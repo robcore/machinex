@@ -400,4 +400,3 @@ static int __init gammacontrol_init(void)
 }
 
 device_initcall(gammacontrol_init);
-
