@@ -49,11 +49,11 @@
 #define DEF_FREQ_DOWN_STEP			(550000)
 #define DEF_FREQ_DOWN_STEP_BARRIER		(1190400)
 #else
-#define DEF_POWER_SAVE_FREQUENCY		(750000)
-#define DEF_TWO_PHASE_FREQUENCY			(1300000)
+#define DEF_POWER_SAVE_FREQUENCY		(810000)
+#define DEF_TWO_PHASE_FREQUENCY			(1350000)
 #define DBS_INPUT_EVENT_MIN_FREQ		(1026000)
 #define DEF_FREQUENCY_OPTIMAL			(702000)
-#define DEF_FREQ_DOWN_STEP			(250000)
+#define DEF_FREQ_DOWN_STEP			(192000)
 #define DEF_FREQ_DOWN_STEP_BARRIER		(702000)
 #endif
 
@@ -273,13 +273,13 @@ static int intellimm_powersave_bias_setspeed(struct cpufreq_policy *policy,
 					    int level)
 {
 	if (level == POWERSAVE_BIAS_MAXLEVEL) {
-		
+
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->min : policy->min,
 			CPUFREQ_RELATION_L);
 		return 1;
 	} else if (level == POWERSAVE_BIAS_MINLEVEL) {
-		
+
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->max : policy->max,
 			CPUFREQ_RELATION_H);
@@ -593,7 +593,7 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 	}
 
 	if (input == dbs_tuners_ins.powersave_bias) {
-		
+
 		return count;
 	}
 
@@ -609,7 +609,7 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 
 	if (!bypass) {
 		if (reenable_timer) {
-			
+
 			for_each_online_cpu(cpu) {
 				if (lock_policy_rwsem_write(cpu) < 0)
 					continue;
@@ -630,7 +630,7 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 				cpumask_set_cpu(cpu, &cpus_timer_done);
 				if (dbs_info->cur_policy) {
 					dbs_timer_exit(dbs_info);
-					
+
 					mutex_lock(&dbs_info->timer_mutex);
 					dbs_timer_init(dbs_info);
 				}
@@ -660,7 +660,7 @@ skip_this_cpu:
 			cpumask_set_cpu(cpu, &cpus_timer_done);
 
 			if (dbs_info->cur_policy) {
-				
+
 				dbs_timer_exit(dbs_info);
 
 				mutex_lock(&dbs_info->timer_mutex);
@@ -983,7 +983,7 @@ int input_event_boosted(void)
 {
 	unsigned long flags;
 
-	
+
 	spin_lock_irqsave(&input_boost_lock, flags);
 	if (input_event_boost) {
 		if (time_before(jiffies, input_event_boost_expired)) {
@@ -1120,7 +1120,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 set_freq:
 		dbs_freq_increase(policy, freq_next);
-		
+
 		if (policy->cur == policy->max)
 			this_dbs_info->rate_mult =
 				dbs_tuners_ins.sampling_down_factor;
@@ -1154,7 +1154,7 @@ set_freq:
 		freq_next = avg_load_freq /
 				(dbs_tuners_ins.up_threshold -
 				 dbs_tuners_ins.down_differential);
-		
+
 		this_dbs_info->rate_mult = 1;
 
 		if (freq_next < policy->min)
@@ -1218,13 +1218,13 @@ static void do_dbs_timer(struct work_struct *work)
 
 	mutex_lock(&dbs_info->timer_mutex);
 
-	
+
 	dbs_info->sample_type = DBS_NORMAL_SAMPLE;
 	if (!dbs_tuners_ins.powersave_bias ||
 	    sample_type == DBS_NORMAL_SAMPLE) {
 		dbs_check_cpu(dbs_info);
 		if (dbs_info->freq_lo) {
-			
+
 			dbs_info->sample_type = DBS_SUB_SAMPLE;
 			delay = dbs_info->freq_hi_jiffies;
 		} else {
@@ -1250,7 +1250,7 @@ sched_wait:
 
 static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 {
-	
+
 	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 
 	if (num_online_cpus() > 1)
@@ -1456,11 +1456,11 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				return rc;
 			}
 
-			
+
 			latency = policy->cpuinfo.transition_latency / 1000;
 			if (latency == 0)
 				latency = 1;
-			
+
 			min_sampling_rate = max(min_sampling_rate,
 					MIN_LATENCY_MULTIPLIER * latency);
 			dbs_tuners_ins.sampling_rate =
@@ -1557,13 +1557,13 @@ static int cpufreq_gov_dbs_up_task(void *data)
 		this_dbs_info = &per_cpu(imm_cpu_dbs_info, cpu);
 		policy = this_dbs_info->cur_policy;
 		if (!policy) {
-			
+
 			goto bail_incorrect_governor;
 		}
 
 		mutex_lock(&this_dbs_info->timer_mutex);
 
-		
+
 		dbs_tuners_ins.powersave_bias = 0;
 		dbs_freq_increase(policy, this_dbs_info->input_event_freq);
 		this_dbs_info->prev_cpu_idle = get_cpu_idle_time(cpu,
@@ -1658,13 +1658,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	destroy_workqueue(dbs_wq);
 }
 
-MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
-MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
-MODULE_DESCRIPTION("'cpufreq_intellimm' - A simple min/max cpufreq governor"
-	"for Low Latency Frequency Transition capable processors");
-MODULE_LICENSE("GPL");
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIMM
 fs_initcall(cpufreq_gov_dbs_init);
 #else
@@ -1672,3 +1665,9 @@ module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
 
+MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
+MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
+MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
+MODULE_DESCRIPTION("'cpufreq_intellimm' - A simple min/max cpufreq governor"
+	"for Low Latency Frequency Transition capable processors");
+MODULE_LICENSE("GPL");

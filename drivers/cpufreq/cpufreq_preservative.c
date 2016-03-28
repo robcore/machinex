@@ -24,15 +24,15 @@
 #include "../gpu/msm/kgsl.h"
 
 #define TRANSITION_LATENCY_LIMIT	(10 * 1000 * 1000)
-#define SAMPLE_RATE			(40009)
+#define SAMPLE_RATE			(45000)
 #define OPTIMAL_POSITION		(3)
 #define TABLE_SIZE			(15)
 #define HYSTERESIS			(7)
 #define UP_THRESH			(100)
 
-static const int valid_fqs[TABLE_SIZE] = {300000, 422400, 652800, 729600, 883200,
-			960000, 1036800, 1190400, 1267200, 1497600,
-			1574400, 1728000, 1958400, 2265600, 2457600};
+static const int valid_fqs[TABLE_SIZE] = {384000, 486000, 594000, 702000, 810000,
+			918000, 1026000, 1134000, 1242000, 1350000,
+			1458000, 1566000, 1674000, 1782000, 1890000};
 static void do_dbs_timer(struct work_struct *work);
 
 static int thresh_adj = 0;
@@ -451,6 +451,13 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	destroy_workqueue(dbs_wq);
 }
 
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PRESERVATIVE
+fs_initcall(cpufreq_gov_dbs_init);
+#else
+module_init(cpufreq_gov_dbs_init);
+#endif
+module_exit(cpufreq_gov_dbs_exit);
+
 MODULE_AUTHOR("bedalus");
 MODULE_DESCRIPTION("Jelly, jam and preserves are all made from fruit mixed with sugar and"
 		   "pectin. The difference between them comes in the form that the fruit"
@@ -459,10 +466,3 @@ MODULE_DESCRIPTION("Jelly, jam and preserves are all made from fruit mixed with 
 		   "less stiff than jelly as a result). In preserves, the fruit comes"
 		   "in the form of chunks in a syrup or a jam.");
 MODULE_LICENSE("GPL");
-
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PRESERVATIVE
-fs_initcall(cpufreq_gov_dbs_init);
-#else
-module_init(cpufreq_gov_dbs_init);
-#endif
-module_exit(cpufreq_gov_dbs_exit);

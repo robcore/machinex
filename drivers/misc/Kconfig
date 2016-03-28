@@ -733,10 +733,12 @@ config QFP_FUSE
 	  fuses. The ioctls provides the necessary interface
 	  to the fuse block. Currently this is supported only
 	  on FSM targets.
+
 config MPU_411_ENABLE
 	bool "mpu gyro sensor MPL 4.1.1"
 	depends on I2C
 	default n
+
 config SEC_MISC
 	bool "Samsung P series miscellaneous driver"
 	default n
@@ -795,7 +797,7 @@ config SEC_TORCH_FLASH
 	  This driver provides torch flash function.	  
 
 config CHG_INCOMPATIBLE
-        tristate " support incompatible charger"
+        tristate "support incompatible charger"
         default n
         help
           this option enable support for incompatible charger

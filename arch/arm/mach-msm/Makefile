@@ -476,7 +476,6 @@ obj-$(CONFIG_MACH_JF) += fusion3-thermistor.o
 obj-$(CONFIG_MACH_M2) += midas-thermistor.o
 endif
 
-
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
 
 obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o

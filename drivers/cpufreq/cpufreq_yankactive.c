@@ -126,7 +126,7 @@ static u64 boostpulse_endtime;
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy;
+static bool io_is_busy = 0;
 
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
@@ -602,7 +602,6 @@ static void cpufreq_yankactive_idle_start(void)
 							MIN_BUSY_TIME) {
 				pcpu->floor_validate_time = now;
 			}
-
 		}
 	}
 
@@ -899,7 +898,6 @@ static ssize_t store_above_hispeed_delay(
 	nabove_hispeed_delay = ntokens;
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
 	return count;
-
 }
 
 static struct global_attr above_hispeed_delay_attr =
@@ -1335,6 +1333,9 @@ static int cpufreq_governor_yankactive(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
+		/* If device is being removed, skip set limits */
+		if (!policy->cur)
+			break;
 		if (policy->max < policy->cur)
 			__cpufreq_driver_target(policy,
 					policy->max, CPUFREQ_RELATION_H);

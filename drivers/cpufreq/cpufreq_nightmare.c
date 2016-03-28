@@ -12,7 +12,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * Created by Alucard_24@xda
  */
 
@@ -101,7 +101,7 @@ static struct nightmare_tuners {
 	.freq_for_responsiveness = ATOMIC_INIT(200000),
 	.freq_for_responsiveness_max = ATOMIC_INIT(1200000),
 #else
-	.freq_for_responsiveness = ATOMIC_INIT(540000),
+	.freq_for_responsiveness = ATOMIC_INIT(1566000),
 	.freq_for_responsiveness_max = ATOMIC_INIT(1890000),
 #endif
 	.freq_step_at_min_freq = ATOMIC_INIT(20),
@@ -858,10 +858,6 @@ static void __exit cpufreq_gov_nightmare_exit(void)
 	cpufreq_unregister_governor(&cpufreq_gov_nightmare);
 }
 
-MODULE_AUTHOR("Alucard24@XDA");
-MODULE_DESCRIPTION("'cpufreq_nightmare' - A dynamic cpufreq/cpuhotplug governor v4.1 (SnapDragon)");
-MODULE_LICENSE("GPL");
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_NIGHTMARE
 fs_initcall(cpufreq_gov_nightmare_init);
 #else
@@ -869,3 +865,6 @@ module_init(cpufreq_gov_nightmare_init);
 #endif
 module_exit(cpufreq_gov_nightmare_exit);
 
+MODULE_AUTHOR("Alucard24@XDA");
+MODULE_DESCRIPTION("'cpufreq_nightmare' - A dynamic cpufreq/cpuhotplug governor v4.1 (SnapDragon)");
+MODULE_LICENSE("GPL");

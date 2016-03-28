@@ -43,11 +43,11 @@ static int enabled;
 static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id = 5,
 	.poll_ms = DEFAULT_POLLING_MS,
-	.limit_temp_degC = 80,
+	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
 	.freq_control_mask = 0xf,
-	.core_limit_temp_degC = 85,
+	.core_limit_temp_degC = 65,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
@@ -55,11 +55,22 @@ static uint32_t limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 static bool core_control_enabled;
+
+static unsigned int debug_mode = 0;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
+/* Always enable Intelli Thermal on boot */
+static int intelli_enabled = 1;
+
 static int limit_idx;
-static int limit_idx_low;
+
+/*
+ * min limit is set to 810000 Mhz!
+ * check your FREQ Table and set corect limit_idx_low freq number.
+ */
+static int limit_idx_low = 5;
+
 static int limit_idx_high;
 static struct cpufreq_frequency_table *table;
 static uint32_t hist_index = 0;

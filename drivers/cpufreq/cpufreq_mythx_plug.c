@@ -148,10 +148,10 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
  */
 static bool align_windows = true;
 
-#define TOP_STOCK_FREQ	2035200
-#define SYNC_FREQ     	1190400
-#define HIGHFREQ	2649600			
-#define LOWFREQ		300000	
+#define TOP_STOCK_FREQ	1890000
+#define SYNC_FREQ     	1134000
+#define HIGHFREQ	1728000			
+#define LOWFREQ		384000	
 
 
 /*

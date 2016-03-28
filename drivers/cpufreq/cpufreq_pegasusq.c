@@ -57,9 +57,9 @@
 #define DEF_START_DELAY				(0)
 
 #define UP_THRESHOLD_AT_MIN_FREQ		(40)
-#define FREQ_FOR_RESPONSIVENESS			(2265600)
+#define FREQ_FOR_RESPONSIVENESS			(1890000)
 /* for fast decrease */
-#define FREQ_FOR_FAST_DOWN			(1574400)
+#define FREQ_FOR_FAST_DOWN			(1458000)
 #define UP_THRESHOLD_AT_FAST_DOWN		(80)
 
 static unsigned int min_sampling_rate;
@@ -391,10 +391,6 @@ static struct attribute_group dbs_attr_group = {
 
 static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 {
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
-	if (p->cur == p->max)
-		return;
-#endif
 
 	__cpufreq_driver_target(p, freq, CPUFREQ_RELATION_L);
 }
@@ -507,13 +503,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency decrease */
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
-	/* if we cannot reduce the frequency anymore, break out early */
-	if (policy->cur == policy->min)
-		return;
-#endif
-
-	/*
+	/* EasterEgg-Penis
 	 * The optimal frequency is the frequency that is the lowest that
 	 * can support the current CPU usage without triggering the up
 	 * policy. To be safe, we focus DOWN_DIFFERENTIAL points under
@@ -707,10 +697,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	kfree(&dbs_tuners_ins);
 }
 
-MODULE_AUTHOR("ByungChang Cha <bc.cha@samsung.com>");
-MODULE_DESCRIPTION("'cpufreq_pegasusq' - A dynamic cpufreq governor");
-MODULE_LICENSE("GPL");
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 fs_initcall(cpufreq_gov_dbs_init);
 #else
@@ -718,4 +704,6 @@ module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
 
-
+MODULE_AUTHOR("ByungChang Cha <bc.cha@samsung.com>");
+MODULE_DESCRIPTION("'cpufreq_pegasusq' - A dynamic cpufreq governor");
+MODULE_LICENSE("GPL");

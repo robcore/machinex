@@ -109,6 +109,14 @@ config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_UBERDEMAND
+	bool "uberdemand"
+	select CPU_FREQ_GOV_UBERDEMAND
+	help
+	  Use the CPUFreq governor 'uberdemand' as default. This is a
+	  kickass governor based on ondemand.  It was made by a guy
+	  named Cl3kener I think.  I will fix this descriptor.
+
 config CPU_FREQ_DEFAULT_GOV_ASSWAX
             bool "asswax"
             select CPU_FREQ_GOV_ASSWAX
@@ -303,6 +311,22 @@ config CPU_FREQ_DEFAULT_GOV_SMARTASSH3
 
 endchoice
 
+config CPU_FREQ_GOV_UBERDEMAND
+	tristate "'uberdemand' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'uberdemand' - This driver adds a dynamic cpufreq policy governor.
+	  The governor does a periodic polling and
+	  changes frequency based on the CPU utilization.
+	  The support for this governor depends on CPU capability to
+	  do fast frequency switching (i.e, very low latency frequency
+	  transitions).
+
+config CPU_FREQ_GOV_UBERDEMAND_SECOND_PHASE_FREQ
+        int "Second Phase Uberdemand Frequency"
+        default 1728000
+        depends on CPU_FREQ_GOV_UBERDEMAND
+
 config CPU_FREQ_GOV_PERFORMANCE
 	tristate "'performance' governor"
 	help
@@ -402,21 +426,21 @@ config CPU_FREQ_GOV_ASSWAX
            tristate "'asswax' cpufreq governor"
            depends on CPU_FREQ
            help
-             asswax' - a "smart" optimized governor!
+             'asswax' - a "smart" optimized governor!
              If in doubt, say N.
 
 config CPU_FREQ_GOV_DANCEDANCE
            tristate "'dancedance' cpufreq governor"
            depends on CPU_FREQ
            help
-             dancedance' - a "smart" optimized governor!
+             'dancedance' - a "smart" optimized governor!
              If in doubt, say N.
 
 config CPU_FREQ_GOV_LIONHEART
            tristate "'lionheart' cpufreq governor"
            depends on CPU_FREQ
            help
-             lionheart' - the "heart" of this kernel
+             'lionheart' - the "heart" of this kernel
              If in doubt, say N.
 
 config CPU_FREQ_GOV_YANKACTIVE
@@ -622,7 +646,7 @@ config INTELLI_MAX_ACTIVE_FREQ
 config INTELLI_MAX_INACTIVE_FREQ
 	int "Max Inactive Freq for Intellidemand"
 	depends on CPU_FREQ_GOV_INTELLIDEMAND
-	default	1134000
+	default	384000
 	help
 		Set default max inactive frequency for intellidemand
 
@@ -685,6 +709,13 @@ menu "PowerPC CPU frequency scaling drivers"
 depends on PPC32 || PPC64
 source "drivers/cpufreq/Kconfig.powerpc"
 endmenu
+
+config LAZYPLUG
+	bool "Conservative hotplugging for generic devices"
+	default n
+	help
+	  This enables the conservative hotplugging, lazyplug by arter97
+	  based on intelli_plug. Refer to the comments for more info.
 
 endif
 endmenu

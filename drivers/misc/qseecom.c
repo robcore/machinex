@@ -1,5 +1,3 @@
-
-
 /*Qualcomm Secure Execution Environment Communicator (QSEECOM) driver
  *
  * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.

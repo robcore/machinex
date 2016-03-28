@@ -46,7 +46,7 @@
 #define DEF_HIGH_GRID_STEP             		(20)
 #define DEF_MIDDLE_GRID_LOAD			(65)
 #define DEF_HIGH_GRID_LOAD			(89)
-#define DEF_OPTIMAL_FREQ			(1190400)
+#define DEF_OPTIMAL_FREQ			(1728000)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -168,8 +168,8 @@ static struct dbs_tuners {
 	.high_grid_load = DEF_HIGH_GRID_LOAD,
 	.ignore_nice = 0,
 	.powersave_bias = 1,
-	.sync_freq = 787200,
-	.optimal_freq = 1190400,
+	.sync_freq = 810000,
+	.optimal_freq = 1350000,
 	.optimal_max_freq = DEF_OPTIMAL_FREQ,
 	.debug_mask=0,
 	.input_boost = 1,
@@ -1577,16 +1577,15 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	destroy_workqueue(dbs_wq);
 }
 
-
-MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
-MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_DESCRIPTION("'cpufreq_optimax' - A dynamic cpufreq governor for "
-	"Low Latency Frequency Transition capable processors");
-MODULE_LICENSE("GPL");
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_OPTIMAX
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
+
+MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
+MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
+MODULE_DESCRIPTION("'cpufreq_optimax' - A dynamic cpufreq governor for "
+	"Low Latency Frequency Transition capable processors");
+MODULE_LICENSE("GPL");

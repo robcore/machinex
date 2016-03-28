@@ -1,0 +1,1 @@
+cmd_arch/arm/crypto/sha1-arm.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf-linaro_4.9.4-2015.06/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o arch/arm/crypto/sha1-arm.o arch/arm/crypto/sha1-armv4-large.o arch/arm/crypto/sha1_glue.o 

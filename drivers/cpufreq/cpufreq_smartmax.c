@@ -52,7 +52,7 @@
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
 
-#define GOV_IDLE_FREQ 475000
+#define GOV_IDLE_FREQ 384000
 
 #define DEFAULT_SUSPEND_IDEAL_FREQ GOV_IDLE_FREQ
 static unsigned int suspend_ideal_freq;
@@ -65,7 +65,7 @@ static unsigned int awake_ideal_freq;
  * Zero disables and causes to always jump straight to max frequency.
  * When below the ideal freqeuncy we always ramp up to the ideal freq.
  */
-#define DEFAULT_RAMP_UP_STEP 300000
+#define DEFAULT_RAMP_UP_STEP 384000
 static unsigned int ramp_up_step;
 
 /*
@@ -73,7 +73,7 @@ static unsigned int ramp_up_step;
  * Zero disables and will calculate ramp down according to load heuristic.
  * When above the ideal freqeuncy we always ramp down to the ideal freq.
  */
-#define DEFAULT_RAMP_DOWN_STEP 150000
+#define DEFAULT_RAMP_DOWN_STEP 192000
 static unsigned int ramp_down_step;
 
 /*
@@ -107,10 +107,10 @@ static unsigned int down_rate;
 static unsigned int sampling_rate;
 
 /* in nsecs */
-#define DEFAULT_INPUT_BOOST_DURATION 50000000
+#define DEFAULT_INPUT_BOOST_DURATION 30000000
 static unsigned int input_boost_duration;
 
-static unsigned int touch_poke_freq = 760000;
+static unsigned int touch_poke_freq = 702000;
 static bool touch_poke = true;
 
 /*
@@ -122,7 +122,7 @@ static bool ramp_up_during_boost = true;
  * external boost interface - boost if duration is written
  * to sysfs for boost_duration
  */
-static unsigned int boost_freq = 760000;
+static unsigned int boost_freq = 810000;
 static bool boost = true;
 
 /* in nsecs */
@@ -1280,5 +1280,3 @@ module_exit(cpufreq_smartmax_exit);
 MODULE_AUTHOR("maxwen");
 MODULE_DESCRIPTION("'cpufreq_smartmax' - A smart cpufreq governor");
 MODULE_LICENSE("GPL");
-
-

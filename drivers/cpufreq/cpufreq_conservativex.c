@@ -620,12 +620,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	destroy_workqueue(dbs_wq);
 }
 
-
-MODULE_AUTHOR("Alexander Clouter <alex@digriz.org.uk>; Florent Guichard <info@broodplank.net>");
-MODULE_DESCRIPTION("'cpufreq_conservativex' - A less aggressive version of "
-		" the conservativex governor (higher performance) ");
-MODULE_LICENSE("GPL");
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVEX
 fs_initcall(cpufreq_gov_dbs_init);
 #else
@@ -633,5 +627,7 @@ module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
 
-
-
+MODULE_AUTHOR("Alexander Clouter <alex@digriz.org.uk>; Florent Guichard <info@broodplank.net>");
+MODULE_DESCRIPTION("'cpufreq_conservativex' - A less aggressive version of "
+		" the conservativex governor (higher performance) ");
+MODULE_LICENSE("GPL");

@@ -657,7 +657,8 @@ SendReceive2(const unsigned int xid, struct cifs_ses *ses,
 
 	cifs_small_buf_release(buf);
 
-	rc = cifs_sync_mid_result(midQ, ses->server);
+	if (midQ != NULL)
+		rc = cifs_sync_mid_result(midQ, ses->server);
 	if (rc != 0) {
 		cifs_add_credits(ses->server, 1);
 		return rc;

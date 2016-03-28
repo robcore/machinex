@@ -686,15 +686,6 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
  */
 static int should_io_be_busy(void)
 {
-#if defined(CONFIG_X86)
-    /*
-     * For Intel, Core 2 (model 15) andl later have an efficient idle.
-     */
-    if (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL &&
-	boot_cpu_data.x86 == 6 &&
-	boot_cpu_data.x86_model >= 15)
-	return 1;
-#endif
     return 0;
 }
 
@@ -823,6 +814,12 @@ static void __exit cpufreq_gov_dbs_exit(void)
     cpufreq_unregister_governor(&cpufreq_gov_wheatley);
 }
 
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_WHEATLEY
+fs_initcall(cpufreq_gov_dbs_init);
+#else
+module_init(cpufreq_gov_dbs_init);
+#endif
+module_exit(cpufreq_gov_dbs_exit);
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
@@ -830,10 +827,3 @@ MODULE_AUTHOR("Ezekeel <notezekeel@googlemail.com>");
 MODULE_DESCRIPTION("'cpufreq_wheatley' - A dynamic cpufreq governor for "
 		   "Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");
-
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_WHEATLEY
-fs_initcall(cpufreq_gov_dbs_init);
-#else
-module_init(cpufreq_gov_dbs_init);
-#endif
-module_exit(cpufreq_gov_dbs_exit);

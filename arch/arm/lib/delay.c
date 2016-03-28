@@ -80,8 +80,8 @@ void __const_udelay(unsigned long xloops)
 EXPORT_SYMBOL(__const_udelay);
 
 /*
- * usecs  <= 2000
- * HZ  <= 1000
+ * usecs <= 2000
+ * HZ <= 1000
  */
 void __udelay(unsigned long usecs)
 {

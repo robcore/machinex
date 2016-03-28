@@ -91,6 +91,9 @@ struct msm_pm_sleep_ops {
 			bool from_idle, bool notify_rpm);
 	void (*exit_sleep)(void *limits, bool from_idle,
 			bool notify_rpm, bool collapsed);
+#ifdef CONFIG_QUICK_WAKEUP
+	bool (*suspend_again)(void);
+#endif
 };
 
 struct msm_pm_cpr_ops {

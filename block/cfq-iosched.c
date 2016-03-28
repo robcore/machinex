@@ -2306,6 +2306,9 @@ static void cfq_choose_cfqg(struct cfq_data *cfqd)
 {
 	struct cfq_group *cfqg = cfq_get_next_cfqg(cfqd);
 
+	if (!cfqg)
+		return;
+
 	cfqd->serving_group = cfqg;
 
 	/* Restore the workload type data */
@@ -3752,6 +3755,18 @@ static void *cfq_init_queue(struct request_queue *q)
 	 */
 	cfqd->last_delayed_sync = jiffies - HZ;
 	return cfqd;
+}
+
+static void cfq_registered_queue(struct request_queue *q)
+{
+	struct elevator_queue *e = q->elevator;
+	struct cfq_data *cfqd = e->elevator_data;
+
+	/*
+	 * Default to IOPS mode with no idling for SSDs
+	 */
+	if (blk_queue_nonrot(q))
+		cfqd->cfq_slice_idle = 0;
 }
 
 /*

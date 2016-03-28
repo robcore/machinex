@@ -1,0 +1,272 @@
+From 18f393876dc2dc640b34a053c9fdddff4e11151b Mon Sep 17 00:00:00 2001
+From: Weiyin Jiang <wjiang@codeaurora.org>
+Date: Tue, 22 Sep 2015 18:55:35 +0800
+Subject: [PATCH] ASoC: msm: qdsp6v2: add wakelock hook in misc driver
+
+add PM_AWAKE and PM_RELAX interfaces as to allow userspace clients to
+hold ARM core during timeout count down.
+
+Change-Id: Ia07a4f8675e1c2f25f698119e7f91e752de9dc78
+Signed-off-by: Weiyin Jiang <wjiang@codeaurora.org>
+---
+ drivers/misc/qcom/qdsp6v2/audio_utils_aio.c | 44 ++++++++++++++++++++++++++++-
+ drivers/misc/qcom/qdsp6v2/audio_utils_aio.h | 12 +++++++-
+ drivers/misc/qcom/qdsp6v2/audio_wma.c       | 18 ++++++++++--
+ drivers/misc/qcom/qdsp6v2/audio_wmapro.c    | 18 ++++++++++--
+ include/uapi/linux/msm_audio.h              |  7 +++--
+ 5 files changed, 91 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/misc/qcom/qdsp6v2/audio_utils_aio.c b/drivers/misc/qcom/qdsp6v2/audio_utils_aio.c
+index 11d890d..b64fb8a 100644
+--- a/drivers/misc/qcom/qdsp6v2/audio_utils_aio.c
++++ b/drivers/misc/qcom/qdsp6v2/audio_utils_aio.c
+@@ -1,6 +1,6 @@
+ /* Copyright (C) 2008 Google, Inc.
+  * Copyright (C) 2008 HTC Corporation
+- * Copyright (c) 2009-2014, The Linux Foundation. All rights reserved.
++ * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+@@ -19,6 +19,7 @@
+ #include <linux/uaccess.h>
+ #include <linux/sched.h>
+ #include <linux/wait.h>
++#include <linux/wakelock.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/slab.h>
+ #include <linux/atomic.h>
+@@ -571,6 +572,15 @@ int audio_aio_release(struct inode *inode, struct file *file)
+ 	pr_debug("%s[%p]\n", __func__, audio);
+ 	mutex_lock(&audio->lock);
+ 	audio->wflush = 1;
++	if (audio->wakelock_voted) {
++		audio->wakelock_voted = false;
++		mutex_lock(&audio->audio_ws_mgr->ws_lock);
++		if ((audio->audio_ws_mgr->ref_cnt > 0) &&
++				(--audio->audio_ws_mgr->ref_cnt == 0)) {
++			pm_relax(audio->miscdevice->this_device);
++		}
++		mutex_unlock(&audio->audio_ws_mgr->ws_lock);
++	}
+ 	if (audio->enabled)
+ 		audio_aio_flush(audio);
+ 	audio->wflush = 0;
+@@ -1471,6 +1481,34 @@ static long audio_aio_shared_ioctl(struct file *file, unsigned int cmd,
+ 		mutex_unlock(&audio->lock);
+ 		break;
+ 	}
++	case AUDIO_PM_AWAKE: {
++		pr_debug("%s[%p]:AUDIO_PM_AWAKE\n", __func__, audio);
++		mutex_lock(&audio->lock);
++		if (!audio->wakelock_voted) {
++			audio->wakelock_voted = true;
++			mutex_lock(&audio->audio_ws_mgr->ws_lock);
++			if (audio->audio_ws_mgr->ref_cnt++ == 0)
++				pm_stay_awake(audio->miscdevice->this_device);
++			mutex_unlock(&audio->audio_ws_mgr->ws_lock);
++		}
++		mutex_unlock(&audio->lock);
++		break;
++	}
++	case AUDIO_PM_RELAX: {
++		pr_debug("%s[%p]:AUDIO_PM_RELAX\n", __func__, audio);
++		mutex_lock(&audio->lock);
++		if (audio->wakelock_voted) {
++			audio->wakelock_voted = false;
++			mutex_lock(&audio->audio_ws_mgr->ws_lock);
++			if ((audio->audio_ws_mgr->ref_cnt > 0) &&
++					(--audio->audio_ws_mgr->ref_cnt == 0)) {
++				pm_relax(audio->miscdevice->this_device);
++			}
++			mutex_unlock(&audio->audio_ws_mgr->ws_lock);
++		}
++		mutex_unlock(&audio->lock);
++		break;
++	}
+ 	default:
+ 		pr_err("%s: Unknown ioctl cmd = %d", __func__, cmd);
+ 		rc =  -EINVAL;
+@@ -1493,6 +1531,8 @@ static long audio_aio_ioctl(struct file *file, unsigned int cmd,
+ 	case AUDIO_PAUSE:
+ 	case AUDIO_FLUSH:
+ 	case AUDIO_GET_SESSION_ID:
++	case AUDIO_PM_AWAKE:
++	case AUDIO_PM_RELAX:
+ 		rc = audio_aio_shared_ioctl(file, cmd, arg);
+ 		break;
+ 	case AUDIO_GET_STATS: {
+@@ -1781,6 +1821,8 @@ static long audio_aio_compat_ioctl(struct file *file, unsigned int cmd,
+ 	case AUDIO_PAUSE:
+ 	case AUDIO_FLUSH:
+ 	case AUDIO_GET_SESSION_ID:
++	case AUDIO_PM_AWAKE:
++	case AUDIO_PM_RELAX:
+ 		rc = audio_aio_shared_ioctl(file, cmd, arg);
+ 		break;
+ 	case AUDIO_GET_STATS_32: {
+diff --git a/drivers/misc/qcom/qdsp6v2/audio_utils_aio.h b/drivers/misc/qcom/qdsp6v2/audio_utils_aio.h
+index 3cea26b..6f94bbc 100644
+--- a/drivers/misc/qcom/qdsp6v2/audio_utils_aio.h
++++ b/drivers/misc/qcom/qdsp6v2/audio_utils_aio.h
+@@ -1,6 +1,6 @@
+ /* Copyright (C) 2008 Google, Inc.
+  * Copyright (C) 2008 HTC Corporation
+- * Copyright (c) 2009-2014, The Linux Foundation. All rights reserved.
++ * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+@@ -104,6 +104,12 @@ union  meta_data {
+ 	struct dec_meta_in meta_in;
+ } __packed;
+ 
++/* per device wakeup source manager */
++struct ws_mgr {
++	struct mutex       ws_lock;
++	uint32_t           ref_cnt;
++};
++
+ #define PCM_BUF_COUNT           (2)
+ /* Buffer with meta */
+ #define PCM_BUFSZ_MIN           ((4*1024) + sizeof(struct dec_meta_out))
+@@ -165,6 +171,10 @@ struct q6audio_aio {
+ 	spinlock_t dsp_lock;
+ 	spinlock_t event_queue_lock;
+ 
++	struct miscdevice *miscdevice;
++	uint32_t wakelock_voted;
++	struct ws_mgr *audio_ws_mgr;
++
+ #ifdef CONFIG_DEBUG_FS
+ 	struct dentry *dentry;
+ #endif
+diff --git a/drivers/misc/qcom/qdsp6v2/audio_wma.c b/drivers/misc/qcom/qdsp6v2/audio_wma.c
+index 9877937..0ae3999 100644
+--- a/drivers/misc/qcom/qdsp6v2/audio_wma.c
++++ b/drivers/misc/qcom/qdsp6v2/audio_wma.c
+@@ -2,7 +2,7 @@
+  *
+  * Copyright (C) 2008 Google, Inc.
+  * Copyright (C) 2008 HTC Corporation
+- * Copyright (c) 2009-2014, The Linux Foundation. All rights reserved.
++ * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+@@ -18,8 +18,12 @@
+ #include <linux/types.h>
+ #include <linux/msm_audio_wma.h>
+ #include <linux/compat.h>
++#include <linux/wakelock.h>
+ #include "audio_utils_aio.h"
+ 
++struct miscdevice audio_wma_misc;
++struct ws_mgr audio_wma_ws_mgr;
++
+ #ifdef CONFIG_DEBUG_FS
+ static const struct file_operations audio_wma_debug_fops = {
+ 	.read = audio_aio_debug_read,
+@@ -243,6 +247,9 @@ static int audio_open(struct inode *inode, struct file *file)
+ 	}
+ 
+ 	audio->pcm_cfg.buffer_size = PCM_BUFSZ_MIN;
++	audio->miscdevice = &audio_wma_misc;
++	audio->wakelock_voted = false;
++	audio->audio_ws_mgr = &audio_wma_ws_mgr;
+ 
+ 	audio->ac = q6asm_audio_client_alloc((app_cb) q6_audio_cb,
+ 					     (void *)audio);
+@@ -325,7 +332,14 @@ struct miscdevice audio_wma_misc = {
+ 
+ static int __init audio_wma_init(void)
+ {
+-	return misc_register(&audio_wma_misc);
++	int ret = misc_register(&audio_wma_misc);
++
++	if (ret == 0)
++		device_init_wakeup(audio_wma_misc.this_device, true);
++	audio_wma_ws_mgr.ref_cnt = 0;
++	mutex_init(&audio_wma_ws_mgr.ws_lock);
++
++	return ret;
+ }
+ 
+ device_initcall(audio_wma_init);
+diff --git a/drivers/misc/qcom/qdsp6v2/audio_wmapro.c b/drivers/misc/qcom/qdsp6v2/audio_wmapro.c
+index 54c0506..3fa8f68 100644
+--- a/drivers/misc/qcom/qdsp6v2/audio_wmapro.c
++++ b/drivers/misc/qcom/qdsp6v2/audio_wmapro.c
+@@ -2,7 +2,7 @@
+  *
+  * Copyright (C) 2008 Google, Inc.
+  * Copyright (C) 2008 HTC Corporation
+- * Copyright (c) 2009-2014, The Linux Foundation. All rights reserved.
++ * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+@@ -18,8 +18,12 @@
+ #include <linux/types.h>
+ #include <linux/msm_audio_wmapro.h>
+ #include <linux/compat.h>
++#include <linux/wakelock.h>
+ #include "audio_utils_aio.h"
+ 
++struct miscdevice audio_wmapro_misc;
++struct ws_mgr     audio_wmapro_ws_mgr;
++
+ #ifdef CONFIG_DEBUG_FS
+ static const struct file_operations audio_wmapro_debug_fops = {
+ 	.read = audio_aio_debug_read,
+@@ -323,6 +327,9 @@ static int audio_open(struct inode *inode, struct file *file)
+ 
+ 
+ 	audio->pcm_cfg.buffer_size = PCM_BUFSZ_MIN;
++	audio->miscdevice = &audio_wmapro_misc;
++	audio->wakelock_voted = false;
++	audio->audio_ws_mgr = &audio_wmapro_ws_mgr;
+ 
+ 	audio->ac = q6asm_audio_client_alloc((app_cb) q6_audio_cb,
+ 					     (void *)audio);
+@@ -405,7 +412,14 @@ struct miscdevice audio_wmapro_misc = {
+ 
+ static int __init audio_wmapro_init(void)
+ {
+-	return misc_register(&audio_wmapro_misc);
++	int ret = misc_register(&audio_wmapro_misc);
++
++	if (ret == 0)
++		device_init_wakeup(audio_wmapro_misc.this_device, true);
++	audio_wmapro_ws_mgr.ref_cnt = 0;
++	mutex_init(&audio_wmapro_ws_mgr.ws_lock);
++
++	return ret;
+ }
+ 
+ device_initcall(audio_wmapro_init);
+diff --git a/include/uapi/linux/msm_audio.h b/include/uapi/linux/msm_audio.h
+index 5005cd5..2505bc4 100644
+--- a/include/uapi/linux/msm_audio.h
++++ b/include/uapi/linux/msm_audio.h
+@@ -1,7 +1,7 @@
+ /* include/linux/msm_audio.h
+  *
+  * Copyright (C) 2008 Google, Inc.
+- * Copyright (c) 2012, 2014 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012, 2014-2015 The Linux Foundation. All rights reserved.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+@@ -114,7 +114,10 @@
+ #define AUDIO_EFFECTS_READ _IOWR(AUDIO_IOCTL_MAGIC, 103, void *)
+ #define AUDIO_EFFECTS_SET_PP_PARAMS _IOW(AUDIO_IOCTL_MAGIC, 104, void *)
+ 
+-#define	AUDIO_MAX_COMMON_IOCTL_NUM	105
++#define AUDIO_PM_AWAKE      _IOW(AUDIO_IOCTL_MAGIC, 105, unsigned)
++#define AUDIO_PM_RELAX      _IOW(AUDIO_IOCTL_MAGIC, 106, unsigned)
++
++#define	AUDIO_MAX_COMMON_IOCTL_NUM	107
+ 
+ 
+ #define HANDSET_MIC			0x01

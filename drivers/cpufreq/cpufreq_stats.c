@@ -420,10 +420,10 @@ static void __exit cpufreq_stats_exit(void)
 	}
 }
 
+module_init(cpufreq_stats_init);
+module_exit(cpufreq_stats_exit);
+
 MODULE_AUTHOR("Zou Nan hai <nanhai.zou@intel.com>");
 MODULE_DESCRIPTION("'cpufreq_stats' - A driver to export cpufreq stats "
 				"through sysfs filesystem");
 MODULE_LICENSE("GPL");
-
-module_init(cpufreq_stats_init);
-module_exit(cpufreq_stats_exit);

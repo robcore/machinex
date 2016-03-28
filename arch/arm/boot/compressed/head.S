@@ -535,7 +535,7 @@ call_kernel:
  THUMB(		bx	r4	)		@ entry point is always ARM
 
 		.ltorg
-		
+
 		.align	2
 		.type	LC0, #object
 LC0:		.word	LC0			@ r1

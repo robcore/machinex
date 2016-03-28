@@ -1244,7 +1244,7 @@ enum {
 #define INACTIVE_DURATION_MSEC	(1*60*1000) // 1 mins
 #define MAX_ACTIVE_FREQ_LIMIT	30 // %
 #define MAX_INACTIVE_FREQ_LIMIT	20 // %
-#define ACTIVE_MAX_FREQ		CONFIG_INTELLI_MAX_ACTIVE_FREQ		// 1.512GHZ
+#define ACTIVE_MAX_FREQ		CONFIG_INTELLI_MAX_ACTIVE_FREQ		// 1.566GHZ
 #define INACTIVE_MAX_FREQ	CONFIG_INTELLI_MAX_INACTIVE_FREQ	// 1.134GHZ
 
 #define NUM_ACTIVE_LOAD_ARRAY	(ACTIVE_DURATION_MSEC/SAMPLE_DURATION_MSEC)
@@ -1369,7 +1369,7 @@ static void do_dbs_timer(struct work_struct *work)
 
 			if (!active_state)
 			{
-				/* set freq to 1.5GHz */
+				/* set freq to 1.566GHz */
 				//pr_info("LMF: CPU0 set max freq to: %lu\n", lmf_active_max_limit);
 				cpufreq_set_limits(BOOT_CPU, SET_MAX, lmf_active_max_limit);
 				
@@ -1486,7 +1486,7 @@ static void do_dbs_timer(struct work_struct *work)
 								load_limit_index = 0;
 								active_state = false;
 
-								/* set freq to 1.0GHz */
+								/* set freq to 1.134GHz */
 								//pr_info("LMF: CPU0 set max freq to: %lu\n", lmf_inactive_max_limit);
 								cpufreq_set_limits(BOOT_CPU, SET_MAX, lmf_inactive_max_limit);
 								
@@ -1533,7 +1533,7 @@ static void do_dbs_timer(struct work_struct *work)
 								load_limit_index = 0;
 								active_state = true;
 
-								/* set freq to 1.5GHz */
+								/* set freq to 1.566GHz */
 								//pr_info("LMF: CPU0 set max freq to: %lu\n", lmf_active_max_limit);
 								cpufreq_set_limits(BOOT_CPU, SET_MAX, lmf_active_max_limit);
 								
@@ -2013,13 +2013,6 @@ static int set_enable_dbs_input_event_param(const char *val, struct kernel_param
 module_param_call(enable_dbs_input_event, set_enable_dbs_input_event_param, param_get_uint,
 		&enable_dbs_input_event, S_IWUSR | S_IRUGO);
 
-MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
-MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
-MODULE_DESCRIPTION("'cpufreq_intellidemand' - An intelligent dynamic cpufreq governor for "
-	"Low Latency Frequency Transition capable processors");
-MODULE_LICENSE("GPL");
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIDEMAND
 fs_initcall(cpufreq_gov_dbs_init);
 #else
@@ -2027,3 +2020,9 @@ module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
 
+MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
+MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
+MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
+MODULE_DESCRIPTION("'cpufreq_intellidemand' - An intelligent dynamic cpufreq governor for "
+	"Low Latency Frequency Transition capable processors");
+MODULE_LICENSE("GPL");

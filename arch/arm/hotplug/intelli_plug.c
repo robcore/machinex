@@ -596,9 +596,9 @@ int __init intelli_plug_init(void)
 	return 0;
 }
 
+late_initcall(intelli_plug_init);
+
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");
-
-late_initcall(intelli_plug_init);
