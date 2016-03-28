@@ -1,0 +1,18 @@
+--- fs/buffer.c
++++ fs/buffer.c
+@@ -1063,13 +1064,14 @@ __getblk_slow(struct block_device *bdev, sector_t block, int size)
+ 		if (bh)
+ 			return bh;
+ 
+-		ret = grow_buffers(bdev, block, size);
++		ret = grow_buffers(bdev, block, size, gfp);
+ 		if (ret < 0)
+ 			return NULL;
+ 		if (ret == 0)
+ 			free_more_memory();
+ 	}
+ }
++EXPORT_SYMBOL(__getblk_slow);
+ 
+ /*
+  * The relationship between dirty buffers and dirty pages:

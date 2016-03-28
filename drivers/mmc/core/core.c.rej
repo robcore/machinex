@@ -1,0 +1,10 @@
+--- drivers/mmc/core/core.c
++++ drivers/mmc/core/core.c
+@@ -2370,6 +2370,7 @@
+ 	switch (mode) {
+ 	case PM_HIBERNATION_PREPARE:
+ 	case PM_SUSPEND_PREPARE:
++	case PM_RESTORE_PREPARE:
+ 
+ 		spin_lock_irqsave(&host->lock, flags);
+ 		host->rescan_disable = 1;
