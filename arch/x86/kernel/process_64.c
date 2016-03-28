@@ -116,11 +116,11 @@ void __show_regs(struct pt_regs *regs, int all)
 void release_thread(struct task_struct *dead_task)
 {
 	if (dead_task->mm) {
-		if (dead_task->mm->context.ldt) {
+		if (dead_task->mm->context.size) {
 			printk("WARNING: dead process %8s still has LDT? <%p/%d>\n",
 					dead_task->comm,
-					dead_task->mm->context.ldt->entries,
-					dead_task->mm->context.ldt->size);
+					dead_task->mm->context.ldt,
+					dead_task->mm->context.size);
 			BUG();
 		}
 	}

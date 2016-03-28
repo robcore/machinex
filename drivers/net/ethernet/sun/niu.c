@@ -6659,8 +6659,10 @@ static netdev_tx_t niu_start_xmit(struct sk_buff *skb,
 		struct sk_buff *skb_new;
 
 		skb_new = skb_realloc_headroom(skb, len);
-		if (!skb_new)
+		if (!skb_new) {
+			rp->tx_errors++;
 			goto out_drop;
+		}
 		kfree_skb(skb);
 		skb = skb_new;
 	} else

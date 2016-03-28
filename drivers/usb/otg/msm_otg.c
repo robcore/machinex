@@ -51,9 +51,8 @@
 #include <mach/msm_xo.h>
 #include <mach/msm_bus.h>
 #include <mach/rpm-regulator.h>
-#ifdef CONFIG_FORCE_FAST_CHARGE
+
 #include <linux/fastchg.h>
-#endif
 
 #define MSM_USB_BASE	(motg->regs)
 #define DRIVER_NAME	"msm_otg"
@@ -1202,14 +1201,8 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 	if (motg->cur_power == mA)
 		return;
 
-	dev_info(motg->phy.dev, "Avail curr from USB = %u\n", mA);
-
-	/*
-	 *  Use Power Supply API if supported, otherwise fallback
-	 *  to legacy pm8921 API.
-	 */
-	if (msm_otg_notify_power_supply(motg, mA))
-		pm8921_charger_vbus_draw(mA);
+	pm8921_charger_vbus_draw(mA);
+	msm_otg_notify_power_supply(motg, mA);
 
 	motg->cur_power = mA;
 #endif
@@ -1598,11 +1591,9 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 	struct msm_otg *motg = container_of(otg->phy, struct msm_otg, phy);
 	struct msm_otg_platform_data *pdata = motg->pdata;
 
-#ifdef CONFIG_FORCE_FAST_CHARGE
 	if (!use_mtp_during_fast_charge && on == 1)
 		on = 0;
-#endif
-
+	
 	if (!otg->gadget)
 		return;
 
@@ -2601,8 +2592,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 			 * switch from ACA to PMIC.  Check ID state
 			 * before entering into low power mode.
 			 */
-			if ((motg->pdata->otg_control == OTG_PMIC_CONTROL) &&
-					!msm_otg_read_pmic_id_state(motg)) {
+			if (!msm_otg_read_pmic_id_state(motg)) {
 				pr_debug("process missed ID intr\n");
 				clear_bit(ID, &motg->inputs);
 				work = 1;
@@ -3411,12 +3401,9 @@ static int msm_otg_mode_show(struct seq_file *s, void *unused)
 	struct usb_phy *phy = &motg->phy;
 
 	switch (phy->state) {
-	case OTG_STATE_A_WAIT_BCON:
 	case OTG_STATE_A_HOST:
-	case OTG_STATE_A_SUSPEND:
 		seq_printf(s, "host\n");
 		break;
-	case OTG_STATE_B_IDLE:
 	case OTG_STATE_B_PERIPHERAL:
 		seq_printf(s, "peripheral\n");
 		break;
@@ -3464,9 +3451,7 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 	switch (req_mode) {
 	case USB_NONE:
 		switch (phy->state) {
-		case OTG_STATE_A_WAIT_BCON:
 		case OTG_STATE_A_HOST:
-		case OTG_STATE_A_SUSPEND:
 		case OTG_STATE_B_PERIPHERAL:
 			set_bit(ID, &motg->inputs);
 			clear_bit(B_SESS_VLD, &motg->inputs);
@@ -3478,9 +3463,7 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 	case USB_PERIPHERAL:
 		switch (phy->state) {
 		case OTG_STATE_B_IDLE:
-		case OTG_STATE_A_WAIT_BCON:
 		case OTG_STATE_A_HOST:
-		case OTG_STATE_A_SUSPEND:
 			set_bit(ID, &motg->inputs);
 			set_bit(B_SESS_VLD, &motg->inputs);
 			break;
