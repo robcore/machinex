@@ -94,17 +94,6 @@ struct ib_umem *ib_umem_get(struct ib_ucontext *context, unsigned long addr,
 	if (dmasync)
 		dma_set_attr(DMA_ATTR_WRITE_BARRIER, &attrs);
 
-	if (!size)
-		return ERR_PTR(-EINVAL);
-
-	/*
-	 * If the combination of the addr and size requested for this memory
-	 * region causes an integer overflow, return error.
-	 */
-	if (((addr + size) < addr) ||
-	    PAGE_ALIGN(addr + size) < (addr + size))
-		return ERR_PTR(-EINVAL);
-
 	if (!can_do_mlock())
 		return ERR_PTR(-EPERM);
 
@@ -280,7 +269,7 @@ void ib_umem_release(struct ib_umem *umem)
 	} else
 		down_write(&mm->mmap_sem);
 
-	current->mm->pinned_vm -= diff;
+	current->mm->locked_vm -= diff;
 	up_write(&mm->mmap_sem);
 	mmput(mm);
 	kfree(umem);

@@ -1,1 +1,0 @@
-cmd_drivers/barcode_emul/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf-linaro_4.9.4-2015.06/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/barcode_emul/built-in.o drivers/barcode_emul/barcode_emul_ice4.o 

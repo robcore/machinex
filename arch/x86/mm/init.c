@@ -60,7 +60,6 @@ static void __init find_early_table_space(unsigned long end, int use_pse,
 		ptes = (end + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
 	tables += roundup(ptes * sizeof(pte_t), PAGE_SIZE);
-	tables += (pgd_extra * PAGE_SIZE);
 
 #ifdef CONFIG_X86_32
 	/* for fixmap */

@@ -1169,8 +1169,10 @@ static void kcryptd_async_done(struct crypto_async_request *async_req,
 	struct dm_crypt_io *io = container_of(ctx, struct dm_crypt_io, ctx);
 	struct crypt_config *cc = io->target->private;
 
-	if (error == -EINPROGRESS)
+	if (error == -EINPROGRESS) {
+		complete(&ctx->restart);
 		return;
+	}
 
 	if (!error && cc->iv_gen_ops && cc->iv_gen_ops->post)
 		error = cc->iv_gen_ops->post(cc, iv_of_dmreq(cc, dmreq), dmreq);
@@ -1232,6 +1234,20 @@ static int crypt_decode_key(u8 *key, char *hex, unsigned int size)
 		return -EINVAL;
 
 	return 0;
+}
+
+/*
+ * Encode key into its hex representation
+ */
+static void crypt_encode_key(char *hex, u8 *key, unsigned int size)
+{
+	unsigned int i;
+
+	for (i = 0; i < size; i++) {
+		sprintf(hex, "%02x", *key);
+		hex += 2;
+		key++;
+	}
 }
 
 static void crypt_free_tfms(struct crypt_config *cc)
@@ -1522,7 +1538,6 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	unsigned int key_size, opt_params;
 	unsigned long long tmpll;
 	int ret;
-	size_t iv_size_padding;
 	struct dm_arg_set as;
 	const char *opt_string;
 	char dummy;
@@ -1559,23 +1574,12 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 	cc->dmreq_start = sizeof(struct ablkcipher_request);
 	cc->dmreq_start += crypto_ablkcipher_reqsize(any_tfm(cc));
-	cc->dmreq_start = ALIGN(cc->dmreq_start, __alignof__(struct dm_crypt_request));
-
-	if (crypto_ablkcipher_alignmask(any_tfm(cc)) < CRYPTO_MINALIGN) {
-		/* Allocate the padding exactly */
-		iv_size_padding = -(cc->dmreq_start + sizeof(struct dm_crypt_request))
-				& crypto_ablkcipher_alignmask(any_tfm(cc));
-	} else {
-		/*
-		 * If the cipher requires greater alignment than kmalloc
-		 * alignment, we don't know the exact position of the
-		 * initialization vector. We must assume worst case.
-		 */
-		iv_size_padding = crypto_ablkcipher_alignmask(any_tfm(cc));
-	}
+	cc->dmreq_start = ALIGN(cc->dmreq_start, crypto_tfm_ctx_alignment());
+	cc->dmreq_start += crypto_ablkcipher_alignmask(any_tfm(cc)) &
+			   ~(crypto_tfm_ctx_alignment() - 1);
 
 	cc->req_pool = mempool_create_kmalloc_pool(MIN_IOS, cc->dmreq_start +
-			sizeof(struct dm_crypt_request) + iv_size_padding + cc->iv_size);
+			sizeof(struct dm_crypt_request) + cc->iv_size);
 	if (!cc->req_pool) {
 		ti->error = "Cannot allocate crypt request mempool";
 		goto bad;
@@ -1695,11 +1699,11 @@ static int crypt_map(struct dm_target *ti, struct bio *bio,
 	return DM_MAPIO_SUBMITTED;
 }
 
-static void crypt_status(struct dm_target *ti, status_type_t type,
-			 char *result, unsigned int maxlen)
+static int crypt_status(struct dm_target *ti, status_type_t type,
+			char *result, unsigned int maxlen)
 {
 	struct crypt_config *cc = ti->private;
-	unsigned i, sz = 0;
+	unsigned int sz = 0;
 
 	switch (type) {
 	case STATUSTYPE_INFO:
@@ -1709,11 +1713,17 @@ static void crypt_status(struct dm_target *ti, status_type_t type,
 	case STATUSTYPE_TABLE:
 		DMEMIT("%s ", cc->cipher_string);
 
-		if (cc->key_size > 0)
-			for (i = 0; i < cc->key_size; i++)
-				DMEMIT("%02x", cc->key[i]);
-		else
-			DMEMIT("-");
+		if (cc->key_size > 0) {
+			if ((maxlen - sz) < ((cc->key_size << 1) + 1))
+				return -ENOMEM;
+
+			crypt_encode_key(result + sz, cc->key, cc->key_size);
+			sz += cc->key_size << 1;
+		} else {
+			if (sz >= maxlen)
+				return -ENOMEM;
+			result[sz++] = '-';
+		}
 
 		DMEMIT(" %llu %s %llu", (unsigned long long)cc->iv_offset,
 				cc->dev->name, (unsigned long long)cc->start);
@@ -1723,6 +1733,7 @@ static void crypt_status(struct dm_target *ti, status_type_t type,
 
 		break;
 	}
+	return 0;
 }
 
 static void crypt_postsuspend(struct dm_target *ti)

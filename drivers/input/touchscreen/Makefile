@@ -7,7 +7,6 @@
 wm97xx-ts-y := wm97xx-core.o
 
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
-obj-$(CONFIG_TOUCHSCREEN_SWEEP2WAKE) 	+= sweep2wake.o
 obj-$(CONFIG_TOUCHSCREEN_AD7877)	+= ad7877.o
 obj-$(CONFIG_TOUCHSCREEN_AD7879)	+= ad7879.o
 obj-$(CONFIG_TOUCHSCREEN_AD7879_I2C)	+= ad7879-i2c.o
@@ -102,4 +101,3 @@ obj-$(CONFIG_TOUCHSCREEN_MMS144)        += mms_ts_144.o
 obj-$(CONFIG_TOUCHSCREEN_ZINITIX_BT532)	+= zinitix_bt_532.o
 obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X)	+= cyttsp4_core.o cyttsp4_i2c.o cyttsp4_bus.o cyttsp4_mtb.o cyttsp4_mt_common.o cyttsp4_device_access.o cyttsp4_loader.o
 obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X_SUPPORT_BUTTON)	+= cyttsp4_btn.o
-obj-y += touchboost.o

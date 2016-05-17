@@ -148,14 +148,6 @@
 #include <mach/fusion3-thermistor.h>
 #endif
 
-#ifdef CONFIG_KEXEC_HARDBOOT
-#include <asm/kexec.h>
-#endif
-
-#ifdef CONFIG_CPU_FREQ_GOV_UBERDEMAND
-int set_second_phase_freq(int cpufreq);
-#endif
-
 #if defined(CONFIG_SENSORS_SSP)
 enum {
 	SNS_PWR_OFF,
@@ -302,7 +294,7 @@ static void max77693_haptic_power_onoff(int onoff)
 			printk(KERN_ERR"enable l8 failed, rc=%d\n", ret);
 			return;
 		}
-		//printk(KERN_DEBUG"haptic power_on is finished.\n");
+		printk(KERN_DEBUG"haptic power_on is finished.\n");
 	} else {
 		if (regulator_is_enabled(reg_l8)) {
 			ret = regulator_disable(reg_l8);
@@ -312,7 +304,7 @@ static void max77693_haptic_power_onoff(int onoff)
 				return;
 			}
 		}
-		//printk(KERN_DEBUG"haptic power_off is finished.\n");
+		printk(KERN_DEBUG"haptic power_off is finished.\n");
 	}
 }
 #endif
@@ -402,7 +394,7 @@ static void irda_device_init(void)
 		.output_buffer		= PM_GPIO_OUT_BUF_CMOS,
 		.output_value		= 0,
 	};
-	printk(KERN_ERR "%s called!\n", __func__);
+	printk(KERN_ERR "%s called!\n", __func__);	
 	gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), "irda_wake");
 	gpio_direction_output(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), 0);
 	pm8xxx_gpio_config(PM8921_GPIO_PM_TO_SYS(	\
@@ -1013,15 +1005,7 @@ static struct platform_device ram_console_device = {
 static struct persistent_ram_descriptor per_ram_descs[] __initdata = {
        {
                .name = "ram_console",
-#ifdef CONFIG_KEXEC_HARDBOOT
-               .size = KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR,
-       },
-       {
-               .name = "kexec_hb_page",
-               .size = SZ_1M - (KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR),
-#else
                .size = SZ_1M,
-#endif
        }
 };
 
@@ -3250,13 +3234,10 @@ static struct platform_device msm_tsens_device = {
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 7,
 	.poll_ms = 250,
-	.limit_temp_degC = 60,
+	.limit_temp_degC = 70,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
-#ifdef CONFIG_INTELLI_THERMAL
-	.freq_control_mask = 0xf,
-#endif
-	.core_limit_temp_degC = 70,
+	.core_limit_temp_degC = 80,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
@@ -5048,7 +5029,6 @@ static void __init register_i2c_devices(void)
 		apq8064_camera_board_info.board_info,
 		apq8064_camera_board_info.num_i2c_board_info,
 	};
-
 	struct i2c_registry apq8064_front_camera_i2c_devices = {
 		I2C_SURF | I2C_FFA | I2C_LIQUID | I2C_RUMI,
 		APQ_8064_GSBI7_QUP_I2C_BUS_ID,
@@ -5333,10 +5313,6 @@ static void __init apq8064_common_init(void)
 	apq8064_device_otg.dev.platform_data = &msm_otg_pdata;
 	apq8064_ehci_host_init();
 	apq8064_init_buses();
-
-#ifdef CONFIG_CPU_FREQ_GOV_UBERDEMAND	
-	set_second_phase_freq(CONFIG_CPU_FREQ_GOV_UBERDEMAND_SECOND_PHASE_FREQ);
-#endif
 
 	platform_add_devices(early_common_devices,
 				ARRAY_SIZE(early_common_devices));
