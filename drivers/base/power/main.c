@@ -636,6 +636,8 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 
  Unlock:
 	device_unlock(dev);
+
+ Complete:
 	complete_all(&dev->power.completion);
 
 	TRACE_RESUME(error);

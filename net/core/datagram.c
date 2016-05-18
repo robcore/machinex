@@ -127,6 +127,35 @@ out_noerr:
 	goto out;
 }
 
+static int skb_set_peeked(struct sk_buff *skb)
+{
+	struct sk_buff *nskb;
+
+	if (skb->peeked)
+		return 0;
+
+	/* We have to unshare an skb before modifying it. */
+	if (!skb_shared(skb))
+		goto done;
+
+	nskb = skb_clone(skb, GFP_ATOMIC);
+	if (!nskb)
+		return -ENOMEM;
+
+	skb->prev->next = nskb;
+	skb->next->prev = nskb;
+	nskb->prev = skb->prev;
+	nskb->next = skb->next;
+
+	consume_skb(skb);
+	skb = nskb;
+
+done:
+	skb->peeked = 1;
+
+	return 0;
+}
+
 /**
  *	__skb_recv_datagram - Receive a datagram skbuff
  *	@sk: socket
@@ -161,7 +190,9 @@ out_noerr:
 struct sk_buff *__skb_recv_datagram(struct sock *sk, unsigned flags,
 				    int *peeked, int *off, int *err)
 {
+	struct sk_buff_head *queue = &sk->sk_receive_queue;
 	struct sk_buff *skb;
+	unsigned long cpu_flags;
 	long timeo;
 	/*
 	 * Caller is allowed not to check sk->sk_err before skb_recv_datagram()
@@ -210,6 +241,8 @@ struct sk_buff *__skb_recv_datagram(struct sock *sk, unsigned flags,
 
 	return NULL;
 
+unlock_err:
+	spin_unlock_irqrestore(&queue->lock, cpu_flags);
 no_packet:
 	*err = error;
 	return NULL;
