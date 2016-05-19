@@ -362,7 +362,7 @@ KERNEL_FLAGS	= -marm -mtune=cortex-a15 -mcpu=cortex-a15 -mfpu=neon-vfpv4 \
 		  -fgcse-las -ftree-loop-im -ftree-loop-ivcanon -fivopts \
 		  -ftree-vectorize -fmodulo-sched -ffast-math -fweb \
 		  -frename-registers -ftree-loop-linear -std=gnu89 \
-		  -fmodulo-sched -ffast-math -funsafe-math-optimizations 
+		  -fmodulo-sched -ffast-math -funsafe-math-optimizations
 
 CFLAGS_MODULE   = -marm -mtune=cortex-a15 -munaligned-access -fno-pic -mfpu=neon-vfpv4 -mvectorize-with-neon-quad -fpredictive-commoning -fno-cond-mismatch -fsingle-precision-constant -mcpu=cortex-a15 -ftree-vectorize -mvectorize-with-neon-quad -funroll-loops -ftree-loop-im -ftree-loop-ivcanon -fmodulo-sched -fmodulo-sched-allow-regmoves -fivopts -mneon-for-64bits -fopenmp -fopenmp-simd -fsimd-cost-model=unlimited -std=gnu89 -fgraphite
 CFLAGS_MODULE   = -DMODULE $(KERNEL_FLAGS)
@@ -390,7 +390,7 @@ CFLAGS_A15 = -mtune=cortex-a15 -mfpu=neon-vfpv4 -marm
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -Wno-unused-value \
 		   -Wno-format-security -Wdeprecated-declarations \
-		   -Wno-aggressive-loop-optimizations \
+		   -Wno-aggressive-loop-optimizations -Wno-unused-label \
 		   -Wno-logical-not-parentheses -Wno-discarded-array-qualifiers \
 		   -Werror-implicit-function-declaration -Wno-uninitialized \
 		   -Wno-sequence-point -Wno-unused-variable -Wno-unused-function \

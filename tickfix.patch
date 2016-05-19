@@ -1,0 +1,46 @@
+diff --git a/include/linux/tick.h b/include/linux/tick.h
+index 5128d33..53dbbd7 100644
+--- a/include/linux/tick.h
++++ b/include/linux/tick.h
+@@ -48,7 +48,6 @@ enum tick_nohz_mode {
+  * @idle_exittime:	Time when the idle state was left
+  * @idle_sleeptime:	Sum of the time slept in idle with sched tick stopped
+  * @iowait_sleeptime:	Sum of the time slept in idle with sched tick stopped, with IO outstanding
+- * @sleep_length:	Duration of the current idle sleep
+  * @do_timer_lst:	CPU was the last one doing do_timer before going idle
+  */
+ struct tick_sched {
+@@ -67,7 +66,6 @@ struct tick_sched {
+ 	ktime_t				idle_exittime;
+ 	ktime_t				idle_sleeptime;
+ 	ktime_t				iowait_sleeptime;
+-	ktime_t				sleep_length;
+ 	unsigned long			last_jiffies;
+ 	unsigned long			next_jiffies;
+ 	ktime_t				idle_expires;
+diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
+index 3612fc7..60b1dcd 100644
+--- a/kernel/time/tick-sched.c
++++ b/kernel/time/tick-sched.c
+@@ -673,7 +673,6 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
+ out:
+ 	ts->next_jiffies = next_jiffies;
+ 	ts->last_jiffies = last_jiffies;
+-	ts->sleep_length = ktime_sub(dev->next_event, now);
+ 
+ 	return ret;
+ }
+@@ -837,8 +836,10 @@ void tick_nohz_irq_exit(void)
+	 ktime_t tick_nohz_get_sleep_length(void)
+ {
+ 	struct tick_sched *ts = &__get_cpu_var(tick_cpu_sched);
++	struct clock_event_device *dev = __get_cpu_var(tick_cpu_device).evtdev;
++	ktime_t now = ktime_get();
+ 
+-	return ts->sleep_length;
++	return ktime_sub(dev->next_event, now);
+ }
+ 
+ static void tick_nohz_restart(struct tick_sched *ts, ktime_t now)
+-- 
+1.7.9.5
