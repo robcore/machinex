@@ -1,0 +1,36 @@
+diff --git a/arch/arm/mach-msm/clock-8960.c b/arch/arm/mach-msm/clock-8960.c
+index d335fa0..66766f9 100644
+--- a/arch/arm/mach-msm/clock-8960.c
++++ b/arch/arm/mach-msm/clock-8960.c
+@@ -5476,8 +5476,7 @@ static void __init reg_init(void)
+         * the clock is halted. The sleep and wake-up delays are set to safe
+         * values.
+         */
+-       if (cpu_is_msm8960() &&
+-                       SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2) {
++       if (0)
+                rmwreg(0x44000000, AHB_EN_REG,  0x6C000103);
+                writel_relaxed(0x3C7097F9, AHB_EN2_REG);
+        } else {
+@@ -5494,8 +5493,7 @@ static void __init reg_init(void)
+        /* Initialize MM AXI registers: Enable HW gating for all clocks that
+         * support it. Also set FORCE_CORE_ON bits, and any sleep and wake-up
+         * delays to safe values. */
+-       if (cpu_is_msm8960() &&
+-                       SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 3) {
++       if (0) {
+                rmwreg(0x0003AFF9, MAXI_EN_REG,  0x0803FFFF);
+                rmwreg(0x3A27FCFF, MAXI_EN2_REG, 0x3A3FFFFF);
+                rmwreg(0x0027FCFF, MAXI_EN4_REG, 0x017FFFFF);
+@@ -5507,8 +5505,7 @@ static void __init reg_init(void)
+        rmwreg(0x0027FCFF, MAXI_EN3_REG, 0x003FFFFF);
+        if (cpu_is_apq8064())
+                rmwreg(0x009FE4FF, MAXI_EN5_REG, 0x01FFEFFF);
+-       if (cpu_is_msm8960() &&
+-                       SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2)
++       if (0)
+                rmwreg(0x00003C38, SAXI_EN_REG,  0x00003FFF);
+        else
+                rmwreg(0x000003C7, SAXI_EN_REG,  0x00003FFF);
+
+
