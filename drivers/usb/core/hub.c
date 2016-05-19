@@ -24,6 +24,7 @@
 #include <linux/kthread.h>
 #include <linux/mutex.h>
 #include <linux/freezer.h>
+#include <linux/random.h>
 #include <linux/usb/otg.h>
 
 #include <asm/uaccess.h>

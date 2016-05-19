@@ -1,0 +1,83 @@
+From 5cb240831eaf34ecb3c0c8ff301673abfbd19765 Mon Sep 17 00:00:00 2001
+Date: Mon, 10 Mar 2014 17:00:52 -0700
+Subject: [PATCH] send_cmd8
+
+Change-Id: Ic6a65d592dc926c0811e07777d06fccc7a0f95b3
+---
+ drivers/mmc/host/msm_sdcc.c  |   51 +++++++++++++++++++++++++++++++++++++++++-
+ drivers/mmc/host/sdhci-msm.c |    3 +-
+ drivers/mmc/host/sdhci.c     |    2 +-
+ 3 files changed, 53 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/mmc/host/msm_sdcc.c b/drivers/mmc/host/msm_sdcc.c
+index 95f0a04..6444939 100644
+--- a/drivers/mmc/host/msm_sdcc.c
++++ b/drivers/mmc/host/msm_sdcc.c
+@@ -2207,6 +2207,54 @@ static bool msmsdcc_is_wait_for_prog_done(struct msmsdcc_host *host,
+ 	return false;
+ }
+ 
++void msmsdcc_sendextcsd( struct mmc_host *mmc )
++{
++
++	struct msmsdcc_host *host = mmc_priv(mmc);
++	static int counter = 1000;
++	unsigned char *data_buf = NULL;
++	struct mmc_command cmd = {0};
++	struct mmc_data data = {0};
++	struct mmc_request mrq = {
++		.cmd = &cmd,
++		.data = &data
++	};	
++	struct scatterlist sg;
++	if ( !counter--  )
++	{	
++
++		counter = 1000;
++		cmd.opcode = MMC_SEND_EXT_CSD;
++		cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
++		data.blksz = 512;
++		data.blocks = 1;
++		data.flags = MMC_DATA_READ;
++		data.timeout_ns = 1000 * 1000 * 1000; /* 1 sec */
++
++		data.sg = &sg;
++		data.sg_len = 1;
++		sg_init_one(&sg, data_buf, 512);
++		memset(data_buf, 0, 512);
++		mmc_wait_for_req(mmc, &mrq);
++
++		if( cmd.error )
++		{
++			printk(KERN_ALERT "%s: %s :: cmd erro r= %d",mmc_hostname(host->mmc), __func__,  cmd.error );
++			
++		} 	
++		else if( data.error )		
++		{
++			printk(KERN_ALERT "%s: %s :: data error = %d",mmc_hostname( host->mmc ), __func__,  data.error );
++		}
++		else
++		{
++			printk( KERN_ALERT "%s : %s :: Pked CMD Stat =  %08x",mmc_hostname( host->mmc ), __func__,  data_buf[36] );
++		}
++
++
++	}
++}
++
+ static void
+ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+ {
+@@ -2214,10 +2262,11 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+ 	unsigned long		flags;
+ 	unsigned int error = 0;
+ 	int retries = 5;
+-
+ 	/*
+ 	 * Get the SDIO AL client out of LPM.
+ 	 */
++	
++	msmsdcc_sendextcsd( mmc );
+ 	WARN(host->dummy_52_sent, "Dummy CMD52 in progress\n");
+ 	if (host->plat->is_sdio_al_client)
+ 		msmsdcc_sdio_al_lpm(mmc, false);
