@@ -2431,9 +2431,6 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
 	if (uaddr == uaddr2)
 		return -EINVAL;
 
-	if (uaddr == uaddr2)
-		return -EINVAL;
-
 	if (!bitset)
 		return -EINVAL;
 
@@ -2469,15 +2466,6 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
 	ret = futex_wait_setup(uaddr, val, flags, &q, &hb);
 	if (ret)
 		goto out_key2;
-
-	/*
-	 * The check above which compares uaddrs is not sufficient for
-	 * shared futexes. We need to compare the keys:
-	 */
-	if (match_futex(&q.key, &key2)) {
-		ret = -EINVAL;
-		goto out_put_keys;
-	}
 
 	/*
 	 * The check above which compares uaddrs is not sufficient for

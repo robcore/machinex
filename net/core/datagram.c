@@ -211,8 +211,6 @@ struct sk_buff *__skb_recv_datagram(struct sock *sk, unsigned flags,
 		 * Look at current nfs client by the way...
 		 * However, this function was correct in any case. 8)
 		 */
-		unsigned long cpu_flags;
-		struct sk_buff_head *queue = &sk->sk_receive_queue;
 
 		spin_lock_irqsave(&queue->lock, cpu_flags);
 		skb_queue_walk(queue, skb) {
@@ -222,7 +220,11 @@ struct sk_buff *__skb_recv_datagram(struct sock *sk, unsigned flags,
 					*off -= skb->len;
 					continue;
 				}
-				skb->peeked = 1;
+
+				error = skb_set_peeked(skb);
+				if (error)
+					goto unlock_err;
+
 				atomic_inc(&skb->users);
 			} else
 				__skb_unlink(skb, queue);
