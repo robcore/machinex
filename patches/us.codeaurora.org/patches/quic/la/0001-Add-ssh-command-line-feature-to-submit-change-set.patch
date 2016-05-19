@@ -1,0 +1,32 @@
+From 1c2b2ee12ecd333584aaee41ca5b86a87796cac7 Mon Sep 17 00:00:00 2001
+From: Martin Fick <mfick@codeaurora.org>
+Date: Thu, 10 Jun 2010 10:32:00 -0600
+Subject: [PATCH 1/2] Add ssh command line feature to submit change set
+
+Rename the ssh gerrit approve command to review and enhance
+it with the ability to perform submits via --submit.  Create
+an alias for 'review' as 'approve' to support legacy approve.
+Update docs accordingly.
+
+Bug: issue 310
+Change-Id: I5b88c8818b227de7dfc9c8a879eb5e7c7821e3b5
+---
+ .../google/gerrit/sshd/commands/ReviewCommand.java |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gerrit-sshd/src/main/java/com/google/gerrit/sshd/commands/ReviewCommand.java b/gerrit-sshd/src/main/java/com/google/gerrit/sshd/commands/ReviewCommand.java
+index d9f9eae..85eb118 100644
+--- a/gerrit-sshd/src/main/java/com/google/gerrit/sshd/commands/ReviewCommand.java
++++ b/gerrit-sshd/src/main/java/com/google/gerrit/sshd/commands/ReviewCommand.java
+@@ -47,7 +47,7 @@ import org.kohsuke.args4j.Argument;
+ import org.kohsuke.args4j.Option;
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+-
++ 
+ import java.io.IOException;
+ import java.util.ArrayList;
+ import java.util.Collections;
+-- 
+1.7.0.2
+

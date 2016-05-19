@@ -1,0 +1,294 @@
+From 49fe479cc1bebee33ad37f905a41c1f21ae3b93d Mon Sep 17 00:00:00 2001
+From: Kiran Rudramuni <kchitrik@codeaurora.org>
+Date: Tue, 19 Aug 2014 17:05:09 -0700
+Subject: [PATCH] one frame id changes
+
+Change-Id: Ic1c57659b0081fdf9c6574aec2059b69a1b0f779
+---
+ drivers/media/platform/msm/camera_v2/isp/msm_isp.h |  2 +-
+ .../media/platform/msm/camera_v2/isp/msm_isp32.c   | 12 ++--
+ .../media/platform/msm/camera_v2/isp/msm_isp40.c   | 35 +++++++----
+ .../platform/msm/camera_v2/isp/msm_isp_axi_util.c  | 67 +++++++++++-----------
+ .../platform/msm/camera_v2/isp/msm_isp_axi_util.h  |  2 +-
+ .../msm/camera_v2/isp/msm_isp_stats_util.c         |  8 +--
+ 6 files changed, 70 insertions(+), 56 deletions(-)
+
+diff --git a/drivers/media/platform/msm/camera_v2/isp/msm_isp.h b/drivers/media/platform/msm/camera_v2/isp/msm_isp.h
+index d33d34b..869da78 100644
+--- a/drivers/media/platform/msm/camera_v2/isp/msm_isp.h
++++ b/drivers/media/platform/msm/camera_v2/isp/msm_isp.h
+@@ -307,7 +307,6 @@ struct msm_vfe_axi_composite_info {
+ };
+ 
+ struct msm_vfe_src_info {
+-	unsigned long frame_id;
+ 	uint8_t active;
+ 	uint8_t pix_stream_count;
+ 	uint8_t raw_stream_count;
+@@ -338,6 +337,7 @@ struct msm_vfe_axi_shared_data {
+ 	atomic_t axi_cfg_update;
+ 	enum msm_isp_camif_update_state pipeline_update;
+ 	struct msm_vfe_src_info src_info[VFE_SRC_MAX];
++	unsigned long frame_id;
+ 	uint16_t stream_handle_cnt;
+ 	unsigned long event_mask;
+ };
+diff --git a/drivers/media/platform/msm/camera_v2/isp/msm_isp32.c b/drivers/media/platform/msm/camera_v2/isp/msm_isp32.c
+index 00a443b..d9547df 100644
+--- a/drivers/media/platform/msm/camera_v2/isp/msm_isp32.c
++++ b/drivers/media/platform/msm/camera_v2/isp/msm_isp32.c
+@@ -193,7 +193,7 @@ static void msm_vfe32_process_camif_irq(struct vfe_device *vfe_dev,
+ 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].raw_stream_count > 0
+ 			&& vfe_dev->axi_data.src_info[VFE_PIX_0].
+ 			pix_stream_count == 0) {
+-			msm_isp_sof_notify(vfe_dev, VFE_PIX_0, ts);
++			msm_isp_sof_notify(vfe_dev, ts);
+ 			if (vfe_dev->axi_data.stream_update)
+ 				msm_isp_axi_stream_update(vfe_dev);
+ 			msm_isp_update_framedrop_reg(vfe_dev);
+@@ -344,19 +344,19 @@ static void msm_vfe32_process_reg_update(struct vfe_device *vfe_dev,
+ 
+ 	if (irq_status0 & BIT(5)) {
+ 		flag_pix = 1;
+-		msm_isp_sof_notify(vfe_dev, VFE_PIX_0, ts);
++		msm_isp_sof_notify(vfe_dev, ts);
+ 	}
+ 	if (irq_status1 & BIT(26)) {
+ 		flag_rdi = (1 << VFE_RAW_0) | flag_rdi;
+-		msm_isp_sof_notify(vfe_dev, VFE_RAW_0, ts);
++		msm_isp_sof_notify(vfe_dev, ts);
+ 	}
+ 	if (irq_status1 & BIT(27)) {
+ 		flag_rdi = (1 << VFE_RAW_1) | flag_rdi;
+-		msm_isp_sof_notify(vfe_dev, VFE_RAW_1, ts);
++		msm_isp_sof_notify(vfe_dev, ts);
+ 	}
+ 	if (irq_status1 & BIT(28)) {
+ 		flag_rdi = (1 << VFE_RAW_2) | flag_rdi;
+-		msm_isp_sof_notify(vfe_dev, VFE_RAW_2, ts);
++		msm_isp_sof_notify(vfe_dev, ts);
+ 	}
+ 
+ 	if (vfe_dev->axi_data.stream_update)
+@@ -1101,7 +1101,7 @@ static uint32_t msm_vfe32_stats_get_comp_mask(uint32_t irq_status0,
+ 
+ static uint32_t msm_vfe32_stats_get_frame_id(struct vfe_device *vfe_dev)
+ {
+-	return vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
++	return vfe_dev->axi_data.frame_id;
+ }
+ 
+ static int msm_vfe32_get_platform_data(struct vfe_device *vfe_dev)
+diff --git a/drivers/media/platform/msm/camera_v2/isp/msm_isp40.c b/drivers/media/platform/msm/camera_v2/isp/msm_isp40.c
+index 63b81c5..a989540 100644
+--- a/drivers/media/platform/msm/camera_v2/isp/msm_isp40.c
++++ b/drivers/media/platform/msm/camera_v2/isp/msm_isp40.c
+@@ -378,7 +378,7 @@ static void msm_vfe40_process_camif_irq(struct vfe_device *vfe_dev,
+ 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].raw_stream_count > 0
+ 			&& vfe_dev->axi_data.src_info[VFE_PIX_0].
+ 			pix_stream_count == 0) {
+-			msm_isp_sof_notify(vfe_dev, VFE_PIX_0, ts);
++			msm_isp_sof_notify(vfe_dev, ts);
+ 			if (vfe_dev->axi_data.stream_update)
+ 				msm_isp_axi_stream_update(vfe_dev);
+ 			msm_isp_update_framedrop_reg(vfe_dev);
+@@ -554,14 +554,29 @@ static void msm_vfe40_process_reg_update(struct vfe_device *vfe_dev,
+ 	if (!(irq_status0 & 0xF0))
+ 		return;
+ 
+-	if (irq_status0 & BIT(4))
+-		msm_isp_sof_notify(vfe_dev, VFE_PIX_0, ts);
+-	if (irq_status0 & BIT(5))
+-		msm_isp_sof_notify(vfe_dev, VFE_RAW_0, ts);
+-	if (irq_status0 & BIT(6))
+-		msm_isp_sof_notify(vfe_dev, VFE_RAW_1, ts);
+-	if (irq_status0 & BIT(7))
+-		msm_isp_sof_notify(vfe_dev, VFE_RAW_2, ts);
++
++ 	if (vfe_dev->axi_data.src_info[VFE_PIX_0].active)
++ 	{
++ 		if (irq_status0 & BIT(4) )
++ 			msm_isp_sof_notify(vfe_dev,  ts);
++ 	} else
++ 	if (vfe_dev->axi_data.src_info[VFE_RAW_0].active)
++ 	{
++ 		if (irq_status0 & BIT(5) )
++ 			msm_isp_sof_notify(vfe_dev, ts);
++ 	} else
++ 	if (vfe_dev->axi_data.src_info[VFE_RAW_1].active)
++ 	{
++ 		if (irq_status0 & BIT(6) )
++ 			msm_isp_sof_notify(vfe_dev, ts);
++ 	} else
++ 	if (vfe_dev->axi_data.src_info[VFE_RAW_2].active)
++ 	{
++ 		if (irq_status0 & BIT(7) )
++ 			msm_isp_sof_notify(vfe_dev, ts);
++ 	} else {
++ 		msm_isp_sof_notify(vfe_dev, ts);
++ 	}
+ 
+ 	if (vfe_dev->axi_data.stream_update)
+ 		msm_isp_axi_stream_update(vfe_dev);
+@@ -1340,7 +1355,7 @@ static uint32_t msm_vfe40_stats_get_comp_mask(
+ static uint32_t msm_vfe40_stats_get_frame_id(
+ 	struct vfe_device *vfe_dev)
+ {
+-	return vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
++	return vfe_dev->axi_data.frame_id;
+ }
+ 
+ static int msm_vfe40_get_platform_data(struct vfe_device *vfe_dev)
+diff --git a/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.c b/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.c
+index 3632ea9..c42a361 100755
+--- a/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.c
++++ b/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.c
+@@ -449,35 +449,20 @@ static void msm_isp_reset_framedrop(struct vfe_device *vfe_dev,
+ 	vfe_dev->hw_info->vfe_ops.axi_ops.cfg_framedrop(vfe_dev, stream_info);
+ }
+ 
+-void msm_isp_sof_notify(struct vfe_device *vfe_dev,
+-	enum msm_vfe_input_src frame_src, struct msm_isp_timestamp *ts) {
++void msm_isp_sof_notify(struct vfe_device        *vfe_dev,
++			   struct msm_isp_timestamp *ts)
++{
+ 	struct msm_isp_event_data sof_event;
+-	switch (frame_src) {
+-	case VFE_PIX_0:
+-		ISP_DBG("%s: PIX0 frame id: %lu\n", __func__,
+-			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id);
+-		vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id++;
+-		if (vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id == 0)
+-			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id = 1;
+-		break;
+-	case VFE_RAW_0:
+-	case VFE_RAW_1:
+-	case VFE_RAW_2:
+-		ISP_DBG("%s: RDI%d frame id: %lu\n",
+-			__func__, frame_src - VFE_RAW_0,
+-			vfe_dev->axi_data.src_info[frame_src].frame_id);
+-		vfe_dev->axi_data.src_info[frame_src].frame_id++;
+-		if (vfe_dev->axi_data.src_info[frame_src].frame_id == 0)
+-			vfe_dev->axi_data.src_info[frame_src].frame_id = 1;
+-		break;
+-	default:
+-		pr_err("%s: invalid frame src %d received\n",
+-			__func__, frame_src);
+-		break;
+-	}
+ 
+-	sof_event.input_intf = frame_src;
+-	sof_event.frame_id = vfe_dev->axi_data.src_info[frame_src].frame_id;
++	//SSK ISP_DBG("%s: frame id: %lu\n", __func__, vfe_dev->axi_data.frame_id);
++	pr_err("SOF %s: frame id: %lu\n", __func__, vfe_dev->axi_data.frame_id);
++
++	vfe_dev->axi_data.frame_id++;
++	if (vfe_dev->axi_data.frame_id == 0)
++		vfe_dev->axi_data.frame_id = 1;
++
++	sof_event.input_intf = VFE_PIX_0;
++	sof_event.frame_id = vfe_dev->axi_data.frame_id;
+ 	sof_event.timestamp = ts->event_time;
+ 	sof_event.mono_timestamp = ts->buf_time;
+ 	msm_isp_send_event(vfe_dev, ISP_EVENT_SOF, &sof_event);
+@@ -877,8 +862,7 @@ static void msm_isp_process_done_buf(struct vfe_device *vfe_dev,
+ 	struct msm_isp_event_data buf_event;
+ 	struct timeval *time_stamp;
+ 	uint32_t stream_idx = HANDLE_TO_IDX(stream_info->stream_handle);
+-	uint32_t frame_id = vfe_dev->axi_data.
+-		src_info[SRC_TO_INTF(stream_info->stream_src)].frame_id;
++	uint32_t frame_id = vfe_dev->axi_data.frame_id;
+ 
+ 	if (buf && ts) {
+ 		if (vfe_dev->vt_enable) {
+@@ -1260,19 +1244,19 @@ static int msm_isp_start_axi_stream(struct vfe_device *vfe_dev,
+ 	msm_isp_update_camif_output_count(vfe_dev, stream_cfg_cmd);
+ 	msm_isp_update_rdi_output_count(vfe_dev, stream_cfg_cmd);
+ 	if (camif_update == ENABLE_CAMIF) {
+-		vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id = 0;
++		vfe_dev->axi_data.frame_id = 0;
+ 		vfe_dev->hw_info->vfe_ops.core_ops.
+ 			update_camif_state(vfe_dev, camif_update);
+ 	}
+ 
+ 	if (vfe_dev->axi_data.src_info[VFE_RAW_0].raw_stream_count > 0) {
+-		vfe_dev->axi_data.src_info[VFE_RAW_0].frame_id = init_frm_drop;
++		vfe_dev->axi_data.frame_id = init_frm_drop;
+ 	}
+ 	if (vfe_dev->axi_data.src_info[VFE_RAW_1].raw_stream_count > 0) {
+-		vfe_dev->axi_data.src_info[VFE_RAW_1].frame_id = init_frm_drop;
++		vfe_dev->axi_data.frame_id = init_frm_drop;
+ 	}
+ 	if (vfe_dev->axi_data.src_info[VFE_RAW_2].raw_stream_count > 0) {
+-		vfe_dev->axi_data.src_info[VFE_RAW_2].frame_id = init_frm_drop;
++		vfe_dev->axi_data.frame_id = init_frm_drop;
+ 	}
+ 
+ 	if (wait_for_complete)
+@@ -1523,7 +1507,22 @@ void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
+ 	if (!(comp_mask || wm_mask))
+ 		return;
+ 
+-	ISP_DBG("%s: status: 0x%x\n", __func__, irq_status0);
++	ISP_DBG("%s: comp_mask=0x%x wm_mask=0x%x "
++	    " c[0]=0x%x c[1]=0x%x c[2]=0x%x"
++	    " num_active_stream %d num_used_composite_mask 0x%x num_used_wm %d"
++	    " w[0]=0x%x w[1]=0x%x w[2]=0x%x"
++	    "\n", __func__,
++	       comp_mask, wm_mask,
++           axi_data->composite_info[0].stream_handle,
++           axi_data->composite_info[1].stream_handle,
++           axi_data->composite_info[2].stream_handle,
++           axi_data->num_active_stream,
++           axi_data->num_used_composite_mask,
++           axi_data->num_used_wm,
++           axi_data->free_wm[0],
++           axi_data->free_wm[1],
++           axi_data->free_wm[2]
++	       );
+ 	pingpong_status =
+ 		vfe_dev->hw_info->vfe_ops.axi_ops.get_pingpong_status(vfe_dev);
+ 
+diff --git a/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.h b/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.h
+index 7aa0e18..875cc1c 100644
+--- a/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.h
++++ b/drivers/media/platform/msm/camera_v2/isp/msm_isp_axi_util.h
+@@ -48,7 +48,7 @@ void msm_isp_axi_stream_update(struct vfe_device *vfe_dev);
+ void msm_isp_update_framedrop_reg(struct vfe_device *vfe_dev);
+ void msm_isp_update_framedrop_rdi_reg(struct vfe_device *vfe_dev, int flag);
+ void msm_isp_sof_notify(struct vfe_device *vfe_dev,
+-	enum msm_vfe_input_src frame_src, struct msm_isp_timestamp *ts);
++	struct msm_isp_timestamp *ts);
+ void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
+ 	uint32_t irq_status0, uint32_t irq_status1,
+ 	struct msm_isp_timestamp *ts);
+diff --git a/drivers/media/platform/msm/camera_v2/isp/msm_isp_stats_util.c b/drivers/media/platform/msm/camera_v2/isp/msm_isp_stats_util.c
+index 6bd7585..cadc5ba 100644
+--- a/drivers/media/platform/msm/camera_v2/isp/msm_isp_stats_util.c
++++ b/drivers/media/platform/msm/camera_v2/isp/msm_isp_stats_util.c
+@@ -96,9 +96,10 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
+ 
+ 	memset(&buf_event, 0, sizeof(struct msm_isp_event_data));
+ 	buf_event.timestamp = ts->event_time;
+-	buf_event.frame_id =
+-		vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
++
++	buf_event.frame_id = vfe_dev->axi_data.frame_id;
+ 	buf_event.input_intf = VFE_PIX_0;
++
+ 	pingpong_status = vfe_dev->hw_info->
+ 		vfe_ops.stats_ops.get_pingpong_status(vfe_dev);
+ 
+@@ -112,8 +113,7 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
+ 		if (done_buf) {
+ 			rc = vfe_dev->buf_mgr->ops->buf_divert(vfe_dev->buf_mgr,
+ 				done_buf->bufq_handle, done_buf->buf_idx,
+-				&ts->buf_time, vfe_dev->axi_data.
+-				src_info[VFE_PIX_0].frame_id);
++				&ts->buf_time, buf_event.frame_id);
+ 			if (rc != 0)
+ 				continue;
+ 
+-- 
+1.8.2.1
+

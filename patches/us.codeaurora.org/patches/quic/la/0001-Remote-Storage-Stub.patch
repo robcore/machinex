@@ -1,0 +1,955 @@
+From b41b8cb5c55347b01a479518a3b21a29dd65f764 Mon Sep 17 00:00:00 2001
+From: Liron Kuch <lkuch@codeaurora.org>
+Date: Thu, 7 Jan 2016 14:49:47 +0200
+Subject: [PATCH] Remote Storage Stub
+
+Implemented remote storage stub for APQ-8016 platform to
+resolve Modem initialization from user-space.
+
+Change-Id: Iaa0b7c6dcde00e4674e88e5c23c668e1bf9579c7
+Signed-off-by: Liron Kuch <lkuch@codeaurora.org>
+---
+ drivers/uio/msm_sharedmem/Makefile             |   1 +
+ drivers/uio/msm_sharedmem/remote_storage_v01.c | 490 +++++++++++++++++++++++++
+ drivers/uio/msm_sharedmem/remote_storage_v01.h | 147 ++++++++
+ drivers/uio/msm_sharedmem/sharedmem_qmi.c      | 213 +++++++++++
+ 4 files changed, 851 insertions(+)
+ create mode 100644 drivers/uio/msm_sharedmem/remote_storage_v01.c
+ create mode 100644 drivers/uio/msm_sharedmem/remote_storage_v01.h
+
+diff --git a/drivers/uio/msm_sharedmem/Makefile b/drivers/uio/msm_sharedmem/Makefile
+index e6b8570..79d134a 100644
+--- a/drivers/uio/msm_sharedmem/Makefile
++++ b/drivers/uio/msm_sharedmem/Makefile
+@@ -1,4 +1,5 @@
+ obj-$(CONFIG_UIO_MSM_SHAREDMEM) := \
+ 	msm_sharedmem.o \
+ 	remote_filesystem_access_v01.o \
++	remote_storage_v01.o \
+ 	sharedmem_qmi.o \
+diff --git a/drivers/uio/msm_sharedmem/remote_storage_v01.c b/drivers/uio/msm_sharedmem/remote_storage_v01.c
+new file mode 100644
+index 0000000..946e66d
+--- /dev/null
++++ b/drivers/uio/msm_sharedmem/remote_storage_v01.c
+@@ -0,0 +1,490 @@
++ /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 and
++ * only version 2 as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++#include <linux/qmi_encdec.h>
++
++#include <soc/qcom/msm_qmi_interface.h>
++
++#include "remote_storage_v01.h"
++
++
++struct elem_info rmtfs_open_req_msg_v01_ei[] = {
++	{
++		.data_type   = QMI_STRING,
++		.elem_len    = RMTFS_MAX_FILE_PATH_V01,
++		.elem_size   = sizeof(char),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x01,
++		.offset      = offsetof(struct rmtfs_open_req_msg_v01,
++					   path),
++	},
++
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.tlv_type    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++struct elem_info rmtfs_open_resp_msg_v01_ei[] = {
++	{
++		.data_type   = QMI_STRUCT,
++		.elem_len    = 1,
++		.elem_size   = sizeof(struct qmi_response_type_v01),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x02,
++		.offset      = offsetof(struct rmtfs_open_resp_msg_v01,
++					   resp),
++		.ei_array    = get_qmi_response_type_v01_ei(),
++	},
++	{
++		.data_type   = QMI_OPT_FLAG,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint8_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x10,
++		.offset      = offsetof(struct rmtfs_open_resp_msg_v01,
++					caller_id_valid),
++	},
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x10,
++		.offset      = offsetof(struct rmtfs_open_resp_msg_v01,
++					caller_id),
++	},
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.is_array    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++struct elem_info rmtfs_alloc_buff_req_msg_v01_ei[] = {
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x01,
++		.offset      = offsetof(struct rmtfs_alloc_buff_req_msg_v01,
++					caller_id),
++	},
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x02,
++		.offset      = offsetof(struct rmtfs_alloc_buff_req_msg_v01,
++					buff_size),
++	},
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.tlv_type    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++struct elem_info rmtfs_alloc_buff_resp_msg_v01_ei[] = {
++	{
++		.data_type   = QMI_STRUCT,
++		.elem_len    = 1,
++		.elem_size   = sizeof(struct qmi_response_type_v01),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x02,
++		.offset      = offsetof(struct rmtfs_alloc_buff_resp_msg_v01,
++					   resp),
++		.ei_array    = get_qmi_response_type_v01_ei(),
++	},
++	{
++		.data_type   = QMI_OPT_FLAG,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint8_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x10,
++		.offset      = offsetof(struct rmtfs_alloc_buff_resp_msg_v01,
++					buff_address_valid),
++	},
++	{
++		.data_type   = QMI_UNSIGNED_8_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint64_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x10,
++		.offset      = offsetof(struct rmtfs_alloc_buff_resp_msg_v01,
++					buff_address),
++	},
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.is_array    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++/*
++static const uint8_t rmtfs_rw_iovec_req_msg_data_v01[] = {
++  0x01,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, caller_id),
++
++  0x02,
++   QMI_IDL_1_BYTE_ENUM,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, direction),
++
++  0x03,
++  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, iovec_struct),
++  RMTFS_MAX_IOVEC_ENTRIES_V01,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, iovec_struct) - QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, iovec_struct_len),
++  QMI_IDL_TYPE88(0, 0),
++
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x04,
++   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
++  QMI_IDL_OFFSET16ARRAY(rmtfs_rw_iovec_req_msg_v01, is_force_sync)
++};
++
++*/
++
++struct elem_info rmtfs_iovec_desc_type_v01_ei[] = {
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x01,
++		.offset      = offsetof(struct rmtfs_iovec_desc_type_v01,
++					sector_addr),
++	},
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x01,
++		.offset      = offsetof(struct rmtfs_iovec_desc_type_v01,
++					data_phy_addr_offset),
++	},
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x01,
++		.offset      = offsetof(struct rmtfs_iovec_desc_type_v01,
++					num_sector),
++	},
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.is_array    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++struct elem_info rmtfs_rw_iovec_req_msg_v01_ei[] = {
++	{
++		.data_type   = QMI_UNSIGNED_4_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x01,
++		.offset      = offsetof(struct rmtfs_rw_iovec_req_msg_v01,
++					caller_id),
++	},
++	{
++		.data_type   = QMI_UNSIGNED_1_BYTE/*QMI_SIGNED_4_BYTE_ENUM*/,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint8_t)/*sizeof(rmtfs_direction_enum_v01)*/,
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x02,
++		.offset      = offsetof(struct rmtfs_rw_iovec_req_msg_v01,
++					direction),
++	},
++	{
++		.data_type   = QMI_DATA_LEN,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint8_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x03,
++		.offset	     = offsetof(struct rmtfs_rw_iovec_req_msg_v01,
++					iovec_struct_len),
++	},
++	{
++		.data_type   = QMI_STRUCT,
++		.elem_len    = RMTFS_MAX_IOVEC_ENTRIES_V01,
++		.elem_size   = sizeof(struct rmtfs_iovec_desc_type_v01),
++		.is_array    = VAR_LEN_ARRAY,
++		.tlv_type    = 0x03,
++		.offset      = offsetof(struct rmtfs_rw_iovec_req_msg_v01,
++					iovec_struct),
++		.ei_array    = rmtfs_iovec_desc_type_v01_ei,
++	},
++	{
++		.data_type   = QMI_UNSIGNED_1_BYTE,
++		.elem_len    = 1,
++		.elem_size   = sizeof(uint32_t),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x04,
++		.offset      = offsetof(struct rmtfs_rw_iovec_req_msg_v01,
++					is_force_sync),
++	},
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.tlv_type    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++struct elem_info rmtfs_rw_iovec_resp_msg_v01_ei[] = {
++	{
++		.data_type   = QMI_STRUCT,
++		.elem_len    = 1,
++		.elem_size   = sizeof(struct qmi_response_type_v01),
++		.is_array    = NO_ARRAY,
++		.tlv_type    = 0x02,
++		.offset      = offsetof(struct rmtfs_rw_iovec_resp_msg_v01,
++					   resp),
++		.ei_array    = get_qmi_response_type_v01_ei(),
++	},
++
++	{
++		.data_type   = QMI_EOTI,
++		.is_array    = NO_ARRAY,
++		.is_array    = QMI_COMMON_TLV_TYPE,
++	},
++};
++
++
++#if 0
++
++/*Type Definitions*/
++static const uint8_t rmtfs_iovec_desc_type_data_v01[] = {
++  QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_iovec_desc_type_v01, sector_addr),
++
++  QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_iovec_desc_type_v01, data_phy_addr_offset),
++
++  QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_iovec_desc_type_v01, num_sector),
++
++  QMI_IDL_FLAG_END_VALUE
++};
++	{
++		.data_type	= QMI_DATA_LEN,
++		.elem_len	= 1,
++		.elem_size	= sizeof(uint8_t),
++		.is_array	= NO_ARRAY,
++		.tlv_type	= 0x10,
++		.offset		= offsetof(
++			struct ipa_install_fltr_rule_req_msg_v01,
++			filter_spec_list_len),
++	},
++/*Message Definitions*/
++static const uint8_t rmtfs_open_req_msg_data_v01[] = {
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
++  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
++  QMI_IDL_OFFSET8(rmtfs_open_req_msg_v01, path),
++  RMTFS_MAX_FILE_PATH_V01
++};
++
++static const uint8_t rmtfs_open_resp_msg_data_v01[] = {
++  0x02,
++   QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_open_resp_msg_v01, resp),
++  QMI_IDL_TYPE88(1, 0),
++
++  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(rmtfs_open_resp_msg_v01, caller_id) - QMI_IDL_OFFSET8(rmtfs_open_resp_msg_v01, caller_id_valid)),
++  0x10,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_open_resp_msg_v01, caller_id)
++};
++
++static const uint8_t rmtfs_close_req_msg_data_v01[] = {
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_close_req_msg_v01, caller_id)
++};
++
++static const uint8_t rmtfs_close_resp_msg_data_v01[] = {
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
++   QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_close_resp_msg_v01, resp),
++  QMI_IDL_TYPE88(1, 0)
++};
++
++static const uint8_t rmtfs_rw_iovec_req_msg_data_v01[] = {
++  0x01,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, caller_id),
++
++  0x02,
++   QMI_IDL_1_BYTE_ENUM,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, direction),
++
++  0x03,
++  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, iovec_struct),
++  RMTFS_MAX_IOVEC_ENTRIES_V01,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, iovec_struct) - QMI_IDL_OFFSET8(rmtfs_rw_iovec_req_msg_v01, iovec_struct_len),
++  QMI_IDL_TYPE88(0, 0),
++
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x04,
++   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
++  QMI_IDL_OFFSET16ARRAY(rmtfs_rw_iovec_req_msg_v01, is_force_sync)
++};
++
++static const uint8_t rmtfs_rw_iovec_resp_msg_data_v01[] = {
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
++   QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_rw_iovec_resp_msg_v01, resp),
++  QMI_IDL_TYPE88(1, 0)
++};
++
++static const uint8_t rmtfs_alloc_buff_req_msg_data_v01[] = {
++  0x01,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_alloc_buff_req_msg_v01, caller_id),
++
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_alloc_buff_req_msg_v01, buff_size)
++};
++
++static const uint8_t rmtfs_alloc_buff_resp_msg_data_v01[] = {
++  0x02,
++   QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_alloc_buff_resp_msg_v01, resp),
++  QMI_IDL_TYPE88(1, 0),
++
++  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(rmtfs_alloc_buff_resp_msg_v01, buff_address) - QMI_IDL_OFFSET8(rmtfs_alloc_buff_resp_msg_v01, buff_address_valid)),
++  0x10,
++   QMI_IDL_GENERIC_8_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_alloc_buff_resp_msg_v01, buff_address)
++};
++
++static const uint8_t rmtfs_get_dev_error_req_msg_data_v01[] = {
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
++   QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_get_dev_error_req_msg_v01, caller_id)
++};
++
++static const uint8_t rmtfs_get_dev_error_resp_msg_data_v01[] = {
++  0x02,
++   QMI_IDL_AGGREGATE,
++  QMI_IDL_OFFSET8(rmtfs_get_dev_error_resp_msg_v01, resp),
++  QMI_IDL_TYPE88(1, 0),
++
++  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(rmtfs_get_dev_error_resp_msg_v01, status) - QMI_IDL_OFFSET8(rmtfs_get_dev_error_resp_msg_v01, status_valid)),
++  0x10,
++   QMI_IDL_1_BYTE_ENUM,
++  QMI_IDL_OFFSET8(rmtfs_get_dev_error_resp_msg_v01, status)
++};
++
++static const uint8_t rmtfs_force_sync_ind_msg_data_v01[] = {
++  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
++  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_4_BYTE,
++  QMI_IDL_OFFSET8(rmtfs_force_sync_ind_msg_v01, caller_id),
++  RMTFS_MAX_CALLER_ID_V01,
++  QMI_IDL_OFFSET8(rmtfs_force_sync_ind_msg_v01, caller_id) - QMI_IDL_OFFSET8(rmtfs_force_sync_ind_msg_v01, caller_id_len)
++};
++
++/* Type Table */
++static const qmi_idl_type_table_entry  rmtfs_type_table_v01[] = {
++  {sizeof(rmtfs_iovec_desc_type_v01), rmtfs_iovec_desc_type_data_v01}
++};
++
++/* Message Table */
++static const qmi_idl_message_table_entry rmtfs_message_table_v01[] = {
++  {sizeof(rmtfs_open_req_msg_v01), rmtfs_open_req_msg_data_v01},
++  {sizeof(rmtfs_open_resp_msg_v01), rmtfs_open_resp_msg_data_v01},
++  {sizeof(rmtfs_close_req_msg_v01), rmtfs_close_req_msg_data_v01},
++  {sizeof(rmtfs_close_resp_msg_v01), rmtfs_close_resp_msg_data_v01},
++  {sizeof(rmtfs_rw_iovec_req_msg_v01), rmtfs_rw_iovec_req_msg_data_v01},
++  {sizeof(rmtfs_rw_iovec_resp_msg_v01), rmtfs_rw_iovec_resp_msg_data_v01},
++  {sizeof(rmtfs_alloc_buff_req_msg_v01), rmtfs_alloc_buff_req_msg_data_v01},
++  {sizeof(rmtfs_alloc_buff_resp_msg_v01), rmtfs_alloc_buff_resp_msg_data_v01},
++  {sizeof(rmtfs_get_dev_error_req_msg_v01), rmtfs_get_dev_error_req_msg_data_v01},
++  {sizeof(rmtfs_get_dev_error_resp_msg_v01), rmtfs_get_dev_error_resp_msg_data_v01},
++  {sizeof(rmtfs_force_sync_ind_msg_v01), rmtfs_force_sync_ind_msg_data_v01}
++};
++
++/* Range Table */
++/* No Ranges Defined in IDL */
++
++/* Predefine the Type Table Object */
++static const qmi_idl_type_table_object rmtfs_qmi_idl_type_table_object_v01;
++
++/*Referenced Tables Array*/
++static const qmi_idl_type_table_object *rmtfs_qmi_idl_type_table_object_referenced_tables_v01[] =
++{&rmtfs_qmi_idl_type_table_object_v01, &common_qmi_idl_type_table_object_v01};
++
++/*Type Table Object*/
++static const qmi_idl_type_table_object rmtfs_qmi_idl_type_table_object_v01 = {
++  sizeof(rmtfs_type_table_v01)/sizeof(qmi_idl_type_table_entry ),
++  sizeof(rmtfs_message_table_v01)/sizeof(qmi_idl_message_table_entry),
++  1,
++  rmtfs_type_table_v01,
++  rmtfs_message_table_v01,
++  rmtfs_qmi_idl_type_table_object_referenced_tables_v01,
++  NULL
++};
++
++/*Arrays of service_message_table_entries for commands, responses and indications*/
++static const qmi_idl_service_message_table_entry rmtfs_service_command_messages_v01[] = {
++  {QMI_RMTFS_OPEN_REQ_V01, QMI_IDL_TYPE16(0, 0), 258},
++  {QMI_RMTFS_CLOSE_REQ_V01, QMI_IDL_TYPE16(0, 2), 7},
++  {QMI_RMTFS_RW_IOVEC_REQ_V01, QMI_IDL_TYPE16(0, 4), 3079},
++  {QMI_RMTFS_ALLOC_BUFF_REQ_V01, QMI_IDL_TYPE16(0, 6), 14},
++  {QMI_RMTFS_GET_DEV_ERROR_REQ_V01, QMI_IDL_TYPE16(0, 8), 7}
++};
++
++static const qmi_idl_service_message_table_entry rmtfs_service_response_messages_v01[] = {
++  {QMI_RMTFS_OPEN_RESP_V01, QMI_IDL_TYPE16(0, 1), 14},
++  {QMI_RMTFS_CLOSE_RESP_V01, QMI_IDL_TYPE16(0, 3), 7},
++  {QMI_RMTFS_RW_IOVEC_RESP_V01, QMI_IDL_TYPE16(0, 5), 7},
++  {QMI_RMTFS_ALLOC_BUFF_RESP_V01, QMI_IDL_TYPE16(0, 7), 18},
++  {QMI_RMTFS_GET_DEV_ERROR_RESP_V01, QMI_IDL_TYPE16(0, 9), 11}
++};
++
++static const qmi_idl_service_message_table_entry rmtfs_service_indication_messages_v01[] = {
++  {QMI_RMTFS_FORCE_SYNC_IND_V01, QMI_IDL_TYPE16(0, 10), 44}
++};
++
++/*Service Object*/
++struct qmi_idl_service_object rmtfs_qmi_idl_service_object_v01 = {
++  0x06,
++  0x01,
++  0x0E,
++  3079,
++  { sizeof(rmtfs_service_command_messages_v01)/sizeof(qmi_idl_service_message_table_entry),
++    sizeof(rmtfs_service_response_messages_v01)/sizeof(qmi_idl_service_message_table_entry),
++    sizeof(rmtfs_service_indication_messages_v01)/sizeof(qmi_idl_service_message_table_entry) },
++  { rmtfs_service_command_messages_v01, rmtfs_service_response_messages_v01, rmtfs_service_indication_messages_v01},
++  &rmtfs_qmi_idl_type_table_object_v01,
++  0x02,
++  NULL
++};
++
++/* Service Object Accessor */
++qmi_idl_service_object_type rmtfs_get_service_object_internal_v01
++ ( int32_t idl_maj_version, int32_t idl_min_version, int32_t library_version ){
++  if ( RMTFS_V01_IDL_MAJOR_VERS != idl_maj_version || RMTFS_V01_IDL_MINOR_VERS != idl_min_version
++       || RMTFS_V01_IDL_TOOL_VERS != library_version)
++  {
++    return NULL;
++  }
++  return (qmi_idl_service_object_type)&rmtfs_qmi_idl_service_object_v01;
++}
++#endif
+diff --git a/drivers/uio/msm_sharedmem/remote_storage_v01.h b/drivers/uio/msm_sharedmem/remote_storage_v01.h
+new file mode 100644
+index 0000000..4173fc7
+--- /dev/null
++++ b/drivers/uio/msm_sharedmem/remote_storage_v01.h
+@@ -0,0 +1,147 @@
++ /* Copyright (c) 2015, The Linux Foundation. All rights reserved.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 and
++ * only version 2 as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++#ifndef __RMTFS_SERVICE_01_H__
++#define __RMTFS_SERVICE_01_H__
++
++
++#define RMTFS_SERVICE_ID_V01 0x0E
++#define RMTFS_SERVICE_VERS_V01 0x01
++
++/**  Max file path size for open request */
++#define RMTFS_MAX_FILE_PATH_V01 255
++/**  Max iovec entries for read or write iovec requests */
++#define RMTFS_MAX_IOVEC_ENTRIES_V01 255
++/**  Max caller ID's that can be specified in force sync indication */
++#define RMTFS_MAX_CALLER_ID_V01 10
++
++
++extern struct elem_info rmtfs_open_req_msg_v01_ei[];
++extern struct elem_info rmtfs_open_resp_msg_v01_ei[];
++
++extern struct elem_info rmtfs_alloc_buff_req_msg_v01_ei[];
++extern struct elem_info rmtfs_alloc_buff_resp_msg_v01_ei[];
++
++extern struct elem_info rmtfs_rw_iovec_req_msg_v01_ei[];
++extern struct elem_info rmtfs_rw_iovec_resp_msg_v01_ei[];
++
++
++struct rmtfs_open_req_msg_v01 {
++  char path[RMTFS_MAX_FILE_PATH_V01 + 1];
++};  
++
++struct rmtfs_open_resp_msg_v01 {
++  struct qmi_response_type_v01 resp;
++  uint8_t caller_id_valid;  /**< Must be set to true if caller_id is being passed */
++  uint32_t caller_id;
++};  
++
++struct rmtfs_close_req_msg_v01 {
++  uint32_t caller_id;
++};
++
++struct rmtfs_close_resp_msg_v01 {
++  struct qmi_response_type_v01 resp;
++};
++
++struct rmtfs_iovec_desc_type_v01 {
++  uint32_t sector_addr;
++  uint32_t data_phy_addr_offset;
++  uint32_t num_sector;
++};
++
++typedef enum {
++  RMTFS_DIRECTION_ENUM_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
++  RMTFS_DIRECTION_READ_V01 = 0x00,
++  RMTFS_DIRECTION_WRITE_V01 = 0x01,
++  RMTFS_DIRECTION_ENUM_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
++}rmtfs_direction_enum_v01;
++
++struct rmtfs_rw_iovec_req_msg_v01 {
++  uint32_t caller_id;
++  rmtfs_direction_enum_v01 direction;
++  uint32_t iovec_struct_len;  /**< Must be set to # of elements in iovec_struct */
++  struct rmtfs_iovec_desc_type_v01 iovec_struct[RMTFS_MAX_IOVEC_ENTRIES_V01];
++  uint8_t is_force_sync;
++}; 
++
++struct rmtfs_rw_iovec_resp_msg_v01 {
++  struct qmi_response_type_v01 resp;
++};  
++
++struct rmtfs_alloc_buff_req_msg_v01 {
++  uint32_t caller_id;
++  uint32_t buff_size;
++};
++
++struct rmtfs_alloc_buff_resp_msg_v01 {
++  struct qmi_response_type_v01 resp;
++  uint8_t buff_address_valid;  /**< Must be set to true if buff_address is being passed */
++  uint64_t buff_address;
++};
++
++struct rmtfs_get_dev_error_req_msg_v01 {
++  uint32_t caller_id;
++};
++
++typedef enum {
++  RMTFS_DEV_ERROR_ENUM_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
++  RMTFS_DEV_ERROR_NONE_V01 = 0,
++  RMTFS_DEV_ERROR_DEVICE_NOT_FOUND_V01 = 1,
++  RMTFS_DEV_ERROR_PARTITION_NOT_FOUND_V01 = 2,
++  RMTS_DEV_ERROR_RW_FAILURE_V01 = 3,
++  RMTS_DEV_ERROR_PARAM_ERROR_V01 = 4,
++  RMTS_DEV_ERROR_OTHER_V01 = 5,
++  RMTFS_DEV_ERROR_ENUM_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
++}rmtfs_dev_error_enum_v01;
++
++struct rmtfs_get_dev_error_resp_msg_v01 {
++  struct qmi_response_type_v01 resp;
++  uint8_t status_valid;  /**< Must be set to true if status is being passed */
++  rmtfs_dev_error_enum_v01 status;
++  /**<   Indicates the device error that occurred. Values: \n
++       - 0 -- No error occurred \n
++       - 1 -- Device was not found \n
++       - 2 -- Partition was not found \n
++       - 3 -- Read/write error occurred \n
++       - 4 -- Parameter error occurred \n
++       - 5 -- Other unspecified error occurred */
++};
++
++struct rmtfs_force_sync_ind_msg_v01 {
++  uint32_t caller_id_len;  /**< Must be set to # of elements in caller_id */
++  uint32_t caller_id[RMTFS_MAX_CALLER_ID_V01];
++  /**<   List of the caller IDs for which the force sync is to be issued. */
++};
++
++#define QMI_RMTFS_OPEN_REQ_MSG_V01 		0x0001
++#define QMI_RMTFS_OPEN_RESP_MSG_V01 		0x0001
++#define QMI_RMTFS_CLOSE_REQ_MSG_V01 		0x0002
++#define QMI_RMTFS_CLOSE_RESP_MSG_V01 		0x0002
++#define QMI_RMTFS_RW_IOVEC_REQ_MSG_V01 		0x0003
++#define QMI_RMTFS_RW_IOVEC_RESP_MSG_V01 	0x0003
++#define QMI_RMTFS_ALLOC_BUFF_REQ_MSG_V01 	0x0004
++#define QMI_RMTFS_ALLOC_BUFF_RESP_MSG_V01 	0x0004
++#define QMI_RMTFS_GET_DEV_ERROR_REQ_MSG_V01 	0x0005
++#define QMI_RMTFS_GET_DEV_ERROR_RESP_MSG_V01 	0x0005
++#define QMI_RMTFS_FORCE_SYNC_IND_MSG_V01 	0x0006
++
++#define RMTFS_OPEN_REQ_MSG_MAX_LEN_V01 		 258
++#define RMTFS_OPEN_RESP_MSG_MAX_LEN_V01 	  14
++#define RMTFS_RW_IOVEC_REQ_MSG_MAX_LEN_V01	3079
++#define RMTFS_RW_IOVEC_RESP_MSG_MAX_LEN_V01	   7
++#define RMTFS_ALLOC_BUFF_REQ_MSG_MAX_LEN_V01 	  14
++#define RMTFS_ALLOC_BUFF_RESP_MSG_MAX_LEN_V01 	  18
++
++
++#endif
++
+diff --git a/drivers/uio/msm_sharedmem/sharedmem_qmi.c b/drivers/uio/msm_sharedmem/sharedmem_qmi.c
+index 018c37a..1dc77bc 100644
+--- a/drivers/uio/msm_sharedmem/sharedmem_qmi.c
++++ b/drivers/uio/msm_sharedmem/sharedmem_qmi.c
+@@ -23,8 +23,11 @@
+ #include <soc/qcom/msm_qmi_interface.h>
+ #include "sharedmem_qmi.h"
+ #include "remote_filesystem_access_v01.h"
++#include "remote_storage_v01.h"
+ 
+ #define RFSA_SERVICE_INSTANCE_NUM 1
++#define RMTFS_SERVICE_INSTANCE_NUM 0
++#define RMTFS_CLIENT_ID 0x00000001
+ #define SHARED_ADDR_ENTRY_NAME_MAX_LEN 10
+ 
+ struct shared_addr_entry {
+@@ -47,6 +50,11 @@ static struct qmi_handle *sharedmem_qmi_svc_handle;
+ static void sharedmem_qmi_svc_recv_msg(struct work_struct *work);
+ static DECLARE_DELAYED_WORK(work_recv_msg, sharedmem_qmi_svc_recv_msg);
+ static struct workqueue_struct *sharedmem_qmi_svc_workqueue;
++static struct qmi_handle *sharedmem_qmi_rmtfs_svc_handle;
++static void sharedmem_qmi_rmtfs_svc_recv_msg(struct work_struct *work);
++static DECLARE_DELAYED_WORK(work_rmtfs_recv_msg, sharedmem_qmi_rmtfs_svc_recv_msg);
++static struct workqueue_struct *sharedmem_qmi_rmtfs_svc_workqueue;
++static uint32_t g_rmtfs_caller_counter = 0;
+ static struct dentry *dir_ent;
+ 
+ static u32 rfsa_count;
+@@ -67,6 +75,36 @@ static struct msg_desc rfsa_get_buffer_addr_resp_desc = {
+ 	.msg_id = QMI_RFSA_GET_BUFF_ADDR_RESP_MSG_V01,
+ 	.ei_array = rfsa_get_buff_addr_resp_msg_v01_ei,
+ };
++static struct msg_desc rmtfs_open_req_desc = {
++	.max_msg_len = RMTFS_OPEN_REQ_MSG_MAX_LEN_V01,
++	.msg_id = QMI_RMTFS_OPEN_REQ_MSG_V01,
++	.ei_array = rmtfs_open_req_msg_v01_ei,
++};
++static struct msg_desc rmtfs_open_resp_desc = {
++	.max_msg_len = RMTFS_OPEN_RESP_MSG_MAX_LEN_V01,
++	.msg_id = QMI_RMTFS_OPEN_RESP_MSG_V01,
++	.ei_array = rmtfs_open_resp_msg_v01_ei,
++};
++static struct msg_desc rmtfs_rw_iovec_req_desc = {
++	.max_msg_len = RMTFS_RW_IOVEC_REQ_MSG_MAX_LEN_V01,
++	.msg_id = QMI_RMTFS_RW_IOVEC_REQ_MSG_V01,
++	.ei_array = rmtfs_rw_iovec_req_msg_v01_ei,
++};
++static struct msg_desc rmtfs_rw_iovec_resp_desc = {
++	.max_msg_len = RMTFS_RW_IOVEC_RESP_MSG_MAX_LEN_V01,
++	.msg_id = QMI_RMTFS_RW_IOVEC_RESP_MSG_V01,
++	.ei_array = rmtfs_rw_iovec_resp_msg_v01_ei,
++};
++static struct msg_desc rmtfs_alloc_buff_req_desc = {
++	.max_msg_len = RMTFS_ALLOC_BUFF_REQ_MSG_MAX_LEN_V01,
++	.msg_id = QMI_RMTFS_ALLOC_BUFF_REQ_MSG_V01,
++	.ei_array = rmtfs_alloc_buff_req_msg_v01_ei,
++};
++static struct msg_desc rmtfs_alloc_buff_resp_desc = {
++	.max_msg_len = RMTFS_ALLOC_BUFF_RESP_MSG_MAX_LEN_V01,
++	.msg_id = QMI_RMTFS_ALLOC_BUFF_RESP_MSG_V01,
++	.ei_array = rmtfs_alloc_buff_resp_msg_v01_ei,
++};
+ 
+ void sharedmem_qmi_add_entry(struct sharemem_qmi_entry *qmi_entry)
+ {
+@@ -214,6 +252,127 @@ static int sharedmem_qmi_req_cb(struct qmi_handle *handle, void *conn_h,
+ 
+ 	if (msg_id == QMI_RFSA_GET_BUFF_ADDR_REQ_MSG_V01)
+ 		rc = sharedmem_qmi_get_buffer(conn_h, req_handle, req);
++	return rc;
++}
++static int sharedmem_qmi_rmtfs_open_stub(void *conn_h, void *req_handle, void *req)
++{
++	struct rmtfs_open_req_msg_v01 *open_req;
++	struct rmtfs_open_resp_msg_v01 open_resp;
++	int result;
++	open_req = (struct rmtfs_open_req_msg_v01 *)req;
++	memset(&open_resp, 0, sizeof(open_resp));
++	open_resp.caller_id_valid = 1;
++	open_resp.caller_id = ++g_rmtfs_caller_counter;
++	open_resp.resp.result = QMI_RESULT_SUCCESS_V01;
++	result = qmi_send_resp_from_cb(sharedmem_qmi_rmtfs_svc_handle, conn_h,
++				req_handle,
++				&rmtfs_open_resp_desc,
++				&open_resp,
++				sizeof(open_resp));
++	return result;
++}
++static int sharedmem_qmi_rmtfs_rw_iovec_stub(void *conn_h, void *req_handle, void *req)
++{
++	struct rmtfs_rw_iovec_req_msg_v01 *iovec_req;
++	struct rmtfs_rw_iovec_resp_msg_v01 iovec_resp;
++	int result;
++	iovec_req = (struct rmtfs_rw_iovec_req_msg_v01 *)req;
++	memset(&iovec_resp, 0, sizeof(iovec_resp));
++	iovec_resp.resp.result = QMI_RESULT_SUCCESS_V01;
++	result = qmi_send_resp_from_cb(sharedmem_qmi_rmtfs_svc_handle, conn_h,
++				req_handle,
++				&rmtfs_rw_iovec_resp_desc,
++				&iovec_resp,
++				sizeof(iovec_resp));
++	return result;
++}
++static int sharedmem_qmi_rmtfs_get_buffer(void *conn_h, void *req_handle, void *req)
++{
++	struct rmtfs_alloc_buff_req_msg_v01 *get_buffer_req;
++	struct rmtfs_alloc_buff_resp_msg_v01 get_buffer_resp;
++	int result;
++	u64 address = 0;
++printk(KERN_ERR "[ALEXF] %s \n", __func__);
++	get_buffer_req = (struct rmtfs_alloc_buff_req_msg_v01 *)req;
++	pr_debug("req->client_id = 0x%X and req->size = %d\n",
++		get_buffer_req->caller_id, get_buffer_req->buff_size);
++	result = get_buffer_for_client(RMTFS_CLIENT_ID,get_buffer_req->buff_size, 
++					&address);
++	if (result != 0)
++		return result;
++	if (address == 0) {
++		pr_err("Entry found for client id = 0x%X but address is zero",
++			get_buffer_req->caller_id);
++		return -ENOMEM;
++	}
++	memset(&get_buffer_resp, 0, sizeof(get_buffer_resp));
++	get_buffer_resp.buff_address_valid = 1;
++	get_buffer_resp.buff_address = address;
++	get_buffer_resp.resp.result = QMI_RESULT_SUCCESS_V01;
++	result = qmi_send_resp_from_cb(sharedmem_qmi_rmtfs_svc_handle, conn_h,
++				req_handle,
++				&rmtfs_alloc_buff_resp_desc,
++				&get_buffer_resp,
++				sizeof(get_buffer_resp));
++	return result;
++}
++static int sharedmem_qmi_rmtfs_connect_cb(struct qmi_handle *handle, void *conn_h)
++{
++	if (sharedmem_qmi_rmtfs_svc_handle != handle || !conn_h)
++		return -EINVAL;
++	return 0;
++}
++static int sharedmem_qmi_rmtfs_disconnect_cb(struct qmi_handle *handle, void *conn_h)
++{
++printk(KERN_ERR "[ALEXF] %s \n", __func__);
++	if (sharedmem_qmi_rmtfs_svc_handle != handle || !conn_h)
++		return -EINVAL;
++	return 0;
++}
++static int sharedmem_qmi_rmtfs_req_desc_cb(unsigned int msg_id,
++				struct msg_desc **req_desc)
++{
++	int rc;
++	switch (msg_id) {
++	case QMI_RMTFS_OPEN_REQ_MSG_V01:
++		*req_desc = &rmtfs_open_req_desc;
++		rc = sizeof(struct rmtfs_open_req_msg_v01);
++		break;
++	case QMI_RMTFS_RW_IOVEC_REQ_MSG_V01:
++		*req_desc = &rmtfs_rw_iovec_req_desc;
++		rc = sizeof(struct rmtfs_rw_iovec_req_msg_v01);
++		break;
++	case QMI_RMTFS_ALLOC_BUFF_REQ_MSG_V01:
++		*req_desc = &rmtfs_alloc_buff_req_desc;
++		rc = sizeof(struct rmtfs_alloc_buff_req_msg_v01);
++		break;
++	default:
++		rc = -ENOTSUPP;
++		break;
++	}
++	return rc;
++}
++static int sharedmem_qmi_rmtfs_req_cb(struct qmi_handle *handle, void *conn_h,
++				void *req_handle, unsigned int msg_id,
++				void *req)
++{
++	int rc = -ENOTSUPP;
++	if (sharedmem_qmi_rmtfs_svc_handle != handle || !conn_h)
++		return -EINVAL;
++	switch (msg_id) {
++	case QMI_RMTFS_OPEN_REQ_MSG_V01:
++		rc = sharedmem_qmi_rmtfs_open_stub(conn_h, req_handle, req);;
++		break;
++	case QMI_RMTFS_RW_IOVEC_REQ_MSG_V01:
++		rc = sharedmem_qmi_rmtfs_rw_iovec_stub(conn_h, req_handle, req);;
++		break;
++	case QMI_RMTFS_ALLOC_BUFF_REQ_MSG_V01:
++		rc = sharedmem_qmi_rmtfs_get_buffer(conn_h, req_handle, req);
++		break;
++	default:
++		rc = -ENOTSUPP;
++		break;
++	}
+ 
+ 	return rc;
+ }
+@@ -376,6 +535,27 @@ static void sharedmem_qmi_notify(struct qmi_handle *handle,
+ 	}
+ }
+ 
++static void sharedmem_qmi_rmtfs_svc_recv_msg(struct work_struct *work)
++{
++	int rc;
++	do {
++		pr_debug("%s: Notified about a Receive Event", __func__);
++	} while ((rc = qmi_recv_msg(sharedmem_qmi_rmtfs_svc_handle)) == 0);
++	if (rc != -ENOMSG)
++		pr_err("Error receiving message\n");
++}
++static void sharedmem_qmi_rmtfs_notify(struct qmi_handle *handle,
++		enum qmi_event_type event, void *priv)
++{
++	switch (event) {
++	case QMI_RECV_MSG:
++		queue_delayed_work(sharedmem_qmi_rmtfs_svc_workqueue,
++				   &work_rmtfs_recv_msg, 0);
++		break;
++	default:
++		break;
++	}
++}
+ static struct qmi_svc_ops_options sharedmem_qmi_ops_options = {
+ 	.version = 1,
+ 	.service_id = RFSA_SERVICE_ID_V01,
+@@ -388,6 +568,16 @@ static struct qmi_svc_ops_options sharedmem_qmi_ops_options = {
+ };
+ 
+ 
++static struct qmi_svc_ops_options sharedmem_qmi_rmtfs_ops_options = {
++	.version = 1,
++	.service_id = RMTFS_SERVICE_ID_V01,
++	.service_vers = RMTFS_SERVICE_VERS_V01,
++	.service_ins = RMTFS_SERVICE_INSTANCE_NUM,
++	.connect_cb = sharedmem_qmi_rmtfs_connect_cb,
++	.disconnect_cb = sharedmem_qmi_rmtfs_disconnect_cb,
++	.req_desc_cb = sharedmem_qmi_rmtfs_req_desc_cb,
++	.req_cb = sharedmem_qmi_rmtfs_req_cb,
++};
+ static void sharedmem_register_qmi(void)
+ {
+ 	int rc;
+@@ -412,6 +602,25 @@ static void sharedmem_register_qmi(void)
+ 		destroy_workqueue(sharedmem_qmi_svc_workqueue);
+ 		return;
+ 	}
++	sharedmem_qmi_rmtfs_svc_workqueue =
++		create_singlethread_workqueue("sharedmem_qmi_rmtfs_work");
++	if (!sharedmem_qmi_rmtfs_svc_workqueue)
++		return;
++	sharedmem_qmi_rmtfs_svc_handle = qmi_handle_create(sharedmem_qmi_rmtfs_notify,
++							NULL);
++	if (!sharedmem_qmi_rmtfs_svc_handle) {
++		pr_err("Creating sharedmem_qmi_rmtfs qmi handle failed\n");
++		destroy_workqueue(sharedmem_qmi_rmtfs_svc_workqueue);
++		return;
++	}
++	rc = qmi_svc_register(sharedmem_qmi_rmtfs_svc_handle,
++				&sharedmem_qmi_rmtfs_ops_options);
++	if (rc < 0) {
++		pr_err("Registering sharedmem_qmi_rmtfs failed %d\n", rc);
++		qmi_handle_destroy(sharedmem_qmi_rmtfs_svc_handle);
++		destroy_workqueue(sharedmem_qmi_rmtfs_svc_workqueue);
++		return;
++	}
+ 	pr_info("qmi init successful\n");
+ }
+ 
+@@ -435,5 +644,9 @@ void sharedmem_qmi_exit(void)
+ 	flush_workqueue(sharedmem_qmi_svc_workqueue);
+ 	qmi_handle_destroy(sharedmem_qmi_svc_handle);
+ 	destroy_workqueue(sharedmem_qmi_svc_workqueue);
++	qmi_svc_unregister(sharedmem_qmi_rmtfs_svc_handle);
++	flush_workqueue(sharedmem_qmi_rmtfs_svc_workqueue);
++	qmi_handle_destroy(sharedmem_qmi_rmtfs_svc_handle);
++	destroy_workqueue(sharedmem_qmi_rmtfs_svc_workqueue);
+ 	debugfs_exit();
+ }
+-- 
+1.8.2.1
+
