@@ -1377,12 +1377,18 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
 	struct futex_hash_bucket *hb1, *hb2;
 	struct plist_head *head1;
 	struct futex_q *this, *next;
-	u32 curval2;
 
 	if (requeue_pi) {
 		/*
 		 * Requeue PI only works on two distinct uaddrs. This
 		 * check is only valid for private futexes. See below.
+		 */
+		if (uaddr1 == uaddr2)
+			return -EINVAL;
+
+		/*
+		 * Requeue PI only works on two distinct uaddrs. This
+		 * check is only valid for private futexec. See below.
 		 */
 		if (uaddr1 == uaddr2)
 			return -EINVAL;
@@ -1426,7 +1432,7 @@ retry:
 	}
 
 	/*
-	 * The check above which compares uaddrs is not sufficient for
+	 * The check above which compares uaddrs is not sufficient for 
 	 * shared futexes. We need to compare the keys:
 	 */
 	if (requeue_pi && match_futex(&key1, &key2)) {
