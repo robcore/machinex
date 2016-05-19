@@ -481,4 +481,3 @@ config BOEFFLA_SOUND
 	default n
 	help
 		Boeffla sound engine by andip71 (aka Lord Boeffla)
-

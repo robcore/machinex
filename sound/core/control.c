@@ -292,10 +292,6 @@ static bool snd_ctl_remove_numid_conflict(struct snd_card *card,
 	if (card->last_numid >= UINT_MAX - count)
 		card->last_numid = 0;
 
-	/* Make sure that the ids assigned to the control do not wrap around */
-	if (card->last_numid >= UINT_MAX - count)
-		card->last_numid = 0;
-
 	list_for_each_entry(kctl, &card->controls, list) {
 		if (kctl->id.numid < card->last_numid + 1 + count &&
 		    kctl->id.numid + kctl->count > card->last_numid + 1) {
@@ -412,9 +408,6 @@ int snd_ctl_replace(struct snd_card *card, struct snd_kcontrol *kcontrol,
 		goto error;
 	}
 	id = kcontrol->id;
-	if (id.index > UINT_MAX - kcontrol->count)
-		goto error;
-
 	down_write(&card->controls_rwsem);
 	old = snd_ctl_find_id(card, &id);
 	if (!old) {
