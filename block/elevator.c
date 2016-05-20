@@ -504,7 +504,6 @@ static bool elv_attempt_insert_merge(struct request_queue *q,
 				     struct request *rq)
 {
 	struct request *__rq;
-	bool ret;
 
 	if (blk_queue_nomerges(q))
 		return false;
@@ -518,21 +517,14 @@ static bool elv_attempt_insert_merge(struct request_queue *q,
 	if (blk_queue_noxmerges(q))
 		return false;
 
-	ret = false;
 	/*
 	 * See if our hash lookup can find a potential backmerge.
 	 */
-	while (1) {
-		__rq = elv_rqhash_find(q, blk_rq_pos(rq));
-		if (!__rq || !blk_attempt_req_merge(q, __rq, rq))
-			break;
+	__rq = elv_rqhash_find(q, blk_rq_pos(rq));
+	if (__rq && blk_attempt_req_merge(q, __rq, rq))
+		return true;
 
-		/* The merged request could be merged with others, try again */
-		ret = true;
-		rq = __rq;
-	}
-
-	return ret;
+	return false;
 }
 
 void elv_merged_request(struct request_queue *q, struct request *rq, int type)
@@ -591,41 +583,6 @@ void elv_requeue_request(struct request_queue *q, struct request *rq)
 	rq->cmd_flags &= ~REQ_STARTED;
 
 	__elv_add_request(q, rq, ELEVATOR_INSERT_REQUEUE);
-}
-
-/**
- * elv_reinsert_request() - Insert a request back to the scheduler
- * @q:		request queue where request should be inserted
- * @rq:		request to be inserted
- *
- * This function returns the request back to the scheduler to be
- * inserted as if it was never dispatched
- *
- * Return: 0 on success, error code on failure
- */
-int elv_reinsert_request(struct request_queue *q, struct request *rq)
-{
-	int res;
-
-	if (!q->elevator->type->ops.elevator_reinsert_req_fn)
-		return -EPERM;
-
-	res = q->elevator->type->ops.elevator_reinsert_req_fn(q, rq);
-	if (!res) {
-		/*
-		 * it already went through dequeue, we need to decrement the
-		 * in_flight count again
-		 */
-		if (blk_account_rq(rq)) {
-			q->in_flight[rq_is_sync(rq)]--;
-			if (rq->cmd_flags & REQ_SORTED)
-				elv_deactivate_rq(q, rq);
-		}
-		rq->cmd_flags &= ~REQ_STARTED;
-		q->nr_sorted++;
-	}
-
-	return res;
 }
 
 void elv_drain_elevator(struct request_queue *q)
@@ -822,10 +779,6 @@ void elv_completed_request(struct request_queue *q, struct request *rq)
 {
 	struct elevator_queue *e = q->elevator;
 
-	if (rq->cmd_flags & REQ_URGENT) {
-		q->notified_urgent = false;
-		q->dispatched_urgent = false;
-	}
 	/*
 	 * request is released from the driver, io must be done
 	 */
@@ -900,8 +853,6 @@ int __elv_register_queue(struct request_queue *q, struct elevator_queue *e)
 		}
 		kobject_uevent(&e->kobj, KOBJ_ADD);
 		e->registered = 1;
-		if (e->type->ops.elevator_registered_fn)
-			e->type->ops.elevator_registered_fn(q);
 	}
 	return error;
 }
