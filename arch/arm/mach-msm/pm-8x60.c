@@ -22,6 +22,7 @@
 #include <linux/cpu.h>
 #include <linux/pm.h>
 #include <linux/pm_qos.h>
+#include <linux/quickwakeup.h>
 #include <linux/smp.h>
 #include <linux/suspend.h>
 #include <linux/tick.h>
@@ -1165,6 +1166,7 @@ static struct platform_suspend_ops msm_pm_ops = {
 	.prepare_late = msm_pm_prepare_late,
 	.enter = msm_pm_enter,
 	.valid = suspend_valid_only_mem,
+	.suspend_again = quickwakeup_suspend_again,
 };
 
 /******************************************************************************
