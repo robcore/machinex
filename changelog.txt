@@ -6,4 +6,13 @@ Versions 0-0.3 *as of May 19/2016
 -disabled crc
 -added an option in kconfig to disable sec_discard
 -removed some Tima code (like 10% finished with that one) and disabled samsung root restriction
----?
+---
+version 0.4 *as of May 19/2016
+regarding commit 52e221992d4611a126f5feced3603f6c2c67b3ef
+-finished fixing merge bugs (i think so at least, bug fixing is part of life but some of these were HUGE and shouldn't be ignored)
+-finished fixing my own bugs
+-added extra WCD9311 reset register
+-added some framework for soon-to-be-implemented additions:cpu govs (intelli, uber), fast-chg, *potential OC*
+-overclocked gpu BUS speeds (they can handle way more than they're set to originally)
+-probably a few more little additions imported from my no-go kernel
+-more to come
