@@ -102,5 +102,4 @@ obj-$(CONFIG_BU52031NVX) += pm8xxx-cradle.o
 obj-$(CONFIG_SLIMPORT_ANX7808)	+= slimport_anx7808/
 obj-$(CONFIG_2MIC_ES305)		+= a2220.o
 obj-$(CONFIG_SEC_TORCH_FLASH)	+= sec_torch.o
-obj-$(CONFIG_TIMA_LOG)		+= tima_debug_log.o
 obj-$(CONFIG_MPU_411_ENABLE)	+= inv_mpu/

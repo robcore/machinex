@@ -1928,6 +1928,7 @@ static int filename_trans_read(struct policydb *p, void *fp)
 			kfree(otype);
 		}
 	}
+
 	hash_eval(p->filename_trans, "filenametr");
 	return 0;
 out:
