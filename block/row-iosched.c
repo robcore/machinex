@@ -1,7 +1,7 @@
 /*
  * ROW (Read Over Write) I/O scheduler.
  *
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -86,13 +86,13 @@ struct row_queue_params {
  */
 static const struct row_queue_params row_queues_def[] = {
 /* idling_enabled, quantum, is_urgent */
-	{true, 100, true},	/* ROWQ_PRIO_HIGH_READ */
-	{false, 5, false},	/* ROWQ_PRIO_HIGH_SWRITE */
-	{true, 75, true},	/* ROWQ_PRIO_REG_READ */
-	{false, 4, false},	/* ROWQ_PRIO_REG_SWRITE */
-	{false, 4, false},	/* ROWQ_PRIO_REG_WRITE */
-	{false, 3, false},	/* ROWQ_PRIO_LOW_READ */
-	{false, 2, false}	/* ROWQ_PRIO_LOW_SWRITE */
+	{true, 10, true},	/* ROWQ_PRIO_HIGH_READ */
+	{false, 1, false},	/* ROWQ_PRIO_HIGH_SWRITE */
+	{true, 100, true},	/* ROWQ_PRIO_REG_READ */
+	{false, 1, false},	/* ROWQ_PRIO_REG_SWRITE */
+	{false, 1, false},	/* ROWQ_PRIO_REG_WRITE */
+	{false, 1, false},	/* ROWQ_PRIO_LOW_READ */
+	{false, 1, false}	/* ROWQ_PRIO_LOW_SWRITE */
 };
 
 /* Default values for idling on read queues (in msec) */
@@ -331,10 +331,6 @@ static void row_add_request(struct request_queue *q,
 	struct row_queue *rqueue = RQ_ROWQ(rq);
 	s64 diff_ms;
 	bool queue_was_empty = list_empty(&rqueue->fifo);
-	unsigned long bv_page_flags = 0;
-
-	if (rq->bio && rq->bio->bi_io_vec && rq->bio->bi_io_vec->bv_page)
-		bv_page_flags = rq->bio->bi_io_vec->bv_page->flags;
 
 	list_add_tail(&rq->queuelist, &rqueue->fifo);
 	rd->nr_reqs[rq_data_dir(rq)]++;
@@ -367,9 +363,7 @@ static void row_add_request(struct request_queue *q,
 			rqueue->idle_data.begin_idling = false;
 			return;
 		}
-
-		if ((bv_page_flags & (1L << PG_readahead)) ||
-		    (diff_ms < rd->rd_idle_data.freq_ms)) {
+		if (diff_ms < rd->rd_idle_data.freq_ms) {
 			rqueue->idle_data.begin_idling = true;
 			row_log_rowq(rd, rqueue->prio, "Enable idling");
 		} else {
@@ -788,24 +782,17 @@ done:
  * this dispatch queue
  *
  */
-static int row_init_queue(struct request_queue *q, struct elevator_type *e)
+static void *row_init_queue(struct request_queue *q)
 {
 
 	struct row_data *rdata;
-	struct elevator_queue *eq;
 	int i;
-
-	eq = elevator_alloc(q, e);
-	if (!eq)
-		return -ENOMEM;
 
 	rdata = kmalloc_node(sizeof(*rdata),
 			     GFP_KERNEL | __GFP_ZERO, q->node);
-	if (!rdata) {
-		kobject_put(&eq->kobj);
-		return -ENOMEM;
-	}
-	eq->elevator_data = rdata;
+	if (!rdata)
+		return NULL;
+
 	memset(rdata, 0, sizeof(*rdata));
 	for (i = 0; i < ROWQ_MAX_PRIO; i++) {
 		INIT_LIST_HEAD(&rdata->row_queues[i].fifo);
@@ -837,11 +824,7 @@ static int row_init_queue(struct request_queue *q, struct elevator_type *e)
 	rdata->rd_idle_data.idling_queue_idx = ROWQ_MAX_PRIO;
 	rdata->dispatch_queue = q;
 
-	spin_lock_irq(q->queue_lock);
-	q->elevator = eq;
-	spin_unlock_irq(q->queue_lock);
-
-	return 0;
+	return rdata;
 }
 
 /*
@@ -947,8 +930,7 @@ static enum row_queue_prio row_get_queue_prio(struct request *rq,
  *
  */
 static int
-row_set_request(struct request_queue *q, struct request *rq, struct bio *bio,
-		gfp_t gfp_mask)
+row_set_request(struct request_queue *q, struct request *rq, gfp_t gfp_mask)
 {
 	struct row_data *rd = (struct row_data *)q->elevator->elevator_data;
 	unsigned long flags;
