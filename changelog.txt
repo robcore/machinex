@@ -1,0 +1,9 @@
+Versions 0-0.3 *as of May 19/2016
+-setup a build system based on newest kernel source OK3 and Tkkg's custom hf-gcc 5.3.0 compiler.
+-systematically repaired samsung's source mistakes
+-upgraded kernel from 3.4.0-3.4.112 in one swoop
+-added sysfs interface to control arch_power and gentle_fair_sleepers
+-disabled crc
+-added an option in kconfig to disable sec_discard
+-removed some Tima code (like 10% finished with that one) and disabled samsung root restriction
+---?
