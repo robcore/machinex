@@ -754,10 +754,9 @@ static int crypt_convert(struct crypt_config *cc,
 		switch (r) {
 		/* async */
 		case -EBUSY:
+		case -EINPROGRESS:
 			wait_for_completion(&ctx->restart);
 			INIT_COMPLETION(ctx->restart);
-			/* fall through*/
-		case -EINPROGRESS:
 			ctx->req = NULL;
 			ctx->sector++;
 			continue;
@@ -1181,12 +1180,15 @@ static void kcryptd_async_done(struct crypto_async_request *async_req,
 	mempool_free(req_of_dmreq(cc, dmreq), cc->req_pool);
 
 	if (!atomic_dec_and_test(&ctx->cc_pending))
-		return;
+		goto done;
 
 	if (bio_data_dir(io->base_bio) == READ)
 		kcryptd_crypt_read_done(io);
 	else
 		kcryptd_crypt_write_io_submit(io, 1);
+done:
+	if (!completion_done(&ctx->restart))
+		complete(&ctx->restart);
 }
 
 static void kcryptd_crypt(struct work_struct *work)
@@ -1232,20 +1234,6 @@ static int crypt_decode_key(u8 *key, char *hex, unsigned int size)
 		return -EINVAL;
 
 	return 0;
-}
-
-/*
- * Encode key into its hex representation
- */
-static void crypt_encode_key(char *hex, u8 *key, unsigned int size)
-{
-	unsigned int i;
-
-	for (i = 0; i < size; i++) {
-		sprintf(hex, "%02x", *key);
-		hex += 2;
-		key++;
-	}
 }
 
 static void crypt_free_tfms(struct crypt_config *cc)
