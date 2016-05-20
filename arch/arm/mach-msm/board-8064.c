@@ -1908,10 +1908,10 @@ static struct platform_device msm_tsens_device = {
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 7,
 	.poll_ms = 250,
-	.limit_temp_degC = 70,
+	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
-	.core_limit_temp_degC = 80,
+	.core_limit_temp_degC = 70,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
@@ -2408,7 +2408,7 @@ static struct platform_device *early_common_devices[] __initdata = {
 	&apq8064_device_dmov,
 #if !defined(CONFIG_MACH_JACTIVE_ATT) && !defined(CONFIG_MACH_JACTIVE_EUR)
 	&apq8064_device_qup_spi_gsbi5,
-#endif	
+#endif
 };
 
 static struct platform_device *pm8921_common_devices[] __initdata = {
@@ -2435,7 +2435,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_device_wcnss_wlan,
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	&apq8064_device_qup_spi_gsbi5,
-#endif	
+#endif
 	&msm_device_iris_fm,
 	&apq8064_fmem_device,
 #ifdef CONFIG_ANDROID_PMEM

@@ -3311,7 +3311,7 @@ static void __init msm8960_tsens_init(void)
 static void __init msm8960ab_update_krait_spm(void)
  {
  	int i;
- 
+
 
 	/* Update the SPM sequences for SPC and PC */
 	for (i = 0; i < ARRAY_SIZE(msm_spm_data); i++) {

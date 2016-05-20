@@ -257,6 +257,9 @@ static int __init sec_tsp_mode(char *mode)
 }
 __setup("lcd_id=0x", sec_tsp_mode);
 
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND  
+int id_set_two_phase_freq(int cpufreq); 
+#endif 
 
 #if defined(CONFIG_VIBETONZ) && defined(CONFIG_MOTOR_DRV_MAX77693)
 static struct max77693_haptic_platform_data max77693_haptic_pdata = {
@@ -5485,6 +5488,9 @@ static void __init samsung_jf_init(void)
 	clear_ssp_gpio();
 	sensor_power_on_vdd(SNS_PWR_ON, SNS_PWR_ON);
 	initialize_ssp_gpio();
+#endif
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+	id_set_two_phase_freq(1566000);
 #endif
 #ifdef CONFIG_MACH_JF
 	platform_device_register(&gpio_kp_pdev);

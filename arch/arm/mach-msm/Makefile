@@ -264,7 +264,7 @@ obj-$(CONFIG_ARCH_MSM8960) += memory_topology.o
 obj-$(CONFIG_ARCH_MSM8960) += saw-regulator.o
 obj-$(CONFIG_ARCH_MSM8960) += devices-8960.o
 obj-$(CONFIG_ARCH_APQ8064) += devices-8960.o devices-8064.o
-obj-$(CONFIG_INPUT_TOUCHSCREEN) += board-mxt540s-tsp.o 
+obj-$(CONFIG_INPUT_TOUCHSCREEN) += board-mxt540s-tsp.o
 obj-$(CONFIG_ARCH_APQ8064) += acpuclock-8064.o
 board-8960-all-objs += board-8960.o board-8960-camera.o board-8960-display.o board-8960-pmic.o board-8960-storage.o board-8960-gpiomux.o
 board-8930-all-objs += board-8930.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-8930-gpiomux.o devices-8930.o board-8930-gpu.o
@@ -475,7 +475,6 @@ obj-$(CONFIG_MACH_GOLDEN) += msm8930-thermistor.o
 obj-$(CONFIG_MACH_JF) += fusion3-thermistor.o
 obj-$(CONFIG_MACH_M2) += midas-thermistor.o
 endif
-
 
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
 
