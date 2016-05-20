@@ -1308,10 +1308,10 @@ static int __devinit pm8xxx_misc_probe(struct platform_device *pdev)
 #endif
 
 #if !defined(CONFIG_MACH_JF_VZW)
-	if (!sec_debug_is_enabled()) {
+	/*if (!sec_debug_is_enabled()) {*/
 		hr_enabled = 1;
 		status = 1;
-	}
+	/*}*/
 #endif
 
 	return rc;
