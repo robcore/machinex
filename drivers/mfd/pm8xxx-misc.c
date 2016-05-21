@@ -25,8 +25,6 @@
 #include <asm/system_info.h>
 #include <mach/apq8064-gpio.h>
 
-#include <mach/sec_debug.h>
-
 /* PON CTRL 1 register */
 #define REG_PM8XXX_PON_CTRL_1			0x01C
 
