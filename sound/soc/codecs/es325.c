@@ -99,14 +99,6 @@ struct es325_cmd_access {
 #define NS_OFFSET 2
 
 #define ES325_NUM_CODEC_SLIM_DAIS	6
-int debug_for_dl_firmware = 0;
-
-enum {
-	BOOT_OK = 0,
-	BOOT_MSG_ERR,
-	BOOT_MSG_NACK,
-	SYNC_MSG_NACK
-};
 
 struct es325_slim_dai_data {
 	unsigned int rate;
@@ -189,7 +181,6 @@ static unsigned int es325_ap_tx1_ch_cnt = 1;
 unsigned int es325_tx1_route_enable;
 unsigned int es325_rx1_route_enable;
 unsigned int es325_rx2_route_enable;
-unsigned int es325_fw_downloaded = 0;
 
 static int es325_slim_rx_port_to_ch[ES325_SLIM_RX_PORTS] = {
 	152, 153, 154, 155, 134, 135
@@ -881,10 +872,6 @@ int es325_remote_cfg_slim_rx(int dai_id)
 	struct es325_priv *es325 = &es325_priv;
 	int be_id;
 	int rc = 0;
-	if(es325_fw_downloaded == 0) {
-		pr_err("%s():eS325 FW not ready, cfg_slim_rx rejected\n", __func__);
-		return rc;
-	}
 
 	if (dai_id != ES325_SLIM_1_PB
 	    && dai_id != ES325_SLIM_2_PB)
@@ -931,10 +918,6 @@ int es325_remote_cfg_slim_tx(int dai_id)
 	int ch_cnt;
 	int rc = 0;
 
-	if(es325_fw_downloaded == 0) {
-		pr_err("%s():eS325 FW not ready, cfg_slim_tx rejected\n", __func__);
-		return rc;
-	}
 	if (dai_id != ES325_SLIM_1_CAP)
 		return 0;
 
@@ -2074,12 +2057,10 @@ static int es325_bootup(struct es325_priv *es325)
 	if (rc < 0) {
 		pr_err("%s(): ES325_BUS_READ_ERROR = %d\n", __func__,rc);
 		pr_err("%s(): firmware load failed boot ack\n", __func__);
-		debug_for_dl_firmware = BOOT_MSG_ERR;
 		return	rc;
 	}
 	if ((msg[0] != (ES325_BOOT_ACK >> 8)) || (msg[1] != (ES325_BOOT_ACK & 0x00ff))) {
 		pr_err("%s(): firmware load failed boot ack pattern", __func__);
-		debug_for_dl_firmware = BOOT_MSG_NACK;
 		return	-EIO;
 	}
 	usleep_range(50000, 50000);
@@ -2096,7 +2077,6 @@ static int es325_bootup(struct es325_priv *es325)
 		if (rc < 0) {
 			pr_err("%s(): ES325_BUS_WRITE_ERROR = %d\n", __func__,rc);
 			pr_err("%s(): firmware load failed\n", __func__);
-			debug_for_dl_firmware = buf_frames * ES325_FW_LOAD_BUF_SZ;
 			return -EIO;
 		}
 	}
@@ -2107,7 +2087,6 @@ static int es325_bootup(struct es325_priv *es325)
 		if (rc < 0) {
 			pr_err("%s(): ES325_BUS_WRITE_ERROR = %d\n", __func__,rc);
 			pr_err("%s(): firmware load failed\n", __func__);
-			debug_for_dl_firmware = es325->fw->size % ES325_FW_LOAD_BUF_SZ;
 			return -EIO;
 		}
 	}
@@ -2145,17 +2124,14 @@ static int es325_bootup(struct es325_priv *es325)
 		pr_err("%s(): ES325_BUS_READ_ERROR = %d\n", __func__,rc);
 		pr_err("%s(): error reading firmware sync ack rc=%d\n",
 		       __func__, rc);
-		debug_for_dl_firmware = SYNC_MSG_NACK;
 		return rc;
 	}
 	if (memcmp(msg, sync_ok, 4) == 0) {
 		pr_info("%s(): firmware sync ack good=0x%02x%02x%02x%02x\n",
 			__func__, msg[0], msg[1], msg[2], msg[3]);
-		es325_fw_downloaded = 1;
 	} else {
 		pr_err("%s(): firmware sync ack failed=0x%02x%02x%02x%02x\n",
 		       __func__, msg[0], msg[1], msg[2], msg[3]);
-		debug_for_dl_firmware = SYNC_MSG_NACK;
 		return -EIO;
 	}
 
@@ -2311,41 +2287,34 @@ static DEVICE_ATTR(firmware, 0644, NULL, es325_firmware_store);
 
 static int es325_sleep(struct es325_priv *es325)
 {
-	char smooth_rate_cmd[] = {
-		0x90, 0x4e, 0x00, 0x00 /* response not expected */
-	};
 	char pwr_cmd[] = {
-		0x90, 0x10, 0x00, 0x01 /* response not expected */
+		0x90, 0x10, 0, 1
 	};
-
 	int rc;
-	int i = 0;
+	int remain = 3;
 
 	pr_info("+[ES325]=%s()=\n", __func__);
 
-	/* Set Smooth Mute period to 0 ms */
+	/* FIXME: check host vs bus ordering in the write. Why is this
+	 * still so confused?
+	 */
+LOOP:
 	rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
-				ES325_WRITE_VE_WIDTH, smooth_rate_cmd, 4, 1);
-	if (rc < 0)
-		pr_err("=[ES325]=%s(): Sleep Smooth Mute Set to 0 Fail, rc=%d\n", __func__, rc);
-
-	usleep_range(2000, 2100);
-
-	/* write pwr command, es325 to sleep mode */
-	do {
-		rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
 			     ES325_WRITE_VE_WIDTH, pwr_cmd, 4, 1);
-		if (rc == 0) {
-			/* wait 20 ms according to spec end return. 
-			   eS325 is sleeping */
-			msleep(20);
-			break;
+	if (rc < 0) {
+		if (-remain > 0) {
+			pr_info("=[ES325]= wrapper %s sleep command failed remain count %d\n",
+				__func__, remain);
+			usleep_range(1000, 1100);
+			goto LOOP;
 		}
-		pr_err("=[ES325]=%s(): slim write fail, rc=%d\n", __func__,rc);
-		usleep_range(1000, 1000);
-		i++;
-	} while (i <= 20);
+	}
 
+	if (rc < 0) {
+		pr_err("=[ES325]= error sending sleep cmd rc=%d\n", rc);
+		return rc;
+	}
+	usleep_range(20000, 20000);
 
 	pr_info("-[ES325]=%s()=\n", __func__);
 	return 0;
@@ -5208,10 +5177,6 @@ void es325_wrapper_wakeup(struct snd_soc_dai *dai)
 #ifdef ES325_SLEEP
 	int rc;
 	struct es325_priv *es325 = &es325_priv;
-	if(es325_fw_downloaded==0) {
-		pr_err("%s():FW not ready, wakeup suspends, err_msg:%d\n", __func__,debug_for_dl_firmware);
-		return;
-	}
 	pr_debug("=[ES325]=%s dai_id=%d ch_wakeup=%d,wakeup_cnt=%d\n", __func__,
 		dai->id, es325->dai[dai->id-1].ch_wakeup, es325->wakeup_cnt);
 	if (!es325_remote_route_enable(dai)) {
