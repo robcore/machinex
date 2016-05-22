@@ -1030,15 +1030,10 @@ restart_loop:
 	write_unlock(&journal->j_state_lock);
 
 	if (journal->j_checkpoint_transactions == NULL) {
-	    journal->j_checkpoint_transactions = commit_transaction;
-	    commit_transaction->t_cpnext = commit_transaction;
-	    commit_transaction->t_cpprev = commit_transaction;
+		journal->j_checkpoint_transactions = commit_transaction;
+		commit_transaction->t_cpnext = commit_transaction;
+		commit_transaction->t_cpprev = commit_transaction;
 	} else {
-		if (journal->j_checkpoint_transactions == NULL) {
-			journal->j_checkpoint_transactions = commit_transaction;
-			commit_transaction->t_cpnext = commit_transaction;
-			commit_transaction->t_cpprev = commit_transaction;
-		} else {
 		commit_transaction->t_cpnext =
 			journal->j_checkpoint_transactions;
 		commit_transaction->t_cpprev =
@@ -1056,7 +1051,7 @@ restart_loop:
 		journal->j_commit_callback(journal, commit_transaction);
 		spin_lock(&journal->j_list_lock);
 		if (commit_transaction->t_dropped) {
-			to_free = 1;
+//			to_free = 1;
 		} else {
 			commit_transaction->t_callbacked = 1;
 		}
