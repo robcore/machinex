@@ -125,6 +125,9 @@ struct ib_umem *ib_umem_get(struct ib_ucontext *context, unsigned long addr,
 		return ERR_PTR(-ENOMEM);
 	}
 
+	if (!size)
+		return ERR_PTR(-EINVAL);
+
 	/*
 	 * if we can't alloc the vma_list, it's not so bad;
 	 * just assume the memory is not hugetlb memory
