@@ -398,7 +398,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -funsafe-math-optimizations -ftree-vectorize \
 		   -std=gnu89 \
-		   -Wbool-compare -Wno-unused-variable \
+		   -Wbool-compare -Wno-unused-variable -Wno-array-bounds \
 		   -marm -mtune=cortex-a15 -mcpu=cortex-a15 -mfpu=neon-vfpv4 \
 		   -mvectorize-with-neon-quad -fgcse-after-reload -fgcse-sm \
 		   -ftree-loop-im -ftree-loop-ivcanon -fivopts \
@@ -637,8 +637,6 @@ ifndef CONFIG_FUNCTION_TRACER
 KBUILD_CFLAGS	+= -fomit-frame-pointer
 endif
 endif
-
-KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
 
 KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
 
