@@ -1,0 +1,5 @@
+kernel/arch/arm/mach-msm/pil-q6v4.ko
+kernel/arch/arm/mach-msm/pil-tzapps.ko
+kernel/arch/arm/mach-msm/pil-vidc.ko
+kernel/arch/arm/mach-msm/lpass-8960.ko
+kernel/arch/arm/mach-msm/hsic_sysmon.ko
