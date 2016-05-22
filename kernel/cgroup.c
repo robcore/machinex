@@ -414,6 +414,11 @@ static void put_css_set(struct css_set *cg)
 		list_del(&link->cg_link_list);
 		list_del(&link->cgrp_link_list);
 
+		/*
+		 * We may not be holding cgroup_mutex, and if cgrp->count is
+		 * dropped to 0 the cgroup can be destroyed at any time, hence
+		 * rcu_read_lock is used to keep it alive.
+		 */
 		rcu_read_lock();
 		if (atomic_dec_and_test(&cgrp->count)) {
 			check_for_release(cgrp);
