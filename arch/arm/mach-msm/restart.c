@@ -401,7 +401,7 @@ reset:
 	mdelay(10000);
 	printk(KERN_ERR "Restarting has failed\n");
 }
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG)
 static int dload_mode_normal_reboot_handler(struct notifier_block *nb,
 				unsigned long l, void *p)
 {
