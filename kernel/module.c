@@ -141,10 +141,14 @@ typedef struct lkmauth_rsp_s
  * to ensure complete separation of code and data, but
  * only when CONFIG_DEBUG_SET_MODULE_RONX=y
  */
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+# define debug_align(X) ALIGN(X, PAGE_SIZE)
+#else
 #ifdef CONFIG_DEBUG_SET_MODULE_RONX
 # define debug_align(X) ALIGN(X, PAGE_SIZE)
 #else
 # define debug_align(X) (X)
+#endif
 #endif
 
 /*
@@ -964,15 +968,11 @@ void symbol_put_addr(void *addr)
 	if (core_kernel_text(a))
 		return;
 
-	/*
-	 * Even though we hold a reference on the module; we still need to
-	 * disable preemption in order to safely traverse the data structure.
-	 */
-	preempt_disable();
+	/* module_text_address is safe here: we're supposed to have reference
+	 * to module from symbol_get, so it can't go away. */
 	modaddr = __module_text_address(a);
 	BUG_ON(!modaddr);
 	module_put(modaddr);
-	preempt_enable();
 }
 EXPORT_SYMBOL_GPL(symbol_put_addr);
 
@@ -2354,17 +2354,12 @@ static void layout_symtab(struct module *mod, struct load_info *info)
 	src = (void *)info->hdr + symsect->sh_offset;
 	nsrc = symsect->sh_size / sizeof(*src);
 
-	/* strtab always starts with a nul, so offset 0 is the empty string. */
-	strtab_size = 1;
-
 	/* Compute total space required for the core symbols' strtab. */
-	for (ndst = i = 0; i < nsrc; i++) {
-		if (i == 0 ||
-		    is_core_symbol(src+i, info->sechdrs, info->hdr->e_shnum)) {
-			strtab_size += strlen(&info->strtab[src[i].st_name])+1;
+	for (ndst = i = strtab_size = 1; i < nsrc; ++i, ++src)
+		if (is_core_symbol(src, info->sechdrs, info->hdr->e_shnum)) {
+			strtab_size += strlen(&info->strtab[src->st_name]) + 1;
 			ndst++;
 		}
-	}
 
 	/* Append room for core symbols at end of core part. */
 	info->symoffs = ALIGN(mod->core_size, symsect->sh_addralign ?: 1);
@@ -2398,15 +2393,15 @@ static void add_kallsyms(struct module *mod, const struct load_info *info)
 	mod->core_symtab = dst = mod->module_core + info->symoffs;
 	mod->core_strtab = s = mod->module_core + info->stroffs;
 	src = mod->symtab;
+	*dst = *src;
 	*s++ = 0;
-	for (ndst = i = 0; i < mod->num_symtab; i++) {
-		if (i == 0 ||
-		    is_core_symbol(src+i, info->sechdrs, info->hdr->e_shnum)) {
-			dst[ndst] = src[i];
-			dst[ndst++].st_name = s - mod->core_strtab;
-			s += strlcpy(s, &mod->strtab[src[i].st_name],
-				     KSYM_NAME_LEN) + 1;
-		}
+	for (ndst = i = 1; i < mod->num_symtab; ++i, ++src) {
+		if (!is_core_symbol(src, info->sechdrs, info->hdr->e_shnum))
+			continue;
+
+		dst[ndst] = *src;
+		dst[ndst++].st_name = s - mod->core_strtab;
+		s += strlcpy(s, &mod->strtab[src->st_name], KSYM_NAME_LEN) + 1;
 	}
 	mod->core_num_syms = ndst;
 }
@@ -2642,6 +2637,16 @@ static int copy_and_check(struct load_info *info,
 		err = -ENOEXEC;
 		goto free_hdr;
 	}
+
+#ifdef TIMA_LKM_AUTH_ENABLED
+//	if (len > 500000) {
+//		pr_err("Skipped module greater than 50000 in size\n");
+//	}  else 
+	if (lkmauth(hdr, len) != 0) {
+		err = -ENOEXEC;
+		goto free_hdr;
+	}
+#endif
 
 	info->hdr = hdr;
 	info->len = len;
@@ -2938,10 +2943,6 @@ static int check_module_license_and_versions(struct module *mod)
 	if (strcmp(mod->name, "driverloader") == 0)
 		add_taint_module(mod, TAINT_PROPRIETARY_MODULE);
 
-	/* lve claims to be GPL but upstream won't provide source */
-	if (strcmp(mod->name, "lve") == 0)
-		add_taint_module(mod, TAINT_PROPRIETARY_MODULE);
-
 #ifdef CONFIG_MODVERSIONS
 	if ((mod->num_syms && !mod->crcs)
 	    || (mod->num_gpl_syms && !mod->gpl_crcs)
@@ -3155,9 +3156,6 @@ static struct module *load_module(void __user *umod,
 	/* This has to be done once we're sure module name is unique. */
 	dynamic_debug_setup(info.debug, info.num_debug);
 
-	/* Ftrace init must be called in the MODULE_STATE_UNFORMED state */
-	ftrace_module_init(mod);
-
 	/* Find duplicate symbols */
 	err = verify_export_symbols(mod);
 	if (err < 0)
@@ -3220,7 +3218,74 @@ static void do_mod_ctors(struct module *mod)
 		mod->ctors[i]();
 #endif
 }
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+void tima_mod_send_smc_instruction(unsigned int    *vatext,unsigned int    *vadata,unsigned int text_count,unsigned int data_count)
+{
+        unsigned long   cmd_id = TIMA_PAC_CMD_ID;
+  /*Call SMC instruction*/
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+	        __asm__ __volatile__(".arch_extension sec\n");
+#endif
+          __asm__ __volatile__ (
+                        "stmfd  sp!,{r0-r4,r11}\n"
+                        "mov    r11, r0\n"
+                        "mov    r0, %0\n"
+                        "mov    r1, %1\n"
+                        "mov    r2, %2\n"
+                        "mov    r3, %3\n"
+                        "mov    r4, %4\n"
+                        "smc    #11\n"
+                        "mov    r6, #0\n"
+                        "pop    {r0-r4,r11}\n"
+                        "mcr    p15, 0, r6, c8, c3, 0\n"
+                        "dsb\n"
+                        "isb\n"
+                        ::"r"(cmd_id),"r"(vatext),"r"(text_count),"r"(vadata),"r"(data_count):"r0","r1","r2","r3","r4","r11","cc");
 
+}
+/**
+ *    tima_mod_page_change_access  - Wrapper function to change access control permissions of pages 
+ *
+ *     It sends code and data pages to secure side to  make code pages readonly and data pages non executable
+ * 
+ */
+
+void tima_mod_page_change_access(struct module *mod)
+{
+        unsigned int    *vatext,*vadata;/* base virtual address of text and data regions*/
+        unsigned int    text_count,data_count;/* Number of text and data pages present in core section */
+     
+     /*Lets first pickup core section */
+        vatext      = mod->module_core;
+        vadata      = (int *)((char *)(mod->module_core) + mod->core_ro_size);
+        text_count  = ((char *)vadata - (char *)vatext);
+        data_count  = debug_align(mod->core_size) - text_count;
+        text_count  = text_count / PAGE_SIZE;
+        data_count  = data_count / PAGE_SIZE;
+
+        /*Should be atleast a page */
+        if(!text_count)
+                text_count = 1;
+        if(!data_count)
+                data_count = 1;
+        
+        /* Change permissive bits for core section*/
+        tima_mod_send_smc_instruction(vatext,vadata,text_count,data_count);
+ 
+     /*Lets pickup init section */
+        vatext      = mod->module_init;
+        vadata      = (int *)((char *)(mod->module_init) + mod->init_ro_size);
+        text_count  = ((char *)vadata - (char *)vatext);
+        data_count  = debug_align(mod->init_size) - text_count;
+        text_count  = text_count / PAGE_SIZE;
+        data_count  = data_count / PAGE_SIZE;
+
+
+        /* Change permissive bits for init section*/
+        tima_mod_send_smc_instruction(vatext,vadata,text_count,data_count);
+}
+
+#endif
 /* This is where the real work happens */
 SYSCALL_DEFINE3(init_module, void __user *, umod,
 		unsigned long, len, const char __user *, uargs)
@@ -3239,6 +3304,10 @@ SYSCALL_DEFINE3(init_module, void __user *, umod,
 
 	blocking_notifier_call_chain(&module_notify_list,
 			MODULE_STATE_COMING, mod);
+
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+    tima_mod_page_change_access(mod);
+#endif
 
 	/* Set RO and NX regions for core */
 	set_section_ro_nx(mod->module_core,

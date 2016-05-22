@@ -585,41 +585,6 @@ void elv_requeue_request(struct request_queue *q, struct request *rq)
 	__elv_add_request(q, rq, ELEVATOR_INSERT_REQUEUE);
 }
 
-/**
- * elv_reinsert_request() - Insert a request back to the scheduler
- * @q:		request queue where request should be inserted
- * @rq:		request to be inserted
- *
- * This function returns the request back to the scheduler to be
- * inserted as if it was never dispatched
- *
- * Return: 0 on success, error code on failure
- */
-int elv_reinsert_request(struct request_queue *q, struct request *rq)
-{
-	int res;
-
-	if (!q->elevator->type->ops.elevator_reinsert_req_fn)
-		return -EPERM;
-
-	res = q->elevator->type->ops.elevator_reinsert_req_fn(q, rq);
-	if (!res) {
-		/*
-		 * it already went through dequeue, we need to decrement the
-		 * in_flight count again
-		 */
-		if (blk_account_rq(rq)) {
-			q->in_flight[rq_is_sync(rq)]--;
-			if (rq->cmd_flags & REQ_SORTED)
-				elv_deactivate_rq(q, rq);
-		}
-		rq->cmd_flags &= ~REQ_STARTED;
-		q->nr_sorted++;
-	}
-
-	return res;
-}
-
 void elv_drain_elevator(struct request_queue *q)
 {
 	static int printed;
@@ -814,11 +779,6 @@ void elv_completed_request(struct request_queue *q, struct request *rq)
 {
 	struct elevator_queue *e = q->elevator;
 
-	if (rq->cmd_flags & REQ_URGENT) {
-		q->notified_urgent = false;
-		WARN_ON(!q->dispatched_urgent);
-		q->dispatched_urgent = false;
-	}
 	/*
 	 * request is released from the driver, io must be done
 	 */
@@ -1037,7 +997,7 @@ fail_register:
 /*
  * Switch this queue to the given IO scheduler.
  */
-static int __elevator_change(struct request_queue *q, const char *name)
+int elevator_change(struct request_queue *q, const char *name)
 {
 	char elevator_name[ELV_NAME_MAX];
 	struct elevator_type *e;
@@ -1059,18 +1019,6 @@ static int __elevator_change(struct request_queue *q, const char *name)
 
 	return elevator_switch(q, e);
 }
-
-int elevator_change(struct request_queue *q, const char *name)
-{
-	int ret;
-
-	/* Protect q->elevator from elevator_init() */
-	mutex_lock(&q->sysfs_lock);
-	ret = __elevator_change(q, name);
-	mutex_unlock(&q->sysfs_lock);
-
-	return ret;
-}
 EXPORT_SYMBOL(elevator_change);
 
 ssize_t elv_iosched_store(struct request_queue *q, const char *name,
@@ -1081,7 +1029,7 @@ ssize_t elv_iosched_store(struct request_queue *q, const char *name,
 	if (!q->elevator)
 		return count;
 
-	ret = __elevator_change(q, name);
+	ret = elevator_change(q, name);
 	if (!ret)
 		return count;
 

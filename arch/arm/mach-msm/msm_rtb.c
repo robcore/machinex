@@ -28,6 +28,7 @@
 #include <mach/memory.h>
 #include <mach/msm_rtb.h>
 #include <mach/system.h>
+#include <mach/sec_debug.h>
 
 #define SENTINEL_BYTE_1 0xFF
 #define SENTINEL_BYTE_2 0xAA
@@ -84,6 +85,18 @@ static int msm_rtb_panic_notifier(struct notifier_block *this,
 	msm_rtb.enabled = 0;
 	return NOTIFY_DONE;
 }
+//for rtb enable
+static int __init sec_rtb_level(char *str)
+{
+        int new_rtb_level = 0;
+        if(get_option(&str, &new_rtb_level))
+        {
+                msm_rtb.enabled = new_rtb_level;
+                return 0;
+        }
+        return -EINVAL;
+}
+__setup("msm_rtb.enabled=", sec_rtb_level);
 
 static struct notifier_block msm_rtb_panic_blk = {
 	.notifier_call  = msm_rtb_panic_notifier,
@@ -286,7 +299,9 @@ int msm_rtb_probe(struct platform_device *pdev)
 	atomic_set(&msm_rtb_idx, 0);
 	msm_rtb.step_size = 1;
 #endif
-	msm_rtb.filter = 1 << LOGK_READL | 1 << LOGK_WRITEL;
+	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW) {
+		msm_rtb.filter = 1 << LOGK_READL | 1 << LOGK_WRITEL;
+	}
 	atomic_notifier_chain_register(&panic_notifier_list,
 						&msm_rtb_panic_blk);
 	msm_rtb.initialized = 1;

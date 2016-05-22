@@ -1,2 +1,0 @@
-Changes were required in EMMC related to mounting of partitions due to memory map change in the 1170 Release. This patch needs to be applied in system/core.
-

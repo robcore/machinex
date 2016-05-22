@@ -312,7 +312,6 @@ static int mdm_driver_queue_notification(char *name,
 			(void *)notif);
 	return ret;
 }
-
 static int mdm_force_crash(struct mdm_device *mdev)
 {
 	pr_info("%s: Start mdm force crash\n", __func__);
@@ -321,7 +320,6 @@ static int mdm_force_crash(struct mdm_device *mdev)
 
 	return 0;
 }
-
 static irqreturn_t mdm_vddmin_change(int irq, void *dev_id)
 {
 	struct mdm_device *mdev = (struct mdm_device *)dev_id;

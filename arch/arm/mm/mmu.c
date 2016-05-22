@@ -535,7 +535,7 @@ static void __init build_mem_type_table(void)
 #endif
 
 	for (i = 0; i < 16; i++) {
-		pteval_t v = pgprot_val(protection_map[i]);
+		unsigned long v = pgprot_val(protection_map[i]);
 		protection_map[i] = __pgprot(v | user_pgprot);
 	}
 
@@ -1413,6 +1413,17 @@ void __init paging_init(struct machine_desc *mdesc)
 
 	/* allocate the zero page. */
 	zero_page = early_alloc(PAGE_SIZE);
+
+#ifdef TIMA_ENABLED
+	{
+	        /**TIMA_MAGIC*/
+	        void *mem_alloc_ptr;
+		unsigned int phy_addr; 
+		mem_alloc_ptr = early_alloc(0x200000);
+		phy_addr = __pa(mem_alloc_ptr);
+		printk(KERN_ERR"===TIMA===NEW=== -> mem_alloc_ptr= %p pa = %x\n", mem_alloc_ptr, phy_addr);
+	}
+#endif
 
 	bootmem_init();
 

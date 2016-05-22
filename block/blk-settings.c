@@ -100,18 +100,6 @@ void blk_queue_lld_busy(struct request_queue *q, lld_busy_fn *fn)
 EXPORT_SYMBOL_GPL(blk_queue_lld_busy);
 
 /**
- * blk_urgent_request() - Set an urgent_request handler function for queue
- * @q:		queue
- * @fn:		handler for urgent requests
- *
- */
-void blk_urgent_request(struct request_queue *q, request_fn_proc *fn)
-{
-	q->urgent_request_fn = fn;
-}
-EXPORT_SYMBOL(blk_urgent_request);
-
-/**
  * blk_set_default_limits - reset limits to default values
  * @lim:  the queue_limits structure to reset
  *
@@ -155,7 +143,6 @@ void blk_set_stacking_limits(struct queue_limits *lim)
 	lim->discard_zeroes_data = 1;
 	lim->max_segments = USHRT_MAX;
 	lim->max_hw_sectors = UINT_MAX;
-	lim->max_segment_size = UINT_MAX;
 
 	lim->max_sectors = BLK_DEF_MAX_SECTORS;
 }
@@ -550,7 +537,7 @@ int blk_stack_limits(struct queue_limits *t, struct queue_limits *b,
 		bottom = max(b->physical_block_size, b->io_min) + alignment;
 
 		/* Verify that top and bottom intervals line up */
-		if (max(top, bottom) % min(top, bottom)) {
+		if (max(top, bottom) & (min(top, bottom) - 1)) {
 			t->misaligned = 1;
 			ret = -1;
 		}
@@ -591,7 +578,7 @@ int blk_stack_limits(struct queue_limits *t, struct queue_limits *b,
 
 	/* Find lowest common alignment_offset */
 	t->alignment_offset = lcm(t->alignment_offset, alignment)
-		% max(t->physical_block_size, t->io_min);
+		& (max(t->physical_block_size, t->io_min) - 1);
 
 	/* Verify that new alignment_offset is on a logical block boundary */
 	if (t->alignment_offset & (t->logical_block_size - 1)) {
