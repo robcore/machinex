@@ -1,4 +1,0 @@
-kernel/drivers/input/touchscreen/synaptics_i2c_rmi.ko
-kernel/drivers/input/touchscreen/rmi_dev.ko
-kernel/drivers/input/touchscreen/rmi_f54.ko
-kernel/drivers/input/touchscreen/rmi_fw_update.ko
