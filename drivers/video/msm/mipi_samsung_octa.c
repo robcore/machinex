@@ -17,6 +17,9 @@
 #include "mipi_dsi.h"
 #include "mipi_samsung_octa.h"
 #include "mdp4.h"
+#ifdef CONFIG_LCD_NOTIFY
+#include <linux/lcd_notify.h>
+#endif
 
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include <linux/mfd/pm8xxx/pm8821.h>
@@ -617,6 +620,10 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	pr_info("[%s]\n", __func__);
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
+
 	return 0;
 }
 
@@ -667,6 +674,10 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 
 	pr_info("[lcd] %s\n", __func__);
+
+#if defined(CONFIG_MACH_LGE)
+	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
+#endif
 
 	return 0;
 }

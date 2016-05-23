@@ -16,6 +16,12 @@ config FB_MSM
 
 if FB_MSM
 
+config LCD_NOTIFY
+	bool "Enable lcd notify"
+	default n
+	help
+	  Call lcd notify handlers when the user requested sleep state
+
 config FB_MSM_BACKLIGHT
 	bool "Support for backlight control"
 	default y
