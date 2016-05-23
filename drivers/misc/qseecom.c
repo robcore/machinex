@@ -1,5 +1,3 @@
-
-
 /*Qualcomm Secure Execution Environment Communicator (QSEECOM) driver
  *
  * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
@@ -738,6 +736,9 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 			&resp, sizeof(resp));
 		if (ret) {
 			pr_err("scm_call to load app failed\n");
+			if (!IS_ERR_OR_NULL(ihandle))
+				ion_free(qseecom.ion_clnt, ihandle);
+			qsee_disable_clock_vote(CLK_SFPB);
 			return -EINVAL;
 		}
 

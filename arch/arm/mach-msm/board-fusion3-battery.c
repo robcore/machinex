@@ -28,6 +28,10 @@
 #include "devices-msm8x60.h"
 #include "board-8064.h"
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
+
 #if defined(CONFIG_BATTERY_SAMSUNG)
 #include <linux/battery/sec_battery.h>
 #include <linux/battery/sec_fuelgauge.h>
@@ -347,6 +351,56 @@ static int sec_bat_get_cable_from_extended_cable_type(
 		cable_type = cable_main;
 		break;
 	}
+
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	/* We are in basic Fast Charge mode, so we substitute AC to USB
+	   levels */
+	if (force_fast_charge == FAST_CHARGE_FORCE_AC) {
+		switch(cable_type) {
+			/* These are low current USB connections,
+			   apply normal 1A AC levels to USB */
+			case POWER_SUPPLY_TYPE_USB:
+			case POWER_SUPPLY_TYPE_USB_ACA:
+			case POWER_SUPPLY_TYPE_CARDOCK:
+			case POWER_SUPPLY_TYPE_OTG:
+				charge_current_max = USB_CHARGE_1000;
+				charge_current     = USB_CHARGE_1000;
+				break;
+			default:		/* Don't do anything for any other kind of connections and don't touch when type is unknown */
+				break;
+
+		}
+	/* We are in advanced Fast Charge mode, so we apply custom charging
+	   levels for both AC and USB */
+	} else if (force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) {
+		switch(cable_type) {
+			/* These are USB connections, apply custom USB current
+			   for all of them */
+			case POWER_SUPPLY_TYPE_USB:
+			case POWER_SUPPLY_TYPE_USB_DCP:
+			case POWER_SUPPLY_TYPE_USB_CDP:
+			case POWER_SUPPLY_TYPE_USB_ACA:
+			case POWER_SUPPLY_TYPE_CARDOCK:
+			case POWER_SUPPLY_TYPE_OTG:
+				charge_current_max = usb_charge_level;
+				charge_current     = usb_charge_level;
+				break;
+			/* These are AC connections, apply custom AC current
+			   for all of them */
+			case POWER_SUPPLY_TYPE_MAINS:
+				charge_current_max = ac_charge_level;
+				/* but never go above 2.1A */
+				charge_current     =
+				/* Keep the 300mA/h delta, but never go above 2.1A/h */
+					min(ac_charge_level+300, MAX_CHARGE_LEVEL);
+				break;
+			/* Don't do anything for any other kind of connections
+			   and don't touch when type is unknown */
+			default:
+				break;
+		}
+	}
+#endif
 
 	if (charge_current_max == 0) {
 		charge_current_max =
@@ -759,7 +813,7 @@ sec_battery_platform_data_t sec_battery_pdata = {
 	.temp_low_threshold_normal = -30,
 	.temp_low_recovery_normal = 0,
 
-	.temp_high_threshold_lpm = 470,
+	.temp_high_threshold_lpm = 500,
 	.temp_high_recovery_lpm = 430,
 	.temp_low_threshold_lpm = -30,
 	.temp_low_recovery_lpm = 0,
