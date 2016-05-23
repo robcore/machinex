@@ -828,6 +828,13 @@ config DESKDOCK_DISABLE
 	help
 	  This option enable not support for DESKDOCK
 
+config GAMMA_CONTROL
+       bool "Gamma Control for OLED"
+       depends on FB_MSM_MIPI_DSI_SAMSUNG_OCTA
+       default y
+       help
+       This adds full support for shifting RGB panel colors.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
