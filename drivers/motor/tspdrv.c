@@ -181,7 +181,7 @@ static int get_time_for_vibetonz(struct timed_output_dev *dev)
 
 static void enable_vibetonz_from_user(struct timed_output_dev *dev, int value)
 {
-	//printk(KERN_DEBUG "tspdrv: Enable time = %d msec\n", value);
+//	printk(KERN_DEBUG "tspdrv: Enable time = %d msec\n", value);
 	hrtimer_cancel(&timer);
 
 	/* set_vibetonz(value); */
@@ -217,12 +217,12 @@ static void vibetonz_start(void)
 		DbgOut((KERN_ERR
 		"tspdrv: timed_output_dev_register fail\n"));
 
-    ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_value);
+	ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_value);
 	if (ret < 0)
 		DbgOut((KERN_ERR
 		"tspdrv: device_create_file fail: pwm_value\n"));
-    
-    ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_max);
+
+	ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_max);
 	if (ret < 0) {
 		pr_err("vibrator_init(): create sysfs fail: pwm_max\n");
 	}

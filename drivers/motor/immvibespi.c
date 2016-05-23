@@ -8,10 +8,10 @@
 **     to control PWM duty cycle, amp enable/disable, save IVT file, etc...
 **
 ** Portions Copyright (c) 2008-2010 Immersion Corporation. All Rights Reserved.
-**          Copyright (c) 2013 The CyanogenMod Project
-**                        Daniel Hillenbrand <codeworkx@cyanogenmod.com>
-**                        Dan Pasanen <dan.pasanen@gmail.com>
-**                        Shareef Ali <shareefalis@cyanogenmod.org>
+** Copyright (c) 2013 The CyanogenMod Project
+** Daniel Hillenbrand <codeworkx@cyanogenmod.com>
+** Dan Pasanen <dan.pasanen@gmail.com>
+** Shareef Ali <shareefalis@cyanogenmod.org>
 **
 ** This file contains Original Code and/or Modifications of Original Code
 ** as defined in and that are subject to the GNU Public License v2 -
@@ -34,10 +34,10 @@
 #include <linux/gpio.h>
 #include "tspdrv.h"
 
-#define LEVEL_MAX           100
-#define LEVEL_MIN           0
-#define LEVEL_DEFAULT       50
-#define LEVEL_THRESHOLD     75
+#define LEVEL_MAX	100
+#define LEVEL_MIN	0
+#define LEVEL_DEFAULT	50
+#define LEVEL_THRESHOLD	75
 
 /*
 ** This SPI supports only one actuator.
@@ -149,7 +149,7 @@ static int32_t ImmVibeSPI_ForceOut_AmpDisable(u_int8_t nActuatorIndex)
 			gpio_set_value(vibrator_drvdata.vib_pwm_gpio, \
 			    VIBRATION_OFF);
 		}
-		//printk(KERN_DEBUG "tspdrv: %s\n", __func__);
+//		printk(KERN_DEBUG "tspdrv: %s\n", __func__);
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
 		max77693_vibtonz_en(0);
 #endif
@@ -172,7 +172,7 @@ static int32_t ImmVibeSPI_ForceOut_AmpEnable(u_int8_t nActuatorIndex)
 			vib_pwm_gpio, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, \
 			GPIO_CFG_2MA), 1);
 		}
-		//printk(KERN_DEBUG "tspdrv: %s\n", __func__);
+//		printk(KERN_DEBUG "tspdrv: %s\n", __func__);
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
 		max77693_vibtonz_en(1);
 #endif
@@ -300,6 +300,7 @@ static int32_t ImmVibeSPI_ForceOut_SetSamples(u_int8_t nActuatorIndex,
 	}
 	return VIBE_S_SUCCESS;
 }
+
 static ssize_t pwm_max_show(struct device *dev,
                             struct device_attribute *attr, char *buf)
 {
@@ -311,7 +312,7 @@ static ssize_t pwm_max_show(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(pwm_max, S_IRUGO | S_IWUSR,
+static DEVICE_ATTR(pwm_max, S_IRUGO,
                    pwm_max_show, NULL);
 
 static ssize_t pwm_min_show(struct device *dev,
