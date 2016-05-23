@@ -458,6 +458,7 @@ EXPORT_SYMBOL(snd_ctl_replace);
 int snd_ctl_remove(struct snd_card *card, struct snd_kcontrol *kcontrol)
 {
 	struct snd_ctl_elem_id id;
+	unsigned int count;
 	unsigned int idx;
 
 	if (snd_BUG_ON(!card || !kcontrol))

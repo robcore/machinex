@@ -912,7 +912,7 @@ static int msm_hdmi_rx_ch_put(struct snd_kcontrol *kcontrol,
 		msm_hdmi_rx_ch);
 	return 1;
 }
-	
+
 static int msm_hdmi_rate_put(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
