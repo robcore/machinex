@@ -118,6 +118,7 @@ enum an30259a_pattern {
 	LOW_BATTERY,
 	FULLY_CHARGED,
 	POWERING,
+	BOOTING,
 };
 
 struct an30259a_led {
@@ -322,7 +323,7 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (mode > POWERING)
+	if (mode > BOOTING)
 		return;
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
@@ -383,7 +384,13 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_B,
 				0, 15, 14, 12, 2, 2, 7, 7, 7, 7);
 		break;
-
+	case BOOTING:
+		pr_info("LED Booting Pattern on\n");
+		//leds_on(LED_G, true, true, LED_G_CURRENT);
+		leds_on(LED_B, true, true, LED_B_CURRENT);
+		//leds_set_slope_mode(client, LED_G, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
+		break;
 	default:
 		return;
 		break;
@@ -883,6 +890,7 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 		goto exit;
 	}
 #endif
+	an30259a_start_led_pattern(BOOTING);
 	return ret;
 exit:
 	mutex_destroy(&data->mutex);
