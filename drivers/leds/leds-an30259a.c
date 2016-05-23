@@ -367,6 +367,8 @@ static void an30259a_start_led_pattern(int mode)
 
 	case CHARGING_ERR:
 		leds_on(LED_R, true, true, cur);
+		leds_set_slope_mode(client, LED_R,
+				1, 15, 15, 0, 1, 1, 0, 0, 0, 0);
 		break;
 
 	case MISSED_NOTI:
@@ -411,15 +413,14 @@ static void an30259a_start_led_pattern(int mode)
 
 		break;
 
-
 	case FULLY_CHARGED:
 		leds_on(LED_G, true, false, cur);
 		break;
 
 	case POWERING:
 		pr_info("LED Powering Pattern on\n");
-		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
-		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
+		leds_on(LED_G, true, true, LED_G_CURRENT);
+		leds_on(LED_B, true, true, LED_B_CURRENT);
 		leds_set_slope_mode(client, LED_G,
 				0, 8, 4, 1, 2, 2, 3, 3, 3, 3);
 		leds_set_slope_mode(client, LED_B,
@@ -471,7 +472,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	max_brightness = (led_lowpower_mode) ?
 			leds_control.current_low : leds_control.current_high;
 
-	brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+	brightness = (brightness * max_brightness) / LED_MAX_CURRENT;
 
 	if (delay_on_time > SLPTT_MAX_VALUE)
 		delay_on_time = SLPTT_MAX_VALUE;
