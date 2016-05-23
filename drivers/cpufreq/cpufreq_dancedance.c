@@ -1,10 +1,7 @@
 /*
- *  drivers/cpufreq/cpufreq_conservative.c
+ *  drivers/cpufreq/cpufreq_dancedance.c
  *
- *  Copyright (C)  2001 Russell King
- *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
- *                      Jun Nakajima <jun.nakajima@intel.com>
- *            (C)  2009 Alexander Clouter <alex@digriz.org.uk>
+ *  Copyright (C)  2012 Shaun Nuzzo <jrracinfan@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -23,25 +20,15 @@
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
+#include <linux/cpuidle.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(20)
-
-/*
- * The polling frequency of this governor depends on the capability of
- * the processor. Default polling frequency is 1000 times the transition
- * latency of the processor. The governor will work on any processor with
- * transition latency <= 10mS, using appropriate sampling
- * rate.
- * For CPUs with transition latency > 10mS (mostly drivers with CPUFREQ_ETERNAL)
- * this governor will not work.
- * All times here are in uS.
- */
+#define DEF_FREQUENCY_UP_THRESHOLD		(90)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(30)
 #define MIN_SAMPLING_RATE_RATIO			(2)
 
 static unsigned int min_sampling_rate;
@@ -53,22 +40,41 @@ static unsigned int min_sampling_rate;
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 static void do_dbs_timer(struct work_struct *work);
+static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
+				unsigned int event);
+
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_DANCEDANCE
+static
+#endif
+struct cpufreq_governor cpufreq_gov_dancedance = {
+    .name                   = "dancedance",
+    .governor               = cpufreq_governor_dbs,
+    .max_transition_latency = TRANSITION_LATENCY_LIMIT,
+    .owner                  = THIS_MODULE,
+};
+
+/* Sampling types */
+enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
 struct cpu_dbs_info_s {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_wall;
-	cputime64_t prev_cpu_nice;
-	struct cpufreq_policy *cur_policy;
-	struct delayed_work work;
+    cputime64_t prev_cpu_idle;
+    cputime64_t prev_cpu_iowait;
+    cputime64_t prev_cpu_wall;
+    cputime64_t prev_cpu_nice;
+    struct cpufreq_policy *cur_policy;
+    struct delayed_work work;
+    struct cpufreq_frequency_table *freq_table;
 	unsigned int down_skip;
 	unsigned int requested_freq;
-	int cpu;
+    unsigned int freq_lo;
+    unsigned int freq_lo_jiffies;
+    unsigned int freq_hi_jiffies;
+    unsigned int rate_mult;
+    int cpu;
+    unsigned int sample_type:1;
+    unsigned long long prev_idletime;
+    unsigned long long prev_idleusage;
 	unsigned int enable:1;
-	/*
-	 * percpu mutex that serializes governor limit change with
-	 * do_dbs_timer invocation. We do not want do_dbs_timer to run
-	 * when user is changing the governor or limits.
-	 */
 	struct mutex timer_mutex;
 };
 static DEFINE_PER_CPU(struct cpu_dbs_info_s, cs_cpu_dbs_info);
@@ -81,12 +87,17 @@ static unsigned int dbs_enable;	/* number of CPUs using this policy */
 static DEFINE_MUTEX(dbs_mutex);
 
 static struct dbs_tuners {
-	unsigned int sampling_rate;
-	unsigned int sampling_down_factor;
-	unsigned int up_threshold;
-	unsigned int down_threshold;
-	unsigned int ignore_nice;
+    unsigned int sampling_rate;
+    unsigned int up_threshold;
+    unsigned int down_differential;
+    unsigned int ignore_nice;
+    unsigned int sampling_down_factor;
+    unsigned int powersave_bias;
+    unsigned int io_is_busy;
+    unsigned int target_residency;
+    unsigned int allowed_misses;
 	unsigned int freq_step;
+	unsigned int down_threshold;
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.down_threshold = DEF_FREQUENCY_DOWN_THRESHOLD,
@@ -95,38 +106,37 @@ static struct dbs_tuners {
 	.freq_step = 5,
 };
 
-static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
+static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
+						  u64 *wall)
 {
-	u64 idle_time;
-	u64 cur_wall_time;
-	u64 busy_time;
+    u64 idle_time;
+    u64 cur_wall_time;
+    u64 busy_time;
 
-	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
+    cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
 
-	busy_time  = kcpustat_cpu(cpu).cpustat[CPUTIME_USER];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_IRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SOFTIRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_STEAL];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
+    busy_time  = kcpustat_cpu(cpu).cpustat[CPUTIME_USER];
+    busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
+    busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_IRQ];
+    busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SOFTIRQ];
+    busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_STEAL];
+    busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
 
-	idle_time = cur_wall_time - busy_time;
-	if (wall)
-		*wall = jiffies_to_usecs(cur_wall_time);
+    idle_time = cur_wall_time - busy_time;
+    if (wall)
+	*wall = jiffies_to_usecs(cur_wall_time);
 
-	return jiffies_to_usecs(idle_time);
+    return jiffies_to_usecs(idle_time);
 }
 
 static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 {
-	u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
+    u64 idle_time = get_cpu_idle_time_us(cpu, wall);
 
-	if (idle_time == -1ULL)
-		return get_cpu_idle_time_jiffy(cpu, wall);
-	else
-		idle_time += get_cpu_iowait_time_us(cpu, wall);
+    if (idle_time == -1ULL)
+	return get_cpu_idle_time_jiffy(cpu, wall);
 
-	return idle_time;
+    return idle_time;
 }
 
 /* keep track of frequency transitions */
@@ -170,7 +180,7 @@ static ssize_t show_sampling_rate_min(struct kobject *kobj,
 
 define_one_global_ro(sampling_rate_min);
 
-/* cpufreq_conservative Governor Tunables */
+/* cpufreq_dancedance Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
 (struct kobject *kobj, struct attribute *attr, char *buf)		\
@@ -271,7 +281,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 		dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
 						&dbs_info->prev_cpu_wall);
 		if (dbs_tuners_ins.ignore_nice)
-			dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
+		      dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 	}
 	return count;
 }
@@ -315,7 +325,7 @@ static struct attribute *dbs_attributes[] = {
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "conservative",
+	.name = "dancedance",
 };
 
 /************************** sysfs end ************************/
@@ -352,20 +362,18 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
 
-		wall_time = (unsigned int)
-			(cur_wall_time - j_dbs_info->prev_cpu_wall);
+		wall_time = (unsigned int) (cur_wall_time - j_dbs_info->prev_cpu_wall);
 		j_dbs_info->prev_cpu_wall = cur_wall_time;
 
-		idle_time = (unsigned int)
-			(cur_idle_time - j_dbs_info->prev_cpu_idle);
+		idle_time = (unsigned int) (cur_idle_time - j_dbs_info->prev_cpu_idle);
 		j_dbs_info->prev_cpu_idle = cur_idle_time;
 
 		if (dbs_tuners_ins.ignore_nice) {
-			u64 cur_nice;
+			cputime64_t cur_nice;
 			unsigned long cur_nice_jiffies;
 
-			cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] -
-					 j_dbs_info->prev_cpu_nice;
+		        cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] -
+             			j_dbs_info->prev_cpu_nice;
 			/*
 			 * Assumption: nice time between sampling periods will
 			 * be less than 2^32 jiffies for 32 bit sys
@@ -373,7 +381,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			cur_nice_jiffies = (unsigned long)
 					cputime64_to_jiffies64(cur_nice);
 
-			j_dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
+         		j_dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 			idle_time += jiffies_to_usecs(cur_nice_jiffies);
 		}
 
@@ -442,9 +450,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 static void do_dbs_timer(struct work_struct *work)
 {
-	struct cpu_dbs_info_s *dbs_info =
-		container_of(work, struct cpu_dbs_info_s, work.work);
-	unsigned int cpu = dbs_info->cpu;
+    struct cpu_dbs_info_s *dbs_info =
+	container_of(work, struct cpu_dbs_info_s, work.work);
+    unsigned int cpu = dbs_info->cpu;
+    int sample_type = dbs_info->sample_type;
 
 	/* We want all CPUs to do sampling nearly on same jiffy */
 	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
@@ -453,16 +462,40 @@ static void do_dbs_timer(struct work_struct *work)
 
 	mutex_lock(&dbs_info->timer_mutex);
 
+    /* Common NORMAL_SAMPLE setup */
+    dbs_info->sample_type = DBS_NORMAL_SAMPLE;
+    if (!dbs_tuners_ins.powersave_bias ||
+	sample_type == DBS_NORMAL_SAMPLE) {
 	dbs_check_cpu(dbs_info);
+	if (dbs_info->freq_lo) {
+	    /* Setup timer for SUB_SAMPLE */
+	    dbs_info->sample_type = DBS_SUB_SAMPLE;
+	    delay = dbs_info->freq_hi_jiffies;
+	} else {
+	    /* We want all CPUs to do sampling nearly on
+	     * same jiffy
+	     */
+	    delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate
+				     * dbs_info->rate_mult);
+	    if (num_online_cpus() > 1)
+		delay -= jiffies % delay;
+	}
+    } else {
+	__cpufreq_driver_target(dbs_info->cur_policy,
+				dbs_info->freq_lo, CPUFREQ_RELATION_H);
+	delay = dbs_info->freq_lo_jiffies;
+    }
 
-	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
-	mutex_unlock(&dbs_info->timer_mutex);
+    schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+    mutex_unlock(&dbs_info->timer_mutex);
 }
 
 static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 {
-	/* We want all CPUs to do sampling nearly on same jiffy */
-	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
+    /* We want all CPUs to do sampling nearly on same jiffy */
+    int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
+
+    if (num_online_cpus() > 1)
 	delay -= jiffies % delay;
 
 	dbs_info->enable = 1;
@@ -500,9 +533,10 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 			j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
 						&j_dbs_info->prev_cpu_wall);
-			if (dbs_tuners_ins.ignore_nice)
+			if (dbs_tuners_ins.ignore_nice) {
 				j_dbs_info->prev_cpu_nice =
 						kcpustat_cpu(j).cpustat[CPUTIME_NICE];
+			}
 		}
 		this_dbs_info->down_skip = 0;
 		this_dbs_info->requested_freq = policy->cur;
@@ -582,7 +616,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		else if (policy->min > this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(
 					this_dbs_info->cur_policy,
-					policy->min, CPUFREQ_RELATION_C);
+					policy->min, CPUFREQ_RELATION_L);
 		mutex_unlock(&this_dbs_info->timer_mutex);
 
 		break;
@@ -590,34 +624,25 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return 0;
 }
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
-static
-#endif
-struct cpufreq_governor cpufreq_gov_conservative = {
-	.name			= "conservative",
-	.governor		= cpufreq_governor_dbs,
-	.max_transition_latency	= TRANSITION_LATENCY_LIMIT,
-	.owner			= THIS_MODULE,
-};
-
 static int __init cpufreq_gov_dbs_init(void)
 {
-	return cpufreq_register_governor(&cpufreq_gov_conservative);
+	return cpufreq_register_governor(&cpufreq_gov_dancedance);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_conservative);
+	cpufreq_unregister_governor(&cpufreq_gov_dancedance);
 }
 
-
-MODULE_AUTHOR("Alexander Clouter <alex@digriz.org.uk>");
-MODULE_DESCRIPTION("'cpufreq_conservative' - A dynamic cpufreq governor for "
+MODULE_AUTHOR("Shaun Nuzzo <jrracinfan@gmail.com>");
+MODULE_DESCRIPTION("'cpufreq_dancedance' - A dynamic cpufreq governor for "
 		"Low Latency Frequency Transition capable processors "
-		"optimised for use in a battery environment");
+		"optimised for use in a battery environment"
+		"Modified code based off conservative with a faster"
+		"deep sleep rate");
 MODULE_LICENSE("GPL");
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_DANCEDANCE
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
