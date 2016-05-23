@@ -25,8 +25,6 @@
 #include <asm/system_info.h>
 #include <mach/apq8064-gpio.h>
 
-#include <mach/sec_debug.h>
-
 /* PON CTRL 1 register */
 #define REG_PM8XXX_PON_CTRL_1			0x01C
 
@@ -1308,10 +1306,10 @@ static int __devinit pm8xxx_misc_probe(struct platform_device *pdev)
 #endif
 
 #if !defined(CONFIG_MACH_JF_VZW)
-	if (!sec_debug_is_enabled()) {
+	/*if (!sec_debug_is_enabled()) {*/
 		hr_enabled = 1;
 		status = 1;
-	}
+	/*}*/
 #endif
 
 	return rc;

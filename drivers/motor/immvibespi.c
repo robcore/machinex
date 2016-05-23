@@ -59,7 +59,6 @@ struct pm_gpio vib_pwm = {
 				.inv_int_pol = 0,
 			};
 
-
 unsigned long pwm_val = 100;
 
 static int32_t vibe_set_pwm_freq(int nForce)
