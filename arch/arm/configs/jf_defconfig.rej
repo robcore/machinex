@@ -1,10 +1,10 @@
 --- arch/arm/configs/jf_defconfig
 +++ arch/arm/configs/jf_defconfig
-@@ -8,6 +8,7 @@ CONFIG_KERNEL_MODE_NEON=y
- CONFIG_ASYNC_FSYNC=y
+@@ -9,6 +9,7 @@ CONFIG_ASYNC_FSYNC=y
  CONFIG_FORCE_FAST_CHARGE=y
  CONFIG_MSM_KGSL_SIMPLE_GOV=y
-+# CONFIG_LCD_NOTIFY is not set
+ # CONFIG_LCD_NOTIFY is not set
++CONFIG_F2FS_FS=y
  
  #IOSCHED
  CONFIG_IOSCHED_NOOP=y
