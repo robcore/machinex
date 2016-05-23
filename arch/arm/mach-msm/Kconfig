@@ -3261,7 +3261,7 @@ config AUXPCM_INTERFACE
          Say Y here if you want use auxpcm interface for external device.
 	 To compile this option, choose M here:
 	 If unsure, say N here.
-	 
+
 config PCM_ROUTE_VOICE_STUB
 	depends on ARCH_MSM8930
 	default n
@@ -3277,4 +3277,11 @@ config SEC_FACTORY
 	default n
 	help
 	  Enable Features only For FACTORY BINARY.
+
+config GPU_OVERCLOCK
+	bool "Enable GPU Overclocking option"
+	default n
+	help
+	  Krait 600 ab GPU overclock up to 600 MHz
+
 endif
