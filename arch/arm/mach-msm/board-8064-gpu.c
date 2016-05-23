@@ -170,13 +170,13 @@ static struct msm_bus_vectors grp3d_max_vectors[] = {
 		.src = MSM_BUS_MASTER_GRAPHICS_3D,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(4660),
+		.ib = KGSL_CONVERT_TO_MBPS(4816),
 	},
 	{
 		.src = MSM_BUS_MASTER_GRAPHICS_3D_PORT1,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(4660),
+		.ib = KGSL_CONVERT_TO_MBPS(4816),
 	},
 };
 #endif
@@ -215,6 +215,12 @@ static struct resource kgsl_3d0_resources[] = {
 	{
 		.name = KGSL_3D0_REG_MEMORY,
 		.start = 0x04300000, /* GFX3D address */
+		.end = 0x0430ffff,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.name = KGSL_3D0_SHADER_MEMORY,
+		.start = 0x04310000, /* Shader Mem Address */
 		.end = 0x0431ffff,
 		.flags = IORESOURCE_MEM,
 	},
@@ -255,12 +261,12 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.pwrlevel = {
 #ifdef CONFIG_GPU_OVERCLOCK
 		{
-			.gpu_freq = 600000000,
+			.gpu_freq = 545000000,
 			.bus_freq = 4,
 			.io_fraction = 0,
 		},
 		{
-			.gpu_freq = 500000000,
+			.gpu_freq = 450000000,
 			.bus_freq = 4,
 			.io_fraction = 0,
 		},
@@ -338,8 +344,11 @@ void __init apq8064_init_gpu(void)
 	if (SOCINFO_VERSION_MAJOR(version) == 2) {
 		kgsl_3d0_pdata.chipid = ADRENO_CHIPID(3, 2, 0, 2);
 	} else {
+		/* The bootloader has started returning 1.2 for chips that
+		   are either 1.1 or 1.2. To handle that and default any
+		   future revisions to this path, check for minor version >=1 */
 		if ((SOCINFO_VERSION_MAJOR(version) == 1) &&
-				(SOCINFO_VERSION_MINOR(version) == 1))
+				(SOCINFO_VERSION_MINOR(version) >= 1))
 			kgsl_3d0_pdata.chipid = ADRENO_CHIPID(3, 2, 0, 1);
 		else
 			kgsl_3d0_pdata.chipid = ADRENO_CHIPID(3, 2, 0, 0);
