@@ -16,10 +16,13 @@ lib-y		:= backtrace.o changebit.o csumipv6.o csumpartial.o   \
 		   io-readsb.o io-writesb.o io-readsl.o io-writesl.o  \
 		   call_with_stack.o
 
-mmu-y	:= clear_user.o copy_page.o getuser.o putuser.o
+mmu-y	:= clear_user.o getuser.o putuser.o
 
 # the code in uaccess.S is not preemption safe and
 # probably faster on ARMv3 only
+ifneq ($(CONFIG_HAS_MACH_MEMUTILS),y)
+  mmu-y += copy_page.o
+  lib-y += memcpy.o memmove.o
 ifeq ($(CONFIG_PREEMPT),y)
   mmu-y	+= copy_from_user.o copy_to_user.o
 else
@@ -27,6 +30,7 @@ ifneq ($(CONFIG_CPU_32v3),y)
   mmu-y	+= copy_from_user.o copy_to_user.o
 else
   mmu-y	+= uaccess.o
+endif
 endif
 endif
 

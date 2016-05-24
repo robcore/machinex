@@ -172,11 +172,11 @@ config ARCH_MSM8960
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
-	select HAS_MACH_MEMUTILS
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
+	select HAS_MACH_MEMUTILS
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -211,11 +211,11 @@ config ARCH_MSM8930
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
-	select HAS_MACH_MEMUTILS
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
+	select HAS_MACH_MEMUTILS
 
 config ARCH_APQ8064
 	bool "APQ8064"
@@ -246,11 +246,11 @@ config ARCH_APQ8064
 	select SPARSEMEM_ALLOC_MEM_MAP_TOGETHER if SPARSEMEM
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
-	select HAS_MACH_MEMUTILS
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
+	select HAS_MACH_MEMUTILS
 
 config ARCH_MSM8974
 	bool "MSM8974"
@@ -3286,10 +3286,10 @@ config SEC_FACTORY
 	help
 	  Enable Features only For FACTORY BINARY.
 
-config GPU_OVERCLOCK
-	bool "Enable GPU Overclocking option"
+config HAS_MACH_MEMUTILS
 	default n
+	bool "Motorola MSM memcpy enhancements"
 	help
-	  Krait 600 ab GPU overclock up to 600 MHz
+	 Faster memcpy performance for Krait
 
 endif
