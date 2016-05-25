@@ -1,0 +1,37 @@
+#!/system/bin/sh
+#
+echo 2 > /sys/kernel/fast_charge/force_fast_charge;
+echo 0 > /sys/kernel/fast_charge/screen_on_current_limit;
+echo 0 > /sys/kernel/fast_charge/failsafe;
+echo 2100 > /sys/kernel/fast_charge/ac_charge_level;
+echo 47 47  > /sys/kernel/sound_control/gpl_speaker_gain;
+echo 57 57 > /sys/kernel/sound_control/gpl_headphone_gain;
+echo 15 15 > /sys/kernel/sound_control/gpl_headphone_pa_gain;
+#su -c "busybox rm -f /data/system/#recent_tasks/*.xml";
+#su -c "busybox rm -f /data/system/#recent_images/*.png";
+#echo #"9303,13954,18606,23257,27909,32560" > /#sys/module/lowmemorykiller/parameters/#minfree
+#echo "Y" > /sys/module/workqueue/#power_efficient
+echo 53 52 58 > /sys/class/misc/gammacontrol/tuner
+
+#echo "2d6 b9" > /sys/kernel/debug/asoc/apq8064-tabla-snd-card/tabla_codec/codec_reg
+echo 1 > /sys/module/intelli_plug/parameters/intelli_plug_active
+echo 1 > /sys/module/intelli_plug/parameters/nr_run_profile_sel
+echo 1 > /sys/module/intelli_plug/parameters/touch_boost_active
+echo 8 > /sys/module/intelli_plug/parameters/nr_run_hysteresis
+echo 4 > /sys/module/intelli_plug/parameters/nr_possible_cores
+echo 4 > /sys/devices/platform/kgsl-3d0.0/kgsl/kgsl-3d0/max_pwrlevel
+#echo "0" > /sys/module/wakelock/parameters/debug_mask
+#echo "0" > /sys/module/userwakelock/parameters/debug_mask
+#echo "0" > /sys/module/earlysuspend/parameters/debug_mask
+#echo "0" > /sys/module/alarm/parameters/debug_mask
+#echo "0" > /sys/module/alarm_dev/parameters/debug_mask
+#echo "0" > /sys/module/binder/parameters/debug_mask
+#echo "1" > /sys/module/bam_dmux/#parameters/adaptive_timer_enabled
+#echo "30" > /sys/class/firmware/timeout
+
+general queue tweaks
+for i in /sys/block/*/queue; do
+  echo 512 > $i/nr_requests;
+  echo 0 > $i/nomerges;
+  echo 0 > $i/rotational;
+done;
