@@ -4236,7 +4236,6 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
  * This function goes through the sensor wake process if the system wakes
  * up from early suspend (without going into suspend).
  */
-
 static void synaptics_rmi4_late_resume(struct early_suspend *h)
 {
 	struct synaptics_rmi4_data *rmi4_data =
@@ -4312,7 +4311,6 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
  * sleep (if not already done so during the early suspend phase),
  * disables the interrupt, and turns off the power to the sensor.
  */
-
 static int synaptics_rmi4_suspend(struct device *dev)
 {
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
@@ -4350,7 +4348,6 @@ static int synaptics_rmi4_suspend(struct device *dev)
  * from sleep, enables the interrupt, and starts finger data
  * acquisition.
  */
-
 static int synaptics_rmi4_resume(struct device *dev)
 {
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);

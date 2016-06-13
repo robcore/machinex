@@ -315,7 +315,6 @@ static int brcm_wlan_set_carddetect(int val)
 
 	/* msleep(200); wait for carddetect */
 
-
 	return 0;
 }
 

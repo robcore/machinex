@@ -31,7 +31,6 @@
 /* Wait a maximum of 20 seconds when trying to idle the core */
 #define Z180_IDLE_TIMEOUT (20 * 1000)
 
-
 struct z180_ringbuffer {
 	unsigned int prevctx;
 	struct kgsl_memdesc      cmdbufdesc;

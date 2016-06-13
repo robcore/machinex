@@ -321,7 +321,6 @@ void die(const char *str, struct pt_regs *regs, int err)
 #ifdef CONFIG_SEC_DEBUG_SUBSYS
 	sec_debug_save_die_info(str, regs);
 #endif
-
 	if (regs && kexec_should_crash(thread->task))
 		crash_kexec(regs);
 

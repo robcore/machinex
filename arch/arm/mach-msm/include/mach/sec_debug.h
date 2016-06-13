@@ -328,6 +328,7 @@ extern void sec_debug_subsys_fill_fbinfo(int idx, void *fb, u32 xres,
   */
 #define SEC_DEBUG_SUBSYS_MAGIC3 0x00010004
 
+
 #define TZBSP_CPU_COUNT           4
 /* CPU context for the monitor. */
 struct tzbsp_dump_cpu_ctx_s {
