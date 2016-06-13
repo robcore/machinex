@@ -14,7 +14,6 @@
 #include <linux/compat.h>
 #include <linux/mount.h>
 #include <linux/file.h>
-#include <linux/blkdev.h>
 #include <asm/uaccess.h>
 #include "ext4_jbd2.h"
 #include "ext4.h"
@@ -39,7 +38,7 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		handle_t *handle = NULL;
 		int err, migrate = 0;
 		struct ext4_iloc iloc;
-		unsigned int oldflags, mask, i;
+		unsigned int oldflags;
 		unsigned int jflag;
 
 		if (!inode_owner_or_capable(inode))
@@ -116,14 +115,9 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (err)
 			goto flags_err;
 
-		for (i = 0, mask = 1; i < 32; i++, mask <<= 1) {
-			if (!(mask & EXT4_FL_USER_MODIFIABLE))
-				continue;
-			if (mask & flags)
-				ext4_set_inode_flag(inode, i);
-			else
-				ext4_clear_inode_flag(inode, i);
-		}
+		flags = flags & EXT4_FL_USER_MODIFIABLE;
+		flags |= oldflags & ~EXT4_FL_USER_MODIFIABLE;
+		ei->i_flags = flags;
 
 		ext4_set_inode_flags(inode);
 		inode->i_ctime = ext4_current_time(inode);
@@ -262,6 +256,7 @@ group_extend_out:
 		err = ext4_move_extents(filp, donor_filp, me.orig_start,
 					me.donor_start, me.len, &me.moved_len);
 		mnt_drop_write_file(filp);
+		mnt_drop_write(filp->f_path.mnt);
 
 		if (copy_to_user((struct move_extent __user *)arg,
 				 &me, sizeof(me)))
@@ -399,39 +394,6 @@ group_add_out:
 resizefs_out:
 		ext4_resize_end(sb);
 		return err;
-	}
-
-	case FSECTRIM:
-	{
-		struct request_queue *q = bdev_get_queue(sb->s_bdev);
-		struct fstrim_range range;
-		int ret = 0;
-
-		if (!capable(CAP_SYS_ADMIN))
-			return -EPERM;
-
-		if (!blk_queue_discard(q))
-			return -EOPNOTSUPP;
-
-		if (EXT4_HAS_RO_COMPAT_FEATURE(sb,
-				   EXT4_FEATURE_RO_COMPAT_BIGALLOC)) {
-			ext4_msg(sb, KERN_ERR,
-				 "FSECTRIM not supported with bigalloc");
-			return -EOPNOTSUPP;
-		}
-
-		if (copy_from_user(&range, (struct fstrim_range __user *)arg,
-			sizeof(range)))
-			return -EFAULT;
-
-		range.minlen = max((unsigned int)range.minlen,
-				   q->limits.discard_granularity);
-
-		ret =  blkdev_issue_discard(sb->s_bdev, range.start, range.len, GFP_NOFS, 1);
-		if (ret < 0)
-			return ret;
-
-		return 0;
 	}
 
 	case FITRIM:

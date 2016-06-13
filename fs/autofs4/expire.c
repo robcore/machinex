@@ -61,6 +61,15 @@ static int autofs4_mount_busy(struct vfsmount *mnt, struct dentry *dentry)
 		/* This is an autofs submount, we can't expire it */
 		if (autofs_type_indirect(sbi->type))
 			goto done;
+
+		/*
+		 * Otherwise it's an offset mount and we need to check
+		 * if we can umount its mount, if there is one.
+		 */
+		if (!d_mountpoint(path.dentry)) {
+			status = 0;
+			goto done;
+		}
 	}
 
 	/* Update the expiry counter if fs is busy */
@@ -100,7 +109,7 @@ static struct dentry *get_next_positive_subdir(struct dentry *prev,
 	p = prev;
 	spin_lock(&p->d_lock);
 again:
-	next = p->d_child.next;
+	next = p->d_u.d_child.next;
 start:
 	if (next == &root->d_subdirs) {
 		spin_unlock(&p->d_lock);
@@ -109,7 +118,7 @@ start:
 		return NULL;
 	}
 
-	q = list_entry(next, struct dentry, d_child);
+	q = list_entry(next, struct dentry, d_u.d_child);
 
 	spin_lock_nested(&q->d_lock, DENTRY_D_LOCK_NESTED);
 	/* Negative dentry - try next */
@@ -166,13 +175,13 @@ again:
 				goto relock;
 			}
 			spin_unlock(&p->d_lock);
-			next = p->d_child.next;
+			next = p->d_u.d_child.next;
 			p = parent;
 			if (next != &parent->d_subdirs)
 				break;
 		}
 	}
-	ret = list_entry(next, struct dentry, d_child);
+	ret = list_entry(next, struct dentry, d_u.d_child);
 
 	spin_lock_nested(&ret->d_lock, DENTRY_D_LOCK_NESTED);
 	/* Negative dentry - try next */
@@ -457,7 +466,7 @@ found:
 	spin_lock(&sbi->lookup_lock);
 	spin_lock(&expired->d_parent->d_lock);
 	spin_lock_nested(&expired->d_lock, DENTRY_D_LOCK_NESTED);
-	list_move(&expired->d_parent->d_subdirs, &expired->d_child);
+	list_move(&expired->d_parent->d_subdirs, &expired->d_u.d_child);
 	spin_unlock(&expired->d_lock);
 	spin_unlock(&expired->d_parent->d_lock);
 	spin_unlock(&sbi->lookup_lock);

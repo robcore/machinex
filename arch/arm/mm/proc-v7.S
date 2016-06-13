@@ -63,7 +63,7 @@ ENTRY(cpu_v7_reset)
 	mcr     p15, 0, ip, c7, c5, 6           @ flush BTC
 	dsb
 	isb
-	bx	r0
+	mov	pc, r0
 ENDPROC(cpu_v7_reset)
 	.popsection
 
@@ -81,16 +81,14 @@ ENTRY(cpu_v7_do_idle)
 ENDPROC(cpu_v7_do_idle)
 
 ENTRY(cpu_v7_dcache_clean_area)
-//#ifndef TLB_CAN_READ_FROM_L1_CACHE
-	ALT_SMP(mov	pc, lr)			@ MP extensions imply L1 PTW	
-	ALT_UP(W(nop))
+#ifndef TLB_CAN_READ_FROM_L1_CACHE
 	dcache_line_size r2, r3
 1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
 	add	r0, r0, r2
 	subs	r1, r1, r2
 	bhi	1b
 	dsb
-//#endif
+#endif
 	mov	pc, lr
 ENDPROC(cpu_v7_dcache_clean_area)
 
@@ -187,9 +185,6 @@ __v7_ca9mp_setup:
 	b	1f
 __v7_ca7mp_setup:
 __v7_ca15mp_setup:
-	mrc	p15, 0, r0, c1, c0, 1
-	orr	r0, #(1<<24) @ Enable NCSE in ACTLR
-	mcr	p15, 0, r0, c1, c0, 1
 	mov	r10, #0
 1:
 #ifdef CONFIG_SMP
@@ -203,7 +198,7 @@ __v7_ca15mp_setup:
 __v7_setup:
 	adr	r12, __v7_setup_stack		@ the local stack
 	stmia	r12, {r0-r5, r7, r9, r11, lr}
-	bl	v7_flush_dcache_louis
+	bl	v7_flush_dcache_all
 	ldmia	r12, {r0-r5, r7, r9, r11, lr}
 
 	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
@@ -277,6 +272,7 @@ __v7_setup:
 
 3:	mov	r10, #0
 	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
+	dsb
 #ifdef CONFIG_MMU
 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
 	v7_ttb_setup r10, r4, r8, r5		@ TTBCR, TTBRx setup
@@ -406,7 +402,7 @@ __v7_ca9mp_proc_info:
 __v7_ca7mp_proc_info:
 	.long	0x410fc070
 	.long	0xff0ffff0
-	__v7_proc __v7_ca7mp_setup
+	__v7_proc __v7_ca7mp_setup, hwcaps = HWCAP_IDIV
 	.size	__v7_ca7mp_proc_info, . - __v7_ca7mp_proc_info
 
 	/*
@@ -416,7 +412,7 @@ __v7_ca7mp_proc_info:
 __v7_ca15mp_proc_info:
 	.long	0x410fc0f0
 	.long	0xff0ffff0
-	__v7_proc __v7_ca15mp_setup
+	__v7_proc __v7_ca15mp_setup, hwcaps = HWCAP_IDIV
 	.size	__v7_ca15mp_proc_info, . - __v7_ca15mp_proc_info
 
 	/*

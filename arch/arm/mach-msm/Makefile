@@ -478,6 +478,5 @@ endif
 
 
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
-obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
 
 obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o

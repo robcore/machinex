@@ -125,9 +125,6 @@ struct ib_umem *ib_umem_get(struct ib_ucontext *context, unsigned long addr,
 		return ERR_PTR(-ENOMEM);
 	}
 
-	if (!size)
-		return ERR_PTR(-EINVAL);
-
 	/*
 	 * if we can't alloc the vma_list, it's not so bad;
 	 * just assume the memory is not hugetlb memory
@@ -272,7 +269,7 @@ void ib_umem_release(struct ib_umem *umem)
 	} else
 		down_write(&mm->mmap_sem);
 
-	current->mm->pinned_vm -= diff;
+	current->mm->locked_vm -= diff;
 	up_write(&mm->mmap_sem);
 	mmput(mm);
 	kfree(umem);

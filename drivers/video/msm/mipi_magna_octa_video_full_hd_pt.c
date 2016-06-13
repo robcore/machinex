@@ -760,6 +760,11 @@ static char magna_brightness_aor_1p7[] = {
 	0x00, 0x00, 0x00, 0x20
 };
 
+static char magna_brightness_aor_7p1[] = {
+	0xB2,
+	0x00, 0x00, 0x00, 0x8A
+};
+
 static char magna_brightness_aor_8p5[] = {
 	0xB2,
 	0x00, 0x00, 0x00, 0xA5
@@ -768,6 +773,16 @@ static char magna_brightness_aor_8p5[] = {
 static char magna_brightness_aor_13p4[] = {
 	0xB2,
 	0x00, 0x00, 0x01, 0x03
+};
+
+static char magna_brightness_tulip_aor_13p4[] = {
+	0xB2,
+	0x00, 0x00, 0x01, 0x04
+};
+
+static char magna_brightness_aor_18p9[] = {
+	0xB2,
+	0x00, 0x00, 0x01, 0x6E
 };
 
 static char magna_brightness_aor_19p1[] = {
@@ -780,9 +795,19 @@ static char magna_brightness_aor_23p8[] = {
 	0x00, 0x00, 0x01, 0xCC
 };
 
+static char magna_brightness_aor_24p2[] = {
+	0xB2,
+	0x00, 0x00, 0x01, 0xD4
+};
+
 static char magna_brightness_aor_28p5[] = {
 	0xB2,
 	0x00, 0x00, 0x02, 0x27
+};
+
+static char magna_brightness_aor_28p9[] = {
+	0xB2,
+	0x00, 0x00, 0x02, 0x2E
 };
 
 static char magna_brightness_aor_33p2[] = {
@@ -790,9 +815,19 @@ static char magna_brightness_aor_33p2[] = {
 	0x00, 0x00, 0x02, 0x83
 };
 
+static char magna_brightness_aor_33p5[] = {
+	0xB2,
+	0x00, 0x00, 0x02, 0x88
+};
+
 static char magna_brightness_aor_37p1[] = {
 	0xB2,
 	0x00, 0x00, 0x02, 0xCE
+};
+
+static char magna_brightness_aor_38p3[] = {
+	0xB2,
+	0x00, 0x00, 0x02, 0xE4
 };
 
 static char magna_brightness_aor_41p1[] = {
@@ -800,9 +835,19 @@ static char magna_brightness_aor_41p1[] = {
 	0x00, 0x00, 0x03, 0x1B
 };
 
+static char magna_brightness_aor_42p5[] = {
+	0xB2,
+	0x00, 0x00, 0x03, 0x36
+};
+
 static char magna_brightness_aor_45p1[] = {
 	0xB2,
 	0x00, 0x00, 0x03, 0x69
+};
+
+static char magna_brightness_aor_46p1[] = {
+	0xB2,
+	0x00, 0x00, 0x03, 0x7C
 };
 
 static char magna_brightness_aor_48p7[] = {
@@ -810,9 +855,19 @@ static char magna_brightness_aor_48p7[] = {
 	0x00, 0x00, 0x03, 0xAE
 };
 
+static char magna_brightness_aor_49p9[] = {
+	0xB2,
+	0x00, 0x00, 0x03, 0xC6
+};
+
 static char magna_brightness_aor_51p4[] = {
 	0xB2,
 	0x00, 0x00, 0x03, 0xE2
+};
+
+static char magna_brightness_aor_52p7[] = {
+	0xB2,
+	0x00, 0x00, 0x03, 0xFB
 };
 
 static char magna_brightness_aor_54p1[] = {
@@ -820,9 +875,19 @@ static char magna_brightness_aor_54p1[] = {
 	0x00, 0x00, 0x04, 0x16
 };
 
+static char magna_brightness_aor_55p6[] = {
+	0xB2,
+	0x00, 0x00, 0x04, 0x34
+};
+
 static char magna_brightness_aor_57p0[] = {
 	0xB2,
 	0x00, 0x00, 0x04, 0x4E
+};
+
+static char magna_brightness_aor_58p3[] = {
+	0xB2,
+	0x00, 0x00, 0x04, 0x67
 };
 
 static char magna_brightness_aor_59p9[] = {
@@ -830,9 +895,19 @@ static char magna_brightness_aor_59p9[] = {
 	0x00, 0x00, 0x04, 0x86
 };
 
+static char magna_brightness_aor_60p9[] = {
+	0xB2,
+	0x00, 0x00, 0x04, 0x9A
+};
+
 static char magna_brightness_aor_62p8[] = {
 	0xB2,
 	0x00, 0x00, 0x04, 0xBF
+};
+
+static char magna_brightness_aor_63p5[] = {
+	0xB2,
+	0x00, 0x00, 0x04, 0xCC
 };
 
 static char magna_brightness_aor_64p7[] = {
@@ -840,9 +915,19 @@ static char magna_brightness_aor_64p7[] = {
 	0x00, 0x00, 0x04, 0xE3
 };
 
+static char magna_brightness_aor_65p3[] = {
+	0xB2,
+	0x00, 0x00, 0x04, 0xEE
+};
+
 static char magna_brightness_aor_66p5[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0x06
+};
+
+static char magna_brightness_aor_67p4[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0x17
 };
 
 static char magna_brightness_aor_69p2[] = {
@@ -850,63 +935,146 @@ static char magna_brightness_aor_69p2[] = {
 	0x00, 0x00, 0x05, 0x3B
 };
 
+static char magna_brightness_aor_69p9[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0x48
+};
+
 static char magna_brightness_aor_71p0[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0x5E
+};
+
+static char magna_brightness_aor_72p1[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0x73
 };
 
 static char magna_brightness_aor_72p9[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0x82
 };
+
 static char magna_brightness_aor_73p7[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0x92
 };
+
+static char magna_brightness_aor_73p8[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0x93
+};
+
+static char magna_brightness_aor_74p7[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0xA4
+};
+
 static char magna_brightness_aor_75p4[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0xB3
 };
+
+static char magna_brightness_aor_76p4[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0xC5
+};
+
 static char magna_brightness_aor_77p1[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0xD4
 };
+
 static char magna_brightness_aor_78p0[] = {
 	0xB2,
 	0x00, 0x00, 0x05, 0xE5
 };
+
+static char magna_brightness_aor_78p1[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0xE6
+};
+
+static char magna_brightness_aor_78p9[] = {
+	0xB2,
+	0x00, 0x00, 0x05, 0xF6
+};
+
 static char magna_brightness_aor_79p7[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x06
 };
+
 static char magna_brightness_aor_80p6[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x16
 };
+
+static char magna_brightness_aor_80p7[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x18
+};
+
 static char magna_brightness_aor_81p4[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x27
 };
+
+static char magna_brightness_aor_81p8[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x2E
+};
+
 static char magna_brightness_aor_82p3[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x38
 };
+
+static char magna_brightness_aor_83p4[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x4D
+};
+
 static char magna_brightness_aor_84p1[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x5B
 };
+
 static char magna_brightness_aor_85p0[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x6C
 };
+
+static char magna_brightness_aor_85p3[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x72
+};
+
+static char magna_brightness_aor_85p8[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x7C
+};
+
 static char magna_brightness_aor_85p9[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x7D
 };
+
 static char magna_brightness_aor_86p8[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0x8F
 };
+
+static char magna_brightness_aor_87p0[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x92
+};
+
+static char magna_brightness_aor_87p5[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0x9D
+};
+
 static char magna_brightness_aor_87p7[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0xA0
@@ -915,13 +1083,35 @@ static char magna_brightness_aor_88p6[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0xB2
 };
+
+static char magna_brightness_aor_88p7[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0xB4
+};
+
+static char magna_brightness_aor_89p2[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0xBE
+};
+
 static char magna_brightness_aor_89p5[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0xC3
 };
+
 static char magna_brightness_aor_90p4[] = {
 	0xB2,
 	0x00, 0x00, 0x06, 0xD5
+};
+
+static char magna_brightness_tulip_aor_90p4[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0xD4
+};
+
+static char magna_brightness_aor_91p2[] = {
+	0xB2,
+	0x00, 0x00, 0x06, 0xE4
 };
 
 enum {
@@ -1164,12 +1354,89 @@ static int get_candela_index(int bl_level)
 
 #define DEFAULT_ELVSS 0x2B
 #define ELVSS_LSL 2
-static int get_elvss_value(int candela, int id3)
+static int get_elvss_value(int candela, int id2, int id3)
 {
 	int elvss_value;
 
 	elvss_value = 0;
 
+	if ((id2 & EL_METERIAL_MASK) == TULIP) {
+		switch (candela) {
+		case 0 ... 77:
+			elvss_value = DEFAULT_ELVSS + (0x0B << ELVSS_LSL);
+			break;
+		case 78 ... 82:
+			elvss_value = DEFAULT_ELVSS + (0x0A << ELVSS_LSL);
+			break;
+		case 83 ... 87:
+			elvss_value = DEFAULT_ELVSS + (0x0A << ELVSS_LSL);
+			break;
+		case 88 ... 93:
+			elvss_value = DEFAULT_ELVSS + (0x09 << ELVSS_LSL);
+			break;
+		case 94 ... 98:
+			elvss_value = DEFAULT_ELVSS + (0x09 << ELVSS_LSL);
+			break;
+		case 99 ... 105:
+			elvss_value = DEFAULT_ELVSS + (0x08 << ELVSS_LSL);
+			break;
+		case 106 ... 111:
+			elvss_value = DEFAULT_ELVSS + (0x08 << ELVSS_LSL);
+			break;
+		case 112 ... 119:
+			elvss_value = DEFAULT_ELVSS + (0x07 << ELVSS_LSL);
+			break;
+		case 120 ... 126:
+			elvss_value = DEFAULT_ELVSS + (0x06 << ELVSS_LSL);
+			break;
+		case 127 ... 134:
+			elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
+			break;
+		case 135 ... 143:
+			elvss_value = DEFAULT_ELVSS + (0x04 << ELVSS_LSL);
+			break;
+		case 144 ... 152:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 153 ... 162:
+			elvss_value = DEFAULT_ELVSS + (0x02 << ELVSS_LSL);
+			break;
+		case 163 ... 172:
+			elvss_value = DEFAULT_ELVSS + (0x04 << ELVSS_LSL);
+			break;
+		case 173 ... 183:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 184 ... 195:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 196 ... 207:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 208 ... 220:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 221 ... 234:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 235 ... 249:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 250 ... 265:
+			elvss_value = DEFAULT_ELVSS + (0x02 << ELVSS_LSL);
+			break;
+		case 266 ... 282:
+			elvss_value = DEFAULT_ELVSS + (0x01 << ELVSS_LSL);
+			break;
+		case 283 ... 300:
+			elvss_value = DEFAULT_ELVSS + 0x0;
+			break;
+		default :
+			pr_info("%s lcd error bl_level : %d", __func__, candela);
+			elvss_value = DEFAULT_ELVSS + 0x0;
+			break;
+		}
+	} else {
 	switch (candela) {
 	case 0 ... 105:
 		elvss_value = DEFAULT_ELVSS + (0x0F << ELVSS_LSL);
@@ -1230,12 +1497,129 @@ static int get_elvss_value(int candela, int id3)
 		elvss_value = DEFAULT_ELVSS + 0x0;
 		break;
 	}
-
+	}
 	return elvss_value;
 }
 
-static void aor_copy(int candela)
+static void aor_copy(int id2, int candela)
 {
+	if ((id2 & EL_METERIAL_MASK) == TULIP) {
+		if (candela >= 249) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_0,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 234) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_7p1,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 220) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_tulip_aor_13p4,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 207) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_18p9,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 195) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_24p2,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 183) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_28p9,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 172) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_33p5,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 68) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_38p3,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 64) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_42p5,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 60) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_46p1,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 56) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_49p9,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 53) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_52p7,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 50) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_55p6,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 47) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_58p3,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 44) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_60p9,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 41) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_63p5,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 39) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_65p3,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 37) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_67p4,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 34) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_69p9,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 32) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_72p1,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 30) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_73p8,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 29) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_74p7,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 27) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_76p4,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 25) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_78p1,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 24) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_78p9,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 22) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_80p7,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 21) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_81p8,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 20) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_82p3,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 19) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_83p4,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 17) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_85p3,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 16) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_85p8,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 15) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_87p0,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 14) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_87p5,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 13) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_88p7,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 12) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_89p2,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 11) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_tulip_aor_90p4,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 10) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_91p2,
+						sizeof(magna_brightness_aor_ref));
+		} else {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_ref,
+						sizeof(magna_brightness_aor_ref));
+		}
+	} else {
 	if (candela >= 183) {
 		memcpy(magna_brightness_aor_ref, magna_brightness_aor_0,
 					sizeof(magna_brightness_aor_ref));
@@ -1358,6 +1742,7 @@ static void aor_copy(int candela)
 					sizeof(magna_brightness_aor_ref));
 	}
 }
+}
 
 static int brightness_control(int bl_level)
 {
@@ -1399,7 +1784,7 @@ static int brightness_control(int bl_level)
 	memcpy(magna_brightness_aor_pre, magna_brightness_aor_ref,
 					sizeof(magna_brightness_aor_ref));
 
-	aor_copy(candela);
+	aor_copy(id2, candela);
 
 	if (memcmp(magna_brightness_aor_pre, magna_brightness_aor_ref,
 			sizeof(magna_brightness_aor_ref))) {
@@ -1415,7 +1800,7 @@ static int brightness_control(int bl_level)
 	memcpy(magna_brightness_elvss_pre, magna_brightness_elvss_ref,
 					sizeof(magna_brightness_elvss_ref));
 
-	elvss_value = get_elvss_value(candela, id3);
+	elvss_value = get_elvss_value(candela, id2, id3);
 
 	magna_brightness_elvss_ref[1] = elvss_value;
 

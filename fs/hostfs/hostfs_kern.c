@@ -7,7 +7,6 @@
  */
 
 #include <linux/fs.h>
-#include <linux/magic.h>
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/pagemap.h>
@@ -45,6 +44,8 @@ static const struct dentry_operations hostfs_dentry_ops = {
 /* Changed in hostfs_args before the kernel starts running */
 static char *root_ino = "";
 static int append = 0;
+
+#define HOSTFS_SUPER_MAGIC 0x00c0ffee
 
 static const struct inode_operations hostfs_iops;
 static const struct inode_operations hostfs_dir_iops;
@@ -263,7 +264,7 @@ static int hostfs_show_options(struct seq_file *seq, struct dentry *root)
 	size_t offset = strlen(root_ino) + 1;
 
 	if (strlen(root_path) > offset)
-		seq_show_option(seq, root_path + offset, NULL);
+		seq_printf(seq, ",%s", root_path + offset);
 
 	return 0;
 }

@@ -69,9 +69,9 @@ static int crypto_cc_reset_rng(struct crypto_rng *tfm)
         goto out;
     }
 
-    filp = filp_open("/dev/urandom", O_RDONLY, 0);
+    filp = filp_open("/dev/random", O_RDONLY, 0);
     if (IS_ERR(filp)) {
-		ecryptfs_printk(KERN_ERR, "Failed to open /dev/urandom\n");
+		ecryptfs_printk(KERN_ERR, "Failed to open /dev/random\n");
         goto out;
     }
 
@@ -2301,6 +2301,7 @@ ecryptfs_decode_from_filename(unsigned char *dst, size_t *dst_size,
 			break;
 		case 2:
 			dst[dst_byte_offset++] |= (src_byte);
+			dst[dst_byte_offset] = 0;
 			current_bit_offset = 0;
 			break;
 		}

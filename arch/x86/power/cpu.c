@@ -11,7 +11,6 @@
 #include <linux/suspend.h>
 #include <linux/export.h>
 #include <linux/smp.h>
-#include <linux/perf_event.h>
 
 #include <asm/pgtable.h>
 #include <asm/proto.h>
@@ -22,7 +21,6 @@
 #include <asm/suspend.h>
 #include <asm/debugreg.h>
 #include <asm/fpu-internal.h> /* pcntxt_mask */
-#include <asm/mmu_context.h>
 
 #ifdef CONFIG_X86_32
 static struct saved_context saved_context;
@@ -149,7 +147,7 @@ static void fix_processor_context(void)
 	syscall_init();				/* This sets MSR_*STAR and related */
 #endif
 	load_TR_desc();				/* This does ltr */
-	load_mm_ldt(current->active_mm);	/* This does lldt */
+	load_LDT(&current->active_mm->context);	/* This does lldt */
 }
 
 /**
@@ -229,7 +227,6 @@ static void __restore_processor_state(struct saved_context *ctxt)
 	do_fpu_end();
 	x86_platform.restore_sched_clock_state();
 	mtrr_bp_restore();
-	perf_restore_debug_store();
 }
 
 /* Needed by apm.c */

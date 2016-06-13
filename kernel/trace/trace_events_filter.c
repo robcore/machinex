@@ -777,11 +777,7 @@ static int filter_set_pred(struct event_filter *filter,
 
 static void __free_preds(struct event_filter *filter)
 {
-	int i;
-
 	if (filter->preds) {
-		for (i = 0; i < filter->n_preds; i++)
-			kfree(filter->preds[i].ops);
 		kfree(filter->preds);
 		filter->preds = NULL;
 	}
@@ -1044,9 +1040,6 @@ static void parse_init(struct filter_parse_state *ps,
 
 static char infix_next(struct filter_parse_state *ps)
 {
-	if (!ps->infix.cnt)
-		return 0;
-
 	ps->infix.cnt--;
 
 	return ps->infix.string[ps->infix.tail++];
@@ -1062,9 +1055,6 @@ static char infix_peek(struct filter_parse_state *ps)
 
 static void infix_advance(struct filter_parse_state *ps)
 {
-	if (!ps->infix.cnt)
-		return;
-
 	ps->infix.cnt--;
 	ps->infix.tail++;
 }
@@ -1363,27 +1353,19 @@ static int check_preds(struct filter_parse_state *ps)
 {
 	int n_normal_preds = 0, n_logical_preds = 0;
 	struct postfix_elt *elt;
-	int cnt = 0;
 
 	list_for_each_entry(elt, &ps->postfix, list) {
-		if (elt->op == OP_NONE) {
-			cnt++;
+		if (elt->op == OP_NONE)
 			continue;
-		}
 
 		if (elt->op == OP_AND || elt->op == OP_OR) {
 			n_logical_preds++;
-			cnt--;
 			continue;
 		}
-		cnt--;
 		n_normal_preds++;
-		/* all ops should have operands */
-		if (cnt < 0)
-			break;
 	}
 
-	if (cnt != 1 || !n_normal_preds || n_logical_preds >= n_normal_preds) {
+	if (!n_normal_preds || n_logical_preds >= n_normal_preds) {
 		parse_error(ps, FILT_ERR_INVALID_FILTER, 0);
 		return -EINVAL;
 	}

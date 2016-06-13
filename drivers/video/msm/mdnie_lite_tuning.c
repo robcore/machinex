@@ -108,6 +108,15 @@ struct mdnie_lite_tun_type mdnie_tun_state = {
 	.blind = ACCESSIBILITY_OFF,
 };
 
+const char accessibility_name[ACCESSIBILITY_MAX][20] = {
+	"ACCESSIBILITY_OFF",
+	"NEGATIVE_MODE",
+	"COLOR_BLIND_MODE",
+#if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
+	"SCREEN_CURTAIN_MODE",
+#endif
+};
+
 const char background_name[MAX_BACKGROUND_MODE][16] = {
 	"STANDARD",
 	"DYNAMIC",
@@ -284,7 +293,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	*/
 	if (mdnie_tun_state.blind == COLOR_BLIND)
 		mode = mDNIE_BLINE_MODE;
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL)
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL) || defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	else if (mdnie_tun_state.blind == DARK_SCREEN)
 		mode = mDNIE_DARK_SCREEN_MODE;
 #endif
@@ -627,7 +636,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		INPUT_PAYLOAD2(COLOR_BLIND_2);
 		break;
 
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL)
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL) || defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	case mDNIE_DARK_SCREEN_MODE:
 		DPRINT(" = DARK SCREEN MODE =\n");
 		INPUT_PAYLOAD1(DARK_SCREEN_BLIND_1);
@@ -1026,7 +1035,9 @@ static ssize_t accessibility_show(struct device *dev,
 			char *buf)
 {
 	DPRINT("called %s\n", __func__);
-	return snprintf(buf, 256, "%d\n", play_speed_1_5);
+	return snprintf(buf, 256, "Current accessibility Value : %s\n",
+		accessibility_name[mdnie_tun_state.blind]);
+	//return snprintf(buf, 256, "%d\n", play_speed_1_5);
 }
 
 static ssize_t accessibility_store(struct device *dev,
@@ -1071,7 +1082,7 @@ static ssize_t accessibility_store(struct device *dev,
 				buffer, MDNIE_COLOR_BLINDE_CMD);
 #endif
 	} 
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL)
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL) || defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	else if  (cmd_value == DARK_SCREEN) {
 		mdnie_tun_state.negative = mDNIe_NEGATIVE_OFF;
 		mdnie_tun_state.blind = DARK_SCREEN;

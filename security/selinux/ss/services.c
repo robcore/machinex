@@ -1021,11 +1021,9 @@ static int context_struct_to_string(struct context *context, char **scontext, u3
 
 	if (context->len) {
 		*scontext_len = context->len;
-		if (scontext) {
-			*scontext = kstrdup(context->str, GFP_ATOMIC);
-			if (!(*scontext))
-				return -ENOMEM;
-		}
+		*scontext = kstrdup(context->str, GFP_ATOMIC);
+		if (!(*scontext))
+			return -ENOMEM;
 		return 0;
 	}
 
@@ -1235,10 +1233,6 @@ static int security_context_to_sid_core(const char *scontext, u32 scontext_len,
 	int rc = 0;
 
 	/* An empty security context is never valid */
-	if (!scontext_len)
-		return -EINVAL;
-
-	/* An empty security context is never valid. */
 	if (!scontext_len)
 		return -EINVAL;
 
@@ -2326,7 +2320,6 @@ int security_fs_use(
 {
 	int rc = 0;
 	struct ocontext *c;
-	u32 tmpsid;
 
 	read_lock(&policy_rwlock);
 
@@ -2341,8 +2334,7 @@ int security_fs_use(
 		*behavior = c->v.behavior;
 		if (!c->sid[0]) {
 			rc = sidtab_context_to_sid(&sidtab, &c->context[0],
-						   &tmpsid);
-			c->sid[0] = tmpsid;
+						   &c->sid[0]);
 			if (rc)
 				goto out;
 		}

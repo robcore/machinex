@@ -432,19 +432,17 @@ static inline void rx_process (struct usbnet *dev, struct sk_buff *skb)
 	}
 	// else network stack removes extra byte if we forced a short packet
 
-	/* all data was already cloned from skb inside the driver */
-	if (dev->driver_info->flags & FLAG_MULTI_PACKET)
-		goto done;
-
-	if (skb->len < ETH_HLEN) {
-		dev->net->stats.rx_errors++;
-		dev->net->stats.rx_length_errors++;
-		netif_dbg(dev, rx_err, dev->net, "rx length %d\n", skb->len);
-	} else {
-		usbnet_skb_return(dev, skb);
+	if (skb->len) {
+		/* all data was already cloned from skb inside the driver */
+		if (dev->driver_info->flags & FLAG_MULTI_PACKET)
+			dev_kfree_skb_any(skb);
+		else
+			usbnet_skb_return(dev, skb);
 		return;
 	}
 
+	netif_dbg(dev, rx_err, dev->net, "drop\n");
+	dev->net->stats.rx_errors++;
 done:
 	skb_queue_tail(&dev->done, skb);
 }
@@ -466,6 +464,13 @@ void rx_complete(struct urb *urb)
 	switch (urb_status) {
 	/* success */
 	case 0:
+		if (skb->len < dev->net->hard_header_len) {
+			state = rx_cleanup;
+			dev->net->stats.rx_errors++;
+			dev->net->stats.rx_length_errors++;
+			netif_dbg(dev, rx_err, dev->net,
+				  "rx length %d\n", skb->len);
+		}
 		break;
 
 	/* stalls need manual reset. this is rare ... except that
@@ -1171,6 +1176,7 @@ netdev_tx_t usbnet_start_xmit (struct sk_buff *skb,
 		usb_anchor_urb(urb, &dev->deferred);
 		/* no use to process more packets */
 		netif_stop_queue(net);
+		usb_put_urb(urb);
 		spin_unlock_irqrestore(&dev->txq.lock, flags);
 		netdev_dbg(dev->net, "Delaying transmission for resumption\n");
 		goto deferred;
@@ -1319,6 +1325,8 @@ void usbnet_disconnect (struct usb_interface *intf)
 	unregister_netdev (net);
 
 	cancel_work_sync(&dev->kevent);
+
+	usb_scuttle_anchored_urbs(&dev->deferred);
 
 	if (dev->driver_info->unbind)
 		dev->driver_info->unbind (dev, intf);

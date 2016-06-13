@@ -29,7 +29,7 @@
 #include "synaptics_i2c_rmi.h"
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
-
+//#undef CONFIG_HAS_EARLYSUSPEND
 #define PROXIMITY
 #define TYPE_B_PROTOCOL
 #define SURFACE_TOUCH
@@ -152,9 +152,9 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 static void synaptics_rmi4_early_suspend(struct early_suspend *h);
 
 static void synaptics_rmi4_late_resume(struct early_suspend *h);
+#endif /* CONFIG_HAS_EARLYSUSPEND */
 
-#else
-
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
 static int synaptics_rmi4_suspend(struct device *dev);
 
 static int synaptics_rmi4_resume(struct device *dev);
@@ -3748,7 +3748,7 @@ int synaptics_rmi4_new_function(enum exp_fn fn_type,
 
 	return 0;
 }
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static void synaptics_init_power_on(struct work_struct *work)
 {
 	struct synaptics_rmi4_data *rmi4_data =
@@ -3768,7 +3768,7 @@ static void synaptics_init_power_on(struct work_struct *work)
 	synaptics_rmi4_late_resume(&rmi4_data->early_suspend);
 #endif
 }
-
+#endif
  /**
  * synaptics_rmi4_probe()
  *
@@ -4236,6 +4236,7 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
  * This function goes through the sensor wake process if the system wakes
  * up from early suspend (without going into suspend).
  */
+
 static void synaptics_rmi4_late_resume(struct early_suspend *h)
 {
 	struct synaptics_rmi4_data *rmi4_data =
@@ -4297,8 +4298,10 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
 #endif
 	return;
 }
-#else
+#endif /* CONFIG_HAS_EARLYSUSPEND */
 
+/* Use only for CONFIG_PM */
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
  /**
  * synaptics_rmi4_suspend()
  *
@@ -4309,6 +4312,7 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
  * sleep (if not already done so during the early suspend phase),
  * disables the interrupt, and turns off the power to the sensor.
  */
+
 static int synaptics_rmi4_suspend(struct device *dev)
 {
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
@@ -4346,6 +4350,7 @@ static int synaptics_rmi4_suspend(struct device *dev)
  * from sleep, enables the interrupt, and starts finger data
  * acquisition.
  */
+
 static int synaptics_rmi4_resume(struct device *dev)
 {
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
@@ -4381,7 +4386,8 @@ static int synaptics_rmi4_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_PM
+
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,
@@ -4398,7 +4404,7 @@ static struct i2c_driver synaptics_rmi4_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
-#ifdef CONFIG_PM
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
 		.pm = &synaptics_rmi4_dev_pm_ops,
 #endif
 	},

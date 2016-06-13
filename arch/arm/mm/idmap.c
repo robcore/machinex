@@ -22,13 +22,6 @@ static void idmap_add_pmd(pud_t *pud, unsigned long addr, unsigned long end,
 			pr_warning("Failed to allocate identity pmd.\n");
 			return;
 		}
-		/*
-		 * Copy the original PMD to ensure that the PMD entries for
-		 * the kernel image are preserved.
-		 */
-		if (!pud_none(*pud))
-			memcpy(pmd, pmd_offset(pud, 0),
-			       PTRS_PER_PMD * sizeof(pmd_t));
 		pud_populate(&init_mm, pud, pmd);
 		pmd += pmd_index(addr);
 	} else
@@ -149,9 +142,6 @@ static int __init init_static_idmap(void)
 		(long long)idmap_start, (long long)idmap_end);
 	identity_mapping_add(idmap_pgd, idmap_start, idmap_end);
 
-	/* Flush L1 for the hardware to see this page table content */
-	flush_cache_louis();
-
 	return 0;
 }
 early_initcall(init_static_idmap);
@@ -163,15 +153,12 @@ early_initcall(init_static_idmap);
  */
 void setup_mm_for_reboot(void)
 {
+	/* Clean and invalidate L1. */
+	flush_cache_all();
+
 	/* Switch to the identity mapping. */
 	cpu_switch_mm(idmap_pgd, &init_mm);
 
-#ifdef CONFIG_CPU_HAS_ASID
-	/*
-	 * We don't have a clean ASID for the identity mapping, which
-	 * may clash with virtual addresses of the previous page tables
-	 * and therefore potentially in the TLB.
-	 */
+	/* Flush the TLB. */
 	local_flush_tlb_all();
-#endif
 }

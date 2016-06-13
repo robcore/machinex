@@ -475,10 +475,10 @@ static int cs4271_probe(struct snd_soc_codec *codec)
 	if (gpio_nreset >= 0) {
 		/* Reset codec */
 		gpio_direction_output(gpio_nreset, 0);
-		mdelay(1);
+		udelay(1);
 		gpio_set_value(gpio_nreset, 1);
 		/* Give the codec time to wake up */
-		mdelay(1);
+		udelay(1);
 	}
 
 	cs4271->gpio_nreset = gpio_nreset;

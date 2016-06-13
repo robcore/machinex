@@ -698,11 +698,8 @@ static int compact_zone(struct zone *zone, struct compact_control *cc)
 		if (err) {
 			putback_lru_pages(&cc->migratepages);
 			cc->nr_migratepages = 0;
-			if (err == -ENOMEM) {
-				ret = COMPACT_PARTIAL;
-				goto out;
-			}
 		}
+
 	}
 
 out:
@@ -846,7 +843,7 @@ static int compact_node(int nid)
 }
 
 /* Compact all nodes in the system */
-static void compact_nodes(void)
+static int compact_nodes(void)
 {
 	int nid;
 
@@ -855,6 +852,8 @@ static void compact_nodes(void)
 
 	for_each_online_node(nid)
 		compact_node(nid);
+
+	return COMPACT_COMPLETE;
 }
 
 /* The written value is actually unused, all memory is compacted */
@@ -864,14 +863,8 @@ int sysctl_compact_memory;
 int sysctl_compaction_handler(struct ctl_table *table, int write,
 			void __user *buffer, size_t *length, loff_t *ppos)
 {
-	if (write) {
-		sysctl_compact_memory++;
-		compact_nodes();
-		pr_info("compact_memory done.(%d times so far)\n",
-			sysctl_compact_memory);
-	}
-	else
-		proc_dointvec(table, write, buffer, length, ppos);
+	if (write)
+		return compact_nodes();
 
 	return 0;
 }

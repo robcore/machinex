@@ -357,14 +357,17 @@ static void msm_fb_remove_sysfs(struct platform_device *pdev)
 
 static void msm_fb_shutdown(struct platform_device *pdev)
 {
-       struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
-       if (IS_ERR_OR_NULL(mfd)) {
-               pr_err("MFD is Null");
-               return;
-       }
-       lock_fb_info(mfd->fbi);
-       msm_fb_release_all(mfd->fbi, true);
-       unlock_fb_info(mfd->fbi);
+	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+	if (IS_ERR_OR_NULL(mfd)) {
+	       pr_err("MFD is Null");
+	       return;
+	}
+	mfd->shutdown_pending = true;
+	printk(KERN_INFO "%s: fb%d shut down\n", __func__, mfd->index);
+
+	lock_fb_info(mfd->fbi);
+	msm_fb_release_all(mfd->fbi, true);
+	unlock_fb_info(mfd->fbi);
 }
 static int msm_fb_probe(struct platform_device *pdev)
 {
@@ -1782,6 +1785,11 @@ static int msm_fb_open(struct fb_info *info, int user)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	bool unblank = true;
 	int result;
+
+	if (mfd->shutdown_pending) {
+		printk(KERN_ERR "%s: fb%d Shutdown pending.\n", __func__, mfd->index);
+		return -EPERM;
+	}
 
 	result = pm_runtime_get_sync(info->dev);
 
@@ -3897,6 +3905,9 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	if (!info || !info->par)
 		return -EINVAL;
 	mfd = (struct msm_fb_data_type *)info->par;
+	if (mfd->shutdown_pending)
+		return -EPERM;
+
 	msm_fb_pan_idle(mfd);
 
 	switch (cmd) {

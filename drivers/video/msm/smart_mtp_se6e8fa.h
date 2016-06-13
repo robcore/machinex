@@ -48,6 +48,12 @@ enum ldi_chip {
 
 extern int get_ldi_chip(void);
 
+/* EL METERIAL. ID2 BIT(0) & BIT(1) field*/
+#define EL_METERIAL_MASK 0x03
+#define M4 0x0
+#define M4P 0x1
+#define TULIP 0x2
+
 /* LSI LDI ID */
 #define VT232_ID 0x02
 #define CCG6_ID 0x03
