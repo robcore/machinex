@@ -817,4 +817,5 @@ static int __init vfp_rootfs_init(void)
 	return 0;
 }
 
+core_initcall(vfp_init);
 rootfs_initcall(vfp_rootfs_init);
