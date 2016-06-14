@@ -100,27 +100,20 @@ static ssize_t reset_store(struct device *dev,
 	zram = dev_to_zram(dev);
 	bdev = bdget_disk(zram->disk, 0);
 
-	if (!bdev)
-		return -ENOMEM;
-
 	/* Do not reset an active device! */
-	if (bdev->bd_holders) {
-		ret = -EBUSY;
-		goto out;
-	}
+	if (bdev->bd_holders)
+		return -EBUSY;
 
 	ret = kstrtou16(buf, 10, &do_reset);
 	if (ret)
-		goto out;
+		return ret;
 
-	if (!do_reset) {
-		ret = -EINVAL;
-		goto out;
-	}
+	if (!do_reset)
+		return -EINVAL;
 
 	/* Make sure all pending I/O is finished */
-	fsync_bdev(bdev);
-	bdput(bdev);
+	if (bdev)
+		fsync_bdev(bdev);
 
 	down_write(&zram->init_lock);
 	if (zram->init_done)
@@ -128,10 +121,6 @@ static ssize_t reset_store(struct device *dev,
 	up_write(&zram->init_lock);
 
 	return len;
-
-out:
-	bdput(bdev);
-	return ret;
 }
 
 static ssize_t num_reads_show(struct device *dev,

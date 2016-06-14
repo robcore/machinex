@@ -941,9 +941,9 @@ static struct uart_driver xuartps_uart_driver = {
  **/
 static int __devinit xuartps_probe(struct platform_device *pdev)
 {
-	int rc, irq;
+	int rc;
 	struct uart_port *port;
-	struct resource *res;
+	struct resource *res, *res2;
 	int clk = 0;
 
 #ifdef CONFIG_OF
@@ -964,9 +964,9 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
 	if (!res)
 		return -ENODEV;
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq <= 0)
-		return -ENXIO;
+	res2 = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (!res2)
+		return -ENODEV;
 
 	/* Initialize the port structure */
 	port = xuartps_get_port();
@@ -980,7 +980,7 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
 		 * and triggers invocation of the config_port() entry point.
 		 */
 		port->mapbase = res->start;
-		port->irq = irq;
+		port->irq = res2->start;
 		port->dev = &pdev->dev;
 		port->uartclk = clk;
 		dev_set_drvdata(&pdev->dev, port);
