@@ -795,7 +795,7 @@ config SEC_TORCH_FLASH
 	  This driver provides torch flash function.	  
 
 config CHG_INCOMPATIBLE
-        tristate " support incompatible charger"
+        tristate "support incompatible charger"
         default n
         help
           this option enable support for incompatible charger
