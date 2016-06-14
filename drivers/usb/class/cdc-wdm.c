@@ -55,6 +55,15 @@ static const struct usb_device_id wdm_ids[] = {
 		.bInterfaceSubClass = 1,
 		.bInterfaceProtocol = 9, /* NOTE: CDC ECM control interface! */
 	},
+	{
+		 /* Vodafone/Huawei K5005 (12d1:14c8) and similar modems */
+		.match_flags        = USB_DEVICE_ID_MATCH_VENDOR |
+				      USB_DEVICE_ID_MATCH_INT_INFO,
+		.idVendor           = HUAWEI_VENDOR_ID,
+		.bInterfaceClass    = USB_CLASS_VENDOR_SPEC,
+		.bInterfaceSubClass = 1,
+		.bInterfaceProtocol = 57, /* NOTE: CDC ECM control interface! */
+	},
 	{ }
 };
 
@@ -125,12 +134,14 @@ static struct usb_driver wdm_driver;
 /* return intfdata if we own the interface, else look up intf in the list */
 static struct wdm_device *wdm_find_device(struct usb_interface *intf)
 {
-	struct wdm_device *desc = NULL;
+	struct wdm_device *desc;
 
 	spin_lock(&wdm_device_list_lock);
 	list_for_each_entry(desc, &wdm_device_list, device_list)
 		if (desc->intf == intf)
-			break;
+			goto found;
+	desc = NULL;
+found:
 	spin_unlock(&wdm_device_list_lock);
 
 	return desc;
@@ -138,12 +149,14 @@ static struct wdm_device *wdm_find_device(struct usb_interface *intf)
 
 static struct wdm_device *wdm_find_device_by_minor(int minor)
 {
-	struct wdm_device *desc = NULL;
+	struct wdm_device *desc;
 
 	spin_lock(&wdm_device_list_lock);
 	list_for_each_entry(desc, &wdm_device_list, device_list)
 		if (desc->intf->minor == minor)
-			break;
+			goto found;
+	desc = NULL;
+found:
 	spin_unlock(&wdm_device_list_lock);
 
 	return desc;
@@ -488,6 +501,8 @@ retry:
 			goto retry;
 		}
 		if (!desc->reslength) { /* zero length read */
+			dev_dbg(&desc->intf->dev, "%s: zero length - clearing WDM_READ\n", __func__);
+			clear_bit(WDM_READ, &desc->flags);
 			spin_unlock_irq(&desc->iuspin);
 			goto retry;
 		}
