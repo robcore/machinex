@@ -676,8 +676,6 @@ static int proc_read_status(char *page, char **start, off_t off, int count,
 }
 #endif
 
-#ifdef CONFIG_KERNEL_MODE_NEON
-
 void vfp_kmode_exception(void)
 {
 	/*
@@ -697,6 +695,8 @@ void vfp_kmode_exception(void)
 	else
 		pr_crit("BUG: FP instruction issued in kernel mode with FP unit disabled\n");
 }
+
+#ifdef CONFIG_KERNEL_MODE_NEON
 
 /*
  * Kernel-side NEON support functions
@@ -795,11 +795,14 @@ static int __init vfp_init(void)
 			elf_hwcap |= HWCAP_VFPv3;
 
 			/*
-			 * Check for VFPv3 D16. CPUs in this configuration
-			 * only have 16 x 64bit registers.
+			 * Check for VFPv3 D16 and VFPv4 D16.  CPUs in
+			 * this configuration only have 16 x 64bit
+			 * registers.
 			 */
 			if (((fmrx(MVFR0) & MVFR0_A_SIMD_MASK)) == 1)
-				elf_hwcap |= HWCAP_VFPv3D16;
+				elf_hwcap |= HWCAP_VFPv3D16; /* also v4-D16 */
+			else
+				elf_hwcap |= HWCAP_VFPD32;
 		}
 #endif
 		/*
@@ -822,7 +825,7 @@ static int __init vfp_init(void)
 }
 
 static int __init vfp_rootfs_init(void)
-
+{
 #ifdef CONFIG_PROC_FS
 	static struct proc_dir_entry *procfs_entry;
 
@@ -833,7 +836,6 @@ static int __init vfp_rootfs_init(void)
 	else
 		pr_err("Failed to create procfs node for VFP bounce reporting\n");
 #endif
-
 	return 0;
 }
 
