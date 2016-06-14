@@ -345,7 +345,7 @@ int hwspin_lock_register(struct hwspinlock_device *bank, struct device *dev,
 		spin_lock_init(&hwlock->lock);
 		hwlock->bank = bank;
 
-		ret = hwspin_lock_register_single(hwlock, base_id + i);
+		ret = hwspin_lock_register_single(hwlock, i);
 		if (ret)
 			goto reg_failed;
 	}
@@ -354,7 +354,7 @@ int hwspin_lock_register(struct hwspinlock_device *bank, struct device *dev,
 
 reg_failed:
 	while (--i >= 0)
-		hwspin_lock_unregister_single(base_id + i);
+		hwspin_lock_unregister_single(i);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(hwspin_lock_register);

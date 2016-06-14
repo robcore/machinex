@@ -1597,15 +1597,7 @@ static int dapm_power_widgets(struct snd_soc_dapm_context *dapm, int event)
 	}
 
 	list_for_each_entry(w, &card->widgets, list) {
-		switch (w->id) {
-		case snd_soc_dapm_pre:
-		case snd_soc_dapm_post:
-			/* These widgets always need to be powered */
-			break;
-		default:
-			list_del_init(&w->dirty);
-			break;
-		}
+		list_del_init(&w->dirty);
 
 		if (w->power) {
 			d = w->dapm;

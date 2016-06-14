@@ -1115,12 +1115,6 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, stru
 			EXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
 			return ERR_PTR(-EIO);
 		}
-		if (unlikely(ino == dir->i_ino)) {
-			EXT4_ERROR_INODE(dir, "'%.*s' linked to parent dir",
-					 dentry->d_name.len,
-					 dentry->d_name.name);
-			return ERR_PTR(-EIO);
-		}
 		brelse(bh);
 
 		inode = ext4_iget(dir->i_sb, ino);
@@ -1891,7 +1885,9 @@ retry:
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
 		init_special_inode(inode, inode->i_mode, rdev);
+#ifdef CONFIG_EXT4_FS_XATTR
 		inode->i_op = &ext4_special_inode_operations;
+#endif
 		err = ext4_add_nondir(handle, dentry, inode);
 		if (!err && IS_DIRSYNC(dir))
 			ext4_handle_sync(handle);
@@ -2401,7 +2397,7 @@ retry:
 		 * for transaction commit if we are running out of space
 		 * and thus we deadlock. So we have to stop transaction now
 		 * and restart it when symlink contents is written.
-		 *
+		 * 
 		 * To keep fs consistent in case of crash, we have to put inode
 		 * to orphan list in the mean time.
 		 */

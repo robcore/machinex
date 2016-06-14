@@ -611,7 +611,7 @@ static void disable_pirq(struct irq_data *data)
 	disable_dynirq(data);
 }
 
-int xen_irq_from_gsi(unsigned gsi)
+static int find_irq_by_gsi(unsigned gsi)
 {
 	struct irq_info *info;
 
@@ -625,7 +625,6 @@ int xen_irq_from_gsi(unsigned gsi)
 
 	return -1;
 }
-EXPORT_SYMBOL_GPL(xen_irq_from_gsi);
 
 /*
  * Do not make any assumptions regarding the relationship between the
@@ -645,7 +644,7 @@ int xen_bind_pirq_gsi_to_irq(unsigned gsi,
 
 	mutex_lock(&irq_mapping_update_lock);
 
-	irq = xen_irq_from_gsi(gsi);
+	irq = find_irq_by_gsi(gsi);
 	if (irq != -1) {
 		printk(KERN_INFO "xen_map_pirq_gsi: returning irq %d for gsi %u\n",
 		       irq, gsi);

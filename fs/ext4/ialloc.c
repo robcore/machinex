@@ -490,12 +490,10 @@ fallback_retry:
 	for (i = 0; i < ngroups; i++) {
 		grp = (parent_group + i) % ngroups;
 		desc = ext4_get_group_desc(sb, grp, NULL);
-		if (desc) {
-			grp_free = ext4_free_inodes_count(sb, desc);
-			if (grp_free && grp_free >= avefreei) {
-				*group = grp;
-				return 0;
-			}
+		grp_free = ext4_free_inodes_count(sb, desc);
+		if (desc && grp_free && grp_free >= avefreei) {
+			*group = grp;
+			return 0;
 		}
 	}
 
@@ -1028,8 +1026,7 @@ unsigned long ext4_count_free_inodes(struct super_block *sb)
 		if (!bitmap_bh)
 			continue;
 
-		x = ext4_count_free(bitmap_bh->b_data,
-				    EXT4_INODES_PER_GROUP(sb) / 8);
+		x = ext4_count_free(bitmap_bh, EXT4_INODES_PER_GROUP(sb) / 8);
 		printk(KERN_DEBUG "group %lu: stored = %d, counted = %lu\n",
 			(unsigned long) i, ext4_free_inodes_count(sb, gdp), x);
 		bitmap_count += x;

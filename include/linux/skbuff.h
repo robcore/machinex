@@ -225,11 +225,14 @@ enum {
 	/* device driver is going to provide hardware time stamp */
 	SKBTX_IN_PROGRESS = 1 << 2,
 
+	/* ensure the originating sk reference is available on driver level */
+	SKBTX_DRV_NEEDS_SK_REF = 1 << 3,
+
 	/* device driver supports TX zero-copy buffers */
-	SKBTX_DEV_ZEROCOPY = 1 << 3,
+	SKBTX_DEV_ZEROCOPY = 1 << 4,
 
 	/* generate wifi status information (where possible) */
-	SKBTX_WIFI_STATUS = 1 << 4,
+	SKBTX_WIFI_STATUS = 1 << 5,
 };
 
 /*
@@ -1886,6 +1889,8 @@ static inline int __skb_cow(struct sk_buff *skb, unsigned int headroom,
 {
 	int delta = 0;
 
+	if (headroom < NET_SKB_PAD)
+		headroom = NET_SKB_PAD;
 	if (headroom > skb_headroom(skb))
 		delta = headroom - skb_headroom(skb);
 

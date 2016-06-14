@@ -560,17 +560,6 @@ bool inet_peer_xrlim_allow(struct inet_peer *peer, int timeout)
 }
 EXPORT_SYMBOL(inet_peer_xrlim_allow);
 
-static void inetpeer_inval_rcu(struct rcu_head *head)
-{
-	struct inet_peer *p = container_of(head, struct inet_peer, gc_rcu);
-
-	spin_lock_bh(&gc_lock);
-	list_add_tail(&p->gc_list, &gc_list);
-	spin_unlock_bh(&gc_lock);
-
-	schedule_delayed_work(&gc_work, gc_delay);
-}
-
 void inetpeer_invalidate_tree(int family)
 {
 	struct inet_peer *old, *new, *prev;
@@ -587,7 +576,10 @@ void inetpeer_invalidate_tree(int family)
 	prev = cmpxchg(&base->root, old, new);
 	if (prev == old) {
 		base->total = 0;
-		call_rcu(&prev->gc_rcu, inetpeer_inval_rcu);
+		spin_lock(&gc_lock);
+		list_add_tail(&prev->gc_list, &gc_list);
+		spin_unlock(&gc_lock);
+		schedule_delayed_work(&gc_work, gc_delay);
 	}
 
 out:
