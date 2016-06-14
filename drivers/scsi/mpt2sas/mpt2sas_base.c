@@ -1785,7 +1785,7 @@ static inline void _base_writeq(__u64 b, volatile void __iomem *addr,
 static inline u8
 _base_get_msix_index(struct MPT2SAS_ADAPTER *ioc)
 {
-	return ioc->cpu_msix_table[raw_smp_processor_id()];
+	return ioc->cpu_msix_table[smp_processor_id()];
 }
 
 /**
@@ -2417,13 +2417,10 @@ _base_allocate_memory_pools(struct MPT2SAS_ADAPTER *ioc,  int sleep_flag)
 	}
 
 	/* command line tunables  for max controller queue depth */
-	if (max_queue_depth != -1 && max_queue_depth != 0) {
-		max_request_credit = min_t(u16, max_queue_depth +
-			ioc->hi_priority_depth + ioc->internal_depth,
-			facts->RequestCredit);
-		if (max_request_credit > MAX_HBA_QUEUE_DEPTH)
-			max_request_credit =  MAX_HBA_QUEUE_DEPTH;
-	} else
+	if (max_queue_depth != -1)
+		max_request_credit = (max_queue_depth < facts->RequestCredit)
+		    ? max_queue_depth : facts->RequestCredit;
+	else
 		max_request_credit = min_t(u16, facts->RequestCredit,
 		    MAX_HBA_QUEUE_DEPTH);
 
@@ -2498,7 +2495,7 @@ _base_allocate_memory_pools(struct MPT2SAS_ADAPTER *ioc,  int sleep_flag)
 	/* set the scsi host can_queue depth
 	 * with some internal commands that could be outstanding
 	 */
-	ioc->shost->can_queue = ioc->scsiio_depth;
+	ioc->shost->can_queue = ioc->scsiio_depth - (2);
 	dinitprintk(ioc, printk(MPT2SAS_INFO_FMT "scsi host: "
 	    "can_queue depth (%d)\n", ioc->name, ioc->shost->can_queue));
 

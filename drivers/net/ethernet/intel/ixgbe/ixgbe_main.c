@@ -1036,17 +1036,17 @@ static inline void ixgbe_rx_hash(struct ixgbe_ring *ring,
 #ifdef IXGBE_FCOE
 /**
  * ixgbe_rx_is_fcoe - check the rx desc for incoming pkt type
- * @ring: structure containing ring specific data
+ * @adapter: address of board private structure
  * @rx_desc: advanced rx descriptor
  *
  * Returns : true if it is FCoE pkt
  */
-static inline bool ixgbe_rx_is_fcoe(struct ixgbe_ring *ring,
+static inline bool ixgbe_rx_is_fcoe(struct ixgbe_adapter *adapter,
 				    union ixgbe_adv_rx_desc *rx_desc)
 {
 	__le16 pkt_info = rx_desc->wb.lower.lo_dword.hs_rss.pkt_info;
 
-	return test_bit(__IXGBE_RX_FCOE, &ring->state) &&
+	return (adapter->flags & IXGBE_FLAG_FCOE_ENABLED) &&
 	       ((pkt_info & cpu_to_le16(IXGBE_RXDADV_PKTTYPE_ETQF_MASK)) ==
 		(cpu_to_le16(IXGBE_ETQF_FILTER_FCOE <<
 			     IXGBE_RXDADV_PKTTYPE_ETQF_SHIFT)));
@@ -1519,12 +1519,6 @@ static bool ixgbe_cleanup_headers(struct ixgbe_ring *rx_ring,
 		skb->truesize -= ixgbe_rx_bufsz(rx_ring);
 	}
 
-#ifdef IXGBE_FCOE
-	/* do not attempt to pad FCoE Frames as this will disrupt DDP */
-	if (ixgbe_rx_is_fcoe(rx_ring, rx_desc))
-		return false;
-
-#endif
 	/* if skb_pad returns an error the skb was freed */
 	if (unlikely(skb->len < 60)) {
 		int pad_len = 60 - skb->len;
@@ -1751,7 +1745,7 @@ static bool ixgbe_clean_rx_irq(struct ixgbe_q_vector *q_vector,
 
 #ifdef IXGBE_FCOE
 		/* if ddp, not passing to ULD unless for FCP_RSP or error */
-		if (ixgbe_rx_is_fcoe(rx_ring, rx_desc)) {
+		if (ixgbe_rx_is_fcoe(adapter, rx_desc)) {
 			ddp_bytes = ixgbe_fcoe_ddp(adapter, rx_desc, skb);
 			if (!ddp_bytes) {
 				dev_kfree_skb_any(skb);
