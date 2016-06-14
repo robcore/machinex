@@ -69,6 +69,14 @@ static void kvm_unpin_pages(struct kvm *kvm, pfn_t pfn, unsigned long npages)
 		kvm_release_pfn_clean(pfn + i);
 }
 
+static void kvm_unpin_pages(struct kvm *kvm, pfn_t pfn, unsigned long npages)
+{
+	unsigned long i;
+
+	for (i = 0; i < npages; ++i)
+		kvm_release_pfn_clean(pfn + i);
+}
+
 int kvm_iommu_map_pages(struct kvm *kvm, struct kvm_memory_slot *slot)
 {
 	gfn_t gfn, end_gfn;
@@ -107,6 +115,10 @@ int kvm_iommu_map_pages(struct kvm *kvm, struct kvm_memory_slot *slot)
 
 		/* Make sure gfn is aligned to the page size we want to map */
 		while ((gfn << PAGE_SHIFT) & (page_size - 1))
+			page_size >>= 1;
+
+		/* Make sure hva is aligned to the page size we want to map */
+		while (gfn_to_hva_memslot(slot, gfn) & (page_size - 1))
 			page_size >>= 1;
 
 		/*

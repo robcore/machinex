@@ -86,6 +86,7 @@ static int snd_ctl_open(struct inode *inode, struct file *file)
 	write_lock_irqsave(&card->ctl_files_rwlock, flags);
 	list_add_tail(&ctl->list, &card->ctl_files);
 	write_unlock_irqrestore(&card->ctl_files_rwlock, flags);
+	snd_card_unref(card);
 	return 0;
 
       __error:
@@ -93,6 +94,8 @@ static int snd_ctl_open(struct inode *inode, struct file *file)
       __error2:
 	snd_card_file_remove(card, file);
       __error1:
+	if (card)
+		snd_card_unref(card);
       	return err;
 }
 
@@ -285,6 +288,10 @@ static bool snd_ctl_remove_numid_conflict(struct snd_card *card,
 {
 	struct snd_kcontrol *kctl;
 
+	/* Make sure that the ids assigned to the control do not wrap around */
+	if (card->last_numid >= UINT_MAX - count)
+		card->last_numid = 0;
+
 	list_for_each_entry(kctl, &card->controls, list) {
 		if (kctl->id.numid < card->last_numid + 1 + count &&
 		    kctl->id.numid + kctl->count > card->last_numid + 1) {
@@ -401,6 +408,9 @@ int snd_ctl_replace(struct snd_card *card, struct snd_kcontrol *kcontrol,
 		goto error;
 	}
 	id = kcontrol->id;
+	if (id.index > UINT_MAX - kcontrol->count)
+		goto error;
+
 	down_write(&card->controls_rwsem);
 	old = snd_ctl_find_id(card, &id);
 	if (!old) {
@@ -451,6 +461,7 @@ EXPORT_SYMBOL(snd_ctl_replace);
 int snd_ctl_remove(struct snd_card *card, struct snd_kcontrol *kcontrol)
 {
 	struct snd_ctl_elem_id id;
+	unsigned int count;
 	unsigned int idx;
 
 	if (snd_BUG_ON(!card || !kcontrol))
@@ -1157,6 +1168,10 @@ static int snd_ctl_elem_add(struct snd_ctl_file *file,
 
 	if (info->count < 1)
 		return -EINVAL;
+	if (!*info->id.name)
+		return -EINVAL;
+	if (strnlen(info->id.name, sizeof(info->id.name)) >= sizeof(info->id.name))
+		return -EINVAL;
 	access = info->access == 0 ? SNDRV_CTL_ELEM_ACCESS_READWRITE :
 		(info->access & (SNDRV_CTL_ELEM_ACCESS_READWRITE|
 				 SNDRV_CTL_ELEM_ACCESS_INACTIVE|
@@ -1453,6 +1468,8 @@ static ssize_t snd_ctl_read(struct file *file, char __user *buffer,
 			spin_unlock_irq(&ctl->read_lock);
 			schedule();
 			remove_wait_queue(&ctl->change_sleep, &wait);
+			if (ctl->card->shutdown)
+				return -ENODEV;
 			if (signal_pending(current))
 				return -ERESTARTSYS;
 			spin_lock_irq(&ctl->read_lock);
