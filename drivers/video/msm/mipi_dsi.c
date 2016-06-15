@@ -131,8 +131,9 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	ret = panel_next_off(pdev);
 
 	spin_lock_bh(&dsi_clk_lock);
-	
+
 	mipi_dsi_clk_disable();
+
 
 	/* disbale dsi engine */
 	dsi_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0000);
@@ -150,11 +151,11 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	mipi_dsi_unprepare_clocks();
 
 	usleep(5000);
-#if  defined (CONFIG_MIPI_DSI_RESET_LP11)
+#if defined (CONFIG_MIPI_DSI_RESET_LP11)
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 		mipi_dsi_pdata->active_reset(0); /* low */
-#endif	
+#endif
 
 	usleep(2000); /*1ms delay(minimum) required between reset low and AVDD off*/
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
@@ -367,7 +368,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 #endif
 #if defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
 	if(system_rev)
-		ret = panel_next_on(pdev);	
+		ret = panel_next_on(pdev);
 #elif defined(CONFIG_MACH_LT02_CHN_CTC)
         ret = panel_next_on(pdev);
 #endif
@@ -384,7 +385,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mutex_lock(&mfd->dma->ov_mutex);
 	else
 		down(&mfd->dma->mutex);
-		
+
 #if !defined(CONFIG_MACH_LT02_CHN_CTC)
 #if defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
 	if(!system_rev)
@@ -473,7 +474,7 @@ void esd_recovery(void)
 			mutex_lock(&power_state_chagne);
 
 			panel_next_off(pdev_for_esd);
-			
+
 			if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 				mipi_dsi_pdata->active_reset(0); /* low */
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
@@ -618,7 +619,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 			MIPI_OUTP(MIPI_DSI_BASE + 0x200, 0);
 			mipi_dsi_ahb_ctrl(0);
 		}
-#if defined (CONFIG_SEC_PRODUCT_8960) || defined(CONFIG_SEC_PRODUCT_8930) 
+#if defined (CONFIG_SEC_PRODUCT_8960) || defined(CONFIG_SEC_PRODUCT_8930)
 		mipi_dsi_unprepare_clocks(); // unprepare the clocks to balance clock calls
 #endif
 		mipi_dsi_resource_initialized = 1;
