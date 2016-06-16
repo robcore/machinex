@@ -223,6 +223,13 @@ config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 
 endchoice
 
+config CPU_FREQ_GOV_LIONHEART
+	tristate "'Lionheart' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'Lionheart' - A brave and agile conservative-based governor.
+	  If in doubt, say N.
+
 config CPU_FREQ_GOV_DARKNESS
 	tristate "'darkness' cpufreq governor"
 	depends on CPU_FREQ

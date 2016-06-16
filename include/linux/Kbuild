@@ -420,6 +420,7 @@ header-y += wireless.h
 header-y += x25.h
 header-y += xattr.h
 header-y += xfrm.h
+header-y += msm_thermal_ioctl.h
 header-y += msm_adsp.h
 header-y += msm_mdp.h
 header-y += msm_kgsl.h

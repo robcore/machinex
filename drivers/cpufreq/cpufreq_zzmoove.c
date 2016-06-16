@@ -657,14 +657,14 @@
 #include <linux/exynos4_export_temp.h>		// ZZ: Exynos4 temperatue reading support
 #endif
 
-//#define ENABLE_QCOM_THERMAL_SUPPORT		// ZZ: Qualcomm temperature tripping support
+#define ENABLE_QCOM_THERMAL_SUPPORT		// ZZ: Qualcomm temperature tripping support
 
 #if defined(CONFIG_THERMAL_TSENS8974) || defined(CONFIG_THERMAL_TSENS8960) && defined(ENABLE_QCOM_THERMAL_SUPPORT) // ZZ: qualcomm temperature sensor
 #include <linux/msm_tsens.h>
 #endif
 
-//#define ENABLE_INPUTBOOSTER			// ZZ: enable/disable inputbooster support
-//#define ENABLE_WORK_RESTARTLOOP		// ZZ: enable/disable restart loop for touchboost
+#define ENABLE_INPUTBOOSTER			// ZZ: enable/disable inputbooster support
+#define ENABLE_WORK_RESTARTLOOP		// ZZ: enable/disable restart loop for touchboost
 
 #ifdef ENABLE_INPUTBOOSTER
 #include <linux/slab.h>
@@ -678,10 +678,10 @@
 #define MAX_CORES					(4)
 
 // ZZ: enable/disable hotplug support
-//#define ENABLE_HOTPLUGGING
+#define ENABLE_HOTPLUGGING
 
 // ZZ: enable support for native hotplugging on qualcomm platform
-//#define QCOM_NATIVE_HOTPLUGGING
+#define QCOM_NATIVE_HOTPLUGGING
 
 // ZZ: enable for sources with backported cpufreq implementation of 3.10 kernel
 //#define CPU_IDLE_TIME_IN_CPUFREQ
