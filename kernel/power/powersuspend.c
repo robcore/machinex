@@ -63,7 +63,6 @@ static DEFINE_SPINLOCK(state_lock);
 
 /* Yank555.lu : Current powersave state (screen on / off) */
 static int state;
-
 /* Yank555.lu : Current powersave suspend_mode  (kernel / userspace / panel) */
 int suspend_mode;
 
