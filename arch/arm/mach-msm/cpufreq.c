@@ -312,7 +312,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	cpumask_clear(mask);
 	cpumask_set_cpu(policy->cpu, mask);
 	if (cpumask_equal(mask, &current->cpus_allowed)) {
-		ret = set_cpu_freq(cpu_work->policy, cpu_work->frequency);
+		ret = set_cpu_freq(cpu_work->policy, cpu_work->frequency, cpu_work->index);
 		goto done;
 	} else {
 		cancel_work_sync(&cpu_work->work);
