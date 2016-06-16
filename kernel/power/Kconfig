@@ -21,6 +21,13 @@ config SUSPEND_FREEZER
 config HIBERNATE_CALLBACKS
 	bool
 
+config POWERSUSPEND
+        bool "Power suspend"
+        default n
+        help
+          Call early suspend handlers when the user requested sleep state
+          changes.
+
 config HIBERNATION
 	bool "Hibernation (aka 'suspend to disk')"
 	depends on SWAP && ARCH_HIBERNATION_POSSIBLE
