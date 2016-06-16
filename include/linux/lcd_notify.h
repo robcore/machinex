@@ -16,7 +16,7 @@ struct lcd_event {
 	void *data;
 };
 
-#ifdef CONFIG_MACH_JF
+#ifdef CONFIG_LCD_NOTIFY
 int lcd_register_client(struct notifier_block *nb);
 int lcd_unregister_client(struct notifier_block *nb);
 int lcd_notifier_call_chain(unsigned long val, void *v);

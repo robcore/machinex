@@ -1,5 +1,5 @@
 /*
- * drivers/video/msm/mdss/lcd_notify.c
+ * drivers/video/msm/lcd_notify.c
  *
  * Copyright (C) 2013 LGE Inc
  *
