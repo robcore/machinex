@@ -560,7 +560,7 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	int error;
 
 	if (state == PM_SUSPEND_ON
-	    && !(strncmp(buf, "off", 3) && strncmp(buf, "off\n", 4)))
+	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
 		return -EINVAL;
 
 	error = pm_autosleep_set_state(state);
@@ -910,6 +910,11 @@ static struct attribute *g[] = {
 #endif
 #ifdef CONFIG_PM_SLEEP_DEBUG
 	&pm_print_times_attr.attr,
+#endif
+#ifdef CONFIG_USER_WAKELOCK
+	&wake_lock_attr.attr,
+	&wake_unlock_attr.attr,
+#endif
 #endif
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
