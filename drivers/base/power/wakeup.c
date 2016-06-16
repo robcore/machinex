@@ -14,6 +14,7 @@
 #include <linux/suspend.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <trace/events/power.h>
 
 #include "power.h"
 
@@ -374,12 +375,16 @@ EXPORT_SYMBOL_GPL(device_set_wakeup_enable);
  */
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
+	unsigned int cec;
+
 	ws->active = true;
 	ws->active_count++;
 	ws->last_time = ktime_get();
 
 	/* Increment the counter of events in progress. */
-	atomic_inc(&combined_event_count);
+	cec = atomic_inc_return(&combined_event_count);
+
+	trace_wakeup_source_activate(ws->name, cec);
 }
 
 /**
@@ -459,7 +464,7 @@ EXPORT_SYMBOL_GPL(pm_stay_awake);
  */
 static void wakeup_source_deactivate(struct wakeup_source *ws)
 {
-	unsigned int cnt, inpr;
+	unsigned int cnt, inpr, cec;
 	ktime_t duration;
 	ktime_t now;
 
@@ -494,7 +499,8 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	 * Increment the counter of registered wakeup events and decrement the
 	 * couter of wakeup events in progress simultaneously.
 	 */
-	atomic_add(MAX_IN_PROGRESS, &combined_event_count);
+	cec = atomic_add_return(MAX_IN_PROGRESS, &combined_event_count);
+	trace_wakeup_source_deactivate(ws->name, cec);
 
 	split_counters(&cnt, &inpr);
 	if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
@@ -641,10 +647,9 @@ EXPORT_SYMBOL_GPL(pm_wakeup_event);
  */
 bool pm_wakeup_pending(void)
 {
-	unsigned long flags;
 	bool ret = false;
 
-	spin_lock_irqsave(&events_lock, flags);
+	spin_lock_irq(&events_lock);
 	if (events_check_enabled) {
 		unsigned int cnt, inpr;
 
@@ -652,22 +657,23 @@ bool pm_wakeup_pending(void)
 		ret = (cnt != saved_count || inpr > 0);
 		events_check_enabled = !ret;
 	}
-	spin_unlock_irqrestore(&events_lock, flags);
+	spin_unlock_irq(&events_lock);
 	return ret;
 }
 
 /**
  * pm_get_wakeup_count - Read the number of registered wakeup events.
  * @count: Address to store the value at.
+ * @block: Whether or not to block.
  *
- * Store the number of registered wakeup events at the address in @count.  Block
- * if the current number of wakeup events being processed is nonzero.
+ * Store the number of registered wakeup events at the address in @count.  If
+ * @block is set, block until the current number of wakeup events being
+ * processed is zero.
  *
- * Return 'false' if the wait for the number of wakeup events being processed to
- * drop down to zero has been interrupted by a signal (and the current number
- * of wakeup events being processed is still nonzero).  Otherwise return 'true'.
+ * Return 'false' if the current number of wakeup events being processed is
+ * nonzero.  Otherwise return 'true'.
  */
-bool pm_get_wakeup_count(unsigned int *count)
+bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
 	unsigned int cnt, inpr;
 
@@ -704,13 +710,13 @@ bool pm_save_wakeup_count(unsigned int count)
 	unsigned int cnt, inpr;
 
 	events_check_enabled = false;
-	spin_lock_irq(&events_lock);
+	spin_lock_irqsave(&events_lock, flags);
 	split_counters(&cnt, &inpr);
 	if (cnt == count && inpr == 0) {
 		saved_count = count;
 		events_check_enabled = true;
 	}
-	spin_unlock_irq(&events_lock);
+	spin_unlock_irqrestore(&events_lock, flags);
 	return events_check_enabled;
 }
 

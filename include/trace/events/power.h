@@ -199,6 +199,40 @@ static inline void trace_power_frequency(u64 type, u64 state, u64 cpuid) {};
 
 #endif /* CONFIG_EVENT_POWER_TRACING_DEPRECATED */
 
+DECLARE_EVENT_CLASS(wakeup_source,
+
+	TP_PROTO(const char *name, unsigned int state),
+
+	TP_ARGS(name, state),
+
+	TP_STRUCT__entry(
+		__string(       name,           name            )
+		__field(        u64,            state           )
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->state = state;
+	),
+
+	TP_printk("%s state=0x%lx", __get_str(name),
+		(unsigned long)__entry->state)
+);
+
+DEFINE_EVENT(wakeup_source, wakeup_source_activate,
+
+	TP_PROTO(const char *name, unsigned int state),
+
+	TP_ARGS(name, state)
+);
+
+DEFINE_EVENT(wakeup_source, wakeup_source_deactivate,
+
+	TP_PROTO(const char *name, unsigned int state),
+
+	TP_ARGS(name, state)
+);
+
 /*
  * The clock events are used for clock enable/disable and for
  *  clock rate change
