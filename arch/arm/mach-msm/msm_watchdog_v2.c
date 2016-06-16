@@ -96,6 +96,7 @@ static int msm_watchdog_suspend(struct device *dev)
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
 	__raw_writel(0, wdog_dd->base + WDT0_EN);
 	mb();
+	wdog_dd->last_pet = sched_clock();
 	return 0;
 }
 
@@ -108,6 +109,7 @@ static int msm_watchdog_resume(struct device *dev)
 	__raw_writel(1, wdog_dd->base + WDT0_EN);
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
 	mb();
+	wdog_dd->last_pet = sched_clock();
 	return 0;
 }
 
@@ -120,9 +122,9 @@ static int panic_wdog_handler(struct notifier_block *this,
 		__raw_writel(0, wdog_dd->base + WDT0_EN);
 		mb();
 	} else {
-		__raw_writel(WDT_HZ * (panic_timeout + 4),
+		__raw_writel(WDT_HZ * (panic_timeout + 10),
 				wdog_dd->base + WDT0_BARK_TIME);
-		__raw_writel(WDT_HZ * (panic_timeout + 4),
+		__raw_writel(WDT_HZ * (panic_timeout + 10),
 				wdog_dd->base + WDT0_BITE_TIME);
 		__raw_writel(1, wdog_dd->base + WDT0_RST);
 	}
@@ -312,8 +314,8 @@ static irqreturn_t wdog_bark_handler(int irq, void *dev_id)
 	unsigned long long t = sched_clock();
 
 	nanosec_rem = do_div(t, 1000000000);
-	printk(KERN_INFO "Watchdog bark! Now = %lu.%06lu\n", (unsigned long) t,
-		nanosec_rem / 1000);
+	printk(KERN_INFO "Watchdog bark! Now = %lu.%06lu (IRQ %d)\n",
+		(unsigned long) t, nanosec_rem / 1000, irq);
 
 	nanosec_rem = do_div(wdog_dd->last_pet, 1000000000);
 	printk(KERN_INFO "Watchdog last pet at %lu.%06lu\n", (unsigned long)
