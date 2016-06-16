@@ -27,6 +27,7 @@
  * Note also that it is intended that __put_user_bad is not global.
  */
 #include <linux/linkage.h>
+#include <asm/assembler.h>
 #include <asm/errno.h>
 #include <asm/domain.h>
 

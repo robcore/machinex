@@ -43,7 +43,6 @@ struct notifier_block freq_policy;
 struct cpu_load_data {
 	cputime64_t prev_cpu_idle;
 	cputime64_t prev_cpu_wall;
-	cputime64_t prev_cpu_iowait;
 	unsigned int avg_load_maxfreq;
 	unsigned int samples;
 	unsigned int window_size;
@@ -89,39 +88,21 @@ static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 	return idle_time;
 }
 
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
-							cputime64_t *wall)
-{
-	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
-
-	if (iowait_time == -1ULL)
-		return 0;
-
-	return iowait_time;
-}
-
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
-	cputime64_t cur_wall_time, cur_idle_time, cur_iowait_time;
-	unsigned int idle_time, wall_time, iowait_time;
+	cputime64_t cur_wall_time, cur_idle_time;
+	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time);
-	cur_iowait_time = get_cpu_iowait_time(cpu, &cur_wall_time);
 
 	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
 	pcpu->prev_cpu_wall = cur_wall_time;
 
 	idle_time = (unsigned int) (cur_idle_time - pcpu->prev_cpu_idle);
 	pcpu->prev_cpu_idle = cur_idle_time;
-
-	iowait_time = (unsigned int) (cur_iowait_time - pcpu->prev_cpu_iowait);
-	pcpu->prev_cpu_iowait = cur_iowait_time;
-
-	if (idle_time >= iowait_time)
-		idle_time -= iowait_time;
 
 	if (unlikely(wall_time <= 0 || wall_time < idle_time))
 		return 0;
@@ -190,6 +171,19 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 	return 0;
 }
 
+static void update_related_cpus(void)
+{
+	unsigned cpu;
+
+	for_each_cpu(cpu, cpu_online_mask) {
+		struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
+		struct cpufreq_policy cpu_policy;
+
+		cpufreq_get_policy(&cpu_policy, cpu);
+		cpumask_copy(this_cpu->related_cpus, cpu_policy.cpus);
+	}
+}
+
 static int cpu_hotplug_handler(struct notifier_block *nb,
 			unsigned long val, void *data)
 {
@@ -200,6 +194,7 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 	case CPU_ONLINE:
 		if (!this_cpu->cur_freq)
 			this_cpu->cur_freq = cpufreq_quick_get(cpu);
+			update_related_cpus();
 	case CPU_ONLINE_FROZEN:
 		this_cpu->avg_load_maxfreq = 0;
 	}
