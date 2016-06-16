@@ -205,7 +205,7 @@ static void __cpufreq_cpu_put(struct cpufreq_policy *data, bool sysfs)
 void cpufreq_cpu_put(struct cpufreq_policy *data)
 {
 	if (cpufreq_disabled())
-		return NULL;
+		return;
 	__cpufreq_cpu_put(data, false);
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
@@ -273,7 +273,7 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	BUG_ON(irqs_disabled());
 
 	if (cpufreq_disabled())
-		return NULL;
+		return;
 
 	freqs->flags = cpufreq_driver->flags;
 	pr_debug("notification %u of frequency transition to %u kHz\n",
@@ -1013,7 +1013,8 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 
 	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
 	/* assure that the starting sequence is run in __cpufreq_set_policy */
-	policy->governor = NULL;
+	if (policy)
+		policy->governor = NULL;
 
 	/* set default policy */
 	ret = __cpufreq_set_policy(policy, &new_policy);
@@ -1898,7 +1899,6 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 
 	data->min = policy->min;
 	data->max = policy->max;
-	}
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
 					data->min, data->max);

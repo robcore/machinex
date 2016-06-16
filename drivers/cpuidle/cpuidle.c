@@ -23,7 +23,7 @@
 #include "cpuidle.h"
 
 DEFINE_PER_CPU(struct cpuidle_device *, cpuidle_devices);
-DEFINE_PER_CPU(struct cpuidle_device, cpuidle_dev);	
+DEFINE_PER_CPU(struct cpuidle_device, cpuidle_dev);
 
 DEFINE_MUTEX(cpuidle_lock);
 LIST_HEAD(cpuidle_detected_devices);
@@ -253,8 +253,11 @@ static int poll_idle(struct cpuidle_device *dev,
 
 	t1 = ktime_get();
 	local_irq_enable();
-	while (!need_resched())
-		cpu_relax();
+	if (!current_set_polling_and_test()) {
+		while (!need_resched())
+			cpu_relax();
+	}
+	current_clr_polling();
 
 	t2 = ktime_get();
 	diff = ktime_to_us(ktime_sub(t2, t1));
@@ -546,8 +549,8 @@ static int cpuidle_latency_notify(struct notifier_block *b,
 {
 #if 0
 	smp_call_function(smp_callback, NULL, 1);
-	return NOTIFY_OK;
 #endif
+	return NOTIFY_OK;
 }
 
 static struct notifier_block cpuidle_latency_notifier = {
