@@ -456,7 +456,7 @@ static void intelli_plug_suspend(struct early_suspend *handler)
 	}
 }
 
-static void wakeup_boost(void)
+static void wakeup_intelli_boost(void)
 {
 	unsigned int cpu;
 	struct cpufreq_policy *policy;
@@ -492,7 +492,7 @@ static void __ref intelli_plug_resume(struct early_suspend *handler)
 			cpu_up(cpu);
 		}
 
-		wakeup_boost();
+		wakeup_intelli_boost();
 		screen_off_limit(false);
 	}
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
