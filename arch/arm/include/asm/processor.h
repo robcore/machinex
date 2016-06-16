@@ -109,9 +109,7 @@ static inline void prefetch(const void *ptr)
 {
 	__asm__ __volatile__(
 		"pld\t%a0"
-		:
-		: "p" (ptr)
-		: "cc");
+		:: "p" (ptr));
 }
 
 #define ARCH_HAS_PREFETCHW
@@ -124,5 +122,7 @@ static inline void prefetch(const void *ptr)
 #define HAVE_ARCH_PICK_MMAP_LAYOUT
 
 #endif
+
+#include <asm-generic/processor.h>
 
 #endif /* __ASM_ARM_PROCESSOR_H */
