@@ -616,7 +616,7 @@ static int tuner_probe(struct platform_device *pdev)
 
 	INIT_WORK(&tmm_chg_ctrl_work, tmm_chg_ctrl_work_func);
 	
-	INIT_DELAYED_WORK_DEFERRABLE(&tmm_chg_ctrl_polling_work, tmm_chg_ctrl_polling_work_func);
+	INIT_DEFERRABLE_WORK(&tmm_chg_ctrl_polling_work, tmm_chg_ctrl_polling_work_func);
 
 	tmm_chg_wqueue = create_singlethread_workqueue("tmm_chg_wqueue");
 	

@@ -378,7 +378,7 @@ static int __devinit sec_charger_probe(struct platform_device *pdev)
 	}
 
 	if (charger->pdata->chg_irq) {
-		INIT_DELAYED_WORK_DEFERRABLE(
+		INIT_DEFERRABLE_WORK(
 			&charger->isr_work, sec_chg_isr_work);
 
 		ret = request_threaded_irq(charger->pdata->chg_irq,
@@ -525,7 +525,7 @@ static int __devinit sec_charger_probe(struct i2c_client *client,
 	}
 
 	if (charger->pdata->chg_irq) {
-		INIT_DELAYED_WORK_DEFERRABLE(
+		INIT_DEFERRABLE_WORK(
 			&charger->isr_work, sec_chg_isr_work);
 
 		ret = request_threaded_irq(charger->pdata->chg_irq,
