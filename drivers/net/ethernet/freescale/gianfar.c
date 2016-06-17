@@ -1650,7 +1650,6 @@ void stop_gfar(struct net_device *dev)
 
 	phy_stop(priv->phydev);
 
-
 	/* Lock it down */
 	local_irq_save(flags);
 	lock_tx_qs(priv);

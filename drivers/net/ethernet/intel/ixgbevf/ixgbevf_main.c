@@ -3211,8 +3211,6 @@ static void ixgbevf_shutdown(struct pci_dev *pdev)
 #ifdef CONFIG_PM
 	pci_save_state(pdev);
 #endif
-
-	pci_disable_device(pdev);
 }
 
 static struct rtnl_link_stats64 *ixgbevf_get_stats(struct net_device *netdev,
@@ -3509,9 +3507,6 @@ static void __devexit ixgbevf_remove(struct pci_dev *pdev)
 	pci_release_regions(pdev);
 
 	hw_dbg(&adapter->hw, "Remove complete\n");
-
-	kfree(adapter->tx_ring);
-	kfree(adapter->rx_ring);
 
 	free_netdev(netdev);
 

@@ -6,7 +6,6 @@
  * Author: Sebastian Andrzej Siewior <bigeasy at linutronix dot de>
  * License: GPLv2 as published by FSF.
  */
-
 #include <linux/init.h>
 #include <linux/module.h>
 

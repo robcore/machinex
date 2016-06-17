@@ -511,6 +511,7 @@ static irqreturn_t ivybridge_irq_handler(DRM_IRQ_ARGS)
 	if (de_iir == 0 && gt_iir == 0 && pch_iir == 0 && pm_iir == 0)
 		goto done;
 
+
 	ret = IRQ_HANDLED;
 
 	if (dev->primary->master) {

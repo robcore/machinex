@@ -2013,7 +2013,7 @@ int bnx2x_nic_load(struct bnx2x *bp, int load_mode)
 
 	case LOAD_OPEN:
 		netif_tx_start_all_queues(bp->dev);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 		break;
 
 	case LOAD_DIAG:
@@ -3749,3 +3749,4 @@ void bnx2x_update_coalesce_sb_index(struct bnx2x *bp, u8 fw_sb_id,
 	disable = disable ? 1 : (usec ? 0 : 1);
 	storm_memset_hc_disable(bp, port, fw_sb_id, sb_index, disable);
 }
+

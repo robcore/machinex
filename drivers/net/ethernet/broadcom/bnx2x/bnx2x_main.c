@@ -1712,15 +1712,14 @@ void bnx2x_sp_event(struct bnx2x_fastpath *fp, union eth_rx_cqe *rr_cqe)
 		return;
 #endif
 
-	smp_mb__before_atomic_inc();
+	smp_mb__before_atomic();
 	atomic_inc(&bp->cq_spq_left);
 	/* push the change in bp->spq_left and towards the memory */
-	smp_mb__after_atomic_inc();
+	smp_mb__after_atomic();
 
 	DP(BNX2X_MSG_SP, "bp->cq_spq_left %x\n", atomic_read(&bp->cq_spq_left));
 
 	return;
-}
 
 void bnx2x_update_rx_prod(struct bnx2x *bp, struct bnx2x_fastpath *fp,
 			u16 bd_prod, u16 rx_comp_prod, u16 rx_sge_prod)
@@ -4556,6 +4555,7 @@ static inline void bnx2x_handle_rx_mode_eqe(struct bnx2x *bp)
 }
 
 static inline struct bnx2x_queue_sp_obj *bnx2x_cid_to_q_obj(
+{
 	struct bnx2x *bp, u32 cid)
 {
 	DP(BNX2X_MSG_SP, "retrieving fp from cid %d\n", cid);
@@ -4724,7 +4724,7 @@ next_spqe:
 		spqe_cnt++;
 	} /* for */
 
-	smp_mb__before_atomic_inc();
+	smp_mb__before_atomic();
 	atomic_add(spqe_cnt, &bp->eq_spq_left);
 
 	bp->eq_cons = sw_cons;
@@ -12086,9 +12086,9 @@ static int bnx2x_drv_ctl(struct net_device *dev, struct drv_ctl_info *ctl)
 	case DRV_CTL_RET_L2_SPQ_CREDIT_CMD: {
 		int count = ctl->data.credit.credit_count;
 
-		smp_mb__before_atomic_inc();
+		smp_mb__before_atomic();
 		atomic_add(count, &bp->cq_spq_left);
-		smp_mb__after_atomic_inc();
+		smp_mb__after_atomic();
 		break;
 	}
 	case DRV_CTL_ULP_REGISTER_CMD: {
