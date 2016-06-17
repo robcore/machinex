@@ -716,7 +716,7 @@ static inline void bds_timer_init(struct cpu_bds_info_s *bds_info)
 		delay -= jiffies % delay;
 
 	bds_info->sample_type = BDS_NORMAL_SAMPLE;
-	INIT_DELAYED_WORK_DEFERRABLE(&bds_info->work, do_bds_timer);
+	INIT_DEFERRABLE_WORK(&bds_info->work, do_bds_timer);
 	schedule_delayed_work_on(bds_info->cpu, &bds_info->work, delay);
 }
 

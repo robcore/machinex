@@ -828,6 +828,12 @@ config DESKDOCK_DISABLE
 	help
 	  This option enable not support for DESKDOCK
 
+config UID_CPUTIME
+	tristate "Per-UID cpu time statistics"
+	depends on PROFILING
+	help
+	  Per UID based cpu time statistics exported to /proc/uid_cputime
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
