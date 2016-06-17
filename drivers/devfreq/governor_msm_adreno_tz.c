@@ -63,6 +63,24 @@ static int __secure_tz_entry3(u32 cmd, u32 val1, u32 val2, u32 val3)
 	return ret;
 }
 
+static void _update_cutoff(struct devfreq_msm_adreno_tz_data *priv,
+				unsigned int norm_max)
+{
+	int i;
+
+	priv->bus.max = norm_max;
+	for (i = 0; i < priv->bus.num; i++) {
+		priv->bus.up[i] = priv->bus.p_up[i] * norm_max / 100;
+		priv->bus.down[i] = priv->bus.p_down[i] * norm_max / 100;
+	}
+}
+
+#ifdef CONFIG_SIMPLE_GPU_ALGORITHM
+extern int simple_gpu_active;
+extern int simple_gpu_algorithm(int level,
+				struct devfreq_msm_adreno_tz_data *priv);
+#endif
+
 static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 				u32 *flag)
 {
@@ -103,10 +121,20 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	if (priv->bin.busy_time > CEILING) {
 		val = -1;
 	} else {
+#ifdef CONFIG_SIMPLE_GPU_ALGORITHM
+		if (simple_gpu_active != 0)
+			val = simple_gpu_algorithm(level, priv);
+		else
+			val = __secure_tz_entry3(TZ_UPDATE_ID,
+					level,
+					priv->bin.total_time,
+					priv->bin.busy_time);
+#else
 		val = __secure_tz_entry3(TZ_UPDATE_ID,
 				level,
 				priv->bin.total_time,
 				priv->bin.busy_time);
+#endif
 	}
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;

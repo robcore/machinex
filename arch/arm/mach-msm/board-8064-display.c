@@ -639,7 +639,6 @@ static int mipi_dsi_power_tft_request(void)
 static int mipi_panel_power_tft(int enable)
 {
 	int rc = 0;
-
 	pr_info("%s %d", __func__, enable);
 	if (enable) {
 #if defined(CONFIG_MACH_JACTIVE_EUR)

@@ -493,7 +493,7 @@ int force_fast_charge_init(void)
 	/* Use Samsung Screen ON current limit while charging, enabled by default */
 	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_ENABLED;
 	/* Default AC charge level to 1900mA/h    */
-	ac_charge_level   = AC_CHARGE_1900;
+	ac_charge_level   = AC_CHARGE_2100;
 	/* Default USB charge level to 460mA/h    */
 	usb_charge_level  = USB_CHARGE_460;
 	/* Default USB charge level to 650mA/h    */
