@@ -3,8 +3,6 @@ obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o
 obj-$(CONFIG_CPU_BOOST)			+= cpu-boost.o
 # CPUfreq stats
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
-# CPUfreq hardlimit
-obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
 
 # CPUfreq governors 
 obj-$(CONFIG_CPU_FREQ_GOV_ABYSSPLUG)		+= cpufreq_abyssplug.o
