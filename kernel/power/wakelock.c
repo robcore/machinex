@@ -1,13 +1,13 @@
 /*
  * kernel/power/wakelock.c
-  *
+ *
  * User space wakeup sources support.
-  *
+ *
  * Copyright (C) 2012 Rafael J. Wysocki <rjw@sisk.pl>
-  *
+ *
  * This code is based on the analogous interface allowing user space to
  * manipulate wakelocks on Android.
-  */
+ */
 
 #include <linux/capability.h>
 #include <linux/ctype.h>
@@ -27,12 +27,12 @@ struct wakelock {
 #ifdef CONFIG_PM_WAKELOCKS_GC
 	struct list_head	lru;
 #endif
- };
+};
 
 static struct rb_root wakelocks_tree = RB_ROOT;
 
 ssize_t pm_show_wakelocks(char *buf, bool show_active)
- {
+{
 	struct rb_node *node;
 	struct wakelock *wl;
 	char *str = buf;
@@ -44,8 +44,7 @@ ssize_t pm_show_wakelocks(char *buf, bool show_active)
 		wl = rb_entry(node, struct wakelock, node);
 		if (wl->ws.active == show_active)
 			str += scnprintf(str, end - str, "%s ", wl->name);
- 	}
-
+	}
 	if (str > buf)
 		str--;
 
@@ -53,7 +52,7 @@ ssize_t pm_show_wakelocks(char *buf, bool show_active)
 
 	mutex_unlock(&wakelocks_lock);
 	return (str - buf);
- }
+}
 
 #if CONFIG_PM_WAKELOCKS_LIMIT > 0
 static unsigned int number_of_wakelocks;
@@ -135,7 +134,7 @@ static inline void wakelocks_gc(void) {}
 
 static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 					    bool add_if_not_found)
- {
+{
 	struct rb_node **node = &wakelocks_tree.rb_node;
 	struct rb_node *parent = *node;
 	struct wakelock *wl;
@@ -149,17 +148,14 @@ static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 		if (diff == 0) {
 			if (wl->name[len])
 				diff = -1;
- 			else
-
+			else
 				return wl;
- 		}
-
+		}
 		if (diff < 0)
 			node = &(*node)->rb_left;
- 		else
+		else
 			node = &(*node)->rb_right;
- 	}
-
+	}
 	if (!add_if_not_found)
 		return ERR_PTR(-EINVAL);
 
@@ -175,7 +171,7 @@ static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 	if (!wl->name) {
 		kfree(wl);
 		return ERR_PTR(-ENOMEM);
- 	}
+	}
 	wl->ws.name = wl->name;
 	wakeup_source_add(&wl->ws);
 	rb_link_node(&wl->node, parent, node);
@@ -183,10 +179,10 @@ static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 	wakelocks_lru_add(wl);
 	increment_wakelocks_number();
 	return wl;
- }
+}
 
 int pm_wake_lock(const char *buf)
- {
+{
 	const char *str = buf;
 	struct wakelock *wl;
 	u64 timeout_ns = 0;
@@ -208,7 +204,7 @@ int pm_wake_lock(const char *buf)
 		ret = kstrtou64(skip_spaces(str), 10, &timeout_ns);
 		if (ret)
 			return -EINVAL;
- 	}
+	}
 
 	mutex_lock(&wakelocks_lock);
 
@@ -222,20 +218,19 @@ int pm_wake_lock(const char *buf)
 
 		do_div(timeout_ms, NSEC_PER_MSEC);
 		__pm_wakeup_event(&wl->ws, timeout_ms);
- 	} else {
-		suspend_short_count = 0;
+	} else {
 		__pm_stay_awake(&wl->ws);
- 	}
+	}
 
 	wakelocks_lru_most_recent(wl);
 
-out:
+ out:
 	mutex_unlock(&wakelocks_lock);
 	return ret;
- }
+}
 
 int pm_wake_unlock(const char *buf)
- {
+{
 	struct wakelock *wl;
 	size_t len;
 	int ret = 0;
@@ -259,7 +254,7 @@ int pm_wake_unlock(const char *buf)
 	if (IS_ERR(wl)) {
 		ret = PTR_ERR(wl);
 		goto out;
- 	}
+	}
 	__pm_relax(&wl->ws);
 
 	wakelocks_lru_most_recent(wl);
@@ -267,5 +262,5 @@ int pm_wake_unlock(const char *buf)
 
  out:
 	mutex_unlock(&wakelocks_lock);
- 	return ret;
- }
+	return ret;
+}
