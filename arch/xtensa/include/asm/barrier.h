@@ -18,8 +18,12 @@
 
 #ifdef CONFIG_SMP
 #error smp_* not defined
+#else
+#define smp_mb()	barrier()
+#define smp_rmb()	barrier()
+#define smp_wmb()	barrier()
 #endif
 
-#include <asm-generic/barrier.h>
+#define set_mb(var, value)	do { var = value; mb(); } while (0)
 
 #endif /* _XTENSA_SYSTEM_H */

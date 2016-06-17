@@ -100,9 +100,9 @@ void nfs_unlock_request(struct nfs_page *req)
 		printk(KERN_ERR "NFS: Invalid unlock attempted\n");
 		BUG();
 	}
-	smp_mb__before_atomic();
+	smp_mb__before_clear_bit();
 	clear_bit(PG_BUSY, &req->wb_flags);
-	smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 	wake_up_bit(&req->wb_flags, PG_BUSY);
 	nfs_release_request(req);
 }
