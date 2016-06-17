@@ -34,7 +34,7 @@ struct wake_lock {
 	struct wakeup_source ws;
 };
 
-#ifdef CONFIG_HAS_WAKELOCK
+void set_debug_lock_timer(int enable, unsigned int timeout);
 
 static inline void wake_lock_init(struct wake_lock *lock, int type,
 				  const char *name)
