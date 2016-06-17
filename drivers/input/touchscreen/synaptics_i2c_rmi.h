@@ -18,8 +18,8 @@
 #include <linux/device.h>
 #include <linux/i2c/synaptics_rmi.h>
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
 
 /*#define dev_dbg(dev, fmt, arg...) dev_info(dev, fmt, ##arg)*/
@@ -233,10 +233,10 @@ struct synaptics_hover {
  * @rmi4_mod_info: device information
  * @regulator: pointer to associated regulator
  * @rmi4_io_ctrl_mutex: mutex for i2c i/o control
- * @power_suspend: instance to support power suspend power management
+ * @early_suspend: instance to support early suspend power management
  * @current_page: current page in sensor to acess
  * @button_0d_enabled: flag for 0d button support
- * @full_pm_cycle: flag for full power management cycle in power suspend stage
+ * @full_pm_cycle: flag for full power management cycle in early suspend stage
  * @num_of_intr_regs: number of interrupt registers
  * @f01_query_base_addr: query base address for f01
  * @f01_cmd_base_addr: command base address for f01
@@ -265,8 +265,8 @@ struct synaptics_rmi4_data {
 	struct mutex rmi4_io_ctrl_mutex;
 	struct mutex rmi4_reflash_mutex;
 	struct timer_list f51_finger_timer;
-#ifdef CONFIG_POWERSUSPEND
-	struct power_suspend power_suspend;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend early_suspend;
 #endif
 	unsigned char *firmware_image;
 

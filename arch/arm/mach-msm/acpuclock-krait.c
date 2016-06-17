@@ -39,7 +39,6 @@
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
 #include "avs.h"
-#include "acpuclock-common.h"
 #ifdef CONFIG_SEC_DEBUG_DCVS_LOG
 #include <mach/sec_debug.h>
 #endif
@@ -988,7 +987,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][FREQ_TABLE_SIZE];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
@@ -1165,7 +1164,6 @@ static struct pvs_table * __init select_freq_plan(u32 pte_efuse_phys,
 	speed_bin = bin_idx;
 	pvs_bin = tbl_idx;
 #endif
-	
 	return &pvs_tables[bin_idx][tbl_idx];
 }
 

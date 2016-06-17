@@ -1,5 +1,5 @@
 /*
- * drivers/power/process.c - Functions for starting/stopping processes on
+ * drivers/power/process.c - Functions for starting/stopping processes on 
  *                           suspend transitions.
  *
  * Originally from swsusp.
@@ -20,10 +20,11 @@
 #include <linux/wakelock.h>
 #include "power.h"
 
-/*
+/* 
  * Timeout for stopping processes
  */
-unsigned int __read_mostly freeze_timeout_msecs = 20 * MSEC_PER_SEC;
+#define TIMEOUT	(20 * HZ)
+unsigned int __read_mostly freeze_timeout_msecs = 2 * MSEC_PER_SEC;
 
 static int try_to_freeze_tasks(bool user_only)
 {
@@ -32,14 +33,13 @@ static int try_to_freeze_tasks(bool user_only)
 	unsigned int todo;
 	bool wq_busy = false;
 	struct timeval start, end;
-	u64 elapsed_msecs64;
-	unsigned int elapsed_msecs;
+	u64 elapsed_csecs64;
+	unsigned int elapsed_csecs;
 	bool wakeup = false;
-	int sleep_usecs = USEC_PER_MSEC;
 
 	do_gettimeofday(&start);
 
-	end_time = jiffies + msecs_to_jiffies(freeze_timeout_msecs);
+	end_time = jiffies + TIMEOUT;
 
 	if (!user_only)
 		freeze_workqueues_begin();
@@ -72,6 +72,10 @@ static int try_to_freeze_tasks(bool user_only)
 			todo += wq_busy;
 		}
 
+		if (todo && has_wake_lock(WAKE_LOCK_SUSPEND)) {
+			wakeup = 1;
+			break;
+		}
 		if (!todo || time_after(jiffies, end_time))
 			break;
 
@@ -82,18 +86,15 @@ static int try_to_freeze_tasks(bool user_only)
 
 		/*
 		 * We need to retry, but first give the freezing tasks some
-		 * time to enter the refrigerator.  Start with an initial
-		 * 1 ms sleep followed by exponential backoff until 8 ms.
+		 * time to enter the regrigerator.
 		 */
-		usleep_range(sleep_usecs / 2, sleep_usecs);
-		if (sleep_usecs < 8 * USEC_PER_MSEC)
-			sleep_usecs *= 2;
+		msleep(10);
 	}
 
 	do_gettimeofday(&end);
-	elapsed_msecs64 = timeval_to_ns(&end) - timeval_to_ns(&start);
-	do_div(elapsed_msecs64, NSEC_PER_MSEC);
-	elapsed_msecs = elapsed_msecs64;
+	elapsed_csecs64 = timeval_to_ns(&end) - timeval_to_ns(&start);
+	do_div(elapsed_csecs64, NSEC_PER_SEC / 100);
+	elapsed_csecs = elapsed_csecs64;
 
 	if (todo) {
 		/* This does not unfreeze processes that are already frozen
@@ -108,25 +109,26 @@ static int try_to_freeze_tasks(bool user_only)
 		}
 		else {
 			printk("\n");
-			printk(KERN_ERR "Freezing of tasks %s after %d.%03d seconds "
-					"(%d tasks refusing to freeze, wq_busy=%d):\n",
-					wakeup ? "aborted" : "failed",
-					elapsed_msecs / 1000, elapsed_msecs % 1000,
-					todo - wq_busy, wq_busy);
+			printk(KERN_ERR "Freezing of tasks %s after %d.%02d seconds "
+			       "(%d tasks refusing to freeze, wq_busy=%d):\n",
+			       wakeup ? "aborted" : "failed",
+			       elapsed_csecs / 100, elapsed_csecs % 100,
+			       todo - wq_busy, wq_busy);
 		}
 
 		if (!wakeup) {
 			read_lock(&tasklist_lock);
 			do_each_thread(g, p) {
 				if (p != current && !freezer_should_skip(p)
-				    && freezing(p) && !frozen(p))
+				    && freezing(p) && !frozen(p) &&
+				    elapsed_csecs > 100)
 					sched_show_task(p);
 			} while_each_thread(g, p);
 			read_unlock(&tasklist_lock);
 		}
 	} else {
-		printk("(elapsed %d.%03d seconds) ", elapsed_msecs / 1000,
-			elapsed_msecs % 1000);
+		printk("(elapsed %d.%02d seconds) ", elapsed_csecs / 100,
+			elapsed_csecs % 100);
 	}
 
 	return todo ? -EBUSY : 0;
@@ -167,9 +169,6 @@ int freeze_processes(void)
 	error = __usermodehelper_disable(UMH_FREEZING);
 	if (error)
 		return error;
-
-	/* Make sure this task doesn't get frozen */
-	current->flags |= PF_SUSPEND_TASK;
 
 	if (!pm_freezing)
 		atomic_inc(&system_freezing_cnt);
@@ -217,7 +216,7 @@ int freeze_kernel_threads(void)
 {
 	int error;
 
-	error = sys_sync();
+	error = suspend_sys_sync_wait();
 	if (error)
 		return error;
 
@@ -238,7 +237,6 @@ int freeze_kernel_threads(void)
 void thaw_processes(void)
 {
 	struct task_struct *g, *p;
-	struct task_struct *curr = current;
 
 	if (pm_freezing)
 		atomic_dec(&system_freezing_cnt);
@@ -254,14 +252,9 @@ void thaw_processes(void)
 
 	read_lock(&tasklist_lock);
 	do_each_thread(g, p) {
-		/* No other threads should have PF_SUSPEND_TASK set */
-		WARN_ON((p != curr) && (p->flags & PF_SUSPEND_TASK));
 		__thaw_task(p);
 	} while_each_thread(g, p);
 	read_unlock(&tasklist_lock);
-
-	WARN_ON(!(curr->flags & PF_SUSPEND_TASK));
-	curr->flags &= ~PF_SUSPEND_TASK;
 
 	usermodehelper_enable();
 

@@ -2,7 +2,6 @@
  * drivers/cpufreq/cpufreq_yankactive.c
  *
  * Copyright (C) 2010 Google, Inc.
- *           (C) 2014 LoungeKatt <twistedumbrella@gmail.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,7 +35,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_yankactive.h>
 
-#define DEFAULT_HISPEED_FREQ	1728000
+#define DEFAULT_HISPEED_FREQ	1890000
 
 static int active_count;
 
@@ -58,7 +57,6 @@ struct cpufreq_yankactive_cpuinfo {
 	int governor_enabled;
 	int prev_load;
 	bool limits_changed;
-	unsigned int cpu;
 };
 
 #define MIN_TIMER_JIFFIES 1UL
@@ -91,7 +89,7 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  */
-#define DEFAULT_MIN_SAMPLE_TIME (50 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (20 * USEC_PER_MSEC)
 static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 
 /*
@@ -128,7 +126,7 @@ static u64 boostpulse_endtime;
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy = 0;
+static bool io_is_busy;
 
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
@@ -162,7 +160,8 @@ static void cpufreq_yankactive_timer_resched(
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(smp_processor_id(),
-				     &pcpu->time_in_idle_timestamp, io_is_busy);
+				     &pcpu->time_in_idle_timestamp,
+				     io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
 	expires = jiffies + usecs_to_jiffies(timer_rate);
@@ -568,6 +567,7 @@ static void cpufreq_yankactive_idle_start(void)
 							MIN_BUSY_TIME) {
 				pcpu->floor_validate_time = now;
 			}
+
 		}
 	}
 
@@ -864,6 +864,7 @@ static ssize_t store_above_hispeed_delay(
 	nabove_hispeed_delay = ntokens;
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
 	return count;
+
 }
 
 static struct global_attr above_hispeed_delay_attr =
@@ -1219,20 +1220,16 @@ static int cpufreq_governor_yankactive(struct cpufreq_policy *policy,
 {
 	int rc;
 	unsigned int j;
-	unsigned int cpu;
 	struct cpufreq_yankactive_cpuinfo *pcpu;
 	struct cpufreq_frequency_table *freq_table;
 	unsigned long expire_time;
-
-	pcpu = &per_cpu(cpuinfo, policy->cpu);
-	cpu = pcpu->cpu;
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
 		mutex_lock(&gov_lock);
 
 		freq_table =
-			cpufreq_frequency_get_table(cpu);
+			cpufreq_frequency_get_table(policy->cpu);
 		if (!hispeed_freq)
 			hispeed_freq = DEFAULT_HISPEED_FREQ;
 
@@ -1303,9 +1300,6 @@ static int cpufreq_governor_yankactive(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
-		/* If device is being removed, skip set limits */
-		if (!policy->cur)
-			break;
 		if (policy->max < policy->cur)
 			__cpufreq_driver_target(policy,
 					policy->max, CPUFREQ_RELATION_H);

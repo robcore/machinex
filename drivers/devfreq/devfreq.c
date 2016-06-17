@@ -91,7 +91,7 @@ int update_devfreq(struct devfreq *devfreq)
 	}
 
 	/* Reevaluate the proper frequency */
-	err = devfreq->governor->get_target_freq(devfreq, &freq, &flags);
+	err = devfreq->governor->get_target_freq(devfreq, &freq);
 	if (err)
 		return err;
 
@@ -607,7 +607,7 @@ static int __init devfreq_start_polling(void)
 	mutex_lock(&devfreq_list_lock);
 	polling = false;
 	devfreq_wq = create_freezable_workqueue("devfreq_wq");
-	INIT_DEFERRABLE_WORK(&devfreq_work, devfreq_monitor);
+	INIT_DELAYED_WORK_DEFERRABLE(&devfreq_work, devfreq_monitor);
 	mutex_unlock(&devfreq_list_lock);
 
 	devfreq_monitor(&devfreq_work.work);
@@ -656,14 +656,14 @@ struct opp *devfreq_recommended_opp(struct device *dev, unsigned long *freq,
 		opp = opp_find_freq_floor(dev, freq);
 
 		/* If not available, use the closest opp */
-		if (opp == ERR_PTR(-ERANGE))
+		if (opp == ERR_PTR(-ENODEV))
 			opp = opp_find_freq_ceil(dev, freq);
 	} else {
 		/* The freq is an lower bound. opp should be higher */
 		opp = opp_find_freq_ceil(dev, freq);
 
 		/* If not available, use the closest opp */
-		if (opp == ERR_PTR(-ERANGE))
+		if (opp == ERR_PTR(-ENODEV))
 			opp = opp_find_freq_floor(dev, freq);
 	}
 

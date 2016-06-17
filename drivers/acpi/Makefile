@@ -21,10 +21,9 @@ obj-y				+= acpi.o \
 acpi-y				+= osl.o utils.o reboot.o
 acpi-y				+= nvs.o
 
-# Power management related files
+# sleep related files
 acpi-y				+= wakeup.o
 acpi-y				+= sleep.o
-acpi-$(CONFIG_PM)		+= device_pm.o
 acpi-$(CONFIG_ACPI_SLEEP)	+= proc.o
 
 

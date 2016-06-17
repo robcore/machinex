@@ -152,16 +152,6 @@
 #include <mach/fusion3-thermistor.h>
 #endif
 
-#ifdef CONFIG_CPU_FREQ_GOV_BADASS_2_PHASE
-int set_two_phase_freq_badass(int cpufreq);
-#endif
-#ifdef CONFIG_CPU_FREQ_GOV_BADASS_3_PHASE
-int set_three_phase_freq_badass(int cpufreq);
-#endif
-#ifdef CONFIG_CPU_FREQ_GOV_UBERDEMAND
-int set_second_phase_freq(int cpufreq);
-#endif
-
 #if defined(CONFIG_SENSORS_SSP)
 enum {
 	SNS_PWR_OFF,
@@ -223,6 +213,10 @@ static void sensor_power_on_vdd(int, int);
 #define PCIE_WAKE_N_PMIC_GPIO 12
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
+
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+int id_set_two_phase_freq(int cpufreq);
+#endif
 
 unsigned int gpio_table[][GPIO_REV_MAX] = {
 /* GPIO_INDEX   Rev	{#00,#01,#02,#03,#04 ... }, */
@@ -585,7 +579,7 @@ static struct platform_device apq8064_android_pmem_audio_device = {
 static struct platform_device battery_bcl_device = {
 	.name = "battery_current_limit",
 	.id = -1,
-	};
+};
 #endif
 
 struct fmem_platform_data apq8064_fmem_pdata = {
@@ -1095,7 +1089,7 @@ static void __init reserve_cache_dump_memory(void)
 		apq8064_cache_dump_pdata.l2_size;
 	apq8064_reserve_table[MEMTYPE_EBI1].size += total;
 	pr_info("mem_map: cache_dump reserved with size 0x%x in pool\n",
-			total);
+				total);
 #endif
 }
 
@@ -1295,6 +1289,7 @@ static void __init apq8064_reserve(void)
 static void __init apq8064_early_reserve(void)
 {
 	reserve_info = &apq8064_reserve_info;
+
 }
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
 /* Bandwidth requests (zero) if no vote placed */
@@ -3504,6 +3499,7 @@ static uint8_t spm_power_collapse_with_rpm_krait_v3[] __initdata = {
 	0x24, 0x30, 0x0f,
 };
 
+
 static struct msm_spm_seq_entry msm_spm_boot_cpu_seq_list[] __initdata = {
 	[0] = {
 		.mode = MSM_SPM_MODE_CLOCK_GATING,
@@ -3673,11 +3669,11 @@ static void __init apq8064ab_update_krait_spm(void)
 			if (pdata->modes[j].cmd ==
 					spm_power_collapse_without_rpm)
 				pdata->modes[j].cmd =
-				spm_power_collapse_without_rpm_krait_v3;
+					spm_power_collapse_without_rpm_krait_v3;
 			else if (pdata->modes[j].cmd ==
 					spm_power_collapse_with_rpm)
 				pdata->modes[j].cmd =
-				spm_power_collapse_with_rpm_krait_v3;
+					spm_power_collapse_with_rpm_krait_v3;
 		}
 	}
 }
@@ -4025,7 +4021,7 @@ static struct platform_device *early_common_devices[] __initdata = {
 	&apq8064_device_dmov,
 #if !defined(CONFIG_MACH_JACTIVE_ATT) && !defined(CONFIG_MACH_JACTIVE_EUR)
 	&apq8064_device_qup_spi_gsbi5,
-#endif	
+#endif
 };
 
 static struct platform_device *pm8921_common_devices[] __initdata = {
@@ -4549,11 +4545,10 @@ static void __init apq8064_i2c_init(void)
 					&apq8064_i2c_qup_gsbi3_pdata;
 	apq8064_device_qup_i2c_gsbi1.dev.platform_data =
 					&apq8064_i2c_qup_gsbi1_pdata;
-
 	/* Add GSBI4 I2C pdata for non-fusion3 SGLTE2 */
 	if (socinfo_get_platform_subtype() !=
-				PLATFORM_SUBTYPE_SGLTE2) {
-		apq8064_device_qup_i2c_gsbi4.dev.platform_data =
+			PLATFORM_SUBTYPE_SGLTE2) {
+	apq8064_device_qup_i2c_gsbi4.dev.platform_data =
 					&apq8064_i2c_qup_gsbi4_pdata;
 	}
 	mpq8064_device_qup_i2c_gsbi5.dev.platform_data =
@@ -5147,6 +5142,7 @@ static void __init register_i2c_devices(void)
 	}
 }
 
+
 static void enable_avc_i2c_bus(void)
 {
 	int avc_i2c_en_mpp = PM8921_MPP_PM_TO_SYS(8);
@@ -5333,7 +5329,7 @@ static void __init apq8064ab_update_retention_spm(void)
 			if (pdata->modes[j].cmd ==
 					spm_retention_cmd_sequence)
 				pdata->modes[j].cmd =
-				spm_retention_with_krait_v3_cmd_sequence;
+					spm_retention_with_krait_v3_cmd_sequence;
 		}
 	}
 }
@@ -5341,7 +5337,6 @@ static void __init apq8064ab_update_retention_spm(void)
 static void __init apq8064_common_init(void)
 {
 	u32 platform_version = socinfo_get_platform_version();
-
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
 	int ret;
 #endif
@@ -5394,17 +5389,6 @@ static void __init apq8064_common_init(void)
 	apq8064_ehci_host_init();
 	apq8064_init_buses();
 
-
-#ifdef CONFIG_CPU_FREQ_GOV_BADASS_2_PHASE
-	set_two_phase_freq_badass(CONFIG_CPU_FREQ_GOV_BADASS_2_PHASE_FREQ);
-#endif
-#ifdef CONFIG_CPU_FREQ_GOV_BADASS_3_PHASE	
-	set_three_phase_freq_badass(CONFIG_CPU_FREQ_GOV_BADASS_3_PHASE_FREQ);
-#endif
-#ifdef CONFIG_CPU_FREQ_GOV_UBERDEMAND	
-	set_second_phase_freq(CONFIG_CPU_FREQ_GOV_UBERDEMAND_SECOND_PHASE_FREQ);
-#endif
-
 	platform_add_devices(early_common_devices,
 				ARRAY_SIZE(early_common_devices));
 	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
@@ -5422,7 +5406,6 @@ static void __init apq8064_common_init(void)
 			machine_is_mpq8064_dtv())) {
 		platform_add_devices(common_not_mpq_devices,
 			ARRAY_SIZE(common_not_mpq_devices));
-
 		/* Add GSBI4 I2C Device for non-fusion3 platform */
 		if (socinfo_get_platform_subtype() !=
 				PLATFORM_SUBTYPE_SGLTE2) {
@@ -5609,7 +5592,6 @@ static void __init samsung_jf_init(void)
 #ifdef CONFIG_MSM_CAMERA
 	apq8064_init_cam();
 #endif
-
 	if (machine_is_mpq8064_hrd() || machine_is_mpq8064_dtv()) {
 #ifdef CONFIG_SERIAL_MSM_HS
 		/* GSBI6(2) - UARTDM_RX */
@@ -5625,6 +5607,9 @@ static void __init samsung_jf_init(void)
 	sensor_power_on_vdd(SNS_PWR_ON, SNS_PWR_ON);
 	initialize_ssp_gpio();
 #endif
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+	id_set_two_phase_freq(1566000);
+#endif
 #ifdef CONFIG_MACH_JF
 	platform_device_register(&gpio_kp_pdev);
 #else
@@ -5638,6 +5623,7 @@ static void __init samsung_jf_init(void)
 	bcm2079x_init();
 	nfc_gpio_rev_init();
 #endif
+
 #ifndef CONFIG_MACH_JF
 	if (machine_is_mpq8064_cdp()) {
 		platform_device_register(&mpq_gpio_keys_pdev);

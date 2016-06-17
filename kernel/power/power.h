@@ -156,9 +156,6 @@ extern void swsusp_free(void);
 extern int swsusp_read(unsigned int *flags_p);
 extern int swsusp_write(unsigned int flags);
 extern void swsusp_close(fmode_t);
-#ifdef CONFIG_SUSPEND
-extern int swsusp_unmark(void);
-#endif
 
 /* kernel/power/block_io.c */
 extern struct block_device *hib_resume_bdev;
@@ -175,20 +172,17 @@ extern void swsusp_show_speed(struct timeval *, struct timeval *,
 				unsigned int, char *);
 
 #ifdef CONFIG_SUSPEND
-struct pm_sleep_state {
-	const char *label;
-	suspend_state_t state;
-};
-
 /* kernel/power/suspend.c */
-extern struct pm_sleep_state pm_states[];
+extern const char *const pm_states[];
 
+extern bool valid_state(suspend_state_t state);
 extern int suspend_devices_and_enter(suspend_state_t state);
 #else /* !CONFIG_SUSPEND */
 static inline int suspend_devices_and_enter(suspend_state_t state)
 {
 	return -ENOSYS;
 }
+static inline bool valid_state(suspend_state_t state) { return false; }
 #endif /* !CONFIG_SUSPEND */
 
 #ifdef CONFIG_PM_TEST_SUSPEND
@@ -245,13 +239,6 @@ static inline int suspend_freeze_processes(void)
 	if (error)
 		return error;
 
-	error = pm_notifier_call_chain(PM_USERSPACE_FROZEN);
-	if (error) {
-		printk(KERN_INFO "Userspace frozen workqueue canceled suspend\n");
-		thaw_processes();
-		return error;
-	}
-
 	error = freeze_kernel_threads();
 	/*
 	 * freeze_kernel_threads() thaws only kernel threads upon freezing
@@ -278,29 +265,31 @@ static inline void suspend_thaw_processes(void)
 }
 #endif
 
-#ifdef CONFIG_PM_AUTOSLEEP
-
-/* kernel/power/autosleep.c */
-extern int pm_autosleep_init(void);
-extern int pm_autosleep_lock(void);
-extern void pm_autosleep_unlock(void);
-extern suspend_state_t pm_autosleep_state(void);
-extern int pm_autosleep_set_state(suspend_state_t state);
-
-#else /* !CONFIG_PM_AUTOSLEEP */
-
-static inline int pm_autosleep_init(void) { return 0; }
-static inline int pm_autosleep_lock(void) { return 0; }
-static inline void pm_autosleep_unlock(void) {}
-static inline suspend_state_t pm_autosleep_state(void) { return PM_SUSPEND_ON; }
-
-#endif /* !CONFIG_PM_AUTOSLEEP */
-
-#ifdef CONFIG_PM_WAKELOCKS
-
+#ifdef CONFIG_WAKELOCK
 /* kernel/power/wakelock.c */
-extern ssize_t pm_show_wakelocks(char *buf, bool show_active);
-extern int pm_wake_lock(const char *buf);
-extern int pm_wake_unlock(const char *buf);
+extern struct workqueue_struct *suspend_work_queue;
+extern struct wake_lock main_wake_lock;
+extern suspend_state_t requested_suspend_state;
+extern void suspend_sys_sync_queue(void);
+extern int suspend_sys_sync_wait(void);
+#else
+static inline void suspend_sys_sync_queue(void) {}
+static inline int suspend_sys_sync_wait(void) { return 0; }
+#endif
 
-#endif /* !CONFIG_PM_WAKELOCKS */
+#ifdef CONFIG_USER_WAKELOCK
+ssize_t wake_lock_show(struct kobject *kobj, struct kobj_attribute *attr,
+			char *buf);
+ssize_t wake_lock_store(struct kobject *kobj, struct kobj_attribute *attr,
+			const char *buf, size_t n);
+ssize_t wake_unlock_show(struct kobject *kobj, struct kobj_attribute *attr,
+			char *buf);
+ssize_t  wake_unlock_store(struct kobject *kobj, struct kobj_attribute *attr,
+			const char *buf, size_t n);
+#endif
+
+#ifdef CONFIG_EARLYSUSPEND
+/* kernel/power/earlysuspend.c */
+void request_suspend_state(suspend_state_t state);
+suspend_state_t get_suspend_state(void);
+#endif

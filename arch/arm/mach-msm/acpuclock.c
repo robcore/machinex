@@ -19,7 +19,7 @@ static struct acpuclk_data *acpuclk_data;
 
 unsigned long acpuclk_get_rate(int cpu)
 {
-	if (!acpuclk_data || !acpuclk_data->get_rate)
+	if (!acpuclk_data->get_rate)
 		return 0;
 
 	return acpuclk_data->get_rate(cpu);
@@ -29,7 +29,7 @@ int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason reason)
 {
 	int ret;
 
-	if (!acpuclk_data || !acpuclk_data->set_rate)
+	if (!acpuclk_data->set_rate)
 		return 0;
 
 	trace_cpu_frequency_switch_start(acpuclk_get_rate(cpu), rate, cpu);
@@ -44,8 +44,6 @@ int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason reason)
 
 uint32_t acpuclk_get_switch_time(void)
 {
-	if (!acpuclk_data)
-		return 0;
 	return acpuclk_data->switch_time_us;
 }
 

@@ -20,24 +20,70 @@ config SUSPEND_FREEZER
 
 config HAS_WAKELOCK
 	bool
-	default y
+
+config HAS_EARLYSUSPEND
+	bool
 
 config WAKELOCK
-	bool
+	bool "Wake lock"
+	depends on PM && RTC_CLASS
+	default n
+	select HAS_WAKELOCK
+	---help---
+	  Enable wakelocks. When user space request a sleep state the
+	  sleep request will be delayed until no wake locks are held.
+
+config WAKELOCK_STAT
+	bool "Wake lock stats"
+	depends on WAKELOCK
 	default y
+	---help---
+	  Report wake lock stats in /proc/wakelocks
 
-config POWERSUSPEND
-        bool "Power suspend"
-        default y
-        help
-          Call early suspend handlers when the user requested sleep state
-          changes.
+config USER_WAKELOCK
+	bool "Userspace wake locks"
+	depends on PM_SLEEP
+	default y
+	---help---
+	  User-space wake lock api. Write "lockname" or "lockname timeout"
+	  to /sys/power/wake_lock lock and if needed create a wake lock.
+	  Write "lockname" to /sys/power/wake_unlock to unlock a user wake
+	  lock.
 
-config POWERSUSPEND_DEBUG
-	bool "Powersuspend driver debugging code"
-	depends on POWERSUSPEND
-	help
-	  Output debugging info in dmesg [POWERSUSPEND] (Yank555.lu)
+config EARLYSUSPEND
+	bool "Early suspend"
+	depends on WAKELOCK
+	default y
+	select HAS_EARLYSUSPEND
+	---help---
+	  Call early suspend handlers when the user requested sleep state
+	  changes.
+
+choice
+	prompt "User-space screen access"
+	default FB_EARLYSUSPEND if !FRAMEBUFFER_CONSOLE
+	default CONSOLE_EARLYSUSPEND
+	depends on HAS_EARLYSUSPEND
+
+	config NO_USER_SPACE_SCREEN_ACCESS_CONTROL
+		bool "None"
+
+	config CONSOLE_EARLYSUSPEND
+		bool "Console switch on early-suspend"
+		depends on HAS_EARLYSUSPEND && VT
+		---help---
+		  Register early suspend handler to perform a console switch to
+		  when user-space should stop drawing to the screen and a switch
+		  back when it should resume.
+
+	config FB_EARLYSUSPEND
+		bool "Sysfs interface"
+		depends on HAS_EARLYSUSPEND
+		---help---
+		  Register early suspend handler that notifies and waits for
+		  user-space through sysfs when user-space should stop drawing
+		  to the screen and notifies user-space when it should resume.
+endchoice
 
 config HIBERNATE_CALLBACKS
 	bool
@@ -96,20 +142,20 @@ config PM_STD_PARTITION
 	default ""
 	---help---
 	  The default resume partition is the partition that the suspend-
-	  to-disk implementation will look for a suspended disk image.
+	  to-disk implementation will look for a suspended disk image. 
 
-	  The partition specified here will be different for almost every user.
+	  The partition specified here will be different for almost every user. 
 	  It should be a valid swap partition (at least for now) that is turned
-	  on before suspending.
+	  on before suspending. 
 
 	  The partition specified can be overridden by specifying:
 
-		resume=/dev/<other device>
+		resume=/dev/<other device> 
 
-	  which will set the resume partition to the device specified.
+	  which will set the resume partition to the device specified. 
 
 	  Note there is currently not a way to specify which device to save the
-	  suspended image to. It will simply pick the first available swap
+	  suspended image to. It will simply pick the first available swap 
 	  device.
 
 config PM_SLEEP
@@ -123,33 +169,6 @@ config PM_SLEEP_SMP
 	depends on PM_SLEEP
 	select HOTPLUG
 	select HOTPLUG_CPU
-
-config PM_AUTOSLEEP
-	bool "Opportunistic sleep"
-	depends on PM_SLEEP
-	default n
-	---help---
-	Allow the kernel to trigger a system transition into a global sleep
-	state automatically whenever there are no active wakeup sources.
-
-config PM_WAKELOCKS
-	bool "User space wakeup sources interface"
-	depends on PM_SLEEP
-	default n
-	---help---
-	Allow user space to create, activate and deactivate wakeup source
-	objects with the help of a sysfs-based interface.
-
-config PM_WAKELOCKS_LIMIT
-	int "Maximum number of user space wakeup sources (0 = no limit)"
-	range 0 100000
-	default 100
-	depends on PM_WAKELOCKS
-
-config PM_WAKELOCKS_GC
-	bool "Garbage collector for user space wakeup sources"
-	depends on PM_WAKELOCKS
-	default y
 
 config PM_RUNTIME
 	bool "Run-time PM core functionality"
@@ -196,7 +215,7 @@ config PM_TEST_SUSPEND
 	You probably want to have your system's RTC driver statically
 	linked, ensuring that it's available when this test runs.
 
-config PM_SLEEP_DEBUG
+config CAN_PM_TRACE
 	def_bool y
 	depends on PM_DEBUG && PM_SLEEP
 
@@ -217,7 +236,7 @@ config PM_TRACE
 
 config PM_TRACE_RTC
 	bool "Suspend/resume event tracing"
-	depends on PM_SLEEP_DEBUG
+	depends on CAN_PM_TRACE
 	depends on X86
 	select PM_TRACE
 	---help---
@@ -260,10 +279,11 @@ config APM_EMULATION
 	  APM in your BIOS).
 
 config ARCH_HAS_OPP
-	bool "Arch has OPP"
+	bool
 
 config PM_OPP
-	bool
+	bool "Operating Performance Point (OPP) Layer library"
+	depends on ARCH_HAS_OPP
 	---help---
 	  SOCs have a standard set of tuples consisting of frequency and
 	  voltage pairs that the device will support per voltage domain. This
@@ -317,23 +337,6 @@ config SUSPEND_TIME
 	  Prints the time spent in suspend in the kernel log, and
 	  keeps statistics on the time spent in suspend in
 	  /sys/kernel/debug/suspend_time
-
-config PARTIALRESUME
-	bool "Partial-resume framework"
-	default y
-	---help---
-	  Provides hooks for drivers to register partial-resume handlers.
-	  Similar to suspend_again support already in kernel, except that it
-	  operates with kernel threads unfrozen and userspace still frozen,
-	  allowing callbacks to block on work queues and kernel threads.
-	  Partial resume will occur only if all wakeup sources have
-	  partial-resume handlers associated with them, and they all return
-	  true.
-
-config PM_SYNC_BEFORE_SUSPEND
-	bool "Sync file systems before suspend"
-	depends on PM
-	default n
 
 config QUICK_WAKEUP
 	bool "Quick wakeup"

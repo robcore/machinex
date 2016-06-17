@@ -480,10 +480,5 @@ endif
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
 
 obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o
-
 obj-$(CONFIG_INTELLI_PLUG) += intelli_plug.o
-obj-$(CONFIG_MSM_HOTPLUG) += msm_hotplug.o
-obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
-obj-$(CONFIG_ZEN_DECISION) += msm_zen_decision.o
-obj-$(CONFIG_MSM_LIMITER) += msm_limiter.o
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o

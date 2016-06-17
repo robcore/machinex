@@ -31,20 +31,6 @@ obj-$(CONFIG_CPU_FREQ_GOV_INTELLIMM)	        += cpufreq_intellimm.o
 obj-$(CONFIG_CPU_FREQ_GOV_SMARTMAX)		+= cpufreq_smartmax.o
 obj-$(CONFIG_CPU_FREQ_GOV_IMPULSE)		+= cpufreq_impulse.o
 obj-$(CONFIG_CPU_FREQ_GOV_PEGASUSQ)		+= cpufreq_pegasusq.o
-obj-$(CONFIG_CPU_FREQ_GOV_SMARTASSV2)		+= cpufreq_smartass2.o
-obj-$(CONFIG_CPU_FREQ_GOV_ONDEMANDPLUS)		+= cpufreq_ondemandplus.o
-obj-$(CONFIG_CPU_FREQ_GOV_HYPER)		+= cpufreq_HYPER.o
-obj-$(CONFIG_CPU_FREQ_GOV_YANKDEMAND)		+= cpufreq_yankdemand.o
-obj-$(CONFIG_CPU_FREQ_GOV_BLUACTIVE)		+= cpufreq_bluactive.o
-obj-$(CONFIG_CPU_FREQ_GOV_OPTIMAX)		+= cpufreq_optimax.o
-obj-$(CONFIG_CPU_FREQ_GOV_BARRY_ALLEN)		+= cpufreq_barry_allen.o
-obj-$(CONFIG_CPU_FREQ_GOV_ARTERACTIVE)		+= cpufreq_arteractive.o
-obj-$(CONFIG_CPU_FREQ_GOV_PRESERVATIVE)		+= cpufreq_preservative.o
-obj-$(CONFIG_CPU_FREQ_GOV_TRIPNDROID)		+= cpufreq_tripndroid.o
-obj-$(CONFIG_CPU_FREQ_GOV_ELEMENTALX)		+= cpufreq_elementalx.o
-obj-$(CONFIG_CPU_FREQ_GOV_LAZY)			+= cpufreq_lazy.o
-obj-$(CONFIG_CPU_FREQ_GOV_UBERDEMAND)		+= cpufreq_uberdemand.o
-obj-$(CONFIG_CPU_FREQ_GOV_LULZACTIVE)		+= cpufreq_lulzactive.o
 
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)			+= freq_table.o
@@ -89,6 +75,3 @@ obj-$(CONFIG_ARM_OMAP2PLUS_CPUFREQ)     += omap-cpufreq.o
 # PowerPC platform drivers
 obj-$(CONFIG_CPU_FREQ_MAPLE)		+= maple-cpufreq.o
 obj-$(CONFIG_MSM_DCVS)			+= cpufreq_gov_msm.o
-
-obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
-CFLAGS_lazyplug.o			+= -finline-functions

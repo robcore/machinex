@@ -22,13 +22,7 @@
 #include <asm/div64.h>
 
 #define CPUFREQ_NAME_LEN 16
-/* Print length for names. Extra 1 space for accomodating '\n' in prints */
-#define CPUFREQ_NAME_PLEN (CPUFREQ_NAME_LEN + 1)
 
-#ifdef CONFIG_CPU_FREQ_GOV_BADASS_GPU_CONTROL
-/* Badass gpu state detection */
-extern bool gpu_busy_state;
-#endif
 
 /*********************************************************************
  *                     CPUFREQ NOTIFIER INTERFACE                    *
@@ -36,7 +30,6 @@ extern bool gpu_busy_state;
 
 #define CPUFREQ_TRANSITION_NOTIFIER	(0)
 #define CPUFREQ_POLICY_NOTIFIER		(1)
-#define CPUFREQ_GOVINFO_NOTIFIER	(2)
 
 #ifdef CONFIG_CPU_FREQ
 int cpufreq_register_notifier(struct notifier_block *nb, unsigned int list);
@@ -125,12 +118,6 @@ struct cpufreq_policy {
 #define CPUFREQ_INCOMPATIBLE	(1)
 #define CPUFREQ_NOTIFY		(2)
 #define CPUFREQ_START		(3)
-
-#define CPUFREQ_CREATE_POLICY	(5)
-#define CPUFREQ_REMOVE_POLICY	(6)
-
-/* Govinfo Notifiers */
-#define CPUFREQ_LOAD_CHANGE	(0)
 
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */
@@ -331,29 +318,9 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 /*********************************************************************
  *                        CPUFREQ 2.6. INTERFACE                     *
  *********************************************************************/
-extern u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
+u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
-
-/*
- * Governor specific info that can be passed to modules that subscribe
- * to CPUFREQ_GOVINFO_NOTIFIER
- */
-struct cpufreq_govinfo {
-	unsigned int cpu;
-	unsigned int load;
-	unsigned int sampling_rate_us;
-};
-extern struct atomic_notifier_head cpufreq_govinfo_notifier_list;
-
-#ifdef CONFIG_MSM_LIMITER
-int cpufreq_set_gov(char *target_gov, unsigned int cpu);
-char *cpufreq_get_gov(unsigned int cpu);
-int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
-			unsigned int cpu);
-int cpufreq_get_max(unsigned int cpu);
-int cpufreq_get_min(unsigned int cpu);
-#endif
 
 #ifdef CONFIG_CPU_FREQ
 /* query the current CPU frequency (in kHz). If zero, cpufreq couldn't detect it */
@@ -509,48 +476,6 @@ extern struct cpufreq_governor cpufreq_gov_zzmoove;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_PEGASUSQ)
 extern struct cpufreq_governor cpufreq_gov_pegasusq;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_pegasusq)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_SMARTASSV2)
-extern struct cpufreq_governor cpufreq_gov_smartass2;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_smartass2)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMANDPLUS)
-extern struct cpufreq_governor cpufreq_gov_ondemandplus;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_ondemandplus)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_HYPER)
-extern struct cpufreq_governor cpufreq_gov_HYPER;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_HYPER)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_YANKDEMAND)
-extern struct cpufreq_governor cpufreq_gov_yankdemand;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_yankdemand)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_BLUACTIVE)
-extern struct cpufreq_governor cpufreq_gov_bluactive;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_bluactive)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_OPTIMAX)
-extern struct cpufreq_governor cpufreq_gov_optimax;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_optimax)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_BARRY_ALLEN)
-extern struct cpufreq_governor cpufreq_gov_barry_allen;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_barry_allen)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ARTERACTIVE)
-extern struct cpufreq_governor cpufreq_gov_arteractive;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_arteractive)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_PRESERVATIVE)
-extern struct cpufreq_governor cpufreq_gov_preservative;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_preservative)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_TRIPNDROID)
-extern struct cpufreq_governor cpufreq_gov_tripndroid;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_tripndroid)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ELEMENTALX)
-extern struct cpufreq_governor cpufreq_gov_elementalx;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_elementalx)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_LAZY)
-extern struct cpufreq_governor cpufreq_gov_lazy;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_lazy)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_UBERDEMAND)
-extern struct cpufreq_governor cpufreq_gov_uberdemand;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_uberdemand)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_LULZACTIVE)
-extern struct cpufreq_governor cpufreq_gov_lulzactive;
-#define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_lulzactive)
 #endif
 
 

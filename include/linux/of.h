@@ -21,7 +21,6 @@
 #include <linux/kref.h>
 #include <linux/mod_devicetable.h>
 #include <linux/spinlock.h>
-#include <linux/topology.h>
 
 #include <asm/byteorder.h>
 #include <asm/errno.h>
@@ -159,6 +158,11 @@ static inline unsigned long of_read_ulong(const __be32 *cell, int size)
 
 #define OF_BAD_ADDR	((u64)-1)
 
+#ifndef of_node_to_nid
+static inline int of_node_to_nid(struct device_node *np) { return -1; }
+#define of_node_to_nid of_node_to_nid
+#endif
+
 extern struct device_node *of_find_node_by_name(struct device_node *from,
 	const char *name);
 #define for_each_node_by_name(dn, name) \
@@ -185,8 +189,6 @@ extern struct device_node *of_get_parent(const struct device_node *node);
 extern struct device_node *of_get_next_parent(struct device_node *node);
 extern struct device_node *of_get_next_child(const struct device_node *node,
 					     struct device_node *prev);
-extern struct device_node *of_get_child_by_name(const struct device_node *node,
-					const char *name);
 #define for_each_child_of_node(parent, child) \
 	for (child = of_get_next_child(parent, NULL); child != NULL; \
 	     child = of_get_next_child(parent, child))
@@ -222,7 +224,6 @@ extern int of_device_is_available(const struct device_node *device);
 extern const void *of_get_property(const struct device_node *node,
 				const char *name,
 				int *lenp);
-extern struct device_node *of_get_cpu_node(int cpu, unsigned int *thread);
 #define for_each_property_of_node(dn, pp) \
 	for (pp = dn->properties; pp != NULL; pp = pp->next)
 
@@ -315,12 +316,6 @@ static inline const void *of_get_property(const struct device_node *node,
 	return NULL;
 }
 
-static inline struct device_node *of_get_cpu_node(int cpu,
-					unsigned int *thread)
-{
-	return NULL;
-}
-
 static inline int of_property_read_u64(const struct device_node *np,
 				       const char *propname, u64 *out_value)
 {
@@ -347,15 +342,6 @@ static inline int of_machine_is_compatible(const char *compat)
 #define of_match_ptr(_ptr)	NULL
 #define of_match_node(_matches, _node)	NULL
 #endif /* CONFIG_OF */
-
-#ifndef of_node_to_nid
-static inline int of_node_to_nid(struct device_node *np)
-{
-	return numa_node_id();
-}
-
-#define of_node_to_nid of_node_to_nid
-#endif
 
 /**
  * of_property_read_string_array() - Read an array of strings from a multiple
