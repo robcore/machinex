@@ -78,7 +78,7 @@ again:
 	else if (unlikely(err))
 		return err;
 
-	*id = *id & MAX_IDR_MASK;
+	*id = *id & MAX_ID_MASK;
 	return 0;
 }
 
@@ -1211,7 +1211,7 @@ EXPORT_SYMBOL(thermal_zone_device_update);
  * longer needed. The passive cooling formula uses tc1 and tc2 as described in
  * section 11.1.5.1 of the ACPI specification 3.0.
  */
-struct thermal_zone_device *thermal_zone_device_register(const char *type,
+struct thermal_zone_device *thermal_zone_device_register(char *type,
 	int trips, void *devdata,
 	const struct thermal_zone_device_ops *ops,
 	int tc1, int tc2, int passive_delay, int polling_delay)
