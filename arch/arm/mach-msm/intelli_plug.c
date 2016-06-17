@@ -293,20 +293,29 @@ static void intelli_plug_work_fn(struct work_struct *work)
 					msecs_to_jiffies(def_sampling_ms));
 }
 
-static void intelli_plug_suspend(struct work_struct *work)
+static void __ref intelli_plug_suspend(struct work_struct *work)
 {
+	int cpu;
+
 	if (hotplug_suspended == false) {
 		mutex_lock(&intelli_plug_mutex);
 		hotplug_suspended = true;
 		min_cpus_online_res = min_cpus_online;
 		min_cpus_online = 1;
 		max_cpus_online_res = max_cpus_online;
-		max_cpus_online = 1;
+		max_cpus_online = 2;
 		mutex_unlock(&intelli_plug_mutex);
 
 		/* Flush hotplug workqueue */
 		flush_workqueue(intelliplug_wq);
 		cancel_delayed_work_sync(&intelli_plug_work);
+
+		/* Put 2,3 sibling cores to sleep */
+		for_each_online_cpu(cpu) {
+			if (cpu == 1)
+				continue;
+			cpu_down(cpu);
+		}
 
 		dprintk("%s: suspended!\n", INTELLI_PLUG);
 	}
