@@ -512,7 +512,7 @@ static int ssp_resume(struct device *dev)
 
 static const struct dev_pm_ops ssp_pm_ops = {
 	.suspend_late = ssp_suspend,
-	.resume_power = ssp_resume
+	.resume_early = ssp_resume
 };
 #endif /* CONFIG_POWERSUSPEND */
 
