@@ -314,7 +314,7 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 			delay = max(delay - (jiffies % delay), usecs_to_jiffies(darkness_tuners_ins.sampling_rate / 2));
 		}
 
-		INIT_DELAYED_WORK_DEFERRABLE(&this_nightmare_cpuinfo->work, do_nightmare_timer);
+		INIT_DELAYED_WORK_DEFERRABLE(&this_darkness_cpuinfo->work, do_darkness_timer);
 		mod_delayed_work_on(cpu, system_wq, &this_darkness_cpuinfo->work, delay);
 
 		break;
