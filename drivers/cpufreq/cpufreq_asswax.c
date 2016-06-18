@@ -45,7 +45,7 @@
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 #include <linux/moduleparam.h>
 #include <linux/notifier.h>
 #include <asm/cputime.h>
@@ -860,7 +860,7 @@ static void asswax_suspend(int cpu, int suspend)
 	reset_timer(smp_processor_id(),this_asswax);
 }
 
-static void asswax_early_suspend(struct power_suspend *handler) {
+static void asswax_early_suspend(struct early_suspend *handler) {
 	int i;
 	if (asswax_state == 0 || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
 		return;
@@ -869,7 +869,7 @@ static void asswax_early_suspend(struct power_suspend *handler) {
 		asswax_suspend(i,0);
 }
 
-static void asswax_late_resume(struct power_suspend *handler) {
+static void asswax_late_resume(struct early_suspend *handler) {
 	int i;
 	if (asswax_state > 0) // already not suspended so nothing to do
 		return;
@@ -878,7 +878,7 @@ static void asswax_late_resume(struct power_suspend *handler) {
 		asswax_suspend(i,1);
 }
 
-static struct power_suspend asswax_power_suspend = {
+static struct early_suspend asswax_power_suspend = {
 	.suspend = asswax_early_suspend,
 	.resume = asswax_late_resume,
 #ifdef CONFIG_MACH_HERO
@@ -919,7 +919,7 @@ static int __init cpufreq_asswax_init(void)
 
 	INIT_WORK(&freq_scale_work, cpufreq_asswax_freq_change_time_work);
 
-	register_power_suspend(&asswax_power_suspend);
+	register_early_suspend(&asswax_power_suspend);
 
 	return cpufreq_register_governor(&cpufreq_gov_asswax);
 }

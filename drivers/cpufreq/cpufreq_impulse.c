@@ -54,7 +54,6 @@ struct cpufreq_impulse_cpuinfo {
 	u64 max_freq_idle_start_time;
 	struct rw_semaphore enable_sem;
 	int governor_enabled;
-	unsigned int cpu;
 };
 
 static DEFINE_PER_CPU(struct cpufreq_impulse_cpuinfo, cpuinfo);
@@ -66,7 +65,7 @@ static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
 /* Hi speed to bump to from lo speed when load burst (default max) */
-static unsigned int hispeed_freq = 1574400;
+static unsigned int hispeed_freq;
 
 /* Go to hi speed when CPU load at or above this value. */
 #define DEFAULT_GO_HISPEED_LOAD 99
@@ -1219,24 +1218,20 @@ static int cpufreq_governor_impulse(struct cpufreq_policy *policy,
 {
 	int rc;
 	unsigned int j;
-	unsigned int cpu;
 	struct cpufreq_impulse_cpuinfo *pcpu;
 	struct cpufreq_frequency_table *freq_table;
 	unsigned long flags;
 	unsigned int anyboost;
 
-	pcpu = &per_cpu(cpuinfo, policy->cpu);
-	cpu = pcpu->cpu;
-
 	switch (event) {
 	case CPUFREQ_GOV_START:
-		if (!cpu_online(cpu))
+		if (!cpu_online(policy->cpu))
 			return -EINVAL;
 
 		mutex_lock(&gov_lock);
 
 		freq_table =
-			cpufreq_frequency_get_table(cpu);
+			cpufreq_frequency_get_table(policy->cpu);
 		if (!hispeed_freq)
 			hispeed_freq = policy->max;
 
@@ -1311,9 +1306,6 @@ static int cpufreq_governor_impulse(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
-		/* If device is being removed, skip set limits */
-		if (!policy->cur)
-			break;
 		if (policy->max < policy->cur)
 			__cpufreq_driver_target(policy,
 					policy->max, CPUFREQ_RELATION_H);

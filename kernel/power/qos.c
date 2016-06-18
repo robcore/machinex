@@ -295,7 +295,8 @@ void pm_qos_update_request(struct pm_qos_request *req,
 		return;
 	}
 
-	cancel_delayed_work_sync(&req->work);
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
 
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
@@ -321,7 +322,8 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 		 "%s called for unknown object.", __func__))
 		return;
 
-	cancel_delayed_work_sync(&req->work);
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
 
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
@@ -350,7 +352,8 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 		return;
 	}
 
-	cancel_delayed_work_sync(&req->work);
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
 
 	pm_qos_update_target(pm_qos_array[req->pm_qos_class]->constraints,
 			     &req->node, PM_QOS_REMOVE_REQ,
@@ -496,7 +499,7 @@ static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
 		} else {
 			ascii_value[count] = '\0';
 		}
-		ret = kstrtoul(ascii_value, 16, &ulval);
+		ret = strict_strtoul(ascii_value, 16, &ulval);
 		if (ret) {
 			pr_debug("%s, 0x%lx, 0x%x\n", ascii_value, ulval, ret);
 			return -EINVAL;

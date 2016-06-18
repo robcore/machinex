@@ -2623,14 +2623,6 @@ config MSM_RUN_QUEUE_STATS
          in user mode, called MPDecision will be using this data to decide
          on when to switch off/on the other cores.
 
-config MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE
-	bool "Use a more conservative computation for RQ Stats"
-	depends on MSM_RUN_QUEUE_STATS
-	default n
-	help
-	  Enable more conservative computation of load and size of the run
-	  queue.
-
 config MSM_STANDALONE_POWER_COLLAPSE
        bool "Enable standalone power collapse"
        default n
@@ -3282,21 +3274,5 @@ config INTELLI_PLUG
         default n
         help
           Generic Intelli-plug cpu hotplug driver for ARM SOCs
-
-config MSM_HOTPLUG
-	bool "MSM hotplug driver"
-	depends on HOTPLUG_CPU
-	default y
-	help
-	  The MSM hotplug driver controls on-/offlining of additional cores based
-	  on current cpu load.
-
-config BRICKED_HOTPLUG
-	bool "Enable kernel based mpdecision"
-	depends on MSM_RUN_QUEUE_STATS
-	default y
-	help
-	  This enables kernel based multi core control.
-	  (up/down hotplug based on load)
 
 endif

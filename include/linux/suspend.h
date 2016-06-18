@@ -34,10 +34,8 @@ static inline void pm_restore_console(void)
 typedef int __bitwise suspend_state_t;
 
 #define PM_SUSPEND_ON		((__force suspend_state_t) 0)
-#define PM_SUSPEND_FREEZE	((__force suspend_state_t) 1)
-#define PM_SUSPEND_STANDBY	((__force suspend_state_t) 2)
+#define PM_SUSPEND_STANDBY	((__force suspend_state_t) 1)
 #define PM_SUSPEND_MEM		((__force suspend_state_t) 3)
-#define PM_SUSPEND_MIN		PM_SUSPEND_FREEZE
 #define PM_SUSPEND_MAX		((__force suspend_state_t) 4)
 
 enum suspend_stat_step {
@@ -187,11 +185,6 @@ struct platform_suspend_ops {
 	void (*recover)(void);
 };
 
-struct platform_freeze_ops {
-	int (*begin)(void);
-	void (*end)(void);
-};
-
 #ifdef CONFIG_SUSPEND
 /**
  * suspend_set_ops - set platform dependent suspend operations
@@ -199,8 +192,6 @@ struct platform_freeze_ops {
  */
 extern void suspend_set_ops(const struct platform_suspend_ops *ops);
 extern int suspend_valid_only_mem(suspend_state_t state);
-extern void freeze_set_ops(const struct platform_freeze_ops *ops);
-extern void freeze_wake(void);
 
 /**
  * arch_suspend_disable_irqs - disable IRQs for suspend
@@ -226,8 +217,6 @@ extern int pm_suspend(suspend_state_t state);
 
 static inline void suspend_set_ops(const struct platform_suspend_ops *ops) {}
 static inline int pm_suspend(suspend_state_t state) { return -ENOSYS; }
-static inline void freeze_set_ops(const struct platform_freeze_ops *ops) {}
-static inline void freeze_wake(void) {}
 #endif /* !CONFIG_SUSPEND */
 
 /* struct pbe is used for creating lists of pages that should be restored
@@ -346,7 +335,6 @@ static inline bool system_entering_hibernation(void) { return false; }
 #define PM_POST_SUSPEND		0x0004 /* Suspend finished */
 #define PM_RESTORE_PREPARE	0x0005 /* Going to restore a saved image */
 #define PM_POST_RESTORE		0x0006 /* Restore failed */
-#define PM_USERSPACE_FROZEN	0x0007 /* Userspace frozen */
 
 extern struct mutex pm_mutex;
 
