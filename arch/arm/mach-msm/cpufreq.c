@@ -46,6 +46,7 @@ static struct clk *l2_clk;
 static unsigned int freq_index[NR_CPUS];
 static struct cpufreq_frequency_table *freq_table;
 static unsigned int *l2_khz;
+static bool is_clk;
 static bool is_sync;
 static struct msm_bus_vectors *bus_vec_lst;
 static struct msm_bus_scale_pdata bus_bw = {
