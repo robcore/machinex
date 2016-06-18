@@ -60,7 +60,7 @@ struct gpio_button_data {
 	spinlock_t lock;
 	bool disabled;
 	bool key_pressed;
-#ifdef # CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS
 #ifdef KEY_BOOSTER
 	struct delayed_work	work_dvfs_off;
 	struct delayed_work	work_dvfs_chg;
@@ -358,7 +358,7 @@ static struct attribute_group gpio_keys_attr_group = {
 	.attrs = gpio_keys_attrs,
 };
 
-#ifdef # CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS
 #ifdef KEY_BOOSTER
 static void gpio_key_change_dvfs_lock(struct work_struct *work)
 {
@@ -570,7 +570,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 {
 	struct gpio_button_data *bdata =
 		container_of(work, struct gpio_button_data, work);
-#ifdef # CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS
 #ifdef KEY_BOOSTER
 	const struct gpio_keys_button *button = bdata->button;
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
@@ -578,7 +578,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 #endif
 
 	gpio_keys_gpio_report_event(bdata);
-#ifdef # CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS
 #ifdef KEY_BOOSTER
 	if (button->code == KEY_HOMEPAGE)
 		gpio_key_set_dvfs_lock(bdata, !!state);
@@ -1069,7 +1069,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 		error = gpio_keys_setup_key(pdev, input, bdata, button);
 		if (error)
 			goto fail2;
-#ifdef # CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS
 #ifdef KEY_BOOSTER
 		error = gpio_key_init_dvfs(bdata);
 		if (error < 0) {
