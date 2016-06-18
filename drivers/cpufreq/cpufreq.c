@@ -493,7 +493,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 static ssize_t store_##file_name					\
 (struct cpufreq_policy *policy, const char *buf, size_t count)		\
 {									\
-	unsigned int ret = -EINVAL;					\
+	int ret = -EINVAL;						\
 	struct cpufreq_policy new_policy;				\
 	int mpd = strcmp(current->comm, "mpdecision");			\
 									\
@@ -503,6 +503,7 @@ static ssize_t store_##file_name					\
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
 	if (ret)							\
 		return -EINVAL;						\
+									\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
 									\
@@ -513,6 +514,7 @@ static ssize_t store_##file_name					\
 	ret = cpufreq_driver->verify(&new_policy);			\
 	if (ret)							\
 		pr_err("cpufreq: Frequency verification failed\n");	\
+									\
 	policy->user_policy.min = new_policy.min;			\
 	policy->user_policy.max = new_policy.max;			\
 									\
@@ -573,7 +575,7 @@ static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 					const char *buf, size_t count)
 {
-	unsigned int ret = -EINVAL;
+	int ret = -EINVAL;
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
@@ -1068,6 +1070,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		cpufreq_cpu_put(policy);
 		return 0;
 	}
+
 #ifdef CONFIG_HOTPLUG_CPU
 	/* Check if this cpu was hot-unplugged earlier and has siblings */
 	for_each_online_cpu(sibling) {
@@ -1109,9 +1112,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	for_each_online_cpu(sibling) {
 		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
 		if (cp && cp->governor &&
-		   (cpumask_test_cpu(cpu, cp->related_cpus))) {
+		    (cpumask_test_cpu(cpu, cp->related_cpus))) {
 			policy->governor = cp->governor;
-
 			found = 1;
 			break;
 		}
@@ -1142,6 +1144,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
 
+	policy->util = 0;
+
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
 
@@ -1151,7 +1155,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		policy->governor = gov;
 		pr_debug("Restoring governor %s for cpu %d\n",
 		       policy->governor->name, cpu);
- 	}
+	}
 	if (per_cpu(cpufreq_policy_save, cpu).min) {
 		policy->min = per_cpu(cpufreq_policy_save, cpu).min;
 		policy->user_policy.min = policy->min;
@@ -1178,7 +1182,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	pr_debug("initialization complete\n");
 
 	return 0;
-
 
 err_out_unregister:
 	spin_lock_irqsave(&cpufreq_driver_lock, flags);
