@@ -84,9 +84,12 @@ struct cpu_freq {
 
 static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
-
 #ifdef CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS_BOOSTER
+static unsigned int upper_limit_freq = 1566000;
+#else
 static unsigned int upper_limit_freq;
+#endif
 static unsigned int lower_limit_freq;
 static unsigned int cpuinfo_max_freq;
 static unsigned int cpuinfo_min_freq;
@@ -395,11 +398,9 @@ int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 	else
 		limit->allowed_max = limit->max;
 
-#if 0
 	pr_debug("%s: Limiting cpu %d min = %d, max = %d\n",
 			__func__, cpu,
 			limit->allowed_min, limit->allowed_max);
-#endif
 
 	return 0;
 }

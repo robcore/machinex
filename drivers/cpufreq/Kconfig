@@ -567,6 +567,11 @@ config SEC_DVFS
 	default n
 	depends on CPU_FREQ
 
+config SEC_DVFS_BOOSTER
+    bool "DVFS input booster"
+    default y
+    depends on SEC_DVFS
+
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
 	depends on CPU_FREQ
