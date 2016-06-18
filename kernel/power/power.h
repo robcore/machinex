@@ -172,8 +172,13 @@ extern void swsusp_show_speed(struct timeval *, struct timeval *,
 				unsigned int, char *);
 
 #ifdef CONFIG_SUSPEND
+struct pm_sleep_state {
+	const char *label;
+	suspend_state_t state;
+};
+
 /* kernel/power/suspend.c */
-extern const char *const pm_states[];
+extern struct pm_sleep_state pm_states[];
 
 extern bool valid_state(suspend_state_t state);
 extern int suspend_devices_and_enter(suspend_state_t state);
@@ -238,6 +243,13 @@ static inline int suspend_freeze_processes(void)
 	 */
 	if (error)
 		return error;
+
+	error = pm_notifier_call_chain(PM_USERSPACE_FROZEN);
+	if (error) {
+		printk(KERN_INFO "Userspace frozen workqueue canceled suspend\n");
+		thaw_processes();
+		return error;
+	}
 
 	error = freeze_kernel_threads();
 	/*

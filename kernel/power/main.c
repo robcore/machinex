@@ -76,7 +76,7 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	unsigned long val;
 
-	if (strict_strtoul(buf, 10, &val))
+	if (kstrtoul(buf, 10, &val))
 		return -EINVAL;
 
 	if (val > 1)
@@ -344,12 +344,12 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	char *s = buf;
 #ifdef CONFIG_SUSPEND
-	int i;
+	suspend_state_t i;
 
-	for (i = 0; i < PM_SUSPEND_MAX; i++) {
-		if (pm_states[i] && valid_state(i))
-			s += sprintf(s,"%s ", pm_states[i]);
-	}
+	for (i = PM_SUSPEND_MIN; i < PM_SUSPEND_MAX; i++)
+		if (valid_state(i))
+			s += sprintf(s,"%s ", pm_states[i].label);
+
 #endif
 #ifdef CONFIG_HIBERNATION
 	s += sprintf(s, "%s\n", "disk");
@@ -367,9 +367,9 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 #ifdef CONFIG_EARLYSUSPEND
 	suspend_state_t state = PM_SUSPEND_ON;
 #else
-	suspend_state_t state = PM_SUSPEND_STANDBY;
+	suspend_state_t state = PM_SUSPEND_MIN;
 #endif
-	const char * const *s;
+	struct pm_sleep_state *s;
 #endif
 	char *p;
 	int len;
@@ -383,7 +383,7 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 
 #ifdef CONFIG_SUSPEND
 	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
-		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))
+		if (len == strlen(s->label) && !strncmp(buf, s->label, len))
 			return state;
 #endif
 
@@ -501,7 +501,7 @@ static ssize_t autosleep_show(struct kobject *kobj,
 #ifdef CONFIG_SUSPEND
 	if (state < PM_SUSPEND_MAX)
 		return sprintf(buf, "%s\n", valid_state(state) ?
-						pm_states[state] : "error");
+					pm_states[state].label : "error");
 #endif
 #ifdef CONFIG_HIBERNATION
 	return sprintf(buf, "disk\n");
@@ -607,6 +607,30 @@ pm_trace_dev_match_store(struct kobject *kobj, struct kobj_attribute *attr,
 power_attr(pm_trace_dev_match);
 
 #endif /* CONFIG_PM_TRACE */
+
+#ifdef CONFIG_FREEZER
+static ssize_t pm_freeze_timeout_show(struct kobject *kobj,
+				      struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", freeze_timeout_msecs);
+}
+
+static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
+				       struct kobj_attribute *attr,
+				       const char *buf, size_t n)
+{
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val))
+		return -EINVAL;
+
+	freeze_timeout_msecs = val;
+	return n;
+}
+
+power_attr(pm_freeze_timeout);
+
+#endif	/* CONFIG_FREEZER*/
 
 #ifdef CONFIG_SEC_DVFS
 DEFINE_MUTEX(dvfs_mutex);
@@ -815,38 +839,6 @@ power_attr(cpufreq_min_limit);
 power_attr(cpufreq_table);
 #endif
 
-static ssize_t hard_reset_ctl_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", pm8xxx_hard_reset_enabled());
-}
-
-static ssize_t hard_reset_ctl_store(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					const char *buf, size_t n)
-{
-	int ret = 0;
-	int enable;
-
-	ret = sscanf(buf, "%d", &enable);
-
-	if (ret != 1 || enable > 1)
-		return -EINVAL;
-
-	ret = pm8xxx_hard_reset_control(enable);
-	if (ret)
-		return -EPERM;
-
-	ret = resout_irq_control(enable);
-	if (ret)
-		return -EPERM;
-
-	pr_info("hard_reset_controlled = %d\n", enable);
-
-	return n;
-}
-
-power_attr(hard_reset_ctl);
 
 static struct attribute *g[] = {
 	&state_attr.attr,
@@ -870,12 +862,14 @@ static struct attribute *g[] = {
 	&pm_test_attr.attr,
 #endif
 #endif
+#ifdef CONFIG_FREEZER
+	&pm_freeze_timeout_attr.attr,
+#endif
 #ifdef CONFIG_SEC_DVFS
 	&cpufreq_min_limit_attr.attr,
 	&cpufreq_max_limit_attr.attr,
 	&cpufreq_table_attr.attr,
 #endif
-	&hard_reset_ctl_attr.attr,
 	NULL,
 };
 
