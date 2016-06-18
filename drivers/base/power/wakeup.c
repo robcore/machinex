@@ -417,6 +417,11 @@ void __pm_stay_awake(struct wakeup_source *ws)
 
 	if (!ws)
 		return;
+	/*
+	 * active wakeup source should bring the system
+	 * out of PM_SUSPEND_FREEZE state
+	 */
+	freeze_wake();
 
 	spin_lock_irqsave(&ws->lock, flags);
 
