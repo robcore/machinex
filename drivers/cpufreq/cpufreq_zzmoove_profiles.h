@@ -44,7 +44,7 @@
  */
 
 // NOTE: profile values in this version are mainly for Snapdragon devices!
-static char profiles_file_version[20] = "0.3 beta8 SNAP";
+static char profiles_file_version[20] = "develop";
 #define PROFILE_TABLE_END ~1
 #define END_OF_PROFILES "end"
 #define PROFILE_MAX_FREQ (2457600)	// ZZ: max possible freq in system table for freq adaption (possible OC frequencies inclusive)
@@ -2330,4 +2330,3 @@ struct zzmoove_profile zzmoove_profiles[] = {
 #endif /* defined(CONFIG_HAS_EARLYSUSPEND)... */
 	}
 };
-

@@ -69,14 +69,13 @@
 #define ENABLE_INPUTBOOSTER			// ZZ: enable/disable inputbooster support
 // #define ENABLE_WORK_RESTARTLOOP		// ZZ: enable/disable restart loop for touchboost (DO NOT ENABLE IN THIS VERSION -> NOT STABLE YET!)
 
-
 #ifdef ENABLE_INPUTBOOSTER
 #include <linux/slab.h>
 #include <linux/input.h>
 #endif /* ENABLE_INPUTBOOSTER */
 
 // Yank: enable/disable sysfs interface to display current zzmoove version
-#define ZZMOOVE_VERSION "1.0 beta8"
+#define ZZMOOVE_VERSION "develop"
 
 // ZZ: support for 2,4,6 or 8 cores (this will enable/disable hotplug threshold tuneables and limit hotplug max limit tuneable)
 #define MAX_CORES					(4)
@@ -205,6 +204,7 @@ static char custom_profile[20] = "custom";			// ZZ: name to show in sysfs if any
 
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
 // ZZ: tuneable defaults for early suspend
+#define DEF_DISABLE_SLEEP_MODE				(1)	// ZZ: default for sleep mode switch
 #define MAX_SAMPLING_RATE_SLEEP_MULTIPLIER		(8)	// ZZ: default maximum for sampling rate sleep multiplier
 #define DEF_SAMPLING_RATE_SLEEP_MULTIPLIER		(2)	// ZZ: default sampling rate sleep multiplier
 #define DEF_UP_THRESHOLD_SLEEP				(90)	// ZZ: default up threshold sleep
@@ -218,7 +218,7 @@ static char custom_profile[20] = "custom";			// ZZ: name to show in sysfs if any
 #ifdef ENABLE_HOTPLUGGING
 #define DEF_DISABLE_HOTPLUG_SLEEP			(0)	// ZZ: default hotplug sleep switch
 #endif /* ENABLE_HOTPLUGGING */
-#endif /* ENABLE_HOTPLUGGING */
+#endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 
 /*
  * ZZ: Hotplug Sleep: 0 do not touch hotplug settings at suspend, so all cores will stay online
@@ -585,6 +585,7 @@ static struct dbs_tuners {
 	unsigned int sampling_rate_idle_threshold;		// ZZ: sampling rate switching threshold tuneable
 	unsigned int sampling_rate_idle_delay;			// ZZ: sampling rate switching delay tuneable
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+	unsigned int disable_sleep_mode;			// ZZ: switch for sleep mode
 	unsigned int sampling_rate_sleep_multiplier;		// ZZ: sampling rate sleep multiplier tuneable for early suspend
 #endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 	unsigned int sampling_down_factor;			// ZZ: sampling down factor tuneable (reactivated)
@@ -758,6 +759,7 @@ static struct dbs_tuners {
 	.sampling_rate_idle_threshold = DEF_SAMPLING_RATE_IDLE_THRESHOLD,
 	.sampling_rate_idle_delay = DEF_SAMPLING_RATE_IDLE_DELAY,
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+	.disable_sleep_mode = DEF_DISABLE_SLEEP_MODE,
 	.sampling_rate_sleep_multiplier = DEF_SAMPLING_RATE_SLEEP_MULTIPLIER,
 #endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
@@ -2559,71 +2561,6 @@ static inline void adjust_freq_thresholds(unsigned int step)
 }
 #endif /* ENABLE_AUTO_ADJUST_FREQ */
 
-// ZZ: compatibility with kernel version lower than 3.4
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
-static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
-{
-	u64 idle_time;
-	u64 cur_wall_time;
-	u64 busy_time;
-
-	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
-	busy_time = cputime64_add(kstat_cpu(cpu).cpustat.user,
-			kstat_cpu(cpu).cpustat.system);
-
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.irq);
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.softirq);
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.steal);
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.nice);
-
-	idle_time = cputime64_sub(cur_wall_time, busy_time);
-	if (wall)
-	    *wall = (u64)jiffies_to_usecs(cur_wall_time);
-
-	return (u64)jiffies_to_usecs(idle_time);
-}
-#endif /* LINUX_VERSION_CODE... */
-
-// ZZ: this function is placed here only from kernel version 3.4 to 3.8
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0) && LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)
-static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
-{
-	u64 idle_time;
-	u64 cur_wall_time;
-	u64 busy_time;
-	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
-	busy_time  = kcpustat_cpu(cpu).cpustat[CPUTIME_USER];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_IRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SOFTIRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_STEAL];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
-
-	idle_time = cur_wall_time - busy_time;
-	if (wall)
-	*wall = jiffies_to_usecs(cur_wall_time);
-	return jiffies_to_usecs(idle_time);
-}
-#endif /* LINUX_VERSION_CODE... */
-
-/*
- * ZZ: function has been moved out of governor since kernel version 3.8 and finally moved to cpufreq.c in kernel version 3.11
- *     overruling macro CPU_IDLE_TIME_IN_CPUFREQ included for sources with backported cpufreq implementation
- */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0) && !defined(CPU_IDLE_TIME_IN_CPUFREQ)
-static inline u64 get_cpu_idle_time(unsigned int cpu, u64 *wall)
-{
-	u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
-
-	if (idle_time == -1ULL)
-		return get_cpu_idle_time_jiffy(cpu, wall);
-	else
-		idle_time += get_cpu_iowait_time_us(cpu, wall);
-
-	return idle_time;
-}
-#endif /* LINUX_VERSION_CODE... */
-
 // keep track of frequency transitions
 static int dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val, void *data)
 {
@@ -2680,6 +2617,7 @@ show_one(sampling_rate_idle_threshold, sampling_rate_idle_threshold);			// ZZ: s
 show_one(sampling_rate_idle, sampling_rate_idle);					// ZZ: tuneable for sampling rate at idle
 show_one(sampling_rate_idle_delay, sampling_rate_idle_delay);				// ZZ: DSR switching delay tuneable
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+show_one(disable_sleep_mode, disable_sleep_mode);					// ZZ: disable sleep mode tuneable
 show_one(sampling_rate_sleep_multiplier, sampling_rate_sleep_multiplier);		// ZZ: sampling rate multiplier tuneable for early suspend
 #endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 show_one(sampling_down_factor, sampling_down_factor);					// ZZ: sampling down factor tuneable
@@ -3078,8 +3016,23 @@ static ssize_t store_sampling_rate_idle_delay(struct kobject *a, struct attribut
 	return count;
 }
 
-// ZZ: tuneable -> possible values: 1 to 8, if not set default is 2
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+// ZZ: added tuneable disable_sleep_mode -> possible values: 0 disabled, anything else enabled
+static ssize_t store_disable_sleep_mode(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input < 0 || suspend_flag) // ZZ: dont set this tuneable during suspend
+	return -EINVAL;
+
+	dbs_tuners_ins.disable_sleep_mode = !!input;
+	return count;
+}
+
+// ZZ: tuneable -> possible values: 1 to 8, if not set default is 2
 static ssize_t store_sampling_rate_sleep_multiplier(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
@@ -3105,7 +3058,7 @@ static ssize_t store_sampling_rate_sleep_multiplier(struct kobject *a, struct at
 
 	return count;
 }
-#endif /* ENABLE_PROFILES_SUPPORT */
+#endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 
 static ssize_t store_up_threshold(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
@@ -3519,7 +3472,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b, co
 		 struct cpu_dbs_info_s *dbs_info;
 		 dbs_info = &per_cpu(cs_cpu_dbs_info, j);
 		 dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ) /* overrule for sources with backported cpufreq implementation */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ) /* overrule for sources with backported cpufreq implementation */
 		 &dbs_info->prev_cpu_wall, 0);
 #else
 		 &dbs_info->prev_cpu_wall);
@@ -6001,7 +5954,7 @@ static inline int set_profile(int profile_num)
 		     struct cpu_dbs_info_s *dbs_info;
 		     dbs_info = &per_cpu(cs_cpu_dbs_info, j);
 		     dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ) /* overrule for sources with backported cpufreq implementation */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ) /* overrule for sources with backported cpufreq implementation */
 		 &dbs_info->prev_cpu_wall, 0);
 #else
 		 &dbs_info->prev_cpu_wall);
@@ -6662,6 +6615,7 @@ define_one_global_rw(sampling_rate_idle_threshold);
 define_one_global_rw(sampling_rate_idle);
 define_one_global_rw(sampling_rate_idle_delay);
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+define_one_global_rw(disable_sleep_mode);
 define_one_global_rw(sampling_rate_sleep_multiplier);
 #endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 define_one_global_rw(sampling_down_factor);
@@ -7050,6 +7004,7 @@ static struct attribute *dbs_attributes[] = {
 	&sampling_rate_idle.attr,
 	&sampling_rate_idle_delay.attr,
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+	&disable_sleep_mode.attr,
 	&sampling_rate_sleep_multiplier.attr,
 #endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 	&sampling_down_factor.attr,
@@ -7323,7 +7278,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		j_dbs_info = &per_cpu(cs_cpu_dbs_info, j);
 
 		cur_idle_time = get_cpu_idle_time(j,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ)	/* overrule for sources with backported cpufreq implementation */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ)	/* overrule for sources with backported cpufreq implementation */
 		     &cur_wall_time, 0);
 #else
 		     &cur_wall_time);
@@ -8436,12 +8391,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 
 	dbs_info_enabled = true;
 
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 	INIT_DEFERRABLE_WORK(&dbs_info->work, do_dbs_timer);
-#else
-	INIT_DELAYED_WORK_DEFERRABLE(&dbs_info->work, do_dbs_timer);
-#endif /* LINUX_VERSION_CODE... */
 	queue_delayed_work_on(dbs_info->cpu, dbs_wq, &dbs_info->work, delay);
 }
 
@@ -8467,11 +8417,14 @@ static void __cpuinit powersave_suspend(struct power_suspend *handler)
 void zzmoove_suspend(void)
 #endif /* defined(CONFIG_HAS_EARLYSUSPEND)... */
 {
+	if (dbs_tuners_ins.disable_sleep_mode)					// ZZ: exit if sleep mode is disabled
+	    return;
+
 	if (!freq_table_desc && limit_table_start != 0)				// ZZ: asc: when entering suspend reset freq table start point to full range in case it
 	    limit_table_start = 0;						//     was changed for example because of pol min boosts - this is important otherwise
 										//     freq will stuck at soft limit and wont go below anymore!
 
-	suspend_flag = true;				// ZZ: we want to know if we are at suspend because of things that shouldn't be executed at suspend
+	suspend_flag = true;							// ZZ: we want to know if we are at suspend because of things that shouldn't be executed at suspend
 	sampling_rate_awake = dbs_tuners_ins.sampling_rate_current;		// ZZ: save current sampling rate for restore on awake
 	up_threshold_awake = dbs_tuners_ins.up_threshold;			// ZZ: save up threshold for restore on awake
 	down_threshold_awake = dbs_tuners_ins.down_threshold;			// ZZ: save down threhold for restore on awake
@@ -8650,12 +8603,15 @@ void zzmoove_suspend(void)
 
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_LCD_NOTIFIER)
 static void __cpuinit powersave_late_resume(struct early_suspend *handler)
-#elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER)
+#elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER) || defined(CONFIG_POWERSUSPEND) && defined(USE_LCD_NOTIFIER)
 static void __cpuinit powersave_resume(struct power_suspend *handler)
 #elif defined(USE_LCD_NOTIFIER)
 void zzmoove_resume(void)
 #endif /* defined(CONFIG_HAS_EARLYSUSPEND)... */
 {
+	if (dbs_tuners_ins.disable_sleep_mode)					// ZZ: exit if sleep mode is disabled
+	    return;
+
 	suspend_flag = false;							// ZZ: we are resuming so reset supend flag
 	scaling_mode_up = 4;							// ZZ: scale up as fast as possibe
 	boost_freq = true;							// ZZ: and boost freq in addition
@@ -8773,7 +8729,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			j_dbs_info->cur_policy = policy;
 
 			j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ)	/* ZZ: overrule for sources with backported cpufreq implementation */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0) || defined(CPU_IDLE_TIME_IN_CPUFREQ)	/* ZZ: overrule for sources with backported cpufreq implementation */
 			&j_dbs_info->prev_cpu_wall, 0);
 #else
 			&j_dbs_info->prev_cpu_wall);
@@ -8886,7 +8842,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		dbs_timer_init(this_dbs_info);
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT)
 		register_early_suspend(&_powersave_early_suspend);
-#elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT)
+#elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT) || defined(CONFIG_POWERSUSPEND) && defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT)
 		if (cpu == 0)
 		    register_power_suspend(&powersave_powersuspend);
 #endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
@@ -8911,7 +8867,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		dbs_enable--;
 		mutex_destroy(&this_dbs_info->timer_mutex);
 		/*
-		 * Stop the timerschedule work, when this governor
+		 * Stop the timerschedule work, unregister input handler and reset various tuneables when this governor
 		 * is used for the last time
 		 */
 		if (dbs_enable == 0) {
@@ -8919,6 +8875,12 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		    if (!policy->cpu && dbs_tuners_ins.inputboost_cycles)
 			input_unregister_handler(&interactive_input_handler);
 #endif /* ENABLE_INPUTBOOST */
+#if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
+		    dbs_tuners_ins.disable_sleep_mode = DEF_DISABLE_SLEEP_MODE;
+#endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
+#ifdef ENABLE_MUSIC_LIMITS
+		    dbs_tuners_ins.music_state = 0;
+#endif /* ENABLE_MUSIC_LIMITS */
 		    cpufreq_unregister_notifier(
 		    &dbs_cpufreq_notifier_block,
 		    CPUFREQ_TRANSITION_NOTIFIER);
@@ -8930,7 +8892,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		   &dbs_attr_group);
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT)
 		unregister_early_suspend(&_powersave_early_suspend);
-#elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT)
+#elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT) || defined(CONFIG_POWERSUSPEND) && defined(USE_LCD_NOTIFIER) && !defined(DISABLE_POWER_MANAGEMENT)
 		if (cpu == 0)
 		    unregister_power_suspend(&powersave_powersuspend);
 #endif /* defined(CONFIG_HAS_EARLYSUSPEND)... */
