@@ -31,6 +31,7 @@
 #include <linux/tick.h>
 #include <asm/smp_plat.h>
 #include <linux/suspend.h>
+#include "acpuclock.h"
 
 #define MAX_LONG_SIZE 24
 #define DEFAULT_RQ_POLL_JIFFIES 1
@@ -56,11 +57,16 @@ static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
-
-	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
+	int ret
 	cputime64_t cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
+	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
+	struct cpufreq_policy policy;
+
+        ret = cpufreq_get_policy(&policy, cpu);
+        if (ret)
+                return -EINVAL;
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
@@ -76,7 +82,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 	cur_load = 100 * (wall_time - idle_time) / wall_time;
 
 	/* Calculate the scaled load across CPU */
-	load_at_max_freq = (cur_load * freq) / pcpu->policy_max;
+	load_at_max_freq = (cur_load * policy.cur) / policy.max;
 
 	if (!pcpu->avg_load_maxfreq) {
 		/* This is the first sample in this window*/
