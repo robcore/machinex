@@ -67,7 +67,7 @@ union power_supply_propval current_charge;
  * If we can't find the "battery" device, then we ignore all battery work, which means
  * we do the CPU_UP work regardless of the battery level.
  */
-const char ps_name[] = "battery";
+char ps_name[] = "battery";
 
 static int get_power_supply_level(void)
 {

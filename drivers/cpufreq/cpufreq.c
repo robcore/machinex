@@ -2075,18 +2075,13 @@ int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
 		if (min_freq)
 			per_cpu(cpufreq_policy_save, cpu).min = min_freq;
 	} else {
-		policy = __cpufreq_cpu_get(cpu, 1);
+		policy = cpufreq_cpu_get(cpu);
 		if (!policy) {
 			ret = -EINVAL;
 			goto skip;
 		}
 
-		if (lock_policy_rwsem_write(cpu) < 0) {
-			__cpufreq_cpu_put(policy, true);
-			ret = -EINVAL;
-			goto skip;
-		}
-
+		down_write(&policy->rwsem);
 		if (max_freq && max_freq >= policy->min) {
 			policy->user_policy.max = max_freq;
 			policy->max = max_freq;
@@ -2095,10 +2090,9 @@ int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
 			policy->user_policy.min = min_freq;
 			policy->min = min_freq;
 		}
+		up_write(&policy->rwsem);
 
-		unlock_policy_rwsem_write(cpu);
-
-		__cpufreq_cpu_put(policy, true);
+		cpufreq_cpu_put(policy);
 	}
 skip:
 	put_online_cpus();
@@ -2113,12 +2107,12 @@ EXPORT_SYMBOL(cpufreq_set_freq);
  */
 int cpufreq_get_max(unsigned int cpu)
 {
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int freq = per_cpu(cpufreq_policy_save, cpu).max;
-	struct cpufreq_policy *policy = __cpufreq_cpu_get(cpu, 1);
 
 	if (policy) {
 		freq = policy->max;
-		__cpufreq_cpu_put(policy, true);
+		cpufreq_cpu_put(policy);
 	}
 
 	return freq;
@@ -2131,12 +2125,12 @@ EXPORT_SYMBOL(cpufreq_get_max);
  */
 int cpufreq_get_min(unsigned int cpu)
 {
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int freq = per_cpu(cpufreq_policy_save, cpu).min;
-	struct cpufreq_policy *policy = __cpufreq_cpu_get(cpu, 1);
 
 	if (policy) {
 		freq = policy->min;
-		__cpufreq_cpu_put(policy, true);
+		cpufreq_cpu_put(policy);
 	}
 
 	return freq;
@@ -2158,23 +2152,17 @@ int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 		strncpy(per_cpu(cpufreq_policy_save, cpu).gov, target_gov,
 			CPUFREQ_NAME_LEN);
 	} else {
-		policy = __cpufreq_cpu_get(cpu, 1);
+		policy = cpufreq_cpu_get(cpu);
 		if (!policy) {
 			ret = -EINVAL;
 			goto skip;
 		}
 
-		if (lock_policy_rwsem_write(cpu) < 0) {
-			__cpufreq_cpu_put(policy, true);
-			ret = -EINVAL;
-			goto skip;
-		}
-
+		down_write(&policy->rwsem);
 		ret = store_scaling_governor(policy, target_gov, ret);
+		up_write(&policy->rwsem);
 
-		unlock_policy_rwsem_write(cpu);
-
-		__cpufreq_cpu_put(policy, true);
+		cpufreq_cpu_put(policy);
 	}
 skip:
 	put_online_cpus();
@@ -2189,12 +2177,12 @@ EXPORT_SYMBOL(cpufreq_set_gov);
  */
 char *cpufreq_get_gov(unsigned int cpu)
 {
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	char *val = per_cpu(cpufreq_policy_save, cpu).gov;
-	struct cpufreq_policy *policy = __cpufreq_cpu_get(cpu, 1);
 
 	if (policy) {
 		val = policy->governor->name;
-		__cpufreq_cpu_put(policy, true);
+		cpufreq_cpu_put(policy);
 	}
 
 	return val;
@@ -2231,7 +2219,7 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 
 					if (target_freq != policy->cur)
 						__cpufreq_driver_target(policy, target_freq, CPUFREQ_RELATION_L);
-					
+
 					cpufreq_cpu_put(policy);
 				}
 			}
