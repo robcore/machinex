@@ -33,5 +33,5 @@ cp -p /media/root/robcore/android/machinex/arch/arm/boot/scsi_wait_scan.ko $(pwd
 rm $(pwd)/split_img/boot.img-zImage;
 cp -p /media/root/robcore/android/machinex/arch/arm/boot/boot.img-zImage $(pwd)/split_img/boot.img-zImage;
 rm image-new.img;
-sudo sh repackimg.sh;
+sh repackimg.sh --sudo;
 cp -p image-new.img $(pwd)/machinex-new/boot.img
