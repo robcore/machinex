@@ -5852,7 +5852,6 @@ build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 
 		sg->sgp = *per_cpu_ptr(sdd->sgp, cpumask_first(sg_span));
 		atomic_inc(&sg->sgp->ref);
-		sg->balance_cpu = -1;
 
 		if (cpumask_test_cpu(cpu, sg_span))
 			groups = sg;
@@ -5928,7 +5927,6 @@ build_sched_groups(struct sched_domain *sd, int cpu)
 		group = get_group(i, sdd, &sg);
 		cpumask_clear(sched_group_cpus(sg));
 		sg->sgp->power = 0;
-		sg->balance_cpu = -1;
 
 		for_each_cpu(j, span) {
 			if (get_group(j, sdd, NULL) != group)
@@ -6136,11 +6134,6 @@ static int *sched_domains_numa_distance;
 static struct cpumask ***sched_domains_numa_masks;
 static int sched_domains_curr_level;
 
-static inline unsigned long numa_scale(unsigned long x, int level)
-{
-	return x * sched_domains_numa_distance[level] / sched_domains_numa_scale;
-}
-
 static inline int sd_local_flags(int level)
 {
 	if (sched_domains_numa_distance[level] > REMOTE_DISTANCE)
@@ -6161,7 +6154,7 @@ sd_numa_init(struct sched_domain_topology_level *tl, int cpu)
 		.min_interval		= sd_weight,
 		.max_interval		= 2*sd_weight,
 		.busy_factor		= 32,
-		.imbalance_pct		= 100 + numa_scale(25, level),
+		.imbalance_pct		= 125,
 		.cache_nice_tries	= 2,
 		.busy_idx		= 3,
 		.idle_idx		= 2,
