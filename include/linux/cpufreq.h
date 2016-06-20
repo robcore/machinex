@@ -36,7 +36,6 @@ extern bool gpu_busy_state;
 
 #define CPUFREQ_TRANSITION_NOTIFIER	(0)
 #define CPUFREQ_POLICY_NOTIFIER		(1)
-#define CPUFREQ_GOVINFO_NOTIFIER	(2)
 
 #ifdef CONFIG_CPU_FREQ
 int cpufreq_register_notifier(struct notifier_block *nb, unsigned int list);
@@ -129,9 +128,6 @@ struct cpufreq_policy {
 #define CPUFREQ_CREATE_POLICY	(5)
 #define CPUFREQ_REMOVE_POLICY	(6)
 
-/* Govinfo Notifiers */
-#define CPUFREQ_LOAD_CHANGE	(0)
-
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */
 #define CPUFREQ_SHARED_TYPE_ALL	 (2) /* All dependent CPUs should set freq */
@@ -218,18 +214,16 @@ extern int __cpufreq_driver_getavg(struct cpufreq_policy *policy,
 int cpufreq_register_governor(struct cpufreq_governor *governor);
 void cpufreq_unregister_governor(struct cpufreq_governor *governor);
 
-int lock_policy_rwsem_read(int cpu);
 int lock_policy_rwsem_write(int cpu);
-void unlock_policy_rwsem_read(int cpu);
 void unlock_policy_rwsem_write(int cpu);
 
 /*********************************************************************
  *                      CPUFREQ DRIVER INTERFACE                     *
  *********************************************************************/
 
-#define CPUFREQ_RELATION_L 0	/* lowest frequency at or above target */
-#define CPUFREQ_RELATION_H 1	/* highest frequency below or at target */
-#define CPUFREQ_RELATION_C 2	/* closest frequency to target */
+#define CPUFREQ_RELATION_L 0  /* lowest frequency at or above target */
+#define CPUFREQ_RELATION_H 1  /* highest frequency below or at target */
+#define CPUFREQ_RELATION_C 2  /* closest frequency to target */
 
 struct freq_attr;
 
@@ -336,26 +330,6 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 extern u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
-
-/*
- * Governor specific info that can be passed to modules that subscribe
- * to CPUFREQ_GOVINFO_NOTIFIER
- */
-struct cpufreq_govinfo {
-	unsigned int cpu;
-	unsigned int load;
-	unsigned int sampling_rate_us;
-};
-extern struct atomic_notifier_head cpufreq_govinfo_notifier_list;
-
-#ifdef CONFIG_MSM_LIMITER
-int cpufreq_set_gov(char *target_gov, unsigned int cpu);
-char *cpufreq_get_gov(unsigned int cpu);
-int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
-			unsigned int cpu);
-int cpufreq_get_max(unsigned int cpu);
-int cpufreq_get_min(unsigned int cpu);
-#endif
 
 #ifdef CONFIG_CPU_FREQ
 /* query the current CPU frequency (in kHz). If zero, cpufreq couldn't detect it */
