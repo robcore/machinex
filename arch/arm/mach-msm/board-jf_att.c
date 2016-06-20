@@ -3289,7 +3289,7 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 7,
+	.sensor_id = 0,
 	.poll_ms = 250,
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
@@ -3505,7 +3505,6 @@ static uint8_t spm_power_collapse_with_rpm_krait_v3[] __initdata = {
 	0x24, 0x30, 0x0f,
 };
 
-
 static struct msm_spm_seq_entry msm_spm_boot_cpu_seq_list[] __initdata = {
 	[0] = {
 		.mode = MSM_SPM_MODE_CLOCK_GATING,
@@ -3675,11 +3674,11 @@ static void __init apq8064ab_update_krait_spm(void)
 			if (pdata->modes[j].cmd ==
 					spm_power_collapse_without_rpm)
 				pdata->modes[j].cmd =
-					spm_power_collapse_without_rpm_krait_v3;
+				spm_power_collapse_without_rpm_krait_v3;
 			else if (pdata->modes[j].cmd ==
 					spm_power_collapse_with_rpm)
 				pdata->modes[j].cmd =
-					spm_power_collapse_with_rpm_krait_v3;
+				spm_power_collapse_with_rpm_krait_v3;
 		}
 	}
 }
@@ -4551,6 +4550,7 @@ static void __init apq8064_i2c_init(void)
 					&apq8064_i2c_qup_gsbi3_pdata;
 	apq8064_device_qup_i2c_gsbi1.dev.platform_data =
 					&apq8064_i2c_qup_gsbi1_pdata;
+
 	/* Add GSBI4 I2C pdata for non-fusion3 SGLTE2 */
 	if (socinfo_get_platform_subtype() !=
 			PLATFORM_SUBTYPE_SGLTE2) {
@@ -5148,7 +5148,6 @@ static void __init register_i2c_devices(void)
 	}
 }
 
-
 static void enable_avc_i2c_bus(void)
 {
 	int avc_i2c_en_mpp = PM8921_MPP_PM_TO_SYS(8);
@@ -5343,6 +5342,7 @@ static void __init apq8064ab_update_retention_spm(void)
 static void __init apq8064_common_init(void)
 {
 	u32 platform_version = socinfo_get_platform_version();
+
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
 	int ret;
 #endif
@@ -5423,6 +5423,7 @@ static void __init apq8064_common_init(void)
 			machine_is_mpq8064_dtv())) {
 		platform_add_devices(common_not_mpq_devices,
 			ARRAY_SIZE(common_not_mpq_devices));
+
 		/* Add GSBI4 I2C Device for non-fusion3 platform */
 		if (socinfo_get_platform_subtype() !=
 				PLATFORM_SUBTYPE_SGLTE2) {
@@ -5436,6 +5437,7 @@ static void __init apq8064_common_init(void)
 	else
 		platform_device_register(&touchkey_i2c_gpio_device_2);
 #endif
+
 	msm_hsic_pdata.swfi_latency =
 		msm_rpmrs_levels[0].latency_us;
 	if (machine_is_apq8064_mtp() || machine_is_JF()) {
