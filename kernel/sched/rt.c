@@ -1901,9 +1901,9 @@ static void set_cpus_allowed_rt(struct task_struct *p,
 
 		}
 
-		if ((p->rt.nr_cpus_allowed <= 1) && (weight > 1)) {
+		if ((p->nr_cpus_allowed <= 1) && (weight > 1)) {
 			rq->rt.rt_nr_migratory++;
-		} else if ((p->rt.nr_cpus_allowed > 1) && (weight <= 1)) {
+		} else if ((p->nr_cpus_allowed > 1) && (weight <= 1)) {
 			BUG_ON(!rq->rt.rt_nr_migratory);
 			rq->rt.rt_nr_migratory--;
 		}
