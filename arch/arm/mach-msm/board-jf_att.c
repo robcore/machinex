@@ -420,7 +420,7 @@ static void irda_device_init(void)
 		.output_buffer		= PM_GPIO_OUT_BUF_CMOS,
 		.output_value		= 0,
 	};
-	printk(KERN_ERR "%s called!\n", __func__);	
+	printk(KERN_ERR "%s called!\n", __func__);
 	if (system_rev < BOARD_REV03) {
 		gpio_tlmm_config(GPIO_CFG(gpio_rev(GPIO_IRDA_SDA), 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
@@ -1225,7 +1225,7 @@ static struct i2c_board_info touchkey_i2c_devices_info[] __initdata = {
 
 
 static struct i2c_gpio_platform_data  cypress_touchkey_i2c_gpio_data = {
-	.sda_pin		= GPIO_TOUCHKEY_SDA,	
+	.sda_pin		= GPIO_TOUCHKEY_SDA,
 	.scl_pin		= GPIO_TOUCHKEY_SCL,
 	.udelay			= 0,
 	.sda_is_open_drain	= 0,
@@ -1239,7 +1239,7 @@ static struct platform_device touchkey_i2c_gpio_device = {
 };
 
 static struct i2c_gpio_platform_data  cypress_touchkey_i2c_gpio_data_2 = {
-	.sda_pin		= GPIO_TOUCHKEY_SDA,	
+	.sda_pin		= GPIO_TOUCHKEY_SDA,
 	.scl_pin		= GPIO_TOUCHKEY_SCL_2,
 	.udelay			= 0,
 	.sda_is_open_drain	= 0,
@@ -3291,7 +3291,7 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 7,
+	.sensor_id = 0,
 	.poll_ms = 250,
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
@@ -5233,10 +5233,10 @@ static void sec_jack_init(void)
 		.pull			= PM_GPIO_PULL_NO,
 		.out_strength	= PM_GPIO_STRENGTH_HIGH,
 		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,		
+		.inv_int_pol	= 0,
 		.vin_sel		= PM_GPIO_VIN_S4,
 		.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
-		.output_value	= 1,		
+		.output_value	= 1,
 	};
 
 	static struct pm_gpio fsa8048_en_old = {
@@ -5244,10 +5244,10 @@ static void sec_jack_init(void)
 		.pull			= PM_GPIO_PULL_UP_30,
 		.out_strength	= PM_GPIO_STRENGTH_HIGH,
 		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,		
+		.inv_int_pol	= 0,
 		.vin_sel		= PM_GPIO_VIN_S4,
 		.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
-		.output_value	= 1,		
+		.output_value	= 1,
 	};
 
 	ret = gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN),
@@ -5415,7 +5415,7 @@ static void __init apq8064_common_init(void)
 			platform_device_register(&apq8064_device_qup_i2c_gsbi4);
 		}
 	}
-	
+
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
 	if (system_rev < 9)
 		platform_device_register(&touchkey_i2c_gpio_device);
