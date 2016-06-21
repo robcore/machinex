@@ -23,6 +23,10 @@
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
 
+#ifdef CONFIG_LCD_NOTIFY
+#include <linux/lcd_notify.h>
+#endif
+
 #if defined(CONFIG_FB_MDP4_ENHANCE)
 #include "mdp4_video_enhance.h"
 #elif defined(CONFIG_MDNIE_LITE_TUNING)
