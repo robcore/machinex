@@ -152,6 +152,10 @@
 #include <mach/fusion3-thermistor.h>
 #endif
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/kexec.h>
+#endif
+
 #if defined(CONFIG_SENSORS_SSP)
 enum {
 	SNS_PWR_OFF,
@@ -1059,7 +1063,15 @@ static struct platform_device ram_console_device = {
 static struct persistent_ram_descriptor per_ram_descs[] __initdata = {
        {
                .name = "ram_console",
-               .size = SZ_1M,
+#ifdef CONFIG_KEXEC_HARDBOOT
+               .size = KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR,
+       },
+       {
+               .name = "kexec_hb_page",
+               .size = SZ_1M - (KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR),
+#else
+                .size = SZ_1M,
+#endif
        }
 };
 
@@ -3279,7 +3291,7 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 0,
+	.sensor_id = 7,
 	.poll_ms = 250,
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
