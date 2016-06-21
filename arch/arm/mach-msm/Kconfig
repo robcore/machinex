@@ -877,13 +877,13 @@ config MACH_GOLDEN_ATT
 	bool "MSM8930 GOLDEN ATT"
 	help
 	  Support for the Samsung Golden device.
-	  
+
  config MACH_GOLDEN_BMC
         depends on MACH_GOLDEN
         bool "MSM8930 GOLDEN BMC"
         help
           Support for the Samsung Golden device.
-		  
+
 config MACH_MELIUS
 	depends on ARCH_MSM8930
 	bool "MSM8930 MELIUS"
@@ -981,13 +981,13 @@ config MACH_LT02_SPR
 	bool "MSM8930 LT02 SPR"
 	help
 	  Support for the Samsung LT02(Tablet) device.
-	  
+
 config MACH_LT02_TMO
 	depends on MACH_LT02
 	bool "MSM8930 LT02 TMO"
 	help
 	  Support for the Samsung LT02(Tablet) device.
-	  
+
 config MACH_SERRANO_LRA
 	depends on MACH_SERRANO
 	bool "MSM8930 SERRANO LRA"
@@ -1325,7 +1325,7 @@ config TARGET_LOCALE_JPN
 	help
 	  Enable LOCALE JPN.
 	  used to distinguish LOCALE-related differences.
-	  
+
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -3086,7 +3086,7 @@ config SEC_THERMISTOR
 	default n
 	help
 	Use thermistor driver for checking temperature near AP chip.
-	  
+
 config EXT_MAINMIC_BIAS
 	depends on ARCH_MSM8930
 	default n
@@ -3169,7 +3169,7 @@ config 2MIC_QUP_I2C_GSBI2
          Say Y here if you want use 2MIC QUP GSBI2.
 	 To compile this option, choose M here:
 	 If unsure, say N here.
-	 
+
 config EXT_ADC_IC
        	depends on ARCH_MSM8930
 	default n
@@ -3244,7 +3244,7 @@ config AUXPCM_INTERFACE
          Say Y here if you want use auxpcm interface for external device.
 	 To compile this option, choose M here:
 	 If unsure, say N here.
-	 
+
 config PCM_ROUTE_VOICE_STUB
 	depends on ARCH_MSM8930
 	default n
