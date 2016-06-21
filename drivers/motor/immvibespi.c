@@ -396,3 +396,4 @@ static int32_t ImmVibeSPI_Device_GetName(
 {
 	return VIBE_S_SUCCESS;
 }
+
