@@ -1,3 +1,5 @@
+
+
 /*Qualcomm Secure Execution Environment Communicator (QSEECOM) driver
  *
  * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
@@ -1282,8 +1284,7 @@ static int qseecom_receive_req(struct qseecom_dev_handle *data)
 		if (wait_event_freezable(this_lstnr->rcv_req_wq,
 				__qseecom_listener_has_rcvd_req(data,
 				this_lstnr))) {
-			pr_debug("Interrupted: exiting Listener Service = %d\n",
-						(uint32_t)data->listener.id);
+			pr_warning("Interrupted: exiting wait_rcv_req loop\n");
 			/* woken up for different reason */
 			return -ERESTARTSYS;
 		}
@@ -1632,7 +1633,6 @@ int qseecom_shutdown_app(struct qseecom_handle **handle)
 {
 	int ret = -EINVAL;
 	struct qseecom_dev_handle *data;
-
 	struct qseecom_registered_kclient_list *kclient = NULL;
 	unsigned long flags = 0;
 	bool found_handle = false;
@@ -1641,11 +1641,14 @@ int qseecom_shutdown_app(struct qseecom_handle **handle)
 		pr_err("This functionality is UNSUPPORTED in version 1.3\n");
 		return -EINVAL;
 	}
-	if ((handle == NULL)  || (*handle == NULL)) {
+
+	if (*handle == NULL) {
 		pr_err("Handle is not initialized\n");
 		return -EINVAL;
 	}
-	data =	(struct qseecom_dev_handle *) ((*handle)->dev);
+
+	data = (struct qseecom_dev_handle *) ((*handle)->dev);
+
 	spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
 	list_for_each_entry(kclient, &qseecom.registered_kclient_list_head,
 				list) {
@@ -2136,7 +2139,7 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 		ret = qseecom_receive_req(data);
 		atomic_dec(&data->ioctl_count);
 		wake_up_all(&data->abort_wq);
-		if (ret && (ret != -ERESTARTSYS))
+		if (ret)
 			pr_err("failed qseecom_receive_req: %d\n", ret);
 		break;
 	}

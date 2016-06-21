@@ -519,38 +519,26 @@ static int bad_syscall(int n, struct pt_regs *regs)
 	return regs->ARM_r0;
 }
 
-static inline int
-__do_cache_op(unsigned long start, unsigned long end)
-{
- int ret;
-
- do {
- unsigned long chunk = min(PAGE_SIZE, end - start);
-
-		if (fatal_signal_pending(current))
-			return 0;
-
- ret = flush_cache_user_range(start, start + chunk);
- if (ret)
- return ret;
-
- cond_resched();
- start += chunk;
- } while (start < end);
-
- return 0;
-}
-
-static inline int
+static inline void
 do_cache_op(unsigned long start, unsigned long end, int flags)
 {
+	struct mm_struct *mm = current->active_mm;
+	struct vm_area_struct *vma;
+
 	if (end < start || flags)
-		return -EINVAL;
+		return;
 
- if (!access_ok(VERIFY_READ, start, end - start))
- return -EFAULT;
+	down_read(&mm->mmap_sem);
+	vma = find_vma(mm, start);
+	if (vma && vma->vm_start < end) {
+		if (start < vma->vm_start)
+			start = vma->vm_start;
+		if (end > vma->vm_end)
+			end = vma->vm_end;
 
-return __do_cache_op(start, end);
+		flush_cache_user_range(vma, start, end);
+	}
+	up_read(&mm->mmap_sem);
 }
 
 /*
@@ -596,7 +584,8 @@ asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 	 * the specified region).
 	 */
 	case NR(cacheflush):
-		return do_cache_op(regs->ARM_r0, regs->ARM_r1, regs->ARM_r2);
+		do_cache_op(regs->ARM_r0, regs->ARM_r1, regs->ARM_r2);
+		return 0;
 
 	case NR(usr26):
 		if (!(elf_hwcap & HWCAP_26BIT))

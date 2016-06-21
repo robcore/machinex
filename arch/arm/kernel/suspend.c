@@ -1,16 +1,13 @@
 #include <linux/init.h>
-#include <linux/slab.h>
 
-#include <asm/cacheflush.h>
 #include <asm/idmap.h>
 #include <asm/pgalloc.h>
 #include <asm/pgtable.h>
 #include <asm/memory.h>
-#include <asm/smp_plat.h>
 #include <asm/suspend.h>
 #include <asm/tlbflush.h>
 
-extern int __cpu_suspend(unsigned long, int (*)(unsigned long), u32 cpuid);
+extern int __cpu_suspend(unsigned long, int (*)(unsigned long));
 extern void cpu_resume_mmu(void);
 
 /*
@@ -20,8 +17,6 @@ extern void cpu_resume_mmu(void);
  */
 void __cpu_suspend_save(u32 *ptr, u32 ptrsz, u32 sp, u32 *save_ptr)
 {
-	u32 *ctx = ptr;
-
 	*save_ptr = virt_to_phys(ptr);
 
 	/* This must correspond to the LDM in cpu_resume() assembly */
@@ -31,20 +26,7 @@ void __cpu_suspend_save(u32 *ptr, u32 ptrsz, u32 sp, u32 *save_ptr)
 
 	cpu_do_suspend(ptr);
 
-	flush_cache_louis();
-
-	/*
-	 * flush_cache_louis does not guarantee that
-	 * save_ptr and ptr are cleaned to main memory,
-	 * just up to the Level of Unification Inner Shareable.
-	 * Since the context pointer and context itself
-	 * are to be retrieved with the MMU off that
-	 * data must be cleaned from all cache levels
-	 * to main memory using "area" cache primitives.
-	 */
-	__cpuc_flush_dcache_area(ctx, ptrsz);
-	__cpuc_flush_dcache_area(save_ptr, sizeof(*save_ptr));
-
+	flush_cache_all();
 	outer_clean_range(*save_ptr, *save_ptr + ptrsz);
 	outer_clean_range(virt_to_phys(save_ptr),
 			  virt_to_phys(save_ptr) + sizeof(*save_ptr));
@@ -57,7 +39,6 @@ void __cpu_suspend_save(u32 *ptr, u32 ptrsz, u32 sp, u32 *save_ptr)
 int cpu_suspend(unsigned long arg, int (*fn)(unsigned long))
 {
 	struct mm_struct *mm = current->active_mm;
-	u32 __mpidr = cpu_logical_map(smp_processor_id());
 	int ret;
 
 	if (!idmap_pgd)
@@ -69,30 +50,11 @@ int cpu_suspend(unsigned long arg, int (*fn)(unsigned long))
 	 * resume (indicated by a zero return code), we need to switch
 	 * back to the correct page tables.
 	 */
-	ret = __cpu_suspend(arg, fn, __mpidr);
+	ret = __cpu_suspend(arg, fn);
 	if (ret == 0) {
 		cpu_switch_mm(mm->pgd, mm);
 		local_flush_tlb_all();
-	} else {
-		local_flush_tlb_all_non_is();
 	}
 
 	return ret;
 }
-
-extern struct sleep_save_sp sleep_save_sp;
-
-static int cpu_suspend_alloc_sp(void)
-{
-	void *ctx_ptr;
-	/* ctx_ptr is an array of physical addresses */
-	ctx_ptr = kcalloc(mpidr_hash_size(), sizeof(u32), GFP_KERNEL);
-
-	if (WARN_ON(!ctx_ptr))
-		return -ENOMEM;
-	sleep_save_sp.save_ptr_stash = ctx_ptr;
-	sleep_save_sp.save_ptr_stash_phys = virt_to_phys(ctx_ptr);
-	sync_cache_w(&sleep_save_sp);
-	return 0;
-}
-early_initcall(cpu_suspend_alloc_sp);

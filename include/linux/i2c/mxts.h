@@ -16,8 +16,8 @@
 #ifndef __MXT_H__
 #define __MXT_H__
 
-#ifdef CONFIG_HAS_POWERSUSPEND
-#include <linux/powersuspend.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT224S)
@@ -267,9 +267,7 @@ enum {
 #define MXT_REVISION_I	1	/* Support hovering */
 
 /************** Feature + **************/
-#ifdef CONFIG_SEC_DVFS_BOOSTER
 #define TSP_BOOSTER				1
-#endif
 #define TSP_SEC_FACTORY			1
 #define TSP_INFORM_CHARGER		1
 #define TSP_USE_SHAPETOUCH		1
@@ -346,7 +344,7 @@ enum {
 };
 #endif
 
-#ifdef TSP_BOOSTER
+#if TSP_BOOSTER
 #include <linux/cpufreq.h>
 #define TOUCH_BOOSTER_OFF_TIME	100
 #define TOUCH_BOOSTER_CHG_TIME	200
@@ -432,7 +430,7 @@ struct mxt_reportid {
 	u8 index;
 };
 
-#ifdef TSP_BOOSTER
+#if TSP_BOOSTER
 struct touch_booster {
 	bool touch_cpu_lock_status;
 	int cpu_lv;
@@ -491,10 +489,10 @@ struct mxt_data {
 	u8 max_reportid;
 	u8 finger_mask ;
 	bool mxt_enabled;
-#ifdef CONFIG_HAS_POWERSUSPEND
-	struct power_suspend power_suspend;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend early_suspend;
 #endif
-#ifdef TSP_BOOSTER
+#if TSP_BOOSTER
 	struct delayed_work work_dvfs_off;
 	bool	dvfs_lock_status;
 	struct mutex dvfs_lock;

@@ -63,7 +63,7 @@ ENTRY(cpu_v7_reset)
 	mcr     p15, 0, ip, c7, c5, 6           @ flush BTC
 	dsb
 	isb
-	bx	r0
+	mov	pc, r0
 ENDPROC(cpu_v7_reset)
 	.popsection
 
@@ -81,16 +81,14 @@ ENTRY(cpu_v7_do_idle)
 ENDPROC(cpu_v7_do_idle)
 
 ENTRY(cpu_v7_dcache_clean_area)
-//#ifndef TLB_CAN_READ_FROM_L1_CACHE
-	ALT_SMP(mov	pc, lr)			@ MP extensions imply L1 PTW	
-	ALT_UP(W(nop))
+#ifndef TLB_CAN_READ_FROM_L1_CACHE
 	dcache_line_size r2, r3
 1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
 	add	r0, r0, r2
 	subs	r1, r1, r2
 	bhi	1b
 	dsb
-//#endif
+#endif
 	mov	pc, lr
 ENDPROC(cpu_v7_dcache_clean_area)
 
@@ -187,9 +185,6 @@ __v7_ca9mp_setup:
 	b	1f
 __v7_ca7mp_setup:
 __v7_ca15mp_setup:
-	mrc	p15, 0, r0, c1, c0, 1
-	orr	r0, #(1<<24)			@ Enable NCSE in ACTLR
-	mcr	p15, 0, r0, c1, c0, 1
 	mov	r10, #0
 1:
 #ifdef CONFIG_SMP
@@ -198,23 +193,15 @@ __v7_ca15mp_setup:
 	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
 	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode
 	orreq	r0, r0, r10			@ Enable CPU-specific SMP bits
-	orr	r0, #(1<<24)			@ Enable non-cacheable streaming enhancement
-	mcr	p15, 0, r0, c1, c0, 1
+	mcreq	p15, 0, r0, c1, c0, 1
 #endif
 __v7_setup:
 	adr	r12, __v7_setup_stack		@ the local stack
-	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
-	ubfx	r10, r0, #4, #28
-	ldr	r6, =0x00f0000
-	bic	r10, r10, r6
-	ldr	r6, =0x410fc0f			@ ARM cortex A15
-	teq	r10, r6
-	biceq	r10, r10, r10			@ clear r10 if it's A15
-	beq	4f
 	stmia	r12, {r0-r5, r7, r9, r11, lr}
-	bl	v7_flush_dcache_louis
+	bl	v7_flush_dcache_all
 	ldmia	r12, {r0-r5, r7, r9, r11, lr}
 
+	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
 	and	r10, r0, #0xff000000		@ ARM?
 	teq	r10, #0x41000000
 	bne	3f
@@ -285,7 +272,6 @@ __v7_setup:
 
 3:	mov	r10, #0
 	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
-4:
 #ifdef CONFIG_MMU
 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
 	v7_ttb_setup r10, r4, r8, r5		@ TTBCR, TTBRx setup
@@ -415,7 +401,7 @@ __v7_ca9mp_proc_info:
 __v7_ca7mp_proc_info:
 	.long	0x410fc070
 	.long	0xff0ffff0
-	__v7_proc __v7_ca7mp_setup
+	__v7_proc __v7_ca7mp_setup, hwcaps = HWCAP_IDIV
 	.size	__v7_ca7mp_proc_info, . - __v7_ca7mp_proc_info
 
 	/*
@@ -425,23 +411,8 @@ __v7_ca7mp_proc_info:
 __v7_ca15mp_proc_info:
 	.long	0x410fc0f0
 	.long	0xff0ffff0
-	__v7_proc __v7_ca15mp_setup
+	__v7_proc __v7_ca15mp_setup, hwcaps = HWCAP_IDIV
 	.size	__v7_ca15mp_proc_info, . - __v7_ca15mp_proc_info
-
-	/*
-	 * Qualcomm Inc. Krait processors.
-	 */
-	.type	__krait_proc_info, #object
-__krait_proc_info:
-	.long	0x510f0400		@ Required ID value
-	.long	0xff0ffc00		@ Mask for ID
-	/*
-	 * Some Krait processors don't indicate support for SDIV and UDIV
-	 * instructions in the ARM instruction set, even though they actually
-	 * do support them.
-	 */
-	__v7_proc __v7_setup, hwcaps = HWCAP_IDIV
-	.size	__krait_proc_info, . - __krait_proc_info
 
 	/*
 	 * Match any ARMv7 processor core.

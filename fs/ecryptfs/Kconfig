@@ -28,3 +28,8 @@ config ECRYPT_FS_VIRTUAL_FAT_XATTR
 	help
 	Modification of encrypted filesystem for virtual FAT xattr
 
+config FORCE_DISABLE_FIPS
+	bool "Force disable FIPS config"
+	default n
+	help
+	  Force disable FIPS config

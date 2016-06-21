@@ -116,6 +116,7 @@ static inline int rcu_needs_cpu(int cpu)
 static inline void rcu_note_context_switch(int cpu)
 {
 	rcu_sched_qs(cpu);
+	rcu_preempt_note_context_switch();
 }
 
 /*

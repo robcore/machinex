@@ -106,8 +106,7 @@ struct devfreq_dev_profile {
  */
 struct devfreq_governor {
 	const char name[DEVFREQ_NAME_LEN];
-	int (*get_target_freq)(struct devfreq *this, unsigned long *freq,
-				u32 *flag);
+	int (*get_target_freq)(struct devfreq *this, unsigned long *freq);
 	int (*init)(struct devfreq *this);
 	void (*exit)(struct devfreq *this);
 	const bool no_central_polling;
@@ -202,9 +201,6 @@ extern const struct devfreq_governor devfreq_simple_ondemand;
  *			the governor may consider slowing the frequency down.
  *			Specify 0 to use the default. Valid value = 0 to 100.
  *			downdifferential < upthreshold must hold.
- * @simple_scaling:	Setting this flag will scale the clocks up only if the
- *			load is above @upthreshold and will scale the clocks
- *			down only if the load is below @downdifferential.
  *
  * If the fed devfreq_simple_ondemand_data pointer is NULL to the governor,
  * the governor uses the default values.
@@ -212,7 +208,6 @@ extern const struct devfreq_governor devfreq_simple_ondemand;
 struct devfreq_simple_ondemand_data {
 	unsigned int upthreshold;
 	unsigned int downdifferential;
-	unsigned int simple_scaling;
 };
 #endif
 

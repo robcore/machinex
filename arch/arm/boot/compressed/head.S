@@ -391,8 +391,11 @@ wont_overwrite:
  *   sp  = stack pointer
  */
 		orrs	r1, r0, r5
+#ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
+		beq not_relocated_copy
+#else
 		beq	not_relocated
-
+#endif
 		add	r11, r11, r0
 		add	r12, r12, r0
 
@@ -405,6 +408,9 @@ wont_overwrite:
 		add	r2, r2, r0
 		add	r3, r3, r0
 
+#ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
+        bl copy_compressed
+#endif
 		/*
 		 * Relocate all entries in the GOT table.
 		 * Bump bss entries to _edata + dtb size
@@ -483,6 +489,46 @@ params:		ldr	r0, =0x10000100		@ params_phys for RPC
 		mov	pc, lr
 		.ltorg
 		.align
+#endif
+
+/*
+ * change@ksingh.sra-dallas - Copying the zImage to a secure location 
+ * this copy will be used to computer integrity for FIPS validation
+ */
+#ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
+not_relocated_copy:
+		bl copy_compressed
+		b not_relocated
+
+copy_compressed:
+		// preserve the registers
+		PUSH {r1, r2, r4, r8, r9, r10}
+
+		// source address - zImage load address
+		movw r1, #:lower16:FIPS_KERNEL_RAM_BASE
+		movt r1, #:upper16:FIPS_KERNEL_RAM_BASE
+
+		// destination address - location where zImage copy will be made
+		movw r9, #:lower16:CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS
+	        movt r9, #:upper16:CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS
+
+1:
+		// makes the copy of zImage
+		ldmia	r1!, {r10}
+		stmia	r9!, {r10}
+		cmp	r1, r2
+		blo	1b
+
+		// copy the padded hash of zImage
+		.rept 8
+		ldmia	r1!, {r10}
+		stmia	r9!, {r10}
+		.endr
+
+		// restore the registers
+		POP {r1, r2, r4, r8, r9, r10}
+		// go back to where we came from
+		mov	pc, lr
 #endif
 
 /*
@@ -615,15 +661,6 @@ __setup_mmu:	sub	r3, r4, #16384		@ Page directory size
 		mov	pc, lr
 ENDPROC(__setup_mmu)
 
-@ Enable unaligned access on v6, to allow better code generation
-@ for the decompressor C code:
-__armv6_mmu_cache_on:
-		mrc	p15, 0, r0, c1, c0, 0	@ read SCTLR
-		bic	r0, r0, #2		@ A (no unaligned access fault)
-		orr	r0, r0, #1 << 22	@ U (v6 unaligned access model)
-		mcr	p15, 0, r0, c1, c0, 0	@ write SCTLR
-		b	__armv4_mmu_cache_on
-
 __arm926ejs_mmu_cache_on:
 #ifdef CONFIG_CPU_DCACHE_WRITETHROUGH
 		mov	r0, #4			@ put dcache in WT mode
@@ -666,9 +703,6 @@ __armv7_mmu_cache_on:
 		bic	r0, r0, #1 << 28	@ clear SCTLR.TRE
 		orr	r0, r0, #0x5000		@ I-cache enable, RR cache replacement
 		orr	r0, r0, #0x003c		@ write buffer
-		bic	r0, r0, #2		@ A (no unaligned access fault)
-		orr	r0, r0, #1 << 22	@ U (v6 unaligned access model)
-						@ (needed for ARM1176)
 #ifdef CONFIG_MMU
 #ifdef CONFIG_CPU_ENDIAN_BE8
 		orr	r0, r0, #1 << 25	@ big-endian page tables
@@ -909,7 +943,7 @@ proc_types:
 
 		.word	0x0007b000		@ ARMv6
 		.word	0x000ff000
-		W(b)	__armv6_mmu_cache_on
+		W(b)	__armv4_mmu_cache_on
 		W(b)	__armv4_mmu_cache_off
 		W(b)	__armv6_mmu_cache_flush
 
@@ -1030,8 +1064,6 @@ cache_clean_flush:
 		b	call_cache_fn
 
 __armv4_mpu_cache_flush:
-		tst	r4, #1
-		movne	pc, lr
 		mov	r2, #1
 		mov	r3, #0
 		mcr	p15, 0, ip, c7, c6, 0	@ invalidate D cache
@@ -1049,8 +1081,6 @@ __armv4_mpu_cache_flush:
 		mov	pc, lr
 		
 __fa526_cache_flush:
-		tst	r4, #1
-		movne	pc, lr
 		mov	r1, #0
 		mcr	p15, 0, r1, c7, c14, 0	@ clean and invalidate D cache
 		mcr	p15, 0, r1, c7, c5, 0	@ flush I cache
@@ -1059,16 +1089,13 @@ __fa526_cache_flush:
 
 __armv6_mmu_cache_flush:
 		mov	r1, #0
-		tst	r4, #1
-		mcreq	p15, 0, r1, c7, c14, 0	@ clean+invalidate D
+		mcr	p15, 0, r1, c7, c14, 0	@ clean+invalidate D
 		mcr	p15, 0, r1, c7, c5, 0	@ invalidate I+BTB
-		mcreq	p15, 0, r1, c7, c15, 0	@ clean+invalidate unified
+		mcr	p15, 0, r1, c7, c15, 0	@ clean+invalidate unified
 		mcr	p15, 0, r1, c7, c10, 4	@ drain WB
 		mov	pc, lr
 
 __armv7_mmu_cache_flush:
-		tst	r4, #1
-		bne	iflush
 		mrc	p15, 0, r10, c0, c1, 5	@ read ID_MMFR1
 		tst	r10, #0xf << 16		@ hierarchical cache (ARMv7)
 		mov	r10, #0
@@ -1129,8 +1156,6 @@ iflush:
 		mov	pc, lr
 
 __armv5tej_mmu_cache_flush:
-		tst	r4, #1
-		movne	pc, lr
 1:		mrc	p15, 0, r15, c7, c14, 3	@ test,clean,invalidate D cache
 		bne	1b
 		mcr	p15, 0, r0, c7, c5, 0	@ flush I cache
@@ -1138,8 +1163,6 @@ __armv5tej_mmu_cache_flush:
 		mov	pc, lr
 
 __armv4_mmu_cache_flush:
-		tst	r4, #1
-		movne	pc, lr
 		mov	r2, #64*1024		@ default: 32K dcache size (*2)
 		mov	r11, #32		@ default: 32 byte line size
 		mrc	p15, 0, r3, c0, c0, 1	@ read cache type
@@ -1173,8 +1196,6 @@ no_cache_id:
 
 __armv3_mmu_cache_flush:
 __armv3_mpu_cache_flush:
-		tst	r4, #1
-		movne	pc, lr
 		mov	r1, #0
 		mcr	p15, 0, r1, c7, c0, 0	@ invalidate whole cache v3
 		mov	pc, lr

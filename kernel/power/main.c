@@ -361,56 +361,47 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return (s - buf);
 }
 
-static suspend_state_t decode_state(const char *buf, size_t n)
+static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
+			   const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-	suspend_state_t state = PM_SUSPEND_MIN;
+#ifdef CONFIG_EARLYSUSPEND
+	suspend_state_t state = PM_SUSPEND_ON;
+#else
+	suspend_state_t state = PM_SUSPEND_STANDBY;
+#endif
 	const char * const *s;
 #endif
 	char *p;
 	int len;
+	int error = -EINVAL;
 
 	p = memchr(buf, '\n', n);
 	len = p ? p - buf : n;
 
-	/* Check hibernation first. */
-	if (len == 4 && !strncmp(buf, "disk", len))
-		return PM_SUSPEND_MAX;
-
-#ifdef CONFIG_SUSPEND
-	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
-		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))
-			return state;
-#endif
-
-	return PM_SUSPEND_ON;
-}
-
-static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t n)
-{
-	suspend_state_t state;
-	int error;
-
-	error = pm_autosleep_lock();
-	if (error)
-		return error;
-
-	if (pm_autosleep_state() > PM_SUSPEND_ON) {
-		error = -EBUSY;
-		goto out;
+	/* First, check if we are requested to hibernate */
+	if (len == 4 && !strncmp(buf, "disk", len)) {
+		error = hibernate();
+		goto Exit;
 	}
 
-	state = decode_state(buf, n);
-	if (state < PM_SUSPEND_MAX)
-		error = pm_suspend(state);
-	else if (state == PM_SUSPEND_MAX)
-		error = hibernate();
-	else
-		error = -EINVAL;
+#ifdef CONFIG_SUSPEND
+	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++) {
+		if (*s && len == strlen(*s) && !strncmp(buf, *s, len)) {
+#ifdef CONFIG_EARLYSUSPEND
+			if (state == PM_SUSPEND_ON || valid_state(state)) {
+				error = 0;
+				request_suspend_state(state);
+				break;
+			}
+#else
+			error = pm_suspend(state);
+#endif
+		}
+	}
+#endif
 
- out:
-	pm_autosleep_unlock();
+ Exit:
 	return error ? error : n;
 }
 
@@ -451,8 +442,7 @@ static ssize_t wakeup_count_show(struct kobject *kobj,
 {
 	unsigned int val;
 
-	return pm_get_wakeup_count(&val, true) ?
-		sprintf(buf, "%u\n", val) : -EINTR;
+	return pm_get_wakeup_count(&val) ? sprintf(buf, "%u\n", val) : -EINTR;
 }
 
 static ssize_t wakeup_count_store(struct kobject *kobj,
@@ -460,106 +450,15 @@ static ssize_t wakeup_count_store(struct kobject *kobj,
 				const char *buf, size_t n)
 {
 	unsigned int val;
-	int error;
 
-	error = pm_autosleep_lock();
-	if (error)
-		return error;
-
-	if (pm_autosleep_state() > PM_SUSPEND_ON) {
-		error = -EBUSY;
-		goto out;
-	}
-
-	error = -EINVAL;
 	if (sscanf(buf, "%u", &val) == 1) {
 		if (pm_save_wakeup_count(val))
-			error = n;
+			return n;
 	}
-
- out:
-	pm_autosleep_unlock();
-	return error;
+	return -EINVAL;
 }
 
 power_attr(wakeup_count);
-
-#ifdef CONFIG_PM_AUTOSLEEP
-static ssize_t autosleep_show(struct kobject *kobj,
-			      struct kobj_attribute *attr,
-			      char *buf)
-{
-	suspend_state_t state = pm_autosleep_state();
-
-	if (state == PM_SUSPEND_ON)
-		return sprintf(buf, "off\n");
-
-#ifdef CONFIG_SUSPEND
-	if (state < PM_SUSPEND_MAX)
-		return sprintf(buf, "%s\n", valid_state(state) ?
-						pm_states[state] : "error");
-#endif
-#ifdef CONFIG_HIBERNATION
-	return sprintf(buf, "disk\n");
-#else
-	return sprintf(buf, "error");
-#endif
-}
-
-static ssize_t autosleep_store(struct kobject *kobj,
-			       struct kobj_attribute *attr,
-			       const char *buf, size_t n)
-{
-	suspend_state_t state = decode_state(buf, n);
-	int error;
-
-	if (state == PM_SUSPEND_ON
-	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
-		return -EINVAL;
-
-	error = pm_autosleep_set_state(state);
-	return error ? error : n;
-}
-
-power_attr(autosleep);
-#endif /* CONFIG_PM_AUTOSLEEP */
-
-#ifdef CONFIG_PM_WAKELOCKS
-static ssize_t wake_lock_show(struct kobject *kobj,
-			      struct kobj_attribute *attr,
-			      char *buf)
-{
-	return pm_show_wakelocks(buf, true);
-}
-
-static ssize_t wake_lock_store(struct kobject *kobj,
-			       struct kobj_attribute *attr,
-			       const char *buf, size_t n)
-{
-	int error = pm_wake_lock(buf);
-	return error ? error : n;
-}
-
-power_attr(wake_lock);
-
-static ssize_t wake_unlock_show(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				char *buf)
-{
-	return pm_show_wakelocks(buf, false);
-}
-
-static ssize_t wake_unlock_store(struct kobject *kobj,
-				 struct kobj_attribute *attr,
-				 const char *buf, size_t n)
-{
-	int error = pm_wake_unlock(buf);
-	return error ? error : n;
-}
-
-power_attr(wake_unlock);
-
-#endif /* CONFIG_PM_WAKELOCKS */
 #endif /* CONFIG_PM_SLEEP */
 
 #ifdef CONFIG_PM_TRACE
@@ -603,6 +502,11 @@ pm_trace_dev_match_store(struct kobject *kobj, struct kobj_attribute *attr,
 power_attr(pm_trace_dev_match);
 
 #endif /* CONFIG_PM_TRACE */
+
+#ifdef CONFIG_USER_WAKELOCK
+power_attr(wake_lock);
+power_attr(wake_unlock);
+#endif
 
 #ifdef CONFIG_SEC_DVFS
 DEFINE_MUTEX(dvfs_mutex);
@@ -811,6 +715,38 @@ power_attr(cpufreq_min_limit);
 power_attr(cpufreq_table);
 #endif
 
+static ssize_t hard_reset_ctl_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", pm8xxx_hard_reset_enabled());
+}
+
+static ssize_t hard_reset_ctl_store(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					const char *buf, size_t n)
+{
+	int ret = 0;
+	int enable;
+
+	ret = sscanf(buf, "%d", &enable);
+
+	if (ret != 1 || enable > 1)
+		return -EINVAL;
+
+	ret = pm8xxx_hard_reset_control(enable);
+	if (ret)
+		return -EPERM;
+
+	ret = resout_irq_control(enable);
+	if (ret)
+		return -EPERM;
+
+	pr_info("hard_reset_controlled = %d\n", enable);
+
+	return n;
+}
+
+power_attr(hard_reset_ctl);
 
 static struct attribute *g[] = {
 	&state_attr.attr,
@@ -821,17 +757,14 @@ static struct attribute *g[] = {
 #ifdef CONFIG_PM_SLEEP
 	&pm_async_attr.attr,
 	&wakeup_count_attr.attr,
-#ifdef CONFIG_PM_AUTOSLEEP
-	&autosleep_attr.attr,
-#endif
-#ifdef CONFIG_PM_WAKELOCKS
-	&wake_lock_attr.attr,
-	&wake_unlock_attr.attr,
-#endif
 	&touch_event_attr.attr,
 	&touch_event_timer_attr.attr,
 #ifdef CONFIG_PM_DEBUG
 	&pm_test_attr.attr,
+#endif
+#ifdef CONFIG_USER_WAKELOCK
+	&wake_lock_attr.attr,
+	&wake_unlock_attr.attr,
 #endif
 #endif
 #ifdef CONFIG_SEC_DVFS
@@ -839,6 +772,7 @@ static struct attribute *g[] = {
 	&cpufreq_max_limit_attr.attr,
 	&cpufreq_table_attr.attr,
 #endif
+	&hard_reset_ctl_attr.attr,
 	NULL,
 };
 
@@ -883,10 +817,8 @@ static int __init pm_init(void)
 	apps_max_freq = MAX_FREQ_LIMIT;
 	thermald_max_freq = MAX_FREQ_LIMIT;
 #endif
-	error = sysfs_create_group(power_kobj, &attr_group);
-	if (error)
-		return error;
-	return pm_autosleep_init();
+
+	return sysfs_create_group(power_kobj, &attr_group);
 }
 
 core_initcall(pm_init);

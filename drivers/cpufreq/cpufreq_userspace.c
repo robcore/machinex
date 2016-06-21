@@ -11,8 +11,6 @@
  *
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/smp.h>
@@ -176,7 +174,7 @@ static int cpufreq_governor_userspace(struct cpufreq_policy *policy,
 		} else {
 			__cpufreq_driver_target(policy,
 						per_cpu(cpu_set_freq, cpu),
-						CPUFREQ_RELATION_C);
+						CPUFREQ_RELATION_L);
 		}
 		per_cpu(cpu_min_freq, cpu) = policy->min;
 		per_cpu(cpu_max_freq, cpu) = policy->max;

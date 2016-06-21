@@ -176,7 +176,6 @@ config ARCH_MSM8960
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
-	select HAS_MACH_MEMUTILS
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -215,7 +214,6 @@ config ARCH_MSM8930
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
-	select HAS_MACH_MEMUTILS
 
 config ARCH_APQ8064
 	bool "APQ8064"
@@ -250,7 +248,6 @@ config ARCH_APQ8064
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
-	select HAS_MACH_MEMUTILS
 
 config ARCH_MSM8974
 	bool "MSM8974"
@@ -276,7 +273,6 @@ config ARCH_MSM8974
 	select MSM_RPM_REGULATOR_SMD
 	select ARM_HAS_SG_CHAIN
 	select MSM_RUN_QUEUE_STATS
-	select HAS_MACH_MEMUTILS
 
 config ARCH_MPQ8092
 	bool "MPQ8092"
@@ -881,13 +877,13 @@ config MACH_GOLDEN_ATT
 	bool "MSM8930 GOLDEN ATT"
 	help
 	  Support for the Samsung Golden device.
-
+	  
  config MACH_GOLDEN_BMC
         depends on MACH_GOLDEN
         bool "MSM8930 GOLDEN BMC"
         help
           Support for the Samsung Golden device.
-
+		  
 config MACH_MELIUS
 	depends on ARCH_MSM8930
 	bool "MSM8930 MELIUS"
@@ -985,13 +981,13 @@ config MACH_LT02_SPR
 	bool "MSM8930 LT02 SPR"
 	help
 	  Support for the Samsung LT02(Tablet) device.
-
+	  
 config MACH_LT02_TMO
 	depends on MACH_LT02
 	bool "MSM8930 LT02 TMO"
 	help
 	  Support for the Samsung LT02(Tablet) device.
-
+	  
 config MACH_SERRANO_LRA
 	depends on MACH_SERRANO
 	bool "MSM8930 SERRANO LRA"
@@ -1329,7 +1325,7 @@ config TARGET_LOCALE_JPN
 	help
 	  Enable LOCALE JPN.
 	  used to distinguish LOCALE-related differences.
-
+	  
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -2018,39 +2014,6 @@ config MSM_CPU_FREQ_MIN
 
 endif # CPU_FREQ_MSM
 
-config ZEN_DECISION
-	bool "Zen Decision: MSM Userspace Handler"
-	depends on SMP && FB
-	default n
-	help
-	  MSM/Qcomm devices have multiple userspace applications that handle
-	  CPU hotplugging and frequency operations.
-
-	  ZenDecision is a "handler" to account for behavior caused by
-	  disabling some of these services.
-
-	  For example, If MPDecision is disabled and MSM-Thermal_Engine is
-	  enabled in the userspace. Situations where CPUs go offline but never
-	  come back online occur. ZenDecision handles the situation of CPUs
-	  never coming online when they are supposed.
-
-	  ZenDecision ensures all CPUs are online when they are supposed to be by:
-	  - Enable all CPUs when screen comes on after wake_wait_delay
-	  - Ignore all CPU_UP operations when battery level is <= 15% to respect
-	    decisions of MSMThermal.
-
-	  Userspace tunables for ZenDecision (/sys/kernel/zen_decision):
-	  - enabled (0 or 1): Enable or disable the driver.
-	  - wake_wait_time (0-60000): How long to wait before executing CPU_UP work.
-	  - bat_threshold_ignore (0-100, 0=disabled): Don't do any CPU_UP work up to
-	     this battery charge level.
-
-	  WARNING: ZenDecision is not a direct replacement for any of the MSM userspace
-	  services. It is simply designed to "handle" specific behaviors that are caused
-	  by disabling these services.
-
-	  If unsure, say N.
-
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
 	default n
@@ -2660,14 +2623,6 @@ config MSM_RUN_QUEUE_STATS
          in user mode, called MPDecision will be using this data to decide
          on when to switch off/on the other cores.
 
-config MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE
-	bool "Use a more conservative computation for RQ Stats"
-	depends on MSM_RUN_QUEUE_STATS
-	default n
-	help
-	  Enable more conservative computation of load and size of the run
-	  queue.
-
 config MSM_STANDALONE_POWER_COLLAPSE
        bool "Enable standalone power collapse"
        default n
@@ -3131,7 +3086,7 @@ config SEC_THERMISTOR
 	default n
 	help
 	Use thermistor driver for checking temperature near AP chip.
-
+	  
 config EXT_MAINMIC_BIAS
 	depends on ARCH_MSM8930
 	default n
@@ -3214,7 +3169,7 @@ config 2MIC_QUP_I2C_GSBI2
          Say Y here if you want use 2MIC QUP GSBI2.
 	 To compile this option, choose M here:
 	 If unsure, say N here.
-
+	 
 config EXT_ADC_IC
        	depends on ARCH_MSM8930
 	default n
@@ -3289,7 +3244,7 @@ config AUXPCM_INTERFACE
          Say Y here if you want use auxpcm interface for external device.
 	 To compile this option, choose M here:
 	 If unsure, say N here.
-
+	 
 config PCM_ROUTE_VOICE_STUB
 	depends on ARCH_MSM8930
 	default n
@@ -3306,12 +3261,6 @@ config SEC_FACTORY
 	help
 	  Enable Features only For FACTORY BINARY.
 
-config HAS_MACH_MEMUTILS
-	default n
-	bool "Motorola MSM memcpy enhancements"
-	help
-	Faster memcpy performance for Krait
-
 config FORCE_FAST_CHARGE
 	bool "Force fast charging (AC/USB) by Yank555.lu"
 	default n
@@ -3319,27 +3268,5 @@ config FORCE_FAST_CHARGE
 	  A simple sysfs interface to force adapters that
 	  are detected as USB to charge as AC (1A/h) or to set
 	  custom charging currents for AC and USB.
-
-config INTELLI_PLUG
-        bool "Enable intelli-plug cpu hotplug driver"
-        default n
-        help
-          Generic Intelli-plug cpu hotplug driver for ARM SOCs
-
-config MSM_HOTPLUG
-	bool "MSM hotplug driver"
-	depends on HOTPLUG_CPU
-	default y
-	help
-	  The MSM hotplug driver controls on-/offlining of additional cores based
-	  on current cpu load.
-
-config BRICKED_HOTPLUG
-	bool "Enable kernel based mpdecision"
-	depends on MSM_RUN_QUEUE_STATS
-	default y
-	help
-	  This enables kernel based multi core control.
-	  (up/down hotplug based on load)
 
 endif

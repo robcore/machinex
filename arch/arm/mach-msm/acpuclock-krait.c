@@ -39,7 +39,6 @@
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
 #include "avs.h"
-#include "acpuclock-common.h"
 #ifdef CONFIG_SEC_DEBUG_DCVS_LOG
 #include <mach/sec_debug.h>
 #endif
@@ -406,12 +405,12 @@ static void decrease_vdd(int cpu, struct vdd_data *data,
 	}
 }
 
-static inline int calculate_vdd_mem(const struct acpu_level *tgt)
+static int calculate_vdd_mem(const struct acpu_level *tgt)
 {
 	return drv.l2_freq_tbl[tgt->l2_level].vdd_mem;
 }
 
-static inline int get_src_dig(const struct core_speed *s)
+static int get_src_dig(const struct core_speed *s)
 {
 	const int *hfpll_vdd = drv.hfpll_data->vdd;
 	const u32 low_vdd_l_max = drv.hfpll_data->low_vdd_l_max;
@@ -427,7 +426,7 @@ static inline int get_src_dig(const struct core_speed *s)
 		return hfpll_vdd[HFPLL_VDD_LOW];
 }
 
-static inline int calculate_vdd_dig(const struct acpu_level *tgt)
+static int calculate_vdd_dig(const struct acpu_level *tgt)
 {
 	int l2_pll_vdd_dig, cpu_pll_vdd_dig;
 
@@ -441,7 +440,7 @@ static inline int calculate_vdd_dig(const struct acpu_level *tgt)
 static bool enable_boost = true;
 module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
 
-static inline int calculate_vdd_core(const struct acpu_level *tgt)
+static int calculate_vdd_core(const struct acpu_level *tgt)
 {
 	return tgt->vdd_core + (enable_boost ? drv.boost_uv : 0);
 }
@@ -942,53 +941,8 @@ static void __init bus_init(const struct l2_level *l2_level)
 		dev_err(drv.dev, "initial bandwidth req failed (%d)\n", ret);
 }
 
-#define HFPLL_MIN_VDD		 600000
-#define HFPLL_MAX_VDD		1450000
-
-ssize_t acpuclk_get_vdd_levels_str(char *buf) {
-
-	int i, len = 0;
-
-	if (buf) {
-		mutex_lock(&driver_lock);
-
-		for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
-			/* updated to use uv required by 8x60 architecture - faux123 */
-			len += sprintf(buf + len, "%8lu: %8d\n", drv.acpu_freq_tbl[i].speed.khz,
-				drv.acpu_freq_tbl[i].vdd_core );
-		}
-
-		mutex_unlock(&driver_lock);
-	}
-	return len;
-}
-
-/* updated to use uv required by 8x60 architecture - faux123 */
-void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
-
-	int i;
-	unsigned int new_vdd_uv;
-
-	mutex_lock(&driver_lock);
-
-	for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
-		if (khz == 0)
-			new_vdd_uv = min(max((unsigned int)(drv.acpu_freq_tbl[i].vdd_core + vdd_uv),
-				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
-		else if ( drv.acpu_freq_tbl[i].speed.khz == khz)
-			new_vdd_uv = min(max((unsigned int)vdd_uv,
-				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
-		else 
-			continue;
-
-		drv.acpu_freq_tbl[i].vdd_core = new_vdd_uv;
-	}
-	pr_warn("acpuclock: user voltage table modified!\n");
-	mutex_unlock(&driver_lock);
-}
-
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][FREQ_TABLE_SIZE];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
@@ -1165,7 +1119,6 @@ static struct pvs_table * __init select_freq_plan(u32 pte_efuse_phys,
 	speed_bin = bin_idx;
 	pvs_bin = tbl_idx;
 #endif
-	
 	return &pvs_tables[bin_idx][tbl_idx];
 }
 

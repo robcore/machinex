@@ -46,7 +46,7 @@
 ENTRY(cpu_v7_switch_mm)
 #ifdef CONFIG_MMU
 	mov	r2, #0
-	mmid	r1, r1				@ get mm->context.id
+	ldr	r1, [r1, #MM_CONTEXT_ID]	@ get mm->context.id
 	ALT_SMP(orr	r0, r0, #TTB_FLAGS_SMP)
 	ALT_UP(orr	r0, r0, #TTB_FLAGS_UP)
 #ifdef CONFIG_ARM_ERRATA_430973
@@ -176,8 +176,7 @@ TIMA_CMP_LOOP2:
  ARM(	str	r3, [r0, #2048]! )
  THUMB(	add	r0, r0, #2048 )
  THUMB(	str	r3, [r0] )
- 	ALT_SMP(W(nop))
-	ALT_UP (mcr	p15, 0, r0, c7, c10, 1)	@ flush_pte
+ 	mcr     p15, 0, r0, c7, c10, 1          @ flush_pte
 #endif
 #endif
 	mov	pc, lr
