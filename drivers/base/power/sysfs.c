@@ -500,6 +500,8 @@ static ssize_t async_store(struct device *dev, struct device_attribute *attr,
 }
 
 static DEVICE_ATTR(async, 0644, async_show, async_store);
+
+#endif
 #endif /* CONFIG_PM_ADVANCED_DEBUG */
 
 static struct attribute *power_attrs[] = {
