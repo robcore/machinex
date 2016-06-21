@@ -72,7 +72,6 @@ config THERMAL_PM8XXX
 	  Enabling the thermal zone device via the mode file results in
 	  shifting over temperature shutdown control of the PMIC from hardware
 	  to software.
-
 choice
 	prompt "MSM Thermal Monitor Types"
 	default THERMAL_MONITOR
@@ -81,7 +80,6 @@ config INTELLI_THERMAL
 	bool "Better thermal monitor for MSM"
 	depends on THERMAL_TSENS8960 || THERMAL_TSENS8974
 	depends on CPU_FREQ_MSM
-	default n
 	help
 	  This enables thermal monitoring capability in the kernel replacing
 	  userspace thermal monitoring altogether.
@@ -90,7 +88,6 @@ config THERMAL_MONITOR
 	bool "Monitor thermal state and limit CPU Frequency"
 	depends on THERMAL_TSENS8960 || THERMAL_TSENS8974
 	depends on CPU_FREQ_MSM
-	default n
 	help
 	  This enables thermal monitoring capability in the kernel in the
 	  absence of a system wide thermal monitoring entity or until such an
@@ -106,3 +103,4 @@ config SPEAR_THERMAL
 	help
 	  Enable this to plug the SPEAr thermal sensor driver into the Linux
 	  thermal framework
+
