@@ -622,6 +622,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
+	if (get_auto_brightness() >= 6)
 		msd.mpd->first_bl_hbm_psre = 1;
 
 	sec_debug_mdp_reset_value();
