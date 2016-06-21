@@ -363,7 +363,7 @@ __error:
 	snd_seq_cell_free(cell);
 	return err;
 }
-  
+
 
 /* poll wait */
 int snd_seq_pool_poll_wait(struct snd_seq_pool *pool, struct file *file,
@@ -383,17 +383,20 @@ int snd_seq_pool_init(struct snd_seq_pool *pool)
 
 	if (snd_BUG_ON(!pool))
 		return -EINVAL;
-	if (pool->ptr)			/* should be atomic? */
-		return 0;
 
-	pool->ptr = vmalloc(sizeof(struct snd_seq_event_cell) * pool->size);
-	if (pool->ptr == NULL) {
-		snd_printd("seq: malloc for sequencer events failed\n");
+	cellptr = vmalloc(sizeof(struct snd_seq_event_cell) * pool->size);
+	if (!cellptr)
 		return -ENOMEM;
-	}
 
 	/* add new cells to the free cell list */
 	spin_lock_irqsave(&pool->lock, flags);
+	if (pool->ptr) {
+		spin_unlock_irqrestore(&pool->lock, flags);
+		vfree(cellptr);
+		return 0;
+	}
+
+	pool->ptr = cellptr;
 	pool->free = NULL;
 
 	for (cell = 0; cell < pool->size; cell++) {
@@ -437,7 +440,7 @@ int snd_seq_pool_done(struct snd_seq_pool *pool)
 		schedule_timeout_uninterruptible(1);
 		max_count--;
 	}
-	
+
 	/* release all resources */
 	spin_lock_irqsave(&pool->lock, flags);
 	ptr = pool->ptr;
@@ -474,7 +477,7 @@ struct snd_seq_pool *snd_seq_pool_new(int poolsize)
 	atomic_set(&pool->counter, 0);
 	pool->closing = 0;
 	init_waitqueue_head(&pool->output_sleep);
-	
+
 	pool->size = poolsize;
 
 	/* init statistics */

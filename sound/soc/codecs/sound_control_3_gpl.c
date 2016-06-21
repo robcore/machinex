@@ -37,7 +37,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 
 
 #define REG_SZ	24
-static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0 };
 
@@ -258,7 +258,7 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 			tabla_read(fauxsound_codec_ptr,
 				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(fauxsound_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX6_VOL_CTL_B2_CTL));
 
 }
 

@@ -8454,7 +8454,7 @@ static int tabla_handle_pdata(struct tabla_priv *tabla)
 		snd_soc_update_bits(codec, TABLA_A_RX_HPH_OCP_CTL,
 			0xE0, (pdata->ocp.hph_ocp_limit << 5));
 	}
-#ifndef CONFIG_MACH_M2
+
 	for (i = 0; i < ARRAY_SIZE(pdata->regulator); i++) {
 		if (!strncmp(pdata->regulator[i].name, "CDC_VDDA_RX", 11)) {
 			if (pdata->regulator[i].min_uV == 1800000 &&
@@ -8475,7 +8475,6 @@ static int tabla_handle_pdata(struct tabla_priv *tabla)
 			break;
 		}
 	}
-#endif
 done:
 	return rc;
 }
