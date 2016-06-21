@@ -1289,6 +1289,12 @@ config NOVATEK_VIDEO_HD_CLK_MIPICLK_480
 	bool "mipi clk 480Mhz on novatek  tft video hd panel"
 	default n
 
+config LCD_NOTIFY
+	bool "Enable lcd notify"
+	default n
+	help
+	  Call lcd notify handlers when the user requested sleep state
+
 if FB_MSM_MDSS
 	source "drivers/video/msm/mdss/Kconfig"
 endif

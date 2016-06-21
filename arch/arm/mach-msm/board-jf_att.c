@@ -3279,12 +3279,15 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 7,
+	.sensor_id = 0,
 	.poll_ms = 250,
-	.limit_temp_degC = 70,
+	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
-	.core_limit_temp_degC = 80,
+#ifdef CONFIG_INTELLI_THERMAL
+	.freq_control_mask = 0xf,
+#endif
+	.core_limit_temp_degC = 70,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
@@ -3487,7 +3490,6 @@ static uint8_t spm_power_collapse_with_rpm_krait_v3[] __initdata = {
 	0x10, 0x84, 0x30, 0x0C,
 	0x24, 0x30, 0x0f,
 };
-
 
 static struct msm_spm_seq_entry msm_spm_boot_cpu_seq_list[] __initdata = {
 	[0] = {

@@ -100,7 +100,7 @@ enum {
 #define MAX(X, Y) (((int)X) >= ((int)Y) ? (X) : (Y))
 #define WCD9XXX_MAX_NUM_IRQS (MAX(MAX(TABLA_NUM_IRQS, SITAR_NUM_IRQS), \
 				  TAIKO_NUM_IRQS))
-				  
+
 enum {
 	TAIKO_IRQ_SLIMBUS = 0,
 	TAIKO_IRQ_MBHC_REMOVAL,
@@ -161,7 +161,7 @@ enum wcd9xxx_pm_state {
 
 /*
  * data structure for Slimbus and I2S channel.
- * Some of fields are only used in smilbus mode
+ * Some of fields are only used in slimbus mode
  */
 struct wcd9xxx_ch {
 	u32 sph;		/* share channel handle - slimbus only	*/
@@ -263,6 +263,9 @@ struct wcd9xxx {
 };
 
 int wcd9xxx_reg_read(struct wcd9xxx *wcd9xxx, unsigned short reg);
+#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
+int wcd9xxx_reg_read_safe(struct wcd9xxx *wcd9xxx, unsigned short reg);
+#endif
 int wcd9xxx_reg_write(struct wcd9xxx *wcd9xxx, unsigned short reg,
 		u8 val);
 int wcd9xxx_interface_reg_read(struct wcd9xxx *wcd9xxx, unsigned short reg);

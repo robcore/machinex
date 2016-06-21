@@ -60,7 +60,7 @@ static int ldi_manupacture;
 static int ldi_chip(void)
 {
 	int rc;
-	
+
 	gpio_get_param.pull = PM_GPIO_PULL_UP_1P5_30;
 
 	rc = pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
@@ -153,7 +153,7 @@ static int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
 			goto unknown_command;
 			;
 	}
-		
+
 #ifdef CMD_DEBUG
 	if (cmd == PANEL_BRIGHT_CTRL || cmd == PANEL_ACL_CONTROL) {
 		pr_info("+++ cmd_size = %d\n",cmd_size);
@@ -499,9 +499,9 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 #ifdef CONFIG_HBM_PSRE_DEBUG
 	pr_info("%s c8[34~40](%x)(%x)(%x)(%x)(%x)(%x)(%x)", __func__,
 		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[0],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[1], 
+		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[1],
 		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[2],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[3], 
+		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[3],
 		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[4],
 		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[5],
 		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[6]);
@@ -547,6 +547,10 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_START, NULL);
+#endif
+
 	mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
@@ -569,6 +573,10 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 		pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	}
+
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
 
 	pr_info("[%s] ID : 0x%x LDI : %s", __func__, msd.mpd->manufacture_id,
 		ldi_manupacture == LDI_MAGNA ? "LDI_MAGNA" : "LDI_LSI");
@@ -601,7 +609,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_READY_TO_ON, false);
 		mipi_set_tx_power_mode(HS_TX_MODE);
 
-		/* force dsi_clk alway on 
+		/* force dsi_clk alway on
 		*    Magan nees clk lane LP mode before sending 0xF0 & 0xFC & 0xD2 cmds
 		*/
 		tmp = MIPI_INP(MIPI_DSI_BASE + 0xA8);
@@ -610,7 +618,6 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
-	if (get_auto_brightness() >= 6)
 		msd.mpd->first_bl_hbm_psre = 1;
 
 	sec_debug_mdp_reset_value();
@@ -620,7 +627,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	return 0;
 }
 
-int touch_tout1_on(void) 
+int touch_tout1_on(void)
 {
 	struct msm_fb_data_type *mfd;
 
@@ -631,7 +638,7 @@ int touch_tout1_on(void)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-	if (mfd->panel_power_on == TRUE) { 
+	if (mfd->panel_power_on == TRUE) {
 		mipi_samsung_disp_send_cmd(mfd, PANLE_TOUCH_KEY, true);
 		pr_info("%s", __func__);
 	}
@@ -649,6 +656,10 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
+#endif
+
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
@@ -665,6 +676,10 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	gpio_get_param.pull = PM_GPIO_PULL_DN;
 	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
+
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
+#endif
 
 	pr_info("[lcd] %s\n", __func__);
 
@@ -697,7 +712,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 {
 	mutex_lock(&brightness_mutex);
 
-	if (mfd->resume_state == MIPI_RESUME_STATE) {		
+	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		if (msd.mpd->backlight_control(mfd->bl_level)) {
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
@@ -707,7 +722,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 		msd.mpd->first_bl_hbm_psre = 0;
 		pr_info("%s : panel is off state!!\n", __func__);
 	}
-	
+
 	mutex_unlock(&brightness_mutex);
 }
 
@@ -846,7 +861,7 @@ char* get_c8_reg_2(void)
 char get_elvss_400cd(void)
 {
 	return msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[6];
-}		
+}
 char get_elvss_offset(void)
 {
 	return msd.mpd->smart_se6e8fa.hbm_reg.b6_reg_lsi[0];
@@ -887,7 +902,7 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		pr_info("%s: Invalid argument!!", __func__);
 
 	if (!first_auto_br) {
-		pr_info("%s : skip first auto brightness store (%d) (%d)!!\n", 
+		pr_info("%s : skip first auto brightness store (%d) (%d)!!\n",
 				__func__, msd.dstat.auto_brightness, mfd->bl_level);
 		first_auto_br++;
 		return size;
@@ -1089,7 +1104,7 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
 	mfd->bl_level = level;
-	
+
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		mipi_samsung_disp_backlight(mfd);
 		pr_info("%s : level (%d)\n",__func__,level);
@@ -1143,7 +1158,7 @@ static ssize_t mipi_samsung_temperature_store(struct device *dev,
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_temperature_store %d\n", mfd->bl_level);
 		}
-		
+
 		pr_info("%s msd.mpd->temperature : %d msd.mpd->temperature_value : 0x%x", __func__,
 						msd.mpd->temperature, msd.mpd->temperature_value);
 	} else {
@@ -1487,7 +1502,7 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 		pr_info("sysfs create fail-%s\n",
 				dev_attr_siop_enable.attr.name);
 	}
-	
+
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 					&dev_attr_backlight.attr);
 	if (ret) {
