@@ -181,7 +181,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x8200000    /* 56MB(0x3800000) -> 98MB -> 102MB -> 130MB */
+#define MSM_ION_MM_SIZE		0x7200000    /* 56MB(0x3800000) -> 98MB -> 102MB -> 114MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	8
@@ -1254,7 +1254,6 @@ static struct platform_device touchkey_i2c_gpio_device_2 = {
 
 #endif
 
-
 static char prim_panel_name[PANEL_NAME_MAX_LEN];
 static char ext_panel_name[PANEL_NAME_MAX_LEN];
 
@@ -1297,7 +1296,6 @@ static void __init apq8064_reserve(void)
 static void __init apq8064_early_reserve(void)
 {
 	reserve_info = &apq8064_reserve_info;
-
 }
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
 /* Bandwidth requests (zero) if no vote placed */
