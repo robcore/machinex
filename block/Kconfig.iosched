@@ -31,8 +31,6 @@ config IOSCHED_DEADLINE
 	  a new point in the service tree and doing a batch of IO from there
 	  in case of expiry.
 
-Fix-dispatching-of-URGENT-mechanism
-
 config IOSCHED_SIO
 	tristate "Simple I/O scheduler"
 	default y
@@ -54,7 +52,7 @@ config IOSCHED_FIFO
 	tristate "Fifo I/O scheduler"
 	default y
 	---help---
-	Fifo is similar to no-op I/O scheduler and it's a minimal scheduler that does 		basic   merging and sorting. Ported from: 
+	Fifo is similar to no-op I/O scheduler and it's a minimal scheduler that does 		basic   merging and sorting. Ported from:
 	https://github.com/AndroidDeveloperAlliance/ZenKernel_TUNA/blob/master/block/fifo-
 	iosched.c
 
