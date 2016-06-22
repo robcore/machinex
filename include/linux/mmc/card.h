@@ -201,6 +201,7 @@ struct sdio_cis {
 struct mmc_host;
 struct sdio_func;
 struct sdio_func_tuple;
+struct mmc_queue;
 
 #define SDIO_MAX_FUNCS		7
 
@@ -213,15 +214,8 @@ enum mmc_packed_stop_reasons {
 	REL_WRITE,
 	THRESHOLD,
 	LARGE_SEC_ALIGN,
+	RANDOM,
 	MAX_REASONS,
-};
-
-struct mmc_wr_pack_stats {
-	u32 *packing_events;
-	u32 pack_stop_reason[MAX_REASONS];
-	spinlock_t lock;
-	bool enabled;
-	bool print_in_read;
 };
 
 enum mmc_blk_status {
@@ -234,6 +228,16 @@ enum mmc_blk_status {
 	MMC_BLK_ECC_ERR,
 	MMC_BLK_NOMEDIUM,
 	MMC_BLK_NEW_REQUEST,
+	MMC_BLK_URGENT,
+	MMC_BLK_URGENT_DONE,
+};
+
+struct mmc_wr_pack_stats {
+	u32 *packing_events;
+	u32 pack_stop_reason[MAX_REASONS];
+	spinlock_t lock;
+	bool enabled;
+	bool print_in_read;
 };
 
 /* The number of MMC physical partitions.  These consist of:
@@ -605,10 +609,10 @@ extern void mmc_fixup_device(struct mmc_card *card,
 			     const struct mmc_fixup *table);
 extern struct mmc_wr_pack_stats *mmc_blk_get_packed_statistics(
 			struct mmc_card *card);
-extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
 
 extern struct mmc_wr_pack_stats *mmc_blk_get_packed_statistics(
 			struct mmc_card *card);
 extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
 
+extern void mmc_blk_disable_wr_packing(struct mmc_queue *mq);
 #endif /* LINUX_MMC_CARD_H */
