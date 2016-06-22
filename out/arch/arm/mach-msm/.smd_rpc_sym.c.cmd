@@ -1,1 +1,0 @@
-cmd_arch/arm/mach-msm/smd_rpc_sym.c := perl /media/root/robcore/android/machinex/arch/arm/mach-msm/mkrpcsym.pl /media/root/robcore/android/machinex/arch/arm/mach-msm/smd_rpc_sym arch/arm/mach-msm/smd_rpc_sym.c

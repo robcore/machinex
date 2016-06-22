@@ -1,3 +1,0 @@
-kernel/lib/lz4/lz4_compress.ko
-kernel/lib/lz4/lz4hc_compress.ko
-kernel/lib/lz4/lz4_decompress.ko

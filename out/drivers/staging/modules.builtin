@@ -1,5 +1,0 @@
-kernel/drivers/staging/android/logger.ko
-kernel/drivers/staging/android/timed_gpio.ko
-kernel/drivers/staging/qcache/qcache.ko
-kernel/drivers/staging/vnswap/vnswap.ko
-kernel/drivers/staging/vnswap/vnswap_sysfs.ko
