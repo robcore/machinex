@@ -1,0 +1,3 @@
+kernel/drivers/regulator/max77693-regulator.ko
+kernel/drivers/regulator/msm-gpio-regulator.ko
+kernel/drivers/regulator/pm8xxx-regulator.ko
