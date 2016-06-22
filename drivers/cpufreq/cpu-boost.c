@@ -51,7 +51,7 @@ static struct work_struct input_boost_work;
 
 static struct notifier_block notif;
 
-static unsigned int boost_ms = 40;
+static unsigned int boost_ms;
 module_param(boost_ms, uint, 0644);
 
 static unsigned int sync_threshold;
@@ -71,7 +71,7 @@ module_param(load_based_syncs, bool, 0644);
 static bool hotplug_boost = 1;
 module_param(hotplug_boost, bool, 0644);
 
-bool wakeup_boost = 1;
+bool wakeup_boost;
 module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
@@ -86,7 +86,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 	int i, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
-	bool enabled = true;
+	bool enabled = false;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;

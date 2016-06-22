@@ -83,10 +83,10 @@ struct cpufreq_governor cpufreq_gov_abyssplugv2 = {
 enum {BDS_NORMAL_SAMPLE, BDS_SUB_SAMPLE};
 
 struct cpu_bds_info_s {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_iowait;
-	cputime64_t prev_cpu_wall;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_idle;
+	u64 prev_cpu_iowait;
+	u64 prev_cpu_wall;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -135,40 +135,8 @@ static struct bds_tuners {
 	.powersave_bias = 0,
 };
 
-static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
-							u64 *wall)
-{
-	u64 idle_time;
-	u64 cur_wall_time;
-	u64 busy_time;
-
-	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
-
-	busy_time  = kcpustat_cpu(cpu).cpustat[CPUTIME_USER];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_IRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SOFTIRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_STEAL];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
-
-	idle_time = cur_wall_time - busy_time;
-	if (wall)
-		*wall = jiffies_to_usecs(cur_wall_time);
-
-	return jiffies_to_usecs(idle_time);
-}
-
-static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
-{
-	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
-
-	if (idle_time == -1ULL)
-		return get_cpu_idle_time_jiffy(cpu, wall);
-
-	return idle_time;
-}
-
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
+static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
+							cputime64_t *wall)
 {
 	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
 
@@ -608,7 +576,7 @@ static void bds_check_cpu(struct cpu_bds_info_s *this_bds_info)
 		j_bds_info->prev_cpu_iowait = cur_iowait_time;
 
 		if (bds_tuners_ins.ignore_nice) {
-			cputime64_t cur_nice;
+			u64 cur_nice;
 			unsigned long cur_nice_jiffies;
 
 			cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] -
@@ -655,7 +623,7 @@ static void bds_check_cpu(struct cpu_bds_info_s *this_bds_info)
 	/* Check for frequency increase */
 	if (max_load_freq > bds_tuners_ins.up_threshold * policy->cur) {
 		/* If switching to max speed, apply sampling_down_factor */
-		
+
 			/* busy phase */
 			if (policy->cur < policy->max)
 				this_bds_info->rate_mult =
@@ -990,7 +958,7 @@ static int cpufreq_governor_bds(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_bds_init(void)
 {
-	cputime64_t wall;
+	u64 wall;
 	u64 idle_time;
 	unsigned int i;
 	int cpu = get_cpu();
@@ -1048,6 +1016,7 @@ module_param_call(enable_bds_input_event, set_enable_bds_input_event_param, para
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
+MODULE_AUTHOR("Dennis Rassmann <showp1984@gmail.com>");
 MODULE_DESCRIPTION("'cpufreq_abyssplugv2' - An abyssplug cpufreq governor based on ondemand");
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ABYSSPLUGV2
