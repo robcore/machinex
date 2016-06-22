@@ -83,6 +83,28 @@ config IOSCHED_TRIPNDROID
 	  it uses deadlines to ensure some fairness. The scheduler is build
 	  to keep a minimum overhead. It is mainly build for mobile devices.
 
+config IOSCHED_BFQ
+	tristate "BFQ I/O scheduler"
+	depends on EXPERIMENTAL
+	default y
+	---help---
+	  The BFQ I/O scheduler tries to distribute bandwidth among
+	  all processes according to their weights.
+	  It aims at distributing the bandwidth as desired, independently of
+	  the disk parameters and with any workload. It also tries to
+	  guarantee low latency to interactive and soft real-time
+	  applications.  If compiled built-in (saying Y here), BFQ can
+	  be configured to support hierarchical scheduling.
+
+config CGROUP_BFQIO
+	bool "BFQ hierarchical scheduling support"
+	depends on CGROUPS && IOSCHED_BFQ=y
+	default n
+	---help---
+	  Enable hierarchical scheduling in BFQ, using the cgroups
+	  filesystem interface.  The name of the subsystem will be
+	  bfqio.
+
 config IOSCHED_CFQ
 	tristate "CFQ I/O scheduler"
 	# If BLK_CGROUP is a module, CFQ has to be built as module.
@@ -104,28 +126,6 @@ config CFQ_GROUP_IOSCHED
 	default n
 	---help---
 	  Enable group IO scheduling in CFQ.
-
-config IOSCHED_BFQ
-	tristate "BFQ I/O scheduler"
-	depends on EXPERIMENTAL
-	default n
-	---help---
-	  The BFQ I/O scheduler tries to distribute bandwidth among
-	  all processes according to their weights.
-	  It aims at distributing the bandwidth as desired, independently of
-	  the disk parameters and with any workload. It also tries to
-	  guarantee low latency to interactive and soft real-time
-	  applications.  If compiled built-in (saying Y here), BFQ can
-	  be configured to support hierarchical scheduling.
-
-config CGROUP_BFQIO
-	bool "BFQ hierarchical scheduling support"
-	depends on CGROUPS && IOSCHED_BFQ=y
-	default n
-	---help---
-	  Enable hierarchical scheduling in BFQ, using the cgroups
-	  filesystem interface.  The name of the subsystem will be
-	  bfqio.
 
 choice
 	prompt "Default I/O scheduler"
@@ -168,7 +168,7 @@ config DEFAULT_IOSCHED
 	default "sio" if DEFAULT_SIO
 	default "fifo" if DEFAULT_FIFO
 	default "zen" if DEFAULT_ZEN
-        default "vr" if DEFAULT_VR
+	default "vr" if DEFAULT_VR
 	default "fiops" if DEFAULT_FIOPS
 	default "sioplus" if DEFAULT_SIOPLUS
 	default "tripndroid" if DEFAULT_TRIPNDROID
