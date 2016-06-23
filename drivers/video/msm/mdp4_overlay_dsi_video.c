@@ -849,6 +849,16 @@ int mdp4_dsi_video_off(struct platform_device *pdev)
 		mdp4_dsi_video_pipe_clean(vp);
 	}
 
+	undx =  vctrl->update_ndx;
+	vp = &vctrl->vlist[undx];
+	if (vp->update_cnt) {
+		/*
+		 * pipe's iommu will be freed at next overlay play
+		 * and iommu_drop statistic will be increased by one
+		 */
+		vp->update_cnt = 0;     /* empty queue */
+	}
+
 	if (pipe) {
 		xlog(__func__, pipe->pipe_ndx, mfd->ref_cnt, 0, 0, 0);
 		/* sanity check, free pipes besides base layer */
