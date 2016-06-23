@@ -59,7 +59,7 @@
 // Temporarily (maybe for all of Alpha-1), assuming TIM = 0
 //
 
-const tANI_U8 P2pOui[] = {0x50, 0x6F, 0x9A, 0x9};
+tANI_U8 P2pOui[] = {0x50, 0x6F, 0x9A, 0x9};
 
 #ifdef ANI_PRODUCT_TYPE_AP
 
