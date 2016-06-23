@@ -83,7 +83,7 @@ static struct {
  * kgsl_hang_check() - Check for GPU hang
  * data: KGSL device structure
  *
- * This function is called every KGSL_TIMEOUT_HANG_DETECT time when
+ * This function is called every KGSL_TIMEOUT_PART time when
  * GPU is active to check for hang. If a hang is detected we
  * trigger fault tolerance.
  */
@@ -109,7 +109,7 @@ void kgsl_hang_check(struct work_struct *work)
 		}
 #endif
 		mod_timer(&device->hang_timer,
-			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_HANG_DETECT)));
+			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_PART)));
 	}
 
 	mutex_unlock(&device->mutex);
@@ -122,7 +122,7 @@ void kgsl_hang_check(struct work_struct *work)
  * This function is called when hang timer expires, in this
  * function we check if GPU is in active state and queue the
  * work on device workqueue to check for the hang. We restart
- * the timer after KGSL_TIMEOUT_HANG_DETECT time.
+ * the timer after KGSL_TIMEOUT_PART time.
  */
 void hang_timer(unsigned long data)
 {
@@ -563,9 +563,20 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	}
 
 	kref_init(&context->refcount);
+	/*
+	 * Get a refernce to the process private so its not destroyed, until
+	 * the context is destroyed. This will also prevent the pagetable
+	 * from being destroyed
+	 */
+	if (!kgsl_process_private_get(dev_priv->process_priv)) {
+		ret = -EBADF;
+		goto fail_free_id;
+	}
+
 	context->dev_priv = dev_priv;
 	ret = kgsl_sync_timeline_create(context);
 	if (ret) {
+		kgsl_process_private_put(dev_priv->process_priv);
 		goto fail_free_id;
 	}
 
@@ -645,6 +656,7 @@ kgsl_context_destroy(struct kref *kref)
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
 	kgsl_sync_timeline_destroy(context);
+	kgsl_process_private_put(context->dev_priv->process_priv);
 	kfree(context);
 }
 
