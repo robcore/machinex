@@ -1822,9 +1822,12 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
-		pr_err("%s: CMD%d: Command CRC error\n",
-			mmc_hostname(host->mmc), cmd->opcode);
-		msmsdcc_dump_sdcc_state(host);
+
+		if (cmd->opcode != 52) {
+			pr_err("%s: CMD%d: Command CRC error\n",
+				mmc_hostname(host->mmc), cmd->opcode);
+			msmsdcc_dump_sdcc_state(host);
+		}
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
 		if( host->pdev_id == 4){
@@ -1976,10 +1979,10 @@ msmsdcc_irq(int irq, void *dev_id)
 			if (status & (MCI_PROGDONE | MCI_CMDCRCFAIL |
 					  MCI_CMDTIMEOUT)) {
 				if (status & MCI_CMDTIMEOUT)
-					//pr_debug("%s: dummy CMD52 timeout\n",
+					pr_debug("%s: dummy CMD52 timeout\n",
 						mmc_hostname(host->mmc));
 				if (status & MCI_CMDCRCFAIL)
-					//pr_debug("%s: dummy CMD52 CRC failed\n",
+					pr_debug("%s: dummy CMD52 CRC failed\n",
 						mmc_hostname(host->mmc));
 				host->dummy_52_sent = 0;
 				host->dummy_52_needed = 0;
@@ -5263,7 +5266,7 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (host->dummy_52_sent) {
-		//pr_info("%s: %s: dummy CMD52 timeout\n",
+		pr_info("%s: %s: dummy CMD52 timeout\n",
 				mmc_hostname(host->mmc), __func__);
 		host->dummy_52_sent = 0;
 	}
@@ -5828,7 +5831,7 @@ static ssize_t t_flash_detect_show(struct device *dev,
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	unsigned int detect;
 
-
+	
 	if (host->plat->status_gpio)
 		detect = gpio_get_value(host->plat->status_gpio);
 	else {
