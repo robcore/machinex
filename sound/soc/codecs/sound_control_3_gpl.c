@@ -36,10 +36,10 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 
-#define REG_SZ	24
-static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+#define REG_SZ	25
+static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0 };
+			    0, 0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -118,9 +118,6 @@ faux sound anyhow.
                 case TABLA_A_RX_LINE_4_GAIN:
 			out = &cached_regs[24];
 			break;
-                case TABLA_A_RX_LINE_5_GAIN:
-			out = &cached_regs[25];
-			break;
         }
 	return out;
 }
@@ -168,7 +165,6 @@ int snd_hax_reg_access(unsigned int reg)
 		case TABLA_A_RX_LINE_2_GAIN:
 		case TABLA_A_RX_LINE_3_GAIN:
 		case TABLA_A_RX_LINE_4_GAIN:
-		case TABLA_A_RX_LINE_5_GAIN:
 			if (snd_ctrl_locked > 0)
 				ret = 0;
 			break;
@@ -258,7 +254,7 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 			tabla_read(fauxsound_codec_ptr,
 				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(fauxsound_codec_ptr,
-				TABLA_A_CDC_RX6_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX7_VOL_CTL_B2_CTL));
 
 }
 
