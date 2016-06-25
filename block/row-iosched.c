@@ -788,24 +788,17 @@ done:
  * this dispatch queue
  *
  */
-static int row_init_queue(struct request_queue *q, struct elevator_type *e)
+static void *row_init_queue(struct request_queue *q)
 {
 
 	struct row_data *rdata;
-	struct elevator_queue *eq;
 	int i;
-
-	eq = elevator_alloc(q, e);
-	if (!eq)
-		return -ENOMEM;
 
 	rdata = kmalloc_node(sizeof(*rdata),
 			     GFP_KERNEL | __GFP_ZERO, q->node);
-	if (!rdata) {
-		kobject_put(&eq->kobj);
-		return -ENOMEM;
-	}
-	eq->elevator_data = rdata;
+	if (!rdata)
+		return NULL;
+
 	memset(rdata, 0, sizeof(*rdata));
 	for (i = 0; i < ROWQ_MAX_PRIO; i++) {
 		INIT_LIST_HEAD(&rdata->row_queues[i].fifo);
@@ -837,11 +830,7 @@ static int row_init_queue(struct request_queue *q, struct elevator_type *e)
 	rdata->rd_idle_data.idling_queue_idx = ROWQ_MAX_PRIO;
 	rdata->dispatch_queue = q;
 
-	spin_lock_irq(q->queue_lock);
-	q->elevator = eq;
-	spin_unlock_irq(q->queue_lock);
-
-	return 0;
+	return rdata;
 }
 
 /*
@@ -947,8 +936,7 @@ static enum row_queue_prio row_get_queue_prio(struct request *rq,
  *
  */
 static int
-row_set_request(struct request_queue *q, struct request *rq, struct bio *bio,
-		gfp_t gfp_mask)
+row_set_request(struct request_queue *q, struct request *rq, gfp_t gfp_mask)
 {
 	struct row_data *rd = (struct row_data *)q->elevator->elevator_data;
 	unsigned long flags;
