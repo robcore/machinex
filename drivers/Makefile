@@ -142,6 +142,7 @@ obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
 #MobiCore
 obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
 
+#sensor_class
 obj-$(CONFIG_SENSORS_CORE)		+= sensors/
 ifdef CONFIG_MACH_SERRANO
 obj-$(CONFIG_MSM_VIBRATOR) += motor_msm8930/
