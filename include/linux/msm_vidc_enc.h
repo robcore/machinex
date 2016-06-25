@@ -528,6 +528,10 @@ struct venc_range {
 	unsigned long        step_size;
 };
 
+/*IOCTL params:SET: InputData - unsigned int, OutputData - NULL*/
+#define VEN_IOCTL_SET_SPS_PPS_FOR_IDR \
+	_IOW(VEN_IOCTLBASE_ENC, 51, struct venc_ioctl_msg)
+
 struct venc_switch{
 	unsigned char	status;
 };
