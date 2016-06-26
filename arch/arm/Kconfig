@@ -1501,7 +1501,6 @@ config KSAPI
 endmenu
 
 source "arch/arm/common/Kconfig"
-source "arch/arm/hotplug/Kconfig"
 
 menu "Bus support"
 
@@ -2025,7 +2024,7 @@ config USE_LDRDSTRD_OVER_LDMSTM
  help
  Cortex-A15 perform better when use LDRD/STRD to access memory.
  Selecting this to optimize memory copy routines.
-	  
+
 config SECCOMP
 	bool
 	prompt "Enable seccomp to safely compute untrusted bytecode"

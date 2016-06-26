@@ -36,7 +36,7 @@
 #define INTELLI_PLUG_MAJOR_VERSION	4
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_MS			(268)
+#define DEF_SAMPLING_MS			(200)
 
 #define DUAL_PERSISTENCE		(2500 / DEF_SAMPLING_MS)
 #define TRI_PERSISTENCE			(1700 / DEF_SAMPLING_MS)
@@ -431,7 +431,6 @@ static struct attribute_group intelli_plug_perf_boost_attr_group = {
 
 static struct kobject *intelli_plug_perf_boost_kobj;
 /* sysfs interface for performance boost (END) */
-
 
 #ifdef CONFIG_POWERSUSPEND
 static void intelli_plug_suspend(struct power_suspend *handler)
