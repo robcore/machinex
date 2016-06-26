@@ -108,6 +108,8 @@ static void dyn_fsync_force_flush(void)
 {
 	/* flush all outstanding buffers */
 	wakeup_flusher_threads(0, WB_REASON_SYNC);
+	sync_filesystems(0);
+	sync_filesystems(1);
 }
 
 static void dyn_fsync_early_suspend(struct early_suspend *h)
