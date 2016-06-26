@@ -41,14 +41,14 @@
 	.endm
 
 #ifdef CONFIG_USE_LDRDSTRD_OVER_LDMSTM
-	.macro cpy8w dst src reg1 reg2 abort
-	.irp offset, #0, #8, #16, #24
-	ldrd \reg1, \reg2, [\src, \offset]
-	strd \reg1, \reg2, [\dst, \offset]
-	.endr
-	add \src, \src, #32
-	add \dst, \dst, #32
-	.endm
+ .macro cpy8w dst src reg1 reg2 abort
+ .irp offset, #0, #8, #16, #24
+ ldrd \reg1, \reg2, [\src, \offset]
+ strd \reg1, \reg2, [\dst, \offset]
+ .endr
+ add \src, \src, #32
+ add \dst, \dst, #32
+ .endm
 #endif
 
 	.macro str1b ptr reg cond=al abort

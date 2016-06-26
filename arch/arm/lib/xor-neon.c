@@ -14,7 +14,7 @@
 MODULE_LICENSE("GPL");
 
 #ifndef __ARM_NEON__
-#error You should compile this file with '-mfloat-abi=hard -mfpu=neon-vfpv4'
+#error You should compile this file with '-mfloat-abi=softfp -mfpu=neon'
 #endif
 
 /*
