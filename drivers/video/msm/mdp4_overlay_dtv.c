@@ -1050,10 +1050,8 @@ static void mdp4_dtv_do_blt(struct msm_fb_data_type *mfd, int enable)
 	unsigned long flag;
 	int data;
 	int cndx = 0;
-	int undx;
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
-	struct vsync_update *vp;
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
@@ -1134,10 +1132,6 @@ void mdp4_dtv_overlay(struct msm_fb_data_type *mfd)
 	vctrl = &vsync_ctrl_db[cndx];
 	if (vctrl->base_pipe == NULL)
 		mdp4_overlay_dtv_set(mfd, NULL);
-
-	undx =  vctrl->update_ndx;
-	vp = &vctrl->vlist[undx];
-	vp->update_cnt = 0;     /* empty queue */
 
 	pipe = vctrl->base_pipe;
 
