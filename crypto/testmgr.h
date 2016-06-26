@@ -53,7 +53,7 @@ struct cipher_testvec {
 	char *result;
 	unsigned short tap[MAX_TAP];
 	int np;
-	bool fail;
+	unsigned char fail;
 	unsigned char wk; /* weak key flag */
 	unsigned char klen;
 	unsigned short ilen;
@@ -70,7 +70,7 @@ struct aead_testvec {
 	unsigned char atap[MAX_TAP];
 	int np;
 	int anp;
-	bool fail;
+	unsigned char fail;
 	unsigned char novrfy;	/* ccm dec verification failure expected */
 	unsigned char wk; /* weak key flag */
 	unsigned char klen;
@@ -2043,7 +2043,7 @@ static struct cipher_testvec des_enc_tv_template[] = {
 			  "\xb4\x99\x26\xf7\x1f\xe1\xd4\x90",
 		.rlen	= 24,
 	}, { /* Weak key */
-		.fail	= true,
+		.fail	= 1,
 		.wk	= 1,
 		.key	= "\x01\x01\x01\x01\x01\x01\x01\x01",
 		.klen	= 8,

@@ -2,8 +2,6 @@
 # Makefile for the linux memory manager.
 #
 
-EXTRA_CFLAGS += -Wno-array-bounds
-
 mmu-y			:= nommu.o
 mmu-$(CONFIG_MMU)	:= fremap.o highmem.o madvise.o memory.o mincore.o \
 			   mlock.o mmap.o mprotect.o mremap.o msync.o rmap.o \
