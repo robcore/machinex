@@ -28,7 +28,7 @@ static struct msm_mercury_core_buf out_buf_local;
 static struct msm_mercury_core_buf in_buf_local;
 
 /*************** queue helper ****************/
-inline void msm_mercury_q_init(char const *name, struct msm_mercury_q *q_p)
+static inline void msm_mercury_q_init(char const *name, struct msm_mercury_q *q_p)
 {
 	MCR_DBG("%s:%d] %s\n", __func__, __LINE__, name);
 	q_p->name = name;
@@ -38,7 +38,7 @@ inline void msm_mercury_q_init(char const *name, struct msm_mercury_q *q_p)
 	q_p->unblck = 0;
 }
 
-inline void *msm_mercury_q_out(struct msm_mercury_q *q_p)
+static inline void *msm_mercury_q_out(struct msm_mercury_q *q_p)
 {
 	unsigned long flags;
 	struct msm_mercury_q_entry *q_entry_p = NULL;
@@ -64,7 +64,7 @@ inline void *msm_mercury_q_out(struct msm_mercury_q *q_p)
 	return data;
 }
 
-inline int msm_mercury_q_in(struct msm_mercury_q *q_p, void *data)
+static inline int msm_mercury_q_in(struct msm_mercury_q *q_p, void *data)
 {
 	unsigned long flags;
 
@@ -86,7 +86,7 @@ inline int msm_mercury_q_in(struct msm_mercury_q *q_p, void *data)
 	return 0;
 }
 
-inline int msm_mercury_q_in_buf(struct msm_mercury_q *q_p,
+static inline int msm_mercury_q_in_buf(struct msm_mercury_q *q_p,
 	struct msm_mercury_core_buf *buf)
 {
 	struct msm_mercury_core_buf *buf_p;
@@ -104,7 +104,7 @@ inline int msm_mercury_q_in_buf(struct msm_mercury_q *q_p,
 	return 0;
 }
 
-inline int msm_mercury_q_wait(struct msm_mercury_q *q_p)
+static inline int msm_mercury_q_wait(struct msm_mercury_q *q_p)
 {
 	int tm = MAX_SCHEDULE_TIMEOUT; /* 500ms */
 	int rc;
@@ -134,14 +134,14 @@ inline int msm_mercury_q_wait(struct msm_mercury_q *q_p)
 	return rc;
 }
 
-inline int msm_mercury_q_wakeup(struct msm_mercury_q *q_p)
+static inline int msm_mercury_q_wakeup(struct msm_mercury_q *q_p)
 {
 	MCR_DBG("%s:%d] %s\n", __func__, __LINE__, q_p->name);
 	wake_up(&q_p->wait);
 	return 0;
 }
 
-inline int msm_mercury_q_wr_eoi(struct msm_mercury_q *q_p)
+static inline int msm_mercury_q_wr_eoi(struct msm_mercury_q *q_p)
 {
 	MCR_DBG("%s:%d] Wake up %s\n", __func__, __LINE__, q_p->name);
 	q_p->unblck = MSM_MERCURY_EVT_FRAMEDONE;
@@ -149,7 +149,7 @@ inline int msm_mercury_q_wr_eoi(struct msm_mercury_q *q_p)
 	return 0;
 }
 
-inline int msm_mercury_q_wr_err(struct msm_mercury_q *q_p)
+static inline int msm_mercury_q_wr_err(struct msm_mercury_q *q_p)
 {
 	MCR_DBG("%s:%d] Wake up %s\n", __func__, __LINE__, q_p->name);
 	q_p->unblck = MSM_MERCURY_EVT_ERR;
@@ -157,7 +157,7 @@ inline int msm_mercury_q_wr_err(struct msm_mercury_q *q_p)
 	return 0;
 }
 
-inline int msm_mercury_q_unblock(struct msm_mercury_q *q_p)
+static inline int msm_mercury_q_unblock(struct msm_mercury_q *q_p)
 {
 	MCR_DBG("%s:%d] Wake up %s\n", __func__, __LINE__, q_p->name);
 	q_p->unblck = MSM_MERCURY_EVT_UNBLOCK;
@@ -165,7 +165,7 @@ inline int msm_mercury_q_unblock(struct msm_mercury_q *q_p)
 	return 0;
 }
 
-inline void msm_mercury_q_cleanup(struct msm_mercury_q *q_p)
+static inline void msm_mercury_q_cleanup(struct msm_mercury_q *q_p)
 {
 	void *data;
 	MCR_DBG("\n%s:%d] %s\n", __func__, __LINE__, q_p->name);

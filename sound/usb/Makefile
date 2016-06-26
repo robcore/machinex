@@ -2,6 +2,8 @@
 # Makefile for ALSA
 #
 
+EXTRA_CFLAGS += -Wno-array-bounds
+
 snd-usb-audio-objs := 	card.o \
 			clock.o \
 			endpoint.o \

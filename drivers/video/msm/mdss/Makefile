@@ -1,3 +1,5 @@
+EXTRA_CFLAGS += -Wno-array-bounds
+
 mdss-mdp-objs := mdss_mdp.o mdss_mdp_ctl.o mdss_mdp_pipe.o mdss_mdp_util.o
 mdss-mdp-objs += mdss_mdp_pp.o
 mdss-mdp-objs += mdss_mdp_intf_video.o
