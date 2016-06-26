@@ -90,3 +90,4 @@ extern void mmc_exit_clk_scaling(struct mmc_host *host);
 extern void mmc_reset_clk_scale_stats(struct mmc_host *host);
 extern unsigned long mmc_get_max_frequency(struct mmc_host *host);
 #endif
+
