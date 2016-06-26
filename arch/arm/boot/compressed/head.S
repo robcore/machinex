@@ -492,6 +492,7 @@ not_relocated:	mov	r0, #0
 		add	r2, sp, #0x10000	@ 64k max
 		mov	r3, r7
 		bl	decompress_kernel
+
 /* Copy the kernel tagged list (atags):
  *
  * The kernel requires atags to be located in a direct-mapped region,
