@@ -513,7 +513,6 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
 	const long div = 1000/HZ;
-	static unsigned int org_interval_timeout = 1;
 	int ret;
 
 	if (device == NULL)
@@ -524,15 +523,11 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if (org_interval_timeout == 1)
-		org_interval_timeout = pwr->interval_timeout;
-
 	mutex_lock(&device->mutex);
 
 	/* Let the timeout be requested in ms, but convert to jiffies. */
 	val /= div;
-	if (val >= org_interval_timeout)
-		pwr->interval_timeout = val;
+	pwr->interval_timeout = val;
 
 	mutex_unlock(&device->mutex);
 
@@ -544,10 +539,12 @@ static int kgsl_pwrctrl_idle_timer_show(struct device *dev,
 					char *buf)
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
+	int mul = 1000/HZ;
 	if (device == NULL)
 		return 0;
+	/* Show the idle_timeout converted to msec */
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-		device->pwrctrl.interval_timeout);
+		device->pwrctrl.interval_timeout * mul);
 }
 
 static int kgsl_pwrctrl_pmqos_latency_store(struct device *dev,
