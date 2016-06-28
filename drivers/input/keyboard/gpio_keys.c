@@ -29,7 +29,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 #include <linux/spinlock.h>
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG)
 #include <mach/sec_debug.h>
 #endif
 #ifdef CONFIG_MACH_JF
@@ -513,7 +513,7 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	unsigned int type = button->type ?: EV_KEY;
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
 
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG)
 	sec_debug_check_crash_key(button->code, state);
 #endif
 
@@ -548,7 +548,7 @@ static void gpio_keys_gpio_force_report_event(struct gpio_button_data *bdata, in
 
 	printk(KERN_DEBUG "%s forced key[%d] p[%d]events\n", __func__, button->code, state);
 
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG)
 	sec_debug_check_crash_key(button->code, state);
 #endif
 

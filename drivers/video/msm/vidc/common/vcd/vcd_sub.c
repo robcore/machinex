@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, 2015, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1255,15 +1255,15 @@ u32 vcd_check_for_client_context(
 u32 vcd_validate_driver_handle(
 	struct vcd_dev_ctxt *dev_ctxt, s32 driver_handle)
 {
-	driver_handle--;
+	u32 result = false;
+	s32 driver_id = driver_handle - 1;
 
-	if (driver_handle < 0 ||
-		driver_handle >= VCD_DRIVER_CLIENTS_MAX ||
-		!dev_ctxt->driver_ids[driver_handle]) {
-		return false;
-	} else {
-		return true;
-	}
+	if ((0 <= driver_id) &&
+		(VCD_DRIVER_CLIENTS_MAX > driver_id) &&
+		(dev_ctxt->driver_ids[driver_id]))
+		result = true;
+
+	return result;
 }
 
 u32 vcd_client_cmd_en_q(
@@ -3163,10 +3163,9 @@ u32 vcd_req_perf_level(
 		return -EINVAL;
 	}
 	res_trk_perf_level = get_res_trk_perf_level(perf_level->level);
-	if ((int)res_trk_perf_level < 0) {
+
+	if (res_trk_perf_level < 0) {
 		rc = -ENOTSUPP;
-		VCD_MSG_ERROR("%s: unsupported perf level(%d)",
-			__func__, res_trk_perf_level);
 		goto perf_level_not_supp;
 	}
 	turbo_perf_level = get_res_trk_perf_level(VCD_PERF_LEVEL_TURBO);
@@ -3177,10 +3176,6 @@ u32 vcd_req_perf_level(
 		if (res_trk_perf_level == turbo_perf_level)
 			cctxt->is_turbo_enabled = true;
 	}
-	VCD_MSG_HIGH("%s: client perf level = %u, "\
-		"perf_set_by_client = %u, is_turbo_enabled = %u",
-		__func__, cctxt->reqd_perf_lvl, cctxt->perf_set_by_client,
-		cctxt->is_turbo_enabled);
 perf_level_not_supp:
 	return rc;
 }
