@@ -359,10 +359,11 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 KERNEL_FLAGS	= -mtune=cortex-a15 -marm \
 		  -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
 
-CFLAGS_MODULE   = -fsched-spec-load -ffast-math -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
-AFLAGS_MODULE   =
+MODFLAGS	= -DMODULE -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -march=armv7-a -mfpu=neon -ftree-vectorize -funroll-loops
+CFLAGS_MODULE   = $(MODFLAGS)
+AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -fsched-spec-load -ffast-math -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
+CFLAGS_KERNEL	= -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad -ftree-vectorize -funroll-loops
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
