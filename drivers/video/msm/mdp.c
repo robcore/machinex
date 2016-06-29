@@ -687,6 +687,11 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	mdp_clk_ctrl(1);
 
+	if (cmap->start > MDP_HIST_LUT_SIZE || cmap->len > MDP_HIST_LUT_SIZE ||
+			(cmap->start + cmap->len > MDP_HIST_LUT_SIZE)) {
+		pr_err("mdp_lut_hw_update invalid arguments\n");
+		return -EINVAL;
+	}
 	for (i = 0; i < cmap->len; i++) {
 		r = lut2r(internal_lut[i]);
 		g = lut2g(internal_lut[i]);
