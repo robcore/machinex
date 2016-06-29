@@ -578,12 +578,6 @@ static int mdp_lut_hw_update(struct fb_cmap *cmap)
 		pr_err("mdp_lut_hw_update invalid arguments\n");
 		return -EINVAL;
 	}
-
-	if (cmap->start > MDP_HIST_LUT_SIZE || cmap->len > MDP_HIST_LUT_SIZE ||
-			(cmap->start + cmap->len > MDP_HIST_LUT_SIZE)) {
-		pr_err("mdp_lut_hw_update invalid arguments\n");
-		return -EINVAL;
-	}
 	for (i = 0; i < cmap->len; i++) {
 		if (copy_from_user(&r, cmap->red++, sizeof(r)) ||
 		    copy_from_user(&g, cmap->green++, sizeof(g)) ||
@@ -2458,7 +2452,7 @@ static int mdp_off(struct platform_device *pdev)
 	complete_all(&vsync_cntrl.vsync_wait);
 	mdp_clk_ctrl(1);
 	mdp_lut_status_backup();
-	
+
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	ret = panel_next_off(pdev);
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
@@ -2470,9 +2464,9 @@ static int mdp_off(struct platform_device *pdev)
 	else if (mfd->panel.type == HDMI_PANEL ||
 			mfd->panel.type == LCDC_PANEL ||
 			mfd->panel.type == LVDS_PANEL)
-		mdp4_lcdc_off(pdev);	
+		mdp4_lcdc_off(pdev);
 	else if (mfd->panel.type == WRITEBACK_PANEL)
-		mdp4_overlay_writeback_off(pdev);		  
+		mdp4_overlay_writeback_off(pdev);
 
 	mdp_clk_ctrl(0);
 
@@ -2556,9 +2550,9 @@ static int mdp_on(struct platform_device *pdev)
 
 	mdp4_overlay_dsi_video_start();
 
-	spin_lock_irqsave(&mdp_spin_lock, flag); 
-	outp32(MDP_INTR_CLEAR, 0xffffffff); 
-	spin_unlock_irqrestore(&mdp_spin_lock, flag); 
+	spin_lock_irqsave(&mdp_spin_lock, flag);
+	outp32(MDP_INTR_CLEAR, 0xffffffff);
+	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
 	mdp_histogram_ctrl_all(TRUE);
 
@@ -2684,10 +2678,10 @@ static int mdp_bus_scale_register(void)
 
 	if (!mdp_bus_scale_handle) {
 		mdp_bus_scale_handle = msm_bus_scale_register_client(bus_pdata);
-		if (!mdp_bus_scale_handle) {									
-			pr_err("%s: not able to get bus scale!\n", __func__);			
-			return -ENOMEM; 												
-		}																
+		if (!mdp_bus_scale_handle) {
+			pr_err("%s: not able to get bus scale!\n", __func__);
+			return -ENOMEM;
+		}
 	}
 	return 0;
 }
@@ -2715,7 +2709,7 @@ int mdp_bus_scale_update_request(u64 ab_p0, u64 ib_p0, u64 ab_p1, u64 ib_p1)
    mdp_bus_usecases[bus_index].vectors[1].ab = min(ab_p1, mdp_max_bw);
    ib_p1 = max(ib_p1, ab_p1);
    mdp_bus_usecases[bus_index].vectors[1].ib = min(ib_p1, mdp_max_bw);
-   
+
 	pr_debug("%s: handle=%d index=%d ab=%llu ib=%llu\n", __func__,
 		 (u32)mdp_bus_scale_handle, bus_index,
 		 mdp_bus_usecases[bus_index].vectors[0].ab,
@@ -2724,36 +2718,36 @@ int mdp_bus_scale_update_request(u64 ab_p0, u64 ib_p0, u64 ab_p1, u64 ib_p1)
 			(u32)mdp_bus_scale_handle, bus_index,
 			mdp_bus_usecases[bus_index].vectors[1].ab,
 			mdp_bus_usecases[bus_index].vectors[1].ib);
-	
+
 
 	return msm_bus_scale_client_update_request
 		(mdp_bus_scale_handle, bus_index);
 }
 
-int mdp_bus_scale_restore_request(void) 
-{ 
-	u64 ab, ib; 
-	if (!bus_index || 
-		!mdp_bus_usecases[bus_index].vectors[0].ab) { 
-		ab = mdp_max_bw; 
-		ib = mdp_max_bw; 
-	} else { 
-		ab = mdp_bus_usecases[bus_index].vectors[0].ab; 
-		ib = mdp_bus_usecases[bus_index].vectors[0].ib; 
-	} 
-	pr_info("%s: ab=%llu ib=%llu\n", __func__, ab, ib); 
-	
+int mdp_bus_scale_restore_request(void)
+{
+	u64 ab, ib;
+	if (!bus_index ||
+		!mdp_bus_usecases[bus_index].vectors[0].ab) {
+		ab = mdp_max_bw;
+		ib = mdp_max_bw;
+	} else {
+		ab = mdp_bus_usecases[bus_index].vectors[0].ab;
+		ib = mdp_bus_usecases[bus_index].vectors[0].ib;
+	}
+	pr_info("%s: ab=%llu ib=%llu\n", __func__, ab, ib);
+
 	pr_debug("%s: index=%d ab_p0=%llu ib_p0=%llu\n", __func__, bus_index,
 					 mdp_bus_usecases[bus_index].vectors[0].ab,
 					 mdp_bus_usecases[bus_index].vectors[0].ib);
 	pr_debug("%s: index=%d ab_p1=%llu ib_p1=%llu\n", __func__, bus_index,
 					 mdp_bus_usecases[bus_index].vectors[1].ab,
 					 mdp_bus_usecases[bus_index].vectors[1].ib);
-	
+
 	return mdp_bus_scale_update_request(ab, ib,
 		mdp_bus_usecases[bus_index].vectors[1].ab,
-		mdp_bus_usecases[bus_index].vectors[1].ib); 
-} 
+		mdp_bus_usecases[bus_index].vectors[1].ib);
+}
 
 #endif
 DEFINE_MUTEX(mdp_clk_lock);
@@ -3434,7 +3428,7 @@ static int mdp_probe(struct platform_device *pdev)
 #ifdef CONFIG_MSM_BUS_SCALING
 	if (mdp_bus_scale_handle > 0) {
 		msm_bus_scale_unregister_client(mdp_bus_scale_handle);
-		mdp_bus_scale_handle = 0; 
+		mdp_bus_scale_handle = 0;
 	}
 #endif
 	return rc;
@@ -3533,7 +3527,7 @@ static int mdp_remove(struct platform_device *pdev)
 #ifdef CONFIG_MSM_BUS_SCALING
 	if (mdp_bus_scale_handle > 0) {
 		msm_bus_scale_unregister_client(mdp_bus_scale_handle);
-		mdp_bus_scale_handle = 0; 
+		mdp_bus_scale_handle = 0;
 	}
 #endif
 	return 0;
