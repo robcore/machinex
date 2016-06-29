@@ -3317,7 +3317,13 @@ config SEC_FACTORY
 	default n
 	help
 	  Enable Features only For FACTORY BINARY.
-	  
+
+config GPU_OVERCLOCK
+	bool "Enable GPU Overclocking option"
+	default n
+	help
+	  Krait 600 ab GPU overclock up to 600 MHz
+
 config HAS_MACH_MEMUTILS
 	default n
 	bool "Motorola MSM memcpy enhancements"
