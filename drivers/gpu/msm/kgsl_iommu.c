@@ -310,7 +310,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	fsynr1 = KGSL_IOMMU_GET_CTX_REG(iommu, iommu_unit,
 		iommu_dev->ctx_id, FSYNR1);
 
-	if (!msm_soc_version_supports_iommu_v1())
+	if (msm_soc_version_supports_iommu_v1())
 		write = ((fsynr1 & (KGSL_IOMMU_FSYNR1_AWRITE_MASK <<
 			KGSL_IOMMU_FSYNR1_AWRITE_SHIFT)) ? 1 : 0);
 	else
