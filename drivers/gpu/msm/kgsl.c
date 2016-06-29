@@ -1036,9 +1036,6 @@ kgsl_get_process_private(struct kgsl_device *device)
 	if (!private)
 		return NULL;
 
-	if (!private)
-		return NULL;
-
 	mutex_lock(&private->process_private_mutex);
 
 	if (test_bit(KGSL_PROCESS_INIT, &private->priv))
