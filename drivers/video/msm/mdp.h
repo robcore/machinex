@@ -888,7 +888,6 @@ int mdp_histogram_block2mgmt(uint32_t block, struct mdp_hist_mgmt **mgmt);
 void mdp_histogram_handle_isr(struct mdp_hist_mgmt *mgmt);
 void __mdp_histogram_kickoff(struct mdp_hist_mgmt *mgmt);
 void __mdp_histogram_reset(struct mdp_hist_mgmt *mgmt);
-unsigned int mdp_check_suspended(void);
 void mdp_footswitch_ctrl(boolean on);
 int mdp_enable_iommu_clocks(void); 
 int mdp_disable_iommu_clocks(void);
@@ -940,10 +939,6 @@ void mdp_vid_quant_set(void);
 static inline void mdp_vid_quant_set(void)
 {
 	/* empty */
-}
-static inline void mdp4_iommu_detach(void)
-{
-    /* empty */
 }
 #endif
 

@@ -724,7 +724,6 @@ int mdp4_dtv_off(struct platform_device *pdev)
 	}
 
 	ret = panel_next_off(pdev);
-	mdp4_iommu_detach();
 	mdp_footswitch_ctrl(FALSE);
 
 	/*
