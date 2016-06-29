@@ -101,6 +101,7 @@ static inline void outer_flush_all(void) { }
 static inline void outer_clean_all(void) { }
 static inline void outer_inv_all(void) { }
 static inline void outer_disable(void) { }
+static inline void outer_resume(void) { }
 
 #endif
 
