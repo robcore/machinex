@@ -178,7 +178,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	8
 #else
-#define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
+#define MSM_ION_MM_SIZE		0x4C00000
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
 #define MSM_ION_QSECOM_SIZE	0x600000 /* (6MB) */
 #define MSM_ION_HEAP_NUM	8
