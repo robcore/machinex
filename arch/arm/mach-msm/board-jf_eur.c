@@ -525,7 +525,7 @@ static struct platform_device apq8064_android_pmem_audio_device = {
 static struct platform_device battery_bcl_device = {
 	.name = "battery_current_limit",
 	.id = -1,
-	};
+};
 #endif
 
 struct fmem_platform_data apq8064_fmem_pdata = {
@@ -1185,7 +1185,7 @@ static struct platform_device touchkey_i2c_gpio_device = {
 };
 
 static struct i2c_gpio_platform_data  cypress_touchkey_i2c_gpio_data_2 = {
-	.sda_pin		= GPIO_TOUCHKEY_SDA,	
+	.sda_pin		= GPIO_TOUCHKEY_SDA,
 	.scl_pin		= GPIO_TOUCHKEY_SCL_2,
 	.udelay			= 0,
 	.sda_is_open_drain	= 0,
@@ -3246,13 +3246,13 @@ static struct platform_device msm_tsens_device = {
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 7,
 	.poll_ms = 250,
-	.limit_temp_degC = 70,
+	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
 #ifdef CONFIG_INTELLI_THERMAL
 	.freq_control_mask = 0xf,
 #endif
-	.core_limit_temp_degC = 80,
+	.core_limit_temp_degC = 70,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
