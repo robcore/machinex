@@ -166,11 +166,7 @@ static void sensor_power_on_vdd(int, int);
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
-#else
-#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
-#endif
+#define MSM_PMEM_SIZE              0x0
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 #define HOLE_SIZE		0x20000
@@ -398,7 +394,7 @@ static void irda_device_init(void)
 		.output_buffer		= PM_GPIO_OUT_BUF_CMOS,
 		.output_value		= 0,
 	};
-	printk(KERN_ERR "%s called!\n", __func__);	
+	printk(KERN_ERR "%s called!\n", __func__);
 	gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), "irda_wake");
 	gpio_direction_output(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), 0);
 	pm8xxx_gpio_config(PM8921_GPIO_PM_TO_SYS(	\
@@ -3977,7 +3973,7 @@ static struct platform_device *early_common_devices[] __initdata = {
 	&apq8064_device_dmov,
 #if !defined(CONFIG_MACH_JACTIVE_ATT) && !defined(CONFIG_MACH_JACTIVE_EUR)
 	&apq8064_device_qup_spi_gsbi5,
-#endif	
+#endif
 };
 
 static struct platform_device *pm8921_common_devices[] __initdata = {
@@ -4007,7 +4003,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_device_wcnss_wlan,
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	&apq8064_device_qup_spi_gsbi5,
-#endif	
+#endif
 	&msm_device_iris_fm,
 	&apq8064_fmem_device,
 #ifdef CONFIG_ANDROID_PMEM
@@ -5169,10 +5165,10 @@ static void sec_jack_init(void)
 		.pull			= PM_GPIO_PULL_NO,
 		.out_strength	= PM_GPIO_STRENGTH_HIGH,
 		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,		
+		.inv_int_pol	= 0,
 		.vin_sel		= PM_GPIO_VIN_S4,
 		.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
-		.output_value	= 1,		
+		.output_value	= 1,
 	};
 
 	static struct pm_gpio fsa8048_en_old = {
@@ -5180,10 +5176,10 @@ static void sec_jack_init(void)
 		.pull			= PM_GPIO_PULL_UP_30,
 		.out_strength	= PM_GPIO_STRENGTH_HIGH,
 		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,		
+		.inv_int_pol	= 0,
 		.vin_sel		= PM_GPIO_VIN_S4,
 		.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
-		.output_value	= 1,		
+		.output_value	= 1,
 	};
 
 	ret = gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN),
@@ -5437,7 +5433,7 @@ static void __init apq8064_common_init(void)
 	if (!poweroff_charging) {
 		if (sec_tsp_synaptics_mode)
 			S5000_tsp_input_init(lcd_tsp_panel_version);
-#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXTS)	
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXTS)
 		else
 			mxt540s_tsp_input_init();
 #endif
