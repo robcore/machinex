@@ -899,7 +899,7 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
 	}
-	
+
 #endif
 
 	outpdw(rgb_base + 0x0000, src_size);	/* MDP_RGB_SRC_SIZE */
@@ -1098,22 +1098,22 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 #if defined(CONFIG_FEATURE_FLIPLR)
-	if (!pipe->mfd) 
-	pr_err("vg mfd is not set\n"); 
+	if (!pipe->mfd)
+	pr_err("vg mfd is not set\n");
 
-	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){ 
-		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR; 
-		if (pipe->ext_flag & MDP_FLIP_LR){ 
-			op_mode &= ~MDP4_OP_FLIP_LR; 
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));			
+	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){
+		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR;
+		if (pipe->ext_flag & MDP_FLIP_LR){
+			op_mode &= ~MDP4_OP_FLIP_LR;
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
-		pipe->op_mode = op_mode; 
+		pipe->op_mode = op_mode;
 
 		if ((pipe->op_mode & MDP4_OP_FLIP_LR) && pipe->mfd){
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));						
-			outpdw(MDP_BASE + 0xE0044, 0xe0fff); 
-		} 
-	} 
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
+			outpdw(MDP_BASE + 0xE0044, 0xe0fff);
+		}
+	}
 #endif
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
@@ -1124,8 +1124,13 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	outpdw(vg_base + 0x000c, dst_xy);	/* MDP_RGB_DST_XY */
 
 	xlog(__func__, (int) pipe->srcp0_addr, pipe->srcp0_ystride, 0, 0, 0);
-	if (pipe->frame_format != MDP4_FRAME_FORMAT_LINEAR)
-		outpdw(vg_base + 0x0048, frame_size); /* TILE frame size */
+	/* TILE frame size */
+	if (pipe->frame_format != MDP4_FRAME_FORMAT_LINEAR) {
+		if (ctrl->panel_mode & MDP4_PANEL_DSI_CMD)
+			outpdw(vg_base + 0x0048, frame_size);
+		else
+			pipe->frame_size = frame_size;
+	}
 
 	/*
 	 * Adjust src X offset to avoid MDP from overfetching pixels
@@ -3359,7 +3364,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		}
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
-			if (pipe->bpp==2) 
+			if (pipe->bpp==2)
 				yuvcount++;
 		}
 
@@ -4078,6 +4083,24 @@ void mdp4_overlay_dma_commit(int mixer)
 	* non double buffer register update here
 	* perf level, new clock rate should be done here
 	*/
+	struct mdp4_overlay_pipe *pipe;
+	char *vg_base;
+	int i, pnum;
+	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
+		pipe = ctrl->stage[mixer][i];
+		if (pipe) {
+			if (pipe->pipe_type == OVERLAY_TYPE_VIDEO &&
+						(pipe->frame_format !=
+						MDP4_FRAME_FORMAT_LINEAR) &&
+						pipe->frame_size) {
+				pnum = pipe->pipe_num - OVERLAY_PIPE_VG1;
+				vg_base = MDP_BASE + MDP4_VIDEO_BASE;
+				vg_base += (MDP4_VIDEO_OFF * pnum);
+				outpdw(vg_base + 0x0048, pipe->frame_size);
+				pipe->frame_size = 0;
+			}
+		}
+	}
 }
 
 /*
