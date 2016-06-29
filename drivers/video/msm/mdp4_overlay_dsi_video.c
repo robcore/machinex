@@ -800,6 +800,7 @@ int mdp4_dsi_video_on(struct platform_device *pdev)
 //	mdp4_overlay_dsi_video_start();
 	mutex_unlock(&mfd->dma->ov_mutex);
 
+	mdp4_iommu_detach();
 	return ret;
 }
 

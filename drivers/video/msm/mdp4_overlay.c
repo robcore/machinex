@@ -899,7 +899,7 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
 	}
-	
+
 #endif
 
 	outpdw(rgb_base + 0x0000, src_size);	/* MDP_RGB_SRC_SIZE */
@@ -1098,22 +1098,22 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 #if defined(CONFIG_FEATURE_FLIPLR)
-	if (!pipe->mfd) 
-	pr_err("vg mfd is not set\n"); 
+	if (!pipe->mfd)
+	pr_err("vg mfd is not set\n");
 
-	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){ 
-		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR; 
-		if (pipe->ext_flag & MDP_FLIP_LR){ 
-			op_mode &= ~MDP4_OP_FLIP_LR; 
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));			
+	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){
+		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR;
+		if (pipe->ext_flag & MDP_FLIP_LR){
+			op_mode &= ~MDP4_OP_FLIP_LR;
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
-		pipe->op_mode = op_mode; 
+		pipe->op_mode = op_mode;
 
 		if ((pipe->op_mode & MDP4_OP_FLIP_LR) && pipe->mfd){
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));						
-			outpdw(MDP_BASE + 0xE0044, 0xe0fff); 
-		} 
-	} 
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
+			outpdw(MDP_BASE + 0xE0044, 0xe0fff);
+		}
+	}
 #endif
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
@@ -3359,7 +3359,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		}
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
-			if (pipe->bpp==2) 
+			if (pipe->bpp==2)
 				yuvcount++;
 		}
 
@@ -4373,14 +4373,14 @@ static struct msm_iommu_ctx msm_iommu_split_ctx_names[] = {
 	},
 };
 
+static int iommu_enabled;
 void mdp4_iommu_attach(void)
 {
-	static int done;
 	struct msm_iommu_ctx *ctx_names;
 	struct iommu_domain *domain;
 	int i, arr_size;
 
-	if (!done) {
+	if (!iommu_enabled) {
 		if (mdp_iommu_split_domain) {
 			ctx_names = msm_iommu_split_ctx_names;
 			arr_size = ARRAY_SIZE(msm_iommu_split_ctx_names);
@@ -4411,7 +4411,35 @@ void mdp4_iommu_attach(void)
 				continue;
 			}
 		}
-		done = 1;
+		pr_debug("Attached MDP IOMMU device\n");
+		iommu_enabled = 1;
+	}
+}
+
+void mdp4_iommu_detach(void)
+{
+	struct iommu_domain *domain;
+	int i;
+
+	if (iommu_enabled) {
+		for (i = 0; i < ARRAY_SIZE(msm_iommu_ctx_names); i++) {
+			int domain_idx;
+			struct device *ctx = msm_iommu_get_ctx(
+				msm_iommu_ctx_names[i].name);
+
+			if (!ctx)
+				continue;
+
+			domain_idx = msm_iommu_ctx_names[i].domain;
+
+			domain = msm_get_iommu_domain(domain_idx);
+			if (!domain)
+				continue;
+
+			iommu_detach_device(domain,	ctx);
+		}
+		pr_debug("Detached MDP IOMMU device\n");
+		iommu_enabled = 0;
 	}
 }
 

@@ -756,6 +756,7 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 
 	mdp_histogram_ctrl_all(TRUE);
 
+	mdp4_iommu_detach();
 	return ret;
 }
 
