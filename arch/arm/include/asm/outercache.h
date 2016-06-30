@@ -31,7 +31,7 @@ struct outer_cache_fns {
 	void (*clean_all)(void);
 	void (*inv_all)(void);
 	void (*disable)(void);
-	uint32_t (*get_size)(void)
+	uint32_t (*get_size)(void);
 #ifdef CONFIG_OUTER_CACHE_SYNC
 	void (*sync)(void);
 #endif
@@ -69,7 +69,7 @@ static inline void outer_clean_all(void)
 {
 	if (outer_cache.clean_all)
 		outer_cache.clean_all();
-+}
+}
 
 static inline void outer_inv_all(void)
 {
