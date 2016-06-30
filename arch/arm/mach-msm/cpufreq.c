@@ -433,7 +433,6 @@ static struct early_suspend msm_cpu_early_suspend_handler = {
 
 static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
-
 {
 	unsigned int cpu = (unsigned long)hcpu;
 
