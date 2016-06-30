@@ -135,6 +135,8 @@ adreno_ringbuffer_waitspace(struct adreno_ringbuffer *rb,
 
 		continue;
 
+		continue;
+
 err:
 		if (!adreno_dump_and_exec_ft(rb->device)) {
 			if (context && context->flags & CTXT_FLAGS_GPU_HANG) {
