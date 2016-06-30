@@ -166,7 +166,7 @@ static void sensor_power_on_vdd(int, int);
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
-#define MSM_PMEM_SIZE              0x0
+#define MSM_PMEM_SIZE              0x4000000
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 #define HOLE_SIZE		0x20000
@@ -209,6 +209,10 @@ static void sensor_power_on_vdd(int, int);
 #define PCIE_WAKE_N_PMIC_GPIO 12
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
+
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND  
+int id_set_two_phase_freq(int cpufreq); 
+#endif 
 
 static int sec_tsp_synaptics_mode;
 static int lcd_tsp_panel_version;
@@ -5549,6 +5553,9 @@ static void __init samsung_jf_init(void)
 	clear_ssp_gpio();
 	sensor_power_on_vdd(SNS_PWR_ON, SNS_PWR_ON);
 	initialize_ssp_gpio();
+#endif
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+	id_set_two_phase_freq(1566000);
 #endif
 #ifdef CONFIG_MACH_JF
 	platform_device_register(&gpio_kp_pdev);
