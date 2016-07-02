@@ -899,7 +899,7 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
 	}
-	
+
 #endif
 
 	outpdw(rgb_base + 0x0000, src_size);	/* MDP_RGB_SRC_SIZE */
@@ -1098,22 +1098,22 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 #if defined(CONFIG_FEATURE_FLIPLR)
-	if (!pipe->mfd) 
-	pr_err("vg mfd is not set\n"); 
+	if (!pipe->mfd)
+	pr_err("vg mfd is not set\n");
 
-	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){ 
-		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR; 
-		if (pipe->ext_flag & MDP_FLIP_LR){ 
-			op_mode &= ~MDP4_OP_FLIP_LR; 
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));			
+	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){
+		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR;
+		if (pipe->ext_flag & MDP_FLIP_LR){
+			op_mode &= ~MDP4_OP_FLIP_LR;
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
-		pipe->op_mode = op_mode; 
+		pipe->op_mode = op_mode;
 
 		if ((pipe->op_mode & MDP4_OP_FLIP_LR) && pipe->mfd){
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));						
-			outpdw(MDP_BASE + 0xE0044, 0xe0fff); 
-		} 
-	} 
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
+			outpdw(MDP_BASE + 0xE0044, 0xe0fff);
+		}
+	}
 #endif
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
@@ -3301,6 +3301,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 
 	u64 ab_quota_port0 = 0, ib_quota_port0 = 0;
 	u64 ab_quota_port1 = 0, ib_quota_port1 = 0;
+	u64 ib_quota_min = 0;
 
 	u32 cnt = 0;
 	int ret = -EINVAL;
@@ -3356,7 +3357,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		}
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
-			if (pipe->bpp==2) 
+			if (pipe->bpp==2)
 				yuvcount++;
 		}
 
@@ -3373,6 +3374,12 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 			    (mfd->panel_info.type != DTV_PANEL)) {
 				perf_req->use_ov_blt[MDP4_MIXER0] = 1;
 			}
+		} else {
+			if (ib_quota_min == 0)
+				ib_quota_min = pipe->bw_ib_quota;
+			else
+				ib_quota_min = min(ib_quota_min,
+						   pipe->bw_ib_quota);
 		}
 	}
 
@@ -3471,6 +3478,9 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 
 	}
 #endif
+
+	ib_quota_total = max(ib_quota_total, ib_quota_min);
+
 	perf_req->mdp_ab_bw = roundup(ab_quota_total, MDP_BUS_SCALE_AB_STEP);
 	perf_req->mdp_ib_bw = roundup(ib_quota_total, MDP_BUS_SCALE_AB_STEP);
 
