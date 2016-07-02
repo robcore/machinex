@@ -622,9 +622,9 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	 */
 	if (mfd->panel_info.type == HDMI_PANEL ||
 	    mfd->panel_info.type == DTV_PANEL)
-		mfd->suspend.panel_power_state = MDP_PANEL_POWER_OFF;
+		mfd->suspend.panel_power_on = false;
 	else
-		mfd->suspend.panel_power_state = mfd->panel_power_state;
+		mfd->suspend.panel_power_on = mfd->panel_power_on;
 
 	mfd->suspend.op_suspend = true;
 
@@ -684,7 +684,7 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 	mfd->sw_refreshing_enable = mfd->suspend.sw_refreshing_enable;
 	mfd->op_enable = mfd->suspend.op_enable;
 
-	if (mdp_panel_is_power_on(mfd->suspend.panel_power_state)) {
+	if (mfd->suspend.panel_power_on) {
 		if (mfd->panel_driver_on == FALSE)
 			msm_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
 				      mfd->op_enable);
@@ -929,7 +929,6 @@ static int mdp_bl_scale_config(struct msm_fb_data_type *mfd,
 								bl_min_lvl);
 
 	/* update current backlight to use new scaling*/
-	if (!mdp_fb_is_power_off(mfd) && bl_updated)
 	msm_fb_set_backlight(mfd, curr_bl);
 	up(&mfd->sem);
 
@@ -969,7 +968,7 @@ void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
 	struct msm_fb_panel_data *pdata;
 	__u32 temp = bkl_lvl;
 
-	if (mdp_fb_is_power_off(mfd) || !bl_updated) {
+	if (!mfd->panel_power_on || !bl_updated) {
 		unset_bl_level = bkl_lvl;
 		return;
 	} else {
@@ -996,7 +995,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	struct msm_fb_panel_data *pdata = NULL;
 	int ret = 0;
-	int cur_power_state, req_power_state = MDP_PANEL_POWER_OFF;
 
 	if (!op_enable)
 		return -EPERM;
@@ -1007,18 +1005,17 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 		return -ENODEV;
 	}
 
-	cur_power_state = mfd->panel_power_state;
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 		mutex_lock(&power_state_chagne);
 #endif
 		bl_updated = 0;
-		if (mdp_fb_is_power_off(mfd)) {
+		if (!mfd->panel_power_on) {
 			ret = pdata->on(mfd->pdev);
 			if (ret == 0) {
 				down(&mfd->sem);
-				mfd->panel_power_state = MDP_PANEL_POWER_ON;
+				mfd->panel_power_on = TRUE;
 				up(&mfd->sem);
 				mfd->panel_driver_on = mfd->op_enable;
 			}
@@ -1029,19 +1026,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 		break;
 
 	case FB_BLANK_VSYNC_SUSPEND:
-		req_power_state = MDP_PANEL_POWER_DOZE;
-		if (mdp_fb_is_power_off(mfd)) {
-			ret = pdata->on(mfd->pdev);
-			if (ret == 0) {
-				down(&mfd->sem);
-				mfd->panel_power_state = MDP_PANEL_POWER_ON;
-				up(&mfd->sem);
-				mfd->panel_driver_on = mfd->op_enable;
-			}
-		}
-		/* Continue to POWERDOWN to doze if no errors */
-		if (ret)
-			break;
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_NORMAL:
 	case FB_BLANK_POWERDOWN:
@@ -1049,12 +1033,13 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 		mutex_lock(&power_state_chagne);
 #endif
-		if (mdp_fb_is_power_on(mfd)) {
-			cur_power_state = mfd->panel_power_state;
+		if (mfd->panel_power_on) {
+			int curr_pwr_state;
 
 			mfd->op_enable = FALSE;
+			curr_pwr_state = mfd->panel_power_on;
 			down(&mfd->sem);
-			mfd->panel_power_state = req_power_state;
+			mfd->panel_power_on = FALSE;
 			up(&mfd->sem);
 
 			if (mfd->msmfb_no_update_notify_timer.function)
@@ -1069,7 +1054,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 			ret = pdata->off(mfd->pdev);
 			if (ret)
-				mfd->panel_power_state = cur_power_state;
+				mfd->panel_power_on = curr_pwr_state;
 
 			if (mfd->timeline) {
 				/* Adding 1 is enough when pan_display is still
@@ -1569,7 +1554,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->ref_cnt = 0;
 	mfd->sw_currently_refreshing = FALSE;
 	mfd->sw_refreshing_enable = TRUE;
-	mfd->panel_power_state = MDP_PANEL_POWER_OFF;
+	mfd->panel_power_on = FALSE;
 
 	mfd->pan_waiting = FALSE;
 	init_completion(&mfd->pan_comp);
@@ -1633,7 +1618,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		memset(fbi->screen_base, 0x0, fix->smem_len);
 
 	mfd->op_enable = TRUE;
-	mfd->panel_power_state = MDP_PANEL_POWER_OFF;
+	mfd->panel_power_on = FALSE;
 
 	/* cursor memory allocation */
 	if (mfd->cursor_update) {
@@ -1739,9 +1724,9 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		if (sub_dir) {
 			msm_fb_debugfs_file_create(sub_dir, "op_enable",
 						   (u32 *) &mfd->op_enable);
-			msm_fb_debugfs_file_create(sub_dir, "panel_power_state",
+			msm_fb_debugfs_file_create(sub_dir, "panel_power_on",
 						   (u32 *) &mfd->
-						   panel_power_state);
+						   panel_power_on);
 			msm_fb_debugfs_file_create(sub_dir, "ref_cnt",
 						   (u32 *) &mfd->ref_cnt);
 			msm_fb_debugfs_file_create(sub_dir, "fb_imgType",
@@ -2049,7 +2034,7 @@ static int msm_fb_pan_display_ex(struct fb_info *info,
 	int ret = 0;
 	if (disp_commit->flags &
 		MDP_DISPLAY_COMMIT_OVERLAY) {
-		if (mdp_fb_is_power_off(mfd)) /* suspended */
+		if (!mfd->panel_power_on) /* suspended */
 			return -EPERM;
 	} else {
 	        /*
@@ -2068,7 +2053,7 @@ static int msm_fb_pan_display_ex(struct fb_info *info,
 		}
 
 		if (info->node != 0 || mfd->cont_splash_done)	/* primary */
-			if ((!mfd->op_enable) || (mdp_fb_is_power_off(mfd)))
+			if ((!mfd->op_enable) || (!mfd->panel_power_on))
 				return -EPERM;
 
 		if (var->xoffset > (info->var.xres_virtual - info->var.xres))
@@ -2134,7 +2119,7 @@ static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 	}
 
 	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
-		if ((!mfd->op_enable) || (mdp_fb_is_power_off(mfd)))
+		if ((!mfd->op_enable) || (!mfd->panel_power_on))
 			return -EPERM;
 
 	if (var->xoffset > (info->var.xres_virtual - info->var.xres))
@@ -2448,7 +2433,7 @@ static int msm_fb_set_par(struct fb_info *info)
 	mfd->fbi->fix.line_length = msm_fb_line_length(mfd->index, var->xres,
 						       var->bits_per_pixel/8);
 
-	if ((mfd->panel_info.type == DTV_PANEL) && mdp_fb_is_power_off(mfd)) {
+	if ((mfd->panel_info.type == DTV_PANEL) && !mfd->panel_power_on) {
 		msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable);
 	} else if (blank) {
 		msm_fb_blank_sub(FB_BLANK_POWERDOWN, info, mfd->op_enable);
@@ -3426,7 +3411,7 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 		}
 	}
 
-	if (mdp_fb_is_power_off(mfd)) /* suspended */
+	if (!mfd->panel_power_on) /* suspended */
 		return -EPERM;
 
 	complete(&mfd->msmfb_update_notify);
@@ -3838,7 +3823,7 @@ static int msmfb_handle_buf_sync_ioctl(struct msm_fb_data_type *mfd,
 		(mfd->timeline == NULL))
 		return -EINVAL;
 
-	if ((!mfd->op_enable) || (mdp_fb_is_power_off(mfd)))
+	if ((!mfd->op_enable) || (!mfd->panel_power_on))
 		return -EPERM;
 
 	if (buf_sync->acq_fen_fd_cnt)
@@ -4143,7 +4128,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		return -EFAULT;
 #endif
 	case MSMFB_SUSPEND_SW_REFRESHER:
-		if (mdp_fb_is_power_off(mfd))
+		if (!mfd->panel_power_on)
 			return -EPERM;
 
 		mfd->sw_refreshing_enable = FALSE;
@@ -4151,7 +4136,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case MSMFB_RESUME_SW_REFRESHER:
-		if (mdp_fb_is_power_off(mfd))
+		if (!mfd->panel_power_on)
 			return -EPERM;
 
 		mfd->sw_refreshing_enable = TRUE;
@@ -4177,7 +4162,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case MSMFB_HISTOGRAM:
-		if (mdp_fb_is_power_off(mfd))
+		if (!mfd->panel_power_on)
 			return -EPERM;
 
 		if (!mfd->do_histogram)
@@ -4191,7 +4176,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case MSMFB_HISTOGRAM_START:
-		if (mdp_fb_is_power_off(mfd))
+		if (!mfd->panel_power_on)
 			return -EPERM;
 
 		if (!mfd->start_histogram)
