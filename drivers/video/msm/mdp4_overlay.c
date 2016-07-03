@@ -3882,10 +3882,10 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		fill_black_screen(FALSE, pipe->pipe_num, pipe->mixer_num);
 
 	mdp4_overlay_mdp_pipe_req(pipe, mfd);
-	ret = mdp4_overlay_mdp_perf_req(mfd);
+	ret = mdp4_overlay_mdp_perf_req(mfd, ctrl->plist);
 
 	if (ret) {
-		mdp4_overlay_pipe_free(pipe);
+		mdp4_overlay_pipe_free(pipe, 0);
 		pr_err("%s: blt mode should not be enabled\n", __func__);
 	}
 	mutex_unlock(&mfd->dma->ov_mutex);
