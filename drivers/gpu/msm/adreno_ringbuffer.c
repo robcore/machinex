@@ -135,8 +135,6 @@ adreno_ringbuffer_waitspace(struct adreno_ringbuffer *rb,
 
 		continue;
 
-		continue;
-
 err:
 		if (!adreno_dump_and_exec_ft(rb->device)) {
 			if (context && context->flags & CTXT_FLAGS_GPU_HANG) {
@@ -563,9 +561,6 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	if (KGSL_MEMSTORE_GLOBAL != context_id)
 		total_sizedwords += 3; /* global timestamp without cache
 					* flush for non-zero context */
-
-	if (flags & KGSL_CMD_FLAGS_EOF)
-		total_sizedwords += 2;
 
 	if (flags & KGSL_CMD_FLAGS_EOF)
 		total_sizedwords += 2;
