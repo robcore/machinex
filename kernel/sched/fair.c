@@ -1755,27 +1755,6 @@ dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	se->on_rq = 0;
 }
 
-#ifdef CONFIG_ARCH_SCALE_INVARIANT_CPU_CAPACITY
-#define SCHED_ARCH_SCALE_POWER_SHIFT 10
-#endif
-static inline unsigned long compute_capacity_of(int cpu)
-{
-	return cpu_rq(cpu)->curr_compute_capacity;
-}
-
-static inline unsigned long max_compute_capacity_of(int cpu)
-{
-	return cpu_rq(cpu)->max_compute_capacity;
-}
-
-static inline void update_cpu_capacity(int cpu)
-{
-	int tmp_capacity = arch_get_cpu_capacity(cpu);
-	int tmp_max_capacity = arch_get_max_cpu_capacity(cpu);
-	trace_sched_upd_cap(cpu, tmp_capacity, tmp_max_capacity);
-	cpu_rq(cpu)->max_compute_capacity = tmp_max_capacity;
-	cpu_rq(cpu)->curr_compute_capacity = tmp_capacity;
-}
 /*
  * Preempt the current task with a newly woken task if needed:
  */
