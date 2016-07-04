@@ -2042,7 +2042,7 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 	s16 field_width;
 	bool is_sign;
 
-	while (*fmt && *str) {
+	while (*fmt) {
 		/* skip any white space in format */
 		/* white space in format matchs any amount of
 		 * white space, including none, in the input.
@@ -2067,6 +2067,8 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 		 * advance both strings to next white space
 		 */
 		if (*fmt == '*') {
+			if (!*str)
+				break;
 			while (!isspace(*fmt) && *fmt != '%' && *fmt)
 				fmt++;
 			while (!isspace(*str) && *str)
@@ -2095,7 +2097,17 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 			}
 		}
 
-		if (!*fmt || !*str)
+		if (!*fmt)
+			break;
+
+		if (*fmt == 'n') {
+			/* return number of characters read so far */
+			*va_arg(args, int *) = str - buf;
+			++fmt;
+			continue;
+		}
+
+		if (!*str)
 			break;
 
 		base = 10;
@@ -2126,13 +2138,6 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 				*s++ = *str++;
 			*s = '\0';
 			num++;
-		}
-		continue;
-		case 'n':
-			/* return number of characters read so far */
-		{
-			int *i = (int *)va_arg(args, int*);
-			*i = str - buf;
 		}
 		continue;
 		case 'o':
@@ -2233,16 +2238,6 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 		if (!next)
 			break;
 		str = next;
-	}
-
-	/*
-	 * Now we've come all the way through so either the input string or the
-	 * format ended. In the former case, there can be a %n at the current
-	 * position in the format that needs to be filled.
-	 */
-	if (*fmt == '%' && *(fmt + 1) == 'n') {
-		int *p = (int *)va_arg(args, int *);
-		*p = str - buf;
 	}
 
 	return num;
