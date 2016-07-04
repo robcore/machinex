@@ -28,7 +28,7 @@
 
 //#define DEBUG_CPU_LIMITER
 
-uint32_t limited_max_freq = 2265600;
+uint32_t limited_max_freq = 1890000;
 
 static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 {
@@ -87,12 +87,12 @@ static ssize_t msm_cpufreq_limit_version_show(struct kobject *kobj,
 			MSM_CPUFREQ_LIMIT_MAJOR, MSM_CPUFREQ_LIMIT_MINOR);
 }
 
-static struct kobj_attribute msm_cpufreq_limit_attribute = 
+static struct kobj_attribute msm_cpufreq_limit_attribute =
 	__ATTR(cpufreq_limit, 0666,
 		msm_cpufreq_limit_show,
 		msm_cpufreq_limit_store);
 
-static struct kobj_attribute msm_cpufreq_limit_version_attribute = 
+static struct kobj_attribute msm_cpufreq_limit_version_attribute =
 	__ATTR(msm_cpufreq_limit_version, 0444 ,
 		msm_cpufreq_limit_version_show,
 		NULL);
@@ -142,7 +142,7 @@ static void msm_cpufreq_limit_exit(void)
 
 module_init(msm_cpufreq_limit_init);
 module_exit(msm_cpufreq_limit_exit);
-MODULE_LICENSE("GPL v2"); 
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("Krait CPU frequency Limit Driver");
 
