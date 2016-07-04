@@ -29,12 +29,6 @@ config CPU_BOOST
 
 	  If in doubt, say N.
 
-config CPUFREQ_ID_PERFLOCK
-	bool "Intellidemand Performance Lock"
-	depends on CPU_FREQ_GOV_INTELLIDEMAND
-	default n
-	help
-		Minimum CPU performance lock for Intellidemand governor
 
 config CPU_FREQ_TABLE
 	tristate
@@ -70,14 +64,6 @@ config CPU_FREQ_STAT_DETAILS
 	  system.
 
 	  If in doubt, say N.
-
-config QUAD_CORES_SOC_STAT
-	bool "Overall statistic details for quadcore SOCs"
-	depends on CPU_FREQ_STAT
-	default n
-	help
-	  This will show overall CPU frequency statistics via sysfs.
-	  If this option is not set, it defaults to dual core stats
 
 choice
 	prompt "Default CPUFreq governor"
