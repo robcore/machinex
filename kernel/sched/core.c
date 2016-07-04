@@ -6345,7 +6345,6 @@ cpu_attach_domain(struct sched_domain *sd, struct root_domain *rd, int cpu)
 	rcu_assign_pointer(rq->sd, sd);
 	destroy_sched_domains(tmp, cpu);
 
-	update_packing_domain(cpu);
 	update_top_cache_domain(cpu);
 }
 
@@ -7417,8 +7416,6 @@ void __init sched_init(void)
 		rq->sd = NULL;
 		rq->rd = NULL;
 		rq->cpu_power = SCHED_POWER_SCALE;
-		rq->curr_compute_capacity = SCHED_POWER_SCALE;
-		rq->max_compute_capacity = SCHED_POWER_SCALE;
 		rq->post_schedule = 0;
 		rq->active_balance = 0;
 		rq->next_balance = jiffies;
