@@ -45,7 +45,14 @@ extern void set_gpu_vdd_levels(int uv_tbl[]);
  */
 static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
-
+#ifdef CONFIG_HOTPLUG_CPU
+/* This one keeps track of the previously set governor of a removed CPU */
+struct cpufreq_cpu_save_data {
+	char gov[CPUFREQ_NAME_LEN];
+	unsigned int max, min;
+};
+static DEFINE_PER_CPU(struct cpufreq_cpu_save_data, cpufreq_policy_save);
+#endif
 static DEFINE_SPINLOCK(cpufreq_driver_lock);
 
 /*
@@ -877,6 +884,26 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 #ifdef CONFIG_SMP
 	unsigned long flags;
 	unsigned int j;
+#ifdef CONFIG_HOTPLUG_CPU
+	struct cpufreq_governor *gov;
+
+	gov = __find_governor(per_cpu(cpufreq_policy_save, cpu).gov);
+	if (gov) {
+		policy->governor = gov;
+		pr_debug("Restoring governor %s for cpu %d\n",
+		       policy->governor->name, cpu);
+	}
+	if (per_cpu(cpufreq_policy_save, cpu).min) {
+		policy->min = per_cpu(cpufreq_policy_save, cpu).min;
+		policy->user_policy.min = policy->min;
+	}
+	if (per_cpu(cpufreq_policy_save, cpu).max) {
+		policy->max = per_cpu(cpufreq_policy_save, cpu).max;
+		policy->user_policy.max = policy->max;
+	}
+	pr_debug("Restoring CPU%d min %d and max %d\n",
+		cpu, policy->min, policy->max);
+#endif
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpufreq_policy *managed_policy;
@@ -906,8 +933,6 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 
 			spin_lock_irqsave(&cpufreq_driver_lock, flags);
 			cpumask_copy(managed_policy->cpus, policy->cpus);
-			cpumask_and(managed_policy->cpus,
-					managed_policy->cpus, cpu_online_mask);
 			per_cpu(cpufreq_cpu_data, cpu) = managed_policy;
 			spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
@@ -1226,6 +1251,15 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 
 #ifdef CONFIG_SMP
 
+#ifdef CONFIG_HOTPLUG_CPU
+	strncpy(per_cpu(cpufreq_policy_save, cpu).gov, data->governor->name,
+			CPUFREQ_NAME_LEN);
+	per_cpu(cpufreq_policy_save, cpu).min = data->min;
+	per_cpu(cpufreq_policy_save, cpu).max = data->max;
+	pr_debug("Saving CPU%d policy min %d and max %d\n",
+			cpu, data->min, data->max);
+#endif
+
 	/* if we have other CPUs still registered, we need to unlink them,
 	 * or else wait_for_completion below will lock up. Clean the
 	 * per_cpu(cpufreq_cpu_data) while holding the lock, and remove
@@ -1246,6 +1280,14 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 			if (j == cpu)
 				continue;
 			pr_debug("removing link for cpu %u\n", j);
+#ifdef CONFIG_HOTPLUG_CPU
+			strncpy(per_cpu(cpufreq_policy_save, j).gov,
+				data->governor->name, CPUFREQ_NAME_LEN);
+			per_cpu(cpufreq_policy_save, j).min = data->min;
+			per_cpu(cpufreq_policy_save, j).max = data->max;
+			pr_debug("Saving CPU%d policy min %d and max %d\n",
+					j, data->min, data->max);
+#endif
 			cpu_dev = get_cpu_device(j);
 			kobj = &cpu_dev->kobj;
 			unlock_policy_rwsem_write(cpu);
@@ -1750,11 +1792,27 @@ EXPORT_SYMBOL_GPL(cpufreq_register_governor);
 
 void cpufreq_unregister_governor(struct cpufreq_governor *governor)
 {
+#ifdef CONFIG_HOTPLUG_CPU
+	int cpu;
+#endif
+
 	if (!governor)
 		return;
 
 	if (cpufreq_disabled())
 		return;
+
+#ifdef CONFIG_HOTPLUG_CPU
+	for_each_present_cpu(cpu) {
+		if (cpu_online(cpu))
+			continue;
+		if (!strcmp(per_cpu(cpufreq_policy_save, cpu).gov,
+					governor->name))
+			strcpy(per_cpu(cpufreq_policy_save, cpu).gov, "\0");
+		per_cpu(cpufreq_policy_save, cpu).min = 0;
+		per_cpu(cpufreq_policy_save, cpu).max = 0;
+	}
+#endif
 
 	mutex_lock(&cpufreq_governor_mutex);
 	list_del(&governor->governor_list);
