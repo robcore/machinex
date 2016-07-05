@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -209,8 +209,6 @@ struct msm_fb_panel_data {
 	int (*power_ctrl) (boolean enable);
 	struct platform_device *next;
 	int (*clk_func) (int enable);
-	int (*fps_level_change) (struct platform_device *pdev,
-					u32 fps_level);
 };
 
 /*===========================================================================
@@ -221,8 +219,6 @@ struct platform_device *msm_fb_device_alloc(struct msm_fb_panel_data *pdata,
 int panel_next_on(struct platform_device *pdev);
 int panel_next_init(struct platform_device *pdev);
 int panel_next_off(struct platform_device *pdev);
-int panel_next_fps_level_change(struct platform_device *pdev,
-					u32 fps_level);
 int panel_next_late_init(struct platform_device *pdev);
 
 int lcdc_device_register(struct msm_panel_info *pinfo);

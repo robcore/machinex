@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -57,8 +57,6 @@ static int mipi_dsi_remove(struct platform_device *pdev);
 
 static int mipi_dsi_off(struct platform_device *pdev);
 static int mipi_dsi_on(struct platform_device *pdev);
-static int mipi_dsi_fps_level_change(struct platform_device *pdev,
-					u32 fps_level);
 
 static struct platform_device *pdev_list[MSM_FB_MAX_DEV_LIST];
 static int pdev_list_cnt;
@@ -88,15 +86,6 @@ if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 	mipi_dsi_pdata->active_reset(0);
 }
 #endif
-
-static int mipi_dsi_fps_level_change(struct platform_device *pdev,
-					u32 fps_level)
-{
-	mipi_dsi_wait4video_done();
-	mipi_dsi_configure_fb_divider(fps_level);
-	return 0;
-}
-
 static int mipi_dsi_off(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -683,7 +672,6 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	pdata = mdp_dev->dev.platform_data;
 	pdata->on = mipi_dsi_on;
 	pdata->off = mipi_dsi_off;
-	pdata->fps_level_change = mipi_dsi_fps_level_change;
 	pdata->late_init = mipi_dsi_late_init;
 	pdata->next = pdev;
 

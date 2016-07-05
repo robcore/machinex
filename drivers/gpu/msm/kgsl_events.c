@@ -221,7 +221,6 @@ int kgsl_add_event(struct kgsl_device *device, u32 id, u32 ts,
 
 		func(device, priv, id, ts, KGSL_EVENT_TIMESTAMP_RETIRED);
 		kgsl_context_put(context);
-		queue_work(device->work_queue, &device->ts_expired_ws);
 		return 0;
 	}
 

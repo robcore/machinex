@@ -47,7 +47,7 @@ spinlock_t tz_lock;
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR			5000
+#define FLOOR			15000
 /* CEILING is 50msec, larger than any standard
  * frame length, but less than the idle timer.
  */
