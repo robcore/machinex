@@ -83,8 +83,6 @@ int mdp_iommu_split_domain;
 u32 mdp_max_clk = 266667000;
 u64 mdp_max_bw = 3080000000UL;
 
-u32 mdp_bw_ab_factor = MDP4_BW_AB_DEFAULT_FACTOR;
-u32 mdp_bw_ib_factor = MDP4_BW_IB_DEFAULT_FACTOR;
 static struct platform_device *mdp_init_pdev;
 static struct regulator *footswitch;
 static unsigned int mdp_footswitch_on;
@@ -581,6 +579,11 @@ static int mdp_lut_hw_update(struct fb_cmap *cmap)
 		return -EINVAL;
 	}
 
+	if (cmap->start > MDP_HIST_LUT_SIZE || cmap->len > MDP_HIST_LUT_SIZE ||
+			(cmap->start + cmap->len > MDP_HIST_LUT_SIZE)) {
+		pr_err("mdp_lut_hw_update invalid arguments\n");
+		return -EINVAL;
+	}
 	for (i = 0; i < cmap->len; i++) {
 		if (copy_from_user(&r, cmap->red++, sizeof(r)) ||
 		    copy_from_user(&g, cmap->green++, sizeof(g)) ||
@@ -709,6 +712,44 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 
 	return 0;
 }
+#endif
+
+#ifdef CONFIG_UPDATE_LCDC_LUT
+int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
+{
+	uint32_t out;
+	int i;
+	u16 r, g, b;
+
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+	mdp_clk_ctrl(1);
+
+	for (i = 0; i < cmap->len; i++) {
+		r = lut2r(internal_lut[i]);
+		g = lut2g(internal_lut[i]);
+		b = lut2b(internal_lut[i]);
+
+		r = scaled_by_kcal(r, *(cmap->red));
+		g = scaled_by_kcal(g, *(cmap->green));
+		b = scaled_by_kcal(b, *(cmap->blue));
+
+		MDP_OUTP(MDP_BASE + 0x94800 +
+			(0x400*mdp_lut_i) + cmap->start*4 + i*4,
+				((g & 0xff) |
+				 ((b & 0xff) << 8) |
+				 ((r & 0xff) << 16)));
+	}
+
+
+	out = inpdw(MDP_BASE + 0x90070) & ~((0x1 << 10) | 0x7);
+	MDP_OUTP(MDP_BASE + 0x90070, (mdp_lut_i << 10) | 0x7 | out);
+	mdp_clk_ctrl(0);
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+	mdp_lut_i = (mdp_lut_i + 1)%2;
+
+	return 0;
+}
+EXPORT_SYMBOL(mdp_preset_lut_update_lcdc);
 #endif
 
 static void mdp_lut_enable(void)
@@ -2890,13 +2931,6 @@ static int mdp_probe(struct platform_device *pdev)
 			pr_err("mdp: can not get mdp irq\n");
 			return -ENOMEM;
 		}
-
-		if (mdp_pdata->mdp_max_bw)
-			mdp_max_bw = mdp_pdata->mdp_max_bw;
-		if (mdp_pdata->mdp_bw_ab_factor)
-			mdp_bw_ab_factor = mdp_pdata->mdp_bw_ab_factor;
-		if (mdp_pdata->mdp_bw_ib_factor)
-			mdp_bw_ib_factor = mdp_pdata->mdp_bw_ib_factor;
 
 		mdp_rev = mdp_pdata->mdp_rev;
 

@@ -60,9 +60,6 @@
 #define MSM_FB_NUM	3
 #endif
 
-/*  Idle wakelock to prevent PC between wake up and Vsync */
-struct wake_lock mdp_idle_wakelock;
-
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
 static int fbram_size;
@@ -358,7 +355,7 @@ static ssize_t msm_fb_msm_fb_type(struct device *dev,
 }
 
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, msm_fb_msm_fb_type, NULL);
-static DEVICE_ATTR(msm_fb_fps_level, S_IRUGO | S_IWUSR | S_IWGRP, NULL, \
+static DEVICE_ATTR(msm_fb_fps_level, S_IRUGO | S_IWUGO, NULL, \
 				msm_fb_fps_level_change);
 static struct attribute *msm_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
@@ -543,10 +540,6 @@ static int msm_fb_remove(struct platform_device *pdev)
 		del_timer(&mfd->msmfb_no_update_notify_timer);
 	complete(&mfd->msmfb_no_update_notify);
 	complete(&mfd->msmfb_update_notify);
-
-	/* Do this only for the primary panel */
-	if (mfd->fbi->node == 0)
-		wake_lock_destroy(&mdp_idle_wakelock);
 
 	/* remove /dev/fb* */
 	unregister_framebuffer(mfd->fbi);
@@ -1055,17 +1048,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			ret = pdata->off(mfd->pdev);
 			if (ret)
 				mfd->panel_power_on = curr_pwr_state;
-
-			if (mfd->timeline) {
-				/* Adding 1 is enough when pan_display is still
-				 * a blocking call and with mutex protection.
-				 * But if it is an async call, we will still
-				 * need to add 2. Adding 2 can be safer in
-				 * order to signal all existing fences, and it
-				 * is harmless. */
-				sw_sync_timeline_inc(mfd->timeline, 2);
-				mfd->timeline_value+= 2;
-			}
 
 			msm_fb_release_timeline(mfd);
 			mfd->op_enable = TRUE;
@@ -1662,9 +1644,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		mfd->op_enable = FALSE;
 		return -EPERM;
 	}
-
-	if (fbi->node == 0)
-		wake_lock_init(&mdp_idle_wakelock, WAKE_LOCK_IDLE, "mdp");
 
 	fbram += fix->smem_len;
 	fbram_phys += fix->smem_len;

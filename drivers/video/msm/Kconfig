@@ -16,12 +16,6 @@ config FB_MSM
 
 if FB_MSM
 
-config UPDATE_LCDC_LUT
-	bool "Lcdc Lut control
-	default y
-	---help---
-	  Nothing can help you
-
 config FB_MSM_BACKLIGHT
 	bool "Support for backlight control"
 	default y

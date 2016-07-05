@@ -107,8 +107,6 @@ static int alloc_ion_mem(struct smem_client *client, size_t size,
 	unsigned long ionflags = 0;
 	unsigned long heap_mask = 0;
 	int rc = 0;
-	if (size == 0)
-		goto skip_mem_alloc;
 	if (flags == SMEM_CACHED)
 		ionflags = ION_SET_CACHED(ionflags);
 	else
@@ -153,7 +151,6 @@ fail_device_address:
 fail_map:
 	ion_free(client->clnt, hndl);
 fail_shared_mem_alloc:
-skip_mem_alloc:
 	return rc;
 }
 

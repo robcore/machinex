@@ -200,7 +200,6 @@ u32 vcd_init_device_context(struct vcd_drv_ctxt *drv_ctxt,
 
 		return rc;
 	}
-	dev_ctxt->turbo_mode_set = 0;
 
 	VCD_MSG_HIGH("Created scheduler instance.");
 

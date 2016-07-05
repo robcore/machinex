@@ -735,7 +735,7 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 			INIT_COMPLETION(device->hwaccess_gate);
 			device->ftbl->suspend_context(device);
 			device->ftbl->stop(device);
-			pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
+			pm_qos_update_request(&device->pm_qos_req_dma,
 						PM_QOS_DEFAULT_VALUE);
 			kgsl_pwrctrl_set_state(device, KGSL_STATE_SUSPEND);
 			break;
@@ -2449,7 +2449,6 @@ _gpumem_alloc(struct kgsl_device_private *dev_priv,
 	int result;
 	struct kgsl_process_private *private = dev_priv->process_priv;
 	struct kgsl_mem_entry *entry;
-	int align;
 
 	/*
 	 * Mask off unknown flags from userspace. This way the caller can
@@ -2460,15 +2459,6 @@ _gpumem_alloc(struct kgsl_device_private *dev_priv,
 		| KGSL_MEMTYPE_MASK
 		| KGSL_MEMALIGN_MASK
 		| KGSL_MEMFLAGS_USE_CPU_MAP;
-
-	/* Cap the alignment bits to the highest number we can handle */
-
-	align = (flags & KGSL_MEMALIGN_MASK) >> KGSL_MEMALIGN_SHIFT;
-	if (align >= 32) {
-		KGSL_CORE_ERR("Alignment too big, restricting to 2^32\n");
-		flags &= ~KGSL_MEMALIGN_MASK;
-		flags |= (31 << KGSL_MEMALIGN_SHIFT) & KGSL_MEMALIGN_MASK;
-	}
 
 	entry = kgsl_mem_entry_create();
 	if (entry == NULL)
@@ -3376,33 +3366,6 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 	device->reg_phys = res->start;
 	device->reg_len = resource_size(res);
 
-	/*
-	 * Check if a shadermemname is defined, and then get shader memory
-	 * details including shader memory starting physical address
-	 * and shader memory length
-	 */
-	if (device->shadermemname != NULL) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
-						device->shadermemname);
-
-		if (res == NULL) {
-			KGSL_DRV_ERR(device,
-			"Shader memory: platform_get_resource_byname failed\n");
-		}
-
-		else {
-			device->shader_mem_phys = res->start;
-			device->shader_mem_len = resource_size(res);
-		}
-
-		if (!devm_request_mem_region(device->dev,
-					device->shader_mem_phys,
-					device->shader_mem_len,
-						device->name)) {
-			KGSL_DRV_ERR(device, "request_mem_region_failed\n");
-		}
-	}
-
 	if (!devm_request_mem_region(device->dev, device->reg_phys,
 				device->reg_len, device->name)) {
 		KGSL_DRV_ERR(device, "request_mem_region failed\n");
@@ -3472,8 +3435,7 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 		goto error_close_mmu;
 	}
 
-	pm_qos_add_request(&device->pwrctrl.pm_qos_req_dma,
-				PM_QOS_CPU_DMA_LATENCY,
+	pm_qos_add_request(&device->pm_qos_req_dma, PM_QOS_CPU_DMA_LATENCY,
 				PM_QOS_DEFAULT_VALUE);
 
 	/* Initalize the snapshot engine */
@@ -3517,13 +3479,13 @@ int kgsl_postmortem_dump(struct kgsl_device *device, int manual)
 	}
 
 	if (device->pm_dump_enable) {
+
+		KGSL_LOG_DUMP(device,
+				"POWER: FLAGS = %08lX | ACTIVE POWERLEVEL = %08X",
+				pwr->power_flags, pwr->active_pwrlevel);
+
 		KGSL_LOG_DUMP(device, "POWER: INTERVAL TIMEOUT = %08X ",
 				pwr->interval_timeout);
-		KGSL_LOG_DUMP(device, "POWER: NAP ALLOWED = %d | START_STOP_SLEEP_WAKE = %d\n",
-				pwr->nap_allowed, pwr->strtstp_sleepwake);
-
-		KGSL_LOG_DUMP(device, "GRP_CLK = %lu ",
-				  kgsl_get_clkrate(pwr->grp_clks[0]));
 
 	}
 
@@ -3571,7 +3533,7 @@ void kgsl_device_platform_remove(struct kgsl_device *device)
 
 	kgsl_pwrctrl_uninit_sysfs(device);
 
-	pm_qos_remove_request(&device->pwrctrl.pm_qos_req_dma);
+	pm_qos_remove_request(&device->pm_qos_req_dma);
 
 	idr_destroy(&device->context_idr);
 

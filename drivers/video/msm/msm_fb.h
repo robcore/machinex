@@ -33,7 +33,6 @@
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <linux/hrtimer.h>
-#include <linux/wakelock.h>
 
 #include <linux/fb.h>
 #include <linux/list.h>
@@ -44,9 +43,6 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
-
-/*  Idle wakelock to prevent PC between wake up and Vsync */
-extern struct wake_lock mdp_idle_wakelock;
 
 #include "msm_fb_panel.h"
 #include "mdp.h"

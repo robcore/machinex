@@ -227,9 +227,6 @@ struct vdec_ioctl_msg {
 #define VDEC_IOCTL_GET_PERF_LEVEL \
 	_IOR(VDEC_IOCTL_MAGIC, 42, struct vdec_ioctl_msg)
 
-#define VDEC_IOCTL_SET_PERF_CLK \
-	_IOR(VDEC_IOCTL_MAGIC, 38, struct vdec_ioctl_msg)
-
 enum vdec_picture {
 	PICTURE_TYPE_I,
 	PICTURE_TYPE_P,

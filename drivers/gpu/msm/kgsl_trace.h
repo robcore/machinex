@@ -285,32 +285,6 @@ TRACE_EVENT(kgsl_mpdcvs,
 	)
 );
 
-TRACE_EVENT(kgsl_gpubusy,
-	TP_PROTO(struct kgsl_device *device, unsigned int busy,
-		unsigned int elapsed),
-
-	TP_ARGS(device, busy, elapsed),
-
-	TP_STRUCT__entry(
-		__string(device_name, device->name)
-		__field(unsigned int, busy)
-		__field(unsigned int, elapsed)
-	),
-
-	TP_fast_assign(
-		__assign_str(device_name, device->name);
-		__entry->busy = busy;
-		__entry->elapsed = elapsed;
-	),
-
-	TP_printk(
-		"d_name=%s busy=%d elapsed=%d",
-		__get_str(device_name),
-		__entry->busy,
-		__entry->elapsed
-	)
-);
-
 DECLARE_EVENT_CLASS(kgsl_pwrstate_template,
 	TP_PROTO(struct kgsl_device *device, unsigned int state),
 
@@ -663,27 +637,23 @@ TRACE_EVENT(kgsl_register_event,
 
 TRACE_EVENT(kgsl_fire_event,
 		TP_PROTO(unsigned int id, unsigned int ts,
-			unsigned int type, unsigned int age,
-			unsigned long func),
-		TP_ARGS(id, ts, type, age, func),
+			unsigned int type, unsigned int age),
+		TP_ARGS(id, ts, type, age),
 		TP_STRUCT__entry(
 			__field(unsigned int, id)
 			__field(unsigned int, ts)
 			__field(unsigned int, type)
 			__field(unsigned int, age)
-			__field(unsigned long, func)
 		),
 		TP_fast_assign(
 			__entry->id = id;
 			__entry->ts = ts;
 			__entry->type = type;
 			__entry->age = age;
-			__entry->func = func;
 		),
 		TP_printk(
-			"ctx=%d ts=%d type=%d age=%u func=%pF",
-			__entry->id, __entry->ts, __entry->type, __entry->age,
-			(void *) __entry->func)
+			"ctx=%d ts=%d type=%d age=%u",
+			__entry->id, __entry->ts, __entry->type, __entry->age)
 );
 
 TRACE_EVENT(kgsl_regwrite,

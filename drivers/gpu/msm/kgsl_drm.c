@@ -17,7 +17,6 @@
 #include "drmP.h"
 #include "drm.h"
 #include <linux/android_pmem.h>
-#include <linux/msm_ion.h>
 
 #include "kgsl.h"
 #include "kgsl_device.h"
@@ -28,7 +27,7 @@
 #define DRIVER_AUTHOR           "Qualcomm"
 #define DRIVER_NAME             "kgsl"
 #define DRIVER_DESC             "KGSL DRM"
-#define DRIVER_DATE             "20121107"
+#define DRIVER_DATE             "20100127"
 
 #define DRIVER_MAJOR            2
 #define DRIVER_MINOR            1
@@ -107,7 +106,6 @@ struct drm_kgsl_gem_object {
 	uint32_t type;
 	struct kgsl_memdesc memdesc;
 	struct kgsl_pagetable *pagetable;
-	struct ion_handle *ion_handle;
 	uint64_t mmap_offset;
 	int bufcount;
 	int flags;
@@ -130,8 +128,6 @@ struct drm_kgsl_gem_object {
 
 	struct list_head wait_list;
 };
-
-static struct ion_client *kgsl_drm_ion_phys_client;
 
 static int kgsl_drm_inited = DRM_KGSL_NOT_INITED;
 
@@ -247,50 +243,15 @@ kgsl_gem_alloc_memory(struct drm_gem_object *obj)
 	if (TYPE_IS_PMEM(priv->type)) {
 		if (priv->type == DRM_KGSL_GEM_TYPE_EBI ||
 		    priv->type & DRM_KGSL_GEM_PMEM_EBI) {
-			priv->ion_handle = ion_alloc(kgsl_drm_ion_phys_client,
-				obj->size * priv->bufcount, PAGE_SIZE,
-				ION_HEAP(ION_SF_HEAP_ID), 0);
-			if (IS_ERR_OR_NULL(priv->ion_handle)) {
-				DRM_ERROR(
-				"Unable to allocate ION Phys memory handle\n");
-				return -ENOMEM;
-			}
-
-			priv->memdesc.pagetable = priv->pagetable;
-
-			result = ion_phys(kgsl_drm_ion_phys_client,
-				priv->ion_handle, (ion_phys_addr_t *)
-				&priv->memdesc.physaddr, &priv->memdesc.size);
-			if (result) {
-				DRM_ERROR(
-				"Unable to get ION Physical memory address\n");
-				ion_free(kgsl_drm_ion_phys_client,
-					priv->ion_handle);
-				priv->ion_handle = NULL;
-				return result;
-			}
-
-			result = memdesc_sg_phys(&priv->memdesc,
-				priv->memdesc.physaddr, priv->memdesc.size);
-			if (result) {
-				DRM_ERROR(
-				"Unable to get sg list\n");
-				ion_free(kgsl_drm_ion_phys_client,
-					priv->ion_handle);
-				priv->ion_handle = NULL;
-				return result;
-			}
-
-			result = kgsl_mmu_map(priv->pagetable, &priv->memdesc,
-					GSL_PT_PAGE_RV | GSL_PT_PAGE_WV);
-			if (result) {
-				DRM_ERROR(
-				"Unable to map GPU\n");
-				ion_free(kgsl_drm_ion_phys_client,
-					priv->ion_handle);
-				priv->ion_handle = NULL;
-				return result;
-			}
+				result = kgsl_sharedmem_ebimem_user(
+						&priv->memdesc,
+						priv->pagetable,
+						obj->size * priv->bufcount);
+				if (result) {
+					DRM_ERROR(
+					"Unable to allocate PMEM memory\n");
+					return result;
+				}
 		}
 		else
 			return -EINVAL;
@@ -335,16 +296,7 @@ kgsl_gem_free_memory(struct drm_gem_object *obj)
 	kgsl_gem_mem_flush(&priv->memdesc,  priv->type,
 			   DRM_KGSL_GEM_CACHE_OP_FROM_DEV);
 
-	if (priv->memdesc.gpuaddr)
-		kgsl_mmu_unmap(priv->memdesc.pagetable, &priv->memdesc);
-
-	kgsl_sg_free(priv->memdesc.sg, priv->memdesc.sglen);
-
-	if (priv->ion_handle)
-		ion_free(kgsl_drm_ion_phys_client, priv->ion_handle);
-	priv->ion_handle = NULL;
-
-	memset(&priv->memdesc, 0, sizeof(priv->memdesc));
+	kgsl_sharedmem_free(&priv->memdesc);
 
 	kgsl_mmu_putpagetable(priv->pagetable);
 	priv->pagetable = NULL;
@@ -630,43 +582,6 @@ kgsl_gem_create_fd_ioctl(struct drm_device *dev, void *data,
 
 error_fput:
 	fput_light(file, put_needed);
-
-	return ret;
-}
-
-int
-kgsl_gem_get_ion_fd_ioctl(struct drm_device *dev, void *data,
-			struct drm_file *file_priv)
-{
-	struct drm_kgsl_gem_get_ion_fd *args = data;
-	struct drm_gem_object *obj;
-	struct drm_kgsl_gem_object *priv;
-	int ret = 0;
-
-	obj = drm_gem_object_lookup(dev, file_priv, args->handle);
-
-	if (obj == NULL) {
-		DRM_ERROR("Invalid GEM handle %x\n", args->handle);
-		return -EBADF;
-	}
-
-	mutex_lock(&dev->struct_mutex);
-	priv = obj->driver_private;
-
-	if (TYPE_IS_FD(priv->type))
-		ret = -EINVAL;
-	else {
-		if (priv->ion_handle) {
-			args->ion_fd = ion_share_dma_buf(
-			kgsl_drm_ion_phys_client, priv->ion_handle);
-		} else {
-			DRM_ERROR("GEM object has no ion memory allocated.\n");
-			ret = -EINVAL;
-		}
-	}
-
-	drm_gem_object_unreference(obj);
-	mutex_unlock(&dev->struct_mutex);
 
 	return ret;
 }
@@ -1519,7 +1434,6 @@ struct drm_ioctl_desc kgsl_drm_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(KGSL_GEM_ALLOC, kgsl_gem_alloc_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(KGSL_GEM_MMAP, kgsl_gem_mmap_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(KGSL_GEM_GET_BUFINFO, kgsl_gem_get_bufinfo_ioctl, 0),
-	DRM_IOCTL_DEF_DRV(KGSL_GEM_GET_ION_FD, kgsl_gem_get_ion_fd_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(KGSL_GEM_SET_BUFCOUNT,
 		      kgsl_gem_set_bufcount_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(KGSL_GEM_SET_ACTIVE, kgsl_gem_set_active_ioctl, 0),
@@ -1533,16 +1447,6 @@ struct drm_ioctl_desc kgsl_drm_ioctls[] = {
 		      DRM_MASTER),
 };
 
-static const struct file_operations kgsl_drm_driver_fops = {
-	.owner = THIS_MODULE,
-	.open = drm_open,
-	.release = drm_release,
-	.unlocked_ioctl = drm_ioctl,
-	.mmap = msm_drm_gem_mmap,
-	.poll = drm_poll,
-	.fasync = drm_fasync,
-};
-
 static struct drm_driver driver = {
 	.driver_features = DRIVER_GEM,
 	.load = kgsl_drm_load,
@@ -1554,7 +1458,17 @@ static struct drm_driver driver = {
 	.gem_init_object = kgsl_gem_init_object,
 	.gem_free_object = kgsl_gem_free_object,
 	.ioctls = kgsl_drm_ioctls,
-	.fops = &kgsl_drm_driver_fops,
+
+	.fops = {
+		 .owner = THIS_MODULE,
+		 .open = drm_open,
+		 .release = drm_release,
+		 .unlocked_ioctl = drm_ioctl,
+		 .mmap = msm_drm_gem_mmap,
+		 .poll = drm_poll,
+		 .fasync = drm_fasync,
+		 },
+
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
 	.date = DRIVER_DATE,
@@ -1583,24 +1497,11 @@ int kgsl_drm_init(struct platform_device *dev)
 		gem_buf_fence[i].fence_id = ENTRY_EMPTY;
 	}
 
-	/* Create ION Client */
-	kgsl_drm_ion_phys_client = msm_ion_client_create(
-			ION_HEAP_CARVEOUT_MASK, "kgsl_drm");
-	if (!kgsl_drm_ion_phys_client) {
-		DRM_ERROR("Unable to create ION client\n");
-		return -ENOMEM;
-	}
-
 	return drm_platform_init(&driver, dev);
 }
 
 void kgsl_drm_exit(void)
 {
 	kgsl_drm_inited = DRM_KGSL_NOT_INITED;
-
-	if (kgsl_drm_ion_phys_client)
-		ion_client_destroy(kgsl_drm_ion_phys_client);
-	kgsl_drm_ion_phys_client = NULL;
-
 	drm_platform_exit(&driver, driver.kdriver.platform_device);
 }
