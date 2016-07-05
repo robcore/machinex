@@ -579,11 +579,6 @@ static int mdp_lut_hw_update(struct fb_cmap *cmap)
 		return -EINVAL;
 	}
 
-	if (cmap->start > MDP_HIST_LUT_SIZE || cmap->len > MDP_HIST_LUT_SIZE ||
-			(cmap->start + cmap->len > MDP_HIST_LUT_SIZE)) {
-		pr_err("mdp_lut_hw_update invalid arguments\n");
-		return -EINVAL;
-	}
 	for (i = 0; i < cmap->len; i++) {
 		if (copy_from_user(&r, cmap->red++, sizeof(r)) ||
 		    copy_from_user(&g, cmap->green++, sizeof(g)) ||
@@ -1174,7 +1169,6 @@ int mdp_histogram_start(struct mdp_histogram_start_req *req)
 	mgmt->frame_cnt = req->frame_cnt;
 	mgmt->bit_mask = req->bit_mask;
 	mgmt->num_bins = req->num_bins;
-	mgmt->hist = NULL;
 
 	ret = mdp_histogram_enable(mgmt);
 

@@ -2074,4 +2074,3 @@ MODULE_VERSION("1.0");
 
 module_init(vid_enc_init);
 module_exit(vid_enc_exit);
-
