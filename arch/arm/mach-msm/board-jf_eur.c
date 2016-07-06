@@ -166,7 +166,11 @@ static void sensor_power_on_vdd(int, int);
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
-#define MSM_PMEM_SIZE              0x0
+#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
+#else
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
+#endif
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 #define HOLE_SIZE		0x20000
@@ -178,7 +182,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	8
 #else
-#define MSM_ION_MM_SIZE		0x4C00000
+#define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
 #define MSM_ION_QSECOM_SIZE	0x600000 /* (6MB) */
 #define MSM_ION_HEAP_NUM	8
