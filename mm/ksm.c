@@ -190,7 +190,7 @@ static unsigned int ksm_thread_pages_to_scan = 256;
 static unsigned int ksm_thread_sleep_millisecs = 1500;
 
 /* Boolean to indicate whether to use deferred timer or not */
-static bool use_deferred_timer = true;
+static bool use_deferred_timer;
 
 #define KSM_RUN_STOP	0
 #define KSM_RUN_MERGE	1
