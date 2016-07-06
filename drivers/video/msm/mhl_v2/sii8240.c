@@ -238,7 +238,7 @@ static void sii8240_link_monitor_work(struct work_struct *work)
 		scm_call(_SCM_SVC_OEM, _SCM_OEM_CMD, &g_monitor_cmd, sizeof(g_monitor_cmd), NULL, 0);
 		pr_info("%s() g_monitor_cmd.a = %d\n", __func__, g_monitor_cmd.a);
 	} else {
-		g_monitor_cmd.a |= 0x02; 
+		g_monitor_cmd.a |= 0x02;
 		scm_call(_SCM_SVC_OEM, _SCM_OEM_CMD, &g_monitor_cmd, sizeof(g_monitor_cmd), NULL, 0);
 		pr_info("%s() g_monitor_cmd.a = %d\n", __func__, g_monitor_cmd.a);
 	}
@@ -314,7 +314,7 @@ static int sii8240_hdcp_on(struct sii8240_data *sii8240, bool hdcp_on)
 		cancel_work_sync(&sii8240->mhl_link_monitor_work);
 		scm_call(_SCM_SVC_OEM, _SCM_OEM_CMD, &g_monitor_cmd, sizeof(g_monitor_cmd), NULL, 0);
 		pr_info("%s() g_monitor_cmd.a = %d\n", __func__, g_monitor_cmd.a);
-		
+
 #endif
 	}
 
@@ -355,7 +355,7 @@ static int sii8240_tmds_active_hdcp(struct sii8240_data *sii8240)
 }
 #endif
 
-static int tmds_control(struct sii8240_data *sii8240, bool tmds_on)
+static int tmds_control(struct sii8240_data *sii8240, int tmds_on)
 {
 	int ret = 0;
 #ifdef SFEATURE_HDCP_SUPPORT
@@ -1783,7 +1783,7 @@ static void cbus_process_rcp_key(struct sii8240_data *sii8240, u8 key)
 
 	if (key < SII8240_RCP_NUM_KEYS && is_key_supported(sii8240, key)) {
 		/* Report the key */
-		rcp_key_report(sii8240, sii8240->keycode[key]);	
+		rcp_key_report(sii8240, sii8240->keycode[key]);
 		/* Send the RCP ack */
 		sii8240_msc_req_locked(sii8240, START_MSC_MSG, 0, MSG_RCPK, key);
 	} else {
@@ -2782,12 +2782,12 @@ static int sii8240_detection_callback(struct notifier_block *this,
 
 	if (event) {
 		pr_info("sii8240:detection started\n");
-		sii8240->mhl_connected = true; 
+		sii8240->mhl_connected = true;
 	} else {
 		pr_info("sii8240:disconnection\n");
 		if (sii8240->pdata->vbus_present)
 			sii8240->pdata->vbus_present(false, -1);
-		sii8240->mhl_connected = false; 
+		sii8240->mhl_connected = false;
 		mutex_lock(&sii8240->lock);
 		goto power_down;
 	}
