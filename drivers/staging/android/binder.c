@@ -673,7 +673,7 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 		page = &proc->pages[(page_addr - proc->buffer) / PAGE_SIZE];
 
 		BUG_ON(*page);
-		*page = alloc_page(GFP_KERNEL | __GFP_ZERO);
+		*page = alloc_page(GFP_KERNEL | __GFP_HIGHMEM | __GFP_ZERO);
 		if (*page == NULL) {
 			printk(KERN_ERR "binder: %d: binder_alloc_buf failed "
 			       "for page at %p\n", proc->pid, page_addr);
@@ -2027,8 +2027,10 @@ int binder_thread_write(struct binder_proc *proc, struct binder_thread *thread,
 				BUG_ON(!buffer->target_node->has_async_transaction);
 				if (list_empty(&buffer->target_node->async_todo))
 					buffer->target_node->has_async_transaction = 0;
-				else
-					list_move_tail(buffer->target_node->async_todo.next, &thread->todo);
+				else {
+					list_move_tail(buffer->target_node->async_todo.next, &thread->proc->todo);
+					wake_up_interruptible(&thread->proc->wait);
+				}
 			}
 			trace_binder_transaction_buffer_release(buffer);
 			binder_transaction_buffer_release(proc, buffer, NULL);

@@ -2322,6 +2322,7 @@ int security_fs_use(
 {
 	int rc = 0;
 	struct ocontext *c;
+	u32 tmpsid;
 
 	read_lock(&policy_rwlock);
 
@@ -2336,7 +2337,8 @@ int security_fs_use(
 		*behavior = c->v.behavior;
 		if (!c->sid[0]) {
 			rc = sidtab_context_to_sid(&sidtab, &c->context[0],
-						   &c->sid[0]);
+						   &tmpsid);
+			c->sid[0] = tmpsid;
 			if (rc)
 				goto out;
 		}

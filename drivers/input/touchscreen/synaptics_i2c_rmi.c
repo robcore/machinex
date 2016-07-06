@@ -29,7 +29,7 @@
 #include "synaptics_i2c_rmi.h"
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
-//#undef CONFIG_HAS_EARLYSUSPEND
+
 #define PROXIMITY
 #define TYPE_B_PROTOCOL
 #define SURFACE_TOUCH
@@ -152,9 +152,9 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 static void synaptics_rmi4_early_suspend(struct early_suspend *h);
 
 static void synaptics_rmi4_late_resume(struct early_suspend *h);
-#endif /* CONFIG_HAS_EARLYSUSPEND */
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
+#else
+
 static int synaptics_rmi4_suspend(struct device *dev);
 
 static int synaptics_rmi4_resume(struct device *dev);
@@ -3748,7 +3748,7 @@ int synaptics_rmi4_new_function(enum exp_fn fn_type,
 
 	return 0;
 }
-#ifdef CONFIG_HAS_EARLYSUSPEND
+
 static void synaptics_init_power_on(struct work_struct *work)
 {
 	struct synaptics_rmi4_data *rmi4_data =
@@ -3768,7 +3768,7 @@ static void synaptics_init_power_on(struct work_struct *work)
 	synaptics_rmi4_late_resume(&rmi4_data->early_suspend);
 #endif
 }
-#endif
+
  /**
  * synaptics_rmi4_probe()
  *
@@ -4297,10 +4297,8 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
 #endif
 	return;
 }
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#else
 
-/* Use only for CONFIG_PM */
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
  /**
  * synaptics_rmi4_suspend()
  *
@@ -4383,8 +4381,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 }
 #endif
 
-
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
+#ifdef CONFIG_PM
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,
@@ -4401,7 +4398,7 @@ static struct i2c_driver synaptics_rmi4_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_OPEN_CLOSE)
+#ifdef CONFIG_PM
 		.pm = &synaptics_rmi4_dev_pm_ops,
 #endif
 	},
