@@ -558,6 +558,8 @@ void mdp4_hw_init(void)
 
 	/* max read pending cmd config */
 	outpdw(MDP_BASE + 0x004c, 0x02222);	/* 3 pending requests */
+	outpdw(MDP_BASE + 0x0400, 0x7FF);
+	outpdw(MDP_BASE + 0x0404, 0x30050);
 
 #ifndef CONFIG_FB_MSM_OVERLAY
 	/* both REFRESH_MODE and DIRECT_OUT are ignored at BLT mode */
@@ -2578,7 +2580,7 @@ void mdp4_vg_qseed_init_DMB(int vp_num)
 }
 #endif
 
-void mdp4_mixer_blend_init(int mixer_num)
+void mdp4_mixer_blend_init(mixer_num)
 {
 	unsigned char *overlay_base;
 	int off;
