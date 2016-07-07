@@ -243,7 +243,7 @@ static void __cpufreq_cpu_put(struct cpufreq_policy *data, bool sysfs)
 void cpufreq_cpu_put(struct cpufreq_policy *data)
 {
 	if (cpufreq_disabled())
-		return NULL;
+		return;
 	__cpufreq_cpu_put(data, false);
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
@@ -311,7 +311,7 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	BUG_ON(irqs_disabled());
 
 	if (cpufreq_disabled())
-		return NULL;
+		return;
 
 	freqs->flags = cpufreq_driver->flags;
 	pr_debug("notification %u of frequency transition to %u kHz\n",
