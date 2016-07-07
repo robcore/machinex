@@ -15,5 +15,3 @@ void replace_str(char *str, char *orig, char *rep)
 
   strncpy(str, buffer, strlen(buffer));
 }
-
-
