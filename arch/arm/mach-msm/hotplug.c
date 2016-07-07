@@ -182,7 +182,6 @@ static struct notifier_block hotplug_cpu_check_notifier = {
 	.priority = INT_MAX,
 };
 
-
 int msm_platform_secondary_init(unsigned int cpu)
 {
 	int ret;
