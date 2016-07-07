@@ -347,6 +347,36 @@ static void inode_wait_for_writeback(struct inode *inode,
 }
 
 /*
+ * Wait for writeback on an inode to complete. Caller must have inode pinned.
+ */
+void inode_wait_for_writeback(struct inode *inode)
+{
+	spin_lock(&inode->i_lock);
+	__inode_wait_for_writeback(inode);
+	spin_unlock(&inode->i_lock);
+}
+
+/*
+ * Sleep until I_SYNC is cleared. This function must be called with i_lock
+ * held and drops it. It is aimed for callers not holding any inode reference
+ * so once i_lock is dropped, inode can go away.
+ */
+static void inode_sleep_on_writeback(struct inode *inode)
+	__releases(inode->i_lock)
+{
+	DEFINE_WAIT(wait);
+	wait_queue_head_t *wqh = bit_waitqueue(&inode->i_state, __I_SYNC);
+	int sleep;
+
+	prepare_to_wait(wqh, &wait, TASK_UNINTERRUPTIBLE);
+	sleep = inode->i_state & I_SYNC;
+	spin_unlock(&inode->i_lock);
+	if (sleep)
+		schedule();
+	finish_wait(wqh, &wait);
+}
+
+/*
  * Find proper writeback list for the inode depending on its current state and
  * possibly also change of its state while we were doing writeback.  Here we
  * handle things such as livelock prevention or fairness of writeback among
@@ -502,9 +532,11 @@ writeback_single_inode(struct inode *inode, struct bdi_writeback *wb,
 		if (wbc->sync_mode != WB_SYNC_ALL)
 			goto out;
 		/*
-		 * It's a data-integrity sync.  We must wait.
+		 * It's a data-integrity sync. We must wait. Since callers hold
+		 * inode reference or inode has I_WILL_FREE set, it cannot go
+		 * away under us.
 		 */
-		inode_wait_for_writeback(inode);
+		__inode_wait_for_writeback(inode);
 	}
 	WARN_ON(inode->i_state & I_SYNC);
 	/*
@@ -668,10 +700,7 @@ static long writeback_sb_inodes(struct super_block *sb,
 		requeue_inode(inode, wb, &wbc);
 		inode_sync_complete(inode);
 		spin_unlock(&inode->i_lock);
-		spin_unlock(&wb->list_lock);
-		iput(inode);
-		cond_resched();
-		spin_lock(&wb->list_lock);
+		cond_resched_lock(&wb->list_lock);
 		/*
 		 * bail out to wb_writeback() often enough to check
 		 * background threshold and other termination conditions.
