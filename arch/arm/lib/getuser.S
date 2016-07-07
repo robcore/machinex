@@ -33,7 +33,7 @@
 ENTRY(__get_user_1)
 1: TUSER(ldrb)	r2, [r0]
 	mov	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_1)
 
 ENTRY(__get_user_2)
@@ -50,19 +50,19 @@ ENTRY(__get_user_2)
 	orr	r2, r3, r2, lsl #8
 #endif
 	mov	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_2)
 
 ENTRY(__get_user_4)
 4: TUSER(ldr)	r2, [r0]
 	mov	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_4)
 
 __get_user_bad:
 	mov	r2, #0
 	mov	r0, #-EFAULT
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_bad)
 
 .pushsection __ex_table, "a"

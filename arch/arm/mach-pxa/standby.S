@@ -29,7 +29,7 @@ ENTRY(pxa_cpu_standby)
 	.align	5
 1:	mcr	p14, 0, r2, c7, c0, 0	@ put the system into Standby
 	str	r1, [r0]		@ make sure PSSR_PH/STS are clear
-	mov	pc, lr
+	ret	lr
 
 #endif
 
