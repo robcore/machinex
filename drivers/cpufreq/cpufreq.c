@@ -431,7 +431,6 @@ out:
 	return err;
 }
 
-
 /**
  * cpufreq_per_cpu_attr_read() / show_##file_name() -
  * print out cpufreq information
