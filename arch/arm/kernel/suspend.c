@@ -95,4 +95,4 @@ static int cpu_suspend_alloc_sp(void)
 	sync_cache_w(&sleep_save_sp);
 	return 0;
 }
-+early_initcall(cpu_suspend_alloc_sp);
+early_initcall(cpu_suspend_alloc_sp);

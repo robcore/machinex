@@ -559,6 +559,8 @@ static inline void update_mmu_cache(struct vm_area_struct *vma,
 
 #endif
 
+#elif defined(CONFIG_SMP)	/* !CONFIG_MMU */
+
 #ifndef __ASSEMBLY__
 
 #include <linux/mm_types.h>
@@ -579,5 +581,7 @@ extern void flush_tlb_range(struct vm_area_struct *vma, unsigned long start, uns
 extern void flush_tlb_kernel_range(unsigned long start, unsigned long end);
 extern void flush_bp_all(void);
 #endif	/* __ASSEMBLY__ */
+
+#endif
 
 #endif
