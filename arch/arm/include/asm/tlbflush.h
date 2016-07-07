@@ -477,7 +477,7 @@ static inline void local_flush_bp_all(void)
 
 	if (tlb_flag(TLB_BARRIER))
 		isb();
-+}
+}
 
 /*
  *	flush_pmd_entry
