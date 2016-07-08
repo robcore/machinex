@@ -1046,7 +1046,10 @@ static void __queue_work(unsigned int cpu, struct workqueue_struct *wq,
 	cwq = get_cwq(gcwq->cpu, wq);
 	trace_workqueue_queue_work(cpu, cwq, work);
 
-	BUG_ON(!list_empty(&work->entry));
+	if (WARN_ON(!list_empty(&work->entry))) {
+		spin_unlock_irqrestore(&gcwq->lock, flags);
+		return;
+	}
 
 	cwq->nr_in_flight[cwq->work_color]++;
 	work_flags = work_color_to_flags(cwq->work_color);
@@ -1396,6 +1399,7 @@ static struct worker *create_worker(struct worker_pool *pool, bool bind)
 					      "kworker/u:%d%s", id, pri);
 	if (IS_ERR(worker->task))
 		goto fail;
+
 	if (worker_pool_pri(pool))
 		set_user_nice(worker->task, HIGHPRI_NICE_LEVEL);
 
