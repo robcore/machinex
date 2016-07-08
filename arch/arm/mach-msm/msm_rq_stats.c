@@ -53,6 +53,8 @@ struct cpu_load_data {
 	struct mutex cpu_load_mutex;
 };
 
+static unsigned int lock_hotplug_disabled = 1;
+
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
@@ -190,11 +192,13 @@ static int system_suspend_handler(struct notifier_block *nb,
 	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
 	case PM_POST_RESTORE:
-		rq_info.hotplug_disabled = 0;
+		if (!lock_hotplug_disabled)
+			rq_info.hotplug_disabled = 0;
 		break;
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
-		rq_info.hotplug_disabled = 1;
+		if (!lock_hotplug_disabled)
+			rq_info.hotplug_disabled = 1;
 		break;
 	default:
 		return NOTIFY_DONE;
@@ -233,6 +237,7 @@ static ssize_t store_hotplug_disable(struct kobject *kobj,
 		return -EINVAL;
 
 	rq_info.hotplug_disabled = val;
+	lock_hotplug_disabled = val;
 	spin_unlock_irqrestore(&rq_lock, flags);
 
 	return count;
@@ -405,6 +410,7 @@ static int __init msm_rq_stats_init(void)
 	rq_info.rq_poll_last_jiffy = 0;
 	rq_info.def_timer_last_jiffy = 0;
 	rq_info.hotplug_disabled = 1;
+	lock_hotplug_disabled = 1;
 	ret = init_rq_attribs();
 
 	rq_info.init = 1;
