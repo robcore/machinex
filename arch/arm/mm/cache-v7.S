@@ -18,7 +18,6 @@
 
 #include "proc-macros.S"
 
-
 /*
  * The secondary kernel init calls v7_flush_dcache_all before it enables
  * the L1; however, the L1 comes out of reset in an undefined state, so
@@ -89,21 +88,21 @@ ENDPROC(v7_flush_icache_all)
  */
 
 ENTRY(v7_flush_dcache_louis)
-	dmb						@ ensure ordering with previous memory accesses
-	mrc		p15, 1, r0, c0, c0, 1		@ read clidr, r0 = clidr
-	ALT_SMP(ands	r3, r0, #(7 << 21))		@ extract LoUIS from clidr
-	ALT_UP(ands	r3, r0, #(7 << 27))		@ extract LoUU from clidr
-	ALT_SMP(mrceq	p15, 0, r2, c0, c0, 0)		@ read main ID register
-	ALT_UP(reteq	lr)				@ LoUU is zero, so nothing to do
-	ldreq	r1, =0x410fc090				@ ID of ARM Cortex A9 r0p?
-	biceq	r2, r2, #0x0000000f			@ clear minor revision number
-	teqeq	r2, r1					@ test for errata affected core and if so...
-	orreqs	r3, #(1 << 21)				@ fix LoUIS value (and set flags state to 'ne')
-	ALT_SMP(mov	r3, r3, lsr #20)		@ r3 = LoUIS * 2
-	ALT_UP(mov	r3, r3, lsr #26)		@ r3 = LoUU * 2
-	reteq		lr				@ return if level == 0
-	mov		r10, #0				@ r10 (starting level) = 0
-	b		flush_levels			@ start flushing cache levels
+	dmb					@ ensure ordering with previous memory accesses
+	mrc	p15, 1, r0, c0, c0, 1		@ read clidr, r0 = clidr
+	ALT_SMP(ands	r3, r0, #(7 << 21))	@ extract LoUIS from clidr
+	ALT_UP(ands	r3, r0, #(7 << 27))	@ extract LoUU from clidr
+	ALT_SMP(mrceq	p15, 0, r2, c0, c0, 0)	@ read main ID register
+	ALT_UP(reteq	lr)			@ LoUU is zero, so nothing to do
+	ldreq	r1, =0x410fc090                 @ ID of ARM Cortex A9 r0p?
+	biceq	r2, r2, #0x0000000f             @ clear minor revision number
+	teqeq	r2, r1                          @ test for errata affected core and if so...
+	orreqs	r3, #(1 << 21)			@   fix LoUIS value (and set flags state to 'ne')
+	ALT_SMP(mov	r3, r3, lsr #20)	@ r3 = LoUIS * 2
+	ALT_UP(mov	r3, r3, lsr #26)	@ r3 = LoUU * 2
+	reteq	lr				@ return if level == 0
+	mov	r10, #0				@ r10 (starting level) = 0
+	b	flush_levels			@ start flushing cache levels
 ENDPROC(v7_flush_dcache_louis)
 
 /*
@@ -145,7 +144,7 @@ flush_levels:
 	ldr	r7, =0x7fff
 	ands	r7, r7, r1, lsr #13		@ extract max number of the index size
 loop1:
-	mov	r9, r7				@ create working copy of max way index
+	mov	r9, r7				@ create working copy of max index
 loop2:
  ARM(	orr	r11, r10, r4, lsl r5	)	@ factor way and cache number into r11
  THUMB(	lsl	r6, r4, r5		)
@@ -156,7 +155,7 @@ loop2:
 	mcr	p15, 0, r11, c7, c14, 2		@ clean & invalidate by set/way
 	subs	r9, r9, #1			@ decrement the index
 	bge	loop2
-	subs	r7, r7, #1			@ decrement the way
+	subs	r4, r4, #1			@ decrement the way
 	bge	loop1
 skip:
 	add	r10, r10, #2			@ increment cache number
@@ -194,20 +193,20 @@ ENTRY(v7_flush_kern_cache_all)
 ENDPROC(v7_flush_kern_cache_all)
 
 /*
- * v7_flush_kern_cache_louis(void)
+ *     v7_flush_kern_cache_louis(void)
  *
- * Flush the data cache up to Level of Unification Inner Shareable.
- * Invalidate the I-cache to the point of unification.
+ *     Flush the data cache up to Level of Unification Inner Shareable.
+ *     Invalidate the I-cache to the point of unification.
  */
 ENTRY(v7_flush_kern_cache_louis)
- ARM( stmfd	sp!, {r4-r5, r7, r9-r11, lr}	)
- THUMB(		stmfd sp!, {r4-r7, r9-r11, lr}	)
+ ARM(	stmfd	sp!, {r4-r5, r7, r9-r11, lr}	)
+ THUMB(	stmfd	sp!, {r4-r7, r9-r11, lr}	)
 	bl	v7_flush_dcache_louis
 	mov	r0, #0
-	ALT_SMP(mcr	p15, 0, r0, c7, c1, 0) @ invalidate I-cache inner shareable
-	ALT_UP(mcr	p15, 0, r0, c7, c5, 0) @ I+BTB cache invalidate
- ARM(	ldmfd	sp!, {r4-r5, r7, r9-r11, lr} )
- THUMB(		ldmfd	sp!, {r4-r7, r9-r11, lr}	)
+	ALT_SMP(mcr	p15, 0, r0, c7, c1, 0)	@ invalidate I-cache inner shareable
+	ALT_UP(mcr	p15, 0, r0, c7, c5, 0)	@ I+BTB cache invalidate
+ ARM(	ldmfd	sp!, {r4-r5, r7, r9-r11, lr}	)
+ THUMB(	ldmfd	sp!, {r4-r7, r9-r11, lr}	)
 	ret	lr
 ENDPROC(v7_flush_kern_cache_louis)
 

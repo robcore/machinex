@@ -188,7 +188,7 @@
 				 TLB_V7_UIS_FULL | TLB_V7_UIS_PAGE | \
 				 TLB_V7_UIS_ASID | TLB_V7_UIS_BP)
 #define v7wbi_tlb_flags_up	(TLB_WB | TLB_DCLEAN | TLB_BARRIER | \
-			 	 TLB_V6_U_FULL | TLB_V6_U_PAGE | \
+				 TLB_V6_U_FULL | TLB_V6_U_PAGE | \
 				 TLB_V6_U_ASID | TLB_V6_BP)
 
 #ifdef CONFIG_CPU_TLB_V7

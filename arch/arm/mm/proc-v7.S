@@ -125,7 +125,7 @@ ENTRY(cpu_v7_do_resume)
 	ldmia	r0, {r5 - r11}
 #ifdef CONFIG_MMU
 	mcr	p15, 0, ip, c8, c7, 0	@ invalidate TLBs
-	mcr	p15, 0, r6, c3, c0, 0	@ Domain ID	
+	mcr	p15, 0, r6, c3, c0, 0	@ Domain ID
 #ifdef CONFIG_ARM_LPAE
 	mcrr	p15, 0, r1, ip, c2	@ TTB 0
 	mcrr	p15, 1, r5, r7, c2	@ TTB 1
@@ -140,7 +140,7 @@ ENTRY(cpu_v7_do_resume)
 	ldr	r5, =NMRR		@ NMRR
 	mcr	p15, 0, r4, c10, c2, 0	@ write PRRR
 	mcr	p15, 0, r5, c10, c2, 1	@ write NMRR
-#endif /* CONFIG_MMU */
+#endif	/* CONFIG_MMU */
 	mrc	p15, 0, r4, c1, c0, 1	@ Read Auxiliary control register
 	teq	r4, r9			@ Is it already set?
 	mcrne	p15, 0, r9, c1, c0, 1	@ No, so write it
@@ -263,7 +263,7 @@ __v7_pj4b_setup:
 __v7_setup:
 	adr	r12, __v7_setup_stack		@ the local stack
 	stmia	r12, {r0-r5, r7, r9, r11, lr}
-	bl	v7_flush_dcache_louis
+	bl      v7_flush_dcache_louis
 	ldmia	r12, {r0-r5, r7, r9, r11, lr}
 
 	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
@@ -280,6 +280,7 @@ __v7_setup:
 	teq	r0, r10
 	bne	2f
 #if defined(CONFIG_ARM_ERRATA_430973) && !defined(CONFIG_ARCH_MULTIPLATFORM)
+
 	teq	r5, #0x00100000			@ only present in r1p*
 	mrceq	p15, 0, r10, c1, c0, 1		@ read aux control register
 	orreq	r10, r10, #(1 << 6)		@ set IBE to 1
@@ -357,7 +358,6 @@ __v7_setup:
 	mcr	p15, 0, r5, c10, c2, 0		@ write PRRR
 	mcr	p15, 0, r6, c10, c2, 1		@ write NMRR
 #endif
-
 	dsb					@ Complete invalidations
 #ifndef CONFIG_ARM_THUMBEE
 	mrc	p15, 0, r0, c0, c1, 0		@ read ID_PFR0 for ThumbEE
@@ -449,6 +449,7 @@ __v7_ca9mp_proc_info:
 	.long	0xff0ffff0
 	__v7_proc __v7_ca9mp_setup
 	.size	__v7_ca9mp_proc_info, . - __v7_ca9mp_proc_info
+
 #endif	/* CONFIG_ARM_LPAE */
 
 	/*

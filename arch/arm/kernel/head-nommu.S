@@ -150,6 +150,7 @@ __after_proc_init:
 						@ to start_kernel
 ENDPROC(__after_proc_init)
 	.ltorg
+
 #ifdef CONFIG_ARM_MPU
 
 

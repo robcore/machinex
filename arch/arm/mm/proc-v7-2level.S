@@ -86,7 +86,7 @@ ENTRY(cpu_v7_switch_mm)
 	mcr	p15, 0, r1, c13, c0, 1		@ set context ID
 	isb
 #endif
-	ret	lr
+	bx	lr
 ENDPROC(cpu_v7_switch_mm)
 
 /*
@@ -176,11 +176,11 @@ TIMA_CMP_LOOP2:
  ARM(	str	r3, [r0, #2048]! )
  THUMB(	add	r0, r0, #2048 )
  THUMB(	str	r3, [r0] )
- 	ALT_SMP(W(nop))
-	ALT_UP (mcr	p15, 0, r0, c7, c10, 1)	@ flush_pte
+	ALT_SMP(W(nop))
+	ALT_UP (mcr	p15, 0, r0, c7, c10, 1)		@ flush_pte
 #endif
 #endif
-	ret	lr
+	bx	lr
 ENDPROC(cpu_v7_set_pte_ext)
 
 	/*

@@ -23,7 +23,7 @@
 void delay_loop(unsigned long loops)
 {
 	asm volatile(
-	"1:	subs %0, %0, #1	\n"
+	"1:	subs %0, %0, #1 \n"
 	"	bhi 1b		\n"
 	: /* No output */
 	: "r" (loops)

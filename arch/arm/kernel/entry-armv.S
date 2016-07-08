@@ -571,8 +571,8 @@ ENDPROC(__und_usr)
 	b	2f
 #endif
 call_fpe:
-#ifdef CONFIG_NEON
 	get_thread_info r10			@ get current thread
+#ifdef CONFIG_NEON
 	adr	r6, .LCneon_arm_opcodes
 2:	ldr	r5, [r6], #4			@ mask value
 	ldr	r7, [r6], #4			@ opcode bits matching in mask

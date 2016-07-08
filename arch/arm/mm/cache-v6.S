@@ -306,7 +306,7 @@ v6_dma_flush_dcache_all:
 	mcr	p15, 0, r0, c7, c15, 0		@ Cache clean+invalidate
 #endif
 	mcr	p15, 0, r0, c7, c10, 4		@ drain write buffer
-	ret	lr
+	ret     lr
 #endif
 
 /*
@@ -343,7 +343,7 @@ ENTRY(v6_dma_unmap_area)
 	ret	lr
 ENDPROC(v6_dma_unmap_area)
 
-	.globl v6_flush_kern_cache_louis
+	.globl	v6_flush_kern_cache_louis
 	.equ	v6_flush_kern_cache_louis, v6_flush_kern_cache_all
 
 	__INITDATA

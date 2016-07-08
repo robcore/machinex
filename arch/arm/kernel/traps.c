@@ -527,8 +527,8 @@ __do_cache_op(unsigned long start, unsigned long end)
  do {
  unsigned long chunk = min(PAGE_SIZE, end - start);
 
-	if (fatal_signal_pending(current))
-		return 0;
+		if (fatal_signal_pending(current))
+			return 0;
 
  ret = flush_cache_user_range(start, start + chunk);
  if (ret)
@@ -544,6 +544,7 @@ __do_cache_op(unsigned long start, unsigned long end)
 static inline int
 do_cache_op(unsigned long start, unsigned long end, int flags)
 {
+	
 	if (end < start || flags)
 		return -EINVAL;
 
@@ -551,6 +552,7 @@ do_cache_op(unsigned long start, unsigned long end, int flags)
  return -EFAULT;
 
 return __do_cache_op(start, end);
+
 }
 
 /*
