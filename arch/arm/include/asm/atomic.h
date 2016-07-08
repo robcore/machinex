@@ -120,7 +120,9 @@ static inline int atomic_sub_return(int i, atomic_t *v)
 
 static inline int atomic_cmpxchg(atomic_t *ptr, int old, int new)
 {
-	unsigned long oldval, res;
+	int oldval;
+	unsigned long res;
+
 
 	smp_mb();
 	prefetchw(&ptr->counter);
@@ -348,9 +350,9 @@ static inline long long atomic64_add_return(long long i, atomic64_t *v)
 	return result;
 }
 
-static inline void atomic64_sub(u64 i, atomic64_t *v)
+static inline void atomic64_sub(long long i, atomic64_t *v)
 {
-	u64 result;
+	long long result;
 	unsigned long tmp;
 
 	prefetchw(&v->counter);
