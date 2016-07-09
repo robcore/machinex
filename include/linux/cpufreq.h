@@ -332,6 +332,8 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 extern u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
+bool have_governor_per_policy(void);
+int cpufreq_set_gov(char *target_gov, unsigned int cpu);
 
 /*
  * Governor specific info that can be passed to modules that subscribe
