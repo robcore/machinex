@@ -36,7 +36,9 @@ static int try_to_freeze_tasks(bool user_only)
 	u64 elapsed_msecs64;
 	unsigned int elapsed_msecs;
 	bool wakeup = false;
+#ifdef CONFIG_PM_SLEEP
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
+#endif
 	int sleep_usecs = USEC_PER_MSEC;
 
 	do_gettimeofday(&start);
