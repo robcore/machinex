@@ -538,7 +538,6 @@ ssize_t store_GPU_mV_table(struct cpufreq_policy *policy, const char *buf, size_
 	return count;
 }
 
-
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
  */
@@ -986,7 +985,8 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 
 	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
 	/* assure that the starting sequence is run in __cpufreq_set_policy */
-	policy->governor = NULL;
+	if (policy)
+		policy->governor = NULL;
 
 	/* set default policy */
 	ret = __cpufreq_set_policy(policy, &new_policy);
