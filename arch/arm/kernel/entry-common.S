@@ -387,9 +387,7 @@ ENTRY(vector_swi)
   A710(	teq	ip, #0x0f000000						)
   A710(	bne	.Larm710bug						)
 #endif
-#ifdef CONFIG_CPU_ENDIAN_BE8
-	rev	r10, r10			@ little endian instruction
-#endif
+ ARM_BE8(rev	r10, r10)			@ little endian instruction
 
 #elif defined(CONFIG_AEABI)
 
