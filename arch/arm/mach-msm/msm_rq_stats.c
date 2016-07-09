@@ -384,7 +384,6 @@ static ssize_t show_def_timer_ms(struct kobject *kobj,
 			return snprintf(buf, MAX_LONG_SIZE, "%u\n", udiff);
 		}
 	}
-}
 
 static ssize_t store_def_timer_ms(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
