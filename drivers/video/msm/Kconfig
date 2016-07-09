@@ -117,6 +117,7 @@ endchoice
 config MIPI_SUPPORT_TFT_IN_HW_00_01
 	bool "On Fusion3, use tft panel in hw 00/01 "
 	default n
+
 config FEATURE_FLIPLR
 	bool "FLIP LR feature"
 	default n
@@ -255,6 +256,7 @@ config FB_MSM_MIPI_DSI_NOVATEK_NT35596
 	bool
 	select FB_MSM_MIPI_DSI
 	default n
+
 config FB_MSM_MIPI_DSI_ORISE
         bool
         select FB_MSM_MIPI_DSI
@@ -297,6 +299,7 @@ config FB_MSM_MIPI_DSI_SAMSUNG_OLED
 	bool
 	select FB_MSM_MIPI_DSI
 	default n
+
 config FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT
 	bool
 	select FB_MSM_MIPI_DSI_SAMSUNG_OLED
@@ -510,6 +513,7 @@ config FB_MSM_MIPI_SAMSUNG_TFT_VIDEO_WSVGA_PT
 	bool
 	select FB_MSM_MIPI_DSI_TC358764_DSI2LVDS
 	default n
+
 config FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
 	bool
 	select FB_MSM_MIPI_DSI_TRULY
@@ -518,6 +522,7 @@ config FB_MSM_MIPI_SIMULATOR_VIDEO
 	bool
 	select FB_MSM_MIPI_DSI_SIMULATOR
 	default n
+
 config FB_MSM_NO_MDP_PIPE_CTRL
 	depends on FB_MSM_OVERLAY
 	bool "Do not use mdp_pipe_ctrl"
@@ -532,24 +537,6 @@ config FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT
 	bool
 	select FB_MSM_MIPI_DSI_SAMSUNG_OLED
 	default n
-
-config FB_MSM_NO_MDP_PIPE_CTRL
-	depends on FB_MSM_OVERLAY
-	bool "Do not use mdp_pipe_ctrl"
-	---help---
-	  Saying 'Y' here obsoletes the mdp_pipe_ctrl function,
-	  which was used to control mdp-related clocks. MDP4 vsync-driven
-	  screen updates will use a different clock control mechanism if
-	  this is selected.
-
-config FB_MSM_NO_MDP_PIPE_CTRL
-	depends on FB_MSM_OVERLAY
-	bool "Do not use mdp_pipe_ctrl"
-	---help---
-	  Saying 'Y' here obsoletes the mdp_pipe_ctrl function,
-	  which was used to control mdp-related clocks. MDP4 vsync-driven
-	  screen updates will use a different clock control mechanism if
-	  this is selected.
 
 config FB_MSM_NO_MDP_PIPE_CTRL
 	depends on FB_MSM_OVERLAY
@@ -869,9 +856,11 @@ config FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT_PANEL
 config FB_MSM_MIPI_NOVATEK_VIDEO_HD_PT_PANEL
 	bool "MIPI NOVATEK VIDEO HD PT Panel"
 	select FB_MSM_MIPI_NOVATEK_VIDEO_HD_PT
+
 config FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT_PANEL
 	bool "MIPI SAMSUNG OLED VIDEO QHD PT Panel"
 	select FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT
+
 config FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_WVGA_PT_PANEL
 	bool "MIPI SAMSUNG OLED VIDEO WVGA PT Panel"
 	select FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_WVGA_PT
@@ -1204,7 +1193,7 @@ config BACKLIGHT_WORKQUEUE
 	bool "CONFIG_BACKLIGHT_WORKQUEUE"
 	default n
 	---help---
-	  support for BACKLIGHT_WORKQUEUE  
+	  support for BACKLIGHT_WORKQUEUE
 
 config FB_MSM_EBI2_EPSON_S1D_QVGA_PANEL
 	bool "EBI2 Epson QVGA Panel"
@@ -1227,14 +1216,14 @@ config SAMSUNG_DEBUG_DISPLAY
 config MIPI_DSI_LP_CMD_SEND
 	bool "MDP4_ENHANCE solution"
 	default n
-config MIPI_DSI_RESET_LP11	
+config MIPI_DSI_RESET_LP11
 	bool "mipi dsi reset during LP11"
 	default n
 
-config MIPI_DSI_LP_RX	
+config MIPI_DSI_LP_RX
 	bool "rx interface on lp mode"
 	default n
-config MDP_SHUTDOWN	
+config MDP_SHUTDOWN
 	bool "use mdp shutdown"
 	default n
 config FB_MDP4_ENHANCE
@@ -1250,6 +1239,7 @@ config MDNIE_LITE_TUNING
 config HBM_PSRE
 	bool "HBM PSRE funtion"
 	default n
+
 config MIPI_SAMSUNG_OLED_VIDEO_QHD_MIPICLK_461
 	bool "mipi clk 461Mhz on samsung oled video qhd panel"
 	default n
@@ -1276,6 +1266,7 @@ config RUNTIME_MIPI_CLK_CHANGE
 config ESD_ERR_FG_RECOVERY
 	bool "ESD RECOVERY BY ERR_FG"
 	default n
+
 config MIPI_MDP_REGISTER_DUMP
 	default n
 	bool "MIPI MDP REGISTER DUMP"

@@ -22,6 +22,9 @@
 #include <linux/mfd/pm8xxx/pm8821.h>
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 
 #ifdef CONFIG_LCD_NOTIFY
 #include <linux/lcd_notify.h>
@@ -577,6 +580,10 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 		pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	}
+#ifdef CONFIG_STATE_NOTIFIER
+		if (!use_fb_notifier)
+			state_resume();
+#endif
 
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
@@ -681,6 +688,11 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	gpio_get_param.pull = PM_GPIO_PULL_DN;
 	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
+
+#ifdef CONFIG_STATE_NOTIFIER
+		if (!use_fb_notifier)
+			state_suspend();
+#endif
 
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
