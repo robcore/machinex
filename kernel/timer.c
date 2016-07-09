@@ -689,6 +689,14 @@ static inline void detach_timer(struct timer_list *timer, bool clear_pending)
 	entry->prev = LIST_POISON2;
 }
 
+static inline void
+detach_expired_timer(struct timer_list *timer, struct tvec_base *base)
+{
+	detach_timer(timer, true);
+	if (!tbase_get_deferrable(timer->base))
+		timer->base->active_timers--;
+}
+
 static int detach_if_pending(struct timer_list *timer, struct tvec_base *base,
 			     bool clear_pending)
 {
@@ -1184,7 +1192,7 @@ static inline void __run_timers(struct tvec_base *base)
 			timer_stats_account_timer(timer);
 
 			base->running_timer = timer;
-			detach_timer(timer, true);
+			detach_expired_timer(timer, base);
 
 			spin_unlock_irq(&base->lock);
 			call_timer_fn(timer, fn, data);
@@ -1735,6 +1743,7 @@ static void migrate_timer_list(struct tvec_base *new_base, struct list_head *hea
 
 	while (!list_empty(head)) {
 		timer = list_first_entry(head, struct timer_list, entry);
+		/* We ignore the accounting on the dying cpu */
 		detach_timer(timer, false);
 		timer_set_base(timer, new_base);
 		internal_add_timer(new_base, timer);
