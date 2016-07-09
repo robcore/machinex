@@ -64,7 +64,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	struct cpufreq_policy policy;
 
-	ret = cpufreq_get_policy(&policy, cpu);
+	ret = cpufreq_get_policy(&cpu_policy, cpu);
 	if (ret)
 		return -EINVAL;
 
