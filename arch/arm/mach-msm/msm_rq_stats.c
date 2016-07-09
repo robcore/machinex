@@ -24,7 +24,6 @@
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/sched.h>
-#include "acpuclock.h"
 #include <linux/spinlock.h>
 #include <linux/rq_stats.h>
 #include <linux/cpufreq.h>
@@ -32,7 +31,6 @@
 #include <linux/tick.h>
 #include <asm/smp_plat.h>
 #include <linux/suspend.h>
-#include "acpuclock.h"
 
 #define MAX_LONG_SIZE 24
 #define DEFAULT_RQ_POLL_JIFFIES 1
@@ -58,11 +56,16 @@ static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
-
-	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
+	int ret;
 	cputime64_t cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
+	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
+	struct cpufreq_policy policy;
+
+	ret = cpufreq_get_policy(&policy, cpu);
+	if (ret)
+		return -EINVAL;
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
@@ -102,7 +105,6 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 }
 
 #ifdef CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE
-
 static unsigned int report_load_at_max_freq(void)
 {
 	int cpu;
@@ -196,7 +198,7 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 	struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
 
 	if (!rq_info.hotplug_enabled)
-		return NOTIFY_OK;
+		return 0;
 
 	switch (val) {
 	case CPU_ONLINE:
@@ -264,10 +266,13 @@ static ssize_t store_hotplug_enable(struct kobject *kobj,
 	unsigned long flags = 0;
 
 	spin_lock_irqsave(&rq_lock, flags);
+	ret = sscanf(buf, "%u", &val);
 	if (ret != 1 || val < 0 || val > 1) {
 		spin_unlock_irqrestore(&rq_lock, flags);
 		return -EINVAL;
+	}
 
+	rq_info.hotplug_enabled = val;
 		if (rq_info.hotplug_enabled)
 			rq_info.hotplug_disabled = 0;
 		else
@@ -301,7 +306,11 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 {
 #ifdef CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE
 	int nr_running = (avg_nr_running() * 10) >> FSHIFT;
-	return snprintf(buf, PAGE_SIZE, "%d.%d\n", nr_running/10, nr_running%10);
+	if (rq_info.hotplug_disabled)
+		return snprintf(buf, PAGE_SIZE, "%d.%d\n", 0, 5);
+	else
+		return snprintf(buf, PAGE_SIZE, "%d.%d\n",
+				nr_running/10, nr_running%10);
 #else
 	unsigned int val = 0;
 	unsigned long flags = 0;
@@ -312,7 +321,10 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 	rq_info.rq_avg = 0;
 	spin_unlock_irqrestore(&rq_lock, flags);
 
-	return snprintf(buf, PAGE_SIZE, "%d.%d\n", val/10, val%10);
+	if (rq_info.hotplug_disabled)
+		return snprintf(buf, PAGE_SIZE, "%d.%d\n", 0, 1);
+	else
+		return snprintf(buf, PAGE_SIZE, "%d.%d\n", val/10, val%10);
 #endif
 }
 
@@ -362,11 +374,16 @@ static ssize_t show_def_timer_ms(struct kobject *kobj,
 	int64_t diff;
 	unsigned int udiff;
 
-	diff = ktime_to_ns(ktime_get()) - rq_info.def_start_time;
-	do_div(diff, 1000 * 1000);
-	udiff = (unsigned int) diff;
+	if (rq_info.hotplug_disabled) {
+		return snprintf(buf, MAX_LONG_SIZE, "%u\n", 5);
+		} else {
+			diff = ktime_to_ns(ktime_get()) - rq_info.def_start_time;
+			do_div(diff, 1000 * 1000);
+			udiff = (unsigned int) diff;
 
-		return snprintf(buf, MAX_LONG_SIZE, "%u\n", udiff);
+			return snprintf(buf, MAX_LONG_SIZE, "%u\n", udiff);
+		}
+	}
 }
 
 static ssize_t store_def_timer_ms(struct kobject *kobj,
@@ -375,9 +392,13 @@ static ssize_t store_def_timer_ms(struct kobject *kobj,
 	unsigned int val = 0;
 
 	sscanf(buf, "%u", &val);
-	rq_info.def_timer_jiffies = msecs_to_jiffies(val);
 
-	rq_info.def_start_time = ktime_to_ns(ktime_get());
+	if (rq_info.hotplug_disabled) {
+		val = 5;
+	} else {
+		rq_info.def_timer_jiffies = msecs_to_jiffies(val);
+		rq_info.def_start_time = ktime_to_ns(ktime_get());
+	}
 	return count;
 }
 
@@ -389,12 +410,12 @@ static ssize_t show_cpu_normalized_load(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return snprintf(buf, MAX_LONG_SIZE, "%u\n",
-		rq_info.hotplug_disabled ? 0 : report_load_at_max_freq());
+		rq_info.hotplug_enabled ? report_load_at_max_freq() : 0);
 }
 
 static struct kobj_attribute cpu_normalized_load_attr =
-	__ATTR(cpu_normalized_load, S_IWUSR | S_IRUSR, show_cpu_normalized_load,
-			NULL);
+	__ATTR(cpu_normalized_load, S_IWUSR | S_IRUSR,
+			show_cpu_normalized_load, NULL);
 
 static struct attribute *rq_attrs[] = {
 	&cpu_normalized_load_attr.attr,
@@ -436,6 +457,7 @@ static int __init msm_rq_stats_init(void)
 {
 	int ret;
 	int i;
+	struct cpufreq_policy cpu_policy;
 
 #ifndef CONFIG_SMP
 	/* Bail out if this is not an SMP Target */
@@ -450,8 +472,8 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_jiffies = DEFAULT_DEF_TIMER_JIFFIES;
 	rq_info.rq_poll_last_jiffy = 0;
 	rq_info.def_timer_last_jiffy = 0;
-	rq_info.hotplug_disabled = 1;
-	rq_info.hotplug_enabled = 0;
+	rq_info.hotplug_disabled = 0;
+	rq_info.hotplug_enabled = 1;
 	ret = init_rq_attribs();
 
 	rq_info.init = 1;
@@ -460,9 +482,11 @@ static int __init msm_rq_stats_init(void)
 		struct cpu_load_data *pcpu = &per_cpu(cpuload, i);
 		mutex_init(&pcpu->cpu_load_mutex);
 		cpufreq_get_policy(&cpu_policy, i);
-		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
+		pcpu->policy_max = cpu_policy.max;
 		if (cpu_online(i))
 			pcpu->cur_freq = cpu_policy.cur;
+		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
+				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
