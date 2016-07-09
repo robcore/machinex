@@ -373,7 +373,9 @@ __v7_setup:
 #endif
 	adr	r5, v7_crval
 	ldmia	r5, {r5, r6}
- ARM_BE8(orr	r6, r6, #1 << 25)		@ big-endian page tables
+#ifdef CONFIG_CPU_ENDIAN_BE8
+	orr	r6, r6, #1 << 25		@ big-endian page tables
+#endif
 #ifdef CONFIG_SWP_EMULATE
 	orr     r5, r5, #(1 << 10)              @ set SW bit in "clear"
 	bic     r6, r6, #(1 << 10)              @ clear it in "mmuset"

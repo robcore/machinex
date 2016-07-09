@@ -462,8 +462,9 @@ __und_usr:
 	bne	__und_usr_thumb
 	sub	r4, r2, #4			@ ARM instr at LR - 4
 1:	ldrt	r0, [r4]
- ARM_BE8(rev	r0, r0)				@ little endian instruction
-
+#ifdef CONFIG_CPU_ENDIAN_BE8
+	rev	r0, r0				@ little endian instruction
+#endif
 	@ r0 = 32-bit ARM instruction which caused the exception
 	@ r2 = PC value for the following instruction (:= regs->ARM_pc)
 	@ r4 = PC value for the faulting instruction
