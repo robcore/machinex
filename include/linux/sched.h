@@ -1305,10 +1305,10 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
+	struct ravg ravg;
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
-	struct ravg ravg;
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	/* list of struct preempt_notifier: */
@@ -1390,9 +1390,9 @@ struct task_struct {
 	unsigned long stack_canary;
 #endif
 
-	/* 
+	/*
 	 * pointers to (original) parent process, youngest child, younger sibling,
-	 * older sibling, respectively.  (p->father can be replaced with 
+	 * older sibling, respectively.  (p->father can be replaced with
 	 * p->real_parent->pid)
 	 */
 	struct task_struct __rcu *real_parent; /* real parent process */
