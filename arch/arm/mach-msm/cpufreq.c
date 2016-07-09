@@ -29,8 +29,6 @@
 #include <mach/socinfo.h>
 #include <mach/cpufreq.h>
 
-#include "acpuclock.h"
-
 struct cpufreq_work_struct {
 	struct work_struct work;
 	struct cpufreq_policy *policy;
