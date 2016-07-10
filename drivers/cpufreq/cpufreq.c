@@ -1590,21 +1590,6 @@ static struct syscore_ops cpufreq_syscore_ops = {
 	.resume		= cpufreq_bp_resume,
 };
 
-/**
- * cpufreq_get_current_driver - return current driver's name
- *
- * Return the name string of the currently loaded cpufreq driver
- * or NULL, if none.
- */
-const char *cpufreq_get_current_driver(void)
-{
-	if (cpufreq_driver)
-		return cpufreq_driver->name;
-
-	return NULL;
-}
-EXPORT_SYMBOL_GPL(cpufreq_get_current_driver);
-
 
 /*********************************************************************
  *                     NOTIFIER LISTS INTERFACE                      *
@@ -1719,7 +1704,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 			policy->cpu, target_freq, relation, old_target_freq);
 
 	if (target_freq == policy->cur)
-		return 0
+		return 0;
 
 	if (cpu_online(policy->cpu) && cpufreq_driver->target)
 		retval = cpufreq_driver->target(policy, target_freq, relation);
@@ -1910,20 +1895,6 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu)
 }
 EXPORT_SYMBOL(cpufreq_get_policy);
 
-/**
- *	cpufreq_get_current_driver - return current driver's name
- *
- *	Return the name string of the currently loaded cpufreq driver
- *	or NULL, if none.
- */
-const char *cpufreq_get_current_driver(void)
-{
-	if (cpufreq_driver)
-		return cpufreq_driver->name;
-
-	return NULL;
-}
-EXPORT_SYMBOL_GPL(cpufreq_get_current_driver);
 
 /*
  * data   : current policy.
