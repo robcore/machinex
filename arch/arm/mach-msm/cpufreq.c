@@ -3,7 +3,7 @@
  * MSM architecture cpufreq driver
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2007-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2007-2012, The Linux Foundation. All rights reserved.
  * Author: Mike A. Chan <mikechan@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -17,6 +17,7 @@
  *
  */
 
+#include <linux/earlysuspend.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
@@ -116,6 +117,18 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 
+	if (limit->limits_init) {
+		if (new_freq > limit->allowed_max) {
+			new_freq = limit->allowed_max;
+			pr_debug("max: limiting freq to %d\n", new_freq);
+		}
+
+		if (new_freq < limit->allowed_min) {
+			new_freq = limit->allowed_min;
+			pr_debug("min: limiting freq to %d\n", new_freq);
+		}
+	}
+
 #ifdef CONFIG_SEC_DVFS
 	if (lower_limit_freq || upper_limit_freq) {
 		unsigned int t_freq = new_freq;
@@ -132,23 +145,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 			new_freq = policy->min;
 		if (new_freq > policy->max)
 			new_freq = policy->max;
-	}
-#endif
 
-	if (limit->limits_init) {
-		if (new_freq > limit->allowed_max) {
-			new_freq = limit->allowed_max;
-			pr_debug("max: limiting freq to %d\n", new_freq);
-		}
-
-		if (new_freq < limit->allowed_min) {
-			new_freq = limit->allowed_min;
-			pr_debug("min: limiting freq to %d\n", new_freq);
-		}
-	}
-
-#ifdef CONFIG_SEC_DVFS
-	if (lower_limit_freq || upper_limit_freq) {
 		if (new_freq == policy->cur)
 			return 0;
 	}
@@ -348,14 +345,6 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (cpu_is_msm8625())
 		cpumask_setall(policy->cpus);
 
-	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
-	INIT_WORK(&cpu_work->work, set_cpu_work);
-	init_completion(&cpu_work->complete);
-
-	/* synchronous cpus share the same policy */
-	if (is_clk && !cpu_clk[policy->cpu])
-		return 0;
-
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
@@ -397,6 +386,10 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
+
+	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
+	INIT_WORK(&cpu_work->work, set_cpu_work);
+	init_completion(&cpu_work->complete);
 
 	return 0;
 }
@@ -467,71 +460,33 @@ static struct notifier_block __refdata msm_cpufreq_cpu_notifier = {
 	.notifier_call = msm_cpufreq_cpu_callback,
 };
 
-static int msm_cpufreq_suspend(void)
+/*
+ * Define suspend/resume for cpufreq_driver. Kernel will call
+ * these during suspend/resume with interrupts disabled. This
+ * helps the suspend/resume variable get's updated before cpufreq
+ * governor tries to change the frequency after coming out of suspend.
+ */
+static int msm_cpufreq_suspend(struct cpufreq_policy *policy)
 {
 	int cpu;
 
 	for_each_possible_cpu(cpu) {
-		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 1;
-		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 	}
 
-	return NOTIFY_DONE;
+	return 0;
 }
 
-static int msm_cpufreq_resume(void)
+static int msm_cpufreq_resume(struct cpufreq_policy *policy)
 {
-	int cpu, ret;
-	struct cpufreq_policy policy;
+	int cpu;
 
 	for_each_possible_cpu(cpu) {
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 	}
 
-	/*
-	 * Freq request might be rejected during suspend, resulting
-	 * in policy->cur violating min/max constraint.
-	 * Correct the frequency as soon as possible.
-	 */
-	get_online_cpus();
-	for_each_online_cpu(cpu) {
-		ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			continue;
-		if (policy.cur <= policy.max && policy.cur >= policy.min)
-			continue;
-		ret = cpufreq_update_policy(cpu);
-		if (ret)
-			pr_info("cpufreq: Current frequency violates policy min/max for CPU%d\n",
-			       cpu);
-		else
-			pr_info("cpufreq: Frequency violation fixed for CPU%d\n",
-				cpu);
-	}
-	put_online_cpus();
-
-	return NOTIFY_DONE;
+	return 0;
 }
-
-static int msm_cpufreq_pm_event(struct notifier_block *this,
-				unsigned long event, void *ptr)
-{
-	switch (event) {
-	case PM_POST_HIBERNATION:
-	case PM_POST_SUSPEND:
-		return msm_cpufreq_resume();
-	case PM_HIBERNATION_PREPARE:
-	case PM_SUSPEND_PREPARE:
-		return msm_cpufreq_suspend();
-	default:
-		return NOTIFY_DONE;
-	}
-}
-
-static struct notifier_block msm_cpufreq_pm_notifier = {
-	.notifier_call = msm_cpufreq_pm_event,
-};
 
 static struct freq_attr *msm_freq_attr[] = {
 	&cpufreq_freq_attr_scaling_available_freqs,
@@ -545,6 +500,8 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
+	.suspend	= msm_cpufreq_suspend,
+	.resume		= msm_cpufreq_resume,
 	.name		= "msm",
 	.attr		= msm_freq_attr,
 };
@@ -560,7 +517,8 @@ static int __init msm_cpufreq_register(void)
 
 	msm_cpufreq_wq = create_workqueue("msm-cpufreq");
 	register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
-	register_pm_notifier(&msm_cpufreq_pm_notifier);
+
+	register_early_suspend(&msm_cpu_early_suspend_handler);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
