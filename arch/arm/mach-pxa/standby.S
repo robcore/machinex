@@ -108,7 +108,7 @@ ENTRY(pm_enter_standby_start)
 	bic	r0, r0, #0x20000000
 	str	r0, [r1, #PXA3_DMCIER]
 
-	ret	lr
+	mov	pc, lr
 ENTRY(pm_enter_standby_end)
 
 #endif

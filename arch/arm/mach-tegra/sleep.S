@@ -88,6 +88,6 @@ ENTRY(tegra_cpu_wfi)
 	mov	r3, #FLOW_CTRL_CSR_INTR_FLAG | FLOW_CTRL_CSR_EVENT_FLAG
 	str	r3, [r0, r2]	@ clear event & interrupt status
 	dsb
-	ret	lr
+	mov	pc, lr
 ENDPROC(tegra_cpu_wfi)
 
