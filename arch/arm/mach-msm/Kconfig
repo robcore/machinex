@@ -2006,7 +2006,7 @@ config MSM_DALRPC_TEST
 
 if CPU_FREQ_MSM
 
-config INTELLI_PLUG
+config INTELLI_HOTPLUG
         bool "Enable intelli-plug cpu hotplug driver"
         default n
         help
@@ -3325,7 +3325,7 @@ config SEC_FACTORY
 	default n
 	help
 	  Enable Features only For FACTORY BINARY.
-	  
+
 config HAS_MACH_MEMUTILS
 	default n
 	bool "Motorola MSM memcpy enhancements"
