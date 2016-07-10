@@ -29,6 +29,8 @@
 #include <mach/socinfo.h>
 #include <mach/cpufreq.h>
 
+#include "acpuclock.h"
+
 struct cpufreq_work_struct {
 	struct work_struct work;
 	struct cpufreq_policy *policy;
@@ -158,7 +160,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 
 	/*
 	 * Put the caller into SCHED_FIFO priority to avoid cpu starvation
-	 * while increasing frequencies
+	 * in the acpuclk_set_rate path while increasing frequencies
 	 */
 
 	if (freqs.new > freqs.old && current->policy != SCHED_FIFO) {
@@ -351,7 +353,7 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	init_completion(&cpu_work->complete);
 
 	/* synchronous cpus share the same policy */
-	if (!cpu_clk[policy->cpu])
+	if (is_clk && !cpu_clk[policy->cpu])
 		return 0;
 
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
@@ -392,6 +394,9 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	}
 
 	policy->cur = cur_freq;
+
+	policy->cpuinfo.transition_latency =
+		acpuclk_get_switch_time() * NSEC_PER_USEC;
 
 	return 0;
 }
