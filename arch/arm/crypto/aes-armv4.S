@@ -37,6 +37,8 @@
 #include <linux/linkage.h>
 #include <asm/assembler.h>
 
+#include <asm/assembler.h>
+
 .text
 
 .type	AES_Te,%object
