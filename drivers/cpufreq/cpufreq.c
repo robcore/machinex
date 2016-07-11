@@ -501,6 +501,7 @@ static ssize_t store_##file_name					\
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
 	if (ret)							\
 		return -EINVAL;						\
+									\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
 									\
@@ -511,6 +512,7 @@ static ssize_t store_##file_name					\
 	ret = cpufreq_driver->verify(&new_policy);			\
 	if (ret)							\
 		pr_err("cpufreq: Frequency verification failed\n");	\
+									\
 	policy->user_policy.min = new_policy.min;			\
 	policy->user_policy.max = new_policy.max;			\
 									\
@@ -1195,7 +1197,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 
 	return 0;
 
-
 err_out_unregister:
 	spin_lock_irqsave(&cpufreq_driver_lock, flags);
 	for_each_cpu(j, policy->cpus)
@@ -1760,14 +1761,12 @@ int __cpufreq_driver_getavg(struct cpufreq_policy *policy, unsigned int cpu)
 	if (cpufreq_disabled())
 		return ret;
 
-	if (!(cpu_online(cpu) && cpufreq_driver->getavg))
-		return 0;
-
 	policy = cpufreq_cpu_get(policy->cpu);
 	if (!policy)
 		return -EINVAL;
 
-	ret = cpufreq_driver->getavg(policy, cpu);
+	if (cpu_online(cpu) && cpufreq_driver->getavg)
+		ret = cpufreq_driver->getavg(policy, cpu);
 
 	cpufreq_cpu_put(policy);
 	return ret;
