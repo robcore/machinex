@@ -143,6 +143,24 @@ struct lock_class_stats lock_stats(struct lock_class *class);
 void clear_lock_stats(struct lock_class *class);
 #endif
 
+static inline void lockdep_copy_map(struct lockdep_map *to,
+				    struct lockdep_map *from)
+{
+	int i;
+
+	*to = *from;
+	/*
+	 * Since the class cache can be modified concurrently we could observe
+	 * half pointers (64bit arch using 32bit copy insns). Therefore clear
+	 * the caches and take the performance hit.
+	 *
+	 * XXX it doesn't work well with lockdep_set_class_and_subclass(), since
+	 *     that relies on cache abuse.
+	 */
+	for (i = 0; i < NR_LOCKDEP_CACHING_CLASSES; i++)
+		to->class_cache[i] = NULL;
+}
+
 /*
  * Map the lock object (the lock instance) to the lock-class object.
  * This is embedded into specific lock instances:
@@ -359,7 +377,9 @@ extern void lockdep_trace_alloc(gfp_t mask);
 
 #define lockdep_depth(tsk)	(debug_locks ? (tsk)->lockdep_depth : 0)
 
-#define lockdep_assert_held(l)	WARN_ON(debug_locks && !lockdep_is_held(l))
+#define lockdep_assert_held(l)	do {				\
+		WARN_ON(debug_locks && !lockdep_is_held(l));	\
+	} while (0)
 
 #define lockdep_recursing(tsk)	((tsk)->lockdep_recursion)
 
@@ -410,7 +430,7 @@ struct lock_class_key { };
 
 #define lockdep_depth(tsk)	(0)
 
-#define lockdep_assert_held(l)			do { } while (0)
+#define lockdep_assert_held(l)			do { (void)(l); } while (0)
 
 #define lockdep_recursing(tsk)			(0)
 
@@ -524,14 +544,17 @@ static inline void print_irqtrace_events(struct task_struct *curr)
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 # ifdef CONFIG_PROVE_LOCKING
 #  define rwsem_acquire(l, s, t, i)		lock_acquire(l, s, t, 0, 2, NULL, i)
+#  define rwsem_acquire_nest(l, s, t, n, i)	lock_acquire(l, s, t, 0, 2, n, i)
 #  define rwsem_acquire_read(l, s, t, i)	lock_acquire(l, s, t, 1, 2, NULL, i)
 # else
 #  define rwsem_acquire(l, s, t, i)		lock_acquire(l, s, t, 0, 1, NULL, i)
+#  define rwsem_acquire_nest(l, s, t, n, i)	lock_acquire(l, s, t, 0, 1, n, i)
 #  define rwsem_acquire_read(l, s, t, i)	lock_acquire(l, s, t, 1, 1, NULL, i)
 # endif
 # define rwsem_release(l, n, i)			lock_release(l, n, i)
 #else
 # define rwsem_acquire(l, s, t, i)		do { } while (0)
+# define rwsem_acquire_nest(l, s, t, n, i)	do { } while (0)
 # define rwsem_acquire_read(l, s, t, i)		do { } while (0)
 # define rwsem_release(l, n, i)			do { } while (0)
 #endif
