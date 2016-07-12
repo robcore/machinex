@@ -364,7 +364,7 @@ MODFLAGS	= -DMODULE -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-v
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -mcpu=cortex-a15 -fforce-addr -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-align-labels -fno-prefetch-loop-arrays -mvectorize-with-neon-quad -funsafe-math-optimizations -munaligned-access -ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops
+CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-align-labels -fno-prefetch-loop-arrays -mvectorize-with-neon-quad -funsafe-math-optimizations -munaligned-access -ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -381,7 +381,6 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-variable -Wno-maybe-uninitialized \
 		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -std=gnu89 \
-		   -ftree-loop-ivcanon -fforce-addr \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label -Wno-array-bounds -Wno-logical-not-parentheses \
 		   -fno-delete-null-pointer-checks -Wno-cpp -Wno-declaration-after-statement -fno-var-tracking-assignments \
 		   -Wno-sizeof-pointer-memaccess -Wno-aggressive-loop-optimizations -Wno-sequence-point
