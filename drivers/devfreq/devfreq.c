@@ -610,7 +610,7 @@ static int __init devfreq_start_polling(void)
 	    alloc_workqueue("devfreq_wq",
 			    WQ_HIGHPRI | WQ_UNBOUND | WQ_FREEZABLE |
 			    WQ_MEM_RECLAIM, 0);
-	INIT_DELAYED_WORK_DEFERRABLE(&devfreq_work, devfreq_monitor);
+	INIT_DEFERRABLE_WORK(&devfreq_work, devfreq_monitor);
 	mutex_unlock(&devfreq_list_lock);
 
 	devfreq_monitor(&devfreq_work.work);

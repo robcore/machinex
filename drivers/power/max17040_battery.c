@@ -927,7 +927,7 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	/* create fuelgauge attributes */
 	fuelgauge_create_attrs(chip->battery.dev);
 
-	INIT_DELAYED_WORK_DEFERRABLE(&chip->work, max17040_work);
+	INIT_DEFERRABLE_WORK(&chip->work, max17040_work);
 	schedule_delayed_work(&chip->work, 0);
 
 	return 0;
