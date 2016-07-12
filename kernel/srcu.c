@@ -446,10 +446,12 @@ static void __synchronize_srcu(struct srcu_struct *sp, int trycount)
  * synchronize_srcu - wait for prior SRCU read-side critical-section completion
  * @sp: srcu_struct with which to synchronize.
  *
- * Flip the completed counter, and wait for the old count to drain to zero.
- * As with classic RCU, the updater must use some separate means of
- * synchronizing concurrent updates.  Can block; must be called from
- * process context.
+ * Wait for the count to drain to zero of both indexes. To avoid the
+ * possible starvation of synchronize_srcu(), it waits for the count of
+ * the index=((->completed & 1) ^ 1) to drain to zero at first,
+ * and then flip the completed and wait for the count of the other index.
+ *
+ * Can block; must be called from process context.
  *
  * Note that it is illegal to call synchronize_srcu() from the corresponding
  * SRCU read-side critical section; doing so will result in deadlock.
@@ -469,12 +471,11 @@ EXPORT_SYMBOL_GPL(synchronize_srcu);
  * Wait for an SRCU grace period to elapse, but be more aggressive about
  * spinning rather than blocking when waiting.
  *
- * Note that it is illegal to call this function while holding any lock
- * that is acquired by a CPU-hotplug notifier.  It is also illegal to call
- * synchronize_srcu_expedited() from the corresponding SRCU read-side
- * critical section; doing so will result in deadlock.  However, it is
- * perfectly legal to call synchronize_srcu_expedited() on one srcu_struct
- * from some other srcu_struct's read-side critical section, as long as
+ * Note that it is also illegal to call synchronize_srcu_expedited()
+ * from the corresponding SRCU read-side critical section;
+ * doing so will result in deadlock.  However, it is perfectly legal
+ * to call synchronize_srcu_expedited() on one srcu_struct from some
+ * other srcu_struct's read-side critical section, as long as
  * the resulting graph of srcu_structs is acyclic.
  */
 void synchronize_srcu_expedited(struct srcu_struct *sp)
