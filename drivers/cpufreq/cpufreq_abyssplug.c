@@ -609,7 +609,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 	delay -= jiffies % delay;
 
-	INIT_DELAYED_WORK_DEFERRABLE(&dbs_info->work, do_dbs_timer);
+	INIT_DEFERRABLE_WORK(&dbs_info->work, do_dbs_timer);
 	if (!dbs_info->boost_applied)
 		delay = usecs_to_jiffies(dbs_tuners_ins.boost_timeout);
 	queue_delayed_work_on(dbs_info->cpu, khotplug_wq, &dbs_info->work,
