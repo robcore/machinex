@@ -364,7 +364,7 @@ MODFLAGS	= -DMODULE -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad -ftree-vectorize -funroll-loops
+CFLAGS_KERNEL	= -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-align-labels -fno-prefetch-loop-arrays -mvectorize-with-neon-quad -mfused-madd -funsafe-math-optimizations -munaligned-access -ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -379,12 +379,11 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 #-freorder-blocks -freorder-blocks-and-partition?
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-variable -Wno-maybe-uninitialized \
-		   -fno-strict-aliasing -fno-common -mtune="cortex-a15" -mfpu=neon-vfpv4 \
+		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -std=gnu89 \
-		   -fno-align-functions -fno-align-jumps -fno-align-loops \
-		   -fno-align-labels -fno-prefetch-loop-arrays -ftree-vectorize \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label -Wno-array-bounds -Wno-logical-not-parentheses \
-		   -fno-delete-null-pointer-checks -Wno-cpp -Wno-declaration-after-statement -fno-var-tracking-assignments -Wno-sizeof-pointer-memaccess -Wno-aggressive-loop-optimizations -Wno-sequence-point
+		   -fno-delete-null-pointer-checks -Wno-cpp -Wno-declaration-after-statement -fno-var-tracking-assignments \
+		   -Wno-sizeof-pointer-memaccess -Wno-aggressive-loop-optimizations -Wno-sequence-point
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
