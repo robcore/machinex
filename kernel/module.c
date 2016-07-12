@@ -1189,7 +1189,7 @@ static unsigned long maybe_relocated(unsigned long crc,
 static int check_version(Elf_Shdr *sechdrs,
 			 unsigned int versindex,
 			 const char *symname,
-			 struct module *mod, 
+			 struct module *mod,
 			 const unsigned long *crc,
 			 const struct module *crc_owner)
 {
@@ -1260,7 +1260,7 @@ static inline int same_magic(const char *amagic, const char *bmagic,
 static inline int check_version(Elf_Shdr *sechdrs,
 				unsigned int versindex,
 				const char *symname,
-				struct module *mod, 
+				struct module *mod,
 				const unsigned long *crc,
 				const struct module *crc_owner)
 {
@@ -2776,9 +2776,9 @@ static int check_modinfo(struct module *mod, struct load_info *info)
 		if (err)
 			return err;
 	} else if (!same_magic(modmagic, vermagic, info->index.vers)) {
-		printk(KERN_ERR "%s: version magic '%s' should be '%s'\n",
+		/* Load kernel even if version mismatches */
+		printk(KERN_WARNING "%s: version magic '%s' should be '%s'\n",
 		       mod->name, modmagic, vermagic);
-		return -ENOEXEC;
 	}
 
 	if (!get_modinfo(info, "intree"))
