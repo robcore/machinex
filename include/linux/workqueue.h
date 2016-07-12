@@ -234,7 +234,7 @@ static inline unsigned int work_static(struct work_struct *work) { return 0; }
 #define INIT_DELAYED_WORK_ONSTACK(_work, _func)				\
 	__INIT_DELAYED_WORK_ONSTACK(_work, _func, 0)
 
-#define INIT_DEFERRABLE_WORK(_work, _func)			\
+#define INIT_DEFERRABLE_WORK(_work, _func)				\
 	__INIT_DELAYED_WORK(_work, _func, TIMER_DEFERRABLE)
 
 #define INIT_DEFERRABLE_WORK_ONSTACK(_work, _func)			\
@@ -507,3 +507,4 @@ extern void thaw_workqueues(void);
 #endif /* CONFIG_FREEZER */
 
 #endif
+
