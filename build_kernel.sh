@@ -1,5 +1,5 @@
 #!/bin/bash
-
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 rm -rf $(pwd)/out;
 rm $(pwd)/arch/arm/boot/dhd.ko;
 rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
