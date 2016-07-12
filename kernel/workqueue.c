@@ -1026,16 +1026,14 @@ static void cwq_dec_nr_in_flight(struct cpu_workqueue_struct *cwq, int color,
  *		for arbitrarily long
  *
  * On >= 0 return, the caller owns @work's PENDING bit.  To avoid getting
- * preempted while holding PENDING and @work off queue, preemption must be
- * disabled on entry.  This ensures that we don't return -EAGAIN while
- * another task is preempted in this function.
+ * interrupted while holding PENDING and @work off queue, irq must be
+ * disabled on entry.  This, combined with delayed_work->timer being
+ * irqsafe, ensures that we return -EAGAIN for finite short period of time.
  *
  * On successful return, >= 0, irq is disabled and the caller is
  * responsible for releasing it using local_irq_restore(*@flags).
  *
- * This function is safe to call from any context other than IRQ handler.
- * An IRQ handler may run on top of delayed_work_timer_fn() which can make
- * this function return -EAGAIN perpetually.
+ * This function is safe to call from any context including IRQ handler.
  */
 static int try_to_grab_pending(struct work_struct *work, bool is_dwork,
 			       unsigned long *flags)
@@ -1048,6 +1046,11 @@ static int try_to_grab_pending(struct work_struct *work, bool is_dwork,
 	if (is_dwork) {
 		struct delayed_work *dwork = to_delayed_work(work);
 
+		/*
+		 * dwork->timer is irqsafe.  If del_timer() fails, it's
+		 * guaranteed that the timer is not queued anywhere and not
+		 * running on the local CPU.
+		 */
 		if (likely(del_timer(&dwork->timer)))
 			return 1;
 	}
@@ -1315,9 +1318,8 @@ void delayed_work_timer_fn(unsigned long __data)
 	struct delayed_work *dwork = (struct delayed_work *)__data;
 	struct cpu_workqueue_struct *cwq = get_work_cwq(&dwork->work);
 
-	local_irq_disable();
+	/* should have been called from irqsafe timer with irq already off */
 	__queue_work(dwork->cpu, cwq->wq, &dwork->work);
-	local_irq_enable();
 }
 EXPORT_SYMBOL_GPL(delayed_work_timer_fn);
 
@@ -1440,7 +1442,7 @@ EXPORT_SYMBOL_GPL(queue_delayed_work);
  * Returns %false if @dwork was idle and queued, %true if @dwork was
  * pending and its timer was modified.
  *
- * This function is safe to call from any context other than IRQ handler.
+ * This function is safe to call from any context including IRQ handler.
  * See try_to_grab_pending() for details.
  */
 bool mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
