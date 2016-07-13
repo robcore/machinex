@@ -108,7 +108,7 @@ static void csd_lock_wait(struct call_single_data *data)
 static void csd_lock(struct call_single_data *data)
 {
 	csd_lock_wait(data);
-	data->flags |= CSD_FLAG_LOCK;
+	data->flags = CSD_FLAG_LOCK;
 
 	/*
 	 * prevent CPU from reordering the above assignment
@@ -582,6 +582,26 @@ int smp_call_function(smp_call_func_t func, void *info, int wait)
 	return 0;
 }
 EXPORT_SYMBOL(smp_call_function);
+
+void ipi_call_lock(void)
+{
+	raw_spin_lock(&call_function.lock);
+}
+
+void ipi_call_unlock(void)
+{
+	raw_spin_unlock(&call_function.lock);
+}
+
+void ipi_call_lock_irq(void)
+{
+	raw_spin_lock_irq(&call_function.lock);
+}
+
+void ipi_call_unlock_irq(void)
+{
+	raw_spin_unlock_irq(&call_function.lock);
+}
 #endif /* USE_GENERIC_SMP_HELPERS */
 
 /* Setup configured maximum number of CPUs to activate */
