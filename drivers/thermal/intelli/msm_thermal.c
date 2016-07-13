@@ -93,7 +93,7 @@ static int msm_thermal_get_freq_table(void)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
-	limit_idx_low = 0;
+	limit_idx_low = 4;
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -214,7 +214,7 @@ static void __ref do_freq_control(long temp)
 	if (max_freq == limited_max_freq_thermal)
 		return;
 
-	
+
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
@@ -300,7 +300,7 @@ static void __ref disable_msm_thermal(void)
 {
 	int cpu = 0;
 
-	
+
 	flush_workqueue(intellithermal_wq);
 
 	for_each_possible_cpu(cpu) {

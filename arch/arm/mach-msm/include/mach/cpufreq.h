@@ -39,4 +39,7 @@ static inline int msm_cpufreq_set_freq_limits(
 }
 #endif
 
+extern int msm_cpufreq_get_index(struct cpufreq_policy *policy,
+				 unsigned int freq);
+
 #endif /* __ARCH_ARM_MACH_MSM_MACH_CPUFREQ_H */
