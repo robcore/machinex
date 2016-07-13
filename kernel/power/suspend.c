@@ -30,13 +30,13 @@
 
 #include "power.h"
 
-const char *const pm_states[PM_SUSPEND_MAX] = {
+struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 #ifdef CONFIG_EARLYSUSPEND
-	[PM_SUSPEND_ON]		= "on",
+	[PM_SUSPEND_ON]	= { "on", PM_SUSPEND_FREEZE },
 #endif
-	[PM_SUSPEND_FREEZE]	= "freeze",
-	[PM_SUSPEND_STANDBY]	= "standby",
-	[PM_SUSPEND_MEM]	= "mem",
+	[PM_SUSPEND_FREEZE] = { "freeze", PM_SUSPEND_FREEZE },
+	[PM_SUSPEND_STANDBY] = { "standby", PM_SUSPEND_STANDBY },
+	[PM_SUSPEND_MEM] = { "mem", PM_SUSPEND_MEM },
 };
 
 static const struct platform_suspend_ops *suspend_ops;
@@ -355,7 +355,7 @@ static int enter_state(suspend_state_t state)
 		freeze_begin();
 
 	suspend_sys_sync_queue();
-	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state]);
+	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state].label);
 	error = suspend_prepare(state);
 	if (error)
 		goto Unlock;
@@ -363,7 +363,7 @@ static int enter_state(suspend_state_t state)
 	if (suspend_test(TEST_FREEZER))
 		goto Finish;
 
-	pr_debug("PM: Entering %s sleep\n", pm_states[state]);
+	pr_debug("PM: Entering %s sleep\n", pm_states[state].label);
 	pm_restrict_gfp_mask();
 	error = suspend_devices_and_enter(state);
 	pm_restore_gfp_mask();
