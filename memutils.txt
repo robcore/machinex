@@ -1,0 +1,3 @@
+00000000 t $a
+         U memcpy
+00000000 T memmove
