@@ -220,7 +220,7 @@ static int mxt_calculate_infoblock_crc(struct mxt_data *data,
 {
 	u32 crc = 0;
 	u8 mem[7 + data->info.object_num * 6];
-	int ret = 0;
+	int ret;
 	int i;
 
 	ret = mxt_read_mem(data, 0, sizeof(mem), mem);
@@ -240,7 +240,7 @@ static int mxt_read_info_crc(struct mxt_data *data, u32 *crc_pointer)
 {
 	u16 crc_address;
 	u8 msg[3];
-	int ret = 0;
+	int ret;
 
 	/* Read Info block CRC address */
 	crc_address = MXT_OBJECT_TABLE_START_ADDRESS +
@@ -299,7 +299,7 @@ static int mxt_init_write_config(struct mxt_data *data,
 {
 	struct mxt_object *object;
 	u8 *temp;
-	int ret = 0;
+	int ret;
 
 	object = mxt_get_object(data, type);
 	if (!object)
@@ -338,7 +338,7 @@ static int mxt_write_config_from_pdata(struct mxt_data *data)
 	struct device *dev = &data->client->dev;
 	u8 **tsp_config = (u8 **)data->pdata->config;
 	u8 i;
-	int ret = 0;
+	int ret;
 
 	if (!tsp_config) {
 		dev_info(dev, "No cfg data in pdata\n");
@@ -363,7 +363,7 @@ static int mxt_write_config(struct mxt_fw_info *fw_info)
 	u32 current_crc;
 	u8 i, val = 0;
 	u16 reg, index;
-	int ret = 0;
+	int ret;
 
 	if (!fw_info->cfg_raw_data) {
 		dev_info(dev, "No cfg data in file\n");
@@ -1248,7 +1248,7 @@ static int mxt_flash_fw(struct mxt_fw_info *fw_info)
 	size_t fw_size = fw_info->fw_len;
 	unsigned int frame_size;
 	unsigned int pos = 0;
-	int ret = 0;
+	int ret;
 
 	if (!fw_data) {
 		dev_err(dev, "firmware data is Null\n");
@@ -1424,7 +1424,7 @@ static int mxt_initialize(struct mxt_data *data)
 	struct i2c_client *client = data->client;
 
 	u32 read_info_crc, calc_info_crc;
-	int ret = 0;
+	int ret;
 
 	ret = mxt_read_id_info(data);
 	if (ret)
@@ -1481,7 +1481,7 @@ static int  mxt_rest_initialize(struct mxt_fw_info *fw_info)
 {
 	struct mxt_data *data = fw_info->data;
 	struct device *dev = &data->client->dev;
-	int ret = 0;
+	int ret;
 
 	/* Restore memory and stop event handing */
 	ret = mxt_command_backup(data, MXT_DISALEEVT_VALUE);
@@ -1628,7 +1628,7 @@ err_power_off:
 static int mxt_input_open(struct input_dev *dev)
 {
 	struct mxt_data *data = input_get_drvdata(dev);
-	int ret = 0;
+	int ret;
 
 	ret = wait_for_completion_interruptible_timeout(&data->init_done,
 			msecs_to_jiffies(90 * MSEC_PER_SEC));

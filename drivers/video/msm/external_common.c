@@ -1782,7 +1782,7 @@ static int hdmi_edid_get_display_vsd_3d_mode(const uint8 *data_buf,
 	struct hdmi_disp_mode_list_type *disp_mode_list,
 	uint32 num_og_cea_blocks)
 {
-	uint8 len = 0, offset, present_multi_3d, hdmi_vic_len;
+	uint8 len, offset, present_multi_3d, hdmi_vic_len;
 	uint16 structure_all, structure_mask;
 	int hdmi_3d_len;
 	const uint8 *vsd = num_og_cea_blocks ?
