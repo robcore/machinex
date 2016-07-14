@@ -721,6 +721,7 @@ bool pm_get_wakeup_count(unsigned int *count)
 	*count = cnt;
 	return !inpr;
 }
+EXPORT_SYMBOL_GPL(pm_system_wakeup);
 
 /**
  * pm_save_wakeup_count - Save the current number of registered wakeup events.
