@@ -1936,7 +1936,7 @@ error_return:
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 		int, maxevents, int, timeout)
 {
-	int error, fput_needed;
+	int error;
 	struct file *file;
 	struct eventpoll *ep;
 
@@ -1952,7 +1952,7 @@ SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 
 	/* Get the "struct file *" for the eventpoll file */
 	error = -EBADF;
-	file = fget_light(epfd, &fput_needed);
+	file = fget(epfd);
 	if (!file)
 		goto error_return;
 
@@ -1974,7 +1974,7 @@ SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 	error = ep_poll(ep, events, maxevents, timeout);
 
 error_fput:
-	fput_light(file, fput_needed);
+	fput(file);
 error_return:
 
 	return error;
