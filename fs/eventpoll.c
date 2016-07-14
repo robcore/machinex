@@ -39,6 +39,7 @@
 #include <asm/mman.h>
 #include <linux/atomic.h>
 #include <linux/rculist.h>
+#include <linux/compat.h>
 
 /*
  * LOCKING:
@@ -167,6 +168,9 @@ struct epitem {
 
 	/* The structure that describe the interested events and the source fd */
 	struct epoll_event event;
+
+	/* The fllink is in use. Since rcu can't do 'list_del_init()' */
+	int on_list;
 };
 
 /*
@@ -290,7 +294,7 @@ static LIST_HEAD(tfile_check_list);
 static long zero;
 static long long_max = LONG_MAX;
 
-ctl_table epoll_table[] = {
+struct ctl_table epoll_table[] = {
 	{
 		.procname	= "max_user_watches",
 		.data		= &max_user_watches,
@@ -703,7 +707,10 @@ static int ep_remove(struct eventpoll *ep, struct epitem *epi)
 
 	/* Remove the current item from the list of epoll hooks */
 	spin_lock(&file->f_lock);
-	list_del_rcu(&epi->fllink);
+	if (epi->on_list) {
+		list_del_rcu(&epi->fllink);
+		epi->on_list = 0;
+	}
 	spin_unlock(&file->f_lock);
 
 	rb_erase(&epi->rbn, &ep->rbr);
@@ -714,6 +721,7 @@ static int ep_remove(struct eventpoll *ep, struct epitem *epi)
 	spin_unlock_irqrestore(&ep->lock, flags);
 
 	wakeup_source_unregister(ep_wakeup_source(epi));
+
 	/*
 	 * At this point it is safe to free the eventpoll item. Use the union
 	 * field epi->rcu, since we are trying to minimize the size of
@@ -1259,6 +1267,7 @@ static int ep_insert(struct eventpoll *ep, struct epoll_event *event,
 	epi->event = *event;
 	epi->nwait = 0;
 	epi->next = EP_UNACTIVE_PTR;
+	epi->on_list = 0;
 	if (epi->event.events & EPOLLWAKEUP) {
 		error = ep_create_wakeup_source(epi);
 		if (error)
@@ -1292,6 +1301,7 @@ static int ep_insert(struct eventpoll *ep, struct epoll_event *event,
 	/* Add the current item to the list of active epoll hook for this file */
 	spin_lock(&tfile->f_lock);
 	list_add_tail_rcu(&epi->fllink, &tfile->f_ep_links);
+	epi->on_list = 1;
 	spin_unlock(&tfile->f_lock);
 
 	/*
@@ -1332,7 +1342,8 @@ static int ep_insert(struct eventpoll *ep, struct epoll_event *event,
 
 error_remove_epi:
 	spin_lock(&tfile->f_lock);
-	list_del_rcu(&epi->fllink);
+	if (epi->on_list)
+		list_del_rcu(&epi->fllink);
 	spin_unlock(&tfile->f_lock);
 
 	rb_erase(&epi->rbn, &ep->rbr);
@@ -1796,7 +1807,7 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 {
 	int error;
 	int full_check = 0;
-	struct fd f, tf;
+	struct file *file, *tfile;
 	struct eventpoll *ep;
 	struct epitem *epi;
 	struct epoll_event epds;
@@ -1807,19 +1818,20 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	    copy_from_user(&epds, event, sizeof(struct epoll_event)))
 		goto error_return;
 
+	/* Get the "struct file *" for the eventpoll file */
 	error = -EBADF;
-	f = fdget(epfd);
-	if (!f.file)
+	file = fget(epfd);
+	if (!file)
 		goto error_return;
 
 	/* Get the "struct file *" for the target file */
-	tf = fdget(fd);
-	if (!tf.file)
+	tfile = fget(fd);
+	if (!tfile)
 		goto error_fput;
 
 	/* The target file descriptor must support poll */
 	error = -EPERM;
-	if (!tf.file->f_op || !tf.file->f_op->poll)
+	if (!tfile->f_op || !tfile->f_op->poll)
 		goto error_tgt_fput;
 
 	/* Check if EPOLLWAKEUP is allowed */
@@ -1832,14 +1844,14 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 * adding an epoll file descriptor inside itself.
 	 */
 	error = -EINVAL;
-	if (f.file == tf.file || !is_file_epoll(f.file))
+	if (file == tfile || !is_file_epoll(file))
 		goto error_tgt_fput;
 
 	/*
 	 * At this point it is safe to assume that the "private_data" contains
 	 * our own data structure.
 	 */
-	ep = f.file->private_data;
+	ep = file->private_data;
 
 	/*
 	 * When we insert an epoll file descriptor, inside another epoll file
@@ -1858,23 +1870,23 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 */
 	mutex_lock_nested(&ep->mtx, 0);
 	if (op == EPOLL_CTL_ADD) {
-		if (!list_empty(&f.file->f_ep_links) ||
-						is_file_epoll(tf.file)) {
+		if (!list_empty(&file->f_ep_links) ||
+						is_file_epoll(tfile)) {
 			full_check = 1;
 			mutex_unlock(&ep->mtx);
 			mutex_lock(&epmutex);
-			if (is_file_epoll(tf.file)) {
+			if (is_file_epoll(tfile)) {
 				error = -ELOOP;
-				if (ep_loop_check(ep, tf.file) != 0) {
+				if (ep_loop_check(ep, tfile) != 0) {
 					clear_tfile_check_list();
 					goto error_tgt_fput;
 				}
 			} else
-				list_add(&tf.file->f_tfile_llink,
+				list_add(&tfile->f_tfile_llink,
 							&tfile_check_list);
 			mutex_lock_nested(&ep->mtx, 0);
-			if (is_file_epoll(tf.file)) {
-				tep = tf.file->private_data;
+			if (is_file_epoll(tfile)) {
+				tep = tfile->private_data;
 				mutex_lock_nested(&tep->mtx, 1);
 			}
 		}
@@ -1885,14 +1897,14 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 * above, we can be sure to be able to use the item looked up by
 	 * ep_find() till we release the mutex.
 	 */
-	epi = ep_find(ep, tf.file, fd);
+	epi = ep_find(ep, tfile, fd);
 
 	error = -EINVAL;
 	switch (op) {
 	case EPOLL_CTL_ADD:
 		if (!epi) {
 			epds.events |= POLLERR | POLLHUP;
-			error = ep_insert(ep, &epds, tf.file, fd, full_check);
+			error = ep_insert(ep, &epds, tfile, fd, full_check);
 		} else
 			error = -EEXIST;
 		if (full_check)
@@ -1920,9 +1932,9 @@ error_tgt_fput:
 	if (full_check)
 		mutex_unlock(&epmutex);
 
-	fdput(tf);
+	fput(tfile);
 error_fput:
-	fdput(f);
+	fput(file);
 error_return:
 
 	return error;
@@ -1935,8 +1947,8 @@ error_return:
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 		int, maxevents, int, timeout)
 {
-	int error;
-	struct fd f;
+	int error, fput_needed;
+	struct file *file;
 	struct eventpoll *ep;
 
 	/* The maximum number of event must be greater than zero */
@@ -1944,37 +1956,40 @@ SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 		return -EINVAL;
 
 	/* Verify that the area passed by the user is writeable */
-	if (!access_ok(VERIFY_WRITE, events, maxevents * sizeof(struct epoll_event)))
-		return -EFAULT;
+	if (!access_ok(VERIFY_WRITE, events, maxevents * sizeof(struct epoll_event))) {
+		error = -EFAULT;
+		goto error_return;
+	}
 
 	/* Get the "struct file *" for the eventpoll file */
-	f = fdget(epfd);
-	if (!f.file)
-		return -EBADF;
+	error = -EBADF;
+	file = fget_light(epfd, &fput_needed);
+	if (!file)
+		goto error_return;
 
 	/*
 	 * We have to check that the file structure underneath the fd
 	 * the user passed to us _is_ an eventpoll file.
 	 */
 	error = -EINVAL;
-	if (!is_file_epoll(f.file))
+	if (!is_file_epoll(file))
 		goto error_fput;
 
 	/*
 	 * At this point it is safe to assume that the "private_data" contains
 	 * our own data structure.
 	 */
-	ep = f.file->private_data;
+	ep = file->private_data;
 
 	/* Time to fish for events ... */
 	error = ep_poll(ep, events, maxevents, timeout);
 
 error_fput:
-	fdput(f);
+	fput_light(file, fput_needed);
+error_return:
+
 	return error;
 }
-
-#ifdef HAVE_SET_RESTORE_SIGMASK
 
 /*
  * Implement the event wait interface for the eventpoll file. It is the kernel
@@ -2020,7 +2035,51 @@ SYSCALL_DEFINE6(epoll_pwait, int, epfd, struct epoll_event __user *, events,
 	return error;
 }
 
-#endif /* HAVE_SET_RESTORE_SIGMASK */
+#ifdef CONFIG_COMPAT
+COMPAT_SYSCALL_DEFINE6(epoll_pwait, int, epfd,
+			struct epoll_event __user *, events,
+			int, maxevents, int, timeout,
+			const compat_sigset_t __user *, sigmask,
+			compat_size_t, sigsetsize)
+{
+	long err;
+	compat_sigset_t csigmask;
+	sigset_t ksigmask, sigsaved;
+
+	/*
+	 * If the caller wants a certain signal mask to be set during the wait,
+	 * we apply it here.
+	 */
+	if (sigmask) {
+		if (sigsetsize != sizeof(compat_sigset_t))
+			return -EINVAL;
+		if (copy_from_user(&csigmask, sigmask, sizeof(csigmask)))
+			return -EFAULT;
+		sigset_from_compat(&ksigmask, &csigmask);
+		sigsaved = current->blocked;
+		set_current_blocked(&ksigmask);
+	}
+
+	err = sys_epoll_wait(epfd, events, maxevents, timeout);
+
+	/*
+	 * If we changed the signal mask, we need to restore the original one.
+	 * In case we've got a signal while waiting, we do not restore the
+	 * signal mask yet, and we allow do_signal() to deliver the signal on
+	 * the way back to userspace, before the signal mask is restored.
+	 */
+	if (sigmask) {
+		if (err == -EINTR) {
+			memcpy(&current->saved_sigmask, &sigsaved,
+			       sizeof(sigsaved));
+			set_restore_sigmask();
+		} else
+			set_current_blocked(&sigsaved);
+	}
+
+	return err;
+}
+#endif
 
 static int __init eventpoll_init(void)
 {
