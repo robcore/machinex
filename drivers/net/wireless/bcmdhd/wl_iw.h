@@ -2,13 +2,13 @@
  * Linux Wireless Extensions support
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -70,14 +70,14 @@ struct cntry_locales_custom {
 /* ============================================== */
 /* Defines from wlc_pub.h */
 #define	WL_IW_RSSI_MINVAL		-200	/* Low value, e.g. for forcing roam */
-#define	WL_IW_RSSI_NO_SIGNAL	-91	/* NDIS RSSI link quality cutoffs */
-#define	WL_IW_RSSI_VERY_LOW	-80	/* Very low quality cutoffs */
-#define	WL_IW_RSSI_LOW		-70	/* Low quality cutoffs */
-#define	WL_IW_RSSI_GOOD		-68	/* Good quality cutoffs */
-#define	WL_IW_RSSI_VERY_GOOD	-58	/* Very good quality cutoffs */
-#define	WL_IW_RSSI_EXCELLENT	-57	/* Excellent quality cutoffs */
+#define	WL_IW_RSSI_NO_SIGNAL	-98	/* NDIS RSSI link quality cutoffs */
+#define	WL_IW_RSSI_VERY_LOW	-87	/* Very low quality cutoffs */
+#define	WL_IW_RSSI_LOW		-77	/* Low quality cutoffs */
+#define	WL_IW_RSSI_GOOD		-75	/* Good quality cutoffs */
+#define	WL_IW_RSSI_VERY_GOOD	-65	/* Very good quality cutoffs */
+#define	WL_IW_RSSI_EXCELLENT	-64	/* Excellent quality cutoffs */
 #define	WL_IW_RSSI_INVALID	 0	/* invalid RSSI value */
-#define MAX_WX_STRING 80
+#define MAX_WX_STRING 87
 #define SSID_FMT_BUF_LEN	((4 * 32) + 1)
 #define isprint(c) bcm_isprint(c)
 #define WL_IW_SET_ACTIVE_SCAN	(SIOCIWFIRSTPRIV+1)
