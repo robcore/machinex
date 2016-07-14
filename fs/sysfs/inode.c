@@ -310,7 +310,7 @@ void sysfs_evict_inode(struct inode *inode)
 	struct sysfs_dirent *sd  = inode->i_private;
 
 	truncate_inode_pages(&inode->i_data, 0);
-	clear_inode(inode);
+	end_writeback(inode);
 	sysfs_put(sd);
 }
 

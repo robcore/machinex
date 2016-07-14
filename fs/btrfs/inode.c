@@ -3774,7 +3774,7 @@ void btrfs_evict_inode(struct inode *inode)
 	btrfs_end_transaction(trans, root);
 	btrfs_btree_balance_dirty(root, nr);
 no_delete:
-	clear_inode(inode);
+	end_writeback(inode);
 	return;
 }
 

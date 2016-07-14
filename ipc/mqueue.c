@@ -249,7 +249,7 @@ static void mqueue_evict_inode(struct inode *inode)
 	int i;
 	struct ipc_namespace *ipc_ns;
 
-	clear_inode(inode);
+	end_writeback(inode);
 
 	if (S_ISDIR(inode->i_mode))
 		return;

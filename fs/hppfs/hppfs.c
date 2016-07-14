@@ -614,7 +614,7 @@ static struct inode *hppfs_alloc_inode(struct super_block *sb)
 
 void hppfs_evict_inode(struct inode *ino)
 {
-	clear_inode(ino);
+	end_writeback(ino);
 	dput(HPPFS_I(ino)->proc_dentry);
 	mntput(ino->i_sb->s_fs_info);
 }
