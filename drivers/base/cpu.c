@@ -25,6 +25,12 @@ EXPORT_SYMBOL_GPL(cpu_subsys);
 static DEFINE_PER_CPU(struct device *, cpu_sys_devices);
 
 #ifdef CONFIG_HOTPLUG_CPU
+
+#ifdef CONFIG_CPU_TOGGLE
+int enabled[NR_CPUS];
+bool toggle_init;
+#endif
+
 static ssize_t show_online(struct device *dev,
 			   struct device_attribute *attr,
 			   char *buf)
@@ -64,16 +70,57 @@ static ssize_t __ref store_online(struct device *dev,
 }
 static DEVICE_ATTR(online, 0644, show_online, store_online);
 
+#ifdef CONFIG_CPU_TOGGLE
+static ssize_t show_enabled(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct cpu *cpu = container_of(dev, struct cpu, dev);
+
+	return sprintf(buf, "%d\n", enabled[cpu->dev.id]);
+}
+
+static ssize_t __ref store_enabled(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct cpu *cpu = container_of(dev, struct cpu, dev);
+
+	sscanf(buf, "%du", &enabled[cpu->dev.id]);
+
+	cpu_hotplug_driver_lock();
+	if(enabled[cpu->dev.id]){
+		if (!cpu_up(cpu->dev.id))
+			kobject_uevent(&dev->kobj, KOBJ_ONLINE);
+	}
+	cpu_hotplug_driver_unlock();
+
+	return count;
+}
+static DEVICE_ATTR(enabled, 0644, show_enabled, store_enabled);
+
+bool cpu_enabled(unsigned int cpu){
+	return enabled[cpu] || !toggle_init;
+}
+#endif
+
 static void __cpuinit register_cpu_control(struct cpu *cpu)
 {
+	#ifdef CONFIG_CPU_TOGGLE
+	int i;
+	for(i = 0; i < NR_CPUS; i++) enabled[i] = 1;
+	device_create_file(&cpu->dev, &dev_attr_enabled);
+	toggle_init = true;
+	#endif
 	device_create_file(&cpu->dev, &dev_attr_online);
 }
+
 void unregister_cpu(struct cpu *cpu)
 {
 	int logical_cpu = cpu->dev.id;
 
 	unregister_cpu_under_node(logical_cpu, cpu_to_node(logical_cpu));
 
+	#ifdef CONFIG_CPU_TOGGLE
+	device_remove_file(&cpu->dev, &dev_attr_enabled);
+	toggle_init = false;
+	#endif
 	device_remove_file(&cpu->dev, &dev_attr_online);
 
 	device_unregister(&cpu->dev);
