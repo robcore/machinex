@@ -141,7 +141,7 @@ int tick_device_uses_broadcast(struct clock_event_device *dev, int cpu)
 	if (!tick_device_is_functional(dev)) {
 		dev->event_handler = tick_handle_periodic;
 		tick_device_setup_broadcast_func(dev);
-		cpumask_set_cpu(cpu, tick_broadcast_mask);
+		cpumask_set_cpu(cpu, tick_get_broadcast_mask());
 		tick_broadcast_start_periodic(tick_broadcast_device.evtdev);
 		ret = 1;
 	} else {
@@ -152,7 +152,7 @@ int tick_device_uses_broadcast(struct clock_event_device *dev, int cpu)
 		 */
 		if (!(dev->features & CLOCK_EVT_FEAT_C3STOP)) {
 			int cpu = smp_processor_id();
-			cpumask_clear_cpu(cpu, tick_broadcast_mask);
+			cpumask_clear_cpu(cpu, tick_get_broadcast_mask());
 			tick_broadcast_clear_oneshot(cpu);
 		} else {
 			tick_device_setup_broadcast_func(dev);
