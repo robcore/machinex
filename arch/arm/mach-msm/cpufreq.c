@@ -16,6 +16,7 @@
  * GNU General Public License for more details.
  *
  */
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif

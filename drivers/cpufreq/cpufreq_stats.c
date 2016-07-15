@@ -39,7 +39,7 @@ struct cpufreq_stats {
 	unsigned int max_state;
 	unsigned int state_num;
 	unsigned int last_index;
-	cputime64_t *time_in_state;
+	u64 *time_in_state;
 	unsigned int *freq_table;
 #ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	unsigned int *trans_table;
@@ -48,7 +48,7 @@ struct cpufreq_stats {
 
 struct all_cpufreq_stats {
 	unsigned int state_num;
-	cputime64_t *time_in_state;
+	u64 *time_in_state;
 	unsigned int *freq_table;
 };
 
@@ -327,7 +327,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 		count++;
 	}
 
-	alloc_size = count * sizeof(int) + count * sizeof(cputime64_t);
+	alloc_size = count * sizeof(int) + count * sizeof(u64);
 
 #ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	alloc_size += count * count * sizeof(int);
@@ -424,7 +424,7 @@ static void cpufreq_allstats_create(unsigned int cpu)
 	}
 
 	/*Allocate memory for freq table per cpu as well as clockticks per freq*/
-	alloc_size = count * sizeof(int) + count * sizeof(cputime64_t);
+	alloc_size = count * sizeof(int) + count * sizeof(u64);
 	all_stat->time_in_state = kzalloc(alloc_size, GFP_KERNEL);
 	if (!all_stat->time_in_state) {
 		pr_warn("Cannot allocate memory for cpufreq time_in_state\n");
