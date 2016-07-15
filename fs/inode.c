@@ -538,8 +538,6 @@ static void evict(struct inode *inode)
 	 */
 	inode_wait_for_writeback(inode);
 
-	inode_sync_wait(inode);
-
 	if (op->evict_inode) {
 		op->evict_inode(inode);
 	} else {
