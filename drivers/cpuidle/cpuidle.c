@@ -418,8 +418,6 @@ static int __cpuidle_register_device(struct cpuidle_device *dev)
 	if (!try_module_get(cpuidle_driver->owner))
 		return -EINVAL;
 
-	init_completion(&dev->kobj_unregister);
-
 	per_cpu(cpuidle_devices, dev->cpu) = dev;
 	list_add(&dev->device_list, &cpuidle_detected_devices);
 	ret = cpuidle_add_sysfs(dev);
@@ -435,7 +433,6 @@ static int __cpuidle_register_device(struct cpuidle_device *dev)
 
 err_coupled:
 	cpuidle_remove_sysfs(dev);
-	wait_for_completion(&dev->kobj_unregister);
 err_sysfs:
 	list_del(&dev->device_list);
 	per_cpu(cpuidle_devices, dev->cpu) = NULL;
@@ -489,7 +486,6 @@ void cpuidle_unregister_device(struct cpuidle_device *dev)
 
 	cpuidle_remove_sysfs(dev);
 	list_del(&dev->device_list);
-	wait_for_completion(&dev->kobj_unregister);
 	per_cpu(cpuidle_devices, dev->cpu) = NULL;
 
 	cpuidle_coupled_unregister_device(dev);
