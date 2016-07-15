@@ -637,7 +637,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 #ifdef CONFIG_GENERIC_CLOCKEVENTS_BROADCAST
 	case IPI_TIMER:
 		irq_enter();
-		ipi_timer();
 		tick_receive_broadcast();
 		irq_exit();
 		break;
