@@ -1107,7 +1107,7 @@ static void yaffs_evict_inode(struct inode *inode)
 	if (!inode->i_nlink && !is_bad_inode(inode))
 		deleteme = 1;
 	truncate_inode_pages(&inode->i_data, 0);
-	end_writeback(inode);
+	clear_inode(inode);
 
 	if (deleteme && obj) {
 		dev = obj->my_dev;
@@ -1287,7 +1287,7 @@ static int yaffs_writepage(struct page *page, struct writeback_control *wbc)
 	return (n_written == n_bytes) ? 0 : -ENOSPC;
 }
 
-/* Space holding and freeing is done to ensure we have space available for 
+/* Space holding and freeing is done to ensure we have space available for
  * write_begin/end.
  * For now we just assume few parallel writes and check against a small
  * number.
@@ -1618,7 +1618,7 @@ static int yaffs_do_sync_fs(struct super_block *sb, int request_checkpoint)
  * yaffs_bg_start() launches the background thread.
  * yaffs_bg_stop() cleans up the background thread.
  *
- * NB: 
+ * NB:
  * The thread should only run after the yaffs is initialised
  * The thread should be stopped before yaffs is unmounted.
  * The thread should not do any writing while the fs is in read only.
@@ -2274,7 +2274,7 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 		param->read_chunk_tags_fn = nandmtd2_read_chunk_tags;
 		param->bad_block_fn = nandmtd2_mark_block_bad;
 		param->query_block_fn = nandmtd2_query_block;
-		yaffs_dev_to_lc(dev)->spare_buffer = 
+		yaffs_dev_to_lc(dev)->spare_buffer =
 		                kmalloc(mtd->oobsize, GFP_NOFS);
 		param->is_yaffs2 = 1;
 		param->total_bytes_per_chunk = mtd->writesize;
@@ -2572,7 +2572,7 @@ static struct {
 	char *mask_name;
 	unsigned mask_bitfield;
 } mask_flags[] = {
-	{"allocate", YAFFS_TRACE_ALLOCATE}, 
+	{"allocate", YAFFS_TRACE_ALLOCATE},
 	{"always", YAFFS_TRACE_ALWAYS},
 	{"background", YAFFS_TRACE_BACKGROUND},
 	{"bad_blocks", YAFFS_TRACE_BAD_BLOCKS},

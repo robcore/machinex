@@ -2,11 +2,11 @@
  * fs/sdcardfs/super.c
  *
  * Copyright (c) 2013 Samsung Electronics Co. Ltd
- *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun, 
+ *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun,
  *               Sunghwan Yun, Sungjong Seo
- *                      
+ *
  * This program has been developed as a stackable file system based on
- * the WrapFS which written by 
+ * the WrapFS which written by
  *
  * Copyright (c) 1998-2011 Erez Zadok
  * Copyright (c) 2009     Shrikar Archak
@@ -36,7 +36,7 @@ static void sdcardfs_put_super(struct super_block *sb)
 	if (!spd)
 		return;
 
-	printk(KERN_ERR "sdcardfs: umounted dev_name %s\n", 
+	printk(KERN_ERR "sdcardfs: umounted dev_name %s\n",
 				spd->devpath ? spd->devpath : "");
 	if(spd->devpath)
 		kfree(spd->devpath);
@@ -75,15 +75,15 @@ static int sdcardfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 			printk(KERN_ERR "Returned block size is zero.\n");
 			return -EINVAL;
 		}
-	
+
 		min_blocks = ((sbi->options.reserved_mb * 1024 * 1024)/buf->f_bsize);
 		buf->f_blocks -= min_blocks;
-	
+
 		if (buf->f_bavail > min_blocks)
 			buf->f_bavail -= min_blocks;
 		else
 			buf->f_bavail = 0;
-	
+
 		/* Make reserved blocks invisiable to media storage */
 		buf->f_bfree = buf->f_bavail;
 	}
@@ -127,7 +127,7 @@ static void sdcardfs_evict_inode(struct inode *inode)
 	struct inode *lower_inode;
 
 	truncate_inode_pages(&inode->i_data, 0);
-	end_writeback(inode);
+	clear_inode(inode);
 	/*
 	 * Decrement a reference to a lower_inode, which was incremented
 	 * by our read_inode when it was created initially.
