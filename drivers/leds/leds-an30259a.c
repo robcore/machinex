@@ -377,7 +377,7 @@ static void an30259a_start_led_pattern(int mode)
 
 		if (leds_control.blink_fading)
 			leds_set_slope_mode(client, LED_B,
-				leds_control.blink_delay, 15, 7, 0, 
+				leds_control.blink_delay, 15, 7, 0,
 				leds_control.fade_in_time,
 				leds_control.fade_out_time,
 				leds_control.fade_dt1,
@@ -398,7 +398,7 @@ static void an30259a_start_led_pattern(int mode)
 
 		if (leds_control.blink_fading)
 			leds_set_slope_mode(client, LED_R,
-				leds_control.blink_delay, 15, 7, 0, 
+				leds_control.blink_delay, 15, 7, 0,
 				leds_control.fade_in_time,
 				leds_control.fade_out_time,
 				leds_control.fade_dt1,
@@ -429,9 +429,9 @@ static void an30259a_start_led_pattern(int mode)
 		break;
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
-		//leds_on(LED_G, true, true, LED_G_CURRENT);
+		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
-		//leds_set_slope_mode(client, LED_G, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_G, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 		break;
 	default:
@@ -484,7 +484,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	leds_on(led, true, (delay_off_time > 0), brightness);
 
 	if (leds_control.blink_fading)
-		leds_set_slope_mode(client, led, 1, 15, 7, 0, 
+		leds_set_slope_mode(client, led, 1, 15, 7, 0,
 				(delay_on_time + AN30259A_TIME_UNIT - 1) /
 				AN30259A_TIME_UNIT,
 				(delay_off_time + AN30259A_TIME_UNIT - 1) /
@@ -812,14 +812,14 @@ static struct device_attribute leds_control_attrs[] = {
 
 enum {
 	LOWPOWER_CURRENT = 0, HIGHPOWER_CURRENT, BLINK_DELAY, BLINK_FADING,
-	FADE_IN_TIME, FADE_OUT_TIME, FADE_DT1, FADE_DT2, FADE_DT3, FADE_DT4, 
+	FADE_IN_TIME, FADE_OUT_TIME, FADE_DT1, FADE_DT2, FADE_DT3, FADE_DT4,
 };
 
 static ssize_t show_leds_property(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
 	const ptrdiff_t offset = attr - leds_control_attrs;
-	
+
 	switch (offset) {
 		case LOWPOWER_CURRENT:
 			return sprintf(buf, "%d", leds_control.current_low);
@@ -842,7 +842,7 @@ static ssize_t show_leds_property(struct device *dev,
 		case FADE_DT4:
 			return sprintf(buf, "%d", leds_control.fade_dt4);
 	}
-	
+
 	return -EINVAL;
 }
 
@@ -897,7 +897,7 @@ static ssize_t store_leds_property(struct device *dev,
 			leds_control.fade_dt4 = val;
 			break;
 	}
-	
+
 	return len;
 }
 
@@ -1039,7 +1039,7 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 
 		if (ret < 0) {
 			dev_err(&client->adapter->dev, "failure on initialization at led channel:%d\n", i);
-			while(i>0) { 
+			while(i>0) {
 					i--;
 					an30259a_deinitialize(&data->leds[i], i);
 			}
