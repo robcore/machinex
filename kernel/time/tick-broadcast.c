@@ -412,6 +412,7 @@ int tick_resume_broadcast(void)
 
 static cpumask_var_t tick_broadcast_oneshot_mask;
 static cpumask_var_t tick_broadcast_pending_mask;
+static cpumask_var_t tick_broadcast_force_mask;
 
 /*
  * Exposed for debugging: see timer_list.c
@@ -510,6 +511,10 @@ again:
 		}
 	}
 
+	/* Take care of enforced broadcast requests */
+	cpumask_or(tmpmask, tmpmask, tick_broadcast_force_mask);
+	cpumask_clear(tick_broadcast_force_mask);
+
 	/*
 	 * Remove the current cpu from the pending mask. The event is
 	 * delivered immediately in tick_do_broadcast() !
@@ -600,7 +605,7 @@ int tick_broadcast_oneshot_control(unsigned long reason)
 	struct tick_device *td;
 	unsigned long flags;
 	ktime_t now;
-	int cpu, ret = 0;
+	int cpu;
 
 	/*
 	 * Periodic mode does not care about the enter/exit of power
@@ -669,6 +674,47 @@ int tick_broadcast_oneshot_control(unsigned long reason)
 				       tick_broadcast_pending_mask))
 				goto out;
 
+			/*
+			 * If the pending bit is not set, then we are
+			 * either the CPU handling the broadcast
+			 * interrupt or we got woken by something else.
+			 *
+			 * We are not longer in the broadcast mask, so
+			 * if the cpu local expiry time is already
+			 * reached, we would reprogram the cpu local
+			 * timer with an already expired event.
+			 *
+			 * This can lead to a ping-pong when we return
+			 * to idle and therefor rearm the broadcast
+			 * timer before the cpu local timer was able
+			 * to fire. This happens because the forced
+			 * reprogramming makes sure that the event
+			 * will happen in the future and depending on
+			 * the min_delta setting this might be far
+			 * enough out that the ping-pong starts.
+			 *
+			 * If the cpu local next_event has expired
+			 * then we know that the broadcast timer
+			 * next_event has expired as well and
+			 * broadcast is about to be handled. So we
+			 * avoid reprogramming and enforce that the
+			 * broadcast handler, which did not run yet,
+			 * will invoke the cpu local handler.
+			 *
+			 * We cannot call the handler directly from
+			 * here, because we might be in a NOHZ phase
+			 * and we did not go through the irq_enter()
+			 * nohz fixups.
+			 */
+			now = ktime_get();
+			if (dev->next_event.tv64 <= now.tv64) {
+				cpumask_set_cpu(cpu, tick_broadcast_force_mask);
+				goto out;
+			}
+			/*
+			 * We got woken by something else. Reprogram
+			 * the cpu local timer device.
+			 */
 			tick_program_event(dev->next_event, 1);
 		}
 	}
@@ -815,5 +861,6 @@ void __init tick_broadcast_init(void)
 #ifdef CONFIG_TICK_ONESHOT
 	alloc_cpumask_var(&tick_broadcast_oneshot_mask, GFP_NOWAIT);
 	alloc_cpumask_var(&tick_broadcast_pending_mask, GFP_NOWAIT);
+	alloc_cpumask_var(&tick_broadcast_force_mask, GFP_NOWAIT);
 #endif
 }
