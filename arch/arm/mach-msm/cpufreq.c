@@ -471,7 +471,6 @@ extern bool lmf_screen_state;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void msm_cpu_early_suspend(struct early_suspend *h)
-#endif
 
 {
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
@@ -484,6 +483,7 @@ static void msm_cpu_early_suspend(struct early_suspend *h)
 	}
 #endif
 }
+#endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void msm_cpu_late_resume(struct early_suspend *h)
