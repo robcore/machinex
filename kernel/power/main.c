@@ -760,6 +760,9 @@ static struct attribute *g[] = {
 	&wakeup_count_attr.attr,
 	&touch_event_attr.attr,
 	&touch_event_timer_attr.attr,
+#ifdef CONFIG_PM_AUTOSLEEP
+	&autosleep_attr.attr,
+#endif
 #ifdef CONFIG_PM_DEBUG
 	&pm_test_attr.attr,
 #endif
@@ -819,7 +822,10 @@ static int __init pm_init(void)
 	thermald_max_freq = MAX_FREQ_LIMIT;
 #endif
 
-	return sysfs_create_group(power_kobj, &attr_group);
+	error = sysfs_create_group(power_kobj, &attr_group);
+	if (error)
+		return error;
+	return pm_autosleep_init();
 }
 
 core_initcall(pm_init);
