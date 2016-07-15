@@ -371,6 +371,7 @@ static inline void pm_system_wakeup(void) {}
 static inline void pm_wakeup_clear(void) {}
 extern bool pm_get_wakeup_count(unsigned int *count, bool block);
 extern bool pm_save_wakeup_count(unsigned int count);
+extern void pm_wakep_autosleep_enabled(bool set);
 
 static inline void lock_system_sleep(void)
 {
