@@ -492,7 +492,7 @@ static inline void update_prevent_sleep_time(struct wakeup_source *ws,
  */
 static void wakeup_source_deactivate(struct wakeup_source *ws)
 {
-	unsigned int cnt, inpr;
+	unsigned int cnt, inpr, cec;
 	ktime_t duration;
 	ktime_t now;
 
@@ -530,7 +530,8 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	 * Increment the counter of registered wakeup events and decrement the
 	 * couter of wakeup events in progress simultaneously.
 	 */
-	atomic_add(MAX_IN_PROGRESS, &combined_event_count);
+	cec = atomic_add_return(MAX_IN_PROGRESS, &combined_event_count);
+	trace_wakeup_source_deactivate(ws->name, cec);
 
 	split_counters(&cnt, &inpr);
 	if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
@@ -772,19 +773,20 @@ void pm_wakeup_clear(void)
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
  	unsigned int cnt, inpr;
-	DEFINE_WAIT(wait);
+	if (block) {
+		DEFINE_WAIT(wait);
 
-	for (;;) {
-		prepare_to_wait(&wakeup_count_wait_queue, &wait,
-				TASK_INTERRUPTIBLE);
-		split_counters(&cnt, &inpr);
-		if (inpr == 0 || signal_pending(current))
-			break;
-		pm_wakeup_update_hit_counts();
+		for (;;) {
+			prepare_to_wait(&wakeup_count_wait_queue, &wait,
+					TASK_INTERRUPTIBLE);
+			split_counters(&cnt, &inpr);
+			if (inpr == 0 || signal_pending(current))
+				break;
 
-		schedule();
+			schedule();
+		}
+		finish_wait(&wakeup_count_wait_queue, &wait);
  	}
-	finish_wait(&wakeup_count_wait_queue, &wait);
 
  	split_counters(&cnt, &inpr);
  	*count = cnt;
