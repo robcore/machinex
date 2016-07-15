@@ -11,11 +11,9 @@ Documentation/android.txt
 drivers/barcode_emul/barcode_emul_ice4_8930_442.c
 drivers/barcode_emul/barcode_emul_ice4_8930.c
 drivers/barcode_emul/barcode_emul_ice4.c
-drivers/cpufreq/cpufreq_arteractive.c
 drivers/cpufreq/cpufreq_asswax.c
 drivers/cpufreq/cpufreq_intellidemand.c
 drivers/cpufreq/cpufreq_lionheart.c
-drivers/cpufreq/cpufreq_preservative.c
 drivers/cpufreq/cpufreq_smartassH3.c
 drivers/cpufreq/cpufreq_smartmax.c
 drivers/cpufreq/cpufreq_tripndroid.c
@@ -23,10 +21,7 @@ drivers/cpufreq/cpufreq_zzmoove.c
 drivers/cpufreq/cpufreq_zzmoove_profiles.h
 drivers/cpufreq/lazyplug.c
 drivers/gpu/msm/adreno.c
-drivers/gpu/msm/kgsl.c
 drivers/gpu/msm/kgsl_device.h
-drivers/gpu/msm/kgsl.h
-drivers/gpu/msm/kgsl_pwrctrl.c
 drivers/input/joystick/tdisc_vtd518_shinetsu.c
 drivers/input/keyboard/cypress_touchkey_236/cypress-touchkey-236.c
 drivers/input/keyboard/cypress_touchkey_236/cypress-touchkey-236_msm8960.c
@@ -83,7 +78,6 @@ drivers/net/wireless/bcmdhd/Makefile
 drivers/net/wireless/bcmdhd/Makefile.jb
 drivers/net/wireless/bcmdhd/Makefile.jbp
 drivers/net/wireless/bcmdhd/wl_android.c
-drivers/net/wireless/bcmdhd/wl_cfg_btcoex.c
 drivers/power/msm_battery.c
 drivers/power/sec_battery.c
 drivers/sensorhub/ssp_dev.c
@@ -95,7 +89,6 @@ drivers/staging/prima/CORE/HDD/src/wlan_hdd_early_suspend.c
 drivers/staging/prima/CORE/HDD/src/wlan_hdd_main.c
 drivers/staging/prima/CORE/HDD/src/wlan_hdd_wext.c
 drivers/staging/prima/CORE/VOSS/src/vos_sched.c
-drivers/staging/prima/Makefile
 drivers/video/backlight/lm3533.c
 drivers/video/msm/cmc624_sysfs-8960.c
 drivers/video/msm/cmc624_sysfs.c
@@ -135,15 +128,12 @@ drivers/video/msm/msm_fb.h
 .git/lost-found/other/5b3642f76703e767bfede1bf512fa8e8bcf6b769
 .git/lost-found/other/bd7966004ce4f74e3b57215178307c84ea7f49db
 .git/lost-found/other/bfba5dcab5343fddcc1ead5e4abbe56100c407cf
-.git/lost-found/other/fd5506799c7a3a981e10fb5ece14771df384b50b
 include/linux/earlysuspend.h
 include/linux/i2c/mxts.h
 include/linux/i2c/mxts_msm8930.h
-include/linux/input/lge_touch_core.h
 kernel/power/consoleearlysuspend.c
 kernel/power/earlysuspend.c
 kernel/power/fbearlysuspend.c
 kernel/power/main.c
-kernel/power/powersuspend.c
 kernel/power/suspend.c
 unleashedpm.txt
