@@ -21,6 +21,8 @@ extern void tick_handover_do_timer(int *cpup);
 extern void tick_shutdown(unsigned int *cpup);
 extern void tick_suspend(void);
 extern void tick_resume(void);
+extern void tick_notify(unsigned long reason, void *dev);
+extern void tick_check_new_device(struct clock_event_device *dev);
 
 extern void clockevents_shutdown(struct clock_event_device *dev);
 
@@ -93,7 +95,7 @@ static inline bool tick_broadcast_oneshot_available(void) { return false; }
  */
 #ifdef CONFIG_GENERIC_CLOCKEVENTS_BROADCAST
 extern int tick_device_uses_broadcast(struct clock_event_device *dev, int cpu);
-extern int tick_check_broadcast_device(struct clock_event_device *dev);
+extern void tick_install_broadcast_device(struct clock_event_device *dev);
 extern int tick_is_broadcast_device(struct clock_event_device *dev);
 extern void tick_broadcast_on_off(unsigned long reason, int *oncpu);
 extern void tick_shutdown_broadcast(unsigned int *cpup);
@@ -106,9 +108,8 @@ int tick_broadcast_update_freq(struct clock_event_device *dev, u32 freq);
 
 #else /* !BROADCAST */
 
-static inline int tick_check_broadcast_device(struct clock_event_device *dev)
+static inline void tick_install_broadcast_device(struct clock_event_device *dev)
 {
-	return 0;
 }
 
 static inline int tick_is_broadcast_device(struct clock_event_device *dev)
