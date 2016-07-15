@@ -24,8 +24,10 @@
 #include <linux/gpio.h>
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+bool scr_suspended;
 #endif
-
+#endif
 #ifdef CONFIG_LCD_NOTIFY
 #include <linux/lcd_notify.h>
 #endif
@@ -584,7 +586,9 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		if (!use_fb_notifier)
 			state_resume();
 #endif
-
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		scr_suspended = false;
+#endif
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 #endif
@@ -692,6 +696,9 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 #ifdef CONFIG_STATE_NOTIFIER
 		if (!use_fb_notifier)
 			state_suspend();
+#endif
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		scr_suspended = true;
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY
