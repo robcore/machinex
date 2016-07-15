@@ -502,7 +502,7 @@ static struct inode *bm_get_inode(struct super_block *sb, int mode)
 
 static void bm_evict_inode(struct inode *inode)
 {
-	clear_inode(inode);
+	end_writeback(inode);
 	kfree(inode->i_private);
 }
 

@@ -2258,7 +2258,7 @@ void ntfs_evict_big_inode(struct inode *vi)
 	ntfs_inode *ni = NTFS_I(vi);
 
 	truncate_inode_pages(&vi->i_data, 0);
-	clear_inode(vi);
+	end_writeback(vi);
 
 #ifdef NTFS_RW
 	if (NInoDirty(ni)) {

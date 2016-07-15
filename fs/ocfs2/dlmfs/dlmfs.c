@@ -367,7 +367,7 @@ static void dlmfs_evict_inode(struct inode *inode)
 	int status;
 	struct dlmfs_inode_private *ip;
 
-	clear_inode(inode);
+	end_writeback(inode);
 
 	mlog(0, "inode %lu\n", inode->i_ino);
 

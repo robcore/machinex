@@ -378,7 +378,7 @@ out:
 		smp_wmb();
 	}
 done:
-	clear_inode(inode);
+	end_writeback(inode);
 }
 
 static void ubifs_dirty_inode(struct inode *inode, int flags)
