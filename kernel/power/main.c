@@ -388,7 +388,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 	suspend_state_t i;
 
 	for (i = PM_SUSPEND_MIN; i < PM_SUSPEND_MAX; i++)
-		if (pm_states[i].state)
+		if (valid_state(i))
 			s += sprintf(s,"%s ", pm_states[i].label);
 
 #endif
@@ -424,7 +424,7 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 
 #ifdef CONFIG_SUSPEND
 	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
-		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))
+		if (len == strlen(s->label) && !strncmp(buf, s->label, len))
 			return state;
 #endif
 
@@ -542,7 +542,7 @@ static ssize_t autosleep_show(struct kobject *kobj,
 #ifdef CONFIG_SUSPEND
 	if (state < PM_SUSPEND_MAX)
 		return sprintf(buf, "%s\n", valid_state(state) ?
-						pm_states[state] : "error");
+					pm_states[state].label : "error");
 #endif
 #ifdef CONFIG_HIBERNATION
 	return sprintf(buf, "disk\n");
