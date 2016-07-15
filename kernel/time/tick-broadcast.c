@@ -411,6 +411,7 @@ int tick_resume_broadcast(void)
 #ifdef CONFIG_TICK_ONESHOT
 
 static cpumask_var_t tick_broadcast_oneshot_mask;
+static cpumask_var_t tick_broadcast_pending_mask;
 
 /*
  * Exposed for debugging: see timer_list.c
@@ -497,6 +498,12 @@ again:
 		td = &per_cpu(tick_cpu_device, cpu);
 		if (td->evtdev->next_event.tv64 <= now.tv64) {
 			cpumask_set_cpu(cpu, tmpmask);
+			/*
+			 * Mark the remote cpu in the pending mask, so
+			 * it can avoid reprogramming the cpu local
+			 * timer in tick_broadcast_oneshot_control().
+			 */
+			cpumask_set_cpu(cpu, tick_broadcast_pending_mask);
 		} else if (td->evtdev->next_event.tv64 < next_event.tv64) {
 			next_event.tv64 = td->evtdev->next_event.tv64;
 			next_cpu = cpu;
@@ -617,6 +624,7 @@ int tick_broadcast_oneshot_control(unsigned long reason)
 
 	raw_spin_lock_irqsave(&tick_broadcast_lock, flags);
 	if (reason == CLOCK_EVT_NOTIFY_BROADCAST_ENTER) {
+		WARN_ON_ONCE(cpumask_test_cpu(cpu, tick_broadcast_pending_mask));
 		if (!cpumask_test_cpu(cpu, tick_get_broadcast_oneshot_mask())) {
 			WARN_ON_ONCE(cpumask_test_cpu(cpu, tick_broadcast_pending_mask));
 			broadcast_shutdown_local(bc, dev);
@@ -646,10 +654,25 @@ int tick_broadcast_oneshot_control(unsigned long reason)
 	} else {
 		if (cpumask_test_and_clear_cpu(cpu, tick_broadcast_oneshot_mask)) {
 			clockevents_set_mode(dev, CLOCK_EVT_MODE_ONESHOT);
-			if (dev->next_event.tv64 != KTIME_MAX)
-				tick_program_event(dev->next_event, 1);
+			if (dev->next_event.tv64 == KTIME_MAX)
+				goto out;
+			/*
+			 * The cpu which was handling the broadcast
+			 * timer marked this cpu in the broadcast
+			 * pending mask and fired the broadcast
+			 * IPI. So we are going to handle the expired
+			 * event anyway via the broadcast IPI
+			 * handler. No need to reprogram the timer
+			 * with an already expired event.
+			 */
+			if (cpumask_test_and_clear_cpu(cpu,
+				       tick_broadcast_pending_mask))
+				goto out;
+
+			tick_program_event(dev->next_event, 1);
 		}
 	}
+out:
 	raw_spin_unlock_irqrestore(&tick_broadcast_lock, flags);
 	return ret;
 }
@@ -791,5 +814,6 @@ void __init tick_broadcast_init(void)
 	alloc_cpumask_var(&tmpmask, GFP_NOWAIT);
 #ifdef CONFIG_TICK_ONESHOT
 	alloc_cpumask_var(&tick_broadcast_oneshot_mask, GFP_NOWAIT);
+	alloc_cpumask_var(&tick_broadcast_pending_mask, GFP_NOWAIT);
 #endif
 }
