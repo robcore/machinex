@@ -504,6 +504,16 @@ again:
 	}
 
 	/*
+	 * Remove the current cpu from the pending mask. The event is
+	 * delivered immediately in tick_do_broadcast() !
+	 */
+	cpumask_clear_cpu(smp_processor_id(), tick_broadcast_pending_mask);
+
+	/* Take care of enforced broadcast requests */
+	cpumask_or(tmpmask, tmpmask, tick_broadcast_force_mask);
+	cpumask_clear(tick_broadcast_force_mask);
+
+	/*
 	 * Wakeup the cpus which have an expired event.
 	 */
 	tick_do_broadcast(tmpmask);
@@ -603,6 +613,7 @@ int tick_broadcast_oneshot_control(unsigned long reason)
 		if (!cpumask_test_cpu(cpu, tick_get_broadcast_oneshot_mask())) {
 			WARN_ON_ONCE(cpumask_test_cpu(cpu, tick_broadcast_pending_mask));
 			broadcast_shutdown_local(bc, dev);
+			clockevents_set_mode(dev, CLOCK_EVT_MODE_SHUTDOWN);
 			/*
 			 * We only reprogram the broadcast timer if we
 			 * did not mark ourself in the force mask and
