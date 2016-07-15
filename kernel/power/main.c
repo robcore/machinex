@@ -655,6 +655,30 @@ power_attr(wake_lock);
 power_attr(wake_unlock);
 #endif
 
+#ifdef CONFIG_FREEZER
+static ssize_t pm_freeze_timeout_show(struct kobject *kobj,
+				      struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", freeze_timeout_msecs);
+}
+
+static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
+				       struct kobj_attribute *attr,
+				       const char *buf, size_t n)
+{
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val))
+		return -EINVAL;
+
+	freeze_timeout_msecs = val;
+	return n;
+}
+
+power_attr(pm_freeze_timeout);
+
+#endif	/* CONFIG_FREEZER*/
+
 #ifdef CONFIG_SEC_DVFS
 DEFINE_MUTEX(dvfs_mutex);
 static unsigned long dvfs_id;
@@ -734,8 +758,8 @@ int set_freq_limit(unsigned long id, unsigned int freq)
 	set_min_lock(min);
 	set_max_lock(max);
 
-	pr_info("%s: 0x%lu %d, min %d, max %d\n",
-				__func__, id, freq, min, max);
+	//pr_info("%s: 0x%lu %d, min %d, max %d\n",
+	//			__func__, id, freq, min, max);
 
 	/* need to update now */
 	if (id & UPDATE_NOW_BITS) {
@@ -924,6 +948,9 @@ static struct attribute *g[] = {
 	&wake_unlock_attr.attr,
 #endif
 #endif
+#ifdef CONFIG_FREEZER
+	&pm_freeze_timeout_attr.attr,
+#endif
 #ifdef CONFIG_SEC_DVFS
 	&cpufreq_min_limit_attr.attr,
 	&cpufreq_max_limit_attr.attr,
@@ -963,7 +990,6 @@ static int __init pm_init(void)
 	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	tc_ev_timer.function = &tc_ev_stop;
 	tc_ev_processed = 1;
-
 
 	power_kobj = kobject_create_and_add("power", NULL);
 	if (!power_kobj)
