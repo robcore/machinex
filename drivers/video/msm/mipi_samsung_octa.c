@@ -31,6 +31,10 @@ bool scr_suspended;
 #ifdef CONFIG_LCD_NOTIFY
 #include <linux/lcd_notify.h>
 #endif
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#endif
+
 
 #if defined(CONFIG_FB_MDP4_ENHANCE)
 #include "mdp4_video_enhance.h"
@@ -586,6 +590,12 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		if (!use_fb_notifier)
 			state_resume();
 #endif
+
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
 		scr_suspended = false;
 #endif
@@ -697,6 +707,12 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 		if (!use_fb_notifier)
 			state_suspend();
 #endif
+
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
 		scr_suspended = true;
 #endif
