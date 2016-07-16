@@ -13,7 +13,7 @@
 #ifndef AUDIO_LPA_H
 #define AUDIO_LPA_H
 
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/wakelock.h>
 
 #define ADRV_STATUS_OBUF_GIVEN 0x00000001
@@ -28,9 +28,9 @@ struct buffer {
 	unsigned addr;
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 struct audlpa_suspend_ctl {
-	struct early_suspend node;
+	struct power_suspend node;
 	struct audio *audio;
 };
 #endif
@@ -69,7 +69,7 @@ struct audio {
 	int buf_refresh;
 	int teos; /* valid only if tunnel mode & no data left for decoder */
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 	struct audlpa_suspend_ctl suspend_ctl;
 #endif
 
