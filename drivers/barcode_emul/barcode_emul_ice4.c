@@ -32,7 +32,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/device.h>
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 #include <linux/spinlock.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>
@@ -1026,7 +1026,7 @@ int ice_gpiox_get(int num)
 
 #if defined(CONFIG_MACH_JF_DCM)
 	if(num == FPGA_GPIO_FELICA_HSEL || num == FPGA_GPIO_FELICA_PON)
-		fpga_enable(1, 0);
+		fpga_enable(1, 0);	
 	else
 		fpga_enable(1, 1);
 #else
@@ -1047,7 +1047,7 @@ int ice_gpiox_get(int num)
 
 #if defined(CONFIG_MACH_JF_DCM)
 	if(num == FPGA_GPIO_FELICA_HSEL || num == FPGA_GPIO_FELICA_PON)
-		fpga_enable(0, 0);
+		fpga_enable(0, 0);	
 	else
 		fpga_enable(0, 1);
 #else
@@ -1092,7 +1092,7 @@ int ice_gpiox_set(int num, int val)
 
 #if defined(CONFIG_MACH_JF_DCM)
 	if(num == FPGA_GPIO_FELICA_HSEL || num == FPGA_GPIO_FELICA_PON)
-		fpga_enable(1, 0);
+		fpga_enable(1, 0);	
 	else
 		fpga_enable(1, 1);
 #else
@@ -1115,7 +1115,7 @@ int ice_gpiox_set(int num, int val)
 
 #if defined(CONFIG_MACH_JF_DCM)
 	if(num == FPGA_GPIO_FELICA_HSEL || num == FPGA_GPIO_FELICA_PON)
-		fpga_enable(0, 0);
+		fpga_enable(0, 0);	
 	else
 		fpga_enable(0, 1);
 #else
