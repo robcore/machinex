@@ -243,9 +243,9 @@ extern wl_iw_extra_params_t  g_wl_iw_params;
 #define early_suspend				pre_suspend
 #define EARLY_SUSPEND_LEVEL_BLANK_SCREEN		50
 #else
-#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
-#endif /* defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND) */
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+#include <linux/powersuspend.h>
+#endif /* defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND) */
 #endif /* CUSTOMER_HW4 && CONFIG_PARTIALSUSPEND_SLP */
 
 extern int dhd_get_suspend_bcn_li_dtim(dhd_pub_t *dhd);
@@ -442,9 +442,9 @@ typedef struct dhd_info {
 	atomic_t pend_8021x_cnt;
 	dhd_attach_states_t dhd_state;
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
-	struct early_suspend early_suspend;
-#endif /* CONFIG_HAS_EARLYSUSPEND && DHD_USE_EARLYSUSPEND */
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+	struct power_suspend power_suspend;
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
 
 #ifdef ARP_OFFLOAD_SUPPORT
 	u32 pend_ipaddr;
@@ -1121,7 +1121,7 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	int ret = 0;
 
 	DHD_OS_WAKE_LOCK(dhdp);
-	/* Set flag when early suspend was called */
+	/* Set flag when power suspend was called */
 	dhdp->in_suspend = val;
 	if ((force || !dhdp->suspend_disable_flag) &&
 		dhd_support_sta_mode(dhdp))
@@ -1133,25 +1133,25 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	return ret;
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
-static void dhd_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+static void dhd_power_suspend(struct power_suspend *h)
 {
-	struct dhd_info *dhd = container_of(h, struct dhd_info, early_suspend);
+	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
 	DHD_TRACE_HW4(("%s: enter\n", __FUNCTION__));
 
 	if (dhd)
 		dhd_suspend_resume_helper(dhd, 1, 0);
 }
 
-static void dhd_late_resume(struct early_suspend *h)
+static void dhd_late_resume(struct power_suspend *h)
 {
-	struct dhd_info *dhd = container_of(h, struct dhd_info, early_suspend);
+	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
 	DHD_TRACE_HW4(("%s: enter\n", __FUNCTION__));
 
 	if (dhd)
 		dhd_suspend_resume_helper(dhd, 0, 0);
 }
-#endif /* CONFIG_HAS_EARLYSUSPEND && DHD_USE_EARLYSUSPEND */
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
 
 /*
  * Generalized timeout mechanism.  Uses spin sleep with exponential back-off until
@@ -4175,13 +4175,12 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	}
 #endif /* CONFIG_PM_SLEEP */
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
-	dhd->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 20;
-	dhd->early_suspend.suspend = dhd_early_suspend;
-	dhd->early_suspend.resume = dhd_late_resume;
-	register_early_suspend(&dhd->early_suspend);
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+	dhd->power_suspend.suspend = dhd_power_suspend;
+	dhd->power_suspend.resume = dhd_late_resume;
+	register_power_suspend(&dhd->power_suspend);
 	dhd_state |= DHD_ATTACH_STATE_EARLYSUSPEND_DONE;
-#endif /* CONFIG_HAS_EARLYSUSPEND && DHD_USE_EARLYSUSPEND */
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
 
 #ifdef ARP_OFFLOAD_SUPPORT
 	dhd->pend_ipaddr = 0;
@@ -5986,13 +5985,12 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd_inet6addr_notifier_registered = FALSE;
 		unregister_inet6addr_notifier(&dhd_inet6addr_notifier);
 	}
-
-#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_EARLYSUSPEND_DONE) {
-		if (dhd->early_suspend.suspend)
-			unregister_early_suspend(&dhd->early_suspend);
+		if (dhd->power_suspend.suspend)
+			unregister_power_suspend(&dhd->power_suspend);
 	}
-#endif /* CONFIG_HAS_EARLYSUSPEND && DHD_USE_EARLYSUSPEND */
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
 
 #if defined(WL_WIRELESS_EXT)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_WL_ATTACH) {
