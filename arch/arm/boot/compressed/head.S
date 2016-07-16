@@ -623,6 +623,7 @@ cache_on:	mov	r3, #8			@ cache_on function
  * to cover all 32bit address and cacheable and bufferable.
  */
 __armv4_mpu_cache_on:
+		.arch armv4
 		mov	r0, #0x3f		@ 4G, the whole
 		mcr	p15, 0, r0, c6, c7, 0	@ PR7 Area Setting
 		mcr 	p15, 0, r0, c6, c7, 1
@@ -743,11 +744,13 @@ __armv6_mmu_cache_on:
 
 __arm926ejs_mmu_cache_on:
 #ifdef CONFIG_CPU_DCACHE_WRITETHROUGH
+		.arch armv5
 		mov	r0, #4			@ put dcache in WT mode
 		mcr	p15, 7, r0, c15, c0, 0
 #endif
 
 __armv4_mmu_cache_on:
+		.arch armv4
 		mov	r12, lr
 #ifdef CONFIG_MMU
 		mov	r6, #CB_BITS | 0x12	@ U
@@ -768,6 +771,7 @@ __armv4_mmu_cache_on:
 		mov	pc, r12
 
 __armv7_mmu_cache_on:
+		.arch armv7-a
 		mov	r12, lr
 #ifdef CONFIG_MMU
 		mrc	p15, 0, r11, c0, c1, 4	@ read ID_MMFR0
@@ -818,6 +822,7 @@ __fa526_cache_on:
 		mov	pc, r12
 
 __arm6_mmu_cache_on:
+		.arch armv6
 		mov	r12, lr
 		mov	r6, #CB_BITS | 0x12	@ U
 		bl	__setup_mmu
@@ -1146,6 +1151,7 @@ cache_clean_flush:
 		mov	r3, #16
 		b	call_cache_fn
 
+		.arch armv4
 __armv4_mpu_cache_flush:
 		tst	r4, #1
 		movne	pc, lr
@@ -1175,6 +1181,7 @@ __fa526_cache_flush:
 		mov	pc, lr
 
 __armv6_mmu_cache_flush:
+		.arch armv6
 		mov	r1, #0
 		tst	r4, #1
 		mcreq	p15, 0, r1, c7, c14, 0	@ clean+invalidate D
@@ -1183,6 +1190,7 @@ __armv6_mmu_cache_flush:
 		mcr	p15, 0, r1, c7, c10, 4	@ drain WB
 		mov	pc, lr
 
+		.arch armv7-a
 __armv7_mmu_cache_flush:
 		tst	r4, #1
 		bne	iflush
@@ -1245,6 +1253,7 @@ iflush:
 		mcr	p15, 0, r10, c7, c5, 4	@ ISB
 		mov	pc, lr
 
+		.arch armv5
 __armv5tej_mmu_cache_flush:
 		tst	r4, #1
 		movne	pc, lr
@@ -1254,6 +1263,7 @@ __armv5tej_mmu_cache_flush:
 		mcr	p15, 0, r0, c7, c10, 4	@ drain WB
 		mov	pc, lr
 
+		.arch armv4
 __armv4_mmu_cache_flush:
 		tst	r4, #1
 		movne	pc, lr
@@ -1295,6 +1305,8 @@ __armv3_mpu_cache_flush:
 		mov	r1, #0
 		mcr	p15, 0, r1, c7, c0, 0	@ invalidate whole cache v3
 		mov	pc, lr
+
+		.arch armv4
 
 /*
  * Various debugging routines for printing hex characters and
