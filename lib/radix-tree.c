@@ -32,7 +32,6 @@
 #include <linux/string.h>
 #include <linux/bitops.h>
 #include <linux/rcupdate.h>
-#include <linux/hardirq.h>		/* in_interrupt() */
 
 
 #ifdef __KERNEL__
@@ -74,24 +73,11 @@ static unsigned long height_to_maxindex[RADIX_TREE_MAX_PATH + 1] __read_mostly;
 static struct kmem_cache *radix_tree_node_cachep;
 
 /*
- * The radix tree is variable-height, so an insert operation not only has
- * to build the branch to its corresponding item, it also has to build the
- * branch to existing items if the size has to be increased (by
- * radix_tree_extend).
- *
- * The worst case is a zero height tree with just a single item at index 0,
- * and then inserting an item at index ULONG_MAX. This requires 2 new branches
- * of RADIX_TREE_MAX_PATH size to be created, with only the root node shared.
- * Hence:
- */
-#define RADIX_TREE_PRELOAD_SIZE (RADIX_TREE_MAX_PATH * 2 - 1)
-
-/*
  * Per-cpu pool of preloaded nodes
  */
 struct radix_tree_preload {
 	int nr;
-	struct radix_tree_node *nodes[RADIX_TREE_PRELOAD_SIZE];
+	struct radix_tree_node *nodes[RADIX_TREE_MAX_PATH];
 };
 static DEFINE_PER_CPU(struct radix_tree_preload, radix_tree_preloads) = { 0, };
 
@@ -208,12 +194,7 @@ radix_tree_node_alloc(struct radix_tree_root *root)
 	struct radix_tree_node *ret = NULL;
 	gfp_t gfp_mask = root_gfp_mask(root);
 
-	/*
-	 * Preload code isn't irq safe and it doesn't make sence to use
-	 * preloading in the interrupt anyway as all the allocations have to
-	 * be atomic. So just do normal allocation when in interrupt.
-	 */
-	if (!(gfp_mask & __GFP_WAIT) && !in_interrupt()) {
+	if (!(gfp_mask & __GFP_WAIT)) {
 		struct radix_tree_preload *rtp;
 
 		/*
@@ -270,7 +251,7 @@ radix_tree_node_free(struct radix_tree_node *node)
  * To make use of this facility, the radix tree must be initialised without
  * __GFP_WAIT being passed to INIT_RADIX_TREE().
  */
-static int __radix_tree_preload(gfp_t gfp_mask)
+int radix_tree_preload(gfp_t gfp_mask)
 {
 	struct radix_tree_preload *rtp;
 	struct radix_tree_node *node;
@@ -294,38 +275,7 @@ static int __radix_tree_preload(gfp_t gfp_mask)
 out:
 	return ret;
 }
-
-/*
- * Load up this CPU's radix_tree_node buffer with sufficient objects to
- * ensure that the addition of a single element in the tree cannot fail.  On
- * success, return zero, with preemption disabled.  On error, return -ENOMEM
- * with preemption not disabled.
- *
- * To make use of this facility, the radix tree must be initialised without
- * __GFP_WAIT being passed to INIT_RADIX_TREE().
- */
-int radix_tree_preload(gfp_t gfp_mask)
-{
-	/* Warn on non-sensical use... */
-	WARN_ON_ONCE(!(gfp_mask & __GFP_WAIT));
-	return __radix_tree_preload(gfp_mask);
-}
 EXPORT_SYMBOL(radix_tree_preload);
-
-/*
- * The same as above function, except we don't guarantee preloading happens.
- * We do it, if we decide it helps. On success, return zero with preemption
- * disabled. On error, return -ENOMEM with preemption not disabled.
- */
-int radix_tree_maybe_preload(gfp_t gfp_mask)
-{
-	if (gfp_mask & __GFP_WAIT)
-		return __radix_tree_preload(gfp_mask);
-	/* Preloading doesn't help anything with this gfp mask, skip it */
-	preempt_disable();
-	return 0;
-}
-EXPORT_SYMBOL(radix_tree_maybe_preload);
 
 /*
  *	Return the maximum key which can be store into a
@@ -1253,10 +1203,8 @@ unsigned long radix_tree_locate_item(struct radix_tree_root *root, void *item)
 
 		node = indirect_to_ptr(node);
 		max_index = radix_tree_maxindex(node->height);
-		if (cur_index > max_index) {
-			rcu_read_unlock();
+		if (cur_index > max_index)
 			break;
-		}
 
 		cur_index = __locate(node, item, cur_index, &found_index);
 		rcu_read_unlock();
