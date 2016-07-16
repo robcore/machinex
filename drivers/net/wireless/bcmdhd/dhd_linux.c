@@ -6775,7 +6775,7 @@ int net_os_set_suspend(struct net_device *dev, int val, int force)
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	if (dhd) {
-#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 		ret = dhd_set_suspend(val, &dhd->pub);
 #else
 		ret = dhd_suspend_resume_helper(dhd, val, force);
@@ -6853,9 +6853,9 @@ int dhd_os_enable_packet_filter(dhd_pub_t *dhdp, int val)
 {
 	int ret = 0;
 
-	/* Packet filtering is set only if we still in early-suspend and
+	/* Packet filtering is set only if we still in power-suspend and
 	 * we need either to turn it ON or turn it OFF
-	 * We can always turn it OFF in case of early-suspend, but we turn it
+	 * We can always turn it OFF in case of power-suspend, but we turn it
 	 * back ON only if suspend_disable_flag was not set
 	*/
 	if (dhdp && dhdp->up) {
