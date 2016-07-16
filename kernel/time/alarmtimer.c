@@ -746,9 +746,6 @@ static int alarm_timer_nsleep(const clockid_t which_clock, int flags,
 	if (!alarmtimer_get_rtcdev())
 		return -ENOTSUPP;
 
-	if (flags & ~TIMER_ABSTIME)
-		return -EINVAL;
-
 	if (!capable(CAP_WAKE_ALARM))
 		return -EPERM;
 
