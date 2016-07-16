@@ -289,6 +289,7 @@ static int __init power_suspend_init(void)
                 kobject_put(power_suspend_kobj);
                 return -ENOMEM;
         }
+
 	suspend_work_queue = create_singlethread_workqueue("p-suspend");
 
 	if (suspend_work_queue == NULL) {
