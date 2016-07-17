@@ -49,26 +49,18 @@ extern struct tvec_base boot_tvec_bases;
 #endif
 
 /*
- * Note that all tvec_bases are at least 4 byte aligned and lower two bits
- * of base in timer_list is guaranteed to be zero. Use them for flags.
+ * Note that all tvec_bases are 2 byte aligned and lower bit of
+ * base in timer_list is guaranteed to be zero. Use the LSB to
+ * indicate whether the timer is deferrable.
  *
  * A deferrable timer will work normally when the system is busy, but
  * will not cause a CPU to come out of idle just to service it; instead,
  * the timer will be serviced when the CPU eventually wakes up with a
  * subsequent non-deferrable timer.
- *
- * An irqsafe timer is executed with IRQ disabled and it's safe to wait for
- * the completion of the running instance from IRQ handlers, for example,
- * by calling del_timer_sync().
- *
- * Note: The irq disabled callback execution is a special case for
- * workqueue locking issues. It's not meant for executing random crap
- * with interrupts disabled. Abuse is monitored!
  */
 #define TIMER_DEFERRABLE		0x1LU
-#define TIMER_IRQSAFE			0x2LU
 
-#define TIMER_FLAG_MASK			0x3LU
+#define TIMER_FLAG_MASK			0x1LU
 
 #define __TIMER_INITIALIZER(_function, _expires, _data, _flags) { \
 		.entry = { .prev = TIMER_ENTRY_STATIC },	\
@@ -106,21 +98,6 @@ static inline void init_timer_on_stack_key(struct timer_list *timer,
 					   struct lock_class_key *key)
 {
 	init_timer_key(timer, flags, name, key);
-}
-#endif
-
-#ifdef CONFIG_DEBUG_OBJECTS_TIMERS
-extern void init_timer_on_stack_key(struct timer_list *timer,
-				    const char *name,
-				    struct lock_class_key *key);
-extern void destroy_timer_on_stack(struct timer_list *timer);
-#else
-static inline void destroy_timer_on_stack(struct timer_list *timer) { }
-static inline void init_timer_on_stack_key(struct timer_list *timer,
-					   const char *name,
-					   struct lock_class_key *key)
-{
-	init_timer_key(timer, name, key);
 }
 #endif
 
@@ -169,54 +146,7 @@ static inline void init_timer_on_stack_key(struct timer_list *timer,
 #define setup_timer_on_stack(timer, fn, data)				\
 	__setup_timer_on_stack((timer), (fn), (data), 0)
 #define setup_deferrable_timer_on_stack(timer, fn, data)		\
-	do {								\
-		static struct lock_class_key __key;			\
-		setup_deferrable_timer_on_stack_key((timer), #timer,	\
-						    &__key, (fn),	\
-						    (data));		\
-	} while (0)
-#else
-#define init_timer(timer)\
-	init_timer_key((timer), NULL, NULL)
-#define init_timer_deferrable(timer)\
-	init_timer_deferrable_key((timer), NULL, NULL)
-#define init_timer_on_stack(timer)\
-	init_timer_on_stack_key((timer), NULL, NULL)
-#define setup_timer(timer, fn, data)\
-	setup_timer_key((timer), NULL, NULL, (fn), (data))
-#define setup_timer_on_stack(timer, fn, data)\
-	setup_timer_on_stack_key((timer), NULL, NULL, (fn), (data))
-#define setup_deferrable_timer_on_stack(timer, fn, data)\
-	setup_deferrable_timer_on_stack_key((timer), NULL, NULL, (fn), (data))
-#endif
-
-static inline void setup_timer_key(struct timer_list * timer,
-				const char *name,
-				struct lock_class_key *key,
-				void (*function)(unsigned long),
-				unsigned long data)
-{
-	timer->function = function;
-	timer->data = data;
-	init_timer_key(timer, name, key);
-}
-
-static inline void setup_timer_on_stack_key(struct timer_list *timer,
-					const char *name,
-					struct lock_class_key *key,
-					void (*function)(unsigned long),
-					unsigned long data)
-{
-	timer->function = function;
-	timer->data = data;
-	init_timer_on_stack_key(timer, name, key);
-}
-
-extern void setup_deferrable_timer_on_stack_key(struct timer_list *timer,
-						const char *name,
-						struct lock_class_key *key,
-						void (*function)(unsigned long),
-						unsigned long data);
+	__setup_timer_on_stack((timer), (fn), (data), TIMER_DEFERRABLE)
 
 /**
  * timer_pending - is a timer pending?
