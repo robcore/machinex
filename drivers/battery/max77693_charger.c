@@ -26,8 +26,8 @@
 #define RECOVERY_CNT		5
 #define REDUCE_CURRENT_STEP	100
 #define MINIMUM_INPUT_CURRENT	300
-#define SIOP_INPUT_LIMIT_CURRENT 1300
-#define SIOP_CHARGING_LIMIT_CURRENT 1300
+#define SIOP_INPUT_LIMIT_CURRENT 1200
+#define SIOP_CHARGING_LIMIT_CURRENT 1000
 
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
@@ -1349,7 +1349,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		if (charger->is_charging) {
 			/* reduce only at CC MODE */
 			if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
-					(chg_dtls == 0x01) && (stable_count > 2))
+					(chg_dtls == 0x01) && (stable_count > 3))
 				reduce_input_current(charger, REDUCE_CURRENT_STEP);
 		}
 		prev_chgin_dtls = chgin_dtls;
