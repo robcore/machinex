@@ -745,5 +745,11 @@ config LAZYPLUG
 	  This enables the conservative hotplugging, lazyplug by arter97
 	  based on intelli_plug. Refer to the comments for more info.
 
+config CPU_FREQ_RETAIN_POLICY
+	bool "Retain CPU Policy."
+	default n
+	help
+	  Retain individual CPU policies after hotplug.
+
 endif
 endmenu
