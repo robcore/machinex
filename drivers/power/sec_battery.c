@@ -3282,7 +3282,7 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 */
 	}
 
-	//info->bat_power_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
+	//info->bat_power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB + 1;
 	info->bat_power_suspend.suspend = sec_bat_power_suspend;
 	info->bat_power_suspend.resume = sec_bat_power_resume;
 	register_power_suspend(&info->bat_power_suspend);
