@@ -101,12 +101,14 @@ struct cpufreq_governor* get_retained_governor(int cpu)
 
 unsigned int get_retained_min_cpu_freq(int cpu)
 {
-	return (sync_retained_cpu_policy() ? retained_policy[0].min : retained_policy[cpu].min);
+	return retained_policy[0].min;
+	//return (sync_retained_cpu_policy() ? retained_policy[0].min : retained_policy[cpu].min);
 }
 
 unsigned int get_retained_max_cpu_freq(int cpu)
 {
-	return (sync_retained_cpu_policy() ? retained_policy[0].max : retained_policy[cpu].max);
+	return retained_policy[0].max;
+	//return (sync_retained_cpu_policy() ? retained_policy[0].max : retained_policy[cpu].max);
 }
 
 static int sync_cpu_policy(struct notifier_block *nb, unsigned long val, void *data)
@@ -120,8 +122,8 @@ static int sync_cpu_policy(struct notifier_block *nb, unsigned long val, void *d
 			break;
 
 		case CPUFREQ_ADJUST:
-			if(sync_retained_cpu_policy() && policy->cpu > 0)
-				restore_cpu_policy(policy, CPUFREQ_RESTORE_ALL);
+			if(policy->cpu > 0)
+				restore_cpu_policy(policy, sync_retained_cpu_policy() ? CPUFREQ_RESTORE_ALL : CPUFREQ_RESTORE_FREQ);
 			retain_cpu_policy(policy);
 			break;
 	}
