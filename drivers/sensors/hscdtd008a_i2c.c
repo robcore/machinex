@@ -21,8 +21,8 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/input.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
-#include <linux/powersuspend.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
 #include "sensors_head.h"
 
@@ -57,8 +57,8 @@
 #define CHIP_DEV_VENDOR	"ALPS"
 
 static struct i2c_driver hscd_driver;
-#ifdef CONFIG_HAS_POWERSUSPEND
-static struct power_suspend hscd_power_suspend_handler;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static struct early_suspend hscd_early_suspend_handler;
 #endif
 
 static atomic_t flgEna;
@@ -70,7 +70,7 @@ static int probe_done;
 struct hscd_i2c_data {
 	struct i2c_client *this_client;
 	struct input_dev *input_dev;
-	struct power_suspend power_suspend;
+	struct early_suspend early_suspend;
 };
 struct hscd_i2c_data *hscd_data;
 
@@ -527,8 +527,8 @@ static int __devexit hscd_remove(struct i2c_client *client)
 {
 	printk("[HSCD] remove\n");
 	hscd_activate(0, 0, atomic_read(&delay));
-#ifdef CONFIG_HAS_POWERSUSPEND
-	unregister_power_suspend(&hscd_power_suspend_handler);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&hscd_early_suspend_handler);
 #endif
 	kfree(hscd_data->this_client);
 	return 0;
@@ -554,19 +554,19 @@ static int hscd_resume(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
-static void hscd_power_suspend(struct power_suspend *handler)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void hscd_early_suspend(struct early_suspend *handler)
 {
 #ifdef ALPS_DEBUG
-	printk("[HSCD] power_suspend\n");
+	printk("[HSCD] early_suspend\n");
 #endif
 	hscd_suspend(hscd_data->this_client, PMSG_SUSPEND);
 }
 
-static void hscd_power_resume(struct power_suspend *handler)
+static void hscd_early_resume(struct early_suspend *handler)
 {
 #ifdef ALPS_DEBUG
-	printk("[HSCD] power_resume\n");
+	printk("[HSCD] early_resume\n");
 #endif
 	hscd_resume(hscd_data->this_client);
 }
@@ -584,16 +584,16 @@ static struct i2c_driver hscd_driver = {
 	.driver = {
 	.name = HSCD_DRIVER_NAME,
 	},
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend = hscd_suspend,
 	.resume = hscd_resume,
 #endif
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
-static struct power_suspend hscd_power_suspend_handler = {
-	.suspend = hscd_power_suspend,
-	.resume = hscd_power_resume,
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static struct early_suspend hscd_early_suspend_handler = {
+	.suspend = hscd_early_suspend,
+	.resume = hscd_early_resume,
 };
 #endif
 

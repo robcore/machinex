@@ -270,9 +270,8 @@ static int e2i_init(struct usbtouch_usb *usbtouch)
 	                      0x01, 0x02, 0x0000, 0x0081,
 	                      NULL, 0, USB_CTRL_SET_TIMEOUT);
 
-	dev_dbg(&usbtouch->input->dev,
-		"%s - usb_control_msg - E2I_RESET - bytes|err: %d\n",
-		__func__, ret);
+	dbg("%s - usb_control_msg - E2I_RESET - bytes|err: %d",
+	    __func__, ret);
 	return ret;
 }
 
@@ -427,9 +426,8 @@ static int mtouch_init(struct usbtouch_usb *usbtouch)
 	                      MTOUCHUSB_RESET,
 	                      USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
 	                      1, 0, NULL, 0, USB_CTRL_SET_TIMEOUT);
-	dev_dbg(&usbtouch->input->dev,
-		"%s - usb_control_msg - MTOUCHUSB_RESET - bytes|err: %d\n",
-		__func__, ret);
+	dbg("%s - usb_control_msg - MTOUCHUSB_RESET - bytes|err: %d",
+	    __func__, ret);
 	if (ret < 0)
 		return ret;
 	msleep(150);
@@ -439,9 +437,8 @@ static int mtouch_init(struct usbtouch_usb *usbtouch)
 				      MTOUCHUSB_ASYNC_REPORT,
 				      USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
 				      1, 1, NULL, 0, USB_CTRL_SET_TIMEOUT);
-		dev_dbg(&usbtouch->input->dev,
-			"%s - usb_control_msg - MTOUCHUSB_ASYNC_REPORT - bytes|err: %d\n",
-			__func__, ret);
+		dbg("%s - usb_control_msg - MTOUCHUSB_ASYNC_REPORT - bytes|err: %d",
+		    __func__, ret);
 		if (ret >= 0)
 			break;
 		if (ret != -EPIPE)
@@ -744,29 +741,27 @@ static int jastec_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
 #ifdef CONFIG_TOUCHSCREEN_USB_ZYTRONIC
 static int zytronic_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
 {
-	struct input_dev *input = dev->input;
-
 	switch (pkt[0]) {
 	case 0x3A: /* command response */
-		dev_dbg(&input->dev, "%s: Command response %d\n", __func__, pkt[1]);
+		dbg("%s: Command response %d", __func__, pkt[1]);
 		break;
 
 	case 0xC0: /* down */
 		dev->x = (pkt[1] & 0x7f) | ((pkt[2] & 0x07) << 7);
 		dev->y = (pkt[3] & 0x7f) | ((pkt[4] & 0x07) << 7);
 		dev->touch = 1;
-		dev_dbg(&input->dev, "%s: down %d,%d\n", __func__, dev->x, dev->y);
+		dbg("%s: down %d,%d", __func__, dev->x, dev->y);
 		return 1;
 
 	case 0x80: /* up */
 		dev->x = (pkt[1] & 0x7f) | ((pkt[2] & 0x07) << 7);
 		dev->y = (pkt[3] & 0x7f) | ((pkt[4] & 0x07) << 7);
 		dev->touch = 0;
-		dev_dbg(&input->dev, "%s: up %d,%d\n", __func__, dev->x, dev->y);
+		dbg("%s: up %d,%d", __func__, dev->x, dev->y);
 		return 1;
 
 	default:
-		dev_dbg(&input->dev, "%s: Unknown return %d\n", __func__, pkt[0]);
+		dbg("%s: Unknown return %d", __func__, pkt[0]);
 		break;
 	}
 
@@ -821,8 +816,7 @@ static int nexio_alloc(struct usbtouch_usb *usbtouch)
 
 	priv->ack = usb_alloc_urb(0, GFP_KERNEL);
 	if (!priv->ack) {
-		dev_dbg(&usbtouch->input->dev,
-			"%s - usb_alloc_urb failed: usbtouch->ack\n", __func__);
+		dbg("%s - usb_alloc_urb failed: usbtouch->ack", __func__);
 		goto err_ack_buf;
 	}
 
@@ -1359,7 +1353,6 @@ out_flush_buf:
 static void usbtouch_irq(struct urb *urb)
 {
 	struct usbtouch_usb *usbtouch = urb->context;
-	struct device *dev = &usbtouch->input->dev;
 	int retval;
 
 	switch (urb->status) {
@@ -1368,21 +1361,20 @@ static void usbtouch_irq(struct urb *urb)
 		break;
 	case -ETIME:
 		/* this urb is timing out */
-		dev_dbg(dev,
-			"%s - urb timed out - was the device unplugged?\n",
-			__func__);
+		dbg("%s - urb timed out - was the device unplugged?",
+		    __func__);
 		return;
 	case -ECONNRESET:
 	case -ENOENT:
 	case -ESHUTDOWN:
 	case -EPIPE:
 		/* this urb is terminated, clean up */
-		dev_dbg(dev, "%s - urb shutting down with status: %d\n",
-			__func__, urb->status);
+		dbg("%s - urb shutting down with status: %d",
+		    __func__, urb->status);
 		return;
 	default:
-		dev_dbg(dev, "%s - nonzero urb status received: %d\n",
-			__func__, urb->status);
+		dbg("%s - nonzero urb status received: %d",
+		    __func__, urb->status);
 		goto exit;
 	}
 
@@ -1468,9 +1460,8 @@ static int usbtouch_reset_resume(struct usb_interface *intf)
 	if (usbtouch->type->init) {
 		err = usbtouch->type->init(usbtouch);
 		if (err) {
-			dev_dbg(&input->dev,
-				"%s - type->init() failed, err: %d\n",
-				__func__, err);
+			dbg("%s - type->init() failed, err: %d",
+			    __func__, err);
 			return err;
 		}
 	}
@@ -1558,8 +1549,7 @@ static int usbtouch_probe(struct usb_interface *intf,
 
 	usbtouch->irq = usb_alloc_urb(0, GFP_KERNEL);
 	if (!usbtouch->irq) {
-		dev_dbg(&intf->dev,
-			"%s - usb_alloc_urb failed: usbtouch->irq\n", __func__);
+		dbg("%s - usb_alloc_urb failed: usbtouch->irq", __func__);
 		goto out_free_buffers;
 	}
 
@@ -1621,9 +1611,7 @@ static int usbtouch_probe(struct usb_interface *intf,
 	if (type->alloc) {
 		err = type->alloc(usbtouch);
 		if (err) {
-			dev_dbg(&intf->dev,
-				"%s - type->alloc() failed, err: %d\n",
-				__func__, err);
+			dbg("%s - type->alloc() failed, err: %d", __func__, err);
 			goto out_free_urb;
 		}
 	}
@@ -1632,18 +1620,14 @@ static int usbtouch_probe(struct usb_interface *intf,
 	if (type->init) {
 		err = type->init(usbtouch);
 		if (err) {
-			dev_dbg(&intf->dev,
-				"%s - type->init() failed, err: %d\n",
-				__func__, err);
+			dbg("%s - type->init() failed, err: %d", __func__, err);
 			goto out_do_exit;
 		}
 	}
 
 	err = input_register_device(usbtouch->input);
 	if (err) {
-		dev_dbg(&intf->dev,
-			"%s - input_register_device failed, err: %d\n",
-			__func__, err);
+		dbg("%s - input_register_device failed, err: %d", __func__, err);
 		goto out_do_exit;
 	}
 
@@ -1683,12 +1667,12 @@ static void usbtouch_disconnect(struct usb_interface *intf)
 {
 	struct usbtouch_usb *usbtouch = usb_get_intfdata(intf);
 
+	dbg("%s - called", __func__);
+
 	if (!usbtouch)
 		return;
 
-	dev_dbg(&usbtouch->input->dev,
-		"%s - usbtouch is initialized, cleaning up\n", __func__);
-
+	dbg("%s - usbtouch is initialized, cleaning up", __func__);
 	usb_set_intfdata(intf, NULL);
 	/* this will stop IO via close */
 	input_unregister_device(usbtouch->input);

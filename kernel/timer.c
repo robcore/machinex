@@ -39,7 +39,6 @@
 #include <linux/kallsyms.h>
 #include <linux/irq_work.h>
 #include <linux/sched.h>
-#include <linux/sysctl.h>
 #include <linux/slab.h>
 
 #include <asm/uaccess.h>
@@ -1093,7 +1092,7 @@ static int cascade(struct tvec_base *base, struct tvec *tv, int index)
 static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
 			  unsigned long data)
 {
-	int count = preempt_count();
+	int preempt_count = preempt_count();
 
 #ifdef CONFIG_LOCKDEP
 	/*
@@ -1120,16 +1119,16 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
 
 	lock_map_release(&lockdep_map);
 
-	if (count != preempt_count()) {
+	if (preempt_count != preempt_count()) {
 		WARN_ONCE(1, "timer: %pF preempt leak: %08x -> %08x\n",
-			  fn, count, preempt_count());
+			  fn, preempt_count, preempt_count());
 		/*
 		 * Restore the preempt count. That gives us a decent
 		 * chance to survive and extract information. If the
 		 * callback kept a lock held, bad luck, but not worse
 		 * than the BUG() we had.
 		 */
-		preempt_count_set(count);
+		preempt_count() = preempt_count;
 	}
 }
 
@@ -1356,6 +1355,7 @@ void update_process_times(int user_tick)
 	account_process_tick(p, user_tick);
 	run_local_timers();
 	rcu_check_callbacks(cpu, user_tick);
+	printk_tick();
 #ifdef CONFIG_IRQ_WORK
 	if (in_irq())
 		irq_work_run();
@@ -1398,13 +1398,6 @@ SYSCALL_DEFINE1(alarm, unsigned int, seconds)
 }
 
 #endif
-
-#ifndef __alpha__
-
-/*
- * The Alpha uses getxpid, getxuid, and getxgid instead.  Maybe this
- * should be moved into arch/i386 instead?
- */
 
 #ifndef __alpha__
 
@@ -1467,8 +1460,6 @@ SYSCALL_DEFINE0(getegid)
 	/* Only we change this so SMP safe */
 	return  current_egid();
 }
-
-#endif
 
 #endif
 
@@ -1669,7 +1660,6 @@ static int __cpuinit init_timers_cpu(int cpu)
 	int j;
 	struct tvec_base *base;
 	static char __cpuinitdata tvec_base_done[NR_CPUS];
-	unsigned long flags;
 #ifdef CONFIG_MACH_JF
 	int *lock_init = &per_cpu(tvec_base_lock_init, cpu);
 #endif
@@ -1731,7 +1721,6 @@ static int __cpuinit init_timers_cpu(int cpu)
 	base->timer_jiffies = jiffies;
 	base->next_timer = base->timer_jiffies;
 	base->active_timers = 0;
-	spin_unlock_irqrestore(&base->lock, flags);
 	return 0;
 }
 

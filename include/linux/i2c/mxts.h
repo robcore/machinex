@@ -16,8 +16,8 @@
 #ifndef __MXT_H__
 #define __MXT_H__
 
-#ifdef CONFIG_HAS_POWERSUSPEND
-#include <linux/powersuspend.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT224S)
@@ -491,8 +491,8 @@ struct mxt_data {
 	u8 max_reportid;
 	u8 finger_mask ;
 	bool mxt_enabled;
-#ifdef CONFIG_HAS_POWERSUSPEND
-	struct power_suspend power_suspend;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend early_suspend;
 #endif
 #ifdef TSP_BOOSTER
 	struct delayed_work work_dvfs_off;

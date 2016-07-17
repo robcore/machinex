@@ -27,7 +27,7 @@
 #include <linux/proc_fs.h>
 #include <linux/android_alarm.h>
 #include <linux/msm_adc.h>
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 #include <linux/sec_battery.h>
 #include <linux/gpio.h>
 #include <mach/msm8960-gpio.h>
@@ -187,7 +187,7 @@ struct sec_bat_info {
 	struct delayed_work cable_work;
 	struct delayed_work measure_work;
 	struct delayed_work otg_work;
-	struct power_suspend bat_power_suspend;
+	struct early_suspend bat_early_suspend;
 	struct sec_temperature_spec tspec;
 	struct proc_dir_entry *entry;
 
@@ -1362,9 +1362,9 @@ static void sec_check_chgcurrent(struct sec_bat_info *info)
 #if defined(CONFIG_MACH_M2_MTR)
 			if ((is_full_condition) &&
 			(info->batt_vcell >= (info->vmax - 15000))) {
-#else
+#else			
 			if (is_full_condition) {
-#endif
+#endif			
 				cnt++;
 				pr_info("%s : full state? %d, %d\n", __func__,
 					info->batt_current_adc, cnt);
@@ -2465,7 +2465,7 @@ static ssize_t sec_bat_show_property(struct device *dev,
 	case BATT_CHARGING_SOURCE:
 
 		switch(info->cable_type) {
-			case CABLE_TYPE_NONE:
+			case CABLE_TYPE_NONE: 
 				val = POWER_SUPPLY_TYPE_BATTERY;
 				break;
 			case CABLE_TYPE_USB:
@@ -2662,7 +2662,7 @@ static ssize_t sec_bat_store(struct device *dev,
 	struct sec_bat_info *info = dev_get_drvdata(dev->parent);
 
 	switch (off) {
-	case BATT_ESUS_TEST:	/* power_suspend test */
+	case BATT_ESUS_TEST:	/* early_suspend test */
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			if (x == 0) {
 				info->test_info.test_esuspend = 0;
@@ -2955,10 +2955,10 @@ static int sec_bat_read_proc(char *buf, char **start,
 	return len;
 }
 
-static void sec_bat_power_suspend(struct power_suspend *handle)
+static void sec_bat_early_suspend(struct early_suspend *handle)
 {
 	struct sec_bat_info *info = container_of(handle, struct sec_bat_info,
-						 bat_power_suspend);
+						 bat_early_suspend);
 
 	pr_info("%s[BATT]...\n", __func__);
 	info->is_esus_state = true;
@@ -2966,10 +2966,10 @@ static void sec_bat_power_suspend(struct power_suspend *handle)
 	return;
 }
 
-static void sec_bat_power_resume(struct power_suspend *handle)
+static void sec_bat_late_resume(struct early_suspend *handle)
 {
 	struct sec_bat_info *info = container_of(handle, struct sec_bat_info,
-						 bat_power_suspend);
+						 bat_early_suspend);
 
 	pr_info("%s[BATT]...\n", __func__);
 	info->is_esus_state = false;
@@ -3282,10 +3282,10 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 */
 	}
 
-	//info->bat_power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB + 1;
-	info->bat_power_suspend.suspend = sec_bat_power_suspend;
-	info->bat_power_suspend.resume = sec_bat_power_resume;
-	register_power_suspend(&info->bat_power_suspend);
+	info->bat_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
+	info->bat_early_suspend.suspend = sec_bat_early_suspend;
+	info->bat_early_suspend.resume = sec_bat_late_resume;
+	register_early_suspend(&info->bat_early_suspend);
 
 	INIT_WORK(&info->monitor_work, sec_bat_monitor_work);
 	INIT_DEFERRABLE_WORK(&info->cable_work, sec_bat_cable_work);

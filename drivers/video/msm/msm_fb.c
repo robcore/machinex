@@ -45,7 +45,6 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
-#include <linux/state_notifier.h>
 
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>

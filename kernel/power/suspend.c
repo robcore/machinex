@@ -26,7 +26,6 @@
 #include <linux/syscore_ops.h>
 #include <linux/ftrace.h>
 #include <linux/rtc.h>
-#include <linux/ftrace.h>
 #include <trace/events/power.h>
 
 #include "power.h"
@@ -38,7 +37,7 @@ static int suspendsync;
 #endif
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_EARLYSUSPEND
 	[PM_SUSPEND_ON]	= { .label = "on", .state = PM_SUSPEND_FREEZE },
 #endif
 	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },
@@ -315,7 +314,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_start();
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
-		pr_err("PM: Some devices failed to suspend, or power wake event detected\n");
+		pr_err("PM: Some devices failed to suspend, or early wake event detected\n");
 		goto Recover_platform;
 	}
 	suspend_test_finish("suspend devices");

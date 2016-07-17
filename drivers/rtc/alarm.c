@@ -730,8 +730,8 @@ static void alarm_shutdown(struct platform_device *dev)
 	return;
 
 disable_alarm:
-	spin_unlock_irqrestore(&alarm_slock, flags);
 	rtc_alarm_irq_enable(alarm_rtc_dev, 0);
+	spin_unlock_irqrestore(&alarm_slock, flags);
 }
 
 static struct rtc_task alarm_rtc_task = {

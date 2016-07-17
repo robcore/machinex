@@ -108,7 +108,8 @@ static inline struct hlist_bl_head *d_hash(const struct dentry *parent,
 					unsigned int hash)
 {
 	hash += (unsigned long) parent / L1_CACHE_BYTES;
-	return dentry_hashtable + hash_32(hash, d_hash_shift);
+	hash = hash + (hash >> D_HASHBITS);
+	return dentry_hashtable + (hash & D_HASHMASK);
 }
 
 /* Statistics gathering. */
@@ -2741,7 +2742,7 @@ char *dynamic_dname(struct dentry *dentry, char *buffer, int buflen,
 			const char *fmt, ...)
 {
 	va_list args;
-	char temp[256];
+	char temp[64];
 	int sz;
 
 	va_start(args, fmt);
