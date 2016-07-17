@@ -1565,8 +1565,6 @@ static int __test__rdpmc(void)
 	sa.sa_sigaction = segfault_handler;
 	sigaction(SIGSEGV, &sa, NULL);
 
-	fprintf(stderr, "\n\n");
-
 	fd = sys_perf_event_open(&attr, 0, -1, -1, 0);
 	if (fd < 0) {
 		die("Error: sys_perf_event_open() syscall returned "
@@ -1591,7 +1589,7 @@ static int __test__rdpmc(void)
 		loops *= 10;
 
 		delta = now - stamp;
-		fprintf(stderr, "%14d: %14Lu\n", n, (long long)delta);
+		pr_debug("%14d: %14Lu\n", n, (long long)delta);
 
 		delta_sum += delta;
 	}
@@ -1599,7 +1597,7 @@ static int __test__rdpmc(void)
 	munmap(addr, page_size);
 	close(fd);
 
-	fprintf(stderr, "   ");
+	pr_debug("   ");
 
 	if (!delta_sum)
 		return -1;
