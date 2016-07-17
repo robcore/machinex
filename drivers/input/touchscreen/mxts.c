@@ -26,8 +26,8 @@
 #include <asm/unaligned.h>
 #include <linux/firmware.h>
 #include <linux/string.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 /*#define dev_dbg(dev, fmt, arg...) dev_info(dev, fmt, ##arg)*/
@@ -1917,14 +1917,14 @@ out:
 	return ret;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 #define mxt_suspend	NULL
 #define mxt_resume	NULL
 
-static void mxt_early_suspend(struct early_suspend *h)
+static void mxt_power_suspend(struct power_suspend *h)
 {
 	struct mxt_data *data = container_of(h, struct mxt_data,
-								early_suspend);
+								power_suspend);
 #if TSP_INFORM_CHARGER
 	cancel_delayed_work_sync(&data->noti_dwork);
 #endif
@@ -1936,10 +1936,10 @@ static void mxt_early_suspend(struct early_suspend *h)
 	mutex_unlock(&data->input_dev->mutex);
 }
 
-static void mxt_late_resume(struct early_suspend *h)
+static void mxt_power_resume(struct power_suspend *h)
 {
 	struct mxt_data *data = container_of(h, struct mxt_data,
-								early_suspend);
+								power_suspend);
 	mutex_lock(&data->input_dev->mutex);
 
 	mxt_start(data);
@@ -2082,11 +2082,11 @@ static int __devinit mxt_probe(struct i2c_client *client,
 		goto err_touch_init;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	data->early_suspend.suspend = mxt_early_suspend;
-	data->early_suspend.resume = mxt_late_resume;
-	register_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	//data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	data->power_suspend.suspend = mxt_power_suspend;
+	data->power_suspend.resume = mxt_power_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	return 0;
@@ -2113,8 +2113,8 @@ static int __devexit mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);
 	kfree(data->objects);
