@@ -10,6 +10,11 @@
 #include <linux/mutex.h>
 #include <linux/pm_wakeup.h>
 
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#endif
+
+#include <linux/powersuspend.h>
 #include <linux/syscalls.h>
 
 #include "power.h"
@@ -112,7 +117,6 @@ int pm_autosleep_set_state(suspend_state_t state)
 		sys_sync();
 		printk("done.\n");
 #endif
-
 	} else {
 		pm_wakep_autosleep_enabled(false);
 	}
