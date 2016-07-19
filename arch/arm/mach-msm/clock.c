@@ -399,21 +399,10 @@ EXPORT_SYMBOL(clk_set_max_rate);
 
 int clk_set_parent(struct clk *clk, struct clk *parent)
 {
-	int rc = 0;
-
 	if (!clk->ops->set_parent)
-		return -ENOSYS;
+		return 0;
 
-	mutex_lock(&clk->prepare_lock);
-	if (clk->parent == parent)
-		goto out;
-	rc = clk->ops->set_parent(clk, parent);
-	if (!rc)
-		clk->parent = parent;
-out:
-	mutex_unlock(&clk->prepare_lock);
-
-	return rc;
+	return clk->ops->set_parent(clk, parent);
 }
 EXPORT_SYMBOL(clk_set_parent);
 
