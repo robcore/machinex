@@ -21,6 +21,7 @@
 #define __SEC_BATTERY_H __FILE__
 
 #include <linux/battery/sec_charging_common.h>
+#include <../../../drivers/staging/android/android_alarm.h>
 #include <linux/hrtimer.h>
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
