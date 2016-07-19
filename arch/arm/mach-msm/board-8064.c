@@ -77,6 +77,7 @@
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_serial_hs.h>
+#include <linux/persistent_ram.h>
 
 #include "msm_watchdog.h"
 #include "board-8064.h"
