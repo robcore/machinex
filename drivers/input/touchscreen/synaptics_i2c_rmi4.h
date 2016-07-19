@@ -231,7 +231,7 @@ struct synaptics_rmi4_data {
 #ifdef CONFIG_FB
 	struct notifier_block fb_notif;
 #else
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
 #endif
