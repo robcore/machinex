@@ -12,6 +12,7 @@
  */
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
+#include <linux/android_pmem.h>
 #include <linux/dma-mapping.h>
 #include <linux/errno.h>
 #include <linux/file.h>
