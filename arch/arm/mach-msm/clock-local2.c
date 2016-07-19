@@ -209,7 +209,11 @@ static int rcg_clk_set_rate(struct clk *c, unsigned long rate)
 	return 0;
 }
 
-/* Return a supported rate that's at least the specified rate. */
+/*
+ * Return a supported rate that's at least the specified rate or
+ * the max supported rate if the specified rate is larger than the
+ * max supported rate.
+ */
 static long rcg_clk_round_rate(struct clk *c, unsigned long rate)
 {
 	struct rcg_clk *rcg = to_rcg_clk(c);
@@ -219,7 +223,8 @@ static long rcg_clk_round_rate(struct clk *c, unsigned long rate)
 		if (f->freq_hz >= rate)
 			return f->freq_hz;
 
-	return -EPERM;
+	f--;
+	return f->freq_hz;
 }
 
 /* Return the nth supported frequency for a given clock. */

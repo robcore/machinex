@@ -568,6 +568,11 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
 
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+
 	if ((msd.mpd->manufacture_id & 0xFF) == 0)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_NEED_FLIP, false);
 
@@ -684,6 +689,11 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
+
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
 
 #if defined(RUMTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
@@ -829,16 +839,8 @@ static ssize_t mipi_samsung_disp_set_power(struct device *dev,
 		mfd->fbi->fbops->fb_pan_display(&mfd->fbi->var, mfd->fbi);
 		mipi_samsung_disp_send_cmd(mfd, PANEL_LATE_ON, true);
 		mipi_samsung_disp_backlight(mfd);
-#ifdef CONFIG_POWERSUSPEND
-		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-#endif
 	} else {
 		mfd->fbi->fbops->fb_blank(FB_BLANK_POWERDOWN, mfd->fbi);
-#ifdef CONFIG_POWERSUSPEND
-		/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
-#endif
 	}
 
 	pr_info("mipi_samsung_disp_set_power\n");
