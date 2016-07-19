@@ -220,8 +220,8 @@ static void __init adjust_reserve_sizes(void)
 		if (mt->flags & MEMTYPE_FLAGS_1M_ALIGN)
 			mt->size = (mt->size + SECTION_SIZE - 1) & SECTION_MASK;
 		if (mt->size > mt->limit) {
-			pr_warning("%pa size for %s too large, setting to %pa\n",
-				&mt->size, memtype_name[i], &mt->limit);
+			pr_warning("%lx size for %s too large, setting to %lx\n",
+				mt->size, memtype_name[i], mt->limit);
 			mt->size = mt->limit;
 		}
 	}
@@ -337,7 +337,7 @@ void *allocate_contiguous_ebi(unsigned long size,
 }
 EXPORT_SYMBOL(allocate_contiguous_ebi);
 
-phys_addr_t allocate_contiguous_ebi_nomap(unsigned long size,
+unsigned long allocate_contiguous_ebi_nomap(unsigned long size,
 	unsigned long align)
 {
 	return _allocate_contiguous_memory_nomap(size, get_ebi_memtype(),
