@@ -268,6 +268,10 @@ static void __init reserve_memory_for_mempools(void)
 				 * out of multiple contiguous memory banks.
 				 */
 				mt->start = mb->start + (size - mt->size);
+				ret = memblock_reserve(mt->start, mt->size);
+				BUG_ON(ret);
+				ret = memblock_free(mt->start, mt->size);
+				BUG_ON(ret);
 				ret = memblock_remove(mt->start, mt->size);
 				BUG_ON(ret);
 				break;
