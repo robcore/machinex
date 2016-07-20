@@ -3154,6 +3154,8 @@ static struct i2c_registry apq8064_i2c_devices[] __initdata = {
 #define SX150X_EXP1_INT_N	PM8921_MPP_IRQ(PM8921_IRQ_BASE, 9)
 #define SX150X_EXP2_INT_N	MSM_GPIO_TO_INT(81)
 
+#define SX150X_EXP1_INT_N	PM8921_MPP_IRQ(PM8921_IRQ_BASE, 9)
+
 struct sx150x_platform_data mpq8064_sx150x_pdata[] = {
 	[SX150X_EXP1] = {
 		.gpio_base	= SX150X_EXP1_GPIO_BASE,
@@ -3182,7 +3184,8 @@ struct sx150x_platform_data mpq8064_sx150x_pdata[] = {
 		.io_pulldn_ena	= 0x0,
 		.io_open_drain_ena = 0x0,
 		.io_polarity	= 0,
-		.irq_summary	= -1,
+		.irq_summary	= SX150X_EXP1_INT_N,
+		.irq_base	= SX150X_EXP1_IRQ_BASE,
 	},
 	[SX150X_EXP4] = {
 		.gpio_base	= SX150X_EXP4_GPIO_BASE,
