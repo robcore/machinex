@@ -32,8 +32,6 @@
 #include <linux/timer.h>
 
 #include <linux/cpuidle.h>
-#include <linux/timer.h>
-
 #include "../base.h"
 #include "power.h"
 
@@ -63,12 +61,6 @@ struct dpm_watchdog {
 	struct device		*dev;
 	struct task_struct	*tsk;
 	struct timer_list	timer;
-};
-
-static void dpm_drv_timeout(unsigned long data);
-struct dpm_drv_wd_data {
-	struct device *dev;
-	struct task_struct *tsk;
 };
 
 static int async_error;
@@ -503,19 +495,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 	return error;
 }
 
-static bool is_async(struct device *dev);
-
-static void async_resume_noirq(void *data, async_cookie_t cookie)
-{
-	struct device *dev = (struct device *)data;
-	int error;
-
-	error = device_resume_noirq(dev, pm_transition);
-	if (error)
-		pm_dev_err(dev, pm_transition, " noirq", error);
-	put_device(dev);
-}
-
 /**
  * dpm_resume_noirq - Execute "noirq resume" callbacks for all devices.
  * @state: PM transition of the system being carried out.
@@ -525,40 +504,29 @@ static void async_resume_noirq(void *data, async_cookie_t cookie)
  */
 static void dpm_resume_noirq(pm_message_t state)
 {
-	struct device *dev;
 	ktime_t starttime = ktime_get();
-	pm_transition = state;
-
-	list_for_each_entry(dev, &dpm_noirq_list, power.entry) {
-		if (is_async(dev)) {
-			get_device(dev);
-			async_schedule(async_resume_noirq, dev);
-		}
-	}
 
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_noirq_list)) {
-		dev = to_device(dpm_noirq_list.next);
+		struct device *dev = to_device(dpm_noirq_list.next);
+		int error;
 
 		get_device(dev);
 		list_move_tail(&dev->power.entry, &dpm_late_early_list);
 		mutex_unlock(&dpm_list_mtx);
 
-		if (!is_async(dev)) {
-			int error;
-			error = device_resume_noirq(dev, state);
-			if (error) {
-				suspend_stats.failed_resume_noirq++;
-				dpm_save_failed_step(SUSPEND_RESUME_NOIRQ);
-				dpm_save_failed_dev(dev_name(dev));
-				pm_dev_err(dev, state, " noirq", error);
-			}
+		error = device_resume_noirq(dev, state);
+		if (error) {
+			suspend_stats.failed_resume_noirq++;
+			dpm_save_failed_step(SUSPEND_RESUME_NOIRQ);
+			dpm_save_failed_dev(dev_name(dev));
+			pm_dev_err(dev, state, " noirq", error);
 		}
+
 		mutex_lock(&dpm_list_mtx);
 		put_device(dev);
 	}
 	mutex_unlock(&dpm_list_mtx);
-	async_synchronize_full();
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
 	cpuidle_resume();
@@ -756,30 +724,6 @@ static bool is_async(struct device *dev)
 {
 	return dev->power.async_suspend && pm_async_enabled
 		&& !pm_trace_is_enabled();
-}
-
-/**
- *	dpm_drv_timeout - Driver suspend / resume watchdog handler
- *	@data: struct device which timed out
- *
- * 	Called when a driver has timed out suspending or resuming.
- * 	There's not much we can do here to recover so
- * 	BUG() out for a crash-dump
- *
- */
-static void dpm_drv_timeout(unsigned long data)
-{
-	struct dpm_drv_wd_data *wd_data = (void *)data;
-	struct device *dev = wd_data->dev;
-	struct task_struct *tsk = wd_data->tsk;
-
-	printk(KERN_EMERG "**** DPM device timeout: %s (%s)\n", dev_name(dev),
-	       (dev->driver ? dev->driver->name : "no driver"));
-
-	printk(KERN_EMERG "dpm suspend stack:\n");
-	show_stack(tsk, NULL);
-
-	BUG();
 }
 
 /**
@@ -1083,8 +1027,6 @@ static int dpm_suspend_late(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
 	int error = 0;
-	struct timer_list timer;
-	struct dpm_drv_wd_data data;
 
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_suspended_list)) {
@@ -1181,14 +1123,6 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 
 	if (async_error)
 		goto Complete;
-	
-	data.dev = dev;
-	data.tsk = get_current();
-	init_timer_on_stack(&timer);
-	timer.expires = jiffies + HZ * 12;
-	timer.function = dpm_drv_timeout;
-	timer.data = (unsigned long)&data;
-	add_timer(&timer);
 
 	/*
 	 * If a device configured to wake up the system from sleep states
@@ -1262,9 +1196,6 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	device_unlock(dev);
 
 	dpm_wd_clear(&wd);
-
-	del_timer_sync(&timer);
-	destroy_timer_on_stack(&timer);
 
  Complete:
 	complete_all(&dev->power.completion);

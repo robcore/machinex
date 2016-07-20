@@ -219,8 +219,6 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	struct dwc3			*dwc = dep->dwc;
 
 	if (req->queued) {
-		req->queued = false;
-
 		if (req->request.num_mapped_sgs)
 			dep->busy_slot += req->request.num_mapped_sgs;
 		else
@@ -674,8 +672,11 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 	dep = to_dwc3_ep(ep);
 	dwc = dep->dwc;
 
-	if (!(dep->flags & DWC3_EP_ENABLED))
+	if (!(dep->flags & DWC3_EP_ENABLED)) {
+		dev_WARN_ONCE(dwc->dev, true, "%s is already disabled\n",
+				dep->name);
 		return 0;
+	}
 
 	snprintf(dep->name, sizeof(dep->name), "ep%d%s",
 			dep->number >> 1,

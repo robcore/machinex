@@ -2207,10 +2207,6 @@ static int scale_soc_while_chg(struct pm8921_bms_chip *chip,
 		return new_soc;
 #endif
 
-	/* do not scale at 100 */
-	if (new_soc == 100)
-		return new_soc;
-
 	chg_time_sec = DIV_ROUND_UP(the_chip->charge_time_us, USEC_PER_SEC);
 	catch_up_sec = DIV_ROUND_UP(the_chip->catch_up_time_us, USEC_PER_SEC);
 	if (catch_up_sec == 0)

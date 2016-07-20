@@ -77,7 +77,6 @@
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_serial_hs.h>
-#include <linux/persistent_ram.h>
 
 #include "msm_watchdog.h"
 #include "board-8064.h"
@@ -306,6 +305,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.reusable = FMEM_ENABLED,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
+	.is_cma = 1,
 	.no_nonsecure_alloc = 1,
 };
 
@@ -1357,57 +1357,6 @@ static const u8 mxt1386e_config_data_v2_1[] = {
 	0,
 };
 
-/* configuration data for mxt1386e using V2.4.AB firmware */
-static const u8 mxt1386e_config_data_v2_4_AB[] = {
-	/* T6 Object */
-	0, 0, 0, 0, 0, 0,
-	/* Object 38, Instance = 0 */
-	14, 5, 0, 0,
-	/* Object 7, Instance = 0 */
-	32, 8, 50, 0,
-	/* Object 8, Instance = 0 */
-	25, 0, 20, 20, 0, 0, 0, 0, 0, 0,
-	/* Object 9, Instance = 0 */
-	139, 0, 0, 26, 42, 0, 32, 80, 2, 5,
-	0, 5, 5, 79, 10, 30, 10, 10, 255, 2,
-	85, 5, 0, 5, 9, 5, 12, 35, 70, 40,
-	20, 5, 0, 0, 0, 0,
-	/* Object 18, Instance = 0 */
-	0, 0,
-	/* Object 24, Instance = 0 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0,
-	/* Object 25, Instance = 0 */
-	1, 0, 60, 115, 156, 99,
-	/* Object 27, Instance = 0 */
-	0, 0, 0, 0, 0, 0, 0,
-	/* Object 40, Instance = 0 */
-	0, 0, 0, 0, 0,
-	/* Object 42, Instance = 0 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	/* Object 43, Instance = 0 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0,
-	/* Object 46, Instance = 0 */
-	68, 0, 16, 16, 0, 0, 0, 0, 0,
-	/* Object 47, Instance = 0 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	/* Object 56, Instance = 0 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0,
-	/* Object 62, Instance = 0 */
-	1, 0, 0, 2, 0, 0, 0, 0, 10, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 32,
-	40, 10, 52, 10, 100, 10, 10, 10, 90, 0,
-	0, 0, 0, 0, 33, 0, 1, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0,
-};
-
 #define MXT_TS_GPIO_IRQ			6
 #define MXT_TS_PWR_EN_GPIO		PM8921_GPIO_PM_TO_SYS(23)
 #define MXT_TS_RESET_GPIO		33
@@ -1421,7 +1370,7 @@ static struct mxt_config_info mxt_config_array[] = {
 		.version	= 0x21,
 		.build		= 0xAA,
 		.bootldr_id	= MXT_BOOTLOADER_ID_1386E,
-		.fw_name	= "atmel_8064_liquid_v2_4_AB.hex",
+		.fw_name	= "atmel_8064_liquid_v2_2_AA.hex",
 	},
 	{
 		/* The config data for V2.2.AA is the same as for V2.1.AA */
@@ -1431,16 +1380,6 @@ static struct mxt_config_info mxt_config_array[] = {
 		.variant_id	= 0x7,
 		.version	= 0x22,
 		.build		= 0xAA,
-		.bootldr_id	= MXT_BOOTLOADER_ID_1386E,
-		.fw_name	= "atmel_8064_liquid_v2_4_AB.hex",
-	},
-	{
-		.config		= mxt1386e_config_data_v2_4_AB,
-		.config_length	= ARRAY_SIZE(mxt1386e_config_data_v2_4_AB),
-		.family_id	= 0xA0,
-		.variant_id	= 0x7,
-		.version	= 0x24,
-		.build		= 0xAB,
 		.bootldr_id	= MXT_BOOTLOADER_ID_1386E,
 	},
 };
@@ -1930,7 +1869,6 @@ static struct mdm_platform_data sglte2_mdm_platform_data = {
 	.ramdump_delay_ms = 2000,
 	.early_power_on = 1,
 	.sfr_query = 1,
-	.send_shdn = 1,
 	.vddmin_resource = &mdm_vddmin_rscs,
 	.peripheral_platform_device = &apq8064_device_hsic_host,
 	.ramdump_timeout_ms = 120000,
@@ -2351,12 +2289,6 @@ static void __init apq8064ab_update_krait_spm(void)
 		}
 	}
 }
-
-static struct msm_pm_sleep_status_data msm_pm_slp_sts_data = {
-	.base_addr = MSM_ACC0_BASE + 0x08,
-	.cpu_offset = MSM_ACC1_BASE - MSM_ACC0_BASE,
-	.mask = 1UL << 13,
-};
 
 static void __init apq8064_init_buses(void)
 {
@@ -3155,8 +3087,6 @@ static struct i2c_registry apq8064_i2c_devices[] __initdata = {
 #define SX150X_EXP1_INT_N	PM8921_MPP_IRQ(PM8921_IRQ_BASE, 9)
 #define SX150X_EXP2_INT_N	MSM_GPIO_TO_INT(81)
 
-#define SX150X_EXP1_INT_N	PM8921_MPP_IRQ(PM8921_IRQ_BASE, 9)
-
 struct sx150x_platform_data mpq8064_sx150x_pdata[] = {
 	[SX150X_EXP1] = {
 		.gpio_base	= SX150X_EXP1_GPIO_BASE,
@@ -3185,8 +3115,7 @@ struct sx150x_platform_data mpq8064_sx150x_pdata[] = {
 		.io_pulldn_ena	= 0x0,
 		.io_open_drain_ena = 0x0,
 		.io_polarity	= 0,
-		.irq_summary	= SX150X_EXP1_INT_N,
-		.irq_base	= SX150X_EXP1_IRQ_BASE,
+		.irq_summary	= -1,
 	},
 	[SX150X_EXP4] = {
 		.gpio_base	= SX150X_EXP4_GPIO_BASE,
@@ -3470,7 +3399,6 @@ static void __init apq8064_common_init(void)
 		platform_device_register(&msm_8960_riva);
 	}
 	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
-	msm_pm_init_sleep_status_data(&msm_pm_slp_sts_data);
 	apq8064_epm_adc_init();
 }
 
