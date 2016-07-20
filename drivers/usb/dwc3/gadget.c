@@ -219,6 +219,8 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	struct dwc3			*dwc = dep->dwc;
 
 	if (req->queued) {
+		req->queued = false;
+
 		if (req->request.num_mapped_sgs)
 			dep->busy_slot += req->request.num_mapped_sgs;
 		else
