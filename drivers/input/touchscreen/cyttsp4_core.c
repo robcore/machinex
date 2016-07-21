@@ -4722,7 +4722,7 @@ static int cyttsp4_core_probe(struct cyttsp4_core *core)
 
 #if defined(CONFIG_HAS_POWERSUSPEND)
 	printk(KERN_ERR "%s: register powersuspend.\n", __func__);
-//	cd->power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+//	cd->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	cd->power_suspend.suspend = cyttsp4_ts_power_suspend;
 	cd->power_suspend.resume = cyttsp4_ts_power_resume;
 	register_power_suspend(&cd->power_suspend);
