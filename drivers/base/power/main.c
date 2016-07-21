@@ -53,6 +53,10 @@ static LIST_HEAD(dpm_suspended_list);
 static LIST_HEAD(dpm_late_early_list);
 static LIST_HEAD(dpm_noirq_list);
 
+#ifdef CONFIG_ZERO_WAIT
+LIST_HEAD(dpm_wakeup_dev_list);
+#endif
+
 struct suspend_stats suspend_stats;
 static DEFINE_MUTEX(dpm_list_mtx);
 static pm_message_t pm_transition;
