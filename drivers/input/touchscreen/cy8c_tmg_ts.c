@@ -15,7 +15,7 @@
 
 #include <linux/cy8c_tmg_ts.h>
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/hrtimer.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
@@ -35,14 +35,14 @@ struct cy8c_ts_data {
 	struct work_struct work;
 	uint16_t version;
 	int (*power) (int on);
-	struct early_suspend early_suspend;
+	struct power_suspend power_suspend;
 };
 
 struct workqueue_struct *cypress_touch_wq;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void cy8c_ts_early_suspend(struct early_suspend *h);
-static void cy8c_ts_late_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void cy8c_ts_power_suspend(struct power_suspend *h);
+static void cy8c_ts_power_resume(struct power_suspend *h);
 #endif
 
 uint16_t sample_count, X_mean, Y_mean, first_touch;
@@ -319,11 +319,11 @@ static int cy8c_ts_probe(struct i2c_client *client,
 		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	ts->early_suspend.suspend = cy8c_ts_early_suspend;
-	ts->early_suspend.resume = cy8c_ts_late_resume;
-	register_early_suspend(&ts->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	ts->power_suspend.suspend = cy8c_ts_power_suspend;
+	ts->power_suspend.resume = cy8c_ts_power_resume;
+	register_power_suspend(&ts->power_suspend);
 #endif
 
 	dev_info(&client->dev, "Start touchscreen %s in %s mode\n",
@@ -351,7 +351,7 @@ static int cy8c_ts_remove(struct i2c_client *client)
 {
 	struct cy8c_ts_data *ts = i2c_get_clientdata(client);
 
-	unregister_early_suspend(&ts->early_suspend);
+	unregister_power_suspend(&ts->power_suspend);
 
 	if (ts->use_irq)
 		free_irq(client->irq, ts);
@@ -407,18 +407,18 @@ static int cy8c_ts_resume(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void cy8c_ts_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void cy8c_ts_power_suspend(struct power_suspend *h)
 {
 	struct cy8c_ts_data *ts;
-	ts = container_of(h, struct cy8c_ts_data, early_suspend);
+	ts = container_of(h, struct cy8c_ts_data, power_suspend);
 	cy8c_ts_suspend(ts->client, PMSG_SUSPEND);
 }
 
-static void cy8c_ts_late_resume(struct early_suspend *h)
+static void cy8c_ts_power_resume(struct power_suspend *h)
 {
 	struct cy8c_ts_data *ts;
-	ts = container_of(h, struct cy8c_ts_data, early_suspend);
+	ts = container_of(h, struct cy8c_ts_data, power_suspend);
 	cy8c_ts_resume(ts->client);
 }
 #endif
@@ -432,7 +432,7 @@ static struct i2c_driver cy8c_ts_driver = {
 	.id_table = cy8c_ts_i2c_id,
 	.probe = cy8c_ts_probe,
 	.remove = cy8c_ts_remove,
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	.suspend = cy8c_ts_suspend,
 	.resume = cy8c_ts_resume,
 #endif

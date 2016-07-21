@@ -157,7 +157,7 @@ static int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
 
 	mipi_dsi_cmds_tx(&msd.samsung_tx_buf, cmd_desc, cmd_size);
 
-	
+
 	if (mfd->panel.type == MIPI_VIDEO_PANEL)
 		mutex_unlock(&dsi_tx_mutex);
 	else {
@@ -195,7 +195,7 @@ void lcd_hsync_onoff(bool onoff)
 #endif
 
 	if (mfd->panel_power_on == TRUE)
-		{ 
+		{
 			if( onoff )
 				{
 				msleep(30);
@@ -211,7 +211,7 @@ void lcd_hsync_onoff(bool onoff)
 		}
 	else
 		pr_err("%s : panel power off\n",__func__);
-	
+
 return;
 }
 #endif
@@ -307,7 +307,7 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 #if defined(RUMTIME_MIPI_CLK_CHANGE)
 	current_fps = mfd->panel_info.mipi.frame_rate;
 #endif
-	
+
 #if defined(AUTO_BRIGHTNESS_CABC_FUNCTION)
 	is_disp_on = 1;
 
@@ -324,9 +324,9 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		printk ( KERN_ERR "%s-PANEL_CABC_ENABLE(delayed)\n", __func__ );
 	}
 #endif
-	
+
 	printk(KERN_INFO "[lcd] mipi_samsung_disp_on_in_video_engine end %d\n", gpio_get_value(err_fg_gpio));
-	
+
 #if defined(CONFIG_ESD_ERR_FG_RECOVERY)
 		enable_irq(PM8921_GPIO_IRQ(PM8921_IRQ_BASE, PMIC_GPIO_ERR_FG));
 #endif
@@ -475,8 +475,8 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void mipi_samsung_disp_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void mipi_samsung_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = NULL;
 	pr_info("[lcd] %s\n", __func__);
@@ -492,7 +492,7 @@ static void mipi_samsung_disp_early_suspend(struct early_suspend *h)
 	}
 }
 
-static void mipi_samsung_disp_late_resume(struct early_suspend *h)
+static void mipi_samsung_disp_power_resume(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = NULL;
 	mfd = platform_get_drvdata(msd.msm_pdev);
@@ -713,7 +713,7 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 		return -EINVAL;
 
 	mfd->bl_level = level;
-	
+
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		mipi_samsung_disp_backlight(mfd);
 		pr_info("%s : level (%d)\n",__func__,level);
@@ -1130,15 +1130,15 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 	mutex_init(&dsi_tx_mutex);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
 #endif
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	msd.early_suspend.suspend = mipi_samsung_disp_early_suspend;
-	msd.early_suspend.resume = mipi_samsung_disp_late_resume;
-	msd.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	register_early_suspend(&msd.early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	msd.power_suspend.suspend = mipi_samsung_disp_power_suspend;
+	msd.power_suspend.resume = mipi_samsung_disp_power_resume;
+//	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
+	register_power_suspend(&msd.power_suspend);
 #endif
 
 #if defined(CONFIG_ESD_ERR_FG_RECOVERY)
@@ -1160,7 +1160,7 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = request_threaded_irq(PM8921_GPIO_IRQ(PM8921_IRQ_BASE, PMIC_GPIO_ERR_FG), 
+	ret = request_threaded_irq(PM8921_GPIO_IRQ(PM8921_IRQ_BASE, PMIC_GPIO_ERR_FG),
 		NULL, err_fg_irq_handler,  IRQF_TRIGGER_RISING | IRQF_ONESHOT, "esd_detect", NULL);
 	if (ret) {
 		pr_err("%s : Failed to request_irq.:ret=%d", __func__, ret);

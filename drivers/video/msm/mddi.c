@@ -50,9 +50,9 @@ static int mddi_suspend(struct platform_device *pdev, pm_message_t state);
 static int mddi_resume(struct platform_device *pdev);
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void mddi_early_suspend(struct early_suspend *h);
-static void mddi_early_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_POWER_SUSPEND
+static void mddi_power_suspend(struct power_suspend *h);
+static void mddi_power_resume(struct power_suspend *h);
 #endif
 
 static void pmdh_clk_disable(void);
@@ -96,7 +96,7 @@ unsigned char mddi_timer_shutdown_flag;
 static struct platform_driver mddi_driver = {
 	.probe = mddi_probe,
 	.remove = mddi_remove,
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWER_SUSPEND
 #ifdef CONFIG_PM
 	.suspend = mddi_suspend,
 	.resume = mddi_resume,
@@ -432,11 +432,11 @@ static int mddi_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	mfd->mddi_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
-	mfd->mddi_early_suspend.suspend = mddi_early_suspend;
-	mfd->mddi_early_suspend.resume = mddi_early_resume;
-	register_early_suspend(&mfd->mddi_early_suspend);
+#ifdef CONFIG_HAS_POWER_SUSPEND
+//	mfd->mddi_power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
+	mfd->mddi_power_suspend.suspend = mddi_power_suspend;
+	mfd->mddi_power_suspend.resume = mddi_power_resume;
+	register_power_suspend(&mfd->mddi_power_suspend);
 #endif
 
 	return 0;
@@ -522,21 +522,21 @@ static int mddi_resume(struct platform_device *pdev)
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void mddi_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWER_SUSPEND
+static void mddi_power_suspend(struct power_suspend *h)
 {
 	pm_message_t state;
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
-							mddi_early_suspend);
+							mddi_power_suspend);
 
 	state.event = PM_EVENT_SUSPEND;
 	mddi_suspend(mfd->pdev, state);
 }
 
-static void mddi_early_resume(struct early_suspend *h)
+static void mddi_power_resume(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
-							mddi_early_suspend);
+							mddi_power_suspend);
 	mddi_resume(mfd->pdev);
 }
 #endif

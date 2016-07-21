@@ -46,9 +46,9 @@ static int pdev_list_cnt;
 static int mddi_ext_suspend(struct platform_device *pdev, pm_message_t state);
 static int mddi_ext_resume(struct platform_device *pdev);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void mddi_ext_early_suspend(struct early_suspend *h);
-static void mddi_ext_early_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void mddi_ext_power_suspend(struct power_suspend *h);
+static void mddi_ext_power_resume(struct power_suspend *h);
 #endif
 
 static int mddi_ext_runtime_suspend(struct device *dev)
@@ -77,7 +77,7 @@ static struct dev_pm_ops mddi_ext_dev_pm_ops = {
 static struct platform_driver mddi_ext_driver = {
 	.probe = mddi_ext_probe,
 	.remove = mddi_ext_remove,
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 #ifdef CONFIG_PM
 	.suspend = mddi_ext_suspend,
 	.resume = mddi_ext_resume,
@@ -255,11 +255,11 @@ static int mddi_ext_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	mfd->mddi_ext_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
-	mfd->mddi_ext_early_suspend.suspend = mddi_ext_early_suspend;
-	mfd->mddi_ext_early_suspend.resume = mddi_ext_early_resume;
-	register_early_suspend(&mfd->mddi_ext_early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	mfd->mddi_ext_power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
+	mfd->mddi_ext_power_suspend.suspend = mddi_ext_power_suspend;
+	mfd->mddi_ext_power_suspend.resume = mddi_ext_power_resume;
+	register_power_suspend(&mfd->mddi_ext_power_suspend);
 #endif
 
 	return 0;
@@ -306,21 +306,21 @@ static int mddi_ext_resume(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void mddi_ext_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void mddi_ext_power_suspend(struct power_suspend *h)
 {
 	pm_message_t state;
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
-							mddi_ext_early_suspend);
+							mddi_ext_power_suspend);
 
 	state.event = PM_EVENT_SUSPEND;
 	mddi_ext_suspend(mfd->pdev, state);
 }
 
-static void mddi_ext_early_resume(struct early_suspend *h)
+static void mddi_ext_power_resume(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
-							mddi_ext_early_suspend);
+							mddi_ext_power_suspend);
 	mddi_ext_resume(mfd->pdev);
 }
 #endif

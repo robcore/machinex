@@ -49,7 +49,7 @@ Copyright (C) 2011, Samsung Electronics. All rights reserved.
 
 #include <linux/delay.h>
 #include <linux/workqueue.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include "msm_fb.h"
 #include <linux/time.h>
 #include <linux/timer.h>
@@ -293,7 +293,7 @@ static ssize_t cabc_store(struct device *dev,
 	}
 
 	cabc_onoff_ctrl(value);
-	
+
 	return size;
 }
 
@@ -393,7 +393,7 @@ static ssize_t accessibility_store(struct device *dev,
 	else {
 		if (value >= ACCESSIBILITY_MAX)
 			value = ACCESSIBILITY_OFF;
-		
+
 		if (value == COLOR_BLIND) {
 			if (ret != 10)
 				return -EINVAL;
@@ -412,7 +412,7 @@ static ssize_t accessibility_store(struct device *dev,
 			if (ret != 0) {
 				pr_err("[CMC624:ERROR] ERROR : set blind value failed.\n");
 			}
-			
+
 			cmc624_state.blind = value;
 			cmc624_state.negative = ACCESSIBILITY_OFF;
 		} else if(value == NEGATIVE) {
@@ -428,7 +428,7 @@ static ssize_t accessibility_store(struct device *dev,
 			if (ret != 0) {
 				pr_err("[CMC624:ERROR] ERROR : set blind value failed.\n");
 			}
-			
+
 			ret = apply_negative_tune_value(value, cmc624_state.cabc_mode);
 			if (ret != 0) {
 				pr_err("[CMC624:ERROR] ERROR : set negative value failed.\n");

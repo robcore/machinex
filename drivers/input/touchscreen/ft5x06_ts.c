@@ -27,11 +27,12 @@
 #include <linux/regulator/consumer.h>
 #include <linux/input/ft5x06_ts.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-/* Early-suspend level */
-#define FT5X06_SUSPEND_LEVEL 1
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
+/* Power-suspend level
+#define FT5X06_SUSPEND_LEVEL 1
+ */
 
 #define CFG_MAX_TOUCH_POINTS	5
 
@@ -84,8 +85,8 @@ struct ft5x06_ts_data {
 	const struct ft5x06_ts_platform_data *pdata;
 	struct regulator *vdd;
 	struct regulator *vcc_i2c;
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 };
 
@@ -370,28 +371,28 @@ static int ft5x06_ts_resume(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void ft5x06_ts_early_suspend(struct early_suspend *handler)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void ft5x06_ts_power_suspend(struct power_suspend *handler)
 {
 	struct ft5x06_ts_data *data = container_of(handler,
 						   struct ft5x06_ts_data,
-						   early_suspend);
+						   power_suspend);
 
 	ft5x06_ts_suspend(&data->client->dev);
 }
 
-static void ft5x06_ts_late_resume(struct early_suspend *handler)
+static void ft5x06_ts_power_resume(struct power_suspend *handler)
 {
 	struct ft5x06_ts_data *data = container_of(handler,
 						   struct ft5x06_ts_data,
-						   early_suspend);
+						   power_suspend);
 
 	ft5x06_ts_resume(&data->client->dev);
 }
 #endif
 
 static const struct dev_pm_ops ft5x06_ts_pm_ops = {
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	.suspend = ft5x06_ts_suspend,
 	.resume = ft5x06_ts_resume,
 #endif
@@ -552,12 +553,12 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		goto free_reset_gpio;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN +
-	    FT5X06_SUSPEND_LEVEL;
-	data->early_suspend.suspend = ft5x06_ts_early_suspend;
-	data->early_suspend.resume = ft5x06_ts_late_resume;
-	register_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
+//	    FT5X06_SUSPEND_LEVEL;
+	data->power_suspend.suspend = ft5x06_ts_power_suspend;
+	data->power_suspend.resume = ft5x06_ts_power_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	return 0;
@@ -592,8 +593,8 @@ static int __devexit ft5x06_ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);
 

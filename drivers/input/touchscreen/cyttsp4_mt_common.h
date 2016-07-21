@@ -30,8 +30,8 @@
 #include <linux/cyttsp4_bus.h>
 
 #include <linux/delay.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <linux/gpio.h>
 #include <linux/input.h>
@@ -73,8 +73,8 @@ struct cyttsp4_mt_data {
 	struct input_dev *input;
 	struct cyttsp4_mt_function mt_function;
 	struct mutex report_lock;	/* Used to serialize reports */
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend es;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend es;
 	bool is_suspended;
 #endif
 #if defined(TSP_BOOSTER)

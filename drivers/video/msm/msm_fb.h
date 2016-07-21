@@ -40,8 +40,8 @@
 #include <linux/switch.h>
 #include <linux/msm_mdp.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 #include "msm_fb_panel.h"
@@ -164,11 +164,11 @@ struct msm_fb_data_type {
 	struct dentry *sub_dir;
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend power_suspend;
 #ifdef CONFIG_FB_MSM_MDDI
-	struct early_suspend mddi_early_suspend;
-	struct early_suspend mddi_ext_early_suspend;
+	struct power_suspend mddi_power_suspend;
+	struct power_suspend mddi_ext_power_suspend;
 #endif
 #endif
 	u32 mdp_fb_page_protection;
@@ -217,7 +217,7 @@ struct msm_fb_data_type {
 	boolean panel_driver_on;
 	int vsync_sysfs_created;
 	int resume_state;
-	void *copy_splash_buf;			
+	void *copy_splash_buf;
 	unsigned char *copy_splash_phys;
 	uint32 sec_mapped;
 	uint32 sec_active;

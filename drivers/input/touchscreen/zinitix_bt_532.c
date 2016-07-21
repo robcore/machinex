@@ -26,8 +26,8 @@
 #include <linux/miscdevice.h>
 #include <linux/interrupt.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #if defined(CONFIG_PM_RUNTIME)
 #include <linux/pm_runtime.h>
@@ -444,8 +444,8 @@ struct bt532_ts_info {
 	struct timer_list		esd_timeout_tmr;
 	struct timer_list		*p_esd_timeout_tmr;
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend		early_suspend;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend		power_suspend;
 #endif
 	struct semaphore		raw_data_lock;
 	u16				touch_mode;
@@ -599,9 +599,9 @@ static inline s32 read_firmware_data(struct i2c_client *client,
 	return length;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void bt532_ts_early_suspend(struct early_suspend *h);
-static void bt532_ts_late_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void bt532_ts_power_suspend(struct power_suspend *h);
+static void bt532_ts_power_resume(struct power_suspend *h);
 #endif
 
 static bool bt532_power_control(struct bt532_ts_info *info, u8 ctl);
@@ -1876,8 +1876,8 @@ out:
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void bt532_ts_late_resume(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void bt532_ts_power_resume(struct power_suspend *h)
 {
 	struct bt532_ts_info *info = misc_info;
 
@@ -1899,7 +1899,7 @@ static void bt532_ts_late_resume(struct early_suspend *h)
 	bt532_power_control(info, POWER_ON_SEQUENCE);
 #endif
 	if (mini_init_touch(info) == false)
-		goto fail_late_resume;
+		goto fail_power_resume;
 
 	if (info->ta_status == 2)
 		zinitix_ta_cb(charger_callbacks, 0);
@@ -1909,20 +1909,20 @@ static void bt532_ts_late_resume(struct early_suspend *h)
 	enable_irq(info->irq);
 	info->work_state = NOTHING;
 	up(&info->work_lock);
-	zinitix_printk("late resume--\n");
+	zinitix_printk("power resume--\n");
 	return;
-fail_late_resume:
-	zinitix_printk("failed to late resume\n");
+fail_power_resume:
+	zinitix_printk("failed to power resume\n");
 	enable_irq(info->irq);
 	info->work_state = NOTHING;
 	up(&info->work_lock);
 	return;
 }
 
-static void bt532_ts_early_suspend(struct early_suspend *h)
+static void bt532_ts_power_suspend(struct power_suspend *h)
 {
 	struct bt532_ts_info *info = misc_info;
-	/*info = container_of(h, struct bt532_ts_info, early_suspend);*/
+	/*info = container_of(h, struct bt532_ts_info, power_suspend);*/
 
 	if (info == NULL)
 		return;
@@ -1961,13 +1961,13 @@ static void bt532_ts_early_suspend(struct early_suspend *h)
 #else
 	bt532_power_control(info, POWER_OFF);
 #endif
-	zinitix_printk("early suspend--\n");
+	zinitix_printk("power_resume suspend--\n");
 	up(&info->work_lock);
 	return;
 }
-#endif	/* CONFIG_HAS_EARLYSUSPEND */
+#endif	/* CONFIG_HAS_POWERSUSPEND */
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int bt532_ts_resume(struct device *dev)
 {
 	struct bt532_ts_info *info = dev_get_drvdata(dev);
@@ -1984,7 +1984,7 @@ static int bt532_ts_resume(struct device *dev)
 
 	bt532_power_control(info, POWER_ON_SEQUENCE);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 	info->work_state = RESUME;
 #else
 	enable_irq(info->irq);
@@ -2007,7 +2007,7 @@ static int bt532_ts_suspend(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct bt532_ts_info *info = i2c_get_clientdata(client);
 
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	disable_irq(info->irq);
 #endif
 #if ESD_TIMER_INTERVAL
@@ -2019,13 +2019,13 @@ static int bt532_ts_suspend(struct device *dev)
 		dev_err(&client->dev, "%s: Invalid work proceedure (%d)\n",
 			__func__, info->work_state);
 		up(&info->work_lock);
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 		enable_irq(info->irq);
 #endif
 		return 0;
 	}
 
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	clear_report_data(info);
 
 #if ESD_TIMER_INTERVAL
@@ -3640,11 +3640,11 @@ static int bt532_ts_probe(struct i2c_client *client,
 		goto err_request_irq;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	info->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	info->early_suspend.suspend = bt532_ts_early_suspend;
-	info->early_suspend.resume = bt532_ts_late_resume;
-	register_early_suspend(&info->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	info->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	info->power_suspend.suspend = bt532_ts_power_suspend;
+	info->power_suspend.resume = bt532_ts_power_resume;
+	register_power_suspend(&info->power_suspend);
 #endif
 
 #if defined(CONFIG_PM_RUNTIME)
@@ -3670,7 +3670,7 @@ static int bt532_ts_probe(struct i2c_client *client,
 #endif
 
 #if ESD_TIMER_INTERVAL
-	
+
 	INIT_WORK(&info->tmr_work, ts_tmr_work);
 	info->esd_tmr_workqueue =
 		create_singlethread_workqueue("esd_tmr_workqueue");
@@ -3731,8 +3731,8 @@ static int bt532_ts_remove(struct i2c_client *client)
 
 	misc_deregister(&touch_misc_device);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&info->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&info->power_suspend);
 #endif
 
 	if (gpio_is_valid(pdata->gpio_int) != 0)
@@ -3751,7 +3751,7 @@ static struct i2c_device_id bt532_idtable[] = {
 	{ }
 };
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static const struct dev_pm_ops bt532_ts_pm_ops = {
 #if defined(CONFIG_PM_RUNTIME)
 	SET_RUNTIME_PM_OPS(bt532_ts_suspend, bt532_ts_resume, NULL)
@@ -3768,7 +3768,7 @@ static struct i2c_driver bt532_ts_driver = {
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= ZINITIX_NAME,
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 		.pm	= &bt532_ts_pm_ops,
 #endif
 	},

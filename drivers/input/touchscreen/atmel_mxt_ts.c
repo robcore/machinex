@@ -27,11 +27,12 @@
 #include <linux/regulator/consumer.h>
 #include <linux/string.h>
 #include <linux/of_gpio.h>
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
-/* Early-suspend level */
-#define MXT_SUSPEND_LEVEL 1
+#if defined(CONFIG_HAS_POWERSUSPEND)
+#include <linux/powersuspend.h>
 #endif
+/* Early-suspend level
+#define MXT_SUSPEND_LEVEL 1
+*/
 
 /* Family ID */
 #define MXT224_ID	0x80
@@ -344,8 +345,8 @@ struct mxt_data {
 	struct regulator *vcc_ana;
 	struct regulator *vcc_dig;
 	struct regulator *vcc_i2c;
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	struct early_suspend early_suspend;
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	struct power_suspend power_suspend;
 #endif
 
 	u8 t7_data[T7_DATA_SIZE];
@@ -2243,24 +2244,24 @@ static int mxt_resume(struct device *dev)
 	return 0;
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void mxt_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void mxt_power_suspend(struct power_suspend *h)
 {
-	struct mxt_data *data = container_of(h, struct mxt_data, early_suspend);
+	struct mxt_data *data = container_of(h, struct mxt_data, power_suspend);
 
 	mxt_suspend(&data->client->dev);
 }
 
-static void mxt_late_resume(struct early_suspend *h)
+static void mxt_power_resume(struct power_suspend *h)
 {
-	struct mxt_data *data = container_of(h, struct mxt_data, early_suspend);
+	struct mxt_data *data = container_of(h, struct mxt_data, power_suspend);
 
 	mxt_resume(&data->client->dev);
 }
 #endif
 
 static const struct dev_pm_ops mxt_pm_ops = {
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	.suspend	= mxt_suspend,
 	.resume		= mxt_resume,
 #endif
@@ -2697,12 +2698,12 @@ static int __devinit mxt_probe(struct i2c_client *client,
 	if (error)
 		goto err_unregister_device;
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN +
-						MXT_SUSPEND_LEVEL;
-	data->early_suspend.suspend = mxt_early_suspend;
-	data->early_suspend.resume = mxt_late_resume;
-	register_early_suspend(&data->early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+//	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
+//						MXT_SUSPEND_LEVEL;
+	data->power_suspend.suspend = mxt_power_suspend;
+	data->power_suspend.resume = mxt_power_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	mxt_debugfs_init(data);
@@ -2745,8 +2746,8 @@ static int __devexit mxt_remove(struct i2c_client *client)
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	free_irq(data->irq, data);
 	input_unregister_device(data->input_dev);
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	unregister_early_suspend(&data->early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	unregister_power_suspend(&data->power_suspend);
 #endif
 
 	if (data->pdata->power_on)

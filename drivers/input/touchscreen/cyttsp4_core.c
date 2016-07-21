@@ -47,8 +47,8 @@
 
 #include <linux/cyttsp4_core.h>
 #include <linux/cyttsp4_regs.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #define CY_CORE_MODE_CHANGE_TIMEOUT		1000
 #define CY_CORE_RESET_AND_WAIT_TIMEOUT		500
@@ -207,8 +207,8 @@ struct cyttsp4_core_data {
 	wait_queue_head_t sleep_q;
 	int irq;
 
-	#if defined(CONFIG_HAS_EARLYSUSPEND)
-	struct early_suspend early_suspend;
+	#if defined(CONFIG_HAS_POWERSUSPEND)
+	struct power_suspend power_suspend;
 	#endif
 	struct workqueue_struct *startup_work_q;
 	struct work_struct startup_work;
@@ -383,9 +383,9 @@ struct device *sec_touchkey;
 static u16 home_sensitivity=0;
 /*static u16 back_sensitivity=0; FIX BUILD ERROR CANE3G*/
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void cyttsp4_ts_early_suspend(struct early_suspend *h);
-static void cyttsp4_ts_late_resume(struct early_suspend *h);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void cyttsp4_ts_power_suspend(struct power_suspend *h);
+static void cyttsp4_ts_power_resume(struct power_suspend *h);
 #endif
 
 static int cyttsp4_si_get_samsung_data(struct cyttsp4_core_data *cd);
@@ -3310,7 +3310,7 @@ static void cyttsp4_watchdog_timer(unsigned long handle)
 		return;
 
 	dev_vdbg(cd->dev, "%s: Timer triggered\n", __func__);
-	
+
 	if (!work_pending(&cd->watchdog_work))
 		schedule_work(&cd->watchdog_work);
 
@@ -4265,12 +4265,12 @@ static void cyttsp4_free_si_ptrs(struct cyttsp4_core_data *cd)
 	kfree(si->btn_rec_data);
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void cyttsp4_ts_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void cyttsp4_ts_power_suspend(struct power_suspend *h)
 {
 	int rc;
 	struct cyttsp4_core_data *cd;
-	cd = container_of(h, struct cyttsp4_core_data, early_suspend);
+	cd = container_of(h, struct cyttsp4_core_data, power_suspend);
 
 	dev_dbg(cd->dev, "%s\n", __func__);
 
@@ -4279,11 +4279,11 @@ static void cyttsp4_ts_early_suspend(struct early_suspend *h)
 		dev_err(cd->dev, "%s: Error on sleep, %d\n", __func__, rc);
 	}
 }
-static void cyttsp4_ts_late_resume(struct early_suspend *h)
+static void cyttsp4_ts_power_resume(struct power_suspend *h)
 {
 	int rc;
 	struct cyttsp4_core_data *cd;
-	cd = container_of(h, struct cyttsp4_core_data, early_suspend);
+	cd = container_of(h, struct cyttsp4_core_data, power_suspend);
 
 	dev_dbg(cd->dev, "%s\n", __func__);
 
@@ -4329,7 +4329,7 @@ static int cyttsp4_core_resume(struct device *dev)
 #endif
 
 static const struct dev_pm_ops cyttsp4_core_pm_ops = {
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	SET_SYSTEM_SLEEP_PM_OPS(cyttsp4_core_suspend, cyttsp4_core_resume)
 #endif
 	SET_RUNTIME_PM_OPS(cyttsp4_core_suspend, cyttsp4_core_resume, NULL)
@@ -4720,12 +4720,12 @@ static int cyttsp4_core_probe(struct cyttsp4_core *core)
 		goto error_startup;
 	}
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	printk(KERN_ERR "%s: register earlysuspend.\n", __func__);
-	cd->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	cd->early_suspend.suspend = cyttsp4_ts_early_suspend;
-	cd->early_suspend.resume = cyttsp4_ts_late_resume;
-	register_early_suspend(&cd->early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	printk(KERN_ERR "%s: register powersuspend.\n", __func__);
+//	cd->power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	cd->power_suspend.suspend = cyttsp4_ts_power_suspend;
+	cd->power_suspend.resume = cyttsp4_ts_power_resume;
+	register_power_suspend(&cd->power_suspend);
 #endif
 
 #ifdef SEC_TSP_FACTORY_TEST
@@ -4840,8 +4840,8 @@ static int cyttsp4_core_release(struct cyttsp4_core *core)
 
 	remove_sysfs_interfaces(dev);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	unregister_early_suspend(&cd->early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	unregister_power_suspend(&cd->power_suspend);
 #endif
 	free_irq(cd->irq, cd);
 	if (cd->pdata->init)
