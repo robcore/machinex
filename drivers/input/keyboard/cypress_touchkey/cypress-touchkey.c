@@ -1061,8 +1061,8 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 #endif
 
 #ifdef CONFIG_HAS_POWERSUSPEND
-/*		info->early_suspend.level =
-				EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+/*		info->power_suspend.level =
+				POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 */
 		info->power_suspend.suspend = cypress_touchkey_power_suspend;
 		info->power_suspend.resume = cypress_touchkey_power_resume;
