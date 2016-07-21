@@ -16,7 +16,6 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/hrtimer.h>
-#include <linux/powersuspend.h>
 
 #include "power.h"
 #ifdef CONFIG_SEC_DVFS
@@ -365,7 +364,7 @@ static inline void pm_print_times_init(void)
 {
 	pm_print_times_enabled = !!initcall_debug;
 }
-#else /* !CONFIG_PM_SLEEP_DEBUG */
+#else /* !CONFIG_PP_SLEEP_DEBUG */
 static inline void pm_print_times_init(void) {}
 #endif /* CONFIG_PM_SLEEP_DEBUG */
 
@@ -406,7 +405,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 static suspend_state_t decode_state(const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_EARLYSUSPEND
 	suspend_state_t state = PM_SUSPEND_ON;
 #else
 	suspend_state_t state = PM_SUSPEND_MIN;

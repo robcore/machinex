@@ -150,12 +150,6 @@ static inline void msm_spm_drv_set_vctl2(struct msm_spm_driver_data *dev,
 {
 	unsigned int pmic_data = 0;
 
-	/**
-	 * VCTL_PORT has to be 0, for PMIC_STS register to be updated.
-	 * Ensure that vctl_port is always set to 0.
-	 */
-	WARN_ON(dev->vctl_port);
-
 	pmic_data |= vlevel;
 	pmic_data |= (dev->vctl_port & 0x7) << 16;
 
