@@ -21,8 +21,8 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <linux/i2c/synaptics_rmi.h>
 #include "synaptics_i2c_rmi.h"

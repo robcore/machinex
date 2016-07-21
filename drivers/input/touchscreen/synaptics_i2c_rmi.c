@@ -151,7 +151,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 
 static void synaptics_rmi4_power_suspend(struct power_suspend *h);
 
-static void synaptics_rmi4_late_resume(struct power_suspend *h);
+static void synaptics_rmi4_power_resume(struct power_suspend *h);
 
 #else
 
@@ -3763,10 +3763,10 @@ static void synaptics_init_power_on(struct work_struct *work)
 			schedule_delayed_work(&rmi4_data->work_init_power_on,
 					msecs_to_jiffies(1000));
 	} else {
-		synaptics_rmi4_late_resume(&rmi4_data->power_suspend);
+		synaptics_rmi4_power_resume(&rmi4_data->power_suspend);
 	}
 #else
-	synaptics_rmi4_late_resume(&rmi4_data->power_suspend);
+	synaptics_rmi4_power_resume(&rmi4_data->power_suspend);
 #endif
 }
 #endif
@@ -3781,7 +3781,7 @@ static void synaptics_init_power_on(struct work_struct *work)
  * as an input driver, turns on the power to the sensor, queries the
  * sensor for its supported Functions and characteristics, registers
  * the driver to the input subsystem, sets up the interrupt, handles
- * the registration of the power_suspend and late_resume functions,
+ * the registration of the power_suspend and power_resume functions,
  * and creates a work queue for detection of other expansion Function
  * modules.
  */
@@ -3925,7 +3925,7 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 #ifdef CONFIG_POWERSUSPEND
 //	rmi4_data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN - 1;
 	rmi4_data->power_suspend.suspend = synaptics_rmi4_power_suspend;
-	rmi4_data->power_suspend.resume = synaptics_rmi4_late_resume;
+	rmi4_data->power_suspend.resume = synaptics_rmi4_power_resume;
 	register_power_suspend(&rmi4_data->power_suspend);
 #endif
 
@@ -4071,7 +4071,7 @@ static void synaptics_rmi4_sensor_sleep(struct synaptics_rmi4_data *rmi4_data)
  /**
  * synaptics_rmi4_sensor_wake()
  *
- * Called by synaptics_rmi4_resume() and synaptics_rmi4_late_resume().
+ * Called by synaptics_rmi4_resume() and synaptics_rmi4_power_resume().
  *
  * This function wakes the sensor from sleep.
  */
@@ -4230,7 +4230,7 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
 }
 
  /**
- * synaptics_rmi4_late_resume()
+ * synaptics_rmi4_power_resume()
  *
  * Called by the kernel during the late resume phase when the system
  * wakes up from suspend.
@@ -4238,7 +4238,7 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
  * This function goes through the sensor wake process if the system wakes
  * up from power suspend (without going into suspend).
  */
-static void synaptics_rmi4_late_resume(struct power_suspend *h)
+static void synaptics_rmi4_power_resume(struct power_suspend *h)
 {
 	struct synaptics_rmi4_data *rmi4_data =
 			container_of(h, struct synaptics_rmi4_data,

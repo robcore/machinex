@@ -36,7 +36,7 @@
 #include <linux/jiffies.h>
 #include <linux/syscalls.h>
 #include <linux/uaccess.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/input/lge_touch_core.h>
 #include <linux/input/touch_synaptics.h>
 

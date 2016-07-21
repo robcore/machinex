@@ -52,8 +52,8 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/workqueue.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include "bmp18x.h"
 
@@ -96,8 +96,8 @@ struct bmp18x_data {
 	u32	temp_measurement_period;
 	u32	last_temp_measurement;
 	s32	b6; /* calculated temperature correction coefficient */
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 	struct input_dev	*input;
 	struct delayed_work work;
@@ -105,9 +105,9 @@ struct bmp18x_data {
 	u32					enable;
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void bmp18x_early_suspend(struct early_suspend *h);
-static void bmp18x_late_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void bmp18x_power_suspend(struct power_suspend *h);
+static void bmp18x_power_resume(struct power_suspend *h);
 #endif
 
 static s32 bmp18x_read_calibration_data(struct bmp18x_data *data)
@@ -622,11 +622,12 @@ __devinit int bmp18x_probe(struct device *dev, struct bmp18x_data_bus *data_bus)
 	data->delay  = BMP_DELAY_DEFAULT;
 	data->enable = 0;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	data->early_suspend.suspend = bmp18x_early_suspend;
-	data->early_suspend.resume = bmp18x_late_resume;
-	register_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+/*	data->power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+*/
+	data->power_suspend.suspend = bmp18x_power_suspend;
+	data->power_suspend.resume = bmp18x_power_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	dev_info(dev, "Succesfully initialized bmp18x!\n");
@@ -646,8 +647,8 @@ EXPORT_SYMBOL(bmp18x_probe);
 int bmp18x_remove(struct device *dev)
 {
 	struct bmp18x_data *data = dev_get_drvdata(dev);
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 	sysfs_remove_group(&dev->kobj, &bmp18x_attr_group);
 	kfree(data);
@@ -680,21 +681,21 @@ int bmp18x_enable(struct device *dev)
 EXPORT_SYMBOL(bmp18x_enable);
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void bmp18x_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void bmp18x_power_suspend(struct power_suspend *h)
 {
 	struct bmp18x_data *data =
-		container_of(h, struct bmp18x_data, early_suspend);
+		container_of(h, struct bmp18x_data, power_suspend);
 	if (data->enable) {
 		cancel_delayed_work_sync(&data->work);
 		(void) bmp18x_disable(data->dev);
 	}
 }
 
-static void bmp18x_late_resume(struct early_suspend *h)
+static void bmp18x_power_resume(struct power_suspend *h)
 {
 	struct bmp18x_data *data =
-		container_of(h, struct bmp18x_data, early_suspend);
+		container_of(h, struct bmp18x_data, power_suspend);
 
 	if (data->enable) {
 		(void) bmp18x_enable(data->dev);
