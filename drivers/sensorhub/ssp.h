@@ -36,8 +36,8 @@
 #include <linux/timer.h>
 #include <linux/alarmtimer.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#undef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
+#undef CONFIG_HAS_POWERSUSPEND
 #endif
 
 #ifdef CONFIG_SENSORS_SSP_SENSORHUB

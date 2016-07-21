@@ -18,7 +18,7 @@
 #define DEBUG  0
 
 #include <linux/slab.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/err.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -246,7 +246,7 @@ struct msm_battery_info {
 
 	u32 vbatt_modify_reply_avail;
 
-	struct early_suspend early_suspend;
+	struct power_suspend power_suspend;
 };
 
 static struct msm_battery_info msm_batt_info = {
@@ -652,7 +652,7 @@ static void msm_batt_update_psy_status(void)
 	}
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 struct batt_modify_client_req {
 
 	u32 client_handle;
@@ -753,7 +753,7 @@ static int msm_batt_modify_client(u32 client_handle, u32 desired_batt_voltage,
 	return 0;
 }
 
-void msm_batt_early_suspend(struct early_suspend *h)
+void msm_batt_power_suspend(struct power_suspend *h)
 {
 	int rc;
 
@@ -779,7 +779,7 @@ void msm_batt_early_suspend(struct early_suspend *h)
 	pr_debug("%s: exit\n", __func__);
 }
 
-void msm_batt_late_resume(struct early_suspend *h)
+void msm_batt_power_resume(struct power_suspend *h)
 {
 	int rc;
 
@@ -1169,9 +1169,9 @@ static int msm_batt_cleanup(void)
 		}
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	if (msm_batt_info.early_suspend.suspend == msm_batt_early_suspend)
-		unregister_early_suspend(&msm_batt_info.early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	if (msm_batt_info.power_suspend.suspend == msm_batt_power_suspend)
+		unregister_power_suspend(&msm_batt_info.power_suspend);
 #endif
 #endif
 	return rc;
@@ -1424,11 +1424,11 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	msm_batt_info.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	msm_batt_info.early_suspend.suspend = msm_batt_early_suspend;
-	msm_batt_info.early_suspend.resume = msm_batt_late_resume;
-	register_early_suspend(&msm_batt_info.early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	msm_batt_info.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
+	msm_batt_info.power_suspend.suspend = msm_batt_power_suspend;
+	msm_batt_info.power_suspend.resume = msm_batt_power_resume;
+	register_power_suspend(&msm_batt_info.power_suspend);
 #endif
 	msm_batt_update_psy_status();
 

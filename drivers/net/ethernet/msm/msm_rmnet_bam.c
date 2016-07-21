@@ -31,8 +31,8 @@
 #include <linux/platform_device.h>
 #include <net/pkt_sched.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 #include <mach/bam_dmux.h>
@@ -90,9 +90,9 @@ struct rmnet_private {
 #ifdef CONFIG_MSM_RMNET_DEBUG
 static unsigned long timeout_us;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 /*
- * If early suspend is enabled then we specify two timeout values,
+ * If power suspend is enabled then we specify two timeout values,
  * screen on (default), and screen is off.
  */
 static unsigned long timeout_suspend_us;
@@ -118,7 +118,7 @@ static ssize_t timeout_suspend_show(struct device *d,
 static DEVICE_ATTR(timeout_suspend, 0664, timeout_suspend_show,
 		   timeout_suspend_store);
 
-static void rmnet_early_suspend(struct early_suspend *handler)
+static void rmnet_power_suspend(struct power_suspend *handler)
 {
 	if (rmnet0) {
 		struct rmnet_private *p = netdev_priv(to_net_dev(rmnet0));
@@ -126,7 +126,7 @@ static void rmnet_early_suspend(struct early_suspend *handler)
 	}
 }
 
-static void rmnet_late_resume(struct early_suspend *handler)
+static void rmnet_power_resume(struct power_suspend *handler)
 {
 	if (rmnet0) {
 		struct rmnet_private *p = netdev_priv(to_net_dev(rmnet0));
@@ -134,14 +134,14 @@ static void rmnet_late_resume(struct early_suspend *handler)
 	}
 }
 
-static struct early_suspend rmnet_power_suspend = {
-	.suspend = rmnet_early_suspend,
-	.resume = rmnet_late_resume,
+static struct power_suspend rmnet_power_suspend = {
+	.suspend = rmnet_power_suspend,
+	.resume = rmnet_power_resume,
 };
 
 static int __init rmnet_late_init(void)
 {
-	register_early_suspend(&rmnet_power_suspend);
+	register_power_suspend(&rmnet_power_suspend);
 	return 0;
 }
 
@@ -189,11 +189,11 @@ DEVICE_ATTR(wakeups_rcv, 0444, wakeups_rcv_show, NULL);
 static ssize_t timeout_store(struct device *d, struct device_attribute *attr,
 			     const char *buf, size_t n)
 {
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	struct rmnet_private *p = netdev_priv(to_net_dev(d));
 	p->timeout_us = timeout_us = strict_strtoul(buf, NULL, 10);
 #else
-/* If using early suspend/resume hooks do not write the value on store. */
+/* If using power suspend/resume hooks do not write the value on store. */
 	timeout_us = strict_strtoul(buf, NULL, 10);
 #endif
 	return n;
@@ -812,7 +812,7 @@ static int bam_rmnet_rev_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_MSM_RMNET_DEBUG
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 static int rmnet_debug_init_timeout_suspend(struct net_device *dev)
 {
 	struct device *d;
@@ -866,7 +866,7 @@ static int __init rmnet_init(void)
 
 #ifdef CONFIG_MSM_RMNET_DEBUG
 	timeout_us = 0;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 	timeout_suspend_us = 0;
 #endif
 #endif
@@ -910,7 +910,7 @@ static int __init rmnet_init(void)
 			continue;
 		if (device_create_file(d, &dev_attr_wakeups_rcv))
 			continue;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 		if (device_create_file(d, &dev_attr_timeout_suspend))
 			continue;
 

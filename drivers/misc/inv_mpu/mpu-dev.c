@@ -62,8 +62,8 @@
 #endif
 #include <linux/akm8975.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 #define MAG_VENDOR	"AKM"
@@ -71,7 +71,7 @@
 #define MPU_VENDOR	"INVENSENSE"
 #define MPU_PART_ID	"MPU-6050"
 
-#define MPU_EARLY_SUSPEND_IN_DRIVER 1
+#define MPU_POWER_SUSPEND_IN_DRIVER 1
 
 #define CALIBRATION_FILE_PATH	"/efs/calibration_data"
 #define CALIBRATION_GYRO_FILE_PATH	"/efs/gyro_cal_data"
@@ -113,8 +113,8 @@ struct mpu_private_data {
 	struct hrtimer activate_timer;
 	int activate_timeout;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 	int gyro_bias[3];
 };
@@ -1083,8 +1083,8 @@ static long mpu_dev_ioctl(struct file *file,
 	return retval;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-void mpu_dev_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+void mpu_dev_power_suspend(struct power_suspend *h)
 {
 	struct mpu_private_data *mpu =
 	    (struct mpu_private_data *)i2c_get_clientdata(this_client);
@@ -1116,7 +1116,7 @@ void mpu_dev_early_suspend(struct early_suspend *h)
 	mutex_unlock(&mpu->mutex);
 }
 
-void mpu_dev_early_resume(struct early_suspend *h)
+void mpu_dev_power_resume(struct power_suspend *h)
 {
 	struct mpu_private_data *mpu =
 	    (struct mpu_private_data *)i2c_get_clientdata(this_client);
@@ -1870,7 +1870,7 @@ static ssize_t accel_reactive_alert_show(struct device *dev,
 	    (struct mpu_private_data *) i2c_get_clientdata(this_client);
 	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
 
-	if (mldl_cfg->inv_mpu_state->use_accel_reactive && 
+	if (mldl_cfg->inv_mpu_state->use_accel_reactive &&
 		!mldl_cfg->inv_mpu_state->accel_reactive)
 		return sprintf(buf, "%d\n", 1);
 	else
@@ -2555,11 +2555,11 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		goto out_gsensorcal_failed;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-		mpu->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
-		mpu->early_suspend.suspend = mpu_dev_early_suspend;
-		mpu->early_suspend.resume = mpu_dev_early_resume;
-		register_early_suspend(&mpu->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//		mpu->power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB + 1;
+		mpu->power_suspend.suspend = mpu_dev_power_suspend;
+		mpu->power_suspend.resume = mpu_dev_power_resume;
+		register_power_suspend(&mpu->power_suspend);
 #endif
 
 	return res;

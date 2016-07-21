@@ -7,8 +7,8 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/input.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <linux/regulator/consumer.h>
 #include <linux/sensors_core.h>
@@ -211,8 +211,8 @@ struct bma254_platform_data {
 };
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static struct early_suspend bma254_early_suspend_handler;
+#ifdef CONFIG_HAS_POWERSUSPEND
+static struct power_suspend bma254_power_suspend_handler;
 #endif
 
 static int accel_open_calibration(void);
@@ -971,8 +971,8 @@ static int bma254_probe(struct i2c_client *client,
 	}
 #endif
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&bma254_early_suspend_handler);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	register_power_suspend(&bma254_power_suspend_handler);
 #endif
 	ret = sensors_register(bma_device, NULL, bma254_attrs,
 		"accelerometer_sensor");
@@ -1027,8 +1027,8 @@ static int __devexit bma254_remove(struct i2c_client *client)
 #endif
 	pr_info("%s\n", __func__);
 	bma254_activate(0, 0, atomic_read(&delay));
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&bma254_early_suspend_handler);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&bma254_power_suspend_handler);
 #endif
 #ifdef CONFIG_BMA254_SMART_ALERT
 	wake_lock_destroy(&bma254->reactive_wake_lock);
@@ -1037,15 +1037,15 @@ static int __devexit bma254_remove(struct i2c_client *client)
 return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void bma254_early_suspend(struct early_suspend *handler)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void bma254_power_suspend(struct power_suspend *handler)
 {
 	pr_info("%s\n", __func__);
 
 	bma254_suspend(this_client, PMSG_SUSPEND);
 }
 
-static void bma254_early_resume(struct early_suspend *handler)
+static void bma254_power_resume(struct power_suspend *handler)
 {
 	pr_info("%s\n", __func__);
 
@@ -1069,10 +1069,10 @@ static struct i2c_driver bma254_driver = {
 	.resume = bma254_resume
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static struct early_suspend bma254_early_suspend_handler = {
-	.suspend = bma254_early_suspend,
-	.resume  = bma254_early_resume,
+#ifdef CONFIG_HAS_POWERSUSPEND
+static struct power_suspend bma254_power_suspend_handler = {
+	.suspend = bma254_power_suspend,
+	.resume  = bma254_power_resume,
 };
 #endif
 
