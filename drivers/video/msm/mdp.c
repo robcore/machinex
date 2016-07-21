@@ -215,7 +215,7 @@ uint32_t mdp_block2base(uint32_t block)
 		break;
 	case MDP_BLOCK_OVERLAY_0:
 		base = 0x10000;
-		break;drivers/video/msm/mdp.c
+		break;
 	case MDP_BLOCK_OVERLAY_1:
 		base = 0x18000;
 		break;
