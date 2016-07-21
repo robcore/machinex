@@ -494,7 +494,8 @@ static void msm_cpu_power_resume(struct power_suspend *h)
 }
 
 static struct power_suspend msm_cpu_power_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+/*	.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN,
+*/
 	.suspend = msm_cpu_power_suspend,
 	.resume = msm_cpu_power_resume,
 };

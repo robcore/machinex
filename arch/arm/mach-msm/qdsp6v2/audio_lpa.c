@@ -1362,7 +1362,7 @@ static int audio_open(struct inode *inode, struct file *file)
 		pr_err("%s: debugfs_create_file failed\n", __func__);
 #endif
 #ifdef CONFIG_HAS_POWERSUSPEND
-	audio->suspend_ctl.node.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
+//	audio->suspend_ctl.node.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
 	audio->suspend_ctl.node.resume = audlpa_resume;
 	audio->suspend_ctl.node.suspend = audlpa_suspend;
 	audio->suspend_ctl.audio = audio;

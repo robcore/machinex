@@ -27,6 +27,7 @@
 #include <linux/ftrace.h>
 #include <linux/rtc.h>
 #include <trace/events/power.h>
+#include <linux/powersuspend.h>
 
 #include "power.h"
 
@@ -37,7 +38,7 @@ static int suspendsync;
 #endif
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
-#ifdef CONFIG_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	[PM_SUSPEND_ON]	= { .label = "on", .state = PM_SUSPEND_FREEZE },
 #endif
 	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },

@@ -16,7 +16,7 @@
 //#define ISP_VERY_VERBOSE_DEBUG
 
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
+#include <linux/power.h>
 #include <linux/firmware.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
@@ -137,7 +137,7 @@ struct tc360_data {
 	struct input_dev		*input_dev;
 	char				phys[32];
 	struct tc360_platform_data	*pdata;
-	struct early_suspend		early_suspend;
+	struct power_suspend		power_suspend;
 	struct mutex			lock;
 	struct fw_image			*fw_img;
 	bool				enabled;
@@ -146,7 +146,7 @@ struct tc360_data {
 	u32				sda;
 	int				udelay;
 	int				num_key;
-	int				*keycodes;	
+	int				*keycodes;
 	/* variables for fw update*/
 	const struct firmware		*fw;
 	u8				cur_fw_path;
@@ -166,9 +166,9 @@ struct tc360_data {
 #endif
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void tc360_early_suspend(struct early_suspend *h);
-static void tc360_late_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void tc360_power_suspend(struct power_suspend *h);
+static void tc360_power_resume(struct power_suspend *h);
 #endif
 
 static irqreturn_t tc360_interrupt(int irq, void *dev_id)
@@ -191,7 +191,7 @@ static irqreturn_t tc360_interrupt(int irq, void *dev_id)
 	switch (key_index) {
 	case 0:
 		dev_err(&client->dev, "no button press interrupt(%#x)\n",
-			key_val);		
+			key_val);
 		break;
 
 	case 1 ... 2:
@@ -886,8 +886,8 @@ err:
 
 /* early suspend is not removed for debugging. */
 /*
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 */
 	data->fw_flash_state = STATE_FLASH_FAIL;
@@ -900,7 +900,7 @@ err:
 /* fw_wq (workqueue for firmware flash) will be destroyed in suspend function */
 /*	destroy_workqueue(data->fw_wq); */
 	input_unregister_device(data->input_dev);
-	input_free_device(data->input_dev);	
+	input_free_device(data->input_dev);
 /* data is not deallocated for debugging. */
 /*	kfree(data); */
 	dev_err(&client->dev, "fail to fw flash. driver is removed\n");
@@ -911,7 +911,7 @@ static int load_fw_built_in(struct tc360_data *data)
 	struct i2c_client *client = data->client;
 	int ret;
 	char *fw_name;
-	
+
 	fw_name = kasprintf(GFP_KERNEL, "%s/%s.fw",
 		TC360_FW_BUILTIN_PATH, TC360_FW_NAME);
 
@@ -1080,12 +1080,12 @@ static int tc360_flash_fw(struct tc360_data *data, u8 fw_path, bool force)
 	data->cur_fw_path = fw_path;
 	/* firmware version compare */
 	fw_ver = tc360_get_fw_ver(data);
-#if SUPPORT_MULTI_PCB	
+#if SUPPORT_MULTI_PCB
 	module_ver = tc360_get_module_ver(data);
 
 	if (module_ver >= 0 && module_ver != SUPPORT_MODULE_VER) {
 		ret = HAVE_LATEST_FW;
-	#if defined(SEC_FAC_TK)		
+	#if defined(SEC_FAC_TK)
 		data->fdata->fw_update_skip = 1;
 	#endif
 		dev_info(&client->dev, "IC module does not support fw update (%#x)\n", module_ver);
@@ -1095,18 +1095,18 @@ static int tc360_flash_fw(struct tc360_data *data, u8 fw_path, bool force)
 #endif
 	if (fw_ver >= data->fw_img->first_fw_ver && !force) {
 		ret = HAVE_LATEST_FW;
-	#if defined(SEC_FAC_TK)	
-		data->fdata->fw_update_skip = 1;		
+	#if defined(SEC_FAC_TK)
+		data->fdata->fw_update_skip = 1;
 	#endif
 		dev_info(&client->dev, "IC aleady have latest firmware (%#x)\n",
 			 fw_ver);
 		goto out;
 	}
-	
+
 	dev_info(&client->dev, "fw update to %#x (from %#x) (%s)\n",
 		 data->fw_img->first_fw_ver, fw_ver,
 		 (force) ? "force" : "ver mismatch");
-	#if defined(SEC_FAC_TK)	
+	#if defined(SEC_FAC_TK)
 	data->fdata->fw_update_skip = 0;
 	#endif
 	queue_work(data->fw_wq, &data->fw_work);
@@ -1630,7 +1630,7 @@ static void tc360_destroy_interface(struct tc360_data *data)
 
 static int __devinit tc360_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
-{ 	
+{
 	struct tc360_platform_data *pdata = client->dev.platform_data;
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct tc360_data *data;
@@ -1639,7 +1639,7 @@ static int __devinit tc360_probe(struct i2c_client *client,
 	int i;
 
 	printk(KERN_ERR "%s start\n", __func__);
-				
+
 	if (!pdata) {
 			dev_err(&client->dev, "Platform data is not proper\n");
 			return -EINVAL;
@@ -1694,7 +1694,7 @@ static int __devinit tc360_probe(struct i2c_client *client,
 #endif
 
 	data->pdata = client->dev.platform_data;
-	data->suspend_type = data->pdata->suspend_type;	
+	data->suspend_type = data->pdata->suspend_type;
 	data->scl = data->pdata->gpio_scl;
 	data->sda = data->pdata->gpio_sda;
 	data->udelay = data->pdata->udelay;
@@ -1784,11 +1784,11 @@ static int __devinit tc360_probe(struct i2c_client *client,
 		break;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	data->early_suspend.suspend = tc360_early_suspend;
-	data->early_suspend.resume = tc360_late_resume;
-	register_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	data->power_suspend.suspend = tc360_power_suspend;
+	data->power_suspend.resume = tc360_power_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	data->led_wq = create_singlethread_workqueue(client->name);
@@ -1844,8 +1844,8 @@ static int __devexit tc360_remove(struct i2c_client *client)
 {
 	struct tc360_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);
 	gpio_free(data->pdata->gpio_int);
@@ -1861,7 +1861,7 @@ static int __devexit tc360_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_POWERSUSPEND)
 static int tc360_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1912,7 +1912,7 @@ static int tc360_suspend(struct device *dev)
 		gpio_tlmm_config(GPIO_CFG(102, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), 1);
 	#endif
-		
+
 	} else if (data->suspend_type == TC360_SUSPEND_WITH_SLEEP_CMD) {
 		ret = i2c_smbus_write_byte_data(client, TC360_CMD,
 						TC360_CMD_SLEEP);
@@ -1960,7 +1960,7 @@ static int tc360_resume(struct device *dev)
 		gpio_tlmm_config(GPIO_CFG(102, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), 1);
 	#endif
-	
+
 		data->pdata->power(true);
 		msleep(TC360_POWERON_DELAY);
 	} else if (data->suspend_type == TC360_SUSPEND_WITH_SLEEP_CMD) {
@@ -1981,23 +1981,23 @@ out:
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void tc360_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+static void tc360_power_suspend(struct power_suspend *h)
 {
 	struct tc360_data *data;
-	data = container_of(h, struct tc360_data, early_suspend);
+	data = container_of(h, struct tc360_data, power_suspend);
 	tc360_suspend(&data->client->dev);
 }
 
-static void tc360_late_resume(struct early_suspend *h)
+static void tc360_power_resume(struct power_suspend *h)
 {
 	struct tc360_data *data;
-	data = container_of(h, struct tc360_data, early_suspend);
+	data = container_of(h, struct tc360_data, power_suspend);
 	tc360_resume(&data->client->dev);
 }
 #endif
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_POWERSUSPEND)
 static const struct dev_pm_ops tc360_pm_ops = {
 	.suspend	= tc360_suspend,
 	.resume		= tc360_resume,
@@ -2015,7 +2015,7 @@ static struct i2c_driver tc360_driver = {
 	.remove		= tc360_remove,
 	.driver = {
 		.name	= TC360_DEVICE,
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 		.pm	= &tc360_pm_ops,
 #endif
 	},
