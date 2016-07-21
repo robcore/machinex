@@ -1,3 +1,0 @@
-kernel/drivers/leds/led-class.ko
-kernel/drivers/leds/leds-an30259a.ko
-kernel/drivers/leds/ledtrig-heartbeat.ko

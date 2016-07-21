@@ -1,4 +1,0 @@
-kernel/drivers/misc/smsc_hub.ko
-kernel/drivers/misc/qseecom.ko
-kernel/drivers/misc/tzic.ko
-kernel/drivers/misc/bcm2079x-i2c.ko
