@@ -232,7 +232,7 @@ static struct srcu_struct bam_dmux_srcu;
 /* A2 power collaspe */
 #define UL_TIMEOUT_DELAY 1000	/* in ms */
 #define ENABLE_DISCONNECT_ACK	0x1
-#define SHUTDOWN_TIMEOUT_MS	500
+#define SHUTDOWN_TIMEOUT_MS	3000
 #define UL_WAKEUP_TIMEOUT_MS	2000
 static void toggle_apps_ack(void);
 static void reconnect_to_bam(void);
@@ -1863,6 +1863,8 @@ static void disconnect_to_bam(void)
 			bam_ops->sps_disconnect_ptr(bam_rx_pipe);
 			__memzero(rx_desc_mem_buf.base, rx_desc_mem_buf.size);
 			__memzero(tx_desc_mem_buf.base, tx_desc_mem_buf.size);
+			BAM_DMUX_LOG("%s: device reset\n", __func__);
+			sps_device_reset(a2_device_handle);
 		} else {
 			ssr_skipped_disconnect = 1;
 		}
