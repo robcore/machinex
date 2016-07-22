@@ -137,10 +137,6 @@ extern void cpu_resume(void);
 	})
 #endif
 
-#else	/*!CONFIG_MMU */
-
-#define cpu_switch_mm(pgd,mm)	{ }
-
 #endif
 
 #endif /* __ASSEMBLY__ */

@@ -12,13 +12,22 @@
 #include <linux/percpu.h>
 #include <linux/hardirq.h>
 #include <linux/irqflags.h>
-#include <linux/sched.h>
-#include <linux/tick.h>
 #include <asm/processor.h>
 
+/*
+ * An entry can be in one of four states:
+ *
+ * free	     NULL, 0 -> {claimed}       : free to be used
+ * claimed   NULL, 3 -> {pending}       : claimed to be enqueued
+ * pending   next, 3 -> {busy}          : queued, pending callback
+ * busy      NULL, 2 -> {free, claimed} : callback in progress, can be claimed
+ */
+
+#define IRQ_WORK_PENDING	1UL
+#define IRQ_WORK_BUSY		2UL
+#define IRQ_WORK_FLAGS		3UL
 
 static DEFINE_PER_CPU(struct llist_head, irq_work_list);
-static DEFINE_PER_CPU(int, irq_work_raised);
 
 /*
  * Claim the entry so that no one else will poke at it.
@@ -52,19 +61,14 @@ void __weak arch_irq_work_raise(void)
  */
 static void __irq_work_queue(struct irq_work *work)
 {
+	bool empty;
+
 	preempt_disable();
 
-	llist_add(&work->llnode, &__get_cpu_var(irq_work_list));
-
-	/*
-	 * If the work is not "lazy" or the tick is stopped, raise the irq
-	 * work interrupt (if supported by the arch), otherwise, just wait
-	 * for the next tick.
-	 */
-	if (!(work->flags & IRQ_WORK_LAZY) || tick_nohz_tick_stopped()) {
-		if (!this_cpu_cmpxchg(irq_work_raised, 0, 1))
-			arch_irq_work_raise();
-	}
+	empty = llist_add(&work->llnode, &__get_cpu_var(irq_work_list));
+	/* The list was empty, raise self-interrupt to start processing. */
+	if (empty)
+		arch_irq_work_raise();
 
 	preempt_enable();
 }
@@ -95,18 +99,9 @@ EXPORT_SYMBOL_GPL(irq_work_queue);
  */
 void irq_work_run(void)
 {
-	unsigned long flags;
 	struct irq_work *work;
 	struct llist_head *this_list;
 	struct llist_node *llnode;
-
-
-	/*
-	 * Reset the "raised" state right before we check the list because
-	 * an NMI may enqueue after we find the list empty from the runner.
-	 */
-	__this_cpu_write(irq_work_raised, 0);
-	barrier();
 
 	this_list = &__get_cpu_var(irq_work_list);
 	if (llist_empty(this_list))
@@ -125,15 +120,13 @@ void irq_work_run(void)
 		 * Clear the PENDING bit, after this point the @work
 		 * can be re-used.
 		 */
-		flags = work->flags & ~IRQ_WORK_PENDING;
-		work->flags = flags;
-
+		work->flags = IRQ_WORK_BUSY;
 		work->func(work);
 		/*
 		 * Clear the BUSY bit and return to the free state if
 		 * no-one else claimed it meanwhile.
 		 */
-		(void)cmpxchg(&work->flags, flags, flags & ~IRQ_WORK_BUSY);
+		(void)cmpxchg(&work->flags, IRQ_WORK_BUSY, 0);
 	}
 }
 EXPORT_SYMBOL_GPL(irq_work_run);

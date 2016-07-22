@@ -76,7 +76,7 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	unsigned long val;
 
-	if (kstrtoul(buf, 10, &val))
+	if (strict_strtoul(buf, 10, &val))
 		return -EINVAL;
 
 	if (val > 1)
@@ -939,9 +939,6 @@ static struct attribute *g[] = {
 #endif
 #ifdef CONFIG_PM_DEBUG
 	&pm_test_attr.attr,
-#endif
-#ifdef CONFIG_PM_SLEEP_DEBUG
-	&pm_print_times_attr.attr,
 #endif
 #ifdef CONFIG_PM_SLEEP_DEBUG
 	&pm_print_times_attr.attr,
