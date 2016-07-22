@@ -230,32 +230,6 @@ static struct pm_qos_object gpu_freq_max_pm_qos = {
 	.name = "gpu_freq_max",
 };
 
-static BLOCKING_NOTIFIER_HEAD(cpu_dma_throughput_notifier);
-static struct pm_qos_constraints cpu_dma_tput_constraints = {
-	.list = PLIST_HEAD_INIT(cpu_dma_tput_constraints.list),
-	.target_value = PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE,
-	.default_value = PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE,
-	.type = PM_QOS_MAX,
-	.notifiers = &cpu_dma_throughput_notifier,
-};
-static struct pm_qos_object cpu_dma_throughput_pm_qos = {
-	.constraints = &cpu_dma_tput_constraints,
-	.name = "cpu_dma_throughput",
-};
-
-
-static BLOCKING_NOTIFIER_HEAD(dvfs_lat_notifier);
-static struct pm_qos_constraints dvfs_lat_constraints = {
-	.list = PLIST_HEAD_INIT(dvfs_lat_constraints.list),
-	.target_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.default_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &dvfs_lat_notifier,
-};
-static struct pm_qos_object dvfs_lat_pm_qos = {
-	.constraints = &dvfs_lat_constraints,
-	.name = "dvfs_latency",
-
 static BLOCKING_NOTIFIER_HEAD(emc_freq_min_notifier);
 static struct pm_qos_constraints emc_freq_min_constraints = {
 	.list = PLIST_HEAD_INIT(emc_freq_min_constraints.list),
@@ -301,8 +275,6 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&cpu_dma_pm_qos,
 	&network_lat_pm_qos,
 	&network_throughput_pm_qos,
-	&cpu_dma_throughput_pm_qos,
-	&dvfs_lat_pm_qos,
 	&min_online_cpus_pm_qos,
 	&max_online_cpus_pm_qos,
 	&cpu_freq_min_pm_qos,
