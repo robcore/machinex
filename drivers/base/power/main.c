@@ -562,8 +562,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
-
-	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -646,6 +644,8 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
+
+	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -771,6 +771,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 
  Unlock:
 	device_unlock(dev);
+	dpm_wd_clear(&wd);
 
  Complete:
 	complete_all(&dev->power.completion);
@@ -796,6 +797,9 @@ static bool is_async(struct device *dev)
 	return dev->power.async_suspend && pm_async_enabled
 		&& !pm_trace_is_enabled();
 }
+
+static int nsec64_measure_resume_spend = 10000;// over 10ms
+module_param_named(resume_spend, nsec64_measure_resume_spend, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /**
  * dpm_resume - Execute "resume" callbacks for non-sysdev devices.
@@ -994,8 +998,6 @@ static int device_suspend_noirq(struct device *dev, pm_message_t state)
 {
 	pm_callback_t callback = NULL;
 	char *info = NULL;
-
-	__pm_runtime_disable(dev, false);
 
 	if (dev->power.syscore)
 		return 0;
@@ -1229,13 +1231,10 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		goto Complete;
 	}
 
-	data.dev = dev;
-	data.tsk = get_current();
-	init_timer_on_stack(&timer);
-	timer.expires = jiffies + HZ * 12;
-	timer.function = dpm_drv_timeout;
-	timer.data = (unsigned long)&data;
-	add_timer(&timer);
+	if (dev->power.syscore)
+		goto Complete;
+
+	dpm_wd_set(&wd, dev);
 
 	device_lock(dev);
 

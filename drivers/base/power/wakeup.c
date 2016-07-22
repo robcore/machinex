@@ -747,7 +747,8 @@ void pm_wakeup_clear(void)
  */
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
- 	unsigned int cnt, inpr;
+	unsigned int cnt, inpr;
+
 	if (block) {
 		DEFINE_WAIT(wait);
 
@@ -761,10 +762,10 @@ bool pm_get_wakeup_count(unsigned int *count, bool block)
 			schedule();
 		}
 		finish_wait(&wakeup_count_wait_queue, &wait);
- 	}
+	}
 
- 	split_counters(&cnt, &inpr);
- 	*count = cnt;
+	split_counters(&cnt, &inpr);
+	*count = cnt;
 	return !inpr;
 }
 EXPORT_SYMBOL_GPL(pm_system_wakeup);
