@@ -1,0 +1,34 @@
+--- drivers/base/power/main.c
++++ drivers/base/power/main.c
+@@ -699,7 +699,6 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
+ 
+  Unlock:
+ 	device_unlock(dev);
+-	dpm_wd_clear(&wd);
+ 
+  Complete:
+ 	complete_all(&dev->power.completion);
+@@ -991,8 +990,6 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
+ 	pm_callback_t callback = NULL;
+ 	char *info = NULL;
+ 
+-	__pm_runtime_disable(dev, false);
+-
+ 	if (dev->power.syscore)
+ 		return 0;
+ 
+@@ -1140,7 +1137,13 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
+ 	if (dev->power.syscore)
+ 		goto Complete;
+ 
+-	dpm_wd_set(&wd, dev);
++	data.dev = dev;
++	data.tsk = get_current();
++	init_timer_on_stack(&timer);
++	timer.expires = jiffies + HZ * 12;
++	timer.function = dpm_drv_timeout;
++	timer.data = (unsigned long)&data;
++	add_timer(&timer);
+ 
+ 	device_lock(dev);
+ 
