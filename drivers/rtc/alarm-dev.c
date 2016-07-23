@@ -73,10 +73,6 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	char bootalarm_data[14]; 
 #endif
 
-#ifdef CONFIG_RTC_AUTO_PWRON
-	char bootalarm_data[14];
-#endif
-
 	if (alarm_type >= ANDROID_ALARM_TYPE_COUNT)
 		return -EINVAL;
 
