@@ -576,7 +576,8 @@ static int msm_cpufreq_suspend(void)
 static int msm_cpufreq_resume(void)
 {
 	int cpu, ret;
-	struct cpufreq_policy pol;
+	struct cpufreq_policy policy;
+
 	for_each_possible_cpu(cpu) {
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 	}
@@ -588,10 +589,10 @@ static int msm_cpufreq_resume(void)
 	 */
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		ret = cpufreq_get_policy(&pol, cpu);
+		ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			continue;
-		if (pol.cur <= pol.max && pol.cur >= pol.min)
+		if (policy.cur <= policy.max && policy.cur >= policy.min)
 			continue;
 		ret = cpufreq_update_policy(cpu);
 		if (ret)
