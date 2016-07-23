@@ -22,6 +22,19 @@
 #include <linux/mfd/pm8xxx/pm8821.h>
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+bool scr_suspended;
+#endif
+#endif
+#ifdef CONFIG_LCD_NOTIFY
+#include <linux/lcd_notify.h>
+#endif
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#endif
+
 
 #if defined(CONFIG_FB_MDP4_ENHANCE)
 #include "mdp4_video_enhance.h"
@@ -547,9 +560,18 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_START, NULL);
+#endif
+
 	mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
+
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
 
 	if ((msd.mpd->manufacture_id & 0xFF) == 0)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_NEED_FLIP, false);
@@ -569,6 +591,17 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 		pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	}
+#ifdef CONFIG_STATE_NOTIFIER
+		if (!use_fb_notifier)
+			state_resume();
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		scr_suspended = false;
+#endif
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
 
 	pr_info("[%s] ID : 0x%x LDI : %s", __func__, msd.mpd->manufacture_id,
 		ldi_manupacture == LDI_MAGNA ? "LDI_MAGNA" : "LDI_LSI");
@@ -631,7 +664,7 @@ int touch_tout1_on(void)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-	if (!mdp_fb_is_power_off(mfd)) {
+	if (mfd->panel_power_on == TRUE) {
 		mipi_samsung_disp_send_cmd(mfd, PANLE_TOUCH_KEY, true);
 		pr_info("%s", __func__);
 	}
@@ -649,9 +682,18 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
+#endif
+
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
+
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
 
 #if defined(RUMTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
@@ -665,6 +707,19 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	gpio_get_param.pull = PM_GPIO_PULL_DN;
 	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
+
+#ifdef CONFIG_STATE_NOTIFIER
+		if (!use_fb_notifier)
+			state_suspend();
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		scr_suspended = true;
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
+#endif
 
 	pr_info("[lcd] %s\n", __func__);
 
@@ -759,8 +814,8 @@ static ssize_t mipi_samsung_disp_get_power(struct device *dev,
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-	rc = snprintf((char *)buf, (int)sizeof(buf), "%d\n", !mdp_fb_is_power_off(mfd));
-	pr_info("mipi_samsung_disp_get_power(%d)\n", !mdp_fb_is_power_off(mfd));
+	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", mfd->panel_power_on);
+	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
 
 	return rc;
 }
@@ -776,7 +831,7 @@ static ssize_t mipi_samsung_disp_set_power(struct device *dev,
 	if (sscanf(buf, "%u", &power) != 1)
 		return -EINVAL;
 
-	if (power == !mdp_fb_is_power_off(mfd))
+	if (power == mfd->panel_power_on)
 		return 0;
 
 	if (power) {
@@ -916,7 +971,7 @@ static ssize_t mipi_samsung_disp_acl_show(struct device *dev,
 {
 	int rc;
 
-	rc = snprintf((char *)buf, (int)sizeof(buf), "%d\n", msd.mpd->acl_status);
+	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", msd.mpd->acl_status);
 	pr_info("acl status: %d\n", *buf);
 
 	return rc;
@@ -938,7 +993,7 @@ static ssize_t mipi_samsung_disp_acl_store(struct device *dev,
 		return size;
 	}
 
-	if (!mdp_fb_is_power_off(mfd)) {
+	if (mfd->panel_power_on) {
 		if (msd.mpd->acl_control(mfd->bl_level))
 			mipi_samsung_disp_send_cmd(mfd,
 						PANEL_ACL_CONTROL, true);
@@ -956,7 +1011,7 @@ static ssize_t mipi_samsung_disp_siop_show(struct device *dev,
 {
 	int rc;
 
-	rc = snprintf((char *)buf, (int)sizeof(buf), "%d\n", msd.mpd->siop_status);
+	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", msd.mpd->siop_status);
 	pr_info("siop status: %d\n", *buf);
 
 	return rc;
@@ -978,7 +1033,7 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 		return size;
 	}
 
-	if (!mdp_fb_is_power_off(mfd)) {
+	if (mfd->panel_power_on) {
 		if (msd.mpd->acl_control(mfd->bl_level))
 			mipi_samsung_disp_send_cmd(mfd,
 						PANEL_ACL_CONTROL, true);
@@ -1026,7 +1081,7 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	if (mdp_fb_is_power_off(mfd)) {
+	if (mfd->panel_power_on == FALSE) {
 		pr_err("%s fps set error, panel power off 1", __func__);
 		return size;
 	}
@@ -1049,7 +1104,7 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 
 	mutex_lock(&dsi_tx_mutex);
 
-	if (mdp_fb_is_power_off(mfd)) {
+	if (mfd->panel_power_on == FALSE) {
 		mutex_unlock(&dsi_tx_mutex);
 		pr_info("%s fps set error, panel power off 2", __func__);
 		return size;
@@ -1075,7 +1130,7 @@ static ssize_t mipi_samsung_disp_backlight_show(struct device *dev,
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	rc = snprintf((char *)buf, (int)sizeof(buf), "%d\n", mfd->bl_level);
+	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", mfd->bl_level);
 
 	return rc;
 }

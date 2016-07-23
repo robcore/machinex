@@ -17,10 +17,6 @@
 
 #include "mdss_dsi.h"
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
-
 #define DT_CMD_HDR 6
 
 static struct dsi_buf dsi_panel_tx_buf;
