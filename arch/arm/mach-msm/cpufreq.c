@@ -412,14 +412,6 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (cpu_is_msm8625() || (is_clk && is_sync))
 		cpumask_setall(policy->cpus);
 
-	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
-	INIT_WORK(&cpu_work->work, set_cpu_work);
-	init_completion(&cpu_work->complete);
-
-	/* synchronous cpus share the same policy */
-	if (is_clk && !cpu_clk[policy->cpu])
-		return 0;
-
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
