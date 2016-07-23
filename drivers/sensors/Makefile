@@ -6,8 +6,6 @@
 obj-$(CONFIG_INPUT_YAS_MAGNETOMETER)		+= geomagnetic/
 obj-$(CONFIG_INPUT_YAS_ORIENTATION) +=  yas532_orient.o
 obj-y	+= optical/
-obj-$(CONFIG_SENSORS)		+= sensors_class.o
-obj-$(CONFIG_SENSORS_SSC)	+= sensors_ssc.o
 obj-$(CONFIG_SENSORS_CORE)		+= sensors_core.o
 obj-$(CONFIG_SENSORS_AD7146) += ad7146.o
 obj-$(CONFIG_SENSORS_ASP01) += asp01.o
