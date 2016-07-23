@@ -579,11 +579,33 @@ static int msm_cpufreq_suspend(struct cpufreq_policy *policy)
 
 static int msm_cpufreq_resume(struct cpufreq_policy *policy)
 {
-	int cpu;
+	int cpu, ret;
 
 	for_each_possible_cpu(cpu) {
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 	}
+
+	/*
+	 * Freq request might be rejected during suspend, resulting
+	 * in policy->cur violating min/max constraint.
+	 * Correct the frequency as soon as possible.
+	 */
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			continue;
+		if (policy.cur <= policy.max && policy.cur >= policy.min)
+			continue;
+		ret = cpufreq_update_policy(cpu);
+		if (ret)
+			pr_info("cpufreq: Current frequency violates policy min/max for CPU%d\n",
+			       cpu);
+		else
+			pr_info("cpufreq: Frequency violation fixed for CPU%d\n",
+				cpu);
+	}
+	put_online_cpus();
 
 	return 0;
 }
