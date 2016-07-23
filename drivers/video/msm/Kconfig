@@ -1223,9 +1223,11 @@ config MIPI_DSI_RESET_LP11
 config MIPI_DSI_LP_RX
 	bool "rx interface on lp mode"
 	default n
+
 config MDP_SHUTDOWN
 	bool "use mdp shutdown"
 	default n
+
 config FB_MDP4_ENHANCE
 	bool "MDP4 VIDEO ENHANCEMENT"
 	default n
@@ -1257,6 +1259,7 @@ config SUPPORT_SECOND_POWER
 config LCD_VDD3_BY_PMGPIO
 	bool "support externel dcdc for VDD3_IO"
 	default n
+
 config RUNTIME_MIPI_CLK_CHANGE
 	default n
 	bool "SAMSUNG MIPI CLK CHANGE"
@@ -1264,8 +1267,6 @@ config RUNTIME_MIPI_CLK_CHANGE
 	  Support for MIPI CLK CHANGE
 
 config ESD_ERR_FG_RECOVERY
-	bool "ESD RECOVERY BY ERR_FG"
-	default n
 
 config MIPI_MDP_REGISTER_DUMP
 	default n
@@ -1285,6 +1286,10 @@ config LCD_NOTIFY
 	default n
 	help
 	  Call lcd notify handlers when the user requested sleep state
+
+config STATE_NOTIFIER
+        bool "State Notifier"
+	default y
 
 if FB_MSM_MDSS
 	source "drivers/video/msm/mdss/Kconfig"

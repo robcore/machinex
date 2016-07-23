@@ -543,7 +543,7 @@ static ssize_t mipi_samsung_disp_set_power(struct device *dev,
 	if (sscanf(buf, "%u", &power) != 1)
 		return -EINVAL;
 
-	if (power == mfd->panel_power_on)
+	if (power == !mdp_fb_is_power_off(mfd))
 		return 0;
 
 	if (power) {
@@ -752,7 +752,7 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-	if (mfd->panel_power_on == FALSE) {
+	if (mdp_fb_is_power_off(mfd)) {
 		pr_err("%s fps set error, panel power off 1", __func__);
 		return size;
 	}
@@ -775,7 +775,7 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 
 	mutex_lock(&dsi_tx_mutex);
 
-	if (mfd->panel_power_on == FALSE) {
+	if (mdp_fb_is_power_off(mfd)) {
 		mutex_unlock(&dsi_tx_mutex);
 		pr_info("%s fps set error, panel power off 2", __func__);
 		return size;

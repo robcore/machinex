@@ -260,5 +260,6 @@ obj-$(CONFIG_SAMSUNG_DEBUG_DISPLAY) += dlog.o
 obj-$(CONFIG_MSM_VIDC_1080P) += vidc/
 obj-$(CONFIG_MSM_VIDC_720P) += vidc/
 obj-$(CONFIG_VIDEO_MHL_V2) += mhl_v2/
+obj-$(CONFIG_STATE_NOTIFIER)		+= state_notifier.o
 clean:
 	rm *.o .*cmd
