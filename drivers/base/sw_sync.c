@@ -99,7 +99,7 @@ static void sw_sync_pt_value_str(struct sync_pt *sync_pt,
 	snprintf(str, size, "%d", pt->value);
 }
 
-static struct sync_timeline_ops sw_sync_timeline_ops = {
+struct sync_timeline_ops sw_sync_timeline_ops = {
 	.driver_name = "sw_sync",
 	.dup = sw_sync_pt_dup,
 	.has_signaled = sw_sync_pt_has_signaled,
@@ -136,7 +136,7 @@ EXPORT_SYMBOL(sw_sync_timeline_inc);
  */
 
 /* opening sw_sync create a new sync obj */
-static int sw_sync_open(struct inode *inode, struct file *file)
+int sw_sync_open(struct inode *inode, struct file *file)
 {
 	struct sw_sync_timeline *obj;
 	char task_comm[TASK_COMM_LEN];
@@ -152,14 +152,14 @@ static int sw_sync_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int sw_sync_release(struct inode *inode, struct file *file)
+int sw_sync_release(struct inode *inode, struct file *file)
 {
 	struct sw_sync_timeline *obj = file->private_data;
 	sync_timeline_destroy(&obj->obj);
 	return 0;
 }
 
-static long sw_sync_ioctl_create_fence(struct sw_sync_timeline *obj, unsigned long arg)
+long sw_sync_ioctl_create_fence(struct sw_sync_timeline *obj, unsigned long arg)
 {
 	int fd = get_unused_fd();
 	int err;
@@ -200,7 +200,7 @@ err:
 	return err;
 }
 
-static long sw_sync_ioctl_inc(struct sw_sync_timeline *obj, unsigned long arg)
+long sw_sync_ioctl_inc(struct sw_sync_timeline *obj, unsigned long arg)
 {
 	u32 value;
 
@@ -212,7 +212,7 @@ static long sw_sync_ioctl_inc(struct sw_sync_timeline *obj, unsigned long arg)
 	return 0;
 }
 
-static long sw_sync_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+long sw_sync_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct sw_sync_timeline *obj = file->private_data;
 
@@ -241,12 +241,12 @@ static struct miscdevice sw_sync_dev = {
 	.fops	= &sw_sync_fops,
 };
 
-static int __init sw_sync_device_init(void)
+int __init sw_sync_device_init(void)
 {
 	return misc_register(&sw_sync_dev);
 }
 
-static void __exit sw_sync_device_remove(void)
+void __exit sw_sync_device_remove(void)
 {
 	misc_deregister(&sw_sync_dev);
 }
