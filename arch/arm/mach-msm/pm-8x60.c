@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #include <linux/module.h>
@@ -28,11 +31,11 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/nmi.h>
 #include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
 #include <mach/system.h>
 #include <mach/scm.h>
-#include <mach/socinfo.h>
 #include <mach/msm-krait-l2-accessors.h>
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
@@ -56,16 +59,6 @@
 #include "pm-boot.h"
 #include <mach/event_timer.h>
 #include <linux/cpu_pm.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
-#include <linux/regulator/consumer.h>
-#include <mach/gpiomux.h>
-#include <linux/mfd/pm8xxx/pm8921.h>
-
-#ifdef CONFIG_SEC_GPIO_DVS
-#include <linux/secgpio_dvs.h>
-#endif
 
 /******************************************************************************
  * Debug Definitions
@@ -92,7 +85,6 @@ static int msm_pm_retention_tz_call;
 /******************************************************************************
  * Sleep Modes and Parameters
  *****************************************************************************/
-static int spc_attempts;
 enum {
 	MSM_PM_MODE_ATTR_SUSPEND,
 	MSM_PM_MODE_ATTR_IDLE,
@@ -186,7 +178,7 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int ret = -EINVAL;
-	int i, j;
+	int i;
 
 	for (i = 0; i < MSM_PM_SLEEP_MODE_NR; i++) {
 		struct kernel_param kp;
@@ -208,20 +200,10 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 			ret = param_set_byte(buf, &kp);
 		} else if (!strcmp(attr->attr.name,
 			msm_pm_mode_attr_labels[MSM_PM_MODE_ATTR_IDLE])) {
-			j = MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE;
-			if (!strcmp(kobj->name, msm_pm_sleep_mode_labels[j])) {
-				if (buf[0] == '1') {
-					spc_attempts++;
-					pr_err("%s: spc is blocked (%d) from [%s]\n",
-						__func__, spc_attempts,
-						current->comm);
-				}
-				ret = 0;
-			} else {
-				kp.arg = &mode->idle_enabled;
-				ret = param_set_byte(buf, &kp);
-			}
+			kp.arg = &mode->idle_enabled;
+			ret = param_set_byte(buf, &kp);
 		}
+
 		break;
 	}
 
@@ -577,13 +559,20 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-#if defined(CONFIG_SEC_DEBUG)
-	secdbg_sched_msg("+pc(I:%d,R:%d)", from_idle, notify_rpm);
+
+	/*
+	 * msm_pm_12x0_power_collapse will bring us into trustzone
+	 * for some time, so I just feed msm_watchdog to ensure we
+	 * have some time to go.
+	 * But if we are in trustzone for more than 11 seconds,
+	 * msm_watchdog will still bark/bite.
+	 * We only do this on CPU0 since that is where watchdog runs.
+	 */
+	if (cpu == 0)
+		touch_nmi_watchdog();
+
 	collapsed = msm_pm_l2x0_power_collapse();
-	secdbg_sched_msg("-pc(%d)", collapsed);
-#else
-	collapsed = msm_pm_l2x0_power_collapse();
-#endif
+
 	msm_pm_boot_config_after_pc(cpu);
 
 	if (collapsed) {
@@ -840,10 +829,9 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 			if (msm_pm_retention_tz_call &&
 				num_online_cpus() > 1) {
 				allow = false;
-
-			if (msm_pm_retention_tz_call &&	num_online_cpus() > 1)
-				allow = false;
-			break;
+				break;
+			}
+			/* fall through */
 
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
 			if (!allow)
@@ -946,9 +934,6 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 			timer_expiration, MSM_PM_SLEEP_TICK_LIMIT);
 		if (sleep_delay == 0) /* 0 would mean infinite time */
 			sleep_delay = 1;
-
-		if (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask)
-			clock_debug_print_enabled();
 
 		if (pm_sleep_ops.enter_sleep)
 			ret = pm_sleep_ops.enter_sleep(sleep_delay,
@@ -1073,8 +1058,6 @@ static int msm_pm_enter(suspend_state_t state)
 		if (MSM_PM_DEBUG_SUSPEND & msm_pm_debug_mask)
 			pr_info("%s: power collapse\n", __func__);
 
-		clock_debug_print_enabled();
-
 #ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
 		if (msm_pm_sleep_time_override > 0) {
 			int64_t ns = NSEC_PER_SEC *
@@ -1130,40 +1113,7 @@ enter_exit:
 	return 0;
 }
 
-enum {
-	MSM_PM_SECDEBUG_LEVLE1 = BIT(0),
-};
-
-static int msm_pm_secdebug_mask;
-module_param_named(
-	secdebug, msm_pm_secdebug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
-);
-
-static int msm_pm_prepare_late(void)
-{
-	if (msm_pm_secdebug_mask & MSM_PM_SECDEBUG_LEVLE1) {
-		regulator_showall_enabled();
-		msm_gpio_print_enabled();
-		pm_gpio_dbg_showall(1);
-		pm_mpp_dbg_showall(1);
-	} else {
-		pm_gpio_dbg_showall(0);
-		pm_mpp_dbg_showall(0);
-	}
-
-#ifdef CONFIG_SEC_GPIO_DVS
-	/************************ Caution !!! ****************************/
-	/* This function must be located in appropriate SLEEP position
-	 * in accordance with the specification of each BB vendor.
-	 */
-	/************************ Caution !!! ****************************/
-	gpio_dvs_check_sleepgpio();
-#endif
-	return 0;
-}
-
 static struct platform_suspend_ops msm_pm_ops = {
-	.prepare_late = msm_pm_prepare_late,
 	.enter = msm_pm_enter,
 	.valid = suspend_valid_only_mem,
 };
