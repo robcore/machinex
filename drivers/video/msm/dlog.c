@@ -745,10 +745,8 @@ static enum  {	DLOG_BUFFER_READING,	KLOG_BUFFER_READING,	SECLOG_BUFFER_READING, 
 		u32 clock_state_len = 0;
 		struct dentry *dent = debugfs_create_dir("dlog", NULL);
 
-#if defined(CONFIG_SEC_DEBUG)
+#ifdef CONFIG_SEC_DEBUG
 		sec_debug_level = sec_debug_is_enabled();
-		
-#endif
 		
 		if(sec_debug_level){
 			log_buff_len = DLOG_BUFFER_SIZE*1024;
@@ -759,6 +757,7 @@ static enum  {	DLOG_BUFFER_READING,	KLOG_BUFFER_READING,	SECLOG_BUFFER_READING, 
 		
 		dump_size = log_buff_len + event_desc_len+ reg_log_len \
 			 +clock_state_len+ sizeof(struct debug_mdp);
+#endif
 #ifdef __KERNEL__
 		if(__debug_mdp_phys){
 			debug_mdp = ioremap_nocache(__debug_mdp_phys,CARVEOUT_MEM_SIZE);

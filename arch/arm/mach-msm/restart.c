@@ -67,8 +67,7 @@ static int restart_mode;
 #ifndef CONFIG_SEC_DEBUG
 void *restart_reason;
 #endif
-int kernel_sec_get_debug_level(void);
-#define KERNEL_SEC_DEBUG_LEVEL_LOW      (0x574F4C44)
+
 int pmic_reset_irq;
 static void __iomem *msm_tmr0_base;
 
@@ -344,6 +343,8 @@ void msm_restart(char mode, const char *cmd)
 #ifdef CONFIG_SEC_DEBUG
 		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {
 			__raw_writel(0x776655ee, restart_reason);
+		} else if (!strncmp(cmd, "sec_debug_low_panic", 19)) {
+			__raw_writel(0x776655dd, restart_reason);
 #endif
 		} else if (!strncmp(cmd, "download", 8)) {
 			__raw_writel(0x12345671, restart_reason);
@@ -437,9 +438,9 @@ static int __init msm_pmic_restart_init(void)
 {
 	int rc;
 
-#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS) || defined(CONFIG_MACH_SERRANO)
+#ifdef CONFIG_MACH_JF_VZW
 	return 0;
-#else
+#elif defined(CONFIG_SEC_DEBUG)
 	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
 		return 0;
 #endif

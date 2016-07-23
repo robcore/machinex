@@ -32,7 +32,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/device.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/spinlock.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>
@@ -1066,7 +1066,7 @@ static int __devinit barcode_emul_probe(struct i2c_client *client,
 	int i;
 #endif
 	pr_barcode("%s probe!\n", __func__);
-	
+
 	pdata = client->dev.platform_data;
 	g_pdata = pdata;
 #ifdef CONFIG_IR_REMOCON_FPGA

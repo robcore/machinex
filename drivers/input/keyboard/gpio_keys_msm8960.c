@@ -26,7 +26,7 @@
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <linux/string.h>
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
 
@@ -332,7 +332,7 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 	button->active_low;
 	static int count;
 
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	sec_debug_check_crash_key(button->code, state);
 #endif
 
@@ -403,7 +403,7 @@ static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
 		schedule_work(&bdata->work);
 
 	printk(KERN_ALERT" gpio-keys (keypad) handled : %s\n",__func__);
-	
+
 	return IRQ_HANDLED;
 }
 

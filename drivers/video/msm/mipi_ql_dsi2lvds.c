@@ -29,7 +29,7 @@
 static struct mipi_dsi2lvds_driver_data msd;
 static unsigned int recovery_boot_mode;
 extern unsigned int system_rev;
-static int lcd_panel; 
+static int lcd_panel;
 
 struct mutex cabc_lock;
 #if defined(CONFIG_MACH_LT02_TMO)
@@ -133,7 +133,7 @@ static void GPIO_I2C_LOW(uint32_t delay)
 	SCLH_SDAL(delay);
 	SCLL_SDAL(delay);
 	}
-	
+
 static void GPIO_I2C_HIGH(uint32_t delay)
 {
 	SCLL_SDAH(delay);
@@ -169,18 +169,18 @@ static void GPIO_I2C_ACK(uint32_t delay)
 
 	/* SDA -> Input */
 	gpio_tlmm_config(GPIO_CFG(gpio_i2c.sda, 0, GPIO_CFG_INPUT,
-						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_DISABLE); 
+						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_DISABLE);
 	gpio_direction_input(gpio_i2c.sda);
 
 	GPIO_I2C_SCL_HIGH;
 	udelay(delay);
-	ack = gpio_get_value(gpio_i2c.sda); 
+	ack = gpio_get_value(gpio_i2c.sda);
 	GPIO_I2C_SCL_HIGH;
 	udelay(delay);
 
 	/* SDA -> Onput Low */
 	gpio_tlmm_config(GPIO_CFG(gpio_i2c.sda, 0, GPIO_CFG_OUTPUT,
-						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_DISABLE); 
+						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_DISABLE);
 	gpio_set_value(gpio_i2c.sda, 0);
 	udelay(delay);
 
@@ -196,9 +196,9 @@ static void GPIO_I2C_ACK(uint32_t delay)
 void lvds_i2c_init(void)
 {
 	gpio_tlmm_config(GPIO_CFG(gpio_i2c.scl, 0, GPIO_CFG_OUTPUT,
-						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_ENABLE); 
+						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_ENABLE);
 	gpio_tlmm_config(GPIO_CFG(gpio_i2c.sda, 0, GPIO_CFG_OUTPUT,
-						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_ENABLE); 
+						GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	GPIO_CFG_ENABLE);
 
 	gpio_set_value(gpio_i2c.scl, 1);
 	gpio_set_value(gpio_i2c.sda, 1);
@@ -226,7 +226,7 @@ void lvds_i2c_burst_write(uint8_t *Data, uint8_t length)
 		GPIO_I2C_ACK(GPIO_I2C_DELAY);
 
 	}
-	
+
 	GPIO_I2C_END(GPIO_I2C_DELAY);
 
 	}
@@ -328,7 +328,7 @@ static void send_i2c_lvds_data(void)
 	WriteRegister(0x244, 0x001E0285);
 #if defined(CONFIG_MACH_LT02_SPR) && !defined(CONFIG_MACH_LT02_SEA)
 	WriteRegister(0x258, 0x30019);
-#else	
+#else
 	WriteRegister(0x258, 0x20007);
 #endif
 
@@ -363,7 +363,7 @@ static void send_i2c_lvds_data2(void)
 		lcd_id_value = lcd_id_get_adc_value();
 		if ((lcd_id_value > 900000) && (lcd_id_value < 1000000) )
 			lcd_panel = SDC_PANEL;
-		else 
+		else
 			lcd_panel = BOE_PANEL;
 		pr_info(" - %s:---------------->:lcd_id_value:%d (%d)\n", __func__, lcd_id_value, lcd_panel);
 
@@ -420,7 +420,7 @@ static int mipi2lvds_disp_late_init(struct platform_device *pdev)
 
 	pr_info("**+ %s **\n", __func__);
         mipi = &mfd->panel_info.mipi;
-        
+
         if (mipi->mode == DSI_VIDEO_MODE)
 	send_i2c_lvds_data2();
 
@@ -445,7 +445,7 @@ static int mipi2lvds_disp_off(struct platform_device *pdev)
 
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	pr_info("-%s", __func__);
-	
+
 	return 0;
 }
 
@@ -469,7 +469,7 @@ static void mipi2lvds_disp_set_pwm_duty(int level)
 	int vx5b3d_level = 0;
 	u32 vee_strenght = 0;
 	static u32 prev_vee_strenght=0;
-	
+
 	/* brightness tuning*/
 	if (level > MAX_BRIGHTNESS_LEVEL)
 		level = MAX_BRIGHTNESS_LEVEL;
@@ -489,7 +489,7 @@ static void mipi2lvds_disp_set_pwm_duty(int level)
 	else {
 		vx5b3d_level = 0;
 		pr_info("level = [%d]: vx5b3d_level = [%d]\n",\
-			level,vx5b3d_level);	
+			level,vx5b3d_level);
 	}
 	}
 	else if (lcd_panel == BOE_PANEL){
@@ -507,23 +507,23 @@ static void mipi2lvds_disp_set_pwm_duty(int level)
 		else {
 			vx5b3d_level = 0;
 			pr_info("level = [%d]: vx5b3d_level = [%d]\n",\
-				level,vx5b3d_level);	
+				level,vx5b3d_level);
 		}
 	}
-	
+
 	if (msd.dstat.cabc) {
 
 		switch (msd.dstat.auto_brightness) {
 
 		case	0 ... 3:
-			vee_strenght = V5D3BX_DEFAULT_STRENGHT;				
+			vee_strenght = V5D3BX_DEFAULT_STRENGHT;
 			break;
 		case	4 ... 5:
 			vee_strenght = V5D3BX_DEFAULT_LOW_STRENGHT;
 			break;
 		case	6 ... 8:
 			vee_strenght = V5D3BX_DEFAULT_HIGH_STRENGHT;
-			break;	
+			break;
 		default:
 			vee_strenght = V5D3BX_DEFAULT_STRENGHT;
 		}
@@ -540,7 +540,7 @@ static void mipi2lvds_disp_set_pwm_duty(int level)
 		WriteRegister(0x400,vee_strenght);
 		prev_vee_strenght = vee_strenght;
 	}
-	
+
 	if (vx5b3d_level != 0) {
 		pr_info("[MIPI2LVDS]:level=%d vx5b3d_level:%d auto_brightness:%d CABC:%d \n",\
 			level,vx5b3d_level,msd.dstat.auto_brightness,msd.dstat.cabc);
@@ -555,13 +555,13 @@ static void mipi2lvds_disp_set_backlight(struct msm_fb_data_type *mfd)
 {
 	pr_info("%s : level (%d)\n", __func__, mfd->bl_level);
 
-	if (mfd->resume_state == MIPI_RESUME_STATE) 
+	if (mfd->resume_state == MIPI_RESUME_STATE)
 	mipi2lvds_disp_set_pwm_duty(mfd->bl_level);
 	return;
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void mipi2lvds_disp_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void mipi2lvds_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
 	pr_info("%s", __func__);
@@ -577,7 +577,7 @@ static void mipi2lvds_disp_early_suspend(struct early_suspend *h)
 	}
 }
 
-static void mipi2lvds_disp_late_resume(struct early_suspend *h)
+static void mipi2lvds_disp_power_resume(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
 
@@ -629,7 +629,7 @@ static ssize_t siop_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	struct msm_fb_data_type *mfd;
-	
+
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
 	if (unlikely(!mfd)) {
@@ -651,7 +651,7 @@ static ssize_t siop_enable_store(struct device *dev,
 		mipi2lvds_disp_set_backlight(mfd);
 		mutex_unlock(&cabc_lock);
 		pr_info("[%s] set cabc by siop in manual bl : %d\n", __func__, msd.dstat.cabc);
-		
+
 	} else {
 		pr_info("[%s] do nothing:cabc already controlled by auto bl : %d\n", __func__, msd.dstat.auto_brightness);
 	}
@@ -699,7 +699,7 @@ void delay_auto_brightness_store(struct work_struct *work)
 	prev_auto_brightness = msd.dstat.auto_brightness;
 	msd.dstat.auto_brightness = saved_auto_brightness;
 
-	if (msd.dstat.auto_brightness == 0) {		
+	if (msd.dstat.auto_brightness == 0) {
 		WriteRegister(0x710,0x054D000B );
 		mdelay(1);
 		WriteRegister(0x174,0x0);
@@ -709,9 +709,9 @@ void delay_auto_brightness_store(struct work_struct *work)
 		mdelay(1);
 		WriteRegister(0x174,0xff);
 	}
-	
+
 	mdelay(1);
-	
+
 	mutex_lock(&cabc_lock);
 
 	if(msd.dstat.auto_brightness)
@@ -746,17 +746,17 @@ static ssize_t mipi2lvds_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "2"))
 		msd.dstat.auto_brightness = 2;
 	else if (sysfs_streq(buf, "3"))
-		msd.dstat.auto_brightness = 3;	
+		msd.dstat.auto_brightness = 3;
 	else if (sysfs_streq(buf, "4"))
 		msd.dstat.auto_brightness = 4;
 	else if (sysfs_streq(buf, "5"))
-		msd.dstat.auto_brightness = 5;	
+		msd.dstat.auto_brightness = 5;
 	else if (sysfs_streq(buf, "6"))
-		msd.dstat.auto_brightness = 6;	
+		msd.dstat.auto_brightness = 6;
 	else
 		pr_info("%s: Invalid argument!!", __func__);
 
-	if (msd.dstat.auto_brightness == 0) {		
+	if (msd.dstat.auto_brightness == 0) {
 		WriteRegister(0x710,0x054D000B );
 		mdelay(1);
 		WriteRegister(0x174,0x0);
@@ -766,9 +766,9 @@ static ssize_t mipi2lvds_auto_brightness_store(struct device *dev,
 		mdelay(1);
 		WriteRegister(0x174,0xff);
 	}
-	
+
 	mdelay(1);
-	
+
 	mutex_lock(&cabc_lock);
 
 	if(msd.dstat.auto_brightness)
@@ -786,17 +786,17 @@ static ssize_t mipi2lvds_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "2"))
 		saved_auto_brightness  = 2;
 	else if (sysfs_streq(buf, "3"))
-		saved_auto_brightness  = 3;	
+		saved_auto_brightness  = 3;
 	else if (sysfs_streq(buf, "4"))
 		saved_auto_brightness  = 4;
 	else if (sysfs_streq(buf, "5"))
-		saved_auto_brightness  = 5;	
+		saved_auto_brightness  = 5;
 	else if (sysfs_streq(buf, "6"))
-		saved_auto_brightness  = 6;	
+		saved_auto_brightness  = 6;
 	else
 		pr_info("%s: Invalid argument!!", __func__);
-	
-	schedule_delayed_work(&auto_brightness_delayed_work, msecs_to_jiffies(1000));	
+
+	schedule_delayed_work(&auto_brightness_delayed_work, msecs_to_jiffies(1000));
 #endif
 	return size;
 }
@@ -838,15 +838,15 @@ static int __devinit mipi2lvds_vx5b3d_disp_probe(struct platform_device *pdev)
 	msm_fb_added_dev = msm_fb_add_device(pdev);
 	mutex_init(&cabc_lock);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
 #endif
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	msd.early_suspend.suspend = mipi2lvds_disp_early_suspend;
-	msd.early_suspend.resume = mipi2lvds_disp_late_resume;
-	msd.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	register_early_suspend(&msd.early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	msd.power_suspend.suspend = mipi2lvds_disp_power_suspend;
+	msd.power_suspend.resume = mipi2lvds_disp_power_resume;
+//	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
+	register_power_suspend(&msd.power_suspend);
 
 #endif
 #if defined(CONFIG_LCD_CLASS_DEVICE)

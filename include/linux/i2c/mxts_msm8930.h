@@ -16,8 +16,8 @@
 #ifndef __MXT_H__
 #define __MXT_H__
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <asm/system_info.h>
 
@@ -466,9 +466,9 @@ struct mxt_platform_data {
 	u8 check_calgood;
 	u8 check_afterCalgood;
 #endif
-	
+
 	const char *project_name;
-	const char *config_ver;	
+	const char *config_ver;
 	const u8 **config;
 	bool (*read_chg)(void);
 	int (*power_on) (void);
@@ -603,7 +603,7 @@ struct mxt_data {
 	u8 finger_mask ;
 	bool mxt_enabled;
 
-#if CHECK_ANTITOUCH		
+#if CHECK_ANTITOUCH
 	u8 Report_touch_number;
 	u8 Press_Release_check;
 	u16 Press_cnt;
@@ -640,7 +640,7 @@ struct mxt_data {
 	u8		Report_touch_number;
 	bool		check_antitouch;//In First Step, exist antichannel
 	bool		check_after_wakeup; //In First Step,after wakeup
-	bool		TimerSet;//In Second Step, No Big Tcharea and No Atch 
+	bool		TimerSet;//In Second Step, No Big Tcharea and No Atch
 	bool		WakeupPowerOn;//0613
 	u8		GoodConditionStep;//checking good condition step
 	u8		GoodStep1_AllReleased; //check release status in good condition 1
@@ -657,7 +657,7 @@ struct mxt_data {
 	u8		T9_amp;		//0924  ! New: T9 amplitude message info for debugging
 	u16		T57_touch;
 	u16		tch_value;
-	u16		atch_value;	
+	u16		atch_value;
 	u16		init_tchnum; //0925 ! New
 	u16		init_t57sum; //0925 ! New
 	u16		init_t57tch; //0925 ! New
@@ -666,7 +666,7 @@ struct mxt_data {
 	u16		wait_tchnum; //0925 ! New
 	u16		wait_t57sum; //0925 ! New
 	u16		wait_t57tch; //0925 ! New
-	u16		wait_t57atch; //0925 ! New	
+	u16		wait_t57atch; //0925 ! New
 	u16		wait_t9area; //0925 ! New
 #elif CHECK_ANTITOUCH_GOLDEN
 	bool		check_antitouch;//In First Step, exist antichannel
@@ -682,8 +682,8 @@ struct mxt_data {
 	u8		PalmFlag;
 	u8		PressEventCheck;
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 #ifdef TSP_BOOSTER
 	struct touch_booster booster;

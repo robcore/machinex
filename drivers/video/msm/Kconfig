@@ -1216,6 +1216,7 @@ config SAMSUNG_DEBUG_DISPLAY
 config MIPI_DSI_LP_CMD_SEND
 	bool "MDP4_ENHANCE solution"
 	default n
+
 config MIPI_DSI_RESET_LP11
 	bool "mipi dsi reset during LP11"
 	default n

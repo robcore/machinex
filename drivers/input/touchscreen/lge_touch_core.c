@@ -23,7 +23,7 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/jiffies.h>
 #include <linux/sysdev.h>
 #include <linux/types.h>
@@ -84,9 +84,9 @@ static struct pointer_trace tr_data[MAX_TRACE];
 static int tr_last_index;
 #endif
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void touch_early_suspend(struct early_suspend *h);
-static void touch_late_resume(struct early_suspend *h);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void touch_power_suspend(struct power_suspend *h);
+static void touch_power_resume(struct power_suspend *h);
 #endif
 
 /* set_touch_handle / get_touch_handle
@@ -1856,11 +1856,11 @@ static int touch_probe(struct i2c_client *client,
 		ts->accuracy_filter.touch_max_count = one_sec / 2;
 	}
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	ts->early_suspend.suspend = touch_early_suspend;
-	ts->early_suspend.resume = touch_late_resume;
-	register_early_suspend(&ts->early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+//	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	ts->power_suspend.suspend = touch_power_suspend;
+	ts->power_suspend.resume = touch_power_resume;
+	register_power_suspend(&ts->power_suspend);
 #endif
 
 	/* Register sysfs for making fixed communication path to framework layer */
@@ -1894,7 +1894,7 @@ err_lge_touch_sysfs_init_and_add:
 err_lge_touch_sys_dev_register:
 	sysdev_class_unregister(&lge_touch_sys_class);
 err_lge_touch_sys_class_register:
-	unregister_early_suspend(&ts->early_suspend);
+	unregister_power_suspend(&ts->power_suspend);
 	if (ts->pdata->role->operation_mode == INTERRUPT_MODE) {
 		gpio_free(ts->pdata->int_pin);
 		free_irq(ts->client->irq, ts);
@@ -1931,7 +1931,7 @@ static int touch_remove(struct i2c_client *client)
 	sysdev_unregister(&lge_touch_sys_device);
 	sysdev_class_unregister(&lge_touch_sys_class);
 
-	unregister_early_suspend(&ts->early_suspend);
+	unregister_power_suspend(&ts->power_suspend);
 
 	if (ts->pdata->role->operation_mode == INTERRUPT_MODE) {
 		gpio_free(ts->pdata->int_pin);
@@ -1948,11 +1948,11 @@ static int touch_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void touch_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void touch_power_suspend(struct power_suspend *h)
 {
 	struct lge_touch_data *ts =
-			container_of(h, struct lge_touch_data, early_suspend);
+			container_of(h, struct lge_touch_data, power_suspend);
 
 	if (unlikely(touch_debug_mask & DEBUG_TRACE))
 		TOUCH_DEBUG_MSG("\n");
@@ -1960,7 +1960,7 @@ static void touch_early_suspend(struct early_suspend *h)
 	ts->curr_resume_state = 0;
 
 	if (ts->fw_upgrade.is_downloading == UNDER_DOWNLOADING) {
-		TOUCH_INFO_MSG("early_suspend is not executed\n");
+		TOUCH_INFO_MSG("power_suspend is not executed\n");
 		return;
 	}
 
@@ -1979,10 +1979,10 @@ static void touch_early_suspend(struct early_suspend *h)
 	touch_power_cntl(ts, ts->pdata->role->suspend_pwr);
 }
 
-static void touch_late_resume(struct early_suspend *h)
+static void touch_power_resume(struct power_suspend *h)
 {
 	struct lge_touch_data *ts =
-			container_of(h, struct lge_touch_data, early_suspend);
+			container_of(h, struct lge_touch_data, power_suspend);
 
 	if (unlikely(touch_debug_mask & DEBUG_TRACE))
 		TOUCH_DEBUG_MSG("\n");
@@ -1990,7 +1990,7 @@ static void touch_late_resume(struct early_suspend *h)
 	ts->curr_resume_state = 1;
 
 	if (ts->fw_upgrade.is_downloading == UNDER_DOWNLOADING) {
-		TOUCH_INFO_MSG("late_resume is not executed\n");
+		TOUCH_INFO_MSG("power_resume is not executed\n");
 		return;
 	}
 

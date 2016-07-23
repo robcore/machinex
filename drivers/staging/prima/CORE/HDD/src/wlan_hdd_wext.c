@@ -68,8 +68,8 @@
 #include "wlan_hdd_p2p.h"
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_HAS_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include "wlan_hdd_power.h"
 #include "qwlan_version.h"
@@ -95,9 +95,9 @@
 #include "qc_sap_ioctl.h"
 #define WE_MAX_STR_LEN 1024
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-extern void hdd_suspend_wlan(struct early_suspend *wlan_suspend);
-extern void hdd_resume_wlan(struct early_suspend *wlan_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+extern void hdd_suspend_wlan(struct power_suspend *wlan_suspend);
+extern void hdd_resume_wlan(struct power_suspend *wlan_suspend);
 #endif
 
 #ifdef FEATURE_OEM_DATA_SUPPORT
@@ -315,7 +315,7 @@ static const hdd_freq_chan_map_t freq_chan_map[] = { {2412, 1}, {2417, 2},
 #define WLAN_HDD_UI_SET_BAND_VALUE_OFFSET         8
 
 #ifdef WLAN_FEATURE_PACKET_FILTERING
-int wlan_hdd_set_filter(hdd_context_t *pHddCtx, tpPacketFilterCfg pRequest, 
+int wlan_hdd_set_filter(hdd_context_t *pHddCtx, tpPacketFilterCfg pRequest,
                            v_U8_t sessionId);
 void wlan_hdd_set_mc_addr_list(hdd_context_t *pHddCtx, v_U8_t set, v_U8_t sessionId);
 #endif
@@ -2406,7 +2406,7 @@ void* wlan_hdd_change_country_code_callback(void *pAdapter)
 {
 
     hdd_adapter_t *call_back_pAdapter = pAdapter;
-  
+
     complete(&call_back_pAdapter->change_country_code);
 
     return NULL;
@@ -3285,7 +3285,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
     int set_value = value[1];
     int ret = 0; /* success */
     int enable_pbm, enable_mp;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
     v_U8_t nEnableSuspendOld;
 #endif
     INIT_COMPLETION(pWextState->completion_var);
@@ -3434,7 +3434,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
                  sme_DisablePowerSave(hHal, ePMC_STANDBY_MODE_POWER_SAVE);
                  break;
               case  8: //Request Standby
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
                  (void)hdd_enter_standby(pAdapter->pHddCtx);
 #endif
@@ -3446,9 +3446,9 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
               case  10://Stop Auto BMPS Timer
                  sme_StopAutoBmpsTimer(hHal);
                  break;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
               case  11://suspend to standby
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
                  nEnableSuspendOld = (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend;
                  (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend = 1;
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
@@ -3458,7 +3458,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
 #endif
                  break;
               case  12://suspend to deep sleep
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
                  nEnableSuspendOld = (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend;
                  (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend = 2;
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
@@ -3468,7 +3468,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
 #endif
                  break;
               case  13://resume from suspend
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
                  hdd_resume_wlan(NULL);
 #endif
@@ -3576,7 +3576,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
         case WE_SET_TM_LEVEL:
         {
            hdd_context_t *hddCtxt = WLAN_HDD_GET_CTX(pAdapter);
-           hddLog(VOS_TRACE_LEVEL_INFO, "Set Thermal Mitigation Level %d", (int)set_value); 
+           hddLog(VOS_TRACE_LEVEL_INFO, "Set Thermal Mitigation Level %d", (int)set_value);
            hddDevTmLevelChangedHandler(hddCtxt->parent_dev, set_value);
 
            break;
@@ -3688,9 +3688,9 @@ static int iw_setnone_getint(struct net_device *dev, struct iw_request_info *inf
         case WE_GET_11D_STATE:
         {
            tSmeConfigParams smeConfig;;
-           
+
            sme_GetConfigParam(hHal,&smeConfig);
-           
+
            *value = smeConfig.csrConfig.Is11dSupportEnabled;
 
             VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, ("11D state=%ld!!\n"),*value);
@@ -3939,7 +3939,7 @@ static int iw_get_char_setnone(struct net_device *dev, struct iw_request_info *i
             break;
         }
 #endif
-           
+
         case WE_GET_WMM_STATUS:
         {
             snprintf(extra, WE_MAX_STR_LEN,
@@ -3977,7 +3977,7 @@ static int iw_get_char_setnone(struct net_device *dev, struct iw_request_info *i
             tChannelListInfo channel_list;
 
             status = iw_softap_get_channel_list(dev, info, wrqu, (char *)&channel_list);
-            if ( !VOS_IS_STATUS_SUCCESS( status ) ) 
+            if ( !VOS_IS_STATUS_SUCCESS( status ) )
             {
                 hddLog(VOS_TRACE_LEVEL_ERROR, "%s GetChannelList Failed!!!\n",__func__);
                 return -EINVAL;
@@ -3986,7 +3986,7 @@ static int iw_get_char_setnone(struct net_device *dev, struct iw_request_info *i
 
             /**
                        * Maximum channels = WNI_CFG_VALID_CHANNEL_LIST_LEN. Maximum buffer
-                       * needed = 5 * number of channels. Check if sufficient buffer is available and 
+                       * needed = 5 * number of channels. Check if sufficient buffer is available and
                        * then proceed to fill the buffer.
                        */
             if(WE_MAX_STR_LEN < (5 * WNI_CFG_VALID_CHANNEL_LIST_LEN))
@@ -4006,7 +4006,7 @@ static int iw_get_char_setnone(struct net_device *dev, struct iw_request_info *i
 
             break;
         }
-        default:  
+        default:
         {
             hddLog(LOGE, "Invalid IOCTL command %d  \n",  sub_cmd );
             break;
@@ -4671,17 +4671,17 @@ static int iw_set_fties(struct net_device *dev, struct iw_request_info *info,
 }
 #endif
 
-static int iw_set_dynamic_mcbc_filter(struct net_device *dev, 
+static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
         struct iw_request_info *info,
         union iwreq_data *wrqu, char *extra)
-{   
+{
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     tpMcBcFilterCfg pRequest = (tpMcBcFilterCfg)wrqu->data.pointer;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
     tpSirWlanSetRxpFilters wlanRxpFilterParam;
     VOS_STATUS vstatus = VOS_STATUS_E_FAILURE;
 
-    hddLog(VOS_TRACE_LEVEL_INFO_HIGH, 
+    hddLog(VOS_TRACE_LEVEL_INFO_HIGH,
            "%s: Set MC BC Filter Config request: %d suspend %d",
            __FUNCTION__, pRequest->mcastBcastFilterSetting,
            pHddCtx->hdd_wlan_suspended);
@@ -4694,39 +4694,39 @@ static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
         return -EINVAL;
     }
 
-    pHddCtx->dynamic_mcbc_filter.mcastBcastFilterSetting = 
-                               pRequest->mcastBcastFilterSetting; 
-    pHddCtx->dynamic_mcbc_filter.enableCfg = TRUE; 
+    pHddCtx->dynamic_mcbc_filter.mcastBcastFilterSetting =
+                               pRequest->mcastBcastFilterSetting;
+    pHddCtx->dynamic_mcbc_filter.enableCfg = TRUE;
 
     if(pHddCtx->hdd_wlan_suspended)
     {
-      wlanRxpFilterParam->configuredMcstBcstFilterSetting = 
+      wlanRxpFilterParam->configuredMcstBcstFilterSetting =
                                pRequest->mcastBcastFilterSetting;
       wlanRxpFilterParam->setMcstBcstFilter = TRUE;
 
-      if((pHddCtx->cfg_ini->fhostArpOffload) && 
-         (eConnectionState_Associated == 
+      if((pHddCtx->cfg_ini->fhostArpOffload) &&
+         (eConnectionState_Associated ==
          (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState))
       {
         vstatus = hdd_conf_hostarpoffload(pHddCtx, TRUE);
         if (!VOS_IS_STATUS_SUCCESS(vstatus))
         {
-          hddLog(VOS_TRACE_LEVEL_INFO, 
+          hddLog(VOS_TRACE_LEVEL_INFO,
                  "%s:Failed to enable ARPOFFLOAD Feature %d\n",
                  __func__, vstatus);
         }
         else
         {
-          if (HDD_MCASTBCASTFILTER_FILTER_ALL_MULTICAST_BROADCAST == 
+          if (HDD_MCASTBCASTFILTER_FILTER_ALL_MULTICAST_BROADCAST ==
               pHddCtx->dynamic_mcbc_filter.mcastBcastFilterSetting)
           {
-            wlanRxpFilterParam->configuredMcstBcstFilterSetting = 
+            wlanRxpFilterParam->configuredMcstBcstFilterSetting =
                        HDD_MCASTBCASTFILTER_FILTER_ALL_MULTICAST;
           }
-          else if(HDD_MCASTBCASTFILTER_FILTER_ALL_BROADCAST == 
+          else if(HDD_MCASTBCASTFILTER_FILTER_ALL_BROADCAST ==
                   pHddCtx->dynamic_mcbc_filter.mcastBcastFilterSetting)
           {
-            wlanRxpFilterParam->configuredMcstBcstFilterSetting = 
+            wlanRxpFilterParam->configuredMcstBcstFilterSetting =
                            HDD_MCASTBCASTFILTER_FILTER_NONE;
           }
         }
@@ -4741,20 +4741,20 @@ static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
       if (eHAL_STATUS_SUCCESS != sme_ConfigureRxpFilter(WLAN_HDD_GET_HAL_CTX(pAdapter),
                                                    wlanRxpFilterParam))
       {
-        hddLog(VOS_TRACE_LEVEL_ERROR, 
+        hddLog(VOS_TRACE_LEVEL_ERROR,
                "%s: Failure to execute set HW MC/BC Filter request\n",
                __func__);
         return -EINVAL;
       }
 
-      pHddCtx->dynamic_mcbc_filter.mcBcFilterSuspend = 
+      pHddCtx->dynamic_mcbc_filter.mcBcFilterSuspend =
                          wlanRxpFilterParam->configuredMcstBcstFilterSetting;
     }
 
     return 0;
 }
 
-static int iw_clear_dynamic_mcbc_filter(struct net_device *dev, 
+static int iw_clear_dynamic_mcbc_filter(struct net_device *dev,
         struct iw_request_info *info,
         union iwreq_data *wrqu, char *extra)
 {
@@ -4886,7 +4886,7 @@ static int iw_set_keepalive_params(struct net_device *dev, struct iw_request_inf
 
        hddLog(VOS_TRACE_LEVEL_ERROR, "set Keep: TP before SME %d\n", keepaliveRequest.timePeriod);
 
-    if (eHAL_STATUS_SUCCESS != sme_SetKeepAlive(WLAN_HDD_GET_HAL_CTX(pAdapter), 
+    if (eHAL_STATUS_SUCCESS != sme_SetKeepAlive(WLAN_HDD_GET_HAL_CTX(pAdapter),
                                         pAdapter->sessionId, &keepaliveRequest))
     {
         hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Failure to execute Keep Alive\n",
@@ -4898,7 +4898,7 @@ static int iw_set_keepalive_params(struct net_device *dev, struct iw_request_inf
 }
 
 #ifdef WLAN_FEATURE_PACKET_FILTERING
-int wlan_hdd_set_filter(hdd_context_t *pHddCtx, tpPacketFilterCfg pRequest, 
+int wlan_hdd_set_filter(hdd_context_t *pHddCtx, tpPacketFilterCfg pRequest,
                             tANI_U8 sessionId)
 {
     tSirRcvPktFilterCfgType    packetFilterSetReq;
@@ -4998,8 +4998,8 @@ int wlan_hdd_set_filter(hdd_context_t *pHddCtx, tpPacketFilterCfg pRequest,
 
 void wlan_hdd_set_mc_addr_list(hdd_context_t *pHddCtx, v_U8_t set, v_U8_t sessionId)
 {
-    v_U8_t filterAction = 0; 
-    tPacketFilterCfg request = {0}; 
+    v_U8_t filterAction = 0;
+    tPacketFilterCfg request = {0};
     v_U8_t i = 0;
 
     filterAction = set ? HDD_RCV_FILTER_SET : HDD_RCV_FILTER_CLEAR;
@@ -5009,26 +5009,26 @@ void wlan_hdd_set_mc_addr_list(hdd_context_t *pHddCtx, v_U8_t set, v_U8_t sessio
     {
         memset(&request, 0, sizeof (tPacketFilterCfg));
         request.filterAction = filterAction;
-        request.filterId = i; 
+        request.filterId = i;
         if (set)
         {
-            request.numParams = 1; 
-            request.paramsData[0].protocolLayer = HDD_FILTER_PROTO_TYPE_MAC; 
-            request.paramsData[0].cmpFlag = HDD_FILTER_CMP_TYPE_EQUAL;   
+            request.numParams = 1;
+            request.paramsData[0].protocolLayer = HDD_FILTER_PROTO_TYPE_MAC;
+            request.paramsData[0].cmpFlag = HDD_FILTER_CMP_TYPE_EQUAL;
             request.paramsData[0].dataOffset = WLAN_HDD_80211_FRM_DA_OFFSET;
             request.paramsData[0].dataLength = ETH_ALEN;
-            memcpy(&(request.paramsData[0].compareData[0]), 
+            memcpy(&(request.paramsData[0].compareData[0]),
                     &(pHddCtx->mc_addr_list.addr[i][0]), ETH_ALEN);
             /*set mulitcast filters*/
-            hddLog(VOS_TRACE_LEVEL_INFO, 
-                    "%s: %s multicast filter: addr =" 
-                    "%02x:%02x:%02x:%02x:%02x:%02x", 
-                    __func__, set ? "setting" : "clearing", 
-                    request.paramsData[0].compareData[0], 
+            hddLog(VOS_TRACE_LEVEL_INFO,
+                    "%s: %s multicast filter: addr ="
+                    "%02x:%02x:%02x:%02x:%02x:%02x",
+                    __func__, set ? "setting" : "clearing",
+                    request.paramsData[0].compareData[0],
                     request.paramsData[0].compareData[1],
-                    request.paramsData[0].compareData[2], 
+                    request.paramsData[0].compareData[2],
                     request.paramsData[0].compareData[3],
-                    request.paramsData[0].compareData[4], 
+                    request.paramsData[0].compareData[4],
                     request.paramsData[0].compareData[5]);
         }
         wlan_hdd_set_filter(pHddCtx, &request, sessionId);
@@ -5038,7 +5038,7 @@ void wlan_hdd_set_mc_addr_list(hdd_context_t *pHddCtx, v_U8_t set, v_U8_t sessio
 
 static int iw_set_packet_filter_params(struct net_device *dev, struct iw_request_info *info,
         union iwreq_data *wrqu, char *extra)
-{   
+{
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     tpPacketFilterCfg pRequest = (tpPacketFilterCfg)wrqu->data.pointer;
     return wlan_hdd_set_filter(WLAN_HDD_GET_CTX(pAdapter), pRequest, pAdapter->sessionId);
@@ -5167,9 +5167,9 @@ static int iw_get_statistics(struct net_device *dev,
               (char*) &(pStats->rx_error_cnt),
               tlen);
 
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_BYTE_CNT, 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_BYTE_CNT,
               (tANI_U8) sizeof (dStats->tx_uc_byte_cnt[0]),
-              (char*) &(dStats->tx_uc_byte_cnt[0]), 
+              (char*) &(dStats->tx_uc_byte_cnt[0]),
               tlen);
 
     FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_BYTE_CNT,
@@ -5188,29 +5188,29 @@ static int iw_get_statistics(struct net_device *dev,
               (char*) &(aStats->tx_rate),
               tlen);
 
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_UC_BYTE_CNT, 
-              (tANI_U8) sizeof (dStats->rx_uc_byte_cnt[0]), 
-              (char*) &(dStats->rx_uc_byte_cnt[0]), 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_UC_BYTE_CNT,
+              (tANI_U8) sizeof (dStats->rx_uc_byte_cnt[0]),
+              (char*) &(dStats->rx_uc_byte_cnt[0]),
               tlen);
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_MC_BYTE_CNT, 
-              (tANI_U8) sizeof (dStats->rx_mc_byte_cnt), 
-              (char*) &(dStats->rx_mc_byte_cnt), 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_MC_BYTE_CNT,
+              (tANI_U8) sizeof (dStats->rx_mc_byte_cnt),
+              (char*) &(dStats->rx_mc_byte_cnt),
               tlen);
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_BC_BYTE_CNT, 
-              (tANI_U8) sizeof (dStats->rx_bc_byte_cnt), 
-              (char*) &(dStats->rx_bc_byte_cnt), 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_RX_BC_BYTE_CNT,
+              (tANI_U8) sizeof (dStats->rx_bc_byte_cnt),
+              (char*) &(dStats->rx_bc_byte_cnt),
               tlen);
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_UC_BYTE_CNT, 
-              (tANI_U8) sizeof (dStats->tx_uc_byte_cnt[0]), 
-              (char*) &(dStats->tx_uc_byte_cnt[0]), 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_UC_BYTE_CNT,
+              (tANI_U8) sizeof (dStats->tx_uc_byte_cnt[0]),
+              (char*) &(dStats->tx_uc_byte_cnt[0]),
               tlen);
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_MC_BYTE_CNT, 
-              (tANI_U8) sizeof (dStats->tx_mc_byte_cnt), 
-              (char*) &(dStats->tx_mc_byte_cnt), 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_MC_BYTE_CNT,
+              (tANI_U8) sizeof (dStats->tx_mc_byte_cnt),
+              (char*) &(dStats->tx_mc_byte_cnt),
               tlen);
-    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_BC_BYTE_CNT, 
-              (tANI_U8) sizeof (dStats->tx_bc_byte_cnt), 
-              (char*) &(dStats->tx_bc_byte_cnt), 
+    FILL_TLV(p, (tANI_U8)WLAN_STATS_TX_BC_BYTE_CNT,
+              (tANI_U8) sizeof (dStats->tx_bc_byte_cnt),
+              (char*) &(dStats->tx_bc_byte_cnt),
               tlen);
 
     wrqu->data.length = tlen;
@@ -5292,7 +5292,7 @@ VOS_STATUS iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     <scan_timers> <scan_time> <scan_repeat> <scan_time> <scan_repeat>
 
     e.g:
-    1 2 4 test 0 0 3 1 6 11 2 40 5 test2 4 4 6 1 2 3 4 5 6 1 0 2 5 2 300 0 
+    1 2 4 test 0 0 3 1 6 11 2 40 5 test2 4 4 6 1 2 3 4 5 6 1 0 2 5 2 300 0
 
     this translates into:
     -----------------------------
@@ -5308,7 +5308,7 @@ VOS_STATUS iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     bcast type is non-bcast (directed probe will be sent)
     and must not meet any RSSI threshold
 
-    scan every 5 seconds 2 times, scan every 300 seconds until stopped 
+    scan every 5 seconds 2 times, scan every 300 seconds until stopped
   -----------------------------------------------------------------------*/
   ptr = (char*)(wrqu->data.pointer + nOffset);
 
@@ -5438,14 +5438,14 @@ VOS_STATUS iw_set_pno(struct net_device *dev, struct iw_request_info *info,
   {
      ptr += nOffset;
 
-     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, 
-        "Scan timer count %d offset %d", 
+     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+        "Scan timer count %d offset %d",
         pnoRequest.scanTimers.ucScanTimersCount,
         nOffset );
 
      if ( SIR_PNO_MAX_SCAN_TIMERS < pnoRequest.scanTimers.ucScanTimersCount )
      {
-       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, 
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                     "Incorrect cmd - too many scan timers");
        return VOS_STATUS_E_FAILURE;
      }
@@ -5457,15 +5457,15 @@ VOS_STATUS iw_set_pno(struct net_device *dev, struct iw_request_info *info,
            &( pnoRequest.scanTimers.aTimerValues[i].uTimerRepeat),
            &nOffset);
 
-        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, 
-            "PNO Timer value %d Timer repeat %d offset %d", 
-            pnoRequest.scanTimers.aTimerValues[i].uTimerValue, 
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+            "PNO Timer value %d Timer repeat %d offset %d",
+            pnoRequest.scanTimers.aTimerValues[i].uTimerValue,
             pnoRequest.scanTimers.aTimerValues[i].uTimerRepeat,
             nOffset );
 
         if ( 2 != ucParams )
         {
-          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, 
+          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                     "Incorrect cmd - diff params then expected %d", ucParams);
           return VOS_STATUS_E_FAILURE;
         }
@@ -5476,8 +5476,8 @@ VOS_STATUS iw_set_pno(struct net_device *dev, struct iw_request_info *info,
   }
   else
   {
-    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, 
-       "No scan timers provided param count %d scan timers %d", 
+    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+       "No scan timers provided param count %d scan timers %d",
         ucParams,  pnoRequest.scanTimers.ucScanTimersCount );
 
     /*Scan timers defaults to 5 minutes*/
@@ -5572,10 +5572,10 @@ int hdd_setBand_helper(struct net_device *dev, tANI_U8* ptr)
         return -EIO;
     }
 
-    if ( (band == eCSR_BAND_24 && pHddCtx->cfg_ini->nBandCapability==2) || 
-         (band == eCSR_BAND_5G && pHddCtx->cfg_ini->nBandCapability==1) || 
-         (band == eCSR_BAND_ALL && pHddCtx->cfg_ini->nBandCapability!=0)) 
-    {       
+    if ( (band == eCSR_BAND_24 && pHddCtx->cfg_ini->nBandCapability==2) ||
+         (band == eCSR_BAND_5G && pHddCtx->cfg_ini->nBandCapability==1) ||
+         (band == eCSR_BAND_ALL && pHddCtx->cfg_ini->nBandCapability!=0))
+    {
          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
              "%s: band value %u violate INI settings %u", __FUNCTION__,
              band, pHddCtx->cfg_ini->nBandCapability);
@@ -5783,12 +5783,12 @@ VOS_STATUS iw_set_power_params(struct net_device *dev, struct iw_request_info *i
     }
 
     uTotalSize -= nOffset;
-    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, 
-              "Power request parameter %d Total size", 
+    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+              "Power request parameter %d Total size",
               uTotalSize);
     ptr += nOffset;
     /* This is added for dynamic Tele LI enable (0xF1) /disable (0xF0)*/
-    if(!(uTotalSize - nOffset) && 
+    if(!(uTotalSize - nOffset) &&
        (powerRequest.uListenInterval != SIR_NOCHANGE_POWER_VALUE))
     {
         uTotalSize = 0;
@@ -5972,7 +5972,7 @@ static const struct iw_priv_args we_private_args[] = {
 
     {   WE_SET_TM_LEVEL,
         IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,
-        0, 
+        0,
         "setTmLevel" },
 
     /* handlers for main ioctl */
@@ -6118,7 +6118,7 @@ static const struct iw_priv_args we_private_args[] = {
         "getWmmStatus" },
     {
         WE_GET_CHANNEL_LIST,
-        0, 
+        0,
         IW_PRIV_TYPE_CHAR| WE_MAX_STR_LEN,
         "getChannelList" },
 

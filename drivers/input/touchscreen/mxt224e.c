@@ -19,7 +19,7 @@
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/i2c/mxt224e.h>
@@ -117,7 +117,7 @@ struct finger_info {
 struct mxt224_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
-	struct early_suspend early_suspend;
+	struct power_suspend power_suspend;
 #if TOUCH_BOOSTER
 	struct delayed_work work_dvfs_off;
 	struct delayed_work	work_dvfs_chg;
@@ -454,7 +454,7 @@ static uint8_t calibrate_chip(void)
 				1, &atchcalst_tmp); /* forced cal thr  */
 			ret1 = write_mem(copy_data,
 				obj_address+9,
-				1, &atchcalsthr_tmp); /* forced cal thr ratio */	
+				1, &atchcalsthr_tmp); /* forced cal thr ratio */
 	}
 	}
 
@@ -573,7 +573,7 @@ static void mxt224_ta_probe(int ta_status)
 		}
 	printk(KERN_DEBUG"[TSP] threshold : %d\n", threshold_e);
 	calibrate_chip();
-	
+
 }
 
 static void check_chip_calibration(void)
@@ -1072,7 +1072,7 @@ static void median_err_setting(void)
 	}
 
 
-	if (1) 
+	if (1)
 	{
 		gErrCondition = ERR_RTN_CONDITION_T9;
 
@@ -1449,14 +1449,14 @@ static int mxt224_internal_resume(struct mxt224_data *data)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 #define mxt224_suspend	NULL
 #define mxt224_resume	NULL
 
-static void mxt224_early_suspend(struct early_suspend *h)
+static void mxt224_power_suspend(struct power_suspend *h)
 {
 	struct mxt224_data *data = container_of(h, struct mxt224_data,
-								early_suspend);
+								power_suspend);
 	int i;
 	bool ta_status = 0;
 	mxt224_enabled = 0;
@@ -1494,11 +1494,11 @@ static void mxt224_early_suspend(struct early_suspend *h)
 	mxt224_internal_suspend(data);
 }
 
-static void mxt224_late_resume(struct early_suspend *h)
+static void mxt224_power_resume(struct power_suspend *h)
 {
 	bool ta_status = 0;
 	struct mxt224_data *data = container_of(h, struct mxt224_data,
-								early_suspend);
+								power_suspend);
 	mxt224_internal_resume(data);
 	enable_irq(data->client->irq);
 
@@ -2965,11 +2965,11 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 		pr_err("Failed to create device file(%s)!\n",
 				dev_attr_set_module_on.attr.name);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	data->early_suspend.suspend = mxt224_early_suspend;
-	data->early_suspend.resume = mxt224_late_resume;
-	register_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+//	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	data->power_suspend.suspend = mxt224_power_suspend;
+	data->power_suspend.resume = mxt224_power_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	mxt224_enabled = 1;
@@ -3001,8 +3001,8 @@ static int __devexit mxt224_remove(struct i2c_client *client)
 {
 	struct mxt224_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);
 	kfree(data->objects);

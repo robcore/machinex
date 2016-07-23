@@ -80,11 +80,8 @@ static int msm_hdmi_sample_rate = MSM_HDMI_SAMPLE_RATE_48KHZ;
 struct workqueue_struct *hdmi_work_queue;
 struct hdmi_msm_state_type *hdmi_msm_state;
 
-#ifdef CONFIG_SAMSUNG_MHL_8240
+/* Enable HDCP by default */
 static bool hdcp_feature_on = false;
-#else
-static bool hdcp_feature_on = true;
-#endif
 
 DEFINE_MUTEX(hdmi_msm_state_mutex);
 EXPORT_SYMBOL(hdmi_msm_state_mutex);
@@ -643,11 +640,10 @@ static void hdmi_msm_setup_video_mode_lut(void)
 	/* Add all supported CEA modes to the lut */
 	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
 		hdmi_common_supported_video_mode_lut, MSM_HDMI_MODES_CEA);
-#ifndef CONFIG_VIDEO_MHL_V2
+
 	/* Add any other supported timings (DVI modes, etc.) */
 	MSM_HDMI_MODES_SET_TIMING(hdmi_common_supported_video_mode_lut,
 		HDMI_VFRMT_1280x1024p60_5_4);
-#endif
 }
 
 #ifdef PORT_DEBUG
@@ -2703,6 +2699,7 @@ error:
 		return 1;
 	}
 }
+
 static int hdmi_msm_transfer_v_h(void)
 {
 	/* Read V'.HO 4 Byte at offset 0x20 */

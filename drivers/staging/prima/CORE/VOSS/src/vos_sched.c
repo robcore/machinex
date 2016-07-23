@@ -195,7 +195,7 @@ vos_sched_open
   //Create the VOSS Main Controller thread
   pSchedContext->McThread = kthread_create(VosMCThread, pSchedContext,
                                            "VosMCThread");
-  if (IS_ERR(pSchedContext->McThread)) 
+  if (IS_ERR(pSchedContext->McThread))
   {
      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
                "%s: Could not Create VOSS Main Thread Controller",__func__);
@@ -208,7 +208,7 @@ vos_sched_open
 #if !defined(ANI_MANF_DIAG) || defined(FEATURE_WLAN_INTEGRATED_SOC)
   pSchedContext->TxThread = kthread_create(VosTXThread, pSchedContext,
                                            "VosTXThread");
-  if (IS_ERR(pSchedContext->TxThread)) 
+  if (IS_ERR(pSchedContext->TxThread))
   {
      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
                "%s: Could not Create VOSS TX Thread",__func__);
@@ -221,7 +221,7 @@ vos_sched_open
 #ifdef FEATURE_WLAN_INTEGRATED_SOC
   pSchedContext->RxThread = kthread_create(VosRXThread, pSchedContext,
                                            "VosRXThread");
-  if (IS_ERR(pSchedContext->RxThread)) 
+  if (IS_ERR(pSchedContext->RxThread))
   {
 
      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
@@ -325,13 +325,13 @@ VOS_STATUS vos_watchdog_open
 
   //Create the Watchdog thread
   pWdContext->WdThread = kthread_create(VosWDThread, pWdContext,"VosWDThread");
-  
-  if (IS_ERR(pWdContext->WdThread)) 
+
+  if (IS_ERR(pWdContext->WdThread))
   {
      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
                "%s: Could not Create Watchdog thread",__func__);
      return VOS_STATUS_E_RESOURCES;
-  }  
+  }
   else
   {
      wake_up_process(pWdContext->WdThread);
@@ -403,7 +403,7 @@ VosMCThread
   {
     // This implements the execution model algorithm
     retWaitStatus = wait_event_interruptible(pSchedContext->mcWaitQueue,
-       test_bit(MC_POST_EVENT_MASK, &pSchedContext->mcEventFlag) || 
+       test_bit(MC_POST_EVENT_MASK, &pSchedContext->mcEventFlag) ||
        test_bit(MC_SUSPEND_EVENT_MASK, &pSchedContext->mcEventFlag));
 
     if(retWaitStatus == -ERESTARTSYS)
@@ -426,7 +426,7 @@ VosMCThread
         if(test_bit(MC_SUSPEND_EVENT_MASK, &pSchedContext->mcEventFlag))
         {
            clear_bit(MC_SUSPEND_EVENT_MASK, &pSchedContext->mcEventFlag);
-        
+
            /* Unblock anyone waiting on suspend */
            complete(&pHddCtx->mc_sus_event_var);
         }
@@ -468,7 +468,7 @@ VosMCThread
 
         pWdiMsg->callback(pWdiMsg);
 
-        /* 
+        /*
         ** return message to the Core
         */
         vos_core_return_msg(pSchedContext->pVContext, pMsgWrapper);
@@ -884,7 +884,7 @@ static int VosTXThread ( void * Arg )
   {
     // This implements the execution model algorithm
     retWaitStatus = wait_event_interruptible(pSchedContext->txWaitQueue,
-        test_bit(TX_POST_EVENT_MASK, &pSchedContext->txEventFlag) || 
+        test_bit(TX_POST_EVENT_MASK, &pSchedContext->txEventFlag) ||
         test_bit(TX_SUSPEND_EVENT_MASK, &pSchedContext->txEventFlag));
 
 
@@ -907,7 +907,7 @@ static int VosTXThread ( void * Arg )
         if(test_bit(TX_SUSPEND_EVENT_MASK, &pSchedContext->txEventFlag))
         {
            clear_bit(TX_SUSPEND_EVENT_MASK, &pSchedContext->txEventFlag);
-        
+
            /* Unblock anyone waiting on suspend */
            complete(&pHddCtx->tx_sus_event_var);
         }
@@ -990,7 +990,7 @@ static int VosTXThread ( void * Arg )
            VOS_ASSERT(0);
            break;
         }
-        
+
         pWdiMsg->callback(pWdiMsg);
 
         // return message to the Core
@@ -1106,7 +1106,7 @@ static int VosRXThread ( void * Arg )
   {
     // This implements the execution model algorithm
     retWaitStatus = wait_event_interruptible(pSchedContext->rxWaitQueue,
-        test_bit(RX_POST_EVENT_MASK, &pSchedContext->rxEventFlag) || 
+        test_bit(RX_POST_EVENT_MASK, &pSchedContext->rxEventFlag) ||
         test_bit(RX_SUSPEND_EVENT_MASK, &pSchedContext->rxEventFlag));
 
 
@@ -1129,7 +1129,7 @@ static int VosRXThread ( void * Arg )
         if(test_bit(RX_SUSPEND_EVENT_MASK, &pSchedContext->rxEventFlag))
         {
            clear_bit(RX_SUSPEND_EVENT_MASK, &pSchedContext->rxEventFlag);
-        
+
            /* Unblock anyone waiting on suspend */
            complete(&pHddCtx->rx_sus_event_var);
         }
@@ -1321,7 +1321,7 @@ VOS_STATUS vos_watchdog_chip_reset ( vos_chip_reset_reason_type  reason )
     hdd_context_t *pHddCtx = NULL;
     hdd_chip_reset_stats_t *pResetStats;
     struct sdio_func *sdio_func_dev = NULL;
-    
+
     VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
         "%s: vos_watchdog resetting WLAN", __FUNCTION__);
     if (gpVosWatchdogContext == NULL)
@@ -1346,7 +1346,7 @@ VOS_STATUS vos_watchdog_chip_reset ( vos_chip_reset_reason_type  reason )
     }
 
     sd_claim_host(sdio_func_dev);
-    
+
     /* Disable SDIO IRQ since we are in LOGP state */
     libra_disable_sdio_irq_capability(sdio_func_dev, 1);
     libra_enable_sdio_irq(sdio_func_dev, 0);
@@ -1364,7 +1364,7 @@ VOS_STATUS vos_watchdog_chip_reset ( vos_chip_reset_reason_type  reason )
         /* Release the lock here */
         spin_unlock(&gpVosWatchdogContext->wdLock);
         return VOS_STATUS_E_FAILURE;
-    } 
+    }
     else if (pHddCtx->isLogpInProgress)
     {
         VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
@@ -1376,7 +1376,7 @@ VOS_STATUS vos_watchdog_chip_reset ( vos_chip_reset_reason_type  reason )
     }
 
     VOS_ASSERT(0);
-    
+
     pVosContext = vos_get_global_context(VOS_MODULE_ID_HDD, NULL);
     pAdapter = (hdd_adapter_t *)vos_get_context(VOS_MODULE_ID_HDD,pVosContext);
 
@@ -1392,10 +1392,10 @@ VOS_STATUS vos_watchdog_chip_reset ( vos_chip_reset_reason_type  reason )
         VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
             "%s: Load/unload in Progress. Ignoring signaling Watchdog",
                                                           __FUNCTION__);
-        return VOS_STATUS_E_FAILURE;    
+        return VOS_STATUS_E_FAILURE;
     }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
     if(VOS_STATUS_SUCCESS != hdd_wlan_reset_initialization())
     {
        /* This can fail if card got removed by SDCC during resume */
@@ -1739,7 +1739,7 @@ void vos_sched_flush_mc_mqs ( pVosSchedContext pSchedContext )
   /* Flush the WDA Mq */
   while( NULL != (pMsgWrapper = vos_mq_get(&pSchedContext->wdaMcMq) ))
   {
-    if(pMsgWrapper->pVosMsg != NULL) 
+    if(pMsgWrapper->pVosMsg != NULL)
     {
         VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
                    "%s: Freeing MC WDA MSG message type %d",
@@ -2037,7 +2037,7 @@ VOS_STATUS vos_watchdog_wlan_shutdown(void)
         /* Release the lock here */
         spin_unlock(&gpVosWatchdogContext->wdLock);
         return VOS_STATUS_E_FAILURE;
-    } 
+    }
 
     /* Set the flags so that all future CMD53 and Wext commands get blocked right away */
     vos_set_logp_in_progress(VOS_MODULE_ID_VOSS, TRUE);
@@ -2055,7 +2055,7 @@ VOS_STATUS vos_watchdog_wlan_shutdown(void)
     }
     /* Update Riva Reset Statistics */
     pHddCtx->hddRivaResetStats++;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
     if(VOS_STATUS_SUCCESS != hdd_wlan_reset_initialization())
     {
        VOS_ASSERT(0);

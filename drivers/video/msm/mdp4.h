@@ -15,9 +15,6 @@
 #ifndef MDP4_H
 #define MDP4_H
 
-#if defined(DLOG_ENABLED)
-#include "dlog.h"
-#endif
 extern struct mdp_dma_data dma2_data;
 extern struct mdp_dma_data dma_s_data;
 extern struct mdp_dma_data dma_e_data;
@@ -1046,5 +1043,4 @@ static inline void mdp4_unmap_sec_resource(struct msm_fb_data_type *mfd);
 	return 0;
 }
 #endif
-void xlog(const char *name, u32 data0, u32 data1, u32 data2, u32 data3, u32 data4);
 #endif /* MDP_H */

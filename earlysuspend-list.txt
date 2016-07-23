@@ -1,5 +1,4 @@
 girlie 'earlysuspend\|early_suspend\|late_resume\|early_suspend.level' | sort -d >> /media/root/robcore/android/machinex/earlysuspend-list.txt
-
 arch/arm/mach-msm/board-mahimahi-flashlight.c
 arch/arm/mach-msm/board-mahimahi-microp.c
 arch/arm/mach-msm/htc_pwrsink.c
@@ -27,7 +26,6 @@ drivers/gpu/msm/kgsl_device.h
 drivers/gpu/msm/kgsl.h
 drivers/gpu/msm/kgsl_pwrctrl.c
 drivers/input/misc/mpu6500/mpu6500_selftest.c
-drivers/input/touchscreen/cyttsp4_core.c
 drivers/input/touchscreen/lge_touch_core.c
 drivers/input/touchscreen/mxt224e.c
 drivers/input/touchscreen/mxts.c
@@ -36,11 +34,7 @@ drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c
 drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.h
 drivers/input/touchscreen/zinitix_bt_532.c
 drivers/pcmcia/cs.c
-drivers/staging/prima/CORE/HDD/inc/wlan_hdd_power.h
 drivers/staging/prima/CORE/HDD/src/wlan_hdd_early_suspend.c
-drivers/staging/prima/CORE/HDD/src/wlan_hdd_main.c
-drivers/staging/prima/CORE/HDD/src/wlan_hdd_wext.c
-drivers/staging/prima/CORE/VOSS/src/vos_sched.c
 drivers/staging/prima/Makefile
 drivers/video/backlight/lm3533.c
 drivers/video/msm/mipi_himax_tft.c
@@ -79,4 +73,5 @@ kernel/power/fbearlysuspend.c
 kernel/power/main.c
 kernel/power/powersuspend.c
 kernel/power/suspend.c
-unleashedpm.txt
+out/kernel/power/.main.o.cmd
+out/kernel/power/.suspend.o.cmd

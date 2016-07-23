@@ -698,8 +698,8 @@ static struct msm_fb_panel_data d2l_panel_data = {
 	.off = mipi_d2l_lcd_off,
 	.set_backlight = mipi_d2l_set_backlight,
 };
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void mipi_d2l_disp_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_HAS_POWERSUSPEND)
+static void mipi_d2l_disp_power_suspend(struct power_suspend *h)
 {
 	down(&d2l_mfd->sem);
 	mipi_d2l_set_backlight_level(bl_pwm, 0);
@@ -709,7 +709,7 @@ static void mipi_d2l_disp_early_suspend(struct early_suspend *h)
 	pr_info("%s-", __func__);
 }
 
-static void mipi_d2l_disp_late_resume(struct early_suspend *h)
+static void mipi_d2l_disp_power_resume(struct power_suspend *h)
 {
 
 	d2l_mfd->resume_state = MIPI_RESUME_STATE;
@@ -906,11 +906,11 @@ static int __devinit mipi_d2l_probe(struct platform_device *pdev)
 	}
 #endif
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	ddd.early_suspend.suspend = mipi_d2l_disp_early_suspend;
-	ddd.early_suspend.resume = mipi_d2l_disp_late_resume;
-	ddd.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	register_early_suspend(&ddd.early_suspend);
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	ddd.power_suspend.suspend = mipi_d2l_disp_power_suspend;
+	ddd.power_suspend.resume = mipi_d2l_disp_power_resume;
+//	ddd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
+	register_power_suspend(&ddd.power_suspend);
 #endif
 
 	return ret;
