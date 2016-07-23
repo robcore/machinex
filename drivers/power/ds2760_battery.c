@@ -355,7 +355,8 @@ static void ds2760_battery_external_power_changed(struct power_supply *psy)
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
-	mod_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ/10);
+	cancel_delayed_work(&di->monitor_work);
+	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ/10);
 }
 
 
@@ -400,7 +401,8 @@ static void ds2760_battery_set_charged(struct power_supply *psy)
 
 	/* postpone the actual work by 20 secs. This is for debouncing GPIO
 	 * signals and to let the current value settle. See AN4188. */
-	mod_delayed_work(di->monitor_wqueue, &di->set_charged_work, HZ * 20);
+	cancel_delayed_work(&di->set_charged_work);
+	queue_delayed_work(di->monitor_wqueue, &di->set_charged_work, HZ * 20);
 }
 
 static int ds2760_battery_get_property(struct power_supply *psy,
@@ -614,7 +616,8 @@ static int ds2760_battery_resume(struct platform_device *pdev)
 	di->charge_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	power_supply_changed(&di->bat);
 
-	mod_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ);
+	cancel_delayed_work(&di->monitor_work);
+	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ);
 
 	return 0;
 }
