@@ -34,6 +34,20 @@ config SENSORS_AD7146
 	  This driver can also be built as a module.  If so, the module
 	  will be called ad7146.
 endif
+
+config SENSORS
+	bool "Sensors Class Support"
+	help
+	  This option enables the sensor sysfs class in /sys/class/sensors.
+	  You'll need this to do anything useful with sensorss. If unsure, say N.
+
+config SENSORS_SSC
+	bool "Enable Sensors Driver Support for SSC"
+	help
+	  Add support for sensors SSC driver.
+	  This driver is used for exercising sensors use case,
+	  time syncing with ADSP clock.
+
 config SENSORS_CORE
          bool "sensors_core"
          depends on I2C
