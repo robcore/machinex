@@ -1028,6 +1028,7 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 {
 	pm_callback_t callback = NULL;
 	char *info = NULL;
+	int error = 0;
 
 	__pm_runtime_disable(dev, false);
 
