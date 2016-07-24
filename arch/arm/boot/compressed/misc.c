@@ -155,7 +155,8 @@ decompress_kernel(unsigned long output_start, unsigned long free_mem_ptr_p,
 		putstr(" done, booting the kernel.\n");
 }
 
-const struct tag *copy_atags(struct tag *dest, const struct tag *src, size_t max)
+const struct tag *copy_atags(struct tag *dest, const struct tag *src,
+                             size_t max)
 {
 	struct tag *tag;
 	size_t      size;
