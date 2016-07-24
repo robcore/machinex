@@ -28,7 +28,7 @@
 #elif defined(CONFIG_MDNIE_LITE_TUNING)
 #include "mdnie_lite_tuning.h"
 #endif
-#include "powersuspend.h"
+#include <linux/powersuspend.h>
 
 #define DDI_VIDEO_ENHANCE_TUNING
 #if defined(DDI_VIDEO_ENHANCE_TUNING)
