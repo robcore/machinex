@@ -331,11 +331,6 @@ static void msmsdcc_soft_reset(struct msmsdcc_host *host)
 	 */
 	if (is_sw_reset_save_config(host)) {
 		ktime_t start;
-		uint32_t dll_config = 0;
-
-
-		if (is_sw_reset_save_config_broken(host))
-			dll_config = readl_relaxed(host->base + MCI_DLL_CONFIG);
 
 		writel_relaxed(readl_relaxed(host->base + MMCIPOWER)
 				| MCI_SW_RST_CFG, host->base + MMCIPOWER);
@@ -354,11 +349,6 @@ static void msmsdcc_soft_reset(struct msmsdcc_host *host)
 					mmc_hostname(host->mmc), __func__);
 				BUG();
 			}
-		}
-
-		if (is_sw_reset_save_config_broken(host)) {
-			writel_relaxed(dll_config, host->base + MCI_DLL_CONFIG);
-			mb();
 		}
 	} else {
 		writel_relaxed(0, host->base + MMCICOMMAND);
@@ -537,6 +527,8 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 
 	if (mrq->data)
 		mrq->data->bytes_xfered = host->curr.data_xfered;
+	if (mrq->cmd->error == -ETIMEDOUT)
+		mdelay(5);
 
 	msmsdcc_reset_dpsm(host);
 
@@ -1830,12 +1822,9 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
-
-		if (cmd->opcode != 52) {
-			pr_err("%s: CMD%d: Command CRC error\n",
-				mmc_hostname(host->mmc), cmd->opcode);
-			msmsdcc_dump_sdcc_state(host);
-		}
+		pr_err("%s: CMD%d: Command CRC error\n",
+			mmc_hostname(host->mmc), cmd->opcode);
+		msmsdcc_dump_sdcc_state(host);
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
 		if( host->pdev_id == 4){
@@ -6239,7 +6228,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags | IRQF_ONESHOT,
+				  plat->irq_flags,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
