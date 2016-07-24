@@ -28,7 +28,12 @@
 #elif defined(CONFIG_MDNIE_LITE_TUNING)
 #include "mdnie_lite_tuning.h"
 #endif
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
+#endif
 
 #define DDI_VIDEO_ENHANCE_TUNING
 #if defined(DDI_VIDEO_ENHANCE_TUNING)
@@ -653,6 +658,9 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
+#ifdef CONFIG_STATE_NOTIFIER
+		state_suspend();
+#endif
 #ifdef CONFIG_POWERSUSPEND
 	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);

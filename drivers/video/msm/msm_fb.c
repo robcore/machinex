@@ -1181,9 +1181,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
-#ifdef CONFIG_STATE_NOTIFIER
-		state_suspend();
-#endif
 		break;
 	}
 
