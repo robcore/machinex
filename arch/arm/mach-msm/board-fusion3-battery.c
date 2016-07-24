@@ -358,7 +358,7 @@ static int sec_bat_get_cable_from_extended_cable_type(
 	if (force_fast_charge == FAST_CHARGE_FORCE_AC) {
 		switch(cable_type) {
 			/* These are low current USB connections,
-			   apply normal 1A AC levels to USB */
+			   apply normal 1A AC level to USB */
 			case POWER_SUPPLY_TYPE_USB:
 			case POWER_SUPPLY_TYPE_USB_ACA:
 			case POWER_SUPPLY_TYPE_CARDOCK:
@@ -813,7 +813,7 @@ sec_battery_platform_data_t sec_battery_pdata = {
 	.temp_low_threshold_normal = -30,
 	.temp_low_recovery_normal = 0,
 
-	.temp_high_threshold_lpm = 500,
+	.temp_high_threshold_lpm = 470,
 	.temp_high_recovery_lpm = 430,
 	.temp_low_threshold_lpm = -30,
 	.temp_low_recovery_lpm = 0,

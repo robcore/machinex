@@ -525,7 +525,7 @@ static struct platform_device apq8064_android_pmem_audio_device = {
 static struct platform_device battery_bcl_device = {
 	.name = "battery_current_limit",
 	.id = -1,
-};
+	};
 #endif
 
 struct fmem_platform_data apq8064_fmem_pdata = {
@@ -3244,9 +3244,9 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 0, /*see drivers/thermal/msm8960_tsens.c to put this to rest*/
+	.sensor_id = 7,
 	.poll_ms = 250,
-	.limit_temp_degC = 60,
+	.limit_temp_degC = 70,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
 #ifdef CONFIG_INTELLI_THERMAL

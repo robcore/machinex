@@ -617,7 +617,7 @@ static void msm_pil_debugfs_remove(struct pil_device *pil)
 }
 #else
 static int __init msm_pil_debugfs_init(void) { return 0; };
-static void __exit msm_pil_debugfs_exit(void) { };
+static void __exit msm_pil_debugfs_exit(void) { return 0; };
 static int msm_pil_debugfs_add(struct pil_device *pil) { return 0; }
 static void msm_pil_debugfs_remove(struct pil_device *pil) { }
 #endif
@@ -688,7 +688,7 @@ void msm_pil_unregister(struct pil_device *pil)
 	if (get_device(&pil->dev)) {
 		mutex_lock(&pil->lock);
 		WARN_ON(pil->count);
-		flush_delayed_work(&pil->proxy);
+		flush_delayed_work_sync(&pil->proxy);
 		msm_pil_debugfs_remove(pil);
 		device_unregister(&pil->dev);
 		mutex_unlock(&pil->lock);

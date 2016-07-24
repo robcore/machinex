@@ -576,8 +576,7 @@ int msm_bus_scale_client_update_request(uint32_t cl, unsigned index)
 	pdata = client->pdata;
 	if (!pdata) {
 		MSM_BUS_ERR("Null pdata passed to update-request\n");
-		ret = -ENXIO;
-		goto err;
+		return -ENXIO;
 	}
 
 	if (index >= pdata->num_usecases) {
