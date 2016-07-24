@@ -867,6 +867,24 @@ static const int prio_to_weight[40] = {
  /*  15 */        36,        29,        23,        18,        15,
 };
 
+static inline void update_load_add(struct load_weight *lw, unsigned long inc)
+{
+	lw->weight += inc;
+	lw->inv_weight = 0;
+}
+
+static inline void update_load_sub(struct load_weight *lw, unsigned long dec)
+{
+	lw->weight -= dec;
+	lw->inv_weight = 0;
+}
+
+static inline void update_load_set(struct load_weight *lw, unsigned long w)
+{
+	lw->weight = w;
+	lw->inv_weight = 0;
+}
+
 /*
  * Inverse (2^32/x) values of the prio_to_weight[] array, precalculated.
  *
