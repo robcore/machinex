@@ -1636,6 +1636,11 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
+	if(msm_uport == NULL) {
+		printk(KERN_INFO "(msm_serial_hs) msm_hs_set_mctrl - msm_uport is NULL, so return..\n");
+		return;
+	}
+
 	if (msm_uport->clk_state == MSM_HS_CLK_OFF) {
 		pr_err("%s:Failing as GSBI clocks are OFF\n", __func__);
 		return;
@@ -2008,6 +2013,11 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	unsigned long flags;
 	unsigned int data;
 	int ret = 0;
+
+	if(msm_uport == NULL) {
+		printk(KERN_INFO "(msm_serial_hs) msm_hs_request_clock_on - msm_uport is NULL, so return..\n");
+		return;
+	}
 
 	if(msm_uport->is_shutdown) {
 		printk(KERN_INFO "(msm_serial_hs) msm_hs_request_clock_on - uart shutdown, so return..\n");

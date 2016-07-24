@@ -1164,7 +1164,7 @@ int mdp_histogram_stop(struct fb_info *info, uint32_t block)
 
 	mgmt->mdp_is_hist_start = FALSE;
 
-	if (mdp_fb_is_power_off(mfd)) {
+	if (!mfd->panel_power_on) {
 		if (mgmt->hist != NULL) {
 			mgmt->hist = NULL;
 			complete(&mgmt->mdp_hist_comp);
@@ -2389,31 +2389,22 @@ static struct platform_driver mdp_driver = {
 	},
 };
 
-static int mdp_fps_level_change(struct platform_device *pdev, u32 fps_level)
-{
-	int ret = 0;
-	ret = panel_next_fps_level_change(pdev, fps_level);
-	return ret;
-}
 static int mdp_off(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
 
 	pr_debug("%s:+\n", __func__);
-	if (mdp_fb_is_power_on_lp(mfd)) {
-		pr_debug("panel not turned off. keeping overlay on\n");
-		ret = panel_next_low_power_config(pdev, true);
-		return ret;
-	}
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
 	complete_all(&vsync_cntrl.vsync_wait);
-
 	mdp_clk_ctrl(1);
 	mdp_lut_status_backup();
-	ret = panel_next_early_off(pdev);
+
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+	ret = panel_next_off(pdev);
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
 	if (mfd->panel.type == MIPI_CMD_PANEL)
 		mdp4_dsi_cmd_off(pdev);
@@ -2426,12 +2417,12 @@ static int mdp_off(struct platform_device *pdev)
 	else if (mfd->panel.type == WRITEBACK_PANEL)
 		mdp4_overlay_writeback_off(pdev);
 
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-	ret = panel_next_off(pdev);
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-
 	mdp_clk_ctrl(0);
+
 #ifdef CONFIG_MSM_BUS_SCALING
+#if defined(CONFIG_MACH_WILCOX_EUR_LTE)
+	msleep(20);
+#endif
 	mdp_bus_scale_update_request(0, 0, 0, 0);
 #endif
 	pr_debug("%s:-\n", __func__);
@@ -2460,31 +2451,15 @@ static int mdp_on(struct platform_device *pdev)
 
 	pr_debug("%s:+\n", __func__);
 
-	if (!(mfd->cont_splash_done)) {
-		if (mfd->panel.type == MIPI_VIDEO_PANEL)
-			mdp4_dsi_video_splash_done();
-
-		/* Clks are enabled in probe.
-		Disabling clocks now */
-		mdp_clk_ctrl(0);
-		mfd->cont_splash_done = 1;
-	}
 
 	if(mfd->index == 0)
 		mdp_iommu_max_map_size = mfd->max_map_size;
-
-	ret = panel_next_low_power_config(pdev, false);
-
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-
-	ret = panel_next_on(pdev);
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-
 
 	if (mdp_rev >= MDP_REV_40) {
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		mdp_clk_ctrl(1);
 		mdp_bus_scale_restore_request();
+
 		mdp4_hw_init();
 
 		/* Initialize HistLUT to last LUT */
@@ -2516,6 +2491,11 @@ static int mdp_on(struct platform_device *pdev)
 		vsync_cntrl.dev = mfd->fbi->dev;
 		atomic_set(&vsync_cntrl.suspend, 1);
 	}
+
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+
+	ret = panel_next_on(pdev);
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
 	mdp4_overlay_dsi_video_start();
 
@@ -2828,7 +2808,7 @@ static int mdp_irq_clk_setup(struct platform_device *pdev,
 
 	MSM_FB_DEBUG("mdp_clk: mdp_clk=%d\n", (int)clk_get_rate(mdp_clk));
 #endif
-
+#if defined(CONFIG_MACH_MELIUS)
 	if (mdp_rev == MDP_REV_42 && !cont_splashScreen) {
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		/* DSI Video Timing generator disable */
@@ -2839,6 +2819,7 @@ static int mdp_irq_clk_setup(struct platform_device *pdev,
 		outpdw(MDP_BASE + 0x10004, 0x3);
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	}
+#endif
 	return 0;
 }
 #ifdef CONFIG_MDP_SHUTDOWN
@@ -2989,7 +2970,8 @@ static int mdp_probe(struct platform_device *pdev)
 		rc = -ENOMEM;
 		goto mdp_probe_err;
 	}
-#if 0
+#if defined (CONFIG_MACH_MELIUS) || defined (CONFIG_MACH_SERRANO) || defined (CONFIG_MACH_GOLDEN) || defined (CONFIG_MACH_LT02) || defined(CONFIG_MACH_WILCOX_EUR_LTE)
+
 	if (mdp_pdata) {
 #if defined (CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT)
 		if ((get_lcd_attached()) && mdp_pdata->cont_splash_enabled &&
@@ -3047,7 +3029,6 @@ static int mdp_probe(struct platform_device *pdev)
 	pdata = msm_fb_dev->dev.platform_data;
 	pdata->on = mdp_on;
 	pdata->off = mdp_off;
-	pdata->fps_level_change = mdp_fps_level_change;
 	pdata->late_init = NULL;
 	pdata->next = pdev;
 
@@ -3418,17 +3399,6 @@ void mdp_footswitch_ctrl(boolean on)
 	}
 
 	mutex_unlock(&mdp_suspend_mutex);
-}
-
-void mdp_free_splash_buffer(struct msm_fb_data_type *mfd)
-{
-	if (mfd->copy_splash_buf) {
-		dma_free_coherent(NULL,	mdp_pdata->splash_screen_size,
-			mfd->copy_splash_buf,
-			(dma_addr_t) mfd->copy_splash_phys);
-
-		mfd->copy_splash_buf = NULL;
-	}
 }
 
 #ifdef CONFIG_PM

@@ -225,7 +225,6 @@ void mdp4_overlay_iommu_unmap_freelist(int mixer)
 		return;
 
 	mutex_lock(&iommu_mutex);
-
 	pflist = &ctrl->iommu_free_prev[mixer];
 	flist = &ctrl->iommu_free[mixer];
 	pr_debug("%s: mixer=%d fndx=%d %d\n", __func__,
@@ -3787,7 +3786,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	}
 
 	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
-		if (mdp_fb_is_power_off(mfd))		/* suspended */
+		if (!mfd->panel_power_on)		/* suspended */
 			return -EPERM;
 
 	if (req->src.format == MDP_FB_FORMAT)
@@ -3923,7 +3922,7 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 		/* mixer 0 */
 		ctrl->mixer0_played = 0;
 		if (ctrl->panel_mode & MDP4_PANEL_MDDI) {
-			if (!mdp_fb_is_power_off(mfd))
+			if (mfd->panel_power_on)
 				mdp4_mddi_blt_dmap_busy_wait(mfd);
 		}
 	}
@@ -3933,7 +3932,7 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 
 	if (pipe->mixer_num == MDP4_MIXER0) {
 		if (ctrl->panel_mode & MDP4_PANEL_MDDI) {
-			if (!mdp_fb_is_power_off(mfd))
+			if (mfd->panel_power_on)
 				mdp4_mddi_overlay_restore();
 		}
 	} else {	/* mixer1, DTV, ATV */
@@ -3995,7 +3994,7 @@ int mdp4_overlay_vsync_ctrl(struct fb_info *info, int enable)
 	if (mfd == NULL)
 		return -ENODEV;
 
-	if (mdp_fb_is_power_off(mfd))
+	if (!mfd->panel_power_on)
 		return -EINVAL;
 
 	if (enable)
@@ -4265,8 +4264,8 @@ int mdp4_overlay_commit(struct fb_info *info)
 	if (mfd == NULL)
 		return -ENODEV;
 
-	if (mdp_fb_is_power_off(mfd))
-		ret = -EINVAL;
+	if (!mfd->panel_power_on) /* suspended */
+		return -EINVAL;
 
 	mixer = mfd->panel_info.pdest;	/* DISPLAY_1 or DISPLAY_2 */
 

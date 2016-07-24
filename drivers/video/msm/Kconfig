@@ -1268,6 +1268,8 @@ config RUNTIME_MIPI_CLK_CHANGE
 	  Support for MIPI CLK CHANGE
 
 config ESD_ERR_FG_RECOVERY
+	bool "ESD RECOVERY BY ERR_FG"
+	default n
 
 config MIPI_MDP_REGISTER_DUMP
 	default n

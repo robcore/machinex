@@ -565,19 +565,10 @@ static void mdp4_dsi_video_tg_off(struct vsycn_ctrl *vctrl)
 	msleep(20);
 }
 
-int mdp4_dsi_video_splash_done(void)
-{
-	struct vsycn_ctrl *vctrl;
-	int cndx = 0;
-
-	vctrl = &vsync_ctrl_db[cndx];
-
-	mdp4_dsi_video_tg_off(vctrl);
-	mipi_dsi_controller_cfg(0);
-
-	return 0;
-}
-
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_WVGA_PT) \
+|| defined (CONFIG_MACH_LT02_SPR) || defined (CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
+void pull_reset_low(void);
+#endif
 int mdp4_dsi_video_on(struct platform_device *pdev)
 {
 	int dsi_width;
@@ -684,7 +675,15 @@ int mdp4_dsi_video_on(struct platform_device *pdev)
 
 		atomic_set(&vctrl->suspend, 0);
 
+#if defined(CONFIG_FEATURE_FLIPLR)
+	pipe->mfd = mfd;
+#endif
+/* QC Patch for LCD black out Issue */
 	if (!(mfd->cont_splash_done)) {
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_WVGA_PT) \
+|| defined (CONFIG_MACH_LT02_SPR) || defined (CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
+	pull_reset_low();
+#endif
 		mfd->cont_splash_done = 1;
 		mdp4_dsi_video_wait4vsync(0);
 		MDP_OUTP(MDP_BASE + DSI_VIDEO_BASE, 0);
@@ -1248,7 +1247,7 @@ void mdp4_dsi_video_overlay(struct msm_fb_data_type *mfd)
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
 
-	if (!pipe || mdp_fb_is_power_off(mfd)) {
+	if (!pipe || !mfd->panel_power_on) {
 		mutex_unlock(&mfd->dma->ov_mutex);
 		return;
 	}
