@@ -37,10 +37,8 @@ void read_current_timer_delay_loop(unsigned long loops)
 {
 	unsigned long bclock, now;
 
-	read_current_timer(&bclock);
-	do {
-		read_current_timer(&now);
-	} while ((now - bclock) < loops);
+	while ((get_cycles() - start) <= cycles)
+		cpu_relax();
 }
 #endif
 
