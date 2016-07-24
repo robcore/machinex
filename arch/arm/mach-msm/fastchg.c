@@ -420,12 +420,12 @@ static ssize_t info_show(struct kobject *kobj,
 		"Fast charge mode : %s\n"
 		"MTP while charging mode : %s\n"
 		"Screen on Current Limit mode : %s\n"
-		"Custom  AC level : %dmA/h\n"
-		"Custom USB level : %dmA/h\n"
+		"Custom  AC level      : %dmA/h\n"
+		"Custom USB level      : %dmA/h\n"
 		"Custom Wireless level : %dmA/h\n"
-		"Failsafe mode : %s\n"
-		"Valid AC  levels : %s\n"
-		"Valid USB levels : %s\n"
+		"Failsafe mode         : %s\n"
+		"Valid AC  levels      : %s\n"
+		"Valid USB levels      : %s\n"
 		"Valid Wireless levels : %s\n",
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	   ? "0 - Disabled (default)" :
@@ -492,8 +492,8 @@ int force_fast_charge_init(void)
 	use_mtp_during_fast_charge = USE_MTP_DURING_FAST_CHARGE_ENABLED;
 	/* Use Samsung Screen ON current limit while charging, enabled by default */
 	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_ENABLED;
-	/* Default AC charge level to 2100mA/h    */
-	ac_charge_level   = AC_CHARGE_2100;
+	/* Default AC charge level to 1900mA/h    */
+	ac_charge_level   = AC_CHARGE_1900;
 	/* Default USB charge level to 460mA/h    */
 	usb_charge_level  = USB_CHARGE_460;
 	/* Default USB charge level to 650mA/h    */

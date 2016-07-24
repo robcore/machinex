@@ -366,8 +366,6 @@ static int sec_bat_get_cable_from_extended_cable_type(
 				charge_current_max = USB_CHARGE_1000;
 				charge_current     = USB_CHARGE_1000;
 				break;
-			default:		/* Don't do anything for any other kind of connections and don't touch when type is unknown */
-				break;
 
 		}
 	/* We are in advanced Fast Charge mode, so we apply custom charging

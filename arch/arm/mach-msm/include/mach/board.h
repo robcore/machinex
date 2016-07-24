@@ -367,8 +367,8 @@ struct msm_camera_sensor_platform_info {
 	void(*sensor_power_off)(void);
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	void(*sensor_power_on_sub)(void);
-	void(*sensor_power_off_sub)(void);	
-#endif	
+	void(*sensor_power_off_sub)(void);
+#endif
 	void(*sensor_af_power_off)(void);
 	void(*sensor_vddio_power_off)(void);
 	void(*sensor_pmic_gpio_ctrl)(int, int);

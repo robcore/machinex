@@ -483,13 +483,10 @@ static void xhci_hub_report_link_state(struct xhci_hcd *xhci,
 	u32 pls = status_reg & PORT_PLS_MASK;
 
 	/* resume state is a xHCI internal state.
-	 * Do not report it to usb core, instead, pretend to be U3,
-	 * thus usb core knows it's not ready for transfer
+	 * Do not report it to usb core.
 	 */
-	if (pls == XDEV_RESUME) {
-		*status |= USB_SS_PORT_LS_U3;
+	if (pls == XDEV_RESUME)
 		return;
-	}
 
 	/* When the CAS bit is set then warm reset
 	 * should be performed on port
@@ -1027,10 +1024,10 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	spin_lock_irqsave(&xhci->lock, flags);
 
 	if (hcd->self.root_hub->do_remote_wakeup) {
-		if (bus_state->resuming_ports ||	/* USB2 */
-		    bus_state->port_remote_wakeup) {	/* USB3 */
+		if (bus_state->resuming_ports) {
 			spin_unlock_irqrestore(&xhci->lock, flags);
-			xhci_dbg(xhci, "suspend failed because a port is resuming\n");
+			xhci_dbg(xhci, "suspend failed because "
+						"a port is resuming\n");
 			return -EBUSY;
 		}
 	}
@@ -1079,7 +1076,7 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 			if (xhci->quirks & XHCI_PORTSC_DELAY)
 				ndelay(100);
 		}
-	}
+		
 	hcd->state = HC_STATE_SUSPENDED;
 	bus_state->next_statechange = jiffies + msecs_to_jiffies(10);
 	spin_unlock_irqrestore(&xhci->lock, flags);
@@ -1160,6 +1157,7 @@ int xhci_bus_resume(struct usb_hcd *hcd)
 			if (xhci->quirks & XHCI_PORTSC_DELAY)
 				ndelay(100);
 		}
+
 	}
 
 	(void) xhci_readl(xhci, &xhci->op_regs->command);

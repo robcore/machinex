@@ -280,7 +280,6 @@ struct xhci_op_regs {
 #define XDEV_U0		(0x0 << 5)
 #define XDEV_U2		(0x2 << 5)
 #define XDEV_U3		(0x3 << 5)
-#define XDEV_INACTIVE	(0x6 << 5)
 #define XDEV_RESUME	(0xf << 5)
 /* true: port has power (see HCC_PPC) */
 #define PORT_POWER	(1 << 9)
@@ -1509,13 +1508,6 @@ struct xhci_hcd {
 #define XHCI_RESET_ON_RESUME	(1 << 7)
 #define	XHCI_SW_BW_CHECKING	(1 << 8)
 #define XHCI_AMD_0x96_HOST	(1 << 9)
-#define XHCI_TRUST_TX_LENGTH	(1 << 10)
-#define XHCI_SPURIOUS_REBOOT	(1 << 13)
-#define XHCI_COMP_MODE_QUIRK	(1 << 14)
-#define XHCI_AVOID_BEI		(1 << 15)
-#define XHCI_PLAT		(1 << 16)
-#define XHCI_SLOW_SUSPEND	(1 << 17)
-#define XHCI_SPURIOUS_WAKEUP	(1 << 18)
 /*
  * In Synopsis DWC3 controller, PORTSC register access involves multiple clock
  * domains. When the software does a PORTSC write, handshakes are needed
@@ -1531,6 +1523,10 @@ struct xhci_hcd {
  * (16.66 ns x 5 = 84ns) ~100ns after writing to the PORTSC register.
  */
 #define XHCI_PORTSC_DELAY	(1 << 10)
+#define XHCI_PLAT		(1 << 16)
+#define XHCI_SLOW_SUSPEND	(1 << 17)
+#define XHCI_SPURIOUS_WAKEUP	(1 << 18)
+#define XHCI_PME_STUCK_QUIRK	(1 << 20)
 	unsigned int		num_active_eps;
 	unsigned int		limit_active_eps;
 	/* There are two roothubs to keep track of bus suspend info for */

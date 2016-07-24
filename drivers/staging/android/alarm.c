@@ -13,17 +13,26 @@
  *
  */
 
+#include <linux/time.h>
 #include <linux/module.h>
-#include <linux/android_alarm.h>
 #include <linux/device.h>
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/rtc.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
-#include <linux/wakelock.h>
+#include "android_alarm.h"
 
-#include <asm/mach/time.h>
+/* XXX - Hack out wakelocks, while they are out of tree */
+struct wake_lock {
+	int i;
+};
+#define wake_lock(x)
+#define wake_lock_timeout(x, y)
+#define wake_unlock(x)
+#define WAKE_LOCK_SUSPEND 0
+#define wake_lock_init(x, y, z) ((x)->i = 1)
+#define wake_lock_destroy(x)
 
 #define ANDROID_ALARM_PRINT_ERROR (1U << 0)
 #define ANDROID_ALARM_PRINT_INIT_STATUS (1U << 1)
@@ -71,7 +80,7 @@ static bool suspended;
 
 static void update_timer_locked(struct alarm_queue *base, bool head_removed)
 {
-	struct alarm *alarm;
+	struct android_alarm *alarm;
 	bool is_wakeup = base == &alarms[ANDROID_ALARM_RTC_WAKEUP] ||
 			base == &alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP];
 
@@ -86,7 +95,7 @@ static void update_timer_locked(struct alarm_queue *base, bool head_removed)
 	if (!base->first)
 		return;
 
-	alarm = container_of(base->first, struct alarm, node);
+	alarm = container_of(base->first, struct android_alarm, node);
 
 	pr_alarm(FLOW, "selected alarm, type %d, func %pF at %lld\n",
 		alarm->type, alarm->function, ktime_to_ns(alarm->expires));
@@ -103,12 +112,12 @@ static void update_timer_locked(struct alarm_queue *base, bool head_removed)
 	hrtimer_start_expires(&base->timer, HRTIMER_MODE_ABS);
 }
 
-static void alarm_enqueue_locked(struct alarm *alarm)
+static void alarm_enqueue_locked(struct android_alarm *alarm)
 {
 	struct alarm_queue *base = &alarms[alarm->type];
 	struct rb_node **link = &base->alarms.rb_node;
 	struct rb_node *parent = NULL;
-	struct alarm *entry;
+	struct android_alarm *entry;
 	int leftmost = 1;
 	bool was_first = false;
 
@@ -126,7 +135,7 @@ static void alarm_enqueue_locked(struct alarm *alarm)
 
 	while (*link) {
 		parent = *link;
-		entry = rb_entry(parent, struct alarm, node);
+		entry = rb_entry(parent, struct android_alarm, node);
 		/*
 		* We dont care about collisions. Nodes with
 		* the same expiry time stay together.
@@ -148,13 +157,13 @@ static void alarm_enqueue_locked(struct alarm *alarm)
 }
 
 /**
- * alarm_init - initialize an alarm
+ * android_alarm_init - initialize an alarm
  * @alarm:	the alarm to be initialized
  * @type:	the alarm type to be used
  * @function:	alarm callback function
  */
-void alarm_init(struct alarm *alarm,
-	enum android_alarm_type type, void (*function)(struct alarm *))
+void android_alarm_init(struct android_alarm *alarm,
+	enum android_alarm_type type, void (*function)(struct android_alarm *))
 {
 	RB_CLEAR_NODE(&alarm->node);
 	alarm->type = type;
@@ -165,12 +174,13 @@ void alarm_init(struct alarm *alarm,
 
 
 /**
- * alarm_start_range - (re)start an alarm
+ * android_alarm_start_range - (re)start an alarm
  * @alarm:	the alarm to be added
  * @start:	earliest expiry time
  * @end:	expiry time
  */
-void alarm_start_range(struct alarm *alarm, ktime_t start, ktime_t end)
+void android_alarm_start_range(struct android_alarm *alarm, ktime_t start,
+								ktime_t end)
 {
 	unsigned long flags;
 
@@ -182,7 +192,7 @@ void alarm_start_range(struct alarm *alarm, ktime_t start, ktime_t end)
 }
 
 /**
- * alarm_try_to_cancel - try to deactivate an alarm
+ * android_alarm_try_to_cancel - try to deactivate an alarm
  * @alarm:	alarm to stop
  *
  * Returns:
@@ -191,7 +201,7 @@ void alarm_start_range(struct alarm *alarm, ktime_t start, ktime_t end)
  * -1 when the alarm may currently be excuting the callback function and
  *    cannot be stopped (it may also be inactive)
  */
-int alarm_try_to_cancel(struct alarm *alarm)
+int android_alarm_try_to_cancel(struct android_alarm *alarm)
 {
 	struct alarm_queue *base = &alarms[alarm->type];
 	unsigned long flags;
@@ -222,17 +232,17 @@ int alarm_try_to_cancel(struct alarm *alarm)
 }
 
 /**
- * alarm_cancel - cancel an alarm and wait for the handler to finish.
+ * android_alarm_cancel - cancel an alarm and wait for the handler to finish.
  * @alarm:	the alarm to be cancelled
  *
  * Returns:
  *  0 when the alarm was not active
  *  1 when the alarm was active
  */
-int alarm_cancel(struct alarm *alarm)
+int android_alarm_cancel(struct android_alarm *alarm)
 {
 	for (;;) {
-		int ret = alarm_try_to_cancel(alarm);
+		int ret = android_alarm_try_to_cancel(alarm);
 		if (ret >= 0)
 			return ret;
 		cpu_relax();
@@ -243,7 +253,7 @@ int alarm_cancel(struct alarm *alarm)
  * alarm_set_rtc - set the kernel and rtc walltime
  * @new_time:	timespec value containing the new time
  */
-int alarm_set_rtc(struct timespec new_time)
+int android_alarm_set_rtc(struct timespec new_time)
 {
 	int i;
 	int ret;
@@ -259,15 +269,6 @@ int alarm_set_rtc(struct timespec new_time)
 		rtc_new_rtc_time.tm_sec, rtc_new_rtc_time.tm_mon + 1,
 		rtc_new_rtc_time.tm_mday,
 		rtc_new_rtc_time.tm_year + 1900);
-
-#ifdef CONFIG_RTC_AUTO_PWRON
-	pr_info("%s : set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n", __func__,
-		new_time.tv_sec, new_time.tv_nsec,
-		rtc_new_rtc_time.tm_hour, rtc_new_rtc_time.tm_min,
-		rtc_new_rtc_time.tm_sec, rtc_new_rtc_time.tm_mon + 1,
-		rtc_new_rtc_time.tm_mday,
-		rtc_new_rtc_time.tm_year + 1900);
-#endif
 
 	mutex_lock(&alarm_setrtc_mutex);
 	spin_lock_irqsave(&alarm_slock, flags);
@@ -309,128 +310,6 @@ err:
 	return ret;
 }
 
-#ifdef CONFIG_RTC_AUTO_PWRON
-extern int rtc_set_bootalarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm);
-// 0|1234|56|78|90|12
-// 1|2010|01|01|00|00
-//en yyyy mm dd hh mm
-#define BOOTALM_BIT_EN       0
-#define BOOTALM_BIT_YEAR     1
-#define BOOTALM_BIT_MONTH    5
-#define BOOTALM_BIT_DAY      7
-#define BOOTALM_BIT_HOUR     9
-#define BOOTALM_BIT_MIN     11
-#define BOOTALM_BIT_TOTAL   13
-
-int alarm_set_alarm(char* alarm_data)
-{
-	struct rtc_wkalrm alm;
-	int ret;
-	char buf_ptr[BOOTALM_BIT_TOTAL+1];
-	struct rtc_time rtc_tm;
-	unsigned long rtc_sec;
-	unsigned long rtc_alarm_time;
-	struct timespec rtc_delta;
-	struct timespec wall_time;
-	ktime_t wall_ktm;
-	struct rtc_time wall_tm;
-
-	if (!alarm_rtc_dev) {
-		pr_alarm(ERROR,
-			"alarm_set_alarm: no RTC, time will be lost on reboot\n");
-		return -1;
-	}
-
-	strlcpy(buf_ptr, alarm_data, BOOTALM_BIT_TOTAL+1);
-
-	alm.time.tm_sec = 0;
-	alm.time.tm_min  =  (buf_ptr[BOOTALM_BIT_MIN]    -'0') * 10
-	                  + (buf_ptr[BOOTALM_BIT_MIN+1]  -'0');
-	alm.time.tm_hour =  (buf_ptr[BOOTALM_BIT_HOUR]   -'0') * 10
-	                  + (buf_ptr[BOOTALM_BIT_HOUR+1] -'0');
-	alm.time.tm_mday =  (buf_ptr[BOOTALM_BIT_DAY]    -'0') * 10
-	                  + (buf_ptr[BOOTALM_BIT_DAY+1]  -'0');
-	alm.time.tm_mon  =  (buf_ptr[BOOTALM_BIT_MONTH]  -'0') * 10
-	                  + (buf_ptr[BOOTALM_BIT_MONTH+1]-'0');
-	alm.time.tm_year =  (buf_ptr[BOOTALM_BIT_YEAR]   -'0') * 1000
-	                  + (buf_ptr[BOOTALM_BIT_YEAR+1] -'0') * 100
-	                  + (buf_ptr[BOOTALM_BIT_YEAR+2] -'0') * 10
-	                  + (buf_ptr[BOOTALM_BIT_YEAR+3] -'0');
-
-	alm.enabled = (*buf_ptr == '1');
-
-	pr_info("%s : %s => tm(%d %04d-%02d-%02d %02d:%02d:%02d)\n",
-			__func__, buf_ptr, alm.enabled,
-			alm.time.tm_year, alm.time.tm_mon, alm.time.tm_mday,
-			alm.time.tm_hour, alm.time.tm_min, alm.time.tm_sec);
-
-	if ( alm.enabled ) {
-		/* If time daemon is exist */
-
-		alm.time.tm_mon -= 1;
-		alm.time.tm_year -= 1900;
-
-		/* read current time */
-		rtc_read_time(alarm_rtc_dev, &rtc_tm);
-		rtc_tm_to_time(&rtc_tm, &rtc_sec);
-		pr_info("%s: rtc  %4d-%02d-%02d %02d:%02d:%02d -> %lu\n", __func__,
-			rtc_tm.tm_year, rtc_tm.tm_mon, rtc_tm.tm_mday,
-			rtc_tm.tm_hour, rtc_tm.tm_min, rtc_tm.tm_sec, rtc_sec);
-
-		/* read kernel time */
-		getnstimeofday(&wall_time);
-		wall_ktm = timespec_to_ktime(wall_time);
-		wall_tm = rtc_ktime_to_tm(wall_ktm);
-		pr_info("%s: wall %4d-%02d-%02d %02d:%02d:%02d -> %lu\n", __func__,
-			wall_tm.tm_year, wall_tm.tm_mon, wall_tm.tm_mday,
-			wall_tm.tm_hour, wall_tm.tm_min, wall_tm.tm_sec, wall_time.tv_sec);
-
-		/* calculate offset */
-		set_normalized_timespec(&rtc_delta,
-					wall_time.tv_sec - rtc_sec,
-					wall_time.tv_nsec);
-
-		/* convert user requested SAPA time to second type */
-		rtc_tm_to_time(&alm.time, &rtc_alarm_time);
-
-		/* convert to RTC time with user requested SAPA time and offset */
-		rtc_alarm_time -= rtc_delta.tv_sec;
-		rtc_time_to_tm(rtc_alarm_time, &alm.time);
-	}
-
-	ret = rtc_set_bootalarm(alarm_rtc_dev, &alm);
-	if (ret < 0) {
-		pr_alarm(ERROR, "alarm_set_alarm: "
-			"Failed to set ALARM, time will be lost on reboot\n");
-		return -2;
-	}
-	return 0; 
-}
-#endif
-
-void
-alarm_update_timedelta(struct timespec tmp_time, struct timespec new_time)
-{
-	int i;
-	unsigned long flags;
-
-	spin_lock_irqsave(&alarm_slock, flags);
-	for (i = 0; i < ANDROID_ALARM_SYSTEMTIME; i++) {
-		hrtimer_try_to_cancel(&alarms[i].timer);
-		alarms[i].stopped = true;
-		alarms[i].stopped_time = timespec_to_ktime(tmp_time);
-	}
-	alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP].delta =
-		alarms[ANDROID_ALARM_ELAPSED_REALTIME].delta =
-		ktime_sub(alarms[ANDROID_ALARM_ELAPSED_REALTIME].delta,
-			timespec_to_ktime(timespec_sub(tmp_time, new_time)));
-	for (i = 0; i < ANDROID_ALARM_SYSTEMTIME; i++) {
-		alarms[i].stopped = false;
-		update_timer_locked(&alarms[i], false);
-	}
-	spin_unlock_irqrestore(&alarm_slock, flags);
-}
-
 /**
  * alarm_get_elapsed_realtime - get the elapsed real time in ktime_t format
  *
@@ -452,7 +331,7 @@ ktime_t alarm_get_elapsed_realtime(void)
 static enum hrtimer_restart alarm_timer_triggered(struct hrtimer *timer)
 {
 	struct alarm_queue *base;
-	struct alarm *alarm;
+	struct android_alarm *alarm;
 	unsigned long flags;
 	ktime_t now;
 
@@ -462,11 +341,11 @@ static enum hrtimer_restart alarm_timer_triggered(struct hrtimer *timer)
 	now = base->stopped ? base->stopped_time : hrtimer_cb_get_time(timer);
 	now = ktime_sub(now, base->delta);
 
-	pr_alarm(INT, "alarm_timer_triggered type %d at %lld\n",
+	pr_alarm(INT, "alarm_timer_triggered type %ld at %lld\n",
 		base - alarms, ktime_to_ns(now));
 
 	while (base->first) {
-		alarm = container_of(base->first, struct alarm, node);
+		alarm = container_of(base->first, struct android_alarm, node);
 		if (alarm->softexpires.tv64 > now.tv64) {
 			pr_alarm(FLOW, "don't call alarm, %pF, %lld (s %lld)\n",
 				alarm->function, ktime_to_ns(alarm->expires),
@@ -485,7 +364,7 @@ static enum hrtimer_restart alarm_timer_triggered(struct hrtimer *timer)
 		spin_lock_irqsave(&alarm_slock, flags);
 	}
 	if (!base->first)
-		pr_alarm(FLOW, "no more alarms of type %d\n", base - alarms);
+		pr_alarm(FLOW, "no more alarms of type %ld\n", base - alarms);
 	update_timer_locked(base, true);
 	spin_unlock_irqrestore(&alarm_slock, flags);
 	return HRTIMER_NORESTART;

@@ -430,7 +430,7 @@ int rtc_set_bootalarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 		err = -EINVAL;
 	} else
 		err = rtc->ops->set_bootalarm(rtc->dev.parent, alarm);
-	pr_info("[SAPA] %s\n",__func__);
+	pr_info("%s [RTC] \n",__func__);
 /*	mutex_unlock(&rtc->ops_lock); */
 	return err;
 }

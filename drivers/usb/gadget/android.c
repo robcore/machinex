@@ -2012,7 +2012,6 @@ static struct android_usb_function hid_function = {
 	.bind_config	= hid_function_bind_config,
 };
 
-
 static struct android_usb_function *supported_functions[] = {
 #ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	&mbim_function,
@@ -2271,12 +2270,6 @@ functions_show(struct device *pdev, struct device_attribute *attr, char *buf)
 	return buff - buf;
 }
 
-static struct hid_usb_data hid_usb = {
-	.hid_enabled = 0,
-};
-
-module_param_named(usb_keyboard, hid_usb.hid_enabled, uint, 0664);
-
 static ssize_t
 functions_store(struct device *pdev, struct device_attribute *attr,
 			       const char *buff, size_t size)
@@ -2289,7 +2282,6 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 	char *name;
 	char buf[256], *b;
 	int err;
-	int hid_usb_enabled = 0;
 
 	mutex_lock(&dev->mutex);
 
@@ -2330,17 +2322,10 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 				if (err)
 					pr_err("android_usb: Cannot enable %s",
 						name);
-				if (!strcmp(name, "hid")) {
-					if (hid_usb.hid_enabled == 1)
-						hid_usb_enabled = 1;
-					else
-				hid_usb_enabled = 0;
-				}
 			}
 		}
 		/* HID driver always enabled, it's the whole point of this kernel patch */
-		if (hid_usb_enabled)
-			android_enable_function(dev, conf, "hid");
+		android_enable_function(dev, conf, "hid");
 	}
 
 	/* Free uneeded configurations if exists */

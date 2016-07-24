@@ -162,6 +162,7 @@ config ARCH_MSM8960
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
 	select CLEANCACHE
+	select QCACHE
 	select MSM_MULTIMEDIA_USE_ION
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
@@ -237,6 +238,7 @@ config ARCH_APQ8064
 	select CPU_HAS_L2_PMU
 	select HOLES_IN_ZONE if SPARSEMEM
 	select CLEANCACHE
+	select QCACHE
 	select MIGHT_HAVE_PCI
 	select ARCH_SUPPORTS_MSI
 	select ARM_HAS_SG_CHAIN
@@ -1395,7 +1397,7 @@ config END_MEM
 config KERNEL_MSM_CONTIG_MEM_REGION
 	bool "Enable in-kernel contiguous memory region"
 	default y if ARCH_MSM8X60
-	depends on ARCH_MSM8X60 || ARCH_MSM8960 || ARCH_MSM8974
+	depends on ANDROID_PMEM && (ARCH_MSM8X60 || ARCH_MSM8960 || ARCH_MSM8974)
 	help
 	   Enable the in-kernel contiguous memory allocator. Sets up a
 	   region of physically contiguous memory. This memory is
@@ -1758,14 +1760,14 @@ config MSM_PCIE
 
 config MSM_RPC_SDIO_XPRT
 	depends on MSM_SDIO_AL
-	default y
+	default n
 	bool "MSM SDIO XPRT Layer"
 	help
 	  SDIO Transport Layer for RPC Rouer
 
 config MSM_RPC_SDIO_DEBUG
 	depends on MSM_RPC_SDIO_XPRT
-	default y
+	default n
 	bool "MSM SDIO XPRT debug support"
 	help
 	  Support for debugging SDIO XPRT
@@ -1780,7 +1782,7 @@ config MSM_SMD_DEBUG
 
 config MSM_SDIO_AL
 	depends on ((ARCH_MSM7X30 || MACH_MSM8X60_FUSN_FFA || MACH_TYPE_MSM8X60_FUSION) && HAS_WAKELOCK)
-	default y
+	default n
 	tristate "SDIO-Abstraction-Layer"
 	help
 	  Support MSM<->MDM Communication over SDIO bus.
