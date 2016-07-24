@@ -28,6 +28,7 @@
 #elif defined(CONFIG_MDNIE_LITE_TUNING)
 #include "mdnie_lite_tuning.h"
 #endif
+#include "powersuspend.h"
 
 #define DDI_VIDEO_ENHANCE_TUNING
 #if defined(DDI_VIDEO_ENHANCE_TUNING)
@@ -652,6 +653,10 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
+#ifdef CONFIG_POWERSUSPEND
+	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
 
 #if defined(RUMTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
@@ -711,7 +716,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 	mutex_unlock(&brightness_mutex);
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 static void mipi_samsung_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
@@ -745,6 +750,7 @@ static void mipi_samsung_disp_power_resume(struct power_suspend *h)
 	pr_info("[lcd] %s\n", __func__);
 }
 #endif
+*/
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 static ssize_t mipi_samsung_disp_get_power(struct device *dev,
@@ -1411,9 +1417,11 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 	mutex_init(&dsi_tx_mutex);
 
+/*
 #if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
 #endif
+*/
 
 	pm_gpio8 = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_ERR_FG);
 
@@ -1430,13 +1438,14 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 		pr_err("gpio_config mlcd_rst failed (3), rc=%d\n", rc);
 		return -EINVAL;
 	}
-
+/*
 #if defined(CONFIG_HAS_POWERSUSPEND)
 	msd.power_suspend.suspend = mipi_samsung_disp_power_suspend;
 	msd.power_suspend.resume = mipi_samsung_disp_power_resume;
 //	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_power_suspend(&msd.power_suspend);
 #endif
+*/
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 	printk(KERN_INFO "[lcd] lcd_device_register for panel start\n");

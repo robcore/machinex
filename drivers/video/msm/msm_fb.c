@@ -1116,12 +1116,12 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 #endif
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+#endif
 #ifdef CONFIG_POWERSUSPEND
 	/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-#endif
-#ifdef CONFIG_STATE_NOTIFIER
-		state_resume();
 #endif
 		break;
 
@@ -1181,11 +1181,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
-#ifdef CONFIG_POWERSUSPEND
-	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
-#endif
-
 #ifdef CONFIG_STATE_NOTIFIER
 		state_suspend();
 #endif
