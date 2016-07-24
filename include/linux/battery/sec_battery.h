@@ -22,6 +22,8 @@
 
 #include <linux/battery/sec_charging_common.h>
 #include <linux/alarmtimer.h>
+#include <linux/hrtimer.h>
+#include <linux/android_alarm.h>
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
 #include <linux/proc_fs.h>
