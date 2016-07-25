@@ -305,7 +305,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (time_first && n >= max_restarts_check) {
 		if ((curr_time->tv_sec - time_first->tv_sec) <
 				max_history_time_check) {
-			panic("Subsystems have crashed %d times in less than "\
+			WARN(1, "Subsystems have crashed %d times in less than "\
 				"%ld seconds!", max_restarts_check,
 				max_history_time_check);
 		}
@@ -345,7 +345,7 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Shutting down %s\n", current, name);
 	if (dev->desc->shutdown(dev->desc) < 0) {
-		panic("subsys-restart: [%p]: Failed to shutdown %s!",
+		WARN(1, "subsys-restart: %s[%p]: Failed to shutdown %s!",
 			current, name);
 	}
 	subsys_set_state(dev, SUBSYS_OFFLINE);
@@ -366,7 +366,7 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
-		panic("[%p]: Failed to powerup %s!", current, name);
+		WARN(1, "%s[%p]: Failed to powerup %s!", __func__,
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
@@ -424,7 +424,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	 * order is being rebooted.
 	 */
 	if (!mutex_trylock(powerup_lock)) {
-		panic("%s[%p]: Subsystem died during powerup!",
+		WARN(1, "%s[%p]: Subsystem died during powerup!",
 						__func__, current);
 	}
 
@@ -511,7 +511,7 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 			wake_lock(&dev->wake_lock);
 			queue_work(ssr_wq, &dev->work);
 		} else {
-			panic("Subsystem %s crashed during SSR!", name);
+			WARN(1, "Subsystem %s crashed during SSR!", name);
 		}
 	}
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
@@ -549,10 +549,10 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.", name);
 /* It should be used for APQ model to distingush AP side or MDM side */
 #ifdef CONFIG_SEC_DEBUG
-		panic("%s crashed: subsys-restart: Resetting the SoC",
+		WARN(1, "%s crashed: subsys-restart: Resetting the SoC",
 			name);
 #else
-		panic("subsys-restart: Resetting the SoC - %s crashed.",
+		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.",
 			name);
 #endif
 		break;
@@ -714,7 +714,7 @@ static int __init subsys_restart_init(void)
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
-		panic("%s: out of memory\n", __func__);
+		WARN(1, "%s: out of memory\n", __func__);
 
 	return ssr_init_soc_restart_orders();
 }
