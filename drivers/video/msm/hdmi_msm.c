@@ -640,10 +640,11 @@ static void hdmi_msm_setup_video_mode_lut(void)
 	/* Add all supported CEA modes to the lut */
 	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
 		hdmi_common_supported_video_mode_lut, MSM_HDMI_MODES_CEA);
-
+#ifndef CONFIG_VIDEO_MHL_V2
 	/* Add any other supported timings (DVI modes, etc.) */
 	MSM_HDMI_MODES_SET_TIMING(hdmi_common_supported_video_mode_lut,
 		HDMI_VFRMT_1280x1024p60_5_4);
+#endif
 }
 
 #ifdef PORT_DEBUG
