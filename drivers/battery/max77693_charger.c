@@ -27,7 +27,7 @@
 #define REDUCE_CURRENT_STEP	100
 #define MINIMUM_INPUT_CURRENT	300
 #define SIOP_INPUT_LIMIT_CURRENT 1200
-#define SIOP_CHARGING_LIMIT_CURRENT 1000
+#define SIOP_CHARGING_LIMIT_CURRENT 1200
 
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
@@ -1135,7 +1135,7 @@ static void wpc_detect_work(struct work_struct *work)
 				POWER_SUPPLY_PROP_ONLINE, value);
 		pr_info("%s: wpc activated, set V_INT as PN\n",
 				__func__);
-	} else if ((chg_data->wc_w_state == 1) && (wc_w_state == 0)) {
+	} else if (wc_w_state == 0) {
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, true);
 		max77693_read_reg(chg_data->max77693->i2c,

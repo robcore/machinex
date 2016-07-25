@@ -458,6 +458,9 @@ static int msm_otg_phy_reset(struct msm_otg *motg)
 	ret = msm_otg_phy_clk_reset(motg);
 	if (ret)
 		return ret;
+	/* 10 usec delay is required according to spec */
+	if (IS_ERR(motg->phy_reset_clk))
+		usleep_range(10, 12);
 	ret = msm_otg_link_clk_reset(motg, 0);
 	if (ret)
 		return ret;
@@ -1598,6 +1601,9 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 	if (!use_mtp_during_fast_charge && on == 1)
 		on = 0;
 #endif
+
+	if (!use_mtp_during_fast_charge && on == 1)
+		on = 0;
 	
 	if (!otg->gadget)
 		return;
@@ -2203,6 +2209,8 @@ static void msm_chg_block_off(struct msm_otg *motg)
 		/* Clear alt interrupt latch and enable bits */
 		ulpi_write(phy, 0x1F, 0x92);
 		ulpi_write(phy, 0x1F, 0x95);
+		/* re-enable DP and DM pull down resistors */
+		ulpi_write(phy, 0x6, 0xB);
 		break;
 	default:
 		break;
@@ -2597,7 +2605,8 @@ static void msm_otg_sm_work(struct work_struct *w)
 			 * switch from ACA to PMIC.  Check ID state
 			 * before entering into low power mode.
 			 */
-			if (!msm_otg_read_pmic_id_state(motg)) {
+			if ((motg->pdata->otg_control == OTG_PMIC_CONTROL) &&
+					!msm_otg_read_pmic_id_state(motg)) {
 				pr_debug("process missed ID intr\n");
 				clear_bit(ID, &motg->inputs);
 				work = 1;
@@ -2830,6 +2839,9 @@ static void msm_otg_sm_work(struct work_struct *w)
 			if (TA_WAIT_BCON > 0)
 				msm_otg_start_timer(motg, TA_WAIT_BCON,
 					A_WAIT_BCON);
+
+			/* Clear BSV in host mode */
+			clear_bit(B_SESS_VLD, &motg->inputs);
 			msm_otg_start_host(otg, 1);
 			msm_chg_enable_aca_det(motg);
 			msm_chg_disable_aca_intr(motg);
@@ -3406,9 +3418,12 @@ static int msm_otg_mode_show(struct seq_file *s, void *unused)
 	struct usb_phy *phy = &motg->phy;
 
 	switch (phy->state) {
+	case OTG_STATE_A_WAIT_BCON:
 	case OTG_STATE_A_HOST:
+	case OTG_STATE_A_SUSPEND:
 		seq_printf(s, "host\n");
 		break;
+	case OTG_STATE_B_IDLE:
 	case OTG_STATE_B_PERIPHERAL:
 		seq_printf(s, "peripheral\n");
 		break;
@@ -3456,7 +3471,9 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 	switch (req_mode) {
 	case USB_NONE:
 		switch (phy->state) {
+		case OTG_STATE_A_WAIT_BCON:
 		case OTG_STATE_A_HOST:
+		case OTG_STATE_A_SUSPEND:
 		case OTG_STATE_B_PERIPHERAL:
 			set_bit(ID, &motg->inputs);
 			clear_bit(B_SESS_VLD, &motg->inputs);
@@ -3468,7 +3485,9 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 	case USB_PERIPHERAL:
 		switch (phy->state) {
 		case OTG_STATE_B_IDLE:
+		case OTG_STATE_A_WAIT_BCON:
 		case OTG_STATE_A_HOST:
+		case OTG_STATE_A_SUSPEND:
 			set_bit(ID, &motg->inputs);
 			set_bit(B_SESS_VLD, &motg->inputs);
 			break;
@@ -4118,7 +4137,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	if (motg->pdata->enable_lpm_on_dev_suspend)
 		motg->caps |= ALLOW_LPM_ON_DEV_SUSPEND;
 
-	wake_lock(&motg->wlock);
+	//wake_lock(&motg->wlock);
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 

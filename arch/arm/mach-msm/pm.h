@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/pm.h
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
  * Author: San Mehat <san@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -52,7 +52,8 @@ enum msm_pm_sleep_mode {
 	MSM_PM_SLEEP_MODE_RETENTION = MSM_PM_SLEEP_MODE_APPS_SLEEP,
 	MSM_PM_SLEEP_MODE_POWER_COLLAPSE_SUSPEND = 5,
 	MSM_PM_SLEEP_MODE_POWER_COLLAPSE_NO_XO_SHUTDOWN = 6,
-	MSM_PM_SLEEP_MODE_NR
+	MSM_PM_SLEEP_MODE_NR = 7,
+	MSM_PM_SLEEP_MODE_NOT_SELECTED,
 };
 
 #define MSM_PM_MODE(cpu, mode_nr)  ((cpu) * MSM_PM_SLEEP_MODE_NR + (mode_nr))
@@ -108,6 +109,7 @@ void msm_pm_set_irq_extns(struct msm_pm_irq_calls *irq_calls);
 int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode);
 void msm_pm_cpu_enter_lowpower(unsigned int cpu);
 void __init msm_pm_set_tz_retention_flag(unsigned int flag);
+void msm_pm_enable_retention(bool enable);
 
 #ifdef CONFIG_MSM_PM8X60
 void msm_pm_set_rpm_wakeup_irq(unsigned int irq);

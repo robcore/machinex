@@ -162,7 +162,6 @@ config ARCH_MSM8960
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
 	select CLEANCACHE
-	select QCACHE
 	select MSM_MULTIMEDIA_USE_ION
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
@@ -238,7 +237,6 @@ config ARCH_APQ8064
 	select CPU_HAS_L2_PMU
 	select HOLES_IN_ZONE if SPARSEMEM
 	select CLEANCACHE
-	select QCACHE
 	select MIGHT_HAVE_PCI
 	select ARCH_SUPPORTS_MSI
 	select ARM_HAS_SG_CHAIN
@@ -1397,7 +1395,7 @@ config END_MEM
 config KERNEL_MSM_CONTIG_MEM_REGION
 	bool "Enable in-kernel contiguous memory region"
 	default y if ARCH_MSM8X60
-	depends on ANDROID_PMEM && (ARCH_MSM8X60 || ARCH_MSM8960 || ARCH_MSM8974)
+	depends on ARCH_MSM8X60 || ARCH_MSM8960 || ARCH_MSM8974
 	help
 	   Enable the in-kernel contiguous memory allocator. Sets up a
 	   region of physically contiguous memory. This memory is
@@ -1758,20 +1756,6 @@ config MSM_PCIE
 	  Enables the PCIe functionality by configures PCIe core on
 	  MSM chipset and by enabling the ARM PCI framework extension.
 
-config MSM_RPC_SDIO_XPRT
-	depends on MSM_SDIO_AL
-	default n
-	bool "MSM SDIO XPRT Layer"
-	help
-	  SDIO Transport Layer for RPC Rouer
-
-config MSM_RPC_SDIO_DEBUG
-	depends on MSM_RPC_SDIO_XPRT
-	default n
-	bool "MSM SDIO XPRT debug support"
-	help
-	  Support for debugging SDIO XPRT
-
 config MSM_SMD_DEBUG
 	depends on MSM_SMD
 	default y
@@ -1779,21 +1763,6 @@ config MSM_SMD_DEBUG
 	help
 	  Support for debugging the SMD for communication
 	  between the ARM9 and ARM11
-
-config MSM_SDIO_AL
-	depends on ((ARCH_MSM7X30 || MACH_MSM8X60_FUSN_FFA || MACH_TYPE_MSM8X60_FUSION) && HAS_WAKELOCK)
-	default n
-	tristate "SDIO-Abstraction-Layer"
-	help
-	  Support MSM<->MDM Communication over SDIO bus.
-	  MDM SDIO-Client should have pipes support.
-
-config MSM_SDIO_DMUX
-	bool "SDIO Data Mux Driver"
-	depends on MSM_SDIO_AL
-	default n
-	help
-	  Support Muxed Data Channels over SDIO interface.
 
 config MSM_BAM_DMUX
 	bool "BAM Data Mux Driver"
@@ -1854,16 +1823,6 @@ config MSM_SMD_NMEA
 
 	  If in doubt, say yes.
 
-config MSM_SDIO_TTY
-	bool "SDIO TTY Driver"
-	depends on MSM_SDIO_AL
-	default n
-	help
-	  Provides a TTY driver SDIO TTY
-	  This driver can be used by user space
-	  applications for passing data through the
-	  SDIO interface.
-
 config MSM_HSIC_TTY
 	bool "HSIC TTY Driver"
 	default n
@@ -1891,13 +1850,6 @@ config MSM_SMD_QMI
 
 	  If in doubt, say yes.
 
-config MSM_SDIO_CMUX
-	bool "SDIO CMUX Driver"
-	depends on MSM_SDIO_AL
-	default n
-	help
-	  Provides a Muxed port interface over SDIO QMI
-
 config MSM_DSPS
 	bool "Sensors DSPS driver"
 	depends on (MSM_PIL && (ARCH_MSM8X60 || ARCH_MSM8960))
@@ -1909,13 +1861,6 @@ config MSM_DSPS
 	  themself.
 	  The number of clocks and their name may vary between targets.
 	  It also triggers the PIL to load the DSPS firmware.
-
-config MSM_SDIO_CTL
-	bool "SDIO CTL Driver"
-	depends on MSM_SDIO_CMUX
-	default n
-	help
-	  Provides a binary SDIO control port interface.
 
 config MSM_ONCRPCROUTER
 	depends on MSM_SMD
@@ -2043,15 +1988,6 @@ config MSM_RMT_STORAGE_CLIENT_STATS
 	help
 	  Collects performance statistics and shows this information
 	  through a debugfs file rmt_storage_stats.
-
-config MSM_SDIO_SMEM
-        depends on MSM_SDIO_AL
-        default n
-        bool "SDIO SMEM for remote storage"
-        help
-          Copies data from remote MDM9K memory to local MSM8x60
-	  memory. Used by remote storage client to shadow
-	  MDM9K filesystem.
 
 config MSM_DALRPC
 	bool "DAL RPC support"

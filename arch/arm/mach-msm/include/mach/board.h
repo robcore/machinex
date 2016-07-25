@@ -367,8 +367,8 @@ struct msm_camera_sensor_platform_info {
 	void(*sensor_power_off)(void);
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	void(*sensor_power_on_sub)(void);
-	void(*sensor_power_off_sub)(void);
-#endif
+	void(*sensor_power_off_sub)(void);	
+#endif	
 	void(*sensor_af_power_off)(void);
 	void(*sensor_vddio_power_off)(void);
 	void(*sensor_pmic_gpio_ctrl)(int, int);
@@ -601,6 +601,7 @@ struct mipi_dsi_platform_data {
 	void (*active_reset)(int high);
 	int (*power_common)(void);
 	int (*dsi_power_save)(int on);
+	int (*panel_lp_en)(int on);
 	int (*dsi_client_reset)(void);
 	int (*get_lane_config)(void);
 	char (*splash_is_enabled)(void);

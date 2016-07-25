@@ -3,7 +3,7 @@
 
 /* HID descriptor for a mouse */
 static struct hidg_func_descriptor ghid_device_android_mouse = {
-	.subclass      = 1, /* Boot Interface Subclass */
+	.subclass      = 0, /* No subclass */
 	.protocol      = 2, /* Mouse */
 	.report_length = 4,
 	.report_desc_length	= 52,
@@ -37,4 +37,5 @@ static struct hidg_func_descriptor ghid_device_android_mouse = {
 		0xc0  //End Collection
 	}
 };
+
 

@@ -343,6 +343,8 @@ void msm_restart(char mode, const char *cmd)
 #ifdef CONFIG_SEC_DEBUG
 		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {
 			__raw_writel(0x776655ee, restart_reason);
+		} else if (!strncmp(cmd, "sec_debug_low_panic", 19)) {
+			__raw_writel(0x776655dd, restart_reason);
 #endif
 		} else if (!strncmp(cmd, "download", 8)) {
 			__raw_writel(0x12345671, restart_reason);

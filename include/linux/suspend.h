@@ -327,6 +327,8 @@ extern unsigned long get_safe_page(gfp_t gfp_mask);
 extern void hibernation_set_ops(const struct platform_hibernation_ops *ops);
 extern int hibernate(void);
 extern bool system_entering_hibernation(void);
+asmlinkage int swsusp_save(void);
+extern struct pbe *restore_pblist;
 #else /* CONFIG_HIBERNATION */
 static inline void register_nosave_region(unsigned long b, unsigned long e) {}
 static inline void register_nosave_region_late(unsigned long b, unsigned long e) {}
@@ -470,9 +472,5 @@ static inline void page_key_memorize(unsigned long *pfn) {}
 static inline void page_key_write(void *address) {}
 
 #endif /* !CONFIG_ARCH_SAVE_PAGE_KEYS */
-
-#ifdef CONFIG_SEC_PM_DEBUG
-int wakeup_sources_stats_active(void);
-#endif
 
 #endif /* _LINUX_SUSPEND_H */

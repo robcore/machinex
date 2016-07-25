@@ -366,7 +366,7 @@ static ssize_t failsafe_store(struct kobject *kobj,
 	switch (new_failsafe) {
 		case FAIL_SAFE_ENABLED:
 			usb_charge_level = USB_CHARGE_460;
-			ac_charge_level = AC_CHARGE_1000;
+			ac_charge_level = AC_CHARGE_1900;
 			failsafe = new_failsafe;
 			return count;
 		case FAIL_SAFE_DISABLED:
@@ -420,12 +420,12 @@ static ssize_t info_show(struct kobject *kobj,
 		"Fast charge mode : %s\n"
 		"MTP while charging mode : %s\n"
 		"Screen on Current Limit mode : %s\n"
-		"Custom  AC level      : %dmA/h\n"
-		"Custom USB level      : %dmA/h\n"
+		"Custom  AC level : %dmA/h\n"
+		"Custom USB level : %dmA/h\n"
 		"Custom Wireless level : %dmA/h\n"
-		"Failsafe mode         : %s\n"
-		"Valid AC  levels      : %s\n"
-		"Valid USB levels      : %s\n"
+		"Failsafe mode : %s\n"
+		"Valid AC  levels : %s\n"
+		"Valid USB levels : %s\n"
 		"Valid Wireless levels : %s\n",
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	   ? "0 - Disabled (default)" :
@@ -487,13 +487,13 @@ int force_fast_charge_init(void)
 	int force_fast_charge_retval;
 
 	/* Forced fast charge disabled by default */
-	force_fast_charge = FAST_CHARGE_DISABLED;
+	force_fast_charge = FAST_CHARGE_FORCE_CUSTOM_MA;
 	/* Use MTP during fast charge, enabled by default */
 	use_mtp_during_fast_charge = USE_MTP_DURING_FAST_CHARGE_ENABLED;
 	/* Use Samsung Screen ON current limit while charging, enabled by default */
-	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_ENABLED;
-	/* Default AC charge level to 1900mA/h    */
-	ac_charge_level   = AC_CHARGE_1900;
+	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_DISABLED;
+	/* Default AC charge level to 2100mA/h    */
+	ac_charge_level   = AC_CHARGE_2100;
 	/* Default USB charge level to 460mA/h    */
 	usb_charge_level  = USB_CHARGE_460;
 	/* Default USB charge level to 650mA/h    */
@@ -503,17 +503,15 @@ int force_fast_charge_init(void)
 
         force_fast_charge_kobj =
 		kobject_create_and_add("fast_charge", kernel_kobj);
-
-        if (!force_fast_charge_kobj)
+        if (!force_fast_charge_kobj) {
                 return -ENOMEM;
-
+	}
         force_fast_charge_retval =
 		sysfs_create_group(force_fast_charge_kobj,
 			&force_fast_charge_attr_group);
 
         if (force_fast_charge_retval)
                 kobject_put(force_fast_charge_kobj);
-
         return (force_fast_charge_retval);
 }
 /* end sysfs interface */

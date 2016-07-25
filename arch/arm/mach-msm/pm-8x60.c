@@ -11,6 +11,7 @@
  *
  */
 
+#include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -133,6 +134,7 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
+static bool msm_pm_ldo_retention_enabled = true;
 /*
  * Write out the attribute.
  */
@@ -406,40 +408,6 @@ module_param_named(sleep_time_override,
 #endif
 
 #define SCLK_HZ (32768)
-#define MSM_PM_SLEEP_TICK_LIMIT (0x6DDD000)
-
-static uint32_t msm_pm_max_sleep_time;
-
-/*
- * Convert time from nanoseconds to slow clock ticks, then cap it to the
- * specified limit
- */
-static int64_t msm_pm_convert_and_cap_time(int64_t time_ns, int64_t limit)
-{
-	do_div(time_ns, NSEC_PER_SEC / SCLK_HZ);
-	return (time_ns > limit) ? limit : time_ns;
-}
-
-/*
- * Set the sleep time for suspend.  0 means infinite sleep time.
- */
-void msm_pm_set_max_sleep_time(int64_t max_sleep_time_ns)
-{
-	if (max_sleep_time_ns == 0) {
-		msm_pm_max_sleep_time = 0;
-	} else {
-		msm_pm_max_sleep_time = (uint32_t)msm_pm_convert_and_cap_time(
-			max_sleep_time_ns, MSM_PM_SLEEP_TICK_LIMIT);
-
-		if (msm_pm_max_sleep_time == 0)
-			msm_pm_max_sleep_time = 1;
-	}
-
-	if (msm_pm_debug_mask & MSM_PM_DEBUG_SUSPEND)
-		pr_info("%s: Requested %lld ns Giving %u sclk ticks\n",
-			__func__, max_sleep_time_ns, msm_pm_max_sleep_time);
-}
-EXPORT_SYMBOL(msm_pm_set_max_sleep_time);
 
 struct reg_data {
 	uint32_t reg;
@@ -730,7 +698,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 	int64_t time = 0;
 
 	if (msm_pm_use_qtimer)
-		return sched_clock();
+		return ktime_to_ns(ktime_get());
 
 	time = msm_timer_get_sclk_time(period);
 	if (!time)
@@ -742,7 +710,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
 	if (msm_pm_use_qtimer)
-		return sched_clock() - time;
+		return ktime_to_ns(ktime_get()) - time;
 
 	if (time != 0) {
 		int64_t end_time = msm_timer_get_sclk_time(NULL);
@@ -793,7 +761,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 {
 	int i;
 	unsigned int power_usage = -1;
-	int ret = 0;
+	int ret = MSM_PM_SLEEP_MODE_NOT_SELECTED;
 	uint32_t modified_time_us = 0;
 	struct msm_pm_time_params time_param;
 
@@ -828,50 +796,27 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 
 		switch (mode) {
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE:
-			if (num_online_cpus() > 1 || cpu_maps_is_updating()) {
+			if (num_online_cpus() > 1 || cpu_maps_is_updating())
 				allow = false;
-				break;
-			}
-			/* fall through */
+			break;
 		case MSM_PM_SLEEP_MODE_RETENTION:
-			if (!allow)
-				break;
-
-			if (msm_pm_retention_tz_call &&
-				num_online_cpus() > 1) {
+			/*
+			 * The Krait BHS regulator doesn't have enough head
+			 * room to drive the retention voltage on LDO and so
+			 * has disabled retention
+			 */
+			if (!msm_pm_ldo_retention_enabled)
 				allow = false;
-				break;
-			}
-			/* fall through */
 
+			if (msm_pm_retention_tz_call &&	num_online_cpus() > 1)
+				allow = false;
+			break;
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
-			if (!allow)
-				break;
-
 			if (!dev->cpu && msm_rpm_local_request_is_outstanding()) {
 				allow = false;
 				break;
 			}
-			/* fall through */
-
 		case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
-			if (!allow)
-				break;
-			/* fall through */
-
-			if (pm_sleep_ops.lowest_limits)
-				rs_limits = pm_sleep_ops.lowest_limits(true,
-						mode, &time_param, &power);
-
-			if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
-				pr_info("CPU%u: %s: %s, latency %uus, "
-					"sleep %uus, limit %p\n",
-					dev->cpu, __func__, state->desc,
-					time_param.latency_us,
-					time_param.sleep_us, rs_limits);
-
-			if (!rs_limits)
-				allow = false;
 			break;
 
 		default:
@@ -879,20 +824,29 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 			break;
 		}
 
+		if (!allow)
+			continue;
+
+		if (pm_sleep_ops.lowest_limits)
+			rs_limits = pm_sleep_ops.lowest_limits(true,
+					mode, &time_param, &power);
+
 		if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
-			pr_info("CPU%u: %s: allow %s: %d\n",
-				dev->cpu, __func__, state->desc, (int)allow);
+			pr_info("CPU%u:%s:%s, latency %uus, slp %uus, lim %p\n",
+					dev->cpu, __func__, state->desc,
+					time_param.latency_us,
+					time_param.sleep_us, rs_limits);
+		if (!rs_limits)
+			continue;
 
-		if (allow) {
-			if (power < power_usage) {
-				power_usage = power;
-				modified_time_us = time_param.modified_time_us;
-				ret = mode;
-			}
-
-			if (MSM_PM_SLEEP_MODE_POWER_COLLAPSE == mode)
-				msm_pm_idle_rs_limits = rs_limits;
+		if (power < power_usage) {
+			power_usage = power;
+			modified_time_us = time_param.modified_time_us;
+			ret = mode;
 		}
+
+		if (MSM_PM_SLEEP_MODE_POWER_COLLAPSE == mode)
+			msm_pm_idle_rs_limits = rs_limits;
 	}
 
 	if (modified_time_us && !dev->cpu)
@@ -931,18 +885,14 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		break;
 
 	case MSM_PM_SLEEP_MODE_POWER_COLLAPSE: {
-		int64_t timer_expiration = 0;
 		bool timer_halted = false;
-		uint32_t sleep_delay;
+		uint32_t sleep_delay = 1;
 		int ret = -ENODEV;
 		int notify_rpm =
 			(sleep_mode == MSM_PM_SLEEP_MODE_POWER_COLLAPSE);
 		int collapsed = 0;
 
-		timer_expiration = msm_pm_timer_enter_idle();
-
-		sleep_delay = (uint32_t) msm_pm_convert_and_cap_time(
-			timer_expiration, MSM_PM_SLEEP_TICK_LIMIT);
+		sleep_delay = (uint32_t)msm_pm_timer_enter_idle();
 		if (sleep_delay == 0) /* 0 would mean infinite time */
 			sleep_delay = 1;
 
@@ -969,9 +919,14 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		break;
 	}
 
+	case MSM_PM_SLEEP_MODE_NOT_SELECTED:
+		goto cpuidle_enter_bail;
+		break;
+
 	default:
 		__WARN();
 		goto cpuidle_enter_bail;
+		break;
 	}
 
 	time = ktime_to_ns(ktime_get()) - time;
@@ -1003,7 +958,7 @@ int msm_pm_wait_cpu_shutdown(unsigned int cpu)
 		if (acc_sts & msm_pm_slp_sts[cpu].mask)
 			return 0;
 		udelay(100);
-		WARN(++timeout == 10, "CPU%u didn't collape within 1ms\n",
+		WARN(++timeout == 50, "CPU%u didn't collape within 5ms\n",
 					cpu);
 	}
 
@@ -1034,6 +989,42 @@ void msm_pm_cpu_enter_lowpower(unsigned int cpu)
 	else
 		msm_pm_swfi();
 }
+
+static void msm_pm_ack_retention_disable(void *data)
+{
+	/*
+	 * This is a NULL function to ensure that the core has woken up
+	 * and is safe to disable retention.
+	 */
+}
+/**
+ * msm_pm_enable_retention() - Disable/Enable retention on all cores
+ * @enable: Enable/Disable retention
+ *
+ */
+void msm_pm_enable_retention(bool enable)
+{
+	if (enable == msm_pm_ldo_retention_enabled)
+		return;
+
+	msm_pm_ldo_retention_enabled = enable;
+	/*
+	 * If retention is being disabled, wakeup all online core to ensure
+	 * that it isn't executing retention. Offlined cores need not be woken
+	 * up as they enter the deepest sleep mode, namely RPM assited power
+	 * collapse
+	 */
+	if (!enable) {
+		preempt_disable();
+		smp_call_function_many(cpu_online_mask,
+				msm_pm_ack_retention_disable,
+				NULL, true);
+		preempt_enable();
+
+
+	}
+}
+EXPORT_SYMBOL(msm_pm_enable_retention);
 
 static int msm_pm_enter(suspend_state_t state)
 {
@@ -1067,6 +1058,7 @@ static int msm_pm_enter(suspend_state_t state)
 		void *rs_limits = NULL;
 		int ret = -ENODEV;
 		uint32_t power;
+		uint32_t msm_pm_max_sleep_time = 0;
 		int collapsed = 0;
 
 		if (MSM_PM_DEBUG_SUSPEND & msm_pm_debug_mask)
@@ -1078,8 +1070,8 @@ static int msm_pm_enter(suspend_state_t state)
 		if (msm_pm_sleep_time_override > 0) {
 			int64_t ns = NSEC_PER_SEC *
 				(int64_t) msm_pm_sleep_time_override;
-			msm_pm_set_max_sleep_time(ns);
-			msm_pm_sleep_time_override = 0;
+			do_div(ns, NSEC_PER_SEC / SCLK_HZ);
+			msm_pm_max_sleep_time = (uint32_t) ns;
 		}
 #endif /* CONFIG_MSM_SLEEP_TIME_OVERRIDE */
 		if (pm_sleep_ops.lowest_limits)
@@ -1314,6 +1306,7 @@ static int __init msm_pm_setup_saved_state(void)
 	pmd_t *pmd;
 	unsigned long pmdval;
 	unsigned long exit_phys;
+	dma_addr_t temp_phys;
 
 	/* Page table for cores to come back up safely. */
 
@@ -1330,20 +1323,22 @@ static int __init msm_pm_setup_saved_state(void)
 	pmd[0] = __pmd(pmdval);
 	pmd[1] = __pmd(pmdval + (1 << (PGDIR_SHIFT - 1)));
 
-	msm_saved_state_phys =
-		allocate_contiguous_ebi_nomap(CPU_SAVED_STATE_SIZE *
-					      num_possible_cpus(), 4);
-	if (!msm_saved_state_phys) {
-		pgd_free(&init_mm, pc_pgd);
-		return -ENOMEM;
-	}
-	msm_saved_state = ioremap_nocache(msm_saved_state_phys,
-					  CPU_SAVED_STATE_SIZE *
-					  num_possible_cpus());
+	msm_saved_state = dma_zalloc_coherent(NULL, CPU_SAVED_STATE_SIZE *
+						num_possible_cpus(),
+						&temp_phys, 0);
+
 	if (!msm_saved_state) {
 		pgd_free(&init_mm, pc_pgd);
 		return -ENOMEM;
 	}
+
+	/*
+	 * Explicitly cast here since msm_saved_state_phys is defined
+	 * in assembly and we want to avoid any kind of truncation
+	 * or endian problems.
+	 */
+	msm_saved_state_phys = (unsigned long)temp_phys;
+
 	/* It is remotely possible that the code in msm_pm_collapse_exit()
 	 * which turns on the MMU with this mapping is in the
 	 * next even-numbered megabyte beyond the
@@ -1358,7 +1353,7 @@ static int __init msm_pm_setup_saved_state(void)
 
 	return 0;
 }
-core_initcall(msm_pm_setup_saved_state);
+arch_initcall(msm_pm_setup_saved_state);
 
 static int __init msm_pm_init(void)
 {

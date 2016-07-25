@@ -138,6 +138,12 @@ static inline bool timespec_valid_strict(const struct timespec *ts)
 	return true;
 }
 
+extern bool persistent_clock_exist;
+static inline bool has_persistent_clock(void)
+{
+	return persistent_clock_exist;
+}
+
 extern void read_persistent_clock(struct timespec *ts);
 extern void read_boot_clock(struct timespec *ts);
 extern int update_persistent_clock(struct timespec now);
@@ -181,6 +187,7 @@ extern int do_setitimer(int which, struct itimerval *value,
 			struct itimerval *ovalue);
 extern unsigned int alarm_setitimer(unsigned int seconds);
 extern int do_getitimer(int which, struct itimerval *value);
+extern int __getnstimeofday(struct timespec *tv);
 extern void getnstimeofday(struct timespec *tv);
 extern void getrawmonotonic(struct timespec *ts);
 extern void getnstime_raw_and_real(struct timespec *ts_raw,

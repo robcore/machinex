@@ -35,11 +35,12 @@
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/security.h>
+#include <linux/rtmutex.h>
 
 #include "binder.h"
 #include "binder_trace.h"
 
-static DEFINE_MUTEX(binder_main_lock);
+static DEFINE_RT_MUTEX(binder_main_lock);
 static DEFINE_MUTEX(binder_deferred_lock);
 static DEFINE_MUTEX(binder_mmap_lock);
 
@@ -505,14 +506,14 @@ out_unlock:
 static inline void binder_lock(const char *tag)
 {
 	trace_binder_lock(tag);
-	mutex_lock(&binder_main_lock);
+	rt_mutex_lock(&binder_main_lock);
 	trace_binder_locked(tag);
 }
 
 static inline void binder_unlock(const char *tag)
 {
 	trace_binder_unlock(tag);
-	mutex_unlock(&binder_main_lock);
+	rt_mutex_unlock(&binder_main_lock);
 }
 
 static void binder_set_nice(long nice)
@@ -2508,6 +2509,8 @@ retry:
 			struct task_struct *sender = t->from->proc->tsk;
 			tr.sender_pid = task_tgid_nr_ns(sender,
 							current->nsproxy->pid_ns);
+			if (tr.sender_pid == 0)
+				tr.sender_pid = task_tgid_nr(sender);
 		} else {
 			tr.sender_pid = 0;
 		}
@@ -2653,6 +2656,27 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		thread->looper |= BINDER_LOOPER_STATE_NEED_RETURN;
 		thread->return_error = BR_OK;
 		thread->return_error2 = BR_OK;
+	}
+	return thread;
+}
+
+static struct binder_thread *binder_get_thread_by_tid(
+	struct binder_proc *proc, pid_t tid)
+{
+	struct binder_thread *thread = NULL;
+	struct rb_node *parent = NULL;
+	struct rb_node **p = &proc->threads.rb_node;
+
+	while (*p) {
+		parent = *p;
+		thread = rb_entry(parent, struct binder_thread, rb_node);
+
+		if (tid < thread->pid)
+			p = &(*p)->rb_left;
+		else if (tid > thread->pid)
+			p = &(*p)->rb_right;
+		else
+			break;
 	}
 	return thread;
 }
@@ -2852,6 +2876,35 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			goto err;
 		}
 		break;
+	case BINDER_GET_PEER_PID: {
+		struct binder_get_peer peer;
+		struct binder_thread *thrd;
+		struct binder_transaction *t;
+		if (size != sizeof(struct binder_get_peer)) {
+			ret = -EINVAL;
+			goto err;
+		}
+		if (copy_from_user(&peer, ubuf, sizeof(peer))) {
+			ret = -EFAULT;
+			goto err;
+		}
+		peer.remote = 0;
+		thrd = binder_get_thread_by_tid(proc, peer.self);
+		/*
+		 * Check if the top of the stack is outgoing call or not,
+		 * and return its pid if true.
+		 */
+		if (thrd) {
+			t = thrd->transaction_stack;
+			if (t && t->from == thrd)
+				peer.remote = t->to_proc ? t->to_proc->pid : 0;
+		}
+		if (copy_to_user(ubuf, &peer, sizeof(peer))) {
+			ret = -EFAULT;
+			goto err;
+		}
+		break;
+	}
 	default:
 		ret = -EINVAL;
 		goto err;

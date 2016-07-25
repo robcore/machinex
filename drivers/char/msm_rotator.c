@@ -1785,7 +1785,7 @@ static int msm_rotator_rotate_prepare(
 	struct file *srcp1_file = NULL, *dstp1_file = NULL;
 	struct ion_handle *srcp0_ihdl = NULL, *dstp0_ihdl = NULL;
 	struct ion_handle *srcp1_ihdl = NULL, *dstp1_ihdl = NULL;
-	int ps0_need, p_need;
+	int ps0_need = 0, p_need;
 	unsigned int in_chroma_paddr = 0, out_chroma_paddr = 0;
 	unsigned int in_chroma2_paddr = 0, out_chroma2_paddr = 0;
 	struct msm_rotator_img_info *img_info;
@@ -1984,6 +1984,7 @@ rotate_prepare_error:
 		fput_light(srcp0_file, ps0_need);
 	else
 		put_img(srcp0_file, srcp0_ihdl, ROTATOR_SRC_DOMAIN, 0);
+	msm_rotator_signal_timeline_done(s);
 	dev_dbg(msm_rotator_dev->device, "%s() returning rc = %d\n",
 		__func__, rc);
 	mutex_unlock(&msm_rotator_dev->rotator_lock);

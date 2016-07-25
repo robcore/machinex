@@ -6,7 +6,6 @@ obj-y += timer.o
 endif
 obj-y += clock.o clock-voter.o clock-dummy.o
 obj-y += modem_notifier.o subsystem_map.o
-obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
 obj-$(CONFIG_KEXEC) += msm_kexec.o
 
@@ -88,10 +87,6 @@ obj-$(CONFIG_ARCH_QSD8X50) += sirc.o
 obj-$(CONFIG_ARCH_FSM9XXX) += sirc-fsm9xxx.o
 obj-$(CONFIG_MSM_FIQ_SUPPORT) += fiq_glue.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-rfkill.o
-obj-$(CONFIG_MSM_SDIO_AL) += sdio_al.o
-obj-$(CONFIG_MSM_SDIO_AL) += sdio_al_test.o
-obj-$(CONFIG_MSM_SDIO_AL) += sdio_al_dloader.o
-obj-$(CONFIG_MSM_SDIO_DMUX) += sdio_dmux.o
 obj-$(CONFIG_MSM_BAM_DMUX) += bam_dmux.o
 obj-$(CONFIG_MSM_SMD_LOGGING) += smem_log.o
 obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging.o
@@ -125,13 +120,10 @@ endif
 endif
 
 obj-$(CONFIG_MSM_HSIC_TTY) += hsic_tty.o
-obj-$(CONFIG_MSM_SDIO_TTY) += sdio_tty.o
 obj-$(CONFIG_MSM_SMD_TTY) += smd_tty.o
 obj-$(CONFIG_MSM_SMD_QMI) += smd_qmi.o
 obj-$(CONFIG_MSM_SMD_PKT) += smd_pkt.o
-obj-$(CONFIG_MSM_SDIO_CMUX) += sdio_cmux.o
 obj-$(CONFIG_MSM_DSPS) += msm_dsps.o
-obj-$(CONFIG_MSM_SDIO_CTL) += sdio_ctl.o
 obj-$(CONFIG_MSM_SMD_NMEA) += smd_nmea.o
 obj-$(CONFIG_MSM_RESET_MODEM) += reset_modem.o
 obj-$(CONFIG_MSM_IPC_ROUTER_SMD_XPRT) += ipc_router_smd_xprt.o
@@ -146,7 +138,6 @@ obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_servers.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_clients.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_xdr.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += rpcrouter_smd_xprt.o
-obj-$(CONFIG_MSM_RPC_SDIO_XPRT) += rpcrouter_sdio_xprt.o
 obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o
 obj-$(CONFIG_MSM_RPC_PROC_COMM_TEST) += proc_comm_test.o
 obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o ping_apps_server.o
@@ -380,7 +371,6 @@ obj-$(CONFIG_TROUT_BATTCHG) += htc_battery.o
 obj-$(CONFIG_HTC_PWRSINK) += htc_pwrsink.o
 obj-$(CONFIG_HTC_HEADSET) += htc_headset.o
 obj-$(CONFIG_MSM_RMT_STORAGE_CLIENT) += rmt_storage_client.o
-obj-$(CONFIG_MSM_SDIO_SMEM) += sdio_smem.o
 obj-$(CONFIG_MSM_RPM) += rpm.o
 ifdef CONFIG_MSM_RPM
 	obj-$(CONFIG_ARCH_APQ8064) += rpm_resources.o
@@ -471,6 +461,7 @@ ifdef CONFIG_MSM_CPR
 obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
+obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 
 obj-$(CONFIG_ARCH_RANDOM) += early_random.o
 
@@ -485,9 +476,11 @@ obj-$(CONFIG_MACH_JF) += fusion3-thermistor.o
 obj-$(CONFIG_MACH_M2) += midas-thermistor.o
 endif
 
+
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
 
 obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o
+
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
 obj-$(CONFIG_ZEN_DECISION) += msm_zen_decision.o
 obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o

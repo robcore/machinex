@@ -23,6 +23,7 @@
 #include <linux/cpu.h>
 #include <linux/console.h>
 #include <linux/regulator/consumer.h>
+#include <linux/iopoll.h>
 
 #include <asm/mach-types.h>
 #include <asm/cpu.h>
@@ -73,8 +74,12 @@ static unsigned long acpuclk_krait_get_rate(int cpu)
 	return drv.scalable[cpu].cur_speed->khz;
 }
 
-/* Select a source on the primary MUX. */
-static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
+struct set_clk_src_args {
+	struct scalable *sc;
+	u32 src_sel;
+};
+
+static void __set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
 {
 	u32 regval;
 
@@ -85,6 +90,27 @@ static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
 	/* Wait for switch to complete. */
 	mb();
 	udelay(1);
+}
+
+static void __set_cpu_pri_clk_src(void *data)
+{
+	struct set_clk_src_args *args = data;
+	__set_pri_clk_src(args->sc, args->src_sel);
+}
+
+/* Select a source on the primary MUX. */
+static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
+{
+	int cpu = sc - drv.scalable;
+	if (sc != &drv.scalable[L2] && cpu_online(cpu)) {
+		struct set_clk_src_args args = {
+			.sc = sc,
+			.src_sel = pri_src_sel,
+		};
+		smp_call_function_single(cpu, __set_cpu_pri_clk_src, &args, 1);
+	} else {
+		__set_pri_clk_src(sc, pri_src_sel);
+	}
 }
 
 /* Select a source on the secondary MUX. */
@@ -160,8 +186,14 @@ static void hfpll_enable(struct scalable *sc, bool skip_regulators)
 	writel_relaxed(0x6, sc->hfpll_base + drv.hfpll_data->mode_offset);
 
 	/* Wait for PLL to lock. */
-	mb();
-	udelay(60);
+	if (drv.hfpll_data->has_lock_status) {
+		u32 regval;
+		readl_tight_poll(sc->hfpll_base + drv.hfpll_data->status_offset,
+			   regval, regval & BIT(16));
+	} else {
+		mb();
+		udelay(60);
+	}
 
 	/* Enable PLL output. */
 	writel_relaxed(0x7, sc->hfpll_base + drv.hfpll_data->mode_offset);
@@ -405,12 +437,12 @@ static void decrease_vdd(int cpu, struct vdd_data *data,
 	}
 }
 
-static int calculate_vdd_mem(const struct acpu_level *tgt)
+static inline int calculate_vdd_mem(const struct acpu_level *tgt)
 {
 	return drv.l2_freq_tbl[tgt->l2_level].vdd_mem;
 }
 
-static int get_src_dig(const struct core_speed *s)
+static inline int get_src_dig(const struct core_speed *s)
 {
 	const int *hfpll_vdd = drv.hfpll_data->vdd;
 	const u32 low_vdd_l_max = drv.hfpll_data->low_vdd_l_max;
@@ -426,7 +458,7 @@ static int get_src_dig(const struct core_speed *s)
 		return hfpll_vdd[HFPLL_VDD_LOW];
 }
 
-static int calculate_vdd_dig(const struct acpu_level *tgt)
+static inline int calculate_vdd_dig(const struct acpu_level *tgt)
 {
 	int l2_pll_vdd_dig, cpu_pll_vdd_dig;
 
@@ -440,7 +472,7 @@ static int calculate_vdd_dig(const struct acpu_level *tgt)
 static bool enable_boost = true;
 module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
 
-static int calculate_vdd_core(const struct acpu_level *tgt)
+static int inline calculate_vdd_core(const struct acpu_level *tgt)
 {
 	return tgt->vdd_core + (enable_boost ? drv.boost_uv : 0);
 }
@@ -645,9 +677,8 @@ static void __cpuinit hfpll_init(struct scalable *sc,
 		writel_relaxed(drv.hfpll_data->droop_val,
 			       sc->hfpll_base + drv.hfpll_data->droop_offset);
 
-	/* Set an initial rate and enable the PLL. */
+	/* Set an initial PLL rate. */
 	hfpll_set_rate(sc, tgt_s);
-	hfpll_enable(sc, false);
 }
 
 static int __cpuinit rpm_regulator_init(struct scalable *sc, enum vregs vreg,
@@ -818,7 +849,9 @@ static int __cpuinit init_clock_sources(struct scalable *sc,
 	regval &= ~(0x3 << 6);
 	set_l2_indirect_reg(sc->l2cpmr_iaddr, regval);
 
-	/* Switch to the target clock source. */
+	/* Enable and switch to the target clock source. */
+	if (tgt_s->src == HFPLL)
+		hfpll_enable(sc, false);
 	set_pri_clk_src(sc, tgt_s->pri_src_sel);
 	sc->cur_speed = tgt_s;
 
@@ -979,7 +1012,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 		else if ( drv.acpu_freq_tbl[i].speed.khz == khz)
 			new_vdd_uv = min(max((unsigned int)vdd_uv,
 				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
-		else 
+		else
 			continue;
 
 		drv.acpu_freq_tbl[i].vdd_core = new_vdd_uv;
@@ -995,14 +1028,15 @@ extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
 	int cpu;
+	int freq_cnt = 0;
 
 	for_each_possible_cpu(cpu) {
-		int i, freq_cnt = 0;
+		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
-		for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0
+		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
 				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
 			if (drv.acpu_freq_tbl[i].use_for_scaling) {
-#ifdef CONFIG_SEC_FACTORY 
+#ifdef CONFIG_SEC_FACTORY
 				// if factory_condition, set the core freq limit.
 				//QMCK
 				if (console_set_on_cmdline && drv.acpu_freq_tbl[i].speed.khz > 1000000) {
@@ -1011,7 +1045,7 @@ static void __init cpufreq_table_init(void)
 					}
 				}
 				//QMCK
-#endif		
+#endif
 				freq_table[cpu][freq_cnt].index = freq_cnt;
 				freq_table[cpu][freq_cnt].frequency
 					= drv.acpu_freq_tbl[i].speed.khz;
@@ -1024,12 +1058,11 @@ static void __init cpufreq_table_init(void)
 		freq_table[cpu][freq_cnt].index = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
-		dev_info(drv.dev, "CPU%d: %d frequencies supported\n",
-			cpu, freq_cnt);
-
 		/* Register table with CPUFreq. */
 		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
 	}
+
+	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
 }
 #else
 static void __init cpufreq_table_init(void) {}
@@ -1088,7 +1121,7 @@ static struct notifier_block __cpuinitdata acpuclk_cpu_notifier = {
 	.notifier_call = acpuclk_cpu_callback,
 };
 
-static const int krait_needs_vmin(void)
+static const int __init krait_needs_vmin(void)
 {
 	switch (read_cpuid_id()) {
 	case 0x511F04D0: /* KR28M2A20 */
@@ -1100,7 +1133,7 @@ static const int krait_needs_vmin(void)
 	};
 }
 
-static void krait_apply_vmin(struct acpu_level *tbl)
+static void __init krait_apply_vmin(struct acpu_level *tbl)
 {
 	for (; tbl->speed.khz != 0; tbl++) {
 		if (tbl->vdd_core < 1150000)
@@ -1167,7 +1200,7 @@ static struct pvs_table * __init select_freq_plan(u32 pte_efuse_phys,
 	speed_bin = bin_idx;
 	pvs_bin = tbl_idx;
 #endif
-	
+
 	return &pvs_tables[bin_idx][tbl_idx];
 }
 
