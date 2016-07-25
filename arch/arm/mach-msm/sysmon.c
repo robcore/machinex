@@ -190,6 +190,9 @@ int sysmon_send_shutdown(enum subsys_id dest_ss)
 	if (dest_ss < 0 || dest_ss >= SYSMON_NUM_SS)
 		return -EINVAL;
 
+	if (!ss->chan_open)
+		return -ENODEV;
+
 	mutex_lock(&ss->lock);
 	ret = sysmon_send_msg(ss, tx_buf, ARRAY_SIZE(tx_buf));
 	if (ret)
