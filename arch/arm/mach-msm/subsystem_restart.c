@@ -345,7 +345,7 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Shutting down %s\n", current, name);
 	if (dev->desc->shutdown(dev->desc) < 0) {
-		WARN(1, "subsys-restart: %s[%p]: Failed to shutdown %s!",
+		WARN(1, "subsys-restart: [%p]: Failed to shutdown %s!",
 			current, name);
 	}
 	subsys_set_state(dev, SUBSYS_OFFLINE);
@@ -366,7 +366,7 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
-		WARN(1, "%s[%p]: Failed to powerup %s!", __func__,
+		WARN(1, "[%p]: Failed to powerup %s!", current, name);
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
