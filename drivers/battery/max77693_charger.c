@@ -1178,7 +1178,7 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	if (chg_data->wc_w_state)
 		delay = msecs_to_jiffies(500);
 	else
-		delay = msecs_to_jiffies(200);
+		delay = msecs_to_jiffies(0);
 #endif
 	queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 			delay);
