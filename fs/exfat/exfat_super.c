@@ -1823,7 +1823,7 @@ static void exfat_evict_inode(struct inode *inode)
 
 	invalidate_inode_buffers(inode);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,00)
-	end_writeback(inode);
+	clear_inode(inode);
 #else
 	clear_inode(inode);
 #endif
