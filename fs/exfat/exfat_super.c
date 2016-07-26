@@ -1315,8 +1315,8 @@ const struct file_operations exfat_file_operations = {
 	.llseek      = generic_file_llseek,
 	.read        = do_sync_read,
 	.write       = do_sync_write,
-	.aio_read    = generic_file_aio_read,
-	.aio_write   = generic_file_aio_write,
++	.read_iter	= generic_file_read_iter,
++	.write_iter	= generic_file_write_iter,
 	.mmap        = generic_file_mmap,
 	.release     = exfat_file_release,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
