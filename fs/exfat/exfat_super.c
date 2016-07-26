@@ -77,7 +77,6 @@
 #include <linux/exportfs.h>
 #include <linux/mount.h>
 #include <linux/vfs.h>
-#include <linux/aio.h>
 #include <linux/parser.h>
 #include <linux/uio.h>
 #include <linux/writeback.h>
@@ -1315,8 +1314,8 @@ const struct file_operations exfat_file_operations = {
 	.llseek      = generic_file_llseek,
 	.read        = do_sync_read,
 	.write       = do_sync_write,
-+	.read_iter	= generic_file_read_iter,
-+	.write_iter	= generic_file_write_iter,
+	.read_iter	= generic_file_read_iter,
+	.write_iter	= generic_file_write_iter,
 	.mmap        = generic_file_mmap,
 	.release     = exfat_file_release,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
@@ -1575,6 +1574,7 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
 #ifdef CONFIG_AIO_OPTIMIZATION
 	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset,
 				 exfat_get_block);
+#else
 	ret = blockdev_direct_IO(rw, iocb, inode, iov,
 					offset, nr_segs, exfat_get_block);
 #endif
@@ -1839,7 +1839,7 @@ static void exfat_evict_inode(struct inode *inode)
 
 	invalidate_inode_buffers(inode);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,00)
-	clear_inode(inode);
+	end_writeback(inode);
 #else
 	clear_inode(inode);
 #endif
