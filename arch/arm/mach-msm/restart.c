@@ -357,9 +357,11 @@ void msm_restart(char mode, const char *cmd)
 				&& !kstrtoul(cmd + 7, 0, &value)) {
 			__raw_writel(0xfedc0000 | value, restart_reason);
 #endif
+#if 1
 		} else if (strlen(cmd) == 0) {
 			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
 			__raw_writel(0x12345678, restart_reason);
+#endif
 #ifndef CONFIG_MACH_JF
 		} else if (!strncmp(cmd, "nvbackup", 8)) {
 			__raw_writel(0x77665511, restart_reason);
