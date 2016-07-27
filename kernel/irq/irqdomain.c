@@ -126,6 +126,7 @@ void irq_domain_remove(struct irq_domain *domain)
 
 	irq_domain_free(domain);
 }
+EXPORT_SYMBOL_GPL(irq_domain_remove);
 
 static unsigned int irq_domain_legacy_revmap(struct irq_domain *domain,
 					     irq_hw_number_t hwirq)
@@ -270,6 +271,7 @@ struct irq_domain *irq_domain_add_legacy(struct device_node *of_node,
 	irq_domain_add(domain);
 	return domain;
 }
+EXPORT_SYMBOL_GPL(irq_domain_add_legacy);
 
 /**
  * irq_domain_add_linear() - Allocate and register a legacy revmap irq_domain.
@@ -300,6 +302,7 @@ struct irq_domain *irq_domain_add_linear(struct device_node *of_node,
 	irq_domain_add(domain);
 	return domain;
 }
+EXPORT_SYMBOL_GPL(irq_domain_add_linear);
 
 struct irq_domain *irq_domain_add_nomap(struct device_node *of_node,
 					 unsigned int max_irq,
@@ -314,6 +317,7 @@ struct irq_domain *irq_domain_add_nomap(struct device_node *of_node,
 	}
 	return domain;
 }
+EXPORT_SYMBOL_GPL(irq_domain_add_nomap);
 
 /**
  * irq_domain_add_tree()
@@ -335,6 +339,7 @@ struct irq_domain *irq_domain_add_tree(struct device_node *of_node,
 	}
 	return domain;
 }
+EXPORT_SYMBOL_GPL(irq_domain_add_tree);
 
 /**
  * irq_find_host() - Locates a domain for a given device node
@@ -382,6 +387,7 @@ void irq_set_default_host(struct irq_domain *domain)
 
 	irq_default_domain = domain;
 }
+EXPORT_SYMBOL_GPL(irq_set_default_host);
 
 static int irq_setup_virq(struct irq_domain *domain, unsigned int virq,
 			    irq_hw_number_t hwirq)
@@ -440,6 +446,7 @@ unsigned int irq_create_direct_mapping(struct irq_domain *domain)
 
 	return virq;
 }
+EXPORT_SYMBOL_GPL(irq_create_direct_mapping);
 
 /**
  * irq_create_mapping() - Map a hardware interrupt into linux irq space
@@ -678,6 +685,7 @@ unsigned int irq_radix_revmap_lookup(struct irq_domain *domain,
 	 */
 	return irq_data ? irq_data->irq : irq_find_mapping(domain, hwirq);
 }
+EXPORT_SYMBOL_GPL(irq_radix_revmap_lookup);
 
 /**
  * irq_radix_revmap_insert() - Insert a hw irq to linux irq number mapping.
@@ -702,6 +710,7 @@ void irq_radix_revmap_insert(struct irq_domain *domain, unsigned int virq,
 		mutex_unlock(&revmap_trees_mutex);
 	}
 }
+EXPORT_SYMBOL_GPL(irq_radix_revmap_insert);
 
 /**
  * irq_linear_revmap() - Find a linux irq from a hw irq number.
@@ -735,6 +744,7 @@ unsigned int irq_linear_revmap(struct irq_domain *domain,
 
 	return revmap[hwirq];
 }
+EXPORT_SYMBOL_GPL(irq_linear_revmap);
 
 #ifdef CONFIG_IRQ_DOMAIN_DEBUG
 static int virq_debug_show(struct seq_file *m, void *private)
