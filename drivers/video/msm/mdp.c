@@ -167,7 +167,7 @@ struct dentry *mdp_dir;
 //static int mdp_suspend(struct platform_device *pdev, pm_message_t state);
 //#else
 #define mdp_suspend NULL
-/#endif
+//#endif
 
 struct timeval mdp_dma2_timeval;
 struct timeval mdp_ppp_timeval;
