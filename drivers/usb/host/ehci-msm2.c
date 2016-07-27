@@ -1020,8 +1020,8 @@ static int __devinit ehci_msm2_probe(struct platform_device *pdev)
 	if (mhcd->pmic_gpio_dp_irq) {
 		ret = request_threaded_irq(mhcd->pmic_gpio_dp_irq, NULL,
 				msm_ehci_host_wakeup_irq,
-				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				IRQF_ONESHOT, "msm_ehci_host_wakeup", mhcd);
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				"msm_ehci_host_wakeup", mhcd);
 		if (!ret) {
 			disable_irq_nosync(mhcd->pmic_gpio_dp_irq);
 		} else {
