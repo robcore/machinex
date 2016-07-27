@@ -166,7 +166,7 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 		pr_info("%s: device found: rev.0x%x, ver.0x%x\n", __func__,
 				max77693->pmic_rev, max77693->pmic_ver);
 	}
-#if 0
+#if defined(CONFIG_MACH_JF)
 #if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_JF_LGT)
 	if (kernel_sec_get_debug_level() == KERNEL_SEC_DEBUG_LEVEL_LOW) {
 		pm8xxx_hard_reset_config(PM8XXX_DISABLE_HARD_RESET);
