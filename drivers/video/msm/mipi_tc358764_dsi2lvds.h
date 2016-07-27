@@ -24,9 +24,9 @@ struct dsi2lvds_panel_data {
 };
 struct dsi2lvds_driver_data {
 	struct dsi2lvds_panel_data *dpd;
-#if defined(CONFIG_HAS_POWERSUSPEND)
-	struct power_suspend power_suspend;
-#endif
+//#if defined(CONFIG_HAS_POWERSUSPEND)
+//	struct power_suspend power_suspend;
+//#endif
 };
 extern int poweroff_charging;
 

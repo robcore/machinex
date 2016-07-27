@@ -24,9 +24,6 @@
 #include <linux/gpio.h>
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-bool scr_suspended;
-#endif
 #endif
 #ifdef CONFIG_LCD_NOTIFY
 #include <linux/lcd_notify.h>
@@ -762,7 +759,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 	mutex_unlock(&brightness_mutex);
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 static void mipi_samsung_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
@@ -795,7 +792,7 @@ static void mipi_samsung_disp_power_resume(struct power_suspend *h)
 
 	pr_info("[lcd] %s\n", __func__);
 }
-#endif
+#endif */
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 static ssize_t mipi_samsung_disp_get_power(struct device *dev,
@@ -1462,9 +1459,9 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 	mutex_init(&dsi_tx_mutex);
 
-#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+//#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
-#endif
+//#endif
 
 	pm_gpio8 = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_ERR_FG);
 
@@ -1482,12 +1479,12 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 	msd.power_suspend.suspend = mipi_samsung_disp_power_suspend;
 	msd.power_suspend.resume = mipi_samsung_disp_power_resume;
 //	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_power_suspend(&msd.power_suspend);
-#endif
+#endif */
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 	printk(KERN_INFO "[lcd] lcd_device_register for panel start\n");

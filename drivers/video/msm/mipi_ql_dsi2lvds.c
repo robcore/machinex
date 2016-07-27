@@ -560,7 +560,7 @@ static void mipi2lvds_disp_set_backlight(struct msm_fb_data_type *mfd)
 	return;
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 static void mipi2lvds_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
@@ -593,7 +593,7 @@ static void mipi2lvds_disp_power_resume(struct power_suspend *h)
 
 	pr_info("%s", __func__);
 }
-#endif
+#endif */
 
 unsigned char mipi2lvds_show_cabc(void )
 {
@@ -838,17 +838,17 @@ static int __devinit mipi2lvds_vx5b3d_disp_probe(struct platform_device *pdev)
 	msm_fb_added_dev = msm_fb_add_device(pdev);
 	mutex_init(&cabc_lock);
 
-#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+//#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
-#endif
+//#endif
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 	msd.power_suspend.suspend = mipi2lvds_disp_power_suspend;
 	msd.power_suspend.resume = mipi2lvds_disp_power_resume;
 //	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_power_suspend(&msd.power_suspend);
 
-#endif
+#endif */
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 	lcd_device = lcd_device_register("panel", &pdev->dev, NULL,
 					&mipi2lvds_disp_props);
