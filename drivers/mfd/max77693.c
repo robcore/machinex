@@ -386,7 +386,7 @@ static int max77693_restore(struct device *dev)
 #endif
 
 
-const struct dev_pm_ops max77693_pm = {
+static const struct dev_pm_ops max77693_pm = {
 	.suspend = max77693_suspend,
 	.resume = max77693_resume,
 #ifdef CONFIG_HIBERNATION
