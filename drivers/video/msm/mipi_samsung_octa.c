@@ -567,7 +567,8 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
-
+	
+	printk(KERN_INFO "[lcd] robhooktest\n");
 #ifdef CONFIG_STATE_NOTIFIER
 		if (!use_fb_notifier)
 			state_resume();
