@@ -119,6 +119,44 @@ void log_wakeup_reason(int irq)
 	spin_unlock(&resume_reason_lock);
 }
 
+void log_suspend_abort_reason(const char *fmt, ...)
+{
+	va_list args;
+
+	spin_lock(&resume_reason_lock);
+
+	//Suspend abort reason has already been logged.
+	if (suspend_abort) {
+		spin_unlock(&resume_reason_lock);
+		return;
+	}
+
+	suspend_abort = true;
+	va_start(args, fmt);
+	snprintf(abort_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
+	va_end(args);
+	spin_unlock(&resume_reason_lock);
+}
+
+void log_suspend_abort_reason(const char *fmt, ...)
+{
+	va_list args;
+
+	spin_lock(&resume_reason_lock);
+
+	//Suspend abort reason has already been logged.
+	if (suspend_abort) {
+		spin_unlock(&resume_reason_lock);
+		return;
+	}
+
+	suspend_abort = true;
+	va_start(args, fmt);
+	snprintf(abort_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
+	va_end(args);
+	spin_unlock(&resume_reason_lock);
+}
+
 const int* get_wakeup_reasons(size_t *len)
 {
 	*len = irq_count;
@@ -129,6 +167,7 @@ void clear_wakeup_reasons(void)
 {
 	spin_lock(&resume_reason_lock);
 	irq_count = 0;
+	suspend_abort = false;
 	spin_unlock(&resume_reason_lock);
 }
 
