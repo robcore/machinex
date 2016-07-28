@@ -43,7 +43,6 @@
  */
 
 #include <linux/cdrom.h>
-#include <linux/export.h>
 #include <scsi/scsi.h>
 #include <scsi/scsi_cmnd.h>
 #include <scsi/scsi_dbg.h>
@@ -151,7 +150,7 @@ void usb_stor_show_command(struct scsi_cmnd *srb)
 	default: what = "(unknown command)"; break;
 	}
 	US_DEBUGP("Command %s (%d bytes)\n", what, srb->cmd_len);
-	US_DEBUGP("bytes: ");
+	US_DEBUGP("");
 	for (i = 0; i < srb->cmd_len && i < 16; i++)
 		US_DEBUGPX(" %02x", srb->cmnd[i]);
 	US_DEBUGPX("\n");
@@ -176,22 +175,3 @@ void usb_stor_show_sense(
 	US_DEBUGPX(what, ascq);
 	US_DEBUGPX("\n");
 }
-
-int usb_stor_dbg(const char *fmt, ...)
-{
-	struct va_format vaf;
-	va_list args;
-	int r;
-
-	va_start(args, fmt);
-
-	vaf.fmt = fmt;
-	vaf.va = &args;
-
-	r = printk(KERN_DEBUG USB_STORAGE "%pV", &vaf);
-
-	va_end(args);
-
-	return r;
-}
-EXPORT_SYMBOL_GPL(usb_stor_dbg);

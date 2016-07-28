@@ -751,7 +751,7 @@ static void receive_file_work(struct work_struct *data)
 	struct file *filp;
 	loff_t offset;
 	int64_t count;
-	int ret, len, cur_buf = 0;
+	int ret, cur_buf = 0;
 	int r = 0;
 
 	/* read our parameters */
@@ -768,11 +768,8 @@ static void receive_file_work(struct work_struct *data)
 			read_req = dev->rx_req[cur_buf];
 			cur_buf = (cur_buf + 1) % RX_REQ_MAX;
 
-			len = ALIGN(count, dev->ep_out->maxpacket);
-			if (len > mtp_rx_req_len)
-				len = mtp_rx_req_len;
-			read_req->length = len;
-
+			read_req->length = (count > mtp_rx_req_len
+					? mtp_rx_req_len : count);
 			dev->rx_done = 0;
 			ret = usb_ep_queue(dev->ep_out, read_req, GFP_KERNEL);
 			if (ret < 0) {
