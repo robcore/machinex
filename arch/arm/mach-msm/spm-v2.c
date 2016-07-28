@@ -401,23 +401,8 @@ int msm_spm_drv_set_phase(struct msm_spm_driver_data *dev,
 	unsigned int pmic_data = 0;
 	unsigned int timeout_us = 0;
 
-<<<<<<< HEAD
-	if (dev->major != SAW2_MAJOR_2)
-		return -ENODEV;
-
 	pmic_data |= phase_cnt & 0xFF;
 	pmic_data |= (dev->phase_port & 0x7) << 16;
-=======
-	if (!msm_spm_pmic_arb_present(dev))
-		return -ENOSYS;
-
-	index = msm_spm_drv_get_pmic_port(dev, port);
-	if (index < 0)
-		return -ENODEV;
-
-	pmic_data |= data & 0xFF;
-	pmic_data |= (index & 0x7) << 16;
->>>>>>> 069cf05... msm: spm-v2: Use proper register offsets for SAW2_v3.0
 
 	dev->reg_shadow[MSM_SPM_REG_SAW2_VCTL] &= ~0x700FF;
 	dev->reg_shadow[MSM_SPM_REG_SAW2_VCTL] |= pmic_data;
