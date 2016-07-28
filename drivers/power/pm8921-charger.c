@@ -4833,9 +4833,6 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 			= pdata->btc_panic_if_cant_stop_chg;
 	}
 
-	if (chip->battery_less_hardware)
-		charging_disabled = 1;
-
 	chip->ibatmax_max_adj_ma = find_ibat_max_adj_ma(
 					chip->max_bat_chg_current);
 
