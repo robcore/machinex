@@ -14,6 +14,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/radix-tree.h>
 #include <linux/bitmap.h>
+#include <linux/wakeup_reason.h>
 
 #include "internals.h"
 #ifdef CONFIG_SEC_DEBUG
@@ -339,8 +340,12 @@ int generic_handle_irq(unsigned int irq)
 		sec_debug_irq_sched_log(irq, (void *)desc->handle_irq,
 			irqs_disabled());
 #endif
-	generic_handle_irq_desc(irq, desc);
-	return 0;
+	if (unlikely(logging_wakeup_reasons()))
+		return log_possible_wakeup_reason(irq,
+				desc,
+				generic_handle_irq_desc);
+
+	return generic_handle_irq_desc(irq, desc);
 }
 EXPORT_SYMBOL_GPL(generic_handle_irq);
 
