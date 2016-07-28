@@ -1335,7 +1335,7 @@ static void msm_spi_process_message(struct msm_spi *dd)
 					write_force_cs(dd, 0);
 			}
 
-			dd->cur_msg_len = dd->cur_transfer->len;
+			dd->cur_msg_len += dd->cur_transfer->len;
 			msm_spi_process_transfer(dd);
 		}
 	} else {
@@ -1435,10 +1435,13 @@ static void msm_spi_workq(struct work_struct *work)
 					 struct spi_message, queue);
 		list_del_init(&dd->cur_msg->queue);
 		spin_unlock_irqrestore(&dd->queue_lock, flags);
-		if (status_error)
+		if (status_error) {
 			dd->cur_msg->status = -EIO;
-		else
+		}
+		else {
 			msm_spi_process_message(dd);
+			dd->cur_msg->actual_length = dd->cur_msg_len;
+		}
 		if (dd->cur_msg->complete)
 			dd->cur_msg->complete(dd->cur_msg->context);
 		spin_lock_irqsave(&dd->queue_lock, flags);
