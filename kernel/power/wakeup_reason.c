@@ -31,6 +31,8 @@
 #define MAX_WAKEUP_REASON_IRQS 32
 static int irq_list[MAX_WAKEUP_REASON_IRQS];
 static int irqcount;
+static bool suspend_abort;
+static char abort_reason[MAX_SUSPEND_ABORT_LEN];
 static struct kobject *wakeup_reason;
 static spinlock_t resume_reason_lock;
 
@@ -42,17 +44,18 @@ static struct timespec curr_stime; /* total_sleep_time after last suspend */
 static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribute *attr,
 		char *buf)
 {
-	int irq_no, buf_offset = 0;
-	struct irq_desc *desc;
-	spin_lock(&resume_reason_lock);
-	for (irq_no = 0; irq_no < irqcount; irq_no++) {
-		desc = irq_to_desc(irq_list[irq_no]);
-		if (desc && desc->action && desc->action->name)
-			buf_offset += sprintf(buf + buf_offset, "%d %s\n",
-					irq_list[irq_no], desc->action->name);
-		else
-			buf_offset += sprintf(buf + buf_offset, "%d\n",
-					irq_list[irq_no]);
+	if (suspend_abort) {
+		buf_offset = sprintf(buf, "Abort: %s", abort_reason);
+	} else {
+		for (irq_no = 0; irq_no < irq_count; irq_no++) {
+			desc = irq_to_desc(irq_list[irq_no]);
+			if (desc && desc->action && desc->action->name)
+				buf_offset += sprintf(buf + buf_offset, "%d %s\n",
+						irq_list[irq_no], desc->action->name);
+			else
+				buf_offset += sprintf(buf + buf_offset, "%d\n",
+						irq_list[irq_no]);
+		}
 	}
 	spin_unlock(&resume_reason_lock);
 	return buf_offset;
