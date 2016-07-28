@@ -245,7 +245,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -std=gnu89
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -fgcse-las -std=gnu89
 HOSTCXXFLAGS = -O3
 
 # Decide whether to build built-in, modular, or both.
@@ -356,15 +356,15 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-KERNEL_FLAGS	= -mtune=cortex-a15 -marm \
-		  -mfpu=neon-vfpv4 -mvectorize-with-neon-quad\
+KERNEL_FLAGS	= -mtune=cortex-a15 -marm -fgcse-las -fpredictive-commoning \
+		  -mfpu=neon-vfpv4 -mvectorize-with-neon-quad \
 		  -munaligned-access -fno-pic
 
 MODFLAGS	= -DMODULE -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize -funroll-loops
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-align-labels -fno-prefetch-loop-arrays -mvectorize-with-neon-quad -funsafe-math-optimizations -munaligned-access -ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops
+CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-align-labels -fno-prefetch-loop-arrays -mvectorize-with-neon-quad -munaligned-access -ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -553,11 +553,11 @@ PHONY += include/config/auto.conf
 
 include/config/auto.conf:
 	$(Q)test -e include/generated/autoconf.h -a -e $@ || (		\
-	echo;								\
-	echo "  ERROR: Kernel configuration is invalid.";		\
-	echo "         include/generated/autoconf.h or $@ are missing.";\
-	echo "         Run 'make oldconfig && make prepare' on kernel src to fix it.";	\
-	echo;								\
+	echo >&2;							\
+	echo >&2 "  ERROR: Kernel configuration is invalid.";		\
+	echo >&2 "         include/generated/autoconf.h or $@ are missing.";\
+	echo >&2 "         Run 'make oldconfig && make prepare' on kernel src to fix it.";	\
+	echo >&2 ;							\
 	/bin/false)
 
 endif # KBUILD_EXTMOD
@@ -614,7 +614,7 @@ KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
 
 ifdef CONFIG_DEBUG_INFO
 KBUILD_CFLAGS	+= -g
-KBUILD_AFLAGS	+= -gdwarf-2
+KBUILD_AFLAGS	+= -Wa,-gdwarf-2
 endif
 
 ifdef CONFIG_DEBUG_INFO_REDUCED
