@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -77,6 +77,8 @@
 #define SPS_BAM_OPT_IRQ_WAKEUP      (1UL << 3)
 /* Ignore external block pipe reset */
 #define SPS_BAM_NO_EXT_P_RST        (1UL << 4)
+/* Verify Low Memory status */
+#define SPS_BAM_ATMC_MEM            (1UL << 8)
 
 /* BAM device management flags */
 
