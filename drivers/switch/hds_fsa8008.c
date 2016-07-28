@@ -252,7 +252,7 @@ static void remove_headset(struct hsd_info *hi)
 
 	if (atomic_read(&hi->btn_state))
 #ifdef	FSA8008_USE_WORK_QUEUE
-	queue_delayed_work(local_fsa8008_workqueue,
+	mod_delayed_work(local_fsa8008_workqueue,
 			&(hi->work_for_key_released), hi->latency_for_key );
 #else
 	schedule_delayed_work(&(hi->work_for_key_released),
@@ -295,7 +295,7 @@ static void schedule_detect_work(struct hsd_info *hi)
 	wake_lock_timeout(&ear_hook_wake_lock, FSA8008_WAKELOCK_TIMEOUT);
 
 #ifdef FSA8008_USE_WORK_QUEUE
-	queue_delayed_work(local_fsa8008_workqueue, &(hi->work),
+	mod_delayed_work(local_fsa8008_workqueue, &(hi->work),
 			msecs_to_jiffies(FSA8008_DEBOUNCE_TIME));
 #else
 	schedule_delayed_work(&(hi->work),
@@ -327,11 +327,11 @@ static irqreturn_t button_irq_handler(int irq, void *dev_id)
 
 #ifdef	FSA8008_USE_WORK_QUEUE
 	if (value)
-		queue_delayed_work(local_fsa8008_workqueue,
+		mod_delayed_work(local_fsa8008_workqueue,
 				&(hi->work_for_key_pressed),
 				hi->latency_for_key );
 	else
-		queue_delayed_work(local_fsa8008_workqueue,
+		mod_delayed_work(local_fsa8008_workqueue,
 				&(hi->work_for_key_released),
 				hi->latency_for_key );
 #else
@@ -557,7 +557,7 @@ static int hsd_probe(struct platform_device *pdev)
 	if (!gpio_get_value_cansleep(hi->gpio_detect)) {
 #ifdef FSA8008_USE_WORK_QUEUE
 		/* to detect in initialization with eacjack insertion */
-		queue_delayed_work(local_fsa8008_workqueue, &(hi->work), 0);
+		mod_delayed_work(local_fsa8008_workqueue, &(hi->work), 0);
 #else
 		/* to detect in initialization with eacjack insertion */
 		schedule_delayed_work(&(hi->work), 0);

@@ -443,7 +443,7 @@ static void
 xfs_syncd_queue_sync(
 	struct xfs_mount        *mp)
 {
-	queue_delayed_work(xfs_syncd_wq, &mp->m_sync_work,
+	mod_delayed_work(xfs_syncd_wq, &mp->m_sync_work,
 				msecs_to_jiffies(xfs_syncd_centisecs * 10));
 }
 
@@ -498,7 +498,7 @@ xfs_syncd_queue_reclaim(
 
 	rcu_read_lock();
 	if (radix_tree_tagged(&mp->m_perag_tree, XFS_ICI_RECLAIM_TAG)) {
-		queue_delayed_work(xfs_syncd_wq, &mp->m_reclaim_work,
+		mod_delayed_work(xfs_syncd_wq, &mp->m_reclaim_work,
 			msecs_to_jiffies(xfs_syncd_centisecs / 6 * 10));
 	}
 	rcu_read_unlock();

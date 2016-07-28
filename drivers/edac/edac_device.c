@@ -398,10 +398,10 @@ static void edac_device_workq_function(struct work_struct *work_req)
 	 * between integral seconds
 	 */
 	if (edac_dev->poll_msec == 1000)
-		queue_delayed_work(edac_workqueue, &edac_dev->work,
+		mod_delayed_work(edac_workqueue, &edac_dev->work,
 				round_jiffies_relative(edac_dev->delay));
 	else
-		queue_delayed_work(edac_workqueue, &edac_dev->work,
+		mod_delayed_work(edac_workqueue, &edac_dev->work,
 				edac_dev->delay);
 }
 
@@ -430,10 +430,10 @@ void edac_device_workq_setup(struct edac_device_ctl_info *edac_dev,
 	 * to fire together on the 1 second exactly
 	 */
 	if (edac_dev->poll_msec == 1000)
-		queue_delayed_work(edac_workqueue, &edac_dev->work,
+		mod_delayed_work(edac_workqueue, &edac_dev->work,
 				round_jiffies_relative(edac_dev->delay));
 	else
-		queue_delayed_work(edac_workqueue, &edac_dev->work,
+		mod_delayed_work(edac_workqueue, &edac_dev->work,
 				edac_dev->delay);
 }
 

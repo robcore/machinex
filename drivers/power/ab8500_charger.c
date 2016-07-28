@@ -1135,7 +1135,7 @@ static int ab8500_charger_ac_en(struct ux500_charger *charger,
 			 * is disabled
 			 */
 			if (di->ac_conn) {
-				queue_delayed_work(di->charger_wq,
+				mod_delayed_work(di->charger_wq,
 					&di->kick_wd_work,
 					round_jiffies(WD_KICK_INTERVAL));
 			}
@@ -1287,7 +1287,7 @@ static int ab8500_charger_usb_en(struct ux500_charger *charger,
 		if (ret < 0)
 			dev_err(di->dev, "failed to enable LED\n");
 
-		queue_delayed_work(di->charger_wq, &di->check_vbat_work, HZ);
+		mod_delayed_work(di->charger_wq, &di->check_vbat_work, HZ);
 
 		di->usb.charger_online = 1;
 	} else {
@@ -1496,7 +1496,7 @@ static void ab8500_charger_check_vbat_work(struct work_struct *work)
 		(di->vbat > (VBAT_TRESH_IP_CUR_RED - 100)))
 			t = 1;
 
-	queue_delayed_work(di->charger_wq, &di->check_vbat_work, t * HZ);
+	mod_delayed_work(di->charger_wq, &di->check_vbat_work, t * HZ);
 }
 
 /**
@@ -1541,7 +1541,7 @@ static void ab8500_charger_check_hw_failure_work(struct work_struct *work)
 	}
 	/* If we still have a failure, schedule a new check */
 	if (di->flags.mainextchnotok || di->flags.vbus_ovv) {
-		queue_delayed_work(di->charger_wq,
+		mod_delayed_work(di->charger_wq,
 			&di->check_hw_failure_work, round_jiffies(HZ));
 	}
 }
@@ -1573,7 +1573,7 @@ static void ab8500_charger_kick_watchdog_work(struct work_struct *work)
 		dev_err(di->dev, "Failed to kick WD!\n");
 
 	/* Schedule a new watchdog kick */
-	queue_delayed_work(di->charger_wq,
+	mod_delayed_work(di->charger_wq,
 		&di->kick_wd_work, round_jiffies(WD_KICK_INTERVAL));
 }
 
@@ -1805,7 +1805,7 @@ static void ab8500_charger_check_usbchargernotok_work(struct work_struct *work)
 	if (reg_value & VBUS_CH_NOK) {
 		di->flags.usbchargernotok = true;
 		/* Check again in 1sec */
-		queue_delayed_work(di->charger_wq,
+		mod_delayed_work(di->charger_wq,
 			&di->check_usbchgnotok_work, HZ);
 	} else {
 		di->flags.usbchargernotok = false;
@@ -1926,7 +1926,7 @@ static irqreturn_t ab8500_charger_mainextchnotok_handler(int irq, void *_di)
 	ab8500_power_supply_changed(di, &di->ac_chg.psy);
 
 	/* Schedule a new HW failure check */
-	queue_delayed_work(di->charger_wq, &di->check_hw_failure_work, 0);
+	mod_delayed_work(di->charger_wq, &di->check_hw_failure_work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -2072,7 +2072,7 @@ static irqreturn_t ab8500_charger_usbchargernotokr_handler(int irq, void *_di)
 	struct ab8500_charger *di = _di;
 
 	dev_dbg(di->dev, "Not allowed USB charger detected\n");
-	queue_delayed_work(di->charger_wq, &di->check_usbchgnotok_work, 0);
+	mod_delayed_work(di->charger_wq, &di->check_usbchgnotok_work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -2122,7 +2122,7 @@ static irqreturn_t ab8500_charger_vbusovv_handler(int irq, void *_di)
 	ab8500_power_supply_changed(di, &di->usb_chg.psy);
 
 	/* Schedule a new HW failure check */
-	queue_delayed_work(di->charger_wq, &di->check_hw_failure_work, 0);
+	mod_delayed_work(di->charger_wq, &di->check_hw_failure_work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -2460,14 +2460,14 @@ static int ab8500_charger_resume(struct platform_device *pdev)
 		/* If not already pending start a new timer */
 		if (!delayed_work_pending(
 			&di->kick_wd_work)) {
-			queue_delayed_work(di->charger_wq, &di->kick_wd_work,
+			mod_delayed_work(di->charger_wq, &di->kick_wd_work,
 				round_jiffies(WD_KICK_INTERVAL));
 		}
 	}
 
 	/* If we still have a HW failure, schedule a new check */
 	if (di->flags.mainextchnotok || di->flags.vbus_ovv) {
-		queue_delayed_work(di->charger_wq,
+		mod_delayed_work(di->charger_wq,
 			&di->check_hw_failure_work, 0);
 	}
 

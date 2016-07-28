@@ -590,7 +590,7 @@ static void smux_lch_purge(void)
 
 		/* Purge RX retry queue */
 		if (ch->rx_retry_queue_cnt)
-			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
+			mod_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
 
 		spin_unlock_irqrestore(&ch->state_lock_lhb1, flags);
 	}
@@ -1621,7 +1621,7 @@ static int smux_handle_rx_data_cmd(struct smux_pkt_t *pkt)
 		list_add_tail(&retry->rx_retry_list, &ch->rx_retry_queue);
 		++ch->rx_retry_queue_cnt;
 		if (ch->rx_retry_queue_cnt == 1)
-			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work,
+			mod_delayed_work(smux_rx_wq, &ch->rx_retry_work,
 				msecs_to_jiffies(retry->timeout_in_ms));
 		spin_unlock_irqrestore(&ch->state_lock_lhb1, flags);
 	}
@@ -1937,7 +1937,7 @@ static void smux_handle_wakeup_req(void)
 		smux.power_state = SMUX_PWR_ON;
 		queue_work(smux_tx_wq, &smux_wakeup_work);
 		queue_work(smux_tx_wq, &smux_tx_work);
-		queue_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
+		mod_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
 			msecs_to_jiffies(SMUX_INACTIVITY_TIMEOUT_MS));
 		smux_send_byte(SMUX_WAKEUP_ACK);
 	} else if (smux.power_state == SMUX_PWR_ON) {
@@ -1964,7 +1964,7 @@ static void smux_handle_wakeup_ack(void)
 				smux.power_state, SMUX_PWR_ON);
 		smux.power_state = SMUX_PWR_ON;
 		queue_work(smux_tx_wq, &smux_tx_work);
-		queue_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
+		mod_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
 			msecs_to_jiffies(SMUX_INACTIVITY_TIMEOUT_MS));
 
 	} else if (smux.power_state != SMUX_PWR_ON) {
@@ -2498,7 +2498,7 @@ static void smux_wakeup_worker(struct work_struct *work)
 			SMUX_DBG(
 			"smux: %s: scheduling delayed wakeup in %u ms\n",
 					__func__, wakeup_delay / 1000);
-			queue_delayed_work(smux_tx_wq,
+			mod_delayed_work(smux_tx_wq,
 					&smux_wakeup_delayed_work,
 					msecs_to_jiffies(wakeup_delay / 1000));
 		}
@@ -2584,7 +2584,7 @@ static void smux_inactivity_worker(struct work_struct *work)
 
 	/* reschedule inactivity worker */
 	if (smux.power_state != SMUX_PWR_OFF)
-		queue_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
+		mod_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
 			msecs_to_jiffies(SMUX_INACTIVITY_TIMEOUT_MS));
 }
 
@@ -2779,9 +2779,9 @@ static void smux_rx_retry_worker(struct work_struct *work)
 						rx_retry_list);
 
 		if (immediate_retry)
-			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
+			mod_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
 		else
-			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work,
+			mod_delayed_work(smux_rx_wq, &ch->rx_retry_work,
 					msecs_to_jiffies(retry->timeout_in_ms));
 	}
 	spin_unlock_irqrestore(&ch->state_lock_lhb1, flags);
@@ -3247,7 +3247,7 @@ int msm_smux_close(uint8_t lcid)
 
 		/* Purge RX retry queue */
 		if (ch->rx_retry_queue_cnt)
-			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
+			mod_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
 	}
 	spin_unlock_irqrestore(&ch->state_lock_lhb1, flags);
 

@@ -1510,7 +1510,7 @@ il_scan_initiate(struct il_priv *il, struct ieee80211_vif *vif)
 		return ret;
 	}
 
-	queue_delayed_work(il->workqueue, &il->scan_check,
+	mod_delayed_work(il->workqueue, &il->scan_check,
 			   IL_SCAN_CHECK_WATCHDOG);
 
 	return 0;

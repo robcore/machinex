@@ -1447,7 +1447,7 @@ static void ab8500_fg_algorithm_discharging(struct ab8500_fg *di)
 					AB8500_FG_DISCHARGE_READOUT);
 				di->recovery_needed = false;
 			} else {
-				queue_delayed_work(di->fg_wq,
+				mod_delayed_work(di->fg_wq,
 					&di->fg_periodic_work,
 					sleep_time * HZ);
 			}
@@ -1483,7 +1483,7 @@ static void ab8500_fg_algorithm_discharging(struct ab8500_fg *di)
 				ab8500_fg_discharge_state_to(di,
 					AB8500_FG_DISCHARGE_RECOVERY);
 
-				queue_delayed_work(di->fg_wq,
+				mod_delayed_work(di->fg_wq,
 					&di->fg_periodic_work, 0);
 
 				break;
@@ -1577,7 +1577,7 @@ static void ab8500_fg_algorithm_calibrate(struct ab8500_fg *di)
 			goto err;
 		di->flags.calibrate = false;
 		dev_dbg(di->dev, "Calibration done...\n");
-		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+		mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 		break;
 	case AB8500_FG_CALIB_WAIT:
 		dev_dbg(di->dev, "Calibration WFI\n");
@@ -1590,7 +1590,7 @@ err:
 	dev_err(di->dev, "failed to calibrate the CC\n");
 	di->flags.calibrate = false;
 	di->calib_state = AB8500_FG_CALIB_INIT;
-	queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+	mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 }
 
 /**
@@ -1649,7 +1649,7 @@ static void ab8500_fg_periodic_work(struct work_struct *work)
 		ab8500_fg_check_capacity_limits(di, true);
 		di->init_capacity = false;
 
-		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+		mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 	} else if (di->flags.user_cap) {
 		if (check_sysfs_capacity(di)) {
 			ab8500_fg_check_capacity_limits(di, true);
@@ -1661,7 +1661,7 @@ static void ab8500_fg_periodic_work(struct work_struct *work)
 					AB8500_FG_DISCHARGE_READOUT_INIT);
 		}
 		di->flags.user_cap = false;
-		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+		mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 	} else
 		ab8500_fg_algorithm(di);
 
@@ -1701,7 +1701,7 @@ static void ab8500_fg_check_hw_failure_work(struct work_struct *work)
 		}
 
 		/* Not yet recovered from ovv, reschedule this test */
-		queue_delayed_work(di->fg_wq, &di->fg_check_hw_failure_work,
+		mod_delayed_work(di->fg_wq, &di->fg_check_hw_failure_work,
 				   round_jiffies(HZ));
 	}
 }
@@ -1730,7 +1730,7 @@ static void ab8500_fg_low_bat_work(struct work_struct *work)
 		 * We need to re-schedule this check to be able to detect
 		 * if the voltage increases again during charging
 		 */
-		queue_delayed_work(di->fg_wq, &di->fg_low_bat_work,
+		mod_delayed_work(di->fg_wq, &di->fg_low_bat_work,
 			round_jiffies(LOW_BAT_CHECK_INTERVAL));
 	} else {
 		di->flags.low_bat = false;
@@ -1844,7 +1844,7 @@ static irqreturn_t ab8500_fg_cc_int_calib_handler(int irq, void *_di)
 {
 	struct ab8500_fg *di = _di;
 	di->calib_state = AB8500_FG_CALIB_END;
-	queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+	mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 	return IRQ_HANDLED;
 }
 
@@ -1880,7 +1880,7 @@ static irqreturn_t ab8500_fg_batt_ovv_handler(int irq, void *_di)
 	power_supply_changed(&di->fg_psy);
 
 	/* Schedule a new HW failure check */
-	queue_delayed_work(di->fg_wq, &di->fg_check_hw_failure_work, 0);
+	mod_delayed_work(di->fg_wq, &di->fg_check_hw_failure_work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -1903,7 +1903,7 @@ static irqreturn_t ab8500_fg_lowbatf_handler(int irq, void *_di)
 		 * Start a timer to check LOW_BAT again after some time
 		 * This is done to avoid shutdown on single voltage dips
 		 */
-		queue_delayed_work(di->fg_wq, &di->fg_low_bat_work,
+		mod_delayed_work(di->fg_wq, &di->fg_low_bat_work,
 			round_jiffies(LOW_BAT_CHECK_INTERVAL));
 	}
 	return IRQ_HANDLED;
@@ -2209,13 +2209,13 @@ static void ab8500_fg_reinit_work(struct work_struct *work)
 		ab8500_fg_calc_cap_discharge_voltage(di, true);
 		ab8500_fg_charge_state_to(di, AB8500_FG_CHARGE_INIT);
 		ab8500_fg_discharge_state_to(di, AB8500_FG_DISCHARGE_INIT);
-		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+		mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 
 	} else {
 		dev_err(di->dev, "Residual offset calibration ongoing "
 			"retrying..\n");
 		/* Wait one second until next try*/
-		queue_delayed_work(di->fg_wq, &di->fg_reinit_work,
+		mod_delayed_work(di->fg_wq, &di->fg_reinit_work,
 			round_jiffies(1));
 	}
 }
@@ -2231,7 +2231,7 @@ void ab8500_fg_reinit(void)
 	struct ab8500_fg *di = ab8500_fg_get();
 	/* User won't be notified if a null pointer returned. */
 	if (di != NULL)
-		queue_delayed_work(di->fg_wq, &di->fg_reinit_work, 0);
+		mod_delayed_work(di->fg_wq, &di->fg_reinit_work, 0);
 }
 
 /* Exposure to the sysfs interface */
@@ -2284,7 +2284,7 @@ static ssize_t charge_now_store(struct ab8500_fg *di, const char *buf,
 		di->bat_cap.user_mah = (int) charge_now;
 		di->flags.user_cap = true;
 		ret = count;
-		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+		mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 	}
 	return ret;
 }
@@ -2585,7 +2585,7 @@ static int __devinit ab8500_fg_probe(struct platform_device *pdev)
 	di->bat_temp = 210;
 
 	/* Run the FG algorithm */
-	queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+	mod_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
 
 	list_add_tail(&di->node, &ab8500_fg_list);
 

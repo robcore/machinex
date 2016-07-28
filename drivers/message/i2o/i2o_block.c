@@ -925,7 +925,7 @@ static void i2o_block_request_fn(struct request_queue *q)
 			INIT_DELAYED_WORK(&dreq->work,
 					  i2o_block_delayed_request_fn);
 
-			if (!queue_delayed_work(i2o_block_driver.event_queue,
+			if (!mod_delayed_work(i2o_block_driver.event_queue,
 						&dreq->work,
 						I2O_BLOCK_RETRY_TIME))
 				kfree(dreq);

@@ -411,7 +411,7 @@ static void taal_queue_esd_work(struct omap_dss_device *dssdev)
 	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
 
 	if (td->esd_interval > 0)
-		queue_delayed_work(td->workqueue, &td->esd_work,
+		mod_delayed_work(td->workqueue, &td->esd_work,
 				msecs_to_jiffies(td->esd_interval));
 }
 
@@ -427,7 +427,7 @@ static void taal_queue_ulps_work(struct omap_dss_device *dssdev)
 	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
 
 	if (td->ulps_timeout > 0)
-		queue_delayed_work(td->workqueue, &td->ulps_work,
+		mod_delayed_work(td->workqueue, &td->ulps_work,
 				msecs_to_jiffies(td->ulps_timeout));
 }
 

@@ -29,7 +29,7 @@ void bnx2fc_cmd_timer_set(struct bnx2fc_cmd *io_req,
 {
 	struct bnx2fc_interface *interface = io_req->port->priv;
 
-	if (queue_delayed_work(interface->timer_work_queue,
+	if (mod_delayed_work(interface->timer_work_queue,
 			       &io_req->timeout_work,
 			       msecs_to_jiffies(timer_msec)))
 		kref_get(&io_req->refcount);

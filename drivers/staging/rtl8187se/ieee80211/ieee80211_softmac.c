@@ -604,7 +604,7 @@ void ieee80211_softmac_scan_wq(struct work_struct *work)
 	if(channel_map[ieee->current_network.channel] == 1)
 		ieee80211_send_probe_requests(ieee);
 
-	queue_delayed_work(ieee->wq, &ieee->softmac_scan_wq, IEEE80211_SOFTMAC_SCAN_TIME);
+	mod_delayed_work(ieee->wq, &ieee->softmac_scan_wq, IEEE80211_SOFTMAC_SCAN_TIME);
 	up(&ieee->scan_sem);
 	return;
 out:
@@ -707,7 +707,7 @@ void ieee80211_rtl_start_scan(struct ieee80211_device *ieee)
 		//	queue_work(ieee->wq, &ieee->softmac_scan_wq);
 		//care this,1203,2007,by lawrence
 #if 1
-			queue_delayed_work(ieee->wq, &ieee->softmac_scan_wq,0);
+			mod_delayed_work(ieee->wq, &ieee->softmac_scan_wq,0);
 #endif
 		}
 	}else
@@ -1156,7 +1156,7 @@ void ieee80211_associate_abort(struct ieee80211_device *ieee)
 
 	ieee->state = IEEE80211_ASSOCIATING_RETRY;
 
-	queue_delayed_work(ieee->wq, &ieee->associate_retry_wq,IEEE80211_SOFTMAC_ASSOC_RETRY_TIME);
+	mod_delayed_work(ieee->wq, &ieee->associate_retry_wq,IEEE80211_SOFTMAC_ASSOC_RETRY_TIME);
 
 	spin_unlock_irqrestore(&ieee->lock, flags);
 }
@@ -2265,7 +2265,7 @@ void ieee80211_start_ibss_wq(struct work_struct *work)
 }
 inline void ieee80211_start_ibss(struct ieee80211_device *ieee)
 {
-	queue_delayed_work(ieee->wq, &ieee->start_ibss_wq, 100);
+	mod_delayed_work(ieee->wq, &ieee->start_ibss_wq, 100);
 }
 
 /* this is called only in user context, with wx_sem held */

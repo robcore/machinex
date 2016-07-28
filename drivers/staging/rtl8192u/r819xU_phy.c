@@ -1687,7 +1687,7 @@ void InitialGain819xUsb(struct net_device *dev,	u8 Operation)
 
 	if(priv->up)
 	{
-		queue_delayed_work(priv->priv_wq,&priv->initialgain_operate_wq,0);
+		mod_delayed_work(priv->priv_wq,&priv->initialgain_operate_wq,0);
 	}
 }
 

@@ -2404,7 +2404,7 @@ ath5k_tx_complete_poll_work(struct work_struct *work)
 
 	mutex_unlock(&ah->lock);
 
-	ieee80211_queue_delayed_work(ah->hw, &ah->tx_complete_work,
+	ieee80211_mod_delayed_work(ah->hw, &ah->tx_complete_work,
 		msecs_to_jiffies(ATH5K_TX_COMPLETE_POLL_INT));
 }
 
@@ -2660,7 +2660,7 @@ done:
 	mmiowb();
 	mutex_unlock(&ah->lock);
 
-	ieee80211_queue_delayed_work(ah->hw, &ah->tx_complete_work,
+	ieee80211_mod_delayed_work(ah->hw, &ah->tx_complete_work,
 			msecs_to_jiffies(ATH5K_TX_COMPLETE_POLL_INT));
 
 	return ret;

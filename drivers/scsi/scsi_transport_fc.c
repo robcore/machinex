@@ -2379,7 +2379,7 @@ fc_queue_devloss_work(struct Scsi_Host *shost, struct delayed_work *work,
 		return -EINVAL;
 	}
 
-	return queue_delayed_work(fc_host_devloss_work_q(shost), work, delay);
+	return mod_delayed_work(fc_host_devloss_work_q(shost), work, delay);
 }
 
 /**

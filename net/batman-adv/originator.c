@@ -34,7 +34,7 @@ static void purge_orig(struct work_struct *work);
 static void start_purge_timer(struct bat_priv *bat_priv)
 {
 	INIT_DELAYED_WORK(&bat_priv->orig_work, purge_orig);
-	queue_delayed_work(bat_event_workqueue, &bat_priv->orig_work, 1 * HZ);
+	mod_delayed_work(bat_event_workqueue, &bat_priv->orig_work, 1 * HZ);
 }
 
 /* returns 1 if they are the same originator */

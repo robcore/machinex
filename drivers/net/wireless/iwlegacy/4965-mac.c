@@ -4010,7 +4010,7 @@ il4965_hdl_alive(struct il_priv *il, struct il_rx_buf *rxb)
 	/* We delay the ALIVE response by 5ms to
 	 * give the HW RF Kill time to activate... */
 	if (palive->is_valid == UCODE_VALID_OK)
-		queue_delayed_work(il->workqueue, pwork, msecs_to_jiffies(5));
+		mod_delayed_work(il->workqueue, pwork, msecs_to_jiffies(5));
 	else
 		IL_WARN("uCode did not respond OK.\n");
 }

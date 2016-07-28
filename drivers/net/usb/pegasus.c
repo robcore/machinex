@@ -1277,7 +1277,7 @@ static void check_carrier(struct work_struct *work)
 	pegasus_t *pegasus = container_of(work, pegasus_t, carrier_check.work);
 	set_carrier(pegasus->net);
 	if (!(pegasus->flags & PEGASUS_UNPLUG)) {
-		queue_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
+		mod_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
 			CARRIER_CHECK_DELAY);
 	}
 }
@@ -1390,7 +1390,7 @@ static int pegasus_probe(struct usb_interface *intf,
 	res = register_netdev(net);
 	if (res)
 		goto out3;
-	queue_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
+	mod_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
 				CARRIER_CHECK_DELAY);
 
 	dev_info(&intf->dev, "%s, %s, %pM\n",
@@ -1464,7 +1464,7 @@ static int pegasus_resume(struct usb_interface *intf)
 		pegasus->intr_urb->actual_length = 0;
 		intr_callback(pegasus->intr_urb);
 	}
-	queue_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
+	mod_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
 				CARRIER_CHECK_DELAY);
 	return 0;
 }

@@ -225,13 +225,13 @@ static void ftdi_elan_init_kref(struct usb_ftdi *ftdi)
 
 static void ftdi_status_requeue_work(struct usb_ftdi *ftdi, unsigned int delta)
 {
-	if (!queue_delayed_work(status_queue, &ftdi->status_work, delta))
+	if (!mod_delayed_work(status_queue, &ftdi->status_work, delta))
 		kref_put(&ftdi->kref, ftdi_elan_delete);
 }
 
 static void ftdi_status_queue_work(struct usb_ftdi *ftdi, unsigned int delta)
 {
-	if (queue_delayed_work(status_queue, &ftdi->status_work, delta))
+	if (mod_delayed_work(status_queue, &ftdi->status_work, delta))
 		kref_get(&ftdi->kref);
 }
 
@@ -243,13 +243,13 @@ static void ftdi_status_cancel_work(struct usb_ftdi *ftdi)
 
 static void ftdi_command_requeue_work(struct usb_ftdi *ftdi, unsigned int delta)
 {
-	if (!queue_delayed_work(command_queue, &ftdi->command_work, delta))
+	if (!mod_delayed_work(command_queue, &ftdi->command_work, delta))
 		kref_put(&ftdi->kref, ftdi_elan_delete);
 }
 
 static void ftdi_command_queue_work(struct usb_ftdi *ftdi, unsigned int delta)
 {
-	if (queue_delayed_work(command_queue, &ftdi->command_work, delta))
+	if (mod_delayed_work(command_queue, &ftdi->command_work, delta))
 		kref_get(&ftdi->kref);
 }
 
@@ -262,13 +262,13 @@ static void ftdi_command_cancel_work(struct usb_ftdi *ftdi)
 static void ftdi_response_requeue_work(struct usb_ftdi *ftdi,
         unsigned int delta)
 {
-	if (!queue_delayed_work(respond_queue, &ftdi->respond_work, delta))
+	if (!mod_delayed_work(respond_queue, &ftdi->respond_work, delta))
 		kref_put(&ftdi->kref, ftdi_elan_delete);
 }
 
 static void ftdi_respond_queue_work(struct usb_ftdi *ftdi, unsigned int delta)
 {
-	if (queue_delayed_work(respond_queue, &ftdi->respond_work, delta))
+	if (mod_delayed_work(respond_queue, &ftdi->respond_work, delta))
 		kref_get(&ftdi->kref);
 }
 

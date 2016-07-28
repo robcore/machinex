@@ -779,7 +779,7 @@ static irqreturn_t r852_irq(int irq, void *data)
 
 		/* let, card state to settle a bit, and then do the work */
 		dev->card_unstable = 1;
-		queue_delayed_work(dev->card_workqueue,
+		mod_delayed_work(dev->card_workqueue,
 			&dev->card_detect_work, msecs_to_jiffies(100));
 		goto out;
 	}
@@ -957,7 +957,7 @@ int  r852_probe(struct pci_dev *pci_dev, const struct pci_device_id *id)
 		goto error10;
 
 	/* kick initial present test */
-	queue_delayed_work(dev->card_workqueue,
+	mod_delayed_work(dev->card_workqueue,
 		&dev->card_detect_work, 0);
 
 
@@ -1063,7 +1063,7 @@ static int r852_resume(struct device *device)
 		dbg("card was %s during low power state",
 			dev->card_detected ? "added" : "removed");
 
-		queue_delayed_work(dev->card_workqueue,
+		mod_delayed_work(dev->card_workqueue,
 		&dev->card_detect_work, msecs_to_jiffies(1000));
 		return 0;
 	}

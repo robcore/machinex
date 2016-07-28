@@ -813,7 +813,7 @@ static void cm_enter_timewait(struct cm_id_private *cm_id_priv)
 	 */
 	cm_id_priv->id.state = IB_CM_TIMEWAIT;
 	wait_time = cm_convert_to_ms(cm_id_priv->av.timeout);
-	queue_delayed_work(cm.wq, &cm_id_priv->timewait_info->work.work,
+	mod_delayed_work(cm.wq, &cm_id_priv->timewait_info->work.work,
 			   msecs_to_jiffies(wait_time));
 	cm_id_priv->timewait_info = NULL;
 }
@@ -3343,7 +3343,7 @@ static int cm_establish(struct ib_cm_id *cm_id)
 	work->remote_id = cm_id->remote_id;
 	work->mad_recv_wc = NULL;
 	work->cm_event.event = IB_CM_USER_ESTABLISHED;
-	queue_delayed_work(cm.wq, &work->work, 0);
+	mod_delayed_work(cm.wq, &work->work, 0);
 out:
 	return ret;
 }
@@ -3452,7 +3452,7 @@ static void cm_recv_handler(struct ib_mad_agent *mad_agent,
 	work->cm_event.event = event;
 	work->mad_recv_wc = mad_recv_wc;
 	work->port = port;
-	queue_delayed_work(cm.wq, &work->work, 0);
+	mod_delayed_work(cm.wq, &work->work, 0);
 }
 
 static int cm_init_qp_init_attr(struct cm_id_private *cm_id_priv,

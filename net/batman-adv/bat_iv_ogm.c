@@ -372,7 +372,7 @@ static void bat_iv_ogm_aggregate_new(const unsigned char *packet_buff,
 	/* start timer for this packet */
 	INIT_DELAYED_WORK(&forw_packet_aggr->delayed_work,
 			  send_outstanding_bat_ogm_packet);
-	queue_delayed_work(bat_event_workqueue,
+	mod_delayed_work(bat_event_workqueue,
 			   &forw_packet_aggr->delayed_work,
 			   send_time - jiffies);
 

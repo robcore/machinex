@@ -1846,7 +1846,7 @@ il3945_reg_txpower_periodic(struct il_priv *il)
 	il3945_hw_reg_comp_txpower_temp(il);
 
 reschedule:
-	queue_delayed_work(il->workqueue, &il->_3945.thermal_periodic,
+	mod_delayed_work(il->workqueue, &il->_3945.thermal_periodic,
 			   REG_RECALIB_PERIOD * HZ);
 }
 

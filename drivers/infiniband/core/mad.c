@@ -2512,7 +2512,7 @@ static void timeout_sends(struct work_struct *work)
 			delay = mad_send_wr->timeout - jiffies;
 			if ((long)delay <= 0)
 				delay = 1;
-			queue_delayed_work(mad_agent_priv->qp_info->
+			mod_delayed_work(mad_agent_priv->qp_info->
 					   port_priv->wq,
 					   &mad_agent_priv->timed_work, delay);
 			break;

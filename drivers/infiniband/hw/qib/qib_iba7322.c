@@ -5057,7 +5057,7 @@ static void try_7322_autoneg(struct qib_pportdata *ppd)
 	set_7322_ibspeed_fast(ppd, QIB_IB_DDR);
 	qib_7322_mini_pcs_reset(ppd);
 	/* 2 msec is minimum length of a poll cycle */
-	queue_delayed_work(ib_wq, &ppd->cpspec->autoneg_work,
+	mod_delayed_work(ib_wq, &ppd->cpspec->autoneg_work,
 			   msecs_to_jiffies(2));
 }
 
@@ -5188,7 +5188,7 @@ static void try_7322_ipg(struct qib_pportdata *ppd)
 		ib_free_send_mad(send_buf);
 retry:
 	delay = 2 << ppd->cpspec->ipg_tries;
-	queue_delayed_work(ib_wq, &ppd->cpspec->ipg_work,
+	mod_delayed_work(ib_wq, &ppd->cpspec->ipg_work,
 			   msecs_to_jiffies(delay));
 }
 

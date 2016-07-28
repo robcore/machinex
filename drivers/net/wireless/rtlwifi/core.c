@@ -298,7 +298,7 @@ static int rtl_op_config(struct ieee80211_hw *hw, u32 changed)
 			 * fail, and cause pkt loss, we have tested that 5mA
 			 * is worked very well */
 			if (!rtlpriv->psc.multi_buffered)
-				queue_delayed_work(rtlpriv->works.rtl_wq,
+				mod_delayed_work(rtlpriv->works.rtl_wq,
 						&rtlpriv->works.ps_work,
 						MSECS(5));
 		} else {

@@ -419,7 +419,7 @@ static int touch_ic_init(struct lge_touch_data *ts)
 err_out_retry:
 	ts->ic_init_err_cnt++;
 	safety_reset(ts);
-	queue_delayed_work(touch_wq, &ts->work_init, msecs_to_jiffies(10));
+	mod_delayed_work(touch_wq, &ts->work_init, msecs_to_jiffies(10));
 
 	return 0;
 

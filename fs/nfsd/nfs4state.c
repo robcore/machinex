@@ -3251,7 +3251,7 @@ laundromat_main(struct work_struct *not_used)
 
 	t = nfs4_laundromat();
 	dprintk("NFSD: laundromat_main - sleeping for %ld seconds\n", t);
-	queue_delayed_work(laundry_wq, &laundromat_work, t*HZ);
+	mod_delayed_work(laundry_wq, &laundromat_work, t*HZ);
 }
 
 static inline __be32 nfs4_check_fh(struct svc_fh *fhp, struct nfs4_ol_stateid *stp)
@@ -4741,7 +4741,7 @@ nfs4_state_start(void)
 	ret = nfsd4_create_callback_queue();
 	if (ret)
 		goto out_free_laundry;
-	queue_delayed_work(laundry_wq, &laundromat_work, nfsd4_grace * HZ);
+	mod_delayed_work(laundry_wq, &laundromat_work, nfsd4_grace * HZ);
 	set_max_delegations();
 	return 0;
 out_free_laundry:

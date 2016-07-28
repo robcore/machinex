@@ -88,8 +88,8 @@ void rds_connect_complete(struct rds_connection *conn)
 
 	conn->c_reconnect_jiffies = 0;
 	set_bit(0, &conn->c_map_queued);
-	queue_delayed_work(rds_wq, &conn->c_send_w, 0);
-	queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+	mod_delayed_work(rds_wq, &conn->c_send_w, 0);
+	mod_delayed_work(rds_wq, &conn->c_recv_w, 0);
 }
 EXPORT_SYMBOL_GPL(rds_connect_complete);
 
@@ -122,7 +122,7 @@ void rds_queue_reconnect(struct rds_connection *conn)
 	set_bit(RDS_RECONNECT_PENDING, &conn->c_flags);
 	if (conn->c_reconnect_jiffies == 0) {
 		conn->c_reconnect_jiffies = rds_sysctl_reconnect_min_jiffies;
-		queue_delayed_work(rds_wq, &conn->c_conn_w, 0);
+		mod_delayed_work(rds_wq, &conn->c_conn_w, 0);
 		return;
 	}
 
@@ -130,7 +130,7 @@ void rds_queue_reconnect(struct rds_connection *conn)
 	rdsdebug("%lu delay %lu ceil conn %p for %pI4 -> %pI4\n",
 		 rand % conn->c_reconnect_jiffies, conn->c_reconnect_jiffies,
 		 conn, &conn->c_laddr, &conn->c_faddr);
-	queue_delayed_work(rds_wq, &conn->c_conn_w,
+	mod_delayed_work(rds_wq, &conn->c_conn_w,
 			   rand % conn->c_reconnect_jiffies);
 
 	conn->c_reconnect_jiffies = min(conn->c_reconnect_jiffies * 2,
@@ -168,11 +168,11 @@ void rds_send_worker(struct work_struct *work)
 		switch (ret) {
 		case -EAGAIN:
 			rds_stats_inc(s_send_immediate_retry);
-			queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+			mod_delayed_work(rds_wq, &conn->c_send_w, 0);
 			break;
 		case -ENOMEM:
 			rds_stats_inc(s_send_delayed_retry);
-			queue_delayed_work(rds_wq, &conn->c_send_w, 2);
+			mod_delayed_work(rds_wq, &conn->c_send_w, 2);
 		default:
 			break;
 		}
@@ -190,11 +190,11 @@ void rds_recv_worker(struct work_struct *work)
 		switch (ret) {
 		case -EAGAIN:
 			rds_stats_inc(s_recv_immediate_retry);
-			queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+			mod_delayed_work(rds_wq, &conn->c_recv_w, 0);
 			break;
 		case -ENOMEM:
 			rds_stats_inc(s_recv_delayed_retry);
-			queue_delayed_work(rds_wq, &conn->c_recv_w, 2);
+			mod_delayed_work(rds_wq, &conn->c_recv_w, 2);
 		default:
 			break;
 		}

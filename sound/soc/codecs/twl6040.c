@@ -602,7 +602,7 @@ static int out_drv_event(struct snd_soc_dapm_widget *w,
 		out->left_step = out->left_vol;
 		out->right_step = out->right_vol;
 
-		queue_delayed_work(priv->workqueue, work, msecs_to_jiffies(1));
+		mod_delayed_work(priv->workqueue, work, msecs_to_jiffies(1));
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
@@ -613,7 +613,7 @@ static int out_drv_event(struct snd_soc_dapm_widget *w,
 		out->ramp = TWL6040_RAMP_DOWN;
 		INIT_COMPLETION(out->ramp_done);
 
-		queue_delayed_work(priv->workqueue, work, msecs_to_jiffies(1));
+		mod_delayed_work(priv->workqueue, work, msecs_to_jiffies(1));
 
 		wait_for_completion_timeout(&out->ramp_done,
 					    msecs_to_jiffies(2000));
@@ -741,7 +741,7 @@ static irqreturn_t twl6040_audio_handler(int irq, void *data)
 	struct snd_soc_codec *codec = data;
 	struct twl6040_data *priv = snd_soc_codec_get_drvdata(codec);
 
-	queue_delayed_work(priv->workqueue, &priv->hs_jack.work,
+	mod_delayed_work(priv->workqueue, &priv->hs_jack.work,
 			   msecs_to_jiffies(200));
 
 	return IRQ_HANDLED;

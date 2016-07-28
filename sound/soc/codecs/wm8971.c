@@ -605,7 +605,7 @@ static int wm8971_resume(struct snd_soc_codec *codec)
 		reg = snd_soc_read(codec, WM8971_PWR1) & 0xfe3e;
 		snd_soc_write(codec, WM8971_PWR1, reg | 0x01c0);
 		codec->dapm.bias_level = SND_SOC_BIAS_ON;
-		queue_delayed_work(wm8971_workq, &codec->dapm.delayed_work,
+		mod_delayed_work(wm8971_workq, &codec->dapm.delayed_work,
 			msecs_to_jiffies(1000));
 	}
 
@@ -635,7 +635,7 @@ static int wm8971_probe(struct snd_soc_codec *codec)
 	reg = snd_soc_read(codec, WM8971_PWR1) & 0xfe3e;
 	snd_soc_write(codec, WM8971_PWR1, reg | 0x01c0);
 	codec->dapm.bias_level = SND_SOC_BIAS_STANDBY;
-	queue_delayed_work(wm8971_workq, &codec->dapm.delayed_work,
+	mod_delayed_work(wm8971_workq, &codec->dapm.delayed_work,
 		msecs_to_jiffies(1000));
 
 	/* set the update bits */

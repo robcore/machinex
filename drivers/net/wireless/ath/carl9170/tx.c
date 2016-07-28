@@ -612,7 +612,7 @@ void carl9170_tx_janitor(struct work_struct *work)
 	if (!atomic_read(&ar->tx_total_queued))
 		return;
 
-	ieee80211_queue_delayed_work(ar->hw, &ar->tx_janitor,
+	ieee80211_mod_delayed_work(ar->hw, &ar->tx_janitor,
 		msecs_to_jiffies(CARL9170_TX_TIMEOUT));
 }
 
@@ -1314,7 +1314,7 @@ static void carl9170_tx(struct ar9170 *ar)
 	if (!schedule_garbagecollector)
 		return;
 
-	ieee80211_queue_delayed_work(ar->hw, &ar->tx_janitor,
+	ieee80211_mod_delayed_work(ar->hw, &ar->tx_janitor,
 		msecs_to_jiffies(CARL9170_TX_TIMEOUT));
 }
 

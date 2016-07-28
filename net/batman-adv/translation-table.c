@@ -47,7 +47,7 @@ static int compare_tt(const struct hlist_node *node, const void *data2)
 static void tt_start_timer(struct bat_priv *bat_priv)
 {
 	INIT_DELAYED_WORK(&bat_priv->tt_work, tt_purge);
-	queue_delayed_work(bat_event_workqueue, &bat_priv->tt_work,
+	mod_delayed_work(bat_event_workqueue, &bat_priv->tt_work,
 			   msecs_to_jiffies(5000));
 }
 

@@ -343,7 +343,7 @@ static void ds2760_battery_work(struct work_struct *work)
 	dev_dbg(di->dev, "%s\n", __func__);
 
 	ds2760_battery_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
+	mod_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
 }
 
 #define to_ds2760_device_info(x) container_of((x), struct ds2760_device_info, \
@@ -569,7 +569,7 @@ static int ds2760_battery_probe(struct platform_device *pdev)
 		retval = -ESRCH;
 		goto workqueue_failed;
 	}
-	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 1);
+	mod_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 1);
 
 	goto success;
 

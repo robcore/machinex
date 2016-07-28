@@ -2283,7 +2283,7 @@ static void ath_tx_complete_poll_work(struct work_struct *work)
 		ieee80211_queue_work(sc->hw, &sc->hw_reset_work);
 	}
 
-	ieee80211_queue_delayed_work(sc->hw, &sc->tx_complete_work,
+	ieee80211_mod_delayed_work(sc->hw, &sc->tx_complete_work,
 			msecs_to_jiffies(ATH_TX_COMPLETE_POLL_INT));
 }
 

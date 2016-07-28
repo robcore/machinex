@@ -454,7 +454,7 @@ static struct ib_mad_recv_wc * complete_rmpp(struct mad_rmpp_recv *rmpp_recv)
 	rmpp_wc = rmpp_recv->rmpp_wc;
 	rmpp_wc->mad_len = get_mad_len(rmpp_recv);
 	/* 10 seconds until we can find the packet lifetime */
-	queue_delayed_work(rmpp_recv->agent->qp_info->port_priv->wq,
+	mod_delayed_work(rmpp_recv->agent->qp_info->port_priv->wq,
 			   &rmpp_recv->cleanup_work, msecs_to_jiffies(10000));
 	return rmpp_wc;
 }
@@ -547,7 +547,7 @@ start_rmpp(struct ib_mad_agent_private *agent,
 	} else {
 		spin_unlock_irqrestore(&agent->lock, flags);
 		/* 40 seconds until we can find the packet lifetimes */
-		queue_delayed_work(agent->qp_info->port_priv->wq,
+		mod_delayed_work(agent->qp_info->port_priv->wq,
 				   &rmpp_recv->timeout_work,
 				   msecs_to_jiffies(40000));
 		rmpp_recv->newwin += window_size(agent);

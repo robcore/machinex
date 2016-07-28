@@ -1336,7 +1336,7 @@ static void _brcms_timer(struct work_struct *work)
 	if (t->set) {
 		if (t->periodic) {
 			atomic_inc(&t->wl->callbacks);
-			ieee80211_queue_delayed_work(t->wl->pub->ieee_hw,
+			ieee80211_mod_delayed_work(t->wl->pub->ieee_hw,
 						     &t->dly_wrk,
 						     msecs_to_jiffies(t->ms));
 		} else {
@@ -1405,7 +1405,7 @@ void brcms_add_timer(struct brcms_timer *t, uint ms, int periodic)
 		atomic_inc(&t->wl->callbacks);
 	}
 
-	ieee80211_queue_delayed_work(hw, &t->dly_wrk, msecs_to_jiffies(ms));
+	ieee80211_mod_delayed_work(hw, &t->dly_wrk, msecs_to_jiffies(ms));
 }
 
 /*

@@ -154,7 +154,7 @@ struct sbp2_logical_unit {
 
 static void sbp2_queue_work(struct sbp2_logical_unit *lu, unsigned long delay)
 {
-	queue_delayed_work(fw_workqueue, &lu->work, delay);
+	mod_delayed_work(fw_workqueue, &lu->work, delay);
 }
 
 /*

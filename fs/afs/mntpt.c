@@ -250,7 +250,7 @@ struct vfsmount *afs_d_automount(struct path *path)
 
 	mntget(newmnt); /* prevent immediate expiration */
 	mnt_set_expiry(newmnt, &afs_vfsmounts);
-	queue_delayed_work(afs_wq, &afs_mntpt_expiry_timer,
+	mod_delayed_work(afs_wq, &afs_mntpt_expiry_timer,
 			   afs_mntpt_expiry_timeout * HZ);
 	_leave(" = %p", newmnt);
 	return newmnt;
@@ -265,7 +265,7 @@ static void afs_mntpt_expiry_timed_out(struct work_struct *work)
 
 	if (!list_empty(&afs_vfsmounts)) {
 		mark_mounts_for_expiry(&afs_vfsmounts);
-		queue_delayed_work(afs_wq, &afs_mntpt_expiry_timer,
+		mod_delayed_work(afs_wq, &afs_mntpt_expiry_timer,
 				   afs_mntpt_expiry_timeout * HZ);
 	}
 

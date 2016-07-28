@@ -472,7 +472,7 @@ static int ipoib_cm_req_handler(struct ib_cm_id *cm_id, struct ib_cm_event *even
 	}
 
 	spin_lock_irq(&priv->lock);
-	queue_delayed_work(ipoib_workqueue,
+	mod_delayed_work(ipoib_workqueue,
 			   &priv->cm.stale_task, IPOIB_CM_RX_DELAY);
 	/* Add this entry to passive ids list head, but do not re-add it
 	 * if IB_EVENT_QP_LAST_WQE_REACHED has moved it to flush list. */
@@ -1438,7 +1438,7 @@ static void ipoib_cm_stale_task(struct work_struct *work)
 	}
 
 	if (!list_empty(&priv->cm.passive_ids))
-		queue_delayed_work(ipoib_workqueue,
+		mod_delayed_work(ipoib_workqueue,
 				   &priv->cm.stale_task, IPOIB_CM_RX_DELAY);
 	spin_unlock_irq(&priv->lock);
 }

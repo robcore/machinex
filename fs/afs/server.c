@@ -238,7 +238,7 @@ void afs_put_server(struct afs_server *server)
 	if (atomic_read(&server->usage) == 0) {
 		list_move_tail(&server->grave, &afs_server_graveyard);
 		server->time_of_death = get_seconds();
-		queue_delayed_work(afs_wq, &afs_server_reaper,
+		mod_delayed_work(afs_wq, &afs_server_reaper,
 				   afs_server_timeout * HZ);
 	}
 	spin_unlock(&afs_server_graveyard_lock);

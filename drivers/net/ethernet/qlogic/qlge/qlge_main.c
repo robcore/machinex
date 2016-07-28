@@ -935,7 +935,7 @@ static int ql_8000_port_initialize(struct ql_adapter *qdev)
 	if (status)
 		goto exit;
 	/* Wake up a worker to get/set the TX/RX frame sizes. */
-	queue_delayed_work(qdev->workqueue, &qdev->mpi_port_cfg_work, 0);
+	mod_delayed_work(qdev->workqueue, &qdev->mpi_port_cfg_work, 0);
 exit:
 	return status;
 }
@@ -2081,7 +2081,7 @@ static void ql_process_mac_tx_intr(struct ql_adapter *qdev,
 void ql_queue_fw_error(struct ql_adapter *qdev)
 {
 	ql_link_off(qdev);
-	queue_delayed_work(qdev->workqueue, &qdev->mpi_reset_work, 0);
+	mod_delayed_work(qdev->workqueue, &qdev->mpi_reset_work, 0);
 }
 
 void ql_queue_asic_error(struct ql_adapter *qdev)
@@ -2097,7 +2097,7 @@ void ql_queue_asic_error(struct ql_adapter *qdev)
 	 * in fatal error recovery process rather than normal close
 	 */
 	set_bit(QL_ASIC_RECOVERY, &qdev->flags);
-	queue_delayed_work(qdev->workqueue, &qdev->asic_reset_work, 0);
+	mod_delayed_work(qdev->workqueue, &qdev->asic_reset_work, 0);
 }
 
 static void ql_process_chip_ae_intr(struct ql_adapter *qdev,
@@ -4174,7 +4174,7 @@ static int qlge_change_mtu(struct net_device *ndev, int new_mtu)
 	} else
 		return -EINVAL;
 
-	queue_delayed_work(qdev->workqueue,
+	mod_delayed_work(qdev->workqueue,
 			&qdev->mpi_port_cfg_work, 3*HZ);
 
 	ndev->mtu = new_mtu;

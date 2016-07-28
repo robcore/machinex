@@ -327,7 +327,7 @@ void wl1271_scan_stm(struct wl1271 *wl, struct ieee80211_vif *vif)
 	case WL1271_SCAN_STATE_DONE:
 		wl->scan.failed = false;
 		cancel_delayed_work(&wl->scan_complete_work);
-		ieee80211_queue_delayed_work(wl->hw, &wl->scan_complete_work,
+		ieee80211_mod_delayed_work(wl->hw, &wl->scan_complete_work,
 					     msecs_to_jiffies(0));
 		break;
 
@@ -338,7 +338,7 @@ void wl1271_scan_stm(struct wl1271 *wl, struct ieee80211_vif *vif)
 
 	if (ret < 0) {
 		cancel_delayed_work(&wl->scan_complete_work);
-		ieee80211_queue_delayed_work(wl->hw, &wl->scan_complete_work,
+		ieee80211_mod_delayed_work(wl->hw, &wl->scan_complete_work,
 					     msecs_to_jiffies(0));
 	}
 }
@@ -371,7 +371,7 @@ int wl1271_scan(struct wl1271 *wl, struct ieee80211_vif *vif,
 
 	/* we assume failure so that timeout scenarios are handled correctly */
 	wl->scan.failed = true;
-	ieee80211_queue_delayed_work(wl->hw, &wl->scan_complete_work,
+	ieee80211_mod_delayed_work(wl->hw, &wl->scan_complete_work,
 				     msecs_to_jiffies(WL1271_SCAN_TIMEOUT));
 
 	wl1271_scan_stm(wl, vif);

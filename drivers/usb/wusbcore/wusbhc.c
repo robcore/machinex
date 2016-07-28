@@ -79,7 +79,7 @@ static ssize_t wusb_trust_timeout_store(struct device *dev,
 	wusbhc->trust_timeout = trust_timeout;
 	cancel_delayed_work(&wusbhc->keep_alive_timer);
 	flush_workqueue(wusbd);
-	queue_delayed_work(wusbd, &wusbhc->keep_alive_timer,
+	mod_delayed_work(wusbd, &wusbhc->keep_alive_timer,
 			   (trust_timeout * CONFIG_HZ)/1000/2);
 out:
 	return result < 0 ? result : size;

@@ -203,7 +203,7 @@ _base_fault_reset_work(struct work_struct *work)
 	spin_lock_irqsave(&ioc->ioc_reset_in_progress_lock, flags);
  rearm_timer:
 	if (ioc->fault_reset_work_q)
-		queue_delayed_work(ioc->fault_reset_work_q,
+		mod_delayed_work(ioc->fault_reset_work_q,
 		    &ioc->fault_reset_work,
 		    msecs_to_jiffies(FAULT_POLLING_INTERVAL));
 	spin_unlock_irqrestore(&ioc->ioc_reset_in_progress_lock, flags);
@@ -237,7 +237,7 @@ mpt2sas_base_start_watchdog(struct MPT2SAS_ADAPTER *ioc)
 	}
 	spin_lock_irqsave(&ioc->ioc_reset_in_progress_lock, flags);
 	if (ioc->fault_reset_work_q)
-		queue_delayed_work(ioc->fault_reset_work_q,
+		mod_delayed_work(ioc->fault_reset_work_q,
 		    &ioc->fault_reset_work,
 		    msecs_to_jiffies(FAULT_POLLING_INTERVAL));
 	spin_unlock_irqrestore(&ioc->ioc_reset_in_progress_lock, flags);

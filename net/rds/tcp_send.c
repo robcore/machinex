@@ -191,7 +191,7 @@ void rds_tcp_write_space(struct sock *sk)
 	rds_send_drop_acked(conn, rds_tcp_snd_una(tc), rds_tcp_is_acked);
 
         if ((atomic_read(&sk->sk_wmem_alloc) << 1) <= sk->sk_sndbuf)
-		queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+		mod_delayed_work(rds_wq, &conn->c_send_w, 0);
 
 out:
 	read_unlock_bh(&sk->sk_callback_lock);

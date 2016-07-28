@@ -283,8 +283,8 @@ static bool ath_complete_reset(struct ath_softc *sc, bool start)
 		if (sc->sc_flags & SC_OP_BEACONS)
 			ath_set_beacon(sc);
 
-		ieee80211_queue_delayed_work(sc->hw, &sc->tx_complete_work, 0);
-		ieee80211_queue_delayed_work(sc->hw, &sc->hw_pll_work, HZ/2);
+		ieee80211_mod_delayed_work(sc->hw, &sc->tx_complete_work, 0);
+		ieee80211_mod_delayed_work(sc->hw, &sc->hw_pll_work, HZ/2);
 		if (!common->disable_ani)
 			ath_start_ani(common);
 	}
@@ -980,7 +980,7 @@ void ath_hw_pll_work(struct work_struct *work)
 
 		ath_hw_pll_rx_hang_check(sc, pll_sqsum);
 
-		ieee80211_queue_delayed_work(sc->hw, &sc->hw_pll_work, HZ/5);
+		ieee80211_mod_delayed_work(sc->hw, &sc->hw_pll_work, HZ/5);
 	}
 }
 
@@ -2246,7 +2246,7 @@ static void ath9k_flush(struct ieee80211_hw *hw, bool drop)
 		ieee80211_wake_queues(hw);
 	}
 
-	ieee80211_queue_delayed_work(hw, &sc->tx_complete_work, 0);
+	ieee80211_mod_delayed_work(hw, &sc->tx_complete_work, 0);
 	mutex_unlock(&sc->mutex);
 }
 

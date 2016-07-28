@@ -237,7 +237,7 @@ static irqreturn_t lp8727_isr_func(int irq, void *ptr)
 	struct lp8727_chg *pchg = ptr;
 	unsigned long delay = msecs_to_jiffies(DEBOUNCE_MSEC);
 
-	queue_delayed_work(pchg->irqthread, &pchg->work, delay);
+	mod_delayed_work(pchg->irqthread, &pchg->work, delay);
 
 	return IRQ_HANDLED;
 }

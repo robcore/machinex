@@ -3264,7 +3264,7 @@ out_requeue:
 		delay = msecs_to_jiffies(50);
 	else
 		delay = round_jiffies_relative(HZ * 15);
-	ieee80211_queue_delayed_work(wl->hw, &dev->periodic_work, delay);
+	ieee80211_mod_delayed_work(wl->hw, &dev->periodic_work, delay);
 out:
 	mutex_unlock(&wl->mutex);
 }
@@ -3275,7 +3275,7 @@ static void b43_periodic_tasks_setup(struct b43_wldev *dev)
 
 	dev->periodic_state = 0;
 	INIT_DELAYED_WORK(work, b43_periodic_work_handler);
-	ieee80211_queue_delayed_work(dev->wl->hw, work, 0);
+	ieee80211_mod_delayed_work(dev->wl->hw, work, 0);
 }
 
 /* Check if communication with the device works correctly. */

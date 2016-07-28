@@ -552,7 +552,7 @@ static void data_xfer(struct work_struct *work)
 		status = ioread8(qc->ap->ioaddr.altstatus_addr);
 		spin_unlock_irqrestore(&acdev->host->lock, flags);
 		if (status & (ATA_BUSY | ATA_DRQ)) {
-			ata_sff_queue_delayed_work(&acdev->dwork, 1);
+			ata_sff_mod_delayed_work(&acdev->dwork, 1);
 			return;
 		}
 
@@ -586,7 +586,7 @@ static void delayed_finish(struct work_struct *work)
 	spin_unlock_irqrestore(&acdev->host->lock, flags);
 
 	if (status & (ATA_BUSY | ATA_DRQ))
-		ata_sff_queue_delayed_work(&acdev->dwork, 1);
+		ata_sff_mod_delayed_work(&acdev->dwork, 1);
 	else
 		dma_complete(acdev);
 }

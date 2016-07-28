@@ -1494,7 +1494,7 @@ static void dm_CheckTXPowerTracking_TSSI(struct net_device *dev)
 	{
 		if((tx_power_track_counter % 30 == 0)&&(tx_power_track_counter != 0))
 		{
-				queue_delayed_work(priv->priv_wq,&priv->txpower_tracking_wq,0);
+				mod_delayed_work(priv->priv_wq,&priv->txpower_tracking_wq,0);
 		}
 		tx_power_track_counter++;
 	}
@@ -1533,7 +1533,7 @@ static void dm_CheckTXPowerTracking_ThermalMeter(struct net_device *dev)
 	else
 	{
 		//DbgPrint("Schedule TxPowerTrackingWorkItem\n");
-			queue_delayed_work(priv->priv_wq,&priv->txpower_tracking_wq,0);
+			mod_delayed_work(priv->priv_wq,&priv->txpower_tracking_wq,0);
 		TM_Trigger = 0;
 	}
 }
@@ -2853,7 +2853,7 @@ static void dm_check_rfctrl_gpio(struct net_device * dev)
 	return;
 #endif
 #ifdef RTL8192E
-		queue_delayed_work(priv->priv_wq,&priv->gpio_change_rf_wq,0);
+		mod_delayed_work(priv->priv_wq,&priv->gpio_change_rf_wq,0);
 #endif
 
 }	/* dm_CheckRfCtrlGPIO */
@@ -3314,7 +3314,7 @@ static void dm_rxpath_sel_byrssi(struct net_device * dev)
 static	void	dm_check_rx_path_selection(struct net_device *dev)
 {
 	struct r8192_priv *priv = ieee80211_priv(dev);
-	queue_delayed_work(priv->priv_wq,&priv->rfpath_check_wq,0);
+	mod_delayed_work(priv->priv_wq,&priv->rfpath_check_wq,0);
 }	/* dm_CheckRxRFPath */
 
 

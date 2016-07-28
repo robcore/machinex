@@ -413,7 +413,7 @@ static int carl9170_op_start(struct ieee80211_hw *hw)
 
 	carl9170_set_state_when(ar, CARL9170_IDLE, CARL9170_STARTED);
 
-	ieee80211_queue_delayed_work(ar->hw, &ar->stat_work,
+	ieee80211_mod_delayed_work(ar->hw, &ar->stat_work,
 		round_jiffies(msecs_to_jiffies(CARL9170_STAT_WORK)));
 
 	ieee80211_wake_queues(ar->hw);
@@ -832,7 +832,7 @@ static void carl9170_stat_work(struct work_struct *work)
 	if (err)
 		return;
 
-	ieee80211_queue_delayed_work(ar->hw, &ar->stat_work,
+	ieee80211_mod_delayed_work(ar->hw, &ar->stat_work,
 		round_jiffies(msecs_to_jiffies(CARL9170_STAT_WORK)));
 }
 

@@ -859,7 +859,7 @@ void rds_iw_recv_tasklet_fn(unsigned long data)
 	 * If the ring is running low, then schedule the thread to refill.
 	 */
 	if (rds_iw_ring_low(&ic->i_recv_ring))
-		queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+		mod_delayed_work(rds_wq, &conn->c_recv_w, 0);
 }
 
 int rds_iw_recv(struct rds_connection *conn)

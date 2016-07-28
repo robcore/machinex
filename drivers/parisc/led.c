@@ -141,7 +141,7 @@ static int start_task(void)
 
 	/* Create the work queue and queue the LED task */
 	led_wq = create_singlethread_workqueue("led_wq");	
-	queue_delayed_work(led_wq, &led_task, 0);
+	mod_delayed_work(led_wq, &led_task, 0);
 
 	return 0;
 }
@@ -488,7 +488,7 @@ static void led_work_func (struct work_struct *unused)
 		lastleds = currentleds;
 	}
 
-	queue_delayed_work(led_wq, &led_task, LED_UPDATE_INTERVAL);
+	mod_delayed_work(led_wq, &led_task, LED_UPDATE_INTERVAL);
 }
 
 /*
@@ -595,7 +595,7 @@ int __init register_led_driver(int model, unsigned long cmd_reg, unsigned long d
 
 	/* Ensure the work is queued */
 	if (led_wq) {
-		queue_delayed_work(led_wq, &led_task, 0);
+		mod_delayed_work(led_wq, &led_task, 0);
 	}
 
 	return 0;
@@ -665,7 +665,7 @@ int lcd_print( const char *str )
 	
 	/* re-queue the work */
 	if (led_wq) {
-		queue_delayed_work(led_wq, &led_task, 0);
+		mod_delayed_work(led_wq, &led_task, 0);
 	}
 
 	return lcd_info.lcd_width;

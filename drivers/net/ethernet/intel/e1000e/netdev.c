@@ -4414,7 +4414,7 @@ static void e1000_watchdog(unsigned long data)
 	/* Do the rest outside of interrupt context */
 	schedule_work(&adapter->watchdog_task);
 
-	/* TODO: make this use queue_delayed_work() */
+	/* TODO: make this use mod_delayed_work() */
 }
 
 static void e1000_watchdog_task(struct work_struct *work)

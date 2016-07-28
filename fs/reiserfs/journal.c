@@ -4195,7 +4195,7 @@ static int do_journal_end(struct reiserfs_transaction_handle *th,
 		flush_commit_list(sb, jl, 1);
 		flush_journal_list(sb, jl, 1);
 	} else if (!(jl->j_state & LIST_COMMIT_PENDING))
-		queue_delayed_work(commit_wq, &journal->j_work, HZ / 10);
+		mod_delayed_work(commit_wq, &journal->j_work, HZ / 10);
 
 	/* if the next transaction has any chance of wrapping, flush
 	 ** transactions that might get overwritten.  If any journal lists are very

@@ -1334,7 +1334,7 @@ static void schedule_chk_task(struct adapter *adap)
 	    (HZ * adap->params.linkpoll_period) / 10 :
 	    adap->params.stats_update_period * HZ;
 	if (timeo)
-		queue_delayed_work(cxgb3_wq, &adap->adap_check_task, timeo);
+		mod_delayed_work(cxgb3_wq, &adap->adap_check_task, timeo);
 }
 
 static int offload_open(struct net_device *dev)

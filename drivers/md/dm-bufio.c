@@ -1651,7 +1651,7 @@ static void work_fn(struct work_struct *w)
 {
 	cleanup_old_buffers();
 
-	queue_delayed_work(dm_bufio_wq, &dm_bufio_work,
+	mod_delayed_work(dm_bufio_wq, &dm_bufio_work,
 			   DM_BUFIO_WORK_TIMER_SECS * HZ);
 }
 
@@ -1701,7 +1701,7 @@ static int __init dm_bufio_init(void)
 		return -ENOMEM;
 
 	INIT_DELAYED_WORK(&dm_bufio_work, work_fn);
-	queue_delayed_work(dm_bufio_wq, &dm_bufio_work,
+	mod_delayed_work(dm_bufio_wq, &dm_bufio_work,
 			   DM_BUFIO_WORK_TIMER_SECS * HZ);
 
 	return 0;

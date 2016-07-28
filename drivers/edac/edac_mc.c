@@ -309,7 +309,7 @@ static void edac_mc_workq_function(struct work_struct *work_req)
 	mutex_unlock(&mem_ctls_mutex);
 
 	/* Reschedule */
-	queue_delayed_work(edac_workqueue, &mci->work,
+	mod_delayed_work(edac_workqueue, &mci->work,
 			msecs_to_jiffies(edac_mc_get_poll_msec()));
 }
 

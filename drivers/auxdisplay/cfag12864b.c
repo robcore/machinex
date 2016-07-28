@@ -228,7 +228,7 @@ static DECLARE_DELAYED_WORK(cfag12864b_work, cfag12864b_update);
 
 static void cfag12864b_queue(void)
 {
-	queue_delayed_work(cfag12864b_workqueue, &cfag12864b_work,
+	mod_delayed_work(cfag12864b_workqueue, &cfag12864b_work,
 		HZ / cfag12864b_rate);
 }
 

@@ -2156,7 +2156,7 @@ void bond_3ad_state_machine_handler(struct work_struct *work)
 	}
 
 re_arm:
-	queue_delayed_work(bond->wq, &bond->ad_work, ad_delta_in_ticks);
+	mod_delayed_work(bond->wq, &bond->ad_work, ad_delta_in_ticks);
 
 	read_unlock(&bond->lock);
 }

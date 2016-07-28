@@ -1926,7 +1926,7 @@ static int cnic_bnx2x_iscsi_destroy(struct cnic_dev *dev, struct kwqe *kwqe)
 			delta = 0;
 
 		set_bit(CTX_FL_DELETE_WAIT, &ctx->ctx_flags);
-		queue_delayed_work(cnic_wq, &cp->delete_task, delta);
+		mod_delayed_work(cnic_wq, &cp->delete_task, delta);
 		goto destroy_reply;
 	}
 
@@ -2462,7 +2462,7 @@ static int cnic_bnx2x_fcoe_destroy(struct cnic_dev *dev, struct kwqe *kwqe)
 	}
 
 	set_bit(CTX_FL_DELETE_WAIT, &ctx->ctx_flags);
-	queue_delayed_work(cnic_wq, &cp->delete_task, msecs_to_jiffies(2000));
+	mod_delayed_work(cnic_wq, &cp->delete_task, msecs_to_jiffies(2000));
 
 	kcqe.op_code = FCOE_KCQE_OPCODE_DESTROY_CONN;
 	kcqe.fcoe_conn_id = req->conn_id;
@@ -3204,7 +3204,7 @@ static int cnic_ctl(void *data, struct cnic_ctl_info *info)
 	case CNIC_CTL_STOP_ISCSI_CMD: {
 		struct cnic_local *cp = dev->cnic_priv;
 		set_bit(CNIC_LCL_FL_STOP_ISCSI, &cp->cnic_local_flags);
-		queue_delayed_work(cnic_wq, &cp->delete_task, 0);
+		mod_delayed_work(cnic_wq, &cp->delete_task, 0);
 		break;
 	}
 	case CNIC_CTL_COMPLETION_CMD: {
@@ -4204,7 +4204,7 @@ static void cnic_delete_task(struct work_struct *work)
 	}
 
 	if (need_resched)
-		queue_delayed_work(cnic_wq, &cp->delete_task,
+		mod_delayed_work(cnic_wq, &cp->delete_task,
 				   msecs_to_jiffies(10));
 
 }

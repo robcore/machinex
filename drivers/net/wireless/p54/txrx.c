@@ -381,7 +381,7 @@ static int p54_rx_data(struct p54_common *priv, struct sk_buff *skb)
 
 	ieee80211_rx_irqsafe(priv->hw, skb);
 
-	ieee80211_queue_delayed_work(priv->hw, &priv->work,
+	ieee80211_mod_delayed_work(priv->hw, &priv->work,
 			   msecs_to_jiffies(P54_STATISTICS_UPDATE));
 
 	return -1;

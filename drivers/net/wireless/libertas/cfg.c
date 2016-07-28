@@ -716,7 +716,7 @@ static void lbs_scan_worker(struct work_struct *work)
 	if (priv->scan_channel < priv->scan_req->n_channels) {
 		cancel_delayed_work(&priv->scan_work);
 		if (netif_running(priv->dev))
-			queue_delayed_work(priv->work_thread, &priv->scan_work,
+			mod_delayed_work(priv->work_thread, &priv->scan_work,
 				msecs_to_jiffies(300));
 	}
 
@@ -767,7 +767,7 @@ static void _internal_start_scan(struct lbs_private *priv, bool internal,
 	priv->scan_req = request;
 	priv->internal_scan = internal;
 
-	queue_delayed_work(priv->work_thread, &priv->scan_work,
+	mod_delayed_work(priv->work_thread, &priv->scan_work,
 		msecs_to_jiffies(50));
 
 	lbs_deb_leave(LBS_DEB_CFG80211);

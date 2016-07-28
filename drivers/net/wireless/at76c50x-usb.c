@@ -1896,7 +1896,7 @@ static void at76_dwork_hw_scan(struct work_struct *work)
 	/* FIXME: add maximum time for scan to complete */
 
 	if (ret != CMD_STATUS_COMPLETE) {
-		ieee80211_queue_delayed_work(priv->hw, &priv->dwork_hw_scan,
+		ieee80211_mod_delayed_work(priv->hw, &priv->dwork_hw_scan,
 					     SCAN_POLL_INTERVAL);
 		mutex_unlock(&priv->mtx);
 		return;
@@ -1959,7 +1959,7 @@ static int at76_hw_scan(struct ieee80211_hw *hw,
 		goto exit;
 	}
 
-	ieee80211_queue_delayed_work(priv->hw, &priv->dwork_hw_scan,
+	ieee80211_mod_delayed_work(priv->hw, &priv->dwork_hw_scan,
 				     SCAN_POLL_INTERVAL);
 
 exit:

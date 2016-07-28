@@ -805,7 +805,7 @@ void rxrpc_put_connection(struct rxrpc_connection *conn)
 	conn->put_time = get_seconds();
 	if (atomic_dec_and_test(&conn->usage)) {
 		_debug("zombie");
-		rxrpc_queue_delayed_work(&rxrpc_connection_reap, 0);
+		rxrpc_mod_delayed_work(&rxrpc_connection_reap, 0);
 	}
 
 	_leave("");
@@ -889,7 +889,7 @@ static void rxrpc_connection_reaper(struct work_struct *work)
 	if (earliest != ULONG_MAX) {
 		_debug("reschedule reaper %ld", (long) earliest - now);
 		ASSERTCMP(earliest, >, now);
-		rxrpc_queue_delayed_work(&rxrpc_connection_reap,
+		rxrpc_mod_delayed_work(&rxrpc_connection_reap,
 					 (earliest - now) * HZ);
 	}
 
@@ -916,7 +916,7 @@ void __exit rxrpc_destroy_all_connections(void)
 
 	rxrpc_connection_timeout = 0;
 	cancel_delayed_work(&rxrpc_connection_reap);
-	rxrpc_queue_delayed_work(&rxrpc_connection_reap, 0);
+	rxrpc_mod_delayed_work(&rxrpc_connection_reap, 0);
 
 	_leave("");
 }

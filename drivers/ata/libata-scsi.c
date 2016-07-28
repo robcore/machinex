@@ -3491,7 +3491,7 @@ void ata_scsi_scan_host(struct ata_port *ap, int sync)
 			     "WARNING: synchronous SCSI scan failed without making any progress, switching to async\n");
 	}
 
-	queue_delayed_work(system_long_wq, &ap->hotplug_task,
+	mod_delayed_work(system_long_wq, &ap->hotplug_task,
 			   round_jiffies_relative(HZ));
 }
 

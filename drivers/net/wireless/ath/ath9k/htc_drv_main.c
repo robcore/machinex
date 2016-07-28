@@ -761,7 +761,7 @@ void ath9k_htc_start_ani(struct ath9k_htc_priv *priv)
 
 	priv->op_flags |= OP_ANI_RUNNING;
 
-	ieee80211_queue_delayed_work(common->hw, &priv->ani_work,
+	ieee80211_mod_delayed_work(common->hw, &priv->ani_work,
 				     msecs_to_jiffies(ATH_ANI_POLLINTERVAL));
 }
 
@@ -852,7 +852,7 @@ set_timer:
 	if (!common->ani.caldone)
 		cal_interval = min(cal_interval, (u32)short_cal_interval);
 
-	ieee80211_queue_delayed_work(common->hw, &priv->ani_work,
+	ieee80211_mod_delayed_work(common->hw, &priv->ani_work,
 				     msecs_to_jiffies(cal_interval));
 }
 

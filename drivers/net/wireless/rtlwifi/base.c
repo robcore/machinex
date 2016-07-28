@@ -1225,7 +1225,7 @@ void rtl_watch_dog_timer_callback(unsigned long data)
 	struct ieee80211_hw *hw = (struct ieee80211_hw *)data;
 	struct rtl_priv *rtlpriv = rtl_priv(hw);
 
-	queue_delayed_work(rtlpriv->works.rtl_wq,
+	mod_delayed_work(rtlpriv->works.rtl_wq,
 			   &rtlpriv->works.watchdog_wq, 0);
 
 	mod_timer(&rtlpriv->works.watchdog_timer,

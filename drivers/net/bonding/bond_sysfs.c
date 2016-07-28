@@ -563,7 +563,7 @@ static ssize_t bonding_store_arp_interval(struct device *d,
 			cancel_delayed_work_sync(&bond->arp_work);
 		} else {
 			cancel_delayed_work_sync(&bond->mii_work);
-			queue_delayed_work(bond->wq, &bond->arp_work, 0);
+			mod_delayed_work(bond->wq, &bond->arp_work, 0);
 		}
 	}
 out:
@@ -1011,7 +1011,7 @@ static ssize_t bonding_store_miimon(struct device *d,
 			cancel_delayed_work_sync(&bond->mii_work);
 		} else {
 			cancel_delayed_work_sync(&bond->arp_work);
-			queue_delayed_work(bond->wq, &bond->mii_work, 0);
+			mod_delayed_work(bond->wq, &bond->mii_work, 0);
 		}
 	}
 out:

@@ -120,7 +120,7 @@ static void appledisplay_complete(struct urb *urb)
 	case ACD_BTN_BRIGHT_UP:
 	case ACD_BTN_BRIGHT_DOWN:
 		pdata->button_pressed = 1;
-		queue_delayed_work(wq, &pdata->work, 0);
+		mod_delayed_work(wq, &pdata->work, 0);
 		break;
 	case ACD_BTN_NONE:
 	default:

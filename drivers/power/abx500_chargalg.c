@@ -951,7 +951,7 @@ static int abx500_chargalg_get_ext_psy_data(struct device *dev, void *data)
 					di->chg_info.prev_online_chg =
 						di->chg_info.online_chg;
 					di->chg_info.online_chg |= AC_CHG;
-					queue_delayed_work(di->chargalg_wq,
+					mod_delayed_work(di->chargalg_wq,
 						&di->chargalg_wd_work, 0);
 				}
 				break;
@@ -969,7 +969,7 @@ static int abx500_chargalg_get_ext_psy_data(struct device *dev, void *data)
 					di->chg_info.prev_online_chg =
 						di->chg_info.online_chg;
 					di->chg_info.online_chg |= USB_CHG;
-					queue_delayed_work(di->chargalg_wq,
+					mod_delayed_work(di->chargalg_wq,
 						&di->chargalg_wd_work, 0);
 				}
 				break;
@@ -1541,11 +1541,11 @@ static void abx500_chargalg_periodic_work(struct work_struct *work)
 	 * frequently, else the work can be delayed.
 	 */
 	if (di->chg_info.conn_chg)
-		queue_delayed_work(di->chargalg_wq,
+		mod_delayed_work(di->chargalg_wq,
 			&di->chargalg_periodic_work,
 			di->bat->interval_charging * HZ);
 	else
-		queue_delayed_work(di->chargalg_wq,
+		mod_delayed_work(di->chargalg_wq,
 			&di->chargalg_periodic_work,
 			di->bat->interval_not_charging * HZ);
 }
@@ -1568,7 +1568,7 @@ static void abx500_chargalg_wd_work(struct work_struct *work)
 	if (ret < 0)
 		dev_err(di->dev, "failed to kick watchdog\n");
 
-	queue_delayed_work(di->chargalg_wq,
+	mod_delayed_work(di->chargalg_wq,
 		&di->chargalg_wd_work, CHG_WD_INTERVAL);
 }
 
@@ -1754,13 +1754,13 @@ static int abx500_chargalg_resume(struct platform_device *pdev)
 
 	/* Kick charger watchdog if charging (any charger online) */
 	if (di->chg_info.online_chg)
-		queue_delayed_work(di->chargalg_wq, &di->chargalg_wd_work, 0);
+		mod_delayed_work(di->chargalg_wq, &di->chargalg_wd_work, 0);
 
 	/*
 	 * Run the charging algorithm directly to be sure we don't
 	 * do it too seldom
 	 */
-	queue_delayed_work(di->chargalg_wq, &di->chargalg_periodic_work, 0);
+	mod_delayed_work(di->chargalg_wq, &di->chargalg_periodic_work, 0);
 
 	return 0;
 }
@@ -1876,7 +1876,7 @@ static int __devinit abx500_chargalg_probe(struct platform_device *pdev)
 	}
 
 	/* Run the charging algorithm */
-	queue_delayed_work(di->chargalg_wq, &di->chargalg_periodic_work, 0);
+	mod_delayed_work(di->chargalg_wq, &di->chargalg_periodic_work, 0);
 
 	dev_info(di->dev, "probe success\n");
 	return ret;

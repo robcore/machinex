@@ -482,7 +482,7 @@ static void wusbhc_keep_alive_run(struct work_struct *ws)
 	__wusbhc_keep_alive(wusbhc);
 	mutex_unlock(&wusbhc->mutex);
 
-	queue_delayed_work(wusbd, &wusbhc->keep_alive_timer,
+	mod_delayed_work(wusbd, &wusbhc->keep_alive_timer,
 			   msecs_to_jiffies(wusbhc->trust_timeout / 2));
 }
 
@@ -1074,7 +1074,7 @@ int wusbhc_devconnect_start(struct wusbhc *wusbhc)
 	}
 	wusbhc->wuie_host_info = hi;
 
-	queue_delayed_work(wusbd, &wusbhc->keep_alive_timer,
+	mod_delayed_work(wusbd, &wusbhc->keep_alive_timer,
 			   (wusbhc->trust_timeout*CONFIG_HZ)/1000/2);
 
 	return 0;

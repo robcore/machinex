@@ -62,7 +62,7 @@ void afs_lock_may_be_available(struct afs_vnode *vnode)
 {
 	_enter("{%x:%u}", vnode->fid.vid, vnode->fid.vnode);
 
-	queue_delayed_work(afs_lock_manager, &vnode->lock_work, 0);
+	mod_delayed_work(afs_lock_manager, &vnode->lock_work, 0);
 }
 
 /*
@@ -71,7 +71,7 @@ void afs_lock_may_be_available(struct afs_vnode *vnode)
  */
 static void afs_schedule_lock_extension(struct afs_vnode *vnode)
 {
-	queue_delayed_work(afs_lock_manager, &vnode->lock_work,
+	mod_delayed_work(afs_lock_manager, &vnode->lock_work,
 			   AFS_LOCKWAIT * HZ / 2);
 }
 
@@ -159,7 +159,7 @@ void afs_lock_work(struct work_struct *work)
 			printk(KERN_WARNING "AFS:"
 			       " Failed to extend lock on {%x:%x} error %d\n",
 			       vnode->fid.vid, vnode->fid.vnode, ret);
-			queue_delayed_work(afs_lock_manager, &vnode->lock_work,
+			mod_delayed_work(afs_lock_manager, &vnode->lock_work,
 					   HZ * 10);
 			break;
 		}

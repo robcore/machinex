@@ -527,7 +527,7 @@ static void mlx4_en_do_get_stats(struct work_struct *work)
 		if (priv->port_up)
 			mlx4_en_auto_moderation(priv);
 
-		queue_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
+		mod_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
 	}
 	if (mdev->mac_removed[MLX4_MAX_PORTS + 1 - priv->port]) {
 		queue_work(mdev->workqueue, &priv->mac_task);
@@ -1164,7 +1164,7 @@ int mlx4_en_init_netdev(struct mlx4_en_dev *mdev, int port,
 		goto out;
 	}
 	mlx4_en_set_default_moderation(priv);
-	queue_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
+	mod_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
 	return 0;
 
 out:

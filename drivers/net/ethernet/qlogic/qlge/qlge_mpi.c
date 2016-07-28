@@ -225,7 +225,7 @@ static int ql_idc_req_aen(struct ql_adapter *qdev)
 		 * when we leave mpi_worker.
 		 */
 		ql_write32(qdev, INTR_MASK, (INTR_MASK_PI << 16));
-		queue_delayed_work(qdev->workqueue, &qdev->mpi_idc_work, 0);
+		mod_delayed_work(qdev->workqueue, &qdev->mpi_idc_work, 0);
 	}
 	return status;
 }
@@ -292,7 +292,7 @@ static void ql_link_up(struct ql_adapter *qdev, struct mbox_params *mbcp)
 		 * when we leave mpi_worker dpc.
 		 */
 		ql_write32(qdev, INTR_MASK, (INTR_MASK_PI << 16));
-		queue_delayed_work(qdev->workqueue,
+		mod_delayed_work(qdev->workqueue,
 				&qdev->mpi_port_cfg_work, 0);
 	}
 
@@ -1277,7 +1277,7 @@ void ql_mpi_reset_work(struct work_struct *work)
 	if (!ql_core_dump(qdev, qdev->mpi_coredump)) {
 		netif_err(qdev, drv, qdev->ndev, "Core is dumped!\n");
 		qdev->core_is_dumped = 1;
-		queue_delayed_work(qdev->workqueue,
+		mod_delayed_work(qdev->workqueue,
 			&qdev->mpi_core_to_log, 5 * HZ);
 	}
 	ql_soft_reset_mpi_risc(qdev);

@@ -3051,7 +3051,7 @@ qlcnic_schedule_work(struct qlcnic_adapter *adapter,
 		return;
 
 	INIT_DELAYED_WORK(&adapter->fw_work, func);
-	queue_delayed_work(qlcnic_wq, &adapter->fw_work,
+	mod_delayed_work(qlcnic_wq, &adapter->fw_work,
 					round_jiffies_relative(delay));
 }
 

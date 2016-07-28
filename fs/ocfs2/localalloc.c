@@ -1051,7 +1051,7 @@ static int ocfs2_recalc_la_window(struct ocfs2_super *osb,
 		} else {
 			osb->local_alloc_state = OCFS2_LA_DISABLED;
 		}
-		queue_delayed_work(ocfs2_wq, &osb->la_enable_wq,
+		mod_delayed_work(ocfs2_wq, &osb->la_enable_wq,
 				   OCFS2_LA_ENABLE_INTERVAL);
 		goto out_unlock;
 	}

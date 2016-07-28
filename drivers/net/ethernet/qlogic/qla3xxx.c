@@ -2250,7 +2250,7 @@ static irqreturn_t ql3xxx_isr(int irq, void *dev_id)
 				   "Another function issued a reset to the chip. ISR value = %x\n",
 				   value);
 		}
-		queue_delayed_work(qdev->workqueue, &qdev->reset_work, 0);
+		mod_delayed_work(qdev->workqueue, &qdev->reset_work, 0);
 		spin_unlock(&qdev->adapter_lock);
 	} else if (value & ISP_IMR_DISABLE_CMPL_INT) {
 		ql_disable_interrupts(qdev);
@@ -3618,7 +3618,7 @@ static void ql3xxx_tx_timeout(struct net_device *ndev)
 	/*
 	 * Wake up the worker to process this event.
 	 */
-	queue_delayed_work(qdev->workqueue, &qdev->tx_timeout_work, 0);
+	mod_delayed_work(qdev->workqueue, &qdev->tx_timeout_work, 0);
 }
 
 static void ql_reset_work(struct work_struct *work)
@@ -3754,7 +3754,7 @@ static void ql_get_board_info(struct ql3_adapter *qdev)
 static void ql3xxx_timer(unsigned long ptr)
 {
 	struct ql3_adapter *qdev = (struct ql3_adapter *)ptr;
-	queue_delayed_work(qdev->workqueue, &qdev->link_state_work, 0);
+	mod_delayed_work(qdev->workqueue, &qdev->link_state_work, 0);
 }
 
 static const struct net_device_ops ql3xxx_netdev_ops = {

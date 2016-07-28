@@ -141,7 +141,7 @@ rpc_queue_upcall(struct rpc_pipe *pipe, struct rpc_pipe_msg *msg)
 		res = 0;
 	} else if (pipe->flags & RPC_PIPE_WAIT_FOR_OPEN) {
 		if (list_empty(&pipe->pipe))
-			queue_delayed_work(rpciod_workqueue,
+			mod_delayed_work(rpciod_workqueue,
 					&pipe->queue_timeout,
 					RPC_UPCALL_TIMEOUT);
 		list_add_tail(&msg->list, &pipe->pipe);

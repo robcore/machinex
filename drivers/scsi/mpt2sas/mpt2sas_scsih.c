@@ -2772,7 +2772,7 @@ _scsih_fw_event_add(struct MPT2SAS_ADAPTER *ioc, struct fw_event_work *fw_event)
 	spin_lock_irqsave(&ioc->fw_event_lock, flags);
 	list_add_tail(&fw_event->list, &ioc->fw_event_list);
 	INIT_DELAYED_WORK(&fw_event->delayed_work, _firmware_event_work);
-	queue_delayed_work(ioc->firmware_event_thread,
+	mod_delayed_work(ioc->firmware_event_thread,
 	    &fw_event->delayed_work, 0);
 	spin_unlock_irqrestore(&ioc->fw_event_lock, flags);
 }

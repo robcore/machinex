@@ -1113,7 +1113,7 @@ static void gdlm_recover_done(void *arg, struct dlm_slot *slots, int num_slots,
 	}
 
 	if (!test_bit(DFL_UNMOUNT, &ls->ls_recover_flags))
-		queue_delayed_work(gfs2_control_wq, &sdp->sd_control_work, 0);
+		mod_delayed_work(gfs2_control_wq, &sdp->sd_control_work, 0);
 
 	clear_bit(DFL_DLM_RECOVERY, &ls->ls_recover_flags);
 	smp_mb__after_clear_bit();
@@ -1157,7 +1157,7 @@ static void gdlm_recovery_result(struct gfs2_sbd *sdp, unsigned int jid,
 	   finish before trying again */
 
 	if (!test_bit(DFL_UNMOUNT, &ls->ls_recover_flags))
-		queue_delayed_work(gfs2_control_wq, &sdp->sd_control_work,
+		mod_delayed_work(gfs2_control_wq, &sdp->sd_control_work,
 				   result == LM_RD_GAVEUP ? HZ : 0);
 	spin_unlock(&ls->ls_recover_spin);
 }

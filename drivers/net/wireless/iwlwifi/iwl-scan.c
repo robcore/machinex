@@ -995,7 +995,7 @@ int __must_check iwl_scan_initiate(struct iwl_priv *priv,
 		return ret;
 	}
 
-	queue_delayed_work(priv->workqueue, &priv->scan_check,
+	mod_delayed_work(priv->workqueue, &priv->scan_check,
 			   IWL_SCAN_CHECK_WATCHDOG);
 
 	return 0;

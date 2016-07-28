@@ -743,7 +743,7 @@ static int rmt_storage_sdio_smem_probe(struct platform_device *pdev)
 static int rmt_storage_sdio_smem_remove(struct platform_device *pdev)
 {
 	sdio_smem_unregister_client();
-	queue_delayed_work(rmc->workq, &sdio_smem_work, 0);
+	mod_delayed_work(rmc->workq, &sdio_smem_work, 0);
 	return 0;
 }
 
@@ -1431,7 +1431,7 @@ static void handle_restart_setup(struct msm_rpc_client *client)
 	if (!srv)
 		return;
 	pr_debug("%s: Scheduling restart for 0x%08x\n", __func__, srv->prog);
-	queue_delayed_work(rmc->workq, &srv->restart_work,
+	mod_delayed_work(rmc->workq, &srv->restart_work,
 			msecs_to_jiffies(RESTART_WORK_DELAY_MS));
 }
 
@@ -1514,7 +1514,7 @@ static void rmt_storage_restart_work(struct work_struct *work)
 	       __func__, ret, srv->prog);
 
 	if (!msm_rpc_client_in_reset(srv->rpc_client))
-		queue_delayed_work(rmc->workq, &srv->restart_work,
+		mod_delayed_work(rmc->workq, &srv->restart_work,
 				msecs_to_jiffies(RESTART_WORK_DELAY_MS));
 }
 

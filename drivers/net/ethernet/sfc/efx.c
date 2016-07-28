@@ -1560,7 +1560,7 @@ static void efx_start_all(struct efx_nic *efx)
 	 * event driven), we have to poll the PHY because after an event queue
 	 * flush, we could have a missed a link state change */
 	if (efx->type->monitor != NULL) {
-		queue_delayed_work(efx->workqueue, &efx->monitor_work,
+		mod_delayed_work(efx->workqueue, &efx->monitor_work,
 				   efx_monitor_interval);
 	} else {
 		mutex_lock(&efx->mac_lock);
@@ -1727,7 +1727,7 @@ static void efx_monitor(struct work_struct *data)
 		mutex_unlock(&efx->mac_lock);
 	}
 
-	queue_delayed_work(efx->workqueue, &efx->monitor_work,
+	mod_delayed_work(efx->workqueue, &efx->monitor_work,
 			   efx_monitor_interval);
 }
 

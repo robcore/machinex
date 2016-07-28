@@ -240,7 +240,7 @@ static void afs_do_give_up_callback(struct afs_server *server,
 	 * possible to ship in one operation */
 	switch (atomic_inc_return(&server->cb_break_n)) {
 	case 1 ... AFSCBMAX - 1:
-		queue_delayed_work(afs_callback_update_worker,
+		mod_delayed_work(afs_callback_update_worker,
 				   &server->cb_break_work, HZ * 2);
 		break;
 	case AFSCBMAX:
@@ -391,7 +391,7 @@ static void afs_callback_updater(struct work_struct *work)
 
 	timeout = vnode->update_at - now;
 	if (timeout > 0) {
-		queue_delayed_work(afs_vnode_update_worker,
+		mod_delayed_work(afs_vnode_update_worker,
 				   &afs_vnode_update, timeout * HZ);
 		spin_unlock(&server->cb_lock);
 		_leave(" [nothing]");
@@ -449,7 +449,7 @@ static void afs_callback_updater(struct work_struct *work)
 	list_add_tail(&vnode->update, &server->cb_promises);
 
 	_debug("timeout %ld", timeout);
-	queue_delayed_work(afs_vnode_update_worker,
+	mod_delayed_work(afs_vnode_update_worker,
 			   &afs_vnode_update, timeout * HZ);
 	spin_unlock(&server->cb_lock);
 	afs_put_vnode(vl);

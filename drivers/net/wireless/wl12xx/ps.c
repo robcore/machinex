@@ -87,7 +87,7 @@ void wl1271_ps_elp_sleep(struct wl1271 *wl)
 			return;
 	}
 
-	ieee80211_queue_delayed_work(wl->hw, &wl->elp_work,
+	ieee80211_mod_delayed_work(wl->hw, &wl->elp_work,
 		msecs_to_jiffies(wl->conf.conn.dynamic_ps_timeout));
 }
 

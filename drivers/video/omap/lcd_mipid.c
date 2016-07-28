@@ -390,7 +390,7 @@ static void ls041y3_esd_check(struct mipid_device *md)
 static void mipid_esd_start_check(struct mipid_device *md)
 {
 	if (md->esd_check != NULL)
-		queue_delayed_work(md->esd_wq, &md->esd_work,
+		mod_delayed_work(md->esd_wq, &md->esd_work,
 				   MIPID_ESD_CHECK_PERIOD);
 }
 

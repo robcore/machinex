@@ -974,7 +974,7 @@ static void __iscsi_block_session(struct work_struct *work)
 	scsi_target_block(&session->dev);
 	ISCSI_DBG_TRANS_SESSION(session, "Completed SCSI target blocking\n");
 	if (session->recovery_tmo >= 0)
-		queue_delayed_work(iscsi_eh_timer_workq,
+		mod_delayed_work(iscsi_eh_timer_workq,
 				   &session->recovery_work,
 				   session->recovery_tmo * HZ);
 }

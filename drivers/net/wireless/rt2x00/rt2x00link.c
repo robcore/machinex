@@ -282,7 +282,7 @@ void rt2x00link_start_tuner(struct rt2x00_dev *rt2x00dev)
 	rt2x00link_reset_tuner(rt2x00dev, false);
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags))
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->work, LINK_TUNE_INTERVAL);
 }
 
@@ -395,7 +395,7 @@ static void rt2x00link_tuner(struct work_struct *work)
 	link->count++;
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags))
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->work, LINK_TUNE_INTERVAL);
 }
 
@@ -405,7 +405,7 @@ void rt2x00link_start_watchdog(struct rt2x00_dev *rt2x00dev)
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags) &&
 	    rt2x00dev->ops->lib->watchdog)
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->watchdog_work,
 					     WATCHDOG_INTERVAL);
 }
@@ -431,7 +431,7 @@ static void rt2x00link_watchdog(struct work_struct *work)
 	rt2x00dev->ops->lib->watchdog(rt2x00dev);
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags))
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->watchdog_work,
 					     WATCHDOG_INTERVAL);
 }
@@ -442,7 +442,7 @@ void rt2x00link_start_agc(struct rt2x00_dev *rt2x00dev)
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags) &&
 	    rt2x00dev->ops->lib->gain_calibration)
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->agc_work,
 					     AGC_INTERVAL);
 }
@@ -453,7 +453,7 @@ void rt2x00link_start_vcocal(struct rt2x00_dev *rt2x00dev)
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags) &&
 	    rt2x00dev->ops->lib->vco_calibration)
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->vco_work,
 					     VCO_INTERVAL);
 }
@@ -484,7 +484,7 @@ static void rt2x00link_agc(struct work_struct *work)
 	rt2x00dev->ops->lib->gain_calibration(rt2x00dev);
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags))
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->agc_work,
 					     AGC_INTERVAL);
 }
@@ -505,7 +505,7 @@ static void rt2x00link_vcocal(struct work_struct *work)
 	rt2x00dev->ops->lib->vco_calibration(rt2x00dev);
 
 	if (test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags))
-		ieee80211_queue_delayed_work(rt2x00dev->hw,
+		ieee80211_mod_delayed_work(rt2x00dev->hw,
 					     &link->vco_work,
 					     VCO_INTERVAL);
 }

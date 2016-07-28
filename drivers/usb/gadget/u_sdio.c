@@ -848,7 +848,7 @@ static int gsdio_ch_probe(struct platform_device *dev)
 		if (!strncmp(pi->data_ch_name, dev->name,
 					SDIO_CH_NAME_MAX_LEN)) {
 			port->sdio_probe = 1;
-			queue_delayed_work(gsdio_wq,
+			mod_delayed_work(gsdio_wq,
 				&port->sdio_open_work, SDIO_OPEN_DELAY);
 			return 0;
 		}

@@ -228,7 +228,7 @@ static void ieee80211_work_work(struct work_struct *work)
 
 	if (list_empty(&local->work_list) && local->scan_req &&
 	    !local->scanning)
-		ieee80211_queue_delayed_work(&local->hw,
+		ieee80211_mod_delayed_work(&local->hw,
 					     &local->scan_work,
 					     round_jiffies_relative(0));
 

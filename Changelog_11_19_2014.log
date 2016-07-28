@@ -1,0 +1,400 @@
+Project name: Unleashed Kernel
+ ion-storm - switch from alucard back to intelliplug as default hotplug
+ ion-storm - hotplug_select added, thanks neobuddy89, will add to this and add alucard/autosmp hotplugs as well
+ ion-storm - this update-binary does not like set_perm
+ ion-storm - msm_rq_stats: compile fix
+ Pan Fang - msm:rpm-log: add the mutex to protect read opertion
+ Abhijeet Dharmapurikar - msm: krait-regulator: fix unnecessary calls to switch to LDO
+ Abhijeet Dharmapurikar - msm: krait-regulator: handle efuse differences
+ savoca - msm: implement latest krait-regulator system
+ Greg Thelen - tmpfs: fix mempolicy object leaks
+ Jonathan Austin - ARM: nommu: add stub local_flush_bp_all() for !CONFIG_MMUU
+ Will Deacon - ARM: nommu: define dummy TLB operations for nommu configurations
+ Will Deacon - ARM: 7447/1: rwlocks: remove unused branch labels from trylock routines
+ Will Deacon - ARM: 7983/1: atomics: implement a better __atomic_add_unless for v6+
+ Victor Kamensky - ARM: atomic64: fix endian-ness in atomic.h
+ Will Deacon - ARM: atomics: prefetch the destination word for write prior to strex
+ Will Deacon - ARM: prefetch: remove redundant "cc" clobber
+ ion-storm - ARM: mpu: add MPU initialisation for secondary cores
+ Jonathan Austin - ARM: mpu: add early bring-up code for the ARMv7 PMSA-compliant MPU
+ Jonathan Austin - ARM: mpu: add header for MPU register layouts and region data
+ Jonathan Austin - ARM: mpu: add PMSA related registers and bitfields to existing headers
+ Will Deacon - ARM: nommu: provide dummy cpu_switch_mm implementation
+ Will Deacon - asm-generic: io: don't perform swab during {in,out} string functions
+ hellsgod - ARM: 8011/1: ARM hibernation / suspend-to-disk
+ ion-storm - ARM: 7666/1: decompressor: add -mno-single-pic-base for building the decompressor
+ hellsgod - ARM: 7858/1: mm: make UACCESS_WITH_MEMCPY huge page aware
+ Yalin Wang - ARM: 8168/1: extend __init_end to a page align address
+ Mark Rutland - ARM: 8088/1: vmlinux.lds.S: drop redundant .comment
+ Pawel Moll - ARM: 7605/1: vmlinux.lds: Move .notes section next to the rodata
+ Robin Murphy - ARM: 8165/1: alignment: don't break misaligned NEON load/store
+ Mike Galbraith - sched,rt: disable rt_runtime borrowing by default
+ Shawn Bohrer - sched/rt: Remove redundant nr_cpus_allowed test
+ Paul Reioux - sched: document the difference between nr_running and h_nr_running
+ Lei Wen - sched: change active_load_balance_cpu_stop to use h_nr_running
+ Paul Reioux - sched: change find_busiest_queue to h_nr_running
+ Paul Reioux - sched: change update_sg_lb_stats to h_nr_running
+ Lei Wen - sched: change pick_next_task_fair to h_nr_running
+ Lei Wen - sched: change cpu_avg_load_per_task using h_nr_running
+ Paul Reioux - kernel/sched/fair.c: fix merge derp
+ Paul Reioux - sched: change load balance number to h_nr_running of run queue
+ Paul Reioux - sched: Periodically decay max cost of idle balance
+ ion-storm - sched: Consider max cost of idle balance per sched domain
+ Paul Reioux - sched: scale cpu load for judgment of group imbalance
+ Lei Wen - sched: scale the busy and this queue's per-task load before compare
+ Lei Wen - sched: reduce calculation effort in fix_small_imbalance
+ Viresh Kumar - sched: remove WARN_ON(!sd) from init_sched_groups_power()
+ Viresh Kumar - sched: Use cached value of span instead of calling sched_domain_span()
+ Viresh Kumar - sched: Remove unused params of build_sched_domain()
+ Viresh Kumar - sched: Optimize build_sched_domains() for saving first SD node for a cpu
+ Viresh Kumar - sched: Optimize build_sched_domains() for saving first SD node for a cpu
+ Rom Lemarchand - cgroup: refactor allow_attach function into common code
+ ion-storm - intelli_hotplug: just boost 2 cores instead of 3
+ Borislav Petkov - cpufreq: Add a get_current_driver helper
+ Viresh Kumar - cpufreq: Create a macro for unlock_policy_rwsem{read,write}
+ Pranav Vashi - msm: mdss: Add basic color preset interface
+ Pranav Vashi - Revert "msm8974: Lower thermal thresholds"
+ Banajit Goswami - ASoC: msm: qdsp6v2: Add SLIMBUS 3 TX port as valid port
+ Divya Narayanan Poojary - ASoC: wcd9320: fix the no audio issue on triggering SSR
+ Divya Narayanan Poojary - msm: usbaudio: remove usbaudiosdev switch
+ Johannes Berg - cfg80211: clarify BSS probe response vs. beacon data
+ Simon Wunderlich - nl80211: add scan width to bss and scan request structs
+ Pranav Vashi - msm: limiter: Enable by default
+ ion-storm - Add pre-compiled binary and libraries defconfig: Enable MSM RQ Stats Update updater-binary
+ ion-storm - bootimg.sh: Boot with permissive SELinux
+ ion-storm - These files somehow got deleted, possibly by git gc
+ ion-storm - defconfig: enable SECCOMP Filter
+ Sergei Trofimovich - um: add missing declaration of 'getrlimit()' and friends
+ Robert Sesek - seccomp: Use atomic operations that are present in kernel 3.4.
+ Kees Cook - seccomp: implement SECCOMP_FILTER_FLAG_TSYNC
+ Kees Cook - seccomp: allow mode setting across threads
+ Kees Cook - seccomp: introduce writer locking
+ Kees Cook - seccomp: split filter prep from check and apply
+ Kees Cook - sched: move no_new_privs into new atomic flags
+ Kees Cook - ARM: add seccomp syscall
+ Kees Cook - seccomp: add "seccomp" syscall
+ Kees Cook - seccomp: split mode setting routines
+ Kees Cook - seccomp: extract check/assign mode helpers
+ Kees Cook - seccomp: create internal mode-setting function
+ Kees Cook - MAINTAINERS: create seccomp entry
+ Will Drewry - CHROMIUM: ARM: r1->r0 for get/set arguments
+ Will Drewry - CHROMIUM: seccomp: set -ENOSYS if there is no tracer
+ Will Drewry - CHROMIUM: ARM: arch/arm: allow a scno of -1 to not cause a SIGILL
+ Will Drewry - CHROMIUM: arch/arm: select HAVE_ARCH_SECCOMP_FILTER
+ Will Drewry - CHROMIUM: arch/arm: move secure_computing into trace; respect return code
+ Will Drewry - CHROMIUM: arch/arm: add asm/syscall.h
+ Will Drewry - samples/seccomp: fix dependencies on arch macros
+ Will Drewry - seccomp: fix build warnings when there is no CONFIG_SECCOMP_FILTER
+ Will Drewry - seccomp: ignore secure_computing return values
+ Stephen Rothwell - seccomp: use a static inline for a function stub
+ Will Drewry - Documentation: prctl/seccomp_filter
+ Sasha Levitskiy - Change-Id: I7c9d49079d4e18390c2d520513a4afd55e6eaa3e
+ Will Drewry - ptrace,seccomp: Add PTRACE_SECCOMP support
+ Will Drewry - seccomp: Add SECCOMP_RET_TRAP
+ Will Drewry - signal, x86: add SIGSYS info and make it synchronous.
+ Will Drewry - seccomp: add SECCOMP_RET_ERRNO
+ Kees Cook - seccomp: remove duplicated failure logging
+ Will Drewry - seccomp: add system call filtering using BPF
+ Will Drewry - arch/x86: add syscall_get_arch to syscall.h
+ Will Drewry - asm/syscall.h: add syscall_get_arch
+ Will Drewry - seccomp: kill the seccomp_t typedef
+ Will Drewry - net/compat.c,linux/filter.h: share compat_sock_fprog
+ Will Drewry - sk_run_filter: add BPF_S_ANC_SECCOMP_LD_W
+ John Johansen - Fix execve behavior apparmor for PR_{GET,SET}_NO_NEW_PRIVS
+ Andy Lutomirski - Add PR_{GET,SET}_NO_NEW_PRIVS to prevent execve from granting privs
+ ion-storm - switch to alucard_hotplug  & cpufreq_alucard for 3000k antutu boost
+ ion-storm - Upgrade/Tweak governors for performance
+ ion-storm - defconfig: enable DM_VERITY for secureboot
+ ion-storm - update synapse settings
+ Jason Low - sched: Reduce overestimating rq->avg_idle
+ ion-storm - page_alloc: Make watermarks tunable separately
+ Peter Zijlstra - sched/fair: Optimize cgroup pick_next_task_fair()
+ Peter Zijlstra - sched/fair: Optimize find_busiest_queue()
+ Pradeep Sawlani - ksm: check and skip page, if it is already scanned
+ ion-storm - fix F2FS & exFAT for AIO, direct_IO, iov_iter
+ Paul Reioux - aio: convert the ioctx list to radix tree
+ faux123 - tmpfs: add support for read_iter and write_iter
+ Dave Kleikamp - iov_iter: move into its own file (bug fix)
+ Dave Kleikamp - ecrpytfs: Convert aio_read/write ops to read/write_iter
+ faux123 - ext4: add support for read_iter and write_iter
+ Dave Kleikamp - fs: add read_iter and write_iter to several file systems
+ Dave Kleikamp - fs: use read_iter and write_iter rather than aio_read and aio_write
+ faux123 - fs: create file_readable() and file_writable() functions
+ faux123 - loop: use aio to perform io on the underlying file
+ faux123 - bio: add bvec_length(), like iov_length()
+ faux123 - aio: add aio support for iov_iter arguments
+ faux123 - aio: add aio_kernel_() interface
+ faux123 - fs: pull iov_iter use higher up the stack
+ faux123 - dio: add bio_vec support to __blockdev_direct_IO()
+ faux123 - dio: Convert direct_IO to use iov_iter
+ Zach Brown - iov_iter: let callers extract iovecs and bio_vecs
+ Zach Brown - iov_iter: add a shorten call
+ Zach Brown - iov_iter: add bvec support
+ faux123 - iov_iter: hide iovec details behind ops function pointers
+ Dave Kleikamp - fuse: convert fuse to use iov_iter_copy_[to|from]_user
+ Zach Brown - iov_iter: add copy_to_user support
+ Dave Kleikamp - iov_iter: iov_iter_copy_from_user() should use non-atomic copy
+ Zach Brown - iov_iter: move into its own file
+ Lance Poore - SCHEDULER: Autogroup patch group by current user android UID instead of task ID
+ ion-storm - Update version to 5u
+ ion-storm - cpuboost input boost set to 500ms as default, AOSP L is set to 2 secs by default, this gives a nice boost
+ ion-storm - Add Multi cpu policy governor controls to UKM/Synapse, Low Memory Killer profiles, Vibrator settings for DT2W & More
+ Dirk Brandewie - cpufreq_stats: do not remove sysfs files if frequency table is not present
+ ion-storm - zram: avoid kunmap_atomic() of a NULL pointer
+ ion-storm - add lowmemorykiller tweaks, clean up mpdecision & thermal files in rom
+ ion-storm - This crap, codel, et' al somehow killed 3G/4G, removed
+ ion-storm - I like ak changelogs, thnx @ak
+ ion-storm - Turn off intelli_plug debug as default, it can be re-enabled in Synapse
+ ion-storm - remove hotplug suspend as a configurable userspace option because it causes SOD with Multi CPU Policy
+ ion-storm - Bring back Async Fsync with fixes Asynchronous Fsync: initial extraction of Async Fsync from HTC
+ ion-storm - Revert: core.c: Disable Software CRC check (reverted from commit df6d1d90b90c7ae524f3ee7fa9ea374e1855a8cb) (reverted from commit df7aa4f57243ef6821ee23dc0605472287af2754)
+ ion-storm - Revert: ARM acpuclk: Inline heavy used functions to reduce overhead. by duki994@xda (reverted from commit 599c9e6a969e08e8ff97c2ab9edacaa5fbb29d6a) (reverted from commit 252bb1a419bfe5b1da334b2ab09fe187df7c8d1d)
+ ion-storm - ipv4: icmp: Fix pMTU handling for rare case Some older router implementations still send Fragmentation Needed errors with the Next-Hop MTU field set to zero. This is explicitly described as an eventuality that hosts must deal with by the standard (RFC 1191) since older standards specified that those bits must be zero.
+ ion-storm - ipv4: Kill ip_rt_frag_needed(). There is zero point to this function.
+ ion-storm - i2c: Drop missing things to 19.2 MHz
+ ion-storm - fs: sync: Make sync() satisfy many requests with one invocation
+ ion-storm - Enable hotplug suspend, without it, SOD's, keep hotplug suspend enabled!
+ ion-storm - fs: sync: Make sync() satisfy many requests with one invocation
+ ion-storm - i2c: Drop missing things to 19.2 MHz
+ ion-storm - ipv4: Kill ip_rt_frag_needed(). There is zero point to this function.
+ ion-storm - ipv4: icmp: Fix pMTU handling for rare case Some older router implementations still send Fragmentation Needed errors with the Next-Hop MTU field set to zero. This is explicitly described as an eventuality that hosts must deal with by the standard (RFC 1191) since older standards specified that those bits must be zero.
+ ion-storm - Revert: ARM acpuclk: Inline heavy used functions to reduce overhead. by duki994@xda (reverted from commit 599c9e6a969e08e8ff97c2ab9edacaa5fbb29d6a)
+ ion-storm - Revert: core.c: Disable Software CRC check (reverted from commit df6d1d90b90c7ae524f3ee7fa9ea374e1855a8cb)
+ ion-storm - update version to v3u
+ ion-storm - update 99defcon
+ javilonas - bcmdhd: reducir wakelocks
+ mrg666 - af_unix: speedup /proc/net/unix /proc/net/unix has quadratic behavior, and can hold unix_table_lock for a while if high number of unix sockets are alive. (90 ms for 200k sockets...)
+ Andrey Sidorov - ext4: speed up truncate/unlink by not using bforget() unless needed
+ Jan Kara - block: Reserve only one queue tag for sync IO if only 3 tags are available
+ Al Viro - switch do_fsync() to fget_light()
+ Ingo Molnar - nohz: Reduce overhead under high-freq idling patterns
+ Will Deacon - ARM: 7495/1: mutex: use generic atomic_dec-based implementation for ARMv6+
+ Will Deacon - ARM: 7467/1: mutex: use generic xchg-based implementation for ARMv6+
+ ion-storm - Revert qualcomm's contributions on mutex.h
+ Vladimir Davydov - sched: add wait_for_completion_io[_timeout]
+ Vladimir Davydov - block: account iowait time when waiting for completion of IO request
+ Dave Chinner - sync: don't block the flusher thread waiting on IO
+ flar2 - fix for app-mounted directories (thanks @mkasick)
+ franciscofranco - fs: sync: enable fsync by default.
+ Francisco Franco - fs: sync: add missing return if fsync is disabled from userspace.
+ franciscofranco - Added fsync on/off support.
+ ion-storm - suspend: enable freeze timeout configuration through sys
+ ion-storm - kernel: power: Add PM_USERSPACE_FROZEN workqueue
+ ion-storm - freezer: set PF_SUSPEND_TASK flag on tasks that call freeze_processes
+ ion-storm - Revert: "Asynchronous Fsync: initial extraction of Async Fsync from HTC"
+ ion-storm - freezer: set PF_SUSPEND_TASK flag on tasks that call freeze_processes
+ ion-storm - kernel: power: Add PM_USERSPACE_FROZEN workqueue
+ ion-storm - suspend: enable freeze timeout configuration through sys
+ flar2 - vibrator: change permissions again
+ Steve Kondik - msm: Improve qpnp-vibrator scheduling
+ ion-storm - defconfig: Enable Asynchronous Filesync
+ ion-storm - switch do_fsync() to fget_light() Signed-off-by: Al Viro <viro@zeniv.linux.org.uk># Please enter the commit message for your changes. Lines starting. Signed-off-by: franciscofranco <franciscofranco.1990@gmail.com>
+ ion-storm - Import latest DorimanX, Alucard enhanced Intelli_plug 5.2+ & latest msm_hotplug
+ ion-storm - Asynchronous Fsync: initial extraction of Async Fsync from HTC
+ Li Fei - suspend: enable freeze timeout configuration through sys
+ Arto Merilainen - kernel: power: Add PM_USERSPACE_FROZEN workqueue
+ Colin Cross - freezer: set PF_SUSPEND_TASK flag on tasks that call freeze_processes
+ ion-storm - update version to v3u
+ ion-storm - update 99defcon
+ javilonas - bcmdhd: reducir wakelocks
+ mrg666 - af_unix: speedup /proc/net/unix /proc/net/unix has quadratic behavior, and can hold unix_table_lock for a while if high number of unix sockets are alive. (90 ms for 200k sockets...)
+ Andrey Sidorov - ext4: speed up truncate/unlink by not using bforget() unless needed
+ Jan Kara - block: Reserve only one queue tag for sync IO if only 3 tags are available
+ Al Viro - switch do_fsync() to fget_light()
+ Ingo Molnar - nohz: Reduce overhead under high-freq idling patterns
+ Will Deacon - ARM: 7495/1: mutex: use generic atomic_dec-based implementation for ARMv6+
+ Will Deacon - ARM: 7467/1: mutex: use generic xchg-based implementation for ARMv6+
+ ion-storm - Revert qualcomm's contributions on mutex.h
+ Vladimir Davydov - sched: add wait_for_completion_io[_timeout]
+ Vladimir Davydov - block: account iowait time when waiting for completion of IO request
+ Dave Chinner - sync: don't block the flusher thread waiting on IO
+ flar2 - fix for app-mounted directories (thanks @mkasick)
+ franciscofranco - fs: sync: enable fsync by default.
+ Francisco Franco - fs: sync: add missing return if fsync is disabled from userspace.
+ franciscofranco - Added fsync on/off support.
+ ion-storm - suspend: enable freeze timeout configuration through sys
+ ion-storm - kernel: power: Add PM_USERSPACE_FROZEN workqueue
+ ion-storm - freezer: set PF_SUSPEND_TASK flag on tasks that call freeze_processes
+ ion-storm - Revert: "Asynchronous Fsync: initial extraction of Async Fsync from HTC"
+ ion-storm - freezer: set PF_SUSPEND_TASK flag on tasks that call freeze_processes
+ ion-storm - kernel: power: Add PM_USERSPACE_FROZEN workqueue
+ ion-storm - suspend: enable freeze timeout configuration through sys
+ flar2 - vibrator: change permissions again
+ Steve Kondik - msm: Improve qpnp-vibrator scheduling
+ ion-storm - defconfig: Enable Asynchronous Filesync
+ ion-storm - switch do_fsync() to fget_light() Signed-off-by: Al Viro <viro@zeniv.linux.org.uk># Please enter the commit message for your changes. Lines starting. Signed-off-by: franciscofranco <franciscofranco.1990@gmail.com>
+ ion-storm - Import latest DorimanX, Alucard enhanced Intelli_plug 5.2+ & latest msm_hotplug
+ ion-storm - Asynchronous Fsync: initial extraction of Async Fsync from HTC
+ Li Fei - suspend: enable freeze timeout configuration through sys
+ Arto Merilainen - kernel: power: Add PM_USERSPACE_FROZEN workqueue
+ Colin Cross - freezer: set PF_SUSPEND_TASK flag on tasks that call freeze_processes
+ Todd Poynor - ARM: kgdb: ignore breakpoint instructions from user mode
+ ion-storm - ARM: Export LoUIS flush
+ Vishal Singh - ARM: mm: adding a check for slab objects in flush_dcache_page
+ Bo Yan - ARM: mm: Enable NCSE feature for A15 only
+ Bo Yan - ARM: mm: enable non-cacheable streaming enhancement
+ Ben Dooks - ARM: 7650/1: mm: replace direct access to mm->context.id with new macro
+ Kirill Artamonov - ARM: cache-l2x0: get size of outer cache
+ Hiroshi Doyu - ARM: dma: Drop GFP_COMP for DMA-IOMMU memory allocations
+ Kirill Artamonov - ARM: mm: cache-l2x0: Implement outer_clean_all()
+ Catalin Marinas - ARM: LPAE: Invalidate the TLB for module addresses during translation fault
+ Heechul Yun - ARM: remove unnecessary dcache_clean_area
+ ion-storm - ARM: mm: Skip I-cache invalidate for Cortex-A15 boot
+ Bo Yan - ARM: mm: Remove unnecessary CMO in Cortex A15 startup
+ Russell King - ARM: cleanup undefined instruction entry code
+ Joonsoo Kim - ARM: 7694/1: ARM, TCM: initialize TCM in paging_init(), instead of setup_arch()
+ Alessandro Rubini - ARM: 7432/1: use the new linux/sizes.h
+ Alessandro Rubini - ARM: 7430/1: sizes.h: move from asm-generic to <linux/sizes.h>
+ Marc Zyngier - ARM: opcodes: add __ERET/__MSR_ELR_HYP instruction encoding
+ Will Deacon - ARM: opcodes: add missing include of linux/linkage.h
+ Dave Martin - ARM: 7511/1: opcodes: Opcode definitions for the Virtualization Extensions
+ Dave Martin - ARM: 7510/1: opcodes: Add helpers for emitting custom opcodes
+ Dave Martin - ARM: 7509/1: opcodes: Make opcode byteswapping macros assembly-compatible
+ Dave Martin - ARM: 7508/1: opcodes: Don't define the thumb32 byteswapping macros for BE32
+ Mark Rutland - ARM: 7786/1: hyp: fix macro parameterisation
+ Marc Zyngier - ARM: arch_timer: stop virtual timer when booted in HYP mode
+ Marc Zyngier - ARM: hyp: initialize CNTVOFF to zero
+ Marc Zyngier - ARM: virt: simplify __hyp_stub_install epilog
+ Dave Martin - ARM: virt: Avoid bx instruction for compatibility with <=ARMv4
+ Marc Zyngier - ARM: virt: arch_timers: enable access to physical timers
+ Dave Martin - ARM: zImage/virt: hyp mode entry support for the zImage loader
+ Mark Rutland - ARM: 7787/1: virt: ensure visibility of __boot_cpu_mode
+ Will Deacon - ARM: virt: use PSR_N_BIT for detecting boot CPU mode mismatch
+ Dave Martin - ARM: virt: Add boot-time diagnostics
+ Dave Martin - ARM: virt: allow the kernel to be entered in HYP mode
+ Christoffer Dall - ARM: Section based HYP idmap
+ Nicolas Pitre - ARM: 7573/1: idmap: use flush_cache_louis() and flush TLBs only when necessary
+ Jon Medhurst - ARM: 7752/1: errata: LoUIS bit field in CLIDR register is incorrect
+ Will Deacon - ARM: 7606/1: cache: flush to LoUU instead of LoUIS on uniprocessor CPUs
+ Lorenzo Pieralisi - ARM: mm: rename jump labels in v7_flush_dcache_all function
+ Johannes Weiner - arch: mm: do not invoke OOM killer on kernel fault OOM
+ Russell King - ARM: smp: flush L1 cache in cpu_die()
+ Santosh Shilimkar - ARM: mm: update __v7_setup() to the new LoUIS cache maintenance API
+ Lorenzo Pieralisi - ARM: kernel: update __cpu_disable to use cache LoUIS maintenance API
+ Lorenzo Pieralisi - ARM: kernel: update cpu_suspend code to use cache LoUIS operations
+ Lorenzo Pieralisi - ARM: mm: implement LoUIS API for cache maintenance ops
+ Dorimanx - ARM acpuclk: Inline heavy used functions to reduce overhead. by duki994@xda
+ ion-storm - update version to 2u
+ Pranav Vashi - msm: limiter: Add controls for per cpu governor
+ Pranav Vashi - cpufreq: Add interface for gov change and upstream fixes
+ ion-storm - Fixup Synapse cpuboost, thermal, msm limiter & more
+ Arnd Bergmann - sysfs: fix crash_notes_size build warning
+ Zhang Yanfei - sysfs: Add crash_notes_size to export percpu note size
+ Rob Herring - ARM: 7494/1: use generic termios.h
+ Chester Kener - uksm: Disable by default
+ ion-storm - Defconfig: Add Snappy Compress/Decompress
+ Pranav Vashi - staging: Add Snappy compression library
+ ion-storm - defconfig: add BLX
+ ayysir - Add BLX driver
+ ion-storm - Delete mpdecision & thermald since it is no longer needed and could cause problems
+ ion-storm - Disable STACKTRACE/TRACING
+ Paul E. McKenney - fs: sync: Make sync() satisfy many requests with one invocation
+ anarkia1976 - core.c: Disable Software CRC check
+ Rudolf Tammekivi - rmt_storage: Decrease logging.
+ anarkia1976 - kernel: printk: set default console log level to 4
+ JustArchi - kernel: printk: Implement configurable DEFAULT_CONSOLE_LOGLEVEL
+ anarkia1976 - block: disable add_random for more performance on SSD's
+ Pranav Vashi - staging: android: logger: Improve logging
+ Pranav Vashi - staging: android: logger.h: Complete documentation of logger_entry
+ Steve Kondik - debug: remove: arm unwind: remove logspam while in debug mode
+ ktoonsez - debug: remove: remove some dmesg logspam from Linux mainline 3.4 fs
+ Francisco Franco - writeback: I believe these defines were calculated with HZ=1000 in mind. Since our devices are HZ=100 I hardcoded the values on this constants. I'm not 100% sure if this code was made for HZ with 1000 but I couldn't track it to understand clearly. Although I didn't see any drawback of using this as it is now. If anyone knows the answer please chime in.
+ Francisco Franco - writeback: increase bdi_min_ratio to 5 in light of the latest writeback commit.
+ ktoonsez - Async I/O latency to a ssd greatly increased, 34% gain (Creds: kleikamp)
+ ion-storm - More disabling of tracer
+ ion-storm - defconfig: Enable Ultra Same Page Merging
+ ion-storm - Add UKSM 0.1.2.2 for 3.4 kernels ksm: check and skip page, if it is already scanned
+ Mikulas Patocka - crypto: arm-aes - fix encryption of unaligned data
+ mrg666 - ipv4: icmp: Fix pMTU handling for rare case Some older router implementations still send Fragmentation Needed errors with the Next-Hop MTU field set to zero. This is explicitly described as an eventuality that hosts must deal with by the standard (RFC 1191) since older standards specified that those bits must be zero.
+ mrg666 - ipv4: Kill ip_rt_frag_needed(). There is zero point to this function.
+ ion-storm - remove unused NET/SCSI drivers
+ ion-storm - enable CODEL net scheduler
+ Vijay Subramanian - net: fq_codel: Fix off-by-one error
+ Eric Dumazet - fq_codel: dont reinit flow state
+ Eric Dumazet - codel: refine one condition to avoid a nul rec_inv_sqrt
+ Eric Dumazet - fq_codel: should use qdisc backlog as threshold
+ Eric Dumazet - codel: use u16 field instead of 31bits for rec_inv_sqrt
+ Eric Dumazet - codel: use Newton method instead of sqrt() and divides
+ Sasha Levin - net: codel: fix build errors
+ Geert Uytterhoeven - net/codel: Add missing #include <linux/prefetch.h>
+ Eric Dumazet - fq_codel: Fair Queue Codel AQM
+ Eric Dumazet - codel: Controlled Delay AQM
+ ion-storm - remove crap from defconfig, disable mediatuner as well
+ mrg666 - sched: disable gentle fair sleepers
+ ion-storm - Unhide DEBUG_BUGVERBOSE when EXPERT=y, even if DEBUG_KERNEL=n
+ ion-storm - revert: debug: Make CONFIG_EXPERT select CONFIG_DEBUG_KERNEL to unhide debug options
+ ion-storm - Various small tweaks from morfic (thx to LaboDJ)
+ ion-storm - IO: removed usless test & debug things
+ anarkia1976 - fs: dcache: set vfs_cache_pressure 40%
+ ion-storm - mm: Adjust dirty writeback for IO boost
+ ion-storm - after someone with a nexus 4 flashed this nexus 5 kernel, this is getting added
+ ion-storm - Add Synapse/UKM Auto installer
+ Deepak Verma - msm: vidc: Initialize kernel space stack variables
+ Federico Vaga - serial_core.c: add put_device() after device_find_child()
+ Alan Cox - tty: Allow uart_register/unregister/register
+ Al Viro - vt: synchronize_rcu() under spinlock is not nice...
+ Takashi Iwai - fb: Yet another band-aid for fixing lockdep mess
+ Alan Cox - fb: rework locking to fix lock ordering on takeover
+ Dave Airlie - vgacon/vt: clear buffer attributes when we load a 512 character font (v2)
+ Jason Wessel - kdb,vt_console: Fix missed data due to pager overruns
+ Christopher Brannon - tty: keyboard.c: Remove locking from vt_get_leds.
+ Oleg Nesterov - tty: set_termios/set_termiox should not return -EINTR
+ Ilya Zykov - tty: Correct tty buffer flush.
+ Linus Torvalds - tty: fix up atime/mtime mess, take three
+ Jiri Slaby - TTY: fix atime/mtime regression
+ Jiri Slaby - TTY: do not update atime/mtime on read/write
+ Jiri Slaby - TTY: do not reset master's packet mode
+ Wang YanQing - TTY: Fix tty miss restart after we turn off flow-control
+ Stanislav Kozina - Remove BUG_ON from n_tty_read()
+ sireesha kosuri - msm: wlan: 2.4 GHz Channel Range for Mexico
+ Girish Mahadevan - ARM: dts: Modify BKE limiting for Krait master
+ Girish Mahadevan - ARM: dts: Reintroduce dual config for CPU on msm8974
+ Neil Leeder - ARM: dts: msm: BIMC for 8974 class devices
+ Girish Mahadevan - msm: msm_bus: Fix inadvertent stomp on BKE_EN register
+ Girish Mahadevan - msm: msm_bus: Prevent BKE swtich from overwriting other fields
+ Sana Venkat Raju - msm: msm_bus: Correct Error string while reading Clients pdata
+ Ke Liu - msm: msm_bus: export msm_bus_fabric_init_driver
+ Girish Mahadevan - msm: msm_bus: Introduce multi level BKE limiting.
+ Dan Sneddon - msm: msm_bus: Only set clock rate on unset clocks.
+ Girish Mahadevan - msm: msm_bus: Don't divide RPM BW requests
+ Swetha Chikkaboraiah - mach-msm:bus_config:fix possible missing error check
+ Girish Mahadevan - msm: msm_bus: Modify IB aggregation at master
+ Girish Mahadevan - msm: msm_bus: Allow QOS address offset to be configurable
+ Girish Mahadevan - msm: msm_bus: Arbitrate IB for dual config masters
+ Girish Mahadevan - msm: msm_bus: Don't program bw regs in dual config
+ Gagan Mac - msm: msm_bus: Add checks during bus client unregistration
+ Gagan Mac - msm: msm_bus: Correct the return value from register-client
+ Gagan Mac - msm: msm_bus: Don't touch ID array in case of invalid IDs
+ Syed Rameez Mustafa - msm: msm_bus: fix memory leak in msm_bus_fabric_probe
+ Girish Mahadevan - msm: msm_bus: Changes for QOS computation at BIMC
+ Sagar Dharia - msm: msm_bus: Change priority overrides based on master configuration
+ Patrick Daly - nf: IDLETIMER: Fix possible use before initialization in idletimer_resume
+ Chet Kener - mach-msm: Remove smd debugging
+ Chet Kener - i2c: Drop missing things to 19.2 MHz
+ anarkia1976 - xz: Optimize Sfck Compression
+ ion-storm - Disable Tracer Part 2
+ ion-storm - this should be in cleaner not init
+ Chet Kener - Disable Tracer
+ franciscofranco - audit: Imma let you finish, but shut up
+ dorimanx - Always set noatime no diratime on all partitions! I/O Boost! V2
+ dorimanx - Always set noatime no diratime on all partitions! I/O Boost!
+ ion-storm - Underclock down to 96mhz
+ ion-storm - update cleaner, 99defcon & updater script
+ ion-storm - clean up zImages
+ ion-storm - add io_is_busy, update freq's and enable alucard hotplug
+ ion-storm - remove these files. no longer needed, update gitignore
+ ion-storm - cpufreq: Introduce new relation for freq selection
+ ion-storm - defconfig: enable darkness, alucard cpufreq
+ ion-storm - import darkness cpu governor & fix Kconfig/Makefile/cpufreq.h for Alucard cpufreq
+ ion-storm - Merged Latest Version of Alucard HotPlug & Alucard CPU Governor by @Alucard24
+ ion-storm - Add Unleashed defconfig
+ ion-storm - cpufreq: Import HYPER, INTELLIACTIVE, NIGHTMARE, PEGASUSQ cpu governors
+ ion-storm - update 99defcon,cleaner,export, set intelli_plug as default
+ ion-storm - add myself to KBUILD_BUILD_USER
+ ion-storm - update export
+ ion-storm - update update-binary
+ ion-storm - add anykernel
+ ion-storm - import Unleashed Makefile
+ Pranav Vashi - msm: limiter: Introduce initial multi cpu control
+ Pranav Vashi - drivers: cpufreq: Upstream optimizations
+

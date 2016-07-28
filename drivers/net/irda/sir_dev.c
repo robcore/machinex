@@ -274,7 +274,7 @@ static void sirdev_config_fsm(struct work_struct *work)
 		fsm->state = next_state;
 	} while(!delay);
 
-	queue_delayed_work(irda_sir_wq, &fsm->work, msecs_to_jiffies(delay));
+	mod_delayed_work(irda_sir_wq, &fsm->work, msecs_to_jiffies(delay));
 }
 
 /* schedule some device configuration task for execution by kIrDAd
@@ -312,7 +312,7 @@ int sirdev_schedule_request(struct sir_dev *dev, int initial_state, unsigned par
 	fsm->result = 0;
 
 	INIT_DELAYED_WORK(&fsm->work, sirdev_config_fsm);
-	queue_delayed_work(irda_sir_wq, &fsm->work, 0);
+	mod_delayed_work(irda_sir_wq, &fsm->work, 0);
 	return 0;
 }
 

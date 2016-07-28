@@ -193,7 +193,7 @@ static void _add_bcast_packet_to_list(struct bat_priv *bat_priv,
 	/* start timer for this packet */
 	INIT_DELAYED_WORK(&forw_packet->delayed_work,
 			  send_outstanding_bcast_packet);
-	queue_delayed_work(bat_event_workqueue, &forw_packet->delayed_work,
+	mod_delayed_work(bat_event_workqueue, &forw_packet->delayed_work,
 			   send_time);
 }
 

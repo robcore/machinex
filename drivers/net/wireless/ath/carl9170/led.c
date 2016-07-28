@@ -98,7 +98,7 @@ static void carl9170_led_update(struct work_struct *work)
 	if (!rerun)
 		return;
 
-	ieee80211_queue_delayed_work(ar->hw,
+	ieee80211_mod_delayed_work(ar->hw,
 				     &ar->led_work,
 				     msecs_to_jiffies(blink_delay));
 }
@@ -118,7 +118,7 @@ static void carl9170_led_set_brightness(struct led_classdev *led,
 	}
 
 	if (likely(IS_ACCEPTING_CMD(ar) && arl->toggled))
-		ieee80211_queue_delayed_work(ar->hw, &ar->led_work, HZ / 10);
+		ieee80211_mod_delayed_work(ar->hw, &ar->led_work, HZ / 10);
 }
 
 static int carl9170_led_register_led(struct ar9170 *ar, int i, char *name,

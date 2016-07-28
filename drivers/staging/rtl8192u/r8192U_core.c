@@ -2455,7 +2455,7 @@ static int rtl8192_handle_beacon(struct net_device * dev,
 	struct r8192_priv *priv = ieee80211_priv(dev);
 
 	rtl8192_qos_handle_probe_response(priv,1,network);
-	queue_delayed_work(priv->priv_wq, &priv->update_beacon_wq, 0);
+	mod_delayed_work(priv->priv_wq, &priv->update_beacon_wq, 0);
 	return 0;
 
 }
@@ -4156,7 +4156,7 @@ void watch_dog_timer_callback(unsigned long data)
 {
 	struct r8192_priv *priv = ieee80211_priv((struct net_device *) data);
 	//printk("===============>watch_dog  timer\n");
-	queue_delayed_work(priv->priv_wq,&priv->watch_dog_wq, 0);
+	mod_delayed_work(priv->priv_wq,&priv->watch_dog_wq, 0);
 	mod_timer(&priv->watch_dog_timer, jiffies + MSECS(IEEE80211_WATCH_DOG_TIME));
 }
 int _rtl8192_up(struct net_device *dev)

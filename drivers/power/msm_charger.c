@@ -572,7 +572,7 @@ static void handle_battery_inserted(void)
 
 		dev_info(msm_chg.dev, "%s: starting safety timer work\n",
 				__func__);
-		queue_delayed_work(msm_chg.event_wq_thread,
+		mod_delayed_work(msm_chg.event_wq_thread,
 					&msm_chg.teoc_work,
 				      round_jiffies_relative(msecs_to_jiffies
 							     (msm_chg.
@@ -641,7 +641,7 @@ static void update_heartbeat(struct work_struct *work)
 		msm_chg.stop_update = 0;
 		return;
 	}
-	queue_delayed_work(msm_chg.event_wq_thread,
+	mod_delayed_work(msm_chg.event_wq_thread,
 				&msm_chg.update_heartbeat_work,
 			      round_jiffies_relative(msecs_to_jiffies
 						     (msm_chg.update_time)));
@@ -704,7 +704,7 @@ static void handle_charger_ready(struct msm_hardware_charger_priv *hw_chg_priv)
 			if (!is_batt_status_charging()) {
 				dev_info(msm_chg.dev,
 				       "%s: starting safety timer\n", __func__);
-				queue_delayed_work(msm_chg.event_wq_thread,
+				mod_delayed_work(msm_chg.event_wq_thread,
 							&msm_chg.teoc_work,
 						      round_jiffies_relative
 						      (msecs_to_jiffies
@@ -1010,7 +1010,7 @@ static int determine_initial_batt_status(void)
 
 	/* start updaing the battery powersupply every msm_chg.update_time
 	 * milliseconds */
-	queue_delayed_work(msm_chg.event_wq_thread,
+	mod_delayed_work(msm_chg.event_wq_thread,
 				&msm_chg.update_heartbeat_work,
 			      round_jiffies_relative(msecs_to_jiffies
 						     (msm_chg.update_time)));
@@ -1204,7 +1204,7 @@ static int msm_charger_resume(struct device *dev)
 	msm_chg.stop_update = 0;
 	/* start updaing the battery powersupply every msm_chg.update_time
 	 * milliseconds */
-	queue_delayed_work(msm_chg.event_wq_thread,
+	mod_delayed_work(msm_chg.event_wq_thread,
 				&msm_chg.update_heartbeat_work,
 			      round_jiffies_relative(msecs_to_jiffies
 						     (msm_chg.update_time)));

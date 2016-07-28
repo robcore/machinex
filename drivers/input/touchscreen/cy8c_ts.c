@@ -323,7 +323,7 @@ static irqreturn_t cy8c_ts_irq(int irq, void *dev_id)
 
 	disable_irq_nosync(irq);
 
-	queue_delayed_work(ts->wq, &ts->work, 0);
+	mod_delayed_work(ts->wq, &ts->work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -494,7 +494,7 @@ static int cy8c_ts_resume(struct device *dev)
 			ts->int_pending = false;
 
 			/* start a delayed work */
-			queue_delayed_work(ts->wq, &ts->work, 0);
+			mod_delayed_work(ts->wq, &ts->work, 0);
 		}
 		mutex_unlock(&ts->sus_lock);
 

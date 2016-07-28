@@ -488,7 +488,7 @@ static void pmic_battery_monitor(struct work_struct *work)
 
 	/* update pmic_power_module_info members */
 	pmic_battery_read_status(pbi);
-	queue_delayed_work(pbi->monitor_wqueue, &pbi->monitor_battery, HZ * 10);
+	mod_delayed_work(pbi->monitor_wqueue, &pbi->monitor_battery, HZ * 10);
 }
 
 /**
@@ -704,7 +704,7 @@ static __devinit int probe(int irq, struct device *dev)
 		"registration with power supply subsystem successful\n",
 		__func__);
 
-	queue_delayed_work(pbi->monitor_wqueue, &pbi->monitor_battery, HZ * 1);
+	mod_delayed_work(pbi->monitor_wqueue, &pbi->monitor_battery, HZ * 1);
 
 	/* register pmic-usb with power supply subsystem */
 	pbi->usb.name = "pmic-usb";

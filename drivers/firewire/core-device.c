@@ -739,7 +739,7 @@ EXPORT_SYMBOL(fw_workqueue);
 static void fw_schedule_device_work(struct fw_device *device,
 				    unsigned long delay)
 {
-	queue_delayed_work(fw_workqueue, &device->work, delay);
+	mod_delayed_work(fw_workqueue, &device->work, delay);
 }
 
 /*

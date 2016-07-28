@@ -1691,7 +1691,7 @@ static void omapfb_auto_update_work(struct work_struct *work)
 	freq = auto_update_freq;
 	if (freq == 0)
 		freq = 20;
-	queue_delayed_work(fbdev->auto_update_wq,
+	mod_delayed_work(fbdev->auto_update_wq,
 			&d->auto_update_work, HZ / freq);
 }
 

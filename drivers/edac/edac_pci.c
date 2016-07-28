@@ -244,7 +244,7 @@ static void edac_pci_workq_function(struct work_struct *work_req)
 			delay = msecs_to_jiffies(msec);
 
 		/* Reschedule only if we are in POLL mode */
-		queue_delayed_work(edac_workqueue, &pci->work, delay);
+		mod_delayed_work(edac_workqueue, &pci->work, delay);
 	}
 
 	mutex_unlock(&edac_pci_ctls_mutex);
@@ -264,7 +264,7 @@ static void edac_pci_workq_setup(struct edac_pci_ctl_info *pci,
 	debugf0("%s()\n", __func__);
 
 	INIT_DELAYED_WORK(&pci->work, edac_pci_workq_function);
-	queue_delayed_work(edac_workqueue, &pci->work,
+	mod_delayed_work(edac_workqueue, &pci->work,
 			msecs_to_jiffies(edac_pci_get_poll_msec()));
 }
 

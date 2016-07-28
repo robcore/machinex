@@ -408,7 +408,7 @@ static void vub300_queue_cmnd_work(struct vub300_mmc_host *vub300)
 static void vub300_queue_poll_work(struct vub300_mmc_host *vub300, int delay)
 {
 	kref_get(&vub300->kref);
-	if (queue_delayed_work(pollworkqueue, &vub300->pollwork, delay)) {
+	if (mod_delayed_work(pollworkqueue, &vub300->pollwork, delay)) {
 		/*
 		 * then the pollworkqueue was not previously
 		 * running and the above get ref is obvious

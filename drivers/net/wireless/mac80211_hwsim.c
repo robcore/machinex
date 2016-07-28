@@ -1184,7 +1184,7 @@ static int mac80211_hwsim_hw_scan(struct ieee80211_hw *hw,
 	print_hex_dump(KERN_DEBUG, "scan IEs: ", DUMP_PREFIX_OFFSET,
 			16, 1, req->ie, req->ie_len, 1);
 
-	ieee80211_queue_delayed_work(hw, &hsd->w, 2 * HZ);
+	ieee80211_mod_delayed_work(hw, &hsd->w, 2 * HZ);
 
 	return 0;
 }

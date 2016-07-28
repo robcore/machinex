@@ -6035,7 +6035,7 @@ void ocfs2_schedule_truncate_log_flush(struct ocfs2_super *osb,
 		if (cancel)
 			cancel_delayed_work(&osb->osb_truncate_log_wq);
 
-		queue_delayed_work(ocfs2_wq, &osb->osb_truncate_log_wq,
+		mod_delayed_work(ocfs2_wq, &osb->osb_truncate_log_wq,
 				   OCFS2_TRUNCATE_LOG_FLUSH_INTERVAL);
 	}
 }

@@ -496,7 +496,7 @@ void mdss_mdp_clk_ctrl(int enable, int isr)
 	if (isr) {
 		/* if it's power off send workqueue to turn off clocks */
 		if (mdss_res->clk_ena && !atomic_read(&clk_ref))
-			queue_delayed_work(mdss_res->clk_ctrl_wq,
+			mod_delayed_work(mdss_res->clk_ctrl_wq,
 					   &mdss_res->clk_ctrl_worker,
 					   mdss_res->timeout);
 	} else {
@@ -512,7 +512,7 @@ void mdss_mdp_clk_ctrl(int enable, int isr)
 				mdss_mdp_clk_ctrl_update(false);
 			} else {
 				/* send workqueue to turn off mdp power */
-				queue_delayed_work(mdss_res->clk_ctrl_wq,
+				mod_delayed_work(mdss_res->clk_ctrl_wq,
 						   &mdss_res->clk_ctrl_worker,
 						   mdss_res->timeout);
 			}

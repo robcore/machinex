@@ -434,7 +434,7 @@ mpt_fault_reset_work(struct work_struct *work)
 	/* rearm the timer */
 	spin_lock_irqsave(&ioc->taskmgmt_lock, flags);
 	if (ioc->reset_work_q)
-		queue_delayed_work(ioc->reset_work_q, &ioc->fault_reset_work,
+		mod_delayed_work(ioc->reset_work_q, &ioc->fault_reset_work,
 			msecs_to_jiffies(MPT_POLLING_INTERVAL));
 	spin_unlock_irqrestore(&ioc->taskmgmt_lock, flags);
 }
@@ -2044,7 +2044,7 @@ mpt_attach(struct pci_dev *pdev, const struct pci_device_id *id)
 #endif
 
 	if (!ioc->alt_ioc)
-		queue_delayed_work(ioc->reset_work_q, &ioc->fault_reset_work,
+		mod_delayed_work(ioc->reset_work_q, &ioc->fault_reset_work,
 			msecs_to_jiffies(MPT_POLLING_INTERVAL));
 
 	return 0;

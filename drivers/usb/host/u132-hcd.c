@@ -310,9 +310,9 @@ static void u132_ring_requeue_work(struct u132 *u132, struct u132_ring *ring,
 	unsigned int delta)
 {
 	if (delta > 0) {
-		if (queue_delayed_work(workqueue, &ring->scheduler, delta))
+		if (mod_delayed_work(workqueue, &ring->scheduler, delta))
 			return;
-	} else if (queue_delayed_work(workqueue, &ring->scheduler, 0))
+	} else if (mod_delayed_work(workqueue, &ring->scheduler, 0))
 		return;
 	kref_put(&u132->kref, u132_hcd_delete);
 }
@@ -389,7 +389,7 @@ static inline void u132_endp_init_kref(struct u132 *u132,
 static void u132_endp_queue_work(struct u132 *u132, struct u132_endp *endp,
 	unsigned int delta)
 {
-	if (queue_delayed_work(workqueue, &endp->scheduler, delta))
+	if (mod_delayed_work(workqueue, &endp->scheduler, delta))
 		kref_get(&endp->kref);
 }
 
@@ -406,13 +406,13 @@ static inline void u132_monitor_put_kref(struct u132 *u132)
 
 static void u132_monitor_queue_work(struct u132 *u132, unsigned int delta)
 {
-	if (queue_delayed_work(workqueue, &u132->monitor, delta))
+	if (mod_delayed_work(workqueue, &u132->monitor, delta))
 		kref_get(&u132->kref);
 }
 
 static void u132_monitor_requeue_work(struct u132 *u132, unsigned int delta)
 {
-	if (!queue_delayed_work(workqueue, &u132->monitor, delta))
+	if (!mod_delayed_work(workqueue, &u132->monitor, delta))
 		kref_put(&u132->kref, u132_hcd_delete);
 }
 

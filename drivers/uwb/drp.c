@@ -558,7 +558,7 @@ static void uwb_cnflt_update_work(struct work_struct *work)
 		bitmap_or(rc->cnflt_alien_bitmap.bm, rc->cnflt_alien_bitmap.bm, c->mas.bm, UWB_NUM_MAS);			
 	}
 	
-	queue_delayed_work(rc->rsv_workq, &rc->rsv_alien_bp_work, usecs_to_jiffies(delay_us));
+	mod_delayed_work(rc->rsv_workq, &rc->rsv_alien_bp_work, usecs_to_jiffies(delay_us));
 
 	kfree(cnflt);
 	mutex_unlock(&rc->rsvs_mutex);
@@ -616,7 +616,7 @@ static void uwb_drp_handle_alien_drp(struct uwb_rc *rc, struct uwb_ie_drp *drp_i
 	/* update rc global conflicting alien bitmap */
 	bitmap_or(rc->cnflt_alien_bitmap.bm, rc->cnflt_alien_bitmap.bm, mas.bm, UWB_NUM_MAS);
 
-	queue_delayed_work(rc->rsv_workq, &rc->rsv_alien_bp_work, usecs_to_jiffies(delay_us));
+	mod_delayed_work(rc->rsv_workq, &rc->rsv_alien_bp_work, usecs_to_jiffies(delay_us));
 	
 	/* start the timer */
 	uwb_cnflt_alien_stroke_timer(cnflt);

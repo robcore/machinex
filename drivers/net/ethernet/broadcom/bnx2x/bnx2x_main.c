@@ -1784,7 +1784,7 @@ irqreturn_t bnx2x_interrupt(int irq, void *dev_instance)
 #endif
 
 	if (unlikely(status & 0x1)) {
-		queue_delayed_work(bnx2x_wq, &bp->sp_task, 0);
+		mod_delayed_work(bnx2x_wq, &bp->sp_task, 0);
 
 		status &= ~0x1;
 		if (!status)
@@ -2183,7 +2183,7 @@ u8 bnx2x_initial_phy_init(struct bnx2x *bp, int load_mode)
 			bnx2x_stats_handle(bp, STATS_EVENT_LINK_UP);
 			bnx2x_link_report(bp);
 		} else
-			queue_delayed_work(bnx2x_wq, &bp->period_task, 0);
+			mod_delayed_work(bnx2x_wq, &bp->period_task, 0);
 		bp->link_params.req_line_speed[cfx_idx] = req_line_speed;
 		return rc;
 	}
@@ -2550,7 +2550,7 @@ static void bnx2x_pmf_update(struct bnx2x *bp)
 	smp_mb();
 
 	/* queue a periodic task */
-	queue_delayed_work(bnx2x_wq, &bp->period_task, 0);
+	mod_delayed_work(bnx2x_wq, &bp->period_task, 0);
 
 	bnx2x_dcbx_pmf_update(bp);
 
@@ -4810,7 +4810,7 @@ irqreturn_t bnx2x_msix_sp_int(int irq, void *dev_instance)
 		rcu_read_unlock();
 	}
 #endif
-	queue_delayed_work(bnx2x_wq, &bp->sp_task, 0);
+	mod_delayed_work(bnx2x_wq, &bp->sp_task, 0);
 
 	return IRQ_HANDLED;
 }
@@ -8768,7 +8768,7 @@ static void bnx2x_period_task(struct work_struct *work)
 		bnx2x_period_func(&bp->link_params, &bp->link_vars);
 
 		/* Re-queue task in 1 sec */
-		queue_delayed_work(bnx2x_wq, &bp->period_task, 1*HZ);
+		mod_delayed_work(bnx2x_wq, &bp->period_task, 1*HZ);
 	}
 
 	bnx2x_release_phy_lock(bp);

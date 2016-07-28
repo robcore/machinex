@@ -1476,7 +1476,7 @@ static void beacon_watchdog_handler(struct work_struct *work)
 	}
 
 rearm:
-	queue_delayed_work(zd_workqueue, &mac->beacon.watchdog_work,
+	mod_delayed_work(zd_workqueue, &mac->beacon.watchdog_work,
 			   BEACON_WATCHDOG_DELAY);
 }
 
@@ -1490,7 +1490,7 @@ static void beacon_enable(struct zd_mac *mac)
 	dev_dbg_f(zd_mac_dev(mac), "\n");
 
 	mac->beacon.last_update = jiffies;
-	queue_delayed_work(zd_workqueue, &mac->beacon.watchdog_work,
+	mod_delayed_work(zd_workqueue, &mac->beacon.watchdog_work,
 			   BEACON_WATCHDOG_DELAY);
 }
 
@@ -1525,7 +1525,7 @@ static void link_led_handler(struct work_struct *work)
 		dev_dbg_f(zd_mac_dev(mac), "zd_chip_control_leds error %d\n", r);
 
 requeue:
-	queue_delayed_work(zd_workqueue, &mac->housekeeping.link_led_work,
+	mod_delayed_work(zd_workqueue, &mac->housekeeping.link_led_work,
 		           LINK_LED_WORK_DELAY);
 }
 
@@ -1537,7 +1537,7 @@ static void housekeeping_init(struct zd_mac *mac)
 static void housekeeping_enable(struct zd_mac *mac)
 {
 	dev_dbg_f(zd_mac_dev(mac), "\n");
-	queue_delayed_work(zd_workqueue, &mac->housekeeping.link_led_work,
+	mod_delayed_work(zd_workqueue, &mac->housekeeping.link_led_work,
 			   0);
 }
 

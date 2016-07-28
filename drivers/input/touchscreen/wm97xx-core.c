@@ -336,7 +336,7 @@ static void wm97xx_pen_irq_worker(struct work_struct *work)
 	if (!wm->mach_ops->acc_enabled || wm->mach_ops->acc_pen_down) {
 		if (wm->pen_is_down && !pen_was_down) {
 			/* Data is not available immediately on pen down */
-			queue_delayed_work(wm->ts_workq, &wm->ts_reader, 1);
+			mod_delayed_work(wm->ts_workq, &wm->ts_reader, 1);
 		}
 
 		/* Let ts_reader report the pen up for debounce. */
@@ -474,7 +474,7 @@ static void wm97xx_ts_reader(struct work_struct *work)
 	} while (rc & RC_AGAIN);
 
 	if (wm->pen_is_down || !wm->pen_irq)
-		queue_delayed_work(wm->ts_workq, &wm->ts_reader,
+		mod_delayed_work(wm->ts_workq, &wm->ts_reader,
 				   wm->ts_reader_interval);
 }
 
@@ -519,7 +519,7 @@ static int wm97xx_ts_input_open(struct input_dev *idev)
 	 * failed to acquire it then we need to poll.
 	 */
 	if (wm->pen_irq == 0)
-		queue_delayed_work(wm->ts_workq, &wm->ts_reader,
+		mod_delayed_work(wm->ts_workq, &wm->ts_reader,
 				   wm->ts_reader_interval);
 
 	return 0;
@@ -781,7 +781,7 @@ static int wm97xx_resume(struct device *dev)
 
 	if (wm->input_dev->users && !wm->pen_irq) {
 		wm->ts_reader_interval = wm->ts_reader_min_interval;
-		queue_delayed_work(wm->ts_workq, &wm->ts_reader,
+		mod_delayed_work(wm->ts_workq, &wm->ts_reader,
 				   wm->ts_reader_interval);
 	}
 

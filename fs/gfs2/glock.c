@@ -563,7 +563,7 @@ __acquires(&gl->gl_spin)
 		GLOCK_BUG_ON(gl, ret);
 	} else { /* lock_nolock */
 		finish_xmote(gl, target);
-		if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+		if (mod_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 			gfs2_glock_put(gl);
 	}
 
@@ -636,7 +636,7 @@ out_sched:
 	clear_bit(GLF_LOCK, &gl->gl_flags);
 	smp_mb__after_clear_bit();
 	gfs2_glock_hold(gl);
-	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+	if (mod_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 		gfs2_glock_put_nolock(gl);
 	return;
 
@@ -700,7 +700,7 @@ static void glock_work_func(struct work_struct *work)
 	else {
 		if (gl->gl_name.ln_type != LM_TYPE_INODE)
 			delay = 0;
-		if (queue_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
+		if (mod_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
 			gfs2_glock_put(gl);
 	}
 	if (drop_ref)
@@ -1133,7 +1133,7 @@ void gfs2_glock_dq(struct gfs2_holder *gh)
 	    !test_bit(GLF_DEMOTE, &gl->gl_flags) &&
 	    gl->gl_name.ln_type == LM_TYPE_INODE)
 		delay = gl->gl_hold_time;
-	if (queue_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
+	if (mod_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
 		gfs2_glock_put(gl);
 }
 
@@ -1323,7 +1323,7 @@ void gfs2_glock_cb(struct gfs2_glock *gl, unsigned int state)
 	spin_lock(&gl->gl_spin);
 	handle_callback(gl, state, delay);
 	spin_unlock(&gl->gl_spin);
-	if (queue_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
+	if (mod_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
 		gfs2_glock_put(gl);
 }
 
@@ -1385,7 +1385,7 @@ void gfs2_glock_complete(struct gfs2_glock *gl, int ret)
 	set_bit(GLF_REPLY_PENDING, &gl->gl_flags);
 	smp_wmb();
 	gfs2_glock_hold(gl);
-	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+	if (mod_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 		gfs2_glock_put(gl);
 }
 
@@ -1425,7 +1425,7 @@ static int gfs2_shrink_glock_memory(struct shrinker *shrink,
 			}
 			clear_bit(GLF_LOCK, &gl->gl_flags);
 			smp_mb__after_clear_bit();
-			if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+			if (mod_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 				gfs2_glock_put_nolock(gl);
 			spin_unlock(&gl->gl_spin);
 			spin_lock(&lru_lock);
@@ -1494,7 +1494,7 @@ static void thaw_glock(struct gfs2_glock *gl)
 		return;
 	set_bit(GLF_REPLY_PENDING, &gl->gl_flags);
 	gfs2_glock_hold(gl);
-	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+	if (mod_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 		gfs2_glock_put(gl);
 }
 
@@ -1513,7 +1513,7 @@ static void clear_glock(struct gfs2_glock *gl)
 		handle_callback(gl, LM_ST_UNLOCKED, 0);
 	spin_unlock(&gl->gl_spin);
 	gfs2_glock_hold(gl);
-	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+	if (mod_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 		gfs2_glock_put(gl);
 }
 

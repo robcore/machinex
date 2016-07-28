@@ -562,7 +562,7 @@ void wl12xx_rearm_tx_watchdog_locked(struct wl1271 *wl)
 		return;
 
 	cancel_delayed_work(&wl->tx_watchdog_work);
-	ieee80211_queue_delayed_work(wl->hw, &wl->tx_watchdog_work,
+	ieee80211_mod_delayed_work(wl->hw, &wl->tx_watchdog_work,
 		msecs_to_jiffies(wl->conf.tx.tx_watchdog_timeout));
 }
 

@@ -289,7 +289,7 @@ void rds_iw_send_cq_comp_handler(struct ib_cq *cq, void *context)
 
 		if (test_and_clear_bit(RDS_LL_SEND_FULL, &conn->c_flags) ||
 		    test_bit(0, &conn->c_map_queued))
-			queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+			mod_delayed_work(rds_wq, &conn->c_send_w, 0);
 
 		/* We expect errors as the qp is drained during shutdown */
 		if (wc.status != IB_WC_SUCCESS && rds_conn_up(conn)) {
@@ -412,7 +412,7 @@ void rds_iw_send_add_credits(struct rds_connection *conn, unsigned int credits)
 
 	atomic_add(IB_SET_SEND_CREDITS(credits), &ic->i_credits);
 	if (test_and_clear_bit(RDS_LL_SEND_FULL, &conn->c_flags))
-		queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+		mod_delayed_work(rds_wq, &conn->c_send_w, 0);
 
 	WARN_ON(IB_GET_SEND_CREDITS(credits) >= 16384);
 

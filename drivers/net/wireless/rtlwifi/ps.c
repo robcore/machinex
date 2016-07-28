@@ -227,7 +227,7 @@ void rtl_ips_nic_off(struct ieee80211_hw *hw)
 	 *to disable nic quickly after scan before linking,
 	 *this will cause link failed, so we delay 100ms here
 	 */
-	queue_delayed_work(rtlpriv->works.rtl_wq,
+	mod_delayed_work(rtlpriv->works.rtl_wq,
 			   &rtlpriv->works.ips_nic_off_wq, MSECS(100));
 }
 
@@ -514,7 +514,7 @@ void rtl_swlps_beacon(struct ieee80211_hw *hw, void *data, unsigned int len)
 	if (!m_buffed) {
 		/* back to low-power land. and delay is
 		 * prevent null power save frame tx fail */
-		queue_delayed_work(rtlpriv->works.rtl_wq,
+		mod_delayed_work(rtlpriv->works.rtl_wq,
 				&rtlpriv->works.ps_work, MSECS(5));
 	} else {
 		RT_TRACE(rtlpriv, COMP_POWER, DBG_DMESG,
@@ -610,7 +610,7 @@ void rtl_swlps_rf_sleep(struct ieee80211_hw *hw)
 		 rtlpriv->psc.dtim_counter, sleep_intv);
 
 	/* we tested that 40ms is enough for sw & hw sw delay */
-	queue_delayed_work(rtlpriv->works.rtl_wq, &rtlpriv->works.ps_rfon_wq,
+	mod_delayed_work(rtlpriv->works.rtl_wq, &rtlpriv->works.ps_rfon_wq,
 			MSECS(sleep_intv * mac->vif->bss_conf.beacon_int - 40));
 }
 

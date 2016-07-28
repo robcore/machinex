@@ -87,9 +87,9 @@ static void ath_btcoex_period_work(struct work_struct *work)
 	ath9k_hw_btcoex_enable(priv->ah);
 	timer_period = is_btscan ? btcoex->btscan_no_stomp :
 		btcoex->btcoex_no_stomp;
-	ieee80211_queue_delayed_work(priv->hw, &priv->duty_cycle_work,
+	ieee80211_mod_delayed_work(priv->hw, &priv->duty_cycle_work,
 				     msecs_to_jiffies(timer_period));
-	ieee80211_queue_delayed_work(priv->hw, &priv->coex_period_work,
+	ieee80211_mod_delayed_work(priv->hw, &priv->coex_period_work,
 				     msecs_to_jiffies(btcoex->btcoex_period));
 }
 
@@ -142,7 +142,7 @@ static void ath_htc_resume_btcoex_work(struct ath9k_htc_priv *priv)
 	btcoex->bt_priority_cnt = 0;
 	btcoex->bt_priority_time = jiffies;
 	priv->op_flags &= ~(OP_BT_PRIORITY_DETECTED | OP_BT_SCAN);
-	ieee80211_queue_delayed_work(priv->hw, &priv->coex_period_work, 0);
+	ieee80211_mod_delayed_work(priv->hw, &priv->coex_period_work, 0);
 }
 
 

@@ -689,7 +689,7 @@ static irqreturn_t octeon_cf_interrupt(int irq, void *dev_instance)
 				cvmx_write_csr(CVMX_MIO_BOOT_DMA_INTX(ocd->dma_engine),
 					       dma_int.u64);
 
-				queue_delayed_work(cf_port->wq,
+				mod_delayed_work(cf_port->wq,
 						   &cf_port->delayed_finish, 1);
 				handled = 1;
 			} else {
@@ -726,7 +726,7 @@ static void octeon_cf_delayed_finish(struct work_struct *work)
 	status = ioread8(ap->ioaddr.altstatus_addr);
 	if (status & (ATA_BUSY | ATA_DRQ)) {
 		/* Still busy, try again. */
-		queue_delayed_work(cf_port->wq,
+		mod_delayed_work(cf_port->wq,
 				   &cf_port->delayed_finish, 1);
 		goto out;
 	}

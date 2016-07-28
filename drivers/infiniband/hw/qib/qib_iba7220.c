@@ -3535,7 +3535,7 @@ static void try_7220_autoneg(struct qib_pportdata *ppd)
 
 	toggle_7220_rclkrls(ppd->dd);
 	/* 2 msec is minimum length of a poll cycle */
-	queue_delayed_work(ib_wq, &ppd->cpspec->autoneg_work,
+	mod_delayed_work(ib_wq, &ppd->cpspec->autoneg_work,
 			   msecs_to_jiffies(2));
 }
 
