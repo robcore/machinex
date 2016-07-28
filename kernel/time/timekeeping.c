@@ -35,7 +35,7 @@ __cacheline_aligned_in_smp DEFINE_SEQLOCK(xtime_lock);
 int __read_mostly timekeeping_suspended;
 
 /* Flag for if there is a persistent clock on this platform */
-bool __read_mostly persistent_clock_exist = false;
+bool __read_mostly persistent_clock_exist = true;
 
 /**
  * timekeeper_setup_internals - Set up internals to use clocksource clock.
