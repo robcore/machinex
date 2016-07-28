@@ -3496,6 +3496,7 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 		switch (phy->state) {
 		case OTG_STATE_B_IDLE:
 		case OTG_STATE_B_PERIPHERAL:
+			clear_bit(B_SESS_VLD, &motg->inputs);
 			clear_bit(ID, &motg->inputs);
 			break;
 		default:
