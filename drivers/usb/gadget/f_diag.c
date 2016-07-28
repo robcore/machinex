@@ -28,7 +28,6 @@
 #include <linux/debugfs.h>
 #include <linux/kmemleak.h>
 
-
 static DEFINE_SPINLOCK(ch_lock);
 static LIST_HEAD(usb_diag_ch_list);
 
