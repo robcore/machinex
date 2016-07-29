@@ -20,7 +20,6 @@
 #include <linux/module.h>
 #include <linux/memory_alloc.h>
 #include <linux/memblock.h>
-#include <asm/memblock.h>
 #include <asm/pgtable.h>
 #include <asm/io.h>
 #include <asm/mach/map.h>
@@ -34,6 +33,7 @@
 #include <linux/completion.h>
 #include <linux/err.h>
 #endif
+#include <linux/android_pmem.h>
 #include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
 #include <linux/sched.h>
@@ -111,6 +111,34 @@ void invalidate_caches(unsigned long vstart,
 {
 	dmac_inv_range((void *)vstart, (void *) (vstart + length));
 	outer_inv_range(pstart, pstart + length);
+}
+
+void * __init alloc_bootmem_aligned(unsigned long size, unsigned long alignment)
+{
+	void *unused_addr = NULL;
+	unsigned long addr, tmp_size, unused_size;
+
+	/* Allocate maximum size needed, see where it ends up.
+	 * Then free it -- in this path there are no other allocators
+	 * so we can depend on getting the same address back
+	 * when we allocate a smaller piece that is aligned
+	 * at the end (if necessary) and the piece we really want,
+	 * then free the unused first piece.
+	 */
+
+	tmp_size = size + alignment - PAGE_SIZE;
+	addr = (unsigned long)alloc_bootmem(tmp_size);
+	free_bootmem(__pa(addr), tmp_size);
+
+	unused_size = alignment - (addr % alignment);
+	if (unused_size)
+		unused_addr = alloc_bootmem(unused_size);
+
+	addr = (unsigned long)alloc_bootmem(size);
+	if (unused_size)
+		free_bootmem(__pa(unused_addr), unused_size);
+
+	return (void *)addr;
 }
 
 char *memtype_name[] = {
@@ -201,19 +229,54 @@ static void __init adjust_reserve_sizes(void)
 
 static void __init reserve_memory_for_mempools(void)
 {
-	int memtype;
+	int i, memtype, membank_type;
 	struct memtype_reserve *mt;
-	phys_addr_t alignment;
+	struct membank *mb;
+	int ret;
+	unsigned long size;
 
 	mt = &reserve_info->memtype_reserve_table[0];
 	for (memtype = 0; memtype < MEMTYPE_MAX; memtype++, mt++) {
 		if (mt->flags & MEMTYPE_FLAGS_FIXED || !mt->size)
 			continue;
 
-		alignment = (mt->flags & MEMTYPE_FLAGS_1M_ALIGN) ?
-			SZ_1M : PAGE_SIZE;
-		mt->start = arm_memblock_steal(mt->size, alignment);
-		BUG_ON(!mt->start);
+		/* We know we will find memory bank(s) of the proper size
+		 * as we have limited the size of the memory pool for
+		 * each memory type to the largest total size of the memory
+		 * banks which are contiguous and of the correct memory type.
+		 * Choose the memory bank with the highest physical
+		 * address which is large enough, so that we will not
+		 * take memory from the lowest memory bank which the kernel
+		 * is in (and cause boot problems) and so that we might
+		 * be able to steal memory that would otherwise become
+		 * highmem. However, do not use unstable memory.
+		 */
+		for (i = meminfo.nr_banks - 1; i >= 0; i--) {
+			mb = &meminfo.bank[i];
+			membank_type =
+				reserve_info->paddr_to_memtype(mb->start);
+			if (memtype != membank_type)
+				continue;
+			size = total_stable_size(i);
+			if (size >= mt->size) {
+				size = stable_size(mb,
+					reserve_info->low_unstable_address);
+				if (!size)
+					continue;
+				/* mt->size may be larger than size, all this
+				 * means is that we are carving the memory pool
+				 * out of multiple contiguous memory banks.
+				 */
+				mt->start = mb->start + (size - mt->size);
+				ret = memblock_reserve(mt->start, mt->size);
+				BUG_ON(ret);
+				ret = memblock_free(mt->start, mt->size);
+				BUG_ON(ret);
+				ret = memblock_remove(mt->start, mt->size);
+				BUG_ON(ret);
+				break;
+			}
+		}
 	}
 }
 
@@ -274,7 +337,7 @@ void *allocate_contiguous_ebi(unsigned long size,
 }
 EXPORT_SYMBOL(allocate_contiguous_ebi);
 
-phys_addr_t allocate_contiguous_ebi_nomap(unsigned long size,
+unsigned long allocate_contiguous_ebi_nomap(unsigned long size,
 	unsigned long align)
 {
 	return _allocate_contiguous_memory_nomap(size, get_ebi_memtype(),
