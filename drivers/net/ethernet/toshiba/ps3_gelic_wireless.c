@@ -2271,7 +2271,7 @@ void gelic_wl_interrupt(struct net_device *netdev, u64 status)
 
 	if (status & GELIC_CARD_WLAN_EVENT_RECEIVED) {
 		pr_debug("%s:event received\n", __func__);
-		mod_delayed_work(wl->event_queue, &wl->event_work, 0);
+		queue_delayed_work(wl->event_queue, &wl->event_work, 0);
 	}
 }
 

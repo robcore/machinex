@@ -347,7 +347,7 @@ static irqreturn_t anx7808_cbl_det_isr(int irq, void *data)
 	if (gpio_get_value(anx7808->pdata->gpio_cbl_det)) {
 		wake_lock(&anx7808->slimport_lock);
 		pr_info("%s : detect cable insertion\n", __func__);
-		mod_delayed_work(anx7808->workqueue, &anx7808->work, 0);
+		queue_delayed_work(anx7808->workqueue, &anx7808->work, 0);
 	} else {
 		pr_info("%s : detect cable removal\n", __func__);
 		cancel_delayed_work_sync(&anx7808->work);
@@ -364,7 +364,7 @@ static void anx7808_work_func(struct work_struct *work)
 								work.work);
 
 	slimport_main_proc(td);
-	mod_delayed_work(td->workqueue, &td->work,
+	queue_delayed_work(td->workqueue, &td->work,
 			msecs_to_jiffies(300));
 #endif
 }

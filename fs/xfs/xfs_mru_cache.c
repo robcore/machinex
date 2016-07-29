@@ -208,7 +208,7 @@ _xfs_mru_cache_list_insert(
 		mru->time_zero = now;
 		if (!mru->queued) {
 			mru->queued = 1;
-			mod_delayed_work(xfs_mru_reap_wq, &mru->work,
+			queue_delayed_work(xfs_mru_reap_wq, &mru->work,
 			                   mru->grp_count * mru->grp_time);
 		}
 	} else {
@@ -295,7 +295,7 @@ _xfs_mru_cache_reap(
 			next = 0;
 		else
 			next -= now;
-		mod_delayed_work(xfs_mru_reap_wq, &mru->work, next);
+		queue_delayed_work(xfs_mru_reap_wq, &mru->work, next);
 	}
 
 	spin_unlock(&mru->lock);

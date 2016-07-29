@@ -213,7 +213,7 @@ psmouse_ret_t psmouse_process_byte(struct psmouse *psmouse)
 void psmouse_queue_work(struct psmouse *psmouse, struct delayed_work *work,
 		unsigned long delay)
 {
-	mod_delayed_work(kpsmoused_wq, work, delay);
+	queue_delayed_work(kpsmoused_wq, work, delay);
 }
 
 /*

@@ -29,9 +29,6 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-
-#define MIN_SAMPLING_RATE	10000
-
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler

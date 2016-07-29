@@ -1508,7 +1508,7 @@ static void do_waker(struct work_struct *ws)
 {
 	struct pool *pool = container_of(to_delayed_work(ws), struct pool, waker);
 	wake_worker(pool);
-	mod_delayed_work(pool->wq, &pool->waker, COMMIT_PERIOD);
+	queue_delayed_work(pool->wq, &pool->waker, COMMIT_PERIOD);
 }
 
 /*----------------------------------------------------------------*/

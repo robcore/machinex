@@ -1105,7 +1105,7 @@ static inline void hci_conn_start_rssi_timer(struct hci_conn *conn,
 	BT_DBG("conn %p, pending %d", conn,
 			delayed_work_pending(&conn->rssi_update_work));
 	if (!delayed_work_pending(&conn->rssi_update_work)) {
-		mod_delayed_work(hdev->workqueue, &conn->rssi_update_work,
+		queue_delayed_work(hdev->workqueue, &conn->rssi_update_work,
 				msecs_to_jiffies(interval));
 	}
 }

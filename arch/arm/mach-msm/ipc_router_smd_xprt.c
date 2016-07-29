@@ -285,7 +285,7 @@ static void smd_xprt_read_data(struct work_struct *work)
 			ipc_rtr_pkt = alloc_skb(sz, GFP_KERNEL);
 			if (!ipc_rtr_pkt) {
 				if (sz <= (PAGE_SIZE/2)) {
-					mod_delayed_work(
+					queue_delayed_work(
 						smd_xprtp->smd_xprt_wq,
 						&smd_xprtp->read_work,
 						msecs_to_jiffies(100));
@@ -374,7 +374,7 @@ static void msm_ipc_router_smd_remote_notify(void *_dev, unsigned event)
 	switch (event) {
 	case SMD_EVENT_DATA:
 		if (smd_read_avail(smd_xprtp->channel))
-			mod_delayed_work(smd_xprtp->smd_xprt_wq,
+			queue_delayed_work(smd_xprtp->smd_xprt_wq,
 					   &smd_xprtp->read_work, 0);
 		if (smd_write_avail(smd_xprtp->channel))
 			wake_up(&smd_xprtp->write_avail_wait_q);

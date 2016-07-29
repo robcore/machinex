@@ -759,7 +759,7 @@ il3945_hdl_alive(struct il_priv *il, struct il_rx_buf *rxb)
 	/* We delay the ALIVE response by 5ms to
 	 * give the HW RF Kill time to activate... */
 	if (palive->is_valid == UCODE_VALID_OK)
-		mod_delayed_work(il->workqueue, pwork, msecs_to_jiffies(5));
+		queue_delayed_work(il->workqueue, pwork, msecs_to_jiffies(5));
 	else
 		IL_WARN("uCode did not respond OK.\n");
 }
@@ -2503,7 +2503,7 @@ il3945_rfkill_poll(struct work_struct *data)
 
 	/* Keep this running, even if radio now enabled.  This will be
 	 * cancelled in mac_start() if system decides to start again */
-	mod_delayed_work(il->workqueue, &il->_3945.rfkill_poll,
+	queue_delayed_work(il->workqueue, &il->_3945.rfkill_poll,
 			   round_jiffies_relative(2 * HZ));
 
 }
@@ -2852,7 +2852,7 @@ il3945_mac_stop(struct ieee80211_hw *hw)
 	flush_workqueue(il->workqueue);
 
 	/* start polling the killswitch state again */
-	mod_delayed_work(il->workqueue, &il->_3945.rfkill_poll,
+	queue_delayed_work(il->workqueue, &il->_3945.rfkill_poll,
 			   round_jiffies_relative(2 * HZ));
 
 	D_MAC80211("leave\n");
@@ -3759,7 +3759,7 @@ il3945_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		       err);
 
 	/* Start monitoring the killswitch */
-	mod_delayed_work(il->workqueue, &il->_3945.rfkill_poll, 2 * HZ);
+	queue_delayed_work(il->workqueue, &il->_3945.rfkill_poll, 2 * HZ);
 
 	return 0;
 

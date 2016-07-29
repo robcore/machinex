@@ -1273,7 +1273,7 @@ static int __devinit pm8xxx_adc_probe(struct platform_device *pdev)
 
 	rc = devm_request_irq(&pdev->dev, adc_pmic->adc_irq,
 				pm8xxx_adc_isr,
-		IRQF_TRIGGER_RISING | IRQF_ONESHOT, "pm8xxx_adc_interrupt", adc_pmic);
+		IRQF_TRIGGER_RISING, "pm8xxx_adc_interrupt", adc_pmic);
 	if (rc) {
 		dev_err(&pdev->dev, "failed to request adc irq "
 						"with error %d\n", rc);
@@ -1287,7 +1287,7 @@ static int __devinit pm8xxx_adc_probe(struct platform_device *pdev)
 
 	rc = devm_request_irq(&pdev->dev, adc_pmic->btm_warm_irq,
 				pm8xxx_btm_warm_isr,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 			"pm8xxx_btm_warm_interrupt", adc_pmic);
 	if (rc) {
 		pr_err("btm warm irq failed %d with interrupt number %d\n",
@@ -1303,7 +1303,7 @@ static int __devinit pm8xxx_adc_probe(struct platform_device *pdev)
 
 	rc = devm_request_irq(&pdev->dev, adc_pmic->btm_cool_irq,
 				pm8xxx_btm_cool_isr,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 			"pm8xxx_btm_cool_interrupt", adc_pmic);
 	if (rc) {
 		pr_err("btm cool irq failed with return %d and number %d\n",

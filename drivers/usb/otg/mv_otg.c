@@ -87,7 +87,7 @@ static void mv_otg_run_state_machine(struct mv_otg *mvotg,
 	if (!mvotg->qwork)
 		return;
 
-	mod_delayed_work(mvotg->qwork, &mvotg->work, delay);
+	queue_delayed_work(mvotg->qwork, &mvotg->work, delay);
 }
 
 static void mv_otg_timer_await_bcon(unsigned long data)

@@ -1660,7 +1660,7 @@ i915_add_request(struct intel_ring_buffer *ring,
 				  msecs_to_jiffies(DRM_I915_HANGCHECK_PERIOD));
 		}
 		if (was_empty)
-			mod_delayed_work(dev_priv->wq,
+			queue_delayed_work(dev_priv->wq,
 					   &dev_priv->mm.retire_work, HZ);
 	}
 	return 0;
@@ -1879,7 +1879,7 @@ i915_gem_retire_work_handler(struct work_struct *work)
 
 	/* Come back later if the device is busy... */
 	if (!mutex_trylock(&dev->struct_mutex)) {
-		mod_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, HZ);
+		queue_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, HZ);
 		return;
 	}
 
@@ -1908,7 +1908,7 @@ i915_gem_retire_work_handler(struct work_struct *work)
 	}
 
 	if (!dev_priv->mm.suspended && !idle)
-		mod_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, HZ);
+		queue_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, HZ);
 
 	mutex_unlock(&dev->struct_mutex);
 }
@@ -3339,7 +3339,7 @@ i915_gem_ring_throttle(struct drm_device *dev, struct drm_file *file)
 	}
 
 	if (ret == 0)
-		mod_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, 0);
+		queue_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, 0);
 
 	return ret;
 }

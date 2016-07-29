@@ -1290,7 +1290,7 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 /*
  * determine how safe it is to execute the proposed program
  * - the caller must hold ->cred_guard_mutex to protect against
- *   PTRACE_ATTACH or seccomp thread-sync
+ *   PTRACE_ATTACH
  */
 static int check_unsafe_exec(struct linux_binprm *bprm)
 {

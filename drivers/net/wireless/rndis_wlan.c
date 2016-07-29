@@ -2000,7 +2000,7 @@ static int rndis_scan(struct wiphy *wiphy, struct net_device *dev,
 			delay = HZ;
 
 		/* Wait before retrieving scan results from device */
-		mod_delayed_work(priv->workqueue, &priv->scan_work, delay);
+		queue_delayed_work(priv->workqueue, &priv->scan_work, delay);
 	}
 
 	return ret;
@@ -3296,7 +3296,7 @@ end:
 			update_jiffies = j;
 	}
 
-	mod_delayed_work(priv->workqueue, &priv->dev_poller_work,
+	queue_delayed_work(priv->workqueue, &priv->dev_poller_work,
 								update_jiffies);
 }
 
@@ -3571,7 +3571,7 @@ static int rndis_wlan_reset(struct usbnet *usbdev)
 	   (set_multicast_list() also turns on current packet filter) */
 	set_multicast_list(usbdev);
 
-	mod_delayed_work(priv->workqueue, &priv->dev_poller_work,
+	queue_delayed_work(priv->workqueue, &priv->dev_poller_work,
 		round_jiffies_relative(DEVICE_POLLER_JIFFIES));
 
 	return deauthenticate(usbdev);
