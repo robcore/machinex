@@ -21,6 +21,7 @@
 #include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/rq_stats.h>
+#include <linux/irq_work.h>
 
 #include <asm/irq_regs.h>
 
@@ -300,17 +301,14 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 	} else {
 		/* Get the next timer wheel timer */
 		next_jiffies = get_next_timer_interrupt(last_jiffies);
-		if (rcu_delta_jiffies < delta_jiffies) {
-			next_jiffies = last_jiffies + rcu_delta_jiffies;
-			delta_jiffies = rcu_delta_jiffies;
-		}
+		delta_jiffies = next_jiffies - last_jiffies;
 	}
 
 	/*
 	 * Do not stop the tick, if we are only one off (or less)
 	 * or if the cpu is required for RCU:
 	 */
-	if (!ts->tick_stopped && delta_jiffies <= 1)
+	if (!ts->tick_stopped && delta_jiffies == 1)
 		goto out;
 
 	/* Schedule the tick, if we are at least one jiffie off */
