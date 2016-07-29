@@ -336,7 +336,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int msm8930_paddr_to_memtype(phys_addr_t paddr)
+static int msm8930_paddr_to_memtype(unsigned int paddr)
 {
 	return MEMTYPE_EBI1;
 }
