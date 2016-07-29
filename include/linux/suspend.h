@@ -182,7 +182,7 @@ struct platform_suspend_ops {
 	int (*enter)(suspend_state_t state);
 	void (*wake)(void);
 	void (*finish)(void);
-	bool (*suspend_again)(void);
+//	bool (*suspend_again)(void);
 	void (*end)(void);
 	void (*recover)(void);
 };
