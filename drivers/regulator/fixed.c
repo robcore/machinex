@@ -91,9 +91,6 @@ of_get_fixed_voltage_config(struct device *dev)
 	if (of_find_property(np, "enable-active-high", NULL))
 		config->enable_high = true;
 
-	if (of_find_property(np, "parent-supply", NULL))
-		init_data->supply_regulator = "parent";
-
 	return config;
 }
 
