@@ -126,13 +126,10 @@ struct menu_device {
 	unsigned int	predicted_us;
 	unsigned int	bucket;
 	unsigned int	correction_factor[BUCKETS];
-	u32		intervals[INTERVALS];
+	unsigned int	intervals[INTERVALS];
 	int		interval_ptr;
 };
 
-	/* Make sure our coefficients do not exceed unity */
-	if (measured_us > data->next_timer_us)
-		measured_us = data->next_timer_us;
 
 #define LOAD_INT(x) ((x) >> FSHIFT)
 #define LOAD_FRAC(x) LOAD_INT(((x) & (FIXED_1-1)) * 100)
@@ -173,15 +170,6 @@ static inline int which_bucket(unsigned int duration, unsigned long nr_iowaiters
 static inline int performance_multiplier(unsigned long nr_iowaiters)
 {
 	int mult = 1;
-
-	/* for higher loadavg, we are more reluctant */
-
-	/*
-	 * this doesn't work as intended - it is almost always 0, but can
-	 * sometimes, depending on workload, spike very high into the hundreds
-	 * even when the average cpu load is under 10%.
-	 */
-	/* mult += 2 * get_loadavg(); */
 
 	/* for IO wait tasks (per cpu!) we add 5x each */
 	mult += 10 * nr_iowaiters;
