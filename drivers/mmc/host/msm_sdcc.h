@@ -25,6 +25,7 @@
 #include <linux/scatterlist.h>
 #include <linux/dma-mapping.h>
 #include <linux/wakelock.h>
+#include <linux/powersuspend.h>
 #include <linux/pm_qos.h>
 #include <mach/sps.h>
 
@@ -379,6 +380,11 @@ struct msmsdcc_host {
 	struct msmsdcc_dma_data	dma;
 	struct msmsdcc_sps_data sps;
 	struct msmsdcc_pio_data	pio;
+
+#ifdef CONFIG_HAS_POWERSUSPEND
+	struct power_suspend power_suspend;
+	int polling_enabled;
+#endif
 
 	struct tasklet_struct 	dma_tlet;
 

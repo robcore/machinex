@@ -1818,6 +1818,7 @@ void mmc_detect_change(struct mmc_host *host, unsigned long delay)
 #endif
 	host->detect_change = 1;
 
+	wake_lock(&host->detect_wake_lock);
 	mmc_schedule_delayed_work(&host->detect, delay);
 }
 
@@ -2942,9 +2943,12 @@ void mmc_rescan(struct work_struct *work)
  out:
 	if (extend_wakelock)
 		wake_lock_timeout(&host->detect_wake_lock, HZ / 2);
-
-	if (host->caps & MMC_CAP_NEEDS_POLL)
+	else
+		wake_unlock(&host->detect_wake_lock);
+	if (host->caps & MMC_CAP_NEEDS_POLL) {
+		wake_lock(&host->detect_wake_lock);
 		mmc_schedule_delayed_work(&host->detect, HZ);
+	}
 }
 
 void mmc_start_host(struct mmc_host *host)
@@ -2962,8 +2966,8 @@ void mmc_stop_host(struct mmc_host *host)
 	spin_unlock_irqrestore(&host->lock, flags);
 #endif
 
-	cancel_delayed_work_sync(&host->detect);
-
+	if (cancel_delayed_work_sync(&host->detect))
+		wake_unlock(&host->detect_wake_lock);
 	mmc_flush_scheduled_work();
 
 	/* clear pm flags now and let card drivers set them as needed */
@@ -3184,7 +3188,8 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (mmc_bus_needs_resume(host))
 		return 0;
 
-	cancel_delayed_work(&host->detect);
+	if (cancel_delayed_work(&host->detect))
+		wake_unlock(&host->detect_wake_lock);
 
 	/* If there is pending detect work abort runtime suspend */
 	if (unlikely(work_busy(&host->detect.work)))
@@ -3344,22 +3349,10 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 			spin_unlock_irqrestore(&host->lock, flags);
 			break;
 		}
-		spin_unlock_irqrestore(&host->lock, flags);
-
-		/* Wait for pending detect work to be completed */
-		if (!(host->caps & MMC_CAP_NEEDS_POLL))
-			flush_work(&host->detect.work);
-
-		spin_lock_irqsave(&host->lock, flags);
 		host->rescan_disable = 1;
 		spin_unlock_irqrestore(&host->lock, flags);
-
-		/*
-		 * In some cases, the detect work might be scheduled
-		 * just before rescan_disable is set to true.
-		 * Cancel such the scheduled works.
-		 */
-		cancel_delayed_work_sync(&host->detect);
+		if (cancel_delayed_work_sync(&host->detect))
+			wake_unlock(&host->detect_wake_lock);
 
 		if (!host->bus_ops || host->bus_ops->suspend)
 			break;
@@ -3394,10 +3387,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		else
 #endif
 		mmc_detect_change(host, 0);
-		break;
 
-	default:
-		return -EINVAL;
 	}
 
 	return 0;
