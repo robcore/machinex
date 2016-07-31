@@ -214,10 +214,10 @@ static int proc_pid_cmdline(struct task_struct *task, char * buffer)
 		goto out_mm;	/* Shh! No looking before we're done */
 
  	len = mm->arg_end - mm->arg_start;
- 
+
 	if (len > PAGE_SIZE)
 		len = PAGE_SIZE;
- 
+
 	res = access_process_vm(task, mm->arg_start, buffer, len, 0);
 
 	// If the nul at the end of args has been overwritten, then
@@ -2507,7 +2507,7 @@ out:
 	return error;
 }
 
-static struct dentry *proc_pident_lookup(struct inode *dir, 
+static struct dentry *proc_pident_lookup(struct inode *dir,
 					 struct dentry *dentry,
 					 const struct pid_entry *ents,
 					 unsigned int nents)
@@ -3080,8 +3080,8 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("cgroup",  S_IRUGO, proc_cgroup_operations),
 #endif
 	INF("oom_score",  S_IRUGO, proc_oom_score),
-	REG("oom_adj",    S_IRUGO|S_IWUSR, proc_oom_adjust_operations),
-	REG("oom_score_adj", S_IRUGO|S_IWUSR, proc_oom_score_adj_operations),
+	REG("oom_adj",    S_IRUSR, proc_oom_adjust_operations),
+	REG("oom_score_adj", S_IRUSR, proc_oom_score_adj_operations),
 #ifdef CONFIG_SAMP_HOTNESS
 	REG("hotness_adj", S_IWUGO, proc_hotness_adjust_operations),
 #endif
@@ -3441,8 +3441,8 @@ static const struct pid_entry tid_base_stuff[] = {
 	REG("cgroup",  S_IRUGO, proc_cgroup_operations),
 #endif
 	INF("oom_score", S_IRUGO, proc_oom_score),
-	REG("oom_adj",   S_IRUGO|S_IWUSR, proc_oom_adjust_operations),
-	REG("oom_score_adj", S_IRUGO|S_IWUSR, proc_oom_score_adj_operations),
+	REG("oom_adj",   S_IRUSR, proc_oom_adjust_operations),
+	REG("oom_score_adj", S_IRUSR, proc_oom_score_adj_operations),
 #ifdef CONFIG_AUDITSYSCALL
 	REG("loginuid",  S_IWUSR|S_IRUGO, proc_loginuid_operations),
 	REG("sessionid",  S_IRUGO, proc_sessionid_operations),
