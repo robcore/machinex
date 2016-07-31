@@ -35,7 +35,6 @@
 #include <asm/tls.h>
 #include <asm/system_misc.h>
 
-#include "signal.h"
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
@@ -544,7 +543,7 @@ __do_cache_op(unsigned long start, unsigned long end)
 static inline int
 do_cache_op(unsigned long start, unsigned long end, int flags)
 {
-	
+
 	if (end < start || flags)
 		return -EINVAL;
 
