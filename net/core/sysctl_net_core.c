@@ -24,6 +24,9 @@ static int ushort_max = USHRT_MAX;
 
 static int one = 1;
 
+static int zero = 0;
+static int ushort_max = USHRT_MAX;
+
 #ifdef CONFIG_RPS
 static int rps_sock_flow_sysctl(ctl_table *table, int write,
 				void __user *buffer, size_t *lenp, loff_t *ppos)
@@ -195,7 +198,9 @@ static struct ctl_table net_core_table[] = {
 		.data		= &net_msg_warn,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
-		.proc_handler	= proc_dointvec
+		.extra1		= &zero,
+		.extra2		= &ushort_max,
+		.proc_handler	= proc_dointvec_minmax
 	},
 	{ }
 };
