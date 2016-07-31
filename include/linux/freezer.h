@@ -180,12 +180,12 @@ static inline bool freezer_should_skip(struct task_struct *p)
  */
 
 /* Like schedule(), but should not block the freezer. */
-#define freezable_schedule()						\
-({									\
-	freezer_do_not_count();						\
-	schedule();							\
-	freezer_count();						\
-})
+static inline void freezable_schedule(void)
+{
+	freezer_do_not_count();
+	schedule();
+	freezer_count();
+}
 
 /* Like schedule_timeout(), but should not block the freezer. */
 #define freezable_schedule_timeout(timeout)				\
@@ -208,12 +208,12 @@ static inline bool freezer_should_skip(struct task_struct *p)
 })
 
 /* DO NOT ADD ANY NEW CALLERS OF THIS FUNCTION */
-#define freezable_schedule_unsafe()					\
-({									\
-	freezer_do_not_count();						\
-	schedule();							\
-	freezer_count_unsafe();						\
-})
+static inline void freezable_schedule_unsafe(void)
+{
+	freezer_do_not_count();
+	schedule();
+	freezer_count_unsafe();
+}
 
 /* Like schedule_timeout_killable(), but should not block the freezer. */
 #define freezable_schedule_timeout_killable(timeout)			\
@@ -262,14 +262,14 @@ static inline bool freezer_should_skip(struct task_struct *p)
 })
 
 /* DO NOT ADD ANY NEW CALLERS OF THIS FUNCTION */
-#define wait_event_freezekillable_unsafe(wq, condition)			\
-({									\
-	int __retval;							\
-	freezer_do_not_count();						\
-	__retval = wait_event_killable(wq, (condition));		\
-	freezer_count_unsafe();						\
-	__retval;							\
-})
+static inline long freezable_schedule_timeout_killable_unsafe(long timeout)
+{
+	long __retval;
+	freezer_do_not_count();
+	__retval = schedule_timeout_killable(timeout);
+	freezer_count_unsafe();
+	return __retval;
+}
 
 #define wait_event_freezable(wq, condition)				\
 ({									\
