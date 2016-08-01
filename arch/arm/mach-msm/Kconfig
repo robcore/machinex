@@ -2077,6 +2077,15 @@ config MSM_AVS_HW
 	  fine tune the voltages based on the feedback from the ring
 	  oscillators.
 
+config MSM_HOTPLUG
+	bool "MSM hotplug driver"
+	depends on HOTPLUG_CPU
+	default n
+	help
+	  The MSM hotplug driver controls on-/offlining of additional cores based
+	  on current cpu load.
+
+
 config MSM_HW3D
 	tristate "MSM Hardware 3D Register Driver"
 	depends on ANDROID_PMEM
