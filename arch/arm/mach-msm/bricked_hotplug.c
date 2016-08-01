@@ -1,8 +1,7 @@
 /*
- * Brhttphttps://github.com/RenderBroken/msm8974_OPO_render_kernel/edit/cm-12.0/arch/arm/mach-msm/bricked_hotplug.c#s://github.com/RenderBroken/msm8974_OPO_render_kernel/edit/cm-12.0/arch/arm/mach-msm/bricked_hotplug.c#icked Hotplug Driver
+ * Bricked Hotplug Driver
  *
  * Copyright (c) 2013-2014, Dennis Rassmann <showp1984@gmail.com>
- * Copyright (c) 2013-2014, Pranav Vashi <neobuddy89@gmail.com>
  * Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,7 +21,7 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
-#include <linux/device.h>R
+#include <linux/device.h>
 #include <linux/state_notifier.h>
 
 #define DEBUG 0
