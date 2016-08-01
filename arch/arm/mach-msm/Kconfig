@@ -2062,6 +2062,20 @@ config ZEN_DECISION
 
 	  If unsure, say N.
 
+config BRICKED_HOTPLUG
+	bool "Enable kernel based mpdecision"
+	depends on MSM_RUN_QUEUE_STATS
+	default y
+	help
+	 This enables kernel based multi core control.
+(up/down hotplug based on load)
+
+config MSM_SLEEPER
+	bool "CPU hotplug driver"
+	default n
+	help
+CPU hotplug driver
+
 config CPU_VOLTAGE_TABLE
 	bool "Enable CPU Voltage Table via sysfs for adjustements"
 	default y
