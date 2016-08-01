@@ -19,9 +19,6 @@
 #include <net/sock.h>
 #include <net/net_ratelimit.h>
 
-static int zero = 0;
-static int ushort_max = USHRT_MAX;
-
 static int one = 1;
 
 static int zero = 0;
