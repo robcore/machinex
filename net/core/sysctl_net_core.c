@@ -19,10 +19,10 @@
 #include <net/sock.h>
 #include <net/net_ratelimit.h>
 
-static int one = 1;
-
 static int zero = 0;
 static int ushort_max = USHRT_MAX;
+
+static int one = 1;
 
 #ifdef CONFIG_RPS
 static int rps_sock_flow_sysctl(ctl_table *table, int write,
@@ -195,9 +195,7 @@ static struct ctl_table net_core_table[] = {
 		.data		= &net_msg_warn,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
-		.extra1		= &zero,
-		.extra2		= &ushort_max,
-		.proc_handler	= proc_dointvec_minmax
+		.proc_handler	= proc_dointvec
 	},
 	{ }
 };
