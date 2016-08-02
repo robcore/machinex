@@ -399,6 +399,16 @@ static struct cpufreq_governor *__find_governor(const char *str_governor)
 	return NULL;
 }
 
+static bool cpufreq_update_allowed(int mpd)
+{
+#ifdef CONFIG_MSM_LIMITER
+	if (mpd == 0 && mpd_enabled == 0)
+		return false;
+#endif
+
+	return true;
+}
+
 /**
  * cpufreq_parse_governor - parse a governor string
  */
