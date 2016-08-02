@@ -1436,12 +1436,12 @@ static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
  */
 unsigned int cpufreq_quick_get_util(unsigned int cpu)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	struct cpufreq_policy *policy = __cpufreq_cpu_get(cpu, 0);
 	unsigned int ret_util = 0;
 
 	if (policy) {
 		ret_util = policy->util;
-		cpufreq_cpu_put(policy);
+		__cpufreq_cpu_put(policy, 0);
 	}
 
 	return ret_util;
