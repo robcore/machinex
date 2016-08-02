@@ -1085,13 +1085,13 @@ bad:
 	return 0;
 }
 
-static noinline struct kmem_cache_node *free_debug_processing(
-	struct kmem_cache *s, struct page *page, void *object,
-	unsigned long addr, unsigned long *flags)
+static noinline int free_debug_processing(struct kmem_cache *s,
+		 struct page *page, void *object, unsigned long addr)
 {
-	struct kmem_cache_node *n = get_node(s, page_to_nid(page));
+	unsigned long flags;
+	int rc = 0;
 
-	spin_lock_irqsave(&n->list_lock, *flags);
+	local_irq_save(flags);
 	slab_lock(page);
 
 	if (!check_slab(s, page))
@@ -1129,19 +1129,15 @@ static noinline struct kmem_cache_node *free_debug_processing(
 		set_track(s, object, TRACK_FREE, addr);
 	trace(s, page, object, 0);
 	init_object(s, object, SLUB_RED_INACTIVE);
+	rc = 1;
 out:
 	slab_unlock(page);
-	/*
-	 * Keep node_lock to preserve integrity
-	 * until the object is actually freed
-	 */
-	return n;
+	local_irq_restore(flags);
+	return rc;
 
 fail:
-	slab_unlock(page);
-	spin_unlock_irqrestore(&n->list_lock, *flags);
 	slab_fix(s, "Object at 0x%p not freed", object);
-	return NULL;
+	goto out;
 }
 
 static int __init setup_slub_debug(char *str)
@@ -1234,9 +1230,8 @@ static inline void setup_object_debug(struct kmem_cache *s,
 static inline int alloc_debug_processing(struct kmem_cache *s,
 	struct page *page, void *object, unsigned long addr) { return 0; }
 
-static inline struct kmem_cache_node *free_debug_processing(
-	struct kmem_cache *s, struct page *page, void *object,
-	unsigned long addr, unsigned long *flags) { return NULL; }
+static inline int free_debug_processing(struct kmem_cache *s,
+	struct page *page, void *object, unsigned long addr) { return 0; }
 
 static inline int slab_pad_check(struct kmem_cache *s, struct page *page)
 			{ return 1; }
@@ -2438,8 +2433,7 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 
 	stat(s, FREE_SLOWPATH);
 
-	if (kmem_cache_debug(s) &&
-		!(n = free_debug_processing(s, page, x, addr, &flags)))
+	if (kmem_cache_debug(s) && !free_debug_processing(s, page, x, addr))
 		return;
 
 	do {
