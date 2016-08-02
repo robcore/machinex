@@ -521,7 +521,7 @@ static void register_disk(struct gendisk *disk)
 	int err;
 
 #ifdef CONFIG_BLOCK_SUPPORT_STLOG
-	int major 		= disk->major;	
+	int major 		= disk->major;
 	int first_minor 	= disk->first_minor;
 #endif
 
@@ -701,7 +701,7 @@ void del_gendisk(struct gendisk *disk)
 	dev=disk_to_dev(disk);
 	ST_LOG("<%s> KOBJ_REMOVE %d:%d %s",
 	__func__,MAJOR(dev->devt),MINOR(dev->devt),dev->kobj.name);
-#endif	
+#endif
 	device_del(disk_to_dev(disk));
 }
 EXPORT_SYMBOL(del_gendisk);
@@ -1600,7 +1600,7 @@ void disk_flush_events(struct gendisk *disk, unsigned int mask)
 	spin_lock_irq(&ev->lock);
 	ev->clearing |= mask;
 	if (!ev->block)
-		mod_delayed_work(system_freezable_wq, &ev->dwork, 0);
+		queue_delayed_work(system_freezable_wq, &ev->dwork, 0);
 	spin_unlock_irq(&ev->lock);
 }
 
