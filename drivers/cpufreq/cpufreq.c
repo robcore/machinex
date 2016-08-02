@@ -54,7 +54,7 @@ struct cpufreq_cpu_save_data {
 static DEFINE_PER_CPU(struct cpufreq_cpu_save_data, cpufreq_policy_save);
 #endif
 static DEFINE_SPINLOCK(cpufreq_driver_lock);
-static DEFINE_MUTEX(cpufreq_governor_lock);
+static DEFINE_MUTEX(cpufreq_governor_lock); 
 
 /*
  * cpu_policy_rwsem is a per CPU reader-writer semaphore designed to cure
@@ -1850,20 +1850,20 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 
 	pr_debug("__cpufreq_governor for CPU %u, event %u\n",
 						policy->cpu, event);
+ 
+mutex_lock(&cpufreq_governor_lock); 
+if ((!policy->governor_enabled && (event == CPUFREQ_GOV_STOP)) || 
+(policy->governor_enabled && (event == CPUFREQ_GOV_START))) { 
+mutex_unlock(&cpufreq_governor_lock); 
+return -EBUSY; 
+} 
 
-mutex_lock(&cpufreq_governor_lock);
-if ((!policy->governor_enabled && (event == CPUFREQ_GOV_STOP)) ||
-(policy->governor_enabled && (event == CPUFREQ_GOV_START))) {
-mutex_unlock(&cpufreq_governor_lock);
-return -EBUSY;
-}
+if (event == CPUFREQ_GOV_STOP) 
+policy->governor_enabled = false; 
+else if (event == CPUFREQ_GOV_START) 
+policy->governor_enabled = true; 
 
-if (event == CPUFREQ_GOV_STOP)
-policy->governor_enabled = false;
-else if (event == CPUFREQ_GOV_START)
-policy->governor_enabled = true;
-
-mutex_unlock(&cpufreq_governor_lock);
+mutex_unlock(&cpufreq_governor_lock); 
 
 	ret = policy->governor->governor(policy, event);
 
@@ -2123,80 +2123,69 @@ no_policy:
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
 
+/*
+ *	cpufreq_set_gov - set governor for a cpu
+ *	@cpu: CPU whose governor needs to be changed
+ *	@target_gov: new governor to be set
+ */
 int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 {
-	struct cpufreq_policy *cpu_policy;
-	unsigned int ret = 0;
+	int ret = 0;
+	struct cpufreq_policy new_policy;
+	struct cpufreq_policy *cur_policy;
 
-	get_online_cpus();
-	if (!cpu_online(cpu)) {
-		strncpy(per_cpu(cpufreq_policy_save, cpu).gov, target_gov,
-			CPUFREQ_NAME_LEN);
-	} else {
-		cpu_policy = __cpufreq_cpu_get(cpu, 1);
-		if (!cpu_policy) {
-			put_online_cpus();
-			return -EINVAL;
-		}
+	if (target_gov == NULL)
+		return -EINVAL;
 
-		if (lock_policy_rwsem_write(cpu) < 0) {
-			__cpufreq_cpu_put(cpu_policy, true);
-			put_online_cpus();
-			return -EINVAL;
-		}
+	/* Get current governer */
+	cur_policy = cpufreq_cpu_get(cpu);
+	if (!cur_policy)
+		return -EINVAL;
 
-		ret = store_scaling_governor(cpu_policy, target_gov, ret);
-
-		unlock_policy_rwsem_write(cpu);
-
-		__cpufreq_cpu_put(cpu_policy, true);
+	if (lock_policy_rwsem_read(cur_policy->cpu) < 0) {
+		ret = -EINVAL;
+		goto err_out;
 	}
-	put_online_cpus();
 
+	if (cur_policy->governor)
+		ret = strncmp(cur_policy->governor->name, target_gov,
+					strlen(target_gov));
+	else {
+		unlock_policy_rwsem_read(cur_policy->cpu);
+		ret = -EINVAL;
+		goto err_out;
+	}
+	unlock_policy_rwsem_read(cur_policy->cpu);
+
+	if (!ret) {
+		pr_debug(" Target governer & current governer is same\n");
+		ret = -EINVAL;
+		goto err_out;
+	} else {
+		new_policy = *cur_policy;
+		if (cpufreq_parse_governor(target_gov, &new_policy.policy,
+				&new_policy.governor)) {
+			ret = -EINVAL;
+			goto err_out;
+		}
+
+		if (lock_policy_rwsem_write(cur_policy->cpu) < 0) {
+			ret = -EINVAL;
+			goto err_out;
+		}
+
+		ret = __cpufreq_set_policy(cur_policy, &new_policy);
+
+		cur_policy->user_policy.policy = cur_policy->policy;
+		cur_policy->user_policy.governor = cur_policy->governor;
+
+		unlock_policy_rwsem_write(cur_policy->cpu);
+	}
+err_out:
+	cpufreq_cpu_put(cur_policy);
 	return ret;
 }
 EXPORT_SYMBOL(cpufreq_set_gov);
-
-/*
- *	cpufreq_get_gov - get governor for a cpu
- *	@cpu: CPU whose governor needs to be known
- */
-char *cpufreq_get_gov(unsigned int cpu)
-{
-	struct cpufreq_policy *policy;
-	char *val = "invalid";
-
-	get_online_cpus();
-	if (!cpu_online(cpu)) {
-		val = per_cpu(cpufreq_policy_save, cpu).gov;
-	} else {
-		policy = __cpufreq_cpu_get(cpu, 1);
-		if (!policy) {
-			put_online_cpus();
-			return val;
-		}
-
-		if (lock_policy_rwsem_read(cpu) < 0) {
-			__cpufreq_cpu_put(policy, true);
-			put_online_cpus();
-			return val;
-		}
-
-		if (policy->policy == CPUFREQ_POLICY_POWERSAVE)
-			val = "powersave";
-		else if (policy->policy == CPUFREQ_POLICY_PERFORMANCE)
-			val = "performance";
-		else if (policy->governor)
-			val = policy->governor->name;
-
-		unlock_policy_rwsem_read(cpu);
-
-		__cpufreq_cpu_put(policy, true);
-	}
-	put_online_cpus();
-	return val;
-}
-EXPORT_SYMBOL(cpufreq_get_gov);
 
 static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
