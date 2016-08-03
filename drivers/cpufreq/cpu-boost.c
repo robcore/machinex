@@ -58,7 +58,7 @@ module_param(sync_threshold, uint, 0644);
 static bool input_boost_enabled;
 static bool suspended;
 
-static unsigned int input_boost_ms = 500;
+static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
 static unsigned int migration_load_threshold = 30;
@@ -335,7 +335,7 @@ static int boost_migration_notify(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	if (load_based_syncs && ((mnd->load < 0) || (mnd->load > 100))) {
-		pr_debug("cpu-boost:Invalid load: %d\n", mnd->load);
+		pr_err("cpu-boost:Invalid load: %d\n", mnd->load);
 		return NOTIFY_OK;
 	}
 

@@ -1097,16 +1097,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		if (cp && cpumask_test_cpu(cpu, cp->related_cpus))
 			return cpufreq_add_policy_cpu(cpu, sibling, dev);
 	}
-	if (per_cpu(cpufreq_policy_save, cpu).min) {
-		policy->min = per_cpu(cpufreq_policy_save, cpu).min;
-		policy->user_policy.min = policy->min;
-	}
-	if (per_cpu(cpufreq_policy_save, cpu).max) {
-		policy->max = per_cpu(cpufreq_policy_save, cpu).max;
-		policy->user_policy.max = policy->max;
-	}
-	pr_debug("Restoring CPU%d min %d and max %d\n",
-		cpu, policy->min, policy->max);
 #endif
 #endif
 
