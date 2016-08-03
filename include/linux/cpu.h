@@ -233,4 +233,12 @@ extern bool check_cpuboost(int cpu);
 extern bool wakeup_boost;
 #endif
 
+enum cpuhp_state {
+	CPUHP_OFFLINE,
+	CPUHP_ONLINE,
+};
+
+void cpu_startup_entry(enum cpuhp_state state);
+void cpu_idle(void);
+
 #endif /* _LINUX_CPU_H_ */
