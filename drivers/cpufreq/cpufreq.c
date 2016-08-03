@@ -2267,7 +2267,7 @@ int cpufreq_get_min(unsigned int cpu)
 EXPORT_SYMBOL(cpufreq_get_min);
 
 /*
- *	cpufreq_set_gov - set governor for a cpu
+ *	limiter_set_gov - set governor for a cpu
  *	@cpu: CPU whose governor needs to be changed
  *	@target_gov: new governor to be set
  */
