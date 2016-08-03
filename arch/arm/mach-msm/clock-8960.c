@@ -392,7 +392,7 @@ static int vdd_uv[] = {
 ssize_t get_gpu_vdd_levels_str(char *buf)
 {
 	int i, len = 0;
-	
+
 	if (buf)
 	{
 		for (i = 1; i <= 3; i++)
@@ -426,11 +426,11 @@ static DEFINE_VDD_CLASS(vdd_dig, set_vdd_dig_8960, VDD_DIG_NUM);
 static int rpm_vreg_dig_8930 = RPM_VREG_ID_PM8038_VDD_DIG_CORNER;
 static int set_vdd_dig_8930(struct clk_vdd_class *vdd_class, int level)
 {
-	static const int vdd_corner[] = {
-		[VDD_DIG_NONE]    = RPM_VREG_CORNER_NONE,
-		[VDD_DIG_LOW]     = RPM_VREG_CORNER_LOW,
-		[VDD_DIG_NOMINAL] = RPM_VREG_CORNER_NOMINAL,
-		[VDD_DIG_HIGH]    = RPM_VREG_CORNER_HIGH,
+	static const int *vdd_corner[] = {
+		[VDD_DIG_NONE]    = VDD_UV(RPM_VREG_CORNER_NONE),
+		[VDD_DIG_LOW]     = VDD_UV(RPM_VREG_CORNER_LOW),
+		[VDD_DIG_NOMINAL] = VDD_UV(RPM_VREG_CORNER_NOMINAL),
+		[VDD_DIG_HIGH]    = VDD_UV(RPM_VREG_CORNER_HIGH),
 	};
 	return rpm_vreg_set_voltage(rpm_vreg_dig_8930,
 					RPM_VREG_VOTER3,
@@ -4729,9 +4729,9 @@ static struct clk_freq_tbl clk_tbl_pcm_432[] = {
 	F_PCM( 2048000, pll4, 1, 1, 211),
 	F_PCM( 4096000, pll4, 1, 1, 106),
 	F_PCM( 9600000, pll4, 1, 1, 45),
-	F_PCM(27000000, pxo, 1, 0, 0), 
-	F_END 
-}; 
+	F_PCM(27000000, pxo, 1, 0, 0),
+	F_END
+};
 #else
 static struct clk_freq_tbl clk_tbl_pcm_432[] = {
 	{ .ns_val = BIT(10) /* external input */ },
@@ -5860,7 +5860,7 @@ static struct clk_lookup msm_clocks_8960_common[] __initdata = {
 	CLK_LOOKUP("iface_clk",          gsbi1_p_clk.c,        ""),
 #else
 	CLK_LOOKUP("iface_clk",		gsbi1_p_clk.c,		"spi_qsd.0"),
-#endif	
+#endif
 	CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,		""),
 	CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c,		"qup_i2c.3"),
 	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,		"qup_i2c.4"),
@@ -5901,7 +5901,7 @@ static struct clk_lookup msm_clocks_8960_common[] __initdata = {
 	CLK_LOOKUP("cam_clk",	cam0_clk.c,	"msm_camera_s5c73m3.0"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	NULL),
 	CLK_LOOKUP("cam_clk",		cam2_clk.c,	"4-0045"),
-	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-002d"),	
+	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-002d"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-001a"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0010"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-006c"),
@@ -6467,7 +6467,7 @@ static struct clk_lookup msm_clocks_8930[] = {
 	CLK_LOOKUP("osr_clk",		codec_i2s_spkr_osr_clk.c,"msm-dai-q6.16384"),
 	CLK_LOOKUP("bit_clk",		spare_i2s_spkr_bit_clk.c,"msm-dai-q6.4"),
 	CLK_LOOKUP("osr_clk",		spare_i2s_spkr_osr_clk.c,"msm-dai-q6.4"),
-#endif /* CONFIG_SLIMBUS_MSM_CTRL */	   
+#endif /* CONFIG_SLIMBUS_MSM_CTRL */
 	CLK_LOOKUP("pcm_clk",		pcm_clk.c,		"msm-dai-q6.2"),
 #if defined (CONFIG_MACH_MELIUS_EUR_OPEN) || defined(CONFIG_MACH_MELIUS_EUR_LTE) \
 	|| defined(CONFIG_MACH_MELIUS_SKT) || defined(CONFIG_MACH_MELIUS_KTT) \
@@ -6476,7 +6476,7 @@ static struct clk_lookup msm_clocks_8930[] = {
 	|| defined(CONFIG_MACH_MELIUS_VZW) || defined(CONFIG_MACH_MELIUS_SPR) \
 	|| defined(CONFIG_MACH_MELIUS_MTR) \
 	|| (defined(CONFIG_MACH_MELIUS_USC) && !defined(CONFIG_MACH_MELIUS_USC_00))
-#ifdef CONFIG_AUXPCM_INTERFACE	
+#ifdef CONFIG_AUXPCM_INTERFACE
 	CLK_LOOKUP("pcm_clk",		pcm_clk.c,		"msm-dai-q6.3"),
 #else
 	CLK_LOOKUP("pcm_clk",		pcm_clk.c,		"msm-dai-q6.0"),

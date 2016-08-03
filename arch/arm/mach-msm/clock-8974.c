@@ -618,11 +618,11 @@ enum vdd_dig_levels {
 	VDD_DIG_NUM
 };
 
-static const int vdd_corner[] = {
-	[VDD_DIG_NONE]	  = RPM_REGULATOR_CORNER_NONE,
-	[VDD_DIG_LOW]	  = RPM_REGULATOR_CORNER_SVS_SOC,
-	[VDD_DIG_NOMINAL] = RPM_REGULATOR_CORNER_NORMAL,
-	[VDD_DIG_HIGH]	  = RPM_REGULATOR_CORNER_SUPER_TURBO,
+static const int *vdd_corner[] = {
+	[VDD_DIG_NONE]	  = VDD_UV(RPM_REGULATOR_CORNER_NONE),
+	[VDD_DIG_LOW]	  = VDD_UV(RPM_REGULATOR_CORNER_SVS_SOC),
+	[VDD_DIG_NOMINAL] = VDD_UV(RPM_REGULATOR_CORNER_NORMAL),
+	[VDD_DIG_HIGH]	  = VDD_UV(RPM_REGULATOR_CORNER_SUPER_TURBO),
 };
 
 static struct rpm_regulator *vdd_dig_reg;
@@ -5673,7 +5673,6 @@ static void __init msm8974_clock_pre_init(void)
 
 	vdd_dig_reg = rpm_regulator_get(NULL, "vdd_dig");
 	if (IS_ERR(vdd_dig_reg))
-		panic("clock-8974: Unable to get the vdd_dig regulator!");
 
 	/*
 	 * TODO: Set a voltage and enable vdd_dig, leaving the voltage high
