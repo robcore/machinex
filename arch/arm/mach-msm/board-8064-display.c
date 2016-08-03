@@ -1246,18 +1246,11 @@ static int lvds_panel_power(int on)
 		gpio_set_value_cansleep(mpp3, 0);
 		gpio_set_value_cansleep(gpio36, 1);
 
-		rc = regulator_disable(reg_l11);
-		if (rc) {
-			pr_err("disable reg_l1 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-
 		rc = regulator_disable(reg_lvs7);
 		if (rc) {
 			pr_err("disable reg_lvs7 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
-
 		rc = regulator_disable(reg_l2);
 		if (rc) {
 			pr_err("disable reg_l2 failed, rc=%d\n", rc);
