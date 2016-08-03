@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,9 +39,7 @@ struct rpm_clk {
 	const bool active_only;
 	bool enabled;
 	bool branch; /* true: RPM only accepts 1 for ON and 0 for OFF */
-	unsigned factor;
 	struct clk_rpmrs_data *rpmrs_data;
-
 	struct rpm_clk *peer;
 	struct clk c;
 };
@@ -63,7 +61,6 @@ extern struct clk_rpmrs_data clk_rpmrs_data_smd;
 		.rpm_status_id = (stat_id), \
 		.rpm_key = (key), \
 		.peer = &active, \
-		.factor = 1000, \
 		.rpmrs_data = (rpmrsdata),\
 		.c = { \
 			.ops = &clk_ops_rpm, \
@@ -79,7 +76,6 @@ extern struct clk_rpmrs_data clk_rpmrs_data_smd;
 		.rpm_key = (key), \
 		.peer = &name, \
 		.active_only = true, \
-		.factor = 1000, \
 		.rpmrs_data = (rpmrsdata),\
 		.c = { \
 			.ops = &clk_ops_rpm, \
@@ -98,7 +94,6 @@ extern struct clk_rpmrs_data clk_rpmrs_data_smd;
 		.rpm_status_id = (stat_id), \
 		.rpm_key = (key), \
 		.peer = &active, \
-		.factor = 1000, \
 		.branch = true, \
 		.rpmrs_data = (rpmrsdata),\
 		.c = { \
@@ -115,46 +110,12 @@ extern struct clk_rpmrs_data clk_rpmrs_data_smd;
 		.rpm_key = (key), \
 		.peer = &name, \
 		.active_only = true, \
-		.factor = 1000, \
 		.branch = true, \
 		.rpmrs_data = (rpmrsdata),\
 		.c = { \
 			.ops = &clk_ops_rpm_branch, \
 			.dbg_name = #active, \
 			.rate = (r), \
-			CLK_INIT(active.c), \
-		}, \
-	};
-
-#define __DEFINE_CLK_RPM_QDSS(name, active, type, r_id, stat_id, \
-				key, rpmrsdata) \
-	static struct rpm_clk active; \
-	static struct rpm_clk name = { \
-		.rpm_res_type = (type), \
-		.rpm_clk_id = (r_id), \
-		.rpm_status_id = (stat_id), \
-		.rpm_key = (key), \
-		.peer = &active, \
-		.factor = 1, \
-		.rpmrs_data = (rpmrsdata),\
-		.c = { \
-			.ops = &clk_ops_rpm, \
-			.dbg_name = #name, \
-			CLK_INIT(name.c), \
-		}, \
-	}; \
-	static struct rpm_clk active = { \
-		.rpm_res_type = (type), \
-		.rpm_clk_id = (r_id), \
-		.rpm_status_id = (stat_id), \
-		.rpm_key = (key), \
-		.peer = &name, \
-		.active_only = true, \
-		.factor = 1, \
-		.rpmrs_data = (rpmrsdata),\
-		.c = { \
-			.ops = &clk_ops_rpm, \
-			.dbg_name = #active, \
 			CLK_INIT(active.c), \
 		}, \
 	};
@@ -164,8 +125,8 @@ extern struct clk_rpmrs_data clk_rpmrs_data_smd;
 		MSM_RPM_STATUS_ID_##r_id##_CLK, dep, 0, &clk_rpmrs_data)
 
 #define DEFINE_CLK_RPM_QDSS(name, active) \
-	__DEFINE_CLK_RPM_QDSS(name, active, 0, MSM_RPM_ID_QDSS_CLK, \
-		MSM_RPM_STATUS_ID_QDSS_CLK, 0, &clk_rpmrs_data)
+	__DEFINE_CLK_RPM(name, active, 0, MSM_RPM_ID_QDSS_CLK, \
+		MSM_RPM_STATUS_ID_QDSS_CLK, 0, 0, &clk_rpmrs_data)
 
 #define DEFINE_CLK_RPM_BRANCH(name, active, r_id, r) \
 	__DEFINE_CLK_RPM_BRANCH(name, active, 0, MSM_RPM_ID_##r_id##_CLK, \
@@ -180,8 +141,8 @@ extern struct clk_rpmrs_data clk_rpmrs_data_smd;
 				RPM_SMD_KEY_ENABLE, &clk_rpmrs_data_smd)
 
 #define DEFINE_CLK_RPM_SMD_QDSS(name, active, type, r_id) \
-	__DEFINE_CLK_RPM_QDSS(name, active, type, r_id, \
-		0, RPM_SMD_KEY_STATE, &clk_rpmrs_data_smd)
+	__DEFINE_CLK_RPM(name, active, type, r_id, \
+		0, 0, RPM_SMD_KEY_STATE, &clk_rpmrs_data_smd)
 /*
  * The RPM XO buffer clock management code aggregates votes for pin-control mode
  * and software mode separately. Software-enable has higher priority over pin-
