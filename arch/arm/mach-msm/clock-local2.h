@@ -87,6 +87,7 @@ struct fixed_clk {
 /**
  * struct branch_clk - branch clock
  * @set_rate: Set the frequency of this branch clock.
+ * @parent: clock source
  * @c: clk
  * @cbcr_reg: branch control register
  * @bcr_reg: block reset register
@@ -98,6 +99,7 @@ struct fixed_clk {
  */
 struct branch_clk {
 	void   (*set_rate)(struct branch_clk *, struct clk_freq_tbl *);
+	struct clk *parent;
 	struct clk c;
 	const u32 cbcr_reg;
 	const u32 bcr_reg;

@@ -234,6 +234,7 @@ struct fixed_clk {
  * struct branch_clk - branch
  * @enabled: true if clock is on, false otherwise
  * @b: branch
+ * @parent: clock source
  * @c: clock
  *
  * An on/off switch with a rate derived from the parent.
@@ -241,6 +242,7 @@ struct fixed_clk {
 struct branch_clk {
 	bool enabled;
 	struct branch b;
+	struct clk *parent;
 	struct clk c;
 };
 

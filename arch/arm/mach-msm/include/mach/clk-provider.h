@@ -103,7 +103,6 @@ struct clk_ops {
  * @depends: non-direct parent of clock to enable when this clock is enabled
  * @vdd_class: voltage scaling requirement class
  * @fmax: maximum frequency in Hz supported at each voltage level
- * @parent: the current source of this clock
  */
 struct clk {
 	uint32_t flags;
@@ -114,7 +113,6 @@ struct clk {
 	unsigned long *fmax;
 	int num_fmax;
 	unsigned long rate;
-	struct clk *parent;
 
 	struct list_head children;
 	struct list_head siblings;
