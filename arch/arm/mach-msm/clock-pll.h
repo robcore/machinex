@@ -35,7 +35,6 @@ enum {
  * any HW voting
  * @id: PLL ID
  * @mode_reg: enable register
- * @parent: clock source
  * @c: clock
  */
 struct pll_shared_clk {
@@ -65,7 +64,6 @@ void msm_shared_pll_control_init(void);
  * @en_mask: ORed with @en_reg to enable the clock
  * @status_mask: ANDed with @status_reg to determine if PLL is active.
  * @status_reg: status register
- * @parent: clock source
  * @c: clock
  */
 struct pll_vote_clk {
@@ -76,7 +74,6 @@ struct pll_vote_clk {
 	void __iomem *const status_reg;
 	const u32 status_mask;
 
-	struct clk *parent;
 	struct clk c;
 	void *const __iomem *base;
 };
@@ -100,7 +97,6 @@ struct pll_clk {
 	void __iomem *const mode_reg;
 	void __iomem *const status_reg;
 
-	struct clk *parent;
 	struct clk c;
 	void *const __iomem *base;
 };

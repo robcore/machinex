@@ -163,7 +163,7 @@ int clk_prepare(struct clk *clk)
 
 	mutex_lock(&clk->prepare_lock);
 	if (clk->prepare_count == 0) {
-		parent = clk_get_parent(clk);
+		parent = clk->parent;
 
 		ret = clk_prepare(parent);
 		if (ret)
@@ -213,7 +213,7 @@ int clk_enable(struct clk *clk)
 	WARN(!clk->prepare_count,
 			"%s: Don't call enable on unprepared clocks\n", name);
 	if (clk->count == 0) {
-		parent = clk_get_parent(clk);
+		parent = clk->parent;
 
 		ret = clk_enable(parent);
 		if (ret)
@@ -258,7 +258,7 @@ void clk_disable(struct clk *clk)
 	if (WARN(clk->count == 0, "%s is unbalanced", name))
 		goto out;
 	if (clk->count == 1) {
-		struct clk *parent = clk_get_parent(clk);
+		struct clk *parent = clk->parent;
 
 		trace_clock_disable(name, 0, smp_processor_id());
 		if (clk->ops->disable)
@@ -283,7 +283,7 @@ void clk_unprepare(struct clk *clk)
 	if (WARN(!clk->prepare_count, "%s is unbalanced (prepare)", name))
 		goto out;
 	if (clk->prepare_count == 1) {
-		struct clk *parent = clk_get_parent(clk);
+		struct clk *parent = clk->parent;
 
 		WARN(clk->count,
 			"%s: Don't call unprepare when the clock is enabled\n",
@@ -411,10 +411,7 @@ struct clk *clk_get_parent(struct clk *clk)
 	if (IS_ERR_OR_NULL(clk))
 		return NULL;
 
-	if (!clk->ops->get_parent)
-		return NULL;
-
-	return clk->ops->get_parent(clk);
+	return clk->parent;
 }
 EXPORT_SYMBOL(clk_get_parent);
 
@@ -535,7 +532,7 @@ int __init msm_clock_init(struct clock_init_data *data)
 	for (n = 0; n < num_clocks; n++) {
 		struct clk *parent;
 		clk = clock_tbl[n].clk;
-		parent = clk_get_parent(clk);
+		parent = clk->parent;
 		if (parent && list_empty(&clk->siblings))
 			list_add(&clk->siblings, &parent->children);
 	}

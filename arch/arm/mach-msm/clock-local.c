@@ -527,6 +527,7 @@ static int rcg_clk_set_rate(struct clk *c, unsigned long rate)
 	 * is called to make sure the MNCNTR_EN bit is set correctly.
 	 */
 	rcg->current_freq = nf;
+	c->parent = nf->src_clk;
 
 	/* Enable any clocks that were disabled. */
 	if (!rcg->bank_info) {
@@ -588,11 +589,6 @@ static int rcg_clk_list_rate(struct clk *c, unsigned n)
 	return (rcg->freq_tbl + n)->freq_hz;
 }
 
-static struct clk *rcg_clk_get_parent(struct clk *c)
-{
-	return to_rcg_clk(c)->current_freq->src_clk;
-}
-
 /* Disable hw clock gating if not set at boot */
 enum handoff branch_handoff(struct branch *b, struct clk *c)
 {
@@ -649,6 +645,7 @@ static enum handoff rcg_clk_handoff(struct clk *c)
 		return HANDOFF_UNKNOWN_RATE;
 
 	rcg->current_freq = freq;
+	c->parent = freq->src_clk;
 	c->rate = freq->freq_hz;
 
 	return HANDOFF_ENABLED_CLK;
@@ -686,11 +683,6 @@ static void branch_clk_disable(struct clk *c)
 	__branch_disable_reg(&br->b, br->c.dbg_name);
 	br->enabled = false;
 	spin_unlock_irqrestore(&local_clock_reg_lock, flags);
-}
-
-static struct clk *branch_clk_get_parent(struct clk *c)
-{
-	return to_branch_clk(c)->parent;
 }
 
 static int branch_clk_is_enabled(struct clk *c)
@@ -839,7 +831,6 @@ struct clk_ops clk_ops_branch = {
 	.in_hwcg_mode = branch_clk_in_hwcg_mode,
 	.is_enabled = branch_clk_is_enabled,
 	.reset = branch_clk_reset,
-	.get_parent = branch_clk_get_parent,
 	.handoff = branch_clk_handoff,
 	.set_flags = branch_clk_set_flags,
 };
@@ -867,7 +858,6 @@ struct clk_ops clk_ops_rcg = {
 	.is_enabled = rcg_clk_is_enabled,
 	.round_rate = rcg_clk_round_rate,
 	.reset = rcg_clk_reset,
-	.get_parent = rcg_clk_get_parent,
 	.set_flags = rcg_clk_set_flags,
 };
 
