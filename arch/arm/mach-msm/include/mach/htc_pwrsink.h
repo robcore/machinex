@@ -17,7 +17,7 @@
 #define _ARCH_ARM_MACH_MSM_HTC_PWRSINK_H_
 
 #include <linux/platform_device.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 
 typedef enum {
 	PWRSINK_AUDIO_PCM = 0,
@@ -61,8 +61,8 @@ struct pwr_sink_platform_data {
 	struct pwr_sink	*sinks;
 	int (*suspend_late)(struct platform_device *, pm_message_t state);
 	int (*resume_early)(struct platform_device *);
-	void (*suspend_early)(struct early_suspend *);
-	void (*resume_late)(struct early_suspend *);
+	void (*suspend_early)(struct power_suspend *);
+	void (*resume_late)(struct power_suspend *);
 };
 
 #ifndef CONFIG_HTC_PWRSINK
