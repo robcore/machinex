@@ -366,7 +366,7 @@ static ssize_t failsafe_store(struct kobject *kobj,
 	switch (new_failsafe) {
 		case FAIL_SAFE_ENABLED:
 			usb_charge_level = USB_CHARGE_460;
-			ac_charge_level = AC_CHARGE_1000;
+			ac_charge_level = AC_CHARGE_1800;
 			failsafe = new_failsafe;
 			return count;
 		case FAIL_SAFE_DISABLED:
@@ -486,7 +486,7 @@ int force_fast_charge_init(void)
 {
 	int force_fast_charge_retval;
 
-	/* Forced fast charge disabled by default */
+	/* Forced fast charge enabled by default */
 	force_fast_charge = FAST_CHARGE_FORCE_CUSTOM_MA;
 	/* Use MTP during fast charge, enabled by default */
 	use_mtp_during_fast_charge = USE_MTP_DURING_FAST_CHARGE_ENABLED;
