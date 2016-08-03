@@ -378,17 +378,6 @@ static struct mfd_cell vibrator_cell __devinitdata = {
 	.id             = -1,
 };
 
-static const struct resource ccadc_cell_resources[] __devinitconst = {
-	SINGLE_IRQ_RESOURCE("PM8921_BMS_CCADC_EOC", PM8921_BMS_CCADC_EOC),
-};
-
-static struct mfd_cell ccadc_cell __devinitdata = {
-	.name		= PM8XXX_CCADC_DEV_NAME,
-	.id		= -1,
-	.resources	= ccadc_cell_resources,
-	.num_resources	= ARRAY_SIZE(ccadc_cell_resources),
-};
-
 static struct pm8xxx_vreg regulator_data[] = {
 	/*   name	     pc_name	    ctrl   test   hpm_min */
 	NLDO1200("8038_l1",		    0x0AE, 0x0AF, LDO_1200),
@@ -724,19 +713,6 @@ pm8038_add_subdevices(const struct pm8038_platform_data *pdata,
 	if (pdata->ccadc_pdata) {
 		pdata->ccadc_pdata->ccadc_cdata.batt_temp_channel
 						= CHANNEL_BATT_THERM;
-		ccadc_cell.platform_data = pdata->ccadc_pdata;
-		ccadc_cell.pdata_size =
-				sizeof(struct pm8xxx_ccadc_platform_data);
-
-		ret = mfd_add_devices(pmic->dev, 0, &ccadc_cell, 1, NULL,
-					irq_base);
-		if (ret) {
-			pr_err("Failed to add ccadc subdevice ret=%d\n", ret);
-			goto bail;
-		}
-	}
-
-	if (pdata->ccadc_pdata) {
 		ccadc_cell.platform_data = pdata->ccadc_pdata;
 		ccadc_cell.pdata_size =
 				sizeof(struct pm8xxx_ccadc_platform_data);
