@@ -54,7 +54,7 @@ struct cpufreq_cpu_save_data {
 static DEFINE_PER_CPU(struct cpufreq_cpu_save_data, cpufreq_policy_save);
 #endif
 static DEFINE_SPINLOCK(cpufreq_driver_lock);
-static DEFINE_MUTEX(cpufreq_governor_lock); 
+static DEFINE_MUTEX(cpufreq_governor_lock);
 
 /*
  * cpu_policy_rwsem is a per CPU reader-writer semaphore designed to cure
@@ -1182,7 +1182,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		policy->governor = gov;
 		pr_debug("Restoring governor %s for cpu %d\n",
 		       policy->governor->name, cpu);
- 	}
+	}
 	if (per_cpu(cpufreq_policy_save, cpu).min) {
 		policy->min = per_cpu(cpufreq_policy_save, cpu).min;
 		policy->user_policy.min = policy->min;
@@ -1840,20 +1840,20 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 
 	pr_debug("__cpufreq_governor for CPU %u, event %u\n",
 						policy->cpu, event);
- 
-mutex_lock(&cpufreq_governor_lock); 
-if ((!policy->governor_enabled && (event == CPUFREQ_GOV_STOP)) || 
-(policy->governor_enabled && (event == CPUFREQ_GOV_START))) { 
-mutex_unlock(&cpufreq_governor_lock); 
-return -EBUSY; 
-} 
 
-if (event == CPUFREQ_GOV_STOP) 
-policy->governor_enabled = false; 
-else if (event == CPUFREQ_GOV_START) 
-policy->governor_enabled = true; 
+mutex_lock(&cpufreq_governor_lock);
+if ((!policy->governor_enabled && (event == CPUFREQ_GOV_STOP)) ||
+(policy->governor_enabled && (event == CPUFREQ_GOV_START))) {
+mutex_unlock(&cpufreq_governor_lock);
+return -EBUSY;
+}
 
-mutex_unlock(&cpufreq_governor_lock); 
+if (event == CPUFREQ_GOV_STOP)
+policy->governor_enabled = false;
+else if (event == CPUFREQ_GOV_START)
+policy->governor_enabled = true;
+
+mutex_unlock(&cpufreq_governor_lock);
 
 	ret = policy->governor->governor(policy, event);
 
@@ -2271,7 +2271,7 @@ EXPORT_SYMBOL(cpufreq_get_min);
  *	@cpu: CPU whose governor needs to be changed
  *	@target_gov: new governor to be set
  */
-int cpufreq_set_gov(char *target_gov, unsigned int cpu)
+int limiter_set_gov(char *target_gov, unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	unsigned int ret = 0;
@@ -2304,7 +2304,7 @@ skip:
 
 	return ret;
 }
-EXPORT_SYMBOL(cpufreq_set_gov);
+EXPORT_SYMBOL(limiter_set_gov);
 
 /*
  *	cpufreq_get_gov - get governor for a cpu

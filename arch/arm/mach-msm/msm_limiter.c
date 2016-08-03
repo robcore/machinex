@@ -132,7 +132,7 @@ static void __msm_limit_suspend(void)
 		return;
 
 	INIT_DELAYED_WORK(&limit.suspend_work, msm_limit_suspend);
-	queue_delayed_work_on(0, limiter_wq, &limit.suspend_work,
+	mod_delayed_work_on(0, limiter_wq, &limit.suspend_work,
 			msecs_to_jiffies(limit.suspend_defer_time * 1000));
 }
 
@@ -440,7 +440,7 @@ static ssize_t store_scaling_governor_##cpu(		\
 	ret = sscanf(buf, "%s\n", val);			\
 	if (ret != 1)					\
 		return -EINVAL;				\
-	ret = cpufreq_set_gov(val, cpu);		\
+	ret = limiter_set_gov(val, cpu);		\
 	return count;					\
 }							\
 static ssize_t show_scaling_governor_##cpu(		\
