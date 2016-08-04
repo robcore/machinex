@@ -3428,7 +3428,9 @@ static int is_charging_finished(struct pm8921_chg_chip *chip,
 							vbat_batt_terminal_uv,
 							vbat_intended,
 							vbat_intended);
+#ifndef CONFIG_PM8921_EXTENDED_INFO
 			return CHG_IN_PROGRESS;
+#endif
 		}
 
 		regulation_loop = pm_chg_get_regulation_loop(chip);
