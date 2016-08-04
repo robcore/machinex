@@ -31,9 +31,6 @@
 
 #include "power.h"
 
-+static void suspend_timeout(unsigned long data);
-+static DEFINE_TIMER(suspend_wd, suspend_timeout, 0, 0);
-
 #ifdef CONFIG_PM_SYNC_BEFORE_SUSPEND
 static int suspendsync = 1;
 #else
@@ -92,42 +89,6 @@ static bool valid_state(suspend_state_t state)
 	 * implementation, no valid callback implies that none are valid.
 	 */
 	return suspend_ops && suspend_ops->valid && suspend_ops->valid(state);
-}
-
-/**
- *      suspend_timeout - suspend watchdog handler
- *
- *      Called when timed out in suspending.
- *      There's not much we can do here to recover so
- *      BUG() out for a crash-dump
- *
- */
-static void suspend_timeout(unsigned long data)
-{
-	struct task_struct *suspend_task = (struct task_struct *)data;
-	printk(KERN_EMERG "**** Suspend timeout\n");
-	if (suspend_task)
-		sched_show_task(suspend_task);
-	BUG();
-}
-
-/**
- *      suspend_wdset - Sets up suspend watchdog timer.
- *
- */
-static void suspend_wdset(void)
-{
-	suspend_wd.data = (unsigned long)current;
-	mod_timer(&suspend_wd, jiffies + (HZ * 60));
-}
-
-/**
- *      suspend_wdclr - clear suspend watchdog timer.
- *
- */
-static void suspend_wdclr(void)
-{
-	del_timer_sync(&suspend_wd);
 }
 
 /**
@@ -436,9 +397,7 @@ static int enter_state(suspend_state_t state)
 	}
 
 	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state].label);
-	suspend_wdset();
 	error = suspend_prepare(state);
-	suspend_wdclr();
 	if (error)
 		goto Unlock;
 
@@ -452,9 +411,7 @@ static int enter_state(suspend_state_t state)
 
  Finish:
 	pr_debug("PM: Finishing wakeup.\n");
-	suspend_wdset();
 	suspend_finish();
-	suspend_wdclr();
  Unlock:
 	mutex_unlock(&pm_mutex);
 	return error;
