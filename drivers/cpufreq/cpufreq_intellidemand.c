@@ -81,7 +81,7 @@ static freq_table_idx pre_freq_idx[SUP_CORE_NUM] = {};
 #if defined(SMART_UP_SLOW_UP_AT_HIGH_FREQ)
 
 #define SUP_SLOW_UP_FREQUENCY			(1350000)
-#define SUP_HIGH_SLOW_UP_FREQUENCY		(1566000)
+#define SUP_HIGH_SLOW_UP_FREQUENCY		(1674000)
 #define SUP_SLOW_UP_LOAD			(90)
 
 typedef struct {
@@ -225,7 +225,7 @@ static struct dbs_tuners {
 	.step_up_interim_hispeed = DEF_STEP_UP_INTERIM_HISPEED,
 	.sampling_early_factor = DEF_SAMPLING_EARLY_HISPEED_FACTOR,
 	.sampling_interim_factor = DEF_SAMPLING_INTERIM_HISPEED_FACTOR,
-	.two_phase_freq = 1674000,
+	.two_phase_freq = 1782000,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
 };
@@ -379,7 +379,7 @@ static ssize_t show_powersave_bias
 	return snprintf(buf, PAGE_SIZE, "%d\n", dbs_tuners_ins.powersave_bias);
 }
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1674000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1782000} ;
 
 static ssize_t show_two_phase_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)
