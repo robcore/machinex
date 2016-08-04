@@ -104,7 +104,7 @@ struct msm_pm_cpr_ops {
 
 void msm_pm_set_platform_data(struct msm_pm_platform_data *data, int count);
 enum msm_pm_sleep_mode msm_pm_idle_enter(struct cpuidle_device *dev,
-			struct cpuidle_driver *drv, int index, bool coupled);
+			struct cpuidle_driver *drv, int index);
 void msm_pm_set_irq_extns(struct msm_pm_irq_calls *irq_calls);
 void msm_pm_cpu_enter_lowpower(unsigned int cpu);
 void __init msm_pm_set_tz_retention_flag(unsigned int flag);
