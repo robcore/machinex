@@ -1262,6 +1262,8 @@ static void armv7pmu_restore_pm_registers(void *hcpu)
 }
 
 static struct arm_pmu armv7pmu = {
+	.request_pmu_irq	= armpmu_generic_request_irq,
+	.free_pmu_irq		= armpmu_generic_free_irq,
 	.handle_irq		= armv7pmu_handle_irq,
 	.enable			= armv7pmu_enable_event,
 	.disable		= armv7pmu_disable_event,
