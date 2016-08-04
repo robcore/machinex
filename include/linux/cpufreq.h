@@ -396,7 +396,7 @@ enum {
 int get_max_freq(void);
 int get_min_freq(void);
 
-#define MAX_FREQ_LIMIT		get_max_freq() /* 1512000 */
+#define MAX_FREQ_LIMIT		get_max_freq() /* 1890000 */
 #define MIN_FREQ_LIMIT		get_min_freq() /* 384000 */
 
 #define MIN_TOUCH_LIMIT		384000
@@ -559,6 +559,9 @@ extern struct cpufreq_governor cpufreq_gov_uberdemand;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_LULZACTIVE)
 extern struct cpufreq_governor cpufreq_gov_lulzactive;
 #define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_lulzactive)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_MEDUSA)
+extern struct cpufreq_governor cpufreq_gov_medusa;
+#define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_medusa)
 #endif
 
 

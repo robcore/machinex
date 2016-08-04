@@ -337,6 +337,12 @@ config CPU_FREQ_DEFAULT_GOV_SMARTASSH3
  	help
 	  Use the CPUFreq governor 'smartassH3' as default.
 
+config CPU_FREQ_DEFAULT_GOV_MEDUSA
+	bool "medusa"
+	select CPU_FREQ_GOV_MEDUSA
+	help
+	  Use 'medusa' governor as default.
+
 endchoice
 
 config CPU_FREQ_GOV_UBERDEMAND
@@ -717,6 +723,15 @@ config CPU_FREQ_GOV_INTELLIMM
           For details, take a look at linux/Documentation/cpu-freq.
 
           If in doubt, say N.
+
+config CPU_FREQ_DEFAULT_GOV_MEDUSA
+	tristate "'medusa' cpufreq governor"
+	help
+	  'medusa'is a Linux CPU frequency governor designed for
+	  mobile multi-core applications processors
+	  (e.g. ARM Cortex and Qualcomm Krait).
+
+	  Feeling risky, say Y.
 
 config SEC_DVFS
 	bool "DVFS job"

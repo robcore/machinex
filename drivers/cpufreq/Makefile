@@ -45,6 +45,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_TRIPNDROID)		+= cpufreq_tripndroid.o
 obj-$(CONFIG_CPU_FREQ_GOV_ELEMENTALX)		+= cpufreq_elementalx.o
 obj-$(CONFIG_CPU_FREQ_GOV_LAZY)			+= cpufreq_lazy.o
 obj-$(CONFIG_CPU_FREQ_GOV_LULZACTIVE)		+= cpufreq_lulzactive.o
+obj-$(CONFIG_CPU_FREQ_GOV_MEDUSA)		+= cpufreq_medusa.o
 
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
