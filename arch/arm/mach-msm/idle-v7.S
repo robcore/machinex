@@ -22,7 +22,7 @@
 #include "idle.h"
 #include "idle-macros.S"
 
-#ifdef CONFIG_MSM_SCM
+#ifdef CONFIG_ARCH_MSM_KRAIT
 #define SCM_SVC_BOOT 0x1
 #define SCM_CMD_TERMINATE_PC 0x2
 #endif
@@ -186,7 +186,6 @@ ENTRY(msm_pm_collapse)
 	ldr	r1, [r1]
 	cmp	r1, #0
 	blxne	r1
-
 skip:
 	ldr	r1, =msm_pm_disable_l2_fn
 	ldr	r1, [r1]
@@ -207,7 +206,7 @@ skip:
 	str	r2, [r1]
 skip_pc_debug1:
 
-#ifdef CONFIG_MSM_SCM
+#ifdef CONFIG_ARCH_MSM_KRAIT
 	ldr	r0, =SCM_SVC_BOOT
 	ldr	r1, =SCM_CMD_TERMINATE_PC
 	ldr	r2, =msm_pm_flush_l2_flag
