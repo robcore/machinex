@@ -480,7 +480,7 @@ ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
   	if (!log_enabled)
      	return 0;
 
-	now = current_kernel_time();
+	getnstimeofday(&now);
 
 	header.pid = current->tgid;
 	header.tid = current->pid;
