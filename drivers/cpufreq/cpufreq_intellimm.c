@@ -25,6 +25,7 @@
 #include <linux/ktime.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
@@ -49,10 +50,10 @@
 #define DEF_FREQ_DOWN_STEP			(550000)
 #define DEF_FREQ_DOWN_STEP_BARRIER		(1190400)
 #else
-#define DEF_POWER_SAVE_FREQUENCY		(750000)
-#define DEF_TWO_PHASE_FREQUENCY			(1300000)
-#define DBS_INPUT_EVENT_MIN_FREQ		(1026000)
-#define DEF_FREQUENCY_OPTIMAL			(702000)
+#define DEF_POWER_SAVE_FREQUENCY		(918000)
+#define DEF_TWO_PHASE_FREQUENCY			(1890000)
+#define DBS_INPUT_EVENT_MIN_FREQ		(810000)
+#define DEF_FREQUENCY_OPTIMAL			(1026000)
 #define DEF_FREQ_DOWN_STEP			(250000)
 #define DEF_FREQ_DOWN_STEP_BARRIER		(702000)
 #endif
@@ -124,7 +125,7 @@ static unsigned long input_event_boost_expired = 0;
 
 #define MAX(x,y)			(x > y ? x : y)
 #define MIN(x,y)			(x < y ? x : y)
-#define FREQ_NEED_BURST(x)		(x < 600000 ? 1 : 0)
+#define FREQ_NEED_BURST(x)		(x < 594000 ? 1 : 0)
 
 static struct cpufreq_frequency_table *tbl = NULL;
 static unsigned int *tblmap[TABLE_SIZE] __read_mostly;
@@ -194,29 +195,6 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 	return jiffies_to_usecs(idle_time);
 }
 
-static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
-{
-	u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
-
-	if (idle_time == -1ULL)
-		return get_cpu_idle_time_jiffy(cpu, wall);
-	else
-		idle_time += get_cpu_iowait_time_us(cpu, wall);
-
-	return idle_time;
-}
-
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
-						cputime64_t *wall)
-{
-	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
-
-	if (iowait_time == -1ULL)
-		return 0;
-
-	return iowait_time;
-}
-
 static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 					  unsigned int freq_next,
 					  unsigned int relation)
@@ -248,7 +226,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	freq_lo = dbs_info->freq_table[index].frequency;
 	index = 0;
 	cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-			CPUFREQ_RELATION_L, &index);
+			CPUFREQ_RELATION_C, &index);
 	freq_hi = dbs_info->freq_table[index].frequency;
 
 	
@@ -276,7 +254,7 @@ static int intellimm_powersave_bias_setspeed(struct cpufreq_policy *policy,
 		
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->min : policy->min,
-			CPUFREQ_RELATION_L);
+			CPUFREQ_RELATION_C);
 		return 1;
 	} else if (level == POWERSAVE_BIAS_MINLEVEL) {
 		
@@ -559,7 +537,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 		struct cpu_dbs_info_s *dbs_info;
 		dbs_info = &per_cpu(imm_cpu_dbs_info, j);
 		dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-						&dbs_info->prev_cpu_wall);
+						&dbs_info->prev_cpu_wall, 0);
 		if (dbs_tuners_ins.ignore_nice)
 			dbs_info->prev_cpu_nice =
 				kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -611,7 +589,7 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 		if (reenable_timer) {
 			
 			for_each_online_cpu(cpu) {
-				if (lock_policy_rwsem_write(cpu) < 0)
+				//if (lock_policy_rwsem_write(cpu) < 0)
 					continue;
 
 				dbs_info = &per_cpu(imm_cpu_dbs_info, cpu);
@@ -641,7 +619,7 @@ skip_this_cpu:
 		intellimm_powersave_bias_init();
 	} else {
 		for_each_online_cpu(cpu) {
-			if (lock_policy_rwsem_write(cpu) < 0)
+			//if (lock_policy_rwsem_write(cpu) < 0)
 				continue;
 
 			dbs_info = &per_cpu(imm_cpu_dbs_info, cpu);
@@ -976,7 +954,7 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 
 	__cpufreq_driver_target(p, freq, (dbs_tuners_ins.powersave_bias ||
 						freq < p->max) ?
-			CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
+			CPUFREQ_RELATION_C : CPUFREQ_RELATION_H);
 }
 
 int input_event_boosted(void)
@@ -1027,8 +1005,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		j_dbs_info = &per_cpu(imm_cpu_dbs_info, j);
 
-		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
-		cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
+		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
+		//cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time, 0);
 
 		wall_time = (unsigned int)
 			(cur_wall_time - j_dbs_info->prev_cpu_wall);
@@ -1172,7 +1150,7 @@ set_freq:
 
 		if (dbs_tuners_ins.powersave_bias) {
 			freq_next = powersave_bias_target(policy, freq_next,
-					CPUFREQ_RELATION_L);
+					CPUFREQ_RELATION_C);
 		}
 
 		if (dbs_tuners_ins.freq_down_step) {
@@ -1200,7 +1178,7 @@ set_freq:
 			freq_next = new_freq_next;
 		}
 
-		__cpufreq_driver_target(policy, freq_next, CPUFREQ_RELATION_L);
+		__cpufreq_driver_target(policy, freq_next, CPUFREQ_RELATION_C);
 	}
 }
 
@@ -1438,7 +1416,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			j_dbs_info->cur_policy = policy;
 
 			j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-						&j_dbs_info->prev_cpu_wall);
+						&j_dbs_info->prev_cpu_wall, 0);
 			if (dbs_tuners_ins.ignore_nice)
 				j_dbs_info->prev_cpu_nice =
 					kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -1521,7 +1499,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			else if (policy->min > this_dbs_info->cur_policy->cur)
 				__cpufreq_driver_target(this_dbs_info->
 							cur_policy,
-					policy->min, CPUFREQ_RELATION_L);
+					policy->min, CPUFREQ_RELATION_C);
 			else if (dbs_tuners_ins.powersave_bias != 0)
 				intellimm_powersave_bias_setspeed(
 					this_dbs_info->cur_policy,
@@ -1551,7 +1529,7 @@ static int cpufreq_gov_dbs_up_task(void *data)
 
 		get_online_cpus();
 
-		if (lock_policy_rwsem_write(cpu) < 0)
+		//if (lock_policy_rwsem_write(cpu) < 0)
 			goto bail_acq_sema_failed;
 
 		this_dbs_info = &per_cpu(imm_cpu_dbs_info, cpu);
@@ -1567,7 +1545,7 @@ static int cpufreq_gov_dbs_up_task(void *data)
 		dbs_tuners_ins.powersave_bias = 0;
 		dbs_freq_increase(policy, this_dbs_info->input_event_freq);
 		this_dbs_info->prev_cpu_idle = get_cpu_idle_time(cpu,
-						&this_dbs_info->prev_cpu_wall);
+						&this_dbs_info->prev_cpu_wall, 0);
 
 		mutex_unlock(&this_dbs_info->timer_mutex);
 
