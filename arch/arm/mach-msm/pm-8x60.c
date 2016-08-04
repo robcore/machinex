@@ -678,7 +678,7 @@ static void msm_pm_target_init(void)
 		msm_pm_use_qtimer = true;
 }
 
-static int64_t msm_pm_timer_enter_idle(void)
+int64_t msm_pm_timer_enter_idle(void)
 {
 	if (msm_pm_use_qtimer)
 		return ktime_to_ns(tick_nohz_get_sleep_length());
@@ -686,7 +686,7 @@ static int64_t msm_pm_timer_enter_idle(void)
 	return msm_timer_enter_idle();
 }
 
-static void msm_pm_timer_exit_idle(bool timer_halted)
+void msm_pm_timer_exit_idle(bool timer_halted)
 {
 	if (msm_pm_use_qtimer)
 		return;
@@ -757,20 +757,80 @@ void arch_idle(void)
 	return;
 }
 
-int msm_pm_idle_prepare(struct cpuidle_device *dev,
-		struct cpuidle_driver *drv, int index)
+static u32 msm_pm_coupled_sleep_time;
+
+static u32 msm_get_coupled_sleep_time(void)
 {
-	int i;
+	u32 s_us;
+	ktime_t k;
+	unsigned cpu;
+	u32 ret = -1;
+	/* Get the sleep time across all cpus for coupled */
+
+	for_each_online_cpu(cpu) {
+		k = tick_nohz_get_cpu_sleep_length(cpu);
+		s_us = (uint32_t) (ktime_to_us(k) & UINT_MAX);
+
+		if (ret > s_us)
+			ret = s_us;
+	}
+	return ret;
+}
+
+int msm_pm_idle_prepare(struct cpuidle_device *dev,
+		struct cpuidle_driver *drv, int index, bool coupled)
+{
 	unsigned int power_usage = -1;
 	int ret = MSM_PM_SLEEP_MODE_NOT_SELECTED;
+	struct cpuidle_state *state = &drv->states[index];
+	struct cpuidle_state_usage *st_usage = &dev->states_usage[index];
+	enum msm_pm_sleep_mode mode;
+	bool allow;
+	void *rs_limits = NULL;
+	uint32_t power;
+	int idx;
 	uint32_t modified_time_us = 0;
+	ktime_t k;
 	struct msm_pm_time_params time_param;
+	unsigned int cpu;
+
+	time_param.sleep_us = -1;
+
+	mode = (enum msm_pm_sleep_mode) cpuidle_get_statedata(st_usage);
+	idx = MSM_PM_MODE(dev->cpu, mode);
+
+	if (coupled) {
+		allow = true;
+		for_each_online_cpu(cpu) {
+			bool pc_allow;
+
+			idx = MSM_PM_MODE(cpu, mode);
+			pc_allow = msm_pm_sleep_modes[idx].idle_enabled &&
+				msm_pm_sleep_modes[idx].idle_supported;
+
+			if (!pc_allow)
+				allow = false;
+		}
+	} else
+		allow = msm_pm_sleep_modes[idx].idle_enabled &&
+			msm_pm_sleep_modes[idx].idle_supported;
+
+	if (!allow)
+		return 0;
+
+	if (coupled && dev->cpu)
+		return allow ? mode : 0;
+
+	if (coupled) {
+		time_param.sleep_us = msm_get_coupled_sleep_time();
+	} else {
+		k = tick_nohz_get_sleep_length();
+		time_param.sleep_us = (uint32_t) (ktime_to_us(k) & UINT_MAX);
+	}
 
 	time_param.latency_us =
 		(uint32_t) pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
-	time_param.sleep_us =
-		(uint32_t) (ktime_to_us(tick_nohz_get_sleep_length())
-								& UINT_MAX);
+
 	time_param.modified_time_us = 0;
 
 	if (!dev->cpu)
@@ -780,69 +840,26 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 	else
 		time_param.next_event_us = 0;
 
-	for (i = 0; i < dev->state_count; i++) {
-		struct cpuidle_state *state = &drv->states[i];
-		struct cpuidle_state_usage *st_usage = &dev->states_usage[i];
-		enum msm_pm_sleep_mode mode;
-		bool allow;
-		void *rs_limits = NULL;
-		uint32_t power;
-		int idx;
+	if (pm_sleep_ops.lowest_limits)
+		rs_limits = pm_sleep_ops.lowest_limits(true,
+				mode, &time_param, &power);
 
-		mode = (enum msm_pm_sleep_mode) cpuidle_get_statedata(st_usage);
-		idx = MSM_PM_MODE(dev->cpu, mode);
+	if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
+		pr_info("CPU%u: %s: %s, latency %uus, "
+			"sleep %uus, limit %p\n",
+			dev->cpu, __func__, state->desc,
+			time_param.latency_us,
+			time_param.sleep_us, rs_limits);
 
-		allow = msm_pm_sleep_modes[idx].idle_enabled &&
-				msm_pm_sleep_modes[idx].idle_supported;
+	if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
+		pr_info("CPU%u: %s: allow %s: %d\n",
+			dev->cpu, __func__, state->desc, (int)allow);
 
-		switch (mode) {
-		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE:
-			if (num_online_cpus() > 1 || cpu_maps_is_updating())
-				allow = false;
-			break;
-		case MSM_PM_SLEEP_MODE_RETENTION:
-			/*
-			 * The Krait BHS regulator doesn't have enough head
-			 * room to drive the retention voltage on LDO and so
-			 * has disabled retention
-			 */
-			if (!msm_pm_ldo_retention_enabled)
-				allow = false;
-
-			if (msm_pm_retention_tz_call &&	num_online_cpus() > 1)
-				allow = false;
-			break;
-		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
-			if (!dev->cpu && msm_rpm_local_request_is_outstanding()) {
-				allow = false;
-				break;
-			}
-		case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
-			break;
-
-		default:
-			allow = false;
-			break;
-		}
-
-		if (!allow)
-			continue;
-
-		if (pm_sleep_ops.lowest_limits)
-			rs_limits = pm_sleep_ops.lowest_limits(true,
-					mode, &time_param, &power);
-
-		if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
-			pr_info("CPU%u:%s:%s, latency %uus, slp %uus, lim %p\n",
-					dev->cpu, __func__, state->desc,
-					time_param.latency_us,
-					time_param.sleep_us, rs_limits);
-		if (!rs_limits)
-			continue;
-
+	if (rs_limits) {
 		if (power < power_usage) {
 			power_usage = power;
 			modified_time_us = time_param.modified_time_us;
+			msm_pm_coupled_sleep_time = time_param.sleep_us;
 			ret = mode;
 		}
 
@@ -852,13 +869,18 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 
 	if (modified_time_us && !dev->cpu)
 		msm_pm_set_timer(modified_time_us);
+
 	return ret;
 }
 
-int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
+int msm_pm_idle_enter(struct cpuidle_device *dev, struct cpuidle_driver *drv,
+		int index, bool coupled)
 {
 	int64_t time;
 	int exit_stat;
+	bool collapsed = 1;
+	enum msm_pm_sleep_mode sleep_mode =
+		msm_pm_idle_prepare(dev, drv, index, coupled);
 
 	if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: mode %d\n",
@@ -887,36 +909,44 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 
 	case MSM_PM_SLEEP_MODE_POWER_COLLAPSE: {
 		bool timer_halted = false;
-		uint32_t sleep_delay = 1;
-		int ret = -ENODEV;
-		int notify_rpm =
-			(sleep_mode == MSM_PM_SLEEP_MODE_POWER_COLLAPSE);
-		int collapsed = 0;
 
-		sleep_delay = (uint32_t)msm_pm_timer_enter_idle();
-		if (sleep_delay == 0) /* 0 would mean infinite time */
-			sleep_delay = 1;
+		if (!dev->cpu) {
+			uint32_t sleep_delay;
+			int ret = -ENODEV;
 
-		if (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask)
-			clock_debug_print_enabled();
+			sleep_delay = (uint32_t) msm_pm_convert_and_cap_time(
+					msm_pm_coupled_sleep_time,
+					MSM_PM_SLEEP_TICK_LIMIT);
 
-		if (pm_sleep_ops.enter_sleep)
-			ret = pm_sleep_ops.enter_sleep(sleep_delay,
-					msm_pm_idle_rs_limits,
-					true, notify_rpm);
-		if (!ret) {
-			collapsed = msm_pm_power_collapse(true);
-			timer_halted = true;
+			if (sleep_delay == 0) /* 0 would mean infinite time */
+				sleep_delay = 1;
 
-			if (pm_sleep_ops.exit_sleep)
-				pm_sleep_ops.exit_sleep(msm_pm_idle_rs_limits,
-						true, notify_rpm, collapsed);
+			if (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask)
+				clock_debug_print_enabled();
+
+			if (pm_sleep_ops.enter_sleep)
+				ret = pm_sleep_ops.enter_sleep(sleep_delay,
+						msm_pm_idle_rs_limits,
+						true, true);
 		}
-		msm_pm_timer_exit_idle(timer_halted);
-		if (collapsed)
-			exit_stat = MSM_PM_STAT_IDLE_POWER_COLLAPSE;
-		else
-			exit_stat = MSM_PM_STAT_IDLE_FAILED_POWER_COLLAPSE;
+
+		/* Until timers can be synchronized on secondary cores,
+		 * disabling timer enter and exit idles
+		 *
+		 */
+		msm_pm_timer_enter_idle();
+
+		collapsed = msm_pm_power_collapse(true);
+		timer_halted = true;
+
+		if (!dev->cpu) {
+			pm_sleep_ops.exit_sleep(msm_pm_idle_rs_limits,
+					true, true, collapsed);
+		}
+
+		msm_pm_timer_exit_idle(collapsed);
+
+		exit_stat = MSM_PM_STAT_IDLE_POWER_COLLAPSE;
 		break;
 	}
 
@@ -1324,7 +1354,7 @@ static struct platform_driver msm_pc_counter_driver = {
 };
 
 static int __init msm_pm_setup_saved_state(void)
-{
+{msm_pm_coupled_sleep_time;
 	pgd_t *pc_pgd;
 	pmd_t *pmd;
 	unsigned long pmdval;
