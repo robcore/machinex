@@ -23,6 +23,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/percpu.h>
+#include <linux/syscore_ops.h>
 #include <linux/mm.h>
 
 #include <asm/localtimer.h>
@@ -86,6 +87,8 @@ static int msm_global_timer;
 static struct timespec persistent_ts;
 static u64 persistent_ns;
 static u64 last_persistent_ns;
+static struct timespec suspend_ts;
+static u64 cyc_offset;
 
 #define NR_TIMERS ARRAY_SIZE(msm_clocks)
 
@@ -941,7 +944,7 @@ static u32 notrace msm_read_sched_clock(void)
 {
 	struct msm_clock *clock = &msm_clocks[msm_global_timer];
 	struct clocksource *cs = &clock->clocksource;
-	return cs->read(NULL);
+	return cs->read(NULL) + cyc_offset;
 }
 
 static struct delay_timer msm_delay_timer;
@@ -1032,6 +1035,30 @@ void read_persistent_clock(struct timespec *ts)
 	timespec_add_ns(tsp, delta);
 	*ts = *tsp;
 }
+
+static int msm_timer_suspend(void)
+{
+	read_persistent_clock(&suspend_ts);
+	return 0;
+}
+
+static void msm_timer_resume(void)
+{
+	struct timespec ts;
+	struct msm_clock *clock = &msm_clocks[msm_global_timer];
+	int div = NSEC_PER_SEC / clock->freq;
+
+	read_persistent_clock(&ts);
+	if (timespec_compare(&ts, &suspend_ts) > 0) {
+		ts = timespec_sub(ts, suspend_ts);
+		cyc_offset += (clock->freq * ts.tv_sec) + (ts.tv_nsec / div);
+	}
+}
+
+static struct syscore_ops msm_timer_syscore_ops = {
+	.suspend = msm_timer_suspend,
+	.resume = msm_timer_resume,
+};
 
 static void __init msm_timer_init(void)
 {
@@ -1207,6 +1234,8 @@ static void __init msm_timer_init(void)
 #ifdef CONFIG_LOCAL_TIMERS
 	local_timer_register(&msm_lt_ops);
 #endif
+
+	register_syscore_ops(&msm_timer_syscore_ops);
 }
 
 struct sys_timer msm_timer = {
