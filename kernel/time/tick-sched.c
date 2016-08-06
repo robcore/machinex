@@ -534,7 +534,7 @@ void tick_nohz_irq_exit(void)
 
 	local_irq_save(flags);
 
-	tick_nohz_stop_sched_tick(ts, now, cpu);
+	__tick_nohz_idle_enter(ts);
 
 	local_irq_restore(flags);
 }
