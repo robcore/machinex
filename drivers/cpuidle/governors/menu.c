@@ -28,13 +28,6 @@
 #define MAX_INTERESTING 50000
 #define STDDEV_THRESH 400
 
-/* 60 * 60 > STDDEV_THRESH * INTERVALS = 400 * 8 */
-#define MAX_DEVIATION 60
-
-static DEFINE_PER_CPU(struct hrtimer, menu_hrtimer);
-static DEFINE_PER_CPU(int, hrtimer_status);
-/* menu hrtimer mode */
-enum {MENU_HRTIMER_STOP, MENU_HRTIMER_REPEAT};
 
 /*
  * Concepts and ideas behind the menu governor
@@ -270,9 +263,6 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	int i;
 	int multiplier;
 	struct timespec t;
-	int repeat = 0, low_predicted = 0;
-	int cpu = smp_processor_id();
-	struct hrtimer *hrtmr = &per_cpu(menu_hrtimer, cpu);
 
 	if (data->needs_update) {
 		menu_update(drv, dev);
@@ -328,10 +318,8 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 
 		if (s->disabled || su->disable)
 			continue;
-		if (s->target_residency > data->predicted_us) {
-			low_predicted = 1;
+		if (s->target_residency > data->predicted_us)
 			continue;
-		}
 		if (s->exit_latency > latency_req)
 			continue;
 		if (s->exit_latency * multiplier > data->predicted_us)
@@ -341,27 +329,6 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 			power_usage = s->power_usage;
 			data->last_state_idx = i;
 			data->exit_us = s->exit_latency;
-		}
-	}
-
-	/* not deepest C-state chosen for low predicted residency */
-	if (low_predicted) {
-		unsigned int timer_us = 0;
-
-		/*
-		 * Set a timer to detect whether this sleep is much
-		 * longer than repeat mode predicted.  If the timer
-		 * triggers, the code will evaluate whether to put
-		 * the CPU into a deeper C-state.
-		 * The timer is cancelled on CPU wakeup.
-		 */
-		timer_us = 2 * (data->predicted_us + MAX_DEVIATION);
-
-		if (repeat && (4 * timer_us < data->expected_us)) {
-			hrtimer_start(hrtmr, ns_to_ktime(1000 * timer_us),
-				HRTIMER_MODE_REL_PINNED);
-			/* In repeat case, menu hrtimer is started */
-			per_cpu(hrtimer_status, cpu) = MENU_HRTIMER_REPEAT;
 		}
 	}
 
@@ -476,9 +443,6 @@ static int menu_enable_device(struct cpuidle_driver *drv,
 				struct cpuidle_device *dev)
 {
 	struct menu_device *data = &per_cpu(menu_devices, dev->cpu);
-	struct hrtimer *t = &per_cpu(menu_hrtimer, dev->cpu);
-	hrtimer_init(t, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	t->function = menu_hrtimer_notify;
 
 	memset(data, 0, sizeof(struct menu_device));
 
