@@ -27,7 +27,7 @@
 #define REDUCE_CURRENT_STEP	100
 #define MINIMUM_INPUT_CURRENT	300
 #define SIOP_INPUT_LIMIT_CURRENT 1200
-#define SIOP_CHARGING_LIMIT_CURRENT 1000
+#define SIOP_CHARGING_LIMIT_CURRENT 1200
 
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
@@ -227,11 +227,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 	int chg_state;
 
 	mutex_lock(&charger->ops_lock);
-	reg_data = 0;
-	reg_data = (1 << CHGIN_SHIFT);
-	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
-			CHGIN_MASK);
-
+	disable_irq(charger->irq_chgin);
 	if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS)
 		set_reg = MAX77693_CHG_REG_CHG_CNFG_10;
 	else
@@ -344,10 +340,7 @@ set_input_current:
 	max77693_write_reg(charger->max77693->i2c,
 		set_reg, set_current_reg);
 exit:
-	reg_data = 0;
-	reg_data = (0 << CHGIN_SHIFT);
-	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
-			CHGIN_MASK);
+	enable_irq(charger->irq_chgin);
 	mutex_unlock(&charger->ops_lock);
 }
 
@@ -759,6 +752,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 		POWER_SUPPLY_TYPE_USB].fast_charging_current;
 	const int wpc_charging_current = charger->pdata->charging_current[
 		POWER_SUPPLY_TYPE_WIRELESS].input_current_limit;
+	u8 chg_cnfg_00;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -768,6 +762,24 @@ static int sec_chg_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_ONLINE:
 		/* check and unlock */
 		check_charger_unlock_state(charger);
+
+		if (val->intval == POWER_SUPPLY_TYPE_POWER_SHARING) {
+			psy_do_property("ps", get,
+					POWER_SUPPLY_PROP_STATUS, value);
+			chg_cnfg_00 = CHG_CNFG_00_OTG_MASK
+				| CHG_CNFG_00_BOOST_MASK
+				| CHG_CNFG_00_DIS_MUIC_CTRL_MASK;
+			if (value.intval) {
+				max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_CNFG_00,
+						chg_cnfg_00, chg_cnfg_00);
+				pr_info("%s: ps enable\n", __func__);
+			} else {
+				max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_CNFG_00,
+						0, chg_cnfg_00);
+				pr_info("%s: ps disable\n", __func__);
+			}
+			break;
+		}
 		charger->cable_type = val->intval;
 		psy_do_property("battery", get,
 				POWER_SUPPLY_PROP_HEALTH, value);
@@ -1254,12 +1266,8 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 	int battery_health;
 	union power_supply_propval value;
 	int stable_count = 0;
-	u8 reg_data;
 
-	reg_data = 0;
-	reg_data = (1 << CHGIN_SHIFT);
-	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
-			CHGIN_MASK);
+	disable_irq(charger->irq_chgin);
 
 	while (1) {
 		psy_do_property("battery", get,
@@ -1336,10 +1344,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		prev_chgin_dtls = chgin_dtls;
 		msleep(100);
 	}
-	reg_data = 0;
-	reg_data = (0 << CHGIN_SHIFT);
-	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
-			CHGIN_MASK);
+	enable_irq(charger->irq_chgin);
 }
 
 static irqreturn_t max77693_chgin_irq(int irq, void *data)
