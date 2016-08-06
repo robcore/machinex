@@ -19,7 +19,7 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-make ARCH=arm -j4 O=$(pwd)/out oldconfig;
+make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make ARCH=arm -S -s -j4 O=$(pwd)/out;
 cp -p $(pwd)/out/arch/arm/boot/zImage $(pwd)/arch/arm/boot/zImage;
 cp -p $(pwd)/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/arch/arm/boot/dhd.ko;
