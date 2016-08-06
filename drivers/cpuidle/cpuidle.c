@@ -8,7 +8,6 @@
  * This code is licenced under the GPL.
  */
 
-#include <linux/clockchips.h>
 #include <linux/kernel.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
@@ -139,15 +138,7 @@ int cpuidle_idle_call(void)
 
 	trace_cpu_idle_rcuidle(next_state, dev->cpu);
 
-	if (drv->states[next_state].flags & CPUIDLE_FLAG_TIMER_STOP)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER,
-				   &dev->cpu);
-
 	entered_state = cpuidle_enter_ops(dev, drv, next_state);
-
-	if (drv->states[next_state].flags & CPUIDLE_FLAG_TIMER_STOP)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
-				   &dev->cpu);
 
 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, dev->cpu);
 
@@ -320,15 +311,16 @@ int cpuidle_enable_device(struct cpuidle_device *dev)
 
 	if (dev->enabled)
 		return 0;
-
 	if (!drv || !cpuidle_curr_governor)
 		return -EIO;
-
-	if (!dev->registered)
-		return -EINVAL;
-
 	if (!dev->state_count)
 		dev->state_count = drv->state_count;
+
+	if (dev->registered == 0) {
+		ret = __cpuidle_register_device(dev);
+		if (ret)
+			return ret;
+	}
 
 	cpuidle_enter_ops = drv->en_core_tk_irqen ?
 		cpuidle_enter_tk : cpuidle_enter;
@@ -441,17 +433,13 @@ int cpuidle_register_device(struct cpuidle_device *dev)
 		return ret;
 	}
 
-	ret = cpuidle_enable_device(dev);
-	if (ret) {
-		mutex_unlock(&cpuidle_lock);
-		return ret;
-	}
-
+	cpuidle_enable_device(dev);
 	cpuidle_install_idle_handler();
 
 	mutex_unlock(&cpuidle_lock);
 
 	return 0;
+
 }
 
 EXPORT_SYMBOL_GPL(cpuidle_register_device);
