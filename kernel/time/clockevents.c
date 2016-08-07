@@ -362,6 +362,7 @@ int __clockevents_update_freq(struct clock_event_device *dev, u32 freq)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(clockevents_config_and_register);
 
 /**
  * clockevents_update_freq - Update frequency and reprogram a clock event device.
