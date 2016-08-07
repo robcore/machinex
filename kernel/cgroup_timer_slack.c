@@ -18,7 +18,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #ifdef CONFIG_CGROUP_DYNAMIC_TIMER_SLACK
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #endif
 
 struct cgroup_subsys timer_slack_subsys;
@@ -31,7 +31,7 @@ unsigned long min_slack_suspend_ns;
 };
 
 #ifdef CONFIG_CGROUP_DYNAMIC_TIMER_SLACK
-bool is_early_suspend_registered = false;
+bool is_power_suspend_registered = false;
 bool is_system_active = true;
 #endif
 
@@ -47,7 +47,7 @@ return container_of(css, struct tslack_cgroup, css);
 /*
 * Sets the status for suspended system
 */
-static void tslack_early_suspend(struct early_suspend *handler)
+static void tslack_power_suspend(struct power_suspend *handler)
 {
 is_system_active = false;
 }
@@ -55,7 +55,7 @@ is_system_active = false;
 /*
 * Sets the status for active system
 */
-static void tslack_late_resume(struct early_suspend *handler)
+static void tslack_power_resume(struct power_suspend *handler)
 {
 is_system_active = true;
 }
@@ -63,9 +63,9 @@ is_system_active = true;
 /*
 * Struct for the timer slack management during suspend/resume
 */
-static struct early_suspend tslack_suspend = {
-.suspend = tslack_early_suspend,
-.resume = tslack_late_resume,
+static struct power_suspend tslack_suspend = {
+.suspend = tslack_power_suspend,
+.resume = tslack_power_resume,
 };
 #endif
 
@@ -75,9 +75,9 @@ struct tslack_cgroup *tslack_cgroup;
 
 #ifdef CONFIG_CGROUP_DYNAMIC_TIMER_SLACK
 /* Register the timer slack management during suspend/resume */
-if (!is_early_suspend_registered) {
-is_early_suspend_registered = true;
-register_early_suspend(&tslack_suspend);
+if (!is_power_suspend_registered) {
+is_power_suspend_registered = true;
+register_power_suspend(&tslack_suspend);
 }
 #endif
 
