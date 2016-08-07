@@ -1107,8 +1107,15 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		 */
 		pr_err("Threaded irq requested with handler=NULL and !ONESHOT for irq %d\n",
 		       irq);
+#if 0
+		/*
+		 * Disabling this reject as it breaks many drivers in Android.
+		 * We need to mark all bad written drivers in *_request_threaded_irq
+		 * to add IRQF_ONESHOT to fix.
+		 */
 		ret = -EINVAL;
 		goto out_mask;
+#endif
 	}
 
 	if (!shared) {
