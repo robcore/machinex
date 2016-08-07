@@ -23,7 +23,6 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/export.h>
-#include <linux/slab.h>
 
 #include <asm/cputype.h>
 #include <asm/delay.h>
@@ -34,12 +33,45 @@
 #include <asm/system_info.h>
 
 static unsigned long arch_timer_rate;
-static int arch_timer_spi;
 static int arch_timer_ppi;
 static int arch_timer_ppi2;
+static int is_irq_percpu;
 
 static struct clock_event_device __percpu **arch_timer_evt;
 static void __iomem *timer_base;
+
+static u32 timer_reg_read_cp15(int reg);
+static void timer_reg_write_cp15(int reg, u32 val);
+static inline cycle_t counter_get_cntpct_cp15(void);
+static inline cycle_t counter_get_cntvct_cp15(void);
+
+static u32 timer_reg_read_mem(int reg);
+static void timer_reg_write_mem(int reg, u32 val);
+static inline cycle_t counter_get_cntpct_mem(void);
+static inline cycle_t counter_get_cntvct_mem(void);
+
+struct arch_timer_operations {
+	void (*reg_write)(int, u32);
+	u32 (*reg_read)(int);
+	cycle_t (*get_cntpct)(void);
+	cycle_t (*get_cntvct)(void);
+};
+
+static struct arch_timer_operations arch_timer_ops_cp15 = {
+	.reg_read = &timer_reg_read_cp15,
+	.reg_write = &timer_reg_write_cp15,
+	.get_cntpct = &counter_get_cntpct_cp15,
+	.get_cntvct = &counter_get_cntvct_cp15,
+};
+
+static struct arch_timer_operations arch_timer_ops_mem = {
+	.reg_read = &timer_reg_read_mem,
+	.reg_write = &timer_reg_write_mem,
+	.get_cntpct = &counter_get_cntpct_mem,
+	.get_cntvct = &counter_get_cntvct_mem,
+};
+
+static struct arch_timer_operations *arch_specific_timer = &arch_timer_ops_cp15;
 
 static struct delay_timer arch_delay_timer;
 
@@ -65,7 +97,7 @@ static struct delay_timer arch_delay_timer;
 #define QTIMER_CNTP_TVAL_REG		0x028
 #define QTIMER_CNTV_TVAL_REG		0x038
 
-static inline void timer_reg_write_mem(int reg, u32 val)
+static void timer_reg_write_mem(int reg, u32 val)
 {
 	switch (reg) {
 	case ARCH_TIMER_REG_CTRL:
@@ -77,7 +109,7 @@ static inline void timer_reg_write_mem(int reg, u32 val)
 	}
 }
 
-static inline void timer_reg_write_cp15(int reg, u32 val)
+static void timer_reg_write_cp15(int reg, u32 val)
 {
 	switch (reg) {
 	case ARCH_TIMER_REG_CTRL:
@@ -91,15 +123,7 @@ static inline void timer_reg_write_cp15(int reg, u32 val)
 	isb();
 }
 
-static inline void arch_timer_reg_write(int cp15, int reg, u32 val)
-{
-	if (cp15)
-		timer_reg_write_cp15(reg, val);
-	else
-		timer_reg_write_mem(reg, val);
-}
-
-static inline u32 timer_reg_read_mem(int reg)
+static u32 timer_reg_read_mem(int reg)
 {
 	u32 val;
 
@@ -120,7 +144,7 @@ static inline u32 timer_reg_read_mem(int reg)
 	return val;
 }
 
-static inline u32 timer_reg_read_cp15(int reg)
+static u32 timer_reg_read_cp15(int reg)
 {
 	u32 val;
 
@@ -141,23 +165,17 @@ static inline u32 timer_reg_read_cp15(int reg)
 	return val;
 }
 
-static inline u32 arch_timer_reg_read(int cp15, int reg)
+static irqreturn_t arch_timer_handler(int irq, void *dev_id)
 {
-	if (cp15)
-		return timer_reg_read_cp15(reg);
-	else
-		return timer_reg_read_mem(reg);
-}
-
-static inline irqreturn_t arch_timer_handler(int cp15,
-					     struct clock_event_device *evt)
-{
+	struct clock_event_device *evt;
 	unsigned long ctrl;
 
-	ctrl = arch_timer_reg_read(cp15, ARCH_TIMER_REG_CTRL);
+	ctrl = arch_specific_timer->reg_read(ARCH_TIMER_REG_CTRL);
 	if (ctrl & ARCH_TIMER_CTRL_IT_STAT) {
 		ctrl |= ARCH_TIMER_CTRL_IT_MASK;
-		arch_timer_reg_write(cp15, ARCH_TIMER_REG_CTRL, ctrl);
+		arch_specific_timer->reg_write(ARCH_TIMER_REG_CTRL,
+							ctrl);
+		evt = *__this_cpu_ptr(arch_timer_evt);
 		evt->event_handler(evt);
 		return IRQ_HANDLED;
 	}
@@ -165,18 +183,16 @@ static inline irqreturn_t arch_timer_handler(int cp15,
 	return IRQ_NONE;
 }
 
-static irqreturn_t arch_timer_handler_cp15(int irq, void *dev_id)
+static void arch_timer_disable(void)
 {
-	struct clock_event_device *evt = *(struct clock_event_device **)dev_id;
-	return arch_timer_handler(1, evt);
+	unsigned long ctrl;
+
+	ctrl = arch_specific_timer->reg_read(ARCH_TIMER_REG_CTRL);
+	ctrl &= ~ARCH_TIMER_CTRL_ENABLE;
+	arch_specific_timer->reg_write(ARCH_TIMER_REG_CTRL, ctrl);
 }
 
-static irqreturn_t arch_timer_handler_mem(int irq, void *dev_id)
-{
-	return arch_timer_handler(0, dev_id);
-}
-
-static inline void arch_timer_set_mode(int cp15, enum clock_event_mode mode,
+static void arch_timer_set_mode(enum clock_event_mode mode,
 				struct clock_event_device *clk)
 {
 	unsigned long ctrl;
@@ -184,54 +200,28 @@ static inline void arch_timer_set_mode(int cp15, enum clock_event_mode mode,
 	switch (mode) {
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
-		ctrl = arch_timer_reg_read(cp15, ARCH_TIMER_REG_CTRL);
-		ctrl &= ~ARCH_TIMER_CTRL_ENABLE;
-		arch_timer_reg_write(cp15, ARCH_TIMER_REG_CTRL, ctrl);
+		arch_timer_disable();
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
-		ctrl = arch_timer_reg_read(cp15, ARCH_TIMER_REG_CTRL);
+		ctrl = arch_specific_timer->reg_read(ARCH_TIMER_REG_CTRL);
 		ctrl |= ARCH_TIMER_CTRL_ENABLE;
-		arch_timer_reg_write(cp15, ARCH_TIMER_REG_CTRL, ctrl);
+		arch_specific_timer->reg_write(ARCH_TIMER_REG_CTRL, ctrl);
 	default:
 		break;
 	}
 }
 
-static void arch_timer_set_mode_cp15(enum clock_event_mode mode,
-				struct clock_event_device *clk)
-{
-	arch_timer_set_mode(1, mode, clk);
-}
-
-static void arch_timer_set_mode_mem(enum clock_event_mode mode,
-				struct clock_event_device *clk)
-{
-	arch_timer_set_mode(0, mode, clk);
-}
-
-static int arch_timer_set_next_event(int cp15, unsigned long evt,
+static int arch_timer_set_next_event(unsigned long evt,
 				     struct clock_event_device *unused)
 {
 	unsigned long ctrl;
 
-	ctrl = arch_timer_reg_read(cp15, ARCH_TIMER_REG_CTRL);
+	ctrl = arch_specific_timer->reg_read(ARCH_TIMER_REG_CTRL);
 	ctrl &= ~ARCH_TIMER_CTRL_IT_MASK;
-	arch_timer_reg_write(cp15, ARCH_TIMER_REG_CTRL, ctrl);
-	arch_timer_reg_write(cp15, ARCH_TIMER_REG_TVAL, evt);
+	arch_specific_timer->reg_write(ARCH_TIMER_REG_CTRL, ctrl);
+	arch_specific_timer->reg_write(ARCH_TIMER_REG_TVAL, evt);
 
 	return 0;
-}
-
-static int arch_timer_set_next_event_cp15(unsigned long evt,
-				     struct clock_event_device *unused)
-{
-	return arch_timer_set_next_event(1, evt, unused);
-}
-
-static int arch_timer_set_next_event_mem(unsigned long evt,
-				     struct clock_event_device *unused)
-{
-	return arch_timer_set_next_event(0, evt, unused);
 }
 
 static int __cpuinit arch_timer_setup(struct clock_event_device *clk)
@@ -240,15 +230,15 @@ static int __cpuinit arch_timer_setup(struct clock_event_device *clk)
 	if (!smp_processor_id() && clk->irq == arch_timer_ppi)
 		return 0;
 
-	clk->features = CLOCK_EVT_FEAT_ONESHOT | CLOCK_EVT_FEAT_C3STOP;
+	/* Be safe... */
+	arch_timer_disable();
+
+	clk->features = CLOCK_EVT_FEAT_ONESHOT;
 	clk->name = "arch_sys_timer";
 	clk->rating = 450;
-	clk->set_mode = arch_timer_set_mode_cp15;
-	clk->set_next_event = arch_timer_set_next_event_cp15;
+	clk->set_mode = arch_timer_set_mode;
+	clk->set_next_event = arch_timer_set_next_event;
 	clk->irq = arch_timer_ppi;
-
-	/* Be safe... */
-	clk->set_mode(CLOCK_EVT_MODE_SHUTDOWN, clk);
 
 	clockevents_config_and_register(clk, arch_timer_rate,
 					0xf, 0x7fffffff);
@@ -274,8 +264,8 @@ static int arch_timer_available(void)
 	unsigned long freq;
 
 	if (arch_timer_rate == 0) {
-		arch_timer_reg_write(1, ARCH_TIMER_REG_CTRL, 0);
-		freq = arch_timer_reg_read(1, ARCH_TIMER_REG_FREQ);
+		arch_specific_timer->reg_write(ARCH_TIMER_REG_CTRL, 0);
+		freq = arch_specific_timer->reg_read(ARCH_TIMER_REG_FREQ);
 
 		/* Check the timer frequency. */
 		if (freq == 0) {
@@ -333,12 +323,9 @@ static inline cycle_t counter_get_cntvct_cp15(void)
 	return ((cycle_t) cvalh << 32) | cvall;
 }
 
-static cycle_t (*get_cntpct_func)(void) = counter_get_cntpct_cp15;
-static cycle_t (*get_cntvct_func)(void) = counter_get_cntvct_cp15;
-
 cycle_t arch_counter_get_cntpct(void)
 {
-	return get_cntpct_func();
+	return arch_specific_timer->get_cntpct();
 }
 EXPORT_SYMBOL(arch_counter_get_cntpct);
 
@@ -364,7 +351,7 @@ static u32 arch_counter_get_cntvct32(void)
 {
 	cycle_t cntvct;
 
-	cntvct = get_cntvct_func();
+	cntvct = arch_specific_timer->get_cntvct();
 
 	/*
 	 * The sched_clock infrastructure only knows about counters
@@ -386,7 +373,7 @@ static void __cpuinit arch_timer_stop(struct clock_event_device *clk)
 	disable_percpu_irq(clk->irq);
 	if (arch_timer_ppi2)
 		disable_percpu_irq(arch_timer_ppi2);
-	clk->set_mode(CLOCK_EVT_MODE_UNUSED, clk);
+	arch_timer_set_mode(CLOCK_EVT_MODE_UNUSED, clk);
 }
 
 static struct local_timer_ops arch_timer_ops __cpuinitdata = {
@@ -396,23 +383,13 @@ static struct local_timer_ops arch_timer_ops __cpuinitdata = {
 
 static struct clock_event_device arch_timer_global_evt;
 
-static void __init arch_timer_counter_init(void)
-{
-	clocksource_register_hz(&clocksource_counter, arch_timer_rate);
-
-	setup_sched_clock(arch_timer_update_sched_clock, 32, arch_timer_rate);
-
-	/* Use the architected timer for the delay loop. */
-	arch_delay_timer.read_current_timer = &arch_timer_read_current_timer;
-	arch_delay_timer.freq = arch_timer_rate;
-	register_current_timer_delay(&arch_delay_timer);
-}
-
 static int __init arch_timer_common_register(void)
 {
 	int err;
 
-	if (!local_timer_is_architected())
+	if (timer_base)
+		arch_specific_timer = &arch_timer_ops_mem;
+	else if (!local_timer_is_architected())
 		return -ENXIO;
 
 	err = arch_timer_available();
@@ -423,8 +400,16 @@ static int __init arch_timer_common_register(void)
 	if (!arch_timer_evt)
 		return -ENOMEM;
 
-	err = request_percpu_irq(arch_timer_ppi, arch_timer_handler_cp15,
-			 "arch_timer", arch_timer_evt);
+	clocksource_register_hz(&clocksource_counter, arch_timer_rate);
+
+	setup_sched_clock(arch_timer_update_sched_clock, 32, arch_timer_rate);
+
+	if (is_irq_percpu)
+		err = request_percpu_irq(arch_timer_ppi, arch_timer_handler,
+				 "arch_timer", arch_timer_evt);
+	else
+		err = request_irq(arch_timer_ppi, arch_timer_handler, 0,
+			"arch_timer", arch_timer_evt);
 	if (err) {
 		pr_err("arch_timer: can't register interrupt %d (%d)\n",
 		       arch_timer_ppi, err);
@@ -432,9 +417,13 @@ static int __init arch_timer_common_register(void)
 	}
 
 	if (arch_timer_ppi2) {
-		err = request_percpu_irq(arch_timer_ppi2,
-				arch_timer_handler_cp15,
-				"arch_timer", arch_timer_evt);
+		if (is_irq_percpu)
+			err = request_percpu_irq(arch_timer_ppi2,
+					arch_timer_handler, "arch_timer",
+					arch_timer_evt);
+		else
+			err = request_irq(arch_timer_ppi2, arch_timer_handler,
+					0, "arch_timer", arch_timer_evt);
 		if (err) {
 			pr_err("arch_timer: can't register interrupt %d (%d)\n",
 			       arch_timer_ppi2, err);
@@ -457,6 +446,12 @@ static int __init arch_timer_common_register(void)
 
 	if (err)
 		goto out_free_irq;
+	percpu_timer_setup();
+
+	/* Use the architected timer for the delay loop. */
+	arch_delay_timer.read_current_timer = &arch_timer_read_current_timer;
+	arch_delay_timer.freq = arch_timer_rate;
+	register_current_timer_delay(&arch_delay_timer);
 
 	return 0;
 
@@ -467,34 +462,6 @@ out_free_irq:
 
 out_free:
 	free_percpu(arch_timer_evt);
-
-	return err;
-}
-
-static int __init arch_timer_mem_register(void)
-{
-	int err;
-	struct clock_event_device *clk;
-
-	clk = kzalloc(sizeof(*clk), GFP_KERNEL);
-	if (!clk)
-		return -ENOMEM;
-
-	clk->features = CLOCK_EVT_FEAT_ONESHOT;
-	clk->name = "arch_mem_timer";
-	clk->rating = 400;
-	clk->set_mode = arch_timer_set_mode_mem;
-	clk->set_next_event = arch_timer_set_next_event_mem;
-	clk->irq = arch_timer_spi;
-	clk->cpumask = cpu_all_mask;
-
-	clk->set_mode(CLOCK_EVT_MODE_SHUTDOWN, clk);
-
-	clockevents_config_and_register(clk, arch_timer_rate,
-					0xf, 0x7fffffff);
-
-	err = request_irq(arch_timer_spi, arch_timer_handler_mem, 0,
-		"arch_timer", clk);
 
 	return err;
 }
@@ -528,86 +495,48 @@ static const struct of_device_id arch_timer_of_match[] __initconst = {
 	{},
 };
 
-static const struct of_device_id arch_timer_mem_of_match[] __initconst = {
-	{ .compatible	= "arm,armv7-timer-mem",	},
-	{},
-};
-
 int __init arch_timer_of_register(void)
 {
-	struct device_node *np, *frame;
+	struct device_node *np;
 	u32 freq;
 	int ret;
-	int has_cp15 = false, has_mem = false;
 
 	np = of_find_matching_node(NULL, arch_timer_of_match);
-	if (np) {
-		has_cp15 = true;
-		/*
-		 * Try to determine the frequency from the device tree
-		 */
-		if (!of_property_read_u32(np, "clock-frequency", &freq))
-			arch_timer_rate = freq;
-
-		ret = irq_of_parse_and_map(np, 0);
-		if (ret <= 0) {
-			pr_err("arch_timer: interrupt not specified in timer node\n");
-			return -ENODEV;
-		}
-		arch_timer_ppi = ret;
-		ret = irq_of_parse_and_map(np, 1);
-		if (ret > 0)
-			arch_timer_ppi2 = ret;
-
-		ret = arch_timer_common_register();
-		if (ret)
-			return ret;
-	}
-
-	np = of_find_matching_node(NULL, arch_timer_mem_of_match);
-	if (np) {
-		has_mem = true;
-
-		if (!has_cp15) {
-			get_cntpct_func = counter_get_cntpct_mem;
-			get_cntvct_func = counter_get_cntvct_mem;
-		}
-		/*
-		 * Try to determine the frequency from the device tree
-		 */
-		if (!of_property_read_u32(np, "clock-frequency", &freq))
-			arch_timer_rate = freq;
-
-		frame = of_get_next_child(np, NULL);
-		if (!frame) {
-			pr_err("arch_timer: no child frame\n");
-			return -EINVAL;
-		}
-
-		timer_base = of_iomap(frame, 0);
-		if (!timer_base) {
-			pr_err("arch_timer: cant map timer base\n");
-			return -ENOMEM;
-		}
-
-		arch_timer_spi = irq_of_parse_and_map(frame, 0);
-		if (!arch_timer_spi) {
-			pr_err("arch_timer: no physical timer irq\n");
-			return -EINVAL;
-		}
-
-		ret = arch_timer_mem_register();
-		if (ret)
-			return ret;
-	}
-
-	if (!has_cp15 && !has_mem) {
+	if (!np) {
 		pr_err("arch_timer: can't find DT node\n");
 		return -ENODEV;
 	}
 
-	arch_timer_counter_init();
+	/* Try to determine the frequency from the device tree or CNTFRQ */
+	if (!of_property_read_u32(np, "clock-frequency", &freq))
+		arch_timer_rate = freq;
 
-	return 0;
+	ret = irq_of_parse_and_map(np, 0);
+	if (ret <= 0) {
+		pr_err("arch_timer: interrupt not specified in timer node\n");
+		return -ENODEV;
+	}
+
+	if (of_get_address(np, 0, NULL, NULL)) {
+		timer_base = of_iomap(np, 0);
+		if (!timer_base) {
+			pr_err("arch_timer: cant map timer base\n");
+			return -ENOMEM;
+		}
+	}
+
+	if (of_get_property(np, "irq-is-not-percpu", NULL))
+		is_irq_percpu = 0;
+	else
+		is_irq_percpu = 1;
+
+	arch_timer_ppi = ret;
+	ret = irq_of_parse_and_map(np, 1);
+	if (ret > 0)
+		arch_timer_ppi2 = ret;
+	pr_info("arch_timer: found %s irqs %d %d\n",
+		np->name, arch_timer_ppi, arch_timer_ppi2);
+
+	return arch_timer_common_register();
 }
 #endif
