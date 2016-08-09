@@ -47,7 +47,7 @@ volatile int pen_release = -1;
  * observers, irrespective of whether they're taking part in coherency
  * or not.  This is necessary for the hotplug code to work reliably.
  */
-static void write_pen_release(int val)
+static void __cpuinit write_pen_release(int val)
 {
 	pen_release = val;
 	smp_wmb();
@@ -57,7 +57,7 @@ static void write_pen_release(int val)
 
 static DEFINE_SPINLOCK(boot_lock);
 
-void platform_secondary_init(unsigned int cpu)
+void __cpuinit platform_secondary_init(unsigned int cpu)
 {
 	WARN_ON(msm_platform_secondary_init(cpu));
 
@@ -74,7 +74,7 @@ void platform_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
-static int scorpion_release_secondary(void)
+static int __cpuinit scorpion_release_secondary(void)
 {
 	void *base_ptr = ioremap_nocache(0x00902000, SZ_4K*2);
 	if (!base_ptr)
@@ -90,7 +90,7 @@ static int scorpion_release_secondary(void)
 	return 0;
 }
 
-static int krait_release_secondary_sim(unsigned long base, int cpu)
+static int __cpuinit krait_release_secondary_sim(unsigned long base, int cpu)
 {
 	void *base_ptr = ioremap_nocache(base + (cpu * 0x10000), SZ_4K);
 	if (!base_ptr)
@@ -106,7 +106,7 @@ static int krait_release_secondary_sim(unsigned long base, int cpu)
 	return 0;
 }
 
-static int krait_release_secondary(unsigned long base, int cpu)
+static int __cpuinit krait_release_secondary(unsigned long base, int cpu)
 {
 	void *base_ptr = ioremap_nocache(base + (cpu * 0x10000), SZ_4K);
 	if (!base_ptr)
@@ -137,7 +137,7 @@ static int krait_release_secondary(unsigned long base, int cpu)
 	return 0;
 }
 
-static int krait_release_secondary_p3(unsigned long base, int cpu)
+static int __cpuinit krait_release_secondary_p3(unsigned long base, int cpu)
 {
 	void *base_ptr = ioremap_nocache(base + (cpu * 0x10000), SZ_4K);
 	if (!base_ptr)
@@ -162,7 +162,7 @@ static int krait_release_secondary_p3(unsigned long base, int cpu)
 	return 0;
 }
 
-static int release_secondary(unsigned int cpu)
+static int __cpuinit release_secondary(unsigned int cpu)
 {
 	BUG_ON(cpu >= get_core_count());
 
@@ -191,7 +191,7 @@ static int cold_boot_flags[] = {
 	SCM_FLAG_COLDBOOT_CPU3,
 };
 
-int boot_secondary(unsigned int cpu, struct task_struct *idle)
+int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	int ret;
 	unsigned int flag = 0;

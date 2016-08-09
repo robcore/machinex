@@ -82,7 +82,7 @@ void __init register_current_timer_delay(const struct delay_timer *timer)
 		pr_info("Ignoring duplicate/late registration of read_current_timer delay\n");
 	}
 }
-unsigned long calibrate_delay_is_known(void)
+unsigned long __cpuinit calibrate_delay_is_known(void)
 {
 	delay_calibrated = true;
 	return lpj_fine;

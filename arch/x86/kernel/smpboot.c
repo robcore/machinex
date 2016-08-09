@@ -84,7 +84,7 @@ DEFINE_PER_CPU(int, cpu_state) = { 0 };
 */
 #ifdef CONFIG_HOTPLUG_CPU
 /*
- * Needed only for CONFIG_HOTPLUG_CPU because is
+ * Needed only for CONFIG_HOTPLUG_CPU because __cpuinitdata is
  * removed after init for !CONFIG_HOTPLUG_CPU.
  */
 static DEFINE_PER_CPU(struct task_struct *, idle_thread_array);
@@ -110,7 +110,7 @@ void cpu_hotplug_driver_unlock(void)
 ssize_t arch_cpu_probe(const char *buf, size_t count) { return -1; }
 ssize_t arch_cpu_release(const char *buf, size_t count) { return -1; }
 #else
-static struct task_struct *idle_thread_array[NR_CPUS] ;
+static struct task_struct *idle_thread_array[NR_CPUS] __cpuinitdata ;
 #define get_idle_for_cpu(x)      (idle_thread_array[(x)])
 #define set_idle_for_cpu(x, p)   (idle_thread_array[(x)] = (p))
 #endif
@@ -142,7 +142,7 @@ atomic_t init_deasserted;
  * Report back to the Boot Processor.
  * Running on AP.
  */
-static void smp_callin(void)
+static void __cpuinit smp_callin(void)
 {
 	int cpuid, phys_id;
 	unsigned long timeout;
@@ -245,7 +245,7 @@ static void smp_callin(void)
 /*
  * Activate a secondary processor.
  */
-notrace static void start_secondary(void *unused)
+notrace static void __cpuinit start_secondary(void *unused)
 {
 	/*
 	 * Don't put *anything* before cpu_init(), SMP booting is too
@@ -314,7 +314,7 @@ notrace static void start_secondary(void *unused)
  * a given CPU
  */
 
-void smp_store_cpu_info(int id)
+void __cpuinit smp_store_cpu_info(int id)
 {
 	struct cpuinfo_x86 *c = &cpu_data(id);
 
@@ -324,7 +324,7 @@ void smp_store_cpu_info(int id)
 		identify_secondary_cpu(c);
 }
 
-static void link_thread_siblings(int cpu1, int cpu2)
+static void __cpuinit link_thread_siblings(int cpu1, int cpu2)
 {
 	cpumask_set_cpu(cpu1, cpu_sibling_mask(cpu2));
 	cpumask_set_cpu(cpu2, cpu_sibling_mask(cpu1));
@@ -335,7 +335,7 @@ static void link_thread_siblings(int cpu1, int cpu2)
 }
 
 
-void set_cpu_sibling_map(int cpu)
+void __cpuinit set_cpu_sibling_map(int cpu)
 {
 	int i;
 	struct cpuinfo_x86 *c = &cpu_data(cpu);
@@ -477,7 +477,7 @@ void __inquire_remote_apic(int apicid)
  * INIT, INIT, STARTUP sequence will reset the chip hard for us, and this
  * won't ... remember to clear down the APIC, etc later.
  */
-int
+int __cpuinit
 wakeup_secondary_cpu_via_nmi(int logical_apicid, unsigned long start_eip)
 {
 	unsigned long send_status, accept_status = 0;
@@ -511,7 +511,7 @@ wakeup_secondary_cpu_via_nmi(int logical_apicid, unsigned long start_eip)
 	return (send_status | accept_status);
 }
 
-static int
+static int __cpuinit
 wakeup_secondary_cpu_via_init(int phys_apicid, unsigned long start_eip)
 {
 	unsigned long send_status, accept_status = 0;
@@ -633,7 +633,7 @@ struct create_idle {
 	int cpu;
 };
 
-static void do_fork_idle(struct work_struct *work)
+static void __cpuinit do_fork_idle(struct work_struct *work)
 {
 	struct create_idle *c_idle =
 		container_of(work, struct create_idle, work);
@@ -643,7 +643,7 @@ static void do_fork_idle(struct work_struct *work)
 }
 
 /* reduce the number of lines printed when booting a large cpu count system */
-static void announce_cpu(int cpu, int apicid)
+static void __cpuinit announce_cpu(int cpu, int apicid)
 {
 	static int current_node = -1;
 	int node = early_cpu_to_node(cpu);
@@ -668,7 +668,7 @@ static void announce_cpu(int cpu, int apicid)
  * Returns zero if CPU booted OK, else error code from
  * ->wakeup_secondary_cpu.
  */
-static int do_boot_cpu(int apicid, int cpu)
+static int __cpuinit do_boot_cpu(int apicid, int cpu)
 {
 	unsigned long boot_error = 0;
 	unsigned long start_ip;
@@ -827,7 +827,7 @@ do_rest:
 	return boot_error;
 }
 
-int native_cpu_up(unsigned int cpu)
+int __cpuinit native_cpu_up(unsigned int cpu)
 {
 	int apicid = apic->cpu_present_to_apicid(cpu);
 	unsigned long flags;

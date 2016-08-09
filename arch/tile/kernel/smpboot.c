@@ -133,14 +133,14 @@ static __init int reset_init_affinity(void)
 }
 late_initcall(reset_init_affinity);
 
-static struct cpumask cpu_started;
+static struct cpumask cpu_started __cpuinitdata;
 
 /*
  * Activate a secondary processor.  Very minimal; don't add anything
  * to this path without knowing what you're doing, since SMP booting
  * is pretty fragile.
  */
-static void start_secondary(void)
+static void __cpuinit start_secondary(void)
 {
 	int cpuid = smp_processor_id();
 
@@ -183,7 +183,7 @@ static void start_secondary(void)
 /*
  * Bring a secondary processor online.
  */
-void online_secondary(void)
+void __cpuinit online_secondary(void)
 {
 	/*
 	 * low-memory mappings have been cleared, flush them from
@@ -222,7 +222,7 @@ void online_secondary(void)
 	cpu_idle();
 }
 
-int __cpu_up(unsigned int cpu, struct task_struct *tidle)
+int __cpuinit __cpu_up(unsigned int cpu, struct task_struct *tidle)
 {
 	/* Wait 5s total for all CPUs for them to come online */
 	static int timeout;
