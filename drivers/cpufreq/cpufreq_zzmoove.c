@@ -1361,7 +1361,7 @@ static inline int zz_get_next_freq(unsigned int curfreq, unsigned int updown, un
 
 #ifdef ENABLE_HOTPLUGGING
 // ZZ: function for enabling/disabling cores from offline/online state
-static inline void __cpuinit enable_disable_cores(void)
+static inline void enable_disable_cores(void)
 {
 	int i = 0;
 
@@ -7087,7 +7087,7 @@ static void tmu_check_work(struct work_struct * work_tmu_check)
 
 // ZZ: function for hotplug down work
 #ifdef ENABLE_HOTPLUGGING
-static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
+static void hotplug_offline_work_fn(struct work_struct *work)
 {
 	int cpu;	// ZZ: for hotplug down loop
 
@@ -7161,7 +7161,7 @@ static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
 }
 
 // ZZ: function for hotplug up work
-static void __cpuinit hotplug_online_work_fn(struct work_struct *work)
+static void hotplug_online_work_fn(struct work_struct *work)
 {
 	int i = 0;	// ZZ: for hotplug up loop
 
@@ -7342,9 +7342,9 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
 // raise sampling rate to SR*multiplier and adjust sampling rate/thresholds/hotplug/scaling/freq limit/freq step on blank screen
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_LCD_NOTIFIER)
-static void __cpuinit powersave_early_suspend(struct early_suspend *handler)
+static void powersave_early_suspend(struct early_suspend *handler)
 #elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER)
-static void __cpuinit powersave_suspend(struct power_suspend *handler)
+static void powersave_suspend(struct power_suspend *handler)
 #elif defined(USE_LCD_NOTIFIER)
 void zzmoove_suspend(void)
 #endif
@@ -7515,9 +7515,9 @@ void zzmoove_suspend(void)
 }
 
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(USE_LCD_NOTIFIER)
-static void __cpuinit powersave_late_resume(struct early_suspend *handler)
+static void powersave_late_resume(struct early_suspend *handler)
 #elif defined(CONFIG_POWERSUSPEND) && !defined(USE_LCD_NOTIFIER)
-static void __cpuinit powersave_resume(struct power_suspend *handler)
+static void powersave_resume(struct power_suspend *handler)
 #elif defined(USE_LCD_NOTIFIER)
 void zzmoove_resume(void)
 #endif

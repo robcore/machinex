@@ -570,12 +570,12 @@ out:
 	return;
 }
 
-static void __cpuinit do_cpu_up(struct work_struct *work)
+static void do_cpu_up(struct work_struct *work)
 {
 	cpu_up(1);
 }
 
-static void __cpuinit do_cpu_down(struct work_struct *work)
+static void do_cpu_down(struct work_struct *work)
 {
 	cpu_down(1);
 }
