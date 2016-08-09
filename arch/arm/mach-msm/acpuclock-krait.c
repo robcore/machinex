@@ -114,7 +114,7 @@ static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
 }
 
 /* Select a source on the secondary MUX. */
-static void __cpuinit set_sec_clk_src(struct scalable *sc, u32 sec_src_sel)
+static void set_sec_clk_src(struct scalable *sc, u32 sec_src_sel)
 {
 	u32 regval;
 
@@ -655,7 +655,7 @@ static struct acpuclk_data acpuclk_krait_data = {
 };
 
 /* Initialize a HFPLL at a given rate and enable it. */
-static void __cpuinit hfpll_init(struct scalable *sc,
+static void hfpll_init(struct scalable *sc,
 			      const struct core_speed *tgt_s)
 {
 	dev_dbg(drv.dev, "Initializing HFPLL%d\n", sc - drv.scalable);
@@ -681,7 +681,7 @@ static void __cpuinit hfpll_init(struct scalable *sc,
 	hfpll_set_rate(sc, tgt_s);
 }
 
-static int __cpuinit rpm_regulator_init(struct scalable *sc, enum vregs vreg,
+static int rpm_regulator_init(struct scalable *sc, enum vregs vreg,
 					 int vdd, bool enable)
 {
 	int ret;
@@ -721,7 +721,7 @@ err_get:
 	return ret;
 }
 
-static void __cpuinit rpm_regulator_cleanup(struct scalable *sc,
+static void rpm_regulator_cleanup(struct scalable *sc,
 						enum vregs vreg)
 {
 	if (!sc->vreg[vreg].rpm_reg)
@@ -732,7 +732,7 @@ static void __cpuinit rpm_regulator_cleanup(struct scalable *sc,
 }
 
 /* Voltage regulator initialization. */
-static int __cpuinit regulator_init(struct scalable *sc,
+static int regulator_init(struct scalable *sc,
 				const struct acpu_level *acpu_level)
 {
 	int ret, vdd_mem, vdd_dig, vdd_core;
@@ -813,7 +813,7 @@ err_mem:
 	return ret;
 }
 
-static void __cpuinit regulator_cleanup(struct scalable *sc)
+static void regulator_cleanup(struct scalable *sc)
 {
 	regulator_disable(sc->vreg[VREG_CORE].reg);
 	regulator_put(sc->vreg[VREG_CORE].reg);
@@ -824,7 +824,7 @@ static void __cpuinit regulator_cleanup(struct scalable *sc)
 }
 
 /* Set initial rate for a given core. */
-static int __cpuinit init_clock_sources(struct scalable *sc,
+static int init_clock_sources(struct scalable *sc,
 					 const struct core_speed *tgt_s)
 {
 	u32 regval;
@@ -858,21 +858,21 @@ static int __cpuinit init_clock_sources(struct scalable *sc,
 	return 0;
 }
 
-static void __cpuinit fill_cur_core_speed(struct core_speed *s,
+static void fill_cur_core_speed(struct core_speed *s,
 					  struct scalable *sc)
 {
 	s->pri_src_sel = get_l2_indirect_reg(sc->l2cpmr_iaddr) & 0x3;
 	s->pll_l_val = readl_relaxed(sc->hfpll_base + drv.hfpll_data->l_offset);
 }
 
-static bool __cpuinit speed_equal(const struct core_speed *s1,
+static bool speed_equal(const struct core_speed *s1,
 				  const struct core_speed *s2)
 {
 	return (s1->pri_src_sel == s2->pri_src_sel &&
 		s1->pll_l_val == s2->pll_l_val);
 }
 
-static const struct acpu_level __cpuinit *find_cur_acpu_level(int cpu)
+static const struct acpu_level *find_cur_acpu_level(int cpu)
 {
 	struct scalable *sc = &drv.scalable[cpu];
 	const struct acpu_level *l;
@@ -898,7 +898,7 @@ static const struct l2_level __init *find_cur_l2_level(void)
 	return NULL;
 }
 
-static const struct acpu_level __cpuinit *find_min_acpu_level(void)
+static const struct acpu_level *find_min_acpu_level(void)
 {
 	struct acpu_level *l;
 
@@ -909,7 +909,7 @@ static const struct acpu_level __cpuinit *find_min_acpu_level(void)
 	return NULL;
 }
 
-static int __cpuinit per_cpu_init(int cpu)
+static int per_cpu_init(int cpu)
 {
 	struct scalable *sc = &drv.scalable[cpu];
 	const struct acpu_level *acpu_level;
@@ -1079,7 +1079,7 @@ static void __init dcvs_freq_init(void)
 				drv.acpu_freq_tbl[i].vdd_core / 1000);
 }
 
-static int __cpuinit acpuclk_cpu_callback(struct notifier_block *nfb,
+static int acpuclk_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
 	static int prev_khz[NR_CPUS];
@@ -1117,7 +1117,7 @@ static int __cpuinit acpuclk_cpu_callback(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block __cpuinitdata acpuclk_cpu_notifier = {
+static struct notifier_block acpuclk_cpu_notifier = {
 	.notifier_call = acpuclk_cpu_callback,
 };
 

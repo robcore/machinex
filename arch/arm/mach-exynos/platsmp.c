@@ -41,7 +41,7 @@ extern void exynos4_secondary_startup(void);
  * boot "holding pen"
  */
 
-volatile int __cpuinitdata pen_release = -1;
+volatile int pen_release = -1;
 
 /*
  * Write pen_release in a way that is guaranteed to be visible to all
@@ -63,7 +63,7 @@ static void __iomem *scu_base_addr(void)
 
 static DEFINE_SPINLOCK(boot_lock);
 
-void __cpuinit platform_secondary_init(unsigned int cpu)
+void platform_secondary_init(unsigned int cpu)
 {
 	/*
 	 * let the primary processor know we're out of the
@@ -78,7 +78,7 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
-int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+int boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 

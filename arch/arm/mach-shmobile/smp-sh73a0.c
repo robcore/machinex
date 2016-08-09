@@ -70,11 +70,11 @@ unsigned int __init sh73a0_get_core_count(void)
 	return scu_get_core_count(scu_base);
 }
 
-void __cpuinit sh73a0_secondary_init(unsigned int cpu)
+void sh73a0_secondary_init(unsigned int cpu)
 {
 }
 
-int __cpuinit sh73a0_boot_secondary(unsigned int cpu)
+int sh73a0_boot_secondary(unsigned int cpu)
 {
 	cpu = cpu_logical_map(cpu);
 
