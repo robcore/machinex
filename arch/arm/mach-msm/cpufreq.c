@@ -421,12 +421,15 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 		return 0;
 
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
-		policy->cpuinfo.min_freq = 384000;
-		policy->cpuinfo.max_freq = 1890000;
+#ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
+		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
+		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
+#endif
 	}
-
-	policy->min = 384000;
-	policy->max = 1890000;
+#ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
+	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
+	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
+#endif
 
 #ifdef CONFIG_SEC_DVFS
 	cpuinfo_max_freq = policy->cpuinfo.max_freq;
