@@ -405,11 +405,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 static suspend_state_t decode_state(const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-#ifdef CONFIG_EARLYSUSPEND
-	suspend_state_t state = PM_SUSPEND_ON;
-#else
 	suspend_state_t state = PM_SUSPEND_MIN;
-#endif
 	struct pm_sleep_state *s;
 #endif
 	char *p;
@@ -649,11 +645,6 @@ pm_trace_dev_match_store(struct kobject *kobj, struct kobj_attribute *attr,
 power_attr(pm_trace_dev_match);
 
 #endif /* CONFIG_PM_TRACE */
-
-#ifdef CONFIG_USER_WAKELOCK
-power_attr(wake_lock);
-power_attr(wake_unlock);
-#endif
 
 #ifdef CONFIG_FREEZER
 static ssize_t pm_freeze_timeout_show(struct kobject *kobj,
@@ -919,7 +910,7 @@ static ssize_t hard_reset_ctl_store(struct kobject *kobj,
 
 power_attr(hard_reset_ctl);
 
-static struct attribute *g[] = {
+static struct attribute * g[] = {
 	&state_attr.attr,
 #ifdef CONFIG_PM_TRACE
 	&pm_trace_attr.attr,
@@ -942,10 +933,6 @@ static struct attribute *g[] = {
 #endif
 #ifdef CONFIG_PM_SLEEP_DEBUG
 	&pm_print_times_attr.attr,
-#endif
-#ifdef CONFIG_USER_WAKELOCK
-	&wake_lock_attr.attr,
-	&wake_unlock_attr.attr,
 #endif
 #endif
 #ifdef CONFIG_FREEZER
