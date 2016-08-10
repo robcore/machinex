@@ -577,7 +577,7 @@ static inline int cpulist_scnprintf(char *buf, int len,
 	return bitmap_scnlistprintf(buf, len, cpumask_bits(srcp),
 				    nr_cpumask_bits);
 }
-
+/**
  * cpumask_parse - extract a cpumask from from a string
  * @buf: the buffer to extract from
  * @dstp: the cpumask to set.
