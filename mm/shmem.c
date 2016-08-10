@@ -77,25 +77,25 @@ static struct vfsmount *shm_mnt;
 #define SHORT_SYMLINK_LEN 128
 
 /*
- * vmtruncate_range() communicates with shmem_fault via
- * inode->i_private (with i_mutex making sure that it has only one user at
- * a time): we would prefer not to enlarge the shmem inode just for that.
- */
-struct shmem_falloc {
-	wait_queue_head_t *waitq; /* faults into hole wait for punch to end */
-	pgoff_t start;		/* start of range currently being fallocated */
-	pgoff_t next;		/* the next page offset to be fallocated */
-};
-
  * shmem_fallocate and shmem_writepage communicate via inode->i_private
  * (with i_mutex making sure that it has only one user at a time):
  * we would prefer not to enlarge the shmem inode just for that.
  */
+
+//variant which was added in 3.4.100
+//struct shmem_falloc {
+//	pgoff_t start;		/* start of range currently being fallocated */
+//	pgoff_t next;		/* the next page offset to be fallocated */
+//	pgoff_t nr_falloced;	/* how many new pages have been fallocated */
+//	pgoff_t nr_unswapped;	/* how often writepage refused to swap out */
+//};
+
+// variant of the XATTR for CGROUPS backport
+
 struct shmem_falloc {
-	pgoff_t start;		/* start of range currently being fallocated */
-	pgoff_t next;		/* the next page offset to be fallocated */
-	pgoff_t nr_falloced;	/* how many new pages have been fallocated */
-	pgoff_t nr_unswapped;	/* how often writepage refused to swap out */
+       wait_queue_head_t *waitq; /* faults into hole wait for punch to end */
+       pgoff_t start;          /* start of range currently being fallocated */
+       pgoff_t next;           /* the next page offset to be fallocated */
 };
 
 /* Flag allocation requirements to shmem_getpage */
