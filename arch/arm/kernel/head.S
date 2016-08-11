@@ -494,7 +494,7 @@ __fixup_smp:
 	mrc	p15, 0, r0, c0, c0, 5	@ read MPIDR
 	and	r0, r0, #0xc0000000	@ multiprocessing extensions and
 	teq	r0, #0x80000000		@ not part of a uniprocessor system?
-	retne	lr
+	reteq	lr			@ yes, assume SMP
 
 __fixup_smp_on_up:
 	adr	r0, 1f

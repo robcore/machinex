@@ -12,6 +12,7 @@
 #include <asm/unistd.h>
 #include <asm/ftrace.h>
 #include <asm/unwind.h>
+#include <asm/assembler.h>
 
 #ifdef CONFIG_NEED_RET_TO_USER
 #include <mach/entry-macro.S>
@@ -190,7 +191,7 @@ ENDPROC(ret_from_fork)
 1: 	mcount_get_lr	r1			@ lr of instrumented func
 	mcount_adjust_addr	r0, lr		@ instrumented function
 	adr	lr, BSYM(2f)
-	ret     r2
+	ret	r2
 2:	mcount_exit
 .endm
 

@@ -13,8 +13,8 @@
  */
 
 #include <linux/linkage.h>
-#include <asm/assembler.h>
 #include <asm/unwind.h>
+#include <asm/assembler.h>
 
 #ifdef __ARMEB__
 #define xh r0

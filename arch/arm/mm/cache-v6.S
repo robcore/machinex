@@ -306,7 +306,7 @@ v6_dma_flush_dcache_all:
 	mcr	p15, 0, r0, c7, c15, 0		@ Cache clean+invalidate
 #endif
 	mcr	p15, 0, r0, c7, c10, 4		@ drain write buffer
-	ret     lr
+	ret	lr
 #endif
 
 /*

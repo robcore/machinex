@@ -13,9 +13,9 @@
 #include <linux/init.h>
 #include <linux/linkage.h>
 #include <asm/asm-offsets.h>
-#include <asm/assembler.h>
 #include <asm/page.h>
 #include <asm/tlbflush.h>
+#include <asm/assembler.h>
 #include "proc-macros.S"
 
 #define HARVARD_TLB

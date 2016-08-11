@@ -7,7 +7,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <asm/assembler.h>
 
 /*
  * unsigned int
@@ -17,6 +16,8 @@
  *
  * Note that 'tst' and 'teq' preserve the carry flag.
  */
+
+#include <asm/assembler.h>
 
 src	.req	r0
 dst	.req	r1

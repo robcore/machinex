@@ -325,7 +325,7 @@ ENTRY(msm_pm_collapse_exit)
 msm_pm_mapped_pa:
 	/* Switch to virtual */
 	ldr     r0, =msm_pm_pa_to_va
-	mov     pc, r0
+	ret     r0
 msm_pm_pa_to_va:
 	mcr     p15, 0, r1, c2, c0, 0 /* restore TTBR0 */
 	isb

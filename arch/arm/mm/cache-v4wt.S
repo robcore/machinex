@@ -13,8 +13,8 @@
  */
 #include <linux/linkage.h>
 #include <linux/init.h>
-#include <asm/assembler.h>
 #include <asm/page.h>
+#include <asm/assembler.h>
 #include "proc-macros.S"
 
 /*
@@ -126,7 +126,6 @@ ENTRY(v4wt_coherent_user_range)
 	add	r0, r0, #CACHE_DLINESIZE
 	cmp	r0, r1
 	blo	1b
-	mov	r0, #0
 	ret	lr
 
 /*

@@ -16,7 +16,7 @@
 /*
  *	flush_icache_all()
  *
- *	Unconditionally clean and inva#include <asm/assembler.h>lidate the entire icache.
+ *	Unconditionally clean and invalidate the entire icache.
  */
 ENTRY(v3_flush_icache_all)
 	ret	lr
@@ -79,7 +79,6 @@ ENTRY(v3_coherent_kern_range)
  *	- end	 - virtual end address
  */
 ENTRY(v3_coherent_user_range)
-	mov	r0, #0
 	ret	lr
 
 /*

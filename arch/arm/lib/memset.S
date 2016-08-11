@@ -16,6 +16,7 @@
 	.text
 	.align	5
 
+ENTRY(mmioset)
 ENTRY(memset)
 UNWIND( .fnstart         )
 	ands	r3, r0, #3		@ 1 unaligned?
@@ -132,5 +133,5 @@ UNWIND( .fnstart            )
 	add	r2, r2, r3		@ 1 (r2 = r2 - (4 - r3))
 	b	1b
 UNWIND( .fnend   )
-ENDPROC(memset)
+ENDPROC(mmioset)
 

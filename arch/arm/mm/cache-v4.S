@@ -9,8 +9,8 @@
  */
 #include <linux/linkage.h>
 #include <linux/init.h>
-#include <asm/assembler.h>
 #include <asm/page.h>
+#include <asm/assembler.h>
 #include "proc-macros.S"
 
 /*
@@ -89,7 +89,6 @@ ENTRY(v4_coherent_kern_range)
  *	- end	 - virtual end address
  */
 ENTRY(v4_coherent_user_range)
-	mov	r0, #0
 	ret	lr
 
 /*

@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  *
  */
+
 #include <asm/assembler.h>
 
 #define ATAG_CORE 0x54410001
