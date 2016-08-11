@@ -616,7 +616,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_READY_TO_ON, false);
 		mipi_set_tx_power_mode(HS_TX_MODE);
 
-		/* force dsi_clk alway on
+		/* force dsi_clk always on
 		*    Magan nees clk lane LP mode before sending 0xF0 & 0xFC & 0xD2 cmds
 		*/
 		tmp = MIPI_INP(MIPI_DSI_BASE + 0xA8);
@@ -631,13 +631,17 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	sec_debug_mdp_reset_value();
 
 	pr_info("[%s]\n", __func__);
+
 #ifdef CONFIG_STATE_NOTIFIER
-	if (!use_fb_notifier)
+	if (!first_boot_on) {
+		if (!use_fb_notifier)
 			state_resume();
+}
 #endif
 
 #ifdef CONFIG_POWERSUSPEND
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	if (!first_boot_on)
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
 
@@ -748,7 +752,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
-		msd.mpd->first_bl_hbm_psre = 0;
+		msd.mpd->first_bl_hbm_psre = 7;
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
 		pr_info("%s : panel is off state!!\n", __func__);
@@ -872,7 +876,7 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 
 	rc = snprintf((char *)buf, sizeof(*buf), "%d\n",
 			msd.dstat.auto_brightness);
-	pr_info("auot_brightness: %d\n", *buf);
+	pr_info("auto_brightness: %d\n", *buf);
 
 	return rc;
 }
@@ -940,7 +944,7 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	}
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
-		msd.mpd->first_bl_hbm_psre = 1;
+		msd.mpd->first_bl_hbm_psre = 7;
 		mipi_samsung_disp_backlight(mfd);
 		pr_info("%s : %d\n",__func__,msd.dstat.auto_brightness);
 	} else {
