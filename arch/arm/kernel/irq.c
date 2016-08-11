@@ -40,7 +40,6 @@
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
 
-#include <asm/perftypes.h>
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
@@ -80,7 +79,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	int cpu = smp_processor_id();
 	unsigned long long start_time = cpu_clock(cpu);
 #endif
-	perf_mon_interrupt_in();
 	irq_enter();
 
 	/*
@@ -103,7 +101,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	sec_debug_irq_enterexit_log(irq, start_time);
 #endif
 	set_irq_regs(old_regs);
-	perf_mon_interrupt_out();
 }
 
 /*
