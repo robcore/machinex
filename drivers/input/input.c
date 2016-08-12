@@ -33,10 +33,8 @@ MODULE_DESCRIPTION("Input core");
 MODULE_LICENSE("GPL");
 
 #define INPUT_DEVICES	256
-#if !defined (CONFIG_SEC_PRODUCT_8930)
 #ifdef CONFIG_SAMSUNG_LPM_MODE
 extern int poweroff_charging;
-#endif
 #endif
 
 static LIST_HEAD(input_dev_list);

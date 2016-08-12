@@ -317,12 +317,6 @@ const_debug int sysctl_sched_yield_sleep_threshold = 4;
 const_debug unsigned int sysctl_sched_yield_sleep_duration = 50;
 
 /*
- * Maximum possible frequency across all cpus. Task demand and cpu
- * capacity (cpu_power) metrics could be scaled in reference to it.
- */
-static unsigned int max_possible_freq = 1;
-
-/*
  * this_rq_lock - lock this runqueue and disable interrupts.
  */
 static struct rq *this_rq_lock(void)
@@ -416,7 +410,7 @@ void hrtick_start(struct rq *rq, u64 delay)
 
 	if (rq == this_rq()) {
 		__hrtimer_start_range_ns(timer, ns_to_ktime(delay), 0,
-						HRTIMER_MODE_REL_PINNED, 0);
+						 HRTIMER_MODE_REL_PINNED, 0);
 	} else if (!rq->hrtick_csd_pending) {
 		__smp_call_function_single(cpu_of(rq), &rq->hrtick_csd, 0);
 		rq->hrtick_csd_pending = 1;
@@ -7715,10 +7709,9 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 		cpu_rq(i)->max_possible_freq = policy->cpuinfo.max_freq;
 	}
 
-	max_possible_freq = policy->max;
-
+	max_possible_freq = max(max_possible_freq, policy->cpuinfo.max_freq);
 	if (min_max_freq == 1)
-	min_max = UINT_MAX;
+		min_max = UINT_MAX;
 	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
 	BUG_ON(!min_max_freq);
 	BUG_ON(!policy->max);
@@ -7763,6 +7756,12 @@ static int register_sched_callback(void)
 	return 0;
 }
 
+/*
+ * cpufreq callbacks can be registered at core_initcall or later time.
+ * Any registration done prior to that is "forgotten" by cpufreq. See
+ * initialization of variable init_cpufreq_transition_notifier_list_called
+ * for further information.
+ */
 core_initcall(register_sched_callback);
 
 #endif /* CONFIG_SCHED_FREQ_INPUT */
@@ -7916,9 +7915,9 @@ void __init sched_init(void)
 		rq->avg_idle = 2*sysctl_sched_migration_cost;
 		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
 #ifdef CONFIG_SCHED_FREQ_INPUT
-		rq->cur_freq = 0;
-		rq->max_freq = 0;
-		rq->min_freq = 0;
+		rq->cur_freq = 1;
+		rq->max_freq = 1;
+		rq->min_freq = 1;
 		rq->max_possible_freq = 1;
 		rq->cumulative_runnable_avg = 0;
 #endif
