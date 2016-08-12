@@ -274,7 +274,7 @@ __und_svc:
 	@
 	@  r0 - instruction
 	@
-#ifndef CONFIG_THUMB2_KERNEL
+#ifndef	CONFIG_THUMB2_KERNEL
 	ldr	r0, [r4, #-4]
 #else
 	mov	r1, #2
