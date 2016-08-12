@@ -28,7 +28,7 @@
 extern struct snd_soc_codec *fauxsound_codec_ptr;
 extern int wcd9xxx_hw_revision;
 
-static int snd_ctrl_locked = 2;
+static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
@@ -36,10 +36,10 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 
-#define REG_SZ	25
+#define REG_SZ	26
 static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0, 0 };
+			    0, 0, 0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -114,6 +114,9 @@ static unsigned int *cache_select(unsigned int reg)
 			break;
                 case TABLA_A_RX_LINE_4_GAIN:
 			out = &cached_regs[24];
+			break;
+                case TABLA_A_RX_LINE_5_GAIN:
+			out = &cached_regs[25];
 			break;
         }
 	return out;
