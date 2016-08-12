@@ -57,7 +57,6 @@ struct max77693_charger_data {
 	unsigned int	charging_current_max;
 	unsigned int	charging_current;
 	unsigned int	vbus_state;
-	int		aicl_on;
 	int		status;
 	int		siop_level;
 
@@ -265,10 +264,6 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 				if ((chg_state != POWER_SUPPLY_STATUS_CHARGING) &&
 						(chg_state != POWER_SUPPLY_STATUS_FULL))
 					break;
-				/* under 400mA, slow rate */
-				if (set_current_reg < (400 / 20) &&
-						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
-					charger->aicl_on = false;
 				msleep(50);
 			} else
 				break;
@@ -318,13 +313,8 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 			if ((chg_state != POWER_SUPPLY_STATUS_CHARGING) &&
 					(chg_state != POWER_SUPPLY_STATUS_FULL))
 				goto exit;
-			if (curr_step < 2) {
-				/* under 400mA, slow rate */
-				if (now_current_reg < (400 / 20) &&
-						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
-					charger->aicl_on = false;
+			if (curr_step < 2)
 				goto exit;
-			}
 			msleep(50);
 		} else
 			now_current_reg += (curr_step);
@@ -718,11 +708,6 @@ static int sec_chg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		if (!charger->is_charging)
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
-		else if (charger->aicl_on)
-		{
-			val->intval = POWER_SUPPLY_CHARGE_TYPE_SLOW;
-			pr_info("%s: slow-charging mode\n", __func__);
-		}
 		else
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
 		break;
@@ -781,7 +766,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 				POWER_SUPPLY_PROP_HEALTH, value);
 		if (val->intval == POWER_SUPPLY_TYPE_BATTERY) {
 			charger->is_charging = false;
-			charger->aicl_on = false;
 			charger->soft_reg_recovery_cnt = 0;
 			set_charging_current = 0;
 			set_charging_current_max =
@@ -864,7 +848,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 			/* decrease the charging current according to siop level */
 			int current_now =
 				charger->charging_current * val->intval / 100;
-
 			if (current_now > 0 &&
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
@@ -1334,7 +1317,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		if (charger->is_charging) {
 			/* reduce only at CC MODE */
 			if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
-					(chg_dtls == 0x01) && (stable_count > 3))
+					(chg_dtls == 0x01) && (stable_count > 2))
 				reduce_input_current(charger, REDUCE_CURRENT_STEP);
 		}
 		prev_chgin_dtls = chgin_dtls;
@@ -1386,7 +1369,6 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 
 	charger->max77693 = iodev;
 	charger->pdata = pdata->charger_data;
-	charger->aicl_on = false;
 	charger->siop_level = 100;
 
 	platform_set_drvdata(pdev, charger);
