@@ -446,10 +446,10 @@ static void sched_rt_rq_dequeue(struct rt_rq *rt_rq)
 
 int unthrottle_rt_rq(struct rq *rq)
 {
-	/* if requested from the migration task we will 
+	/* if requested from the migration task we will
 	 * unthrottle the rt rq.
 	 */
-	if (rq->rt.rt_throttled 
+	if (rq->rt.rt_throttled
 		&& current->sched_class == &stop_sched_class) {
 		rq->rt.rt_throttled = 0;
 		printk_deferred("sched: RT unthrottled for migration\n");
@@ -2001,7 +2001,11 @@ static void watchdog(struct rq *rq, struct task_struct *p)
 	if (soft != RLIM_INFINITY) {
 		unsigned long next;
 
-		p->rt.timeout++;
+		if (p->rt.watchdog_stamp != jiffies) {
+			p->rt.timeout++;
+			p->rt.watchdog_stamp = jiffies;
+		}
+
 		next = DIV_ROUND_UP(min(soft, hard), USEC_PER_SEC/HZ);
 		if (p->rt.timeout > next)
 			p->cputime_expires.sched_exp = p->se.sum_exec_runtime;
