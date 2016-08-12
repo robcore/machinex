@@ -54,6 +54,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
 
+#ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
+int max_swappiness = 200;
+#endif
+
 #ifdef CONFIG_RUNTIME_COMPCACHE
 struct rtcc_control {
 	int nr_anon;
@@ -1751,6 +1755,9 @@ static void get_scan_count(struct mem_cgroup_zone *mz, struct scan_control *sc,
 	 * This scanning priority is essentially the inverse of IO cost.
 	 */
 	anon_prio = vmscan_swappiness(sc);
+#ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
+	file_prio = max_swappiness - vmscan_swappiness(sc);
+#endif
 	file_prio = 200 - vmscan_swappiness(sc);
 
 	/*
