@@ -7651,11 +7651,27 @@ void __init sched_init_smp(void)
 }
 #endif /* CONFIG_SMP */
 
+
+/*
+ * Maximum possible frequency across all cpus. Task demand and cpu
+ * capacity (cpu_power) metrics are scaled in reference to it.
+ */
+unsigned int max_possible_freq = 1;
+
+/*
+ * Minimum possible max_freq across all cpus. This will be same as
+ * max_possible_freq on homogeneous systems and could be different from
+ * max_possible_freq on heterogenous systems. min_max_freq is used to derive
+ * capacity (cpu_power) of cpus.
+ */
+unsigned int min_max_freq = 1;
+
 static int cpufreq_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
 	struct cpufreq_policy *policy = (struct cpufreq_policy *)data;
 	int i;
+	unsigned int min_max = min_max_freq;
 
 	if (val != CPUFREQ_NOTIFY)
 		return 0;
@@ -7663,9 +7679,16 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	for_each_cpu(i, policy->related_cpus) {
 		cpu_rq(i)->min_freq = policy->min;
 		cpu_rq(i)->max_freq = policy->max;
+		cpu_rq(i)->max_possible_freq = policy->cpuinfo.max_freq;
 	}
 
 	max_possible_freq = policy->max;
+
+	if (min_max_freq == 1)
+	min_max = UINT_MAX;
+	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
+	BUG_ON(!min_max_freq);
+	BUG_ON(!policy->max);
 
 	return 0;
 }
@@ -7860,6 +7883,7 @@ void __init sched_init(void)
 		rq->cur_freq = 0;
 		rq->max_freq = 0;
 		rq->min_freq = 0;
+		rq->max_possible_freq = 1;
 		rq->cumulative_runnable_avg = 0;
 
 		INIT_LIST_HEAD(&rq->cfs_tasks);
