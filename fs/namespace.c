@@ -1079,7 +1079,6 @@ void umount_tree(struct mount *mnt, int propagate, struct list_head *kill)
 		list_del_init(&p->mnt_list);
 		__touch_mnt_namespace(p->mnt_ns);
 		p->mnt_ns = NULL;
-		__mnt_make_shortterm(p);
 		if (mnt_has_parent(p)) {
 			p->mnt_parent->mnt_ghosts++;
 			dentry_reset_mounted(p->mnt_mountpoint);
@@ -1622,7 +1621,7 @@ static int do_loopback(struct path *path, char *old_name,
 
 	err = -EINVAL;
 	if (mnt_ns_loop(&old_path))
-		goto out; 
+		goto out;
 
 	err = lock_mount(path);
 	if (err)
