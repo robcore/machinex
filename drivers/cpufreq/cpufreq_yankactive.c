@@ -1380,15 +1380,6 @@ static int cpufreq_governor_yankactive(struct cpufreq_policy *policy,
 	return 0;
 }
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_YANKACTIVE
-static
-#endif
-struct cpufreq_governor cpufreq_gov_yankactive = {
-	.name = "yankactive",
-	.governor = cpufreq_governor_yankactive,
-	.max_transition_latency = 10000000,
-	.owner = THIS_MODULE,
-};
 static void cpufreq_yankactive_nop_timer(unsigned long data)
 {
 }
