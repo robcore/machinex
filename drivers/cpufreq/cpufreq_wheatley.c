@@ -154,18 +154,6 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
 	return jiffies_to_usecs(idle_time);
 }
 
-static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
-{
-    u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
-
-    if (idle_time == -1ULL)
-	return get_cpu_idle_time_jiffy(cpu, wall);
-    else
-	idle_time += get_cpu_iowait_time_us(cpu, wall);
-
-    return idle_time;
-}
-
 static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
 {
     u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
@@ -211,7 +199,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
     freq_lo = dbs_info->freq_table[index].frequency;
     index = 0;
     cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-				   CPUFREQ_RELATION_L, &index);
+				   CPUFREQ_RELATION_C, &index);
     freq_hi = dbs_info->freq_table[index].frequency;
 
     /* Find out how long we have to be in hi and lo freqs */
@@ -357,7 +345,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 	struct cpu_dbs_info_s *dbs_info;
 	dbs_info = &per_cpu(od_cpu_dbs_info, j);
 	dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-						    &dbs_info->prev_cpu_wall);
+						    &dbs_info->prev_cpu_wall, 0);
 	if (dbs_tuners_ins.ignore_nice)
 	    dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 
@@ -448,7 +436,7 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 	return;
 
     __cpufreq_driver_target(p, freq, dbs_tuners_ins.powersave_bias ?
-			    CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
+			    CPUFREQ_RELATION_C : CPUFREQ_RELATION_H);
 }
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
@@ -492,7 +480,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 
-	cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
+	cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
 	cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
 
 	wall_time = (unsigned int) (cur_wall_time - j_dbs_info->prev_cpu_wall);
@@ -608,12 +596,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	if (!dbs_tuners_ins.powersave_bias) {
 	    __cpufreq_driver_target(policy, freq_next,
-				    CPUFREQ_RELATION_L);
+				    CPUFREQ_RELATION_C);
 	} else {
 	    int freq = powersave_bias_target(policy, freq_next,
-					     CPUFREQ_RELATION_L);
+					     CPUFREQ_RELATION_C);
 	    __cpufreq_driver_target(policy, freq,
-				    CPUFREQ_RELATION_L);
+				    CPUFREQ_RELATION_C);
 	}
     }
 }
@@ -722,7 +710,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	    j_dbs_info->cur_policy = policy;
 
 	    j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-							  &j_dbs_info->prev_cpu_wall);
+							  &j_dbs_info->prev_cpu_wall, 0);
 	    if (dbs_tuners_ins.ignore_nice) {
 		j_dbs_info->prev_cpu_nice =
 		    kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -784,7 +772,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				    policy->max, CPUFREQ_RELATION_H);
 	else if (policy->min > this_dbs_info->cur_policy->cur)
 	    __cpufreq_driver_target(this_dbs_info->cur_policy,
-				    policy->min, CPUFREQ_RELATION_L);
+				    policy->min, CPUFREQ_RELATION_C);
 	mutex_unlock(&this_dbs_info->timer_mutex);
 	break;
     }

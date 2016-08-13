@@ -89,7 +89,7 @@ freq_table_idx yank_pre_freq_idx[SUP_CORE_NUM] = {};
 #if defined(SMART_UP_SLOW_UP_AT_HIGH_FREQ)
 
 #define SUP_SLOW_UP_FREQUENCY 		(810000)  /* Yank555.lu : was 1574400 */
-#define SUP_HIGH_SLOW_UP_FREQUENCY 	(1134000) /* Yank555.lu : was 1728000 */
+#define SUP_HIGH_SLOW_UP_FREQUENCY 	(1242000) /* Yank555.lu : was 1728000 */
 #define SUP_SLOW_UP_LOAD 		(95)      /* Yank555.lu : was 90 */
 
 typedef struct {
@@ -148,10 +148,10 @@ struct cpufreq_governor cpufreq_gov_yankdemand = {
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
 struct cpu_dbs_info_s {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_iowait;
-	cputime64_t prev_cpu_wall;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_idle;
+	u64 prev_cpu_iowait;
+	u64 prev_cpu_wall;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -261,7 +261,7 @@ static struct dbs_tuners {
 	.input_boost = DEF_INPUT_BOOST,
 };
 
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
+static inline u64 get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
 {
 	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
 

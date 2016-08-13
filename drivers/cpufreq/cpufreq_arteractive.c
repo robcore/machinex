@@ -169,7 +169,7 @@ static u64 boostpulse_endtime;
 #define DEFAULT_TIMER_SLACK 20000
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy = 1;
+static bool io_is_busy = 0;
 
 #ifdef CONFIG_MODE_AUTO_CHANGE
 struct cpufreq_loadinfo {
@@ -238,7 +238,7 @@ static int mode_count = 0;
  * sync_freq
  */
 static unsigned int up_threshold_any_cpu_load = 95;
-static unsigned int sync_freq = 702000;
+static unsigned int sync_freq = 1134000;
 static unsigned int up_threshold_any_cpu_freq = 918000;
 
 static int cpufreq_governor_arteractive(struct cpufreq_policy *policy,
