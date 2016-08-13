@@ -4149,11 +4149,7 @@ unsigned int tabla_read(struct snd_soc_codec *codec,
 
 	BUG_ON(reg > TABLA_MAX_REGISTER);
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	if (tabla_readable(codec, reg) &&
-#else
 	if (!tabla_volatile(codec, reg) && tabla_readable(codec, reg) &&
-#endif
 		reg < codec->driver->reg_cache_size) {
 		ret = snd_soc_cache_read(codec, reg, &val);
 		if (ret >= 0) {

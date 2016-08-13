@@ -31,7 +31,7 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 36;
+static int actual_pa_gain = 38;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
