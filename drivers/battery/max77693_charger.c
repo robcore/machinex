@@ -882,6 +882,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 		max77693_set_input_current(charger,
 				val->intval);
 		break;
+#if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		if(val->intval == POWER_SUPPLY_TYPE_WIRELESS) {
 			u8 reg_data;
@@ -916,6 +917,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 
 		}
 		break;
+#endif
 	default:
 		return -EINVAL;
 	}
