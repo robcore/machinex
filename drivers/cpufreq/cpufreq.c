@@ -491,11 +491,7 @@ static ssize_t store_##file_name					\
 (struct cpufreq_policy *policy, const char *buf, size_t count)		\
 {									\
 	int ret = -EINVAL;						\
-	struct cpufreq_policy new_policy;				\
-	int mpd = strcmp(current->comm, "mpdecision");			\
-									\
-	if (mpd == 0)							\
-		return ret;						\
+	struct cpufreq_policy new_policy;				\					\
 									\
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
 	if (ret)							\
@@ -607,8 +603,6 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	envp[1] = buf2;
 	envp[2] = NULL;
 	kobject_uevent_env(cpufreq_global_kobject, KOBJ_ADD, envp);
-
-	sysfs_notify(&policy->kobj, NULL, "scaling_governor");
 
 	if (ret)
 		return ret;
@@ -1020,6 +1014,8 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 
 			spin_lock_irqsave(&cpufreq_driver_lock, flags);
 			cpumask_copy(managed_policy->cpus, policy->cpus);
+			cpumask_and(managed_policy->cpus,
+					managed_policy->cpus, cpu_online_mask);
 			per_cpu(cpufreq_cpu_data, cpu) = managed_policy;
 			spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
@@ -1191,10 +1187,15 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 #ifdef CONFIG_HOTPLUG_CPU
 	for_each_online_cpu(sibling) {
 		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
-		if (cp && cp->governor &&
-		   (cpumask_test_cpu(cpu, cp->related_cpus))) {
+		if (cp && cp->governor) {
 			policy->governor = cp->governor;
+			policy->min = cp->min;
+			policy->max = cp->max;
+			policy->user_policy.min = cp->user_policy.min;
+			policy->user_policy.max = cp->user_policy.max;
+
 			found = 1;
+			//pr_info("sibling: found sibling!\n");
 			break;
 		}
 	}
@@ -1233,6 +1234,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 			   exit with 0 */
 			ret = 0;
 		goto err_unlock_policy;
+	}
 
 	ret = cpufreq_add_dev_interface(cpu, policy, dev);
 	if (ret)
@@ -1914,20 +1916,6 @@ mutex_unlock(&cpufreq_governor_lock);
 	return ret;
 }
 
-/**
- *	cpufreq_get_current_driver - return current driver's name
- *
- *	Return the name string of the currently loaded cpufreq driver
- *	or NULL, if none.
- */
-const char *cpufreq_get_current_driver(void)
-{
-	if (cpufreq_driver)
-		return cpufreq_driver->name;
-
-	return NULL;
-}
-EXPORT_SYMBOL_GPL(cpufreq_get_current_driver);
 
 int cpufreq_register_governor(struct cpufreq_governor *governor)
 {
