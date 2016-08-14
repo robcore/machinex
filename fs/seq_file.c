@@ -328,9 +328,9 @@ loff_t seq_lseek(struct file *file, loff_t offset, int origin)
 	mutex_lock(&m->lock);
 	m->version = file->f_version;
 	switch (origin) {
-		case 1:
+		case SEEK_CUR:
 			offset += file->f_pos;
-		case 0:
+		case SEEK_SET:
 			if (offset < 0)
 				break;
 			retval = offset;
