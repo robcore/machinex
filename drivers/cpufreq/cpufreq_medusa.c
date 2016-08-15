@@ -17,27 +17,23 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/cpu.h>
-#include <linux/sched.h>
+#include <linux/init.h>
 #include <linux/cpufreq.h>
-#include <linux/cpumask.h>
-#include <linux/sysfs.h>
+#include <linux/cpu.h>
+#include <linux/jiffies.h>
 #include <linux/kernel_stat.h>
+#include <linux/mutex.h>
+#include <linux/hrtimer.h>
+#include <linux/tick.h>
+#include <linux/ktime.h>
+#include <linux/sched.h>
+#include <linux/workqueue.h>
+#include <linux/slab.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/seq_file.h>
 
-// #define MEDUSA_DEBUG
-// #define MEDUSA_LOG
-// #define MEDUSA_ORACLE
-// #define MEDUSA_PMU
-
 #define FTHRESH_DEFAULT_KHZ 0UL
-
-#if defined(MEDUSA_PMU)
-#include <linux/perf_event.h>
-#endif
 
 static void medusa_tick(struct work_struct *);
 static void medusa_update(struct work_struct *);
@@ -121,11 +117,6 @@ struct medusa_cpu_data {
 
 	/* number of update cycles this cpu was online */
 	u64 ticks_online;
-
-#if defined(MEDUSA_PMU)
-	struct perf_event *perf_events[NUM_PERF_EVENTS];
-	u64 events_start[NUM_PERF_EVENTS];
-#endif
 };
 
 enum medusa_operations {

@@ -31,15 +31,15 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 38;
+static int actual_pa_gain = 20;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 
-#define REG_SZ	26
-static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
+#define REG_SZ	25
+static unsigned int cached_regs[] = {7, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    5, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0 };
 
@@ -48,10 +48,10 @@ static unsigned int *cache_select(unsigned int reg)
 	unsigned int *out = NULL;
 
         switch (reg) {
-                case TABLA_A_RX_HPH_L_GAIN:
+                case TABLA_A_AUX_L_GAIN:
 			out = &cached_regs[0];
 			break;
-                case TABLA_A_RX_HPH_R_GAIN:
+                case TABLA_A_AUX_R_GAIN:
 			out = &cached_regs[1];
 			break;
                 case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
@@ -147,8 +147,8 @@ int snd_hax_reg_access(unsigned int reg)
 	int ret = 1;
 
 	switch (reg) {
-		case TABLA_A_RX_HPH_L_GAIN:
-		case TABLA_A_RX_HPH_R_GAIN:
+		case TABLA_A_AUX_L_GAIN:
+		case TABLA_A_AUX_R_GAIN:
 		case TABLA_A_RX_HPH_L_STATUS:
 		case TABLA_A_RX_HPH_R_STATUS:
 			if (snd_ctrl_locked > 1)
@@ -324,23 +324,23 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		return count;
 
 	snd_ctrl_locked = 0;
-	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
-	out = (gain & 0xf0) | lval;
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
+	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_AUX_L_GAIN);
+	out = (gain & 0x1f) | lval;
+	tabla_write(fauxsound_codec_ptr, TABLA_A_AUX_L_GAIN, out);
+
+	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
+	out = (status & 0x0f) | (lval << 4);
+	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
 
 	actual_pa_gain = out;
 
-	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
-	out = (status & 0x0f) | (lval << 5);
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
+	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_AUX_R_GAIN);
+	out = (gain & 0x1f) | rval;
+	tabla_write(fauxsound_codec_ptr, TABLA_A_AUX_R_GAIN, out);
 
-	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN);
-	out = (gain & 0xf0) | rval;
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
-
-	status = tabla_read(fauxsound_codec_ptr,  TABLA_A_RX_HPH_R_STATUS);
-	out = (status & 0x0f) | (rval << 5);
-	tabla_write(fauxsound_codec_ptr,  TABLA_A_RX_HPH_R_STATUS, out);
+	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
+	out = (status & 0x0f) | (rval << 4);
+	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
 	snd_ctrl_locked = 2;
 
 	return count;
