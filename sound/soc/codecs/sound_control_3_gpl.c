@@ -31,7 +31,7 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 21;
+static int actual_pa_gain = 20;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -475,7 +475,7 @@ static struct kobj_attribute headphone_gain_attribute =
 
 static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
-		0444,
+		0666,
 		headphone_pa_gain_show,
 		headphone_pa_gain_store);
 
