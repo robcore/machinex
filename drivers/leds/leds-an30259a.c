@@ -423,15 +423,15 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_G,
-				0, 5, 4, 1, 2, 2, 3, 3, 3, 3);
+				0, 15, 0, 1, 2, 2, 3, 3, 3, 3);
 		leds_set_slope_mode(client, LED_B,
-				0, 15, 14, 12, 2, 2, 1, 1, 1, 1);
+				0, 15, 15, 12, 2, 2, 1, 1, 1, 1);
 		break;
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
 		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
-		leds_set_slope_mode(client, LED_G, 0, 0, 3, 1, 1, 1, 0, 1, 0, 1);
+		leds_set_slope_mode(client, LED_G, 0, 0, 4, 1, 1, 1, 0, 1, 0, 1);
 		leds_set_slope_mode(client, LED_B, 0, 15, 5, 2, 1, 1, 1, 0, 1, 0);
 		break;
 	default:
@@ -484,7 +484,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	leds_on(led, true, (delay_off_time > 0), brightness);
 
 	if (leds_control.blink_fading)
-		leds_set_slope_mode(client, led, 1, 15, 7, 0,
+		leds_set_slope_mode(client, led, 1, 15, 8, 0,
 				(delay_on_time + AN30259A_TIME_UNIT - 1) /
 				AN30259A_TIME_UNIT,
 				(delay_off_time + AN30259A_TIME_UNIT - 1) /
