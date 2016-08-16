@@ -1,3 +1,7 @@
+EXTRA_CFLAGS += -Wno-discarded-array-qualifiers
+CFLAGS_es325.o += -w
+CFLAGS_wcd9310.o += -w
+CFLAGS_wcd9304.o += -w
 snd-soc-88pm860x-objs := 88pm860x-codec.o
 snd-soc-ac97-objs := ac97.o
 snd-soc-ad1836-objs := ad1836.o
@@ -51,6 +55,7 @@ snd-soc-uda1380-objs := uda1380.o
 snd-soc-wcd9304-objs := wcd9304.o wcd9304-tables.o
 snd-soc-wcd9306-objs := wcd9306.o wcd9306-tables.o wcd9xxx-resmgr.o wcd9xxx-common.o
 snd-soc-wcd9310-objs := wcd9310.o wcd9310-tables.o
+CFLAGS_wcd9310.o += -fno-aggressive-loop-optimizations
 snd-soc-es325-objs := es325.o
 snd-soc-cs8427-objs := cs8427.o
 snd-soc-wcd9320-objs := wcd9320.o wcd9320-tables.o
