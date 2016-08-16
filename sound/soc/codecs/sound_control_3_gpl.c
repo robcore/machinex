@@ -31,7 +31,7 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 38;
+static int actual_pa_gain = 18;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -311,7 +311,7 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		actual_pa_gain, actual_pa_gain);
 }
 
-static ssize_t headphone_pa_gain_store(struct kobject *kobj,
+/*static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int lval, rval;
@@ -345,7 +345,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	return count;
 }
-
+*/
 static unsigned int selected_reg = 0xdeadbeef;
 
 static ssize_t sound_reg_select_store(struct kobject *kobj,
@@ -477,7 +477,7 @@ static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
 		0666,
 		headphone_pa_gain_show,
-		headphone_pa_gain_store);
+		NULL);
 
 static struct kobj_attribute sound_control_rec_locked_attribute =
 	__ATTR(gpl_sound_control_rec_locked,

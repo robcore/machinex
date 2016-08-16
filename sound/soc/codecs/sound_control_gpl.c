@@ -45,8 +45,8 @@ extern struct snd_kcontrol_new *gpl_faux_snd_controls_ptr;
 //#define HEADPHONE_LA_OFFSET	14
 //#define HEADPHONE_RA_OFFSET	15
 
-#define HEADPHONE_PA_L_OFFSET	6
-#define HEADPHONE_PA_R_OFFSET	7
+//#define HEADPHONE_PA_L_OFFSET	6
+//#define HEADPHONE_PA_R_OFFSET	7
 
 static ssize_t cam_mic_gain_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -229,11 +229,11 @@ static ssize_t headphone_gain_store(struct kobject *kobj, struct kobj_attribute 
 	//ra_mixer_ptr->platform_max = r_max;
 	//ra_mixer_ptr->max = r_max;
 	//ra_mixer_ptr->min += r_delta;
-
+ 
 	return count;
 }
 
-static ssize_t headphone_pa_gain_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+/*static ssize_t headphone_pa_gain_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	struct soc_mixer_control *l_mixer_ptr, *r_mixer_ptr;
 
@@ -280,7 +280,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj, struct kobj_attribu
 
 	return count;
 }
-
+*/
 static ssize_t hdmi_spkr_gain_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {
@@ -384,12 +384,12 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-static struct kobj_attribute headphone_pa_gain_attribute =
+/*static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
 		0666,
 		headphone_pa_gain_show,
 		headphone_pa_gain_store);
-
+*/
 static struct kobj_attribute hdmi_spkr_gain_attribute =
 	__ATTR(gpl_hdmi_spkr_gain,
 		0666,
@@ -413,7 +413,7 @@ static struct attribute *sound_control_attrs[] =
 		&mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
 		&headphone_gain_attribute.attr,
-		&headphone_pa_gain_attribute.attr,
+//		&headphone_pa_gain_attribute.attr,
 		&hdmi_spkr_gain_attribute.attr,
 		&headset_mic_gain_attribute.attr,
 		&sound_control_version_attribute.attr,
