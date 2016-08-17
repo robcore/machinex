@@ -418,21 +418,36 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_G, true, false, cur);
 		break;
 
+/*
+ * leds_set_slope_mode() sets correct values to corresponding shadow registers.
+ * led: stands for LED_R or LED_G or LED_B.
+ * delay: represents for starting delay time in multiple of .5 second.
+ * dutymax: led at slope lighting maximum PWM Duty setting.
+ * dutymid: led at slope lighting middle PWM Duty setting.
+ * dutymin: led at slope lighting minimum PWM Duty Setting.
+ * slptt1: total time of slope operation 1 and 2, in multiple of .5 second.
+ * slptt2: total time of slope operation 3 and 4, in multiple of .5 second.
+ * dt1: detention time at each step in slope operation 1, in multiple of 4ms.
+ * dt2: detention time at each step in slope operation 2, in multiple of 4ms.
+ * dt3: detention time at each step in slope operation 3, in multiple of 4ms.
+ * dt4: detention time at each step in slope operation 4, in multiple of 4ms.
+ */
 	case POWERING:
 		pr_info("LED Powering Pattern on\n");
 		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_G,
-				0, 15, 0, 1, 2, 2, 3, 3, 3, 3);
+				2, 15, 6, 4, 2, 2, 1, 1, 1, 1);
 		leds_set_slope_mode(client, LED_B,
-				0, 15, 15, 12, 2, 2, 1, 1, 1, 1);
+				0, 15, 10, 15, 2, 2, 3, 3, 3, 3);
 		break;
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
 		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
-		leds_set_slope_mode(client, LED_G, 0, 0, 4, 1, 1, 1, 0, 1, 0, 1);
-		leds_set_slope_mode(client, LED_B, 0, 15, 5, 2, 1, 1, 1, 0, 1, 0);
+		leds_set_slope_mode(client, LED_G, 2, 15, 5, 2, 1, 1, 1, 3, 1, 2);
+		leds_set_slope_mode(client, LED_B, 0, 15, 5, 8, 1, 1, 1, 1, 3, 2);
+
 		break;
 	default:
 		return;

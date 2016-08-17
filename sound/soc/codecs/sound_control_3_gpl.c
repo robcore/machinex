@@ -31,7 +31,7 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 0;
+static int actual_pa_gain = 31;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -39,7 +39,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 
 
 #define REG_SZ	25
-static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0 };
 
@@ -250,7 +250,7 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 			tabla_read(fauxsound_codec_ptr,
 				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(fauxsound_codec_ptr,
-				TABLA_A_CDC_RX6_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX7_VOL_CTL_B2_CTL));
 
 }
 
@@ -268,7 +268,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	tabla_write(fauxsound_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
 	tabla_write(fauxsound_codec_ptr,
-		TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
 
 	return count;
@@ -325,21 +325,21 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	snd_ctrl_locked = 0;
 	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
-	out = (gain & 0xc0) | lval;
+	out = (gain & 0xf0) | lval;
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
 
 	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
-	out = (status & 0x1f) | (lval << 2);
+	out = (status & 0x0f) | (lval << 4);
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
 
 	actual_pa_gain = out;
 
 	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN);
-	out = (gain & 0xc0) | rval;
+	out = (gain & 0xf0) | rval;
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
 
 	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
-	out = (status & 0x1f) | (rval << 2);
+	out = (status & 0x0f) | (rval << 4);
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
 	snd_ctrl_locked = 2;
 
@@ -475,9 +475,9 @@ static struct kobj_attribute headphone_gain_attribute =
 
 static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
-		0666,
+		0444,
 		headphone_pa_gain_show,
-		headphone_pa_gain_store);
+		NULL);
 
 static struct kobj_attribute sound_control_rec_locked_attribute =
 	__ATTR(gpl_sound_control_rec_locked,
