@@ -311,7 +311,7 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		actual_pa_gain, actual_pa_gain);
 }
 
-*static ssize_t headphone_pa_gain_store(struct kobject *kobj,
+static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int lval, rval;
@@ -329,7 +329,7 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
 
 	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
-	out = (status & 0x0f) | (lval << 2);
+	out = (status & 0x1f) | (lval << 2);
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
 
 	actual_pa_gain = out;
@@ -339,7 +339,7 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
 
 	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
-	out = (status & 0x0f) | (rval << 2);
+	out = (status & 0x1f) | (rval << 2);
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
 	snd_ctrl_locked = 2;
 
