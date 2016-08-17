@@ -38,22 +38,22 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 
-#define REG_SZ	22
+#define REG_SZ	25
 static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0 };
+			    0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
 	unsigned int *out = NULL;
 
         switch (reg) {
-//                case TABLA_A_RX_HPH_L_GAIN:
-//			out = &cached_regs[0];
-//			break;
-//				case TABLA_A_RX_HPH_R_GAIN:
-//			out = &cached_regs[1];
-//			break;
+                case TABLA_A_RX_HPH_L_GAIN:
+			out = &cached_regs[0];
+			break;
+				case TABLA_A_RX_HPH_R_GAIN:
+			out = &cached_regs[1];
+			break;
                 case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 			out = &cached_regs[4];
 			break;
@@ -146,7 +146,7 @@ int snd_hax_reg_access(unsigned int reg)
 {
 	int ret = 1;
 
-/*	switch (reg) {
+	switch (reg) {
 		case TABLA_A_RX_HPH_L_GAIN:
 		case TABLA_A_RX_HPH_R_GAIN:
 		case TABLA_A_RX_HPH_L_STATUS:
@@ -154,7 +154,6 @@ int snd_hax_reg_access(unsigned int reg)
 			if (snd_ctrl_locked > 1)
 				ret = 0;
 			break;
-*/
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
