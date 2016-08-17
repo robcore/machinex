@@ -31,29 +31,29 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 31;
+//static int actual_pa_gain = 31;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 
-#define REG_SZ	25
-static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
+#define REG_SZ	22
+static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0 };
+			    0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
 	unsigned int *out = NULL;
 
         switch (reg) {
-                case TABLA_A_RX_HPH_L_GAIN:
-			out = &cached_regs[0];
-			break;
-                case TABLA_A_RX_HPH_R_GAIN:
-			out = &cached_regs[1];
-			break;
+//                case TABLA_A_RX_HPH_L_GAIN:
+//			out = &cached_regs[0];
+//			break;
+//				case TABLA_A_RX_HPH_R_GAIN:
+//			out = &cached_regs[1];
+//			break;
                 case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 			out = &cached_regs[4];
 			break;
@@ -146,7 +146,7 @@ int snd_hax_reg_access(unsigned int reg)
 {
 	int ret = 1;
 
-	switch (reg) {
+/*	switch (reg) {
 		case TABLA_A_RX_HPH_L_GAIN:
 		case TABLA_A_RX_HPH_R_GAIN:
 		case TABLA_A_RX_HPH_L_STATUS:
@@ -154,6 +154,7 @@ int snd_hax_reg_access(unsigned int reg)
 			if (snd_ctrl_locked > 1)
 				ret = 0;
 			break;
+*/
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
@@ -250,7 +251,7 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 			tabla_read(fauxsound_codec_ptr,
 				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(fauxsound_codec_ptr,
-				TABLA_A_CDC_RX7_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
 
 }
 
@@ -268,7 +269,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	tabla_write(fauxsound_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
 	tabla_write(fauxsound_codec_ptr,
-		TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
 
 	return count;
@@ -304,6 +305,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	return count;
 }
 
+/*
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -345,7 +347,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	return count;
 }
-
+*/
 static unsigned int selected_reg = 0xdeadbeef;
 
 static ssize_t sound_reg_select_store(struct kobject *kobj,
@@ -473,12 +475,12 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-static struct kobj_attribute headphone_pa_gain_attribute =
-	__ATTR(gpl_headphone_pa_gain,
-		0444,
-		headphone_pa_gain_show,
-		NULL);
-
+//static struct kobj_attribute headphone_pa_gain_attribute =
+//	__ATTR(gpl_headphone_pa_gain,
+//		0444,
+//		headphone_pa_gain_show,
+//		NULL);
+//removing again because it's screwy
 static struct kobj_attribute sound_control_rec_locked_attribute =
 	__ATTR(gpl_sound_control_rec_locked,
 		0666,
@@ -507,7 +509,7 @@ static struct attribute *sound_control_attrs[] =
 		&mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
 		&headphone_gain_attribute.attr,
-		&headphone_pa_gain_attribute.attr,
+//		&headphone_pa_gain_attribute.attr,
 		&sound_control_rec_locked_attribute.attr,
 		&sound_reg_sel_attribute.attr,
 		&sound_reg_read_attribute.attr,

@@ -387,6 +387,15 @@ config CPU_FREQ_DEFAULT_GOV_HELLSACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_ARTERACTIVE
+	bool "hellsactive"
+	select CPU_FREQ_GOV_ARTERACTIVE
+	help
+	  Use the CPUFreq governor 'arteractive' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'interactive' governor for latency-sensitive workloads.
+
 endchoice
 
 config CPU_FREQ_GOV_UBERDEMAND
@@ -820,9 +829,20 @@ config CPU_FREQ_GOV_HELLSACTIVE
 	  interactive workloads.
 
 	  To compile this driver as a module, choose M here: the
-	  module will be called cpufreq_interactive.
+	  module will be called cpufreq_hellsactive.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_ARTERACTIVE
+	tristate "'arteractive' cpufreq policy governor"
+	help
+	  'arteractive' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+
+	  This is an interactive governor built by arter97 with snapdragon
+	  chipsets in mind.
 
 	  If in doubt, say N.
 

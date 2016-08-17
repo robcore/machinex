@@ -52,6 +52,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_MEDUSA)		+= cpufreq_medusa.o
 obj-$(CONFIG_CPU_FREQ_GOV_BACON)	+= cpufreq_bacon.o
 obj-$(CONFIG_CPU_FREQ_GOV_SLIM)			+= cpufreq_slim.o
 obj-$(CONFIG_CPU_FREQ_GOV_HELLSACTIVE)	+= cpufreq_hellsactive.o
+obj-$(CONFIG_CPU_FREQ_GOV_ARTERACTIVE)	+= cpufreq_arteractive.o
 
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
