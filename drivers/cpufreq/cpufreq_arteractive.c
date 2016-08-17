@@ -57,7 +57,6 @@
 #include <asm/cputime.h>
 
 #define CONFIG_MODE_AUTO_CHANGE
-#define CONFIG_RETENTION_CHANGE
 
 /*
  * Governor-side implemented Touchboost by Paul Reioux(faux123)
@@ -118,6 +117,9 @@ static unsigned int hispeed_freq = 1890000;
 /* Go to hi speed when CPU load at or above this value. */
 #define DEFAULT_GO_HISPEED_LOAD 99
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
+
+/* Go to hi speed when CPU load at or above this value on screen-off state */
+#define DEFAULT_GO_HISPEED_LOAD_SCREEN_OFF 110
 
 /* Sampling down factor to be applied to min_sample_time at max freq */
 static unsigned int sampling_down_factor = 100000;
@@ -224,13 +226,7 @@ static unsigned int *above_hispeed_delay_set[MAX_PARAM_SET];
 static int nabove_hispeed_delay_set[MAX_PARAM_SET];
 static unsigned int sampling_down_factor_set[MAX_PARAM_SET];
 #endif /* CONFIG_MODE_AUTO_CHANGE */
-#ifdef CONFIG_RETENTION_CHANGE
-static void do_toggle_retention(struct work_struct *work);
-extern void msm_pm_retention_mode_enable(bool enable);
-static struct workqueue_struct *retention_toggle_wq;
-static struct work_struct retention_toggle_work;
-static int mode_count = 0;
-#endif
+
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
  * and if the highest frequency among the other CPUs is higher than
@@ -606,17 +602,11 @@ static void enter_mode(void)
 #else
 	set_new_param_set(1);
 #endif
-#ifdef CONFIG_RETENTION_CHANGE
-	queue_work(retention_toggle_wq, &retention_toggle_work);
-#endif
 }
 
 static void exit_mode(void)
 {
 	set_new_param_set(0);
-#ifdef CONFIG_RETENTION_CHANGE
-	queue_work(retention_toggle_wq, &retention_toggle_work);
-#endif
 }
 #endif
 
@@ -656,30 +646,28 @@ static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 		goto rearm;
 
 #ifdef CONFIG_MODE_AUTO_CHANGE
-	if (!suspended) {
-		spin_lock_irqsave(&mode_lock, flags);
-		if (enforced_mode)
-			new_mode = enforced_mode;
-		else
-			new_mode = check_mode(data, mode, now);
-		if (new_mode != mode) {
-			mode = new_mode;
-			if (new_mode & MULTI_MODE || new_mode & SINGLE_MODE) {
+	spin_lock_irqsave(&mode_lock, flags);
+	if (enforced_mode)
+		new_mode = enforced_mode;
+	else
+		new_mode = check_mode(data, mode, now);
+	if (new_mode != mode) {
+		mode = new_mode;
+		if (new_mode & MULTI_MODE || new_mode & SINGLE_MODE) {
 #ifdef CONFIG_RETENTION_CHANGE
-				++mode_count;
+			++mode_count;
 #endif
-				pr_info("Governor: enter mode 0x%x\n", mode);
-				enter_mode();
-			} else {
+			pr_info("Governor: enter mode 0x%x\n", mode);
+			enter_mode();
+		} else {
 #ifdef CONFIG_RETENTION_CHANGE
-				mode_count=0;
+			mode_count=0;
 #endif
-				pr_info("Governor: exit mode 0x%x\n", mode);
-				exit_mode();
-			}
+			pr_info("Governor: exit mode 0x%x\n", mode);
+			exit_mode();
 		}
-		spin_unlock_irqrestore(&mode_lock, flags);
 	}
+	spin_unlock_irqrestore(&mode_lock, flags);
 #endif
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
@@ -694,8 +682,10 @@ static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 	pcpu->policy->util = cpu_load;
 #endif
 
-	if (cpu_load >= go_hispeed_load || boosted) {
-		if (pcpu->policy->cpu == 0 && !suspended) {
+	if ( (suspended && (cpu_load >= DEFAULT_GO_HISPEED_LOAD_SCREEN_OFF)) ||
+	    (!suspended && (cpu_load >= go_hispeed_load)) ||
+	     (boosted)) {
+		if (pcpu->policy->cpu == 0) {
 			if (pcpu->target_freq < this_hispeed_freq) {
 				new_freq = this_hispeed_freq;
 			} else {
@@ -2031,12 +2021,6 @@ static int __init cpufreq_arteractive_init(void)
 	spin_lock_init(&mode_lock);
 	cpufreq_param_set_init();
 #endif
-#ifdef CONFIG_RETENTION_CHANGE
-	retention_toggle_wq = alloc_workqueue("retentionToggle_wq", WQ_HIGHPRI, 0);
-	if(!retention_toggle_wq)
-		pr_info("retention toggle workqueue init error\n");
-	INIT_WORK(&retention_toggle_work, do_toggle_retention);
-#endif
 	mutex_init(&gov_lock);
 	speedchange_task =
 		kthread_create(cpufreq_interactive_speedchange_task, NULL,
@@ -2052,16 +2036,6 @@ static int __init cpufreq_arteractive_init(void)
 
 	return cpufreq_register_governor(&cpufreq_gov_arteractive);
 }
-
-#ifdef CONFIG_RETENTION_CHANGE
-static void do_toggle_retention(struct work_struct *work)
-{
-	if(mode_count == 1)
-		msm_pm_retention_mode_enable(0);
-	else if(mode_count == 0)
-		msm_pm_retention_mode_enable(1);
-}
-#endif	// CONFIG_RETENTION_CHANGE
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ARTERACTIVE
 fs_initcall(cpufreq_arteractive_init);
