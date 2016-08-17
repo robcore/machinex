@@ -229,7 +229,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj, struct kobj_attribute 
 	//ra_mixer_ptr->platform_max = r_max;
 	//ra_mixer_ptr->max = r_max;
 	//ra_mixer_ptr->min += r_delta;
- 
+
 	return count;
 }
 
@@ -389,7 +389,7 @@ static struct kobj_attribute headphone_pa_gain_attribute =
 		0666,
 		headphone_pa_gain_show,
 		headphone_pa_gain_store);
-*/
+
 static struct kobj_attribute hdmi_spkr_gain_attribute =
 	__ATTR(gpl_hdmi_spkr_gain,
 		0666,
@@ -466,3 +466,4 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("Sound Control Module GPL Edition");
+
