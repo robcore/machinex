@@ -41,7 +41,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 #define REG_SZ	25
 static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0 };
+			    0, 0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -304,14 +304,14 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	return count;
 }
 
-/*
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u %u\n",
-		actual_pa_gain, actual_pa_gain);
+		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
+		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
 }
-
+/*
 static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -474,12 +474,11 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-//static struct kobj_attribute headphone_pa_gain_attribute =
-//	__ATTR(gpl_headphone_pa_gain,
-//		0444,
-//		headphone_pa_gain_show,
-//		NULL);
-//removing again because it's screwy
+static struct kobj_attribute headphone_pa_gain_attribute =
+	__ATTR(gpl_headphone_pa_gain,
+		0444,
+		headphone_pa_gain_show, NULL);
+
 static struct kobj_attribute sound_control_rec_locked_attribute =
 	__ATTR(gpl_sound_control_rec_locked,
 		0666,
@@ -508,7 +507,7 @@ static struct attribute *sound_control_attrs[] =
 		&mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
 		&headphone_gain_attribute.attr,
-//		&headphone_pa_gain_attribute.attr,
+		&headphone_pa_gain_attribute.attr,
 		&sound_control_rec_locked_attribute.attr,
 		&sound_reg_sel_attribute.attr,
 		&sound_reg_read_attribute.attr,
