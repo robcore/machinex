@@ -9176,11 +9176,11 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 #ifdef CONFIG_DEBUG_FS
 	if (ret == 0) {
 		tabla->debugfs_poke =
-		    debugfs_create_file("TRRS", S_IFREG | S_IRUGO | S_IWUSR, NULL, tabla,
+		    debugfs_create_file("TRRS", S_IFREG | S_IRUGO, NULL, tabla,
 					&codec_debug_ops);
-		tabla->debugfs_reg_peek = debugfs_create_file("peek", S_IFREG | S_IRUGO | S_IWUSR, NULL,
+		tabla->debugfs_reg_peek = debugfs_create_file("peek", S_IFREG | S_IRUGO, NULL,
 			codec, &peek_reg_fops);
-		tabla->debugfs_reg_poke = debugfs_create_file("poke", S_IFREG | S_IRUGO | S_IWUSR, NULL,
+		tabla->debugfs_reg_poke = debugfs_create_file("poke", S_IFREG | S_IRUGO, NULL,
 			codec, &poke_reg_fops);
 		tabla->debugfs_mbhc =
 		    debugfs_create_file("tabla_mbhc", S_IFREG | S_IRUGO,
