@@ -311,12 +311,12 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
 		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
 }
-/*
+
 static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int lval, rval;
-	unsigned int gain, status;
+	unsigned int gain;
 	unsigned int out;
 
 	sscanf(buf, "%u %u", &lval, &rval);
@@ -326,27 +326,27 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	snd_ctrl_locked = 0;
 	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
-	out = (gain & 0xf0) | lval;
+	out = (gain & 0x0f) | lval;
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
 
-	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
-	out = (status & 0x0f) | (lval << 4);
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
+//	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
+//	out = (status & 0x0f) | (lval << 4);
+//	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
 
-	actual_pa_gain = out;
+//	actual_pa_gain = out; NOTE:actual pa gain is 16 as shown in kernel when "show" is enabled and not "store."
 
 	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN);
-	out = (gain & 0xf0) | rval;
+	out = (gain & 0x0f) | rval;
 	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
 
-	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
-	out = (status & 0x0f) | (rval << 4);
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
+//	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
+//	out = (status & 0x0f) | (rval << 4);
+//	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
 	snd_ctrl_locked = 2;
 
 	return count;
 }
-*/
+
 static unsigned int selected_reg = 0xdeadbeef;
 
 static ssize_t sound_reg_select_store(struct kobject *kobj,
@@ -476,8 +476,9 @@ static struct kobj_attribute headphone_gain_attribute =
 
 static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
-		0444,
-		headphone_pa_gain_show, NULL);
+		0666,
+		headphone_pa_gain_show,
+		headphone_pa_gain_store);
 
 static struct kobj_attribute sound_control_rec_locked_attribute =
 	__ATTR(gpl_sound_control_rec_locked,
@@ -559,4 +560,3 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPL and additional rights");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("Sound Control Module 3.x");
-
