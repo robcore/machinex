@@ -57,6 +57,7 @@ struct max77693_charger_data {
 	unsigned int	charging_current_max;
 	unsigned int	charging_current;
 	unsigned int	vbus_state;
+	int		aicl_on;
 	int		status;
 	int		siop_level;
 
@@ -226,7 +227,11 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 	int chg_state;
 
 	mutex_lock(&charger->ops_lock);
-	disable_irq(charger->irq_chgin);
+	reg_data = 0;
+	reg_data = (1 << CHGIN_SHIFT);
+	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			CHGIN_MASK);
+
 	if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS)
 		set_reg = MAX77693_CHG_REG_CHG_CNFG_10;
 	else
@@ -264,6 +269,12 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 				if ((chg_state != POWER_SUPPLY_STATUS_CHARGING) &&
 						(chg_state != POWER_SUPPLY_STATUS_FULL))
 					break;
+				/* under 400mA, slow rate */
+				if (set_current_reg < (400 / 20) &&
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
+					charger->aicl_on = true;
+				else
+					charger->aicl_on = false;
 				msleep(50);
 			} else
 				break;
@@ -313,8 +324,15 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 			if ((chg_state != POWER_SUPPLY_STATUS_CHARGING) &&
 					(chg_state != POWER_SUPPLY_STATUS_FULL))
 				goto exit;
-			if (curr_step < 2)
+			if (curr_step < 2) {
+				/* under 400mA, slow rate */
+				if (now_current_reg < (400 / 20) &&
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
+					charger->aicl_on = true;
+				else
+					charger->aicl_on = false;
 				goto exit;
+			}
 			msleep(50);
 		} else
 			now_current_reg += (curr_step);
@@ -326,7 +344,10 @@ set_input_current:
 	max77693_write_reg(charger->max77693->i2c,
 		set_reg, set_current_reg);
 exit:
-	enable_irq(charger->irq_chgin);
+	reg_data = 0;
+	reg_data = (0 << CHGIN_SHIFT);
+	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			CHGIN_MASK);
 	mutex_unlock(&charger->ops_lock);
 }
 
@@ -708,6 +729,11 @@ static int sec_chg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		if (!charger->is_charging)
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
+		else if (charger->aicl_on)
+		{
+			val->intval = POWER_SUPPLY_CHARGE_TYPE_SLOW;
+			pr_info("%s: slow-charging mode\n", __func__);
+		}
 		else
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
 		break;
@@ -766,6 +792,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				POWER_SUPPLY_PROP_HEALTH, value);
 		if (val->intval == POWER_SUPPLY_TYPE_BATTERY) {
 			charger->is_charging = false;
+			charger->aicl_on = false;
 			charger->soft_reg_recovery_cnt = 0;
 			set_charging_current = 0;
 			set_charging_current_max =
@@ -1243,8 +1270,12 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 	int battery_health;
 	union power_supply_propval value;
 	int stable_count = 0;
+	u8 reg_data;
 
-	disable_irq(charger->irq_chgin);
+	reg_data = 0;
+	reg_data = (1 << CHGIN_SHIFT);
+	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			CHGIN_MASK);
 
 	while (1) {
 		psy_do_property("battery", get,
@@ -1315,13 +1346,16 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		if (charger->is_charging) {
 			/* reduce only at CC MODE */
 			if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
-					(chg_dtls == 0x01) && (stable_count > 2))
+					(chg_dtls == 0x01) && (stable_count > 3))
 				reduce_input_current(charger, REDUCE_CURRENT_STEP);
 		}
 		prev_chgin_dtls = chgin_dtls;
 		msleep(100);
 	}
-	enable_irq(charger->irq_chgin);
+	reg_data = 0;
+	reg_data = (0 << CHGIN_SHIFT);
+	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			CHGIN_MASK);
 }
 
 static irqreturn_t max77693_chgin_irq(int irq, void *data)
@@ -1367,6 +1401,7 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 
 	charger->max77693 = iodev;
 	charger->pdata = pdata->charger_data;
+	charger->aicl_on = false;
 	charger->siop_level = 100;
 
 	platform_set_drvdata(pdev, charger);

@@ -296,6 +296,7 @@ struct pm8921_chg_chip {
 	int				btc_delay_ms;
 	bool				btc_panic_if_cant_stop_chg;
 	int				stop_chg_upon_expiry;
+	bool				disable_aicl;
 	int				usb_type;
 	bool				disable_chg_rmvl_wrkarnd;
 	bool				enable_tcxo_warmup_delay;
@@ -1513,6 +1514,24 @@ static int pm_power_get_property_mains(struct power_supply *psy,
 	return 0;
 }
 
+static int disable_aicl(int disable)
+{
+	if (disable != POWER_SUPPLY_HEALTH_UNKNOWN
+		&& disable != POWER_SUPPLY_HEALTH_GOOD) {
+		pr_err("called with invalid param :%d\n", disable);
+		return -EINVAL;
+	}
+
+	if (!the_chip) {
+		pr_err("%s called before init\n", __func__);
+		return -EINVAL;
+	}
+
+	pr_debug("Disable AICL = %d\n", disable);
+	the_chip->disable_aicl = disable;
+	return 0;
+}
+
 static int switch_usb_to_charge_mode(struct pm8921_chg_chip *chip)
 {
 	int rc;
@@ -1572,7 +1591,7 @@ static int pm_power_set_property_usb(struct power_supply *psy,
 		return pm8921_set_usb_power_supply_type(val->intval);
 	case POWER_SUPPLY_PROP_HEALTH:
 		/* UNKNOWN(0) means enable aicl, GOOD(1) means disable aicl */
-		return 1
+		return disable_aicl(val->intval);
 	default:
 		return -EINVAL;
 	}
