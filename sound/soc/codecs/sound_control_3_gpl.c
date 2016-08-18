@@ -39,7 +39,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 
 
 #define REG_SZ	25
-static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
+static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0 };
 
@@ -233,7 +233,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	if (!snd_ctrl_enabled)
 		return count;
-TABLA_A_CDC_RX6_VOL_CTL_B2_CTL
+
 	snd_ctrl_locked = 0;
 	tabla_write(fauxsound_codec_ptr,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
