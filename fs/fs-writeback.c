@@ -235,6 +235,7 @@ static void inode_sync_complete(struct inode *inode)
 {
 	inode->i_state &= ~I_SYNC;
 	/* Waiters must see I_SYNC cleared before being woken up */
+	inode_add_lru(inode);
 	smp_mb();
 	wake_up_bit(&inode->i_state, __I_SYNC);
 }
