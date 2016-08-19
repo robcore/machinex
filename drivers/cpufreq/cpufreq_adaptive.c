@@ -24,8 +24,6 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 
-#include <mach/ppmu.h>
-
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -346,10 +344,8 @@ static void cpufreq_adaptive_timer(unsigned long data)
 	for_each_online_cpu(j) {
 		cur_idle = get_cpu_idle_time_us(j, &cur_wall);
 
-		delta_idle = (unsigned int) cputime64_sub(cur_idle,
-				per_cpu(idle_in_idle, j));
-		delta_time = (unsigned int) cputime64_sub(cur_wall,
-				per_cpu(idle_exit_wall, j));
+		delta_idle = (unsigned int) (cur_idle - per_cpu(idle_in_idle, j));
+		delta_time = (unsigned int) (cur_wall - per_cpu(idle_exit_wall, j));
 
 		/*
 		 * If timer ran less than 1ms after short-term sample started, retry.
@@ -468,20 +464,20 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		cur_idle_time = get_cpu_idle_time_us(j, &cur_wall_time);
 		cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
 
-		wall_time = (unsigned int) cputime64_sub(cur_wall_time,
-				j_dbs_info->prev_cpu_wall);
+		wall_time = (unsigned int)
+			(cur_wall_time - j_dbs_info->prev_cpu_wall);
 		j_dbs_info->prev_cpu_wall = cur_wall_time;
 
-		idle_time = (unsigned int) cputime64_sub(cur_idle_time,
-				j_dbs_info->prev_cpu_idle);
+		idle_time = (unsigned int)
+			(cur_idle_time - j_dbs_info->prev_cpu_idle);
 		j_dbs_info->prev_cpu_idle = cur_idle_time;
 
-		iowait_time = (unsigned int) cputime64_sub(cur_iowait_time,
-				j_dbs_info->prev_cpu_iowait);
+		iowait_time = (unsigned int)
+			(cur_iowait_time - j_dbs_info->prev_cpu_iowait);
 		j_dbs_info->prev_cpu_iowait = cur_iowait_time;
 
 		if (dbs_tuners_ins.ignore_nice) {
-			cputime64_t cur_nice;
+			u64 cur_nice;
 			unsigned long cur_nice_jiffies;
 
 			cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] -
@@ -695,10 +691,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 			j_dbs_info->prev_cpu_idle = get_cpu_idle_time_us(j,
 						&j_dbs_info->prev_cpu_wall);
-			if (dbs_tuners_ins.ignore_nice) {
+			if (dbs_tuners_ins.ignore_nice)
 				j_dbs_info->prev_cpu_nice =
 						kcpustat_cpu(j).cpustat[CPUTIME_NICE];
-			}
 		}
 		this_dbs_info->cpu = cpu;
 		adaptive_init_cpu(cpu);
@@ -734,8 +729,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		mutex_init(&this_dbs_info->timer_mutex);
 		dbs_timer_init(this_dbs_info);
 
-		pm_idle_old = pm_idle;
-		pm_idle = cpufreq_adaptive_idle;
 		break;
 
 	case CPUFREQ_GOV_STOP:
@@ -750,7 +743,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &dbs_attr_group);
 
-		pm_idle = pm_idle_old;
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
@@ -880,7 +872,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	u64 idle_time;
 	int cpu = get_cpu();
 
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
+	struct sched_param param = { .sched_priority = 0 };
 	go_maxspeed_load = DEFAULT_GO_MAXSPEED_LOAD;
 	keep_minspeed_load = DEFAULT_KEEP_MINSPEED_LOAD;
 	step_up_load = DEFAULT_STEPUP_LOAD;
