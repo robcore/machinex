@@ -461,7 +461,7 @@ static u64 update_load(int cpu)
 	unsigned int delta_idle;
 	unsigned int delta_time;
 	u64 active_time;
-#if defined(CONFIG_MODE_AUTO_CHANGE)
+#if defined(CONFIG_SEC_PM) || defined(CONFIG_MODE_AUTO_CHANGE)
 	unsigned int cur_load = 0;
 #endif
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -482,11 +482,13 @@ static u64 update_load(int cpu)
 	pcpu->time_in_idle = now_idle;
 	pcpu->time_in_idle_timestamp = now;
 
-#if defined(CONFIG_MODE_AUTO_CHANGE)
+#if defined(CONFIG_SEC_PM) || defined(CONFIG_MODE_AUTO_CHANGE)
 	cur_load = (unsigned int)(active_time * 100) / delta_time;
 #endif
+#ifdef CONFIG_SEC_PM
 	pcpu->policy->load_at_max = (cur_load * pcpu->policy->cur) /
 		pcpu->policy->cpuinfo.max_freq;
+#endif
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	cur_loadinfo->load = (cur_load * pcpu->policy->cur) /
 									pcpu->policy->cpuinfo.max_freq;
@@ -676,7 +678,9 @@ static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 	boosted = boost_val || now < boostpulse_endtime;
 	this_hispeed_freq = max(hispeed_freq, pcpu->policy->min);
 
+#ifdef CONFIG_SEC_PM
 	pcpu->policy->util = cpu_load;
+#endif
 
 	if ( (suspended && (cpu_load >= DEFAULT_GO_HISPEED_LOAD_SCREEN_OFF)) ||
 	    (!suspended && (cpu_load >= go_hispeed_load)) ||

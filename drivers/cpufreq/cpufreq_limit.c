@@ -111,10 +111,15 @@ static int cpufreq_limit_notifier_policy(struct notifier_block *nb,
 			max = handle->max;
 	}
 
+#ifdef CONFIG_SEC_PM
+	pr_debug("CPUFREQ(%d): %s: umin=%d,umax=%d\n",
+		policy->cpu, __func__, policy->user_policy.min, policy->user_policy.max);
+
 	if (policy->user_policy.min > min)
 		min = policy->user_policy.min;
 	if (policy->user_policy.max && policy->user_policy.max < max)
 		max = policy->user_policy.max;
+#endif
 
 	mutex_unlock(&cpufreq_limit_lock);
 
