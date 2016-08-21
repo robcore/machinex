@@ -215,7 +215,7 @@ int snd_cs8427_create(struct snd_i2c_bus *bus,
 		return -ENOMEM;
 	}
 	device->private_free = snd_cs8427_free;
-	
+
 	snd_i2c_lock(bus);
 	err = snd_cs8427_reg_read(device, CS8427_REG_ID_AND_VER);
 	if (err != CS8427_VER8427A) {
@@ -269,7 +269,6 @@ int snd_cs8427_create(struct snd_i2c_bus *bus,
 	chip->reset_timeout = reset_timeout;
 	snd_cs8427_reset(device);
 
-#if 0	// it's nice for read tests
 	{
 	char buf[128];
 	int xx;
@@ -279,8 +278,7 @@ int snd_cs8427_create(struct snd_i2c_bus *bus,
 	for (xx = 0; xx < 127; xx++)
 		printk(KERN_DEBUG "reg[0x%x] = 0x%x\n", xx+1, buf[xx]);
 	}
-#endif
-	
+
 	if (r_cs8427)
 		*r_cs8427 = device;
 	return 0;
@@ -409,7 +407,7 @@ static int snd_cs8427_spdif_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_i2c_device *device = snd_kcontrol_chip(kcontrol);
 	struct cs8427 *chip = device->private_data;
-	
+
 	snd_i2c_lock(device->bus);
 	memcpy(ucontrol->value.iec958.status, chip->playback.def_status, 24);
 	snd_i2c_unlock(device->bus);
