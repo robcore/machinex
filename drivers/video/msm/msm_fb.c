@@ -826,7 +826,7 @@ static void msmfb_power_suspend(struct power_suspend *h)
 
  For MDP with overlay, set framebuffer with black pixels
  to show black screen on HDMI.
-	
+
 	struct fb_info *fbi = mfd->fbi;
 	switch (mfd->fbi->var.bits_per_pixel) {
 	case 32:
@@ -1622,6 +1622,11 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	    ("FrameBuffer[%d] %dx%d size=%d bytes is registered successfully!\n",
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
 
+#ifdef CONFIG_UPDATE_LCDC_LUT
+	if (msm_fb_pdata->update_lcdc_lut)
+		msm_fb_pdata->update_lcdc_lut();
+#endif
+
 #ifdef CONFIG_FB_MSM_LOGO
 	if (mfd->panel_info.type != DTV_PANEL) {
 #ifndef MSM_RGB_LOGO
@@ -1711,6 +1716,8 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 						   (u32 *) &mfd->panel_info.
 						   frame_count);
 
+static int unset_bl_level, bl_updated;
+static int bl_level_old;
 
 			switch (mfd->dest) {
 			case DISPLAY_LCD:

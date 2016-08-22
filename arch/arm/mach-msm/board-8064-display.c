@@ -161,8 +161,19 @@ static int msm_fb_detect_panel(const char *name)
 	return -ENODEV;
 }
 
+#ifdef CONFIG_UPDATE_LCDC_LUT
+int update_preset_lcdc_lut(void)
+{
+	return 0;
+}
+#endif
+
+
 static struct msm_fb_platform_data msm_fb_pdata = {
 	.detect_client = msm_fb_detect_panel,
+#ifdef CONFIG_UPDATE_LCDC_LUT
+	.update_lcdc_lut = update_preset_lcdc_lut,
+#endif
 };
 
 static struct platform_device msm_fb_device = {
@@ -394,7 +405,7 @@ static bool oled_power_on;
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
 #define LCD_22V_EN	33
 #define PMIC_GPIO_LED_DRIVER_REV00 28
-#define PMIC_GPIO_LED_DRIVER_REV10 31	
+#define PMIC_GPIO_LED_DRIVER_REV10 31
 #else
 #define LCD_22V_EN	69
 #define PMIC_GPIO_LED_DRIVER 27
@@ -516,7 +527,7 @@ static int mipi_dsi_power(int enable)
 static int mipi_dsi_power_tft_request(void)
 {
 	int rc = 0;
-#if defined(CONFIG_MACH_JACTIVE_ATT) 
+#if defined(CONFIG_MACH_JACTIVE_ATT)
 	if (system_rev < 10){
 		gpio33 = PM8921_GPIO_PM_TO_SYS(LCD_22V_EN);
 		rc = gpio_request(gpio33, "led_dirver");
@@ -600,7 +611,7 @@ static int mipi_dsi_power_tft_request(void)
 #else
 	gpio27 = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_LED_DRIVER);
 #endif
-		
+
 
 	rc = gpio_request(gpio27, "led_dirver");
 	if (rc) {
@@ -618,7 +629,7 @@ static int mipi_dsi_power_tft_request(void)
 	if(system_rev < 10)
 		gpio_direction_output(gpio33, 0);
 	else
-		gpio_direction_output(LCD_22V_EN, 0);	
+		gpio_direction_output(LCD_22V_EN, 0);
 #else
 	gpio_direction_output(LCD_22V_EN, 0);
 #endif
@@ -718,7 +729,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("enable L16 failed, rc=%d\n", rc);
 				return -ENODEV;
 			}
-			
+
 			msleep ( 10 );
 		}
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
@@ -734,7 +745,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("enable L16 failed, rc=%d\n", rc);
 				return -ENODEV;
 			}
-			
+
 			msleep ( 10 );
 		}
 #endif
@@ -750,7 +761,7 @@ static int mipi_panel_power_tft(int enable)
 		if(system_rev < 10)
 			gpio_direction_output(gpio33, 0);
 		else
-			gpio_direction_output(LCD_22V_EN, 0);	
+			gpio_direction_output(LCD_22V_EN, 0);
 #else
 #if defined(CONFIG_FB_MSM_ENABLE_LCD_EN2)
 		if( system_rev >= 16 ) // rev0.6 + 10
@@ -786,7 +797,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("set_optimum_mode L16 failed, rc=%d\n", rc);
 				return -EINVAL;
 			}
-			
+
 			rc = regulator_disable(reg_L16);
 			if (rc) {
 				pr_err("disable reg_L16 failed, rc=%d\n", rc);
@@ -802,7 +813,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("set_optimum_mode L16 failed, rc=%d\n", rc);
 				return -EINVAL;
 			}
-			
+
 			rc = regulator_disable(reg_L16);
 			if (rc) {
 				pr_err("disable reg_L16 failed, rc=%d\n", rc);
@@ -1023,7 +1034,7 @@ static int mipi_oled_power_set(void)
 						PTR_ERR(reg_L16));
 				return -ENODEV;
 			}
-			
+
 			rc = regulator_set_voltage(reg_L16, 3000000, 3000000);
 			if (rc) {
 				pr_err("set_voltage L16 failed, rc=%d\n", rc);
@@ -1039,7 +1050,7 @@ static int mipi_oled_power_set(void)
 						PTR_ERR(reg_L16));
 				return -ENODEV;
 			}
-			
+
 			rc = regulator_set_voltage(reg_L16, 3000000, 3000000);
 			if (rc) {
 				pr_err("set_voltage L16 failed, rc=%d\n", rc);
@@ -1124,7 +1135,7 @@ static int mipi_panel_power_samsung(int on)
 		rc = mipi_panel_power_oled(1);
 	else
 		rc = mipi_panel_power_oled(0);
-	
+
 #endif
 	return rc;
 }

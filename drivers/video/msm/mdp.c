@@ -685,11 +685,11 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 		r = lut2r(internal_lut[i]);
 		g = lut2g(internal_lut[i]);
 		b = lut2b(internal_lut[i]);
-#ifdef CONFIG_LCD_KCAL
+
 		r = scaled_by_kcal(r, *(cmap->red));
 		g = scaled_by_kcal(g, *(cmap->green));
 		b = scaled_by_kcal(b, *(cmap->blue));
-#endif
+
 		MDP_OUTP(MDP_BASE + 0x94800 +
 			(0x400*mdp_lut_i) + cmap->start*4 + i*4,
 				((g & 0xff) |
@@ -706,6 +706,7 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 
 	return 0;
 }
+EXPORT_SYMBOL(mdp_preset_lut_update_lcdc);
 #endif
 
 static void mdp_lut_enable(void)
@@ -2459,7 +2460,7 @@ static int mdp_on(struct platform_device *pdev)
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		mdp_clk_ctrl(1);
 		mdp_bus_scale_restore_request();
-
+		mdp_lut_status_restore();
 		mdp4_hw_init();
 
 		/* Initialize HistLUT to last LUT */
@@ -3036,6 +3037,7 @@ static int mdp_probe(struct platform_device *pdev)
 	pdata->next = pdev;
 
 	mdp_clk_ctrl(1);
+        mdp_lut_status_backup();
 
 	mdp_prim_panel_type = mfd->panel.type;
 	switch (mfd->panel.type) {
