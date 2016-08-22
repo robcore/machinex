@@ -1,0 +1,6 @@
+kernel/drivers/gpu/ion/ion.ko
+kernel/drivers/gpu/ion/ion_heap.ko
+kernel/drivers/gpu/ion/ion_system_heap.ko
+kernel/drivers/gpu/ion/ion_carveout_heap.ko
+kernel/drivers/gpu/ion/ion_iommu_heap.ko
+kernel/drivers/gpu/ion/ion_cp_heap.ko
