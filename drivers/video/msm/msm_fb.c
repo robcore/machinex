@@ -1716,8 +1716,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 						   (u32 *) &mfd->panel_info.
 						   frame_count);
 
-static int unset_bl_level, bl_updated;
-static int bl_level_old;
 
 			switch (mfd->dest) {
 			case DISPLAY_LCD:
