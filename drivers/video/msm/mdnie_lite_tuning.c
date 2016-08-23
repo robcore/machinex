@@ -809,8 +809,6 @@ static ssize_t scenario_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	DPRINT("called %s\n", __func__);
-
 	DPRINT("Current Scenario Mode : %s\n",
 		scenario_name[mdnie_tun_state.scenario]);
 
@@ -1224,7 +1222,7 @@ static ssize_t override_store(struct device *dev, struct device_attribute *attr,
 			return -EINVAL;
 		DPRINT("(override: %d)\n", val);
 		override = val;
-		mDNIe_Set_Mode();
+		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1246,7 +1244,7 @@ static ssize_t copy_mode_store(struct device *dev, struct device_attribute *attr
 		copy_mode = val;
 		update_mdnie_copy_mode();
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1268,7 +1266,7 @@ static ssize_t gamma_curve_store(struct device *dev, struct device_attribute *at
 		gamma_curve = val;
 		update_mdnie_gamma_curve();
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1290,7 +1288,7 @@ static ssize_t sharpen_store(struct device *dev, struct device_attribute *attr, 
 		DPRINT("(sharpen: %d)\n", val);
 		CONTROL_1[4] = val;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1314,7 +1312,7 @@ static ssize_t red_store(struct device *dev, struct device_attribute *attr, cons
 		CONTROL_2[21] = green;
 		CONTROL_2[23] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1338,7 +1336,7 @@ static ssize_t green_store(struct device *dev, struct device_attribute *attr, co
 		CONTROL_2[27] = green;
 		CONTROL_2[29] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1362,7 +1360,7 @@ static ssize_t blue_store(struct device *dev, struct device_attribute *attr, con
 		CONTROL_2[33] = green;
 		CONTROL_2[35] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1386,7 +1384,7 @@ static ssize_t cyan_store(struct device *dev, struct device_attribute *attr, con
 		CONTROL_2[20] = green;
 		CONTROL_2[22] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1410,7 +1408,7 @@ static ssize_t magenta_store(struct device *dev, struct device_attribute *attr, 
 		CONTROL_2[26] = green;
 		CONTROL_2[28] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1434,7 +1432,7 @@ static ssize_t yellow_store(struct device *dev, struct device_attribute *attr, c
 		CONTROL_2[32] = green;
 		CONTROL_2[34] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1458,7 +1456,7 @@ static ssize_t white_store(struct device *dev, struct device_attribute *attr, co
 		CONTROL_2[38] = green;
 		CONTROL_2[40] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1482,7 +1480,7 @@ static ssize_t black_store(struct device *dev, struct device_attribute *attr, co
 		CONTROL_2[39] = green;
 		CONTROL_2[41] = blue;
 		if (override)
-			mDNIe_Set_Mode();
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
