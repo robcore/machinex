@@ -329,6 +329,7 @@ void clockevents_config(struct clock_event_device *dev, u32 freq)
 	dev->min_delta_ns = cev_delta2ns(dev->min_delta_ticks, dev, false);
 	dev->max_delta_ns = cev_delta2ns(dev->max_delta_ticks, dev, true);
 }
+EXPORT_SYMBOL_GPL(clockevents_config_and_register);
 
 /**
  * clockevents_config_and_register - Configure and register a clock event device
