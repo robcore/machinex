@@ -1238,15 +1238,11 @@ config FB_MDP4_ENHANCE
 
 config MDNIE_LITE_TUNING
 	bool "mdnie lite tuning"
-	default y
-
-config MDNIE_LITE_CONTROL
-	bool "MDNIe lite control interface"
-	depends on MDNIE_LITE_TUNING
+	default n
 
 config HBM_PSRE
 	bool "HBM PSRE funtion"
-	default y
+	default n
 
 config MIPI_SAMSUNG_OLED_VIDEO_QHD_MIPICLK_461
 	bool "mipi clk 461Mhz on samsung oled video qhd panel"
