@@ -313,8 +313,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	struct msm_fb_data_type *mfd;
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
-	pr_debug("mDNIe_Set_Mode start\n");
+#if !defined(CONFIG_MDNIE_LITE_CONTROL)
+	DPRINT("mDNIe_Set_Mode start , mode(%d), background(%d)\n",
 		mode, mdnie_tun_state.background);
+#endif
 
 	if (mfd->resume_state == MIPI_SUSPEND_STATE) {
 		DPRINT("[ERROR] not ST_DSI_RESUME. do not send mipi cmd.\n");
@@ -714,8 +716,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	sending_tuning_cmd();
 	free_tun_cmd();
 
-		pr_debug("mDNIe_Set_Mode end , %s(%d), %s(%d), %s(%d), %s(%d)\n",
+#if !defined(CONFIG_MDNIE_LITE_CONTROL)
+	DPRINT("mDNIe_Set_Mode end , mode(%d), background(%d)\n",
 		mode, mdnie_tun_state.background);
+#endif
 }
 
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
