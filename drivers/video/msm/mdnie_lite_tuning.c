@@ -735,7 +735,6 @@ void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 
 		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
 		DPRINT(" = NEGATIVE MODE =\n");
-		pr_debug("is negative Mode On = %d\n", mdnie_tun_state.accessibility);
 
 		INPUT_PAYLOAD1(NEGATIVE_1);
 		INPUT_PAYLOAD2(NEGATIVE_2);
