@@ -96,16 +96,16 @@ static unsigned long up_threshold;
 #define DEFAULT_DOWN_DIFFERENTIAL 62
 static unsigned long down_differential;
 
-#define DEFAULT_INTER_HIFREQ 1890000
+#define DEFAULT_INTER_HIFREQ 1674000
 static u64 inter_hifreq;
 
-#define DEFAULT_INTER_LOFREQ 1566000
+#define DEFAULT_INTER_LOFREQ 1134000
 static u64 inter_lofreq;
 
 #define DEFAULT_INTER_STAYCYCLES 2
 static unsigned long inter_staycycles;
 
-#define DEFAULT_STAYCYCLES_RESETFREQ 960000
+#define DEFAULT_STAYCYCLES_RESETFREQ 918000
 static u64 staycycles_resetfreq;
 
 #define DEFAULT_IO_IS_BUSY 0
