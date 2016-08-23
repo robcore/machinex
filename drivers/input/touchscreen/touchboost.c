@@ -33,7 +33,7 @@ struct touchboost_inputopen {
  */
 static u64 last_input_time = 0;
 
-extern inline u64 get_input_time(void)
+inline u64 get_input_time(void)
 {
 	return last_input_time;
 }
