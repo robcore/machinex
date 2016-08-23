@@ -248,7 +248,7 @@ static unsigned long global_dirtyable_memory(void)
 	x -= min(x, dirty_balance_reserve);
 
 	if (!vm_highmem_is_dirtyable)
-		x -= min(x, highmem_dirtyable_memory(x));
+		x -= highmem_dirtyable_memory(x);
 
 	return x + 1;	/* Ensure that we never return 0 */
 }
