@@ -80,7 +80,7 @@ static int msm_hdmi_sample_rate = MSM_HDMI_SAMPLE_RATE_48KHZ;
 struct workqueue_struct *hdmi_work_queue;
 struct hdmi_msm_state_type *hdmi_msm_state;
 
-/* Enable HDCP by default */
+/* Disable HDCP by default - suck it */
 static bool hdcp_feature_on = false;
 
 DEFINE_MUTEX(hdmi_msm_state_mutex);
