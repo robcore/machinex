@@ -1,0 +1,44 @@
+CONFIG_MACH_JF_VZW=y
+CONFIG_EXTRA_FIRMWARE="audience-es325-fw-vzw.bin"
+CONFIG_EXTRA_FIRMWARE_DIR="firmware"
+# InsideSecure VPN Client
+CONFIG_VPNCLIENT_SECURITY=y
+#VMWARE RELATED
+#CONFIG_VMWARE_MVP=y
+CONFIG_CFG80211_REG_NOT_UPDATED=y
+
+#EPDG
+CONFIG_NET_CORE=y
+CONFIG_NET_SCH_PRIO=y
+CONFIG_NET_SCHED=y   #depends on CONFIG_NET  which is enabled by default.. coz not seeing in the config file
+CONFIG_NET_CLS_BASIC=y # required if basic is being used as a filter. depends on CONFIG_NET_CLS so enabling it by default
+CONFIG_NET_CLS=y
+CONFIG_NET_CLS_ACT=y # for enabling the action target.
+CONFIG_NET_ACT_MIRRED=y  # for enabling the mirred target for redirecting the packet between the devices.
+CONFIG_NET_EMATCH=y   #basic uses extended matches so this has to be present
+CONFIG_NET_SCH_INGRESS=y # classifier for ingress packet
+
+# USB
+CONFIG_USB_RNDIS_VZW_REQ=y
+
+# RTCC
+CONFIG_ZRAM=n
+CONFIG_RUNTIME_COMPCACHE=n
+
+# SAMP : HOTNESS
+CONFIG_SAMP_HOTNESS=y
+
+# SSWAP
+CONFIG_SWAP=y
+CONFIG_FRONTSWAP=y
+CONFIG_ZSMALLOC_NEW=y
+CONFIG_PGTABLE_MAPPING=y
+CONFIG_ZSWAP=y
+CONFIG_DIRECT_RECLAIM_FILE_PAGES_ONLY=y
+CONFIG_INCREASE_MAXIMUM_SWAPPINESS=y
+CONFIG_FIX_INACTIVE_RATIO=y
+CONFIG_TIGHT_PGDAT_BALANCE=y
+CONFIG_VNSWAP=y
+CONFIG_SWAP_ENABLE_READAHEAD=n
+
+
