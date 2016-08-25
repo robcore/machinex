@@ -1,5 +1,6 @@
 
 #include <linux/sched.h>
+#include <linux/sched/sysctl.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
 #include <linux/sched/rt.h>
@@ -455,6 +456,8 @@ struct rq {
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
 	u64 cumulative_runnable_avg;
 #endif
+
+	int cur_freq, max_freq, min_freq;
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
 	u64 prev_irq_time;

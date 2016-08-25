@@ -3140,6 +3140,11 @@ static inline void task_group_account_field(struct task_struct *p, int index,
 #endif
 }
 
+/*
+ * Maximum possible frequency across all cpus. Task demand and cpu
+ * capacity (cpu_power) metrics could be scaled in reference to it.
+ */
+static unsigned int max_possible_freq = 1;
 
 /*
  * Account user cpu time to a process.
@@ -5259,20 +5264,32 @@ EXPORT_SYMBOL(yield);
  * It's the caller's job to ensure that the target task struct
  * can't go away on us before we can do any checks.
  *
- * Returns true if we indeed boosted the target task.
+ * Returns:
+ *	true (>0) if we indeed boosted the target task.
+ *	false (0) if we failed to boost the target.
+ *	-ESRCH if there's no task to yield to.
  */
 bool __sched yield_to(struct task_struct *p, bool preempt)
 {
 	struct task_struct *curr = current;
 	struct rq *rq, *p_rq;
 	unsigned long flags;
-	bool yielded = 0;
+	int yielded = 0;
 
 	local_irq_save(flags);
 	rq = this_rq();
 
 again:
 	p_rq = task_rq(p);
+	/*
+	 * If we're the only runnable task on the rq and target rq also
+	 * has only one task, there's absolutely no point in yielding.
+	 */
+	if (rq->nr_running == 1 && p_rq->nr_running == 1) {
+		yielded = -ESRCH;
+		goto out_irq;
+	}
+
 	double_rq_lock(rq, p_rq);
 	while (task_rq(p) != p_rq) {
 		double_rq_unlock(rq, p_rq);
@@ -5280,13 +5297,13 @@ again:
 	}
 
 	if (!curr->sched_class->yield_to_task)
-		goto out;
+		goto out_unlock;
 
 	if (curr->sched_class != p->sched_class)
-		goto out;
+		goto out_unlock;
 
 	if (task_running(p_rq, p) || p->state)
-		goto out;
+		goto out_unlock;
 
 	yielded = curr->sched_class->yield_to_task(rq, p, preempt);
 	if (yielded) {
@@ -5306,11 +5323,12 @@ again:
 		rq->skip_clock_update = 0;
 	}
 
-out:
+out_unlock:
 	double_rq_unlock(rq, p_rq);
+out_irq:
 	local_irq_restore(flags);
 
-	if (yielded)
+	if (yielded > 0)
 		schedule();
 
 	return yielded;
@@ -7765,6 +7783,63 @@ static int register_sched_callback(void)
 core_initcall(register_sched_callback);
 
 #endif /* CONFIG_SCHED_FREQ_INPUT */
+
+static int cpufreq_notifier_policy(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct cpufreq_policy *policy = (struct cpufreq_policy *)data;
+	int i;
+
+	if (val != CPUFREQ_NOTIFY)
+		return 0;
+
+	for_each_cpu(i, policy->related_cpus) {
+		cpu_rq(i)->min_freq = policy->min;
+		cpu_rq(i)->max_freq = policy->max;
+	}
+
+	max_possible_freq = max(max_possible_freq, policy->cpuinfo.max_freq);
+
+	return 0;
+}
+
+static int cpufreq_notifier_trans(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct cpufreq_freqs *freq = (struct cpufreq_freqs *)data;
+	unsigned int cpu = freq->cpu, new_freq = freq->new;
+
+	if (val != CPUFREQ_POSTCHANGE)
+		return 0;
+
+	cpu_rq(cpu)->cur_freq = new_freq;
+
+	return 0;
+}
+
+static struct notifier_block notifier_policy_block = {
+	.notifier_call = cpufreq_notifier_policy
+};
+
+static struct notifier_block notifier_trans_block = {
+	.notifier_call = cpufreq_notifier_trans
+};
+
+static int register_sched_callback(void)
+{
+	int ret;
+
+	ret = cpufreq_register_notifier(&notifier_policy_block,
+						CPUFREQ_POLICY_NOTIFIER);
+
+	if (!ret)
+		ret = cpufreq_register_notifier(&notifier_trans_block,
+						CPUFREQ_TRANSITION_NOTIFIER);
+
+	return 0;
+}
+
+core_initcall(register_sched_callback);
 
 const_debug unsigned int sysctl_timer_migration = 1;
 
