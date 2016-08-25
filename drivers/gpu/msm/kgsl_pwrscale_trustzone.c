@@ -9,9 +9,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Francisco Franco (franciscofranco)
- * 2013-09-11: Added KGSL Interactive & Simple GPU Governor
- *
  */
 
 #include <linux/export.h>
@@ -21,17 +18,20 @@
 #include <linux/spinlock.h>
 #include <mach/socinfo.h>
 #include <mach/scm.h>
-#include <linux/module.h>
+
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
 #include "kgsl_device.h"
+
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 #include <linux/module.h>
-#include <linux/jiffies.h>
+#endif
 
 #define TZ_GOVERNOR_PERFORMANCE 0
 #define TZ_GOVERNOR_ONDEMAND    1
-#define TZ_GOVERNOR_SIMPLE      2
-#define TZ_GOVERNOR_INTERACTIVE 3
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
+#define TZ_GOVERNOR_SIMPLE	2
+#endif
 
 struct tz_priv {
 	int governor;
@@ -44,7 +44,7 @@ spinlock_t tz_lock;
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR			5000
+#define FLOOR			15000
 /* CEILING is 50msec, larger than any standard
  * frame length, but less than the idle timer.
  */
@@ -73,24 +73,6 @@ static int __secure_tz_entry(u32 cmd, u32 val, u32 id)
 }
 #endif /* CONFIG_MSM_SCM */
 
-unsigned long window_time = 0;
-unsigned long sample_time_ms = 100;
-unsigned int up_threshold = 60;
-unsigned int down_threshold = 25;
-unsigned int up_differential = 10;
-bool debug = 0;
-
-module_param(sample_time_ms, long, 0664);
-module_param(up_threshold, int, 0664);
-module_param(down_threshold, int, 0664);
-module_param(debug, bool, 0664);
-
-struct clk_scaling_stats {
-        unsigned long total_time_ms;
-        unsigned long busy_time_ms;
-        unsigned long threshold;
-};
-
 static ssize_t tz_governor_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				char *buf)
@@ -100,10 +82,10 @@ static ssize_t tz_governor_show(struct kgsl_device *device,
 
 	if (priv->governor == TZ_GOVERNOR_ONDEMAND)
 		ret = snprintf(buf, 10, "ondemand\n");
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 	else if (priv->governor == TZ_GOVERNOR_SIMPLE)
 		ret = snprintf(buf, 8, "simple\n");
-	else if (priv->governor == TZ_GOVERNOR_INTERACTIVE)
-		ret = snprintf(buf, 13, "interactive\n");
+#endif
 	else
 		ret = snprintf(buf, 13, "performance\n");
 
@@ -121,10 +103,10 @@ static ssize_t tz_governor_store(struct kgsl_device *device,
 
 	if (!strncmp(buf, "ondemand", 8))
 		priv->governor = TZ_GOVERNOR_ONDEMAND;
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 	else if (!strncmp(buf, "simple", 6))
 		priv->governor = TZ_GOVERNOR_SIMPLE;
-	else if (!strncmp(buf, "interactive", 11))
-		priv->governor = TZ_GOVERNOR_INTERACTIVE;
+#endif
 	else if (!strncmp(buf, "performance", 11))
 		priv->governor = TZ_GOVERNOR_PERFORMANCE;
 
@@ -150,13 +132,17 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
 	if (device->state != KGSL_STATE_NAP &&
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
-		 priv->governor == TZ_GOVERNOR_SIMPLE ||
-		 priv->governor == TZ_GOVERNOR_INTERACTIVE))
+		 priv->governor == TZ_GOVERNOR_SIMPLE))
+#else
+		priv->governor == TZ_GOVERNOR_ONDEMAND)
+#endif
 		kgsl_pwrctrl_pwrlevel_change(device,
 					device->pwrctrl.default_pwrlevel);
 }
 
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 /* KGSL Simple GPU Governor */
 /* Copyright (c) 2011-2013, Paul Reioux (Faux123). All rights reserved. */
 static int default_laziness = 5;
@@ -197,6 +183,7 @@ static int simple_governor(struct kgsl_device *device, int idle_stat)
 	}
 	return val;
 }
+#endif
 
 static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
@@ -249,10 +236,14 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	} else {
 		idle = priv->bin.total_time - priv->bin.busy_time;
 		idle = (idle > 0) ? idle : 0;
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 	if (priv->governor == TZ_GOVERNOR_SIMPLE)
 		val = simple_governor(device, idle);
 	else
 		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
+#else
+		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
+#endif
 		kgsl_trace_kgsl_tz_params(device, priv->bin.total_time, priv->bin.busy_time,
 				idle, val);
 	}

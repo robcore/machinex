@@ -835,6 +835,12 @@ config GAMMA_CONTROL
        help
        This adds full support for shifting RGB panel colors.
 
+config GAMMA_CONTROL_3
+       bool "Gamma Control by franco"
+       default y
+       help
+       This adds full support for shifting RGB panel colors.
+
 config UID_CPUTIME
 	tristate "Per-UID cpu time statistics"
 	depends on PROFILING
