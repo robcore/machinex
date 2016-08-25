@@ -1112,6 +1112,7 @@ int mdp_histogram_start(struct mdp_histogram_start_req *req)
 {
 	struct mdp_hist_mgmt *mgmt = NULL;
 	int ret;
+	unsigned long flags;
 
 	ret = mdp_histogram_block2mgmt(req->block, &mgmt);
 	if (ret) {
