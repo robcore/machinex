@@ -1471,11 +1471,6 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 			atomic_set(&mehci->pm_usage_cnt, 1);
 	}
 
-	if (!atomic_read(&mehci->pm_usage_cnt)) {
-		atomic_set(&mehci->pm_usage_cnt, 1);
-		pm_runtime_get(mehci->dev);
-	}
-
 	return IRQ_HANDLED;
 }
 
