@@ -3344,6 +3344,18 @@ config SEC_FACTORY
 	help
 	  Enable Features only For FACTORY BINARY.
 
+config UPDATE_LCDC_LUT
+	bool "Set initial Qualcomm LCDC lut"
+	default n
+	help
+	  Set initial Qualcomm LCDC Look Up Table.
+
+config LCD_KCAL
+	tristate "MSM generic LCDC Calibration"
+	default n
+	help
+	  Enable MSM generic LCDC temperature Calibration.
+
 config HAS_MACH_MEMUTILS
 	default n
 	bool "Motorola MSM memcpy enhancements"
