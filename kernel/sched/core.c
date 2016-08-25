@@ -1587,7 +1587,6 @@ ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags)
 	trace_sched_wakeup(p, true);
 	check_preempt_curr(rq, p, wake_flags);
 
-	update_task_ravg(p, rq, 0);
 	p->state = TASK_RUNNING;
 #ifdef CONFIG_SMP
 	if (p->sched_class->task_woken)
@@ -3627,7 +3626,6 @@ static inline void schedule_debug(struct task_struct *prev)
 
 static void put_prev_task(struct rq *rq, struct task_struct *prev)
 {
-	update_task_ravg(prev, rq, 1);
 	if (prev->on_rq || rq->skip_clock_update < 0)
 		update_rq_clock(rq);
 	prev->sched_class->put_prev_task(rq, prev);
@@ -3648,18 +3646,14 @@ pick_next_task(struct rq *rq)
 	 */
 	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq);
-		if (likely(p)) {
-			update_task_ravg(p, rq, 1);
+		if (likely(p))
 			return p;
-		}
 	}
 
 	for_each_class(class) {
 		p = class->pick_next_task(rq);
-		if (p) {
-			update_task_ravg(p, rq, 1);
+		if (p)
 			return p;
-		}
 	}
 
 	BUG(); /* the idle class will always have a runnable task */
