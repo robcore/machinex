@@ -10,10 +10,7 @@
 #include <linux/sched.h>
 #include <linux/unistd.h>
 #include <linux/cpu.h>
-#include <linux/oom.h>
-#include <linux/rcupdate.h>
 #include <linux/export.h>
-#include <linux/bug.h>
 #include <linux/kthread.h>
 #include <linux/stop_machine.h>
 #include <linux/mutex.h>
@@ -206,47 +203,6 @@ void __ref unregister_cpu_notifier(struct notifier_block *nb)
 }
 EXPORT_SYMBOL(unregister_cpu_notifier);
 
-/**
- * clear_tasks_mm_cpumask - Safely clear tasks' mm_cpumask for a CPU
- * @cpu: a CPU id
- *
- * This function walks all processes, finds a valid mm struct for each one and
- * then clears a corresponding bit in mm's cpumask.  While this all sounds
- * trivial, there are various non-obvious corner cases, which this function
- * tries to solve in a safe manner.
- *
- * Also note that the function uses a somewhat relaxed locking scheme, so it may
- * be called only for an already offlined CPU.
- */
-void clear_tasks_mm_cpumask(int cpu)
-{
-	struct task_struct *p;
-
-	/*
-	 * This function is called after the cpu is taken down and marked
-	 * offline, so its not like new tasks will ever get this cpu set in
-	 * their mm mask. -- Peter Zijlstra
-	 * Thus, we may use rcu_read_lock() here, instead of grabbing
-	 * full-fledged tasklist_lock.
-	 */
-	WARN_ON(cpu_online(cpu));
-	rcu_read_lock();
-	for_each_process(p) {
-		struct task_struct *t;
-
-		/*
-		 * Main thread might exit, but other threads may still have
-		 * a valid mm. Find one.
-		 */
-		t = find_lock_task_mm(p);
-		if (!t)
-			continue;
-		cpumask_clear_cpu(cpu, mm_cpumask(t->mm));
-		task_unlock(t);
-	}
-	rcu_read_unlock();
-}
-
 static inline void check_for_tasks(int cpu)
 {
 	struct task_struct *p;
@@ -407,12 +363,10 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	unsigned long mod = tasks_frozen ? CPU_TASKS_FROZEN : 0;
 	struct task_struct *idle;
 
-	cpu_hotplug_begin();
+	if (cpu_online(cpu) || !cpu_present(cpu))
+		return -EINVAL;
 
-	if (cpu_online(cpu) || !cpu_present(cpu)) {
-		ret = -EINVAL;
-		goto out;
-	}
+	cpu_hotplug_begin();
 
 	idle = idle_thread_get(cpu);
 	if (IS_ERR(idle)) {
@@ -629,11 +583,6 @@ cpu_hotplug_pm_callback(struct notifier_block *nb,
 
 static int __init cpu_hotplug_pm_sync_init(void)
 {
-	/*
-	 * cpu_hotplug_pm_callback has higher priority than x86
-	 * bsp_pm_callback which depends on cpu_hotplug_pm_callback
-	 * to disable cpu hotplug to avoid cpu hotplug race.
-	 */
 	pm_notifier(cpu_hotplug_pm_callback, 0);
 	return 0;
 }
