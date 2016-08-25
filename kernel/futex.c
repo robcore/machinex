@@ -881,6 +881,16 @@ lookup_pi_state(u32 uval, struct futex_hash_bucket *hb,
 			if (pid != task_pid_vnr(pi_state->owner))
 				return -EINVAL;
 
+			/*
+			 * Protect against a corrupted uval. If uval
+			 * is 0x80000000 then pid is 0 and the waiter
+			 * bit is set. So the deadlock check in the
+			 * calling code has failed and we did not fall
+			 * into the check above due to !pid.
+			 */
+			if (task && pi_state->owner == task)
+				return -EDEADLK;
+
 		out_state:
 			atomic_inc(&pi_state->refcount);
 			*ps = pi_state;
@@ -1046,7 +1056,7 @@ retry:
 	 * We dont have the lock. Look up the PI state (or create it if
 	 * we are the first waiter):
 	 */
-	ret = lookup_pi_state(uval, hb, key, ps);
+	ret = lookup_pi_state(uval, hb, key, ps, task);
 
 	if (unlikely(ret)) {
 		switch (ret) {
