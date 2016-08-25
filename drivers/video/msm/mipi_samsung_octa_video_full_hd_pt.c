@@ -616,13 +616,13 @@ static char samsung_brightness_acl_cont_pre[] = {
  */
 static char samsung_brightness_acl_cont_ref[] = {
 	0xB5,
-	0x00, 0x99, 0x35,
+	0x01, 0x99, 0x35,
 };
 
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x03, 0x99, 0x35,
+	0x01, 0x99, 0x35,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1296,7 +1296,7 @@ static int get_candela_index(int bl_level)
 	return backlightlevel;
 }
 
-#define DEFAULT_ELVSS 0x04
+#define DEFAULT_ELVSS 0x00
 #define DEFAULT_ELVSS_EVT1 0x0A
 
 static int elvss_array_default[][2] = {
@@ -1620,8 +1620,8 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 10)
-		bl_level = 10;
+	if (bl_level < 1)
+		bl_level = 1;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 

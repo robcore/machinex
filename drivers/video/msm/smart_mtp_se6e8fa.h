@@ -238,6 +238,15 @@ struct HBM_REG {
 	char b1_reg[6];		/*b1 10~15th reg*/
 	char b6_reg_magna[23];	/*b6 4~26th reg*/
 } __packed;
+#ifdef CONFIG_HBM_PSRE
+struct MTP_OFFSET_400CD {
+	struct MTP_SET R_OFFSET;
+	struct MTP_SET G_OFFSET;
+	struct MTP_SET B_OFFSET;
+	char mtp_400cd[6];  /*gamma for 400cd*/
+	char elvss_400cd;	/*elvss for 400cd*/
+} __packed;
+#endif
 
 struct MTP_OFFSET {
 	struct MTP_SET R_OFFSET;
@@ -252,7 +261,11 @@ struct illuminance_table {
 
 struct SMART_DIM {
 	struct HBM_REG hbm_reg;
+#ifdef CONFIG_HBM_PSRE
+	struct MTP_OFFSET_400CD MTP_ORIGN;
+#else
 	struct MTP_OFFSET MTP_ORIGN;
+#endif
 	struct MTP_OFFSET MTP;
 	struct RGB_OUTPUT_VOLTARE RGB_OUTPUT;
 	struct GRAY_SCALE GRAY;
