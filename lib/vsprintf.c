@@ -929,6 +929,12 @@ char *uuid_string(char *buf, char *end, const u8 *addr,
 	case 'B':
 		uc = true;
 		break;
+	case 'a':
+		spec.flags |= SPECIAL | SMALL | ZEROPAD;
+		spec.field_width = sizeof(phys_addr_t) * 2 + 2;
+		spec.base = 16;
+		return number(buf, end,
+			      (unsigned long long) *((phys_addr_t *)ptr), spec);
 	}
 
 	for (i = 0; i < 16; i++) {
