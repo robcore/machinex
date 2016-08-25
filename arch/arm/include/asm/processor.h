@@ -122,8 +122,6 @@ static inline void prefetch(const void *ptr)
 #define spin_lock_prefetch(x) do { } while (0)
 
 #endif
-#define HAVE_ARCH_PICK_MMAP_LAYOUT
-
 #endif
 
 #include <asm-generic/processor.h>
