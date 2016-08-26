@@ -430,23 +430,24 @@ static void an30259a_start_led_pattern(int mode)
  * dt1: detention time at each step in slope operation 1, in multiple of 4ms.
  * dt2: detention time at each step in slope operation 2, in multiple of 4ms.
  * dt3: detention time at each step in slope operation 3, in multiple of 4ms.
- * dt4: detention time at each step in slope operation 4, in multiple of 4ms.
+ * dt4: detention time at each step in slope operation 4, in multiple				 of 4ms.
  */
 	case POWERING:
 		pr_info("LED Powering Pattern on\n");
 		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_G,
-				0, 15, 6, 4, 2, 2, 1, 1, 1, 1);
+				0, 0, 6, 4, 1, 1, 0, 0, 1, 1);
 		leds_set_slope_mode(client, LED_B,
-				0, 15, 10, 15, 2, 2, 3, 3, 3, 3);
+				0, 15, 14, 8, 1, 1, 3, 2, 3, 2);
+
 		break;
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
 		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
 		leds_set_slope_mode(client, LED_G, 0, 4, 4, 2, 1, 1, 7, 7, 7, 7);
-		leds_set_slope_mode(client, LED_B, 0, 15, 14, 8, 1, 1, 3, 2, 3, 2);
+		leds_set_slope_mode(client, LED_B, 0, 15, 15, 15, 4, 4, 1, 5, 5, 1);
 
 		break;
 	default:
