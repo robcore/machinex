@@ -5993,7 +5993,7 @@ int sched_group_set_shares(struct task_group *tg, unsigned long shares)
 		raw_spin_lock_irqsave(&rq->lock, flags);
 
 		/* Possible calls to update_curr() need rq clock */
-		update_rq_clock(rq)
+		update_rq_clock(rq);
 		for_each_sched_entity(se) {
 			update_cfs_shares(group_cfs_rq(se));
 			/* update contribution to parent */
