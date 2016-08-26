@@ -23,7 +23,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	3
-#define SOUND_CONTROL_MINOR_VERSION	7
+#define SOUND_CONTROL_MINOR_VERSION	7ish
 
 extern struct snd_soc_codec *fauxsound_codec_ptr;
 extern int wcd9xxx_hw_revision;
@@ -31,94 +31,87 @@ extern int wcd9xxx_hw_revision;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-//static int actual_pa_gain = 31;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 
-#define REG_SZ	25
-static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
+#define REG_SZ	22
+static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0, 0 };
+			    0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
 	unsigned int *out = NULL;
 
         switch (reg) {
-                case TABLA_A_RX_HPH_L_GAIN:
+                case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 			out = &cached_regs[0];
 			break;
-				case TABLA_A_RX_HPH_R_GAIN:
+                case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 			out = &cached_regs[1];
 			break;
-                case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
 			out = &cached_regs[4];
 			break;
-                case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
 			out = &cached_regs[5];
 			break;
-                case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
 			out = &cached_regs[6];
 			break;
-                case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
 			out = &cached_regs[7];
 			break;
-                case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
 			out = &cached_regs[8];
 			break;
-                case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
 			out = &cached_regs[9];
 			break;
-                case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
+                case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
 			out = &cached_regs[10];
 			break;
-                case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
 			out = &cached_regs[11];
 			break;
-                case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
 			out = &cached_regs[12];
 			break;
-                case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
 			out = &cached_regs[13];
 			break;
-                case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 			out = &cached_regs[14];
 			break;
-                case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
 			out = &cached_regs[15];
 			break;
-                case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
 			out = &cached_regs[16];
 			break;
-                case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
 			out = &cached_regs[17];
 			break;
-                case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
+                case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
 			out = &cached_regs[18];
 			break;
-                case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
+                case TABLA_A_RX_LINE_1_GAIN:
 			out = &cached_regs[19];
 			break;
-                case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
+                case TABLA_A_RX_LINE_2_GAIN:
 			out = &cached_regs[20];
 			break;
-                case TABLA_A_RX_LINE_1_GAIN:
+                case TABLA_A_RX_LINE_3_GAIN:
 			out = &cached_regs[21];
 			break;
-                case TABLA_A_RX_LINE_2_GAIN:
+                case TABLA_A_RX_LINE_4_GAIN:
 			out = &cached_regs[22];
 			break;
-                case TABLA_A_RX_LINE_3_GAIN:
-			out = &cached_regs[23];
-			break;
-                case TABLA_A_RX_LINE_4_GAIN:
-			out = &cached_regs[24];
-			break;
                 case TABLA_A_RX_LINE_5_GAIN:
-			out = &cached_regs[25];
+			out = &cached_regs[23];
 			break;
         }
 	return out;
@@ -147,13 +140,6 @@ int snd_hax_reg_access(unsigned int reg)
 	int ret = 1;
 
 	switch (reg) {
-		case TABLA_A_RX_HPH_L_GAIN:
-		case TABLA_A_RX_HPH_R_GAIN:
-		case TABLA_A_RX_HPH_L_STATUS:
-		case TABLA_A_RX_HPH_R_STATUS:
-			if (snd_ctrl_locked > 1)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
@@ -304,49 +290,6 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t headphone_pa_gain_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u %u\n",
-		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
-		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
-}
-
-/*static ssize_t headphone_pa_gain_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int lval, rval;
-	unsigned int gain;
-	unsigned int out;
-
-	sscanf(buf, "%u %u", &lval, &rval);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
-	snd_ctrl_locked = 0;
-	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
-	out = (gain & 0x0f) | lval;
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
-
-	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
-	out = (status & 0x0f) | (lval << 4);
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
-
-	actual_pa_gain = out; NOTE:actual pa gain is 16 as shown in kernel when "show" is enabled and not "store."
-
-	gain = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN);
-	out = (gain & 0x0f) | rval;
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
-
-	status = tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
-	out = (status & 0x0f) | (rval << 4);
-	tabla_write(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
-	snd_ctrl_locked = 2;
-
-	return count;
-}
-*/
 static unsigned int selected_reg = 0xdeadbeef;
 
 static ssize_t sound_reg_select_store(struct kobject *kobj,
@@ -474,11 +417,6 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-/*static struct kobj_attribute headphone_pa_gain_attribute =
-	__ATTR(gpl_headphone_pa_gain,
-		0666,
-		headphone_pa_gain_show, NULL);
-*/
 static struct kobj_attribute sound_control_rec_locked_attribute =
 	__ATTR(gpl_sound_control_rec_locked,
 		0666,
@@ -507,7 +445,6 @@ static struct attribute *sound_control_attrs[] =
 		&mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
 		&headphone_gain_attribute.attr,
-//		&headphone_pa_gain_attribute.attr,
 		&sound_control_rec_locked_attribute.attr,
 		&sound_reg_sel_attribute.attr,
 		&sound_reg_read_attribute.attr,
