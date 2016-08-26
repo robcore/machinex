@@ -1,6 +1,5 @@
 
 #include <linux/sched.h>
-#include <linux/sched/sysctl.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
@@ -35,31 +34,6 @@ extern __read_mostly int scheduler_running;
  */
 #define NS_TO_JIFFIES(TIME)	((unsigned long)(TIME) / (NSEC_PER_SEC / HZ))
 
-/*
- * Increase resolution of nice-level calculations for 64-bit architectures.
- * The extra resolution improves shares distribution and load balancing of
- * low-weight task groups (eg. nice +19 on an autogroup), deeper taskgroup
- * hierarchies, especially on larger systems. This is not a user-visible change
- * and does not change the user-interface for setting shares/weights.
- *
- * We increase resolution only if we have enough bits to allow this increased
- * resolution (i.e. BITS_PER_LONG > 32). The costs for increasing resolution
- * when BITS_PER_LONG <= 32 are pretty high and the returns do not justify the
- * increased costs.
- */
-#if 0 /* BITS_PER_LONG > 32 -- currently broken: it increases power usage under light load  */
-# define SCHED_LOAD_RESOLUTION	10
-# define scale_load(w)		((w) << SCHED_LOAD_RESOLUTION)
-# define scale_load_down(w)	((w) >> SCHED_LOAD_RESOLUTION)
-#else
-# define SCHED_LOAD_RESOLUTION	0
-# define scale_load(w)		(w)
-# define scale_load_down(w)	(w)
-#endif
-
-#define SCHED_LOAD_SHIFT	(10 + SCHED_LOAD_RESOLUTION)
-#define SCHED_LOAD_SCALE	(1L << SCHED_LOAD_SHIFT)
-
 #define NICE_0_LOAD		SCHED_LOAD_SCALE
 #define NICE_0_SHIFT		SCHED_LOAD_SHIFT
 
@@ -72,14 +46,11 @@ extern __read_mostly int scheduler_running;
  */
 #define RUNTIME_INF	((u64)~0ULL)
 
-static inline int fair_policy(int policy)
-{
-	return policy == SCHED_NORMAL || policy == SCHED_BATCH;
-}
-
 static inline int rt_policy(int policy)
 {
-	return policy == SCHED_FIFO || policy == SCHED_RR;
+	if (policy == SCHED_FIFO || policy == SCHED_RR)
+		return 1;
+	return 0;
 }
 
 static inline int task_has_rt_policy(struct task_struct *p)
@@ -186,6 +157,11 @@ struct task_group {
 #define MAX_SHARES	(1UL << 18)
 #endif
 
+/* Default task group.
+ *	Every task in system belong to this group at bootup.
+ */
+extern struct task_group root_task_group;
+
 typedef int (*tg_visitor)(struct task_group *, void *);
 
 extern int walk_tg_tree_from(struct task_group *from,
@@ -222,15 +198,6 @@ extern int alloc_rt_sched_group(struct task_group *tg, struct task_group *parent
 extern void init_tg_rt_entry(struct task_group *tg, struct rt_rq *rt_rq,
 		struct sched_rt_entity *rt_se, int cpu,
 		struct sched_rt_entity *parent);
-
-extern struct task_group *sched_create_group(struct task_group *parent);
-extern void sched_destroy_group(struct task_group *tg);
-
-extern void sched_move_task(struct task_struct *tsk);
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-extern int sched_group_set_shares(struct task_group *tg, unsigned long shares);
-#endif
 
 #else /* CONFIG_CGROUP_SCHED */
 
@@ -355,6 +322,7 @@ struct rt_rq {
 	unsigned long rt_nr_boosted;
 
 	struct rq *rq;
+	struct list_head leaf_rt_rq_list;
 	struct task_group *tg;
 #endif
 };
@@ -617,8 +585,6 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
-DECLARE_PER_CPU(struct sched_domain *, sd_busy);
-DECLARE_PER_CPU(struct sched_domain *, sd_asym);
 
 #endif /* CONFIG_SMP */
 
@@ -901,12 +867,24 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
 }
 #endif /* __ARCH_WANT_UNLOCKED_CTXSW */
 
-/*
- * wake flags
- */
-#define WF_SYNC		0x01		/* waker goes to sleep after wakeup */
-#define WF_FORK		0x02		/* child wakeup after fork */
-#define WF_MIGRATED	0x4		/* internal use, task got migrated */
+
+static inline void update_load_add(struct load_weight *lw, unsigned long inc)
+{
+	lw->weight += inc;
+	lw->inv_weight = 0;
+}
+
+static inline void update_load_sub(struct load_weight *lw, unsigned long dec)
+{
+	lw->weight -= dec;
+	lw->inv_weight = 0;
+}
+
+static inline void update_load_set(struct load_weight *lw, unsigned long w)
+{
+	lw->weight = w;
+	lw->inv_weight = 0;
+}
 
 /*
  * To aid in avoiding the subversion of "niceness" due to uneven distribution
@@ -982,8 +960,6 @@ extern const struct sched_class idle_sched_class;
 
 #ifdef CONFIG_SMP
 
-extern void update_group_power(struct sched_domain *sd, int cpu);
-
 extern void trigger_load_balance(struct rq *rq, int cpu);
 extern void idle_balance(int this_cpu, struct rq *this_rq);
 
@@ -1000,6 +976,7 @@ extern void sysrq_sched_debug_show(void);
 #endif
 extern void sched_init_granularity(void);
 extern void update_max_interval(void);
+extern void update_group_power(struct sched_domain *sd, int cpu);
 extern void init_sched_rt_class(void);
 extern void init_sched_fair_class(void);
 
@@ -1020,9 +997,6 @@ struct cpuacct {
 	u64 __percpu *cpuusage;
 	struct kernel_cpustat __percpu *cpustat;
 };
-
-extern struct cgroup_subsys cpuacct_subsys;
-extern struct cpuacct root_cpuacct;
 
 /* return cpu accounting group corresponding to this container */
 static inline struct cpuacct *cgroup_ca(struct cgroup *cgrp)
@@ -1048,16 +1022,6 @@ static inline struct cpuacct *parent_ca(struct cpuacct *ca)
 extern void cpuacct_charge(struct task_struct *tsk, u64 cputime);
 #else
 static inline void cpuacct_charge(struct task_struct *tsk, u64 cputime) {}
-#endif
-
-#ifdef CONFIG_PARAVIRT
-static inline u64 steal_ticks(u64 steal)
-{
-	if (unlikely(steal > NSEC_PER_SEC))
-		return div_u64(steal, TICK_NSEC);
-
-	return __iter_div_u64_rem(steal, TICK_NSEC, &steal);
-}
 #endif
 
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
@@ -1419,57 +1383,8 @@ extern void cfs_bandwidth_usage_dec(void);
 enum rq_nohz_flag_bits {
 	NOHZ_TICK_STOPPED,
 	NOHZ_BALANCE_KICK,
+	NOHZ_IDLE,
 };
 
 #define nohz_flags(cpu)	(&cpu_rq(cpu)->nohz_flags)
 #endif
-
-#ifdef CONFIG_IRQ_TIME_ACCOUNTING
-
-DECLARE_PER_CPU(u64, cpu_hardirq_time);
-DECLARE_PER_CPU(u64, cpu_softirq_time);
-
-#ifndef CONFIG_64BIT
-DECLARE_PER_CPU(seqcount_t, irq_time_seq);
-
-static inline void irq_time_write_begin(void)
-{
-	__this_cpu_inc(irq_time_seq.sequence);
-	smp_wmb();
-}
-
-static inline void irq_time_write_end(void)
-{
-	smp_wmb();
-	__this_cpu_inc(irq_time_seq.sequence);
-}
-
-static inline u64 irq_time_read(int cpu)
-{
-	u64 irq_time;
-	unsigned seq;
-
-	do {
-		seq = read_seqcount_begin(&per_cpu(irq_time_seq, cpu));
-		irq_time = per_cpu(cpu_softirq_time, cpu) +
-			   per_cpu(cpu_hardirq_time, cpu);
-	} while (read_seqcount_retry(&per_cpu(irq_time_seq, cpu), seq));
-
-	return irq_time;
-}
-#else /* CONFIG_64BIT */
-static inline void irq_time_write_begin(void)
-{
-}
-
-static inline void irq_time_write_end(void)
-{
-}
-
-static inline u64 irq_time_read(int cpu)
-{
-	return per_cpu(cpu_softirq_time, cpu) + per_cpu(cpu_hardirq_time, cpu);
-}
-#endif /* CONFIG_64BIT */
-#endif /* CONFIG_IRQ_TIME_ACCOUNTING */
-
