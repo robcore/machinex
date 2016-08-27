@@ -283,7 +283,7 @@ int notrace persistent_ram_write(struct persistent_ram_zone *prz,
 		return -EINVAL;
 
 	if (unlikely(prz->buffer->sig != PERSISTENT_RAM_SIG))
-		return EINVAL;
+		return -EINVAL;
 
 	if (unlikely(c > prz->buffer_size)) {
 		s += c - prz->buffer_size;
