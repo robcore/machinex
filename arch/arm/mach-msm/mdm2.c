@@ -240,13 +240,11 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 	 */
 	if (mdm_drv->pdata->early_power_on &&
 			(mdm_drv->power_on_count == 2))
-		mdm_toggle_soft_reset(mdm_drv); //this is an experimental hack to fix radio not powering on after autosleeping with airplane mode on
 		return;
 
 	if (mdm_drv->power_on_count == 1)
 		mdm_do_first_power_on(mdm_drv);
 	else
-		mdm_toggle_soft_reset(mdm_drv); //this is an experimental hack to fix radio not powering on after autosleeping with airplane mode on
 		mdm_do_soft_power_on(mdm_drv);
 }
 
