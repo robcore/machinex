@@ -685,11 +685,11 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 		r = lut2r(internal_lut[i]);
 		g = lut2g(internal_lut[i]);
 		b = lut2b(internal_lut[i]);
-
+#ifdef CONFIG_LCD_KCAL
 		r = scaled_by_kcal(r, *(cmap->red));
 		g = scaled_by_kcal(g, *(cmap->green));
 		b = scaled_by_kcal(b, *(cmap->blue));
-
+#endif
 		MDP_OUTP(MDP_BASE + 0x94800 +
 			(0x400*mdp_lut_i) + cmap->start*4 + i*4,
 				((g & 0xff) |
@@ -2186,7 +2186,7 @@ irqreturn_t mdp_isr(int irq, void *ptr)
 
 		/* DMA_E LCD-Out Complete */
 		if (mdp_interrupt & MDP_DMA_E_DONE) {
-			dma = &dma_e_data;
+			dma = &dma_s_data;
 			dma->busy = FALSE;
 			mdp_pipe_ctrl(MDP_DMA_E_BLOCK, MDP_BLOCK_POWER_OFF,
 									TRUE);

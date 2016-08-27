@@ -639,7 +639,7 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 	outpdw(MDP_INTR_CLEAR, isr);
 
 	if (isr & INTR_PRIMARY_INTF_UDERRUN) {
-		pr_info("%s: UNDERRUN -- primary\n", __func__);
+		pr_debug("%s: UNDERRUN -- primary\n", __func__);
 		mdp4_stat.intr_underrun_p++;
 //		dump_underrun_pipe_info();
 		/* When underun occurs mdp clear the histogram registers
