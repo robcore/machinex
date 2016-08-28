@@ -529,10 +529,8 @@ static void mipi2lvds_disp_set_pwm_duty(int level)
 		}
 		vee_strenght = V5D3BX_VEESTRENGHT | ((vee_strenght) << 27);
 
-	if (!(msd.dstat.auto_brightness >= 5))
-		vx5b3d_level = (vx5b3d_level * V5D3BX_CABCBRIGHTNESSRATIO) / 1000;
-
-	} else {
+	}
+	{
 		vee_strenght = V5D3BX_VEESTRENGHT | (V5D3BX_VEEDEFAULTVAL << 27);
 	}
 
