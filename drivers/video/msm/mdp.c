@@ -313,13 +313,10 @@ static int mdp_hist_lut_destroy(void)
 
 static int mdp_hist_lut_init(void)
 {
-	int i;
 	struct mdp_hist_lut_mgmt *temp;
 
 	if (mdp_pp_initialized)
 		return -EEXIST;
-	for (i = 0; i < MDP_HIST_LUT_SIZE; i++)
-		last_lut[i] = i | (i << 8) | (i << 16);
 
 	INIT_LIST_HEAD(&mdp_hist_lut_list);
 
@@ -557,7 +554,7 @@ error:
 }
 
 spinlock_t mdp_lut_push_lock;
-int mdp_lut_i;
+static int mdp_lut_i;
 
 static int mdp_lut_hw_update(struct fb_cmap *cmap)
 {
@@ -595,8 +592,8 @@ static int mdp_lut_hw_update(struct fb_cmap *cmap)
 	return 0;
 }
 
-int mdp_lut_push;
-int mdp_lut_push_i;
+static int mdp_lut_push;
+static int mdp_lut_push_i;
 static int mdp_lut_resume_needed;
 
 static void mdp_lut_status_restore(void)
@@ -614,7 +611,6 @@ static void mdp_lut_status_restore(void)
 static void mdp_lut_status_backup(void)
 {
 	uint32_t status = inpdw(MDP_BASE + 0x90070) & 0x7;
-
 	if (status)
 		mdp_lut_resume_needed = 1;
 	else
@@ -683,11 +679,11 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 		r = lut2r(internal_lut[i]);
 		g = lut2g(internal_lut[i]);
 		b = lut2b(internal_lut[i]);
-#ifdef CONFIG_LCD_KCAL
+
 		r = scaled_by_kcal(r, *(cmap->red));
 		g = scaled_by_kcal(g, *(cmap->green));
 		b = scaled_by_kcal(b, *(cmap->blue));
-#endif
+
 		MDP_OUTP(MDP_BASE + 0x94800 +
 			(0x400*mdp_lut_i) + cmap->start*4 + i*4,
 				((g & 0xff) |
