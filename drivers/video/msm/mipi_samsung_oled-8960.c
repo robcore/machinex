@@ -120,7 +120,7 @@ static uint32 mipi_samsung_manufacture_id(struct msm_fb_data_type *mfd)
 #if defined(CONFIG_MACH_COMANCHE)
 	mipi_dsi_buf_init((struct dsi_buf *)rp);
 #else
-	
+
 	mipi_dsi_buf_init(rp);
 #endif
 	mipi_dsi_buf_init(tp);
@@ -1030,13 +1030,13 @@ int  mipi_samsung_disp_blank(struct platform_device *pdev,int blank)
 {
 	static int curr_status;
 	struct msm_fb_data_type *mfd;
-	
+
 	mfd = platform_get_drvdata(pdev);
 	if (unlikely(!mfd))
 		return -ENODEV;
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
-	
+
 	pr_info("%s(%d)", __func__, blank);
 	if (curr_status == blank)
 		return 0;
@@ -1052,7 +1052,7 @@ int  mipi_samsung_disp_blank(struct platform_device *pdev,int blank)
 		#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_WVGA_PT)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 		#endif
-		
+
 		#if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_EARLY_OFF, true);
 		#else
@@ -1350,11 +1350,15 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "2"))
 		msd.dstat.auto_brightness = 2;
 	else if (sysfs_streq(buf, "3"))
-		msd.dstat.auto_brightness = 3;	
+		msd.dstat.auto_brightness = 3;
 	else if (sysfs_streq(buf, "4"))
 		msd.dstat.auto_brightness = 4;
 	else if (sysfs_streq(buf, "5"))
-		msd.dstat.auto_brightness = 5;	
+		msd.dstat.auto_brightness = 5;
+	else if (sysfs_streq(buf, "6"))
+		msd.dstat.auto_brightness = 6;
+	else if (sysfs_streq(buf, "6"))
+		msd.dstat.auto_brightness = 7;
 	else
 		pr_info("%s: Invalid argument!!", __func__);
 
@@ -1490,7 +1494,7 @@ static void read_error_register(struct msm_fb_data_type *mfd)
 #endif
 	mutex_lock(&mfd->dma->ov_mutex);
 
-	mipi_dsi_mdp_busy_wait();	
+	mipi_dsi_mdp_busy_wait();
 
 	tp = &msd.samsung_tx_buf;
 	rp = &msd.samsung_rx_buf;

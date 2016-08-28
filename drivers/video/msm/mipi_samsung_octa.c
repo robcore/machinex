@@ -748,7 +748,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
-		msd.mpd->first_bl_hbm_psre = 0;
+		msd.mpd->first_bl_hbm_psre = 1;
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
 		pr_info("%s : panel is off state!!\n", __func__);
