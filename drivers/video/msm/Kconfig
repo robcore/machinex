@@ -1240,13 +1240,6 @@ config MDNIE_LITE_TUNING
 	bool "mdnie lite tuning"
 	default y
 
-config TDMB
-	bool "TDMB"
-	depends on MDNIE_LITE_TUNING
-	default y
-	---help---
-	  Additional mobile browsing profiles for mdnie_lite
-
 config HBM_PSRE
 	bool "HBM PSRE funtion"
 	default y
