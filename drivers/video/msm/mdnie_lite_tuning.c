@@ -266,7 +266,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		DPRINT("[ERROR] not ST_DSI_RESUME. do not send mipi cmd.\n");
 		return;
 	}
- 
+
 	if (!mdnie_tun_state.mdnie_enable) {
 		DPRINT("[ERROR] mDNIE engine is OFF.\n");
 		return;
@@ -1056,7 +1056,7 @@ static ssize_t accessibility_store(struct device *dev,
 
 	for(loop = 0; loop < MDNIE_COLOR_BLINDE_CMD/2; loop++) {
 		buffer2[loop] = buffer2[loop] & 0xFFFF;
-	
+
 		buffer[loop * 2] = (buffer2[loop] & 0xFF00) >> 8;
 		buffer[loop * 2 + 1] = buffer2[loop] & 0xFF;
 	}
@@ -1066,7 +1066,7 @@ static ssize_t accessibility_store(struct device *dev,
 		buffer[loop] = buffer[loop + 1];
 		buffer[loop + 1] = temp;
 	}
-	
+
 	if (cmd_value == NEGATIVE) {
 		mdnie_tun_state.negative = mDNIe_NEGATIVE_ON;
 		mdnie_tun_state.blind = ACCESSIBILITY_OFF;
@@ -1081,7 +1081,7 @@ static ssize_t accessibility_store(struct device *dev,
 		memcpy(&COLOR_BLIND_2[MDNIE_COLOR_BLINDE_CMD],
 				buffer, MDNIE_COLOR_BLINDE_CMD);
 #endif
-	} 
+	}
 #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL) || defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	else if  (cmd_value == DARK_SCREEN) {
 		mdnie_tun_state.negative = mDNIe_NEGATIVE_OFF;
@@ -1091,7 +1091,7 @@ static ssize_t accessibility_store(struct device *dev,
 	else if (cmd_value == ACCESSIBILITY_OFF) {
 		mdnie_tun_state.blind = ACCESSIBILITY_OFF;
 		mdnie_tun_state.negative = mDNIe_NEGATIVE_OFF;
-	} else 
+	} else
 		pr_info("%s ACCESSIBILITY_MAX", __func__);
 
 	is_negative_on();
