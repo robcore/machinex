@@ -298,7 +298,7 @@
 #ifdef CONFIG_CRYPTO_FIPS
 static int random_read_wakeup_bits = 256;
 #else
-static int random_read_wakeup_bits = 64;
+static int random_read_wakeup_bits = 128;
 #endif
 /*
  * If the entropy count falls under this number of bits, then we
@@ -308,7 +308,7 @@ static int random_read_wakeup_bits = 64;
 #ifdef CONFIG_CRYPTO_FIPS
 static int random_write_wakeup_bits = 28 * OUTPUT_POOL_WORDS;
 #else
-static int random_write_wakeup_bits = 128;
+static int random_write_wakeup_bits = 320;
 #endif
 
 /*
