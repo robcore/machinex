@@ -312,10 +312,10 @@ static ssize_t pa_gain_control_store(struct kobject *kobj,
 {
 	sscanf(buf, "%d", &pa_gain_control);
 
-	if(pa_gain_control > 1) {
+	if ((pa_gain_control) > 1) {
 		pa_gain_control = 1;
 	} else {
-	if (pa_gain_control < 0)
+	if ((pa_gain_control) < 0)
 		pa_gain_control = 0;
 }
 
@@ -331,11 +331,11 @@ static ssize_t pa_gain_control_show(struct kobject *kobj,
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	if (pa_gain_control = 0) {
+	if ((pa_gain_control) == 0) {
 	return sprintf(buf, "%u %u\n",
 		actual_pa_gain, actual_pa_gain);
 	} else {
-	if (pa_gain_control = 1) {
+	if ((pa_gain_control) == 1) {
 	return sprintf(buf, "%u %u\n",
 		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
 		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
@@ -356,7 +356,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	if (pa_gain_control = 0) {
+	if ((pa_gain_control) == 0) {
 	snd_ctrl_locked = 0;
 	gain = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
 	out = ((gain & 0xF) + 1) | lval;
@@ -379,7 +379,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	return count;
 } else {
-	if (pa_gain_control = 1) {
+	if ((pa_gain_control) == 1) {
 	snd_ctrl_locked = 0;
 	gain = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
 	out = ((gain & 0xF) + 1) | lval;
@@ -523,6 +523,12 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
+static struct kobj_attribute pa_gain_control_attribute =
+	__ATTR(gpl_pa_gain_control,
+		0666,
+		pa_gain_control_show,
+		pa_gain_control_store);
+
 static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
 		0666,
@@ -546,18 +552,13 @@ static struct kobj_attribute sound_control_enabled_attribute =
 		sound_control_enabled_show,
 		sound_control_enabled_store);
 
-static struct kobj_attribute pa_gain_control_attribute =
-	__ATTR(gpl_pa_gain_control,
-		0666,
-		pa_gain_control_show,
-		pa_gain_control_store);
-
 static struct attribute *sound_control_attrs[] =
 {
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,
 	&speaker_gain_attribute.attr,
 	&headphone_gain_attribute.attr,
+	&pa_gain_control_attribute.attr,
 	&headphone_pa_gain_attribute.attr,
 	&sound_control_rec_locked_attribute.attr,
 	&sound_reg_sel_attribute.attr,
@@ -565,7 +566,6 @@ static struct attribute *sound_control_attrs[] =
 	&sound_reg_write_attribute.attr,
 	&sound_control_version_attribute.attr,
 	&sound_control_enabled_attribute.attr,
-	&pa_gain_control_attribute.attr,
 	NULL,
 };
 
