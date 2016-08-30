@@ -21,7 +21,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	2
+#define SOUND_CONTROL_MINOR_VERSION	3
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -29,7 +29,7 @@ int snd_ctrl_enabled = 1;
 static int pa_gain_control = 0;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int actual_pa_gain = 18;
+static int actual_pa_gain = 36;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -315,6 +315,7 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		actual_pa_gain, actual_pa_gain);
 	} else {
 	if (pa_gain_control == 1) {
+	return sprintf(buf, "%u %u\n",
 		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
 		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
 		}
