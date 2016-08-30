@@ -26,10 +26,10 @@
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 int snd_ctrl_enabled = 1;
+static int pa_gain_control = 0;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int pa_gain_control = 1;
-static int actual_pa_gain = 22;
+static int actual_pa_gain = 18;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -310,8 +310,15 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	if pa_gain_control == 0 {
 	return sprintf(buf, "%u %u\n",
 		actual_pa_gain, actual_pa_gain);
+	} else {
+	if pa_gain_control == 1 {
+		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
+		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
+		}
+	}
 }
 
 static ssize_t headphone_pa_gain_store(struct kobject *kobj,
@@ -321,8 +328,10 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	unsigned int gain, status;
 	unsigned int out;
 
-	sscanf(buf, "%u %u", &lval, &rval);
+	if pa_gain_control == 0 {
 
+	sscanf(buf, "%u %u", &lval, &rval);
+	
 	if (!snd_ctrl_enabled)
 		return count;
 
@@ -331,7 +340,6 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	out = ((gain & 0xF) + 1) | lval;
 	tabla_write(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
 
-	if (!pa_gain_control)
 	actual_pa_gain = out;
 
 	status = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
@@ -342,8 +350,31 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	out = ((gain & 0xF) + 1) | rval;
 	tabla_write(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
 
-	if (!pa_gain_control)
-	actual_pa_gain = out;
+	status = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
+	out = (status & 0x0f) | (rval << 4);
+	tabla_write(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_STATUS, out);
+	snd_ctrl_locked = 2;
+
+	return count;
+} else {
+	if pa_gain_control == 1 {
+	sscanf(buf, "%u %u", &lval, &rval);
+	
+	if (!snd_ctrl_enabled)
+		return count;
+
+	snd_ctrl_locked = 0;
+	gain = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
+	out = ((gain & 0xF) + 1) | lval;
+	tabla_write(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, out);
+
+	status = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_STATUS);
+	out = (status & 0x0f) | (lval << 4);
+	tabla_write(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_STATUS, out);
+
+	gain = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN);
+	out = ((gain & 0xF) + 1) | rval;
+	tabla_write(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, out);
 
 	status = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_STATUS);
 	out = (status & 0x0f) | (rval << 4);
@@ -351,6 +382,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	snd_ctrl_locked = 2;
 
 	return count;
+	}
 }
 
 static unsigned int selected_reg = 0xdeadbeef;
@@ -436,6 +468,10 @@ static ssize_t pa_gain_control_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d", &pa_gain_control);
+
+	if pa_gain_control > 1 {
+	pa_gain_control == 1
+	}
 
 	return count;
 }
@@ -576,4 +612,3 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
-
