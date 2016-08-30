@@ -310,11 +310,11 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	if pa_gain_control == 0 {
+	if (pa_gain_control == 0) {
 	return sprintf(buf, "%u %u\n",
 		actual_pa_gain, actual_pa_gain);
 	} else {
-	if pa_gain_control == 1 {
+	if (pa_gain_control == 1) {
 		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
 		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
 		}
@@ -328,7 +328,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	unsigned int gain, status;
 	unsigned int out;
 
-	if pa_gain_control == 0 {
+	if (pa_gain_control == 0) {
 
 	sscanf(buf, "%u %u", &lval, &rval);
 	
@@ -357,7 +357,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	return count;
 } else {
-	if pa_gain_control == 1 {
+	if (pa_gain_control == 1) {
 	sscanf(buf, "%u %u", &lval, &rval);
 	
 	if (!snd_ctrl_enabled)
@@ -469,9 +469,11 @@ static ssize_t pa_gain_control_store(struct kobject *kobj,
 {
 	sscanf(buf, "%d", &pa_gain_control);
 
-	if pa_gain_control > 1 {
-	pa_gain_control == 1
-	}
+//avoid value boundry issues
+	if(pa_gain_control > 1)
+		pa_gain_control = 1;
+	else if (pa_gain_control < 0)
+		pa_gain_control = 0;
 
 	return count;
 }
