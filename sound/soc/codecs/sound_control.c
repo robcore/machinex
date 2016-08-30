@@ -26,10 +26,17 @@
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 int snd_ctrl_enabled = 1;
-static int pa_gain_control = 0;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
 static int actual_pa_gain = 36;
+
+static int pa_gain_control {
+	if(pa_gain_control > 1)
+		pa_gain_control = 1;
+	else if (pa_gain_control < 0)
+		pa_gain_control = 0;
+}
+EXPORT_SYMBOL(pa_gain_control);
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -310,11 +317,11 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	if (pa_gain_control == 0) {
+	if (pa_gain_control = 0) {
 	return sprintf(buf, "%u %u\n",
 		actual_pa_gain, actual_pa_gain);
 	} else {
-	if (pa_gain_control == 1) {
+	if (pa_gain_control = 1) {
 	return sprintf(buf, "%u %u\n",
 		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
 		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
@@ -329,13 +336,12 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	unsigned int gain, status;
 	unsigned int out;
 
-	if (pa_gain_control == 0) {
-
 	sscanf(buf, "%u %u", &lval, &rval);
 	
 	if (!snd_ctrl_enabled)
 		return count;
 
+	if (pa_gain_control = 0) {
 	snd_ctrl_locked = 0;
 	gain = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
 	out = ((gain & 0xF) + 1) | lval;
@@ -358,12 +364,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	return count;
 } else {
-	if (pa_gain_control == 1) {
-	sscanf(buf, "%u %u", &lval, &rval);
-	
-	if (!snd_ctrl_enabled)
-		return count;
-
+	if (pa_gain_control = 1) {
 	snd_ctrl_locked = 0;
 	gain = tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
 	out = ((gain & 0xF) + 1) | lval;
@@ -469,12 +470,6 @@ static ssize_t pa_gain_control_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d", &pa_gain_control);
-
-//avoid value boundry issues
-	if(pa_gain_control > 1)
-		pa_gain_control = 1;
-	else if (pa_gain_control < 0)
-		pa_gain_control = 0;
 
 	return count;
 }
