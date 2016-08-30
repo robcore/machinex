@@ -28,7 +28,7 @@ extern struct snd_soc_codec *snd_engine_codec_ptr;
 int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
-static int pa_gain_unlock = 1;
+static int pa_gain_control = 1;
 static int actual_pa_gain = 22;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
