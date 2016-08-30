@@ -263,7 +263,7 @@ struct wcd9xxx {
 };
 
 int wcd9xxx_reg_read(struct wcd9xxx *wcd9xxx, unsigned short reg);
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
+#ifdef CONFIG_SOUND_CONTROL
 int wcd9xxx_reg_read_safe(struct wcd9xxx *wcd9xxx, unsigned short reg);
 #endif
 int wcd9xxx_reg_write(struct wcd9xxx *wcd9xxx, unsigned short reg,
