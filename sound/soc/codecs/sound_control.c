@@ -29,14 +29,7 @@ int snd_ctrl_enabled = 1;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
 static int actual_pa_gain = 36;
-
-static int pa_gain_control {
-	if(pa_gain_control > 1)
-		pa_gain_control = 1;
-	else if (pa_gain_control < 0)
-		pa_gain_control = 0;
-}
-EXPORT_SYMBOL(pa_gain_control);
+static int pa_gain_control;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -314,6 +307,27 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	return count;
 }
 
+static ssize_t pa_gain_control_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	sscanf(buf, "%d", &pa_gain_control);
+
+	if(pa_gain_control > 1) {
+		pa_gain_control = 1;
+	} else {
+	if (pa_gain_control < 0)
+		pa_gain_control = 0;
+}
+
+	return count;
+}
+
+static ssize_t pa_gain_control_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", pa_gain_control);
+}
+
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -335,6 +349,7 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	unsigned int lval, rval;
 	unsigned int gain, status;
 	unsigned int out;
+	int pa_gain_control;
 
 	sscanf(buf, "%u %u", &lval, &rval);
 	
@@ -464,20 +479,6 @@ static ssize_t sound_control_enabled_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", snd_ctrl_enabled);
-}
-
-static ssize_t pa_gain_control_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	sscanf(buf, "%d", &pa_gain_control);
-
-	return count;
-}
-
-static ssize_t pa_gain_control_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", pa_gain_control);
 }
 
 static struct kobj_attribute sound_reg_sel_attribute =
