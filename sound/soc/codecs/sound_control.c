@@ -315,8 +315,8 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		actual_pa_gain, actual_pa_gain);
 	} else {
 	if (pa_gain_control == 1) {
-		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
-		tabla_read(fauxsound_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
+		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN),
+		tabla_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN));
 		}
 	}
 }
