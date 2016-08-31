@@ -116,7 +116,7 @@ static const int vdd_val[VDD_TYPE_MAX][VDD_VAL_MAX] = {
 		},
 };
 
-static int otg_hack_active = 1;
+static int otg_hack_active = 0;
 module_param_named(otg_hack_enable,
 			otg_hack_active,
 			int, 0664);
@@ -1618,7 +1618,7 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 
 	if (!use_mtp_during_fast_charge && on == 1)
 		on = 0;
-	
+
 	if (!otg->gadget)
 		return;
 
