@@ -703,7 +703,7 @@ void is_play_speed_1_5(int enable)
 static ssize_t mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, 256, "Current Background Mode : %s\n",
+	return snprintf(buf, 256, "%s\n",
 		background_name[mdnie_tun_state.background]);
 }
 
@@ -744,10 +744,10 @@ static ssize_t scenario_show(struct device *dev,
 {
 	DPRINT("called %s\n", __func__);
 
-	DPRINT("Current Scenario Mode : %s\n",
+	DPRINT("%s\n",
 		scenario_name[mdnie_tun_state.scenario]);
 
-	return snprintf(buf, 256, "Current Scenario Mode : %s\n",
+	return snprintf(buf, 256, "%s\n",
 		scenario_name[mdnie_tun_state.scenario]);
 }
 
@@ -921,7 +921,7 @@ static ssize_t outdoor_show(struct device *dev,
 					      char *buf)
 {
 	DPRINT("called %s\n", __func__);
-	return snprintf(buf, 256, "Current outdoor Value : %s\n",
+	return snprintf(buf, 256, "%s\n",
 		(mdnie_tun_state.outdoor == 0) ? "Disabled" : "Enabled");
 }
 
