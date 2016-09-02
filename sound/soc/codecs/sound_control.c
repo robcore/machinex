@@ -35,7 +35,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 #define REG_SZ	22
-static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0 };
 
@@ -430,11 +430,6 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d", &snd_ctrl_enabled);
-
-	if (snd_ctrl_enabled >= 1)
-		snd_ctrl_enabled = 1;
-	else if (snd_ctrl_enabled <= 0)
-		snd_ctrl_enabled = 0;
 
 	return count;
 }
