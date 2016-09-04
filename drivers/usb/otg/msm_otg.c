@@ -2629,6 +2629,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 			 * before entering into low power mode.
 			 */
 			if ((motg->pdata->otg_control == OTG_PMIC_CONTROL) &&
+					(aca_enabled() &&
 					!msm_otg_read_pmic_id_state(motg)) {
 				pr_debug("process missed ID intr\n");
 				clear_bit(ID, &motg->inputs);
