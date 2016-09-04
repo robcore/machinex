@@ -539,7 +539,6 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD1(AUTO_GALLERY_1);
 			INPUT_PAYLOAD2(AUTO_GALLERY_2);
 		}
-#endif
 		break;
 
 	case mDNIe_VT_MODE:
