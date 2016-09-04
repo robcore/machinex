@@ -21,7 +21,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	2
+#define SOUND_CONTROL_MINOR_VERSION	3
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -427,11 +427,18 @@ static ssize_t sound_control_rec_locked_show(struct kobject *kobj,
 }
 
 static ssize_t sound_control_enabled_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
+        struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	sscanf(buf, "%d", &snd_ctrl_enabled);
+    unsigned int val;
 
-	return count;
+    sscanf(buf, "%d", &val);
+
+    if (val > 1)
+        val = 1;
+
+    snd_ctrl_enabled = val;
+
+    return count;
 }
 
 static ssize_t sound_control_enabled_show(struct kobject *kobj,
