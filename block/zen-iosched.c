@@ -259,7 +259,9 @@ static struct elevator_type iosched_zen = {
 
 static int __init zen_init(void)
 {
-	return elv_register(&iosched_zen);
+	elv_register(&iosched_zen);
+
+	return 0;
 }
 
 static void __exit zen_exit(void)
