@@ -781,7 +781,7 @@ static ssize_t mode_store(struct device *dev,
 	sscanf(buf, "%d", &value);
 	DPRINT("set background mode : %d\n", value);
 
-	if (value < DYNAMIC_MODE || value > MAX_BACKGROUND_MODE) {
+	if (value < DYNAMIC_MODE || value >= MAX_BACKGROUND_MODE) {
 		DPRINT("[ERROR] wrong backgound mode value : %d\n",
 			value);
 		return size;
