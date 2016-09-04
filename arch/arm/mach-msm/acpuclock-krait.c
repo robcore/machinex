@@ -55,6 +55,9 @@ int speed_bin;
 int pvs_bin;
 #endif
 
+int pvs_number = 0;
+module_param(pvs_number, int, 0444);
+
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
@@ -1174,6 +1177,8 @@ static int __init get_pvs_bin(u32 pte_efuse)
 	} else {
 		dev_info(drv.dev, "ACPU PVS: %d\n", pvs_bin);
 	}
+
+	pvs_number = pvs_bin;
 
 	return pvs_bin;
 }
