@@ -132,6 +132,7 @@ const char background_name[MAX_BACKGROUND_MODE][16] = {
 	"CONTROL",
 #else
 	"STANDARD",
+#endif
 	"MOVIE",
 	"NATURAL",
 	"AUTO",
