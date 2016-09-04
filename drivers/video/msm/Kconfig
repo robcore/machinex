@@ -569,6 +569,11 @@ config DISPLAY_DISABLE_TEST_KEY
 	bool "Disable test key"
 	default n
 
+config MDNIE_LITE_CONTROL
+	bool "Simple MDNIe lite control interface"
+	depends on MDNIE_LITE_TUNING
+	default n
+
 config FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT
 	bool
 	select FB_MSM_MIPI_DSI_SAMSUNG_OCTA
