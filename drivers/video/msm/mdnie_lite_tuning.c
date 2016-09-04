@@ -367,14 +367,6 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	play_speed_1_5 = 0;
 
-#ifdef CONFIG_MDNIE_LITE_CONTROL
-	if (hijack == HIJACK_ENABLED) {
-		DPRINT(" = CONTROL MODE =\n");
-		INPUT_PAYLOAD1(LITE_CONTROL_1);
-		INPUT_PAYLOAD2(LITE_CONTROL_2);
-	} else
-#endif
-
 	/*
 	*	Blind mode & Screen mode has separated menu.
 	*	To make a sync below code added.
@@ -388,16 +380,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	switch (mode) {
 	case mDNIe_UI_MODE:
 		DPRINT(" = UI MODE =\n");
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-			DPRINT(" = CONTROL MODE =\n");
-			INPUT_PAYLOAD1(LITE_CONTROL_1);
-			INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 		if (mdnie_tun_state.background == STANDARD_MODE) {
 			DPRINT(" = STANDARD MODE =\n");
 			INPUT_PAYLOAD1(STANDARD_UI_1);
 			INPUT_PAYLOAD2(STANDARD_UI_2);
-#endif
 		} else if (mdnie_tun_state.background == NATURAL_MODE) {
 			DPRINT(" = NATURAL MODE =\n");
 			INPUT_PAYLOAD1(NATURAL_UI_1);
@@ -425,16 +411,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(OUTDOOR_VIDEO_2);
 		} else if (mdnie_tun_state.outdoor == OUTDOOR_OFF_MODE) {
 			DPRINT(" = OUTDOOR OFF MODE =\n");
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-				DPRINT(" = CONTROL MODE =\n");
-				INPUT_PAYLOAD1(LITE_CONTROL_1);
-				INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 			if (mdnie_tun_state.background == STANDARD_MODE) {
 				DPRINT(" = STANDARD MODE =\n");
 				INPUT_PAYLOAD1(STANDARD_VIDEO_1);
 				INPUT_PAYLOAD2(STANDARD_VIDEO_2);
-#endif
 			} else if (mdnie_tun_state.background == NATURAL_MODE) {
 				DPRINT(" = NATURAL MODE =\n");
 				INPUT_PAYLOAD1(NATURAL_VIDEO_1);
@@ -489,15 +469,9 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 				INPUT_PAYLOAD1(AUTO_CAMERA_1);
 				INPUT_PAYLOAD2(AUTO_CAMERA_2);
 			} else {
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-				DPRINT(" = CONTROL MODE =\n");
-				INPUT_PAYLOAD1(LITE_CONTROL_1);
-				INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 				DPRINT(" = STANDARD MODE =\n");
 				INPUT_PAYLOAD1(CAMERA_1);
 				INPUT_PAYLOAD2(CAMERA_2);
-#endif
 			}
 		} else if (mdnie_tun_state.outdoor == OUTDOOR_ON_MODE) {
 			DPRINT(" = NATURAL MODE =\n");
@@ -513,16 +487,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	case mDNIe_GALLERY:
 		DPRINT(" = GALLERY MODE =\n");
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-			DPRINT(" = CONTROL MODE =\n");
-			INPUT_PAYLOAD1(LITE_CONTROL_1);
-			INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 		if (mdnie_tun_state.background == STANDARD_MODE) {
 			DPRINT(" = STANDARD MODE =\n");
 			INPUT_PAYLOAD1(STANDARD_GALLERY_1);
 			INPUT_PAYLOAD2(STANDARD_GALLERY_2);
-#endif
 		} else if (mdnie_tun_state.background == NATURAL_MODE) {
 			DPRINT(" = NATURAL MODE =\n");
 			INPUT_PAYLOAD1(NATURAL_GALLERY_1);
@@ -544,16 +512,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	case mDNIe_VT_MODE:
 		DPRINT(" = VT MODE =\n");
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-			DPRINT(" = CONTROL MODE =\n");
-			INPUT_PAYLOAD1(LITE_CONTROL_1);
-			INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 		if (mdnie_tun_state.background == STANDARD_MODE) {
 			DPRINT(" = STANDARD MODE =\n");
 			INPUT_PAYLOAD1(STANDARD_VT_1);
 			INPUT_PAYLOAD2(STANDARD_VT_2);
-#endif
 		} else if (mdnie_tun_state.background == NATURAL_MODE) {
 			DPRINT(" = NATURAL MODE =\n");
 			INPUT_PAYLOAD1(NATURAL_VT_1);
@@ -635,16 +597,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	case mDNIe_BROWSER_MODE:
 		DPRINT(" = BROWSER MODE =\n");
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-				DPRINT(" = CONTROL MODE =\n");
-				INPUT_PAYLOAD1(LITE_CONTROL_1);
-				INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 		if (mdnie_tun_state.background == STANDARD_MODE) {
 			DPRINT(" = STANDARD MODE =\n");
 			INPUT_PAYLOAD1(STANDARD_BROWSER_1);
 			INPUT_PAYLOAD2(STANDARD_BROWSER_2);
-#endif
 		} else if (mdnie_tun_state.background == NATURAL_MODE) {
 			DPRINT(" = NATURAL MODE =\n");
 			INPUT_PAYLOAD1(NATURAL_BROWSER_1);
@@ -666,16 +622,10 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	case mDNIe_eBOOK_MODE:
 		DPRINT(" = eBOOK MODE =\n");
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-			DPRINT(" = CONTROL MODE =\n");
-			INPUT_PAYLOAD1(LITE_CONTROL_1);
-			INPUT_PAYLOAD2(LITE_CONTROL_2);
-#else
 		if (mdnie_tun_state.background == STANDARD_MODE) {
 			DPRINT(" = STANDARD MODE =\n");
 			INPUT_PAYLOAD1(STANDARD_EBOOK_1);
 			INPUT_PAYLOAD2(STANDARD_EBOOK_2);
-#endif
 		} else if (mdnie_tun_state.background == NATURAL_MODE) {
 			DPRINT(" = NATURAL MODE =\n");
 			INPUT_PAYLOAD1(NATURAL_EBOOK_1);

@@ -65,7 +65,7 @@
 #endif
 
 #ifdef CONFIG_MDNIE_LITE_CONTROL
-#define MDNIE_VERSION "1.0a by Yank555.lu"
+#define MDNIE_VERSION "1.1 by Yank555.lu"
 #define HIJACK_DISABLED	0
 #define HIJACK_ENABLED	1
 #endif
@@ -95,9 +95,6 @@ enum Lcd_mDNIe_UI {
 	mDNIe_BROWSER_TONE1 = 40,
 	mDNIe_BROWSER_TONE2,
 	mDNIe_BROWSER_TONE3,
-#endif
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-	mDNIe_CONTROL_MODE
 #endif
 };
 
