@@ -382,9 +382,9 @@ static unsigned long stack_trace[MAX_STACK_TRACE_ENTRIES];
 
 static void print_lockdep_off(const char *bug_msg)
 {
-	printk(KERN_DEBUG "%s\n", bug_msg);
-	printk(KERN_DEBUG "turning off the locking correctness validator.\n");
-	printk(KERN_DEBUG "Please attach the output of /proc/lock_stat to the bug report\n");
+	pr_debug(KERN_DEBUG "%s\n", bug_msg);
+	pr_debug(KERN_DEBUG "turning off the locking correctness validator.\n");
+	pr_debug(KERN_DEBUG "Please attach the output of /proc/lock_stat to the bug report\n");
 }
 
 static int save_trace(struct stack_trace *trace)
@@ -432,7 +432,7 @@ unsigned int max_lockdep_depth;
 
 #ifdef CONFIG_DEBUG_LOCKDEP
 /*
- * We cannot printk in early bootup code. Not even early_printk()
+ * We cannot printk in early bootup code. Not even early_pr_debug()
  * might work. So we mark any initialization errors and printk
  * about it later on, in lockdep_info().
  */
@@ -514,13 +514,13 @@ static void __print_lock_name(struct lock_class *class)
 	name = class->name;
 	if (!name) {
 		name = __get_key_name(class->key, str);
-		printk("%s", name);
+		pr_debug("%s", name);
 	} else {
-		printk("%s", name);
+		pr_debug("%s", name);
 		if (class->name_version > 1)
-			printk("#%d", class->name_version);
+			pr_debug("#%d", class->name_version);
 		if (class->subclass)
-			printk("/%d", class->subclass);
+			pr_debug("/%d", class->subclass);
 	}
 }
 
@@ -530,9 +530,9 @@ static void print_lock_name(struct lock_class *class)
 
 	get_usage_chars(class, usage);
 
-	printk(" (");
+	pr_debug(" (");
 	__print_lock_name(class);
-	printk("){%s}", usage);
+	pr_debug("){%s}", usage);
 }
 
 static void print_lockdep_cache(struct lockdep_map *lock)
@@ -544,13 +544,13 @@ static void print_lockdep_cache(struct lockdep_map *lock)
 	if (!name)
 		name = __get_key_name(lock->key->subkeys, str);
 
-	printk("%s", name);
+	pr_debug("%s", name);
 }
 
 static void print_lock(struct held_lock *hlock)
 {
 	print_lock_name(hlock_class(hlock));
-	printk(", at: ");
+	pr_debug(", at: ");
 	print_ip_sym(hlock->acquire_ip);
 }
 
@@ -559,21 +559,21 @@ static void lockdep_print_held_locks(struct task_struct *curr)
 	int i, depth = curr->lockdep_depth;
 
 	if (!depth) {
-		printk("no locks held by %s/%d.\n", curr->comm, task_pid_nr(curr));
+		pr_debug("no locks held by %s/%d.\n", curr->comm, task_pid_nr(curr));
 		return;
 	}
-	printk("%d lock%s held by %s/%d:\n",
+	pr_debug("%d lock%s held by %s/%d:\n",
 		depth, depth > 1 ? "s" : "", curr->comm, task_pid_nr(curr));
 
 	for (i = 0; i < depth; i++) {
-		printk(" #%d: ", i);
+		pr_debug(" #%d: ", i);
 		print_lock(curr->held_locks + i);
 	}
 }
 
 static void print_kernel_ident(void)
 {
-	printk("%s %.*s %s\n", init_utsname()->release,
+	pr_debug("%s %.*s %s\n", init_utsname()->release,
 		(int)strcspn(init_utsname()->version, " "),
 		init_utsname()->version,
 		print_tainted());
@@ -667,9 +667,9 @@ look_up_lock_class(struct lockdep_map *lock, unsigned int subclass)
 
 	if (unlikely(subclass >= MAX_LOCKDEP_SUBCLASSES)) {
 		debug_locks_off();
-		printk(KERN_ERR
+		pr_debug(KERN_ERR
 			"BUG: looking up invalid subclass: %u\n", subclass);
-		printk(KERN_ERR
+		pr_debug(KERN_ERR
 			"turning off the locking correctness validator.\n");
 		dump_stack();
 		return NULL;
@@ -735,9 +735,9 @@ register_lock_class(struct lockdep_map *lock, unsigned int subclass, int force)
  	 */
 	if (!static_obj(lock->key)) {
 		debug_locks_off();
-		printk("INFO: trying to register non-static key.\n");
-		printk("the code is fine but needs lockdep annotation.\n");
-		printk("turning off the locking correctness validator.\n");
+		pr_debug("INFO: trying to register non-static key.\n");
+		pr_debug("the code is fine but needs lockdep annotation.\n");
+		pr_debug("turning off the locking correctness validator.\n");
 		dump_stack();
 
 		return NULL;
@@ -796,10 +796,10 @@ register_lock_class(struct lockdep_map *lock, unsigned int subclass, int force)
 		graph_unlock();
 		raw_local_irq_restore(flags);
 
-		printk("\nnew class %p: %s", class->key, class->name);
+		pr_debug("\nnew class %p: %s", class->key, class->name);
 		if (class->name_version > 1)
-			printk("#%d", class->name_version);
-		printk("\n");
+			pr_debug("#%d", class->name_version);
+		pr_debug("\n");
 		dump_stack();
 
 		raw_local_irq_save(flags);
@@ -1078,9 +1078,9 @@ print_circular_bug_entry(struct lock_list *target, int depth)
 {
 	if (debug_locks_silent)
 		return 0;
-	printk("\n-> #%u", depth);
+	pr_debug("\n-> #%u", depth);
 	print_lock_name(target->class);
-	printk(":\n");
+	pr_debug(":\n");
 	print_stack_trace(&target->trace, 6);
 
 	return 0;
@@ -1109,31 +1109,31 @@ print_circular_lock_scenario(struct held_lock *src,
 	 * from the safe_class lock to the unsafe_class lock.
 	 */
 	if (parent != source) {
-		printk("Chain exists of:\n  ");
+		pr_debug("Chain exists of:\n  ");
 		__print_lock_name(source);
-		printk(" --> ");
+		pr_debug(" --> ");
 		__print_lock_name(parent);
-		printk(" --> ");
+		pr_debug(" --> ");
 		__print_lock_name(target);
-		printk("\n\n");
+		pr_debug("\n\n");
 	}
 
-	printk(" Possible unsafe locking scenario:\n\n");
-	printk("       CPU0                    CPU1\n");
-	printk("       ----                    ----\n");
-	printk("  lock(");
+	pr_debug(" Possible unsafe locking scenario:\n\n");
+	pr_debug("       CPU0                    CPU1\n");
+	pr_debug("       ----                    ----\n");
+	pr_debug("  lock(");
 	__print_lock_name(target);
-	printk(");\n");
-	printk("                               lock(");
+	pr_debug(");\n");
+	pr_debug("                               lock(");
 	__print_lock_name(parent);
-	printk(");\n");
-	printk("                               lock(");
+	pr_debug(");\n");
+	pr_debug("                               lock(");
 	__print_lock_name(target);
-	printk(");\n");
-	printk("  lock(");
+	pr_debug(");\n");
+	pr_debug("  lock(");
 	__print_lock_name(source);
-	printk(");\n");
-	printk("\n *** DEADLOCK ***\n\n");
+	pr_debug(");\n");
+	pr_debug("\n *** DEADLOCK ***\n\n");
 }
 
 /*
@@ -1150,18 +1150,18 @@ print_circular_bug_header(struct lock_list *entry, unsigned int depth,
 	if (debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("======================================================\n");
-	printk("[ INFO: possible circular locking dependency detected ]\n");
+	pr_debug("\n");
+	pr_debug("======================================================\n");
+	pr_debug("[ INFO: possible circular locking dependency detected ]\n");
 	print_kernel_ident();
-	printk("-------------------------------------------------------\n");
-	printk("%s/%d is trying to acquire lock:\n",
+	pr_debug("-------------------------------------------------------\n");
+	pr_debug("%s/%d is trying to acquire lock:\n",
 		curr->comm, task_pid_nr(curr));
 	print_lock(check_src);
-	printk("\nbut task is already holding lock:\n");
+	pr_debug("\nbut task is already holding lock:\n");
 	print_lock(check_tgt);
-	printk("\nwhich lock already depends on the new lock.\n\n");
-	printk("\nthe existing dependency chain (in reverse order) is:\n");
+	pr_debug("\nwhich lock already depends on the new lock.\n\n");
+	pr_debug("\nthe existing dependency chain (in reverse order) is:\n");
 
 	print_circular_bug_entry(entry, depth);
 
@@ -1201,13 +1201,13 @@ static noinline int print_circular_bug(struct lock_list *this,
 		parent = get_lock_parent(parent);
 	}
 
-	printk("\nother info that might help us debug this:\n\n");
+	pr_debug("\nother info that might help us debug this:\n\n");
 	print_circular_lock_scenario(check_src, check_tgt,
 				     first_parent);
 
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -1366,23 +1366,23 @@ static void print_lock_class_header(struct lock_class *class, int depth)
 {
 	int bit;
 
-	printk("%*s->", depth, "");
+	pr_debug("%*s->", depth, "");
 	print_lock_name(class);
-	printk(" ops: %lu", class->ops);
-	printk(" {\n");
+	pr_debug(" ops: %lu", class->ops);
+	pr_debug(" {\n");
 
 	for (bit = 0; bit < LOCK_USAGE_STATES; bit++) {
 		if (class->usage_mask & (1 << bit)) {
 			int len = depth;
 
-			len += printk("%*s   %s", depth, "", usage_str[bit]);
-			len += printk(" at:\n");
+			len += pr_debug("%*s   %s", depth, "", usage_str[bit]);
+			len += pr_debug(" at:\n");
 			print_stack_trace(class->usage_traces + bit, len);
 		}
 	}
-	printk("%*s }\n", depth, "");
+	pr_debug("%*s }\n", depth, "");
 
-	printk("%*s ... key      at: ",depth,"");
+	pr_debug("%*s ... key      at: ",depth,"");
 	print_ip_sym((unsigned long)class->key);
 }
 
@@ -1401,12 +1401,12 @@ print_shortest_lock_dependencies(struct lock_list *leaf,
 
 	do {
 		print_lock_class_header(entry->class, depth);
-		printk("%*s ... acquired at:\n", depth, "");
+		pr_debug("%*s ... acquired at:\n", depth, "");
 		print_stack_trace(&entry->trace, 2);
-		printk("\n");
+		pr_debug("\n");
 
 		if (depth == 0 && (entry != root)) {
-			printk("lockdep:%s bad path found in chain graph\n", __func__);
+			pr_debug("lockdep:%s bad path found in chain graph\n", __func__);
 			break;
 		}
 
@@ -1444,33 +1444,33 @@ print_irq_lock_scenario(struct lock_list *safe_entry,
 	 * from the safe_class lock to the unsafe_class lock.
 	 */
 	if (middle_class != unsafe_class) {
-		printk("Chain exists of:\n  ");
+		pr_debug("Chain exists of:\n  ");
 		__print_lock_name(safe_class);
-		printk(" --> ");
+		pr_debug(" --> ");
 		__print_lock_name(middle_class);
-		printk(" --> ");
+		pr_debug(" --> ");
 		__print_lock_name(unsafe_class);
-		printk("\n\n");
+		pr_debug("\n\n");
 	}
 
-	printk(" Possible interrupt unsafe locking scenario:\n\n");
-	printk("       CPU0                    CPU1\n");
-	printk("       ----                    ----\n");
-	printk("  lock(");
+	pr_debug(" Possible interrupt unsafe locking scenario:\n\n");
+	pr_debug("       CPU0                    CPU1\n");
+	pr_debug("       ----                    ----\n");
+	pr_debug("  lock(");
 	__print_lock_name(unsafe_class);
-	printk(");\n");
-	printk("                               local_irq_disable();\n");
-	printk("                               lock(");
+	pr_debug(");\n");
+	pr_debug("                               local_irq_disable();\n");
+	pr_debug("                               lock(");
 	__print_lock_name(safe_class);
-	printk(");\n");
-	printk("                               lock(");
+	pr_debug(");\n");
+	pr_debug("                               lock(");
 	__print_lock_name(middle_class);
-	printk(");\n");
-	printk("  <Interrupt>\n");
-	printk("    lock(");
+	pr_debug(");\n");
+	pr_debug("  <Interrupt>\n");
+	pr_debug("    lock(");
 	__print_lock_name(safe_class);
-	printk(");\n");
-	printk("\n *** DEADLOCK ***\n\n");
+	pr_debug(");\n");
+	pr_debug("\n *** DEADLOCK ***\n\n");
 }
 
 static int
@@ -1488,13 +1488,13 @@ print_bad_irq_dependency(struct task_struct *curr,
 	if (!debug_locks_off_graph_unlock() || debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("======================================================\n");
-	printk("[ INFO: %s-safe -> %s-unsafe lock order detected ]\n",
+	pr_debug("\n");
+	pr_debug("======================================================\n");
+	pr_debug("[ INFO: %s-safe -> %s-unsafe lock order detected ]\n",
 		irqclass, irqclass);
 	print_kernel_ident();
-	printk("------------------------------------------------------\n");
-	printk("%s/%d [HC%u[%lu]:SC%u[%lu]:HE%u:SE%u] is trying to acquire:\n",
+	pr_debug("------------------------------------------------------\n");
+	pr_debug("%s/%d [HC%u[%lu]:SC%u[%lu]:HE%u:SE%u] is trying to acquire:\n",
 		curr->comm, task_pid_nr(curr),
 		curr->hardirq_context, hardirq_count() >> HARDIRQ_SHIFT,
 		curr->softirq_context, softirq_count() >> SOFTIRQ_SHIFT,
@@ -1502,47 +1502,47 @@ print_bad_irq_dependency(struct task_struct *curr,
 		curr->softirqs_enabled);
 	print_lock(next);
 
-	printk("\nand this task is already holding:\n");
+	pr_debug("\nand this task is already holding:\n");
 	print_lock(prev);
-	printk("which would create a new lock dependency:\n");
+	pr_debug("which would create a new lock dependency:\n");
 	print_lock_name(hlock_class(prev));
-	printk(" ->");
+	pr_debug(" ->");
 	print_lock_name(hlock_class(next));
-	printk("\n");
+	pr_debug("\n");
 
-	printk("\nbut this new dependency connects a %s-irq-safe lock:\n",
+	pr_debug("\nbut this new dependency connects a %s-irq-safe lock:\n",
 		irqclass);
 	print_lock_name(backwards_entry->class);
-	printk("\n... which became %s-irq-safe at:\n", irqclass);
+	pr_debug("\n... which became %s-irq-safe at:\n", irqclass);
 
 	print_stack_trace(backwards_entry->class->usage_traces + bit1, 1);
 
-	printk("\nto a %s-irq-unsafe lock:\n", irqclass);
+	pr_debug("\nto a %s-irq-unsafe lock:\n", irqclass);
 	print_lock_name(forwards_entry->class);
-	printk("\n... which became %s-irq-unsafe at:\n", irqclass);
-	printk("...");
+	pr_debug("\n... which became %s-irq-unsafe at:\n", irqclass);
+	pr_debug("...");
 
 	print_stack_trace(forwards_entry->class->usage_traces + bit2, 1);
 
-	printk("\nother info that might help us debug this:\n\n");
+	pr_debug("\nother info that might help us debug this:\n\n");
 	print_irq_lock_scenario(backwards_entry, forwards_entry,
 				hlock_class(prev), hlock_class(next));
 
 	lockdep_print_held_locks(curr);
 
-	printk("\nthe dependencies between %s-irq-safe lock", irqclass);
-	printk(" and the holding lock:\n");
+	pr_debug("\nthe dependencies between %s-irq-safe lock", irqclass);
+	pr_debug(" and the holding lock:\n");
 	if (!save_trace(&prev_root->trace))
 		return 0;
 	print_shortest_lock_dependencies(backwards_entry, prev_root);
 
-	printk("\nthe dependencies between the lock to be acquired");
-	printk(" and %s-irq-unsafe lock:\n", irqclass);
+	pr_debug("\nthe dependencies between the lock to be acquired");
+	pr_debug(" and %s-irq-unsafe lock:\n", irqclass);
 	if (!save_trace(&next_root->trace))
 		return 0;
 	print_shortest_lock_dependencies(forwards_entry, next_root);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -1698,17 +1698,17 @@ print_deadlock_scenario(struct held_lock *nxt,
 	struct lock_class *next = hlock_class(nxt);
 	struct lock_class *prev = hlock_class(prv);
 
-	printk(" Possible unsafe locking scenario:\n\n");
-	printk("       CPU0\n");
-	printk("       ----\n");
-	printk("  lock(");
+	pr_debug(" Possible unsafe locking scenario:\n\n");
+	pr_debug("       CPU0\n");
+	pr_debug("       ----\n");
+	pr_debug("  lock(");
 	__print_lock_name(prev);
-	printk(");\n");
-	printk("  lock(");
+	pr_debug(");\n");
+	pr_debug("  lock(");
 	__print_lock_name(next);
-	printk(");\n");
-	printk("\n *** DEADLOCK ***\n\n");
-	printk(" May be due to missing lock nesting notation\n\n");
+	pr_debug(");\n");
+	pr_debug("\n *** DEADLOCK ***\n\n");
+	pr_debug(" May be due to missing lock nesting notation\n\n");
 }
 
 static int
@@ -1718,22 +1718,22 @@ print_deadlock_bug(struct task_struct *curr, struct held_lock *prev,
 	if (!debug_locks_off_graph_unlock() || debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("=============================================\n");
-	printk("[ INFO: possible recursive locking detected ]\n");
+	pr_debug("\n");
+	pr_debug("=============================================\n");
+	pr_debug("[ INFO: possible recursive locking detected ]\n");
 	print_kernel_ident();
-	printk("---------------------------------------------\n");
-	printk("%s/%d is trying to acquire lock:\n",
+	pr_debug("---------------------------------------------\n");
+	pr_debug("%s/%d is trying to acquire lock:\n",
 		curr->comm, task_pid_nr(curr));
 	print_lock(next);
-	printk("\nbut task is already holding lock:\n");
+	pr_debug("\nbut task is already holding lock:\n");
 	print_lock(prev);
 
-	printk("\nother info that might help us debug this:\n");
+	pr_debug("\nother info that might help us debug this:\n");
 	print_deadlock_scenario(next, prev);
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -1893,11 +1893,11 @@ check_prev_add(struct task_struct *curr, struct held_lock *prev,
 	 */
 	if (verbose(hlock_class(prev)) || verbose(hlock_class(next))) {
 		graph_unlock();
-		printk("\n new dependency: ");
+		pr_debug("\n new dependency: ");
 		print_lock_name(hlock_class(prev));
-		printk(" => ");
+		pr_debug(" => ");
 		print_lock_name(hlock_class(next));
-		printk("\n");
+		pr_debug("\n");
 		dump_stack();
 		return graph_lock();
 	}
@@ -2023,7 +2023,7 @@ static inline int lookup_chain_cache(struct task_struct *curr,
 cache_hit:
 			debug_atomic_inc(chain_lookup_hits);
 			if (very_verbose(class))
-				printk("\nhash chain already cached, key: "
+				pr_debug("\nhash chain already cached, key: "
 					"%016Lx tail class: [%p] %s\n",
 					(unsigned long long)chain_key,
 					class->key, class->name);
@@ -2031,7 +2031,7 @@ cache_hit:
 		}
 	}
 	if (very_verbose(class))
-		printk("\nnew hash chain, key: %016Lx tail class: [%p] %s\n",
+		pr_debug("\nnew hash chain, key: %016Lx tail class: [%p] %s\n",
 			(unsigned long long)chain_key, class->key, class->name);
 	/*
 	 * Allocate a new chain entry from the static array, and add
@@ -2202,17 +2202,17 @@ print_usage_bug_scenario(struct held_lock *lock)
 {
 	struct lock_class *class = hlock_class(lock);
 
-	printk(" Possible unsafe locking scenario:\n\n");
-	printk("       CPU0\n");
-	printk("       ----\n");
-	printk("  lock(");
+	pr_debug(" Possible unsafe locking scenario:\n\n");
+	pr_debug("       CPU0\n");
+	pr_debug("       ----\n");
+	pr_debug("  lock(");
 	__print_lock_name(class);
-	printk(");\n");
-	printk("  <Interrupt>\n");
-	printk("    lock(");
+	pr_debug(");\n");
+	pr_debug("  <Interrupt>\n");
+	pr_debug("    lock(");
 	__print_lock_name(class);
-	printk(");\n");
-	printk("\n *** DEADLOCK ***\n\n");
+	pr_debug(");\n");
+	pr_debug("\n *** DEADLOCK ***\n\n");
 }
 
 static int
@@ -2222,16 +2222,16 @@ print_usage_bug(struct task_struct *curr, struct held_lock *this,
 	if (!debug_locks_off_graph_unlock() || debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("=================================\n");
-	printk("[ INFO: inconsistent lock state ]\n");
+	pr_debug("\n");
+	pr_debug("=================================\n");
+	pr_debug("[ INFO: inconsistent lock state ]\n");
 	print_kernel_ident();
-	printk("---------------------------------\n");
+	pr_debug("---------------------------------\n");
 
-	printk("inconsistent {%s} -> {%s} usage.\n",
+	pr_debug("inconsistent {%s} -> {%s} usage.\n",
 		usage_str[prev_bit], usage_str[new_bit]);
 
-	printk("%s/%d [HC%u[%lu]:SC%u[%lu]:HE%u:SE%u] takes:\n",
+	pr_debug("%s/%d [HC%u[%lu]:SC%u[%lu]:HE%u:SE%u] takes:\n",
 		curr->comm, task_pid_nr(curr),
 		trace_hardirq_context(curr), hardirq_count() >> HARDIRQ_SHIFT,
 		trace_softirq_context(curr), softirq_count() >> SOFTIRQ_SHIFT,
@@ -2239,16 +2239,16 @@ print_usage_bug(struct task_struct *curr, struct held_lock *this,
 		trace_softirqs_enabled(curr));
 	print_lock(this);
 
-	printk("{%s} state was registered at:\n", usage_str[prev_bit]);
+	pr_debug("{%s} state was registered at:\n", usage_str[prev_bit]);
 	print_stack_trace(hlock_class(this)->usage_traces + prev_bit, 1);
 
 	print_irqtrace_events(curr);
-	printk("\nother info that might help us debug this:\n");
+	pr_debug("\nother info that might help us debug this:\n");
 	print_usage_bug_scenario(this);
 
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -2287,28 +2287,28 @@ print_irq_inversion_bug(struct task_struct *curr,
 	if (!debug_locks_off_graph_unlock() || debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("=========================================================\n");
-	printk("[ INFO: possible irq lock inversion dependency detected ]\n");
+	pr_debug("\n");
+	pr_debug("=========================================================\n");
+	pr_debug("[ INFO: possible irq lock inversion dependency detected ]\n");
 	print_kernel_ident();
-	printk("---------------------------------------------------------\n");
-	printk("%s/%d just changed the state of lock:\n",
+	pr_debug("---------------------------------------------------------\n");
+	pr_debug("%s/%d just changed the state of lock:\n",
 		curr->comm, task_pid_nr(curr));
 	print_lock(this);
 	if (forwards)
-		printk("but this lock took another, %s-unsafe lock in the past:\n", irqclass);
+		pr_debug("but this lock took another, %s-unsafe lock in the past:\n", irqclass);
 	else
-		printk("but this lock was taken by another, %s-safe lock in the past:\n", irqclass);
+		pr_debug("but this lock was taken by another, %s-safe lock in the past:\n", irqclass);
 	print_lock_name(other->class);
-	printk("\n\nand interrupts could create inverse lock ordering between them.\n\n");
+	pr_debug("\n\nand interrupts could create inverse lock ordering between them.\n\n");
 
-	printk("\nother info that might help us debug this:\n");
+	pr_debug("\nother info that might help us debug this:\n");
 
 	/* Find a middle lock (if one exists) */
 	depth = get_lock_depth(other);
 	do {
 		if (depth == 0 && (entry != root)) {
-			printk("lockdep:%s bad path found in chain graph\n", __func__);
+			pr_debug("lockdep:%s bad path found in chain graph\n", __func__);
 			break;
 		}
 		middle = entry;
@@ -2324,12 +2324,12 @@ print_irq_inversion_bug(struct task_struct *curr,
 
 	lockdep_print_held_locks(curr);
 
-	printk("\nthe shortest dependencies between 2nd lock and 1st lock:\n");
+	pr_debug("\nthe shortest dependencies between 2nd lock and 1st lock:\n");
 	if (!save_trace(&root->trace))
 		return 0;
 	print_shortest_lock_dependencies(other, root);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -2385,14 +2385,14 @@ check_usage_backwards(struct task_struct *curr, struct held_lock *this,
 
 void print_irqtrace_events(struct task_struct *curr)
 {
-	printk("irq event stamp: %u\n", curr->irq_events);
-	printk("hardirqs last  enabled at (%u): ", curr->hardirq_enable_event);
+	pr_debug("irq event stamp: %u\n", curr->irq_events);
+	pr_debug("hardirqs last  enabled at (%u): ", curr->hardirq_enable_event);
 	print_ip_sym(curr->hardirq_enable_ip);
-	printk("hardirqs last disabled at (%u): ", curr->hardirq_disable_event);
+	pr_debug("hardirqs last disabled at (%u): ", curr->hardirq_disable_event);
 	print_ip_sym(curr->hardirq_disable_ip);
-	printk("softirqs last  enabled at (%u): ", curr->softirq_enable_event);
+	pr_debug("softirqs last  enabled at (%u): ", curr->softirq_enable_event);
 	print_ip_sym(curr->softirq_enable_ip);
-	printk("softirqs last disabled at (%u): ", curr->softirq_disable_event);
+	pr_debug("softirqs last disabled at (%u): ", curr->softirq_disable_event);
 	print_ip_sym(curr->softirq_disable_ip);
 }
 
@@ -2935,7 +2935,7 @@ static int mark_lock(struct task_struct *curr, struct held_lock *this,
 	 * We must printk outside of the graph_lock:
 	 */
 	if (ret == 2) {
-		printk("\nmarked lock as {%s}:\n", usage_str[new_bit]);
+		pr_debug("\nmarked lock as {%s}:\n", usage_str[new_bit]);
 		print_lock(this);
 		print_irqtrace_events(curr);
 		dump_stack();
@@ -2980,7 +2980,7 @@ void lockdep_init_map(struct lockdep_map *lock, const char *name,
 	 * Sanity check, the lock-class key must be persistent:
 	 */
 	if (!static_obj(key)) {
-		printk("BUG: key %p not in .data!\n", key);
+		pr_debug("BUG: key %p not in .data!\n", key);
 		/*
 		 * What it says above ^^^^^, I suggest you read it.
 		 */
@@ -3010,25 +3010,25 @@ print_lock_nested_lock_not_held(struct task_struct *curr,
 	if (debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("==================================\n");
-	printk("[ BUG: Nested lock was not taken ]\n");
+	pr_debug("\n");
+	pr_debug("==================================\n");
+	pr_debug("[ BUG: Nested lock was not taken ]\n");
 	print_kernel_ident();
-	printk("----------------------------------\n");
+	pr_debug("----------------------------------\n");
 
-	printk("%s/%d is trying to lock:\n", curr->comm, task_pid_nr(curr));
+	pr_debug("%s/%d is trying to lock:\n", curr->comm, task_pid_nr(curr));
 	print_lock(hlock);
 
-	printk("\nbut this task is not holding:\n");
-	printk("%s\n", hlock->nest_lock->name);
+	pr_debug("\nbut this task is not holding:\n");
+	pr_debug("%s\n", hlock->nest_lock->name);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
-	printk("\nother info that might help us debug this:\n");
+	pr_debug("\nother info that might help us debug this:\n");
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -3082,10 +3082,10 @@ static int __lock_acquire(struct lockdep_map *lock, unsigned int subclass,
 	}
 	atomic_inc((atomic_t *)&class->ops);
 	if (very_verbose(class)) {
-		printk("\nacquire class [%p] %s", class->key, class->name);
+		pr_debug("\nacquire class [%p] %s", class->key, class->name);
 		if (class->name_version > 1)
-			printk("#%d", class->name_version);
-		printk("\n");
+			pr_debug("#%d", class->name_version);
+		pr_debug("\n");
 		dump_stack();
 	}
 
@@ -3193,7 +3193,7 @@ static int __lock_acquire(struct lockdep_map *lock, unsigned int subclass,
 	if (unlikely(curr->lockdep_depth >= MAX_LOCK_DEPTH)) {
 		debug_locks_off();
 		print_lockdep_off("BUG: MAX_LOCK_DEPTH too low!");
-		printk(KERN_DEBUG "depth: %i  max: %lu!\n",
+		pr_debug(KERN_DEBUG "depth: %i  max: %lu!\n",
 		       curr->lockdep_depth, MAX_LOCK_DEPTH);
 
 		lockdep_print_held_locks(current);
@@ -3218,21 +3218,21 @@ print_unlock_imbalance_bug(struct task_struct *curr, struct lockdep_map *lock,
 	if (debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("=====================================\n");
-	printk("[ BUG: bad unlock balance detected! ]\n");
+	pr_debug("\n");
+	pr_debug("=====================================\n");
+	pr_debug("[ BUG: bad unlock balance detected! ]\n");
 	print_kernel_ident();
-	printk("-------------------------------------\n");
-	printk("%s/%d is trying to release lock (",
+	pr_debug("-------------------------------------\n");
+	pr_debug("%s/%d is trying to release lock (",
 		curr->comm, task_pid_nr(curr));
 	print_lockdep_cache(lock);
-	printk(") at:\n");
+	pr_debug(") at:\n");
 	print_ip_sym(ip);
-	printk("but there are no more locks to release!\n");
-	printk("\nother info that might help us debug this:\n");
+	pr_debug("but there are no more locks to release!\n");
+	pr_debug("\nother info that might help us debug this:\n");
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -3533,11 +3533,11 @@ static void check_flags(unsigned long flags)
 
 	if (irqs_disabled_flags(flags)) {
 		if (DEBUG_LOCKS_WARN_ON(current->hardirqs_enabled)) {
-			printk("possible reason: unannotated irqs-off.\n");
+			pr_debug("possible reason: unannotated irqs-off.\n");
 		}
 	} else {
 		if (DEBUG_LOCKS_WARN_ON(!current->hardirqs_enabled)) {
-			printk("possible reason: unannotated irqs-on.\n");
+			pr_debug("possible reason: unannotated irqs-on.\n");
 		}
 	}
 
@@ -3663,21 +3663,21 @@ print_lock_contention_bug(struct task_struct *curr, struct lockdep_map *lock,
 	if (debug_locks_silent)
 		return 0;
 
-	printk("\n");
-	printk("=================================\n");
-	printk("[ BUG: bad contention detected! ]\n");
+	pr_debug("\n");
+	pr_debug("=================================\n");
+	pr_debug("[ BUG: bad contention detected! ]\n");
 	print_kernel_ident();
-	printk("---------------------------------\n");
-	printk("%s/%d is trying to contend lock (",
+	pr_debug("---------------------------------\n");
+	pr_debug("%s/%d is trying to contend lock (",
 		curr->comm, task_pid_nr(curr));
 	print_lockdep_cache(lock);
-	printk(") at:\n");
+	pr_debug(") at:\n");
 	print_ip_sym(ip);
-	printk("but there are no locks held!\n");
-	printk("\nother info that might help us debug this:\n");
+	pr_debug("but there are no locks held!\n");
+	pr_debug("\nother info that might help us debug this:\n");
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 
 	return 0;
@@ -3995,17 +3995,17 @@ void lockdep_init(void)
 
 void __init lockdep_info(void)
 {
-	printk("Lock dependency validator: Copyright (c) 2006 Red Hat, Inc., Ingo Molnar\n");
+	pr_debug("Lock dependency validator: Copyright (c) 2006 Red Hat, Inc., Ingo Molnar\n");
 
-	printk("... MAX_LOCKDEP_SUBCLASSES:  %lu\n", MAX_LOCKDEP_SUBCLASSES);
-	printk("... MAX_LOCK_DEPTH:          %lu\n", MAX_LOCK_DEPTH);
-	printk("... MAX_LOCKDEP_KEYS:        %lu\n", MAX_LOCKDEP_KEYS);
-	printk("... CLASSHASH_SIZE:          %lu\n", CLASSHASH_SIZE);
-	printk("... MAX_LOCKDEP_ENTRIES:     %lu\n", MAX_LOCKDEP_ENTRIES);
-	printk("... MAX_LOCKDEP_CHAINS:      %lu\n", MAX_LOCKDEP_CHAINS);
-	printk("... CHAINHASH_SIZE:          %lu\n", CHAINHASH_SIZE);
+	pr_debug("... MAX_LOCKDEP_SUBCLASSES:  %lu\n", MAX_LOCKDEP_SUBCLASSES);
+	pr_debug("... MAX_LOCK_DEPTH:          %lu\n", MAX_LOCK_DEPTH);
+	pr_debug("... MAX_LOCKDEP_KEYS:        %lu\n", MAX_LOCKDEP_KEYS);
+	pr_debug("... CLASSHASH_SIZE:          %lu\n", CLASSHASH_SIZE);
+	pr_debug("... MAX_LOCKDEP_ENTRIES:     %lu\n", MAX_LOCKDEP_ENTRIES);
+	pr_debug("... MAX_LOCKDEP_CHAINS:      %lu\n", MAX_LOCKDEP_CHAINS);
+	pr_debug("... CHAINHASH_SIZE:          %lu\n", CHAINHASH_SIZE);
 
-	printk(" memory used by lock dependency info: %lu kB\n",
+	pr_debug(" memory used by lock dependency info: %lu kB\n",
 		(sizeof(struct lock_class) * MAX_LOCKDEP_KEYS +
 		sizeof(struct list_head) * CLASSHASH_SIZE +
 		sizeof(struct lock_list) * MAX_LOCKDEP_ENTRIES +
@@ -4017,14 +4017,14 @@ void __init lockdep_info(void)
 		) / 1024
 		);
 
-	printk(" per task-struct memory footprint: %lu bytes\n",
+	pr_debug(" per task-struct memory footprint: %lu bytes\n",
 		sizeof(struct held_lock) * MAX_LOCK_DEPTH);
 
 #ifdef CONFIG_DEBUG_LOCKDEP
 	if (lockdep_init_error) {
-		printk("WARNING: lockdep init error! lock-%s was acquired"
+		pr_debug("WARNING: lockdep init error! lock-%s was acquired"
 			"before lockdep_init\n", lock_init_error);
-		printk("Call stack leading to lockdep invocation was:\n");
+		pr_debug("Call stack leading to lockdep invocation was:\n");
 		print_stack_trace(&lockdep_init_trace, 0);
 	}
 #endif
@@ -4039,17 +4039,17 @@ print_freed_lock_bug(struct task_struct *curr, const void *mem_from,
 	if (debug_locks_silent)
 		return;
 
-	printk("\n");
-	printk("=========================\n");
-	printk("[ BUG: held lock freed! ]\n");
+	pr_debug("\n");
+	pr_debug("=========================\n");
+	pr_debug("[ BUG: held lock freed! ]\n");
 	print_kernel_ident();
-	printk("-------------------------\n");
-	printk("%s/%d is freeing memory %p-%p, with a lock still held there!\n",
+	pr_debug("-------------------------\n");
+	pr_debug("%s/%d is freeing memory %p-%p, with a lock still held there!\n",
 		curr->comm, task_pid_nr(curr), mem_from, mem_to-1);
 	print_lock(hlock);
 	lockdep_print_held_locks(curr);
 
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 }
 
@@ -4097,14 +4097,14 @@ static void print_held_locks_bug(void)
 	if (debug_locks_silent)
 		return;
 
-	printk("\n");
-	printk("=====================================\n");
-	printk("[ BUG: %s/%d still has locks held! ]\n",
+	pr_debug("\n");
+	pr_debug("=====================================\n");
+	pr_debug("[ BUG: %s/%d still has locks held! ]\n",
 	       current->comm, task_pid_nr(current));
 	print_kernel_ident();
-	printk("-------------------------------------\n");
+	pr_debug("-------------------------------------\n");
 	lockdep_print_held_locks(current);
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 }
 
@@ -4122,10 +4122,10 @@ void debug_show_all_locks(void)
 	int unlock = 1;
 
 	if (unlikely(!debug_locks)) {
-		printk("INFO: lockdep is turned off.\n");
+		pr_debug("INFO: lockdep is turned off.\n");
 		return;
 	}
-	printk("\nShowing all locks held in the system:\n");
+	pr_debug("\nShowing all locks held in the system:\n");
 
 	/*
 	 * Here we try to get the tasklist_lock as hard as possible,
@@ -4136,18 +4136,18 @@ void debug_show_all_locks(void)
 retry:
 	if (!read_trylock(&tasklist_lock)) {
 		if (count == 10)
-			printk("hm, tasklist_lock locked, retrying... ");
+			pr_debug("hm, tasklist_lock locked, retrying... ");
 		if (count) {
 			count--;
-			printk(" #%d", 10-count);
+			pr_debug(" #%d", 10-count);
 			mdelay(200);
 			goto retry;
 		}
-		printk(" ignoring it.\n");
+		pr_debug(" ignoring it.\n");
 		unlock = 0;
 	} else {
 		if (count != 10)
-			printk(KERN_CONT " locked it.\n");
+			pr_debug(KERN_CONT " locked it.\n");
 	}
 
 	do_each_thread(g, p) {
@@ -4165,8 +4165,8 @@ retry:
 				unlock = 1;
 	} while_each_thread(g, p);
 
-	printk("\n");
-	printk("=============================================\n\n");
+	pr_debug("\n");
+	pr_debug("=============================================\n\n");
 
 	if (unlock)
 		read_unlock(&tasklist_lock);
@@ -4180,7 +4180,7 @@ EXPORT_SYMBOL_GPL(debug_show_all_locks);
 void debug_show_held_locks(struct task_struct *task)
 {
 	if (unlikely(!debug_locks)) {
-		printk("INFO: lockdep is turned off.\n");
+		pr_debug("INFO: lockdep is turned off.\n");
 		return;
 	}
 	lockdep_print_held_locks(task);
@@ -4194,12 +4194,12 @@ void lockdep_sys_exit(void)
 	if (unlikely(curr->lockdep_depth)) {
 		if (!debug_locks_off())
 			return;
-		printk("\n");
-		printk("================================================\n");
-		printk("[ BUG: lock held when returning to user space! ]\n");
+		pr_debug("\n");
+		pr_debug("================================================\n");
+		pr_debug("[ BUG: lock held when returning to user space! ]\n");
 		print_kernel_ident();
-		printk("------------------------------------------------\n");
-		printk("%s/%d is leaving the kernel with locks still held!\n",
+		pr_debug("------------------------------------------------\n");
+		pr_debug("%s/%d is leaving the kernel with locks still held!\n",
 				curr->comm, curr->pid);
 		lockdep_print_held_locks(curr);
 	}
@@ -4214,14 +4214,14 @@ void lockdep_rcu_suspicious(const char *file, const int line, const char *s)
 		return;
 #endif /* #ifdef CONFIG_PROVE_RCU_REPEATEDLY */
 	/* Note: the following can be executed concurrently, so be careful. */
-	printk("\n");
-	printk("===============================\n");
-	printk("[ INFO: suspicious RCU usage. ]\n");
+	pr_debug("\n");
+	pr_debug("===============================\n");
+	pr_debug("[ INFO: suspicious RCU usage. ]\n");
 	print_kernel_ident();
-	printk("-------------------------------\n");
-	printk("%s:%d %s!\n", file, line, s);
-	printk("\nother info that might help us debug this:\n\n");
-	printk("\n%srcu_scheduler_active = %d, debug_locks = %d\n",
+	pr_debug("-------------------------------\n");
+	pr_debug("%s:%d %s!\n", file, line, s);
+	pr_debug("\nother info that might help us debug this:\n\n");
+	pr_debug("\n%srcu_scheduler_active = %d, debug_locks = %d\n",
 	       !rcu_lockdep_current_cpu_online()
 			? "RCU used illegally from offline CPU!\n"
 			: rcu_is_cpu_idle()
@@ -4248,10 +4248,10 @@ void lockdep_rcu_suspicious(const char *file, const int line, const char *s)
 	 * rcu_read_lock_bh() and so on from extended quiescent states.
 	 */
 	if (rcu_is_cpu_idle())
-		printk("RCU used illegally from extended quiescent state!\n");
+		pr_debug("RCU used illegally from extended quiescent state!\n");
 
 	lockdep_print_held_locks(curr);
-	printk("\nstack backtrace:\n");
+	pr_debug("\nstack backtrace:\n");
 	dump_stack();
 }
 EXPORT_SYMBOL_GPL(lockdep_rcu_suspicious);
