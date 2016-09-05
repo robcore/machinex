@@ -432,7 +432,7 @@ unsigned int max_lockdep_depth;
 
 #ifdef CONFIG_DEBUG_LOCKDEP
 /*
- * We cannot printk in early bootup code. Not even early_pr_debug()
+ * We cannot printk in early bootup code. Not even early_printk()
  * might work. So we mark any initialization errors and printk
  * about it later on, in lockdep_info().
  */
