@@ -1127,10 +1127,6 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 		}
 	}
 
-	error = security_mmap_file(file, reqprot, prot, flags);
-	if (error)
-		return error;
-
 	return mmap_region(file, addr, len, flags, vm_flags, pgoff);
 }
 
