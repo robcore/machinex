@@ -758,9 +758,10 @@ static struct dentry *fat_fh_to_dentry(struct super_block *sb,
 }
 
 static int
-fat_encode_fh(struct inode *inode, __u32 *fh, int *lenp, struct inode *parent)
+fat_encode_fh(struct dentry *de, __u32 *fh, int *lenp, int connectable)
 {
 	int len = *lenp;
+	struct inode *inode =  de->d_inode;
 	u32 ipos_h, ipos_m, ipos_l;
 
 	if (len < 5) {
@@ -776,9 +777,9 @@ fat_encode_fh(struct inode *inode, __u32 *fh, int *lenp, struct inode *parent)
 	fh[1] = inode->i_generation;
 	fh[2] = ipos_h;
 	fh[3] = ipos_m | MSDOS_I(inode)->i_logstart;
-	fh[4] = ipos_l;
-	if (parent)
-		fh[4] |= MSDOS_I(parent)->i_logstart;
+	spin_lock(&de->d_lock);
+	fh[4] = ipos_l | MSDOS_I(de->d_parent->d_inode)->i_logstart;
+	spin_unlock(&de->d_lock);
 	return 3;
 }
 

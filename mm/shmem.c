@@ -1024,14 +1024,9 @@ repeat:
 		shmem_recalc_inode(inode);
 		spin_unlock(&info->lock);
 
-		/*
-		 * Let SGP_WRITE caller clear ends if write does not fill page
-		 */
-		if (sgp != SGP_WRITE) {
-			clear_highpage(page);
-			flush_dcache_page(page);
-			SetPageUptodate(page);
-		}
+		clear_highpage(page);
+		flush_dcache_page(page);
+		SetPageUptodate(page);
 		if (sgp == SGP_DIRTY)
 			set_page_dirty(page);
 	}
@@ -1339,14 +1334,6 @@ shmem_write_end(struct file *file, struct address_space *mapping,
 	if (pos + copied > inode->i_size)
 		i_size_write(inode, pos + copied);
 
-	if (!PageUptodate(page)) {
-		if (copied < PAGE_CACHE_SIZE) {
-			unsigned from = pos & (PAGE_CACHE_SIZE - 1);
-			zero_user_segments(page, 0, from,
-					from + copied, PAGE_CACHE_SIZE);
-		}
-		SetPageUptodate(page);
-	}
 	set_page_dirty(page);
 	unlock_page(page);
 	page_cache_release(page);
@@ -1788,7 +1775,6 @@ static int shmem_symlink(struct inode *dir, struct dentry *dentry, const char *s
 		kaddr = kmap_atomic(page);
 		memcpy(kaddr, symname, len);
 		kunmap_atomic(kaddr);
-		SetPageUptodate(page);
 		set_page_dirty(page);
 		unlock_page(page);
 		page_cache_release(page);
@@ -2025,9 +2011,11 @@ static struct dentry *shmem_fh_to_dentry(struct super_block *sb,
 	return dentry;
 }
 
-static int shmem_encode_fh(struct inode *inode, __u32 *fh, int *len,
-				struct inode *parent)
+static int shmem_encode_fh(struct dentry *dentry, __u32 *fh, int *len,
+				int connectable)
 {
+	struct inode *inode = dentry->d_inode;
+
 	if (*len < 3) {
 		*len = 3;
 		return 255;
@@ -2264,7 +2252,6 @@ int shmem_fill_super(struct super_block *sb, void *data, int silent)
 		}
 	}
 	sb->s_export_op = &shmem_export_ops;
-	sb->s_flags |= MS_NOSEC;
 #else
 	sb->s_flags |= MS_NOUSER;
 #endif

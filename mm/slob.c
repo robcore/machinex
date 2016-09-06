@@ -59,8 +59,6 @@
 
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include "slab.h"
-
 #include <linux/mm.h>
 #include <linux/swap.h> /* struct reclaim_state */
 #include <linux/cache.h>
@@ -94,6 +92,36 @@ struct slob_block {
 typedef struct slob_block slob_t;
 
 /*
+ * We use struct page fields to manage some slob allocation aspects,
+ * however to avoid the horrible mess in include/linux/mm_types.h, we'll
+ * just define our own struct page type variant here.
+ */
+struct slob_page {
+	union {
+		struct {
+			unsigned long flags;	/* mandatory */
+			atomic_t _count;	/* mandatory */
+			slobidx_t units;	/* free units left in page */
+			unsigned long pad[2];
+			slob_t *free;		/* first free slob_t in page */
+			struct list_head list;	/* linked list of free pages */
+		};
+		struct page page;
+	};
+};
+static inline void struct_slob_page_wrong_size(void)
+{ BUILD_BUG_ON(sizeof(struct slob_page) != sizeof(struct page)); }
+
+/*
+ * free_slob_page: call before a slob_page is returned to the page allocator.
+ */
+static inline void free_slob_page(struct slob_page *sp)
+{
+	reset_page_mapcount(&sp->page);
+	sp->page.mapping = NULL;
+}
+
+/*
  * All partially free slob pages go on these lists.
  */
 #define SLOB_BREAK1 256
@@ -103,27 +131,51 @@ static LIST_HEAD(free_slob_medium);
 static LIST_HEAD(free_slob_large);
 
 /*
+ * is_slob_page: True for all slob pages (false for bigblock pages)
+ */
+static inline int is_slob_page(struct slob_page *sp)
+{
+	return PageSlab((struct page *)sp);
+}
+
+static inline void set_slob_page(struct slob_page *sp)
+{
+	__SetPageSlab((struct page *)sp);
+}
+
+static inline void clear_slob_page(struct slob_page *sp)
+{
+	__ClearPageSlab((struct page *)sp);
+}
+
+static inline struct slob_page *slob_page(const void *addr)
+{
+	return (struct slob_page *)virt_to_page(addr);
+}
+
+/*
  * slob_page_free: true for pages on free_slob_pages list.
  */
-static inline int slob_page_free(struct page *sp)
+static inline int slob_page_free(struct slob_page *sp)
 {
-	return PageSlobFree(sp);
+	return PageSlobFree((struct page *)sp);
 }
 
-static void set_slob_page_free(struct page *sp, struct list_head *list)
+static void set_slob_page_free(struct slob_page *sp, struct list_head *list)
 {
 	list_add(&sp->list, list);
-	__SetPageSlobFree(sp);
+	__SetPageSlobFree((struct page *)sp);
 }
 
-static inline void clear_slob_page_free(struct page *sp)
+static inline void clear_slob_page_free(struct slob_page *sp)
 {
 	list_del(&sp->list);
-	__ClearPageSlobFree(sp);
+	__ClearPageSlobFree((struct page *)sp);
 }
 
 #define SLOB_UNIT sizeof(slob_t)
 #define SLOB_UNITS(size) (((size) + SLOB_UNIT - 1)/SLOB_UNIT)
+#define SLOB_ALIGN L1_CACHE_BYTES
 
 /*
  * struct slob_rcu is inserted at the tail of allocated slob blocks, which
@@ -215,12 +267,12 @@ static void slob_free_pages(void *b, int order)
 /*
  * Allocate a slob block within a given slob_page sp.
  */
-static void *slob_page_alloc(struct page *sp, size_t size, int align)
+static void *slob_page_alloc(struct slob_page *sp, size_t size, int align)
 {
 	slob_t *prev, *cur, *aligned = NULL;
 	int delta = 0, units = SLOB_UNITS(size);
 
-	for (prev = NULL, cur = sp->freelist; ; prev = cur, cur = slob_next(cur)) {
+	for (prev = NULL, cur = sp->free; ; prev = cur, cur = slob_next(cur)) {
 		slobidx_t avail = slob_units(cur);
 
 		if (align) {
@@ -244,12 +296,12 @@ static void *slob_page_alloc(struct page *sp, size_t size, int align)
 				if (prev)
 					set_slob(prev, slob_units(prev), next);
 				else
-					sp->freelist = next;
+					sp->free = next;
 			} else { /* fragment */
 				if (prev)
 					set_slob(prev, slob_units(prev), cur + units);
 				else
-					sp->freelist = cur + units;
+					sp->free = cur + units;
 				set_slob(cur + units, avail - units, next);
 			}
 
@@ -268,7 +320,7 @@ static void *slob_page_alloc(struct page *sp, size_t size, int align)
  */
 static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 {
-	struct page *sp;
+	struct slob_page *sp;
 	struct list_head *prev;
 	struct list_head *slob_list;
 	slob_t *b = NULL;
@@ -289,7 +341,7 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 		 * If there's a node specification, search for a partial
 		 * page with a matching node id in the freelist.
 		 */
-		if (node != -1 && page_to_nid(sp) != node)
+		if (node != -1 && page_to_nid(&sp->page) != node)
 			continue;
 #endif
 		/* Enough room on this page? */
@@ -317,12 +369,12 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 		b = slob_new_pages(gfp & ~__GFP_ZERO, 0, node);
 		if (!b)
 			return NULL;
-		sp = virt_to_page(b);
-		__SetPageSlab(sp);
+		sp = slob_page(b);
+		set_slob_page(sp);
 
 		spin_lock_irqsave(&slob_lock, flags);
 		sp->units = SLOB_UNITS(PAGE_SIZE);
-		sp->freelist = b;
+		sp->free = b;
 		INIT_LIST_HEAD(&sp->list);
 		set_slob(b, SLOB_UNITS(PAGE_SIZE), b + SLOB_UNITS(PAGE_SIZE));
 		set_slob_page_free(sp, slob_list);
@@ -340,7 +392,7 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
  */
 static void slob_free(void *block, int size)
 {
-	struct page *sp;
+	struct slob_page *sp;
 	slob_t *prev, *next, *b = (slob_t *)block;
 	slobidx_t units;
 	unsigned long flags;
@@ -350,7 +402,7 @@ static void slob_free(void *block, int size)
 		return;
 	BUG_ON(!size);
 
-	sp = virt_to_page(block);
+	sp = slob_page(block);
 	units = SLOB_UNITS(size);
 
 	spin_lock_irqsave(&slob_lock, flags);
@@ -360,8 +412,8 @@ static void slob_free(void *block, int size)
 		if (slob_page_free(sp))
 			clear_slob_page_free(sp);
 		spin_unlock_irqrestore(&slob_lock, flags);
-		__ClearPageSlab(sp);
-		reset_page_mapcount(sp);
+		clear_slob_page(sp);
+		free_slob_page(sp);
 		slob_free_pages(b, 0);
 		return;
 	}
@@ -369,7 +421,7 @@ static void slob_free(void *block, int size)
 	if (!slob_page_free(sp)) {
 		/* This slob page is about to become partially free. Easy! */
 		sp->units = units;
-		sp->freelist = b;
+		sp->free = b;
 		set_slob(b, units,
 			(void *)((unsigned long)(b +
 					SLOB_UNITS(PAGE_SIZE)) & PAGE_MASK));
@@ -389,15 +441,15 @@ static void slob_free(void *block, int size)
 	 */
 	sp->units += units;
 
-	if (b < (slob_t *)sp->freelist) {
-		if (b + units == sp->freelist) {
-			units += slob_units(sp->freelist);
-			sp->freelist = slob_next(sp->freelist);
+	if (b < sp->free) {
+		if (b + units == sp->free) {
+			units += slob_units(sp->free);
+			sp->free = slob_next(sp->free);
 		}
-		set_slob(b, units, sp->freelist);
-		sp->freelist = b;
+		set_slob(b, units, sp->free);
+		sp->free = b;
 	} else {
-		prev = sp->freelist;
+		prev = sp->free;
 		next = slob_next(prev);
 		while (b > next) {
 			prev = next;
@@ -470,7 +522,7 @@ EXPORT_SYMBOL(__kmalloc_node);
 
 void kfree(const void *block)
 {
-	struct page *sp;
+	struct slob_page *sp;
 
 	trace_kfree(_RET_IP_, block);
 
@@ -478,44 +530,81 @@ void kfree(const void *block)
 		return;
 	kmemleak_free(block);
 
-	sp = virt_to_page(block);
-	if (PageSlab(sp)) {
+	sp = slob_page(block);
+	if (is_slob_page(sp)) {
 		int align = max(ARCH_KMALLOC_MINALIGN, ARCH_SLAB_MINALIGN);
 		unsigned int *m = (unsigned int *)(block - align);
 		slob_free(m, *m + align);
 	} else
-		put_page(sp);
+		put_page(&sp->page);
 }
 EXPORT_SYMBOL(kfree);
 
 /* can't use ksize for kmem_cache_alloc memory, only kmalloc */
 size_t ksize(const void *block)
 {
-	struct page *sp;
+	struct slob_page *sp;
 
 	BUG_ON(!block);
 	if (unlikely(block == ZERO_SIZE_PTR))
 		return 0;
 
-	sp = virt_to_page(block);
-	if (PageSlab(sp)) {
+	sp = slob_page(block);
+	if (is_slob_page(sp)) {
 		int align = max(ARCH_KMALLOC_MINALIGN, ARCH_SLAB_MINALIGN);
 		unsigned int *m = (unsigned int *)(block - align);
 		return SLOB_UNITS(*m) * SLOB_UNIT;
 	} else
-		return sp->private;
+		return sp->page.private;
 }
 EXPORT_SYMBOL(ksize);
 
-int __kmem_cache_create(struct kmem_cache *c, unsigned long flags)
+struct kmem_cache {
+	unsigned int size, align;
+	unsigned long flags;
+	const char *name;
+	void (*ctor)(void *);
+};
+
+struct kmem_cache *kmem_cache_create(const char *name, size_t size,
+	size_t align, unsigned long flags, void (*ctor)(void *))
 {
-	if (flags & SLAB_DESTROY_BY_RCU) {
-		/* leave room for rcu footer at the end of object */
-		c->size += sizeof(struct slob_rcu);
-	}
-	c->flags = flags;
-	return 0;
+	struct kmem_cache *c;
+
+	c = slob_alloc(sizeof(struct kmem_cache),
+		GFP_KERNEL, ARCH_KMALLOC_MINALIGN, -1);
+
+	if (c) {
+		c->name = name;
+		c->size = size;
+		if (flags & SLAB_DESTROY_BY_RCU) {
+			/* leave room for rcu footer at the end of object */
+			c->size += sizeof(struct slob_rcu);
+		}
+		c->flags = flags;
+		c->ctor = ctor;
+		/* ignore alignment unless it's forced */
+		c->align = (flags & SLAB_HWCACHE_ALIGN) ? SLOB_ALIGN : 0;
+		if (c->align < ARCH_SLAB_MINALIGN)
+			c->align = ARCH_SLAB_MINALIGN;
+		if (c->align < align)
+			c->align = align;
+	} else if (flags & SLAB_PANIC)
+		panic("Cannot create slab cache %s\n", name);
+
+	kmemleak_alloc(c, sizeof(struct kmem_cache), 1, GFP_KERNEL);
+	return c;
 }
+EXPORT_SYMBOL(kmem_cache_create);
+
+void kmem_cache_destroy(struct kmem_cache *c)
+{
+	kmemleak_free(c);
+	if (c->flags & SLAB_DESTROY_BY_RCU)
+		rcu_barrier();
+	slob_free(c, sizeof(struct kmem_cache));
+}
+EXPORT_SYMBOL(kmem_cache_destroy);
 
 void *kmem_cache_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
 {
@@ -577,11 +666,11 @@ void kmem_cache_free(struct kmem_cache *c, void *b)
 }
 EXPORT_SYMBOL(kmem_cache_free);
 
-int __kmem_cache_shutdown(struct kmem_cache *c)
+unsigned int kmem_cache_size(struct kmem_cache *c)
 {
-	/* No way to check for remaining objects */
-	return 0;
+	return c->size;
 }
+EXPORT_SYMBOL(kmem_cache_size);
 
 int kmem_cache_shrink(struct kmem_cache *d)
 {
@@ -589,21 +678,19 @@ int kmem_cache_shrink(struct kmem_cache *d)
 }
 EXPORT_SYMBOL(kmem_cache_shrink);
 
-struct kmem_cache kmem_cache_boot = {
-	.name = "kmem_cache",
-	.size = sizeof(struct kmem_cache),
-	.flags = SLAB_PANIC,
-	.align = ARCH_KMALLOC_MINALIGN,
-};
+static unsigned int slob_ready __read_mostly;
+
+int slab_is_available(void)
+{
+	return slob_ready;
+}
 
 void __init kmem_cache_init(void)
 {
-	kmem_cache = &kmem_cache_boot;
-	slab_state = UP;
+	slob_ready = 1;
 }
 
 void __init kmem_cache_init_late(void)
 {
-	slab_state = FULL;
+	/* Nothing to do */
 }
-
