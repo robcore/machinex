@@ -20,6 +20,9 @@
 #include <linux/ima.h>
 #include <linux/evm.h>
 #include <linux/fsnotify.h>
+#include <linux/mman.h>
+#include <linux/mount.h>
+#include <linux/personality.h>
 #include <net/flow.h>
 
 #define MAX_LSM_EVM_XATTR	2
@@ -681,16 +684,44 @@ int security_file_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return security_ops->file_ioctl(file, cmd, arg);
 }
 
-int security_file_mmap(struct file *file, unsigned long reqprot,
-			unsigned long prot, unsigned long flags,
-			unsigned long addr, unsigned long addr_only)
+int security_mmap_file(struct file *file, unsigned long prot,
+			unsigned long flags)
 {
+	unsigned long reqprot = prot;
 	int ret;
-
-	ret = security_ops->file_mmap(file, reqprot, prot, flags, addr, addr_only);
+	/*
+	 * Does the application expect PROT_READ to imply PROT_EXEC?
+	 *
+	 * (the exception is when the underlying filesystem is noexec
+	 *  mounted, in which case we dont add PROT_EXEC.)
+	 */
+	if (!(reqprot & PROT_READ))
+		goto out;
+	if (!(current->personality & READ_IMPLIES_EXEC))
+		goto out;
+	if (!file) {
+		prot |= PROT_EXEC;
+	} else if (!(file->f_path.mnt->mnt_flags & MNT_NOEXEC)) {
+#ifndef CONFIG_MMU
+		unsigned long caps = 0;
+		struct address_space *mapping = file->f_mapping;
+		if (mapping && mapping->backing_dev_info)
+			caps = mapping->backing_dev_info->capabilities;
+		if (!(caps & BDI_CAP_EXEC_MAP))
+			goto out;
+#endif
+		prot |= PROT_EXEC;
+	}
+out:
+	ret = security_ops->mmap_file(file, reqprot, prot, flags);
 	if (ret)
 		return ret;
 	return ima_file_mmap(file, prot);
+}
+
+int security_mmap_addr(unsigned long addr)
+{
+	return security_ops->mmap_addr(addr);
 }
 
 int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,

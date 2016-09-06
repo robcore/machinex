@@ -451,9 +451,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 	unsigned long nr_scanned = 0, nr_isolated = 0;
 	struct list_head *migratelist = &cc->migratepages;
 	isolate_mode_t mode = 0;
-	unsigned long flags;
-	bool locked = false;
-	struct page *page = NULL, *valid_page = NULL;
+	struct lruvec *lruvec;
 
 	/*
 	 * Ensure that there are not too many pages isolated from the LRU
@@ -573,6 +571,8 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 		if (unevictable)
 			mode |= ISOLATE_UNEVICTABLE;
 
+		lruvec = mem_cgroup_page_lruvec(page, zone);
+
 		/* Try isolate the page */
 		if (__isolate_lru_page(page, mode) != 0)
 			continue;
@@ -580,8 +580,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 		VM_BUG_ON(PageTransCompound(page));
 
 		/* Successfully isolated */
-		cc->finished_update_migrate = true;
-		del_page_from_lru_list(zone, page, page_lru(page));
+		del_page_from_lru_list(page, lruvec, page_lru(page));
 		list_add(&page->lru, migratelist);
 		cc->nr_migratepages++;
 		nr_isolated++;
