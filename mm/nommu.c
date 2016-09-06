@@ -1470,34 +1470,6 @@ error_getting_region:
 	return -ENOMEM;
 }
 
-static unsigned long do_mmap(struct file *file, unsigned long addr,
-	unsigned long len, unsigned long prot,
-	unsigned long flag, unsigned long offset)
-{
-	if (unlikely(offset + PAGE_ALIGN(len) < offset))
-		return -EINVAL;
-	if (unlikely(offset & ~PAGE_MASK))
-		return -EINVAL;
-	return do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
-}
-
-unsigned long vm_mmap(struct file *file, unsigned long addr,
-	unsigned long len, unsigned long prot,
-	unsigned long flag, unsigned long offset)
-{
-	unsigned long ret;
-	struct mm_struct *mm = current->mm;
-
-	ret = security_mmap_file(file, prot, flag);
-	if (!ret) {
-		down_write(&mm->mmap_sem);
-		ret = do_mmap(file, addr, len, prot, flag, offset);
-		up_write(&mm->mmap_sem);
-	}
-	return ret;
-}
-EXPORT_SYMBOL(vm_mmap);
-
 SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 		unsigned long, prot, unsigned long, flags,
 		unsigned long, fd, unsigned long, pgoff)
@@ -1514,12 +1486,7 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
-	ret = security_mmap_file(file, prot, flags);
-	if (!ret) {
-		down_write(&current->mm->mmap_sem);
-		retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff);
-		up_write(&current->mm->mmap_sem);
-	}
+	retval = vm_mmap_pgoff(file, addr, len, prot, flags, pgoff);
 
 	if (file)
 		fput(file);
