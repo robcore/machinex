@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -49,12 +49,14 @@
 
 #define DEVICE_NAME "smdpkt"
 #define WAKELOCK_TIMEOUT (2*HZ)
+#define SMD_PKT_MAGIC (0xDEADBAAD)
 
 struct smd_pkt_dev {
 	struct cdev cdev;
 	struct device *devicep;
 	void *pil;
 	char pdriver_name[PDRIVER_NAME_MAX_SIZE];
+	int magic;
 	struct platform_driver driver;
 
 	struct smd_channel *ch;
@@ -101,8 +103,6 @@ enum {
 	SMD_PKT_STATUS = 1U << 0,
 	SMD_PKT_READ = 1U << 1,
 	SMD_PKT_WRITE = 1U << 2,
-	SMD_PKT_READ_DUMP_BUFFER = 1U << 3,
-	SMD_PKT_WRITE_DUMP_BUFFER = 1U << 4,
 	SMD_PKT_POLL = 1U << 5,
 };
 
@@ -114,18 +114,6 @@ enum {
 do { \
 	if (smd_pkt_ilctxt) \
 		ipc_log_string(smd_pkt_ilctxt, "<SMD_PKT>: "x); \
-} while (0)
-
-#define SMD_PKT_LOG_BUF(buf, cnt) \
-do { \
-	char log_buf[128]; \
-	int i; \
-	if (smd_pkt_ilctxt) { \
-		i = cnt < 16 ? cnt : 16; \
-		hex_dump_to_buffer(buf, i, 16, 1, log_buf, \
-				   sizeof(log_buf), false); \
-		ipc_log_string(smd_pkt_ilctxt, "<SMD_PKT>: %s", log_buf); \
-	} \
 } while (0)
 
 #define D_STATUS(x...) \
@@ -149,24 +137,6 @@ do { \
 	SMD_PKT_LOG_STRING(x); \
 } while (0)
 
-#define D_READ_DUMP_BUFFER(prestr, cnt, buf) \
-do { \
-	if (msm_smd_pkt_debug_mask & SMD_PKT_READ_DUMP_BUFFER) \
-		print_hex_dump(KERN_INFO, prestr, \
-			       DUMP_PREFIX_NONE, 16, 1, \
-			       buf, cnt, 1); \
-	SMD_PKT_LOG_BUF(buf, cnt); \
-} while (0)
-
-#define D_WRITE_DUMP_BUFFER(prestr, cnt, buf) \
-do { \
-	if (msm_smd_pkt_debug_mask & SMD_PKT_WRITE_DUMP_BUFFER) \
-		print_hex_dump(KERN_INFO, prestr, \
-			       DUMP_PREFIX_NONE, 16, 1, \
-			       buf, cnt, 1); \
-	SMD_PKT_LOG_BUF(buf, cnt); \
-} while (0)
-
 #define D_POLL(x...) \
 do { \
 	if (msm_smd_pkt_debug_mask & SMD_PKT_POLL) \
@@ -184,8 +154,6 @@ do { \
 #define D_STATUS(x...) do {} while (0)
 #define D_READ(x...) do {} while (0)
 #define D_WRITE(x...) do {} while (0)
-#define D_READ_DUMP_BUFFER(prestr, cnt, buf) do {} while (0)
-#define D_WRITE_DUMP_BUFFER(prestr, cnt, buf) do {} while (0)
 #define D_POLL(x...) do {} while (0)
 #define E_SMD_PKT_SSR(x) do {} while (0)
 #endif
@@ -432,7 +400,6 @@ wait_for_packet:
 			return notify_reset(smd_pkt_devp);
 		}
 	} while (pkt_size != bytes_read);
-	D_READ_DUMP_BUFFER("Read: ", (bytes_read > 16 ? 16 : bytes_read), buf);
 	mutex_unlock(&smd_pkt_devp->rx_lock);
 
 	mutex_lock(&smd_pkt_devp->ch_lock);
@@ -509,7 +476,7 @@ ssize_t smd_pkt_write(struct file *file,
 	do {
 		prepare_to_wait(&smd_pkt_devp->ch_write_wait_queue,
 				&write_wait, TASK_UNINTERRUPTIBLE);
-		if (!smd_write_avail(smd_pkt_devp->ch) &&
+		if (!smd_write_segment_avail(smd_pkt_devp->ch) &&
 		    !smd_pkt_devp->has_reset) {
 			smd_enable_read_intr(smd_pkt_devp->ch);
 			schedule();
@@ -540,8 +507,6 @@ ssize_t smd_pkt_write(struct file *file,
 	} while (bytes_written != count);
 	smd_write_end(smd_pkt_devp->ch);
 	mutex_unlock(&smd_pkt_devp->tx_lock);
-	D_WRITE_DUMP_BUFFER("Write: ",
-			    (bytes_written > 16 ? 16 : bytes_written), buf);
 	D_WRITE("Finished %s on smd_pkt_dev id:%d %d bytes\n",
 		__func__, smd_pkt_devp->i, count);
 
@@ -631,7 +596,7 @@ static void check_and_wakeup_writer(struct smd_pkt_dev *smd_pkt_devp)
 		return;
 	}
 
-	sz = smd_write_avail(smd_pkt_devp->ch);
+	sz = smd_write_segment_avail(smd_pkt_devp->ch);
 	if (sz) {
 		D_WRITE("%s: %d bytes write space in smd_pkt_dev id:%d\n",
 			__func__, sz, smd_pkt_devp->i);
@@ -838,11 +803,7 @@ int smd_pkt_open(struct inode *inode, struct file *file)
 
 	mutex_lock(&smd_pkt_devp->ch_lock);
 	if (smd_pkt_devp->ch == 0) {
-		wake_lock_init(&smd_pkt_devp->pa_wake_lock, WAKE_LOCK_SUSPEND,
-				smd_pkt_dev_name[smd_pkt_devp->i]);
-		INIT_WORK(&smd_pkt_devp->packet_arrival_work,
-				packet_arrival_worker);
-		init_completion(&smd_pkt_devp->ch_allocated);
+		INIT_COMPLETION(smd_pkt_devp->ch_allocated);
 		smd_pkt_devp->driver.probe = smd_pkt_dummy_probe;
 		scnprintf(smd_pkt_devp->pdriver_name, PDRIVER_NAME_MAX_SIZE,
 			  "%s", smd_ch_name[smd_pkt_devp->i]);
@@ -953,9 +914,6 @@ release_pd:
 	else if (r == 0)
 		file->private_data = smd_pkt_devp;
 out:
-	if (!smd_pkt_devp->ch)
-		wake_lock_destroy(&smd_pkt_devp->pa_wake_lock);
-
 	mutex_unlock(&smd_pkt_devp->ch_lock);
 
 
@@ -986,18 +944,27 @@ int smd_pkt_release(struct inode *inode, struct file *file)
 		smd_pkt_devp->ch = 0;
 		smd_pkt_devp->blocking_write = 0;
 		smd_pkt_devp->poll_mode = 0;
-		platform_driver_unregister(&smd_pkt_devp->driver);
-		smd_pkt_devp->driver.probe = NULL;
+		if (smd_pkt_devp->driver.probe) {
+			platform_driver_unregister(&smd_pkt_devp->driver);
+			smd_pkt_devp->driver.probe = NULL;
+		} else {
+			pr_err("%s: invalid unregister dev id:%d magic %x\n",
+					 __func__, smd_pkt_devp->i,
+					smd_pkt_devp->magic);
+		}
 		if (smd_pkt_devp->pil)
 			pil_put(smd_pkt_devp->pil);
 		smd_pkt_devp->has_reset = 0;
 		smd_pkt_devp->do_reset_notification = 0;
 		smd_pkt_devp->wakelock_locked = 0;
-		wake_lock_destroy(&smd_pkt_devp->pa_wake_lock);
 	}
 	mutex_unlock(&smd_pkt_devp->tx_lock);
 	mutex_unlock(&smd_pkt_devp->rx_lock);
 	mutex_unlock(&smd_pkt_devp->ch_lock);
+
+	if (flush_work(&smd_pkt_devp->packet_arrival_work))
+		D_STATUS("%s: Flushed work for smd_pkt_dev id:%d\n", __func__,
+				smd_pkt_devp->i);
 
 	D_STATUS("Finished %s on smd_pkt_dev id:%d\n",
 		 __func__, smd_pkt_devp->i);
@@ -1054,12 +1021,18 @@ static int __init smd_pkt_init(void)
 		smd_pkt_devp[i]->is_open = 0;
 		smd_pkt_devp[i]->poll_mode = 0;
 		smd_pkt_devp[i]->wakelock_locked = 0;
+		smd_pkt_devp[i]->magic = SMD_PKT_MAGIC;
 		init_waitqueue_head(&smd_pkt_devp[i]->ch_opened_wait_queue);
 
 		spin_lock_init(&smd_pkt_devp[i]->pa_spinlock);
 		mutex_init(&smd_pkt_devp[i]->ch_lock);
 		mutex_init(&smd_pkt_devp[i]->rx_lock);
 		mutex_init(&smd_pkt_devp[i]->tx_lock);
+		wake_lock_init(&smd_pkt_devp[i]->pa_wake_lock,
+			WAKE_LOCK_SUSPEND, smd_pkt_dev_name[i]);
+		INIT_WORK(&smd_pkt_devp[i]->packet_arrival_work,
+				packet_arrival_worker);
+		init_completion(&smd_pkt_devp[i]->ch_allocated);
 
 		cdev_init(&smd_pkt_devp[i]->cdev, &smd_pkt_fops);
 		smd_pkt_devp[i]->cdev.owner = THIS_MODULE;
@@ -1087,6 +1060,7 @@ static int __init smd_pkt_init(void)
 			       " id:%d\n", __func__, i);
 			r = -ENOMEM;
 			cdev_del(&smd_pkt_devp[i]->cdev);
+			wake_lock_destroy(&smd_pkt_devp[i]->pa_wake_lock);
 			kfree(smd_pkt_devp[i]);
 			goto error2;
 		}
@@ -1127,6 +1101,7 @@ static void __exit smd_pkt_cleanup(void)
 
 	for (i = 0; i < NUM_SMD_PKT_PORTS; ++i) {
 		cdev_del(&smd_pkt_devp[i]->cdev);
+		smd_pkt_devp[i]->magic = 0;
 		kfree(smd_pkt_devp[i]);
 		device_destroy(smd_pkt_classp,
 			       MKDEV(MAJOR(smd_pkt_number), i));

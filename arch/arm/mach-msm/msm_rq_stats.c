@@ -41,9 +41,13 @@ struct notifier_block cpu_hotplug;
 struct notifier_block freq_policy;
 
 struct cpu_load_data {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_wall;
+	u64 prev_cpu_idle;
+	u64 prev_cpu_wall;
+#ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
+	unsigned int cpu_load;
+#endif
 	unsigned int avg_load_maxfreq;
+	unsigned int cur_load_maxfreq;
 	unsigned int samples;
 	unsigned int window_size;
 	unsigned int cur_freq;
@@ -57,15 +61,15 @@ static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	int ret;
-	cputime64_t cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
+	cputime64_t cur_wall_time, cur_idle_time;
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	struct cpufreq_policy policy;
 
-	ret = cpufreq_get_policy(&policy, cpu);
-	if (ret)
-		return -EINVAL;
+        ret = cpufreq_get_policy(&policy, cpu);
+        if (ret)
+                return -EINVAL;
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
@@ -82,6 +86,10 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	/* Calculate the scaled load across CPU */
 	load_at_max_freq = (cur_load * policy.cur) / policy.max;
+
+#ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
+	pcpu->cpu_load = cur_load;
+#endif
 
 	if (!pcpu->avg_load_maxfreq) {
 		/* This is the first sample in this window*/
@@ -146,12 +154,29 @@ static unsigned int report_load_at_max_freq(void)
 		mutex_lock(&pcpu->cpu_load_mutex);
 		update_average_load(pcpu->cur_freq, cpu);
 		total_load += pcpu->avg_load_maxfreq;
+		pcpu->cur_load_maxfreq = pcpu->avg_load_maxfreq;
 		pcpu->avg_load_maxfreq = 0;
 		mutex_unlock(&pcpu->cpu_load_mutex);
 	}
 	return total_load;
 }
 
+#endif
+
+unsigned int report_avg_load_cpu(unsigned int cpu)
+{
+	struct cpu_load_data *pcpu= &per_cpu(cpuload, cpu);
+
+	return pcpu->cur_load_maxfreq;
+}
+
+#ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
+unsigned int report_cpu_load(unsigned int cpu)
+{
+	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
+
+	return pcpu->cpu_load;
+}
 #endif
 
 static int cpufreq_transition_handler(struct notifier_block *nb,
@@ -207,6 +232,9 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 			update_related_cpus();
 	case CPU_ONLINE_FROZEN:
 		this_cpu->avg_load_maxfreq = 0;
+#ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
+		this_cpu->cpu_load = 0;
+#endif
 	}
 
 	return NOTIFY_OK;

@@ -890,7 +890,25 @@ static void hci_cc_pin_code_reply(struct hci_dev *hdev, struct sk_buff *skb)
 unlock:
 	hci_dev_unlock(hdev);
 }
+static void hci_cc_read_tx_power(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	struct hci_rp_read_tx_power *rp = (void *) skb->data;
+	struct hci_conn *conn;
 
+	BT_DBG("%s status 0x%x", hdev->name, rp->status);
+
+	if (!test_bit(HCI_MGMT, &hdev->flags))
+		return;
+
+	conn = hci_conn_hash_lookup_handle(hdev, __le16_to_cpu(rp->handle));
+	if (!conn) {
+		mgmt_read_tx_power_failed(hdev->id);
+		return;
+	}
+
+	mgmt_read_tx_power_complete(hdev->id, &conn->dst, rp->level,
+								rp->status);
+}
 static void hci_cc_pin_code_neg_reply(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	struct hci_rp_pin_code_neg_reply *rp = (void *) skb->data;
@@ -1634,7 +1652,7 @@ static inline void hci_inquiry_result_evt(struct hci_dev *hdev, struct sk_buff *
 		data.rssi		= 0x00;
 		data.ssp_mode		= 0x00;
 		hci_inquiry_cache_update(hdev, &data);
-		mgmt_device_found(hdev->id, &info->bdaddr, 0, 0,
+		mgmt_device_found(hdev->id, &info->bdaddr, ACL_LINK, 0x00, 0,
 					info->dev_class, 0, 0, NULL);
 	}
 
@@ -2337,6 +2355,10 @@ static inline void hci_cmd_complete_evt(struct hci_dev *hdev, struct sk_buff *sk
 		hci_cc_le_set_scan_enable(hdev, skb);
 		break;
 
+	case HCI_OP_READ_TX_POWER:
+		hci_cc_read_tx_power(hdev, skb);
+		break;
+
 	default:
 		BT_DBG("%s opcode 0x%x", hdev->name, opcode);
 		break;
@@ -2701,12 +2723,6 @@ static inline void hci_link_key_request_evt(struct hci_dev *hdev, struct sk_buff
 		BT_DBG("Conn pending sec level is %d, ssp is %d, key len is %d",
 			conn->pending_sec_level, conn->ssp_mode, key->pin_len);
 	}
-	if (conn && (conn->ssp_mode == 0) &&
-		(conn->pending_sec_level == BT_SECURITY_VERY_HIGH) &&
-		(key->pin_len != 16)) {
-		BT_DBG("Security is high ignoring this key");
-		goto not_found;
-	}
 
 	if (key->key_type == 0x04 && conn && conn->auth_type != 0xff &&
 						(conn->auth_type & 0x01)) {
@@ -2843,9 +2859,9 @@ static inline void hci_inquiry_result_with_rssi_evt(struct hci_dev *hdev, struct
 			data.rssi		= info->rssi;
 			data.ssp_mode		= 0x00;
 			hci_inquiry_cache_update(hdev, &data);
-			mgmt_device_found(hdev->id, &info->bdaddr, 0, 0,
-						info->dev_class, info->rssi,
-						0, NULL);
+			mgmt_device_found(hdev->id, &info->bdaddr, ACL_LINK,
+						0x00, 0, info->dev_class,
+						info->rssi, 0, NULL);
 		}
 	} else {
 		struct inquiry_info_with_rssi *info = (void *) (skb->data + 1);
@@ -2860,9 +2876,9 @@ static inline void hci_inquiry_result_with_rssi_evt(struct hci_dev *hdev, struct
 			data.rssi		= info->rssi;
 			data.ssp_mode		= 0x00;
 			hci_inquiry_cache_update(hdev, &data);
-			mgmt_device_found(hdev->id, &info->bdaddr, 0, 0,
-						info->dev_class, info->rssi,
-						0, NULL);
+			mgmt_device_found(hdev->id, &info->bdaddr, ACL_LINK,
+						0x00, 0, info->dev_class,
+						info->rssi, 0, NULL);
 		}
 	}
 
@@ -3025,7 +3041,7 @@ static inline void hci_extended_inquiry_result_evt(struct hci_dev *hdev, struct 
 		data.rssi		= info->rssi;
 		data.ssp_mode		= 0x01;
 		hci_inquiry_cache_update(hdev, &data);
-		mgmt_device_found(hdev->id, &info->bdaddr, 0, 0,
+		mgmt_device_found(hdev->id, &info->bdaddr, ACL_LINK, 0x00, 0,
 				info->dev_class, info->rssi,
 				HCI_MAX_EIR_LENGTH, info->data);
 	}
@@ -3361,6 +3377,7 @@ static inline void hci_le_adv_report_evt(struct hci_dev *hdev,
 {
 	struct hci_ev_le_advertising_info *ev;
 	u8 num_reports;
+	s8 rssi;
 
 	num_reports = skb->data[0];
 	ev = (void *) &skb->data[1];
@@ -3368,8 +3385,11 @@ static inline void hci_le_adv_report_evt(struct hci_dev *hdev,
 	hci_dev_lock(hdev);
 
 	while (num_reports--) {
-		mgmt_device_found(hdev->id, &ev->bdaddr, ev->bdaddr_type,
-				1, NULL, 0, ev->length, ev->data);
+		rssi = ev->data[ev->length];
+
+		mgmt_device_found(hdev->id, &ev->bdaddr, LE_LINK,
+					ev->bdaddr_type, 1, NULL, rssi,
+					ev->length, ev->data);
 		hci_add_adv_entry(hdev, ev);
 		ev = (void *) (ev->data + ev->length + 1);
 	}

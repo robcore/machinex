@@ -2010,6 +2010,12 @@ config INTELLI_HOTPLUG
         help
           Generic Intelli-plug cpu hotplug driver for ARM SOCs
 
+config ALUCARD_HOTPLUG
+	bool "Enable alucard-hotplug cpu hotplug driver"
+	default y
+	help
+	  Generic Alucard-hotplug cpu hotplug driver for ARM SOCs
+
 config MSM_CPU_FREQ_SET_MIN_MAX
 	bool "Set Min/Max CPU frequencies."
 	default n
@@ -2081,6 +2087,13 @@ config CPU_VOLTAGE_TABLE
 	default y
 	help
 	  Krait User Voltage Control
+
+config ALUCARD_HOTPLUG_USE_RQ_STATS
+	bool "Enable alucard-hotplug msm rq statistics using"
+	depends on ALUCARD_HOTPLUG && MSM_RUN_QUEUE_STATS
+	default n
+	help
+	  Alucard-hotplug msm rq statics using
 
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"

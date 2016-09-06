@@ -285,8 +285,7 @@ void devfreq_monitor_resume(struct devfreq *devfreq)
 	if (!devfreq->stop_polling)
 		goto out;
 
-	if (!delayed_work_pending(&devfreq->work) &&
-			devfreq->profile->polling_ms)
+	if (devfreq->profile->polling_ms)
 		queue_delayed_work(devfreq_wq, &devfreq->work,
 			msecs_to_jiffies(devfreq->profile->polling_ms));
 	devfreq->stop_polling = false;
