@@ -34,13 +34,12 @@ struct files_stat_struct files_stat = {
 	.max_files = NR_FILE
 };
 
-
 /* SLAB cache for file structures */
 static struct kmem_cache *filp_cachep __read_mostly;
 
 static struct percpu_counter nr_files __cacheline_aligned_in_smp;
 
-static void file_free_rcu(struct rcu_head *head)
+static inline void file_free_rcu(struct rcu_head *head)
 {
 	struct file *f = container_of(head, struct file, f_u.fu_rcuhead);
 
@@ -268,6 +267,112 @@ void fput(struct file *file)
 
 EXPORT_SYMBOL(fput);
 
+struct file *fget(unsigned int fd)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	rcu_read_lock();
+	file = fcheck_files(files, fd);
+	if (file) {
+		/* File object ref couldn't be taken */
+		if (file->f_mode & FMODE_PATH ||
+		    !atomic_long_inc_not_zero(&file->f_count))
+			file = NULL;
+	}
+	rcu_read_unlock();
+
+	return file;
+}
+
+EXPORT_SYMBOL(fget);
+
+struct file *fget_raw(unsigned int fd)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	rcu_read_lock();
+	file = fcheck_files(files, fd);
+	if (file) {
+		/* File object ref couldn't be taken */
+		if (!atomic_long_inc_not_zero(&file->f_count))
+			file = NULL;
+	}
+	rcu_read_unlock();
+
+	return file;
+}
+
+EXPORT_SYMBOL(fget_raw);
+
+/*
+ * Lightweight file lookup - no refcnt increment if fd table isn't shared.
+ *
+ * You can use this instead of fget if you satisfy all of the following
+ * conditions:
+ * 1) You must call fput_light before exiting the syscall and returning control
+ *    to userspace (i.e. you cannot remember the returned struct file * after
+ *    returning to userspace).
+ * 2) You must not call filp_close on the returned struct file * in between
+ *    calls to fget_light and fput_light.
+ * 3) You must not clone the current task in between the calls to fget_light
+ *    and fput_light.
+ *
+ * The fput_needed flag returned by fget_light should be passed to the
+ * corresponding fput_light.
+ */
+struct file *fget_light(unsigned int fd, int *fput_needed)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	*fput_needed = 0;
+	if (atomic_read(&files->count) == 1) {
+		file = fcheck_files(files, fd);
+		if (file && (file->f_mode & FMODE_PATH))
+			file = NULL;
+	} else {
+		rcu_read_lock();
+		file = fcheck_files(files, fd);
+		if (file) {
+			if (!(file->f_mode & FMODE_PATH) &&
+			    atomic_long_inc_not_zero(&file->f_count))
+				*fput_needed = 1;
+			else
+				/* Didn't get the reference, someone's freed */
+				file = NULL;
+		}
+		rcu_read_unlock();
+	}
+
+	return file;
+}
+
+struct file *fget_raw_light(unsigned int fd, int *fput_needed)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	*fput_needed = 0;
+	if (atomic_read(&files->count) == 1) {
+		file = fcheck_files(files, fd);
+	} else {
+		rcu_read_lock();
+		file = fcheck_files(files, fd);
+		if (file) {
+			if (atomic_long_inc_not_zero(&file->f_count))
+				*fput_needed = 1;
+			else
+				/* Didn't get the reference, someone's freed */
+				file = NULL;
+		}
+		rcu_read_unlock();
+	}
+
+	return file;
+}
+
 void put_filp(struct file *file)
 {
 	if (atomic_long_dec_and_test(&file->f_count)) {
@@ -277,7 +382,7 @@ void put_filp(struct file *file)
 }
 
 void __init files_init(unsigned long mempages)
-{ 
+{
 	unsigned long n;
 
 	filp_cachep = kmem_cache_create("filp", sizeof(struct file), 0,
@@ -285,11 +390,11 @@ void __init files_init(unsigned long mempages)
 
 	/*
 	 * One file with associated inode and dcache is very roughly 1K.
-	 * Per default don't use more than 10% of our memory for files. 
-	 */ 
+	 * Per default don't use more than 10% of our memory for files.
+	 */
 
 	n = (mempages * (PAGE_SIZE / 1024)) / 10;
 	files_stat.max_files = max_t(unsigned long, n, NR_FILE);
 	files_defer_init();
 	percpu_counter_init(&nr_files, 0);
-} 
+}

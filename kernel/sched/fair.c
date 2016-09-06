@@ -3251,7 +3251,7 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	int want_sd = 1;
 	int sync = wake_flags & WF_SYNC;
 
-	if (p->nr_cpus_allowed == 1)
+	if (p->rt.nr_cpus_allowed == 1)
 		return prev_cpu;
 
 	if (sd_flag & SD_BALANCE_WAKE) {
@@ -4251,8 +4251,7 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 {
 	unsigned long scaled_load, load, max_cpu_load, min_cpu_load, max_nr_running;
 	int i;
-	unsigned int balance_cpu = -1;
-	unsigned long balance_load = ~0UL;
+	unsigned int balance_cpu = -1, first_idle_cpu = 0;
 	unsigned long avg_load_per_task = 0;
 
 	if (local_group)
@@ -4268,11 +4267,12 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 
 		/* Bias balancing toward cpus of our domain */
 		if (local_group) {
-			load = target_load(i, load_idx);
-			if (load < balance_load || idle_cpu(i)) {
-				balance_load = load;
+			if (idle_cpu(i) && !first_idle_cpu) {
+				first_idle_cpu = 1;
 				balance_cpu = i;
 			}
+
+			load = target_load(i, load_idx);
 		} else {
 			load = source_load(i, load_idx);
 			scaled_load = load * SCHED_POWER_SCALE

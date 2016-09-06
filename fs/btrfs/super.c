@@ -1131,7 +1131,6 @@ static int btrfs_remount(struct super_block *sb, int *flags, char *data)
 	unsigned int old_metadata_ratio = fs_info->metadata_ratio;
 	int ret;
 
-	sync_filesystem(sb);
 	ret = btrfs_parse_options(root, data);
 	if (ret) {
 		ret = -EINVAL;

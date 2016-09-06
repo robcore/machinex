@@ -471,6 +471,7 @@ static LIST_HEAD(unoptimizing_list);
 
 static void kprobe_optimizer(struct work_struct *work);
 static DECLARE_DELAYED_WORK(optimizing_work, kprobe_optimizer);
+static DECLARE_COMPLETION(optimizer_comp);
 #define OPTIMIZE_DELAY 5
 
 /*
@@ -551,7 +552,8 @@ static __kprobes void do_free_cleaned_kprobes(struct list_head *free_list)
 /* Start optimizer after OPTIMIZE_DELAY passed */
 static __kprobes void kick_kprobe_optimizer(void)
 {
-	schedule_delayed_work(&optimizing_work, OPTIMIZE_DELAY);
+	if (!delayed_work_pending(&optimizing_work))
+		schedule_delayed_work(&optimizing_work, OPTIMIZE_DELAY);
 }
 
 /* Kprobe jump optimizer */
@@ -590,25 +592,16 @@ static __kprobes void kprobe_optimizer(struct work_struct *work)
 	/* Step 5: Kick optimizer again if needed */
 	if (!list_empty(&optimizing_list) || !list_empty(&unoptimizing_list))
 		kick_kprobe_optimizer();
+	else
+		/* Wake up all waiters */
+		complete_all(&optimizer_comp);
 }
 
 /* Wait for completing optimization and unoptimization */
 static __kprobes void wait_for_kprobe_optimizer(void)
 {
-	mutex_lock(&kprobe_mutex);
-
-	while (!list_empty(&optimizing_list) || !list_empty(&unoptimizing_list)) {
-		mutex_unlock(&kprobe_mutex);
-
-		/* this will also make optimizing_work execute immmediately */
-		flush_delayed_work(&optimizing_work);
-		/* @optimizing_work might not have been queued yet, relax */
-		cpu_relax();
-
-		mutex_lock(&kprobe_mutex);
-	}
-
-	mutex_unlock(&kprobe_mutex);
+	if (delayed_work_pending(&optimizing_work))
+		wait_for_completion(&optimizer_comp);
 }
 
 /* Optimize kprobe if p is ready to be optimized */

@@ -71,7 +71,8 @@ static int ipc_memory_callback(struct notifier_block *self,
 		 * activate the ipcns notification chain.
 		 * No need to keep several ipc work items on the queue.
 		 */
-		schedule_work(&ipc_memory_wq);
+		if (!work_pending(&ipc_memory_wq))
+			schedule_work(&ipc_memory_wq);
 		break;
 	case MEM_GOING_ONLINE:
 	case MEM_GOING_OFFLINE:

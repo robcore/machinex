@@ -190,19 +190,20 @@ static void free_obj_work(struct work_struct *work)
 static void free_object(struct debug_obj *obj)
 {
 	unsigned long flags;
-	bool sched;
+	int sched = 0;
 
 	raw_spin_lock_irqsave(&pool_lock, flags);
 	/*
 	 * schedule work when the pool is filled and the cache is
 	 * initialized:
 	 */
-	sched = obj_pool_free > ODEBUG_POOL_SIZE && obj_cache;
+	if (obj_pool_free > ODEBUG_POOL_SIZE && obj_cache)
+		sched = keventd_up() && !work_pending(&debug_obj_work);
 	hlist_add_head(&obj->node, &obj_pool);
 	obj_pool_free++;
 	obj_pool_used--;
 	raw_spin_unlock_irqrestore(&pool_lock, flags);
-	if (sched && keventd_up())
+	if (sched)
 		schedule_work(&debug_obj_work);
 }
 

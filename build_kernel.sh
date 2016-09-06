@@ -13,7 +13,6 @@ find . -type f \( -iname \*.rej \
 					| parallel rm -fv {};
 export ARCH=arm
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-export USE_CCACHE=1
 env KCONFIG_NOTIMESTAMP=true
 make clean;
 make distclean;

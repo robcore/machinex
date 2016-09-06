@@ -333,9 +333,6 @@ The Inode Object
 
 An inode object represents an object within the filesystem.
 
-  truncate_range: a method provided by the underlying filesystem to truncate a
-  	range of blocks , i.e. punch a hole somewhere in a file.
-
 
 struct inode_operations
 -----------------------

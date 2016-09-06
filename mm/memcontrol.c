@@ -2957,7 +2957,24 @@ __mem_cgroup_commit_charge_swapin(struct page *page, struct mem_cgroup *memcg,
 	 */
 	if (do_swap_account && PageSwapCache(page)) {
 		swp_entry_t ent = {.val = page_private(page)};
-		mem_cgroup_uncharge_swap(ent);
+		struct mem_cgroup *swap_memcg;
+		unsigned short id;
+
+		id = swap_cgroup_record(ent, 0);
+		rcu_read_lock();
+		swap_memcg = mem_cgroup_lookup(id);
+		if (swap_memcg) {
+			/*
+			 * This recorded memcg can be obsolete one. So, avoid
+			 * calling css_tryget
+			 */
+			if (!mem_cgroup_is_root(swap_memcg))
+				res_counter_uncharge(&swap_memcg->memsw,
+						     PAGE_SIZE);
+			mem_cgroup_swap_statistics(swap_memcg, false);
+			mem_cgroup_put(swap_memcg);
+		}
+		rcu_read_unlock();
 	}
 	/*
 	 * At swapin, we may charge account against cgroup which has no tasks.
@@ -4870,6 +4887,7 @@ static int alloc_mem_cgroup_per_zone_info(struct mem_cgroup *memcg, int node)
 {
 	struct mem_cgroup_per_node *pn;
 	struct mem_cgroup_per_zone *mz;
+	enum lru_list lru;
 	int zone, tmp = node;
 	/*
 	 * This routine is called against possible nodes.
@@ -4887,7 +4905,8 @@ static int alloc_mem_cgroup_per_zone_info(struct mem_cgroup *memcg, int node)
 
 	for (zone = 0; zone < MAX_NR_ZONES; zone++) {
 		mz = &pn->zoneinfo[zone];
-		lruvec_init(&mz->lruvec, &NODE_DATA(node)->node_zones[zone]);
+		for_each_lru(lru)
+			INIT_LIST_HEAD(&mz->lruvec.lists[lru]);
 		mz->usage_in_excess = 0;
 		mz->on_tree = false;
 		mz->memcg = memcg;

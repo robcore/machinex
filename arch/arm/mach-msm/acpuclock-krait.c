@@ -861,8 +861,6 @@ static int init_clock_sources(struct scalable *sc,
 	return 0;
 }
 
-#ifndef CONFIG_ARCH_MSM8960
-#error this code here is dumb, keep it out.
 static void fill_cur_core_speed(struct core_speed *s,
 					  struct scalable *sc)
 {
@@ -913,29 +911,6 @@ static const struct acpu_level *find_min_acpu_level(void)
 
 	return NULL;
 }
-#else
-static const struct acpu_level *find_max_acpu_level(void)
-{
-	struct acpu_level *l, *rc = NULL;
-
-	for (l = drv.acpu_freq_tbl; l->speed.khz != 0; l++)
-		if (l->use_for_scaling)
-			rc = l;
-	return rc;
-}
-
-static const struct l2_level __init *find_max_l2_level(void)
-{
-	const struct acpu_level *l = NULL;
-
-	l = find_max_acpu_level();
-
-	if (l)
-		return &drv.l2_freq_tbl[l->l2_level];
-	else
-		return NULL;
-}
-#endif /* CONFIG_ARCH_MSM8960 */
 
 static int per_cpu_init(int cpu)
 {
@@ -949,7 +924,6 @@ static int per_cpu_init(int cpu)
 		goto err_ioremap;
 	}
 
-#ifndef CONFIG_ARCH_MSM8960
 	acpu_level = find_cur_acpu_level(cpu);
 	if (!acpu_level) {
 		acpu_level = find_min_acpu_level();
@@ -963,13 +937,7 @@ static int per_cpu_init(int cpu)
 		dev_dbg(drv.dev, "CPU%d is running at %lu KHz\n", cpu,
 			acpu_level->speed.khz);
 	}
-#else
-	acpu_level = find_max_acpu_level();
-	if (!acpu_level) {
-		ret = -ENODEV;
-		goto err_table;
-	}
-#endif /* CONFIG_ARCH_MSM8960 */
+
 	ret = regulator_init(sc, acpu_level);
 	if (ret)
 		goto err_regulators;
@@ -1299,7 +1267,6 @@ static void __init hw_init(void)
 				l2->vreg[VREG_HFPLL_B].max_vdd, false);
 	BUG_ON(rc);
 
-#ifndef CONFIG_ARCH_MSM8960
 	l2_level = find_cur_l2_level();
 	if (!l2_level) {
 		l2_level = drv.l2_freq_tbl;
@@ -1309,13 +1276,7 @@ static void __init hw_init(void)
 		dev_dbg(drv.dev, "L2 is running at %lu KHz\n",
 			l2_level->speed.khz);
 	}
-#else
-	l2_level = find_max_l2_level();
-	if (!l2_level) {
-		dev_err(drv.dev, "l2 init cannot find max L2 speed\n");
-		l2_level = drv.l2_freq_tbl;
-	}
-#endif
+
 	rc = init_clock_sources(l2, &l2_level->speed);
 	BUG_ON(rc);
 

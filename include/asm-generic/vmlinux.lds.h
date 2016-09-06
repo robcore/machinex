@@ -486,8 +486,8 @@
 	CPU_DISCARD(init.data)						\
 	MEM_DISCARD(init.data)						\
 	KERNEL_CTORS()							\
-	MCOUNT_REC()							\
 	*(.init.rodata)							\
+	MCOUNT_REC()							\
 	FTRACE_EVENTS()							\
 	TRACE_SYSCALLS()						\
 	DEV_DISCARD(init.rodata)					\

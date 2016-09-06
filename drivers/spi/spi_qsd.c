@@ -1574,42 +1574,19 @@ err_setup_exit:
 }
 
 #ifdef CONFIG_DEBUG_FS
-
-
 static int debugfs_iomem_x32_set(void *data, u64 val)
 {
-	struct msm_spi_regs *debugfs_spi_regs = (struct msm_spi_regs *)data;
-	struct msm_spi *dd = debugfs_spi_regs->dd;
-	int ret;
-
-	ret = pm_runtime_get_sync(dd->dev);
-	if (ret < 0)
-		return ret;
-
-	writel_relaxed(val, (dd->base + debugfs_spi_regs->offset));
+	writel_relaxed(val, data);
 	/* Ensure the previous write completed. */
 	mb();
-
-	pm_runtime_mark_last_busy(dd->dev);
-	pm_runtime_put_autosuspend(dd->dev);
 	return 0;
 }
 
 static int debugfs_iomem_x32_get(void *data, u64 *val)
 {
-	struct msm_spi_regs *debugfs_spi_regs = (struct msm_spi_regs *)data;
-	struct msm_spi *dd = debugfs_spi_regs->dd;
-	int ret;
-
-	ret = pm_runtime_get_sync(dd->dev);
-	if (ret < 0)
-		return ret;
-	*val = readl_relaxed(dd->base + debugfs_spi_regs->offset);
+	*val = readl_relaxed(data);
 	/* Ensure the previous read completed. */
 	mb();
-
-	pm_runtime_mark_last_busy(dd->dev);
-	pm_runtime_put_autosuspend(dd->dev);
 	return 0;
 }
 
@@ -1623,13 +1600,12 @@ static void spi_debugfs_init(struct msm_spi *dd)
 		int i;
 
 		for (i = 0; i < ARRAY_SIZE(debugfs_spi_regs); i++) {
-			debugfs_spi_regs[i].dd = dd;
 			dd->debugfs_spi_regs[i] =
 			   debugfs_create_file(
 			       debugfs_spi_regs[i].name,
 			       debugfs_spi_regs[i].mode,
 			       dd->dent_spi,
-			       debugfs_spi_regs+i,
+			       dd->base + debugfs_spi_regs[i].offset,
 			       &fops_iomem_x32);
 		}
 	}
@@ -2182,6 +2158,7 @@ skip_dma_resources:
 		dev_err(&pdev->dev, "failed to create dev. attrs : %d\n", rc);
 		goto err_attrs;
 	}
+
 	spi_debugfs_init(dd);
 
 	return 0;

@@ -36,8 +36,16 @@
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 #define LOCKDEP_INIT_MAP lockdep_init_map
+
+#define DEFINE_LGLOCK_LOCKDEP(name)					\
+ struct lock_class_key name##_lock_key;					\
+ struct lockdep_map name##_lock_dep_map;				\
+ EXPORT_SYMBOL(name##_lock_dep_map)
+
 #else
 #define LOCKDEP_INIT_MAP(a, b, c, d)
+
+#define DEFINE_LGLOCK_LOCKDEP(name)
 #endif
 
 struct lglock {
@@ -49,7 +57,8 @@ struct lglock {
 };
 
 #define DEFINE_LGLOCK(name)						\
-	static DEFINE_PER_CPU(arch_spinlock_t, name ## _lock)		\
+	DEFINE_LGLOCK_LOCKDEP(name);					\
+	DEFINE_PER_CPU(arch_spinlock_t, name ## _lock)			\
 	= __ARCH_SPIN_LOCK_UNLOCKED;					\
 	struct lglock name = { .lock = &name ## _lock }
 

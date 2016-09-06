@@ -1594,8 +1594,8 @@ rb_add_time_stamp(struct ring_buffer_event *event, u64 delta)
 }
 
 /**
- * rb_update_event - update event type and data
- * @event: the event to update
+ * ring_buffer_update_event - update event type and data
+ * @event: the even to update
  * @type: the type of event
  * @length: the size of the event field in the ring buffer
  *
@@ -2868,16 +2868,21 @@ static void rb_iter_reset(struct ring_buffer_iter *iter)
 	struct ring_buffer_per_cpu *cpu_buffer = iter->cpu_buffer;
 
 	/* Iterator usage is expected to have record disabled */
-	iter->head_page = cpu_buffer->reader_page;
-	iter->head = cpu_buffer->reader_page->read;
-
-	iter->cache_reader_page = iter->head_page;
-	iter->cache_read = cpu_buffer->read;
-
+	if (list_empty(&cpu_buffer->reader_page->list)) {
+		iter->head_page = rb_set_head_page(cpu_buffer);
+		if (unlikely(!iter->head_page))
+			return;
+		iter->head = iter->head_page->read;
+	} else {
+		iter->head_page = cpu_buffer->reader_page;
+		iter->head = cpu_buffer->reader_page->read;
+	}
 	if (iter->head)
 		iter->read_stamp = cpu_buffer->read_stamp;
 	else
 		iter->read_stamp = iter->head_page->page->time_stamp;
+	iter->cache_reader_page = cpu_buffer->reader_page;
+	iter->cache_read = cpu_buffer->read;
 }
 
 /**
@@ -3266,14 +3271,12 @@ rb_iter_peek(struct ring_buffer_iter *iter, u64 *ts)
 		return NULL;
 
 	/*
-	 * We repeat when a time extend is encountered or we hit
-	 * the end of the page. Since the time extend is always attached
-	 * to a data event, we should never loop more than three times.
-	 * Once for going to next page, once on time extend, and
-	 * finally once to get the event.
-	 * (We never hit the following condition more than thrice).
+	 * We repeat when a time extend is encountered.
+	 * Since the time extend is always attached to a data event,
+	 * we should never loop more than once.
+	 * (We never hit the following condition more than twice).
 	 */
-	if (RB_WARN_ON(cpu_buffer, ++nr_loops > 3))
+	if (RB_WARN_ON(cpu_buffer, ++nr_loops > 2))
 		return NULL;
 
 	if (rb_per_cpu_empty(cpu_buffer))

@@ -298,10 +298,6 @@ unsigned long shrink_slab(struct shrink_control *shrink,
 		long new_nr;
 		long batch_size = shrinker->batch ? shrinker->batch
 						  : SHRINK_BATCH;
-		long min_cache_size = batch_size;
-
-		if (current_is_kswapd())
-			min_cache_size = 0;
 
 		max_pass = do_shrinker_shrink(shrinker, shrink, 0);
 		if (max_pass <= 0)
@@ -353,11 +349,8 @@ unsigned long shrink_slab(struct shrink_control *shrink,
 					nr_pages_scanned, lru_pages,
 					max_pass, delta, total_scan);
 
-		while (total_scan > min_cache_size) {
+		while (total_scan >= batch_size) {
 			int nr_before;
-
-			if (total_scan < batch_size)
-				batch_size = total_scan;
 
 			nr_before = do_shrinker_shrink(shrinker, shrink, 0);
 			shrink_ret = do_shrinker_shrink(shrinker, shrink,
@@ -1290,11 +1283,11 @@ static int too_many_isolated(struct zone *zone, int file,
 }
 
 static noinline_for_stack void
-putback_inactive_pages(struct lruvec *lruvec,
+putback_inactive_pages(struct mem_cgroup_zone *mz,
 		       struct list_head *page_list)
 {
-	struct zone_reclaim_stat *reclaim_stat = &lruvec->reclaim_stat;
-	struct zone *zone = lruvec_zone(lruvec);
+	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
+	struct zone *zone = mz->zone;
 	LIST_HEAD(pages_to_free);
 
 	/*
@@ -1413,7 +1406,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct mem_cgroup_zone *mz,
 					       nr_reclaimed);
 	}
 
-	putback_inactive_pages(lruvec, &page_list);
+	putback_inactive_pages(mz, &page_list);
 
 	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, -nr_taken);
 
