@@ -27,7 +27,7 @@ struct kmem_cache {
 	unsigned int limit;
 	unsigned int shared;
 
-	unsigned int buffer_size;
+	unsigned int size;
 	u32 reciprocal_buffer_size;
 /* 2) touched by every alloc & free from the backend */
 
@@ -52,7 +52,10 @@ struct kmem_cache {
 
 /* 4) cache creation/removal */
 	const char *name;
-	struct list_head next;
+	struct list_head list;
+	int refcount;
+	int object_size;
+	int align;
 
 /* 5) statistics */
 #ifdef CONFIG_DEBUG_SLAB
@@ -73,12 +76,11 @@ struct kmem_cache {
 
 	/*
 	 * If debugging is enabled, then the allocator can add additional
-	 * fields and/or padding to every object. buffer_size contains the total
+	 * fields and/or padding to every object. size contains the total
 	 * object size including these internal fields, the following two
 	 * variables contain the offset to the user object and its size.
 	 */
 	int obj_offset;
-	int obj_size;
 #endif /* CONFIG_DEBUG_SLAB */
 
 /* 6) per-cpu/per-node data, touched during every alloc/free */
@@ -112,16 +114,11 @@ void *__kmalloc(size_t size, gfp_t flags);
 #ifdef CONFIG_TRACING
 extern void *kmem_cache_alloc_trace(size_t size,
 				    struct kmem_cache *cachep, gfp_t flags);
-extern size_t slab_buffer_size(struct kmem_cache *cachep);
 #else
 static __always_inline void *
 kmem_cache_alloc_trace(size_t size, struct kmem_cache *cachep, gfp_t flags)
 {
 	return kmem_cache_alloc(cachep, flags);
-}
-static inline size_t slab_buffer_size(struct kmem_cache *cachep)
-{
-	return 0;
 }
 #endif
 
