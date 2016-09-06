@@ -889,7 +889,6 @@ static int validate_mmap_request(struct file *file,
 				 unsigned long *_capabilities)
 {
 	unsigned long capabilities, rlen;
-	unsigned long reqprot = prot;
 	int ret;
 
 	/* do the simple checks first */
@@ -1047,7 +1046,7 @@ static int validate_mmap_request(struct file *file,
 	}
 
 	/* allow the security API to have its say */
-	ret = security_file_mmap(file, reqprot, prot, flags, addr, 0);
+	ret = security_mmap_addr(addr);
 	if (ret < 0)
 		return ret;
 
@@ -1233,7 +1232,7 @@ enomem:
 /*
  * handle mapping creation for uClinux
  */
-static unsigned long do_mmap_pgoff(struct file *file,
+unsigned long do_mmap_pgoff(struct file *file,
 			    unsigned long addr,
 			    unsigned long len,
 			    unsigned long prot,
@@ -1471,7 +1470,7 @@ error_getting_region:
 	return -ENOMEM;
 }
 
-unsigned long do_mmap(struct file *file, unsigned long addr,
+static unsigned long do_mmap(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
 	unsigned long flag, unsigned long offset)
 {
@@ -1481,7 +1480,6 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
 		return -EINVAL;
 	return do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
 }
-EXPORT_SYMBOL(do_mmap);
 
 unsigned long vm_mmap(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
@@ -1490,9 +1488,12 @@ unsigned long vm_mmap(struct file *file, unsigned long addr,
 	unsigned long ret;
 	struct mm_struct *mm = current->mm;
 
-	down_write(&mm->mmap_sem);
-	ret = do_mmap(file, addr, len, prot, flag, offset);
-	up_write(&mm->mmap_sem);
+	ret = security_mmap_file(file, prot, flag);
+	if (!ret) {
+		down_write(&mm->mmap_sem);
+		ret = do_mmap(file, addr, len, prot, flag, offset);
+		up_write(&mm->mmap_sem);
+	}
 	return ret;
 }
 EXPORT_SYMBOL(vm_mmap);
@@ -1513,9 +1514,12 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
-	down_write(&current->mm->mmap_sem);
-	retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff);
-	up_write(&current->mm->mmap_sem);
+	ret = security_mmap_file(file, prot, flags);
+	if (!ret) {
+		down_write(&current->mm->mmap_sem);
+		retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff);
+		up_write(&current->mm->mmap_sem);
+	}
 
 	if (file)
 		fput(file);
