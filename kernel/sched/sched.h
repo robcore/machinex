@@ -455,6 +455,8 @@ struct rq {
 	u64 cumulative_runnable_avg;
 #endif
 
+	int cur_freq, max_freq, min_freq;
+
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
 	u64 prev_irq_time;
 #endif
