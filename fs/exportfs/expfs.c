@@ -304,23 +304,24 @@ out:
 
 /**
  * export_encode_fh - default export_operations->encode_fh function
- * @inode:   the object to encode
+ * @dentry:  the dentry to encode
  * @fh:      where to store the file handle fragment
  * @max_len: maximum length to store there
- * @parent:  parent directory inode, if wanted
+ * @connectable: whether to store parent information
  *
  * This default encode_fh function assumes that the 32 inode number
  * is suitable for locating an inode, and that the generation number
  * can be used to check that it is still valid.  It places them in the
  * filehandle fragment where export_decode_fh expects to find them.
  */
-static int export_encode_fh(struct inode *inode, struct fid *fid,
-		int *max_len, struct inode *parent)
+static int export_encode_fh(struct dentry *dentry, struct fid *fid,
+		int *max_len, int connectable)
 {
+	struct inode * inode = dentry->d_inode;
 	int len = *max_len;
 	int type = FILEID_INO32_GEN;
 
-	if (parent && (len < 4)) {
+	if (connectable && (len < 4)) {
 		*max_len = 4;
 		return 255;
 	} else if (len < 2) {
@@ -331,9 +332,14 @@ static int export_encode_fh(struct inode *inode, struct fid *fid,
 	len = 2;
 	fid->i32.ino = inode->i_ino;
 	fid->i32.gen = inode->i_generation;
-	if (parent) {
+	if (connectable && !S_ISDIR(inode->i_mode)) {
+		struct inode *parent;
+
+		spin_lock(&dentry->d_lock);
+		parent = dentry->d_parent->d_inode;
 		fid->i32.parent_ino = parent->i_ino;
 		fid->i32.parent_gen = parent->i_generation;
+		spin_unlock(&dentry->d_lock);
 		len = 4;
 		type = FILEID_INO32_GEN_PARENT;
 	}
@@ -346,22 +352,11 @@ int exportfs_encode_fh(struct dentry *dentry, struct fid *fid, int *max_len,
 {
 	const struct export_operations *nop = dentry->d_sb->s_export_op;
 	int error;
-	struct dentry *p = NULL;
-	struct inode *inode = dentry->d_inode, *parent = NULL;
 
-	if (connectable && !S_ISDIR(inode->i_mode)) {
-		p = dget_parent(dentry);
-		/*
-		 * note that while p might've ceased to be our parent already,
-		 * it's still pinned by and still positive.
-		 */
-		parent = p->d_inode;
-	}
 	if (nop->encode_fh)
-		error = nop->encode_fh(inode, fid->raw, max_len, parent);
+		error = nop->encode_fh(dentry, fid->raw, max_len, connectable);
 	else
-		error = export_encode_fh(inode, fid, max_len, parent);
-	dput(p);
+		error = export_encode_fh(dentry, fid, max_len, connectable);
 
 	return error;
 }
