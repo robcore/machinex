@@ -69,11 +69,7 @@ static struct hotplug_tuners {
 #endif
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
-#ifdef CONFIG_MACH_JF
-	.hotplug_enable = 1,
-#else
 	.hotplug_enable = 0,
-#endif
 	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
 	.maxcoreslimit_sleep = 1,
@@ -243,7 +239,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			check_up = (pcpu_info->cur_up_rate % pcpu_info->up_rate == 0);
 			check_down = (pcpu_info->cur_down_rate % pcpu_info->down_rate == 0);
 
-			if (cpu > 0 
+			if (cpu > 0
 				&& ((online_cpus - offline_cpu) > upmaxcoreslimit)) {
 					hotplug_onoff[cpu] = OFF;
 					pcpu_info->cur_up_rate = 1;
@@ -271,8 +267,8 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 				&& upcpu < upmaxcoreslimit
 				&& (!cpu_online(upcpu))
 				&& (online_cpus + online_cpu) < upmaxcoreslimit
- 			    && cur_load >= pcpu_info->up_load 
-				&& cur_freq >= pcpu_info->up_freq 
+ 			    && cur_load >= pcpu_info->up_load
+				&& cur_freq >= pcpu_info->up_freq
 				&& rq_avg > pcpu_info->up_rq) {
 					++pcpu_info->cur_up_rate;
 					if (check_up) {
@@ -285,7 +281,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 						++online_cpu;
 					}
 			} else if (cpu >= min_cpus_online
-					   && (cur_load < pcpu_info->down_load 
+					   && (cur_load < pcpu_info->down_load
 						   || (cur_freq <= pcpu_info->down_freq
 						       && rq_avg <= pcpu_info->down_rq))) {
 							++pcpu_info->cur_down_rate;
@@ -340,7 +336,7 @@ static void __ref alucard_hotplug_early_suspend(struct early_suspend *handler)
 #endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
-		&& hotplug_tuners_ins.hotplug_suspend == 1) { 
+		&& hotplug_tuners_ins.hotplug_suspend == 1) {
 			mutex_lock(&hotplug_tuners_ins.alu_hotplug_mutex);
 			hotplug_tuners_ins.suspended = true;
 			mutex_unlock(&hotplug_tuners_ins.alu_hotplug_mutex);
