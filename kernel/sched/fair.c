@@ -2994,10 +2994,6 @@ static int wake_wide(struct task_struct *p)
 {
 	int factor = this_cpu_read(sd_llc_size);
 
-	if (!(current->flags & PF_WAKE_UP_IDLE) &&
-	    !(p->flags & PF_WAKE_UP_IDLE))
-		return target;
-
 	/*
 	 * Yeah, it's the switching-frequency, could means many wakee or
 	 * rapidly switch, use factor here will just help to automatically
