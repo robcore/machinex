@@ -2531,6 +2531,12 @@ void shmem_unlock_mapping(struct address_space *mapping)
 {
 }
 
+void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
+{
+	truncate_inode_pages_range(inode->i_mapping, lstart, lend);
+}
+EXPORT_SYMBOL_GPL(shmem_truncate_range);
+
 int vmtruncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 {
 	/* Only CONFIG_SHMEM shmem.c ever supported i_op->truncate_range(). */
