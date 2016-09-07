@@ -112,7 +112,7 @@ static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
 /* Hi speed to bump to from lo speed when load burst (default max) */
-static unsigned int hispeed_freq = 1890000;
+static unsigned int hispeed_freq = 1674000;
 
 /* Go to hi speed when CPU load at or above this value. */
 #define DEFAULT_GO_HISPEED_LOAD 99
@@ -234,7 +234,7 @@ static unsigned int sampling_down_factor_set[MAX_PARAM_SET];
  * sync_freq
  */
 static unsigned int up_threshold_any_cpu_load = 95;
-static unsigned int sync_freq = 1134000;
+static unsigned int sync_freq = 1026000;
 static unsigned int up_threshold_any_cpu_freq = 918000;
 
 static int cpufreq_governor_arteractive(struct cpufreq_policy *policy,
@@ -1963,21 +1963,21 @@ static void cpufreq_interactive_nop_timer(unsigned long data)
 {
 }
 
-static void arteractive_early_suspend(struct power_suspend *handler)
+static void arteractive_power_suspend(struct power_suspend *handler)
 {
 	suspended = true;
 	return;
 }
 
-static void arteractive_late_resume(struct power_suspend *handler)
+static void arteractive_power_resume(struct power_suspend *handler)
 {
 	suspended = false;
 	return;
 }
 
 static struct power_suspend arteractive_suspend = {
-	.suspend = arteractive_early_suspend,
-	.resume = arteractive_late_resume,
+	.suspend = arteractive_power_suspend,
+	.resume = arteractive_power_resume,
 };
 
 static void cpufreq_interactive_timer(unsigned long data)

@@ -104,7 +104,7 @@ static struct alucard_tuners {
 	.dec_cpu_load_at_min_freq = DEC_CPU_LOAD_AT_MIN_FREQ,
 	.dec_cpu_load = DEC_CPU_LOAD,
 	.freq_responsiveness = FREQ_RESPONSIVENESS,
-	.io_is_busy = 1,
+	.io_is_busy = 0,
 	.cpus_up_rate = CPUS_UP_RATE,
 	.cpus_down_rate = CPUS_DOWN_RATE,
 };
