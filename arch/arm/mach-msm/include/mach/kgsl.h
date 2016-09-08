@@ -43,7 +43,7 @@
 extern int graphics_boost;
 #endif
 #ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
-extern int graphics_boost_electroactive
+extern int graphics_boost_electroactive;
 #endif
 
 enum kgsl_iommu_context_id {
