@@ -5259,10 +5259,7 @@ EXPORT_SYMBOL(yield);
  * It's the caller's job to ensure that the target task struct
  * can't go away on us before we can do any checks.
  *
- * Returns:
- *	true (>0) if we indeed boosted the target task.
- *	false (0) if we failed to boost the target.
- *	-ESRCH if there's no task to yield to.
+ * Returns true if we indeed boosted the target task.
  */
 bool __sched yield_to(struct task_struct *p, bool preempt)
 {
@@ -5276,15 +5273,6 @@ bool __sched yield_to(struct task_struct *p, bool preempt)
 
 again:
 	p_rq = task_rq(p);
-	/*
-	 * If we're the only runnable task on the rq and target rq also
-	 * has only one task, there's absolutely no point in yielding.
-	 */
-	if (rq->nr_running == 1 && p_rq->nr_running == 1) {
-		yielded = -ESRCH;
-		goto out_irq;
-	}
-
 	double_rq_lock(rq, p_rq);
 	while (task_rq(p) != p_rq) {
 		double_rq_unlock(rq, p_rq);
@@ -5292,13 +5280,13 @@ again:
 	}
 
 	if (!curr->sched_class->yield_to_task)
-		goto out_unlock;
+		goto out;
 
 	if (curr->sched_class != p->sched_class)
-		goto out_unlock;
+		goto out;
 
 	if (task_running(p_rq, p) || p->state)
-		goto out_unlock;
+		goto out;
 
 	yielded = curr->sched_class->yield_to_task(rq, p, preempt);
 	if (yielded) {
@@ -5318,12 +5306,11 @@ again:
 		rq->skip_clock_update = 0;
 	}
 
-out_unlock:
+out:
 	double_rq_unlock(rq, p_rq);
-out_irq:
 	local_irq_restore(flags);
 
-	if (yielded > 0)
+	if (yielded)
 		schedule();
 
 	return yielded;
