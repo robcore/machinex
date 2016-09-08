@@ -49,7 +49,7 @@ int ___ratelimit(struct ratelimit_state *rs, const char *func)
 		if (rs->missed)
 			pr_debug("%s: %d callbacks suppressed\n",
 				func, rs->missed);
-		rs->begin   = 0;
+		rs->begin   = jiffies;
 		rs->printed = 0;
 		rs->missed  = 0;
 	}
