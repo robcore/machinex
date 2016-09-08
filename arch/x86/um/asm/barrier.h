@@ -54,7 +54,8 @@
 #define smp_mb()	barrier()
 #define smp_rmb()	barrier()
 #define smp_wmb()	barrier()
-#define smp_read_barrier_depends()	do { } while (0)
+
+#define set_mb(var, value) do { WRITE_ONCE(var, value); barrier(); } while (0)
 #define set_mb(var, value) do { var = value; barrier(); } while (0)
 
 #endif /* CONFIG_SMP */
