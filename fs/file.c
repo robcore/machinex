@@ -6,7 +6,6 @@
  *  Manage the dynamic fd arrays in the process files_struct.
  */
 
-#include <linux/syscalls.h>
 #include <linux/export.h>
 #include <linux/fs.h>
 #include <linux/mm.h>
@@ -91,8 +90,16 @@ static void free_fdtable_rcu(struct rcu_head *rcu)
 	struct fdtable_defer *fddef;
 
 	BUG_ON(!fdt);
-	BUG_ON(fdt->max_fds <= NR_OPEN_DEFAULT);
 
+	if (fdt->max_fds <= NR_OPEN_DEFAULT) {
+		/*
+		 * This fdtable is embedded in the files structure and that
+		 * structure itself is getting destroyed.
+		 */
+		kmem_cache_free(files_cachep,
+				container_of(fdt, struct files_struct, fdtab));
+		return;
+	}
 	if (!is_vmalloc_addr(fdt->fd) && !is_vmalloc_addr(fdt->open_fds)) {
 		kfree(fdt->fd);
 		kfree(fdt->open_fds);
@@ -107,6 +114,11 @@ static void free_fdtable_rcu(struct rcu_head *rcu)
 		spin_unlock(&fddef->lock);
 		put_cpu_var(fdtable_defer_list);
 	}
+}
+
+static inline void free_fdtable(struct fdtable *fdt)
+{
+	call_rcu(&fdt->rcu, free_fdtable_rcu);
 }
 
 /*
@@ -226,7 +238,7 @@ static int expand_fdtable(struct files_struct *files, int nr)
 		copy_fdtable(new_fdt, cur_fdt);
 		rcu_assign_pointer(files->fdt, new_fdt);
 		if (cur_fdt->max_fds > NR_OPEN_DEFAULT)
-			call_rcu(&cur_fdt->rcu, free_fdtable_rcu);
+			free_fdtable(cur_fdt);
 	} else {
 		/* Somebody else expanded, so undo our attempt */
 		__free_fdtable(new_fdt);
@@ -455,14 +467,18 @@ void put_files_struct(struct files_struct *files)
 
 	if (atomic_dec_and_test(&files->count)) {
 		close_files(files);
-		/* not really needed, since nobody can see us */
+		/*
+		 * Free the fd and fdset arrays if we expanded them.
+		 * If the fdtable was embedded, pass files for freeing
+		 * at the end of the RCU grace period. Otherwise,
+		 * you can free files immediately.
+		 */
 		rcu_read_lock();
 		fdt = files_fdtable(files);
-		rcu_read_unlock();
-		/* free the arrays if they are not embedded */
 		if (fdt != &files->fdtab)
-			__free_fdtable(fdt);
-		kmem_cache_free(files_cachep, files);
+			kmem_cache_free(files_cachep, files);
+		free_fdtable(fdt);
+		rcu_read_unlock();
 	}
 }
 
@@ -574,85 +590,8 @@ out:
 	return error;
 }
 
-int get_unused_fd_flags(unsigned flags)
+int get_unused_fd(void)
 {
-	return alloc_fd(0, flags);
+	return alloc_fd(0, 0);
 }
-EXPORT_SYMBOL(get_unused_fd_flags);
-
-int iterate_fd(struct files_struct *files, unsigned n,
-		int (*f)(const void *, struct file *, unsigned),
-		const void *p)
-{
-	struct fdtable *fdt;
-	struct file *file;
-	int res = 0;
-	if (!files)
-		return 0;
-	spin_lock(&files->file_lock);
-	fdt = files_fdtable(files);
-	while (!res && n < fdt->max_fds) {
-		file = rcu_dereference_check_fdtable(files, fdt->fd[n++]);
-		if (file)
-			res = f(p, file, n);
-	}
-	spin_unlock(&files->file_lock);
-	return res;
-}
-EXPORT_SYMBOL(iterate_fd);
-
-static void __put_unused_fd(struct files_struct *files, unsigned int fd)
-{
-	struct fdtable *fdt = files_fdtable(files);
-	__clear_open_fd(fd, fdt);
-	if (fd < files->next_fd)
-		files->next_fd = fd;
-}
-
-void put_unused_fd(unsigned int fd)
-{
-	struct files_struct *files = current->files;
-	spin_lock(&files->file_lock);
-	__put_unused_fd(files, fd);
-	spin_unlock(&files->file_lock);
-}
-
-EXPORT_SYMBOL(put_unused_fd);
-
-/*
- * Install a file pointer in the fd array.
- *
- * The VFS is full of places where we drop the files lock between
- * setting the open_fds bitmap and installing the file in the file
- * array.  At any such point, we are vulnerable to a dup2() race
- * installing a file in the array before us.  We need to detect this and
- * fput() the struct file we are about to overwrite in this case.
- *
- * It should never happen - if we allow dup2() do it, _really_ bad things
- * will follow.
- *
- * NOTE: __fd_install() variant is really, really low-level; don't
- * use it unless you are forced to by truly lousy API shoved down
- * your throat.  'files' *MUST* be either current->files or obtained
- * by get_files_struct(current) done by whoever had given it to you,
- * or really bad things will happen.  Normally you want to use
- * fd_install() instead.
- */
-
-void __fd_install(struct files_struct *files, unsigned int fd,
-		struct file *file)
-{
-	struct fdtable *fdt;
-	spin_lock(&files->file_lock);
-	fdt = files_fdtable(files);
-	BUG_ON(fdt->fd[fd] != NULL);
-	rcu_assign_pointer(fdt->fd[fd], file);
-	spin_unlock(&files->file_lock);
-}
-
-void fd_install(unsigned int fd, struct file *file)
-{
-	__fd_install(current->files, fd, file);
-}
-
-EXPORT_SYMBOL(fd_install);
+EXPORT_SYMBOL(get_unused_fd);

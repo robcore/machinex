@@ -1071,16 +1071,18 @@ fail_inode:
 	return NULL;
 }
 
-int create_pipe_files(struct file **res, int flags)
+struct file *create_write_pipe(int flags)
 {
 	int err;
-	struct inode *inode = get_pipe_inode();
+	struct inode *inode;
 	struct file *f;
 	struct path path;
-	static struct qstr name = { .name = "" };
+	struct qstr name = { .name = "" };
 
+	err = -ENFILE;
+	inode = get_pipe_inode();
 	if (!inode)
-		return -ENFILE;
+		goto err;
 
 	err = -ENOMEM;
 	path.dentry = d_alloc_pseudo(pipe_mnt->mnt_sb, &name);
@@ -1094,43 +1096,62 @@ int create_pipe_files(struct file **res, int flags)
 	f = alloc_file(&path, FMODE_WRITE, &write_pipefifo_fops);
 	if (!f)
 		goto err_dentry;
+	f->f_mapping = inode->i_mapping;
 
 	f->f_flags = O_WRONLY | (flags & (O_NONBLOCK | O_DIRECT));
+	f->f_version = 0;
 
-	res[0] = alloc_file(&path, FMODE_READ, &read_pipefifo_fops);
-	if (!res[0])
-		goto err_file;
+	return f;
 
-	path_get(&path);
-	res[0]->f_flags = O_RDONLY | (flags & O_NONBLOCK);
-	res[1] = f;
-	return 0;
-
-err_file:
-	put_filp(f);
-err_dentry:
+ err_dentry:
 	free_pipe_info(inode);
 	path_put(&path);
-	return err;
+	return ERR_PTR(err);
 
-err_inode:
+ err_inode:
 	free_pipe_info(inode);
 	iput(inode);
-	return err;
+ err:
+	return ERR_PTR(err);
+}
+
+void free_write_pipe(struct file *f)
+{
+	free_pipe_info(f->f_dentry->d_inode);
+	path_put(&f->f_path);
+	put_filp(f);
+}
+
+struct file *create_read_pipe(struct file *wrf, int flags)
+{
+	/* Grab pipe from the writer */
+	struct file *f = alloc_file(&wrf->f_path, FMODE_READ,
+				    &read_pipefifo_fops);
+	if (!f)
+		return ERR_PTR(-ENFILE);
+
+	path_get(&wrf->f_path);
+	f->f_flags = O_RDONLY | (flags & O_NONBLOCK);
+
+	return f;
 }
 
 int do_pipe_flags(int *fd, int flags)
 {
-	struct file *files[2];
+	struct file *fw, *fr;
 	int error;
 	int fdw, fdr;
 
 	if (flags & ~(O_CLOEXEC | O_NONBLOCK | O_DIRECT))
 		return -EINVAL;
 
-	error = create_pipe_files(files, flags);
-	if (error)
-		return error;
+	fw = create_write_pipe(flags);
+	if (IS_ERR(fw))
+		return PTR_ERR(fw);
+	fr = create_read_pipe(fw, flags);
+	error = PTR_ERR(fr);
+	if (IS_ERR(fr))
+		goto err_write_pipe;
 
 	error = get_unused_fd_flags(flags);
 	if (error < 0)
@@ -1143,8 +1164,8 @@ int do_pipe_flags(int *fd, int flags)
 	fdw = error;
 
 	audit_fd_pair(fdr, fdw);
-	fd_install(fdr, files[0]);
-	fd_install(fdw, files[1]);
+	fd_install(fdr, fr);
+	fd_install(fdw, fw);
 	fd[0] = fdr;
 	fd[1] = fdw;
 
@@ -1153,8 +1174,10 @@ int do_pipe_flags(int *fd, int flags)
  err_fdr:
 	put_unused_fd(fdr);
  err_read_pipe:
-	fput(files[0]);
-	fput(files[1]);
+	path_put(&fr->f_path);
+	put_filp(fr);
+ err_write_pipe:
+	free_write_pipe(fw);
 	return error;
 }
 

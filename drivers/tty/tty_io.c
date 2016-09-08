@@ -1172,8 +1172,10 @@ ssize_t redirected_tty_write(struct file *file, const char __user *buf,
 	struct file *p = NULL;
 
 	spin_lock(&redirect_lock);
-	if (redirect)
-		p = get_file(redirect);
+	if (redirect) {
+		get_file(redirect);
+		p = redirect;
+	}
 	spin_unlock(&redirect_lock);
 
 	if (p) {
@@ -2274,7 +2276,8 @@ static int tioccons(struct file *file)
 		spin_unlock(&redirect_lock);
 		return -EBUSY;
 	}
-	redirect = get_file(file);
+	get_file(file);
+	redirect = file;
 	spin_unlock(&redirect_lock);
 	return 0;
 }
@@ -2850,13 +2853,6 @@ static long tty_compat_ioctl(struct file *file, unsigned int cmd,
 }
 #endif
 
-static int this_tty(const void *t, struct file *file, unsigned fd)
-{
-	if (likely(file->f_op->read != tty_read))
-		return 0;
-	return file_tty(file) != t ? 0 : fd + 1;
-}
-	
 /*
  * This implements the "Secure Attention Key" ---  the idea is to
  * prevent trojan horses by killing all processes associated with this
@@ -2884,6 +2880,8 @@ void __do_SAK(struct tty_struct *tty)
 	struct task_struct *g, *p;
 	struct pid *session;
 	int		i;
+	struct file	*filp;
+	struct fdtable *fdt;
 
 	if (!tty)
 		return;
@@ -2913,12 +2911,27 @@ void __do_SAK(struct tty_struct *tty)
 			continue;
 		}
 		task_lock(p);
-		i = iterate_fd(p->files, 0, this_tty, tty);
-		if (i != 0) {
-			printk(KERN_NOTICE "SAK: killed process %d"
-			    " (%s): fd#%d opened to the tty\n",
-				    task_pid_nr(p), p->comm, i - 1);
-			force_sig(SIGKILL, p);
+		if (p->files) {
+			/*
+			 * We don't take a ref to the file, so we must
+			 * hold ->file_lock instead.
+			 */
+			spin_lock(&p->files->file_lock);
+			fdt = files_fdtable(p->files);
+			for (i = 0; i < fdt->max_fds; i++) {
+				filp = fcheck_files(p->files, i);
+				if (!filp)
+					continue;
+				if (filp->f_op->read == tty_read &&
+				    file_tty(filp) == tty) {
+					printk(KERN_NOTICE "SAK: killed process %d"
+					    " (%s): fd#%d opened to the tty\n",
+					    task_pid_nr(p), p->comm, i);
+					force_sig(SIGKILL, p);
+					break;
+				}
+			}
+			spin_unlock(&p->files->file_lock);
 		}
 		task_unlock(p);
 	} while_each_thread(g, p);
