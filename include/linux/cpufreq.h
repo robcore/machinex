@@ -607,7 +607,7 @@ extern struct cpufreq_governor cpufreq_gov_cafactive;
 #define CPUFREQ_TABLE_END     ~1
 
 struct cpufreq_frequency_table {
-	unsigned int	index;     /* any */
+	unsigned int	driver_data; /* driver specific data, not used by core */
 	unsigned int	frequency; /* kHz - doesn't need to be in ascending
 				    * order */
 };
