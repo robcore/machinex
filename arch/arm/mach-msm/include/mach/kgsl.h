@@ -39,8 +39,11 @@
 	 (((_mi) & 0xFF) << 8) | \
 	 ((_pa) & 0xFF))
 
-#if defined(CONFIG_CPU_FREQ_GOV_ELEMENTALX) || defined(CONFIG_CPU_FREQ_GOV_ELECTROACTIVE)
+#if def CONFIG_CPU_FREQ_GOV_ELEMENTALX
 extern int graphics_boost;
+#endif
+#ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
+extern int graphics_boost_electroactive
 #endif
 
 enum kgsl_iommu_context_id {

@@ -39,12 +39,13 @@ struct device *stored_dev;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
-int graphics_boost = 6;
+int graphics_boost_electroactive = 6;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
 int graphics_boost = 4;
 #endif
+
 struct clk_pair {
 	const char *name;
 	uint map;
@@ -193,7 +194,11 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 
 	trace_kgsl_pwrlevel(device, pwr->active_pwrlevel, pwrlevel->gpu_freq);
 
-#if defined(CONFIG_CPU_FREQ_GOV_ELEMENTALX) || defined(CONFIG_CPU_FREQ_GOV_ELECTROACTIVE)
+#ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
+        graphics_boost_electroactive = pwr->active_pwrlevel;
+#endif
+
+#ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
         graphics_boost = pwr->active_pwrlevel;
 #endif
 }
