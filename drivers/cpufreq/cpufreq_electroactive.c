@@ -1202,10 +1202,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		if (dbs_tuners_ins.powersave_bias)
 			freq_next = powersave_bias_target(policy, freq_next, CPUFREQ_RELATION_L);
 
+#ifdef TRACE_CRAP
 		trace_cpufreq_electroactive_target (policy->cpu, cur_load, policy->cur, policy->cur, freq_next);
 		__cpufreq_driver_target(policy, freq_next,
 			CPUFREQ_RELATION_L);
 		trace_cpufreq_electroactive_down (policy->cpu, freq_next, policy->cur);
+#endif
 	}
 }
 
