@@ -69,10 +69,10 @@ static struct hotplug_tuners {
 #endif
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
-	.hotplug_enable = 0,
+	.hotplug_enable = 1,
 	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
-	.maxcoreslimit_sleep = 2,
+	.maxcoreslimit_sleep = 1,
 	.hp_io_is_busy = 0,
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
