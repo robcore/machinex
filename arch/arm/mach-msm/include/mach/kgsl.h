@@ -39,7 +39,7 @@
 	 (((_mi) & 0xFF) << 8) | \
 	 ((_pa) & 0xFF))
 
-#if def CONFIG_CPU_FREQ_GOV_ELEMENTALX
+#ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
 extern int graphics_boost;
 #endif
 #ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
