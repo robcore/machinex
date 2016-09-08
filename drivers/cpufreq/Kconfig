@@ -143,9 +143,16 @@ config CPU_FREQ_DEFAULT_GOV_STOCKDEMAND
 	  driver. Fallback governor will be the performance governor.
 	  This is default LG ondemand cpu gov.
 
-config CPU_FREQ_DEFAULT_GOV_ELEMENTALX
-	bool "elementalx"
-	select CPU_FREQ_GOV_ELEMENTALX
+config CPU_FREQ_DEFAULT_GOV_ELECTROACTIVE
+	bool "electroactive"
+	select CPU_FREQ_GOV_ELECTROACTIVE
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'elementalx' as default.
+
+config CPU_FREQ_DEFAULT_GOV_ELECTRODEMAND
+	bool "electrodemand"
+	select CPU_FREQ_GOV_ELECTRODEMAND
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the CPUFreq governor 'elementalx' as default.
@@ -494,6 +501,18 @@ config CPU_FREQ_GOV_ELEMENTALX
 	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_ELECTROACTIVE
+	tristate "'electroactive' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'electroactive' - This driver adds a dynamic cpufreq policy governor.
+
+config CPU_FREQ_GOV_ELECTRODEMAND
+	tristate "'electrodemand' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'electrodemand' - This driver adds a dynamic, demand-based cpufreq policy governor.
 
 config CPU_FREQ_GOV_INTERACTIVE
 	tristate "'interactive' cpufreq policy governor"
