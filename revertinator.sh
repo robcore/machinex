@@ -1,6 +1,4 @@
-0250-reverting-its-gonna-be-much-easier-to-do-this-in-ord.patch
 0249-mm-move-readahead-syscall-to-mm-readahead.c.patch
-0248-make-get_file-return-its-argument.patch
 0247-sched-rt-Add-missing-rmb.patch
 0246-sched-Remove-one-division-operation-in-find_busiest_.patch
 0245-sched-fix-the-theoretical-signal_wake_up-vs-schedule.patch
@@ -8,7 +6,6 @@
 0243-sched-Create-for_each_sd_topology.patch
 0242-sched-Remove-the-useless-declaration-in-kernel-sched.patch
 0241-sched-Move-update_load_-methods-from-sched.h-to-fair.patch
-0240-sched-Fix-init-NOHZ_IDLE-flag.patch
 0239-sched-Simplify-can_migrate_task.patch
 0238-sched-tracing-Allow-tracing-the-preemption-decision-.patch
 0237-sched-name-spelling-misc-commits.patch
