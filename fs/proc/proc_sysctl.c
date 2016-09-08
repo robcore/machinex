@@ -1216,8 +1216,6 @@ struct ctl_table_header *__register_sysctl_table(
 
 	kmemleak_not_leak(header);
 
-	kmemleak_not_leak(header);
-
 	node = (struct ctl_node *)(header + 1);
 	init_header(header, root, set, node, table);
 	if (sysctl_check_table(path, table))
