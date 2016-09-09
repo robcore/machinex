@@ -43,7 +43,7 @@ int graphics_boost_electroactive = 6;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
-int graphics_boost = 4;
+int graphics_boost_elementalx = 4;
 #endif
 
 struct clk_pair {
@@ -284,7 +284,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	/* You can't set a maximum power level lower than the minimum */
 	if (level > pwr->min_pwrlevel)
 		level = pwr->min_pwrlevel;
-		
+
 	// AP: check for hard limit and do not allow to go below
 	// a value of 99 will disable this hard limit check
 	if (max_pwrlevel_hardlimit != BYPASS_HARDLIMIT_CHECK)
