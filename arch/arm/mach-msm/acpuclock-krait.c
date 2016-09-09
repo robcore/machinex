@@ -55,8 +55,8 @@ int speed_bin;
 int pvs_bin;
 #endif
 
-int pvs_number = 0;
-module_param(pvs_number, int, 0444);
+int g_speed_bin;
+int g_pvs_bin;
 
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
@@ -1192,6 +1192,8 @@ static int __init get_speed_bin(u32 pte_efuse)
 		dev_info(drv.dev, "SPEED BIN: %d\n", speed_bin);
 	}
 
+	g_speed_bin = speed_bin;
+
 	return speed_bin;
 }
 
@@ -1210,7 +1212,7 @@ static int __init get_pvs_bin(u32 pte_efuse)
 		dev_info(drv.dev, "ACPU PVS: %d\n", pvs_bin);
 	}
 
-	pvs_number = pvs_bin;
+	g_pvs_bin = pvs_bin;
 
 	return pvs_bin;
 }
