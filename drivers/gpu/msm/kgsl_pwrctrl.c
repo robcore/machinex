@@ -199,7 +199,7 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
-        graphics_boost = pwr->active_pwrlevel;
+        graphics_boost_elementalx = pwr->active_pwrlevel;
 #endif
 }
 

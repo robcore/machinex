@@ -899,7 +899,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	if (dbs_tuners_ins.gboost) {
 
-		if (g_count < 100 && graphics_boost < 5) {
+		if (g_count < 100 && graphics_boost_elementalx < 5) {
 			++g_count;
 		} else if (g_count > 1) {
 			--g_count;
@@ -907,7 +907,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		}
 
 		if (graphics_boost < 4 && g_count > 80) {
-			dbs_tuners_ins.up_threshold = 60 + (graphics_boost * 10);
+			dbs_tuners_ins.up_threshold = 60 + (graphics_boost_elementalx * 10);
 		} else {
 			dbs_tuners_ins.up_threshold = orig_up_threshold;
 		}
@@ -1066,7 +1066,6 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 			else
 				pr_debug("dbs_input_event: Touch isn't paired!\n");
 
-
 			switch_turbo_mode(DBS_SWITCH_MODE_TIMEOUT);
 		}
 	}
@@ -1187,7 +1186,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				mutex_unlock(&dbs_mutex);
 				return rc;
 			}
-
 
 			latency = policy->cpuinfo.transition_latency / 1000;
 			if (latency == 0)

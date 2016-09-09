@@ -28,11 +28,6 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 
-#ifdef TRACE_CRAP
-#define CREATE_TRACE_POINTS
-#include <trace/events/cpufreq_electroactive.h>
-#endif
-
 #include <mach/kgsl.h>
 static int orig_up_threshold = 90;
 static int g_count = 0;
@@ -889,17 +884,12 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned load, unsigned 
 {
 	if (dbs_tuners_ins.powersave_bias)
 		freq = powersave_bias_target(p, freq, CPUFREQ_RELATION_H);
-	//else if (p->cur == p->max) {
-		//trace_cpufreq_electroactive_already (p->cpu, load, p->cur, p->cur, p->cur);
-		//return;
-	//}
-
-	//trace_cpufreq_electroactive_target (p->cpu, load, p->cur, p->cur, freq);
+	else if (p->cur == p->max) {
+		return;
+	}
 
 	__cpufreq_driver_target(p, freq, (dbs_tuners_ins.powersave_bias || freq < p->max) ?
 			CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
-
-	//trace_cpufreq_electroactive_up (p->cpu, freq, p->cur);
 }
 
 int set_two_phase_freq(int cpufreq)
@@ -914,7 +904,7 @@ void set_two_phase_freq_by_cpu ( int cpu_nr, int cpufreq){
 	two_phase_freq_array[cpu_nr-1] = cpufreq;
 }
 
-int input_event_boosted(void)
+int input_event_boosted_electroactive(void)
 {
 	unsigned long flags;
 
@@ -1077,8 +1067,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			if (dbs_tuners_ins.two_phase_freq < policy->cur)
 				phase=1;
 			if (dbs_tuners_ins.two_phase_freq != 0 && phase == 0) {
+
 				dbs_freq_increase(policy, cur_load, dbs_tuners_ins.two_phase_freq);
 			} else {
+
 				if (policy->cur < policy->max)
 					this_dbs_info->rate_mult =
 						dbs_tuners_ins.sampling_down_factor;
@@ -1095,15 +1087,23 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 			if (FREQ_NEED_BURST(policy->cur) && cur_load > up_threshold_level[0]) {
 				freq_next = tblmap[tbl_select[3]][index];
-			} else if (avg_load > up_threshold_level[0]) {
+			}
+
+			else if (avg_load > up_threshold_level[0]) {
 				freq_next = tblmap[tbl_select[3]][index];
-			} else if (avg_load <= up_threshold_level[1]) {
+			}
+
+			else if (avg_load <= up_threshold_level[1]) {
 				freq_next = tblmap[tbl_select[0]][index];
-			} else {
+			}
+
+			else {
 
 				if (cur_load > up_threshold_level[0]) {
 					freq_next = tblmap[tbl_select[2]][index];
-				} else {
+				}
+
+				else {
 					freq_next = tblmap[tbl_select[1]][index];
 				}
 			}
@@ -1140,7 +1140,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		}
 
 		if (g_count > 80)
-			boost_min_freq(1267200);
+			boost_min_freq(1242000);
 	}
 	//end
 
@@ -1161,18 +1161,16 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			return;
 		}
 	}
-#ifdef TRACE_CRAP
-	if (input_event_boosted())
+
+	if (input_event_boosted_electroactive())
 	{
-		trace_cpufreq_electroactive_already (policy->cpu, cur_load, policy->cur, policy->cur, policy->cur);
 		return;
 	}
 
 	if (policy->cur == policy->min){
-		trace_cpufreq_electroactive_already (policy->cpu, cur_load, policy->cur, policy->cur, policy->cur);
 		return;
 	}
-#endif
+
 	if (max_load_freq <
 	    (dbs_tuners_ins.up_threshold - dbs_tuners_ins.down_differential) *
 	     policy->cur) {
@@ -1202,12 +1200,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		if (dbs_tuners_ins.powersave_bias)
 			freq_next = powersave_bias_target(policy, freq_next, CPUFREQ_RELATION_L);
 
-#ifdef TRACE_CRAP
-		trace_cpufreq_electroactive_target (policy->cpu, cur_load, policy->cur, policy->cur, freq_next);
 		__cpufreq_driver_target(policy, freq_next,
 			CPUFREQ_RELATION_L);
-		trace_cpufreq_electroactive_down (policy->cpu, freq_next, policy->cur);
-#endif
 	}
 }
 
@@ -1240,7 +1234,7 @@ static void do_dbs_timer(struct work_struct *work)
 				delay -= jiffies % delay;
 		}
 	} else {
-		if (input_event_boosted())
+		if (input_event_boosted_electroactive())
 			goto sched_wait;
 
 		__cpufreq_driver_target(dbs_info->cur_policy,
@@ -1301,7 +1295,8 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 			spin_unlock_irqrestore(&input_boost_lock, flags);
 
 			boost_min_freq(input_event_min_freq);
-		} else {
+		}
+		else {
 			if (likely(input_event_counter > 0))
 				input_event_counter--;
 			else
@@ -1461,7 +1456,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					NULL,
 					dbs_tuners_ins.powersave_bias))
 			dbs_timer_init(this_dbs_info);
-		//trace_cpufreq_electroactive_target (cpu, 0, 0, 0, 0);
 		break;
 
 	case CPUFREQ_GOV_STOP:
@@ -1478,7 +1472,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &dbs_attr_group);
 		}
-		//trace_cpufreq_electroactive_target (cpu, 0, 0, 0, 0);
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
@@ -1525,6 +1518,7 @@ static int cpufreq_gov_dbs_up_task(void *data)
 		this_dbs_info = &per_cpu(od_cpu_dbs_info, cpu);
 		policy = this_dbs_info->cur_policy;
 		if (!policy) {
+
 			goto bail_incorrect_governor;
 		}
 
