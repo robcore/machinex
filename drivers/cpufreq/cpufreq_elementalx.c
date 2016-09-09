@@ -906,7 +906,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			--g_count;
 		}
 
-		if (graphics_boost < 4 && g_count > 80) {
+		if (graphics_boost_elementalx < 4 && g_count > 80) {
 			dbs_tuners_ins.up_threshold = 60 + (graphics_boost_elementalx * 10);
 		} else {
 			dbs_tuners_ins.up_threshold = orig_up_threshold;
