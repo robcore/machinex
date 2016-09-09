@@ -284,6 +284,15 @@ config CPU_FREQ_DEFAULT_GOV_YANKACTIVE
 	   loading your cpufreq low-level hardware driver, using the
 	   'yankactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_YANKDEMAND
+ 	   bool "yankactive"
+  	   select CPU_FREQ_GOV_YANKDEMAND
+	   help
+	   Use the CPUFreq governor 'yankdemand' as default. This allows
+	   you to get a full dynamic cpu frequency capable system by simply
+	   loading your cpufreq low-level hardware driver, using the
+	   'yankdemand' governor for latency-sensitive workloads.
+
 config CPU_FREQ_DEFAULT_GOV_UMBRELLA_CORE
 	bool "umbrella_core"
 	select CPU_FREQ_GOV_UMBRELLA_CORE
@@ -591,6 +600,15 @@ config CPU_FREQ_GOV_YANKACTIVE
 	  designed for latency-sensitive workloads.
 	  The governor is based on interactive with just different default settings
 	  and can be achieved using interactive with a script. This is added for
+	  simplification purposes for myself.
+
+config CPU_FREQ_GOV_YANKDEMAND
+	  tristate "'yankdemand' cpufreq policy governor"
+	  help
+	  'yankdemand' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+	  The governor is based on ondemand with just different default settings
+	  and can be achieved using ondemand with a script. This is added for
 	  simplification purposes for myself.
 
 config CPU_FREQ_GOV_SMARTMAX

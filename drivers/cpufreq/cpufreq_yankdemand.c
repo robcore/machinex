@@ -40,10 +40,10 @@
 #define DEF_FREQUENCY_UP_THRESHOLD_MULTI_CORE		(80)	/* Yank555.lu : new */
 #define DEF_SAMPLING_DOWN_FACTOR			(2)	/* Yank555.lu : was 1 */
 #define MAX_SAMPLING_DOWN_FACTOR			(100000)
-#define DEF_INPUT_BOOST					(702000)/* Yank555.lu : new */
+#define DEF_INPUT_BOOST					(810000)/* Yank555.lu : new */
 #define DEF_IO_IS_BUSY					(1)	/* Yank555.lu : new */
 #define DEF_OPTIMAL_FREQUENCY				(918000)/* Yank555.lu : new */
-#define DEF_SYNC_FREQUENCY				(810000)/* Yank555.lu : new */
+#define DEF_SYNC_FREQUENCY				(1026000)/* Yank555.lu : new */
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL		(3)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL_MULTI_CORE	(3)	/* Yank555.lu : new */
 #define MICRO_FREQUENCY_UP_THRESHOLD			(95)
@@ -56,7 +56,7 @@
 #ifdef STEP_UP
 #define DEF_FREQ_STEP					(25)
 #define DEF_STEP_UP_EARLY_HISPEED			(702000)  /* Yank555.lu : was 1134000 */
-#define DEF_STEP_UP_INTERIM_HISPEED			(1134000) /* Yank555.lu : was 1728000 */
+#define DEF_STEP_UP_INTERIM_HISPEED			(1242000) /* Yank555.lu : was 1728000 */
 #define DEF_SAMPLING_EARLY_HISPEED_FACTOR		(2)
 #define DEF_SAMPLING_INTERIM_HISPEED_FACTOR		(3)
 #endif
@@ -242,14 +242,14 @@ static struct dbs_tuners {
 	.sync_freq = DEF_SYNC_FREQUENCY,
 	.optimal_freq = DEF_OPTIMAL_FREQUENCY,
 	.io_is_busy = DEF_IO_IS_BUSY,
-	//20130711 smart_up 
+	//20130711 smart_up
 	.smart_up = SMART_UP_PLUS,
 	.smart_slow_up_load = SUP_SLOW_UP_LOAD,
 	.smart_slow_up_freq = SUP_SLOW_UP_FREQUENCY,
 	.smart_slow_up_dur = SUP_SLOW_UP_DUR_DEFAULT,
 	.smart_high_slow_up_freq = SUP_HIGH_SLOW_UP_FREQUENCY,
 	.smart_high_slow_up_dur = SUP_HIGH_SLOW_UP_DUR,
-	.smart_each_off = 0,	
+	.smart_each_off = 0,
 	// end smart_up
 #ifdef STEP_UP
 	.freq_step = DEF_FREQ_STEP,
@@ -390,7 +390,7 @@ show_one(down_differential_multi_core, down_differential_multi_core);
 show_one(optimal_freq, optimal_freq);
 show_one(up_threshold_any_cpu_load, up_threshold_any_cpu_load);
 show_one(sync_freq, sync_freq);
-//20130711 smart_up 
+//20130711 smart_up
 show_one(smart_up, smart_up);
 show_one(smart_slow_up_load, smart_slow_up_load);
 show_one(smart_slow_up_freq, smart_slow_up_freq);
@@ -803,7 +803,7 @@ static ssize_t store_smart_up(struct kobject *a, struct attribute *b,
 	}else if (input < 0 ){
 		input = 0;
 	}
-	
+
 	// buffer reset
 	for_each_online_cpu(i){
 		reset_hist(&yank_hist_load[i]);
@@ -971,7 +971,7 @@ static ssize_t store_step_up_early_hispeed(struct kobject *a,
 	int ret;
 	ret = sscanf(buf, "%u", &input);
 
-	if (ret != 1 || input > 2265600 ||
+	if (ret != 1 || input > 1890000 ||
 			input < 0) {
 		return -EINVAL;
 	}
@@ -986,7 +986,7 @@ static ssize_t store_step_up_interim_hispeed(struct kobject *a,
 	int ret;
 	ret = sscanf(buf, "%u", &input);
 
-	if (ret != 1 || input > 2265600 ||
+	if (ret != 1 || input > 1890000 ||
 			input < 0) {
 		return -EINVAL;
 	}
@@ -1251,10 +1251,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			(policy->max - policy->cur) / SUP_FREQ_STEPS[0];
 		int freq_next = 0;
 		int i = 0;
-		
+
 		//20130429 UPDATE
 		int check_idx =  0;
-		int check_freq = 0; 
+		int check_freq = 0;
 		int temp_up_inc =0;
 
 		for (i = (SUP_MAX_STEP - 1); i > 0; i--) {
@@ -1262,16 +1262,16 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 							* policy->cur) {
 				smart_up_inc = (policy->max - policy->cur)
 						/ SUP_FREQ_STEPS[i];
-			
+
 				break;
 			}
 		}
-		
+
 		//20130429 UPDATE
 		check_idx =  yank_pre_freq_idx[core_j].freq_idx;
-		check_freq = yank_pre_freq_idx[core_j].freq_value; 
-		if ( ( check_idx == 0) 
-		|| (this_dbs_info->freq_table[check_idx].frequency 
+		check_freq = yank_pre_freq_idx[core_j].freq_value;
+		if ( ( check_idx == 0)
+		|| (this_dbs_info->freq_table[check_idx].frequency
 			!=  policy->cur) )
 		{
 			int i = 0;
@@ -1279,35 +1279,35 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			{
 				if (this_dbs_info->freq_table[i].frequency == policy->cur)
 				{
-					
+
 					yank_pre_freq_idx[core_j].freq_idx = i;
 					yank_pre_freq_idx[core_j].freq_value = policy->cur;
 					check_idx =  i;
-					check_freq = policy->cur; 
+					check_freq = policy->cur;
 					break;
 				}
 			}
-			
+
 		}
-		if( check_idx < SUP_FREQ_LEVEL-1 ){ 
-		temp_up_inc =  
-			this_dbs_info->freq_table[check_idx + 1].frequency 
+		if( check_idx < SUP_FREQ_LEVEL-1 ){
+		temp_up_inc =
+			this_dbs_info->freq_table[check_idx + 1].frequency
 			- check_freq;
 		}
-			
+
 		if (smart_up_inc < temp_up_inc )
 			smart_up_inc = temp_up_inc;
 
 		freq_next = MIN((policy->cur + smart_up_inc), policy->max);
 
-			
+
 			if (policy->cur >= dbs_tuners_ins.smart_high_slow_up_freq){
 			int idx = yank_hist_load_high[core_j].hist_load_cnt;
 			int avg_hist_load = 0;
-			
+
 				if (idx >= dbs_tuners_ins.smart_high_slow_up_dur)
 				idx = 0;
-				
+
 			yank_hist_load_high[core_j].hist_max_load[idx] = max_load;
 			yank_hist_load_high[core_j].hist_load_cnt = idx + 1;
 
@@ -1322,7 +1322,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 				avg_hist_load = sum_hist_load_freq
 							/dbs_tuners_ins.smart_high_slow_up_dur;
-						
+
 					if (avg_hist_load > dbs_tuners_ins.smart_slow_up_load){
 					reset_hist_high(&yank_hist_load_high[core_j]);
 					freq_next = MIN((policy->cur + temp_up_inc), policy->max);
@@ -1331,7 +1331,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			} else {
 				freq_next = policy->cur;
 			}
-			
+
 			} else if (policy->cur >= dbs_tuners_ins.smart_slow_up_freq ) {
 			int idx = yank_hist_load[core_j].hist_load_cnt;
 			int avg_hist_load = 0;
@@ -1482,7 +1482,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			yank_hist_load_high[core_j].hist_max_load[idx] = max_load;
 			yank_hist_load_high[core_j].hist_load_cnt = idx + 1;
 
-		
+
 			}else if (freq_next >= dbs_tuners_ins.smart_slow_up_freq) {
 			int idx = yank_hist_load[core_j].hist_load_cnt;
 
@@ -1494,12 +1494,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 			reset_hist_high(&yank_hist_load_high[core_j]);
 
-		
+
 			} else if (policy->cur >= dbs_tuners_ins.smart_slow_up_freq) {
 			reset_hist(&yank_hist_load[core_j]);
 			reset_hist_high(&yank_hist_load_high[core_j]);
 
-				
+
 			}
 		}
 //#endif

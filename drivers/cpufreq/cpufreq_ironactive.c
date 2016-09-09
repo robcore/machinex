@@ -25,7 +25,7 @@
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
-#include <linux/sched/rt.h>
+#include "../../kernel/sched/sched.h>
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
@@ -37,9 +37,6 @@
 #include <linux/state_notifier.h>
 #endif
 #include <asm/cputime.h>
-
-#define CREATE_TRACE_POINTS
-#include <trace/events/cpufreq_ironactive.h>
 
 struct cpufreq_ironactive_policyinfo {
 	struct timer_list policy_timer;
@@ -479,8 +476,6 @@ static void cpufreq_ironactive_timer(unsigned long data)
 		}
 		tmploadadjfreq = (unsigned int)cputime_speedadj * 100;
 		pcpu->loadadjfreq = tmploadadjfreq;
-		trace_cpufreq_ironactive_cpuload(i, tmploadadjfreq /
-						  ppol->policy->cur);
 
 		if (tmploadadjfreq > loadadjfreq) {
 			loadadjfreq = tmploadadjfreq;
@@ -528,9 +523,6 @@ static void cpufreq_ironactive_timer(unsigned long data)
 	    new_freq > ppol->policy->cur &&
 	    now - ppol->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(tunables, ppol->policy->cur)) {
-		trace_cpufreq_ironactive_notyet(
-			max_cpu, cpu_load, ppol->target_freq,
-			ppol->policy->cur, new_freq);
 		spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -549,8 +541,6 @@ static void cpufreq_ironactive_timer(unsigned long data)
 	if (new_freq < ppol->target_freq &&
 	    now - ppol->max_freq_hyst_start_time <
 	    tunables->max_freq_hysteresis) {
-		trace_cpufreq_ironactive_notyet(max_cpu, cpu_load,
-			ppol->target_freq, ppol->policy->cur, new_freq);
 		spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -562,9 +552,6 @@ static void cpufreq_ironactive_timer(unsigned long data)
 	if (new_freq < ppol->floor_freq) {
 		if (now - ppol->floor_validate_time <
 				tunables->min_sample_time) {
-			trace_cpufreq_ironactive_notyet(
-				max_cpu, cpu_load, ppol->target_freq,
-				ppol->policy->cur, new_freq);
 			spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 			goto rearm;
 		}
@@ -587,15 +574,9 @@ static void cpufreq_ironactive_timer(unsigned long data)
 		ppol->max_freq_hyst_start_time = now;
 
 	if (ppol->target_freq == new_freq) {
-		trace_cpufreq_ironactive_already(
-			max_cpu, cpu_load, ppol->target_freq,
-			ppol->policy->cur, new_freq);
 		spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 		goto rearm;
 	}
-
-	trace_cpufreq_ironactive_target(max_cpu, cpu_load, ppol->target_freq,
-					 ppol->policy->cur, new_freq);
 
 	ppol->target_freq = new_freq;
 	spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
@@ -654,9 +635,6 @@ static int cpufreq_ironactive_speedchange_task(void *data)
 				__cpufreq_driver_target(ppol->policy,
 							ppol->target_freq,
 							CPUFREQ_RELATION_H);
-			trace_cpufreq_ironactive_setspeed(cpu,
-						     ppol->target_freq,
-						     ppol->policy->cur);
 			up_read(&ppol->enable_sem);
 		}
 	}
@@ -730,7 +708,6 @@ static int load_change_callback(struct notifier_block *nb, unsigned long val,
 		return 0;
 	}
 
-	trace_cpufreq_ironactive_load_change(cpu);
 	del_timer(&ppol->policy_timer);
 	del_timer(&ppol->policy_slack_timer);
 	cpufreq_ironactive_timer(cpu);
@@ -1070,12 +1047,10 @@ static ssize_t store_boost(struct cpufreq_ironactive_tunables *tunables,
 	tunables->boost_val = val;
 
 	if (tunables->boost_val) {
-		trace_cpufreq_ironactive_boost("on");
 		if (!tunables->boosted)
 			cpufreq_ironactive_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-		trace_cpufreq_ironactive_unboost("off");
 	}
 
 	return count;
@@ -1093,7 +1068,6 @@ static ssize_t store_boostpulse(struct cpufreq_ironactive_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
-	trace_cpufreq_ironactive_boost("pulse");
 	if (!tunables->boosted)
 		cpufreq_ironactive_boost(tunables);
 	return count;
