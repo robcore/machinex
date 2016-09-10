@@ -2871,8 +2871,7 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 			params.sta_modify_mask |= STATION_PARAM_APPLY_UAPSD;
 		}
 		/* TDLS peers cannot be added */
-		if ((params.sta_flags_set & BIT(NL80211_STA_FLAG_TDLS_PEER)) ||
-		    info->attrs[NL80211_ATTR_PEER_AID])
+		if (params.sta_flags_set & BIT(NL80211_STA_FLAG_TDLS_PEER))
 			return -EINVAL;
 		/* but don't bother the driver with it */
 		params.sta_flags_mask &= ~BIT(NL80211_STA_FLAG_TDLS_PEER);
@@ -2884,8 +2883,7 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 		break;
 	case NL80211_IFTYPE_MESH_POINT:
 		/* TDLS peers cannot be added */
-		if ((params.sta_flags_set & BIT(NL80211_STA_FLAG_TDLS_PEER)) ||
-		    info->attrs[NL80211_ATTR_PEER_AID])
+		if (params.sta_flags_set & BIT(NL80211_STA_FLAG_TDLS_PEER))
 			return -EINVAL;
 		break;
 	case NL80211_IFTYPE_STATION:
