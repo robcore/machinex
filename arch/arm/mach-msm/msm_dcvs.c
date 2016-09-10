@@ -1040,9 +1040,6 @@ int msm_dcvs_register_core(
 	if (!msm_dcvs_enabled)
 		return ret;
 
-	if (!msm_dcvs_enabled)
-		return ret;
-
 	offset = get_core_offset(type, type_core_num);
 	if (offset < 0)
 		return ret;
@@ -1293,9 +1290,6 @@ static int __init msm_dcvs_late_init(void)
 {
 	struct kobject *module_kobj = NULL;
 	int ret = 0;
-
-	if (!msm_dcvs_enabled)
-		return ret;
 
 	if (!msm_dcvs_enabled)
 		return ret;
