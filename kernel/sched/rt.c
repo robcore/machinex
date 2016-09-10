@@ -1273,8 +1273,9 @@ select_task_rq_rt(struct task_struct *p, int sd_flag, int flags)
 	 * will have to sort it out.
 	 */
 	if (curr && unlikely(rt_task(curr)) &&
-	    (curr->rt.nr_cpus_allowed < 2 ||
-		curr->prio <= p->prio)) {
+	    (curr->nr_cpus_allowed < 2 ||
+	     curr->prio <= p->prio) &&
+	    (p->nr_cpus_allowed > 1)) {
 		int target = find_lowest_rq(p);
 
 		/*
@@ -1378,16 +1379,6 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 		BUG_ON(!rt_se);
 		rt_rq = group_rt_rq(rt_se);
 	} while (rt_rq);
-
-	/*
-	 * Force update of rq->clock_task in case we failed to do so in
-	 * put_prev_task. A stale value can cause us to over-charge execution
-	 * time to real-time task, that could trigger throttling unnecessarily
-	 */
-	if (rq->skip_clock_update > 0) {
-		rq->skip_clock_update = 0;
-		update_rq_clock(rq);
-	}
 
 	/*
 	 * Force update of rq->clock_task in case we failed to do so in
