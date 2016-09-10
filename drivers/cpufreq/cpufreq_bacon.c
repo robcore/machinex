@@ -128,7 +128,7 @@ static bool align_windows = true;
  */
 static unsigned int max_freq_hysteresis;
 
-static bool io_is_busy;
+static bool io_is_busy = 0;
 
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif)

@@ -374,7 +374,6 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 {
 	if (policy)
 		policy->util = util;
-
 }
 
 /*********************************************************************

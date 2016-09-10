@@ -152,7 +152,7 @@ static bool closest_freq_selection;
  */
 static unsigned int max_freq_hysteresis;
 
-static bool io_is_busy = 1;
+static bool io_is_busy = 0;
 
 static bool use_freq_calc_thresh = true;
 
@@ -491,7 +491,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	} else if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_C,
 					   &index)) {
-	
+
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
