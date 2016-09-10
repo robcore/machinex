@@ -115,10 +115,7 @@ int cpuidle_idle_call(void)
 	struct cpuidle_driver *drv = cpuidle_get_driver();
 	int next_state, entered_state;
 
-	if (off)
-		return -ENODEV;
-
-	if (!initialized)
+	if (off || !initialized)
 		return -ENODEV;
 
 	/* check if the device is ready */
