@@ -1542,11 +1542,6 @@ static struct platform_driver *plat_drivers[]  = {
 #endif
 };
 
-#ifdef DEBUG
-static struct dentry *ehci_debug_root;
-#endif
-
-
 static int __init ehci_hcd_init(void)
 {
 	int i, retval = 0;
