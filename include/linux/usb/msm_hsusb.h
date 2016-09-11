@@ -406,6 +406,11 @@ struct msm_hsic_host_platform_data {
 	struct msm_bus_scale_pdata *bus_scale_table;
 	unsigned log2_irq_thresh;
 	u32 swfi_latency;
+
+ 	/*standalone latency is required when HSCI is active*/
+	u32 standalone_latency;
+	bool pool_64_bit_align;
+	bool enable_hbm;
 };
 
 struct msm_usb_host_platform_data {
