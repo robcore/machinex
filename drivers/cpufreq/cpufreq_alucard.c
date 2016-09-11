@@ -236,7 +236,7 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(input,10000);
+	input = max(input, 10000);
 
 	if (input == alucard_tuners_ins.sampling_rate)
 		return count;
@@ -258,7 +258,7 @@ static ssize_t store_inc_cpu_load_at_min_freq(struct kobject *a, struct attribut
 		return -EINVAL;
 	}
 
-	input = min(input,alucard_tuners_ins.inc_cpu_load);
+	input = min(input, alucard_tuners_ins.inc_cpu_load);
 
 	if (input == alucard_tuners_ins.inc_cpu_load_at_min_freq)
 		return count;
@@ -279,7 +279,7 @@ static ssize_t store_inc_cpu_load(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(min(input,100),0);
+	input = max(min(input, 100),0);
 
 	if (input == alucard_tuners_ins.inc_cpu_load)
 		return count;
@@ -301,7 +301,7 @@ static ssize_t store_dec_cpu_load_at_min_freq(struct kobject *a, struct attribut
 		return -EINVAL;
 	}
 
-	input = min(input,alucard_tuners_ins.dec_cpu_load);
+	input = min(input, alucard_tuners_ins.dec_cpu_load);
 
 	if (input == alucard_tuners_ins.dec_cpu_load_at_min_freq)
 		return count;
@@ -322,7 +322,7 @@ static ssize_t store_dec_cpu_load(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(min(input,95),5);
+	input = max(min(input, 95),5);
 
 	if (input == alucard_tuners_ins.dec_cpu_load)
 		return count;
