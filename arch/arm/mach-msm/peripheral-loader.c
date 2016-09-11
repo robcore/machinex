@@ -147,7 +147,7 @@ static void pil_proxy_unvote(struct pil_device *pil, unsigned long timeout)
 		schedule_delayed_work(&pil->proxy, msecs_to_jiffies(timeout));
 }
 
-#define IOMAP_SIZE SZ_1M
+#define IOMAP_SIZE SZ_4M
 
 static int load_segment(const struct elf32_phdr *phdr, unsigned num,
 		struct pil_device *pil)
@@ -617,7 +617,7 @@ static void msm_pil_debugfs_remove(struct pil_device *pil)
 }
 #else
 static int __init msm_pil_debugfs_init(void) { return 0; };
-static void __exit msm_pil_debugfs_exit(void) { };
+static void __exit msm_pil_debugfs_exit(void) { return 0; };
 static int msm_pil_debugfs_add(struct pil_device *pil) { return 0; }
 static void msm_pil_debugfs_remove(struct pil_device *pil) { }
 #endif

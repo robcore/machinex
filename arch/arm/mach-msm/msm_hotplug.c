@@ -40,7 +40,7 @@
 #define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_FAST_LANE_LOAD		99
-#define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
+#define DEFAULT_MAX_CPUS_ONLINE_SUSP	2
 
 static unsigned int debug = 0;
 module_param_named(debug_mask, debug, uint, 0644);
