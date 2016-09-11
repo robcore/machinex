@@ -34,9 +34,6 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 
 #include "smd_private.h"
 
@@ -117,21 +114,6 @@ DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 static const char * const _order_8x60_modems[] = {"external_modem", "modem"};
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
-#ifndef CONFIG_MACH_JF
-/* MSM 8960 restart ordering info */
-static const char * const order_8960[] = {"modem", "lpass"};
-
-
-static struct subsys_soc_restart_order restart_orders_8960_one = {
-	.subsystem_list = order_8960,
-	.count = ARRAY_SIZE(order_8960),
-	.subsys_ptrs = {[ARRAY_SIZE(order_8960)] = NULL}
-	};
-
-static struct subsys_soc_restart_order *restart_orders_8960[] = {
-	&restart_orders_8960_one,
-};
-#endif
 /*SGLTE restart ordering info*/
 static const char * const order_8960_sglte[] = {"external_modem",
 						"modem"};
@@ -305,7 +287,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (time_first && n >= max_restarts_check) {
 		if ((curr_time->tv_sec - time_first->tv_sec) <
 				max_history_time_check) {
-			WARN(1, "Subsystems have crashed %d times in less than "\
+			panic("Subsystems have crashed %d times in less than "\
 				"%ld seconds!", max_restarts_check,
 				max_history_time_check);
 		}
@@ -345,7 +327,7 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Shutting down %s\n", current, name);
 	if (dev->desc->shutdown(dev->desc) < 0) {
-		WARN(1, "subsys-restart: [%p]: Failed to shutdown %s!",
+		panic("subsys-restart: [%p]: Failed to shutdown %s!",
 			current, name);
 	}
 	subsys_set_state(dev, SUBSYS_OFFLINE);
@@ -366,7 +348,13 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
-		WARN(1, "[%p]: Failed to powerup %s!", current, name);
+
+		/* If a system shutdown is underway, ignore errors. */
+		if (system_state == SYSTEM_POWER_OFF) {
+			pr_err("[%p]: Failed to powerup %s!", current, name);
+			return;
+		} else
+			panic("[%p]: Failed to powerup %s!", current, name);
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
@@ -424,7 +412,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	 * order is being rebooted.
 	 */
 	if (!mutex_trylock(powerup_lock)) {
-		WARN(1, "%s[%p]: Subsystem died during powerup!",
+		panic("%s[%p]: Subsystem died during powerup!",
 						__func__, current);
 	}
 
@@ -480,24 +468,8 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 	const char *name = dev->desc->name;
 	unsigned long flags;
 
-#if !defined(CONFIG_MACH_JF) && defined(CONFIG_SEC_DEBUG)
-#ifdef CONFIG_SEC_SSR_DEBUG_LEVEL_CHK
-	if (!sec_debug_is_enabled_for_ssr())
-#else
-	if (!sec_debug_is_enabled())
-#endif
-	{
-		restart_level = RESET_SUBSYS_INDEPENDENT;
-#ifdef CONFIG_SEC_SSR_DUMP
-		enable_ramdumps = 1;
-#endif
-	}else
-		restart_level = RESET_SOC;
-
-	if (strcmp(name, "riva") == 0)
-		restart_level = RESET_SUBSYS_INDEPENDENT;
-#endif
 	pr_debug("Restarting %s [level=%d]!\n", desc->name, restart_level);
+
 	/*
 	 * We want to allow drivers to call subsystem_restart{_dev}() as many
 	 * times as they want up until the point where the subsystem is
@@ -511,7 +483,7 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 			wake_lock(&dev->wake_lock);
 			queue_work(ssr_wq, &dev->work);
 		} else {
-			WARN(1, "Subsystem %s crashed during SSR!", name);
+			panic("Subsystem %s crashed during SSR!", name);
 		}
 	}
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
@@ -536,28 +508,16 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		name, restart_level);
 
 	switch (restart_level) {
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = sec_debug_is_enabled()? 1 : 0;
-		/* Fall through */
-#endif
+
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
 		break;
 	case RESET_SOC:
-		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.", name);
-/* It should be used for APQ model to distingush AP side or MDM side */
-#ifdef CONFIG_SEC_DEBUG
-		WARN(1, "%s crashed: subsys-restart: Resetting the SoC",
-			name);
-#else
-		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.",
-			name);
-#endif
+		panic("subsys-restart: Resetting the SoC - %s crashed.", name);
 		break;
 	default:
-		pr_err("subsys-restart: Unknown restart level!\n");
+		panic("subsys-restart: Unknown restart level!\n");
 		break;
 	}
 
@@ -645,7 +605,7 @@ static int __init ssr_init_soc_restart_orders(void)
 	atomic_notifier_chain_register(&panic_notifier_list,
 			&panic_nb);
 
-	if (cpu_is_msm8x60()) {
+	if (cpu_is_apq8064() || cpu_is_msm8x60()) {
 		for (i = 0; i < ARRAY_SIZE(orders_8x60_all); i++) {
 			mutex_init(&orders_8x60_all[i]->powerup_lock);
 			mutex_init(&orders_8x60_all[i]->shutdown_lock);
@@ -659,12 +619,7 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-#ifndef CONFIG_MACH_JF
-	if (cpu_is_msm8960() || cpu_is_msm8930()) {
-		restart_orders = restart_orders_8960;
-		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
-	}
-#endif
+
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);
@@ -680,37 +635,20 @@ static int __init ssr_init_soc_restart_orders(void)
 		mutex_init(&restart_orders[i]->shutdown_lock);
 	}
 
+	if (restart_orders == NULL || n_restart_orders < 1) {
+		WARN_ON(1);
+	}
+
 	return 0;
 }
 
 static int __init subsys_restart_init(void)
 {
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
-#else
 	restart_level = RESET_SOC;
-#endif
-
-#if !defined(CONFIG_MACH_JF) && defined(CONFIG_SEC_DEBUG)
-#ifdef CONFIG_SEC_SSR_DEBUG_LEVEL_CHK
-	if (!sec_debug_is_enabled_for_ssr())
-#else
-	if (!sec_debug_is_enabled())
-#endif
-	{
-		restart_level = RESET_SUBSYS_INDEPENDENT;
-#ifdef CONFIG_SEC_SSR_DUMP
-		enable_ramdumps = 1;
-#endif
-		pr_info("%s: enable_ramdumps[%d]", __func__, enable_ramdumps);
-	}else
-		restart_level = RESET_SOC;
-
-#endif
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
-		WARN(1, "%s: out of memory\n", __func__);
+		panic("%s: out of memory\n", __func__);
 
 	return ssr_init_soc_restart_orders();
 }
