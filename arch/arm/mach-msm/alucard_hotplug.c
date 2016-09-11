@@ -57,8 +57,8 @@ static struct hotplug_tuners {
 	unsigned int hotplug_sampling_rate;
 	unsigned int hotplug_enable;
 	unsigned int min_cpus_online;
-	unsigned int maxcoreslimit;
-	unsigned int maxcoreslimit_sleep;
+	unsigned int max_cpus_online;
+	unsigned int max_cpus_online_susp;
 	unsigned int hp_io_is_busy;
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
@@ -70,9 +70,9 @@ static struct hotplug_tuners {
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
 	.hotplug_enable = 1,
-	.min_cpus_online = 1,
-	.maxcoreslimit = NR_CPUS,
-	.maxcoreslimit_sleep = 1,
+	.min_cpus_online = 2,
+	.max_cpus_online = NR_CPUS,
+	.max_cpus_online_susp = 2,
 	.hp_io_is_busy = 0,
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
@@ -160,7 +160,7 @@ typedef enum {IDLE, ON, OFF} HOTPLUG_STATUS;
 
 static void __ref hotplug_work_fn(struct work_struct *work)
 {
-	unsigned int upmaxcoreslimit = 0;
+	unsigned int upmax_cpus_online = 0;
 	unsigned int min_cpus_online = hotplug_tuners_ins.min_cpus_online;
 	unsigned int cpu = 0;
 	int online_cpu = 0;
@@ -180,10 +180,10 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
 	if (hotplug_tuners_ins.suspended)
-		upmaxcoreslimit = hotplug_tuners_ins.maxcoreslimit_sleep;
+		upmax_cpus_online = hotplug_tuners_ins.max_cpus_online_susp;
 	else
 #endif
-		upmaxcoreslimit = hotplug_tuners_ins.maxcoreslimit;
+		upmax_cpus_online = hotplug_tuners_ins.max_cpus_online;
 
 	get_online_cpus();
 	online_cpus = num_online_cpus();
@@ -240,7 +240,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			check_down = (pcpu_info->cur_down_rate % pcpu_info->down_rate == 0);
 
 			if (cpu > 0
-				&& ((online_cpus - offline_cpu) > upmaxcoreslimit)) {
+				&& ((online_cpus - offline_cpu) > upmax_cpus_online)) {
 					hotplug_onoff[cpu] = OFF;
 					pcpu_info->cur_up_rate = 1;
 					pcpu_info->cur_down_rate = 1;
@@ -252,7 +252,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 #else
 			} else if ((online_cpus + online_cpu) < min_cpus_online) {
 #endif
-					if (upcpu < upmaxcoreslimit) {
+					if (upcpu < upmax_cpus_online) {
 						if (!cpu_online(upcpu)) {
 							hotplug_onoff[upcpu] = ON;
 							pcpu_info->cur_up_rate = 1;
@@ -264,9 +264,9 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			}
 
 			if (upcpu > 0
-				&& upcpu < upmaxcoreslimit
+				&& upcpu < upmax_cpus_online
 				&& (!cpu_online(upcpu))
-				&& (online_cpus + online_cpu) < upmaxcoreslimit
+				&& (online_cpus + online_cpu) < upmax_cpus_online
  			    && cur_load >= pcpu_info->up_load
 				&& cur_freq >= pcpu_info->up_freq
 				&& rq_avg > pcpu_info->up_rq) {
@@ -461,8 +461,8 @@ static ssize_t show_##file_name						\
 show_one(hotplug_sampling_rate, hotplug_sampling_rate);
 show_one(hotplug_enable, hotplug_enable);
 show_one(min_cpus_online, min_cpus_online);
-show_one(maxcoreslimit, maxcoreslimit);
-show_one(maxcoreslimit_sleep, maxcoreslimit_sleep);
+show_one(max_cpus_online, max_cpus_online);
+show_one(max_cpus_online_susp, max_cpus_online_susp);
 show_one(hp_io_is_busy, hp_io_is_busy);
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
@@ -666,8 +666,8 @@ static ssize_t store_min_cpus_online(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-/* maxcoreslimit */
-static ssize_t store_maxcoreslimit(struct kobject *a, struct attribute *b,
+/* max_cpus_online */
+static ssize_t store_max_cpus_online(struct kobject *a, struct attribute *b,
 				  const char *buf, size_t count)
 {
 	int input;
@@ -679,16 +679,16 @@ static ssize_t store_maxcoreslimit(struct kobject *a, struct attribute *b,
 
 	input = max(input > NR_CPUS ? NR_CPUS : input, 1);
 
-	if (hotplug_tuners_ins.maxcoreslimit == input)
+	if (hotplug_tuners_ins.max_cpus_online == input)
 		return count;
 
-	hotplug_tuners_ins.maxcoreslimit = input;
+	hotplug_tuners_ins.max_cpus_online = input;
 
 	return count;
 }
 
-/* maxcoreslimit_sleep */
-static ssize_t store_maxcoreslimit_sleep(struct kobject *a,
+/* max_cpus_online_susp */
+static ssize_t store_max_cpus_online_susp(struct kobject *a,
 				struct attribute *b,
 				const char *buf, size_t count)
 {
@@ -701,10 +701,10 @@ static ssize_t store_maxcoreslimit_sleep(struct kobject *a,
 
 	input = max(input > NR_CPUS ? NR_CPUS : input, 1);
 
-	if (hotplug_tuners_ins.maxcoreslimit_sleep == input)
+	if (hotplug_tuners_ins.max_cpus_online_susp == input)
 		return count;
 
-	hotplug_tuners_ins.maxcoreslimit_sleep = input;
+	hotplug_tuners_ins.max_cpus_online_susp = input;
 
 	return count;
 }
@@ -777,8 +777,8 @@ static ssize_t store_hotplug_suspend(struct kobject *a,
 define_one_global_rw(hotplug_sampling_rate);
 define_one_global_rw(hotplug_enable);
 define_one_global_rw(min_cpus_online);
-define_one_global_rw(maxcoreslimit);
-define_one_global_rw(maxcoreslimit_sleep);
+define_one_global_rw(max_cpus_online);
+define_one_global_rw(max_cpus_online_susp);
 define_one_global_rw(hp_io_is_busy);
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
@@ -813,8 +813,8 @@ static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_rate_3_1.attr,
 	&hotplug_rate_4_0.attr,
 	&min_cpus_online.attr,
-	&maxcoreslimit.attr,
-	&maxcoreslimit_sleep.attr,
+	&max_cpus_online.attr,
+	&max_cpus_online_susp.attr,
 	&hp_io_is_busy.attr,
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
@@ -833,17 +833,10 @@ static int __init alucard_hotplug_init(void)
 	int ret;
 	unsigned int cpu;
 	unsigned int hotplug_freq[NR_CPUS][2] = {
-#ifdef CONFIG_MACH_LGE
-		{0, 1497600},
-		{652800, 1190400},
-		{652800, 1190400},
-		{652800, 0}
-#else
-		{0, 1242000},
-		{810000, 1566000},
+		{0, 1350000},
 		{918000, 1674000},
-		{1026000, 0}
-#endif
+		{1026000, 1782000},
+		{1134000, 0}
 	};
 	unsigned int hotplug_load[NR_CPUS][2] = {
 		{0, 60},
