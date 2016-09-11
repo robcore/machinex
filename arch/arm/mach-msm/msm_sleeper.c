@@ -27,23 +27,23 @@
 #define MSM_SLEEPER_DEBUG		0
 #define DELAY				HZ
 #define DEF_UP_THRESHOLD		85
-#define DEF_MAX_ONLINE			4
+#define DEF_MAX_CPUS_ONLINE			4
 #define DEF_DOWN_COUNT_MAX		10 /* 1 sec */
 #define DEF_UP_COUNT_MAX		5 /* 0.5 sec */
-#define DEF_SUSPEND_MAX_ONLINE		2
+#define DEF_MAX_CPUS_ONLINE_SUSP		2
 #define DEF_PLUG_ALL			1
 
 struct msm_sleeper_data {
 	unsigned int enabled;
 	unsigned int delay;
 	unsigned int up_threshold;
-	unsigned int max_online;
+	unsigned int max_cpus_online;
 	unsigned int down_count;
 	unsigned int up_count;
 	unsigned int down_count_max;
 	unsigned int up_count_max;
 	bool suspended;
-	unsigned int suspend_max_online;
+	unsigned int max_cpus_online_susp;
 	bool plug_all;
 	struct notifier_block notif;
 	struct work_struct suspend_work;
@@ -52,11 +52,11 @@ struct msm_sleeper_data {
 	.enabled = MSM_SLEEPER_ENABLED,
 	.delay = DELAY,
 	.up_threshold = DEF_UP_THRESHOLD,
-	.max_online = DEF_MAX_ONLINE,
+	.max_cpus_online = DEF_MAX_CPUS_ONLINE,
 	.down_count_max = DEF_DOWN_COUNT_MAX,
 	.up_count_max = DEF_UP_COUNT_MAX,
 	.suspended = false,
-	.suspend_max_online = DEF_SUSPEND_MAX_ONLINE,
+	.max_cpus_online_susp = DEF_MAX_CPUS_ONLINE_SUSP,
 	.plug_all = DEF_PLUG_ALL
 };
 
@@ -67,7 +67,7 @@ static inline void plug_cpu(void)
 {
 	unsigned int cpu;
 
-	if (num_online_cpus() == sleeper_data.max_online)
+	if (num_online_cpus() == sleeper_data.max_cpus_online)
 		goto reset;
 
 	cpu = cpumask_next_zero(0, cpu_online_mask);
@@ -114,7 +114,7 @@ static void __ref hotplug_func(struct work_struct *work)
 {
 	unsigned int cpu, loadavg = 0;
 
-	if (sleeper_data.suspended || sleeper_data.max_online == 2)
+	if (sleeper_data.suspended || sleeper_data.max_cpus_online == 2)
 		goto reschedule;
 
 	if (sleeper_data.plug_all) {
@@ -157,7 +157,7 @@ static void msm_sleeper_suspend(struct work_struct *work)
 	sleeper_data.suspended = true;
 
 	for_each_possible_cpu(cpu) {
-		if (sleeper_data.suspend_max_online == num_online_cpus())
+		if (sleeper_data.max_cpus_online_susp == num_online_cpus())
 			break;
 
 		if (cpu && cpu_online(cpu))
@@ -172,7 +172,7 @@ static void __ref msm_sleeper_resume(struct work_struct *work)
 	sleeper_data.suspended = false;
 
 
-	if (sleeper_data.max_online == 2) {
+	if (sleeper_data.max_cpus_online == 2) {
 		if (cpu_is_offline(1)) {
 			cpu_up(1);
 		}
@@ -270,14 +270,14 @@ static ssize_t store_plug_all(struct device *dev,
 	return count;
 }
 
-static ssize_t show_max_online(struct device *dev,
+static ssize_t show_max_cpus_online(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.max_online);
+	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.max_cpus_online);
 }
 
-static ssize_t store_max_online(struct device *dev,
+static ssize_t store_max_cpus_online(struct device *dev,
 				     struct device_attribute *msm_sleeper_attrs,
 				     const char *buf, size_t count)
 {
@@ -294,19 +294,19 @@ static ssize_t store_max_online(struct device *dev,
 				cpu_down(cpu);
 	}
 
-	sleeper_data.max_online = val;
+	sleeper_data.max_cpus_online = val;
 
 	return count;
 }
 
-static ssize_t show_suspend_max_online(struct device *dev,
+static ssize_t show_max_cpus_online_susp(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.suspend_max_online);
+	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.max_cpus_online_susp);
 }
 
-static ssize_t store_suspend_max_online(struct device *dev,
+static ssize_t store_max_cpus_online_susp(struct device *dev,
 				     struct device_attribute *msm_sleeper_attrs,
 				     const char *buf, size_t count)
 {
@@ -317,7 +317,7 @@ static ssize_t store_suspend_max_online(struct device *dev,
 	if (ret < 0 || val < 1 || val > NR_CPUS)
 		return -EINVAL;
 
-	sleeper_data.suspend_max_online = val;
+	sleeper_data.max_cpus_online_susp = val;
 
 	return count;
 }
@@ -395,16 +395,16 @@ static ssize_t store_down_count_max(struct device *dev,
 static DEVICE_ATTR(enabled, 644, show_enable_hotplug, store_enable_hotplug);
 static DEVICE_ATTR(up_threshold, 644, show_up_threshold, store_up_threshold);
 static DEVICE_ATTR(plug_all, 644, show_plug_all, store_plug_all);
-static DEVICE_ATTR(max_online, 644, show_max_online, store_max_online);
-static DEVICE_ATTR(suspend_max_online, 644, show_suspend_max_online, store_suspend_max_online);
+static DEVICE_ATTR(max_cpus_online, 644, show_max_cpus_online, store_max_cpus_online);
+static DEVICE_ATTR(max_cpus_online_susp, 644, show_max_cpus_online_susp, store_max_cpus_online_susp);
 static DEVICE_ATTR(up_count_max, 644, show_up_count_max, store_up_count_max);
 static DEVICE_ATTR(down_count_max, 644, show_down_count_max, store_down_count_max);
 
 static struct attribute *msm_sleeper_attrs[] = {
 	&dev_attr_up_threshold.attr,
 	&dev_attr_plug_all.attr,
-	&dev_attr_max_online.attr,
-	&dev_attr_suspend_max_online.attr,
+	&dev_attr_max_cpus_online.attr,
+	&dev_attr_max_cpus_online_susp.attr,
 	&dev_attr_up_count_max.attr,
 	&dev_attr_down_count_max.attr,
 	&dev_attr_enabled.attr,
