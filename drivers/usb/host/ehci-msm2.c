@@ -58,7 +58,6 @@ struct msm_hcd {
 	bool					pmic_gpio_dp_irq_enabled;
 	uint32_t				pmic_gpio_int_cnt;
 	atomic_t				pm_usage_cnt;
-	struct wake_lock			wlock;
 	struct work_struct			phy_susp_fail_work;
 };
 
@@ -626,7 +625,6 @@ static int msm_ehci_suspend(struct msm_hcd *mhcd)
 		enable_irq_wake(mhcd->pmic_gpio_dp_irq);
 		enable_irq(mhcd->pmic_gpio_dp_irq);
 	}
-	wake_unlock(&mhcd->wlock);
 
 	dev_info(mhcd->dev, "EHCI USB in low power mode\n");
 
@@ -650,7 +648,6 @@ static int msm_ehci_resume(struct msm_hcd *mhcd)
 		disable_irq_nosync(mhcd->pmic_gpio_dp_irq);
 		mhcd->pmic_gpio_dp_irq_enabled = 0;
 	}
-	wake_lock(&mhcd->wlock);
 
 	/* Vote for TCXO when waking up the phy */
 	ret = msm_xo_mode_vote(mhcd->xo_handle, MSM_XO_MODE_ON);
@@ -731,8 +728,6 @@ static irqreturn_t msm_ehci_host_wakeup_irq(int irq, void *data)
 	dev_dbg(mhcd->dev, "%s: hsusb host remote wakeup interrupt cnt: %u\n",
 			__func__, mhcd->pmic_gpio_int_cnt);
 
-
-	wake_lock(&mhcd->wlock);
 
 	if (mhcd->pmic_gpio_dp_irq_enabled) {
 		mhcd->pmic_gpio_dp_irq_enabled = 0;
@@ -1006,8 +1001,6 @@ static int __devinit ehci_msm2_probe(struct platform_device *pdev)
 		msm_ehci_vbus_power(mhcd, 1);
 
 	device_init_wakeup(&pdev->dev, 1);
-	wake_lock_init(&mhcd->wlock, WAKE_LOCK_SUSPEND, dev_name(&pdev->dev));
-	wake_lock(&mhcd->wlock);
 	INIT_WORK(&mhcd->phy_susp_fail_work, msm_ehci_phy_susp_fail_work);
 	/*
 	 * This pdev->dev is assigned parent of root-hub by USB core,
@@ -1080,7 +1073,6 @@ static int __devexit ehci_msm2_remove(struct platform_device *pdev)
 	msm_ehci_init_vddcx(mhcd, 0);
 
 	msm_ehci_init_clocks(mhcd, 0);
-	wake_lock_destroy(&mhcd->wlock);
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
 
