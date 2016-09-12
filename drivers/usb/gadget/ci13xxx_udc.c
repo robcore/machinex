@@ -82,7 +82,7 @@ module_param(streaming, uint, S_IRUGO | S_IWUSR);
  *****************************************************************************/
 
 #define DMA_ADDR_INVALID	(~(dma_addr_t)0)
-#define USB_MAX_TIMEOUT		100 /* 100msec timeout */
+#define USB_MAX_TIMEOUT		25 /* 25msec timeout */
 #define EP_PRIME_CHECK_DELAY	(jiffies + msecs_to_jiffies(1000))
 #define MAX_PRIME_CHECK_RETRY	3 /*Wait for 3sec for EP prime failure */
 
@@ -343,7 +343,6 @@ static int hw_device_reset(struct ci13xxx *udc)
 {
 	int delay_count = 25; /* 250 usec */
 
-	printk(KERN_INFO "usb:: %s\n", __func__);
 	/* should flush & stop before reset */
 	hw_cwrite(CAP_ENDPTFLUSH, ~0, ~0);
 	hw_cwrite(CAP_USBCMD, USBCMD_RS, 0);

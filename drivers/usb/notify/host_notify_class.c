@@ -129,9 +129,8 @@ error:
 	return ret;
 }
 
-static DEVICE_ATTR(mode, S_IRUGO | S_IWUSR | S_IWGRP, mode_show, mode_store);
-static DEVICE_ATTR(booster, S_IRUGO | S_IWUSR | S_IWGRP,
-				booster_show, booster_store);
+static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
+static DEVICE_ATTR(booster, 0664, booster_show, booster_store);
 
 static struct attribute *host_notify_attrs[] = {
 	&dev_attr_mode.attr,
