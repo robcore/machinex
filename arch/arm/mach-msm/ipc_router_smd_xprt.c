@@ -174,7 +174,7 @@ static int msm_ipc_router_smd_remote_write(void *data,
 
 			wait_event(smd_xprtp->write_avail_wait_q,
 				(smd_write_segment_avail(smd_xprtp->channel) ||
-+				smd_xprtp->ss_reset));
+				smd_xprtp->ss_reset));
 			smd_disable_read_intr(smd_xprtp->channel);
 			spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
 			if (smd_xprtp->ss_reset) {
