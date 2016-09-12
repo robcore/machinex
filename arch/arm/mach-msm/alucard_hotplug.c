@@ -70,9 +70,9 @@ static struct hotplug_tuners {
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
 	.hotplug_enable = 1,
-	.min_cpus_online = 2,
+	.min_cpus_online = 1,
 	.max_cpus_online = NR_CPUS,
-	.max_cpus_online_susp = 2,
+	.max_cpus_online_susp = 1,
 	.hp_io_is_busy = 0,
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
@@ -833,10 +833,10 @@ static int __init alucard_hotplug_init(void)
 	int ret;
 	unsigned int cpu;
 	unsigned int hotplug_freq[NR_CPUS][2] = {
-		{0, 1350000},
+		{0, 1242000},
+		{810000, 1566000},
 		{918000, 1674000},
-		{1026000, 1782000},
-		{1134000, 0}
+		{1026000, 0}
 	};
 	unsigned int hotplug_load[NR_CPUS][2] = {
 		{0, 60},
