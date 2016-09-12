@@ -35,13 +35,11 @@
 
 #define GENCFG2_SYS_CLK_HOST_DEV_GATE_EN     BIT(13)
 
+#define PORTSC_PHCD            (1 << 23) /* phy suspend mode */
 #define PORTSC_PTS_MASK         (3 << 30)
 #define PORTSC_PTS_ULPI         (3 << 30)
-#define PORTSC_PHCD             (1 << 23) /* phy suspend mode */
 #define PORTSC_LS               (3 << 10)
 #define PORTSC_LS_DM            (1 << 10)
-#define PORTSC_SUSP_MASK        (1 << 7)  /* Port Suspend */
-#define PORTSC_FPR_MASK         (1 << 6)
 #define PORTSC_CSC              (1 << 1)
 #define PORTSC_CCS              (1 << 0)
 
