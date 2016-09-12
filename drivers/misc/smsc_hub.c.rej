@@ -1,0 +1,47 @@
+--- drivers/misc/smsc_hub.c
++++ drivers/misc/smsc_hub.c
+@@ -348,6 +378,8 @@ reg_optimum_mode_fail:
+ struct smsc_hub_platform_data *msm_hub_dt_to_pdata(
+ 				struct platform_device *pdev)
+ {
++	int rc;
++	u32 temp_val;
+ 	struct device_node *node = pdev->dev.of_node;
+ 	struct smsc_hub_platform_data *pdata;
+ 
+@@ -357,6 +389,14 @@ struct smsc_hub_platform_data *msm_hub_dt_to_pdata(
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
++	rc = of_property_read_u32(node, "smsc,model-id", &temp_val);
++	if (rc) {
++		dev_err(&pdev->dev, "Unable to read smsc,model-id\n");
++		return ERR_PTR(rc);
++	} else {
++		pdata->model_id = temp_val;
++	}
++
+ 	pdata->hub_reset = of_get_named_gpio(node, "smsc,reset-gpio", 0);
+ 	if (pdata->hub_reset < 0)
+ 		return ERR_PTR(pdata->hub_reset);
+@@ -429,18 +469,13 @@ static int __devinit smsc_hub_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	gpio_direction_output(pdata->hub_reset, 0);
+-	/* Hub reset should be asserted for minimum 2microsec
++	/*
++	 * Hub reset should be asserted for minimum 2microsec
+ 	 * before deasserting.
+ 	 */
+ 	udelay(5);
+ 	gpio_direction_output(pdata->hub_reset, 1);
+ 
+-	ret = of_platform_populate(node, NULL, NULL, &pdev->dev);
+-	if (ret) {
+-		dev_err(&pdev->dev, "failed to add child node, ret=%d\n", ret);
+-		goto uninit_gpio;
+-	}
+-
+ 	if (!IS_ERR(smsc_hub->hub_vbus_reg)) {
+ 		ret = regulator_enable(smsc_hub->hub_vbus_reg);
+ 		if (ret) {
