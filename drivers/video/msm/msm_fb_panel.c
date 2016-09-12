@@ -49,6 +49,7 @@ int panel_next_on(struct platform_device *pdev)
 			    platform_data;
 			if ((next_pdata) && (next_pdata->on))
 				ret = next_pdata->on(next_pdev);
+				printk(KERN_INFO "RobPanelHookTestOn\n");
 		}
 	}
 
@@ -72,6 +73,7 @@ int panel_next_off(struct platform_device *pdev)
 			    platform_data;
 			if ((next_pdata) && (next_pdata->on))
 				ret = next_pdata->off(next_pdev);
+				printk(KERN_INFO "RobPanelHookTestOff\n");
 		}
 	}
 
