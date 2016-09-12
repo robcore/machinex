@@ -55,10 +55,6 @@
 #include <linux/fastchg.h>
 #endif
 
-#include <linux/fastchg.h>
-
-#include <linux/fastchg.h>
-
 #define MSM_USB_BASE	(motg->regs)
 #define DRIVER_NAME	"msm_otg"
 
