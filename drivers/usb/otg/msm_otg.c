@@ -351,6 +351,8 @@ static int ulpi_read(struct usb_phy *phy, u32 reg)
 	if (cnt >= ULPI_IO_TIMEOUT_USEC) {
 		dev_err(phy->dev, "ulpi_read: timeout %08x\n",
 			readl(USB_ULPI_VIEWPORT));
+		dev_err(phy->dev, "PORTSC: %08x USBCMD: %08x\n",
+			readl_relaxed(USB_PORTSC), readl_relaxed(USB_USBCMD));
 		return -ETIMEDOUT;
 	}
 	return ULPI_DATA_READ(readl(USB_ULPI_VIEWPORT));
@@ -376,6 +378,8 @@ static int ulpi_write(struct usb_phy *phy, u32 val, u32 reg)
 
 	if (cnt >= ULPI_IO_TIMEOUT_USEC) {
 		dev_err(phy->dev, "ulpi_write: timeout\n");
+		dev_err(phy->dev, "PORTSC: %08x USBCMD: %08x\n",
+			readl_relaxed(USB_PORTSC), readl_relaxed(USB_USBCMD));
 		return -ETIMEDOUT;
 	}
 	return 0;
@@ -434,74 +438,23 @@ static int msm_otg_link_clk_reset(struct msm_otg *motg, bool assert)
 	return ret;
 }
 
-static int msm_otg_phy_clk_reset(struct msm_otg *motg)
-{
-	int ret;
-
-	if (IS_ERR(motg->phy_reset_clk))
-		return 0;
-
-	ret = clk_reset(motg->phy_reset_clk, CLK_RESET_ASSERT);
-	if (ret) {
-		dev_err(motg->phy.dev, "usb phy clk assert failed\n");
-		return ret;
-	}
-	usleep_range(10000, 12000);
-	ret = clk_reset(motg->phy_reset_clk, CLK_RESET_DEASSERT);
-	if (ret)
-		dev_err(motg->phy.dev, "usb phy clk deassert failed\n");
-	return ret;
-}
-
 static int msm_otg_phy_reset(struct msm_otg *motg)
 {
 	u32 val;
 	int ret;
-	int retries;
 
 	ret = msm_otg_link_clk_reset(motg, 1);
 	if (ret)
 		return ret;
-	ret = msm_otg_phy_clk_reset(motg);
-	if (ret)
-		return ret;
-	/* 10 usec delay is required according to spec */
-	if (IS_ERR(motg->phy_reset_clk))
-		usleep_range(10, 12);
+	/* wait for 1ms delay as suggested in HPG. */
+	usleep_range(1000, 1200);
+
 	ret = msm_otg_link_clk_reset(motg, 0);
 	if (ret)
 		return ret;
 
 	val = readl(USB_PORTSC) & ~PORTSC_PTS_MASK;
 	writel(val | PORTSC_PTS_ULPI, USB_PORTSC);
-
-	for (retries = 3; retries > 0; retries--) {
-		ret = ulpi_write(&motg->phy, ULPI_FUNC_CTRL_SUSPENDM,
-				ULPI_CLR(ULPI_FUNC_CTRL));
-		if (!ret)
-			break;
-		ret = msm_otg_phy_clk_reset(motg);
-		if (ret)
-			return ret;
-	}
-	if (!retries)
-		return -ETIMEDOUT;
-
-	/* This reset calibrates the phy, if the above write succeeded */
-	ret = msm_otg_phy_clk_reset(motg);
-	if (ret)
-		return ret;
-
-	for (retries = 3; retries > 0; retries--) {
-		ret = ulpi_read(&motg->phy, ULPI_DEBUG);
-		if (ret != -ETIMEDOUT)
-			break;
-		ret = msm_otg_phy_clk_reset(motg);
-		if (ret)
-			return ret;
-	}
-	if (!retries)
-		return -ETIMEDOUT;
 
 	dev_info(motg->phy.dev, "phy_reset: success\n");
 	return 0;
@@ -528,6 +481,32 @@ static int msm_otg_link_reset(struct msm_otg *motg)
 	writel_relaxed(0x08, USB_AHBMODE);
 
 	return 0;
+}
+
+static void usb_phy_reset(struct msm_otg *motg)
+{
+	u32 val;
+
+	if (motg->pdata->phy_type != SNPS_28NM_INTEGRATED_PHY)
+		return;
+
+	/* Assert USB PHY_PON */
+	val =  readl_relaxed(USB_PHY_CTRL);
+	val &= ~PHY_POR_BIT_MASK;
+	val |= PHY_POR_ASSERT;
+	writel_relaxed(val, USB_PHY_CTRL);
+
+	/* wait for minimum 10 microseconds as suggested in HPG. */
+	usleep_range(10, 15);
+
+	/* Deassert USB PHY_PON */
+	val =  readl_relaxed(USB_PHY_CTRL);
+	val &= ~PHY_POR_BIT_MASK;
+	val |= PHY_POR_DEASSERT;
+	writel_relaxed(val, USB_PHY_CTRL);
+
+	/* Ensure that RESET operation is completed. */
+	mb();
 }
 
 static int msm_otg_reset(struct usb_phy *phy)
@@ -564,12 +543,20 @@ static int msm_otg_reset(struct usb_phy *phy)
 		dev_err(phy->dev, "link reset failed\n");
 		return ret;
 	}
+
 	msleep(100);
 
+	/* Reset USB PHY after performing USB Link RESET */
+	usb_phy_reset(motg);
+
+	/* Program USB PHY Override registers. */
 	ulpi_init(motg);
 
-	/* Ensure that RESET operation is completed before turning off clock */
-	mb();
+	/*
+	 * It is recommended in HPG to reset USB PHY after programming
+	 * USB PHY Override registers.
+	 */
+	usb_phy_reset(motg);
 
 	if (!IS_ERR(motg->clk))
 		clk_disable_unprepare(motg->clk);
@@ -3943,11 +3930,6 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	/* initialize reset counter */
 	motg->reset_counter = 0;
 
-	/* Some targets don't support PHY clock. */
-	motg->phy_reset_clk = clk_get(&pdev->dev, "phy_clk");
-	if (IS_ERR(motg->phy_reset_clk))
-		dev_err(&pdev->dev, "failed to get phy_clk\n");
-
 	/*
 	 * Targets on which link uses asynchronous reset methodology,
 	 * free running clock is not required during the reset.
@@ -4280,8 +4262,6 @@ put_core_clk:
 put_clk:
 	if (!IS_ERR(motg->clk))
 		clk_put(motg->clk);
-	if (!IS_ERR(motg->phy_reset_clk))
-		clk_put(motg->phy_reset_clk);
 free_otg:
 	kfree(motg->phy.otg);
 free_motg:
@@ -4365,8 +4345,6 @@ static int __devexit msm_otg_remove(struct platform_device *pdev)
 	iounmap(motg->regs);
 	pm_runtime_set_suspended(&pdev->dev);
 
-	if (!IS_ERR(motg->phy_reset_clk))
-		clk_put(motg->phy_reset_clk);
 	clk_put(motg->pclk);
 	if (!IS_ERR(motg->clk))
 		clk_put(motg->clk);

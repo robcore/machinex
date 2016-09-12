@@ -282,7 +282,6 @@ struct msm_otg_platform_data {
  * @async_irq: IRQ number used by some controllers during low power state
  * @clk: clock struct of alt_core_clk.
  * @pclk: clock struct of iface_clk.
- * @phy_reset_clk: clock struct of phy_clk.
  * @core_clk: clock struct of core_bus_clk.
  * @regs: ioremapped register base address.
  * @inputs: OTG state machine inputs(Id, SessValid etc).
@@ -313,7 +312,6 @@ struct msm_otg {
 	int async_irq;
 	struct clk *clk;
 	struct clk *pclk;
-	struct clk *phy_reset_clk;
 	struct clk *core_clk;
 	void __iomem *regs;
 #define ID		0
