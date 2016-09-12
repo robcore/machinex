@@ -452,9 +452,6 @@ static inline void notify_modem_smsm(void)
 {
 	static const struct interrupt_config_item *intr
 		= &private_intr_config[SMD_MODEM].smsm;
-
-	SMx_POWER_INFO("SMSM Apps->%s", "MODEM");
-
 	if (intr->out_base) {
 		++interrupt_stats[SMD_MODEM].smsm_out_config_count;
 		smd_write_intr(intr->out_bit_pos,
@@ -469,9 +466,6 @@ static inline void notify_dsp_smsm(void)
 {
 	static const struct interrupt_config_item *intr
 		= &private_intr_config[SMD_Q6].smsm;
-
-	SMx_POWER_INFO("SMSM Apps->%s", "ADSP");
-
 	if (intr->out_base) {
 		++interrupt_stats[SMD_Q6].smsm_out_config_count;
 		smd_write_intr(intr->out_bit_pos,
@@ -486,9 +480,6 @@ static inline void notify_dsps_smsm(void)
 {
 	static const struct interrupt_config_item *intr
 		= &private_intr_config[SMD_DSPS].smsm;
-
-	SMx_POWER_INFO("SMSM Apps->%s", "DSPS");
-
 	if (intr->out_base) {
 		++interrupt_stats[SMD_DSPS].smsm_out_config_count;
 		smd_write_intr(intr->out_bit_pos,
@@ -503,8 +494,6 @@ static inline void notify_wcnss_smsm(void)
 {
 	static const struct interrupt_config_item *intr
 		= &private_intr_config[SMD_WCNSS].smsm;
-
-	SMx_POWER_INFO("SMSM Apps->%s", "WCNSS");
 
 	if (intr->out_base) {
 		++interrupt_stats[SMD_WCNSS].smsm_out_config_count;
@@ -2910,8 +2899,7 @@ int smsm_change_state(uint32_t smsm_entry,
 	old_state = __raw_readl(SMSM_STATE_ADDR(smsm_entry));
 	new_state = (old_state & ~clear_mask) | set_mask;
 	__raw_writel(new_state, SMSM_STATE_ADDR(smsm_entry));
-	SMx_POWER_INFO("%s %d:%08x->%08x", __func__, smsm_entry,
-			old_state, new_state);
+	SMSM_DBG("smsm_change_state %x\n", new_state);
 	notify_other_smsm(SMSM_APPS_STATE, (old_state ^ new_state));
 
 	spin_unlock_irqrestore(&smem_lock, flags);

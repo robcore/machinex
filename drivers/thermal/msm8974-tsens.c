@@ -453,15 +453,6 @@ static irqreturn_t tsens_isr(int irq, void *data)
 			lower_thr = true;
 		}
 		if (upper_thr || lower_thr) {
-			unsigned long temp;
-			enum thermal_trip_type trip =
-					THERMAL_TRIP_CONFIGURABLE_LOW;
-
-			if (upper_thr)
-				trip = THERMAL_TRIP_CONFIGURABLE_HI;
-			tsens_tz_get_temp(tm->sensor[i].tz_dev, &temp);
-			thermal_sensor_trip(tm->sensor[i].tz_dev, trip, temp);
-
 			/* Notify user space */
 			schedule_work(&tm->sensor[i].work);
 			pr_debug("sensor:%d trigger temp (%d degC)\n", i,

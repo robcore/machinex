@@ -62,10 +62,6 @@ static int msm_route_lpa_vol_control;
 static const DECLARE_TLV_DB_LINEAR(lpa_rx_vol_gain, 0,
 			INT_RX_LR_VOL_MAX_STEPS);
 
-static int msm_route_hfp_vol_control;
-static const DECLARE_TLV_DB_LINEAR(hfp_rx_vol_gain, 0,
-			INT_RX_VOL_MAX_STEPS);
-
 static int msm_route_multimedia2_vol_control;
 static const DECLARE_TLV_DB_LINEAR(multimedia2_rx_vol_gain, 0,
 			INT_RX_VOL_MAX_STEPS);
@@ -715,23 +711,6 @@ static int msm_routing_set_lpa_vol_mixer(struct snd_kcontrol *kcontrol,
 	if (!lpa_set_volume(ucontrol->value.integer.value[0]))
 		msm_route_lpa_vol_control =
 			ucontrol->value.integer.value[0];
-
-	return 0;
-}
-
-static int msm_routing_get_hfp_vol_mixer(struct snd_kcontrol *kcontrol,
-					 struct snd_ctl_elem_value *ucontrol)
-{
-	ucontrol->value.integer.value[0] = msm_route_hfp_vol_control;
-	return 0;
-}
-
-static int msm_routing_set_hfp_vol_mixer(struct snd_kcontrol *kcontrol,
-					 struct snd_ctl_elem_value *ucontrol)
-{
-	afe_loopback_gain(INT_BT_SCO_TX , ucontrol->value.integer.value[0]);
-
-	msm_route_hfp_vol_control = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -1391,12 +1370,6 @@ static const struct snd_kcontrol_new lpa_vol_mixer_controls[] = {
 	SOC_SINGLE_EXT_TLV("LPA RX Volume", SND_SOC_NOPM, 0,
 	INT_RX_VOL_GAIN, 0, msm_routing_get_lpa_vol_mixer,
 	msm_routing_set_lpa_vol_mixer, lpa_rx_vol_gain),
-};
-
-static const struct snd_kcontrol_new int_hfp_vol_mixer_controls[] = {
-	SOC_SINGLE_EXT_TLV("Internal HFP RX Volume", SND_SOC_NOPM, 0,
-	INT_RX_VOL_GAIN, 0, msm_routing_get_hfp_vol_mixer,
-	msm_routing_set_hfp_vol_mixer, hfp_rx_vol_gain),
 };
 
 static const struct snd_kcontrol_new multimedia2_vol_mixer_controls[] = {
@@ -2150,10 +2123,6 @@ static int msm_routing_probe(struct snd_soc_platform *platform)
 	snd_soc_add_platform_controls(platform,
 				lpa_vol_mixer_controls,
 			ARRAY_SIZE(lpa_vol_mixer_controls));
-
-	snd_soc_add_platform_controls(platform,
-				int_hfp_vol_mixer_controls,
-			ARRAY_SIZE(int_hfp_vol_mixer_controls));
 
 	snd_soc_add_platform_controls(platform,
 				eq_enable_mixer_controls,

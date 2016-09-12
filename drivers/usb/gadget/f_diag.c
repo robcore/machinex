@@ -568,18 +568,12 @@ static void diag_function_unbind(struct usb_configuration *c,
 		struct usb_function *f)
 {
 	struct diag_context *ctxt = func_to_diag(f);
-	unsigned long flags;
 
 	if (gadget_is_dualspeed(c->cdev->gadget))
 		usb_free_descriptors(f->hs_descriptors);
 
 	usb_free_descriptors(f->descriptors);
 	ctxt->ch.priv_usb = NULL;
-
-	spin_lock_irqsave(&ctxt->lock, flags);
-	free_reqs(ctxt);
-	spin_unlock_irqrestore(&ctxt->lock, flags);
-	kfree(ctxt);
 }
 
 static int diag_function_bind(struct usb_configuration *c,

@@ -79,7 +79,7 @@ static void sdhci_dumpregs(struct sdhci_host *host)
 		sdhci_readl(host, SDHCI_INT_STATUS));
 	printk(KERN_DEBUG DRIVER_NAME ": Int enab: 0x%08x | Sig enab: 0x%08x\n",
 		sdhci_readl(host, SDHCI_INT_ENABLE),
-		sdhci_readw(host, SDHCI_AUTO_CMD_ERR),
+		sdhci_readl(host, SDHCI_SIGNAL_ENABLE));
 	printk(KERN_DEBUG DRIVER_NAME ": AC12 err: 0x%08x | Slot int: 0x%08x\n",
 		sdhci_readw(host, SDHCI_ACMD12_ERR),
 		sdhci_readw(host, SDHCI_SLOT_INT_STATUS));
@@ -89,12 +89,6 @@ static void sdhci_dumpregs(struct sdhci_host *host)
 	printk(KERN_DEBUG DRIVER_NAME ": Cmd:      0x%08x | Max curr: 0x%08x\n",
 		sdhci_readw(host, SDHCI_COMMAND),
 		sdhci_readl(host, SDHCI_MAX_CURRENT));
-	pr_info(DRIVER_NAME ": Resp 1:   0x%08x | Resp 0:   0x%08x\n",
-		sdhci_readl(host, SDHCI_RESPONSE + 0x4),
-		sdhci_readl(host, SDHCI_RESPONSE));
-	pr_info(DRIVER_NAME ": Resp 3:   0x%08x | Resp 2:   0x%08x\n",
-		sdhci_readl(host, SDHCI_RESPONSE + 0xC),
-		sdhci_readl(host, SDHCI_RESPONSE + 0x8));
 	printk(KERN_DEBUG DRIVER_NAME ": Host ctl2: 0x%08x\n",
 		sdhci_readw(host, SDHCI_HOST_CONTROL2));
 
@@ -180,7 +174,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 		host->clock = 0;
 
 	/* Wait max 100 ms */
-	timeout = 100000;
+	timeout = 100;
 
 	/* hw clears the bit when it's done */
 	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
@@ -191,7 +185,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 			return;
 		}
 		timeout--;
-		udelay(1);
+		mdelay(1);
 	}
 
 	if (host->ops->platform_reset_exit)
@@ -214,8 +208,7 @@ static void sdhci_init(struct sdhci_host *host, int soft)
 		SDHCI_INT_BUS_POWER | SDHCI_INT_DATA_END_BIT |
 		SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_INDEX |
 		SDHCI_INT_END_BIT | SDHCI_INT_CRC | SDHCI_INT_TIMEOUT |
-		SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE |
-			     SDHCI_INT_AUTO_CMD_ERR);
+		SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE);
 
 	if (soft) {
 		/* force clock reconfiguration */
@@ -943,7 +936,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	WARN_ON(host->cmd);
 
 	/* Wait max 10 ms */
-	timeout = 10000;
+	timeout = 10;
 
 	mask = SDHCI_CMD_INHIBIT;
 	if ((cmd->data != NULL) || (cmd->flags & MMC_RSP_BUSY))
@@ -964,7 +957,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 			return;
 		}
 		timeout--;
-		udelay(1);
+		mdelay(1);
 	}
 
 	mod_timer(&host->timer, jiffies + 10 * HZ);
@@ -1124,7 +1117,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
 
 	/* Wait max 20 ms */
-	timeout = 20000;
+	timeout = 20;
 	while (!((clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL))
 		& SDHCI_CLOCK_INT_STABLE)) {
 		if (timeout == 0) {
@@ -1134,7 +1127,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 			return;
 		}
 		timeout--;
-		udelay(1);
+		mdelay(1);
 	}
 
 	clk |= SDHCI_CLOCK_CARD_EN;
@@ -1974,7 +1967,6 @@ static void sdhci_tuning_timer(unsigned long data)
 
 static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 {
-	u16 auto_cmd_status;
 	BUG_ON(intmask == 0);
 
 	if (!host->cmd) {
@@ -1990,18 +1982,6 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 	else if (intmask & (SDHCI_INT_CRC | SDHCI_INT_END_BIT |
 			SDHCI_INT_INDEX))
 		host->cmd->error = -EILSEQ;
-
-	if (intmask & SDHCI_INT_AUTO_CMD_ERR) {
-		auto_cmd_status = sdhci_readw(host, SDHCI_AUTO_CMD_ERR);
-		if (auto_cmd_status & (SDHCI_AUTO_CMD12_NOT_EXEC |
-				       SDHCI_AUTO_CMD_INDEX_ERR |
-				       SDHCI_AUTO_CMD_ENDBIT_ERR))
-			host->cmd->error = -EIO;
-		else if (auto_cmd_status & SDHCI_AUTO_CMD_TIMEOUT_ERR)
-			host->cmd->error = -ETIMEDOUT;
-		else if (auto_cmd_status & SDHCI_AUTO_CMD_CRC_ERR)
-			host->cmd->error = -EILSEQ;
-	}
 
 	if (host->cmd->error) {
 		tasklet_schedule(&host->finish_tasklet);

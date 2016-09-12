@@ -289,6 +289,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 	synchronize_rcu();
 
 	smpboot_park_threads(cpu);
+
 	/*
 	 * So now all preempt/rcu users must observe !cpu_active().
 	 */
