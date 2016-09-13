@@ -459,22 +459,21 @@ static __devinit int max77693_pmic_probe(struct platform_device *pdev)
 	struct i2c_client *i2c;
 	int i, ret, size;
 	dev_info(&pdev->dev, "%s\n", __func__);
-
 	if (!pdata) {
-		pr_info("[%s:%d] !pdata\n", __FILE__, __LINE__);
+		//pr_info("[%s:%d] !pdata\n", __FILE__, __LINE__);
 		dev_err(pdev->dev.parent, "No platform init data supplied.\n");
 		return -ENODEV;
 	}
 
 	max77693 = kzalloc(sizeof(struct max77693_data), GFP_KERNEL);
 	if (!max77693) {
-		pr_info("[%s:%d] if (!max77693)\n", __FILE__, __LINE__);
+		//pr_info("[%s:%d] if (!max77693)\n", __FILE__, __LINE__);
 		return -ENOMEM;
 	}
 	size = sizeof(struct regulator_dev *) * pdata->num_regulators;
 	max77693->rdev = kzalloc(size, GFP_KERNEL);
 	if (!max77693->rdev) {
-		pr_info("[%s:%d] if (!max77693->rdev)\n", __FILE__, __LINE__);
+		//pr_info("[%s:%d] if (!max77693->rdev)\n", __FILE__, __LINE__);
 		kfree(max77693);
 		return -ENOMEM;
 	}

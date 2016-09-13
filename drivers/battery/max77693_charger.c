@@ -875,6 +875,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 			/* decrease the charging current according to siop level */
 			int current_now =
 				charger->charging_current * val->intval / 100;
+
 			if (current_now > 0 &&
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
