@@ -103,5 +103,4 @@ obj-$(CONFIG_SLIMPORT_ANX7808)	+= slimport_anx7808/
 obj-$(CONFIG_2MIC_ES305)		+= a2220.o
 obj-$(CONFIG_SEC_TORCH_FLASH)	+= sec_torch.o
 obj-$(CONFIG_MPU_411_ENABLE)	+= inv_mpu/
-obj-$(CONFIG_GAMMA_CONTROL)	+= gamma_control.o
 obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
