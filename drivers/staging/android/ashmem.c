@@ -365,9 +365,7 @@ static int ashmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (!sc->nr_to_scan)
 		return lru_count;
 
-	if (!mutex_trylock(&ashmem_mutex))
-		return -1;
-
+	mutex_lock(&ashmem_mutex);
 	list_for_each_entry_safe(range, next, &ashmem_lru_list, lru) {
 		struct inode *inode = range->asma->file->f_dentry->d_inode;
 		loff_t start = range->pgstart * PAGE_SIZE;
@@ -439,6 +437,7 @@ static int set_name(struct ashmem_area *asma, void __user *name)
 
 static int get_name(struct ashmem_area *asma, void __user *name)
 {
+	int len;
 	int ret = 0;
 	char lname[ASHMEM_NAME_LEN];
 	size_t len;
