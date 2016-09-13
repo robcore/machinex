@@ -86,6 +86,12 @@ static int cprm_ake_retry_flag;
 			stats->pack_stop_reason[reason]++;		\
 	} while (0)
 
+#define PCKD_TRGR_INIT_MEAN_POTEN	17
+#define PCKD_TRGR_POTEN_LOWER_BOUND	5
+#define PCKD_TRGR_URGENT_PENALTY	2
+#define PCKD_TRGR_LOWER_BOUND		5
+#define PCKD_TRGR_PRECISION_MULTIPLIER	100
+
 static DEFINE_MUTEX(block_mutex);
 
 /*
