@@ -10,7 +10,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
@@ -1466,7 +1465,8 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			if (!card->wr_pack_stats.packing_events)
 				goto free_card;
 		}
-		if (mmc_card_get_bkops_en_manual(card)) {
+
+		if (card->ext_csd.bkops_en) {
 			INIT_DELAYED_WORK(&card->bkops_info.dw,
 					  mmc_start_idle_time_bkops);
 

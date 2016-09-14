@@ -81,7 +81,7 @@ struct mmc_ext_csd {
 	bool			hpi;			/* HPI support bit */
 	unsigned int		hpi_cmd;		/* cmd used as HPI */
 	bool			bkops;		/* background support bit */
-	u8			bkops_en;	/* background enable bits */
+	bool			bkops_en;	/* background enable bit */
 	unsigned int            data_sector_size;       /* 512 bytes or 4KB */
 	unsigned int            data_tag_unit_size;     /* DATA TAG UNIT size */
 	unsigned int		boot_ro_lock;		/* ro lock support */
@@ -379,23 +379,6 @@ struct mmc_card {
 
 	struct mmc_bkops_info	bkops_info;
 };
-
-/*
- * mmc_csd registers get/set/clr helpers
- */
-#define mmc_card_get_bkops_en_manual(card) ((card->ext_csd.bkops_en) &\
-					EXT_CSD_BKOPS_EN_MANUAL_EN)
-#define mmc_card_set_bkops_en_manual(card) ((card->ext_csd.bkops_en) |= \
-					EXT_CSD_BKOPS_EN_MANUAL_EN)
-#define mmc_card_clr_bkops_en_manual(card) ((card->ext_csd.bkops_en) &= \
-					~EXT_CSD_BKOPS_EN_MANUAL_EN)
-
-#define mmc_card_get_bkops_en_auto(card) ((card->ext_csd.bkops_en) & \
-					EXT_CSD_BKOPS_EN_AUTO_EN)
-#define mmc_card_set_bkops_en_auto(card) ((card->ext_csd.bkops_en) |= \
-					EXT_CSD_BKOPS_EN_AUTO_EN)
-#define mmc_card_clr_bkops_en_auto(card) ((card->ext_csd.bkops_en) &= \
-					~EXT_CSD_BKOPS_EN_AUTO_EN)
 
 /*
  * This function fill contents in mmc_part.
