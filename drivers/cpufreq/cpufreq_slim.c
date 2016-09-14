@@ -154,10 +154,10 @@ static struct dbs_tuners {
 	.up_threshold_any_cpu_load = DEF_FREQUENCY_UP_THRESHOLD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 1026000,
-	.optimal_freq = 1134000,
-	.io_is_busy = 0,
-	.two_phase_freq = 1674000,
+	.sync_freq = 0,
+	.optimal_freq = 0,
+	.io_is_busy = 1,
+	.two_phase_freq = 0,
 	.ui_sampling_rate = UI_DYNAMIC_SAMPLING_RATE,
 	.input_event_timeout = INPUT_EVENT_TIMEOUT,
 	.gboost = 1,
@@ -297,7 +297,7 @@ static ssize_t store_input_event_timeout(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1674000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1350000} ;
 
 static ssize_t show_two_phase_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)
@@ -333,7 +333,7 @@ static ssize_t store_two_phase_freq(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static int input_event_min_freq_array[NR_CPUS] = {1458000, 1458000, 1458000, 1458000} ;
+static int input_event_min_freq_array[NR_CPUS] = {1512000, 1026000, 1026000, 1026000} ;
 
 static ssize_t show_input_event_min_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)

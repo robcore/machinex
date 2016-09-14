@@ -24,7 +24,7 @@
 static int active_count;
 static struct mutex gov_lock;
 
-#define DEFAULT_GOVERNOR_FREQ_OFF   810000
+#define DEFAULT_GOVERNOR_FREQ_OFF   1190400
 unsigned int max_governor_freq;
 unsigned int max_freq_screen_off = DEFAULT_GOVERNOR_FREQ_OFF;
 
