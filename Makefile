@@ -245,9 +245,9 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -fgcse-las -std=gnu89
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -std=gnu89
 HOSTCXXFLAGS = -O3
-
+#-fgcse-las
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
 
@@ -356,15 +356,17 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-KERNEL_FLAGS	= -mtune=cortex-a15 -marm -fgcse-las -fpredictive-commoning \
-		  -mfpu=neon-vfpv4 -mvectorize-with-neon-quad \
-		  -munaligned-access -fno-pic
+KERNEL_FLAGS	= -mtune=cortex-a15 -marm \
+		  -mfpu=neon-vfpv4 -mvectorize-with-neon-quad -munaligned-access \
+		  -fno-pic -fmodulo-sched -ffast-math -funsafe-math-optimizations
 
 MODFLAGS	= -DMODULE -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize -funroll-loops
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-align-labels -fno-prefetch-loop-arrays -mvectorize-with-neon-quad -munaligned-access -ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops
+CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4  -mvectorize-with-neon-quad -munaligned-access \
+				  -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block
+#-ftree-vectorize -funroll-loops -fno-align-functions -fno-align-jumps -fno-align-loops-fno-align-labels -fno-prefetch-loop-arrays
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -376,7 +378,7 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
                    $(if $(KBUILD_SRC), -I$(srctree)/include) \
                    -include $(srctree)/include/linux/kconfig.h
 
-#-freorder-blocks -freorder-blocks-and-partition?
+# -fgcse-las -fpredictive-commoning -freorder-blocks -freorder-blocks-and-partition?
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-variable -Wno-maybe-uninitialized \
 		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
