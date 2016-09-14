@@ -14,6 +14,8 @@
 #include <linux/irqflags.h>
 #include <linux/sched.h>
 #include <linux/tick.h>
+#include <linux/cpu.h>
+#include <linux/notifier.h>
 #include <asm/processor.h>
 
 
@@ -48,10 +50,18 @@ void __weak arch_irq_work_raise(void)
 }
 
 /*
- * Queue the entry and raise the IPI if needed.
+ * Enqueue the irq_work @entry unless it's already pending
+ * somewhere.
+ *
+ * Can be re-enqueued while the callback is still in progress.
  */
-static void __irq_work_queue(struct irq_work *work)
+void irq_work_queue(struct irq_work *work)
 {
+	/* Only queue if not already pending */
+	if (!irq_work_claim(work))
+		return;
+
+	/* Queue the entry and raise the IPI if needed. */
 	preempt_disable();
 
 	llist_add(&work->llnode, &__get_cpu_var(irq_work_list));
@@ -68,25 +78,6 @@ static void __irq_work_queue(struct irq_work *work)
 
 	preempt_enable();
 }
-
-/*
- * Enqueue the irq_work @entry, returns true on success, failure when the
- * @entry was already enqueued by someone else.
- *
- * Can be re-enqueued while the callback is still in progress.
- */
-bool irq_work_queue(struct irq_work *work)
-{
-	if (!irq_work_claim(work)) {
-		/*
-		 * Already enqueued, can't do!
-		 */
-		return false;
-	}
-
-	__irq_work_queue(work);
-	return true;
-}
 EXPORT_SYMBOL_GPL(irq_work_queue);
 
 bool irq_work_needs_cpu(void)
@@ -97,14 +88,13 @@ bool irq_work_needs_cpu(void)
 	if (llist_empty(this_list))
 		return false;
 
+	/* All work should have been flushed before going offline */
+	WARN_ON_ONCE(cpu_is_offline(smp_processor_id()));
+
 	return true;
 }
 
-/*
- * Run the irq_work entries on this cpu. Requires to be ran from hardirq
- * context with local IRQs disabled.
- */
-void irq_work_run(void)
+static void __irq_work_run(void)
 {
 	unsigned long flags;
 	struct irq_work *work;
@@ -123,7 +113,6 @@ void irq_work_run(void)
 	if (llist_empty(this_list))
 		return;
 
-	BUG_ON(!in_irq());
 	BUG_ON(!irqs_disabled());
 
 	llnode = llist_del_all(this_list);
@@ -135,9 +124,12 @@ void irq_work_run(void)
 		/*
 		 * Clear the PENDING bit, after this point the @work
 		 * can be re-used.
+		 * Make it immediately visible so that other CPUs trying
+		 * to claim that work don't rely on us to handle their data
+		 * while we are in the middle of the func.
 		 */
 		flags = work->flags & ~IRQ_WORK_PENDING;
-		work->flags = flags;
+		xchg(&work->flags, flags);
 
 		work->func(work);
 		/*
@@ -146,6 +138,16 @@ void irq_work_run(void)
 		 */
 		(void)cmpxchg(&work->flags, flags, flags & ~IRQ_WORK_BUSY);
 	}
+}
+
+/*
+ * Run the irq_work entries on this cpu. Requires to be ran from hardirq
+ * context with local IRQs disabled.
+ */
+void irq_work_run(void)
+{
+	BUG_ON(!in_irq());
+	__irq_work_run();
 }
 EXPORT_SYMBOL_GPL(irq_work_run);
 
@@ -161,3 +163,35 @@ void irq_work_sync(struct irq_work *work)
 		cpu_relax();
 }
 EXPORT_SYMBOL_GPL(irq_work_sync);
+
+#ifdef CONFIG_HOTPLUG_CPU
+static int irq_work_cpu_notify(struct notifier_block *self,
+			       unsigned long action, void *hcpu)
+{
+	long cpu = (long)hcpu;
+
+	switch (action) {
+	case CPU_DYING:
+		/* Called from stop_machine */
+		if (WARN_ON_ONCE(cpu != smp_processor_id()))
+			break;
+		__irq_work_run();
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cpu_notify;
+
+static __init int irq_work_init_cpu_notifier(void)
+{
+	cpu_notify.notifier_call = irq_work_cpu_notify;
+	cpu_notify.priority = 0;
+	register_cpu_notifier(&cpu_notify);
+	return 0;
+}
+early_initcall(irq_work_init_cpu_notifier);
+
+#endif /* CONFIG_HOTPLUG_CPU */
