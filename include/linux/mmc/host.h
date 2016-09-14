@@ -234,7 +234,6 @@ struct mmc_host {
 						/* DDR mode at 1.8V */
 #define MMC_CAP_1_2V_DDR	(1 << 12)	/* can support */
 						/* DDR mode at 1.2V */
-#define MMC_CAP_HSDDR		(MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR)
 #define MMC_CAP_POWER_OFF_CARD	(1 << 13)	/* Can power off after boot */
 #define MMC_CAP_BUS_WIDTH_TEST	(1 << 14)	/* CMD14/CMD19 bus width ok */
 #define MMC_CAP_UHS_SDR12	(1 << 15)	/* Host supports UHS SDR12 mode */
@@ -280,8 +279,6 @@ struct mmc_host {
 #define MMC_CAP2_INIT_BKOPS	    (1 << 15)	/* Need to set BKOPS_EN */
 #define MMC_CAP2_CLK_SCALE	(1 << 16)	/* Allow dynamic clk scaling */
 #define MMC_CAP2_ADAPT_PACKED	(1 << 17) 	/*  Disable packed write adaptively */
-/* Allows Asynchronous SDIO irq while card is in 4-bit mode */
-#define MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE (1 << 20)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
@@ -406,7 +403,6 @@ struct mmc_host {
 };
 
 extern struct mmc_host *mmc_alloc_host(int extra, struct device *);
-extern bool mmc_host_may_gate_card(struct mmc_card *);
 extern int mmc_add_host(struct mmc_host *);
 extern void mmc_remove_host(struct mmc_host *);
 extern void mmc_free_host(struct mmc_host *);
