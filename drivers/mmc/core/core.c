@@ -326,7 +326,9 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
  */
 void mmc_start_delayed_bkops(struct mmc_card *card)
 {
-	if (!card || !card->ext_csd.bkops_en || mmc_card_doing_bkops(card))
+	if (!card ||
+		!(mmc_card_get_bkops_en_manual(card)) ||
+		mmc_card_doing_bkops(card))
 		return;
 
 	if (card->bkops_info.sectors_changed <
