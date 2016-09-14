@@ -77,10 +77,6 @@ static int cpufreq_stats_update(unsigned int cpu)
 	spin_lock(&cpufreq_stats_lock);
 	stat = per_cpu(cpufreq_stats_table, cpu);
 	all_stat = per_cpu(all_cpufreq_stats, cpu);
-	if (!stat) {
-		spin_unlock(&cpufreq_stats_lock);
-		return 0;
-	}
 	if (stat->time_in_state) {
 		stat->time_in_state[stat->last_index] +=
 			cur_time - stat->last_time;
