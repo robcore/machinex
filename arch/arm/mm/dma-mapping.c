@@ -293,8 +293,6 @@ static int __init consistent_init(void)
 	pr_debug("DMA memory: 0x%08lx - 0x%08lx:\n", base, CONSISTENT_END);
 	consistent_head.vm_start = base;
 
-	pages += off;
-
 	do {
 		pgd = pgd_offset(&init_mm, base);
 
@@ -882,7 +880,7 @@ static void dma_cache_maint_page(struct page *page, unsigned long offset,
 	do {
 		size_t len = left;
 		void *vaddr;
-		
+
 		page = pfn_to_page(pfn);
 
 		if (PageHighMem(page)) {
