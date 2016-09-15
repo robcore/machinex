@@ -172,6 +172,7 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 
 	return cputime_to_usecs(idle_time);
 }
+EXPORT_SYMBOL_GPL(have_governor_per_policy);
 
 u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy)
 {
