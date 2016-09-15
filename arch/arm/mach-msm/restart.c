@@ -370,9 +370,6 @@ static int __init msm_pmic_restart_init(void)
 	return 0;
 #endif
 
-	if (use_restart_v2())
-		return 0;
-
 	if (pmic_reset_irq != 0) {
 		rc = request_any_context_irq(pmic_reset_irq,
 					resout_irq_handler, IRQF_TRIGGER_HIGH,
