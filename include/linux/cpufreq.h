@@ -128,9 +128,8 @@ struct cpufreq_cpu_sysinfo {
 #define CPUFREQ_INCOMPATIBLE	(1)
 #define CPUFREQ_NOTIFY		(2)
 #define CPUFREQ_START		(3)
-
-#define CPUFREQ_CREATE_POLICY	(5)
-#define CPUFREQ_REMOVE_POLICY	(6)
+#define CPUFREQ_CREATE_POLICY	(4)
+#define CPUFREQ_REMOVE_POLICY	(5)
 
 /* Govinfo Notifiers */
 #define CPUFREQ_LOAD_CHANGE	(0)
@@ -358,6 +357,7 @@ extern u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
 bool have_governor_per_policy(void);
+struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy);
 int cpufreq_set_gov(char *target_gov, unsigned int cpu);
 
 /*
