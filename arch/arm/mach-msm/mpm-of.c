@@ -591,6 +591,14 @@ static int __devinit msm_mpm_dev_probe(struct platform_device *pdev)
 		goto failed_free_irq;
 
 	}
+	ret = irq_set_irq_wake(dev->mpm_ipc_irq, 1);
+
+	if (ret) {
+		pr_err("%s: failed to set wakeup irq %u: %d\n",
+			__func__, dev->mpm_ipc_irq, ret);
+		goto failed_irq_get;
+
+	}
 	msm_mpm_initialized |= MSM_MPM_DEVICE_PROBED;
 
 	return 0;
