@@ -71,7 +71,8 @@ static inline u16 llc_ui_next_link_no(int sap)
  */
 static inline __be16 llc_proto_type(u16 arphrd)
 {
-	return htons(ETH_P_802_2);
+	return arphrd == ARPHRD_IEEE802_TR ?
+			 htons(ETH_P_TR_802_2) : htons(ETH_P_802_2);
 }
 
 /**
