@@ -11,6 +11,7 @@
 #ifndef _LINUX_CPUFREQ_H
 #define _LINUX_CPUFREQ_H
 
+#include <asm/cputime.h>
 #include <linux/mutex.h>
 #include <linux/notifier.h>
 #include <linux/threads.h>
@@ -139,6 +140,11 @@ struct cpufreq_cpu_sysinfo {
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */
 #define CPUFREQ_SHARED_TYPE_ALL	 (2) /* All dependent CPUs should set freq */
 #define CPUFREQ_SHARED_TYPE_ANY	 (3) /* Freq can be set from any dependent CPU*/
+
+static inline bool policy_is_shared(struct cpufreq_policy *policy)
+{
+	return cpumask_weight(policy->cpus) > 1;
+}
 
 /******************** cpufreq transition notifiers *******************/
 
@@ -436,6 +442,10 @@ enum {
 	DVFS_MAX_ID
 };
 
+/*********************************************************************
+ *                     Governor Helpers				     *
+ *********************************************************************/
+cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall);
 
 int set_freq_limit(unsigned long id, unsigned int freq);
 
