@@ -922,15 +922,6 @@ config SEC_DVFS
 	default n
 	depends on CPU_FREQ
 
-config CPUFREQ_HARDLIMIT
-	bool "CPU Frequency max. hardlimit"
-	default y
-	depends on CPU_FREQ
-	help
-	  Enforce a CPU hardlimit on mpdecision by refusing writes to sysfs
-	  above the given cutoff frequency and returning this cutoff frequency
-	  as get_max_freq(). (Yank555.lu)
-
 menu "x86 CPU frequency scaling drivers"
 depends on X86
 source "drivers/cpufreq/Kconfig.x86"
