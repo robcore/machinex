@@ -462,7 +462,7 @@ static struct notifier_block acpi_cpu_notifier =
 
 /*
  * acpi_processor_start() is called by the cpu_hotplug_notifier func:
- * acpi_cpu_soft_notify(). Getting it {data} is difficult, the
+ * acpi_cpu_soft_notify(). Getting it __cpuinit{data} is difficult, the
  * root cause seem to be that acpi_processor_uninstall_hotplug_notify()
  * is in the module_exit (__exit) func. Allowing acpi_processor_start()
  * to not be in section, but being called from funcs
@@ -599,7 +599,7 @@ err_remove_sysfs:
 err_clear_processor:
 	/*
 	 * processor_device_array is not cleared to allow checks for buggy BIOS
-	 */
+	 */ 
 	per_cpu(processors, pr->id) = NULL;
 err_free_cpumask:
 	free_cpumask_var(pr->throttling.shared_cpu_map);
