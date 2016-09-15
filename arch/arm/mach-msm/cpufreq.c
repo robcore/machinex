@@ -472,7 +472,7 @@ static int msm_cpufreq_suspend(struct cpufreq_policy *policy)
 static int msm_cpufreq_resume(struct cpufreq_policy *policy)
 {
 	int cpu, ret;
-	struct cpufreq_policy policy;
+	struct cpufreq_policy &policy;
 
 	for_each_possible_cpu(cpu) {
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
