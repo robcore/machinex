@@ -107,36 +107,6 @@ struct ww_mutex {
 #endif
 };
 
-struct ww_class {
-	atomic_long_t stamp;
-	struct lock_class_key acquire_key;
-	struct lock_class_key mutex_key;
-	const char *acquire_name;
-	const char *mutex_name;
-};
-
-struct ww_acquire_ctx {
-	struct task_struct *task;
-	unsigned long stamp;
-	unsigned acquired;
-#ifdef CONFIG_DEBUG_MUTEXES
-	unsigned done_acquire;
-	struct ww_class *ww_class;
-	struct ww_mutex *contending_lock;
-#endif
-#ifdef CONFIG_DEBUG_LOCK_ALLOC
-	struct lockdep_map dep_map;
-#endif
-};
-
-struct ww_mutex {
-	struct mutex base;
-	struct ww_acquire_ctx *ctx;
-#ifdef CONFIG_DEBUG_MUTEXES
-	struct ww_class *ww_class;
-#endif
-};
-
 #ifdef CONFIG_DEBUG_MUTEXES
 # include <linux/mutex-debug.h>
 #else
