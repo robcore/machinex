@@ -52,6 +52,10 @@ static struct msm_bus_scale_pdata bus_bw = {
 };
 static u32 bus_client;
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#include <linux/cpufreq_hardlimit.h>
+#endif
+
 struct cpufreq_work_struct {
 	struct work_struct work;
 	struct cpufreq_policy *policy;
