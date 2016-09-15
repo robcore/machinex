@@ -52,6 +52,10 @@ static struct msm_bus_scale_pdata bus_bw = {
 };
 static u32 bus_client;
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#include <linux/cpufreq_hardlimit.h>
+#endif
+
 struct cpufreq_work_struct {
 	struct work_struct work;
 	struct cpufreq_policy *policy;
@@ -134,11 +138,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 		}
 	}
 
-	/* limits applied above must be in cpufreq table */
-	table = cpufreq_frequency_get_table(policy->cpu);
-	if (cpufreq_frequency_table_target(policy, table, new_freq,
-		CPUFREQ_RELATION_H, &index))
-		return -EINVAL;
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
@@ -157,23 +156,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
-	trace_cpu_frequency_switch_start(freqs.old, freqs.new, policy->cpu);
-	if (is_clk) {
-		unsigned long rate = new_freq * 1000;
-		rate = clk_round_rate(cpu_clk[policy->cpu], rate);
-		ret = clk_set_rate(cpu_clk[policy->cpu], rate);
-		if (!ret) {
-			freq_index[policy->cpu] = index;
-			update_l2_bw(NULL);
-		}
-	} else {
-		ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
-	}
-
-	if (!ret) {
-		trace_cpu_frequency_switch_end(policy->cpu);
+	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
+	if (!ret)
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
-	}
 
 	/* Restore priority after clock ramp-up */
 	if (freqs.new > freqs.old && saved_sched_policy >= 0) {
