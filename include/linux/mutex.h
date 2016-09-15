@@ -77,6 +77,36 @@ struct mutex_waiter {
 #endif
 };
 
+struct ww_class {
+	atomic_long_t stamp;
+	struct lock_class_key acquire_key;
+	struct lock_class_key mutex_key;
+	const char *acquire_name;
+	const char *mutex_name;
+};
+
+struct ww_acquire_ctx {
+	struct task_struct *task;
+	unsigned long stamp;
+	unsigned acquired;
+#ifdef CONFIG_DEBUG_MUTEXES
+	unsigned done_acquire;
+	struct ww_class *ww_class;
+	struct ww_mutex *contending_lock;
+#endif
+#ifdef CONFIG_DEBUG_LOCK_ALLOC
+	struct lockdep_map dep_map;
+#endif
+};
+
+struct ww_mutex {
+	struct mutex base;
+	struct ww_acquire_ctx *ctx;
+#ifdef CONFIG_DEBUG_MUTEXES
+	struct ww_class *ww_class;
+#endif
+};
+
 #ifdef CONFIG_DEBUG_MUTEXES
 # include <linux/mutex-debug.h>
 #else
@@ -101,8 +131,11 @@ static inline void mutex_destroy(struct mutex *lock) {}
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 # define __DEP_MAP_MUTEX_INITIALIZER(lockname) \
 		, .dep_map = { .name = #lockname }
+# define __WW_CLASS_MUTEX_INITIALIZER(lockname, ww_class) \
+		, .ww_class = &ww_class
 #else
 # define __DEP_MAP_MUTEX_INITIALIZER(lockname)
+# define __WW_CLASS_MUTEX_INITIALIZER(lockname, ww_class)
 #endif
 
 #define __MUTEX_INITIALIZER(lockname) \
@@ -112,11 +145,47 @@ static inline void mutex_destroy(struct mutex *lock) {}
 		__DEBUG_MUTEX_INITIALIZER(lockname) \
 		__DEP_MAP_MUTEX_INITIALIZER(lockname) }
 
+#define __WW_CLASS_INITIALIZER(ww_class) \
+		{ .stamp = ATOMIC_LONG_INIT(0) \
+		, .acquire_name = #ww_class "_acquire" \
+		, .mutex_name = #ww_class "_mutex" }
+
+#define __WW_MUTEX_INITIALIZER(lockname, class) \
+		{ .base = { \__MUTEX_INITIALIZER(lockname) } \
+		__WW_CLASS_MUTEX_INITIALIZER(lockname, class) }
+
 #define DEFINE_MUTEX(mutexname) \
 	struct mutex mutexname = __MUTEX_INITIALIZER(mutexname)
 
+#define DEFINE_WW_CLASS(classname) \
+	struct ww_class classname = __WW_CLASS_INITIALIZER(classname)
+
+#define DEFINE_WW_MUTEX(mutexname, ww_class) \
+	struct ww_mutex mutexname = __WW_MUTEX_INITIALIZER(mutexname, ww_class)
+
+
 extern void __mutex_init(struct mutex *lock, const char *name,
 			 struct lock_class_key *key);
+
+/**
+ * ww_mutex_init - initialize the w/w mutex
+ * @lock: the mutex to be initialized
+ * @ww_class: the w/w class the mutex should belong to
+ *
+ * Initialize the w/w mutex to unlocked state and associate it with the given
+ * class.
+ *
+ * It is not allowed to initialize an already locked mutex.
+ */
+static inline void ww_mutex_init(struct ww_mutex *lock,
+				 struct ww_class *ww_class)
+{
+	__mutex_init(&lock->base, ww_class->mutex_name, &ww_class->mutex_key);
+	lock->ctx = NULL;
+#ifdef CONFIG_DEBUG_MUTEXES
+	lock->ww_class = ww_class;
+#endif
+}
 
 /**
  * mutex_is_locked - is the mutex locked
