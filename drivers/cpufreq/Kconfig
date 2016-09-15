@@ -928,21 +928,6 @@ config SEC_DVFS
 	default n
 	depends on CPU_FREQ
 
-config CPUFREQ_HARDLIMIT
-	bool "CPU Frequency hardlimit driver (Yank555.lu)"
-	default y
-	depends on CPU_FREQ
-	help
-	  Enforce CPU scaling min/max against interference by userspace, allow
-	  for screen on/off settings for scaling min/max and introducing
-	  wakeup kick to reduce wakeup lag (Yank555.lu)
-
-config CPUFREQ_HARDLIMIT_DEBUG
- 	bool "CPU Frequency hardlimit driver debugging code"
- 	depends on CPUFREQ_HARDLIMIT
- 	help
- 	  Output debugging info in dmesg [HARDLIMIT] (Yank555.lu)
-
 menu "x86 CPU frequency scaling drivers"
 depends on X86
 source "drivers/cpufreq/Kconfig.x86"
