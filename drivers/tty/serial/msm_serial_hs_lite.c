@@ -59,6 +59,7 @@
 #ifdef CONFIG_MACH_APQ8064_MAKO
 /* HACK: earjack noise due to HW flaw. disable console to avoid this issue */
 extern int mako_console_stopped(void);
+#else
 static inline int mako_console_stopped(void) { return 0; }
 #endif
 #if !defined(CONFIG_MFD_MAX77693)
@@ -86,12 +87,6 @@ struct msm_hsl_wakeup {
 	unsigned int wakeup_set;
 	struct wake_lock wake_lock; /* Keep a wake lock */
 };
-
-#ifdef CONFIG_MACH_APQ8064_MAKO
-/* HACK: earjack noise due to HW flaw. disable console to avoid this issue */
-extern int mako_console_stopped(void);
-static inline int mako_console_stopped(void) { return 0; }
-#endif
 
 struct msm_hsl_port {
 	struct uart_port	uart;
@@ -1743,7 +1738,6 @@ static int msm_serial_hsl_resume(struct device *dev)
 		return rc;
 	}
 #endif
-#ifdef CONFIG_MACH_APQ8064_MAKO
 	port = get_port_from_line(get_line(pdev));
 	msm_hsl_port = UART_TO_MSM(port);
 
@@ -1760,7 +1754,6 @@ static int msm_serial_hsl_resume(struct device *dev)
 				console_stop(port->cons);
 			msm_hsl_init_clock(port);
 		}
-#endif
 #if defined(CONFIG_MFD_MAX77693)
 		if (max77693_get_jig_state() || msm_hsl_port->wakeup.wakeup_set) {
 #else
