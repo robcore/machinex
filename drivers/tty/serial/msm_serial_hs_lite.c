@@ -88,6 +88,13 @@ struct msm_hsl_wakeup {
 	struct wake_lock wake_lock; /* Keep a wake lock */
 };
 
+#ifdef CONFIG_MACH_APQ8064_MAKO
+/* HACK: earjack noise due to HW flaw. disable console to avoid this issue */
+extern int mako_console_stopped(void);
+#else
+static inline int mako_console_stopped(void) { return 0; }
+#endif
+
 struct msm_hsl_port {
 	struct uart_port	uart;
 	char			name[16];
@@ -1311,6 +1318,11 @@ static void msm_hsl_console_write(struct console *co, const char *s,
 	int locked;
 
 	BUG_ON(co->index < 0 || co->index >= UART_NR);
+
+#ifdef CONFIG_MACH_APQ8064_MAKO
+	if (mako_console_stopped())
+		return;
+#endif
 
 #ifdef CONFIG_MACH_APQ8064_MAKO
 	if (mako_console_stopped())
