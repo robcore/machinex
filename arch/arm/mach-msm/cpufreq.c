@@ -52,6 +52,10 @@ static struct msm_bus_scale_pdata bus_bw = {
 };
 static u32 bus_client;
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#include <linux/cpufreq_hardlimit.h>
+#endif
+
 struct cpufreq_work_struct {
 	struct work_struct work;
 	struct cpufreq_policy *policy;
@@ -149,7 +153,11 @@ void set_max_lock(int freq)
 
 int get_max_freq(void)
 {
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+	return check_cpufreq_hardlimit(cpuinfo_max_freq); /* Yank555.lu : Enforce hardlimit */
+#else
 	return cpuinfo_max_freq;
+#endif
 }
 
 int get_min_freq(void)
