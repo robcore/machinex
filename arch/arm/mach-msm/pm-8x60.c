@@ -124,11 +124,11 @@ struct msm_pm_sysfs_sleep_mode {
 };
 
 static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
-	[MSM_PM_SLEEP_MODE_POWER_COLLAPSE] = "power_collapse",
 	[MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT] = "wfi",
 	[MSM_PM_SLEEP_MODE_RETENTION] = "retention",
 	[MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE] =
 		"standalone_power_collapse",
+	[MSM_PM_SLEEP_MODE_POWER_COLLAPSE] = "power_collapse",
 };
 
 static struct hrtimer pm_hrtimer;
