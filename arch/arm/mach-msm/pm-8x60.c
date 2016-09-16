@@ -1383,6 +1383,7 @@ static int __init msm_pm_init(void)
 		return rc;
 	}
 
+
 	return 0;
 }
 
