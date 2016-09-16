@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,9 +21,9 @@
 #include <linux/errno.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
+#include <linux/console.h>
 #include <linux/regulator/consumer.h>
 #include <linux/iopoll.h>
-#include <linux/console.h>
 
 #include <asm/mach-types.h>
 #include <asm/cpu.h>
@@ -861,10 +861,8 @@ static int init_clock_sources(struct scalable *sc,
 	return 0;
 }
 
-//using a bash symbol as a commented line in C code is dumb too
-//assholes
-//error this code here is dumb, keep it out.
 #ifndef CONFIG_ARCH_MSM8960
+#error this code here is dumb, keep it out.
 static void fill_cur_core_speed(struct core_speed *s,
 					  struct scalable *sc)
 {
@@ -1013,8 +1011,8 @@ static void __init bus_init(const struct l2_level *l2_level)
 
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 
-#define HFPLL_MIN_VDD		 600000
-#define HFPLL_MAX_VDD		1450000
+#define HFPLL_MIN_VDD		 700000
+#define HFPLL_MAX_VDD		1350000
 
 ssize_t acpuclk_get_vdd_levels_str(char *buf) {
 
