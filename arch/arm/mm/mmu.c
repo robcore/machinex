@@ -1000,7 +1000,7 @@ void __init sanity_check_meminfo(void)
 	}
 #endif
 #ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-	find_membank0_hole();
+	find_memory_hole();
 #endif
 
 #if (defined CONFIG_HIGHMEM) && (defined CONFIG_FIX_MOVABLE_ZONE)
