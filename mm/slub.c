@@ -2646,7 +2646,7 @@ EXPORT_SYMBOL(kmem_cache_free);
  * take the list_lock.
  */
 static int slub_min_order;
-static int slub_max_order;
+static int slub_max_order = PAGE_ALLOC_COSTLY_ORDER;
 static int slub_min_objects;
 
 /*
@@ -4383,8 +4383,22 @@ enum slab_stat_type {
 static ssize_t show_slab_objects(struct kmem_cache *s,
 			    char *buf, unsigned long flags)
 {
- 		for_each_possible_cpu(cpu) {
- 			struct kmem_cache_cpu *c = per_cpu_ptr(s->cpu_slab, cpu);
+	unsigned long total = 0;
+	int node;
+	int x;
+	unsigned long *nodes;
+	unsigned long *per_cpu;
+
+	nodes = kzalloc(2 * sizeof(unsigned long) * nr_node_ids, GFP_KERNEL);
+	if (!nodes)
+		return -ENOMEM;
+	per_cpu = nodes + nr_node_ids;
+
+	if (flags & SO_CPU) {
+		int cpu;
+
+		for_each_possible_cpu(cpu) {
+			struct kmem_cache_cpu *c = per_cpu_ptr(s->cpu_slab, cpu);
 			int node;
 			struct page *page;
 
