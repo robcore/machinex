@@ -71,28 +71,28 @@ static int msm_cpuidle_enter(
 	struct cpuidle_device *dev, struct cpuidle_driver *drv, int index)
 {
 	int ret = 0;
-	int i;
+	int i = 0;
 	enum msm_pm_sleep_mode pm_mode;
+	struct cpuidle_state_usage *st_usage = NULL;
 
-	pm_mode = msm_pm_idle_enter(dev, drv, index);
-
+	pm_mode = msm_pm_idle_prepare(dev, drv, index);
+	dev->last_residency = msm_pm_idle_enter(pm_mode);
 	for (i = 0; i < dev->state_count; i++) {
-		struct cpuidle_state_usage *st_usage = &dev->states_usage[i];
-		enum msm_pm_sleep_mode last_mode =
-			(enum msm_pm_sleep_mode)cpuidle_get_statedata(st_usage);
-
-		if (last_mode == pm_mode) {
+		st_usage = &dev->states_usage[i];
+		if ((enum msm_pm_sleep_mode) cpuidle_get_statedata(st_usage)
+		    == pm_mode) {
 			ret = i;
 			break;
 		}
 	}
+
 
 	local_irq_enable();
 
 	return ret;
 }
 
-static void __devinit msm_cpuidle_set_states(void)
+static void __init msm_cpuidle_set_states(void)
 {
 	int i = 0;
 	int state_count = 0;
@@ -148,7 +148,7 @@ static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 	dev->state_count = state_count; /* Per cpu state count */
 }
 
-int __devinit msm_cpuidle_init(void)
+int __init msm_cpuidle_init(void)
 {
 	unsigned int cpu = 0;
 	int ret = 0;

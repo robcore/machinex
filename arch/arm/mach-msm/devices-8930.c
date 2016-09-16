@@ -67,18 +67,11 @@ static struct resource msm8930_resources_pccntr[] = {
 	},
 };
 
-static struct msm_pm_init_data_type msm_pm_data = {
-	.retention_calls_tz = true,
-};
-
-struct platform_device msm8930_pm_8x60 = {
-	.name		= "pm-8x60",
+struct platform_device msm8930_pc_cntr = {
+	.name		= "pc-cntr",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(msm8930_resources_pccntr),
 	.resource	= msm8930_resources_pccntr,
-	.dev = {
-		.platform_data = &msm_pm_data,
-	},
 };
 
 struct msm_rpm_platform_data msm8930_rpm_data __initdata = {
