@@ -22,7 +22,7 @@
 #include "idle.h"
 #include "idle-macros.S"
 
-#ifdef CONFIG_ARCH_MSM_KRAIT
+#ifdef CONFIG_MSM_SCM
 #define SCM_SVC_BOOT 0x1
 #define SCM_CMD_TERMINATE_PC 0x2
 #endif
@@ -96,7 +96,7 @@ ENTRY(msm_pm_pc_hotplug)
 	str	r2, [r1]
 skip_hp_debug1:
 
-#ifdef CONFIG_ARCH_MSM_KRAIT
+#ifdef CONFIG_MSM_SCM
 	ldr	r0, =SCM_SVC_BOOT
 	ldr	r1, =SCM_CMD_TERMINATE_PC
 	mov	r2, #0
@@ -186,6 +186,7 @@ ENTRY(msm_pm_collapse)
 	ldr	r1, [r1]
 	cmp	r1, #0
 	blxne	r1
+
 skip:
 	ldr	r1, =msm_pm_disable_l2_fn
 	ldr	r1, [r1]
@@ -206,7 +207,7 @@ skip:
 	str	r2, [r1]
 skip_pc_debug1:
 
-#ifdef CONFIG_ARCH_MSM_KRAIT
+#ifdef CONFIG_MSM_SCM
 	ldr	r0, =SCM_SVC_BOOT
 	ldr	r1, =SCM_CMD_TERMINATE_PC
 	ldr	r2, =msm_pm_flush_l2_flag
@@ -222,7 +223,7 @@ skip_pc_debug1:
 	SUSPEND_8x25_L2
 	SET_SMP_COHERENCY OFF
 	wfi
-	DELAY 300
+	DELAY_8x25 300
 
 	mcr     p15, 0, r4, c1, c0, 0    /* restore d/i cache  */
 	isb
@@ -325,7 +326,7 @@ ENTRY(msm_pm_collapse_exit)
 msm_pm_mapped_pa:
 	/* Switch to virtual */
 	ldr     r0, =msm_pm_pa_to_va
-	ret     r0
+	mov     pc, r0
 msm_pm_pa_to_va:
 	mcr     p15, 0, r1, c2, c0, 0 /* restore TTBR0 */
 	isb
@@ -355,7 +356,6 @@ msm_pm_pa_to_va:
 	blxne	r1
 	dmb
 #if defined(CONFIG_MSM_JTAG) || defined(CONFIG_MSM_JTAG_MM)
-	stmfd   sp!, {lr}
 	bl      msm_jtag_restore_state
 #endif
 	ldmfd   sp!, {lr}
@@ -474,3 +474,4 @@ msm_pm_flush_l2_flag:
  */
 l2x0_saved_ctrl_reg_val:
 	.space 4 * 3
+

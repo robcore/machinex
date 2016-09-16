@@ -20,6 +20,9 @@
 #include <linux/workqueue.h>
 #include <linux/cpumask.h>
 #include <asm/div64.h>
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#include <linux/cpufreq_hardlimit.h>
+#endif
 
 #define CPUFREQ_NAME_LEN 16
 /* Print length for names. Extra 1 space for accomodating '\n' in prints */
@@ -295,7 +298,9 @@ static inline void cpufreq_verify_within_limits(struct cpufreq_policy *policy, u
 #ifdef CONFIG_MSM_CPUFREQ_LIMITER
 	max = min(limited_max_freq, max);
 #endif
-
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+	max = check_cpufreq_hardlimit(max); /* Yank555.lu - Enforce hardlimit */
+#endif
 	if (policy->min < min)
 		policy->min = min;
 	if (policy->max < min)
