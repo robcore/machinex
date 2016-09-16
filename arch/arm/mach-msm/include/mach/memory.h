@@ -152,8 +152,8 @@ extern char *__compat_exports_end[];
 #endif
 
 /* these correspond to values known by the modem */
-#define MEMORY_DEEP_POWERDOWN	0
-#define MEMORY_SELF_REFRESH	1
+define MEMORY_DEEP_POWERDOWN	0
+define MEMORY_SELF_REFRESH	1
 #define MEMORY_ACTIVE		2
 
 #define NPA_MEMORY_NODE_NAME	"/mem/apps/ddr_dpd"
