@@ -129,7 +129,7 @@ static void msm_limit_resume(struct work_struct *work)
 
 static void __msm_limit_suspend(void)
 {
-	if (!limit.limiter_enabled)
+	if (!limit.limiter_enabled || limit.suspended)
 		return;
 
 	INIT_DELAYED_WORK(&limit.suspend_work, msm_limit_suspend);
@@ -249,7 +249,7 @@ static void msm_cpufreq_limit_stop(void)
 	cancel_work_sync(&limit.resume_work);
 	cancel_delayed_work_sync(&limit.suspend_work);
 	mutex_destroy(&limit.resume_suspend_mutex);
-	for_each_possible_cpu(cpu)	
+	for_each_possible_cpu(cpu)
 		mutex_destroy(&limit.msm_limiter_mutex[cpu]);
 
 #ifdef CONFIG_STATE_NOTIFIER
