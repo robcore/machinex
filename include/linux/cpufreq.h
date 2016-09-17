@@ -359,6 +359,10 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
 bool have_governor_per_policy(void);
 int cpufreq_set_gov(char *target_gov, unsigned int cpu);
+int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
+			unsigned int cpu);
+int cpufreq_get_max(unsigned int cpu);
+int cpufreq_get_min(unsigned int cpu);
 
 /*
  * Governor specific info that can be passed to modules that subscribe
