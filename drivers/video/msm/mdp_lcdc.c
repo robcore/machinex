@@ -94,7 +94,6 @@ static int lcdc_suspend(struct msm_panel_data *fb_panel)
 	clk_disable_unprepare(lcdc->pad_pclk);
 	clk_disable_unprepare(lcdc->pclk);
 	clk_disable_unprepare(lcdc->mdp_clk);
-	printk(KERN_INFO "RobPanelHookTestOff\n");
 
 	return 0;
 }
@@ -109,7 +108,6 @@ static int lcdc_resume(struct msm_panel_data *fb_panel)
 	clk_prepare_enable(lcdc->pclk);
 	clk_prepare_enable(lcdc->pad_pclk);
 	mdp_writel(lcdc->mdp, 1, MDP_LCDC_EN);
-	printk(KERN_INFO "RobPanelHookTestOn\n");
 
 	return 0;
 }

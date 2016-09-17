@@ -343,6 +343,19 @@ static inline void lockup_detector_init(void)
 }
 #endif
 
+#ifdef CONFIG_DETECT_HUNG_TASK
+extern unsigned int  sysctl_hung_task_panic;
+extern unsigned long sysctl_hung_task_check_count;
+extern unsigned long sysctl_hung_task_timeout_secs;
+extern unsigned long sysctl_hung_task_warnings;
+extern int proc_dohung_task_timeout_secs(struct ctl_table *table, int write,
+					 void __user *buffer,
+					 size_t *lenp, loff_t *ppos);
+#else
+/* Avoid need for ifdefs elsewhere in the code */
+enum { sysctl_hung_task_timeout_secs = 0 };
+#endif
+
 /* Attach to any functions which should be ignored in wchan output. */
 #define __sched		__attribute__((__section__(".sched.text")))
 
@@ -2624,16 +2637,7 @@ static inline void thread_group_cputime_init(struct signal_struct *sig)
 extern void recalc_sigpending_and_wake(struct task_struct *t);
 extern void recalc_sigpending(void);
 
-extern void signal_wake_up_state(struct task_struct *t, unsigned int state);
-
-static inline void signal_wake_up(struct task_struct *t, bool resume)
-{
-	signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
-}
-static inline void ptrace_signal_wake_up(struct task_struct *t, bool resume)
-{
-	signal_wake_up_state(t, resume ? __TASK_TRACED : 0);
-}
+extern void signal_wake_up(struct task_struct *t, int resume_stopped);
 
 /*
  * Wrappers for p->thread_info->cpu access. No-op on UP.
