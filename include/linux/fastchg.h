@@ -23,9 +23,9 @@
 #define _LINUX_FASTCHG_H
 
 #define FAST_CHARGE_VERSION "v1.2 by Yank555.lu, ktoonsez & Tkkg1994"
-#define AC_LEVELS  "1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100"
-#define USB_LEVELS "460 500 600 700 800 900 1000"
-#define WIRELESS_LEVELS "650 800 900 1000 1100 1200"
+#define AC_LEVELS  "0 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100"
+#define USB_LEVELS "0 460 500 600 700 800 900 1000"
+#define WIRELESS_LEVELS "0 650 800 900 1000 1100 1200"
 #define ANY_LEVELS "0 to 2100"
 
 extern int force_fast_charge;
@@ -46,6 +46,7 @@ extern int screen_on_current_limit;
 
 extern int ac_charge_level;
 
+#define AC_CHARGE_0 0
 #define AC_CHARGE_1000 1000
 #define AC_CHARGE_1100 1100
 #define AC_CHARGE_1200 1200
@@ -61,6 +62,7 @@ extern int ac_charge_level;
 
 extern int usb_charge_level;
 
+#define USB_CHARGE_0 0
 #define USB_CHARGE_460 460	/* default */
 #define USB_CHARGE_500 500
 #define USB_CHARGE_600 600
@@ -71,6 +73,7 @@ extern int usb_charge_level;
 
 extern int wireless_charge_level;
 
+#define WIRELESS_CHARGE_0 0
 #define WIRELESS_CHARGE_650 650	/* default */
 #define WIRELESS_CHARGE_800 800
 #define WIRELESS_CHARGE_900 900
