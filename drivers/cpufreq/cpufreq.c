@@ -1031,7 +1031,7 @@ err_out_kobj_put:
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
-static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
+static int cpufreq_add_policy_cpu(unsigned int cpu, int sibling,
 				  struct device *dev)
 {
 	struct cpufreq_policy *policy;
