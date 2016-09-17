@@ -209,7 +209,6 @@ static ssize_t ac_charge_level_store(struct kobject *kobj,
 	else {
 
 		switch (new_ac_charge_level) {
-			case AC_CHARGE_0:
 			case AC_CHARGE_1000:
 			case AC_CHARGE_1100:
 			case AC_CHARGE_1200:
@@ -269,7 +268,6 @@ static ssize_t usb_charge_level_store(struct kobject *kobj,
 	else {
 
 		switch (new_usb_charge_level) {
-			case USB_CHARGE_0:
 			case USB_CHARGE_460:
 			case USB_CHARGE_500:
 			case USB_CHARGE_600:
@@ -323,7 +321,6 @@ static ssize_t wireless_charge_level_store(struct kobject *kobj,
 	else {
 
 		switch (new_wireless_charge_level) {
-			case WIRELESS_CHARGE_0:
 			case WIRELESS_CHARGE_650:
 			case WIRELESS_CHARGE_800:
 			case WIRELESS_CHARGE_900:
@@ -332,7 +329,7 @@ static ssize_t wireless_charge_level_store(struct kobject *kobj,
 			case WIRELESS_CHARGE_1200:
 				wireless_charge_level = new_wireless_charge_level;
 				return count;
-			default:
+			default:			
 				return -EINVAL;
 		}
 
@@ -369,7 +366,7 @@ static ssize_t failsafe_store(struct kobject *kobj,
 	switch (new_failsafe) {
 		case FAIL_SAFE_ENABLED:
 			usb_charge_level = USB_CHARGE_460;
-			ac_charge_level = AC_CHARGE_1900;
+			ac_charge_level = AC_CHARGE_1800;
 			failsafe = new_failsafe;
 			return count;
 		case FAIL_SAFE_DISABLED:
