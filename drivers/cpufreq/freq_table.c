@@ -62,6 +62,9 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 	pr_debug("request for verification of policy (%u - %u kHz) for cpu %u\n",
 					policy->min, policy->max, policy->cpu);
 
+	if (!cpu_online(policy->cpu))
+		return -EINVAL;
+
 	cpufreq_verify_within_cpu_limits(policy);
 
 	for (; freq = table[i].frequency, freq != CPUFREQ_TABLE_END; i++) {
@@ -116,6 +119,9 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 		optimal.frequency = ~0;
 		break;
 	}
+
+	if (!cpu_online(policy->cpu))
+		return -EINVAL;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		unsigned int freq = table[i].frequency;
