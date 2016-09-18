@@ -750,6 +750,9 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
 	if (aca_enabled())
 		return 0;
 
+	if (atomic_read(&motg->in_lpm) == suspend)
+		return 0;
+
 	/*
 	 * UDC and HCD call usb_phy_set_suspend() to enter/exit LPM
 	 * during bus suspend/resume.  Update the relevant state
