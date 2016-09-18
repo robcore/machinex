@@ -747,12 +747,12 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 		return 0;
 	}
 
+	/* Handles race with Async interrupt */
+	disable_irq(hcd->irq);
+
 	if (pdata && pdata->standalone_latency)
 		pm_qos_update_request(&mehci->pm_qos_req_dma,
 			pdata->standalone_latency + 1);
-
-	/* Handles race with Async interrupt */
-	disable_irq(hcd->irq);
 
 	spin_lock_irqsave(&mehci->wakeup_lock, flags);
 	if (mehci->wakeup_irq_enabled) {
@@ -1004,7 +1004,10 @@ static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		next_latency = PM_QOS_DEFAULT_VALUE;
+		if (pdata->standalone_latency)
+			next_latency = pdata->standalone_latency + 1;
+		else
+			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	mehci->bus_reset = 1;
@@ -1110,9 +1113,13 @@ static int msm_hsic_resume_thread(void *data)
 
 	dbg_log_event(NULL, "Resume RH", 0);
 
-			if (pdata && pdata->standalone_latency)
-				pm_qos_update_request(&mehci->pm_qos_req_dma,
-					pdata->standalone_latency + 1);
+	if (pdata && pdata->swfi_latency) {
+		next_latency = pdata->swfi_latency + 1;
+		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
+		if (pdata->standalone_latency)
+			next_latency = pdata->standalone_latency + 1;
+		else
+			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	/* keep delay between bus states */
