@@ -3249,7 +3249,7 @@ static struct msm_thermal_data msm_thermal_pdata = {
 	.poll_ms = 250,
 	.limit_temp_degC = 70,
 	.temp_hysteresis_degC = 10,
-	.freq_step = 1,
+	.freq_step = 2,
 #ifdef CONFIG_INTELLI_THERMAL
 	.freq_control_mask = 0xf,
 #endif
@@ -3327,14 +3327,14 @@ static struct msm_rpmrs_level msm_rpmrs_levels[] = {
 	{
 		MSM_PM_SLEEP_MODE_RETENTION,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		true,
+		false,
 		415, 715, 340827, 475,
 	},
 
 	{
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		false,
+		true,
 		1300, 228, 1200000, 2000,
 	},
 
@@ -5045,6 +5045,7 @@ static void __init register_i2c_devices(void)
 		apq8064_camera_board_info.board_info,
 		apq8064_camera_board_info.num_i2c_board_info,
 	};
+
 	struct i2c_registry apq8064_front_camera_i2c_devices = {
 		I2C_SURF | I2C_FFA | I2C_LIQUID | I2C_RUMI,
 		APQ_8064_GSBI7_QUP_I2C_BUS_ID,
@@ -5277,6 +5278,7 @@ static void __init apq8064ab_update_retention_spm(void)
 static void __init apq8064_common_init(void)
 {
 	u32 platform_version = socinfo_get_platform_version();
+	struct msm_rpmrs_level rpmrs_level;
 
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
 	int ret;
@@ -5361,8 +5363,13 @@ static void __init apq8064_common_init(void)
 			platform_device_register(&touchkey_i2c_gpio_device_2);
 #endif
 
-	msm_hsic_pdata.swfi_latency =
-		msm_rpmrs_levels[0].latency_us;
+	rpmrs_level =
+		msm_rpmrs_levels[MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT];
+	msm_hsic_pdata.swfi_latency = rpmrs_level.latency_us;
+	rpmrs_level =
+		msm_rpmrs_levels[MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE];
+	msm_hsic_pdata.standalone_latency = rpmrs_level.latency_us;
+
 	if (machine_is_apq8064_mtp() || machine_is_JF()) {
 		msm_hsic_pdata.log2_irq_thresh = 5,
 		apq8064_device_hsic_host.dev.platform_data = &msm_hsic_pdata;
