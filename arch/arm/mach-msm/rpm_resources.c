@@ -953,9 +953,6 @@ static void *msm_rpmrs_lowest_limits(bool from_idle,
 		if (next_wakeup_us <= level->time_overhead_us)
 			continue;
 
-		if (sleep_us <= level->time_overhead_us)
-			continue;
-
 		if (!msm_rpmrs_irqs_detectable(&level->rs_limits,
 					irqs_detectable, gpio_detectable))
 			continue;
