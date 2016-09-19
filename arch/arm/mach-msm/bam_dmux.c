@@ -28,6 +28,7 @@
 #include <linux/wakelock.h>
 #include <linux/kfifo.h>
 #include <linux/of.h>
+#include <linux/srcu.h>
 #include <mach/msm_ipc_logging.h>
 #include <mach/sps.h>
 #include <mach/bam_dmux.h>
@@ -233,6 +234,8 @@ static DECLARE_WORK(queue_rx_work, queue_rx_work_func);
 
 static struct workqueue_struct *bam_mux_rx_workqueue;
 static struct workqueue_struct *bam_mux_tx_workqueue;
+
+static struct srcu_struct bam_dmux_srcu;
 
 /* A2 power collaspe */
 #define UL_TIMEOUT_DELAY 1000	/* in ms */
@@ -764,6 +767,7 @@ int msm_bam_dmux_write(uint32_t id, struct sk_buff *skb)
 	struct sk_buff *new_skb = NULL;
 	dma_addr_t dma_address;
 	struct tx_pkt_info *pkt;
+	int rcu_id;
 
 	if (id >= BAM_DMUX_NUM_CHANNELS)
 		return -EINVAL;
@@ -772,11 +776,19 @@ int msm_bam_dmux_write(uint32_t id, struct sk_buff *skb)
 	if (!bam_mux_initialized)
 		return -ENODEV;
 
+	rcu_id = srcu_read_lock(&bam_dmux_srcu);
+	if (in_global_reset) {
+		BAM_DMUX_LOG("%s: In SSR... ch_id[%d]\n", __func__, id);
+		srcu_read_unlock(&bam_dmux_srcu, rcu_id);
+		return -EFAULT;
+	}
+
 	DBG("%s: writing to ch %d len %d\n", __func__, id, skb->len);
 	spin_lock_irqsave(&bam_ch[id].lock, flags);
 	if (!bam_ch_is_open(id)) {
 		spin_unlock_irqrestore(&bam_ch[id].lock, flags);
 		pr_err("%s: port not open: %d\n", __func__, bam_ch[id].status);
+		srcu_read_unlock(&bam_dmux_srcu, rcu_id);
 		return -ENODEV;
 	}
 
@@ -784,6 +796,7 @@ int msm_bam_dmux_write(uint32_t id, struct sk_buff *skb)
 	    (bam_ch[id].num_tx_pkts >= HIGH_WATERMARK)) {
 		spin_unlock_irqrestore(&bam_ch[id].lock, flags);
 		pr_err("%s: watermark exceeded: %d\n", __func__, id);
+		srcu_read_unlock(&bam_dmux_srcu, rcu_id);
 		return -EAGAIN;
 	}
 	spin_unlock_irqrestore(&bam_ch[id].lock, flags);
@@ -792,8 +805,10 @@ int msm_bam_dmux_write(uint32_t id, struct sk_buff *skb)
 	if (!bam_is_connected) {
 		read_unlock(&ul_wakeup_lock);
 		ul_wakeup();
-		if (unlikely(in_global_reset == 1))
+		if (unlikely(in_global_reset == 1)) {
+			srcu_read_unlock(&bam_dmux_srcu, rcu_id);
 			return -EFAULT;
+		}
 		read_lock(&ul_wakeup_lock);
 		notify_all(BAM_DMUX_UL_CONNECTED, (unsigned long)(NULL));
 	}
@@ -871,6 +886,7 @@ int msm_bam_dmux_write(uint32_t id, struct sk_buff *skb)
 	}
 	ul_packet_written = 1;
 	read_unlock(&ul_wakeup_lock);
+	srcu_read_unlock(&bam_dmux_srcu, rcu_id);
 	return rc;
 
 write_fail3:
@@ -881,6 +897,7 @@ write_fail2:
 		dev_kfree_skb_any(new_skb);
 write_fail:
 	read_unlock(&ul_wakeup_lock);
+	srcu_read_unlock(&bam_dmux_srcu, rcu_id);
 	return -ENOMEM;
 }
 
@@ -1925,9 +1942,15 @@ static int restart_notifier_cb(struct notifier_block *this,
 	 * the bam hardware when disconnect_to_bam() is triggered by SMD's SSR
 	 * processing.  We do not wat to access the bam hardware during SSR
 	 * because a watchdog crash from a bus stall would likely occur.
-	 */
-	if (code == SUBSYS_BEFORE_SHUTDOWN)
+*/
+ 	if (code == SUBSYS_BEFORE_SHUTDOWN) {
+		in_global_reset = 1;
 		in_ssr = 1;
+		/* wait till all bam_dmux writes completes */
+		synchronize_srcu(&bam_dmux_srcu);
+		BAM_DMUX_LOG("%s: ssr signaling complete\n", __func__);
+		flush_workqueue(bam_mux_rx_workqueue);
+	}
 	if (code != SUBSYS_AFTER_SHUTDOWN)
 		return NOTIFY_DONE;
 
@@ -2377,6 +2400,7 @@ static int bam_dmux_probe(struct platform_device *pdev)
 	init_completion(&dfab_unvote_completion);
 	INIT_DELAYED_WORK(&ul_timeout_work, ul_timeout);
 	wake_lock_init(&bam_wakelock, WAKE_LOCK_SUSPEND, "bam_dmux_wakelock");
+	init_srcu_struct(&bam_dmux_srcu);
 
 	rc = smsm_state_cb_register(SMSM_MODEM_STATE, SMSM_A2_POWER_CONTROL,
 					bam_dmux_smsm_cb, NULL);
