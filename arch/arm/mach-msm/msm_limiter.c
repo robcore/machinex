@@ -542,3 +542,4 @@ MODULE_AUTHOR("Dorimanx <yuri@bynet.co.il>");
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("MSM CPU Frequency Limiter Driver");
 MODULE_LICENSE("GPL v2");
+

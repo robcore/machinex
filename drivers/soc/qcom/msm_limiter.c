@@ -16,7 +16,8 @@
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #include <linux/state_notifier.h>
-#include <linux/limiter.h>
+
+#include <soc/qcom/limiter.h>
 
 #define MSM_LIMITER_MAJOR		4
 #define MSM_LIMITER_MINOR		0
@@ -542,3 +543,4 @@ MODULE_AUTHOR("Dorimanx <yuri@bynet.co.il>");
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("MSM CPU Frequency Limiter Driver");
 MODULE_LICENSE("GPL v2");
+
