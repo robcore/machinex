@@ -116,6 +116,7 @@ struct pm8xxx_mpp_init {
 /* Initial PM8921 GPIO configurations */
 static struct pm8xxx_gpio_init pm8921_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT(14, 1, HIGH),	/* HDMI Mux Selector */
+	PM8921_GPIO_OUTPUT(23, 0, HIGH),	/* touchscreen power FET */
 	PM8921_GPIO_OUTPUT_BUFCONF(25, 0, LOW, CMOS), /* DISP_RESET_N */
 	PM8921_GPIO_OUTPUT_FUNC(26, 0, PM_GPIO_FUNC_2), /* Bl: Off, PWM mode */
 	PM8921_GPIO_OUTPUT_VIN(30, 1, PM_GPIO_VIN_VPH), /* SMB349 susp line */
@@ -149,6 +150,7 @@ static struct pm8xxx_gpio_init pm8921_mpq8064_hrd_gpios[] __initdata = {
 /* Initial PM8917 GPIO configurations */
 static struct pm8xxx_gpio_init pm8917_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT(14, 1, HIGH),	/* HDMI Mux Selector */
+	PM8921_GPIO_OUTPUT(23, 0, HIGH),	/* touchscreen power FET */
 	PM8921_GPIO_OUTPUT_BUFCONF(25, 0, LOW, CMOS), /* DISP_RESET_N */
 	PM8921_GPIO_OUTPUT(26, 1, HIGH), /* Backlight: on */
 	PM8921_GPIO_OUTPUT_BUFCONF(36, 1, LOW, OPEN_DRAIN),
@@ -188,10 +190,6 @@ static struct pm8xxx_gpio_init pm8917_cdp_kp_gpios[] __initdata = {
 	PM8921_GPIO_INPUT(27, PM_GPIO_PULL_UP_30),
 	PM8921_GPIO_INPUT(8, PM_GPIO_PULL_UP_30),
 	PM8921_GPIO_INPUT(17, PM_GPIO_PULL_UP_1P5),	/* SD_WP */
-};
-
-static struct pm8xxx_gpio_init pm8921_8917_cdp_ts_gpios[] __initdata = {
-	PM8921_GPIO_OUTPUT(23, 0, HIGH),	/* touchscreen power FET */
 };
 
 static struct pm8xxx_gpio_init pm8921_8917_cdp_ts_gpios[] __initdata = {
