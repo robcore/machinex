@@ -17,7 +17,7 @@
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #include <linux/state_notifier.h>
-#include <include/linux/limiter.h>
+#include <linux/limiter.h>
 
 #define MSM_CPUFREQ_LIMIT_MAJOR		4
 #define MSM_CPUFREQ_LIMIT_MINOR		0
