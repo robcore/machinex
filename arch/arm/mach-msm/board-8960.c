@@ -3009,14 +3009,14 @@ static struct msm_rpmrs_level msm_rpmrs_levels[] = {
 	{
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE,
 		MSM_RPMRS_LIMITS(ON, GDHS, MAX, ACTIVE),
-		true,
+		false,
 		2000, 138, 1208400, 3200,
 	},
 
 	{
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE,
 		MSM_RPMRS_LIMITS(ON, HSFS_OPEN, ACTIVE, RET_HIGH),
-		true,
+		false,
 		6000, 119, 1850300, 9000,
 	},
 
@@ -3311,7 +3311,7 @@ static void __init msm8960_tsens_init(void)
 static void __init msm8960ab_update_krait_spm(void)
  {
  	int i;
- 
+
 
 	/* Update the SPM sequences for SPC and PC */
 	for (i = 0; i < ARRAY_SIZE(msm_spm_data); i++) {
