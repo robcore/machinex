@@ -554,14 +554,14 @@ static ssize_t store_##file_name					\
 }
 
 /* Yank555.lu : CPU Hardlimit - Enforce userspace dvfs lock */
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
+/* robcore : CPU Hardlimit - Account for configurations with DVFS Disabled by Default */
+#ifdef CONFIG_SEC_DVFS
 static ssize_t store_scaling_min_freq
 (struct cpufreq_policy *policy, const char *buf, size_t count)
 {
 	unsigned int ret = -EINVAL;
 	struct cpufreq_policy new_policy;
 
-#ifdef CONFIG_SEC_DVFS
 	// Yank555.lu - Enforce userspace dvfs lock
 	switch (userspace_dvfs_lock_status()) {
 		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_IGNORE:
@@ -584,7 +584,6 @@ static ssize_t store_scaling_min_freq
 	ret = cpufreq_driver->verify(&new_policy);
 	if (ret)
 		pr_err("cpufreq: Frequency verification failed\n");
-#endif
 
 	policy->user_policy.min = new_policy.min;
 	policy->user_policy.max = new_policy.max;
@@ -596,17 +595,18 @@ static ssize_t store_scaling_min_freq
 #else
 /* Disable scaling_min_freq store */
 store_one(scaling_min_freq, min);
-#endif /* CONFIG_CPUFREQ_HARDLIMIT */
+#endif /* CONFIG_SEC_DVFS */
 
 /* Yank555.lu : CPU Hardlimit - Enforce userspace dvfs lock */
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
+/* robcore : CPU Hardlimit - Account for configurations with DVFS Disabled by Default */
+#ifdef CONFIG_SEC_DVFS
 static ssize_t store_scaling_max_freq
 (struct cpufreq_policy *policy, const char *buf, size_t count)
 {
 	unsigned int ret = -EINVAL;
 	struct cpufreq_policy new_policy;
 
-#ifdef CONFIG_SEC_DVFS
+
 	// Yank555.lu - Enforce userspace dvfs lock
 	switch (userspace_dvfs_lock_status()) {
 		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_IGNORE:
@@ -629,7 +629,6 @@ static ssize_t store_scaling_max_freq
 	ret = cpufreq_driver->verify(&new_policy);
 	if (ret)
 		pr_err("cpufreq: Frequency verification failed\n");
-#endif
 
 	policy->user_policy.min = new_policy.min;
 	policy->user_policy.max = new_policy.max;
@@ -640,7 +639,7 @@ static ssize_t store_scaling_max_freq
 }
 #else
 store_one(scaling_max_freq, max);
-#endif /* CONFIG_CPUFREQ_HARDLIMIT */
+#endif /* CONFIG_SEC_DVFS */
 
 ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
 {
