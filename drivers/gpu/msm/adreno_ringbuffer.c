@@ -1071,8 +1071,6 @@ adreno_ringbuffer_issueibcmds(struct kgsl_device_private *dev_priv,
 	adreno_idle(device);
 #endif
 
-	flags &= KGSL_CMD_FLAGS_EOF;
-
 	/*
 	 * If context hung and recovered then return error so that the
 	 * application may handle it
