@@ -981,8 +981,8 @@ int hardlimit_init(void)
 		/* Only register to powersuspend and delayed work if we were able to create the sysfs interface */
 		hardlimit_input_retval = input_register_handler(&hardlimit_input_handler);
 		register_power_suspend(&cpufreq_hardlimit_suspend_data);
-		INIT_DELAYED_WORK_DEFERRABLE(&stop_wakeup_kick_work, stop_wakeup_kick);
-		INIT_DELAYED_WORK_DEFERRABLE(&stop_touchboost_work, stop_touchboost);
+		INIT_DEFERRABLE_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
+		INIT_DEFERRABLE_WORK(&stop_touchboost_work, stop_touchboost);
 	}
 
         return (hardlimit_retval);

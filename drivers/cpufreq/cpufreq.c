@@ -569,7 +569,6 @@ static ssize_t store_scaling_min_freq
 		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_REFUSE:
 			return -EINVAL;
 	}
-#endif
 
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);
 	if (ret)
@@ -585,6 +584,7 @@ static ssize_t store_scaling_min_freq
 	ret = cpufreq_driver->verify(&new_policy);
 	if (ret)
 		pr_err("cpufreq: Frequency verification failed\n");
+#endif
 
 	policy->user_policy.min = new_policy.min;
 	policy->user_policy.max = new_policy.max;
@@ -614,7 +614,6 @@ static ssize_t store_scaling_max_freq
 		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_REFUSE:
 			return -EINVAL;
 	}
-#endif
 
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);
 	if (ret)
@@ -630,6 +629,7 @@ static ssize_t store_scaling_max_freq
 	ret = cpufreq_driver->verify(&new_policy);
 	if (ret)
 		pr_err("cpufreq: Frequency verification failed\n");
+#endif
 
 	policy->user_policy.min = new_policy.min;
 	policy->user_policy.max = new_policy.max;
