@@ -118,7 +118,7 @@ struct kgsl_pagetable;
 struct kgsl_memdesc;
 
 struct kgsl_memdesc_ops {
-	unsigned int vmflags;
+	int (*vmflags)(struct kgsl_memdesc *);
 	int (*vmfault)(struct kgsl_memdesc *, struct vm_area_struct *,
 		       struct vm_fault *);
 	void (*free)(struct kgsl_memdesc *memdesc);
