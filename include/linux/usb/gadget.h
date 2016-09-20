@@ -508,7 +508,6 @@ struct usb_gadget_ops {
  * @dev: Driver model state for this abstract device.
  * @usb_core_id: Identifies the usb core controlled by this usb_gadget.
  *		 Used in case of more then one core operates concurrently.
- * @xfer_isr_count: UI (transfer complete) interrupts count
  *
  * Gadgets have a mostly-portable "gadget driver" implementing device
  * functions, handling all usb configurations and interfaces.  Gadget
@@ -546,7 +545,6 @@ struct usb_gadget {
 	const char			*name;
 	struct device			dev;
 	u8				usb_core_id;
-	u32				xfer_isr_count;
 };
 
 static inline void set_gadget_data(struct usb_gadget *gadget, void *data)
