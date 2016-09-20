@@ -2727,6 +2727,12 @@ config MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE
 	  Enable more conservative computation of load and size of the run
 	  queue.
 
+config MSM_RUN_QUEUE_STATS_USE_CPU_UTIL
+	bool "Enable collection and exporting of MSM Run Queue stats to userspace"
+	depends on (MSM_RUN_QUEUE_STATS)
+	help
+	 This option enable cpu utilization
+
 config MSM_STANDALONE_POWER_COLLAPSE
        bool "Enable standalone power collapse"
        default n

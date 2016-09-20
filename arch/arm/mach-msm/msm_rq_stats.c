@@ -533,6 +533,9 @@ static int __init msm_rq_stats_init(void)
 		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
 				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
+#ifdef CONFIG_MSM_RUN_QUEUE_STATS_USE_CPU_UTIL
+		pcpu->prev_cpu_wall = ktime_to_us(ktime_get());
+#endif
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
 	cpu_hotplug.notifier_call = cpu_hotplug_handler;
