@@ -138,7 +138,7 @@ static int connect_pipe(u8 conn_idx, enum usb_bam_pipe_dir pipe_dir,
 		data_mem_buf[conn_idx][pipe_dir].base =
 			ioremap(data_mem_buf[conn_idx][pipe_dir].phys_base,
 				data_mem_buf[conn_idx][pipe_dir].size);
-		memset(data_mem_buf[conn_idx][pipe_dir].base, 0,
+		memset_io(data_mem_buf[conn_idx][pipe_dir].base, 0,
 			data_mem_buf[conn_idx][pipe_dir].size);
 
 		desc_mem_buf[conn_idx][pipe_dir].phys_base =
@@ -149,7 +149,7 @@ static int connect_pipe(u8 conn_idx, enum usb_bam_pipe_dir pipe_dir,
 		desc_mem_buf[conn_idx][pipe_dir].base =
 			ioremap(desc_mem_buf[conn_idx][pipe_dir].phys_base,
 				desc_mem_buf[conn_idx][pipe_dir].size);
-		memset(desc_mem_buf[conn_idx][pipe_dir].base, 0,
+		memset_io(desc_mem_buf[conn_idx][pipe_dir].base, 0,
 			desc_mem_buf[conn_idx][pipe_dir].size);
 	}
 
