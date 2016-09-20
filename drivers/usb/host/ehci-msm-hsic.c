@@ -1835,6 +1835,12 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
+	/* If the device was removed no need to call pm_runtime_disable */
+	if (pdev->dev.power.power_state.event != PM_EVENT_INVALID)
+		pm_runtime_disable(&pdev->dev);
+
+	pm_runtime_set_suspended(&pdev->dev);
+
 	if (pdata && pdata->swfi_latency)
 		pm_qos_add_request(&mehci->pm_qos_req_dma,
 			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
@@ -1904,7 +1910,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
-	pm_runtime_set_suspended(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
