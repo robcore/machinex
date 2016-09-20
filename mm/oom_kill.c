@@ -36,8 +36,10 @@
 #include <linux/ftrace.h>
 #include <linux/ratelimit.h>
 
+#if 0
 #define CREATE_TRACE_POINTS
 #include <trace/events/oom.h>
+#endif
 
 int sysctl_panic_on_oom;
 int sysctl_oom_kill_allocating_task;
@@ -60,7 +62,7 @@ void compare_swap_oom_score_adj(int old_val, int new_val)
 	spin_lock_irq(&sighand->siglock);
 	if (current->signal->oom_score_adj == old_val)
 		current->signal->oom_score_adj = new_val;
-	trace_oom_score_adj_update(current);
+	//trace_oom_score_adj_update(current);
 	spin_unlock_irq(&sighand->siglock);
 }
 
@@ -80,7 +82,7 @@ int test_set_oom_score_adj(int new_val)
 	spin_lock_irq(&sighand->siglock);
 	old_val = current->signal->oom_score_adj;
 	current->signal->oom_score_adj = new_val;
-	trace_oom_score_adj_update(current);
+	//trace_oom_score_adj_update(current);
 	spin_unlock_irq(&sighand->siglock);
 
 	return old_val;
