@@ -45,12 +45,7 @@
 #include <mach/sec_debug.h>
 #endif
 
-/*
- * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
- */
-#ifndef irq_finish
-#define irq_finish(irq) do { } while (0)
-#endif
+#include <asm/perftypes.h>
 
 unsigned long irq_err_count;
 
@@ -93,9 +88,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	} else {
 		generic_handle_irq(irq);
 	}
-
-	/* AT91 specific workaround */
-	irq_finish(irq);
 
 	irq_exit();
 #ifdef CONFIG_SEC_DEBUG
