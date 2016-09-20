@@ -112,58 +112,6 @@ static const int vdd_val[VDD_TYPE_MAX][VDD_VAL_MAX] = {
 		},
 };
 
-static int otg_hack_active = 0;
-module_param_named(otg_hack_enable,
-			otg_hack_active,
-			int, 0664);
-
-#ifdef CONFIG_USB_HOST_NOTIFY
-static void msm_otg_set_id_state_pbatest(int id, struct host_notify_dev *ndev)
-{
-	struct msm_otg *motg = container_of(ndev, struct msm_otg, ndev);
-
-	dev_info(motg->phy.dev, "%s, !id=%d\n", __func__, !id);
-
-	if (atomic_read(&motg->in_lpm))
-		pm_runtime_resume(motg->phy.dev);
-	if (!id)
-		set_bit(ID, &motg->inputs);
-	else
-		clear_bit(ID, &motg->inputs);
-
-	queue_work(system_nrt_wq, &motg->sm_work);
-}
-
-enum usb_notify_state {
-	ACC_POWER_ON = 0,
-	ACC_POWER_OFF,
-	ACC_POWER_OVER_CURRENT,
-};
-
-static void msm_otg_notify_work(struct work_struct *w)
-{
-	struct msm_otg *motg = container_of(w, struct msm_otg, notify_work);
-
-	if (motg->smartdock)
-		return;
-
-	switch (motg->notify_state) {
-	case ACC_POWER_ON:
-		dev_info(motg->phy.dev, "Acc power on detect\n");
-		break;
-	case ACC_POWER_OFF:
-		dev_info(motg->phy.dev, "Acc power off detect\n");
-		break;
-	case ACC_POWER_OVER_CURRENT:
-		host_state_notify(&motg->ndev, NOTIFY_HOST_OVERCURRENT);
-		dev_err(motg->phy.dev, "OTG overcurrent!!!!!!\n");
-		break;
-	default:
-		break;
-	}
-}
-#endif
-
 #ifdef CONFIG_USB_HOST_NOTIFY
 static void msm_otg_set_id_state_pbatest(int id, struct host_notify_dev *ndev)
 {
@@ -1020,11 +968,9 @@ static int msm_otg_suspend(struct msm_otg *motg)
 	}
 
 	if (device_may_wakeup(phy->dev)) {
+		enable_irq_wake(motg->irq);
 		if (motg->async_irq)
 			enable_irq_wake(motg->async_irq);
-		else
-			enable_irq_wake(motg->irq);
-
 		if (motg->pdata->pmic_id_irq)
 			enable_irq_wake(motg->pdata->pmic_id_irq);
 		if (pdata->otg_control == OTG_PHY_CONTROL &&
@@ -1127,11 +1073,9 @@ static int msm_otg_resume(struct msm_otg *motg)
 
 skip_phy_resume:
 	if (device_may_wakeup(phy->dev)) {
+		disable_irq_wake(motg->irq);
 		if (motg->async_irq)
 			disable_irq_wake(motg->async_irq);
-		else
-			disable_irq_wake(motg->irq);
-
 		if (motg->pdata->pmic_id_irq)
 			disable_irq_wake(motg->pdata->pmic_id_irq);
 		if (pdata->otg_control == OTG_PHY_CONTROL &&
@@ -2659,9 +2603,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 			 * switch from ACA to PMIC.  Check ID state
 			 * before entering into low power mode.
 			 */
-			if ((motg->pdata->otg_control == OTG_PMIC_CONTROL) &&
-					(aca_enabled()) &&
-					(!msm_otg_read_pmic_id_state(motg))) {
+			if (!msm_otg_read_pmic_id_state(motg)) {
 				pr_debug("process missed ID intr\n");
 				clear_bit(ID, &motg->inputs);
 				work = 1;
@@ -3447,100 +3389,6 @@ static void msm_pmic_id_status_w(struct work_struct *w)
 	}
 
 }
-#else
-void msm_otg_set_vbus_state(int online)
-{
-	struct msm_otg *motg = the_msm_otg;
-
-	if (online) {
-		dev_info(motg->phy.dev, "MUIC: BSV set\n");
-		set_bit(B_SESS_VLD, &motg->inputs);
-#ifdef CONFIG_CHARGER_MAX77693
-		motg->chg_state = USB_CHG_STATE_DETECTED;
-		motg->chg_type = USB_SDP_CHARGER;
-#endif
-	} else {
-		dev_info(motg->phy.dev, "MUIC: BSV clear\n");
-		clear_bit(B_SESS_VLD, &motg->inputs);
-	}
-
-	if (atomic_read(&motg->pm_suspended))
-		motg->sm_work_pending = true;
-	else
-		queue_work(system_nrt_wq, &motg->sm_work);
-}
-EXPORT_SYMBOL_GPL(msm_otg_set_vbus_state);
-#endif
-void msm_otg_set_charging_state(bool enable)
-{
-	struct msm_otg *motg = the_msm_otg;
-	static bool charging;
-
-	if (charging == enable)
-		return;
-	else
-		charging = enable;
-
-	pr_info("%s enable=%d\n", __func__, enable);
-
-	if (enable) {
-		motg->chg_type = USB_DCP_CHARGER;
-		motg->chg_state = USB_CHG_STATE_DETECTED;
-		schedule_work(&motg->sm_work);
-	} else {
-		motg->chg_state = USB_CHG_STATE_UNDEFINED;
-		motg->chg_type = USB_INVALID_CHARGER;
-	}
-}
-EXPORT_SYMBOL_GPL(msm_otg_set_charging_state);
-void msm_otg_set_id_state(int online)
-{
-	struct msm_otg *motg = the_msm_otg;
-
-	if (online) {
-		dev_info(motg->phy.dev, "MUIC: ID set\n");
-		set_bit(ID, &motg->inputs);
-		host_state_notify(&motg->ndev, NOTIFY_HOST_REMOVE);
-	} else {
-		dev_info(motg->phy.dev, "MUIC: ID clear\n");
-		clear_bit(ID, &motg->inputs);
-		set_bit(A_BUS_REQ, &motg->inputs);
-		host_state_notify(&motg->ndev, NOTIFY_HOST_ADD);
-	}
-
-	if (atomic_read(&motg->pm_suspended))
-		motg->sm_work_pending = true;
-	else
-		queue_work(system_nrt_wq, &motg->sm_work);
-}
-EXPORT_SYMBOL_GPL(msm_otg_set_id_state);
-
-void msm_otg_set_smartdock_state(bool online)
-{
-	struct msm_otg *motg = the_msm_otg;
-
-	if (online) {
-		dev_info(motg->phy.dev, "SMARTDOCK : ID set\n");
-		motg->smartdock = false;
-#if defined (CONFIG_SEC_PRODUCT_8960)
-		motg->smartdock = true;
-#endif
-		set_bit(ID, &motg->inputs);
-	} else {
-		dev_info(motg->phy.dev, "SMARTDOCK : ID clear\n");
-		motg->smartdock = true;
-		clear_bit(ID, &motg->inputs);
-	}
-
-	if (test_bit(B_SESS_VLD, &motg->inputs))
-		clear_bit(B_SESS_VLD, &motg->inputs);
-
-	if (atomic_read(&motg->pm_suspended))
-		motg->sm_work_pending = true;
-	else
-		queue_work(system_nrt_wq, &motg->sm_work);
-}
-EXPORT_SYMBOL_GPL(msm_otg_set_smartdock_state);
 
 #define MSM_PMIC_ID_STATUS_DELAY	5 /* 5msec */
 static irqreturn_t msm_pmic_id_irq(int irq, void *data)
@@ -4287,7 +4135,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	if (motg->pdata->enable_lpm_on_dev_suspend)
 		motg->caps |= ALLOW_LPM_ON_DEV_SUSPEND;
 
-	//wake_lock(&motg->wlock);
+	wake_lock(&motg->wlock);
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
