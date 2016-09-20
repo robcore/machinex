@@ -459,6 +459,7 @@ static __devinit int max77693_pmic_probe(struct platform_device *pdev)
 	struct i2c_client *i2c;
 	int i, ret, size;
 	dev_info(&pdev->dev, "%s\n", __func__);
+
 	if (!pdata) {
 		//pr_info("[%s:%d] !pdata\n", __FILE__, __LINE__);
 		dev_err(pdev->dev.parent, "No platform init data supplied.\n");
