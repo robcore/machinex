@@ -1343,8 +1343,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 
 	policy->util = 0;
 
-	policy->util = 0;
-
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
 
@@ -1396,26 +1394,6 @@ module_out:
 	return ret;
 }
 
-/**
- * cpufreq_quick_get_util - get the CPU utilization from policy->util
- * @cpu: CPU number
- *
- * This is the last known util, without actually getting it from the driver.
- * Return value will be same as what is shown in util in sysfs.
- */
-unsigned int cpufreq_quick_get_util(unsigned int cpu)
-{
-	struct cpufreq_policy *policy = __cpufreq_cpu_get(cpu, 0);
-	unsigned int ret_util = 0;
-
-	if (policy) {
-		ret_util = policy->util;
-		__cpufreq_cpu_put(policy, 0);
-	}
-
-	return ret_util;
-}
-EXPORT_SYMBOL(cpufreq_quick_get_util);
 
 /**
  * __cpufreq_remove_dev - remove a CPU device
