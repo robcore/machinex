@@ -121,8 +121,6 @@ static inline void prefetch(const void *ptr)
 #define ARCH_HAS_SPINLOCK_PREFETCH
 #define spin_lock_prefetch(x) do { } while (0)
 
-#define HAVE_ARCH_PICK_MMAP_LAYOUT
-
 #endif
 #endif
 
