@@ -770,7 +770,7 @@ struct kgsl_perfcounter_query {
 struct kgsl_perfcounter_read_group {
 	unsigned int groupid;
 	unsigned int countable;
-	unsigned long long value;
+	uint64_t value;
 };
 
 struct kgsl_perfcounter_read {
