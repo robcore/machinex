@@ -18,6 +18,8 @@
 #include <linux/spinlock.h>
 #include <mach/socinfo.h>
 #include <mach/scm.h>
+#include <linux/module.h>
+#include <linux/jiffies.h>
 
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
@@ -25,6 +27,9 @@
 
 #define TZ_GOVERNOR_PERFORMANCE 0
 #define TZ_GOVERNOR_ONDEMAND    1
+#define TZ_GOVERNOR_INTERACTIVE	2
+
+#define DEBUG 0
 
 struct tz_priv {
 	int governor;
@@ -80,6 +85,22 @@ static ssize_t tz_governor_show(struct kgsl_device *device,
 
 	return ret;
 }
+#endif /* CONFIG_MSM_SCM */
+#endif
+
+unsigned long window_time = 0;
+unsigned long sample_time_ms = 100;
+unsigned int up_threshold = 50;
+unsigned int down_threshold = 25;
+unsigned int up_differential = 10;
+bool debug = 0;
+unsigned long gpu_pref_counter;
+
+module_param(sample_time_ms, long, 0664);
+module_param(up_threshold, int, 0664);
+module_param(down_threshold, int, 0664);
+module_param(debug, bool, 0664);
+
 
 static ssize_t tz_governor_store(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
@@ -127,7 +148,8 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
-	int val, idle;
+	unsigned long total_time_ms = 0;
+	unsigned long busy_time_ms = 0;
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
@@ -240,3 +262,4 @@ struct kgsl_pwrscale_policy kgsl_pwrscale_policy_tz = {
 	.close = tz_close
 };
 EXPORT_SYMBOL(kgsl_pwrscale_policy_tz);
+
