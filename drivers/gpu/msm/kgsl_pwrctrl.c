@@ -104,7 +104,7 @@ static void update_clk_statistics(struct kgsl_device *device,
 }
 
 // #define DEFAULT_MAX_PWRLEVEL   1
-#define DEFAULT_MIN_PWRLEVEL   4
+#define DEFAULT_MIN_PWRLEVEL   3
 #define BYPASS_HARDLIMIT_CHECK	99
 static unsigned int max_pwrlevel_hardlimit;
 static unsigned int min_pwrlevel_hardlimit;
