@@ -1344,7 +1344,6 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		pr_info("%s lcd error bl_level : %d", __func__, bl_level);
 		backlightlevel = GAMMA_152CD;
 		break;
 	}
@@ -1432,7 +1431,6 @@ static int get_elvss_value(int candela, int id2, int id3)
 			elvss_value = DEFAULT_ELVSS + 0x0;
 			break;
 		default :
-			pr_info("%s lcd error bl_level : %d", __func__, candela);
 			elvss_value = DEFAULT_ELVSS + 0x0;
 			break;
 		}
@@ -1493,7 +1491,6 @@ static int get_elvss_value(int candela, int id2, int id3)
 		elvss_value = DEFAULT_ELVSS + 0x0;
 		break;
 	default :
-		pr_info("%s lcd error bl_level : %d", __func__, candela);
 		elvss_value = DEFAULT_ELVSS + 0x0;
 		break;
 	}
@@ -1766,7 +1763,7 @@ static int brightness_control(int bl_level)
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
-	pr_info("%s brightness_level : %d, candela : %d, auto : %d\n",
+	//pr_info("%s brightness_level : %d, candela : %d, auto : %d\n",
 					__func__, mipi_pd.brightness_level, candela, get_auto_brightness());
 	cmd_size = 0;
 
