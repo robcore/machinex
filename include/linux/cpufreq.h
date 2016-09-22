@@ -371,6 +371,7 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
 bool have_governor_per_policy(void);
 int cpufreq_set_gov(char *target_gov, unsigned int cpu);
+char *cpufreq_get_gov(unsigned int cpu);
 int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
 			unsigned int cpu);
 
