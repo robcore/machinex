@@ -2613,6 +2613,7 @@ err_out:
 }
 EXPORT_SYMBOL(cpufreq_set_gov);
 
+#if 0
 /*
  *	cpufreq_get_gov - get governor for a cpu
  *	@cpu: CPU whose governor needs to be known
@@ -2630,6 +2631,7 @@ char *cpufreq_get_gov(unsigned int cpu)
 	return val;
 }
 EXPORT_SYMBOL(cpufreq_get_gov);
+#endif
 
 static int cpufreq_cpu_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
