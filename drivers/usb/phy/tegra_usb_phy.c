@@ -28,9 +28,10 @@
 #include <linux/usb/otg.h>
 #include <linux/usb/ulpi.h>
 #include <asm/mach-types.h>
-#include <mach/gpio-tegra.h>
 #include <linux/usb/tegra_usb_phy.h>
-#include <mach/iomap.h>
+
+#define TEGRA_USB_BASE		0xC5000000
+#define TEGRA_USB_SIZE		SZ_16K
 
 #define ULPI_VIEWPORT		0x170
 
