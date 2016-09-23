@@ -1825,7 +1825,7 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (mipi_pd.first_bl_hbm_psre  && (get_auto_brightness() >= 6)) {
+	if (get_auto_brightness() >= 6)) {
 		brightness_packet[cmd_size].payload =
 				magna_brightness_write_als;
 		brightness_packet[cmd_size].dlen =
@@ -1839,8 +1839,8 @@ static int brightness_control(int bl_level)
 						sizeof(magna_psre_mtp_ref));
 
 	if (get_auto_brightness() == 6) {
-//		magna_psre_mtp_ref[1] = 0x04; // RE ON
-//	} else {
+		magna_psre_mtp_ref[1] = 0x04; // RE ON
+	} else {
 		magna_psre_mtp_ref[1] = 0x84; // RE OFF
 	}
 
@@ -1869,12 +1869,7 @@ static int brightness_control(int bl_level)
 					sizeof(magna_brightness_acl_ref));
 
 	if (get_auto_brightness() == 6) {
-		magna_brightness_acl_ref[1] = 0x00; /*RE low, ACL 40%*/
-	} else {
-		if (mipi_pd.acl_status)
-			magna_brightness_acl_ref[1] = 0x00; /*ACL 40%*/
-		else
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	if (memcmp(magna_brightness_acl_pre, magna_brightness_acl_ref,
@@ -1960,12 +1955,7 @@ static int acl_control(int bl_level)
 {
 
 	if (get_auto_brightness() == 6) {
-		magna_brightness_acl_ref[1] = 0x00; /*RE low, ACL 40%*/
-	} else {
-		if (mipi_pd.acl_status)
-			magna_brightness_acl_ref[1] = 0x00; /*ACL 40%*/
-		else
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	return 1;
@@ -2173,7 +2163,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.underflow_clr = 0xff;	/* blue */
 	pinfo.lcdc.hsync_skew = 0;
 
-	pinfo.bl_max = 255;
+	pinfo.bl_max = 300;
 	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 

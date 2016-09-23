@@ -1288,7 +1288,7 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		pr_info("%s lcd error bl_level : %d", __func__, bl_level);
+		//pr_info("%s lcd error bl_level : %d", __func__, bl_level);
 		backlightlevel = GAMMA_300CD;
 		break;
 	}
@@ -1660,26 +1660,14 @@ static int brightness_control(int bl_level)
 					sizeof(samsung_brightness_elvss_ref));
 
 	elvss_value = get_elvss_value(candela, id3);
-
-	if (elvss_value >= 0x29)
-		elvss_value = 0x29;
-
 	samsung_brightness_elvss_ref[2] = elvss_value;
 
-	if (mipi_pd.ldi_rev >= 'G')
-		samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-
-	if (mipi_pd.ldi_rev >= 'H') {
-		if (get_auto_brightness() == 6)
+	if (get_auto_brightness() == 6)
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-	} else {
-		if (get_auto_brightness() == 6)
-			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
-			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
+	else
 			samsung_brightness_elvss_ref[16] = get_elvss_offset();
 	}
-	pr_debug("%s: 0xb6_17th(%x)!!\n", __func__, samsung_brightness_elvss_ref[16]);
+	//pr_debug("%s: 0xb6_17th(%x)!!\n", __func__, samsung_brightness_elvss_ref[16]);
 
 	// ELVSS lOW TEMPERATURE
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
@@ -1698,7 +1686,7 @@ static int brightness_control(int bl_level)
 	}
 
 	// ELVSS lOW TEMPERATURE
-	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
+	if  mipi_pd.need_update) {
 		samsung_temperature_compensation[6] = mipi_pd.temperature_value;
 		brightness_packet[cmd_size].payload =
 					samsung_temperature_compensation;
@@ -1743,12 +1731,7 @@ static int brightness_control(int bl_level)
 					sizeof(samsung_brightness_acl_ref));
 
 	if (get_auto_brightness() == 6) {
-		samsung_brightness_acl_ref[1] = 0x00; /*RE low, ACL on 40p*/
-	} else {
-		if (mipi_pd.acl_status || mipi_pd.siop_status)
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p*/
-		else
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
@@ -1764,7 +1747,7 @@ static int brightness_control(int bl_level)
 
 	/* PSRE control 1 **********************************************************************/
 	/* 0xBC setting */
-	if (mipi_pd.first_bl_hbm_psre  && (get_auto_brightness() == 6)) {
+	if (get_auto_brightness() == 6)) {
 		brightness_packet[cmd_size].payload =
 					samsung_brightness_psre_cont;
 		brightness_packet[cmd_size].dlen =
@@ -1820,18 +1803,11 @@ static int acl_control(int bl_level)
 	/* 0xB5 setting */
 	if (get_auto_brightness() == 6)
 		samsung_brightness_acl_cont_default[1] = 0x00;
-	else
-		samsung_brightness_acl_cont_default[1] = 0x00;
 
 	/* write power saving *****************************************************************/
 	/* 0x55 setting */
 	if (get_auto_brightness() == 6) {
-		samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p, re low*/
-	} else {
-		if (mipi_pd.acl_status || mipi_pd.siop_status)
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p*/
-		else
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	return 1;

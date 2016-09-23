@@ -244,7 +244,6 @@ struct cpufreq_driver {
 	struct module           *owner;
 	char			name[CPUFREQ_NAME_LEN];
 	u8			flags;
-	void			*driver_data;
 
 	/* needed by all drivers */
 	int	(*init)		(struct cpufreq_policy *policy);
@@ -649,5 +648,4 @@ void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
 
 void cpufreq_frequency_table_put_attr(unsigned int cpu);
 const char *cpufreq_get_current_driver(void);
-void *cpufreq_get_driver_data(void);
 #endif /* _LINUX_CPUFREQ_H */
