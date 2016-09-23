@@ -1746,7 +1746,7 @@ static int brightness_control(int bl_level)
 		samsung_brightness_acl_ref[1] = 0x00; /*RE low, ACL on 40p*/
 	} else {
 		if (mipi_pd.acl_status || mipi_pd.siop_status)
-			samsung_brightness_acl_ref[1] = 0x01; /*ACL on 40p*/
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p*/
 		else
 			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
