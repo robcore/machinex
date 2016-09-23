@@ -293,11 +293,9 @@ int filemap_fdatawait_range(struct address_space *mapping, loff_t start_byte,
 	}
 
 	/* Check for outstanding write errors */
-	if (test_bit(AS_ENOSPC, &mapping->flags) &&
-	    test_and_clear_bit(AS_ENOSPC, &mapping->flags))
+	if (test_and_clear_bit(AS_ENOSPC, &mapping->flags))
 		ret = -ENOSPC;
-	if (test_bit(AS_EIO, &mapping->flags) &&
-	    test_and_clear_bit(AS_EIO, &mapping->flags))
+	if (test_and_clear_bit(AS_EIO, &mapping->flags))
 		ret = -EIO;
 
 	return ret;
