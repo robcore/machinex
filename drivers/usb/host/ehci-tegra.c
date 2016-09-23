@@ -26,7 +26,7 @@
 #include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
 
-#include <mach/usb_phy.h>
+#include <linux/usb/tegra_usb_phy.h>
 #include <mach/iomap.h>
 
 #define TEGRA_USB_DMA_ALIGN 32
@@ -746,7 +746,9 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 		goto fail_phy;
 	}
 
-	err = tegra_usb_phy_power_on(tegra->phy);
+	usb_phy_init(&tegra->phy->u_phy);
+
+	err = usb_phy_set_suspend(&tegra->phy->u_phy, 0);
 	if (err) {
 		dev_err(&pdev->dev, "Failed to power on the phy\n");
 		goto fail;
@@ -793,7 +795,7 @@ fail:
 		usb_put_transceiver(tegra->transceiver);
 	}
 #endif
-	tegra_usb_phy_close(tegra->phy);
+	usb_phy_shutdown(&tegra->phy->u_phy);
 fail_phy:
 	iounmap(hcd->regs);
 fail_io:
@@ -832,7 +834,7 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 
-	tegra_usb_phy_close(tegra->phy);
+	usb_phy_shutdown(&tegra->phy->u_phy);
 	iounmap(hcd->regs);
 
 	clk_disable(tegra->clk);
