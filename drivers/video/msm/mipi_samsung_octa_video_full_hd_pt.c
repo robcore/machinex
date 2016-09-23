@@ -1681,7 +1681,7 @@ static int brightness_control(int bl_level)
 	}
 	//pr_debug("%s: 0xb6_17th(%x)!!\n", __func__, samsung_brightness_elvss_ref[16]);
 
-	// ELVSS lOW TEMPERATURE 
+	// ELVSS lOW TEMPERATURE
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
 		if (get_auto_brightness() != 6)
 			if (mipi_pd.temperature <= -20)
@@ -1729,7 +1729,7 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (get_auto_brightness() == 6)) {
+	if (get_auto_brightness() == 6) {
 		brightness_packet[cmd_size].payload =
 				samsung_brightness_write_als;
 		brightness_packet[cmd_size].dlen =
@@ -1759,7 +1759,7 @@ static int brightness_control(int bl_level)
 
 	/* PSRE control 1 **********************************************************************/
 	/* 0xBC setting */
-	if (get_auto_brightness() == 6)) {
+	if (get_auto_brightness() == 6) {
 		brightness_packet[cmd_size].payload =
 					samsung_brightness_psre_cont;
 		brightness_packet[cmd_size].dlen =
