@@ -4854,6 +4854,13 @@ int ext4_ext_punch_hole(struct file *file, loff_t offset, loff_t length)
 	if (offset >= inode->i_size)
 		return 0;
 
+	/* Call ext4_force_commit to flush all data in case of data=journal. */
+	if (ext4_should_journal_data(inode)) {
+		ret = ext4_force_commit(inode->i_sb);
+		if (ret)
+			return ret;
+	}
+
 	/*
 	 * If the hole extends beyond i_size, set the hole
 	 * to end after the page that contains i_size
