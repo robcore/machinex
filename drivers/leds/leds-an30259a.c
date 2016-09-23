@@ -158,14 +158,14 @@ static struct leds_control {
 } leds_control = {
 	.current_low = 5,
 	.current_high = 40,
-	.blink_delay = 10,
+	.blink_delay = 8,
 	.blink_fading = true,
 	.fade_in_time = 2,
-	.fade_out_time = 8,
+	.fade_out_time = 4,
 	.fade_dt1 = 1,
 	.fade_dt2 = 1,
-	.fade_dt3 = 2,
-	.fade_dt4 = 3,
+	.fade_dt3 = 1,
+	.fade_dt4 = 1,
 };
 
 extern struct class *sec_class;
@@ -437,9 +437,9 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_R, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_R,
-				0, 15, 10, 2, 3, 2, 2, 2, 2, 2);
+				0, 15, 10, 2, 3, 2, 3, 2, 2, 2);
 		leds_set_slope_mode(client, LED_G,
-				0, 0, 0, 2, 1, 1, 0, 1, 1, 0);
+				0, 0, 0, 3, 1, 1, 0, 1, 1, 0);
 
 		break;
 	case BOOTING:
