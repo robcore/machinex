@@ -231,9 +231,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	 * a policy only change the active clock if it is higher then the new
 	 * thermal level
 	 */
-
-	if (device->pwrscale.policy == NULL ||
-		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
+	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
 
 	mutex_unlock(&device->mutex);
