@@ -616,13 +616,13 @@ static char samsung_brightness_acl_cont_pre[] = {
  */
 static char samsung_brightness_acl_cont_ref[] = {
 	0xB5,
-	0x01, 0x99, 0x35,
+	0x01, 0x99, 0x00,
 };
 
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x03, 0x99, 0x35,
+	0x03, 0x99, 0x00,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1660,16 +1660,28 @@ static int brightness_control(int bl_level)
 					sizeof(samsung_brightness_elvss_ref));
 
 	elvss_value = get_elvss_value(candela, id3);
+
+	if (elvss_value >= 0x29)
+		elvss_value = 0x29;
+
 	samsung_brightness_elvss_ref[2] = elvss_value;
 
-	if (get_auto_brightness() == 6)
+	if (mipi_pd.ldi_rev >= 'G')
+		samsung_brightness_elvss_ref[1] = 0x2C;
+
+	if (mipi_pd.ldi_rev >= 'H') {
+		if (get_auto_brightness() == 6)
+			samsung_brightness_elvss_ref[2] = 0x01;
+	} else {
+		if (get_auto_brightness() == 6)
+			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-	else
+		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
 			samsung_brightness_elvss_ref[16] = get_elvss_offset();
 	}
 	//pr_debug("%s: 0xb6_17th(%x)!!\n", __func__, samsung_brightness_elvss_ref[16]);
 
-	// ELVSS lOW TEMPERATURE
+	// ELVSS lOW TEMPERATURE 
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
 		if (get_auto_brightness() != 6)
 			if (mipi_pd.temperature <= -20)
@@ -1686,7 +1698,7 @@ static int brightness_control(int bl_level)
 	}
 
 	// ELVSS lOW TEMPERATURE
-	if  mipi_pd.need_update) {
+	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
 		samsung_temperature_compensation[6] = mipi_pd.temperature_value;
 		brightness_packet[cmd_size].payload =
 					samsung_temperature_compensation;
@@ -1717,7 +1729,7 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (mipi_pd.first_bl_hbm_psre  && (get_auto_brightness() == 6)) {
+	if (get_auto_brightness() == 6)) {
 		brightness_packet[cmd_size].payload =
 				samsung_brightness_write_als;
 		brightness_packet[cmd_size].dlen =
@@ -1742,7 +1754,7 @@ static int brightness_control(int bl_level)
 				sizeof(samsung_brightness_acl_ref);
 		cmd_size++;
 	}
-	pr_debug("%s: 0x55(%x)!!\n", __func__, samsung_brightness_acl_ref[1]);
+	//pr_debug("%s: 0x55(%x)!!\n", __func__, samsung_brightness_acl_ref[1]);
 
 
 	/* PSRE control 1 **********************************************************************/
