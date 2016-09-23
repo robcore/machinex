@@ -44,6 +44,9 @@
 #include <linux/syscalls.h>
 #endif
 
+static int panel_colors = 2;
+extern void panel_load_colors(unsigned int value);
+
 static int pm_gpio8;	/* ERR_FG */
 static int pm_gpio5;	/* LDI_CHIP_SELECT */
 #define PMIC_GPIO_ERR_FG 8
@@ -1199,6 +1202,32 @@ static ssize_t mipi_samsung_temperature_store(struct device *dev,
 	return size;
 }
 
+static ssize_t panel_colors_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", panel_colors);
+}
+
+static ssize_t panel_colors_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	int ret;
+	unsigned int value;
+
+	ret = sscanf(buf, "%d\n", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (value < 0)
+		value = 0;
+	else if (value > 4)
+		value = 4;
+
+	panel_colors = value;
+
+	panel_load_colors(panel_colors);
+
+	return size;
+}
+
 static DEVICE_ATTR(lcd_power, S_IRUGO | S_IWUSR,
 		mipi_samsung_disp_get_power,
 		mipi_samsung_disp_set_power);
@@ -1230,6 +1259,10 @@ static DEVICE_ATTR(fps_change, S_IRUGO | S_IWUSR | S_IWGRP,
 static DEVICE_ATTR(temperature, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_temperature_show,
 			mipi_samsung_temperature_store);
+
+static DEVICE_ATTR(panel_colors, S_IRUGO | S_IWUSR | S_IWGRP,
+			panel_colors_show,
+			panel_colors_store);
 
 #ifdef DDI_VIDEO_ENHANCE_TUNING
 #define MAX_FILE_NAME 128
@@ -1555,6 +1588,13 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_info("sysfs create fail-%s\n",
 				dev_attr_temperature.attr.name);
+	}
+
+ 	ret = sysfs_create_file(&lcd_device->dev.kobj,
+				&dev_attr_panel_colors.attr);
+	if (ret) {
+		pr_info("sysfs create fail-%s\n",
+				dev_attr_panel_colors.attr.name);
 	}
 
 	printk(KERN_INFO "[lcd] backlight_device_register for panel start\n");
