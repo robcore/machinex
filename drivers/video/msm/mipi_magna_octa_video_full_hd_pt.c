@@ -1825,7 +1825,7 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (get_auto_brightness() >= 6)) {
+	if (get_auto_brightness() >= 6) {
 		brightness_packet[cmd_size].payload =
 				magna_brightness_write_als;
 		brightness_packet[cmd_size].dlen =
