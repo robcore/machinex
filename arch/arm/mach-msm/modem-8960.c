@@ -20,6 +20,7 @@
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
+#include <mach/mdm2.h>
 
 #include <mach/irqs.h>
 #include <mach/scm.h>
@@ -28,6 +29,7 @@
 #include <mach/subsystem_notif.h>
 #include <mach/socinfo.h>
 #include <mach/msm_smsm.h>
+#include "sysmon.h"
 
 #include "smd_private.h"
 #include "modem_notifier.h"
@@ -147,6 +149,21 @@ static struct ramdump_segment smem_segments[] = {
 	{0x80000000, 0x00200000},
 };
 
+#ifdef CONFIG_SEC_SSR_DUMP
+/* Defining the kernel ramdump address and its Size */
+#if defined(TIMA_ENABLED)
+static struct ramdump_segment kernel_log_segments[] = {
+	{0x88600008, 0x00080000},
+};
+#else
+static struct ramdump_segment kernel_log_segments[] = {
+        {0x88B00008, 0x00080000},
+};
+#endif
+/* Declaring the kernel ramdump device */
+static void *kernel_log_ramdump_dev;
+#endif
+
 static void *modemfw_ramdump_dev;
 static void *modemsw_ramdump_dev;
 static void *smem_ramdump_dev;
@@ -181,6 +198,19 @@ static int modem_ramdump(int enable, const struct subsys_desc *crashed_subsys)
 			pr_err("Unable to dump smem memory (rc = %d).\n", ret);
 			goto out;
 		}
+
+#ifdef CONFIG_SEC_SSR_DUMP
+		pr_debug("Before kernel log do_ramdump\n");
+		ret = do_ramdump(kernel_log_ramdump_dev, kernel_log_segments,
+			ARRAY_SIZE(kernel_log_segments));
+
+		if (ret < 0) {
+			pr_err("Unable to dump kernel memory (rc = %d).\n",
+			ret);
+			goto out;
+		}
+		pr_debug("After kernel do_ramdump\n");
+#endif
 	}
 
 out:
@@ -253,6 +283,43 @@ static int modem_debugfs_init(void)
 		&modem_debug_fops);
 	return 0;
 }
+int system_shutdown_notifier(struct notifier_block *this,
+		unsigned long code, void *x)
+{
+	sysmon_send_event(SYSMON_SS_MODEM,
+			"ext_modem1",
+			SUBSYS_BEFORE_SHUTDOWN);
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block shutdown_notifier = {
+	.notifier_call = system_shutdown_notifier,
+	.next = NULL,
+	.priority = INT_MAX,
+};
+
+int qsc_powerup_notifier_fn(struct notifier_block *this,
+		unsigned long code, void *x)
+{
+	int rcode = 0;
+	do {
+		rcode = sysmon_send_event(SYSMON_SS_MODEM,
+				"ext_modem1",
+				SUBSYS_AFTER_POWERUP);
+		if (rcode) {
+			pr_err("%s: sysmon_send_event returned error %d\n",
+					__func__, rcode);
+			msleep(500);
+		}
+	} while (rcode);
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block qsc_powerup_notifier = {
+	.notifier_call = qsc_powerup_notifier_fn,
+	.next = NULL,
+	.priority = INT_MAX,
+};
 
 static int __init modem_8960_init(void)
 {
@@ -263,7 +330,8 @@ static int __init modem_8960_init(void)
 
 	ret = smsm_state_cb_register(SMSM_MODEM_STATE, SMSM_RESET,
 		smsm_state_cb, 0);
-
+	register_reboot_notifier(&shutdown_notifier);
+	mdm_driver_register_notifier("external_modem", &qsc_powerup_notifier);
 	if (ret < 0)
 		pr_err("%s: Unable to register SMSM callback! (%d)\n",
 				__func__, ret);
@@ -295,6 +363,11 @@ static int __init modem_8960_init(void)
 		goto out;
 	}
 
+#ifdef CONFIG_SEC_SSR_DUMP
+        /* Create the ramdump device files whenever SSR is enabled */
+        if (get_restart_level() == RESET_SUBSYS_INDEPENDENT) {
+
+
 	modemfw_ramdump_dev = create_ramdump_device("modem_fw");
 
 	if (!modemfw_ramdump_dev) {
@@ -321,7 +394,17 @@ static int __init modem_8960_init(void)
 		ret = -ENOMEM;
 		goto out;
 	}
-
+        pr_debug("Before create_ramdump_device: kernel\n");
+        kernel_log_ramdump_dev = create_ramdump_device("kernel_log");
+	 if (!kernel_log_ramdump_dev) {
+                pr_err("%s: Unable to create kernel ramdump device. (%d)\n",
+                        __func__, -ENOMEM);
+                ret = -ENOMEM;
+                goto out;
+        }
+        pr_debug("After create_ramdump_device: kernel\n");
+        }
+#endif
 	ret = modem_debugfs_init();
 
 	pr_info("%s: modem fatal driver init'ed.\n", __func__);
