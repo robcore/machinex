@@ -125,6 +125,9 @@ extern struct platform_device msm_device_sdc2;
 extern struct platform_device msm_device_sdc3;
 extern struct platform_device msm_device_sdc4;
 
+extern struct platform_device msm_device_hsusb;
+extern struct platform_device msm_device_otg;
+
 extern struct platform_device msm8960_pc_cntr;
 extern struct platform_device msm8064_pc_cntr;
 extern struct platform_device msm8930_pc_cntr;
@@ -203,6 +206,10 @@ extern struct platform_device msm_device_dmov_adm0;
 extern struct platform_device msm_device_dmov_adm1;
 
 extern struct platform_device msm_device_pcie;
+
+extern struct platform_device msm_device_mddi0;
+extern struct platform_device msm_device_mddi1;
+extern struct platform_device msm_device_mdp;
 
 extern struct platform_device msm_device_nand;
 
