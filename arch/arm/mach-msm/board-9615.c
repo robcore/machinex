@@ -283,7 +283,7 @@ static struct pm8xxx_mpp_platform_data pm8xxx_mpp_pdata __devinitdata = {
 };
 
 static struct pm8xxx_rtc_platform_data pm8xxx_rtc_pdata __devinitdata = {
-	.rtc_write_enable	= true,
+	.rtc_write_enable	= false,
 	.rtc_alarm_powerup	= false,
 };
 
@@ -937,6 +937,7 @@ static struct platform_device *common_devices[] = {
 	&msm9615_rpm_stat_device,
 	&msm9615_rpm_master_stat_device,
 	&msm_tsens_device,
+	&msm9615_pm_8x60,
 };
 
 static void __init msm9615_i2c_init(void)

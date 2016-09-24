@@ -47,11 +47,11 @@
 #include <mach/sec_debug.h>
 #endif
 
-#define MDM_MODEM_TIMEOUT	8000
+#define MDM_MODEM_TIMEOUT	6000
 #define MDM_MODEM_DELTA	100
-#define MDM_BOOT_TIMEOUT	80000L
+#define MDM_BOOT_TIMEOUT	60000L
 #define MDM_RDUMP_TIMEOUT	120000L
-#define MDM2AP_STATUS_TIMEOUT_MS 80000L
+#define MDM2AP_STATUS_TIMEOUT_MS 60000L
 
 /* Allow a maximum device id of this many digits */
 #define MAX_DEVICE_DIGITS  10
@@ -312,6 +312,7 @@ static int mdm_driver_queue_notification(char *name,
 			(void *)notif);
 	return ret;
 }
+
 static int mdm_force_crash(struct mdm_device *mdev)
 {
 	pr_info("%s: Start mdm force crash\n", __func__);
@@ -320,6 +321,7 @@ static int mdm_force_crash(struct mdm_device *mdev)
 
 	return 0;
 }
+
 static irqreturn_t mdm_vddmin_change(int irq, void *dev_id)
 {
 	struct mdm_device *mdev = (struct mdm_device *)dev_id;
@@ -1121,7 +1123,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 	gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 0);
 	gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 
-	if (gpio_is_valid(mdm_drv->ap2mdm_wakeup_gpio))
+	if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio))
 		gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 0);
 
 	gpio_direction_input(mdm_drv->mdm2ap_status_gpio);
@@ -1220,7 +1222,7 @@ pblrdy_err:
 	 * If AP2MDM_PMIC_PWR_EN gpio is used, pull it high. It remains
 	 * high until the whole phone is shut down.
 	 */
-	if (gpio_is_valid(mdm_drv->ap2mdm_pmic_pwr_en_gpio))
+	if (GPIO_IS_VALID(mdm_drv->ap2mdm_pmic_pwr_en_gpio))
 		gpio_direction_output(mdm_drv->ap2mdm_pmic_pwr_en_gpio, 1);
 
 	return 0;
@@ -1311,7 +1313,7 @@ static void mdm_modem_shutdown(struct platform_device *pdev)
 	mdm_disable_irqs(mdev);
 	mdm_drv = &mdev->mdm_data;
 	mdm_ops->power_down_mdm_cb(mdm_drv);
-	if (gpio_is_valid(mdm_drv->ap2mdm_pmic_pwr_en_gpio))
+	if (GPIO_IS_VALID(mdm_drv->ap2mdm_pmic_pwr_en_gpio))
 		gpio_direction_output(mdm_drv->ap2mdm_pmic_pwr_en_gpio, 0);
 }
 
