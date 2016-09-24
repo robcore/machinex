@@ -1821,7 +1821,6 @@ static struct mdm_platform_data mdm_platform_data = {
 	.send_shdn = 1,
 	.vddmin_resource = &mdm_vddmin_rscs,
 	.peripheral_platform_device = &apq8064_device_hsic_host,
-	.soft_reset_inverted = 1,
 	.ramdump_timeout_ms = 120000,
 	.mdm2ap_status_gpio_run_cfg = &mdm2ap_status_gpio_run_cfg,
 	.sysmon_subsys_id_valid = 1,
