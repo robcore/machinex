@@ -165,12 +165,11 @@ static int gpio_vbus_set_peripheral(struct usb_otg *otg,
 	struct gpio_vbus_data *gpio_vbus;
 	struct gpio_vbus_mach_info *pdata;
 	struct platform_device *pdev;
-	int gpio, irq;
+	int gpio;
 
 	gpio_vbus = container_of(otg->phy, struct gpio_vbus_data, phy);
 	pdev = to_platform_device(gpio_vbus->dev);
 	pdata = gpio_vbus->dev->platform_data;
-	irq = gpio_to_irq(pdata->gpio_vbus);
 	gpio = pdata->gpio_pullup;
 
 	if (!gadget) {
@@ -274,6 +273,8 @@ static int __init gpio_vbus_probe(struct platform_device *pdev)
 		res->flags |= IRQF_SHARED;
 	} else
 		irq = gpio_to_irq(gpio);
+
+	gpio_vbus->irq = irq;
 
 	/* if data line pullup is in use, initialize it to "not pulling up" */
 	gpio = pdata->gpio_pullup;
