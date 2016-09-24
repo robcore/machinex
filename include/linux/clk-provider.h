@@ -276,6 +276,8 @@ struct clk *clk_register(struct device *dev, const char *name,
 		const struct clk_ops *ops, struct clk_hw *hw,
 		char **parent_names, u8 num_parents, unsigned long flags);
 
+void clk_unregister(struct clk *clk);
+
 /* helper functions */
 const char *__clk_get_name(struct clk *clk);
 struct clk_hw *__clk_get_hw(struct clk *clk);

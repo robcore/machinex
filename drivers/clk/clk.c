@@ -1350,6 +1350,15 @@ struct clk *clk_register(struct device *dev, const char *name,
 }
 EXPORT_SYMBOL_GPL(clk_register);
 
+/**
+ * clk_unregister - unregister a currently registered clock
+ * @clk: clock to unregister
+ *
+ * Currently unimplemented.
+ */
+void clk_unregister(struct clk *clk) {}
+EXPORT_SYMBOL_GPL(clk_unregister);
+
 /***        clk rate change notifiers        ***/
 
 /**
