@@ -338,5 +338,6 @@ extern struct diagchar_dev *driver;
 
 extern int wrap_enabled;
 extern uint16_t wrap_count;
+int diag_find_polling_reg(int i);
 
 #endif
