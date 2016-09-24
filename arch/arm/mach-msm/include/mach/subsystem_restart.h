@@ -24,9 +24,6 @@ enum {
 	RESET_SOC = 1,
 	RESET_SUBSYS_COUPLED,
 	RESET_SUBSYS_INDEPENDENT,
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-	RESET_SUBSYS_INDEPENDENT_SOC,
-#endif
 	RESET_LEVEL_MAX
 };
 
@@ -44,6 +41,7 @@ struct subsys_desc {
 extern int get_restart_level(void);
 extern int subsystem_restart_dev(struct subsys_device *dev);
 extern int subsystem_restart(const char *name);
+extern int subsys_modem_restart(void); /*                                                 */
 
 extern struct subsys_device *subsys_register(struct subsys_desc *desc);
 extern void subsys_unregister(struct subsys_device *dev);
