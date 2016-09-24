@@ -1102,7 +1102,7 @@ struct touch_device_driver synaptics_ts_driver = {
 	.fw_upgrade_check = synaptics_ts_fw_upgrade_check,
 };
 
-static int __devinit touch_init(void)
+static int touch_init(void)
 {
 	if (touch_debug_mask & DEBUG_TRACE)
 		TOUCH_DEBUG_MSG("\n");
