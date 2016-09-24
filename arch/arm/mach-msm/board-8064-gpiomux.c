@@ -1554,7 +1554,6 @@ void __init apq8064_init_gpiomux(void)
 		}
 	}
 
-#ifdef CONFIG_USB_EHCI_MSM_HSIC
 	if (machine_is_apq8064_mtp()) {
 		if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
 			msm_gpiomux_install(cyts_gpio_alt_config,
@@ -1565,6 +1564,7 @@ void __init apq8064_init_gpiomux(void)
 		}
 	}
 
+#ifdef CONFIG_USB_EHCI_MSM_HSIC
 	if (machine_is_apq8064_mtp())
 		msm_gpiomux_install(apq8064_hsic_configs,
 				ARRAY_SIZE(apq8064_hsic_configs));
