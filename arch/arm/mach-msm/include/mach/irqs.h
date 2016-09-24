@@ -17,6 +17,14 @@
 #ifndef __ASM_ARCH_MSM_IRQS_H
 #define __ASM_ARCH_MSM_IRQS_H
 
+/*
+ * 0-15:  STI/SGI (software triggered/generated interrupts)
+ * 16-31: PPI (private peripheral interrupts)
+ * 32+:   SPI (shared peripheral interrupts)
+ */
+#define GIC_PPI_START 16
+#define GIC_SPI_START 32
+
 #define MSM_IRQ_BIT(irq)     (1 << ((irq) & 31))
 
 #include "irqs-8625.h"

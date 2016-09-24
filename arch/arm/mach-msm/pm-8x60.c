@@ -35,6 +35,7 @@
 #include <mach/scm.h>
 #include <mach/socinfo.h>
 #include <mach/msm-krait-l2-accessors.h>
+#include <mach/mpm.h>
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
 #include <asm/pgtable.h>
@@ -133,7 +134,7 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
-static bool msm_pm_ldo_retention_enabled = true;
+static bool msm_pm_ldo_retention_enabled = false;
 /*
  * Write out the attribute.
  */
@@ -1155,6 +1156,17 @@ void msm_pm_set_sleep_ops(struct msm_pm_sleep_ops *ops)
 		pm_sleep_ops = *ops;
 }
 
+static int msm_suspend_prepare(void)
+{
+	msm_mpm_suspend_prepare();
+	return 0;
+}
+
+static void msm_suspend_wake(void)
+{
+	msm_mpm_suspend_wake();
+}
+
 void __init msm_pm_set_tz_retention_flag(unsigned int flag)
 {
 	msm_pm_retention_tz_call = flag;
@@ -1190,7 +1202,7 @@ static struct of_device_id msm_pc_debug_table[] = {
 	{.compatible = "qcom,pc-cntr"},
 	{},
 };
-static int __devinit msm_cpu_status_probe(struct platform_device *pdev)
+static int msm_cpu_status_probe(struct platform_device *pdev)
 {
 	struct msm_pm_sleep_status_data *pdata;
 	char *key;
