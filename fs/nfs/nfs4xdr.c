@@ -53,11 +53,9 @@
 #include <linux/nfs4.h>
 #include <linux/nfs_fs.h>
 #include <linux/nfs_idmap.h>
-
 #include "nfs4_fs.h"
 #include "internal.h"
 #include "pnfs.h"
-#include "netns.h"
 
 #define NFSDBG_FACILITY		NFSDBG_XDR
 
@@ -1728,7 +1726,6 @@ static void encode_create_session(struct xdr_stream *xdr,
 	char machine_name[NFS4_MAX_MACHINE_NAME_LEN];
 	uint32_t len;
 	struct nfs_client *clp = args->client;
-	struct nfs_net *nn = net_generic(clp->cl_net, nfs_net_id);
 	u32 max_resp_sz_cached;
 
 	/*
@@ -1770,7 +1767,7 @@ static void encode_create_session(struct xdr_stream *xdr,
 	*p++ = cpu_to_be32(RPC_AUTH_UNIX);			/* auth_sys */
 
 	/* authsys_parms rfc1831 */
-	*p++ = (__be32)nn->boot_time.tv_nsec;		/* stamp */
+	*p++ = cpu_to_be32((u32)clp->cl_boot_time.tv_nsec);	/* stamp */
 	p = xdr_encode_opaque(p, machine_name, len);
 	*p++ = cpu_to_be32(0);				/* UID */
 	*p++ = cpu_to_be32(0);				/* GID */

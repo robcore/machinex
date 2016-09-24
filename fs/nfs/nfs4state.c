@@ -57,8 +57,6 @@
 #include "internal.h"
 #include "pnfs.h"
 
-#define NFSDBG_FACILITY		NFSDBG_STATE
-
 #define OPENOWNER_POOL_SIZE	8
 
 const nfs4_stateid zero_stateid;
@@ -1598,7 +1596,7 @@ void nfs41_handle_recall_slot(struct nfs_client *clp)
 static void nfs4_reset_all_state(struct nfs_client *clp)
 {
 	if (test_and_set_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state) == 0) {
-		set_bit(NFS4CLNT_PURGE_STATE, &clp->cl_state);
+		clp->cl_boot_time = CURRENT_TIME;
 		nfs4_state_start_reclaim_nograce(clp);
 		nfs4_schedule_state_manager(clp);
 	}
@@ -1614,6 +1612,7 @@ static void nfs41_handle_server_reboot(struct nfs_client *clp)
 
 static void nfs41_handle_state_revoked(struct nfs_client *clp)
 {
+	/* Temporary */
 	nfs4_reset_all_state(clp);
 }
 
@@ -1634,10 +1633,6 @@ void nfs41_handle_sequence_flag_errors(struct nfs_client *clp, u32 flags)
 {
 	if (!flags)
 		return;
-
-	dprintk("%s: \"%s\" (client ID %llx) flags=0x%08x\n",
-		__func__, clp->cl_hostname, clp->cl_clientid, flags);
-
 	if (flags & SEQ4_STATUS_RESTART_RECLAIM_NEEDED)
 		nfs41_handle_server_reboot(clp);
 	if (flags & (SEQ4_STATUS_EXPIRED_ALL_STATE_REVOKED |
@@ -1757,12 +1752,6 @@ static void nfs4_state_manager(struct nfs_client *clp)
 
 	/* Ensure exclusive access to NFSv4 state */
 	do {
-		if (test_bit(NFS4CLNT_PURGE_STATE, &clp->cl_state)) {
-			nfs4_reclaim_lease(clp);
-			clear_bit(NFS4CLNT_PURGE_STATE, &clp->cl_state);
-			set_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state);
-		}
-
 		if (test_and_clear_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state)) {
 			/* We're going to have to re-establish a clientid */
 			status = nfs4_reclaim_lease(clp);

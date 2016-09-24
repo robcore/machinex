@@ -49,7 +49,7 @@
 #include "nfs4_fs.h"
 #include "delegation.h"
 
-#define NFSDBG_FACILITY		NFSDBG_STATE
+#define NFSDBG_FACILITY	NFSDBG_PROC
 
 void
 nfs4_renew_state(struct work_struct *work)

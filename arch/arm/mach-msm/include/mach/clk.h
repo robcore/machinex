@@ -24,7 +24,6 @@
 #define CLKFLAG_INIT_DONE		0x00001000
 #define CLKFLAG_INIT_ERR		0x00002000
 #define CLKFLAG_NO_RATE_CACHE		0x00004000
-#define MSM_AXI_MAX_FREQ	LONG_MAX
 
 struct clk_lookup;
 struct clk;
@@ -33,9 +32,6 @@ enum clk_reset_action {
 	CLK_RESET_DEASSERT	= 0,
 	CLK_RESET_ASSERT	= 1
 };
-
-/* Rate is minimum clock rate in Hz */
-int clk_set_min_rate(struct clk *clk, unsigned long rate);
 
 /* Rate is maximum clock rate in Hz */
 int clk_set_max_rate(struct clk *clk, unsigned long rate);

@@ -24,7 +24,6 @@ enum nfs4_client_state {
 	NFS4CLNT_RECALL_SLOT,
 	NFS4CLNT_LEASE_CONFIRM,
 	NFS4CLNT_SERVER_SCOPE_MISMATCH,
-	NFS4CLNT_PURGE_STATE,
 };
 
 enum nfs4_session_state {
@@ -51,6 +50,11 @@ struct nfs4_minor_version_ops {
 	const struct nfs4_state_recovery_ops *reboot_recovery_ops;
 	const struct nfs4_state_recovery_ops *nograce_recovery_ops;
 	const struct nfs4_state_maintenance_ops *state_renewal_ops;
+};
+
+struct nfs_unique_id {
+	struct rb_node rb_node;
+	__u64 id;
 };
 
 #define NFS_SEQID_CONFIRMED 1
@@ -330,7 +334,7 @@ extern void nfs4_schedule_stateid_recovery(const struct nfs_server *, struct nfs
 extern void nfs41_handle_sequence_flag_errors(struct nfs_client *clp, u32 flags);
 extern void nfs41_handle_recall_slot(struct nfs_client *clp);
 extern void nfs41_handle_server_scope(struct nfs_client *,
-				      struct nfs41_server_scope **);
+				      struct server_scope **);
 extern void nfs4_put_lock_state(struct nfs4_lock_state *lsp);
 extern int nfs4_set_lock_state(struct nfs4_state *state, struct file_lock *fl);
 extern void nfs4_select_rw_stateid(nfs4_stateid *, struct nfs4_state *,

@@ -17,7 +17,7 @@ struct nfs4_sequence_args;
 struct nfs4_sequence_res;
 struct nfs_server;
 struct nfs4_minor_version_ops;
-struct nfs41_server_scope;
+struct server_scope;
 struct nfs41_impl_id;
 
 /*
@@ -61,6 +61,9 @@ struct nfs_client {
 
 	struct rpc_wait_queue	cl_rpcwaitq;
 
+	/* used for the setclientid verifier */
+	struct timespec		cl_boot_time;
+
 	/* idmapper */
 	struct idmap *		cl_idmap;
 
@@ -76,16 +79,16 @@ struct nfs_client {
 	u32			cl_seqid;
 	/* The flags used for obtaining the clientid during EXCHANGE_ID */
 	u32			cl_exchange_flags;
-	struct nfs4_session	*cl_session;	/* shared session */
-	struct nfs41_server_scope *cl_serverscope;
-	struct nfs41_impl_id	*cl_implid;
+	struct nfs4_session	*cl_session; 	/* sharred session */
 #endif /* CONFIG_NFS_V4 */
 
 #ifdef CONFIG_NFS_FSCACHE
 	struct fscache_cookie	*fscache;	/* client index cache cookie */
 #endif
 
-	struct net		*cl_net;
+	struct server_scope	*server_scope;	/* from exchange_id */
+	struct nfs41_impl_id	*impl_id;	/* from exchange_id */
+	struct net		*net;
 };
 
 /*

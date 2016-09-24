@@ -38,6 +38,5 @@ pen:
 	b	secondary_startup
 ENDPROC(msm_secondary_startup)
 
-	.align
 1:	.long	.
 	.long	pen_release
