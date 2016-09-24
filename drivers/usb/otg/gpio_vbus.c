@@ -51,7 +51,8 @@ struct gpio_vbus_data {
  * edges might be workable.
  */
 #define VBUS_IRQ_FLAGS \
-	(IRQF_SHARED | IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)
+	( IRQF_SAMPLE_RANDOM | IRQF_SHARED \
+	| IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING )
 
 
 /* interface to regulator framework */
@@ -165,11 +166,12 @@ static int gpio_vbus_set_peripheral(struct usb_otg *otg,
 	struct gpio_vbus_data *gpio_vbus;
 	struct gpio_vbus_mach_info *pdata;
 	struct platform_device *pdev;
-	int gpio;
+	int gpio, irq;
 
 	gpio_vbus = container_of(otg->phy, struct gpio_vbus_data, phy);
 	pdev = to_platform_device(gpio_vbus->dev);
 	pdata = gpio_vbus->dev->platform_data;
+	irq = gpio_to_irq(pdata->gpio_vbus);
 	gpio = pdata->gpio_pullup;
 
 	if (!gadget) {
@@ -270,7 +272,7 @@ static int __init gpio_vbus_probe(struct platform_device *pdev)
 	if (res) {
 		irq = res->start;
 		res->flags &= IRQF_TRIGGER_MASK;
-		res->flags |= IRQF_SHARED;
+		res->flags |= IRQF_SAMPLE_RANDOM | IRQF_SHARED;
 	} else
 		irq = gpio_to_irq(gpio);
 
