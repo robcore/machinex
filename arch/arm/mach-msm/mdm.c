@@ -385,7 +385,7 @@ errfatal_err:
 	}
 
 	ret = request_threaded_irq(irq, NULL, charm_status_change,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 		"charm status", NULL);
 
 	if (ret < 0) {

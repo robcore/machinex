@@ -164,7 +164,7 @@ static int earjack_debugger_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&adev->work, set_console_work);
 
 	ret = request_threaded_irq(adev->irq, NULL, earjack_debugger_irq_handler,
-			IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING,
+			IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING|IRQF_ONESHOT,
 			"earjack_debugger_trigger", adev);
 	if (ret < 0) {
 		pr_err("%s: failed to request irq\n", __func__);

@@ -432,7 +432,7 @@ static int anx7808_i2c_probe(struct i2c_client *client,
 	}
 
 	ret = request_threaded_irq(client->irq, NULL, anx7808_cbl_det_isr,
-					IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+					IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING| IRQF_ONESHOT,
 					"anx7808", anx7808);
 	if (ret  < 0) {
 		pr_err("%s : failed to request irq \n", __func__);
