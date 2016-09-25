@@ -158,7 +158,7 @@ struct sa_params {
     int16_t m3Dlevel;
     int16_t BElevel;
     int16_t CHlevel;
-    int16_t CHRoomSize; 
+    int16_t CHRoomSize;
     int16_t Clalevel;
     int16_t volume;
 } __packed;
