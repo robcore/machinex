@@ -34,7 +34,7 @@ unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
-#define REG_SZ	22
+#define REG_SZ	25
 static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0 };
@@ -162,7 +162,6 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
-		/* Loud Speaker Gain */
 		case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
 		/* Line out gain */
 		case TABLA_A_RX_LINE_1_GAIN:
@@ -253,9 +252,9 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 {
 	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
+				TABLA_A_CDC_RX3_VOL_CTL_B2_CTL),
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX7_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
 }
 
 static ssize_t speaker_gain_store(struct kobject *kobj,
@@ -270,9 +269,9 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
+		TABLA_A_CDC_RX3_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
 
 	return count;
