@@ -224,7 +224,7 @@ static inline int sysfs_slab_alias(struct kmem_cache *s, const char *p)
 static inline void sysfs_slab_remove(struct kmem_cache *s)
 {
 	kfree(s->name);
-	kmem_cache_free(kmem_cache, s);
+	kfree(s);
 }
 
 #endif
@@ -2430,6 +2430,7 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 	void *prior;
 	void **object = (void *)x;
 	int was_frozen;
+	int inuse;
 	struct page new;
 	unsigned long counters;
 	struct kmem_cache_node *n = NULL;
@@ -2441,17 +2442,13 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 		return;
 
 	do {
-		if (unlikely(n)) {
-			spin_unlock_irqrestore(&n->list_lock, flags);
-			n = NULL;
-		}
 		prior = page->freelist;
 		counters = page->counters;
 		set_freepointer(s, object, prior);
 		new.counters = counters;
 		was_frozen = new.frozen;
 		new.inuse--;
-		if ((!new.inuse || !prior) && !was_frozen) {
+		if ((!new.inuse || !prior) && !was_frozen && !n) {
 
 			if (!kmem_cache_debug(s) && !prior)
 
@@ -2476,6 +2473,7 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 
 			}
 		}
+		inuse = new.inuse;
 
 	} while (!cmpxchg_double_slab(s, page,
 		prior, counters,
@@ -2501,17 +2499,25 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
                 return;
         }
 
-	if (unlikely(!new.inuse && n->nr_partial > s->min_partial))
-		goto slab_empty;
-
 	/*
-	 * Objects left in the slab. If it was not on the partial list before
-	 * then add it.
+	 * was_frozen may have been set after we acquired the list_lock in
+	 * an earlier loop. So we need to check it here again.
 	 */
-	if (kmem_cache_debug(s) && unlikely(!prior)) {
-		remove_full(s, page);
-		add_partial(n, page, DEACTIVATE_TO_TAIL);
-		stat(s, FREE_ADD_PARTIAL);
+	if (was_frozen)
+		stat(s, FREE_FROZEN);
+	else {
+		if (unlikely(!inuse && n->nr_partial > s->min_partial))
+                        goto slab_empty;
+
+		/*
+		 * Objects left in the slab. If it was not on the partial list before
+		 * then add it.
+		 */
+		if (unlikely(!prior)) {
+			remove_full(s, page);
+			add_partial(n, page, DEACTIVATE_TO_TAIL);
+			stat(s, FREE_ADD_PARTIAL);
+		}
 	}
 	spin_unlock_irqrestore(&n->list_lock, flags);
 	return;
@@ -2587,13 +2593,6 @@ void kmem_cache_free(struct kmem_cache *s, void *x)
 	struct page *page;
 
 	page = virt_to_head_page(x);
-
-	if (kmem_cache_debug(s) && page->slab != s) {
-		pr_err("kmem_cache_free: Wrong slab cache. %s but object"
-			" is from  %s\n", page->slab->name, s->name);
-		WARN_ON_ONCE(1);
-		return;
-	}
 
 	slab_free(s, page, x, _RET_IP_);
 
@@ -3960,7 +3959,7 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size,
 	if (!n)
 		goto err;
 
-	s = kmem_cache_alloc(kmem_cache, GFP_KERNEL);
+	s = kmalloc(kmem_size, GFP_KERNEL);
 	if (s) {
 		if (kmem_cache_open(s, n,
 				size, align, flags, ctor)) {
@@ -3975,7 +3974,7 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size,
 			}
 			return s;
 		}
-		kmem_cache_free(kmem_cache, s);
+		kfree(s);
 	}
 	kfree(n);
 err:
@@ -5226,7 +5225,7 @@ static void kmem_cache_release(struct kobject *kobj)
 	struct kmem_cache *s = to_slab(kobj);
 
 	kfree(s->name);
-	kmem_cache_free(kmem_cache, s);
+	kfree(s);
 }
 
 static const struct sysfs_ops slab_sysfs_ops = {

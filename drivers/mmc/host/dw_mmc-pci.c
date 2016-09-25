@@ -140,7 +140,18 @@ static struct pci_driver dw_mci_pci_driver = {
 	},
 };
 
-module_pci_driver(dw_mci_pci_driver);
+static int __init dw_mci_init(void)
+{
+	return pci_register_driver(&dw_mci_pci_driver);
+}
+
+static void __exit dw_mci_exit(void)
+{
+	pci_unregister_driver(&dw_mci_pci_driver);
+}
+
+module_init(dw_mci_init);
+module_exit(dw_mci_exit);
 
 MODULE_DESCRIPTION("DW Multimedia Card PCI Interface driver");
 MODULE_AUTHOR("Shashidhar Hiremath <shashidharh@vayavyalabs.com>");

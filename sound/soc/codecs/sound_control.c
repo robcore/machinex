@@ -35,7 +35,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 #define REG_SZ	22
-static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0 };
 
@@ -252,9 +252,9 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 {
 	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX3_VOL_CTL_B2_CTL),
+				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX7_VOL_CTL_B2_CTL));
 }
 
 static ssize_t speaker_gain_store(struct kobject *kobj,
@@ -269,9 +269,9 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX3_VOL_CTL_B2_CTL, lval);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
 
 	return count;

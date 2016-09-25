@@ -81,8 +81,8 @@
 #define MODULE_ID_PP_SA                             0x10001fa0
 #define PARAM_ID_PP_SA_PARAMS                       0x10001fa1
 
-#define MODULE_ID_PP_SA_VOL                         0x10001fa3
-#define PARAM_ID_PP_SA_VOLUME                       0x10001fa4
+//#define MODULE_ID_PP_SA_VOL                         0x10001fa3
+//#define PARAM_ID_PP_SA_VOLUME                       0x10001fa4
 #define MODULE_ID_PP_SA_VSP                             0x10001fb0
 #define PARAM_ID_PP_SA_VSP_PARAMS                       0x10001fb1
 
