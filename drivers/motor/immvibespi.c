@@ -37,7 +37,7 @@
 #define LEVEL_MAX           100
 #define LEVEL_MIN           0
 #define LEVEL_DEFAULT       50
-#define LEVEL_THRESHOLD     50
+#define LEVEL_THRESHOLD     25
 
 /*
 ** This SPI supports only one actuator.

@@ -129,8 +129,8 @@ static int set_vibetonz(int timeout)
 	} else {
 		DbgOut((KERN_INFO "tspdrv: ENABLE\n"));
 		if (vibrator_drvdata.vib_model == HAPTIC_PWM) {
-				strength = 125;
-			/* 95% duty cycle */
+				strength = 119;
+			/* 90% duty cycle */
 			ImmVibeSPI_ForceOut_SetSamples(0, 8, 1, &strength);
 		} else { /* HAPTIC_MOTOR */
 			ImmVibeSPI_ForceOut_AmpEnable(0);
