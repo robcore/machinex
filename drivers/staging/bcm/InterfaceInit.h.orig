@@ -18,11 +18,11 @@
 #define BCM_USB_MINOR_BASE 		192
 
 
-int InterfaceInitialize(void);
+INT InterfaceInitialize(void);
 
-int InterfaceExit(void);
+INT InterfaceExit(void);
 
-int usbbcm_worker_thread(PS_INTERFACE_ADAPTER psIntfAdapter);
+INT usbbcm_worker_thread(PS_INTERFACE_ADAPTER psIntfAdapter);
 
 #endif
 
