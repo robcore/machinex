@@ -34,7 +34,7 @@
 #include <linux/gpio.h>
 #include "tspdrv.h"
 
-#define LEVEL_MAX           127
+#define LEVEL_MAX           100
 #define LEVEL_MIN           0
 #define LEVEL_DEFAULT       50
 #define LEVEL_THRESHOLD     50
@@ -60,7 +60,7 @@ struct pm_gpio vib_pwm = {
 			};
 
 
-unsigned long pwm_val = 127;
+unsigned long pwm_val = 100;
 
 static int32_t vibe_set_pwm_freq(int nForce)
 {
@@ -377,8 +377,8 @@ ssize_t pwm_value_store(struct device *dev, struct device_attribute *attr,
 	pr_info("[VIB] %s: pwm_val=%lu\n", __func__, pwm_val);
 
 	/* make sure new pwm duty is in range */
-	if(pwm_val > 127)
-		pwm_val = 127;
+	if(pwm_val > 100)
+		pwm_val = 100;
 	else if (pwm_val < 0)
 		pwm_val = 0;
 
