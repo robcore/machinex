@@ -34,10 +34,10 @@
 #include <linux/gpio.h>
 #include "tspdrv.h"
 
-#define LEVEL_MAX           100
+#define LEVEL_MAX           127
 #define LEVEL_MIN           0
-#define LEVEL_DEFAULT       100
-#define LEVEL_THRESHOLD     75
+#define LEVEL_DEFAULT       50
+#define LEVEL_THRESHOLD     50
 
 /*
 ** This SPI supports only one actuator.
@@ -60,7 +60,7 @@ struct pm_gpio vib_pwm = {
 			};
 
 
-unsigned long pwm_val = 100;
+unsigned long pwm_val = 127;
 
 static int32_t vibe_set_pwm_freq(int nForce)
 {
@@ -305,10 +305,10 @@ static ssize_t pwm_max_show(struct device *dev,
                             struct device_attribute *attr, char *buf)
 {
 	int count;
-    
+
 	count = sprintf(buf, "%d\n", LEVEL_MAX);
 	pr_info("vibrator: pwm max value: %d\n", LEVEL_MAX);
-    
+
 	return count;
 }
 
@@ -319,10 +319,10 @@ static ssize_t pwm_min_show(struct device *dev,
                             struct device_attribute *attr, char *buf)
 {
 	int count;
-    
+
 	count = sprintf(buf, "%d\n", LEVEL_MIN);
 	pr_info("vibrator: pwm min value: %d\n", LEVEL_MIN);
-    
+
 	return count;
 }
 
@@ -333,10 +333,10 @@ static ssize_t pwm_default_show(struct device *dev,
                                 struct device_attribute *attr, char *buf)
 {
 	int count;
-    
+
 	count = sprintf(buf, "%d\n", LEVEL_DEFAULT);
 	pr_info("vibrator: pwm default value: %d\n", LEVEL_DEFAULT);
-    
+
 	return count;
 }
 
@@ -347,10 +347,10 @@ static ssize_t pwm_threshold_show(struct device *dev,
                                   struct device_attribute *attr, char *buf)
 {
 	int count;
-    
+
 	count = sprintf(buf, "%d\n", LEVEL_THRESHOLD);
 	pr_info("vibrator: pwm threshold value: %d\n", LEVEL_THRESHOLD);
-    
+
 	return count;
 }
 
@@ -377,8 +377,8 @@ ssize_t pwm_value_store(struct device *dev, struct device_attribute *attr,
 	pr_info("[VIB] %s: pwm_val=%lu\n", __func__, pwm_val);
 
 	/* make sure new pwm duty is in range */
-	if(pwm_val > 100)
-		pwm_val = 100;
+	if(pwm_val > 127)
+		pwm_val = 127;
 	else if (pwm_val < 0)
 		pwm_val = 0;
 
