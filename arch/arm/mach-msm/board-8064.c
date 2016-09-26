@@ -345,6 +345,7 @@ static struct platform_device ion_mm_heap_device = {
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	}
 };
+
 static struct platform_device ion_adsp_heap_device = {
 	.name = "ion-adsp-heap-device",
 	.id = -1,
@@ -1926,7 +1927,7 @@ static void __init apq8064_map_io(void)
 	msm_shared_ram_phys = MSM_SHARED_RAM_PHYS;
 	msm_map_apq8064_io();
 	if (socinfo_init() < 0)
-		pr_err("socinfo_init() failed!\n");
+		pr_err("%s: socinfo_init() failed\n", __func__);
 }
 
 static void __init apq8064_init_irq(void)
@@ -2006,14 +2007,14 @@ static struct msm_rpmrs_level msm_rpmrs_levels[] = {
 	{
 		MSM_PM_SLEEP_MODE_RETENTION,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		false,
+		true,
 		415, 715, 340827, 475,
 	},
 
 	{
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		false,
+		true,
 		1300, 228, 1200000, 2000,
 	},
 
@@ -2109,7 +2110,7 @@ static uint8_t spm_retention_cmd_sequence[] __initdata = {
 
 static uint8_t spm_retention_with_krait_v3_cmd_sequence[] __initdata = {
 	0x42, 0x1B, 0x00,
-	0x05, 0x03, 0x0D, 0x0B,
+	0x05, 0x03, 0x01, 0x0B,
 	0x00, 0x42, 0x1B,
 	0x0f,
 };
@@ -2413,6 +2414,7 @@ apq8064_pm8921_device_rpm_regulator __devinitdata = {
 static struct gpio_ir_recv_platform_data gpio_ir_recv_pdata = {
 	.gpio_nr = 88,
 	.active_low = 1,
+	.can_wakeup = true,
 };
 
 static struct platform_device gpio_ir_recv_pdev = {

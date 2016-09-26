@@ -52,6 +52,10 @@ config GENERIC_CLOCKEVENTS_MIN_ADJUST
 config GENERIC_CMOS_UPDATE
 	bool
 
+config GENERIC_SCHED_CLOCK
+	default y
+	bool
+
 if GENERIC_CLOCKEVENTS
 menu "Timers subsystem"
 
