@@ -74,4 +74,3 @@ DEFINE_EVENT(loadeval, cpufreq_ondemandplus_already,
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
-
