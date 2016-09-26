@@ -460,7 +460,7 @@ static struct mmc_platform_data *apq8064_sdc1_pdata;
 
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 static unsigned int sdc2_sup_clk_rates[] = {
-	400000, 24000000, 40000000
+	400000, 24000000, 48000000
 };
 
 static struct mmc_platform_data sdc2_data = {

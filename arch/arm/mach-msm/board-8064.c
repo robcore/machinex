@@ -3396,6 +3396,7 @@ static void __init apq8064_common_init(void)
 	apq8064_init_mmc();
 
 	if (machine_is_apq8064_mtp()) {
+		mdm_8064_device.dev.platform_data = &mdm_platform_data;
 		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_DSDA2) {
 			amdm_8064_device.dev.platform_data =
 				&amdm_platform_data;
