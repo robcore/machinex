@@ -201,6 +201,7 @@ struct qseecom_control {
 	uint32_t          qseos_version;
 	struct device *pdev;
 	struct cdev cdev;
+
 };
 
 struct qseecom_client_handle {

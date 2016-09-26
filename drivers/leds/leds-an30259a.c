@@ -437,9 +437,9 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_R, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_B,
-				0, 15, 13, 11, 3, 3, 0, 0, 2, 4);
+				0, 15, 10, 5, 3, 1, 0, 0, 2, 4);
 		leds_set_slope_mode(client, LED_R,
-				1, 0, 0, 1, 2, 3, 0, 0, 2, 4);
+				0, 0, 5, 1, 1, 3, 0, 0, 2, 4);
 
 		break;
 	case BOOTING:
