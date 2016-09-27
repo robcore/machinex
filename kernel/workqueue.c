@@ -461,13 +461,6 @@ void destroy_work_on_stack(struct work_struct *work)
 }
 EXPORT_SYMBOL_GPL(destroy_work_on_stack);
 
-void destroy_delayed_work_on_stack(struct delayed_work *work)
-{
-	destroy_timer_on_stack(&work->timer);
-	debug_object_free(&work->work, &work_debug_descr);
-}
-EXPORT_SYMBOL_GPL(destroy_delayed_work_on_stack);
-
 #else
 static inline void debug_work_activate(struct work_struct *work) { }
 static inline void debug_work_deactivate(struct work_struct *work) { }
@@ -2006,7 +1999,8 @@ restart:
 		if (!need_to_create_worker(pool))
 			break;
 
-		schedule_timeout_interruptible(CREATE_COOLDOWN);
+		__set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(CREATE_COOLDOWN);
 
 		if (!need_to_create_worker(pool))
 			break;
