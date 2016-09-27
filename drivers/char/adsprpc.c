@@ -693,6 +693,9 @@ static int fastrpc_internal_invoke(struct fastrpc_apps *me, uint32_t kernel,
 		if (err)
 			goto bail;
 	}
+	spin_lock(&me->hlock);
+	hlist_add_head(&fl->hn, &me->drivers);
+	spin_unlock(&me->hlock);
 
 	context_list_alloc_ctx(&me->clst, &ctx);
 	VERIFY(err, 0 == fastrpc_invoke_send(me, invoke->handle, sc, ctx,
