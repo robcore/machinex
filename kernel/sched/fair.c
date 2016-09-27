@@ -183,11 +183,6 @@ void sched_init_granularity(void)
 	update_sysctl();
 }
 
-/* Save per_cpu information that will be shared with other frameworks */
-DEFINE_PER_CPU(struct sched_pm, sched_stat) = {
-	.wake_latency = ATOMIC_INIT(0)
-};
-
 #if BITS_PER_LONG == 32
 # define WMULT_CONST	(~0UL)
 #else
@@ -3947,6 +3942,9 @@ static int tg_load_down(struct task_group *tg, void *data)
 	if (!tg->parent) {
 		load = cpu_rq(cpu)->load.weight;
 	} else {
+		unsigned long tmp_rla;
+		tmp_rla = tg->parent->cfs_rq[cpu]->runnable_load_avg + 1;
+
 		load = tg->parent->cfs_rq[cpu]->h_load;
 		load *= tg->se[cpu]->load.weight;
 		load /= tg->parent->cfs_rq[cpu]->load.weight + 1;
