@@ -2569,13 +2569,7 @@ static bool mmc_is_vaild_state_for_clk_scaling(struct mmc_host *host)
 	u32 status;
 	bool ret = false;
 
-	/*
-	 * If the current partition type is RPMB, clock switching may not
-	 * work properly as sending tuning command (CMD21) is illegal in
-	 * this mode.
-	 */
-	if (!card || (mmc_card_mmc(card) &&
-			card->part_curr == EXT_CSD_PART_CONFIG_ACC_RPMB))
+	if (!card)
 		goto out;
 
 	if (mmc_send_status(card, &status)) {
