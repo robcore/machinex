@@ -97,7 +97,7 @@
 /* Use SPS only if transfer size is more than this macro */
 #define SPS_MIN_XFER_SIZE		MCI_FIFOSIZE
 
-#define MSM_MMC_BUS_VOTING_DELAY	100 /* msecs */
+#define MSM_MMC_BUS_VOTING_DELAY	200 /* msecs */
 #define INVALID_TUNING_PHASE		-1
 
 #if defined(CONFIG_DEBUG_FS)
@@ -6161,6 +6161,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	 * mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	 */
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
+	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
