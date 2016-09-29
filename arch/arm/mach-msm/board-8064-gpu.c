@@ -34,7 +34,7 @@ static struct msm_dcvs_core_info grp3d_core_info = {
 	.freq_tbl		= &grp3d_freq[0],
 	.num_cores		= 1,
 	.sensors		= (int[]){0},
-	.thermal_poll_ms	= 60000,
+	.thermal_poll_ms	= 65000,
 	.core_param		= {
 		.core_type	= MSM_DCVS_CORE_TYPE_GPU,
 	},
@@ -226,7 +226,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 			.io_fraction = 0,
 		},
 		{
-			.gpu_freq = 320000000,
+			.gpu_freq = 325000000,
 			.bus_freq = 3,
 			.io_fraction = 33,
 		},
@@ -245,7 +245,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 			.bus_freq = 0,
 		},
 	},
-	.init_level = 1,
+	.init_level = 2,
 	.num_levels = 5,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
