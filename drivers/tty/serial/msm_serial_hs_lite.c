@@ -1355,9 +1355,6 @@ static int msm_hsl_console_setup(struct console *co, char *options)
 	if (unlikely(co->index >= UART_NR || co->index < 0))
 		return -ENXIO;
 
-	if (console_disabled())
-		return;
-
 	port = get_port_from_line(co->index);
 	vid = UART_TO_MSM(port)->ver_id;
 
