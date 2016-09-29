@@ -171,6 +171,8 @@ static int get_console_state(struct uart_port *port);
 static inline int get_console_state(struct uart_port *port) { return -ENODEV; };
 #endif
 
+static bool msm_console_disabled = false;
+
 static struct dentry *debug_base;
 static inline void wait_for_xmitr(struct uart_port *port);
 static inline void msm_hsl_write(struct uart_port *port,
@@ -229,6 +231,16 @@ static int clk_en(struct uart_port *port, int enable)
 	}
 err:
 	return ret;
+}
+
+void msm_console_set_enable(bool enable)
+{
+	msm_console_disabled = !enable;
+}
+
+static bool console_disabled(void)
+{
+	return msm_console_disabled;
 }
 
 /**
@@ -350,6 +362,9 @@ static void msm_hsl_stop_tx(struct uart_port *port)
 static void msm_hsl_start_tx(struct uart_port *port)
 {
 	struct msm_hsl_port *msm_hsl_port = UART_TO_MSM(port);
+
+	if (is_console(port) && console_disabled())
+		return;
 
 	msm_hsl_port->imr |= UARTDM_ISR_TXLEV_BMSK;
 	msm_hsl_write(port, msm_hsl_port->imr,
@@ -640,6 +655,9 @@ static unsigned int msm_hsl_tx_empty(struct uart_port *port)
 {
 	unsigned int ret;
 	unsigned int vid = UART_TO_MSM(port)->ver_id;
+
+	if (is_console(port) && console_disabled())
+		return 1;
 
 	ret = (msm_hsl_read(port, regmap[vid][UARTDM_SR]) &
 	       UARTDM_SR_TXEMT_BMSK) ? TIOCSER_TEMT : 0;
@@ -1344,6 +1362,9 @@ static int msm_hsl_console_setup(struct console *co, char *options)
 
 	if (unlikely(co->index >= UART_NR || co->index < 0))
 		return -ENXIO;
+
+	if (console_disabled())
+		return;
 
 	port = get_port_from_line(co->index);
 	vid = UART_TO_MSM(port)->ver_id;
