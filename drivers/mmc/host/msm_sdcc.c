@@ -97,7 +97,7 @@
 /* Use SPS only if transfer size is more than this macro */
 #define SPS_MIN_XFER_SIZE		MCI_FIFOSIZE
 
-#define MSM_MMC_BUS_VOTING_DELAY	200 /* msecs */
+#define MSM_MMC_BUS_VOTING_DELAY	100 /* msecs */
 #define INVALID_TUNING_PHASE		-1
 
 #if defined(CONFIG_DEBUG_FS)
