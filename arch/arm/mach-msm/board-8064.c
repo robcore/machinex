@@ -101,9 +101,9 @@
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
 #ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
 #else
-#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
 #endif
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -2321,12 +2321,9 @@ static void __init apq8064_init_buses(void)
 	msm_bus_8064_apps_fabric_pdata.rpm_enabled = 1;
 	msm_bus_8064_sys_fabric_pdata.rpm_enabled = 1;
 	msm_bus_8064_mm_fabric_pdata.rpm_enabled = 1;
-	msm_bus_8064_apps_fabric.dev.platform_data =
-		&msm_bus_8064_apps_fabric_pdata;
-	msm_bus_8064_sys_fabric.dev.platform_data =
-		&msm_bus_8064_sys_fabric_pdata;
-	msm_bus_8064_mm_fabric.dev.platform_data =
-		&msm_bus_8064_mm_fabric_pdata;
+	msm_bus_8064_apps_fabric.dev.platform_data = &msm_bus_8064_apps_fabric_pdata;
+	msm_bus_8064_sys_fabric.dev.platform_data = &msm_bus_8064_sys_fabric_pdata;
+	msm_bus_8064_mm_fabric.dev.platform_data = &msm_bus_8064_mm_fabric_pdata;
 	msm_bus_8064_sys_fpb.dev.platform_data = &msm_bus_8064_sys_fpb_pdata;
 	msm_bus_8064_cpss_fpb.dev.platform_data = &msm_bus_8064_cpss_fpb_pdata;
 }
