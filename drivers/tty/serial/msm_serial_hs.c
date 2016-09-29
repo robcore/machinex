@@ -2066,7 +2066,8 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	case MSM_HS_CLK_OFF:
 		printk(KERN_INFO "(msm_serial_hs) msm_hs_check_clock_on - dma wake lock\n");
 		wake_lock(&msm_uport->dma_wake_lock);
-		disable_irq_nosync(msm_uport->wakeup.irq);
+		if (use_low_power_wakeup(msm_uport))
+			disable_irq_nosync(msm_uport->wakeup.irq);
 		spin_unlock_irqrestore(&uport->lock, flags);
 		ret = msm_hs_clock_vote(msm_uport);
 		if (ret) {
@@ -2319,7 +2320,8 @@ static int msm_hs_startup(struct uart_port *uport)
 free_uart_irq:
 	free_irq(uport->irq, msm_uport);
 free_wake_irq:
-	irq_set_irq_wake(msm_uport->wakeup.irq, 0);
+	if (use_low_power_wakeup(msm_uport))
+		irq_set_irq_wake(msm_uport->wakeup.irq, 0);
 unconfigure_uart_gpio:
 	if (pdata && pdata->config_gpio)
 		msm_hs_unconfig_uart_gpios(uport);
