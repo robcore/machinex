@@ -2933,21 +2933,6 @@ fail_regulator_hpm:
 	return rc;
 }
 
-static void cyttsp_release_all(struct cyttsp *ts)
-{
-	int id;
-
-	for (id = 0; id < CY_NUM_MT_TCH_ID; id++) {
-		input_mt_slot(ts->input, id);
-		input_mt_report_slot_state(ts->input, MT_TOOL_FINGER, 0);
-	}
-
-	input_report_key(ts->input, BTN_TOUCH, 0);
-	input_report_key(ts->input, BTN_TOOL_FINGER, 0);
-
-	input_sync(ts->input);
-}
-
 /* Function to manage power-on resume */
 static int cyttsp_resume(struct device *dev)
 {
@@ -3052,8 +3037,6 @@ static int cyttsp_suspend(struct device *dev)
 		del_timer(&ts->timer);
 	else
 		disable_irq(ts->client->irq);
-
-	cyttsp_release_all(ts);
 
 	if (!(retval < CY_OK)) {
 		if (ts->platform_data->use_sleep &&
