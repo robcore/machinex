@@ -5000,8 +5000,8 @@ static int msmsdcc_sps_init(struct msmsdcc_host *host)
 	bam.user = (void *)host;
 
 	/* bam reset messages will be limited to 5 times */
-	bam.constrained_logging = true;
-	bam.logging_number = 5;
+	//bam.constrained_logging = true;
+	//bam.logging_number = 5;
 
 	pr_info("%s: bam physical base=0x%x\n", mmc_hostname(host->mmc),
 			(u32)bam.phys_addr);
