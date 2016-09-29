@@ -24,6 +24,7 @@
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM "TRACE_SYSTEM"
+#define REALLY_WANT_TRACEPOINTS
 
 DEFINE_MUTEX(event_mutex);
 
