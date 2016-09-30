@@ -54,10 +54,12 @@ struct wakeup_irq_node {
 	bool handled;
 };
 
+#ifdef CONFIG_DEDUCE_WAKEUP_REASONS
+
 /* Called in the resume path, with interrupts and nonboot cpus disabled; on
  * need for a spinlock.
  */
-static inline bool logging_wakeup_reasons_nosync(void)
+static inline void start_logging_wakeup_reasons(void)
 {
 	extern bool log_wakeups;
 	extern struct completion wakeups_completion;
@@ -65,7 +67,7 @@ static inline bool logging_wakeup_reasons_nosync(void)
 	init_completion(&wakeups_completion);
 }
 
-static inline bool logging_wakeup_reasons(void)
+static inline bool logging_wakeup_reasons_nosync(void)
 {
 	extern bool log_wakeups;
 	return ACCESS_ONCE(log_wakeups);
@@ -77,19 +79,27 @@ static inline bool logging_wakeup_reasons(void)
 	return logging_wakeup_reasons_nosync();
 }
 
-void log_base_wakeup_reason(int irq);
-
-void log_suspend_abort_reason(const char *fmt, ...);
-
 bool log_possible_wakeup_reason(int irq,
 			struct irq_desc *desc,
 			bool (*handler)(unsigned int, struct irq_desc *));
 
-int check_wakeup_reason(int irq);
+#else
+
+static inline void start_logging_wakeup_reasons(void) {}
+static inline bool logging_wakeup_reasons_nosync(void) { return false; }
+static inline bool logging_wakeup_reasons(void) { return false; }
+static inline bool log_possible_wakeup_reason(int irq,
+			struct irq_desc *desc,
+			bool (*handler)(unsigned int, struct irq_desc *)) { return true; }
+
+#endif
 
 const struct list_head*
 get_wakeup_reasons(unsigned long timeout, struct list_head *unfinished);
-
+void log_base_wakeup_reason(int irq);
 void clear_wakeup_reasons(void);
+void log_suspend_abort_reason(const char *fmt, ...);
+int check_wakeup_reason(int irq);
 
 #endif /* _LINUX_WAKEUP_REASON_H */
+
