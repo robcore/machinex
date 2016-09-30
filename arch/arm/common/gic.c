@@ -261,6 +261,7 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 		enabled = readl_relaxed(base + GIC_DIST_ENABLE_CLEAR + i * 4);
 		pending[i] = readl_relaxed(base + GIC_DIST_PENDING_SET + i * 4);
 		pending[i] &= enabled;
+		pending[i] &= gic->wakeup_irqs[i];
 	}
 	raw_spin_unlock(&irq_controller_lock);
 
@@ -275,7 +276,7 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 		else if (desc->action && desc->action->name)
 			name = desc->action->name;
 
-		log_wakeup_reason(i + gic->irq_offset);
+		log_base_wakeup_reason(i + gic->irq_offset);
 	}
 }
 
