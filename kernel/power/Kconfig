@@ -298,6 +298,10 @@ config WQ_POWER_EFFICIENT_DEFAULT
 
 	  If in doubt, say N.
 
+config PM_GENERIC_DOMAINS_SLEEP
+	def_bool y
+	depends on PM_SLEEP && PM_GENERIC_DOMAINS
+
 config PM_GENERIC_DOMAINS_RUNTIME
 	def_bool y
 	depends on PM_RUNTIME && PM_GENERIC_DOMAINS
