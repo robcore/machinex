@@ -5335,8 +5335,8 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (host->dummy_52_sent) {
-		pr_info("%s: %s: dummy CMD52 timeout\n",
-				mmc_hostname(host->mmc), __func__);
+		//pr_info("%s: %s: dummy CMD52 timeout\n",
+				//mmc_hostname(host->mmc), __func__);
 		host->dummy_52_sent = 0;
 	}
 
@@ -5344,8 +5344,8 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 
 	if (mrq && mrq->cmd) {
 		if (!mrq->cmd->ignore_timeout) {
-			pr_info("%s: CMD%d: Request timeout\n",
-				mmc_hostname(host->mmc), mrq->cmd->opcode);
+			//pr_info("%s: CMD%d: Request timeout\n",
+				//mmc_hostname(host->mmc), mrq->cmd->opcode);
 			msmsdcc_dump_sdcc_state(host);
 		}
 
