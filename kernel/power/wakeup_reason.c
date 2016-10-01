@@ -573,6 +573,128 @@ void clear_wakeup_reasons(void)
 	spin_unlock_irqrestore(&resume_reason_lock, flags);
 }
 
+int check_wakeup_reason(int irq)
+{
+	int irq_no;
+	int ret = false;
+
+	spin_lock(&resume_reason_lock);
+	for (irq_no = 0; irq_no < irq_count; irq_no++)
+		if (irq_list[irq_no] == irq) {
+			ret = true;
+			break;
+	}
+	spin_unlock(&resume_reason_lock);
+	return ret;
+}
+
+void log_suspend_abort_reason(const char *fmt, ...)
+{
+	va_list args;
+
+	spin_lock(&resume_reason_lock);
+
+	//Suspend abort reason has already been logged.
+	if (suspend_abort) {
+		spin_unlock(&resume_reason_lock);
+		return;
+	}
+
+	suspend_abort = true;
+	va_start(args, fmt);
+	snprintf(abort_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
+	va_end(args);
+
+	spin_unlock(&resume_reason_lock);
+}
+
+static bool match_node(struct wakeup_irq_node *n, void *_p)
+{
+	int irq = *((int *)_p);
+	return n->irq != irq;
+}
+
+int check_wakeup_reason(int irq)
+{
+	bool found;
+	spin_lock(&resume_reason_lock);
+	found = !walk_irq_node_tree(base_irq_nodes, match_node, &irq);
+	spin_unlock(&resume_reason_lock);
+	return found;
+}
+
+static bool build_leaf_nodes(struct wakeup_irq_node *n, void *_p)
+{
+	struct list_head *wakeups = _p;
+	if (!n->child)
+		list_add(&n->next, wakeups);
+	return true;
+}
+
+static const struct list_head* get_wakeup_reasons_nosync(void)
+{
+	BUG_ON(logging_wakeup_reasons());
+	INIT_LIST_HEAD(&wakeup_irqs);
+	walk_irq_node_tree(base_irq_nodes, build_leaf_nodes, &wakeup_irqs);
+	return &wakeup_irqs;
+}
+
+static bool build_unfinished_nodes(struct wakeup_irq_node *n, void *_p)
+{
+	struct list_head *unfinished = _p;
+	if (!n->handled) {
+		pr_warning("%s: wakeup irq %d was not handled\n",
+			   __func__, n->irq);
+		list_add(&n->next, unfinished);
+	}
+	return true;
+}
+
+const struct list_head* get_wakeup_reasons(unsigned long timeout,
+					struct list_head *unfinished)
+{
+	INIT_LIST_HEAD(unfinished);
+
+	if (logging_wakeup_reasons()) {
+		unsigned long signalled = 0;
+		if (timeout)
+			signalled = wait_for_completion_timeout(&wakeups_completion, timeout);
+		if (WARN_ON(!signalled)) {
+			stop_logging_wakeup_reasons();
+			walk_irq_node_tree(base_irq_nodes, build_unfinished_nodes, unfinished);
+			return NULL;
+		}
+		pr_info("%s: waited for %u ms\n",
+				__func__,
+				jiffies_to_msecs(timeout - signalled));
+	}
+
+	return get_wakeup_reasons_nosync();
+}
+
+static bool delete_node(struct wakeup_irq_node *n, void *unused)
+{
+	list_del(&n->siblings);
+	kmem_cache_free(wakeup_irq_nodes_cache, n);
+	return true;
+}
+
+void clear_wakeup_reasons(void)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&resume_reason_lock, flags);
+
+	BUG_ON(logging_wakeup_reasons());
+	walk_irq_node_tree(base_irq_nodes, delete_node, NULL);
+	base_irq_nodes = NULL;
+	cur_irq_tree = NULL;
+	cur_irq_tree_depth = 0;
+	INIT_LIST_HEAD(&wakeup_irqs);
+	suspend_abort = false;
+
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
+}
+
 /* Detects a suspend and clears all the previous wake up reasons*/
 static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		unsigned long pm_event, void *unused)

@@ -26,7 +26,6 @@
 #include <linux/syscore_ops.h>
 #include <linux/ftrace.h>
 #include <linux/rtc.h>
-#include <linux/ftrace.h>
 #include <linux/wakeup_reason.h>
 #include <linux/partialresume.h>
 #include <trace/events/power.h>
@@ -150,35 +149,6 @@ int suspend_valid_only_mem(suspend_state_t state)
 }
 EXPORT_SYMBOL_GPL(suspend_valid_only_mem);
 
-static bool platform_suspend_again(void)
-{
-	int count;
-	bool suspend = suspend_ops->suspend_again ?
-		suspend_ops->suspend_again() : false;
-
-	if (suspend) {
-		/*
-		 * pm_get_wakeup_count() gets an updated count of wakeup events
-		 * that have occured and will return false (i.e. abort suspend)
-		 * if a wakeup event has been started during suspend_again() and
-		 * is still active. pm_save_wakeup_count() stores the count
-		 * and enables pm_wakeup_pending() to properly analyze wakeup
-		 * events before entering suspend in suspend_enter().
-		 */
-		suspend = pm_get_wakeup_count(&count, false) &&
-			  pm_save_wakeup_count(count);
-
-		if (!suspend)
-			pr_debug("%s: wakeup occurred during suspend_again\n",
-				__func__);
-	}
-
-	pr_debug("%s: votes for: %s\n", __func__,
-		suspend ? "suspend" : "resume");
-
-	return suspend;
-}
-
 static int suspend_test(int level)
 {
 #ifdef CONFIG_PM_DEBUG
@@ -299,14 +269,15 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			error = suspend_ops->enter(state);
 			events_check_enabled = false;
 		} else if (*wakeup) {
-			error = -EBUSY;
-		}
-		} else {
 			pm_get_active_wakeup_sources(suspend_abort,
 				MAX_SUSPEND_ABORT_LEN);
 			log_suspend_abort_reason(suspend_abort);
-			syscore_resume();
-}
+			error = -EBUSY;
+		}
+
+		start_logging_wakeup_reasons();
+		syscore_resume();
+	}
 
 	arch_suspend_enable_irqs();
 	BUG_ON(irqs_disabled());
@@ -365,14 +336,8 @@ static bool suspend_again(bool *drivers_resumed)
 	if (suspend_again_consensus() &&
 		       !freeze_kernel_threads()) {
 		clear_wakeup_reasons();
+		dpm_suspend_start(PMSG_SUSPEND);
 		*drivers_resumed = false;
-		if (dpm_suspend_start(PMSG_SUSPEND)) {
-			printk(KERN_ERR "PM: Some devices failed to suspend\n");
-			log_suspend_abort_reason("Some devices failed to suspend");
-			if (suspend_ops->recover)
-				suspend_ops->recover();
-			return false;
-		}
 		return true;
 	}
 
@@ -414,7 +379,8 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_start();
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
-		pr_err("PM: Some devices failed to suspend, or early wake event detected\n");
+		printk(KERN_ERR "PM: Some devices failed to suspend\n");
+		log_suspend_abort_reason("Some devices failed to suspend");
 		goto Recover_platform;
 	}
 	suspend_test_finish("suspend devices");
@@ -423,8 +389,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 
 	do {
 		error = suspend_enter(state, &wakeup);
-	} while (!error && !wakeup && need_suspend_ops(state)
-		&& platform_suspend_again());
+	} while (!error && !wakeup && need_suspend_ops(state) && suspend_again(&resumed));
 
  Resume_devices:
 	suspend_test_start();
