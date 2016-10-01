@@ -8069,6 +8069,12 @@ static void dhd_dump_latency(void)
 	maxdelayts.t4 - maxdelayts.t1);
 }
 
+int dhd_os_get_wake_irq(dhd_pub_t *pub)
+{
+	if (!pub)
+		return -1;
+	return wifi_platform_get_wake_irq(pub->info->adapter);
+}
 
 static int
 dhd_ioctl_htsf_get(dhd_info_t *dhd, int ifidx)

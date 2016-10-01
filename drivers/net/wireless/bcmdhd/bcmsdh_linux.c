@@ -2,13 +2,13 @@
  * SDIO access interface for drivers - linux specific (pci only)
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_linux.c 461443 2014-03-12 02:40:59Z $
+ * $Id: bcmsdh_linux.c 461444 2014-03-12 02:55:28Z $
  */
 
 /**
@@ -34,6 +34,9 @@
 #include <linuxver.h>
 #include <linux/pci.h>
 #include <linux/completion.h>
+#ifdef DHD_WAKE_STATUS
+#include <linux/wakeup_reason.h>
+#endif
 
 #include <osl.h>
 #include <pcicfg.h>
@@ -44,7 +47,9 @@ extern void dhdsdio_isr(void * args);
 #include <bcmutils.h>
 #include <dngl_stats.h>
 #include <dhd.h>
-
+#if defined(CONFIG_ARCH_ODIN)
+#include <linux/platform_data/gpio-odin.h>
+#endif /* defined(CONFIG_ARCH_ODIN) */
 #include <dhd_linux.h>
 
 /* driver info, initialized when bcmsdh_register is called */
@@ -75,6 +80,7 @@ typedef struct bcmsdh_os_info {
 	void			*context;	/* context returned from upper layer */
 	void			*sdioh;		/* handle to lower layer (sdioh) */
 	void			*dev;		/* handle to the underlying device */
+	void			*adapter;	/* handle to adapter */
 	bool			dev_wake_enabled;
 } bcmsdh_os_info_t;
 
@@ -153,6 +159,7 @@ void* bcmsdh_probe(osl_t *osh, void *dev, void *sdioh, void *adapter_info, uint 
 	bcmsdh->os_cxt = bcmsdh_osinfo;
 	bcmsdh_osinfo->sdioh = sdioh;
 	bcmsdh_osinfo->dev = dev;
+	bcmsdh_osinfo->adapter = adapter_info;
 	osl_set_bus_handle(osh, bcmsdh);
 
 #if !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
@@ -181,6 +188,11 @@ void* bcmsdh_probe(osl_t *osh, void *dev, void *sdioh, void *adapter_info, uint 
 		goto err;
 	}
 
+#ifdef DHD_WAKE_STATUS
+	bcmsdh->wake_irq = wifi_platform_get_wake_irq(adapter_info);
+	if (bcmsdh->wake_irq == -1)
+		bcmsdh->wake_irq = bcmsdh_osinfo->oob_irq_num;
+#endif
 	return bcmsdh;
 
 	/* error handling */
@@ -209,18 +221,54 @@ int bcmsdh_remove(bcmsdh_info_t *bcmsdh)
 	return 0;
 }
 
+#ifdef DHD_WAKE_STATUS
+int bcmsdh_get_total_wake(bcmsdh_info_t *bcmsdh)
+{
+	return bcmsdh->total_wake_count;
+}
+
+int bcmsdh_set_get_wake(bcmsdh_info_t *bcmsdh, int flag)
+{
+	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&bcmsdh_osinfo->oob_irq_spinlock, flags);
+
+	ret = bcmsdh->pkt_wake;
+	bcmsdh->total_wake_count += flag;
+	bcmsdh->pkt_wake = flag;
+
+	spin_unlock_irqrestore(&bcmsdh_osinfo->oob_irq_spinlock, flags);
+	return ret;
+}
+#endif
+
 int bcmsdh_suspend(bcmsdh_info_t *bcmsdh)
 {
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
 
 	if (drvinfo.suspend && drvinfo.suspend(bcmsdh_osinfo->context))
 		return -EBUSY;
+#ifdef CONFIG_PARTIALRESUME
+	wifi_process_partial_resume(bcmsdh_osinfo->adapter, WIFI_PR_INIT);
+#endif
 	return 0;
 }
 
 int bcmsdh_resume(bcmsdh_info_t *bcmsdh)
 {
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
+
+#ifdef DHD_WAKE_STATUS
+	if (check_wakeup_reason(bcmsdh->wake_irq)) {
+#ifdef CONFIG_PARTIALRESUME
+		wifi_process_partial_resume(bcmsdh_osinfo->adapter,
+					    WIFI_PR_NOTIFY_RESUME);
+#endif
+		bcmsdh_set_get_wake(bcmsdh, 1);
+	}
+#endif
 
 	if (drvinfo.resume)
 		return drvinfo.resume(bcmsdh_osinfo->context);
@@ -292,7 +340,7 @@ bool bcmsdh_dev_pm_enabled(bcmsdh_info_t *bcmsdh)
 	return bcmsdh_osinfo->dev_wake_enabled;
 }
 
-#if defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID)
+#if defined(OOB_INTR_ONLY)
 void bcmsdh_oob_intr_set(bcmsdh_info_t *bcmsdh, bool enable)
 {
 	unsigned long flags;
@@ -318,9 +366,7 @@ static irqreturn_t wlan_oob_irq(int irq, void *dev_id)
 	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)dev_id;
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
 
-#ifndef BCMSPI_ANDROID
 	bcmsdh_oob_intr_set(bcmsdh, FALSE);
-#endif /* !BCMSPI_ANDROID */
 	bcmsdh_osinfo->oob_irq_handler(bcmsdh_osinfo->oob_irq_handler_context);
 
 	return IRQ_HANDLED;
@@ -341,22 +387,21 @@ int bcmsdh_oob_intr_register(bcmsdh_info_t *bcmsdh, bcmsdh_cb_fn_t oob_irq_handl
 		(int)bcmsdh_osinfo->oob_irq_num, (int)bcmsdh_osinfo->oob_irq_flags));
 	bcmsdh_osinfo->oob_irq_handler = oob_irq_handler;
 	bcmsdh_osinfo->oob_irq_handler_context = oob_irq_handler_context;
+#if defined(CONFIG_ARCH_ODIN)
+	err = odin_gpio_sms_request_irq(bcmsdh_osinfo->oob_irq_num, wlan_oob_irq,
+		bcmsdh_osinfo->oob_irq_flags, "bcmsdh_sdmmc", bcmsdh);
+#else
 	err = request_irq(bcmsdh_osinfo->oob_irq_num, wlan_oob_irq,
 		bcmsdh_osinfo->oob_irq_flags, "bcmsdh_sdmmc", bcmsdh);
+#endif /* defined(CONFIG_ARCH_ODIN) */
 	if (err) {
 		SDLX_MSG(("%s: request_irq failed with %d\n", __FUNCTION__, err));
 		return err;
 	}
 
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI)
-	if (device_may_wakeup(bcmsdh_osinfo->dev)) {
-#endif /* CONFIG_ARCH_RHEA || CONFIG_ARCH_CAPRI */
 		err = enable_irq_wake(bcmsdh_osinfo->oob_irq_num);
 		if (!err)
 			bcmsdh_osinfo->oob_irq_wake_enabled = TRUE;
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI)
-	}
-#endif /* CONFIG_ARCH_RHEA || CONFIG_ARCH_CAPRI */
 	bcmsdh_osinfo->oob_irq_enabled = TRUE;
 	bcmsdh_osinfo->oob_irq_registered = TRUE;
 	return err;
@@ -373,15 +418,9 @@ void bcmsdh_oob_intr_unregister(bcmsdh_info_t *bcmsdh)
 		return;
 	}
 	if (bcmsdh_osinfo->oob_irq_wake_enabled) {
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI)
-		if (device_may_wakeup(bcmsdh_osinfo->dev)) {
-#endif /* CONFIG_ARCH_RHEA || CONFIG_ARCH_CAPRI */
 			err = disable_irq_wake(bcmsdh_osinfo->oob_irq_num);
 			if (!err)
 				bcmsdh_osinfo->oob_irq_wake_enabled = FALSE;
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI)
-		}
-#endif /* CONFIG_ARCH_RHEA || CONFIG_ARCH_CAPRI */
 	}
 	if (bcmsdh_osinfo->oob_irq_enabled) {
 		disable_irq(bcmsdh_osinfo->oob_irq_num);
@@ -390,14 +429,7 @@ void bcmsdh_oob_intr_unregister(bcmsdh_info_t *bcmsdh)
 	free_irq(bcmsdh_osinfo->oob_irq_num, bcmsdh);
 	bcmsdh_osinfo->oob_irq_registered = FALSE;
 }
-
-int bcmsdh_get_irq(void)
-{
-	if (!bcmsdh_osinfo)
-		return -1;
-	return bcmsdh_osinfo->oob_irq;
-}
-#endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
+#endif 
 
 /* Module parameters specific to each host-controller driver */
 

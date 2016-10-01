@@ -2,13 +2,13 @@
  * DHD Bus Module for SDIO
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -172,7 +172,7 @@ DHD_SPINWAIT_SLEEP_INIT(sdioh_spinwait_sleep);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
 DEFINE_MUTEX(_dhd_sdio_mutex_lock_);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) */
-#endif 
+#endif
 
 #ifdef DHD_DEBUG
 /* Device console log buffer state */
@@ -361,6 +361,11 @@ typedef struct dhd_bus {
 	uint		f2rxdata;		/* Number of frame data reads */
 	uint		f2txdata;		/* Number of f2 frame writes */
 	uint		f1regdata;		/* Number of f1 register accesses */
+#ifdef DHD_WAKE_STATUS
+	uint		rxwake;
+	uint		rcwake;
+	uint		glomwake;
+#endif
 #ifdef BCMSPI
 	bool		dwordmode;
 #endif /* BCMSPI */
@@ -2704,6 +2709,11 @@ dhd_bus_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 	            bus->rxlen, bus->rx_seq);
 	bcm_bprintf(strbuf, "intr %d intrcount %u lastintrs %u spurious %u\n",
 	            bus->intr, bus->intrcount, bus->lastintrs, bus->spurious);
+#ifdef DHD_WAKE_STATUS
+	bcm_bprintf(strbuf, "wake %u rxwake %u readctrlwake %u glomwake %u\n",
+	            bcmsdh_get_total_wake(bus->sdh), bus->rxwake,
+	            bus->rcwake, bus->glomwake);
+#endif
 	bcm_bprintf(strbuf, "pollrate %u pollcnt %u regfails %u\n",
 	            bus->pollrate, bus->pollcnt, bus->regfails);
 
@@ -3359,7 +3369,7 @@ dhd_serialconsole(dhd_bus_t *bus, bool set, bool enable, int *bcmerror)
 
 	return (int_val & uart_enab);
 }
-#endif 
+#endif
 
 static int
 dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const char *name,
@@ -3833,7 +3843,7 @@ dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const ch
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_MESBUSYCTRL,
 			((uint8)mesbusyctrl | 0x80), NULL);
 		break;
-#endif 
+#endif
 
 
 	case IOV_GVAL(IOV_DONGLEISOLATION):
@@ -5260,6 +5270,9 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 	uchar reorder_info_buf[WLHOST_REORDERDATA_TOTLEN];
 	uint reorder_info_len;
 	uint pkt_count;
+#ifdef DHD_WAKE_STATUS
+	int pkt_wake = bcmsdh_set_get_wake(bus->sdh, 0);
+#endif
 
 #if defined(DHD_DEBUG) || defined(SDTEST)
 	bool sdtest = FALSE;	/* To limit message spew from test mode */
@@ -5323,7 +5336,11 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 
 	for (rxseq = bus->rx_seq, rxleft = maxframes;
 	     !bus->rxskip && rxleft && bus->dhd->busstate != DHD_BUS_DOWN;
+#ifdef DHD_WAKE_STATUS
+	     rxseq++, rxleft--, pkt_wake=0) {
+#else
 	     rxseq++, rxleft--) {
+#endif
 #ifdef DHDTCPACK_SUP_DBG
 		if (bus->dhd->tcpack_sup_mode != TCPACK_SUP_DELAYTX) {
 			if (bus->dotxinrx == FALSE)
@@ -5359,6 +5376,9 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 			uint8 cnt;
 			DHD_GLOM(("%s: calling rxglom: glomd %p, glom %p\n",
 			          __FUNCTION__, bus->glomd, bus->glom));
+#ifdef DHD_WAKE_STATUS
+			bus->glomwake += pkt_wake;
+#endif
 			cnt = dhdsdio_rxglom(bus, rxseq);
 			DHD_GLOM(("%s: rxglom returned %d\n", __FUNCTION__, cnt));
 			rxseq += cnt - 1;
@@ -5815,6 +5835,9 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 
 		/* Call a separate function for control frames */
 		if (chan == SDPCM_CONTROL_CHANNEL) {
+#ifdef DHD_WAKE_STATUS
+			bus->rcwake += pkt_wake;
+#endif
 			dhdsdio_read_control(bus, bus->rxhdr, len, doff);
 			continue;
 		}
@@ -5953,6 +5976,9 @@ deliver:
 			pkt_count = 1;
 
 		/* Unlock during rx call */
+#ifdef DHD_WAKE_STATUS
+		bus->rxwake += pkt_wake;
+#endif
 		dhd_os_sdunlock(bus->dhd);
 		dhd_rx_frame(bus->dhd, ifidx, pkt, pkt_count, chan);
 		dhd_os_sdlock(bus->dhd);
@@ -7089,7 +7115,7 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	}
 	mutex_lock(&_dhd_sdio_mutex_lock_);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) */
-#endif 
+#endif
 
 	/* Init global variables at run-time, not as part of the declaration.
 	 * This is required to support init/de-init of the driver. Initialization
@@ -7273,7 +7299,7 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	mutex_unlock(&_dhd_sdio_mutex_lock_);
 	DHD_ERROR(("%s : the lock is released.\n", __FUNCTION__));
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
-#endif 
+#endif
 
 	return bus;
 
@@ -7286,7 +7312,7 @@ forcereturn:
 	mutex_unlock(&_dhd_sdio_mutex_lock_);
 	DHD_ERROR(("%s : the lock is released.\n", __FUNCTION__));
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
-#endif 
+#endif
 
 	return NULL;
 }
@@ -8097,7 +8123,7 @@ dhdsdio_disconnect(void *ptr)
 	}
 	mutex_lock(&_dhd_sdio_mutex_lock_);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) */
-#endif 
+#endif
 
 
 	if (bus) {
@@ -8696,7 +8722,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 #if !defined(IGNORE_ETH0_DOWN)
 						/* Restore flow control  */
 						dhd_txflowcontrol(bus->dhd, ALL_INTERFACES, OFF);
-#endif 
+#endif
 						dhd_os_wd_timer(dhdp, dhd_watchdog_ms);
 
 						DHD_TRACE(("%s: WLAN ON DONE\n", __FUNCTION__));
