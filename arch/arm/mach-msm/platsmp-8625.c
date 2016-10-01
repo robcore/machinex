@@ -226,7 +226,7 @@ int boot_secondary(unsigned int cpu, struct task_struct *idle)
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
-void __init msm8625_smp_init_cpus(void)
+void __init smp_init_cpus(void)
 {
 	void __iomem *scu_base = scu_base_addr();
 
@@ -287,13 +287,3 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	__raw_writel(value | (0x4 << 24), MSM_CFG_CTL_BASE + 0x30) ;
 	mb();
 }
-
-struct smp_operations msm8625_smp_ops __initdata = {
-	.smp_init_cpus = msm8625_smp_init_cpus,
-	.smp_prepare_cpus = msm8625_platform_smp_prepare_cpus,
-	.smp_secondary_init = msm8625_platform_secondary_init,
-	.smp_boot_secondary = msm8625_boot_secondary,
-	.cpu_kill = platform_cpu_kill,
-	.cpu_die = platform_cpu_die,
-	.cpu_disable = platform_cpu_disable
-};

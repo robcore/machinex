@@ -8,7 +8,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/cpumask.h>
@@ -259,62 +258,6 @@ int boot_secondary(unsigned int cpu, struct task_struct *idle)
 
 	return pen_release != -1 ? -ENOSYS : 0;
 }
-
-DEFINE_PER_CPU(int, cold_boot_done);
-
-int __cpuinit scorpion_boot_secondary(unsigned int cpu,
-				      struct task_struct *idle)
-{
-	pr_debug("Starting secondary CPU %d\n", cpu);
-
-	if (per_cpu(cold_boot_done, cpu) == false) {
-		scorpion_release_secondary();
-		per_cpu(cold_boot_done, cpu) = true;
-	}
-	return release_from_pen(cpu);
-}
-
-int __cpuinit msm8960_boot_secondary(unsigned int cpu, struct task_struct *idle)
-{
-	pr_debug("Starting secondary CPU %d\n", cpu);
-
-	if (per_cpu(cold_boot_done, cpu) == false) {
-		msm8960_release_secondary(0x02088000, cpu);
-		per_cpu(cold_boot_done, cpu) = true;
-	}
-	return release_from_pen(cpu);
-}
-
-int __cpuinit msm8974_boot_secondary(unsigned int cpu, struct task_struct *idle)
-{
-	pr_debug("Starting secondary CPU %d\n", cpu);
-
-	if (per_cpu(cold_boot_done, cpu) == false) {
-		if (machine_is_msm8974_sim() || machine_is_mpq8092_sim())
-			release_secondary_sim(0xf9088000, cpu);
-		else if (machine_is_msm8974_rumi())
-			return 0;
-		else
-			msm8974_release_secondary(0xf9088000, cpu);
-
-		per_cpu(cold_boot_done, cpu) = true;
-	}
-	return release_from_pen(cpu);
-}
-
-int __cpuinit arm_boot_secondary(unsigned int cpu, struct task_struct *idle)
-{
-	pr_debug("Starting secondary CPU %d\n", cpu);
-
-	if (per_cpu(cold_boot_done, cpu) == false) {
-		if (machine_is_msm8226_sim() || machine_is_msm8910_sim())
-			release_secondary_sim(0xf9088000, cpu);
-
-		per_cpu(cold_boot_done, cpu) = true;
-	}
-	return release_from_pen(cpu);
-}
-
 /*
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.

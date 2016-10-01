@@ -30,7 +30,6 @@
 #include <linux/irqdomain.h>
 
 #include "clock.h"
-#include "platsmp.h"
 
 static struct of_device_id irq_match[] __initdata  = {
 	{ .compatible = "qcom,msm-qgic2", .data = gic_of_init, },
