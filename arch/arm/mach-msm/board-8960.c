@@ -103,6 +103,7 @@
 #include "smd_private.h"
 #include "pm-boot.h"
 #include "msm_watchdog.h"
+#include "platsmp.h"
 
 #if defined(CONFIG_BT) && defined(CONFIG_BT_HCIUART_ATH3K)
 #include <linux/wlan_plat.h>
@@ -3491,6 +3492,7 @@ MACHINE_START(MSM8960_CDP, "QCT MSM8960 CDP")
 	.init_early = msm8960_allocate_memory_regions,
 	.init_very_early = msm8960_early_memory,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MSM8960_MTP, "QCT MSM8960 MTP")
@@ -3503,6 +3505,7 @@ MACHINE_START(MSM8960_MTP, "QCT MSM8960 MTP")
 	.init_early = msm8960_allocate_memory_regions,
 	.init_very_early = msm8960_early_memory,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MSM8960_FLUID, "QCT MSM8960 FLUID")
@@ -3515,6 +3518,7 @@ MACHINE_START(MSM8960_FLUID, "QCT MSM8960 FLUID")
 	.init_early = msm8960_allocate_memory_regions,
 	.init_very_early = msm8960_early_memory,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MSM8960_LIQUID, "QCT MSM8960 LIQUID")
@@ -3527,4 +3531,5 @@ MACHINE_START(MSM8960_LIQUID, "QCT MSM8960 LIQUID")
 	.init_early = msm8960_allocate_memory_regions,
 	.init_very_early = msm8960_early_memory,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END

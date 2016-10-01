@@ -48,6 +48,7 @@
 #include "spm.h"
 #include "modem_notifier.h"
 #include "lpm_resources.h"
+#include "platsmp.h"
 
 #define MSM_KERNEL_EBI1_MEM_SIZE	0x280000
 
