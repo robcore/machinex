@@ -262,13 +262,12 @@ void unmask_irq(struct irq_desc *desc)
  *	handler. The handler function is called inside the calling
  *	threads context.
  */
-bool handle_nested_irq(unsigned int irq)
+void handle_nested_irq(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 	struct irqaction *action;
 	int mask_this_irq = 0;
 	irqreturn_t action_ret;
-	bool handled = false;
 
 	might_sleep();
 
@@ -293,8 +292,6 @@ bool handle_nested_irq(unsigned int irq)
 	raw_spin_lock_irq(&desc->lock);
 	irqd_clear(&desc->irq_data, IRQD_IRQ_INPROGRESS);
 
-	handled = true;
-
 out_unlock:
 	raw_spin_unlock_irq(&desc->lock);
 	if (unlikely(mask_this_irq)) {
@@ -302,8 +299,6 @@ out_unlock:
 		mask_irq(desc);
 		chip_bus_sync_unlock(desc);
 	}
-
-	return handled;
 }
 EXPORT_SYMBOL_GPL(handle_nested_irq);
 
@@ -326,11 +321,9 @@ static bool irq_check_poll(struct irq_desc *desc)
  *	Note: The caller is expected to handle the ack, clear, mask and
  *	unmask issues if necessary.
  */
-bool
+void
 handle_simple_irq(unsigned int irq, struct irq_desc *desc)
 {
-	bool handled = false;
-
 	raw_spin_lock(&desc->lock);
 
 	if (unlikely(irqd_irq_inprogress(&desc->irq_data)))
@@ -345,11 +338,8 @@ handle_simple_irq(unsigned int irq, struct irq_desc *desc)
 
 	handle_irq_event(desc);
 
-	handled = true;
-
 out_unlock:
 	raw_spin_unlock(&desc->lock);
-	return handled;
 }
 EXPORT_SYMBOL_GPL(handle_simple_irq);
 
@@ -381,11 +371,9 @@ static void cond_unmask_irq(struct irq_desc *desc)
  *	it after the associated handler has acknowledged the device, so the
  *	interrupt line is back to inactive.
  */
-bool
+void
 handle_level_irq(unsigned int irq, struct irq_desc *desc)
 {
-	bool handled = false;
-
 	raw_spin_lock(&desc->lock);
 	mask_ack_irq(desc);
 
@@ -407,11 +395,8 @@ handle_level_irq(unsigned int irq, struct irq_desc *desc)
 
 	cond_unmask_irq(desc);
 
-	handled = true;
-
 out_unlock:
 	raw_spin_unlock(&desc->lock);
-	return handled;
 }
 EXPORT_SYMBOL_GPL(handle_level_irq);
 
@@ -435,11 +420,9 @@ static inline void preflow_handler(struct irq_desc *desc) { }
  *	for modern forms of interrupt handlers, which handle the flow
  *	details in hardware, transparently.
  */
-bool
+void
 handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 {
-	bool handled = false;
-
 	raw_spin_lock(&desc->lock);
 
 	if (unlikely(irqd_irq_inprogress(&desc->irq_data)))
@@ -469,13 +452,11 @@ handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 	if (desc->istate & IRQS_ONESHOT)
 		cond_unmask_irq(desc);
 
-	handled = true;
-
 out_eoi:
 	desc->irq_data.chip->irq_eoi(&desc->irq_data);
 out_unlock:
 	raw_spin_unlock(&desc->lock);
-	return handled;
+	return;
 out:
 	if (!(desc->irq_data.chip->flags & IRQCHIP_EOI_IF_HANDLED))
 		goto out_eoi;
@@ -498,11 +479,9 @@ out:
  *	the handler was running. If all pending interrupts are handled, the
  *	loop is left.
  */
-bool
+void
 handle_edge_irq(unsigned int irq, struct irq_desc *desc)
 {
-	bool handled = false;
-
 	raw_spin_lock(&desc->lock);
 
 	desc->istate &= ~(IRQS_REPLAY | IRQS_WAITING);
@@ -542,14 +521,12 @@ handle_edge_irq(unsigned int irq, struct irq_desc *desc)
 		}
 
 		handle_irq_event(desc);
-		handled = true;
 
 	} while ((desc->istate & IRQS_PENDING) &&
 		 !irqd_irq_disabled(&desc->irq_data));
 
 out_unlock:
 	raw_spin_unlock(&desc->lock);
-	return handled;
 }
 EXPORT_SYMBOL(handle_edge_irq);
 
@@ -562,9 +539,8 @@ EXPORT_SYMBOL(handle_edge_irq);
  * Similar as the above handle_edge_irq, but using eoi and w/o the
  * mask/unmask logic.
  */
-bool handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc)
+void handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc)
 {
-	bool handled = false;
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 
 	raw_spin_lock(&desc->lock);
@@ -589,7 +565,6 @@ bool handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc)
 			goto out_eoi;
 
 		handle_irq_event(desc);
-		handled = true;
 
 	} while ((desc->istate & IRQS_PENDING) &&
 		 !irqd_irq_disabled(&desc->irq_data));
@@ -597,7 +572,6 @@ bool handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc)
 out_eoi:
 	chip->irq_eoi(&desc->irq_data);
 	raw_spin_unlock(&desc->lock);
-	return handled;
 }
 #endif
 
@@ -608,7 +582,7 @@ out_eoi:
  *
  *	Per CPU interrupts on SMP machines without locking requirements
  */
-bool
+void
 handle_percpu_irq(unsigned int irq, struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
@@ -622,8 +596,6 @@ handle_percpu_irq(unsigned int irq, struct irq_desc *desc)
 
 	if (chip->irq_eoi)
 		chip->irq_eoi(&desc->irq_data);
-
-	return true;
 }
 
 /**
@@ -638,7 +610,7 @@ handle_percpu_irq(unsigned int irq, struct irq_desc *desc)
  * contain the real device id for the cpu on which this handler is
  * called
  */
-bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc)
+void handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct irqaction *action = desc->action;
@@ -656,8 +628,6 @@ bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc)
 
 	if (chip->irq_eoi)
 		chip->irq_eoi(&desc->irq_data);
-
-	return true;
 }
 
 void
