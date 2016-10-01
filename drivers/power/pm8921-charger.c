@@ -4416,6 +4416,11 @@ static int set_reg(void *data, u64 val)
 			addr, temp, ret);
 		return -EAGAIN;
 	}
+
+	if (chip->btc_override && (is_dc_chg_plugged_in(the_chip) ||
+					is_usb_chg_plugged_in(the_chip)))
+		schedule_delayed_work(&chip->btc_override_work, 0);
+
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(reg_fops, get_reg, set_reg, "0x%02llx\n");
@@ -4652,6 +4657,9 @@ static int pm8921_charger_suspend(struct device *dev)
 	struct pm8921_chg_chip *chip = dev_get_drvdata(dev);
 
 	cancel_delayed_work_sync(&chip->update_heartbeat_work);
+
+	if (chip->btc_override)
+		cancel_delayed_work_sync(&chip->btc_override_work);
 
 	if (chip->btc_override)
 		cancel_delayed_work_sync(&chip->btc_override_work);
