@@ -546,7 +546,7 @@ int __init wlan_partial_resume_init(void)
 
 	/* Setup partial resume */
 	spin_lock_init(&bcm_lock);
-	wlan_pr.irq = bcm_wifi_device.resource->start;
+	wlan_pr.irq = brcm_device_wlan.resource->start;
 	rc = register_partial_resume(&wlan_pr);
 	pr_debug("%s: after registering %pF: %d\n", __func__,
 		 wlan_pr.partial_resume, rc);
