@@ -557,14 +557,23 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_ON_START, NULL);
-#endif
-
 	mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
 
+if (mfd->resume_state == MIPI_RESUME_STATE) {
+#ifdef CONFIG_STATE_NOTIFIER
+	if (!use_fb_notifier)
+			state_resume();
+#endif
+#ifdef CONFIG_POWERSUSPEND
+		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
+}
 	if ((msd.mpd->manufacture_id & 0xFF) == 0)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_NEED_FLIP, false);
 
@@ -631,19 +640,6 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	sec_debug_mdp_reset_value();
 
 	pr_info("[%s]\n", __func__);
-#ifdef CONFIG_STATE_NOTIFIER
-	if (!use_fb_notifier)
-			state_resume();
-#endif
-
-#ifdef CONFIG_POWERSUSPEND
-		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-#endif
-
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-#endif
 
 	return 0;
 }
