@@ -809,9 +809,9 @@ static void msm_hsl_set_baud_rate(struct uart_port *port, unsigned int baud)
 	 * Configure Rx Watermark as 3/4 size of Rx FIFO.
 	 * RFWR register takes value in Words for UARTDM Core
 	 * whereas it is consider to be in Bytes for UART Core.
-	 * Hence configuring Rx Watermark as 48 Words.
+	 * Hence configuring Rx Watermark as 12 Words.
 	 */
-	watermark = (port->fifosize * 3) / 4;
+	watermark = (port->fifosize * 3) / (4*4);
 	msm_hsl_write(port, watermark, regmap[vid][UARTDM_RFWR]);
 
 	/* set TX watermark */
@@ -888,14 +888,17 @@ static int msm_hsl_startup(struct uart_port *port)
 		}
 	}
 
-	/*
-	 * Set RFR Level as 3/4 of UARTDM FIFO Size
-	 * i.e. 48 Words = 192 bytes as Rx FIFO is 64 words ( 256 bytes).
-	 */
+	/* Set RFR Level as 3/4 of UARTDM FIFO Size */
 	if (likely(port->fifosize > 48))
 		rfr_level = port->fifosize - 16;
 	else
 		rfr_level = port->fifosize;
+
+	/*
+	 * Use rfr_level value in Words to program
+	 * MR1 register for UARTDM Core.
+	 */
+	rfr_level = (rfr_level / 4);
 
 	spin_lock_irqsave(&port->lock, flags);
 
