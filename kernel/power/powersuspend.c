@@ -18,6 +18,8 @@
  *
  *  v1.6 - remove autosleep and hybrid modes (autosleep not working on shamu)
  *
+ *  v1.7 - do only run state change if change actually requests a new state
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -35,8 +37,11 @@
 #include <linux/workqueue.h>
 
 #define MAJOR_VERSION	1
-#define MINOR_VERSION	6
+#define MINOR_VERSION	7
 
+bool flg_power_suspended = false;
+struct timeval time_power_suspended;
+struct timeval time_power_resumed;
 struct workqueue_struct *suspend_work_queue;
 
 static DEFINE_MUTEX(power_suspend_lock);
@@ -78,7 +83,9 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] entering suspend...\n");
+	#endif
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == POWER_SUSPEND_INACTIVE)
@@ -88,13 +95,20 @@ static void power_suspend(struct work_struct *work)
 	if (abort)
 		goto abort_suspend;
 
+	flg_power_suspended = true;
+	do_gettimeofday(&time_power_suspended);
+
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] suspending...\n");
+	#endif
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			pos->suspend(pos);
 		}
 	}
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] suspend completed.\n");
+	#endif
 abort_suspend:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -105,7 +119,9 @@ static void power_resume(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] entering resume...\n");
+	#endif
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == POWER_SUSPEND_ACTIVE)
@@ -115,13 +131,20 @@ static void power_resume(struct work_struct *work)
 	if (abort)
 		goto abort_resume;
 
+	flg_power_suspended = false;
+	do_gettimeofday(&time_power_resumed);
+
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] resuming...\n");
+	#endif
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
 		}
 	}
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] resume completed.\n");
+	#endif
 abort_resume:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -130,22 +153,36 @@ void set_power_suspend_state(int new_state)
 {
 	unsigned long irqflags;
 
-	spin_lock_irqsave(&state_lock, irqflags);
-	if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
-		pr_info("[POWERSUSPEND] state activated.\n");
-		state = new_state;
-		queue_work(suspend_work_queue, &power_suspend_work);
-	} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
-		pr_info("[POWERSUSPEND] state deactivated.\n");
-		state = new_state;
-		queue_work(suspend_work_queue, &power_resume_work);
+	if (state != new_state) {
+		spin_lock_irqsave(&state_lock, irqflags);
+		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
+			#ifdef CONFIG_POWERSUSPEND_DEBUG
+			pr_info("[POWERSUSPEND] state activated.\n");
+			#endif
+			state = new_state;
+			queue_work(suspend_work_queue, &power_suspend_work);
+		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
+			#ifdef CONFIG_POWERSUSPEND_DEBUG
+			pr_info("[POWERSUSPEND] state deactivated.\n");
+			#endif
+			state = new_state;
+			queue_work(suspend_work_queue, &power_resume_work);
+		}
+		spin_unlock_irqrestore(&state_lock, irqflags);
 	}
-	spin_unlock_irqrestore(&state_lock, irqflags);
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	else {
+		pr_info("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
+	}
+	#endif
+
 }
 
 void set_power_suspend_state_panel_hook(int new_state)
 {
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] panel resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	#endif
 	// Yank555.lu : Only allow panel hook changes in panel mode
 	if (mode == POWER_SUSPEND_PANEL)
 		set_power_suspend_state(new_state);
@@ -153,7 +190,7 @@ void set_power_suspend_state_panel_hook(int new_state)
 
 EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
 
-/* ------------------------------------------ sysfs interface ------------------------------------------ */
+// ------------------------------------------ sysfs interface ------------------------------------------
 
 static ssize_t power_suspend_state_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -172,7 +209,9 @@ static ssize_t power_suspend_state_store(struct kobject *kobj,
 
 	sscanf(buf, "%d\n", &new_state);
 
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	pr_info("[POWERSUSPEND] userspace resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	#endif
 	if(new_state == POWER_SUSPEND_ACTIVE || new_state == POWER_SUSPEND_INACTIVE)
 		set_power_suspend_state(new_state);
 
@@ -204,7 +243,7 @@ static ssize_t power_suspend_mode_store(struct kobject *kobj,
 		default:
 			return -EINVAL;
 	}
-
+	
 }
 
 static struct kobj_attribute power_suspend_mode_attribute =
@@ -238,7 +277,7 @@ static struct attribute_group power_suspend_attr_group =
 
 static struct kobject *power_suspend_kobj;
 
-/* ------------------ sysfs interface ----------------------- */
+// ------------------ sysfs interface -----------------------
 static int __init power_suspend_init(void)
 {
 
@@ -266,9 +305,16 @@ static int __init power_suspend_init(void)
 		return -ENOMEM;
 	}
 
-//	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
-	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
-
+/* Note: On legacy devices like the apq8064, we do not have a consistent, separate 
+ *  method for determining whether the panel is resuming or booting up.  So when we boot
+ * with these third party power hooks (this driver and state notifier) enabled by default,
+ * they start notifying the drivers that use them that the system is coming out of suspend
+ * into resume, when they are actually just being initialized for the first time.  So default
+ * to userspace at boot for powersuspend and set the (almost too effective in this case) panel
+ * hooks after boot.  TODO: Come up with a suitable workaround for state notifier as well.
+*/
+	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
+//	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
 	return 0;
 }
 
@@ -278,9 +324,9 @@ static void __exit power_suspend_exit(void)
 		kobject_put(power_suspend_kobj);
 
 	destroy_workqueue(suspend_work_queue);
-}
+} 
 
-late_initcall(power_suspend_init);
+core_initcall(power_suspend_init);
 module_exit(power_suspend_exit);
 
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com>");
