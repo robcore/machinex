@@ -561,6 +561,20 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
 
+#ifdef CONFIG_STATE_NOTIFIER
+	if (!use_fb_notifier)
+		state_resume();
+#endif
+
+#ifdef CONFIG_POWERSUSPEND
+		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
+
 	if ((msd.mpd->manufacture_id & 0xFF) == 0)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_NEED_FLIP, false);
 
@@ -621,32 +635,6 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
-#ifdef CONFIG_STATE_NOTIFIER
-	if ((first_boot_on) && (mfd->resume_state == MIPI_RESUME_STATE)) {
-		//if (!use_fb_notifier)
-		state_resume();
-	} else {
-		printk("[STATE NOTIFIER] Skipping resume on first boot\n");
-	}
-#endif
-
-#ifdef CONFIG_POWERSUSPEND
-		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-	if ((first_boot_on) && (mfd->resume_state == MIPI_RESUME_STATE)) {
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-	} else {
-		printk("[POWERSUSPEND] Skipping resume on first boot\n");
-	}
-#endif
-
-#ifdef CONFIG_LCD_NOTIFY
-	if ((first_boot_on) && (mfd->resume_state == MIPI_RESUME_STATE)) {
-		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-	} else {
-		printk("[LCD NOTIFIER] Skipping resume on first boot\n");
-	}
-#endif
-
 	if (get_auto_brightness() >= 6)
 		msd.mpd->first_bl_hbm_psre = 1;
 
@@ -694,19 +682,6 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
-	if (mfd->panel_info.mipi.frame_rate != current_fps)
-		mipi_runtime_clk_change(mfd->panel_info.mipi.frame_rate);
-#endif
-
-	if (msd.mpd->reset_bl_level != NULL)
-		msd.mpd->reset_bl_level();
-
-	/* To setting gpio_configuration under sleep condition */
-	gpio_get_param.pull = PM_GPIO_PULL_DN;
-	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
-	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
-
 #ifdef CONFIG_STATE_NOTIFIER
 		if (!use_fb_notifier)
 			state_suspend();
@@ -720,6 +695,19 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
+
+#if defined(RUMTIME_MIPI_CLK_CHANGE)
+	if (mfd->panel_info.mipi.frame_rate != current_fps)
+		mipi_runtime_clk_change(mfd->panel_info.mipi.frame_rate);
+#endif
+
+	if (msd.mpd->reset_bl_level != NULL)
+		msd.mpd->reset_bl_level();
+
+	/* To setting gpio_configuration under sleep condition */
+	gpio_get_param.pull = PM_GPIO_PULL_DN;
+	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
+	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 
 	pr_info("[lcd] %s\n", __func__);
 
