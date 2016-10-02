@@ -591,7 +591,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;
-	static int first_boot_on = 0;
+	static int first_boot_on;
 	u32 tmp;
 
 	mfd = platform_get_drvdata(pdev);
@@ -612,7 +612,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_READY_TO_ON, false);
 		mipi_set_tx_power_mode(HS_TX_MODE);
 
-		/* force dsi_clk alway on
+		/* force dsi_clk always on
 		*    Magan nees clk lane LP mode before sending 0xF0 & 0xFC & 0xD2 cmds
 		*/
 		tmp = MIPI_INP(MIPI_DSI_BASE + 0xA8);
@@ -636,13 +636,14 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 	} else {
 		printk("[POWERSUSPEND] Skipping resume on first boot\n");
+	}
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY
 	if (first_boot_on == 1) {
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 	} else {
-		printk([LCD NOTIFY] Skipping resume on first boot\n");
+		printk("[LCD NOTIFIER] Skipping resume on first boot\n");
 	}
 #endif
 
