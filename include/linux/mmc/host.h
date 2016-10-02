@@ -148,8 +148,6 @@ struct mmc_host_ops {
 	void	(*hw_reset)(struct mmc_host *host);
 	unsigned long (*get_max_frequency)(struct mmc_host *host);
 	unsigned long (*get_min_frequency)(struct mmc_host *host);
-	int	(*stop_request)(struct mmc_host *host);
-	unsigned int	(*get_xfer_remain)(struct mmc_host *host);
 	int     (*notify_load)(struct mmc_host *, enum mmc_load);
 };
 
@@ -159,18 +157,11 @@ struct device;
 struct mmc_async_req {
 	/* active mmc request */
 	struct mmc_request	*mrq;
-	unsigned int cmd_flags; /* copied from struct request */
-
 	/*
 	 * Check error status of completed mmc request.
 	 * Returns 0 if success otherwise non zero.
 	 */
 	int (*err_check) (struct mmc_card *, struct mmc_async_req *);
-	/* Reinserts request back to the block layer */
-	void (*reinsert_req) (struct mmc_async_req *);
-	/* update what part of request is not done (packed_fail_idx) */
-	int (*update_interrupted_req) (struct mmc_card *,
-			struct mmc_async_req *);
 };
 
 struct mmc_hotplug {
@@ -190,7 +181,6 @@ struct mmc_context_info {
 	bool			is_done_rcv;
 	bool			is_new_req;
 	bool			is_waiting_last_req;
-	bool			is_urgent;
 	wait_queue_head_t	wait;
 	spinlock_t		lock;
 };
@@ -244,7 +234,6 @@ struct mmc_host {
 						/* DDR mode at 1.8V */
 #define MMC_CAP_1_2V_DDR	(1 << 12)	/* can support */
 						/* DDR mode at 1.2V */
-#define MMC_CAP_HSDDR		(MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR)
 #define MMC_CAP_POWER_OFF_CARD	(1 << 13)	/* Can power off after boot */
 #define MMC_CAP_BUS_WIDTH_TEST	(1 << 14)	/* CMD14/CMD19 bus width ok */
 #define MMC_CAP_UHS_SDR12	(1 << 15)	/* Host supports UHS SDR12 mode */
@@ -420,7 +409,6 @@ struct mmc_host {
 };
 
 extern struct mmc_host *mmc_alloc_host(int extra, struct device *);
-extern bool mmc_host_may_gate_card(struct mmc_card *);
 extern int mmc_add_host(struct mmc_host *);
 extern void mmc_remove_host(struct mmc_host *);
 extern void mmc_free_host(struct mmc_host *);
