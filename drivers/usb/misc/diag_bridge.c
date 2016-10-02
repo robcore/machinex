@@ -33,6 +33,8 @@
 #define MAX_DIAG_BRIDGE_DEVS	2
 #define AUTOSUSP_DELAY_WITH_USB 1000
 
+#define AUTOSUSP_DELAY_WITH_USB 1000
+
 struct diag_bridge {
 	struct usb_device	*udev;
 	struct usb_interface	*ifc;
@@ -44,6 +46,7 @@ struct diag_bridge {
 	struct mutex		ifc_mutex;
 	struct diag_bridge_ops	*ops;
 	struct platform_device	*pdev;
+	unsigned		default_autosusp_delay;
 	int			id;
 
 	/* debugging counters */
@@ -76,6 +79,12 @@ int diag_bridge_open(int id, struct diag_bridge_ops *ops)
 
 	dev->ops = ops;
 	dev->err = 0;
+
+#ifdef CONFIG_PM_RUNTIME
+	dev->default_autosusp_delay = dev->udev->dev.power.autosuspend_delay;
+#endif
+	pm_runtime_set_autosuspend_delay(&dev->udev->dev,
+			AUTOSUSP_DELAY_WITH_USB);
 
 	kref_get(&dev->kref);
 
@@ -117,6 +126,10 @@ void diag_bridge_close(int id)
 
 	usb_kill_anchored_urbs(&dev->submitted);
 	dev->ops = 0;
+
+	pm_runtime_set_autosuspend_delay(&dev->udev->dev,
+			dev->default_autosusp_delay);
+
 	kref_put(&dev->kref, diag_bridge_delete);
 }
 EXPORT_SYMBOL(diag_bridge_close);
