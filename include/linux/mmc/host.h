@@ -148,6 +148,8 @@ struct mmc_host_ops {
 	void	(*hw_reset)(struct mmc_host *host);
 	unsigned long (*get_max_frequency)(struct mmc_host *host);
 	unsigned long (*get_min_frequency)(struct mmc_host *host);
+	int	(*stop_request)(struct mmc_host *host);
+	unsigned int	(*get_xfer_remain)(struct mmc_host *host);
 	int     (*notify_load)(struct mmc_host *, enum mmc_load);
 };
 
@@ -162,6 +164,11 @@ struct mmc_async_req {
 	 * Returns 0 if success otherwise non zero.
 	 */
 	int (*err_check) (struct mmc_card *, struct mmc_async_req *);
+	/* Reinserts request back to the block layer */
+	void (*reinsert_req) (struct mmc_async_req *);
+	/* update what part of request is not done (packed_fail_idx) */
+	int (*update_interrupted_req) (struct mmc_card *,
+			struct mmc_async_req *);
 };
 
 struct mmc_hotplug {
@@ -181,6 +188,8 @@ struct mmc_context_info {
 	bool			is_done_rcv;
 	bool			is_new_req;
 	bool			is_waiting_last_req;
+	bool			is_urgent;
+	bool			is_waiting;
 	wait_queue_head_t	wait;
 	spinlock_t		lock;
 };
