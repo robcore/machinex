@@ -622,27 +622,27 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_STATE_NOTIFIER
-	if ((first_boot_on == 1) && (mfd->resume_state == MIPI_RESUME_STATE)) {
+	if (first_boot_on == 1) {
 		//if (!use_fb_notifier)
 		state_resume();
 	} else {
-		printk(KERN_INFO "[STATE NOTIFIER] Skipping resume on first boot\n");
+		printk("[STATE NOTIFIER] Skipping resume on first boot\n");
 	}
 #endif
 
 #ifdef CONFIG_POWERSUSPEND
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-	if ((first_boot_on == 1) && (mfd->resume_state == MIPI_RESUME_STATE)) {
+	if (first_boot_on == 1) {
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 	} else {
-		printk(KERN_INFO "[POWERSUSPEND] Skipping resume on first boot\n");
+		printk("[POWERSUSPEND] Skipping resume on first boot\n");
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY
-	if ((first_boot_on == 1) && (mfd->resume_state == MIPI_RESUME_STATE)) {
+	if (first_boot_on == 1) {
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 	} else {
-		printk(KERN_INFO "[LCD NOTIFY] Skipping resume on first boot\n");
+		printk([LCD NOTIFY] Skipping resume on first boot\n");
 	}
 #endif
 
