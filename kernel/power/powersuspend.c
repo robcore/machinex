@@ -266,16 +266,8 @@ static int __init power_suspend_init(void)
 		return -ENOMEM;
 	}
 
-/* Note: On legacy devices like the apq8064, we do not have a consistent, separate
- *  method for determining whether the panel is resuming or booting up.  So when we boot
- * with these third party power hooks (this driver and state notifier) enabled by default,
- * they start notifying the drivers that use them that the system is coming out of suspend
- * into resume, when they are actually just being initialized for the first time.  So default
- * to userspace at boot for powersuspend and set the (almost too effective in this case) panel
- * hooks after boot.  TODO: Come up with a suitable workaround for state notifier as well.
-*/
-	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
-//	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
+//	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
+	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
 
 	return 0;
 }

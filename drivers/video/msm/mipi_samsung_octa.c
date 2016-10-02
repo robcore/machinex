@@ -561,19 +561,6 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	mfd->resume_state = MIPI_RESUME_STATE;
 	touch_display_status = MIPI_RESUME_STATE;
 
-if (mfd->resume_state == MIPI_RESUME_STATE) {
-#ifdef CONFIG_STATE_NOTIFIER
-	if (!use_fb_notifier)
-			state_resume();
-#endif
-#ifdef CONFIG_POWERSUSPEND
-		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-#endif
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-#endif
-}
 	if ((msd.mpd->manufacture_id & 0xFF) == 0)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_NEED_FLIP, false);
 
@@ -633,6 +620,34 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		MIPI_OUTP(MIPI_DSI_BASE + 0xA8, tmp);
 		wmb();
 	}
+
+#ifdef CONFIG_STATE_NOTIFIER
+	if (first_boot_on == 1) {
+		//if (!use_fb_notifier)
+		state_resume();
+	} else {
+		printk(KERN_INFO "[STATE NOTIFIER] Skipping resume on first boot\n");
+	}
+#endif
+
+#ifdef CONFIG_POWERSUSPEND
+		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	if (first_boot_on == 1) {
+		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+	} else {
+		printk(KERN_INFO "[POWERSUSPEND] Skipping resume on first boot\n");
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+	if (first_boot_on == 1) {
+		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+	} else {
+		printk(KERN_INFO "[LCD NOTIFY] Skipping resume on first boot\n");
+	}
+#endif
+
+printk(KERN_INFO "[lcd] mipi_samsung_disp_probe start\n");
+
 
 	if (get_auto_brightness() >= 6)
 		msd.mpd->first_bl_hbm_psre = 1;
