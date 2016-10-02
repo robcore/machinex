@@ -1596,17 +1596,16 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	app_ireq.qsee_cmd_id = QSEOS_APP_LOOKUP_COMMAND;
 	memcpy(app_ireq.app_name, app_name, MAX_APP_NAME_SIZE);
 	ret = __qseecom_check_app_exists(app_ireq);
-	if (ret < 0)
-		return -EINVAL;
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto exit_free_handle;
+	}
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data) {
+		ret = -ENOMEM;
 		pr_err("kmalloc failed\n");
-		if (ret == 0) {
-			kfree(*handle);
-			*handle = NULL;
-		}
-		return -ENOMEM;
+		goto exit_free_handle;
 	}
 	data->abort = 0;
 	data->type = QSEECOM_CLIENT_APP;
@@ -1622,11 +1621,9 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	data->client.ihandle = ion_alloc(qseecom.ion_clnt, size, 4096,
 				ION_HEAP(ION_QSECOM_HEAP_ID), 0);
 	if (IS_ERR_OR_NULL(data->client.ihandle)) {
+		ret = -EINVAL;
 		pr_err("Ion client could not retrieve the handle\n");
-		kfree(data);
-		kfree(*handle);
-		*handle = NULL;
-		return -EINVAL;
+		goto exit_free_data;
 	}
 
 	if (ret > 0) {
@@ -1694,10 +1691,8 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	kclient_entry = kzalloc(sizeof(*kclient_entry), GFP_KERNEL);
 	if (!kclient_entry) {
 		pr_err("kmalloc failed\n");
-		kfree(data);
-		kfree(*handle);
-		*handle = NULL;
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto exit_ion_unmap;
 	}
 	kclient_entry->handle = *handle;
 
@@ -1707,6 +1702,22 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
 
 	return 0;
+
+exit_ion_unmap:
+	if (!IS_ERR_OR_NULL(data->client.ihandle))
+		ion_unmap_kernel(qseecom.ion_clnt, data->client.ihandle);
+	kfree(entry);
+exit_ion_free:
+	if (!IS_ERR_OR_NULL(data->client.ihandle)) {
+		ion_free(qseecom.ion_clnt, data->client.ihandle);
+		data->client.ihandle = NULL;
+	}
+exit_free_data:
+	kfree(data);
+exit_free_handle:
+	kfree(*handle);
+	*handle = NULL;
+	return ret;
 }
 EXPORT_SYMBOL(qseecom_start_app);
 
@@ -2166,6 +2177,11 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 	int ret = 0;
 	struct qseecom_dev_handle *data = file->private_data;
 	void __user *argp = (void __user *) arg;
+
+	if (!data) {
+		pr_err("Invalid/uninitialized device handle\n");
+		return -EINVAL;
+	}
 
 	if (data->abort) {
 		pr_err("Aborting qseecom driver\n");
