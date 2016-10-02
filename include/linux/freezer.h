@@ -184,40 +184,6 @@ static inline bool freezer_should_skip(struct task_struct *p)
 	__retval;							\
 })
 
-/* DO NOT ADD ANY NEW CALLERS OF THIS FUNCTION */
-#define freezable_schedule_unsafe()					\
-({									\
-	freezer_do_not_count();						\
-	schedule();							\
-	freezer_count_unsafe();						\
-})
-
-/*
- * Like freezable_schedule_timeout(), but should not block the freezer.  Do not
- * call this with locks held.
- */
-static inline long freezable_schedule_timeout(long timeout)
-{
-	long __retval;
-	freezer_do_not_count();
-	__retval = schedule_timeout(timeout);
-	freezer_count();
-	return __retval;
-}
-
-/*
- * Like schedule_timeout_interruptible(), but should not block the freezer.  Do not
- * call this with locks held.
- */
-static inline long freezable_schedule_timeout_interruptible(long timeout)
-{
-	long __retval;
-	freezer_do_not_count();
-	__retval = schedule_timeout_interruptible(timeout);
-	freezer_count();
-	return __retval;
-}
-
 /* Like schedule_timeout_killable(), but should not block the freezer. */
 #define freezable_schedule_timeout_killable(timeout)			\
 ({									\
@@ -238,20 +204,6 @@ static inline long freezable_schedule_timeout_interruptible(long timeout)
 	__retval;							\
 })
 
-
-/*
- * Like schedule_hrtimeout_range(), but should not block the freezer.  Do not
- * call this with locks held.
- */
-static inline int freezable_schedule_hrtimeout_range(ktime_t *expires,
-		unsigned long delta, const enum hrtimer_mode mode)
-{
-	int __retval;
-	freezer_do_not_count();
-	__retval = schedule_hrtimeout_range(expires, delta, mode);
-	freezer_count();
-	return __retval;
-}
 
 /*
  * Freezer-friendly wrappers around wait_event_interruptible(),
@@ -288,16 +240,6 @@ static inline int freezable_schedule_hrtimeout_range(ktime_t *expires,
 })
 
 #define wait_event_freezable_exclusive(wq, condition)		\
-({									\
-	int __retval;							\
-	freezer_do_not_count();						\
-	__retval = wait_event_interruptible_exclusive(wq, condition);	\
-	freezer_count();						\
-	__retval;							\
-})
-
-
-#define wait_event_freezable_exclusive(wq, condition)			\
 ({									\
 	int __retval;							\
 	freezer_do_not_count();						\
