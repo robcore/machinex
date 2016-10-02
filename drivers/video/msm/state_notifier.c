@@ -103,7 +103,7 @@ void state_suspend(void)
 	suspend_in_progress = true;
 
 	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
-	queue_delayed_work_on(0, susp_wq, &suspend_work,
+	queue_delayed_work_on(0, susp_wq, &suspend_work, 
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
