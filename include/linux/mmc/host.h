@@ -159,6 +159,8 @@ struct device;
 struct mmc_async_req {
 	/* active mmc request */
 	struct mmc_request	*mrq;
+	unsigned int cmd_flags; /* copied from struct request */
+
 	/*
 	 * Check error status of completed mmc request.
 	 * Returns 0 if success otherwise non zero.
@@ -189,7 +191,6 @@ struct mmc_context_info {
 	bool			is_new_req;
 	bool			is_waiting_last_req;
 	bool			is_urgent;
-	bool			is_waiting;
 	wait_queue_head_t	wait;
 	spinlock_t		lock;
 };
