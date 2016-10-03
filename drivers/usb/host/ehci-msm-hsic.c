@@ -1849,9 +1849,6 @@ struct msm_hsic_host_platform_data *msm_hsic_dt_to_pdata(
 
 	pdata->bus_scale_table = msm_bus_cl_get_pdata(pdev);
 
-	pdata->pool_64_bit_align = of_property_read_bool(node,
-				"qcom,pool-64-bit-align");
-
 	return pdata;
 }
 
@@ -1935,7 +1932,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		mehci->ehci.resume_sof_bug = 1;
 	}
 
-	mehci->ehci.pool_64_bit_align = pdata->pool_64_bit_align;
 
 	if (pdata)
 		mehci->ehci.log2_irq_thresh = pdata->log2_irq_thresh;

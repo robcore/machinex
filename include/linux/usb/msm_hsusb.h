@@ -415,7 +415,6 @@ struct msm_hsic_host_platform_data {
 
 	/*standalone latency is required when HSCI is active*/
 	u32 standalone_latency;
-	bool pool_64_bit_align;
 };
 
 struct msm_usb_host_platform_data {
