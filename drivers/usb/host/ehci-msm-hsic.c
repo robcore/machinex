@@ -84,7 +84,7 @@ struct msm_hsic_hcd {
 	struct clk		*cal_clk;
 	struct clk		*inactivity_clk;
 	struct regulator	*hsic_vddcx;
-	struct regulator	*hsic_gdsc
+	struct regulator	*hsic_gdsc;
 	atomic_t		async_int;
 	atomic_t                in_lpm;
 	struct wake_lock	wlock;
