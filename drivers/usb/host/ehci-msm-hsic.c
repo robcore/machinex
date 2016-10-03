@@ -632,12 +632,6 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 #define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
-static int msm_hsic_phy_reset(struct msm_hsic_hcd *mehci)
-{
-	/* robcore's reverse wrapper to reset HSIC phy */
-		msm_hsic_reset(mehci);
-}
-
 static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 {
 	struct usb_hcd *hcd = hsic_to_hcd(mehci);
@@ -723,11 +717,9 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
 
-    if (mehci->wakeup_irq) {
-    	mehci->wakeup_irq_enabled = 1;
-    	enable_irq_wake(mehci->wakeup_irq);
-    	enable_irq(mehci->wakeup_irq);
-    }
+	mehci->wakeup_irq_enabled = 1;
+	enable_irq_wake(mehci->wakeup_irq);
+	enable_irq(mehci->wakeup_irq);
 
 	wake_unlock(&mehci->wlock);
 
@@ -752,15 +744,13 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
 
-	if (mehci->wakeup_irq) {
-		spin_lock_irqsave(&mehci->wakeup_lock, flags);
-		if (mehci->wakeup_irq_enabled) {
-			disable_irq_wake(mehci->wakeup_irq);
-			disable_irq_nosync(mehci->wakeup_irq);
-			mehci->wakeup_irq_enabled = 0;
-		}
-		spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
+	spin_lock_irqsave(&mehci->wakeup_lock, flags);
+	if (mehci->wakeup_irq_enabled) {
+		disable_irq_wake(mehci->wakeup_irq);
+		disable_irq_nosync(mehci->wakeup_irq);
+		mehci->wakeup_irq_enabled = 0;
 	}
+	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
 	wake_lock(&mehci->wlock);
 
@@ -986,8 +976,6 @@ static int ehci_hsic_reset(struct usb_hcd *hcd)
 	ehci_port_power(ehci, 1);
 	return 0;
 }
-
-#ifdef CONFIG_PM
 
 #define RESET_RETRY_LIMIT 3
 #define RESET_SIGNAL_TIME_SOF_USEC (50 * 1000)
@@ -1309,10 +1297,6 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 	return 0;
 }
 
-#define ehci_hsic_bus_suspend	NULL
-#define ehci_hsic_bus_resume	NULL
-
-#endif	/* CONFIG_PM */
 static struct hc_driver msm_hsic_driver = {
 	.description		= hcd_name,
 	.product_desc		= "Qualcomm EHCI Host Controller using HSIC",
@@ -1435,8 +1419,7 @@ put_cal_clk:
 put_phy_clk:
 	clk_put(mehci->phy_clk);
 put_alt_core_clk:
-	if (!IS_ERR(mehci->alt_core_clk))
-		clk_put(mehci->alt_core_clk);
+	clk_put(mehci->alt_core_clk);
 put_core_clk:
 	clk_put(mehci->core_clk);
 
@@ -1466,15 +1449,13 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 
 	wake_lock(&mehci->wlock);
 
-	if (mehci->wakeup_irq) {
-		spin_lock(&mehci->wakeup_lock);
-		if (mehci->wakeup_irq_enabled) {
-			mehci->wakeup_irq_enabled = 0;
-			disable_irq_wake(irq);
-			disable_irq_nosync(irq);
-		}
-		spin_unlock(&mehci->wakeup_lock);
+	spin_lock(&mehci->wakeup_lock);
+	if (mehci->wakeup_irq_enabled) {
+		mehci->wakeup_irq_enabled = 0;
+		disable_irq_wake(irq);
+		disable_irq_nosync(irq);
 	}
+	spin_unlock(&mehci->wakeup_lock);
 
 	if (!atomic_read(&mehci->pm_usage_cnt)) {
 		ret = pm_runtime_get(mehci->dev);
@@ -1743,12 +1724,10 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	spin_lock_init(&mehci->wakeup_lock);
 
-	if (pdata->phy_sof_workaround) {
-		mehci->ehci.susp_sof_bug = 1;
-		mehci->ehci.reset_sof_bug = 1;
-		mehci->ehci.resume_sof_bug = 1;
-	}
+	mehci->ehci.susp_sof_bug = 1;
+	mehci->ehci.reset_sof_bug = 1;
 
+	mehci->ehci.resume_sof_bug = 1;
 
 	if (pdata)
 		mehci->ehci.log2_irq_thresh = pdata->log2_irq_thresh;
@@ -1811,7 +1790,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
 			NULL, hsic_peripheral_status_change,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
-						| IRQF_SHARED,
+						| IRQF_SHARED | IRQF_ONESHOT,
 			"hsic_peripheral_status", mehci);
 		if (ret)
 			dev_err(&pdev->dev, "%s:request_irq:%d failed:%d",
