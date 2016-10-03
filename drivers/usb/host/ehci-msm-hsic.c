@@ -1397,16 +1397,15 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 #define ehci_hsic_bus_resume	NULL
 
 #endif	/* CONFIG_PM */
-
+/*
 static void ehci_msm_set_autosuspend_delay(struct usb_device *dev)
 {
-	if (!dev->parent) /*for root hub no delay*/
+	if (!dev->parent) //for root hub no delay
 		pm_runtime_set_autosuspend_delay(&dev->dev, 0);
 	else
 		pm_runtime_set_autosuspend_delay(&dev->dev, 200);
 }
 
-/*
 static int ehci_msm_urb_enqueue(struct usb_hcd *hcd, struct urb *urb,
 				gfp_t mem_flags)
 {
@@ -1439,7 +1438,7 @@ static struct hc_driver msm_hsic_driver = {
 	/*
 	 * managing i/o requests and associated device resources
 	 */
-	.urb_enqueue		= ehci_msm_urb_enqueue,
+	.urb_enqueue		= ehci_urb_enqueue,
 	.urb_dequeue		= ehci_urb_dequeue,
 	.endpoint_disable	= ehci_endpoint_disable,
 	.endpoint_reset		= ehci_endpoint_reset,
@@ -1467,7 +1466,7 @@ static struct hc_driver msm_hsic_driver = {
 	.log_urb		= dbg_log_event,
 	.dump_regs		= dump_hsic_regs,
 
-	.set_autosuspend_delay = ehci_msm_set_autosuspend_delay,
+	//.set_autosuspend_delay = ehci_msm_set_autosuspend_delay,
 	.reset_sof_bug_handler	= ehci_hsic_reset_sof_bug_handler,
 };
 
