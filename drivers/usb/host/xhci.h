@@ -1510,76 +1510,11 @@ struct xhci_hcd {
 #define	XHCI_SW_BW_CHECKING	(1 << 8)
 #define XHCI_AMD_0x96_HOST	(1 << 9)
 #define XHCI_TRUST_TX_LENGTH	(1 << 10)
-#define XHCI_SPURIOUS_REBOOT	(1 << 13)
 #define XHCI_COMP_MODE_QUIRK	(1 << 14)
 #define XHCI_AVOID_BEI		(1 << 15)
 #define XHCI_PLAT		(1 << 16)
 #define XHCI_SLOW_SUSPEND	(1 << 17)
 #define XHCI_SPURIOUS_WAKEUP	(1 << 18)
-#define XHCI_PME_STUCK_QUIRK	(1 << 20)
-	unsigned int		num_active_eps;
-	unsigned int		limit_active_eps;
-	/* There are two roothubs to keep track of bus suspend info for */
-	struct xhci_bus_state   bus_state[2];
-	/* Is each xHCI roothub port a USB 3.0, USB 2.0, or USB 1.1 port? */
-	u8			*port_array;
-	/* Array of pointers to USB 3.0 PORTSC registers */
-	__le32 __iomem		**usb3_ports;
-	unsigned int		num_usb3_ports;
-	/* Array of pointers to USB 2.0 PORTSC registers */
-	__le32 __iomem		**usb2_ports;
-	unsigned int		num_usb2_ports;
-	/* support xHCI 0.96 spec USB2 software LPM */
-	unsigned		sw_lpm_support:1;
-	/* support xHCI 1.0 spec USB2 hardware LPM */
-	unsigned		hw_lpm_support:1;
-	/* Compliance Mode Recovery Data */
-	struct timer_list	comp_mode_recovery_timer;
-	u32			port_status_u0;
-/* Compliance Mode Timer Triggered every 2 seconds */
-#define COMP_MODE_RCVRY_MSECS 2000
-};
-
-/* convert between an HCD pointer and the corresponding EHCI_HCD */
-static inline struct xhci_hcd *hcd_to_xhci(struct usb_hcd *hcd)
-{
-	return *((struct xhci_hcd **) (hcd->hcd_priv));
-}
-
-static inline struct usb_hcd *xhci_to_hcd(struct xhci_hcd *xhci)
-{
-	return xhci->main_hcd;
-}
-
-#ifdef CONFIG_USB_XHCI_HCD_DEBUGGING
-#define XHCI_DEBUG	1
-#else
-#define XHCI_DEBUG	0
-#endif
-
-#define xhci_dbg(xhci, fmt, args...) \
-	do { if (XHCI_DEBUG) dev_dbg(xhci_to_hcd(xhci)->self.controller , fmt , ## args); } while (0)
-#define xhci_info(xhci, fmt, args...) \
-	do { if (XHCI_DEBUG) dev_info(xhci_to_hcd(xhci)->self.controller , fmt , ## args); } while (0)
-#define xhci_err(xhci, fmt, args...) \
-	dev_err(xhci_to_hcd(xhci)->self.controller , fmt , ## args)
-#define xhci_warn(xhci, fmt, args...) \
-	dev_warn(xhci_to_hcd(xhci)->self.controller , fmt , ## args)
-
-/* TODO: copied from ehci.h - can be refactored? */
-/* xHCI spec says all registers are little endian */
-static inline unsigned int xhci_readl(const struct xhci_hcd *xhci,
-		__le32 __iomem *regs)
-{
-	return readl(regs);
-}
-static inline void xhci_writel(struct xhci_hcd *xhci,
-		const unsigned int val, __le32 __iomem *regs)
-{
-	writel(val, regs);
-}
-
-#define XHCI_PME_STUCK_QUIRK	(1 << 20)
 /*
  * In Synopsis DWC3 controller, PORTSC register access involves multiple clock
  * domains. When the software does a PORTSC write, handshakes are needed
