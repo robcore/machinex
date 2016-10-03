@@ -1095,7 +1095,7 @@ static void hub_quiesce(struct usb_hub *hub, enum hub_quiescing_type type)
 	if (hub->has_indicators)
 		cancel_delayed_work_sync(&hub->leds);
 	if (hub->tt.hub)
-		flush_work(&hub->tt.clear_work);
+		flush_work_sync(&hub->tt.clear_work);
 }
 
 /* caller has locked the hub device */
@@ -2704,10 +2704,6 @@ int usb_port_suspend(struct usb_device *udev, pm_message_t msg)
 				(void) usb_disable_function_remotewakeup(udev);
 
 		}
-
-		/* Try to enable USB2 hardware LPM again */
-		if (udev->usb2_hw_lpm_capable == 1)
-			usb_set_usb2_hardware_lpm(udev, 1);
 
 		/* Try to enable USB2 hardware LPM again */
 		if (udev->usb2_hw_lpm_capable == 1)
