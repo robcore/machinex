@@ -48,6 +48,7 @@
 #include <linux/spinlock.h>
 #include <linux/cpu.h>
 #include <mach/rpm-regulator.h>
+#include <mach/subsystem_restart.h>
 
 #define MSM_USB_BASE (hcd->regs)
 #define USB_REG_START_OFFSET 0x90
@@ -87,6 +88,9 @@ struct msm_hsic_hcd {
 	int			peripheral_status_irq;
 	int			wakeup_irq;
 	int			wakeup_gpio;
+	int			err_fatal;
+	int			ready_gpio;
+	int			pbl_gpio;
 	bool			wakeup_irq_enabled;
 	atomic_t		pm_usage_cnt;
 	uint32_t		bus_perf_client;
@@ -358,6 +362,26 @@ static void dump_hsic_regs(struct usb_hcd *hcd)
 				readl_relaxed(hcd->regs + i + 0xc));
 }
 
+static ssize_t override_wakelock_store(
+		struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	long value;
+
+	if (kstrtol(buf, 10, &value))
+		return -EINVAL;
+
+	if (__mehci) {
+		if (value == 1)
+			wake_lock(&__mehci->wlock);
+		else if (value == 0)
+			wake_unlock(&__mehci->wlock);
+	}
+	return size;
+}
+
+static DEVICE_ATTR(override_wakelock, S_IWUSR, NULL, override_wakelock_store);
+
 #define ULPI_IO_TIMEOUT_USEC	(10 * 1000)
 
 #define USB_PHY_VDD_DIG_VOL_NONE	0 /*uV */
@@ -581,6 +605,65 @@ static int usbdev_notify(struct notifier_block *self,
 			break;
 		default:
 			break;
+	}
+out:
+	return NOTIFY_OK;
+}
+static int in_progress;
+
+static void do_restart(struct work_struct *dummy)
+{
+	int normal_boot = 0;
+	int on_pbl = 0;
+	int err_fatal = 0;
+
+	normal_boot = gpio_get_value(__mehci->ready_gpio);
+	on_pbl = gpio_get_value(__mehci->pbl_gpio);
+	err_fatal = gpio_get_value(__mehci->err_fatal);
+	if (normal_boot && !on_pbl && !in_progress && !err_fatal &&
+	    system_state == SYSTEM_RUNNING) {
+		in_progress = 1;
+		pr_info("%s: normal_boot(%d), on_pbl(%d)",
+			__func__, normal_boot, on_pbl);
+		pr_info(", in_progress(%d), err_fatal(%d)\n",
+			in_progress, err_fatal);
+
+		pr_info("%s : system_state(%d)\n", __func__, system_state);
+		subsystem_restart("external_modem");
+		/* BUG_ON(1); */
+	}
+
+}
+DECLARE_DELAYED_WORK(restart_work, do_restart);
+static int usbdev_notify(struct notifier_block *self,
+			unsigned long action, void *priv)
+{
+	struct usb_device *udev = priv;
+	struct usb_hcd *hcd;
+
+	if (!__mehci)
+		goto out;
+	hcd = hsic_to_hcd(__mehci);
+	if (&hcd->self != udev->bus)
+		goto out;
+
+	if (action == USB_BUS_ADD || action == USB_BUS_REMOVE ||
+	    action == USB_DEVICE_CONFIG)
+		goto out;
+
+	if (!udev->parent || udev->parent->parent)
+		goto out;
+
+	switch (action) {
+	case USB_DEVICE_ADD:
+		in_progress = 0;
+		break;
+	/* fall through */
+	case USB_DEVICE_REMOVE:
+		schedule_delayed_work(&restart_work, 0);
+		break;
+	default:
+		break;
 	}
 out:
 	return NOTIFY_OK;
@@ -971,21 +1054,15 @@ static irqreturn_t msm_hsic_irq(struct usb_hcd *hcd)
 
 	if (status & STS_GPTIMER0_INTERRUPT) {
 		int timeleft;
+		u32 temp;
 
-		dbg_log_event(NULL, "FPR: gpt0_isr", mehci->bus_reset);
+		temp = ehci_readl(ehci, &ehci->regs->port_status[0]);
+		dbg_log_event(NULL, "FPR: gpt0_isr", (int) temp);
 
 		timeleft = GPT_CNT(ehci_readl(ehci,
 						 &mehci->timer->gptimer1_ctrl));
-		if (!mehci->bus_reset) {
-			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
-					RESUME_SIGNAL_TIME_SOF_USEC) {
-				dbg_log_event(NULL, "FPR: GPT prog invalid",
-						timeleft);
-				pr_err("HSIC GPT timer prog invalid\n");
-				timeleft = 0;
-			}
-		}
-		if (timeleft) {
+		if (timeleft && !(temp & PORT_SUSPEND) &&
+		    !(temp & PORT_RESUME)) {
 			if (mehci->bus_reset) {
 				ret = msm_hsic_reset_done(hcd);
 				if (ret) {
@@ -1171,9 +1248,13 @@ static int ehci_hsic_bus_suspend(struct usb_hcd *hcd)
 		return -EAGAIN;
 	}
 
-	dbg_log_event(NULL, "Suspend RH", 0);
+	dbg_log_event(NULL, "Suspend RH jiffies ", jiffies);
 	return ehci_bus_suspend(hcd);
 }
+
+static struct notifier_block usbdev_nb = {
+	.notifier_call = usbdev_notify,
+};
 
 static int msm_hsic_resume_thread(void *data)
 {
@@ -1199,10 +1280,11 @@ static int msm_hsic_resume_thread(void *data)
 	}
 
 	/* keep delay between bus states */
-	now = ktime_get();
-	mdiff = ktime_to_us(ktime_sub(now, ehci->last_susp_resume));
-	if (time_before_eq(jiffies, ehci->next_statechange))
-		usleep_range(10000, 10000);
+	if (time_before_eq(jiffies, ehci->next_statechange)) {
+		dbg_log_event(NULL, "Resume bus state delay next_statechange ",
+			ehci->next_statechange);
+		msleep(20);
+	}
 
 	spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
@@ -1542,6 +1624,14 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 {
 	struct msm_hsic_hcd *mehci = data;
 	int ret;
+	int status;
+
+	status = gpio_get_value(mehci->wakeup_gpio);
+
+	if (!status) {
+		dbg_log_event(NULL, "Remote Wakeup gpio val", status);
+		return IRQ_HANDLED;
+	}
 
 	if (irq == mehci->async_irq) {
 		mehci->async_int_cnt++;
@@ -1968,6 +2058,8 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
+	device_create_file(&pdev->dev, &dev_attr_override_wakelock);
+
 	if (pdata && pdata->swfi_latency)
 		pm_qos_add_request(&mehci->pm_qos_req_dma,
 			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
@@ -2058,6 +2150,7 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	msm_hsic_init_vddcx(mehci, 0);
 
 	msm_hsic_init_clocks(mehci, 0);
+	device_remove_file(&pdev->dev, &dev_attr_override_wakelock);
 	wake_lock_destroy(&mehci->wlock);
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
