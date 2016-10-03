@@ -90,10 +90,6 @@ static const struct usb_device_id usb_quirk_list[] = {
 	{ USB_DEVICE(0x04b4, 0x0526), .driver_info =
 			USB_QUIRK_CONFIG_INTF_STRINGS },
 
-	/* Qualcomm MDM9x15 */
-	{ USB_DEVICE(0x05c6, 0x9048), .driver_info = USB_QUIRK_HSIC_TUNE },
-	{ USB_DEVICE(0x05c6, 0x904C), .driver_info = USB_QUIRK_HSIC_TUNE },
-
 	/* Microchip Joss Optical infrared touchboard device */
 	{ USB_DEVICE(0x04d8, 0x000c), .driver_info =
 			USB_QUIRK_CONFIG_INTF_STRINGS },
