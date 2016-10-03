@@ -225,9 +225,7 @@ struct msm_otg_platform_data {
 	int ovp_ctrl_gpio;
 	int otg_power_irq;
 #endif
-#if defined(CONFIG_SEC_PRODUCT_8960)
-    bool smb347s;
-#endif
+
 	const char *mhl_dev_name;
 #ifdef CONFIG_USB_SWITCH_TSU6721
         int (*get_usb_state)(int data);
@@ -358,7 +356,6 @@ struct msm_otg {
 	unsigned notify_state;
 	struct delayed_work late_power_work;
 	struct work_struct otg_power_work;
-	bool init_state;
 #endif
 	bool smartdock;
 	bool disable_peripheral;
@@ -402,7 +399,12 @@ struct msm_hsic_host_platform_data {
 	bool phy_sof_workaround;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	unsigned log2_irq_thresh;
+
+	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
+
+	/*standalone latency is required when HSCI is active*/
+	u32 standalone_latency;
 };
 
 struct msm_usb_host_platform_data {
