@@ -1955,8 +1955,7 @@ static void msm_bus_bimc_node_init(void *hw_data,
 	struct msm_bus_bimc_info *binfo =
 		(struct msm_bus_bimc_info *)hw_data;
 
-	if (!IS_SLAVE(info->node_info->priv_id) &&
-		(info->node_info->hw_sel != MSM_BUS_RPM))
+	if (!IS_SLAVE(info->node_info->priv_id))
 		msm_bus_bimc_mas_init(binfo, info);
 }
 
