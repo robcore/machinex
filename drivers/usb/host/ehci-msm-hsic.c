@@ -1,6 +1,6 @@
 /* ehci-msm-hsic.c - HSUSB Host Controller Driver Implementation
  *
- * Copyright (c) 2011-2013, Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * Partly derived from ehci-fsl.c and ehci-hcd.c
  * Copyright (c) 2000-2004 by David Brownell
@@ -1073,9 +1073,6 @@ static int ehci_hsic_reset(struct usb_hcd *hcd)
 	return 0;
 }
 
-#define RESET_RETRY_LIMIT 3
-#define RESET_SIGNAL_TIME_SOF_USEC (50 * 1000)
-#define RESET_SIGNAL_TIME_USEC (20 * 1000)
 static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 {
 	struct ehci_hcd	*ehci = hcd_to_ehci(hcd);
@@ -1182,6 +1179,10 @@ static int ehci_hsic_bus_suspend(struct usb_hcd *hcd)
 	dbg_log_event(NULL, "Suspend RH", 0);
 	return ehci_bus_suspend(hcd);
 }
+
+#define RESET_RETRY_LIMIT 3
+#define RESET_SIGNAL_TIME_USEC (20 * 1000)
+#define RESET_SIGNAL_TIME_SOF_USEC (23 * 1000)
 
 static int msm_hsic_resume_thread(void *data)
 {
@@ -1809,6 +1810,8 @@ struct msm_hsic_host_platform_data *msm_hsic_dt_to_pdata(
 					&pdata->strobe_pad_offset);
 	of_property_read_u32(node, "hsic,data-pad-offset",
 					&pdata->data_pad_offset);
+
+	pdata->bus_scale_table = msm_bus_cl_get_pdata(pdev);
 
 	return pdata;
 }
