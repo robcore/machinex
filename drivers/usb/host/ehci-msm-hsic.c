@@ -81,7 +81,6 @@ struct msm_hsic_hcd {
 	struct clk		*phy_clk;
 	struct clk		*cal_clk;
 	struct regulator	*hsic_vddcx;
-	struct regulator	*hsic_gdsc;
 	atomic_t		async_int;
 	atomic_t                in_lpm;
 	struct wake_lock	wlock;
@@ -112,8 +111,6 @@ struct msm_hsic_hcd {
 struct msm_hsic_hcd *__mehci;
 
 static bool debug_bus_voting_enabled = true;
-static u64 ehci_msm_hsic_dma_mask = DMA_BIT_MASK(32);
-
 
 static unsigned int enable_payload_log = 1;
 module_param(enable_payload_log, uint, S_IRUGO | S_IWUSR);
@@ -407,35 +404,6 @@ reg_enable_err:
 
 }
 
-/* Global Distributed Switch Controller (GDSC) init */
-static int msm_hsic_init_gdsc(struct msm_hsic_hcd *mehci, int init)
-{
-	int ret = 0;
-
-	if (IS_ERR(mehci->hsic_gdsc))
-		return 0;
-
-	if (!mehci->hsic_gdsc) {
-		mehci->hsic_gdsc = devm_regulator_get(mehci->dev,
-			"HSIC_GDSC");
-		if (IS_ERR(mehci->hsic_gdsc))
-			return 0;
-	}
-
-	if (init) {
-		ret = regulator_enable(mehci->hsic_gdsc);
-		if (ret) {
-			dev_err(mehci->dev, "unable to enable hsic gdsc\n");
-			return ret;
-		}
-	} else {
-		regulator_disable(mehci->hsic_gdsc);
-	}
-
-	return 0;
-
-}
-
 static int __maybe_unused ulpi_read(struct msm_hsic_hcd *mehci, u32 reg)
 {
 	struct usb_hcd *hcd = hsic_to_hcd(mehci);
@@ -680,7 +648,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	int cnt = 0, ret;
 	u32 val;
 	int none_vol, max_vol;
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in lpm\n", __func__);
@@ -764,10 +731,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	enable_irq_wake(mehci->wakeup_irq);
 	enable_irq(mehci->wakeup_irq);
 
-	if (pdata && pdata->standalone_latency)
-		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			PM_QOS_DEFAULT_VALUE);
-
 	wake_unlock(&mehci->wlock);
 
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
@@ -782,16 +745,11 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	unsigned temp;
 	int min_vol, max_vol;
 	unsigned long flags;
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data
 
 	if (!atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in !in_lpm\n", __func__);
 		return 0;
 	}
-
-	if (pdata && pdata->standalone_latency)
-		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			pdata->standalone_latency + 1);
 
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
@@ -1749,11 +1707,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
 
-	if (!pdev->dev.dma_mask)
-		pdev->dev.dma_mask = &ehci_msm_hsic_dma_mask;
-	if (!pdev->dev.coherent_dma_mask)
-		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
-
 	/* After parent device's probe is executed, it will be put in suspend
 	 * mode. When child device's probe is called, driver core is not
 	 * resuming parent device due to which parent will be in suspend even
@@ -1807,13 +1760,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	if (pdata)
 		mehci->ehci.log2_irq_thresh = pdata->log2_irq_thresh;
-
-	ret = msm_hsic_init_gdsc(mehci, 1);
-	if (ret) {
-		dev_err(&pdev->dev, "unable to initialize GDSC\n");
-		ret = -ENODEV;
-		goto put_hcd;
-	}
 
 	res = platform_get_resource_byname(pdev,
 			IORESOURCE_IRQ,
@@ -1920,9 +1866,9 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_add_request(&mehci->pm_qos_req_dma,
-			PM_QOS_CPU_DMA_LATENCY, pdata->standalone_latency + 1);
+			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 
 	/*
 	 * This pdev->dev is assigned parent of root-hub by USB core,
@@ -1944,7 +1890,6 @@ destroy_wq:
 	destroy_workqueue(ehci_wq);
 deinit_vddcx:
 	msm_hsic_init_vddcx(mehci, 0);
-	msm_hsic_init_gdsc(mehci, 0);
 deinit_clocks:
 	msm_hsic_init_clocks(mehci, 0);
 unmap:
@@ -1964,7 +1909,7 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	/* Remove the HCD prior to releasing our resources. */
 	usb_remove_hcd(hcd);
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_remove_request(&mehci->pm_qos_req_dma);
 
 	if (mehci->peripheral_status_irq)
@@ -1995,7 +1940,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	msm_hsic_config_gpios(mehci, 0);
 	msm_hsic_init_vddcx(mehci, 0);
-	msm_hsic_init_gdsc(mehci, 0);
 
 	msm_hsic_init_clocks(mehci, 0);
 	wake_lock_destroy(&mehci->wlock);
@@ -2116,11 +2060,7 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 				msm_hsic_runtime_idle)
 };
 #endif
-static const struct of_device_id hsic_host_dt_match[] = {
-	{ .compatible = "qcom,hsic-host",
-	},
-	{}
-};
+
 static struct platform_driver ehci_msm_hsic_driver = {
 	.probe	= ehci_hsic_msm_probe,
 	.remove	= __devexit_p(ehci_hsic_msm_remove),
@@ -2129,6 +2069,5 @@ static struct platform_driver ehci_msm_hsic_driver = {
 #ifdef CONFIG_PM
 		.pm = &msm_hsic_dev_pm_ops,
 #endif
-		.of_match_table = hsic_host_dt_match,
 	},
 };
