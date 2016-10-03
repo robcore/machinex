@@ -218,6 +218,8 @@ struct msm_otg_platform_data {
 	bool disable_reset_on_disconnect;
 	bool enable_lpm_on_dev_suspend;
 	bool core_clk_always_on_workaround;
+	bool delay_lpm_on_disconnect;
+	bool dp_manual_pullup;
 	struct msm_bus_scale_pdata *bus_scale_table;
 #ifdef CONFIG_USB_HOST_NOTIFY
 	int otg_power_gpio;
@@ -225,12 +227,15 @@ struct msm_otg_platform_data {
 	int ovp_ctrl_gpio;
 	int otg_power_irq;
 #endif
-
 	const char *mhl_dev_name;
 #ifdef CONFIG_USB_SWITCH_TSU6721
-        int (*get_usb_state)(int data);
+	int (*get_usb_state)(int data);
 #endif
 };
+
+/* phy related flags */
+#define ENABLE_DP_MANUAL_PULLUP		BIT(0)
+
 
 /* Timeout (in msec) values (min - max) associated with OTG timers */
 
