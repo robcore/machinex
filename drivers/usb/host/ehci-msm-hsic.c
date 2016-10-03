@@ -987,8 +987,6 @@ static int ehci_hsic_reset(struct usb_hcd *hcd)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-
 #define RESET_RETRY_LIMIT 3
 #define RESET_SIGNAL_TIME_SOF_USEC (50 * 1000)
 #define RESET_SIGNAL_TIME_USEC (20 * 1000)
