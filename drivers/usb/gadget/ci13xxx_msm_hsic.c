@@ -525,7 +525,7 @@ static void msm_hsic_pm_suspend_work(struct work_struct *w)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CONFIG_PM_RUNTIME
+#if 0
 static int msm_hsic_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "MSM HSIC Peripheral runtime idle\n");

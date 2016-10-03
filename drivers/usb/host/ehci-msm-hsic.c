@@ -2110,7 +2110,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#if 0
 static int msm_hsic_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "EHCI runtime idle\n");
