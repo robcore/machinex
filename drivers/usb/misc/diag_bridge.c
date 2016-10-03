@@ -33,8 +33,6 @@
 #define MAX_DIAG_BRIDGE_DEVS	2
 #define AUTOSUSP_DELAY_WITH_USB 1000
 
-#define AUTOSUSP_DELAY_WITH_USB 1000
-
 struct diag_bridge {
 	struct usb_device	*udev;
 	struct usb_interface	*ifc;
