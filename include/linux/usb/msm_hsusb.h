@@ -1,8 +1,8 @@
-/* linux/include/asm-arm/arch-msm/hsusb.h
+/* include/linux/usb/msm_hsusb.h
  *
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
- * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -28,7 +28,7 @@
 #ifdef CONFIG_USB_HOST_NOTIFY
 #include <linux/host_notify.h>
 #endif
-
+#include <linux/power_supply.h>
 /*
  * The following are bit fields describing the usb_request.udc_priv word.
  * These bit fields are set by function drivers that wish to queue
@@ -412,6 +412,9 @@ struct msm_hsic_host_platform_data {
 
 	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
+
+	/*standalone latency is required when HSCI is active*/
+	u32 standalone_latency;
 	bool pool_64_bit_align;
 };
 
@@ -484,6 +487,9 @@ int msm_ep_unconfig(struct usb_ep *ep);
 int msm_data_fifo_config(struct usb_ep *ep, u32 addr, u32 size,
 	u8 dst_pipe_idx);
 
+void msm_dwc3_restart_usb_session(void);
+
+int msm_register_usb_ext_notification(struct usb_ext_notification *info);
 #else
 static inline int msm_data_fifo_config(struct usb_ep *ep, u32 addr, u32 size,
 	u8 dst_pipe_idx)
@@ -500,5 +506,16 @@ static inline int msm_ep_unconfig(struct usb_ep *ep)
 {
 	return -ENODEV;
 }
+
+static inline void msm_dwc3_restart_usb_session(void)
+{
+	return;
+}
+
+//static inline int msm_register_usb_ext_notification(
+//					struct usb_ext_notification *info)
+//{
+//	return -ENODEV;
+//}
 #endif
 #endif

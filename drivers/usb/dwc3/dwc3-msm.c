@@ -143,6 +143,7 @@ struct dwc3_msm {
 	struct delayed_work	chg_work;
 	enum usb_chg_state	chg_state;
 	u8			dcd_retries;
+	bool			ext_inuse;
 };
 
 #define USB_HSPHY_3P3_VOL_MIN		3050000 /* uV */
