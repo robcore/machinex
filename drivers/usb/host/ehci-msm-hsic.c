@@ -48,7 +48,6 @@
 #include <linux/spinlock.h>
 #include <linux/cpu.h>
 #include <mach/rpm-regulator.h>
-#include <mach/subsystem_restart.h>
 
 #define MSM_USB_BASE (hcd->regs)
 #define USB_REG_START_OFFSET 0x90
@@ -88,9 +87,6 @@ struct msm_hsic_hcd {
 	int			peripheral_status_irq;
 	int			wakeup_irq;
 	int			wakeup_gpio;
-	int			err_fatal;
-	int			ready_gpio;
-	int			pbl_gpio;
 	bool			wakeup_irq_enabled;
 	atomic_t		pm_usage_cnt;
 	uint32_t		bus_perf_client;
@@ -144,31 +140,6 @@ enum event_type {
 };
 
 #define EVENT_STR_LEN	5
-
-static int in_progress;
-
-static void do_restart(struct work_struct *dummy)
-{
-	int normal_boot = 0;
-        int on_pbl = 0;
-	int err_fatal=0;
-
-	normal_boot = gpio_get_value(__mehci->ready_gpio);
-	on_pbl = gpio_get_value(__mehci->pbl_gpio);
-	err_fatal = gpio_get_value(__mehci->err_fatal);
-#ifdef HSIC_DISCONNECT_DEBUG
-	pr_info("[DEBUG] normal_boot:%d, on_pbl:%d, err_fatal:%d \n",
-		normal_boot, on_pbl, err_fatal);
-#endif
-	if(normal_boot && !on_pbl && !in_progress && !err_fatal && system_state == SYSTEM_RUNNING){
-        pr_err("%s: normal_boot(%d), on_pbl(%d), in_progress(%d), err_fatal(%d), system_state(%d)\n",
-                __func__, normal_boot, on_pbl, in_progress, err_fatal, system_state);
-		in_progress = 1;
-		subsystem_restart("external_modem");
-	}
-
-}
-DECLARE_DELAYED_WORK(restart_work,do_restart);
 
 static enum event_type str_to_event(const char *name)
 {
@@ -362,26 +333,6 @@ static void dump_hsic_regs(struct usb_hcd *hcd)
 				readl_relaxed(hcd->regs + i + 0xc));
 }
 
-static ssize_t override_wakelock_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	long value;
-
-	if (kstrtol(buf, 10, &value))
-		return -EINVAL;
-
-	if (__mehci) {
-		if (value == 1)
-			wake_lock(&__mehci->wlock);
-		else if (value == 0)
-			wake_unlock(&__mehci->wlock);
-	}
-	return size;
-}
-
-static DEVICE_ATTR(override_wakelock, S_IWUSR, NULL, override_wakelock_store);
-
 #define ULPI_IO_TIMEOUT_USEC	(10 * 1000)
 
 #define USB_PHY_VDD_DIG_VOL_NONE	0 /*uV */
@@ -483,7 +434,6 @@ static int __maybe_unused ulpi_read(struct msm_hsic_hcd *mehci, u32 reg)
 		udelay(130);
 		dev_err(mehci->dev, "ulpi_read: FRINDEX: %08x\n",
 				readl_relaxed(USB_FRINDEX));
-		schedule_delayed_work(&restart_work,0);
 		return -ETIMEDOUT;
 	}
 
@@ -577,97 +527,6 @@ free_strobe:
 
 	return rc;
 }
-static int usbdev_notify(struct notifier_block *self,
-			unsigned long action, void *priv)
-{
-	struct usb_device *udev = priv;
-	struct usb_hcd *hcd;
-
-	if(!__mehci)
-		goto out;
-	hcd = hsic_to_hcd(__mehci);
-	if(&hcd->self != udev->bus)
-		goto out;
-
-	if (action == USB_BUS_ADD || action == USB_BUS_REMOVE || action == USB_DEVICE_CONFIG)
-		goto out;
-
-	if (!udev->parent || udev->parent->parent)
-		goto out;
-
-	switch (action) {
-		case USB_DEVICE_ADD:
-			in_progress = 0;
-			break;
-		/* fall through */
-		case USB_DEVICE_REMOVE:
-			schedule_delayed_work(&restart_work,0);
-			break;
-		default:
-			break;
-	}
-out:
-	return NOTIFY_OK;
-}
-static int in_progress;
-
-static void do_restart(struct work_struct *dummy)
-{
-	int normal_boot = 0;
-	int on_pbl = 0;
-	int err_fatal = 0;
-
-	normal_boot = gpio_get_value(__mehci->ready_gpio);
-	on_pbl = gpio_get_value(__mehci->pbl_gpio);
-	err_fatal = gpio_get_value(__mehci->err_fatal);
-	if (normal_boot && !on_pbl && !in_progress && !err_fatal &&
-	    system_state == SYSTEM_RUNNING) {
-		in_progress = 1;
-		pr_info("%s: normal_boot(%d), on_pbl(%d)",
-			__func__, normal_boot, on_pbl);
-		pr_info(", in_progress(%d), err_fatal(%d)\n",
-			in_progress, err_fatal);
-
-		pr_info("%s : system_state(%d)\n", __func__, system_state);
-		subsystem_restart("external_modem");
-		/* BUG_ON(1); */
-	}
-
-}
-DECLARE_DELAYED_WORK(restart_work, do_restart);
-static int usbdev_notify(struct notifier_block *self,
-			unsigned long action, void *priv)
-{
-	struct usb_device *udev = priv;
-	struct usb_hcd *hcd;
-
-	if (!__mehci)
-		goto out;
-	hcd = hsic_to_hcd(__mehci);
-	if (&hcd->self != udev->bus)
-		goto out;
-
-	if (action == USB_BUS_ADD || action == USB_BUS_REMOVE ||
-	    action == USB_DEVICE_CONFIG)
-		goto out;
-
-	if (!udev->parent || udev->parent->parent)
-		goto out;
-
-	switch (action) {
-	case USB_DEVICE_ADD:
-		in_progress = 0;
-		break;
-	/* fall through */
-	case USB_DEVICE_REMOVE:
-		schedule_delayed_work(&restart_work, 0);
-		break;
-	default:
-		break;
-	}
-out:
-	return NOTIFY_OK;
-}
 
 static void msm_hsic_clk_reset(struct msm_hsic_hcd *mehci)
 {
@@ -696,32 +555,19 @@ static void msm_hsic_clk_reset(struct msm_hsic_hcd *mehci)
 #define HSIC_PAD_CALIBRATION	0xA8
 #define HSIC_GPIO_PAD_VAL	0x0A0AAA10
 #define LINK_RESET_TIMEOUT_USEC		(250 * 1000)
-
-static void msm_hsic_phy_reset(struct msm_hsic_hcd *mehci)
+static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 {
 	struct usb_hcd *hcd = hsic_to_hcd(mehci);
+	int ret;
+	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
+	u32 temp;
 
 	msm_hsic_clk_reset(mehci);
 
 	/* select ulpi phy */
 	writel_relaxed(0x80000000, USB_PORTSC);
+
 	mb();
-}
-
-static int msm_hsic_start(struct msm_hsic_hcd *mehci)
-{
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
-	int ret;
-	void __iomem *reg;
-
-	if (pdata && pdata->resume_gpio) {
-		ret = gpio_request(pdata->resume_gpio, "HSIC_RESUME_GPIO");
-		if (ret < 0) {
-			dev_err(mehci->dev,
-				"gpio req failed for hsic resume:%d\n", ret);
-			pdata->resume_gpio = 0;
-		}
-	}
 
 	/* HSIC init sequence when HSIC signals (Strobe/Data) are
 	routed via GPIOs */
@@ -772,29 +618,24 @@ static int msm_hsic_start(struct msm_hsic_hcd *mehci)
 		ulpi_write(mehci, 0xA9, 0x30);
 	}
 
+	temp = readl_relaxed(USB_GENCONFIG2);
+	temp &= ~GENCFG2_SYS_CLK_HOST_DEV_GATE_EN;
+	writel_relaxed(temp, USB_GENCONFIG2);
+
 	/*disable auto resume*/
 	ulpi_write(mehci, ULPI_IFC_CTRL_AUTORESUME, ULPI_CLR(ULPI_IFC_CTRL));
 
 	return 0;
-
-free_resume_gpio:
-	if (pdata && pdata->resume_gpio)
-		gpio_free(pdata->resume_gpio);
-
-	return ret;
 }
 
 #define PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
-static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
+static int msm_hsic_phy_reset(struct msm_hsic_hcd *mehci)
 {
-	/* reset HSIC phy */
-	msm_hsic_phy_reset(mehci);
-
-	/* HSIC init procedure (caliberation) */
-	return msm_hsic_start(mehci);
+	/* robcore's reverse wrapper to reset HSIC phy */
+		msm_hsic_reset(mehci);
 }
 
 static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
@@ -803,7 +644,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	int cnt = 0, ret;
 	u32 val;
 	int none_vol, max_vol;
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in lpm\n", __func__);
@@ -903,7 +743,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	unsigned temp;
 	int min_vol, max_vol;
 	unsigned long flags;
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (!atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in !in_lpm\n", __func__);
@@ -1054,15 +893,21 @@ static irqreturn_t msm_hsic_irq(struct usb_hcd *hcd)
 
 	if (status & STS_GPTIMER0_INTERRUPT) {
 		int timeleft;
-		u32 temp;
 
-		temp = ehci_readl(ehci, &ehci->regs->port_status[0]);
-		dbg_log_event(NULL, "FPR: gpt0_isr", (int) temp);
+		dbg_log_event(NULL, "FPR: gpt0_isr", mehci->bus_reset);
 
 		timeleft = GPT_CNT(ehci_readl(ehci,
 						 &mehci->timer->gptimer1_ctrl));
-		if (timeleft && !(temp & PORT_SUSPEND) &&
-		    !(temp & PORT_RESUME)) {
+		if (!mehci->bus_reset) {
+			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
+					RESUME_SIGNAL_TIME_SOF_USEC) {
+				dbg_log_event(NULL, "FPR: GPT prog invalid",
+						timeleft);
+				pr_err("HSIC GPT timer prog invalid\n");
+				timeleft = 0;
+			}
+		}
+		if (timeleft) {
 			if (mehci->bus_reset) {
 				ret = msm_hsic_reset_done(hcd);
 				if (ret) {
@@ -1248,13 +1093,9 @@ static int ehci_hsic_bus_suspend(struct usb_hcd *hcd)
 		return -EAGAIN;
 	}
 
-	dbg_log_event(NULL, "Suspend RH jiffies ", jiffies);
+	dbg_log_event(NULL, "Suspend RH", 0);
 	return ehci_bus_suspend(hcd);
 }
-
-static struct notifier_block usbdev_nb = {
-	.notifier_call = usbdev_notify,
-};
 
 static int msm_hsic_resume_thread(void *data)
 {
@@ -1268,8 +1109,6 @@ static int msm_hsic_resume_thread(void *data)
 	int			tight_count = 0;
 	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 	s32 next_latency = 0;
-	ktime_t now;
-	s64 mdiff;
 
 	dbg_log_event(NULL, "Resume RH", 0);
 
@@ -1280,11 +1119,8 @@ static int msm_hsic_resume_thread(void *data)
 	}
 
 	/* keep delay between bus states */
-	if (time_before_eq(jiffies, ehci->next_statechange)) {
-		dbg_log_event(NULL, "Resume bus state delay next_statechange ",
-			ehci->next_statechange);
-		msleep(20);
-	}
+	if (time_before_eq(jiffies, ehci->next_statechange))
+		usleep_range(10000, 10000);
 
 	spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
@@ -1473,10 +1309,6 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 	return 0;
 }
 
-static struct notifier_block usbdev_nb = {
-	.notifier_call =	usbdev_notify,
-};
-
 #define ehci_hsic_bus_suspend	NULL
 #define ehci_hsic_bus_resume	NULL
 
@@ -1548,12 +1380,14 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 		return ret;
 	}
 
-	/* alt_core_clk is for LINK to be used during PHY RESET in
-	 * targets on which link does NOT use asynchronous reset methodology.
+	/* alt_core_clk is for LINK to be used during PHY RESET
 	 * clock rate appropriately set by target specific clock driver */
 	mehci->alt_core_clk = clk_get(mehci->dev, "alt_core_clk");
-	if (IS_ERR(mehci->alt_core_clk))
-		dev_dbg(mehci->dev, "failed to get alt_core_clk\n");
+	if (IS_ERR(mehci->alt_core_clk)) {
+		dev_err(mehci->dev, "failed to core_clk\n");
+		ret = PTR_ERR(mehci->alt_core_clk);
+		goto put_core_clk;
+	}
 
 	/* phy_clk is required for HSIC PHY operation
 	 * clock rate appropriately set by target specific clock driver */
@@ -1624,25 +1458,11 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 {
 	struct msm_hsic_hcd *mehci = data;
 	int ret;
-	int status;
 
-	status = gpio_get_value(mehci->wakeup_gpio);
-
-	if (!status) {
-		dbg_log_event(NULL, "Remote Wakeup gpio val", status);
-		return IRQ_HANDLED;
-	}
-
-	if (irq == mehci->async_irq) {
-		mehci->async_int_cnt++;
-		dbg_log_event(NULL, "Remote Wakeup (ASYNC) IRQ",
-							 mehci->async_int_cnt);
-	} else {
-		mehci->wakeup_int_cnt++;
-		dbg_log_event(NULL, "Remote Wakeup IRQ", mehci->wakeup_int_cnt);
-	}
-	dev_dbg(mehci->dev, "%s: hsic remote wakeup interrupt %d cnt: %u, %u\n",
-		    __func__, irq, mehci->wakeup_int_cnt, mehci->async_int_cnt);
+	mehci->wakeup_int_cnt++;
+	dbg_log_event(NULL, "Remote Wakeup IRQ", mehci->wakeup_int_cnt);
+	dev_dbg(mehci->dev, "%s: hsic remote wakeup interrupt cnt: %u\n",
+			__func__, mehci->wakeup_int_cnt);
 
 	wake_lock(&mehci->wlock);
 
@@ -1946,25 +1766,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		dev_dbg(mehci->dev, "wakeup_irq: %d\n", mehci->wakeup_irq);
 	}
 
-	res = platform_get_resource_byname(pdev,
-			IORESOURCE_IO, "MDM2AP_PBLRDY");
-	if (res) {
-	    dev_dbg(mehci->dev, "pblrdy: %d\n", res->start);
-	    mehci->pbl_gpio = res->start;
-	}
-
-	res = platform_get_resource_byname(pdev,
-			IORESOURCE_IO, "AP2MDM_HSICRDY");
-	if (res) {
-		dev_dbg(mehci->dev, "AP2MDM_HSICRDY: %d\n", res->start);
-		mehci->ready_gpio = res->start;
-	}
-	res = platform_get_resource_byname(pdev,
-			IORESOURCE_IO, "MDM2AP_ERRFATAL");
-	if (res) {
-		dev_dbg(mehci->dev, "MDM2AP_ERRFATAL: %d\n", res->start);
-		mehci->err_fatal = res->start;
-	}
 	ret = msm_hsic_init_clocks(mehci, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "unable to initialize clocks\n");
@@ -1981,8 +1782,11 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	init_completion(&mehci->rt_completion);
 	init_completion(&mehci->gpt0_completion);
-
-	msm_hsic_phy_reset(mehci);
+	ret = msm_hsic_reset(mehci);
+	if (ret) {
+		dev_err(&pdev->dev, "unable to initialize PHY\n");
+		goto deinit_vddcx;
+	}
 
 	ehci_wq = create_singlethread_workqueue("ehci_wq");
 	if (!ehci_wq) {
@@ -1992,17 +1796,11 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	}
 
 	INIT_WORK(&mehci->bus_vote_w, ehci_hsic_bus_vote_w);
-	usb_register_notify(&usbdev_nb);
+
 	ret = usb_add_hcd(hcd, hcd->irq, IRQF_SHARED);
 	if (ret) {
 		dev_err(&pdev->dev, "unable to register HCD\n");
-		goto destroy_wq;
-	}
-
-	ret = msm_hsic_start(mehci);
-	if (ret) {
-		dev_err(&pdev->dev, "unable to initialize PHY\n");
-		goto destroy_wq;
+		goto unconfig_gpio;
 	}
 
 	device_init_wakeup(&pdev->dev, 1);
@@ -2058,8 +1856,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
-	device_create_file(&pdev->dev, &dev_attr_override_wakelock);
-
 	if (pdata && pdata->swfi_latency)
 		pm_qos_add_request(&mehci->pm_qos_req_dma,
 			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
@@ -2080,7 +1876,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	return 0;
 
-destroy_wq:
+unconfig_gpio:
 	destroy_workqueue(ehci_wq);
 	msm_hsic_config_gpios(mehci, 0);
 deinit_vddcx:
@@ -2101,12 +1897,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
-	/* If the device was removed no need to call pm_runtime_disable */
-	if (pdev->dev.power.power_state.event != PM_EVENT_INVALID)
-		pm_runtime_disable(&pdev->dev);
-
-	pm_runtime_set_suspended(&pdev->dev);
-
 	/* Remove the HCD prior to releasing our resources. */
 	usb_remove_hcd(hcd);
 
@@ -2122,12 +1912,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 		free_irq(mehci->wakeup_irq, mehci);
 	}
 
-	if (mehci->async_irq) {
-		/* Async IRQ is used only in absence of dedicated wakeup irq */
-		if (!mehci->wakeup_irq)
-			disable_irq_wake(mehci->async_irq);
-		free_irq(mehci->async_irq, mehci);
-	}
 	/*
 	 * If the update request is called after unregister, the request will
 	 * fail. Results are undefined if unregister is called in the middle of
@@ -2145,12 +1929,10 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	destroy_workqueue(ehci_wq);
 
-	usb_unregister_notify(&usbdev_nb);
 	msm_hsic_config_gpios(mehci, 0);
 	msm_hsic_init_vddcx(mehci, 0);
 
 	msm_hsic_init_clocks(mehci, 0);
-	device_remove_file(&pdev->dev, &dev_attr_override_wakelock);
 	wake_lock_destroy(&mehci->wlock);
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
@@ -2174,7 +1956,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
-	if (device_may_wakeup(dev) && !mehci->async_irq)
+	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
 	return 0;
@@ -2202,7 +1984,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 	dev_dbg(dev, "ehci-msm-hsic PM resume\n");
 	dbg_log_event(NULL, "PM Resume", 0);
 
-	if (device_may_wakeup(dev) && !mehci->async_irq)
+	if (device_may_wakeup(dev))
 		disable_irq_wake(hcd->irq);
 
 	/*
