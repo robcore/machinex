@@ -862,14 +862,6 @@ struct clk_ops clk_ops_smi_2x = {
 	.handoff = branch_clk_handoff,
 };
 
-struct clk_ops clk_ops_smi_2x = {
-	.prepare = branch_clk_enable,
-	.unprepare = branch_clk_disable,
-	.is_enabled = branch_clk_is_enabled,
-	.get_parent = branch_clk_get_parent,
-	.handoff = branch_clk_handoff,
-};
-
 struct clk_ops clk_ops_reset = {
 	.reset = branch_clk_reset,
 };
