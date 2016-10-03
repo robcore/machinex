@@ -217,7 +217,7 @@ static int msm_hsusb_config_vddcx(int high)
 		return ret;
 	}
 
-	pr_info("%s: min_vol:%d max_vol:%d\n", __func__, min_vol, max_vol);
+	pr_debug("%s: min_vol:%d max_vol:%d\n", __func__, min_vol, max_vol);
 
 	return ret;
 }
@@ -298,7 +298,7 @@ static int msm_hsusb_ldo_enable(struct msm_otg *motg, int on)
 				"HSUSB_3p3\n", __func__);
 	}
 
-	pr_info("reg (%s)\n", on ? "HPM" : "LPM");
+	pr_debug("reg (%s)\n", on ? "HPM" : "LPM");
 	return ret < 0 ? ret : 0;
 }
 
@@ -386,7 +386,7 @@ static void ulpi_init(struct msm_otg *motg)
 		return;
 
 	while (seq[0] >= 0) {
-		dev_info(motg->phy.dev, "ulpi: write 0x%02x to 0x%02x\n",
+		dev_dbg(motg->phy.dev, "ulpi: write 0x%02x to 0x%02x\n",
 				seq[0], seq[1]);
 		ulpi_write(&motg->phy, seq[0], seq[1]);
 		seq += 2;
@@ -1287,7 +1287,7 @@ static void msm_otg_start_host(struct usb_otg *otg, int on)
 
 		usb_add_hcd(hcd, hcd->irq, IRQF_SHARED);
 	} else {
-		dev_info(otg->phy->dev, "host off\n");
+		dev_dbg(otg->phy->dev, "host off\n");
 
 		usb_remove_hcd(hcd);
 		/* HCD core reset all bits of PORTSC. select ULPI phy */

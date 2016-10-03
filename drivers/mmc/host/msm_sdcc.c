@@ -6204,6 +6204,8 @@ msmsdcc_probe(struct platform_device *pdev)
 	/* packed write */
 	mmc->caps2 |= plat->packed_write;
 
+	mmc->caps2 |= MMC_CAP2_PACKED_WR;
+	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
 	/* Disable Sanitize & BKOPS
 	 * mmc->caps2 |= MMC_CAP2_SANITIZE;

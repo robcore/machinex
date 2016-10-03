@@ -87,7 +87,6 @@ static struct resource msm_fb_resources[] = {
 #define MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME "mipi_video_toshiba_wsvga"
 #define MIPI_VIDEO_CHIMEI_WXGA_PANEL_NAME "mipi_video_chimei_wxga"
 #define HDMI_PANEL_NAME "hdmi_msm"
-#define MHL_PANEL_NAME "hdmi_msm,mhl_8334"
 #define TVOUT_PANEL_NAME "tvout_msm"
 
 #define LVDS_PIXEL_MAP_PATTERN_1	1
@@ -99,16 +98,9 @@ static unsigned char hdmi_is_primary = 1;
 static unsigned char hdmi_is_primary;
 #endif
 
-static unsigned char mhl_display_enabled;
-
 unsigned char apq8064_hdmi_as_primary_selected(void)
 {
 	return hdmi_is_primary;
-}
-
-unsigned char apq8064_mhl_display_enabled(void)
-{
-	return mhl_display_enabled;
 }
 
 static void set_mdp_clocks_for_wuxga(void);
@@ -404,7 +396,7 @@ static bool oled_power_on;
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
 #define LCD_22V_EN	33
 #define PMIC_GPIO_LED_DRIVER_REV00 28
-#define PMIC_GPIO_LED_DRIVER_REV10 31	
+#define PMIC_GPIO_LED_DRIVER_REV10 31
 #else
 #define LCD_22V_EN	69
 #define PMIC_GPIO_LED_DRIVER 27
@@ -526,7 +518,7 @@ static int mipi_dsi_power(int enable)
 static int mipi_dsi_power_tft_request(void)
 {
 	int rc = 0;
-#if defined(CONFIG_MACH_JACTIVE_ATT) 
+#if defined(CONFIG_MACH_JACTIVE_ATT)
 	if (system_rev < 10){
 		gpio33 = PM8921_GPIO_PM_TO_SYS(LCD_22V_EN);
 		rc = gpio_request(gpio33, "led_dirver");
@@ -610,7 +602,7 @@ static int mipi_dsi_power_tft_request(void)
 #else
 	gpio27 = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_LED_DRIVER);
 #endif
-		
+
 
 	rc = gpio_request(gpio27, "led_dirver");
 	if (rc) {
@@ -628,7 +620,7 @@ static int mipi_dsi_power_tft_request(void)
 	if(system_rev < 10)
 		gpio_direction_output(gpio33, 0);
 	else
-		gpio_direction_output(LCD_22V_EN, 0);	
+		gpio_direction_output(LCD_22V_EN, 0);
 #else
 	gpio_direction_output(LCD_22V_EN, 0);
 #endif
@@ -728,7 +720,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("enable L16 failed, rc=%d\n", rc);
 				return -ENODEV;
 			}
-			
+
 			msleep ( 10 );
 		}
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
@@ -744,7 +736,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("enable L16 failed, rc=%d\n", rc);
 				return -ENODEV;
 			}
-			
+
 			msleep ( 10 );
 		}
 #endif
@@ -760,7 +752,7 @@ static int mipi_panel_power_tft(int enable)
 		if(system_rev < 10)
 			gpio_direction_output(gpio33, 0);
 		else
-			gpio_direction_output(LCD_22V_EN, 0);	
+			gpio_direction_output(LCD_22V_EN, 0);
 #else
 #if defined(CONFIG_FB_MSM_ENABLE_LCD_EN2)
 		if( system_rev >= 16 ) // rev0.6 + 10
@@ -796,7 +788,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("set_optimum_mode L16 failed, rc=%d\n", rc);
 				return -EINVAL;
 			}
-			
+
 			rc = regulator_disable(reg_L16);
 			if (rc) {
 				pr_err("disable reg_L16 failed, rc=%d\n", rc);
@@ -812,7 +804,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("set_optimum_mode L16 failed, rc=%d\n", rc);
 				return -EINVAL;
 			}
-			
+
 			rc = regulator_disable(reg_L16);
 			if (rc) {
 				pr_err("disable reg_L16 failed, rc=%d\n", rc);
@@ -1033,7 +1025,7 @@ static int mipi_oled_power_set(void)
 						PTR_ERR(reg_L16));
 				return -ENODEV;
 			}
-			
+
 			rc = regulator_set_voltage(reg_L16, 3000000, 3000000);
 			if (rc) {
 				pr_err("set_voltage L16 failed, rc=%d\n", rc);
@@ -1049,7 +1041,7 @@ static int mipi_oled_power_set(void)
 						PTR_ERR(reg_L16));
 				return -ENODEV;
 			}
-			
+
 			rc = regulator_set_voltage(reg_L16, 3000000, 3000000);
 			if (rc) {
 				pr_err("set_voltage L16 failed, rc=%d\n", rc);
@@ -1134,7 +1126,7 @@ static int mipi_panel_power_samsung(int on)
 		rc = mipi_panel_power_oled(1);
 	else
 		rc = mipi_panel_power_oled(0);
-	
+
 #endif
 	return rc;
 }
@@ -1744,15 +1736,7 @@ void __init apq8064_set_display_params(char *prim_panel, char *ext_panel,
 				PANEL_NAME_MAX_LEN);
 		pr_debug("msm_fb_pdata.ext_panel_name %s\n",
 				msm_fb_pdata.ext_panel_name);
-
-		if (!strncmp((char *)msm_fb_pdata.ext_panel_name,
-			MHL_PANEL_NAME, strnlen(MHL_PANEL_NAME,
-				PANEL_NAME_MAX_LEN))) {
-			pr_debug("MHL is external display by boot parameter\n");
-			mhl_display_enabled = 1;
-		}
 	}
 
 	msm_fb_pdata.ext_resolution = resolution;
-	hdmi_msm_data.is_mhl_enabled = mhl_display_enabled;
 }

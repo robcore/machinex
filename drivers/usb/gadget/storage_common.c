@@ -409,9 +409,9 @@ fsg_fs_intr_in_desc = {
 };
 
 #ifndef FSG_NO_OTG
-#  define FSG_FS_FUNCTION_PRE_EP_ENTRIES	2
+#define FSG_FS_FUNCTION_PRE_EP_ENTRIES	2
 #else
-#  define FSG_FS_FUNCTION_PRE_EP_ENTRIES	1
+#define FSG_FS_FUNCTION_PRE_EP_ENTRIES	1
 #endif
 
 #endif

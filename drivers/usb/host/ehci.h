@@ -138,6 +138,8 @@ struct ehci_hcd {			/* one per controller */
 
 	unsigned		log2_irq_thresh;
 
+	unsigned		log2_irq_thresh;
+
 	/* SILICON QUIRKS */
 	unsigned		no_selective_suspend:1;
 	unsigned		has_fsl_port_bug:1; /* FreeScale */
