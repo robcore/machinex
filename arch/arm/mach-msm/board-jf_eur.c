@@ -4321,6 +4321,7 @@ static int  es325_enable_VDD_CORE(void)
 	ret = regulator_set_voltage(l18, 1100000, 1100000);
 	if (ret)
 		pr_err("%s: error set voltage ret=%d\n", __func__, ret);
+
 	ret = regulator_enable(l18);
 	if (ret) {
 		pr_err("%s: error enable l18 ret=%d\n", __func__, ret);
