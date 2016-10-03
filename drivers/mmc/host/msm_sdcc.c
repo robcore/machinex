@@ -150,9 +150,6 @@ static const u32 tuning_block_128[] = {
 	0xFFFFBBBB, 0xFFFF77FF, 0xFF7777FF, 0xEEDDBB77
 };
 
-static int disable_slots;
-module_param(disable_slots, int, 0);
-
 #if IRQ_DEBUG == 1
 static char *irq_status_bits[] = { "cmdcrcfail", "datcrcfail", "cmdtimeout",
 				   "dattimeout", "txunderrun", "rxoverrun",
@@ -1955,7 +1952,7 @@ msmsdcc_irq(int irq, void *dev_id)
 				 */
 				wake_lock(&host->sdio_wlock);
 			} else {
-				if (mmc->card && !mmc_card_sdio(mmc->card)) {
+				if (!mmc->card || !mmc_card_sdio(mmc->card)) {
 					WARN(1, "%s: SDCC core interrupt received for non-SDIO cards when SDCC clocks are off\n",
 					     mmc_hostname(mmc));
 					ret = 1;
@@ -1989,7 +1986,7 @@ msmsdcc_irq(int irq, void *dev_id)
 #endif
 
 		if (status & MCI_SDIOINTROPE) {
-			if (mmc->card && !mmc_card_sdio(mmc->card)) {
+			if (!mmc->card || mmc_card_sdio(mmc->card)) {
 				WARN(1, "%s: SDIO interrupt received for non-SDIO card\n",
 					mmc_hostname(mmc));
 				ret = 1;
@@ -2356,9 +2353,7 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		}
 
 		if ((mrq->cmd->opcode == MMC_WRITE_BLOCK) ||
-		    (mrq->cmd->opcode == MMC_WRITE_MULTIPLE_BLOCK) ||
-		    ((mrq->cmd->opcode == SD_IO_RW_EXTENDED) &&
-		     is_data_pend_for_cmd53(host)))
+		    (mrq->cmd->opcode == MMC_WRITE_MULTIPLE_BLOCK))
 			host->curr.use_wr_data_pend = true;
 	}
 
@@ -2602,8 +2597,7 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 
 	curr_slot = host->plat->vreg_data;
 	if (!curr_slot) {
-		pr_debug("%s: vreg info unavailable, assuming the slot is powered by always on domain\n",
-			 mmc_hostname(host->mmc));
+		rc = -EINVAL;
 		goto out;
 	}
 
@@ -5961,11 +5955,6 @@ msmsdcc_probe(struct platform_device *pdev)
 		pr_err("%s: Platform data not available\n", __func__);
 		ret = -EINVAL;
 		goto out;
-	}
-
-	if (disable_slots & (1 << (pdev->id - 1))) {
-		pr_info("%s: Slot %d disabled\n", __func__, pdev->id);
-		return -ENODEV;
 	}
 
 	if (pdev->id < 1 || pdev->id > 5)

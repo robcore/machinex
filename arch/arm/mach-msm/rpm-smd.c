@@ -356,18 +356,6 @@ static void msm_rpm_notify(void *data, unsigned event)
 	}
 }
 
-bool msm_rpm_waiting_for_ack(void)
-{
-	bool ret;
-	unsigned long flags;
-
-	spin_lock_irqsave(&msm_rpm_list_lock, flags);
-	ret = list_empty(&msm_rpm_wait_list);
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
-
-	return !ret;
-}
-
 static struct msm_rpm_wait_data *msm_rpm_get_entry_from_msg_id(uint32_t msg_id)
 {
 	struct list_head *ptr;
@@ -1003,7 +991,8 @@ static int __devinit msm_rpm_dev_probe(struct platform_device *pdev)
 	smd_disable_read_intr(msm_rpm_data.ch_info);
 
 	if (!standalone) {
-		msm_rpm_smd_wq = create_singlethread_workqueue("rpm-smd");
+		msm_rpm_smd_wq = alloc_workqueue("rpm-smd",
+				WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
 		if (!msm_rpm_smd_wq)
 			return -EINVAL;
 	}

@@ -229,19 +229,12 @@ static irqreturn_t
 qup_i2c_interrupt(int irq, void *devid)
 {
 	struct qup_i2c_dev *dev = devid;
-	uint32_t status = 0;
-	uint32_t status1 = 0;
-	uint32_t op_flgs = 0;
+	uint32_t status = readl_relaxed(dev->base + QUP_I2C_STATUS);
+	uint32_t status1 = readl_relaxed(dev->base + QUP_ERROR_FLAGS);
+	uint32_t op_flgs = readl_relaxed(dev->base + QUP_OPERATIONAL);
 	int err = 0;
 
-	if (pm_runtime_suspended(dev->dev))
-		return IRQ_NONE;
-
-	status = readl_relaxed(dev->base + QUP_I2C_STATUS);
-	status1 = readl_relaxed(dev->base + QUP_ERROR_FLAGS);
-	op_flgs = readl_relaxed(dev->base + QUP_OPERATIONAL);
-
-#ifdef SECURE_INPUT
+#ifdef SECURE_INPUT    
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -375,7 +368,7 @@ qup_config_core_on_en(struct qup_i2c_dev *dev)
 static void
 qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state)
 {
-#ifdef SECURE_INPUT
+#ifdef SECURE_INPUT    
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return;
 	}
@@ -829,7 +822,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	long timeout;
 	int err;
 
-#ifdef SECURE_INPUT
+#ifdef SECURE_INPUT    
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}

@@ -2480,21 +2480,6 @@ static inline void hci_cmd_status_evt(struct hci_dev *hdev, struct sk_buff *skb)
 	}
 }
 
-static inline void hci_hardware_error_evt(struct hci_dev *hdev,
-					struct sk_buff *skb)
-{
-	struct hci_ev_hardware_error *ev = (void *) skb->data;
-
-	BT_ERR("hdev=%p, hw_err_code = %u", hdev, ev->hw_err_code);
-
-	if (hdev && hdev->dev_type == HCI_BREDR) {
-		hci_dev_lock_bh(hdev);
-		mgmt_powered(hdev->id, 1);
-		hci_dev_unlock_bh(hdev);
-	}
-
-}
-
 static inline void hci_role_change_evt(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	struct hci_ev_role_change *ev = (void *) skb->data;
@@ -2665,6 +2650,9 @@ static inline void hci_mode_change_evt(struct hci_dev *hdev, struct sk_buff *skb
 			else
 				conn->power_save = 0;
 		}
+		if (conn->mode == HCI_CM_SNIFF)
+			if (wake_lock_active(&conn->idle_lock))
+				wake_unlock(&conn->idle_lock);
 
 		if (test_and_clear_bit(HCI_CONN_SCO_SETUP_PEND, &conn->pend))
 			hci_sco_setup(conn, ev->status);
@@ -2982,7 +2970,6 @@ static inline void hci_sync_conn_complete_evt(struct hci_dev *hdev, struct sk_bu
 		hci_conn_add_sysfs(conn);
 		break;
 
-	case 0x10:	/* Connection Accept Timeout */
 	case 0x11:	/* Unsupported Feature or Parameter Value */
 	case 0x1c:	/* SCO interval rejected */
 	case 0x1a:	/* Unsupported Remote Feature */
@@ -3622,10 +3609,6 @@ void hci_event_packet(struct hci_dev *hdev, struct sk_buff *skb)
 
 	case HCI_EV_CMD_STATUS:
 		hci_cmd_status_evt(hdev, skb);
-		break;
-
-	case HCI_EV_HARDWARE_ERROR:
-		hci_hardware_error_evt(hdev, skb);
 		break;
 
 	case HCI_EV_ROLE_CHANGE:
