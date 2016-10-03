@@ -412,6 +412,7 @@ struct msm_hsic_host_platform_data {
 
 	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
+	bool pool_64_bit_align;
 };
 
 struct msm_usb_host_platform_data {

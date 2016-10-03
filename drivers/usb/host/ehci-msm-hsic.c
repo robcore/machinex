@@ -1828,6 +1828,9 @@ struct msm_hsic_host_platform_data *msm_hsic_dt_to_pdata(
 
 	pdata->bus_scale_table = msm_bus_cl_get_pdata(pdev);
 
+	pdata->pool_64_bit_align = of_property_read_bool(node,
+				"qcom,pool-64-bit-align");
+
 	return pdata;
 }
 
@@ -1838,6 +1841,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct msm_hsic_hcd *mehci;
 	struct msm_hsic_host_platform_data *pdata;
+	unsigned long wakeup_irq_flags = 0;
 	int ret;
 
 	dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
@@ -1846,6 +1850,9 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "device tree enabled\n");
 		pdev->dev.platform_data = msm_hsic_dt_to_pdata(pdev);
 		dev_set_name(&pdev->dev, ehci_msm_hsic_driver.driver.name);
+	} else {
+		/* explicitly pass wakeup_irq flag for !DT */
+		wakeup_irq_flags = IRQF_TRIGGER_HIGH;
 	}
 	if (!pdev->dev.platform_data)
 		dev_dbg(&pdev->dev, "No platform data given\n");
@@ -1905,6 +1912,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	mehci->ehci.reset_sof_bug = 1;
 
 	mehci->ehci.resume_sof_bug = 1;
+	mehci->ehci.pool_64_bit_align = pdata->pool_64_bit_align;
 
 	if (pdata)
 		mehci->ehci.log2_irq_thresh = pdata->log2_irq_thresh;
@@ -1992,7 +2000,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		 */
 		irq_set_status_flags(mehci->wakeup_irq, IRQ_NOAUTOEN);
 		ret = request_irq(mehci->wakeup_irq, msm_hsic_wakeup_irq,
-				IRQF_TRIGGER_HIGH,
+				wakeup_irq_flags,
 				"msm_hsic_wakeup", mehci);
 		if (ret) {
 			dev_err(&pdev->dev, "request_irq(%d) failed: %d\n",
@@ -2011,7 +2019,8 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "request irq failed (ASYNC INT)\n");
 			mehci->async_irq = 0;
-		} else {
+		} else if (!mehci->wakeup_irq) {
+			/* Async IRQ is used only in absence of dedicated irq */
 			enable_irq_wake(mehci->async_irq);
 		}
 	}
@@ -2174,7 +2183,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 	dev_dbg(dev, "ehci-msm-hsic PM resume\n");
 	dbg_log_event(NULL, "PM Resume", 0);
 
-	if (device_may_wakeup(dev))
+	if (device_may_wakeup(dev) && !mehci->async_irq)
 		disable_irq_wake(hcd->irq);
 
 	/*
