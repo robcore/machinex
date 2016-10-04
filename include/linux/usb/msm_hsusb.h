@@ -407,9 +407,6 @@ struct msm_hsic_host_platform_data {
 
 	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
-
-	/*standalone latency is required when HSCI is active*/
-	u32 standalone_latency;
 };
 
 struct msm_usb_host_platform_data {

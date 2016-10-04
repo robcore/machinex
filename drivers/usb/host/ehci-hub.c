@@ -210,8 +210,8 @@ static int ehci_bus_suspend (struct usb_hcd *hcd)
 
 	ehci_dbg(ehci, "suspend root hub\n");
 
-	if (time_before (jiffies, ehci->next_statechange))
-		msleep(5);
+	if (time_before_eq(jiffies, ehci->next_statechange))
+		usleep_range(10000, 10000);
 	del_timer_sync(&ehci->watchdog);
 	del_timer_sync(&ehci->iaa_watchdog);
 
@@ -329,6 +329,7 @@ static int ehci_bus_suspend (struct usb_hcd *hcd)
 	ehci_readl(ehci, &ehci->regs->intr_enable);
 
 	ehci->next_statechange = jiffies + msecs_to_jiffies(10);
+	ehci->last_susp_resume = ktime_get();
 	spin_unlock_irq (&ehci->lock);
 
 	/* ehci_work() may have re-enabled the watchdog timer, which we do not
@@ -340,7 +341,7 @@ static int ehci_bus_suspend (struct usb_hcd *hcd)
 
 
 /* caller has locked the root hub, and should reset/reinit on error */
-static int __maybe_unused ehci_bus_resume(struct usb_hcd *hcd)
+static int ehci_bus_resume (struct usb_hcd *hcd)
 {
 	struct ehci_hcd		*ehci = hcd_to_ehci (hcd);
 	u32			temp;
@@ -348,8 +349,8 @@ static int __maybe_unused ehci_bus_resume(struct usb_hcd *hcd)
 	int			i;
 	unsigned long		resume_needed = 0;
 
-	if (time_before (jiffies, ehci->next_statechange))
-		msleep(5);
+	if (time_before_eq(jiffies, ehci->next_statechange))
+		usleep_range(10000, 10000);
 	spin_lock_irq (&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
 		spin_unlock_irq(&ehci->lock);
@@ -642,7 +643,11 @@ ehci_hub_status_data (struct usb_hcd *hcd, char *buf)
 			status = STS_PCD;
 		}
 	}
-	/* FIXME autosuspend idle root hubs */
+
+	/* If a resume is in progress, make sure it can finish */
+	if (ehci->resuming_ports)
+		mod_timer(&hcd->rh_timer, jiffies + msecs_to_jiffies(25));
+
 	spin_unlock_irqrestore (&ehci->lock, flags);
 	return status ? retval : 0;
 }

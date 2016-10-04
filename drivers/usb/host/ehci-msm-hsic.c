@@ -638,7 +638,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	int cnt = 0, ret;
 	u32 val;
 	int none_vol, max_vol;
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in lpm\n", __func__);
@@ -722,10 +721,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	enable_irq_wake(mehci->wakeup_irq);
 	enable_irq(mehci->wakeup_irq);
 
-	if (pdata && pdata->standalone_latency)
-		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			PM_QOS_DEFAULT_VALUE);
-
 	wake_unlock(&mehci->wlock);
 
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
@@ -740,7 +735,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	unsigned temp;
 	int min_vol, max_vol;
 	unsigned long flags;
-	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (!atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in !in_lpm\n", __func__);
@@ -749,10 +743,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
-
-	if (pdata && pdata->standalone_latency)
-		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			pdata->standalone_latency + 1);
 
 	spin_lock_irqsave(&mehci->wakeup_lock, flags);
 	if (mehci->wakeup_irq_enabled) {
@@ -1004,10 +994,7 @@ static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		if (pdata->standalone_latency)
-			next_latency = pdata->standalone_latency + 1;
-		else
-			next_latency = PM_QOS_DEFAULT_VALUE;
+		next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	mehci->bus_reset = 1;
@@ -1116,10 +1103,7 @@ static int msm_hsic_resume_thread(void *data)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		if (pdata->standalone_latency)
-			next_latency = pdata->standalone_latency + 1;
-		else
-			next_latency = PM_QOS_DEFAULT_VALUE;
+		next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	/* keep delay between bus states */
@@ -1851,9 +1835,9 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_add_request(&mehci->pm_qos_req_dma,
-			PM_QOS_CPU_DMA_LATENCY, pdata->standalone_latency + 1);
+			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 
 	/*
 	 * This pdev->dev is assigned parent of root-hub by USB core,
@@ -1895,7 +1879,7 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	/* Remove the HCD prior to releasing our resources. */
 	usb_remove_hcd(hcd);
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_remove_request(&mehci->pm_qos_req_dma);
 
 	if (mehci->peripheral_status_irq)
@@ -2006,7 +1990,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 }
 #endif
 
-#if 0
+#ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "EHCI runtime idle\n");
@@ -2042,8 +2026,8 @@ static int msm_hsic_runtime_resume(struct device *dev)
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
 	.suspend_noirq = msm_hsic_pm_suspend_noirq,
-	//SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
-				//msm_hsic_runtime_idle)
+	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
+				msm_hsic_runtime_idle)
 };
 #endif
 
