@@ -352,7 +352,7 @@ static ssize_t apr_debug_write(struct file *file, const char __user *buf,
 			pc.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_EVENT,
 					APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
 			pc.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
-						sizeof(uint32_t));
+						sizeof(uint32_t));;
 			pc.hdr.src_port = 0;
 			pc.hdr.dest_port = 0;
 			pc.hdr.token = 0;

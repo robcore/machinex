@@ -320,14 +320,14 @@ skip:
 
 int max77693_get_jig_state(void)
 {
-	pr_info("%s: %d\n", __func__, is_jig_attached);
+	//pr_info("%s: %d\n", __func__, is_jig_attached);
 	return is_jig_attached;
 }
 EXPORT_SYMBOL(max77693_get_jig_state);
 
 void max77693_set_jig_state(int jig_state)
 {
-	pr_info("%s: %d\n", __func__, jig_state);
+	//pr_info("%s: %d\n", __func__, jig_state);
 	is_jig_attached = jig_state;
 }
 
