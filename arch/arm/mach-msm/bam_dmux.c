@@ -37,8 +37,6 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_restart.h>
 
-#include "bam_dmux_private.h"
-
 #define BAM_CH_LOCAL_OPEN       0x1
 #define BAM_CH_REMOTE_OPEN      0x2
 #define BAM_CH_IN_RESET         0x4
