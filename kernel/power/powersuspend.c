@@ -266,8 +266,8 @@ static int __init power_suspend_init(void)
 		return -ENOMEM;
 	}
 
-//	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
-	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
+	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
+//	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
 
 	return 0;
 }
