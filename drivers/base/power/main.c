@@ -121,7 +121,6 @@ void device_pm_remove(struct device *dev)
 	complete_all(&dev->power.completion);
 	mutex_lock(&dpm_list_mtx);
 	list_del_init(&dev->power.entry);
-	dpm_wakeup_dev_remove(dev);
 	mutex_unlock(&dpm_list_mtx);
 	device_wakeup_disable(dev);
 	pm_runtime_remove(dev);
