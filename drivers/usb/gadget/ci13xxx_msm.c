@@ -255,6 +255,7 @@ static int ci13xxx_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "request_irq failed\n");
 		goto gpio_uninstall;
 	}
+	INIT_DELAYED_WORK(&ui->chg_stop, usb_chg_stop);
 
 	pm_runtime_no_callbacks(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
@@ -271,6 +272,21 @@ iounmap:
 	return ret;
 }
 
+static void ci13xxx_msm_shutdown(struct platform_device *pdev)
+{
+	struct msm_otg *motg;
+	struct ci13xxx *udc = _udc;
+
+	if (!udc || !udc->transceiver)
+		return;
+
+	motg = container_of(udc->transceiver, struct msm_otg, phy);
+
+	if (!atomic_read(&motg->in_lpm))
+		ci13xxx_pullup(&udc->gadget, 0);
+
+}
+
 int ci13xxx_msm_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
@@ -281,16 +297,11 @@ int ci13xxx_msm_remove(struct platform_device *pdev)
 	return 0;
 }
 
-void ci13xxx_msm_shutdown(struct platform_device *pdev)
-{
-	ci13xxx_pullup(&_udc->gadget, 0);
-}
-
 static struct platform_driver ci13xxx_msm_driver = {
 	.probe = ci13xxx_msm_probe,
+	.shutdown = ci13xxx_msm_shutdown,
 	.driver = { .name = "msm_hsusb", },
 	.remove = ci13xxx_msm_remove,
-	.shutdown = ci13xxx_msm_shutdown,
 };
 MODULE_ALIAS("platform:msm_hsusb");
 
