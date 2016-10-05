@@ -74,7 +74,10 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
-	perf_mon_interrupt_in();
+#ifdef CONFIG_SEC_DEBUG
+	int cpu = smp_processor_id();
+	unsigned long long start_time = cpu_clock(cpu);
+#endif
 	irq_enter();
 
 	/*
@@ -93,8 +96,10 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	irq_finish(irq);
 
 	irq_exit();
+#ifdef CONFIG_SEC_DEBUG
+	sec_debug_irq_enterexit_log(irq, start_time);
+#endif
 	set_irq_regs(old_regs);
-	perf_mon_interrupt_out();
 }
 
 /*
