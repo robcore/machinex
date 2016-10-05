@@ -98,9 +98,9 @@
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
 #ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #else
-#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #endif
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -3278,7 +3278,7 @@ static struct clk_lookup msm_clocks_dummy[] = {
 static void __init apq8064_common_init(void)
 {
 	u32 platform_version = socinfo_get_platform_version();
-
+	struct msm_rpmrs_level rpmrs_level;
 #ifdef CONFIG_PROC_AVC
 	sec_avc_log_init();
 #endif
