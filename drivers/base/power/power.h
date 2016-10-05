@@ -11,12 +11,15 @@ static inline void device_pm_init_common(struct device *dev)
 
 #ifdef CONFIG_PM_RUNTIME
 
+extern void pm_runtime_init(struct device *dev);
+extern void pm_runtime_remove(struct device *dev);
+
 static inline void pm_runtime_early_init(struct device *dev)
 {
 	device_pm_init_common(dev);
 	dev->power.disable_depth = 1;
 }
-
+#else
 static inline void pm_runtime_init(struct device *dev) {}
 static inline void pm_runtime_remove(struct device *dev) {}
 
