@@ -832,23 +832,16 @@ error:
  * Replace a process's session keyring on behalf of one of its children when
  * the target  process is about to resume userspace execution.
  */
-void key_replace_session_keyring(void)
+void key_change_session_keyring(struct callback_head *twork)
 {
-	const struct cred *old;
-	struct cred *new;
+	const struct cred *old = current_cred();
+	struct cred *new = container_of(twork, struct cred, rcu);
 
-	if (!current->replacement_session_keyring)
+	if (unlikely(current->flags & PF_EXITING)) {
+		put_cred(new);
 		return;
+	}
 
-	write_lock_irq(&tasklist_lock);
-	new = current->replacement_session_keyring;
-	current->replacement_session_keyring = NULL;
-	write_unlock_irq(&tasklist_lock);
-
-	if (!new)
-		return;
-
-	old = current_cred();
 	new->  uid	= old->  uid;
 	new-> euid	= old-> euid;
 	new-> suid	= old-> suid;

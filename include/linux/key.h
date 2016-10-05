@@ -33,6 +33,8 @@ typedef uint32_t key_perm_t;
 
 struct key;
 
+#define key_replace_session_keyring()	do { } while (0)
+
 #ifdef CONFIG_KEYS
 
 #undef KEY_DEBUGGING
@@ -124,7 +126,10 @@ static inline unsigned long is_key_possessed(const key_ref_t key_ref)
 struct key {
 	atomic_t		usage;		/* number of references */
 	key_serial_t		serial;		/* key serial number */
-	struct rb_node		serial_node;
+	union {
+		struct list_head graveyard_link;
+		struct rb_node	serial_node;
+	};
 	struct key_type		*type;		/* type of key */
 	struct rw_semaphore	sem;		/* change vs change sem */
 	struct key_user		*user;		/* owner of this key */
@@ -156,6 +161,7 @@ struct key {
 #define KEY_FLAG_USER_CONSTRUCT	4	/* set if key is being constructed in userspace */
 #define KEY_FLAG_NEGATIVE	5	/* set if key is negative */
 #define KEY_FLAG_ROOT_CAN_CLEAR	6	/* set if key can be cleared by root without permission */
+#define KEY_FLAG_INVALIDATED	7	/* set if key has been invalidated */
 
 	/* the description string
 	 * - this is used to match a key against search criteria
@@ -199,6 +205,7 @@ extern struct key *key_alloc(struct key_type *type,
 #define KEY_ALLOC_NOT_IN_QUOTA	0x0002	/* not in quota */
 
 extern void key_revoke(struct key *key);
+extern void key_invalidate(struct key *key);
 extern void key_put(struct key *key);
 
 static inline struct key *key_get(struct key *key)
@@ -302,9 +309,6 @@ static inline bool key_is_instantiated(const struct key *key)
 #ifdef CONFIG_SYSCTL
 extern ctl_table key_sysctls[];
 #endif
-
-extern void key_replace_session_keyring(void);
-
 /*
  * the userspace interface
  */
@@ -319,6 +323,7 @@ extern void key_init(void);
 #define key_serial(k)			0
 #define key_get(k) 			({ NULL; })
 #define key_revoke(k)			do { } while(0)
+#define key_invalidate(k)		do { } while(0)
 #define key_put(k)			do { } while(0)
 #define key_ref_put(k)			do { } while(0)
 #define make_key_ref(k, p)		NULL
@@ -327,7 +332,6 @@ extern void key_init(void);
 #define key_fsuid_changed(t)		do { } while(0)
 #define key_fsgid_changed(t)		do { } while(0)
 #define key_init()			do { } while(0)
-#define key_replace_session_keyring()	do { } while(0)
 
 #endif /* CONFIG_KEYS */
 #endif /* __KERNEL__ */

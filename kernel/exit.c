@@ -759,6 +759,7 @@ static void exit_notify(struct task_struct *tsk, int group_dead)
 	 *	jobs, send them a SIGHUP and then a SIGCONT.  (POSIX 3.2.2.2)
 	 */
 	forget_original_parent(tsk);
+	exit_task_namespaces(tsk);
 
 	write_lock_irq(&tasklist_lock);
 	if (group_dead)
@@ -865,13 +866,10 @@ void do_exit(long code)
 	exit_signals(tsk);  /* sets PF_EXITING */
 	/*
 	 * tsk->flags are checked in the futex code to protect against
-	 * an exiting task cleaning up the robust pi futexes, and in
-	 * task_work_add() to avoid the race with exit_task_work().
+	 * an exiting task cleaning up the robust pi futexes.
 	 */
 	smp_mb();
 	raw_spin_unlock_wait(&tsk->pi_lock);
-
-	exit_task_work(tsk);
 
 	if (unlikely(in_atomic()))
 		printk(KERN_INFO "note: %s[%d] exited with preempt_count %d\n",
@@ -907,7 +905,7 @@ void do_exit(long code)
 	exit_shm(tsk);
 	exit_files(tsk);
 	exit_fs(tsk);
-	exit_task_namespaces(tsk);
+	exit_task_work(tsk);
 	check_stack_usage();
 	exit_thread();
 
@@ -923,6 +921,8 @@ void do_exit(long code)
 
 	if (group_dead)
 		disassociate_ctty(1);
+
+	module_put(task_thread_info(tsk)->exec_domain->module);
 
 	proc_exit_connector(tsk);
 
