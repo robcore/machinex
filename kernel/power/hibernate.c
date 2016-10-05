@@ -28,6 +28,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/ctype.h>
 #include <linux/genhd.h>
+#include <scsi/scsi_scan.h>
 
 #include "power.h"
 
@@ -650,23 +651,22 @@ int hibernate(void)
 	if (error)
 		goto Exit;
 
+	/* Allocate memory management structures */
+	error = create_basic_memory_bitmaps();
+	if (error)
+		goto Exit;
+
 	printk(KERN_INFO "PM: Syncing filesystems ... ");
 	sys_sync();
 	printk("done.\n");
 
 	error = freeze_processes();
 	if (error)
-		goto Exit;
-
-	lock_device_hotplug();
-	/* Allocate memory management structures */
-	error = create_basic_memory_bitmaps();
-	if (error)
-		goto Thaw;
+		goto Free_bitmaps;
 
 	error = hibernation_snapshot(hibernation_mode == HIBERNATION_PLATFORM);
 	if (error || freezer_test_done)
-		goto Free_bitmaps;
+		goto Thaw;
 
 	if (in_suspend) {
 		unsigned int flags = 0;
@@ -689,14 +689,14 @@ int hibernate(void)
 		pr_debug("PM: Image restored successfully.\n");
 	}
 
- Free_bitmaps:
-	free_basic_memory_bitmaps();
  Thaw:
-	unlock_device_hotplug();
 	thaw_processes();
 
 	/* Don't bother checking whether freezer_test_done is true */
 	freezer_test_done = false;
+
+ Free_bitmaps:
+	free_basic_memory_bitmaps();
  Exit:
 	pm_notifier_call_chain(PM_POST_HIBERNATION);
 	pm_restore_console();
@@ -787,6 +787,13 @@ static int software_resume(void)
 			async_synchronize_full();
 		}
 
+		/*
+		 * We can't depend on SCSI devices being available after loading
+		 * one of their modules until scsi_complete_async_scans() is
+		 * called and the resume device usually is a SCSI one.
+		 */
+		scsi_complete_async_scans();
+
 		swsusp_resume_device = name_to_dev_t(resume_file);
 		if (!swsusp_resume_device) {
 			error = -ENODEV;
@@ -813,19 +820,20 @@ static int software_resume(void)
 	pm_prepare_console();
 	error = pm_notifier_call_chain(PM_RESTORE_PREPARE);
 	if (error)
-		goto Close_Finish;
+		goto close_finish;
+
+	error = create_basic_memory_bitmaps();
+	if (error)
+		goto close_finish;
 
 	pr_debug("PM: Preparing processes for restore.\n");
 	error = freeze_processes();
-	if (error)
-		goto Close_Finish;
+	if (error) {
+		swsusp_close(FMODE_READ);
+		goto Done;
+	}
 
 	pr_debug("PM: Loading hibernation image.\n");
-
-	lock_device_hotplug();
-	error = create_basic_memory_bitmaps();
-	if (error)
-		goto Thaw;
 
 	error = swsusp_read(&flags);
 	swsusp_close(FMODE_READ);
@@ -834,10 +842,9 @@ static int software_resume(void)
 
 	printk(KERN_ERR "PM: Failed to load hibernation image, recovering.\n");
 	swsusp_free();
-	free_basic_memory_bitmaps();
- Thaw:
-	unlock_device_hotplug();
 	thaw_processes();
+ Done:
+	free_basic_memory_bitmaps();
  Finish:
 	pm_notifier_call_chain(PM_POST_RESTORE);
 	pm_restore_console();
@@ -847,7 +854,7 @@ static int software_resume(void)
 	mutex_unlock(&pm_mutex);
 	pr_debug("PM: Hibernation image not present or could not be loaded.\n");
 	return error;
- Close_Finish:
+close_finish:
 	swsusp_close(FMODE_READ);
 	goto Finish;
 }

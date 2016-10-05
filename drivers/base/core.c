@@ -1909,12 +1909,10 @@ void device_shutdown(void)
 		pm_runtime_barrier(dev);
 
 		if (dev->bus && dev->bus->shutdown) {
-			if (initcall_debug)
-				dev_info(dev, "shutdown\n");
+			dev_dbg(dev, "shutdown\n");
 			dev->bus->shutdown(dev);
 		} else if (dev->driver && dev->driver->shutdown) {
-			if (initcall_debug)
-				dev_info(dev, "shutdown\n");
+			dev_dbg(dev, "shutdown\n");
 			dev->driver->shutdown(dev);
 		}
 		put_device(dev);

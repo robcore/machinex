@@ -30,6 +30,7 @@
 #include <linux/suspend.h>
 #include <linux/cpuidle.h>
 #include <linux/timer.h>
+#include <linux/slab.h>
 
 #include <linux/cpuidle.h>
 #include "../base.h"
@@ -108,7 +109,6 @@ void device_pm_add(struct device *dev)
 		dev_warn(dev, "parent %s should not be sleeping\n",
 			dev_name(dev->parent));
 	list_add_tail(&dev->power.entry, &dpm_list);
-	dev_pm_qos_constraints_init(dev);
 	mutex_unlock(&dpm_list_mtx);
 }
 
@@ -122,8 +122,8 @@ void device_pm_remove(struct device *dev)
 		 dev->bus ? dev->bus->name : "No Bus", dev_name(dev));
 	complete_all(&dev->power.completion);
 	mutex_lock(&dpm_list_mtx);
-	dev_pm_qos_constraints_destroy(dev);
 	list_del_init(&dev->power.entry);
+	dpm_wakeup_dev_remove(dev);
 	mutex_unlock(&dpm_list_mtx);
 	device_wakeup_disable(dev);
 	pm_runtime_remove(dev);
@@ -557,6 +557,7 @@ static void dpm_resume_noirq(pm_message_t state)
 				pm_dev_err(dev, state, " noirq", error);
 			}
 		}
+
 		mutex_lock(&dpm_list_mtx);
 		put_device(dev);
 	}
@@ -737,7 +738,6 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 
  Unlock:
 	device_unlock(dev);
-	dpm_wd_clear(&wd);
 
  Complete:
 	complete_all(&dev->power.completion);
@@ -1182,7 +1182,13 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (dev->power.syscore)
 		goto Complete;
 
-	dpm_wd_set(&wd, dev);
+	data.dev = dev;
+	data.tsk = get_current();
+	init_timer_on_stack(&timer);
+	timer.expires = jiffies + HZ * 12;
+	timer.function = dpm_drv_timeout;
+	timer.data = (unsigned long)&data;
+	add_timer(&timer);
 
 	device_lock(dev);
 
