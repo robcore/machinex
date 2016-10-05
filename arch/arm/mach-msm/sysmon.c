@@ -179,7 +179,7 @@ out:
 int sysmon_send_shutdown(enum subsys_id dest_ss)
 {
 	struct sysmon_subsys *ss = &subsys[dest_ss];
-	const char tx_buf[] = "ssr:shutdown";
+	const char tx_buf[] = "system:shutdown";
 	const char expect[] = "system:ack";
 	size_t prefix_len = ARRAY_SIZE(expect) - 1;
 	int ret;
@@ -190,7 +190,7 @@ int sysmon_send_shutdown(enum subsys_id dest_ss)
 	if (dest_ss < 0 || dest_ss >= SYSMON_NUM_SS)
 		return -EINVAL;
 
-	if ((!ss->chan_open) && (dest_ss != SYSMON_SS_EXT_MODEM))
+	if ((!ss->chan_open) && (dest_ss != mdm_drv->pdata->sysmon_subsys_id))
 		return -ENODEV;
 
 	mutex_lock(&ss->lock);

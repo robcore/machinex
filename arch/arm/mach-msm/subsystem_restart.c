@@ -369,7 +369,9 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 		/* If a system shutdown is underway, ignore errors. */
 		if (system_state == SYSTEM_POWER_OFF) {
-			pr_err("[%p]: Failed to powerup %s!", current, name);
+			//pr_err("[%p]: Failed to powerup %s!", current, name);
+		/*if we are ignoring errors in system shutdown, why the FUCK
+		would you print an error message? jesus */
 			return;
 		} else
 			panic("[%p]: Failed to powerup %s!", current, name);

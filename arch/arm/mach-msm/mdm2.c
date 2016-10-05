@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -140,14 +140,6 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 {
 	int i;
 	int pblrdy;
-	int kpd_direction_assert = 1,
-		kpd_direction_de_assert = 0;
-
-	if (mdm_drv->pdata->kpd_not_inverted) {
-		kpd_direction_assert = 0;
-		kpd_direction_de_assert = 1;
-	}
-
 	if (mdm_drv->power_on_count != 1) {
 		pr_debug("%s:id %d: Calling fn when power_on_count != 1\n",
 			   __func__, mdm_drv->device_id);
