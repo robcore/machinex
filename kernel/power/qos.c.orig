@@ -101,88 +101,6 @@ static struct pm_qos_object network_throughput_pm_qos = {
 };
 
 
-static BLOCKING_NOTIFIER_HEAD(min_online_cpus_notifier);
-static struct pm_qos_constraints min_online_cpus_constraints = {
-	.list = PLIST_HEAD_INIT(min_online_cpus_constraints.list),
-	.target_value = PM_QOS_MIN_ONLINE_CPUS_DEFAULT_VALUE,
-	.default_value = PM_QOS_MIN_ONLINE_CPUS_DEFAULT_VALUE,
-	.type = PM_QOS_MAX,
-	.notifiers = &min_online_cpus_notifier,
-};
-static struct pm_qos_object min_online_cpus_pm_qos = {
-	.constraints = &min_online_cpus_constraints,
-	.name = "min_online_cpus",
-};
-
-
-static BLOCKING_NOTIFIER_HEAD(max_online_cpus_notifier);
-static struct pm_qos_constraints max_online_cpus_constraints = {
-	.list = PLIST_HEAD_INIT(max_online_cpus_constraints.list),
-	.target_value = PM_QOS_MAX_ONLINE_CPUS_DEFAULT_VALUE,
-	.default_value = PM_QOS_MAX_ONLINE_CPUS_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &max_online_cpus_notifier,
-};
-static struct pm_qos_object max_online_cpus_pm_qos = {
-	.constraints = &max_online_cpus_constraints,
-	.name = "max_online_cpus",
-
-};
-
-
-static BLOCKING_NOTIFIER_HEAD(cpu_freq_min_notifier);
-static struct pm_qos_constraints cpu_freq_min_constraints = {
-	.list = PLIST_HEAD_INIT(cpu_freq_min_constraints.list),
-	.target_value = PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE,
-	.default_value = PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE,
-	.type = PM_QOS_MAX,
-	.notifiers = &cpu_freq_min_notifier,
-};
-static struct pm_qos_object cpu_freq_min_pm_qos = {
-	.constraints = &cpu_freq_min_constraints,
-	.name = "cpu_freq_min",
-};
-
-
-static BLOCKING_NOTIFIER_HEAD(cpu_freq_max_notifier);
-static struct pm_qos_constraints cpu_freq_max_constraints = {
-	.list = PLIST_HEAD_INIT(cpu_freq_max_constraints.list),
-	.target_value = PM_QOS_CPU_FREQ_MAX_DEFAULT_VALUE,
-	.default_value = PM_QOS_CPU_FREQ_MAX_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &cpu_freq_max_notifier,
-};
-static struct pm_qos_object cpu_freq_max_pm_qos = {
-	.constraints = &cpu_freq_max_constraints,
-	.name = "cpu_freq_max",
-};
-
-static BLOCKING_NOTIFIER_HEAD(gpu_freq_min_notifier);
-static struct pm_qos_constraints gpu_freq_min_constraints = {
-	.list = PLIST_HEAD_INIT(gpu_freq_min_constraints.list),
-	.target_value = PM_QOS_GPU_FREQ_MIN_DEFAULT_VALUE,
-	.default_value = PM_QOS_GPU_FREQ_MIN_DEFAULT_VALUE,
-	.type = PM_QOS_MAX,
-	.notifiers = &gpu_freq_min_notifier,
-};
-static struct pm_qos_object gpu_freq_min_pm_qos = {
-	.constraints = &gpu_freq_min_constraints,
-	.name = "gpu_freq_min",
-};
-
-static BLOCKING_NOTIFIER_HEAD(gpu_freq_max_notifier);
-static struct pm_qos_constraints gpu_freq_max_constraints = {
-	.list = PLIST_HEAD_INIT(gpu_freq_max_constraints.list),
-	.target_value = PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE,
-	.default_value = PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &gpu_freq_max_notifier,
-};
-static struct pm_qos_object gpu_freq_max_pm_qos = {
-	.constraints = &gpu_freq_max_constraints,
-	.name = "gpu_freq_max",
-};
-
 static BLOCKING_NOTIFIER_HEAD(cpu_dma_throughput_notifier);
 static struct pm_qos_constraints cpu_dma_tput_constraints = {
 	.list = PLIST_HEAD_INIT(cpu_dma_tput_constraints.list),
@@ -217,12 +135,6 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&network_throughput_pm_qos,
 	&cpu_dma_throughput_pm_qos,
 	&dvfs_lat_pm_qos,
-	&min_online_cpus_pm_qos,
-	&max_online_cpus_pm_qos,
-	&cpu_freq_min_pm_qos,
-	&cpu_freq_max_pm_qos,
-	&gpu_freq_min_pm_qos,
-	&gpu_freq_max_pm_qos
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
@@ -287,15 +199,6 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 	unsigned long flags;
 	int prev_value, curr_value, new_value, ret;
 
-	if (unlikely(value < PM_QOS_DEFAULT_VALUE)) {
-		panic("%s (value: %d, pid: %d, comm: %s)", __func__, value,
-				current->pid, current->comm);
-	}
-
-	/*
-	 * do not update qos value and generate kernel panic when the requested
-	 * value is smaller than PM_QOS_DEFAULT_VALUE.
-	 */
 	if (unlikely(value < PM_QOS_DEFAULT_VALUE)) {
 		panic("%s (value: %d, pid: %d, comm: %s)", __func__, value,
 				current->pid, current->comm);
