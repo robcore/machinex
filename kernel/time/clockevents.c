@@ -387,7 +387,6 @@ int clockevents_update_freq(struct clock_event_device *dev, u32 freq)
 	local_irq_restore(flags);
 	return ret;
 }
-EXPORT_SYMBOL_GPL(clockevents_config_and_register);
 
 /*
  * Noop handler when we shut down an event device
