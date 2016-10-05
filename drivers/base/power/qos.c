@@ -41,10 +41,12 @@
 #include <linux/mutex.h>
 #include <linux/export.h>
 #include <linux/pm_runtime.h>
+#include <linux/err.h>
 
 #include "power.h"
 
 static DEFINE_MUTEX(dev_pm_qos_mtx);
+static DEFINE_MUTEX(dev_pm_qos_sysfs_mtx);
 
 static BLOCKING_NOTIFIER_HEAD(dev_pm_notifiers);
 
@@ -61,7 +63,7 @@ enum pm_qos_flags_status __dev_pm_qos_flags(struct device *dev, s32 mask)
 	struct pm_qos_flags *pqf;
 	s32 val;
 
-	if (!qos)
+	if (IS_ERR_OR_NULL(qos))
 		return PM_QOS_FLAGS_UNDEFINED;
 
 	pqf = &qos->flags;
@@ -101,7 +103,8 @@ EXPORT_SYMBOL_GPL(dev_pm_qos_flags);
  */
 s32 __dev_pm_qos_read_value(struct device *dev)
 {
-	return dev->power.qos ? pm_qos_read_value(&dev->power.qos->latency) : 0;
+	return IS_ERR_OR_NULL(dev->power.qos) ?
+		0 : pm_qos_read_value(&dev->power.qos->latency);
 }
 
 /**
@@ -198,20 +201,8 @@ static int dev_pm_qos_constraints_allocate(struct device *dev)
 	return 0;
 }
 
-/**
- * dev_pm_qos_constraints_init - Initalize device's PM QoS constraints pointer.
- * @dev: target device
- *
- * Called from the device PM subsystem during device insertion under
- * device_pm_lock().
- */
-void dev_pm_qos_constraints_init(struct device *dev)
-{
-	mutex_lock(&dev_pm_qos_mtx);
-	dev->power.qos = NULL;
-	dev->power.power_state = PMSG_ON;
-	mutex_unlock(&dev_pm_qos_mtx);
-}
+static void __dev_pm_qos_hide_latency_limit(struct device *dev);
+static void __dev_pm_qos_hide_flags(struct device *dev);
 
 /**
  * dev_pm_qos_constraints_destroy
@@ -226,16 +217,20 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	struct pm_qos_constraints *c;
 	struct pm_qos_flags *f;
 
+	mutex_lock(&dev_pm_qos_sysfs_mtx);
+
 	/*
 	 * If the device's PM QoS resume latency limit or PM QoS flags have been
 	 * exposed to user space, they have to be hidden at this point.
 	 */
-	dev_pm_qos_hide_latency_limit(dev);
-	dev_pm_qos_hide_flags(dev);
+	pm_qos_sysfs_remove_latency(dev);
+	pm_qos_sysfs_remove_flags(dev);
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	dev->power.power_state = PMSG_INVALID;
+	__dev_pm_qos_hide_latency_limit(dev);
+	__dev_pm_qos_hide_flags(dev);
+
 	qos = dev->power.qos;
 	if (!qos)
 		goto out;
@@ -257,7 +252,7 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	}
 
 	spin_lock_irq(&dev->power.lock);
-	dev->power.qos = NULL;
+	dev->power.qos = ERR_PTR(-ENODEV);
 	spin_unlock_irq(&dev->power.lock);
 
 	kfree(c->notifiers);
@@ -265,6 +260,8 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 
  out:
 	mutex_unlock(&dev_pm_qos_mtx);
+
+	mutex_unlock(&dev_pm_qos_sysfs_mtx);
 }
 
 /**
@@ -301,32 +298,19 @@ int dev_pm_qos_add_request(struct device *dev, struct dev_pm_qos_request *req,
 		 "%s() called for already added request\n", __func__))
 		return -EINVAL;
 
-	req->dev = dev;
-
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.qos) {
-		if (dev->power.power_state.event == PM_EVENT_INVALID) {
-			/* The device has been removed from the system. */
-			req->dev = NULL;
-			ret = -ENODEV;
-			goto out;
-		} else {
-			/*
-			 * Allocate the constraints data on the first call to
-			 * add_request, i.e. only if the data is not already
-			 * allocated and if the device has not been removed.
-			 */
-			ret = dev_pm_qos_constraints_allocate(dev);
-		}
-	}
+	if (IS_ERR(dev->power.qos))
+		ret = -ENODEV;
+	else if (!dev->power.qos)
+		ret = dev_pm_qos_constraints_allocate(dev);
 
 	if (!ret) {
+		req->dev = dev;
 		req->type = type;
 		ret = apply_constraint(req, PM_QOS_ADD_REQ, value);
 	}
 
- out:
 	mutex_unlock(&dev_pm_qos_mtx);
 
 	return ret;
@@ -351,7 +335,7 @@ static int __dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 		 "%s() called for unknown object\n", __func__))
 		return -EINVAL;
 
-	if (!req->dev->power.qos)
+	if (IS_ERR_OR_NULL(req->dev->power.qos))
 		return -ENODEV;
 
 	switch(req->type) {
@@ -402,7 +386,7 @@ EXPORT_SYMBOL_GPL(dev_pm_qos_update_request);
 
 static int __dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 {
-	int ret = 0;
+	int ret;
 
 	if (!req) /*guard against callers passing in null */
 		return -EINVAL;
@@ -411,13 +395,11 @@ static int __dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 		 "%s() called for unknown object\n", __func__))
 		return -EINVAL;
 
-	if (req->dev->power.qos) {
-		ret = apply_constraint(req, PM_QOS_REMOVE_REQ,
-				       PM_QOS_DEFAULT_VALUE);
-		memset(req, 0, sizeof(*req));
-	} else {
-		ret = -ENODEV;
-	}
+	if (IS_ERR_OR_NULL(req->dev->power.qos))
+		return -ENODEV;
+
+	ret = apply_constraint(req, PM_QOS_REMOVE_REQ, PM_QOS_DEFAULT_VALUE);
+	memset(req, 0, sizeof(*req));
 	return ret;
 }
 
@@ -466,9 +448,10 @@ int dev_pm_qos_add_notifier(struct device *dev, struct notifier_block *notifier)
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.qos)
-		ret = dev->power.power_state.event != PM_EVENT_INVALID ?
-			dev_pm_qos_constraints_allocate(dev) : -ENODEV;
+	if (IS_ERR(dev->power.qos))
+		ret = -ENODEV;
+	else if (!dev->power.qos)
+		ret = dev_pm_qos_constraints_allocate(dev);
 
 	if (!ret)
 		ret = blocking_notifier_chain_register(
@@ -497,7 +480,7 @@ int dev_pm_qos_remove_notifier(struct device *dev,
 	mutex_lock(&dev_pm_qos_mtx);
 
 	/* Silently return if the constraints object is not present. */
-	if (dev->power.qos)
+	if (!IS_ERR_OR_NULL(dev->power.qos))
 		retval = blocking_notifier_chain_unregister(
 				dev->power.qos->latency.notifiers,
 				notifier);
@@ -583,6 +566,14 @@ static void __dev_pm_qos_drop_user_request(struct device *dev,
 	kfree(req);
 }
 
+static void dev_pm_qos_drop_user_request(struct device *dev,
+					 enum dev_pm_qos_req_type type)
+{
+	mutex_lock(&dev_pm_qos_mtx);
+	__dev_pm_qos_drop_user_request(dev, type);
+	mutex_unlock(&dev_pm_qos_mtx);
+}
+
 /**
  * dev_pm_qos_expose_latency_limit - Expose PM QoS latency limit to user space.
  * @dev: Device whose PM QoS latency limit is to be exposed to user space.
@@ -606,9 +597,11 @@ int dev_pm_qos_expose_latency_limit(struct device *dev, s32 value)
 		return ret;
 	}
 
+	mutex_lock(&dev_pm_qos_sysfs_mtx);
+
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.qos)
+	if (IS_ERR_OR_NULL(dev->power.qos))
 		ret = -ENODEV;
 	else if (dev->power.qos->latency_req)
 		ret = -EEXIST;
@@ -616,19 +609,28 @@ int dev_pm_qos_expose_latency_limit(struct device *dev, s32 value)
 	if (ret < 0) {
 		__dev_pm_qos_remove_request(req);
 		kfree(req);
+		mutex_unlock(&dev_pm_qos_mtx);
 		goto out;
 	}
-
 	dev->power.qos->latency_req = req;
+
+	mutex_unlock(&dev_pm_qos_mtx);
+
 	ret = pm_qos_sysfs_add_latency(dev);
 	if (ret)
-		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_LATENCY);
+		dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_LATENCY);
 
  out:
-	mutex_unlock(&dev_pm_qos_mtx);
+	mutex_unlock(&dev_pm_qos_sysfs_mtx);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_expose_latency_limit);
+
+static void __dev_pm_qos_hide_latency_limit(struct device *dev)
+{
+	if (!IS_ERR_OR_NULL(dev->power.qos) && dev->power.qos->latency_req)
+		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_LATENCY);
+}
 
 /**
  * dev_pm_qos_hide_latency_limit - Hide PM QoS latency limit from user space.
@@ -636,14 +638,15 @@ EXPORT_SYMBOL_GPL(dev_pm_qos_expose_latency_limit);
  */
 void dev_pm_qos_hide_latency_limit(struct device *dev)
 {
+	mutex_lock(&dev_pm_qos_sysfs_mtx);
+
+	pm_qos_sysfs_remove_latency(dev);
+
 	mutex_lock(&dev_pm_qos_mtx);
-
-	if (dev->power.qos && dev->power.qos->latency_req) {
-		pm_qos_sysfs_remove_latency(dev);
-		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_LATENCY);
-	}
-
+	__dev_pm_qos_hide_latency_limit(dev);
 	mutex_unlock(&dev_pm_qos_mtx);
+
+	mutex_unlock(&dev_pm_qos_sysfs_mtx);
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_hide_latency_limit);
 
@@ -671,9 +674,11 @@ int dev_pm_qos_expose_flags(struct device *dev, s32 val)
 	}
 
 	pm_runtime_get_sync(dev);
+	mutex_lock(&dev_pm_qos_sysfs_mtx);
+
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.qos)
+	if (IS_ERR_OR_NULL(dev->power.qos))
 		ret = -ENODEV;
 	else if (dev->power.qos->flags_req)
 		ret = -EEXIST;
@@ -681,20 +686,29 @@ int dev_pm_qos_expose_flags(struct device *dev, s32 val)
 	if (ret < 0) {
 		__dev_pm_qos_remove_request(req);
 		kfree(req);
+		mutex_unlock(&dev_pm_qos_mtx);
 		goto out;
 	}
-
 	dev->power.qos->flags_req = req;
+
+	mutex_unlock(&dev_pm_qos_mtx);
+
 	ret = pm_qos_sysfs_add_flags(dev);
 	if (ret)
-		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_FLAGS);
+		dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_FLAGS);
 
  out:
-	mutex_unlock(&dev_pm_qos_mtx);
+	mutex_unlock(&dev_pm_qos_sysfs_mtx);
 	pm_runtime_put(dev);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_expose_flags);
+
+static void __dev_pm_qos_hide_flags(struct device *dev)
+{
+	if (!IS_ERR_OR_NULL(dev->power.qos) && dev->power.qos->flags_req)
+		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_FLAGS);
+}
 
 /**
  * dev_pm_qos_hide_flags - Hide PM QoS flags of a device from user space.
@@ -703,14 +717,15 @@ EXPORT_SYMBOL_GPL(dev_pm_qos_expose_flags);
 void dev_pm_qos_hide_flags(struct device *dev)
 {
 	pm_runtime_get_sync(dev);
+	mutex_lock(&dev_pm_qos_sysfs_mtx);
+
+	pm_qos_sysfs_remove_flags(dev);
+
 	mutex_lock(&dev_pm_qos_mtx);
-
-	if (dev->power.qos && dev->power.qos->flags_req) {
-		pm_qos_sysfs_remove_flags(dev);
-		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_FLAGS);
-	}
-
+	__dev_pm_qos_hide_flags(dev);
 	mutex_unlock(&dev_pm_qos_mtx);
+
+	mutex_unlock(&dev_pm_qos_sysfs_mtx);
 	pm_runtime_put(dev);
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_hide_flags);
@@ -729,7 +744,7 @@ int dev_pm_qos_update_flags(struct device *dev, s32 mask, bool set)
 	pm_runtime_get_sync(dev);
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.qos || !dev->power.qos->flags_req) {
+	if (IS_ERR_OR_NULL(dev->power.qos) || !dev->power.qos->flags_req) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -747,4 +762,7 @@ int dev_pm_qos_update_flags(struct device *dev, s32 mask, bool set)
 	pm_runtime_put(dev);
 	return ret;
 }
+#else /* !CONFIG_PM_RUNTIME */
+static void __dev_pm_qos_hide_latency_limit(struct device *dev) {}
+static void __dev_pm_qos_hide_flags(struct device *dev) {}
 #endif /* CONFIG_PM_RUNTIME */
