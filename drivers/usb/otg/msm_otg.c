@@ -456,9 +456,6 @@ static int msm_otg_phy_reset(struct msm_otg *motg)
 	ret = msm_otg_phy_clk_reset(motg);
 	if (ret)
 		return ret;
-	/* 10 usec delay is required according to spec */
-	if (IS_ERR(motg->phy_reset_clk))
-		usleep_range(10, 12);
 	ret = msm_otg_link_clk_reset(motg, 0);
 	if (ret)
 		return ret;
@@ -745,9 +742,6 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
 	if (aca_enabled())
 		return 0;
 
-	if (atomic_read(&motg->in_lpm) == suspend)
-		return 0;
-
 	/*
 	 * UDC and HCD call usb_phy_set_suspend() to enter/exit LPM
 	 * during bus suspend/resume.  Update the relevant state
@@ -968,11 +962,9 @@ static int msm_otg_suspend(struct msm_otg *motg)
 	}
 
 	if (device_may_wakeup(phy->dev)) {
+		enable_irq_wake(motg->irq);
 		if (motg->async_irq)
 			enable_irq_wake(motg->async_irq);
-		else
-			enable_irq_wake(motg->irq);
-
 		if (motg->pdata->pmic_id_irq)
 			enable_irq_wake(motg->pdata->pmic_id_irq);
 		if (pdata->otg_control == OTG_PHY_CONTROL &&
@@ -1075,11 +1067,9 @@ static int msm_otg_resume(struct msm_otg *motg)
 
 skip_phy_resume:
 	if (device_may_wakeup(phy->dev)) {
+		disable_irq_wake(motg->irq);
 		if (motg->async_irq)
 			disable_irq_wake(motg->async_irq);
-		else
-			disable_irq_wake(motg->irq);
-
 		if (motg->pdata->pmic_id_irq)
 			disable_irq_wake(motg->pdata->pmic_id_irq);
 		if (pdata->otg_control == OTG_PHY_CONTROL &&
@@ -1212,8 +1202,14 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 	if (motg->cur_power == mA)
 		return;
 
-	pm8921_charger_vbus_draw(mA);
-	msm_otg_notify_power_supply(motg, mA);
+	dev_info(motg->phy.dev, "Avail curr from USB = %u\n", mA);
+
+	/*
+	 *  Use Power Supply API if supported, otherwise fallback
+	 *  to legacy pm8921 API.
+	 */
+	if (msm_otg_notify_power_supply(motg, mA))
+		pm8921_charger_vbus_draw(mA);
 
 	motg->cur_power = mA;
 #endif
@@ -2211,8 +2207,6 @@ static void msm_chg_block_off(struct msm_otg *motg)
 		/* Clear alt interrupt latch and enable bits */
 		ulpi_write(phy, 0x1F, 0x92);
 		ulpi_write(phy, 0x1F, 0x95);
-		/* re-enable DP and DM pull down resistors */
-		ulpi_write(phy, 0x6, 0xB);
 		break;
 	default:
 		break;
@@ -2607,9 +2601,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 			 * switch from ACA to PMIC.  Check ID state
 			 * before entering into low power mode.
 			 */
-			if ((motg->pdata->otg_control == OTG_PMIC_CONTROL) &&
-					(aca_enabled()) &&
-					(!msm_otg_read_pmic_id_state(motg))) {
+			if (!msm_otg_read_pmic_id_state(motg)) {
 				pr_debug("process missed ID intr\n");
 				clear_bit(ID, &motg->inputs);
 				work = 1;
@@ -2842,9 +2834,6 @@ static void msm_otg_sm_work(struct work_struct *w)
 			if (TA_WAIT_BCON > 0)
 				msm_otg_start_timer(motg, TA_WAIT_BCON,
 					A_WAIT_BCON);
-
-			/* Clear BSV in host mode */
-			clear_bit(B_SESS_VLD, &motg->inputs);
 			msm_otg_start_host(otg, 1);
 			msm_chg_enable_aca_det(motg);
 			msm_chg_disable_aca_intr(motg);
@@ -3421,12 +3410,9 @@ static int msm_otg_mode_show(struct seq_file *s, void *unused)
 	struct usb_phy *phy = &motg->phy;
 
 	switch (phy->state) {
-	case OTG_STATE_A_WAIT_BCON:
 	case OTG_STATE_A_HOST:
-	case OTG_STATE_A_SUSPEND:
 		seq_printf(s, "host\n");
 		break;
-	case OTG_STATE_B_IDLE:
 	case OTG_STATE_B_PERIPHERAL:
 		seq_printf(s, "peripheral\n");
 		break;
@@ -3474,9 +3460,7 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 	switch (req_mode) {
 	case USB_NONE:
 		switch (phy->state) {
-		case OTG_STATE_A_WAIT_BCON:
 		case OTG_STATE_A_HOST:
-		case OTG_STATE_A_SUSPEND:
 		case OTG_STATE_B_PERIPHERAL:
 			set_bit(ID, &motg->inputs);
 			clear_bit(B_SESS_VLD, &motg->inputs);
@@ -3488,9 +3472,7 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 	case USB_PERIPHERAL:
 		switch (phy->state) {
 		case OTG_STATE_B_IDLE:
-		case OTG_STATE_A_WAIT_BCON:
 		case OTG_STATE_A_HOST:
-		case OTG_STATE_A_SUSPEND:
 			set_bit(ID, &motg->inputs);
 			set_bit(B_SESS_VLD, &motg->inputs);
 			break;
@@ -3502,7 +3484,6 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 		switch (phy->state) {
 		case OTG_STATE_B_IDLE:
 		case OTG_STATE_B_PERIPHERAL:
-			clear_bit(B_SESS_VLD, &motg->inputs);
 			clear_bit(ID, &motg->inputs);
 			break;
 		default:
@@ -3842,8 +3823,6 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 				&pdata->pmic_id_irq);
 	pdata->disable_reset_on_disconnect = of_property_read_bool(node,
 				"qcom,hsusb-otg-disable-reset");
-	pdata->dp_manual_pullup = of_property_read_bool(node,
-				"qcom,dp-manual-pullup");
 
 	return pdata;
 }
@@ -4087,8 +4066,6 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	phy->otg->set_peripheral = msm_otg_set_peripheral;
 	phy->otg->start_hnp = msm_otg_start_hnp;
 	phy->otg->start_srp = msm_otg_start_srp;
-	if (pdata->dp_manual_pullup)
-		phy->flags |= ENABLE_DP_MANUAL_PULLUP;
 
 	ret = usb_set_transceiver(&motg->phy);
 	if (ret) {
