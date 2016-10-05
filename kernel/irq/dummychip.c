@@ -57,4 +57,3 @@ struct irq_chip dummy_irq_chip = {
 	.irq_mask	= noop,
 	.irq_unmask	= noop,
 };
-EXPORT_SYMBOL_GPL(dummy_irq_chip);
