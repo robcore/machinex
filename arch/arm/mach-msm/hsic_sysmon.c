@@ -368,7 +368,7 @@ hsic_sysmon_probe(struct usb_interface *ifc, const struct usb_device_id *id)
 	usb_set_intfdata(ifc, hs);
 
 	hs->pdev.name = "sys_mon";
-	hs->pdev.id = mdm_drv->pdata->sysmon_subsys_id + hs->id;
+	hs->pdev.id = SYSMON_SS_EXT_MODEM + hs->id;
 	hs->pdev.dev.release = hsic_sysmon_pdev_release;
 	platform_device_register(&hs->pdev);
 
