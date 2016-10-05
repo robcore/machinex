@@ -5249,7 +5249,7 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 };
 #endif
 
-static void msmsdcc_print_regs(const char *name, void __iomem *base,
+/*static void msmsdcc_print_regs(const char *name, void __iomem *base,
 			       u32 phys_base, unsigned int no_of_regs)
 {
 	unsigned int i;
@@ -5270,7 +5270,7 @@ static void msmsdcc_print_regs(const char *name, void __iomem *base,
 
 static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 {
-	/* Dump current state of SDCC clocks, power and irq */
+ Dump current state of SDCC clocks, power and irq
 	pr_err("%s: SDCC PWR is %s\n", mmc_hostname(host->mmc),
 		(host->pwr ? "ON" : "OFF"));
 	pr_err("%s: SDCC clks are %s, MCLK rate=%d\n",
@@ -5280,7 +5280,7 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 	pr_err("%s: SDCC irq is %s\n", mmc_hostname(host->mmc),
 		(host->sdcc_irq_disabled ? "disabled" : "enabled"));
 
-	/* Now dump SDCC registers. Don't print FIFO registers */
+	 Now dump SDCC registers. Don't print FIFO registers
 	if (atomic_read(&host->clks_on)) {
 		msmsdcc_print_regs("SDCC-CORE", host->base,
 				host->core_memres->start, 28);
@@ -5325,7 +5325,7 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 		host->curr.wait_for_auto_prog_done,
 		host->curr.got_auto_prog_done, host->curr.req_tout_ms);
 	msmsdcc_print_rpm_info(host);
-}
+} */
 
 static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 {
