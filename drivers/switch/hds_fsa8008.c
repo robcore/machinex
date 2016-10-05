@@ -475,7 +475,7 @@ static int hsd_probe(struct platform_device *pdev)
 	}
 
 	ret = request_threaded_irq(hi->irq_detect, NULL, gpio_irq_handler,
-			IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING,
+			IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING|IRQF_ONESHOT,
 			pdev->name, hi);
 	if (ret) {
 		pr_err("%s: failed to request button irq\n", __func__);

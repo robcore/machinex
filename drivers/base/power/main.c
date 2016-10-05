@@ -121,6 +121,7 @@ void device_pm_remove(struct device *dev)
 	complete_all(&dev->power.completion);
 	mutex_lock(&dpm_list_mtx);
 	list_del_init(&dev->power.entry);
+	dpm_wakeup_dev_remove(dev);
 	mutex_unlock(&dpm_list_mtx);
 	device_wakeup_disable(dev);
 	pm_runtime_remove(dev);
@@ -500,8 +501,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
-
-	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -556,6 +555,7 @@ static void dpm_resume_noirq(pm_message_t state)
 				pm_dev_err(dev, state, " noirq", error);
 			}
 		}
+
 		mutex_lock(&dpm_list_mtx);
 		put_device(dev);
 	}
@@ -609,6 +609,8 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
+
+	pm_runtime_enable(dev);
 	return error;
 }
 
