@@ -781,10 +781,6 @@ static struct ci13xxx_platform_data msm_hsic_peripheral_pdata = {
 	.prv_data = &msm_hsic_peripheral_pdata_private,
 };
 
-static struct msm_hsic_host_platform_data msm_hsic_pdata = {
-	.phy_sof_workaround	= true,
-};
-
 #define PID_MAGIC_ID		0x71432909
 #define SERIAL_NUM_MAGIC_ID	0x61945374
 #define SERIAL_NUMBER_LENGTH	127

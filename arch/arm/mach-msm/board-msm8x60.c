@@ -1065,7 +1065,7 @@ static int msm_hsusb_pmic_id_notif_init(void (*callback)(int online), int init)
 			return ret;
 		}
 		ret = request_threaded_irq(PMICID_INT, NULL, pmic_id_on_irq,
-			(IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING|IRQF_ONESHOT),
+			(IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING),
 						"msm_otg_id", NULL);
 		if (ret) {
 			pr_err("%s:pmic_usb_id interrupt registration failed",

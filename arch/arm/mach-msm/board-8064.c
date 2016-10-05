@@ -345,7 +345,6 @@ static struct platform_device ion_mm_heap_device = {
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	}
 };
-
 static struct platform_device ion_adsp_heap_device = {
 	.name = "ion-adsp-heap-device",
 	.id = -1,
@@ -800,7 +799,6 @@ static struct msm_bus_scale_pdata hsic_bus_scale_pdata = {
 static struct msm_hsic_host_platform_data msm_hsic_pdata = {
 	.strobe			= 88,
 	.data			= 89,
-	.phy_sof_workaround	= true,
 	.bus_scale_table	= &hsic_bus_scale_pdata,
 };
 #else
@@ -3296,7 +3294,7 @@ static void __init apq8064ab_update_retention_spm(void)
 		}
 	}
 }
-
+/* for now
 static struct clk_lookup msm_clocks_dummy[] = {
 	CLK_DUMMY("core_clk",   BLSP1_UART_CLK, "msm_serial_hsl.0", OFF),
 	CLK_DUMMY("iface_clk",  BLSP1_UART_CLK, "msm_serial_hsl.0", OFF),
@@ -3306,6 +3304,7 @@ static struct clk_lookup msm_clocks_dummy[] = {
 	CLK_DUMMY("iface_clk",	SDC2_P_CLK,	"msm_sdcc.2", OFF),
 
 };
+*/ 
 
 static void __init apq8064_common_init(void)
 {

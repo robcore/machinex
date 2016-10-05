@@ -3615,13 +3615,13 @@ static struct clk_freq_tbl clk_tbl_gfx3d_8930ab[] = {
 
 static unsigned long fmax_gfx3d_8064ab[VDD_DIG_NUM] = {
 	[VDD_DIG_LOW]     = 128000000,
-	[VDD_DIG_NOMINAL] = 320000000,
+	[VDD_DIG_NOMINAL] = 325000000,
 	[VDD_DIG_HIGH]    = 450000000
 };
 
 static unsigned long fmax_gfx3d_8064[VDD_DIG_NUM] = {
 	[VDD_DIG_LOW]     = 128000000,
-	[VDD_DIG_NOMINAL] = 320000000,
+	[VDD_DIG_NOMINAL] = 325000000,
 	[VDD_DIG_HIGH]    = 400000000
 };
 
@@ -4382,7 +4382,7 @@ static struct rcg_clk vcodec_clk = {
 		.dbg_name = "vcodec_clk",
 		.ops = &clk_ops_rcg,
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
-				  HIGH, 266670000),
+				  HIGH, 228571000),
 		CLK_INIT(vcodec_clk.c),
 		.depends = &vcodec_axi_clk.c,
 	},
@@ -6897,7 +6897,7 @@ static void __init msm8960_clock_pre_init(void)
 	if (cpu_is_msm8960ab()) {
 		pll3_clk.c.rate = 650000000;
 		gfx3d_clk.c.fmax[VDD_DIG_LOW] = 192000000;
-		gfx3d_clk.c.fmax[VDD_DIG_NOMINAL] = 320000000;
+		gfx3d_clk.c.fmax[VDD_DIG_NOMINAL] = 325000000;
 		gfx3d_clk.c.fmax[VDD_DIG_HIGH] = 400000000;
 		mdp_clk.freq_tbl = clk_tbl_mdp_8960ab;
 		mdp_clk.c.fmax[VDD_DIG_LOW] = 128000000;

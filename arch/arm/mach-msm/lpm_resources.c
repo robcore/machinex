@@ -669,7 +669,8 @@ int msm_lpmrs_enter_sleep(uint32_t sclk_count, struct msm_rpmrs_limits *limits,
 	}
 	msm_lpm_get_rpm_notif = true;
 
-	msm_mpm_enter_sleep(sclk_count, from_idle);
+	if (msm_lpm_use_mpm(limits))
+		msm_mpm_enter_sleep(sclk_count, from_idle);
 
 	return ret;
 }
