@@ -90,10 +90,10 @@ static struct ion_client *iclient;
 
 u32 msm_fb_debug_enabled;
 /* Setting msm_fb_msg_level to 8 prints out ALL messages */
-u32 msm_fb_msg_level = 0;
+u32 msm_fb_msg_level = 7;
 
 /* Setting mddi_msg_level to 8 prints out ALL messages */
-u32 mddi_msg_level = 0;
+u32 mddi_msg_level = 5;
 
 extern int32 mdp_block_power_cnt[MDP_MAX_BLOCK];
 extern unsigned long mdp_timer_duration;
@@ -2505,12 +2505,6 @@ int msm_fb_resume_sw_refresher(struct msm_fb_data_type *mfd)
 
 	if (mfd->hw_refresh)
 		return -EPERM;
-
-	/*
-	 * Little hack to allow the lowest brightness value to be as low as possible
-	 */
-	if (bl_lvl <= 5)
-		bl_lvl = mfd->panel_info.bl_min;
 
 	down(&mfd->sem);
 	if ((!mfd->sw_currently_refreshing) && (mfd->sw_refreshing_enable)) {
