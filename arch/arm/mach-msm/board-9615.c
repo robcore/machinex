@@ -1000,7 +1000,6 @@ static void __init msm9615_common_init(void)
 		&msm_peripheral_pdata;
 	msm_device_hsic_peripheral.dev.platform_data =
 		&msm_hsic_peripheral_pdata;
-	msm_device_hsic_host.dev.platform_data = &msm_hsic_pdata;
 	msm_device_usb_bam.dev.platform_data = &msm_usb_bam_pdata;
 	platform_add_devices(common_devices, ARRAY_SIZE(common_devices));
 	msm9615_pm8xxx_gpio_mpp_init();

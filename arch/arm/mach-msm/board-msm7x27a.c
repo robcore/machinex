@@ -16,6 +16,7 @@
 #include <asm/mach-types.h>
 #include <linux/memblock.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/gic.h>
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_hsusb.h>

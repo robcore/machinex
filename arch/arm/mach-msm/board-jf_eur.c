@@ -1300,10 +1300,8 @@ static struct msm_bus_scale_pdata hsic_bus_scale_pdata = {
 };
 
 static struct msm_hsic_host_platform_data msm_hsic_pdata = {
-	.log2_irq_thresh	= 5,
 	.strobe			= 88,
 	.data			= 89,
-    .phy_sof_workaround	= true,
 	.bus_scale_table	= &hsic_bus_scale_pdata,
 };
 #else
@@ -3329,14 +3327,14 @@ static struct msm_rpmrs_level msm_rpmrs_levels[] = {
 	{
 		MSM_PM_SLEEP_MODE_RETENTION,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		false,
+		true,
 		415, 715, 340827, 475,
 	},
 
 	{
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		false,
+		true,
 		1300, 228, 1200000, 2000,
 	},
 
@@ -5472,6 +5470,7 @@ static void __init apq8064_allocate_memory_regions(void)
 
 static void __init apq8064_gpio_keys_init(void)
 {
+	int ret;
 	struct pm_gpio param = {
 		.direction     = PM_GPIO_DIR_IN,
 		.pull          = PM_GPIO_PULL_UP_31P5,
@@ -5480,8 +5479,6 @@ static void __init apq8064_gpio_keys_init(void)
 		.function      = PM_GPIO_FUNC_NORMAL,
 	};
 #ifdef CONFIG_SENSORS_HALL
-	int ret;
-
 	struct pm_gpio param_hall_ic = {
 		.direction     = PM_GPIO_DIR_IN,
 		.pull          = PM_GPIO_PULL_NO,
