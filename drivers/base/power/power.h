@@ -9,12 +9,6 @@ static inline void device_pm_init_common(struct device *dev)
 	}
 }
 
-static inline void device_pm_init_common(struct device *dev)
-{
-	spin_lock_init(&dev->power.lock);
-	dev->power.power_state = PMSG_INVALID;
-}
-
 #ifdef CONFIG_PM_RUNTIME
 
 static inline void pm_runtime_early_init(struct device *dev)
@@ -95,13 +89,6 @@ static inline void device_pm_move_after(struct device *deva,
 static inline void device_pm_move_last(struct device *dev) {}
 
 #endif /* !CONFIG_PM_SLEEP */
-
-static inline void device_pm_init(struct device *dev)
-{
-	device_pm_init_common(dev);
-	device_pm_sleep_init(dev);
-	pm_runtime_init(dev);
-}
 
 static inline void device_pm_init(struct device *dev)
 {
