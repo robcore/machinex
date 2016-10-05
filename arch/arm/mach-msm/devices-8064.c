@@ -1418,8 +1418,8 @@ static struct resource resources_hsic_host[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.start	= MSM_GPIO_TO_INT(45),
-		.end	= MSM_GPIO_TO_INT(45),
+		.start	= 47,
+		.end	= 47,
 		.name	= "wakeup",
 		.flags	= IORESOURCE_IO,
 	},

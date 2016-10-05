@@ -2003,7 +2003,10 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
 	dev_dbg(dev, "EHCI runtime suspend\n");
-	return 0;
+
+	dbg_log_event(NULL, "Run Time PM Suspend", 0);
+
+	return msm_hsic_suspend(mehci);
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
@@ -2012,7 +2015,10 @@ static int msm_hsic_runtime_resume(struct device *dev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
 	dev_dbg(dev, "EHCI runtime resume\n");
-	return 0;
+
+	dbg_log_event(NULL, "Run Time PM Resume", 0);
+
+	return msm_hsic_resume(mehci);
 }
 #endif
 
