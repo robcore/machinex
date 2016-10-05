@@ -74,11 +74,11 @@ xfs_find_handle(
 	struct inode		*inode;
 	struct file		*file = NULL;
 	struct path		path;
-	int			error, fput_needed;
+	int			error;
 	struct xfs_inode	*ip;
 
 	if (cmd == XFS_IOC_FD_TO_HANDLE) {
-		file = fget_light(hreq->fd, &fput_needed);
+		file = fget(hreq->fd);
 		if (!file)
 			return -EBADF;
 		inode = file->f_path.dentry->d_inode;
@@ -136,7 +136,7 @@ xfs_find_handle(
 
  out_put:
 	if (cmd == XFS_IOC_FD_TO_HANDLE)
-		fput_light(file, fput_needed);
+		fput(file);
 	else
 		path_put(&path);
 	return error;

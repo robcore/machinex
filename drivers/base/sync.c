@@ -34,6 +34,7 @@
 static void sync_fence_signal_pt(struct sync_pt *pt);
 static int _sync_pt_has_signaled(struct sync_pt *pt);
 static void sync_fence_free(struct kref *kref);
+static void sync_dump(struct sync_fence *fence);
 
 static LIST_HEAD(sync_timeline_list_head);
 static DEFINE_SPINLOCK(sync_timeline_list_lock);
@@ -585,74 +586,6 @@ static bool sync_fence_check(struct sync_fence *fence)
 	return fence->status != 0;
 }
 
-static const char *sync_status_str(int status)
-{
-	if (status > 0)
-		return "signaled";
-	else if (status == 0)
-		return "active";
-	else
-		return "error";
-}
-
-static void sync_pt_log(struct sync_pt *pt)
-{
-	int status = pt->status;
-	pr_cont("  %s_pt %s",
-		   pt->parent->name,
-		   sync_status_str(status));
-
-	if (pt->status) {
-		struct timeval tv = ktime_to_timeval(pt->timestamp);
-		pr_cont("@%ld.%06ld", tv.tv_sec, tv.tv_usec);
-	}
-
-	if (pt->parent->ops->timeline_value_str &&
-	    pt->parent->ops->pt_value_str) {
-		char value[64];
-		pt->parent->ops->pt_value_str(pt, value, sizeof(value));
-		pr_cont(": %s", value);
-		pt->parent->ops->timeline_value_str(pt->parent, value,
-					    sizeof(value));
-		pr_cont(" / %s", value);
-	}
-
-	pr_cont("\n");
-
-	/* Show additional details for active fences */
-	if (pt->status == 0 && pt->parent->ops->pt_log)
-		pt->parent->ops->pt_log(pt);
-}
-
-void sync_fence_log(struct sync_fence *fence)
-{
-	struct list_head *pos;
-	unsigned long flags;
-
-	pr_info("[%p] %s: %s\n", fence, fence->name,
-		sync_status_str(fence->status));
-
-	pr_info("waiters:\n");
-
-	spin_lock_irqsave(&fence->waiter_list_lock, flags);
-	list_for_each(pos, &fence->waiter_list_head) {
-		struct sync_fence_waiter *waiter =
-			container_of(pos, struct sync_fence_waiter,
-				     waiter_list);
-
-		pr_info(" %pF\n", waiter->callback);
-	}
-	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
-
-	pr_info("syncpoints:\n");
-	list_for_each(pos, &fence->pt_list_head) {
-		struct sync_pt *pt =
-			container_of(pos, struct sync_pt, pt_list);
-		sync_pt_log(pt);
-	}
-}
-EXPORT_SYMBOL(sync_fence_log);
-
 int sync_fence_wait(struct sync_fence *fence, long timeout)
 {
 	int err = 0;
@@ -678,7 +611,7 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 
 	if (fence->status < 0) {
 		pr_info("fence error %d on [%p]\n", fence->status, fence);
-		sync_fence_log(fence);
+		sync_dump(fence);
 		return fence->status;
 	}
 
@@ -686,7 +619,7 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 		if (timeout > 0) {
 			pr_info("fence timeout on [%p] after %dms\n", fence,
 				jiffies_to_msecs(timeout));
-			sync_fence_log(fence);
+			sync_dump(fence);
 		}
 		return -ETIME;
 	}
@@ -701,6 +634,8 @@ static void sync_fence_free(struct kref *kref)
 
 	sync_fence_free_pts(fence);
 
+	fence->file->private_data = NULL;
+
 	kfree(fence);
 }
 
@@ -709,6 +644,10 @@ static int sync_fence_release(struct inode *inode, struct file *file)
 	struct sync_fence *fence = file->private_data;
 	unsigned long flags;
 
+	if (fence == NULL) {
+		pr_err("%s: fence already freed\n", __func__);
+		return -EIO;
+	}
 	/*
 	 * We need to remove all ways to access this fence before droping
 	 * our ref.
@@ -733,6 +672,11 @@ static int sync_fence_release(struct inode *inode, struct file *file)
 static unsigned int sync_fence_poll(struct file *file, poll_table *wait)
 {
 	struct sync_fence *fence = file->private_data;
+
+	if (fence == NULL) {
+		pr_err("%s: fence already freed\n", __func__);
+		return POLLERR;
+	}
 
 	poll_wait(file, &fence->wq, wait);
 
@@ -829,8 +773,9 @@ static int sync_fill_pt_info(struct sync_pt *pt, void *data, int size)
 	}
 
 	strlcpy(info->obj_name, pt->parent->name, sizeof(info->obj_name));
-	strlcpy(info->driver_name, pt->parent->ops->driver_name,
-		sizeof(info->driver_name));
+	if (pt->parent->ops->driver_name)
+		strlcpy(info->driver_name, pt->parent->ops->driver_name,
+			sizeof(info->driver_name));
 	info->status = pt->status;
 	info->timestamp_ns = ktime_to_ns(pt->timestamp);
 
@@ -892,6 +837,10 @@ static long sync_fence_ioctl(struct file *file, unsigned int cmd,
 			     unsigned long arg)
 {
 	struct sync_fence *fence = file->private_data;
+	if (fence == NULL) {
+		pr_err("%s: fence is already freed", __func__);
+		return -ENOTTY;
+	}
 	switch (cmd) {
 	case SYNC_IOC_WAIT:
 		return sync_fence_ioctl_wait(fence, arg);
@@ -908,6 +857,16 @@ static long sync_fence_ioctl(struct file *file, unsigned int cmd,
 }
 
 #ifdef CONFIG_DEBUG_FS
+static const char *sync_status_str(int status)
+{
+	if (status > 0)
+		return "signaled";
+	else if (status == 0)
+		return "active";
+	else
+		return "error";
+}
+
 static void sync_print_pt(struct seq_file *s, struct sync_pt *pt, bool fence)
 {
 	int status = pt->status;
@@ -1040,4 +999,35 @@ static __init int sync_debugfs_init(void)
 	return 0;
 }
 late_initcall(sync_debugfs_init);
+
+#define DUMP_CHUNK 256
+static char sync_dump_buf[64 * 1024];
+static void sync_dump(struct sync_fence *fence)
+{
+       struct seq_file s = {
+               .buf = sync_dump_buf,
+               .size = sizeof(sync_dump_buf) - 1,
+       };
+       int i;
+
+       seq_printf(&s, "fence:\n--------------\n");
+       sync_print_fence(&s, fence);
+       seq_printf(&s, "\n");
+
+       for (i = 0; i < s.count; i += DUMP_CHUNK) {
+               if ((s.count - i) > DUMP_CHUNK) {
+                       char c = s.buf[i + DUMP_CHUNK];
+                       s.buf[i + DUMP_CHUNK] = 0;
+                       pr_cont("%s", s.buf + i);
+                       s.buf[i + DUMP_CHUNK] = c;
+               } else {
+                       s.buf[s.count] = 0;
+                       pr_cont("%s", s.buf + i);
+               }
+       }
+}
+#else
+static void sync_dump(struct sync_fence *fence)
+{
+}
 #endif

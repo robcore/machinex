@@ -83,8 +83,9 @@ void panic(const char *fmt, ...)
 	va_list args;
 	long i, i_next = 0;
 	int state = 0;
-
+#if !defined(CONFIG_MACH_MELIUS) && !defined(CONFIG_SEC_PRODUCT_8960) && !defined(CONFIG_MACH_SERRANO) && !defined(CONFIG_MACH_GOLDEN) && !defined(CONFIG_MACH_LT02) && !defined(CONFIG_MACH_CANE)
 	coresight_abort();
+#endif
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
 	 * from deadlocking the first cpu that invokes the panic, since
@@ -106,6 +107,9 @@ void panic(const char *fmt, ...)
 	if (!spin_trylock(&panic_lock))
 		panic_smp_self_stop();
 
+#ifdef CONFIG_SEC_DEBUG
+	secdbg_sched_msg("!!panic!!");
+#endif
 	console_verbose();
 	bust_spinlocks(1);
 	va_start(args, fmt);
