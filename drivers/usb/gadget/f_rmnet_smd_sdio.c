@@ -1334,7 +1334,7 @@ static void rmnet_mux_open_sdio_work(struct work_struct *w)
 			return;
 		}
 		retry_cnt++;
-		queue_delayed_work(dev->wq, &sdio_dev->open_work,
+		mod_delayed_work(dev->wq, &sdio_dev->open_work,
 					SDIO_OPEN_RETRY_DELAY);
 		return;
 	}
@@ -1617,7 +1617,7 @@ static int rmnet_mux_bind(struct usb_configuration *c, struct usb_function *f)
 			rmnet_mux_fs_notify_desc.bEndpointAddress;
 	}
 
-	queue_delayed_work(dev->wq, &sdio_dev->open_work, 0);
+	mod_delayed_work(dev->wq, &sdio_dev->open_work, 0);
 
 	return 0;
 

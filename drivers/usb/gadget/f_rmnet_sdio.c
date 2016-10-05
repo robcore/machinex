@@ -772,7 +772,7 @@ static void rmnet_sdio_data_write_done(void *priv, struct sk_buff *skb)
 	/* SDIO mux sends NULL SKB when link state changes */
 	if (!skb) {
 		pr_info("%s: dmux_ch open event\n", __func__);
-		queue_delayed_work(dev->wq, &dev->sdio_open_work, 0);
+		mod_delayed_work(dev->wq, &dev->sdio_open_work, 0);
 		return;
 	}
 
@@ -1242,7 +1242,7 @@ static void rmnet_open_sdio_work(struct work_struct *w)
 			ERROR(cdev, "Unable to open DATA SDIO channel\n");
 
 	} else {
-		queue_delayed_work(dev->wq, &dev->sdio_open_work,
+		mod_delayed_work(dev->wq, &dev->sdio_open_work,
 				RMNET_SDIO_OPEN_RETRY_DELAY);
 	}
 }
@@ -1378,7 +1378,7 @@ static int rmnet_sdio_bind(struct usb_configuration *c, struct usb_function *f)
 			rmnet_sdio_fs_notify_desc.bEndpointAddress;
 	}
 
-	queue_delayed_work(dev->wq, &dev->sdio_open_work, 0);
+	mod_delayed_work(dev->wq, &dev->sdio_open_work, 0);
 
 	return 0;
 
