@@ -256,8 +256,11 @@ static int ehci_bus_suspend (struct usb_hcd *hcd)
 		else if ((t1 & PORT_PE) && !(t1 & PORT_SUSPEND)) {
 			/*clear RS bit before setting SUSP bit
 			* and wait for HCH to get set*/
-			if (ehci->susp_sof_bug)
+			if (ehci->susp_sof_bug) {
+				spin_unlock_irq(&ehci->lock);
 				ehci_halt(ehci);
+				spin_lock_irq(&ehci->lock);
+			}
 
 			t2 |= PORT_SUSPEND;
 			set_bit(port, &ehci->bus_suspended);
@@ -640,7 +643,11 @@ ehci_hub_status_data (struct usb_hcd *hcd, char *buf)
 			status = STS_PCD;
 		}
 	}
-	/* FIXME autosuspend idle root hubs */
+
+	/* If a resume is in progress, make sure it can finish */
+	if (ehci->resuming_ports)
+		mod_timer(&hcd->rh_timer, jiffies + msecs_to_jiffies(25));
+
 	spin_unlock_irqrestore (&ehci->lock, flags);
 	return status ? retval : 0;
 }
@@ -1251,7 +1258,9 @@ static int ehci_hub_control (
 							temp | PORT_SUSPEND,
 							sreg);
 				}
+				spin_unlock_irq(&ehci->lock);
 				ehci_halt(ehci);
+				spin_lock_irq(&ehci->lock);
 				temp = ehci_readl(ehci, status_reg);
 				temp |= selector << 16;
 				ehci_writel(ehci, temp, status_reg);

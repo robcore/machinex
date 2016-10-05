@@ -17,8 +17,6 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/kmod.h>
-#include <linux/wakelock.h>
-#include "power.h"
 
 /*
  * Timeout for stopping processes

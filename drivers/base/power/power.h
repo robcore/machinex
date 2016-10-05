@@ -2,11 +2,8 @@
 
 static inline void device_pm_init_common(struct device *dev)
 {
-	if (!dev->power.early_init) {
-		spin_lock_init(&dev->power.lock);
-		dev->power.qos = NULL;
-		dev->power.early_init = true;
-	}
+	spin_lock_init(&dev->power.lock);
+	dev->power.power_state = PMSG_INVALID;
 }
 
 #ifdef CONFIG_PM_RUNTIME
@@ -14,12 +11,13 @@ static inline void device_pm_init_common(struct device *dev)
 extern void pm_runtime_init(struct device *dev);
 extern void pm_runtime_remove(struct device *dev);
 
+#else /* !CONFIG_PM_RUNTIME */
+
 static inline void pm_runtime_early_init(struct device *dev)
 {
 	device_pm_init_common(dev);
-	dev->power.disable_depth = 1;
 }
-#else
+
 static inline void pm_runtime_init(struct device *dev) {}
 static inline void pm_runtime_remove(struct device *dev) {}
 
@@ -49,10 +47,14 @@ extern void device_pm_move_last(struct device *);
 
 static inline void device_pm_sleep_init(struct device *dev) {}
 
-static inline void device_pm_add(struct device *dev) {}
+static inline void device_pm_add(struct device *dev)
+{
+	dev_pm_qos_constraints_init(dev);
+}
 
 static inline void device_pm_remove(struct device *dev)
 {
+	dev_pm_qos_constraints_destroy(dev);
 	pm_runtime_remove(dev);
 }
 
@@ -82,10 +84,8 @@ extern void dpm_sysfs_remove(struct device *dev);
 extern void rpm_sysfs_remove(struct device *dev);
 extern int wakeup_sysfs_add(struct device *dev);
 extern void wakeup_sysfs_remove(struct device *dev);
-extern int pm_qos_sysfs_add_latency(struct device *dev);
-extern void pm_qos_sysfs_remove_latency(struct device *dev);
-extern int pm_qos_sysfs_add_flags(struct device *dev);
-extern void pm_qos_sysfs_remove_flags(struct device *dev);
+extern int pm_qos_sysfs_add(struct device *dev);
+extern void pm_qos_sysfs_remove(struct device *dev);
 
 #else /* CONFIG_PM */
 
