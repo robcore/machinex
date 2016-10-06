@@ -74,13 +74,6 @@
 #define USB_PHY_VDD_DIG_VOL_MIN	1045000 /* uV */
 #define USB_PHY_VDD_DIG_VOL_MAX	1320000 /* uV */
 
-enum msm_otg_phy_reg_mode {
-	USB_PHY_REG_OFF,
-	USB_PHY_REG_ON,
-	USB_PHY_REG_LPM_ON,
-	USB_PHY_REG_LPM_OFF,
-};
-
 #ifdef CONFIG_PM8921_CHARGER_CALLBACK
 static DECLARE_COMPLETION(pmic_vbus_init);
 #endif
@@ -229,8 +222,7 @@ static int msm_hsusb_config_vddcx(int high)
 	return ret;
 }
 
-static int msm_hsusb_ldo_enable(struct msm_otg *motg,
-	enum msm_otg_phy_reg_mode mode)
+static int msm_hsusb_ldo_enable(struct msm_otg *motg, int on)
 {
 	int ret = 0;
 
@@ -244,8 +236,7 @@ static int msm_hsusb_ldo_enable(struct msm_otg *motg,
 		return -ENODEV;
 	}
 
-	switch (mode) {
-	case USB_PHY_REG_ON:
+	if (on) {
 		ret = regulator_set_optimum_mode(hsusb_1p8,
 				USB_PHY_1P8_HPM_LOAD);
 		if (ret < 0) {
@@ -282,9 +273,7 @@ static int msm_hsusb_ldo_enable(struct msm_otg *motg,
 			return ret;
 		}
 
-		break;
-
-	case USB_PHY_REG_OFF:
+	} else {
 		ret = regulator_disable(hsusb_1p8);
 		if (ret) {
 			dev_err(motg->phy.dev, "%s: unable to disable the hsusb 1p8\n",
@@ -307,55 +296,9 @@ static int msm_hsusb_ldo_enable(struct msm_otg *motg,
 		if (ret < 0)
 			pr_err("%s: Unable to set LPM of the regulator:"
 				"HSUSB_3p3\n", __func__);
-
-		break;
-
-	case USB_PHY_REG_LPM_ON:
-		ret = regulator_set_optimum_mode(hsusb_1p8,
-				USB_PHY_1P8_LPM_LOAD);
-		if (ret < 0) {
-			pr_err("%s: Unable to set LPM of the regulator: HSUSB_1p8\n",
-				__func__);
-			return ret;
-		}
-
-		ret = regulator_set_optimum_mode(hsusb_3p3,
-				USB_PHY_3P3_LPM_LOAD);
-		if (ret < 0) {
-			pr_err("%s: Unable to set LPM of the regulator: HSUSB_3p3\n",
-				__func__);
-			regulator_set_optimum_mode(hsusb_1p8, USB_PHY_REG_ON);
-			return ret;
-		}
-
-		break;
-
-	case USB_PHY_REG_LPM_OFF:
-		ret = regulator_set_optimum_mode(hsusb_1p8,
-				USB_PHY_1P8_HPM_LOAD);
-		if (ret < 0) {
-			pr_err("%s: Unable to set HPM of the regulator: HSUSB_1p8\n",
-				__func__);
-			return ret;
-		}
-
-		ret = regulator_set_optimum_mode(hsusb_3p3,
-				USB_PHY_3P3_HPM_LOAD);
-		if (ret < 0) {
-			pr_err("%s: Unable to set HPM of the regulator: HSUSB_3p3\n",
-				__func__);
-			regulator_set_optimum_mode(hsusb_1p8, USB_PHY_REG_ON);
-			return ret;
-		}
-
-		break;
-
-	default:
-		pr_err("%s: Unsupported mode (%d).", __func__, mode);
-		return -ENOTSUPP;
 	}
 
-	pr_debug("%s: USB reg mode (%d) (OFF/HPM/LPM)\n", __func__, mode);
+	pr_debug("reg (%s)\n", on ? "HPM" : "LPM");
 	return ret < 0 ? ret : 0;
 }
 
@@ -1015,12 +958,8 @@ static int msm_otg_suspend(struct msm_otg *motg)
 
 	if (motg->caps & ALLOW_PHY_POWER_COLLAPSE &&
 			!host_bus_suspend && !dcp) {
-		msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
+		msm_hsusb_ldo_enable(motg, 0);
 		motg->lpm_flags |= PHY_PWR_COLLAPSED;
-	} else if (motg->caps & ALLOW_PHY_REGULATORS_LPM &&
-			!host_bus_suspend && !device_bus_suspend && !dcp) {
-		msm_hsusb_ldo_enable(motg, USB_PHY_REG_LPM_ON);
-		motg->lpm_flags |= PHY_REGULATORS_LPM;
 	}
 
 	if (motg->lpm_flags & PHY_RETENTIONED) {
@@ -1086,11 +1025,8 @@ static int msm_otg_resume(struct msm_otg *motg)
 	}
 
 	if (motg->lpm_flags & PHY_PWR_COLLAPSED) {
-		msm_hsusb_ldo_enable(motg, USB_PHY_REG_ON);
+		msm_hsusb_ldo_enable(motg, 1);
 		motg->lpm_flags &= ~PHY_PWR_COLLAPSED;
-	} else if (motg->lpm_flags & PHY_REGULATORS_LPM) {
-		msm_hsusb_ldo_enable(motg, USB_PHY_REG_LPM_OFF);
-		motg->lpm_flags &= ~PHY_REGULATORS_LPM;
 	}
 
 	if (motg->lpm_flags & PHY_RETENTIONED) {
@@ -4094,7 +4030,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = msm_hsusb_ldo_enable(motg, USB_PHY_REG_ON);
+	ret = msm_hsusb_ldo_enable(motg, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "hsusb vreg enable failed\n");
 		goto free_ldo_init;
@@ -4203,8 +4139,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 				ALLOW_PHY_RETENTION;
 
 		if (motg->pdata->otg_control == OTG_PHY_CONTROL)
-			motg->caps = ALLOW_PHY_RETENTION |
-				ALLOW_PHY_REGULATORS_LPM;
+			motg->caps = ALLOW_PHY_RETENTION;
 	}
 
 	if (motg->pdata->enable_lpm_on_dev_suspend)
@@ -4269,7 +4204,7 @@ free_irq:
 destroy_wlock:
 	wake_lock_destroy(&motg->wlock);
 	clk_disable_unprepare(motg->core_clk);
-	msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
+	msm_hsusb_ldo_enable(motg, 0);
 free_ldo_init:
 	msm_hsusb_ldo_init(motg, 0);
 free_hsusb_vddcx:
@@ -4364,7 +4299,7 @@ static int __devexit msm_otg_remove(struct platform_device *pdev)
 	clk_disable_unprepare(motg->pclk);
 	clk_disable_unprepare(motg->core_clk);
 	msm_xo_put(motg->xo_handle);
-	msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
+	msm_hsusb_ldo_enable(motg, 0);
 	msm_hsusb_ldo_init(motg, 0);
 	regulator_disable(hsusb_vddcx);
 	regulator_set_voltage(hsusb_vddcx,

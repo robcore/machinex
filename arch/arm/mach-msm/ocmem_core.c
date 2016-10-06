@@ -853,7 +853,7 @@ invalid_transition:
 /* Interfaces invoked from the scheduler */
 int ocmem_memory_off(int id, unsigned long offset, unsigned long len)
 {
-	return switch_power_state(id, offset, len, REGION_DEFAULT_ON);
+	return switch_power_state(id, offset, len, REGION_DEFAULT_OFF);
 }
 
 int ocmem_memory_on(int id, unsigned long offset, unsigned long len)
@@ -863,7 +863,7 @@ int ocmem_memory_on(int id, unsigned long offset, unsigned long len)
 
 int ocmem_memory_retain(int id, unsigned long offset, unsigned long len)
 {
-	return switch_power_state(id, offset, len, REGION_DEFAULT_ON);
+	return switch_power_state(id, offset, len, REGION_DEFAULT_RETENTION);
 }
 
 int ocmem_core_init(struct platform_device *pdev)

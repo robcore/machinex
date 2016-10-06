@@ -1418,10 +1418,10 @@ static struct resource resources_hsic_host[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.start	= MSM_GPIO_TO_INT(47),
-		.end	= MSM_GPIO_TO_INT(47),
+		.start	= 47,
+		.end	= 47,
 		.name	= "wakeup",
-		.flags	= IORESOURCE_IRQ,
+		.flags	= IORESOURCE_IO,
 	},
 };
 
@@ -1719,13 +1719,13 @@ static struct msm_bus_vectors vidc_venc_1080p_turbo_vectors[] = {
 		.src = MSM_BUS_MASTER_AMPSS_M0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 2500000,
-		.ib  = 700000000,
+		.ib  = 5000000,
 	},
 	{
 		.src = MSM_BUS_MASTER_AMPSS_M0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 2500000,
-		.ib  = 10000000,
+		.ib  = 5000000,
 	},
 };
 static struct msm_bus_vectors vidc_vdec_1080p_turbo_vectors[] = {
@@ -3377,8 +3377,8 @@ static struct msm_bus_vectors vcap_1080_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_CAP,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 1920 * 1080 * 10 * 60,
-		.ib = 1920 * 1080 * 10 * 60 * 1.5,
+		.ab = 1920 * 1080 * 3 * 60,
+		.ib = 1920 * 1080 * 3 * 60 * 1.5,
 	},
 };
 
