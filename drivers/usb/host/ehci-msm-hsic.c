@@ -1908,8 +1908,7 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
 	pm_runtime_set_suspended(&pdev->dev);
-	pm_runtime_disable(dev);
-
+	pm_runtime_disable(&pdev->dev);
 	destroy_workqueue(ehci_wq);
 
 	msm_hsic_config_gpios(mehci, 0);
