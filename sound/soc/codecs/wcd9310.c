@@ -221,7 +221,7 @@ struct comp_dgtl_gain_offset {
 	u8 half_db_gain;
 };
 
-const static struct comp_dgtl_gain_offset
+static const struct comp_dgtl_gain_offset
 			comp_dgtl_gain[MAX_PA_GAIN_OPTIONS] = {
 	{0, 0},
 	{1, 1},
@@ -3053,7 +3053,6 @@ static int tabla_codec_enable_ear_rx_bias(struct snd_soc_dapm_widget *w,
 	}
 	return 0;
 }
-
 
 static int tabla_codec_enable_rx_bias(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
