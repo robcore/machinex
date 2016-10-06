@@ -1899,12 +1899,16 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	mehci->bus_vote = false;
 	cancel_work_sync(&mehci->bus_vote_w);
 
+	//So why the fuck not put in a short delay to ensure that doesn't fucking happen, assholes?
+	udelay(130);
+
 	if (mehci->bus_perf_client)
 		msm_bus_scale_unregister_client(mehci->bus_perf_client);
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
 	pm_runtime_set_suspended(&pdev->dev);
+	pm_runtime_disable(dev);
 
 	destroy_workqueue(ehci_wq);
 
@@ -1922,6 +1926,7 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int msm_hsic_pm_suspend(struct device *dev)
 {
+	int ret;
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
@@ -1938,6 +1943,10 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
+	ret = msm_hsic_suspend(mehci);
+	if (ret)
+		return ret;
+
 	return 0;
 }
 
@@ -1947,7 +1956,6 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
 	if (atomic_read(&mehci->async_int)) {
-		dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
 		return -EBUSY;
 	}
 
