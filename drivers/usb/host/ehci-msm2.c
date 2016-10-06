@@ -1069,7 +1069,7 @@ static int __devexit ehci_msm2_remove(struct platform_device *pdev)
 	}
 	device_init_wakeup(&pdev->dev, 0);
 	pm_runtime_set_suspended(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
+
 	usb_remove_hcd(hcd);
 
 	msm_xo_put(mhcd->xo_handle);
@@ -1090,7 +1090,6 @@ static int __devexit ehci_msm2_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int ehci_msm2_pm_suspend(struct device *dev)
 {
-	int ret;
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hcd *mhcd = hcd_to_mhcd(hcd);
 
@@ -1099,11 +1098,7 @@ static int ehci_msm2_pm_suspend(struct device *dev)
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
-	ret = msm_ehci_suspend(mhcd);
-	if (ret)
-		return ret;
-
-	return 0;
+	return msm_ehci_suspend(mhcd);
 
 }
 
