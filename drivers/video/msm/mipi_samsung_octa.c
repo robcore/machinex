@@ -584,7 +584,7 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_STATE_NOTIFIER
-		if (!use_fb_notifier)
+		if (enabled)
 			state_resume();
 #endif
 	} else {
@@ -716,7 +716,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
 #ifdef CONFIG_STATE_NOTIFIER
-		if (!use_fb_notifier)
+		if (enabled)
 			state_suspend();
 #endif
 
