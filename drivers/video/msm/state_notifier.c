@@ -20,7 +20,7 @@
 /*
  * debug = 1 will print all
  */
-static unsigned int debug;
+static unsigned int debug = 1;
 module_param_named(debug_mask, debug, uint, 0644);
 
 #define dprintk(msg...)		\
@@ -97,7 +97,7 @@ void state_suspend(void)
 
 	suspend_in_progress = true;
 
-	queue_delayed_work(susp_wq, &suspend_work, 
+	queue_delayed_work(susp_wq, &suspend_work,
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
