@@ -2117,7 +2117,7 @@ static int cgroup_attach_proc(struct cgroup *cgrp, struct task_struct *leader)
 	 * take an rcu_read_lock.
 	 */
 	rcu_read_lock();
-	do {
+	for_each_thread(leader, tsk) {
 		struct task_and_cgroup ent;
 
 		/* @tsk either already exited or can't exit until the end */
@@ -2138,7 +2138,7 @@ static int cgroup_attach_proc(struct cgroup *cgrp, struct task_struct *leader)
 		retval = flex_array_put(group, i, &ent, GFP_ATOMIC);
 		BUG_ON(retval != 0);
 		i++;
-	} while_each_thread(leader, tsk);
+	}
 	rcu_read_unlock();
 	/* remember the number of threads in the array for later. */
 	group_size = i;

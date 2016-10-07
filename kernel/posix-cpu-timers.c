@@ -250,11 +250,11 @@ void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
 		goto out;
 
 	t = tsk;
-	do {
+	for_each_thread(tsk, t) {
 		times->utime += t->utime;
 		times->stime += t->stime;
 		times->sum_exec_runtime += task_sched_runtime(t);
-	} while_each_thread(tsk, t);
+	}
 out:
 	rcu_read_unlock();
 }

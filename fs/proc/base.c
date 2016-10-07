@@ -3009,7 +3009,7 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
 		struct task_struct *t = task;
 
 		task_io_accounting_add(&acct, &task->signal->ioac);
-		while_each_thread(task, t)
+		for_each_thread(task, t)
 			task_io_accounting_add(&acct, &t->ioac);
 
 		unlock_task_sighand(task, &flags);

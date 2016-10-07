@@ -873,9 +873,9 @@ static int prepare_signal(int sig, struct task_struct *p, bool force)
 		 */
 		rm_from_queue(sigmask(SIGCONT), &signal->shared_pending);
 		t = p;
-		do {
+		for_each_thread(p, t) {
 			rm_from_queue(sigmask(SIGCONT), &t->pending);
-		} while_each_thread(p, t);
+		}
 	} else if (sig == SIGCONT) {
 		unsigned int why;
 		/*
@@ -883,14 +883,14 @@ static int prepare_signal(int sig, struct task_struct *p, bool force)
 		 */
 		rm_from_queue(SIG_KERNEL_STOP_MASK, &signal->shared_pending);
 		t = p;
-		do {
+		for_each_thread(p, t) {
 			task_clear_jobctl_pending(t, JOBCTL_STOP_PENDING);
 			rm_from_queue(SIG_KERNEL_STOP_MASK, &t->pending);
 			if (likely(!(t->ptrace & PT_SEIZED)))
 				wake_up_state(t, __TASK_STOPPED);
 			else
 				ptrace_trap_notify(t);
-		} while_each_thread(p, t);
+		}
 
 		/*
 		 * Notify the parent with CLD_CONTINUED if we were stopped.
@@ -1001,11 +1001,11 @@ static void complete_signal(int sig, struct task_struct *p, int group)
 			signal->group_exit_code = sig;
 			signal->group_stop_count = 0;
 			t = p;
-			do {
+			for_each_thread(p, t) {
 				task_clear_jobctl_pending(t, JOBCTL_PENDING_MASK);
 				sigaddset(&t->pending.signal, SIGKILL);
 				signal_wake_up(t, 1);
-			} while_each_thread(p, t);
+			}
 			return;
 		}
 	}
@@ -1274,7 +1274,7 @@ int zap_other_threads(struct task_struct *p)
 
 	p->signal->group_stop_count = 0;
 
-	while_each_thread(p, t) {
+	for_each_thread(p, t) {
 		task_clear_jobctl_pending(t, JOBCTL_PENDING_MASK);
 		count++;
 
@@ -2413,7 +2413,7 @@ static void retarget_shared_pending(struct task_struct *tsk, sigset_t *which)
 		return;
 
 	t = tsk;
-	while_each_thread(tsk, t) {
+	for_each_thread(tsk, t) {
 		if (t->flags & PF_EXITING)
 			continue;
 
