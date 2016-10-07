@@ -1,0 +1,1 @@
+cmd_drivers/battery/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/battery/built-in.o drivers/battery/sec_battery.o drivers/battery/sec_fuelgauge.o drivers/battery/max17048_fuelgauge.o drivers/battery/max77693_charger.o 

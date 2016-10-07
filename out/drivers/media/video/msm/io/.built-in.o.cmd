@@ -1,0 +1,1 @@
+cmd_drivers/media/video/msm/io/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/media/video/msm/io/built-in.o drivers/media/video/msm/io/msm_camera_io_util.o drivers/media/video/msm/io/msm_camera_i2c.o drivers/media/video/msm/io/msm_camera_i2c_mux.o drivers/media/video/msm/io/msm_io_8960.o 

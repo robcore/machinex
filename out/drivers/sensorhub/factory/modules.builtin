@@ -1,0 +1,9 @@
+kernel/drivers/sensorhub/factory/accel_mpu6500.ko
+kernel/drivers/sensorhub/factory/gyro_mpu6500.ko
+kernel/drivers/sensorhub/factory/light_cm3320.ko
+kernel/drivers/sensorhub/factory/prox_max88920.ko
+kernel/drivers/sensorhub/factory/gesture_max88920.ko
+kernel/drivers/sensorhub/factory/magnetic_yas532.ko
+kernel/drivers/sensorhub/factory/pressure_bmp182.ko
+kernel/drivers/sensorhub/factory/mcu_atuc128l5har.ko
+kernel/drivers/sensorhub/factory/temphumidity_shtc1.ko

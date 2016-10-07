@@ -1,0 +1,1 @@
+cmd_drivers/gpu/ion/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/gpu/ion/built-in.o drivers/gpu/ion/ion.o drivers/gpu/ion/ion_heap.o drivers/gpu/ion/ion_system_heap.o drivers/gpu/ion/ion_carveout_heap.o drivers/gpu/ion/ion_iommu_heap.o drivers/gpu/ion/ion_cp_heap.o drivers/gpu/ion/msm/built-in.o 

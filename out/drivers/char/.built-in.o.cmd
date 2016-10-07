@@ -1,0 +1,1 @@
+cmd_drivers/char/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/char/built-in.o drivers/char/mem.o drivers/char/random.o drivers/char/misc.o drivers/char/frandom.o drivers/char/hw_random/built-in.o drivers/char/msm_rotator.o drivers/char/diag/built-in.o drivers/char/adsprpc.o 

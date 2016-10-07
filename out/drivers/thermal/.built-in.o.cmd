@@ -1,0 +1,1 @@
+cmd_drivers/thermal/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/thermal/built-in.o drivers/thermal/thermal_sys.o drivers/thermal/msm8960_tsens.o drivers/thermal/pm8xxx-tm.o drivers/thermal/intelli/built-in.o 

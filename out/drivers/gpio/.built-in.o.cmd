@@ -1,0 +1,1 @@
+cmd_drivers/gpio/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/gpio/built-in.o drivers/gpio/gpiolib.o drivers/gpio/devres.o drivers/gpio/secgpio_dvs.o drivers/gpio/gpio-msm-common.o drivers/gpio/gpio-msm-v2.o drivers/gpio/pm8xxx-gpio.o drivers/gpio/pm8xxx-mpp.o drivers/gpio/gpio-sx150x.o 

@@ -1,0 +1,1 @@
+cmd_sound/soc/msm/qdsp6/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o sound/soc/msm/qdsp6/built-in.o sound/soc/msm/qdsp6/q6asm.o sound/soc/msm/qdsp6/q6adm.o sound/soc/msm/qdsp6/q6afe.o sound/soc/msm/qdsp6/q6voice.o 

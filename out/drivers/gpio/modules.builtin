@@ -1,0 +1,5 @@
+kernel/drivers/gpio/secgpio_dvs.ko
+kernel/drivers/gpio/gpio-msm-common.ko
+kernel/drivers/gpio/gpio-msm-v2.ko
+kernel/drivers/gpio/pm8xxx-gpio.ko
+kernel/drivers/gpio/pm8xxx-mpp.ko

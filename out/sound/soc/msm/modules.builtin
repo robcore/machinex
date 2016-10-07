@@ -1,0 +1,4 @@
+kernel/sound/soc/msm/msm-dai-q6-hdmi.ko
+kernel/sound/soc/msm/snd-soc-qdsp6.ko
+kernel/sound/soc/msm/snd-soc-msm8960.ko
+kernel/sound/soc/msm/snd-soc-hostless-pcm.ko

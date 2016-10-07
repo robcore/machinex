@@ -1,0 +1,1 @@
+cmd_drivers/barcode_emul/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/barcode_emul/built-in.o drivers/barcode_emul/barcode_emul_ice4.o 

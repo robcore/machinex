@@ -1,0 +1,1 @@
+cmd_drivers/staging/qcache/qcache.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/staging/qcache/qcache.o drivers/staging/qcache/qcache-main.o drivers/staging/qcache/tmem.o drivers/staging/qcache/fmem.o 

@@ -1,0 +1,1 @@
+cmd_drivers/net/slip/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/net/slip/built-in.o drivers/net/slip/slip.o drivers/net/slip/slhc.o 
