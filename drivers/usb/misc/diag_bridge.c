@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,6 +32,8 @@
 
 #define MAX_DIAG_BRIDGE_DEVS	2
 #define AUTOSUSP_DELAY_WITH_USB 1000
+static unsigned int  default_auto_susp_enabled;
+module_param(default_auto_susp_enabled, uint, S_IRUGO | S_IWUSR);
 
 struct diag_bridge {
 	struct usb_device	*udev;
@@ -82,12 +84,15 @@ int diag_bridge_open(int id, struct diag_bridge_ops *ops)
 
 	dev->ops = ops;
 	dev->err = 0;
-
+/* Do not update auto suspend delay for diag instance#1 (id == 1) i.e DCI */
+	if (!default_auto_susp_enabled && id != 1) {
 #ifdef CONFIG_PM_RUNTIME
-	dev->default_autosusp_delay = dev->udev->dev.power.autosuspend_delay;
+		dev->default_autosusp_delay =
+			dev->udev->dev.power.autosuspend_delay;
 #endif
-	pm_runtime_set_autosuspend_delay(&dev->udev->dev,
-			AUTOSUSP_DELAY_WITH_USB);
+		pm_runtime_set_autosuspend_delay(&dev->udev->dev,
+				AUTOSUSP_DELAY_WITH_USB);
+	}
 
 	kref_get(&dev->kref);
 
@@ -130,8 +135,9 @@ void diag_bridge_close(int id)
 	usb_kill_anchored_urbs(&dev->submitted);
 	dev->ops = 0;
 
-	pm_runtime_set_autosuspend_delay(&dev->udev->dev,
-			dev->default_autosusp_delay);
+	if (dev->default_autosusp_delay)
+		pm_runtime_set_autosuspend_delay(&dev->udev->dev,
+				dev->default_autosusp_delay);
 
 	kref_put(&dev->kref, diag_bridge_delete);
 }
@@ -145,9 +151,9 @@ static void diag_bridge_read_cb(struct urb *urb)
 	dev_dbg(&dev->ifc->dev, "%s: status:%d actual:%d\n", __func__,
 			urb->status, urb->actual_length);
 
-        /* save error so that subsequent read/write returns ENODEV */
-        if (urb->status == -EPROTO)
-     	dev->err = urb->status;
+	/* save error so that subsequent read/write returns ENODEV */
+	if (urb->status == -EPROTO)
+		dev->err = urb->status;
 
 	if (cbs && cbs->read_complete_cb)
 		cbs->read_complete_cb(cbs->ctxt,
@@ -493,7 +499,6 @@ diag_bridge_probe(struct usb_interface *ifc, const struct usb_device_id *id)
 	ifc_desc = ifc->cur_altsetting;
 	for (i = 0; i < ifc_desc->desc.bNumEndpoints; i++) {
 		ep_desc = &ifc_desc->endpoint[i].desc;
-
 		if (!dev->in_epAddr && (usb_endpoint_is_bulk_in(ep_desc) ||
 			usb_endpoint_is_int_in(ep_desc))) {
 			dev->in_epAddr = ep_desc->bEndpointAddress;
