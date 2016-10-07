@@ -245,23 +245,6 @@ static void update_function_graph_func(void);
 static inline void update_function_graph_func(void) { }
 #endif
 
-static void ftrace_sync(struct work_struct *work)
-{
-	/*
-	 * This function is just a stub to implement a hard force
-	 * of synchronize_sched(). This requires synchronizing
-	 * tasks even in userspace and idle.
-	 *
-	 * Yes, function tracing is rude.
-	 */
-}
-
-static void ftrace_sync_ipi(void *data)
-{
-	/* Probably not needed, but do it anyway */
-	smp_rmb();
-}
-
 static void update_ftrace_function(void)
 {
 	ftrace_func_t func;
