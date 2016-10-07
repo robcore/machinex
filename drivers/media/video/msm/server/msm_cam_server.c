@@ -1397,7 +1397,6 @@ static long msm_ioctl_server(struct file *file, void *fh,
 			kfree(k_isp_event);
 			mutex_unlock(&g_server_dev.server_queue_lock);
 			rc = -EINVAL;
-			mutex_unlock(&g_server_dev.server_queue_lock);
 			return rc;
 		}
 		kfree(k_isp_event);
