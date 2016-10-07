@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/poll.h>
 #include <linux/mmu_context.h>
+#include <linux/aio.h>
 
 #include <linux/device.h>
 #include <linux/moduleparam.h>
@@ -533,7 +534,6 @@ static int ep_aio_cancel(struct kiocb *iocb, struct io_event *e)
 	local_irq_disable();
 	epdata = priv->epdata;
 	// spin_lock(&epdata->dev->lock);
-	kiocbSetCancelled(iocb);
 	if (likely(epdata && epdata->ep && priv->req))
 		value = usb_ep_dequeue (epdata->ep, priv->req);
 	else
@@ -570,6 +570,7 @@ static ssize_t ep_copy_to_user(struct kiocb_priv *priv)
 		if (total == 0)
 			break;
 	}
+
 	return len;
 }
 
@@ -589,7 +590,6 @@ static void ep_user_copy_worker(struct work_struct *work)
 
 	kfree(priv->buf);
 	kfree(priv);
-	return len;
 }
 
 static void ep_aio_complete(struct usb_ep *ep, struct usb_request *req)
@@ -609,7 +609,6 @@ static void ep_aio_complete(struct usb_ep *ep, struct usb_request *req)
 	 */
 	if (priv->iv == NULL || unlikely(req->actual == 0)) {
 		kfree(req->buf);
-		kfree(priv->iv);
 		kfree(priv);
 		iocb->private = NULL;
 		/* aio_complete() reports bytes-transferred _and_ faults */
@@ -645,7 +644,7 @@ ep_aio_rwtail(
 	struct usb_request	*req;
 	ssize_t			value;
 
-	priv = kzalloc(sizeof *priv, GFP_KERNEL);
+	priv = kmalloc(sizeof *priv, GFP_KERNEL);
 	if (!priv) {
 		value = -ENOMEM;
 fail:
@@ -654,25 +653,17 @@ fail:
 	}
 	iocb->private = priv;
 	priv->iocb = iocb;
-	if (iv) {
-		priv->iv = kmemdup(iv, nr_segs * sizeof(struct iovec),
-				   GFP_KERNEL);
-		if (!priv->iv) {
-			kfree(priv);
-			goto fail;
-		}
-	}
+	priv->iv = iv;
 	priv->nr_segs = nr_segs;
 	INIT_WORK(&priv->work, ep_user_copy_worker);
 
 	value = get_ready_ep(iocb->ki_filp->f_flags, epdata);
 	if (unlikely(value < 0)) {
-		kfree(priv->iv);
 		kfree(priv);
 		goto fail;
 	}
 
-	iocb->ki_cancel = ep_aio_cancel;
+	kiocb_set_cancel_fn(iocb, ep_aio_cancel);
 	get_ep(epdata);
 	priv->epdata = epdata;
 	priv->actual = 0;
@@ -702,7 +693,6 @@ fail:
 	mutex_unlock(&epdata->lock);
 
 	if (unlikely(value)) {
-		kfree(priv->iv);
 		kfree(priv);
 		put_ep(epdata);
 	} else
