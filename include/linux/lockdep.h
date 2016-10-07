@@ -143,24 +143,6 @@ struct lock_class_stats lock_stats(struct lock_class *class);
 void clear_lock_stats(struct lock_class *class);
 #endif
 
-static inline void lockdep_copy_map(struct lockdep_map *to,
-				    struct lockdep_map *from)
-{
-	int i;
-
-	*to = *from;
-	/*
-	 * Since the class cache can be modified concurrently we could observe
-	 * half pointers (64bit arch using 32bit copy insns). Therefore clear
-	 * the caches and take the performance hit.
-	 *
-	 * XXX it doesn't work well with lockdep_set_class_and_subclass(), since
-	 *     that relies on cache abuse.
-	 */
-	for (i = 0; i < NR_LOCKDEP_CACHING_CLASSES; i++)
-		to->class_cache[i] = NULL;
-}
-
 /*
  * Map the lock object (the lock instance) to the lock-class object.
  * This is embedded into specific lock instances:
