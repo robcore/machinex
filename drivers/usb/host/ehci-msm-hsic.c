@@ -1719,12 +1719,12 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 			IORESOURCE_IRQ,
 			"peripheral_status_irq");
 	if (res)
-		mehci->peripheral_status_irq = MSM_GPIO_TO_INT(res->start); //this matches our platform data...
+		mehci->peripheral_status_irq = res->start;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_IO, "wakeup");
 	if (res) {
 		mehci->wakeup_gpio = res->start;
-		mehci->wakeup_irq = res->start; //this too...
+		mehci->wakeup_irq = MSM_GPIO_TO_INT(res->start);
 		dev_dbg(mehci->dev, "wakeup_irq: %d\n", mehci->wakeup_irq);
 	}
 
