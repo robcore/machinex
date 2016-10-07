@@ -1,1 +1,0 @@
-cmd_arch/arm/crypto/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o arch/arm/crypto/built-in.o arch/arm/crypto/aes-arm.o arch/arm/crypto/sha1-arm.o 

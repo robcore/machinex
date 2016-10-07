@@ -1,4 +1,0 @@
-kernel/drivers/usb/misc/ehset.ko
-kernel/drivers/usb/misc/diag_bridge.ko
-kernel/drivers/usb/misc/mdm_bridge.ko
-kernel/drivers/usb/misc/ks_bridge.ko

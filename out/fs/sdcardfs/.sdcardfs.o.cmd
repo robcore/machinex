@@ -1,1 +1,0 @@
-cmd_fs/sdcardfs/sdcardfs.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o fs/sdcardfs/sdcardfs.o fs/sdcardfs/dentry.o fs/sdcardfs/file.o fs/sdcardfs/inode.o fs/sdcardfs/main.o fs/sdcardfs/super.o fs/sdcardfs/lookup.o fs/sdcardfs/mmap.o fs/sdcardfs/packagelist.o fs/sdcardfs/derived_perm.o fs/sdcardfs/xattr.o 

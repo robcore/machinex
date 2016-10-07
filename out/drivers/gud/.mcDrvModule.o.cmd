@@ -1,1 +1,0 @@
-cmd_drivers/gud/mcDrvModule.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/gud/mcDrvModule.o drivers/gud/mobicore_driver/logging.o drivers/gud/mobicore_driver/ops.o drivers/gud/mobicore_driver/mem.o drivers/gud/mobicore_driver/api.o drivers/gud/mobicore_driver/main.o drivers/gud/mobicore_driver/pm.o 

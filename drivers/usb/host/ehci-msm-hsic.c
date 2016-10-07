@@ -1,6 +1,6 @@
 /* ehci-msm-hsic.c - HSUSB Host Controller Driver Implementation
  *
- * Copyright (c) 2011-2013, Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * Partly derived from ehci-fsl.c and ehci-hcd.c
  * Copyright (c) 2000-2004 by David Brownell
@@ -1719,12 +1719,12 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 			IORESOURCE_IRQ,
 			"peripheral_status_irq");
 	if (res)
-		mehci->peripheral_status_irq = res->start;
+		mehci->peripheral_status_irq = MSM_GPIO_TO_INT(res->start); //this matches our platform data...
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_IO, "wakeup");
 	if (res) {
 		mehci->wakeup_gpio = res->start;
-		mehci->wakeup_irq = MSM_GPIO_TO_INT(res->start);
+		mehci->wakeup_irq = res->start; //this too...
 		dev_dbg(mehci->dev, "wakeup_irq: %d\n", mehci->wakeup_irq);
 	}
 

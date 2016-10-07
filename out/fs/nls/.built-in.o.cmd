@@ -1,1 +1,0 @@
-cmd_fs/nls/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o fs/nls/built-in.o fs/nls/nls_base.o fs/nls/nls_cp437.o fs/nls/nls_ascii.o fs/nls/nls_iso8859-1.o fs/nls/nls_utf8.o 

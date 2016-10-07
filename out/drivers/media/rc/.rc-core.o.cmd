@@ -1,1 +1,0 @@
-cmd_drivers/media/rc/rc-core.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/media/rc/rc-core.o drivers/media/rc/rc-main.o drivers/media/rc/ir-raw.o 

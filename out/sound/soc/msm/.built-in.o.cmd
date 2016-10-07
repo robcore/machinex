@@ -1,1 +1,0 @@
-cmd_sound/soc/msm/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o sound/soc/msm/built-in.o sound/soc/msm/qdsp6/built-in.o sound/soc/msm/msm-dai-q6-hdmi.o sound/soc/msm/msm-pcm-voice.o sound/soc/msm/msm-pcm-voip.o sound/soc/msm/snd-soc-qdsp6.o sound/soc/msm/snd-soc-msm8960.o sound/soc/msm/snd-soc-hostless-pcm.o 

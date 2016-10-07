@@ -1,1 +1,0 @@
-cmd_net/sunrpc/auth_gss/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o net/sunrpc/auth_gss/built-in.o net/sunrpc/auth_gss/auth_rpcgss.o 

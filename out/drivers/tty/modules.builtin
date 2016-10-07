@@ -1,8 +1,0 @@
-kernel/drivers/tty/n_smux.ko
-kernel/drivers/tty/smux_debug.ko
-kernel/drivers/tty/smux_test.ko
-kernel/drivers/tty/smux_loopback.ko
-kernel/drivers/tty/smux_ctl.ko
-kernel/drivers/tty/serial/serial_core.ko
-kernel/drivers/tty/serial/msm_serial_hs.ko
-kernel/drivers/tty/serial/msm_serial_hs_lite.ko

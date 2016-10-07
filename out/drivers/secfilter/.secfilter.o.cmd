@@ -1,1 +1,0 @@
-cmd_drivers/secfilter/secfilter.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/secfilter/secfilter.o drivers/secfilter/sec_filter.o drivers/secfilter/tcp_track.o drivers/secfilter/url_parser.o 

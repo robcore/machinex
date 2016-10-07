@@ -1,1 +1,0 @@
-cmd_drivers/leds/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/leds/built-in.o drivers/leds/led-core.o drivers/leds/led-class.o drivers/leds/led-triggers.o drivers/leds/leds-an30259a.o drivers/leds/leds-max77693.o drivers/leds/ledtrig-heartbeat.o 

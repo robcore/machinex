@@ -1,3 +1,0 @@
-kernel/drivers/thermal/thermal_sys.ko
-kernel/drivers/thermal/msm8960_tsens.ko
-kernel/drivers/thermal/pm8xxx-tm.ko

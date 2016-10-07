@@ -1,1 +1,0 @@
-cmd_drivers/usb/class/built-in.o :=  /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o drivers/usb/class/built-in.o drivers/usb/class/cdc-acm.o drivers/usb/class/usblp.o 

@@ -1,6 +1,0 @@
-kernel/sound/soc/codecs/snd-soc-wcd9304.ko
-kernel/sound/soc/codecs/snd-soc-wcd9310.ko
-kernel/sound/soc/codecs/snd-soc-es325.ko
-kernel/sound/soc/codecs/snd-soc-cs8427.ko
-kernel/sound/soc/codecs/snd-soc-msm-stub.ko
-kernel/sound/soc/codecs/sound_control.ko

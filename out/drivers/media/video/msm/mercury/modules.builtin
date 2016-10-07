@@ -1,5 +1,0 @@
-kernel/drivers/media/video/msm/mercury/msm_mercury_dev.ko
-kernel/drivers/media/video/msm/mercury/msm_mercury_core.ko
-kernel/drivers/media/video/msm/mercury/msm_mercury_hw.ko
-kernel/drivers/media/video/msm/mercury/msm_mercury_platform.ko
-kernel/drivers/media/video/msm/mercury/msm_mercury_sync.ko

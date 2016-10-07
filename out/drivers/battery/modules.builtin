@@ -1,4 +1,0 @@
-kernel/drivers/battery/sec_battery.ko
-kernel/drivers/battery/sec_fuelgauge.ko
-kernel/drivers/battery/max17048_fuelgauge.ko
-kernel/drivers/battery/max77693_charger.ko

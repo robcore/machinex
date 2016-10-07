@@ -1,1 +1,0 @@
-cmd_sound/soc/codecs/snd-soc-es325.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o sound/soc/codecs/snd-soc-es325.o sound/soc/codecs/es325.o 

@@ -1,1 +1,0 @@
-cmd_sound/soc/snd-soc-core.o := /opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-ld -EL    -r -o sound/soc/snd-soc-core.o sound/soc/soc-core.o sound/soc/soc-dapm.o sound/soc/soc-jack.o sound/soc/soc-cache.o sound/soc/soc-utils.o sound/soc/soc-pcm.o sound/soc/soc-io.o 
