@@ -48,7 +48,6 @@
 static struct vidc_dev *vidc_device_p;
 static dev_t vidc_dev_num;
 static struct class *vidc_class;
-static unsigned int vidc_mmu_subsystem[] = {MSM_SUBSYSTEM_VIDEO};
 
 static const struct file_operations vidc_fops = {
 	.owner = THIS_MODULE,
