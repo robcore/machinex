@@ -49,7 +49,7 @@ static struct msm_mmc_reg_data mmc_vdd_reg_data[MAX_SDCC_CONTROLLER] = {
 		.lpm_uA = 9000,
 		.hpm_uA = 200000, /* 200mA */
 	},
-#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT	
+#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 	/* SDCC2 : External card slot connected after system_rev 08 */
 	[SDCC2] = {
 			.name = "sdc_vdd",
@@ -460,7 +460,7 @@ static struct mmc_platform_data *apq8064_sdc1_pdata;
 
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 static unsigned int sdc2_sup_clk_rates[] = {
-	400000, 24000000, 40000000
+	400000, 24000000, 48000000
 };
 
 static struct mmc_platform_data sdc2_data = {
@@ -578,7 +578,7 @@ void __init apq8064_init_mmc(void)
 
 	// SDC3 is used for External memory Card
 	if (apq8064_sdc3_pdata)
-   {  
+   {
 		apq8064_sdc3_pdata->status_gpio = PM8921_GPIO_PM_TO_SYS(33);
 		apq8064_sdc3_pdata->status_irq	= PM8921_GPIO_IRQ(PM8921_IRQ_BASE, 33);
 
