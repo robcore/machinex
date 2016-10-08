@@ -2422,7 +2422,8 @@ static struct platform_device *i2c_qup_sglte_devices[] __initdata = {
 
 static struct platform_device *common_devices[] __initdata = {
 	&msm_8960_q6_lpass,
-	&msm_8960_q6_mss,
+	&msm_8960_q6_mss_fw,
+	&msm_8960_q6_mss_sw,
 	&msm_8960_riva,
 	&msm_pil_tzapps,
 	&msm_pil_vidc,
