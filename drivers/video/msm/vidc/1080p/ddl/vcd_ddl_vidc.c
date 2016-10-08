@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,11 +23,6 @@
 #define DDL_PIX_CACHE_ENABLE  true
 #endif
 static unsigned int run_cnt;
-
-/* MMRND_AVRC. Start */
-#define QCIF_WIDTH   176
-#define QCIF_HEIGHT  144
-/* MMRND_AVRC. End */
 
 void ddl_vidc_core_init(struct ddl_context *ddl_context)
 {
@@ -116,7 +111,6 @@ void ddl_vidc_channel_set(struct ddl_client_context *ddl)
 		enc_pix_cache = VIDC_1080P_ENCODE_PCACHE_ENABLE;
 	u32 pix_cache_ctrl, ctxt_mem_offset, ctxt_mem_size, arg1 = 0;
 	u8 *hw_ctxt = NULL;
-	struct ion_handle *alloc_handle;
 
 	if (ddl->decoding) {
 		ddl_set_core_start_time(__func__, DEC_OP_TIME);
@@ -125,28 +119,21 @@ void ddl_vidc_channel_set(struct ddl_client_context *ddl)
 		ctxt_mem_offset = DDL_ADDR_OFFSET(ddl_context->dram_base_a,
 		ddl->codec_data.decoder.hw_bufs.context) >> 11;
 		hw_ctxt =
-		ddl->codec_data.decoder.hw_bufs.context.align_virtual_addr;
+		ddl->codec_data.decoder.hw_bufs.context.virtual_base_addr;
 		ctxt_mem_size =
 			ddl->codec_data.decoder.hw_bufs.context.buffer_size;
-		alloc_handle =
-			ddl->codec_data.decoder.hw_bufs.context.alloc_handle;
 	} else {
 		vcd_codec = &(ddl->codec_data.encoder.codec.codec);
 		pix_cache_ctrl = (u32)enc_pix_cache;
 		ctxt_mem_offset = DDL_ADDR_OFFSET(ddl_context->dram_base_a,
 			ddl->codec_data.encoder.hw_bufs.context) >> 11;
 		hw_ctxt =
-		ddl->codec_data.encoder.hw_bufs.context.align_virtual_addr;
+		ddl->codec_data.encoder.hw_bufs.context.virtual_base_addr;
 		ctxt_mem_size =
 			ddl->codec_data.encoder.hw_bufs.context.buffer_size;
-		alloc_handle =
-			ddl->codec_data.encoder.hw_bufs.context.alloc_handle;
 	}
 	if (!res_trk_check_for_sec_session() && hw_ctxt) {
 		memset(hw_ctxt, 0, ctxt_mem_size);
-		msm_ion_do_cache_op(ddl_context->video_ion_client,
-			alloc_handle, hw_ctxt, ctxt_mem_size,
-			ION_IOC_CLEAN_INV_CACHES);
 		arg1 = 1 << 29;
 	}
 	switch (*vcd_codec) {
@@ -605,20 +592,12 @@ void ddl_vidc_encode_init_codec(struct ddl_client_context *ddl)
 	const u32 recon_bufs = 4;
 	u32 h263_cpfc_enable = false;
 	u32 scaled_frame_rate, ltr_enable;
-	u32 pic_order_count = false;
 
 	ddl_vidc_encode_set_profile_level(ddl);
 	vidc_1080p_set_encode_frame_size(encoder->frame_size.width,
 		encoder->frame_size.height);
 	vidc_1080p_encode_set_qp_params(encoder->qp_range.max_qp,
 		encoder->qp_range.min_qp);
-	vidc_sm_set_i_frame_qp(&ddl->shared_mem[ddl->command_channel],
-		encoder->qp_range.max_qp,
-		encoder->qp_range.min_qp);
-	if (encoder->session_qp.i_frame_qp < encoder->qp_range.min_qp)
-		encoder->session_qp.i_frame_qp = encoder->qp_range.min_qp;
-	if (encoder->session_qp.i_frame_qp > encoder->qp_range.max_qp)
-		encoder->session_qp.i_frame_qp = encoder->qp_range.max_qp;
 	vidc_1080p_encode_set_rc_config(encoder->rc_level.frame_level_rc,
 		encoder->rc_level.mb_level_rc,
 		encoder->session_qp.i_frame_qp);
@@ -631,29 +610,16 @@ void ddl_vidc_encode_init_codec(struct ddl_client_context *ddl)
 			encoder->frame_rate.fps_denominator;
 	if ((encoder->codec.codec == VCD_CODEC_H263) &&
 		(DDL_FRAMERATE_SCALE(DDL_INITIAL_FRAME_RATE)
-		 != scaled_frame_rate))
+		 != scaled_frame_rate) && encoder->plusptype_enable)
 		h263_cpfc_enable = true;
-/* MMRND_AVRC. Start */
-/* pic_order_cnt_type = 2 */
-	if (encoder->codec.codec == VCD_CODEC_H264)
-		pic_order_count = true;
-
-/* added for MMS plus header issue */
-	if ((encoder->codec.codec == VCD_CODEC_H263) &&
-		(encoder->frame_size.width == QCIF_WIDTH) &&
-		(encoder->frame_size.height == QCIF_HEIGHT))
-		h263_cpfc_enable = false;
-/* MMRND_AVRC. End */
-
 	ltr_enable = DDL_IS_LTR_ENABLED(encoder);
 	DDL_MSG_HIGH("ltr_enable = %u", ltr_enable);
 	vidc_sm_set_extended_encoder_control(&ddl->shared_mem
 		[ddl->command_channel], hdr_ext_control,
 		r_cframe_skip, false, 0,
 		h263_cpfc_enable, encoder->sps_pps.sps_pps_for_idr_enable_flag,
-		pic_order_count, encoder->closed_gop, encoder->
-		avc_delimiter_enable, encoder->vui_timinginfo_enable,
-		encoder->bitstream_restrict_enable, ltr_enable);
+		encoder->closed_gop, encoder->avc_delimiter_enable,
+		encoder->vui_timinginfo_enable, ltr_enable);
 	if (encoder->vui_timinginfo_enable) {
 		vidc_sm_set_h264_encoder_timing_info(
 			&ddl->shared_mem[ddl->command_channel],
@@ -781,15 +747,8 @@ void ddl_vidc_encode_init_codec(struct ddl_client_context *ddl)
 	default:
 	break;
 	}
-	if ((encoder->buf_format.buffer_format ==
-			VCD_BUFFER_FORMAT_NV21_16M2KA)) {
-		DDL_MSG_LOW("NV21 Input format is set to the core");
-		vidc_1080p_set_enc_NV21(true);
-	}
-	if ((encoder->buf_format.buffer_format ==
-		VCD_BUFFER_FORMAT_NV12_16M2KA) ||
-		(encoder->buf_format.buffer_format ==
-		VCD_BUFFER_FORMAT_NV21_16M2KA))
+	if (encoder->buf_format.buffer_format ==
+		VCD_BUFFER_FORMAT_NV12_16M2KA)
 		mem_access_method = VIDC_1080P_TILE_LINEAR;
 	else
 		mem_access_method = VIDC_1080P_TILE_64x32;
@@ -834,8 +793,7 @@ void ddl_vidc_encode_frame_run(struct ddl_client_context *ddl)
 	struct vcd_frame_data *stream = &(ddl->output_frame.vcd_frm);
 	struct vcd_frame_data *input_vcd_frm =
 		&(ddl->input_frame.vcd_frm);
-	u32 dpb_addr_y[VIDC_1080P_MAX_DEC_DPB];
-	u32 dpb_addr_c[VIDC_1080P_MAX_DEC_DPB];
+	u32 dpb_addr_y[4], dpb_addr_c[4];
 	u32 index, y_addr, c_addr;
 
 	DDL_MSG_LOW("%s\n", __func__);
@@ -864,7 +822,6 @@ void ddl_vidc_encode_frame_run(struct ddl_client_context *ddl)
 		encoder->dynmic_prop_change_req = true;
 		ddl_vidc_encode_dynamic_property(ddl, true);
 	}
-
 	if (DDL_IS_LTR_ENABLED(encoder))
 		ddl_encoder_ltr_control(ddl);
 	vidc_1080p_set_encode_circular_intra_refresh(
@@ -881,10 +838,7 @@ void ddl_vidc_encode_frame_run(struct ddl_client_context *ddl)
 	ddl_context->dram_base_a.align_physical_addr, stream->physical);
 	enc_param.stream_buffer_size =
 		encoder->client_output_buf_req.sz;
-
 	enc_param.intra_frame = encoder->intra_frame_insertion;
-	if (encoder->intra_frame_insertion)
-		encoder->intra_frame_insertion = false;
 	enc_param.input_flush = false;
 	enc_param.slice_enable = false;
 	enc_param.store_ltr0 = encoder->ltr_control.store_ltr0;
@@ -898,7 +852,7 @@ void ddl_vidc_encode_frame_run(struct ddl_client_context *ddl)
 	encoder->ltr_control.store_ltr1 = false;
 	encoder->ltr_control.use_ltr0 = false;
 	encoder->ltr_control.use_ltr1 = false;
-		vidc_sm_set_encoder_vop_time(
+	vidc_sm_set_encoder_vop_time(
 			&ddl->shared_mem[ddl->command_channel], true,
 			encoder->vop_timing.vop_time_resolution,
 			ddl->input_frame.frm_delta);
@@ -956,8 +910,7 @@ void ddl_vidc_encode_slice_batch_run(struct ddl_client_context *ddl)
 	struct ddl_enc_buffers *enc_buffers = &(encoder->hw_bufs);
 	struct vcd_frame_data *input_vcd_frm =
 		&(ddl->input_frame.vcd_frm);
-	u32 dpb_addr_y[VIDC_1080P_MAX_DEC_DPB];
-	u32 dpb_addr_c[VIDC_1080P_MAX_DEC_DPB];
+	u32 dpb_addr_y[4], dpb_addr_c[4];
 	u32 index, y_addr, c_addr;
 	u32 bitstream_size;
 	struct vidc_1080p_enc_slice_batch_in_param *slice_batch_in =
