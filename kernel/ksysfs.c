@@ -3,7 +3,7 @@
  * 		     are not related to any other subsystem
  *
  * Copyright (C) 2004 Kay Sievers <kay.sievers@vrfy.org>
- * 
+ *
  * This file is release under the GPLv2
  *
  */
@@ -191,7 +191,7 @@ static struct attribute_group kernel_attr_group = {
 
 static unsigned int Lgentle_fair_sleepers = 1;
 extern void relay_gfs(unsigned int gfs);
-static unsigned int Larch_power = 1;
+static unsigned int Larch_power = 0;
 extern void relay_ap(unsigned int ap);
 
 static ssize_t gentle_fair_sleepers_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
