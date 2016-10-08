@@ -55,9 +55,6 @@
 #include "devices.h"
 #include <mach/gpiomux.h>
 #include <mach/rpm.h>
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #include <mach/msm_memtypes.h>
 #include <linux/bootmem.h>
 #include <asm/setup.h>
@@ -3273,7 +3270,7 @@ static struct clk_lookup msm_clocks_dummy[] = {
 	CLK_DUMMY("iface_clk",	SDC2_P_CLK,	"msm_sdcc.2", OFF),
 
 };
-*/ 
+*/
 
 static void __init apq8064_common_init(void)
 {
