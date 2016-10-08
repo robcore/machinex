@@ -50,6 +50,9 @@ __asm__ __volatile__ (							\
 #define MSM_IOMMU_ATTR_CACHED_WT	0x3
 
 
+static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
+				 unsigned int len);
+
 static inline void clean_pte(unsigned long *start, unsigned long *end,
 			     int redirect)
 {
@@ -1264,7 +1267,12 @@ irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id)
 		}
 
 		SET_FSR(base, num, fsr);
-		SET_RESUME(base, num, 1);
+		/*
+		 * Only resume fetches if the registered fault handler
+		 * allows it
+		 */
+		if (ret != -EBUSY)
+			SET_RESUME(base, num, 1);
 
 		ret = IRQ_HANDLED;
 	} else

@@ -679,26 +679,8 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 		goto bail_out_add;
 	} else {
 		if (!vcd_get_ion_status()) {
-			if (get_pmem_file(pmem_fd, &phys_addr,
-					kernel_vaddr, &len, &file)) {
-				ERR("%s(): get_pmem_file failed\n", __func__);
-				goto bail_out_add;
-			}
-			put_pmem_file(file);
-			flags = (buffer == BUFFER_TYPE_INPUT)
-			? MSM_SUBSYSTEM_MAP_IOVA :
-			MSM_SUBSYSTEM_MAP_IOVA|MSM_SUBSYSTEM_ALIGN_IOVA_8K;
-			mapped_buffer = msm_subsystem_map_buffer(phys_addr,
-			mapped_length, flags, vidc_mmu_subsystem,
-			sizeof(vidc_mmu_subsystem)/sizeof(unsigned int));
-			if (IS_ERR(mapped_buffer)) {
-				pr_err("buffer map failed");
-				goto bail_out_add;
-			}
-			buf_addr_table[*num_of_buffers].client_data = (void *)
-				mapped_buffer;
-			buf_addr_table[*num_of_buffers].dev_addr =
-				mapped_buffer->iova[0];
+			pr_err("PMEM not available\n");
+			goto bail_out_add;
 		} else {
 			buff_ion_handle = ion_import_dma_buf(
 				client_ctx->user_ion_client, pmem_fd);
