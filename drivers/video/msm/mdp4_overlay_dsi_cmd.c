@@ -566,6 +566,8 @@ void mdp4_dmap_done_dsi_cmd(int cndx)
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
+	if (pipe == NULL)
+		return;
 
 	 /* blt enabled */
 	spin_lock(&vctrl->spin_lock);
@@ -609,6 +611,8 @@ void mdp4_overlay0_done_dsi_cmd(int cndx)
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
+	if (pipe == NULL)
+		return;
 
 	spin_lock(&vctrl->spin_lock);
 	vsync_irq_disable(INTR_OVERLAY0_DONE, MDP_OVERLAY0_TERM);
