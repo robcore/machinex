@@ -79,7 +79,11 @@ static struct workqueue_struct *workqueue;
  * performance cost, and for other reasons may not always be desired.
  * So we allow it it to be disabled.
  */
+#ifdef CONFIG_CRC_DEFAULT_ON
+bool use_spi_crc = 1;
+#else
 bool use_spi_crc = 0;
+#endif
 module_param(use_spi_crc, bool, 0644);
 
 /*
