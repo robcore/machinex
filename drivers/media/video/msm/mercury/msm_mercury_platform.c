@@ -13,7 +13,6 @@
 #include <linux/module.h>
 #include <linux/clk.h>
 #include <linux/io.h>
-#include <linux/android_pmem.h>
 #include <mach/clk.h>
 #include <mach/camera.h>
 #include <mach/msm_subsystem_map.h>
