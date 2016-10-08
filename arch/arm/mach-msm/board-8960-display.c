@@ -696,13 +696,13 @@ static int mipi_dsi_liquid_panel_power(int on)
 		gpio_set_value_cansleep(gpio43, 0); /* disp disable (resx=0) */
 
 		gpio_set_value_cansleep(gpio21, 0); /* disp power enable_n */
-		usleep(20000);
+		msleep(20);
 		gpio_set_value_cansleep(gpio43, 1); /* disp enable */
-		usleep(20000);
+		msleep(20);
 		gpio_set_value_cansleep(gpio43, 0); /* disp enable */
-		usleep(20000);
+		msleep(20);
 		gpio_set_value_cansleep(gpio43, 1); /* disp enable */
-		usleep(20000);
+		msleep(20);
 	} else {
 		gpio_set_value_cansleep(gpio43, 0);
 		gpio_set_value_cansleep(gpio21, 1);

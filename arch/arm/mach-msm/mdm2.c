@@ -163,7 +163,9 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 	 * instead of just de-asserting it. No harm done if the modem was
 	 * powered down.
 	 */
-	mdm_toggle_soft_reset(mdm_drv);
+	if (!mdm_drv->pdata->no_reset_on_first_powerup)
+		mdm_toggle_soft_reset(mdm_drv);
+
 	/* If the device has a kpd pwr gpio then toggle it. */
 	if (GPIO_IS_VALID(mdm_drv->ap2mdm_kpdpwr_n_gpio)) {
 		/* Pull AP2MDM_KPDPWR gpio high and wait for PS_HOLD to settle,

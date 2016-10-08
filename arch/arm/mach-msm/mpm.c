@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -229,12 +229,10 @@ static int msm_mpm_enable_irq_exclusive(
 		uint32_t index = MSM_MPM_IRQ_INDEX(mpm_irq);
 		uint32_t mask = MSM_MPM_IRQ_MASK(mpm_irq);
 
-		if (index < MSM_MPM_REG_WIDTH) {
-			if (enable)
-				mpm_irq_masks[index] |= mask;
-			else
-				mpm_irq_masks[index] &= ~mask;
-		}
+		if (enable)
+			mpm_irq_masks[index] |= mask;
+		else
+			mpm_irq_masks[index] &= ~mask;
 	} else {
 		unsigned long *apps_irq_bitmap = wakeset ?
 			msm_mpm_wake_apps_irqs : msm_mpm_enabled_apps_irqs;
@@ -390,7 +388,6 @@ bool msm_mpm_irqs_detectable(bool from_idle)
 {
 	unsigned long *apps_irq_bitmap;
 	int debug_mask;
-	int i = 0;
 
 	if (from_idle) {
 		apps_irq_bitmap = msm_mpm_enabled_apps_irqs;
@@ -403,17 +400,15 @@ bool msm_mpm_irqs_detectable(bool from_idle)
 	}
 
 	if (debug_mask) {
-		i = find_first_bit(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
-		while (i < MSM_MPM_NR_APPS_IRQS) {
-			struct irq_desc *desc = i ?
-				irq_to_desc(i) : NULL;
-			pr_info("%s: cannot monitor irq=%d %s\n",
-			__func__, i, desc->name);
-			i = find_next_bit(apps_irq_bitmap,
-				MSM_MPM_NR_APPS_IRQS, i + 1);
-		}
+		static char buf[DIV_ROUND_UP(MSM_MPM_NR_APPS_IRQS, 32)*9+1];
 
+		bitmap_scnprintf(buf, sizeof(buf), apps_irq_bitmap,
+				MSM_MPM_NR_APPS_IRQS);
+		buf[sizeof(buf) - 1] = '\0';
+
+		pr_info("%s: cannot monitor %s", __func__, buf);
 	}
+
 	return (bool)__bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
 }
 
