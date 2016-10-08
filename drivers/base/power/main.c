@@ -28,6 +28,7 @@
 #include <linux/sched.h>
 #include <linux/async.h>
 #include <linux/suspend.h>
+#include <linux/cpuidle.h>
 #include <linux/timer.h>
 #include <linux/slab.h>
 
@@ -686,6 +687,8 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
+
+	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -838,8 +841,10 @@ static bool is_async(struct device *dev)
 		&& !pm_trace_is_enabled();
 }
 
+#if defined (CONFIG_MACH_LGE)
 static int nsec64_measure_resume_spend = 10000;// over 10ms
 module_param_named(resume_spend, nsec64_measure_resume_spend, int, S_IRUGO | S_IWUSR | S_IWGRP);
+#endif
 
 /**
  * dpm_resume - Execute "resume" callbacks for non-sysdev devices.
@@ -1134,7 +1139,8 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 {
 	pm_callback_t callback = NULL;
 	char *info = NULL;
-	int error = 0;
+
+	__pm_runtime_disable(dev, false);
 
 	if (dev->power.syscore)
 		return 0;
@@ -1288,6 +1294,9 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		async_error = -EBUSY;
 		goto Complete;
 	}
+
+	if (dev->power.syscore)
+		goto Complete;
 
 	dpm_wd_set(&wd, dev);
 
