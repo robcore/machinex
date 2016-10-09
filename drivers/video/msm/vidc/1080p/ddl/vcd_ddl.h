@@ -348,6 +348,7 @@ struct ddl_encoder_data{
 	u32 avc_delimiter_enable;
 	u32 vui_timinginfo_enable;
 	u32 bitstream_restrict_enable;
+	u32 pic_order_cnt_type;
 };
 struct ddl_decoder_data {
 	struct ddl_codec_data_hdr  hdr;
