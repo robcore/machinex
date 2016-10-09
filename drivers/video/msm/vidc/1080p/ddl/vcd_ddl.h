@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, 2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,7 @@
 #ifndef _VCD_DDL_H_
 #define _VCD_DDL_H_
 
+#include <mach/msm_subsystem_map.h>
 #include "vcd_ddl_api.h"
 #include "vcd_ddl_core.h"
 #include "vcd_ddl_utils.h"
@@ -548,9 +549,9 @@ void ddl_set_vidc_timeout(struct ddl_client_context *ddl);
 #ifdef DDL_BUF_LOG
 void ddl_list_buffers(struct ddl_client_context *ddl);
 #endif
-#ifdef DDL_MSG_LOG
+
 s8 *ddl_get_state_string(enum ddl_client_state client_state);
-#endif
+
 extern unsigned char *vidc_video_codec_fw;
 extern u32 vidc_video_codec_fw_size;
 
