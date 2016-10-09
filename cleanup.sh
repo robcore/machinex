@@ -1,8 +1,29 @@
 #!/bin/bash
-rm -rf $(pwd)/out;
-rm $(pwd)/arch/arm/boot/dhd.ko;
-rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
-rm $(pwd)/arch/arm/boot/boot.img-zImage;
+
+if [ -d $(pwd)/out ]; then
+	rm -rf $(pwd)/out;
+else
+	echo "Out already cleaned"
+fi;
+
+if [ -e $(pwd)/arch/arm/boot/dhd.ko ]; then
+	rm $(pwd)/arch/arm/boot/dhd.ko;
+else
+	echo "module already cleaned"
+fi;
+
+if [ -e $(pwd)/arch/arm/boot/zImage ]; then
+	rm $(pwd)/arch/arm/boot/zImage;
+else
+	echo "zimage already cleaned"
+fi;
+
+if [ -e $(pwd)/arch/arm/boot/boot.img-zImage ]; then
+	rm $(pwd)/arch/arm/boot/boot.img-zImage;
+else
+	echo "boot.img-zImage already cleaned"
+fi;
+
 # clean up leftover junk
 find . -type f \( -iname \*.rej \
 				-o -iname \*.orig \
@@ -16,10 +37,6 @@ rm -f $(pwd)/arch/arm/crypto/aesbs-core.S >> /dev/null;
 rm -f $(pwd)/r*.cpio >> /dev/null;
 rm -rf $(pwd)/include/generated >> /dev/null;
 rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
-rm -f $(pwd)/zImage >> /dev/null;
-rm -f $(pwd)/out/zImage >> /dev/null;
-rm -rf $(pwd)/out/system/lib/modules >> /dev/null;
-rm -rf $(pwd)/out/tmp_modules >> /dev/null;
 export ARCH=arm
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 make distclean;
