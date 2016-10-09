@@ -71,7 +71,7 @@ enum rpm_regulator_param_index {
 	RPM_REGULATOR_PARAM_BYPASS,
 	RPM_REGULATOR_PARAM_MAX,
 };
-
+/* just for now
 enum rpm_regulator_smps_mode {
 	RPM_REGULATOR_SMPS_MODE_AUTO	= 0,
 	RPM_REGULATOR_SMPS_MODE_IPEAK	= 1,
@@ -82,6 +82,7 @@ enum rpm_regulator_ldo_mode {
 	RPM_REGULATOR_LDO_MODE_IPEAK	= 0,
 	RPM_REGULATOR_LDO_MODE_HPM	= 1,
 };
+*/
 
 #define RPM_SET_CONFIG_ACTIVE			BIT(0)
 #define RPM_SET_CONFIG_SLEEP			BIT(1)
@@ -127,6 +128,7 @@ static struct rpm_regulator_param params[RPM_REGULATOR_PARAM_MAX] = {
 	PARAM(BYPASS,          1,  0,  0,  0, "bypa", 0, 1,          "qcom,init-disallow-bypass"),
 };
 
+/* for now
 struct rpm_regulator_mode_map {
 	int			ldo_mode;
 	int			smps_mode;
@@ -140,7 +142,7 @@ static struct rpm_regulator_mode_map mode_mapping[] = {
 	[RPM_REGULATOR_MODE_HPM]
 		= {RPM_REGULATOR_LDO_MODE_HPM,   RPM_REGULATOR_SMPS_MODE_PWM},
 };
-
+*/
 struct rpm_vreg_request {
 	u32			param[RPM_REGULATOR_PARAM_MAX];
 	u32			valid;
@@ -1058,7 +1060,7 @@ EXPORT_SYMBOL_GPL(rpm_regulator_set_voltage);
  * parameter is aggregated using a max function such that AUTO < IPEAK < HPM.
  *
  * Returns 0 on success or errno on failure.
- */
+ 
 int rpm_regulator_set_mode(struct rpm_regulator *regulator,
 				enum rpm_regulator_mode mode)
 {
@@ -1113,6 +1115,7 @@ int rpm_regulator_set_mode(struct rpm_regulator *regulator,
 	return rc;
 }
 EXPORT_SYMBOL_GPL(rpm_regulator_set_mode);
+*/
 
 static struct regulator_ops ldo_ops = {
 	.enable			= rpm_vreg_enable,

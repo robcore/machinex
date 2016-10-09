@@ -1442,10 +1442,8 @@ int msm_comm_set_scratch_buffers(struct msm_vidc_inst *inst)
 			binfo = list_entry(ptr, struct internal_buf,
 					list);
 			list_del(&binfo->list);
-			spin_unlock_irqrestore(&inst->lock, flags);
 			msm_smem_free(inst->mem_client, binfo->handle);
 			kfree(binfo);
-			spin_lock_irqsave(&inst->lock, flags);
 		}
 	}
 	spin_unlock_irqrestore(&inst->lock, flags);

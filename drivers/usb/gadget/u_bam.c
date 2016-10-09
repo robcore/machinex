@@ -50,7 +50,7 @@ static const char *bam_ch_names[] = { "bam_dmux_ch_8" };
 
 #define BAM_MUX_RX_Q_SIZE			16
 #define BAM_MUX_TX_Q_SIZE			200
-#define BAM_MUX_RX_REQ_SIZE			2048   /* Must be 1KB aligned */
+#define BAM_MUX_RX_REQ_SIZE			(2048 - BAM_MUX_HDR)
 
 #define DL_INTR_THRESHOLD			20
 
@@ -362,7 +362,6 @@ static void gbam_epin_complete(struct usb_ep *ep, struct usb_request *req)
 	switch (status) {
 	case 0:
 		/* successful completion */
-		break;
 	case -ECONNRESET:
 	case -ESHUTDOWN:
 		/* connection gone */

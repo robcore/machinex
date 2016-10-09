@@ -381,7 +381,6 @@ int msm_iommu_pagetable_map_range(struct iommu_pt *pt, unsigned int va,
 		       struct scatterlist *sg, unsigned int len, int prot)
 {
 	phys_addr_t pa;
-	unsigned int start_va = va;
 	unsigned int offset = 0;
 	unsigned long *fl_pte;
 	unsigned long fl_offset;
@@ -442,6 +441,12 @@ int msm_iommu_pagetable_map_range(struct iommu_pt *pt, unsigned int va,
 				chunk_offset = 0;
 				sg = sg_next(sg);
 				pa = get_phys_addr(sg);
+				if (pa == 0) {
+					pr_debug("No dma address for sg %p\n",
+							sg);
+					ret = -EINVAL;
+					goto fail;
+				}
 			}
 			continue;
 		}
@@ -494,6 +499,12 @@ int msm_iommu_pagetable_map_range(struct iommu_pt *pt, unsigned int va,
 				chunk_offset = 0;
 				sg = sg_next(sg);
 				pa = get_phys_addr(sg);
+				if (pa == 0) {
+					pr_debug("No dma address for sg %p\n",
+							sg);
+					ret = -EINVAL;
+					goto fail;
+				}
 			}
 		}
 
@@ -504,9 +515,6 @@ int msm_iommu_pagetable_map_range(struct iommu_pt *pt, unsigned int va,
 	}
 
 fail:
-	if (ret && offset > 0)
-		msm_iommu_pagetable_unmap_range(pt, start_va, offset);
-
 	return ret;
 }
 

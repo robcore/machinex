@@ -271,10 +271,6 @@ int __init dma_declare_contiguous(struct device *dev, phys_addr_t size,
 		if (!addr) {
 			base = -ENOMEM;
 			goto err;
-		} else if (addr + size > ~(unsigned long)0) {
-			memblock_free(addr, size);
-			base = -EINVAL;
-			goto err;
 		} else {
 			base = addr;
 		}

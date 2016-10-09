@@ -294,7 +294,6 @@ static int set_enabled(const char *val, const struct kernel_param *kp)
 
 	pr_info("%s: enabled = %d\n", KBUILD_MODNAME, enabled);
 
-	pr_info("msm_thermal: initialized\n");
 	return ret;
 }
 

@@ -224,19 +224,13 @@ static DEVICE_ATTR(disable, S_IWUSR | S_IRUSR, wdog_disable_get,
 
 static void pet_watchdog(struct msm_watchdog_data *wdog_dd)
 {
-	int slack, i, count, prev_count = 0;
+	int slack;
 	unsigned long long time_ns;
 	unsigned long long slack_ns;
 	unsigned long long bark_time_ns = wdog_dd->bark_time * 1000000ULL;
 
-	for (i = 0; i < 2; i++) {
-		count = (__raw_readl(wdog_dd->base + WDT0_STS) >> 1) & 0xFFFFF;
-		if (count != prev_count) {
-			prev_count = count;
-			i = 0;
-		}
-	}
-	slack = ((wdog_dd->bark_time * WDT_HZ) / 1000) - count;
+	slack = __raw_readl(wdog_dd->base + WDT0_STS) >> 3;
+	slack = ((wdog_dd->bark_time*WDT_HZ)/1000) - slack;
 	if (slack < wdog_dd->min_slack_ticks)
 		wdog_dd->min_slack_ticks = slack;
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
