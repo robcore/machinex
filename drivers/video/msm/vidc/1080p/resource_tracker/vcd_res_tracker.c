@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, 2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,7 +18,6 @@
 #include <linux/pm_runtime.h>
 #include <mach/clk.h>
 #include <mach/msm_memtypes.h>
-#include <mach/iommu_domains.h>
 #include <linux/interrupt.h>
 #include <linux/memory_alloc.h>
 #include <asm/sizes.h>
@@ -31,6 +30,8 @@
 static unsigned int vidc_clk_table[5] = {
 	48000000, 133330000, 200000000, 228570000, 266670000,
 };
+static unsigned int restrk_mmu_subsystem[] =	{
+		MSM_SUBSYSTEM_VIDEO, MSM_SUBSYSTEM_VIDEO_FWARE};
 static struct res_trk_context resource_context;
 
 #define VIDC_FW	"vidc_1080p.fw"
@@ -55,8 +56,10 @@ static void res_trk_put_clk(void);
 static void *res_trk_pmem_map
 	(struct ddl_buf_addr *addr, size_t sz, u32 alignment)
 {
-	u32 offset = 0;
+	u32 offset = 0, flags = 0;
+	u32 index = 0;
 	struct ddl_context *ddl_context;
+	struct msm_mapped_buffer *mapped_buffer = NULL;
 	int ret = 0;
 	unsigned long iova = 0;
 	unsigned long buffer_size  = 0;
@@ -97,11 +100,53 @@ static void *res_trk_pmem_map
 		addr->align_virtual_addr = addr->virtual_base_addr + offset;
 		addr->buffer_size = buffer_size;
 	} else {
-		pr_err("ION must be enabled.");
-		goto bail_out;
+		if (!res_trk_check_for_sec_session()) {
+			if (!addr->alloced_phys_addr) {
+				pr_err(" %s() alloced addres NULL", __func__);
+				goto bail_out;
+			}
+			flags = MSM_SUBSYSTEM_MAP_IOVA |
+				MSM_SUBSYSTEM_MAP_KADDR;
+			if (alignment == DDL_KILO_BYTE(128))
+					index = 1;
+			else if (alignment > SZ_4K)
+				flags |= MSM_SUBSYSTEM_ALIGN_IOVA_8K;
+			addr->mapped_buffer =
+			msm_subsystem_map_buffer(
+			(unsigned long)addr->alloced_phys_addr,
+			sz, flags, &restrk_mmu_subsystem[index],
+			sizeof(restrk_mmu_subsystem[index])/
+				sizeof(unsigned int));
+			if (IS_ERR(addr->mapped_buffer)) {
+				pr_err(" %s() buffer map failed", __func__);
+				goto bail_out;
+			}
+			mapped_buffer = addr->mapped_buffer;
+			if (!mapped_buffer->vaddr || !mapped_buffer->iova[0]) {
+				pr_err("%s() map buffers failed\n", __func__);
+				goto bail_out;
+			}
+			addr->physical_base_addr =
+				 (u8 *)mapped_buffer->iova[0];
+			addr->virtual_base_addr =
+					mapped_buffer->vaddr;
+		} else {
+			addr->physical_base_addr =
+				(u8 *) addr->alloced_phys_addr;
+			addr->virtual_base_addr =
+				(u8 *)addr->alloced_phys_addr;
+		}
+		addr->align_physical_addr = (u8 *) DDL_ALIGN((u32)
+		addr->physical_base_addr, alignment);
+		offset = (u32)(addr->align_physical_addr -
+				addr->physical_base_addr);
+		addr->align_virtual_addr = addr->virtual_base_addr + offset;
+		addr->buffer_size = sz;
 	}
 	return addr->virtual_base_addr;
 bail_out:
+	if (IS_ERR(addr->mapped_buffer))
+		msm_subsystem_unmap_buffer(addr->mapped_buffer);
 	return NULL;
 ion_unmap_bail_out:
 	if (!IS_ERR_OR_NULL(addr->alloc_handle)) {
@@ -128,6 +173,12 @@ static void res_trk_pmem_free(struct ddl_buf_addr *addr)
 			 addr->alloc_handle);
 			addr->alloc_handle = NULL;
 		}
+	} else {
+		if (addr->mapped_buffer)
+			msm_subsystem_unmap_buffer(addr->mapped_buffer);
+		if (addr->alloced_phys_addr)
+			free_contiguous_memory_by_paddr(
+			(unsigned long)addr->alloced_phys_addr);
 	}
 	memset(addr, 0 , sizeof(struct ddl_buf_addr));
 }
@@ -214,7 +265,8 @@ static void res_trk_pmem_unmap(struct ddl_buf_addr *addr)
 			addr->virtual_base_addr = NULL;
 			addr->physical_base_addr = NULL;
 		}
-	}
+	} else if (addr->mapped_buffer)
+		msm_subsystem_unmap_buffer(addr->mapped_buffer);
 	addr->mapped_buffer = NULL;
 }
 
@@ -406,10 +458,6 @@ bail_out:
 static struct ion_client *res_trk_create_ion_client(void){
 	struct ion_client *video_client;
 	video_client = msm_ion_client_create(-1, "video_client");
-	if (IS_ERR_OR_NULL(video_client)) {
-		VCDRES_MSG_ERROR("%s: Unable to create ION client\n", __func__);
-		video_client = NULL;
-	}
 	return video_client;
 }
 
@@ -648,8 +696,10 @@ u32 res_trk_download_firmware(void)
 		status = false;
 		goto bail_out;
 	}
-	vidc_video_codec_fw = (unsigned char *)fw_video->data;
-	vidc_video_codec_fw_size = (u32) fw_video->size;
+	if (fw_video) {
+		vidc_video_codec_fw = (unsigned char *)fw_video->data;
+		vidc_video_codec_fw_size = (u32) fw_video->size;
+	}
 bail_out:
 	mutex_unlock(&resource_context.lock);
 	return status;
@@ -811,11 +861,6 @@ unsigned int res_trk_get_ion_flags(void)
 			else if (res_trk_is_cp_enabled())
 				flags |= ION_SECURE;
 		}
-		#if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
-		 else {
-                 flags |= ION_FORCE_CONTIGUOUS;
-              }
-	    #endif
 	}
 	return flags;
 }
