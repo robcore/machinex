@@ -16,6 +16,7 @@
 #include <linux/moduleparam.h>
 #include <linux/time.h>
 #include <linux/wait.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/soc.h>
@@ -25,6 +26,7 @@
 #include <sound/control.h>
 #include <asm/dma.h>
 #include <linux/dma-mapping.h>
+#include <linux/android_pmem.h>
 #include <linux/of_device.h>
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>

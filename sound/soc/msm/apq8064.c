@@ -1524,8 +1524,6 @@ static int msm_slim_4_tx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 
 	pr_debug("%s()\n", __func__);
 
-	if (channels->max < 2)
-		channels->min = channels->max = 2;
 	rate->min = rate->max = 48000;
 	if (rec_mode == INCALL_REC_STEREO)
 		channels->min = channels->max = 2;

@@ -2,26 +2,22 @@
 
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
-else
-	echo "Out already cleaned"
 fi;
 
 if [ -e $(pwd)/arch/arm/boot/dhd.ko ]; then
 	rm $(pwd)/arch/arm/boot/dhd.ko;
-else
-	echo "module already cleaned"
+fi;
+
+if [ -e $(pwd)/arch/arm/boot/scsi_wait_scan.ko ]; then
+	rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
 fi;
 
 if [ -e $(pwd)/arch/arm/boot/zImage ]; then
 	rm $(pwd)/arch/arm/boot/zImage;
-else
-	echo "zimage already cleaned"
 fi;
 
 if [ -e $(pwd)/arch/arm/boot/boot.img-zImage ]; then
 	rm $(pwd)/arch/arm/boot/boot.img-zImage;
-else
-	echo "boot.img-zImage already cleaned"
 fi;
 
 # clean up leftover junk

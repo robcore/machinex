@@ -24,6 +24,7 @@
 #include <linux/spinlock.h>
 #include <linux/slab.h>
 #include <linux/msm_audio.h>
+#include <linux/android_pmem.h>
 #include <linux/memory_alloc.h>
 #include <linux/debugfs.h>
 #include <linux/time.h>
@@ -36,6 +37,7 @@
 #include <mach/peripheral-loader.h>
 #include <mach/qdsp6v2/audio_acdb.h>
 #include <mach/qdsp6v2/rtac.h>
+#include <mach/msm_subsystem_map.h>
 
 #include <sound/apr_audio-v2.h>
 #include <sound/q6asm-v2.h>

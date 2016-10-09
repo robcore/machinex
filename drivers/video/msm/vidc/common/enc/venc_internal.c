@@ -25,12 +25,12 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
-
+#include <linux/android_pmem.h>
 #include <linux/clk.h>
+#include <mach/msm_subsystem_map.h>
 #include <media/msm/vidc_type.h>
 #include <media/msm/vcd_api.h>
 #include <media/msm/vidc_init.h>
-#include <mach/iommu_domains.h>
 #include "vcd_res_tracker_api.h"
 #include "venc_internal.h"
 
@@ -41,6 +41,9 @@
 #endif
 
 #define ERR(x...) printk(KERN_ERR x)
+static unsigned int vidc_mmu_subsystem[] = {
+	MSM_SUBSYSTEM_VIDEO};
+
 
 u32 vid_enc_set_get_base_cfg(struct video_client_ctx *client_ctx,
 		struct venc_basecfg *base_config, u32 set_flag)
@@ -1844,9 +1847,11 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 		struct venc_recon_addr *venc_recon)
 {
 	u32 vcd_status = VCD_ERR_FAIL;
-	u32 len, i;
+	u32 len, i, flags = 0;
+	struct file *file;
 	struct vcd_property_hdr vcd_property_hdr;
 	struct vcd_property_enc_recon_buffer *control = NULL;
+	struct msm_mapped_buffer *mapped_buffer = NULL;
 	int rc = -1;
 	unsigned long ionflag = 0;
 	unsigned long iova = 0;
@@ -1878,8 +1883,25 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 	control->user_virtual_addr = venc_recon->pbuffer;
 
 	if (!vcd_get_ion_status()) {
-		pr_err("PMEM not available\n");
-		return false;
+		if (get_pmem_file(control->pmem_fd, (unsigned long *)
+			(&(control->physical_addr)), (unsigned long *)
+			(&control->kernel_virtual_addr),
+			(unsigned long *) (&len), &file)) {
+				ERR("%s(): get_pmem_file failed\n", __func__);
+				return false;
+			}
+			put_pmem_file(file);
+			flags = MSM_SUBSYSTEM_MAP_IOVA;
+			mapped_buffer = msm_subsystem_map_buffer(
+			(unsigned long)control->physical_addr, len,
+			flags, vidc_mmu_subsystem,
+			sizeof(vidc_mmu_subsystem)/sizeof(unsigned int));
+			if (IS_ERR(mapped_buffer)) {
+				pr_err("buffer map failed");
+				return false;
+			}
+			control->client_data = (void *) mapped_buffer;
+			control->dev_addr = (u8 *)mapped_buffer->iova[0];
 	} else {
 		client_ctx->recon_buffer_ion_handle[i] = ion_import_dma_buf(
 				client_ctx->user_ion_client, control->pmem_fd);
@@ -1994,6 +2016,9 @@ u32 vid_enc_free_recon_buffers(struct video_client_ctx *client_ctx,
 			venc_recon->pbuffer);
 		return false;
 	}
+	if (control->client_data)
+		msm_subsystem_unmap_buffer((struct msm_mapped_buffer *)
+		control->client_data);
 
 	vcd_property_hdr.prop_id = VCD_I_FREE_RECON_BUFFERS;
 	vcd_property_hdr.sz = sizeof(struct vcd_property_buffer_size);

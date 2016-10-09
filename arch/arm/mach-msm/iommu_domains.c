@@ -24,6 +24,7 @@
 #include <mach/iommu.h>
 #include <mach/iommu_domains.h>
 #include <mach/socinfo.h>
+#include <mach/msm_subsystem_map.h>
 
 struct msm_iova_data {
 	struct rb_node node;

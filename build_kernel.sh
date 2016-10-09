@@ -3,29 +3,23 @@ export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
-else
-	echo "Out already cleaned"
 fi;
 
 if [ -e $(pwd)/arch/arm/boot/dhd.ko ]; then
 	rm $(pwd)/arch/arm/boot/dhd.ko;
-else
-	echo "module already cleaned"
+fi;
+
+if [ -e $(pwd)/arch/arm/boot/scsi_wait_scan.ko ]; then
+	rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
 fi;
 
 if [ -e $(pwd)/arch/arm/boot/zImage ]; then
 	rm $(pwd)/arch/arm/boot/zImage;
-else
-	echo "zimage already cleaned"
 fi;
 
 if [ -e $(pwd)/arch/arm/boot/boot.img-zImage ]; then
 	rm $(pwd)/arch/arm/boot/boot.img-zImage;
-else
-	echo "boot.img-zImage already cleaned"
 fi;
-
-#rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
 # clean up leftover junk
 find . -type f \( -iname \*.rej \
 				-o -iname \*.orig \
@@ -46,13 +40,13 @@ make ARCH=arm -S -s -j4 O=$(pwd)/out;
 if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	cp -p $(pwd)/out/arch/arm/boot/zImage $(pwd)/arch/arm/boot/zImage;
 	cp -p $(pwd)/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/arch/arm/boot/dhd.ko;
-	#cp -p $(pwd)/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
+	cp -p $(pwd)/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
 	mv $(pwd)/arch/arm/boot/zImage $(pwd)/arch/arm/boot/boot.img-zImage;
 	cd /media/root/robcore/AIK;
 	rm -rf machinex-new;
 	cp -R -p machina-new machinex-new;
 	cp -p ~/machinex/arch/arm/boot/dhd.ko $(pwd)/machinex-new/system/lib/modules/dhd.ko;
-	#cp -p ~/machinex/arch/arm/boot/scsi_wait_scan.ko $(pwd)/machinex-new/system/lib/modules/scsi_wait_scan.ko;
+	cp -p ~/machinex/arch/arm/boot/scsi_wait_scan.ko $(pwd)/machinex-new/system/lib/modules/scsi_wait_scan.ko;
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/arch/arm/boot/boot.img-zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;

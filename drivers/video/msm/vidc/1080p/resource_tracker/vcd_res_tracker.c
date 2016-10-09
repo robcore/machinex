@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -696,10 +696,8 @@ u32 res_trk_download_firmware(void)
 		status = false;
 		goto bail_out;
 	}
-	if (fw_video) {
-		vidc_video_codec_fw = (unsigned char *)fw_video->data;
-		vidc_video_codec_fw_size = (u32) fw_video->size;
-	}
+	vidc_video_codec_fw = (unsigned char *)fw_video->data;
+	vidc_video_codec_fw_size = (u32) fw_video->size;
 bail_out:
 	mutex_unlock(&resource_context.lock);
 	return status;
@@ -861,6 +859,11 @@ unsigned int res_trk_get_ion_flags(void)
 			else if (res_trk_is_cp_enabled())
 				flags |= ION_SECURE;
 		}
+		#if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
+		 else {
+                 flags |= ION_FORCE_CONTIGUOUS;
+              }
+	    #endif
 	}
 	return flags;
 }

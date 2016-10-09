@@ -55,6 +55,9 @@
 #include "devices.h"
 #include <mach/gpiomux.h>
 #include <mach/rpm.h>
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 #include <mach/msm_memtypes.h>
 #include <linux/bootmem.h>
 #include <asm/setup.h>

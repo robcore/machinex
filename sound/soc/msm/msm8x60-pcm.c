@@ -16,6 +16,7 @@
 #include <linux/moduleparam.h>
 #include <linux/time.h>
 #include <linux/wait.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/soc.h>

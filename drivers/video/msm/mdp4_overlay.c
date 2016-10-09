@@ -30,6 +30,7 @@
 #include <linux/fb.h>
 #include <linux/msm_mdp.h>
 #include <linux/file.h>
+#include <linux/android_pmem.h>
 #include <linux/major.h>
 #include <asm/system.h>
 #include <asm/mach-types.h>
@@ -362,7 +363,7 @@ int mdp4_overlay_iommu_map_buf(int mem_id,
 
 		if (ion_map_iommu(display_iclient, *srcp_ihdl,
 				DISPLAY_READ_DOMAIN, GEN_POOL, SZ_4K, 0, start,
-				len, 0, ION_IOMMU_UNMAP_DELAYED)) {
+				len, 0, 0)) {
 			ion_free(display_iclient, *srcp_ihdl);
 			pr_err("%s(): ion_map_iommu() failed\n",
 					__func__);
@@ -894,7 +895,7 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
 	}
-
+	
 #endif
 
 	outpdw(rgb_base + 0x0000, src_size);	/* MDP_RGB_SRC_SIZE */
@@ -1093,22 +1094,22 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 #if defined(CONFIG_FEATURE_FLIPLR)
-	if (!pipe->mfd)
-	pr_err("vg mfd is not set\n");
+	if (!pipe->mfd) 
+	pr_err("vg mfd is not set\n"); 
 
-	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){
-		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR;
-		if (pipe->ext_flag & MDP_FLIP_LR){
-			op_mode &= ~MDP4_OP_FLIP_LR;
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
+	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){ 
+		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR; 
+		if (pipe->ext_flag & MDP_FLIP_LR){ 
+			op_mode &= ~MDP4_OP_FLIP_LR; 
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));			
 		}
-		pipe->op_mode = op_mode;
+		pipe->op_mode = op_mode; 
 
 		if ((pipe->op_mode & MDP4_OP_FLIP_LR) && pipe->mfd){
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
-			outpdw(MDP_BASE + 0xE0044, 0xe0fff);
-		}
-	}
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));						
+			outpdw(MDP_BASE + 0xE0044, 0xe0fff); 
+		} 
+	} 
 #endif
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
@@ -3347,7 +3348,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		}
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
-			if (pipe->bpp==2)
+			if (pipe->bpp==2) 
 				yuvcount++;
 		}
 
@@ -3659,6 +3660,9 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 {
 	struct file *file;
 	int put_needed, ret = 0, fb_num;
+#ifdef CONFIG_ANDROID_PMEM
+	unsigned long vstart;
+#endif
 	*p_need = 0;
 
 	if (img->flags & MDP_BLIT_SRC_GEM) {
@@ -3692,6 +3696,13 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	return mdp4_overlay_iommu_map_buf(img->memory_id, pipe, plane,
 		start, len, srcp_ihdl);
+#endif
+#ifdef CONFIG_ANDROID_PMEM
+	if (!get_pmem_file(img->memory_id, start, &vstart,
+					    len, srcp_file))
+		return 0;
+	else
+		return -EINVAL;
 #endif
 }
 

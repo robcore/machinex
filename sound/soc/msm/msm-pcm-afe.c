@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/android_pmem.h>
 #include <sound/core.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
@@ -29,6 +30,7 @@
 #include <sound/q6adm.h>
 #include <asm/dma.h>
 #include <linux/memory_alloc.h>
+#include <mach/msm_subsystem_map.h>
 #include "msm-pcm-afe.h"
 #include "msm-pcm-q6.h"
 
