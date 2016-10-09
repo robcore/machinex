@@ -365,9 +365,7 @@ static void gbam_epin_complete(struct usb_ep *ep, struct usb_request *req)
 	case -ECONNRESET:
 	case -ESHUTDOWN:
 		/* connection gone */
-		dev_kfree_skb_any(skb);
-		usb_ep_free_request(ep, req);
-		return;
+		break;
 	default:
 		pr_err("%s: data tx ep error %d\n",
 				__func__, status);

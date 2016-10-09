@@ -76,7 +76,7 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	unsigned long val;
 
-	if (kstrtoul(buf, 10, &val))
+	if (strict_strtoul(buf, 10, &val))
 		return -EINVAL;
 
 	if (val > 1)
@@ -646,11 +646,6 @@ power_attr(pm_trace_dev_match);
 
 #endif /* CONFIG_PM_TRACE */
 
-#ifdef CONFIG_USER_WAKELOCK
-power_attr(wake_lock);
-power_attr(wake_unlock);
-#endif
-
 #ifdef CONFIG_FREEZER
 static ssize_t pm_freeze_timeout_show(struct kobject *kobj,
 				      struct kobj_attribute *attr, char *buf)
@@ -938,16 +933,6 @@ static struct attribute * g[] = {
 #endif
 #ifdef CONFIG_PM_SLEEP_DEBUG
 	&pm_print_times_attr.attr,
-#endif
-#ifdef CONFIG_PM_SLEEP_DEBUG
-	&pm_print_times_attr.attr,
-#endif
-#ifdef CONFIG_PM_SLEEP_DEBUG
-	&pm_print_times_attr.attr,
-#endif
-#ifdef CONFIG_USER_WAKELOCK
-	&wake_lock_attr.attr,
-	&wake_unlock_attr.attr,
 #endif
 #endif
 #ifdef CONFIG_FREEZER
