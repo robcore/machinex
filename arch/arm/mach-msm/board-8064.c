@@ -88,7 +88,6 @@
 #include "pm-boot.h"
 #include "devices-msm8x60.h"
 #include "smd_private.h"
-#include "platsmp.h"
 
 #define MHL_GPIO_INT           30
 #define MHL_GPIO_RESET         35
@@ -3317,13 +3316,11 @@ static void __init apq8064_common_init(void)
 	if (cpu_is_apq8064ab())
 		apq8064ab_update_krait_spm();
 	if (cpu_is_krait_v3()) {
-		struct msm_pm_init_data_type *pdata =
-		msm8064_pm_8x60.dev.platform_data;
-		pdata->retention_calls_tz = 0;
+		msm_pm_set_tz_retention_flag(0);
 		apq8064ab_update_retention_spm();
+	} else {
+		msm_pm_set_tz_retention_flag(1);
 	}
-	platform_device_register(&msm8064_pm_8x60);
-
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm_tsens_early_init(&apq_tsens_pdata);
@@ -3466,11 +3463,6 @@ static void __init apq8064_cdp_init(void)
 		platform_device_register(&mpq8064_device_uartdm_gsbi6);
 	}
 
-#if defined(CONFIG_BT) && defined(CONFIG_MARIMBA_CORE)
-	if (machine_is_mpq8064_hrd())
-		apq8064_bt_power_init();
-#endif
-
 	if (machine_is_apq8064_cdp() || machine_is_apq8064_liquid())
 		platform_device_register(&cdp_kp_pdev);
 
@@ -3483,25 +3475,6 @@ static void __init apq8064_cdp_init(void)
 	}
 }
 
-static void __init fsm8064_ep_init(void)
-{
-	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
-		pr_err("meminfo_init() failed!\n");
-
-	msm_thermal_pdata.limit_temp_degC = 80;
-
-	apq8064_common_init();
-	ethernet_init();
-	fsm8064_ep_pcie_init();
-	platform_add_devices(ep_devices, ARRAY_SIZE(ep_devices));
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-	apq8064_init_gpu();
-	platform_device_register(&cdp_kp_pdev);
-#ifdef CONFIG_MSM_CAMERA
-	apq8064_init_cam();
-#endif
-}
-
 MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
@@ -3512,20 +3485,6 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
-MACHINE_END
-
-MACHINE_START(FSM8064_EP, "QCT FSM8064 EP")
-	.map_io = apq8064_map_io,
-	.reserve = apq8064_reserve,
-	.init_irq = apq8064_init_irq,
-	.handle_irq = gic_handle_irq,
-	.timer = &msm_timer,
-	.init_machine = fsm8064_ep_init,
-	.init_early = apq8064_allocate_memory_regions,
-	.init_very_early = apq8064_early_reserve,
-	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
@@ -3538,7 +3497,6 @@ MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
@@ -3551,7 +3509,6 @@ MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
@@ -3564,7 +3521,6 @@ MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
@@ -3577,7 +3533,6 @@ MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
@@ -3590,6 +3545,5 @@ MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
 
