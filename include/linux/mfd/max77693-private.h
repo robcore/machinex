@@ -146,6 +146,15 @@ enum max77693_haptic_reg {
 	MAX77693_HAPTIC_REG_END,
 };
 
+/* max77693-pmic LSCNFG configuraton register */
+#define MAX77693_PMIC_LOW_SYS_MASK      0x80
+#define MAX77693_PMIC_LOW_SYS_SHIFT     7
+
+/* max77693-haptic configuration register */
+#define MAX77693_CONFIG2_MODE           7
+#define MAX77693_CONFIG2_MEN            6
+#define MAX77693_CONFIG2_HTYP           5
+
 /* MAX77693 REGISTER ENABLE or DISABLE bit */
 #define MAX77693_ENABLE_BIT 1
 #define MAX77693_DISABLE_BIT 0
@@ -177,7 +186,7 @@ enum max77693_haptic_reg {
 /* MAX77693 STATUS2 register */
 #define STATUS2_CHGTYP_SHIFT		0
 #define STATUS2_CHGDETRUN_SHIFT		3
-#define STATUS2_DXOVP_SHIFT		5	
+#define STATUS2_DXOVP_SHIFT		5
 #define STATUS2_VBVOLT_SHIFT		6
 #define STATUS2_CHGTYP_MASK		(0x7 << STATUS2_CHGTYP_SHIFT)
 #define STATUS2_CHGDETRUN_MASK		(0x1 << STATUS2_CHGDETRUN_SHIFT)
@@ -265,6 +274,15 @@ enum max77693_reg_ctrl1_type {
 		| MAX77693_MUIC_CTRL1_BIN_5_101 ,
 };
 /*TODO must modify H/W rev.5*/
+
+/* max77693-pmic LSCNFG configuraton register */
+#define MAX77693_PMIC_LOW_SYS_MASK      0x80
+#define MAX77693_PMIC_LOW_SYS_SHIFT     7
+
+/* max77693-haptic configuration register */
+#define MAX77693_CONFIG2_MODE           7
+#define MAX77693_CONFIG2_MEN            6
+#define MAX77693_CONFIG2_HTYP           5
 
 enum max77693_irq_source {
 	LED_INT = 0,
