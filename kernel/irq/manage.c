@@ -7,6 +7,8 @@
  * This file contains driver APIs to the irq subsystem.
  */
 
+#define pr_fmt(fmt) "genirq: " fmt
+
 #include <linux/irq.h>
 #include <linux/kthread.h>
 #include <linux/module.h>
@@ -14,6 +16,8 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
+#include <linux/task_work.h>
 
 #include "internals.h"
 
@@ -203,6 +207,7 @@ int irq_set_affinity(unsigned int irq, const struct cpumask *mask)
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 	return ret;
 }
+EXPORT_SYMBOL(irq_set_affinity);
 
 int irq_set_affinity_hint(unsigned int irq, const struct cpumask *m)
 {
@@ -597,7 +602,7 @@ int __irq_set_trigger(struct irq_desc *desc, unsigned int irq,
 		 * flow-types?
 		 */
 		pr_debug("No set_type function for IRQ %d (%s)\n", irq,
-				chip ? (chip->name ? : "unknown") : "unknown");
+			 chip ? (chip->name ? : "unknown") : "unknown");
 		return 0;
 	}
 
@@ -631,7 +636,7 @@ int __irq_set_trigger(struct irq_desc *desc, unsigned int irq,
 		ret = 0;
 		break;
 	default:
-		pr_err("setting trigger mode %lu for irq %u failed (%pF)\n",
+		pr_err("Setting trigger mode %lu for irq %u failed (%pF)\n",
 		       flags, irq, chip->irq_set_type);
 	}
 	if (unmask)
@@ -828,11 +833,39 @@ static void wake_threads_waitq(struct irq_desc *desc)
 		wake_up(&desc->wait_for_threads);
 }
 
+static void irq_thread_dtor(struct callback_head *unused)
+{
+	struct task_struct *tsk = current;
+	struct irq_desc *desc;
+	struct irqaction *action;
+
+	if (WARN_ON_ONCE(!(current->flags & PF_EXITING)))
+		return;
+
+	action = kthread_data(tsk);
+
+	pr_err("exiting task \"%s\" (%d) is an active IRQ thread (irq %d)\n",
+	       tsk->comm, tsk->pid, action->irq);
+
+
+	desc = irq_to_desc(action->irq);
+	/*
+	 * If IRQTF_RUNTHREAD is set, we need to decrement
+	 * desc->threads_active and wake possible waiters.
+	 */
+	if (test_and_clear_bit(IRQTF_RUNTHREAD, &action->thread_flags))
+		wake_threads_waitq(desc);
+
+	/* Prevent a stale desc->threads_oneshot */
+	irq_finalize_oneshot(desc, action);
+}
+
 /*
  * Interrupt handler thread
  */
 static int irq_thread(void *data)
 {
+	struct callback_head on_exit_work;
 	static const struct sched_param param = {
 		.sched_priority = MAX_USER_RT_PRIO/2,
 	};
@@ -848,7 +881,9 @@ static int irq_thread(void *data)
 		handler_fn = irq_thread_fn;
 
 	sched_setscheduler(current, SCHED_FIFO, &param);
-	current->irq_thread = 1;
+
+	init_task_work(&on_exit_work, irq_thread_dtor);
+	task_work_add(current, &on_exit_work, false);
 
 	irq_thread_check_affinity(desc, action);
 
@@ -872,43 +907,9 @@ static int irq_thread(void *data)
 	 * cannot touch the oneshot mask at this point anymore as
 	 * __setup_irq() might have given out currents thread_mask
 	 * again.
-	 *
-	 * Clear irq_thread. Otherwise exit_irq_thread() would make
-	 * fuzz about an active irq thread going into nirvana.
 	 */
-	current->irq_thread = 0;
+	task_work_cancel(current, irq_thread_dtor);
 	return 0;
-}
-
-/*
- * Called from do_exit()
- */
-void exit_irq_thread(void)
-{
-	struct task_struct *tsk = current;
-	struct irq_desc *desc;
-	struct irqaction *action;
-
-	if (!tsk->irq_thread)
-		return;
-
-	action = kthread_data(tsk);
-
-	printk(KERN_ERR
-	       "exiting task \"%s\" (%d) is an active IRQ thread (irq %d)\n",
-	       tsk->comm ? tsk->comm : "", tsk->pid, action->irq);
-
-	desc = irq_to_desc(action->irq);
-
-	/*
-	 * If IRQTF_RUNTHREAD is set, we need to decrement
-	 * desc->threads_active and wake possible waiters.
-	 */
-	if (test_and_clear_bit(IRQTF_RUNTHREAD, &action->thread_flags))
-		wake_threads_waitq(desc);
-
-	/* Prevent a stale desc->threads_oneshot */
-	irq_finalize_oneshot(desc, action);
 }
 
 static void irq_setup_forced_threading(struct irqaction *new)
@@ -935,7 +936,6 @@ static int
 __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 {
 	struct irqaction *old, **old_ptr;
-	const char *old_name = NULL;
 	unsigned long flags, thread_mask = 0;
 	int ret, nested, shared = 0;
 	cpumask_var_t mask;
@@ -1008,6 +1008,18 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	}
 
 	/*
+	 * Drivers are often written to work w/o knowledge about the
+	 * underlying irq chip implementation, so a request for a
+	 * threaded irq without a primary hard irq context handler
+	 * requires the ONESHOT flag to be set. Some irq chips like
+	 * MSI based interrupts are per se one shot safe. Check the
+	 * chip flags, so we can avoid the unmask dance at the end of
+	 * the threaded handler for those.
+	 */
+	if (desc->irq_data.chip->flags & IRQCHIP_ONESHOT_SAFE)
+		new->flags &= ~IRQF_ONESHOT;
+
+	/*
 	 * The following block of code has to be executed atomically
 	 */
 	raw_spin_lock_irqsave(&desc->lock, flags);
@@ -1023,10 +1035,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		 */
 		if (!((old->flags & new->flags) & IRQF_SHARED) ||
 		    ((old->flags ^ new->flags) & IRQF_TRIGGER_MASK) ||
-		    ((old->flags ^ new->flags) & IRQF_ONESHOT)) {
-			old_name = old->name;
+		    ((old->flags ^ new->flags) & IRQF_ONESHOT))
 			goto mismatch;
-		}
 
 		/* All handlers must agree on per-cpuness */
 		if ((old->flags & IRQF_PERCPU) !=
@@ -1082,6 +1092,28 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		 * all existing action->thread_mask bits.
 		 */
 		new->thread_mask = 1 << ffz(thread_mask);
+
+	} else if (new->handler == irq_default_primary_handler &&
+		   !(desc->irq_data.chip->flags & IRQCHIP_ONESHOT_SAFE)) {
+		/*
+		 * The interrupt was requested with handler = NULL, so
+		 * we use the default primary handler for it. But it
+		 * does not have the oneshot flag set. In combination
+		 * with level interrupts this is deadly, because the
+		 * default primary handler just wakes the thread, then
+		 * the irq lines is reenabled, but the device still
+		 * has the level irq asserted. Rinse and repeat....
+		 *
+		 * While this works for edge type interrupts, we play
+		 * it safe and reject unconditionally because we can't
+		 * say for sure which type this interrupt really
+		 * has. The type flags are unreliable as the
+		 * underlying chip implementation can override them.
+		 */
+		pr_err("Threaded irq requested with handler=NULL and !ONESHOT for irq %d\n",
+		       irq);
+		ret = -EINVAL;
+		goto out_mask;
 	}
 
 	if (!shared) {
@@ -1129,7 +1161,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 
 		if (nmsk != omsk)
 			/* hope the handler works with current  trigger mode */
-			pr_warning("IRQ %d uses trigger mode %u; requested %u\n",
+			pr_warning("irq %d uses trigger mode %u; requested %u\n",
 				   irq, nmsk, omsk);
 	}
 
@@ -1166,14 +1198,13 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	return 0;
 
 mismatch:
-#ifdef CONFIG_DEBUG_SHIRQ
 	if (!(new->flags & IRQF_PROBE_SHARED)) {
-		printk(KERN_ERR "IRQ handler type mismatch for IRQ %d\n", irq);
-		if (old_name)
-			printk(KERN_ERR "current handler: %s\n", old_name);
+		pr_err("Flags mismatch irq %d. %08x (%s) vs. %08x (%s)\n",
+		       irq, new->flags, new->name, old->flags, old->name);
+#ifdef CONFIG_DEBUG_SHIRQ
 		dump_stack();
-	}
 #endif
+	}
 	ret = -EBUSY;
 
 out_mask:
@@ -1254,12 +1285,6 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 
 	/* Found it - now remove it from the list of entries: */
 	*action_ptr = action->next;
-
-	/* Currently used only by UML, might disappear one day: */
-#ifdef CONFIG_IRQ_RELEASE_METHOD
-	if (desc->irq_data.chip->release)
-		desc->irq_data.chip->release(irq, dev_id);
-#endif
 
 	/* If this was the last handler, shut down the IRQ line: */
 	if (!desc->action) {
@@ -1546,6 +1571,7 @@ void enable_percpu_irq(unsigned int irq, unsigned int type)
 out:
 	irq_put_desc_unlock(desc, flags);
 }
+EXPORT_SYMBOL_GPL(enable_percpu_irq);
 
 void disable_percpu_irq(unsigned int irq)
 {
@@ -1559,6 +1585,7 @@ void disable_percpu_irq(unsigned int irq)
 	irq_percpu_disable(desc, cpu);
 	irq_put_desc_unlock(desc, flags);
 }
+EXPORT_SYMBOL_GPL(disable_percpu_irq);
 
 /*
  * Internal function to unregister a percpu irqaction.
