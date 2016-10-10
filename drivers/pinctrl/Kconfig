@@ -84,6 +84,12 @@ config PINCTRL_COH901
 	  COH 901 335 and COH 901 571/3. They contain 3, 5 or 7
 	  ports of 8 GPIO pins each.
 
+config PINCTRL_NOMADIK
+	bool "Nomadik pin controller driver"
+	depends on ARCH_U8500 || ARCH_NOMADIK
+	select PINMUX
+	select PINCONF
+
 endmenu
 
 endif
