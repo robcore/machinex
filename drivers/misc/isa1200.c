@@ -22,7 +22,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/clk.h>
 #include <linux/i2c/isa1200.h>
-#include <linux/timed_output.h>
+#include "../staging/android/timed_output.h"
 #include <linux/of_gpio.h>
 
 #define ISA1200_HCTRL0		0x30

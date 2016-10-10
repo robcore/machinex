@@ -3,7 +3,6 @@
  *
  * (C) Jens Axboe <jens.axboe@oracle.com> 2008
  */
-#include <linux/irq_work.h>
 #include <linux/rcupdate.h>
 #include <linux/rculist.h>
 #include <linux/kernel.h>
@@ -332,14 +331,6 @@ static void flush_smp_call_function_queue(bool warn_cpu_offline)
 		if (data_flags & CSD_FLAG_LOCK)
 			csd_unlock(data);
 	}
-
-	/*
-	 * Handle irq works queued remotely by irq_work_queue_on().
-	 * Smp functions above are typically synchronous so they
-	 * better run first since some other CPUs may be busy waiting
-	 * for them.
-	 */
-	irq_work_run();
 }
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct call_single_data, csd_data);

@@ -10,7 +10,6 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/timed_output.h>
 #include <linux/hrtimer.h>
 #include <linux/pwm.h>
 #include <linux/platform_device.h>
@@ -110,7 +109,6 @@ static int max77693_haptic_probe(struct platform_device *pdev)
 	hap_data->max77693 = max77693;
 	hap_data->i2c = max77693->haptic;
 	hap_data->pmic_i2c = max77693->i2c;
-	pdata->reg2 = MOTOR_LRA | EXT_PWM | DIVIDER_128;
 	hap_data->pdata = pdata;
 
 	spin_lock_init(&(hap_data->lock));
@@ -166,4 +164,3 @@ module_exit(max77693_haptic_exit);
 MODULE_AUTHOR("ByungChang Cha <bc.cha@samsung.com>");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("MAX77693 haptic driver");
-

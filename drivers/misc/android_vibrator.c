@@ -31,7 +31,7 @@
 #include <linux/err.h>
 #include <linux/android_vibrator.h>
 #include <linux/mutex.h>
-#include <linux/timed_output.h>
+#include "../staging/android/timed_output.h"
 
 #define ANDROID_VIBRATOR_USE_WORKQUEUE
 

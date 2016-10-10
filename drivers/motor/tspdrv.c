@@ -44,7 +44,8 @@
 #include <linux/clk.h>
 #include <linux/wakelock.h>
 #include <linux/io.h>
-#include <linux/timed_output.h>
+#include "../staging/android/timed_output.h"
+
 #include "tspdrv.h"
 #include <linux/vibrator.h>
 #include "immvibespi.c"
@@ -128,7 +129,7 @@ static int set_vibetonz(int timeout)
 	} else {
 		DbgOut((KERN_INFO "tspdrv: ENABLE\n"));
 		if (vibrator_drvdata.vib_model == HAPTIC_PWM) {
-			strength = 126;
+				strength = 119;
 			/* 90% duty cycle */
 			ImmVibeSPI_ForceOut_SetSamples(0, 8, 1, &strength);
 		} else { /* HAPTIC_MOTOR */

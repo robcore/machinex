@@ -44,7 +44,7 @@
 #include <linux/clk.h>
 #include <linux/wakelock.h>
 #include <linux/io.h>
-#include <linux/timed_output.h>
+#include "../staging/android/timed_output.h"
 
 #include "tspdrv_msm8960.h"
 #include <linux/vibrator.h>
@@ -304,7 +304,7 @@ static __devinit int tspdrv_probe(struct platform_device *pdev)
 	/* This condition will be removed,after all board files changes done */
 	if (pdev->dev.platform_data == NULL) {
 
-
+	
 		vibrator_drvdata.is_pmic_vib_en = 0;
 #if defined(CONFIG_MACH_M2_ATT) || defined(CONFIG_MACH_M2_VZW) || \
 defined(CONFIG_MACH_M2_SPR) || defined(CONFIG_MACH_M2_DCM) || \
