@@ -293,8 +293,6 @@ static int __init consistent_init(void)
 	pr_debug("DMA memory: 0x%08lx - 0x%08lx:\n", base, CONSISTENT_END);
 	consistent_head.vm_start = base;
 
-	pages += off;
-
 	do {
 		pgd = pgd_offset(&init_mm, base);
 
