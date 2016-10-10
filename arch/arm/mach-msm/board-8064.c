@@ -88,12 +88,14 @@
 #include "pm-boot.h"
 #include "devices-msm8x60.h"
 #include "smd_private.h"
+#include "platsmp.h"
+
+#define MHL_GPIO_INT           30
+#define MHL_GPIO_RESET         35
 #include "sysmon.h"
 
-#ifdef CONFIG_SEC_THERMISTOR
 #include <mach/sec_thermistor.h>
 #include <mach/fusion3-thermistor.h>
-#endif
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
@@ -108,7 +110,7 @@
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x4800000
+#define MSM_ION_MM_SIZE		0x5C00000
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x780000 /* (7.5MB) */
 #define MSM_ION_HEAP_NUM	8
@@ -796,6 +798,7 @@ static struct msm_bus_scale_pdata hsic_bus_scale_pdata = {
 static struct msm_hsic_host_platform_data msm_hsic_pdata = {
 	.strobe			= 88,
 	.data			= 89,
+	.phy_sof_workaround	= true,
 	.bus_scale_table	= &hsic_bus_scale_pdata,
 };
 #else
@@ -1938,6 +1941,26 @@ static void __init apq8064_init_irq(void)
 						(void *)MSM_QGIC_CPU_BASE);
 }
 
+static struct msm_mhl_platform_data mhl_platform_data = {
+	.irq = MSM_GPIO_TO_INT(MHL_GPIO_INT),
+	.gpio_mhl_int = MHL_GPIO_INT,
+	.gpio_mhl_reset = MHL_GPIO_RESET,
+	.gpio_mhl_power = 0,
+	.gpio_hdmi_mhl_mux = 0,
+};
+
+static struct i2c_board_info sii_device_info[] __initdata = {
+	{
+		/*
+		 * keeps SI 8334 as the default
+		 * MHL TX
+		 */
+		I2C_BOARD_INFO("sii8334", 0x39),
+		.platform_data = &mhl_platform_data,
+		.flags = I2C_CLIENT_WAKE,
+	},
+};
+
 static struct platform_device msm8064_device_saw_regulator_core0 = {
 	.name	= "saw-regulator",
 	.id	= 0,
@@ -2085,7 +2108,7 @@ static uint8_t spm_retention_cmd_sequence[] __initdata = {
 
 static uint8_t spm_retention_with_krait_v3_cmd_sequence[] __initdata = {
 	0x42, 0x1B, 0x00,
-	0x05, 0x03, 0x0D, 0x0B,
+	0x05, 0x03, 0x01, 0x0B,
 	0x00, 0x42, 0x1B,
 	0x0f,
 };
@@ -3019,6 +3042,11 @@ static struct platform_device mpq_keypad_device = {
 	},
 };
 
+static struct platform_device msm_dev_avtimer_device = {
+	.name = "dev_avtimer",
+	.dev = { .platform_data = &dev_avtimer_pdata },
+};
+
 /* Sensors DSPS platform data */
 #define DSPS_PIL_GENERIC_NAME		"dsps"
 static void __init apq8064_init_dsps(void)
@@ -3278,7 +3306,7 @@ static struct clk_lookup msm_clocks_dummy[] = {
 static void __init apq8064_common_init(void)
 {
 	u32 platform_version = socinfo_get_platform_version();
-
+	struct msm_rpmrs_level rpmrs_level;
 #ifdef CONFIG_PROC_AVC
 	sec_avc_log_init();
 #endif
@@ -3289,11 +3317,13 @@ static void __init apq8064_common_init(void)
 	if (cpu_is_apq8064ab())
 		apq8064ab_update_krait_spm();
 	if (cpu_is_krait_v3()) {
-		msm_pm_set_tz_retention_flag(0);
+		struct msm_pm_init_data_type *pdata =
+		msm8064_pm_8x60.dev.platform_data;
+		pdata->retention_calls_tz = false;
 		apq8064ab_update_retention_spm();
-	} else {
-		msm_pm_set_tz_retention_flag(1);
 	}
+	platform_device_register(&msm8064_pm_8x60);
+
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm_tsens_early_init(&apq_tsens_pdata);
@@ -3320,6 +3350,9 @@ static void __init apq8064_common_init(void)
 	apq8064_init_pmic();
 	if (machine_is_apq8064_liquid())
 		msm_otg_pdata.mhl_enable = true;
+
+	if (apq8064_mhl_display_enabled())
+		mhl_platform_data.mhl_enabled = true;
 
 	android_usb_pdata.swfi_latency =
 		msm_rpmrs_levels[0].latency_us;
@@ -3369,28 +3402,8 @@ static void __init apq8064_common_init(void)
 	apq8064_init_mmc();
 
 	if (machine_is_apq8064_mtp()) {
-		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_DSDA2) {
-			amdm_8064_device.dev.platform_data =
-				&amdm_platform_data;
-			platform_device_register(&amdm_8064_device);
-			bmdm_8064_device.dev.platform_data =
-				&bmdm_platform_data;
-			platform_device_register(&bmdm_8064_device);
-		} else if (socinfo_get_platform_subtype() ==
-				   PLATFORM_SUBTYPE_SGLTE2) {
-			sglte_mdm_8064_device.dev.platform_data =
-				&sglte2_mdm_platform_data;
-			platform_device_register(&sglte_mdm_8064_device);
-			sglte2_qsc_8064_device.dev.platform_data =
-				&sglte2_qsc_platform_data;
-			platform_device_register(&sglte2_qsc_8064_device);
-
-			/* GSBI4 UART device for Primay IPC */
-			apq8064_uartdm_gsbi4_pdata.wakeup_irq = gpio_to_irq(11);
-			apq8064_device_uartdm_gsbi4.dev.platform_data =
-						&apq8064_uartdm_gsbi4_pdata;
-			platform_device_register(&apq8064_device_uartdm_gsbi4);
-		} else if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
+		mdm_8064_device.dev.platform_data = &mdm_platform_data;
+		if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
 			i2s_mdm_8064_device.dev.platform_data =
 				&mdm_platform_data;
 			platform_device_register(&i2s_mdm_8064_device);
@@ -3453,6 +3466,11 @@ static void __init apq8064_cdp_init(void)
 		platform_device_register(&mpq8064_device_uartdm_gsbi6);
 	}
 
+#if defined(CONFIG_BT) && defined(CONFIG_MARIMBA_CORE)
+	if (machine_is_mpq8064_hrd())
+		apq8064_bt_power_init();
+#endif
+
 	if (machine_is_apq8064_cdp() || machine_is_apq8064_liquid())
 		platform_device_register(&cdp_kp_pdev);
 
@@ -3465,6 +3483,25 @@ static void __init apq8064_cdp_init(void)
 	}
 }
 
+static void __init fsm8064_ep_init(void)
+{
+	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
+		pr_err("meminfo_init() failed!\n");
+
+	msm_thermal_pdata.limit_temp_degC = 80;
+
+	apq8064_common_init();
+	ethernet_init();
+	fsm8064_ep_pcie_init();
+	platform_add_devices(ep_devices, ARRAY_SIZE(ep_devices));
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	apq8064_init_gpu();
+	platform_device_register(&cdp_kp_pdev);
+#ifdef CONFIG_MSM_CAMERA
+	apq8064_init_cam();
+#endif
+}
+
 MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
@@ -3475,6 +3512,20 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
+MACHINE_END
+
+MACHINE_START(FSM8064_EP, "QCT FSM8064 EP")
+	.map_io = apq8064_map_io,
+	.reserve = apq8064_reserve,
+	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = fsm8064_ep_init,
+	.init_early = apq8064_allocate_memory_regions,
+	.init_very_early = apq8064_early_reserve,
+	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
@@ -3487,6 +3538,7 @@ MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
@@ -3499,6 +3551,7 @@ MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
@@ -3511,6 +3564,7 @@ MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
@@ -3523,6 +3577,7 @@ MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
@@ -3535,5 +3590,6 @@ MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
