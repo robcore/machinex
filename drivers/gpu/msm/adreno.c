@@ -108,11 +108,11 @@ static struct adreno_device device_3d0 = {
 		},
 		.iomemname = KGSL_3D0_REG_MEMORY,
 		.ftbl = &adreno_functable,
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 		.display_off = {
-			.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
-			.suspend = kgsl_early_suspend_driver,
-			.resume = kgsl_late_resume_driver,
+			//.level = POWER_SUSPEND_LEVEL_STOP_DRAWING,
+			.suspend = kgsl_power_suspend_driver,
+			.resume = kgsl_power_resume_driver,
 		},
 #endif
 		.cmd_log = KGSL_LOG_LEVEL_DEFAULT,
@@ -2159,7 +2159,7 @@ _adreno_ft_restart_device(struct kgsl_device *device,
 		KGSL_FT_ERR(device, "Device stop failed\n");
 		return 1;
 	}
-	
+
 	if (adreno_init(device)) {
 		KGSL_FT_ERR(device, "Device start failed\n");
 		return 1;
