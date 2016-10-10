@@ -1032,7 +1032,7 @@ static inline struct page *
 __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 {
 	struct free_area * area;
-	unsigned int order current_order;
+	unsigned int current_order;
 	struct page *page;
 	int migratetype, i;
 
