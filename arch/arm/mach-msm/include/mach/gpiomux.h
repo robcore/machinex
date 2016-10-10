@@ -109,15 +109,6 @@ struct msm_gpiomux_configs {
 	size_t                     ncfg;
 };
 
-/* Provide an enum and an API to write to misc TLMM registers */
-enum msm_tlmm_misc_reg {
-	TLMM_ETM_MODE_REG = 0x2014,
-	TLMM_SDC2_HDRV_PULL_CTL = 0x2048,
-	TLMM_SPARE_REG = 0x2024,
-	TLMM_CDC_HDRV_CTL = 0x2054,
-	TLMM_CDC_HDRV_PULL_CTL = 0x2058,
-};
-
 #ifdef CONFIG_MSM_GPIOMUX
 
 /* Before using gpiomux, initialize the subsystem by telling it how many
@@ -126,21 +117,10 @@ enum msm_tlmm_misc_reg {
  */
 int msm_gpiomux_init(size_t ngpio);
 
-/* DT Variant of msm_gpiomux_init. This will look up the number of gpios from
- * device tree rather than relying on NR_GPIO_IRQS
- */
-int msm_gpiomux_init_dt(void);
-
 /* Install a block of gpiomux configurations in gpiomux.  This is functionally
  * identical to calling msm_gpiomux_write many times.
  */
 void msm_gpiomux_install(struct msm_gpiomux_config *configs, unsigned nconfigs);
-
-/* Install a block of gpiomux configurations in gpiomux. Do not however write
- * to hardware. Just store the settings to be retrieved at a later time
- */
-void msm_gpiomux_install_nowrite(struct msm_gpiomux_config *configs,
-				unsigned nconfigs);
 
 /* Increment a gpio's reference count, possibly activating the line. */
 int __must_check msm_gpiomux_get(unsigned gpio);
@@ -168,15 +148,10 @@ int msm_gpiomux_write(unsigned gpio, enum msm_gpiomux_setting which,
  * should use msm_gpiomux_write.
  */
 void __msm_gpiomux_write(unsigned gpio, struct gpiomux_setting val);
-void __msm_gpiomux_read(unsigned gpio, struct gpiomux_setting *val);
 
 void msm_gpiomux_read(unsigned gpio, struct gpiomux_setting *val);
 
 void msm_gpio_print_enabled(void);
-
-int msm_tlmm_misc_reg_read(enum msm_tlmm_misc_reg misc_reg);
-
-void msm_tlmm_misc_reg_write(enum msm_tlmm_misc_reg misc_reg, int val);
 
 #else
 static inline int msm_gpiomux_init(size_t ngpio)
@@ -203,16 +178,5 @@ static inline int msm_gpiomux_write(unsigned gpio,
 {
 	return -ENOSYS;
 }
-
-static inline int msm_tlmm_misc_reg_read(enum msm_tlmm_misc_reg misc_reg)
-{
-	return -ENOSYS;
-}
-
-static inline void msm_tlmm_misc_reg_write(enum msm_tlmm_misc_reg misc_reg,
-						int val)
-{
-}
-
 #endif
 #endif

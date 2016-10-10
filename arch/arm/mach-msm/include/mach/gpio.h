@@ -62,11 +62,6 @@ struct msm_gpio {
 	const char *label;
 };
 
-struct msm_gpio_pdata {
-	int ngpio;
-	int direct_connect_irqs;
-};
-
 /**
  * msm_gpios_request_enable() - request and enable set of GPIOs
  *
@@ -210,7 +205,6 @@ enum msm_tlmm_pull_tgt {
 	TLMM_PULL_SDC1_CLK,
 	TLMM_PULL_SDC1_CMD,
 	TLMM_PULL_SDC1_DATA,
-	TLMM_PULL_SDC1_RCLK,
 };
 
 #if defined(CONFIG_GPIO_MSM_V2) || defined(CONFIG_GPIO_MSM_V3)
