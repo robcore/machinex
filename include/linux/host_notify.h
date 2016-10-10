@@ -18,7 +18,7 @@ enum host_uevent_state {
 	NOTIFY_HOST_UNKNOWN,
 };
 
-enum otg_hostnotify_mode {
+enum otg_mode {
 	NOTIFY_NONE_MODE,
 	NOTIFY_HOST_MODE,
 	NOTIFY_PERIPHERAL_MODE,
@@ -43,7 +43,21 @@ struct host_notify_dev {
 	int		mode;
 	int		booster;
 	void		(*set_mode)(int);
-	void		(*set_booster)(int, struct host_notify_dev *);
+	void		(*set_booster)(int);
+};
+
+struct host_notifier_platform_data {
+	struct	host_notify_dev ndev;
+	int		gpio;
+	void	(*booster)(int);
+	void (*powered_booster)(int);
+	int		(*usbhostd_start)(void);
+	int		(*usbhostd_stop)(void);
+	int		thread_enable;
+	int		irq_enable;
+#if defined(CONFIG_FAST_BOOT)
+	bool		is_host_working;
+#endif
 };
 
 extern void host_state_notify(struct host_notify_dev *ndev, int state);

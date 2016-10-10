@@ -70,6 +70,7 @@ struct max77693_charger_platform_data {
 #ifdef CONFIG_VIBETONZ
 #define MAX8997_MOTOR_REG_CONFIG2	0x2
 #define MOTOR_LRA			(1<<7)
+#define MOTOR_ERM			(0<<7)
 #define MOTOR_EN			(1<<6)
 #define EXT_PWM				(0<<5)
 #define DIVIDER_128			(1<<1)
