@@ -101,40 +101,11 @@ static struct pm_qos_object network_throughput_pm_qos = {
 };
 
 
-static BLOCKING_NOTIFIER_HEAD(cpu_dma_throughput_notifier);
-static struct pm_qos_constraints cpu_dma_tput_constraints = {
-	.list = PLIST_HEAD_INIT(cpu_dma_tput_constraints.list),
-	.target_value = PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE,
-	.default_value = PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE,
-	.type = PM_QOS_MAX,
-	.notifiers = &cpu_dma_throughput_notifier,
-};
-static struct pm_qos_object cpu_dma_throughput_pm_qos = {
-	.constraints = &cpu_dma_tput_constraints,
-	.name = "cpu_dma_throughput",
-};
-
-
-static BLOCKING_NOTIFIER_HEAD(dvfs_lat_notifier);
-static struct pm_qos_constraints dvfs_lat_constraints = {
-	.list = PLIST_HEAD_INIT(dvfs_lat_constraints.list),
-	.target_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.default_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &dvfs_lat_notifier,
-};
-static struct pm_qos_object dvfs_lat_pm_qos = {
-	.constraints = &dvfs_lat_constraints,
-	.name = "dvfs_latency",
-};
-
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
 	&cpu_dma_pm_qos,
 	&network_lat_pm_qos,
-	&network_throughput_pm_qos,
-	&cpu_dma_throughput_pm_qos,
-	&dvfs_lat_pm_qos,
+	&network_throughput_pm_qos
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
@@ -331,7 +302,8 @@ void pm_qos_update_request(struct pm_qos_request *req,
 		return;
 	}
 
-	cancel_delayed_work_sync(&req->work);
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
 
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
@@ -357,7 +329,8 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 		 "%s called for unknown object.", __func__))
 		return;
 
-	cancel_delayed_work_sync(&req->work);
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
 
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
@@ -386,7 +359,8 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 		return;
 	}
 
-	cancel_delayed_work_sync(&req->work);
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
 
 #ifdef CONFIG_SMP
 	if (req->type == PM_QOS_REQ_AFFINE_IRQ) {
