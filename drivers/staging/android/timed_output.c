@@ -19,8 +19,7 @@
 #include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/err.h>
-
-#include "timed_output.h"
+#include <timed_output.h>
 
 static struct class *timed_output_class;
 static atomic_t device_count;

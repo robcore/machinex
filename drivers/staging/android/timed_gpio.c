@@ -21,9 +21,8 @@
 #include <linux/err.h>
 #include <linux/gpio.h>
 #include <linux/ktime.h>
-
-#include "timed_output.h"
-#include "timed_gpio.h"
+#include <timed_output.h>
+#include <timed_gpio.h>
 
 
 struct timed_gpio_data {
