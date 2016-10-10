@@ -18,11 +18,10 @@
 
 #include <trace/events/irq.h>
 
-#include "internals.h"
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
-
+#include "internals.h"
 
 /**
  * handle_bad_irq - handle spurious and unhandled irqs
