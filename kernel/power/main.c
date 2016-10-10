@@ -21,7 +21,6 @@
 #ifdef CONFIG_SEC_DVFS
 #include <linux/cpufreq.h>
 #endif
-
 #include <linux/mfd/pm8xxx/misc.h>
 #include <mach/sec_debug.h>
 #include <mach/restart.h>
