@@ -778,6 +778,10 @@ static int rmnet_usb_probe(struct usb_interface *iface,
 		/* allow modem and roothub to wake up suspended system */
 		device_set_wakeup_enable(&udev->dev, 1);
 		device_set_wakeup_enable(&udev->parent->dev, 1);
+
+		/* set default autosuspend timeout for modem and roothub */
+		pm_runtime_set_autosuspend_delay(&udev->dev, 1000);
+		pm_runtime_set_autosuspend_delay(&udev->parent->dev, 200);
 	}
 
 	return 0;
@@ -915,7 +919,6 @@ static struct usb_driver rmnet_usb = {
 	.disconnect = rmnet_usb_disconnect,
 	.suspend    = rmnet_usb_suspend,
 	.resume     = rmnet_usb_resume,
-	.reset_resume     = rmnet_usb_resume,
 	.supports_autosuspend = true,
 };
 
