@@ -44,8 +44,7 @@
 #include <linux/clk.h>
 #include <linux/wakelock.h>
 #include <linux/io.h>
-#include "../staging/android/timed_output.h"
-
+#include <timed_output.h>
 #include "tspdrv.h"
 #include <linux/vibrator.h>
 #include "immvibespi.c"
