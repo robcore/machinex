@@ -138,36 +138,6 @@ static unsigned int irq_domain_legacy_revmap(struct irq_domain *domain,
 }
 
 /**
- * irq_domain_add_simple() - Allocate and register a simple irq_domain.
- * @of_node: pointer to interrupt controller's device tree node.
- * @size: total number of irqs in mapping
- * @first_irq: first number of irq block assigned to the domain
- * @ops: map/unmap domain callbacks
- * @host_data: Controller private data pointer
- *
- * Allocates a legacy irq_domain if irq_base is positive or a linear
- * domain otherwise.
- *
- * This is intended to implement the expected behaviour for most
- * interrupt controllers which is that a linear mapping should
- * normally be used unless the system requires a legacy mapping in
- * order to support supplying interrupt numbers during non-DT
- * registration of devices.
- */
-struct irq_domain *irq_domain_add_simple(struct device_node *of_node,
-					 unsigned int size,
-					 unsigned int first_irq,
-					 const struct irq_domain_ops *ops,
-					 void *host_data)
-{
-	if (first_irq > 0)
-		return irq_domain_add_legacy(of_node, size, first_irq, 0,
-					     ops, host_data);
-	else
-		return irq_domain_add_linear(of_node, size, ops, host_data);
-}
-
-/**
  * irq_domain_add_legacy() - Allocate and register a legacy revmap irq_domain.
  * @of_node: pointer to interrupt controller's device tree node.
  * @size: total number of irqs in legacy mapping
@@ -245,7 +215,7 @@ struct irq_domain *irq_domain_add_legacy(struct device_node *of_node,
 EXPORT_SYMBOL_GPL(irq_domain_add_legacy);
 
 /**
- * irq_domain_add_linear() - Allocate and register a linear revmap irq_domain.
+ * irq_domain_add_linear() - Allocate and register a legacy revmap irq_domain.
  * @of_node: pointer to interrupt controller's device tree node.
  * @ops: map/unmap domain callbacks
  * @host_data: Controller private data pointer
@@ -359,52 +329,6 @@ void irq_set_default_host(struct irq_domain *domain)
 }
 EXPORT_SYMBOL_GPL(irq_set_default_host);
 
-static void irq_domain_disassociate_many(struct irq_domain *domain,
-					 unsigned int irq_base, int count)
-{
-	/*
-	 * disassociate in reverse order;
-	 * not strictly necessary, but nice for unwinding
-	 */
-	while (count--) {
-		int irq = irq_base + count;
-		struct irq_data *irq_data = irq_get_irq_data(irq);
-		irq_hw_number_t hwirq = irq_data->hwirq;
-
-		if (WARN_ON(!irq_data || irq_data->domain != domain))
-			continue;
-
-		irq_set_status_flags(irq, IRQ_NOREQUEST);
-
-		/* remove chip and handler */
-		irq_set_chip_and_handler(irq, NULL, NULL);
-
-		/* Make sure it's completed */
-		synchronize_irq(irq);
-
-		/* Tell the PIC about it */
-		if (domain->ops->unmap)
-			domain->ops->unmap(domain, irq);
-		smp_mb();
-
-		irq_data->domain = NULL;
-		irq_data->hwirq = 0;
-
-		/* Clear reverse map */
-		switch(domain->revmap_type) {
-		case IRQ_DOMAIN_MAP_LINEAR:
-			if (hwirq < domain->revmap_data.linear.size)
-				domain->revmap_data.linear.revmap[hwirq] = 0;
-			break;
-		case IRQ_DOMAIN_MAP_TREE:
-			mutex_lock(&revmap_trees_mutex);
-			radix_tree_delete(&domain->revmap_data.tree, hwirq);
-			mutex_unlock(&revmap_trees_mutex);
-			break;
-		}
-	}
-}
-
 static int irq_setup_virq(struct irq_domain *domain, unsigned int virq,
 			    irq_hw_number_t hwirq)
 {
@@ -417,18 +341,6 @@ static int irq_setup_virq(struct irq_domain *domain, unsigned int virq,
 		irq_data->domain = NULL;
 		irq_data->hwirq = 0;
 		return -1;
-	}
-
-	switch (domain->revmap_type) {
-	case IRQ_DOMAIN_MAP_LINEAR:
-		if (hwirq < domain->revmap_data.linear.size)
-			domain->revmap_data.linear.revmap[hwirq] = virq;
-		break;
-	case IRQ_DOMAIN_MAP_TREE:
-		mutex_lock(&revmap_trees_mutex);
-		irq_radix_revmap_insert(domain, virq, hwirq);
-		mutex_unlock(&revmap_trees_mutex);
-		break;
 	}
 
 	irq_clear_status_flags(virq, IRQ_NOREQUEST);
@@ -598,6 +510,7 @@ void irq_dispose_mapping(unsigned int virq)
 {
 	struct irq_data *irq_data = irq_get_irq_data(virq);
 	struct irq_domain *domain;
+	irq_hw_number_t hwirq;
 
 	if (!virq || !irq_data)
 		return;
@@ -610,7 +523,33 @@ void irq_dispose_mapping(unsigned int virq)
 	if (domain->revmap_type == IRQ_DOMAIN_MAP_LEGACY)
 		return;
 
-	irq_domain_disassociate_many(domain, virq, 1);
+	irq_set_status_flags(virq, IRQ_NOREQUEST);
+
+	/* remove chip and handler */
+	irq_set_chip_and_handler(virq, NULL, NULL);
+
+	/* Make sure it's completed */
+	synchronize_irq(virq);
+
+	/* Tell the PIC about it */
+	if (domain->ops->unmap)
+		domain->ops->unmap(domain, virq);
+	smp_mb();
+
+	/* Clear reverse map */
+	hwirq = irq_data->hwirq;
+	switch(domain->revmap_type) {
+	case IRQ_DOMAIN_MAP_LINEAR:
+		if (hwirq < domain->revmap_data.linear.size)
+			domain->revmap_data.linear.revmap[hwirq] = 0;
+		break;
+	case IRQ_DOMAIN_MAP_TREE:
+		mutex_lock(&revmap_trees_mutex);
+		radix_tree_delete(&domain->revmap_data.tree, hwirq);
+		mutex_unlock(&revmap_trees_mutex);
+		break;
+	}
+
 	irq_free_desc(virq);
 }
 EXPORT_SYMBOL_GPL(irq_dispose_mapping);
@@ -655,64 +594,6 @@ unsigned int irq_find_mapping(struct irq_domain *domain,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(irq_find_mapping);
-
-/**
- * irq_radix_revmap_lookup() - Find a linux irq from a hw irq number.
- * @domain: domain owning this hardware interrupt
- * @hwirq: hardware irq number in that domain space
- *
- * This is a fast path, for use by irq controller code that uses radix tree
- * revmaps
- */
-unsigned int irq_radix_revmap_lookup(struct irq_domain *domain,
-				     irq_hw_number_t hwirq)
-{
-	struct irq_data *irq_data;
-
-	if (WARN_ON_ONCE(domain->revmap_type != IRQ_DOMAIN_MAP_TREE))
-		return irq_find_mapping(domain, hwirq);
-
-	/*
-	 * Freeing an irq can delete nodes along the path to
-	 * do the lookup via call_rcu.
-	 */
-	rcu_read_lock();
-	irq_data = radix_tree_lookup(&domain->revmap_data.tree, hwirq);
-	rcu_read_unlock();
-
-	/*
-	 * If found in radix tree, then fine.
-	 * Else fallback to linear lookup - this should not happen in practice
-	 * as it means that we failed to insert the node in the radix tree.
-	 */
-	return irq_data ? irq_data->irq : irq_find_mapping(domain, hwirq);
-}
-EXPORT_SYMBOL_GPL(irq_radix_revmap_lookup);
-
-/**
- * irq_radix_revmap_insert() - Insert a hw irq to linux irq number mapping.
- * @domain: domain owning this hardware interrupt
- * @virq: linux irq number
- * @hwirq: hardware irq number in that domain space
- *
- * This is for use by irq controllers that use a radix tree reverse
- * mapping for fast lookup.
- */
-void irq_radix_revmap_insert(struct irq_domain *domain, unsigned int virq,
-			     irq_hw_number_t hwirq)
-{
-	struct irq_data *irq_data = irq_get_irq_data(virq);
-
-	if (WARN_ON(domain->revmap_type != IRQ_DOMAIN_MAP_TREE))
-		return;
-
-	if (virq) {
-		mutex_lock(&revmap_trees_mutex);
-		radix_tree_insert(&domain->revmap_data.tree, hwirq, irq_data);
-		mutex_unlock(&revmap_trees_mutex);
-	}
-}
-EXPORT_SYMBOL_GPL(irq_radix_revmap_insert);
 
 /**
  * irq_radix_revmap_lookup() - Find a linux irq from a hw irq number.
