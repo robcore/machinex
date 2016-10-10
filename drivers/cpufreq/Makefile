@@ -7,7 +7,7 @@ obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 # CPUfreq hardlimit
 obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
 # CPUfreq limit API
-obj-$(CONFIG_CPU_FREQ_LIMIT)             += cpufreq_limit.o
+#obj-$(CONFIG_CPU_FREQ_LIMIT)             += cpufreq_limit.o i meant to disable this ages ago
 # CPUfreq governors
 obj-$(CONFIG_CPU_FREQ_GOV_PERFORMANCE)	+= cpufreq_performance.o
 obj-$(CONFIG_CPU_FREQ_GOV_POWERSAVE)	+= cpufreq_powersave.o
