@@ -44,7 +44,7 @@
 #include <linux/clk.h>
 #include <linux/wakelock.h>
 #include <linux/io.h>
-#include <timed_output.h>
+#include <linux/timed_output.h>
 #include "tspdrv.h"
 #include <linux/vibrator.h>
 #include "immvibespi.c"

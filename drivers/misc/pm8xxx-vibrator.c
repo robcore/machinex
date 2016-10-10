@@ -19,8 +19,7 @@
 #include <linux/slab.h>
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/mfd/pm8xxx/vibrator.h>
-
-#include "../staging/android/timed_output.h"
+#include <linux/timed_output.h">
 
 #define VIB_DRV			0x4A
 
