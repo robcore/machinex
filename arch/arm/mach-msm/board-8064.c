@@ -3319,7 +3319,7 @@ static void __init apq8064_common_init(void)
 	if (cpu_is_krait_v3()) {
 		struct msm_pm_init_data_type *pdata =
 		msm8064_pm_8x60.dev.platform_data;
-		pdata->retention_calls_tz = false;
+		pdata->retention_calls_tz = 0;
 		apq8064ab_update_retention_spm();
 	}
 	platform_device_register(&msm8064_pm_8x60);
