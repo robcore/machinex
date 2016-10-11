@@ -133,20 +133,6 @@ struct platform_device msm8960_pc_cntr = {
 	.resource	= msm8960_resources_pccntr,
 };
 
-static struct msm_pm_init_data_type msm_pm_data = {
-	.retention_calls_tz = 1,
-};
-
-struct platform_device msm8960_pm_8x60 = {
-	.name		= "pm-8x60",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(msm8960_resources_pccntr),
-	.resource	= msm8960_resources_pccntr,
-	.dev = {
-		.platform_data = &msm_pm_data,
-	},
-};
-
 static struct msm_pm_sleep_status_data msm_pm_slp_sts_data = {
 	.base_addr = MSM_ACC0_BASE + 0x08,
 	.cpu_offset = MSM_ACC1_BASE - MSM_ACC0_BASE,
