@@ -28,6 +28,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/wakelock.h>
+#include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 
@@ -626,6 +627,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	int cnt = 0, ret;
 	u32 val;
 	int none_vol, max_vol;
+	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in lpm\n", __func__);
@@ -723,6 +725,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	unsigned temp;
 	int min_vol, max_vol;
 	unsigned long flags;
+	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (!atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in !in_lpm\n", __func__);
@@ -2016,9 +2019,14 @@ static int msm_hsic_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
-	.suspend_noirq = msm_hsic_pm_suspend_noirq,
+	.suspend_noirq = msm_hsic_pm_suspend_noirq, \
+	.suspend = msm_hsic_pm_suspend, \
+	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
+	.runtime_suspend = msm_hsic_runtime_suspend, \
+	.runtime_resume = msm_hsic_runtime_resume, \
+	.runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
