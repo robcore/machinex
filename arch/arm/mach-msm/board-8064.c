@@ -3398,8 +3398,28 @@ static void __init apq8064_common_init(void)
 	apq8064_init_mmc();
 
 	if (machine_is_apq8064_mtp()) {
-		mdm_8064_device.dev.platform_data = &mdm_platform_data;
-		if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
+		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_DSDA2) {
+			amdm_8064_device.dev.platform_data =
+				&amdm_platform_data;
+			platform_device_register(&amdm_8064_device);
+			bmdm_8064_device.dev.platform_data =
+				&bmdm_platform_data;
+			platform_device_register(&bmdm_8064_device);
+		} else if (socinfo_get_platform_subtype() ==
+				   PLATFORM_SUBTYPE_SGLTE2) {
+			sglte_mdm_8064_device.dev.platform_data =
+				&sglte2_mdm_platform_data;
+			platform_device_register(&sglte_mdm_8064_device);
+			sglte2_qsc_8064_device.dev.platform_data =
+				&sglte2_qsc_platform_data;
+			platform_device_register(&sglte2_qsc_8064_device);
+
+			/* GSBI4 UART device for Primay IPC */
+			apq8064_uartdm_gsbi4_pdata.wakeup_irq = gpio_to_irq(11);
+			apq8064_device_uartdm_gsbi4.dev.platform_data =
+						&apq8064_uartdm_gsbi4_pdata;
+			platform_device_register(&apq8064_device_uartdm_gsbi4);
+		} else if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
 			i2s_mdm_8064_device.dev.platform_data =
 				&mdm_platform_data;
 			platform_device_register(&i2s_mdm_8064_device);

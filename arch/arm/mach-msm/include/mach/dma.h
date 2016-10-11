@@ -269,7 +269,7 @@ int msm_dmov_exec_cmd(unsigned id, unsigned int cmdptr);
 #define DMOV8064_CE_OUT_CHAN       1
 #define DMOV8064_CE_OUT_CRCI       15
 
-#define DMOV8064_TSIF_CHAN         4
+#define DMOV8064_TSIF_CHAN         2
 #define DMOV8064_TSIF_CRCI         1
 
 /* channels for APQ8064 SGLTE*/
@@ -285,15 +285,6 @@ int msm_dmov_exec_cmd(unsigned id, unsigned int cmdptr);
 
 #define DMOV_MPQ8064_HSUART_GSBI6_RX_CHAN	6
 #define DMOV_MPQ8064_HSUART_GSBI6_RX_CRCI	11
-
-#if defined(CONFIG_MACH_MELIUS_SKT) || defined(CONFIG_MACH_MELIUS_KTT) || \
-	defined(CONFIG_MACH_MELIUS_LGT)
-#define DMOV_GSBI11_TX_CHAN	10
-#define DMOV_GSBI11_TX_CRCI	13
-
-#define DMOV_GSBI11_RX_CHAN	9
-#define DMOV_GSBI11_RX_CRCI	12
-#endif
 
 /* no client rate control ifc (eg, ram) */
 #define DMOV_NONE_CRCI        0

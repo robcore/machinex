@@ -133,6 +133,20 @@ struct platform_device msm8960_pc_cntr = {
 	.resource	= msm8960_resources_pccntr,
 };
 
+static struct msm_pm_init_data_type msm_pm_data = {
+	.retention_calls_tz = 1,
+};
+
+struct platform_device msm8960_pm_8x60 = {
+	.name		= "pm-8x60",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(msm8960_resources_pccntr),
+	.resource	= msm8960_resources_pccntr,
+	.dev = {
+		.platform_data = &msm_pm_data,
+	},
+};
+
 static struct msm_pm_sleep_status_data msm_pm_slp_sts_data = {
 	.base_addr = MSM_ACC0_BASE + 0x08,
 	.cpu_offset = MSM_ACC1_BASE - MSM_ACC0_BASE,
@@ -515,6 +529,7 @@ static struct resource resources_uart_gsbi5[] = {
 		.name	= "gsbi_resource",
 		.flags	= IORESOURCE_MEM,
 	},
+#if 0
 #if defined(CONFIG_UART_RX_WAKEUP)
 	{
 		.start = 23,	/* GSBI5[2] UART_RX */
@@ -524,6 +539,7 @@ static struct resource resources_uart_gsbi5[] = {
 	},
 #endif
 };
+#endif
 
 struct platform_device msm8960_device_uart_gsbi5 = {
 	.name	= "msm_serial_hsl",
@@ -1734,7 +1750,7 @@ struct platform_device msm_device_bam_dmux = {
 
 static struct msm_watchdog_pdata msm_watchdog_pdata = {
 	.pet_time = 10000,
-	.bark_time = 20000,
+	.bark_time = 11000,
 	.has_secure = true,
 	.base = MSM_TMR0_BASE + WDT0_OFFSET,
 };
@@ -3765,7 +3781,9 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.num_levels = ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/12,
+#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
+#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp3d_bus_scale_pdata,
@@ -3832,7 +3850,9 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/5,
+#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
+#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp2d0_bus_scale_pdata,
@@ -3899,7 +3919,9 @@ static struct kgsl_device_platform_data kgsl_2d1_pdata = {
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/5,
+#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
+#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp2d1_bus_scale_pdata,

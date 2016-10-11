@@ -139,6 +139,26 @@ struct platform_device msm8064_pc_cntr = {
 	.resource	= msm8064_resources_pccntr,
 };
 
+static uint32_t msm_pm_cp15_regs[] = {0x4501, 0x5501, 0x6501, 0x7501, 0x0500};
+
+static struct msm_pm_init_data_type msm_pm_data = {
+	.retention_calls_tz = 1,
+	.cp15_data.save_cp15 = true,
+	.cp15_data.qsb_pc_vdd = 0x98,
+	.cp15_data.reg_data = &msm_pm_cp15_regs[0],
+	.cp15_data.reg_saved_state_size = ARRAY_SIZE(msm_pm_cp15_regs),
+};
+
+struct platform_device msm8064_pm_8x60 = {
+	.name		= "pm-8x60",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(msm8064_resources_pccntr),
+	.resource	= msm8064_resources_pccntr,
+	.dev = {
+		.platform_data = &msm_pm_data,
+	},
+};
+
 static struct msm_pm_sleep_status_data msm_pm_slp_sts_data = {
 	.base_addr = MSM_ACC0_BASE + 0x08,
 	.cpu_offset = MSM_ACC1_BASE - MSM_ACC0_BASE,
@@ -2370,11 +2390,12 @@ struct platform_device msm_gss = {
 
 static struct fs_driver_data gfx3d_fs_data = {
 	.clks = (struct fs_clk_data[]){
-		{ .name = "core_clk", .reset_rate = 27000000 },
+		{ .name = "core_clk", .reset_rate = 1800000 },
 		{ .name = "iface_clk" },
 		{ .name = "bus_clk" },
 		{ 0 }
 	},
+	.reset_delay_us = 10,
 	.bus_port0 = MSM_BUS_MASTER_GRAPHICS_3D,
 	.bus_port1 = MSM_BUS_MASTER_GRAPHICS_3D_PORT1,
 };

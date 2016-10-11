@@ -1039,7 +1039,7 @@ static int rpmrs_cpu_callback(struct notifier_block *nfb,
 	case CPU_DEAD:
 		if (num_online_cpus() == 1)
 			msm_rpmrs_l2_cache.rs[0].value =
-				MSM_RPMRS_L2_CACHE_GDHS;
+				MSM_RPMRS_L2_CACHE_HSFS_OPEN;
 		break;
 	}
 
