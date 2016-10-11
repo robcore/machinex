@@ -47,8 +47,6 @@ static ktime_t freezer_delta;
 static DEFINE_SPINLOCK(freezer_delta_lock);
 
 static struct wakeup_source *ws;
-static struct delayed_work work;
-static struct workqueue_struct *power_off_alarm_workqueue;
 
 static struct rtc_timer		rtctimer;
 
@@ -56,15 +54,9 @@ static struct rtc_timer		rtctimer;
 /* rtc timer and device for setting alarm wakeups at suspend */
 static struct rtc_device	*rtcdev;
 static DEFINE_SPINLOCK(rtcdev_lock);
+static unsigned long power_on_alarm;
 static struct mutex power_on_alarm_lock;
-struct alarm init_alarm;
 
-/**
- * power_on_alarm_init - Init power on alarm value
- *
- * Read rtc alarm value after device booting up and add this alarm
- * into alarm queue.
- */
 
 void power_on_alarm_init(void)
 {
@@ -72,10 +64,10 @@ void power_on_alarm_init(void)
 	struct rtc_time rt;
 	unsigned long alarm_time;
 	struct rtc_device *rtc;
-	ktime_t alarm_ktime;
 
 	rtc = alarmtimer_get_rtcdev();
 
+	/* If we have no rtcdev, just return */
 	if (!rtc)
 		return;
 

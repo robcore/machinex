@@ -23,7 +23,6 @@
 #include <linux/anon_inodes.h>
 #include <linux/timerfd.h>
 #include <linux/syscalls.h>
-#include <linux/compat.h>
 #include <linux/rcupdate.h>
 
 struct timerfd_ctx {
@@ -348,17 +347,21 @@ SYSCALL_DEFINE2(timerfd_create, int, clockid, int, flags)
 	return ufd;
 }
 
-static int do_timerfd_settime(int ufd, int flags, 
-		const struct itimerspec *new,
-		struct itimerspec *old)
+SYSCALL_DEFINE4(timerfd_settime, int, ufd, int, flags,
+		const struct itimerspec __user *, utmr,
+		struct itimerspec __user *, otmr)
 {
 	struct file *file;
 	struct timerfd_ctx *ctx;
+	struct itimerspec ktmr, kotmr;
 	int ret, fput_needed;
 
+	if (copy_from_user(&ktmr, utmr, sizeof(ktmr)))
+		return -EFAULT;
+
 	if ((flags & ~TFD_SETTIME_FLAGS) ||
-	    !timespec_valid(&new->it_value) ||
-	    !timespec_valid(&new->it_interval))
+	    !timespec_valid(&ktmr.it_value) ||
+	    !timespec_valid(&ktmr.it_interval))
 		return -EINVAL;
 
 	file = timerfd_fget(ufd, &fput_needed);
@@ -399,23 +402,27 @@ static int do_timerfd_settime(int ufd, int flags,
 			hrtimer_forward_now(&ctx->t.tmr, ctx->tintv);
 	}
 
-	old->it_value = ktime_to_timespec(timerfd_get_remaining(ctx));
-	old->it_interval = ktime_to_timespec(ctx->tintv);
+	kotmr.it_value = ktime_to_timespec(timerfd_get_remaining(ctx));
+	kotmr.it_interval = ktime_to_timespec(ctx->tintv);
 
 	/*
 	 * Re-program the timer to the new value ...
 	 */
-	ret = timerfd_setup(ctx, flags, new);
+	ret = timerfd_setup(ctx, flags, &ktmr);
 
 	spin_unlock_irq(&ctx->wqh.lock);
 	fput_light(file, fput_needed);
+	if (otmr && copy_to_user(otmr, &kotmr, sizeof(kotmr)))
+		return -EFAULT;
+
 	return ret;
 }
 
-static int do_timerfd_gettime(int ufd, struct itimerspec *t)
+SYSCALL_DEFINE2(timerfd_gettime, int, ufd, struct itimerspec __user *, otmr)
 {
 	struct file *file;
 	struct timerfd_ctx *ctx;
+	struct itimerspec kotmr;
 	int fput_needed;
 
 	file = timerfd_fget(ufd, &fput_needed);
@@ -439,65 +446,11 @@ static int do_timerfd_gettime(int ufd, struct itimerspec *t)
 			hrtimer_restart(&ctx->t.tmr);
 		}
 	}
-	t->it_value = ktime_to_timespec(timerfd_get_remaining(ctx));
-	t->it_interval = ktime_to_timespec(ctx->tintv);
+	kotmr.it_value = ktime_to_timespec(timerfd_get_remaining(ctx));
+	kotmr.it_interval = ktime_to_timespec(ctx->tintv);
 	spin_unlock_irq(&ctx->wqh.lock);
 	fput_light(file, fput_needed);
-	return 0;
-}
 
-SYSCALL_DEFINE4(timerfd_settime, int, ufd, int, flags,
-		const struct itimerspec __user *, utmr,
-		struct itimerspec __user *, otmr)
-{
-	struct itimerspec new, old;
-	int ret;
-
-	if (copy_from_user(&new, utmr, sizeof(new)))
-		return -EFAULT;
-	ret = do_timerfd_settime(ufd, flags, &new, &old);
-	if (ret)
-		return ret;
-	if (otmr && copy_to_user(otmr, &old, sizeof(old)))
-		return -EFAULT;
-
-	return ret;
-}
-
-SYSCALL_DEFINE2(timerfd_gettime, int, ufd, struct itimerspec __user *, otmr)
-{
-	struct itimerspec kotmr;
-	int ret = do_timerfd_gettime(ufd, &kotmr);
-	if (ret)
-		return ret;
 	return copy_to_user(otmr, &kotmr, sizeof(kotmr)) ? -EFAULT: 0;
 }
 
-#ifdef CONFIG_COMPAT
-COMPAT_SYSCALL_DEFINE4(timerfd_settime, int, ufd, int, flags,
-		const struct compat_itimerspec __user *, utmr,
-		struct compat_itimerspec __user *, otmr)
-{
-	struct itimerspec new, old;
-	int ret;
-
-	if (get_compat_itimerspec(&new, utmr))
-		return -EFAULT;
-	ret = do_timerfd_settime(ufd, flags, &new, &old);
-	if (ret)
-		return ret;
-	if (otmr && put_compat_itimerspec(otmr, &old))
-		return -EFAULT;
-	return ret;
-}
-
-COMPAT_SYSCALL_DEFINE2(timerfd_gettime, int, ufd,
-		struct compat_itimerspec __user *, otmr)
-{
-	struct itimerspec kotmr;
-	int ret = do_timerfd_gettime(ufd, &kotmr);
-	if (ret)
-		return ret;
-	return put_compat_itimerspec(otmr, &kotmr) ? -EFAULT: 0;
-}
-#endif
