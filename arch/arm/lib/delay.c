@@ -58,8 +58,10 @@ static void __timer_delay(unsigned long cycles)
 {
 	cycles_t start = get_cycles();
 
-	while ((get_cycles() - start) <= cycles)
-		cpu_relax();
+	read_current_timer(&bclock);
+	do {
+		read_current_timer(&now);
+	} while ((now - bclock) < loops);
 }
 
 static void __timer_const_udelay(unsigned long xloops)
