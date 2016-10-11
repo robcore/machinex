@@ -102,7 +102,6 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(dev_pm_qos_flags);
 
 /*
  * dev_pm_qos_constraints_allocate
@@ -179,7 +178,7 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 
 	dev->power.power_state = PMSG_INVALID;
 	qos = dev->power.qos;
-	if (!qos)
+	if (IS_ERR_OR_NULL(qos))
 		goto out;
 
 	c = &qos->latency;
