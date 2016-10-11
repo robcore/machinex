@@ -29,6 +29,7 @@
 #include <linux/async.h>
 #include <linux/suspend.h>
 #include <linux/timer.h>
+#include <linux/slab.h>
 
 #include <linux/cpuidle.h>
 #include "../base.h"
