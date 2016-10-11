@@ -744,6 +744,7 @@ static void fdiag_debugfs_init(void)
 	return;
 }
 #endif
+#include <linux/kmemleak.h>
 
 static void diag_cleanup(void)
 {
