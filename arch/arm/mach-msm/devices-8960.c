@@ -515,7 +515,6 @@ static struct resource resources_uart_gsbi5[] = {
 		.name	= "gsbi_resource",
 		.flags	= IORESOURCE_MEM,
 	},
-#if 0
 #if defined(CONFIG_UART_RX_WAKEUP)
 	{
 		.start = 23,	/* GSBI5[2] UART_RX */
@@ -525,7 +524,6 @@ static struct resource resources_uart_gsbi5[] = {
 	},
 #endif
 };
-#endif
 
 struct platform_device msm8960_device_uart_gsbi5 = {
 	.name	= "msm_serial_hsl",
