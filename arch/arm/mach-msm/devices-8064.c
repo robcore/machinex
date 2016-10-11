@@ -2370,7 +2370,7 @@ struct platform_device msm_gss = {
 
 static struct fs_driver_data gfx3d_fs_data = {
 	.clks = (struct fs_clk_data[]){
-		{ .name = "core_clk", .reset_rate = 1800000 },
+		{ .name = "core_clk", .reset_rate = 27000000 },
 		{ .name = "iface_clk" },
 		{ .name = "bus_clk" },
 		{ 0 }
