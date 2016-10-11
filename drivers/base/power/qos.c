@@ -55,9 +55,7 @@ static BLOCKING_NOTIFIER_HEAD(dev_pm_notifiers);
  */
 s32 __dev_pm_qos_read_value(struct device *dev)
 {
-	struct pm_qos_constraints *c = dev->power.constraints;
-
-	return c ? pm_qos_read_value(c) : 0;
+	return dev->power.qos ? pm_qos_read_value(&dev->power.qos->latency) : 0;
 }
 
 /**
@@ -91,12 +89,12 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 {
 	int ret, curr_value;
 
-	ret = pm_qos_update_target(req->dev->power.constraints,
-				   &req->node, action, value);
+	ret = pm_qos_update_target(&req->dev->power.qos->latency,
+				   &req->data.pnode, action, value);
 
 	if (ret) {
 		/* Call the global callbacks if needed */
-		curr_value = pm_qos_read_value(req->dev->power.constraints);
+		curr_value = pm_qos_read_value(&req->dev->power.qos->latency);
 		blocking_notifier_call_chain(&dev_pm_notifiers,
 					     (unsigned long)curr_value,
 					     req);
@@ -104,6 +102,7 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(dev_pm_qos_flags);
 
 /*
  * dev_pm_qos_constraints_allocate
@@ -114,20 +113,22 @@ static int apply_constraint(struct dev_pm_qos_request *req,
  */
 static int dev_pm_qos_constraints_allocate(struct device *dev)
 {
+	struct dev_pm_qos *qos;
 	struct pm_qos_constraints *c;
 	struct blocking_notifier_head *n;
 
-	c = kzalloc(sizeof(*c), GFP_KERNEL);
-	if (!c)
+	qos = kzalloc(sizeof(*qos), GFP_KERNEL);
+	if (!qos)
 		return -ENOMEM;
 
 	n = kzalloc(sizeof(*n), GFP_KERNEL);
 	if (!n) {
-		kfree(c);
+		kfree(qos);
 		return -ENOMEM;
 	}
 	BLOCKING_INIT_NOTIFIER_HEAD(n);
 
+	c = &qos->latency;
 	plist_head_init(&c->list);
 	c->target_value = PM_QOS_DEV_LAT_DEFAULT_VALUE;
 	c->default_value = PM_QOS_DEV_LAT_DEFAULT_VALUE;
@@ -135,7 +136,7 @@ static int dev_pm_qos_constraints_allocate(struct device *dev)
 	c->notifiers = n;
 
 	spin_lock_irq(&dev->power.lock);
-	dev->power.constraints = c;
+	dev->power.qos = qos;
 	spin_unlock_irq(&dev->power.lock);
 
 	return 0;
@@ -151,7 +152,7 @@ static int dev_pm_qos_constraints_allocate(struct device *dev)
 void dev_pm_qos_constraints_init(struct device *dev)
 {
 	mutex_lock(&dev_pm_qos_mtx);
-	dev->power.constraints = NULL;
+	dev->power.qos = NULL;
 	dev->power.power_state = PMSG_ON;
 	mutex_unlock(&dev_pm_qos_mtx);
 }
@@ -164,6 +165,7 @@ void dev_pm_qos_constraints_init(struct device *dev)
  */
 void dev_pm_qos_constraints_destroy(struct device *dev)
 {
+	struct dev_pm_qos *qos;
 	struct dev_pm_qos_request *req, *tmp;
 	struct pm_qos_constraints *c;
 
@@ -176,12 +178,13 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	mutex_lock(&dev_pm_qos_mtx);
 
 	dev->power.power_state = PMSG_INVALID;
-	c = dev->power.constraints;
-	if (!c)
+	qos = dev->power.qos;
+	if (!qos)
 		goto out;
 
+	c = &qos->latency;
 	/* Flush the constraints list for the device */
-	plist_for_each_entry_safe(req, tmp, &c->list, node) {
+	plist_for_each_entry_safe(req, tmp, &c->list, data.pnode) {
 		/*
 		 * Update constraints list and call the notification
 		 * callbacks if needed
@@ -191,7 +194,7 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	}
 
 	spin_lock_irq(&dev->power.lock);
-	dev->power.constraints = NULL;
+	dev->power.qos = NULL;
 	spin_unlock_irq(&dev->power.lock);
 
 	kfree(c->notifiers);
@@ -235,7 +238,7 @@ int dev_pm_qos_add_request(struct device *dev, struct dev_pm_qos_request *req,
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.constraints) {
+	if (!dev->power.qos) {
 		if (dev->power.power_state.event == PM_EVENT_INVALID) {
 			/* The device has been removed from the system. */
 			req->dev = NULL;
@@ -290,8 +293,8 @@ int dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (req->dev->power.constraints) {
-		if (new_value != req->node.prio)
+	if (req->dev->power.qos) {
+		if (new_value != req->data.pnode.prio)
 			ret = apply_constraint(req, PM_QOS_UPDATE_REQ,
 					       new_value);
 	} else {
@@ -329,7 +332,7 @@ int dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (req->dev->power.constraints) {
+	if (req->dev->power.qos) {
 		ret = apply_constraint(req, PM_QOS_REMOVE_REQ,
 				       PM_QOS_DEFAULT_VALUE);
 		memset(req, 0, sizeof(*req));
@@ -362,13 +365,13 @@ int dev_pm_qos_add_notifier(struct device *dev, struct notifier_block *notifier)
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	if (!dev->power.constraints)
+	if (!dev->power.qos)
 		ret = dev->power.power_state.event != PM_EVENT_INVALID ?
 			dev_pm_qos_constraints_allocate(dev) : -ENODEV;
 
 	if (!ret)
 		ret = blocking_notifier_chain_register(
-				dev->power.constraints->notifiers, notifier);
+				dev->power.qos->latency.notifiers, notifier);
 
 	mutex_unlock(&dev_pm_qos_mtx);
 	return ret;
@@ -393,9 +396,9 @@ int dev_pm_qos_remove_notifier(struct device *dev,
 	mutex_lock(&dev_pm_qos_mtx);
 
 	/* Silently return if the constraints object is not present. */
-	if (dev->power.constraints)
+	if (dev->power.qos)
 		retval = blocking_notifier_chain_unregister(
-				dev->power.constraints->notifiers,
+				dev->power.qos->latency.notifiers,
 				notifier);
 
 	mutex_unlock(&dev_pm_qos_mtx);
