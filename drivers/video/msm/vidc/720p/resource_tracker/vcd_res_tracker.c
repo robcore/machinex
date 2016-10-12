@@ -765,6 +765,11 @@ u32 res_trk_get_ion_flags(void)
 	return 0;
 }
 
+u32 res_trk_get_ion_flags(void)
+{
+	return 0;
+}
+
 int res_trk_check_for_sec_session()
 {
 	return 0;
