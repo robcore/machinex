@@ -47,7 +47,7 @@ static bool input_boost_enabled = 1;
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
-static bool hotplug_boost =1;
+static bool hotplug_boost = 0;
 module_param(hotplug_boost, bool, 0644);
 
 static bool wakeup_boost = 1;

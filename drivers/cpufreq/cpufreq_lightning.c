@@ -126,7 +126,7 @@ static struct lightning_tuners {
 	unsigned int ignore_nice;
 	unsigned int sampling_down_factor;
 	int          powersave_bias;
-	unsigned int io_is_busy = 0;
+	unsigned int io_is_busy;
 	//static bool io_busy_true;
 } lightning_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
