@@ -37,7 +37,7 @@
 #include <linux/moduleparam.h>
 #include <linux/notifier.h>
 #include <asm/cputime.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 
 
 /******************** Tunable parameters: ********************/
@@ -47,7 +47,7 @@
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ (702*1000)
+#define DEFAULT_AWAKE_IDEAL_FREQ (1566*1000)
 static unsigned int awake_ideal_freq;
 
 /*
@@ -64,7 +64,7 @@ static unsigned int sleep_ideal_freq;
  * Zero disables and causes to always jump straight to max frequency.
  * When below the ideal frequency we always ramp up to the ideal freq.
  */
-#define DEFAULT_RAMP_UP_STEP (378*1000)
+#define DEFAULT_RAMP_UP_STEP (384*1000)
 static unsigned int ramp_up_step;
 
 /*
@@ -72,7 +72,7 @@ static unsigned int ramp_up_step;
  * Zero disables and will calculate ramp down according to load heuristic.
  * When above the ideal frequency we always ramp down to the ideal freq.
  */
-#define DEFAULT_RAMP_DOWN_STEP (378*1000)
+#define DEFAULT_RAMP_DOWN_STEP (384*1000)
 static unsigned int ramp_down_step;
 
 /*
@@ -105,7 +105,7 @@ static unsigned long down_rate_us;
  * The frequency to set when waking up from sleep.
  * When sleep_ideal_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ (810*1000)
+#define DEFAULT_SLEEP_WAKEUP_FREQ (1026*1000)
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -806,7 +806,7 @@ static void smartass_suspend(int cpu, int suspend)
 	reset_timer(smp_processor_id(),this_smartass);
 }
 
-static void smartass_early_suspend(struct early_suspend *handler) {
+static void smartass_power_suspend(struct power_suspend *handler) {
 	int i;
 	if (suspended || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
 		return;
@@ -815,7 +815,7 @@ static void smartass_early_suspend(struct early_suspend *handler) {
 		smartass_suspend(i,1);
 }
 
-static void smartass_late_resume(struct early_suspend *handler) {
+static void smartass_power_resume(struct power_suspend *handler) {
 	int i;
 	if (!suspended) // already not suspended so nothing to do
 		return;
@@ -824,12 +824,9 @@ static void smartass_late_resume(struct early_suspend *handler) {
 		smartass_suspend(i,0);
 }
 
-static struct early_suspend smartass_power_suspend = {
-	.suspend = smartass_early_suspend,
-	.resume = smartass_late_resume,
-#ifdef CONFIG_MACH_HERO
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
-#endif
+static struct power_suspend smartass_power_suspend = {
+	.suspend = smartass_power_suspend,
+	.resume = smartass_power_resume,
 };
 
 static int __init cpufreq_smartass_init(void)
@@ -878,7 +875,7 @@ static int __init cpufreq_smartass_init(void)
 
 	INIT_WORK(&freq_scale_work, cpufreq_smartass_freq_change_time_work);
 
-	register_early_suspend(&smartass_power_suspend);
+	register_power_suspend(&smartass_power_suspend);
 
 	return cpufreq_register_governor(&cpufreq_gov_smartass_h3);
 }
