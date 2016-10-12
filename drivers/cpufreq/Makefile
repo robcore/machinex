@@ -56,6 +56,16 @@ obj-$(CONFIG_CPU_FREQ_GOV_ARTERACTIVE)	+= cpufreq_arteractive.o
 obj-$(CONFIG_CPU_FREQ_GOV_ELECTROACTIVE)+= cpufreq_electroactive.o
 obj-$(CONFIG_CPU_FREQ_GOV_ELECTRODEMAND)+= cpufreq_electrodemand.o
 obj-$(CONFIG_CPU_FREQ_GOV_CAFACTIVE)		+= cpufreq_cafactive.o
+obj-$(CONFIG_CPU_FREQ_GOV_IRONACTIVE)		+= cpufreq_ironactive.o
+obj-$(CONFIG_CPU_FREQ_GOV_INTERACTIVE_PRO)	+= cpufreq_interactive_pro.o
+obj-$(CONFIG_CPU_FREQ_GOV_INTERACTIVE_X)	+= cpufreq_interactive_x.o
+obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVE_X)	+= cpufreq_conservative_x.o
+obj-$(CONFIG_CPU_FREQ_GOV_BIOSHOCK)		+= cpufreq_bioshock.o
+obj-$(CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS)		+= cpufreq_smartmax_eps.o
+obj-$(CONFIG_CPU_FREQ_GOV_IMPULSE)		+= cpufreq_impulse.o
+obj-$(CONFIG_CPU_FREQ_GOV_DESPAIR)		+= cpufreq_despair.o
+obj-$(CONFIG_CPU_FREQ_GOV_ONDEMAND_X)		+= cpufreq_ondemand_x.o
+obj-$(CONFIG_CPU_FREQ_GOV_HYPER)		+= cpufreq_HYPER.o
 
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o

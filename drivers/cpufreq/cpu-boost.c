@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,6 +34,7 @@ struct cpu_sync {
 	int cpu;
 	spinlock_t lock;
 	bool pending;
+	atomic_t being_woken;
 	int src_cpu;
 	unsigned int boost_min;
 	unsigned int input_boost_min;
@@ -72,8 +73,10 @@ module_param(load_based_syncs, bool, 0644);
 static bool hotplug_boost = 1;
 module_param(hotplug_boost, bool, 0644);
 
+#ifdef CONFIG_STATE_NOTIFIER
 bool wakeup_boost;
 module_param(wakeup_boost, bool, 0644);
+#endif
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
@@ -280,7 +283,7 @@ static void run_boost_migration(unsigned int cpu)
 		cpufreq_update_policy(src_cpu);
 	if (cpu_online(dest_cpu)) {
 		cpufreq_update_policy(dest_cpu);
-		mod_delayed_work_on(dest_cpu, cpu_boost_wq,
+		queue_delayed_work_on(dest_cpu, cpu_boost_wq,
 			&s->boost_rem, msecs_to_jiffies(boost_ms));
 	} else {
 		s->boost_min = 0;
@@ -328,7 +331,7 @@ static int boost_migration_notify(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	if (load_based_syncs && ((mnd->load < 0) || (mnd->load > 100))) {
-		pr_debug("cpu-boost:Invalid load: %d\n", mnd->load);
+		pr_err("cpu-boost:Invalid load: %d\n", mnd->load);
 		return NOTIFY_OK;
 	}
 
@@ -348,6 +351,15 @@ static int boost_migration_notify(struct notifier_block *nb,
 	s->src_cpu = mnd->src_cpu;
 	s->task_load = load_based_syncs ? mnd->load : 0;
 	spin_unlock_irqrestore(&s->lock, flags);
+	/*
+	* Avoid issuing recursive wakeup call, as sync thread itself could be
+	* seen as migrating triggering this notification. Note that sync thread
+	* of a cpu could be running for a short while with its affinity broken
+	* because of CPU hotplug.
+	*/
+	if (!atomic_cmpxchg(&s->being_woken, 0, 1)) {
+		atomic_set(&s->being_woken, 0);
+	}
 
 	return NOTIFY_OK;
 }
@@ -373,7 +385,7 @@ static void do_input_boost(struct work_struct *work)
 	/* Update policies for all online CPUs */
 	update_policy_online();
 
-	mod_delayed_work(cpu_boost_wq, &input_boost_rem,
+	queue_delayed_work(cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
 
@@ -498,6 +510,7 @@ static struct notifier_block __refdata cpu_nblk = {
         .notifier_call = cpuboost_cpu_callback,
 };
 
+#ifdef CONFIG_STATE_NOTIFIER
 static void __wakeup_boost(void)
 {
 	if (!wakeup_boost || !input_boost_enabled ||
@@ -508,7 +521,6 @@ static void __wakeup_boost(void)
 	last_input_time = ktime_to_us(ktime_get());
 }
 
-#ifdef CONFIG_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -543,6 +555,7 @@ static int cpu_boost_init(void)
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
+		atomic_set(&s->being_woken, 0);
 		spin_lock_init(&s->lock);
 		INIT_DELAYED_WORK(&s->boost_rem, do_boost_rem);
 	}

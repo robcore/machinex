@@ -333,6 +333,21 @@ config CPU_FREQ_DEFAULT_GOV_OPTIMAX
  	help
  	  Use the CPUFreq governor 'optimax' as default
 
+config CPU_FREQ_DEFAULT_GOV_IRONACTIVE
+	bool "ironactive"
+	depends on SCHED_FREQ_INPUT
+	select CPU_FREQ_GOV_IRONACTIVE
+	help
+	  Use the CPUFreq governor 'ironactive' as default. This cpugovernor
+	  is based on the 'interactive' governor with many changes made by
+	  CAF.
+
+config CPU_FREQ_DEFAULT_GOV_SMARTMAX_EPS
+	bool "smartmax_eps"
+	select CPU_FREQ_GOV_SMARTMAX_EPS
+	help
+	  Use the CPUFreq governor 'smartmax eps' as default
+
 config CPU_FREQ_DEFAULT_GOV_PRESERVATIVE
 	bool "preservative"
 	select CPU_FREQ_GOV_PRESERVATIVE
@@ -390,6 +405,29 @@ config CPU_FREQ_DEFAULT_GOV_BACON
 	  loading your cpufreq low-level hardware driver, using the
 	  'bacon' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_ONDEMAND_X
+	bool "ondemand_x"
+	select CPU_FREQ_GOV_ONDEMAND_X
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'ondemand_x' as default. This allows
+	  you to get a full dynamic frequency capable system by simply
+	  loading your cpufreq low-level hardware driver.
+	  Be aware that not all cpufreq drivers support the ondemand_x
+	  governor. If unsure have a look at the help section of the
+	  driver. Fallback governor will be the performance governor.
+
+config CPU_FREQ_DEFAULT_GOV_HYPER
+	bool "HYPER"
+	select CPU_FREQ_GOV_HYPER
+	---help---
+	  Use the CPUFreq governor 'HYPER' as default.
+
+config CPU_FREQ_DEFAULT_GOV_DESPAIR
+	bool "despair"
+	select CPU_FREQ_GOV_DESPAIR
+	help
+
 config CPU_FREQ_DEFAULT_GOV_HELLSACTIVE
 	bool "hellsactive"
 	select CPU_FREQ_GOV_HELLSACTIVE
@@ -407,6 +445,27 @@ config CPU_FREQ_DEFAULT_GOV_ARTERACTIVE
 	  you to get a full dynamic cpu frequency capable system by simply
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
+
+config CPU_FREQ_DEFAULT_GOV_INTERACTIVE_X
+	bool "interactive_x"
+	select CPU_FREQ_GOV_INTERACTIVE_X
+	help
+	  Use the CPUFreq governor 'interactive_x' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'interactive' governor for latency-sensitive workloads.
+
+config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE_X
+	bool "conservative_x"
+	select CPU_FREQ_GOV_CONSERVATIVE_X
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'conservative_x' as default. This allows
+	  you to get a full dynamic frequency capable system by simply
+	  loading your cpufreq low-level hardware driver.
+	  Be aware that not all cpufreq drivers support the conservative
+	  governor. If unsure have a look at the help section of the
+	  driver. Fallback governor will be the performance governor.
 
 endchoice
 
@@ -678,6 +737,11 @@ config CPU_FREQ_GOV_INTELLIACTIVE
 
 	  If in doubt, say N.
 
+config CPU_FREQ_GOV_INTERACTIVE_PRO
+	tristate "'interactive_pro' cpufreq governor"
+	depends on SCHED_FREQ_INPUT
+	depends on CPU_FREQ
+
 config CPU_FREQ_GOV_WHEATLEY
 	 tristate "'wheatley' cpufreq governor"
 	 depends on CPU_FREQ
@@ -746,6 +810,29 @@ config CPU_FREQ_GOV_BARRY_ALLEN
 
 	  If in doubt, say N.
 
+config CPU_FREQ_GOV_IRONACTIVE
+	tristate "'ironactive' cpufreq policy governor"
+	depends on SCHED_FREQ_INPUT
+	help
+	  'ironactive' - This driver adds a dynamic cpufreq policy governor
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  ironactive workloads. Based on 'interactive' governor
+	  with many changes compared to our stock 'interactive'
+	  governor we have from samsung. Mainly CAF changes.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_ironactive.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_SMARTMAX_EPS
+	tristate "'smartmax EPS' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'smartmax EPS' is the extreme powersaving version of smartmax
+
 config CPU_FREQ_GOV_CAFACTIVE
 	tristate "'cafactive' cpufreq policy governor"
 	help
@@ -754,6 +841,24 @@ config CPU_FREQ_GOV_CAFACTIVE
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_cafactive.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_ONDEMAND_X
+	tristate "'ondemand_x' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'ondemand_x' - This driver adds a dynamic cpufreq policy governor.
+	  The governor does a periodic polling and
+	  changes frequency based on the CPU utilization.
+	  The support for this governor depends on CPU capability to
+	  do fast frequency switching (i.e, very low latency frequency
+	  transitions).
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_ondemand_x.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say N.
 
@@ -767,6 +872,14 @@ config SEC_DVFS
 	bool "DVFS job"
 	default n
 	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_HYPER
+	tristate "'HYPER' cpufreq governor"
+	depends on CPU_FREQ
+	---help---
+	  'HYPER' - a tweaked "ondemand" based smart and smooth optimized governor!
+
+	  If in doubt, say Y
 
 config CPU_FREQ_GOV_INTELLIDEMAND
         tristate "'intellidemand' cpufreq policy governor"
@@ -805,6 +918,10 @@ config CPUFREQ_LIMIT_MAX_FREQ
 	depends on CPU_FREQ_GOV_INTELLIDEMAND
 	help
 		Limit Max Freq while screen is on for Intellidemand governor
+
+config CPU_FREQ_GOV_DESPAIR
+	tristate "'despair' cpufreq governor"
+	depends on CPU_FREQ
 
 config CPU_FREQ_GOV_YANKACTIVE
 	  tristate "'yankactive' cpufreq policy governor"
@@ -851,6 +968,46 @@ config CPU_FREQ_GOV_BACON
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_bacon.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_INTERACTIVE_X
+	tristate "'interactive_x' cpufreq policy governor"
+	help
+	  'interactive_x' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  interactive workloads.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_interactive.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_CONSERVATIVE_X
+	tristate "'conservative_x' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'conservative_x' - this driver is rather similar to the 'ondemand'
+	  governor both in its source code and its purpose, the difference is
+	  its optimisation for better suitability in a battery powered
+	  environment.  The frequency is gracefully increased and decreased
+	  rather than jumping to 100% when speed is required.
+
+	  If you have a desktop machine then you should really be considering
+	  the 'ondemand' governor instead, however if you are using a laptop,
+	  PDA or even an AMD64 based computer (due to the unacceptable
+	  step-by-step latency issues between the minimum and maximum frequency
+	  transitions in the CPU) you will probably want to use this governor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_conservative.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 
