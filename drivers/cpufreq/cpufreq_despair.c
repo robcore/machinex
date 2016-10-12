@@ -13,7 +13,7 @@
  */
 
 #include <linux/slab.h>
-#include "cpufreq_governor.h"
+#include <linux/cpufreq.h>
 #include <linux/touchboost.h>
 
 /* Conservative governor macros */
@@ -473,8 +473,8 @@ static int cs_init(struct dbs_data *dbs_data)
 	tuners->freq_step = DEF_FREQUENCY_STEP;
 	tuners->input_boost_freq = BOOST_FREQ_VAL;
     tuners->input_boost_duration = BOOST_DURATION_US;
-	tuners->min_load=DEFAULT_MIN_LOAD;	
-	tuners->twostep_threshold=DEF_FREQUENCY_TWOSTEP_THRESHOLD;	
+	tuners->min_load=DEFAULT_MIN_LOAD;
+	tuners->twostep_threshold=DEF_FREQUENCY_TWOSTEP_THRESHOLD;
 
 	dbs_data->tuners = tuners;
 	dbs_data->min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
