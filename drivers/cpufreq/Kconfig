@@ -296,11 +296,21 @@ config CPU_FREQ_DEFAULT_GOV_UMBRELLA_CORE
 	  loading your cpufreq low-level hardware driver, using the
 	  'umbrella_core' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_DYNAMIC_INTERACTIVE
+	bool "dynamic_interactive"
+	select CPU_FREQ_GOV_DYNAMIC_INTERACTIVE
+
 config CPU_FREQ_DEFAULT_GOV_BLU_ACTIVE
 	bool "bluactive"
 	select CPU_FREQ_GOV_BLU_ACTIVE
 	help
 	Use the CPUFreq governor 'blu_active' as default.
+
+config CPU_FREQ_DEFAULT_GOV_HYPERX
+	bool "hyperx"
+	select CPU_FREQ_GOV_HYPERX
+	help
+	Use the CPUfreq governor 'hyperx' as default.
 
 config CPU_FREQ_DEFAULT_GOV_BIOSHOCK
 	bool "BioShock"
@@ -360,6 +370,16 @@ config CPU_FREQ_DEFAULT_GOV_PRESERVATIVE
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	 Use the CPUFreq governor 'preservative' as default.
+
+config CPU_FREQ_DEFAULT_GOV_LIGHTNING
+ 	bool "lightning"
+ 	select CPU_FREQ_GOV_LIGHTNING
+
+config CPU_FREQ_DEFAULT_GOV_LIONFISH
+	bool "lionfish"
+	select CPU_FREQ_GOV_LIONFISH
+	help
+	  Use the CPUFreq governor 'lionfish' as default.
 
 config CPU_FREQ_DEFAULT_GOV_WAVE
 	bool "wave"
@@ -442,6 +462,14 @@ config CPU_FREQ_DEFAULT_GOV_HELLSACTIVE
 	  you to get a full dynamic cpu frequency capable system by simply
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
+
+config CPU_FREQ_DEFAULT_GOV_RAGINGMOLASSES
+	bool "ragingmolasses"
+	select CPU_FREQ_GOV_RAGINMOLASSES
+	help
+	  Use the CPUFreq governor 'ragingmolasses' as default. 
+          Work in progress attempt at a goodaround governor that can do either high performance or battery.
+          Attempts to keep CPU away from max frequ ency as much as possible.
 
 config CPU_FREQ_DEFAULT_GOV_ARTERACTIVE
 	bool "hellsactive"
@@ -691,6 +719,14 @@ config CPU_FREQ_GOV_ABYSSPLUGV2
 
          If in doubt, say N.
 
+config CPU_FREQ_GOV_DYNAMIC_INTERACTIVE
+	tristate "'dynamic_interactive' cpufreq governor"
+	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_HYPERX
+	tristate "'hyperx' cpufreq governor"
+	depends on CPU_FREQ
+
 config CPU_FREQ_GOV_BLU_ACTIVE
 	tristate "'blu_active' cpufreq governor"
 	depends on CPU_FREQ
@@ -778,6 +814,34 @@ config CPU_FREQ_GOV_BIOSHOCK
 	help
 	  'bioshock' - More aggressive version of conservative
 
+config CPU_FREQ_GOV_LIGHTNING
+ 	tristate "'lightning' cpufreq governor"
+        depends on CPU_FREQ
+        ---help---
+          'LIGHTNING' - a tweaked "ondemand" based smart and smooth optimized governor!
+
+config CPU_FREQ_GOV_LIONFISH
+	tristate "'lionfish' governor"
+	depends on CPU_FREQ
+	help
+	  'lionfish' - this is an improved version of the conservative governor
+	  that is optimized for smartphones. To avoid lag, it quickly jumps
+	  to an intermediate frequency when high load is encountered at low
+	  frequencies. If very high load is encountered above this intermediate
+	  frequency, it jumps to a high frequency. For moderate loads, it
+	  votes to increase, decrease, or maintain frequencies at each sampling
+	  interval. When enough votes are gathered to raise or lower the
+	  frequency, the frequency is changed. This mechanism reduces jitter
+	  compared to the conservative governor. Lionfish uses proportional
+	  ramping to more quickly reach suitable frequencies compared to the
+	  conservative governor. By default, Lionfish also reduces frequencies
+	  more aggressively than the conservative governor when loads are reduced.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_lionfish.
+
+	  If in doubt, say N.
+
 config CPU_FREQ_GOV_IMPULSE
 	tristate "'impulse' cpufreq policy governor"
 	help
@@ -839,6 +903,19 @@ config CPU_FREQ_GOV_IRONACTIVE
 
 	  If in doubt, say N.
 
+config CPU_FREQ_GOV_RAGINGMOLASSES
+	tristate "'RAGINGMOLASSES' cpufreq policy governor"
+	help
+	  'RAGINGMOLASSES' - This driver adds a cpufreq policy governor 
+	  much along the lines of ondemand but tries to keep to low 
+	  frequencies without hurting performance for workloads that need it.
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_interactive.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N0.
+
 config CPU_FREQ_GOV_SMARTMAX_EPS
 	tristate "'smartmax EPS' cpufreq policy governor"
 	select CPU_FREQ_TABLE
@@ -892,6 +969,9 @@ config CPU_FREQ_GOV_HYPER
 	  'HYPER' - a tweaked "ondemand" based smart and smooth optimized governor!
 
 	  If in doubt, say Y
+
+config CPU_FREQ_GOV_TRIPNDROID
+        tristate "'tripndroid' cpufreq governor"
 
 config CPU_FREQ_GOV_INTELLIDEMAND
         tristate "'intellidemand' cpufreq policy governor"

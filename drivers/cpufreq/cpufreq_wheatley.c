@@ -78,10 +78,10 @@ struct cpufreq_governor cpufreq_gov_wheatley = {
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
 struct cpu_dbs_info_s {
-    cputime64_t prev_cpu_idle;
-    cputime64_t prev_cpu_iowait;
-    cputime64_t prev_cpu_wall;
-    cputime64_t prev_cpu_nice;
+    u64 prev_cpu_idle;
+    u64 prev_cpu_iowait;
+    u64 prev_cpu_wall;
+    u64 prev_cpu_nice;
     struct cpufreq_policy *cur_policy;
     struct delayed_work work;
     struct cpufreq_frequency_table *freq_table;
@@ -154,7 +154,7 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
 	return jiffies_to_usecs(idle_time);
 }
 
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
+static inline u64 get_cpu_iowait_time(unsigned int cpu, u64 *wall)
 {
     u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
 
@@ -199,7 +199,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
     freq_lo = dbs_info->freq_table[index].frequency;
     index = 0;
     cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-				   CPUFREQ_RELATION_C, &index);
+				   CPUFREQ_RELATION_L, &index);
     freq_hi = dbs_info->freq_table[index].frequency;
 
     /* Find out how long we have to be in hi and lo freqs */
@@ -436,7 +436,7 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 	return;
 
     __cpufreq_driver_target(p, freq, dbs_tuners_ins.powersave_bias ?
-			    CPUFREQ_RELATION_C : CPUFREQ_RELATION_H);
+			    CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
 }
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
@@ -470,7 +470,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
     for_each_cpu(j, policy->cpus) {
 	struct cpu_dbs_info_s *j_dbs_info;
-	cputime64_t cur_wall_time, cur_idle_time, cur_iowait_time;
+	u64 cur_wall_time, cur_idle_time, cur_iowait_time;
 	unsigned int idle_time, wall_time, iowait_time;
 	unsigned int load, load_freq;
 	int freq_avg;
@@ -493,7 +493,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	j_dbs_info->prev_cpu_iowait = cur_iowait_time;
 
 	if (dbs_tuners_ins.ignore_nice) {
-	    cputime64_t cur_nice;
+	    u64 cur_nice;
 	    unsigned long cur_nice_jiffies;
 
 	    cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] -
@@ -596,12 +596,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	if (!dbs_tuners_ins.powersave_bias) {
 	    __cpufreq_driver_target(policy, freq_next,
-				    CPUFREQ_RELATION_C);
+				    CPUFREQ_RELATION_L);
 	} else {
 	    int freq = powersave_bias_target(policy, freq_next,
-					     CPUFREQ_RELATION_C);
+					     CPUFREQ_RELATION_L);
 	    __cpufreq_driver_target(policy, freq,
-				    CPUFREQ_RELATION_C);
+				    CPUFREQ_RELATION_L);
 	}
     }
 }
@@ -772,7 +772,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				    policy->max, CPUFREQ_RELATION_H);
 	else if (policy->min > this_dbs_info->cur_policy->cur)
 	    __cpufreq_driver_target(this_dbs_info->cur_policy,
-				    policy->min, CPUFREQ_RELATION_C);
+				    policy->min, CPUFREQ_RELATION_L);
 	mutex_unlock(&this_dbs_info->timer_mutex);
 	break;
     }

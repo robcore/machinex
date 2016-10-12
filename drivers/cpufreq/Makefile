@@ -66,6 +66,12 @@ obj-$(CONFIG_CPU_FREQ_GOV_IMPULSE)		+= cpufreq_impulse.o
 obj-$(CONFIG_CPU_FREQ_GOV_DESPAIR)		+= cpufreq_despair.o
 obj-$(CONFIG_CPU_FREQ_GOV_ONDEMAND_X)		+= cpufreq_ondemand_x.o
 obj-$(CONFIG_CPU_FREQ_GOV_HYPER)		+= cpufreq_HYPER.o
+obj-$(CONFIG_CPU_FREQ_GOV_LIGHTNING)       += cpufreq_lightning.o
+obj-$(CONFIG_CPU_FREQ_GOV_LIONFISH)	   += cpufreq_lionfish.o
+obj-$(CONFIG_CPU_FREQ_GOV_TRIPNDROID)	   += cpufreq_tripndroid.o
+obj-$(CONFIG_CPU_FREQ_GOV_DYNAMIC_INTERACTIVE) += cpufreq_dynamic_interactive.o
+obj-$(CONFIG_CPU_FREQ_GOV_RAGINGMOLASSES)  += cpufreq_ragingmolasses.o
+obj-$(CONFIG_CPU_FREQ_GOV_HYPERX)	   += cpufreq_hyperx.o
 
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
