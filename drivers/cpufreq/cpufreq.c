@@ -37,7 +37,7 @@
 
 #include <trace/events/power.h>
 #ifdef ARM_AUTO_HOTPLUG
-static unsigned int Lenable_auto_hotplug = 1;
+static unsigned int Lenable_auto_hotplug = 0;
 extern void apenable_auto_hotplug(bool state);
 #endif
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
