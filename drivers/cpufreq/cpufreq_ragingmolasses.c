@@ -24,9 +24,6 @@
 #include <linux/sysfs.h>
 #include <linux/types.h>
 
-#include "cpufreq_governor.h"
-
-
 #define DEF_SAMPLING_RATE                       (40000)
 #define DEF_FREQUENCY_UP_THRESHOLD		(70)
 #define DEF_FREQUENCY_STEP			(20)
@@ -203,7 +200,7 @@ static void rm_check_cpu(int cpu, unsigned int load)
 	struct rm_dbs_tuners *rm_tuners = dbs_data->tuners;
 	unsigned int freq_next;
 
-	
+
 	if (rm_tuners->freq_step == 0)
 		return;
 
@@ -236,7 +233,7 @@ static void rm_check_cpu(int cpu, unsigned int load)
 				CPUFREQ_RELATION_L);
 		return;
 
-	} 
+	}
 }
 
 static void rm_dbs_timer(struct work_struct *work)
