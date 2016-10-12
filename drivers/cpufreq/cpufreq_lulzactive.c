@@ -148,7 +148,7 @@ static unsigned long screen_off_min_step;
 #define DEBUG 0
 #define BUFSZ 128
 
-#if DEBUG
+#if 0
 #include <linux/proc_fs.h>
 
 struct dbgln {
@@ -1161,7 +1161,7 @@ static int __init cpufreq_lulzactive_init(void)
 	INIT_WORK(&freq_scale_down_work,
 			cpufreq_lulzactive_freq_down);
 
-#if DEBUG
+#if 0
 	spin_lock_init(&dbgpr_lock);
 	dbg_proc = create_proc_entry("igov", S_IWUSR | S_IRUGO, NULL);
 	dbg_proc->read_proc = dbg_proc_read;

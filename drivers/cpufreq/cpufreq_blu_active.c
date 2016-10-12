@@ -118,7 +118,7 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
  */
 static unsigned int max_freq_hysteresis;
 
-static bool io_is_busy;
+static bool io_is_busy = 0;
 
 /* Don't scale frequency if load is bellow threshold */
 static unsigned int low_load_down_threshold = 10;
@@ -283,7 +283,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	} else {
 		new_freq = pcpu->policy->min + cpu_load * (pcpu->policy->max - pcpu->policy->min) / 100;
 	}
-	
+
 	if (boosted && new_freq < input_boost_freq)
 		new_freq = input_boost_freq;
 
@@ -338,7 +338,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (new_freq == pcpu->policy->max)
 		pcpu->max_freq_hyst_start_time = now;
-	
+
 	if (pcpu->target_freq == new_freq) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
@@ -870,7 +870,7 @@ static ssize_t store_low_load_down_threshold(struct kobject *kobj, struct attrib
 		low_load_down_threshold = low_load_down_threshold;
 	else
 		low_load_down_threshold = val;
-	
+
 	return count;
 }
 
@@ -1043,7 +1043,7 @@ static int cpufreq_governor_blu_active(struct cpufreq_policy *policy,
 			mutex_unlock(&gov_lock);
 			return rc;
 		}
-		
+
 		idle_notifier_register(&cpufreq_interactive_idle_nb);
 		cpufreq_register_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
@@ -1066,7 +1066,7 @@ static int cpufreq_governor_blu_active(struct cpufreq_policy *policy,
 			mutex_unlock(&gov_lock);
 			return 0;
 		}
-		
+
 		cpufreq_unregister_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_interactive_idle_nb);
@@ -1079,7 +1079,7 @@ static int cpufreq_governor_blu_active(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_LIMITS:
 		__cpufreq_driver_target(policy,
 			policy->cur, CPUFREQ_RELATION_L);
-		
+
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
 
@@ -1096,11 +1096,11 @@ static int cpufreq_governor_blu_active(struct cpufreq_policy *policy,
 				pcpu->target_freq = policy->min;
 
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
-			
+
 			if (policy->min < pcpu->min_freq)
 				cpufreq_interactive_timer_resched(j, true);
 			pcpu->min_freq = policy->min;
-			
+
 			up_read(&pcpu->enable_sem);
 
 			/* Reschedule timer.
@@ -1186,7 +1186,7 @@ module_init(cpufreq_blu_active_init);
 static void __exit cpufreq_interactive_exit(void)
 {
 	unsigned int cpu;
-	
+
 	cpufreq_unregister_governor(&cpufreq_gov_blu_active);
 	for_each_possible_cpu(cpu) {
 		if(!cpu)

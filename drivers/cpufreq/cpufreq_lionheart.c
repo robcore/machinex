@@ -58,9 +58,9 @@ static unsigned int min_sampling_rate;
 static void do_dbs_timer(struct work_struct *work);
 
 struct cpu_dbs_info_s {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_wall;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_idle;
+	u64 prev_cpu_wall;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	unsigned int down_skip;
@@ -72,7 +72,7 @@ struct cpu_dbs_info_s {
 };
 static DEFINE_PER_CPU(struct cpu_dbs_info_s, cs_cpu_dbs_info);
 
-static unsigned int dbs_enable;	
+static unsigned int dbs_enable;
 
 static DEFINE_MUTEX(dbs_mutex);
 
@@ -282,7 +282,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info_s *j_dbs_info;
-		cputime64_t cur_wall_time, cur_idle_time;
+		u64 cur_wall_time, cur_idle_time;
 		unsigned int idle_time, wall_time;
 
 		j_dbs_info = &per_cpu(cs_cpu_dbs_info, j);
@@ -296,7 +296,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		j_dbs_info->prev_cpu_idle = cur_idle_time;
 
 		if (dbs_tuners_ins.ignore_nice) {
-			cputime64_t cur_nice;
+			u64 cur_nice;
 			unsigned long cur_nice_jiffies;
 
 			cur_nice = (kcpustat_cpu(j).cpustat[CPUTIME_NICE] - j_dbs_info->prev_cpu_nice);

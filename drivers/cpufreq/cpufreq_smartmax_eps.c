@@ -83,7 +83,7 @@ extern int tegra_input_boost (struct cpufreq_policy *policy,
 // msm8974 platform
 #ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS
 #define DEFAULT_SUSPEND_IDEAL_FREQ 384000
-#define DEFAULT_AWAKE_IDEAL_FREQ 702000
+#define DEFAULT_AWAKE_IDEAL_FREQ 1026000
 #define DEFAULT_RAMP_UP_STEP 384000
 #define DEFAULT_RAMP_DOWN_STEP 192000
 #define DEFAULT_MAX_CPU_LOAD 70
@@ -92,59 +92,8 @@ extern int tegra_input_boost (struct cpufreq_policy *policy,
 #define DEFAULT_DOWN_RATE 60000
 #define DEFAULT_SAMPLING_RATE 30000
 #define DEFAULT_INPUT_BOOST_DURATION 90000
-#define DEFAULT_TOUCH_POKE_FREQ 1026000
-#define DEFAULT_BOOST_FREQ 1458000
-#define DEFAULT_IO_IS_BUSY 0
-#define DEFAULT_IGNORE_NICE 1
-#endif
-
-#ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_PRIMOU
-#define DEFAULT_SUSPEND_IDEAL_FREQ 368000
-#define DEFAULT_AWAKE_IDEAL_FREQ 806000
-#define DEFAULT_RAMP_UP_STEP 200000
-#define DEFAULT_RAMP_DOWN_STEP 200000
-#define DEFAULT_MAX_CPU_LOAD 60
-#define DEFAULT_MIN_CPU_LOAD 30
-#define DEFAULT_UP_RATE 30000
-#define DEFAULT_DOWN_RATE 60000
-#define DEFAULT_SAMPLING_RATE 30000
-#define DEFAULT_INPUT_BOOST_DURATION 90000
-#define DEFAULT_TOUCH_POKE_FREQ 1200000
-#define DEFAULT_BOOST_FREQ 1200000
-#define DEFAULT_IO_IS_BUSY 0
-#define DEFAULT_IGNORE_NICE 1
-#endif
-
-#ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_M7
-#define DEFAULT_SUSPEND_IDEAL_FREQ 384000
-#define DEFAULT_AWAKE_IDEAL_FREQ 594000
-#define DEFAULT_RAMP_UP_STEP 200000
-#define DEFAULT_RAMP_DOWN_STEP 200000
-#define DEFAULT_MAX_CPU_LOAD 70
-#define DEFAULT_MIN_CPU_LOAD 40
-#define DEFAULT_UP_RATE 30000
-#define DEFAULT_DOWN_RATE 60000
-#define DEFAULT_SAMPLING_RATE 30000
-#define DEFAULT_INPUT_BOOST_DURATION 90000
-#define DEFAULT_TOUCH_POKE_FREQ 1134000
-#define DEFAULT_BOOST_FREQ 1134000
-#define DEFAULT_IO_IS_BUSY 0
-#define DEFAULT_IGNORE_NICE 1
-#endif
-
-#ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_FIND5
-#define DEFAULT_SUSPEND_IDEAL_FREQ 384000
-#define DEFAULT_AWAKE_IDEAL_FREQ 594000
-#define DEFAULT_RAMP_UP_STEP 200000
-#define DEFAULT_RAMP_DOWN_STEP 200000
-#define DEFAULT_MAX_CPU_LOAD 90
-#define DEFAULT_MIN_CPU_LOAD 60
-#define DEFAULT_UP_RATE 30000
-#define DEFAULT_DOWN_RATE 60000
-#define DEFAULT_SAMPLING_RATE 30000
-#define DEFAULT_INPUT_BOOST_DURATION 900000
-#define DEFAULT_TOUCH_POKE_FREQ 1134000
-#define DEFAULT_BOOST_FREQ 1134000
+#define DEFAULT_TOUCH_POKE_FREQ 918000
+#define DEFAULT_BOOST_FREQ 1242000
 #define DEFAULT_IO_IS_BUSY 0
 #define DEFAULT_IGNORE_NICE 1
 #endif
@@ -303,10 +252,10 @@ static int cpufreq_governor_smartmax_eps(struct cpufreq_policy *policy,
 #ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_SMARTMAX_EPS
 static
 #endif
-struct cpufreq_governor cpufreq_gov_smartmax_eps = { 
-    .name = "smartmax_eps", 
-    .governor = cpufreq_governor_smartmax_eps, 
-    .max_transition_latency = TRANSITION_LATENCY_LIMIT, 
+struct cpufreq_governor cpufreq_gov_smartmax_eps = {
+    .name = "smartmax_eps",
+    .governor = cpufreq_governor_smartmax_eps,
+    .max_transition_latency = TRANSITION_LATENCY_LIMIT,
     .owner = THIS_MODULE,
     };
 
@@ -339,7 +288,7 @@ inline static void smartmax_eps_update_min_max_allcpus(void) {
 //				continue;
 
 			smartmax_eps_update_min_max(this_smartmax_eps, this_smartmax_eps->cur_policy);
-			
+
 //			unlock_policy_rwsem_write(cpu);
 		}
 	}
@@ -436,7 +385,7 @@ static void cpufreq_smartmax_eps_freq_change(struct smartmax_eps_info_s *this_sm
 	cpu = this_smartmax_eps->cpu;
 
 	dprintk(SMARTMAX_EPS_DEBUG_ALG, "%d: %s\n", old_freq, __func__);
-	
+
 	if (old_freq != policy->cur) {
 		// frequency was changed by someone else?
 		dprintk(SMARTMAX_EPS_DEBUG_ALG, "%d: frequency changed by 3rd party to %d\n",
@@ -473,7 +422,7 @@ static void cpufreq_smartmax_eps_freq_change(struct smartmax_eps_info_s *this_sm
 	if (new_freq!=0){
 		target_freq(policy, this_smartmax_eps, new_freq, old_freq, relation);
 	}
-	
+
 	this_smartmax_eps->ramp_dir = 0;
 }
 
@@ -482,7 +431,7 @@ static inline void cpufreq_smartmax_eps_get_ramp_direction(struct smartmax_eps_i
 	unsigned int cur_load = this_smartmax_eps->cur_cpu_load;
 	unsigned int cur = this_smartmax_eps->old_freq;
 	struct cpufreq_policy *policy = this_smartmax_eps->cur_policy;
-	
+
 	// Scale up if load is above max or if there where no idle cycles since coming out of idle,
 	// additionally, if we are at or above the ideal_speed, verify we have been at this frequency
 	// for at least up_rate:
@@ -510,7 +459,7 @@ static void inline cpufreq_smartmax_eps_calc_load(int j)
 	u64 cur_wall_time, cur_idle_time, cur_iowait_time;
 	unsigned int idle_time, wall_time, iowait_time;
 	unsigned int cur_load;
-		
+
 	j_this_smartmax_eps = &per_cpu(smartmax_eps_info, j);
 
 	cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
@@ -569,7 +518,7 @@ static void cpufreq_smartmax_eps_timer(struct smartmax_eps_info_s *this_smartmax
 	//unsigned int load_at_max_freq = 0;
 	unsigned int cpu = this_smartmax_eps->cpu;
 
-#if SMARTMAX_EPS_STAT 
+#if SMARTMAX_EPS_STAT
 	u64 diff = 0;
 
 	if (timer_stat[cpu])
@@ -598,14 +547,14 @@ static void cpufreq_smartmax_eps_timer(struct smartmax_eps_info_s *this_smartmax
 	cpufreq_smartmax_eps_get_ramp_direction(this_smartmax_eps, now);
 
 	// no changes
-	if (this_smartmax_eps->ramp_dir == 0)		
+	if (this_smartmax_eps->ramp_dir == 0)
 		return;
 
 	// boost - but not block ramp up steps based on load if requested
 	if (boost_running){
 		if (now < boost_end_time) {
 			dprintk(SMARTMAX_EPS_DEBUG_BOOST, "%d: cpu %d boost running %llu %llu\n", cur, cpu, now, boost_end_time);
-		
+
 			if (this_smartmax_eps->ramp_dir == -1)
 				return;
 			else {
@@ -649,7 +598,7 @@ static void update_idle_time(bool online) {
 
 		j_this_smartmax_eps->prev_cpu_idle = get_cpu_idle_time(j,
 				&j_this_smartmax_eps->prev_cpu_wall, 0);
-				
+
 		if (ignore_nice)
 #ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_30
 			j_this_smartmax_eps->prev_cpu_nice = kstat_cpu(j) .cpustat.nice;
@@ -849,13 +798,13 @@ static ssize_t store_touch_poke_freq(struct kobject *a, struct attribute *b,
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0){
 		touch_poke_freq = input;
-	
+
 		if (touch_poke_freq == 0)
 			touch_poke = false;
 		else
 			touch_poke = true;
 	} else
-		return -EINVAL;	
+		return -EINVAL;
 	return count;
 }
 
@@ -915,7 +864,7 @@ static ssize_t store_boost_freq(struct kobject *a, struct attribute *b,
 		else
 			boost = true;
 	} else
-		return -EINVAL;	
+		return -EINVAL;
 	return count;
 }
 
@@ -966,7 +915,7 @@ static ssize_t store_io_is_busy(struct kobject *a, struct attribute *b,
 		}
 		io_is_busy = input;
 	} else
-		return -EINVAL;	
+		return -EINVAL;
 	return count;
 }
 
@@ -991,7 +940,7 @@ static ssize_t store_ignore_nice(struct kobject *a, struct attribute *b,
 		/* we need to re-evaluate prev_cpu_idle */
 		update_idle_time(true);
 	} else
-		return -EINVAL;	
+		return -EINVAL;
 	return count;
 }
 
@@ -1002,7 +951,7 @@ static ssize_t show_min_sampling_rate(struct kobject *kobj, struct attribute *at
 
 static ssize_t store_min_sampling_rate(struct kobject *a, struct attribute *b,
 		const char *buf, size_t count) {
-	return -EINVAL;	
+	return -EINVAL;
 }
 
 #define define_global_rw_attr(_name)		\
@@ -1032,30 +981,30 @@ define_global_rw_attr(awake_ideal_freq);
 define_global_rw_attr(suspend_ideal_freq);
 define_global_ro_attr(min_sampling_rate);
 
-static struct attribute * smartmax_eps_attributes[] = { 
+static struct attribute * smartmax_eps_attributes[] = {
 	&debug_mask_attr.attr,
-	&up_rate_attr.attr, 
-	&down_rate_attr.attr, 
-	&ramp_up_step_attr.attr, 
+	&up_rate_attr.attr,
+	&down_rate_attr.attr,
+	&ramp_up_step_attr.attr,
 	&ramp_down_step_attr.attr,
-	&max_cpu_load_attr.attr, 
+	&max_cpu_load_attr.attr,
 	&min_cpu_load_attr.attr,
-	&sampling_rate_attr.attr, 
+	&sampling_rate_attr.attr,
 	&touch_poke_freq_attr.attr,
-	&input_boost_duration_attr.attr, 
-	&boost_freq_attr.attr, 
-	&boost_duration_attr.attr, 
+	&input_boost_duration_attr.attr,
+	&boost_freq_attr.attr,
+	&boost_duration_attr.attr,
 	&io_is_busy_attr.attr,
-	&ignore_nice_attr.attr, 
-	&ramp_up_during_boost_attr.attr, 
+	&ignore_nice_attr.attr,
+	&ramp_up_during_boost_attr.attr,
 	&awake_ideal_freq_attr.attr,
-	&suspend_ideal_freq_attr.attr,		
+	&suspend_ideal_freq_attr.attr,
 	&min_sampling_rate_attr.attr,
 	NULL , };
 
-static struct attribute_group smartmax_eps_attr_group = { 
-	.attrs = smartmax_eps_attributes, 
-	.name = "smartmax_eps", 
+static struct attribute_group smartmax_eps_attr_group = {
+	.attrs = smartmax_eps_attributes,
+	.name = "smartmax_eps",
 	};
 
 static int cpufreq_smartmax_eps_boost_task(void *data) {
@@ -1079,7 +1028,7 @@ static int cpufreq_smartmax_eps_boost_task(void *data) {
 			continue;
 
 #ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_TEGRA
-		/* on tegra there is only one cpu clock so we only need to boost cpu 0 
+		/* on tegra there is only one cpu clock so we only need to boost cpu 0
 		   all others will run at the same speed */
 		this_smartmax_eps = &per_cpu(smartmax_eps_info, 0);
 		if (!this_smartmax_eps)
@@ -1091,14 +1040,14 @@ static int cpufreq_smartmax_eps_boost_task(void *data) {
 
 //		if (lock_policy_rwsem_write(0) < 0)
 //			continue;
-		
+
 		tegra_input_boost(policy, cur_boost_freq, CPUFREQ_RELATION_H);
-	
+
         this_smartmax_eps->prev_cpu_idle = get_cpu_idle_time(0,
 						&this_smartmax_eps->prev_cpu_wall, 0);
 
 //	unlock_policy_rwsem_write(0);
-#else		
+#else
 		for_each_online_cpu(cpu){
 			this_smartmax_eps = &per_cpu(smartmax_eps_info, cpu);
 			if (!this_smartmax_eps)
@@ -1135,7 +1084,7 @@ static int cpufreq_smartmax_eps_boost_task(void *data) {
 		now = ktime_to_us(ktime_get());
 		boost_end_time = now + (cur_boost_duration * num_online_cpus());
 		dprintk(SMARTMAX_EPS_DEBUG_BOOST, "%s %llu %llu\n", __func__, now, boost_end_time);
-		
+
 #ifndef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_TEGRA
 		}
 #endif
@@ -1223,12 +1172,12 @@ static const struct input_device_id dbs_ids[] = {
 	{ },
 };
 
-static struct input_handler dbs_input_handler = { 
+static struct input_handler dbs_input_handler = {
 	.event = smartmax_eps_input_event,
-	.connect = dbs_input_connect, 
+	.connect = dbs_input_connect,
 	.disconnect = dbs_input_disconnect,
-	.name = "cpufreq_smartmax_eps", 
-	.id_table = dbs_ids, 
+	.name = "cpufreq_smartmax_eps",
+	.id_table = dbs_ids,
 	};
 #endif
 
@@ -1261,7 +1210,7 @@ static int cpufreq_governor_smartmax_eps(struct cpufreq_policy *new_policy,
 		update_idle_time(false);
 
 		dbs_enable++;
-		
+
 		if (dbs_enable == 1) {
 			if (!boost_task_alive) {
 				boost_task = kthread_create (
@@ -1347,7 +1296,7 @@ static int cpufreq_governor_smartmax_eps(struct cpufreq_policy *new_policy,
 			input_unregister_handler(&dbs_input_handler);
 #endif
 		}
-		
+
 		mutex_unlock(&dbs_mutex);
 		break;
 	}

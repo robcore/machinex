@@ -336,6 +336,11 @@ config CPU_FREQ_DEFAULT_GOV_ZZMOOVE
 	select CPU_FREQ_GOV_ZZMOOVE
 	help
 
+config CPU_FREQ_DEFAULT_GOV_LULZACTIVE
+	bool "lulzactive"
+	select CPU_FREQ_GOV_LULZACTIVE
+	help
+
 config CPU_FREQ_DEFAULT_GOV_IMPULSE
 	bool "impulse"
 	select CPU_FREQ_GOV_IMPULSE
@@ -467,7 +472,7 @@ config CPU_FREQ_DEFAULT_GOV_RAGINGMOLASSES
 	bool "ragingmolasses"
 	select CPU_FREQ_GOV_RAGINMOLASSES
 	help
-	  Use the CPUFreq governor 'ragingmolasses' as default. 
+	  Use the CPUFreq governor 'ragingmolasses' as default.
           Work in progress attempt at a goodaround governor that can do either high performance or battery.
           Attempts to keep CPU away from max frequ ency as much as possible.
 
@@ -723,6 +728,10 @@ config CPU_FREQ_GOV_DYNAMIC_INTERACTIVE
 	tristate "'dynamic_interactive' cpufreq governor"
 	depends on CPU_FREQ
 
+config CPU_FREQ_GOV_LULZACTIVE
+	tristate "'lulzactive' cpufreq governor"
+	depends on CPU_FREQ
+
 config CPU_FREQ_GOV_HYPERX
 	tristate "'hyperx' cpufreq governor"
 	depends on CPU_FREQ
@@ -906,8 +915,8 @@ config CPU_FREQ_GOV_IRONACTIVE
 config CPU_FREQ_GOV_RAGINGMOLASSES
 	tristate "'RAGINGMOLASSES' cpufreq policy governor"
 	help
-	  'RAGINGMOLASSES' - This driver adds a cpufreq policy governor 
-	  much along the lines of ondemand but tries to keep to low 
+	  'RAGINGMOLASSES' - This driver adds a cpufreq policy governor
+	  much along the lines of ondemand but tries to keep to low
 	  frequencies without hurting performance for workloads that need it.
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_interactive.

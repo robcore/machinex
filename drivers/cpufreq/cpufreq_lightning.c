@@ -126,7 +126,7 @@ static struct lightning_tuners {
 	unsigned int ignore_nice;
 	unsigned int sampling_down_factor;
 	int          powersave_bias;
-	unsigned int io_is_busy;
+	unsigned int io_is_busy = 0;
 	//static bool io_busy_true;
 } lightning_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
@@ -551,7 +551,7 @@ static void lightning_check_cpu(struct cpu_lightning_info_s *this_lightning_info
 			cur_nice_jiffies = (unsigned long)
 					cputime64_to_jiffies64(cur_nice);
 
-			j_lightning_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];	
+			j_lightning_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 			idle_time += jiffies_to_usecs(cur_nice_jiffies);
 		}
 
@@ -693,15 +693,6 @@ static inline void lightning_timer_exit(struct cpu_lightning_info_s *lightning_i
  */
 static int should_io_be_busy(void)
 {
-#if defined(CONFIG_X86)
-	/*
-	 * For Intel, Core 2 (model 15) andl later have an efficient idle.
-	 */
-	if (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL &&
-	    boot_cpu_data.x86 == 6 &&
-	    boot_cpu_data.x86_model >= 15)
-		return 1;
-#endif
 	return 0;
 }
 
