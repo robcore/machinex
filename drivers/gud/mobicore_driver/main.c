@@ -1,4 +1,5 @@
 /*
+
  * MobiCore Driver Kernel Module.
  *
  * This driver represents the command proxy on the lowest layer, from the
@@ -486,6 +487,7 @@ void *get_mci_base_phys(unsigned int len)
 		ctx.mci_base.order = order;
 		ctx.mci_base.addr =
 			(void *)__get_free_pages(GFP_USER | __GFP_ZERO, order);
+		ctx.mci_base.len = (1 << order) * PAGE_SIZE;
 		if (ctx.mci_base.addr == NULL) {
 			MCDRV_DBG_WARN(mcd, "get_free_pages failed\n");
 			memset(&ctx.mci_base, 0, sizeof(ctx.mci_base));
@@ -708,6 +710,8 @@ found:
 		paddr = get_mci_base_phys(len);
 		if (!paddr)
 			return -EFAULT;
+		if (len != ctx.mci_base.len)
+			return -EINVAL;
 
 		vmarea->vm_flags |= VM_IO;
 		/*

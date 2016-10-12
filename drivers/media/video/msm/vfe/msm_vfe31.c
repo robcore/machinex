@@ -15,6 +15,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/io.h>
+#include <linux/kernel.h>
 #include <mach/irqs.h>
 #include <mach/camera.h>
 #include <asm/atomic.h>
@@ -1668,8 +1669,6 @@ static int vfe31_proc_general(struct msm_vfe31_cmd *cmd)
 	uint32_t stereo_cam_enable = 0;
 	struct msm_sync* p_sync = (struct msm_sync *)vfe_syncdata;
 
-	CDBG("vfe31_proc_general: cmdID = %s, length = %d\n",
-		vfe31_general_cmd[cmd->id], cmd->length);
 	switch (cmd->id) {
 	case V31_RESET:
 		pr_info("vfe31_proc_general: cmdID = %s\n",
@@ -2237,8 +2236,11 @@ static int vfe31_proc_general(struct msm_vfe31_cmd *cmd)
 		break;
 
 	default: {
-		if (cmd->length != vfe31_cmd[cmd->id].length)
+		if (cmd->id < 0 || cmd->id >= ARRAY_SIZE(vfe31_cmd)) {
+			pr_err("%s - invalid vfe command %d",
+			__func__, cmd->id);
 			return -EINVAL;
+		}
 
 		cmdp = kmalloc(vfe31_cmd[cmd->id].length, GFP_ATOMIC);
 		if (!cmdp) {

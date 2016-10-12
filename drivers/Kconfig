@@ -172,5 +172,4 @@ source "drivers/felica/Kconfig"
 
 source "drivers/motor_msm8930/Kconfig"
 
-source "drivers/secfilter/Kconfig"
 endmenu
