@@ -37,7 +37,7 @@
 
 #include <trace/events/power.h>
 
-static unsigned int Lenable_auto_hotplug = 0;
+static unsigned int Lenable_auto_hotplug = 1;
 extern void apenable_auto_hotplug(bool state);
 
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
@@ -841,21 +841,20 @@ static ssize_t show_bios_limit(struct cpufreq_policy *policy, char *buf)
 
 static ssize_t show_enable_auto_hotplug(struct cpufreq_policy *policy, char *buf)
 {
-	return sprintf(buf, "%u\n", Lenable_auto_hotplug);
+       return sprintf(buf, "%u\n", Lenable_auto_hotplug);
 }
 static ssize_t store_enable_auto_hotplug(struct cpufreq_policy *policy,
-					const char *buf, size_t count)
+ 				       const char *buf, size_t count)
 {
-	unsigned int val = 0;
-	unsigned int ret;
-	ret = sscanf(buf, "%u", &val);
-	Lenable_auto_hotplug = val;
-	apenable_auto_hotplug((bool) Lenable_auto_hotplug);
-	return count;
+       unsigned int val = 0;
+       unsigned int ret;
+       ret = sscanf(buf, "%u", &val);
+       Lenable_auto_hotplug = val;
+       apenable_auto_hotplug((bool) Lenable_auto_hotplug);
+       return count;
 }
 
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
-
 extern ssize_t acpuclk_get_vdd_levels_str(char *buf);
 extern void acpuclk_set_vdd(unsigned acpu_khz, int vdd);
 
