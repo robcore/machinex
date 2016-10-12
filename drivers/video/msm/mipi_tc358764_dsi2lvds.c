@@ -698,7 +698,7 @@ static struct msm_fb_panel_data d2l_panel_data = {
 	.off = mipi_d2l_lcd_off,
 	.set_backlight = mipi_d2l_set_backlight,
 };
-/*#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_HAS_POWERSUSPEND)
 static void mipi_d2l_disp_power_suspend(struct power_suspend *h)
 {
 	down(&d2l_mfd->sem);
@@ -720,7 +720,7 @@ static void mipi_d2l_disp_power_resume(struct power_suspend *h)
 		mipi_d2l_set_backlight_level(bl_pwm, bl_level);
 	pr_info("%s-", __func__);
 }
-#endif */
+#endif
 
 static u32 d2l_i2c_read_reg(struct i2c_client *client, u16 reg)
 {
@@ -906,12 +906,11 @@ static int __devinit mipi_d2l_probe(struct platform_device *pdev)
 	}
 #endif
 
-/*#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_HAS_POWERSUSPEND)
 	ddd.power_suspend.suspend = mipi_d2l_disp_power_suspend;
 	ddd.power_suspend.resume = mipi_d2l_disp_power_resume;
-//	ddd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_power_suspend(&ddd.power_suspend);
-#endif */
+#endif
 
 	return ret;
 }

@@ -49,7 +49,7 @@ Copyright (C) 2011, Samsung Electronics. All rights reserved.
 
 #include <linux/delay.h>
 #include <linux/workqueue.h>
-//#include <linux/powersuspend.h>
+#include <linux/powersuspend.h>
 #include "msm_fb.h"
 #include <linux/time.h>
 #include <linux/timer.h>

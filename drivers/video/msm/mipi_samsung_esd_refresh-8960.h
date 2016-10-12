@@ -66,9 +66,9 @@ struct esd_data_t {
 };
 struct mipi_controls {
 	struct platform_device *mipi_dev;
-//#if defined(CONFIG_HAS_POWERSUSPEND)
-//	struct power_suspend power_suspend;
-//#endif
+#if defined(CONFIG_HAS_POWERSUSPEND)
+	struct power_suspend power_suspend;
+#endif
 };
 #if defined(CONFIG_SAMSUNG_CMC624)
 bool samsung_has_cmc624(void);

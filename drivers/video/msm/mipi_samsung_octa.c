@@ -583,9 +583,6 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 #endif
 
-#ifdef CONFIG_STATE_NOTIFIER
-		state_resume();
-#endif
 	} else {
 		gpio_get_param.pull = PM_GPIO_PULL_NO;
 		pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
@@ -597,10 +594,6 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-#endif
-
-#ifdef CONFIG_STATE_NOTIFIER
-		state_resume();
 #endif
 	}
 
@@ -650,8 +643,11 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	sec_debug_mdp_reset_value();
 
-	pr_info("[%s]\n", __func__);
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+#endif
 
+	pr_info("[%s]\n", __func__);
 	return 0;
 }
 
