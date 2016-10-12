@@ -1700,6 +1700,15 @@ config MSM_FIQ_SUPPORT
 	default y
 	bool "Enable installation of an FIQ handler."
 
+config ARM_AUTO_HOTPLUG
+	bool "Auto hotplugging based on scheduler runqueue load for ARM SoCs"
+	depends on HOTPLUG_CPU
+	depends on ARCH_EXYNOS4 || ARCH_TEGRA || ARCH_MSM_SCORPIONMP || \
+	ARCH_MSM_KRAITMP
+	depends on !TEGRA_AUTO_HOTPLUG && !CPU_FREQ_GOV_PEGASUSQ && \
+	!CPU_FREQ_GOV_HOTPLUG && !MSM_MPDEC
+	default y
+
 config MSM_SERIAL_DEBUGGER
 	select MSM_FIQ_SUPPORT
 	select KERNEL_DEBUGGER_CORE
