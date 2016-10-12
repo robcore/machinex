@@ -948,7 +948,7 @@ void cafactive_boost_ondemand(int cpu, s64 miliseconds, bool static_switch)
 				cpufreq_cafactive_boost(tunables);
 		 } else {
 			tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-			trace_cpufreq_cafactive_unboost("off");
+			//trace_cpufreq_cafactive_unboost("off");
 		 }
 	} else {
 		 tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
