@@ -491,11 +491,11 @@ static int __init auto_hotplug_init(void)
 	pr_info("auto_hotplug: %d CPUs detected\n", CPUS_AVAILABLE);
 
 	INIT_DELAYED_WORK(&hotplug_decision_work, hotplug_decision_work_fn);
-	INIT_DELAYED_WORK_DEFERRABLE(&hotplug_unpause_work, hotplug_unpause_work_fn);
+	INIT_DEFERRABLE_WORK(&hotplug_unpause_work, hotplug_unpause_work_fn);
 	INIT_WORK(&hotplug_online_all_work, hotplug_online_all_work_fn);
 	INIT_WORK(&hotplug_online_single_work, hotplug_online_single_work_fn);
 	INIT_WORK(&hotplug_offline_all_work, hotplug_offline_all_work_fn);
-	INIT_DELAYED_WORK_DEFERRABLE(&aphotplug_offline_work, aphotplug_offline_work_fn);
+	INIT_DEFERRABLE_WORK(&aphotplug_offline_work, aphotplug_offline_work_fn);
 
 	/*
 	 * Give the system time to boot before fiddling with hotplugging.
