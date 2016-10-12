@@ -475,7 +475,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 static void mipi_samsung_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = NULL;
@@ -507,7 +507,7 @@ static void mipi_samsung_disp_power_resume(struct power_suspend *h)
 
 	pr_info("[lcd] %s\n", __func__);
 }
-#endif
+#endif */
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 static ssize_t mipi_samsung_disp_get_power(struct device *dev,
@@ -1130,15 +1130,16 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 	mutex_init(&dsi_tx_mutex);
 
-#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+//#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
-#endif
+//#endif
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_HAS_POWERSUSPEND)
 	msd.power_suspend.suspend = mipi_samsung_disp_power_suspend;
 	msd.power_suspend.resume = mipi_samsung_disp_power_resume;
+//	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_power_suspend(&msd.power_suspend);
-#endif
+#endif */
 
 #if defined(CONFIG_ESD_ERR_FG_RECOVERY)
 	INIT_WORK(&err_fg_work, err_fg_work_func);

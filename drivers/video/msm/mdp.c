@@ -163,18 +163,18 @@ extern int first_pixel_start_y;
 struct dentry *mdp_dir;
 #endif
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
-static int mdp_suspend(struct platform_device *pdev, pm_message_t state);
-#else
+//#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+//static int mdp_suspend(struct platform_device *pdev, pm_message_t state);
+//#else
 #define mdp_suspend NULL
-#endif
+//#endif
 
 struct timeval mdp_dma2_timeval;
 struct timeval mdp_ppp_timeval;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
-static struct power_suspend power_suspend;
-#endif
+//#ifdef CONFIG_HAS_POWERSUSPEND
+//static struct power_suspend power_suspend;
+//#endif
 
 static u32 mdp_irq;
 
@@ -2366,10 +2366,10 @@ static struct dev_pm_ops mdp_dev_pm_ops = {
 static struct platform_driver mdp_driver = {
 	.probe = mdp_probe,
 	.remove = mdp_remove,
-#ifndef CONFIG_HAS_POWERSUSPEND
+/*#ifndef CONFIG_HAS_POWERSUSPEND
 	.suspend = mdp_suspend,
 	.resume = NULL,
-#endif
+#endif */
 #ifdef CONFIG_MDP_SHUTDOWN
 	.shutdown = mdp_shutdown,
 #else
@@ -3471,7 +3471,7 @@ static void mdp_suspend_sub(void)
 }
 #endif
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int mdp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	if (pdev->id == 0) {
@@ -3503,7 +3503,7 @@ static void mdp_power_resume(struct power_suspend *h)
 	mdp_suspended = FALSE;
 	mutex_unlock(&mdp_suspend_mutex);
 }
-#endif
+#endif */
 
 static int mdp_remove(struct platform_device *pdev)
 {
@@ -3528,11 +3528,12 @@ static int mdp_remove(struct platform_device *pdev)
 
 static int mdp_register_driver(void)
 {
-#ifdef CONFIG_HAS_POWERSUSPEND
+/*#ifdef CONFIG_HAS_POWERSUSPEND
+//	power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB - 1;
 	power_suspend.suspend = mdp_power_suspend;
 	power_suspend.resume = mdp_power_resume;
 	register_power_suspend(&power_suspend);
-#endif
+#endif */
 
 	return platform_driver_register(&mdp_driver);
 }

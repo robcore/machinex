@@ -605,7 +605,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM)
 static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct msm_fb_data_type *mfd;
@@ -741,7 +741,7 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 }
 #endif
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM)
 static int msm_fb_resume(struct platform_device *pdev)
 {
 	/* This resume function is called when interrupt is enabled.
@@ -867,10 +867,10 @@ static struct dev_pm_ops msm_fb_dev_pm_ops = {
 static struct platform_driver msm_fb_driver = {
 	.probe = msm_fb_probe,
 	.remove = msm_fb_remove,
-#ifndef CONFIG_HAS_POWERSUSPEND
-	.suspend = msm_fb_suspend,
-	.resume = msm_fb_resume,
-#endif
+//#ifndef CONFIG_HAS_POWERSUSPEND
+//	.suspend = msm_fb_suspend,
+//	.resume = msm_fb_resume,
+//#endif
 	.shutdown = msm_fb_shutdown,
 	.driver = {
 		   /* Driver name must match the device name added in platform.c. */
@@ -879,7 +879,7 @@ static struct platform_driver msm_fb_driver = {
 		   },
 };
 
-#if defined(CONFIG_HAS_POWERSUSPEND) && defined(CONFIG_FB_MSM_MDP303)
+/*#if defined(CONFIG_HAS_POWERSUSPEND) && defined(CONFIG_FB_MSM_MDP303)
 static void memset32_io(u32 __iomem *_ptr, u32 val, size_t count)
 {
 	count >>= 2;
@@ -897,10 +897,10 @@ static void msmfb_power_suspend(struct power_suspend *h)
 
 	msm_fb_pan_idle(mfd);
 #if defined(CONFIG_FB_MSM_MDP303)
-	/*
-	* For MDP with overlay, set framebuffer with black pixels
-	* to show black screen on HDMI.
-	*/
+
+ For MDP with overlay, set framebuffer with black pixels
+ to show black screen on HDMI.
+
 	struct fb_info *fbi = mfd->fbi;
 	switch (mfd->fbi->var.bits_per_pixel) {
 	case 32:
@@ -918,7 +918,7 @@ static void msmfb_power_suspend(struct power_suspend *h)
 	if (hdmi_prim_display &&
 		(mfd->panel_info.type == HDMI_PANEL ||
 		 mfd->panel_info.type == DTV_PANEL)) {
-		/* Turn off the HPD circuitry */
+		 Turn off the HPD circuitry
 		if (pdata->power_ctrl) {
 			MSM_FB_INFO("%s: Turning off HPD circuitry\n",
 				__func__);
@@ -938,7 +938,7 @@ static void msmfb_power_resume(struct power_suspend *h)
 	if (hdmi_prim_display &&
 		(mfd->panel_info.type == HDMI_PANEL ||
 		 mfd->panel_info.type == DTV_PANEL)) {
-		/* Turn on the HPD circuitry */
+		 Turn on the HPD circuitry
 		if (pdata->power_ctrl) {
 			MSM_FB_INFO("%s: Turning on HPD circuitry\n", __func__);
 			pdata->power_ctrl(TRUE);
@@ -947,7 +947,7 @@ static void msmfb_power_resume(struct power_suspend *h)
 
 	msm_fb_resume_sub(mfd);
 }
-#endif
+#endif */
 
 static int unset_bl_level, bl_updated;
 static int bl_level_old;
@@ -1715,15 +1715,16 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 #endif
 	ret = 0;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+/*#ifdef CONFIG_HAS_POWERSUSPEND
 
 	if (hdmi_prim_display ||
 		(mfd->panel_info.type != DTV_PANEL)) {
 		mfd->power_suspend.suspend = msmfb_power_suspend;
 		mfd->power_suspend.resume = msmfb_power_resume;
+//		mfd->power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB - 2;
 		register_power_suspend(&mfd->power_suspend);
 	}
-#endif
+#endif */
 
 #ifdef MSM_FB_ENABLE_DBGFS
 	{
