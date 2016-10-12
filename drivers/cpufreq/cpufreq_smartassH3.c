@@ -806,7 +806,7 @@ static void smartass_suspend(int cpu, int suspend)
 	reset_timer(smp_processor_id(),this_smartass);
 }
 
-static void smartass_power_suspend(struct power_suspend *handler) {
+static void cpufreq_smartass_power_suspend(struct power_suspend *handler) {
 	int i;
 	if (suspended || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
 		return;
@@ -815,7 +815,7 @@ static void smartass_power_suspend(struct power_suspend *handler) {
 		smartass_suspend(i,1);
 }
 
-static void smartass_power_resume(struct power_suspend *handler) {
+static void cpufreq_smartass_power_resume(struct power_suspend *handler) {
 	int i;
 	if (!suspended) // already not suspended so nothing to do
 		return;
@@ -825,8 +825,8 @@ static void smartass_power_resume(struct power_suspend *handler) {
 }
 
 static struct power_suspend smartass_power_suspend = {
-	.suspend = smartass_power_suspend,
-	.resume = smartass_power_resume,
+	.suspend = cpufreq_smartass_power_suspend,
+	.resume = cpufreq_smartass_power_resume,
 };
 
 static int __init cpufreq_smartass_init(void)
