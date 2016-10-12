@@ -343,6 +343,7 @@ static u64 update_load(int cpu)
 	unsigned int delta_idle;
 	unsigned int delta_time;
 	u64 active_time;
+	unsigned int cur_load = 0;
 
 	now_idle = get_cpu_idle_time(cpu, &now, io_is_busy);
 	delta_idle = (unsigned int)(now_idle - pcpu->time_in_idle);
@@ -357,6 +358,11 @@ static u64 update_load(int cpu)
 
 	pcpu->time_in_idle = now_idle;
 	pcpu->time_in_idle_timestamp = now;
+
+	cur_load = (unsigned int)(active_time * 100) / delta_time;
+	pcpu->policy->load_at_max = (cur_load * pcpu->policy->cur) /
+		pcpu->policy->cpuinfo.max_freq;
+
 	return now;
 }
 
@@ -398,6 +404,8 @@ static void cpufreq_yankactive_timer(unsigned long data)
 	cpu_load = loadadjfreq / pcpu->target_freq;
 	pcpu->prev_load = cpu_load;
 	boosted = boost_val || now < boostpulse_endtime;
+
+	pcpu->policy->util = cpu_load;
 
 	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->target_freq < hispeed_freq) {
@@ -1270,10 +1278,7 @@ static int cpufreq_governor_yankactive(struct cpufreq_policy *policy,
 			return 0;
 		}
 
-		if (!have_governor_per_policy())
-			WARN_ON(cpufreq_get_global_kobject());
-
-		rc = sysfs_create_group(get_governor_parent_kobj(policy),
+		rc = sysfs_create_group(cpufreq_global_kobject,
 				&yankactive_attr_group);
 		if (rc) {
 			mutex_unlock(&gov_lock);
@@ -1306,10 +1311,8 @@ static int cpufreq_governor_yankactive(struct cpufreq_policy *policy,
 		cpufreq_unregister_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_yankactive_idle_nb);
-		sysfs_remove_group(get_governor_parent_kobj(policy),
+		sysfs_remove_group(cpufreq_global_kobject,
 				&yankactive_attr_group);
-		if (!have_governor_per_policy())
-			cpufreq_put_global_kobject();
 		mutex_unlock(&gov_lock);
 
 		break;
