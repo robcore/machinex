@@ -19,7 +19,9 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/cpufreq.h>
+#if 0
 #include <linux/ipa.h>
+#endif
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
