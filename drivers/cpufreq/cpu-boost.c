@@ -151,16 +151,18 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	struct cpufreq_policy *policy = data;
 	unsigned int cpu = policy->cpu;
 	struct cpu_sync *s = &per_cpu(sync_info, cpu);
+	unsigned int b_min = s->boost_min;
 	unsigned int ib_min = s->input_boost_min;
 	unsigned int min;
 
 	if (val != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
 
-	if (!ib_min)
+	if (!b_min && !ib_min)
 		return NOTIFY_OK;
 
-	min = min(ib_min, policy->max);
+	min = max(b_min, ib_min);
+	min = min(min, policy->max);
 
 	pr_debug("CPU%u policy min before boost: %u kHz\n",
 		 cpu, policy->min);
@@ -381,12 +383,8 @@ static void cpuboost_input_event(struct input_handle *handle,
 	u64 now;
 	unsigned int min_interval;
 
-#ifdef CONFIG_STATE_NOTIFIER
-	if (state_suspended)
-		return;
-#endif
-
-	if (!input_boost_enabled || work_pending(&input_boost_work))
+	if (suspended || !input_boost_enabled ||
+		work_pending(&input_boost_work))
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -477,11 +475,6 @@ static struct input_handler cpuboost_input_handler = {
 static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
 				 unsigned long action, void *hcpu)
 {
-#ifdef CONFIG_STATE_NOTIFIER
-	if (state_suspended)
-		return NOTIFY_OK;
-#endif
-
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_UP_PREPARE:
 	case CPU_DEAD:
@@ -505,7 +498,6 @@ static struct notifier_block __refdata cpu_nblk = {
         .notifier_call = cpuboost_cpu_callback,
 };
 
-#ifdef CONFIG_STATE_NOTIFIER
 static void __wakeup_boost(void)
 {
 	if (!wakeup_boost || !input_boost_enabled ||
@@ -516,6 +508,7 @@ static void __wakeup_boost(void)
 	last_input_time = ktime_to_us(ktime_get());
 }
 
+#ifdef CONFIG_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
