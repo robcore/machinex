@@ -50,7 +50,7 @@ module_param(input_boost_ms, uint, 0644);
 static bool hotplug_boost = 0;
 module_param(hotplug_boost, bool, 0644);
 
-static bool wakeup_boost = 1;
+static bool wakeup_boost = 0;
 module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
