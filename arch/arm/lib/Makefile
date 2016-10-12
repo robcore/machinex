@@ -6,7 +6,7 @@
 
 lib-y		:= backtrace.o changebit.o csumipv6.o csumpartial.o   \
 		   csumpartialcopy.o csumpartialcopyuser.o clearbit.o \
-		   delay.o delay-loop.o findbit.o memchr.o   \
+		   delay.o delay-loop.o findbit.o memchr.o memcpy.o   \
 		   memset.o memzero.o setbit.o              \
 		   strchr.o strrchr.o                                 \
 		   testchangebit.o testclearbit.o testsetbit.o        \
@@ -21,17 +21,14 @@ mmu-y	:= clear_user.o getuser.o putuser.o
 # probably faster on ARMv3 only
 ifneq ($(CONFIG_HAS_MACH_MEMUTILS),y)
   mmu-y += copy_page.o
-  lib-y += memcpy.o memmove.o
+  lib-y += memmove.o
+endif
 ifeq ($(CONFIG_PREEMPT),y)
-  mmu-y	+= copy_from_user.o copy_to_user.o
-else
-ifneq ($(CONFIG_CPU_32v3),y)
   mmu-y	+= copy_from_user.o copy_to_user.o
 else
   mmu-y	+= uaccess.o
 endif
-endif
-endif
+
 
 # using lib_ here won't override already available weak symbols
 obj-$(CONFIG_UACCESS_WITH_MEMCPY) += uaccess_with_memcpy.o
