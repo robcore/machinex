@@ -243,6 +243,10 @@ static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
 	raw_local_irq_restore(flags);
 }
 
+#endif /* __LINUX_ARM_ARCH__ */
+
+#define atomic_xchg(v, new) (xchg(&((v)->counter), new))
+
 static inline int __atomic_add_unless(atomic_t *v, int a, int u)
 {
 	int c, old;
@@ -252,9 +256,6 @@ static inline int __atomic_add_unless(atomic_t *v, int a, int u)
 		c = old;
 	return c;
 }
-#endif		/* __LINUX_ARM_ARCH__ */
-
-#define atomic_xchg(v, new) (xchg(&((v)->counter), new))
 
 #define atomic_inc(v)		atomic_add(1, v)
 #define atomic_dec(v)		atomic_sub(1, v)
