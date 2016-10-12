@@ -52,8 +52,6 @@ MODULE_ALIAS("ip6t_connmark");
  */
 
 #define META_MARK_BASE_LOWER 100
-#define META_UID_PID_MARK_BASE_LOWER 150
-#define META_UID_PID_MARK_BASE_UPPER 199
 #define META_MARK_BASE_UPPER 500
 
 /* Structure to hold metadata values
@@ -64,32 +62,43 @@ MODULE_ALIAS("ip6t_connmark");
  */
 
 struct knox_meta_param {
-    uid_t uid;
-    pid_t pid;
+	uid_t uid;
+	pid_t pid;
 };
 
-union ip_address {
-    u8 a[4];
-    __be32 addr;
-};
+static unsigned int knoxvpn_uidpid(struct sk_buff *skb, u_int32_t newmark)
+{
+	int szMetaData;
+	struct skb_shared_info *knox_shinfo = NULL;
 
-static unsigned int knoxvpn_uidpid(struct sk_buff *skb, u_int32_t newmark){
-    int szMetaData;
-    struct skb_shared_info * temp = NULL;
+	szMetaData = sizeof(struct knox_meta_param);
+	if (skb != NULL) {
+		knox_shinfo = skb_shinfo(skb);
+	} else {
+		pr_err("KNOX: NULL SKB - no KNOX processing");
+		return -1;
+	}
 
-    szMetaData = sizeof(struct knox_meta_param);
-    temp = skb_shinfo(skb);
+	if( skb->sk == NULL) {
+		pr_err("KNOX: skb->sk value is null");
+		return -1;
+	}
 
-    if (skb == NULL || newmark < META_UID_PID_MARK_BASE_LOWER || META_UID_PID_MARK_BASE_UPPER < newmark || skb->sk == NULL || temp == NULL ){
-        return 0;
-    }
-    else{
-        temp->uid = skb->sk->knox_uid;
-        temp->pid = skb->sk->knox_pid;
-        temp->knox_mark = newmark;
-    }
+	if( knox_shinfo == NULL) {
+		pr_err("KNOX: knox_shinfo is null");
+		return -1;
+	}
 
-    return 0;
+	if (newmark < META_MARK_BASE_LOWER || newmark > META_MARK_BASE_UPPER) {
+		pr_err("KNOX: The mark is out of range");
+		return -1;
+	} else {
+		knox_shinfo->uid = skb->sk->knox_uid;
+		knox_shinfo->pid = skb->sk->knox_pid;
+		knox_shinfo->knox_mark = newmark;
+	}
+
+	return 0;
 }
 
 // ------------- END of KNOX_VPN -------------------//
@@ -121,21 +130,14 @@ connmark_tg(struct sk_buff *skb, const struct xt_action_param *par)
 			ct->mark = newmark;
 			nf_conntrack_event_cache(IPCT_MARK, ct);
 		}
-
-// ------------- START of KNOX_VPN -----------------//
-        knoxvpn_uidpid(skb,newmark);
-// ------------- END of KNOX_VPN -------------------//
-
 		break;
 	case XT_CONNMARK_RESTORE:
 		newmark = (skb->mark & ~info->nfmask) ^
 		          (ct->mark & info->ctmask);
 		skb->mark = newmark;
-
 // ------------- START of KNOX_VPN -----------------//
-        knoxvpn_uidpid(skb,newmark);
+		knoxvpn_uidpid(skb, newmark);
 // ------------- END of KNOX_VPN -------------------//
-
 		break;
 	}
 	return XT_CONTINUE;
