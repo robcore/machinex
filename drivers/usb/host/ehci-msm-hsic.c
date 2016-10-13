@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		udelay(1);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
@@ -1278,7 +1278,7 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 #define ehci_hsic_bus_resume	NULL
 
 #endif	/* CONFIG_PM */
-
+#if 0
 static void ehci_msm_set_autosuspend_delay(struct usb_device *dev)
 {
 	if (!dev->parent) /*for root hub no delay*/
@@ -1286,6 +1286,7 @@ static void ehci_msm_set_autosuspend_delay(struct usb_device *dev)
 	else
 		pm_runtime_set_autosuspend_delay(&dev->dev, 200);
 }
+#endif
 
 static struct hc_driver msm_hsic_driver = {
 	.description		= hcd_name,
@@ -1335,7 +1336,7 @@ static struct hc_driver msm_hsic_driver = {
 	.log_urb		= dbg_log_event,
 	.dump_regs		= dump_hsic_regs,
 
-	.set_autosuspend_delay = ehci_msm_set_autosuspend_delay,
+	//.set_autosuspend_delay = ehci_msm_set_autosuspend_delay,
 	.reset_sof_bug_handler	= ehci_hsic_reset_sof_bug_handler,
 };
 
@@ -2000,7 +2001,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
-	return msm_hsic_suspend(mehci);
+	return msm_hsic_pm_suspend(mehci);
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
@@ -2012,7 +2013,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Resume", 0);
 
-	return msm_hsic_resume(mehci);
+	return msm_hsic_pm_resume(mehci);
 }
 #endif
 
@@ -2024,9 +2025,9 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
-	.runtime_suspend = msm_hsic_runtime_suspend, \
-	.runtime_resume = msm_hsic_runtime_resume, \
-	.runtime_idle = msm_hsic_runtime_idle,
+	.pm_generic_runtime_suspend = msm_hsic_runtime_suspend, \
+	.pm_generic_runtime_resume = msm_hsic_runtime_resume, \
+	.pm_generic_runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
