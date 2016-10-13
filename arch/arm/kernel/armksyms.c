@@ -92,6 +92,10 @@ EXPORT_SYMBOL(__memzero);
 EXPORT_SYMBOL(mmioset);
 EXPORT_SYMBOL(mmiocpy);
 
+	/* user mem (segment) */
+EXPORT_SYMBOL(__strnlen_user);
+EXPORT_SYMBOL(__strncpy_from_user);
+
 #ifdef CONFIG_MMU
 EXPORT_SYMBOL(copy_page);
 

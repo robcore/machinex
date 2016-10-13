@@ -171,7 +171,7 @@ ENTRY(printascii)
 		ldrneb	r1, [r0], #1
 		teqne	r1, #0
 		bne	1b
-		ret	lr
+		mov	pc, lr
 ENDPROC(printascii)
 
 ENTRY(printch)
@@ -188,7 +188,7 @@ ENTRY(printascii)
 		mov	r0, #0x04		@ SYS_WRITE0
 	ARM(	svc	#0x123456	)
 	THUMB(	svc	#0xab		)
-		ret	lr
+		mov	pc, lr
 ENDPROC(printascii)
 
 ENTRY(printch)
@@ -197,7 +197,7 @@ ENTRY(printch)
 		mov	r0, #0x03		@ SYS_WRITEC
 	ARM(	svc	#0x123456	)
 	THUMB(	svc	#0xab		)
-		ret	lr
+		mov	pc, lr
 ENDPROC(printch)
 
 #endif

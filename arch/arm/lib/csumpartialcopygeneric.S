@@ -17,8 +17,6 @@
  * Note that 'tst' and 'teq' preserve the carry flag.
  */
 
-#include <asm/assembler.h>
-
 src	.req	r0
 dst	.req	r1
 len	.req	r2
@@ -42,7 +40,7 @@ sum	.req	r3
 		adcs	sum, sum, ip, put_byte_1	@ update checksum
 		strb	ip, [dst], #1
 		tst	dst, #2
-		reteq	lr			@ dst is now 32bit aligned
+		moveq	pc, lr			@ dst is now 32bit aligned
 
 .Ldst_16bit:	load2b	r8, ip
 		sub	len, len, #2
@@ -50,7 +48,7 @@ sum	.req	r3
 		strb	r8, [dst], #1
 		adcs	sum, sum, ip, put_byte_1
 		strb	ip, [dst], #1
-		ret	lr			@ dst is now 32bit aligned
+		mov	pc, lr			@ dst is now 32bit aligned
 
 		/*
 		 * Handle 0 to 7 bytes, with any alignment of source and

@@ -61,7 +61,7 @@ ENTRY(v7_invalidate_l1)
         bgt     1b
         dsb
         isb
-        ret     lr
+        mov     pc, lr
 ENDPROC(v7_invalidate_l1)
 
 

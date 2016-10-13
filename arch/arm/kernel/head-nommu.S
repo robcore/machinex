@@ -112,7 +112,7 @@ ENTRY(secondary_startup)
 	mov	r13, r12			@ __secondary_switched address
  ARM(	add	pc, r10, #PROCINFO_INITFUNC	)
  THUMB(	add	r12, r10, #PROCINFO_INITFUNC	)
- THUMB(	ret	r12				)
+ THUMB(	mov	pc, r12				)
 ENDPROC(stext)
 
 /*
