@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep_interruptible(500); //why the fuck would your comment above mention an issue that requires 500 msec, and then be followed by a fucking udelay 1 usec? retards!
+		udelay(1);
 		cnt++;
 	}
 

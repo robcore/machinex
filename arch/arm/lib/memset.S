@@ -16,6 +16,7 @@
 	.text
 	.align	5
 
+ENTRY(mmioset)
 ENTRY(memset)
 UNWIND( .fnstart         )
 	ands	r3, r0, #3		@ 1 unaligned?
@@ -121,7 +122,7 @@ UNWIND( .fnstart            )
 	strneb	r1, [ip], #1
 	tst	r2, #1
 	strneb	r1, [ip], #1
-	mov	pc, lr
+	ret	lr
 
 6:	subs	r2, r2, #4		@ 1 do we have enough
 	blt	5b			@ 1 bytes to align with?
@@ -132,5 +133,5 @@ UNWIND( .fnstart            )
 	add	r2, r2, r3		@ 1 (r2 = r2 - (4 - r3))
 	b	1b
 UNWIND( .fnend   )
-ENDPROC(memset)
+ENDPROC(mmioset)
 

@@ -6,7 +6,7 @@
 
 lib-y		:= backtrace.o changebit.o csumipv6.o csumpartial.o   \
 		   csumpartialcopy.o csumpartialcopyuser.o clearbit.o \
-		   delay.o delay-loop.o findbit.o memchr.o   \
+		   delay.o delay-loop.o findbit.o memchr.o memcpy.o   \
 		   memset.o memzero.o setbit.o              \
 		   strchr.o strrchr.o                                 \
 		   testchangebit.o testclearbit.o testsetbit.o        \
@@ -21,7 +21,8 @@ mmu-y	:= clear_user.o getuser.o putuser.o
 # probably faster on ARMv3 only
 ifneq ($(CONFIG_HAS_MACH_MEMUTILS),y)
   mmu-y += copy_page.o
-  lib-y += memcpy.o memmove.o
+  lib-y += memmove.o
+endif
 ifeq ($(CONFIG_PREEMPT),y)
   mmu-y	+= copy_from_user.o copy_to_user.o
 else
@@ -47,8 +48,7 @@ $(obj)/csumpartialcopy.o:	$(obj)/csumpartialcopygeneric.S
 $(obj)/csumpartialcopyuser.o:	$(obj)/csumpartialcopygeneric.S
 
 ifeq ($(CONFIG_KERNEL_MODE_NEON),y)
-  NEON_FLAGS			:= -mfloat-abi=hard -marm -mfpu=neon-vfpv4
+  NEON_FLAGS			:= -mfloat-abi=hard -marm -mfpu=neon-vfpv4 -funsafe-math-optimizations
   CFLAGS_xor-neon.o		+= $(NEON_FLAGS)
   obj-$(CONFIG_XOR_BLOCKS)	+= xor-neon.o
-endif
 endif
