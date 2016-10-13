@@ -2001,7 +2001,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
-	return msm_hsic_pm_suspend(mehci);
+	return msm_hsic_suspend(mehci);
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
@@ -2013,7 +2013,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Resume", 0);
 
-	return msm_hsic_pm_resume(mehci);
+	return msm_hsic_resume(mehci);
 }
 #endif
 
@@ -2025,9 +2025,9 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
-	.pm_generic_runtime_suspend = msm_hsic_runtime_suspend, \
-	.pm_generic_runtime_resume = msm_hsic_runtime_resume, \
-	.pm_generic_runtime_idle = msm_hsic_runtime_idle,
+	.runtime_suspend = msm_hsic_runtime_suspend, \
+	.runtime_resume = msm_hsic_runtime_resume, \
+	.runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
