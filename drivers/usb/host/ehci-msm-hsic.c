@@ -1457,10 +1457,30 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 		 * (ret == -EINPROGRESS), decrement the
 		 * PM usage counter before returning.
 		 */
+
+		/* ++SSD_RIL */
+		spin_lock(&mehci->wakeup_lock);
+		/* --SSD_RIL */
+
 		if ((ret == 1) || (ret == -EINPROGRESS))
 			pm_runtime_put_noidle(mehci->dev);
 		else
 			atomic_set(&mehci->pm_usage_cnt, 1);
+
+		/* ++SSD_RIL */
+		if (!atomic_read(&mehci->in_lpm)) {
+			pr_info("%s(%d): mehci->in_lpm==0 !!!\n", __func__, __LINE__);
+			if (atomic_read(&mehci->pm_usage_cnt)) {
+				atomic_set(&mehci->pm_usage_cnt, 0);
+				pr_info("%s(%d): pm_runtime_put_noidle !!!\n", __func__, __LINE__);
+				pm_runtime_put_noidle(mehci->dev);
+			}
+		}
+		/* --SSD_RIL */
+
+		/* ++SSD_RIL */
+		spin_unlock(&mehci->wakeup_lock);
+		/* --SSD_RIL */
 	}
 
 	return IRQ_HANDLED;
@@ -1930,7 +1950,8 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
-	enable_irq_wake(mehci->wakeup_irq);
+	if (device_may_wakeup(dev))
+		enable_irq_wake(hcd->irq);
 	return 0;
 }
 
@@ -1957,7 +1978,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 	//dbg_log_event(NULL, "PM Resume", 0);
 
 	if (device_may_wakeup(dev))
-		disable_irq_wake(mehci->irq);
+		disable_irq_wake(hcd->irq);
 
 	/*
 	 * Keep HSIC in Low Power Mode if system is resumed
@@ -2022,9 +2043,9 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
-	.pm_runtime_suspend = msm_hsic_runtime_suspend, \
-	.pm_runtime_resume = msm_hsic_runtime_resume, \
-	.pm_runtime_idle = msm_hsic_runtime_idle,
+	.runtime_suspend = msm_hsic_runtime_suspend, \
+	.runtime_resume = msm_hsic_runtime_resume, \
+	.runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
