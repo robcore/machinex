@@ -52,8 +52,6 @@ module_param_named(
 	debug_mask, msm_rpmrs_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
 
-static int msm_rpmrs_debug_collapse;
-
 static struct msm_rpmrs_level *msm_rpmrs_levels;
 static int msm_rpmrs_level_count;
 
@@ -78,6 +76,10 @@ static ssize_t msm_rpmrs_resource_attr_store(struct kobject *kobj,
 static int vdd_dig_vlevels[MSM_RPMRS_VDD_DIG_LAST];
 static int vdd_mem_vlevels[MSM_RPMRS_VDD_MEM_LAST];
 static int vdd_mask;
+
+static DEFINE_PER_CPU(uint32_t , msm_lpm_sleep_time);
+static DEFINE_PER_CPU(int , lpm_permitted_level);
+static DEFINE_PER_CPU(struct atomic_notifier_head, lpm_notify_head);
 
 #define MSM_RPMRS_MAX_RS_REGISTER_COUNT 2
 
@@ -325,8 +327,7 @@ static void msm_rpmrs_aggregate_vdd_mem(struct msm_rpmrs_limits *limits)
 			*buf |= vdd_mem_vlevels[limits->vdd_mem];
 		}
 
-		if (!msm_rpmrs_debug_collapse ||
-				MSM_RPMRS_DEBUG_OUTPUT & msm_rpmrs_debug_mask)
+		if (MSM_RPMRS_DEBUG_OUTPUT & msm_rpmrs_debug_mask)
 			pr_info("%s: vdd %d (0x%x)\n", __func__,
 				MSM_RPMRS_VDD(*buf), MSM_RPMRS_VDD(*buf));
 	}
@@ -377,8 +378,7 @@ static void msm_rpmrs_aggregate_vdd_dig(struct msm_rpmrs_limits *limits)
 		}
 
 
-		if (!msm_rpmrs_debug_collapse ||
-				MSM_RPMRS_DEBUG_OUTPUT & msm_rpmrs_debug_mask)
+		if (MSM_RPMRS_DEBUG_OUTPUT & msm_rpmrs_debug_mask)
 			pr_info("%s: vdd %d (0x%x)\n", __func__,
 				MSM_RPMRS_VDD(*buf), MSM_RPMRS_VDD(*buf));
 	}
@@ -562,7 +562,6 @@ static int msm_rpmrs_flush_buffer(
 	int rc;
 	int i;
 
-	msm_rpmrs_debug_collapse = from_idle;
 	msm_rpmrs_aggregate_sclk(sclk_count);
 	for (i = 0; i < ARRAY_SIZE(msm_rpmrs_resources); i++) {
 		if (msm_rpmrs_resources[i]->aggregate)
@@ -881,6 +880,13 @@ void msm_rpmrs_show_resources(void)
 	spin_unlock_irqrestore(&msm_rpmrs_lock, flags);
 }
 
+static bool lpm_level_permitted(int cur_level_count)
+{
+	if (__get_cpu_var(lpm_permitted_level) == msm_rpmrs_level_count + 1)
+		return true;
+	return (__get_cpu_var(lpm_permitted_level) == cur_level_count);
+}
+
 s32 msm_cpuidle_get_deep_idle_latency(void)
 {
 	int i;
@@ -916,6 +922,7 @@ static void *msm_rpmrs_lowest_limits(bool from_idle,
 	uint32_t pwr;
 	uint32_t next_wakeup_us = time_param->sleep_us;
 	bool modify_event_timer;
+	int best_level_iter = msm_rpmrs_level_count + 1;
 
 	if (sleep_mode == MSM_PM_SLEEP_MODE_POWER_COLLAPSE) {
 		irqs_detectable = msm_mpm_irqs_detectable(from_idle);
@@ -959,11 +966,9 @@ static void *msm_rpmrs_lowest_limits(bool from_idle,
 
 		if ((MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE == sleep_mode)
 			|| (MSM_PM_SLEEP_MODE_POWER_COLLAPSE == sleep_mode))
-			if (!cpu && msm_rpm_local_request_is_outstanding()) {
-				if (MSM_RPMRS_DEBUG_OUTPUT & msm_rpmrs_debug_mask)
-					pr_info(" RPM Request is outstanding\n");
-				break;
-			}
+			if (!cpu && msm_rpm_local_request_is_outstanding())
+					break;
+
 		if (next_wakeup_us <= 1) {
 			pwr = level->energy_overhead;
 		} else if (next_wakeup_us <= level->time_overhead_us) {
@@ -982,6 +987,7 @@ static void *msm_rpmrs_lowest_limits(bool from_idle,
 			level->rs_limits.latency_us[cpu] = level->latency_us;
 			level->rs_limits.power[cpu] = pwr;
 			best_level = level;
+			best_level_iter = i;
 			if (power)
 				*power = pwr;
 			if (modify_event_timer && best_level->latency_us > 1)
@@ -992,6 +998,12 @@ static void *msm_rpmrs_lowest_limits(bool from_idle,
 				time_param->modified_time_us = 0;
 		}
 	}
+	if (best_level && !lpm_level_permitted(best_level_iter))
+		best_level = NULL;
+	else
+		per_cpu(msm_lpm_sleep_time, cpu) =
+			time_param->modified_time_us ?
+			time_param->modified_time_us : time_param->sleep_us;
 
 	return best_level ? &best_level->rs_limits : NULL;
 }
@@ -1000,6 +1012,12 @@ static int msm_rpmrs_enter_sleep(uint32_t sclk_count, void *limits,
 		bool from_idle, bool notify_rpm)
 {
 	int rc = 0;
+	struct msm_lpm_sleep_data sleep_data;
+
+	sleep_data.limits = limits;
+	sleep_data.kernel_sleep = __get_cpu_var(msm_lpm_sleep_time);
+	atomic_notifier_call_chain(&__get_cpu_var(lpm_notify_head),
+		MSM_LPM_STATE_ENTER, &sleep_data);
 
 	if (notify_rpm) {
 		rc = msm_rpmrs_flush_buffer(sclk_count, limits, from_idle);
@@ -1023,6 +1041,9 @@ static void msm_rpmrs_exit_sleep(void *limits, bool from_idle,
 
 	if (msm_rpmrs_use_mpm(limits))
 		msm_mpm_exit_sleep(from_idle);
+
+	atomic_notifier_call_chain(&__get_cpu_var(lpm_notify_head),
+			MSM_LPM_STATE_EXIT, NULL);
 }
 
 static int rpmrs_cpu_callback(struct notifier_block *nfb,
@@ -1039,13 +1060,23 @@ static int rpmrs_cpu_callback(struct notifier_block *nfb,
 	case CPU_DEAD:
 		if (num_online_cpus() == 1)
 			msm_rpmrs_l2_cache.rs[0].value =
-				MSM_RPMRS_L2_CACHE_GDHS;
+				MSM_RPMRS_L2_CACHE_HSFS_OPEN;
 		break;
 	}
 
 	msm_rpmrs_update_levels();
 	return NOTIFY_OK;
 }
+
+static struct lpm_test_platform_data lpm_test_pdata;
+
+static struct platform_device msm_lpm_test_device = {
+	.name		= "lpm_test",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &lpm_test_pdata,
+	},
+};
 
 static struct notifier_block __refdata rpmrs_cpu_notifier = {
 	.notifier_call = rpmrs_cpu_callback,
@@ -1055,6 +1086,7 @@ int __init msm_rpmrs_levels_init(struct msm_rpmrs_platform_data *data)
 {
 	int i, k;
 	struct msm_rpmrs_level *levels = data->levels;
+	unsigned int m_cpu = 0;
 
 	msm_rpmrs_level_count = data->num_levels;
 
@@ -1065,6 +1097,16 @@ int __init msm_rpmrs_levels_init(struct msm_rpmrs_platform_data *data)
 
 	memcpy(msm_rpmrs_levels, levels,
 			msm_rpmrs_level_count * sizeof(struct msm_rpmrs_level));
+
+	lpm_test_pdata.use_qtimer = 0;
+	lpm_test_pdata.msm_lpm_test_levels = msm_rpmrs_levels,
+	lpm_test_pdata.msm_lpm_test_level_count = msm_rpmrs_level_count;
+
+	for_each_possible_cpu(m_cpu)
+		per_cpu(lpm_permitted_level, m_cpu) =
+				msm_rpmrs_level_count + 1;
+
+	platform_device_register(&msm_lpm_test_device);
 
 	memcpy(vdd_dig_vlevels, data->vdd_dig_levels,
 		(MSM_RPMRS_VDD_DIG_MAX + 1) * sizeof(vdd_dig_vlevels[0]));
@@ -1099,6 +1141,41 @@ int __init msm_rpmrs_levels_init(struct msm_rpmrs_platform_data *data)
 	}
 
 	return 0;
+}
+
+uint32_t msm_pm_get_pxo(struct msm_rpmrs_limits *limits)
+{
+	return limits->pxo;
+}
+
+uint32_t msm_pm_get_l2_cache(struct msm_rpmrs_limits *limits)
+{
+	return limits->l2_cache;
+}
+
+uint32_t msm_pm_get_vdd_mem(struct msm_rpmrs_limits *limits)
+{
+	return limits->vdd_mem;
+}
+
+uint32_t msm_pm_get_vdd_dig(struct msm_rpmrs_limits *limits)
+{
+	return limits->vdd_dig;
+}
+
+int msm_lpm_register_notifier(int cpu, int level_iter,
+			struct notifier_block *nb, bool is_latency_measure)
+{
+	per_cpu(lpm_permitted_level, cpu) = level_iter;
+	return atomic_notifier_chain_register(&per_cpu(lpm_notify_head,
+			cpu), nb);
+}
+
+int msm_lpm_unregister_notifier(int cpu, struct notifier_block *nb)
+{
+	per_cpu(lpm_permitted_level, cpu) = msm_rpmrs_level_count + 1;
+	return atomic_notifier_chain_unregister(&per_cpu(lpm_notify_head, cpu),
+				nb);
 }
 
 static int __init msm_rpmrs_init(void)
