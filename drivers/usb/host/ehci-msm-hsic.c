@@ -1944,7 +1944,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 
 	//dbg_log_event(NULL, "PM Suspend", 0);
 
-	if (atomic_read(&mehci->async_int)) {
+	if (!atomic_read(&mehci->in_lpm)) {
 		//dev_info(dev, "abort suspend\n");
 		//dbg_log_event(NULL, "PM Suspend abort", 0);
 		return -EBUSY;
@@ -1952,6 +1952,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
+
 	return 0;
 }
 
@@ -2023,7 +2024,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 	return msm_hsic_suspend(mehci);
 }
 
-static int msm_hsic_runtime_resume(struct device *dev, int rpmflags)
+static int msm_hsic_runtime_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
