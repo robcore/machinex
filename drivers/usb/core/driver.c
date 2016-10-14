@@ -1756,23 +1756,9 @@ static int autosuspend_check(struct usb_device *udev)
 		}
 	}
 	if (w && !device_can_wakeup(&udev->dev)) {
-#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 		dev_dbg(&udev->dev, "remote wakeup needed for autosuspend\n");
-#endif
 		return -EOPNOTSUPP;
 	}
-
-	/*
-	 * If the device is a direct child of the root hub and the HCD
-	 * doesn't handle wakeup requests, don't allow autosuspend when
-	 * wakeup is needed.
-	 */
-	if (w && udev->parent == udev->bus->root_hub &&
-			bus_to_hcd(udev->bus)->cant_recv_wakeups) {
-		dev_dbg(&udev->dev, "HCD doesn't handle wakeup requests\n");
-		return -EOPNOTSUPP;
-	}
-
 	udev->do_remote_wakeup = w;
 	return 0;
 }

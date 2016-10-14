@@ -2548,6 +2548,7 @@ __acquires(mEp->lock)
 				req_dequeue = 0;
 				udc->dTD_update_fail_count++;
 				mEp->dTD_update_fail_count++;
+				udelay(10);
 			}
 			break;
 		}
@@ -2939,6 +2940,7 @@ static int ep_disable(struct usb_ep *ep)
 
 	mEp->desc = NULL;
 	mEp->ep.desc = NULL;
+	mEp->ep.maxpacket = USHRT_MAX;
 
 	spin_unlock_irqrestore(mEp->lock, flags);
 	return retval;
