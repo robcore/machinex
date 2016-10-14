@@ -28,7 +28,6 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/wakelock.h>
-#include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 
@@ -1948,8 +1947,12 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		//dbg_log_event(NULL, "PM Suspend abort", 0);
 		return -EBUSY;
 	}
+	if (!atomic_read(&mehci->async_int)) {
+		//dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
+		return -EBUSY;
+	}
 
-	if (device_may_wakeup(dev) && !mehci->async_irq)
+	if (device_may_wakeup(dev)
 		enable_irq_wake(hcd->irq);
 
 	return 0;
