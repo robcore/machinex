@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,7 +27,11 @@
 #include <linux/dma-mapping.h>
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
+#ifdef CONFIG_USB_MSM_OTG_72K
 #include <mach/msm_hsusb.h>
+#else
+#include <linux/usb/msm_hsusb.h>
+#endif
 #include <mach/msm_sps.h>
 #include <mach/rpm.h>
 #include <mach/msm_bus_board.h>
@@ -53,6 +57,7 @@
 #include "scm-pas.h"
 #include <mach/msm_dcvs.h>
 #include <mach/iommu_domains.h>
+#include <mach/msm_xo.h>
 #include <mach/socinfo.h>
 #include "pm.h"
 #include <mach/msm8930-gpio.h>
@@ -1642,7 +1647,7 @@ static struct smd_subsystem_config smd_config_list[] = {
 		.edge = SMD_APPS_QDSP,
 
 		.smd_int.irq_name = "adsp_a11",
-		.smd_int.flags = IRQF_TRIGGER_RISING,
+		.smd_int.flags = IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 		.smd_int.irq_id = -1,
 		.smd_int.device_name = "smd_dev",
 		.smd_int.dev_id = 0,
@@ -1734,7 +1739,7 @@ struct platform_device msm_device_bam_dmux = {
 
 static struct msm_watchdog_pdata msm_watchdog_pdata = {
 	.pet_time = 10000,
-	.bark_time = 11000,
+	.bark_time = 18000,
 	.has_secure = true,
 	.base = MSM_TMR0_BASE + WDT0_OFFSET,
 };
@@ -4276,8 +4281,8 @@ static struct msm_rpm_log_platform_data msm_rpm_log_pdata = {
 		[MSM_RPM_LOG_PAGE_BUFFER]  = 0x000000A0,
 	},
 	.phys_size = SZ_8K,
-	.log_len = 6144,		  /* log's buffer length in bytes */
-	.log_len_mask = (6144 >> 2) - 1,  /* length mask in units of u32 */
+	.log_len = 4096,		  /* log's buffer length in bytes */
+	.log_len_mask = (4096 >> 2) - 1,  /* length mask in units of u32 */
 };
 
 struct platform_device msm8960_rpm_log_device = {

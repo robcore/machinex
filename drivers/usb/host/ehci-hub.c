@@ -28,6 +28,10 @@
 
 /*-------------------------------------------------------------------------*/
 #include <linux/usb/otg.h>
+/* ++SSD_RIL */
+#include <linux/usb.h>
+#include <mach/board_machinex.h>
+/* --SSD_RIL */
 
 #define	PORT_WAKE_BITS	(PORT_WKOC_E|PORT_WKDISC_E|PORT_WKCONN_E)
 
@@ -973,6 +977,8 @@ static int ehci_hub_control (
 		status = 0;
 		temp = ehci_readl(ehci, status_reg);
 
+		if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
+			pr_debug("%s temp = 0x%08x\n",__func__,temp);
 		// wPortChange bits
 		if (temp & PORT_CSC)
 			status |= USB_PORT_STAT_C_CONNECTION << 16;
@@ -1226,6 +1232,7 @@ static int ehci_hub_control (
 				ehci->reset_done [wIndex] = jiffies
 						+ msecs_to_jiffies (50);
 			}
+
 			if (ehci->reset_sof_bug && (temp & PORT_RESET) &&
 					hcd->driver->reset_sof_bug_handler) {
 				spin_unlock_irqrestore(&ehci->lock, flags);
