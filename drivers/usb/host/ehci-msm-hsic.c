@@ -111,11 +111,11 @@ struct msm_hsic_hcd {
 
 struct msm_hsic_hcd *__mehci;
 
-static bool debug_bus_voting_enabled = true;
+static bool debug_bus_voting_enabled = false;
 
-static unsigned int enable_payload_log = 1;
+static unsigned int enable_payload_log = 0;
 module_param(enable_payload_log, uint, S_IRUGO | S_IWUSR);
-static unsigned int enable_dbg_log = 1;
+static unsigned int enable_dbg_log = 0;
 module_param(enable_dbg_log, uint, S_IRUGO | S_IWUSR);
 /*by default log ep0 and efs sync ep*/
 static unsigned int ep_addr_rxdbg_mask = 9;
@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep_interruptible(500);
+		mdelay(5);
 		cnt++;
 	}
 
@@ -1931,7 +1931,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	}
 
 	if (device_may_wakeup(dev))
-		enable_irq_wake(hcd->irq);
+		enable_irq_wake(mehci->irq);
 
 	return 0;
 }
@@ -1959,7 +1959,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 	dbg_log_event(NULL, "PM Resume", 0);
 
 	if (device_may_wakeup(dev))
-		disable_irq_wake(hcd->irq);
+		disable_irq_wake(mehci->irq);
 
 	/*
 	 * Keep HSIC in Low Power Mode if system is resumed
@@ -1997,9 +1997,9 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
-	dev_dbg(dev, "EHCI runtime suspend\n");
+	//dev_dbg(dev, "EHCI runtime suspend\n");
 
-	dbg_log_event(NULL, "Run Time PM Suspend", 0);
+	//dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
 	return msm_hsic_suspend(mehci);
 }
@@ -2009,9 +2009,9 @@ static int msm_hsic_runtime_resume(struct device *dev)
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
-	dev_dbg(dev, "EHCI runtime resume\n");
+	//dev_dbg(dev, "EHCI runtime resume\n");
 
-	dbg_log_event(NULL, "Run Time PM Resume", 0);
+	//dbg_log_event(NULL, "Run Time PM Resume", 0);
 
 	return msm_hsic_resume(mehci);
 }
