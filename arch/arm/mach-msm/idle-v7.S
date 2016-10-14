@@ -22,7 +22,7 @@
 #include "idle.h"
 #include "idle-macros.S"
 
-#ifdef CONFIG_MSM_SCM
+#ifdef CONFIG_ARCH_MSM_KRAIT
 #define SCM_SVC_BOOT 0x1
 #define SCM_CMD_TERMINATE_PC 0x2
 #endif
@@ -96,7 +96,7 @@ ENTRY(msm_pm_pc_hotplug)
 	str	r2, [r1]
 skip_hp_debug1:
 
-#ifdef CONFIG_MSM_SCM
+#ifdef CONFIG_ARCH_MSM_KRAIT
 	ldr	r0, =SCM_SVC_BOOT
 	ldr	r1, =SCM_CMD_TERMINATE_PC
 	mov	r2, #0
@@ -206,7 +206,7 @@ skip:
 	str	r2, [r1]
 skip_pc_debug1:
 
-#ifdef CONFIG_MSM_SCM
+#ifdef CONFIG_ARCH_MSM_KRAIT
 	ldr	r0, =SCM_SVC_BOOT
 	ldr	r1, =SCM_CMD_TERMINATE_PC
 	ldr	r2, =msm_pm_flush_l2_flag
@@ -474,4 +474,3 @@ msm_pm_flush_l2_flag:
  */
 l2x0_saved_ctrl_reg_val:
 	.space 4 * 3
-
