@@ -134,7 +134,7 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
-static bool msm_pm_ldo_retention_enabled = true;
+static bool msm_pm_ldo_retention_enabled = false;
 /*
  * Write out the attribute.
  */
