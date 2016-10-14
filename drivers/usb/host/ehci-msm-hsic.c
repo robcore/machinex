@@ -418,7 +418,7 @@ static int __maybe_unused ulpi_read(struct msm_hsic_hcd *mehci, u32 reg)
 	while (cnt < ULPI_IO_TIMEOUT_USEC) {
 		if (!(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_RUN))
 			break;
-		udelay(1);
+		usleep(1);
 		cnt++;
 	}
 
@@ -431,7 +431,7 @@ static int __maybe_unused ulpi_read(struct msm_hsic_hcd *mehci, u32 reg)
 				readl_relaxed(USB_FRINDEX));
 
 		/*frame counter increments afte 125us*/
-		udelay(130);
+		usleep(130);
 		dev_err(mehci->dev, "ulpi_read: FRINDEX: %08x\n",
 				readl_relaxed(USB_FRINDEX));
 		return -ETIMEDOUT;
@@ -454,7 +454,7 @@ static int ulpi_write(struct msm_hsic_hcd *mehci, u32 val, u32 reg)
 	while (cnt < ULPI_IO_TIMEOUT_USEC) {
 		if (!(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_RUN))
 			break;
-		udelay(1);
+		usleep(1);
 		cnt++;
 	}
 
@@ -467,7 +467,7 @@ static int ulpi_write(struct msm_hsic_hcd *mehci, u32 val, u32 reg)
 				readl_relaxed(USB_FRINDEX));
 
 		/*frame counter increments afte 125us*/
-		udelay(130);
+		usleep(130);
 		dev_err(mehci->dev, "ulpi_write: FRINDEX: %08x\n",
 				readl_relaxed(USB_FRINDEX));
 		return -ETIMEDOUT;
@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		mdelay(5);
+		msleep(5);
 		cnt++;
 	}
 
@@ -777,7 +777,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 		if (!(readl_relaxed(USB_PORTSC) & PORTSC_PHCD) &&
 			(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_SYNC_STATE))
 			break;
-		udelay(1);
+		usleep(1);
 		cnt++;
 	}
 
@@ -1027,7 +1027,7 @@ retry:
 	spin_lock_irqsave(&ehci->lock, flags);
 	ehci_writel(ehci, val, status_reg);
 	while (cnt--)
-		udelay(1);
+		usleep(1);
 	ret = msm_hsic_reset_done(hcd);
 	spin_unlock_irqrestore(&ehci->lock, flags);
 	if (ret) {
@@ -1165,7 +1165,7 @@ resume_again:
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
 			/* do the resume in a tight loop */
-			mdelay(5);
+			msleep(5);
 			writel_relaxed(readl_relaxed(&ehci->regs->command) |
 					CMD_RUN, &ehci->regs->command);
 			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
@@ -1934,7 +1934,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
 static int msm_hsic_pm_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
@@ -1950,10 +1949,15 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
+	if (atomic_read(&mehci->async_int)) {
+		//dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
+		return -EBUSY;
+	}
+
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
-	return 0;
+	return msm_hsic_suspend(mehci);
 }
 
 static int msm_hsic_pm_suspend_noirq(struct device *dev)
@@ -1962,6 +1966,10 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
 	if (atomic_read(&mehci->async_int)) {
+		//dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
+		return -EBUSY;
+	}
+	if (!atomic_read(&mehci->in_lpm)) {
 		//dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
 		return -EBUSY;
 	}
@@ -2001,9 +2009,8 @@ static int msm_hsic_pm_resume(struct device *dev)
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
 
-	return 0;
+	return msm_hsic_resume(mehci);
 }
-#endif
 
 #ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
