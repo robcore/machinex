@@ -23,6 +23,7 @@
 #include <linux/usb/gadget.h>
 #include <linux/usb/otg.h>
 #include <linux/wakelock.h>
+#include <mach/board.h>
 #include <linux/pm_qos.h>
 #include <linux/hrtimer.h>
 #ifdef CONFIG_USB_HOST_NOTIFY
@@ -177,6 +178,8 @@ enum usb_vdd_value {
 	VDD_VAL_MAX,
 };
 
+#define POWER_COLLAPSE_LDO3V3	(1 << 0) /* Regulator L3 */
+#define POWER_COLLAPSE_LDO1V8	(1 << 1) /* Regulator L4 */
 /**
  * struct msm_otg_platform_data - platform device data
  *              for msm_otg driver.
@@ -215,12 +218,18 @@ struct msm_otg_platform_data {
 	int pmic_id_irq;
 	unsigned int mpm_otgsessvld_int;
 	bool mhl_enable;
+	char *ldo_3v3_name;
+	char *ldo_1v8_name;
+	char *vddcx_name;
 	bool disable_reset_on_disconnect;
 	bool enable_lpm_on_dev_suspend;
 	bool core_clk_always_on_workaround;
 	bool delay_lpm_on_disconnect;
 	bool dp_manual_pullup;
 	struct msm_bus_scale_pdata *bus_scale_table;
+	int reset_phy_before_lpm;
+	void (*usb_uart_switch)(int uart);
+	int ldo_power_collapse;
 #ifdef CONFIG_USB_HOST_NOTIFY
 	int otg_power_gpio;
 	int otg_test_gpio;
@@ -247,7 +256,8 @@ struct msm_otg_platform_data {
  * currents are very minimal.
  */
 #ifdef CONFIG_USB_OTG
-#define TA_WAIT_BCON	30000	/* (1100 - 30000) */
+/* #define TA_WAIT_BCON	30000*/	/* (1100 - 30000) */
+#define TA_WAIT_BCON	-1	/* (1100 - 30000) */
 #else
 #define TA_WAIT_BCON	-1
 #endif
@@ -390,12 +400,21 @@ struct msm_otg {
 #define PHY_RETENTIONED			BIT(1)
 #define XO_SHUTDOWN			BIT(2)
 #define CLOCKS_DOWN			BIT(3)
+	struct work_struct notifier_work;
+	enum usb_connect_type connect_type;
+	int connect_type_ready;
+	struct workqueue_struct *usb_wq;
+	struct delayed_work ac_detect_work;
+	struct work_struct usb_disable_work;
+	int ac_detect_count;
+	int reset_phy_before_lpm;
 	int reset_counter;
 	unsigned long b_last_se0_sess;
 	unsigned long tmouts;
 	u8 active_tmout;
 	struct hrtimer timer;
 	enum usb_vdd_type vdd_type;
+	struct delayed_work init_work;
 };
 
 struct msm_hsic_host_platform_data {

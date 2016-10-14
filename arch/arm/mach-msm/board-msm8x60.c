@@ -5295,6 +5295,7 @@ static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
 	.secure_size = SECURE_SIZE,
 	.iommu_map_all = 1,
 	.iommu_2x_map_domain = VIDEO_DOMAIN,
+        .no_nonsecure_alloc = 0,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
@@ -5303,6 +5304,7 @@ static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
 	.request_region = request_smi_region,
 	.release_region = release_smi_region,
 	.setup_region = setup_smi_region,
+        .no_nonsecure_alloc = 0,
 };
 
 static struct ion_cp_heap_pdata cp_wb_ion_pdata = {

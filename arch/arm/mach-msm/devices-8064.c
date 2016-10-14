@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -62,6 +62,7 @@
 
 /* GSBI UART devices */
 #define MSM_UART1DM_PHYS	(MSM_GSBI1_PHYS + 0x10000)
+#define MSM_UART2DM_PHYS	(MSM_GSBI2_PHYS + 0x10000)
 #define MSM_UART3DM_PHYS	(MSM_GSBI3_PHYS + 0x40000)
 #define MSM_UART4DM_PHYS	(MSM_GSBI4_PHYS + 0x40000)
 #define MSM_UART6DM_PHYS	(MSM_GSBI6_PHYS + 0x40000)
@@ -1418,10 +1419,22 @@ static struct resource resources_hsic_host[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.start	= MSM_GPIO_TO_INT(47),
-		.end	= MSM_GPIO_TO_INT(47),
+		.start	= 47,
+		.end	= 47,
 		.name	= "wakeup",
-		.flags	= IORESOURCE_IRQ,
+		.flags	= IORESOURCE_IO,
+	},
+/*	{
+		.start	= MDM2AP_ERRFATAL,
+		.end	= MDM2AP_ERRFATAL,
+		.name	= "MDM2AP_ERRFATAL",
+		.flags	= IORESOURCE_IO,
+	},*/
+	{
+		.start	= MDM2AP_STATUS,
+		.end	= MDM2AP_STATUS,
+		.name	= "MDM2AP_STATUS",
+		.flags	= IORESOURCE_IO,
 	},
 };
 

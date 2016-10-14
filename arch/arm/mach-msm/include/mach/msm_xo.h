@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,6 +36,8 @@ struct msm_xo_voter *msm_xo_get(enum msm_xo_ids xo_id, const char *voter);
 void msm_xo_put(struct msm_xo_voter *xo_voter);
 int msm_xo_mode_vote(struct msm_xo_voter *xo_voter, enum msm_xo_modes xo_mode);
 int __init msm_xo_init(void);
+int msm_xo_print_voters(void);
+int msm_xo_print_voters_suspend(void);
 #else
 static inline struct msm_xo_voter *msm_xo_get(enum msm_xo_ids xo_id,
 		const char *voter)
@@ -51,6 +53,8 @@ static inline int msm_xo_mode_vote(struct msm_xo_voter *xo_voter,
 	return 0;
 }
 static inline int msm_xo_init(void) { return 0; }
+static inline int msm_xo_print_voters(void) { return 0; }
+static inline int msm_xo_print_voters_suspend(void) { return 0; }
 #endif /* CONFIG_MSM_XO */
 
 #endif

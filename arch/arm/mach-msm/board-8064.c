@@ -307,7 +307,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
 	.is_cma = 1,
-	.no_nonsecure_alloc = 1,
+	.no_nonsecure_alloc = 0,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_apq8064_ion_pdata = {
@@ -316,7 +316,7 @@ static struct ion_cp_heap_pdata cp_mfc_apq8064_ion_pdata = {
 	.reusable = 0,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_HIGH,
-	.no_nonsecure_alloc = 1,
+	.no_nonsecure_alloc = 0,
 };
 
 static struct ion_co_heap_pdata co_apq8064_ion_pdata = {
@@ -481,6 +481,13 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 	BUG_ON(ret);
 #endif
 }
+
+static struct platform_device mdm_8064_device = {
+	.name		= "mdm2_modem",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(mdm_resources),
+	.resource	= mdm_resources,
+};
 
 /**
  * Reserve memory for ION and calculate amount of reusable memory for fmem.
