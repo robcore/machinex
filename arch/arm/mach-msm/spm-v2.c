@@ -150,12 +150,6 @@ static inline void msm_spm_drv_set_vctl2(struct msm_spm_driver_data *dev,
 {
 	unsigned int pmic_data = 0;
 
-	/**
-	 * VCTL_PORT has to be 0, for PMIC_STS register to be updated.
-	 * Ensure that vctl_port is always set to 0.
-	 */
-	WARN_ON(dev->vctl_port);
-
 	pmic_data |= vlevel;
 	pmic_data |= (dev->vctl_port & 0x7) << 16;
 
@@ -368,10 +362,10 @@ int msm_spm_drv_set_vdd(struct msm_spm_driver_data *dev, unsigned int vlevel)
 	uint32_t timeout_us, new_level;
 	bool avs_enabled;
 
+	avs_enabled = msm_spm_drv_is_avs_enabled(dev);
+
 	if (!dev)
 		return -EINVAL;
-
-	avs_enabled  = msm_spm_drv_is_avs_enabled(dev);
 
 	if (!msm_spm_pmic_arb_present(dev))
 		return -ENOSYS;
@@ -405,7 +399,7 @@ int msm_spm_drv_set_vdd(struct msm_spm_driver_data *dev, unsigned int vlevel)
 	}
 
 	if (msm_spm_debug_mask & MSM_SPM_DEBUG_VCTL)
-		pr_info("%s: done, remaining timeout %u us\n",
+		pr_info("%s: done, remaining timeout %uus\n",
 			__func__, timeout_us);
 
 	/* Set AVS min/max */

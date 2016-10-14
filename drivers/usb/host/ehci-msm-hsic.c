@@ -28,6 +28,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/wakelock.h>
+#include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 
@@ -1956,7 +1957,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
-	return 0;
+	return msm_hsic_suspend(mehci);
 }
 
 static int msm_hsic_pm_suspend_noirq(struct device *dev)
@@ -2047,8 +2048,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
 	.suspend = msm_hsic_pm_suspend, \
-	.resume = msm_hsic_pm_resume, \
-	.suspend_noirq = msm_hsic_pm_suspend_noirq,
+	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
 	.runtime_suspend = msm_hsic_runtime_suspend, \
@@ -2067,4 +2067,3 @@ static struct platform_driver ehci_msm_hsic_driver = {
 #endif
 	},
 };
-
