@@ -4106,7 +4106,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 		if (motg->pdata->pmic_id_irq) {
 			ret = request_irq(motg->pdata->pmic_id_irq,
 						msm_pmic_id_irq,
-						IRQF_TRIGGER_RISING | IRQF_ONESHOT |
+						IRQF_TRIGGER_RISING |
 						IRQF_TRIGGER_FALLING,
 						"msm_otg", motg);
 			if (ret) {
@@ -4177,7 +4177,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 
 		ret = request_irq(motg->pdata->otg_power_irq,
 						msm_pmic_otg_power_irq,
-						IRQF_TRIGGER_RISING | IRQF_ONESHOT |
+						IRQF_TRIGGER_RISING |
 						IRQF_TRIGGER_FALLING,
 						"msm_otg", motg);
 		if (ret)

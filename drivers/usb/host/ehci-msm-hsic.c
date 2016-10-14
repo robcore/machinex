@@ -1801,8 +1801,8 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	if (mehci->peripheral_status_irq) {
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
 			NULL, hsic_peripheral_status_change,
-			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-						IRQF_ONESHOT | IRQF_SHARED,
+			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
+						| IRQF_SHARED,
 			"hsic_peripheral_status", mehci);
 		if (ret)
 			dev_err(&pdev->dev, "%s:request_irq:%d failed:%d",
@@ -1818,7 +1818,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		 */
 		irq_set_status_flags(mehci->wakeup_irq, IRQ_NOAUTOEN);
 		ret = request_irq(mehci->wakeup_irq, msm_hsic_wakeup_irq,
-				IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
+				IRQF_TRIGGER_HIGH,
 				"msm_hsic_wakeup", mehci);
 		if (ret) {
 			dev_err(&pdev->dev, "request_irq(%d) failed: %d\n",

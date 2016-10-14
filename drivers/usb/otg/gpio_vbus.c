@@ -52,8 +52,7 @@ struct gpio_vbus_data {
  */
 #define VBUS_IRQ_FLAGS \
 	( IRQF_SAMPLE_RANDOM | IRQF_SHARED \
-	| IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING \
-	| IRQF_ONESHOT )
+	| IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING )
 
 
 /* interface to regulator framework */
