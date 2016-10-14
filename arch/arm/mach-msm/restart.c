@@ -26,6 +26,7 @@
 #include <linux/mfd/pm8xxx/misc.h>
 
 #include <asm/mach-types.h>
+#include <asm/cacheflush.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/restart.h>
@@ -262,6 +263,8 @@ void set_ssr_magic_number(const char* subsys_name)
 			break;
 		}
 	}
+
+	flush_cache_all();
 }
 
 void set_kernel_crash_magic_number(void)
