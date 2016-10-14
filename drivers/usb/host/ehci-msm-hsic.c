@@ -1165,7 +1165,7 @@ resume_again:
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
 			/* do the resume in a tight loop */
-			mdelay(22);
+			mdelay(5);
 			writel_relaxed(readl_relaxed(&ehci->regs->command) |
 					CMD_RUN, &ehci->regs->command);
 			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
@@ -1920,19 +1920,17 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
-	dev_dbg(dev, "ehci-msm-hsic PM suspend\n");
+	//dev_dbg(dev, "ehci-msm-hsic PM suspend\n");
 
-	dbg_log_event(NULL, "PM Suspend", 0);
+	//dbg_log_event(NULL, "PM Suspend", 0);
 
-	if (!atomic_read(&mehci->in_lpm)) {
-		dev_info(dev, "abort suspend\n");
-		dbg_log_event(NULL, "PM Suspend abort", 0);
+	if (atomic_read(&mehci->async_int)) {
+		//dev_info(dev, "abort suspend\n");
+		//dbg_log_event(NULL, "PM Suspend abort", 0);
 		return -EBUSY;
 	}
 
-	if (device_may_wakeup(dev))
-		enable_irq_wake(mehci->irq);
-
+	enable_irq_wake(mehci->wakeup_irq);
 	return 0;
 }
 
@@ -1942,7 +1940,7 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
 	if (atomic_read(&mehci->async_int)) {
-		dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
+		//dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
 		return -EBUSY;
 	}
 
@@ -1955,8 +1953,8 @@ static int msm_hsic_pm_resume(struct device *dev)
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
-	dev_dbg(dev, "ehci-msm-hsic PM resume\n");
-	dbg_log_event(NULL, "PM Resume", 0);
+	//dev_dbg(dev, "ehci-msm-hsic PM resume\n");
+	//dbg_log_event(NULL, "PM Resume", 0);
 
 	if (device_may_wakeup(dev))
 		disable_irq_wake(mehci->irq);
@@ -1988,7 +1986,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 #ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
 {
-	dev_dbg(dev, "EHCI runtime idle\n");
+	//dev_dbg(dev, "EHCI runtime idle\n");
 	return 0;
 }
 
@@ -2004,7 +2002,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 	return msm_hsic_suspend(mehci);
 }
 
-static int msm_hsic_runtime_resume(struct device *dev)
+static int msm_hsic_runtime_resume(struct device *dev, int rpmflags)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
@@ -2020,14 +2018,13 @@ static int msm_hsic_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
-	.suspend_noirq = msm_hsic_pm_suspend_noirq, \
 	.suspend = msm_hsic_pm_suspend, \
 	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
-	.runtime_suspend = msm_hsic_runtime_suspend, \
-	.runtime_resume = msm_hsic_runtime_resume, \
-	.runtime_idle = msm_hsic_runtime_idle,
+	.pm_runtime_suspend = msm_hsic_runtime_suspend, \
+	.pm_runtime_resume = msm_hsic_runtime_resume, \
+	.pm_runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
