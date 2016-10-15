@@ -992,9 +992,9 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		dbg_status(ehci, "fatal", status);
 		ehci_halt(ehci);
 dead:
-		//ehci_reset(ehci);
-		//ehci_writel(ehci, 0, &ehci->regs->configured_flag);
-		//usb_hc_died(hcd);
+		ehci_reset(ehci);
+		ehci_writel(ehci, 0, &ehci->regs->configured_flag);
+		usb_hc_died(hcd);
 		/* generic layer kills/unlinks all urbs, then
 		 * uses ehci_stop to clean up the rest
 		 */

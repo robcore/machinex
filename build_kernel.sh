@@ -53,5 +53,32 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	sh repackimg.sh --sudo;
 	cp -p image-new.img $(pwd)/machinex-new/boot.img
 else
+	if [ -d $(pwd)/out ]; then
+		rm -rf $(pwd)/out;
+	fi;
+	if [ -e $(pwd)/arch/arm/boot/dhd.ko ]; then
+		rm $(pwd)/arch/arm/boot/dhd.ko;
+	fi;
+	if [ -e $(pwd)/arch/arm/boot/scsi_wait_scan.ko ]; then
+		rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
+	fi;
+	if [ -e $(pwd)/arch/arm/boot/zImage ]; then
+		rm $(pwd)/arch/arm/boot/zImage;
+	fi;
+	if [ -e $(pwd)/arch/arm/boot/boot.img-zImage ]; then
+		rm $(pwd)/arch/arm/boot/boot.img-zImage;
+	fi;
+	# clean up leftover junk
+	find . -type f \( -iname \*.rej \
+					-o -iname \*.orig \
+					-o -iname \*.bkp \
+					-o -iname \*.ko \) \
+						| parallel rm -fv {};
+	export ARCH=arm
+	export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+	env KCONFIG_NOTIMESTAMP=true
+	make clean;
+	make distclean;
+	make mrproper;
 	echo "Build failed, Skipped Ramdisk Creation"
 fi;
