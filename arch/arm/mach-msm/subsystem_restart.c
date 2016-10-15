@@ -34,7 +34,6 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
-#include <mach/board_machinex.h>
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
@@ -152,7 +151,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
+static int restart_level = RESET_SUBSYS_INDEPENDENT;
 
 int get_restart_level()
 {
@@ -480,9 +479,9 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 			dev->state = SUBSYS_CRASHED;
 			wake_lock(&dev->wake_lock);
 			queue_work(ssr_wq, &dev->work);
-		} //else {
-			//panic("Subsystem %s crashed during SSR!", name);
-		//}
+		} else {
+			panic("Subsystem %s crashed during SSR!", name);
+		}
 	}
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
 }
@@ -491,7 +490,6 @@ int subsystem_restart_dev(struct subsys_device *dev)
 {
 	const char *name = dev->desc->name;
 
-	extern bool ehci_hsic_is_2nd_enum_done(void);
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
 	 * However, print a message so that we know that a subsystem behaved
@@ -502,22 +500,16 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		pr_err("%s crashed during a system poweroff/shutdown.\n", name);
 		return -EBUSY;
 	}
-		
-		if (!ehci_hsic_is_2nd_enum_done()) {
-			pr_err("%s: 2nd enum is not done !!!\n", __func__);
-			return -EINVAL;
-		}
-		else {
-			pr_info("%s: 2nd enum is done\n", __func__);
-		}
 
 	pr_info("Restart sequence requested for %s, restart_level = %d.\n",
 		name, restart_level);
 
-	switch (restart_level) { 
+	switch (restart_level) {
+#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = 1;
+		enable_ramdumps = sec_debug_is_enabled()? 1 : 0;
 		/* Fall through */
+#endif
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
@@ -657,8 +649,9 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
+#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
 	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
-
+#endif
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
 		panic("%s: out of memory\n", __func__);

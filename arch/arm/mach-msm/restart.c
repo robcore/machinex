@@ -26,16 +26,10 @@
 #include <linux/mfd/pm8xxx/misc.h>
 
 #include <asm/mach-types.h>
-#include <asm/cacheflush.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/restart.h>
 #include <mach/socinfo.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#include <linux/notifier.h>
-#include <linux/ftrace.h>
-#endif
 #include <mach/irqs.h>
 #include <mach/scm.h>
 #include "msm_watchdog.h"
@@ -268,8 +262,6 @@ void set_ssr_magic_number(const char* subsys_name)
 			break;
 		}
 	}
-
-	flush_cache_louis();
 }
 
 void set_kernel_crash_magic_number(void)
@@ -364,19 +356,6 @@ void msm_restart(char mode, const char *cmd)
 		} else if (strlen(cmd) == 0) {
 			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
 			__raw_writel(0x12345678, restart_reason);
-#ifndef CONFIG_MACH_JF
-		} else if (!strncmp(cmd, "nvbackup", 8)) {
-			__raw_writel(0x77665511, restart_reason);
-		} else if (!strncmp(cmd, "nvrestore", 9)) {
-			__raw_writel(0x77665512, restart_reason);
-		} else if (!strncmp(cmd, "nverase", 7)) {
-			__raw_writel(0x77665514, restart_reason);
-		} else if (!strncmp(cmd, "nvrecovery", 10)) {
-			__raw_writel(0x77665515, restart_reason);
-#endif
-        } else if (!strncmp(cmd, "diag", 4)
-                  && !kstrtoul(cmd + 4, 0, &value)) {
-                __raw_writel(0xabcc0000 | value, restart_reason);
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
@@ -386,12 +365,10 @@ void msm_restart(char mode, const char *cmd)
 		set_kernel_crash_magic_number();
 reset:
 #endif /* CONFIG_LGE_CRASH_HANDLER */
-#ifdef CONFIG_SEC_DEBUG
 	else {
 		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
 	}
-#endif
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
@@ -442,9 +419,9 @@ static int __init msm_pmic_restart_init(void)
 {
 	int rc;
 
-#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS) || defined(CONFIG_MACH_SERRANO)
+#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS)
 	return 0;
-#else
+#elif defined(CONFIG_SEC_DEBUG)
 	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
 		return 0;
 #endif
@@ -455,8 +432,6 @@ static int __init msm_pmic_restart_init(void)
 					"restart_from_pmic", NULL);
 		if (rc < 0)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
-		irq_enabled = 1;
-		status = 1;
 	} else {
 		pr_warn("no pmic restart interrupt specified\n");
 	}

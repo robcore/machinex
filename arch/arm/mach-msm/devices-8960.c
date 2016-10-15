@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,11 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
-#ifdef CONFIG_USB_MSM_OTG_72K
 #include <mach/msm_hsusb.h>
-#else
-#include <linux/usb/msm_hsusb.h>
-#endif
 #include <mach/msm_sps.h>
 #include <mach/rpm.h>
 #include <mach/msm_bus_board.h>
@@ -57,7 +53,6 @@
 #include "scm-pas.h"
 #include <mach/msm_dcvs.h>
 #include <mach/iommu_domains.h>
-#include <mach/msm_xo.h>
 #include <mach/socinfo.h>
 #include "pm.h"
 #include <mach/msm8930-gpio.h>
@@ -1739,7 +1734,7 @@ struct platform_device msm_device_bam_dmux = {
 
 static struct msm_watchdog_pdata msm_watchdog_pdata = {
 	.pet_time = 10000,
-	.bark_time = 18000,
+	.bark_time = 11000,
 	.has_secure = true,
 	.base = MSM_TMR0_BASE + WDT0_OFFSET,
 };
@@ -3770,7 +3765,9 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.num_levels = ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/12,
+#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
+#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp3d_bus_scale_pdata,
@@ -3837,7 +3834,9 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/5,
+#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
+#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp2d0_bus_scale_pdata,
@@ -3904,7 +3903,9 @@ static struct kgsl_device_platform_data kgsl_2d1_pdata = {
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/5,
+#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
+#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp2d1_bus_scale_pdata,
@@ -4275,8 +4276,8 @@ static struct msm_rpm_log_platform_data msm_rpm_log_pdata = {
 		[MSM_RPM_LOG_PAGE_BUFFER]  = 0x000000A0,
 	},
 	.phys_size = SZ_8K,
-	.log_len = 4096,		  /* log's buffer length in bytes */
-	.log_len_mask = (4096 >> 2) - 1,  /* length mask in units of u32 */
+	.log_len = 6144,		  /* log's buffer length in bytes */
+	.log_len_mask = (6144 >> 2) - 1,  /* length mask in units of u32 */
 };
 
 struct platform_device msm8960_rpm_log_device = {

@@ -3287,20 +3287,6 @@ static void ep_fifo_flush(struct usb_ep *ep)
 }
 
 /**
- * ep_nuke: dequeues all request binding on endpoint
- */
-static void ep_nuke(struct usb_ep *ep)
-{
-	struct ci13xxx_ep  *mEp  = container_of(ep,  struct ci13xxx_ep, ep);
-	struct ci13xxx *udc = _udc;
-	unsigned long flags;
-
-	spin_lock_irqsave(udc->lock, flags);
-	_ep_nuke(mEp);
-	spin_unlock_irqrestore(udc->lock, flags);
-}
-
-/**
  * Endpoint-specific part of the API to the USB controller hardware
  * Check "usb_gadget.h" for details
  */
@@ -3314,7 +3300,6 @@ static const struct usb_ep_ops usb_ep_ops = {
 	.set_halt      = ep_set_halt,
 	.set_wedge     = ep_set_wedge,
 	.fifo_flush    = ep_fifo_flush,
-	.nuke          = ep_nuke,
 };
 
 /******************************************************************************
@@ -3404,22 +3389,6 @@ static int ci13xxx_pullup(struct usb_gadget *_gadget, int is_active)
 static int ci13xxx_start(struct usb_gadget_driver *driver,
 		int (*bind)(struct usb_gadget *));
 static int ci13xxx_stop(struct usb_gadget_driver *driver);
-static int ci13xxx_request_reset(struct usb_gadget *_gadget)
-{
-	struct ci13xxx *udc = container_of(_gadget, struct ci13xxx, gadget);
-
-	if (((udc->udc_driver->flags & CI13XXX_PULLUP_ON_VBUS) &&
-			!udc->vbus_active) || !udc->driver || !udc->transceiver) {
-		return 0;
-	}
-
-	USBH_DEBUG("ci13xxx_request_reset\n");
-
-	usb_phy_init(udc->transceiver);
-	hw_device_reset(udc);
-
-	return 0;
-}
 /**
  * Device operations part of the API to the USB controller hardware,
  * which don't involve endpoints (or i/o)
@@ -3432,7 +3401,6 @@ static const struct usb_gadget_ops usb_gadget_ops = {
 	.pullup		= ci13xxx_pullup,
 	.start		= ci13xxx_start,
 	.stop		= ci13xxx_stop,
-	.req_reset	= ci13xxx_request_reset,
 };
 
 /**
@@ -3581,11 +3549,6 @@ static int ci13xxx_start(struct usb_gadget_driver *driver,
 	spin_unlock_irqrestore(udc->lock, flags);
 	if (retval || put)
 		pm_runtime_put_sync(&udc->gadget.dev);
-
-	if (udc->udc_driver->notify_event)
-			udc->udc_driver->notify_event(udc,
-				CI13XXX_CONTROLLER_UDC_STARTED_EVENT);
-
 	return retval;
 }
 

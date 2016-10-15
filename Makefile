@@ -358,7 +358,7 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 KERNEL_FLAGS	= -mtune=cortex-a15 -marm \
 		  -mfpu=neon-vfpv4 -mvectorize-with-neon-quad -munaligned-access \
-		  -fno-pic -fmodulo-sched -ffast-math
+		  -fno-pic -fmodulo-sched -ffast-math -funsafe-math-optimizations
 
 MODFLAGS	= -DMODULE -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize -funroll-loops
 CFLAGS_MODULE   = $(MODFLAGS)

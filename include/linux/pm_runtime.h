@@ -26,9 +26,7 @@
 #ifdef CONFIG_PM_RUNTIME
 
 extern struct workqueue_struct *pm_wq;
-/* ++SSD_RIL */
-extern struct workqueue_struct *pm_rt_wq;
-/* --SSD_RIL */
+
 extern int __pm_runtime_idle(struct device *dev, int rpmflags);
 extern int __pm_runtime_suspend(struct device *dev, int rpmflags);
 extern int __pm_runtime_resume(struct device *dev, int rpmflags);
@@ -56,25 +54,9 @@ static inline bool pm_children_suspended(struct device *dev)
 		|| !atomic_read(&dev->power.child_count);
 }
 
-/* ++SSD_RIL */
-//--------------------------------------------------------
-#if defined(CONFIG_USB_EHCI_MSM_HSIC)
-extern struct device *msm_hsic_host_dev;
-#endif	//CONFIG_USB_EHCI_MSM_HSIC
-
-#if defined(CONFIG_ARCH_APQ8064) && defined(CONFIG_USB_EHCI_MSM_HSIC)
-extern int mdm_is_in_restart;
-#endif //CONFIG_USB_EHCI_MSM_HSIC
-//--------------------------------------------------------
-/* --SSD_RIL */
-
 static inline void pm_runtime_get_noresume(struct device *dev)
 {
 	atomic_inc(&dev->power.usage_count);
-
-	{
-		extern unsigned int get_radio_flag(void);
-	}
 }
 
 static inline void pm_runtime_put_noidle(struct device *dev)
@@ -167,9 +149,6 @@ static inline void pm_runtime_set_autosuspend_delay(struct device *dev,
 						int delay) {}
 static inline unsigned long pm_runtime_autosuspend_expiration(
 				struct device *dev) { return 0; }
-
-static inline void pm_runtime_update_max_time_suspended(struct device *dev,
-							s64 delta_ns) {}
 
 #endif /* !CONFIG_PM_RUNTIME */
 
