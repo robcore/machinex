@@ -366,6 +366,8 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	struct subsys_soc_restart_order *soc_restart_order = NULL;
 	struct mutex *powerup_lock;
 	struct mutex *shutdown_lock;
+
+	int i;
 	unsigned count;
 	unsigned long flags;
 
@@ -426,11 +428,11 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	pr_debug("[%p]: Starting restart sequence for %s\n", current,
 			desc->name);
 //machinex
-		for (i = 0; i < restart_list_count; i++) {
-		if (!restart_list[i])
+		for (i = 0; i < count; i++) {
+		if (!list[i])
 			continue;
 
-		if (strcmp(restart_list[i]->name, EXTERNAL_MODEM) == 0) {
+		if (strcmp(list[i]->name, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 1;
 		}
 	}
@@ -457,11 +459,11 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	pr_info("[%p]: Restart sequence for %s completed.\n",
 			current, desc->name);
 //machinex
-		for (i = 0; i < restart_list_count; i++) {
-		if (!restart_list[i])
+		for (i = 0; i < count; i++) {
+		if (!list[i])
 			continue;
 
-		if (strcmp(restart_list[i]->name, EXTERNAL_MODEM) == 0) {
+		if (strcmp(list[i]->name, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 0;
 		}
 	}
@@ -535,12 +537,10 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	pr_info("Restart sequence requested for %s, restart_level = %d.\n",
 		name, restart_level);
 
-	switch (restart_level) {
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
+	switch (restart_level) { 
 	case RESET_SUBSYS_INDEPENDENT_SOC:
 		enable_ramdumps = sec_debug_is_enabled()? 1 : 0;
 		/* Fall through */
-#endif
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
