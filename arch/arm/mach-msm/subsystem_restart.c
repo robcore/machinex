@@ -215,6 +215,23 @@ static void subsys_set_state(struct subsys_device *subsys,
 	spin_unlock_irqrestore(&subsys->restart_lock, flags);
 }
 
+static struct subsys_data *_find_subsystem(const char *subsys_name)
+{
+	struct subsys_data *subsys;
+	unsigned long flags;
+
+	mutex_lock(&subsystem_list_lock);
+	list_for_each_entry(subsys, &subsystem_list, list)
+		if (!strncmp(subsys->name, subsys_name,
+				SUBSYS_NAME_MAX_LENGTH)) {
+			mutex_unlock(&subsystem_list_lock);
+			return subsys;
+		}
+	mutex_unlock(&subsystem_list_lock);
+
+	return NULL;
+}
+
 static struct subsys_soc_restart_order *
 update_restart_order(struct subsys_device *dev)
 {
@@ -373,7 +390,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	const char *name = dev->desc->name;
 	int i;
-	unsigned count;
+	unsigned count = 0;
 	unsigned long flags;
 
 	if (restart_level != RESET_SUBSYS_INDEPENDENT)
@@ -437,7 +454,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 		if (!list[i])
 			continue;
 
-		if (strcmp(list[i]->*name, EXTERNAL_MODEM) == 0) {
+		if (strcmp(list[i]->desc, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 1;
 		}
 	}
