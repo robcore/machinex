@@ -1647,7 +1647,7 @@ static struct smd_subsystem_config smd_config_list[] = {
 		.edge = SMD_APPS_QDSP,
 
 		.smd_int.irq_name = "adsp_a11",
-		.smd_int.flags = IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+		.smd_int.flags = IRQF_TRIGGER_RISING,
 		.smd_int.irq_id = -1,
 		.smd_int.device_name = "smd_dev",
 		.smd_int.dev_id = 0,
@@ -3770,9 +3770,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.num_levels = ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/12,
-#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
-#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp3d_bus_scale_pdata,
@@ -3839,9 +3837,7 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/5,
-#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
-#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp2d0_bus_scale_pdata,
@@ -3908,9 +3904,7 @@ static struct kgsl_device_platform_data kgsl_2d1_pdata = {
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/5,
-#ifndef CONFIG_ARCH_APQ8064
 	.nap_allowed = true,
-#endif
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &grp2d1_bus_scale_pdata,

@@ -1423,18 +1423,6 @@ static struct resource resources_hsic_host[] = {
 		.name	= "wakeup",
 		.flags	= IORESOURCE_IO,
 	},
-/*	{
-		.start	= MDM2AP_ERRFATAL,
-		.end	= MDM2AP_ERRFATAL,
-		.name	= "MDM2AP_ERRFATAL",
-		.flags	= IORESOURCE_IO,
-	},*/
-	{
-		.start	= MDM2AP_STATUS,
-		.end	= MDM2AP_STATUS,
-		.name	= "MDM2AP_STATUS",
-		.flags	= IORESOURCE_IO,
-	},
 };
 
 static u64 dma_mask = DMA_BIT_MASK(32);
@@ -2230,7 +2218,7 @@ static struct smd_subsystem_config smd_config_list[] = {
 		.edge = SMD_APPS_QDSP,
 
 		.smd_int.irq_name = "adsp_a11",
-		.smd_int.flags = IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+		.smd_int.flags = IRQF_TRIGGER_RISING,
 		.smd_int.irq_id = -1,
 		.smd_int.device_name = "smd_dev",
 		.smd_int.dev_id = 0,
@@ -3319,16 +3307,6 @@ static struct msm_dcvs_core_info apq8064_core_info = {
 static struct msm_gov_platform_data gov_platform_data = {
 	.info = &apq8064_core_info,
 	.latency = APQ8064_LPM_LATENCY,
-};
-
-static int apq8064_LPM_latency = 1000; /* >100 usec for WFI */
-
-struct platform_device apq8064_cpu_idle_device = {
-	.name   = "msm_cpu_idle",
-	.id     = -1,
-	.dev = {
-		.platform_data = &APQ8064_LPM_LATENCY,
-	},
 };
 
 struct platform_device apq8064_msm_gov_device = {
