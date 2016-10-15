@@ -135,7 +135,7 @@ qh_refresh (struct ehci_hcd *ehci, struct ehci_qh *qh)
 		 * qtd is updated in qh_completions(). Update the QH
 		 * overlay here.
 		 */
-		if (qh->hw->hw_token & ACTIVE_BIT(ehci)) {
+		if (cpu_to_hc32(ehci, qtd->qtd_dma) == qh->hw->hw_current) {
 			qh->hw->hw_qtd_next = qtd->hw_next;
 			qtd = NULL;
 		}
@@ -264,13 +264,17 @@ ehci_urb_done(struct ehci_hcd *ehci, struct urb *urb, int status)
 __releases(ehci->lock)
 __acquires(ehci->lock)
 {
-	if (usb_pipetype(urb->pipe) == PIPE_INTERRUPT) {
-		/* ... update hc-wide periodic stats */
-		ehci_to_hcd(ehci)->self.bandwidth_int_reqs--;
-	}
+	if (likely (urb->hcpriv != NULL)) {
+		struct ehci_qh	*qh = (struct ehci_qh *) urb->hcpriv;
 
-	if (usb_pipetype(urb->pipe) != PIPE_ISOCHRONOUS)
-		qh_put((struct ehci_qh *) urb->hcpriv);
+		/* S-mask in a QH means it's an interrupt urb */
+		if ((qh->hw->hw_info2 & cpu_to_hc32(ehci, QH_SMASK)) != 0) {
+
+			/* ... update hc-wide periodic stats (for usbfs) */
+			ehci_to_hcd(ehci)->self.bandwidth_int_reqs--;
+		}
+		qh_put (qh);
+	}
 
 	if (unlikely(urb->unlinked)) {
 		COUNT(ehci->stats.unlink);
@@ -455,19 +459,11 @@ qh_completions (struct ehci_hcd *ehci, struct ehci_qh *qh)
 			else if (last_status == -EINPROGRESS && !urb->unlinked)
 				continue;
 
-			/*
-			 * If this was the active qtd when the qh was unlinked
-			 * and the overlay's token is active, then the overlay
-			 * hasn't been written back to the qtd yet so use its
-			 * token instead of the qtd's.  After the qtd is
-			 * processed and removed, the overlay won't be valid
-			 * any more.
-			 */
-			if (state == QH_STATE_IDLE &&
-					qh->qtd_list.next == &qtd->qtd_list &&
-					(hw->hw_token & ACTIVE_BIT(ehci))) {
+			/* qh unlinked; token in overlay may be most current */
+			if (state == QH_STATE_IDLE
+					&& cpu_to_hc32(ehci, qtd->qtd_dma)
+						== hw->hw_current) {
 				token = hc32_to_cpu(ehci, hw->hw_token);
-				hw->hw_token &= ~ACTIVE_BIT(ehci);
 
 				/* An unlink may leave an incomplete
 				 * async transaction in the TT buffer.

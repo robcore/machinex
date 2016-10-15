@@ -36,13 +36,7 @@
 #include <linux/usb/msm_hsusb.h>
 #include <linux/gpio.h>
 #include <linux/spinlock.h>
-#include <linux/kthread.h>
-#include <linux/wait.h>
-#include <linux/pm_qos.h>
-#include <linux/irq.h>
 #include <linux/ktime.h>
-#include <mach/cpuidle.h>
-#include <linux/sched.h>
 
 #include <mach/msm_bus.h>
 #include <mach/clk.h>
@@ -51,6 +45,16 @@
 #include <linux/spinlock.h>
 #include <linux/cpu.h>
 #include <mach/rpm-regulator.h>
+#include <linux/irq.h>
+#include <linux/kthread.h>
+#include <linux/wait.h>
+#include <linux/pm_qos.h>
+//machinex
+#include <linux/rtc.h>
+#include <mach/board_machinex.h>
+#include <linux/pm_qos.h>
+#include <mach/cpuidle.h>
+#include <linux/sched.h>
 
 #define MSM_USB_BASE (hcd->regs)
 #define USB_REG_START_OFFSET 0x90
@@ -63,7 +67,6 @@ static const struct usb_device_id usb1_1[] = {
 	.driver_info = 0 },
 	{}
 };
-
 
 struct usb_hcd *mdm_hsic_usb_hcd = NULL;
 struct usb_device *mdm_usb1_1_usbdev = NULL;

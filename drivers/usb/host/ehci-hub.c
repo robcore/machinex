@@ -28,6 +28,10 @@
 
 /*-------------------------------------------------------------------------*/
 #include <linux/usb/otg.h>
+/* ++SSD_RIL */
+#include <linux/usb.h>
+#include <mach/board_machinex.h>
+/* --SSD_RIL */
 
 #define	PORT_WAKE_BITS	(PORT_WKOC_E|PORT_WKDISC_E|PORT_WKCONN_E)
 
