@@ -41,6 +41,8 @@
 
 #include "smd_private.h"
 
+#define EXTERNAL_MODEM "external_modem"
+
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
 	int count;
@@ -90,6 +92,8 @@ static int enable_ramdumps;
 module_param(enable_ramdumps, int, S_IRUGO | S_IWUSR);
 
 struct workqueue_struct *ssr_wq;
+
+int mdm_is_in_restart = 0;
 
 static LIST_HEAD(restart_log_list);
 static LIST_HEAD(subsystem_list);
@@ -366,6 +370,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	struct subsys_soc_restart_order *soc_restart_order = NULL;
 	struct mutex *powerup_lock;
 	struct mutex *shutdown_lock;
+	const char *name = dev->desc->name;
 
 	int i;
 	unsigned count;
