@@ -41,8 +41,6 @@
 
 #include "smd_private.h"
 
-#define EXTERNAL_MODEM "external_modem"
-
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
 	int count;
@@ -92,8 +90,6 @@ static int enable_ramdumps;
 module_param(enable_ramdumps, int, S_IRUGO | S_IWUSR);
 
 struct workqueue_struct *ssr_wq;
-
-int mdm_is_in_restart = 0;
 
 static LIST_HEAD(restart_log_list);
 static LIST_HEAD(subsystem_list);
@@ -156,7 +152,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_INDEPENDENT;
+static int restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
 
 int get_restart_level()
 {
@@ -370,10 +366,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	struct subsys_soc_restart_order *soc_restart_order = NULL;
 	struct mutex *powerup_lock;
 	struct mutex *shutdown_lock;
-
-	const char *name = dev->desc->name;
-	int i;
-	unsigned count = 0;
+	unsigned count;
 	unsigned long flags;
 
 	if (restart_level != RESET_SUBSYS_INDEPENDENT)
@@ -432,16 +425,6 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	pr_debug("[%p]: Starting restart sequence for %s\n", current,
 			desc->name);
-//machinex
-		for (i = 0; i < count; i++) {
-		if (!list[i])
-			continue;
-
-		if (strcmp(desc[i]->name, EXTERNAL_MODEM) == 0) {
-			mdm_is_in_restart = 1;
-		}
-	}
-
 	send_notification_to_order(list, count, SUBSYS_BEFORE_SHUTDOWN);
 	for_each_subsys_device(list, count, NULL, subsystem_shutdown);
 	send_notification_to_order(list, count, SUBSYS_AFTER_SHUTDOWN);
@@ -463,15 +446,6 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	pr_info("[%p]: Restart sequence for %s completed.\n",
 			current, desc->name);
-//machinex
-		for (i = 0; i < count; i++) {
-		if (!list[i])
-			continue;
-
-		if (strcmp(desc[i]->name, EXTERNAL_MODEM) == 0) {
-			mdm_is_in_restart = 0;
-		}
-	}
 
 	mutex_unlock(powerup_lock);
 
@@ -506,9 +480,9 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 			dev->state = SUBSYS_CRASHED;
 			wake_lock(&dev->wake_lock);
 			queue_work(ssr_wq, &dev->work);
-		} else {
-			panic("Subsystem %s crashed during SSR!", name);
-		}
+		} //else {
+			//panic("Subsystem %s crashed during SSR!", name);
+		//}
 	}
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
 }
@@ -528,8 +502,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		pr_err("%s crashed during a system poweroff/shutdown.\n", name);
 		return -EBUSY;
 	}
-
-	if (strcmp(*name, EXTERNAL_MODEM) == 0) {
+		
 		if (!ehci_hsic_is_2nd_enum_done()) {
 			pr_err("%s: 2nd enum is not done !!!\n", __func__);
 			return -EINVAL;
@@ -537,7 +510,6 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		else {
 			pr_info("%s: 2nd enum is done\n", __func__);
 		}
-	}
 
 	pr_info("Restart sequence requested for %s, restart_level = %d.\n",
 		name, restart_level);
