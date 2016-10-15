@@ -30,7 +30,7 @@
 #include <mach/socinfo.h>
 #include <mach/restart.h>
 #include <mach/msm_smsm.h>
-#include <mach/board_machinex>
+#include <mach/board_machinex.h>
 #include "sysmon.h"
 
 #include "smd_private.h"
