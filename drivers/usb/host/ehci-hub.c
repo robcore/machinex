@@ -979,8 +979,6 @@ static int ehci_hub_control (
 		status = 0;
 		temp = ehci_readl(ehci, status_reg);
 
-		if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
-			pr_debug("%s temp = 0x%08x\n",__func__,temp);
 		// wPortChange bits
 		if (temp & PORT_CSC)
 			status |= USB_PORT_STAT_C_CONNECTION << 16;

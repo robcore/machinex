@@ -218,25 +218,17 @@ static void ehci_hsic_prevent_sleep(struct msm_hsic_hcd *mehci)
 {
 	s32 latency;
 	if (!in_interrupt()) {
-		if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
-			pr_info("%s+\n", __func__);
 		latency =  msm_cpuidle_get_deep_idle_latency();
 		if (!latency)
 			latency = 2;
 		pm_qos_update_request(&mehci->pm_qos_req_dma_machinex, latency);
-		if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
-			pr_info("%s-\n", __func__);
 	}
 }
 
 static void ehci_hsic_allow_sleep(struct msm_hsic_hcd *mehci)
 {
 	if (!in_interrupt()) {
-		if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
-			pr_info("%s+\n", __func__);
 		pm_qos_update_request(&mehci->pm_qos_req_dma_machinex, PM_QOS_DEFAULT_VALUE);
-		if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
-			pr_info("%s-\n", __func__);
 	}
 }
 /* --SSD_RIL */
@@ -460,7 +452,6 @@ static void dbg_log_event(struct urb *urb, char * event, unsigned extra)
 		write_unlock_irqrestore(&dbg_hsic_data.lck, flags);
 	}
 }
-EXPORT_SYMBOL(dbg_log_event);
 
 static int in_progress;
 
@@ -709,7 +700,7 @@ static int __maybe_unused ulpi_read(struct msm_hsic_hcd *mehci, u32 reg)
 	while (cnt < ULPI_IO_TIMEOUT_USEC) {
 		if (!(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_RUN))
 			break;
-		usleep(1);
+		udelay(1);
 		cnt++;
 	}
 
@@ -735,7 +726,7 @@ static int ulpi_write(struct msm_hsic_hcd *mehci, u32 val, u32 reg)
 	while (cnt < ULPI_IO_TIMEOUT_USEC) {
 		if (!(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_RUN))
 			break;
-		usleep(1);
+		udelay(1);
 		cnt++;
 	}
 
@@ -977,7 +968,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep(5);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
@@ -1096,7 +1087,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 		if (!(readl_relaxed(USB_PORTSC) & PORTSC_PHCD) &&
 			(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_SYNC_STATE))
 			break;
-		usleep(1);
+		udelay(1);
 		cnt++;
 	}
 
@@ -1370,8 +1361,7 @@ retry:
 	spin_lock_irqsave(&ehci->lock, flags);
 	ehci_writel(ehci, val, status_reg);
 	while (cnt--)
-		usleep(1);
-
+		udelay(1);
 	ret = msm_hsic_reset_done(hcd);
 	spin_unlock_irqrestore(&ehci->lock, flags);
 	if (ret) {
@@ -1396,7 +1386,7 @@ static int ehci_hsic_bus_suspend(struct usb_hcd *hcd)
 
 	if (!(readl_relaxed(USB_PORTSC) & PORT_PE)) {
 		dbg_log_event(NULL, "RH suspend attempt failed", 0);
-		dev_err(mehci->dev, "%s:port is not enabled skip suspend\n",
+		dev_dbg(mehci->dev, "%s:port is not enabled skip suspend\n",
 				__func__);
 		return -EAGAIN;
 	}
@@ -1522,7 +1512,7 @@ resume_again:
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
 			/* do the resume in a tight loop */
-			msleep(22);
+			mdelay(22);
 			writel_relaxed(readl_relaxed(&ehci->regs->command) |
 					CMD_RUN, &ehci->regs->command);
 			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
@@ -1788,9 +1778,8 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 	struct msm_hsic_hcd *mehci = data;
 	int ret = 0;
 
-	//HTC+++
+	//machinex
 	msm_hsic_wakeup_irq_timestamp = sched_clock();
-	//HTC---
 
 	mehci->wakeup_int_cnt++;
 	dbg_log_event(NULL, "Remote Wakeup IRQ", mehci->wakeup_int_cnt);

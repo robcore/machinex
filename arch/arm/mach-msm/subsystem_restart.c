@@ -34,6 +34,7 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
+#include <mach/board_machinex.h>
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
@@ -424,6 +425,16 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	pr_debug("[%p]: Starting restart sequence for %s\n", current,
 			desc->name);
+//machinex
+		for (i = 0; i < restart_list_count; i++) {
+		if (!restart_list[i])
+			continue;
+
+		if (strcmp(restart_list[i]->name, EXTERNAL_MODEM) == 0) {
+			mdm_is_in_restart = 1;
+		}
+	}
+
 	send_notification_to_order(list, count, SUBSYS_BEFORE_SHUTDOWN);
 	for_each_subsys_device(list, count, NULL, subsystem_shutdown);
 	send_notification_to_order(list, count, SUBSYS_AFTER_SHUTDOWN);
@@ -445,6 +456,15 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	pr_info("[%p]: Restart sequence for %s completed.\n",
 			current, desc->name);
+//machinex
+		for (i = 0; i < restart_list_count; i++) {
+		if (!restart_list[i])
+			continue;
+
+		if (strcmp(restart_list[i]->name, EXTERNAL_MODEM) == 0) {
+			mdm_is_in_restart = 0;
+		}
+	}
 
 	mutex_unlock(powerup_lock);
 
@@ -490,6 +510,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 {
 	const char *name = dev->desc->name;
 
+	extern bool ehci_hsic_is_2nd_enum_done(void);
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
 	 * However, print a message so that we know that a subsystem behaved
@@ -499,6 +520,16 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		|| system_state == SYSTEM_POWER_OFF) {
 		pr_err("%s crashed during a system poweroff/shutdown.\n", name);
 		return -EBUSY;
+	}
+
+	if (strcmp(name, EXTERNAL_MODEM) == 0) {
+		if (!ehci_hsic_is_2nd_enum_done()) {
+			pr_err("%s: 2nd enum is not done !!!\n", __func__);
+			return -EINVAL;
+		}
+		else {
+			pr_info("%s: 2nd enum is done\n", __func__);
+		}
 	}
 
 	pr_info("Restart sequence requested for %s, restart_level = %d.\n",
@@ -649,9 +680,8 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
 	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
-#endif
+
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
 		panic("%s: out of memory\n", __func__);

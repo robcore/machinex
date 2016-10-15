@@ -264,7 +264,7 @@ void set_ssr_magic_number(const char* subsys_name)
 		}
 	}
 
-	flush_cache_all();
+	flush_cache_louis();
 }
 
 void set_kernel_crash_magic_number(void)

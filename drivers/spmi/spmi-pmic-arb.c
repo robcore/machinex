@@ -694,6 +694,7 @@ static int __devexit spmi_pmic_arb_remove(struct platform_device *pdev)
 	struct spmi_pmic_arb_dev *pmic_arb = platform_get_drvdata(pdev);
 
 	irq_set_irq_wake(pmic_arb->pic_irq, 0);
+	free_irq(pmic_arb->pic_irq, pmic_arb);
 	platform_set_drvdata(pdev, NULL);
 	spmi_del_controller(&pmic_arb->controller);
 	return 0;

@@ -41,6 +41,7 @@
 #include <mach/gpiomux.h>
 #include <linux/notifier.h>
 #include "msm_watchdog.h"
+#include <mach/board_machinex.h>
 #include "mdm_private.h"
 #include "sysmon.h"
 #ifdef CONFIG_SEC_DEBUG
@@ -1323,6 +1324,40 @@ static void mdm_modem_shutdown(struct platform_device *pdev)
 	if (GPIO_IS_VALID(mdm_drv->ap2mdm_pmic_pwr_en_gpio))
 		gpio_direction_output(mdm_drv->ap2mdm_pmic_pwr_en_gpio, 0);
 }
+
+int mdm_common_machinex_get_mdm2ap_errfatal_level(void)
+{
+	struct mdm_modem_drv *mdm_drv
+	struct mdm_device *mdev = platform_get_drvdata(pdev);
+	int value = 0;
+
+	mdm_drv = &mdev->mdm_data
+
+	if (mdm_drv != NULL && mdm_drv->mdm2ap_errfatal_gpio != 0)
+		value = gpio_get_value(mdm_drv->mdm2ap_errfatal_gpio);
+
+	pr_info("%s: %d\n", __func__, value);
+
+	return value;
+}
+EXPORT_SYMBOL_GPL(mdm_common_machinex_get_mdm2ap_errfatal_level);
+
+int mdm_common_machinex_get_mdm2ap_status_level(void)
+{
+	struct mdm_modem_drv *mdm_drv
+	struct mdm_device *mdev = platform_get_drvdata(pdev);
+	int value = 0;
+
+	mdm_drv = &mdev->mdm_data
+
+	if (mdm_drv != NULL && mdm_drv->mdm2ap_status_gpio != 0)
+		value = gpio_get_value(mdm_drv->mdm2ap_status_gpio);
+
+	pr_info("%s: %d\n", __func__, value);
+
+	return value;
+}
+EXPORT_SYMBOL_GPL(mdm_common_machinex_get_mdm2ap_status_level);
 
 static struct of_device_id mdm_match_table[] = {
 	{.compatible = "qcom,mdm2_modem,mdm2_modem.1"},
