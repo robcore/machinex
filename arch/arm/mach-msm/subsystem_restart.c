@@ -437,7 +437,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 		if (!list[i])
 			continue;
 
-		if (strcmp(list[i]->desc, EXTERNAL_MODEM) == 0) {
+		if (strcmp(desc[i]->name, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 1;
 		}
 	}
@@ -468,7 +468,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 		if (!list[i])
 			continue;
 
-		if (strcmp(list[i]->desc, EXTERNAL_MODEM) == 0) {
+		if (strcmp(desc[i]->name, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 0;
 		}
 	}
