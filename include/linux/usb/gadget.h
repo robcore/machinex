@@ -138,6 +138,8 @@ struct usb_ep_ops {
 
 	int (*fifo_status) (struct usb_ep *ep);
 	void (*fifo_flush) (struct usb_ep *ep);
+
+	void (*nuke) (struct usb_ep *ep);
 };
 
 /**
@@ -441,6 +443,15 @@ static inline void usb_ep_fifo_flush(struct usb_ep *ep)
 		ep->ops->fifo_flush(ep);
 }
 
+/**
+ * usb_ep_nuke - dequeues all endpoint requests
+ * @ep: endpoint
+ */
+static inline void usb_ep_nuke(struct usb_ep *ep)
+{
+	if (ep->ops->nuke)
+		ep->ops->nuke(ep);
+}
 
 /*-------------------------------------------------------------------------*/
 
@@ -472,6 +483,7 @@ struct usb_gadget_ops {
 			struct usb_gadget_driver *);
 	int	(*udc_stop)(struct usb_gadget *,
 			struct usb_gadget_driver *);
+	int	(*req_reset) (struct usb_gadget *);
 
 	/* Those two are deprecated */
 	int	(*start)(struct usb_gadget_driver *,
@@ -545,6 +557,7 @@ struct usb_gadget {
 	const char			*name;
 	struct device			dev;
 	u8				usb_core_id;
+	int             miMaxMtu;
 };
 
 static inline void set_gadget_data(struct usb_gadget *gadget, void *data)
@@ -773,6 +786,12 @@ static inline int usb_gadget_disconnect(struct usb_gadget *gadget)
 	return gadget->ops->pullup(gadget, 0);
 }
 
+static inline int usb_gadget_request_reset(struct usb_gadget *gadget)
+{
+	if (!gadget->ops->req_reset)
+		return -EOPNOTSUPP;
+	return gadget->ops->req_reset(gadget);
+}
 
 /*-------------------------------------------------------------------------*/
 
@@ -850,6 +869,7 @@ struct usb_gadget_driver {
 	int			(*setup)(struct usb_gadget *,
 					const struct usb_ctrlrequest *);
 	void			(*disconnect)(struct usb_gadget *);
+	void			(*mute_disconnect)(struct usb_gadget *);
 	void			(*suspend)(struct usb_gadget *);
 	void			(*resume)(struct usb_gadget *);
 

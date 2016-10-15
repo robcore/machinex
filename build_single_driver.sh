@@ -20,4 +20,4 @@ make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-make ARCH=arm -S -s -j4 O=$(pwd)/out $(pwd)/drivers/base/;
+make ARCH=arm -S -s -j4 O=$(pwd)/out $(pwd)/drivers/usb/;
