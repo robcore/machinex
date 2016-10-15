@@ -391,95 +391,6 @@ static inline struct usb_hcd *hsic_to_hcd(struct msm_hsic_hcd *mehci)
 	return container_of((void *) mehci, struct usb_hcd, hcd_priv);
 }
 
-
-static void dump_qh_qtd(struct usb_hcd *hcd)
-{
-	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
-	struct ehci_hcd *ehci = &mehci->ehci;
-	struct ehci_qh	*head, *qh;
-	struct ehci_qh_hw *hw;
-	struct ehci_qtd *qtd;
-	struct list_head *entry, *tmp;
-	struct ehci_qtd	*qtd1;
-
-	pr_info("-----------------------------DUMPING EHCI QHs & QTDs-------------------------------\n");
-
-	head = ehci->async;
-	hw = head->hw;
-	pr_info("Current QH: %p\n",head);
-	pr_info("Overlay:\n next %08x, info %x %x, cur qtd %x\n", hw->hw_next, hw->hw_info1, hw->hw_info2, hw->hw_current);
-	qtd =  (struct ehci_qtd *)&hw->hw_qtd_next;
-	pr_info("Current QTD: %p\n",qtd);
-	pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd,
-		hc32_to_cpup(ehci, &qtd->hw_next),
-		hc32_to_cpup(ehci, &qtd->hw_alt_next),
-		hc32_to_cpup(ehci, &qtd->hw_token),
-		hc32_to_cpup(ehci, &qtd->hw_buf [0]));
-	if (qtd->hw_buf [1])
-		pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
-			hc32_to_cpup(ehci, &qtd->hw_buf[1]),
-			hc32_to_cpup(ehci, &qtd->hw_buf[2]),
-			hc32_to_cpup(ehci, &qtd->hw_buf[3]),
-			hc32_to_cpup(ehci, &qtd->hw_buf[4]));
-	pr_info("---------------------------LIST OF QTDs for current QH: %p---------------------------------\n", head);
-	list_for_each_safe (entry, tmp, &head->qtd_list) {
-
-	qtd1 = list_entry (entry, struct ehci_qtd, qtd_list);
-	pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd1,
-			hc32_to_cpup(ehci, &qtd1->hw_next),
-			hc32_to_cpup(ehci, &qtd1->hw_alt_next),
-			hc32_to_cpup(ehci, &qtd1->hw_token),
-			hc32_to_cpup(ehci, &qtd1->hw_buf [0]));
-	if (qtd->hw_buf [1])
-		pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
-				hc32_to_cpup(ehci, &qtd1->hw_buf[1]),
-				hc32_to_cpup(ehci, &qtd1->hw_buf[2]),
-				hc32_to_cpup(ehci, &qtd1->hw_buf[3]),
-				hc32_to_cpup(ehci, &qtd1->hw_buf[4]));
-
-	}
-	qh = head->qh_next.qh;
-	while (qh){
-		pr_info("---------------------------QH %p--------------------------\n",qh);
-		hw = qh->hw;
-		pr_info("Current QH: %p\n",qh);
-		pr_info("Overlay:\n next %08x, info %x %x, cur qtd %x\n", hw->hw_next, hw->hw_info1, hw->hw_info2, hw->hw_current);
-
-		qtd = (struct ehci_qtd *)&hw->hw_qtd_next;
-		pr_info("Current QTD: %p\n",qtd);
-		pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd,
-				hc32_to_cpup(ehci, &qtd->hw_next),
-				hc32_to_cpup(ehci, &qtd->hw_alt_next),
-				hc32_to_cpup(ehci, &qtd->hw_token),
-				hc32_to_cpup(ehci, &qtd->hw_buf [0]));
-		if (qtd->hw_buf [1])
-			pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
-					hc32_to_cpup(ehci, &qtd->hw_buf[1]),
-					hc32_to_cpup(ehci, &qtd->hw_buf[2]),
-					hc32_to_cpup(ehci, &qtd->hw_buf[3]),
-					hc32_to_cpup(ehci, &qtd->hw_buf[4]));
-
-		list_for_each_safe (entry, tmp, &head->qtd_list) {
-
-		qtd1 = list_entry (entry, struct ehci_qtd, qtd_list);
-		pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd1,
-				hc32_to_cpup(ehci, &qtd1->hw_next),
-				hc32_to_cpup(ehci, &qtd1->hw_alt_next),
-				hc32_to_cpup(ehci, &qtd1->hw_token),
-				hc32_to_cpup(ehci, &qtd1->hw_buf [0]));
-		if (qtd->hw_buf [1])
-			pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
-					hc32_to_cpup(ehci, &qtd1->hw_buf[1]),
-					hc32_to_cpup(ehci, &qtd1->hw_buf[2]),
-					hc32_to_cpup(ehci, &qtd1->hw_buf[3]),
-					hc32_to_cpup(ehci, &qtd1->hw_buf[4]));
-
-		}
-
-		qh = qh->qh_next.qh;
-	}
-}
-
 #define ULPI_IO_TIMEOUT_USEC	(10 * 1000)
 
 #define USB_PHY_VDD_DIG_VOL_NONE	0 /*uV */
@@ -1528,7 +1439,7 @@ static struct hc_driver msm_hsic_driver = {
 	.set_int_latency	= ehci_hsic_int_latency,
 
 	.log_urb		= dbg_log_event,
-	.dump_regs		= dump_hsic_regs,
+	//.dump_regs		= dump_hsic_regs,
 
 	.reset_sof_bug_handler  = ehci_hsic_reset_sof_bug_handler,
 };
