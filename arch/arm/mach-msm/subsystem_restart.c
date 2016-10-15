@@ -370,8 +370,8 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	struct subsys_soc_restart_order *soc_restart_order = NULL;
 	struct mutex *powerup_lock;
 	struct mutex *shutdown_lock;
-	const char *name = dev->desc->name;
 
+	const char *name = dev->desc->name;
 	int i;
 	unsigned count;
 	unsigned long flags;
@@ -437,7 +437,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 		if (!list[i])
 			continue;
 
-		if (strcmp(list[i]->name, EXTERNAL_MODEM) == 0) {
+		if (strcmp(list[i]->*name, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 1;
 		}
 	}
@@ -468,7 +468,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 		if (!list[i])
 			continue;
 
-		if (strcmp(list[i]->name, EXTERNAL_MODEM) == 0) {
+		if (strcmp(list[i]->desc, EXTERNAL_MODEM) == 0) {
 			mdm_is_in_restart = 0;
 		}
 	}
@@ -529,7 +529,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		return -EBUSY;
 	}
 
-	if (strcmp(name, EXTERNAL_MODEM) == 0) {
+	if (strcmp(*name, EXTERNAL_MODEM) == 0) {
 		if (!ehci_hsic_is_2nd_enum_done()) {
 			pr_err("%s: 2nd enum is not done !!!\n", __func__);
 			return -EINVAL;
