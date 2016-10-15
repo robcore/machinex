@@ -93,7 +93,7 @@ struct msm_hsic_hcd {
 	struct clk		*phy_clk;
 	struct clk		*cal_clk;
 	struct regulator	*hsic_vddcx;
-	atomic_t		async_int;
+	bool		async_int;
 	atomic_t                in_lpm;
 	struct wake_lock	wlock;
 	int			peripheral_status_irq;
