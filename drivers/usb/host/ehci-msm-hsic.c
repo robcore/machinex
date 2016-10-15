@@ -2108,8 +2108,8 @@ static int msm_hsic_pm_resume(struct device *dev)
 	}
 
 	/* ++SSD_RIL */
-	if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
-		dev_info(dev, "ehci-msm-hsic PM resume\n");
+	//if (get_radio_flag() & RADIO_FLAG_USB_UPLOAD)
+		//dev_info(dev, "ehci-msm-hsic PM resume\n");
 	/* --SSD_RIL */
 
 	ret = msm_hsic_resume(mehci);
