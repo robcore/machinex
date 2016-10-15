@@ -28,7 +28,7 @@
 #include <linux/usb.h>
 #include <linux/usb/quirks.h>
 #include <linux/usb/hcd.h>
-#include <mach/board_machinex.h>  //HTC
+#include <mach/board_machinex.h>
 #include "usb.h"
 
 
@@ -1771,7 +1771,7 @@ static int autosuspend_check(struct usb_device *udev)
 	 * wakeup is needed.
 	 */
 	if (w && udev->parent == udev->bus->root_hub &&
-			bus_to_hcd(udev->bus)->cant_recv_wakeups) {
+			!device_can_wakeup(&udev->dev)) {
 		dev_dbg(&udev->dev, "HCD doesn't handle wakeup requests\n");
 		return -EOPNOTSUPP;
 	}
