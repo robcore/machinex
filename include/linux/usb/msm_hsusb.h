@@ -23,6 +23,7 @@
 #include <linux/usb/gadget.h>
 #include <linux/usb/otg.h>
 #include <linux/wakelock.h>
+#include <mach/board_machinex.h>
 #include <linux/pm_qos.h>
 #include <linux/hrtimer.h>
 #ifdef CONFIG_USB_HOST_NOTIFY
