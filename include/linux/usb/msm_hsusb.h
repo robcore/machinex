@@ -401,12 +401,8 @@ struct msm_otg {
 #define XO_SHUTDOWN			BIT(2)
 #define CLOCKS_DOWN			BIT(3)
 	struct work_struct notifier_work;
-	enum usb_connect_type connect_type;
-	int connect_type_ready;
 	struct workqueue_struct *usb_wq;
-	struct delayed_work ac_detect_work;
 	struct work_struct usb_disable_work;
-	int ac_detect_count;
 	int reset_phy_before_lpm;
 	int reset_counter;
 	unsigned long b_last_se0_sess;
