@@ -498,6 +498,7 @@ show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
 show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
 show_one(cpu_utilization, util);
+show_one(util_threshold, util_thres);
 show_one(policy_min_freq, user_policy.min);
 show_one(policy_max_freq, user_policy.max);
 
@@ -812,6 +813,26 @@ static ssize_t store_scaling_setspeed(struct cpufreq_policy *policy,
 	policy->governor->store_setspeed(policy, freq);
 
 	return count;
+}
+
+static ssize_t store_util_threshold(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	struct cpufreq_policy new_policy;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.util_thres);
+	if (ret < 1 || ret > 100)
+		return -EINVAL;
+
+	policy->user_policy.util_thres = new_policy.util_thres;
+	ret = __cpufreq_set_policy(policy, &new_policy);
+
+	return ret ? ret : count;
 }
 
 static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
