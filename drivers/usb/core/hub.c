@@ -26,6 +26,7 @@
 #include <linux/freezer.h>
 #include <linux/usb/otg.h>
 #include <linux/random.h>
+#include <mach/board_machinex.h>
 
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>

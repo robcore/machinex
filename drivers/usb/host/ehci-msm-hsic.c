@@ -64,15 +64,32 @@
 #define RESUME_SIGNAL_TIME_USEC		(21 * 1000)
 #define RESUME_SIGNAL_TIME_SOF_USEC	(23 * 1000)
 
+static const struct usb_device_id usb1_1[] = {
+	{ USB_DEVICE(0x5c6, 0x9048),
+	.driver_info = 0 },
+	{ USB_DEVICE(0x5c6, 0x908A),
+	.driver_info = 0 },
+	{}
+};
+
+static struct delayed_work register_usb_notification_work;
 struct usb_hcd *mdm_hsic_usb_hcd = NULL;
 struct usb_device *mdm_usb1_1_usbdev = NULL;
 struct device *mdm_usb1_1_dev = NULL;
 struct device *msm_hsic_host_dev = NULL;
 static struct workqueue_struct  *ehci_wq;
+static bool usb_device_recongnized = false;
 unsigned long  mdm_hsic_phy_resume_jiffies = 0;
 unsigned long  mdm_hsic_phy_active_total_ms = 0;
 #define HSIC_GPIO_CHECK_DELAY 5000
 static struct delayed_work  ehci_gpio_check_wq;
+/* --SSD_RIL */
+
+#define RESUME_RETRY_LIMIT		3
+#define RESUME_SIGNAL_TIME_USEC		(21 * 1000)
+#define RESUME_SIGNAL_TIME_SOF_USEC	(23 * 1000)
+
+static struct workqueue_struct  *ehci_wq;
 struct ehci_timer {
 #define GPT_LD(p)	((p) & 0x00FFFFFF)
 	u32	gptimer0_ld;
@@ -85,6 +102,9 @@ struct ehci_timer {
 	u32	gptimer1_ld;
 	u32	gptimer1_ctrl;
 };
+
+static unsigned long long msm_hsic_wakeup_irq_timestamp = 0;
+static unsigned long long msm_hsic_suspend_timestamp = 0;
 
 struct msm_hsic_hcd {
 	struct ehci_hcd		ehci;
@@ -371,21 +391,144 @@ static inline struct usb_hcd *hsic_to_hcd(struct msm_hsic_hcd *mehci)
 	return container_of((void *) mehci, struct usb_hcd, hcd_priv);
 }
 
-static void dump_hsic_regs(struct usb_hcd *hcd)
-{
-	int i;
-	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 
-	if (atomic_read(&mehci->in_lpm))
+static void dump_qh_qtd(struct usb_hcd *hcd)
+{
+	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
+	struct ehci_hcd *ehci = &mehci->ehci;
+	struct ehci_qh	*head, *qh;
+	struct ehci_qh_hw *hw;
+	struct ehci_qtd *qtd;
+	struct list_head *entry, *tmp;
+	struct ehci_qtd	*qtd1;
+
+	pr_info("-----------------------------DUMPING EHCI QHs & QTDs-------------------------------\n");
+
+	head = ehci->async;
+	hw = head->hw;
+	pr_info("Current QH: %p\n",head);
+	pr_info("Overlay:\n next %08x, info %x %x, cur qtd %x\n", hw->hw_next, hw->hw_info1, hw->hw_info2, hw->hw_current);
+	qtd =  (struct ehci_qtd *)&hw->hw_qtd_next;
+	pr_info("Current QTD: %p\n",qtd);
+	pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd,
+		hc32_to_cpup(ehci, &qtd->hw_next),
+		hc32_to_cpup(ehci, &qtd->hw_alt_next),
+		hc32_to_cpup(ehci, &qtd->hw_token),
+		hc32_to_cpup(ehci, &qtd->hw_buf [0]));
+	if (qtd->hw_buf [1])
+		pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
+			hc32_to_cpup(ehci, &qtd->hw_buf[1]),
+			hc32_to_cpup(ehci, &qtd->hw_buf[2]),
+			hc32_to_cpup(ehci, &qtd->hw_buf[3]),
+			hc32_to_cpup(ehci, &qtd->hw_buf[4]));
+	pr_info("---------------------------LIST OF QTDs for current QH: %p---------------------------------\n", head);
+	list_for_each_safe (entry, tmp, &head->qtd_list) {
+
+	qtd1 = list_entry (entry, struct ehci_qtd, qtd_list);
+	pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd1,
+			hc32_to_cpup(ehci, &qtd1->hw_next),
+			hc32_to_cpup(ehci, &qtd1->hw_alt_next),
+			hc32_to_cpup(ehci, &qtd1->hw_token),
+			hc32_to_cpup(ehci, &qtd1->hw_buf [0]));
+	if (qtd->hw_buf [1])
+		pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
+				hc32_to_cpup(ehci, &qtd1->hw_buf[1]),
+				hc32_to_cpup(ehci, &qtd1->hw_buf[2]),
+				hc32_to_cpup(ehci, &qtd1->hw_buf[3]),
+				hc32_to_cpup(ehci, &qtd1->hw_buf[4]));
+
+	}
+	qh = head->qh_next.qh;
+	while (qh){
+		pr_info("---------------------------QH %p--------------------------\n",qh);
+		hw = qh->hw;
+		pr_info("Current QH: %p\n",qh);
+		pr_info("Overlay:\n next %08x, info %x %x, cur qtd %x\n", hw->hw_next, hw->hw_info1, hw->hw_info2, hw->hw_current);
+
+		qtd = (struct ehci_qtd *)&hw->hw_qtd_next;
+		pr_info("Current QTD: %p\n",qtd);
+		pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd,
+				hc32_to_cpup(ehci, &qtd->hw_next),
+				hc32_to_cpup(ehci, &qtd->hw_alt_next),
+				hc32_to_cpup(ehci, &qtd->hw_token),
+				hc32_to_cpup(ehci, &qtd->hw_buf [0]));
+		if (qtd->hw_buf [1])
+			pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
+					hc32_to_cpup(ehci, &qtd->hw_buf[1]),
+					hc32_to_cpup(ehci, &qtd->hw_buf[2]),
+					hc32_to_cpup(ehci, &qtd->hw_buf[3]),
+					hc32_to_cpup(ehci, &qtd->hw_buf[4]));
+
+		list_for_each_safe (entry, tmp, &head->qtd_list) {
+
+		qtd1 = list_entry (entry, struct ehci_qtd, qtd_list);
+		pr_info("td %p, next qtd %08x %08x, token %08x p0=%08x\n", qtd1,
+				hc32_to_cpup(ehci, &qtd1->hw_next),
+				hc32_to_cpup(ehci, &qtd1->hw_alt_next),
+				hc32_to_cpup(ehci, &qtd1->hw_token),
+				hc32_to_cpup(ehci, &qtd1->hw_buf [0]));
+		if (qtd->hw_buf [1])
+			pr_info("  p1=%08x p2=%08x p3=%08x p4=%08x\n",
+					hc32_to_cpup(ehci, &qtd1->hw_buf[1]),
+					hc32_to_cpup(ehci, &qtd1->hw_buf[2]),
+					hc32_to_cpup(ehci, &qtd1->hw_buf[3]),
+					hc32_to_cpup(ehci, &qtd1->hw_buf[4]));
+
+		}
+
+		qh = qh->qh_next.qh;
+	}
+}
+
+static void mdm_hsic_usb_device_add_handler(struct usb_device *udev)
+{
+	struct usb_interface *intf = usb_ifnum_to_if(udev, 0);
+//	struct usb_driver *driver = to_usb_driver(udev->dev.driver);
+	const struct usb_device_id *usb1_1_id;
+	if (intf == NULL)
 		return;
 
-	for (i = USB_REG_START_OFFSET; i <= USB_REG_END_OFFSET; i += 0x10)
-		pr_info("%p: %08x\t%08x\t%08x\t%08x\n", hcd->regs + i,
-				readl_relaxed(hcd->regs + i),
-				readl_relaxed(hcd->regs + i + 4),
-				readl_relaxed(hcd->regs + i + 8),
-				readl_relaxed(hcd->regs + i + 0xc));
+	usb1_1_id = usb_match_id(intf, usb1_1);
+	if (usb1_1_id) {
+		usb_device_recongnized = true;
+		mdm_usb1_1_usbdev = udev;
+		mdm_usb1_1_dev = &(udev->dev);
+
+/* ++SSD_RIL */
+#if defined(CONFIG_USB_EHCI_MSM_HSIC)
+		if (udev->dev.parent) {
+			if (udev->dev.parent->parent) {
+				if (!strncmp(dev_name(udev->dev.parent->parent), "msm_hsic_host", 13)) {
+					msm_hsic_host_dev = udev->dev.parent->parent;
+				}
+			}
+		}
+#endif	//CONFIG_USB_EHCI_MSM_HSIC
 }
+static void mdm_hsic_usb_device_remove_handler(struct usb_device *udev)
+{
+	if (mdm_usb1_1_usbdev == udev) {
+		usb_device_recongnized = false;
+		mdm_usb1_1_usbdev = NULL;
+		mdm_usb1_1_dev = NULL;
+	}
+}
+static int mdm_hsic_usb_notify(struct notifier_block *self, unsigned long action,	void *blob)
+{
+
+	switch (action)	{
+		case USB_DEVICE_ADD:
+			mdm_hsic_usb_device_add_handler(blob);
+			break;
+		case USB_DEVICE_REMOVE:
+			mdm_hsic_usb_device_remove_handler(blob);
+			break;
+		}
+	return NOTIFY_OK;
+}
+struct notifier_block mdm_hsic_usb_nb = {
+	.notifier_call = mdm_hsic_usb_notify,
+};
 
 #define ULPI_IO_TIMEOUT_USEC	(10 * 1000)
 
