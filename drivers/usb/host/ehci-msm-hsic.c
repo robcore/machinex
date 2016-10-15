@@ -63,7 +63,10 @@
 #define RESUME_RETRY_LIMIT		3
 #define RESUME_SIGNAL_TIME_USEC		(21 * 1000)
 #define RESUME_SIGNAL_TIME_SOF_USEC	(23 * 1000)
+
 struct usb_hcd *mdm_hsic_usb_hcd = NULL;
+struct usb_device *mdm_usb1_1_usbdev = NULL;
+struct device *mdm_usb1_1_dev = NULL;
 struct device *msm_hsic_host_dev = NULL;
 static struct workqueue_struct  *ehci_wq;
 unsigned long  mdm_hsic_phy_resume_jiffies = 0;
@@ -815,7 +818,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 
 	wake_lock(&mehci->wlock);
 	ehci_hsic_prevent_sleep(mehci);
-
+	mdm_hsic_phy_resume_jiffies = jiffies;
 	if (mehci->bus_perf_client && debug_bus_voting_enabled) {
 			mehci->bus_vote = true;
 			queue_work(ehci_wq, &mehci->bus_vote_w);
