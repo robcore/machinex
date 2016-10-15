@@ -44,9 +44,6 @@
 
 #include "usb.h"
 
-/* ++SSD_RIL */
-#include <mach/board_machinex.h>
-/* --SSD_RIL */
 
 /*-------------------------------------------------------------------------*/
 
@@ -1013,10 +1010,7 @@ static int register_root_hub(struct usb_hcd *hcd)
 	if (retval) {
 		dev_err (parent_dev, "can't register root hub for %s, %d\n",
 				dev_name(&usb_dev->dev), retval);
-	}
-	mutex_unlock(&usb_bus_list_lock);
-
-	if (retval == 0) {
+	} else {
 		spin_lock_irq (&hcd_root_hub_lock);
 		hcd->rh_registered = 1;
 		spin_unlock_irq (&hcd_root_hub_lock);
@@ -1025,6 +1019,7 @@ static int register_root_hub(struct usb_hcd *hcd)
 		if (HCD_DEAD(hcd))
 			usb_hc_died (hcd);	/* This time clean up */
 	}
+	mutex_unlock(&usb_bus_list_lock);
 
 	return retval;
 }
@@ -2095,12 +2090,7 @@ void usb_hcd_resume_root_hub (struct usb_hcd *hcd)
 	spin_lock_irqsave (&hcd_root_hub_lock, flags);
 	if (hcd->rh_registered) {
 		set_bit(HCD_FLAG_WAKEUP_PENDING, &hcd->flags);
-		/* ++SSD_RIL */
-		if (hcd->product_desc && !strncmp(hcd->product_desc, "Qualcomm EHCI Host Controller using HSIC", 40)) {
-			queue_work(pm_rt_wq, &hcd->wakeup_work);
-		} else
-		/* --SSD_RIL */
-			queue_work(pm_wq, &hcd->wakeup_work);
+		queue_work(pm_wq, &hcd->wakeup_work);
 	}
 	spin_unlock_irqrestore (&hcd_root_hub_lock, flags);
 }

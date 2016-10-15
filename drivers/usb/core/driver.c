@@ -28,7 +28,7 @@
 #include <linux/usb.h>
 #include <linux/usb/quirks.h>
 #include <linux/usb/hcd.h>
-#include <mach/board_machinex.h>
+
 #include "usb.h"
 
 
@@ -1441,7 +1441,6 @@ int usb_resume(struct device *dev, pm_message_t msg)
 	 * (This can't be done in usb_resume_interface()
 	 * above because it doesn't own the right set of locks.)
 	 */
-	pm_runtime_get_sync(dev->parent);
 	status = usb_resume_both(udev, msg);
 	if (status == 0) {
 		pm_runtime_disable(dev);
@@ -1449,7 +1448,6 @@ int usb_resume(struct device *dev, pm_message_t msg)
 		pm_runtime_enable(dev);
 		unbind_marked_interfaces(udev);
 	}
-	pm_runtime_put_sync(dev->parent);
 
 	/* Avoid PM error messages for devices disconnected while suspended
 	 * as we'll display regular disconnect messages just a bit later.
@@ -1544,7 +1542,6 @@ int usb_autoresume_device(struct usb_device *udev)
 	int	status;
 
 	status = pm_runtime_get_sync(&udev->dev);
-
 	if (status < 0)
 		pm_runtime_put_sync(&udev->dev);
 	dev_vdbg(&udev->dev, "%s: cnt %d -> %d\n",
@@ -1771,7 +1768,7 @@ static int autosuspend_check(struct usb_device *udev)
 	 * wakeup is needed.
 	 */
 	if (w && udev->parent == udev->bus->root_hub &&
-			!device_can_wakeup(&udev->dev)) {
+			bus_to_hcd(udev->bus)->cant_recv_wakeups) {
 		dev_dbg(&udev->dev, "HCD doesn't handle wakeup requests\n");
 		return -EOPNOTSUPP;
 	}
@@ -1784,20 +1781,14 @@ int usb_runtime_suspend(struct device *dev)
 {
 	struct usb_device	*udev = to_usb_device(dev);
 	int			status;
-	/* ++SSD_RIL */
-	int ret = 0;
-	/* --SSD_RIL */
 
 	/* A USB device can be suspended if it passes the various autosuspend
 	 * checks.  Runtime suspend for a USB device means suspending all the
 	 * interfaces and then the device itself.
 	 */
-	/* ++SSD_RIL */
-	ret = autosuspend_check(udev);
-	/* --SSD_RIL */
-	if (ret != 0) {
+	if (autosuspend_check(udev) != 0)
 		return -EAGAIN;
-	}
+
 	status = usb_suspend_both(udev, PMSG_AUTO_SUSPEND);
 
 	/* Allow a retry if autosuspend failed temporarily */
@@ -1810,7 +1801,7 @@ int usb_runtime_suspend(struct device *dev)
 	 * (except for root hubs, because they don't suspend through
 	 * an upstream port like other USB devices).
 	 */
-	if (status != 0)
+	if (status != 0 && udev->parent)
 		return -EBUSY;
 	return status;
 }
@@ -1854,37 +1845,6 @@ int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable)
 }
 
 #endif /* CONFIG_USB_SUSPEND */
-
-/*++SSD_RIL:Add interrupt_latency device attr to set interrupt latency dynamically*/
-/*
- * What are the units of latency? Micro Frame / Time in msec / levels?
- *
- * The interrupt latency configuration is specific to HCD.
- * EHCI accept 1-6 values. 1 means interrupt delayed by 1 uFrame and
- * 6 means 64 uFrames.
- * TODO: XHCI: IMODI (125ns * latency)
- *
- * if latency is '0', HCD will configure the least possible interrupt
- * latency. This API returns the original interrupt latency value not
- * the current interrupt latency value.  It is expected that interface
- * driver will call this API with the original value back.
- */
-int usb_set_interrupt_latency(struct usb_device *udev, int latency)
-{
-	struct usb_hcd *hcd = bus_to_hcd(udev->bus);
-	int ret = -EOPNOTSUPP;
-	pr_info("[%s]usb_set_interrupt_latency+\n", __func__);
-
-	if (hcd->driver->set_int_latency) {
-		ret = hcd->driver->set_int_latency(hcd, latency);
-	} else {
-		pr_info("[%s] set_int_latency is null\n", __func__);
-	}
-
-	pr_info("[%s] usb_set_interrupt_latency-, r=[%d]\n", __func__, ret);
-	return ret;
-}
-/*--SSD_RIL*/
 
 struct bus_type usb_bus_type = {
 	.name =		"usb",

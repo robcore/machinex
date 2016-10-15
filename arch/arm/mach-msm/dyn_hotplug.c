@@ -32,7 +32,7 @@
 #define DEF_DOWN_TIMER_CNT	(10)	/* 5 secs */
 #define DEF_UP_TIMER_CNT	(2)	/* 1 sec */
 
-static int enabled;
+static int enabled = 0;
 static unsigned int up_threshold;
 static unsigned int min_cpus_online;
 static unsigned int max_cpus_online;
@@ -399,7 +399,7 @@ static int __init dyn_hp_init(void)
 
 	hp_data->suspend.suspend = hp_power_suspend;
 	hp_data->suspend.resume =  hp_power_resume;
-	hp_data->enabled = 1;
+	hp_data->enabled = 0;
 
 	up_threshold = hp_data->up_threshold;
 	enabled = hp_data->enabled;

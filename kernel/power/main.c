@@ -953,15 +953,11 @@ static struct attribute_group attr_group = {
 
 #ifdef CONFIG_PM_RUNTIME
 struct workqueue_struct *pm_wq;
-struct workqueue_struct *pm_rt_wq;
 EXPORT_SYMBOL_GPL(pm_wq);
 
 static int __init pm_start_workqueue(void)
 {
 	pm_wq = alloc_workqueue("pm", WQ_FREEZABLE, 0);
-	
-	pm_rt_wq = alloc_workqueue("pm_rt", WQ_FREEZABLE | WQ_HIGHPRI , 0);
-	
 
 	return pm_wq ? 0 : -ENOMEM;
 }
