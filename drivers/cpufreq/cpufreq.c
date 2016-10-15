@@ -814,26 +814,6 @@ static ssize_t store_scaling_setspeed(struct cpufreq_policy *policy,
 	return count;
 }
 
-static ssize_t store_util_threshold(struct cpufreq_policy *policy,
-					const char *buf, size_t count)
-{
-	unsigned int ret = -EINVAL;
-	struct cpufreq_policy new_policy;
-
-	ret = cpufreq_get_policy(&new_policy, policy->cpu);
-	if (ret)
-		return -EINVAL;
-
-	ret = sscanf(buf, "%u", &new_policy.util_thres);
-	if (ret < 1 || ret > 100)
-		return -EINVAL;
-
-	policy->user_policy.util_thres = new_policy.util_thres;
-	ret = __cpufreq_set_policy(policy, &new_policy);
-
-	return ret ? ret : count;
-}
-
 static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 {
 	if (!policy->governor || !policy->governor->show_setspeed)
@@ -1330,6 +1310,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 			policy->governor = cp->governor;
 			policy->min = cp->min;
 			policy->max = cp->max;
+			policy->util_thres = cp->util_thres
 			policy->user_policy.min = cp->user_policy.min;
 			policy->user_policy.max = cp->user_policy.max;
 
