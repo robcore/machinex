@@ -486,7 +486,7 @@ static void do_restart(struct work_struct *dummy)
 }
 
 //machinex
-static DECLARE_DELAYED_WORK(machinex_ehci_do_mdm_restart_delay_work, do_restart);
+static INIT_DELAYED_WORK(machinex_ehci_do_mdm_restart_delay_work, do_restart);
 void machinex_ehci_trigger_mdm_restart(void)
 {
 	pr_info("%s[%d]\n", __func__, __LINE__);
