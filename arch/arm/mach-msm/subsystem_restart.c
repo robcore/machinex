@@ -516,7 +516,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	switch (restart_level) { 
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = sec_debug_is_enabled()? 1 : 0;
+		enable_ramdumps = 1;
 		/* Fall through */
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
