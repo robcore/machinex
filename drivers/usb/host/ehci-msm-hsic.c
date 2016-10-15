@@ -1341,11 +1341,11 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 	struct ehci_hcd 	*ehci = hcd_to_ehci(hcd);
 	u32 		temp;
 	int ret = 0;
-	struct task_struct	*resume_thread = NULL;
+	//struct task_struct	*resume_thread = NULL;
 
 	mehci->resume_status = 0;
-	resume_thread = kthread_run(msm_hsic_resume_thread,
-			mehci, "hsic_resume_thread");
+	//resume_thread = kthread_run(msm_hsic_resume_thread,
+	//		mehci, "hsic_resume_thread");
 	ret = wake_up_process(mehci->resume_thread);
 
 	#if 0
