@@ -1331,7 +1331,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 			policy->governor = cp->governor;
 			policy->min = cp->min;
 			policy->max = cp->max;
-			policy->util_thres = cp->util_thres
+			policy->util_thres = cp->util_thres;
 			policy->user_policy.min = cp->user_policy.min;
 			policy->user_policy.max = cp->user_policy.max;
 
