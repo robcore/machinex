@@ -1148,6 +1148,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 		pr_err("%s: could not create mdm_sfr_queue for mdm id %d\n",
 			   __func__, mdev->mdm_data.device_id);
 		ret = -ENOMEM;
+		destroy_workqueue(mdm_queue);
 		goto fatal_err;
 	}
 

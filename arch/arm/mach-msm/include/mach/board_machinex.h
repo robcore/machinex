@@ -1,4 +1,4 @@
-/* arch/arm/mach-msm/include/mach/BOARD_HTC.h
+/* arch/arm/mach-msm/include/mach/BOARD_MACHINEX.h
  * Copyright (C) 2007-2009 HTC Corporation.
  * Author: Thomas Tsai <thomas_tsai@htc.com>
  *
@@ -11,8 +11,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#ifndef __ASM_ARCH_MSM_BOARD_HTC_H
-#define __ASM_ARCH_MSM_BOARD_HTC_H
+#ifndef __ASM_ARCH_MSM_BOARD_MACHINEX_H
+#define __ASM_ARCH_MSM_BOARD_MACHINEX_H
 
 #include <linux/types.h>
 #include <linux/list.h>
@@ -40,7 +40,7 @@ struct msm_pmem_setting{
 	resource_size_t pmem_ediag2_size;
 	resource_size_t pmem_ediag3_start;
 	resource_size_t pmem_ediag3_size;
-#endif	
+#endif
 };
 
 enum {
@@ -105,20 +105,20 @@ enum {
 	RADIO_FLAG_OWN_SD = BIT(10),
 	RADIO_FLAG_RESTART_EN = BIT(11),
 	RADIO_FLAG_ENABLE_CHARGE_SW_PROTECT = BIT(12),
-	RADIO_FLAG_HTC_SET_MIN_CLKRGM_PERF_LEVEL_2 = (1 << 13),
-	RADIO_FLAG_HTC_SET_MIN_CLKRGM_PERF_LEVEL_3 = (2 << 13),
-	RADIO_FLAG_HTC_SET_MIN_CLKRGM_PERF_LEVEL_4 = (3 << 13),
-	RADIO_FLAG_HTC_SET_MAX_CLKRGM_PERF_LEVEL_0 = (4 << 13),
-	RADIO_FLAG_HTC_SET_MAX_CLKRGM_PERF_LEVEL_1 = (5 << 13),
-	RADIO_FLAG_HTC_SET_MAX_CLKRGM_PERF_LEVEL_2 = (6 << 13),
-	RADIO_FLAG_HTC_SET_MAX_CLKRGM_PERF_LEVEL_3 = (7 << 13),
-	RADIO_FLAG_HTC_SET_MAX_CLKRGM_PERF_LEVEL_4 = (8 << 13),
-	RADIO_FLAG_HTC_SET_FIX_CLKRGM_PERF_LEVEL_0 = (9 << 13),
-	RADIO_FLAG_HTC_SET_FIX_CLKRGM_PERF_LEVEL_1 = (10 << 13),
-	RADIO_FLAG_HTC_SET_FIX_CLKRGM_PERF_LEVEL_2 = (11 << 13),
-	RADIO_FLAG_HTC_SET_FIX_CLKRGM_PERF_LEVEL_3 = (12 << 13),
-	RADIO_FLAG_HTC_SET_FIX_CLKRGM_PERF_LEVEL_4 = (13 << 13),
-	RADIO_FLAG_HTC_SET_FIX_CLKRGM_PERF_LEVEL_5 = (14 << 13),
+	RADIO_FLAG_MACHINEX_SET_MIN_CLKRGM_PERF_LEVEL_2 = (1 << 13),
+	RADIO_FLAG_MACHINEX_SET_MIN_CLKRGM_PERF_LEVEL_3 = (2 << 13),
+	RADIO_FLAG_MACHINEX_SET_MIN_CLKRGM_PERF_LEVEL_4 = (3 << 13),
+	RADIO_FLAG_MACHINEX_SET_MAX_CLKRGM_PERF_LEVEL_0 = (4 << 13),
+	RADIO_FLAG_MACHINEX_SET_MAX_CLKRGM_PERF_LEVEL_1 = (5 << 13),
+	RADIO_FLAG_MACHINEX_SET_MAX_CLKRGM_PERF_LEVEL_2 = (6 << 13),
+	RADIO_FLAG_MACHINEX_SET_MAX_CLKRGM_PERF_LEVEL_3 = (7 << 13),
+	RADIO_FLAG_MACHINEX_SET_MAX_CLKRGM_PERF_LEVEL_4 = (8 << 13),
+	RADIO_FLAG_MACHINEX_SET_FIX_CLKRGM_PERF_LEVEL_0 = (9 << 13),
+	RADIO_FLAG_MACHINEX_SET_FIX_CLKRGM_PERF_LEVEL_1 = (10 << 13),
+	RADIO_FLAG_MACHINEX_SET_FIX_CLKRGM_PERF_LEVEL_2 = (11 << 13),
+	RADIO_FLAG_MACHINEX_SET_FIX_CLKRGM_PERF_LEVEL_3 = (12 << 13),
+	RADIO_FLAG_MACHINEX_SET_FIX_CLKRGM_PERF_LEVEL_4 = (13 << 13),
+	RADIO_FLAG_MACHINEX_SET_FIX_CLKRGM_PERF_LEVEL_5 = (14 << 13),
 	RADIO_FLAG_RESERVE_16 = BIT(16),
 	RADIO_FLAG_RESERVE_17 = BIT(17),
 	RADIO_FLAG_RESERVE_18 = BIT(18),
@@ -170,7 +170,7 @@ struct t_usb_status_notifier{
 	const char *name;
 	void (*func)(int online);
 };
-	int htc_usb_register_notifier(struct t_usb_status_notifier *);
+	int machinex_usb_register_notifier(struct t_usb_status_notifier *);
 	static LIST_HEAD(g_lh_usb_notifier_list);
 /* END: add USB connected notify function */
 #endif

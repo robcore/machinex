@@ -20,6 +20,9 @@
 #include <linux/uaccess.h>
 #include <linux/ratelimit.h>
 #include <mach/usb_bridge.h>
+/* ++SSD_RIL */
+#include <mach/board_machinex.h>
+/* --SSD_RIL */
 
 #define MAX_RX_URBS			100
 #define RMNET_RX_BUFSIZE		2048
@@ -646,6 +649,11 @@ static int bridge_resume(struct usb_interface *iface)
 	return retval;
 }
 
+int bridge_reset_resume(struct usb_interface *intf)
+{
+	pr_info("%s intf %p\n", __func__, intf);
+	return bridge_resume(intf);
+}
 static int bridge_suspend(struct usb_interface *intf, pm_message_t message)
 {
 	int			retval;
@@ -955,6 +963,9 @@ bridge_probe(struct usb_interface *iface, const struct usb_device_id *id)
 	int				numends;
 	int				ch_id;
 	char				**bname = (char **)id->driver_info;
+	unsigned int			iface_num;
+
+	iface_num = iface->cur_altsetting->desc.bInterfaceNumber;
 
 	if (iface->num_altsetting != 1) {
 		err("%s invalid num_altsetting %u\n",
@@ -965,6 +976,13 @@ bridge_probe(struct usb_interface *iface, const struct usb_device_id *id)
 	udev = interface_to_usbdev(iface);
 	usb_get_dev(udev);
 
+	/* ++SSD_RIL: If the radio flag 20000 is not set, switch the DUN to TTY interface */
+	printk(KERN_INFO "%s: iface_num:%d\n", __func__, iface_num);
+	if (!usb_diag_enable && iface_num == DUN_IFC_NUM && (board_mfg_mode() == 8 || board_mfg_mode() == 6 || board_mfg_mode() == 2)) {
+		printk(KERN_INFO "%s DUN channel is NOT enumed as bridge interface!!! MAY be switched to TTY interface!!!", __func__);
+		return -ENODEV;
+	}
+	/* --SSD_RIL */
 	numends = iface->cur_altsetting->desc.bNumEndpoints;
 	for (i = 0; i < numends; i++) {
 		endpoint = iface->cur_altsetting->endpoint + i;
@@ -1102,7 +1120,7 @@ static struct usb_driver bridge_driver = {
 	.id_table =		bridge_ids,
 	.suspend =		bridge_suspend,
 	.resume =		bridge_resume,
-	.reset_resume =		bridge_resume,
+	.reset_resume =		bridge_reset_resume,
 	.supports_autosuspend =	1,
 };
 
@@ -1111,6 +1129,9 @@ static int __init bridge_init(void)
 	struct data_bridge	*dev;
 	int			ret;
 	int			i = 0;
+
+	if (get_radio_flag() & 0x20000)
+		usb_diag_enable = true;
 
 	ret = ctrl_bridge_init();
 	if (ret)
