@@ -1,6 +1,6 @@
 /* linux/include/mach/rpc_hsusb.h
  *
- * Copyright (c) 2008-2010, 2012 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2010, 2012 Code Aurora Forum. All rights reserved.
  *
  * All source code in this file is licensed under the following license except
  * where indicated.
@@ -23,7 +23,11 @@
 
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_otg.h>
+#ifdef CONFIG_USB_MSM_OTG_72K
 #include <mach/msm_hsusb.h>
+#else
+#include <linux/usb/msm_hsusb.h>
+#endif
 
 #if defined(CONFIG_MSM_ONCRPCROUTER) && !defined(CONFIG_ARCH_MSM8X60)
 int msm_hsusb_rpc_connect(void);

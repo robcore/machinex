@@ -26,6 +26,7 @@
 #include <linux/mfd/pm8xxx/misc.h>
 
 #include <asm/mach-types.h>
+#include <asm/cacheflush.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/restart.h>
@@ -262,6 +263,8 @@ void set_ssr_magic_number(const char* subsys_name)
 			break;
 		}
 	}
+
+	flush_cache_louis();
 }
 
 void set_kernel_crash_magic_number(void)
@@ -432,6 +435,8 @@ static int __init msm_pmic_restart_init(void)
 					"restart_from_pmic", NULL);
 		if (rc < 0)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
+		irq_enabled = 1;
+		status = 1;
 	} else {
 		pr_warn("no pmic restart interrupt specified\n");
 	}

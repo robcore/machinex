@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1418,10 +1418,10 @@ static struct resource resources_hsic_host[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.start	= MSM_GPIO_TO_INT(47),
-		.end	= MSM_GPIO_TO_INT(47),
+		.start	= 47,
+		.end	= 47,
 		.name	= "wakeup",
-		.flags	= IORESOURCE_IRQ,
+		.flags	= IORESOURCE_IO,
 	},
 };
 
@@ -1654,13 +1654,13 @@ static struct msm_bus_vectors vidc_venc_1080p_vectors[] = {
 		.src = MSM_BUS_MASTER_VIDEO_ENC,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 372244480,
-		.ib  = 2560000000U,
+		.ib  = 3200000000U,
 	},
 	{
 		.src = MSM_BUS_MASTER_VIDEO_DEC,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 501219328,
-		.ib  = 2560000000U,
+		.ib  = 3200000000U,
 	},
 	{
 		.src = MSM_BUS_MASTER_AMPSS_M0,
@@ -1719,13 +1719,13 @@ static struct msm_bus_vectors vidc_venc_1080p_turbo_vectors[] = {
 		.src = MSM_BUS_MASTER_AMPSS_M0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 2500000,
-		.ib  = 5000000,
+		.ib  = 700000000,
 	},
 	{
 		.src = MSM_BUS_MASTER_AMPSS_M0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 2500000,
-		.ib  = 5000000,
+		.ib  = 10000000,
 	},
 };
 static struct msm_bus_vectors vidc_vdec_1080p_turbo_vectors[] = {
@@ -2781,8 +2781,8 @@ static struct msm_rpm_log_platform_data msm_rpm_log_pdata = {
 		[MSM_RPM_LOG_PAGE_BUFFER]  = 0x000000A0,
 	},
 	.phys_size = SZ_8K,
-	.log_len = 6144,		  /* log's buffer length in bytes */
-	.log_len_mask = (6144 >> 2) - 1,  /* length mask in units of u32 */
+	.log_len = 4096,		  /* log's buffer length in bytes */
+	.log_len_mask = (4096 >> 2) - 1,  /* length mask in units of u32 */
 };
 
 struct platform_device apq8064_rpm_log_device = {

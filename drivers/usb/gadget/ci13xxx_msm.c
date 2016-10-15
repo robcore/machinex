@@ -18,6 +18,7 @@
 #include <linux/usb/ulpi.h>
 #include <linux/gpio.h>
 
+static struct usb_info *the_usb_info;
 #include "ci13xxx_udc.c"
 
 #define MSM_USB_BASE	(udc->regs)
@@ -39,8 +40,7 @@ static irqreturn_t msm_udc_irq(int irq, void *data)
 
 static void ci13xxx_msm_suspend(void)
 {
-	struct device *dev = _udc->gadget.dev.parent;
-	dev_dbg(dev, "ci13xxx_msm_suspend\n");
+	//USB_INFO("ci13xxx_msm_suspend\n");
 
 	if (_udc_ctxt.wake_irq && !_udc_ctxt.wake_irq_state) {
 		enable_irq_wake(_udc_ctxt.wake_irq);
@@ -51,89 +51,39 @@ static void ci13xxx_msm_suspend(void)
 
 static void ci13xxx_msm_resume(void)
 {
-	struct device *dev = _udc->gadget.dev.parent;
-	dev_dbg(dev, "ci13xxx_msm_resume\n");
+	//USB_INFO("ci13xxx_msm_resume\n");
 
 	if (_udc_ctxt.wake_irq && _udc_ctxt.wake_irq_state) {
 		disable_irq_wake(_udc_ctxt.wake_irq);
 		disable_irq_nosync(_udc_ctxt.wake_irq);
 		_udc_ctxt.wake_irq_state = false;
-	}
-}
-
-static void ci13xxx_msm_disconnect(void)
-{
-	struct ci13xxx *udc = _udc;
-	struct usb_phy *phy = udc->transceiver;
-
-	if (phy && (phy->flags & ENABLE_DP_MANUAL_PULLUP))
-		usb_phy_io_write(phy,
-				ULPI_MISC_A_VBUSVLDEXT |
-				ULPI_MISC_A_VBUSVLDEXTSEL,
-				ULPI_CLR(ULPI_MISC_A));
-}
-
-static void ci13xxx_msm_connect(void)
-{
-	struct ci13xxx *udc = _udc;
-	struct usb_phy *phy = udc->transceiver;
-
-	if (phy && (phy->flags & ENABLE_DP_MANUAL_PULLUP)) {
-		int	temp;
-
-		usb_phy_io_write(phy,
-			ULPI_MISC_A_VBUSVLDEXT |
-			ULPI_MISC_A_VBUSVLDEXTSEL,
-			ULPI_SET(ULPI_MISC_A));
-
-		temp = readl_relaxed(USB_GENCONFIG2);
-		temp |= GENCFG2_SESS_VLD_CTRL_EN;
-		writel_relaxed(temp, USB_GENCONFIG2);
-
-		temp = readl_relaxed(USB_USBCMD);
-		temp |= USBCMD_SESS_VLD_CTRL;
-		writel_relaxed(temp, USB_USBCMD);
-
-		/*
-		 * Add memory barrier as it is must to complete
-		 * above USB PHY and Link register writes before
-		 * moving ahead with USB peripheral mode enumeration,
-		 * otherwise USB peripheral mode may not work.
-		 */
-		mb();
-	}
+	} 
 }
 
 static void ci13xxx_msm_notify_event(struct ci13xxx *udc, unsigned event)
 {
-	struct device *dev = udc->gadget.dev.parent;
 
 	switch (event) {
 	case CI13XXX_CONTROLLER_RESET_EVENT:
-		dev_info(dev, "CI13XXX_CONTROLLER_RESET_EVENT received\n");
+		USB_INFO("CI13XXX_CONTROLLER_RESET_EVENT received\n");
 		writel(0, USB_AHBBURST);
 		writel_relaxed(0x08, USB_AHBMODE);
 		break;
 	case CI13XXX_CONTROLLER_DISCONNECT_EVENT:
-		dev_info(dev, "CI13XXX_CONTROLLER_DISCONNECT_EVENT received\n");
-		ci13xxx_msm_disconnect();
+		USB_INFO("CI13XXX_CONTROLLER_DISCONNECT_EVENT received\n");
 		ci13xxx_msm_resume();
 		break;
-	case CI13XXX_CONTROLLER_CONNECT_EVENT:
-		dev_info(dev, "CI13XXX_CONTROLLER_CONNECT_EVENT received\n");
-		ci13xxx_msm_connect();
-		break;
 	case CI13XXX_CONTROLLER_SUSPEND_EVENT:
-		dev_info(dev, "CI13XXX_CONTROLLER_SUSPEND_EVENT received\n");
+		USB_INFO("CI13XXX_CONTROLLER_SUSPEND_EVENT received\n");
 		ci13xxx_msm_suspend();
 		break;
 	case CI13XXX_CONTROLLER_RESUME_EVENT:
-		dev_info(dev, "CI13XXX_CONTROLLER_RESUME_EVENT received\n");
+		USB_INFO( "CI13XXX_CONTROLLER_RESUME_EVENT received\n");
 		ci13xxx_msm_resume();
 		break;
 
 	default:
-		dev_dbg(dev, "unknown ci13xxx_udc event\n");
+		USB_INFO("unknown ci13xxx_udc event\n");
 		break;
 	}
 }
@@ -212,8 +162,13 @@ static int ci13xxx_msm_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int ret;
+	struct usb_info *ui;
 
 	dev_dbg(&pdev->dev, "ci13xxx_msm_probe\n");
+	ui = kzalloc(sizeof(struct usb_info), GFP_KERNEL);
+	if (!ui)
+		return -ENOMEM;
+	the_usb_info = ui;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -255,6 +210,7 @@ static int ci13xxx_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "request_irq failed\n");
 		goto gpio_uninstall;
 	}
+	INIT_DELAYED_WORK(&ui->chg_stop, usb_chg_stop);
 
 	pm_runtime_no_callbacks(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
@@ -271,6 +227,21 @@ iounmap:
 	return ret;
 }
 
+static void ci13xxx_msm_shutdown(struct platform_device *pdev)
+{
+	struct msm_otg *motg;
+	struct ci13xxx *udc = _udc;
+
+	if (!udc || !udc->transceiver)
+		return;
+
+	motg = container_of(udc->transceiver, struct msm_otg, phy);
+
+	if (!atomic_read(&motg->in_lpm))
+		ci13xxx_pullup(&udc->gadget, 0);
+
+}
+
 int ci13xxx_msm_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
@@ -281,16 +252,11 @@ int ci13xxx_msm_remove(struct platform_device *pdev)
 	return 0;
 }
 
-void ci13xxx_msm_shutdown(struct platform_device *pdev)
-{
-	ci13xxx_pullup(&_udc->gadget, 0);
-}
-
 static struct platform_driver ci13xxx_msm_driver = {
 	.probe = ci13xxx_msm_probe,
+	.shutdown = ci13xxx_msm_shutdown,
 	.driver = { .name = "msm_hsusb", },
 	.remove = ci13xxx_msm_remove,
-	.shutdown = ci13xxx_msm_shutdown,
 };
 MODULE_ALIAS("platform:msm_hsusb");
 

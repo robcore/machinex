@@ -890,6 +890,8 @@ static int ehci_hub_control (
 		switch (wValue) {
 		case USB_PORT_FEAT_ENABLE:
 			ehci_writel(ehci, temp & ~PORT_PE, status_reg);
+			pr_info("PE bit getting cleared\n");
+			WARN_ON(1);
 			break;
 		case USB_PORT_FEAT_C_ENABLE:
 			ehci_writel(ehci, (temp & ~PORT_RWC_BITS) | PORT_PEC,
@@ -1226,6 +1228,7 @@ static int ehci_hub_control (
 				ehci->reset_done [wIndex] = jiffies
 						+ msecs_to_jiffies (50);
 			}
+
 			if (ehci->reset_sof_bug && (temp & PORT_RESET) &&
 					hcd->driver->reset_sof_bug_handler) {
 				spin_unlock_irqrestore(&ehci->lock, flags);
