@@ -136,7 +136,7 @@ struct ehci_hcd {			/* one per controller */
 	ktime_t			last_susp_resume;
 	u32			command;
 
-	unsigned		log2_irq_thresh;
+	unsigned		max_log2_irq_thresh;
 
 	/* SILICON QUIRKS */
 	unsigned		no_selective_suspend:1;

@@ -68,7 +68,7 @@ static const struct hc_driver ehci_platform_hc_driver = {
 
 	.hub_status_data	= ehci_hub_status_data,
 	.hub_control		= ehci_hub_control,
-#if defined(CONFIG_PM_SLEEP)
+#if defined(CONFIG_PM)
 	.bus_suspend		= ehci_bus_suspend,
 	.bus_resume		= ehci_bus_resume,
 #endif
@@ -148,7 +148,7 @@ static int __devexit ehci_platform_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 
 static int ehci_platform_suspend(struct device *dev)
 {
@@ -167,10 +167,10 @@ static int ehci_platform_resume(struct device *dev)
 	return 0;
 }
 
-#else /* !CONFIG_PM_SLEEP */
+#else /* !CONFIG_PM */
 #define ehci_platform_suspend	NULL
 #define ehci_platform_resume	NULL
-#endif /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM */
 
 static const struct platform_device_id ehci_platform_table[] = {
 	{ "ehci-platform", 0 },
