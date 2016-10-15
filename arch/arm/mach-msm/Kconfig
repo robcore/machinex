@@ -2058,6 +2058,13 @@ config THUNDERPLUG_CONTROL
 	help
 	  This driver hotplugs cpu cores based on per-core load
 
+config DYN_HOTPLUG
+	bool "Enable Dynamic Hotplug Driver ported from Mako"
+	help
+	  Dynamic Hotplug was created by Stratos Karafotis for Mako
+	  and is found in his Semaphore kernel.  This is a weak attempt
+	  at a port to our tree.
+
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
 	default n

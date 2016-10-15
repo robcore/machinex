@@ -73,6 +73,9 @@ struct ehci_regs {
 #define CMD_ASPE	(1<<13)		/* async schedule prefetch enable */
 #define CMD_PSPE	(1<<12)		/* periodic schedule prefetch enable */
 /* 23:16 is r/w intr rate, in microframes; default "8" == 1/msec */
+/*++SSD_RIL:Add interrupt_latency device attr to set interrupt latency dynamically*/
+#define CMD_ITC		(0xff<<16)	/* Interrupt threshold value */
+/*--SSD_RIL*/
 #define CMD_PARK	(1<<11)		/* enable "park" on async qh */
 #define CMD_PARK_CNT(c)	(((c)>>8)&3)	/* how many transfers to park for */
 #define CMD_LRESET	(1<<7)		/* partial reset (no ports, etc) */

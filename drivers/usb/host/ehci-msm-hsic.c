@@ -63,7 +63,7 @@
 #define RESUME_RETRY_LIMIT		3
 #define RESUME_SIGNAL_TIME_USEC		(21 * 1000)
 #define RESUME_SIGNAL_TIME_SOF_USEC	(23 * 1000)
-
+struct usb_hcd *mdm_hsic_usb_hcd = NULL;
 struct device *msm_hsic_host_dev = NULL;
 static struct workqueue_struct  *ehci_wq;
 unsigned long  mdm_hsic_phy_resume_jiffies = 0;

@@ -40,6 +40,7 @@
 
 #define GENCFG2_SYS_CLK_HOST_DEV_GATE_EN     BIT(13)
 
+#define PORTSC_LS		(3 << 10) /* Read - Port's Line status */
 #define PORTSC_PHCD            (1 << 23) /* phy suspend mode */
 #define PORTSC_PTS_MASK         (3 << 30)
 #define PORTSC_PTS_ULPI         (3 << 30)
