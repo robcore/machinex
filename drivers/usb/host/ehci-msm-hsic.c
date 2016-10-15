@@ -480,56 +480,6 @@ static void dump_qh_qtd(struct usb_hcd *hcd)
 	}
 }
 
-static void mdm_hsic_usb_device_add_handler(struct usb_device *udev)
-{
-	struct usb_interface *intf = usb_ifnum_to_if(udev, 0);
-//	struct usb_driver *driver = to_usb_driver(udev->dev.driver);
-	const struct usb_device_id *usb1_1_id;
-	if (intf == NULL)
-		return;
-
-	usb1_1_id = usb_match_id(intf, usb1_1);
-	if (usb1_1_id) {
-		usb_device_recongnized = true;
-		mdm_usb1_1_usbdev = udev;
-		mdm_usb1_1_dev = &(udev->dev);
-
-/* ++SSD_RIL */
-#if defined(CONFIG_USB_EHCI_MSM_HSIC)
-		if (udev->dev.parent) {
-			if (udev->dev.parent->parent) {
-				if (!strncmp(dev_name(udev->dev.parent->parent), "msm_hsic_host", 13)) {
-					msm_hsic_host_dev = udev->dev.parent->parent;
-				}
-			}
-		}
-#endif	//CONFIG_USB_EHCI_MSM_HSIC
-}
-static void mdm_hsic_usb_device_remove_handler(struct usb_device *udev)
-{
-	if (mdm_usb1_1_usbdev == udev) {
-		usb_device_recongnized = false;
-		mdm_usb1_1_usbdev = NULL;
-		mdm_usb1_1_dev = NULL;
-	}
-}
-static int mdm_hsic_usb_notify(struct notifier_block *self, unsigned long action,	void *blob)
-{
-
-	switch (action)	{
-		case USB_DEVICE_ADD:
-			mdm_hsic_usb_device_add_handler(blob);
-			break;
-		case USB_DEVICE_REMOVE:
-			mdm_hsic_usb_device_remove_handler(blob);
-			break;
-		}
-	return NOTIFY_OK;
-}
-struct notifier_block mdm_hsic_usb_nb = {
-	.notifier_call = mdm_hsic_usb_notify,
-};
-
 #define ULPI_IO_TIMEOUT_USEC	(10 * 1000)
 
 #define USB_PHY_VDD_DIG_VOL_NONE	0 /*uV */
@@ -1330,7 +1280,7 @@ while (!kthread_should_stop()) {
 	mdiff = ktime_to_us(ktime_sub(now,ehci->last_susp_resume));
 	if (mdiff < 10000) {
 		usleep_range(10000, 10000);
-
+}
 	spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
 		mehci->resume_status = -ESHUTDOWN;

@@ -991,7 +991,6 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		dbg_cmd(ehci, "fatal", cmd);
 		dbg_status(ehci, "fatal", status);
 		ehci_halt(ehci);
-dead:
 		//ehci_reset(ehci);
 		//ehci_writel(ehci, 0, &ehci->regs->configured_flag);
 		//usb_hc_died(hcd);
@@ -1002,7 +1001,7 @@ dead:
 		//if (&hcd->ssr_work)
 			//queue_work(system_nrt_wq, &hcd->ssr_work);
 	}
-
+dead:
 	if (bh)
 		ehci_work (ehci);
 	spin_unlock_irqrestore(&ehci->lock, flags);
