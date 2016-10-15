@@ -185,10 +185,7 @@ u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy)
 
 	if (idle_time == -1ULL)
 		return get_cpu_idle_time_jiffy(cpu, wall);
-#ifdef CONFIG_CPU_FREQ_GOV_ONDEMANDPLUS
-	else if (io_busy == 2)
-		idle_time += (get_cpu_iowait_time_us(cpu, wall) / 2);
-#endif
+
 	else if (!io_busy)
 		idle_time += get_cpu_iowait_time_us(cpu, wall);
 
@@ -381,6 +378,10 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 	if (policy)
 		policy->util = util;
 
+	if (util > policy->util_thres && policy->util < 100)
+		policy->util++;
+	else if (policy->util > 0)
+		policy->util--;
 }
 
 /* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
@@ -813,6 +814,26 @@ static ssize_t store_scaling_setspeed(struct cpufreq_policy *policy,
 	return count;
 }
 
+static ssize_t store_util_threshold(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	struct cpufreq_policy new_policy;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.util_thres);
+	if (ret < 1 || ret > 100)
+		return -EINVAL;
+
+	policy->user_policy.util_thres = new_policy.util_thres;
+	ret = __cpufreq_set_policy(policy, &new_policy);
+
+	return ret ? ret : count;
+}
+
 static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 {
 	if (!policy->governor || !policy->governor->show_setspeed)
@@ -908,6 +929,7 @@ cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
 cpufreq_freq_attr_ro(cpu_utilization);
+cpufreq_freq_attr_rw(util_threshold);
 cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
@@ -927,6 +949,7 @@ static struct attribute *default_attrs[] = {
 	&scaling_max_freq.attr,
 	&affected_cpus.attr,
 	&cpu_utilization.attr,
+	&util_threshold.attr,
 	&related_cpus.attr,
 	&scaling_governor.attr,
 	&scaling_driver.attr,
@@ -1337,6 +1360,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	policy->user_policy.max = policy->max;
 
 	policy->util = 0;
+	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
 
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
@@ -2172,11 +2196,13 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 		cpu0_policy = cpufreq_cpu_get(0);
 		data->min = cpu0_policy->min;
 		data->max = cpu0_policy->max;
+		data->util_thres = cpu0_policy->util_thres;
 	}
 	else
 	{
 		data->min = policy->min;
 		data->max = policy->max;
+		data->util_thres = policy->util_thres;
 	}
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
@@ -2225,258 +2251,6 @@ error_out:
 	return ret;
 }
 
-#ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ // limit max freq
-enum {
-	SET_MIN = 0,
-	SET_MAX
-};
-
-int cpufreq_set_limits_off(int cpu, unsigned int limit, unsigned int value)
-{
-	int ret = -EINVAL;
-	unsigned long flags;
-
-	if (!(limit == SET_MIN || limit == SET_MAX))
-		goto out;
-	if (!cpu_is_offline(cpu))
-		goto out;
-
-	spin_lock_irqsave(&cpufreq_driver_lock, flags);
-
-	if (!cpufreq_driver)
-		goto out_unlock;
-
-	if (!try_module_get(cpufreq_driver->owner))
-		goto out_unlock;
-
-	ret = 0;
-	pr_info("%s: Setting [min/max:0/1] = %d frequency of cpu[%d]  to %d\n",  __func__, limit, cpu, value);
-
-out_unlock:
-	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
-out:
-	return ret;
-}
-
-int cpufreq_set_limits(int cpu, unsigned int limit, unsigned int value)
-{
-	struct cpufreq_policy new_policy;
-	struct cpufreq_policy *cur_policy;
-	int ret = -EINVAL;
-
-	if (!(limit == SET_MIN || limit == SET_MAX))
-		goto out;
-	if (cpu_is_offline(cpu))
-		goto out;
-
-	cur_policy = cpufreq_cpu_get(cpu);
-	if (!cur_policy)
-		goto out;
-	if (lock_policy_rwsem_write(cpu) < 0)
-		goto out_put_freq;
-
-	memcpy(&new_policy, cur_policy, sizeof(struct cpufreq_policy));
-
-	if (limit == SET_MAX)
-	{
-		// for app boost = DVFS lock
-		if (cur_policy->min > value)
-		{
-			new_policy.min = value;
-			ret = __cpufreq_set_policy(cur_policy, &new_policy);
-			if(ret < 0)
-				goto out_unlock;
-
-			cur_policy->user_policy.min = cur_policy->min;
-		}
-
-		new_policy.max = value;
-	}
-	else
-	{
-		// no other cases to change min value, now
-		if (cur_policy->max < value)
-			value = cur_policy->max;
-
-		new_policy.min = value;
-	}
-
-	ret = __cpufreq_set_policy(cur_policy, &new_policy);
-	if(ret < 0)
-		goto out_unlock;
-
-	if (limit == SET_MAX)
-		cur_policy->user_policy.max = cur_policy->max;
-	else
-		cur_policy->user_policy.min = cur_policy->min;
-
-	ret = 0;
-	pr_info("%s: Setting [min/max:0/1] = %d frequency of cpu[%d]  to %d\n",  __func__, limit, cpu, value);
-out_unlock:
-	unlock_policy_rwsem_write(cpu);
-out_put_freq:
-	cpufreq_cpu_put(cur_policy);
-out:
-	return ret;
-}
-
-int cpufreq_get_limits(int cpu, unsigned int limit)
-{
-	struct cpufreq_policy *cur_policy;
-	int ret = -EINVAL;
-	unsigned int value = 0;
-	if (!(limit == SET_MIN || limit == SET_MAX))
-		goto out;
-	if (cpu_is_offline(cpu))
-		goto out;
-	cur_policy = cpufreq_cpu_get(cpu);
-	if (!cur_policy)
-		goto out;
-	if (lock_policy_rwsem_write(cpu) < 0)
-		goto out_put_freq;
-
-	if (limit == SET_MAX)
-		value = cur_policy->max;
-	else
-		value = cur_policy->min;
-
-	ret = value;
-	unlock_policy_rwsem_write(cpu);
-	pr_info("%s: [min/max:0/1] = %d frequency of cpu[%d]: %d\n", __func__, limit, cpu, value);
-
-out_put_freq:
-	cpufreq_cpu_put(cur_policy);
-out:
-	return ret;
-}
-#endif
-
-#ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ // limit max freq
-enum {
-	SET_MIN = 0,
-	SET_MAX
-};
-
-int cpufreq_set_limits_off(int cpu, unsigned int limit, unsigned int value)
-{
-	int ret = -EINVAL;
-	unsigned long flags;
-
-	if (!(limit == SET_MIN || limit == SET_MAX))
-		goto out;
-	if (!cpu_is_offline(cpu))
-		goto out;
-
-	spin_lock_irqsave(&cpufreq_driver_lock, flags);
-
-	if (!cpufreq_driver)
-		goto out_unlock;
-
-	if (!try_module_get(cpufreq_driver->owner))
-		goto out_unlock;
-
-	ret = 0;
-	pr_info("%s: Setting [min/max:0/1] = %d frequency of cpu[%d]  to %d\n",  __func__, limit, cpu, value);
-
-out_unlock:
-	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
-out:
-	return ret;
-}
-
-int cpufreq_set_limits(int cpu, unsigned int limit, unsigned int value)
-{
-	struct cpufreq_policy new_policy;
-	struct cpufreq_policy *cur_policy;
-	int ret = -EINVAL;
-
-	if (!(limit == SET_MIN || limit == SET_MAX))
-		goto out;
-	if (cpu_is_offline(cpu))
-		goto out;
-
-	cur_policy = cpufreq_cpu_get(cpu);
-	if (!cur_policy)
-		goto out;
-	if (lock_policy_rwsem_write(cpu) < 0)
-		goto out_put_freq;
-
-	memcpy(&new_policy, cur_policy, sizeof(struct cpufreq_policy));
-
-	if (limit == SET_MAX)
-	{
-		// for app boost = DVFS lock
-		if (cur_policy->min > value)
-		{
-			new_policy.min = value;
-			ret = __cpufreq_set_policy(cur_policy, &new_policy);
-			if(ret < 0)
-				goto out_unlock;
-
-			cur_policy->user_policy.min = cur_policy->min;
-		}
-
-		new_policy.max = value;
-	}
-	else
-	{
-		// no other cases to change min value, now
-		if (cur_policy->max < value)
-			value = cur_policy->max;
-
-		new_policy.min = value;
-	}
-
-	ret = __cpufreq_set_policy(cur_policy, &new_policy);
-	if(ret < 0)
-		goto out_unlock;
-
-	if (limit == SET_MAX)
-		cur_policy->user_policy.max = cur_policy->max;
-	else
-		cur_policy->user_policy.min = cur_policy->min;
-
-	ret = 0;
-	pr_info("%s: Setting [min/max:0/1] = %d frequency of cpu[%d]  to %d\n",  __func__, limit, cpu, value);
-out_unlock:
-	unlock_policy_rwsem_write(cpu);
-out_put_freq:
-	cpufreq_cpu_put(cur_policy);
-out:
-	return ret;
-}
-
-int cpufreq_get_limits(int cpu, unsigned int limit)
-{
-	struct cpufreq_policy *cur_policy;
-	int ret = -EINVAL;
-	unsigned int value = 0;
-	if (!(limit == SET_MIN || limit == SET_MAX))
-		goto out;
-	if (cpu_is_offline(cpu))
-		goto out;
-	cur_policy = cpufreq_cpu_get(cpu);
-	if (!cur_policy)
-		goto out;
-	if (lock_policy_rwsem_write(cpu) < 0)
-		goto out_put_freq;
-
-	if (limit == SET_MAX)
-		value = cur_policy->max;
-	else
-		value = cur_policy->min;
-
-	ret = value;
-	unlock_policy_rwsem_write(cpu);
-	pr_info("%s: [min/max:0/1] = %d frequency of cpu[%d]: %d\n", __func__, limit, cpu, value);
-
-out_put_freq:
-	cpufreq_cpu_put(cur_policy);
-out:
-	return ret;
-}
-#endif
-
 /**
  *	cpufreq_update_policy - re-evaluate an existing cpufreq policy
  *	@cpu: CPU which shall be re-evaluated
@@ -2520,6 +2294,7 @@ int cpufreq_update_policy(unsigned int cpu)
 	policy.min = data->user_policy.min;
 	policy.max = data->user_policy.max;
 #endif
+	policy.util_thres = data->user_policy.util_thres;
 	policy.policy = data->user_policy.policy;
 	policy.governor = data->user_policy.governor;
 
