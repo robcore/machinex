@@ -378,9 +378,6 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 	if (policy)
 		policy->util = util;
 
-	if (policy)
-		policy->util_thres = util_thres;
-
 	if (util > policy->util_thres && policy->util < 100)
 		policy->util++;
 	else if (policy->util > 0)
