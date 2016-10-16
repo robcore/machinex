@@ -802,7 +802,7 @@ config ARCH_MSM
 	select GENERIC_GPIO
 	select GENERIC_TIME
 	select GENERIC_ALLOCATOR
-	select HAVE_SCHED_CLOCK
+	select GENERIC_SCHED_CLOCK
 	select HAVE_CLK_PREPARE
 	select NEED_MACH_MEMORY_H
 	select NEED_MACH_IO_H
@@ -1740,7 +1740,7 @@ config HOTPLUG_CPU
 	help
 	  Say Y here to experiment with turning CPUs off and on.  CPUs
 	  can be controlled through /sys/devices/system/cpu.
-	  
+
 config ARM_AUTO_HOTPLUG
 	bool "Auto hotplugging based on scheduler runqueue load for ARM SoCs"
 	default y

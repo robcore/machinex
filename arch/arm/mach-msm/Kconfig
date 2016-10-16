@@ -143,7 +143,6 @@ config ARCH_MSM8960
 	select GPIO_MSM_V2
 	select MSM_GPIOMUX
 	select MSM_SCM if SMP
-	select MSM_DIRECT_SCLK_ACCESS
 	select REGULATOR
 	select MSM_RPM_REGULATOR
 	select MSM_RPM
