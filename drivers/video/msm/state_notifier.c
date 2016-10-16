@@ -23,6 +23,7 @@
 /*necessary measure given existing conflictions */
 #ifdef pr_fmt(fmt)
 #undef pr_fmt(fmt)
+#endif
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 #define DEFAULT_SUSPEND_DEFER_TIME 	10
 #define STATE_NOTIFIER			"state_notifier"
@@ -36,6 +37,7 @@ module_param_named(debug_mask, debug, uint, 0644);
 /* safety measure despite very unlikely scenario */
 #ifdef dprintk
 #undef drpintk
+#endif
 #define dprintk(msg...)		\
 do {				\
 	if (debug)		\
@@ -193,5 +195,3 @@ module_exit(state_notifier_exit);
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Notifier Driver");
 MODULE_LICENSE("GPLv2");
-#endif
-#endif
