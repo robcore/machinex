@@ -36,7 +36,8 @@ static struct tslack_cgroup *cgroup_to_tslack(struct cgroup *cgroup)
 	return container_of(css, struct tslack_cgroup, css);
 }
 
-static struct cgroup_subsys_state *tslack_create(struct cgroup *cgroup)
+static struct cgroup_subsys_state *tslack_create(struct cgroup_subsys *subsys,
+		struct cgroup *cgroup)
 {
 	struct tslack_cgroup *tslack_cgroup;
 
@@ -55,7 +56,8 @@ static struct cgroup_subsys_state *tslack_create(struct cgroup *cgroup)
 	return &tslack_cgroup->css;
 }
 
-static void tslack_destroy(struct cgroup *cgroup)
+static void tslack_destroy(struct cgroup_subsys *tslack_cgroup,
+		struct cgroup *cgroup)
 {
 	kfree(cgroup_to_tslack(cgroup));
 }
@@ -105,29 +107,12 @@ static int tslack_populate(struct cgroup_subsys *subsys, struct cgroup *cgroup)
 	return cgroup_add_files(cgroup, subsys, files, ARRAY_SIZE(files));
 }
 
-static int tslack_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
-{
-	const struct cred *cred = current_cred(), *tcred;
-	struct task_struct *task;
-
-	cgroup_taskset_for_each(task, cgrp, tset) {
-		tcred = __task_cred(task);
-
-		if ((current != task) && !capable(CAP_SYS_NICE) &&
-		    cred->euid != tcred->uid && cred->euid != tcred->suid)
-			return -EACCES;
-	}
-
-	return 0;
-}
-
 struct cgroup_subsys timer_slack_subsys = {
 	.name		= "timer_slack",
 	.subsys_id	= timer_slack_subsys_id,
 	.create		= tslack_create,
 	.destroy	= tslack_destroy,
 	.populate	= tslack_populate,
-	.allow_attach	= tslack_allow_attach,
 };
 
 unsigned long task_get_effective_timer_slack(struct task_struct *tsk)
