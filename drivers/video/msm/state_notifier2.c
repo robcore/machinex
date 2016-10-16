@@ -8,6 +8,11 @@
  * published by the Free Software Foundation.
  *
  */
+e-mail:
+ Your reasoning makes perfect sense, but bare with me. The resume work is based solely on the hook right? And the hooks placed in drivers to be notified by the resume call are still being notified to
+resume by the state_notifier_call_chain. Both resume work and suspend work are initialized from the same workqueue, which is being called on init regardless...so for those of us with old stupid drivers
+that can't distinguish between resuming from suspend and first boot, perhaps I need to refactor the initialization to account for this.
+What do you think of this scrappy first shot? (keep in mind that you don't need this, as your implementation uses a sane driver for a hook and I should probably switch over to the touch driver too.)
 
 #include <linux/state_notifier.h>
 #include <linux/notifier.h>
@@ -92,11 +97,9 @@ static void _resume_work(struct work_struct *work)
 void state_suspend(void)
 {
 	dprintk("%s: suspend called.\n", STATE_NOTIFIER);
-	if (!enabled || suspend_in_progress || state_suspended)
+	if (state_suspended || suspend_in_progress || !enabled)
 		return;
 
-	/* for rapid on/off events */
-	cancel_work_sync(&resume_work);
 	suspend_in_progress = true;
 
 	queue_delayed_work(susp_wq, &suspend_work,
@@ -105,7 +108,7 @@ void state_suspend(void)
 
 void state_resume(void)
 {
-	if (!enabled || !state_suspended)
+	if (!enabled)
 		return;
 
 	dprintk("%s: resume called.\n", STATE_NOTIFIER);
