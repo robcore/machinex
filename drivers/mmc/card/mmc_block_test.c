@@ -1813,6 +1813,30 @@ static ssize_t write_packing_control_test_read(struct file *file,
 			       size_t count,
 			       loff_t *offset)
 {
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
+	if (!access_ok(VERIFY_WRITE, buffer, count))
+		return count;
+
 	memset((void *)buffer, 0, count);
 
 	snprintf(buffer, count,
