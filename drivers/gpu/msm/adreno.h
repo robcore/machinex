@@ -115,6 +115,7 @@ struct adreno_device {
 	struct ocmem_buf *ocmem_hdl;
 	unsigned int ocmem_base;
 	unsigned int gpu_cycles;
+	struct work_struct input_work;
 };
 
 #define PERFCOUNTER_FLAG_NONE 0x0
