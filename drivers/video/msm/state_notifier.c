@@ -102,6 +102,9 @@ void state_suspend(void)
 
 void state_resume(void)
 {
+	if (!enabled)
+		return;
+
 	dprintk("%s: resume called.\n", STATE_NOTIFIER);
 	cancel_delayed_work_sync(&suspend_work);
 	suspend_in_progress = false;

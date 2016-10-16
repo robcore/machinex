@@ -59,12 +59,12 @@ obj-$(CONFIG_MSM_JTAG_MM) +=  jtag-mm.o
 msm-etm-objs := etm.o
 obj-$(CONFIG_MSM_ETM) += msm-etm.o
 
-#quiet_cmd_mkrpcsym = MKCAP   $@
-#      cmd_mkrpcsym = $(PERL) $(src_tree)/$(src)/mkrpcsym.pl $< $@
-#
-#target += smd_rpc_sym.c
-#$(obj)/smd_rpc_sym.c: $(src)/smd_rpc_sym $(src)/mkrpcsym.pl
-#	$(call if_changed,mkrpcsym)
+quiet_cmd_mkrpcsym = MKCAP   $@
+      cmd_mkrpcsym = $(PERL) $(srctree)/$(src)/mkrpcsym.pl $< $@
+
+target += smd_rpc_sym.c
+$(obj)/smd_rpc_sym.c: $(src)/smd_rpc_sym $(src)/mkrpcsym.pl
+	$(call if_changed,mkrpcsym)
 
 obj-$(CONFIG_MSM_SCM) += scm.o scm-boot.o
 obj-$(CONFIG_MSM_SECURE_IO) += scm-io.o

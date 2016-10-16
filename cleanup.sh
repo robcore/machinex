@@ -1,32 +1,28 @@
 #!/bin/bash
-
+if [ -e $(pwd)/.config ]; then
+	rm $(pwd)/.config
+fi;
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
 fi;
-
 if [ -e $(pwd)/arch/arm/boot/dhd.ko ]; then
 	rm $(pwd)/arch/arm/boot/dhd.ko;
 fi;
-
 if [ -e $(pwd)/arch/arm/boot/scsi_wait_scan.ko ]; then
 	rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
 fi;
-
 if [ -e $(pwd)/arch/arm/boot/zImage ]; then
 	rm $(pwd)/arch/arm/boot/zImage;
 fi;
-
 if [ -e $(pwd)/arch/arm/boot/boot.img-zImage ]; then
 	rm $(pwd)/arch/arm/boot/boot.img-zImage;
 fi;
-
 # clean up leftover junk
 find . -type f \( -iname \*.rej \
 				-o -iname \*.orig \
 				-o -iname \*.bkp \
 				-o -iname \*.ko \) \
 					| parallel rm -fv {};
-
 rm -f $(pwd)/arch/arm/boot/*.cmd >> /dev/null;
 rm -f $(pwd)/arch/arm/mach-msm/smd_rpc_sym.c >> /dev/null;
 rm -f $(pwd)/arch/arm/crypto/aesbs-core.S >> /dev/null;
