@@ -60,7 +60,7 @@ msm-etm-objs := etm.o
 obj-$(CONFIG_MSM_ETM) += msm-etm.o
 
 quiet_cmd_mkrpcsym = MKCAP   $@
-      cmd_mkrpcsym = $(PERL) $(srctree)/$(src)/mkrpcsym.pl $< $@
+      cmd_mkrpcsym = $(PERL) /$(src)/mkrpcsym.pl $< $@
 
 target += smd_rpc_sym.c
 $(obj)/smd_rpc_sym.c: $(src)/smd_rpc_sym $(src)/mkrpcsym.pl
