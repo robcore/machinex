@@ -293,17 +293,13 @@ static int arch_timer_available(void)
 	return 0;
 }
 
-static inline cycle_t notrace counter_get_cntpct_mem(void)
+static inline u64 notrace counter_get_cntpct_cp15(void)
 {
-	u32 cvall, cvalh, thigh;
+	u64 cval;
 
-	do {
-		cvalh = __raw_readl(timer_base + QTIMER_CNTP_HIGH_REG);
-		cvall = __raw_readl(timer_base + QTIMER_CNTP_LOW_REG);
-		thigh = __raw_readl(timer_base + QTIMER_CNTP_HIGH_REG);
-	} while (cvalh != thigh);
-
-	return ((cycle_t) cvalh << 32) | cvall;
+	isb();
+	asm volatile("mrrc p15, 0, %Q0, %R0, c14" : "=r" (cval));
+	return cval;
 }
 
 static inline cycle_t notrace counter_get_cntpct_cp15(void)
@@ -362,23 +358,18 @@ static struct clocksource clocksource_counter = {
 	.flags	= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
-static u32 arch_counter_get_cntvct32(void)
+static inline u64 arch_counter_get_cntvct_cp15(void)
 {
-	cycle_t cntvct;
+	u64 cval;
 
-	cntvct = get_cntvct_func();
-
-	/*
-	 * The sched_clock infrastructure only knows about counters
-	 * with at most 32bits. Forget about the upper 24 bits for the
-	 * time being...
-	 */
-	return (u32)(cntvct & (u32)~0);
+	isb();
+	asm volatile("mrrc p15, 1, %Q0, %R0, c14" : "=r" (cval));
+	return cval;
 }
 
 static u64 notrace arch_timer_update_sched_clock(void)
 {
-	return arch_counter_get_cntvct32();
+	return arch_counter_get_cntvct_cp15();
 }
 
 static void arch_timer_stop(struct clock_event_device *clk)
@@ -402,7 +393,7 @@ static void __init arch_timer_counter_init(void)
 {
 	clocksource_register_hz(&clocksource_counter, arch_timer_rate);
 
-	sched_clock_register(arch_timer_update_sched_clock, 32, arch_timer_rate);
+	sched_clock_register(arch_timer_update_sched_clock, 56, arch_timer_rate);
 
 	/* Use the architected timer for the delay loop. */
 	arch_delay_timer.read_current_timer = &arch_timer_read_current_timer;
