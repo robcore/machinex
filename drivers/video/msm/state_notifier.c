@@ -20,6 +20,9 @@
 #include <linux/timer.h>
 #include <linux/delay.h>
 
+/*necessary measure given existing conflictions */
+#ifdef pr_fmt(fmt) KBUILD_MODNAME
+#undef pr_fmt(fmt) KBUILD_MODNAME
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 #define DEFAULT_SUSPEND_DEFER_TIME 	10
 #define STATE_NOTIFIER			"state_notifier"
@@ -190,4 +193,5 @@ module_exit(state_notifier_exit);
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Notifier Driver");
 MODULE_LICENSE("GPLv2");
+#endif
 #endif
