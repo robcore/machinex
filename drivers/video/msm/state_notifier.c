@@ -21,8 +21,8 @@
 #include <linux/delay.h>
 
 /*necessary measure given existing conflictions */
-#ifdef pr_fmt(fmt) KBUILD_MODNAME
-#undef pr_fmt(fmt) KBUILD_MODNAME
+#ifdef pr_fmt(fmt)
+#undef pr_fmt(fmt)
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 #define DEFAULT_SUSPEND_DEFER_TIME 	10
 #define STATE_NOTIFIER			"state_notifier"
