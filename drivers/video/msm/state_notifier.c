@@ -21,8 +21,8 @@
 #include <linux/delay.h>
 
 /*necessary measure given existing conflictions */
-#ifdef pr_fmt(fmt)
-#undef pr_fmt(fmt)
+#ifdef pr_fmt
+#undef pr_fmt
 #endif
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 #define DEFAULT_SUSPEND_DEFER_TIME 	10
