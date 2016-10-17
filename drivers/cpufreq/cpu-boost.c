@@ -49,7 +49,7 @@ static struct work_struct input_boost_work;
 
 static struct notifier_block notif;
 
-static unsigned int boost_ms;
+static unsigned int boost_ms = 20;
 module_param(boost_ms, uint, 0644);
 
 static unsigned int sync_threshold;
@@ -60,7 +60,7 @@ module_param(input_boost_enabled, uint, 0644);
 
 static bool suspended;
 
-static unsigned int input_boost_ms = 50;
+static unsigned int input_boost_ms = 30;
 module_param(input_boost_ms, uint, 0644);
 
 static unsigned int migration_load_threshold = 30;
@@ -78,7 +78,7 @@ module_param(wakeup_boost, bool, 0644);
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
-static unsigned int min_input_interval = 150;
+static unsigned int min_input_interval = 130;
 module_param(min_input_interval, uint, 0644);
 
 
