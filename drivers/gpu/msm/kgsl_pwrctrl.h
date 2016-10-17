@@ -60,6 +60,7 @@ struct kgsl_clk_stats {
  * @irq_name - resource name for the IRQ
  * @restore_slumber - Flag to indicate that we are in a suspend/restore sequence
  * @clk_stats - structure of clock statistics
+ * @step_mul - multiplier for moving between power levels
  */
 
 struct kgsl_pwrctrl {
@@ -85,6 +86,7 @@ struct kgsl_pwrctrl {
 	s64 time;
 	unsigned int restore_slumber;
 	struct kgsl_clk_stats clk_stats;
+	unsigned int step_mul;
 };
 
 void kgsl_pwrctrl_irq(struct kgsl_device *device, int state);
@@ -101,8 +103,6 @@ int kgsl_pwrctrl_init_sysfs(struct kgsl_device *device);
 void kgsl_pwrctrl_uninit_sysfs(struct kgsl_device *device);
 void kgsl_pwrctrl_enable(struct kgsl_device *device);
 void kgsl_pwrctrl_disable(struct kgsl_device *device);
-bool kgsl_pwrctrl_isenabled(struct kgsl_device *device);
-
 static inline unsigned long kgsl_get_clkrate(struct clk *clk)
 {
 	return (clk != NULL) ? clk_get_rate(clk) : 0;

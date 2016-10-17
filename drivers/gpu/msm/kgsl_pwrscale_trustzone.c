@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -44,7 +44,7 @@ spinlock_t tz_lock;
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR			15000
+#define FLOOR			5000
 /* CEILING is 50msec, larger than any standard
  * frame length, but less than the idle timer.
  */
@@ -96,18 +96,24 @@ static ssize_t tz_governor_store(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				 const char *buf, size_t count)
 {
+	char str[20];
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
+	int ret;
+
+	ret = sscanf(buf, "%20s", str);
+	if (ret != 1)
+		return -EINVAL;
 
 	mutex_lock(&device->mutex);
 
-	if (!strncmp(buf, "ondemand", 8))
+	if (!strncmp(str, "ondemand", 8))
 		priv->governor = TZ_GOVERNOR_ONDEMAND;
 #ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
-	else if (!strncmp(buf, "simple", 6))
+	else if (!strncmp(str, "simple", 6))
 		priv->governor = TZ_GOVERNOR_SIMPLE;
 #endif
-	else if (!strncmp(buf, "performance", 11))
+	else if (!strncmp(str, "performance", 11))
 		priv->governor = TZ_GOVERNOR_PERFORMANCE;
 
 	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
@@ -200,7 +206,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	device->ftbl->power_stats(device, &stats);
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
-	idle = priv->bin.total_time - priv->bin.busy_time;
 	/* Do not waste CPU cycles running this algorithm if
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run.
@@ -209,10 +214,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		(priv->bin.total_time < FLOOR))
 		return;
 
-	kgsl_trace_kgsl_tz_params(device, priv->bin.total_time, priv->bin.busy_time,
-			idle, 10);
-
-        /* If the GPU has stayed in turbo mode for a while, *
+	/* If the GPU has stayed in turbo mode for a while, *
 	 * stop writing out values. */
 	if (pwr->active_pwrlevel == 0) {
 		if (priv->no_switch_cnt > SWITCH_OFF) {
@@ -244,12 +246,16 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 #else
 		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
 #endif
-		kgsl_trace_kgsl_tz_params(device, priv->bin.total_time, priv->bin.busy_time,
-				idle, val);
 	}
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
-	if (val) {
+
+	/* If the decision is to move to a lower level, make sure the GPU
+	 * frequency drops.
+	 */
+	if (val > 0)
+		val *= pwr->step_mul;
+	if (val)
 		kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel + val);
 		//pr_info("TZ idle stat: %d, TZ PL: %d, TZ out: %d\n",
