@@ -1457,7 +1457,7 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 		 * (ret == -EINPROGRESS), decrement the
 		 * PM usage counter before returning.
 		 */
-		if ((ret == 1) || (ret == -EBUSY))
+		if ((ret == 1) || (ret == -EINPROGRESS))
 			pm_runtime_put_noidle(mehci->dev);
 		else
 			atomic_set(&mehci->pm_usage_cnt, 1);
@@ -1675,8 +1675,8 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * resuming parent device due to which parent will be in suspend even
 	 * though child is active. Hence resume the parent device explicitly.
 	 */
-	if (pdev->dev.parent)
-		pm_runtime_get_sync(pdev->dev.parent);
+	//if (pdev->dev.parent)
+		//pm_runtime_get_sync(pdev->dev.parent);
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));
@@ -1782,7 +1782,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
 			NULL, hsic_peripheral_status_change,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
-						| IRQF_SHARED,
+				IRQF_ONESHOT | IRQF_SHARED,
 			"hsic_peripheral_status", mehci);
 		if (ret)
 			dev_err(&pdev->dev, "%s:request_irq:%d failed:%d",

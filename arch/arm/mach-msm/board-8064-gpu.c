@@ -255,7 +255,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 			.bus_freq = 0,
 		},
 	},
-	.init_level = 5,
+	.init_level = 0,
 	.num_levels = 7,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
