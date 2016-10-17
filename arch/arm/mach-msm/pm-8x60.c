@@ -29,9 +29,6 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
-#include <linux/regulator/krait-regulator.h>
-#include <linux/cpu.h>
-#include <linux/clk.h>
 #include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
 #include <mach/system.h>
@@ -459,11 +456,15 @@ static void msm_pm_restore_cpu_reg(void)
 	}
 }
 
+static void *msm_pm_idle_rs_limits;
+static bool msm_pm_use_qtimer;
+
 static void msm_pm_swfi(void)
 {
 	msm_pm_config_hw_before_swfi();
 	msm_arch_idle();
 }
+
 
 static void msm_pm_retention(void)
 {
@@ -529,17 +530,17 @@ static bool __ref msm_pm_spm_power_collapse(
 	if (MSM_PM_DEBUG_RESET_VECTOR & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: program vector to %p\n",
 			cpu, __func__, entry);
-	if (from_idle && msm_pm_pc_reset_timer)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &cpu);
 
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-	collapsed = msm_pm_collapse();
-
-	if (from_idle && msm_pm_pc_reset_timer)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu);
-
+#if defined(CONFIG_SEC_DEBUG)
+	secdbg_sched_msg("+pc(I:%d,R:%d)", from_idle, notify_rpm);
+	collapsed = msm_pm_l2x0_power_collapse();
+	secdbg_sched_msg("-pc(%d)", collapsed);
+#else
+	collapsed = msm_pm_l2x0_power_collapse();
+#endif
 	msm_pm_boot_config_after_pc(cpu);
 
 	if (collapsed) {
@@ -656,9 +657,18 @@ static bool msm_pm_power_collapse(bool from_idle)
 	return collapsed;
 }
 
+static void msm_pm_target_init(void)
+{
+	if (cpu_is_apq8064())
+		msm_pm_save_cp15 = true;
+
+	if (cpu_is_msm8974())
+		msm_pm_use_qtimer = true;
+}
+
 static int64_t msm_pm_timer_enter_idle(void)
 {
-	if (msm_pm_use_sync_timer)
+	if (msm_pm_use_qtimer)
 		return ktime_to_ns(tick_nohz_get_sleep_length());
 
 	return msm_timer_enter_idle();
@@ -666,7 +676,7 @@ static int64_t msm_pm_timer_enter_idle(void)
 
 static void msm_pm_timer_exit_idle(bool timer_halted)
 {
-	if (msm_pm_use_sync_timer)
+	if (msm_pm_use_qtimer)
 		return;
 
 	msm_timer_exit_idle((int) timer_halted);
@@ -676,8 +686,8 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 {
 	int64_t time = 0;
 
-	if (msm_pm_use_sync_timer)
-		return sched_clock();
+	if (msm_pm_use_qtimer)
+		return ktime_to_ns(ktime_get());
 
 	time = msm_timer_get_sclk_time(period);
 	if (!time)
@@ -688,8 +698,8 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
-	if (msm_pm_use_sync_timer)
-		return sched_clock() - time;
+	if (msm_pm_use_qtimer)
+		return ktime_to_ns(ktime_get()) - time;
 
 	if (time != 0) {
 		int64_t end_time = msm_timer_get_sclk_time(NULL);
@@ -1342,32 +1352,6 @@ static int __init msm_pm_setup_saved_state(void)
 
 	return 0;
 }
-
-static void setup_broadcast_timer(void *arg)
-{
-	int cpu = smp_processor_id();
-
-	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ON, &cpu);
-}
-
-static int setup_broadcast_cpuhp_notify(struct notifier_block *n,
-		unsigned long action, void *hcpu)
-{
-	int cpu = (unsigned long)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_ONLINE:
-		smp_call_function_single(cpu, setup_broadcast_timer, NULL, 1);
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block setup_broadcast_notifier = {
-	.notifier_call = setup_broadcast_cpuhp_notify,
-};
-
 arch_initcall(msm_pm_setup_saved_state);
 
 static int __init msm_pm_init(void)

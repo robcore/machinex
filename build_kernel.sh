@@ -48,5 +48,5 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	sh repackimg.sh --sudo;
 	cp -p image-new.img $(pwd)/machinex-new/boot.img
 else
-	echo "Build failed, Skipped Ramdisk Creation, config saved..."
+	echo "Build failed, Skipped Ramdisk Creation"
 fi;
