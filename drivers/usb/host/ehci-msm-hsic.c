@@ -1668,15 +1668,18 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	struct msm_hsic_host_platform_data *pdata;
 	int ret;
 
-	dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
+	//dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
 
 	/* After parent device's probe is executed, it will be put in suspend
 	 * mode. When child device's probe is called, driver core is not
 	 * resuming parent device due to which parent will be in suspend even
 	 * though child is active. Hence resume the parent device explicitly.
-	 */
+	 *
+	 * This is done if the hcd create directly below here
+	 fails, or once the device is finished probing anyway.  Doing it at the beginning is
+	overkill. WHY THE EXCESSIVE SYNCING DUMBASSES???
 	if (pdev->dev.parent)
-		pm_runtime_get_sync(pdev->dev.parent);
+		pm_runtime_get_sync(pdev->dev.parent); */
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));
