@@ -20,9 +20,6 @@
 #include <linux/uaccess.h>
 #include <linux/ratelimit.h>
 #include <mach/usb_bridge.h>
-/* ++SSD_RIL */
-#include <mach/board_machinex.h>
-/* --SSD_RIL */
 
 #define MAX_RX_URBS			100
 #define RMNET_RX_BUFSIZE		2048

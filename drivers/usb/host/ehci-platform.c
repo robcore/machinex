@@ -68,7 +68,7 @@ static const struct hc_driver ehci_platform_hc_driver = {
 
 	.hub_status_data	= ehci_hub_status_data,
 	.hub_control		= ehci_hub_control,
-#if defined(CONFIG_PM)
+#if defined(CONFIG_PM_SLEEP)
 	.bus_suspend		= ehci_bus_suspend,
 	.bus_resume		= ehci_bus_resume,
 #endif
