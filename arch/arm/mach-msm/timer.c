@@ -23,16 +23,15 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/percpu.h>
-#include <linux/syscore_ops.h>
 #include <linux/mm.h>
 #include <linux/sched_clock.h>
 
 #include <asm/localtimer.h>
 #include <asm/mach/time.h>
 #include <asm/hardware/gic.h>
+#include <asm/sched_clock.h>
 #include <asm/smp_plat.h>
 #include <asm/user_accessible_timer.h>
-#include <asm/arch_timer.h>
 #include <mach/msm_iomap.h>
 #include <mach/irqs.h>
 #include <mach/socinfo.h>
@@ -84,10 +83,6 @@ enum {
  */
 static int global_timer_offset;
 static int msm_global_timer;
-
-static struct timespec persistent_ts;
-static u64 persistent_ns;
-static u64 last_persistent_ns;
 
 #define NR_TIMERS ARRAY_SIZE(msm_clocks)
 
@@ -298,6 +293,8 @@ static int msm_timer_set_next_event(unsigned long cycles,
 
 	clock = clockevent_to_clock(evt);
 	clock_state = &__get_cpu_var(msm_clocks_percpu)[clock->index];
+	if (clock_state->stopped)
+		return 0;
 	now = msm_read_timer_count(clock, LOCAL_TIMER);
 	alarm = now + (cycles << clock->shift);
 	if (clock->flags & MSM_CLOCK_FLAGS_ODD_MATCH_WRITE)
@@ -1017,19 +1014,6 @@ static struct local_timer_ops msm_lt_ops = {
 };
 #endif /* CONFIG_LOCAL_TIMERS */
 
-#ifdef CONFIG_ARCH_MSM8625
-static void fixup_msm8625_timer(void)
-{
-	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
-	struct msm_clock *gpt = &msm_clocks[MSM_CLOCK_GPT];
-	dgt->irq = MSM8625_INT_DEBUG_TIMER_EXP;
-	gpt->irq = MSM8625_INT_GP_TIMER_EXP;
-	global_timer_offset =  MSM_TMR0_BASE - MSM_TMR_BASE;
-}
-#else
-static inline void fixup_msm8625_timer(void) { };
-#endif
-
 static void __init msm_timer_init(void)
 {
 	int i;
@@ -1040,8 +1024,7 @@ static void __init msm_timer_init(void)
 
 	if (cpu_is_msm7x01() || cpu_is_msm7x25() || cpu_is_msm7x27() ||
 	    cpu_is_msm7x25a() || cpu_is_msm7x27a() || cpu_is_msm7x25aa() ||
-	    cpu_is_msm7x27aa() || cpu_is_msm8625() || cpu_is_msm7x25ab() ||
-	    cpu_is_msm8625q()) {
+	    cpu_is_msm7x27aa() || cpu_is_msm8625() || cpu_is_msm7x25ab()) {
 		dgt->shift = MSM_DGT_SHIFT;
 		dgt->freq = 19200000 >> MSM_DGT_SHIFT;
 		dgt->clockevent.shift = 32 + MSM_DGT_SHIFT;
@@ -1051,8 +1034,11 @@ static void __init msm_timer_init(void)
 		gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT
 			   |  MSM_CLOCK_FLAGS_ODD_MATCH_WRITE
 			   |  MSM_CLOCK_FLAGS_DELAYED_WRITE_POST;
-		if (cpu_is_msm8625() || cpu_is_msm8625q())
-			fixup_msm8625_timer();
+		if (cpu_is_msm8625()) {
+			dgt->irq = MSM8625_INT_DEBUG_TIMER_EXP;
+			gpt->irq = MSM8625_INT_GP_TIMER_EXP;
+			global_timer_offset =  MSM_TMR0_BASE - MSM_TMR_BASE;
+		}
 	} else if (cpu_is_qsd8x50()) {
 		dgt->freq = 4800000;
 		gpt->regbase = MSM_TMR_BASE;
@@ -1142,8 +1128,8 @@ static void __init msm_timer_init(void)
 
 		ce->irq = clock->irq;
 		if (cpu_is_msm8x60() || cpu_is_msm9615() || cpu_is_msm8625() ||
-		    cpu_is_msm8625q() || soc_class_is_msm8960() ||
-		    soc_class_is_apq8064() || soc_class_is_msm8930()) {
+		    soc_class_is_msm8960() || soc_class_is_apq8064() ||
+		    soc_class_is_msm8930()) {
 			clock->percpu_evt = alloc_percpu(struct clock_event_device *);
 			if (!clock->percpu_evt) {
 				pr_err("msm_timer_init: memory allocation "
