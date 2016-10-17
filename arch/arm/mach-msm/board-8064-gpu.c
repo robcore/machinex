@@ -255,7 +255,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 			.bus_freq = 0,
 		},
 	},
-	.init_level = 0,
+	.init_level = 1,
 	.num_levels = 7,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
@@ -285,7 +285,14 @@ struct platform_device device_kgsl_3d0 = {
 void __init apq8064_init_gpu(void)
 {
 	unsigned int version = socinfo_get_version();
-
+	if (cpu_is_apq8064ab())
+		kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 600000000;
+		kgsl_3d0_pdata.pwrlevel[1].gpu_freq = 533000000;
+		kgsl_3d0_pdata.pwrlevel[2].gpu_freq = 450000000;
+		kgsl_3d0_pdata.pwrlevel[3].gpu_freq = 320000000;
+		kgsl_3d0_pdata.pwrlevel[4].gpu_freq = 200000000;
+		kgsl_3d0_pdata.pwrlevel[5].gpu_freq = 128000000;
+		kgsl_3d0_pdata.pwrlevel[6].gpu_freq =  27000000;
 	if (SOCINFO_VERSION_MAJOR(version) == 2) {
 		kgsl_3d0_pdata.chipid = ADRENO_CHIPID(3, 2, 0, 2);
 	} else {
