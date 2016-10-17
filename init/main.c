@@ -6,7 +6,7 @@
  *  GK 2/5/95  -  Changed to support mounting root fs via NFS
  *  Added initrd & change_root: Werner Almesberger & Hans Lermen, Feb '96
  *  Moan early if gcc is old, avoiding bogus kernels - Paul Gortmaker, May '96
- *  Simplified starting of init:  Michael A. Griffith <grif@acm.org>
+ *  Simplified starting of init:  Michael A. Griffith <grif@acm.org> 
  */
 
 #define DEBUG		/* Enable initcall_debug */
@@ -238,8 +238,8 @@ early_param("loglevel", loglevel);
  static int __init battStatus(char *str)
 {
 	int batt_val;
-
-
+  
+	
 	if (get_option(&str, &batt_val)) {
 		console_batt_stat = batt_val;
 		return 0;
@@ -497,8 +497,8 @@ static void __init mm_init(void)
 }
 
 #ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
-/* change@ksingh.sra-dallas - in kernel 3.4 and +
- * the mmu clears the unused/unreserved memory with default RAM initial sticky
+/* change@ksingh.sra-dallas - in kernel 3.4 and + 
+ * the mmu clears the unused/unreserved memory with default RAM initial sticky 
  * bit data.
  * Hence to preseve the copy of zImage in the unmarked area, the Copied zImage
  * memory range has to be marked reserved.
@@ -513,7 +513,7 @@ static void __init integrity_mem_reserve(void) {
 	int result = 0;
 	long len = 0;
 	u8* zBuffer = 0;
-
+	
 	zBuffer = (u8*)phys_to_virt((unsigned long)CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS);
 	if (*((u32 *) &zBuffer[36]) != 0x016F2818) {
 		printk(KERN_ERR "FIPS main.c: invalid zImage magic number.");
@@ -524,15 +524,15 @@ static void __init integrity_mem_reserve(void) {
 		printk(KERN_ERR "FIPS main.c: invalid zImage calculated len");
 		return;
 	}
-
+	
 	len = *(u32 *) &zBuffer[44] - *(u32 *) &zBuffer[40];
 	printk(KERN_NOTICE "FIPS Actual zImage len = %ld\n", len);
-
+	
 	integrity_mem_reservoir = len + SHA256_DIGEST_SIZE;
 	result = reserve_bootmem((unsigned long)CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS, integrity_mem_reservoir, 1);
 	if(result != 0) {
 		integrity_mem_reservoir = 0;
-	}
+	} 
 	printk(KERN_NOTICE "FIPS integrity_mem_reservoir = %ld\n", integrity_mem_reservoir);
 }
 // change@ksingh.sra-dallas - end
