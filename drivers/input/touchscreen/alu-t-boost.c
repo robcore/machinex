@@ -30,6 +30,7 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#include <linux/cpufreq_hardlimit.h>
 
 /*
  * debug = 1 will print all
