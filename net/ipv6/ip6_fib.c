@@ -1387,7 +1387,7 @@ static int fib6_walk_continue(struct fib6_walker_t *w)
 			pn = fn->parent;
 
 			if (!pn)
-			return 0
+			return 0;
 
 			w->node = pn;
 #ifdef CONFIG_IPV6_SUBTREES
