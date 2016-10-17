@@ -1,7 +1,4 @@
 #!/bin/bash
-if [ -e $(pwd)/.config ]; then
-	rm $(pwd)/.config
-fi;
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
 fi;
