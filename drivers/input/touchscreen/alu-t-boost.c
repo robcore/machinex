@@ -47,7 +47,7 @@ static struct workqueue_struct *touch_boost_wq;
 static struct delayed_work input_boost_rem;
 static struct work_struct input_boost_work;
 
-static unsigned int input_boost_freq;
+static unsigned int input_boost_freq = 1026000;
 module_param(input_boost_freq, uint, 0644);
 
 static unsigned int input_boost_ms = 40;
