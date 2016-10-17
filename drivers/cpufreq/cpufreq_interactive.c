@@ -459,8 +459,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	cpufreq_notify_utilization(pcpu->policy, cpu_load);
-	
 	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->target_freq < boosted_freq) {
 			new_freq = boosted_freq;

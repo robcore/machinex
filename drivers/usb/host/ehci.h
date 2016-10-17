@@ -84,6 +84,7 @@ struct ehci_hcd {			/* one per controller */
 	struct ehci_qh		*reclaim;
 	struct ehci_qh		*qh_scan_next;
 	unsigned		scanning : 1;
+	unsigned		async_count;
 
 	/* periodic schedule support */
 #define	DEFAULT_I_TDPS		1024		/* some HCs can do less */
