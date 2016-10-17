@@ -882,7 +882,7 @@ void kgsl_power_resume_driver(struct power_suspend *h)
 	if (device->pwrscale.policy == NULL)
 		kgsl_pwrctrl_pwrlevel_change(device, KGSL_PWRLEVEL_TURBO);
 
-	if (kgsl_pwrctrl_wake(device, 0) != 0) {
+	if (kgsl_pwrctrl_wake(device) != 0) {
 		mutex_unlock(&device->mutex);
 		return;
 	}
@@ -1202,7 +1202,7 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 		if (result)
 			goto err_freedevpriv;
 
-		result = device->ftbl->start(device, 0);
+		result = device->ftbl->start(device);
 		if (result)
 			goto err_freedevpriv;
 		/*
@@ -3519,7 +3519,7 @@ int kgsl_postmortem_dump(struct kgsl_device *device, int manual)
 	device->pwrctrl.nap_allowed = false;
 
 	/* Force on the clocks */
-	kgsl_pwrctrl_wake(device, 0);
+	kgsl_pwrctrl_wake(device);
 
 	/* Disable the irq */
 	kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_OFF);

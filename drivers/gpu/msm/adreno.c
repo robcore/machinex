@@ -83,7 +83,6 @@ unsigned int kgsl_cff_dump_enable;
 
 static const struct kgsl_functable adreno_functable;
 
-static void adreno_start_work(struct work_struct *work);
 static void adreno_input_work(struct work_struct *work);
 
 static struct adreno_device device_3d0 = {
@@ -137,13 +136,9 @@ static struct adreno_device device_3d0 = {
 	.ft_pf_policy = KGSL_FT_PAGEFAULT_DEFAULT_POLICY,
 	.fast_hang_detect = 1,
 	.long_ib_detect = 1,
-	.start_work = __WORK_INITIALIZER(device_3d0.start_work,
-		adreno_start_work),
 	.input_work = __WORK_INITIALIZER(device_3d0.input_work,
 		adreno_input_work),
 };
-
-static struct workqueue_struct *adreno_wq;
 
 /* This set of registers are used for Hang detection
  * If the values of these registers are same after
@@ -239,9 +234,6 @@ static const struct {
 
 static unsigned int adreno_isidle(struct kgsl_device *device);
 
-/* Nice level for the higher priority GPU start thread */
-static int _wake_nice = -7;
-
 /* Number of milliseconds to stay active active after a wake on touch */
 static unsigned int _wake_timeout = 100;
 
@@ -257,17 +249,15 @@ static void adreno_input_work(struct work_struct *work)
 			struct adreno_device, input_work);
 	struct kgsl_device *device = &adreno_dev->dev;
 
-	if (!_wake_timeout)
-		return;
-
 	mutex_lock(&device->mutex);
 
 	device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
 
 	/*
-	 * Schedule adreno_start in a high priority workqueue.
+	 * Don't schedule adreno_start in a high priority workqueue, we are
+	 * already in a workqueue which should be sufficient
 	 */
-	kgsl_pwrctrl_wake(device, 1);
+	kgsl_pwrctrl_wake(device);
 
 	/*
 	 * When waking up from a touch event we want to stay active long enough
@@ -1731,9 +1721,6 @@ static int adreno_init(struct kgsl_device *device)
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
 
-	/* Make a high priority workqueue for starting the GPU */
-	adreno_wq = alloc_workqueue("adreno", WQ_HIGHPRI | WQ_UNBOUND, 1);
-
 	if (KGSL_STATE_DUMP_AND_FT != device->state)
 		kgsl_pwrctrl_set_state(device, KGSL_STATE_INIT);
 
@@ -1787,17 +1774,10 @@ static int adreno_init(struct kgsl_device *device)
 	return 0;
 }
 
-/**
- * _adreno_start - Power up the GPU and prepare to accept commands
- * @adreno_dev: Pointer to an adreno_device structure
- *
- * The core function that powers up and initalizes the GPU.  This function is
- * called at init and after coming out of SLUMBER
- */
-static int _adreno_start(struct adreno_device *adreno_dev)
+static int adreno_start(struct kgsl_device *device)
 {
-	struct kgsl_device *device = &adreno_dev->dev;
 	int status = -EINVAL;
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	unsigned int state = device->state;
 
 	kgsl_cffdump_open(device);
@@ -1906,58 +1886,6 @@ error_clk_off:
 	}
 
 	return status;
-}
-
-static int _status;
-
-/**
- * _adreno_start_work() - Work handler for the low latency adreno_start
- * @work: Pointer to the work_struct for
- *
- * The work callbak for the low lantecy GPU start - this executes the core
- * _adreno_start function in the workqueue.
- */
-static void adreno_start_work(struct work_struct *work)
-{
-	struct adreno_device *adreno_dev = container_of(work,
-		struct adreno_device, start_work);
-	struct kgsl_device *device = &adreno_dev->dev;
-
-	/* Nice ourselves to be higher priority but not too high priority */
-	set_user_nice(current, _wake_nice);
-
-	mutex_lock(&device->mutex);
-	_status = _adreno_start(adreno_dev);
-	mutex_unlock(&device->mutex);
-}
-
-/**
- * adreno_start() - Power up and initialize the GPU
- * @device: Pointer to the KGSL device to power up
- * @priority:  Boolean flag to specify of the start should be scheduled in a low
- * latency work queue
- *
- * Power up the GPU and initialize it.  If priority is specified then queue the
- * start function in a high priority queue for lower latency.
- */
-static int adreno_start(struct kgsl_device *device, int priority)
-{
-	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
-
-	/* No priority (normal latency) call the core start function directly */
-	if (!priority)
-		return _adreno_start(adreno_dev);
-
-	/*
-	 * If priority is specified (low latency) then queue the work in a
-	 * higher priority work queue and wait for it to finish
-	 */
-	queue_work(adreno_wq, &adreno_dev->start_work);
-	mutex_unlock(&device->mutex);
-	flush_work(&adreno_dev->start_work);
-	mutex_lock(&device->mutex);
-
-	return _status;
 }
 
 static int adreno_stop(struct kgsl_device *device)
@@ -2367,7 +2295,7 @@ _adreno_ft_restart_device(struct kgsl_device *device,
 		return 1;
 	}
 
-	if (adreno_start(device, 0)) {
+	if (adreno_start(device)) {
 		KGSL_FT_ERR(device, "Device start failed\n");
 		return 1;
 	}
@@ -2831,15 +2759,15 @@ EXPORT_SYMBOL(adreno_dump_and_exec_ft);
  *
  * This is a common routine to write to FT sysfs files.
  */
-static int _ft_sysfs_store(const char *buf, size_t count, int *ptr)
+static int _ft_sysfs_store(const char *buf, size_t count, unsigned int *ptr)
 {
 	char temp[20];
-	long val;
+	unsigned long val;
 	int rc;
 
 	snprintf(temp, sizeof(temp), "%.*s",
 			 (int)min(count, sizeof(temp) - 1), buf);
-	rc = kstrtol(temp, 0, &val);
+	rc = kstrtoul(temp, 0, &val);
 	if (rc)
 		return rc;
 
@@ -3084,36 +3012,6 @@ static ssize_t _wake_timeout_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", _wake_timeout);
 }
 
-/**
- * _wake_nice_store() - Store nice level for the higher priority GPU start
- * thread
- * @dev: device ptr
- * @attr: Device attribute
- * @buf: value to write
- * @count: size of the value to write
- *
- */
-static ssize_t _wake_nice_store(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf, size_t count)
-{
-	return _ft_sysfs_store(buf, count, &_wake_nice);
-}
-
-/**
- * _wake_nice_show() -  Show nice level for the higher priority GPU start
- * thread
- * @dev: device ptr
- * @attr: Device attribute
- * @buf: value read
- */
-static ssize_t _wake_nice_show(struct device *dev,
-					struct device_attribute *attr,
-					char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n", _wake_nice);
-}
-
 #define FT_DEVICE_ATTR(name) \
 	DEVICE_ATTR(name, 0644,	_ ## name ## _show, _ ## name ## _store);
 
@@ -3122,7 +3020,6 @@ FT_DEVICE_ATTR(ft_pagefault_policy);
 FT_DEVICE_ATTR(ft_fast_hang_detect);
 FT_DEVICE_ATTR(ft_long_ib_detect);
 
-static FT_DEVICE_ATTR(wake_nice);
 static FT_DEVICE_ATTR(wake_timeout);
 
 const struct device_attribute *ft_attr_list[] = {
@@ -3130,7 +3027,6 @@ const struct device_attribute *ft_attr_list[] = {
 	&dev_attr_ft_pagefault_policy,
 	&dev_attr_ft_fast_hang_detect,
 	&dev_attr_ft_long_ib_detect,
-	&dev_attr_wake_nice,
 	&dev_attr_wake_timeout,
 	NULL,
 };
