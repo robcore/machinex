@@ -22,8 +22,6 @@
  * along with this program; if not, you can find it at http://www.fsf.org
  */
 
-#include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
@@ -33,9 +31,7 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
-#include <linux/usb.h>
-#include <linux/usb/hcd.h>
-#include <linux/usb/ulpi.h>
+
 #include <linux/usb/msm_hsusb_hw.h>
 #include <linux/usb/msm_hsusb.h>
 #include <linux/gpio.h>
@@ -45,7 +41,6 @@
 #include <linux/pm_qos.h>
 #include <linux/irq.h>
 #include <linux/ktime.h>
-#include <linux/dma-mapping.h>
 
 #include <mach/msm_bus.h>
 #include <mach/clk.h>
@@ -54,7 +49,6 @@
 #include <linux/spinlock.h>
 #include <linux/cpu.h>
 #include <mach/rpm-regulator.h>
-#include "ehci.h"
 
 #define MSM_USB_BASE (hcd->regs)
 #define USB_REG_START_OFFSET 0x90
@@ -87,7 +81,6 @@ struct msm_hsic_hcd {
 	struct clk		*alt_core_clk;
 	struct clk		*phy_clk;
 	struct clk		*cal_clk;
-	struct clk		*inactivity_clk;
 	struct regulator	*hsic_vddcx;
 	atomic_t		async_int;
 	atomic_t                in_lpm;
@@ -95,8 +88,6 @@ struct msm_hsic_hcd {
 	int			peripheral_status_irq;
 	int			wakeup_irq;
 	bool			wakeup_irq_enabled;
-	int			async_irq;
-	uint32_t		async_int_cnt;
 	atomic_t		pm_usage_cnt;
 	uint32_t		bus_perf_client;
 	uint32_t		wakeup_int_cnt;
@@ -350,7 +341,7 @@ static void dump_hsic_regs(struct usb_hcd *hcd)
 
 #define HSIC_DBG1_REG		0x38
 
-static int vdd_val[VDD_TYPE_MAX][VDD_VAL_MAX] = {
+static const int vdd_val[VDD_TYPE_MAX][VDD_VAL_MAX] = {
 		{   /* VDD_CX CORNER Voting */
 			[VDD_NONE]	= RPM_VREG_CORNER_NONE,
 			[VDD_MIN]	= RPM_VREG_CORNER_NOMINAL,
@@ -665,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep(50);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
@@ -710,7 +701,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	if (mehci->bus_perf_client && debug_bus_voting_enabled) {
 		mehci->bus_vote = false;
-		queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
+		queue_work(ehci_wq, &mehci->bus_vote_w);
 	}
 
 	atomic_set(&mehci->in_lpm, 1);
@@ -756,7 +747,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 
 	if (mehci->bus_perf_client && debug_bus_voting_enabled) {
 		mehci->bus_vote = true;
-		queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
+		queue_work(ehci_wq, &mehci->bus_vote_w);
 	}
 
 	min_vol = vdd_val[mehci->vdd_type][VDD_MIN];
@@ -1669,28 +1660,21 @@ static void ehci_hsic_msm_debugfs_cleanup(void)
 	debugfs_remove_recursive(ehci_hsic_msm_dbg_root);
 }
 
-static int ehci_hsic_msm_probe(struct platform_device *pdev)
+static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd;
 	struct resource *res;
 	struct msm_hsic_hcd *mehci;
 	struct msm_hsic_host_platform_data *pdata;
-	unsigned long wakeup_irq_flags = 0;
 	int ret;
 
-	//dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
+	dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
 
 	/* After parent device's probe is executed, it will be put in suspend
 	 * mode. When child device's probe is called, driver core is not
 	 * resuming parent device due to which parent will be in suspend even
 	 * though child is active. Hence resume the parent device explicitly.
-	 *
-	 * This is done if the hcd create directly below here
-	 fails, or once the device is finished probing anyway.  Doing it at the beginning is
-	overkill. WHY THE EXCESSIVE SYNCING DUMBASSES??? */
-
-	wakeup_irq_flags = IRQF_TRIGGER_HIGH;
-
+	 */
 	if (pdev->dev.parent)
 		pm_runtime_get_sync(pdev->dev.parent);
 
@@ -1733,19 +1717,10 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	spin_lock_init(&mehci->wakeup_lock);
 
-	if (pdata->phy_sof_workaround) {
-		/* Enable ALL workarounds related to PHY SOF bugs */
-		mehci->ehci.susp_sof_bug = 1;
-		mehci->ehci.reset_sof_bug = 1;
-		mehci->ehci.resume_sof_bug = 1;
-	} else {
-		if (pdata->phy_susp_sof_workaround)
-			/* SUSP SOF hardware bug exists */
-			mehci->ehci.susp_sof_bug = 1;
-		if (pdata->phy_reset_sof_workaround)
-			/* RESET SOF hardware bug exists */
-			mehci->ehci.reset_sof_bug = 1;
-	}
+	mehci->ehci.susp_sof_bug = 1;
+	mehci->ehci.reset_sof_bug = 1;
+
+	mehci->ehci.resume_sof_bug = 1;
 
 	if (pdata)
 		mehci->ehci.log2_irq_thresh = pdata->log2_irq_thresh;
@@ -1765,6 +1740,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 	ret = msm_hsic_init_clocks(mehci, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "unable to initialize clocks\n");
+		ret = -ENODEV;
 		goto unmap;
 	}
 
@@ -1777,6 +1753,11 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	init_completion(&mehci->rt_completion);
 	init_completion(&mehci->gpt0_completion);
+	ret = msm_hsic_reset(mehci);
+	if (ret) {
+		dev_err(&pdev->dev, "unable to initialize PHY\n");
+		goto deinit_vddcx;
+	}
 
 	ehci_wq = create_singlethread_workqueue("ehci_wq");
 	if (!ehci_wq) {
@@ -1790,13 +1771,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 	ret = usb_add_hcd(hcd, hcd->irq, IRQF_SHARED);
 	if (ret) {
 		dev_err(&pdev->dev, "unable to register HCD\n");
-		goto destroy_wq;
-	}
-
-	ret = msm_hsic_reset(mehci);
-	if (ret) {
-		dev_err(&pdev->dev, "unable to initialize PHY\n");
-		goto destroy_wq;
+		goto unconfig_gpio;
 	}
 
 	device_init_wakeup(&pdev->dev, 1);
@@ -1823,28 +1798,12 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		 */
 		irq_set_status_flags(mehci->wakeup_irq, IRQ_NOAUTOEN);
 		ret = request_irq(mehci->wakeup_irq, msm_hsic_wakeup_irq,
-				wakeup_irq_flags,
+				IRQF_TRIGGER_HIGH,
 				"msm_hsic_wakeup", mehci);
 		if (ret) {
 			dev_err(&pdev->dev, "request_irq(%d) failed: %d\n",
 					mehci->wakeup_irq, ret);
 			mehci->wakeup_irq = 0;
-		}
-	}
-
-	mehci->async_irq = platform_get_irq_byname(pdev, "async_irq");
-	if (mehci->async_irq < 0) {
-		dev_dbg(&pdev->dev, "platform_get_irq for async_int failed\n");
-		mehci->async_irq = 0;
-	} else {
-		ret = request_irq(mehci->async_irq, msm_hsic_wakeup_irq,
-				IRQF_TRIGGER_RISING, "msm_hsic_async", mehci);
-		if (ret) {
-			dev_err(&pdev->dev, "request irq failed (ASYNC INT)\n");
-			mehci->async_irq = 0;
-		} else if (!mehci->wakeup_irq) {
-			/* Async IRQ is used only in absence of dedicated irq */
-			enable_irq_wake(mehci->async_irq);
 		}
 	}
 
@@ -1859,7 +1818,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		/* Configure BUS performance parameters for MAX bandwidth */
 		if (mehci->bus_perf_client) {
 			mehci->bus_vote = true;
-			queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
+			queue_work(ehci_wq, &mehci->bus_vote_w);
 		} else {
 			dev_err(&pdev->dev, "%s: Failed to register BUS "
 						"scaling client!!\n", __func__);
@@ -1883,12 +1842,12 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * As child is active, parent will not be put into
 	 * suspend mode.
 	 */
-	//if (pdev->dev.parent)
-		//pm_runtime_put_sync(pdev->dev.parent);
+	if (pdev->dev.parent)
+		pm_runtime_put_sync(pdev->dev.parent);
 
 	return 0;
 
-destroy_wq:
+unconfig_gpio:
 	destroy_workqueue(ehci_wq);
 	msm_hsic_config_gpios(mehci, 0);
 deinit_vddcx:
@@ -1906,17 +1865,11 @@ put_parent:
 	return ret;
 }
 
-static int ehci_hsic_msm_remove(struct platform_device *pdev)
+static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
-
-	/* If the device was removed no need to call pm_runtime_disable */
-	if (pdev->dev.power.power_state.event != PM_EVENT_INVALID)
-		pm_runtime_disable(&pdev->dev);
-
-	pm_runtime_set_suspended(&pdev->dev);
 
 	/* Remove the HCD prior to releasing our resources. */
 	usb_remove_hcd(hcd);
@@ -1933,12 +1886,6 @@ static int ehci_hsic_msm_remove(struct platform_device *pdev)
 		free_irq(mehci->wakeup_irq, mehci);
 	}
 
-	if (mehci->async_irq) {
-		/* Async IRQ is used only in absence of dedicated wakeup irq */
-		if (!mehci->wakeup_irq)
-			disable_irq_wake(mehci->async_irq);
-		free_irq(mehci->async_irq, mehci);
-	}
 	/*
 	 * If the update request is called after unregister, the request will
 	 * fail. Results are undefined if unregister is called in the middle of
@@ -1952,11 +1899,13 @@ static int ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
+	pm_runtime_set_suspended(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
 	msm_hsic_config_gpios(mehci, 0);
 	msm_hsic_init_vddcx(mehci, 0);
+
 	msm_hsic_init_clocks(mehci, 0);
 	wake_lock_destroy(&mehci->wlock);
 	iounmap(hcd->regs);
@@ -1981,7 +1930,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
-	if (device_may_wakeup(dev) && !mehci->async_irq)
+	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
 	return 0;
@@ -2009,7 +1958,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 	dev_dbg(dev, "ehci-msm-hsic PM resume\n");
 	dbg_log_event(NULL, "PM Resume", 0);
 
-	if (device_may_wakeup(dev) && !mehci->async_irq)
+	if (device_may_wakeup(dev))
 		disable_irq_wake(hcd->irq);
 
 	/*
@@ -2052,7 +2001,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
-	return 0;
+	return msm_hsic_suspend(mehci);
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
@@ -2064,7 +2013,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Resume", 0);
 
-	return 0;
+	return msm_hsic_resume(mehci);
 }
 #endif
 
@@ -2084,7 +2033,7 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 
 static struct platform_driver ehci_msm_hsic_driver = {
 	.probe	= ehci_hsic_msm_probe,
-	.remove	= ehci_hsic_msm_remove,
+	.remove	= __devexit_p(ehci_hsic_msm_remove),
 	.driver = {
 		.name = "msm_hsic_host",
 #ifdef CONFIG_PM
