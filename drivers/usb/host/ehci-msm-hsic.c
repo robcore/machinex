@@ -46,7 +46,6 @@
 #include <linux/irq.h>
 #include <linux/ktime.h>
 #include <linux/dma-mapping.h>
-#include <linux/clk/msm-clk.h>
 
 #include <mach/msm_bus.h>
 #include <mach/clk.h>
