@@ -1457,7 +1457,7 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 		 * (ret == -EINPROGRESS), decrement the
 		 * PM usage counter before returning.
 		 */
-		if ((ret == 1) || (ret == -EINPROGRESS))
+		if ((ret == 1) || (ret == -EBUSY))
 			pm_runtime_put_noidle(mehci->dev);
 		else
 			atomic_set(&mehci->pm_usage_cnt, 1);

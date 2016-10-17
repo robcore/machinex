@@ -50,13 +50,6 @@ static DEFINE_SPINLOCK(state_lock);
 static int state; // Yank555.lu : Current powersave state (screen on / off)
 static int mode;  // Yank555.lu : Current powersave mode  (userspace / panel)
 
-#ifdef CONFIG_SPEEDUP_KEYRESUME
-	struct sched_param powersuspend_s = { .sched_priority = 66 };
-	struct sched_param powersuspend_v = { .sched_priority = 0 };
-	int powersuspend_old_prio = 0;
-	int powersuspend_old_policy = 0;
-#endif
-
 void register_power_suspend(struct power_suspend *handler)
 {
 	struct list_head *pos;
@@ -112,17 +105,6 @@ static void power_resume(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
-#ifdef CONFIG_SPEEDUP_KEYRESUME
-	powersuspend_old_prio = current->rt_priority;
-	powersuspend_old_policy = current->policy;
-
-	/* just for this write, set us real-time */
-	if (!(unlikely(powersuspend_old_policy == SCHED_FIFO) || unlikely(powersuspend_old_policy == SCHED_RR))) {
-		if ((sched_setscheduler(current, SCHED_RR, &powersuspend_s)) < 0)
-			printk(KERN_ERR "power resume: up late_resume failed\n");
-	}
-#endif
-
 	pr_info("[POWERSUSPEND] entering resume...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -142,14 +124,6 @@ static void power_resume(struct work_struct *work)
 	pr_info("[POWERSUSPEND] resume completed.\n");
 abort_resume:
 	mutex_unlock(&power_suspend_lock);
-
-#ifdef CONFIG_SPEEDUP_KEYRESUME
-	if (!(unlikely(powersuspend_old_policy == SCHED_FIFO) || unlikely(powersuspend_old_policy == SCHED_RR))) {
-		powersuspend_v.sched_priority = powersuspend_old_prio;
-		if ((sched_setscheduler(current, powersuspend_old_policy, &powersuspend_v)) < 0)
-			printk(KERN_ERR "power_resume: down late_resume failed\n");
-	}
-#endif
 }
 
 void set_power_suspend_state(int new_state)
