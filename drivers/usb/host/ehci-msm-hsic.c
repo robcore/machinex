@@ -1686,10 +1686,10 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	if (!hcd) {
 		dev_err(&pdev->dev, "Unable to create HCD\n");
 		ret = -ENOMEM;
-		goto put_parent;
+		goto put_hcd;
 	}
 
-	hcd_to_bus(hcd)->skip_resume = true;
+	//hcd_to_bus(hcd)->skip_resume = true;
 
 	hcd->irq = platform_get_irq(pdev, 0);
 	if (hcd->irq < 0) {
@@ -1821,7 +1821,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		/* Configure BUS performance parameters for MAX bandwidth */
 		if (mehci->bus_perf_client) {
 			mehci->bus_vote = true;
-			queue_work(ehci_wq, &mehci->bus_vote_w);
+			queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
 		} else {
 			dev_err(&pdev->dev, "%s: Failed to register BUS "
 						"scaling client!!\n", __func__);
@@ -1845,8 +1845,8 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * As child is active, parent will not be put into
 	 * suspend mode.
 	 */
-	if (pdev->dev.parent)
-		pm_runtime_put_sync(pdev->dev.parent);
+	//if (pdev->dev.parent)
+		//pm_runtime_put_sync(pdev->dev.parent);
 
 	return 0;
 
@@ -1861,9 +1861,6 @@ unmap:
 	iounmap(hcd->regs);
 put_hcd:
 	usb_put_hcd(hcd);
-put_parent:
-	if (pdev->dev.parent)
-		pm_runtime_put_sync(pdev->dev.parent);
 
 	return ret;
 }
@@ -1902,15 +1899,17 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
+	wake_lock_destroy(&mehci->wlock);
+	spin_lock(&dev->power.lock);
 	pm_runtime_set_suspended(&pdev->dev);
+	spin_unlock(&dev->power.lock);
+	pm_runtime_disable(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
 	msm_hsic_config_gpios(mehci, 0);
 	msm_hsic_init_vddcx(mehci, 0);
-
 	msm_hsic_init_clocks(mehci, 0);
-	wake_lock_destroy(&mehci->wlock);
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
 
@@ -1980,10 +1979,11 @@ static int msm_hsic_pm_resume(struct device *dev)
 		return ret;
 
 	/* Bring the device to full powered state upon system resume */
+	spin_lock(&dev->power.lock);
 	pm_runtime_disable(dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
-
+	spin_lock(&dev->power.lock);
 	return 0;
 }
 #endif
@@ -2004,7 +2004,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
-	return msm_hsic_suspend(mehci);
+	return 0;
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
@@ -2016,7 +2016,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Resume", 0);
 
-	return msm_hsic_resume(mehci);
+	return 0;
 }
 #endif
 
@@ -2026,6 +2026,7 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	.suspend_noirq = msm_hsic_pm_suspend_noirq, \
 	.suspend = msm_hsic_pm_suspend, \
 	.resume = msm_hsic_pm_resume,
+
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
 	.runtime_suspend = msm_hsic_runtime_suspend, \
