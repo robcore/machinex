@@ -60,7 +60,7 @@ module_param(input_boost_enabled, uint, 0644);
 
 static bool suspended;
 
-static unsigned int input_boost_ms = 30;
+static unsigned int input_boost_ms = 50;
 module_param(input_boost_ms, uint, 0644);
 
 static unsigned int migration_load_threshold = 30;
@@ -72,7 +72,7 @@ module_param(load_based_syncs, bool, 0644);
 static bool hotplug_boost;
 module_param(hotplug_boost, bool, 0644);
 
-bool wakeup_boost;
+bool wakeup_boost = true;
 module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
