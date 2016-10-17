@@ -240,7 +240,7 @@ static const struct {
 static unsigned int adreno_isidle(struct kgsl_device *device);
 
 /* Nice level for the higher priority GPU start thread */
-static unsigned int _wake_nice = -7;
+static int _wake_nice = -7;
 
 /* Number of milliseconds to stay active active after a wake on touch */
 static unsigned int _wake_timeout = 100;
@@ -257,15 +257,17 @@ static void adreno_input_work(struct work_struct *work)
 			struct adreno_device, input_work);
 	struct kgsl_device *device = &adreno_dev->dev;
 
+	if (!_wake_timeout)
+		return;
+
 	mutex_lock(&device->mutex);
 
 	device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
 
 	/*
-	 * Don't schedule adreno_start in a high priority workqueue, we are
-	 * already in a workqueue which should be sufficient
+	 * Schedule adreno_start in a high priority workqueue.
 	 */
-	kgsl_pwrctrl_wake(device);
+	kgsl_pwrctrl_wake(device, 1);
 
 	/*
 	 * When waking up from a touch event we want to stay active long enough
@@ -2829,15 +2831,15 @@ EXPORT_SYMBOL(adreno_dump_and_exec_ft);
  *
  * This is a common routine to write to FT sysfs files.
  */
-static int _ft_sysfs_store(const char *buf, size_t count, unsigned int *ptr)
+static int _ft_sysfs_store(const char *buf, size_t count, int *ptr)
 {
 	char temp[20];
-	unsigned long val;
+	long val;
 	int rc;
 
 	snprintf(temp, sizeof(temp), "%.*s",
 			 (int)min(count, sizeof(temp) - 1), buf);
-	rc = kstrtoul(temp, 0, &val);
+	rc = kstrtol(temp, 0, &val);
 	if (rc)
 		return rc;
 
@@ -3090,7 +3092,7 @@ FT_DEVICE_ATTR(ft_pagefault_policy);
 FT_DEVICE_ATTR(ft_fast_hang_detect);
 FT_DEVICE_ATTR(ft_long_ib_detect);
 
-static DEVICE_INT_ATTR(wake_nice, 0644, _wake_nice);
+static FT_DEVICE_ATTR(wake_nice);
 static FT_DEVICE_ATTR(wake_timeout);
 
 const struct device_attribute *ft_attr_list[] = {
@@ -3098,7 +3100,7 @@ const struct device_attribute *ft_attr_list[] = {
 	&dev_attr_ft_pagefault_policy,
 	&dev_attr_ft_fast_hang_detect,
 	&dev_attr_ft_long_ib_detect,
-	&dev_attr_wake_nice.attr,
+	&dev_attr_wake_nice,
 	&dev_attr_wake_timeout,
 	NULL,
 };
@@ -3299,6 +3301,35 @@ int adreno_idle(struct kgsl_device *device)
 	unsigned long wait_time_part;
 	unsigned int prev_reg_val[FT_DETECT_REGS_COUNT];
 
+/**
+ * _wake_nice_store() - Store nice level for the higher priority GPU start
+ * thread
+ * @dev: device ptr
+ * @attr: Device attribute
+ * @buf: value to write
+ * @count: size of the value to write
+ *
+ */
+static ssize_t _wake_nice_store(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	return _ft_sysfs_store(buf, count, &_wake_nice);
+}
+
+/**
+ * _wake_nice_show() -  Show nice level for the higher priority GPU start
+ * thread
+ * @dev: device ptr
+ * @attr: Device attribute
+ * @buf: value read
+ */
+static ssize_t _wake_nice_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", _wake_nice);
+}
 
 	memset(prev_reg_val, 0, sizeof(prev_reg_val));
 
