@@ -490,5 +490,6 @@ obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
 obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
 obj-$(CONFIG_DYN_HOTPLUG) += dyn_hotplug.o
 obj-$(CONFIG_BLU_PLUG) += blu_plug.o
+obj-$(CONFIG_STATE_HELPER)		+= state_helper.o
 obj-$(CONFIG_LCD_KCAL) += msm_kcal_ctrl.o
 obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
