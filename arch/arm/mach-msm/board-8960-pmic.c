@@ -226,7 +226,7 @@ static struct pm8xxx_rtc_platform_data pm8xxx_rtc_pdata __devinitdata = {
 
 static struct pm8xxx_pwrkey_platform_data pm8xxx_pwrkey_pdata = {
 	.pull_up		= 1,
-	.kpd_trigger_delay_us	= 15625,
+	.kpd_trigger_delay_us	= 10000,
 	.wakeup			= 1,
 };
 

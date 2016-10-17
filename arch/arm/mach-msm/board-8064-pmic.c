@@ -307,7 +307,7 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 
 static struct pm8xxx_pwrkey_platform_data apq8064_pm8921_pwrkey_pdata = {
 	.pull_up		= 1,
-	.kpd_trigger_delay_us	= 15625,
+	.kpd_trigger_delay_us	= 10000,
 	.wakeup			= 1,
 };
 
