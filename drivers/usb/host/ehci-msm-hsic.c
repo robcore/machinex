@@ -1782,7 +1782,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
 			NULL, hsic_peripheral_status_change,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
-				IRQF_ONESHOT | IRQF_SHARED,
+						| IRQF_SHARED,
 			"hsic_peripheral_status", mehci);
 		if (ret)
 			dev_err(&pdev->dev, "%s:request_irq:%d failed:%d",
