@@ -1038,7 +1038,8 @@ sec_battery_platform_data_t sec_battery_pdata = {
 	/* Fuel Gauge */
 	.fg_irq = MSM_GPIO_TO_INT(GPIO_FUEL_INT),
 	.fg_irq_attr =
-		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING
+		| IRQF_ONESHOT,
 	.fuel_alert_soc = 2,
 	.repeated_fuelalert = false,
 	.capacity_calculation_type =
