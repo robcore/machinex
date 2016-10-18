@@ -1834,7 +1834,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
-		pr_debug("insert annoying message here")
+		pr_debug("insert annoying message here");
 		//if (cmd->opcode != 52) {
 			//pr_err("%s: CMD%d: Command CRC error\n",
 				//mmc_hostname(host->mmc), cmd->opcode);
