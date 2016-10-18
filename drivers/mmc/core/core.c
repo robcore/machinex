@@ -70,8 +70,7 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq);
 #define MMC_BKOPS_MAX_TIMEOUT	(30 * 1000) /* max time to wait in ms */
 
 /* Flushing a large amount of cached data may take a long time. */
-#define MMC_FLUSH_REQ_TIMEOUT_MS 90000 /* msec */
-#define MMC_CACHE_DISBALE_TIMEOUT_MS 180000 /* msec */
+#define MMC_FLUSH_REQ_TIMEOUT_MS 60000 /* msec */
 
 static struct workqueue_struct *workqueue;
 
@@ -442,8 +441,8 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			EXT_CSD_BKOPS_START, 1, 0, false, false);
 	if (err) {
-		//pr_warn("%s: %s: Error %d when starting bkops\n",
-			//mmc_hostname(card->host), __func__, err);
+		pr_warn("%s: Error %d starting bkops\n",
+			mmc_hostname(card->host), err);
 		goto out;
 	}
 	mmc_card_clr_need_bkops(card);
@@ -1021,7 +1020,7 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 			 * previous value of 300ms is known to be
 			 * insufficient for some cards.
 			 */
-			limit_us = 5000000;
+			limit_us = 6000000;
 		else
 			limit_us = 200000;
 
@@ -2822,10 +2821,16 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 	/* Order's important: probe SDIO, then SD, then MMC */
 	if (!mmc_attach_sdio(host))
 		return 0;
-	if (!mmc_attach_sd(host))
-		return 0;
+
 	if (!host->ios.vdd)
 		mmc_power_up(host);
+
+	if (!mmc_attach_sd(host))
+		return 0;
+
+	if (!host->ios.vdd)
+		mmc_power_up(host);
+
 	if (!mmc_attach_mmc(host))
 		return 0;
 
@@ -2952,12 +2957,8 @@ void mmc_rescan(struct work_struct *work)
 	 */
 	mmc_bus_put(host);
 
-	if (host->ops->get_cd && host->ops->get_cd(host) == 0) {
-		mmc_claim_host(host);
-		mmc_power_off(host);
-		mmc_release_host(host);
+	if (host->ops->get_cd && host->ops->get_cd(host) == 0)
 		goto out;
-	}
 
 	ST_LOG("<%s> %s insertion detected",__func__,host->class_dev.kobj.name);
 
@@ -3169,7 +3170,7 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 
 		if (card->ext_csd.cache_ctrl ^ enable) {
 			if (!enable)
-				timeout = MMC_CACHE_DISBALE_TIMEOUT_MS;
+				timeout = MMC_FLUSH_REQ_TIMEOUT_MS;
 
 			err = mmc_switch_ignore_timeout(card,
 					EXT_CSD_CMD_SET_NORMAL,

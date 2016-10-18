@@ -93,13 +93,13 @@ static struct msm_bus_vectors grp3d_low_vectors[] = {
 		.src = MSM_BUS_MASTER_GRAPHICS_3D,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(1600),
+		.ib = KGSL_CONVERT_TO_MBPS(1700),
 	},
 	{
 		.src = MSM_BUS_MASTER_GRAPHICS_3D_PORT1,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(1600),
+		.ib = KGSL_CONVERT_TO_MBPS(1700),
 	},
 };
 
@@ -138,13 +138,13 @@ static struct msm_bus_vectors grp3d_max_vectors[] = {
 		.src = MSM_BUS_MASTER_GRAPHICS_3D,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(3200),
+		.ib = KGSL_CONVERT_TO_MBPS(4264),
 	},
 	{
 		.src = MSM_BUS_MASTER_GRAPHICS_3D_PORT1,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(3200),
+		.ib = KGSL_CONVERT_TO_MBPS(4264),
 	},
 };
 
@@ -275,8 +275,7 @@ struct platform_device device_kgsl_3d0 = {
 void __init apq8064_init_gpu(void)
 {
 	unsigned int version = socinfo_get_version();
-	if (cpu_is_apq8064ab())
-		kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 450000000;
+
 	if (SOCINFO_VERSION_MAJOR(version) == 2) {
 		kgsl_3d0_pdata.chipid = ADRENO_CHIPID(3, 2, 0, 2);
 	} else {

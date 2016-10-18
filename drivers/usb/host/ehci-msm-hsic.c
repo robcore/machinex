@@ -617,7 +617,7 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 	return 0;
 }
 
-#define PHY_SUSPEND_TIMEOUT_USEC	(20 * 1000)
+#define PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
@@ -646,7 +646,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	/*
 	 * PHY may take some time or even fail to enter into low power
-	 * mode (LPM). Hence poll for 20 msec and reset the PHY and link
+	 * mode (LPM). Hence poll for 500 msec and reset the PHY and link
 	 * in failure case.
 	 */
 	val = readl_relaxed(USB_PORTSC);
@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep(20);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
@@ -1160,12 +1160,12 @@ resume_again:
 			dbg_log_event(NULL, "GPT timer prog done", 0);
 
 			spin_unlock_irq(&ehci->lock);
-			wait_for_completion_interruptible(&mehci->gpt0_completion);
+			wait_for_completion(&mehci->gpt0_completion);
 			spin_lock_irq(&ehci->lock);
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
 			/* do the resume in a tight loop */
-			msleep(22);
+			mdelay(22);
 			writel_relaxed(readl_relaxed(&ehci->regs->command) |
 					CMD_RUN, &ehci->regs->command);
 			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
@@ -1675,8 +1675,8 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * resuming parent device due to which parent will be in suspend even
 	 * though child is active. Hence resume the parent device explicitly.
 	 */
-	//if (pdev->dev.parent)
-		//pm_runtime_get_sync(pdev->dev.parent);
+	if (pdev->dev.parent)
+		pm_runtime_get_sync(pdev->dev.parent);
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));

@@ -890,6 +890,8 @@ static int ehci_hub_control (
 		switch (wValue) {
 		case USB_PORT_FEAT_ENABLE:
 			ehci_writel(ehci, temp & ~PORT_PE, status_reg);
+			pr_info("PE bit getting cleared\n");
+			WARN_ON(1);
 			break;
 		case USB_PORT_FEAT_C_ENABLE:
 			ehci_writel(ehci, (temp & ~PORT_RWC_BITS) | PORT_PEC,

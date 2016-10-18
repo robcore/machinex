@@ -74,7 +74,6 @@ config SDIO_UART
 
 config MMC_TEST
 	tristate "MMC host test driver"
-	default n
 	help
 	  Development driver that performs a series of reads and writes
 	  to a memory card in order to expose certain well known bugs
@@ -109,7 +108,6 @@ config MMC_BKOPS_NODE_GID
 config MMC_BLOCK_TEST
 	tristate "MMC block test"
 	depends on MMC_BLOCK && IOSCHED_TEST
-	default n
 	help
 	  MMC block test can be used with test iosched to test the MMC block
 	  device.
