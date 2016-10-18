@@ -355,6 +355,9 @@ drivers/base/power/runtime.c and include/linux/pm_runtime.h:
   void pm_runtime_get_noresume(struct device *dev);
     - increment the device's usage counter
 
+  int pm_runtime_get_noidle(struct device *dev);
+    - increment the device's usage counter if it was not 0 and return it
+
   int pm_runtime_get(struct device *dev);
     - increment the device's usage counter, run pm_request_resume(dev) and
       return its result

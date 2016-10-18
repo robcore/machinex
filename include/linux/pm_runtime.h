@@ -59,6 +59,11 @@ static inline void pm_runtime_get_noresume(struct device *dev)
 	atomic_inc(&dev->power.usage_count);
 }
 
+static inline int pm_runtime_get_noidle(struct device *dev)
+{
+	return atomic_add_unless(&dev->power.usage_count, 1, 0);
+}
+
 static inline void pm_runtime_put_noidle(struct device *dev)
 {
 	atomic_add_unless(&dev->power.usage_count, -1, 0);
@@ -128,6 +133,7 @@ static inline void pm_runtime_forbid(struct device *dev) {}
 
 static inline bool pm_children_suspended(struct device *dev) { return false; }
 static inline void pm_runtime_get_noresume(struct device *dev) {}
+static inline bool pm_runtime_get_noidle(struct device *dev) { return true; }
 static inline void pm_runtime_put_noidle(struct device *dev) {}
 static inline bool device_run_wake(struct device *dev) { return false; }
 static inline void device_set_run_wake(struct device *dev, bool enable) {}
