@@ -96,8 +96,6 @@ struct mmc_command {
  */
 
 	unsigned int		cmd_timeout_ms;	/* in milliseconds */
-	/* Set this flag only for sanitize request */
-	bool			sanitize_busy;
 	/* Set this flag only for commands which can be HPIed */
 	bool			ignore_timeout;
 
@@ -187,8 +185,6 @@ extern int mmc_erase_group_aligned(struct mmc_card *card, unsigned int from,
 extern unsigned int mmc_calc_max_discard(struct mmc_card *card);
 
 extern int mmc_set_blocklen(struct mmc_card *card, unsigned int blocklen);
-extern int mmc_set_blockcount(struct mmc_card *card, unsigned int blockcount,
-			      bool is_rel_write);
 extern int mmc_hw_reset(struct mmc_host *host);
 extern int mmc_hw_reset_check(struct mmc_host *host);
 extern int mmc_can_reset(struct mmc_card *card);
@@ -207,10 +203,6 @@ extern int mmc_flush_cache(struct mmc_card *);
 extern int mmc_bkops_enable(struct mmc_host *host, u8 value);
 
 extern int mmc_detect_card_removed(struct mmc_host *host);
-
-extern void mmc_blk_init_bkops_statistics(struct mmc_card *card);
-extern void mmc_rpm_hold(struct mmc_host *host, struct device *dev);
-extern void mmc_rpm_release(struct mmc_host *host, struct device *dev);
 
 /**
  *	mmc_claim_host - exclusively claim a host

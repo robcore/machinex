@@ -378,12 +378,9 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 		return;
 	}
 
-	mmc_rpm_hold(card->host, &card->dev);
 	/* In case of delayed bkops we might be in race with suspend. */
-	if (!mmc_try_claim_host(card->host)) {
-		mmc_rpm_release(card->host, &card->dev);
+	if (!mmc_try_claim_host(card->host))
 		return;
-	}
 
 	/*
 	 * Since the cancel_delayed_work can be changed while we are waiting
@@ -454,7 +451,6 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 	mmc_card_set_doing_bkops(card);
 out:
 	mmc_release_host(card->host);
-	mmc_rpm_release(card->host, &card->dev);
 }
 EXPORT_SYMBOL(mmc_start_bkops);
 
@@ -2570,9 +2566,8 @@ static void mmc_clk_scale_work(struct work_struct *work)
 	if (!host->card || !host->bus_ops ||
 			!host->bus_ops->change_bus_speed ||
 			!host->clk_scaling.enable || !host->ios.clock)
-		return;
+		goto out;
 
-	mmc_rpm_hold(host, &host->card->dev);
 	if (!mmc_try_claim_host(host)) {
 		/* retry after a timer tick */
 		queue_delayed_work(system_nrt_wq, &host->clk_scaling.work, 1);
@@ -2582,7 +2577,6 @@ static void mmc_clk_scale_work(struct work_struct *work)
 	mmc_clk_scaling(host, true);
 	mmc_release_host(host);
 out:
-	mmc_rpm_release(host, &host->card->dev);
 	return;
 }
 
@@ -2935,7 +2929,6 @@ void mmc_rescan(struct work_struct *work)
 	host->rescan_entered = 1;
 
 	mmc_bus_get(host);
-	mmc_rpm_hold(host, &host->class_dev);
 
 	/*
 	 * if there is a _removable_ card registered, check whether it is
@@ -2960,12 +2953,9 @@ void mmc_rescan(struct work_struct *work)
 
 	/* if there still is a card present, stop here */
 	if (host->bus_ops != NULL) {
-		mmc_rpm_release(host, &host->class_dev);
 		mmc_bus_put(host);
 		goto out;
 	}
-
-	mmc_rpm_release(host, &host->class_dev);
 
 	/*
 	 * Only we can add a new handler, so it's safe to
@@ -2982,12 +2972,11 @@ void mmc_rescan(struct work_struct *work)
 
 	ST_LOG("<%s> %s insertion detected",__func__,host->class_dev.kobj.name);
 
-	mmc_rpm_hold(host, &host->class_dev);
 	mmc_claim_host(host);
 	if (!mmc_rescan_try_freq(host, host->f_min))
 		extend_wakelock = true;
 	mmc_release_host(host);
-	mmc_rpm_release(host, &host->class_dev);
+
  out:
 	if (extend_wakelock)
 		wake_lock_timeout(&host->detect_wake_lock, HZ / 2);
