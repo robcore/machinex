@@ -484,7 +484,6 @@ EXPORT_SYMBOL(mmc_start_idle_time_bkops);
 static void mmc_wait_data_done(struct mmc_request *mrq)
 {
 	unsigned long flags;
-	struct mmc_context_info *context_info = &mrq->host->context_info;
 
 	spin_lock_irqsave(&mrq->host->context_info.lock, flags);
 	mrq->host->context_info.is_done_rcv = true;
@@ -974,10 +973,6 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 {
 	unsigned int mult;
 
-	if (!card) {
-		WARN_ON(1);
-		return;
-	}
 	/*
 	 * SDIO cards only define an upper 1 s limit on access.
 	 */
@@ -1629,9 +1624,6 @@ void mmc_power_up(struct mmc_host *host)
 {
 	int bit;
 
-	if (host->ios.power_mode == MMC_POWER_ON)
-		return;
-
 	mmc_host_clk_hold(host);
 
 	/* If ocr is set, we use it */
@@ -1674,9 +1666,6 @@ void mmc_power_up(struct mmc_host *host)
 
 void mmc_power_off(struct mmc_host *host)
 {
-	if (host->ios.power_mode == MMC_POWER_OFF)
-		return;
-
 	mmc_host_clk_hold(host);
 
 	host->ios.clock = 0;
@@ -2248,8 +2237,7 @@ int mmc_can_sanitize(struct mmc_card *card)
 {
 	if (!mmc_can_trim(card) && !mmc_can_erase(card))
 		return 0;
-	if ((card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
-			&& (card->host->caps2 & MMC_CAP2_SANITIZE))
+	if (card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
 		return 1;
 	return 0;
 }
@@ -2944,6 +2932,7 @@ void mmc_rescan(struct work_struct *work)
 	 * can respond */
 	if (host->bus_dead)
 		extend_wakelock = 1;
+
 	/*
 	 * Let mmc_bus_put() free the bus/bus_ops if we've found that
 	 * the card is no longer present.
@@ -3180,7 +3169,7 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 
 		if (card->ext_csd.cache_ctrl ^ enable) {
 			if (!enable)
-				timeout = MMC_FLUSH_REQ_TIMEOUT_MS;
+				timeout = MMC_CACHE_DISBALE_TIMEOUT_MS;
 
 			err = mmc_switch_ignore_timeout(card,
 					EXT_CSD_CMD_SET_NORMAL,
