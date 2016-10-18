@@ -1490,7 +1490,7 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 		data->error = -EIO;
 	} else {
 		//pr_err("%s: Unknown error (0x%.8x)\n",
-		      mmc_hostname(host->mmc), status);
+		     // mmc_hostname(host->mmc), status);
 		data->error = -EIO;
 	}
 

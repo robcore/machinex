@@ -883,19 +883,6 @@ int mmc_wait_for_cmd(struct mmc_host *host, struct mmc_command *cmd, int retries
 
 EXPORT_SYMBOL(mmc_wait_for_cmd);
 
-#ifdef CONFIG_PM_RUNTIME
-static int mmc_get_bkops_status(struct mmc_card *card)
-{
-	int err = 0;
-
-	if (!mmc_use_core_runtime_pm(card->host) && mmc_card_doing_bkops(card)
-	    && (card->host->parent->power.runtime_status == RPM_SUSPENDING)
-	    && mmc_card_is_prog_state(card))
-		err = -EBUSY;
-
-	return err;
-}
-#endif
 /**
  *	mmc_stop_bkops - stop ongoing BKOPS
  *	@card: MMC card to check BKOPS
@@ -927,7 +914,9 @@ int mmc_stop_bkops(struct mmc_card *card)
 	 * If idle time bkops is running on the card, let's not get into
 	 * suspend.
 	 */
-	if (mmc_get_bkops_status(card)) {
+	if (mmc_card_doing_bkops(card)
+	    && (card->host->parent->power.runtime_status == RPM_SUSPENDING)
+	    && mmc_card_is_prog_state(card)) {
 		err = -EBUSY;
 		goto out;
 	}
@@ -1084,11 +1073,6 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 	if (card->quirks & MMC_QUIRK_INAND_DATA_TIMEOUT) {
 		data->timeout_ns = 4000000000u; /* 4s */
 		data->timeout_clks = 0;
-	}
-	/* Some emmc cards require a longer read/write time */
-	if (card->quirks & MMC_QUIRK_BROKEN_DATA_TIMEOUT) {
-		if (data->timeout_ns <  4000000000u)
-			data->timeout_ns = 4000000000u;	/* 4s */
 	}
 }
 EXPORT_SYMBOL(mmc_set_data_timeout);
@@ -2500,19 +2484,13 @@ EXPORT_SYMBOL_GPL(mmc_reset_clk_scale_stats);
 unsigned long mmc_get_max_frequency(struct mmc_host *host)
 {
 	unsigned long freq;
-	unsigned char timing;
 
 	if (host->ops && host->ops->get_max_frequency) {
 		freq = host->ops->get_max_frequency(host);
 		goto out;
 	}
 
-	if (mmc_card_hs400(host->card))
-		timing = MMC_TIMING_MMC_HS400;
-	else
-		timing = host->ios.timing;
-
-	switch (timing) {
+	switch (host->ios.timing) {
 	case MMC_TIMING_UHS_SDR50:
 		freq = UHS_SDR50_MAX_DTR;
 		break;
@@ -2524,9 +2502,6 @@ unsigned long mmc_get_max_frequency(struct mmc_host *host)
 		break;
 	case MMC_TIMING_UHS_DDR50:
 		freq = UHS_DDR50_MAX_DTR;
-		break;
-	case MMC_TIMING_MMC_HS400:
-		freq = MMC_HS400_MAX_DTR;
 		break;
 	default:
 		mmc_host_clk_hold(host);
@@ -2566,9 +2541,6 @@ static unsigned long mmc_get_min_frequency(struct mmc_host *host)
 		freq = UHS_SDR25_MAX_DTR;
 		break;
 	case MMC_TIMING_MMC_HS200:
-		freq = MMC_HIGH_52_MAX_DTR;
-		break;
-	case MMC_TIMING_MMC_HS400:
 		freq = MMC_HIGH_52_MAX_DTR;
 		break;
 	case MMC_TIMING_UHS_DDR50:
@@ -2620,14 +2592,7 @@ static bool mmc_is_vaild_state_for_clk_scaling(struct mmc_host *host)
 	u32 status;
 	bool ret = false;
 
-	/*
-	 * If the current partition type is RPMB, clock switching may not
-	 * work properly as sending tuning command (CMD21) is illegal in
-	 * this mode.
-	 */
-	if (!card || (mmc_card_mmc(card) &&
-			card->part_curr == EXT_CSD_PART_CONFIG_ACC_RPMB)
-			|| host->clk_scaling.invalid_state)
+	if (!card)
 		goto out;
 
 	if (mmc_send_status(card, &status)) {
@@ -3177,8 +3142,7 @@ int mmc_flush_cache(struct mmc_card *card)
 	struct mmc_host *host = card->host;
 	int err = 0, rc;
 
-	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL) ||
-	     (card->quirks & MMC_QUIRK_CACHE_DISABLE))
+	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL))
 		return err;
 
 	if (mmc_card_mmc(card) &&
@@ -3227,7 +3191,7 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 
 		if (card->ext_csd.cache_ctrl ^ enable) {
 			if (!enable)
-				timeout = MMC_CACHE_DISBALE_TIMEOUT_MS;
+				timeout = MMC_FLUSH_REQ_TIMEOUT_MS;
 
 			err = mmc_switch_ignore_timeout(card,
 					EXT_CSD_CMD_SET_NORMAL,
@@ -3489,82 +3453,6 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-void mmc_dump_dev_pm_state(struct mmc_host *host, struct device *dev)
-{
-	pr_err("%s: %s: err: runtime_error: %d\n", dev_name(dev),
-	       mmc_hostname(host), dev->power.runtime_error);
-	pr_err("%s: %s: disable_depth: %d runtime_status: %d idle_notification: %d\n",
-	       dev_name(dev), mmc_hostname(host), dev->power.disable_depth,
-	       dev->power.runtime_status,
-	       dev->power.idle_notification);
-	pr_err("%s: %s: request_pending: %d, request: %d\n",
-	       dev_name(dev), mmc_hostname(host),
-	       dev->power.request_pending, dev->power.request);
-}
-
-void mmc_rpm_hold(struct mmc_host *host, struct device *dev)
-{
-	int ret = 0;
-
-	if (!mmc_use_core_runtime_pm(host))
-		return;
-
-	ret = pm_runtime_get_sync(dev);
-	if ((ret < 0) &&
-	    (dev->power.runtime_error || (dev->power.disable_depth > 0))) {
-		pr_err("%s: %s: %s: pm_runtime_get_sync: err: %d\n",
-		       dev_name(dev), mmc_hostname(host), __func__, ret);
-		mmc_dump_dev_pm_state(host, dev);
-		if (pm_runtime_suspended(dev))
-			BUG_ON(1);
-	}
-}
-
-EXPORT_SYMBOL(mmc_rpm_hold);
-
-void mmc_rpm_release(struct mmc_host *host, struct device *dev)
-{
-	int ret = 0;
-
-	if (!mmc_use_core_runtime_pm(host))
-		return;
-
-	ret = pm_runtime_put_sync(dev);
-	if ((ret < 0) &&
-	    (dev->power.runtime_error || (dev->power.disable_depth > 0))) {
-		pr_err("%s: %s: %s: pm_runtime_put_sync: err: %d\n",
-		       dev_name(dev), mmc_hostname(host), __func__, ret);
-		mmc_dump_dev_pm_state(host, dev);
-	}
-}
-
-EXPORT_SYMBOL(mmc_rpm_release);
-#else
-void mmc_rpm_hold(struct mmc_host *host, struct device *dev) {}
-EXPORT_SYMBOL(mmc_rpm_hold);
-
-void mmc_rpm_release(struct mmc_host *host, struct device *dev) {}
-EXPORT_SYMBOL(mmc_rpm_release);
-#endif
-
-/**
- * mmc_init_context_info() - init synchronization context
- * @host: mmc host
- *
- * Init struct context_info needed to implement asynchronous
- * request mechanism, used by mmc core, host driver and mmc requests
- * supplier.
- */
-void mmc_init_context_info(struct mmc_host *host)
-{
-	spin_lock_init(&host->context_info.lock);
-	host->context_info.is_new_req = false;
-	host->context_info.is_done_rcv = false;
-	host->context_info.is_waiting_last_req = false;
-	init_waitqueue_head(&host->context_info.wait);
-}
-
 #ifdef CONFIG_MMC_EMBEDDED_SDIO
 void mmc_set_embedded_sdio_data(struct mmc_host *host,
 				struct sdio_cis *cis,
@@ -3594,7 +3482,6 @@ int mmc_bkops_enable(struct mmc_host *host, u8 value)
 	if (!card)
 		return err;
 
-	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(host);
 
 	/* read ext_csd to get EXT_CSD_BKOPS_EN field value */
