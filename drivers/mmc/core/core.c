@@ -74,7 +74,6 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq);
 #define MMC_CACHE_DISBALE_TIMEOUT_MS 180000 /* msec */
 
 static struct workqueue_struct *workqueue;
-static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
 
 /*
  * Enabling software CRCs on the data blocks can be a significant (30%)
@@ -160,41 +159,6 @@ static inline void mmc_should_fail_request(struct mmc_host *host,
 
 #endif /* CONFIG_FAIL_MMC_REQUEST */
 
-static inline void
-mmc_clk_scaling_update_state(struct mmc_host *host, struct mmc_request *mrq)
-{
-	if (mrq) {
-		switch (mrq->cmd->opcode) {
-		case MMC_READ_SINGLE_BLOCK:
-		case MMC_READ_MULTIPLE_BLOCK:
-		case MMC_WRITE_BLOCK:
-		case MMC_WRITE_MULTIPLE_BLOCK:
-			host->clk_scaling.invalid_state = false;
-			break;
-		default:
-			host->clk_scaling.invalid_state = true;
-			break;
-		}
-	} else {
-		/*
-		 * force clock scaling transitions,
-		 * if other conditions are met
-		 */
-		host->clk_scaling.invalid_state = false;
-	}
-
-	return;
-}
-
-static inline void mmc_update_clk_scaling(struct mmc_host *host)
-{
-	if (host->clk_scaling.enable && !host->clk_scaling.invalid_state) {
-		host->clk_scaling.busy_time_us +=
-			ktime_to_us(ktime_sub(ktime_get(),
-					host->clk_scaling.start_busy));
-		host->clk_scaling.start_busy = ktime_get();
-	}
-}
 /**
  *	mmc_request_done - finish processing an MMC request
  *	@host: MMC host which completed request
@@ -210,8 +174,10 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 #ifdef CONFIG_MMC_PERF_PROFILING
 	ktime_t diff;
 #endif
-	if (host->card)
-		mmc_update_clk_scaling(host);
+	if (host->card && host->clk_scaling.enable)
+		host->clk_scaling.busy_time_us +=
+			ktime_to_us(ktime_sub(ktime_get(),
+					host->clk_scaling.start_busy));
 
 	if (err && cmd->retries && mmc_host_is_spi(host)) {
 		if (cmd->resp[0] & R1_SPI_ILLEGAL_COMMAND)
@@ -350,38 +316,12 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 		 * frequency will be done after current thread
 		 * releases host.
 		 */
-		mmc_clk_scaling_update_state(host, mrq);
-		if (!host->clk_scaling.invalid_state) {
-			mmc_clk_scaling(host, false);
-			host->clk_scaling.start_busy = ktime_get();
-		}
+		mmc_clk_scaling(host, false);
+		host->clk_scaling.start_busy = ktime_get();
 	}
 
 	host->ops->request(host, mrq);
 }
-
-void mmc_blk_init_bkops_statistics(struct mmc_card *card)
-{
-	int i;
-	struct mmc_bkops_stats *bkops_stats;
-
-	if (!card)
-		return;
-
-	bkops_stats = &card->bkops_info.bkops_stats;
-
-	spin_lock(&bkops_stats->lock);
-
-	for (i = 0 ; i < BKOPS_NUM_OF_SEVERITY_LEVELS ; ++i)
-		bkops_stats->bkops_level[i] = 0;
-
-	bkops_stats->suspend = 0;
-	bkops_stats->hpi = 0;
-	bkops_stats->enabled = true;
-
-	spin_unlock(&bkops_stats->lock);
-}
-EXPORT_SYMBOL(mmc_blk_init_bkops_statistics);
 
 /**
  * mmc_start_delayed_bkops() - Start a delayed work to check for
@@ -499,17 +439,16 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 		mmc_card_set_need_bkops(card);
 		goto out;
 	}
-	pr_info("%s: %s: Starting bkops\n", mmc_hostname(card->host), __func__);
+
+	/* pr_info("%s: %s: Starting bkops\n", mmc_hostname(card->host), __func__); */
 
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			EXT_CSD_BKOPS_START, 1, 0, false, false);
 	if (err) {
-		pr_warn("%s: %s: Error %d when starting bkops\n",
-			mmc_hostname(card->host), __func__, err);
+		//pr_warn("%s: %s: Error %d when starting bkops\n",
+			//mmc_hostname(card->host), __func__, err);
 		goto out;
 	}
-	MMC_UPDATE_STATS_BKOPS_SEVERITY_LEVEL(card->bkops_info.bkops_stats,
-					card->ext_csd.raw_bkops_status);
 	mmc_card_clr_need_bkops(card);
 
 	mmc_card_set_doing_bkops(card);
@@ -956,17 +895,6 @@ static int mmc_get_bkops_status(struct mmc_card *card)
 
 	return err;
 }
-#else
-static int mmc_get_bkops_status(struct mmc_card *card)
-{
-	int err = 0;
-
-	if (!mmc_use_core_runtime_pm(card->host) && mmc_card_doing_bkops(card)
-	    && mmc_card_is_prog_state(card))
-		err = -EBUSY;
-
-	return err;
-}
 #endif
 /**
  *	mmc_stop_bkops - stop ongoing BKOPS
@@ -1015,8 +943,6 @@ int mmc_stop_bkops(struct mmc_card *card)
 		err = 0;
 	}
 
-	MMC_UPDATE_BKOPS_STATS_HPI(card->bkops_info.bkops_stats);
-
 out:
 	return err;
 }
@@ -1035,12 +961,6 @@ int mmc_read_bkops_status(struct mmc_card *card)
 		pr_err("%s: could not allocate buffer to receive the ext_csd.\n",
 		       mmc_hostname(card->host));
 		return -ENOMEM;
-	}
-
-	if (card->bkops_info.bkops_stats.ignore_card_bkops_status) {
-		pr_debug("%s: skipping read raw_bkops_status in unittest mode",
-			 __func__);
-		return 0;
 	}
 
 	mmc_claim_host(card->host);
@@ -1554,7 +1474,7 @@ int mmc_regulator_get_ocrmask(struct regulator *supply)
 
 	return result;
 }
-EXPORT_SYMBOL_GPL(mmc_regulator_get_ocrmask);
+EXPORT_SYMBOL(mmc_regulator_get_ocrmask);
 
 /**
  * mmc_regulator_set_ocr - set regulator to match host->ios voltage
@@ -1624,7 +1544,7 @@ int mmc_regulator_set_ocr(struct mmc_host *mmc,
 			"could not set regulator OCR (%d)\n", result);
 	return result;
 }
-EXPORT_SYMBOL_GPL(mmc_regulator_set_ocr);
+EXPORT_SYMBOL(mmc_regulator_set_ocr);
 
 #endif /* CONFIG_REGULATOR */
 
@@ -3268,7 +3188,7 @@ int mmc_flush_cache(struct mmc_card *card)
 						EXT_CSD_FLUSH_CACHE, 1,
 						MMC_FLUSH_REQ_TIMEOUT_MS);
 		if (err == -ETIMEDOUT) {
-			pr_err("%s: cache flush timeout\n",
+			pr_debug("%s: cache flush timeout\n",
 					mmc_hostname(card->host));
 			rc = mmc_interrupt_hpi(card);
 			if (rc)
@@ -3314,7 +3234,7 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 					EXT_CSD_CACHE_CTRL, enable, timeout);
 
 			if (err == -ETIMEDOUT && !enable) {
-				pr_err("%s:cache disable operation timeout\n",
+				pr_debug("%s:cache disable operation timeout\n",
 						mmc_hostname(card->host));
 				rc = mmc_interrupt_hpi(card);
 				if (rc)
