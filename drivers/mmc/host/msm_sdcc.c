@@ -3,8 +3,7 @@
  *
  *  Copyright (C) 2007 Google Inc,
  *  Copyright (C) 2003 Deep Blue Solutions, Ltd, All Rights Reserved.
- *  Copyright (c) 2009-2014, The Linux Foundation. All rights reserved.
- *
+ *  Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2501,8 +2500,6 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 		}
 		rc = msmsdcc_vreg_reset(host);
 		if (rc)
-			pr_err("msmsdcc.%d vreg reset failed (%d)\n",
-			       host->pdev->id, rc);
 		goto out;
 	} else {
 		/* Deregister all regulators from regulator framework */
@@ -3553,7 +3550,7 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
-	if (msmsdcc_is_pwrsave(host) && mmc_host_may_gate_card(host->mmc->card))
+	if (msmsdcc_is_pwrsave(host))
 		clk |= MCI_CLK_PWRSAVE;
 
 	clk |= MCI_CLK_FLOWENA;
@@ -4507,10 +4504,7 @@ static const struct mmc_host_ops msmsdcc_ops = {
 	.get_ro		= msmsdcc_get_ro,
 	.enable_sdio_irq = msmsdcc_enable_sdio_irq,
 	.start_signal_voltage_switch = msmsdcc_switch_io_voltage,
-	.card_busy = msmsdcc_is_card_busy,
 	.execute_tuning = msmsdcc_execute_tuning,
-	.stop_request = msmsdcc_stop_request,
-	.get_xfer_remain = msmsdcc_get_xfer_remain,
 	.notify_load = msmsdcc_notify_load,
 };
 
@@ -4788,10 +4782,6 @@ static int msmsdcc_sps_init_ep_conn(struct msmsdcc_host *host,
 	}
 	/* Now save the sps pipe handle */
 	ep->pipe_handle = sps_pipe_handle;
-	pr_debug("%s: %s, success !!! %s: pipe_handle=0x%x,"\
-		" desc_fifo.phys_base=%pa\n", mmc_hostname(host->mmc),
-		__func__, is_producer ? "READ" : "WRITE",
-		(u32)sps_pipe_handle, &sps_config->desc.phys_base);
 	goto out;
 
 reg_event_err:
@@ -5953,11 +5943,6 @@ msmsdcc_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	if (disable_slots & (1 << (pdev->id - 1))) {
-		//pr_info("%s: Slot %d disabled\n", __func__, pdev->id);
-		return -ENODEV;
-	}
-
 	if (pdev->id < 1 || pdev->id > 5)
 		return -EINVAL;
 
@@ -6224,9 +6209,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
 	mmc->caps |= MMC_CAP_SDIO_IRQ;
-
-	if (plat->is_sdio_al_client)
-		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
 
 	mmc->max_segs = msmsdcc_get_nr_sg(host);
 	mmc->max_blk_size = MMC_MAX_BLK_SIZE;
