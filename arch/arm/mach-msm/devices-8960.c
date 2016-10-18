@@ -3616,7 +3616,7 @@ static struct msm_bus_vectors grp2d0_nominal_vectors[] = {
 		.src = MSM_BUS_MASTER_GRAPHICS_2D_CORE0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(1000),
+		.ib = KGSL_CONVERT_TO_MBPS(1064),
 	},
 };
 
@@ -3625,7 +3625,7 @@ static struct msm_bus_vectors grp2d0_max_vectors[] = {
 		.src = MSM_BUS_MASTER_GRAPHICS_2D_CORE0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(2048),
+		.ib = KGSL_CONVERT_TO_MBPS(2128),
 	},
 };
 
@@ -3831,7 +3831,7 @@ static struct kgsl_device_iommu_data kgsl_2d0_iommu_data[] = {
 static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.pwrlevel = {
 		{
-			.gpu_freq = 228571000,
+			.gpu_freq = 266670000,
 			.bus_freq = 2,
 		},
 		{
@@ -3898,7 +3898,7 @@ static struct resource kgsl_2d1_resources[] = {
 static struct kgsl_device_platform_data kgsl_2d1_pdata = {
 	.pwrlevel = {
 		{
-			.gpu_freq = 228571000,
+			.gpu_freq = 266670000,
 			.bus_freq = 2,
 		},
 		{
