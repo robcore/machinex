@@ -3351,7 +3351,7 @@ static int mdp_probe(struct platform_device *pdev)
 
 	/* req bus bandwidth immediately */
 	if (!(mfd->cont_splash_done))
-		mdp_bus_scale_update_request(mdp_max_bw, mdp_max_bw,mdp_max_bw,mdp_max_bw);
+		mdp_bus_scale_update_request(mdp_max_bw, mdp_max_bw, mdp_max_bw, mdp_max_bw);
 #endif
 
 	/* set driver data */
