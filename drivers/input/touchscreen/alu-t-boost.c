@@ -66,10 +66,10 @@ static struct min_cpu_limit {
 	uint32_t user_min_freq_lock[4];
 	uint32_t user_boost_freq_lock[4];
 } limit = {
-	.user_min_freq_lock[0] = 0,
-	.user_min_freq_lock[1] = 0,
-	.user_min_freq_lock[2] = 0,
-	.user_min_freq_lock[3] = 0,
+	.hardlimit_min_screen_on[0] = 0,
+	.hardlimit_min_screen_on[1] = 0,
+	.hardlimit_min_screen_on[2] = 0,
+	.hardlimit_min_screen_on[3] = 0,
 	.user_boost_freq_lock[0] = 0,
 	.user_boost_freq_lock[1] = 0,
 	.user_boost_freq_lock[2] = 0,
@@ -83,7 +83,7 @@ static void do_input_boost_rem(struct work_struct *work)
 	for_each_possible_cpu(cpu) {
 		if (limit.user_boost_freq_lock[cpu] > 0) {
 			dprintk("Removing input boost for CPU%u\n", cpu);
-			set_cpu_min_lock(cpu, limit.user_min_freq_lock[cpu]);
+			set_cpu_min_lock(cpu, check_cpufreq_hardlimit(data->user_policy.min));
 			limit.user_boost_freq_lock[cpu] = 0;
 		}
 	}

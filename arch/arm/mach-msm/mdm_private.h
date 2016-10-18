@@ -47,7 +47,6 @@ struct mdm_modem_drv {
 	unsigned ap2mdm_pmic_pwr_en_gpio;
 	unsigned mdm2ap_pblrdy;
 	unsigned usb_switch_gpio;
-	
 	int mdm_errfatal_irq;
 	int mdm_status_irq;
 	atomic_t mdm_ready;
