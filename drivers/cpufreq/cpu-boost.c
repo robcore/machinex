@@ -90,7 +90,7 @@ static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 	struct cpu_sync *i_sync_info;
 	int i;
 	static unsigned int val;
-	static int ret;
+	static unsigned int ret;
 
 		for_each_possible_cpu(i) {
 			i_sync_info = &per_cpu(sync_info, i);
