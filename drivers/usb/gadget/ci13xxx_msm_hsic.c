@@ -41,7 +41,7 @@
 #define USB_PHY_VDD_DIG_VOL_MIN			1045000 /* uV */
 #define USB_PHY_VDD_DIG_VOL_MAX			1320000 /* uV */
 #define LINK_RESET_TIMEOUT_USEC			(250 * 1000)
-#define PHY_SUSPEND_TIMEOUT_USEC		(20 * 1000)
+#define PHY_SUSPEND_TIMEOUT_USEC		(1000 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC			(100 * 1000)
 #define HSIC_CFG_REG					0x30
 #define HSIC_IO_CAL_PER_REG				0x33
@@ -87,7 +87,7 @@ static int msm_hsic_init_vddcx(struct msm_hsic_per *mhsic, int init)
 	int ret = 0;
 	int none_vol, min_vol, max_vol;
 
-	if (!mhsic->hsic_vddcx) {
+	if (!mhsic->hsic_vddcx) {20
 		mhsic->vdd_type = VDDCX_CORNER;
 		mhsic->hsic_vddcx = devm_regulator_get(mhsic->dev,
 			"hsic_vdd_dig");

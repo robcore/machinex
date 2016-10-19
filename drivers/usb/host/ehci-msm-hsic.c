@@ -616,7 +616,7 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 	return 0;
 }
 
-#define PHY_SUSPEND_TIMEOUT_USEC	(20 * 1000)
+#define PHY_SUSPEND_TIMEOUT_USEC	(1000 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep(20);
+		msleep_interruptible(20);
 		cnt++;
 	}
 
@@ -1678,7 +1678,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * though child is active. Hence resume the parent device explicitly.
 	 */
 	if (pdev->dev.parent)
-		pm_runtime_get(pdev->dev.parent);
+		pm_runtime_get_sync(pdev->dev.parent);
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));
@@ -1845,7 +1845,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * suspend mode.
 	 */
 	if (pdev->dev.parent)
-		pm_runtime_put(pdev->dev.parent);
+		pm_runtime_put_sync(pdev->dev.parent);
 
 	return 0;
 
