@@ -237,7 +237,6 @@ static void ipw_release(struct usb_serial *serial)
 {
 	struct usb_wwan_intf_private *data = usb_get_serial_data(serial);
 
-	usb_wwan_release(serial);
 	usb_set_serial_data(serial, NULL);
 	kfree(data);
 }
@@ -319,12 +318,12 @@ static struct usb_serial_driver ipw_device = {
 	.description =		"IPWireless converter",
 	.id_table =		usb_ipw_ids,
 	.num_ports =		1,
-	.disconnect =		usb_wwan_disconnect,
 	.open =			ipw_open,
 	.close =		ipw_close,
 	.probe =		ipw_probe,
 	.attach =		usb_wwan_startup,
 	.release =		ipw_release,
+	.port_remove =		usb_wwan_port_remove,
 	.dtr_rts =		ipw_dtr_rts,
 	.write =		usb_wwan_write,
 };

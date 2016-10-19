@@ -726,9 +726,36 @@ bail_out_error:
 }
 EXPORT_SYMBOL(usb_wwan_startup);
 
-static void stop_read_write_urbs(struct usb_serial *serial)
+int usb_wwan_port_remove(struct usb_serial_port *port)
 {
 	int i;
+	struct usb_wwan_port_private *portdata;
+
+	portdata = usb_get_serial_port_data(port);
+	usb_set_serial_port_data(port, NULL);
+
+	/* Stop reading/writing urbs and free them */
+	for (i = 0; i < N_IN_URB; i++) {
+		usb_kill_urb(portdata->in_urbs[i]);
+		usb_free_urb(portdata->in_urbs[i]);
+		free_page((unsigned long)portdata->in_buffer[i]);
+	}
+	for (i = 0; i < N_OUT_URB; i++) {
+		usb_kill_urb(portdata->out_urbs[i]);
+		usb_free_urb(portdata->out_urbs[i]);
+		kfree(portdata->out_buffer[i]);
+	}
+
+	/* Now free port private data */
+	kfree(portdata);
+	return 0;
+}
+EXPORT_SYMBOL(usb_wwan_port_remove);
+
+#ifdef CONFIG_PM
+static void stop_read_write_urbs(struct usb_serial *serial)
+{
+	int i, j;
 	struct usb_serial_port *port;
 	struct usb_wwan_port_private *portdata;
 
@@ -736,63 +763,14 @@ static void stop_read_write_urbs(struct usb_serial *serial)
 	for (i = 0; i < serial->num_ports; ++i) {
 		port = serial->port[i];
 		portdata = usb_get_serial_port_data(port);
-		usb_kill_anchored_urbs(&portdata->submitted);
+
+		for (j = 0; j < N_IN_URB; j++)
+			usb_kill_urb(portdata->in_urbs[j]);
+		for (j = 0; j < N_OUT_URB; j++)
+			usb_kill_urb(portdata->out_urbs[j]);
 	}
 }
 
-void usb_wwan_disconnect(struct usb_serial *serial)
-{
-	dbg("%s", __func__);
-
-	stop_read_write_urbs(serial);
-}
-EXPORT_SYMBOL(usb_wwan_disconnect);
-
-void usb_wwan_release(struct usb_serial *serial)
-{
-	int i, j;
-	struct usb_serial_port *port;
-	struct usb_wwan_port_private *portdata;
-	struct urb *urb;
-	struct list_head *q;
-	unsigned long flags;
-
-	/* Now free them */
-	for (i = 0; i < serial->num_ports; ++i) {
-		port = serial->port[i];
-		portdata = usb_get_serial_port_data(port);
-
-		cancel_work_sync(&portdata->in_work);
-		/* TBD: do we really need this */
-		spin_lock_irqsave(&portdata->in_lock, flags);
-		q = &portdata->in_urb_list;
-		while (!list_empty(q)) {
-			urb = list_first_entry(q, struct urb, urb_list);
-			list_del_init(&urb->urb_list);
-		}
-		spin_unlock_irqrestore(&portdata->in_lock, flags);
-
-		for (j = 0; j < N_IN_URB; j++) {
-			usb_free_urb(portdata->in_urbs[j]);
-			kfree(portdata->in_buffer[j]);
-			portdata->in_urbs[j] = NULL;
-		}
-		for (j = 0; j < N_OUT_URB; j++) {
-			usb_free_urb(portdata->out_urbs[j]);
-			kfree(portdata->out_buffer[j]);
-			portdata->out_urbs[j] = NULL;
-		}
-	}
-
-	/* Now free per port private data */
-	for (i = 0; i < serial->num_ports; i++) {
-		port = serial->port[i];
-		kfree(usb_get_serial_port_data(port));
-	}
-}
-EXPORT_SYMBOL(usb_wwan_release);
-
-#ifdef CONFIG_PM
 int usb_wwan_suspend(struct usb_serial *serial, pm_message_t message)
 {
 	struct usb_wwan_intf_private *intfdata = serial->private;

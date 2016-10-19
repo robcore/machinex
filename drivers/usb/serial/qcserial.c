@@ -278,8 +278,7 @@ static void qc_release(struct usb_serial *serial)
 
 	dbg("%s", __func__);
 
-	/* Call usb_wwan release & free the private data allocated in qcprobe */
-	usb_wwan_release(serial);
+	/* Free the private data allocated in qcprobe */
 	usb_set_serial_data(serial, NULL);
 	kfree(priv);
 }
@@ -301,8 +300,8 @@ static struct usb_serial_driver qcdevice = {
 	.throttle            = usb_wwan_throttle,
 	.unthrottle          = usb_wwan_unthrottle,
 	.attach		     = usb_wwan_startup,
-	.disconnect	     = usb_wwan_disconnect,
 	.release	     = qc_release,
+	.port_remove	     = usb_wwan_port_remove,
 #ifdef CONFIG_PM
 	.suspend	     = usb_wwan_suspend,
 	.resume		     = usb_wwan_resume,

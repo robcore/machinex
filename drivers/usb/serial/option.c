@@ -1811,8 +1811,8 @@ static struct usb_serial_driver option_1port_device = {
 	.tiocmset          = usb_wwan_tiocmset,
 	.ioctl             = usb_wwan_ioctl,
 	.attach            = usb_wwan_startup,
-	.disconnect        = usb_wwan_disconnect,
 	.release           = option_release,
+	.port_remove	   = usb_wwan_port_remove,
 	.read_int_callback = option_instat_callback,
 #ifdef CONFIG_PM
 	.suspend           = usb_wwan_suspend,
@@ -1897,8 +1897,6 @@ static int option_probe(struct usb_serial *serial,
 static void option_release(struct usb_serial *serial)
 {
 	struct usb_wwan_intf_private *priv = usb_get_serial_data(serial);
-
-	usb_wwan_release(serial);
 
 	kfree(priv);
 }
