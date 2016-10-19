@@ -184,7 +184,7 @@ void reapply_hard_limits(void)
 			current_limit_min  = hardlimit_min_screen_on;
 			current_limit_max  = hardlimit_max_screen_on;
 
-		}
+		//}
 
 	} else {
 
