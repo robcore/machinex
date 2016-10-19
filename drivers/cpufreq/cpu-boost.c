@@ -87,17 +87,19 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
-	int i, ntokens = 0;
+	struct cpu_sync *i_sync_info;
+	int i;
 	unsigned int val;
 	int ret;
 
-	if (!ntokens) {
 		for_each_possible_cpu(i) {
-			per_cpu(sync_info, i).input_boost_freq = val;
-		ret = sprintf(buf, "%u", val);
+			i_sync_info = &per_cpu(sync_info, i);
+			val = i_sync_info->input_boost_freq;
 		}
-	}
-	return ret;
+
+		ret = sprintf(buf, "%u", val);
+
+		return ret;
 }
 
 static const struct kernel_param_ops param_ops_input_boost_freq = {
