@@ -31,18 +31,6 @@
 #define DEFAULT_BATT_CRITICAL		15
 #define DEBUG_MASK			0
 
-static struct msm_thermal_data msm_thermal_info = {
-	.sensor_id = 5,
-	.poll_ms = DEFAULT_POLLING_MS,
-	.limit_temp_degC = 70,
-	.temp_hysteresis_degC = 10,
-	.freq_step = 2,
-	.freq_control_mask = 0xf,
-	.core_limit_temp_degC = 80,
-	.core_temp_hysteresis_degC = 10,
-	.core_control_mask = 0xe,
-};
-
 static struct state_helper {
 	unsigned int enabled;
 	unsigned int max_cpus_online;
@@ -137,8 +125,8 @@ static void __ref state_helper_work(struct work_struct *work)
 			STATE_HELPER, info.batt_level);
 		pr_info("%s: Current Temp: %ld\n",
 			STATE_HELPER, info.current_temp);
-		pr_info("%s: Core Limit Temp: %u\n",
-			STATE_HELPER, msm_thermal_info.core_limit_temp_degC);
+//		pr_info("%s: Core Limit Temp: %u\n",
+//			STATE_HELPER, core_limit_temp_degC);
 		pr_info("%s: Target requested: %u\n",
 			STATE_HELPER, info.target_cpus);
 		for_each_possible_cpu(cpu)
