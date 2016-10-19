@@ -24,9 +24,9 @@
 #define HELPER_ENABLED			0
 #define DELAY_MSEC			100
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
-#define DEFAULT_SUSP_CPUS		1
-#define DEFAULT_MAX_CPUS_ECONOMIC	2
-#define DEFAULT_MAX_CPUS_CRITICAL	1
+#define DEFAULT_SUSP_CPUS		2
+#define DEFAULT_MAX_CPUS_ECONOMIC	3
+#define DEFAULT_MAX_CPUS_CRITICAL	2
 #define DEFAULT_BATT_ECONOMIC		25
 #define DEFAULT_BATT_CRITICAL		15
 #define DEBUG_MASK			0
@@ -34,7 +34,7 @@
 static struct state_helper {
 	unsigned int enabled;
 	unsigned int max_cpus_online;
-	unsigned int max_cpus_susp;
+	unsigned int max_cpus_online_susp;
 	unsigned int max_cpus_eco;
 	unsigned int max_cpus_cri;
 	unsigned int batt_level_eco;
@@ -43,7 +43,7 @@ static struct state_helper {
 } helper = {
 	.enabled = HELPER_ENABLED,
 	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
-	.max_cpus_susp = DEFAULT_SUSP_CPUS,
+	.max_cpus_online_susp = DEFAULT_SUSP_CPUS,
 	.max_cpus_eco = DEFAULT_MAX_CPUS_ECONOMIC,
 	.max_cpus_cri = DEFAULT_MAX_CPUS_CRITICAL,
 	.batt_level_eco = DEFAULT_BATT_ECONOMIC,
@@ -77,7 +77,7 @@ do { 				\
 static void target_cpus_calc(void)
 {
 	if (state_suspended)
-		info.target_cpus = helper.max_cpus_susp;
+		info.target_cpus = helper.max_cpus_online_susp;
 	else
 		info.target_cpus = helper.max_cpus_online;
 
@@ -332,14 +332,14 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t show_max_cpus_susp(struct kobject *kobj,
+static ssize_t show_max_cpus_online_susp(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf)
 {
-	return sprintf(buf, "%u\n",helper.max_cpus_susp);
+	return sprintf(buf, "%u\n",helper.max_cpus_online_susp);
 }
 
-static ssize_t store_max_cpus_susp(struct kobject *kobj,
+static ssize_t store_max_cpus_online_susp(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				const char *buf, size_t count)
 {
@@ -353,7 +353,7 @@ static ssize_t store_max_cpus_susp(struct kobject *kobj,
 	if (val > helper.max_cpus_online)
 		val = helper.max_cpus_online;
 
-	helper.max_cpus_susp = val;
+	helper.max_cpus_online_susp = val;
 
 	return count;
 }
@@ -553,7 +553,7 @@ static struct kobj_attribute _name##_attr = 		\
 
 KERNEL_ATTR_RW(enabled);
 KERNEL_ATTR_RW(max_cpus_online);
-KERNEL_ATTR_RW(max_cpus_susp);
+KERNEL_ATTR_RW(max_cpus_online_susp);
 KERNEL_ATTR_RW(max_cpus_eco);
 KERNEL_ATTR_RW(max_cpus_cri);
 KERNEL_ATTR_RW(batt_level_eco);
@@ -568,7 +568,7 @@ KERNEL_ATTR_RO(current_temp);
 static struct attribute *state_helper_attrs[] = {
 	&enabled_attr.attr,
 	&max_cpus_online_attr.attr,
-	&max_cpus_susp_attr.attr,
+	&max_cpus_online_susp_attr.attr,
 	&max_cpus_eco_attr.attr,
 	&max_cpus_cri_attr.attr,
 	&batt_level_eco_attr.attr,
