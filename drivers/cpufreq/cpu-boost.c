@@ -29,8 +29,8 @@
 
 struct cpu_sync {
 	int cpu;
-	unsigned int input_boost_min = 384000;
-	unsigned int input_boost_freq = 1134000;
+	unsigned int input_boost_min;
+	unsigned int input_boost_freq;
 };
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
@@ -42,21 +42,21 @@ static struct work_struct input_boost_work;
 static struct notifier_block notif;
 #endif
 
-static bool input_boost_enabled = true;
+static bool input_boost_enabled;
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
-static bool hotplug_boost = false;
+static bool hotplug_boost;
 module_param(hotplug_boost, bool, 0644);
 
-static bool wakeup_boost = true;
+static bool wakeup_boost;
 module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
-static unsigned int min_input_interval = 130;
+static unsigned int min_input_interval = 150;
 module_param(min_input_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
