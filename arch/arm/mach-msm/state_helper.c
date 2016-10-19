@@ -82,9 +82,9 @@ static void target_cpus_calc(void)
 		info.target_cpus = helper.max_cpus_online;
 
 	info.target_cpus = min(info.target_cpus,
-				info.batt_limited_cpus);	
+				info.batt_limited_cpus);
 	info.target_cpus = min(info.target_cpus,
-				info.therm_allowed_cpus);	
+				info.therm_allowed_cpus);
 }
 
 static void __ref state_helper_work(struct work_struct *work)
@@ -106,7 +106,7 @@ static void __ref state_helper_work(struct work_struct *work)
 	} else if (info.target_cpus > num_online_cpus()) {
 		for(cpu = 1; cpu < NR_CPUS; cpu++) {
 			if (cpu_online(cpu) ||
-				msm_thermal_info.cpus_offlined & BIT(cpu))
+				cpus_offlined & BIT(cpu))
 				continue;
 			cpu_up(cpu);
 			dprintk("%s: Switching CPU%u online\n",
@@ -132,7 +132,7 @@ static void __ref state_helper_work(struct work_struct *work)
 		for_each_possible_cpu(cpu)
 			pr_info("%s: CPU%u status:%u allowed:%u\n",
 				STATE_HELPER, cpu, cpu_online(cpu),
-				!(msm_thermal_info.cpus_offlined & BIT(cpu)));
+				!(cpus_offlined & BIT(cpu)));
 	}
 }
 
@@ -151,7 +151,7 @@ static void thermal_check(void)
 	int cpu, sum = 0;
 
 	for_each_possible_cpu(cpu)
-		sum += !(msm_thermal_info.cpus_offlined & BIT(cpu));
+		sum += !(cpus_offlined & BIT(cpu));
 
 	info.therm_allowed_cpus = sum;
 }
@@ -267,14 +267,14 @@ static void __ref state_helper_stop(void)
 	/* Wake up all the sibling cores */
 	for_each_possible_cpu(cpu)
 		if (!cpu_online(cpu) &&
-			!(msm_thermal_info.cpus_offlined & BIT(cpu)))
+			!(cpus_offlined & BIT(cpu)))
 			cpu_up(cpu);
 }
 
 /************************** sysfs interface ************************/
 
 static ssize_t show_enabled(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n", helper.enabled);
@@ -305,7 +305,7 @@ static ssize_t store_enabled(struct kobject *kobj,
 }
 
 static ssize_t show_max_cpus_online(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n",helper.max_cpus_online);
@@ -333,7 +333,7 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 }
 
 static ssize_t show_max_cpus_susp(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n",helper.max_cpus_susp);
@@ -359,7 +359,7 @@ static ssize_t store_max_cpus_susp(struct kobject *kobj,
 }
 
 static ssize_t show_max_cpus_eco(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n",helper.max_cpus_eco);
@@ -387,7 +387,7 @@ static ssize_t store_max_cpus_eco(struct kobject *kobj,
 }
 
 static ssize_t show_max_cpus_cri(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n",helper.max_cpus_cri);
@@ -415,7 +415,7 @@ static ssize_t store_max_cpus_cri(struct kobject *kobj,
 }
 
 static ssize_t show_batt_level_eco(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n",helper.batt_level_eco);
@@ -443,7 +443,7 @@ static ssize_t store_batt_level_eco(struct kobject *kobj,
 }
 
 static ssize_t show_batt_level_cri(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n",helper.batt_level_cri);
@@ -471,7 +471,7 @@ static ssize_t store_batt_level_cri(struct kobject *kobj,
 }
 
 static ssize_t show_debug_mask(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n", helper.debug);
@@ -497,7 +497,7 @@ static ssize_t store_debug_mask(struct kobject *kobj,
 }
 
 static ssize_t show_target_cpus(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	if (!helper.enabled) {
@@ -510,7 +510,7 @@ static ssize_t show_target_cpus(struct kobject *kobj,
 }
 
 static ssize_t show_batt_limited_cpus(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	if (!helper.enabled)
@@ -520,7 +520,7 @@ static ssize_t show_batt_limited_cpus(struct kobject *kobj,
 }
 
 static ssize_t show_therm_allowed_cpus(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	if (!helper.enabled)
@@ -530,14 +530,14 @@ static ssize_t show_therm_allowed_cpus(struct kobject *kobj,
 }
 
 static ssize_t show_batt_level(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%u\n", info.batt_level);
 }
 
 static ssize_t show_current_temp(struct kobject *kobj,
-				struct kobj_attribute *attr, 
+				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%ld\n", info.current_temp);
