@@ -21,7 +21,7 @@
  */
 
 #include <linux/moduleparam.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/cpufreq.h>
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
@@ -32,7 +32,7 @@
 
 #define ASMP_TAG "AutoSMP: "
 #define ASMP_STARTDELAY 20000
-
+#define ASMP_ENABLED 0
 struct asmp_cpudata_t {
 	long long unsigned int times_hotplugged;
 };
@@ -44,8 +44,8 @@ static DEFINE_PER_CPU(struct asmp_cpudata_t, asmp_cpudata);
 static struct asmp_param_struct {
 	unsigned int delay;
 	bool scroff_single_core;
-	unsigned int max_cpus;
-	unsigned int min_cpus;
+	unsigned int max_cpus_online;
+	unsigned int min_cpus_online;
 	unsigned int cpufreq_up;
 	unsigned int cpufreq_down;
 	unsigned int cycle_up;
@@ -53,8 +53,8 @@ static struct asmp_param_struct {
 } asmp_param = {
 	.delay = 100,
 	.scroff_single_core = true,
-	.max_cpus = CONFIG_NR_CPUS,
-	.min_cpus = 1,
+	.max_cpus_online = CONFIG_NR_CPUS,
+	.min_cpus_online = 1,
 	.cpufreq_up = 80,
 	.cpufreq_down = 67,
 	.cycle_up = 1,
@@ -63,9 +63,9 @@ static struct asmp_param_struct {
 
 static unsigned int cycle = 0, delay0 = 0;
 static unsigned long delay_jif = 0;
-static int enabled __read_mostly = 1;
+static int enabled = ASMP_ENABLED;
 
-static void __cpuinit asmp_work_fn(struct work_struct *work) {
+static void asmp_work_fn(struct work_struct *work) {
 	unsigned int cpu = 0, slow_cpu = 0;
 	unsigned int rate, cpu0_rate, slow_rate = UINT_MAX, fast_rate;
 	unsigned int max_rate, up_rate, down_rate;
@@ -104,22 +104,22 @@ static void __cpuinit asmp_work_fn(struct work_struct *work) {
 
 	/* hotplug one core if all online cores are over up_rate limit */
 	if (slow_rate > up_rate) {
-		if ((nr_cpu_online < asmp_param.max_cpus) &&
+		if ((nr_cpu_online < asmp_param.max_cpus_online) &&
 		    (cycle >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(0, cpu_online_mask);
 			cpu_up(cpu);
 			cycle = 0;
-#if DEBUG
+#if 0
 			pr_info(ASMP_TAG"CPU[%d] on\n", cpu);
 #endif
 		}
 	/* unplug slowest core if all online cores are under down_rate limit */
 	} else if (slow_cpu && (fast_rate < down_rate)) {
-		if ((nr_cpu_online > asmp_param.min_cpus) &&
+		if ((nr_cpu_online > asmp_param.min_cpus_online) &&
 		    (cycle >= asmp_param.cycle_down)) {
  			cpu_down(slow_cpu);
 			cycle = 0;
-#if DEBUG
+#if 0
 			pr_info(ASMP_TAG"CPU[%d] off\n", slow_cpu);
 			per_cpu(asmp_cpudata, cpu).times_hotplugged += 1;
 #endif
@@ -129,7 +129,7 @@ static void __cpuinit asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
-static void asmp_early_suspend(struct early_suspend *h) {
+static void asmp_power_suspend(struct power_suspend *h) {
 	unsigned int cpu;
 
 	/* unplug online cpu cores */
@@ -145,13 +145,13 @@ static void asmp_early_suspend(struct early_suspend *h) {
 	pr_info(ASMP_TAG"suspended\n");
 }
 
-static void __cpuinit asmp_late_resume(struct early_suspend *h) {
+static void asmp_power_resume(struct power_suspend *h) {
 	unsigned int cpu;
 
 	/* hotplug offline cpu cores */
 	if (asmp_param.scroff_single_core)
 		for_each_present_cpu(cpu) {
-			if (num_online_cpus() >= asmp_param.max_cpus)
+			if (num_online_cpus() >= asmp_param.max_cpus_online)
 				break;
 			if (!cpu_online(cpu))
 				cpu_up(cpu);
@@ -164,13 +164,12 @@ static void __cpuinit asmp_late_resume(struct early_suspend *h) {
 	pr_info(ASMP_TAG"resumed\n");
 }
 
-static struct early_suspend __refdata asmp_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	.suspend = asmp_early_suspend,
-	.resume = asmp_late_resume,
+static struct power_suspend __refdata asmp_power_suspend_handler = {
+	.suspend = asmp_power_suspend,
+	.resume = asmp_power_resume,
 };
 
-static int __cpuinit set_enabled(const char *val, const struct kernel_param *kp) {
+static int set_enabled(const char *val, const struct kernel_param *kp) {
 	int ret;
 	unsigned int cpu;
 
@@ -219,8 +218,8 @@ static ssize_t show_##file_name						\
 }
 show_one(delay, delay);
 show_one(scroff_single_core, scroff_single_core);
-show_one(min_cpus, min_cpus);
-show_one(max_cpus, max_cpus);
+show_one(min_cpus_online, min_cpus_online);
+show_one(max_cpus_online, max_cpus_online);
 show_one(cpufreq_up,cpufreq_up);
 show_one(cpufreq_down,cpufreq_down);
 show_one(cycle_up, cycle_up);
@@ -241,8 +240,8 @@ static ssize_t store_##file_name					\
 define_one_global_rw(file_name);
 store_one(delay, delay);
 store_one(scroff_single_core, scroff_single_core);
-store_one(min_cpus, min_cpus);
-store_one(max_cpus, max_cpus);
+store_one(min_cpus_online, min_cpus_online);
+store_one(max_cpus_online, max_cpus_online);
 store_one(cpufreq_up, cpufreq_up);
 store_one(cpufreq_down, cpufreq_down);
 store_one(cycle_up, cycle_up);
@@ -251,8 +250,8 @@ store_one(cycle_down, cycle_down);
 static struct attribute *asmp_attributes[] = {
 	&delay.attr,
 	&scroff_single_core.attr,
-	&min_cpus.attr,
-	&max_cpus.attr,
+	&min_cpus_online.attr,
+	&max_cpus_online.attr,
 	&cpufreq_up.attr,
 	&cpufreq_down.attr,
 	&cycle_up.attr,
@@ -264,7 +263,7 @@ static struct attribute_group asmp_attr_group = {
 	.attrs = asmp_attributes,
 	.name = "conf",
 };
-#if DEBUG
+
 static ssize_t show_times_hotplugged(struct kobject *a,
 					struct attribute *b, char *buf) {
 	ssize_t len = 0;
@@ -287,14 +286,13 @@ static struct attribute_group asmp_stats_attr_group = {
 	.attrs = asmp_stats_attributes,
 	.name = "stats",
 };
-#endif
 /****************************** SYSFS END ******************************/
 
 static int __init asmp_init(void) {
 	unsigned int cpu;
 	int rc;
 
-	asmp_param.max_cpus = nr_cpu_ids;
+	asmp_param.max_cpus_online = nr_cpu_ids;
 	for_each_possible_cpu(cpu)
 		per_cpu(asmp_cpudata, cpu).times_hotplugged = 0;
 
@@ -306,14 +304,14 @@ static int __init asmp_init(void) {
 		queue_delayed_work(asmp_workq, &asmp_work,
 				   msecs_to_jiffies(ASMP_STARTDELAY));
 
-	register_early_suspend(&asmp_early_suspend_handler);
+	register_power_suspend(&asmp_power_suspend_handler);
 
 	asmp_kobject = kobject_create_and_add("autosmp", kernel_kobj);
 	if (asmp_kobject) {
 		rc = sysfs_create_group(asmp_kobject, &asmp_attr_group);
 		if (rc)
 			pr_warn(ASMP_TAG"ERROR, create sysfs group");
-#if DEBUG
+#if 0
 		rc = sysfs_create_group(asmp_kobject, &asmp_stats_attr_group);
 		if (rc)
 			pr_warn(ASMP_TAG"ERROR, create sysfs stats group");
