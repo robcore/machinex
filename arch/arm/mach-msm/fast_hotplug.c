@@ -212,7 +212,7 @@ static void plug_in(int online_cpu_count){
 		}
 	}
 	mutex_unlock(&mutex);
-#ifdef DEBUG_ENABLED
+#if 0
 	pr_info(HOTPLUG_INFO_TAG"Plugged in a core !");
 #endif
 }
@@ -225,12 +225,12 @@ static void plug_out(int online_cpu_count){
 	cpu_down(get_slowest_cpu());
 	if(online_cpu_count <= 2){
 		singlecore = true;
-#ifdef DEBUG_ENABLED
+#if 0
 		pr_info(HOTPLUG_INFO_TAG"Now running in single core");
 #endif
 	}
 	mutex_unlock(&mutex);
-#ifdef DEBUG_ENABLED
+#if 0
 	pr_info(HOTPLUG_INFO_TAG"Plugged out a core !");
 #endif
 }
@@ -249,7 +249,7 @@ static void hotplug(struct work_struct *work){
 		goto delay_work;
 
 	online_cpu_count = num_online_cpus();
-#ifdef DEBUG_ENABLED
+#if 0
 	pr_info(HOTPLUG_INFO_TAG"The load is %lu, we have %d cpu online and the in threshold is : %lu. The delay is %d, out : %lu, %d and singlecore : %d", load, online_cpu_count, *plug_in_threshold[online_cpu_count], *plug_in_delay[online_cpu_count], *plug_out_threshold[online_cpu_count - 1], *plug_out_delay[online_cpu_count - 1], singlecore);
 #endif
 
@@ -299,7 +299,7 @@ static void unboost_cpu(unsigned long data){
 	// This is a good, quiet occasion to change the idle threshold
 	// in case the plug in frequency has been changed
 	idle_threshold = *(plug_in_threshold[1]);
-#ifdef DEBUG_ENABLED
+#if 0
 	pr_info(HOTPLUG_INFO_TAG"Cpu unboosted !\n");
 #endif
 }
@@ -312,7 +312,7 @@ static void hotplug_input_event(struct input_handle *handle,
 		return;
 	}
 	is_boosted = true;
-#ifdef DEBUG_ENABLED
+#if 0
 	pr_info(HOTPLUG_INFO_TAG"Cpu boosted !\n");
 #endif
 	mod_timer(&unboost_timer, jiffies + msecs_to_jiffies(boost_duration));
@@ -435,13 +435,13 @@ static void hotplug_power_suspend(struct power_suspend *h) {
 	if(fast_hotplug_enabled && screen_off_singlecore){
 		mutex_lock(&mutex);
 		flush_workqueue(hotplug_wq);
-#ifdef DEBUG_ENABLED
+#if 0
 		pr_info(HOTPLUG_INFO_TAG"Screen off\n");
 #endif
 		for_each_online_cpu(cpu){
 			if(cpu == 0)
 				continue;
-#ifdef DEBUG_ENABLED
+#if 0
 			pr_info(HOTPLUG_INFO_TAG"Bringing cpu %d down\n", cpu);
 #endif
 			cpu_down(cpu);
@@ -454,7 +454,7 @@ static void hotplug_power_suspend(struct power_suspend *h) {
 
 static void hotplug_late_resume(struct power_suspend *h) {
 	if(fast_hotplug_enabled){
-#ifdef DEBUG_ENABLED
+#if 0
 		pr_info(HOTPLUG_INFO_TAG"Screen on, let's boost the cpu !");
 #endif
 		is_sleeping = false;
