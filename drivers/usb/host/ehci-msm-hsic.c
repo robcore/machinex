@@ -656,7 +656,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep_interruptible(500);
+		msleep_interruptible(20);
 		cnt++;
 	}
 
@@ -707,9 +707,12 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
 
+	wake_lock(&mehci->wlock);
+	spin_lock_irqsave(&mehci->wakeup_lock, flags);
 	mehci->wakeup_irq_enabled = 1;
 	enable_irq_wake(mehci->wakeup_irq);
 	enable_irq(mehci->wakeup_irq);
+	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
 	wake_unlock(&mehci->wlock);
 
@@ -1165,7 +1168,7 @@ resume_again:
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
 			/* do the resume in a tight loop */
-			mdelay(22);
+			msleep(22);
 			writel_relaxed(readl_relaxed(&ehci->regs->command) |
 					CMD_RUN, &ehci->regs->command);
 			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
@@ -1844,7 +1847,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 */
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
-	wake_unlock(&mehci->wlock);
+
 	return 0;
 
 unconfig_gpio:
@@ -1860,7 +1863,7 @@ put_hcd:
 	usb_put_hcd(hcd);
 put_parent:
 	if (pdev->dev.parent)
-		pm_runtime_put_sync(pdev->dev.parent);
+		pm_runtime_put(pdev->dev.parent);
 
 	return ret;
 }
