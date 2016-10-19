@@ -26,6 +26,7 @@ struct msm_thermal_data {
 	int32_t core_limit_temp_degC;
 	int32_t core_temp_hysteresis_degC;
 	uint32_t core_control_mask;
+	uint32_t cpus_offlined;
 };
 
 #if defined(CONFIG_THERMAL_MONITOR) || defined(CONFIG_INTELLI_THERMAL)
