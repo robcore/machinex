@@ -61,16 +61,18 @@ module_param(min_input_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	int i;
+	int i, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
 	bool enabled = false;
 
 	/* single number: apply to all CPUs */
+	if (!ntokens) {
 		if (sscanf(buf, "%u\n", &val) != 1)
 			return -EINVAL;
 		for_each_possible_cpu(i)
 			per_cpu(sync_info, i).input_boost_freq = val;
+		}
 
 	for_each_possible_cpu(i) {
 		if (per_cpu(sync_info, i).input_boost_freq) {
@@ -85,13 +87,17 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
-	unsigned int i;
-	struct cpu_sync *i_sync_info;
+	int i, ntokens = 0;
+	unsigned int val;
+	int ret;
 
-	for_each_possible_cpu(i)
-		i_sync_info = &per_cpu(sync_info, i);
-
-		return snprintf(buf, "%u", i_sync_info->input_boost_freq);
+	if (!ntokens) {
+		for_each_possible_cpu(i) {
+			per_cpu(sync_info, i).input_boost_freq = val;
+		ret = sprintf(buf, "%u", val);
+		}
+	}
+	return ret;
 }
 
 static const struct kernel_param_ops param_ops_input_boost_freq = {
