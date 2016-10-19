@@ -31,6 +31,18 @@
 #define DEFAULT_BATT_CRITICAL		15
 #define DEBUG_MASK			0
 
+static struct msm_thermal_data msm_thermal_info = {
+	.sensor_id = 5,
+	.poll_ms = DEFAULT_POLLING_MS,
+	.limit_temp_degC = 70,
+	.temp_hysteresis_degC = 10,
+	.freq_step = 2,
+	.freq_control_mask = 0xf,
+	.core_limit_temp_degC = 80,
+	.core_temp_hysteresis_degC = 10,
+	.core_control_mask = 0xe,
+};
+
 static struct state_helper {
 	unsigned int enabled;
 	unsigned int max_cpus_online;
