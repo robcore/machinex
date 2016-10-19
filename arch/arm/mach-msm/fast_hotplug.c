@@ -59,14 +59,14 @@
 #define PLUG_OUT_CORE_2_DELAY		2
 #define PLUG_OUT_CORE_3_DELAY		1
 
-static int fast_hotplug_enabled = FAST_HOTPLUG_ENABLED;
+static int enabled = FAST_HOTPLUG_ENABLED;
 static int enable_fast_hotplug(const char *val, const struct kernel_param *kp);
 
 static struct kernel_param_ops params_ops_enable = {
        .set = enable_fast_hotplug,
        .get = param_get_uint,
 };
-module_param_cb(fast_hotplug_enabled, &params_ops_enable, &fast_hotplug_enabled, 0644);
+module_param_cb(enabled, &params_ops_enable, &enabled, 0644);
 
 static DEFINE_MUTEX(mutex);
 
@@ -390,7 +390,7 @@ static int enable_fast_hotplug(const char *val, const struct kernel_param *kp){
 	int ret = param_set_bool(val, kp);
 	int rc;
 
-	if(!fast_hotplug_enabled){
+	if(!enabled){
 		pr_info(HOTPLUG_INFO_TAG"Fast hotplug disabled\n");
 		mutex_lock(&mutex);
 		flush_workqueue(hotplug_wq);
@@ -432,7 +432,7 @@ static int enable_fast_hotplug(const char *val, const struct kernel_param *kp){
 
 static void hotplug_power_suspend(struct power_suspend *h) {
 	int cpu;
-	if(fast_hotplug_enabled && screen_off_singlecore){
+	if(enabled && screen_off_singlecore){
 		mutex_lock(&mutex);
 		flush_workqueue(hotplug_wq);
 #if 0
@@ -453,7 +453,7 @@ static void hotplug_power_suspend(struct power_suspend *h) {
 }
 
 static void hotplug_late_resume(struct power_suspend *h) {
-	if(fast_hotplug_enabled){
+	if(enabled){
 #if 0
 		pr_info(HOTPLUG_INFO_TAG"Screen on, let's boost the cpu !");
 #endif
