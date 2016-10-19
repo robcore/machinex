@@ -25,6 +25,7 @@
 #include <linux/cpufreq.h>
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
+#include <linux/state_helper.h>
 #include <mach/cpufreq.h>
 
 #define DEFAULT_POLLING_MS	500
@@ -55,7 +56,6 @@ static uint32_t limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 static bool core_control_enabled;
-static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
 static int limit_idx;
@@ -143,7 +143,7 @@ static void __ref do_core_control(long temp)
 		for (i = num_possible_cpus(); i > 0; i--) {
 			if (!(msm_thermal_info.core_control_mask & BIT(i)))
 				continue;
-			if (cpus_offlined & BIT(i) && !cpu_online(i))
+			if (msm_thermal_info.cpus_offlined & BIT(i) && !cpu_online(i))
 				continue;
 			pr_info("%s: Set Offline: CPU%d Temp: %ld\n",
 					KBUILD_MODNAME, i, temp);
@@ -151,19 +151,26 @@ static void __ref do_core_control(long temp)
 			if (ret)
 				pr_err("%s: Error %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
-			cpus_offlined |= BIT(i);
+			msm_thermal_info.cpus_offlined |= BIT(i);
+#ifdef CONFIG_STATE_HELPER
+			thermal_notify(i, 0);
+#endif
 			break;
 		}
-	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
+	} else if (msm_thermal_info.core_control_mask && msm_thermal_info.cpus_offlined &&
 		temp <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) {
 		for (i = 0; i < num_possible_cpus(); i++) {
-			if (!(cpus_offlined & BIT(i)))
+			if (!(msm_thermal_info.cpus_offlined & BIT(i)))
 				continue;
-			cpus_offlined &= ~BIT(i);
-			pr_info("%s: Allow Online CPU%d Temp: %ld\n",
-					KBUILD_MODNAME, i, temp);
-			/* If this core is already online, then bring up the
+			msm_thermal_info.cpus_offlined &= ~BIT(i);
+			pr_info("Allow Online CPU%d Temp: %ld\n",
+					i, temp);
+#ifdef CONFIG_STATE_HELPER
+			thermal_notify(i, 1);
+#endif
+			/*
+			 * If this core is already online, then bring up the
 			 * next offlined core.
 			 */
 			if (cpu_online(i))
@@ -241,7 +248,9 @@ static void __ref check_temp(struct work_struct *work)
 				KBUILD_MODNAME, tsens_dev.sensor_num);
 		goto reschedule;
 	}
-
+#ifdef CONFIG_STATE_HELPER
+	thermal_level_relay(temp);
+#endif
 	if (hist_index < MAX_HISTORY_SZ)
 		msm_thermal_stats.temp_history[hist_index] = temp;
 	else {
@@ -275,7 +284,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
 		if (core_control_enabled &&
 			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
-			(cpus_offlined & BIT(cpu))) {
+			(msm_thermal_info.cpus_offlined & BIT(cpu))) {
 			pr_info(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
@@ -483,6 +492,11 @@ static ssize_t __ref store_cc_enabled(struct kobject *kobj,
 		update_offline_cores(cpus_offlined);
 	} else {
 		pr_info("%s: Core control disabled\n", KBUILD_MODNAME);
+#ifdef CONFIG_STATE_HELPER
+		/* Thermal Driver no longer offlines core. */
+		msm_thermal_info.cpus_offlined = 0;
+		reschedule_helper();
+#endif
 		unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
@@ -494,7 +508,7 @@ done_store_cc:
 static ssize_t show_cpus_offlined(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", cpus_offlined);
+	return snprintf(buf, PAGE_SIZE, "%d\n", msm_thermal_info.cpus_offlined);
 }
 
 static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
