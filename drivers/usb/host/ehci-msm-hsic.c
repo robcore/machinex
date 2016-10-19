@@ -707,6 +707,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
 
+	wake_lock(&mehci->wlock);
 	spin_lock_irqsave(&mehci->wakeup_lock, flags);
 	mehci->wakeup_irq_enabled = 1;
 	enable_irq_wake(mehci->wakeup_irq);

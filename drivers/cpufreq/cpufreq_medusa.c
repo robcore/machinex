@@ -27,6 +27,7 @@
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
+#include "../../kernel/sched/sched.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 #include <linux/debugfs.h>
@@ -45,7 +46,7 @@ static void medusa_pmu_start_local(int);
 static const long supported_freqs[] = {
 	384000, 486000, 594000, 702000, 810000, 918000,
 	1026000, 1134000, 1242000, 1350000, 1458000,
-	1566000, 1674000, 1782000, 1890000,
+	1566000, 1674000, 1782000, 1890000, 1998000,
 };
 
 static int freq_to_idx(int freq)
@@ -66,6 +67,7 @@ static int freq_to_idx(int freq)
 	case 1674000: return 12;
 	case 1782000: return 13;
 	case 1890000: return 14;
+	case 1998000: return 15;
 	default: BUG();
 	}
 }
