@@ -17,9 +17,6 @@
  */
 
 #include <linux/battery/sec_fuelgauge.h>
-#ifdef CONFIG_STATE_HELPER
-#include <linux/state_helper.h>
-#endif
 #if 0
 static int max17048_write_reg(struct i2c_client *client, int reg, u8 value)
 {
@@ -499,9 +496,6 @@ bool sec_hal_fg_get_property(struct i2c_client *client,
 		else
 			val->intval = max17048_get_soc(client) / 10;
 		fg_read_address(client);
-#ifdef CONFIG_STATE_HELPER
-		batt_level_notify(val->intval);
-#endif
 		break;
 		/* Battery Temperature */
 	case POWER_SUPPLY_PROP_TEMP:

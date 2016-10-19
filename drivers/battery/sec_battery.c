@@ -10,6 +10,9 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_battery.h>
+#ifdef CONFIG_STATE_HELPER
+#include <linux/state_helper.h>
+#endif
 
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
@@ -967,7 +970,7 @@ static void  sec_bat_event_program_alarm(
 	ktime_t next;
 
 	next = ktime_add(battery->last_event_time, low_interval);
-	/* The original slack time called for, 20 seconds, exceeds 
+	/* The original slack time called for, 20 seconds, exceeds
 	* the length allowed for an unsigned long in nanoseconds. Use
 	* ULONG_MAX instead
 	*/
@@ -1652,7 +1655,7 @@ static void sec_bat_program_alarm(
 	ktime_t next;
 
 	next = ktime_add(battery->last_poll_time, low_interval);
-	/* The original slack time called for, 10 seconds, exceeds 
+	/* The original slack time called for, 10 seconds, exceeds
 	* the length allowed for an unsigned long in nanoseconds. Use
 	* ULONG_MAX instead
 	*/
@@ -2862,6 +2865,9 @@ static int sec_bat_get_property(struct power_supply *psy,
 			val->intval = 100;
 		else
 			val->intval = battery->capacity;
+		#ifdef CONFIG_STATE_HELPER
+		batt_level_notify(val->intval);
+#endif
 #endif
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
