@@ -69,6 +69,7 @@ struct msm_rpm_driver_data {
 
 static ATOMIC_NOTIFIER_HEAD(msm_rpm_sleep_notifier);
 static bool standalone;
+static bool probe_done;
 
 int msm_rpm_register_notifier(struct notifier_block *nb)
 {
@@ -172,6 +173,9 @@ static int msm_rpm_add_kvp_data_common(struct msm_rpm_request *handle,
 	int i;
 	int data_size, msg_size;
 
+	if (!is_probe_done())
+		return -EPROBE_DEFER;
+
 	if (!handle) {
 		pr_err("%s(): Invalid handle\n", __func__);
 		return -EINVAL;
@@ -239,6 +243,9 @@ static struct msm_rpm_request *msm_rpm_create_request_common(
 		int num_elements, bool noirq)
 {
 	struct msm_rpm_request *cdata;
+
+	if (!is_probe_done())
+		return ERR_PTR(-EPROBE_DEFER);
 
 	cdata = kzalloc(sizeof(struct msm_rpm_request),
 			GFP_FLAG(noirq));
@@ -390,6 +397,16 @@ static uint32_t msm_rpm_get_next_msg_id(void)
 	} while ((id == 0) || (id == 1) || msm_rpm_get_entry_from_msg_id(id));
 
 	return id;
+}
+
+/**
+ * Helper function for EPROBE_DEFER support.  If this function returns false,
+ * the calling function should immediately return -EPROBE_DEFER.
+ * Return - true if probe successfully completed, false if otherwise
+ */
+static bool is_probe_done(void)
+{
+	return probe_done;
 }
 
 static int msm_rpm_add_wait_list(uint32_t msg_id)
@@ -677,6 +694,9 @@ static int msm_rpm_send_data(struct msm_rpm_request *cdata,
 
 	int req_hdr_sz, msg_hdr_sz;
 
+	if (!is_probe_done())
+		return -EPROBE_DEFER;
+
 	if (!cdata->msg_hdr.data_len)
 		return 1;
 
@@ -881,8 +901,13 @@ int msm_rpm_send_message(enum msm_rpm_set set, uint32_t rsc_type,
 		uint32_t rsc_id, struct msm_rpm_kvp *kvp, int nelems)
 {
 	int i, rc;
-	struct msm_rpm_request *req =
-		msm_rpm_create_request(set, rsc_type, rsc_id, nelems);
+	struct msm_rpm_request *req;
+
+	req = msm_rpm_create_request(set, rsc_type, rsc_id, nelems);
+
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
 	if (!req)
 		return -ENOMEM;
 
@@ -904,8 +929,13 @@ int msm_rpm_send_message_noirq(enum msm_rpm_set set, uint32_t rsc_type,
 		uint32_t rsc_id, struct msm_rpm_kvp *kvp, int nelems)
 {
 	int i, rc;
-	struct msm_rpm_request *req =
-		msm_rpm_create_request_noirq(set, rsc_type, rsc_id, nelems);
+	struct msm_rpm_request *req;
+
+	req = msm_rpm_create_request_noirq(set, rsc_type, rsc_id, nelems);
+
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
 	if (!req)
 		return -ENOMEM;
 
@@ -997,6 +1027,7 @@ static int __devinit msm_rpm_dev_probe(struct platform_device *pdev)
 	}
 
 	of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+	probe_done = true;
 	return 0;
 fail:
 	pr_err("%s(): Failed to read node: %s, key=%s\n", __func__,
@@ -1029,4 +1060,4 @@ int __init msm_rpm_driver_init(void)
 	return platform_driver_register(&msm_rpm_device_driver);
 }
 EXPORT_SYMBOL(msm_rpm_driver_init);
-late_initcall(msm_rpm_driver_init);
+arch_initcall(msm_rpm_driver_init);
