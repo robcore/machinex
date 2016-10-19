@@ -17,7 +17,7 @@
 #include <linux/power_supply.h>
 #include <linux/sched.h>
 #include <linux/state_helper.h>
-#include <linux/msm_thermal.h>
+//#include <linux/msm_thermal.h>
 #include <linux/workqueue.h>
 
 #define STATE_HELPER			"state_helper"
@@ -54,13 +54,13 @@ static struct state_helper {
 static struct state_info {
 	unsigned int target_cpus;
 	unsigned int batt_limited_cpus;
-	unsigned int therm_allowed_cpus;
+	//unsigned int therm_allowed_cpus;
 	unsigned int batt_level;
-	long current_temp;
+	//long current_temp;
 } info = {
 	.target_cpus = NR_CPUS,
 	.batt_limited_cpus = NR_CPUS,
-	.therm_allowed_cpus = NR_CPUS,
+	//.therm_allowed_cpus = NR_CPUS,
 	.batt_level = 100
 };
 
@@ -83,7 +83,7 @@ static void target_cpus_calc(void)
 
 	info.target_cpus = min(info.target_cpus,
 				info.batt_limited_cpus);
-	info.target_cpus = min(info.target_cpus,
+	//info.target_cpus = min(info.target_cpus,
 				info.therm_allowed_cpus);
 }
 
@@ -146,6 +146,7 @@ static void batt_level_check(void)
 		info.batt_limited_cpus = helper.max_cpus_cri;
 }
 
+/*
 static void thermal_check(void)
 {
 	int cpu, sum = 0;
@@ -155,11 +156,12 @@ static void thermal_check(void)
 
 	info.therm_allowed_cpus = sum;
 }
+*/
 
 static void reschedule_nodelay(void)
 {
 	batt_level_check();
-	thermal_check();
+	//thermal_check();
 
 	cancel_delayed_work_sync(&helper_work);
 	queue_delayed_work(helper_wq, &helper_work, 0);
@@ -168,7 +170,7 @@ static void reschedule_nodelay(void)
 void reschedule_helper(void)
 {
 	batt_level_check();
-	thermal_check();
+	//thermal_check();
 
 	if (!helper.enabled)
 		return;
@@ -200,7 +202,7 @@ void batt_level_notify(int k)
 		reschedule_helper();
 }
 
-void thermal_notify(int cpu, int status)
+/*void thermal_notify(int cpu, int status)
 {
 	if (!helper.enabled)
 		return;
@@ -208,14 +210,13 @@ void thermal_notify(int cpu, int status)
 	dprintk("%s: Received Thermal Notification for CPU%u: %u\n",
 			STATE_HELPER, cpu, status);
 
-	/* Do not reschedule; let thermal driver take care. */
 	thermal_check();
-}
+}*/
 
-void thermal_level_relay(long temp)
+/*void thermal_level_relay(long temp)
 {
 	info.current_temp = temp;
-}
+}*/
 
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
@@ -502,7 +503,7 @@ static ssize_t show_target_cpus(struct kobject *kobj,
 {
 	if (!helper.enabled) {
 		batt_level_check();
-		thermal_check();
+		//thermal_check();
 		target_cpus_calc();
 	}
 
@@ -519,7 +520,7 @@ static ssize_t show_batt_limited_cpus(struct kobject *kobj,
 	return sprintf(buf, "%u\n", info.batt_limited_cpus);
 }
 
-static ssize_t show_therm_allowed_cpus(struct kobject *kobj,
+/*static ssize_t show_therm_allowed_cpus(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf)
 {
@@ -527,7 +528,7 @@ static ssize_t show_therm_allowed_cpus(struct kobject *kobj,
 		thermal_check();
 
 	return sprintf(buf, "%u\n", info.therm_allowed_cpus);
-}
+}*/
 
 static ssize_t show_batt_level(struct kobject *kobj,
 				struct kobj_attribute *attr,
@@ -536,12 +537,12 @@ static ssize_t show_batt_level(struct kobject *kobj,
 	return sprintf(buf, "%u\n", info.batt_level);
 }
 
-static ssize_t show_current_temp(struct kobject *kobj,
+/*static ssize_t show_current_temp(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "%ld\n", info.current_temp);
-}
+}*/
 
 #define KERNEL_ATTR_RW(_name) 				\
 static struct kobj_attribute _name##_attr = 		\
@@ -561,9 +562,9 @@ KERNEL_ATTR_RW(batt_level_cri);
 KERNEL_ATTR_RW(debug_mask);
 KERNEL_ATTR_RO(target_cpus);
 KERNEL_ATTR_RO(batt_limited_cpus);
-KERNEL_ATTR_RO(therm_allowed_cpus);
+//KERNEL_ATTR_RO(therm_allowed_cpus);
 KERNEL_ATTR_RO(batt_level);
-KERNEL_ATTR_RO(current_temp);
+//KERNEL_ATTR_RO(current_temp);
 
 static struct attribute *state_helper_attrs[] = {
 	&enabled_attr.attr,
@@ -576,9 +577,9 @@ static struct attribute *state_helper_attrs[] = {
 	&debug_mask_attr.attr,
 	&target_cpus_attr.attr,
 	&batt_limited_cpus_attr.attr,
-	&therm_allowed_cpus_attr.attr,
+	//&therm_allowed_cpus_attr.attr,
 	&batt_level_attr.attr,
-	&current_temp_attr.attr,
+	//&current_temp_attr.attr,
 	NULL,
 };
 

@@ -25,7 +25,6 @@
 #include <linux/cpufreq.h>
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
-#include <linux/state_helper.h>
 #include <mach/cpufreq.h>
 
 #define DEFAULT_POLLING_MS	500
@@ -56,6 +55,7 @@ static uint32_t limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 static bool core_control_enabled;
+static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
 static int limit_idx;
@@ -133,12 +133,9 @@ static void __ref do_core_control(long temp)
 {
 	int i = 0;
 	int ret = 0;
-	uint32_t previous_cpus_offlined = 0;
 
 	if (!core_control_enabled)
 		return;
-
-	previous_cpus_offlined = cpus_offlined;
 
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask &&
@@ -155,9 +152,6 @@ static void __ref do_core_control(long temp)
 				pr_err("%s: Error %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
 			cpus_offlined |= BIT(i);
-#ifdef CONFIG_STATE_HELPER
-			thermal_notify(i, 0);
-#endif
 			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
@@ -169,11 +163,7 @@ static void __ref do_core_control(long temp)
 			cpus_offlined &= ~BIT(i);
 			pr_info("%s: Allow Online CPU%d Temp: %ld\n",
 					KBUILD_MODNAME, i, temp);
-#ifdef CONFIG_STATE_HELPER
-			thermal_notify(i, 1);
-#endif
-			/*
-			 * If this core is already online, then bring up the
+			/* If this core is already online, then bring up the
 			 * next offlined core.
 			 */
 			if (cpu_online(i))
@@ -186,10 +176,6 @@ static void __ref do_core_control(long temp)
 		}
 	}
 	mutex_unlock(&core_control_mutex);
-#ifdef CONFIG_STATE_HELPER
-	if (previous_cpus_offlined != cpus_offlined)
-		reschedule_helper();
-#endif
 }
 #else
 static void do_core_control(long temp)
@@ -255,9 +241,7 @@ static void __ref check_temp(struct work_struct *work)
 				KBUILD_MODNAME, tsens_dev.sensor_num);
 		goto reschedule;
 	}
-#ifdef CONFIG_STATE_HELPER
-	thermal_level_relay(temp);
-#endif
+
 	if (hist_index < MAX_HISTORY_SZ)
 		msm_thermal_stats.temp_history[hist_index] = temp;
 	else {
@@ -499,11 +483,6 @@ static ssize_t __ref store_cc_enabled(struct kobject *kobj,
 		update_offline_cores(cpus_offlined);
 	} else {
 		pr_info("%s: Core control disabled\n", KBUILD_MODNAME);
-#ifdef CONFIG_STATE_HELPER
-		/* Thermal Driver no longer offlines core. */
-		cpus_offlined = 0;
-		reschedule_helper();
-#endif
 		unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
