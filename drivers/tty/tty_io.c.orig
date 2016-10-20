@@ -181,8 +181,6 @@ struct tty_struct *alloc_tty_struct(void)
 
 void free_tty_struct(struct tty_struct *tty)
 {
-	if (!tty)
-		return;
 	if (tty->dev)
 		put_device(tty->dev);
 	kfree(tty->write_buf);
@@ -1603,7 +1601,6 @@ static int tty_release_checks(struct tty_struct *tty, struct tty_struct *o_tty,
 			printk(KERN_DEBUG "%s: bad pty pointers\n", __func__);
 			return -1;
 		}
-		tty->driver->termios[idx] = tp;
 	}
 #endif
 	return 0;
