@@ -82,7 +82,24 @@
 	.endm
 
 #ifndef CONFIG_THUMB2_KERNEL
-	.macro	svc_exit, rpsr
+	.macro	svc_exit, rpsr, irq = 0
+	.if	\irq != 0
+	@ IRQs already off
+#ifdef CONFIG_TRACE_IRQFLAGS
+	@ The parent context IRQs must have been enabled to get here in
+	@ the first place, so there's no point checking the PSR I bit.
+	bl	trace_hardirqs_on
+#endif
+	.else
+	@ IRQs off again before pulling preserved data off the stack
+	disable_irq_notrace
+#ifdef CONFIG_TRACE_IRQFLAGS
+	tst	\rpsr, #PSR_I_BIT
+	bleq	trace_hardirqs_on
+	tst	\rpsr, #PSR_I_BIT
+	blne	trace_hardirqs_off
+#endif
+	.endif
 	msr	spsr_cxsf, \rpsr
 #if defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_32v6K)
 	@ We must avoid clrex due to Cortex-A15 erratum #830321
@@ -117,7 +134,24 @@
 	.endm
 
 #else	/* CONFIG_THUMB2_KERNEL */
-	.macro	svc_exit, rpsr
+	.macro	svc_exit, rpsr, irq = 0
+	.if	\irq != 0
+	@ IRQs already off
+#ifdef CONFIG_TRACE_IRQFLAGS
+	@ The parent context IRQs must have been enabled to get here in
+	@ the first place, so there's no point checking the PSR I bit.
+	bl	trace_hardirqs_on
+#endif
+	.else
+	@ IRQs off again before pulling preserved data off the stack
+	disable_irq_notrace
+#ifdef CONFIG_TRACE_IRQFLAGS
+	tst	\rpsr, #PSR_I_BIT
+	bleq	trace_hardirqs_on
+	tst	\rpsr, #PSR_I_BIT
+	blne	trace_hardirqs_off
+#endif
+	.endif
 	ldr	lr, [sp, #S_SP]			@ top of the stack
 	ldrd	r0, r1, [sp, #S_LR]		@ calling lr and pc
 
