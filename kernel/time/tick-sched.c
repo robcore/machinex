@@ -198,7 +198,7 @@ core_initcall(init_tick_nohz_extended);
 /*
  * NOHZ - aka dynamic tick functionality
  */
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 /*
  * NO HZ enabled ?
  */
@@ -428,7 +428,7 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 			time_delta = KTIME_MAX;
 		}
 
-#ifdef CONFIG_NO_HZ_FULL
+#ifdef CONFIG_NO_HZ_COMMON
 		if (!ts->inidle) {
 			time_delta = min(time_delta,
 					 scheduler_tick_max_deferment());
@@ -984,7 +984,7 @@ static enum hrtimer_restart tick_sched_timer(struct hrtimer *timer)
 	ktime_t now = ktime_get();
 	int cpu = smp_processor_id();
 
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 	/*
 	 * Check if the do_timer duty was dropped. We don't care about
 	 * concurrency: This happens only when the cpu in charge went
@@ -1068,14 +1068,14 @@ void tick_setup_sched_timer(void)
 		now = ktime_get();
 	}
 
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 	if (tick_nohz_enabled)
 		ts->nohz_mode = NOHZ_MODE_HIGHRES;
 #endif
 }
 #endif /* HIGH_RES_TIMERS */
 
-#if defined CONFIG_NO_HZ || defined CONFIG_HIGH_RES_TIMERS
+#if defined CONFIG_NO_HZ_COMMON || defined CONFIG_HIGH_RES_TIMERS
 void tick_cancel_sched_timer(int cpu)
 {
 	struct tick_sched *ts = &per_cpu(tick_cpu_sched, cpu);
