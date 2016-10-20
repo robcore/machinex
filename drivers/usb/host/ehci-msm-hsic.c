@@ -631,6 +631,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	if (atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in lpm\n", __func__);
+		printk("7-HSIC-PM-Tracker\n");
 		return 0;
 	}
 
@@ -646,7 +647,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	/*
 	 * PHY may take some time or even fail to enter into low power
-	 * mode (LPM). Hence poll for 20 msec and reset the PHY and link
+	 * mode (LPM). Hence poll for 500 msec and reset the PHY and link
 	 * in failure case.
 	 */
 	val = readl_relaxed(USB_PORTSC);
@@ -656,7 +657,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		msleep_interruptible(20);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
@@ -686,7 +687,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	 * clocks are turned OFF and VDD is allowed to minimize.
 	 */
 	mb();
-
+	printk("8-HSIC-PM-Tracker\n");
 	clk_disable_unprepare(mehci->core_clk);
 	clk_disable_unprepare(mehci->phy_clk);
 	clk_disable_unprepare(mehci->cal_clk);
@@ -706,6 +707,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
+	printk("8-HSIC-PM-Tracker\n");
 
 	wake_lock(&mehci->wlock);
 	spin_lock_irqsave(&mehci->wakeup_lock, flags);
@@ -715,7 +717,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
 	wake_unlock(&mehci->wlock);
-
+	printk("9-HSIC-PM-Tracker\n");
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
 
 	return 0;
@@ -810,7 +812,8 @@ skip_phy_resume:
 		atomic_set(&mehci->pm_usage_cnt, 0);
 		pm_runtime_put_noidle(mehci->dev);
 	}
-
+	
+	printk("10-HSIC-PM-TRACKER\n")
 	enable_irq(hcd->irq);
 	dev_dbg(mehci->dev, "HSIC-USB exited from low power mode\n");
 
@@ -1678,12 +1681,9 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * resuming parent device due to which parent will be in suspend even
 	 * though child is active. Hence resume the parent device explicitly.
 	 */
-	if (pdev->dev.parent) {
-		pm_runtime_get_noresume(pdev->dev.parent);
+	if (pdev->dev.parent)
+		pm_runtime_get_sync(pdev->dev.parent);
 		printk("1-HSIC-PM-Tracker\n");
-	if (pm_wakeup_pending())
-		goto machinex;
-	}
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));
@@ -1783,7 +1783,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 	wake_lock_init(&mehci->wlock, WAKE_LOCK_SUSPEND, dev_name(&pdev->dev));
-/*	wake_lock(&mehci->wlock); maybe this is unneccessary at probe? */
+	wake_lock(&mehci->wlock);
 
 	if (mehci->peripheral_status_irq) {
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
@@ -1849,12 +1849,9 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * As child is active, parent will not be put into
 	 * suspend mode.
 	 */
-	if (pdev->dev.parent) {
+	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
 		printk("3-HSIC-PM-Tracker\n");
-	if (pm_wakeup_pending())
-		goto machinex;
-	}
 
 	return 0;
 
@@ -1869,8 +1866,6 @@ unmap:
 	iounmap(hcd->regs);
 put_hcd:
 	usb_put_hcd(hcd);
-machinex:
-	return -EBUSY;
 put_parent:
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
@@ -1914,7 +1909,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	device_init_wakeup(&pdev->dev, 0);
 	wake_lock_destroy(&mehci->wlock);
 	pm_runtime_set_suspended(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
@@ -1944,9 +1938,6 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
-	if (pm_wakeup_pending())
-		return -EBUSY;
-
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
@@ -1963,9 +1954,6 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 		dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
 		return -EBUSY;
 	}
-
-	if (pm_wakeup_pending())
-		return -EBUSY;
 
 	printk("5-HSIC-PM-Tracker\n");
 	return 0;
@@ -2023,8 +2011,6 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
-	if (pm_wakeup_pending())
-		return -EBUSY;
 	printk("6-HSIC-PM-Tracker\n");
 	return msm_hsic_suspend(mehci);
 }
