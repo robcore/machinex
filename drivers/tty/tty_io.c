@@ -1796,7 +1796,7 @@ int tty_release(struct inode *inode, struct file *filp)
 
 	/* check whether both sides are closing ... */
 	if (!tty_closing || (o_tty && !o_tty_closing)) {
-		tty_unlock();
+		tty_unlock(tty);
 		return 0;
 	}
 
@@ -1818,7 +1818,7 @@ int tty_release(struct inode *inode, struct file *filp)
 	/* Make this pty number available for reallocation */
 	if (devpts)
 		devpts_kill_index(inode, idx);
-	tty_unlock();
+	tty_unlock(tty);
 	return 0;
 }
 
