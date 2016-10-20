@@ -1603,7 +1603,6 @@ static int tty_release_checks(struct tty_struct *tty, struct tty_struct *o_tty,
 			printk(KERN_DEBUG "%s: bad pty pointers\n", __func__);
 			return -1;
 		}
-		tty->driver->termios[idx] = tp;
 	}
 #endif
 	return 0;
