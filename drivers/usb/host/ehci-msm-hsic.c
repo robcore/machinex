@@ -1678,8 +1678,11 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * resuming parent device due to which parent will be in suspend even
 	 * though child is active. Hence resume the parent device explicitly.
 	 */
-	if (pdev->dev.parent)
-		pm_runtime_get_sync(pdev->dev.parent);
+	if (pdev->dev.parent) {
+		pm_runtime_get_noresume(pdev->dev.parent);
+	if (pm_wakeup_pending())
+		goto machinex;
+	}
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));
@@ -1845,8 +1848,11 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 * As child is active, parent will not be put into
 	 * suspend mode.
 	 */
-	if (pdev->dev.parent)
+	if (pdev->dev.parent) {
 		pm_runtime_put_sync(pdev->dev.parent);
+	if (pm_wakeup_pending())
+		goto machinex;
+	}
 
 	return 0;
 
@@ -1861,9 +1867,11 @@ unmap:
 	iounmap(hcd->regs);
 put_hcd:
 	usb_put_hcd(hcd);
+machinex:
+	return -EBUSY
 put_parent:
 	if (pdev->dev.parent)
-		pm_runtime_put(pdev->dev.parent);
+		pm_runtime_put_sync(pdev->dev.parent);
 
 	return ret;
 }
@@ -1902,7 +1910,9 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
+	wake_lock_destroy(&mehci->wlock);
 	pm_runtime_set_suspended(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
@@ -1910,7 +1920,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	msm_hsic_init_vddcx(mehci, 0);
 
 	msm_hsic_init_clocks(mehci, 0);
-	wake_lock_destroy(&mehci->wlock);
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
 
@@ -1933,6 +1942,9 @@ static int msm_hsic_pm_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
+	if (pm_wakeup_pending())
+		return -EBUSY;
+
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
@@ -1948,6 +1960,9 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 		dev_dbg(dev, "suspend_noirq: Aborting due to pending interrupt\n");
 		return -EBUSY;
 	}
+
+	if (pm_wakeup_pending())
+		return -EBUSY
 
 	return 0;
 }
@@ -2003,6 +2018,9 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 	dev_dbg(dev, "EHCI runtime suspend\n");
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
+
+	if (pm_wakeup_pending())
+		return -EBUSY;
 
 	return msm_hsic_suspend(mehci);
 }
