@@ -579,6 +579,8 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 	if (button->code == KEY_HOMEPAGE)
 		gpio_key_set_dvfs_lock(bdata, !!state);
 #endif
+	if (bdata->button->wakeup)
+		pm_relax(bdata->input->dev.parent);
 }
 
 static void gpio_keys_gpio_timer(unsigned long _data)
@@ -594,6 +596,8 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 
 	BUG_ON(irq != bdata->irq);
 
+	if (bdata->button->wakeup)
+		pm_stay_awake(bdata->input->dev.parent);
 	if (bdata->timer_debounce)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
@@ -630,6 +634,9 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 	spin_lock_irqsave(&bdata->lock, flags);
 
 	if (!bdata->key_pressed) {
+		if (bdata->button->wakeup)
+			pm_wakeup_event(bdata->input->dev.parent, 0);
+
 		input_event(input, EV_KEY, button->code, 1);
 		input_sync(input);
 
