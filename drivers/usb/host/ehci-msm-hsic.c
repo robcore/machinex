@@ -1779,7 +1779,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 	wake_lock_init(&mehci->wlock, WAKE_LOCK_SUSPEND, dev_name(&pdev->dev));
-	wake_lock(&mehci->wlock);
+/*	wake_lock(&mehci->wlock); maybe this is unneccessary at probe? */
 
 	if (mehci->peripheral_status_irq) {
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
