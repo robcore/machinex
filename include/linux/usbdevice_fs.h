@@ -125,6 +125,19 @@ struct usbdevfs_hub_portinfo {
 	char port [127];	/* e.g. port 3 connects to device 27 */
 };
 
+/* USBDEVFS_DISCONNECT_CLAIM flags & struct */
+
+/* disconnect-and-claim if the driver matches the driver field */
+#define USBDEVFS_DISCONNECT_CLAIM_IF_DRIVER	0x01
+/* disconnect-and-claim except when the driver matches the driver field */
+#define USBDEVFS_DISCONNECT_CLAIM_EXCEPT_DRIVER	0x02
+
+struct usbdevfs_disconnect_claim {
+	unsigned int interface;
+	unsigned int flags;
+	char driver[USBDEVFS_MAXDRIVERNAME + 1];
+};
+
 #ifdef __KERNEL__
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>
@@ -204,4 +217,5 @@ struct usbdevfs_ioctl32 {
 #define USBDEVFS_CONNECT           _IO('U', 23)
 #define USBDEVFS_CLAIM_PORT        _IOR('U', 24, unsigned int)
 #define USBDEVFS_RELEASE_PORT      _IOR('U', 25, unsigned int)
+#define USBDEVFS_DISCONNECT_CLAIM  _IOR('U', 27, struct usbdevfs_disconnect_claim)
 #endif /* _LINUX_USBDEVICE_FS_H */
