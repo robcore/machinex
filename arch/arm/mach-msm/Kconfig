@@ -2068,6 +2068,9 @@ config BLU_PLUG
 config FAST_HOTPLUG
 	bool "Enable Fast Hotplug"
 
+config MAKO_HOTPLUG
+	bool "Enable Mako Hotplug"
+
 config STATE_HELPER
 	bool "State Helper"
 

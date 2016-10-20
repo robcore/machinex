@@ -396,7 +396,6 @@ static int enable_fast_hotplug(const char *val, const struct kernel_param *kp){
 		flush_workqueue(hotplug_wq);
 
 		// stop the boosting as well
-		input_unregister_handler(&hotplug_input_handler);
 		del_timer_sync(&unboost_timer);
 
 		for_each_possible_cpu(cpu){
