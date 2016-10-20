@@ -1362,9 +1362,6 @@ static void init_cpu_efficiency(void)
 	int i, efficiency;
 	unsigned int max = 0, min = UINT_MAX;
 
-	if (!sched_enable_hmp)
-		return;
-
 	for_each_possible_cpu(i) {
 		efficiency = arch_get_cpu_efficiency(i);
 		cpu_rq(i)->efficiency = efficiency;
@@ -1541,8 +1538,8 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 	}
 
 		//tmn.task = p; just for now
-		tmn.from_cpu = task_cpu(p);
-		tmn.to_cpu = new_cpu;
+		/tmn.from_cpu = task_cpu(p);
+		/tmn.to_cpu = new_cpu;
 
 		atomic_notifier_call_chain(&task_migration_notifier, 0, &tmn);
 
