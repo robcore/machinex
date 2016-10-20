@@ -1362,6 +1362,9 @@ static void init_cpu_efficiency(void)
 	int i, efficiency;
 	unsigned int max = 0, min = UINT_MAX;
 
+	if (!sched_enable_hmp)
+		return;
+
 	for_each_possible_cpu(i) {
 		efficiency = arch_get_cpu_efficiency(i);
 		cpu_rq(i)->efficiency = efficiency;
@@ -1403,6 +1406,9 @@ static inline void set_window_start(struct rq *rq)
 		raw_spin_unlock(&rq->lock);
 		double_rq_lock(rq, sync_rq);
 		rq->window_start = cpu_rq(sync_cpu)->window_start;
+#ifdef CONFIG_SCHED_FREQ_INPUT
+		rq->curr_runnable_sum = rq->prev_runnable_sum = 0;
+#endif
 		raw_spin_unlock(&sync_rq->lock);
 	}
 
@@ -1559,7 +1565,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 		}
 #endif
 
-			update_task_ravg(p, task_rq(p), 0);
+			update_task_ravg(p, task_rq(p), 0, sched_clock());
 
 	__set_task_cpu(p, new_cpu);
 }
