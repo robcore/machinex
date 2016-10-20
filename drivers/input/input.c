@@ -1736,6 +1736,7 @@ void input_reset_device(struct input_dev *dev)
 		 * Keys that have been pressed at suspend time are unlikely
 		 * to be still pressed when we resume.
 		 */
+#if 0     /* to avoid release of keys in long press at sleep time and keep the previous state of keys on the resume */
 #if !defined (CONFIG_SEC_PRODUCT_8930)
 #ifdef CONFIG_SAMSUNG_LPM_MODE
 		if (!poweroff_charging) {
@@ -1745,6 +1746,7 @@ void input_reset_device(struct input_dev *dev)
 #endif
 			spin_unlock_irq(&dev->event_lock);
 		}
+#endif
 #endif
 #endif
 	}
