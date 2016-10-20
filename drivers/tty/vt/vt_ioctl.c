@@ -956,32 +956,32 @@ int vt_ioctl(struct tty_struct *tty,
 		if (!perm)
 			ret = -EPERM;
 		else {
-			tty_lock(tty);
+			tty_lock();
 			ret = con_set_trans_old(up);
-			tty_unlock(tty);
+			tty_unlock();
 		}
 		break;
 
 	case GIO_SCRNMAP:
-		tty_lock(tty);
+		tty_lock();
 		ret = con_get_trans_old(up);
-		tty_unlock(tty);
+		tty_unlock();
 		break;
 
 	case PIO_UNISCRNMAP:
 		if (!perm)
 			ret = -EPERM;
 		else {
-			tty_lock(tty);
+			tty_lock();
 			ret = con_set_trans_new(up);
-			tty_unlock(tty);
+			tty_unlock();
 		}
 		break;
 
 	case GIO_UNISCRNMAP:
-		tty_lock(tty);
+		tty_lock();
 		ret = con_get_trans_new(up);
-		tty_unlock(tty);
+		tty_unlock();
 		break;
 
 	case PIO_UNIMAPCLR:
@@ -992,18 +992,18 @@ int vt_ioctl(struct tty_struct *tty,
 		if (ret)
 			ret = -EFAULT;
 		else {
-			tty_lock(tty);
+			tty_lock();
 			con_clear_unimap(vc, &ui);
-			tty_unlock(tty);
+			tty_unlock();
 		}
 		break;
 	      }
 
 	case PIO_UNIMAP:
 	case GIO_UNIMAP:
-		tty_lock(tty);
+		tty_lock();
 		ret = do_unimap_ioctl(cmd, up, perm, vc);
-		tty_unlock(tty);
+		tty_unlock();
 		break;
 
 	case VT_LOCKSWITCH:
@@ -1217,9 +1217,9 @@ long vt_compat_ioctl(struct tty_struct *tty,
 
 	case PIO_UNIMAP:
 	case GIO_UNIMAP:
-		tty_lock(tty);
+		tty_lock();
 		ret = compat_unimap_ioctl(cmd, up, perm, vc);
-		tty_unlock(tty);
+		tty_unlock();
 		break;
 
 	/*
