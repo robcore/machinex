@@ -655,6 +655,24 @@ static inline bool got_nohz_idle_kick(void)
 
 #endif /* CONFIG_NO_HZ_COMMON */
 
+#ifdef CONFIG_NO_HZ_FULL
+bool sched_can_stop_tick(void)
+{
+       struct rq *rq;
+
+       rq = this_rq();
+
+       /* Make sure rq->nr_running update is visible after the IPI */
+       smp_rmb();
+
+       /* More than one running task need preemption */
+       if (rq->nr_running > 1)
+               return false;
+
+       return true;
+}
+#endif /* CONFIG_NO_HZ_FULL */
+
 void sched_avg_update(struct rq *rq)
 {
 	s64 period = sched_avg_period();
@@ -1113,6 +1131,13 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 		rq->skip_clock_update = 1;
 }
 
+static ATOMIC_NOTIFIER_HEAD(task_migration_notifier);
+
+void register_task_migration_notifier(struct notifier_block *n)
+{
+	atomic_notifier_chain_register(&task_migration_notifier, n);
+}
+
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Window size (in ns) */
@@ -1471,13 +1496,6 @@ static inline void migrate_sync_cpu(int cpu) {}
 
 #endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
-static ATOMIC_NOTIFIER_HEAD(task_migration_notifier);
-
-void register_task_migration_notifier(struct notifier_block *n)
-{
-	atomic_notifier_chain_register(&task_migration_notifier, n);
-}
-
 #ifdef CONFIG_SMP
 void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 {
@@ -1507,8 +1525,9 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 
 	trace_sched_migrate_task(p, new_cpu);
 
-	struct task_migration_notifier tmn;
 	if (task_cpu(p) != new_cpu) {
+		struct task_migration_notifier tmn;
+
 		if (p->sched_class->migrate_task_rq)
 			p->sched_class->migrate_task_rq(p, new_cpu);
 		p->se.nr_migrations++;
