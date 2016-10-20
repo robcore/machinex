@@ -859,9 +859,9 @@ void disassociate_ctty(int on_exit)
 void no_tty(void)
 {
 	struct task_struct *tsk = current;
-	tty_lock();
+	tty_lock(tty);
 	disassociate_ctty(0);
-	tty_unlock();
+	tty_unlock(tty);
 	proc_clear_tty(tsk);
 }
 
