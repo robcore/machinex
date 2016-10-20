@@ -631,7 +631,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	if (atomic_read(&mehci->in_lpm)) {
 		dev_dbg(mehci->dev, "%s called in lpm\n", __func__);
-		printk("7-HSIC-PM-Tracker\n");
 		return 0;
 	}
 
@@ -687,7 +686,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	 * clocks are turned OFF and VDD is allowed to minimize.
 	 */
 	mb();
-	printk("8-HSIC-PM-Tracker\n");
 	clk_disable_unprepare(mehci->core_clk);
 	clk_disable_unprepare(mehci->phy_clk);
 	clk_disable_unprepare(mehci->cal_clk);
@@ -707,7 +705,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
-	printk("8-HSIC-PM-Tracker\n");
 
 	wake_lock(&mehci->wlock);
 	spin_lock_irqsave(&mehci->wakeup_lock, flags);
@@ -717,7 +714,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
 	wake_unlock(&mehci->wlock);
-	printk("9-HSIC-PM-Tracker\n");
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
 
 	return 0;
@@ -813,7 +809,6 @@ skip_phy_resume:
 		pm_runtime_put_noidle(mehci->dev);
 	}
 
-	printk("10-HSIC-PM-TRACKER\n");
 	enable_irq(hcd->irq);
 	dev_dbg(mehci->dev, "HSIC-USB exited from low power mode\n");
 
@@ -1683,7 +1678,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 */
 	if (pdev->dev.parent)
 		pm_runtime_get_sync(pdev->dev.parent);
-		printk("1-HSIC-PM-Tracker\n");
 
 	hcd = usb_create_hcd(&msm_hsic_driver, &pdev->dev,
 				dev_name(&pdev->dev));
@@ -1851,7 +1845,6 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 */
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
-		printk("3-HSIC-PM-Tracker\n");
 
 	return 0;
 
@@ -1869,7 +1862,6 @@ put_hcd:
 put_parent:
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
-		printk("2-HSIC-PM-Tracker\n");
 	return ret;
 }
 
@@ -1941,7 +1933,6 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
-	printk("4-HSIC-PM-Tracker\n");
 	return 0;
 }
 
@@ -1955,7 +1946,6 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 		return -EBUSY;
 	}
 
-	printk("5-HSIC-PM-Tracker\n");
 	return 0;
 }
 
@@ -2011,7 +2001,6 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	dbg_log_event(NULL, "Run Time PM Suspend", 0);
 
-	printk("6-HSIC-PM-Tracker\n");
 	return msm_hsic_suspend(mehci);
 }
 
