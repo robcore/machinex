@@ -1868,7 +1868,7 @@ unmap:
 put_hcd:
 	usb_put_hcd(hcd);
 machinex:
-	return -EBUSY
+	return -EBUSY;
 put_parent:
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
