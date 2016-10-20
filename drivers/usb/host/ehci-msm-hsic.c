@@ -1680,6 +1680,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 */
 	if (pdev->dev.parent) {
 		pm_runtime_get_noresume(pdev->dev.parent);
+		printk("1-HSIC-PM-Tracker\n");
 	if (pm_wakeup_pending())
 		goto machinex;
 	}
@@ -1850,6 +1851,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 	 */
 	if (pdev->dev.parent) {
 		pm_runtime_put_sync(pdev->dev.parent);
+		printk("3-HSIC-PM-Tracker\n");
 	if (pm_wakeup_pending())
 		goto machinex;
 	}
@@ -1872,7 +1874,7 @@ machinex:
 put_parent:
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
-
+		printk("2-HSIC-PM-Tracker\n");
 	return ret;
 }
 
@@ -1948,6 +1950,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hcd->irq);
 
+	printk("4-HSIC-PM-Tracker\n");
 	return 0;
 }
 
@@ -1962,8 +1965,9 @@ static int msm_hsic_pm_suspend_noirq(struct device *dev)
 	}
 
 	if (pm_wakeup_pending())
-		return -EBUSY
+		return -EBUSY;
 
+	printk("5-HSIC-PM-Tracker\n");
 	return 0;
 }
 
@@ -2021,7 +2025,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 
 	if (pm_wakeup_pending())
 		return -EBUSY;
-
+	printk("6-HSIC-PM-Tracker\n");
 	return msm_hsic_suspend(mehci);
 }
 
