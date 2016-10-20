@@ -1500,6 +1500,33 @@ int __pm_genpd_name_add_device(const char *domain_name, struct device *dev,
 	return __pm_genpd_add_device(pm_genpd_lookup_name(domain_name), dev, td);
 }
 
+
+/**
+ * __pm_genpd_name_add_device - Find I/O PM domain and add a device to it.
+ * @domain_name: Name of the PM domain to add the device to.
+ * @dev: Device to be added.
+ * @td: Set of PM QoS timing parameters to attach to the device.
+ */
+int __pm_genpd_name_add_device(const char *domain_name, struct device *dev,
+			       struct gpd_timing_data *td)
+{
+	struct generic_pm_domain *genpd = NULL, *gpd;
+
+	if (IS_ERR_OR_NULL(domain_name) || IS_ERR_OR_NULL(dev))
+		return -EINVAL;
+
+	mutex_lock(&gpd_list_lock);
+	list_for_each_entry(gpd, &gpd_list, gpd_list_node) {
+		if (!strcmp(gpd->name, domain_name)) {
+			genpd = gpd;
+			break;
+		}
+	}
+	mutex_unlock(&gpd_list_lock);
+
+	return __pm_genpd_add_device(genpd, dev, td);
+}
+
 /**
  * pm_genpd_remove_device - Remove a device from an I/O PM domain.
  * @genpd: PM domain to remove the device from.
@@ -1821,7 +1848,16 @@ int __pm_genpd_remove_callbacks(struct device *dev, bool clear_td)
 }
 EXPORT_SYMBOL_GPL(__pm_genpd_remove_callbacks);
 
-int genpd_attach_cpuidle(struct generic_pm_domain *genpd, int state)
+/**
+ * pm_genpd_attach_cpuidle - Connect the given PM domain with cpuidle.
+ * @genpd: PM domain to be connected with cpuidle.
+ * @state: cpuidle state this domain can disable/enable.
+ *
+ * Make a PM domain behave as though it contained a CPU core, that is, instead
+ * of calling its power down routine it will enable the given cpuidle state so
+ * that the cpuidle subsystem can power it down (if possible and desirable).
+ */
+int pm_genpd_attach_cpuidle(struct generic_pm_domain *genpd, int state)
 {
 	struct cpuidle_driver *cpuidle_drv;
 	struct gpd_cpu_data *cpu_data;
@@ -1870,7 +1906,14 @@ int genpd_attach_cpuidle(struct generic_pm_domain *genpd, int state)
 	goto out;
 }
 
-int genpd_detach_cpuidle(struct generic_pm_domain *genpd)
+/**
+ * pm_genpd_detach_cpuidle - Remove the cpuidle connection from a PM domain.
+ * @genpd: PM domain to remove the cpuidle connection from.
+ *
+ * Remove the cpuidle connection set up by pm_genpd_attach_cpuidle() from the
+ * given PM domain.
+ */
+int pm_genpd_detach_cpuidle(struct generic_pm_domain *genpd)
 {
 	struct gpd_cpu_data *cpu_data;
 	struct cpuidle_state *idle_state;
