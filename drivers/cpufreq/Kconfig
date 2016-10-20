@@ -1162,6 +1162,17 @@ config CPUFREQ_HARDLIMIT_DEBUG
 	help
 	  Output debugging info in dmesg [HARDLIMIT] (Yank555.lu)
 
+config GENERIC_CPUFREQ_CPU0
+	bool "Generic CPU0 cpufreq driver"
+	depends on HAVE_CLK && REGULATOR && PM_OPP && OF
+	select CPU_FREQ_TABLE
+	help
+	  This adds a generic cpufreq driver for CPU0 frequency management.
+	  It supports both uniprocessor (UP) and symmetric multiprocessor (SMP)
+	  systems which share clock and voltage across all CPUs.
+
+	  If in doubt, say N.
+
 menu "x86 CPU frequency scaling drivers"
 depends on X86
 source "drivers/cpufreq/Kconfig.x86"
