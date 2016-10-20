@@ -812,8 +812,8 @@ skip_phy_resume:
 		atomic_set(&mehci->pm_usage_cnt, 0);
 		pm_runtime_put_noidle(mehci->dev);
 	}
-	
-	printk("10-HSIC-PM-TRACKER\n")
+
+	printk("10-HSIC-PM-TRACKER\n");
 	enable_irq(hcd->irq);
 	dev_dbg(mehci->dev, "HSIC-USB exited from low power mode\n");
 
