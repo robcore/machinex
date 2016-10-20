@@ -1538,10 +1538,10 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 	}
 
 		//tmn.task = p; just for now
-		/tmn.from_cpu = task_cpu(p);
-		/tmn.to_cpu = new_cpu;
+		//tmn.from_cpu = task_cpu(p);
+		//tmn.to_cpu = new_cpu;
 
-		atomic_notifier_call_chain(&task_migration_notifier, 0, &tmn);
+		//atomic_notifier_call_chain(&task_migration_notifier, 0, &tmn);
 
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 		if (p->on_rq) {

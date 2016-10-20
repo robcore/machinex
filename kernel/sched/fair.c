@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/profile.h>
 #include <linux/interrupt.h>
+#include <linux/task_work.h>
 
 #include <trace/events/sched.h>
 
@@ -1648,8 +1649,7 @@ void init_new_task_load(struct task_struct *p)
  */
 static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 							struct sched_avg *sa,
-							int runnable,
-							int running)
+							int runnable)
 {
 	u64 delta, periods;
 	u32 runnable_contrib;
@@ -1690,9 +1690,6 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 			sa->runnable_avg_sum += delta_w;
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
-
-		if (running)
-			sa->usage_avg_sum += delta_w;
 		sa->runnable_avg_period += delta_w;
 
 		delta -= delta_w;
@@ -1706,7 +1703,6 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 		decay_scaled_stat(sa, periods + 1);
 		sa->runnable_avg_period = decay_load(sa->runnable_avg_period,
 						     periods + 1);
-		sa->usage_avg_sum = decay_load(sa->usage_avg_sum, periods + 1);
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		runnable_contrib = __compute_runnable_contrib(periods);
@@ -1714,8 +1710,6 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 			sa->runnable_avg_sum += runnable_contrib;
 			add_to_scaled_stat(cpu, sa, runnable_contrib);
 		}
-		if (running)
-			sa->usage_avg_sum += runnable_contrib;
 		sa->runnable_avg_period += runnable_contrib;
 	}
 
@@ -1724,8 +1718,6 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 		sa->runnable_avg_sum += delta;
 		add_to_scaled_stat(cpu, sa, delta);
 	}
-	if (running)
-		sa->usage_avg_sum += delta;
 	sa->runnable_avg_period += delta;
 
 	return decayed;
@@ -1957,8 +1949,8 @@ static void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq, int force_update)
 
 static inline void update_rq_runnable_avg(struct rq *rq, int runnable)
 {
-	__update_entity_runnable_avg(rq->clock_task, &rq->avg, runnable,
-				     runnable);
+	__update_entity_runnable_avg(cpu_of(rq), rq->clock_task,
+						 &rq->avg, runnable);
 	__update_tg_runnable_avg(&rq->avg, &rq->cfs);
 }
 
@@ -5020,7 +5012,7 @@ static void update_cpu_power(struct sched_domain *sd, int cpu)
 	power *= capacity_scale_cpu_efficiency(cpu);
 	power >>= SCHED_POWER_SHIFT;
 
-	if (Larch_power)
+	if (sched_feat(ARCH_POWER))
 		power *= arch_scale_freq_power(sd, cpu);
 	else
 		power *= default_scale_freq_power(sd, cpu);
@@ -5584,9 +5576,6 @@ find_busiest_group(struct sched_domain *sd, int this_cpu,
 
 	/* There is no busy sibling group to pull tasks from */
 	if (!sds.busiest || sds.busiest_nr_running == 0)
-		goto out_balanced;
-
-	if (bail_inter_cluster_balance(env, &sds))
 		goto out_balanced;
 
 	sds.avg_load = (SCHED_POWER_SCALE * sds.total_load) / sds.total_pwr;
