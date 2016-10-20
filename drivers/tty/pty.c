@@ -45,6 +45,7 @@ static void pty_close(struct tty_struct *tty, struct file *filp)
 	wake_up_interruptible(&tty->read_wait);
 	wake_up_interruptible(&tty->write_wait);
 	tty->packet = 0;
+	/* Review - krefs on tty_link ?? */
 	if (!tty->link)
 		return;
 	set_bit(TTY_OTHER_CLOSED, &tty->link->flags);
@@ -56,9 +57,9 @@ static void pty_close(struct tty_struct *tty, struct file *filp)
 		if (tty->driver == ptm_driver)
 			devpts_pty_kill(tty->link);
 #endif
-		tty_unlock();
+		tty_unlock(tty);
 		tty_vhangup(tty->link);
-		tty_lock();
+		tty_lock(tty);
 	}
 }
 
@@ -618,9 +619,8 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 		return retval;
 
 	/* find a device that is not in use. */
-	tty_lock();
+	mutex_lock(&devpts_mutex);
 	index = devpts_new_index(inode);
-	tty_unlock();
 	if (index < 0) {
 		retval = index;
 		goto err_file;
@@ -648,16 +648,17 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 	if (retval)
 		goto err_release;
 
-	tty_unlock();
+	tty_unlock(tty);
 	return 0;
 err_release:
-	tty_unlock();
+	tty_unlock(tty);
 	tty_release(inode, filp);
 	return retval;
 out:
+	mutex_unlock(&tty_mutex);
 	devpts_kill_index(inode, index);
-	tty_unlock();
 err_file:
+        mutex_unlock(&devpts_mutex);
 	tty_free_file(filp);
 	return retval;
 }
