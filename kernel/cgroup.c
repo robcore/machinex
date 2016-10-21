@@ -1428,6 +1428,7 @@ static void init_cgroup_housekeeping(struct cgroup *cgrp)
 	INIT_LIST_HEAD(&cgrp->children);
 	INIT_LIST_HEAD(&cgrp->files);
 	INIT_LIST_HEAD(&cgrp->css_sets);
+	INIT_LIST_HEAD(&cgrp->allcg_node);
 	INIT_LIST_HEAD(&cgrp->release_list);
 	INIT_LIST_HEAD(&cgrp->pidlists);
 	mutex_init(&cgrp->pidlist_mutex);
@@ -1800,9 +1801,11 @@ static struct kobject *cgroup_kobj;
  */
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 {
+	struct dentry *dentry = cgrp->dentry;
 	char *start;
-	struct dentry *dentry = rcu_dereference_check(cgrp->dentry,
-						      cgroup_lock_is_held());
+
+	rcu_lockdep_assert(rcu_read_lock_held() || cgroup_lock_is_held(),
+			   "cgroup_path() called without proper locking");
 
 	if (!dentry || cgrp == dummytop) {
 		/*
@@ -1826,8 +1829,7 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 		if (!cgrp)
 			break;
 
-		dentry = rcu_dereference_check(cgrp->dentry,
-					       cgroup_lock_is_held());
+		dentry = cgrp->dentry;
 		if (!cgrp->parent)
 			continue;
 		if (--start < buf)
