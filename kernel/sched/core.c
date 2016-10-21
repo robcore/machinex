@@ -89,7 +89,7 @@
 #include <mach/sec_debug.h>
 #endif
 #include "sched.h"
-#include "../workqueue_sched.h"
+#include "../workqueue_internal.h"
 #include "../smpboot.h"
 
 #define CREATE_TRACE_POINTS
