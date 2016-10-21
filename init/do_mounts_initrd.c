@@ -51,6 +51,9 @@ static void __init handle_initrd(void)
 	sys_mount(".", "/", NULL, MS_MOVE, NULL);
 	sys_chroot(".");
 
+	/* try loading default modules from initrd */
+	load_default_modules();
+
 	/*
 	 * In case that a resume from disk is carried out by linuxrc or one of
 	 * its children, we need to tell the freezer not to wait for us.
