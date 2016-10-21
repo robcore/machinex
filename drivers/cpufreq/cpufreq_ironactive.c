@@ -25,7 +25,7 @@
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
-#include "../../kernel/sched/sched.h>
+#include "../../kernel/sched/sched.h"
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
