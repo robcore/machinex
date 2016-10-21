@@ -1801,11 +1801,9 @@ static struct kobject *cgroup_kobj;
  */
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 {
-	struct dentry *dentry = cgrp->dentry;
 	char *start;
-
-	rcu_lockdep_assert(rcu_read_lock_held() || cgroup_lock_is_held(),
-			   "cgroup_path() called without proper locking");
+	struct dentry *dentry = rcu_dereference_check(cgrp->dentry,
+						      cgroup_lock_is_held());
 
 	if (!dentry || cgrp == dummytop) {
 		/*
@@ -1829,7 +1827,8 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 		if (!cgrp)
 			break;
 
-		dentry = cgrp->dentry;
+		dentry = rcu_dereference_check(cgrp->dentry,
+					       cgroup_lock_is_held());
 		if (!cgrp->parent)
 			continue;
 		if (--start < buf)
