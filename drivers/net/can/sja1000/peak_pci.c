@@ -542,7 +542,7 @@ static void peak_pci_post_irq(const struct sja1000_priv *priv)
 		writew(chan->icr_mask, chan->cfg_base + PITA_ICR);
 }
 
-static int __devinit peak_pci_probe(struct pci_dev *pdev,
+static int peak_pci_probe(struct pci_dev *pdev,
 				    const struct pci_device_id *ent)
 {
 	struct sja1000_priv *priv;
@@ -708,7 +708,7 @@ failure_disable_pci:
 	return err;
 }
 
-static void __devexit peak_pci_remove(struct pci_dev *pdev)
+static void peak_pci_remove(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev); /* Last device */
 	struct sja1000_priv *priv = netdev_priv(dev);
@@ -750,7 +750,7 @@ static struct pci_driver peak_pci_driver = {
 	.name = DRV_NAME,
 	.id_table = peak_pci_tbl,
 	.probe = peak_pci_probe,
-	.remove = __devexit_p(peak_pci_remove),
+	.remove = peak_pci_remove,
 };
 
 static int __init peak_pci_init(void)

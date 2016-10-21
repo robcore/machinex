@@ -582,7 +582,7 @@ static int __init populate_rootfs(void)
 			initrd_end - initrd_start);
 		if (!err) {
 			free_initrd();
-			return 0;
+			goto done;
 		} else {
 			clean_rootfs();
 			unpack_to_rootfs(__initramfs_start, __initramfs_size);
@@ -597,6 +597,7 @@ static int __init populate_rootfs(void)
 			sys_close(fd);
 			free_initrd();
 		}
+	done:
 #else
 		printk(KERN_INFO "Unpacking initramfs...\n");
 		err = unpack_to_rootfs((char *)initrd_start,
@@ -605,6 +606,11 @@ static int __init populate_rootfs(void)
 			printk(KERN_EMERG "Initramfs unpacking failed: %s\n", err);
 		free_initrd();
 #endif
+		/*
+		 * Try loading default modules from initramfs.  This gives
+		 * us a chance to load before device_initcalls.
+		 */
+		load_default_modules();
 	}
 	return 0;
 }

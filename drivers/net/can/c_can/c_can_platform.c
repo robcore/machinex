@@ -65,7 +65,7 @@ static void c_can_plat_write_reg_aligned_to_32bit(struct c_can_priv *priv,
 	writew(val, reg + (long)reg - (long)priv->regs);
 }
 
-static int __devinit c_can_plat_probe(struct platform_device *pdev)
+static int c_can_plat_probe(struct platform_device *pdev)
 {
 	int ret;
 	void __iomem *addr;
@@ -166,7 +166,7 @@ exit:
 	return ret;
 }
 
-static int __devexit c_can_plat_remove(struct platform_device *pdev)
+static int c_can_plat_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct c_can_priv *priv = netdev_priv(dev);
