@@ -720,6 +720,7 @@ extern void post_big_small_task_count_change(void);
 extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void set_hmp_defaults(void);
+extern unsigned int power_cost_at_freq(int cpu, unsigned int freq);
 
 #else /* CONFIG_SCHED_HMP */
 
@@ -735,6 +736,12 @@ static inline void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
 static inline void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
 {
 }
+
+static inline void clear_reserved(int cpu) { }
+
+#define power_cost_at_freq(...) 0
+
+#define trace_sched_cpu_load(...)
 
 #endif /* CONFIG_SCHED_HMP */
 

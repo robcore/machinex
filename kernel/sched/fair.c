@@ -6372,7 +6372,7 @@ out:
 		rq->next_balance = next_balance;
 }
 
-#ifdef CONFIG_NO_HZ_COMMON
+#ifdef CONFIG_SCHED_HMP
 
 static int select_lowest_power_cpu(struct cpumask *cpus)
 {
