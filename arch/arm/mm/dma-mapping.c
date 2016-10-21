@@ -747,7 +747,7 @@ static void *__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
 			 bool no_kernel_mapping)
 {
 	u64 mask = get_coherent_dma_mask(dev);
-	struct page *page = NULL;
+	struct page *page;
 	void *addr;
 
 #ifdef CONFIG_DMA_API_DEBUG
