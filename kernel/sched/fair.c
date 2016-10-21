@@ -1269,6 +1269,11 @@ static int select_best_cpu(struct task_struct *p, int target)
 	int cpu_cost, min_cost = INT_MAX;
 	int small_task = is_small_task(p);
 
+	trace_sched_task_load(p);
+	for_each_online_cpu(i)
+		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
+				     mostly_idle_cpu(i), power_cost(p, i));
+
 	/* provide bias for prev_cpu */
 	if (!small_task && mostly_idle_cpu(prev_cpu) &&
 	    task_will_fit(p, prev_cpu)) {
@@ -4408,7 +4413,7 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
  *
  * The adjacency matrix of the resulting graph is given by:
  *
- *             log_2 n     
+ *             log_2 n
  *   A_i,j = \Union     (i % 2^k == 0) && i / 2^(k+1) == j / 2^(k+1)  (6)
  *             k = 0
  *
@@ -4454,7 +4459,7 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
  *
  * [XXX write more on how we solve this.. _after_ merging pjt's patches that
  *      rewrite all of this once again.]
- */ 
+ */
 
 static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
@@ -5130,7 +5135,9 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 
 	for_each_cpu_and(i, sched_group_cpus(group), cpus) {
 		struct rq *rq = cpu_rq(i);
-
+		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
+				     mostly_idle_cpu(i),
+				     power_cost(NULL, i));
 		/* Bias balancing toward cpus of our domain */
 		if (local_group) {
 			load = target_load(i, load_idx);
