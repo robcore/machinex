@@ -380,8 +380,10 @@ static struct ctl_table kern_table[] = {
 		.procname	= "timer_migration",
 		.data		= &sysctl_timer_migration,
 		.maxlen		= sizeof(unsigned int),
-		.mode		= 0444,
-		.proc_handler	= proc_dointvec,
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &one,
 	},
 #endif
 	{
