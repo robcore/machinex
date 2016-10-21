@@ -721,8 +721,14 @@ extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void set_hmp_defaults(void);
 extern unsigned int power_cost_at_freq(int cpu, unsigned int freq);
+extern void reset_all_window_stats(u64 window_start, unsigned int window_size);
+extern void boost_kick(int cpu);
+extern int sched_boost(void);
 
 #else /* CONFIG_SCHED_HMP */
+
+#define sched_enable_hmp 0
+#define sched_freq_legacy_mode 1
 
 static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
 static inline void pre_big_small_task_count_change(void) { }
