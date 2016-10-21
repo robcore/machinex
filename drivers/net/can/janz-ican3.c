@@ -362,7 +362,7 @@ static int ican3_old_send_msg(struct ican3_dev *mod, struct ican3_msg *msg)
  * ICAN3 "new-style" Host Interface Setup
  */
 
-static void ican3_init_new_host_interface(struct ican3_dev *mod)
+static void __devinit ican3_init_new_host_interface(struct ican3_dev *mod)
 {
 	struct ican3_new_desc desc;
 	unsigned long flags;
@@ -441,7 +441,7 @@ static void ican3_init_new_host_interface(struct ican3_dev *mod)
  * ICAN3 Fast Host Interface Setup
  */
 
-static void ican3_init_fast_host_interface(struct ican3_dev *mod)
+static void __devinit ican3_init_fast_host_interface(struct ican3_dev *mod)
 {
 	struct ican3_fast_desc desc;
 	unsigned long flags;
@@ -629,7 +629,7 @@ static int ican3_recv_msg(struct ican3_dev *mod, struct ican3_msg *msg)
  * Quick Pre-constructed Messages
  */
 
-static int ican3_msg_connect(struct ican3_dev *mod)
+static int __devinit ican3_msg_connect(struct ican3_dev *mod)
 {
 	struct ican3_msg msg;
 
@@ -640,7 +640,7 @@ static int ican3_msg_connect(struct ican3_dev *mod)
 	return ican3_send_msg(mod, &msg);
 }
 
-static int ican3_msg_disconnect(struct ican3_dev *mod)
+static int __devexit ican3_msg_disconnect(struct ican3_dev *mod)
 {
 	struct ican3_msg msg;
 
@@ -651,7 +651,7 @@ static int ican3_msg_disconnect(struct ican3_dev *mod)
 	return ican3_send_msg(mod, &msg);
 }
 
-static int ican3_msg_newhostif(struct ican3_dev *mod)
+static int __devinit ican3_msg_newhostif(struct ican3_dev *mod)
 {
 	struct ican3_msg msg;
 	int ret;
@@ -672,7 +672,7 @@ static int ican3_msg_newhostif(struct ican3_dev *mod)
 	return 0;
 }
 
-static int ican3_msg_fasthostif(struct ican3_dev *mod)
+static int __devinit ican3_msg_fasthostif(struct ican3_dev *mod)
 {
 	struct ican3_msg msg;
 	unsigned int addr;
@@ -705,7 +705,7 @@ static int ican3_msg_fasthostif(struct ican3_dev *mod)
  * Setup the CAN filter to either accept or reject all
  * messages from the CAN bus.
  */
-static int ican3_set_id_filter(struct ican3_dev *mod, bool accept)
+static int __devinit ican3_set_id_filter(struct ican3_dev *mod, bool accept)
 {
 	struct ican3_msg msg;
 	int ret;
@@ -1280,7 +1280,7 @@ static int ican3_reset_module(struct ican3_dev *mod)
 	return -ETIMEDOUT;
 }
 
-static void ican3_shutdown_module(struct ican3_dev *mod)
+static void __devexit ican3_shutdown_module(struct ican3_dev *mod)
 {
 	ican3_msg_disconnect(mod);
 	ican3_reset_module(mod);
@@ -1289,7 +1289,7 @@ static void ican3_shutdown_module(struct ican3_dev *mod)
 /*
  * Startup an ICAN module, bringing it into fast mode
  */
-static int ican3_startup_module(struct ican3_dev *mod)
+static int __devinit ican3_startup_module(struct ican3_dev *mod)
 {
 	int ret;
 
@@ -1633,7 +1633,7 @@ static struct attribute_group ican3_sysfs_attr_group = {
  * PCI Subsystem
  */
 
-static int ican3_probe(struct platform_device *pdev)
+static int __devinit ican3_probe(struct platform_device *pdev)
 {
 	struct janz_platform_data *pdata;
 	struct net_device *ndev;
@@ -1769,7 +1769,7 @@ out_return:
 	return ret;
 }
 
-static int ican3_remove(struct platform_device *pdev)
+static int __devexit ican3_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct ican3_dev *mod = netdev_priv(ndev);
@@ -1798,7 +1798,7 @@ static struct platform_driver ican3_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= ican3_probe,
-	.remove		= ican3_remove,
+	.remove		= __devexit_p(ican3_remove),
 };
 
 module_platform_driver(ican3_driver);

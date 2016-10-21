@@ -570,19 +570,21 @@ static int __devinit sirfsoc_dma_probe(struct platform_device *op)
 
 	if (of_property_read_u32(dn, "cell-index", &id)) {
 		dev_err(dev, "Fail to get DMAC index\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_mem;
 	}
 
 	sdma->irq = irq_of_parse_and_map(dn, 0);
 	if (sdma->irq == NO_IRQ) {
 		dev_err(dev, "Error mapping IRQ!\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto free_mem;
 	}
 
 	ret = of_address_to_resource(dn, 0, &res);
 	if (ret) {
 		dev_err(dev, "Error parsing memory region!\n");
-		goto irq_dispose;
+		goto free_mem;
 	}
 
 	regs_start = res.start;
@@ -595,11 +597,12 @@ static int __devinit sirfsoc_dma_probe(struct platform_device *op)
 		goto irq_dispose;
 	}
 
-	ret = request_irq(sdma->irq, &sirfsoc_dma_irq, 0, DRV_NAME, sdma);
+	ret = devm_request_irq(dev, sdma->irq, &sirfsoc_dma_irq, 0, DRV_NAME,
+		sdma);
 	if (ret) {
 		dev_err(dev, "Error requesting IRQ!\n");
 		ret = -EINVAL;
-		goto irq_dispose;
+		goto unmap_mem;
 	}
 
 	dma = &sdma->dma;
@@ -649,9 +652,13 @@ static int __devinit sirfsoc_dma_probe(struct platform_device *op)
 	return 0;
 
 free_irq:
-	free_irq(sdma->irq, sdma);
+	devm_free_irq(dev, sdma->irq, sdma);
 irq_dispose:
 	irq_dispose_mapping(sdma->irq);
+unmap_mem:
+	iounmap(sdma->base);
+free_mem:
+	devm_kfree(dev, sdma);
 	return ret;
 }
 
@@ -661,8 +668,10 @@ static int __devexit sirfsoc_dma_remove(struct platform_device *op)
 	struct sirfsoc_dma *sdma = dev_get_drvdata(dev);
 
 	dma_async_device_unregister(&sdma->dma);
-	free_irq(sdma->irq, sdma);
+	devm_free_irq(dev, sdma->irq, sdma);
 	irq_dispose_mapping(sdma->irq);
+	iounmap(sdma->base);
+	devm_kfree(dev, sdma);
 	return 0;
 }
 

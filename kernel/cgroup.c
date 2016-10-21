@@ -239,9 +239,6 @@ static DEFINE_SPINLOCK(hierarchy_id_lock);
  * extra work in the fork/exit path if none of the subsystems need to
  * be called.
  */
-static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
-			      struct cftype cfts[], bool is_add);
-
 static int need_forkexit_callback __read_mostly;
 
 #ifdef CONFIG_PROVE_LOCKING
@@ -1012,7 +1009,7 @@ static void cgroup_clear_directory(struct dentry *dir, bool base_files,
 		if (!test_bit(ss->subsys_id, &subsys_mask))
 			continue;
 		list_for_each_entry(set, &ss->cftsets, node)
-			cgroup_addrm_files(cgrp, NULL, set->cfts, false);
+			cgroup_rm_file(cgrp, set->cfts);
 	}
 	if (base_files) {
 		while (!list_empty(&cgrp->files))
@@ -1431,7 +1428,6 @@ static void init_cgroup_housekeeping(struct cgroup *cgrp)
 	INIT_LIST_HEAD(&cgrp->children);
 	INIT_LIST_HEAD(&cgrp->files);
 	INIT_LIST_HEAD(&cgrp->css_sets);
-	INIT_LIST_HEAD(&cgrp->allcg_node);
 	INIT_LIST_HEAD(&cgrp->release_list);
 	INIT_LIST_HEAD(&cgrp->pidlists);
 	mutex_init(&cgrp->pidlist_mutex);
@@ -2760,15 +2756,9 @@ static int cgroup_create_file(struct dentry *dentry, umode_t mode,
 		/* start off with i_nlink == 2 (for "." entry) */
 		inc_nlink(inode);
 
-		/*
-		 * Control reaches here with cgroup_mutex held.
-		 * @inode->i_mutex should nest outside cgroup_mutex but we
-		 * want to populate it immediately without releasing
-		 * cgroup_mutex.  As @inode isn't visible to anyone else
-		 * yet, trylock will always succeed without affecting
-		 * lockdep checks.
-		 */
-		WARN_ON_ONCE(!mutex_trylock(&inode->i_mutex));
+		/* start with the directory inode held, so that we can
+		 * populate it without racing with another mkdir */
+		mutex_lock_nested(&inode->i_mutex, I_MUTEX_CHILD);
 	} else if (S_ISREG(mode)) {
 		inode->i_size = 0;
 		inode->i_fop = &cgroup_file_operations;
@@ -4661,7 +4651,7 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	list_for_each_entry(link, &dummytop->css_sets, cgrp_link_list) {
 		struct css_set *cg = link->cg;
 		unsigned long key;
-
+		
 		hash_del(&cg->hlist);
 		BUG_ON(!cg->subsys[ss->subsys_id]);
 		cg->subsys[ss->subsys_id] = NULL;

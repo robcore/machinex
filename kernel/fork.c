@@ -1266,14 +1266,8 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	p->utime = p->stime = p->gtime = 0;
 	p->utimescaled = p->stimescaled = 0;
 #ifndef CONFIG_VIRT_CPU_ACCOUNTING
-	p->prev_cputime.utime = p->prev_cputime.stime = 0;
+	p->prev_utime = p->prev_stime = 0;
 #endif
-#ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
-	seqlock_init(&p->vtime_seqlock);
-	p->vtime_snap = 0;
-	p->vtime_snap_whence = VTIME_SLEEPING;
-#endif
-
 #if defined(SPLIT_RSS_COUNTING)
 	memset(&p->rss_stat, 0, sizeof(p->rss_stat));
 #endif

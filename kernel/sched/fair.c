@@ -1313,6 +1313,7 @@ static void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq, int force_update)
 	}
 
 	__update_cfs_rq_tg_load_contrib(cfs_rq, force_update);
+	update_cfs_shares(cfs_rq);
 }
 
 static inline void update_rq_runnable_avg(struct rq *rq, int runnable)
@@ -1579,7 +1580,9 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 	}
 
 	/* ensure we never gain time by being placed backwards. */
-	se->vruntime = max_vruntime(se->vruntime, vruntime);
+	vruntime = max_vruntime(se->vruntime, vruntime);
+
+	se->vruntime = vruntime;
 }
 
 static void check_enqueue_throttle(struct cfs_rq *cfs_rq);
@@ -1598,9 +1601,8 @@ enqueue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	 * Update run-time statistics of the 'current'.
 	 */
 	update_curr(cfs_rq);
-	enqueue_entity_load_avg(cfs_rq, se, flags & ENQUEUE_WAKEUP);
 	account_entity_enqueue(cfs_rq, se);
-	update_cfs_shares(cfs_rq);
+	enqueue_entity_load_avg(cfs_rq, se, flags & ENQUEUE_WAKEUP);
 
 	if (flags & ENQUEUE_WAKEUP) {
 		place_entity(cfs_rq, se, 0);
@@ -1673,7 +1675,6 @@ dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	 * Update run-time statistics of the 'current'.
 	 */
 	update_curr(cfs_rq);
-	dequeue_entity_load_avg(cfs_rq, se, flags & DEQUEUE_SLEEP);
 
 	update_stats_dequeue(cfs_rq, se);
 	if (flags & DEQUEUE_SLEEP) {
@@ -1693,8 +1694,8 @@ dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 
 	if (se != cfs_rq->curr)
 		__dequeue_entity(cfs_rq, se);
-	se->on_rq = 0;
 	account_entity_dequeue(cfs_rq, se);
+	dequeue_entity_load_avg(cfs_rq, se, flags & DEQUEUE_SLEEP);
 
 	/*
 	 * Normalize the entity after updating the min_vruntime because the
@@ -1708,7 +1709,7 @@ dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	return_cfs_rq_runtime(cfs_rq);
 
 	update_min_vruntime(cfs_rq);
-	update_cfs_shares(cfs_rq);
+	se->on_rq = 0;
 }
 
 /*
@@ -2746,8 +2747,8 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
+		update_cfs_rq_blocked_load(cfs_rq, 0);
 	}
 
 	if (!se) {
@@ -2807,8 +2808,8 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
+		update_cfs_rq_blocked_load(cfs_rq, 0);
 	}
 
 	if (!se) {
@@ -3288,6 +3289,7 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	int prev_cpu = task_cpu(p);
 	int new_cpu = cpu;
 	int want_affine = 0;
+	int want_sd = 1;
 	int sync = wake_flags & WF_SYNC;
 
 	if (p->nr_cpus_allowed == 1)
@@ -3305,21 +3307,48 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 			continue;
 
 		/*
+		 * If power savings logic is enabled for a domain, see if we
+		 * are not overloaded, if so, don't balance wider.
+		 */
+		if (tmp->flags & (SD_PREFER_LOCAL)) {
+			unsigned long power = 0;
+			unsigned long nr_running = 0;
+			unsigned long capacity;
+			int i;
+
+			for_each_cpu(i, sched_domain_span(tmp)) {
+				power += power_of(i);
+				nr_running += cpu_rq(i)->cfs.nr_running;
+			}
+
+			capacity = DIV_ROUND_CLOSEST(power, SCHED_POWER_SCALE);
+
+			if (nr_running < capacity)
+				want_sd = 0;
+		}
+
+		/*
 		 * If both cpu and prev_cpu are part of this domain,
 		 * cpu is a valid SD_WAKE_AFFINE target.
 		 */
 		if (want_affine && (tmp->flags & SD_WAKE_AFFINE) &&
 		    cpumask_test_cpu(prev_cpu, sched_domain_span(tmp))) {
 			affine_sd = tmp;
-			break;
+			want_affine = 0;
 		}
 
-		if (tmp->flags & sd_flag)
+		if (!want_sd && !want_affine)
+			break;
+
+		if (!(tmp->flags & sd_flag))
+			continue;
+
+		if (want_sd)
 			sd = tmp;
 	}
 
 	if (affine_sd) {
-		if (cpu != prev_cpu && wake_affine(affine_sd, p, sync))
+		if (cpu == prev_cpu || wake_affine(affine_sd, p, sync))
 			prev_cpu = cpu;
 
 		new_cpu = select_idle_sibling(p, prev_cpu);
@@ -3660,122 +3689,8 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
 
 #ifdef CONFIG_SMP
 /**************************************************
- * Fair scheduling class load-balancing methods.
- *
- * BASICS
- *
- * The purpose of load-balancing is to achieve the same basic fairness the
- * per-cpu scheduler provides, namely provide a proportional amount of compute
- * time to each task. This is expressed in the following equation:
- *
- *   W_i,n/P_i == W_j,n/P_j for all i,j                               (1)
- *
- * Where W_i,n is the n-th weight average for cpu i. The instantaneous weight
- * W_i,0 is defined as:
- *
- *   W_i,0 = \Sum_j w_i,j                                             (2)
- *
- * Where w_i,j is the weight of the j-th runnable task on cpu i. This weight
- * is derived from the nice value as per prio_to_weight[].
- *
- * The weight average is an exponential decay average of the instantaneous
- * weight:
- *
- *   W'_i,n = (2^n - 1) / 2^n * W_i,n + 1 / 2^n * W_i,0               (3)
- *
- * P_i is the cpu power (or compute capacity) of cpu i, typically it is the
- * fraction of 'recent' time available for SCHED_OTHER task execution. But it
- * can also include other factors [XXX].
- *
- * To achieve this balance we define a measure of imbalance which follows
- * directly from (1):
- *
- *   imb_i,j = max{ avg(W/P), W_i/P_i } - min{ avg(W/P), W_j/P_j }    (4)
- *
- * We them move tasks around to minimize the imbalance. In the continuous
- * function space it is obvious this converges, in the discrete case we get
- * a few fun cases generally called infeasible weight scenarios.
- *
- * [XXX expand on:
- *     - infeasible weights;
- *     - local vs global optima in the discrete case. ]
- *
- *
- * SCHED DOMAINS
- *
- * In order to solve the imbalance equation (4), and avoid the obvious O(n^2)
- * for all i,j solution, we create a tree of cpus that follows the hardware
- * topology where each level pairs two lower groups (or better). This results
- * in O(log n) layers. Furthermore we reduce the number of cpus going up the
- * tree to only the first of the previous level and we decrease the frequency
- * of load-balance at each level inv. proportional to the number of cpus in
- * the groups.
- *
- * This yields:
- *
- *     log_2 n     1     n
- *   \Sum       { --- * --- * 2^i } = O(n)                            (5)
- *     i = 0      2^i   2^i
- *                               `- size of each group
- *         |         |     `- number of cpus doing load-balance
- *         |         `- freq
- *         `- sum over all levels
- *
- * Coupled with a limit on how many tasks we can migrate every balance pass,
- * this makes (5) the runtime complexity of the balancer.
- *
- * An important property here is that each CPU is still (indirectly) connected
- * to every other cpu in at most O(log n) steps:
- *
- * The adjacency matrix of the resulting graph is given by:
- *
- *             log_2 n     
- *   A_i,j = \Union     (i % 2^k == 0) && i / 2^(k+1) == j / 2^(k+1)  (6)
- *             k = 0
- *
- * And you'll find that:
- *
- *   A^(log_2 n)_i,j != 0  for all i,j                                (7)
- *
- * Showing there's indeed a path between every cpu in at most O(log n) steps.
- * The task movement gives a factor of O(m), giving a convergence complexity
- * of:
- *
- *   O(nm log n),  n := nr_cpus, m := nr_tasks                        (8)
- *
- *
- * WORK CONSERVING
- *
- * In order to avoid CPUs going idle while there's still work to do, new idle
- * balancing is more aggressive and has the newly idle cpu iterate up the domain
- * tree itself instead of relying on other CPUs to bring it work.
- *
- * This adds some complexity to both (5) and (8) but it reduces the total idle
- * time.
- *
- * [XXX more?]
- *
- *
- * CGROUPS
- *
- * Cgroups make a horror show out of (2), instead of a simple sum we get:
- *
- *                                s_k,i
- *   W_i,0 = \Sum_j \Prod_k w_k * -----                               (9)
- *                                 S_k
- *
- * Where
- *
- *   s_k,i = \Sum_j w_i,j,k  and  S_k = \Sum_i s_k,i                 (10)
- *
- * w_i,j,k is the weight of the j-th runnable task in the k-th cgroup on cpu i.
- *
- * The big problem is S_k, its a global sum needed to compute a local (W_i)
- * property.
- *
- * [XXX write more on how we solve this.. _after_ merging pjt's patches that
- *      rewrite all of this once again.]
- */ 
+ * Fair scheduling class load-balancing methods:
+ */
 
 static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
@@ -6113,8 +6028,11 @@ int sched_group_set_shares(struct task_group *tg, unsigned long shares)
 		se = tg->se[i];
 		/* Propagate contribution to hierarchy */
 		raw_spin_lock_irqsave(&rq->lock, flags);
-		for_each_sched_entity(se)
+		for_each_sched_entity(se) {
 			update_cfs_shares(group_cfs_rq(se));
+			/* update contribution to parent */
+			update_entity_load_avg(se, 1);
+		}
 		raw_spin_unlock_irqrestore(&rq->lock, flags);
 	}
 

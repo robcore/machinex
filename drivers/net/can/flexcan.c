@@ -903,7 +903,7 @@ static const struct net_device_ops flexcan_netdev_ops = {
 	.ndo_start_xmit	= flexcan_start_xmit,
 };
 
-static int register_flexcandev(struct net_device *dev)
+static int __devinit register_flexcandev(struct net_device *dev)
 {
 	struct flexcan_priv *priv = netdev_priv(dev);
 	struct flexcan_regs __iomem *regs = priv->base;
@@ -947,12 +947,12 @@ static int register_flexcandev(struct net_device *dev)
 	return err;
 }
 
-static void unregister_flexcandev(struct net_device *dev)
+static void __devexit unregister_flexcandev(struct net_device *dev)
 {
 	unregister_candev(dev);
 }
 
-static int flexcan_probe(struct platform_device *pdev)
+static int __devinit flexcan_probe(struct platform_device *pdev)
 {
 	struct net_device *dev;
 	struct flexcan_priv *priv;
@@ -1053,7 +1053,7 @@ static int flexcan_probe(struct platform_device *pdev)
 	return err;
 }
 
-static int flexcan_remove(struct platform_device *pdev)
+static int __devexit flexcan_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct flexcan_priv *priv = netdev_priv(dev);

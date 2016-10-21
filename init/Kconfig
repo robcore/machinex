@@ -402,9 +402,6 @@ source "kernel/time/Kconfig"
 
 menu "RCU Subsystem"
 
-config VIRT_CPU_ACCOUNTING
-	bool
-
 choice
 	prompt "RCU Implementation"
 	default TREE_RCU

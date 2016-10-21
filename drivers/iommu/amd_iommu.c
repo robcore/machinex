@@ -59,10 +59,8 @@
  *
  * If at some point we'd like to utilize the IOMMU core's new behavior,
  * we could change this to advertise the real page sizes we support.
- *
- * 512GB Pages are not supported due to a hardware bug
  */
-#define AMD_IOMMU_PGSIZES	((~0xFFFUL) & ~(2ULL << 38))
+#define AMD_IOMMU_PGSIZES	(~0xFFFUL)
 
 static DEFINE_RWLOCK(amd_iommu_devtable_lock);
 

@@ -222,7 +222,7 @@ asmlinkage void __do_softirq(void)
 	int max_restart = MAX_SOFTIRQ_RESTART;
 
 	pending = local_softirq_pending();
-	account_irq_enter_time(current);
+	account_system_vtime(current);
 
 	__local_bh_disable((unsigned long)__builtin_return_address(0),
 				SOFTIRQ_OFFSET);
@@ -275,7 +275,7 @@ restart:
 
 	lockdep_softirq_exit();
 
-	account_irq_exit_time(current);
+	account_system_vtime(current);
 	__local_bh_enable(SOFTIRQ_OFFSET);
 }
 
@@ -343,7 +343,7 @@ static inline void invoke_softirq(void)
  */
 void irq_exit(void)
 {
-	account_irq_exit_time(current);
+	account_system_vtime(current);
 	trace_hardirq_exit();
 	sub_preempt_count(IRQ_EXIT_OFFSET);
 	if (!in_interrupt() && local_softirq_pending())

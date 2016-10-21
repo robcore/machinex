@@ -3707,16 +3707,6 @@ static blkcnt_t ext4_inode_blocks(struct ext4_inode *raw_inode,
 	}
 }
 
-static inline void ext4_iget_extra_inode(struct inode *inode,
-					 struct ext4_inode *raw_inode,
-					 struct ext4_inode_info *ei)
-{
-	__le32 *magic = (void *)raw_inode +
-			EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize;
-	if (*magic == cpu_to_le32(EXT4_XATTR_MAGIC))
-		ext4_set_inode_state(inode, EXT4_STATE_XATTR);
-}
-
 struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 {
 	struct ext4_iloc iloc;
@@ -3835,7 +3825,11 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 			ei->i_extra_isize = sizeof(struct ext4_inode) -
 					    EXT4_GOOD_OLD_INODE_SIZE;
 		} else {
-			ext4_iget_extra_inode(inode, raw_inode, ei);
+			__le32 *magic = (void *)raw_inode +
+					EXT4_GOOD_OLD_INODE_SIZE +
+					ei->i_extra_isize;
+			if (*magic == cpu_to_le32(EXT4_XATTR_MAGIC))
+				ext4_set_inode_state(inode, EXT4_STATE_XATTR);
 		}
 	} else
 		ei->i_extra_isize = 0;

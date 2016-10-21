@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/rcupdate.h>
 #include <linux/ratelimit.h>
-#include <linux/irqflags.h>
 #include <asm/signal.h>
 
 #include <linux/kvm.h>
@@ -639,52 +638,11 @@ static inline int kvm_deassign_device(struct kvm *kvm,
 }
 #endif /* CONFIG_IOMMU_API */
 
-static inline void __guest_enter(void)
-{
-	/*
-	 * This is running in ioctl context so we can avoid
-	 * the call to vtime_account() with its unnecessary idle check.
-	 */
-	vtime_account_system(current);
-	current->flags |= PF_VCPU;
-}
-
-static inline void __guest_exit(void)
-{
-	/*
-	 * This is running in ioctl context so we can avoid
-	 * the call to vtime_account() with its unnecessary idle check.
-	 */
-	vtime_account_system(current);
-	current->flags &= ~PF_VCPU;
-}
-
-#ifdef CONFIG_CONTEXT_TRACKING
-extern void guest_enter(void);
-extern void guest_exit(void);
-
-#else /* !CONFIG_CONTEXT_TRACKING */
-static inline void guest_enter(void)
-{
-	__guest_enter();
-}
-
-static inline void guest_exit(void)
-{
-	__guest_exit();
-}
-#endif /* !CONFIG_CONTEXT_TRACKING */
-
 static inline void kvm_guest_enter(void)
 {
-	unsigned long flags;
-
 	BUG_ON(preemptible());
-
-	local_irq_save(flags);
-	guest_enter();
-	local_irq_restore(flags);
-
+	account_system_vtime(current);
+	current->flags |= PF_VCPU;
 	/* KVM does not hold any references to rcu protected data when it
 	 * switches CPU into a guest mode. In fact switching to a guest mode
 	 * is very similar to exiting to userspase from rcu point of view. In
@@ -697,11 +655,8 @@ static inline void kvm_guest_enter(void)
 
 static inline void kvm_guest_exit(void)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
-	guest_exit();
-	local_irq_restore(flags);
+	account_system_vtime(current);
+	current->flags &= ~PF_VCPU;
 }
 
 /*
