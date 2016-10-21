@@ -441,6 +441,19 @@ void account_idle_ticks(unsigned long ticks)
 
 #endif
 
+#ifndef __ARCH_HAS_VTIME_TASK_SWITCH
+void vtime_task_switch(struct task_struct *prev)
+{
+	if (is_idle_task(prev))
+		vtime_account_idle(prev);
+	else
+		vtime_account_system(prev);
+
+	vtime_account_user(prev);
+	arch_vtime_task_switch(prev);
+}
+#endif
+
 /*
  * Use precise platform statistics if available:
  */
