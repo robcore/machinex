@@ -239,6 +239,9 @@ static DEFINE_SPINLOCK(hierarchy_id_lock);
  * extra work in the fork/exit path if none of the subsystems need to
  * be called.
  */
+static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
+			      struct cftype cfts[], bool is_add);
+
 static int need_forkexit_callback __read_mostly;
 
 #ifdef CONFIG_PROVE_LOCKING
@@ -1009,7 +1012,7 @@ static void cgroup_clear_directory(struct dentry *dir, bool base_files,
 		if (!test_bit(ss->subsys_id, &subsys_mask))
 			continue;
 		list_for_each_entry(set, &ss->cftsets, node)
-			cgroup_rm_file(cgrp, set->cfts);
+			cgroup_addrm_files(cgrp, NULL, set->cfts, false);
 	}
 	if (base_files) {
 		while (!list_empty(&cgrp->files))
@@ -4658,7 +4661,7 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	list_for_each_entry(link, &dummytop->css_sets, cgrp_link_list) {
 		struct css_set *cg = link->cg;
 		unsigned long key;
-		
+
 		hash_del(&cg->hlist);
 		BUG_ON(!cg->subsys[ss->subsys_id]);
 		cg->subsys[ss->subsys_id] = NULL;
