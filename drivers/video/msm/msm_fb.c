@@ -2154,8 +2154,8 @@ static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 		cap_raise(new->cap_effective, CAP_SYS_NICE);
 		commit_creds(new);
 		if ((sched_setscheduler(current, SCHED_RR, &s)) < 0)
-			pr_err("sched_setscheduler failed\n"); */
-	}
+			pr_err("sched_setscheduler failed\n");
+	} */
 
 	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
 		if ((!mfd->op_enable) || (!mfd->panel_power_on))
