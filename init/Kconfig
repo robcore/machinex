@@ -56,7 +56,7 @@ config VIRT_CPU_ACCOUNTING_GEN
 
 	  If unsure, say N.
 
-endmenu
+endchoice
 
 menu "General setup"
 
