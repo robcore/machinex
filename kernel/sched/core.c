@@ -2036,6 +2036,7 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 	 * transition, resulting in a double drop.
 	 */
 	prev_state = prev->state;
+	account_switch_vtime(prev);
 	finish_arch_switch(prev);
 #ifdef __ARCH_WANT_INTERRUPTS_ON_CTXSW
 	local_irq_disable();
