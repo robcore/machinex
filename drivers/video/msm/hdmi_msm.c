@@ -81,7 +81,8 @@ struct workqueue_struct *hdmi_work_queue;
 struct hdmi_msm_state_type *hdmi_msm_state;
 
 /* Disable HDCP by default - suck it */
-static bool hdcp_feature_on = false;
+/* Just kidding, leave it up to userspace */
+static bool hdcp_feature_on = true;
 
 DEFINE_MUTEX(hdmi_msm_state_mutex);
 EXPORT_SYMBOL(hdmi_msm_state_mutex);

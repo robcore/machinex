@@ -88,9 +88,6 @@
 #include "pm-boot.h"
 #include "devices-msm8x60.h"
 #include "smd_private.h"
-
-#define MHL_GPIO_INT           30
-#define MHL_GPIO_RESET         35
 #include "sysmon.h"
 
 #include <mach/sec_thermistor.h>
@@ -1939,26 +1936,6 @@ static void __init apq8064_init_irq(void)
 						(void *)MSM_QGIC_CPU_BASE);
 }
 
-static struct msm_mhl_platform_data mhl_platform_data = {
-	.irq = MSM_GPIO_TO_INT(MHL_GPIO_INT),
-	.gpio_mhl_int = MHL_GPIO_INT,
-	.gpio_mhl_reset = MHL_GPIO_RESET,
-	.gpio_mhl_power = 0,
-	.gpio_hdmi_mhl_mux = 0,
-};
-
-static struct i2c_board_info sii_device_info[] __initdata = {
-	{
-		/*
-		 * keeps SI 8334 as the default
-		 * MHL TX
-		 */
-		I2C_BOARD_INFO("sii8334", 0x39),
-		.platform_data = &mhl_platform_data,
-		.flags = I2C_CLIENT_WAKE,
-	},
-};
-
 static struct platform_device msm8064_device_saw_regulator_core0 = {
 	.name	= "saw-regulator",
 	.id	= 0,
@@ -3346,9 +3323,6 @@ static void __init apq8064_common_init(void)
 	apq8064_init_pmic();
 	if (machine_is_apq8064_liquid())
 		msm_otg_pdata.mhl_enable = true;
-
-	if (apq8064_mhl_display_enabled())
-		mhl_platform_data.mhl_enabled = true;
 
 	android_usb_pdata.swfi_latency =
 		msm_rpmrs_levels[0].latency_us;
