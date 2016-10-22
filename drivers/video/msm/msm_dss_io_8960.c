@@ -702,6 +702,14 @@ void mipi_dsi_unprepare_ahb_clocks(void)
 	clk_unprepare(amp_pclk);
 }
 
+void mipi_dsi_prepare_clocks(void)
+{
+	clk_set_rate(dsi_byte_div_clk, 1);
+	clk_set_rate(dsi_esc_clk, 1);
+	clk_prepare(dsi_byte_div_clk);
+	clk_prepare(dsi_esc_clk);
+}
+
 void mipi_dsi_unprepare_clocks(void)
 {
 	clk_unprepare(dsi_esc_clk);
