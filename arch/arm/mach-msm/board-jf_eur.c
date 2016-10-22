@@ -167,9 +167,9 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
 #ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #else
-#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #endif
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -398,7 +398,7 @@ static void irda_device_init(void)
 		.output_buffer		= PM_GPIO_OUT_BUF_CMOS,
 		.output_value		= 0,
 	};
-	printk(KERN_ERR "%s called!\n", __func__);
+	//printk(KERN_ERR "%s called!\n", __func__);
 	gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), "irda_wake");
 	gpio_direction_output(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), 0);
 	pm8xxx_gpio_config(PM8921_GPIO_PM_TO_SYS(	\
@@ -602,7 +602,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
 	.is_cma = 0,
-	.no_nonsecure_alloc = 0,
+	.no_nonsecure_alloc = 1,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_apq8064_ion_pdata = {
@@ -611,7 +611,7 @@ static struct ion_cp_heap_pdata cp_mfc_apq8064_ion_pdata = {
 	.reusable = 0,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_HIGH,
-	.no_nonsecure_alloc = 0,
+	.no_nonsecure_alloc = 1,
 };
 
 static struct ion_co_heap_pdata co_apq8064_ion_pdata = {

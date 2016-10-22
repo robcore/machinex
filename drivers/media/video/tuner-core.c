@@ -1241,10 +1241,8 @@ static int tuner_log_status(struct v4l2_subdev *sd)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int tuner_suspend(struct device *dev)
+static int tuner_suspend(struct i2c_client *c, pm_message_t state)
 {
-	struct i2c_client *c = to_i2c_client(dev);
 	struct tuner *t = to_tuner(i2c_get_clientdata(c));
 	struct analog_demod_ops *analog_ops = &t->fe.ops.analog_ops;
 
@@ -1256,9 +1254,8 @@ static int tuner_suspend(struct device *dev)
 	return 0;
 }
 
-static int tuner_resume(struct device *dev)
+static int tuner_resume(struct i2c_client *c)
 {
-	struct i2c_client *c = to_i2c_client(dev);
 	struct tuner *t = to_tuner(i2c_get_clientdata(c));
 
 	tuner_dbg("resume\n");
@@ -1269,7 +1266,6 @@ static int tuner_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
 static int tuner_command(struct i2c_client *client, unsigned cmd, void *arg)
 {
@@ -1314,10 +1310,6 @@ static const struct v4l2_subdev_ops tuner_ops = {
  * I2C structs and module init functions
  */
 
-static const struct dev_pm_ops tuner_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(tuner_suspend, tuner_resume)
-};
-
 static const struct i2c_device_id tuner_id[] = {
 	{ "tuner", }, /* autodetect */
 	{ }
@@ -1328,11 +1320,12 @@ static struct i2c_driver tuner_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,
 		.name	= "tuner",
-		.pm	= &tuner_pm_ops,
 	},
 	.probe		= tuner_probe,
 	.remove		= tuner_remove,
 	.command	= tuner_command,
+	.suspend	= tuner_suspend,
+	.resume		= tuner_resume,
 	.id_table	= tuner_id,
 };
 

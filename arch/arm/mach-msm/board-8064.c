@@ -99,9 +99,9 @@
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
 #ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #else
-#define MSM_PMEM_SIZE 0x0 /* 64 Mbytes */
+#define MSM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #endif
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -307,7 +307,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
 	.is_cma = 1,
-	.no_nonsecure_alloc = 0,
+	.no_nonsecure_alloc = 1,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_apq8064_ion_pdata = {
@@ -316,7 +316,7 @@ static struct ion_cp_heap_pdata cp_mfc_apq8064_ion_pdata = {
 	.reusable = 0,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_HIGH,
-	.no_nonsecure_alloc = 0,
+	.no_nonsecure_alloc = 1,
 };
 
 static struct ion_co_heap_pdata co_apq8064_ion_pdata = {
