@@ -692,12 +692,8 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 		goto bail_out_add;
 	} else {
 		if (!vcd_get_ion_status()) {
-			if (get_pmem_file(pmem_fd, &phys_addr,
-					kernel_vaddr, &len, &file)) {
-				ERR("%s(): get_pmem_file failed\n", __func__);
 				goto bail_out_add;
 			}
-			put_pmem_file(file);
 			flags = (buffer == BUFFER_TYPE_INPUT)
 			? MSM_SUBSYSTEM_MAP_IOVA :
 			MSM_SUBSYSTEM_MAP_IOVA|MSM_SUBSYSTEM_ALIGN_IOVA_8K;
