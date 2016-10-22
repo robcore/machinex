@@ -417,7 +417,7 @@ static int set_vdd_dig_8960(struct clk_vdd_class *vdd_class, int level)
 	int ret;
 	ret = rpm_vreg_set_voltage(RPM_VREG_ID_PM8921_S3, RPM_VREG_VOTER3,
 				    vdd_uv[level], vdd_uv[VDD_DIG_HIGH], 1);
-	pr_alert("GPU VOLTAGE - %d - %d", vdd_uv[level], ret);
+	//pr_alert("GPU VOLTAGE - %d - %d", vdd_uv[level], ret);
 	return ret;
 }
 
