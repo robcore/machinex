@@ -2850,6 +2850,11 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 		mfd->sec_active = FALSE;
 	}
 
+	if ((pipe->flags & MDP_SECURE_OVERLAY_SESSION) &&
+		(!(req->flags & MDP_SECURE_OVERLAY_SESSION))) {
+		pr_err("%s Switch secure %d", __func__, pipe->pipe_ndx);
+		mfd->sec_active = FALSE;
+	}
 	pipe->flags = req->flags;
 	*ppipe = pipe;
 

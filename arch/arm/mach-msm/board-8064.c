@@ -90,8 +90,10 @@
 #include "smd_private.h"
 #include "sysmon.h"
 
+#ifdef CONFIG_SEC_THERMISTOR
 #include <mach/sec_thermistor.h>
 #include <mach/fusion3-thermistor.h>
+#endif
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
