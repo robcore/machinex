@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -132,7 +132,7 @@ static int add_buffer(struct msm_buffer_node *node)
 				p = &(*p)->rb_right;
 			else {
 				WARN(1, "tried to add buffer twice! buf = %p"
-					" vaddr = %p iova = %p", tmp->buf,
+					" vaddr = %p  = %p", tmp->buf,
 					tmp->buf->vaddr,
 					tmp->buf->iova);
 				mutex_unlock(&msm_buffer_mutex);
@@ -412,8 +412,8 @@ struct msm_mapped_buffer *msm_subsystem_map_buffer(unsigned long phys,
 
 			if (flags & MSM_SUBSYSTEM_MAP_IOMMU_2X)
 				msm_iommu_map_extra
-					(d, temp_va, phys, length, SZ_4K,
-					(IOMMU_READ | IOMMU_WRITE));
+				(d, temp_va, length, SZ_4K,
+				(IOMMU_READ | IOMMU_WRITE));
 		}
 
 	}
