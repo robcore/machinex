@@ -1445,11 +1445,11 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 			if (status & MCI_DATACRCFAIL) {
 				pr_err("%s: Data CRC error\n",
 				       mmc_hostname(host->mmc));
-				pr_err("%s: opcode 0x%.8x\n", __func__, opcode);
+				pr_debug("%s: opcode 0x%.8x\n", __func__, opcode);
 				pr_err("%s: blksz %d, blocks %d\n", __func__,
 				       data->blksz, data->blocks);
 			} else {
-				pr_err("%s: CMD%d: Data timeout. DAT0 => %d\n",
+				pr_debug("%s: CMD%d: Data timeout. DAT0 => %d\n",
 					 mmc_hostname(host->mmc), opcode,
 					 (readl_relaxed(host->base
 					 + MCI_TEST_INPUT) & 0x2) ? 1 : 0);
@@ -1829,25 +1829,25 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 	}
 
 	if (status & (MCI_CMDTIMEOUT | MCI_AUTOCMD19TIMEOUT)) {
-		pr_err("%s: CMD%d: Command timeout\n",
-				mmc_hostname(host->mmc), cmd->opcode);
+		//pr_err("%s: CMD%d: Command timeout\n",
+				//mmc_hostname(host->mmc), cmd->opcode);
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
 
 		if (cmd->opcode != 52) {
-			pr_err("%s: CMD%d: Command CRC error\n",
-				mmc_hostname(host->mmc), cmd->opcode);
+			//pr_err("%s: CMD%d: Command CRC error\n",
+				//mmc_hostname(host->mmc), cmd->opcode);
 			msmsdcc_dump_sdcc_state(host);
 		}
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
 		if( host->pdev_id == 4){
-			printk("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
+			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 #elif defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
 		if( host->pdev_id == 3){
-			printk("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
+			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 #else
 		/* Execute full tuning in case of CRC errors */
@@ -4286,7 +4286,7 @@ static int msmsdcc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	int size = sizeof(tuning_block_64); /* Tuning pattern size in bytes */
 	bool is_tuning_all_phases;
 
-	pr_debug("%s: Enter %s\n", mmc_hostname(mmc), __func__);
+	//pr_debug("%s: Enter %s\n", mmc_hostname(mmc), __func__);
 
 	/* Tuning is only required for SDR104 modes */
 	if (!host->tuning_needed) {
@@ -4362,11 +4362,11 @@ retry:
 			if (!is_tuning_all_phases)
 				goto kfree;
 			tuned_phases[tuned_phase_cnt++] = phase;
-			pr_err("%s: %s: found good phase = %d\n",
-				mmc_hostname(mmc), __func__, phase);
+			//pr_err("%s: %s: found good phase = %d\n",
+				//mmc_hostname(mmc), __func__, phase);
 		} else if (!is_tuning_all_phases) {
-			pr_debug("%s: tuning failed at saved phase (%d), retrying\n",
-				mmc_hostname(mmc), (u32)phase);
+			//pr_debug("%s: tuning failed at saved phase (%d), retrying\n",
+				//mmc_hostname(mmc), (u32)phase);
 			is_tuning_all_phases = true;
 			goto retry;
 		}
@@ -4389,8 +4389,8 @@ retry:
 			goto kfree;
 		else
 			host->saved_tuning_phase = phase;
-		pr_err("%s: %s: finally setting the tuning phase to %d\n",
-				mmc_hostname(mmc), __func__, phase);
+		//pr_err("%s: %s: finally setting the tuning phase to %d\n",
+				//mmc_hostname(mmc), __func__, phase);
 	} else {
 		/* tuning failed */
 		pr_err("%s: %s: no tuning point found\n",
@@ -4408,7 +4408,7 @@ out:
 		host->tuning_done = true;
 	spin_unlock_irqrestore(&host->lock, flags);
 exit:
-	pr_debug("%s: Exit %s\n", mmc_hostname(mmc), __func__);
+	//pr_debug("%s: Exit %s\n", mmc_hostname(mmc), __func__);
 	return rc;
 }
 
@@ -4536,7 +4536,7 @@ msmsdcc_platform_status_irq(int irq, void *dev_id)
 {
 	struct msmsdcc_host *host = dev_id;
 
-	pr_debug("%s: %d\n", __func__, irq);
+	//pr_debug("%s: %d\n", __func__, irq);
 	msmsdcc_check_status((unsigned long) host);
 	return IRQ_HANDLED;
 }
@@ -4573,8 +4573,8 @@ msmsdcc_status_notify_cb(int card_present, void *dev_id)
 {
 	struct msmsdcc_host *host = dev_id;
 
-	pr_debug("%s: card_present %d\n", mmc_hostname(host->mmc),
-	       card_present);
+	//pr_debug("%s: card_present %d\n", mmc_hostname(host->mmc),
+	       //card_present);
 	msmsdcc_check_status((unsigned long) host);
 }
 
@@ -5267,10 +5267,10 @@ static void msmsdcc_print_regs(const char *name, void __iomem *base,
 	if (!base)
 		return;
 
-	pr_err("===== %s: Register Dumps @phys_base=0x%x, @virt_base=0x%x"
+	pr_debug("===== %s: Register Dumps @phys_base=0x%x, @virt_base=0x%x"
 		" =====\n", name, phys_base, (u32)base);
 	for (i = 0; i < no_of_regs; i = i + 4) {
-		pr_err("Reg=0x%.2x: 0x%.8x, 0x%.8x, 0x%.8x, 0x%.8x\n", i*4,
+		pr_debug("Reg=0x%.2x: 0x%.8x, 0x%.8x, 0x%.8x, 0x%.8x\n", i*4,
 			(u32)readl_relaxed(base + i*4),
 			(u32)readl_relaxed(base + ((i+1)*4)),
 			(u32)readl_relaxed(base + ((i+2)*4)),
