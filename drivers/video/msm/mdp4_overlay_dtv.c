@@ -713,6 +713,16 @@ int mdp4_dtv_off(struct platform_device *pdev)
 		mdp4_dtv_pipe_clean(vp);
 	}
 
+	undx =  vctrl->update_ndx;
+	vp = &vctrl->vlist[undx];
+	if (vp->update_cnt) {
+		/*
+		 * pipe's iommu will be freed at next overlay play
+		 * and iommu_drop statistic will be increased by one
+		 */
+		vp->update_cnt = 0;     /* empty queue */
+	}
+
 	ret = panel_next_off(pdev);
 	mdp_footswitch_ctrl(FALSE);
 
