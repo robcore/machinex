@@ -2059,11 +2059,7 @@ static long venc_alloc_recon_buffers(struct v4l2_subdev *sd, void *arg)
 	}
 	heap_mask = ION_HEAP(ION_CP_MM_HEAP_ID);
 	heap_mask |= inst->secure ? 0 : ION_HEAP(ION_IOMMU_HEAP_ID);
-#if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
-	ion_flags |= inst->secure ? ION_SECURE : ION_FORCE_CONTIGUOUS;
-#else
 	ion_flags |= inst->secure ? ION_SECURE : 0;
-#endif
 
 	if (vcd_get_ion_status()) {
 		for (i = 0; i < 4; ++i) {
@@ -2075,6 +2071,14 @@ static long venc_alloc_recon_buffers(struct v4l2_subdev *sd, void *arg)
 			client_ctx->recon_buffer_ion_handle[i]
 				= ion_alloc(client_ctx->user_ion_client,
 			control.size, SZ_8K, heap_mask, ion_flags);
+
+			if (IS_ERR_OR_NULL(
+				client_ctx->recon_buffer_ion_handle[i])) {
+				WFD_MSG_ERR("%s() :WFD ION alloc failed\n",
+					__func__);
+				rc = -ENOMEM;
+				goto bail_out;
+			}
 
 			ctrl->kernel_virtual_addr = ion_map_kernel(
 				client_ctx->user_ion_client,
@@ -2133,26 +2137,54 @@ static long venc_alloc_recon_buffers(struct v4l2_subdev *sd, void *arg)
 	return rc;
 unmap_ion_iommu:
 	if (!inst->secure) {
-		if (client_ctx->recon_buffer_ion_handle[i]) {
+		if (!IS_ERR_OR_NULL(
+			client_ctx->recon_buffer_ion_handle[i])) {
 			ion_unmap_iommu(client_ctx->user_ion_client,
 				client_ctx->recon_buffer_ion_handle[i],
 				VIDEO_DOMAIN, VIDEO_MAIN_POOL);
 		}
 	}
 unmap_ion_alloc:
-	if (client_ctx->recon_buffer_ion_handle[i]) {
+	if (!IS_ERR_OR_NULL(client_ctx->recon_buffer_ion_handle[i])) {
 		ion_unmap_kernel(client_ctx->user_ion_client,
 			client_ctx->recon_buffer_ion_handle[i]);
-		ctrl->kernel_virtual_addr = NULL;
-		ctrl->physical_addr = NULL;
+		client_ctx->recon_buffer[i].kernel_virtual_addr = NULL;
+		client_ctx->recon_buffer[i].physical_addr = NULL;
+		client_ctx->recon_buffer[i].user_virtual_addr = NULL;
 	}
 free_ion_alloc:
-	if (client_ctx->recon_buffer_ion_handle[i]) {
+	if (!IS_ERR_OR_NULL(client_ctx->recon_buffer_ion_handle[i])) {
 		ion_free(client_ctx->user_ion_client,
 			client_ctx->recon_buffer_ion_handle[i]);
 		client_ctx->recon_buffer_ion_handle[i] = NULL;
 	}
-	WFD_MSG_ERR("Failed to allo recon buffers\n");
+
+bail_out:
+
+	WFD_MSG_ERR("Failed to alloc recon buffers\n");
+
+	for (--i; i >= 0; i--) {
+		if (!inst->secure) {
+			if (!IS_ERR_OR_NULL(
+				client_ctx->recon_buffer_ion_handle[i])) {
+				ion_unmap_iommu(client_ctx->user_ion_client,
+					client_ctx->recon_buffer_ion_handle[i],
+					VIDEO_DOMAIN, VIDEO_MAIN_POOL);
+			}
+		}
+		if (!IS_ERR_OR_NULL(client_ctx->recon_buffer_ion_handle[i])) {
+			ion_unmap_kernel(client_ctx->user_ion_client,
+				client_ctx->recon_buffer_ion_handle[i]);
+				client_ctx->recon_buffer[i].kernel_virtual_addr = NULL;
+				client_ctx->recon_buffer[i].physical_addr = NULL;
+				client_ctx->recon_buffer[i].user_virtual_addr = NULL;
+		}
+		if (!IS_ERR_OR_NULL(client_ctx->recon_buffer_ion_handle[i])) {
+			ion_free(client_ctx->user_ion_client,
+			client_ctx->recon_buffer_ion_handle[i]);
+			client_ctx->recon_buffer_ion_handle[i] = NULL;
+		}
+	}
 err:
 	return rc;
 }
