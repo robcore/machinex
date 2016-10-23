@@ -363,7 +363,7 @@ int mdp4_overlay_iommu_map_buf(int mem_id,
 
 		if (ion_map_iommu(display_iclient, *srcp_ihdl,
 				DISPLAY_READ_DOMAIN, GEN_POOL, SZ_4K, 0, start,
-				len, 0, 0)) {
+				len, 0, ION_IOMMU_UNMAP_DELAYED)) {
 			ion_free(display_iclient, *srcp_ihdl);
 			pr_err("%s(): ion_map_iommu() failed\n",
 					__func__);
@@ -895,7 +895,7 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
 	}
-	
+
 #endif
 
 	outpdw(rgb_base + 0x0000, src_size);	/* MDP_RGB_SRC_SIZE */
