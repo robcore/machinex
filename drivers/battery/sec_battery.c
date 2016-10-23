@@ -10,6 +10,9 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_battery.h>
+#ifdef CONFIG_STATE_HELPER
+#include <linux/state_helper.h>
+#endif
 
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
@@ -2862,6 +2865,9 @@ static int sec_bat_get_property(struct power_supply *psy,
 			val->intval = 100;
 		else
 			val->intval = battery->capacity;
+		#ifdef CONFIG_STATE_HELPER
+		batt_level_notify(val->intval);
+#endif
 #endif
 		break;
 	case POWER_SUPPLY_PROP_TEMP:

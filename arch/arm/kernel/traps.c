@@ -361,17 +361,15 @@ void arm_notify_die(const char *str, struct pt_regs *regs,
 int is_valid_bugaddr(unsigned long pc)
 {
 #ifdef CONFIG_THUMB2_KERNEL
-	u16 bkpt;
-	u16 insn = __opcode_to_mem_thumb16(BUG_INSTR_VALUE);
+	unsigned short bkpt;
 #else
-	u32 bkpt;
-	u32 insn = __opcode_to_mem_arm(BUG_INSTR_VALUE);
+	unsigned long bkpt;
 #endif
 
 	if (probe_kernel_address((unsigned *)pc, bkpt))
 		return 0;
 
-	return bkpt == insn;
+	return bkpt == BUG_INSTR_VALUE;
 }
 
 #endif
@@ -506,12 +504,10 @@ asmlinkage void bad_mode(struct pt_regs *regs, int reason)
 
 static int bad_syscall(int n, struct pt_regs *regs)
 {
-	struct thread_info *thread = current_thread_info();
 	siginfo_t info;
 
-	if ((current->personality & PER_MASK) != PER_LINUX &&
-	    thread->exec_domain->handler) {
-		thread->exec_domain->handler(n, regs);
+	if ((current->personality & PER_MASK) != PER_LINUX) {
+		send_sig(SIGSEGV, current, 1);
 		return regs->ARM_r0;
 	}
 

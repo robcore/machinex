@@ -146,7 +146,7 @@ struct sx150x_platform_data msm8960_sx150x_data[] = {
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
-#define MSM_PMEM_SIZE 0x2800000 /* 40 Mbytes */
+#define MSM_PMEM_SIZE 0x0 /* 40 Mbytes */
 #define MSM_LIQUID_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 #define MSM_HDMI_PRIM_PMEM_SIZE 0x4000000 /* 64 Mbytes */
 
@@ -371,7 +371,7 @@ static struct ion_cp_heap_pdata cp_mm_msm8960_ion_pdata = {
 	.iommu_map_all = 1,
 	.iommu_2x_map_domain = VIDEO_DOMAIN,
 	.is_cma = 1,
-	.no_nonsecure_alloc = 1,
+	.no_nonsecure_alloc = 0,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_msm8960_ion_pdata = {
@@ -380,7 +380,7 @@ static struct ion_cp_heap_pdata cp_mfc_msm8960_ion_pdata = {
 	.reusable = 0,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_HIGH,
-	.no_nonsecure_alloc = 1,
+	.no_nonsecure_alloc = 0,
 };
 
 static struct ion_co_heap_pdata co_msm8960_ion_pdata = {

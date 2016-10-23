@@ -2236,8 +2236,11 @@ static int vfe31_proc_general(struct msm_vfe31_cmd *cmd)
 		break;
 
 	default: {
-		if (cmd->length != vfe31_cmd[cmd->id].length)
+		if (cmd->id < 0 || cmd->id >= ARRAY_SIZE(vfe31_cmd)) {
+			pr_err("%s - invalid vfe command %d",
+			__func__, cmd->id);
 			return -EINVAL;
+		}
 
 		cmdp = kmalloc(vfe31_cmd[cmd->id].length, GFP_ATOMIC);
 		if (!cmdp) {

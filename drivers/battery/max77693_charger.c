@@ -634,7 +634,7 @@ static int max77693_get_health_state(struct max77693_charger_data *charger)
 		state = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case 0x02:
-		pr_err("%s: battery dead\n", __func__);
+		pr_info("%s: battery dead\n", __func__);
 		state = POWER_SUPPLY_HEALTH_DEAD;
 		break;
 	case 0x03:
@@ -646,7 +646,7 @@ static int max77693_get_health_state(struct max77693_charger_data *charger)
 		state = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case 0x05:
-		pr_err("%s: battery over voltage\n", __func__);
+		pr_info("%s: battery ovp\n", __func__);
 		state = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
 		break;
 	default:
