@@ -435,11 +435,14 @@ static void an30259a_start_led_pattern(int mode)
 	case POWERING:
 		pr_info("LED Powering Pattern on\n");
 		leds_on(LED_R, true, true, LED_DYNAMIC_CURRENT);
+		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_R,
-				0, 2, 1, 0, 2, 2, 0, 0, 0, 0);
+				0, 15, 0, 0, 2, 2, 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_G,
+				0, 0, 15, 0, 2, 2, 0, 0, 0, 0);
 		leds_set_slope_mode(client, LED_B,
-				0, 5, 10, 15, 2, 2, 0, 0, 0, 0);
+				0, 0, 0, 15, 2, 2, 0, 0, 0, 0);
 
 		break;
 	case BOOTING:
