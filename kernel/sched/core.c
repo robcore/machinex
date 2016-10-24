@@ -1510,23 +1510,17 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 
 	if (task_cpu(p) != new_cpu) {
 		struct task_migration_notifier tmn;
-		if (p->sched_class->migrate_task_rq)
+		tmn.task = p;
+		tmn.from_cpu = task_cpu(p);
+		tmn.to_cpu = new_cpu;
+		atomic_notifier_call_chain(&task_migration_notifier, 0, (void *)&tmn);
+	}
+		
+		if (p->sched_class->migrate_task_rq) {
 			p->sched_class->migrate_task_rq(p, new_cpu);
 		p->se.nr_migrations++;
 		perf_sw_event(PERF_COUNT_SW_CPU_MIGRATIONS, 1, NULL, 0);
 	}
-
-struct migration_notify_data {
-	int src_cpu = tmn.task;
-	int dest_cpu = tmn.from_cpu;
-	int load = tmn.to_cpu;
-};
-
-		tmn.task = p;
-		tmn.from_cpu = task_cpu(p);
-		tmn.to_cpu = new_cpu;
-
-		atomic_notifier_call_chain(&task_migration_notifier, 0, &tmn);
 
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 		if (p->on_rq) {

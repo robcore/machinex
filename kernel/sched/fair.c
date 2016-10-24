@@ -1211,6 +1211,11 @@ static int select_best_cpu(struct task_struct *p, int target)
 	int cpu_cost, min_cost = INT_MAX;
 	int small_task = is_small_task(p);
 
+	trace_sched_task_load(p);
+	for_each_online_cpu(i)
+		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
+				     mostly_idle_cpu(i), power_cost(p, i));
+
 	/* provide bias for prev_cpu */
 	if (!small_task && mostly_idle_cpu(prev_cpu) &&
 	    task_will_fit(p, prev_cpu)) {
@@ -1555,8 +1560,7 @@ void init_new_task_load(struct task_struct *p)
  */
 static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 							struct sched_avg *sa,
-							int runnable,
-							int running)
+							int runnable)
 {
 	u64 delta, periods;
 	u32 runnable_contrib;
@@ -1598,8 +1602,6 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
 
-		if (running)
-			sa->usage_avg_sum += delta_w;
 		sa->runnable_avg_period += delta_w;
 
 		delta -= delta_w;
@@ -1621,8 +1623,7 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 			sa->runnable_avg_sum += runnable_contrib;
 			add_to_scaled_stat(cpu, sa, runnable_contrib);
 		}
-		if (running)
-			sa->usage_avg_sum += runnable_contrib;
+
 		sa->runnable_avg_period += runnable_contrib;
 	}
 
@@ -1631,8 +1632,6 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 		sa->runnable_avg_sum += delta;
 		add_to_scaled_stat(cpu, sa, delta);
 	}
-	if (running)
-		sa->usage_avg_sum += delta;
 	sa->runnable_avg_period += delta;
 
 	return decayed;
@@ -1863,8 +1862,7 @@ static void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq, int force_update)
 
 static inline void update_rq_runnable_avg(struct rq *rq, int runnable)
 {
-	__update_entity_runnable_avg(rq->clock_task, &rq->avg, runnable,
-				     runnable);
+	__update_entity_runnable_avg(rq->clock_task, &rq->avg, runnable);
 	__update_tg_runnable_avg(&rq->avg, &rq->cfs);
 }
 
