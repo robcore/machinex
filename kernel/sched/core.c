@@ -74,6 +74,7 @@
 #include <linux/slab.h>
 #include <linux/init_task.h>
 #include <linux/binfmts.h>
+#include <linux/notifier.h>
 #include <linux/context_tracking.h>
 #include <linux/cpufreq.h>
 
@@ -1540,7 +1541,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 		}
 #endif
 
-			update_task_ravg(p, task_rq(p), 0);
+			update_task_ravg(p, task_rq(p), 0, sched_clock());
 
 	__set_task_cpu(p, new_cpu);
 }
