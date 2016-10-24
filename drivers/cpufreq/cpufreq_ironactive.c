@@ -77,7 +77,7 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-static int set_window_count;
+//static int set_window_count;
 static int migration_register_count;
 static struct mutex sched_lock;
 
@@ -178,12 +178,14 @@ static u64 round_to_nw_start(u64 jif,
 	return ret;
 }
 
+#if 0
 static inline int set_window_helper(
 			struct cpufreq_ironactive_tunables *tunables)
 {
 	return sched_set_window(round_to_nw_start(get_jiffies_64(), tunables),
 			 usecs_to_jiffies(tunables->timer_rate));
 }
+#endif
 
 static void cpufreq_ironactive_timer_resched(unsigned long cpu,
 					      bool slack_only)
@@ -1003,7 +1005,7 @@ static ssize_t store_timer_rate(struct cpufreq_ironactive_tunables *tunables,
 #endif
 		}
 	}
-	set_window_helper(tunables);
+	//set_window_helper(tunables);
 
 	return count;
 }
@@ -1133,10 +1135,7 @@ static int cpufreq_ironactive_enable_sched_input(
 	int rc = 0, j;
 	struct cpufreq_ironactive_tunables *t;
 
-	mutex_lock(&sched_lock);
-
-	set_window_count++;
-	if (set_window_count > 1) {
+		mutex_lock(&sched_lock);
 		for_each_possible_cpu(j) {
 			if (!per_cpu(polinfo, j))
 				continue;
@@ -1146,14 +1145,6 @@ static int cpufreq_ironactive_enable_sched_input(
 				tunables->io_is_busy = t->io_is_busy;
 				break;
 			}
-		}
-	} else {
-		rc = set_window_helper(tunables);
-		if (rc) {
-			pr_err("%s: Failed to set sched window\n", __func__);
-			set_window_count--;
-			goto out;
-		}
 		sched_set_io_is_busy(tunables->io_is_busy);
 	}
 
@@ -1183,7 +1174,7 @@ static int cpufreq_ironactive_disable_sched_input(
 					&load_alert_notifier_head,
 					&load_notifier_block);
 	}
-	set_window_count--;
+	//set_window_count--;
 
 	mutex_unlock(&sched_lock);
 	return 0;
