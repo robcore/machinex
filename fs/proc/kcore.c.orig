@@ -15,7 +15,6 @@
 #include <linux/capability.h>
 #include <linux/elf.h>
 #include <linux/elfcore.h>
-#include <linux/notifier.h>
 #include <linux/vmalloc.h>
 #include <linux/highmem.h>
 #include <linux/bootmem.h>
@@ -564,6 +563,7 @@ static const struct file_operations proc_kcore_operations = {
 	.llseek		= default_llseek,
 };
 
+#ifdef CONFIG_MEMORY_HOTPLUG
 /* just remember that we have to update kcore */
 static int __meminit kcore_callback(struct notifier_block *self,
 				    unsigned long action, void *arg)
@@ -577,11 +577,8 @@ static int __meminit kcore_callback(struct notifier_block *self,
 	}
 	return NOTIFY_OK;
 }
+#endif
 
-static struct notifier_block kcore_callback_nb __meminitdata = {
-	.notifier_call = kcore_callback,
-	.priority = 0,
-};
 
 static struct kcore_list kcore_vmalloc;
 
@@ -633,7 +630,7 @@ static int __init proc_kcore_init(void)
 	add_modules_range();
 	/* Store direct-map area from physical memory map */
 	kcore_update_ram();
-	register_hotmemory_notifier(&kcore_callback_nb);
+	hotplug_memory_notifier(kcore_callback, 0);
 
 	return 0;
 }
