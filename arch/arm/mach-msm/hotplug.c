@@ -14,7 +14,6 @@
 #include <linux/ratelimit.h>
 #include <linux/notifier.h>
 
-#include <asm/cacheflush.h>
 #include <asm/smp_plat.h>
 #include <asm/vfp.h>
 
@@ -32,9 +31,6 @@ static DEFINE_PER_CPU(unsigned int, warm_boot_flag);
 
 static inline void cpu_enter_lowpower(void)
 {
-	/* Just flush the cache. Changing the coherency is not yet
-	 * available on msm. */
-	flush_cache_all();
 }
 
 static inline void cpu_leave_lowpower(void)
@@ -199,7 +195,7 @@ static int __init init_hotplug(void)
 
 	rc = register_hotcpu_notifier(&hotplug_rtb_notifier);
 	if (rc)
-		return rc;
+		return (rc);
 
 	return register_hotcpu_notifier(&hotplug_cpu_check_notifier);
 }
