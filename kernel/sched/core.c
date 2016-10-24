@@ -1516,6 +1516,12 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 		perf_sw_event(PERF_COUNT_SW_CPU_MIGRATIONS, 1, NULL, 0);
 	}
 
+struct migration_notify_data {
+	int src_cpu = tmn.task;
+	int dest_cpu = tmn.from_cpu;
+	int load = tmn.to_cpu;
+};
+
 		tmn.task = p;
 		tmn.from_cpu = task_cpu(p);
 		tmn.to_cpu = new_cpu;
