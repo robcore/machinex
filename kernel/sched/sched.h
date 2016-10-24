@@ -72,11 +72,14 @@ extern __read_mostly int scheduler_running;
  */
 #define RUNTIME_INF	((u64)~0ULL)
 
+static inline int fair_policy(int policy)
+{
+	return policy == SCHED_NORMAL || policy == SCHED_BATCH;
+}
+
 static inline int rt_policy(int policy)
 {
-	if (policy == SCHED_FIFO || policy == SCHED_RR)
-		return 1;
-	return 0;
+	return policy == SCHED_FIFO || policy == SCHED_RR;
 }
 
 static inline int task_has_rt_policy(struct task_struct *p)
@@ -480,13 +483,16 @@ struct rq {
 	u64 max_idle_balance_cost;
 #endif
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 	/*
 	 * max_freq = user or thermal defined maximum
 	 * max_possible_freq = maximum supported by hardware
 	 */
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
 	u64 cumulative_runnable_avg;
+	int efficiency; /* Differentiate cpus with different IPC capability */
+	int load_scale_factor;
+	int capacity;
 #endif
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
@@ -625,13 +631,19 @@ DECLARE_PER_CPU(int, sd_llc_id);
 #include "stats.h"
 #include "auto_group.h"
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 extern unsigned int sched_ravg_window;
 extern unsigned int max_possible_freq;
 extern unsigned int min_max_freq;
 extern unsigned int pct_task_load(struct task_struct *p);
 extern void init_new_task_load(struct task_struct *p);
+extern unsigned int max_possible_efficiency;
+extern unsigned int min_possible_efficiency;
+extern unsigned int max_capacity;
+extern unsigned int min_capacity;
+extern unsigned long capacity_scale_cpu_efficiency(int cpu);
+extern unsigned long capacity_scale_cpu_freq(int cpu);
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
@@ -646,7 +658,7 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
 }
 
-#else	/* CONFIG_SCHED_FREQ_INPUT */
+#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 static inline int pct_task_load(struct task_struct *p) { return 0; }
 
@@ -662,7 +674,17 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 
 static inline void init_new_task_load(struct task_struct *p) { }
 
-#endif	/* CONFIG_SCHED_FREQ_INPUT */
+static inline unsigned long capacity_scale_cpu_efficiency(int cpu)
+{
+	return SCHED_LOAD_SCALE;
+}
+
+static inline unsigned long capacity_scale_cpu_freq(int cpu)
+{
+	return SCHED_LOAD_SCALE;
+}
+
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 #ifdef CONFIG_CGROUP_SCHED
 

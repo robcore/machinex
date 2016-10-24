@@ -1425,7 +1425,7 @@ static inline void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq,
 					      int force_update) {}
 #endif
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 static inline unsigned int task_load(struct task_struct *p)
 {
@@ -1460,7 +1460,7 @@ void init_new_task_load(struct task_struct *p)
 		p->ravg.sum_history[i] = 0;
 }
 
-#endif /* CONFIG_SCHED_FREQ_INPUT */
+#endif /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
@@ -4126,7 +4126,7 @@ static inline int get_sd_load_idx(struct sched_domain *sd,
 
 static unsigned long default_scale_freq_power(struct sched_domain *sd, int cpu)
 {
-	return SCHED_POWER_SCALE;
+	return capacity_scale_cpu_freq(cpu);
 }
 
 unsigned long __weak arch_scale_freq_power(struct sched_domain *sd, int cpu)
@@ -4194,6 +4194,9 @@ static void update_cpu_power(struct sched_domain *sd, int cpu)
 	}
 
 	sdg->sgp->power_orig = power;
+
+	power *= capacity_scale_cpu_efficiency(cpu);
+	power >>= SCHED_POWER_SHIFT;
 
 	if (Larch_power)
 		power *= arch_scale_freq_power(sd, cpu);
