@@ -17,6 +17,7 @@
 #include <linux/sched.h>
 #include <linux/thread_info.h> /* for task_thread_info */
 #include <linux/err.h>
+#include <linux/sched.h>
 
 static inline int syscall_get_nr(struct task_struct *task, struct pt_regs *regs)
 {

@@ -211,6 +211,11 @@ static ssize_t gentle_fair_sleepers_store(struct kobject *kobj, struct kobj_attr
 
 KERNEL_ATTR_RW(gentle_fair_sleepers);
 
+static struct attribute * sched_features_attrs[] = {
+ &gentle_fair_sleepers_attr.attr,
+       NULL
+};
+
 static struct attribute_group sched_features_attr_group = {
 .attrs = sched_features_attrs,
 };
