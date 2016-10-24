@@ -1122,7 +1122,7 @@ void set_hmp_defaults(void)
  * Scale that in reference to a given cpu, accounting for how bad it is
  * in reference to "best cpu".
  */
-static u64 scale_task_load(u64 task_load, int cpu)
+u64 scale_task_load(u64 task_load, int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 
@@ -1266,7 +1266,7 @@ void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
  * Walk runqueue of cpu and re-initialize 'nr_big_tasks' and 'nr_small_tasks'
  * counters.
  */
-static inline void fixup_nr_big_small_task(int cpu)
+void fixup_nr_big_small_task(int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 	struct task_struct *p;
@@ -1491,12 +1491,9 @@ static inline int capacity(struct rq *rq)
 void init_new_task_load(struct task_struct *p)
 {
 	int i;
-	u64 wallclock = sched_clock();
 
 	p->se.avg.decay_count	= 0;
 	p->ravg.sum		= 0;
-	p->ravg.window_start	= wallclock;
-	p->ravg.mark_start	= wallclock;
 
 	for (i = 0; i < RAVG_HIST_SIZE; ++i)
 		p->ravg.sum_history[i] = sched_init_task_load_windows;

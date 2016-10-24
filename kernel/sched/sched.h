@@ -497,6 +497,10 @@ struct rq {
 	int efficiency; /* Differentiate cpus with different IPC capability */
 	int load_scale_factor;
 	int capacity;
+	u64 window_start;
+
+	unsigned int curr_runnable_sum;
+	unsigned int prev_runnable_sum;
 #endif
 
 #ifdef CONFIG_SCHED_HMP
@@ -660,6 +664,9 @@ extern unsigned int sched_upmigrate;
 extern unsigned int sched_downmigrate;
 extern unsigned int sched_init_task_load_pelt;
 extern unsigned int sched_init_task_load_windows;
+extern void fixup_nr_big_small_task(int cpu);
+
+u64 scale_task_load(u64 load, int cpu);
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
