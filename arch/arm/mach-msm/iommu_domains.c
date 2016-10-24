@@ -372,7 +372,7 @@ int msm_register_domain(struct msm_iova_layout *layout)
 	if (!data)
 		return -ENOMEM;
 
-	pools = kmalloc(sizeof(struct mem_pool) * layout->npartitions,
+	pools = kzalloc(sizeof(struct mem_pool) * layout->npartitions,
 			GFP_KERNEL);
 
 	if (!pools)
