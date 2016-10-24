@@ -287,7 +287,11 @@ void audio_aio_async_write_ack(struct q6audio_aio *audio, uint32_t token,
 		return;
 
 	spin_lock_irqsave(&audio->dsp_lock, flags);
-	BUG_ON(list_empty(&audio->out_queue));
+	if (list_empty(&audio->out_queue)) {
+		pr_warning("%s: ingore unexpected event from dsp\n", __func__);
+		spin_unlock_irqrestore(&audio->dsp_lock, flags);
+		return;
+	}
 	used_buf = list_first_entry(&audio->out_queue,
 					struct audio_aio_buffer_node, list);
 	if (token == used_buf->token) {
@@ -1149,7 +1153,7 @@ long audio_aio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 	case AUDIO_ASYNC_READ: {
 		mutex_lock(&audio->read_lock);
-		if ((audio->feedback) && (audio->enabled))
+		if (audio->feedback)
 			rc = audio_aio_buf_add(audio, 0,
 					(void __user *)arg);
 		else

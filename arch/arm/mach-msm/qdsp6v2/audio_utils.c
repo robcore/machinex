@@ -268,10 +268,6 @@ long audio_in_ioctl(struct file *file,
 			rc = -EINVAL;
 			break;
 		}
-		if (cfg.buffer_size > FRAME_SIZE) {
-			rc = -EINVAL;
-			break;
-		}
 		audio->str_cfg.buffer_size = cfg.buffer_size;
 		audio->str_cfg.buffer_count = cfg.buffer_count;
 		rc = q6asm_audio_client_buf_alloc(OUT, audio->ac,
