@@ -74,6 +74,7 @@
 #include <linux/slab.h>
 #include <linux/init_task.h>
 #include <linux/binfmts.h>
+#include <linux/sched.h>
 #include <linux/notifier.h>
 #include <linux/context_tracking.h>
 #include <linux/cpufreq.h>
