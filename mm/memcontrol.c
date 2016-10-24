@@ -923,9 +923,12 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 	if (prev && !reclaim)
 		id = css_id(&prev->css);
 
+	if (prev && prev != root)
+		css_put(&prev->css);
+
 	if (!root->use_hierarchy && root != root_mem_cgroup) {
 		if (prev)
-			goto out_css_put;
+			return NULL;
 		return root;
 	}
 
@@ -941,7 +944,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 			mz = mem_cgroup_zoneinfo(root, nid, zid);
 			iter = &mz->reclaim_iter[reclaim->priority];
 			if (prev && reclaim->generation != iter->generation)
-				goto out_css_put;
+				return NULL;
 			id = iter->position;
 		}
 
@@ -964,12 +967,8 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 		}
 
 		if (prev && !css)
-			goto out_css_put;
+			return NULL;
 	}
-out_css_put:
-	if (prev && prev != root)
-		css_put(&prev->css);
-
 	return memcg;
 }
 
@@ -4763,7 +4762,7 @@ static int mem_control_numa_stat_open(struct inode *unused, struct file *file)
 static int memcg_init_kmem(struct mem_cgroup *memcg, struct cgroup_subsys *ss)
 {
 	return mem_cgroup_sockets_init(memcg, ss);
-}
+};
 
 static void kmem_cgroup_destroy(struct mem_cgroup *memcg)
 {

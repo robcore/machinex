@@ -106,109 +106,10 @@ static ktime_t tick_init_jiffy_update(void)
 	return period;
 }
 
-#ifdef CONFIG_NO_HZ_EXTENDED
-static cpumask_var_t nohz_extended_mask;
-bool have_nohz_extended_mask;
-
-int tick_nohz_extended_cpu(int cpu)
-{
-	if (!have_nohz_extended_mask)
-		return 0;
-
-	return cpumask_test_cpu(cpu, nohz_extended_mask);
-}
-
-/* Parse the boot-time nohz CPU list from the kernel parameters. */
-static int __init tick_nohz_extended_setup(char *str)
-{
-	alloc_bootmem_cpumask_var(&nohz_extended_mask);
-	if (cpulist_parse(str, nohz_extended_mask) < 0)
-		pr_warning("NOHZ: Incorrect nohz_extended cpumask\n");
-	else
-		have_nohz_extended_mask = true;
-	return 1;
-}
-__setup("nohz_extended=", tick_nohz_extended_setup);
-
-static int __cpuinit tick_nohz_cpu_down_callback(struct notifier_block *nfb,
-						 unsigned long action,
-						 void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DOWN_PREPARE:
-		/*
-		 * If we handle the timekeeping duty for full dynticks CPUs,
-		 * we can't safely shutdown that CPU.
-		 */
-		if (have_nohz_extended_mask && tick_do_timer_cpu == cpu)
-			return -EINVAL;
-		break;
-	}
-	return NOTIFY_OK;
-}
-
-/*
- * Worst case string length in chunks of CPU range seems 2 steps
- * separations: 0,2,4,6,...
- * This is NR_CPUS + sizeof('\0')
- */
-static char __initdata nohz_ext_buf[NR_CPUS + 1];
-
-static int __init init_tick_nohz_extended(void)
-{
-	cpumask_var_t online_nohz;
-	int cpu;
-
-	if (!have_nohz_extended_mask)
-		return 0;
-
-	cpu_notifier(tick_nohz_cpu_down_callback, 0);
-
-	if (!zalloc_cpumask_var(&online_nohz, GFP_KERNEL)) {
-		pr_warning("NO_HZ: Not enough memory to check extended nohz mask\n");
-		return -ENOMEM;
-	}
-
-	/*
-	 * CPUs can probably not be concurrently offlined on initcall time.
-	 * But we are paranoid, aren't we?
-	 */
-	get_online_cpus();
-
-	/* Ensure we keep a CPU outside the dynticks range for timekeeping */
-	cpumask_and(online_nohz, cpu_online_mask, nohz_extended_mask);
-	if (cpumask_equal(online_nohz, cpu_online_mask)) {
-		pr_warning("NO_HZ: Must keep at least one online CPU "
-			   "out of nohz_extended range\n");
-		/*
-		 * We know the current CPU doesn't have its tick stopped.
-		 * Let's use it for the timekeeping duty.
-		 */
-		preempt_disable();
-		cpu = smp_processor_id();
-		pr_warning("NO_HZ: Clearing %d from nohz_extended range\n", cpu);
-		cpumask_clear_cpu(cpu, nohz_extended_mask);
-		preempt_enable();
-	}
-	put_online_cpus();
-	free_cpumask_var(online_nohz);
-
-	cpulist_scnprintf(nohz_ext_buf, sizeof(nohz_ext_buf), nohz_extended_mask);
-	pr_info("NO_HZ: Full dynticks CPUs: %s.\n", nohz_ext_buf);
-
-	return 0;
-}
-core_initcall(init_tick_nohz_extended);
-#else
-#define have_nohz_extended_mask (0)
-#endif
-
 /*
  * NOHZ - aka dynamic tick functionality
  */
-#ifdef CONFIG_NO_HZ_COMMON
+#ifdef CONFIG_NO_HZ
 /*
  * NO HZ enabled ?
  */
@@ -438,13 +339,6 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 			time_delta = KTIME_MAX;
 		}
 
-#ifdef CONFIG_NO_HZ_FULL
-		if (!ts->inidle) {
-			time_delta = min(time_delta,
-					 scheduler_tick_max_deferment());
-		}
-#endif
-
 		/*
 		 * calculate the expiry time for the next timer wheel
 		 * timer. delta_jiffies >= NEXT_TIMER_MAX_DELTA signals
@@ -555,20 +449,6 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
 			ratelimit++;
 		}
 		return false;
-	}
-	if (have_nohz_extended_mask) {
-		/*
-		 * Keep the tick alive to guarantee timekeeping progression
-		 * if there are full dynticks CPUs around
-		 */
-		if (tick_do_timer_cpu == cpu)
-			return false;
-		/*
-		 * Boot safety: make sure the timekeeping duty has been
-		 * assigned before entering dyntick-idle mode,
-		 */
-		if (tick_do_timer_cpu == TICK_DO_TIMER_NONE)
-			return false;
 	}
 
 	return true;
@@ -994,7 +874,7 @@ static enum hrtimer_restart tick_sched_timer(struct hrtimer *timer)
 	ktime_t now = ktime_get();
 	int cpu = smp_processor_id();
 
-#ifdef CONFIG_NO_HZ_COMMON
+#ifdef CONFIG_NO_HZ
 	/*
 	 * Check if the do_timer duty was dropped. We don't care about
 	 * concurrency: This happens only when the cpu in charge went
@@ -1002,8 +882,7 @@ static enum hrtimer_restart tick_sched_timer(struct hrtimer *timer)
 	 * this duty, then the jiffies update is still serialized by
 	 * jiffies_lock.
 	 */
-	if (unlikely(tick_do_timer_cpu == TICK_DO_TIMER_NONE)
-	    && !tick_nohz_extended_cpu(cpu))
+	if (unlikely(tick_do_timer_cpu == TICK_DO_TIMER_NONE))
 		tick_do_timer_cpu = cpu;
 #endif
 
@@ -1078,14 +957,14 @@ void tick_setup_sched_timer(void)
 		now = ktime_get();
 	}
 
-#ifdef CONFIG_NO_HZ_COMMON
+#ifdef CONFIG_NO_HZ
 	if (tick_nohz_enabled)
 		ts->nohz_mode = NOHZ_MODE_HIGHRES;
 #endif
 }
 #endif /* HIGH_RES_TIMERS */
 
-#if defined CONFIG_NO_HZ_COMMON || defined CONFIG_HIGH_RES_TIMERS
+#if defined CONFIG_NO_HZ || defined CONFIG_HIGH_RES_TIMERS
 void tick_cancel_sched_timer(int cpu)
 {
 	struct tick_sched *ts = &per_cpu(tick_cpu_sched, cpu);
