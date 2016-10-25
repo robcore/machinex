@@ -430,9 +430,14 @@ static void rndis_response_available(void *_rndis)
 {
 	struct f_rndis			*rndis = _rndis;
 	struct usb_request		*req = rndis->notify_req;
-	struct usb_composite_dev	*cdev = rndis->port.func.config->cdev;
+	struct usb_composite_dev	*cdev;
 	__le32				*data = req->buf;
 	int				status;
+
+	if (!rndis->port.func.config || !rndis->port.func.config->cdev)
+		return;
+	else
+		cdev = rndis->port.func.config->cdev;
 
 	if (atomic_inc_return(&rndis->notify_count) != 1)
 		return;

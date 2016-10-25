@@ -2848,6 +2848,9 @@ static int ep_enable(struct usb_ep *ep,
 	if (ep == NULL || desc == NULL)
 		return -EINVAL;
 
+	if (!udc->softconnect)
+		return -ENODEV;
+
 	spin_lock_irqsave(mEp->lock, flags);
 
 	/* only internal SW should enable ctrl endpts */
