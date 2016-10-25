@@ -30,7 +30,6 @@
 
 #include <mach/iommu_hw-v2.h>
 #include <mach/iommu.h>
-#include <mach/socinfo.h>
 
 #include "msm_iommu_pagetable.h"
 
@@ -312,11 +311,7 @@ static int msm_iommu_domain_init(struct iommu_domain *domain, int flags)
 		goto fail_nomem;
 
 #ifdef CONFIG_IOMMU_PGTABLES_L2
-	/* Workaround: skip ES1.0 chip to fix stability issue */
-	if (!((SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 1) &&
-		(SOCINFO_VERSION_MINOR(socinfo_get_version()) == 0))) {
-		priv->pt.redirect = flags & MSM_IOMMU_DOMAIN_PT_CACHEABLE;
-	}
+	priv->pt.redirect = flags & MSM_IOMMU_DOMAIN_PT_CACHEABLE;
 #endif
 
 	INIT_LIST_HEAD(&priv->list_attached);
