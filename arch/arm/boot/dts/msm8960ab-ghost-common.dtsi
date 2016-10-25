@@ -1,0 +1,126 @@
+/* Copyright (c) 2012-2013, Motorola Mobility LLC. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/include/ "msm8960ab-motref.dtsi"
+
+/ {
+	model = "Motorola MSM8960 Pro Ghost";
+	compatible = "mmi,msm8960";
+
+	mmi,product = "mmi,msm8960ab-ghost";
+
+	mmi,dt_revision = <2>;
+
+	System@0 {
+		Display@0 {
+			panel_name = "mipi_mot_cmd_smd_hd_465";
+			disp_intf = <4>;  /* MIPI_VP_CM */
+
+			rst_gpio_1 = <37>;
+			rst_gpio_type_1 = <1>;   /* PM_GPIO */
+			rst_init_state_1 = <1>;
+			rst_en_state_1 = <1>;
+			rst_en_pre_delay_1 = <15>;
+			rst_en_post_delay_1 = <15>;
+			rst_dis_post_delay_1 = <10>;
+
+			num_disp_reg = <3>;
+
+			reg_id_1 = "";
+			reg_name_1 = "VBATT_DISP_CONN";
+			reg_gpio_en_1 = <13>;
+			reg_gpio_name_1 = "DISP_V1_EN";
+			reg_gpio_en_init_state_1 = <1>;
+			reg_gpio_en_state_1 = <1>;
+			reg_gpio_en_type_1 = <0>;
+			reg_gpio_en_delay_1 = <1>;
+
+			/* Display's VDDIO reg */
+			reg_id_2 = "dsi_s4";
+			reg_name_2 = "VDD_DISP_CONN";
+			reg_min_mv_2 = <1800000>;
+			reg_max_mv_2 = <1800000>;
+			reg_gpio_en_2 = <12>;
+			reg_gpio_name_2 = "DISP_V2_EN";
+			reg_gpio_en_type_2 = <0>;   /* MSM_GPIO */
+			reg_gpio_en_init_state_2 = <1>;
+			reg_gpio_en_state_2 = <1>;
+
+			/* Display's VCI reg */
+			reg_id_3 = "disp_vci";
+			reg_name_3 = "VCI_DISP_CONN";
+			reg_min_mv_3 = <3100000>;
+			reg_max_mv_3 = <3100000>;
+			reg_gpio_en_3 = <90>;
+			reg_gpio_name_3 = "DISP_V3_EN";
+			reg_gpio_en_type_3 = <0>;   /* MSM_GPIO */
+			reg_gpio_en_init_state_3 = <1>;
+			reg_gpio_en_state_3 = <1>;
+
+			mipi_d0_sel_gpio_1 = <10>;
+			mipi_d0_sel_name_1 = "mipi_d0_sel";
+			mipi_d0_sel_gpio_type_1 = <1>;  /* PM_GPIO */
+			mipi_d0_sel_init_state_1 = <0>;
+			mipi_d0_sel_en_state_1 = <0>;
+			mipi_d0_sel_en_pre_delay_1 = <0>;
+			mipi_d0_sel_en_post_delay_1 = <0>;
+			mipi_d0_sel_dis_pre_delay_1 = <0>;
+			mipi_d0_sel_dis_post_delay_1 = <0>;
+
+			partial_mode_supported = <1>;
+			quickdraw_enabled = <1>;
+
+                        /* MIPI dsi freq table mapping with radio/carrier 1~6 based on ghost
+			 * HW, need to make sure freq exists in panel file dsi_clk_config_tbl[]
+			 * for matching dsi pll and dsi phi configure.
+			 */
+			dsi_freq = <418000000 424000000 420000000 424000000 416000000 418000000>;
+		};
+	};
+};
+
+&i2c3 {
+	synaptics_dsx_i2c@20 {
+		compatible = "synaptics,synaptics_dsx_i2c";
+		reg = <0x20>;
+		interrupt-parent = <&msmgpio>;
+		interrupts = <46 0>;
+		gpios = <&msmgpio 46 0>, /* IRQ */
+			<&msmgpio 63 0>; /* RESET */
+		touch_vdd-supply = <&rpm_8921_l11>;
+
+		synaptics,normal-mode = <1>;
+		synaptics,purge-enabled;
+		synaptics,reset-on-resume;
+		synaptics,one-touch-enabled;
+		synaptics,display-synced-suspend;
+		synaptics,hw-reset;
+		/* palm-size-threshold, x_min, x_max, y_min, y_max */
+		synaptics,palm-data-info = <20 100 620 100 1180>;
+	};
+};
+
+/* GSBI10 - I2C */
+&i2c10 {
+	/* TI drv2605 */
+	drv2605@5a {
+		compatible = "ti,drv2605";
+		reg = <0x5A>;
+		gpios = <&msmgpio 43 0>, /* EN_GPIO */
+			<&msmgpio 79 0>; /* Trigger */
+
+		external_trigger = <1>;
+		default_effect = <24>;      /* Sharp Tick 100% */
+		rated_voltage = <0x70>;     /* 2.4v */
+		overdrive_voltage = <0x89>; /* 3.0v */
+	};
+};

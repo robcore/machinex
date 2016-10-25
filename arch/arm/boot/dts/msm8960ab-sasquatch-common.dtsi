@@ -1,0 +1,295 @@
+/include/ "msm8960ab-motref.dtsi"
+
+/ {
+	model = "Motorola MSM8960 Pro Sasquatch";
+	compatible = "mmi,msm8960";
+
+	mmi,product = "mmi,msm8960ab-sasquatch";
+
+	mmi,dt_revision = <2>;
+
+	System@0 {
+		Display@0 {
+			/* Name of display driver */
+			panel_name = "mipi_mot_cmd_smd_qhd_429";
+			disp_intf = <4>;  /* MIPI_VP_CM */
+
+			rst_gpio_1 = <37>;
+			rst_gpio_type_1 = <1>; /* PM_GPIO */
+			rst_init_state_1 = <1>;
+			rst_en_state_1 = <1>;
+			rst_en_pre_delay_1 = <25>;
+			rst_en_post_delay_1 = <20>;
+			rst_dis_post_delay_1 = <10>;
+
+			num_disp_reg = <3>;
+
+			reg_id_1 = "dsi_s4";
+			reg_name_1 = "DISP_VDDIO";
+			reg_min_mv_1 = <1800000>;
+			reg_max_mv_1 = <1800000>;
+			reg_gpio_en_1 = <12>;
+			reg_gpio_name_1 = "DISP_V2_EN";
+			reg_gpio_en_type_1 = <0>;  /* MSM_GPIO */
+			reg_gpio_en_init_state_1 = <1>;
+			reg_gpio_en_state_1 = <1>;
+
+			reg_id_2 = "disp_vci";
+			reg_name_2 = "DISP_VCI";
+			reg_max_mv_2 = <3100000>;
+			reg_min_mv_2 = <3100000>;
+			reg_shared_gpio_en_2 = <1>;
+
+			reg_id_3 = "";
+			reg_name_3 = "V_3P80_DISP";
+			reg_gpio_en_3 = <13>;
+			reg_gpio_name_3 = "DISP_V1_EN";
+			reg_gpio_en_type_3 = <0>;  /* MSM_GPIO */
+			reg_gpio_en_init_state_3 = <1>;
+			reg_gpio_en_state_3 = <1>;
+
+			mipi_d0_sel_gpio_1 = <10>;
+			mipi_d0_sel_name_1 = "mipi_d0_sel";
+			mipi_d0_sel_gpio_type_1 = <1>;  /* PM_GPIO */
+			mipi_d0_sel_init_state_1 = <0>;
+			mipi_d0_sel_en_state_1 = <0>;
+			mipi_d0_sel_en_pre_delay_1 = <0>;
+			mipi_d0_sel_en_post_delay_1 = <0>;
+			mipi_d0_sel_dis_pre_delay_1 = <0>;
+			mipi_d0_sel_dis_post_delay_1 = <0>;
+
+			partial_mode_supported = <1>;
+		};
+
+		Display@1 {
+			panel_name = "mipi_mot_cmd_smd_hd_465";
+			disp_intf = <4>;  /* MIPI_VP_CM */
+
+			rst_gpio_1 = <37>;
+			rst_gpio_type_1 = <1>;  /* PM_GPIO */
+			rst_init_state_1 = <1>;
+			rst_en_state_1 = <1>;
+			rst_en_pre_delay_1 = <15>;
+			rst_en_post_delay_1 = <15>;
+			rst_dis_post_delay_1 = <10>;
+
+			num_disp_reg = <3>;
+
+			reg_id_1 = "";
+			reg_name_1 = "VBATT_DISP_CONN";
+			reg_gpio_en_1 = <13>;
+			reg_gpio_name_1 = "DISP_V1_EN";
+			reg_gpio_en_init_state_1 = <1>;
+			reg_gpio_en_state_1 = <1>;
+			reg_gpio_en_type_1 = <0>;
+			reg_gpio_en_delay_1 = <1>;
+
+                        /* Display's VDDIO reg */
+                        reg_id_2 = "dsi_s4";
+                        reg_name_2 = "VDD_DISP_CONN";
+                        reg_min_mv_2 = <1800000>;
+                        reg_max_mv_2 = <1800000>;
+                        reg_gpio_en_2 = <12>;
+                        reg_gpio_name_2 = "DISP_V2_EN";
+                        reg_gpio_en_type_2 = <0>;   /* MSM_GPIO */
+                        reg_gpio_en_init_state_2 = <1>;
+                        reg_gpio_en_state_2 = <1>;
+
+                        /* Display's VCI reg */
+                        reg_id_3 = "disp_vci";
+                        reg_name_3 = "VCI_DISP_CONN";
+                        reg_min_mv_3 = <3100000>;
+                        reg_max_mv_3 = <3100000>;
+                        reg_gpio_en_3 = <90>;
+                        reg_gpio_name_3 = "DISP_V3_EN";
+                        reg_gpio_en_type_3 = <0>;   /* MSM_GPIO */
+                        reg_gpio_en_init_state_3 = <1>;
+                        reg_gpio_en_state_3 = <1>;
+
+
+			mipi_d0_sel_gpio_1 = <10>;
+			mipi_d0_sel_name_1 = "mipi_d0_sel";
+			mipi_d0_sel_gpio_type_1 = <1>; /* PM_GPIO */
+			mipi_d0_sel_init_state_1 = <0>;
+			mipi_d0_sel_en_state_1 = <0>;
+			mipi_d0_sel_en_pre_delay_1 = <0>;
+			mipi_d0_sel_en_post_delay_1 = <0>;
+			mipi_d0_sel_dis_pre_delay_1 = <0>;
+			mipi_d0_sel_dis_post_delay_1 = <0>;
+
+			partial_mode_supported = <1>;
+			quickdraw_enabled = <1>;
+		};
+
+		Display@2 {
+			/* Name of display driver */
+			panel_name = "mipi_mot_cmd_jdi_hd_430";
+			disp_intf = <4>;  /* MIPI_VP_CM */
+
+			/* Display reset lines */
+			rst_gpio_1 = <37>;
+			rst_gpio_type_1 = <1>; /* PM_GPIO */
+			rst_init_state_1 = <1>;
+			rst_en_state_1 = <1>;
+			rst_en_pre_delay_1 = <10>;
+			rst_en_post_delay_1 = <10>;
+			rst_dis_post_delay_1 = <10>;
+
+			/* Display's regulators and regulator gpio en  */
+			num_disp_reg = <4>;
+
+			reg_id_1 = "disp_vci";
+			reg_name_1 = "TOUCH_VDD";
+			reg_min_mv_1 = <3100000>;
+			reg_max_mv_1 = <3100000>;
+			reg_delay_1 = <5>;
+
+			/* Display's VDDIO reg */
+			reg_id_2 = "dsi_s4";
+			reg_name_2 = "DISP_VDDIO";
+			reg_min_mv_2 = <1800000>;
+			reg_max_mv_2 = <1800000>;
+			reg_gpio_en_2 = <12>;
+			reg_gpio_name_2 = "DISP_V2_EN";
+			reg_gpio_en_type_2 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_2 = <1>;
+			reg_gpio_en_state_2 = <1>;
+			reg_gpio_en_delay_2 = <0>;
+			reg_gpio_dis_delay_2 =<0>; /* min 5ms */
+
+			reg_id_3 = "";
+			reg_name_3 = "DISP_VSP";
+			reg_gpio_en_3 = <13>;
+			reg_gpio_name_3 = "DISP_V1_EN";
+			reg_gpio_en_type_3 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_3 = <1> ;
+			reg_gpio_en_state_3 = <1>;
+			reg_gpio_en_delay_3 = <3>;
+			reg_gpio_dis_delay_3 = <0>;
+
+			reg_id_4 = "";
+			reg_name_4 = "DISP_VSN" ;
+			reg_gpio_en_4 = <90>;
+			reg_gpio_name_4 = "DISP_V3_EN" ;
+			reg_gpio_en_type_4 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_4 = <1>;
+			reg_gpio_en_state_4 = <1>;
+			reg_gpio_en_delay_4 = <0>;
+			reg_gpio_dis_delay_4 = <2>;
+		};
+
+		Display@3 {
+			/* Name of display driver  */
+			panel_name = "mipi_mot_cmd_smd_hd_497";
+			disp_intf = <4>;  /* MIPI_VP_CM */
+
+			/* Display reset lines */
+			rst_gpio_1 = <37>;
+			rst_gpio_type_1 = <1>; /* PM_GPIO */
+			rst_init_state_1 = <1>;
+			rst_en_state_1 = <1>;
+			rst_en_pre_delay_1 = <15>;
+			rst_en_post_delay_1 = <15>;
+			rst_dis_post_delay_1 = <10>;
+
+			/* Display's regulators and regulator gpio en  */
+			num_disp_reg = <3>;
+
+			reg_id_1 = "";
+			reg_name_1 = "VBATT_DISP_CONN";
+			reg_gpio_en_1 = <13>;
+			reg_gpio_name_1 = "DISP_V1_EN";
+			reg_gpio_en_type_1 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_1 = <1>;
+			reg_gpio_en_state_1 = <1>;
+			reg_gpio_en_delay_1 = <1>;
+
+			/* Display's VDDIO reg */
+			reg_id_2 = "dsi_s4";
+			reg_name_2 = "VDD_DISP_CONN";
+			reg_min_mv_2 = <1800000>;
+			reg_max_mv_2 = <1800000>;
+			reg_gpio_en_2 = <12>;
+			reg_gpio_name_2 = "DISP_V2_EN";
+			reg_gpio_en_type_2 = <0>;  /* MSM_GPIO */
+			reg_gpio_en_init_state_2 = <1>;
+			reg_gpio_en_state_2 = <1>;
+
+			/* Display's VCI reg which shared same gpio_en as VDDIO */
+			reg_id_3 = "disp_vci";
+			reg_name_3 = "VCI_DISP_CONN";
+			reg_min_mv_3 = <3100000>;
+			reg_max_mv_3 = <3100000>;
+			reg_gpio_en_3 = <90>;
+			reg_gpio_name_3 = "DISP_V3_EN";
+			reg_gpio_en_type_3 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_3 = <1>;
+			reg_gpio_en_state_3 = <1>;
+
+			mipi_d0_sel_gpio_1 = <10>;
+			mipi_d0_sel_name_1 = "mipi_d0_sel";
+			mipi_d0_sel_gpio_type_1 = <1>;  /* PM_GPIO */
+			mipi_d0_sel_init_state_1 = <0>;
+			mipi_d0_sel_en_state_1 = <0>;
+			mipi_d0_sel_en_pre_delay_1 = <0>;
+			mipi_d0_sel_en_post_delay_1 = <0>;
+			mipi_d0_sel_dis_pre_delay_1 = <0>;
+			mipi_d0_sel_dis_post_delay_1 = <0>;
+
+			partial_mode_supported = <1>;
+			prevent_pwr_off = <1>;
+		};
+	};
+
+	qcom,sdcc@3 {
+		status = "okay";
+	};
+};
+
+&i2c3 {
+	atmxt@4a {
+		compatible = "atmel,atmxt-ts";
+		reg = <0x4a>;
+		interrupt-parent = <&msmgpio>;
+		interrupts = <46 0>;
+		gpios = <&msmgpio 46 0>, /* IRQ */
+		        <&msmgpio 63 0>, /* RESET */
+		        <&msmgpio 52 0>; /* ENABLE */
+
+		atmel,atmxt-tdat-filename = "atmxt-r2.tdat";
+	};
+
+	synaptics_dsx_i2c@20 {
+		compatible = "synaptics,synaptics_dsx_i2c";
+		reg = <0x20>;
+		interrupt-parent = <&msmgpio>;
+		interrupts = <46 0>;
+		gpios = <&msmgpio 46 0>, /* IRQ */
+			<&msmgpio 63 0>; /* RESET */
+		touch_vdd-supply = <&rpm_8921_l11>;
+
+		synaptics,purge-enabled;
+		synaptics,reset-on-resume;
+	};
+};
+
+&i2c10 {
+	tps65132@3e {
+		compatible = "ti,tps65132";
+		reg = <0x3e>;
+	};
+
+	lp8556@2c {
+		compatible = "ti,lp8556";
+		reg = <0x2c>;
+		gpios = <&msmgpio 52 0>;  /* enable GPIO */
+
+		ti,lp8556-initial-brightness = <0x3a>;
+		ti,lp8556-dev-ctrl-config = <0x84>;
+		ti,lp8556-eeprom-settings = <0x9e 0x02
+					     0xa5 0x3c
+					     0xa6 0x40
+					     0xa7 0xfc>;
+	};
+};
+

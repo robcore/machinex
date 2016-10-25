@@ -1,0 +1,25 @@
+/* Copyright (c) 2013, Motorola Mobility LLC. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/ {
+	mmi,product = "mmi,msm8960ab-ultra-maxx";
+
+	System@0 {
+		WirelessChargerIC@0 {
+			class = [576972656c65737343686172676572494300];
+			type = <0x0003001b>;
+			wireless_complete_gpio = <0x0000004d>;
+			wireless_terminate_gpio = <0x00000020>;
+			wireless_good_gpio = <0x00000021>;
+		};
+	};
+};

@@ -1,0 +1,167 @@
+/* Copyright (c) 2012, Motorola Mobility LLC. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/include/ "msm8960-pinmux.dtsi"
+/include/ "msm8960-rpm-regulators.dtsi"
+/include/ "msm-pm8921.dtsi"
+
+/ {
+	model = "Qualcomm MSM 8960";
+	compatible = "qcom,msm8960";
+	interrupt-parent = <&intc>;
+
+	intc: interrupt-controller@2000000 {
+		compatible = "qcom,msm-qgic2";
+		interrupt-controller;
+		#interrupt-cells = <3>;
+		reg = <0x02000000 0x1000>,
+		      <0x02002000 0x1000>;
+	};
+
+	msmgpio: gpio@801000 {
+		compatible = "qcom,msm-gpio";
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		reg = <0x801000 0x4000>;
+	};
+
+	/* GSBI 3 - I2C Port */
+	i2c@16200000 {
+		compatible = "qcom,i2c-qup";
+		status = "disabled";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <3>;
+
+		/*
+		 * MSM_GSBI3_PHYS           0x16200000
+		 * MSM_GSBI3_QUP_PHYS       (MSM_GSBI3_PHYS + 0x80000)
+		 */
+		reg = <0x16200000 0x4 0x16280000 0x1000>;
+		reg-names = "gsbi_qup_i2c_addr", "qup_phys_addr";
+
+		/* GSBI3_QUP_IRQ (GIC_SPI_START + 151) */
+		interrupts = <0 151 0>;
+		interrupt-names = "qup_err_intr";
+	};
+
+	/* GSBI 4 - I2C Port */
+	i2c@16300000 {
+		compatible = "qcom,i2c-qup";
+		status = "disabled";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <4>;
+
+		/*
+		 * MSM_GSBI4_PHYS           0x16300000
+		 * MSM_GSBI4_QUP_PHYS       (MSM_GSBI4_PHYS + 0x80000)
+		 */
+		reg = <0x16300000 0x4 0x16380000 0x1000>;
+		reg-names = "gsbi_qup_i2c_addr", "qup_phys_addr";
+
+		/* GSBI4_QUP_IRQ (GIC_SPI_START + 153) */
+		interrupts = <0 153 0>;
+		interrupt-names = "qup_err_intr";
+	};
+
+	/* GSBI 8 - I2C Port */
+	i2c@1a000000 {
+		compatible = "qcom,i2c-qup";
+		status = "disabled";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <8>;
+
+		/*
+		 * MSM_GSBI8_PHYS           0x1A000000
+		 * MSM_GSBI8_QUP_PHYS       (MSM_GSBI8_PHYS + 0x80000)
+		 */
+		reg = <0x1a000000 0x4 0x1a080000 0x1000>;
+		reg-names = "gsbi_qup_i2c_addr", "qup_phys_addr";
+
+		/* GSBI8_QUP_IRQ (GIC_SPI_START + 161) */
+		interrupts = <0 161 0>;
+		interrupt-names = "qup_err_intr";
+	};
+
+	/* GSBI 10 - I2C Port */
+	i2c@1a200000 {
+		compatible = "qcom,i2c-qup";
+		status = "disabled";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <10>;
+
+		/*
+		 * MSM_GSBI10_PHYS           0x1A200000
+		 * MSM_GSBI10_QUP_PHYS       (MSM_GSBI10_PHYS + 0x80000)
+		 */
+		reg = <0x1a200000 0x4 0x1a280000 0x1000>;
+		reg-names = "gsbi_qup_i2c_addr", "qup_phys_addr";
+
+		/* GSBI10_QUP_IRQ (GIC_SPI_START + 192) */
+		interrupts = <0 192 0>;
+		interrupt-names = "qup_err_intr";
+	};
+
+	/* GSBI 12 - I2C Port */
+	i2c@12480000 {
+		compatible = "qcom,i2c-qup";
+		status = "disabled";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <12>;
+
+		/*
+		 * MSM_GSBI12_PHYS           0x12480000
+		 * MSM_GSBI12_QUP_PHYS       (MSM_GSBI12_PHYS + 0x20000)
+		 */
+		reg = <0x12480000 0x4 0x124a0000 0x1000>;
+		reg-names = "gsbi_qup_i2c_addr", "qup_phys_addr";
+
+		/* GSBI12_QUP_IRQ (GIC_SPI_START + 196) */
+		interrupts = <0 196 0>;
+		interrupt-names = "qup_err_intr";
+	};
+
+	/* GSBI 5 - UART DM Port */
+	serial@16440000 {
+		compatible = "qcom,msm-hsuart";
+		status = "disabled";
+
+		/*
+		 * MSM_GSBI5_PHYS          0x16400000
+		 * MSM_UART5DM_PHYS        (MSM_GSBI5_PHYS + 0x40000)
+		 */
+		reg = <0x16440000 0x1000 0x16400000 0x4>;
+		reg-names = "uartdm_resouce", "gsbi_resource";
+
+		/* GSBI5_UARTDM_IRQ (GIC_SPI_START + 154) */
+		interrupts = <0 154 0>;
+
+		/*
+		 * DMOV_HSUART_GSBI5_TX_CRCI  10
+		 * DMOV_HSUART_GSBI5_RX_CRCI  9
+		 */
+		qcom,msm-hs-dm-tx-crci = <10>;
+		qcom,msm-hs-dm-rx-crci = <9>;
+	};
+
+};

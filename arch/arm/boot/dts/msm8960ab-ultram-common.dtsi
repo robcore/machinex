@@ -1,0 +1,185 @@
+/* Copyright (c) 2012-2013, Motorola Mobility LLC. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/include/ "msm8960ab-motref.dtsi"
+
+/ {
+	model = "Motorola MSM8960 Pro Ultra M";
+	compatible = "mmi,msm8960";
+
+	mmi,product = "mmi,msm8960ab-ultram";
+
+	mmi,dt_revision = <2>;
+
+	rpm_regulators: qcom,rpm-regulators {
+		compatible = "qcom,msm-rpm-regulators";
+
+		rpm_8921_l11: 8921_l11 {
+			always_on = <0>;
+		};
+	};
+
+	qcom,msm8960-pinmux@0x801000 {
+		pin@801340 {                      /* BACKLIGHT_EN           */
+			reg = <0x801340 0x10>;
+			qcom,pin-num = <52>;
+			qcom,suspended@1 {
+				qcom,func = <0>;  /* gpio_in_out(52)        */
+				qcom,pull = <0>;  /* none                   */
+				qcom,drv = <0>;   /* 2ma                    */
+				qcom,dir = <1>;   /* out_high               */
+			};
+		};
+		pin@8013f0 {
+			reg = <0x8013f0 0x10>;
+			qcom,pin-num = <63>;      /* TOUCH_RESET */
+			qcom,suspended@1 {
+				qcom,func = <0>;  /* gpio_in_out(63)        */
+				qcom,pull = <1>;  /* down                   */
+				qcom,drv = <0>;   /* 2ma                    */
+				qcom,dir = <0>;   /* in                     */
+			};
+		};
+	};
+
+	/* GSBI3 - I2C Touch Bus */
+	i2c@16200000 {
+		status = "okay";
+
+		qcom,i2c-bus-freq = <400000>;
+		qcom,i2c-src-freq = <24000000>;
+	};
+
+	System@0 {
+		Display@0 {
+			/* Name of display driver */
+			panel_name = "mipi_mot_cmd_jdi_hd_430";
+			disp_intf = <4>;  /* MIPI_VP_CM */
+
+			/* Display reset lines */
+			rst_gpio_1 = <37>;
+			rst_gpio_type_1 = <1>; /* PM_GPIO */
+			rst_init_state_1 = <1>;
+			rst_en_state_1 = <1>;
+			rst_en_pre_delay_1 = <10>;
+			rst_en_post_delay_1 = <0>;
+			rst_dis_post_delay_1 = <10>;
+
+			/* Display's regulators and regulator gpio en  */
+			num_disp_reg = <4>;
+
+			reg_id_1 = "disp_vci";
+			reg_name_1 = "TOUCH_VDD";
+			reg_min_mv_1 = <3100000>;
+			reg_max_mv_1 = <3100000>;
+			reg_delay_1 = <5>;
+
+			/* Display's VDDIO reg */
+			reg_id_2 = "dsi_s4";
+			reg_name_2 = "DISP_VDDIO";
+			reg_min_mv_2 = <1800000>;
+			reg_max_mv_2 = <1800000>;
+			reg_gpio_en_2 = <12>;
+			reg_gpio_name_2 = "DISP_V2_EN";
+			reg_gpio_en_type_2 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_2 = <1>;
+			reg_gpio_en_state_2 = <1>;
+			reg_gpio_en_delay_2 = <3>;
+			reg_gpio_dis_delay_2 =<6>; /* min 5ms */
+
+			reg_id_3 = "";
+			reg_name_3 = "DISP_VSP";
+			reg_gpio_en_3 = <13>;
+			reg_gpio_name_3 = "DISP_V1_EN";
+			reg_gpio_en_type_3 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_3 = <1> ;
+			reg_gpio_en_state_3 = <1>;
+			reg_gpio_en_delay_3 = <3>;
+			reg_gpio_dis_delay_3 = <5>;
+
+			reg_id_4 = "";
+			reg_name_4 = "DISP_VSN" ;
+			reg_gpio_en_4 = <90>;
+			reg_gpio_name_4 = "DISP_V3_EN" ;
+			reg_gpio_en_type_4 = <0>; /* MSM_GPIO */
+			reg_gpio_en_init_state_4 = <1>;
+			reg_gpio_en_state_4 = <1>;
+			reg_gpio_en_delay_4 = <0>;
+			reg_gpio_dis_delay_4 = <4>;
+		};
+	};
+};
+
+&i2c3 {
+	synaptics_dsx_i2c@20 {
+		compatible = "synaptics,synaptics_dsx_i2c";
+		reg = <0x20>;
+		interrupt-parent = <&msmgpio>;
+		interrupts = <46 0>;
+		gpios = <&msmgpio 46 0>, /* IRQ */
+			<&msmgpio 63 0>; /* RESET */
+		touch_vdd-supply = <&rpm_8921_l11>;
+
+		synaptics,normal-mode = <0>;
+		synaptics,purge-enabled;
+		synaptics,display-synced-suspend;
+		synaptics,hw-reset;
+		synaptics,key-buttons = <59 60 61 0>; /* F1, F2, F3 */
+		/* palm-size-threshold, x_min, x_max, y_min, y_max */
+		synaptics,palm-data-info = <24 0 719 0 1279>;
+	};
+};
+
+&i2c10 {
+	tps65132@3e {
+		compatible = "ti,tps65132";
+		reg = <0x3e>;
+	};
+
+	lp8556@2c {
+		compatible = "ti,lp8556";
+		reg = <0x2c>;
+		gpios = <&msmgpio 52 0>;  /* enable GPIO */
+
+		ti,lp8556-initial-brightness = <0x3F>;
+		ti,lp8556-dev-ctrl-config = <0x84>;
+	};
+
+	/* TI drv2605 */
+	drv2605@5a {
+		compatible = "ti,drv2605";
+		reg = <0x5A>;
+		gpios = <&msmgpio 43 0>, /* EN_GPIO */
+			<&msmgpio 79 0>; /* Trigger */
+
+		rated_voltage = <0x70>;
+		overdrive_voltage = <0xA0>;
+		effects_library = <0x04>; /* Library D */
+	};
+};
+
+/* GSBI12 - I2C */
+&i2c12 {
+	msp430@48 {
+		gpios = <&msmgpio 69 0>,     /* IRQ */
+			<&msmgpio 92 0>,     /* RESET */
+			<&msmgpio 51 0>,     /* BSLEN */
+			<&pm8921_gpio 7 0>,  /* WakeIRQ */
+			<0>,                 /* MIPI_REQ */
+			<0>;                 /* MIPI_BUSY */
+	};
+};
+
+/* Audio Firmware Files selection: Obakem */
+&ptfa9890 {
+        tfa9890_bin_path = "obakem";
+};
