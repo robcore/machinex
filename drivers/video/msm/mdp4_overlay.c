@@ -1094,22 +1094,22 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 #if defined(CONFIG_FEATURE_FLIPLR)
-	if (!pipe->mfd) 
-	pr_err("vg mfd is not set\n"); 
+	if (!pipe->mfd)
+	pr_err("vg mfd is not set\n");
 
-	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){ 
-		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR; 
-		if (pipe->ext_flag & MDP_FLIP_LR){ 
-			op_mode &= ~MDP4_OP_FLIP_LR; 
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));			
+	if((pipe->mfd->panel_info.type != DTV_PANEL) && (pipe->mfd->panel_info.type != WRITEBACK_PANEL)){
+		uint32 op_mode = pipe->op_mode | MDP4_OP_FLIP_LR;
+		if (pipe->ext_flag & MDP_FLIP_LR){
+			op_mode &= ~MDP4_OP_FLIP_LR;
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
 		}
-		pipe->op_mode = op_mode; 
+		pipe->op_mode = op_mode;
 
 		if ((pipe->op_mode & MDP4_OP_FLIP_LR) && pipe->mfd){
-			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));						
-			outpdw(MDP_BASE + 0xE0044, 0xe0fff); 
-		} 
-	} 
+			dst_xy = ((pipe->dst_y << 16) | (pipe->mfd->panel_info.xres - pipe->dst_x -pipe->dst_w));
+			outpdw(MDP_BASE + 0xE0044, 0xe0fff);
+		}
+	}
 #endif
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
@@ -2850,11 +2850,6 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 		mfd->sec_active = FALSE;
 	}
 
-	if ((pipe->flags & MDP_SECURE_OVERLAY_SESSION) &&
-		(!(req->flags & MDP_SECURE_OVERLAY_SESSION))) {
-		pr_err("%s Switch secure %d", __func__, pipe->pipe_ndx);
-		mfd->sec_active = FALSE;
-	}
 	pipe->flags = req->flags;
 	*ppipe = pipe;
 
@@ -3353,7 +3348,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		}
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
-			if (pipe->bpp==2) 
+			if (pipe->bpp==2)
 				yuvcount++;
 		}
 
