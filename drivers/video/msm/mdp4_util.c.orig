@@ -360,7 +360,6 @@ void mdp4_fetch_cfg(uint32 core_clk)
 	int i;
 	/* MDP cmd block enable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-	mdp_clk_ctrl(1);
 
 	if (mdp_rev >= MDP_REV_41 || core_clk >= 90000000) { /* 90 Mhz */
 		dmap_data = 0x47; /* 16 bytes-burst x 8 req */
@@ -388,7 +387,6 @@ void mdp4_fetch_cfg(uint32 core_clk)
 	}
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-	mdp_clk_ctrl(0);
 }
 
 #if defined(CONFIG_FB_MSM_CAMERA_CSC)
