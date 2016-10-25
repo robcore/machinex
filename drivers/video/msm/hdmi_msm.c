@@ -786,6 +786,9 @@ void mhl_hpd_handler(bool state)
 		pr_err("hdmi_msm_state->boot_completion = %d\n",
 			hdmi_msm_state->boot_completion);
 	}
+
+	if (!completion_done(&hdmi_msm_state->hpd_event_processed))
+		complete(&hdmi_msm_state->hpd_event_processed);
 }
 #endif
 #endif
@@ -4438,7 +4441,8 @@ error1:
 #ifdef MHL_HPD_SOLUTION
 static int hdmi_msm_power_ctrl(boolean enable)
 {
-	int rc = 0;
+	int rc   = 0;
+	int time = 0;
 
 	if (enable) {
 		/*
@@ -4449,25 +4453,24 @@ static int hdmi_msm_power_ctrl(boolean enable)
 			external_common_state->hpd_feature_on) {
 			DEV_DBG("%s: Turning HPD ciruitry on\n", __func__);
 
-			if (external_common_state->pre_suspend_hpd_state) {
-				external_common_state->pre_suspend_hpd_state =
-					 false;
-
-				hdmi_msm_send_event(HPD_EVENT_OFFLINE);
-			}
-
 			rc = hdmi_msm_hpd_on();
 			if (rc) {
 				DEV_ERR("%s: HPD ON FAILED\n", __func__);
 				return rc;
 			}
+
+			/* Wait for HPD initialization to complete */
+			INIT_COMPLETION(hdmi_msm_state->hpd_event_processed);
+			time = wait_for_completion_interruptible_timeout(
+				&hdmi_msm_state->hpd_event_processed, HZ);
+			if (!time && !external_common_state->hpd_state) {
+				DEV_DBG("%s: cable not detected\n", __func__);
+				queue_work(hdmi_work_queue,
+				    &hdmi_msm_state->hpd_state_work);
+			}
 		}
 	} else {
 		DEV_DBG("%s: Turning HPD ciruitry off\n", __func__);
-
-		external_common_state->pre_suspend_hpd_state =
-			external_common_state->hpd_state;
-
 		hdmi_msm_hpd_off();
 	}
 
