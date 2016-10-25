@@ -77,7 +77,7 @@ static struct platform_driver mipi_dsi_driver = {
 
 struct device dsi_dev;
 
-+static int mipi_dsi_fps_level_change(struct platform_device *pdev,
+static int mipi_dsi_fps_level_change(struct platform_device *pdev,
 					u32 fps_level)
 {
 	mipi_dsi_wait4video_done();
