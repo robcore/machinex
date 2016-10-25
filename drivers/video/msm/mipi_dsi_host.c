@@ -1083,7 +1083,7 @@ void mipi_dsi_wait4video_done(void)
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
 
 	if (!wait_for_completion_timeout(&dsi_video_comp,
-					msecs_to_jiffies(VSYNC_PERIOD * 4)) {
+					msecs_to_jiffies(VSYNC_PERIOD * 4))) {
 		pr_err("%s: video_done timeout error\n", __func__);
 	}
 }
