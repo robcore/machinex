@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1072,7 +1072,7 @@ void mipi_dsi_op_mode_config(int mode)
 }
 
 
-void mipi_dsi_wait4video_done(void)
+static void mipi_dsi_wait4video_done(void)
 {
 	unsigned long flag;
 
@@ -1081,9 +1081,9 @@ void mipi_dsi_wait4video_done(void)
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK, DSI_INTR_VIDEO_DONE_MASK);
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
-
+	
 	if (!wait_for_completion_timeout(&dsi_video_comp,
-					msecs_to_jiffies(VSYNC_PERIOD * 4))) {
+					msecs_to_jiffies(200))) {
 		pr_err("%s: video_done timeout error\n", __func__);
 	}
 }
@@ -1767,28 +1767,28 @@ void dumstate(int error)
 	pr_err("mdp_current_clk_on : %08d\n", mdp_current_clk_on);
 	pr_err("%s: ============= END ==============\n", __func__);
 }
-void mdp4_dump_regs(void)
-{
+void mdp4_dump_regs(void) 
+{ 
 	int i, z, start, len;
-	int offsets[] = {0x0, 0x200, 0x10000, 0x18000,  0x20000,  0x30000,  0x40000,  0x50000, 0x88000, 0x90000, 0xB0000, 0xD0000, 0xE0000};
+	int offsets[] = {0x0, 0x200, 0x10000, 0x18000,  0x20000,  0x30000,  0x40000,  0x50000, 0x88000, 0x90000, 0xB0000, 0xD0000, 0xE0000}; 
 	int length[]  = {24,     64,     101,     101,       32,       32,       32,       32,     101,      64,      64,      27,      64};
 
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-	for (i = 0; i < sizeof(offsets) / sizeof(int); i++) {
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE); 
+	for (i = 0; i < sizeof(offsets) / sizeof(int); i++) { 
 		start = offsets[i];
 		len   = length[i];
 		printk("-------- Address %05x: -------\n", start);
-		for (z = 0; z < len; z++) {
-			if ((z & 3) == 0)
-				printk("%05x:", start + (z * 4));
+		for (z = 0; z < len; z++) { 
+			if ((z & 3) == 0) 
+				printk("%05x:", start + (z * 4)); 
 			printk(" %08x", inpdw(MDP_BASE + start + (z * 4)));
-			if ((z & 3) == 3)
+			if ((z & 3) == 3) 
 				printk("\n");
 		}
-		if ((z & 3) != 0)
-			printk("\n");
-	}
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+		if ((z & 3) != 0) 
+			printk("\n"); 
+	} 
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE); 
 }
 
 void dsi_clk_dump(void)
@@ -1860,7 +1860,7 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 		if(normalcase==0){
 			dumpreg(1);
 			dumstate(1);
-			normalcase=1;
+			normalcase=1;			
 			mdp4_dump_regs();
 			dsi_clk_dump();
 		}
@@ -2177,10 +2177,10 @@ int mipi_runtime_clk_change(int fps)
 	int rc;
 
 	mutex_lock(&fps_done_mutex);
-
+		
 	runtime_clk_chagne = 1;
 	goal_fps = fps;
-
+		
 	INIT_COMPLETION(dsi_fps_comp);
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK,
@@ -2195,7 +2195,7 @@ int mipi_runtime_clk_change(int fps)
 		sec_debug_mdp.dsi_err.fps_chage_time_out_err_cnt++;
 #endif
 	}
-
+		
 	mutex_unlock(&fps_done_mutex);
 
 	return rc;
@@ -2235,7 +2235,7 @@ int mipi_runtime_csc_update(uint32_t reg[][2], int length)
 		sec_debug_mdp.dsi_err.fps_chage_time_out_err_cnt++;
 #endif
 	}
-
+		
 	mutex_unlock(&fps_done_mutex);
 
 	return rc;
@@ -2245,7 +2245,7 @@ int mipi_runtime_csc_update(uint32_t reg[][2], int length)
 irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 {
 	uint32 isr;
-
+	
 	isr = MIPI_INP(MIPI_DSI_BASE + 0x010c);/* DSI_INTR_CTRL */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x010c, isr);
 
@@ -2268,7 +2268,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		if (runtime_clk_chagne) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
-
+				
 			} else {
 				mipi_dsi_configure_dividers(goal_fps);
 				runtime_clk_chagne = 0;
@@ -2316,7 +2316,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		if (runtime_clk_chagne) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
-
+				
 			} else {
 				mipi_dsi_configure_dividers(goal_fps);
 				runtime_clk_chagne = 0;
