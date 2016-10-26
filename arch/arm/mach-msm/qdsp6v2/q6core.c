@@ -41,9 +41,7 @@ static uint32_t adsp_version;
 static wait_queue_head_t bus_bw_req_wait;
 static u32 bus_bw_resp_received;
 
-#ifdef CONFIG_DEBUG_FS
 static struct dentry *dentry;
-#endif /* CONFIG_DEBUG_FS */
 static char l_buf[4096];
 
 static int32_t aprv2_core_fn_q(struct apr_client_data *data, void *priv)
@@ -251,8 +249,6 @@ static ssize_t apr_debug_write(struct file *file, const char __user *buf,
 	int len;
 	static int t_len;
 
-	if (count < 0)
-		return 0;
 	len = count > 63 ? 63 : count;
 	if (copy_from_user(l_buf + 20 , buf, len)) {
 		pr_info("Unable to copy data from user space\n");
