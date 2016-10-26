@@ -229,17 +229,12 @@ static irqreturn_t
 qup_i2c_interrupt(int irq, void *devid)
 {
 	struct qup_i2c_dev *dev = devid;
-	uint32_t status, status1, op_flgs;
+	uint32_t status = readl_relaxed(dev->base + QUP_I2C_STATUS);
+	uint32_t status1 = readl_relaxed(dev->base + QUP_ERROR_FLAGS);
+	uint32_t op_flgs = readl_relaxed(dev->base + QUP_OPERATIONAL);
 	int err = 0;
 
-	if (pm_runtime_suspended(dev->dev))
-		return IRQ_NONE;
-
-	status = readl_relaxed(dev->base + QUP_I2C_STATUS);
-	status1 = readl_relaxed(dev->base + QUP_ERROR_FLAGS);
-	op_flgs = readl_relaxed(dev->base + QUP_OPERATIONAL);
-
-#ifdef SECURE_INPUT
+#ifdef SECURE_INPUT    
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -373,7 +368,7 @@ qup_config_core_on_en(struct qup_i2c_dev *dev)
 static void
 qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state)
 {
-#ifdef SECURE_INPUT
+#ifdef SECURE_INPUT    
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return;
 	}
@@ -827,7 +822,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	long timeout;
 	int err;
 
-#ifdef SECURE_INPUT
+#ifdef SECURE_INPUT    
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -1148,8 +1143,6 @@ timeout_err:
 	dev->pwr_timer.expires = jiffies + 3*HZ;
 	add_timer(&dev->pwr_timer);
 	mutex_unlock(&dev->mlock);
-	pm_runtime_mark_last_busy(dev->dev);
-	pm_runtime_put_autosuspend(dev->dev);
 	return ret;
 }
 
@@ -1345,8 +1338,7 @@ blsp_core_init:
 	clk_prepare_enable(dev->clk);
 	clk_prepare_enable(dev->pclk);
 	writel_relaxed(1, dev->base + QUP_SW_RESET);
-	ret = qup_i2c_poll_state(dev, 0, true);
-	if (ret)
+	if (qup_i2c_poll_state(dev, 0, true) != 0)
 		goto err_reset_failed;
 	clk_disable_unprepare(dev->clk);
 	clk_disable_unprepare(dev->pclk);
@@ -1436,10 +1428,6 @@ blsp_core_init:
 			dev->adapter.dev.of_node = pdev->dev.of_node;
 			of_i2c_register_devices(&dev->adapter);
 		}
-
-		pm_runtime_set_autosuspend_delay(&pdev->dev, MSEC_PER_SEC);
-		pm_runtime_use_autosuspend(&pdev->dev);
-		pm_runtime_enable(&pdev->dev);
 		return 0;
 	}
 
@@ -1504,7 +1492,6 @@ qup_i2c_remove(struct platform_device *pdev)
 	iounmap(dev->base);
 
 	pm_runtime_disable(&pdev->dev);
-	pm_runtime_set_suspended(&pdev->dev);
 
 	if (!(dev->pdata->use_gsbi_shared_mode)) {
 		gsbi_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
