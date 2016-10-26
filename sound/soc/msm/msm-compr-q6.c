@@ -143,7 +143,7 @@ static void compr_event_handler(uint32_t opcode,
 		} else
 			atomic_set(&prtd->pending_buffer, 0);
 		if (runtime->status->hw_ptr >= runtime->control->appl_ptr) {
-			atomic_set(&prtd->pending_buffer, 1);
+			pr_info("hw_ptr %d , appl_ptr %d\n",(int)runtime->status->hw_ptr, (int)runtime->control->appl_ptr);
 			runtime->render_flag |= SNDRV_RENDER_STOPPED;
 			break;
 		}
@@ -204,7 +204,6 @@ static void compr_event_handler(uint32_t opcode,
 			wake_up(&the_locks.eos_wait);
 			atomic_set(&prtd->eos, 0);
 		}
-		atomic_set(&prtd->pending_buffer, 1);
 		break;
 	case ASM_DATA_EVENT_READ_DONE: {
 		pr_info("ASM_DATA_EVENT_READ_DONE\n");
@@ -603,7 +602,6 @@ static int msm_compr_restart(struct snd_pcm_substream *substream)
 				(prtd->out_head + 1) & (runtime->periods - 1);
 
 		runtime->render_flag &= ~SNDRV_RENDER_STOPPED;
-		atomic_set(&prtd->pending_buffer, 0);
 		return 0;
 	}
 	return 0;
@@ -1164,7 +1162,6 @@ static int msm_compr_ioctl(struct snd_pcm_substream *substream,
 				prtd->cmd_interrupt = 1;
 				wake_up(&the_locks.eos_wait);
 				atomic_set(&prtd->eos, 0);
-				atomic_set(&prtd->pending_buffer, 1);
 			}
 
 			/* A unlikely race condition possible with FLUSH
