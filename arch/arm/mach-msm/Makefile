@@ -13,12 +13,12 @@ obj-$(CONFIG_MSM_PROC_COMM) += proc_comm.o
 ifndef CONFIG_ARCH_MSM8X60
 	obj-$(CONFIG_MSM_PROC_COMM) += clock-pcom.o
 	obj-$(CONFIG_MSM_PROC_COMM) += vreg.o mpp.o
-ifdef CONFIG_MSM_PROC_COMM
+	ifdef CONFIG_MSM_PROC_COMM
 ifndef CONFIG_ARCH_FSM9XXX
 		obj-$(CONFIG_REGULATOR) += footswitch-pcom.o
 endif
 		obj-$(CONFIG_DEBUG_FS) += pmic_debugfs.o
-endif
+	endif
 endif
 
 obj-y += acpuclock.o
@@ -495,4 +495,3 @@ obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
 obj-$(CONFIG_STATE_HELPER)		+= state_helper.o
 obj-$(CONFIG_LCD_KCAL) += msm_kcal_ctrl.o
 obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
-obj-$(CONFIG_WALLCLK) += wallclk.o
