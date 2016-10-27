@@ -160,6 +160,7 @@ enum an30259a_pattern {
 	LOW_BATTERY,
 	FULLY_CHARGED,
 	POWERING,
+	BOOTING,
 };
 
 struct an30259a_led {
@@ -379,7 +380,7 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (mode > POWERING)
+	if (mode > BOOTING)
 		return;
 
 	if(disabled_samsung_pattern) {
@@ -466,13 +467,21 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_R,
-				0, 15, 0, 0, 2, 2, 2, 4, 4, 2);
+				0, 5, 0, 0, 2, 2, 2, 2, 2, 2);
 		leds_set_slope_mode(client, LED_G,
-				0, 15, 10, 0, 2, 2, 2, 4, 4, 2);
+				0, 15, 15, 1, 2, 2, 4, 4, 4, 2);
 		leds_set_slope_mode(client, LED_B,
-				0, 0, 0, 15, 2, 2, 4, 3, 3, 4);
-
+				0, 0, 1, 15, 2, 2, 2, 4, 4, 4);
 		break;
+
+	case BOOTING:
+		pr_info("LED Booting Pattern on\n");
+		leds_on(LED_G, true, true, LED_G_CURRENT);
+		leds_on(LED_B, true, true, LED_B_CURRENT);
+		leds_set_slope_mode(client, LED_G, 0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_B, 0, 0, 0, 15, 1, 1, 0, 0, 0, 0);
+		break;
+
 	default:
 		return;
 		break;
@@ -657,9 +666,9 @@ static ssize_t show_an30259a_led_fade(struct device *dev,
                     struct device_attribute *attr, char *buf)
 {
 	switch(led_enable_fade) {
-		case 0:		return sprintf(buf, "%d - LED fading is disabled\n", led_enable_fade);
-		case 1:		return sprintf(buf, "%d - LED fading is enabled\n", led_enable_fade);
-		default:	return sprintf(buf, "%d - LED fading is in undefined status\n", led_enable_fade);
+		case 0:		return sprintf(buf, "%d\n", led_enable_fade);
+		case 1:		return sprintf(buf, "%d\n", led_enable_fade);
+		default:	return sprintf(buf, "%d\n", led_enable_fade);
 	}
 }
 
@@ -682,12 +691,12 @@ static ssize_t show_an30259a_led_intensity(struct device *dev,
                     struct device_attribute *attr, char *buf)
 {
 	switch(led_intensity) {
-		case  0:	return sprintf(buf, "%d - CM stock LED intensity\n", led_intensity);
-		case 40:	return sprintf(buf, "%d - Samsung stock LED intensity\n", led_intensity);
+		case  0:	return sprintf(buf, "%d\n", led_intensity);
+		case 40:	return sprintf(buf, "%d\n", led_intensity);
 		default:	if (led_intensity < 40)
-					return sprintf(buf, "%d - LED intesity darker by %d steps\n", led_intensity, 40-led_intensity);
+					return sprintf(buf, "%d\n", led_intensity, 40-led_intensity);
 				else
-					return sprintf(buf, "%d - LED intesity brighter by %d steps\n", led_intensity, led_intensity-40);
+					return sprintf(buf, "%d\n", led_intensity, led_intensity-40);
 	}
 }
 
@@ -711,7 +720,7 @@ static ssize_t store_an30259a_led_intensity(struct device *dev,
 static ssize_t show_an30259a_led_speed(struct device *dev,
                     struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d - LED blinking/fading speed\n", led_speed);
+	return sprintf(buf, "%d\n", led_speed);
 }
 
 static ssize_t store_an30259a_led_speed(struct device *dev,
@@ -725,14 +734,14 @@ static ssize_t store_an30259a_led_speed(struct device *dev,
 	// only accept if between 0 and 15
 	if ((new_led_speed >= 0) && (new_led_speed <= 15))
 		led_speed = new_led_speed;
-		
+
 	return count;
 }
 
 static ssize_t show_an30259a_led_slope(struct device *dev,
                     struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "Slope up : (%d,%d) - Slope down (%d,%d)\n", led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+	return sprintf(buf, "%d %d %d %d\n", led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
 }
 
 static ssize_t store_an30259a_led_slope(struct device *dev,
@@ -1130,6 +1139,7 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 		goto exit;
 	}
 #endif
+	an30259a_start_led_pattern(BOOTING);
 	return ret;
 exit:
 	mutex_destroy(&data->mutex);
