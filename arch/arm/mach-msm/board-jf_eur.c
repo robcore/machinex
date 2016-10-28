@@ -1952,7 +1952,7 @@ static void clear_ssp_gpio(void)
 		pm8xxx_gpio_config(GPIO_MCU_NRST, &ap_mcu_nrst_cfg);
 	gpio_set_value_cansleep(GPIO_MCU_NRST, 0);
 	mdelay(1);
-	pr_info("[SSP] %s done\n", __func__);
+	pr_info("[SSP] %s,%d done\n", __func__,system_rev);
 }
 
 static int initialize_ssp_gpio(void)
@@ -3208,6 +3208,7 @@ static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
 	.no_a2m_errfatal_on_ssr = 1,
+	.no_reset_on_first_powerup = 1,
 	.kpd_not_inverted = 1,
 	.subsys_name = "external_modem",
 };
