@@ -180,7 +180,8 @@ int msm_spm_turn_on_cpu_rail(unsigned int cpu)
 		MSM_SAW3_BASE
 	};
 
-	if (cpu == 0 || cpu >= num_possible_cpus())
+	if (cpu == 0 || cpu >= num_possible_cpus() ||
+				cpu >= ARRAY_SIZE(saw_bases))
 		return -EINVAL;
 
 	reg = saw_bases[cpu];

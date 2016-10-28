@@ -670,8 +670,9 @@ static int __init subsys_restart_init(void)
 	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
-	if (!ssr_wq)
-		panic("%s: out of memory\n", __func__);
+	BUG_ON(!ssr_wq);
+//	if (!ssr_wq)
+//		panic("%s: out of memory\n", __func__);
 
 	return ssr_init_soc_restart_orders();
 }

@@ -172,7 +172,7 @@ enum {
 };
 
 enum {
-	COMPANDER_1 = 0,
+	COMPANDER_1,
 	COMPANDER_2,
 	COMPANDER_MAX,
 };
