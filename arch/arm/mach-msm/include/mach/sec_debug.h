@@ -555,7 +555,7 @@ extern void get_fbinfo(int fb_num, unsigned int *fb_paddr, unsigned int *xres,
 extern unsigned int msm_shared_ram_phys;
 extern char *get_kernel_log_buf_paddr(void);
 extern char *get_fb_paddr(void);
-#ifndef CONFIG_SEC_DEBUG_MDM_FILE_INFO
+#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
 extern void sec_modify_restart_level_mdm(int value);
 extern void sec_set_mdm_subsys_info(char *str_buf);
 #endif
