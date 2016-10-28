@@ -117,6 +117,21 @@ DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 static const char * const _order_8x60_modems[] = {"external_modem", "modem"};
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
+#ifndef CONFIG_MACH_JF
+/* MSM 8960 restart ordering info */
+static const char * const order_8960[] = {"modem", "lpass"};
+
+
+static struct subsys_soc_restart_order restart_orders_8960_one = {
+	.subsystem_list = order_8960,
+	.count = ARRAY_SIZE(order_8960),
+	.subsys_ptrs = {[ARRAY_SIZE(order_8960)] = NULL}
+	};
+
+static struct subsys_soc_restart_order *restart_orders_8960[] = {
+	&restart_orders_8960_one,
+};
+#endif
 /*SGLTE restart ordering info*/
 static const char * const order_8960_sglte[] = {"external_modem",
 						"modem"};
@@ -151,7 +166,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
+static int restart_level = RESET_SUBSYS_INDEPENDENT;
 
 int get_restart_level()
 {
@@ -626,7 +641,12 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-
+#ifndef CONFIG_MACH_JF
+	if (cpu_is_msm8960() || cpu_is_msm8930()) {
+		restart_orders = restart_orders_8960;
+		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
+	}
+#endif
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);

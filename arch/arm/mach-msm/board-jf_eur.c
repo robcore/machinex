@@ -88,6 +88,8 @@
 #include <mach/msm_pcie.h>
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
+#include <mach/msm_serial_hs.h>
+
 #include <linux/sec_jack.h>
 #include "clock.h"
 
@@ -102,6 +104,7 @@
 
 #include "msm_watchdog.h"
 #include "board-8064.h"
+#include "clock.h"
 #include "spm.h"
 #include <mach/mpm.h>
 #include "rpm_resources.h"
@@ -546,8 +549,6 @@ static void __init reserve_rtb_memory(void)
 {
 #if defined(CONFIG_MSM_RTB)
 	apq8064_reserve_table[MEMTYPE_EBI1].size += apq8064_rtb_pdata.size;
-	pr_info("mem_map: rtb reserved with size 0x%x in pool\n",
-			apq8064_rtb_pdata.size);
 #endif
 }
 
@@ -581,8 +582,6 @@ static void __init reserve_pmem_memory(void)
 	reserve_memory_for(&android_pmem_audio_pdata);
 #endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
 	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
-	pr_info("mem_map: contig_mem reserved with size 0x%x in pool\n",
-			msm_contig_mem_size);
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
@@ -771,9 +770,6 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 
 	ret = memblock_remove(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
-	pr_info("mem_map: fixed_area reserved at 0x%lx with size 0x%lx\n",
-			reserve_info->fixed_area_start,
-			reserve_info->fixed_area_size);
 	BUG_ON(ret);
 #endif
 }
@@ -906,9 +902,6 @@ static void __init reserve_ion_memory(void)
 		BUG_ON(!IS_ALIGNED(fixed_low_size + HOLE_SIZE, SECTION_SIZE));
 		ret = memblock_remove(fixed_low_start,
 				      fixed_low_size + HOLE_SIZE);
-		pr_info("mem_map: fixed_low_area reserved at 0x%lx with size \
-				0x%x\n", fixed_low_start,
-				fixed_low_size + HOLE_SIZE);
 		BUG_ON(ret);
 	}
 
@@ -919,9 +912,6 @@ static void __init reserve_ion_memory(void)
 	} else {
 		BUG_ON(!IS_ALIGNED(fixed_middle_size, SECTION_SIZE));
 		ret = memblock_remove(fixed_middle_start, fixed_middle_size);
-		pr_info("mem_map: fixed_middle_area reserved at 0x%lx with \
-				size 0x%x\n", fixed_middle_start,
-				fixed_middle_size);
 		BUG_ON(ret);
 	}
 
@@ -933,9 +923,6 @@ static void __init reserve_ion_memory(void)
 		/* This is the end of the fixed area so it's okay to round up */
 		fixed_high_size = ALIGN(fixed_high_size, SECTION_SIZE);
 		ret = memblock_remove(fixed_high_start, fixed_high_size);
-		pr_info("mem_map: fixed_high_area reserved at 0x%lx with size \
-				0x%x\n", fixed_high_start,
-				fixed_high_size);
 		BUG_ON(ret);
 	}
 
@@ -1042,8 +1029,6 @@ static void __init reserve_cache_dump_memory(void)
 	total = apq8064_cache_dump_pdata.l1_size +
 		apq8064_cache_dump_pdata.l2_size;
 	apq8064_reserve_table[MEMTYPE_EBI1].size += total;
-	pr_info("mem_map: cache_dump reserved with size 0x%x in pool\n",
-			total);
 #endif
 }
 
@@ -1970,7 +1955,7 @@ static void clear_ssp_gpio(void)
 		pm8xxx_gpio_config(GPIO_MCU_NRST, &ap_mcu_nrst_cfg);
 	gpio_set_value_cansleep(GPIO_MCU_NRST, 0);
 	mdelay(1);
-	pr_info("[SSP] %s done\n", __func__);
+	pr_info("[SSP] %s,%d done\n", __func__,system_rev);
 }
 
 static int initialize_ssp_gpio(void)
@@ -3147,7 +3132,7 @@ static struct mdm_vddmin_resource mdm_vddmin_rscs = {
 
 static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
@@ -3220,12 +3205,15 @@ static struct mdm_platform_data sglte2_mdm_platform_data = {
 static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.mdm_version = "3.0",
 	.ramdump_delay_ms = 2000,
+#ifdef SGLTE_QSC_RESET // not using 19520 patch	
      /* delay between two PS_HOLDs */
 	.ps_hold_delay_ms = 500,
+#endif	
 	.ramdump_timeout_ms = 600000,
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
 	.no_a2m_errfatal_on_ssr = 1,
+	.no_reset_on_first_powerup = 1,
 	.kpd_not_inverted = 1,
 	.subsys_name = "external_modem",
 };
@@ -3970,14 +3958,13 @@ static struct platform_device uv_device = {
 static struct platform_device *common_not_mpq_devices[] __initdata = {
 	&apq8064_device_qup_i2c_gsbi1,
 	&apq8064_device_qup_i2c_gsbi3,
+	&apq8064_device_qup_i2c_gsbi4,
 };
 
 static struct platform_device *early_common_devices[] __initdata = {
 	&apq8064_device_acpuclk,
 	&apq8064_device_dmov,
-#if !defined(CONFIG_MACH_JACTIVE_ATT) && !defined(CONFIG_MACH_JACTIVE_EUR)
 	&apq8064_device_qup_spi_gsbi5,
-#endif
 };
 
 static struct platform_device *pm8921_common_devices[] __initdata = {
@@ -4005,9 +3992,6 @@ static struct platform_device *common_devices[] __initdata = {
 	&apq8064_device_hsusb_host,
 	&android_usb_device,
 	&msm_device_wcnss_wlan,
-#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-	&apq8064_device_qup_spi_gsbi5,
-#endif
 	&msm_device_iris_fm,
 	&apq8064_fmem_device,
 #ifdef CONFIG_ANDROID_PMEM
@@ -4409,6 +4393,7 @@ static struct esxxx_platform_data esxxx_platform_data = {
 	.wakeup_gpio	= PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_2MIC_WAKE),
 	.gpioa_gpio	= 2,
 	.es325_clk_cb	= es325_enable_ext_clk,
+	.es325_reset_cb = es325_start_api,
 	.gpiob_gpio	= 3
 };
 
