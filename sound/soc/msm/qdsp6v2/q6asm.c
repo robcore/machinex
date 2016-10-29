@@ -57,6 +57,7 @@
 #define READDONE_IDX_SEQ_ID 10
 #define FRAME_NUM             (8)
 
+#define FRAME_NUM   (8)
 /* TODO, combine them together */
 static DEFINE_MUTEX(session_lock);
 struct asm_mmap {
