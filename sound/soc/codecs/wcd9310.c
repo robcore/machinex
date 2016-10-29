@@ -172,7 +172,7 @@ enum {
 };
 
 enum {
-	COMPANDER_1,
+	COMPANDER_1 = 0,
 	COMPANDER_2,
 	COMPANDER_MAX,
 };
@@ -488,7 +488,6 @@ static int tabla_codec_enable_charge_pump(struct snd_soc_dapm_widget *w,
 	pr_debug("%s %d\n", __func__, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		msleep(15);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLK_OTHR_CTL, 0x01,
 			0x01);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLSG_CTL, 0x08, 0x08);
@@ -1081,6 +1080,8 @@ static int tabla_codec_hphr_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -1108,6 +1109,8 @@ static int tabla_codec_hphl_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -2316,9 +2319,9 @@ static int tabla_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x40);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-		pr_debug("%s: sleeping 16 us after %s PA turn on\n",
+		pr_debug("%s: sleeping 16 ms after %s PA turn on\n",
 				__func__, w->name);
-		usleep_range(3000, 3000);
+		usleep_range(16000, 16000);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x00);
@@ -2967,7 +2970,7 @@ static int tabla_codec_enable_dec(struct snd_soc_dapm_widget *w,
 					msecs_to_jiffies(300));
 		}
 		/* apply the digital gain after the decimator is enabled*/
-		if ((w->shift) < ARRAY_SIZE(rx_digital_gain_reg))
+		if ((w->shift + offset) < ARRAY_SIZE(tx_digital_gain_reg))
 			snd_soc_write(codec,
 				  tx_digital_gain_reg[w->shift + offset],
 				  snd_soc_read(codec,
@@ -8457,7 +8460,7 @@ static int tabla_handle_pdata(struct tabla_priv *tabla)
 		snd_soc_update_bits(codec, TABLA_A_RX_HPH_OCP_CTL,
 			0xE0, (pdata->ocp.hph_ocp_limit << 5));
 	}
-
+#ifndef CONFIG_MACH_M2
 	for (i = 0; i < ARRAY_SIZE(pdata->regulator); i++) {
 		if (!strncmp(pdata->regulator[i].name, "CDC_VDDA_RX", 11)) {
 			if (pdata->regulator[i].min_uV == 1800000 &&
@@ -8478,6 +8481,7 @@ static int tabla_handle_pdata(struct tabla_priv *tabla)
 			break;
 		}
 	}
+#endif
 done:
 	return rc;
 }

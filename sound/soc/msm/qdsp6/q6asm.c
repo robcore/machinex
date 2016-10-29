@@ -258,8 +258,10 @@ int q6asm_audio_client_buf_free(unsigned int dir,
 					 __func__,
 				PTR_ERR((void *)port->buf[cnt].mem_buffer));
 				else {
-					iounmap(
-						port->buf[cnt].mem_buffer);
+					if (iounmap(
+						port->buf[cnt].mem_buffer) < 0)
+						pr_debug ("%s: unmap buffer failed\n",
+								 __func__);
 				}
 				free_contiguous_memory_by_paddr(
 					port->buf[cnt].phys);
@@ -324,8 +326,9 @@ int q6asm_audio_client_buf_free_contiguous(unsigned int dir,
 				 __func__,
 				PTR_ERR((void *)port->buf[0].mem_buffer));
 		else {
-			iounmap(
-				port->buf[0].mem_buffer);
+			if (iounmap(
+				port->buf[0].mem_buffer) < 0)
+				pr_debug("%s: unmap buffer failed\n", __func__);
 		}
 		free_contiguous_memory_by_paddr(port->buf[0].phys);
 #endif
@@ -509,7 +512,7 @@ int q6asm_audio_client_buf_alloc(unsigned int dir,
 			return 0;
 		}
 
-		if (bufcnt > FRAME_NUM)
+		if (bufcnt != FRAME_NUM)
 			goto fail;
 		mutex_lock(&ac->cmd_lock);
 		buf = kzalloc(((sizeof(struct audio_buffer))*bufcnt),
@@ -773,7 +776,7 @@ static int32_t q6asm_mmapcallback(struct apr_client_data *data, void *priv)
 	struct audio_client *ac;
 
 	if (data->opcode == RESET_EVENTS) {
-		pr_info("%s: Reset event is received: %d %d apr[%p]\n",
+		pr_debug("%s: Reset event is received: %d %d apr[%p]\n",
 				__func__,
 				data->reset_event,
 				data->reset_proc,
@@ -870,7 +873,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	}
 
 	if (data->opcode == RESET_EVENTS) {
-		pr_info("q6asm_callback: Reset event is received: %d %d apr[%p]\n",
+		pr_debug("q6asm_callback: Reset event is received: %d %d apr[%p]\n",
 				data->reset_event, data->reset_proc, ac->apr);
 			if (ac->cb)
 				ac->cb(data->opcode, data->token,
@@ -1518,6 +1521,10 @@ int q6asm_open_write_compressed(struct audio_client *ac, uint32_t format)
 	if (!rc) {
 		pr_err("%s: timeout. waited for OPEN_WRITE rc[%d]\n", __func__,
 			rc);
+		goto fail_cmd;
+	}
+	if (atomic_read(&ac->cmd_response)) {
+		pr_err("%s: format = %x not supported\n", __func__, format);
 		goto fail_cmd;
 	}
 	return 0;
