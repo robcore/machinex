@@ -494,6 +494,7 @@ static void ext4_handle_error(struct super_block *sb, char* buf)
 			return;
 		panic("EXT4-fs (device %s): panic! %s\n",
 			sb->s_id, buf?buf:"no message");
+	}
 }
 
 void __ext4_error(struct super_block *sb, const char *function,
