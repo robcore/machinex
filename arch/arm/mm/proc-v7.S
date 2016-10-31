@@ -541,3 +541,4 @@ __v7_proc_info:
 	.long	0x000f0000		@ Mask for ID
 	__v7_proc __v7_setup
 	.size	__v7_proc_info, . - __v7_proc_info
+
