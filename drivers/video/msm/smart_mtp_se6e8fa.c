@@ -3997,6 +3997,6 @@ void panel_load_colors(unsigned int val)
 {
 	if (val < 5) {
 		panelval = val;
-		smart_dimming_init();
+		smart_dimming_init(gpsmart);
 	}
 }
