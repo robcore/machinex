@@ -3132,8 +3132,8 @@ static struct mdm_vddmin_resource mdm_vddmin_rscs = {
 
 static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_NONE,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
 };
 
 static struct mdm_platform_data mdm_platform_data = {
@@ -3148,6 +3148,7 @@ static struct mdm_platform_data mdm_platform_data = {
 	.mdm2ap_status_gpio_run_cfg = &mdm2ap_status_gpio_run_cfg,
 	.sysmon_subsys_id_valid = 1,
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
+	.no_a2m_errfatal_on_ssr = 1,
 };
 
 static struct mdm_platform_data amdm_platform_data = {
@@ -3205,10 +3206,8 @@ static struct mdm_platform_data sglte2_mdm_platform_data = {
 static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.mdm_version = "3.0",
 	.ramdump_delay_ms = 2000,
-#ifdef SGLTE_QSC_RESET // not using 19520 patch	
      /* delay between two PS_HOLDs */
 	.ps_hold_delay_ms = 500,
-#endif	
 	.ramdump_timeout_ms = 600000,
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
@@ -3321,7 +3320,7 @@ static struct msm_rpmrs_level msm_rpmrs_levels[] = {
 	{
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE,
 		MSM_RPMRS_LIMITS(ON, ACTIVE, MAX, ACTIVE),
-		true,
+		false,
 		1300, 228, 1200000, 2000,
 	},
 

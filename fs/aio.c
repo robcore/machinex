@@ -1475,8 +1475,8 @@ static ssize_t aio_setup_vectored_rw(int type, struct kiocb *kiocb, bool compat)
 				(struct iovec __user *)kiocb->ki_buf,
 				kiocb->ki_nbytes, 1, &kiocb->ki_inline_vec,
 				&kiocb->ki_iovec);
-	if (ret < 0)
-		goto out;
+				if (ret < 0)
+				goto out;
 
 	ret = rw_verify_area(type, kiocb->ki_filp, &kiocb->ki_pos, ret);
 	if (ret < 0)
