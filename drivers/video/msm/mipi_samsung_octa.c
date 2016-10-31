@@ -56,6 +56,8 @@ struct pm_gpio gpio_get_param = {
 	.inv_int_pol	= 0,
 };
 
+unsigned int Lpanel_colors = 2;
+extern void panel_load_colors(unsigned int val);
 static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;
@@ -651,6 +653,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	sec_debug_mdp_reset_value();
 
 	pr_info("[%s]\n", __func__);
+	printk("Rob's Panel Hook Msg.");
 
 	return 0;
 }
@@ -1437,6 +1440,35 @@ static ssize_t tuning_store(struct device *dev,
 static DEVICE_ATTR(tuning, 0664, tuning_show, tuning_store);
 #endif
 
+static ssize_t panel_colors_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", Lpanel_colors);
+}
+
+static ssize_t panel_colors_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	int ret;
+	unsigned int value;
+
+	ret = sscanf(buf, "%d\n", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (value < 0)
+		value = 0;
+	else if (value > 4)
+		value = 4;
+
+	Lpanel_colors = value;
+
+	panel_load_colors(Lpanel_colors);
+
+	return size;
+}
+
+static DEVICE_ATTR(panel_colors, S_IRUGO | S_IWUSR | S_IWGRP,
+			panel_colors_show, panel_colors_store);
+
 static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 {
 	int ret, rc;
@@ -1594,6 +1626,13 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_tuning.attr.name);
 	}
 #endif
+
+	ret = sysfs_create_file(&lcd_device->dev.kobj,
+			&dev_attr_panel_colors.attr);
+	if (ret) {
+		pr_info("sysfs create fail-%s\n";
+				dev_attr_panel_colors.attr.name);
+	}
 
 	printk(KERN_INFO "[lcd] mipi_samsung_disp_probe end\n");
 
