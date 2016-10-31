@@ -1630,7 +1630,7 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 			&dev_attr_panel_colors.attr);
 	if (ret) {
-		pr_info("sysfs create fail-%s\n";
+		pr_info("sysfs create fail-%s\n",
 				dev_attr_panel_colors.attr.name);
 	}
 
