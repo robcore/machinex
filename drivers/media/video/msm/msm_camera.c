@@ -50,8 +50,6 @@ spinlock_t st_frame_spinlock;
 #define ERR_COPY_TO_USER() ERR_USER_COPY(1)
 #define MAX_PMEM_CFG_BUFFERS 10
 
-#define MAX_PMEM_CFG_BUFFERS 10
-
 static struct class *msm_class;
 static dev_t msm_devno;
 static LIST_HEAD(msm_sensors);
@@ -1623,7 +1621,7 @@ static int msm_config_vpe(struct msm_sync *sync, void __user *arg)
 static int msm_config_vfe(struct msm_sync *sync, void __user *arg)
 {
 	struct msm_vfe_cfg_cmd cfgcmd;
-	struct msm_pmem_region region[MAX_PMEM_CFG_BUFFERS];
+	struct msm_pmem_region region[8];
 	struct axidata axi_data;
 
 	if (!sync->vfefn.vfe_config) {
@@ -1768,7 +1766,7 @@ static int msm_vpe_frame_cfg(struct msm_sync *sync,
 	int rc = -EIO;
 	struct axidata axi_data;
 	void *data = &axi_data;
-	struct msm_pmem_region region[MAX_PMEM_CFG_BUFFERS];
+	struct msm_pmem_region region[8];
 	int pmem_type;
 
 	struct msm_vpe_cfg_cmd *cfgcmd;
@@ -1782,7 +1780,7 @@ static int msm_vpe_frame_cfg(struct msm_sync *sync,
 		pmem_type = MSM_PMEM_VIDEO_VPE;
 		axi_data.bufnum1 =
 			msm_pmem_region_lookup_2(&sync->pmem_frames, pmem_type,
-				&region[0], MAX_PMEM_CFG_BUFFERS, &sync->pmem_frame_spinlock);
+				&region[0], 8, &sync->pmem_frame_spinlock);
 		CDBG("axi_data.bufnum1 = %d\n", axi_data.bufnum1);
 		if (!axi_data.bufnum1) {
 			pr_err("%s %d: pmem region lookup error\n",
@@ -1808,7 +1806,7 @@ static int msm_vpe_frame_cfg(struct msm_sync *sync,
 		pmem_type = MSM_PMEM_MAINIMG_VPE;
 		axi_data.bufnum1 =
 			msm_pmem_region_lookup(&sync->pmem_frames, pmem_type,
-				&region[0], MAX_PMEM_CFG_BUFFERS, &sync->pmem_frame_spinlock);
+				&region[0], 8, &sync->pmem_frame_spinlock);
 		if (!axi_data.bufnum1) {
 			pr_err("%s: MAINIMG_VPE pmem region lookup error\n",
 				__func__);
