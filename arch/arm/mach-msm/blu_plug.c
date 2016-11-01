@@ -31,7 +31,7 @@
 #define INIT_DELAY		20000
 #define DELAY			100
 #define UP_THRESHOLD		80
-#define MIN_CPUS_ONLINE		2
+#define MIN_CPUS_ONLINE		1
 #define MAX_CPUS_ONLINE		4
 #define DEF_DOWN_TIMER_CNT	6
 #define DEF_UP_TIMER_CNT	2
