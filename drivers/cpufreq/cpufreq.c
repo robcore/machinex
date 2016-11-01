@@ -862,11 +862,13 @@ static ssize_t show_bios_limit(struct cpufreq_policy *policy, char *buf)
 extern ssize_t acpuclk_get_vdd_levels_str(char *buf);
 extern void acpuclk_set_vdd(unsigned acpu_khz, int vdd);
 
-static ssize_t show_vdd_levels(struct kobject *a, struct attribute *b, char *buf) {
+static ssize_t show_vdd_levels(struct kobject *a, struct attribute *b, char *buf)
+{
 	return acpuclk_get_vdd_levels_str(buf);
 }
 
-static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const char *buf, size_t count) {
+static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+{
 
 	int i = 0, j;
 	int pair[2] = { 0, 0 };
@@ -905,14 +907,16 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 	}
 
 	if (sign != 0) {
-		if (pair[0] > 0)
+		if (pair[0] > 0) {
 			acpuclk_set_vdd(0, sign * pair[0]);
 			pr_warn("faux123: user voltage table modified!\n");
+		}
 	}
 	else {
-		if ((pair[0] > 0) && (pair[1] > 0))
+		if ((pair[0] > 0) && (pair[1] > 0)) {
 			acpuclk_set_vdd((unsigned)pair[0], pair[1]);
 			pr_warn("faux123: user voltage table modified!\n");
+		}
 		else
 			return -EINVAL;
 	}
