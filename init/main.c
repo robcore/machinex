@@ -117,6 +117,29 @@ EXPORT_SYMBOL(system_state);
 int poweroff_charging;
 #endif /*  CONFIG_SAMSUNG_LPM_MODE */
 
+enum {
+	SGH_I337,
+	SPH_L720,
+	SGH_M919,
+	SCH_R970,
+	SCH_I545,
+	GT_I9505,
+	GT_I9295,
+	SHV_E300,
+	SGH_N045,
+	XXX_XXXX,
+	XX_XXXXX,
+	XXXXXXXX,
+};
+
+enum {
+	SGH_I337M,
+	SGH_I337Z,
+	XXX_XXXXX,
+};
+
+unsigned int samsung_hardware;
+
 /*
  * Boot command-line arguments
  */
@@ -436,6 +459,35 @@ static int __init do_early_param(char *param, char *val, const char *unused)
 			poweroff_charging = 1;
 	}
 #endif
+	/* Here we found the proper platform model of our phones */
+	if ((strncmp(param, "samsung.hardware", 16) == 0)) {
+		if (strncmp(val, "SGH-I337", 8) == 0) {
+			samsung_hardware = SGH_I337;
+		} else if (strncmp(val, "SPH-L720", 8) == 0) {
+			samsung_hardware = SPH_L720;
+		} else if (strncmp(val, "SGH-M919", 8) == 0) {
+			samsung_hardware = SGH_M919;
+		} else if (strncmp(val, "SCH-R970", 8) == 0) {
+			samsung_hardware = SCH_R970;
+		} else if (strncmp(val, "SCH-I545", 8) == 0) {
+			samsung_hardware = SCH_I545;
+		} else if (strncmp(val, "GT-I9505", 8) == 0) {
+			samsung_hardware = GT_I9505;
+		} else if (strncmp(val, "SHV-E300", 8) == 0) {
+			samsung_hardware = SHV_E300;
+		} else if (strncmp(val, "SGH-N045", 8) == 0) {
+			samsung_hardware = SGH_N045;
+		} else if (strncmp(val, "GT-I9295", 8) == 0) {
+			samsung_hardware = GT_I9295;
+		} else if (strncmp(val, "SGH-I337M", 9) == 0) {
+			samsung_hardware = SGH_I337M;
+		} else if (strncmp(val, "SGH_I337Z", 9) == 0) {
+			samsung_hardware = SGH_I337Z;
+		} else {
+			samsung_hardware = GT_I9505;
+		}
+	}
+
 	return 0;
 }
 
