@@ -2,13 +2,13 @@
  * Linux cfg80211 driver - Android related functions
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -3387,6 +3387,11 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 
 	net_os_wake_lock(net);
 
+	if (!capable(CAP_NET_ADMIN)) {
+		ret = -EPERM;
+		goto exit;
+	}
+
 	if (!ifr->ifr_data) {
 		ret = -EINVAL;
 		goto exit;
@@ -3546,6 +3551,16 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_COUNTRY, strlen(CMD_COUNTRY)) == 0) {
 		char *country_code = command + strlen(CMD_COUNTRY) + 1;
 		bytes_written = wldev_set_country(net, country_code, true, true);
+#ifdef FCC_PWR_LIMIT_2G
+		{
+			DHD_ERROR(("%s: fccpwrlimit2g is deactivated\n", __FUNCTION__));
+			bytes_written = wldev_iovar_setint(net, "fccpwrlimit2g", FALSE);
+			if (bytes_written) {
+				DHD_ERROR(("%s: fccpwrlimit2g deactivate set error (%d)\n",
+					__FUNCTION__, bytes_written));
+			}
+		}
+#endif /* FCC_PWR_LIMIT_2G */
 	}
 #endif /* CUSTOMER_SET_COUNTRY */
 #endif /* WL_CFG80211 */
@@ -3588,6 +3603,16 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		strlen(CMD_COUNTRYREV_SET)) == 0) {
 		bytes_written = wl_android_set_country_rev(net, command,
 		priv_cmd.total_len);
+#ifdef FCC_PWR_LIMIT_2G
+		{
+			DHD_ERROR(("%s: fccpwrlimit2g is deactivated\n", __FUNCTION__));
+			bytes_written = wldev_iovar_setint(net, "fccpwrlimit2g", FALSE);
+			if (bytes_written) {
+				DHD_ERROR(("%s: fccpwrlimit2g deactivate set error (%d)\n",
+					__FUNCTION__, bytes_written));
+			}
+		}
+#endif /* FCC_PWR_LIMIT_2G */
 	} else if (strnicmp(command, CMD_COUNTRYREV_GET,
 		strlen(CMD_COUNTRYREV_GET)) == 0) {
 		bytes_written = wl_android_get_country_rev(net, command,
@@ -3913,6 +3938,16 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 			priv_cmd.total_len);
 	}
 #endif
+#ifdef FCC_PWR_LIMIT_2G
+	else if (strnicmp(command, CMD_GET_FCC_PWR_LIMIT_2G,
+		strlen(CMD_GET_FCC_PWR_LIMIT_2G)) == 0) {
+		bytes_written = wl_android_get_fcc_pwr_limit_2g(net, command, priv_cmd.total_len);
+	}
+	else if (strnicmp(command, CMD_SET_FCC_PWR_LIMIT_2G,
+		strlen(CMD_SET_FCC_PWR_LIMIT_2G)) == 0) {
+		bytes_written = wl_android_set_fcc_pwr_limit_2g(net, command, priv_cmd.total_len);
+	}
+#endif /* FCC_PWR_LIMIT_2G */
 	else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");
