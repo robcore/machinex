@@ -118,7 +118,7 @@ static unsigned int __read_mostly sampling_time = DEF_SAMPLING_MS;
 
 static int persist_count = 0;
 
-static bool __read_mostly suspended = false;
+static bool __read_mostly suspended = true;
 
 struct ip_cpu_info {
 	unsigned int sys_max;
