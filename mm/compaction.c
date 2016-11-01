@@ -1159,8 +1159,8 @@ int sysctl_compaction_handler(struct ctl_table *table, int write,
 	if (write) {
 		sysctl_compact_memory++;
 		compact_nodes();
-		pr_info("compact_memory done.(%d times so far)\n",
-			sysctl_compact_memory);
+		//pr_info("compact_memory done.(%d times so far)\n",
+			//sysctl_compact_memory);
 	}
 	else
 		proc_dointvec(table, write, buffer, length, ppos);
