@@ -81,7 +81,7 @@ static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
  * suspend mode, if set = 1 hotplug will sleep,
  * if set = 0, then hoplug will be active all the time.
  */
-static unsigned int hotplug_suspend = 0;
+static unsigned int hotplug_suspend = 1;
 
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus = 0;
@@ -89,7 +89,7 @@ static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned int def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = DEFAULT_MAX_CPUS_ONLINE * 2;
-static unsigned int debug_intelli_plug = 1;
+static unsigned int debug_intelli_plug = 0;
 
 #define dprintk(msg...)		\
 do {				\
