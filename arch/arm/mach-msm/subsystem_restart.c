@@ -366,13 +366,7 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
-
-		/* If a system shutdown is underway, ignore errors. */
-		if (system_state == SYSTEM_POWER_OFF) {
-			pr_err("[%p]: Failed to powerup %s!", current, name);
-			return;
-		} else
-			panic("[%p]: Failed to powerup %s!", current, name);
+		panic("[%p]: Failed to powerup %s!", current, name);
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
@@ -673,7 +667,7 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SOC;
+	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)

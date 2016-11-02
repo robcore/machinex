@@ -110,7 +110,7 @@
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x4800000
+#define MSM_ION_MM_SIZE		0x5C00000
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x780000 /* (7.5MB) */
 #define MSM_ION_HEAP_NUM	8
@@ -1854,7 +1854,6 @@ static struct mdm_platform_data sglte2_mdm_platform_data = {
 	.ramdump_delay_ms = 2000,
 	.early_power_on = 1,
 	.sfr_query = 1,
-	.send_shdn = 1,
 	.vddmin_resource = &mdm_vddmin_rscs,
 	.peripheral_platform_device = &apq8064_device_hsic_host,
 	.ramdump_timeout_ms = 120000,
@@ -3393,7 +3392,6 @@ static void __init apq8064_common_init(void)
 	apq8064_init_mmc();
 
 	if (machine_is_apq8064_mtp()) {
-		mdm_8064_device.dev.platform_data = &mdm_platform_data;
 		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_DSDA2) {
 			amdm_8064_device.dev.platform_data =
 				&amdm_platform_data;
