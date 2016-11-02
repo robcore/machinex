@@ -176,7 +176,14 @@ static LIST_HEAD(modules);
 struct list_head *kdb_modules = &modules; /* kdb needs the list of modules */
 #endif /* CONFIG_KGDB_KDB */
 
-
+#ifdef TIMA_TEST_INFRA
+void tts_debug_func_mod(void)
+{
+	/*function is never called*/
+	return;
+}
+EXPORT_SYMBOL(tts_debug_func_mod);
+#endif/*TIMA_TEST_INFRA*/
 /* Block module loading/unloading? */
 int modules_disabled = 0;
 core_param(nomodule, modules_disabled, bint, 0);
@@ -1190,6 +1197,8 @@ static int check_version(Elf_Shdr *sechdrs,
 	struct modversion_info *versions;
 
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
+	if(!strncmp("moc_", mod->name, 4)) return 1;
+
 	if (!crc)
 		return 1;
 
@@ -2476,11 +2485,9 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
                 req (0x%08X), rsp(0x%08X), module_start_addr(0x%08X) module_len %d\n", \
 		app_name, sizeof(lkmauth_req_t), req_len, sizeof(lkmauth_rsp_t), rsp_len, \
 		kreq->cmd_id, (int)kreq, (int)krsp, kreq->module_addr_start, kreq->module_len);
-
-	qseecom_set_bandwidth(qhandle, true);
-	flush_cache_all();
+	qseecom_set_bandwidth(qhandle,true);
 	qsee_ret = qseecom_send_command(qhandle, kreq, req_len, krsp, rsp_len);
-	qseecom_set_bandwidth(qhandle, false);
+	qseecom_set_bandwidth(qhandle,false);
 
 	if (qsee_ret) {
 		pr_err("TIMA: lkmauth--failed to send cmd to qseecom; qsee_ret = %d.\n", qsee_ret);
