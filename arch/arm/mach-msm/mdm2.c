@@ -111,7 +111,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 	for (i = 20; i > 0; i--) {
 		if (gpio_get_value(mdm_drv->mdm2ap_status_gpio) == 0) {
 			if (mdm_debug_mask & MDM_DEBUG_MASK_SHDN_LOG)
-				pr_info("%s:id %d: mdm2ap_statuswent low, i=%d\n",
+				pr_debug("%s:id %d: mdm2ap_statuswent low, i=%d\n",
 					__func__, mdm_drv->device_id, i);
 			break;
 		}
@@ -122,8 +122,10 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
 					soft_reset_direction);
 	if (i == 0) {
-		pr_err("%s: MDM2AP_STATUS never went low. Doing a hard reset\n",
-			   __func__);
+		pr_debug("%s:id %d: MDM2AP_STATUS never went low. Doing a hard reset\n",
+			   __func__, mdm_drv->device_id);
+		gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
+					soft_reset_direction);
 		/*
 		* Currently, there is a debounce timer on the charm PMIC. It is
 		* necessary to hold the PMIC RESET low for ~3.5 seconds
@@ -174,8 +176,9 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 1);
 		msleep(1000);
 		gpio_direction_output(mdm_drv->ap2mdm_kpdpwr_n_gpio, 0);
-	} else
+	} else {
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 1);
+	}
 
 	if (!GPIO_IS_VALID(mdm_drv->mdm2ap_pblrdy))
 		goto start_mdm_peripheral;
@@ -286,7 +289,7 @@ static void mdm_image_upgrade(struct mdm_modem_drv *mdm_drv, int type)
 		 */
 		mdm_drv->disable_status_check = 1;
 		if (GPIO_IS_VALID(mdm_drv->usb_switch_gpio)) {
-			pr_info("%s: id %d: Switching usb control to MDM\n",
+			pr_debug("%s: id %d: Switching usb control to MDM\n",
 					__func__, mdm_drv->device_id);
 			gpio_direction_output(mdm_drv->usb_switch_gpio, 1);
 		} else

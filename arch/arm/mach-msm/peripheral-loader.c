@@ -147,7 +147,7 @@ static void pil_proxy_unvote(struct pil_device *pil, unsigned long timeout)
 		schedule_delayed_work(&pil->proxy, msecs_to_jiffies(timeout));
 }
 
-#define IOMAP_SIZE SZ_4M
+#define IOMAP_SIZE SZ_1M
 
 static int load_segment(const struct elf32_phdr *phdr, unsigned num,
 		struct pil_device *pil)

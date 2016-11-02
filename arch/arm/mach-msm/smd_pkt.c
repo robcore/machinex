@@ -751,6 +751,9 @@ static uint32_t smd_ch_edge[] = {
 	SMD_APPS_MODEM,
 	SMD_APPS_QDSP,
 	SMD_APPS_WCNSS,
+	SMD_APPS_QDSP,
+	SMD_APPS_QDSP,
+	SMD_APPS_QDSP,
 	SMD_APPS_MODEM,
 };
 #endif

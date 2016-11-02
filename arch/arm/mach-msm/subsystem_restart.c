@@ -366,7 +366,13 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
-		panic("[%p]: Failed to powerup %s!", current, name);
+
+		/* If a system shutdown is underway, ignore errors. */
+		if (system_state == SYSTEM_POWER_OFF) {
+			pr_err("[%p]: Failed to powerup %s!", current, name);
+			return;
+		} else
+			panic("[%p]: Failed to powerup %s!", current, name);
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
@@ -627,7 +633,7 @@ static int __init ssr_init_soc_restart_orders(void)
 	atomic_notifier_chain_register(&panic_notifier_list,
 			&panic_nb);
 
-	if (cpu_is_msm8x60()) {
+	if (cpu_is_apq8064() || cpu_is_msm8x60()) {
 		for (i = 0; i < ARRAY_SIZE(orders_8x60_all); i++) {
 			mutex_init(&orders_8x60_all[i]->powerup_lock);
 			mutex_init(&orders_8x60_all[i]->shutdown_lock);
@@ -667,7 +673,7 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
+	restart_level = RESET_SOC;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)

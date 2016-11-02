@@ -3266,7 +3266,7 @@ struct platform_device apq8064_dcvs_device = {
 static struct msm_dcvs_core_info apq8064_core_info = {
 	.num_cores		= 4,
 	.sensors		= (int[]){7, 8, 9, 10},
-	.thermal_poll_ms	= 70000,
+	.thermal_poll_ms	= 60000,
 	.core_param		= {
 		.core_type	= MSM_DCVS_CORE_TYPE_CPU,
 	},
