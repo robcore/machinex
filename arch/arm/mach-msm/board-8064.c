@@ -107,7 +107,7 @@
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x3800000
+#define MSM_ION_MM_SIZE		0x5C00000
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x780000 /* (7.5MB) */
 #define MSM_ION_HEAP_NUM	8
@@ -2067,7 +2067,7 @@ static uint8_t spm_retention_cmd_sequence[] __initdata = {
 
 static uint8_t spm_retention_with_krait_v3_cmd_sequence[] __initdata = {
 	0x42, 0x1B, 0x00,
-	0x05, 0x03, 0x0D, 0x0B,
+	0x05, 0x03, 0x01, 0x0B,
 	0x00, 0x42, 0x1B,
 	0x0f,
 };

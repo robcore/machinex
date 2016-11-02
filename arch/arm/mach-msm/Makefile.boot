@@ -35,6 +35,7 @@ endif
 
 # MSM8x60
    zreladdr-$(CONFIG_ARCH_MSM8X60)	:= 0x40208000
+params_phys-$(CONFIG_ARCH_MSM8960)	:= 0x80200100
 
 # MSM8960
    zreladdr-$(CONFIG_ARCH_MSM8960)	:= 0x80208000
