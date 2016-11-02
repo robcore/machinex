@@ -2397,7 +2397,6 @@ static struct platform_device *pm8921_common_devices[] __initdata = {
 	&apq8064_device_ext_3p3v_vreg,
 	&apq8064_device_ssbi_pmic1,
 	&apq8064_device_ssbi_pmic2,
-	&apq8064_device_ext_ts_sw_vreg,
 };
 
 static struct platform_device *pm8917_common_devices[] __initdata = {
@@ -2405,7 +2404,6 @@ static struct platform_device *pm8917_common_devices[] __initdata = {
 	&apq8064_device_ext_3p3v_vreg,
 	&apq8064_device_ssbi_pmic1,
 	&apq8064_device_ssbi_pmic2,
-	&apq8064_device_ext_ts_sw_vreg,
 };
 
 static struct platform_device *common_devices[] __initdata = {
