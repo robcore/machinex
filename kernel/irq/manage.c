@@ -1203,13 +1203,13 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	return 0;
 
 mismatch:
+#ifdef CONFIG_DEBUG_SHIRQ
 	if (!(new->flags & IRQF_PROBE_SHARED)) {
 		pr_err("Flags mismatch irq %d. %08lx (%s) vs. %08lx (%s)\n",
 		       irq, new->flags, new->name, old->flags, old->name);
-#ifdef CONFIG_DEBUG_SHIRQ
 		dump_stack();
-#endif
 	}
+#endif
 	ret = -EBUSY;
 
 out_mask:
