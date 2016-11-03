@@ -122,8 +122,10 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
 					soft_reset_direction);
 	if (i == 0) {
-		pr_err("%s: MDM2AP_STATUS never went low. Doing a hard reset\n",
-			   __func__);
+		pr_debug("%s:id %d: MDM2AP_STATUS never went low. Doing a hard reset\n",
+			   __func__, mdm_drv->device_id);
+		gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
+					soft_reset_direction);
 		/*
 		* Currently, there is a debounce timer on the charm PMIC. It is
 		* necessary to hold the PMIC RESET low for ~3.5 seconds
@@ -161,9 +163,7 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 	 * instead of just de-asserting it. No harm done if the modem was
 	 * powered down.
 	 */
-	if (!mdm_drv->pdata->no_reset_on_first_powerup)
-		mdm_toggle_soft_reset(mdm_drv);
-
+	mdm_toggle_soft_reset(mdm_drv);
 	/* If the device has a kpd pwr gpio then toggle it. */
 	if (GPIO_IS_VALID(mdm_drv->ap2mdm_kpdpwr_n_gpio)) {
 		/* Pull AP2MDM_KPDPWR gpio high and wait for PS_HOLD to settle,

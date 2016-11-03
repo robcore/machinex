@@ -374,7 +374,7 @@ static void mdm_setup_vddmin_gpios(void)
 		msm_rpm_set(MSM_RPM_CTX_SET_0, &req, 1);
 
 		/* Start monitoring low power gpio from mdm */
-		irq = MSM_GPIO_TO_INT(vddmin_res->mdm2ap_vddmin_gpio);
+		irq = gpio_to_irq(vddmin_res->mdm2ap_vddmin_gpio);
 		if (irq < 0)
 			pr_err("%s: could not get LPM POWER IRQ resource mdm id %d.\n",
 				   __func__, mdev->mdm_data.device_id);
@@ -763,7 +763,7 @@ static irqreturn_t mdm_status_change(int irq, void *dev_id)
 
 	mdm_drv = &mdev->mdm_data;
 	value = gpio_get_value(mdm_drv->mdm2ap_status_gpio);
-	mdm2ap_pblrdy_irq = MSM_GPIO_TO_INT(mdm_drv->mdm2ap_pblrdy);
+	mdm2ap_pblrdy_irq = gpio_to_irq(mdm_drv->mdm2ap_pblrdy);
 
 	if ((mdm_debug_mask & MDM_DEBUG_MASK_SHDN_LOG) && (value == 0))
 		pr_info("%s: mdm2ap_status went low\n", __func__);
@@ -804,7 +804,7 @@ static int mdm_subsys_shutdown(const struct subsys_desc *crashed_subsys)
 	struct mdm_device *mdev =
 	 container_of(crashed_subsys, struct mdm_device, mdm_subsys);
 	struct mdm_modem_drv *mdm_drv = &mdev->mdm_data;
-	unsigned int mdm2ap_pblrdy_irq = MSM_GPIO_TO_INT(mdm_drv->mdm2ap_pblrdy);
+	unsigned int mdm2ap_pblrdy_irq = gpio_to_irq(mdm_drv->mdm2ap_pblrdy);
 
 	pr_debug("%s: ssr on modem id %d\n", __func__,
 			 mdev->mdm_data.device_id);
@@ -1056,7 +1056,7 @@ static void mdm_modem_initialize_data(struct platform_device *pdev,
 
 	mdm_drv->boot_type                  = CHARM_NORMAL_BOOT;
 
-	mdev->dump_timeout_ms = mdm_drv->pdata->ramdump_timeout_ms > 0 ?
+	mdm_drv->dump_timeout_ms = mdm_drv->pdata->ramdump_timeout_ms > 0 ?
 		mdm_drv->pdata->ramdump_timeout_ms : MDM_RDUMP_TIMEOUT;
 
 	init_completion(&mdev->mdm_needs_reload);
@@ -1164,7 +1164,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 			&mdev->ssr_notifier_blk);
 
 	/* ERR_FATAL irq. */
-	irq = MSM_GPIO_TO_INT(mdm_drv->mdm2ap_errfatal_gpio);
+	irq = gpio_to_irq(mdm_drv->mdm2ap_errfatal_gpio);
 	if (irq < 0) {
 		pr_err("%s: bad MDM2AP_ERRFATAL IRQ resource, err = %d\n",
 			   __func__, irq);
@@ -1183,7 +1183,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 errfatal_err:
 
 	 /* status irq */
-	irq = MSM_GPIO_TO_INT(mdm_drv->mdm2ap_status_gpio);
+	irq = gpio_to_irq(mdm_drv->mdm2ap_status_gpio);
 	if (irq < 0) {
 		pr_err("%s: bad MDM2AP_STATUS IRQ resource, err = %d\n",
 				__func__, irq);
@@ -1203,7 +1203,7 @@ errfatal_err:
 
 status_err:
 	if (GPIO_IS_VALID(mdm_drv->mdm2ap_pblrdy)) {
-		irq = MSM_GPIO_TO_INT(mdm_drv->mdm2ap_pblrdy);
+		irq = gpio_to_irq(mdm_drv->mdm2ap_pblrdy);
 		if (irq < 0) {
 			pr_err("%s: could not get MDM2AP_PBLRDY IRQ resource\n",
 				 __func__);

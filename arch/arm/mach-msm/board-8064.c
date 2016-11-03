@@ -88,6 +88,7 @@
 #include "devices-msm8x60.h"
 #include "smd_private.h"
 #include "sysmon.h"
+#include "platsmp.h"
 
 #ifdef CONFIG_SEC_THERMISTOR
 #include <mach/sec_thermistor.h>
@@ -288,7 +289,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int apq8064_paddr_to_memtype(unsigned int paddr)
+static int apq8064_paddr_to_memtype(phys_addr_t paddr)
 {
 	return MEMTYPE_EBI1;
 }
@@ -691,6 +692,7 @@ static void __init apq8064_calculate_reserve_sizes(void)
 	reserve_rtb_memory();
 	reserve_cache_dump_memory();
 	reserve_mpdcvs_memory();
+	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
 }
 
 static struct reserve_info apq8064_reserve_info __initdata = {
@@ -3498,6 +3500,7 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
@@ -3510,6 +3513,7 @@ MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
@@ -3522,6 +3526,7 @@ MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
@@ -3534,6 +3539,7 @@ MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
@@ -3546,6 +3552,7 @@ MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 
 MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
@@ -3558,5 +3565,6 @@ MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
 

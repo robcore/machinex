@@ -538,9 +538,8 @@ int subsystem_restart_dev(struct subsys_device *dev)
 			name);
 #endif
 		break;
-	case RESET_IGNORE:
 	default:
-		pr_err("subsys-restart: no action taken for %s\n", name);
+		pr_err("subsys-restart: Unknown restart level!\n");
 		break;
 	}
 

@@ -152,6 +152,7 @@
 #ifdef CONFIG_KEXEC_HARDBOOT
 #include <asm/kexec.h>
 #endif
+#include "platsmp.h"
 
 #if defined(CONFIG_SENSORS_SSP)
 enum {
@@ -3131,7 +3132,7 @@ static struct mdm_vddmin_resource mdm_vddmin_rscs = {
 static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
+	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct mdm_platform_data mdm_platform_data = {
@@ -5582,4 +5583,5 @@ MACHINE_START(JF, "SAMSUNG JF")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
+	.smp = &msm8960_smp_ops,
 MACHINE_END
