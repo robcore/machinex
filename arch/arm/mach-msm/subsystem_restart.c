@@ -383,7 +383,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
-	if (restart_level != RESET_SUBSYS_INDEPENDENT)
+	if (restart_level != RESET_SUBSYS_INDEPENDENT || RESET_SUBSYS_INDEPENDANT_SOC)
 		soc_restart_order = dev->restart_order;
 
 	/*
@@ -538,8 +538,9 @@ int subsystem_restart_dev(struct subsys_device *dev)
 			name);
 #endif
 		break;
+	case RESET_IGNORE:
 	default:
-		pr_err("subsys-restart: Unknown restart level!\n");
+		pr_err("subsys-restart: no action taken for %s\n", name);
 		break;
 	}
 

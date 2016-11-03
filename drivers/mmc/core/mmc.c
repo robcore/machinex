@@ -1442,8 +1442,8 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (err && err != -EBADMSG)
 			goto free_card;
 		if (err) {
-			pr_warning("%s: Enabling packed event failed\n",
-					mmc_hostname(card->host));
+			pr_warn("%s: Enabling packed event failed\n",
+				mmc_hostname(card->host));
 			card->ext_csd.packed_event_en = 0;
 			err = 0;
 		} else {
@@ -1605,14 +1605,14 @@ static int mmc_suspend(struct mmc_host *host)
 	BUG_ON(!host);
 	BUG_ON(!host->card);
 
+	if (!mmc_try_claim_host(host))
+		return -EBUSY;
+
 	/*
 	 * Disable clock scaling before suspend and enable it after resume so
 	 * as to avoid clock scaling decisions kicking in during this window.
 	 */
 	mmc_disable_clk_scaling(host);
-
-	if (!mmc_try_claim_host(host))
-		return -EBUSY;
 
 	err = mmc_cache_ctrl(host, 0);
 	if (err)

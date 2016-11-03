@@ -36,7 +36,7 @@
 #define NVQUIRK_ENABLE_BLOCK_GAP_DET	BIT(1)
 
 struct sdhci_tegra_soc_data {
-	struct sdhci_pltfm_data *pdata;
+	const struct sdhci_pltfm_data *pdata;
 	u32 nvquirks;
 };
 
@@ -120,7 +120,26 @@ static irqreturn_t carddetect_irq(int irq, void *data)
 	return IRQ_HANDLED;
 };
 
-static int tegra_sdhci_8bit(struct sdhci_host *host, int bus_width)
+static void tegra_sdhci_reset_exit(struct sdhci_host *host, u8 mask)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = pltfm_host->priv;
+	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+
+	if (!(mask & SDHCI_RESET_ALL))
+		return;
+
+	/* Erratum: Enable SDHCI spec v3.00 support */
+	if (soc_data->nvquirks & NVQUIRK_ENABLE_SDHCI_SPEC_300) {
+		u32 misc_ctrl;
+
+		misc_ctrl = sdhci_readb(host, SDHCI_TEGRA_VENDOR_MISC_CTRL);
+		misc_ctrl |= SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300;
+		sdhci_writeb(host, misc_ctrl, SDHCI_TEGRA_VENDOR_MISC_CTRL);
+	}
+}
+
+static int tegra_sdhci_buswidth(struct sdhci_host *host, int bus_width)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
@@ -142,16 +161,16 @@ static int tegra_sdhci_8bit(struct sdhci_host *host, int bus_width)
 	return 0;
 }
 
-static struct sdhci_ops tegra_sdhci_ops = {
+static const struct sdhci_ops tegra_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
 	.read_l     = tegra_sdhci_readl,
 	.read_w     = tegra_sdhci_readw,
 	.write_l    = tegra_sdhci_writel,
-	.platform_8bit_width = tegra_sdhci_8bit,
+	.platform_bus_width = tegra_sdhci_buswidth,
+	.platform_reset_exit = tegra_sdhci_reset_exit,
 };
 
-#ifdef CONFIG_ARCH_TEGRA_2x_SOC
-static struct sdhci_pltfm_data sdhci_tegra20_pdata = {
+static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {
 	.quirks = SDHCI_QUIRK_BROKEN_TIMEOUT_VAL |
 		  SDHCI_QUIRK_SINGLE_POWER_WRITE |
 		  SDHCI_QUIRK_NO_HISPD_BIT |
@@ -166,8 +185,7 @@ static struct sdhci_tegra_soc_data soc_data_tegra20 = {
 };
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-static struct sdhci_pltfm_data sdhci_tegra30_pdata = {
+static const struct sdhci_pltfm_data sdhci_tegra30_pdata = {
 	.quirks = SDHCI_QUIRK_BROKEN_TIMEOUT_VAL |
 		  SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK |
 		  SDHCI_QUIRK_SINGLE_POWER_WRITE |
@@ -181,8 +199,21 @@ static struct sdhci_tegra_soc_data soc_data_tegra30 = {
 };
 #endif
 
-static const struct of_device_id sdhci_tegra_dt_match[] __devinitdata = {
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+static const struct sdhci_pltfm_data sdhci_tegra114_pdata = {
+	.quirks = SDHCI_QUIRK_BROKEN_TIMEOUT_VAL |
+		  SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK |
+		  SDHCI_QUIRK_SINGLE_POWER_WRITE |
+		  SDHCI_QUIRK_NO_HISPD_BIT |
+		  SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC,
+	.ops  = &tegra_sdhci_ops,
+};
+
+static struct sdhci_tegra_soc_data soc_data_tegra114 = {
+	.pdata = &sdhci_tegra114_pdata,
+};
+
+static const struct of_device_id sdhci_tegra_dt_match[] = {
+	{ .compatible = "nvidia,tegra114-sdhci", .data = &soc_data_tegra114 },
 	{ .compatible = "nvidia,tegra30-sdhci", .data = &soc_data_tegra30 },
 #endif
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
