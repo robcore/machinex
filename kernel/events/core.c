@@ -1269,11 +1269,11 @@ static void __ref perf_remove_from_context(struct perf_event *event, bool detach
 {
 	struct perf_event_context *ctx = event->ctx;
 	struct task_struct *task = ctx->task;
+	int ret;
 	struct remove_event re = {
 		.event = event,
 		.detach_group = detach_group,
 	};
-	int ret;
 
 	lockdep_assert_held(&ctx->mutex);
 
@@ -1281,8 +1281,7 @@ static void __ref perf_remove_from_context(struct perf_event *event, bool detach
 		/*
 		 * Per cpu events are removed via an smp call
 		 */
-		ret = cpu_function_call(event->cpu, __perf_remove_from_context,
-					&re);
+		ret = cpu_function_call(event->cpu, __perf_remove_from_context, &re);
 		if (ret == -ENXIO)
 			perf_retry_remove(event);
 		return;
@@ -1299,11 +1298,6 @@ retry:
 	 */
 	if (ctx->is_active) {
 		raw_spin_unlock_irq(&ctx->lock);
-		/*
-		 * Reload the task pointer, it might have been changed by
-		 * a concurrent perf_event_context_sched_out().
-		 */
-		task = ctx->task;
 		/*
 		 * Reload the task pointer, it might have been changed by
 		 * a concurrent perf_event_context_sched_out().
