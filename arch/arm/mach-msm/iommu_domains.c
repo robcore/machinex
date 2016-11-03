@@ -46,14 +46,6 @@ int msm_use_iommu()
 	return iommu_present(&platform_bus_type);
 }
 
-bool msm_iommu_page_size_is_supported(unsigned long page_size)
-{
-	return page_size == SZ_4K
-		|| page_size == SZ_64K
-		|| page_size == SZ_1M
-		|| page_size == SZ_16M;
-}
-
 int msm_iommu_map_extra(struct iommu_domain *domain,
 				unsigned long start_iova,
 				unsigned long size,
@@ -64,7 +56,7 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 	int i = 0;
 	unsigned long phy_addr = ALIGN(virt_to_phys(iommu_dummy), page_size);
 	unsigned long temp_iova = start_iova;
-	if (msm_iommu_page_size_is_supported(page_size)) {
+	if (page_size == SZ_4K) {
 		struct scatterlist *sglist;
 		unsigned int nrpages = PFN_ALIGN(size) >> PAGE_SHIFT;
 		struct page *dummy_page = phys_to_page(phy_addr);

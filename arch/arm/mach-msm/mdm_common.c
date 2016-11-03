@@ -242,11 +242,13 @@ static struct mdm_driver_notif_info *mdm_notif_find_subsys(const char *name)
 	mutex_lock(&mdm_driver_list_lock);
 	list_for_each_entry(notif, &mdm_driver_list, list)
 		if (!strncmp(notif->name, name, ARRAY_SIZE(notif->name))) {
-			mutex_unlock(&mdm_driver_list_lock);
-			return notif;
+		goto out;
 		}
 	mutex_unlock(&mdm_driver_list_lock);
 	return NULL;
+out:
+	mutex_unlock(&mdm_driver_list_lock);
+	return notif;
 }
 
 static void *mdm_notif_add_subsys(const char *name)

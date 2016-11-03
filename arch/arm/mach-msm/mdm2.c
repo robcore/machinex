@@ -163,7 +163,9 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 	 * instead of just de-asserting it. No harm done if the modem was
 	 * powered down.
 	 */
-	mdm_toggle_soft_reset(mdm_drv);
+	if (!mdm_drv->pdata->no_reset_on_first_powerup)
+		mdm_toggle_soft_reset(mdm_drv);
+
 	/* If the device has a kpd pwr gpio then toggle it. */
 	if (GPIO_IS_VALID(mdm_drv->ap2mdm_kpdpwr_n_gpio)) {
 		/* Pull AP2MDM_KPDPWR gpio high and wait for PS_HOLD to settle,
@@ -256,14 +258,21 @@ static void debug_state_changed(int value)
 
 static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 {
+	int value;
 	pr_debug("%s: id %d: value:%d\n", __func__,
 			 value, mdm_drv->device_id);
 
 	if (value) {
 		mdm_peripheral_disconnect(mdm_drv);
 		mdm_peripheral_connect(mdm_drv);
-		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio))
+		msleep(200);
+		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
+		} else {
+			mdm_toggle_soft_reset(mdm_drv);
+			mdm_peripheral_connect(mdm_drv);
+			msleep(200);
+		}
 	}
 }
 
