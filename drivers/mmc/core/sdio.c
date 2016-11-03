@@ -1324,3 +1324,18 @@ err:
 #endif /* CONFIG_BCM4335 || CONFIG_BCM4335_MODULE */
 }
 EXPORT_SYMBOL(sdio_reset_comm);
+
+#if defined(CONFIG_BCM4339) || defined(CONFIG_BCM4335) || defined(CONFIG_BCM4354)
+void sdio_ctrl_power(struct mmc_host *host, bool onoff)
+{
+		mmc_claim_host(host);
+		if (onoff)
+			mmc_power_up(host);
+        else
+			mmc_power_off(host);
+		/* Wait at least 1 ms according to SD spec */
+		mmc_delay(1);
+		mmc_release_host(host);
+}
+EXPORT_SYMBOL(sdio_ctrl_power);
+#endif /* CONFIG_BCM4339 || CONFIG_BCM4335  || CONFIG_BCM4354 */
