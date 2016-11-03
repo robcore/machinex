@@ -364,8 +364,9 @@ int pm_qos_request_for_cpumask(int pm_qos_class, struct cpumask *mask)
 	int cpu;
 	struct pm_qos_constraints *c = NULL;
 	int val;
+	unsigned long flags;
 
-	mutex_lock(&pm_qos_lock);
+	spin_lock_irqsave(&pm_qos_lock, flags);
 	c = pm_qos_array[pm_qos_class]->constraints;
 	val = c->default_value;
 
@@ -384,7 +385,7 @@ int pm_qos_request_for_cpumask(int pm_qos_class, struct cpumask *mask)
 			break;
 		}
 	}
-	mutex_unlock(&pm_qos_lock);
+	spin_unlock_irqrestore(&pm_qos_lock, irqflags);
 
 	return val;
 }
