@@ -80,4 +80,6 @@ static inline void mmc_set_nopacked_period(struct mmc_queue *mq, unsigned long n
 	mq->nopacked_period = jiffies + nopacked_jiffies;
 }
 
+extern int mmc_access_rpmb(struct mmc_queue *);
+
 #endif
