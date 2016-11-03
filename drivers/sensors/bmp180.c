@@ -629,7 +629,7 @@ static ssize_t factory_calibration(struct device *dev,
 static DEVICE_ATTR(eeprom_check, S_IRUSR | S_IRGRP,
 		eeprom_check_show, NULL);
 
-static DEVICE_ATTR(sea_level_pressure, S_IRUGO | S_IWUSR,
+static DEVICE_ATTR(sea_level_pressure, S_IWUSR,
 		NULL, sea_level_pressure_store);
 
 static DEVICE_ATTR(vendor, S_IRUGO,

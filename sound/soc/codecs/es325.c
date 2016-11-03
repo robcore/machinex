@@ -233,7 +233,7 @@ static u8 es325_internal_route_1mic_speaker[10] = {
 };
 #else
 /* 1-mic Speaker NB (1-mic FT)(NS off)(SW bypss) */
-static u8 es325_internal_route_1mic_speaker[10] = {		
+static u8 es325_internal_route_1mic_speaker[10] = {
 	0x90, 0x31, 0x00, 0x0c, /* 1 Mic 1 FEOUT */
 	0x90, 0x31, 0x00, 0x82, /* Algo Preset: 1-mic CT NB */
 	0xff		/* terminate */
@@ -241,28 +241,28 @@ static u8 es325_internal_route_1mic_speaker[10] = {
 #endif
 #ifdef CONFIG_MACH_JACTIVE_EUR
 /* 1-mic Speaker WB (1-mic FT)(NS off)(SW bypss) */
-static u8 es325_internal_route_1mic_speaker_WB[10] = {		
+static u8 es325_internal_route_1mic_speaker_WB[10] = {
 	0x90, 0x31, 0x00, 0x0d, /* 1 Mic 1 FEOUT */
 	0x90, 0x31, 0x00, 0x83, /* Algo Preset: 1-mic CT WB */
 	0xff		/* terminate */
 };
 #else
 /* 1-mic Speaker WB (1-mic FT)(NS off)(SW bypss) */
-static u8 es325_internal_route_1mic_speaker_WB[10] = {		
+static u8 es325_internal_route_1mic_speaker_WB[10] = {
 	0x90, 0x31, 0x00, 0x0c, /* 1 Mic 1 FEOUT */
 	0x90, 0x31, 0x00, 0x83, /* Algo Preset: 1-mic CT WB */
 	0xff		/* terminate */
 };
 #endif
 /* 2-mic Speaker NB (2-mic FT)(NS on) */
-static u8 es325_internal_route_2mic_speaker[10] = {	
+static u8 es325_internal_route_2mic_speaker[10] = {
 	0x90, 0x31, 0x00, 0x02, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x16, /* Algo Preset for 2 Mic FT NB */
 	0xff		/* terminate */
 };
 
 /* 2-mic Speaker WB (2-mic FT)(NS off) */
-static u8 es325_internal_route_2mic_speaker_WB[10] = {		
+static u8 es325_internal_route_2mic_speaker_WB[10] = {
 	0x90, 0x31, 0x00, 0x02, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x17, /* Algo Preset for 2 Mic FT WB */
 	0xff		/* terminate */
@@ -270,14 +270,14 @@ static u8 es325_internal_route_2mic_speaker_WB[10] = {
 
 #if defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT)\
 	|| defined(CONFIG_MACH_JF_LGT)
-/* 1-mic Handset NB (1-mic CT)(NS off) */ 
+/* 1-mic Handset NB (1-mic CT)(NS off) */
 static u8 es325_internal_route_1mic_handset[10] = {
 	0x90, 0x31, 0x00, 0x04, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x18, /* Algo Preset for 2 Mic CT NB */
 	0xff		/* terminate */
 };
 #else
-/* 1-mic Handset NB (1-mic CT)(NS off) */ 
+/* 1-mic Handset NB (1-mic CT)(NS off) */
 static u8 es325_internal_route_1mic_handset[10] = {
 	0x90, 0x31, 0x00, 0x02, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x18, /* Algo Preset for 2 Mic CT NB */
@@ -287,14 +287,14 @@ static u8 es325_internal_route_1mic_handset[10] = {
 
 #if defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT)\
 	|| defined(CONFIG_MACH_JF_LGT)
-/* 1-mic Handset WB (1-mic CT)(NS off) */ 
+/* 1-mic Handset WB (1-mic CT)(NS off) */
 static u8 es325_internal_route_1mic_handset_WB[10] = {
 	0x90, 0x31, 0x00, 0x04, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x19, /* Algo Preset for 2 Mic CT WB */
 	0xff		/* terminate */
 };
 #else
-/* 1-mic Handset WB (1-mic CT)(NS off) */ 
+/* 1-mic Handset WB (1-mic CT)(NS off) */
 static u8 es325_internal_route_1mic_handset_WB[10] = {
 	0x90, 0x31, 0x00, 0x02, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x19, /* Algo Preset for 2 Mic CT WB */
@@ -317,35 +317,35 @@ static u8 es325_internal_route_2mic_handset_WB[10] = {
 };
 
 /* 1-mic 1-output for Loopback (SW bypss) */
-static u8 es325_internal_route_1mic_1out_loopback[10] = {		
+static u8 es325_internal_route_1mic_1out_loopback[10] = {
 	0x90, 0x31, 0x00, 0x0d, /* 1 Mic 1 FEOUT */
 	0x90, 0x31, 0x00, 0x82, /* Algo Preset: 1-mic CT NB */
 	0xff		/* terminate */
 };
 
 /* 1-mic 2-output for Loopback (SW bypss) */
-static u8 es325_internal_route_1mic_2out_loopback[10] = {		
+static u8 es325_internal_route_1mic_2out_loopback[10] = {
 	0x90, 0x31, 0x00, 0x01, /* 1 Mic 2 FEOUT w UITone MD */
 	0x90, 0x31, 0x00, 0x84, /* Algo Preset: 1-mic CT NB */
 	0xff		/* terminate */
 };
 
 /* 2-mic ASR */
-static u8 es325_internal_route_2mic_ASR[10] = {		
+static u8 es325_internal_route_2mic_ASR[10] = {
 	0x90, 0x31, 0x00, 0x6E, /* 2 Mic ASR WB */
 	0x90, 0x31, 0x00, 0x70, /* Algo Preset for 2 Mic ASR WB */
 	0xff        /* terminate */
 };
 
 /* TTY HCO - Rx:Handset(1ch), Tx: Main mic(1ch)(SW bypass)*/
-static u8 es325_internal_route_TTY_HCO[10] = {	
+static u8 es325_internal_route_TTY_HCO[10] = {
 	0x90, 0x31, 0x00, 0x0d, /* 1 Mic 1 FEOUT */
 	0x90, 0x31, 0x00, 0x84, /* Algo Preset: 1-mic CT NB */
 	0xff		/* terminate */
 };
 
 /* TTY VCO - Rx:Headset(2ch), Tx: Main mic(1ch)(SW bypass)*/
-static u8 es325_internal_route_TTY_VCO[10] = {	
+static u8 es325_internal_route_TTY_VCO[10] = {
 	0x90, 0x31, 0x00, 0x01, /* 1 Mic 2 FEOUT w UITone MD */
 	0x90, 0x31, 0x00, 0x84, /* Algo Preset: 1-mic CT NB */
 	0xff		/* terminate */
@@ -361,7 +361,7 @@ static u8* es325_internal_route_configs[ES325_INTERNAL_ROUTE_MAX] = {
 	es325_internal_route_1mic_headset, 		/* [0]: 1-mic Headset NB (SW bypss) */
 	es325_internal_route_2mic_speaker, 		/* [1]: 2-mic Speaker NB (2-mic FT)(NS on)*/
 	es325_internal_route_2mic_handset, 		/* [2]: 2-mic Handset NB (2-mic CT)(NS on) */
-	es325_internal_route_1mic_speaker, 		/* [3]: 1-mic Speaker NB (1-mic FT)(NS off)(SW bypss) */	
+	es325_internal_route_1mic_speaker, 		/* [3]: 1-mic Speaker NB (1-mic FT)(NS off)(SW bypss) */
 	es325_internal_route_1mic_handset, 		/* [4]: 1-mic Handset NB (1-mic CT)(NS off) */
 	dummy, /* [5]: TBD */
 	es325_internal_route_audio_playback_2ch,/* [6]: Audio playback, 2 channels */
@@ -376,7 +376,7 @@ static u8* es325_internal_route_configs[ES325_INTERNAL_ROUTE_MAX] = {
 	dummy, /* [15]: TBD */
 	dummy, /* [16]: TBD */
 	dummy, /* [17]: TBD */
-	es325_internal_route_1mic_1out_loopback,/* [18]: 1-mic 1-output for Loopback (SW bypss) */	
+	es325_internal_route_1mic_1out_loopback,/* [18]: 1-mic 1-output for Loopback (SW bypss) */
 	es325_internal_route_1mic_2out_loopback,/* [19]: 1-mic 2-output for Loopback (SW bypss) */
 	dummy, /* [20]: TBD */
 	es325_internal_route_1mic_headset_WB, 	/* [21]: 1-mic Headset WB (SW bypss) */
@@ -435,7 +435,7 @@ static u8* es325_internal_route_configs[ES325_INTERNAL_ROUTE_MAX] = {
 		0x90, 0x31, 0x00, 0x32, /* Algo Preset for 1 Mic ASR NB */
 		0xff		/* terminate */
 	},
-	
+
 	/* [11]: VOIP Headset(CT) */
 	{
 		0x90, 0x31, 0x00, 0x01, /* 1 Mic Headset */
@@ -449,7 +449,7 @@ static u8* es325_internal_route_configs[ES325_INTERNAL_ROUTE_MAX] = {
 		0x90, 0x31, 0x00, 0x73, /* Algo Preset for 1 Mic ASR DV WB */
 		0xff                        /* terminate */
 	},
-	
+
 	/* [15]: 1-mic FT */
 	{
 		0x90, 0x31, 0x00, 0x0c, /* 1 Mic FT */
@@ -807,13 +807,13 @@ static int es325_close_slim_rx(struct slim_device *sbdev, unsigned int *ch_num,
 			"%s(): slim_disconnect_ports() failed: %d\n",
 			__func__, ret);
 	}
-	
+
 slim_control_ch_error:
 	printk("=[ES325]=%s=close RX channel",__func__);
 	for (i = 0; i < ch_cnt; i++)
 		printk("[%d]",ch_num[i]);
 	printk(" \n");
-	
+
 	dev_dbg(&sbdev->dev, "-%s()\n", __func__);
 	return ret;
 }
@@ -862,7 +862,7 @@ slim_control_ch_error:
 	for (i = 0; i < ch_cnt; i++)
 		printk("[%d]",ch_num[i]);
 	printk(" \n");
-	
+
 	dev_dbg(&sbdev->dev, "-%s()\n", __func__);
 	return ret;
 }
@@ -965,7 +965,7 @@ int es325_remote_close_slim_rx(int dai_id)
 
 	dev_dbg(&sbdev->dev, "=[ES325]=%s(dai_id = %d)(ch_tot = %d)\n",
 			__func__, dai_id,es325->dai[dai_id - 1].ch_tot);
-			
+
 	if (dai_id != ES325_SLIM_1_PB
 		&& dai_id != ES325_SLIM_2_PB)
 		return 0;
@@ -1433,7 +1433,7 @@ static unsigned int es325_read(struct snd_soc_codec *codec,
 		return rc;
 	}
 	usleep_range(20000, 20000);
-	
+
 	rc = ES325_BUS_READ(es325, ES325_READ_VE_OFFSET,
 			    ES325_READ_VE_WIDTH, ack_msg, 4, 1);
 	if (rc < 0) {
@@ -1487,7 +1487,7 @@ static int es325_write(struct snd_soc_codec *codec, unsigned int reg,
 			return rc;
 		}
 		usleep_range(20000, 20000);
-		
+
 		rc = ES325_BUS_READ(es325, ES325_READ_VE_OFFSET,
 				    ES325_READ_VE_WIDTH, msg_ptr, 4, 1);
 		if (rc < 0) {
@@ -1517,7 +1517,7 @@ static ssize_t es325_route_status_show(struct device *dev,
         "INACTIVE",
         "es325 NO RESPONSE"
     };
-   
+
     char *status_name[] = {
         "Route Status",
 
@@ -1529,21 +1529,21 @@ static ssize_t es325_route_status_show(struct device *dev,
         /* Route Status */
         0x80, 0x4f, 0x00, 0x00,
     };
-   
+
     u8 port_st_req_msg[] = {
         /* SBUS port  State read */
         0x80, 0x0B, 0x09, 0x12,
     };
 
     u8 ack_msg[4];
-    
+
     /* Read route status */
     es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
             ES325_WRITE_VE_WIDTH, route_st_req_msg, 4, 1);
 
     msleep(20);
-   
-   
+
+
     es325_slim_read(es325, ES325_READ_VE_OFFSET,
         ES325_READ_VE_WIDTH, ack_msg, 4, 1);
 
@@ -1557,7 +1557,7 @@ static ssize_t es325_route_status_show(struct device *dev,
             status_name[0],
             ack_msg[0], ack_msg[1],
             ack_msg[2], ack_msg[3],
-            route_st_names[ack_msg[3]] );   
+            route_st_names[ack_msg[3]] );
 
         /* Read Port status */
         es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -1570,79 +1570,79 @@ static ssize_t es325_route_status_show(struct device *dev,
 
         pr_info("GAC:%s(): ping ack = %02x%02x%02x%02x\n", __func__,
             ack_msg[0], ack_msg[1], ack_msg[2], ack_msg[3]);
-       
+
         if ((ack_msg[0] == 0x80) && (ack_msg[1] == 0x0B)) {
             u16 port_status = (ack_msg[2]  << 8) | ack_msg[3];
             rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                     "%s = 0x%02x%02x%02x%02x \n",
                     status_name[1],
                     ack_msg[0], ack_msg[1],
-                    ack_msg[2], ack_msg[3]);   
-            
+                    ack_msg[2], ack_msg[3]);
+
             rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                     "%s = ",
                     status_name[2]);
-            
+
             active = 0;
             for (i = 0; i < 10; i++){
                 idx = (port_status & (1 << i)) >> i;
-        
+
                 if (idx == 1) {
                     active = 1;
-                
+
                     rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                             "%d ",
                             i );
                 }
-        
+
             }
             if (active == 0) {
                 rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                     "None\n%s = ",
                     status_name[3]);
-            
+
             } else {
-                
+
                 rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                     "\n%s = ",
-                    status_name[3]);                
+                    status_name[3]);
             }
-            
+
             active = 0;
             for (i = 10; i < 16; i++){
                 idx = (port_status & (1 << i)) >> i;
-        
+
                 if (idx == 1) {
-                
+
                     active = 1;
                     rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                             "%d ",
                             (i-10) );
                 }
-        
+
             }
-            
+
             if (active == 0) {
                 rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                             "None\n" );
-            
+
             } else {
-                
+
                 rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
-                            "\n" );                
+                            "\n" );
             }
-            
-            
-            
-            
-            
+
+
+
+
+
         } else {
             rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
                     "%s = 0x%02x%02x%02x%02x - %s\n",
                     status_name[1],
                     ack_msg[0], ack_msg[1],
                     ack_msg[2], ack_msg[3],
-                    "Cannot Read!" );   
+                    "Cannot Read!" );
         }
     } else {
         rc = rc + snprintf(buf+rc, PAGE_SIZE - rc,
@@ -1650,11 +1650,11 @@ static ssize_t es325_route_status_show(struct device *dev,
                     status_name[0],
                     ack_msg[0], ack_msg[1],
                     ack_msg[2], ack_msg[3],
-                    route_st_names[5] );   
+                    route_st_names[5] );
     }
     return rc;
 }
-static DEVICE_ATTR(route_status, 0644, es325_route_status_show, NULL);
+static DEVICE_ATTR(route_status, 0444, es325_route_status_show, NULL);
 /* /sys/devices/platform/msm_slim_ctrl.1/es325-codec-gen0/route_status */
 
 static ssize_t es325_route_config_show(struct device *dev,
@@ -1730,7 +1730,7 @@ static void es325_switch_route(void)
 			es325->new_internal_route_config < 3) ||
 			(es325->new_internal_route_config >= 1 + NETWORK_OFFSET &&
 			es325->new_internal_route_config < 3 + NETWORK_OFFSET)) {
-			
+
 			es325->new_internal_route_config += NS_OFFSET;
 			pr_info("=[ES325]=%s() adjust 2mic_enable offset\n", __func__);
 		}
@@ -1739,7 +1739,7 @@ static void es325_switch_route(void)
 			es325->new_internal_route_config < 3 + NS_OFFSET) ||
 			(es325->new_internal_route_config >= 1 + NETWORK_OFFSET + NS_OFFSET &&
 			es325->new_internal_route_config < 3 + NETWORK_OFFSET + NS_OFFSET)) {
-			
+
 			es325->new_internal_route_config -= NS_OFFSET;
 			pr_info("=[ES325]=%s() adjust 2mic_enable offset\n", __func__);
 		}
@@ -1860,7 +1860,7 @@ static ssize_t es325_fw_version_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "FW Version = %s\n",verbuf);
 }
 
-static DEVICE_ATTR(fw_version, 0644, es325_fw_version_show, NULL);
+static DEVICE_ATTR(fw_version, 0444, es325_fw_version_show, NULL);
 /* /sys/devices/platform/msm_slim_ctrl.1/es325-codec-gen0/fw_version */
 
 static ssize_t es325_txhex_show(struct device *dev,
@@ -1927,7 +1927,7 @@ static ssize_t es325_clock_on_show(struct device *dev,
 
 	return snprintf(buf, PAGE_SIZE, "clk_status: %s\n", status);
 }
-static DEVICE_ATTR(clock_on, 0644, es325_clock_on_show, NULL);
+static DEVICE_ATTR(clock_on, 0444, es325_clock_on_show, NULL);
 /* /sys/devices/platform/msm_slim_ctrl.1/es325-codec-gen0/clock_on_status */
 
 static ssize_t es325_slim_ch_show(struct device *dev,
@@ -1938,7 +1938,7 @@ static ssize_t es325_slim_ch_show(struct device *dev,
 	struct es325_slim_dai_data* dai = priv->dai;
 	int length = 0;
 	int i, j;
-         
+
 	for(i = 0; i < ES325_NUM_CODEC_SLIM_DAIS; i++) {
 		length += sprintf(buf+length,"=dai[%d]=rate[%d]=ch_num=",i, dai[i].rate);
 		for(j = 0; j < dai[i].ch_tot; j++)
@@ -1948,7 +1948,7 @@ static ssize_t es325_slim_ch_show(struct device *dev,
 
 	return length;
 }
-static DEVICE_ATTR(slim_ch_status, 0644, es325_slim_ch_show, NULL);
+static DEVICE_ATTR(slim_ch_status, 0444, es325_slim_ch_show, NULL);
 /* /sys/devices/platform/msm_slim_ctrl.1/es325-codec-gen0/slim_ch_status */
 
 static ssize_t es325_reg_show(struct device *dev,
@@ -1959,7 +1959,7 @@ static ssize_t es325_reg_show(struct device *dev,
 	int i;
 	int size = 0;
 
-	length += sprintf(buf+length,"es325_reg : algo\n");  
+	length += sprintf(buf+length,"es325_reg : algo\n");
 	size = sizeof(es325_algo_paramid)/sizeof(unsigned short); /* 127 items */
 	for(i = ES325_MIC_CONFIG; i < size; i++)
 		length += sprintf(buf+length,"0x%04x : 0x%04x\n", i, es325_read(NULL, i));
@@ -1991,7 +1991,7 @@ static ssize_t es325_reg_write(struct device *dev,
 		return -EINVAL;
 
 	es325_write(NULL, reg, value);
-	
+
 	return size;
 }
 static DEVICE_ATTR(es325_reg, 0644, es325_reg_show, es325_reg_write);
@@ -2272,7 +2272,7 @@ es325_firmware_store(struct device *dev, struct device_attribute *attr,
 		es325_bootup(&es325_priv);
 		es325_fixed_config(&es325_priv);
 		msleep(100);
-		
+
 		es325_sleep(&es325_priv);
 		es325_priv.pdata->es325_clk_cb(0);
 		es325_priv.clock_on = 0;
@@ -2564,7 +2564,7 @@ static void es325_update_VEQ_enable(void)
 		if (es325_VEQ_enable_new) {
 			cmd_str[7] = 0x01; /* VEQ Enable */
 		}
-		
+
 		memcpy(msg, cmd_str, 4);
 		pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 		ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -2609,7 +2609,7 @@ static void es325_update_BWE_enable(void)
 		if (es325_BWE_enable_new) {
 			cmd_str[7] = 0x01; /* BWE On */
 		}
-		
+
 		memcpy(msg, cmd_str, 4);
 		pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 		ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -2810,7 +2810,7 @@ static int es325_put_2mic_enable(struct snd_kcontrol *kcontrol,
 	pr_info("%s: wakeup_cnt=%d\n", __func__, es325_priv.wakeup_cnt);
 	mutex_lock(&es325_priv.pm_mutex);
 	if (es325_priv.wakeup_cnt) {
-		if ((es325_internal_route_num >= 1 && 
+		if ((es325_internal_route_num >= 1 &&
 			es325_internal_route_num < 3 + NS_OFFSET) ||
 			(es325_internal_route_num >= 1 + NETWORK_OFFSET &&
 			es325_internal_route_num < 3 + + NS_OFFSET + NETWORK_OFFSET)) {
@@ -3049,7 +3049,7 @@ static int es325_put_csout_gain_value(struct snd_kcontrol *kcontrol,
 	pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 	ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
 			ES325_WRITE_VE_WIDTH, msg, 4, 1);
-	
+
 /*	usleep_range(100, 100);
 	memcpy(msg, cmd_str1, 4);
 	pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
@@ -3062,7 +3062,7 @@ static int es325_put_csout_gain_value(struct snd_kcontrol *kcontrol,
 	ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
 			ES325_WRITE_VE_WIDTH, msg, 4, 1);*/
 	es325->rx_is_muted = true;
-	pr_info("=[ES325]=CS out gain set 0");		
+	pr_info("=[ES325]=CS out gain set 0");
 
 	return 0;
 }
@@ -4973,7 +4973,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);
 	rc = device_create_file(&sbdev->dev, &dev_attr_es325_cmd_reg);
 	if (rc)
-		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);			
+		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);
 	rc = device_create_file(&sbdev->dev, &dev_attr_firmware);
 	if (rc)
 		dev_err(&sbdev->dev, "%s(): error file firmware create\n",	__func__);
@@ -5232,7 +5232,7 @@ EXPORT_SYMBOL_GPL(es325_wrapper_wakeup);
 	es325_Tx_NS = ES325_MAX_INVALID_TX_NS;
 	es325_VEQ_enable_new = ES325_MAX_INVALID_VEQ;
 	es325_BWE_enable_new = ES325_MAX_INVALID_BWE;
-	es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;	
+	es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;
 	mutex_unlock(&es325->pm_mutex);
 }
 #endif

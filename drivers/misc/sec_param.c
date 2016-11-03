@@ -239,7 +239,7 @@ static ssize_t movinand_checksum_done_show
 	return snprintf(buf, (int)sizeof(buf), "%u\n", ret);
 }
 static DEVICE_ATTR(movinand_checksum_done,
-				0664, movinand_checksum_done_show, NULL);
+				0444, movinand_checksum_done_show, NULL);
 
 static ssize_t movinand_checksum_pass_show
 (struct device *dev, struct device_attribute *attr, char *buf)
@@ -254,7 +254,7 @@ static ssize_t movinand_checksum_pass_show
 	return snprintf(buf, (int)sizeof(buf), "%u\n", ret);
 }
 static DEVICE_ATTR(movinand_checksum_pass,
-				0664, movinand_checksum_pass_show, NULL);
+				0444, movinand_checksum_pass_show, NULL);
 
 int sec_param_sysfs_init(void)
 {

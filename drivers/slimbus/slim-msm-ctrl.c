@@ -2073,7 +2073,7 @@ static ssize_t slim_ch_show(struct device *dev,
 
 	return length;
 }
-static DEVICE_ATTR(slim_ch_status, 0644, slim_ch_show, NULL);
+static DEVICE_ATTR(slim_ch_status, 0444, slim_ch_show, NULL);
 
 static ssize_t slim_addr_show(struct device *dev,
                                        struct device_attribute *attr,
@@ -2094,7 +2094,7 @@ static ssize_t slim_addr_show(struct device *dev,
 
 	return length;
 }
-static DEVICE_ATTR(slim_addr_status, 0644, slim_addr_show, NULL);
+static DEVICE_ATTR(slim_addr_status, 0444, slim_addr_show, NULL);
 #endif
 
 static int __devinit msm_slim_probe(struct platform_device *pdev)

@@ -94,7 +94,7 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 #endif
 	return IRQ_HANDLED;
 }
-	
+
 #ifdef CONFIG_PM_SLEEP
 static int pmic8xxx_pwrkey_suspend(struct device *dev)
 {
@@ -141,7 +141,7 @@ static ssize_t  sysfs_powerkey_onoff_show(struct device *dev,
 	return 0;
 }
 
-static DEVICE_ATTR(sec_powerkey_pressed, 0664 , sysfs_powerkey_onoff_show,
+static DEVICE_ATTR(sec_powerkey_pressed, 0444 , sysfs_powerkey_onoff_show,
 	NULL);
 static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 {
