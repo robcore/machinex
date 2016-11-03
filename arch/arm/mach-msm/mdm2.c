@@ -258,7 +258,6 @@ static void debug_state_changed(int value)
 
 static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 {
-	int value;
 	pr_debug("%s: id %d: value:%d\n", __func__,
 			 value, mdm_drv->device_id);
 
