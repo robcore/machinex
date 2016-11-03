@@ -1056,7 +1056,7 @@ static void mdm_modem_initialize_data(struct platform_device *pdev,
 
 	mdm_drv->boot_type                  = CHARM_NORMAL_BOOT;
 
-	mdm_drv->dump_timeout_ms = mdm_drv->pdata->ramdump_timeout_ms > 0 ?
+	mdev->dump_timeout_ms = mdm_drv->pdata->ramdump_timeout_ms > 0 ?
 		mdm_drv->pdata->ramdump_timeout_ms : MDM_RDUMP_TIMEOUT;
 
 	init_completion(&mdev->mdm_needs_reload);
