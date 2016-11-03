@@ -152,7 +152,6 @@
 #ifdef CONFIG_KEXEC_HARDBOOT
 #include <asm/kexec.h>
 #endif
-#include "platsmp.h"
 
 #if defined(CONFIG_SENSORS_SSP)
 enum {
@@ -5583,5 +5582,4 @@ MACHINE_START(JF, "SAMSUNG JF")
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
-	.smp = &msm8960_smp_ops,
 MACHINE_END
