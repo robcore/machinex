@@ -20,9 +20,13 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
+#include <linux/idr.h>
 
 #include "base.h"
 #include "power/power.h"
+
+/* For automatically allocated device IDs */
+static DEFINE_IDA(platform_devid_ida);
 
 #define to_platform_driver(drv)	(container_of((drv), struct platform_driver, \
 				 driver))
@@ -40,9 +44,9 @@ EXPORT_SYMBOL_GPL(platform_bus);
  * be setup before the platform_notifier is called.  So if a user needs to
  * manipulate any relevant information in the pdev_archdata they can do:
  *
- * 	platform_devic_alloc()
- * 	... manipulate ...
- * 	platform_device_add()
+ *	platform_device_alloc()
+ *	... manipulate ...
+ *	platform_device_add()
  *
  * And if they don't care they can just call platform_device_register() and
  * everything will just work out.
@@ -79,9 +83,16 @@ EXPORT_SYMBOL_GPL(platform_get_resource);
  */
 int platform_get_irq(struct platform_device *dev, unsigned int num)
 {
+#ifdef CONFIG_SPARC
+	/* sparc does not have irqs represented as IORESOURCE_IRQ resources */
+	if (!dev || num >= dev->archdata.num_irqs)
+		return -ENXIO;
+	return dev->archdata.irqs[num];
+#else
 	struct resource *r = platform_get_resource(dev, IORESOURCE_IRQ, num);
 
 	return r ? r->start : -ENXIO;
+#endif
 }
 EXPORT_SYMBOL_GPL(platform_get_irq);
 
@@ -100,6 +111,9 @@ struct resource *platform_get_resource_byname(struct platform_device *dev,
 	for (i = 0; i < dev->num_resources; i++) {
 		struct resource *r = &dev->resource[i];
 
+		if (unlikely(!r->name))
+			continue;
+
 		if (type == resource_type(r) && !strcmp(r->name, name))
 			return r;
 	}
@@ -108,7 +122,7 @@ struct resource *platform_get_resource_byname(struct platform_device *dev,
 EXPORT_SYMBOL_GPL(platform_get_resource_byname);
 
 /**
- * platform_get_irq - get an IRQ for a device
+ * platform_get_irq_byname - get an IRQ for a device by name
  * @dev: platform device
  * @name: IRQ name
  */
@@ -264,7 +278,7 @@ EXPORT_SYMBOL_GPL(platform_device_add_data);
  */
 int platform_device_add(struct platform_device *pdev)
 {
-	int i, ret = 0;
+	int i, ret;
 
 	if (!pdev)
 		return -EINVAL;
@@ -274,10 +288,27 @@ int platform_device_add(struct platform_device *pdev)
 
 	pdev->dev.bus = &platform_bus_type;
 
-	if (pdev->id != -1)
+	switch (pdev->id) {
+	default:
 		dev_set_name(&pdev->dev, "%s.%d", pdev->name,  pdev->id);
-	else
+		break;
+	case PLATFORM_DEVID_NONE:
 		dev_set_name(&pdev->dev, "%s", pdev->name);
+		break;
+	case PLATFORM_DEVID_AUTO:
+		/*
+		 * Automatically allocated device ID. We mark it as such so
+		 * that we remember it must be freed, and we append a suffix
+		 * to avoid namespace collision with explicit IDs.
+		 */
+		ret = ida_simple_get(&platform_devid_ida, 0, 0, GFP_KERNEL);
+		if (ret < 0)
+			goto err_out;
+		pdev->id = ret;
+		pdev->id_auto = true;
+		dev_set_name(&pdev->dev, "%s.%d.auto", pdev->name, pdev->id);
+		break;
+	}
 
 	for (i = 0; i < pdev->num_resources; i++) {
 		struct resource *p, *r = &pdev->resource[i];
@@ -294,9 +325,7 @@ int platform_device_add(struct platform_device *pdev)
 		}
 
 		if (p && insert_resource(p, r)) {
-			printk(KERN_ERR
-			       "%s: failed to claim resource %d\n",
-			       dev_name(&pdev->dev), i);
+			dev_err(&pdev->dev, "failed to claim resource %d\n", i);
 			ret = -EBUSY;
 			goto failed;
 		}
@@ -310,12 +339,18 @@ int platform_device_add(struct platform_device *pdev)
 		return ret;
 
  failed:
+	if (pdev->id_auto) {
+		ida_simple_remove(&platform_devid_ida, pdev->id);
+		pdev->id = PLATFORM_DEVID_AUTO;
+	}
+
 	while (--i >= 0) {
 		struct resource *r = &pdev->resource[i];
 		if (r->parent)
 			release_resource(r);
 	}
 
+ err_out:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(platform_device_add);
@@ -334,6 +369,11 @@ void platform_device_del(struct platform_device *pdev)
 
 	if (pdev) {
 		device_del(&pdev->dev);
+
+		if (pdev->id_auto) {
+			ida_simple_remove(&platform_devid_ida, pdev->id);
+			pdev->id = PLATFORM_DEVID_AUTO;
+		}
 
 		for (i = 0; i < pdev->num_resources; i++) {
 			struct resource *r = &pdev->resource[i];
@@ -618,7 +658,7 @@ static int platform_uevent(struct device *dev, struct kobj_uevent_env *env)
 	int rc;
 
 	/* Some devices have extra OF data and an OF-style MODALIAS */
-	rc = of_device_uevent_modalias(dev,env);
+	rc = of_device_uevent_modalias(dev, env);
 	if (rc != -ENODEV)
 		return rc;
 
@@ -1058,8 +1098,8 @@ static int __init early_platform_driver_probe_id(char *class_str,
 
 		switch (match_id) {
 		case EARLY_PLATFORM_ID_ERROR:
-			pr_warning("%s: unable to parse %s parameter\n",
-				   class_str, epdrv->pdrv->driver.name);
+			pr_warn("%s: unable to parse %s parameter\n",
+				class_str, epdrv->pdrv->driver.name);
 			/* fall-through */
 		case EARLY_PLATFORM_ID_UNSET:
 			match = NULL;
@@ -1090,8 +1130,8 @@ static int __init early_platform_driver_probe_id(char *class_str,
 			}
 
 			if (epdrv->pdrv->probe(match))
-				pr_warning("%s: unable to probe %s early.\n",
-					   class_str, match->name);
+				pr_warn("%s: unable to probe %s early.\n",
+					class_str, match->name);
 			else
 				n++;
 		}
