@@ -254,7 +254,7 @@ static int __init sec_tsp_mode(char *mode)
 	if (ret == 0)
 		sec_tsp_synaptics_mode = 1;
 
-	if (ret1 == 0x00 && system_rev >= BOARD_REV11)
+	if (ret1 == 0x00 && system_rev >= BOARD_REV10)
 		sec_tsp_synaptics_mode = 1;
 
 	pr_info("%s : %s", __func__, sec_tsp_synaptics_mode ?
@@ -1953,7 +1953,7 @@ static void clear_ssp_gpio(void)
 		pm8xxx_gpio_config(GPIO_MCU_NRST, &ap_mcu_nrst_cfg);
 	gpio_set_value_cansleep(GPIO_MCU_NRST, 0);
 	mdelay(1);
-	pr_info("[SSP] %s,%d done\n", __func__,system_rev);
+	//pr_info("[SSP] %s,%d done\n", __func__,system_rev);
 }
 
 static int initialize_ssp_gpio(void)
@@ -1990,17 +1990,17 @@ static int initialize_ssp_gpio(void)
 		.out_strength = PM_GPIO_STRENGTH_HIGH,
 	};
 
-	pr_info("[SSP]%s\n", __func__);
+	//pr_info("[SSP]%s\n", __func__);
 	pm8xxx_gpio_config(GPIO_AP_MCU_INT, &ap_mcu_int_cfg);
 	err = gpio_request(GPIO_AP_MCU_INT, "AP_MCU_INT");
 	if (err)
-		printk(KERN_ERR "failed to request AP_MCU_INT for SSP\n");
+		pr_debug(KERN_ERR "failed to request AP_MCU_INT for SSP\n");
 	gpio_set_value_cansleep(GPIO_AP_MCU_INT, 1);
 
 	pm8xxx_gpio_config(GPIO_MCU_AP_INT, &mcu_ap_int_cfg);
 	err = gpio_request(GPIO_MCU_AP_INT, "MCU_AP_INT");
 	if (err)
-		printk(KERN_ERR "failed to request MCU_AP_INT for SSP\n");
+		pr_debug(KERN_ERR "failed to request MCU_AP_INT for SSP\n");
 	else {
 		gpio_direction_input(GPIO_MCU_AP_INT);
 		gpio_free(GPIO_MCU_AP_INT);
@@ -2009,20 +2009,20 @@ static int initialize_ssp_gpio(void)
 	pm8xxx_gpio_config(GPIO_MCU_AP_INT_2, &mcu_ap_int_2_cfg);
 	err = gpio_request(GPIO_MCU_AP_INT_2, "MCU_AP_INT_2");
 	if (err)
-		printk(KERN_ERR "failed to request MCU_AP_INT_2 for SSP\n");
+		pr_debug(KERN_ERR "failed to request MCU_AP_INT_2 for SSP\n");
 
 	if (system_rev >= 5) {
 		pm8xxx_gpio_config(GPIO_MCU_NRST, &ap_mcu_nrst_cfg);
 		err = gpio_request(GPIO_MCU_NRST, "MCU_NRST");
 		if (err)
-			printk(KERN_ERR
+			pr_debug(KERN_ERR
 				"failed to request MCU_NRST for SSP\n");
 		gpio_set_value_cansleep(GPIO_MCU_NRST, 1);
 	} else {
 		pm8xxx_mpp_config(MPP_MCU_NRST, &mpp4_cfg);
 		err = gpio_request(MPP_MCU_NRST, "MCU_NRST");
 		if (err)
-			printk(KERN_ERR
+			pr_debug(KERN_ERR
 				"failed to request MCU_NRST for SSP\n");
 		gpio_set_value_cansleep(MPP_MCU_NRST, 1);
 	}
@@ -2032,7 +2032,7 @@ static int initialize_ssp_gpio(void)
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		err = gpio_request(GPIO_MCU_CHG, "GPIO_MCU_CHG");
 		if (err)
-			pr_err("%s, failed to request GPIO_MCU_CHG for SSP\n",
+			pr_debug("%s, failed to request GPIO_MCU_CHG for SSP\n",
 				__func__);
 	}
 	return 0;
@@ -3210,7 +3210,6 @@ static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
 	.no_a2m_errfatal_on_ssr = 1,
-	.no_reset_on_first_powerup = 1,
 	.kpd_not_inverted = 1,
 	.subsys_name = "external_modem",
 };
