@@ -383,7 +383,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
-	if (restart_level != RESET_SUBSYS_INDEPENDENT || RESET_SUBSYS_INDEPENDANT_SOC)
+	if (restart_level != RESET_SUBSYS_INDEPENDENT)
 		soc_restart_order = dev->restart_order;
 
 	/*
