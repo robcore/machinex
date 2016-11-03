@@ -2582,7 +2582,7 @@ void mdp4_vg_qseed_init_DMB(int vp_num)
 }
 #endif
 
-void mdp4_mixer_blend_init(mixer_num)
+void mdp4_mixer_blend_init(int mixer_num)
 {
 	unsigned char *overlay_base;
 	int off;
