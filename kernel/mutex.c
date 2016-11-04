@@ -209,6 +209,9 @@ int mutex_can_spin_on_owner(struct mutex *lock)
 {
 	int retval = 1;
 
+	if (!sched_feat(OWNER_SPIN))
+		return 0;
+
 	rcu_read_lock();
 	if (lock->owner)
 		retval = lock->owner->on_cpu;
@@ -639,4 +642,3 @@ int atomic_dec_and_mutex_lock(atomic_t *cnt, struct mutex *lock)
 	return 1;
 }
 EXPORT_SYMBOL(atomic_dec_and_mutex_lock);
-
