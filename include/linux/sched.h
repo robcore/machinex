@@ -40,8 +40,14 @@
 /* SCHED_ISO: reserved but not implemented yet */
 #define SCHED_IDLE		5
 #define SCHED_DEADLINE		6
+
 /* Can be ORed in to make sure the process is reverted back to SCHED_NORMAL on fork */
 #define SCHED_RESET_ON_FORK     0x40000000
+
+/*
+ * For the sched_{set,get}attr() calls
+ */
+#define SCHED_FLAG_RESET_ON_FORK	0x01
 
 #ifdef __KERNEL__
 
@@ -1195,6 +1201,7 @@ struct sched_rt_entity {
 
 struct sched_dl_entity {
 	struct rb_node	rb_node;
+	int nr_cpus_allowed;
 
 	/*
 	 * Original scheduling parameters. Copied here from sched_attr
@@ -1204,6 +1211,7 @@ struct sched_dl_entity {
 	u64 dl_runtime;		/* maximum runtime for each instance	*/
 	u64 dl_deadline;	/* relative deadline of each instance	*/
 	u64 dl_period;		/* separation of two instances (period) */
+	u64 dl_bw;		/* dl_runtime / dl_deadline		*/
 
 	/*
 	 * Actual scheduling parameters. Initialized with the values above,
