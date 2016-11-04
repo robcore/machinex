@@ -245,7 +245,7 @@ typedef struct dhd_pub {
 	 */
 	int suspend_bcn_li_dtim;         /* bcn_li_dtim value in suspend mode */
 #ifdef PKT_FILTER_SUPPORT
-	int power_suspended;	/* Early suspend status */
+	int dhd_power_suspended;	/* Early suspend status */
 	int dhcp_in_progress;	/* DHCP period */
 #endif
 
