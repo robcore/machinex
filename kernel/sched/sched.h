@@ -1,6 +1,7 @@
 
 #include <linux/sched.h>
 #include <linux/sched/sysctl.h>
+#include <linux/sched/deadline.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
@@ -72,16 +73,43 @@ extern __read_mostly int scheduler_running;
  */
 #define RUNTIME_INF	((u64)~0ULL)
 
+static inline int fair_policy(int policy)
+{
+	return policy == SCHED_NORMAL || policy == SCHED_BATCH;
+}
+
 static inline int rt_policy(int policy)
 {
-	if (policy == SCHED_FIFO || policy == SCHED_RR)
-		return 1;
-	return 0;
+	return policy == SCHED_FIFO || policy == SCHED_RR;
+}
+
+static inline int dl_policy(int policy)
+{
+	return policy == SCHED_DEADLINE;
 }
 
 static inline int task_has_rt_policy(struct task_struct *p)
 {
 	return rt_policy(p->policy);
+}
+
+static inline int task_has_dl_policy(struct task_struct *p)
+{
+	return dl_policy(p->policy);
+}
+
+static inline int dl_time_before(u64 a, u64 b)
+{
+	return (s64)(a - b) < 0;
+}
+
+/*
+ * Tells if entity @a should preempt entity @b.
+ */
+static inline
+int dl_entity_preempt(struct sched_dl_entity *a, struct sched_dl_entity *b)
+{
+	return dl_time_before(a->deadline, b->deadline);
 }
 
 /*
@@ -362,6 +390,40 @@ struct rt_rq {
 #endif
 };
 
+/* Deadline class' related fields in a runqueue */
+struct dl_rq {
+	/* runqueue is an rbtree, ordered by deadline */
+	struct rb_root rb_root;
+	struct rb_node *rb_leftmost;
+
+	unsigned long dl_nr_running;
+
+#ifdef CONFIG_SMP
+	/*
+	 * Deadline values of the currently executing and the
+	 * earliest ready task on this rq. Caching these facilitates
+	 * the decision wether or not a ready but not running task
+	 * should migrate somewhere else.
+	 */
+	struct {
+		u64 curr;
+		u64 next;
+	} earliest_dl;
+
+	unsigned long dl_nr_migratory;
+	unsigned long dl_nr_total;
+	int overloaded;
+
+	/*
+	 * Tasks on this rq that can be pushed away. They are kept in
+	 * an rb-tree, ordered by tasks' deadlines, with caching
+	 * of the leftmost (earliest deadline) element.
+	 */
+	struct rb_root pushable_dl_tasks_root;
+	struct rb_node *pushable_dl_tasks_leftmost;
+#endif
+};
+
 #ifdef CONFIG_SMP
 
 /*
@@ -378,6 +440,13 @@ struct root_domain {
 	struct rcu_head rcu;
 	cpumask_var_t span;
 	cpumask_var_t online;
+
+	/*
+	 * The bit corresponding to a CPU gets set here if such CPU has more
+	 * than one runnable -deadline task (as it is below for RT tasks).
+	 */
+	cpumask_var_t dlo_mask;
+	atomic_t dlo_count;
 
 	/*
 	 * The "RT overload" flag: it gets set if a CPU has more than
@@ -428,6 +497,7 @@ struct rq {
 
 	struct cfs_rq cfs;
 	struct rt_rq rt;
+	struct dl_rq dl;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
@@ -624,6 +694,8 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
+DECLARE_PER_CPU(struct sched_domain *, sd_busy);
+DECLARE_PER_CPU(struct sched_domain *, sd_asym);
 
 struct sched_group_power {
 	atomic_t ref;
@@ -867,6 +939,7 @@ static inline int task_running(struct rq *rq, struct task_struct *p)
 #else
 #define ENQUEUE_WAKING		0
 #endif
+#define ENQUEUE_REPLENISH	8
 
 #define DEQUEUE_SLEEP		1
 
@@ -901,6 +974,7 @@ struct sched_class {
 	void (*set_curr_task) (struct rq *rq);
 	void (*task_tick) (struct rq *rq, struct task_struct *p, int queued);
 	void (*task_fork) (struct task_struct *p);
+	void (*task_dead) (struct task_struct *p);
 
 	void (*switched_from) (struct rq *this_rq, struct task_struct *task);
 	void (*switched_to) (struct rq *this_rq, struct task_struct *task);
@@ -1134,6 +1208,7 @@ struct sched_class {
    for (class = sched_class_highest; class; class = class->next)
 
 extern const struct sched_class stop_sched_class;
+extern const struct sched_class dl_sched_class;
 extern const struct sched_class rt_sched_class;
 extern const struct sched_class fair_sched_class;
 extern const struct sched_class idle_sched_class;
@@ -1171,6 +1246,8 @@ extern void sysrq_sched_debug_show(void);
 #endif
 extern void sched_init_granularity(void);
 extern void update_max_interval(void);
+
+extern void init_sched_dl_class(void);
 extern void init_sched_rt_class(void);
 extern void init_sched_fair_class(void);
 
@@ -1179,6 +1256,8 @@ extern void resched_cpu(int cpu);
 
 extern struct rt_bandwidth def_rt_bandwidth;
 extern void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime);
+
+extern void init_dl_task_timer(struct sched_dl_entity *dl_se);
 
 extern void update_idle_cpu_load(struct rq *this_rq);
 
@@ -1581,6 +1660,7 @@ extern void print_rt_stats(struct seq_file *m, int cpu);
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq);
+extern void init_dl_rq(struct dl_rq *dl_rq, struct rq *rq)
 extern int unthrottle_rt_rq(struct rq *rq);
 
 extern void cfs_bandwidth_usage_inc(void);
