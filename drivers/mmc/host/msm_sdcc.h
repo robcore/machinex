@@ -193,11 +193,21 @@
 
 #define MCI_TEST_INPUT		0x0D4
 
+#define MCI_TESTBUS_CONFIG	0x0CC
+#define MCI_TESTBUS_SEL_MASK	(0x7)
+#define MAX_TESTBUS		8
+#define MCI_TESTBUS_ENA		(1 << 3)
+
+#define MCI_CORE_HC_MODE	0x78
+
+#define MCI_SDCC_DEBUG_REG	0x124
+
 #define MCI_IRQENABLE	\
 	(MCI_CMDCRCFAILMASK|MCI_DATACRCFAILMASK|MCI_CMDTIMEOUTMASK|	\
 	MCI_DATATIMEOUTMASK|MCI_TXUNDERRUNMASK|MCI_RXOVERRUNMASK|	\
 	MCI_CMDRESPENDMASK|MCI_CMDSENTMASK|MCI_DATAENDMASK|		\
 	MCI_PROGDONEMASK|MCI_AUTOCMD19TIMEOUTMASK)
+
 #define MCI_IRQ_PIO 	\
 	(MCI_RXDATAAVLBLMASK | MCI_TXDATAAVLBLMASK | 	\
 	MCI_RXFIFOEMPTYMASK | MCI_TXFIFOEMPTYMASK | MCI_RXFIFOFULLMASK |\
@@ -354,6 +364,7 @@ struct msmsdcc_host {
 	void __iomem		*bam_base;
 
 	int			pdev_id;
+	struct platform_device	*pdev;
 
 	struct msmsdcc_curr_req	curr;
 
@@ -455,6 +466,9 @@ struct msmsdcc_host {
 #define MSMSDCC_AUTO_CMD19	(1 << 9)
 #define MSMSDCC_AUTO_CMD21	(1 << 10)
 #define MSMSDCC_SW_RST_CFG_BROKEN	(1 << 11)
+#define MSMSDCC_DATA_PEND_FOR_CMD53	(1 << 12)
+#define MSMSDCC_TESTBUS_DEBUG		(1 << 13)
+#define MSMSDCC_SDHCI_MODE_SUPPORTED	(1 << 14)
 
 #define set_hw_caps(h, val)		((h)->hw_caps |= val)
 #define is_sps_mode(h)			((h)->hw_caps & MSMSDCC_SPS_BAM_SUP)
@@ -470,6 +484,9 @@ struct msmsdcc_host {
 #define is_auto_cmd21(h)		((h)->hw_caps & MSMSDCC_AUTO_CMD21)
 #define is_sw_reset_save_config_broken(h) \
 				((h)->hw_caps & MSMSDCC_SW_RST_CFG_BROKEN)
+#define is_data_pend_for_cmd53(h) ((h)->hw_caps & MSMSDCC_DATA_PEND_FOR_CMD53)
+#define is_testbus_debug(h) ((h)->hw_caps & MSMSDCC_TESTBUS_DEBUG)
+#define is_sdhci_supported(h) ((h)->hw_caps & MSMSDCC_SDHCI_MODE_SUPPORTED)
 
 extern unsigned int system_rev;
 
@@ -500,17 +517,18 @@ static inline void set_default_hw_caps(struct msmsdcc_host *host)
 			| MSMSDCC_AUTO_CMD19;
 
 	if ((step == 0x18) && (minor >= 3)) {
+		host->hw_caps |= MSMSDCC_AUTO_CMD21;
 		/* Version 0x06000018 need hard reset on errors */
 		host->hw_caps &= ~MSMSDCC_SOFT_RESET;
-		host->hw_caps |= MSMSDCC_AUTO_CMD21;
 	}
 
 	if (step >= 0x2b) /* SDCC v4 2.1.0 and greater */
 		host->hw_caps |= MSMSDCC_SW_RST | MSMSDCC_SW_RST_CFG |
-					MSMSDCC_AUTO_CMD21;
-
-	if (step == 0x2b)
-		host->hw_caps |= MSMSDCC_SW_RST_CFG_BROKEN;
+				 MSMSDCC_AUTO_CMD21 |
+				 MSMSDCC_DATA_PEND_FOR_CMD53 |
+				 MSMSDCC_TESTBUS_DEBUG |
+				 MSMSDCC_SW_RST_CFG_BROKEN |
+				 MSMSDCC_SDHCI_MODE_SUPPORTED;
 }
 
 int msmsdcc_set_pwrsave(struct mmc_host *mmc, int pwrsave);
