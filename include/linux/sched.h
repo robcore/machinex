@@ -136,7 +136,6 @@ extern int nr_threads;
 DECLARE_PER_CPU(unsigned long, process_counts);
 extern int nr_processes(void);
 extern unsigned long nr_running(void);
-extern unsigned long nr_uninterruptible(void);
 extern unsigned long nr_iowait(void);
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 extern unsigned long avg_nr_running(void);
