@@ -268,11 +268,9 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 		} else {
-		if (GPIO_IS_VALID(mdm_drv->usb_switch_gpio)) {
-			gpio_direction_output(mdm_drv->usb_switch_gpio, 0);
-			mdelay(10);
 			mdm_toggle_soft_reset(mdm_drv);
 			mdelay(10);
+			mdm_peripheral_connect(mdm_drv);
 		}
 	}
 }
