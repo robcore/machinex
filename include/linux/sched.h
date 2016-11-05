@@ -165,6 +165,7 @@ struct sched_attr {
 	u64 sched_period;
 };
 
+struct exec_domain;
 struct futex_pi_state;
 struct robust_list_head;
 struct bio_list;
@@ -938,6 +939,8 @@ struct sched_domain_attr {
 
 extern int sched_domain_level_max;
 
+struct sched_group;
+
 struct sched_domain {
 	/* These fields must be setup */
 	struct sched_domain *parent;	/* top domain must be null terminated */
@@ -1097,16 +1100,6 @@ struct sched_avg {
 	u32 usage_avg_sum;
 };
 
-struct sched_avg {
-	/*
-	 * These sums represent an infinite geometric series and so are bound
-	 * above by 1024/(1-y).  Thus we only need a u32 to store them for for all
-	 * choices of y < 1-2^(-32)*1024.
-	 */
-	u32 runnable_avg_sum, runnable_avg_period;
-	u64 last_runnable_update;
-};
-
 #ifdef CONFIG_SCHEDSTATS
 struct sched_statistics {
 	u64			wait_start;
@@ -1205,9 +1198,6 @@ struct sched_entity {
 	/* Per-entity load-tracking */
 	struct sched_avg	avg;
 #endif
-#ifdef CONFIG_SMP
-	struct sched_avg	avg;
-#endif
 };
 
 struct sched_rt_entity {
@@ -1215,6 +1205,7 @@ struct sched_rt_entity {
 	unsigned long timeout;
 	unsigned long watchdog_stamp;
 	unsigned int time_slice;
+	int nr_cpus_allowed;
 
 	struct sched_rt_entity *back;
 #ifdef CONFIG_RT_GROUP_SCHED
@@ -1291,7 +1282,6 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
-	unsigned int yield_count;
 
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
@@ -1334,7 +1324,6 @@ struct task_struct {
 #endif
 
 	unsigned int policy;
-	int nr_cpus_allowed;
 	cpumask_t cpus_allowed;
 
 #ifdef CONFIG_PREEMPT_RCU
