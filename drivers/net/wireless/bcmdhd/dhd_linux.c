@@ -981,7 +981,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 	if (dhd->up) {
 		if (value && dhd->in_suspend) {
 #ifdef PKT_FILTER_SUPPORT
-				dhd->dhd_power_suspended = 1;
+				dhd->power_suspended = 1;
 #endif
 				/* Kernel suspended */
 				DHD_ERROR(("%s: force extra Suspend setting \n", __FUNCTION__));
@@ -1048,7 +1048,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 #endif /* DYNAMIC_SWOOB_DURATION */
 			} else {
 #ifdef PKT_FILTER_SUPPORT
-				dhd->dhd_power_suspended = 0;
+				dhd->power_suspended = 0;
 #endif
 				/* Kernel resumed  */
 				DHD_ERROR(("%s: Remove extra suspend setting \n", __FUNCTION__));
@@ -1358,7 +1358,7 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 #endif /* MCAST_LIST_ACCUMULATION */
 #if defined(PASS_ALL_MCAST_PKTS) && defined(CUSTOMER_HW4)
 #ifdef PKT_FILTER_SUPPORT
-	if (!dhd->pub.dhd_power_suspended)
+	if (!dhd->pub.power_suspended)
 #endif /* PKT_FILTER_SUPPORT */
 		allmulti = TRUE;
 #endif /* PASS_ALL_MCAST_PKTS && CUSTOMER_HW4 */

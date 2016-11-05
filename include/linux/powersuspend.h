@@ -1,7 +1,7 @@
 /* include/linux/powersuspend.h
  *
  * Copyright (C) 2007-2008 Google, Inc.
- * Copyright (C) 2013 Paul Reioux 
+ * Copyright (C) 2013 Paul Reioux
  *
  * Modified by Jean-Pierre Rasquin <yank555.lu@gmail.com>
  *
@@ -53,9 +53,4 @@ void unregister_power_suspend(struct power_suspend *handler);
 
 void set_power_suspend_state_autosleep_hook(int new_state);
 void set_power_suspend_state_panel_hook(int new_state);
-
-extern bool ps_in_suspend;
-
 #endif
-
-

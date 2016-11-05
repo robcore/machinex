@@ -131,8 +131,6 @@ abort_resume:
 	mutex_unlock(&power_suspend_lock);
 }
 
-bool ps_in_suspend = false;
-
 void set_power_suspend_state(int new_state)
 {
 	unsigned long irqflags;
@@ -148,21 +146,21 @@ void set_power_suspend_state(int new_state)
 			state = new_state;
 			queue_work(suspend_work_queue, &power_resume_work);
 		}
-		spin_unlock_irqrestore(&state_lock, irqflags);		
+		spin_unlock_irqrestore(&state_lock, irqflags);
 	} else {
 		pr_info("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
 	}
 }
 
-void set_power_suspend_state_autosleep_hook(int new_state)		
-{		
-	pr_info("[POWERSUSPEND] autosleep resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");		
-	// Yank555.lu : Only allow autosleep hook changes in autosleep & hybrid mode		
-	if (mode == POWER_SUSPEND_AUTOSLEEP || mode == POWER_SUSPEND_HYBRID)		
-		set_power_suspend_state(new_state);		
-}		
-		
-EXPORT_SYMBOL(set_power_suspend_state_autosleep_hook);	
+void set_power_suspend_state_autosleep_hook(int new_state)
+{
+	pr_info("[POWERSUSPEND] autosleep resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	// Yank555.lu : Only allow autosleep hook changes in autosleep & hybrid mode
+	if (mode == POWER_SUSPEND_AUTOSLEEP || mode == POWER_SUSPEND_HYBRID)
+		set_power_suspend_state(new_state);
+}
+
+EXPORT_SYMBOL(set_power_suspend_state_autosleep_hook);
 
 void set_power_suspend_state_panel_hook(int new_state)
 {
@@ -300,7 +298,7 @@ static void __exit power_suspend_exit(void)
 		kobject_put(power_suspend_kobj);
 
 	destroy_workqueue(suspend_work_queue);
-} 
+}
 
 core_initcall(power_suspend_init);
 module_exit(power_suspend_exit);
