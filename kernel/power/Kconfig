@@ -341,6 +341,11 @@ config SPEEDUP_KEYRESUME
 	---help---
 	  Speed up system resume
 
+config WAKEUP_REASON
+	bool "show last wakeup reason"
+	---help---
+	  Backported for our device, lets see if my changes work.
+
 config SUSPEND_TIME_TIMEKEEPING
 	bool "get suspend time from timekeeping"
 	default y

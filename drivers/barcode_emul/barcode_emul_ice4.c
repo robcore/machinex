@@ -32,7 +32,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/device.h>
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 #include <linux/spinlock.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>

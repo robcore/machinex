@@ -132,7 +132,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		* for the reset to fully take place. Sleep here to ensure the
 		* reset has occured before the function exits.
 		*/
-		msleep(4000);
+		msleep(3500);
 	}
 }
 
@@ -265,12 +265,12 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 		mdm_peripheral_disconnect(mdm_drv);
 		mdm_peripheral_connect(mdm_drv);
 		msleep(100);
-		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
-			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
-		} else {
-			mdm_toggle_soft_reset(mdm_drv);
-			mdm_peripheral_connect(mdm_drv);
-			msleep(100);
+		//if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
+		gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
+		//} else {
+			//mdm_toggle_soft_reset(mdm_drv);
+			//mdm_peripheral_connect(mdm_drv);
+			//msleep(100);
 		}
 	}
 }
