@@ -3420,7 +3420,7 @@ msmsdcc_cfg_sdio_wakeup(struct msmsdcc_host *host, bool enable_wakeup_irq)
 			msmsdcc_sync_reg_wr(host);
 			msmsdcc_cfg_mpm_sdiowakeup(host, SDC_DAT1_DISWAKE);
 			msmsdcc_disable_irq_wake(host);
-		} else if (!host->sdio_wakeupirq_disabled) {
+	} else if (!host->sdio_wakeupirq_disabled) {
 			disable_irq_nosync(host->plat->sdiowakeup_irq);
 			msmsdcc_disable_irq_wake(host);
 			host->sdio_wakeupirq_disabled = 1;
@@ -3754,13 +3754,13 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	msmsdcc_pm_qos_update_latency(host, 0);
 
+	if ((host->plat->disable_runtime_pm) || MMC_PM_IGNORE_PM_NOTIFY))
+		return -ENOTSUPP;
+
 	if (mmc->card && mmc_card_sdio(mmc->card)) {
 		rc = 0;
 		goto out;
 	}
-
-	if (host->plat->disable_runtime_pm)
-		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
 
@@ -5239,16 +5239,17 @@ static void msmsdcc_power_suspend(struct power_suspend *h)
 		container_of(h, struct msmsdcc_host, power_suspend);
 	unsigned long flags;
 
-	spin_lock_irqsave(&host->lock, flags);
-	host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
-	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
-	spin_unlock_irqrestore(&host->lock, flags);
+		spin_lock_irqsave(&host->lock, flags);
+		host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
+		host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		spin_unlock_irqrestore(&host->lock, flags);
 };
 static void msmsdcc_power_resume(struct power_suspend *h)
 {
 	struct msmsdcc_host *host =
 		container_of(h, struct msmsdcc_host, power_suspend);
 	unsigned long flags;
+
 
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
