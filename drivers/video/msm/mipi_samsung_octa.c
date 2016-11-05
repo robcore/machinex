@@ -630,8 +630,8 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	pr_info("[%s]\n", __func__);
 	printk("Rob's Panel Hook Msg.");
-#ifdef CONFIG_POWERSUSPEND
-		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+/*#ifdef CONFIG_POWERSUSPEND
+		 Yank555.lu : hook to handle powersuspend tasks (wakeup)
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
 
@@ -642,7 +642,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 #ifdef CONFIG_STATE_NOTIFIER
 		state_resume();
 #endif
-
+*/
 	return 0;
 }
 
@@ -675,13 +675,13 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
-#endif
-
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
+
+/*#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
+#endif*/
 
 #if defined(RUMTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
@@ -696,8 +696,8 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 
-#ifdef CONFIG_POWERSUSPEND
-	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
+/*#ifdef CONFIG_POWERSUSPEND
+	 Yank555.lu : hook to handle powersuspend tasks (sleep)
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
 #endif
 
@@ -706,7 +706,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 #endif
 #ifdef CONFIG_STATE_NOTIFIER
 	state_suspend();
-#endif
+#endif*/
 
 	pr_info("[lcd] %s\n", __func__);
 

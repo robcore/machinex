@@ -134,6 +134,10 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	mipi_dsi_clk_disable();
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
+#endif
+
 	/* disbale dsi engine */
 	dsi_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0000);
 	dsi_ctrl &= ~0x01;
@@ -169,6 +173,20 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
+
+	printk("Rob's DSI OFF HOOK");
+
+#ifdef CONFIG_POWERSUSPEND
+	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
+#endif
+#ifdef CONFIG_STATE_NOTIFIER
+	state_suspend();
+#endif
 
 	pr_debug("%s-:\n", __func__);
 
@@ -451,6 +469,21 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
+
+	printk("Rob's DSI ON HOOK");
+
+#ifdef CONFIG_POWERSUSPEND
+		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
+
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+#endif
 
 	pr_debug("%s-:\n", __func__);
 
