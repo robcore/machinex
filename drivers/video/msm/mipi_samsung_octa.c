@@ -22,6 +22,7 @@
 #include <linux/mfd/pm8xxx/pm8821.h>
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
+/*
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
@@ -31,7 +32,7 @@
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
-
+*/
 
 #if defined(CONFIG_FB_MDP4_ENHANCE)
 #include "mdp4_video_enhance.h"

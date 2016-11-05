@@ -29,6 +29,7 @@
 #include <mach/hardware.h>
 #include <mach/gpio.h>
 #include <mach/clk.h>
+#include <linux/powersuspend.h>
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
