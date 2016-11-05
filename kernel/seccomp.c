@@ -386,7 +386,7 @@ static struct seccomp_filter *seccomp_prepare_filter(struct sock_fprog *fprog)
 	 * This avoids scenarios where unprivileged tasks can affect the
 	 * behavior of privileged children.
 	 */
-	if (!task_no_new_privs(current) &&
+	if (!current->no_new_privs &&
 	    security_capable_noaudit(current_cred(), current_user_ns(),
 				     CAP_SYS_ADMIN) != 0)
 		return ERR_PTR(-EACCES);
@@ -790,13 +790,13 @@ SYSCALL_DEFINE3(seccomp, unsigned int, op, unsigned int, flags,
 }
 
 /**
- * seccomp_set_mode: internal function for setting seccomp mode
+ * prctl_set_seccomp: configures current->seccomp.mode
  * @seccomp_mode: requested mode to use
  * @filter: optional struct sock_fprog for use with SECCOMP_MODE_FILTER
  *
  * Returns 0 on success or -EINVAL on failure.
  */
-static long seccomp_set_mode(unsigned long seccomp_mode, char __user *filter)
+long prctl_set_seccomp(unsigned long seccomp_mode, char __user *filter)
 {
 	unsigned int op;
 	char __user *uargs;
@@ -821,16 +821,4 @@ static long seccomp_set_mode(unsigned long seccomp_mode, char __user *filter)
 
 	/* prctl interface doesn't have flags, so they are always zero. */
 	return do_seccomp(op, 0, uargs);
-}
-
-/**
- * prctl_set_seccomp: configures current->seccomp.mode
- * @seccomp_mode: requested mode to use
- * @filter: optional struct sock_fprog for use with SECCOMP_MODE_FILTER
- *
- * Returns 0 on success or -EINVAL on failure.
- */
-long prctl_set_seccomp(unsigned long seccomp_mode, char __user *filter)
-{
-	return seccomp_set_mode(seccomp_mode, filter);
 }

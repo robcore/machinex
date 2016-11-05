@@ -76,7 +76,7 @@ void dump_backtrace_entry(unsigned long where, unsigned long from, unsigned long
 	if (first_call_chain)
 		set_crash_store_enable();
 #endif
-	printk("[<%08lx>] (%ps) from [<%08lx>] (%pS)\n", where, (void *)where, from, (void *)from);
+	printk("[<%08lx>] (%pS) from [<%08lx>] (%pS)\n", where, (void *)where, from, (void *)from);
 #ifdef CONFIG_LGE_CRASH_HANDLER
 	set_crash_store_disable();
 #endif

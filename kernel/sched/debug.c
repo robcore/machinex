@@ -94,6 +94,7 @@ static void print_cfs_group_stats(struct seq_file *m, int cpu, struct task_group
 #ifdef CONFIG_SMP
 	P(se->avg.runnable_avg_sum);
 	P(se->avg.runnable_avg_period);
+	P(se->avg.usage_avg_sum);
 	P(se->avg.load_avg_contrib);
 	P(se->avg.decay_count);
 #endif
@@ -215,14 +216,16 @@ void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
 			cfs_rq->runnable_load_avg);
 	SEQ_printf(m, "  .%-30s: %lld\n", "blocked_load_avg",
 			cfs_rq->blocked_load_avg);
-	SEQ_printf(m, "  .%-30s: %ld\n", "tg_load_avg",
-			atomic64_read(&cfs_rq->tg->load_avg));
+	SEQ_printf(m, "  .%-30s: %lld\n", "tg_load_avg",
+			(unsigned long long)atomic64_read(&cfs_rq->tg->load_avg));
 	SEQ_printf(m, "  .%-30s: %lld\n", "tg_load_contrib",
 			cfs_rq->tg_load_contrib);
 	SEQ_printf(m, "  .%-30s: %d\n", "tg_runnable_contrib",
 			cfs_rq->tg_runnable_contrib);
 	SEQ_printf(m, "  .%-30s: %d\n", "tg->runnable_avg",
 			atomic_read(&cfs_rq->tg->runnable_avg));
+	SEQ_printf(m, "  .%-30s: %d\n", "tg->usage_avg",
+			atomic_read(&cfs_rq->tg->usage_avg));
 #endif
 #ifdef CONFIG_CFS_BANDWIDTH
 	SEQ_printf(m, "  .%-30s: %d\n", "tg->cfs_bandwidth.timer_active",
@@ -283,6 +286,9 @@ static void print_cpu(struct seq_file *m, int cpu)
 	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", #x, SPLIT_NS(rq->x))
 
 	P(nr_running);
+	SEQ_printf(m, "  .%-30s: %d.%03d   \n", "ave_nr_running",
+		   rq->ave_nr_running / FIXED_1,
+		   ((rq->ave_nr_running % FIXED_1) * 1000) / FIXED_1);
 	SEQ_printf(m, "  .%-30s: %lu\n", "load",
 		   rq->load.weight);
 	P(nr_switches);
@@ -296,21 +302,6 @@ static void print_cpu(struct seq_file *m, int cpu)
 	P(cpu_load[2]);
 	P(cpu_load[3]);
 	P(cpu_load[4]);
-#ifdef CONFIG_SMP
-	P(cpu_power);
-#endif
-#if defined(CONFIG_SCHED_HMP) || defined(CONFIG_SCHED_FREQ_INPUT)
-	P(load_scale_factor);
-	P(capacity);
-	P(max_possible_capacity);
-	P(efficiency);
-	P(cur_freq);
-	P(max_freq);
-#endif
-#ifdef CONFIG_SCHED_HMP
-	P(nr_big_tasks);
-	P(nr_small_tasks);
-#endif
 #undef P
 #undef PN
 
@@ -392,17 +383,6 @@ static int sched_debug_show(struct seq_file *m, void *v)
 	PN(sysctl_sched_wakeup_granularity);
 	P(sysctl_sched_child_runs_first);
 	P(sysctl_sched_features);
-#ifdef CONFIG_SCHED_HMP
-	P(sched_mostly_idle_load);
-	P(sched_small_task);
-	P(sched_upmigrate);
-	P(sched_downmigrate);
-	P(sched_init_task_load_windows);
-	P(sched_init_task_load_pelt);
-	P(min_capacity);
-	P(max_capacity);
-	P(sched_use_pelt);
-#endif
 #undef PN
 #undef P
 
@@ -452,9 +432,6 @@ __initcall(init_sched_debug_procfs);
 void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 {
 	unsigned long nr_switches;
-	unsigned int load_avg;
-
-	load_avg = pct_task_load(p);
 
 	SEQ_printf(m, "%s (%d, #threads: %d)\n", p->comm, p->pid,
 						get_nr_threads(p));
@@ -504,20 +481,12 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 	P(se.statistics.nr_wakeups_passive);
 	P(se.statistics.nr_wakeups_idle);
 
-#if defined(CONFIG_SMP) && defined(CONFIG_FAIR_GROUP_SCHED)
-	__P(load_avg);
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
-	P(ravg.demand);
-	P(se.avg.runnable_avg_sum_scaled);
-#endif
-#endif
-
 	{
 		u64 avg_atom, avg_per_cpu;
 
 		avg_atom = p->se.sum_exec_runtime;
 		if (nr_switches)
-			avg_atom = div64_ul(avg_atom, nr_switches);
+			do_div(avg_atom, nr_switches);
 		else
 			avg_atom = -1LL;
 

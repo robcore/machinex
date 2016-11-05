@@ -19,13 +19,6 @@
 #include <asm/unified.h>
 #include <asm/compiler.h>
 
-#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
-#include <asm-generic/uaccess-unaligned.h>
-#else
-#define __get_user_unaligned __get_user
-#define __put_user_unaligned __put_user
-#endif
-
 #define VERIFY_READ 0
 #define VERIFY_WRITE 1
 
@@ -116,7 +109,7 @@ extern int __get_user_4(void *);
 		: "0" (__p)						\
 		: __i, "cc")
 
-#define __get_user_check(x,p)							\
+#define get_user(x,p)							\
 	({								\
 		register const typeof(*(p)) __user *__p asm("r0") = (p);\
 		register unsigned long __r2 asm("r2");			\
@@ -137,12 +130,6 @@ extern int __get_user_4(void *);
 		__e;							\
 	})
 
-#define get_user(x,p)							\
-	({								\
-		might_fault();						\
-		__get_user_check(x,p);					\
-	 })
-
 extern int __put_user_1(void *, unsigned int);
 extern int __put_user_2(void *, unsigned int);
 extern int __put_user_4(void *, unsigned int);
@@ -156,7 +143,7 @@ extern int __put_user_8(void *, unsigned long long);
 		: "0" (__p), "r" (__r2)					\
 		: "ip", "lr", "cc")
 
-#define __put_user_check(x,p)							\
+#define put_user(x,p)							\
 	({								\
 		register const typeof(*(p)) __r2 asm("r2") = (x);	\
 		const typeof(*(p)) __user *__tmp_p = (p);		\
@@ -180,12 +167,6 @@ extern int __put_user_8(void *, unsigned long long);
 		__e;							\
 	})
 
-#define put_user(x,p)							\
-	({								\
-		might_fault();						\
-		__put_user_check(x,p);					\
-	 })
-
 #else /* CONFIG_MMU */
 
 /*
@@ -194,8 +175,8 @@ extern int __put_user_8(void *, unsigned long long);
 #define USER_DS			KERNEL_DS
 
 #define segment_eq(a,b)		(1)
-#define __addr_ok(addr)		((void)(addr),1)
-#define __range_ok(addr,size)	((void)(addr),0)
+#define __addr_ok(addr)		(1)
+#define __range_ok(addr,size)	(0)
 #define get_fs()		(KERNEL_DS)
 
 static inline void set_fs(mm_segment_t fs)
@@ -239,7 +220,6 @@ do {									\
 	unsigned long __gu_addr = (unsigned long)(ptr);			\
 	unsigned long __gu_val;						\
 	__chk_user_ptr(ptr);						\
-	might_fault();							\
 	switch (sizeof(*(ptr))) {					\
 	case 1:	__get_user_asm_byte(__gu_val,__gu_addr,err);	break;	\
 	case 2:	__get_user_asm_half(__gu_val,__gu_addr,err);	break;	\
@@ -321,7 +301,6 @@ do {									\
 	unsigned long __pu_addr = (unsigned long)(ptr);			\
 	__typeof__(*(ptr)) __pu_val = (x);				\
 	__chk_user_ptr(ptr);						\
-	might_fault();							\
 	switch (sizeof(*(ptr))) {					\
 	case 1: __put_user_asm_byte(__pu_val,__pu_addr,err);	break;	\
 	case 2: __put_user_asm_half(__pu_val,__pu_addr,err);	break;	\

@@ -543,7 +543,7 @@ config RCU_FANOUT_EXACT
 
 config RCU_FAST_NO_HZ
 	bool "Accelerate last non-dyntick-idle CPU's grace periods"
-	depends on NO_HZ_COMMON && SMP
+	depends on NO_HZ && SMP
 	default n
 	help
 	  This option causes RCU to attempt to accelerate grace periods
@@ -666,12 +666,6 @@ config LOG_BUF_SHIFT
 # Architectures with an unreliable sched_clock() should select this:
 #
 config HAVE_UNSTABLE_SCHED_CLOCK
-	bool
-
-#
-# For architectures that know their GCC __int128 support is sound
-#
-config ARCH_SUPPORTS_INT128
 	bool
 
 menuconfig CGROUPS
@@ -893,15 +887,6 @@ config DEBUG_BLK_CGROUP
 	files in a cgroup which can be useful for debugging.
 
 endif # CGROUPS
-
-config SCHED_HMP
-	bool "Scheduler support for heterogenous multi-processor systems"
-	depends on SMP && FAIR_GROUP_SCHED
-	help
-	  This feature will let the scheduler optimize task placement on
-	  systems made of heterogeneous cpus i.e cpus that differ either
-	  in their instructions per-cycle capability or the maximum
-	  frequency they can attain.
 
 config CHECKPOINT_RESTORE
 	bool "Checkpoint/restore support" if EXPERT
@@ -1163,7 +1148,6 @@ config BUG
           Just say Y.
 
 config ELF_CORE
-	depends on COREDUMP
 	default y
 	bool "Enable ELF core dumps" if EXPERT
 	help
