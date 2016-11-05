@@ -278,16 +278,13 @@ static void update_rt_migration(struct rt_rq *rt_rq)
 
 static void inc_rt_migration(struct sched_rt_entity *rt_se, struct rt_rq *rt_rq)
 {
-	struct task_struct *p;
-
 	if (!rt_entity_is_task(rt_se))
 		return;
 
-	p = rt_task_of(rt_se);
 	rt_rq = &rq_of_rt_rq(rt_rq)->rt;
 
 	rt_rq->rt_nr_total++;
-	if (p->nr_cpus_allowed > 1)
+	if (rt_se->nr_cpus_allowed > 1)
 		rt_rq->rt_nr_migratory++;
 
 	update_rt_migration(rt_rq);
@@ -295,16 +292,13 @@ static void inc_rt_migration(struct sched_rt_entity *rt_se, struct rt_rq *rt_rq)
 
 static void dec_rt_migration(struct sched_rt_entity *rt_se, struct rt_rq *rt_rq)
 {
-	struct task_struct *p;
-
 	if (!rt_entity_is_task(rt_se))
 		return;
 
-	p = rt_task_of(rt_se);
 	rt_rq = &rq_of_rt_rq(rt_rq)->rt;
 
 	rt_rq->rt_nr_total--;
-	if (p->nr_cpus_allowed > 1)
+	if (rt_se->nr_cpus_allowed > 1)
 		rt_rq->rt_nr_migratory--;
 
 	update_rt_migration(rt_rq);
@@ -438,21 +432,6 @@ static void sched_rt_rq_dequeue(struct rt_rq *rt_rq)
 
 	if (rt_se && on_rt_rq(rt_se))
 		dequeue_rt_entity(rt_se);
-}
-
-int unthrottle_rt_rq(struct rq *rq)
-{
-	/* if requested from the migration task we will
-	 * unthrottle the rt rq.
-	 */
-	if (rq->rt.rt_throttled
-		&& current->sched_class == &stop_sched_class) {
-		rq->rt.rt_throttled = 0;
-		printk_deferred("sched: RT unthrottled for migration\n");
-		return 1;
-	}
-
-	return 0;
 }
 
 static inline int rt_rq_throttled(struct rt_rq *rt_rq)
@@ -1197,7 +1176,7 @@ enqueue_task_rt(struct rq *rq, struct task_struct *p, int flags)
 
 	enqueue_rt_entity(rt_se, flags & ENQUEUE_HEAD);
 
-	if (!task_current(rq, p) && p->nr_cpus_allowed > 1)
+	if (!task_current(rq, p) && p->rt.nr_cpus_allowed > 1)
 		enqueue_pushable_task(rq, p);
 
 	inc_nr_running(rq);
@@ -1261,7 +1240,7 @@ select_task_rq_rt(struct task_struct *p, int sd_flag, int flags)
 
 	cpu = task_cpu(p);
 
-	if (p->nr_cpus_allowed == 1)
+	if (p->rt.nr_cpus_allowed == 1)
 		goto out;
 
 	/* For anything but wake ups, just return the task_cpu */
@@ -1296,8 +1275,8 @@ select_task_rq_rt(struct task_struct *p, int sd_flag, int flags)
 	 * will have to sort it out.
 	 */
 	if (curr && unlikely(rt_task(curr)) &&
-	    (curr->nr_cpus_allowed < 2 ||
-	     curr->prio <= p->prio)) {
+	    (curr->rt.nr_cpus_allowed < 2 ||
+		curr->prio <= p->prio)) {
 		int target = find_lowest_rq(p);
 
 		/*
@@ -1316,10 +1295,10 @@ out:
 
 static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 {
-	if (rq->curr->nr_cpus_allowed == 1)
+	if (rq->curr->rt.nr_cpus_allowed == 1)
 		return;
 
-	if (p->nr_cpus_allowed != 1
+	if (p->rt.nr_cpus_allowed != 1
 	    && cpupri_find(&rq->rd->cpupri, p, NULL))
 		return;
 
@@ -1402,15 +1381,6 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 		rt_rq = group_rt_rq(rt_se);
 	} while (rt_rq);
 
-	/*
-	 * Force update of rq->clock_task in case we failed to do so in
-	 * put_prev_task. A stale value can cause us to over-charge execution
-	 * time to real-time task, that could trigger throttling unnecessarily
-	 */
-	if (rq->skip_clock_update > 0) {
-		rq->skip_clock_update = 0;
-		update_rq_clock(rq);
-	}
 	p = rt_task_of(rt_se);
 	p->se.exec_start = rq_clock_task(rq);
 
@@ -1444,7 +1414,7 @@ static void put_prev_task_rt(struct rq *rq, struct task_struct *p)
 	 * The previous task needs to be made eligible for pushing
 	 * if it is still active
 	 */
-	if (on_rt_rq(&p->rt) && p->nr_cpus_allowed > 1)
+	if (on_rt_rq(&p->rt) && p->rt.nr_cpus_allowed > 1)
 		enqueue_pushable_task(rq, p);
 }
 
@@ -1494,7 +1464,7 @@ static int find_lowest_rq(struct task_struct *task)
 	if (unlikely(!lowest_mask))
 		return -1;
 
-	if (task->nr_cpus_allowed == 1)
+	if (task->rt.nr_cpus_allowed == 1)
 		return -1; /* No other targets possible */
 
 	if (!cpupri_find(&task_rq(task)->rd->cpupri, task, lowest_mask))
@@ -1596,7 +1566,7 @@ static struct rq *find_lock_lowest_rq(struct task_struct *task, struct rq *rq)
 				     task_running(rq, task) ||
 				     !task->on_rq)) {
 
-				double_unlock_balance(rq, lowest_rq);
+				raw_spin_unlock(&lowest_rq->lock);
 				lowest_rq = NULL;
 				break;
 			}
@@ -1626,7 +1596,7 @@ static struct task_struct *pick_next_pushable_task(struct rq *rq)
 
 	BUG_ON(rq->cpu != task_cpu(p));
 	BUG_ON(task_current(rq, p));
-	BUG_ON(p->nr_cpus_allowed <= 1);
+	BUG_ON(p->rt.nr_cpus_allowed <= 1);
 
 	BUG_ON(!p->on_rq);
 	BUG_ON(!rt_task(p));
@@ -1837,9 +1807,9 @@ static void task_woken_rt(struct rq *rq, struct task_struct *p)
 	if (!task_running(rq, p) &&
 	    !test_tsk_need_resched(rq->curr) &&
 	    has_pushable_tasks(rq) &&
-	    p->nr_cpus_allowed > 1 &&
+	    p->rt.nr_cpus_allowed > 1 &&
 	    (dl_task(rq->curr) || rt_task(rq->curr)) &&
-	    (rq->curr->nr_cpus_allowed < 2 ||
+	    (rq->curr->rt.nr_cpus_allowed < 2 ||
 	     rq->curr->prio <= p->prio))
 		push_rt_tasks(rq);
 }
@@ -1847,40 +1817,44 @@ static void task_woken_rt(struct rq *rq, struct task_struct *p)
 static void set_cpus_allowed_rt(struct task_struct *p,
 				const struct cpumask *new_mask)
 {
-	struct rq *rq;
-	int weight;
+	int weight = cpumask_weight(new_mask);
 
 	BUG_ON(!rt_task(p));
 
-	if (!p->on_rq)
-		return;
-
-	weight = cpumask_weight(new_mask);
-
 	/*
-	 * Only update if the process changes its state from whether it
-	 * can migrate or not.
+	 * Update the migration status of the RQ if we have an RT task
+	 * which is running AND changing its weight value.
 	 */
-	if ((p->nr_cpus_allowed > 1) == (weight > 1))
-		return;
+	if (p->on_rq && (weight != p->rt.nr_cpus_allowed)) {
+		struct rq *rq = task_rq(p);
 
-	rq = task_rq(p);
+		if (!task_current(rq, p)) {
+			/*
+			 * Make sure we dequeue this task from the pushable list
+			 * before going further.  It will either remain off of
+			 * the list because we are no longer pushable, or it
+			 * will be requeued.
+			 */
+			if (p->rt.nr_cpus_allowed > 1)
+				dequeue_pushable_task(rq, p);
 
-	/*
-	 * The process used to be able to migrate OR it can now migrate
-	 */
-	if (weight <= 1) {
-		if (!task_current(rq, p))
-			dequeue_pushable_task(rq, p);
-		BUG_ON(!rq->rt.rt_nr_migratory);
-		rq->rt.rt_nr_migratory--;
-	} else {
-		if (!task_current(rq, p))
-			enqueue_pushable_task(rq, p);
-		rq->rt.rt_nr_migratory++;
+			/*
+			 * Requeue if our weight is changing and still > 1
+			 */
+			if (weight > 1)
+				enqueue_pushable_task(rq, p);
+
+		}
+
+		if ((p->rt.nr_cpus_allowed <= 1) && (weight > 1)) {
+			rq->rt.rt_nr_migratory++;
+		} else if ((p->rt.nr_cpus_allowed > 1) && (weight <= 1)) {
+			BUG_ON(!rq->rt.rt_nr_migratory);
+			rq->rt.rt_nr_migratory--;
+		}
+
+		update_rt_migration(&rq->rt);
 	}
-
-	update_rt_migration(&rq->rt);
 }
 
 /* Assumes rq->lock is held */
