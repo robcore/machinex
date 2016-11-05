@@ -224,6 +224,14 @@ extern void sched_get_nr_running_avg(int *avg, int *iowait_avg);
 extern void calc_global_load(unsigned long ticks);
 extern void update_cpu_load_nohz(void);
 
+/* Notifier for when a task gets migrated to a new CPU */
+struct task_migration_notifier {
+	struct task_struct *task;
+	int from_cpu;
+	int to_cpu;
+};
+extern void register_task_migration_notifier(struct notifier_block *n);
+
 extern unsigned long get_parent_ip(unsigned long addr);
 
 extern void dump_cpu_task(int cpu);
@@ -1080,10 +1088,23 @@ struct sched_avg {
 	 * choices of y < 1-2^(-32)*1024.
 	 */
 	u32 runnable_avg_sum, runnable_avg_period;
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+	u32 runnable_avg_sum_scaled;
+#endif
 	u64 last_runnable_update;
 	s64 decay_count;
 	unsigned long load_avg_contrib;
 	u32 usage_avg_sum;
+};
+
+struct sched_avg {
+	/*
+	 * These sums represent an infinite geometric series and so are bound
+	 * above by 1024/(1-y).  Thus we only need a u32 to store them for for all
+	 * choices of y < 1-2^(-32)*1024.
+	 */
+	u32 runnable_avg_sum, runnable_avg_period;
+	u64 last_runnable_update;
 };
 
 #ifdef CONFIG_SCHEDSTATS
@@ -1127,8 +1148,6 @@ struct sched_statistics {
 /* ravg represents frequency scaled cpu-demand of tasks */
 struct ravg {
 	/*
-	 * 'window_start' marks the beginning of new window
-	 *
 	 * 'mark_start' marks the beginning of an event (task waking up, task
 	 * starting to execute, task being preempted) within a window
 	 *
@@ -1142,9 +1161,14 @@ struct ravg {
 	 *
 	 * 'demand' represents maximum sum seen over previous RAVG_HIST_SIZE
 	 * windows. 'demand' could drive frequency demand for tasks.
+	 *
+	 * 'prev_window' is the history in the most recent window. This value
+	 * may be zero if there was no task activity in that window - that is
+	 * how this quantity differs from the most recent sample in
+	 * sum_history (empty windows are ignored in sum_history).
 	 */
-	u64 window_start, mark_start;
-	u32 sum, demand;
+	u64 mark_start;
+	u32 sum, demand, prev_window;
 	u32 sum_history[RAVG_HIST_SIZE];
 };
 
@@ -1179,6 +1203,9 @@ struct sched_entity {
  */
 #if defined(CONFIG_SMP) && defined(CONFIG_FAIR_GROUP_SCHED)
 	/* Per-entity load-tracking */
+	struct sched_avg	avg;
+#endif
+#ifdef CONFIG_SMP
 	struct sched_avg	avg;
 #endif
 };
@@ -1280,7 +1307,7 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 	struct ravg ravg;
 #endif
 #ifdef CONFIG_CGROUP_SCHED
@@ -1808,6 +1835,8 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, 
 
 extern int task_free_register(struct notifier_block *n);
 extern int task_free_unregister(struct notifier_block *n);
+extern void sched_set_window(u64 window_start, unsigned int window_size);
+extern unsigned long sched_get_busy(int cpu);
 
 /*
  * Per process flags
