@@ -258,8 +258,8 @@ static void debug_state_changed(int value)
 
 static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 {
-	pr_debug("%s: id %d: value:%d\n", __func__,
-			 value, mdm_drv->device_id);
+	//pr_debug("%s: id %d: value:%d\n", __func__,
+			 //value, mdm_drv->device_id);
 
 	if (value) {
 		mdm_peripheral_disconnect(mdm_drv);
@@ -271,7 +271,7 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 			//mdm_toggle_soft_reset(mdm_drv);
 			//mdm_peripheral_connect(mdm_drv);
 			//msleep(100);
-		}
+		//}
 	}
 }
 
