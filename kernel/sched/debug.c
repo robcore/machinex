@@ -302,6 +302,7 @@ static void print_cpu(struct seq_file *m, int cpu)
 #if defined(CONFIG_SCHED_HMP) || defined(CONFIG_SCHED_FREQ_INPUT)
 	P(load_scale_factor);
 	P(capacity);
+	P(max_possible_capacity);
 	P(efficiency);
 	P(cur_freq);
 	P(max_freq);
@@ -318,6 +319,7 @@ static void print_cpu(struct seq_file *m, int cpu)
 #define P64(n) SEQ_printf(m, "  .%-30s: %Ld\n", #n, rq->n);
 
 	P(yld_count);
+	P(yield_sleep_count);
 
 	P(sched_count);
 	P(sched_goidle);
@@ -397,6 +399,9 @@ static int sched_debug_show(struct seq_file *m, void *v)
 	P(sched_downmigrate);
 	P(sched_init_task_load_windows);
 	P(sched_init_task_load_pelt);
+	P(min_capacity);
+	P(max_capacity);
+	P(sched_use_pelt);
 #endif
 #undef PN
 #undef P
@@ -512,7 +517,7 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 
 		avg_atom = p->se.sum_exec_runtime;
 		if (nr_switches)
-			do_div(avg_atom, nr_switches);
+			avg_atom = div64_ul(avg_atom, nr_switches);
 		else
 			avg_atom = -1LL;
 

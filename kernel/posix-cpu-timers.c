@@ -524,8 +524,8 @@ void posix_cpu_timers_exit(struct task_struct *tsk)
 
 	add_device_randomness((const void*) &tsk->se.sum_exec_runtime,
 					sizeof(unsigned long long));
-	task_cputime(tsk, &utime, &stime);
 
+	task_cputime(tsk, &utime, &stime);
 	cleanup_timers(tsk->cpu_timers,
 		       utime, stime, tsk->se.sum_exec_runtime);
 
@@ -535,7 +535,7 @@ void posix_cpu_timers_exit_group(struct task_struct *tsk)
 	struct signal_struct *const sig = tsk->signal;
 	cputime_t utime, stime;
 
-	task_cputime(tsk, &utime, &stime);
+	task_cputime(tsk, &utime, &stime)
 	cleanup_timers(tsk->signal->cpu_timers,
 		       utime + sig->utime, stime + sig->stime,
 		       tsk->se.sum_exec_runtime + sig->sum_sched_runtime);
