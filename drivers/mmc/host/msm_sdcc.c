@@ -3754,7 +3754,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	msmsdcc_pm_qos_update_latency(host, 0);
 
-	if ((host->plat->disable_runtime_pm) || MMC_PM_IGNORE_PM_NOTIFY))
+	if ((host->plat->disable_runtime_pm) || MMC_PM_IGNORE_PM_NOTIFY)
 		return -ENOTSUPP;
 
 	if (mmc->card && mmc_card_sdio(mmc->card)) {
