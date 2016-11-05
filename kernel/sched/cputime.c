@@ -124,7 +124,7 @@ static inline void task_group_account_field(struct task_struct *p, int index,
 	 * is the only cgroup, then nothing else should be necessary.
 	 *
 	 */
-	__get_cpu_var(kernel_cpustat).cpustat[index] += tmp;
+	__this_cpu_add(kernel_cpustat.cpustat[index], tmp);
 
 #ifdef CONFIG_CGROUP_CPUACCT
 	if (unlikely(!cpuacct_subsys.active))
@@ -163,7 +163,7 @@ void account_user_time(struct task_struct *p, cputime_t cputime,
 	task_group_account_field(p, index, (__force u64) cputime);
 
 	/* Account for user time used */
-	acct_update_integrals(p);
+	acct_account_cputime(p);
 }
 
 /*
@@ -213,7 +213,7 @@ void __account_system_time(struct task_struct *p, cputime_t cputime,
 	task_group_account_field(p, index, (__force u64) cputime);
 
 	/* Account for system time used */
-	acct_update_integrals(p);
+	acct_account_cputime(p);
 }
 
 /*
@@ -286,6 +286,36 @@ static __always_inline bool steal_account_process_tick(void)
 	}
 #endif
 	return false;
+}
+
+/*
+ * Accumulate raw cputime values of dead tasks (sig->[us]time) and live
+ * tasks (sum on group iteration) belonging to @tsk's group.
+ */
+void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
+{
+	struct signal_struct *sig = tsk->signal;
+	cputime_t utime, stime;
+	struct task_struct *t;
+
+	times->utime = sig->utime;
+	times->stime = sig->stime;
+	times->sum_exec_runtime = sig->sum_sched_runtime;
+
+	rcu_read_lock();
+	/* make sure we can trust tsk->thread_group list */
+	if (!likely(pid_alive(tsk)))
+		goto out;
+
+	t = tsk;
+	do {
+		task_cputime(t, &utime, &stime);
+		times->utime += utime;
+		times->stime += stime;
+		times->sum_exec_runtime += task_sched_runtime(t);
+	} while_each_thread(tsk, t);
+out:
+	rcu_read_unlock();
 }
 
 #ifndef CONFIG_VIRT_CPU_ACCOUNTING
@@ -434,48 +464,104 @@ void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime
 }
 #else
 
-#ifndef nsecs_to_cputime
-# define nsecs_to_cputime(__nsecs)	nsecs_to_jiffies(__nsecs)
-#endif
-
-static cputime_t scale_utime(cputime_t utime, cputime_t rtime, cputime_t total)
+/*
+ * Perform (stime * rtime) / total, but avoid multiplication overflow by
+ * loosing precision when the numbers are big.
+ */
+static cputime_t scale_stime(u64 stime, u64 rtime, u64 total)
 {
-	u64 temp = (__force u64) rtime;
+	u64 scaled;
 
-	temp *= (__force u64) utime;
+	for (;;) {
+		/* Make sure "rtime" is the bigger of stime/rtime */
+		if (stime > rtime)
+			swap(rtime, stime);
 
-	if (sizeof(cputime_t) == 4)
-		temp = div_u64(temp, (__force u32) total);
-	else
-		temp = div64_u64(temp, (__force u64) total);
+		/* Make sure 'total' fits in 32 bits */
+		if (total >> 32)
+			goto drop_precision;
 
-	return (__force cputime_t) temp;
+		/* Does rtime (and thus stime) fit in 32 bits? */
+		if (!(rtime >> 32))
+			break;
+
+		/* Can we just balance rtime/stime rather than dropping bits? */
+		if (stime >> 31)
+			goto drop_precision;
+
+		/* We can grow stime and shrink rtime and try to make them both fit */
+		stime <<= 1;
+		rtime >>= 1;
+		continue;
+
+drop_precision:
+		/* We drop from rtime, it has more bits than stime */
+		rtime >>= 1;
+		total >>= 1;
+	}
+
+	/*
+	 * Make sure gcc understands that this is a 32x32->64 multiply,
+	 * followed by a 64/32->64 divide.
+	 */
+	scaled = div_u64((u64) (u32) stime * (u64) (u32) rtime, (u32)total);
+	return (__force cputime_t) scaled;
 }
 
+/*
+ * Adjust tick based cputime random precision against scheduler
+ * runtime accounting.
+ */
 static void cputime_adjust(struct task_cputime *curr,
 			   struct cputime *prev,
 			   cputime_t *ut, cputime_t *st)
 {
-	cputime_t rtime, utime, total;
+	cputime_t rtime, stime, utime;
 
-	utime = curr->utime;
-	total = utime + curr->stime;
 	/*
-	 * Use CFS's precise accounting:
+	 * Tick based cputime accounting depend on random scheduling
+	 * timeslices of a task to be interrupted or not by the timer.
+	 * Depending on these circumstances, the number of these interrupts
+	 * may be over or under-optimistic, matching the real user and system
+	 * cputime with a variable precision.
+	 *
+	 * Fix this by scaling these tick based values against the total
+	 * runtime accounted by the CFS scheduler.
 	 */
 	rtime = nsecs_to_cputime(curr->sum_exec_runtime);
 
-	if (total)
-		utime = scale_utime(utime, rtime, total);
-	else
+	/*
+	 * Update userspace visible utime/stime values only if actual execution
+	 * time is bigger than already exported. Note that can happen, that we
+	 * provided bigger values due to scaling inaccuracy on big numbers.
+	 */
+	if (prev->stime + prev->utime >= rtime)
+		goto out;
+
+	stime = curr->stime;
+	utime = curr->utime;
+
+	if (utime == 0) {
+		stime = rtime;
+	} else if (stime == 0) {
 		utime = rtime;
+	} else {
+		cputime_t total = stime + utime;
+
+		stime = scale_stime((__force u64)stime,
+				    (__force u64)rtime, (__force u64)total);
+		utime = rtime - stime;
+	}
 
 	/*
-	 * Compare with previous values, to keep monotonicity:
+	 * If the tick based count grows faster than the scheduler one,
+	 * the result of the scaling may go backward.
+	 * Let's enforce monotonicity.
 	 */
+	prev->stime = max(prev->stime, stime);
 	prev->utime = max(prev->utime, utime);
-	prev->stime = max(prev->stime, rtime - prev->utime);
 
+out:
 	*ut = prev->utime;
 	*st = prev->stime;
 }
@@ -483,11 +569,10 @@ static void cputime_adjust(struct task_cputime *curr,
 void task_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st)
 {
 	struct task_cputime cputime = {
-		.utime = p->utime,
-		.stime = p->stime,
 		.sum_exec_runtime = p->se.sum_exec_runtime,
 	};
 
+	task_cputime(p, &cputime.utime, &cputime.stime);
 	cputime_adjust(&cputime, &p->prev_cputime, ut, st);
 }
 

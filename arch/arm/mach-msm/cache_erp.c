@@ -17,6 +17,7 @@
 #include <linux/errno.h>
 #include <linux/proc_fs.h>
 #include <linux/cpu.h>
+#include <linux/seq_file.h>
 #include <linux/io.h>
 #include <mach/msm-krait-l2-accessors.h>
 #include <mach/msm_iomap.h>
@@ -152,25 +153,23 @@ static inline unsigned int read_cesynr(void)
 	return cesynr;
 }
 
-static int proc_read_status(char *page, char **start, off_t off, int count,
-			    int *eof, void *data)
+static int cache_erp_show(struct seq_file *m, void *v)
 {
 	struct msm_l1_err_stats *l1_stats;
-	char *p = page;
-	int len, cpu, ret, bytes_left = PAGE_SIZE;
+	int cpu;
 
 	for_each_present_cpu(cpu) {
 		l1_stats = &per_cpu(msm_l1_erp_stats, cpu);
 
-		ret = snprintf(p, bytes_left,
-			"CPU %d:\n"	\
-			"\tD-cache tag parity errors:\t%u\n"	\
-			"\tD-cache data parity errors:\t%u\n"	\
-			"\tI-cache tag parity errors:\t%u\n"	\
-			"\tI-cache data parity errors:\t%u\n"	\
-			"\tD-cache timing errors:\t\t%u\n"	\
-			"\tI-cache timing errors:\t\t%u\n"	\
-			"\tTLB multi-hit errors:\t\t%u\n\n",	\
+		seq_printf(m,
+			"CPU %d:\n"
+			"\tD-cache tag parity errors:\t%u\n"
+			"\tD-cache data parity errors:\t%u\n"
+			"\tI-cache tag parity errors:\t%u\n"
+			"\tI-cache data parity errors:\t%u\n"
+			"\tD-cache timing errors:\t\t%u\n"
+			"\tI-cache timing errors:\t\t%u\n"
+			"\tTLB multi-hit errors:\t\t%u\n\n",
 			cpu,
 			l1_stats->dctpe,
 			l1_stats->dcdpe,
@@ -179,18 +178,16 @@ static int proc_read_status(char *page, char **start, off_t off, int count,
 			l1_stats->dcte,
 			l1_stats->icte,
 			l1_stats->tlbmh);
-		p += ret;
-		bytes_left -= ret;
 	}
 
-	p += snprintf(p, bytes_left,
-			"L2 master port decode errors:\t\t%u\n"	\
-			"L2 master port slave errors:\t\t%u\n"		\
-			"L2 tag soft errors, single-bit:\t\t%u\n"	\
-			"L2 tag soft errors, double-bit:\t\t%u\n"	\
-			"L2 data soft errors, single-bit:\t%u\n"	\
-			"L2 data soft errors, double-bit:\t%u\n"	\
-			"L2 modified soft errors:\t\t%u\n"		\
+	seq_printf(m,
+			"L2 master port decode errors:\t\t%u\n"
+			"L2 master port slave errors:\t\t%u\n"
+			"L2 tag soft errors, single-bit:\t\t%u\n"
+			"L2 tag soft errors, double-bit:\t\t%u\n"
+			"L2 data soft errors, single-bit:\t%u\n"
+			"L2 data soft errors, double-bit:\t%u\n"
+			"L2 modified soft errors:\t\t%u\n"
 			"L2 master port LDREX NOK errors:\t%u\n",
 			msm_l2_erp_stats.mpdcd,
 			msm_l2_erp_stats.mpslv,
@@ -201,36 +198,45 @@ static int proc_read_status(char *page, char **start, off_t off, int count,
 			msm_l2_erp_stats.mse,
 			msm_l2_erp_stats.mplxrexnok);
 
-	len = (p - page) - off;
-	if (len < 0)
-		len = 0;
-
-	*eof = (len <= count) ? 1 : 0;
-	*start = page + off;
-
-	return len;
+	return 0;
 }
 
-#ifdef CONFIG_MSM_L1_ERR_LOG
-static int proc_read_log(char *page, char **start, off_t off, int count,
-	int *eof, void *data)
+static int cache_erp_open(struct inode *inode, struct file *file)
 {
-	char *p = page;
-	int len, log_value;
+	return single_open(file, cache_erp_show, NULL);
+}
+
+static const struct file_operations cache_erp_fops = {
+	.open		= cache_erp_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+#ifdef CONFIG_MSM_L1_ERR_LOG
+static int cache_erp_log_show(struct seq_file *m, void *v)
+{
+	int log_value;
+
 	log_value = __raw_readl(MSM_IMEM_BASE + ERP_LOG_MAGIC_ADDR) ==
 			ERP_LOG_MAGIC ? 1 : 0;
 
-	p += snprintf(p, PAGE_SIZE, "%d\n", log_value);
+	seq_printf(m, "%d\n", log_value);
 
-	len = (p - page) - off;
-	if (len < 0)
-		len = 0;
-
-	*eof = (len <= count) ? 1 : 0;
-	*start = page + off;
-
-	return len;
+	return 0;
 }
+
+static int cache_erp_log_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, cache_erp_log_show, NULL);
+}
+
+static const struct file_operations cache_erp_log_fops = {
+	.open		= cache_erp_log_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static void log_cpu_event(void)
 {
@@ -240,11 +246,10 @@ static void log_cpu_event(void)
 
 static int procfs_event_log_init(void)
 {
-	procfs_log_entry = create_proc_entry("cpu/msm_erp_log", S_IRUGO, NULL);
-
+	procfs_log_entry = proc_create("cpu/msm_erp_log", S_IRUGO, NULL,
+			&cache_erp_log_fops);
 	if (!procfs_log_entry)
 		return -ENODEV;
-	procfs_log_entry->read_proc = proc_read_log;
 	return 0;
 }
 
@@ -503,7 +508,8 @@ static int msm_cache_erp_probe(struct platform_device *pdev)
 		goto fail_l1;
 	}
 
-	procfs_entry = create_proc_entry("cpu/msm_cache_erp", S_IRUGO, NULL);
+	procfs_entry = proc_create("cpu/msm_cache_erp", S_IRUGO, NULL,
+			&cache_erp_fops);
 
 	if (!procfs_entry) {
 		pr_err("Failed to create procfs node for cache error reporting\n");
@@ -516,8 +522,6 @@ static int msm_cache_erp_probe(struct platform_device *pdev)
 	for_each_cpu(cpu, cpu_online_mask)
 		smp_call_function_single(cpu, enable_erp_irq_callback, NULL, 1);
 	put_online_cpus();
-
-	procfs_entry->read_proc = proc_read_status;
 
 	ret = procfs_event_log_init();
 	if (ret)

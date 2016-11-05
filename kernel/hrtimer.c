@@ -45,6 +45,8 @@
 #include <linux/debugobjects.h>
 #include <linux/sched.h>
 #include <linux/sched/sysctl.h>
+#include <linux/sched/rt.h>
+#include <linux/sched/deadline.h>
 #include <linux/timer.h>
 #include <linux/freezer.h>
 
@@ -1625,7 +1627,7 @@ long hrtimer_nanosleep(struct timespec *rqtp, struct timespec __user *rmtp,
 	unsigned long slack;
 
 	slack = task_get_effective_timer_slack(current);
-	if (rt_task(current))
+	if (dl_task(current) || rt_task(current))
 		slack = 0;
 
 	hrtimer_init_on_stack(&t.timer, clockid, mode);
@@ -1679,6 +1681,9 @@ static void init_hrtimers_cpu(int cpu)
 	struct hrtimer_cpu_base *cpu_base = &per_cpu(hrtimer_bases, cpu);
 	int *lock_init = &per_cpu(hrtimer_base_lock_init, cpu);
 	int i;
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&cpu_base->lock, flags);
 
 	if ((*lock_init) != cpu) {
 		*lock_init = cpu;
@@ -1692,6 +1697,7 @@ static void init_hrtimers_cpu(int cpu)
 	}
 
 	hrtimer_init_hres(cpu_base);
+	raw_spin_unlock_irqrestore(&cpu_base->lock, flags);
 }
 
 #ifdef CONFIG_HOTPLUG_CPU

@@ -62,11 +62,12 @@
 #include <linux/ptrace.h>
 #include <linux/freezer.h>
 #include <linux/bootmem.h>
+#include <linux/sched/rt.h>
 #include <linux/hugetlb.h>
 
 #include <asm/futex.h>
 
-#include "rtmutex_common.h"
+#include "locking/rtmutex_common.h"
 
 /*
  * Basic futex operation and ordering guarantees:
@@ -311,6 +312,9 @@ get_futex_key(u32 __user *uaddr, int fshared, union futex_key *key, int rw)
 		return -EINVAL;
 	address -= key->both.offset;
 
+	if (unlikely(!access_ok(rw, uaddr, sizeof(u32))))
+		return -EFAULT;
+
 	/*
 	 * PROCESS_PRIVATE futexes are fast.
 	 * As the mm cannot disappear under us and the 'key' only needs
@@ -319,8 +323,6 @@ get_futex_key(u32 __user *uaddr, int fshared, union futex_key *key, int rw)
 	 *        but access_ok() should be faster than find_vma()
 	 */
 	if (!fshared) {
-		if (unlikely(!access_ok(VERIFY_WRITE, uaddr, sizeof(u32))))
-			return -EFAULT;
 		key->private.mm = mm;
 		key->private.address = address;
 		get_futex_key_refs(key);
@@ -2494,6 +2496,8 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
 	 * code while we sleep on uaddr.
 	 */
 	debug_rt_mutex_init_waiter(&rt_waiter);
+	RB_CLEAR_NODE(&rt_waiter.pi_tree_entry);
+	RB_CLEAR_NODE(&rt_waiter.tree_entry);
 	rt_waiter.task = NULL;
 
 	ret = get_futex_key(uaddr2, flags & FLAGS_SHARED, &key2, VERIFY_WRITE);
