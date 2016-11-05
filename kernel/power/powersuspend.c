@@ -140,11 +140,11 @@ void set_power_suspend_state(int new_state)
 		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			pr_info("[POWERSUSPEND] state activated.\n");
 			state = new_state;
-			queue_work(suspend_work_queue, &power_suspend_work, 0);
+			queue_work(suspend_work_queue, &power_suspend_work);
 		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			pr_info("[POWERSUSPEND] state deactivated.\n");
 			state = new_state;
-			queue_work(suspend_work_queue, &power_resume_work, 0);
+			queue_work(suspend_work_queue, &power_resume_work);
 		}
 		spin_unlock_irqrestore(&state_lock, irqflags);
 	} else {
@@ -280,12 +280,9 @@ static int __init power_suspend_init(void)
                 return -ENOMEM;
         }
 
-	suspend_work_queue = alloc_workqueue("p-suspend", system_wq, 0);
+	suspend_work_queue = create_singlethread_workqueue("p-suspend");
 
-	if (!suspend_work_queue) {
-		pr_err("%s: Failed to allocate suspend workqueue\n",
-	       POWER_SUSPEND);
-		destroy_workqueue(suspend_work_queue);
+	if (suspend_work_queue == NULL) {
 		return -ENOMEM;
 	}
 
