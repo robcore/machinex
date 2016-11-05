@@ -62,6 +62,7 @@
 #include <mach/hardware.h>
 #include <mach/dma.h>
 #include <mach/msm_serial_hs.h>
+#include <mach/msm_bus.h>
 
 #include "msm_serial_hs_hwreg.h"
 
@@ -187,6 +188,10 @@ struct msm_hs_port {
 	bool is_shutdown;
 	bool termios_in_progress;
 	int rx_buf_size;
+	/* bus client handler */
+	u32 bus_perf_client;
+	/* BLSP UART required BUS Scaling data */
+	struct msm_bus_scale_pdata *bus_scale_table;
 };
 
 #define MSM_UARTDM_BURST_SIZE 16   /* DM burst size (in bytes) */
@@ -1641,6 +1646,7 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 				    unsigned int mctrl)
 {
 	unsigned long flags;
+	int ret;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	if(msm_uport == NULL) {
@@ -1857,6 +1863,15 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	printk(KERN_INFO "(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock\n");
 	wake_unlock(&msm_uport->dma_wake_lock);
 	spin_unlock_irqrestore(&uport->lock, flags);
+
+	/* Reset PNOC Bus Scaling */
+	if (is_blsp_uart(msm_uport)) {
+		ret = msm_bus_scale_client_update_request(
+				msm_uport->bus_perf_client, 0);
+		if (ret)
+			pr_err("%s(): Failed to reset bus bw vote\n", __func__);
+	}
+
 	mutex_unlock(&msm_uport->clk_mutex);
 	return 1;
 }
@@ -2069,6 +2084,16 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 		if (use_low_power_wakeup(msm_uport))
 			disable_irq_nosync(msm_uport->wakeup.irq);
 		spin_unlock_irqrestore(&uport->lock, flags);
+
+		/* Vote for PNOC BUS Scaling */
+		if (is_blsp_uart(msm_uport)) {
+			ret = msm_bus_scale_client_update_request(
+					msm_uport->bus_perf_client, 1);
+			if (ret)
+				pr_err("%s():Failed to vote for bus scaling.\n",
+								__func__);
+		}
+
 		ret = msm_hs_clock_vote(msm_uport);
 		if (ret) {
 			dev_err(uport->dev, "Clock ON Failure"
@@ -2301,6 +2326,15 @@ static int msm_hs_startup(struct uart_port *uport)
 		disable_irq(msm_uport->wakeup.irq);
 	}
 
+	/* Vote for PNOC BUS Scaling */
+	if (is_blsp_uart(msm_uport)) {
+		ret = msm_bus_scale_client_update_request(
+				msm_uport->bus_perf_client, 1);
+		if (ret)
+			pr_err("%s(): Failed to vote for bus scaling\n",
+								__func__);
+	}
+
 	spin_lock_irqsave(&uport->lock, flags);
 
 	msm_hs_start_rx_locked(uport);
@@ -2462,7 +2496,7 @@ free_tx_command_ptr:
 
 static int __devinit msm_hs_probe(struct platform_device *pdev)
 {
-	int ret;
+	int ret = 0;
 	struct uart_port *uport;
 	struct msm_hs_port *msm_uport;
 	unsigned int data;
@@ -2476,8 +2510,22 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 	msm_uport = &q_uart_port[pdev->id];
 	uport = &msm_uport->uport;
-
 	uport->dev = &pdev->dev;
+
+		msm_uport->bus_scale_table = msm_bus_cl_get_pdata(pdev);
+		if (!msm_uport->bus_scale_table) {
+			pr_err("BLSP UART: Bus scaling is disabled\n");
+			goto unmap_memory;
+		} else {
+			msm_uport->bus_perf_client =
+				msm_bus_scale_register_client
+					(msm_uport->bus_scale_table);
+			if (IS_ERR(&msm_uport->bus_perf_client)) {
+				pr_err("%s(): Bus client register failed.\n",
+								__func__);
+				goto unmap_memory;
+			}
+		}
 
 	resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (unlikely(!resource))
