@@ -359,7 +359,7 @@ void msm_otg_set_id_state(int online)
 	if (atomic_read(&motg->pm_suspended))
 		motg->sm_work_pending = true;
 	else
-		queue_work(system_nrt_wq, &motg->sm_work);
+		queue_work(system_wq, &motg->sm_work);
 }
 EXPORT_SYMBOL_GPL(msm_otg_set_id_state);
 
@@ -383,7 +383,7 @@ void msm_otg_set_smartdock_state(bool online)
 	if (atomic_read(&motg->pm_suspended))
 		motg->sm_work_pending = true;
 	else
-		queue_work(system_nrt_wq, &motg->sm_work);
+		queue_work(system_wq, &motg->sm_work);
 }
 EXPORT_SYMBOL_GPL(msm_otg_set_smartdock_state);
 

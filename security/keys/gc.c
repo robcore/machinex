@@ -77,7 +77,7 @@ void key_schedule_gc(time_t gc_at)
 void key_schedule_gc_links(void)
 {
 	set_bit(KEY_GC_KEY_EXPIRED, &key_gc_flags);
-	queue_work(system_nrt_wq, &key_gc_work);
+	queue_work(system_wq, &key_gc_work);
 }
 
 /*

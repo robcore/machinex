@@ -1199,7 +1199,7 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 		return;
 	}
 
-	queue_delayed_work(system_nrt_wq, &mdwc->chg_work, delay);
+	queue_delayed_work(system_wq, &mdwc->chg_work, delay);
 }
 
 static void dwc3_start_chg_det(struct dwc3_charger *charger, bool start)
@@ -1215,7 +1215,7 @@ static void dwc3_start_chg_det(struct dwc3_charger *charger, bool start)
 
 	mdwc->chg_state = USB_CHG_STATE_UNDEFINED;
 	charger->chg_type = DWC3_INVALID_CHARGER;
-	queue_delayed_work(system_nrt_wq, &mdwc->chg_work, 0);
+	queue_delayed_work(system_wq, &mdwc->chg_work, 0);
 }
 
 static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
