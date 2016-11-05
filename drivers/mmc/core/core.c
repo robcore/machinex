@@ -109,7 +109,7 @@ MODULE_PARM_DESC(
 static int mmc_schedule_delayed_work(struct delayed_work *work,
 				     unsigned long delay)
 {
-	return queue_delayed_work(system_freezable_wq, work, delay);
+	return queue_delayed_work(workqueue, work, delay);
 }
 
 /*
@@ -346,7 +346,7 @@ void mmc_start_delayed_bkops(struct mmc_card *card)
 	 * it was removed from the queue work but not started yet
 	 */
 	card->bkops_info.cancel_delayed_work = false;
-	queue_delayed_work(system_freezable_wq, &card->bkops_info.dw,
+	queue_delayed_work(system_nrt_wq, &card->bkops_info.dw,
 			   msecs_to_jiffies(
 				   card->bkops_info.delay_ms));
 }
@@ -483,7 +483,6 @@ EXPORT_SYMBOL(mmc_start_idle_time_bkops);
 static void mmc_wait_data_done(struct mmc_request *mrq)
 {
 	unsigned long flags;
-	struct mmc_context_info *context_info = &mrq->host->context_info;
 
 	spin_lock_irqsave(&mrq->host->context_info.lock, flags);
 	mrq->host->context_info.is_done_rcv = true;
@@ -986,10 +985,6 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 		return;
 	}
 
-	if (!card) {
-		WARN_ON(1);
-		return;
-	}
 	/*
 	 * SD cards use a 100 multiplier rather than 10
 	 */
@@ -1632,9 +1627,6 @@ void mmc_power_up(struct mmc_host *host)
 {
 	int bit;
 
-	if (host->ios.power_mode == MMC_POWER_ON)
-		return;
-
 	mmc_host_clk_hold(host);
 
 	/* If ocr is set, we use it */
@@ -1677,9 +1669,6 @@ void mmc_power_up(struct mmc_host *host)
 
 void mmc_power_off(struct mmc_host *host)
 {
-	if (host->ios.power_mode == MMC_POWER_OFF)
-		return;
-
 	mmc_host_clk_hold(host);
 
 	host->ios.clock = 0;
@@ -2251,8 +2240,7 @@ int mmc_can_sanitize(struct mmc_card *card)
 {
 	if (!mmc_can_trim(card) && !mmc_can_erase(card))
 		return 0;
-	if ((card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
-			&& (card->host->caps2 & MMC_CAP2_SANITIZE))
+	if (card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
 		return 1;
 	return 0;
 }
@@ -2573,7 +2561,7 @@ static void mmc_clk_scale_work(struct work_struct *work)
 
 	if (!mmc_try_claim_host(host)) {
 		/* retry after a timer tick */
-		queue_delayed_work(system_freezable_wq, &host->clk_scaling.work, 1);
+		queue_delayed_work(system_nrt_wq, &host->clk_scaling.work, 1);
 		goto out;
 	}
 
@@ -2728,7 +2716,7 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq)
 			 * work, so delay atleast one timer tick to release
 			 * host and re-claim while scaling down the clocks.
 			 */
-			queue_delayed_work(system_freezable_wq,
+			queue_delayed_work(system_nrt_wq,
 					&host->clk_scaling.work, 1);
 			goto no_reset_stats;
 		}
@@ -2953,6 +2941,7 @@ void mmc_rescan(struct work_struct *work)
 	 * can respond */
 	if (host->bus_dead)
 		extend_wakelock = 1;
+
 	/*
 	 * Let mmc_bus_put() free the bus/bus_ops if we've found that
 	 * the card is no longer present.
@@ -3535,7 +3524,7 @@ static int __init mmc_init(void)
 {
 	int ret;
 
-	workqueue = alloc_ordered_workqueue("kmmcd", WQ_FREEZABLE);
+	workqueue = alloc_ordered_workqueue("kmmcd", 0);
 	if (!workqueue)
 		return -ENOMEM;
 

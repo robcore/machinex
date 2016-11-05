@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/regulator/consumer.h>
-#include <linux/pm_runtime.h>
 
 #include <linux/leds.h>
 
@@ -32,7 +31,6 @@
 #include "sdhci.h"
 
 #define DRIVER_NAME "sdhci"
-#define SDHCI_SUSPEND_TIMEOUT 300 /* 300 ms */
 
 #define DBG(f, x...) \
 	pr_debug(DRIVER_NAME " [%s()]: " f, __func__,## x)
@@ -52,16 +50,6 @@ static void sdhci_send_command(struct sdhci_host *, struct mmc_command *);
 static void sdhci_finish_command(struct sdhci_host *);
 static int sdhci_execute_tuning(struct mmc_host *mmc);
 static void sdhci_tuning_timer(unsigned long data);
-#ifdef CONFIG_PM_RUNTIME
-static int sdhci_runtime_pm_get(struct sdhci_host *host);
-static int sdhci_runtime_pm_put(struct sdhci_host *host);
-#endif
-
-static inline int sdhci_get_async_int_status(struct sdhci_host *host)
-{
-	return (sdhci_readw(host, SDHCI_HOST_CONTROL2) &
-		 SDHCI_CTRL_ASYNC_INT_ENABLE) >> 14;
-}
 
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
@@ -262,14 +250,11 @@ static void sdhci_led_control(struct led_classdev *led,
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	if (host->runtime_suspended || sdhci_check_state(host))
-		goto out;
-
 	if (brightness == LED_OFF)
 		sdhci_deactivate_led(host);
 	else
 		sdhci_activate_led(host);
-out:
+
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 #endif
@@ -1276,18 +1261,6 @@ static void sdhci_post_req(struct mmc_host *mmc, struct mmc_request *mrq,
 			     DMA_TO_DEVICE : DMA_FROM_DEVICE);
 		data->host_cookie = 0;
 	}
-}
-
-static bool sdhci_check_state(struct sdhci_host *host)
-{
-	struct mmc_host *mmc = host->mmc;
-
-	if (!host->clock || !host->pwr ||
-	    (mmc_use_core_runtime_pm(mmc) ?
-	     pm_runtime_suspended(mmc->parent) : 0))
-		return true;
-	else
-		return false;
 }
 
 static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
