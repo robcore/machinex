@@ -46,7 +46,9 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	cp -p ~/machinex/arch/arm/boot/boot.img-zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
 	sh repackimg.sh --sudo;
-	cp -p image-new.img $(pwd)/machinex-new/boot.img
+	cp -p image-new.img $(pwd)/machinex-new/boot.img;
+	echo -n "SEANDROIDENFORCE" >> $(pwd)/machinex-new/boot.img;
+	echo "Machinex is Ready! And you have tricked Android into thinking this build is semi-official";
 else
 	echo "Build failed, Skipped Ramdisk Creation"
 fi;
