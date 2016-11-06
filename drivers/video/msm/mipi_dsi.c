@@ -29,6 +29,7 @@
 #include <mach/hardware.h>
 #include <mach/gpio.h>
 #include <mach/clk.h>
+/*
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
@@ -38,6 +39,7 @@
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
+*/
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
@@ -143,7 +145,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	mipi_dsi_clk_disable();
 
-#ifdef CONFIG_LCD_NOTIFY
+#if 0
 	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
 #endif
 
@@ -183,17 +185,17 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("Rob's DSI OFF HOOK");
+	//printk("Rob's DSI OFF HOOK");
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
 #endif
 
-#ifdef CONFIG_LCD_NOTIFY
+#if 0
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
-#ifdef CONFIG_STATE_NOTIFIER
+#if 0
 	state_suspend();
 #endif
 
@@ -479,18 +481,18 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("Rob's DSI ON HOOK");
+	//printk("Rob's DSI ON HOOK");
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
 
-#ifdef CONFIG_LCD_NOTIFY
+#if 0
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 #endif
 
-#ifdef CONFIG_STATE_NOTIFIER
+#if 0
 		state_resume();
 #endif
 
