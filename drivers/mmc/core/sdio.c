@@ -190,6 +190,23 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 				card->sw_caps.sd3_drv_type |= SD_DRIVER_TYPE_C;
 			if (data & SDIO_DRIVE_SDTD)
 				card->sw_caps.sd3_drv_type |= SD_DRIVER_TYPE_D;
+
+			ret = mmc_io_rw_direct(card, 0, 0,
+				SDIO_CCCR_INTERRUPT_EXTENSION, 0, &data);
+			if (ret)
+				goto out;
+			if (data & SDIO_SUPPORT_ASYNC_INTR) {
+				if (card->host->caps2 &
+				    MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE) {
+					data |= SDIO_ENABLE_ASYNC_INTR;
+					ret = mmc_io_rw_direct(card, 1, 0,
+						SDIO_CCCR_INTERRUPT_EXTENSION,
+						data, NULL);
+					if (ret)
+						goto out;
+					card->cccr.async_intr_sup = 1;
+				}
+			}
 		}
 
 		/* if no uhs mode ensure we check for high speed */
@@ -897,8 +914,10 @@ static void mmc_sdio_detect(struct mmc_host *host)
 	/* Make sure card is powered before detecting it */
 	if (host->caps & MMC_CAP_POWER_OFF_CARD) {
 		err = pm_runtime_get_sync(&host->card->dev);
-		if (err < 0)
+		if (err < 0) {
+			pm_runtime_put_noidle(&host->card->dev);
 			goto out;
+		}
 	}
 
 	mmc_claim_host(host);
@@ -1003,7 +1022,7 @@ static int mmc_sdio_resume(struct mmc_host *host)
 	}
 
 	if (!err && host->sdio_irqs)
-		wake_up_process(host->sdio_irq_thread);
+		mmc_signal_sdio_irq(host);
 	mmc_release_host(host);
 
 	/*

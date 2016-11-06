@@ -49,7 +49,6 @@
 #include <linux/barcode_emul.h>
 #endif
 
-#include <linux/iopoll.h>
 #include <asm/cacheflush.h>
 #include <asm/div64.h>
 #include <asm/sizes.h>
@@ -109,6 +108,10 @@ static int  msmsdcc_dbg_init(void);
 
 static int msmsdcc_prep_xfer(struct msmsdcc_host *host, struct mmc_data
 			     *data);
+static void msmsdcc_msm_bus_cancel_work_and_set_vote(struct msmsdcc_host *host,
+						struct mmc_ios *ios);
+static void msmsdcc_msm_bus_queue_work(struct msmsdcc_host *host);
+
 
 static u64 dma_mask = DMA_BIT_MASK(32);
 static unsigned int msmsdcc_pwrsave = 1;
@@ -332,6 +335,11 @@ static void msmsdcc_soft_reset(struct msmsdcc_host *host)
 	 */
 	if (is_sw_reset_save_config(host)) {
 		ktime_t start;
+		uint32_t dll_config = 0;
+
+
+		if (is_sw_reset_save_config_broken(host))
+			dll_config = readl_relaxed(host->base + MCI_DLL_CONFIG);
 
 		writel_relaxed(readl_relaxed(host->base + MMCIPOWER)
 				| MCI_SW_RST_CFG, host->base + MMCIPOWER);
@@ -350,6 +358,11 @@ static void msmsdcc_soft_reset(struct msmsdcc_host *host)
 					mmc_hostname(host->mmc), __func__);
 				BUG();
 			}
+		}
+
+		if (is_sw_reset_save_config_broken(host)) {
+			writel_relaxed(dll_config, host->base + MCI_DLL_CONFIG);
+			mb();
 		}
 	} else {
 		writel_relaxed(0, host->base + MMCICOMMAND);
@@ -528,8 +541,6 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 
 	if (mrq->data)
 		mrq->data->bytes_xfered = host->curr.data_xfered;
-	if (mrq->cmd->error == -ETIMEDOUT)
-		mdelay(5);
 
 	msmsdcc_reset_dpsm(host);
 
@@ -1823,9 +1834,12 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
-		pr_debug("%s: CMD%d: Command CRC error\n",
-			mmc_hostname(host->mmc), cmd->opcode);
-		msmsdcc_dump_sdcc_state(host);
+
+		if (cmd->opcode != 52) {
+			//pr_err("%s: CMD%d: Command CRC error\n",
+				//mmc_hostname(host->mmc), cmd->opcode);
+			msmsdcc_dump_sdcc_state(host);
+		}
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
 		if( host->pdev_id == 4){
@@ -1896,6 +1910,7 @@ static irqreturn_t
 msmsdcc_irq(int irq, void *dev_id)
 {
 	struct msmsdcc_host	*host = dev_id;
+	struct mmc_host		*mmc = host->mmc;
 	u32			status;
 	int			ret = 0;
 	int			timer = 0;
@@ -1937,6 +1952,12 @@ msmsdcc_irq(int irq, void *dev_id)
 				 */
 				wake_lock(&host->sdio_wlock);
 			} else {
+				if (mmc->card && !mmc_card_sdio(mmc->card)) {
+					WARN(1, "%s: SDCC core interrupt received for non-SDIO cards when SDCC clocks are off\n",
+					     mmc_hostname(mmc));
+					ret = 1;
+					break;
+				}
 				spin_unlock(&host->lock);
 				mmc_signal_sdio_irq(host->mmc);
 				spin_lock(&host->lock);
@@ -1965,6 +1986,12 @@ msmsdcc_irq(int irq, void *dev_id)
 #endif
 
 		if (status & MCI_SDIOINTROPE) {
+			if (mmc->card && !mmc_card_sdio(mmc->card)) {
+				WARN(1, "%s: SDIO interrupt received for non-SDIO card\n",
+					mmc_hostname(mmc));
+				ret = 1;
+				break;
+			}
 			if (host->sdcc_suspending)
 				wake_lock(&host->sdio_suspend_wlock);
 			spin_unlock(&host->lock);
@@ -2826,12 +2853,14 @@ static int msmsdcc_setup_clocks(struct msmsdcc_host *host, bool enable)
 	int rc = 0;
 
 	if (enable && !atomic_read(&host->clks_on)) {
+		msmsdcc_msm_bus_cancel_work_and_set_vote(host, &host->mmc->ios);
+
 		if (!IS_ERR_OR_NULL(host->bus_clk)) {
 			rc = clk_prepare_enable(host->bus_clk);
 			if (rc) {
 				pr_err("%s: %s: failed to enable the bus-clock with error %d\n",
 					mmc_hostname(host->mmc), __func__, rc);
-				goto out;
+				goto remove_vote;
 			}
 		}
 		if (!IS_ERR(host->pclk)) {
@@ -2859,6 +2888,18 @@ static int msmsdcc_setup_clocks(struct msmsdcc_host *host, bool enable)
 			clk_disable_unprepare(host->pclk);
 		if (!IS_ERR_OR_NULL(host->bus_clk))
 			clk_disable_unprepare(host->bus_clk);
+
+		/*
+		 * If clock gating is enabled, then remove the vote
+		 * immediately because clocks will be disabled only
+		 * after MSM_MMC_CLK_GATE_DELAY and thus no additional
+		 * delay is required to remove the bus vote.
+		 */
+		 if (host->mmc->clkgate_delay)
+			msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
+		 else
+			 msmsdcc_msm_bus_queue_work(host);
+
 		atomic_set(&host->clks_on, 0);
 	}
 	goto out;
@@ -2869,6 +2910,8 @@ disable_pclk:
 disable_bus:
 	if (!IS_ERR_OR_NULL(host->bus_clk))
 		clk_disable_unprepare(host->bus_clk);
+remove_vote:
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
 out:
 	return rc;
 }
@@ -3075,6 +3118,14 @@ static u32 msmsdcc_setup_pwr(struct msmsdcc_host *host, struct mmc_ios *ios)
 		msmsdcc_set_vdd_io_vol(host, VDD_IO_LOW, 0);
 		msmsdcc_update_io_pad_pwr_switch(host);
 		msmsdcc_setup_pins(host, false);
+		/*
+		 * Reset the mask to prevent hitting any pending interrupts
+		 * after powering up the card again.
+		 */
+		if (atomic_read(&host->clks_on)) {
+			writel_relaxed(0, host->base + MMCIMASK0);
+			mb();
+		}
 		break;
 	case MMC_POWER_UP:
 		/* writing PWR_UP bit is redundant */
@@ -3445,6 +3496,14 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 				(1 + ((3 * USEC_PER_SEC) /
 				      (host->clk_rate ? host->clk_rate :
 				       msmsdcc_get_min_sup_clk_rate(host))));
+			spin_unlock_irqrestore(&host->lock, flags);
+			/*
+			 * Update bus vote incase of frequency change due to
+			 * clock scaling.
+			 */
+			msmsdcc_msm_bus_cancel_work_and_set_vote(host,
+								&mmc->ios);
+			spin_lock_irqsave(&host->lock, flags);
 		}
 		/*
 		 * give atleast 2 MCLK cycles delay for clocks
@@ -3685,7 +3744,6 @@ skip_get_sync:
 		return rc;
 	}
 out:
-	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3696,13 +3754,13 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	msmsdcc_pm_qos_update_latency(host, 0);
 
+	if ((host->plat->disable_runtime_pm) || MMC_PM_IGNORE_PM_NOTIFY)
+		return -ENOTSUPP;
+
 	if (mmc->card && mmc_card_sdio(mmc->card)) {
 		rc = 0;
 		goto out;
 	}
-
-	if (host->plat->disable_runtime_pm)
-		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
 
@@ -3714,7 +3772,6 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	}
 
 out:
-	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #else
@@ -3751,7 +3808,6 @@ out:
 		msmsdcc_pm_qos_update_latency(host, 0);
 		return rc;
 	}
-	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3775,7 +3831,6 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		return rc;
 	}
 out:
-	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #endif
@@ -3785,6 +3840,7 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 {
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	unsigned long flags;
+	bool prev_pwrsave, curr_pwrsave;
 	int rc = 0;
 
 	switch (ios->signal_voltage) {
@@ -3817,7 +3873,9 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 	 * low voltage is required
 	 */
 	spin_lock_irqsave(&host->lock, flags);
-
+	prev_pwrsave = !!(readl_relaxed(host->base + MMCICLOCK) &
+			MCI_CLK_PWRSAVE);
+	curr_pwrsave = prev_pwrsave;
 	/*
 	 * Poll on MCIDATIN_3_0 and MCICMDIN bits of MCI_TEST_INPUT
 	 * register until they become all zeros.
@@ -3830,9 +3888,12 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 	}
 
 	/* Stop SD CLK output. */
-	writel_relaxed((readl_relaxed(host->base + MMCICLOCK) |
-			MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
-	msmsdcc_sync_reg_wr(host);
+	if (!prev_pwrsave) {
+		writel_relaxed((readl_relaxed(host->base + MMCICLOCK) |
+				MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
+		msmsdcc_sync_reg_wr(host);
+		curr_pwrsave = true;
+	}
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	/*
@@ -3853,6 +3914,7 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 	writel_relaxed((readl_relaxed(host->base + MMCICLOCK)
 			& ~MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
 	msmsdcc_sync_reg_wr(host);
+	curr_pwrsave = false;
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	/*
@@ -3873,10 +3935,9 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 	}
 
 out_unlock:
-	/* Enable PWRSAVE */
-	writel_relaxed((readl_relaxed(host->base + MMCICLOCK) |
-			MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
-	msmsdcc_sync_reg_wr(host);
+	/* Restore the correct PWRSAVE state */
+	if (prev_pwrsave ^ curr_pwrsave)
+		msmsdcc_set_pwrsave(mmc, prev_pwrsave);
 	spin_unlock_irqrestore(&host->lock, flags);
 out:
 	return rc;
@@ -3915,17 +3976,24 @@ static int msmsdcc_init_cm_sdc4_dll(struct msmsdcc_host *host)
 	int rc = 0;
 	unsigned long flags;
 	u32 wait_cnt;
+	bool prev_pwrsave, curr_pwrsave;
 
 	spin_lock_irqsave(&host->lock, flags);
+	prev_pwrsave = !!(readl_relaxed(host->base + MMCICLOCK) &
+			MCI_CLK_PWRSAVE);
+	curr_pwrsave = prev_pwrsave;
 	/*
 	 * Make sure that clock is always enabled when DLL
 	 * tuning is in progress. Keeping PWRSAVE ON may
 	 * turn off the clock. So let's disable the PWRSAVE
 	 * here and re-enable it once tuning is completed.
 	 */
-	writel_relaxed((readl_relaxed(host->base + MMCICLOCK)
-			& ~MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
-	msmsdcc_sync_reg_wr(host);
+	if (prev_pwrsave) {
+		writel_relaxed((readl_relaxed(host->base + MMCICLOCK)
+				& ~MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
+		msmsdcc_sync_reg_wr(host);
+		curr_pwrsave = false;
+	}
 
 	/* Write 1 to DLL_RST bit of MCI_DLL_CONFIG register */
 	writel_relaxed((readl_relaxed(host->base + MCI_DLL_CONFIG)
@@ -3968,10 +4036,9 @@ static int msmsdcc_init_cm_sdc4_dll(struct msmsdcc_host *host)
 	}
 
 out:
-	/* re-enable PWRSAVE */
-	writel_relaxed((readl_relaxed(host->base + MMCICLOCK) |
-			MCI_CLK_PWRSAVE), host->base + MMCICLOCK);
-	msmsdcc_sync_reg_wr(host);
+	/* Restore the correct PWRSAVE state */
+	if (prev_pwrsave ^ curr_pwrsave)
+		msmsdcc_set_pwrsave(host->mmc, prev_pwrsave);
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	return rc;
@@ -4392,25 +4459,35 @@ static const struct mmc_host_ops msmsdcc_ops = {
 	.notify_load = msmsdcc_notify_load,
 };
 
+static void msmsdcc_enable_status_gpio(struct msmsdcc_host *host)
+{
+	unsigned int gpio_no = host->plat->status_gpio;
+	int status;
+
+	if (!gpio_is_valid(gpio_no))
+		return;
+
+	status = gpio_request(gpio_no, "SD_HW_Detect");
+	if (status)
+		pr_err("%s: %s: gpio_request(%d) failed\n",
+			mmc_hostname(host->mmc), __func__, gpio_no);
+}
+
+static void msmsdcc_disable_status_gpio(struct msmsdcc_host *host)
+{
+	if (gpio_is_valid(host->plat->status_gpio))
+		gpio_free(host->plat->status_gpio);
+}
+
 static unsigned int
 msmsdcc_slot_status(struct msmsdcc_host *host)
 {
 	int status;
-	unsigned int gpio_no = host->plat->status_gpio;
 
-	status = gpio_request(gpio_no, "SD_HW_Detect");
-	if (status) {
-		pr_err("%s: %s: Failed to request GPIO %d\n",
-			mmc_hostname(host->mmc), __func__, gpio_no);
-	} else {
-		status = gpio_direction_input(gpio_no);
-		if (!status) {
-			status = gpio_get_value_cansleep(gpio_no);
-			if (host->plat->is_status_gpio_active_low)
-				status = !status;
-		}
-		gpio_free(gpio_no);
-	}
+	status = gpio_get_value_cansleep(host->plat->status_gpio);
+	if (host->plat->is_status_gpio_active_low)
+		status = !status;
+
 	return status;
 }
 
@@ -4932,6 +5009,10 @@ static int msmsdcc_sps_init(struct msmsdcc_host *host)
 	bam.callback = msmsdcc_sps_bam_global_irq_cb;
 	bam.user = (void *)host;
 
+	/* bam reset messages will be limited to 5 times */
+	//bam.constrained_logging = true;
+	//bam.logging_number = 5;
+
 	pr_info("%s: bam physical base=0x%x\n", mmc_hostname(host->mmc),
 			(u32)bam.phys_addr);
 	pr_info("%s: bam virtual base=0x%x\n", mmc_hostname(host->mmc),
@@ -5168,6 +5249,7 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 	struct msmsdcc_host *host =
 		container_of(h, struct msmsdcc_host, power_suspend);
 	unsigned long flags;
+
 
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
@@ -5742,9 +5824,15 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		goto err;
 	}
 
-	if (msmsdcc_dt_parse_vreg_info(dev,
-			&pdata->vreg_data->vdd_data, "vdd"))
-		goto err;
+	/*
+	 * Some devices might not use vdd. if qcom,not-use-vdd exists
+	 * skip the parse the vdd
+	 */
+	if (of_property_read_bool(np, "qcom,not-use-vdd") != true) {
+		if (msmsdcc_dt_parse_vreg_info(dev,
+				&pdata->vreg_data->vdd_data, "vdd"))
+			goto err;
+	}
 
 	if (msmsdcc_dt_parse_vreg_info(dev,
 			&pdata->vreg_data->vdd_io_data, "vdd-io"))
@@ -6046,6 +6134,17 @@ msmsdcc_probe(struct platform_device *pdev)
 		      msmsdcc_get_min_sup_clk_rate(host)));
 
 	atomic_set(&host->clks_on, 1);
+
+	ret = msmsdcc_msm_bus_register(host);
+	if (ret)
+		goto clk_disable;
+
+	if (host->msm_bus_vote.client_handle)
+		INIT_DELAYED_WORK(&host->msm_bus_vote.vote_work,
+				  msmsdcc_msm_bus_work);
+
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
+
 	/* Apply Hard reset to SDCC to put it in power on default state */
 	msmsdcc_hard_reset(host);
 
@@ -6058,18 +6157,10 @@ msmsdcc_probe(struct platform_device *pdev)
 	pm_qos_add_request(&host->pm_qos_req_dma,
 			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 
-	ret = msmsdcc_msm_bus_register(host);
-	if (ret)
-		goto pm_qos_remove;
-
-	if (host->msm_bus_vote.client_handle)
-		INIT_DELAYED_WORK(&host->msm_bus_vote.vote_work,
-				  msmsdcc_msm_bus_work);
-
 	ret = msmsdcc_vreg_init(host, true);
 	if (ret) {
 		pr_err("%s: msmsdcc_vreg_init() failed (%d)\n", __func__, ret);
-		goto clk_disable;
+		goto pm_qos_remove;
 	}
 
 
@@ -6124,12 +6215,17 @@ msmsdcc_probe(struct platform_device *pdev)
 	/* packed write */
 	mmc->caps2 |= plat->packed_write;
 
+	mmc->caps2 |= MMC_CAP2_PACKED_WR;
+	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
 	/* Disable Sanitize & BKOPS
 	 * mmc->caps2 |= MMC_CAP2_SANITIZE;
 	 * mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	 */
+	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
+	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
+	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -6218,18 +6314,19 @@ msmsdcc_probe(struct platform_device *pdev)
 		plat->wpswitch_gpio = -ENOENT;
 
 	if (plat->status || gpio_is_valid(plat->status_gpio)) {
-		if (plat->status)
+		if (plat->status) {
 			host->oldstat = plat->status(mmc_dev(host->mmc));
-		else
+		} else {
+			msmsdcc_enable_status_gpio(host);
 			host->oldstat = msmsdcc_slot_status(host);
-
+		}
 		host->eject = !host->oldstat;
 	}
 
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags,
+				  plat->irq_flags | IRQF_ONESHOT,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
@@ -6430,6 +6527,7 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (plat->status_irq)
 		free_irq(plat->status_irq, host);
+	msmsdcc_disable_status_gpio(host);
  sdiowakeup_irq_free:
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq)
@@ -6448,12 +6546,13 @@ msmsdcc_probe(struct platform_device *pdev)
 		msmsdcc_sps_exit(host);
  vreg_deinit:
 	msmsdcc_vreg_init(host, false);
- clk_disable:
-	clk_disable(host->clk);
-	msmsdcc_msm_bus_unregister(host);
  pm_qos_remove:
 	if (host->cpu_dma_latency)
 		pm_qos_remove_request(&host->pm_qos_req_dma);
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
+	msmsdcc_msm_bus_unregister(host);
+ clk_disable:
+	clk_disable_unprepare(host->clk);
  clk_put:
 	clk_put(host->clk);
  pclk_disable:
@@ -6526,6 +6625,7 @@ static int msmsdcc_remove(struct platform_device *pdev)
 
 	if (plat->status_irq)
 		free_irq(plat->status_irq, host);
+	msmsdcc_disable_status_gpio(host);
 
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
@@ -6790,8 +6890,13 @@ msmsdcc_runtime_suspend(struct device *dev)
 	pr_debug("%s: %s: ends with err=%d\n", mmc_hostname(mmc), __func__, rc);
 out:
 	/* set bus bandwidth to 0 immediately */
-	msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
-	msmsdcc_print_pm_stats(host, start, __func__);
+	/*
+	 * Remove the vote immediately only if clocks are off in which
+	 * case we might have queued work to remove vote but it may not
+	 * be completed before runtime suspend or system suspend.
+	 */
+	if (!atomic_read(&host->clks_on))
+		msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
 	return rc;
 }
 
@@ -6889,8 +6994,10 @@ static int msmsdcc_pm_suspend(struct device *dev)
 		rc = 0;
 		goto out;
 	}
-	if (host->plat->status_irq)
+	if (host->plat->status_irq) {
 		disable_irq(host->plat->status_irq);
+		msmsdcc_disable_status_gpio(host);
+	}
 
 	/*
 	 * If system comes out of suspend, msmsdcc_pm_resume() sets the
@@ -6904,6 +7011,7 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 */
 	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
+		host->pending_resume = false;
  out:
 	msmsdcc_print_pm_stats(host, start, __func__);
 	return rc;
@@ -6956,6 +7064,7 @@ static int msmsdcc_pm_resume(struct device *dev)
 		host->pending_resume = true;
 
 	if (host->plat->status_irq) {
+		msmsdcc_enable_status_gpio(host);
 		msmsdcc_check_status((unsigned long)host);
 		enable_irq(host->plat->status_irq);
 	}

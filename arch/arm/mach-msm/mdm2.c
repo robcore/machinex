@@ -271,7 +271,6 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 			mdm_toggle_soft_reset(mdm_drv);
 			mdelay(10);
 			mdm_peripheral_connect(mdm_drv);
-			msleep(100)
 		}
 	}
 }

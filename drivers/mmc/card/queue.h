@@ -53,6 +53,7 @@ struct mmc_queue {
 	bool			wr_packing_enabled;
 	int			num_of_potential_packed_wr_reqs;
 	int			num_wr_reqs_to_start_packing;
+	bool			no_pack_for_random;
 	int (*err_check_fn) (struct mmc_card *, struct mmc_async_req *);
 	void (*packed_test_fn) (struct request_queue *, struct mmc_queue_req *);
 };
@@ -60,7 +61,7 @@ struct mmc_queue {
 extern int mmc_init_queue(struct mmc_queue *, struct mmc_card *, spinlock_t *,
 			  const char *);
 extern void mmc_cleanup_queue(struct mmc_queue *);
-extern int mmc_queue_suspend(struct mmc_queue *);
+extern int mmc_queue_suspend(struct mmc_queue *, int);
 extern void mmc_queue_resume(struct mmc_queue *);
 
 extern unsigned int mmc_queue_map_sg(struct mmc_queue *,
