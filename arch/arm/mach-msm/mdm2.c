@@ -277,7 +277,6 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 			}
 		}
 	}
-		return;
 }
 
 static void mdm_image_upgrade(struct mdm_modem_drv *mdm_drv, int type)
