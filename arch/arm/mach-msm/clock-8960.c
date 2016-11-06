@@ -3912,6 +3912,7 @@ static struct clk_freq_tbl clk_tbl_mdp[] = {
 	F_MDP(160000000, pll2, 1,  5),
 	F_MDP(177780000, pll2, 2,  9),
 	F_MDP(200000000, pll2, 1,  4),
+	F_MDP(228571000, pll2, 2,  7),
 	F_MDP(266667000, pll2, 1,  3),
 	F_END
 };
@@ -4382,7 +4383,7 @@ static struct rcg_clk vcodec_clk = {
 		.dbg_name = "vcodec_clk",
 		.ops = &clk_ops_rcg,
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
-				  HIGH, 266670000),
+				  HIGH, 228571000),
 		CLK_INIT(vcodec_clk.c),
 		.depends = &vcodec_axi_clk.c,
 	},
