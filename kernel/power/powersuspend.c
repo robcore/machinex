@@ -228,7 +228,7 @@ static ssize_t power_suspend_mode_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute power_suspend_mode_attribute =
-	__ATTR(power_suspend_mode, 0444,
+	__ATTR(power_suspend_mode, 0666,
 		power_suspend_mode_show,
 		power_suspend_mode_store);
 
@@ -280,10 +280,9 @@ static int __init power_suspend_init(void)
                 return -ENOMEM;
         }
 
-	suspend_work_queue = create_workqueue("p-suspend");
+	suspend_work_queue = create_singlethread_workqueue("p-suspend");
 
 	if (suspend_work_queue == NULL) {
-	destroy_workqueue(suspend_work_queue);
 		return -ENOMEM;
 	}
 
@@ -308,3 +307,5 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@
 MODULE_DESCRIPTION("power_suspend - A replacement kernel PM driver for"
         "Android's deprecated early_suspend/late_resume PM driver!");
 MODULE_LICENSE("GPL v2");
+
+
