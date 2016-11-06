@@ -244,7 +244,7 @@ static int mmc_read_ssr(struct mmc_card *card)
 	 * bitfield positions accordingly.
 	 */
 	au = UNSTUFF_BITS(ssr, 428 - 384, 4);
-	if (au > 0 && au <= 9) {
+	if (au > 0 || au <= 9) {
 		card->ssr.au = 1 << (au + 4);
 		es = UNSTUFF_BITS(ssr, 408 - 384, 16);
 		et = UNSTUFF_BITS(ssr, 402 - 384, 6);
@@ -1036,7 +1036,6 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_send_relative_addr(host, &card->rca);
 		if (err)
 			return err;
-		host->card = card;
 	}
 
 	if (!oldcard) {
@@ -1106,13 +1105,12 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 
+	host->card = card;
 	return 0;
 
 free_card:
-	if (!oldcard) {
-		host->card = NULL;
+	if (!oldcard)
 		mmc_remove_card(card);
-	}
 
 	return err;
 }
@@ -1222,7 +1220,6 @@ static int mmc_sd_resume(struct mmc_host *host)
 	int err;
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	int retries;
-	unsigned long delay = 5000, settle = 0;
 #endif
 
 	BUG_ON(!host);
@@ -1235,19 +1232,13 @@ static int mmc_sd_resume(struct mmc_host *host)
 		err = mmc_sd_init_card(host, host->ocr, host->card);
 
 		if (err) {
-			printk(KERN_ERR "%s: Re-init card rc = %d "
-				"(retries = %d, delay = %lu)\n",
-				mmc_hostname(host), err, retries, delay);
+			pr_debug(KERN_ERR "%s: Re-init card rc = %d (retries = %d)\n",
+			       mmc_hostname(host), err, retries);
 			retries--;
 			mmc_power_off(host);
-			usleep_range(delay, delay + 500);
+			usleep_range(5000, 5500);
 			mmc_power_up(host);
 			mmc_select_voltage(host, host->ocr);
-			if (settle)
-				usleep_range(settle, settle + 500);
-			/* Increase settle times on each attempt */
-			delay += 10000;
-			settle += 10000;
 			continue;
 		}
 		break;

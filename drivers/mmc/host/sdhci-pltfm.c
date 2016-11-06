@@ -36,15 +36,7 @@
 #endif
 #include "sdhci-pltfm.h"
 
-unsigned int sdhci_pltfm_clk_get_max_clock(struct sdhci_host *host)
-{
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-
-	return clk_get_rate(pltfm_host->clk);
-}
-EXPORT_SYMBOL_GPL(sdhci_pltfm_clk_get_max_clock);
-
-static const struct sdhci_ops sdhci_pltfm_ops = {
+static struct sdhci_ops sdhci_pltfm_ops = {
 };
 
 #ifdef CONFIG_OF
@@ -84,7 +76,6 @@ void sdhci_get_of_property(struct platform_device *pdev)
 
 		if (of_device_is_compatible(np, "fsl,p2020-esdhc") ||
 		    of_device_is_compatible(np, "fsl,p1010-esdhc") ||
-		    of_device_is_compatible(np, "fsl,t4240-esdhc") ||
 		    of_device_is_compatible(np, "fsl,mpc8536-esdhc"))
 			host->quirks |= SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
 
@@ -99,7 +90,7 @@ void sdhci_get_of_property(struct platform_device *pdev) {}
 EXPORT_SYMBOL_GPL(sdhci_get_of_property);
 
 struct sdhci_host *sdhci_pltfm_init(struct platform_device *pdev,
-				    const struct sdhci_pltfm_data *pdata)
+				    struct sdhci_pltfm_data *pdata)
 {
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
@@ -179,7 +170,7 @@ void sdhci_pltfm_free(struct platform_device *pdev)
 EXPORT_SYMBOL_GPL(sdhci_pltfm_free);
 
 int sdhci_pltfm_register(struct platform_device *pdev,
-			 const struct sdhci_pltfm_data *pdata)
+			 struct sdhci_pltfm_data *pdata)
 {
 	struct sdhci_host *host;
 	int ret = 0;

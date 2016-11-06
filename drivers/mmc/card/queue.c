@@ -18,7 +18,6 @@
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
-#include <linux/sched.h>
 #include "queue.h"
 
 #define MMC_QUEUE_BOUNCESZ	65536
@@ -60,11 +59,6 @@ static int mmc_queue_thread(void *d)
 	struct request_queue *q = mq->queue;
 	struct request *req;
 	struct mmc_card *card = mq->card;
-
-	struct sched_param scheduler_params = {0};
-	scheduler_params.sched_priority = 1;
-
-	sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
 
 	current->flags |= PF_MEMALLOC;
 
@@ -137,14 +131,12 @@ static void mmc_request(struct request_queue *q)
 		return;
 	}
 
-	if (unlikely(!irqs_disabled())) {
-		ioc = get_task_io_context(current, GFP_NOWAIT, 0);
-		if (ioc) {
-		    /* Set nopacked period if requesting process is RT class */
-		    if (IOPRIO_PRIO_CLASS(ioc->ioprio) == IOPRIO_CLASS_RT)
-		        mmc_set_nopacked_period(mq, HZ);
-		    put_io_context(ioc);
-		}
+	ioc = get_task_io_context(current, GFP_NOWAIT, 0);
+	if (ioc) {
+	    /* Set nopacked period if requesting process is RT class */
+	    if (IOPRIO_PRIO_CLASS(ioc->ioprio) == IOPRIO_CLASS_RT)
+	        mmc_set_nopacked_period(mq, HZ);
+	    put_io_context(ioc);
 	}
 
 	cntx = &mq->card->host->context_info;
@@ -245,7 +237,6 @@ int mmc_init_queue(struct mmc_queue *mq, struct mmc_card *card,
 
 	blk_queue_prep_rq(mq->queue, mmc_prep_request);
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, mq->queue);
-	queue_flag_clear_unlocked(QUEUE_FLAG_ADD_RANDOM, mq->queue);
 	if (mmc_can_erase(card))
 		mmc_queue_setup_discard(mq->queue, card);
 
@@ -402,13 +393,12 @@ EXPORT_SYMBOL(mmc_cleanup_queue);
 /**
  * mmc_queue_suspend - suspend a MMC request queue
  * @mq: MMC queue to suspend
- * @wait: Wait till MMC request queue is empty
  *
  * Stop the block request queue, and wait for our thread to
  * complete any outstanding requests.  This ensures that we
  * won't suspend while a request is being processed.
  */
-int mmc_queue_suspend(struct mmc_queue *mq, int wait)
+int mmc_queue_suspend(struct mmc_queue *mq)
 {
 	struct request_queue *q = mq->queue;
 	unsigned long flags;
@@ -422,7 +412,7 @@ int mmc_queue_suspend(struct mmc_queue *mq, int wait)
 		spin_unlock_irqrestore(q->queue_lock, flags);
 
 		rc = down_trylock(&mq->thread_sem);
-		if (rc && !wait) {
+		if (rc) {
 			/*
 			 * Failed to take the lock so better to abort the
 			 * suspend because mmcqd thread is processing requests.
@@ -432,9 +422,6 @@ int mmc_queue_suspend(struct mmc_queue *mq, int wait)
 			blk_start_queue(q);
 			spin_unlock_irqrestore(q->queue_lock, flags);
 			rc = -EBUSY;
-		} else if (rc && wait) {
-			down(&mq->thread_sem);
-			rc = 0;
 		}
 	}
 	return rc;
