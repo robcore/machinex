@@ -568,7 +568,7 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 {
 	struct subsys_device *dev;
 
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	dev = kmalloc(sizeof(*dev), GFP_ATOMIC);
 	if (!dev)
 		return ERR_PTR(-ENOMEM);
 
@@ -667,9 +667,9 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
+	restart_level = RESET_SUBSYS_INDEPENDENT;
 
-	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
+	ssr_wq = alloc_workqueue("ssr_wq", WQ_HIGHPRI | , 0);
 	if (!ssr_wq)
 		panic("%s: out of memory\n", __func__);
 
