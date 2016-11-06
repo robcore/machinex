@@ -189,8 +189,7 @@ struct sdio_cccr {
 				wide_bus:1,
 				high_power:1,
 				high_speed:1,
-				disable_cd:1,
-				async_intr_sup:1;
+				disable_cd:1;
 };
 
 struct sdio_cis {
