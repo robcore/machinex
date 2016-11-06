@@ -481,7 +481,9 @@ static void mdm_update_gpio_configs(struct mdm_device *mdev,
 	}
 }
 
-#if 0 CONFIG_SEC_DEBUG_MDM_FILE_INFO
+/**CONFIG_SEC_DEBUG_MDM_FILE_INFO
+*/
+#if 1
 static unsigned char *mdm_read_err_report(void)
 {
 	/* Read CP error report from mdm_err.log in tombstones */
