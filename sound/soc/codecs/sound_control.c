@@ -25,7 +25,7 @@
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
-int snd_ctrl_enabled = 1;
+int snd_ctrl_enabled = 0;
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
 //static int actual_pa_gain = 36;
