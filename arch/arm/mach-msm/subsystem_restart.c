@@ -166,7 +166,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
+static int restart_level = RESET_SUBSYS_COUPLED;
 
 int get_restart_level()
 {
@@ -275,7 +275,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (!max_restarts_check)
 		goto out;
 
-	r_log = kmalloc(sizeof(struct restart_log), GFP_KERNEL);
+	r_log = kzalloc(sizeof(struct restart_log), GFP_KERNEL);
 	if (!r_log)
 		goto out;
 	r_log->dev = dev;
@@ -569,7 +569,7 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 {
 	struct subsys_device *dev;
 
-	dev = kmalloc(sizeof(*dev), GFP_KERNEL);
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return ERR_PTR(-ENOMEM);
 
@@ -668,7 +668,7 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
+	restart_level = RESET_SUBSYS_COUPLED;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_HIGHPRI, 0);
 	if (!ssr_wq)

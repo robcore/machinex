@@ -285,7 +285,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int apq8064_paddr_to_memtype(phys_addr_t paddr)
+static int apq8064_paddr_to_memtype(unsigned int paddr)
 {
 	return MEMTYPE_EBI1;
 }

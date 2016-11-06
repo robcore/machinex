@@ -327,5 +327,3 @@ int mdm_get_ops(struct mdm_ops **mdm_ops)
 	*mdm_ops = &mdm_cb;
 	return 0;
 }
-
-
