@@ -244,9 +244,17 @@ enum frm_cfg {
 
 enum msm_ctrl_state {
 	MSM_CTRL_AWAKE,
-	MSM_CTRL_SLEEPING,
+	MSM_CTRL_IDLE,
 	MSM_CTRL_ASLEEP,
+	MSM_CTRL_DOWN,
 };
+/*
+enum msm_slim_msgq {
+	MSM_MSGQ_DISABLED,
+	MSM_MSGQ_RESET,
+	MSM_MSGQ_ENABLED,
+	MSM_MSGQ_DOWN,
+};*/
 
 struct msm_slim_sps_bam {
 	u32			hdl;
@@ -261,6 +269,12 @@ struct msm_slim_endp {
 	struct sps_mem_buffer		buf;
 	struct completion		*xcomp;
 	bool				connected;
+};
+
+static struct msm_slim_mdm {
+	struct notifier_block nb;
+	void *ssr;
+	enum msm_ctrl_state state;
 };
 
 struct msm_slim_ctrl {
@@ -293,8 +307,10 @@ struct msm_slim_ctrl {
 	bool			use_rx_msgqs;
 	int			pipe_b;
 	struct completion	reconf;
+	bool			reconf_busy;
 	bool			chan_active;
 	enum msm_ctrl_state	state;
+	struct msm_slim_mdm	mdm;
 	int			nsats;
 	u32			ver;
 };
@@ -338,15 +354,16 @@ static struct msm_slim_sat *msm_slim_alloc_sat(struct msm_slim_ctrl *dev);
 
 static int msm_slim_rx_enqueue(struct msm_slim_ctrl *dev, u32 *buf, u8 len)
 {
-	spin_lock(&dev->rx_lock);
+	unsigned long flags;
+	spin_lock_irqsave(&dev->rx_lock, flags);
 	if ((dev->tail + 1) % MSM_CONCUR_MSG == dev->head) {
-		spin_unlock(&dev->rx_lock);
+		spin_unlock_irqrestore(&dev->rx_lock, flags);
 		dev_err(dev->dev, "RX QUEUE full!");
 		return -EXFULL;
 	}
 	memcpy((u8 *)dev->rx_msgs[dev->tail], (u8 *)buf, len);
 	dev->tail = (dev->tail + 1) % MSM_CONCUR_MSG;
-	spin_unlock(&dev->rx_lock);
+	spin_unlock_irqrestore(&dev->rx_lock, flags);
 	return 0;
 }
 
@@ -367,15 +384,16 @@ static int msm_slim_rx_dequeue(struct msm_slim_ctrl *dev, u8 *buf)
 static int msm_sat_enqueue(struct msm_slim_sat *sat, u32 *buf, u8 len)
 {
 	struct msm_slim_ctrl *dev = sat->dev;
-	spin_lock(&sat->lock);
+	unsigned long flags;
+	spin_lock_irqsave(&sat->lock, flags);
 	if ((sat->stail + 1) % SAT_CONCUR_MSG == sat->shead) {
-		spin_unlock(&sat->lock);
+		spin_unlock_irqrestore(&sat->lock, flags);
 		dev_err(dev->dev, "SAT QUEUE full!");
 		return -EXFULL;
 	}
 	memcpy(sat->sat_msgs[sat->stail], (u8 *)buf, len);
 	sat->stail = (sat->stail + 1) % SAT_CONCUR_MSG;
-	spin_unlock(&sat->lock);
+	spin_unlock_irqrestore(&sat->lock, flags);
 	return 0;
 }
 
@@ -819,6 +837,8 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 	 */
 	if (!(txn->mc & SLIM_MSG_CLK_PAUSE_SEQ_FLG))
 		msgv = msm_slim_get_ctrl(dev);
+	if (msgv >= 0)
+		dev->state = MSM_CTRL_AWAKE;
 	mutex_lock(&dev->tx_lock);
 	if (dev->state == MSM_CTRL_ASLEEP ||
 		((!(txn->mc & SLIM_MSG_CLK_PAUSE_SEQ_FLG)) &&
@@ -1121,8 +1141,6 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		/* part of grp. activating/removing 1 will take care of rest */
 		ret = slim_control_ch(&sat->satcl, sat->satch[i].chanh, oper,
 					false);
-		pr_info("-slimdebug-SAT oper:%d grp start:%d, ret:%d", oper,
-				sat->satch[i].chan, ret); /* slimbus debug patch */
 		if (!ret) {
 			for (i = 5; i < len; i++) {
 				int j;
@@ -1210,8 +1228,6 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
 					SLIM_CH_ACTIVATE, false);
-			pr_info("-slimdebug-SAT activate grp start: ret:%d", ret); /* slimbus debug patch */
-		}
 	}
 	return ret;
 }
@@ -1258,11 +1274,6 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 #endif
 			ret = slim_assign_laddr(&dev->ctrl, e_addr, 6, &laddr,
 						false);
-
-        	pr_info("wrapper slim_rxwq eaddr %2x:%2x:%2x:%2x:%2x:%2x [laddr=%d]\n",
-			e_addr[0], e_addr[1], e_addr[2],
-			e_addr[3], e_addr[4], e_addr[5], laddr);
-
 			/* Is this Qualcomm ported generic device? */
 			if (!ret && e_addr[5] == QC_MFGID_LSB &&
 				e_addr[4] == QC_MFGID_MSB &&
@@ -1270,10 +1281,8 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 				e_addr[2] != QC_CHIPID_SL)
 				dev->pgdla = laddr;
 			if (!ret && !pm_runtime_enabled(dev->dev) &&
-				laddr == (QC_MSM_DEVS - 1)) {
-				pr_info("wrapper newly pm_runtime_enable\n");
+				laddr == (QC_MSM_DEVS - 1))
 				pm_runtime_enable(dev->dev);
-			}
 
 			if (!ret && msm_is_sat_dev(e_addr)) {
 				struct msm_slim_sat *sat = addr_to_sat(dev,
@@ -1365,8 +1374,6 @@ static void slim_sat_rxprocess(struct work_struct *work)
 			 * when this is detected
 			 */
 			if (sat->sent_capability) {
-				pr_info("-slimdebug-Received report present from SAT:0x%x",
-						sat->satcl.laddr); /* slimbus debug patch */
 				for (i = 0; i < sat->nsatch; i++) {
 					if (sat->satch[i].reconf) {
 						pr_err("SSR, sat:%d, rm ch:%d",
@@ -1476,7 +1483,6 @@ send_capability:
 		case SLIM_USR_MC_RECONFIG_NOW:
 			tid = buf[3];
 			gen_ack = true;
-			pr_info("-slimdebug-SAT:LA:%x reconf req", sat->satcl.laddr); /* slimbus debug patch */
 			ret = slim_reconfigure_now(&sat->satcl);
 			for (i = 0; i < sat->nsatch; i++) {
 				struct msm_sat_chan *sch = &sat->satch[i];
@@ -1524,8 +1530,6 @@ send_capability:
 			txn.len = 2;
 			txn.wbuf = wbuf;
 			gen_ack = true;
-			pr_info("-slimdebug-SAT connect MC:0x%x,LA:0x%x", txn.mc,
-					sat->satcl.laddr); /* slimbus debug patch */
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 
 #ifdef CONFIG_DEBUG_FS
@@ -1549,7 +1553,6 @@ send_capability:
 			txn.mt = SLIM_MSG_MT_CORE;
 			txn.wbuf = wbuf;
 			gen_ack = true;
-			pr_info("-slimdebug-SAT disconnect LA:0x%x", sat->satcl.laddr); /* slimbus debug patch */
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 
 #ifdef CONFIG_DEBUG_FS
@@ -1577,23 +1580,15 @@ send_capability:
 		wbuf[0] = tid;
 		if (!ret)
 			wbuf[1] = MSM_SAT_SUCCSS;
-		else {
-			pr_info("-slimdebug-sat cmd:0x%x no ack:%d", mc, ret); /* slimbus debug patch */
+		else
 			wbuf[1] = 0;
-		}
 		txn.mc = SLIM_USR_MC_GENERIC_ACK;
 		txn.la = sat->satcl.laddr;
 		txn.rl = 6;
 		txn.len = 2;
 		txn.wbuf = wbuf;
 		txn.mt = SLIM_MSG_MT_SRC_REFERRED_USER;
-		ret = msm_xfer_msg(&dev->ctrl, &txn);
-		if (ret) {
-			pr_info("-slimdebug-sending ACK failed:%d", ret);
-			pr_info("-slimdebug-clk gear:%d, subfrm mode:0x%x",
-				dev->ctrl.clkgear, dev->ctrl.sched.subfrmcode);
-			ret = 0;
-		} /* slimbus debug patch */
+		msm_xfer_msg(&dev->ctrl, &txn);
 		if (satv >= 0)
 			msm_slim_put_ctrl(dev);
 	}
@@ -2187,7 +2182,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 					"qcom,min-clk-gear", &dev->ctrl.min_cg);
 		ret = of_property_read_u32(pdev->dev.of_node,
 					"qcom,max-clk-gear", &dev->ctrl.max_cg);
-		pr_info("min_cg:%d, max_cg:%d, rxreg: %d", dev->ctrl.min_cg,
+		pr_debug("min_cg:%d, max_cg:%d, rxreg: %d", dev->ctrl.min_cg,
 					dev->ctrl.max_cg, rxreg_access);
 	} else {
 		dev->ctrl.nr = pdev->id;
@@ -2424,7 +2419,8 @@ static int __devexit msm_slim_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_RUNTIME
 static int msm_slim_runtime_idle(struct device *device)
 {
-	dev_dbg(device, "pm_runtime: idle...\n");
+	if (dev->state == MSM_CTRL_AWAKE)
+		dev->state = MSM_CTRL_IDLE;
 	pm_request_autosuspend(device);
 	return -EAGAIN;
 }
@@ -2442,7 +2438,6 @@ static int msm_slim_runtime_suspend(struct device *device)
 	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
 	int ret;
 	dev_dbg(device, "pm_runtime: suspending...\n");
-	dev->state = MSM_CTRL_SLEEPING;
 	ret = slim_ctrl_clk_pause(&dev->ctrl, false, SLIM_CLK_UNSPECIFIED);
 	if (ret) {
 		dev_err(device, "clk pause not entered:%d", ret);
@@ -2472,10 +2467,12 @@ static int msm_slim_runtime_resume(struct device *device)
 
 static int msm_slim_suspend(struct device *dev)
 {
-	int ret = 0;
-	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
-		struct platform_device *pdev = to_platform_device(dev);
-		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
+	int ret = -EBUSY;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
+	if (!pm_runtime_enabled(dev) ||
+		(!pm_runtime_suspended(dev) &&
+			cdev->state == MSM_CTRL_IDLE)) {
 		dev_dbg(dev, "system suspend");
 		ret = msm_slim_runtime_suspend(dev);
 		if (!ret) {

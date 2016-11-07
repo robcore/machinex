@@ -12,8 +12,18 @@ menuconfig SLIMBUS
 if SLIMBUS
 config SLIMBUS_MSM_CTRL
 	tristate "Qualcomm Slimbus Master Component"
-	default n
+	default y
 	help
 	  Select driver for Qualcomm's Slimbus Master Component.
+
+config SLIMBUS_MSM_NGD
+	tristate "Qualcomm Slimbus Satellite Component"
+	default n
+	help
+	  Select driver for Qualcomm's Slimbus Satellite Component.
+	  This is light-weight slimbus controller driver responsible for
+	  communicating with slave HW directly over the bus using messaging
+	  interface, and communicating with master component residing on ADSP
+	  for bandwidth and data-channel management.
 
 endif

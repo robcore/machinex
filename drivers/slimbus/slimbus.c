@@ -994,8 +994,8 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 			ret = wait_for_completion_timeout(&complete, HZ);
 			if (!ret) {
 				struct slim_msg_txn *txn;
-				mutex_lock(&ctrl->m_ctrl);
 				dev_err(&ctrl->dev, "slimbus Read timed out");
+				mutex_lock(&ctrl->m_ctrl);
 				txn = ctrl->txnt[tid];
 				/* Invalidate the transaction */
 				ctrl->txnt[tid] = NULL;
@@ -1006,8 +1006,8 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 				ret = 0;
 		} else if (ret < 0 && !msg->comp) {
 			struct slim_msg_txn *txn;
-			mutex_lock(&ctrl->m_ctrl);
 			dev_err(&ctrl->dev, "slimbus Read error");
+			mutex_lock(&ctrl->m_ctrl);
 			txn = ctrl->txnt[tid];
 			/* Invalidate the transaction */
 			ctrl->txnt[tid] = NULL;
@@ -1081,8 +1081,11 @@ int slim_alloc_mgrports(struct slim_device *sb, enum slim_port_req req,
 		}
 		break;
 	}
-	if (i >= ctrl->nports)
+	if (i >= ctrl->nports) {
 		ret = -EDQUOT;
+		goto alloc_err;
+	}
+	ret = 0;
 	for (j = i; j < i + nphysp; j++) {
 		ctrl->ports[j].state = SLIM_P_UNCFG;
 		ctrl->ports[j].req = req;
@@ -1377,7 +1380,7 @@ EXPORT_SYMBOL_GPL(slim_port_xfer);
  * processed from the multiple transfers.
  */
 enum slim_port_err slim_port_get_xfer_status(struct slim_device *sb, u32 ph,
-			u8 **done_buf, u32 *done_len)
+			u8 *done_buf, u32 *done_len)
 {
 	struct slim_controller *ctrl = sb->ctrl;
 	u8 pn = SLIM_HDL_TO_PORT(ph);
@@ -1831,18 +1834,10 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 			if (prop->ratem != slc->prop.ratem ||
 			prop->sampleszbits != slc->prop.sampleszbits ||
 			prop->baser != slc->prop.baser) {
-                printk("=[slim]=%s=[slc->state=%d][slc->ref=%d] \
-                        [ratem=%d][samplezbis=%d][baser=%d]\n",
-                        __func__, slc->state, slc->ref, slc->prop.ratem, \
-                        slc->prop.sampleszbits, slc->prop.baser);
 				ret = -EISCONN;
 				goto err_define_ch;
 			}
 		} else if (slc->state > SLIM_CH_DEFINED) {
-            printk("=[slim]=%s=[slc->state=%d][slc->ref=%d] \
-                    [ratem=%d][samplezbis=%d][baser=%d]\n",
-                    __func__, slc->state, slc->ref, slc->prop.ratem, \
-                    slc->prop.sampleszbits, slc->prop.baser);
 			ret = -EISCONN;
 			goto err_define_ch;
 		} else {
@@ -2646,7 +2641,7 @@ int slim_reconfigure_now(struct slim_device *sb)
 		if (list_empty(&sb->mark_removal)) {
 			mutex_unlock(&ctrl->m_ctrl);
 			mutex_unlock(&ctrl->sched.m_reconf);
-			pr_info("SLIM_CL: skip reconfig sequence\n");
+			//pr_info("SLIM_CL: skip reconfig sequence\n");
 			return 0;
 		}
 	}
@@ -2694,14 +2689,14 @@ int slim_reconfigure_now(struct slim_device *sb)
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
 			SLIM_MSG_MC_NEXT_SUBFRAME_MODE, 0, SLIM_MSG_MT_CORE,
 			NULL, (u8 *)&subframe, 1, 4, NULL, 0, NULL);
-		pr_info("-slimdebug-sending subframe:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
+		//pr_info("-slimdebug-sending subframe:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
 	}
 	if (!ret && clkgear != ctrl->clkgear) {
 		wbuf[0] = (u8)(clkgear & 0xFF);
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
 			SLIM_MSG_MC_NEXT_CLOCK_GEAR, 0, SLIM_MSG_MT_CORE,
 			NULL, wbuf, 1, 4, NULL, 0, NULL);
-		pr_info("-slimdebug-sending clkgear:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
+		//pr_info("-slimdebug-sending clkgear:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
 	}
 	if (ret)
 		goto revert_reconfig;
@@ -2833,7 +2828,6 @@ int slim_reconfigure_now(struct slim_device *sb)
 		slim_chan_changes(sb, false);
 		mutex_unlock(&ctrl->m_ctrl);
 		mutex_unlock(&ctrl->sched.m_reconf);
-		pr_info("-slimdebug-slim reconfig done!"); /* slimbus debug patch */
 		return 0;
 	}
 
@@ -2896,8 +2890,6 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		u8 add_mark_removal  = true;
 
 		slc = &ctrl->chans[chan];
-		pr_info("-slimdebug-chan:%d,ctrl:%d,def:%d, ref:%d", slc->chan,
-			chctrl, slc->def, slc->ref); /* slimbus debug patch */
 		if (slc->state < SLIM_CH_DEFINED) {
 			ret = -ENOTCONN;
 			break;
