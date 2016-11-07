@@ -385,6 +385,24 @@ int slim_register_board_info(struct slim_boardinfo const *info, unsigned n)
 EXPORT_SYMBOL_GPL(slim_register_board_info);
 
 /*
+ * slim_ctrl_add_boarddevs: Add devices registered by board-info
+ * @ctrl: Controller to which these devices are to be added to.
+ * This API is called by controller when it is up and running.
+ * If devices on a controller were registered before controller,
+ * this will make sure that they get probed when controller is up.
+ */
+void slim_ctrl_add_boarddevs(struct slim_controller *ctrl)
+{
+	struct sbi_boardinfo *bi;
+	mutex_lock(&board_lock);
+	list_add_tail(&ctrl->list, &slim_ctrl_list);
+	list_for_each_entry(bi, &board_list, list)
+		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
+	mutex_unlock(&board_lock);
+}
+EXPORT_SYMBOL_GPL(slim_ctrl_add_boarddevs);
+
+/*
  * slim_busnum_to_ctrl: Map bus number to controller
  * @busnum: Bus number
  * Returns controller representing this bus number
@@ -504,6 +522,10 @@ out_list:
 /* slim_remove_device: Remove the effect of slim_add_device() */
 void slim_remove_device(struct slim_device *sbdev)
 {
+	struct slim_controller *ctrl = sbdev->ctrl;
+	mutex_lock(&ctrl->m_ctrl);
+	list_del_init(&sbdev->dev_list);
+	mutex_unlock(&ctrl->m_ctrl);
 	device_unregister(&sbdev->dev);
 }
 EXPORT_SYMBOL_GPL(slim_remove_device);
@@ -1380,7 +1402,7 @@ EXPORT_SYMBOL_GPL(slim_port_xfer);
  * processed from the multiple transfers.
  */
 enum slim_port_err slim_port_get_xfer_status(struct slim_device *sb, u32 ph,
-			u8 *done_buf, u32 *done_len)
+			u8 **done_buf, u32 *done_len)
 {
 	struct slim_controller *ctrl = sb->ctrl;
 	u8 pn = SLIM_HDL_TO_PORT(ph);

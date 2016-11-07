@@ -271,12 +271,6 @@ struct msm_slim_endp {
 	bool				connected;
 };
 
-static struct msm_slim_mdm {
-	struct notifier_block nb;
-	void *ssr;
-	enum msm_ctrl_state state;
-};
-
 struct msm_slim_ctrl {
 	struct slim_controller  ctrl;
 	struct slim_framer	framer;
@@ -307,10 +301,8 @@ struct msm_slim_ctrl {
 	bool			use_rx_msgqs;
 	int			pipe_b;
 	struct completion	reconf;
-	bool			reconf_busy;
 	bool			chan_active;
 	enum msm_ctrl_state	state;
-	struct msm_slim_mdm	mdm;
 	int			nsats;
 	u32			ver;
 };
@@ -842,7 +834,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 	mutex_lock(&dev->tx_lock);
 	if (dev->state == MSM_CTRL_ASLEEP ||
 		((!(txn->mc & SLIM_MSG_CLK_PAUSE_SEQ_FLG)) &&
-		dev->state == MSM_CTRL_SLEEPING)) {
+		dev->state == MSM_CTRL_IDLE)) {
 		dev_err(dev->dev, "runtime or system PM suspended state");
 		mutex_unlock(&dev->tx_lock);
 		if (msgv >= 0)
@@ -1224,7 +1216,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 			*grph = chh[0];
 
 		/* part of group so activating 1 will take care of rest */
-		if (mc == SLIM_USR_MC_DEF_ACT_CHAN) {
+		if (mc == SLIM_USR_MC_DEF_ACT_CHAN)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
 					SLIM_CH_ACTIVATE, false);
@@ -1252,23 +1244,15 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 				(e_addr[2] == 0x02) && (e_addr[3] == 0x00) &&
 				(e_addr[4] == 0xbe) && (e_addr[5] == 0x02)) {
 
-				pr_info("wrapper slim_rxwq es325 eaddr recv and apply temporary workaround\n");
-
 				e_addr[1] = 0x01;
 
 				ret = slim_assign_laddr(&dev->ctrl, e_addr, 6,
 							&laddr, false);
 
-				pr_info("wrapper %s assign laddr %2x ret=%d\n",
-					__func__, e_addr[1], ret);
-
 				e_addr[1] = 0x00;
 
 				ret = slim_assign_laddr(&dev->ctrl, e_addr,
 							6, &laddr, false);
-
-				pr_info("wrapper %s assign laddr %2x ret=%d\n",
-					__func__, e_addr[1], ret);
 
 			} else
 #endif
@@ -2328,6 +2312,10 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	 * function
 	 */
 	mb();
+
+	/* Add devices registered with board-info now that controller is up */
+	slim_ctrl_add_boarddevs(&dev->ctrl);
+
 	if (pdev->dev.of_node)
 		of_register_slim_devices(&dev->ctrl);
 
@@ -2419,8 +2407,6 @@ static int __devexit msm_slim_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_RUNTIME
 static int msm_slim_runtime_idle(struct device *device)
 {
-	if (dev->state == MSM_CTRL_AWAKE)
-		dev->state = MSM_CTRL_IDLE;
 	pm_request_autosuspend(device);
 	return -EAGAIN;
 }
@@ -2438,6 +2424,7 @@ static int msm_slim_runtime_suspend(struct device *device)
 	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
 	int ret;
 	dev_dbg(device, "pm_runtime: suspending...\n");
+	dev->state = MSM_CTRL_IDLE;
 	ret = slim_ctrl_clk_pause(&dev->ctrl, false, SLIM_CLK_UNSPECIFIED);
 	if (ret) {
 		dev_err(device, "clk pause not entered:%d", ret);
