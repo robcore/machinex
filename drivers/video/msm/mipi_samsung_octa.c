@@ -1470,7 +1470,7 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 
 	if (val < 0)
 		val = 0;
-	else if (value > 4)
+	else if (val > 4)
 		val = 4;
 
 	Lpanel_colors = val;
