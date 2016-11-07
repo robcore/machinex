@@ -5345,7 +5345,7 @@ static inline void set_cpu_sd_state_busy(void)
 void set_cpu_sd_state_idle(void)
 {
 	struct sched_domain *sd;
-	int cpu = smp_processor_id()
+	int cpu = smp_processor_id();
 
 	if (test_bit(NOHZ_IDLE, nohz_flags(cpu)))
 		return;
