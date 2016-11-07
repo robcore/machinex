@@ -244,17 +244,9 @@ enum frm_cfg {
 
 enum msm_ctrl_state {
 	MSM_CTRL_AWAKE,
-	MSM_CTRL_IDLE,
+	MSM_CTRL_SLEEPING,
 	MSM_CTRL_ASLEEP,
-	MSM_CTRL_DOWN,
 };
-/*
-enum msm_slim_msgq {
-	MSM_MSGQ_DISABLED,
-	MSM_MSGQ_RESET,
-	MSM_MSGQ_ENABLED,
-	MSM_MSGQ_DOWN,
-};*/
 
 struct msm_slim_sps_bam {
 	u32			hdl;
@@ -346,16 +338,15 @@ static struct msm_slim_sat *msm_slim_alloc_sat(struct msm_slim_ctrl *dev);
 
 static int msm_slim_rx_enqueue(struct msm_slim_ctrl *dev, u32 *buf, u8 len)
 {
-	unsigned long flags;
-	spin_lock_irqsave(&dev->rx_lock, flags);
+	spin_lock(&dev->rx_lock);
 	if ((dev->tail + 1) % MSM_CONCUR_MSG == dev->head) {
-		spin_unlock_irqrestore(&dev->rx_lock, flags);
+		spin_unlock(&dev->rx_lock);
 		dev_err(dev->dev, "RX QUEUE full!");
 		return -EXFULL;
 	}
 	memcpy((u8 *)dev->rx_msgs[dev->tail], (u8 *)buf, len);
 	dev->tail = (dev->tail + 1) % MSM_CONCUR_MSG;
-	spin_unlock_irqrestore(&dev->rx_lock, flags);
+	spin_unlock(&dev->rx_lock);
 	return 0;
 }
 
@@ -376,16 +367,15 @@ static int msm_slim_rx_dequeue(struct msm_slim_ctrl *dev, u8 *buf)
 static int msm_sat_enqueue(struct msm_slim_sat *sat, u32 *buf, u8 len)
 {
 	struct msm_slim_ctrl *dev = sat->dev;
-	unsigned long flags;
-	spin_lock_irqsave(&sat->lock, flags);
+	spin_lock(&sat->lock);
 	if ((sat->stail + 1) % SAT_CONCUR_MSG == sat->shead) {
-		spin_unlock_irqrestore(&sat->lock, flags);
+		spin_unlock(&sat->lock);
 		dev_err(dev->dev, "SAT QUEUE full!");
 		return -EXFULL;
 	}
 	memcpy(sat->sat_msgs[sat->stail], (u8 *)buf, len);
 	sat->stail = (sat->stail + 1) % SAT_CONCUR_MSG;
-	spin_unlock_irqrestore(&sat->lock, flags);
+	spin_unlock(&sat->lock);
 	return 0;
 }
 
@@ -829,12 +819,10 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 	 */
 	if (!(txn->mc & SLIM_MSG_CLK_PAUSE_SEQ_FLG))
 		msgv = msm_slim_get_ctrl(dev);
-	if (msgv >= 0)
-		dev->state = MSM_CTRL_AWAKE;
 	mutex_lock(&dev->tx_lock);
 	if (dev->state == MSM_CTRL_ASLEEP ||
 		((!(txn->mc & SLIM_MSG_CLK_PAUSE_SEQ_FLG)) &&
-		dev->state == MSM_CTRL_IDLE)) {
+		dev->state == MSM_CTRL_SLEEPING)) {
 		dev_err(dev->dev, "runtime or system PM suspended state");
 		mutex_unlock(&dev->tx_lock);
 		if (msgv >= 0)
@@ -1133,6 +1121,8 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		/* part of grp. activating/removing 1 will take care of rest */
 		ret = slim_control_ch(&sat->satcl, sat->satch[i].chanh, oper,
 					false);
+		pr_info("-slimdebug-SAT oper:%d grp start:%d, ret:%d", oper,
+				sat->satch[i].chan, ret); /* slimbus debug patch */
 		if (!ret) {
 			for (i = 5; i < len; i++) {
 				int j;
@@ -1572,7 +1562,10 @@ send_capability:
 		txn.len = 2;
 		txn.wbuf = wbuf;
 		txn.mt = SLIM_MSG_MT_SRC_REFERRED_USER;
-		msm_xfer_msg(&dev->ctrl, &txn);
+		ret = msm_xfer_msg(&dev->ctrl, &txn);
+		if (ret) {
+			ret = 0;
+		} /* slimbus debug patch */
 		if (satv >= 0)
 			msm_slim_put_ctrl(dev);
 	}
@@ -2424,7 +2417,7 @@ static int msm_slim_runtime_suspend(struct device *device)
 	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
 	int ret;
 	dev_dbg(device, "pm_runtime: suspending...\n");
-	dev->state = MSM_CTRL_IDLE;
+	dev->state = MSM_CTRL_SLEEPING;
 	ret = slim_ctrl_clk_pause(&dev->ctrl, false, SLIM_CLK_UNSPECIFIED);
 	if (ret) {
 		dev_err(device, "clk pause not entered:%d", ret);
@@ -2459,7 +2452,7 @@ static int msm_slim_suspend(struct device *dev)
 	struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
 	if (!pm_runtime_enabled(dev) ||
 		(!pm_runtime_suspended(dev) &&
-			cdev->state == MSM_CTRL_IDLE)) {
+			cdev->state == MSM_CTRL_SLEEPING)) {
 		dev_dbg(dev, "system suspend");
 		ret = msm_slim_runtime_suspend(dev);
 		if (!ret) {
