@@ -3939,6 +3939,7 @@ CONFIG_FTRACE=y
 # CONFIG_PREEMPT_TRACER is not set
 #####for my testing#####
 # CONFIG_SCHED_TRACER is not set
+CONFIG_ENABLE_DEFAULT_TRACERS=y
 #####-------------######
 # CONFIG_ENABLE_MEMKILL_TRACER is not set
 CONFIG_BRANCH_PROFILE_NONE=y
