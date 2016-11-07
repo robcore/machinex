@@ -5345,7 +5345,7 @@ static inline void set_cpu_sd_state_busy(void)
 void set_cpu_sd_state_idle(void)
 {
 	struct sched_domain *sd;
-	int cpu = smp_processor_id();
+	int cpu = smp_processor_id()
 
 	if (test_bit(NOHZ_IDLE, nohz_flags(cpu)))
 		return;
@@ -5355,7 +5355,8 @@ void set_cpu_sd_state_idle(void)
 	for_each_domain(cpu, sd)
 	atomic_dec(&sd->groups->sgp->nr_busy_cpus);
 	rcu_read_unlock();
-}
+ }
+
 
 /*
  * This routine will record that the cpu is going idle with tick stopped.
