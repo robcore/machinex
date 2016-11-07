@@ -1339,9 +1339,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 #endif
 
 	/* Perform scheduler related setup. Assign this task to a CPU. */
-	retval = sched_fork(p);
-	if (retval)
-		goto bad_fork_cleanup_policy;
+	sched_fork(p);
 
 	retval = perf_event_init_task(p);
 	if (retval)
