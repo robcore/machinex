@@ -521,8 +521,8 @@ static int sound_control_init(void)
 	int sysfs_result;
 
 	snd_ctrl_enabled = 0;
-	snd_ctrl_locked = 0;
-	snd_rec_ctrl_locked = 0;
+	snd_ctrl_locked = 2;
+	snd_rec_ctrl_locked = 2;
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
