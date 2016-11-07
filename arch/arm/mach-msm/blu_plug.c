@@ -35,7 +35,7 @@
 #define MAX_CPUS_ONLINE		4
 #define DEF_DOWN_TIMER_CNT	6
 #define DEF_UP_TIMER_CNT	2
-#define MAX_CPUS_ONLINE_SUSP     2
+#define MAX_CPUS_ONLINE_SUSP     1
 #define DEF_PLUG_THRESHOLD      80
 #define BLU_PLUG_ENABLED	0
 
