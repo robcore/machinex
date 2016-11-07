@@ -166,7 +166,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_COUPLED;
+static int restart_level = RESET_SUBSYS_INDEPENDENT;
 
 int get_restart_level()
 {
@@ -275,7 +275,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (!max_restarts_check)
 		goto out;
 
-	r_log = kzalloc(sizeof(struct restart_log), GFP_KERNEL);
+	r_log = kmalloc(sizeof(struct restart_log), GFP_KERNEL);
 	if (!r_log)
 		goto out;
 	r_log->dev = dev;
@@ -522,7 +522,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = 0;
+		enable_ramdumps = 1;
 		/* Fall through */
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
@@ -668,9 +668,9 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SUBSYS_COUPLED;
+	restart_level = RESET_SUBSYS_INDEPENDENT;
 
-	ssr_wq = alloc_workqueue("ssr_wq", WQ_HIGHPRI, 0);
+	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
 		panic("%s: out of memory\n", __func__);
 

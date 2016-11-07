@@ -262,7 +262,7 @@ static void *mdm_notif_add_subsys(const char *name)
 		mutex_unlock(&mdm_driver_list_add_lock);
 		goto done;
 	}
-	notif = kzalloc(sizeof(struct mdm_driver_notif_info), GFP_KERNEL);
+	notif = kmalloc(sizeof(struct mdm_driver_notif_info), GFP_KERNEL);
 	if (!notif) {
 		mutex_unlock(&mdm_driver_list_add_lock);
 		return ERR_PTR(-EINVAL);
@@ -1245,9 +1245,9 @@ static int __devinit mdm_modem_probe(struct platform_device *pdev)
 	struct mdm_device *mdev = NULL;
 	int ret = -1;
 
-	mdev = kmalloc(sizeof(struct mdm_device), GFP_KERNEL);
+	mdev = kzalloc(sizeof(struct mdm_device), GFP_KERNEL);
 	if (!mdev) {
-		pr_err("%s: kmalloc fail.\n", __func__);
+		pr_err("%s: kzalloc fail.\n", __func__);
 		ret = -ENOMEM;
 		goto init_err;
 	}

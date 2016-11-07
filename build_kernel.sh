@@ -47,8 +47,6 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	rm image-new.img;
 	sh repackimg.sh --sudo;
 	cp -p image-new.img $(pwd)/machinex-new/boot.img
-#	echo -n "SEANDROIDENFORCE" >> $(pwd)/machinex-new/boot.img;
-	echo "Machinex is Ready!"
 else
 	echo "Build failed, Skipped Ramdisk Creation"
 fi;

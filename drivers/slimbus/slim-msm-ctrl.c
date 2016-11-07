@@ -1210,6 +1210,8 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
 					SLIM_CH_ACTIVATE, false);
+			pr_info("-slimdebug-SAT activate grp start: ret:%d", ret); /* slimbus debug patch */
+		}
 	}
 	return ret;
 }
@@ -1255,8 +1257,9 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 				e_addr[2] != QC_CHIPID_SL)
 				dev->pgdla = laddr;
 			if (!ret && !pm_runtime_enabled(dev->dev) &&
-				laddr == (QC_MSM_DEVS - 1))
+				laddr == (QC_MSM_DEVS - 1)) {
 				pm_runtime_enable(dev->dev);
+			}
 
 			if (!ret && msm_is_sat_dev(e_addr)) {
 				struct msm_slim_sat *sat = addr_to_sat(dev,
@@ -2447,12 +2450,10 @@ static int msm_slim_runtime_resume(struct device *device)
 
 static int msm_slim_suspend(struct device *dev)
 {
-	int ret = -EBUSY;
-	struct platform_device *pdev = to_platform_device(dev);
-	struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
-	if (!pm_runtime_enabled(dev) ||
-		(!pm_runtime_suspended(dev) &&
-			cdev->state == MSM_CTRL_SLEEPING)) {
+	int ret = 0;
+	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
+		struct platform_device *pdev = to_platform_device(dev);
+		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
 		dev_dbg(dev, "system suspend");
 		ret = msm_slim_runtime_suspend(dev);
 		if (!ret) {

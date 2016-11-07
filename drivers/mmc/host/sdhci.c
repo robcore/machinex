@@ -991,7 +991,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 			return;
 		}
 		timeout--;
-		mdelay(1);
+		udelay(1);
 	}
 
 	mod_timer(&host->timer, jiffies + 10 * HZ);
@@ -1150,7 +1150,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
 
 	/* Wait max 20 ms */
-	timeout = 20;
+	timeout = 20000;
 	while (!((clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL))
 		& SDHCI_CLOCK_INT_STABLE)) {
 		if (timeout == 0) {
@@ -1160,7 +1160,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 			return;
 		}
 		timeout--;
-		mdelay(1);
+		udelay(1);
 	}
 
 	clk |= SDHCI_CLOCK_CARD_EN;
@@ -2301,18 +2301,23 @@ out:
 void sdhci_enable_irq_wakeups(struct sdhci_host *host)
 {
 	u8 val;
-	u8 mask = SDHCI_WAKE_ON_INT;
+	u8 mask = SDHCI_WAKE_ON_INSERT | SDHCI_WAKE_ON_REMOVE
+			| SDHCI_WAKE_ON_INT;
+
 	val = sdhci_readb(host, SDHCI_WAKE_UP_CONTROL);
-	val |= mask;
+	val |= mask ;
+	/* Avoid fake wake up */
+	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION)
+		val &= ~(SDHCI_WAKE_ON_INSERT | SDHCI_WAKE_ON_REMOVE);
 	sdhci_writeb(host, val, SDHCI_WAKE_UP_CONTROL);
 }
-
 EXPORT_SYMBOL_GPL(sdhci_enable_irq_wakeups);
 
 void sdhci_disable_irq_wakeups(struct sdhci_host *host)
 {
 	u8 val;
-	u8 mask = SDHCI_WAKE_ON_INT;
+	u8 mask = SDHCI_WAKE_ON_INSERT | SDHCI_WAKE_ON_REMOVE
+			| SDHCI_WAKE_ON_INT;
 
 	val = sdhci_readb(host, SDHCI_WAKE_UP_CONTROL);
 	val &= ~mask;
@@ -2848,8 +2853,11 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	ret = request_irq(host->irq, sdhci_irq, IRQF_SHARED,
 		mmc_hostname(mmc), host);
-	if (ret)
+	if (ret) {
+		pr_err("%s: Failed to request IRQ %d: %d\n",
+		       mmc_hostname(mmc), host->irq, ret);
 		goto untasklet;
+	}
 
 	host->vmmc = regulator_get(mmc_dev(mmc), "vmmc");
 	if (IS_ERR(host->vmmc)) {
@@ -2874,8 +2882,11 @@ int sdhci_add_host(struct sdhci_host *host)
 	host->led.brightness_set = sdhci_led_control;
 
 	ret = led_classdev_register(mmc_dev(mmc), &host->led);
-	if (ret)
+	if (ret) {
+		pr_err("%s: Failed to register LED device: %d\n",
+		       mmc_hostname(mmc), ret);
 		goto reset;
+	}
 #endif
 
 	mmiowb();

@@ -22,6 +22,7 @@
 #include <linux/mfd/pm8xxx/pm8821.h>
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
+/*
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
@@ -31,7 +32,7 @@
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
-
+*/
 
 #if defined(CONFIG_FB_MDP4_ENHANCE)
 #include "mdp4_video_enhance.h"
@@ -623,9 +624,15 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
-	printk("Rob's OCTA Hook");
-#ifdef CONFIG_POWERSUSPEND
-		 /*Yank555.lu : hook to handle powersuspend tasks (wakeup)*/
+	if (get_auto_brightness() >= 6)
+		msd.mpd->first_bl_hbm_psre = 1;
+
+	sec_debug_mdp_reset_value();
+
+	pr_info("[%s]\n", __func__);
+	printk("Rob's Panel Hook Msg.");
+/*#ifdef CONFIG_POWERSUSPEND
+		 Yank555.lu : hook to handle powersuspend tasks (wakeup)
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
 
@@ -636,27 +643,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 #ifdef CONFIG_STATE_NOTIFIER
 		state_resume();
 #endif
-
-	if (get_auto_brightness() >= 6)
-		msd.mpd->first_bl_hbm_psre = 1;
-
-	sec_debug_mdp_reset_value();
-
-	pr_info("[%s]\n", __func__);
-	//printk("Rob's OCTA Hook");
-#if 0
-		 /*Yank555.lu : hook to handle powersuspend tasks (wakeup)*/
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-#endif
-
-#if 0
-		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-#endif
-
-#if 0
-		state_resume();
-#endif
-
+*/
 	return 0;
 }
 
@@ -689,25 +676,13 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	if (unlikely(mfd->key != MFD_KEY))
 		return -EINVAL;
 
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
-#endif
-
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 	touch_display_status = MIPI_SUSPEND_STATE;
 
-#ifdef CONFIG_POWERSUSPEND
-	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
-#endif
-
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
-#endif
-#ifdef CONFIG_STATE_NOTIFIER
-	state_suspend();
-#endif
+/*#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
+#endif*/
 
 #if defined(RUMTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
@@ -722,17 +697,17 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 
-#if 0
-	/* Yank555.lu : hook to handle powersuspend tasks (sleep) */
+/*#ifdef CONFIG_POWERSUSPEND
+	 Yank555.lu : hook to handle powersuspend tasks (sleep)
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
 #endif
 
-#if 0
+#ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
-#if 0
+#ifdef CONFIG_STATE_NOTIFIER
 	state_suspend();
-#endif
+#endif*/
 
 	pr_info("[lcd] %s\n", __func__);
 
@@ -1462,18 +1437,18 @@ static ssize_t panel_colors_show(struct device *dev, struct device_attribute *at
 static ssize_t panel_colors_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
 	int ret;
-	unsigned int val;
+	unsigned int value;
 
-	ret = sscanf(buf, "%d\n", &val);
-	//if (ret != 1)
-		//return -EINVAL;
+	ret = sscanf(buf, "%d\n", &value);
+	if (ret != 1)
+		return -EINVAL;
 
-	if (val < 0)
-		val = 0;
-	else if (val > 4)
-		val = 4;
+	if (value < 0)
+		value = 0;
+	else if (value > 4)
+		value = 4;
 
-	Lpanel_colors = val;
+	Lpanel_colors = value;
 
 	panel_load_colors(Lpanel_colors);
 

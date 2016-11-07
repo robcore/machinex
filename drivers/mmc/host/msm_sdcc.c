@@ -335,6 +335,11 @@ static void msmsdcc_soft_reset(struct msmsdcc_host *host)
 	 */
 	if (is_sw_reset_save_config(host)) {
 		ktime_t start;
+		uint32_t dll_config = 0;
+
+
+		if (is_sw_reset_save_config_broken(host))
+			dll_config = readl_relaxed(host->base + MCI_DLL_CONFIG);
 
 		writel_relaxed(readl_relaxed(host->base + MMCIPOWER)
 				| MCI_SW_RST_CFG, host->base + MMCIPOWER);
@@ -353,6 +358,11 @@ static void msmsdcc_soft_reset(struct msmsdcc_host *host)
 					mmc_hostname(host->mmc), __func__);
 				BUG();
 			}
+		}
+
+		if (is_sw_reset_save_config_broken(host)) {
+			writel_relaxed(dll_config, host->base + MCI_DLL_CONFIG);
+			mb();
 		}
 	} else {
 		writel_relaxed(0, host->base + MMCICOMMAND);
@@ -3738,16 +3748,13 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	msmsdcc_pm_qos_update_latency(host, 0);
 
-	if (host->plat->disable_runtime_pm)
-		return -ENOTSUPP;
-
 	if (mmc->card && mmc_card_sdio(mmc->card)) {
 		rc = 0;
 		goto out;
 	}
 
-	//if (host->plat->disable_runtime_pm)
-		//return -ENOTSUPP;
+	if (host->plat->disable_runtime_pm)
+		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
 
@@ -3755,7 +3762,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
-		goto out;
+		return rc;
 	}
 
 out:
@@ -4446,25 +4453,35 @@ static const struct mmc_host_ops msmsdcc_ops = {
 	.notify_load = msmsdcc_notify_load,
 };
 
+static void msmsdcc_enable_status_gpio(struct msmsdcc_host *host)
+{
+	unsigned int gpio_no = host->plat->status_gpio;
+	int status;
+
+	if (!gpio_is_valid(gpio_no))
+		return;
+
+	status = gpio_request(gpio_no, "SD_HW_Detect");
+	if (status)
+		pr_err("%s: %s: gpio_request(%d) failed\n",
+			mmc_hostname(host->mmc), __func__, gpio_no);
+}
+
+static void msmsdcc_disable_status_gpio(struct msmsdcc_host *host)
+{
+	if (gpio_is_valid(host->plat->status_gpio))
+		gpio_free(host->plat->status_gpio);
+}
+
 static unsigned int
 msmsdcc_slot_status(struct msmsdcc_host *host)
 {
 	int status;
-	unsigned int gpio_no = host->plat->status_gpio;
 
-	status = gpio_request(gpio_no, "SD_HW_Detect");
-	if (status) {
-		pr_err("%s: %s: Failed to request GPIO %d\n",
-			mmc_hostname(host->mmc), __func__, gpio_no);
-	} else {
-		status = gpio_direction_input(gpio_no);
-		if (!status) {
-			status = gpio_get_value_cansleep(gpio_no);
-			if (host->plat->is_status_gpio_active_low)
-				status = !status;
-		}
-		gpio_free(gpio_no);
-	}
+	status = gpio_get_value_cansleep(host->plat->status_gpio);
+	if (host->plat->is_status_gpio_active_low)
+		status = !status;
+
 	return status;
 }
 
@@ -4986,6 +5003,10 @@ static int msmsdcc_sps_init(struct msmsdcc_host *host)
 	bam.callback = msmsdcc_sps_bam_global_irq_cb;
 	bam.user = (void *)host;
 
+	/* bam reset messages will be limited to 5 times */
+	//bam.constrained_logging = true;
+	//bam.logging_number = 5;
+
 	pr_info("%s: bam physical base=0x%x\n", mmc_hostname(host->mmc),
 			(u32)bam.phys_addr);
 	pr_info("%s: bam virtual base=0x%x\n", mmc_hostname(host->mmc),
@@ -5212,10 +5233,10 @@ static void msmsdcc_power_suspend(struct power_suspend *h)
 		container_of(h, struct msmsdcc_host, power_suspend);
 	unsigned long flags;
 
-		spin_lock_irqsave(&host->lock, flags);
-		host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
-		host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
-		spin_unlock_irqrestore(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, flags);
+	host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
+	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+	spin_unlock_irqrestore(&host->lock, flags);
 };
 static void msmsdcc_power_resume(struct power_suspend *h)
 {
@@ -6187,12 +6208,17 @@ msmsdcc_probe(struct platform_device *pdev)
 	/* packed write */
 	mmc->caps2 |= plat->packed_write;
 
+	mmc->caps2 |= MMC_CAP2_PACKED_WR;
+	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
 	/* Disable Sanitize & BKOPS
 	 * mmc->caps2 |= MMC_CAP2_SANITIZE;
 	 * mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	 */
+	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
+	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
+	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -6281,11 +6307,12 @@ msmsdcc_probe(struct platform_device *pdev)
 		plat->wpswitch_gpio = -ENOENT;
 
 	if (plat->status || gpio_is_valid(plat->status_gpio)) {
-		if (plat->status)
+		if (plat->status) {
 			host->oldstat = plat->status(mmc_dev(host->mmc));
-		else
+		} else {
+			msmsdcc_enable_status_gpio(host);
 			host->oldstat = msmsdcc_slot_status(host);
-
+		}
 		host->eject = !host->oldstat;
 	}
 
@@ -6493,6 +6520,7 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (plat->status_irq)
 		free_irq(plat->status_irq, host);
+	msmsdcc_disable_status_gpio(host);
  sdiowakeup_irq_free:
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq)
@@ -6590,6 +6618,7 @@ static int msmsdcc_remove(struct platform_device *pdev)
 
 	if (plat->status_irq)
 		free_irq(plat->status_irq, host);
+	msmsdcc_disable_status_gpio(host);
 
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
@@ -6958,8 +6987,10 @@ static int msmsdcc_pm_suspend(struct device *dev)
 		rc = 0;
 		goto out;
 	}
-	if (host->plat->status_irq)
+	if (host->plat->status_irq) {
 		disable_irq(host->plat->status_irq);
+		msmsdcc_disable_status_gpio(host);
+	}
 
 	/*
 	 * If system comes out of suspend, msmsdcc_pm_resume() sets the
@@ -7026,6 +7057,7 @@ static int msmsdcc_pm_resume(struct device *dev)
 		host->pending_resume = true;
 
 	if (host->plat->status_irq) {
+		msmsdcc_enable_status_gpio(host);
 		msmsdcc_check_status((unsigned long)host);
 		enable_irq(host->plat->status_irq);
 	}
