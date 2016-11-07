@@ -3736,6 +3736,10 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	int rc;
 	struct msmsdcc_host *host = mmc_priv(mmc);
 
+//this seems like a saner place 
+	if (host->plat->disable_runtime_pm)
+		return -ENOTSUPP;
+
 	msmsdcc_pm_qos_update_latency(host, 0);
 
 	if (mmc->card && mmc_card_sdio(mmc->card)) {
@@ -3743,8 +3747,8 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		goto out;
 	}
 
-	if (host->plat->disable_runtime_pm)
-		return -ENOTSUPP;
+	//if (host->plat->disable_runtime_pm)
+		//return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
 
@@ -3752,7 +3756,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
-		return rc;
+		goto out;
 	}
 
 out:
@@ -6091,6 +6095,17 @@ msmsdcc_probe(struct platform_device *pdev)
 		      msmsdcc_get_min_sup_clk_rate(host)));
 
 	atomic_set(&host->clks_on, 1);
+
+	ret = msmsdcc_msm_bus_register(host);
+	if (ret)
+		goto clk_disable;
+
+	if (host->msm_bus_vote.client_handle)
+		INIT_DELAYED_WORK(&host->msm_bus_vote.vote_work,
+				  msmsdcc_msm_bus_work);
+
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
+
 	/* Apply Hard reset to SDCC to put it in power on default state */
 	msmsdcc_hard_reset(host);
 
@@ -6103,18 +6118,10 @@ msmsdcc_probe(struct platform_device *pdev)
 	pm_qos_add_request(&host->pm_qos_req_dma,
 			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 
-	ret = msmsdcc_msm_bus_register(host);
-	if (ret)
-		goto pm_qos_remove;
-
-	if (host->msm_bus_vote.client_handle)
-		INIT_DELAYED_WORK(&host->msm_bus_vote.vote_work,
-				  msmsdcc_msm_bus_work);
-
 	ret = msmsdcc_vreg_init(host, true);
 	if (ret) {
 		pr_err("%s: msmsdcc_vreg_init() failed (%d)\n", __func__, ret);
-		goto clk_disable;
+		goto pm_qos_remove;
 	}
 
 
@@ -6274,7 +6281,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags,
+				  plat->irq_flags | IRQF_ONESHOT,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
@@ -6493,12 +6500,13 @@ msmsdcc_probe(struct platform_device *pdev)
 		msmsdcc_sps_exit(host);
  vreg_deinit:
 	msmsdcc_vreg_init(host, false);
- clk_disable:
-	clk_disable(host->clk);
-	msmsdcc_msm_bus_unregister(host);
  pm_qos_remove:
 	if (host->cpu_dma_latency)
 		pm_qos_remove_request(&host->pm_qos_req_dma);
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
+	msmsdcc_msm_bus_unregister(host);
+ clk_disable:
+	clk_disable_unprepare(host->clk);
  clk_put:
 	clk_put(host->clk);
  pclk_disable:

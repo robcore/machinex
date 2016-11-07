@@ -33,6 +33,7 @@
 static void mmc_host_classdev_release(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
+	kfree(host->wlock_name);
 	kfree(host);
 }
 
@@ -184,6 +185,14 @@ static bool mmc_host_may_gate_card(struct mmc_card *card)
 	/* If there is no card we may gate it */
 	if (!card)
 		return true;
+
+	/*
+	 * SDIO3.0 card allows the clock to be gated off so check if
+	 * that is the case or not.
+	 */
+	if (mmc_card_sdio(card) && card->cccr.async_intr_sup)
+		return true;
+
 	/*
 	 * Don't gate SDIO cards! These need to be clocked at all times
 	 * since they may be independent systems generating interrupts
@@ -211,8 +220,8 @@ void mmc_host_clk_release(struct mmc_host *host)
 	host->clk_requests--;
 	if (mmc_host_may_gate_card(host->card) &&
 	    !host->clk_requests)
-		queue_delayed_work(system_wq, &host->clk_gate_work,
-				msecs_to_jiffies(host->clkgate_delay));
+		schedule_delayed_work(&host->clk_gate_work,
+				      msecs_to_jiffies(host->clkgate_delay));
 	spin_unlock_irqrestore(&host->clk_lock, flags);
 }
 
@@ -337,8 +346,10 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
+	host->wlock_name = kasprintf(GFP_KERNEL,
+			"%s_detect", mmc_hostname(host));
 	wake_lock_init(&host->detect_wake_lock, WAKE_LOCK_SUSPEND,
-		kasprintf(GFP_KERNEL, "%s_detect", mmc_hostname(host)));
+			host->wlock_name);
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
 #ifdef CONFIG_PM
 	host->pm_notify.notifier_call = mmc_pm_notify;

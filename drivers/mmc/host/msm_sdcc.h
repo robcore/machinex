@@ -503,7 +503,8 @@ static inline void set_default_hw_caps(struct msmsdcc_host *host)
 	}
 
 	if (step >= 0x2b) /* SDCC v4 2.1.0 and greater */
-		host->hw_caps |= MSMSDCC_SW_RST | MSMSDCC_AUTO_CMD21;
+		host->hw_caps |= MSMSDCC_SW_RST | MSMSDCC_AUTO_CMD21 |
+					MSMSDCC_SW_RST_CFG;
 }
 
 int msmsdcc_set_pwrsave(struct mmc_host *mmc, int pwrsave);
