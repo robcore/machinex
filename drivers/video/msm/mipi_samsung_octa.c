@@ -1464,7 +1464,7 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 	int ret;
 	unsigned int val;
 
-	ret = sscanf(buf, "%d\n", &value);
+	ret = sscanf(buf, "%d\n", &val);
 	//if (ret != 1)
 		//return -EINVAL;
 
