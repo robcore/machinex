@@ -21,7 +21,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	3
+#define SOUND_CONTROL_MINOR_VERSION	4
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -213,10 +213,10 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	snd_ctrl_locked = 0;
+	snd_rec_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
-	snd_ctrl_locked = 2;
+	snd_rec_ctrl_locked = 2;
 
 	return count;
 }
@@ -239,10 +239,10 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	snd_ctrl_locked = 0;
+	snd_rec_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
-	snd_ctrl_locked = 2;
+	snd_rec_ctrl_locked = 2;
 
 	return count;
 }
@@ -407,24 +407,6 @@ static ssize_t sound_control_version_show(struct kobject *kobj,
 			SOUND_CONTROL_MINOR_VERSION);
 }
 
-static ssize_t sound_control_rec_locked_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int inp;
-
-	sscanf(buf, "%d", &inp);
-
-	snd_rec_ctrl_locked = inp;
-
-	return count;
-}
-
-static ssize_t sound_control_rec_locked_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", snd_rec_ctrl_locked);
-}
-
 static ssize_t sound_control_enabled_store(struct kobject *kobj,
         struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -500,12 +482,6 @@ static struct kobj_attribute raw_pa_gain_attribute =
 		0444,
 		raw_pa_gain_show, NULL);
 */
-static struct kobj_attribute sound_control_rec_locked_attribute =
-	__ATTR(gpl_sound_control_rec_locked,
-		0666,
-		sound_control_rec_locked_show,
-		sound_control_rec_locked_store);
-
 static struct kobj_attribute sound_control_version_attribute =
 	__ATTR(gpl_sound_control_version,
 		0444,
@@ -525,7 +501,6 @@ static struct attribute *sound_control_attrs[] =
 	&headphone_gain_attribute.attr,
 //	&headphone_pa_gain_attribute.attr,
 //	&raw_pa_gain_attribute.attr,
-	&sound_control_rec_locked_attribute.attr,
 	&sound_reg_sel_attribute.attr,
 	&sound_reg_read_attribute.attr,
 	&sound_reg_write_attribute.attr,
@@ -544,6 +519,10 @@ static struct kobject *sound_control_kobj;
 static int sound_control_init(void)
 {
 	int sysfs_result;
+
+	snd_ctrl_enabled = 1;
+	snd_ctrl_locked = 0;
+	snd_rec_ctrl_locked = 0;
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
