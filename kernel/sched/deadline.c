@@ -828,8 +828,19 @@ static void enqueue_task_dl(struct rq *rq, struct task_struct *p, int flags)
 	 * smaller than our one... OTW we keep our runtime and
 	 * deadline.
 	 */
-	if (pi_task && p->dl.dl_boosted && dl_prio(pi_task->normal_prio))
+	if (pi_task && p->dl.dl_boosted && dl_prio(pi_task->normal_prio)) {
 		pi_se = &pi_task->dl;
+	} else if (!dl_prio(p->normal_prio)) {
+		/*
+		 * Special case in which we have a !SCHED_DEADLINE task
+		 * that is going to be deboosted, but exceedes its
+		 * runtime while doing so. No point in replenishing
+		 * it, as it's going to return back to its original
+		 * scheduling class after this.
+		 */
+		BUG_ON(!p->dl.dl_boosted || flags != ENQUEUE_REPLENISH);
+		return;
+	}
 
 	/*
 	 * If p is throttled, we do nothing. In fact, if it exhausted
@@ -1082,8 +1093,7 @@ static void set_curr_task_dl(struct rq *rq)
 static int pick_dl_task(struct rq *rq, struct task_struct *p, int cpu)
 {
 	if (!task_running(rq, p) &&
-	    (cpu < 0 || cpumask_test_cpu(cpu, &p->cpus_allowed)) &&
-	    (p->nr_cpus_allowed > 1))
+	( cpumask_test_cpu(cpu, tsk_cpus_allowed(p)))
 		return 1;
 
 	return 0;
