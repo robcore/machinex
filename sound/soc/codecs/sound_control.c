@@ -205,24 +205,21 @@ static ssize_t sound_reg_select_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	if (!snd_ctrl_enabled)
-		goto finito;
+		return count;
 
 	sscanf(buf, "%u", &selected_reg);
-		goto finito;
 
-finito:
 	return count;
 }
 
 static ssize_t sound_reg_read_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	if (selected_reg == 0xdeadbeef) {
+	if (selected_reg == 0xdeadbeef)
 		return -1;
-	} else {
+	else
 		return sprintf(buf, "%u\n",
 			tabla_read(snd_engine_codec_ptr, selected_reg));
-	}
 }
 
 static ssize_t sound_reg_write_store(struct kobject *kobj,
@@ -230,44 +227,44 @@ static ssize_t sound_reg_write_store(struct kobject *kobj,
 {
 	unsigned int out;
 
-	if (!snd_ctrl_enabled)
-		goto finito;
-
 	sscanf(buf, "%u", &out);
+
+	if (!snd_ctrl_enabled)
+		return count;
 
 	if (selected_reg != 0xdeadbeef)
 		tabla_write(snd_engine_codec_ptr, selected_reg, out);
-		goto finito;
 
-finito:
 	return count;
 }
 
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u\n",
+	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
+				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
+			tabla_read(snd_engine_codec_ptr,
+				TABLA_A_CDC_RX6_VOL_CTL_B2_CTL));
 }
 
 static ssize_t speaker_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int lval;
+	unsigned int lval, rval;
+
+	sscanf(buf, "%u %u", &lval, &rval);
 
 	if (!snd_ctrl_enabled)
-		goto finito;
-
-	sscanf(buf, "%u", &lval);
+		return count;
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
-	goto finito;
 
-finito:
 	return count;
 }
 
@@ -286,10 +283,10 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 {
 	unsigned int lval, rval;
 
-	if (!snd_ctrl_enabled)
-		goto finito;
-
 	sscanf(buf, "%u %u", &lval, &rval);
+
+	if (!snd_ctrl_enabled)
+		return count;
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -297,9 +294,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
-	goto finito;
 
-finito:
 	return count;
 }
 
@@ -316,18 +311,16 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 {
 	unsigned int lval;
 
-	if (!snd_ctrl_enabled)
-		goto finito;
-
 	sscanf(buf, "%u", &lval);
+
+	if (!snd_ctrl_enabled)
+		return count;
 
 	snd_rec_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
 	snd_rec_ctrl_locked = 2;
-	goto finito;
 
-finito:
 	return count;
 }
 
@@ -344,18 +337,16 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 {
 	unsigned int lval;
 
-	if (!snd_ctrl_enabled)
-		goto finito;
-
 	sscanf(buf, "%u", &lval);
+
+	if (!snd_ctrl_enabled)
+		return count;
 
 	snd_rec_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
 	snd_rec_ctrl_locked = 2;
-	goto finito;
 
-finito:
 	return count;
 }
 
@@ -480,3 +471,4 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
+
