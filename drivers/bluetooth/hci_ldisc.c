@@ -48,8 +48,6 @@
 
 #define VERSION "2.2"
 
-static bool reset = 0;
-
 static struct hci_uart_proto *hup[HCI_UART_MAX_PROTO];
 static void hci_uart_tty_wakeup_action(unsigned long data);
 
@@ -440,11 +438,11 @@ static int hci_uart_register_dev(struct hci_uart *hu)
 
 	hdev->owner = THIS_MODULE;
 
-	if (!reset)
-		set_bit(HCI_QUIRK_NO_RESET, &hdev->quirks);
-
 	if (test_bit(HCI_UART_RAW_DEVICE, &hu->hdev_flags))
 		set_bit(HCI_QUIRK_RAW_DEVICE, &hdev->quirks);
+
+	if (!test_bit(HCI_UART_RESET_ON_INIT, &hu->hdev_flags))
+		set_bit(HCI_QUIRK_NO_RESET, &hdev->quirks);
 
 	if (hci_register_dev(hdev) < 0) {
 		BT_ERR("Can't register HCI device");
@@ -644,9 +642,6 @@ static void __exit hci_uart_exit(void)
 
 module_init(hci_uart_init);
 module_exit(hci_uart_exit);
-
-module_param(reset, bool, 0644);
-MODULE_PARM_DESC(reset, "Send HCI reset command on initialization");
 
 MODULE_AUTHOR("Marcel Holtmann <marcel@holtmann.org>");
 MODULE_DESCRIPTION("Bluetooth HCI UART driver ver " VERSION);
