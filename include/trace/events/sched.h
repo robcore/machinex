@@ -52,9 +52,6 @@ TRACE_EVENT(sched_kthread_stop_ret,
 	TP_printk("ret=%d", __entry->ret)
 );
 
-/*
- * Tracepoint for task enqueue/dequeue:
- */
 #ifdef CONFIG_SCHED_HMP
 
 TRACE_EVENT(sched_task_load,
