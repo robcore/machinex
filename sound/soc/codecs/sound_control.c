@@ -219,7 +219,7 @@ static ssize_t sound_reg_read_show(struct kobject *kobj,
 {
 	if (selected_reg == 0xdeadbeef) {
 		return -1;
-	else
+	} else {
 		return sprintf(buf, "%u\n",
 			tabla_read(snd_engine_codec_ptr, selected_reg));
 	}
