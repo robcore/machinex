@@ -310,8 +310,8 @@ mode_sysfs_add_cpu_exit:
  */
 static int __init msm_pm_mode_sysfs_add(void)
 {
-	struct kobject *module_kobj;
-	struct kobject *modes_kobj;
+	struct kobject *module_kobj = NULL;
+	struct kobject *modes_kobj = NULL;
 	unsigned int cpu;
 	int ret;
 
@@ -1386,4 +1386,4 @@ static int __init msm_pm_init(void)
 	return 0;
 }
 
-late_initcall(msm_pm_init);
+late_initcall_sync(msm_pm_init);
