@@ -62,6 +62,7 @@
 #include <linux/ptrace.h>
 #include <linux/freezer.h>
 #include <linux/bootmem.h>
+#include <linux/sched/rt.h>
 #include <linux/hugetlb.h>
 
 #include <asm/futex.h>
