@@ -499,7 +499,7 @@ void __smp_call_function_single(int cpu, struct call_single_data *data,
 void smp_call_function_many(const struct cpumask *mask,
 			    smp_call_func_t func, void *info, bool wait)
 {
-	struct call_function_data *data;
+	struct call_function_data *cfd;
 	unsigned long flags;
 	int refs, cpu, next_cpu, this_cpu = smp_processor_id();
 
