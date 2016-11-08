@@ -136,6 +136,7 @@
  * arg3 pid of the thread whose timer slack needs to be set
  */
 #define PR_SET_TIMERSLACK_PID 41
+#define PR_GET_EFFECTIVE_TIMERSLACK 42
 
 #define PR_SET_VMA		0x53564d41
 # define PR_SET_VMA_ANON_NAME		0
@@ -144,6 +145,5 @@
  * Get effective timerslack value for the process.
  * It can be higher than PR_GET_TIMERSLACK.
  */
-#define PR_GET_EFFECTIVE_TIMERSLACK 40
 
 #endif /* _LINUX_PRCTL_H */
