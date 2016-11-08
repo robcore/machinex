@@ -4098,7 +4098,7 @@ static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 #define TABLA_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
 
 #ifdef CONFIG_SOUND_CONTROL
-extern int snd_ctrl_enabled;
+extern unsigned int snd_ctrl_enabled;
 extern int snd_reg_access(unsigned int);
 extern unsigned int snd_cache_read(unsigned int);
 extern void snd_cache_write(unsigned int, unsigned int);
