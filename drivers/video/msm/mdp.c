@@ -2926,8 +2926,6 @@ static int mdp_probe(struct platform_device *pdev)
 #ifdef CONFIG_FB_MSM_OVERLAY
 		mdp_hw_cursor_init();
 #endif
-		mdp_clk_ctrl(0);
-
 		mdp_resource_initialized = 1;
 		return 0;
 	}
