@@ -1194,6 +1194,9 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 		tmn.to_cpu = new_cpu;
 
 		atomic_notifier_call_chain(&task_migration_notifier, 0, &tmn);
+
+		if (p->state == TASK_RUNNING)
+			update_task_ravg(p, task_rq(p), 0);
 	}
 
 	__set_task_cpu(p, new_cpu);
@@ -1506,7 +1509,6 @@ ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags)
 	check_preempt_curr(rq, p, wake_flags);
 	trace_sched_wakeup(p, true);
 
-	update_task_ravg(p, rq, 0);
 	p->state = TASK_RUNNING;
 #ifdef CONFIG_SMP
 	if (p->sched_class->task_woken)
@@ -1680,6 +1682,7 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	unsigned long flags;
 	int cpu, src_cpu, success = 0;
 	int notify = 0;
+	struct rq *rq;
 
 	/*
 	 * If we are going to wake up a thread waiting for CONDITION we
@@ -1690,6 +1693,7 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	smp_mb__before_spinlock();
 	raw_spin_lock_irqsave(&p->pi_lock, flags);
 	src_cpu = cpu = task_cpu(p);
+	rq = cpu_rq(src_cpu);
 
 	if (!(p->state & state))
 		goto out;
@@ -1723,6 +1727,10 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * Pairs with the smp_wmb() in finish_lock_switch().
 	 */
 	smp_rmb();
+
+	raw_spin_lock(&rq->lock);
+	update_task_ravg(p, rq, 0);
+	raw_spin_unlock(&rq->lock);
 
 	p->sched_contributes_to_load = !!task_contributes_to_load(p);
 	p->state = TASK_WAKING;
@@ -1801,8 +1809,10 @@ static void try_to_wake_up_local(struct task_struct *p)
 	if (!(p->state & TASK_NORMAL))
 		goto out;
 
-	if (!p->on_rq)
+	if (!p->on_rq) {
+		update_task_ravg(p, rq, 0);
 		ttwu_activate(rq, p, ENQUEUE_WAKEUP);
+	}
 
 	ttwu_do_wakeup(rq, p, 0);
 	ttwu_stat(p, smp_processor_id(), 0);
@@ -3193,7 +3203,7 @@ pick_next_task(struct rq *rq)
 	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq);
 		if (likely(p)) {
-			update_task_ravg(p, rq, 1);
+			update_task_ravg(p, rq, 0);
 			return p;
 		}
 	}
@@ -3201,7 +3211,7 @@ pick_next_task(struct rq *rq)
 	for_each_class(class) {
 		p = class->pick_next_task(rq);
 		if (p) {
-			update_task_ravg(p, rq, 1);
+			update_task_ravg(p, rq, 0);
 			return p;
 		}
 	}
