@@ -1098,6 +1098,9 @@ struct sched_avg {
 	 * choices of y < 1-2^(-32)*1024.
 	 */
 	u32 runnable_avg_sum, runnable_avg_period;
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+	u32 runnable_avg_sum_scaled;
+#endif
 	u64 last_runnable_update;
 	s64 decay_count;
 	unsigned long load_avg_contrib;
@@ -1222,6 +1225,7 @@ struct sched_rt_entity {
 
 struct sched_dl_entity {
 	struct rb_node	rb_node;
+	int nr_cpus_allowed;
 
 	/*
 	 * Original scheduling parameters. Copied here from sched_attr
@@ -1255,9 +1259,12 @@ struct sched_dl_entity {
 	 *
 	 * @dl_boosted tells if we are boosted due to DI. If so we are
 	 * outside bandwidth enforcement mechanism (but only until we
-	 * exit the critical section).
+	 * exit the critical section);
+	 *
+	 * @dl_yielded tells if task gave up the cpu before consuming
+	 * all its available runtime during the last job.
 	 */
-	int dl_throttled, dl_new, dl_boosted;
+	int dl_throttled, dl_new, dl_boosted, dl_yielded;
 
 	/*
 	 * Bandwidth enforcement timer. Each -deadline task has its
