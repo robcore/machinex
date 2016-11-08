@@ -41,7 +41,10 @@ extern unsigned int sysctl_sched_wake_to_idle;
 extern unsigned int sysctl_sched_init_task_load_pct;
 #endif
 
-extern unsigned int sysctl_sched_task_migrate_notify_pct;
+#ifdef CONFIG_SCHED_FREQ_INPUT
+extern int sysctl_sched_freq_inc_notify_slack_pct;
+extern int sysctl_sched_freq_dec_notify_slack_pct;
+#endif
 
 #ifdef CONFIG_SCHED_HMP
 extern unsigned int sysctl_sched_enable_hmp_task_placement;
