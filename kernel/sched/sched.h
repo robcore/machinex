@@ -7,6 +7,7 @@
 #include <linux/stop_machine.h>
 
 #include "cpupri.h"
+#include "cpudeadline.h"
 
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_MIGRATING	2
@@ -502,6 +503,7 @@ struct root_domain {
 	cpumask_var_t dlo_mask;
 	atomic_t dlo_count;
 	struct dl_bw dl_bw;
+	struct cpudl cpudl;
 
 	/*
 	 * The "RT overload" flag: it gets set if a CPU has more than
