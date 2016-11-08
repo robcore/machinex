@@ -3614,16 +3614,6 @@ void __sched wait_for_completion_io(struct completion *x)
 }
 EXPORT_SYMBOL(wait_for_completion_io);
 
-/*
- * Maximum bandwidth available for all -deadline tasks and groups
- * (if group scheduling is configured) on each CPU.
- *
- * default: 5%
- */
-unsigned int sysctl_sched_dl_period = 1000000;
-int sysctl_sched_dl_runtime = 50000;
-
-
 /**
  * wait_for_completion_timeout: - waits for completion of a task (w/timeout)
  * @x:  holds the state of this particular completion
