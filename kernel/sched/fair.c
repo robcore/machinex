@@ -1006,6 +1006,9 @@ static u32 __compute_runnable_contrib(u64 n)
 	return contrib + runnable_avg_yN_sum[n];
 }
 
+static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
+static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
+
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Initial task load. Newly created tasks are assigned this load. */
@@ -1236,6 +1239,9 @@ int sched_set_boost(int enable)
 {
 	unsigned long flags;
 	int ret = 0;
+
+	if (!sysctl_sched_enable_hmp_task_placement)
+		return -EINVAL;
 
 	spin_lock_irqsave(&boost_lock, flags);
 
@@ -1542,6 +1548,9 @@ done:
 
 void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
 {
+	if (!sysctl_sched_enable_hmp_task_placement)
+		return;
+
 	if (is_big_task(p))
 		rq->nr_big_tasks++;
 	else if (is_small_task(p))
@@ -1550,6 +1559,9 @@ void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
 
 void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
 {
+	if (!sysctl_sched_enable_hmp_task_placement)
+		return;
+
 	if (is_big_task(p))
 		rq->nr_big_tasks--;
 	else if (is_small_task(p))
@@ -1615,7 +1627,7 @@ int sched_hmp_proc_update_handler(struct ctl_table *table, int write,
 	unsigned int old_val = *data;
 
 	ret = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
-	if (ret || !write)
+	if (ret || !write || !sysctl_sched_enable_hmp_task_placement)
 		return ret;
 
 	if ((sysctl_sched_downmigrate_pct > sysctl_sched_upmigrate_pct) ||
@@ -1737,7 +1749,8 @@ static inline int migration_needed(struct rq *rq, struct task_struct *p)
 {
 	int nice = TASK_NICE(p);
 
-	if (is_small_task(p) || p->state != TASK_RUNNING)
+	if (is_small_task(p) || p->state != TASK_RUNNING ||
+			!sysctl_sched_enable_hmp_task_placement)
 		return 0;
 
 	/* Todo: cgroup-based control? */
@@ -5923,7 +5936,6 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 
 	return busiest;
 }
-#endif /* CONFIG_SCHED_HMP */
 
 /*
  * Max backoff if we encounter pinned tasks. Pretty arbitrary value, but
@@ -6728,9 +6740,7 @@ end:
 	clear_bit(NOHZ_BALANCE_KICK, nohz_flags(this_cpu));
 }
 
-#ifdef CONFIG_SCHED_HMP
-
-static inline int _nohz_kick_needed(struct rq *rq, int *type)
+static inline int _nohz_kick_needed_hmp(struct rq *rq, int *type)
 {
 	struct sched_domain *sd;
 	int i, cpu = rq->cpu;
@@ -6765,11 +6775,12 @@ static inline int _nohz_kick_needed(struct rq *rq, int *type)
 	return 0;
 }
 
-#else /* CONFIG_SCHED_HMP */
-
 static inline int _nohz_kick_needed(struct rq *rq, int *type)
 {
 	unsigned long now = jiffies;
+
+	if (sysctl_sched_enable_hmp_task_placement)
+		return _nohz_kick_needed_hmp(rq, type);
 
 	/*
 	 * None are in tickless mode and hence no need for NOHZ idle load
@@ -6783,8 +6794,6 @@ static inline int _nohz_kick_needed(struct rq *rq, int *type)
 
 	return (rq->nr_running >= 2);
 }
-
-#endif /* CONFIG_SCHED_HMP */
 
 /*
  * Current heuristic for kicking the idle load balancer in the presence
