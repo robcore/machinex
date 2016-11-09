@@ -166,8 +166,12 @@ static inline void menu_hrtimer_cancel(void) {}
 
 #ifdef CONFIG_NO_HZ_FULL
 extern int tick_nohz_full_cpu(int cpu);
+extern void tick_nohz_full_kick(void);
+extern void tick_nohz_full_kick_all(void);
 #else
 static inline int tick_nohz_full_cpu(int cpu) { return 0; }
+static inline void tick_nohz_full_kick(void) { }
+static inline void tick_nohz_full_kick_all(void) { }
 #endif
 
 #endif
