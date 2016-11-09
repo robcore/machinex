@@ -3496,8 +3496,6 @@ EXPORT_SYMBOL_GPL(workqueue_congested);
  * Test whether @work is currently pending or running.  There is no
  * synchronization around this function and the test result is
  * unreliable and only useful as advisory hints or for debugging.
- * Especially for reentrant wqs, the pending state might hide the
- * running state.
  *
  * RETURNS:
  * OR'd bitmask of WORK_BUSY_* bits.
@@ -3506,21 +3504,18 @@ unsigned int work_busy(struct work_struct *work)
 {
 	struct worker_pool *pool = get_work_pool(work);
 	struct global_cwq *gcwq;
-	unsigned long flags;
-	unsigned int ret = 0;
+ 	unsigned long flags;
+ 	unsigned int ret = 0;
 
-	if (!pool)
-		return 0;
-	gcwq = pool->gcwq;
+ 	if (work_pending(work))
+ 		ret |= WORK_BUSY_PENDING;
 
-	spin_lock_irqsave(&gcwq->lock, flags);
-
-	if (work_pending(work))
-		ret |= WORK_BUSY_PENDING;
-	if (find_worker_executing_work(pool, work))
-		ret |= WORK_BUSY_RUNNING;
-
-	spin_unlock_irqrestore(&gcwq->lock, flags);
+	if (pool) {
+		spin_lock_irqsave(&pool->lock, flags);
+		if (find_worker_executing_work(pool, work))
+			ret |= WORK_BUSY_RUNNING;
+		spin_unlock_irqrestore(&pool->lock, flags);
+	}
 
 	return ret;
 }
