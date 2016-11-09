@@ -389,11 +389,8 @@ static struct dentry *scfs_mount(struct file_system_type *fs_type, int flags,
 	if (!sbi->options.comp_type)
 		sbi->options.comp_type = SCFS_COMP_LZO;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	sb = sget(fs_type, NULL, set_anon_super, flags, NULL);
-#else
-	sb = sget(fs_type, NULL, set_anon_super, NULL);
-#endif
+
 	if (IS_ERR(sb)) {
 		goto out_free;
 	}

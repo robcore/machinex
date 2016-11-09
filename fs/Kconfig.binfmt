@@ -166,8 +166,8 @@ config BINFMT_MISC
 	  don't know what to answer at this point, say Y.
 
 config COREDUMP
-	bool "Enable core dump support" if EXPERT
-	default y
+	bool "Enable core dump support"
+	default n
 	help
 	  This option enables support for performing core dumps. You almost
 	  certainly want to say Y here. Not necessary on systems that never
