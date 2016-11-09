@@ -98,32 +98,6 @@ struct ww_acquire_ctx {
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	struct lockdep_map dep_map;
 #endif
-#ifdef CONFIG_DEBUG_WW_MUTEX_SLOWPATH
-	unsigned deadlock_inject_interval;
-	unsigned deadlock_inject_countdown;
-#endif
-};
-
-struct ww_mutex {
-	struct mutex base;
-	struct ww_acquire_ctx *ctx;
-#ifdef CONFIG_DEBUG_MUTEXES
-	struct ww_class *ww_class;
-#endif
-};
-
-struct ww_acquire_ctx {
-	struct task_struct *task;
-	unsigned long stamp;
-	unsigned acquired;
-#ifdef CONFIG_DEBUG_MUTEXES
-	unsigned done_acquire;
-	struct ww_class *ww_class;
-	struct ww_mutex *contending_lock;
-#endif
-#ifdef CONFIG_DEBUG_LOCK_ALLOC
-	struct lockdep_map dep_map;
-#endif
 };
 
 struct ww_mutex {
