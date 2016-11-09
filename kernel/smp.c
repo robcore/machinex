@@ -124,9 +124,9 @@ void __init call_function_init(void)
  * previous function call. For multi-cpu calls its even more interesting
  * as we'll have to ensure no other cpu is observing our csd.
  */
-static void csd_lock_wait(struct call_single_data *data)
+static void csd_lock_wait(struct call_single_data *csd)
 {
-	while (data->flags & CSD_FLAG_LOCK)
+	while (csd->flags & CSD_FLAG_LOCK)
 		cpu_relax();
 }
 
@@ -532,8 +532,7 @@ void smp_call_function_many(const struct cpumask *mask,
 		return;
 	}
 
-	data = &__get_cpu_var(cfd_data);
-	csd_lock(&data->csd);
+	cfd = &__get_cpu_var(cfd_data);
 
 	/* This BUG_ON verifies our reuse assertions and can be removed */
 	BUG_ON(atomic_read(&data->refs) || !cpumask_empty(data->cpumask));
@@ -640,6 +639,7 @@ int smp_call_function(smp_call_func_t func, void *info, int wait)
 }
 EXPORT_SYMBOL(smp_call_function);
 
+#ifndef CONFIG_USE_GENERIC_SMP_HELPERS
 void ipi_call_lock(void)
 {
 	raw_spin_lock(&call_function.lock);
