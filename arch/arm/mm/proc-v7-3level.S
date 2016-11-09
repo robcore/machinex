@@ -69,6 +69,10 @@ ENTRY(cpu_v7_set_pte_ext)
 	tst	r2, #L_PTE_VALID
 	beq	1f
 
+	tst	r3, #1 << (57 - 32)		@ L_PTE_NONE
+	bicne	r2, #L_PTE_VALID
+	bne	1f
+
 	eor	ip, rh, #1 << (55 - 32)	@ toggle L_PTE_DIRTY in temp reg to
 					@ test for !L_PTE_DIRTY || L_PTE_RDONLY
 	tst	ip, #1 << (55 - 32) | 1 << (58 - 32)
