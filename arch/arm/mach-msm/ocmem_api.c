@@ -105,6 +105,9 @@ struct ocmem_buf *ocmem_allocate(int client_id, unsigned long size)
 	bool can_block = false;
 	bool can_wait = true;
 
+	if (!is_probe_done())
+		return ERR_PTR(-EPROBE_DEFER);
+
 	if (!check_id(client_id)) {
 		pr_err("ocmem: Invalid client id: %d\n", client_id);
 		return NULL;
@@ -138,6 +141,9 @@ struct ocmem_buf *ocmem_allocate_nowait(int client_id, unsigned long size)
 	bool can_block = false;
 	bool can_wait = false;
 
+	if (!is_probe_done())
+		return ERR_PTR(-EPROBE_DEFER);
+
 	if (!check_id(client_id)) {
 		pr_err("ocmem: Invalid client id: %d\n", client_id);
 		return NULL;
@@ -170,6 +176,9 @@ struct ocmem_buf *ocmem_allocate_range(int client_id, unsigned long min,
 {
 	bool can_block = true;
 	bool can_wait = false;
+
+	if (!is_probe_done())
+		return ERR_PTR(-EPROBE_DEFER);
 
 	if (!check_id(client_id)) {
 		pr_err("ocmem: Invalid client id: %d\n", client_id);
@@ -210,6 +219,9 @@ struct ocmem_buf *ocmem_allocate_nb(int client_id, unsigned long size)
 {
 	bool can_block = true;
 	bool can_wait = false;
+
+	if (!is_probe_done())
+		return ERR_PTR(-EPROBE_DEFER);
 
 	if (!check_id(client_id)) {
 		pr_err("ocmem: Invalid client id: %d\n", client_id);

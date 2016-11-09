@@ -49,6 +49,8 @@ struct ocmem_zone *get_zone(unsigned id)
 
 static struct ocmem_plat_data *ocmem_pdata;
 
+static bool probe_done;
+
 #define CLIENT_NAME_MAX 10
 
 /* Must be in sync with enum ocmem_client */
@@ -93,6 +95,11 @@ static inline int get_id(const char *name)
 			return i;
 	}
 	return -EINVAL;
+}
+
+bool is_probe_done(void)
+{
+	return probe_done;
 }
 
 int check_id(int id)
@@ -498,6 +505,11 @@ static int ocmem_zone_init(struct platform_device *pdev)
 	for (i = 0; i < pdata->nr_parts; i++) {
 		struct ocmem_partition *part = &pdata->parts[i];
 		zone = get_zone(part->id);
+		if (!zone) {
+			pr_err("Unable to get zone for client %s\n",
+						client_names[part->id]);
+			return -EBUSY;
+		}
 		zone->active = false;
 
 		dev_dbg(dev, "Partition %d, start %lx, size %lx for %s\n",
@@ -600,23 +612,6 @@ static int __devinit msm_ocmem_probe(struct platform_device *pdev)
 	struct clk *ocmem_core_clk = NULL;
 	struct clk *ocmem_iface_clk = NULL;
 
-	if (!pdev->dev.of_node) {
-		dev_info(dev, "Missing Configuration in Device Tree\n");
-		ocmem_pdata = parse_static_config(pdev);
-	} else {
-		ocmem_pdata = parse_dt_config(pdev);
-	}
-
-	/* Check if we have some configuration data to start */
-	if (!ocmem_pdata)
-		return -ENODEV;
-
-	/* Sanity Checks */
-	BUG_ON(!IS_ALIGNED(ocmem_pdata->size, PAGE_SIZE));
-	BUG_ON(!IS_ALIGNED(ocmem_pdata->base, PAGE_SIZE));
-
-	dev_info(dev, "OCMEM Virtual addr %p\n", ocmem_pdata->vbase);
-
 	ocmem_core_clk = devm_clk_get(dev, "core_clk");
 
 	if (IS_ERR(ocmem_core_clk)) {
@@ -635,8 +630,24 @@ static int __devinit msm_ocmem_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(ocmem_iface_clk))
 		ocmem_iface_clk = NULL;
 
+	if (!pdev->dev.of_node) {
+		dev_info(dev, "Missing Configuration in Device Tree\n");
+		ocmem_pdata = parse_static_config(pdev);
+	} else {
+		ocmem_pdata = parse_dt_config(pdev);
+	}
+	/* Check if we have some configuration data to start */
+	if (!ocmem_pdata)
+		return -ENODEV;
+
 	ocmem_pdata->core_clk = ocmem_core_clk;
 	ocmem_pdata->iface_clk = ocmem_iface_clk;
+
+	/* Sanity Checks */
+	BUG_ON(!IS_ALIGNED(ocmem_pdata->size, PAGE_SIZE));
+	BUG_ON(!IS_ALIGNED(ocmem_pdata->base, PAGE_SIZE));
+
+	dev_info(dev, "OCMEM Virtual addr %p\n", ocmem_pdata->vbase);
 
 	platform_set_drvdata(pdev, ocmem_pdata);
 
@@ -660,6 +671,7 @@ static int __devinit msm_ocmem_probe(struct platform_device *pdev)
 		return -EBUSY;
 	}
 
+	probe_done = true;
 	dev_dbg(dev, "initialized successfully\n");
 	return 0;
 }
