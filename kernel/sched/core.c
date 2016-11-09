@@ -1810,7 +1810,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 #endif
 #endif
 
-	trace_sched_migrate_task(p, new_cpu, pct_task_load(p));
+	trace_sched_migrate_task(p, new_cpu);
 
 	if (task_cpu(p) != new_cpu) {
 		struct task_migration_notifier tmn;
