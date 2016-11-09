@@ -249,6 +249,7 @@ config ARCH_APQ8064
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
+	select WALLCLOCK
 
 config ARCH_MSM8974
 	bool "MSM8974"
@@ -3347,6 +3348,12 @@ config LCD_KCAL
 	default n
 	help
 	  Enable MSM generic LCDC temperature Calibration.
+
+config WALLCLOCK
+	bool "Use MSM wallclock scheduling helper"
+	default y
+	help
+	  Your guess is as good as mine.
 
 config HAS_MACH_MEMUTILS
 	default n

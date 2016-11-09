@@ -804,12 +804,12 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  *	The task_lock() exception
  *
  * The need for this exception arises from the action of
- * cgroup_attach_task(), which overwrites one task's cgroup pointer with
+ * cgroup_attach_task(), which overwrites one tasks cgroup pointer with
  * another.  It does so using cgroup_mutex, however there are
  * several performance critical places that need to reference
  * task->cgroups without the expense of grabbing a system global
  * mutex.  Therefore except as noted below, when dereferencing or, as
- * in cgroup_attach_task(), modifying a task's cgroup pointer we use
+ * in cgroup_attach_task(), modifying a task's cgroups pointer we use
  * task_lock(), which acts on a spinlock (task->alloc_lock) already in
  * the task_struct routinely used for such matters.
  *
@@ -1922,7 +1922,9 @@ EXPORT_SYMBOL_GPL(cgroup_taskset_size);
 /*
  * cgroup_task_migrate - move a task from one cgroup to another.
  *
- * Must be called with cgroup_mutex and threadgroup locked.
+ * 'guarantee' is set if the caller promises that a new css_set for the task
+ * will already exist. If not set, this function might sleep, and can fail with
+ * -ENOMEM. Must be called with cgroup_mutex and threadgroup locked.
  */
 static void cgroup_task_migrate(struct cgroup *cgrp, struct cgroup *oldcgrp,
 				struct task_struct *tsk, struct css_set *newcg)
@@ -3805,7 +3807,7 @@ static int cgroup_event_wake(wait_queue_t *wait, unsigned mode,
 	if (flags & POLLHUP) {
 		__remove_wait_queue(event->wqh, &event->wait);
 		spin_lock(&cgrp->event_list_lock);
-		list_del_init(&event->list);
+		list_del(&event->list);
 		spin_unlock(&cgrp->event_list_lock);
 		/*
 		 * We are in atomic context, but cgroup_event_remove() may
@@ -4023,7 +4025,6 @@ static int cgroup_populate_dir(struct cgroup *cgrp, bool base_files,
 {
 	int err;
 	struct cgroup_subsys *ss;
-	LIST_HEAD(tmp_list);
 
 	if (base_files) {
 		err = cgroup_addrm_files(cgrp, NULL, files, true);
@@ -4429,20 +4430,16 @@ again:
 	/*
 	 * Unregister events and notify userspace.
 	 * Notify userspace about cgroup removing only after rmdir of cgroup
-	 * directory to avoid race between userspace and kernelspace. Use
-	 * a temporary list to avoid a deadlock with cgroup_event_wake(). Since
-	 * cgroup_event_wake() is called with the wait queue head locked,
-	 * remove_wait_queue() cannot be called while holding event_list_lock.
+	 * directory to avoid race between userspace and kernelspace
 	 */
 	spin_lock(&cgrp->event_list_lock);
-	list_splice_init(&cgrp->event_list, &tmp_list);
-	spin_unlock(&cgrp->event_list_lock);
-	list_for_each_entry_safe(event, tmp, &tmp_list, list) {
-		list_del_init(&event->list);
+	list_for_each_entry_safe(event, tmp, &cgrp->event_list, list) {
+		list_del(&event->list);
 		remove_wait_queue(event->wqh, &event->wait);
 		eventfd_signal(event->eventfd, 1);
 		schedule_work(&event->remove);
 	}
+	spin_unlock(&cgrp->event_list_lock);
 
 	mutex_unlock(&cgroup_mutex);
 	return 0;

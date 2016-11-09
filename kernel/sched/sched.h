@@ -621,7 +621,7 @@ struct rq {
 	int cstate, wakeup_latency, wakeup_energy;
 #endif
 
-#ifdef CONFIG_SCHED_HMP
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 	/*
 	 * max_freq = user or thermal defined maximum
 	 * max_possible_freq = maximum supported by hardware
@@ -636,14 +636,8 @@ struct rq {
 	int max_possible_capacity;
 	u64 window_start;
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
-	unsigned int old_busy_time;
-#endif
-#endif
-
-#ifdef CONFIG_SCHED_FREQ_INPUT
-	u64 curr_runnable_sum;
-	u64 prev_runnable_sum;
+	unsigned int curr_runnable_sum;
+	unsigned int prev_runnable_sum;
 #endif
 
 #ifdef CONFIG_SCHED_HMP
@@ -841,18 +835,10 @@ static inline unsigned int group_first_cpu(struct sched_group *group)
 
 extern void init_new_task_load(struct task_struct *p);
 
-#ifdef CONFIG_SCHED_HMP
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
-#define WINDOW_STATS_RECENT		0
-#define WINDOW_STATS_MAX		1
-#define WINDOW_STATS_MAX_RECENT_AVG	2
-#define WINDOW_STATS_AVG		3
-#define WINDOW_STATS_INVALID_POLICY	4
-
-extern struct mutex policy_mutex;
 extern unsigned int sched_ravg_window;
 extern unsigned int sched_use_pelt;
-extern unsigned int sched_disable_window_stats;
 extern unsigned int max_possible_freq;
 extern unsigned int min_max_freq;
 extern unsigned int pct_task_load(struct task_struct *p);
@@ -869,13 +855,10 @@ extern unsigned int sched_upmigrate;
 extern unsigned int sched_downmigrate;
 extern unsigned int sched_init_task_load_pelt;
 extern unsigned int sched_init_task_load_windows;
-extern unsigned int sched_heavy_task;
-
 extern void fixup_nr_big_small_task(int cpu);
+
 u64 scale_load_to_cpu(u64 load, int cpu);
 unsigned int max_task_load(void);
-extern void sched_account_irqtime(int cpu, struct task_struct *curr,
-				 u64 delta, u64 wallclock);
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
@@ -883,7 +866,7 @@ inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 	if (sched_use_pelt)
 		rq->cumulative_runnable_avg +=
 				p->se.avg.runnable_avg_sum_scaled;
-	else if (!sched_disable_window_stats)
+	else
 		rq->cumulative_runnable_avg += p->ravg.demand;
 }
 
@@ -893,12 +876,12 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 	if (sched_use_pelt)
 		rq->cumulative_runnable_avg -=
 				p->se.avg.runnable_avg_sum_scaled;
-	else if (!sched_disable_window_stats)
+	else
 		rq->cumulative_runnable_avg -= p->ravg.demand;
 	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
 }
 
-#else	/* CONFIG_SCHED_HMP */
+#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 static inline int pct_task_load(struct task_struct *p) { return 0; }
 
@@ -922,39 +905,7 @@ static inline unsigned long capacity_scale_cpu_freq(int cpu)
 	return SCHED_LOAD_SCALE;
 }
 
-static inline void sched_account_irqtime(int cpu, struct task_struct *curr,
-				 u64 delta, u64 wallclock)
-{
-}
-
-#endif	/* CONFIG_SCHED_HMP */
-
-#ifdef CONFIG_SCHED_FREQ_INPUT
-extern void check_for_freq_change(struct rq *rq);
-
-/* Is frequency of two cpus synchronized with each other? */
-static inline int same_freq_domain(int src_cpu, int dst_cpu)
-{
-	struct rq *rq = cpu_rq(src_cpu);
-
-	if (src_cpu == dst_cpu)
-		return 1;
-
-	return cpumask_test_cpu(dst_cpu, &rq->freq_domain_cpumask);
-}
-
-#else	/* CONFIG_SCHED_FREQ_INPUT */
-
-#define sched_migration_fixup	0
-
-static inline void check_for_freq_change(struct rq *rq) { }
-
-static inline int same_freq_domain(int src_cpu, int dst_cpu)
-{
-	return 1;
-}
-
-#endif	/* CONFIG_SCHED_FREQ_INPUT */
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 #ifdef CONFIG_SCHED_HMP
 
@@ -963,18 +914,16 @@ extern unsigned int sched_enable_power_aware;
 
 int mostly_idle_cpu(int cpu);
 extern void check_for_migration(struct rq *rq, struct task_struct *p);
-extern void pre_big_small_task_count_change(const struct cpumask *cpus);
-extern void post_big_small_task_count_change(const struct cpumask *cpus);
+extern void pre_big_small_task_count_change(void);
+extern void post_big_small_task_count_change(void);
 extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void set_hmp_defaults(void);
 extern unsigned int power_cost_at_freq(int cpu, unsigned int freq);
-extern void reset_all_window_stats(u64 window_start, unsigned int window_size);
 
 #else /* CONFIG_SCHED_HMP */
 
 #define sched_enable_hmp 0
-#define sched_freq_legacy_mode 1
 
 static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
 static inline void pre_big_small_task_count_change(void) { }
