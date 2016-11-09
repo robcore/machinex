@@ -23,7 +23,7 @@
 #include <mach/peripheral-loader.h>
 
 #include "ipc_router.h"
-#include "smd_private.h"
+#include <mach/msm_smsm.h>
 
 static int msm_ipc_router_smd_xprt_debug_mask;
 module_param_named(debug_mask, msm_ipc_router_smd_xprt_debug_mask,
