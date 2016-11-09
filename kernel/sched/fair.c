@@ -1009,7 +1009,7 @@ static u32 __compute_runnable_contrib(u64 n)
 static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
 static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_HMP
 
 /* Initial task load. Newly created tasks are assigned this load. */
 unsigned int __read_mostly sched_init_task_load_pelt;
@@ -1031,10 +1031,6 @@ unsigned int max_task_load(void)
 
 	return sched_ravg_window;
 }
-
-#endif /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
-
-#ifdef CONFIG_SCHED_HMP
 
 /* Use this knob to turn on or off HMP-aware task placement logic */
 unsigned int __read_mostly sched_enable_hmp = 0;
@@ -1094,6 +1090,18 @@ unsigned int __read_mostly sched_small_task;
 unsigned int __read_mostly sysctl_sched_small_task_pct = 10;
 
 /*
+ * Tasks with demand >= sched_heavy_task will have their
+ * window-based demand added to the previous window's CPU
+ * time when they wake up, if they have slept for at least
+ * one full window. This feature is disabled when the tunable
+ * is set to 0 (the default).
+ */
+#ifdef CONFIG_SCHED_FREQ_INPUT
+unsigned int __read_mostly sysctl_sched_heavy_task_pct;
+unsigned int __read_mostly sched_heavy_task;
+#endif
+
+/*
  * Tasks whose bandwidth consumption on a cpu is more than
  * sched_upmigrate are considered "big" tasks. Big tasks will be
  * considered for "up" migration, i.e migrating to a cpu with better
@@ -1150,6 +1158,11 @@ void set_hmp_defaults(void)
 
 	sched_downmigrate =
 		pct_to_real(sysctl_sched_downmigrate_pct);
+
+#ifdef CONFIG_SCHED_FREQ_INPUT
+	sched_heavy_task =
+		pct_to_real(sysctl_sched_heavy_task_pct);
+#endif
 
 	sched_init_task_load_pelt =
 		div64_u64((u64)sysctl_sched_init_task_load_pct *
@@ -1551,7 +1564,7 @@ done:
 
 void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
 {
-	if (!sched_enable_hmp)
+	if (!sched_enable_hmp || sched_disable_window_stats)
 		return;
 
 	if (is_big_task(p))
@@ -1562,7 +1575,7 @@ void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
 
 void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
 {
-	if (!sched_enable_hmp)
+	if (!sched_enable_hmp || sched_disable_window_stats)
 		return;
 
 	if (is_big_task(p))
@@ -1589,13 +1602,13 @@ void fixup_nr_big_small_task(int cpu)
 }
 
 /* Disable interrupts and grab runqueue lock of all cpus listed in @cpus */
-void pre_big_small_task_count_change(void)
+void pre_big_small_task_count_change(const struct cpumask *cpus)
 {
 	int i;
 
 	local_irq_disable();
 
-	for_each_online_cpu(i)
+	for_each_cpu(i, cpus)
 		raw_spin_lock(&cpu_rq(i)->lock);
 }
 
@@ -1603,18 +1616,71 @@ void pre_big_small_task_count_change(void)
  * Reinitialize 'nr_big_tasks' and 'nr_small_tasks' counters on all affected
  * cpus
  */
-void post_big_small_task_count_change(void)
+void post_big_small_task_count_change(const struct cpumask *cpus)
 {
 	int i;
 
 	/* Assumes local_irq_disable() keeps online cpumap stable */
-	for_each_online_cpu(i)
+	for_each_cpu(i, cpus)
 		fixup_nr_big_small_task(i);
 
-	for_each_online_cpu(i)
+	for_each_cpu(i, cpus)
 		raw_spin_unlock(&cpu_rq(i)->lock);
 
 	local_irq_enable();
+}
+
+DEFINE_MUTEX(policy_mutex);
+
+static inline int invalid_value(unsigned int *data)
+{
+	int val = *data;
+
+	if (data == &sysctl_sched_ravg_hist_size)
+		return (val < 2 || val > RAVG_HIST_SIZE_MAX);
+
+	if (data == &sysctl_sched_window_stats_policy)
+		return (val >= WINDOW_STATS_INVALID_POLICY);
+
+	return 0;
+}
+
+/*
+ * Handle "atomic" update of sysctl_sched_window_stats_policy,
+ * sysctl_sched_ravg_hist_size, sysctl_sched_account_wait_time and
+ * sched_freq_legacy_mode variables.
+ */
+int sched_window_update_handler(struct ctl_table *table, int write,
+		void __user *buffer, size_t *lenp,
+		loff_t *ppos)
+{
+	int ret;
+	unsigned int *data = (unsigned int *)table->data;
+	unsigned int old_val;
+
+	if (!sched_enable_hmp)
+		return -EINVAL;
+
+	mutex_lock(&policy_mutex);
+
+	old_val = *data;
+
+	ret = proc_dointvec(table, write, buffer, lenp, ppos);
+	if (ret || !write || (write && (old_val == *data)))
+		goto done;
+
+	if (invalid_value(data)) {
+		*data = old_val;
+		ret = -EINVAL;
+		goto done;
+	}
+
+	reset_all_window_stats(0, 0);
+
+done:
+	mutex_unlock(&policy_mutex);
+
+	return ret;
 }
 
 /*
@@ -1650,15 +1716,19 @@ int sched_hmp_proc_update_handler(struct ctl_table *table, int write,
 	 */
 	if ((*data != old_val) &&
 		(data == &sysctl_sched_upmigrate_pct ||
-		data == &sysctl_sched_small_task_pct))
-			pre_big_small_task_count_change();
+		data == &sysctl_sched_small_task_pct)) {
+			get_online_cpus();
+			pre_big_small_task_count_change(cpu_online_mask);
+	}
 
 	set_hmp_defaults();
 
 	if ((*data != old_val) &&
 		(data == &sysctl_sched_upmigrate_pct ||
-		data == &sysctl_sched_small_task_pct))
-			post_big_small_task_count_change();
+		data == &sysctl_sched_small_task_pct)) {
+			post_big_small_task_count_change(cpu_online_mask);
+			put_online_cpus();
+	}
 
 	return 0;
 }
@@ -1867,26 +1937,25 @@ static inline int capacity(struct rq *rq)
 
 #endif	/* CONFIG_SCHED_HMP */
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_HMP
 
 void init_new_task_load(struct task_struct *p)
 {
 	int i;
 
+	memset(&p->ravg, 0, sizeof(struct ravg));
 	p->se.avg.decay_count	= 0;
-	p->ravg.sum		= 0;
 
-	for (i = 0; i < RAVG_HIST_SIZE; ++i)
+	for (i = 0; i < RAVG_HIST_SIZE_MAX; ++i)
 		p->ravg.sum_history[i] = sched_init_task_load_windows;
 	p->se.avg.runnable_avg_period =
 		sysctl_sched_init_task_load_pct ? LOAD_AVG_MAX : 0;
 	p->se.avg.runnable_avg_sum = sched_init_task_load_pelt;
 	p->se.avg.runnable_avg_sum_scaled = sched_init_task_load_pelt;
 	p->ravg.demand = sched_init_task_load_windows;
-	p->ravg.partial_demand = sched_init_task_load_windows;
 }
 
-#else /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else /* CONFIG_SCHED_HMP */
 
 #if defined(CONFIG_SMP) && defined(CONFIG_FAIR_GROUP_SCHED)
 
@@ -1905,7 +1974,7 @@ void init_new_task_load(struct task_struct *p)
 
 #endif	/* CONFIG_SMP && CONFIG_FAIR_GROUP_SCHED */
 
-#endif /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#endif /* CONFIG_SCHED_HMP */
 
 /*
  * We can represent the historical contribution to runnable average as the
@@ -2327,7 +2396,7 @@ static inline void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq,
 					      int force_update) {}
 #endif
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_HMP
 
 /* Return task demand in percentage scale */
 unsigned int pct_task_load(struct task_struct *p)
@@ -2377,7 +2446,7 @@ static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
 			   periods);
 }
 
-#else  /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else  /* CONFIG_SCHED_HMP */
 
 static inline void
 add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta)
@@ -2388,7 +2457,7 @@ static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
 {
 }
 
-#endif /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#endif /* CONFIG_SCHED_HMP */
 
 static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
@@ -6213,6 +6282,12 @@ more_balance:
 			per_cpu(dbs_boost_load_moved, this_cpu) = 0;
 
 		}
+
+		/* Assumes one 'busiest' cpu that we pulled tasks from */
+		if (!same_freq_domain(this_cpu, cpu_of(busiest))) {
+			check_for_freq_change(this_rq);
+			check_for_freq_change(busiest);
+		}
 	}
 	if (likely(!active_balance)) {
 		/* We were unbalanced, so reset the balancing interval */
@@ -6381,6 +6456,7 @@ static int active_load_balance_cpu_stop(void *data)
 		.src_rq		= busiest_rq,
 		.idle		= CPU_IDLE,
 	};
+	bool moved = false;
 
 	raw_spin_lock_irq(&busiest_rq->lock);
 
@@ -6409,8 +6485,10 @@ static int active_load_balance_cpu_stop(void *data)
 	if (push_task) {
 		if (push_task->on_rq && push_task->state == TASK_RUNNING &&
 		    task_cpu(push_task) == busiest_cpu &&
-		    cpu_online(target_cpu))
+		    cpu_online(target_cpu)) {
 			move_task(push_task, &env);
+			moved = true;
+		}
 		put_task_struct(push_task);
 		busiest_rq->push_task = NULL;
 		goto out_unlock_balance;
@@ -6428,17 +6506,32 @@ static int active_load_balance_cpu_stop(void *data)
 		env.sd = sd;
 		schedstat_inc(sd, alb_count);
 
-		if (move_one_task(&env))
+		if (move_one_task(&env)) {
 			schedstat_inc(sd, alb_pushed);
-		else
+			moved = true;
+		} else {
 			schedstat_inc(sd, alb_failed);
+		}
 	}
 	rcu_read_unlock();
 out_unlock_balance:
 	double_unlock_balance(busiest_rq, target_rq);
 out_unlock:
 	busiest_rq->active_balance = 0;
+	push_task = busiest_rq->push_task;
+	target_cpu = busiest_rq->push_cpu;
+	if (push_task) {
+		put_task_struct(push_task);
+		clear_reserved(target_cpu);
+		busiest_rq->push_task = NULL;
+	}
 	raw_spin_unlock_irq(&busiest_rq->lock);
+
+	if (moved && !same_freq_domain(busiest_cpu, target_cpu)) {
+		check_for_freq_change(busiest_rq);
+		check_for_freq_change(target_rq);
+	}
+
 	if (per_cpu(dbs_boost_needed, target_cpu)) {
 		struct migration_notify_data mnd;
 
