@@ -17,7 +17,7 @@
  *
  */
 
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
