@@ -5684,7 +5684,6 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 	struct task_struct *p;
 	int retval;
 
-	get_online_cpus();
 	rcu_read_lock();
 
 	p = find_process_by_pid(pid);
@@ -5755,7 +5754,6 @@ out_free_cpus_allowed:
 	free_cpumask_var(cpus_allowed);
 out_put_task:
 	put_task_struct(p);
-	put_online_cpus();
 	return retval;
 }
 
@@ -5800,7 +5798,6 @@ long sched_getaffinity(pid_t pid, struct cpumask *mask)
 	unsigned long flags;
 	int retval;
 
-	get_online_cpus();
 	rcu_read_lock();
 
 	retval = -ESRCH;
@@ -5813,12 +5810,11 @@ long sched_getaffinity(pid_t pid, struct cpumask *mask)
 		goto out_unlock;
 
 	raw_spin_lock_irqsave(&p->pi_lock, flags);
-	cpumask_and(mask, &p->cpus_allowed, cpu_online_mask);
+	cpumask_and(mask, &p->cpus_allowed, cpu_active_mask);
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
 out_unlock:
 	rcu_read_unlock();
-	put_online_cpus();
 
 	return retval;
 }
