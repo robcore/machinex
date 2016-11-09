@@ -43,10 +43,6 @@ struct call_single_queue {
 	raw_spinlock_t		lock;
 };
 
-/* CPU mask indicating which CPUs to bring online during smp_init() */
-static bool have_boot_cpu_mask;
-static cpumask_var_t boot_cpu_mask;
-
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct call_single_queue, call_single_queue);
 
 static void flush_smp_call_function_queue(bool warn_cpu_offline);
@@ -124,9 +120,9 @@ void __init call_function_init(void)
  * previous function call. For multi-cpu calls its even more interesting
  * as we'll have to ensure no other cpu is observing our csd.
  */
-static void csd_lock_wait(struct call_single_data *csd)
+static void csd_lock_wait(struct call_single_data *data)
 {
-	while (csd->flags & CSD_FLAG_LOCK)
+	while (data->flags & CSD_FLAG_LOCK)
 		cpu_relax();
 }
 
@@ -499,7 +495,7 @@ void __smp_call_function_single(int cpu, struct call_single_data *data,
 void smp_call_function_many(const struct cpumask *mask,
 			    smp_call_func_t func, void *info, bool wait)
 {
-	struct call_function_data *cfd;
+	struct call_function_data *data;
 	unsigned long flags;
 	int refs, cpu, next_cpu, this_cpu = smp_processor_id();
 
@@ -532,7 +528,8 @@ void smp_call_function_many(const struct cpumask *mask,
 		return;
 	}
 
-	cfd = &__get_cpu_var(cfd_data);
+	data = &__get_cpu_var(cfd_data);
+	csd_lock(&data->csd);
 
 	/* This BUG_ON verifies our reuse assertions and can be removed */
 	BUG_ON(atomic_read(&data->refs) || !cpumask_empty(data->cpumask));
@@ -639,7 +636,6 @@ int smp_call_function(smp_call_func_t func, void *info, int wait)
 }
 EXPORT_SYMBOL(smp_call_function);
 
-#ifndef CONFIG_USE_GENERIC_SMP_HELPERS
 void ipi_call_lock(void)
 {
 	raw_spin_lock(&call_function.lock);
@@ -714,19 +710,6 @@ static int __init maxcpus(char *str)
 
 early_param("maxcpus", maxcpus);
 
-static int __init boot_cpus(char *str)
-{
-	alloc_bootmem_cpumask_var(&boot_cpu_mask);
-	if (cpulist_parse(str, boot_cpu_mask) < 0) {
-		pr_warn("SMP: Incorrect boot_cpus cpumask\n");
-		return -EINVAL;
-	}
-	have_boot_cpu_mask = true;
-	return 0;
-}
-
-early_param("boot_cpus", boot_cpus);
-
 /* Setup number of possible processor ids */
 int nr_cpu_ids __read_mostly = NR_CPUS;
 EXPORT_SYMBOL(nr_cpu_ids);
@@ -735,21 +718,6 @@ EXPORT_SYMBOL(nr_cpu_ids);
 void __init setup_nr_cpu_ids(void)
 {
 	nr_cpu_ids = find_last_bit(cpumask_bits(cpu_possible_mask),NR_CPUS) + 1;
-}
-
-/* Should the given CPU be booted during smp_init() ? */
-static inline bool boot_cpu(int cpu)
-{
-	if (!have_boot_cpu_mask)
-		return true;
-
-	return cpumask_test_cpu(cpu, boot_cpu_mask);
-}
-
-static inline void free_boot_cpu_mask(void)
-{
-	if (have_boot_cpu_mask)	/* Allocated from boot_cpus() */
-		free_bootmem_cpumask_var(boot_cpu_mask);
 }
 
 /* Called by boot processor to activate the rest. */
@@ -763,11 +731,9 @@ void __init smp_init(void)
 	for_each_present_cpu(cpu) {
 		if (num_online_cpus() >= setup_max_cpus)
 			break;
-		if (!cpu_online(cpu) && boot_cpu(cpu))
+		if (!cpu_online(cpu))
 			cpu_up(cpu);
 	}
-
-	free_boot_cpu_mask();
 
 	/* Any cleanup work */
 	printk(KERN_INFO "Brought up %ld CPUs\n", (long)num_online_cpus());
