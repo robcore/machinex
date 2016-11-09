@@ -702,27 +702,6 @@ DECLARE_PER_CPU(struct rq, runqueues);
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
 #define raw_rq()		(&__raw_get_cpu_var(runqueues))
 
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-struct nr_stats_s {
-	/* time-based average load */
-	u64 nr_last_stamp;
-	unsigned int ave_nr_running;
-	seqcount_t ave_seqcnt;
-};
-
-/* 27 ~= 134217728ns = 134.2ms
- * 26 ~=  67108864ns =  67.1ms
- * 25 ~=  33554432ns =  33.5ms
- * 24 ~=  16777216ns =  16.8ms
- */
-#define NR_AVE_PERIOD_EXP	27
-#define NR_AVE_SCALE(x)		((x) << FSHIFT)
-#define NR_AVE_PERIOD		(1 << NR_AVE_PERIOD_EXP)
-#define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
-
-DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
-#endif
-
 static inline u64 rq_clock(struct rq *rq)
 {
 	return rq->clock;
@@ -732,6 +711,22 @@ static inline u64 rq_clock_task(struct rq *rq)
 {
 	return rq->clock_task;
 }
+
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+struct nr_stats_s {
+	/* time-based average load */
+	u64 nr_last_stamp;
+	unsigned int ave_nr_running;
+	seqcount_t ave_seqcnt;
+};
+
+#define NR_AVE_PERIOD_EXP	28
+#define NR_AVE_SCALE(x)		((x) << FSHIFT)
+#define NR_AVE_PERIOD		(1 << NR_AVE_PERIOD_EXP)
+#define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
+
+DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
+#endif
 
 #ifdef CONFIG_SMP
 
@@ -777,6 +772,8 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
+DECLARE_PER_CPU(struct sched_domain *, sd_busy);
+DECLARE_PER_CPU(struct sched_domain *, sd_asym);
 
 struct sched_group_power {
 	atomic_t ref;
@@ -1482,6 +1479,8 @@ extern void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags);
 extern const_debug unsigned int sysctl_sched_time_avg;
 extern const_debug unsigned int sysctl_sched_nr_migrate;
 extern const_debug unsigned int sysctl_sched_migration_cost;
+extern const_debug unsigned int sysctl_sched_yield_sleep_duration;
+extern const_debug int sysctl_sched_yield_sleep_threshold;
 
 static inline u64 sched_avg_period(void)
 {
