@@ -112,14 +112,6 @@ struct ww_mutex {
 #endif
 };
 
-struct ww_class {
-	atomic_long_t stamp;
-	struct lock_class_key acquire_key;
-	struct lock_class_key mutex_key;
-	const char *acquire_name;
-	const char *mutex_name;
-};
-
 struct ww_acquire_ctx {
 	struct task_struct *task;
 	unsigned long stamp;
