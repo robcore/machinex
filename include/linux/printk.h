@@ -122,8 +122,6 @@ extern int kptr_restrict;
 
 void log_buf_kexec_setup(void);
 void __init setup_log_buf(int early);
-void dump_stack_set_arch_desc(const char *fmt, ...);
-void dump_stack_print_info(const char *log_lvl);
 #else
 static inline __printf(1, 0)
 int vprintk(const char *s, va_list args)
@@ -155,14 +153,6 @@ static inline void log_buf_kexec_setup(void)
 }
 
 static inline void setup_log_buf(int early)
-{
-}
-
-static inline void dump_stack_set_arch_desc(const char *fmt, ...)
-{
-}
-
-static inline void dump_stack_print_info(const char *log_lvl)
 {
 }
 #endif
@@ -227,19 +217,8 @@ extern void dump_stack(void) __cold;
 		printk(fmt, ##__VA_ARGS__);	\
 	}					\
 })
-#define printk_deferred_once(fmt, ...)				\
-({								\
-	static bool __print_once __read_mostly;			\
-								\
-	if (!__print_once) {					\
-		__print_once = true;				\
-		printk_deferred(fmt, ##__VA_ARGS__);		\
-	}							\
-})
 #else
 #define printk_once(fmt, ...)			\
-	no_printk(fmt, ##__VA_ARGS__)
-#define printk_deferred_once(fmt, ...)				\
 	no_printk(fmt, ##__VA_ARGS__)
 #endif
 

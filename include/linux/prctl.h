@@ -113,12 +113,6 @@
 # define PR_SET_MM_START_STACK		5
 # define PR_SET_MM_START_BRK		6
 # define PR_SET_MM_BRK			7
-# define PR_SET_MM_ARG_START		8
-# define PR_SET_MM_ARG_END		9
-# define PR_SET_MM_ENV_START		10
-# define PR_SET_MM_ENV_END		11
-# define PR_SET_MM_AUXV			12
-# define PR_SET_MM_EXE_FILE		13
 
 /*
  * Set specific pid that is allowed to ptrace the current task.
@@ -127,16 +121,14 @@
 #define PR_SET_PTRACER 0x59616d61
 # define PR_SET_PTRACER_ANY ((unsigned long)-1)
 
-#define PR_SET_CHILD_SUBREAPER	36
-#define PR_GET_CHILD_SUBREAPER	37
+#define PR_SET_CHILD_SUBREAPER 36
+#define PR_GET_CHILD_SUBREAPER 37
 
-#define PR_GET_TID_ADDRESS	40
 /* Sets the timerslack for arbitrary threads
  * arg2 slack value, 0 means "use default"
  * arg3 pid of the thread whose timer slack needs to be set
  */
 #define PR_SET_TIMERSLACK_PID 41
-#define PR_GET_EFFECTIVE_TIMERSLACK 42
 
 #define PR_SET_VMA		0x53564d41
 # define PR_SET_VMA_ANON_NAME		0
@@ -145,5 +137,6 @@
  * Get effective timerslack value for the process.
  * It can be higher than PR_GET_TIMERSLACK.
  */
+#define PR_GET_EFFECTIVE_TIMERSLACK 40
 
 #endif /* _LINUX_PRCTL_H */

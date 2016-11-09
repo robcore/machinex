@@ -1212,6 +1212,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 					SLIM_CH_ACTIVATE, false);
 			pr_info("-slimdebug-SAT activate grp start: ret:%d", ret); /* slimbus debug patch */
 		}
+	}
 	return ret;
 }
 

@@ -60,6 +60,7 @@
 #include "compat.h"
 #endif
 #include "atags.h"
+#include "tcm.h"
 
 #ifndef MEM_SIZE
 #define MEM_SIZE	(16*1024*1024)
@@ -415,6 +416,12 @@ void cpu_init(void)
 		printk(KERN_CRIT "CPU%u: bad primary CPU number\n", cpu);
 		BUG();
 	}
+
+	/*
+	 * This only works on resume and secondary cores. For booting on the
+	 * boot cpu, smp_prepare_boot_cpu is called after percpu area setup.
+	 */
+	set_my_cpu_offset(per_cpu_offset(cpu));
 
 	cpu_proc_init();
 
@@ -1075,6 +1082,8 @@ void __init setup_arch(char **cmdline_p)
 		smp_build_mpidr_hash();
 #endif
 	reserve_crashkernel();
+
+	tcm_init();
 
 #ifdef CONFIG_MULTI_IRQ_HANDLER
 	handle_arch_irq = mdesc->handle_irq;

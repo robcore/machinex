@@ -1248,6 +1248,7 @@ static void smd_state_change(struct smd_channel *ch,
 	case SMD_SS_CLOSED:
 		if (ch->half_ch->get_state(ch->send) == SMD_SS_OPENED) {
 			ch_set_state(ch, SMD_SS_CLOSING);
+			ch->current_packet = 0;
 			ch->pending_pkt_sz = 0;
 			ch->notify(ch->priv, SMD_EVENT_CLOSE);
 		}
@@ -3656,7 +3657,7 @@ int __init msm_smd_init(void)
 	return 0;
 }
 
-arch_initcall(msm_smd_init);
+module_init(msm_smd_init);
 
 MODULE_DESCRIPTION("MSM Shared Memory Core");
 MODULE_AUTHOR("Brian Swetland <swetland@google.com>");

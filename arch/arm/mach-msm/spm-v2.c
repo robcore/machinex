@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -143,10 +143,6 @@ static inline void msm_spm_drv_set_vctl(struct msm_spm_driver_data *dev,
 	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_1] &= ~0x3F0000;
 	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_1] |=
 						((vlevel & 0x3F) << 16);
-
-	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_VCTL);
-	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_0);
-	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_1);
 }
 
 static inline void msm_spm_drv_set_vctl2(struct msm_spm_driver_data *dev,
@@ -159,12 +155,6 @@ static inline void msm_spm_drv_set_vctl2(struct msm_spm_driver_data *dev,
 
 	dev->reg_shadow[MSM_SPM_REG_SAW2_VCTL] &= ~0x700FF;
 	dev->reg_shadow[MSM_SPM_REG_SAW2_VCTL] |= pmic_data;
-
-	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_3] &= ~0x700FF;
-	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_3] |= pmic_data;
-
-	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_VCTL);
-	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_3);
 }
 
 static inline void msm_spm_drv_apcs_set_vctl(struct msm_spm_driver_data *dev,
@@ -391,6 +381,9 @@ int msm_spm_drv_set_vdd(struct msm_spm_driver_data *dev, unsigned int vlevel)
 	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_RST);
 
 	msm_spm_drv_apcs_set_vctl(dev, vlevel);
+	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_VCTL);
+	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_0);
+	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_1);
 
 	timeout_us = dev->vctl_timeout_us;
 	/* Confirm the voltage we set was what hardware sent */

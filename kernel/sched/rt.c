@@ -6,7 +6,6 @@
 #include "sched.h"
 
 #include <linux/slab.h>
-#include <trace/events/sched.h>
 
 int sched_rr_timeslice = RR_TIMESLICE;
 
@@ -579,14 +578,6 @@ static inline struct rt_bandwidth *sched_rt_bandwidth(struct rt_rq *rt_rq)
 
 #endif /* CONFIG_RT_GROUP_SCHED */
 
-bool sched_rt_bandwidth_account(struct rt_rq *rt_rq)
-{
-	struct rt_bandwidth *rt_b = sched_rt_bandwidth(rt_rq);
-
-	return (hrtimer_active(&rt_b->rt_period_timer) ||
-		rt_rq->rt_time < rt_b->rt_runtime);
-}
-
 #ifdef CONFIG_SMP
 /*
  * We ran out of runtime, see if we can borrow some from our neighbours.
@@ -722,9 +713,6 @@ balanced:
 		rt_rq->rt_throttled = 0;
 		raw_spin_unlock(&rt_rq->rt_runtime_lock);
 		raw_spin_unlock(&rt_b->rt_runtime_lock);
-
-		/* Make rt_rq available for pick_next_task() */
-		sched_rt_rq_enqueue(rt_rq);
 	}
 }
 
@@ -852,51 +840,6 @@ static inline int rt_se_prio(struct sched_rt_entity *rt_se)
 	return rt_task_of(rt_se)->prio;
 }
 
-static void dump_throttled_rt_tasks(struct rt_rq *rt_rq)
-{
-	struct rt_prio_array *array = &rt_rq->active;
-	struct sched_rt_entity *rt_se;
-	char buf[500];
-	char *pos = buf;
-	char *end = buf + sizeof(buf);
-	int idx;
-
-	pos += snprintf(pos, sizeof(buf),
-		"sched: RT throttling activated for rt_rq %p (cpu %d)\n",
-		rt_rq, cpu_of(rq_of_rt_rq(rt_rq)));
-
-	if (bitmap_empty(array->bitmap, MAX_RT_PRIO))
-		goto out;
-
-	pos += snprintf(pos, end - pos, "potential CPU hogs:\n");
-	idx = sched_find_first_bit(array->bitmap);
-	while (idx < MAX_RT_PRIO) {
-		list_for_each_entry(rt_se, array->queue + idx, run_list) {
-			struct task_struct *p;
-
-			if (!rt_entity_is_task(rt_se))
-				continue;
-
-			p = rt_task_of(rt_se);
-			if (pos < end)
-				pos += snprintf(pos, end - pos, "\t%s (%d)\n",
-					p->comm, p->pid);
-		}
-		idx = find_next_bit(array->bitmap, MAX_RT_PRIO, idx + 1);
-	}
-out:
-#ifdef CONFIG_PANIC_ON_RT_THROTTLING
-	/*
-	 * Use pr_err() in the BUG() case since printk_deferred_once() will
-	 * not get flushed and deadlock is not a concern.
-	 */
-	pr_err("%s", buf);
-	BUG();
-#else
-	printk_deferred_once("%s", buf);
-#endif
-}
-
 static int sched_rt_runtime_exceeded(struct rt_rq *rt_rq)
 {
 	u64 runtime = sched_rt_runtime(rt_rq);
@@ -920,8 +863,14 @@ static int sched_rt_runtime_exceeded(struct rt_rq *rt_rq)
 		 * but accrue some time due to boosting.
 		 */
 		if (likely(rt_b->rt_runtime)) {
+			static bool once = false;
+
 			rt_rq->rt_throttled = 1;
-			dump_throttled_rt_tasks(rt_rq);
+
+			if (!once) {
+				once = true;
+				printk_deferred("sched: RT throttling activated\n");
+			}
 		} else {
 			/*
 			 * In case we did anyway, make it go away,
@@ -954,7 +903,7 @@ static void update_curr_rt(struct rq *rq)
 	if (curr->sched_class != &rt_sched_class)
 		return;
 
-	delta_exec = rq_clock_task(rq) - curr->se.exec_start;
+	delta_exec = rq->clock_task - curr->se.exec_start;
 	if (unlikely((s64)delta_exec <= 0))
 		return;
 
@@ -964,7 +913,7 @@ static void update_curr_rt(struct rq *rq)
 	curr->se.sum_exec_runtime += delta_exec;
 	account_group_exec_runtime(curr, delta_exec);
 
-	curr->se.exec_start = rq_clock_task(rq);
+	curr->se.exec_start = rq->clock_task;
 	cpuacct_charge(curr, delta_exec);
 
 	sched_rt_avg_update(rq, delta_exec);
@@ -1281,22 +1230,6 @@ static void yield_task_rt(struct rq *rq)
 static int find_lowest_rq(struct task_struct *task);
 
 static int
-select_task_rq_rt_hmp(struct task_struct *p, int sd_flag, int flags)
-{
-	int cpu, target;
-
-	cpu = task_cpu(p);
-
-	rcu_read_lock();
-	target = find_lowest_rq(p);
-	if (target != -1)
-		cpu = target;
-	rcu_read_unlock();
-
-	return cpu;
-}
-
-static int
 select_task_rq_rt(struct task_struct *p, int sd_flag, int flags)
 {
 	struct task_struct *curr;
@@ -1307,9 +1240,6 @@ select_task_rq_rt(struct task_struct *p, int sd_flag, int flags)
 
 	if (p->nr_cpus_allowed == 1)
 		goto out;
-
-	if (sched_enable_hmp)
-		return select_task_rq_rt_hmp(p, sd_flag, flags);
 
 	/* For anything but wake ups, just return the task_cpu */
 	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
@@ -1459,7 +1389,7 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 		update_rq_clock(rq);
 	}
 	p = rt_task_of(rt_se);
-	p->se.exec_start = rq_clock_task(rq);
+	p->se.exec_start = rq->clock_task;
 
 	return p;
 }
@@ -1548,63 +1478,12 @@ next_idx:
 
 static DEFINE_PER_CPU(cpumask_var_t, local_cpu_mask);
 
-#ifdef CONFIG_SCHED_HMP
-static int find_lowest_rq_hmp(struct task_struct *task)
-{
-	struct cpumask *lowest_mask = __get_cpu_var(local_cpu_mask);
-	int cpu_cost, min_cost = INT_MAX;
-	int best_cpu = -1;
-	int i;
-
-	/* Make sure the mask is initialized first */
-	if (unlikely(!lowest_mask))
-		return best_cpu;
-
-	if (task->nr_cpus_allowed == 1)
-		return best_cpu; /* No other targets possible */
-
-	if (!cpupri_find(&task_rq(task)->rd->cpupri, task, lowest_mask))
-		return best_cpu; /* No targets found */
-
-	/*
-	 * At this point we have built a mask of cpus representing the
-	 * lowest priority tasks in the system.  Now we want to elect
-	 * the best one based on our affinity and topology.
-	 */
-
-	/* Skip performance considerations and optimize for power.
-	 * Worst case we'll be iterating over all CPUs here. CPU
-	 * online mask should be taken care of when constructing
-	 * the lowest_mask.
-	 */
-	for_each_cpu(i, lowest_mask) {
-		struct rq *rq = cpu_rq(i);
-		cpu_cost = power_cost_at_freq(i, ACCESS_ONCE(rq->min_freq));
-		trace_sched_cpu_load(rq, idle_cpu(i),
-				     mostly_idle_cpu(i), cpu_cost);
-		if (cpu_cost < min_cost) {
-			min_cost = cpu_cost;
-			best_cpu = i;
-		}
-	}
-	return best_cpu;
-}
-#else
-static int find_lowest_rq_hmp(struct task_struct *task)
-{
-	return -1;
-}
-#endif
-
 static int find_lowest_rq(struct task_struct *task)
 {
 	struct sched_domain *sd;
 	struct cpumask *lowest_mask = __get_cpu_var(local_cpu_mask);
 	int this_cpu = smp_processor_id();
 	int cpu      = task_cpu(task);
-
-	if (sched_enable_hmp)
-		return find_lowest_rq_hmp(task);
 
 	/* Make sure the mask is initialized first */
 	if (unlikely(!lowest_mask))
@@ -1956,7 +1835,7 @@ static void task_woken_rt(struct rq *rq, struct task_struct *p)
 	    !test_tsk_need_resched(rq->curr) &&
 	    has_pushable_tasks(rq) &&
 	    p->nr_cpus_allowed > 1 &&
-	    (dl_task(rq->curr) || rt_task(rq->curr)) &&
+	    rt_task(rq->curr) &&
 	    (rq->curr->nr_cpus_allowed < 2 ||
 	     rq->curr->prio <= p->prio))
 		push_rt_tasks(rq);
@@ -2183,7 +2062,7 @@ static void set_curr_task_rt(struct rq *rq)
 {
 	struct task_struct *p = rq->curr;
 
-	p->se.exec_start = rq_clock_task(rq);
+	p->se.exec_start = rq->clock_task;
 
 	/* The running task is never eligible for pushing */
 	dequeue_pushable_task(rq, p);

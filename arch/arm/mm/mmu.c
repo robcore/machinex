@@ -16,13 +16,13 @@
 #include <linux/memblock.h>
 #include <linux/fs.h>
 #include <linux/vmalloc.h>
-#include <linux/sizes.h>
 
 #include <asm/cp15.h>
 #include <asm/cputype.h>
 #include <asm/sections.h>
 #include <asm/cachetype.h>
 #include <asm/setup.h>
+#include <asm/sizes.h>
 #include <asm/smp_plat.h>
 #include <asm/tlb.h>
 #include <asm/highmem.h>
@@ -36,7 +36,6 @@
 #include <asm/user_accessible_timer.h>
 
 #include "mm.h"
-#include "tcm.h"
 
 /*
  * empty_zero_page is a special page that is used for
@@ -1434,7 +1433,6 @@ void __init paging_init(struct machine_desc *mdesc)
 	dma_contiguous_remap();
 	devicemaps_init(mdesc);
 	kmap_init();
-	tcm_init();
 
 	top_pmd = pmd_off_k(0xffff0000);
 

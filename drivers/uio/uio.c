@@ -638,7 +638,7 @@ static const struct vm_operations_struct uio_logical_vm_ops = {
 
 static int uio_mmap_logical(struct vm_area_struct *vma)
 {
-	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
+	vma->vm_flags |= VM_DONTEXPAND | VM_NODUMP;
 	vma->vm_ops = &uio_logical_vm_ops;
 	uio_vma_open(vma);
 	return 0;

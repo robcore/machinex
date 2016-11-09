@@ -173,14 +173,16 @@ static void jz_battery_external_power_changed(struct power_supply *psy)
 {
 	struct jz_battery *jz_battery = psy_to_jz_battery(psy);
 
-	mod_delayed_work(system_wq, &jz_battery->work, 0);
+	cancel_delayed_work(&jz_battery->work);
+	schedule_delayed_work(&jz_battery->work, 0);
 }
 
 static irqreturn_t jz_battery_charge_irq(int irq, void *data)
 {
 	struct jz_battery *jz_battery = data;
 
-	mod_delayed_work(system_wq, &jz_battery->work, 0);
+	cancel_delayed_work(&jz_battery->work);
+	schedule_delayed_work(&jz_battery->work, 0);
 
 	return IRQ_HANDLED;
 }

@@ -18,14 +18,8 @@ typedef u64 __nocast cputime64_t;
 #define cputime64_add(__a, __b) 	((__a) + (__b))
 #define cputime64_sub(__a, __b) 	((__a) - (__b))
 
-
-/*
- * Convert nanoseconds to cputime
- */
-#define nsecs_to_cputime64(__nsec)	\
-	jiffies64_to_cputime64(nsecs_to_jiffies64(__nsec))
-#define nsecs_to_cputime(__nsec)	\
-	jiffies_to_cputime(nsecs_to_jiffies(__nsec))
+#define nsecs_to_cputime64(__ct)	\
+	jiffies64_to_cputime64(nsecs_to_jiffies64(__ct))
 
 
 /*

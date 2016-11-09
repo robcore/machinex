@@ -58,8 +58,6 @@ struct cpu_load_data {
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
-static bool io_is_busy;
-
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	int ret;
@@ -73,7 +71,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
         if (ret)
                 return -EINVAL;
 
-	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, io_is_busy);
+	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
 	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
 	pcpu->prev_cpu_wall = cur_wall_time;

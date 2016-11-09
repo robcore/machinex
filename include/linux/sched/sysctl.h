@@ -37,41 +37,6 @@ extern unsigned int sysctl_sched_wakeup_granularity;
 extern unsigned int sysctl_sched_child_runs_first;
 extern unsigned int sysctl_sched_wake_to_idle;
 
-#ifdef CONFIG_SCHED_DEBUG
-extern __read_mostly unsigned int sysctl_sched_yield_sleep_duration;
-extern __read_mostly int sysctl_sched_yield_sleep_threshold;
-#else
-extern const unsigned int sysctl_sched_yield_sleep_duration;
-extern const int sysctl_sched_yield_sleep_threshold;
-#endif
-
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
-extern unsigned int sysctl_sched_init_task_load_pct;
-#endif
-
-#ifdef CONFIG_SCHED_FREQ_INPUT
-extern int sysctl_sched_freq_inc_notify_slack_pct;
-extern int sysctl_sched_freq_dec_notify_slack_pct;
-#endif
-
-#ifdef CONFIG_SCHED_HMP
-extern unsigned int sysctl_sched_spill_nr_run;
-extern unsigned int sysctl_sched_mostly_idle_nr_run;
-extern unsigned int sysctl_sched_spill_load_pct;
-extern unsigned int sysctl_sched_mostly_idle_load_pct;
-extern unsigned int sysctl_sched_small_task_pct;
-extern unsigned int sysctl_sched_upmigrate_pct;
-extern unsigned int sysctl_sched_downmigrate_pct;
-extern int sysctl_sched_upmigrate_min_nice;
-extern unsigned int sysctl_sched_powerband_limit_pct;
-extern unsigned int sysctl_sched_boost;
-
-#else /* CONFIG_SCHED_HMP */
-
-#define sysctl_sched_enable_hmp_task_placement 0
-
-#endif /* CONFIG_SCHED_HMP */
-
 enum sched_tunable_scaling {
 	SCHED_TUNABLESCALING_NONE,
 	SCHED_TUNABLESCALING_LOG,
@@ -91,16 +56,6 @@ int sched_proc_update_handler(struct ctl_table *table, int write,
 		void __user *buffer, size_t *length,
 		loff_t *ppos);
 #endif
-
-extern int sched_migrate_notify_proc_handler(struct ctl_table *table,
-		int write, void __user *buffer, size_t *lenp, loff_t *ppos);
-
-extern int sched_hmp_proc_update_handler(struct ctl_table *table,
-		int write, void __user *buffer, size_t *lenp, loff_t *ppos);
-
-extern int sched_boost_handler(struct ctl_table *table, int write,
-		void __user *buffer, size_t *lenp, loff_t *ppos);
-
 #ifdef CONFIG_SCHED_DEBUG
 static inline unsigned int get_sysctl_timer_migration(void)
 {

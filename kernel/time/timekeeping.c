@@ -238,7 +238,7 @@ void ktime_get_ts(struct timespec *ts)
 	unsigned int seq;
 	s64 nsecs;
 
-	WARN_ON_ONCE(timekeeping_suspended);
+	WARN_ON(timekeeping_suspended);
 
 	do {
 		seq = read_seqbegin(&timekeeper.lock);

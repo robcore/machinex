@@ -258,21 +258,27 @@ static void debug_state_changed(int value)
 
 static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 {
+	//pr_debug("%s: id %d: value:%d\n", __func__,
+			 //value, mdm_drv->device_id);
+
 	if (value) {
 		mdm_peripheral_disconnect(mdm_drv);
 		mdm_peripheral_connect(mdm_drv);
-		mdelay(100);
-
+		msleep(100);
 		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 		} else {
+			mdm_toggle_soft_reset(mdm_drv);
+			mdelay(10);
 			mdm_peripheral_disconnect(mdm_drv);
-			mdm_atomic_soft_reset(mdm_drv);
 			mdm_peripheral_connect(mdm_drv);
-			mdelay(200);
+			mdelay(100);
+		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
+			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 			}
 		}
 	}
+}
 
 static void mdm_image_upgrade(struct mdm_modem_drv *mdm_drv, int type)
 {

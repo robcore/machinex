@@ -4947,6 +4947,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 
 	if (clk_count++ == 0) {
 		pdata->es325_clk_cb(1);
+		pdata->es325_reset_cb();
 	}
 
 	rc = device_create_file(&sbdev->dev, &dev_attr_route_status);
@@ -5050,7 +5051,6 @@ static int es325_slim_probe(struct slim_device *sbdev)
 	es325_priv.internal_route_config =  ES325_INTERNAL_ROUTE_MAX;
 	es325_priv.new_internal_route_config = ES325_INTERNAL_ROUTE_MAX;
 #endif
-	pr_info("%s: system_rev=%d, firmware=%s\n", __func__, system_rev, filename);
 	rc = request_firmware((const struct firmware **)&es325_priv.fw,
 			      filename, &sbdev->dev);
 	if (rc) {

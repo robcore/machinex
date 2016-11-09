@@ -310,8 +310,8 @@ mode_sysfs_add_cpu_exit:
  */
 static int __init msm_pm_mode_sysfs_add(void)
 {
-	struct kobject *module_kobj = NULL;
-	struct kobject *modes_kobj = NULL;
+	struct kobject *module_kobj;
+	struct kobject *modes_kobj;
 	unsigned int cpu;
 	int ret;
 
@@ -946,8 +946,8 @@ int msm_pm_wait_cpu_shutdown(unsigned int cpu)
 
 		if (acc_sts & msm_pm_slp_sts[cpu].mask)
 			return 0;
-		mdelay(10);
-		WARN(++timeout == 10, "CPU%u didn't collape within 10ms\n",
+		udelay(100);
+		WARN(++timeout == 10, "CPU%u didn't collape within 1ms\n",
 					cpu);
 	}
 
@@ -1386,4 +1386,4 @@ static int __init msm_pm_init(void)
 	return 0;
 }
 
-late_initcall_sync(msm_pm_init);
+late_initcall(msm_pm_init);

@@ -1,5 +1,5 @@
 #!/bin/bash
-export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3alt/bin:$PATH
 rm -rf $(pwd)/out;
 rm $(pwd)/arch/arm/boot/dhd.ko;
 rm $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
@@ -12,7 +12,7 @@ find . -type f \( -iname \*.rej \
 				-o -iname \*.ko \) \
 					| parallel rm -fv {};
 export ARCH=arm
-export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3alt/bin/arm-cortex_a15-linux-gnueabihf-
 env KCONFIG_NOTIMESTAMP=true
 make clean;
 make distclean;
@@ -20,4 +20,4 @@ make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/kernel/sched/core.o;
+make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/drivers/video/;
