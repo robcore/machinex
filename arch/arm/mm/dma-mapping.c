@@ -1341,6 +1341,13 @@ static void *arm_iommu_alloc_attrs(struct device *dev, size_t size,
 	 * platform--see CONFIG_HUGETLB_PAGE. */
 	gfp &= ~(__GFP_COMP);
 
+	/* Following is a work-around (a.k.a. hack) to prevent pages
+	 * with __GFP_COMP being passed to split_page() which cannot
+	 * handle them.  The real problem is that this flag probably
+	 * should be 0 on ARM as it is not supported on this
+	 * platform--see CONFIG_HUGETLB_PAGE. */
+	gfp &= ~(__GFP_COMP);
+
 	*handle = DMA_ERROR_CODE;
 	size = PAGE_ALIGN(size);
 
