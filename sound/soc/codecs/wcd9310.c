@@ -1081,6 +1081,8 @@ static int tabla_codec_hphr_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -1108,6 +1110,8 @@ static int tabla_codec_hphl_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -2967,7 +2971,7 @@ static int tabla_codec_enable_dec(struct snd_soc_dapm_widget *w,
 					msecs_to_jiffies(300));
 		}
 		/* apply the digital gain after the decimator is enabled*/
-		if ((w->shift) < ARRAY_SIZE(rx_digital_gain_reg))
+		if ((w->shift + offset) < ARRAY_SIZE(tx_digital_gain_reg))
 			snd_soc_write(codec,
 				  tx_digital_gain_reg[w->shift + offset],
 				  snd_soc_read(codec,
@@ -6457,7 +6461,7 @@ void tabla_mbhc_cal(struct snd_soc_codec *codec)
 	tabla_turn_onoff_rel_detection(codec, true);
 }
 
-void *tabla_mbhc_cal_btn_det_mp(const struct tabla_mbhc_btn_detect_cfg* btn_det,
+void *tabla_mbhc_cal_btn_det_mp(struct tabla_mbhc_btn_detect_cfg* btn_det,
 				const enum tabla_mbhc_btn_det_mem mem)
 {
 	void *ret = &btn_det->_v_btn_low;
@@ -6760,7 +6764,7 @@ static irqreturn_t tabla_dce_handler(int irq, void *data)
 	u16 *btn_high;
 	int btn = -1, meas = 0;
 	struct tabla_priv *priv = data;
-	const struct tabla_mbhc_btn_detect_cfg *d =
+	struct tabla_mbhc_btn_detect_cfg *d =
 	    TABLA_MBHC_CAL_BTN_DET_PTR(priv->mbhc_cfg.calibration);
 	short btnmeas[d->n_btn_meas + 1];
 	struct snd_soc_codec *codec = priv->codec;
@@ -8329,7 +8333,7 @@ static irqreturn_t tabla_slimbus_irq(int irq, void *data)
 				pr_debug("%s: port %x disconnect value %x\n",
 					__func__, i*8 + j, val);
 				port_id = i*8 + j;
-				for (k = 0; k < ARRAY_SIZE(tabla_dai); k++) {
+				for (k = 0; k < ARRAY_SIZE(tabla_p->dai); k++) {
 					ch_mask_temp = 1 << port_id;
 					if (ch_mask_temp &
 						tabla_p->dai[k].ch_mask) {
@@ -9219,7 +9223,7 @@ static int tabla_codec_remove(struct snd_soc_codec *codec)
 	tabla_codec_enable_bandgap(codec, TABLA_BANDGAP_OFF);
 	if (tabla->mbhc_fw)
 		release_firmware(tabla->mbhc_fw);
-	for (i = 0; i < ARRAY_SIZE(tabla_dai); i++)
+	for (i = 0; i < ARRAY_SIZE(tabla->dai); i++)
 		kfree(tabla->dai[i].ch_num);
 	mutex_destroy(&tabla->codec_resource_lock);
 #ifdef CONFIG_DEBUG_FS

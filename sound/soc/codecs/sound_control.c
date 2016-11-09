@@ -147,7 +147,7 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_RX_LINE_2_GAIN:
 		case TABLA_A_RX_LINE_3_GAIN:
 		case TABLA_A_RX_LINE_4_GAIN:
-			if (snd_ctrl_locked > 0)
+			if (snd_ctrl_locked == 2)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
@@ -162,7 +162,7 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
 		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			if (snd_rec_ctrl_locked > 0)
+			if (snd_rec_ctrl_locked == 2)
 				ret = 0;
 			break;
 		default:
@@ -436,10 +436,6 @@ static int sound_control_init(void)
 {
 	int sysfs_result;
 
-	snd_ctrl_enabled = 1;
-	snd_ctrl_locked = 2;
-	snd_rec_ctrl_locked = 2;
-
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
 
@@ -451,6 +447,10 @@ static int sound_control_init(void)
 
 	sysfs_result = sysfs_create_group(sound_control_kobj,
 			&sound_control_attr_group);
+
+	snd_ctrl_enabled = 1;
+	snd_ctrl_locked = 2;
+	snd_rec_ctrl_locked = 2;
 
 	if (sysfs_result) {
 		pr_info("%s sysfs create failed!\n", __FUNCTION__);
