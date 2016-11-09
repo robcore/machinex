@@ -834,7 +834,7 @@ int msm_rpm_wait_for_ack(uint32_t msg_id)
 		return rc;
 
 	rc = elem->errno;
-	wait_for_completion_interruptible(&elem->ack);
+	while (wait_for_completion_interruptible(&elem->ack) != 0)
 	msm_rpm_free_list_entry(elem);
 
 	return rc;
