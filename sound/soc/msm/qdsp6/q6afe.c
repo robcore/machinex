@@ -429,7 +429,7 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 	int index = 0;
 	int ret = -EINVAL;
 
-	pr_debug("%s\n", __func__);
+	//pr_debug("%s\n", __func__);
 
 	delay_entry.sample_rate = rate;
 	if (afe_get_port_type(port_id) == MSM_AFE_PORT_TYPE_TX)
@@ -438,12 +438,12 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 		ret = get_hw_delay(RX_CAL, &delay_entry);
 
 	if (ret != 0) {
-		pr_debug("%s: Failed to get hw delay info\n", __func__);
+		//pr_debug("%s: Failed to get hw delay info\n", __func__);
 		goto done;
 	}
 	index = port_id;
 	if (index < 0) {
-		pr_debug("%s: AFE port index invalid!\n", __func__);
+		//pr_debug("%s: AFE port index invalid!\n", __func__);
 		goto done;
 	}
 
@@ -472,8 +472,8 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &config);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed\n", __func__,
-			port_id);
+		//pr_err("%s: AFE enable for port %d failed\n", __func__,
+			//port_id);
 		ret = -EINVAL;
 		goto done;
 	}
@@ -483,19 +483,19 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 				msecs_to_jiffies(TIMEOUT_MS));
 
 	if (!ret) {
-		pr_err("%s: wait_event timeout IF CONFIG\n", __func__);
+		//pr_err("%s: wait_event timeout IF CONFIG\n", __func__);
 		ret = -EINVAL;
 		goto done;
 	}
 	if (atomic_read(&this_afe.status) != 0) {
-		pr_err("%s: config cmd failed\n", __func__);
+		//pr_err("%s: config cmd failed\n", __func__);
 		ret = -EINVAL;
 		goto done;
 	}
 
 done:
-	pr_debug("%s port_id %u rate %u delay_usec %d status %d\n",
-		__func__, port_id, rate, delay_entry.delay_usec, ret);
+	//pr_debug("%s port_id %u rate %u delay_usec %d status %d\n",
+		//__func__, port_id, rate, delay_entry.delay_usec, ret);
 	return ret;
 }
 

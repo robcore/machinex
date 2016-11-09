@@ -237,7 +237,7 @@ enum mgr_intr {
 enum frm_cfg {
 	FRM_ACTIVE	= 1,
 	CLK_GEAR	= 11,
-	ROOT_FREQ	= 22,
+	ROOT_FREQ	= 11,
 	REF_CLK_GEAR	= 15,
 	INTR_WAKE	= 19,
 };
@@ -482,7 +482,7 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 
 			writel_relaxed(MGR_INT_TX_NACKED_2,
 					dev->base + MGR_INT_CLR);
-			pr_err("TX Nack MGR dump:int_stat:0x%x, mgr_stat:0x%x",
+			/*pr_err("TX Nack MGR dump:int_stat:0x%x, mgr_stat:0x%x",
 					stat, mgr_stat);
 			pr_err("TX Nack MGR dump:ie_stat:0x%x", mgr_ie_stat);
 			pr_err("TX Nack FRM dump:int_stat:0x%x, frm_stat:0x%x",
@@ -491,7 +491,7 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 					frm_cfg, frm_ie_stat);
 			pr_err("TX Nack INTF dump:intr_st:0x%x, intf_stat:0x%x",
 					intf_intr_stat, intf_stat);
-			pr_err("TX Nack INTF dump:ie_stat:0x%x", intf_ie_stat);
+			pr_err("TX Nack INTF dump:ie_stat:0x%x", intf_ie_stat);*/
 
 			dev->err = -EIO;
 		}

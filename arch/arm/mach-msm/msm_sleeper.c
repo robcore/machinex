@@ -30,7 +30,7 @@
 #define DEF_MAX_CPUS_ONLINE			4
 #define DEF_DOWN_COUNT_MAX		10 /* 1 sec */
 #define DEF_UP_COUNT_MAX		5 /* 0.5 sec */
-#define DEF_MAX_CPUS_ONLINE_SUSP		2
+#define DEF_MAX_CPUS_ONLINE_SUSP		1
 #define DEF_PLUG_ALL			1
 
 struct msm_sleeper_data {
