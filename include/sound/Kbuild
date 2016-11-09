@@ -12,3 +12,4 @@ header-y += tlv.h
 header-y += compress_params.h
 header-y += compress_offload.h
 header-y += a2220.h
+header-y += audio_effects.h
