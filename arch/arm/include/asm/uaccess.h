@@ -19,6 +19,13 @@
 #include <asm/unified.h>
 #include <asm/compiler.h>
 
+#if __LINUX_ARM_ARCH__ < 6
+#include <asm-generic/uaccess-unaligned.h>
+#else
+#define __get_user_unaligned __get_user
+#define __put_user_unaligned __put_user
+#endif
+
 #define VERIFY_READ 0
 #define VERIFY_WRITE 1
 
@@ -187,8 +194,8 @@ extern int __put_user_8(void *, unsigned long long);
 #define USER_DS			KERNEL_DS
 
 #define segment_eq(a,b)		(1)
-#define __addr_ok(addr)		(1)
-#define __range_ok(addr,size)	(0)
+#define __addr_ok(addr)		((void)(addr),1)
+#define __range_ok(addr,size)	((void)(addr),0)
 #define get_fs()		(KERNEL_DS)
 
 static inline void set_fs(mm_segment_t fs)
