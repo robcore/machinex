@@ -1037,6 +1037,58 @@ static int __init set_sched_enable_power_aware(char *str)
 
 early_param("sched_enable_power_aware", set_sched_enable_power_aware);
 
+static inline int got_boost_kick(void)
+{
+	int cpu = smp_processor_id();
+	struct rq *rq = cpu_rq(cpu);
+
+	return test_bit(BOOST_KICK, &rq->hmp_flags);
+}
+
+static inline void clear_boost_kick(int cpu)
+{
+	struct rq *rq = cpu_rq(cpu);
+
+	clear_bit(BOOST_KICK, &rq->hmp_flags);
+}
+
+void boost_kick(int cpu)
+{
+	struct rq *rq = cpu_rq(cpu);
+
+	if (!test_and_set_bit(BOOST_KICK, &rq->hmp_flags))
+		smp_send_reschedule(cpu);
+}
+
+/* Clear any HMP scheduler related requests pending from or on cpu */
+static inline void clear_hmp_request(int cpu)
+{
+	struct rq *rq = cpu_rq(cpu);
+	unsigned long flags;
+
+	clear_boost_kick(cpu);
+	if (rq->push_task) {
+		raw_spin_lock_irqsave(&rq->lock, flags);
+		if (rq->push_task) {
+			put_task_struct(rq->push_task);
+			rq->push_task = NULL;
+		}
+		rq->active_balance = 0;
+		raw_spin_unlock_irqrestore(&rq->lock, flags);
+	}
+}
+
+#else
+
+static inline int got_boost_kick(void)
+{
+	return 0;
+}
+
+static inline void clear_boost_kick(int cpu) { }
+
+static inline void clear_hmp_request(int cpu) { }
+
 #endif	/* CONFIG_SCHED_HMP */
 
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
@@ -1056,6 +1108,15 @@ __read_mostly unsigned int sched_ravg_window = 10000000;
 
 __read_mostly unsigned int sysctl_sched_window_stats_policy =
 	WINDOW_STATS_USE_AVG;
+
+/*
+ * copy of sysctl_sched_window_stats_policy. Required for atomically
+ * changing policy (see sched_window_stats_policy_update_handler() for details).
+ *
+ * Initialize both to same value!!
+ */
+static __read_mostly unsigned int sched_window_stats_policy =
+	 WINDOW_STATS_USE_AVG;
 
 /* 1 -> use PELT based load stats, 0 -> use window-based load stats */
 unsigned int __read_mostly sched_use_pelt;
@@ -1177,9 +1238,9 @@ update_history(struct rq *rq, struct task_struct *p, u32 runtime, int samples,
 compute_demand:
 	avg = div64_u64(sum, RAVG_HIST_SIZE);
 
-	if (sysctl_sched_window_stats_policy == WINDOW_STATS_USE_RECENT)
+	if (sched_window_stats_policy == WINDOW_STATS_USE_RECENT)
 		demand = runtime;
-	else if (sysctl_sched_window_stats_policy == WINDOW_STATS_USE_MAX)
+	else if (sched_window_stats_policy == WINDOW_STATS_USE_MAX)
 		demand = max;
 	else
 		demand = max(avg, runtime);
@@ -1448,22 +1509,74 @@ unsigned long sched_get_busy(int cpu)
 			  NSEC_PER_USEC);
 }
 
-int sched_set_window(u64 window_start, unsigned int window_size)
+/* Called with IRQs disabled */
+void reset_all_window_stats(u64 window_start, unsigned int window_size,
+				 int policy)
 {
 	int cpu;
-	u64 ws;
-	u64 now = get_jiffies_64();
-	int delta;
-	unsigned long flags;
 	u64 wallclock;
 	struct task_struct *g, *p;
 
-	if (sched_use_pelt)
-		return -EINVAL;
+	for_each_online_cpu(cpu) {
+		struct rq *rq = cpu_rq(cpu);
+		raw_spin_lock(&rq->lock);
+	}
 
-	delta = window_start - now; /* how many jiffies ahead */
+	if (window_size) {
+		sched_ravg_window = window_size * TICK_NSEC;
+		set_hmp_defaults();
+	}
 
-	if (delta > 0) {
+	wallclock = sched_clock();
+
+	read_lock(&tasklist_lock);
+	do_each_thread(g, p) {
+		int i;
+
+		p->ravg.sum = 0;
+		p->ravg.demand = 0;
+		p->ravg.partial_demand = 0;
+		p->ravg.prev_window = 0;
+		for (i = 0; i < RAVG_HIST_SIZE; ++i)
+			p->ravg.sum_history[i] = 0;
+		p->ravg.mark_start = wallclock;
+	}  while_each_thread(g, p);
+	read_unlock(&tasklist_lock);
+
+	for_each_online_cpu(cpu) {
+		struct rq *rq = cpu_rq(cpu);
+
+		if (window_start)
+			rq->window_start = window_start;
+		rq->curr_runnable_sum = rq->prev_runnable_sum = 0;
+		rq->cumulative_runnable_avg = 0;
+		fixup_nr_big_small_task(cpu);
+	}
+
+	if (policy >= 0)
+		sched_window_stats_policy = policy;
+
+	for_each_online_cpu(cpu) {
+		struct rq *rq = cpu_rq(cpu);
+		raw_spin_unlock(&rq->lock);
+	}
+}
+
+int sched_set_window(u64 window_start, unsigned int window_size)
+{
+	u64 ws, now;
+	int delta;
+	unsigned long flags;
+
+	if (sched_use_pelt ||
+		 (window_size * TICK_NSEC <  MIN_SCHED_RAVG_WINDOW))
+			return -EINVAL;
+
+	local_irq_save(flags);
+
+	now = get_jiffies_64();
+	if (time_after64(window_start, now)) {
+		delta = window_start - now; /* how many jiffies ahead */
 		delta /= window_size; /* # of windows to roll back */
 		delta += 1;
 		window_start -= (delta * window_size);
@@ -1475,40 +1588,7 @@ int sched_set_window(u64 window_start, unsigned int window_size)
 
 	BUG_ON(sched_clock() < ws);
 
-	local_irq_save(flags);
-
-	for_each_online_cpu(cpu) {
-		struct rq *rq = cpu_rq(cpu);
-		raw_spin_lock(&rq->lock);
-	}
-
-	sched_ravg_window = window_size * TICK_NSEC;
-	set_hmp_defaults();
-
-	wallclock = sched_clock();
-
-	read_lock(&tasklist_lock);
-	do_each_thread(g, p) {
-		p->ravg.sum = p->ravg.prev_window = 0;
-	}  while_each_thread(g, p);
-	read_unlock(&tasklist_lock);
-
-	for_each_online_cpu(cpu) {
-		struct rq *rq = cpu_rq(cpu);
-
-		rq->window_start = ws;
-		rq->curr_runnable_sum = rq->prev_runnable_sum = 0;
-		if (!is_idle_task(rq->curr)) {
-			rq->curr->ravg.mark_start = wallclock;
-			rq->curr_runnable_sum += rq->curr->ravg.partial_demand;
-		}
-		fixup_nr_big_small_task(cpu);
-	}
-
-	for_each_online_cpu(cpu) {
-		struct rq *rq = cpu_rq(cpu);
-		raw_spin_unlock(&rq->lock);
-	}
+	reset_all_window_stats(ws, window_size, -1);
 
 	local_irq_restore(flags);
 
@@ -2251,8 +2331,19 @@ static void sched_ttwu_pending(void)
 
 void scheduler_ipi(void)
 {
-	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick())
+	if (llist_empty(&this_rq()->wake_list)
+			&& !tick_nohz_full_cpu(cpu)
+			&& !got_nohz_idle_kick()
+			&& !got_boost_kick())
 		return;
+
+	if (got_boost_kick()) {
+		struct rq *rq = cpu_rq(cpu);
+
+		if (rq->curr->sched_class == &fair_sched_class)
+			check_for_migration(rq, rq->curr);
+		clear_boost_kick(cpu);
+	}
 
 	/*
 	 * Not all reschedule IPI handlers call irq_enter/irq_exit, since
@@ -8639,6 +8730,7 @@ void __init sched_init(void)
 #ifdef CONFIG_SCHED_HMP
 		rq->nr_small_tasks = rq->nr_big_tasks = 0;
 		rq->curr_runnable_sum = rq->prev_runnable_sum = 0;
+		rq->hmp_flags = 0;
 #endif
 
 		INIT_LIST_HEAD(&rq->cfs_tasks);
