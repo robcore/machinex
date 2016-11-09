@@ -257,6 +257,10 @@ extern int sysctl_tcp_thin_dupack;
 extern int sysctl_tcp_challenge_ack_limit;
 extern int sysctl_tcp_default_init_rwnd;
 
+/* sysctl variables for controlling various tcp parameters */
+extern int sysctl_tcp_delack_seg;
+extern int sysctl_tcp_use_userconfig;
+
 extern atomic_long_t tcp_memory_allocated;
 
 /* sysctl variables for controlling various tcp parameters */
