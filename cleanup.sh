@@ -27,7 +27,7 @@ rm -f $(pwd)/r*.cpio >> /dev/null;
 rm -rf $(pwd)/include/generated >> /dev/null;
 rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
 export ARCH=arm
-export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3alt/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 make distclean;
 make clean;
 make mrproper
