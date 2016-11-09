@@ -3819,30 +3819,34 @@ void thaw_workqueues(void)
 		struct worker_pool *pool;
 		struct workqueue_struct *wq;
 
-		spin_lock_irq(&gcwq->lock);
+	unsigned int cpu;
+
+	spin_lock(&workqueue_lock);
 
 		for_each_worker_pool(pool, gcwq) {
+			spin_lock_irq(&pool->lock);
+
 			WARN_ON_ONCE(!(pool->flags & POOL_FREEZING));
 			pool->flags &= ~POOL_FREEZING;
-		}
 
-		list_for_each_entry(wq, &workqueues, list) {
-			struct cpu_workqueue_struct *cwq = get_cwq(cpu, wq);
+			list_for_each_entry(wq, &workqueues, list) {
+				struct cpu_workqueue_struct *cwq = get_cwq(cpu, wq);
 
-			if (!cwq || !(wq->flags & WQ_FREEZABLE))
-				continue;
+				if (!cwq || cwq->pool != pool ||
+				    !(wq->flags & WQ_FREEZABLE))
+					continue;
 
-			/* restore max_active and repopulate worklist */
-			cwq_set_max_active(cwq, wq->saved_max_active);
-		}
+				/* restore max_active and repopulate worklist */
+				cwq_set_max_active(cwq, wq->saved_max_active);
+			}
 
-		for_each_worker_pool(pool, gcwq)
 			wake_up_worker(pool);
 
-		spin_unlock_irq(&gcwq->lock);
-	}
+			spin_unlock_irq(&pool->lock);
+ 		}
+ 	}
 
-	workqueue_freezing = false;
+ 	workqueue_freezing = false;
 out_unlock:
 	spin_unlock(&workqueue_lock);
 }
