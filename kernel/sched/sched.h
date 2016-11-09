@@ -835,7 +835,7 @@ static inline unsigned int group_first_cpu(struct sched_group *group)
 
 extern void init_new_task_load(struct task_struct *p);
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#if defined(CONFIG_SCHED_HMP)
 
 extern unsigned int sched_ravg_window;
 extern unsigned int sched_use_pelt;
