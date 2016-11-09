@@ -2127,6 +2127,7 @@ int sched_rt_handler(struct ctl_table *table, int write,
 
 #ifdef CONFIG_NO_HZ_FULL
 extern bool sched_can_stop_tick(void);
+extern u64 scheduler_tick_max_deferment(void);
 #else
 static inline bool sched_can_stop_tick(void) { return false; }
 #endif
