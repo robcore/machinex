@@ -22,21 +22,24 @@
 #include <linux/freezer.h>
 #include <linux/seq_file.h>
 
-enum freezer_state_flags {
-	CGROUP_FREEZING		= (1 << 1), /* this freezer is freezing */
-	CGROUP_FROZEN		= (1 << 3), /* this and its descendants frozen */
+enum freezer_state {
+	CGROUP_THAWED = 0,
+	CGROUP_FREEZING,
+	CGROUP_FROZEN,
 };
 
 struct freezer {
-	struct cgroup_subsys_state	css;
-	unsigned int			state;
-	spinlock_t			lock;
+	struct cgroup_subsys_state css;
+	enum freezer_state state;
+	spinlock_t lock; /* protects _writes_ to state */
 };
 
-static inline struct freezer *cgroup_freezer(struct cgroup *cgroup)
+static inline struct freezer *cgroup_freezer(
+		struct cgroup *cgroup)
 {
-	return container_of(cgroup_subsys_state(cgroup, freezer_subsys_id),
-			    struct freezer, css);
+	return container_of(
+		cgroup_subsys_state(cgroup, freezer_subsys_id),
+		struct freezer, css);
 }
 
 static inline struct freezer *task_freezer(struct task_struct *task)
@@ -47,10 +50,12 @@ static inline struct freezer *task_freezer(struct task_struct *task)
 
 bool cgroup_freezing(struct task_struct *task)
 {
+	enum freezer_state state;
 	bool ret;
 
 	rcu_read_lock();
-	ret = task_freezer(task)->state & CGROUP_FREEZING;
+	state = task_freezer(task)->state;
+	ret = state == CGROUP_FREEZING || state == CGROUP_FROZEN;
 	rcu_read_unlock();
 
 	return ret;
@@ -60,13 +65,10 @@ bool cgroup_freezing(struct task_struct *task)
  * cgroups_write_string() limits the size of freezer state strings to
  * CGROUP_LOCAL_BUFFER_SIZE
  */
-static const char *freezer_state_strs(unsigned int state)
-{
-	if (state & CGROUP_FROZEN)
-		return "FROZEN";
-	if (state & CGROUP_FREEZING)
-		return "FREEZING";
-	return "THAWED";
+static const char *freezer_state_strs[] = {
+	"THAWED",
+	"FREEZING",
+	"FROZEN",
 };
 
 /*
@@ -135,6 +137,7 @@ static struct cgroup_subsys_state *freezer_create(struct cgroup *cgroup)
 		return ERR_PTR(-ENOMEM);
 
 	spin_lock_init(&freezer->lock);
+	freezer->state = CGROUP_THAWED;
 	return &freezer->css;
 }
 
@@ -142,47 +145,41 @@ static void freezer_destroy(struct cgroup *cgroup)
 {
 	struct freezer *freezer = cgroup_freezer(cgroup);
 
-	if (freezer->state & CGROUP_FREEZING)
+	if (freezer->state != CGROUP_THAWED)
 		atomic_dec(&system_freezing_cnt);
 	kfree(freezer);
 }
 
-/*
- * Tasks can be migrated into a different freezer anytime regardless of its
- * current state.  freezer_attach() is responsible for making new tasks
- * conform to the current state.
- *
- * Freezer state changes and task migration are synchronized via
- * @freezer->lock.  freezer_attach() makes the new tasks conform to the
- * current state and all following state changes can see the new tasks.
- */
-static void freezer_attach(struct cgroup *new_cgrp, struct cgroup_taskset *tset)
+/* task is frozen or will freeze immediately when next it gets woken */
+static bool is_task_frozen_enough(struct task_struct *task)
 {
-	struct freezer *freezer = cgroup_freezer(new_cgrp);
+	return frozen(task) ||
+		(task_is_stopped_or_traced(task) && freezing(task));
+}
+
+/*
+ * The call to cgroup_lock() in the freezer.state write method prevents
+ * a write to that file racing against an attach, and hence the
+ * can_attach() result will remain valid until the attach completes.
+ */
+static int freezer_can_attach(struct cgroup *new_cgroup,
+			      struct cgroup_taskset *tset)
+{
+	struct freezer *freezer;
 	struct task_struct *task;
 
-	spin_lock_irq(&freezer->lock);
-
 	/*
-	 * Make the new tasks conform to the current state of @new_cgrp.
-	 * For simplicity, when migrating any task to a FROZEN cgroup, we
-	 * revert it to FREEZING and let update_if_frozen() determine the
-	 * correct state later.
-	 *
-	 * Tasks in @tset are on @new_cgrp but may not conform to its
-	 * current state before executing the following - !frozen tasks may
-	 * be visible in a FROZEN cgroup and frozen tasks in a THAWED one.
+	 * Anything frozen can't move or be moved to/from.
 	 */
-	cgroup_taskset_for_each(task, new_cgrp, tset) {
-		if (!(freezer->state & CGROUP_FREEZING)) {
-			__thaw_task(task);
-		} else {
-			freeze_task(task);
-			freezer->state &= ~CGROUP_FROZEN;
-		}
-	}
+	cgroup_taskset_for_each(task, new_cgroup, tset)
+		if (cgroup_freezing(task))
+			return -EBUSY;
 
-	spin_unlock_irq(&freezer->lock);
+	freezer = cgroup_freezer(new_cgroup);
+	if (freezer->state != CGROUP_THAWED)
+		return -EBUSY;
+
+	return 0;
 }
 
 static void freezer_fork(struct task_struct *task)
@@ -200,82 +197,95 @@ static void freezer_fork(struct task_struct *task)
 		goto out;
 
 	spin_lock_irq(&freezer->lock);
-	if (freezer->state & CGROUP_FREEZING)
+	BUG_ON(freezer->state == CGROUP_FROZEN);
+
+	/* Locking avoids race with FREEZING -> THAWED transitions. */
+	if (freezer->state == CGROUP_FREEZING)
 		freeze_task(task);
+
 	spin_unlock_irq(&freezer->lock);
 out:
 	rcu_read_unlock();
 }
 
 /*
- * We change from FREEZING to FROZEN lazily if the cgroup was only
- * partially frozen when we exitted write.  Caller must hold freezer->lock.
- *
- * Task states and freezer state might disagree while tasks are being
- * migrated into or out of @cgroup, so we can't verify task states against
- * @freezer state here.  See freezer_attach() for details.
+ * caller must hold freezer->lock
  */
-static void update_if_frozen(struct freezer *freezer)
+static void update_if_frozen(struct cgroup *cgroup,
+				 struct freezer *freezer)
 {
-	struct cgroup *cgroup = freezer->css.cgroup;
 	struct cgroup_iter it;
 	struct task_struct *task;
-
-	if (!(freezer->state & CGROUP_FREEZING) ||
-	    (freezer->state & CGROUP_FROZEN))
-		return;
+	unsigned int nfrozen = 0, ntotal = 0;
+	enum freezer_state old_state = freezer->state;
 
 	cgroup_iter_start(cgroup, &it);
-
 	while ((task = cgroup_iter_next(cgroup, &it))) {
-		if (freezing(task)) {
-			/*
-			 * freezer_should_skip() indicates that the task
-			 * should be skipped when determining freezing
-			 * completion.  Consider it frozen in addition to
-			 * the usual frozen condition.
-			 */
-			if (!frozen(task) && !freezer_should_skip(task))
-				goto notyet;
-		}
+		ntotal++;
+		if (freezing(task) && is_task_frozen_enough(task))
+			nfrozen++;
 	}
 
-	freezer->state |= CGROUP_FROZEN;
-notyet:
+	if (old_state == CGROUP_THAWED) {
+		BUG_ON(nfrozen > 0);
+	} else if (old_state == CGROUP_FREEZING) {
+		if (nfrozen == ntotal)
+			freezer->state = CGROUP_FROZEN;
+	} else { /* old_state == CGROUP_FROZEN */
+		BUG_ON(nfrozen != ntotal);
+	}
+
 	cgroup_iter_end(cgroup, &it);
 }
 
 static int freezer_read(struct cgroup *cgroup, struct cftype *cft,
 			struct seq_file *m)
 {
-	struct freezer *freezer = cgroup_freezer(cgroup);
-	unsigned int state;
+	struct freezer *freezer;
+	enum freezer_state state;
 
+	if (!cgroup_lock_live_group(cgroup))
+		return -ENODEV;
+
+	freezer = cgroup_freezer(cgroup);
 	spin_lock_irq(&freezer->lock);
-	update_if_frozen(freezer);
 	state = freezer->state;
+	if (state == CGROUP_FREEZING) {
+		/* We change from FREEZING to FROZEN lazily if the cgroup was
+		 * only partially frozen when we exitted write. */
+		update_if_frozen(cgroup, freezer);
+		state = freezer->state;
+	}
 	spin_unlock_irq(&freezer->lock);
+	cgroup_unlock();
 
-	seq_puts(m, freezer_state_strs(state));
+	seq_puts(m, freezer_state_strs[state]);
 	seq_putc(m, '\n');
 	return 0;
 }
 
-static void freeze_cgroup(struct freezer *freezer)
+static int try_to_freeze_cgroup(struct cgroup *cgroup, struct freezer *freezer)
 {
-	struct cgroup *cgroup = freezer->css.cgroup;
 	struct cgroup_iter it;
 	struct task_struct *task;
+	unsigned int num_cant_freeze_now = 0;
 
 	cgroup_iter_start(cgroup, &it);
-	while ((task = cgroup_iter_next(cgroup, &it)))
-		freeze_task(task);
+	while ((task = cgroup_iter_next(cgroup, &it))) {
+		if (!freeze_task(task))
+			continue;
+		if (is_task_frozen_enough(task))
+			continue;
+		if (!freezing(task) && !freezer_should_skip(task))
+			num_cant_freeze_now++;
+	}
 	cgroup_iter_end(cgroup, &it);
+
+	return num_cant_freeze_now ? -EBUSY : 0;
 }
 
-static void unfreeze_cgroup(struct freezer *freezer)
+static void unfreeze_cgroup(struct cgroup *cgroup, struct freezer *freezer)
 {
-	struct cgroup *cgroup = freezer->css.cgroup;
 	struct cgroup_iter it;
 	struct task_struct *task;
 
@@ -285,58 +295,59 @@ static void unfreeze_cgroup(struct freezer *freezer)
 	cgroup_iter_end(cgroup, &it);
 }
 
-/**
- * freezer_apply_state - apply state change to a single cgroup_freezer
- * @freezer: freezer to apply state change to
- * @freeze: whether to freeze or unfreeze
- */
-static void freezer_apply_state(struct freezer *freezer, bool freeze)
+static int freezer_change_state(struct cgroup *cgroup,
+				enum freezer_state goal_state)
 {
-	/* also synchronizes against task migration, see freezer_attach() */
-	lockdep_assert_held(&freezer->lock);
+	struct freezer *freezer;
+	int retval = 0;
 
-	if (freeze) {
-		if (!(freezer->state & CGROUP_FREEZING))
-			atomic_inc(&system_freezing_cnt);
-		freezer->state |= CGROUP_FREEZING;
-		freeze_cgroup(freezer);
-	} else {
-		if (freezer->state & CGROUP_FREEZING)
-			atomic_dec(&system_freezing_cnt);
-		freezer->state &= ~(CGROUP_FREEZING | CGROUP_FROZEN);
-		unfreeze_cgroup(freezer);
-	}
-}
+	freezer = cgroup_freezer(cgroup);
 
-/**
- * freezer_change_state - change the freezing state of a cgroup_freezer
- * @freezer: freezer of interest
- * @freeze: whether to freeze or thaw
- *
- * Freeze or thaw @cgroup according to @freeze.
- */
-static void freezer_change_state(struct freezer *freezer, bool freeze)
-{
-	/* update @freezer */
 	spin_lock_irq(&freezer->lock);
-	freezer_apply_state(freezer, freeze);
+
+	update_if_frozen(cgroup, freezer);
+
+	switch (goal_state) {
+	case CGROUP_THAWED:
+		if (freezer->state != CGROUP_THAWED)
+			atomic_dec(&system_freezing_cnt);
+		freezer->state = CGROUP_THAWED;
+		unfreeze_cgroup(cgroup, freezer);
+		break;
+	case CGROUP_FROZEN:
+		if (freezer->state == CGROUP_THAWED)
+			atomic_inc(&system_freezing_cnt);
+		freezer->state = CGROUP_FREEZING;
+		retval = try_to_freeze_cgroup(cgroup, freezer);
+		break;
+	default:
+		BUG();
+	}
+
 	spin_unlock_irq(&freezer->lock);
+
+	return retval;
 }
 
-static int freezer_write(struct cgroup *cgroup, struct cftype *cft,
+static int freezer_write(struct cgroup *cgroup,
+			 struct cftype *cft,
 			 const char *buffer)
 {
-	bool freeze;
+	int retval;
+	enum freezer_state goal_state;
 
-	if (strcmp(buffer, freezer_state_strs(0)) == 0)
-		freeze = false;
-	else if (strcmp(buffer, freezer_state_strs(CGROUP_FROZEN)) == 0)
-		freeze = true;
+	if (strcmp(buffer, freezer_state_strs[CGROUP_THAWED]) == 0)
+		goal_state = CGROUP_THAWED;
+	else if (strcmp(buffer, freezer_state_strs[CGROUP_FROZEN]) == 0)
+		goal_state = CGROUP_FROZEN;
 	else
 		return -EINVAL;
 
-	freezer_change_state(cgroup_freezer(cgroup), freeze);
-	return 0;
+	if (!cgroup_lock_live_group(cgroup))
+		return -ENODEV;
+	retval = freezer_change_state(cgroup, goal_state);
+	cgroup_unlock();
+	return retval;
 }
 
 static struct cftype files[] = {
@@ -354,7 +365,7 @@ struct cgroup_subsys freezer_subsys = {
 	.create		= freezer_create,
 	.destroy	= freezer_destroy,
 	.subsys_id	= freezer_subsys_id,
-	.attach		= freezer_attach,
+	.can_attach	= freezer_can_attach,
 	.fork		= freezer_fork,
 	.base_cftypes	= files,
 };

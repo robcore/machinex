@@ -1919,7 +1919,7 @@ static void ptrace_stop(int exit_code, int why, int clear_code, siginfo_t *info)
 		preempt_disable();
 		read_unlock(&tasklist_lock);
 		preempt_enable_no_resched();
-		freezable_schedule();
+		schedule();
 	} else {
 		/*
 		 * By the time we got the lock, our tracer went away.
@@ -1940,6 +1940,13 @@ static void ptrace_stop(int exit_code, int why, int clear_code, siginfo_t *info)
 			current->exit_code = 0;
 		read_unlock(&tasklist_lock);
 	}
+
+	/*
+	 * While in TASK_TRACED, we were considered "frozen enough".
+	 * Now that we woke up, it's crucial if we're supposed to be
+	 * frozen that we freeze now before running anything substantial.
+	 */
+	try_to_freeze();
 
 	/*
 	 * We are back.  Now reacquire the siglock before touching
@@ -2095,7 +2102,7 @@ static bool do_signal_stop(int signr)
 		}
 
 		/* Now we don't run again until woken by SIGCONT or SIGKILL */
-		freezable_schedule();
+		schedule();
 		return true;
 	} else {
 		/*
@@ -2197,20 +2204,15 @@ int get_signal_to_deliver(siginfo_t *info, struct k_sigaction *return_ka,
 	struct signal_struct *signal = current->signal;
 	int signr;
 
-	if (unlikely(current->task_works))
-		task_work_run();
-
-	if (unlikely(uprobe_deny_signal()))
-		return 0;
-
+relock:
 	/*
-	 * Do this once, we can't return to user-mode if freezing() == T.
-	 * do_signal_stop() and ptrace_stop() do freezable_schedule() and
-	 * thus do not need another check after return.
+	 * We'll jump back here after any time we were stopped in TASK_STOPPED.
+	 * While in TASK_STOPPED, we were considered "frozen enough".
+	 * Now that we woke up, it's crucial if we're supposed to be
+	 * frozen that we freeze now before running anything substantial.
 	 */
 	try_to_freeze_nowarn();
 
-relock:
 	spin_lock_irq(&sighand->siglock);
 	/*
 	 * Every stopped thread goes here after wakeup. Check to see if
