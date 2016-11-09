@@ -164,4 +164,10 @@ extern void menu_hrtimer_cancel(void);
 static inline void menu_hrtimer_cancel(void) {}
 # endif /* CONFIG_CPU_IDLE_GOV_MENU */
 
+#ifdef CONFIG_NO_HZ_EXTENDED
+extern int tick_nohz_extended_cpu(int cpu);
+#else
+static inline int tick_nohz_extended_cpu(int cpu) { return 0; }
+#endif
+
 #endif
