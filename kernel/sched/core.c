@@ -1674,7 +1674,7 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 */
 	while (p->on_cpu)
  		cpu_relax();
-	}
+
 	/*
 	 * Pairs with the smp_wmb() in finish_lock_switch().
 	 */
