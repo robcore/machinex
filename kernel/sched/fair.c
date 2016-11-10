@@ -26,6 +26,9 @@
 #include <linux/slab.h>
 #include <linux/profile.h>
 #include <linux/interrupt.h>
+#include <linux/mempolicy.h>
+#include <linux/migrate.h>
+#include <linux/task_work.h>
 #include <linux/math64.h>
 
 #include <trace/events/sched.h>
@@ -1689,25 +1692,17 @@ static inline void update_entity_load_avg(struct sched_entity *se,
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
 	long contrib_delta;
 	u64 now;
-	int cpu = cpu_of(rq_of(cfs_rq));
-	int decayed;
 
 	/*
 	 * For a group entity we need to use their owned cfs_rq_clock_task() in
 	 * case they are the parent of a throttled hierarchy.
 	 */
-	if (entity_is_task(se)) {
+	if (entity_is_task(se))
 		now = cfs_rq_clock_task(cfs_rq);
-		if (se->on_rq)
-			dec_cumulative_runnable_avg(rq_of(cfs_rq), task_of(se));
-	} else
+	else
 		now = cfs_rq_clock_task(group_cfs_rq(se));
 
-	decayed = __update_entity_runnable_avg(cpu, now, &se->avg, se->on_rq);
-	if (entity_is_task(se) && se->on_rq)
-		inc_cumulative_runnable_avg(rq_of(cfs_rq), task_of(se));
-
-	if (!decayed)
+	if (!__update_entity_runnable_avg(now, &se->avg, se->on_rq))
 		return;
 
 	contrib_delta = __update_entity_load_avg_contrib(se);
@@ -1751,8 +1746,7 @@ static void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq, int force_update)
 
 static inline void update_rq_runnable_avg(struct rq *rq, int runnable)
 {
-	__update_entity_runnable_avg(rq->clock_task, &rq->avg, runnable,
-				     runnable);
+	__update_entity_runnable_avg(rq->clock_task, &rq->avg, runnable);
 	__update_tg_runnable_avg(&rq->avg, &rq->cfs);
 }
 
@@ -1785,13 +1779,7 @@ static inline void enqueue_entity_load_avg(struct cfs_rq *cfs_rq,
 		}
 		wakeup = 0;
 	} else {
-		/*
-		 * Task re-woke on same cpu (or else migrate_task_rq_fair()
-		 * would have made count negative); we must be careful to avoid
-		 * double-accounting blocked time after synchronizing decays.
-		 */
-		se->avg.last_runnable_update += __synchronize_entity_decay(se)
-							<< 20;
+		__synchronize_entity_decay(se);
 	}
 
 	/* migrated tasks did not contribute to our blocked load */
@@ -2217,7 +2205,6 @@ set_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 		 */
 		update_stats_wait_end(cfs_rq, se);
 		__dequeue_entity(cfs_rq, se);
-		update_entity_load_avg(se, 1);
 	}
 
 	update_stats_curr_start(cfs_rq, se);
