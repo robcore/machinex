@@ -2236,6 +2236,12 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 			goto close_fail;
 	}
 
+	/* get us an unshared descriptor table; almost always a no-op */
+	retval = unshare_files(&displaced);
+	if (retval)
+		goto close_fail;
+	if (displaced)
+		put_files_struct(displaced);
 	retval = binfmt->core_dump(&cprm);
 	if (retval)
 		current->signal->group_exit_code |= 0x80;
