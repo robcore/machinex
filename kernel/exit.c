@@ -452,7 +452,9 @@ void daemonize(const char *name, ...)
 	/* Become as one with the init task */
 
 	daemonize_fs_struct();
-	daemonize_descriptors();
+	exit_files(current);
+	current->files = init_task.files;
+	atomic_inc(&current->files->count);
 
 	reparent_to_kthreadd();
 }
