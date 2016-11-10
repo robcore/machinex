@@ -7,7 +7,6 @@
 #include <linux/cpumask.h>
 #include <linux/interrupt.h>
 #include <linux/sched.h>
-#include <linux/vtime.h>
 #include <asm/irq.h>
 #include <asm/cputime.h>
 
