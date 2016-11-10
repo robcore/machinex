@@ -1676,7 +1676,7 @@ int blkdev_mmap(struct file *file, struct vm_area_struct *vma)
 	return ret;
 }
 
-
+/*
 static ssize_t blkdev_aio_read(struct kiocb *iocb, const struct iovec *iov,
 			 unsigned long nr_segs, loff_t pos)
 {
@@ -1693,7 +1693,7 @@ static ssize_t blkdev_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	return generic_file_aio_read(iocb, iov, nr_segs, pos);
 }
 
-/*
+
  * Try to release a page associated with block device when the system
  * is under memory pressure.
  */

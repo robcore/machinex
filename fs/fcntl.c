@@ -148,7 +148,7 @@ pid_t f_getown(struct file *filp)
 
 static int f_setown_ex(struct file *filp, unsigned long arg)
 {
-	struct f_owner_ex * __user owner_p = (void * __user)arg;
+	struct f_owner_ex __user *owner_p = (void __user *)arg;
 	struct f_owner_ex owner;
 	struct pid *pid;
 	int type;
@@ -188,7 +188,7 @@ static int f_setown_ex(struct file *filp, unsigned long arg)
 
 static int f_getown_ex(struct file *filp, unsigned long arg)
 {
-	struct f_owner_ex * __user owner_p = (void * __user)arg;
+	struct f_owner_ex __user *owner_p = (void __user *)arg;
 	struct f_owner_ex owner;
 	int ret = 0;
 
@@ -232,7 +232,7 @@ static long do_fcntl(int fd, unsigned int cmd, unsigned long arg,
 		err = f_dupfd(arg, filp, 0);
 		break;
 	case F_DUPFD_CLOEXEC:
-		err = f_dupfd(arg, filp, FD_CLOEXEC);
+		err = f_dupfd(arg, filp, O_CLOEXEC);
 		break;
 	case F_GETFD:
 		err = get_close_on_exec(fd) ? FD_CLOEXEC : 0;
@@ -327,19 +327,18 @@ SYSCALL_DEFINE3(fcntl, unsigned int, fd, unsigned int, cmd, unsigned long, arg)
 
 	if (unlikely(f.file->f_mode & FMODE_PATH)) {
 		if (!check_fcntl_cmd(cmd)) {
-			fput(filp);
-			goto out;
+			goto out1;
 		}
 	}
 
 	err = security_file_fcntl(f.file, cmd, arg);
 	if (err) {
-		fput(filp);
 		return err;
 	}
 
 	err = do_fcntl(fd, cmd, arg, f.file);
 
+out1:
  	fdput(f);
 out:
 	return err;
@@ -358,14 +357,12 @@ SYSCALL_DEFINE3(fcntl64, unsigned int, fd, unsigned int, cmd,
 
 	if (unlikely(f.file->f_mode & FMODE_PATH)) {
 		if (!check_fcntl_cmd(cmd)) {
-			fput(filp);
-			goto out;
+			goto out1;
 		}
 	}
 
 	err = security_file_fcntl(f.file, cmd, arg);
 	if (err) {
-		fput(filp);
 		return err;
 	}
 	err = -EBADF;
@@ -383,7 +380,10 @@ SYSCALL_DEFINE3(fcntl64, unsigned int, fd, unsigned int, cmd,
 			err = do_fcntl(fd, cmd, arg, f.file);
 			break;
 	}
+
+out1:
 	fdput(f);
+
 out:
 	return err;
 }

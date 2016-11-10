@@ -1820,7 +1820,7 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 
 	/* Get the "struct file *" for the eventpoll file */
 	error = -EBADF;
-	file = fget_light(epfd, &fput_needed);
+	file = fget(epfd);
 	if (!file)
 		goto error_return;
 
@@ -1934,7 +1934,7 @@ error_tgt_fput:
 
 	fput(tfile);
 error_fput:
-	fput_light(file, fput_needed);
+	fput(file);
 error_return:
 
 	return error;

@@ -603,7 +603,7 @@ int get_unused_fd_flags(unsigned flags)
 {
 	return __alloc_fd(current->files, 0, rlimit(RLIMIT_NOFILE), flags);
 }
-EXPORT_SYMBOL(get_unused_fd_flags)
+EXPORT_SYMBOL(get_unused_fd_flags);
 
 static void __put_unused_fd(struct files_struct *files, unsigned int fd)
 {
@@ -693,7 +693,6 @@ void do_close_on_exec(struct files_struct *files)
 	struct fdtable *fdt;
 
 	/* exec unshares first */
-	BUG_ON(atomic_read(&files->count) != 1);
 	spin_lock(&files->file_lock);
 	for (i = 0; ; i++) {
 		unsigned long set;
