@@ -1703,7 +1703,7 @@ static inline void update_entity_load_avg(struct sched_entity *se,
 	} else
 		now = cfs_rq_clock_task(group_cfs_rq(se));
 
-	decayed = __update_entity_runnable_avg(cpu, now, &se->avg, se->on_rq);
+	decayed = __update_entity_runnable_avg(cpu, now, &se->avg, se->on_rq, 0);
 	if (entity_is_task(se) && se->on_rq)
 		inc_cumulative_runnable_avg(rq_of(cfs_rq), task_of(se));
 
@@ -1751,8 +1751,9 @@ static void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq, int force_update)
 
 static inline void update_rq_runnable_avg(struct rq *rq, int runnable)
 {
-	__update_entity_runnable_avg(rq->clock_task, &rq->avg, runnable,
-				     runnable);
+	int __update_entity_runnable_avg(int cpu, u64 now, struct sched_avg *sa,
+							int runnable,
+							int running);
 	__update_tg_runnable_avg(&rq->avg, &rq->cfs);
 }
 
@@ -1859,7 +1860,7 @@ static inline void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq,
 					      int force_update) {}
 #endif
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#if defined(CONFIG_SCHED_HMP)
 
 /* Return task demand in percentage scale */
 unsigned int pct_task_load(struct task_struct *p)
