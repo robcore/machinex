@@ -18,7 +18,6 @@
 #include <asm/cacheflush.h>
 #include <linux/fdtable.h>
 #include <linux/file.h>
-#include <linux/freezer.h>
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/miscdevice.h>
@@ -103,7 +102,7 @@ enum {
 	BINDER_DEBUG_BUFFER_ALLOC_ASYNC     = 1U << 15,
 };
 static uint32_t binder_debug_mask = BINDER_DEBUG_USER_ERROR |
-	BINDER_DEBUG_DEAD_TRANSACTION;
+	BINDER_DEBUG_FAILED_TRANSACTION | BINDER_DEBUG_DEAD_TRANSACTION;
 module_param_named(debug_mask, binder_debug_mask, uint, S_IWUSR | S_IRUGO);
 
 static bool binder_debug_no_lock;
@@ -1219,9 +1218,8 @@ static int binder_inc_ref(struct binder_ref *ref, int strong,
 }
 
 
-static int binder_dec_ref(struct binder_ref **ptr_to_ref, int strong)
+static int binder_dec_ref(struct binder_ref *ref, int strong)
 {
-	struct binder_ref *ref = *ptr_to_ref;
 	if (strong) {
 		if (ref->strong == 0) {
 			binder_user_error("binder: %d invalid dec strong, "
@@ -1247,10 +1245,8 @@ static int binder_dec_ref(struct binder_ref **ptr_to_ref, int strong)
 		}
 		ref->weak--;
 	}
-	if (ref->strong == 0 && ref->weak == 0) {
+	if (ref->strong == 0 && ref->weak == 0)
 		binder_delete_ref(ref);
-		*ptr_to_ref = NULL;
-	}
 	return 0;
 }
 
@@ -1383,7 +1379,7 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 			binder_debug(BINDER_DEBUG_TRANSACTION,
 				     "        ref %d desc %d (node %d)\n",
 				     ref->debug_id, ref->desc, ref->node->debug_id);
-			binder_dec_ref(&ref, fp->type == BINDER_TYPE_HANDLE);
+			binder_dec_ref(ref, fp->type == BINDER_TYPE_HANDLE);
 		} break;
 
 		case BINDER_TYPE_FD:
@@ -1794,16 +1790,8 @@ static void binder_transaction(struct binder_proc *proc,
 	list_add_tail(&t->work.entry, target_list);
 	tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
 	list_add_tail(&tcomplete->entry, &thread->todo);
-	if (target_wait) {
-		if (reply || !(t->flags & TF_ONE_WAY)) {
-			preempt_disable();
-			wake_up_interruptible_sync(target_wait);
-			sched_preempt_enable_no_resched();
-		}
-		else {
-			wake_up_interruptible(target_wait);
-		}
-	}
+	if (target_wait)
+		wake_up_interruptible(target_wait);
 	return;
 
 err_get_unused_fd_failed:
@@ -1910,25 +1898,19 @@ int binder_thread_write(struct binder_proc *proc, struct binder_thread *thread,
 				break;
 			case BC_RELEASE:
 				debug_string = "Release";
-				binder_dec_ref(&ref, 1);
+				binder_dec_ref(ref, 1);
 				break;
 			case BC_DECREFS:
 			default:
 				debug_string = "DecRefs";
-				binder_dec_ref(&ref, 0);
+				binder_dec_ref(ref, 0);
 				break;
 			}
-			if (ref == NULL) {
-				binder_debug(BINDER_DEBUG_USER_REFS,
-					"binder: %d:%d %s ref deleted",
-					proc->pid, thread->pid, debug_string);
-			} else {
-				binder_debug(BINDER_DEBUG_USER_REFS,
-					"binder: %d:%d %s ref %d desc %d s %d w %d for node %d\n",
-					proc->pid, thread->pid, debug_string, ref->debug_id,
-					ref->desc, ref->strong, ref->weak, ref->node->debug_id);
-			}
-      break;
+			binder_debug(BINDER_DEBUG_USER_REFS,
+				     "binder: %d:%d %s ref %d desc %d s %d w %d for node %d\n",
+				     proc->pid, thread->pid, debug_string, ref->debug_id,
+				     ref->desc, ref->strong, ref->weak, ref->node->debug_id);
+			break;
 		}
 		case BC_INCREFS_DONE:
 		case BC_ACQUIRE_DONE: {
@@ -2333,13 +2315,13 @@ retry:
 			if (!binder_has_proc_work(proc, thread))
 				ret = -EAGAIN;
 		} else
-			ret = wait_event_freezable_exclusive(proc->wait, binder_has_proc_work(proc, thread));
+			ret = wait_event_interruptible_exclusive(proc->wait, binder_has_proc_work(proc, thread));
 	} else {
 		if (non_block) {
 			if (!binder_has_thread_work(thread))
 				ret = -EAGAIN;
 		} else
-			ret = wait_event_freezable(thread->wait, binder_has_thread_work(thread));
+			ret = wait_event_interruptible(thread->wait, binder_has_thread_work(thread));
 	}
 
 	binder_lock(__func__);
@@ -2515,8 +2497,6 @@ retry:
 			struct task_struct *sender = t->from->proc->tsk;
 			tr.sender_pid = task_tgid_nr_ns(sender,
 							current->nsproxy->pid_ns);
-			if (tr.sender_pid == 0)
-				tr.sender_pid = task_tgid_nr(sender);
 		} else {
 			tr.sender_pid = 0;
 		}
@@ -2662,27 +2642,6 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		thread->looper |= BINDER_LOOPER_STATE_NEED_RETURN;
 		thread->return_error = BR_OK;
 		thread->return_error2 = BR_OK;
-	}
-	return thread;
-}
-
-static struct binder_thread *binder_get_thread_by_tid(
-	struct binder_proc *proc, pid_t tid)
-{
-	struct binder_thread *thread = NULL;
-	struct rb_node *parent = NULL;
-	struct rb_node **p = &proc->threads.rb_node;
-
-	while (*p) {
-		parent = *p;
-		thread = rb_entry(parent, struct binder_thread, rb_node);
-
-		if (tid < thread->pid)
-			p = &(*p)->rb_left;
-		else if (tid > thread->pid)
-			p = &(*p)->rb_right;
-		else
-			break;
 	}
 	return thread;
 }
@@ -2882,35 +2841,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			goto err;
 		}
 		break;
-	case BINDER_GET_PEER_PID: {
-		struct binder_get_peer peer;
-		struct binder_thread *thrd;
-		struct binder_transaction *t;
-		if (size != sizeof(struct binder_get_peer)) {
-			ret = -EINVAL;
-			goto err;
-		}
-		if (copy_from_user(&peer, ubuf, sizeof(peer))) {
-			ret = -EFAULT;
-			goto err;
-		}
-		peer.remote = 0;
-		thrd = binder_get_thread_by_tid(proc, peer.self);
-		/*
-		 * Check if the top of the stack is outgoing call or not,
-		 * and return its pid if true.
-		 */
-		if (thrd) {
-			t = thrd->transaction_stack;
-			if (t && t->from == thrd)
-				peer.remote = t->to_proc ? t->to_proc->pid : 0;
-		}
-		if (copy_to_user(ubuf, &peer, sizeof(peer))) {
-			ret = -EFAULT;
-			goto err;
-		}
-		break;
-	}
 	default:
 		ret = -EINVAL;
 		goto err;
@@ -2951,15 +2881,9 @@ static void binder_vma_close(struct vm_area_struct *vma)
 	binder_defer_work(proc, BINDER_DEFERRED_PUT_FILES);
 }
 
-static int binder_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
-{
-	return VM_FAULT_SIGBUS;
-}
-
 static struct vm_operations_struct binder_vm_ops = {
 	.open = binder_vma_open,
 	.close = binder_vma_close,
-	.fault = binder_vm_fault,
 };
 
 static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
@@ -3485,7 +3409,7 @@ static void print_binder_proc(struct seq_file *m,
 		m->count = start_pos;
 }
 
-static const char * const binder_return_strings[] = {
+static const char *binder_return_strings[] = {
 	"BR_ERROR",
 	"BR_OK",
 	"BR_TRANSACTION",
@@ -3506,7 +3430,7 @@ static const char * const binder_return_strings[] = {
 	"BR_FAILED_REPLY"
 };
 
-static const char * const binder_command_strings[] = {
+static const char *binder_command_strings[] = {
 	"BC_TRANSACTION",
 	"BC_REPLY",
 	"BC_ACQUIRE_RESULT",
@@ -3526,7 +3450,7 @@ static const char * const binder_command_strings[] = {
 	"BC_DEAD_BINDER_DONE"
 };
 
-static const char * const binder_objstat_strings[] = {
+static const char *binder_objstat_strings[] = {
 	"proc",
 	"thread",
 	"node",

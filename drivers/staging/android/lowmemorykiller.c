@@ -30,8 +30,6 @@
  *
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -239,7 +237,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	selected_oom_score_adj = min_score_adj;
 #endif
 
-	rcu_read_lock();
+	read_lock(&tasklist_lock);
 	for_each_process(tsk) {
 		struct task_struct *p;
 		int oom_score_adj;
@@ -259,10 +257,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
 			time_before_eq(jiffies, lowmem_deathpending_timeout)) {
 				task_unlock(p);
-				rcu_read_unlock();
+				read_unlock(&tasklist_lock);
 				return 0;
 		}
-
+		
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
 			task_unlock(p);
@@ -354,7 +352,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef ENHANCED_LMK_ROUTINE
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
 		if (selected[i]) {
-#ifdef CONFIG_SAMP_HOTNESS
+#ifdef CONFIG_SAMP_HOTNESS			
 			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
 				     size %d, free memory = %d, reclaimable memory = %d ,hotness %d\n",
 				     selected[i]->pid, selected[i]->comm,
@@ -393,8 +391,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     selected_oom_score_adj, selected_tasksize);
 #endif
 		lowmem_deathpending_timeout = jiffies + HZ;
-		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		send_sig(SIGKILL, selected, 0);
+		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
 		if(reclaim_state)
 			reclaim_state->reclaimed_slab = selected_tasksize;
@@ -492,11 +490,6 @@ static int android_oom_handler(struct notifier_block *nb,
 
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
-			task_unlock(p);
-			continue;
-		}
-		if (fatal_signal_pending(p)) {
-			lowmem_print(2, "skip slow dying process %d\n", p->pid);
 			task_unlock(p);
 			continue;
 		}
