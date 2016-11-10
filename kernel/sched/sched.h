@@ -898,7 +898,7 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
 	 *
 	 * Pairs with the control dependency and rmb in try_to_wake_up().
 	 */
-	smp_mb();
+	smp_wmb();
 	prev->on_cpu = 0;
 #endif
 #ifdef CONFIG_DEBUG_SPINLOCK
