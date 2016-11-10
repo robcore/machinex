@@ -679,7 +679,7 @@ int bam_init(void *base, u32 ee,
 	bam_write_reg_field(base, CTRL, BAM_EN, 1);
 
 #ifdef CONFIG_SPS_SUPPORT_NDP_BAM
-	bam_write_reg_field(base, CTRL, CACHE_MISS_ERR_RESP_EN, 1);
+	bam_write_reg_field(base, CTRL, CACHE_MISS_ERR_RESP_EN, 0);
 
 	if (options & SPS_BAM_NO_LOCAL_CLK_GATING)
 		bam_write_reg_field(base, CTRL, LOCAL_CLK_GATING, 0);
