@@ -2062,20 +2062,13 @@ static void wait_for_dump_helpers(struct file *file)
  */
 static int umh_pipe_setup(struct subprocess_info *info, struct cred *new)
 {
-	struct file *rp, *wp;
+	struct file *files[2];
 	struct coredump_params *cp = (struct coredump_params *)info->data;
+	int err = create_pipe_files(files, 0);
+	if (err)
+		return err;
 
-	wp = create_write_pipe(0);
-	if (IS_ERR(wp))
-		return PTR_ERR(wp);
-
-	rp = create_read_pipe(wp, 0);
-	if (IS_ERR(rp)) {
-		free_write_pipe(wp);
-		return PTR_ERR(rp);
-	}
-
-	cp->file = wp;
+	cp->file = files[1];
 
 	replace_fd(0, files[0], 0);
 	/* and disallow core files too */
@@ -2095,6 +2088,7 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 	int retval = 0;
 	int flag = 0;
 	int ispipe;
+	struct files_struct *displaced;
 	static atomic_t core_dump_count = ATOMIC_INIT(0);
 	struct coredump_params cprm = {
 		.signr = signr,
@@ -2236,12 +2230,6 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 			goto close_fail;
 	}
 
-	/* get us an unshared descriptor table; almost always a no-op */
-	retval = unshare_files(&displaced);
-	if (retval)
-		goto close_fail;
-	if (displaced)
-		put_files_struct(displaced);
 	retval = binfmt->core_dump(&cprm);
 	if (retval)
 		current->signal->group_exit_code |= 0x80;
