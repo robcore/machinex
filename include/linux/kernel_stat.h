@@ -7,6 +7,7 @@
 #include <linux/cpumask.h>
 #include <linux/interrupt.h>
 #include <linux/sched.h>
+#include <linux/vtime.h>
 #include <asm/irq.h>
 #include <asm/cputime.h>
 
@@ -140,6 +141,7 @@ static inline void account_process_tick(struct task_struct *tsk, int user)
 extern void account_process_tick(struct task_struct *, int user);
 extern void account_steal_ticks(unsigned long ticks);
 extern void account_idle_ticks(unsigned long ticks);
+#endif
 
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING
 extern void vtime_task_switch(struct task_struct *prev);
