@@ -793,27 +793,29 @@ static int p9_fd_open(struct p9_client *client, int rfd, int wfd)
 static int p9_socket_open(struct p9_client *client, struct socket *csocket)
 {
 	struct p9_trans_fd *p;
-	struct file *file;
-	int ret;
+	int ret, fd;
 
 	p = kmalloc(sizeof(struct p9_trans_fd), GFP_KERNEL);
 	if (!p)
 		return -ENOMEM;
 
 	csocket->sk->sk_allocation = GFP_NOIO;
-	file = sock_alloc_file(csocket, 0);
-	if (IS_ERR(file)) {
+	fd = sock_map_fd(csocket, 0);
+	if (fd < 0) {
 		pr_err("%s (%d): failed to map fd\n",
 		       __func__, task_pid_nr(current));
 		sock_release(csocket);
 		kfree(p);
-		return PTR_ERR(file);
+		return fd;
 	}
 
-	get_file(file);
-	p->wr = p->rd = file;
+	get_file(csocket->file);
+	get_file(csocket->file);
+	p->wr = p->rd = csocket->file;
 	client->trans = p;
 	client->status = Connected;
+
+	sys_close(fd);	/* still racy */
 
 	p->rd->f_flags |= O_NONBLOCK;
 

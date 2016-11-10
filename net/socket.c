@@ -348,7 +348,8 @@ static struct file_system_type sock_fs_type = {
  *	but we take care of internal coherence yet.
  */
 
-struct file *sock_alloc_file(struct socket *sock, int flags)
+static int sock_alloc_file(struct socket *sock, struct file **f, int flags,
+			   const char *dname)
 {
 	struct qstr name = { .name = "" };
 	struct path path;
@@ -394,9 +395,8 @@ struct file *sock_alloc_file(struct socket *sock, int flags)
 	*f = file;
 	return fd;
 }
-EXPORT_SYMBOL(sock_alloc_file);
 
-static int sock_map_fd(struct socket *sock, int flags)
+int sock_map_fd(struct socket *sock, int flags)
 {
 	struct file *newfile;
 	int fd = sock_alloc_file(sock, &newfile, flags, NULL);
@@ -406,6 +406,7 @@ static int sock_map_fd(struct socket *sock, int flags)
 
 	return fd;
 }
+EXPORT_SYMBOL(sock_map_fd);
 
 static struct socket *sock_from_file(struct file *file, int *err)
 {
