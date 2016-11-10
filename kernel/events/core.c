@@ -468,13 +468,14 @@ static inline int perf_cgroup_connect(int fd, struct perf_event *event,
 {
 	struct perf_cgroup *cgrp;
 	struct cgroup_subsys_state *css;
-	struct fd f = fdget(fd);
-	int ret = 0;
+	struct file *file;
+	int ret = 0, fput_needed;
 
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
 
-	css = cgroup_css_from_dir(f.file, perf_subsys_id);
+	css = cgroup_css_from_dir(file, perf_subsys_id);
 	if (IS_ERR(css)) {
 		ret = PTR_ERR(css);
 		goto out;
@@ -500,7 +501,7 @@ static inline int perf_cgroup_connect(int fd, struct perf_event *event,
 		ret = -EINVAL;
 	}
 out:
-	fdput(f);
+	fput_light(file, fput_needed);
 	return ret;
 }
 
@@ -3317,18 +3318,21 @@ unlock:
 
 static const struct file_operations perf_fops;
 
-static inline int perf_fget_light(int fd, struct fd *p)
+static struct file *perf_fget_light(int fd, int *fput_needed)
 {
-	struct fd f = fdget(fd);
-	if (!f.file)
-		return -EBADF;
+	struct file *file;
 
-	if (f.file->f_op != &perf_fops) {
-		fdput(f);
-		return -EBADF;
+	file = fget_light(fd, fput_needed);
+	if (!file)
+		return ERR_PTR(-EBADF);
+
+	if (file->f_op != &perf_fops) {
+		fput_light(file, *fput_needed);
+		*fput_needed = 0;
+		return ERR_PTR(-EBADF);
 	}
-	*p = f;
-	return 0;
+
+	return file;
 }
 
 static int perf_event_set_output(struct perf_event *event,
@@ -3360,19 +3364,22 @@ static long perf_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case PERF_EVENT_IOC_SET_OUTPUT:
 	{
+		struct file *output_file = NULL;
+		struct perf_event *output_event = NULL;
+		int fput_needed = 0;
 		int ret;
+
 		if (arg != -1) {
-			struct perf_event *output_event;
-			struct fd output;
-			ret = perf_fget_light(arg, &output);
-			if (ret)
-				return ret;
-			output_event = output.file->private_data;
-			ret = perf_event_set_output(event, output_event);
-			fdput(output);
-		} else {
-			ret = perf_event_set_output(event, NULL);
+			output_file = perf_fget_light(arg, &fput_needed);
+			if (IS_ERR(output_file))
+				return PTR_ERR(output_file);
+			output_event = output_file->private_data;
 		}
+
+		ret = perf_event_set_output(event, output_event);
+		if (output_event)
+			fput_light(output_file, fput_needed);
+
 		return ret;
 	}
 
@@ -6430,11 +6437,12 @@ SYSCALL_DEFINE5(perf_event_open,
 	struct perf_event_attr attr;
 	struct perf_event_context *ctx;
 	struct file *event_file = NULL;
-	struct fd group = {NULL, 0};
+	struct file *group_file = NULL;
 	struct task_struct *task = NULL;
 	struct pmu *pmu;
 	int event_fd;
 	int move_group = 0;
+	int fput_needed = 0;
 	int err;
 
 	/* for future expandability... */
@@ -6470,15 +6478,17 @@ SYSCALL_DEFINE5(perf_event_open,
 	if ((flags & PERF_FLAG_PID_CGROUP) && (pid == -1 || cpu == -1))
 		return -EINVAL;
 
-	event_fd = get_unused_fd();
+	event_fd = get_unused_fd_flags(O_RDWR);
 	if (event_fd < 0)
 		return event_fd;
 
 	if (group_fd != -1) {
-		err = perf_fget_light(group_fd, &group);
-		if (err)
+		group_file = perf_fget_light(group_fd, &fput_needed);
+		if (IS_ERR(group_file)) {
+			err = PTR_ERR(group_file);
 			goto err_fd;
-		group_leader = group.file->private_data;
+		}
+		group_leader = group_file->private_data;
 		if (flags & PERF_FLAG_FD_OUTPUT)
 			output_event = group_leader;
 		if (flags & PERF_FLAG_FD_NO_GROUP)
@@ -6657,7 +6667,7 @@ SYSCALL_DEFINE5(perf_event_open,
 	 * of the group leader will find the pointer to itself in
 	 * perf_group_detach().
 	 */
-	fdput(group);
+	fput_light(group_file, fput_needed);
 	fd_install(event_fd, event_file);
 	return event_fd;
 
@@ -6670,7 +6680,7 @@ err_task:
 	if (task)
 		put_task_struct(task);
 err_group_fd:
-	fdput(group);
+	fput_light(group_file, fput_needed);
 err_fd:
 	put_unused_fd(event_fd);
 	return err;

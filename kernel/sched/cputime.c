@@ -10,11 +10,11 @@
 
 /*
  * There are no locks covering percpu hardirq/softirq time.
- * They are only modified in vtime_account, on corresponding CPU
+ * They are only modified in account_system_vtime, on corresponding CPU
  * with interrupts disabled. So, writes are safe.
  * They are read and saved off onto struct rq in update_rq_clock().
  * This may result in other CPU reading this CPU's irq time and can
- * race with irq/vtime_account on this CPU. We would either get old
+ * race with irq/account_system_vtime on this CPU. We would either get old
  * or new value with a side effect of accounting a slice of irq time to wrong
  * task when irq is in progress while we read rq->clock. That is a worthy
  * compromise in place of having locks on each irq in account_system_time.
@@ -43,7 +43,7 @@ DEFINE_PER_CPU(seqcount_t, irq_time_seq);
  * Called before incrementing preempt_count on {soft,}irq_enter
  * and before decrementing preempt_count on {soft,}irq_exit.
  */
-void vtime_account(struct task_struct *curr)
+void account_system_vtime(struct task_struct *curr)
 {
 	unsigned long flags;
 	s64 delta;
@@ -73,7 +73,7 @@ void vtime_account(struct task_struct *curr)
 	irq_time_write_end();
 	local_irq_restore(flags);
 }
-EXPORT_SYMBOL_GPL(vtime_account);
+EXPORT_SYMBOL_GPL(account_system_vtime);
 
 static int irqtime_account_hi_update(void)
 {
@@ -124,7 +124,7 @@ static inline void task_group_account_field(struct task_struct *p, int index,
 	 * is the only cgroup, then nothing else should be necessary.
 	 *
 	 */
-	__get_cpu_var(kernel_cpustat).cpustat[index] += tmp;
+	__this_cpu_add(kernel_cpustat.cpustat[index], tmp);
 
 #ifdef CONFIG_CGROUP_CPUACCT
 	if (unlikely(!cpuacct_subsys.active))
@@ -163,7 +163,7 @@ void account_user_time(struct task_struct *p, cputime_t cputime,
 	task_group_account_field(p, index, (__force u64) cputime);
 
 	/* Account for user time used */
-	acct_update_integrals(p);
+	acct_account_cputime(p);
 }
 
 /*
@@ -213,7 +213,7 @@ void __account_system_time(struct task_struct *p, cputime_t cputime,
 	task_group_account_field(p, index, (__force u64) cputime);
 
 	/* Account for system time used */
-	acct_update_integrals(p);
+	acct_account_cputime(p);
 }
 
 /*
@@ -295,6 +295,7 @@ static __always_inline bool steal_account_process_tick(void)
 void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
 {
 	struct signal_struct *sig = tsk->signal;
+	cputime_t utime, stime;
 	struct task_struct *t;
 
 	times->utime = sig->utime;
@@ -308,8 +309,9 @@ void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
 
 	t = tsk;
 	for_each_thread(tsk, t) {
-		times->utime += t->utime;
-		times->stime += t->stime;
+		task_cputime(t, &utime, &stime);
+		times->utime += utime;
+		times->stime += stime;
 		times->sum_exec_runtime += task_sched_runtime(t);
 	}
 out:
@@ -460,46 +462,50 @@ void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime
 	*ut = cputime.utime;
 	*st = cputime.stime;
 }
-
-/*
- * Archs that account the whole time spent in the idle task
- * (outside irq) as idle time can rely on this and just implement
- * vtime_account_system() and vtime_account_idle(). Archs that
- * have other meaning of the idle time (s390 only includes the
- * time spent by the CPU when it's in low power mode) must override
- * vtime_account().
- */
-#ifndef __ARCH_HAS_VTIME_ACCOUNT
-void vtime_account(struct task_struct *tsk)
-{
-	unsigned long flags;
-
-	local_irq_save(flags);
-
-	if (in_interrupt() || !is_idle_task(tsk))
-		vtime_account_system(tsk);
-	else
-		vtime_account_idle(tsk);
-
-	local_irq_restore(flags);
-}
-EXPORT_SYMBOL_GPL(vtime_account);
-#endif /* __ARCH_HAS_VTIME_ACCOUNT */
-
 #else
 
-static cputime_t scale_utime(cputime_t utime, cputime_t rtime, cputime_t total)
+/*
+ * Perform (stime * rtime) / total, but avoid multiplication overflow by
+ * loosing precision when the numbers are big.
+ */
+static cputime_t scale_stime(u64 stime, u64 rtime, u64 total)
 {
-	u64 temp = (__force u64) rtime;
+	u64 scaled;
 
-	temp *= (__force u64) utime;
+	for (;;) {
+		/* Make sure "rtime" is the bigger of stime/rtime */
+		if (stime > rtime)
+			swap(rtime, stime);
 
-	if (sizeof(cputime_t) == 4)
-		temp = div_u64(temp, (__force u32) total);
-	else
-		temp = div64_u64(temp, (__force u64) total);
+		/* Make sure 'total' fits in 32 bits */
+		if (total >> 32)
+			goto drop_precision;
 
-	return (__force cputime_t) temp;
+		/* Does rtime (and thus stime) fit in 32 bits? */
+		if (!(rtime >> 32))
+			break;
+
+		/* Can we just balance rtime/stime rather than dropping bits? */
+		if (stime >> 31)
+			goto drop_precision;
+
+		/* We can grow stime and shrink rtime and try to make them both fit */
+		stime <<= 1;
+		rtime >>= 1;
+		continue;
+
+drop_precision:
+		/* We drop from rtime, it has more bits than stime */
+		rtime >>= 1;
+		total >>= 1;
+	}
+
+	/*
+	 * Make sure gcc understands that this is a 32x32->64 multiply,
+	 * followed by a 64/32->64 divide.
+	 */
+	scaled = div_u64((u64) (u32) stime * (u64) (u32) rtime, (u32)total);
+	return (__force cputime_t) scaled;
 }
 
 /*
@@ -510,10 +516,7 @@ static void cputime_adjust(struct task_cputime *curr,
 			   struct cputime *prev,
 			   cputime_t *ut, cputime_t *st)
 {
-	cputime_t rtime, utime, total;
-
-	utime = curr->utime;
-	total = utime + curr->stime;
+	cputime_t rtime, stime, utime;
 
 	/*
 	 * Tick based cputime accounting depend on random scheduling
@@ -527,19 +530,38 @@ static void cputime_adjust(struct task_cputime *curr,
 	 */
 	rtime = nsecs_to_cputime(curr->sum_exec_runtime);
 
-	if (total)
-		utime = scale_utime(utime, rtime, total);
-	else
+	/*
+	 * Update userspace visible utime/stime values only if actual execution
+	 * time is bigger than already exported. Note that can happen, that we
+	 * provided bigger values due to scaling inaccuracy on big numbers.
+	 */
+	if (prev->stime + prev->utime >= rtime)
+		goto out;
+
+	stime = curr->stime;
+	utime = curr->utime;
+
+	if (utime == 0) {
+		stime = rtime;
+	} else if (stime == 0) {
 		utime = rtime;
+	} else {
+		cputime_t total = stime + utime;
+
+		stime = scale_stime((__force u64)stime,
+				    (__force u64)rtime, (__force u64)total);
+		utime = rtime - stime;
+	}
 
 	/*
 	 * If the tick based count grows faster than the scheduler one,
 	 * the result of the scaling may go backward.
 	 * Let's enforce monotonicity.
 	 */
+	prev->stime = max(prev->stime, stime);
 	prev->utime = max(prev->utime, utime);
-	prev->stime = max(prev->stime, rtime - prev->utime);
 
+out:
 	*ut = prev->utime;
 	*st = prev->stime;
 }
@@ -547,11 +569,10 @@ static void cputime_adjust(struct task_cputime *curr,
 void task_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st)
 {
 	struct task_cputime cputime = {
-		.utime = p->utime,
-		.stime = p->stime,
 		.sum_exec_runtime = p->se.sum_exec_runtime,
 	};
 
+	task_cputime(p, &cputime.utime, &cputime.stime);
 	cputime_adjust(&cputime, &p->prev_cputime, ut, st);
 }
 
