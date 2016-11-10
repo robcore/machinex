@@ -160,7 +160,7 @@ EXPORT_SYMBOL(_local_bh_enable);
 
 static inline void _local_bh_enable_ip(unsigned long ip)
 {
-	WARN_ON_ONCE(in_irq());
+	WARN_ON_ONCE(in_irq() || irqs_disabled());
 #ifdef CONFIG_TRACE_IRQFLAGS
 	local_irq_disable();
 #endif
@@ -759,13 +759,9 @@ static void run_ksoftirqd(unsigned int cpu)
 	local_irq_disable();
 	if (local_softirq_pending()) {
 		__do_softirq();
+		rcu_note_context_switch(cpu);
 		local_irq_enable();
 		cond_resched();
-
-		preempt_disable();
-		rcu_note_context_switch(cpu);
-		preempt_enable();
-
 		return;
 	}
 	local_irq_enable();
