@@ -561,7 +561,7 @@ void resched_cpu(int cpu)
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
 
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 /*
  * In the semi idle case, use the nearest busy cpu for migrating timers
  * from an idle cpu.  This is good for power-savings.
@@ -599,7 +599,7 @@ unlock:
  * account when the CPU goes back to idle and evaluates the timer
  * wheel for the next timer event.
  */
-void wake_up_idle_cpu(int cpu)
+static void wake_up_idle_cpu(int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 
@@ -608,6 +608,24 @@ void wake_up_idle_cpu(int cpu)
 
 	if (set_nr_and_not_polling(rq->idle))
 		smp_send_reschedule(cpu);
+}
+
+static bool wake_up_extended_nohz_cpu(int cpu)
+{
+	if (tick_nohz_extended_cpu(cpu)) {
+		if (cpu != smp_processor_id() ||
+		    tick_nohz_tick_stopped())
+			smp_send_reschedule(cpu);
+		return true;
+	}
+
+	return false;
+}
+
+void wake_up_nohz_cpu(int cpu)
+{
+	if (!wake_up_extended_nohz_cpu(cpu))
+		wake_up_idle_cpu(cpu);
 }
 
 static inline bool got_nohz_idle_kick(void)
@@ -628,14 +646,14 @@ static inline bool got_nohz_idle_kick(void)
 	return false;
 }
 
-#else /* CONFIG_NO_HZ */
+#else /* CONFIG_NO_HZ_COMMON */
 
 static inline bool got_nohz_idle_kick(void)
 {
 	return false;
 }
 
-#endif /* CONFIG_NO_HZ */
+#endif /* CONFIG_NO_HZ_COMMON */
 
 void sched_avg_update(struct rq *rq)
 {
@@ -1275,7 +1293,7 @@ static void ttwu_activate(struct rq *rq, struct task_struct *p, int en_flags)
 		wq_worker_waking_up(p, cpu_of(rq));
 }
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Window size (in ns) */
 __read_mostly unsigned int sched_ravg_window = 10000000;
@@ -1292,6 +1310,9 @@ __read_mostly unsigned int max_sched_ravg_window = 1000000000;
 
 __read_mostly unsigned int sysctl_sched_window_stats_policy =
 	WINDOW_STATS_USE_AVG;
+
+unsigned int max_possible_efficiency = 1024;
+unsigned int min_possible_efficiency = 1024;
 
 /*
  * Called when new window is starting for a task, to record cpu usage over
@@ -1383,6 +1404,7 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 
 		if (update_sum) {
 			unsigned int cur_freq = rq->cur_freq;
+			int sf;
 
 			delta = now - p->ravg.mark_start;
 			BUG_ON(delta < 0);
@@ -1394,6 +1416,9 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 
 			delta = div64_u64(delta  * cur_freq,
 							max_possible_freq);
+			sf = (rq->efficiency * 1024) / max_possible_efficiency;
+			delta *= sf;
+			delta >>= 10;
 			p->ravg.sum += delta;
 			WARN_ON(p->ravg.sum > window_size);
 		}
@@ -1422,14 +1447,42 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	p->ravg.mark_start = wallclock;
 }
 
-#else	/* CONFIG_SCHED_FREQ_INPUT */
+unsigned long __weak arch_get_cpu_efficiency(int cpu)
+{
+	return SCHED_LOAD_SCALE;
+}
+
+static void init_cpu_efficiency(void)
+{
+	int i, efficiency;
+	unsigned int max = 0, min = UINT_MAX;
+
+	for_each_possible_cpu(i) {
+		efficiency = arch_get_cpu_efficiency(i);
+		cpu_rq(i)->efficiency = efficiency;
+
+		if (efficiency > max)
+			max = efficiency;
+		if (efficiency < min)
+			min = efficiency;
+	}
+
+	BUG_ON(!max || !min);
+
+	max_possible_efficiency = max;
+	min_possible_efficiency = min;
+}
+
+#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 static inline void
 update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 {
 }
 
-#endif	/* CONFIG_SCHED_FREQ_INPUT */
+static inline void init_cpu_efficiency(void) {}
+
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 /*
  * Mark the task runnable and perform wakeup-preemption.
@@ -1550,25 +1603,6 @@ static void ttwu_queue_remote(struct task_struct *p, int cpu)
 		smp_send_reschedule(cpu);
 }
 
-#ifdef __ARCH_WANT_INTERRUPTS_ON_CTXSW
-static int ttwu_activate_remote(struct task_struct *p, int wake_flags)
-{
-	struct rq *rq;
-	int ret = 0;
-
-	rq = __task_rq_lock(p);
-	if (p->on_cpu) {
-		ttwu_activate(rq, p, ENQUEUE_WAKEUP);
-		ttwu_do_wakeup(rq, p, wake_flags);
-		ret = 1;
-	}
-	__task_rq_unlock(rq);
-
-	return ret;
-
-}
-#endif /* __ARCH_WANT_INTERRUPTS_ON_CTXSW */
-
 bool cpus_share_cache(int this_cpu, int that_cpu)
 {
 	return per_cpu(sd_llc_id, this_cpu) == per_cpu(sd_llc_id, that_cpu);
@@ -1638,21 +1672,9 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * If the owning (remote) cpu is still in the middle of schedule() with
 	 * this task as prev, wait until its done referencing the task.
 	 */
-	while (cpu_relaxed_read(&(p->on_cpu))) {
-#ifdef __ARCH_WANT_INTERRUPTS_ON_CTXSW
-		/*
-		 * In case the architecture enables interrupts in
-		 * context_switch(), we cannot busy wait, since that
-		 * would lead to deadlocks when an interrupt hits and
-		 * tries to wake up @prev. So bail and do a complete
-		 * remote wakeup.
-		 */
-		if (ttwu_activate_remote(p, wake_flags))
-			goto stat;
-#else
-		cpu_read_relax();
-#endif
-	}
+	while (p->on_cpu)
+ 		cpu_relax();
+
 	/*
 	 * Pairs with the smp_wmb() in finish_lock_switch().
 	 */
@@ -1783,7 +1805,6 @@ static void __sched_fork(struct task_struct *p)
 	p->se.prev_sum_exec_runtime	= 0;
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
-	init_new_task_load(p);
 
 	INIT_LIST_HEAD(&p->se.group_node);
 
@@ -1793,8 +1814,7 @@ static void __sched_fork(struct task_struct *p)
  * load-balance).
  */
 #if defined(CONFIG_SMP) && defined(CONFIG_FAIR_GROUP_SCHED)
-	p->se.avg.runnable_avg_period = 0;
-	p->se.avg.runnable_avg_sum = 0;
+	init_new_task_load(p);
 #endif
 #ifdef CONFIG_SCHEDSTATS
 	memset(&p->se.statistics, 0, sizeof(p->se.statistics));
@@ -2037,13 +2057,7 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 	 */
 	prev_state = prev->state;
 	finish_arch_switch(prev);
-#ifdef __ARCH_WANT_INTERRUPTS_ON_CTXSW
-	local_irq_disable();
-#endif /* __ARCH_WANT_INTERRUPTS_ON_CTXSW */
 	perf_event_task_sched_in(prev, current);
-#ifdef __ARCH_WANT_INTERRUPTS_ON_CTXSW
-	local_irq_enable();
-#endif /* __ARCH_WANT_INTERRUPTS_ON_CTXSW */
 	finish_lock_switch(rq, prev);
 	finish_arch_post_lock_switch();
 
@@ -2180,11 +2194,10 @@ context_switch(struct rq *rq, struct task_struct *prev,
 }
 
 /*
- * nr_running, nr_uninterruptible and nr_context_switches:
+ * nr_running and nr_context_switches:
  *
  * externally visible scheduler statistics: current number of runnable
- * threads, current number of uninterruptible-sleeping threads, total
- * number of context switches performed since bootup.
+ * threads, total number of context switches performed since bootup.
  */
 unsigned long nr_running(void)
 {
@@ -2192,23 +2205,6 @@ unsigned long nr_running(void)
 
 	for_each_online_cpu(i)
 		sum += cpu_rq(i)->nr_running;
-
-	return sum;
-}
-
-unsigned long nr_uninterruptible(void)
-{
-	unsigned long i, sum = 0;
-
-	for_each_possible_cpu(i)
-		sum += cpu_rq(i)->nr_uninterruptible;
-
-	/*
-	 * Since we read the counters lockless, it might be slightly
-	 * inaccurate. Do not allow it to go below zero though:
-	 */
-	if (unlikely((long)sum < 0))
-		sum = 0;
 
 	return sum;
 }
@@ -2413,7 +2409,7 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 	return load >> FSHIFT;
 }
 
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 /*
  * Handle NO_HZ for the global load-average.
  *
@@ -2639,12 +2635,12 @@ static void calc_global_nohz(void)
 	smp_wmb();
 	calc_load_idx++;
 }
-#else /* !CONFIG_NO_HZ */
+#else /* !CONFIG_NO_HZ_COMMON */
 
 static inline long calc_load_fold_idle(void) { return 0; }
 static inline void calc_global_nohz(void) { }
 
-#endif /* CONFIG_NO_HZ */
+#endif /* CONFIG_NO_HZ_COMMON */
 
 /*
  * calc_load - update the avenrun load estimates 10 ticks after the
@@ -2804,7 +2800,7 @@ static void __update_cpu_load(struct rq *this_rq, unsigned long this_load,
 	sched_avg_update(this_rq);
 }
 
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 /*
  * There is no sane way to deal with nohz on smp when using jiffies because the
  * cpu doing the jiffies update might drift wrt the cpu doing the jiffy reading
@@ -2864,7 +2860,7 @@ void update_cpu_load_nohz(void)
 	}
 	raw_spin_unlock(&this_rq->lock);
 }
-#endif /* CONFIG_NO_HZ */
+#endif /* CONFIG_NO_HZ_COMMON */
 
 /*
  * Called from scheduler_tick()
@@ -2991,7 +2987,35 @@ void scheduler_tick(void)
 	rq->idle_balance = idle_cpu(cpu);
 	trigger_load_balance(rq, cpu);
 #endif
+	rq_last_tick_reset(rq);
+	check_for_migration(rq, curr);
 }
+
+#ifdef CONFIG_NO_HZ_FULL
+/**
+ * scheduler_tick_max_deferment
+ *
+ * Keep at least one tick per second when a single
+ * active task is running because the scheduler doesn't
+ * yet completely support full dynticks environment.
+ *
+ * This makes sure that uptime, CFS vruntime, load
+ * balancing, etc... continue to move forward, even
+ * with a very low granularity.
+ */
+u64 scheduler_tick_max_deferment(void)
+{
+	struct rq *rq = this_rq();
+	unsigned long next, now = ACCESS_ONCE(jiffies);
+
+	next = rq->last_sched_tick + HZ;
+
+	if (time_before_eq(next, now))
+		return 0;
+
+	return jiffies_to_usecs(next - now) * NSEC_PER_USEC;
+}
+#endif
 
 notrace unsigned long get_parent_ip(unsigned long addr)
 {
@@ -3077,10 +3101,10 @@ static inline void schedule_debug(struct task_struct *prev)
 {
 	/*
 	 * Test if we are atomic. Since do_exit() needs to call into
-	 * schedule() atomically, we ignore that path. Otherwise whine
-	 * if we are scheduling when we should not.
+	 * schedule() atomically, we ignore that path for now.
+	 * Otherwise, whine if we are scheduling when we should not be.
 	 */
-	if (unlikely(in_atomic_preempt_off() && prev->state != TASK_DEAD))
+	if (unlikely(in_atomic_preempt_off() && !prev->exit_state))
 		__schedule_bug(prev);
 	rcu_sleep_check();
 
@@ -4148,12 +4172,20 @@ static void __setscheduler(struct rq *rq, struct task_struct *p,
 {
 	int policy = attr->sched_policy;
 
+	if (policy == -1) /* setparam */
+		policy = p->policy;
+
 	p->policy = policy;
 
-	if (rt_policy(policy))
-		p->rt_priority = attr->sched_priority;
-	else
+	if (fair_policy(policy))
 		p->static_prio = NICE_TO_PRIO(attr->sched_nice);
+
+	/*
+	 * __sched_setscheduler() ensures attr->sched_priority == 0 when
+	 * !rt_policy. Always setting this ensures that things like
+	 * getparam()/getattr() don't report silly values for !rt tasks.
+	 */
+	p->rt_priority = attr->sched_priority;
 
 	p->normal_prio = normal_prio(p);
 	p->prio = rt_mutex_getprio(p);
@@ -4302,7 +4334,6 @@ recheck:
 		return 0;
 	}
 change:
-
 #ifdef CONFIG_RT_GROUP_SCHED
 	if (user) {
 		/*
@@ -4527,13 +4558,14 @@ SYSCALL_DEFINE2(sched_setparam, pid_t, pid, struct sched_param __user *, param)
  * @pid: the pid in question.
  * @attr: structure containing the extended parameters.
  */
-SYSCALL_DEFINE2(sched_setattr, pid_t, pid, struct sched_attr __user *, uattr)
+SYSCALL_DEFINE3(sched_setattr, pid_t, pid, struct sched_attr __user *, uattr,
+			       unsigned int, flags)
 {
 	struct sched_attr attr;
 	struct task_struct *p;
 	int retval;
 
-	if (!uattr || pid < 0)
+	if (!uattr || pid < 0 || flags)
 		return -EINVAL;
 
 	if (sched_copy_attr(uattr, &attr))
@@ -4660,8 +4692,8 @@ err_size:
  * @attr: structure containing the extended parameters.
  * @size: sizeof(attr) for fwd/bwd comp.
  */
-SYSCALL_DEFINE3(sched_getattr, pid_t, pid, struct sched_attr __user *, uattr,
-		unsigned int, size)
+SYSCALL_DEFINE4(sched_getattr, pid_t, pid, struct sched_attr __user *, uattr,
+		unsigned int, size, unsigned int, flags)
 {
 	struct sched_attr attr = {
 		.size = sizeof(struct sched_attr),
@@ -4670,7 +4702,7 @@ SYSCALL_DEFINE3(sched_getattr, pid_t, pid, struct sched_attr __user *, uattr,
 	int retval;
 
 	if (!uattr || pid < 0 || size > PAGE_SIZE ||
-	    size < SCHED_ATTR_SIZE_VER0)
+	    size < SCHED_ATTR_SIZE_VER0 || flags)
 		return -EINVAL;
 
 	rcu_read_lock();
@@ -5816,6 +5848,7 @@ migration_call(struct notifier_block *nfb, unsigned long action, void *hcpu)
 		migrate_tasks(cpu);
 		BUG_ON(rq->nr_running != 1); /* the migration thread */
 		raw_spin_unlock_irqrestore(&rq->lock, flags);
+		break;
 
 	case CPU_DEAD:
 		calc_load_migrate(rq);
@@ -6085,7 +6118,7 @@ static void rq_attach_root(struct rq *rq, struct root_domain *rd)
 		cpumask_clear_cpu(rq->cpu, old_rd->span);
 
 		/*
-		 * If we dont want to free the old_rd yet then
+		 * If we dont want to free the old_rt yet then
 		 * set old_rd to NULL to skip the freeing later
 		 * in this function:
 		 */
@@ -6212,11 +6245,6 @@ static void destroy_sched_domains(struct sched_domain *sd, int cpu)
  * SD_SHARE_PKG_RESOURCE set (Last Level Cache Domain) for this
  * allows us to avoid some pointer chasing select_idle_sibling().
  *
- * Iterate domains and sched_groups downward, assigning CPUs to be
- * select_idle_sibling() hw buddy.  Cross-wiring hw makes bouncing
- * due to random perturbation self canceling, ie sw buddies pull
- * their counterpart to their CPU's hw counterpart.
- *
  * Also keep a unique ID per domain (we use the first cpu number in
  * the cpumask of the domain), this allows us to quickly tell if
  * two cpus are in the same cache domain, see cpus_share_cache().
@@ -6232,41 +6260,10 @@ static void update_top_cache_domain(int cpu)
 	int size = 1;
 
 	sd = highest_flag_domain(cpu, SD_SHARE_PKG_RESOURCES);
-	if (sd) {
-		struct sched_domain *tmp = sd;
-		struct sched_group *sg, *prev;
-		bool right;
 
-		/*
-		 * Traverse to first CPU in group, and count hops
-		 * to cpu from there, switching direction on each
-		 * hop, never ever pointing the last CPU rightward.
-		 */
-		do {
-			id = cpumask_first(sched_domain_span(tmp));
-			prev = sg = tmp->groups;
-			right = 1;
-
-			while (cpumask_first(sched_group_cpus(sg)) != id)
-				sg = sg->next;
-
-			while (!cpumask_test_cpu(cpu, sched_group_cpus(sg))) {
-				prev = sg;
-				sg = sg->next;
-				right = !right;
-			}
-
-			/* A CPU went down, never point back to domain start. */
-			if (right && cpumask_first(sched_group_cpus(sg->next)) == id)
-				right = false;
-
-			sg = right ? sg->next : prev;
-			tmp->idle_buddy = cpumask_first(sched_group_cpus(sg));
-		} while ((tmp = tmp->child));
-
+	if (sd)
 		id = cpumask_first(sched_domain_span(sd));
                 size = cpumask_weight(sched_domain_span(sd));
-	}
 
 	rcu_assign_pointer(per_cpu(sd_llc, cpu), sd);
 	per_cpu(sd_llc_size, cpu) = size;
@@ -7303,6 +7300,7 @@ void __init sched_init_smp(void)
 {
 	cpumask_var_t non_isolated_cpus;
 
+	init_cpu_efficiency();
 	alloc_cpumask_var(&non_isolated_cpus, GFP_KERNEL);
 	alloc_cpumask_var(&fallback_doms, GFP_KERNEL);
 
@@ -7335,8 +7333,65 @@ void __init sched_init_smp(void)
 }
 #endif /* CONFIG_SMP */
 
+unsigned int max_capacity = 1024; /* max(rq->capacity) */
+unsigned int min_capacity = 1024; /* min(rq->capacity) */
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+/* Keep track of max/min capacity possible across CPUs "currently" */
+static void update_min_max_capacity(void)
+{
+	int i;
+	int max = 0, min = INT_MAX;
+
+	for_each_possible_cpu(i) {
+		if (cpu_rq(i)->capacity > max)
+			max = cpu_rq(i)->capacity;
+		if (cpu_rq(i)->capacity < min)
+			min = cpu_rq(i)->capacity;
+	}
+
+	max_capacity = max;
+	min_capacity = min;
+}
+
+/*
+ * Return 'capacity' of a cpu in reference to "least" efficient cpu, such that
+ * least efficient cpu gets capacity of 1024
+ */
+unsigned long capacity_scale_cpu_efficiency(int cpu)
+{
+	return (1024 * cpu_rq(cpu)->efficiency) / min_possible_efficiency;
+}
+
+/*
+ * Return 'capacity' of a cpu in reference to cpu with lowest max_freq
+ * (min_max_freq), such that one with lowest max_freq gets capacity of 1024.
+ */
+unsigned long capacity_scale_cpu_freq(int cpu)
+{
+	return (1024 * cpu_rq(cpu)->max_freq) / min_max_freq;
+}
+
+/*
+ * Return load_scale_factor of a cpu in reference to "most" efficient cpu, so
+ * that "most" efficient cpu gets a load_scale_factor of 1
+ */
+static inline unsigned long load_scale_cpu_efficiency(int cpu)
+{
+	return (1024 * max_possible_efficiency) / cpu_rq(cpu)->efficiency;
+}
+
+/*
+ * Return load_scale_factor of a cpu in reference to cpu with best max_freq
+ * (max_possible_freq), so that one with best max_freq gets a load_scale_factor
+ * of 1.
+ */
+static inline unsigned long load_scale_cpu_freq(int cpu)
+{
+	return (1024 * max_possible_freq) / cpu_rq(cpu)->max_freq;
+}
+
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+
 /*
  * Maximum possible frequency across all cpus. Task demand and cpu
  * capacity (cpu_power) metrics are scaled in reference to it.
@@ -7357,6 +7412,9 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	struct cpufreq_policy *policy = (struct cpufreq_policy *)data;
 	int i;
 	unsigned int min_max = min_max_freq;
+	int cpu = policy->cpu;
+	int load_scale = 1024;
+	int capacity = 1024;
 
 	if (val != CPUFREQ_NOTIFY)
 		return 0;
@@ -7373,6 +7431,34 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
 	BUG_ON(!min_max_freq);
 	BUG_ON(!policy->max);
+
+	/* Assumes all cpus in cluster has same efficiency!! */
+	capacity *= capacity_scale_cpu_efficiency(cpu);
+	capacity >>= 10;
+
+	capacity *= capacity_scale_cpu_freq(cpu);
+	capacity >>= 10;
+
+	/*
+	 * load_scale_factor accounts for the fact that task load
+	 * (p->se.avg.runnable_avg_sum_scaled) is in reference to "best"
+	 * performing cpu. Task's load will need to be scaled (up) by a factor
+	 * to determine suitability to be placed on a particular cpu.
+	 */
+	load_scale *= load_scale_cpu_efficiency(cpu);
+	load_scale >>= 10;
+
+	load_scale *= load_scale_cpu_freq(cpu);
+	load_scale >>= 10;
+
+	for_each_cpu(i, policy->related_cpus) {
+		struct rq *rq = cpu_rq(i);
+
+		rq->capacity = capacity;
+		rq->load_scale_factor = load_scale;
+	}
+
+	update_min_max_capacity();
 
 	return 0;
 }
@@ -7422,7 +7508,7 @@ static int register_sched_callback(void)
  */
 core_initcall(register_sched_callback);
 
-#endif /* CONFIG_SCHED_FREQ_INPUT */
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 const_debug unsigned int sysctl_timer_migration = 1;
 
@@ -7571,6 +7657,7 @@ void __init sched_init(void)
 		rq->active_balance = 0;
 		rq->next_balance = jiffies;
 		rq->push_cpu = 0;
+		rq->push_task = NULL;
 		rq->cpu = i;
 		rq->online = 0;
 		rq->idle_stamp = 0;
@@ -7582,18 +7669,26 @@ void __init sched_init(void)
 		rq->min_freq = 1;
 		rq->max_possible_freq = 1;
 		rq->cumulative_runnable_avg = 0;
+		rq->efficiency = 1024;
+		rq->capacity = 1024;
+		rq->load_scale_factor = 1024;
 #endif
 
 		INIT_LIST_HEAD(&rq->cfs_tasks);
 
 		rq_attach_root(rq, &def_root_domain);
-#ifdef CONFIG_NO_HZ
+#ifdef CONFIG_NO_HZ_COMMON
 		rq->nohz_flags = 0;
+#endif
+#ifdef CONFIG_NO_HZ_FULL
+		rq->last_sched_tick = 0;
 #endif
 #endif
 		init_rq_hrtick(rq);
 		atomic_set(&rq->nr_iowait, 0);
 	}
+
+	set_hmp_defaults();
 
 	set_load_weight(&init_task);
 
