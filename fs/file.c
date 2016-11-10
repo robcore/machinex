@@ -212,7 +212,7 @@ static int expand_fdtable(struct files_struct *files, int nr)
 	 */
 	if (unlikely(new_fdt->max_fds <= nr)) {
 		__free_fdtable(new_fdt);
-		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)"); 
+		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)");
 		return -EMFILE;
 	}
 	/*
@@ -573,11 +573,11 @@ out:
 	return error;
 }
 
-int get_unused_fd(void)
+int get_unused_fd_flags(unsigned flags)
 {
-	return alloc_fd(0, 0);
+	return alloc_fd(0, flags);
 }
-EXPORT_SYMBOL(get_unused_fd);
+EXPORT_SYMBOL(get_unused_fd_flags)
 
 int iterate_fd(struct files_struct *files, unsigned n,
 		int (*f)(const void *, struct file *, unsigned),
