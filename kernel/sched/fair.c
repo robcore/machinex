@@ -1860,7 +1860,7 @@ static inline void update_cfs_rq_blocked_load(struct cfs_rq *cfs_rq,
 					      int force_update) {}
 #endif
 
-#if defined(CONFIG_SCHED_HMP)
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Return task demand in percentage scale */
 unsigned int pct_task_load(struct task_struct *p)
