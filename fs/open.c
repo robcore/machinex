@@ -1046,7 +1046,6 @@ int filp_close(struct file *filp, fl_owner_t id)
 	int retval = 0;
 
 	if (!file_count(filp)) {
-		print_err("Yo, VFS: Close: file count is 0\n");
 		return 0;
 	}
 
