@@ -135,6 +135,7 @@ err_out:
 		timed_output_dev_unregister(&gpio_data[i].dev);
 		gpio_free(gpio_data[i].gpio);
 	}
+	kfree(gpio_data);
 
 	return ret;
 }
@@ -150,6 +151,8 @@ static int timed_gpio_remove(struct platform_device *pdev)
 		gpio_free(gpio_data[i].gpio);
 	}
 
+	kfree(gpio_data);
+
 	return 0;
 }
 
@@ -158,10 +161,22 @@ static struct platform_driver timed_gpio_driver = {
 	.remove		= timed_gpio_remove,
 	.driver		= {
 		.name		= TIMED_GPIO_NAME,
+		.owner		= THIS_MODULE,
 	},
 };
 
-module_platform_driver(timed_gpio_driver);
+static int __init timed_gpio_init(void)
+{
+	return platform_driver_register(&timed_gpio_driver);
+}
+
+static void __exit timed_gpio_exit(void)
+{
+	platform_driver_unregister(&timed_gpio_driver);
+}
+
+module_init(timed_gpio_init);
+module_exit(timed_gpio_exit);
 
 MODULE_AUTHOR("Mike Lockwood <lockwood@android.com>");
 MODULE_DESCRIPTION("timed gpio driver");

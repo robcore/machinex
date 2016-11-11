@@ -141,14 +141,15 @@ EXPORT_SYMBOL_GPL(dma_buf_export_named);
  */
 int dma_buf_fd(struct dma_buf *dmabuf, int flags)
 {
-	int fd;
+	int error, fd;
 
 	if (!dmabuf || !dmabuf->file)
 		return -EINVAL;
 
-	fd = get_unused_fd_flags(flags);
-	if (fd < 0)
-		return fd;
+	error = get_unused_fd_flags(flags);
+	if (error < 0)
+		return error;
+	fd = error;
 
 	fd_install(fd, dmabuf->file);
 
@@ -468,8 +469,9 @@ int dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma,
 		return -EINVAL;
 
 	/* readjust the vma */
-	vma->vm_file = get_file(dmabuf->file);
+	get_file(dmabuf->file);
 	oldfile = vma->vm_file;
+	vma->vm_file = dmabuf->file;
 	vma->vm_pgoff = pgoff;
 
 	ret = dmabuf->ops->mmap(dmabuf, vma);

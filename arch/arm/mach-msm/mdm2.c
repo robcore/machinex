@@ -38,6 +38,7 @@
 #include <mach/subsystem_restart.h>
 #include <linux/msm_charm.h>
 #include "msm_watchdog.h"
+//#include <linux/async.h>
 #include "devices.h"
 #include "clock.h"
 #include "mdm_private.h"
@@ -117,6 +118,13 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		}
 		msleep(100);
 	}
+
+	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
+		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
+	if (mdm_drv->ap2mdm_status_gpio > 0)
+		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 0);
+	if (mdm_drv->ap2mdm_wakeup_gpio > 0)
+		gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 0);
 
 	/* Assert the soft reset line whether mdm2ap_status went low or not */
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
@@ -263,18 +271,19 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 		mdm_peripheral_connect(mdm_drv);
 		mdelay(100);
 
-		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
+		//if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
-		} else {
-			mdm_peripheral_disconnect(mdm_drv);
-			mdm_peripheral_connect(mdm_drv);
-			mdelay(100);
+		//} else {
+			mdelay(5);
+			//mdm_peripheral_disconnect(mdm_drv);
+			//mdm_peripheral_connect(mdm_drv);
+			//mdelay(100);
 
-		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
-			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
-			}
-		}
-	}
+		//if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
+			//gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
+			//}
+		//}
+	//}
 }
 
 static void mdm_image_upgrade(struct mdm_modem_drv *mdm_drv, int type)
