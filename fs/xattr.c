@@ -399,20 +399,21 @@ SYSCALL_DEFINE5(lsetxattr, const char __user *, pathname,
 SYSCALL_DEFINE5(fsetxattr, int, fd, const char __user *, name,
 		const void __user *,value, size_t, size, int, flags)
 {
-	struct fd f = fdget(fd);
+	struct file *f;
 	struct dentry *dentry;
 	int error = -EBADF;
 
-	if (!f.file)
+	f = fget(fd);
+	if (!f)
 		return error;
-	dentry = f.file->f_path.dentry;
+	dentry = f->f_path.dentry;
 	audit_inode(NULL, dentry);
-	error = mnt_want_write_file(f.file);
+	error = mnt_want_write_file(f);
 	if (!error) {
 		error = setxattr(dentry, name, value, size, flags);
-		mnt_drop_write_file(f.file);
+		mnt_drop_write_file(f);
 	}
-	fdput(f);
+	fput(f);
 	return error;
 }
 
@@ -436,7 +437,7 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 	if (size) {
 		if (size > XATTR_SIZE_MAX)
 			size = XATTR_SIZE_MAX;
-		kvalue = kzalloc(size, GFP_KERNEL | __GFP_NOWARN);
+		kvalue = kzalloc(size, GFP_KERNEL);
 		if (!kvalue)
 			return -ENOMEM;
 	}
@@ -485,14 +486,15 @@ SYSCALL_DEFINE4(lgetxattr, const char __user *, pathname,
 SYSCALL_DEFINE4(fgetxattr, int, fd, const char __user *, name,
 		void __user *, value, size_t, size)
 {
-	struct fd f = fdget(fd);
+	struct file *f;
 	ssize_t error = -EBADF;
 
-	if (!f.file)
+	f = fget(fd);
+	if (!f)
 		return error;
-	audit_inode(NULL, f.file->f_path.dentry);
-	error = getxattr(f.file->f_path.dentry, name, value, size);
-	fdput(f);
+	audit_inode(NULL, f->f_path.dentry);
+	error = getxattr(f->f_path.dentry, name, value, size);
+	fput(f);
 	return error;
 }
 
@@ -564,14 +566,15 @@ SYSCALL_DEFINE3(llistxattr, const char __user *, pathname, char __user *, list,
 
 SYSCALL_DEFINE3(flistxattr, int, fd, char __user *, list, size_t, size)
 {
-	struct fd f = fdget(fd);
+	struct file *f;
 	ssize_t error = -EBADF;
 
-	if (!f.file)
+	f = fget(fd);
+	if (!f)
 		return error;
-	audit_inode(NULL, f.file->f_path.dentry);
-	error = listxattr(f.file->f_path.dentry, list, size);
-	fdput(f);
+	audit_inode(NULL, f->f_path.dentry);
+	error = listxattr(f->f_path.dentry, list, size);
+	fput(f);
 	return error;
 }
 
@@ -631,20 +634,21 @@ SYSCALL_DEFINE2(lremovexattr, const char __user *, pathname,
 
 SYSCALL_DEFINE2(fremovexattr, int, fd, const char __user *, name)
 {
-	struct fd f = fdget(fd);
+	struct file *f;
 	struct dentry *dentry;
 	int error = -EBADF;
 
-	if (!f.file)
+	f = fget(fd);
+	if (!f)
 		return error;
-	dentry = f.file->f_path.dentry;
+	dentry = f->f_path.dentry;
 	audit_inode(NULL, dentry);
-	error = mnt_want_write_file(f.file);
+	error = mnt_want_write_file(f);
 	if (!error) {
 		error = removexattr(dentry, name);
-		mnt_drop_write_file(f.file);
+		mnt_drop_write_file(f);
 	}
-	fdput(f);
+	fput(f);
 	return error;
 }
 

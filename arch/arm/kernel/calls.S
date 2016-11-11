@@ -389,8 +389,8 @@
 		CALL(sys_process_vm_writev)
 		CALL(sys_ni_syscall)
 		CALL(sys_ni_syscall)
-/* 380 */	CALL(sys_sched_setattr)
-		CALL(sys_sched_getattr)
+/* 380 */	CALL(sys_ni_syscall)
+		CALL(sys_ni_syscall)
 		CALL(sys_ni_syscall)
 		CALL(sys_seccomp)
 #ifndef syscalls_counted

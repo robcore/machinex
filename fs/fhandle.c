@@ -113,21 +113,24 @@ SYSCALL_DEFINE5(name_to_handle_at, int, dfd, const char __user *, name,
 
 static struct vfsmount *get_vfsmount_from_fd(int fd)
 {
-	struct vfsmount *mnt;
+	struct path path;
 
 	if (fd == AT_FDCWD) {
 		struct fs_struct *fs = current->fs;
 		spin_lock(&fs->lock);
-		mnt = mntget(fs->pwd.mnt);
+		path = fs->pwd;
+		mntget(path.mnt);
 		spin_unlock(&fs->lock);
 	} else {
-		struct fd f = fdget(fd);
-		if (!f.file)
+		int fput_needed;
+		struct file *file = fget_light(fd, &fput_needed);
+		if (!file)
 			return ERR_PTR(-EBADF);
-		mnt = mntget(f.file->f_path.mnt);
-		fdput(f);
+		path = file->f_path;
+		mntget(path.mnt);
+		fput_light(file, fput_needed);
 	}
-	return mnt;
+	return path.mnt;
 }
 
 static int vfs_dentry_acceptable(void *context, struct dentry *dentry)

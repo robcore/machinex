@@ -230,18 +230,23 @@ EXPORT_SYMBOL(vfs_llseek);
 SYSCALL_DEFINE3(lseek, unsigned int, fd, off_t, offset, unsigned int, origin)
 {
 	off_t retval;
-	struct fd f = fdget(fd);
-	if (!f.file)
-		return -EBADF;
+	struct file * file;
+	int fput_needed;
+
+	retval = -EBADF;
+	file = fget_light(fd, &fput_needed);
+	if (!file)
+		goto bad;
 
 	retval = -EINVAL;
 	if (origin <= SEEK_MAX) {
-		loff_t res = vfs_llseek(f.file, offset, origin);
+		loff_t res = vfs_llseek(file, offset, origin);
 		retval = res;
 		if (res != (loff_t)retval)
 			retval = -EOVERFLOW;	/* LFS: should only happen on 32 bit platforms */
 	}
-	fdput(f);
+	fput_light(file, fput_needed);
+bad:
 	return retval;
 }
 
@@ -251,17 +256,20 @@ SYSCALL_DEFINE5(llseek, unsigned int, fd, unsigned long, offset_high,
 		unsigned int, origin)
 {
 	int retval;
-	struct fd f = fdget(fd);
+	struct file * file;
 	loff_t offset;
+	int fput_needed;
 
-	if (!f.file)
-		return -EBADF;
+	retval = -EBADF;
+	file = fget_light(fd, &fput_needed);
+	if (!file)
+		goto bad;
 
 	retval = -EINVAL;
 	if (origin > SEEK_MAX)
 		goto out_putf;
 
-	offset = vfs_llseek(f.file, ((loff_t) offset_high << 32) | offset_low,
+	offset = vfs_llseek(file, ((loff_t) offset_high << 32) | offset_low,
 			origin);
 
 	retval = (int)offset;
@@ -271,7 +279,8 @@ SYSCALL_DEFINE5(llseek, unsigned int, fd, unsigned long, offset_high,
 			retval = 0;
 	}
 out_putf:
-	fdput(f);
+	fput_light(file, fput_needed);
+bad:
 	return retval;
 }
 #endif
@@ -496,29 +505,34 @@ static inline void file_pos_write(struct file *file, loff_t pos)
 
 SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
-	if (f.file) {
-		loff_t pos = file_pos_read(f.file);
-		ret = vfs_read(f.file, buf, count, &pos);
-		file_pos_write(f.file, pos);
-		fdput(f);
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_read(file, buf, count, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
 	}
+
 	return ret;
 }
 
 SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
 		size_t, count)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
-	if (f.file) {
-		loff_t pos = file_pos_read(f.file);
-		ret = vfs_write(f.file, buf, count, &pos);
-		file_pos_write(f.file, pos);
-		fdput(f);
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_write(file, buf, count, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
 	}
 
 	return ret;
@@ -527,18 +541,19 @@ SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
 SYSCALL_DEFINE(pread64)(unsigned int fd, char __user *buf,
 			size_t count, loff_t pos)
 {
-	struct fd f;
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
 	if (pos < 0)
 		return -EINVAL;
 
-	f = fdget(fd);
-	if (f.file) {
+	file = fget_light(fd, &fput_needed);
+	if (file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PREAD)
-			ret = vfs_read(f.file, buf, count, &pos);
-		fdput(f);
+		if (file->f_mode & FMODE_PREAD)
+			ret = vfs_read(file, buf, count, &pos);
+		fput_light(file, fput_needed);
 	}
 
 	return ret;
@@ -555,18 +570,19 @@ SYSCALL_ALIAS(sys_pread64, SyS_pread64);
 SYSCALL_DEFINE(pwrite64)(unsigned int fd, const char __user *buf,
 			 size_t count, loff_t pos)
 {
-	struct fd f;
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
 	if (pos < 0)
 		return -EINVAL;
 
-	f = fdget(fd);
-	if (f.file) {
+	file = fget_light(fd, &fput_needed);
+	if (file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PWRITE)  
-			ret = vfs_write(f.file, buf, count, &pos);
-		fdput(f);
+		if (file->f_mode & FMODE_PWRITE)  
+			ret = vfs_write(file, buf, count, &pos);
+		fput_light(file, fput_needed);
 	}
 
 	return ret;
@@ -819,14 +835,16 @@ EXPORT_SYMBOL(vfs_writev);
 SYSCALL_DEFINE3(readv, unsigned long, fd, const struct iovec __user *, vec,
 		unsigned long, vlen)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
-	if (f.file) {
-		loff_t pos = file_pos_read(f.file);
-		ret = vfs_readv(f.file, vec, vlen, &pos);
-		file_pos_write(f.file, pos);
-		fdput(f);
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_readv(file, vec, vlen, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
 	}
 
 	if (ret > 0)
@@ -838,14 +856,16 @@ SYSCALL_DEFINE3(readv, unsigned long, fd, const struct iovec __user *, vec,
 SYSCALL_DEFINE3(writev, unsigned long, fd, const struct iovec __user *, vec,
 		unsigned long, vlen)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
-	if (f.file) {
-		loff_t pos = file_pos_read(f.file);
-		ret = vfs_writev(f.file, vec, vlen, &pos);
-		file_pos_write(f.file, pos);
-		fdput(f);
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_writev(file, vec, vlen, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
 	}
 
 	if (ret > 0)
@@ -864,18 +884,19 @@ SYSCALL_DEFINE5(preadv, unsigned long, fd, const struct iovec __user *, vec,
 		unsigned long, vlen, unsigned long, pos_l, unsigned long, pos_h)
 {
 	loff_t pos = pos_from_hilo(pos_h, pos_l);
-	struct fd f;
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
 	if (pos < 0)
 		return -EINVAL;
 
-	f = fdget(fd);
-	if (f.file) {
+	file = fget_light(fd, &fput_needed);
+	if (file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PREAD)
-			ret = vfs_readv(f.file, vec, vlen, &pos);
-		fdput(f);
+		if (file->f_mode & FMODE_PREAD)
+			ret = vfs_readv(file, vec, vlen, &pos);
+		fput_light(file, fput_needed);
 	}
 
 	if (ret > 0)
@@ -888,18 +909,19 @@ SYSCALL_DEFINE5(pwritev, unsigned long, fd, const struct iovec __user *, vec,
 		unsigned long, vlen, unsigned long, pos_l, unsigned long, pos_h)
 {
 	loff_t pos = pos_from_hilo(pos_h, pos_l);
-	struct fd f;
+	struct file *file;
 	ssize_t ret = -EBADF;
+	int fput_needed;
 
 	if (pos < 0)
 		return -EINVAL;
 
-	f = fdget(fd);
-	if (f.file) {
+	file = fget_light(fd, &fput_needed);
+	if (file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PWRITE)
-			ret = vfs_writev(f.file, vec, vlen, &pos);
-		fdput(f);
+		if (file->f_mode & FMODE_PWRITE)
+			ret = vfs_writev(file, vec, vlen, &pos);
+		fput_light(file, fput_needed);
 	}
 
 	if (ret > 0)
@@ -911,28 +933,28 @@ SYSCALL_DEFINE5(pwritev, unsigned long, fd, const struct iovec __user *, vec,
 static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 			   size_t count, loff_t max)
 {
-	struct fd in, out;
-	struct inode *in_inode, *out_inode;
+	struct file * in_file, * out_file;
+	struct inode * in_inode, * out_inode;
 	loff_t pos;
 	ssize_t retval;
-	int fl;
+	int fput_needed_in, fput_needed_out, fl;
 
 	/*
 	 * Get input file, and verify that it is ok..
 	 */
 	retval = -EBADF;
-	in = fdget(in_fd);
-	if (!in.file)
+	in_file = fget_light(in_fd, &fput_needed_in);
+	if (!in_file)
 		goto out;
-	if (!(in.file->f_mode & FMODE_READ))
+	if (!(in_file->f_mode & FMODE_READ))
 		goto fput_in;
 	retval = -ESPIPE;
 	if (!ppos)
-		ppos = &in.file->f_pos;
+		ppos = &in_file->f_pos;
 	else
-		if (!(in.file->f_mode & FMODE_PREAD))
+		if (!(in_file->f_mode & FMODE_PREAD))
 			goto fput_in;
-	retval = rw_verify_area(READ, in.file, ppos, count);
+	retval = rw_verify_area(READ, in_file, ppos, count);
 	if (retval < 0)
 		goto fput_in;
 	count = retval;
@@ -941,15 +963,15 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	 * Get output file, and verify that it is ok..
 	 */
 	retval = -EBADF;
-	out = fdget(out_fd);
-	if (!out.file)
+	out_file = fget_light(out_fd, &fput_needed_out);
+	if (!out_file)
 		goto fput_in;
-	if (!(out.file->f_mode & FMODE_WRITE))
+	if (!(out_file->f_mode & FMODE_WRITE))
 		goto fput_out;
 	retval = -EINVAL;
-	in_inode = in.file->f_path.dentry->d_inode;
-	out_inode = out.file->f_path.dentry->d_inode;
-	retval = rw_verify_area(WRITE, out.file, &out.file->f_pos, count);
+	in_inode = in_file->f_path.dentry->d_inode;
+	out_inode = out_file->f_path.dentry->d_inode;
+	retval = rw_verify_area(WRITE, out_file, &out_file->f_pos, count);
 	if (retval < 0)
 		goto fput_out;
 	count = retval;
@@ -973,10 +995,10 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	 * and the application is arguably buggy if it doesn't expect
 	 * EAGAIN on a non-blocking file descriptor.
 	 */
-	if (in.file->f_flags & O_NONBLOCK)
+	if (in_file->f_flags & O_NONBLOCK)
 		fl = SPLICE_F_NONBLOCK;
 #endif
-	retval = do_splice_direct(in.file, ppos, out.file, count, fl);
+	retval = do_splice_direct(in_file, ppos, out_file, count, fl);
 
 	if (retval > 0) {
 		add_rchar(current, retval);
@@ -989,9 +1011,9 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 		retval = -EOVERFLOW;
 
 fput_out:
-	fdput(out);
+	fput_light(out_file, fput_needed_out);
 fput_in:
-	fdput(in);
+	fput_light(in_file, fput_needed_in);
 out:
 	return retval;
 }

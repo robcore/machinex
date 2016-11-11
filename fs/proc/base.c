@@ -2218,7 +2218,7 @@ out:
 }
 
 struct map_files_info {
-	fmode_t		mode;
+	struct file	*file;
 	unsigned long	len;
 	unsigned char	name[4*sizeof(long)+2]; /* max: %lx-%lx\0 */
 };
@@ -2227,9 +2227,12 @@ static struct dentry *
 proc_map_files_instantiate(struct inode *dir, struct dentry *dentry,
 			   struct task_struct *task, const void *ptr)
 {
-	fmode_t mode = (fmode_t)(unsigned long)ptr;
+	const struct file *file = ptr;
 	struct proc_inode *ei;
 	struct inode *inode;
+
+	if (!file)
+		return ERR_PTR(-ENOENT);
 
 	inode = proc_pid_make_inode(dir->i_sb, task);
 	if (!inode)
@@ -2242,9 +2245,9 @@ proc_map_files_instantiate(struct inode *dir, struct dentry *dentry,
 	inode->i_size = 64;
 	inode->i_mode = S_IFLNK;
 
-	if (mode & FMODE_READ)
+	if (file->f_mode & FMODE_READ)
 		inode->i_mode |= S_IRUSR;
-	if (mode & FMODE_WRITE)
+	if (file->f_mode & FMODE_WRITE)
 		inode->i_mode |= S_IWUSR;
 
 	d_set_d_op(dentry, &tid_map_files_dentry_operations);
@@ -2288,8 +2291,7 @@ static struct dentry *proc_map_files_lookup(struct inode *dir,
 	if (!vma)
 		goto out_no_vma;
 
-	result = proc_map_files_instantiate(dir, dentry, task,
-			(void *)(unsigned long)vma->vm_file->f_mode);
+	result = proc_map_files_instantiate(dir, dentry, task, vma->vm_file);
 
 out_no_vma:
 	up_read(&mm->mmap_sem);
@@ -2390,7 +2392,8 @@ proc_map_files_readdir(struct file *filp, void *dirent, filldir_t filldir)
 				if (++pos <= filp->f_pos)
 					continue;
 
-				info.mode = vma->vm_file->f_mode;
+				get_file(vma->vm_file);
+				info.file = vma->vm_file;
 				info.len = snprintf(info.name,
 						sizeof(info.name), "%lx-%lx",
 						vma->vm_start, vma->vm_end);
@@ -2405,11 +2408,19 @@ proc_map_files_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			ret = proc_fill_cache(filp, dirent, filldir,
 					      p->name, p->len,
 					      proc_map_files_instantiate,
-					      task,
-					      (void *)(unsigned long)p->mode);
+					      task, p->file);
 			if (ret)
 				break;
 			filp->f_pos++;
+			fput(p->file);
+		}
+		for (; i < nr_files; i++) {
+			/*
+			 * In case of error don't forget
+			 * to put rest of file refs.
+			 */
+			p = flex_array_get(fa, i);
+			fput(p->file);
 		}
 		if (fa)
 			flex_array_free(fa);

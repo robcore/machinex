@@ -57,13 +57,13 @@ EXPORT_SYMBOL(vfs_getattr);
 
 int vfs_fstat(unsigned int fd, struct kstat *stat)
 {
-	struct fd f = fdget_raw(fd);
+	int fput_needed;
+	struct file *f = fget_light(fd, &fput_needed);
 	int error = -EBADF;
 
-	if (f.file) {
-		error = vfs_getattr(f.file->f_path.mnt, f.file->f_path.dentry,
-				    stat);
-		fdput(f);
+	if (f) {
+		error = vfs_getattr(f->f_path.mnt, f->f_path.dentry, stat);
+		fput_light(f, fput_needed);
 	}
 	return error;
 }

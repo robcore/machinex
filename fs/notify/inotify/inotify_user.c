@@ -752,20 +752,20 @@ SYSCALL_DEFINE3(inotify_add_watch, int, fd, const char __user *, pathname,
 	struct fsnotify_group *group;
 	struct inode *inode;
 	struct path path;
-	struct fd f;
-	int ret;
+	struct file *filp;
+	int ret, fput_needed;
 	unsigned flags = 0;
 
 	/* don't allow invalid bits: we don't want flags set */
 	if (unlikely(!(mask & ALL_INOTIFY_BITS)))
 		return -EINVAL;
 
-	f = fdget(fd);
-	if (unlikely(!f.file))
+	filp = fget_light(fd, &fput_needed);
+	if (unlikely(!filp))
 		return -EBADF;
 
 	/* verify that this is indeed an inotify instance */
-	if (unlikely(f.file->f_op != &inotify_fops)) {
+	if (unlikely(filp->f_op != &inotify_fops)) {
 		ret = -EINVAL;
 		goto fput_and_out;
 	}
@@ -781,13 +781,13 @@ SYSCALL_DEFINE3(inotify_add_watch, int, fd, const char __user *, pathname,
 
 	/* inode held in place by reference to path; group by fget on fd */
 	inode = path.dentry->d_inode;
-	group = f.file->private_data;
+	group = filp->private_data;
 
 	/* create/update an inode mark */
 	ret = inotify_update_watch(group, inode, mask);
 	path_put(&path);
 fput_and_out:
-	fdput(f);
+	fput_light(filp, fput_needed);
 	return ret;
 }
 
@@ -795,19 +795,19 @@ SYSCALL_DEFINE2(inotify_rm_watch, int, fd, __s32, wd)
 {
 	struct fsnotify_group *group;
 	struct inotify_inode_mark *i_mark;
-	struct fd f;
-	int ret = 0;
+	struct file *filp;
+	int ret = 0, fput_needed;
 
-	f = fdget(fd);
-	if (unlikely(!f.file))
+	filp = fget_light(fd, &fput_needed);
+	if (unlikely(!filp))
 		return -EBADF;
 
 	/* verify that this is indeed an inotify instance */
 	ret = -EINVAL;
-	if (unlikely(f.file->f_op != &inotify_fops))
+	if (unlikely(filp->f_op != &inotify_fops))
 		goto out;
 
-	group = f.file->private_data;
+	group = filp->private_data;
 
 	ret = -EINVAL;
 	i_mark = inotify_idr_find(group, wd);
@@ -822,7 +822,7 @@ SYSCALL_DEFINE2(inotify_rm_watch, int, fd, __s32, wd)
 	fsnotify_put_mark(&i_mark->fsn_mark);
 
 out:
-	fdput(f);
+	fput_light(filp, fput_needed);
 	return ret;
 }
 

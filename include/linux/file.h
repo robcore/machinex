@@ -57,13 +57,11 @@ static inline struct fd fdget_raw(unsigned int fd)
 	return (struct fd){f,b};
 }
 
-extern int f_dupfd(unsigned int from, struct file *file, unsigned flags);
-extern int replace_fd(unsigned fd, struct file *file, unsigned flags);
 extern void set_close_on_exec(unsigned int fd, int flag);
-extern bool get_close_on_exec(unsigned int fd);
 extern void put_filp(struct file *);
-extern int get_unused_fd_flags(unsigned flags);
-#define get_unused_fd() get_unused_fd_flags(0)
+extern int alloc_fd(unsigned start, unsigned flags);
+extern int get_unused_fd(void);
+#define get_unused_fd_flags(flags) alloc_fd(0, (flags))
 extern void put_unused_fd(unsigned int fd);
 
 extern void fd_install(unsigned int fd, struct file *file);

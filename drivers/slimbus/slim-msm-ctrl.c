@@ -237,7 +237,7 @@ enum mgr_intr {
 enum frm_cfg {
 	FRM_ACTIVE	= 1,
 	CLK_GEAR	= 11,
-	ROOT_FREQ	= 11,
+	ROOT_FREQ	= 22,
 	REF_CLK_GEAR	= 15,
 	INTR_WAKE	= 19,
 };
@@ -2307,6 +2307,10 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	 * function
 	 */
 	mb();
+
+	/* Add devices registered with board-info now that controller is up */
+	slim_ctrl_add_boarddevs(&dev->ctrl);
+
 	if (pdev->dev.of_node)
 		of_register_slim_devices(&dev->ctrl);
 

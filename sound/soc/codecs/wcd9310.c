@@ -488,7 +488,6 @@ static int tabla_codec_enable_charge_pump(struct snd_soc_dapm_widget *w,
 	pr_debug("%s %d\n", __func__, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		msleep(15);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLK_OTHR_CTL, 0x01,
 			0x01);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLSG_CTL, 0x08, 0x08);
@@ -4099,7 +4098,7 @@ static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 #define TABLA_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
 
 #ifdef CONFIG_SOUND_CONTROL
-extern unsigned int snd_ctrl_enabled;
+extern int snd_ctrl_enabled;
 extern int snd_reg_access(unsigned int);
 extern unsigned int snd_cache_read(unsigned int);
 extern void snd_cache_write(unsigned int, unsigned int);

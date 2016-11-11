@@ -222,7 +222,7 @@ asmlinkage void __do_softirq(void)
 	int max_restart = MAX_SOFTIRQ_RESTART;
 
 	pending = local_softirq_pending();
-	vtime_account(current);
+	account_system_vtime(current);
 
 	__local_bh_disable((unsigned long)__builtin_return_address(0),
 				SOFTIRQ_OFFSET);
@@ -275,7 +275,7 @@ restart:
 
 	lockdep_softirq_exit();
 
-	vtime_account(current);
+	account_system_vtime(current);
 	__local_bh_enable(SOFTIRQ_OFFSET);
 }
 
@@ -343,13 +343,13 @@ static inline void invoke_softirq(void)
  */
 void irq_exit(void)
 {
-	vtime_account(current);
+	account_system_vtime(current);
 	trace_hardirq_exit();
 	sub_preempt_count(IRQ_EXIT_OFFSET);
 	if (!in_interrupt() && local_softirq_pending())
 		invoke_softirq();
 
-#ifdef CONFIG_NO_HZ_COMMON
+#ifdef CONFIG_NO_HZ
 	/* Make sure that timer wheel updates are propagated */
 	if (idle_cpu(smp_processor_id()) && !in_interrupt() && !need_resched())
 		tick_nohz_irq_exit();
@@ -759,9 +759,13 @@ static void run_ksoftirqd(unsigned int cpu)
 	local_irq_disable();
 	if (local_softirq_pending()) {
 		__do_softirq();
-		rcu_note_context_switch(cpu);
 		local_irq_enable();
 		cond_resched();
+
+		preempt_disable();
+		rcu_note_context_switch(cpu);
+		preempt_enable();
+
 		return;
 	}
 	local_irq_enable();

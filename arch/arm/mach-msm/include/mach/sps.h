@@ -79,8 +79,6 @@
 #define SPS_BAM_NO_EXT_P_RST        (1UL << 4)
 /* Don't enable local clock gating */
 #define SPS_BAM_NO_LOCAL_CLK_GATING (1UL << 5)
-/* Hold memory for BAM DMUX */
-#define SPS_BAM_HOLD_MEM            (1UL << 9)
 
 /* BAM device management flags */
 

@@ -217,10 +217,6 @@ static inline int pmd_same(pmd_t pmd_a, pmd_t pmd_b)
 #define move_pte(pte, prot, old_addr, new_addr)	(pte)
 #endif
 
-#ifndef pte_accessible
-# define pte_accessible(pte)		((void)(pte),1)
-#endif
-
 #ifndef flush_tlb_fix_spurious_fault
 #define flush_tlb_fix_spurious_fault(vma, address) flush_tlb_page(vma, address)
 #endif
@@ -396,57 +392,48 @@ static inline void ptep_modify_prot_commit(struct mm_struct *mm,
 
 #ifndef __HAVE_PFNMAP_TRACKING
 /*
- * Interfaces that can be used by architecture code to keep track of
- * memory type of pfn mappings specified by the remap_pfn_range,
- * vm_insert_pfn.
+ * Interface that can be used by architecture code to keep track of
+ * memory type of pfn mappings (remap_pfn_range, vm_insert_pfn)
+ *
+ * track_pfn_vma_new is called when a _new_ pfn mapping is being established
+ * for physical range indicated by pfn and size.
  */
-
-/*
- * track_pfn_remap is called when a _new_ pfn mapping is being established
- * by remap_pfn_range() for physical range indicated by pfn and size.
- */
-static inline int track_pfn_remap(struct vm_area_struct *vma, pgprot_t *prot,
-				  unsigned long pfn, unsigned long size)
+static inline int track_pfn_vma_new(struct vm_area_struct *vma, pgprot_t *prot,
+					unsigned long pfn, unsigned long size)
 {
 	return 0;
 }
 
 /*
- * track_pfn_insert is called when a _new_ single pfn is established
- * by vm_insert_pfn().
- */
-static inline int track_pfn_insert(struct vm_area_struct *vma, pgprot_t *prot,
-				   unsigned long pfn)
-{
-	return 0;
-}
-
-/*
- * track_pfn_copy is called when vma that is covering the pfnmap gets
+ * Interface that can be used by architecture code to keep track of
+ * memory type of pfn mappings (remap_pfn_range, vm_insert_pfn)
+ *
+ * track_pfn_vma_copy is called when vma that is covering the pfnmap gets
  * copied through copy_page_range().
  */
-static inline int track_pfn_copy(struct vm_area_struct *vma)
+static inline int track_pfn_vma_copy(struct vm_area_struct *vma)
 {
 	return 0;
 }
 
 /*
+ * Interface that can be used by architecture code to keep track of
+ * memory type of pfn mappings (remap_pfn_range, vm_insert_pfn)
+ *
  * untrack_pfn_vma is called while unmapping a pfnmap for a region.
  * untrack can be called for a specific region indicated by pfn and size or
- * can be for the entire vma (in which case pfn, size are zero).
+ * can be for the entire vma (in which case size can be zero).
  */
-static inline void untrack_pfn(struct vm_area_struct *vma,
-			       unsigned long pfn, unsigned long size)
+static inline void untrack_pfn_vma(struct vm_area_struct *vma,
+					unsigned long pfn, unsigned long size)
 {
 }
 #else
-extern int track_pfn_remap(struct vm_area_struct *vma, pgprot_t *prot,
-			   unsigned long pfn, unsigned long size);
-extern int track_pfn_insert(struct vm_area_struct *vma, pgprot_t *prot,
-			    unsigned long pfn);
-extern int track_pfn_copy(struct vm_area_struct *vma);
-extern void untrack_pfn(struct vm_area_struct *vma, unsigned long pfn,
-			unsigned long size);
+extern int track_pfn_vma_new(struct vm_area_struct *vma, pgprot_t *prot,
+				unsigned long pfn, unsigned long size);
+extern int track_pfn_vma_copy(struct vm_area_struct *vma);
+extern void untrack_pfn_vma(struct vm_area_struct *vma, unsigned long pfn,
+				unsigned long size);
 #endif
 
 #ifdef CONFIG_MMU
@@ -522,11 +509,10 @@ static inline int pmd_none_or_trans_huge_or_clear_bad(pmd_t *pmd)
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	barrier();
 #endif
-	if (pmd_none(pmdval))
+	if (pmd_none(pmdval) || pmd_trans_huge(pmdval))
 		return 1;
 	if (unlikely(pmd_bad(pmdval))) {
-		if (!pmd_trans_huge(pmdval))
-			pmd_clear_bad(pmd);
+		pmd_clear_bad(pmd);
 		return 1;
 	}
 	return 0;

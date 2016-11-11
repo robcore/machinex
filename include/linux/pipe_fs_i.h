@@ -168,6 +168,4 @@ extern const struct pipe_buf_operations nosteal_pipe_buf_ops;
 long pipe_fcntl(struct file *, unsigned int, unsigned long arg);
 struct pipe_inode_info *get_pipe_info(struct file *file);
 
-int create_pipe_files(struct file **, int);
-
 #endif

@@ -140,18 +140,18 @@ long do_utimes(int dfd, const char __user *filename, struct timespec *times,
 		goto out;
 
 	if (filename == NULL && dfd != AT_FDCWD) {
-		struct fd f;
+		struct file *file;
 
 		if (flags & AT_SYMLINK_NOFOLLOW)
 			goto out;
 
-		f = fdget(dfd);
+		file = fget(dfd);
 		error = -EBADF;
-		if (!f.file)
+		if (!file)
 			goto out;
 
-		error = utimes_common(&f.file->f_path, times);
-		fdput(f);
+		error = utimes_common(&file->f_path, times);
+		fput(file);
 	} else {
 		struct path path;
 		int lookup_flags = 0;
@@ -222,4 +222,3 @@ SYSCALL_DEFINE2(utimes, char __user *, filename,
 {
 	return sys_futimesat(AT_FDCWD, filename, utimes);
 }
-

@@ -269,12 +269,12 @@ SYSCALL_DEFINE4(signalfd4, int, ufd, sigset_t __user *, user_mask,
 		if (ufd < 0)
 			kfree(ctx);
 	} else {
-		struct fd f = fdget(ufd);
-		if (!f.file)
+		struct file *file = fget(ufd);
+		if (!file)
 			return -EBADF;
-		ctx = f.file->private_data;
-		if (f.file->f_op != &signalfd_fops) {
-			fdput(f);
+		ctx = file->private_data;
+		if (file->f_op != &signalfd_fops) {
+			fput(file);
 			return -EINVAL;
 		}
 		spin_lock_irq(&current->sighand->siglock);
@@ -282,7 +282,7 @@ SYSCALL_DEFINE4(signalfd4, int, ufd, sigset_t __user *, user_mask,
 		spin_unlock_irq(&current->sighand->siglock);
 
 		wake_up(&current->sighand->signalfd_wqh);
-		fdput(f);
+		fput(file);
 	}
 
 	return ufd;
@@ -293,4 +293,3 @@ SYSCALL_DEFINE3(signalfd, int, ufd, sigset_t __user *, user_mask,
 {
 	return sys_signalfd4(ufd, user_mask, sizemask, 0);
 }
-

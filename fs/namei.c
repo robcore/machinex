@@ -49,8 +49,8 @@
  * The new code replaces the old recursive symlink resolution with
  * an iterative one (in case of non-nested symlink chains).  It does
  * this with calls to <fs>_follow_link().
- * As a side effect, dir_namei(), _namei() and follow_link() are now
- * replaced with a single function lookup_dentry() that can handle all
+ * As a side effect, dir_namei(), _namei() and follow_link() are now 
+ * replaced with a single function lookup_dentry() that can handle all 
  * the special cases of the former code.
  *
  * With the new dcache, the pathname is stored at each inode, at least as
@@ -1553,7 +1553,7 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 {
 	struct path next;
 	int err;
-
+	
 	while (*name=='/')
 		name++;
 	if (!*name)
@@ -1619,7 +1619,7 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 		}
 		if (can_lookup(nd->inode))
 			continue;
-		err = -ENOTDIR;
+		err = -ENOTDIR; 
 		break;
 		/* here ends the main loop */
 
@@ -1636,6 +1636,8 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 		     struct nameidata *nd, struct file **fp)
 {
 	int retval = 0;
+	int fput_needed;
+	struct file *file;
 
 	nd->last_type = LAST_ROOT; /* if there are only slashes... */
 	nd->flags = flags | LOOKUP_JUMPED;
@@ -1690,42 +1692,45 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 			get_fs_pwd(current->fs, &nd->path);
 		}
 	} else {
-		struct fd f = fdget_raw(dfd);
 		struct dentry *dentry;
 
-		if (!f.file)
-			return -EBADF;
+		file = fget_raw_light(dfd, &fput_needed);
+		retval = -EBADF;
+		if (!file)
+			goto out_fail;
 
-		dentry = f.file->f_path.dentry;
+		dentry = file->f_path.dentry;
 
 		if (*name) {
-			if (!S_ISDIR(dentry->d_inode->i_mode)) {
-				fdput(f);
-				return -ENOTDIR;
-			}
+			retval = -ENOTDIR;
+			if (!S_ISDIR(dentry->d_inode->i_mode))
+				goto fput_fail;
 
 			retval = inode_permission(dentry->d_inode, MAY_EXEC);
-			if (retval) {
-				fdput(f);
-				return retval;
-			}
+			if (retval)
+				goto fput_fail;
 		}
 
-		nd->path = f.file->f_path;
+		nd->path = file->f_path;
 		if (flags & LOOKUP_RCU) {
-			if (f.need_put)
-				*fp = f.file;
+			if (fput_needed)
+				*fp = file;
 			nd->seq = __read_seqcount_begin(&nd->path.dentry->d_seq);
 			br_read_lock(&vfsmount_lock);
 			rcu_read_lock();
 		} else {
-			path_get(&nd->path);
-			fdput(f);
+			path_get(&file->f_path);
+			fput_light(file, fput_needed);
 		}
 	}
 
 	nd->inode = nd->path.dentry->d_inode;
 	return 0;
+
+fput_fail:
+	fput_light(file, fput_needed);
+out_fail:
+	return retval;
 }
 
 static inline int lookup_last(struct nameidata *nd, struct path *path)
@@ -3231,7 +3236,7 @@ int vfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 	if (old_dentry->d_inode == new_dentry->d_inode)
  		return 0;
-
+ 
 	error = may_delete(old_dir, old_dentry, is_dir);
 	if (error)
 		return error;
@@ -3500,7 +3505,7 @@ EXPORT_SYMBOL(user_path_at);
 EXPORT_SYMBOL(follow_down_one);
 EXPORT_SYMBOL(follow_down);
 EXPORT_SYMBOL(follow_up);
-EXPORT_SYMBOL(get_write_access); /* nfsd */
+EXPORT_SYMBOL(get_write_access); /* binfmt_aout */
 EXPORT_SYMBOL(getname);
 EXPORT_SYMBOL(lock_rename);
 EXPORT_SYMBOL(lookup_one_len);

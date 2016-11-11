@@ -87,11 +87,11 @@ int user_statfs(const char __user *pathname, struct kstatfs *st)
 
 int fd_statfs(int fd, struct kstatfs *st)
 {
-	struct fd f = fdget(fd);
+	struct file *file = fget_raw(fd);
 	int error = -EBADF;
-	if (f.file) {
-		error = vfs_statfs(&f.file->f_path, st);
-		fdput(f);
+	if (file) {
+		error = vfs_statfs(&file->f_path, st);
+		fput(file);
 	}
 	return error;
 }
@@ -232,4 +232,3 @@ SYSCALL_DEFINE2(ustat, unsigned, dev, struct ustat __user *, ubuf)
 
 	return copy_to_user(ubuf, &tmp, sizeof(struct ustat)) ? -EFAULT : 0;
 }
-
