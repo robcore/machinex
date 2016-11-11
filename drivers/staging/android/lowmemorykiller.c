@@ -193,11 +193,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_hotness_adj = 0;
 #endif
 	int array_size = ARRAY_SIZE(lowmem_adj);
-//#if (!defined(CONFIG_MACH_JF) \
-//	&& !defined(CONFIG_SEC_PRODUCT_8960)\
-//	)
 	unsigned long nr_to_scan = sc->nr_to_scan;
-#endif
 	struct reclaim_state *reclaim_state = current->reclaim_state;
 #ifndef CONFIG_CMA
 	int other_free = global_page_state(NR_FREE_PAGES);
@@ -406,19 +402,15 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
-		rcu_read_unlock();
-#ifdef LMK_COUNT_READ
-		lmk_count++;
-#endif
-	}
-#endif
-
-		/* give the system time to free up the memory */
 		msleep_interruptible(20);
 		if(reclaim_state)
 			reclaim_state->reclaimed_slab = selected_tasksize;
-	} else
+#ifdef LMK_COUNT_READ
+		lmk_count++;
+#endif
+	} 	 else
 		rcu_read_unlock();
+#endif
 
 	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
 		     nr_to_scan, sc->gfp_mask, rem);
