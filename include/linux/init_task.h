@@ -151,6 +151,8 @@ extern struct task_group root_task_group;
  */
 #define INIT_TASK(tsk)	\
 {									\
+	.causes     = NULL,                     \
+	.account_id     = ATOMIC_INIT(0),	\
 	.state		= 0,						\
 	.stack		= &init_thread_info,				\
 	.usage		= ATOMIC_INIT(2),				\

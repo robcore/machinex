@@ -309,6 +309,11 @@ struct cfq_data {
 
 	/* Number of groups which are on blkcg->blkg_list */
 	unsigned int nr_blkcg_linked_grps;
+
+	/*
+	 * yangsuli added tracing facility
+	 */
+	int prio_served_rqs[IOPRIO_BE_NR];
 };
 
 static struct cfq_group *cfq_get_next_cfqg(struct cfq_data *cfqd);
@@ -612,6 +617,7 @@ static inline unsigned
 cfq_scaled_cfqq_slice(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 {
 	unsigned slice = cfq_prio_to_slice(cfqd, cfqq);
+	//printk("yangsuli cfq_prio_to_slice returned %d for cfq %p prio %d\n", slice, cfqq, cfqq->ioprio);
 	if (cfqd->cfq_latency) {
 		/*
 		 * interested queues (we consider only the ones with the same
@@ -646,6 +652,8 @@ cfq_set_prio_slice(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 	cfqq->slice_start = jiffies;
 	cfqq->slice_end = jiffies + slice;
 	cfqq->allocated_slice = slice;
+	//printk("yangsuli cfqq:%p of prio %lu slice set to %d\n", cfqq,
+	//		IOPRIO_PRIO_DATA(cfqq->ioprio), cfqq->allocated_slice);
 	cfq_log_cfqq(cfqd, cfqq, "set_slice=%lu", cfqq->slice_end - jiffies);
 }
 
@@ -1722,6 +1730,8 @@ static void __cfq_set_active_queue(struct cfq_data *cfqd,
 	if (cfqq) {
 		cfq_log_cfqq(cfqd, cfqq, "set_active wl_prio:%d wl_type:%d",
 				cfqd->serving_prio, cfqd->serving_type);
+	//	printk("yangsuli set_active cfqq:%p prio:%lu at %lu\n",
+	//			cfqq, IOPRIO_PRIO_DATA(cfqq->ioprio), jiffies);
 		cfq_blkiocg_update_avg_queue_size_stats(&cfqq->cfqg->blkg);
 		cfqq->slice_start = 0;
 		cfqq->dispatch_start = jiffies;
@@ -2340,8 +2350,10 @@ static struct cfq_queue *cfq_select_queue(struct cfq_data *cfqd)
 	/*
 	 * We were waiting for group to get backlogged. Expire the queue
 	 */
-	if (cfq_cfqq_wait_busy(cfqq) && !RB_EMPTY_ROOT(&cfqq->sort_list))
+	if (cfq_cfqq_wait_busy(cfqq) && !RB_EMPTY_ROOT(&cfqq->sort_list)){
+		//printk("yangsuli waiting for group to get backlooged cause queue expeire: cfqq: %p prio: %lu\n", cfqq, IOPRIO_PRIO_DATA(cfqq->ioprio));
 		goto expire;
+	}
 
 	/*
 	 * The active queue has run out of time, expire it and select new.
@@ -2381,6 +2393,7 @@ static struct cfq_queue *cfq_select_queue(struct cfq_data *cfqd)
 	if (new_cfqq) {
 		if (!cfqq->new_cfqq)
 			cfq_setup_merge(cfqq, new_cfqq);
+		//printk("yangsuli another queue has request waiting within mean seek distance cause queue expeire: cfqq: %p prio: %lu\n", cfqq, IOPRIO_PRIO_DATA(cfqq->ioprio));
 		goto expire;
 	}
 
@@ -2423,6 +2436,7 @@ check_group_idle:
 	}
 
 expire:
+	//printk("yangsuli code path fall cause queue expeire: cfqq: %p prio: %lu\n", cfqq, IOPRIO_PRIO_DATA(cfqq->ioprio));
 	cfq_slice_expired(cfqd, 0);
 new_queue:
 	/*
@@ -2598,6 +2612,8 @@ static bool cfq_dispatch_request(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 	 */
 	cfq_dispatch_insert(cfqd->queue, rq);
 
+	cfqd->prio_served_rqs[cfqq->ioprio]++;
+
 	if (!cfqd->active_cic) {
 		struct cfq_io_cq *cic = RQ_CIC(rq);
 
@@ -2632,6 +2648,8 @@ static int cfq_dispatch_requests(struct request_queue *q, int force)
 	 */
 	if (!cfq_dispatch_request(cfqd, cfqq))
 		return 0;
+
+	//printk("yangsuli dispatched a request from cfqq %p prio %lu\n", cfqq, IOPRIO_PRIO_DATA(cfqq->ioprio));
 
 	cfqq->slice_dispatch++;
 	cfq_clear_cfqq_must_dispatch(cfqq);
@@ -3200,6 +3218,17 @@ static void cfq_insert_request(struct request_queue *q, struct request *rq)
 	struct cfq_data *cfqd = q->elevator->elevator_data;
 	struct cfq_queue *cfqq = RQ_CFQQ(rq);
 
+	/*
+	int raw_prio = ((struct cfq_io_context*)rq->elevator_private[0])->ioc->ioprio;
+	int prio;
+	if(ioprio_valid(raw_prio)){
+        	prio = IOPRIO_PRIO_DATA(raw_prio);
+	}else{
+		prio = IOPRIO_NORM;
+	}
+	//printk("cfq_insert_request called. execname %s data_size %d prio %d\n", current->comm, blk_rq_bytes(rq), prio);
+	*/
+
 	cfq_log_cfqq(cfqd, cfqq, "insert_request");
 	cfq_init_prio_data(cfqq, RQ_CIC(rq)->icq.ioc);
 
@@ -3619,6 +3648,11 @@ static void cfq_exit_queue(struct elevator_queue *e)
 	struct cfq_data *cfqd = e->elevator_data;
 	struct request_queue *q = cfqd->queue;
 	bool wait = false;
+	int i;
+
+	for ( i = 0; i < IOPRIO_BE_NR; i++){
+		printk("cfq prio: %d req_num: %d\n", i, cfqd->prio_served_rqs[i]);
+	}
 
 	cfq_shutdown_timer_wq(cfqd);
 
@@ -3747,8 +3781,13 @@ static void *cfq_init_queue(struct request_queue *q)
 	cfqd->cfq_slice_async_rq = cfq_slice_async_rq;
 	cfqd->cfq_slice_idle = blk_queue_nonrot(q) ? 0 : cfq_slice_idle;
 	cfqd->cfq_group_idle = cfq_group_idle;
-	cfqd->cfq_latency = 1;
+	cfqd->cfq_latency = 0;
 	cfqd->hw_tag = -1;
+
+	for (i = 0; i < IOPRIO_BE_NR; i++){
+		cfqd->prio_served_rqs[i] = 0;
+	}
+
 	/*
 	 * we optimistically start assuming sync ops weren't delayed in last
 	 * second, in order to have larger depth for async operations.

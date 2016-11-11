@@ -632,6 +632,8 @@ struct transaction_s
 	 * structures associated with the transaction
 	 */
 	struct list_head	t_private_list;
+
+	struct cause_list* causes;
 };
 
 struct transaction_run_stats_s {
@@ -812,7 +814,7 @@ struct journal_s
 	 * j_checkpoint_mutex.  [j_checkpoint_mutex]
 	 */
 	struct buffer_head	*j_chkpt_bhs[JBD2_NR_BATCH];
-	
+
 	/*
 	 * Journal head: identifies the first unused block in the journal.
 	 * [j_state_lock]
@@ -1193,7 +1195,7 @@ extern int	   jbd2_journal_cancel_revoke(handle_t *, struct journal_head *);
 extern void	   jbd2_journal_write_revoke_records(journal_t *journal,
 						     transaction_t *transaction,
 						     struct list_head *log_bufs,
-						     int write_op);
+						     int write_op, struct cause_list*);
 
 /* Recovery revoke support */
 extern int	jbd2_journal_set_revoke(journal_t *, unsigned long long, tid_t);

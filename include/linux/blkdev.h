@@ -107,6 +107,7 @@ struct request {
 		struct rb_node rb_node;	/* sort/lookup */
 		void *completion_data;
 	};
+	struct rb_node expire_rb_node;
 
 	/*
 	 * Three pointers are available for the IO schedulers, if they need
@@ -409,6 +410,9 @@ struct request_queue {
 	/* Throttle data */
 	struct throtl_data *td;
 #endif
+
+	// this allows us to identify when schedulers have switched
+	int sched_uniq;
 };
 
 #define QUEUE_FLAG_QUEUED	1	/* uses generic tag queueing */
@@ -1453,5 +1457,22 @@ static inline bool blk_needs_flush_plug(struct task_struct *tsk)
 }
 
 #endif /* CONFIG_BLOCK */
+
+#include <linux/elevator.h>
+struct request_queue;
+
+struct request_queue *inode_to_request_queue(struct inode *inode);
+
+void get_elevator_call_info_from_inode(struct inode* inode,
+										  struct request_queue **rq,
+										  struct module **module,
+										  struct elevator_syscall_ops *sops);
+
+
+void get_elevator_call_info(struct file* filp,
+										  struct request_queue **rq,
+										  struct module **module,
+										  struct elevator_syscall_ops *sops);
+
 
 #endif

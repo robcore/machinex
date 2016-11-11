@@ -5,6 +5,7 @@
 #include "ext4_jbd2.h"
 
 #include <trace/events/ext4.h>
+#include <linux/cause_tags.h>
 
 int __ext4_journal_get_write_access(const char *where, unsigned int line,
 				    handle_t *handle, struct buffer_head *bh)
@@ -106,6 +107,14 @@ int __ext4_handle_dirty_metadata(const char *where, unsigned int line,
 				 struct buffer_head *bh)
 {
 	int err = 0;
+
+#ifndef DISABLE_CAUSES
+	// add this cause (meta write)
+	spin_lock(&bh->causes_lock);
+	cause_list_add(&bh->causes, current);
+	set_cause_list_type(bh->causes, SPLIT_CHECKPOINT);
+	spin_unlock(&bh->causes_lock);
+#endif
 
 	if (ext4_handle_valid(handle)) {
 		err = jbd2_journal_dirty_metadata(handle, bh);

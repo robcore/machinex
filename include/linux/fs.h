@@ -946,6 +946,9 @@ struct inode {
 	atomic_t		i_readcount; /* struct files open RO */
 #endif
 	void			*i_private; /* fs or device private pointer */
+
+	// for scheduler to use as it pleases
+	long i_private1; // (maybe use as last write offset)
 };
 
 static inline int inode_unhashed(struct inode *inode)

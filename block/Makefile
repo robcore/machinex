@@ -6,7 +6,13 @@ obj-$(CONFIG_BLOCK) := elevator.o blk-core.o blk-tag.o blk-sysfs.o \
 			blk-flush.o blk-settings.o blk-ioc.o blk-map.o \
 			blk-exec.o blk-merge.o blk-softirq.o blk-timeout.o \
 			blk-iopoll.o blk-lib.o ioctl.o genhd.o scsi_ioctl.o \
-			partition-generic.o partitions/
+			cause_tags.o partition-generic.o partitions/
+obj-$(CONFIG_IOSCHED_AFQ) := acct_afq_sched.o \
+	split_sched.o split_account.o ioctl_helper.o io_batch.o disk_sim.o
+obj-$(CONFIG_IOSCHED_SPLIT_DEADLINE) := split_deadline_sched.o \
+	split_sched.o split_account.o ioctl_helper.o io_batch.o disk_sim.o \
+	expire_rb.o io_work_expire_rb.o
+obj-$(CONFIG_IOSCHED_TB) := tbucket.o ioctl_helper.o io_batch.o disk_sim.o
 
 obj-$(CONFIG_BLK_DEV_BSG)	+= bsg.o
 obj-$(CONFIG_BLK_DEV_BSGLIB)	+= bsg-lib.o

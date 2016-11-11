@@ -50,6 +50,7 @@
 
 #include <asm/uaccess.h>
 #include <asm/page.h>
+#include <linux/cause_tags.h>
 
 EXPORT_SYMBOL(jbd2_journal_extend);
 EXPORT_SYMBOL(jbd2_journal_stop);
@@ -2228,6 +2229,8 @@ static struct journal_head *journal_alloc_journal_head(void)
 
 static void journal_free_journal_head(struct journal_head *jh)
 {
+	put_cause_list(jh->causes);
+
 #ifdef CONFIG_JBD2_DEBUG
 	atomic_dec(&nr_journal_heads);
 	memset(jh, JBD2_POISON_FREE, sizeof(*jh));
@@ -2300,6 +2303,7 @@ repeat:
 			goto repeat;
 		}
 
+		new_jh->causes = NULL;
 		jh = new_jh;
 		new_jh = NULL;		/* We consumed it */
 		set_buffer_jbd(bh);

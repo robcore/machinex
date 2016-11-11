@@ -41,6 +41,7 @@
 #include <linux/bitops.h>
 #include <linux/mpage.h>
 #include <linux/bit_spinlock.h>
+#include <linux/cause_tags.h>
 
 static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
 
@@ -1964,12 +1965,15 @@ int __block_write_begin(struct page *page, loff_t pos, unsigned len,
 EXPORT_SYMBOL(__block_write_begin);
 
 static int __block_commit_write(struct inode *inode, struct page *page,
-		unsigned from, unsigned to)
+		unsigned from, unsigned to, long pos)
 {
 	unsigned block_start, block_end;
 	int partial = 0;
 	unsigned blocksize;
 	struct buffer_head *bh, *head;
+	struct request_queue *q = NULL;
+	elevator_causes_dirty_fn *causes_dirty_fn = NULL;
+	int cause_added;
 
 	blocksize = 1 << inode->i_blkbits;
 
@@ -1983,6 +1987,37 @@ static int __block_commit_write(struct inode *inode, struct page *page,
 		} else {
 			set_buffer_uptodate(bh);
 			mark_buffer_dirty(bh);
+
+#ifndef DISABLE_CAUSES
+
+			spin_lock(&bh->causes_lock);
+			// add this cause (data write)
+			cause_added = cause_list_add(&bh->causes, current);
+			set_cause_list_type(bh->causes, SPLIT_DATA);
+
+			// dirty hook
+			q = inode_to_request_queue(inode);
+			if (q && bh->causes && cause_added) {
+				spin_lock_irq(q->queue_lock);
+
+				if (bh->causes->callback_q == NULL) {
+					// TODO(tyler): need refcount get on q?
+					bh->causes->callback_q = q;
+					bh->causes->sched_uniq = q->sched_uniq;
+					bh->causes->size = bh->b_size;
+				}
+				// one buffer can't correspond to many disks, right?
+				WARN_ON(bh->causes->callback_q != q);
+
+				causes_dirty_fn = q->elevator->type->ops.elevator_causes_dirty_fn;
+				if (causes_dirty_fn && q->sched_uniq == bh->causes->sched_uniq)
+					causes_dirty_fn(q, bh->causes, current, inode, pos);
+
+				spin_unlock_irq(q->queue_lock);
+			}
+			spin_unlock(&bh->causes_lock);
+
+#endif
 		}
 		clear_buffer_new(bh);
 	}
@@ -2057,7 +2092,7 @@ int block_write_end(struct file *file, struct address_space *mapping,
 	flush_dcache_page(page);
 
 	/* This could be a short (even 0-length) commit */
-	__block_commit_write(inode, page, start, start+copied);
+	__block_commit_write(inode, page, start, start+copied, pos);
 
 	return copied;
 }
@@ -2378,7 +2413,7 @@ EXPORT_SYMBOL(cont_write_begin);
 int block_commit_write(struct page *page, unsigned from, unsigned to)
 {
 	struct inode *inode = page->mapping->host;
-	__block_commit_write(inode,page,from,to);
+	__block_commit_write(inode,page,from,to,-1);
 	return 0;
 }
 EXPORT_SYMBOL(block_commit_write);
@@ -3010,6 +3045,9 @@ int submit_bh(int rw, struct buffer_head * bh)
 		clear_buffer_sync_flush(bh);
 	}
 
+	if (rw & WRITE)
+		move_causes_bh_to_bio(bh, bio);
+
 	bio_get(bio);
 	submit_bio(rw, bio);
 
@@ -3288,6 +3326,12 @@ struct buffer_head *alloc_buffer_head(gfp_t gfp_flags)
 {
 	struct buffer_head *ret = kmem_cache_zalloc(bh_cachep, gfp_flags);
 	if (ret) {
+
+#ifndef DISABLE_CAUSES
+		spin_lock_init(&ret->causes_lock);
+		BUG_ON(ret->causes);
+#endif
+
 		INIT_LIST_HEAD(&ret->b_assoc_buffers);
 		preempt_disable();
 		__this_cpu_inc(bh_accounting.nr);
@@ -3300,6 +3344,9 @@ EXPORT_SYMBOL(alloc_buffer_head);
 
 void free_buffer_head(struct buffer_head *bh)
 {
+	put_cause_list(bh->causes);
+	bh->causes = NULL;
+
 	BUG_ON(!list_empty(&bh->b_assoc_buffers));
 	kmem_cache_free(bh_cachep, bh);
 	preempt_disable();

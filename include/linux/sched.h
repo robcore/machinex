@@ -1531,6 +1531,13 @@ struct task_struct {
 #ifdef CONFIG_HAVE_HW_BREAKPOINT
 	atomic_t ptrace_bp_refcnt;
 #endif
+
+	// sometimes a task acts as a proxy for other threads (e.g.,
+	// a flush thread acting on behalf of other tasks that did
+	// delayed allocation).
+	struct cause_list* causes;
+
+	atomic_t account_id;
 };
 
 /* Future-safe accessor for struct task_struct's cpus_allowed. */

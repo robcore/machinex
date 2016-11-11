@@ -1245,6 +1245,8 @@ xfs_itruncate_extents(
 			 * Mark the inode dirty so it will be logged and
 			 * moved forward in the log as part of every commit.
 			 */
+			//yangsuli
+			//here dirties data...
 			xfs_trans_log_inode(tp, ip, XFS_ILOG_CORE);
 		}
 
@@ -1363,6 +1365,11 @@ xfs_iunlink(
 	agi->agi_unlinked[bucket_index] = cpu_to_be32(agino);
 	offset = offsetof(xfs_agi_t, agi_unlinked) +
 		(sizeof(xfs_agino_t) * bucket_index);
+	//yangsuli
+	//here we dirty
+	//but note that here the dirtier created/modified bp?
+	//is it true that who ever calls trans_log_buf dirtied the buf?
+	//possible...
 	xfs_trans_log_buf(tp, agibp, offset,
 			  (offset + sizeof(xfs_agino_t) - 1));
 	return 0;
@@ -2488,6 +2495,7 @@ xfs_iflush(
 	if (error)
 		goto cluster_corrupt_out;
 
+	//yangsuli: here dirty
 	if (flags & SYNC_WAIT)
 		error = xfs_bwrite(bp);
 	else

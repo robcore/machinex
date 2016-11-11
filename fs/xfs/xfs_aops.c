@@ -39,6 +39,8 @@
 #include <linux/pagevec.h>
 #include <linux/writeback.h>
 
+#include <linux/cause_tags.h>
+
 void
 xfs_count_page_state(
 	struct page		*page,
@@ -450,6 +452,7 @@ xfs_start_page_writeback(
 
 static inline int bio_add_buffer(struct bio *bio, struct buffer_head *bh)
 {
+	move_causes_bh_to_bio(bh, bio);
 	return bio_add_page(bio, bh->b_page, bh->b_size, bh_offset(bh));
 }
 

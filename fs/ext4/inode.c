@@ -37,6 +37,7 @@
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/ratelimit.h>
+#include <linux/cause_tags.h>
 #include <linux/bitops.h>
 
 #include "ext4_jbd2.h"
@@ -1493,7 +1494,7 @@ static void ext4_print_free_blocks(struct inode *inode)
  * The function skips space we know is already mapped to disk blocks.
  *
  */
-static void mpage_da_map_and_submit(struct mpage_da_data *mpd)
+static void __mpage_da_map_and_submit(struct mpage_da_data *mpd)
 {
 	int err, blks, get_blocks_flags;
 	struct ext4_map_blocks map, *mapp = NULL;
@@ -1624,6 +1625,14 @@ static void mpage_da_map_and_submit(struct mpage_da_data *mpd)
 submit_io:
 	mpage_da_submit_io(mpd, mapp);
 	mpd->io_done = 1;
+}
+
+static void mpage_da_map_and_submit(struct mpage_da_data *mpd)
+{
+	__mpage_da_map_and_submit(mpd);
+	// we are no longer acting as a proxy for dirty buffers
+	put_cause_list(current->causes);
+	current->causes = new_cause_list();
 }
 
 #define BH_FLAGS ((1 << BH_Uptodate) | (1 << BH_Mapped) | \
@@ -2161,6 +2170,10 @@ static int write_cache_pages_da(struct address_space *mapping,
 					 * with the page in ext4_writepage
 					 */
 					if (ext4_bh_delay_or_unwritten(NULL, bh)) {
+						// are we a proxy?
+						if (current->causes)
+							cause_list_copy(bh->causes, &current->causes);
+
 						mpage_add_bh_to_extent(mpd, logical,
 								       bh->b_size,
 								       bh->b_state);
@@ -2256,6 +2269,10 @@ static int ext4_da_writepages(struct address_space *mapping,
 	 */
 	if (unlikely(sbi->s_mount_flags & EXT4_MF_FS_ABORTED))
 		return -EROFS;
+
+	// now acting as cause proxy
+	BUG_ON(current->causes);
+	current->causes = new_cause_list();
 
 	if (wbc->range_start == 0 && wbc->range_end == LLONG_MAX)
 		range_whole = 1;
@@ -2397,6 +2414,10 @@ retry:
 		mapping->writeback_index = done_index;
 
 out_writepages:
+	// done acting as cause proxy
+	put_cause_list(current->causes);
+	current->causes = NULL;
+
 	wbc->nr_to_write -= nr_to_writebump;
 	wbc->range_start = range_start;
 	trace_ext4_da_writepages_result(inode, wbc, ret, pages_written);
@@ -2598,7 +2619,7 @@ static int ext4_da_write_end(struct file *file,
 		if (ext4_da_should_update_i_disksize(page, end)) {
 			down_write(&EXT4_I(inode)->i_data_sem);
 			if (new_i_size > EXT4_I(inode)->i_disksize) {
-#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK 
+#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK
 /*++++ Effective Write Back patch added for fsync latency control ++++*/
 				/*
 				 * Updating i_disksize when extending file

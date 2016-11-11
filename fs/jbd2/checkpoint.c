@@ -314,6 +314,7 @@ static int __process_buffer(journal_t *journal, struct journal_head *jh,
 		(*batch_count)++;
 		if (*batch_count == JBD2_NR_BATCH) {
 			spin_unlock(&journal->j_list_lock);
+			printk("yangsuli: journal checkpoint process submit %d blocks\n", *batch_count);
 			__flush_batch(journal, batch_count);
 			ret = 1;
 		}

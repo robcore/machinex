@@ -6,6 +6,7 @@
 #include <linux/bio.h>
 #include <linux/blkdev.h>
 #include <linux/scatterlist.h>
+#include <linux/cause_tags.h>
 
 #include "blk.h"
 
@@ -214,6 +215,9 @@ int blkdev_issue_zeroout(struct block_device *bdev, sector_t sector,
 		while (nr_sects != 0) {
 			sz = min((sector_t) PAGE_SIZE >> 9 , nr_sects);
 			ret = bio_add_page(bio, ZERO_PAGE(0), sz << 9, 0);
+
+			add_causes_zero_to_bio(bio, sz << 9);
+
 			nr_sects -= ret >> 9;
 			sector += ret >> 9;
 			if (ret < (sz << 9))
