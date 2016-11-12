@@ -1044,8 +1044,12 @@ SYSCALL_DEFINE2(creat, const char __user *, pathname, umode_t, mode)
 int filp_close(struct file *filp, fl_owner_t id)
 {
 	int retval = 0;
+	long ret;
 
-	if (!file_count(filp)) {
+	ret = file_count(filp);
+	if (ret <= 0) {
+		printk(KERN_ERR "VFS: Close: file count is %ld\n", ret);
+		WARN_ON(ret < 0);
 		return 0;
 	}
 

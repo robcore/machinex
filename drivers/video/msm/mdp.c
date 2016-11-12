@@ -2368,9 +2368,10 @@ static struct dev_pm_ops mdp_dev_pm_ops = {
 static struct platform_driver mdp_driver = {
 	.probe = mdp_probe,
 	.remove = mdp_remove,
+/*#ifndef CONFIG_HAS_POWERSUSPEND
 	.suspend = mdp_suspend,
 	.resume = NULL,
-
+#endif */
 #ifdef CONFIG_MDP_SHUTDOWN
 	.shutdown = mdp_shutdown,
 #else

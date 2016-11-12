@@ -18,11 +18,9 @@
 
 #include <linux/ion.h>
 
-enum msm_ion_heap_types {
-	ION_HEAP_TYPE_MSM_START = ION_HEAP_TYPE_CUSTOM + 1,
-	ION_HEAP_TYPE_IOMMU = ION_HEAP_TYPE_MSM_START,
-	ION_HEAP_TYPE_CP,
-};
+#define ION_HEAP_TYPE_MSM_START (ION_HEAP_TYPE_CUSTOM + 1)
+#define ION_HEAP_TYPE_IOMMU	(ION_HEAP_TYPE_MSM_START)
+#define ION_HEAP_TYPE_CP	(ION_HEAP_TYPE_IOMMU + 1)
 
 /**
  * These are the only ids that should be used for Ion heap ids.
@@ -72,20 +70,14 @@ enum cp_mem_usage {
 /**
  * Flag to use when allocating to indicate that a heap is secure.
  */
-#define ION_FLAG_SECURE (1 << ION_HEAP_ID_RESERVED)
+#define ION_SECURE (1 << ION_HEAP_ID_RESERVED)
 
 /**
  * Flag for clients to force contiguous memort allocation
  *
  * Use of this flag is carefully monitored!
  */
-#define ION_FLAG_FORCE_CONTIGUOUS (1 << 30)
-
-/**
-* Deprecated! Please use the corresponding ION_FLAG_*
-*/
-#define ION_SECURE ION_FLAG_SECURE
-#define ION_FORCE_CONTIGUOUS ION_FLAG_FORCE_CONTIGUOUS
+#define ION_FORCE_CONTIGUOUS (1 << 30)
 
 /**
  * Macro should be used with ion_heap_ids defined above.
@@ -282,33 +274,6 @@ struct ion_flush_data {
 	unsigned int length;
 };
 
-/* struct ion_flag_data - information about flags for this buffer
- *
- * @handle:	handle to get flags from
- * @flags:	flags of this handle
- *
- * Takes handle as an input and outputs the flags from the handle
- * in the flag field.
- */
-struct ion_flag_data {
-	struct ion_handle *handle;
-	unsigned long flags;
-};
-
-/* struct ion_buffer_data
- *
- * @handle:	handle for the buffer being queried
- * @paddr:	The physical address of the buffer referenced by the handle
- * @length:	The length of the buffer referenced by the handle
- *
- * Gets the physicial address of the given handle
- */
-struct ion_buffer_data {
-	struct ion_handle *handle;
-	unsigned long paddr;
-	unsigned int length;
-};
-
 #define ION_IOC_MSM_MAGIC 'M'
 
 /**
@@ -332,21 +297,5 @@ struct ion_buffer_data {
  */
 #define ION_IOC_CLEAN_INV_CACHES	_IOWR(ION_IOC_MSM_MAGIC, 2, \
 						struct ion_flush_data)
-
-/**
- * DOC: ION_IOC_GET_FLAGS - get the flags of the handle
- *
- * Gets the flags of the current handle which indicate cachability,
- * secure state etc.
- */
-#define ION_IOC_GET_FLAGS		_IOWR(ION_IOC_MSM_MAGIC, 3, \
-						struct ion_flag_data)
-/**
- * DOC: ION_IOC_GET_PHYS - get the physical address of the handle
- *
- * Gets the physicial address of the given handle
- */
-#define ION_IOC_GET_PHYS	_IOWR(ION_IOC_MSM_MAGIC, 4, \
-						struct ion_buffer_data)
 
 #endif

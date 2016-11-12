@@ -1938,7 +1938,6 @@ int do_writepages(struct address_space *mapping, struct writeback_control *wbc)
 		ret = generic_writepages(mapping, wbc);
 	return ret;
 }
-EXPORT_SYMBOL(do_writepages);
 
 /**
  * write_one_page - write out a single page and optionally wait on I/O

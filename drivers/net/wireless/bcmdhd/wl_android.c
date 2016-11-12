@@ -1,14 +1,14 @@
 /*
  * Linux cfg80211 driver - Android related functions
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ * Copyright (C) 1999-2015, Broadcom Corporation
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.c 517113 2014-11-24 06:29:50Z $
+ * $Id: wl_android.c 561435 2015-06-04 13:56:04Z $
  */
 
 #include <linux/module.h>
@@ -178,6 +178,7 @@
 #define CMD_SETSCANNPROBES "SETSCANNPROBES"
 #define CMD_GETDFSSCANMODE "GETDFSSCANMODE"
 #define CMD_SETDFSSCANMODE "SETDFSSCANMODE"
+#define CMD_SETJOINPREFER "SETJOINPREFER"
 
 #define CMD_SENDACTIONFRAME "SENDACTIONFRAME"
 #define CMD_REASSOC "REASSOC"
@@ -187,6 +188,11 @@
 
 #define CMD_GETOKCMODE "GETOKCMODE"
 #define CMD_SETOKCMODE "SETOKCMODE"
+
+#ifdef FCC_PWR_LIMIT_2G
+#define CMD_GET_FCC_PWR_LIMIT_2G "GET_FCC_CHANNEL"
+#define CMD_SET_FCC_PWR_LIMIT_2G "SET_FCC_CHANNEL"
+#endif /* FCC_PWR_LIMIT_2G */
 
 #define ANDROID_WIFI_MAX_ROAM_SCAN_CHANNELS 100
 
@@ -225,6 +231,11 @@ typedef struct android_wifi_af_params {
 
 #define CMD_SET_SCSCAN		"SETSINGLEANT"
 #define CMD_GET_SCSCAN		"GETSINGLEANT"
+
+/* FCC_PWR_LIMIT_2G */
+#define CUSTOMER_HW4_ENABLE		0
+#define CUSTOMER_HW4_DISABLE	-1
+#define CUSTOMER_HW4_EN_CONVERT(i)	(i += 1)
 
 #endif /* CUSTOMER_HW4 */
 
@@ -1014,6 +1025,44 @@ int wl_android_set_scan_dfs_channel_mode(struct net_device *dev, char *command, 
 	return 0;
 }
 
+#define JOINPREFFER_BUF_SIZE 12
+
+static int
+wl_android_set_join_prefer(struct net_device *dev, char *command, int total_len)
+{
+	int error = BCME_OK;
+	char smbuf[WLC_IOCTL_SMLEN];
+	uint8 buf[JOINPREFFER_BUF_SIZE];
+	char *pcmd;
+	int total_len_left;
+	int i;
+	char hex[2];
+
+	pcmd = command + strlen(CMD_SETJOINPREFER) + 1;
+	total_len_left = strlen(pcmd);
+
+	memset(buf, 0, sizeof(buf));
+
+	if (total_len_left != JOINPREFFER_BUF_SIZE << 1) {
+		DHD_ERROR(("%s: Failed to get Parameter\n", __FUNCTION__));
+		return BCME_ERROR;
+	}
+
+	/* Store the MSB first, as required by join_pref */
+	for (i = 0; i < JOINPREFFER_BUF_SIZE; i++) {
+		hex[0] = *pcmd++;
+		hex[1] = *pcmd++;
+		buf[i] = (uint8)simple_strtoul(hex, NULL, 16);
+	}
+
+	prhex("join pref", (uint8 *)buf, JOINPREFFER_BUF_SIZE);
+	error = wldev_iovar_setbuf(dev, "join_pref", buf, JOINPREFFER_BUF_SIZE,
+		smbuf, sizeof(smbuf), NULL);
+	if (error) {
+		DHD_ERROR(("Failed to set join_pref, error = %d\n", error));
+	}
+	return error;
+}
 
 int wl_android_send_action_frame(struct net_device *dev, char *command, int total_len)
 {
@@ -1028,6 +1077,12 @@ int wl_android_send_action_frame(struct net_device *dev, char *command, int tota
 	params = (android_wifi_af_params_t *)(command + strlen(CMD_SENDACTIONFRAME) + 1);
 	if (params == NULL) {
 		DHD_ERROR(("%s: Invalid params \n", __FUNCTION__));
+		goto send_action_frame_out;
+	}
+
+	if (params->len > ANDROID_WIFI_ACTION_FRAME_SIZE) {
+		DHD_ERROR(("%s: Requested action frame len was out of range(%d)\n",
+			__FUNCTION__, params->len));
 		goto send_action_frame_out;
 	}
 
@@ -1238,6 +1293,51 @@ int wl_android_set_okc_mode(struct net_device *dev, char *command, int total_len
 	return error;
 }
 #endif /* WES_SUPPORT */
+#ifdef FCC_PWR_LIMIT_2G
+int
+wl_android_set_fcc_pwr_limit_2g(struct net_device *dev, char *command, int total_len)
+{
+	int error = 0;
+	int enable = 0;
+
+	sscanf(command+sizeof("SET_FCC_CHANNEL"), "%d", &enable);
+
+	if ((enable != CUSTOMER_HW4_ENABLE) && (enable != CUSTOMER_HW4_DISABLE)) {
+		DHD_ERROR(("%s: Invalid data\n", __FUNCTION__));
+		return BCME_ERROR;
+	}
+
+	CUSTOMER_HW4_EN_CONVERT(enable);
+
+	DHD_ERROR(("%s: fccpwrlimit2g set (%d)\n", __FUNCTION__, enable));
+	error = wldev_iovar_setint(dev, "fccpwrlimit2g", enable);
+	if (error) {
+		DHD_ERROR(("%s: fccpwrlimit2g set error (%d)\n", __FUNCTION__, error));
+		return BCME_ERROR;
+	}
+
+	return error;
+}
+
+int
+wl_android_get_fcc_pwr_limit_2g(struct net_device *dev, char *command, int total_len)
+{
+	int error = 0;
+	int enable = 0;
+	int bytes_written = 0;
+
+	error = wldev_iovar_getint(dev, "fccpwrlimit2g", &enable);
+	if (error) {
+		DHD_ERROR(("%s: fccpwrlimit2g get error (%d)\n", __FUNCTION__, error));
+		return BCME_ERROR;
+	}
+	DHD_ERROR(("%s: fccpwrlimit2g get (%d)\n", __FUNCTION__, enable));
+
+	bytes_written = snprintf(command, total_len, "%s %d", CMD_GET_FCC_PWR_LIMIT_2G, enable);
+
+	return bytes_written;
+}
+#endif /* FCC_PWR_LIMIT_2G */
 #endif /* CUSTOMER_HW4 */
 
 #ifdef PNO_SUPPORT
@@ -1294,8 +1394,9 @@ wls_parse_batching_cmd(struct net_device *dev, char *command, int total_len)
 					" <> params\n", __FUNCTION__));
 					goto exit;
 				}
-					while ((token2 = strsep(&pos2,
-					PNO_PARAM_CHANNEL_DELIMETER)) != NULL) {
+
+				while ((token2 = strsep(&pos2, PNO_PARAM_CHANNEL_DELIMETER))
+						!= NULL) {
 					if (token2 == NULL || !*token2)
 						break;
 					if (*token2 == '\0')
@@ -1306,11 +1407,18 @@ wls_parse_batching_cmd(struct net_device *dev, char *command, int total_len)
 						DHD_PNO(("band : %s\n",
 							(*token2 == 'A')? "A" : "B"));
 					} else {
+						if ((batch_params.nchan >= WL_NUMCHANNELS) ||
+						    (i >= WL_NUMCHANNELS)) {
+							DHD_ERROR(("Too many nchan %d\n",
+								batch_params.nchan));
+							err = BCME_BUFTOOSHORT;
+							goto exit;
+						}
 						batch_params.chan_list[i++] =
-						simple_strtol(token2, NULL, 0);
+							simple_strtol(token2, NULL, 0);
 						batch_params.nchan++;
-						DHD_PNO(("channel :%d\n",
-						batch_params.chan_list[i-1]));
+						DHD_PNO(("channel: %d\n",
+							batch_params.chan_list[i-1]));
 					}
 				 }
 			} else if (!strncmp(param, PNO_PARAM_RTT, strlen(PNO_PARAM_RTT))) {
@@ -1629,19 +1737,28 @@ wl_android_set_mac_address_filter(struct net_device *dev, const char* str)
 	int macmode = MACLIST_MODE_DISABLED;
 	struct maclist *list;
 	char eabuf[ETHER_ADDR_STR_LEN];
+	char *token;
 
 	/* string should look like below (macmode/macnum/maclist) */
 	/*   1 2 00:11:22:33:44:55 00:11:22:33:44:ff  */
 
 	/* get the MAC filter mode */
-	macmode = bcm_atoi(strsep((char**)&str, " "));
+	token = strsep((char**)&str, " ");
+	if (!token) {
+		return -1;
+	}
+	macmode = bcm_atoi(token);
 
 	if (macmode < MACLIST_MODE_DISABLED || macmode > MACLIST_MODE_ALLOW) {
 		DHD_ERROR(("%s : invalid macmode %d\n", __FUNCTION__, macmode));
 		return -1;
 	}
 
-	macnum = bcm_atoi(strsep((char**)&str, " "));
+	token = strsep((char**)&str, " ");
+	if (!token) {
+		return -1;
+	}
+	macnum = bcm_atoi(token);
 	if (macnum < 0 || macnum > MAX_NUM_MAC_FILT) {
 		DHD_ERROR(("%s : invalid number of MAC address entries %d\n",
 			__FUNCTION__, macnum));
@@ -1712,10 +1829,6 @@ int wl_android_wifi_on(struct net_device *dev)
 			if (dhd_dev_init_ioctl(dev) < 0)
 				ret = -EFAULT;
 		}
-#if defined(ENABLE_4335BT_WAR) && defined(CUSTOMER_HW4)
-		bcm_bt_unlock(lock_cookie_wifi);
-		DHD_ERROR(("%s() bcm_bt_unlock\n", __FUNCTION__));
-#endif
 		g_wifi_on = TRUE;
 	}
 
@@ -2066,7 +2179,7 @@ wl_android_set_ssid(struct net_device *dev, const char* hapd_ssid)
 	ssid.SSID_len = strlen(hapd_ssid);
 	if (ssid.SSID_len > DOT11_MAX_SSID_LEN) {
 		ssid.SSID_len = DOT11_MAX_SSID_LEN;
-		DHD_ERROR(("%s : Too long SSID Length %d\n", __FUNCTION__, strlen(hapd_ssid)));
+		DHD_ERROR(("%s : Too long SSID Length %zu\n", __FUNCTION__, strlen(hapd_ssid)));
 	}
 	bcm_strncpy_s(ssid.SSID, sizeof(ssid.SSID), hapd_ssid, ssid.SSID_len);
 	DHD_INFO(("%s: HAPD_SSID = %s\n", __FUNCTION__, ssid.SSID));
@@ -2205,6 +2318,7 @@ wl_android_set_ltecx(struct net_device *dev, const char* string_num)
 }
 #endif /* SUPPORT_LTECX */
 
+#ifdef WL_RELMCAST
 static int
 wl_android_rmc_enable(struct net_device *net, int rmc_enable)
 {
@@ -2262,6 +2376,7 @@ static int wl_android_set_rmc_event(struct net_device *dev, char *command, int t
 
 	return err;
 }
+#endif /* WL_RELMCAST */
 
 int wl_android_get_singlecore_scan(struct net_device *dev, char *command, int total_len)
 {
@@ -2922,10 +3037,10 @@ static int wl_android_set_ibss_txfail_event(struct net_device *dev, char *comman
 
 	/* set pid, and if the event was happened, let's send a notification through netlink */
 	wl_cfg80211_set_txfail_pid(pid);
-#ifdef CUSTOMER_HW4
+#if defined(CUSTOMER_HW4) && defined(WL_RELMCAST)
 	/* using same pid for RMC, AIBSS shares same pid with RMC and it is set once */
 	wl_cfg80211_set_rmc_pid(pid);
-#endif
+#endif /* CUSTOMER_HW4 && WL_RELMCAST */
 
 	/* If retry value is 0, it disables the functionality for TX Fail. */
 	if (retry > 0) {
@@ -3436,6 +3551,16 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_COUNTRY, strlen(CMD_COUNTRY)) == 0) {
 		char *country_code = command + strlen(CMD_COUNTRY) + 1;
 		bytes_written = wldev_set_country(net, country_code, true, true);
+#ifdef FCC_PWR_LIMIT_2G
+		{
+			DHD_ERROR(("%s: fccpwrlimit2g is deactivated\n", __FUNCTION__));
+			bytes_written = wldev_iovar_setint(net, "fccpwrlimit2g", FALSE);
+			if (bytes_written) {
+				DHD_ERROR(("%s: fccpwrlimit2g deactivate set error (%d)\n",
+					__FUNCTION__, bytes_written));
+			}
+		}
+#endif /* FCC_PWR_LIMIT_2G */
 	}
 #endif /* CUSTOMER_SET_COUNTRY */
 #endif /* WL_CFG80211 */
@@ -3478,6 +3603,16 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		strlen(CMD_COUNTRYREV_SET)) == 0) {
 		bytes_written = wl_android_set_country_rev(net, command,
 		priv_cmd.total_len);
+#ifdef FCC_PWR_LIMIT_2G
+		{
+			DHD_ERROR(("%s: fccpwrlimit2g is deactivated\n", __FUNCTION__));
+			bytes_written = wldev_iovar_setint(net, "fccpwrlimit2g", FALSE);
+			if (bytes_written) {
+				DHD_ERROR(("%s: fccpwrlimit2g deactivate set error (%d)\n",
+					__FUNCTION__, bytes_written));
+			}
+		}
+#endif /* FCC_PWR_LIMIT_2G */
 	} else if (strnicmp(command, CMD_COUNTRYREV_GET,
 		strlen(CMD_COUNTRYREV_GET)) == 0) {
 		bytes_written = wl_android_get_country_rev(net, command,
@@ -3536,6 +3671,9 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_SETDFSSCANMODE, strlen(CMD_SETDFSSCANMODE)) == 0) {
 		bytes_written = wl_android_set_scan_dfs_channel_mode(net, command,
 			priv_cmd.total_len);
+	}
+	else if (strnicmp(command, CMD_SETJOINPREFER, strlen(CMD_SETJOINPREFER)) == 0) {
+		bytes_written = wl_android_set_join_prefer(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_GETWESMODE, strlen(CMD_GETWESMODE)) == 0) {
 		bytes_written = wl_android_get_wes_mode(net, command, priv_cmd.total_len);
@@ -3686,6 +3824,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		bytes_written = wl_android_set_ltecx(net, (const char*)command+skip);
 	}
 #endif /* SUPPORT_LTECX */
+#ifdef WL_RELMCAST
 	else if (strnicmp(command, CMD_SET_RMC_ENABLE, strlen(CMD_SET_RMC_ENABLE)) == 0) {
 		int rmc_enable = *(command + strlen(CMD_SET_RMC_ENABLE) + 1) - '0';
 		bytes_written = wl_android_rmc_enable(net, rmc_enable);
@@ -3711,8 +3850,10 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		bytes_written = wl_android_rmc_set_leader(net, (const char*)command+skip);
 	}
 	else if (strnicmp(command, CMD_SET_RMC_EVENT,
-		strlen(CMD_SET_RMC_EVENT)) == 0)
+		strlen(CMD_SET_RMC_EVENT)) == 0) {
 		bytes_written = wl_android_set_rmc_event(net, command, priv_cmd.total_len);
+	}
+#endif /* WL_RELMCAST */
 	else if (strnicmp(command, CMD_GET_SCSCAN, strlen(CMD_GET_SCSCAN)) == 0) {
 		bytes_written = wl_android_get_singlecore_scan(net, command, priv_cmd.total_len);
 	}
@@ -3797,6 +3938,16 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 			priv_cmd.total_len);
 	}
 #endif
+#ifdef FCC_PWR_LIMIT_2G
+	else if (strnicmp(command, CMD_GET_FCC_PWR_LIMIT_2G,
+		strlen(CMD_GET_FCC_PWR_LIMIT_2G)) == 0) {
+		bytes_written = wl_android_get_fcc_pwr_limit_2g(net, command, priv_cmd.total_len);
+	}
+	else if (strnicmp(command, CMD_SET_FCC_PWR_LIMIT_2G,
+		strlen(CMD_SET_FCC_PWR_LIMIT_2G)) == 0) {
+		bytes_written = wl_android_set_fcc_pwr_limit_2g(net, command, priv_cmd.total_len);
+	}
+#endif /* FCC_PWR_LIMIT_2G */
 	else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");

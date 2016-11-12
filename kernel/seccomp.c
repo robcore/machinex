@@ -227,7 +227,7 @@ static u32 seccomp_run_filters(int syscall)
 
 static inline bool seccomp_may_assign_mode(unsigned long seccomp_mode)
 {
-	assert_spin_locked(&current->sighand->siglock);
+	BUG_ON(!spin_is_locked(&current->sighand->siglock));
 
 	if (current->seccomp.mode && current->seccomp.mode != seccomp_mode)
 		return false;
@@ -238,7 +238,7 @@ static inline bool seccomp_may_assign_mode(unsigned long seccomp_mode)
 static inline void seccomp_assign_mode(struct task_struct *task,
 				       unsigned long seccomp_mode)
 {
-	assert_spin_locked(&task->sighand->siglock);
+	BUG_ON(!spin_is_locked(&task->sighand->siglock));
 
 	task->seccomp.mode = seccomp_mode;
 	/*
@@ -277,7 +277,7 @@ static inline pid_t seccomp_can_sync_threads(void)
 	struct task_struct *thread, *caller;
 
 	BUG_ON(!mutex_is_locked(&current->signal->cred_guard_mutex));
-	assert_spin_locked(&current->sighand->siglock);
+	BUG_ON(!spin_is_locked(&current->sighand->siglock));
 
 	/* Validate all threads being eligible for synchronization. */
 	caller = current;
@@ -318,7 +318,7 @@ static inline void seccomp_sync_threads(void)
 	struct task_struct *thread, *caller;
 
 	BUG_ON(!mutex_is_locked(&current->signal->cred_guard_mutex));
-	assert_spin_locked(&current->sighand->siglock);
+	BUG_ON(!spin_is_locked(&current->sighand->siglock));
 
 	/* Synchronize all threads. */
 	caller = current;
@@ -386,7 +386,7 @@ static struct seccomp_filter *seccomp_prepare_filter(struct sock_fprog *fprog)
 	 * This avoids scenarios where unprivileged tasks can affect the
 	 * behavior of privileged children.
 	 */
-	if (!task_no_new_privs(current) &&
+	if (!current->no_new_privs &&
 	    security_capable_noaudit(current_cred(), current_user_ns(),
 				     CAP_SYS_ADMIN) != 0)
 		return ERR_PTR(-EACCES);
@@ -479,7 +479,7 @@ static long seccomp_attach_filter(unsigned int flags,
 	unsigned long total_insns;
 	struct seccomp_filter *walker;
 
-	assert_spin_locked(&current->sighand->siglock);
+	BUG_ON(!spin_is_locked(&current->sighand->siglock));
 
 	/* Validate resulting filter length. */
 	total_insns = filter->len;
@@ -790,13 +790,13 @@ SYSCALL_DEFINE3(seccomp, unsigned int, op, unsigned int, flags,
 }
 
 /**
- * seccomp_set_mode: internal function for setting seccomp mode
+ * prctl_set_seccomp: configures current->seccomp.mode
  * @seccomp_mode: requested mode to use
  * @filter: optional struct sock_fprog for use with SECCOMP_MODE_FILTER
  *
  * Returns 0 on success or -EINVAL on failure.
  */
-static long seccomp_set_mode(unsigned long seccomp_mode, char __user *filter)
+long prctl_set_seccomp(unsigned long seccomp_mode, char __user *filter)
 {
 	unsigned int op;
 	char __user *uargs;
@@ -821,16 +821,4 @@ static long seccomp_set_mode(unsigned long seccomp_mode, char __user *filter)
 
 	/* prctl interface doesn't have flags, so they are always zero. */
 	return do_seccomp(op, 0, uargs);
-}
-
-/**
- * prctl_set_seccomp: configures current->seccomp.mode
- * @seccomp_mode: requested mode to use
- * @filter: optional struct sock_fprog for use with SECCOMP_MODE_FILTER
- *
- * Returns 0 on success or -EINVAL on failure.
- */
-long prctl_set_seccomp(unsigned long seccomp_mode, char __user *filter)
-{
-	return seccomp_set_mode(seccomp_mode, filter);
 }

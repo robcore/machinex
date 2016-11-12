@@ -180,7 +180,7 @@ choice
 		bool "ZEN" if IOSCHED_ZEN=y
 
 	config DEFAULT_FIFO
-		bool "fifo" if IOSCHED_FIFO=y
+		bool "fifo"
 endchoice
 
 config DEFAULT_IOSCHED

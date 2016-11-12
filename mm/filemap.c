@@ -1590,7 +1590,7 @@ EXPORT_SYMBOL(generic_file_aio_read);
 static int page_cache_read(struct file *file, pgoff_t offset)
 {
 	struct address_space *mapping = file->f_mapping;
-	struct page *page;
+	struct page *page; 
 	int ret;
 
 	do {
@@ -1607,7 +1607,7 @@ static int page_cache_read(struct file *file, pgoff_t offset)
 		page_cache_release(page);
 
 	} while (ret == AOP_TRUNCATED_PAGE);
-
+		
 	return ret;
 }
 
@@ -2421,7 +2421,7 @@ generic_file_buffered_write_iter(struct kiocb *iocb, struct iov_iter *iter,
 		written += status;
 		*ppos = pos + status;
   	}
-
+	
 	return written ? written : status;
 }
 EXPORT_SYMBOL(generic_file_buffered_write_iter);
