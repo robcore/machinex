@@ -25,9 +25,9 @@
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
-unsigned int snd_ctrl_enabled;
-static unsigned int snd_ctrl_locked;
-static unsigned int snd_rec_ctrl_locked;
+unsigned int snd_ctrl_enabled = 1;
+unsigned int snd_ctrl_locked = 2;
+unsigned int snd_rec_ctrl_locked = 2;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -147,7 +147,7 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_RX_LINE_2_GAIN:
 		case TABLA_A_RX_LINE_3_GAIN:
 		case TABLA_A_RX_LINE_4_GAIN:
-			if (snd_ctrl_locked == 2)
+			if (snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
@@ -162,7 +162,7 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
 		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			if (snd_rec_ctrl_locked == 2)
+			if (snd_ctrl_enabled > 0) && (snd_rec_ctrl_locked > 0)
 				ret = 0;
 			break;
 		default:
@@ -262,7 +262,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 2;
 
 	return count;
@@ -435,7 +435,7 @@ static struct kobject *sound_control_kobj;
 static int sound_control_init(void)
 {
 	int sysfs_result;
-	
+
 	snd_ctrl_enabled = 1;
 	snd_ctrl_locked = 2;
 	snd_rec_ctrl_locked = 2;
@@ -471,5 +471,3 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
-
-
