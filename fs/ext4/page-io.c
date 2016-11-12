@@ -23,7 +23,6 @@
 #include <linux/workqueue.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include <linux/cause_tags.h>
 #include <linux/ratelimit.h>
 
 #include "ext4_jbd2.h"
@@ -348,15 +347,8 @@ submit_and_retry:
 	io->io_end->size += bh->b_size;
 	io->io_next_block++;
 	ret = bio_add_page(io->io_bio, bh->b_page, bh->b_size, bh_offset(bh));
-
-
-
 	if (ret != bh->b_size)
 		goto submit_and_retry;
-
-	// I think this path is only for writes
-	move_causes_bh_to_bio(bh, io->io_bio);
-
 	if ((io_end->num_io_pages == 0) ||
 	    (io_end->pages[io_end->num_io_pages-1] != io_page)) {
 		io_end->pages[io_end->num_io_pages++] = io_page;

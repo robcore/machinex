@@ -97,7 +97,6 @@ bool kthread_should_park(void)
 {
 	return test_bit(KTHREAD_SHOULD_PARK, &to_kthread(current)->flags);
 }
-EXPORT_SYMBOL(kthread_data);
 
 /**
  * kthread_freezable_should_stop - should this freezable kthread return now?
@@ -136,6 +135,8 @@ void *kthread_data(struct task_struct *task)
 {
 	return to_kthread(task)->data;
 }
+
+EXPORT_SYMBOL(kthread_data);
 
 /**
  * probe_kthread_data - speculative version of kthread_data()

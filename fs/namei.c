@@ -15,7 +15,6 @@
  */
 
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/export.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -37,7 +36,6 @@
 #include <linux/posix_acl.h>
 #include <linux/hash.h>
 #include <asm/uaccess.h>
-#include <linux/blkdev.h>
 
 #include "internal.h"
 #include "mount.h"
@@ -2094,47 +2092,21 @@ void unlock_rename(struct dentry *p1, struct dentry *p2)
 int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 		struct nameidata *nd)
 {
-	struct request_queue* rq;
-	struct elevator_syscall_ops sops;
-	struct module* module;
-	void* opaque = NULL;
-
-	int error;
-
-	// intercept entry
-	get_elevator_call_info_from_inode(dir, &rq, &module, &sops);
-	if(sops.create_entry_fn){
-		error = sops.create_entry_fn(rq, dir, dentry, mode, &opaque, sops.sched_uniq);
-		if (error) {
-			BUG_ON(!module);
-			module_put(module);
-		return error;
-		}
-	}
-
-	error = may_create(dir, dentry);
+	int error = may_create(dir, dentry);
 
 	if (error)
-		goto out;
+		return error;
 
-	if (!dir->i_op->create) {
-		error = -EACCES;	/* shouldn't it be ENOSYS? */
-		goto out;
-	}
+	if (!dir->i_op->create)
+		return -EACCES;	/* shouldn't it be ENOSYS? */
 	mode &= S_IALLUGO;
 	mode |= S_IFREG;
 	error = security_inode_create(dir, dentry, mode);
 	if (error)
-		goto out;
+		return error;
 	error = dir->i_op->create(dir, dentry, mode, nd);
 	if (!error)
 		fsnotify_create(dir, dentry);
- out:
-	if(sops.create_return_fn)
-		sops.create_return_fn(rq, opaque, error, sops.sched_uniq);
-	if(module)
-		module_put(module);
-
 	return error;
 }
 
@@ -2684,12 +2656,6 @@ SYSCALL_DEFINE3(mknod, const char __user *, filename, umode_t, mode, unsigned, d
 
 int vfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
-	struct request_queue* rq;
-	struct elevator_syscall_ops sops;
-	struct module* module;
-	void* opaque = NULL;
-
-	//it's ok to check permission upfront before queuing since no I/O is performed
 	int error = may_create(dir, dentry);
 	unsigned max_links = dir->i_sb->s_max_links;
 
@@ -2699,21 +2665,10 @@ int vfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	if (!dir->i_op->mkdir)
 		return -EPERM;
 
-	// intercept entry
-	get_elevator_call_info_from_inode(dir, &rq, &module, &sops);
-	if(sops.mkdir_entry_fn){
-		error = sops.mkdir_entry_fn(rq, dir, dentry, mode, &opaque, sops.sched_uniq);
-		if (error) {
-			BUG_ON(!module);
-			module_put(module);
-			return error;
-		}
-	}
-
 	mode &= (S_IRWXUGO|S_ISVTX);
 	error = security_inode_mkdir(dir, dentry, mode);
 	if (error)
-		goto out;
+		return error;
 
 	if (max_links && dir->i_nlink >= max_links)
 		return -EMLINK;
@@ -2721,12 +2676,6 @@ int vfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	error = dir->i_op->mkdir(dir, dentry, mode);
 	if (!error)
 		fsnotify_mkdir(dir, dentry);
-
-out:
-	if(sops.mkdir_return_fn)
-		sops.mkdir_return_fn(rq, opaque, error, sops.sched_uniq);
-	if(module)
-		module_put(module);
 	return error;
 }
 

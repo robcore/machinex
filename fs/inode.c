@@ -219,8 +219,6 @@ static struct inode *alloc_inode(struct super_block *sb)
 		return NULL;
 	}
 
-	inode->i_private1 = 0;
-
 	return inode;
 }
 
@@ -1568,9 +1566,6 @@ void touch_atime(struct path *path)
 	 * so just ignore the return value.
 	 */
 	update_time(inode, &now, S_ATIME);
-#ifndef SPLIT_NODEP
-	mark_inode_dirty_sync(inode);
-#endif
 	mnt_drop_write(mnt);
 }
 EXPORT_SYMBOL(touch_atime);
@@ -1617,10 +1612,6 @@ int file_update_time(struct file *file)
 		return 0;
 
 	ret = update_time(inode, &now, sync_it);
-
-#ifndef SPLIT_NODEP
-	mark_inode_dirty_sync(inode);
-#endif
 	mnt_drop_write_file(file);
 
 	return ret;

@@ -2,24 +2,6 @@ if BLOCK
 
 menu "IO Schedulers"
 
-config IOSCHED_AFQ
-	bool
-	default y
-	---help---
-	  VERY experimental.
-
-config IOSCHED_SPLIT_DEADLINE
-	bool
-	default y
-	---help---
-	  VERY experimental.
-
-config IOSCHED_TB
-	bool
-	default y
-	---help---
-	  VERY experimental.
-
 config IOSCHED_NOOP
 	bool
 	default y
@@ -199,16 +181,6 @@ choice
 
 	config DEFAULT_FIFO
 		bool "fifo" if IOSCHED_FIFO=y
-
-	config DEFAULT_AFQ
-		bool "AFQ" if IOSCHED_AFQ=y
-
-	config DEFAULT_SPLIT_DEADLINE
-		bool "split_Deadline" if IOSCHED_SPLIT_DEADLINE=y
-
-	config DEFAULT_TB
-		bool "TB" if IOSCHED_TB=y
-
 endchoice
 
 config DEFAULT_IOSCHED
@@ -225,9 +197,7 @@ config DEFAULT_IOSCHED
 	default "fiops" if DEFAULT_FIOPS
 	default "sioplus" if DEFAULT_SIOPLUS
 	default "tripndroid" if DEFAULT_TRIPNDROID
-	default "afq" if DEFAULT_AFQ
-	default "split_deadline" if DEFAULT_SPLIT_DEADLINE
-	default "tb" if DEFAULT_TB
+
 endmenu
 
 endif

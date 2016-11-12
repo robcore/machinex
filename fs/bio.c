@@ -25,7 +25,6 @@
 #include <linux/export.h>
 #include <linux/mempool.h>
 #include <linux/workqueue.h>
-#include <linux/cause_tags.h>
 #include <scsi/sg.h>		/* for struct sg_iovec */
 
 #include <trace/events/block.h>
@@ -235,8 +234,6 @@ fallback:
 void bio_free(struct bio *bio, struct bio_set *bs)
 {
 	void *p;
-
-	del_cause_list_list(bio->cll);
 
 	if (bio_has_allocated_vec(bio))
 		bvec_free_bs(bs, bio->bi_io_vec, BIO_POOL_IDX(bio));

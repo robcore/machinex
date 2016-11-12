@@ -40,9 +40,6 @@
 #include "locking.h"
 #include "compat.h"
 
-#include <linux/blkdev.h>
-#include <linux/cause_tags.h>
-
 /*
  * when auto defrag is enabled we
  * queue up these defrag structs to remember which
@@ -380,57 +377,6 @@ void btrfs_drop_pages(struct page **pages, size_t num_pages)
 	}
 }
 
-void add_to_causes(struct inode *inode, struct page *page, loff_t pos) {
-#ifndef DISABLE_CAUSES
-
-	struct request_queue *q = NULL;
-	elevator_causes_dirty_fn *causes_dirty_fn = NULL;
-	int cause_added;
-	struct cause_list_locked * locked_causes = (struct cause_list_locked *) page->locked_causes;
-
-	if(!locked_causes){
-	//printk("### no causes.\n");
-	WARN_ON(1);
-	return;
-	}
-	else{
-	//printk("### causes.\n");
-	}
-
-	// add this cause (data write)
-	spin_lock(&locked_causes->lock);
-	if(!(locked_causes->causes)){
-	locked_causes->causes = new_cause_list();
-	}
-	cause_added = cause_list_add(&locked_causes->causes, current);
-	set_cause_list_type(locked_causes->causes, SPLIT_DATA);
-
-	// dirty hook
-	q = inode_to_request_queue(inode);
-	if (q && locked_causes->causes && cause_added) {
-		spin_lock_irq(q->queue_lock);
-
-	//yangsuli ????
-		if (locked_causes->causes->callback_q == NULL) {
-			// TODO(tyler): need refcount get on q?
-			locked_causes->causes->callback_q = q;
-			locked_causes->causes->sched_uniq = q->sched_uniq;
-			locked_causes->causes->size = PAGE_CACHE_SIZE;
-		}
-		// one buffer can't correspond to many disks, right?
-		WARN_ON(locked_causes->causes->callback_q != q);
-
-		causes_dirty_fn = q->elevator->type->ops.elevator_causes_dirty_fn;
-		if (causes_dirty_fn && q->sched_uniq == locked_causes->causes->sched_uniq)
-			causes_dirty_fn(q, locked_causes->causes, current, inode, pos);
-
-		spin_unlock_irq(q->queue_lock);
-	}
-	spin_unlock(&locked_causes->lock);
-
-#endif
-}
-
 /*
  * after copy_from_user, pages need to be dirtied and we need to make
  * sure holes are created between the current EOF and the start of
@@ -467,10 +413,6 @@ int btrfs_dirty_pages(struct btrfs_root *root, struct inode *inode,
 		SetPageUptodate(p);
 		ClearPageChecked(p);
 		set_page_dirty(p);
-
-#ifndef DISABLE_CAUSES
-		add_to_causes(inode, p, pos);
-#endif
 	}
 
 	/*
@@ -1148,7 +1090,6 @@ static noinline int prepare_pages(struct btrfs_root *root, struct file *file,
 	int faili = 0;
 	u64 start_pos;
 	u64 last_pos;
-	struct cause_list_locked * locked_causes;
 
 	start_pos = pos & ~((u64)root->sectorsize - 1);
 	last_pos = ((u64)index + num_pages) << PAGE_CACHE_SHIFT;
@@ -1162,27 +1103,6 @@ again:
 			err = -ENOMEM;
 			goto fail;
 		}
-
-#ifndef DISABLE_CAUSES
-		// allocate the cause list if this a new page
-		if (pages[i]->locked_causes == NULL){
-			//printk("### No Causes.\n");
-			pages[i]->locked_causes = kmalloc(sizeof(struct cause_list_locked), GFP_KERNEL);
-			BUG_ON(!(pages[i]->locked_causes));
-			locked_causes = (struct cause_list_locked *) pages[i]->locked_causes;
-			spin_lock_init(&locked_causes->lock);
-			locked_causes->causes = new_cause_list();
-		}
-		else{
-			locked_causes = (struct cause_list_locked *) pages[i]->locked_causes;
-			if (locked_causes->causes == NULL){
-				locked_causes->causes = new_cause_list();
-			}
-			else{
-		    		//printk("### has Causes.\n");
-			}
-		}
-#endif
 
 		if (i == 0)
 			err = prepare_uptodate_page(pages[i], pos,

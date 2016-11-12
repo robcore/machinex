@@ -866,10 +866,6 @@ retry:
 		}
 
 
-#ifndef DISABLE_CAUSES
-		page->locked_causes = NULL;
-#endif
-
 		/*
 		 * We want a regular kernel memory (not highmem or DMA etc)
 		 * allocation for the radix tree nodes, but we need to honour

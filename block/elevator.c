@@ -271,7 +271,6 @@ int elevator_init(struct request_queue *q, char *name)
 		return err;
 	}
 
-	q->sched_uniq = 1000; // arbitrary start num
 	q->elevator = eq;
 	return 0;
 }
@@ -451,18 +450,6 @@ void elv_dispatch_add_tail(struct request_queue *q, struct request *rq)
 	list_add_tail(&rq->queuelist, &q->queue_head);
 }
 EXPORT_SYMBOL(elv_dispatch_add_tail);
-
-void elv_dispatch_add_head(struct request_queue *q, struct request *rq)
-{
-	if (q->last_merge == rq)
-		q->last_merge = NULL;
-
-	elv_rqhash_del(q, rq);
-
-	q->nr_sorted--;
-	list_add(&rq->queuelist, &q->queue_head);
-}
-EXPORT_SYMBOL(elv_dispatch_add_head);
 
 int elv_merge(struct request_queue *q, struct request **req, struct bio *bio)
 {
@@ -1063,9 +1050,6 @@ static int elevator_switch(struct request_queue *q, struct elevator_type *new_e)
 	ioc_clear_queue(q);
 	old_elevator = q->elevator;
 	q->elevator = e;
-	q->sched_uniq++;
-	if (q->sched_uniq < 0)
-		q->sched_uniq = 1;
 	spin_unlock_irq(q->queue_lock);
 
 	elevator_exit(old_elevator);
@@ -1190,92 +1174,3 @@ struct request *elv_rb_latter_request(struct request_queue *q,
 	return NULL;
 }
 EXPORT_SYMBOL(elv_rb_latter_request);
-
-
-struct block_device *btrfs_inode_to_bdev(struct inode*);
-struct request_queue *inode_to_request_queue(struct inode *inode) {
-	struct request_queue *rq = NULL;
-	struct block_device *bdev = NULL;
-	if (!inode)
-		return NULL;
-	if(!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode)){
-		return NULL;
-	}
-	if (!inode->i_sb)
-		return NULL;
-
-	if(inode->i_sb->s_type &&
-			inode->i_sb->s_type->name &&
-			!strcmp(inode->i_sb->s_type->name, "btrfs")){
-		bdev = btrfs_inode_to_bdev(inode);
-	}else{
-		bdev = inode->i_sb->s_bdev;
-	}
-
-	if (!bdev)
-		return NULL;
-
-	rq = bdev_get_queue(bdev);
-
-	if(!rq || !rq->elevator || !rq->elevator->type)
-		return NULL;
-
-	return rq;
-
-}
-
-
-void get_elevator_call_info_from_inode(struct inode* inode,
-										  struct request_queue **rq,
-										  struct module **module,
-										  struct elevator_syscall_ops *sops) {
-	   *rq = inode_to_request_queue(inode);
-
-	if(!(*rq))
-		goto skip;
-
-	spin_lock_irq((*rq)->queue_lock);
-	*module = (*rq)->elevator->type->elevator_owner;
-	if(*module && try_module_get(*module)){
-		sops->sched_uniq = (*rq)->sched_uniq;
-		sops->read_entry_fn = (*rq)->elevator->type->ops.elevator_read_entry_fn;
-		sops->write_entry_fn = (*rq)->elevator->type->ops.elevator_write_entry_fn;
-		sops->fsync_entry_fn = (*rq)->elevator->type->ops.elevator_fsync_entry_fn;
-		sops->mkdir_entry_fn = (*rq)->elevator->type->ops.elevator_mkdir_entry_fn;
-		sops->create_entry_fn = (*rq)->elevator->type->ops.elevator_create_entry_fn;
-		sops->read_return_fn = (*rq)->elevator->type->ops.elevator_read_return_fn;
-		sops->write_return_fn = (*rq)->elevator->type->ops.elevator_write_return_fn;
-		sops->fsync_return_fn = (*rq)->elevator->type->ops.elevator_fsync_return_fn;
-		sops->mkdir_return_fn = (*rq)->elevator->type->ops.elevator_mkdir_return_fn;
-		sops->create_return_fn = (*rq)->elevator->type->ops.elevator_create_return_fn;
-	}else{
-		spin_unlock_irq((*rq)->queue_lock);
-		goto skip;
-	}
-	spin_unlock_irq((*rq)->queue_lock);
-	return;
-
- skip:
-	*rq = NULL;
-	*module = NULL;
-	memset(sops, 0, sizeof(*sops));
-}
-void get_elevator_call_info(struct file* filp,
-										  struct request_queue **rq,
-										  struct module **module,
-										  struct elevator_syscall_ops *sops) {
-	if (!filp)
-		goto skip;
-	if (!filp->f_mapping)
-		goto skip;
-	if (!filp->f_mapping->host)
-		goto skip;
-
-	get_elevator_call_info_from_inode(filp->f_mapping->host, rq, module, sops);
-	return;
-
- skip:
-	*rq = NULL;
-	*module = NULL;
-	memset(sops, 0, sizeof(*sops));
-}

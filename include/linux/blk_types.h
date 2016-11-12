@@ -72,8 +72,6 @@ struct bio {
 
 	bio_destructor_t	*bi_destructor;	/* destructor */
 
-	struct cause_list_list *cll;
-
 	/*
 	 * We can inline a number of vecs at the end of the bio, to avoid
 	 * double allocations for a small number of bio_vecs. This member

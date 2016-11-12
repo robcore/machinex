@@ -174,13 +174,7 @@ struct page {
 	 */
 	void *shadow;
 #endif
-
-    // cause list for btrfs
-#ifndef DISABLE_CAUSES
-        void* locked_causes;
-#endif
 }
-
 /*
  * The struct page can be forced to be double word aligned so that atomic ops
  * on double words work. The SLUB allocator can make use of such a feature.

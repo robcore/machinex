@@ -15,8 +15,6 @@
 #include <linux/syscalls.h>
 #include <linux/pagemap.h>
 #include <linux/splice.h>
-#include <linux/module.h>
-#include <linux/blkdev.h>
 #include "read_write.h"
 
 #include <asm/uaccess.h>
@@ -467,10 +465,6 @@ EXPORT_SYMBOL(do_sync_write);
 
 ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
 {
-	struct request_queue* rq;
-	struct elevator_syscall_ops sops;
-	struct module* module;
-	void* opaque = NULL;
 	ssize_t ret;
 
 	if (!(file->f_mode & FMODE_WRITE))
@@ -479,17 +473,6 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 		return -EINVAL;
 	if (unlikely(!access_ok(VERIFY_READ, buf, count)))
 		return -EFAULT;
-
-	// intercept entry
-	get_elevator_call_info(file, &rq, &module, &sops);
-	if (sops.write_entry_fn) {
-		ret = sops.write_entry_fn(rq, file, count, pos, &opaque, sops.sched_uniq);
-		if (ret) {
-			BUG_ON(!module);
-			module_put(module);
-			return ret;
-		}
-	}
 
 	ret = rw_verify_area(WRITE, file, pos, count);
 	if (ret >= 0) {
@@ -504,12 +487,6 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 		}
 		inc_syscw(current);
 	}
-
-	// intercept exit
-	if (sops.write_return_fn)
-		sops.write_return_fn(rq, opaque, ret, sops.sched_uniq);
-	if (module)
-		module_put(module);
 
 	return ret;
 }

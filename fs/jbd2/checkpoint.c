@@ -314,7 +314,6 @@ static int __process_buffer(journal_t *journal, struct journal_head *jh,
 		(*batch_count)++;
 		if (*batch_count == JBD2_NR_BATCH) {
 			spin_unlock(&journal->j_list_lock);
-			printk("yangsuli: journal checkpoint process submit %d blocks\n", *batch_count);
 			__flush_batch(journal, batch_count);
 			ret = 1;
 		}
@@ -651,7 +650,12 @@ int __jbd2_journal_remove_checkpoint(struct journal_head *jh)
 				    transaction->t_tid, stats);
 
 	__jbd2_journal_drop_transaction(journal, transaction);
-	jbd2_journal_free_transaction(transaction);
+
+	if ((journal->j_commit_callback == NULL) || (transaction->t_callbacked)) {
+		jbd2_journal_free_transaction(transaction);
+	} else {
+		transaction->t_dropped = 1;	
+	}
 
 	/* Just in case anybody was waiting for more transactions to be
            checkpointed... */
@@ -717,9 +721,7 @@ void __jbd2_journal_drop_transaction(journal_t *journal, transaction_t *transact
 	J_ASSERT(transaction->t_state == T_FINISHED);
 	J_ASSERT(transaction->t_buffers == NULL);
 	J_ASSERT(transaction->t_forget == NULL);
-	J_ASSERT(transaction->t_iobuf_list == NULL);
 	J_ASSERT(transaction->t_shadow_list == NULL);
-	J_ASSERT(transaction->t_log_list == NULL);
 	J_ASSERT(transaction->t_checkpoint_list == NULL);
 	J_ASSERT(transaction->t_checkpoint_io_list == NULL);
 	J_ASSERT(atomic_read(&transaction->t_updates) == 0);
