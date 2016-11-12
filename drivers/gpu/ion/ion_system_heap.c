@@ -238,7 +238,7 @@ int ion_system_heap_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 }
 
 static int ion_system_print_debug(struct ion_heap *heap, struct seq_file *s,
-				  const struct list_head *unused)
+				  const struct rb_root *unused)
 {
 	seq_printf(s, "total bytes currently allocated: %lx\n",
 			(unsigned long) atomic_read(&system_heap_allocated));
@@ -270,6 +270,14 @@ int ion_system_heap_map_iommu(struct ion_buffer *buffer,
 
 	data->mapped_size = iova_length;
 	extra = iova_length - buffer->size;
+
+	/* Use the biggest alignment to allow bigger IOMMU mappings.
+	 * Use the first entry since the first entry will always be the
+	 * biggest entry. To take advantage of bigger mapping sizes both the
+	 * VA and PA addresses have to be aligned to the biggest size.
+	 */
+	if (table->sgl->length > align)
+		align = table->sgl->length;
 
 	ret = msm_allocate_iova_address(domain_num, partition_num,
 						data->mapped_size, align,
@@ -449,7 +457,7 @@ int ion_system_contig_heap_cache_ops(struct ion_heap *heap,
 
 static int ion_system_contig_print_debug(struct ion_heap *heap,
 					 struct seq_file *s,
-					 const struct list_head *unused)
+					 const struct rb_root *unused)
 {
 	seq_printf(s, "total bytes currently allocated: %lx\n",
 		(unsigned long) atomic_read(&system_contig_heap_allocated));

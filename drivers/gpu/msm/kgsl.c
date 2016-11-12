@@ -1898,6 +1898,10 @@ static int kgsl_get_phys_file(int fd, unsigned long *start, unsigned long *len,
 	*vstart = 0;
 	*len = 0;
 	*filep = NULL;
+#ifdef CONFIG_ANDROID_PMEM
+	if (!get_pmem_file(fd, start, vstart, len, filep))
+		return 0;
+#endif
 
 	fbfile = fget(fd);
 	if (fbfile == NULL) {
@@ -1988,6 +1992,9 @@ static int kgsl_setup_phys_file(struct kgsl_mem_entry *entry,
 
 	return 0;
 err:
+#ifdef CONFIG_ANDROID_PMEM
+	put_pmem_file(filep);
+#endif
 	return ret;
 }
 

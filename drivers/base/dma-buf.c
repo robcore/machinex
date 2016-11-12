@@ -38,12 +38,9 @@ static int dma_buf_release(struct inode *inode, struct file *file)
 		return -EINVAL;
 
 	dmabuf = file->private_data;
-
-	BUG_ON(dmabuf->vmapping_counter);
-
 	if(NULL != dmabuf) {
 		dmabuf->ops->release(dmabuf);
-	}
+	}	
 	kfree(dmabuf);
 	return 0;
 }
@@ -79,24 +76,22 @@ static inline int is_dma_buf_file(struct file *file)
 }
 
 /**
- * dma_buf_export_named - Creates a new dma_buf, and associates an anon file
+ * dma_buf_export - Creates a new dma_buf, and associates an anon file
  * with this buffer, so it can be exported.
  * Also connect the allocator specific data and ops to the buffer.
- * Additionally, provide a name string for exporter; useful in debugging.
  *
  * @priv:	[in]	Attach private data of allocator to this buffer
  * @ops:	[in]	Attach allocator-defined dma buf ops to the new buffer.
  * @size:	[in]	Size of the buffer
  * @flags:	[in]	mode flags for the file.
- * @exp_name:	[in]	name of the exporting module - useful for debugging.
  *
  * Returns, on success, a newly created dma_buf object, which wraps the
  * supplied private data and operations for dma_buf_ops. On either missing
  * ops, or error in allocating struct dma_buf, will return negative error.
  *
  */
-struct dma_buf *dma_buf_export_named(void *priv, const struct dma_buf_ops *ops,
-				size_t size, int flags, const char *exp_name)
+struct dma_buf *dma_buf_export(void *priv, const struct dma_buf_ops *ops,
+				size_t size, int flags)
 {
 	struct dma_buf *dmabuf;
 	struct file *file;
@@ -118,7 +113,6 @@ struct dma_buf *dma_buf_export_named(void *priv, const struct dma_buf_ops *ops,
 	dmabuf->priv = priv;
 	dmabuf->ops = ops;
 	dmabuf->size = size;
-	dmabuf->exp_name = exp_name;
 
 	file = anon_inode_getfile("dmabuf", &dma_buf_fops, dmabuf, flags);
 
@@ -129,7 +123,7 @@ struct dma_buf *dma_buf_export_named(void *priv, const struct dma_buf_ops *ops,
 
 	return dmabuf;
 }
-EXPORT_SYMBOL_GPL(dma_buf_export_named);
+EXPORT_SYMBOL_GPL(dma_buf_export);
 
 
 /**
@@ -321,7 +315,7 @@ EXPORT_SYMBOL_GPL(dma_buf_unmap_attachment);
  * cpu in the kernel context. Calls begin_cpu_access to allow exporter-specific
  * preparations. Coherency is only guaranteed in the specified range for the
  * specified access direction.
- * @dmabuf:	[in]	buffer to prepare cpu access for.
+ * @dma_buf:	[in]	buffer to prepare cpu access for.
  * @start:	[in]	start of range for cpu access.
  * @len:	[in]	length of range for cpu access.
  * @direction:	[in]	length of range for cpu access.
@@ -348,7 +342,7 @@ EXPORT_SYMBOL_GPL(dma_buf_begin_cpu_access);
  * cpu in the kernel context. Calls end_cpu_access to allow exporter-specific
  * actions. Coherency is only guaranteed in the specified range for the
  * specified access direction.
- * @dmabuf:	[in]	buffer to complete cpu access for.
+ * @dma_buf:	[in]	buffer to complete cpu access for.
  * @start:	[in]	start of range for cpu access.
  * @len:	[in]	length of range for cpu access.
  * @direction:	[in]	length of range for cpu access.
@@ -368,7 +362,7 @@ EXPORT_SYMBOL_GPL(dma_buf_end_cpu_access);
 /**
  * dma_buf_kmap_atomic - Map a page of the buffer object into kernel address
  * space. The same restrictions as for kmap_atomic and friends apply.
- * @dmabuf:	[in]	buffer to map page from.
+ * @dma_buf:	[in]	buffer to map page from.
  * @page_num:	[in]	page in PAGE_SIZE units to map.
  *
  * This call must always succeed, any necessary preparations that might fail
@@ -384,7 +378,7 @@ EXPORT_SYMBOL_GPL(dma_buf_kmap_atomic);
 
 /**
  * dma_buf_kunmap_atomic - Unmap a page obtained by dma_buf_kmap_atomic.
- * @dmabuf:	[in]	buffer to unmap page from.
+ * @dma_buf:	[in]	buffer to unmap page from.
  * @page_num:	[in]	page in PAGE_SIZE units to unmap.
  * @vaddr:	[in]	kernel space pointer obtained from dma_buf_kmap_atomic.
  *
@@ -403,7 +397,7 @@ EXPORT_SYMBOL_GPL(dma_buf_kunmap_atomic);
 /**
  * dma_buf_kmap - Map a page of the buffer object into kernel address space. The
  * same restrictions as for kmap and friends apply.
- * @dmabuf:	[in]	buffer to map page from.
+ * @dma_buf:	[in]	buffer to map page from.
  * @page_num:	[in]	page in PAGE_SIZE units to map.
  *
  * This call must always succeed, any necessary preparations that might fail
@@ -419,7 +413,7 @@ EXPORT_SYMBOL_GPL(dma_buf_kmap);
 
 /**
  * dma_buf_kunmap - Unmap a page obtained by dma_buf_kmap.
- * @dmabuf:	[in]	buffer to unmap page from.
+ * @dma_buf:	[in]	buffer to unmap page from.
  * @page_num:	[in]	page in PAGE_SIZE units to unmap.
  * @vaddr:	[in]	kernel space pointer obtained from dma_buf_kmap.
  *
@@ -438,7 +432,7 @@ EXPORT_SYMBOL_GPL(dma_buf_kunmap);
 
 /**
  * dma_buf_mmap - Setup up a userspace mmap with the given vma
- * @dmabuf:	[in]	buffer that should back the vma
+ * @dma_buf:	[in]	buffer that should back the vma
  * @vma:	[in]	vma for the mmap
  * @pgoff:	[in]	offset in pages where this mmap should start within the
  * 			dma-buf buffer.
@@ -453,9 +447,6 @@ EXPORT_SYMBOL_GPL(dma_buf_kunmap);
 int dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma,
 		 unsigned long pgoff)
 {
-	struct file *oldfile;
-	int ret;
-
 	if (WARN_ON(!dmabuf || !vma))
 		return -EINVAL;
 
@@ -469,86 +460,14 @@ int dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma,
 		return -EINVAL;
 
 	/* readjust the vma */
-	get_file(dmabuf->file);
-	oldfile = vma->vm_file;
+	if (vma->vm_file)
+		fput(vma->vm_file);
+
 	vma->vm_file = dmabuf->file;
+	get_file(vma->vm_file);
+
 	vma->vm_pgoff = pgoff;
 
-	ret = dmabuf->ops->mmap(dmabuf, vma);
-	if (ret) {
-		/* restore old parameters on failure */
-		vma->vm_file = oldfile;
-		fput(dmabuf->file);
-	} else {
-		if (oldfile)
-			fput(oldfile);
-	}
-	return ret;
-
+	return dmabuf->ops->mmap(dmabuf, vma);
 }
 EXPORT_SYMBOL_GPL(dma_buf_mmap);
-
-/**
- * dma_buf_vmap - Create virtual mapping for the buffer object into kernel address space. Same restrictions as for vmap and friends apply.
- * @dma_buf:	[in]	buffer to vmap
- *
- * This call may fail due to lack of virtual mapping address space.
- * These calls are optional in drivers. The intended use for them
- * is for mapping objects linear in kernel space for high use objects.
- * Please attempt to use kmap/kunmap before thinking about these interfaces.
- */
-void *dma_buf_vmap(struct dma_buf *dmabuf)
-{
-	void *ptr;
-
-	if (WARN_ON(!dmabuf))
-		return NULL;
-
-	if (!dmabuf->ops->vmap)
-		return NULL;
-
-	mutex_lock(&dmabuf->lock);
-	if (dmabuf->vmapping_counter) {
-		dmabuf->vmapping_counter++;
-		BUG_ON(!dmabuf->vmap_ptr);
-		ptr = dmabuf->vmap_ptr;
-		goto out_unlock;
-	}
-
-	BUG_ON(dmabuf->vmap_ptr);
-
-	ptr = dmabuf->ops->vmap(dmabuf);
-	if (IS_ERR_OR_NULL(ptr))
-		goto out_unlock;
-
-	dmabuf->vmap_ptr = ptr;
-	dmabuf->vmapping_counter = 1;
-
-out_unlock:
-	mutex_unlock(&dmabuf->lock);
-	return ptr;
-}
-EXPORT_SYMBOL_GPL(dma_buf_vmap);
-
-/**
- * dma_buf_vunmap - Unmap a vmap obtained by dma_buf_vmap.
- * @dma_buf:	[in]	buffer to vmap
- */
-void dma_buf_vunmap(struct dma_buf *dmabuf, void *vaddr)
-{
-	if (WARN_ON(!dmabuf))
-		return;
-
-	BUG_ON(!dmabuf->vmap_ptr);
-	BUG_ON(dmabuf->vmapping_counter == 0);
-	BUG_ON(dmabuf->vmap_ptr != vaddr);
-
-	mutex_lock(&dmabuf->lock);
-	if (--dmabuf->vmapping_counter == 0) {
-		if (dmabuf->ops->vunmap)
-			dmabuf->ops->vunmap(dmabuf, vaddr);
-		dmabuf->vmap_ptr = NULL;
-	}
-	mutex_unlock(&dmabuf->lock);
-}
-EXPORT_SYMBOL_GPL(dma_buf_vunmap);
