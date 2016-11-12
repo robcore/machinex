@@ -27,7 +27,7 @@
 #include <linux/slab.h>
 #include <linux/iocontext.h>
 #include <linux/ioprio.h>
-#include <linux/hashtable.h>
+#include "../fs/sdcardfs/hashtable.h"
 #include <linux/hrtimer.h>
 
 #include "ioctl_helper.h"
@@ -176,12 +176,13 @@ static void add_account(struct tbucket_data* td,
 //
 // return account, regardless of rate
 static struct account *get_account(struct tbucket_data* td,
-								   int account_id) {
+								   int account_id)
+{
 	struct account *account;
 
 	// search existing accounts
 	hash_for_each_possible(td->accounts_hash, account,
-						   node, account_id) {
+						   &account->node, account_id); {
 		if (account->id == account_id)
 			return account;
 	}
@@ -195,7 +196,7 @@ static struct account *get_account(struct tbucket_data* td,
 
 	// use default account
 	hash_for_each_possible(td->accounts_hash, account,
-						   node, DEFAULT_ACCOUNT) {
+						   &account->node, DEFAULT_ACCOUNT); {
 		if (account->id == DEFAULT_ACCOUNT)
 			return account;
 	}
@@ -252,12 +253,6 @@ long causes_get_cost(struct cause_list* causes) {
 
 static void print_account(struct account *account) {
 	int i;
-	printk(KERN_INFO "account {id=%d, rate=%ld, limit=%ld, count=%ld,\n"
-		   "credit=%ld, lost=%ld, estimate=%ld,\n"
-		   "used=%ld, used_raw=%ld, sane=%ld}\n",
-		   account->id, account->rate, account->limit, count(account),
-		   account->credit, account->lost, account->estimate,
-		   account->used, account->used_raw, account->sane);
 	for (i = 0; i<INSANE_CAP; i++) {
 		if (account->insane[i])
 			printk(KERN_INFO "  Cause errors from line %d: %ld\n", i, account->insane[i]);
@@ -272,7 +267,7 @@ static void print_accounts(struct tbucket_data* td) {
 		print_account(cur);
 	}
 	printk(KERN_INFO "queue_runs: %ld", td->stats.queue_runs);
-	printk(KERN_INFO "Avg Run Len: %lld", 
+	printk(KERN_INFO "Avg Run Len: %lld",
 		   safe_div(td->stats.disk_reads+td->stats.disk_writes,
 					max(td->stats.queue_runs,1l)));
 	printk(KERN_INFO "disk_norm: %ld", td->stats.disk_norm);
@@ -281,18 +276,18 @@ static void print_accounts(struct tbucket_data* td) {
 		   td->stats.io_batch_add_seq);
 	printk(KERN_INFO "io_batch_add_tot: %ld",
 		   td->stats.io_batch_add_tot);
-	printk(KERN_INFO "Avg Batch Size: %lld", 
+	printk(KERN_INFO "Avg Batch Size: %lld",
 		   safe_div(td->stats.disk_reads+td->stats.disk_writes,
 					max(td->stats.io_batches,1l)));
 	printk(KERN_INFO "disk_reads: %ld", td->stats.disk_reads);
 	printk(KERN_INFO "disk_writes: %ld", td->stats.disk_writes);
-	printk(KERN_INFO "Disk I/O: %ld", 
+	printk(KERN_INFO "Disk I/O: %ld",
 		   td->stats.disk_reads+td->stats.disk_writes);
-	printk(KERN_INFO "dispatch_declined_throttle: %ld", 
+	printk(KERN_INFO "dispatch_declined_throttle: %ld",
 		   td->stats.dispatch_declined_throttle);
-	printk(KERN_INFO "dispatch_declined_no_work: %ld", 
+	printk(KERN_INFO "dispatch_declined_no_work: %ld",
 		   td->stats.dispatch_declined_no_work);
-	printk(KERN_INFO "sleep_time: %ld.%06ld", 
+	printk(KERN_INFO "sleep_time: %ld.%06ld",
 		   td->stats.sleep_time.tv_sec,
 		   td->stats.sleep_time.tv_nsec);
 }
@@ -415,7 +410,7 @@ static void do_disk_accounting(struct tbucket_data *td,
 		iobatch_clear(td->batch);
 		td->stats.disk_norm += combined_cost;
 		td->stats.io_batches++;
-		
+
 		summed_cost = 0;
 		list_for_each_entry(account, &td->accounts, accounts) {
 			summed_cost += iobatch_get_cost(account->batch);
@@ -471,7 +466,7 @@ static void account_for_causes(struct tbucket_data *td,
 	do_disk_accounting(td, causes, offset);
 
 	// TODO: why do we pass size to this function,
-	// but not to do_disk_accounting? 
+	// but not to do_disk_accounting?
 }
 
 static void account_for_bio(struct tbucket_data *td,
@@ -873,7 +868,7 @@ int tbucket_fsync_entry (struct request_queue *q,
 						 int sched_uniq) {
 	return 0;
 }
-										 
+
 void tbucket_write_return (struct request_queue *q,
 						   void *opaque,
 						   ssize_t rv,
@@ -934,7 +929,7 @@ void tbucket_causes_free (struct request_queue *q,
 
 int tbucket_create_entry (struct request_queue* q,
 						   struct inode *dir,
-						   struct dentry *dentry, 
+						   struct dentry *dentry,
 						   int mode,
 						   void **opaque,
 						   int sched_uniq) {
