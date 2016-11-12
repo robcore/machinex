@@ -36,7 +36,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 #define REG_SZ	21
 static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0 };
+			    0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -147,7 +147,7 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_RX_LINE_2_GAIN:
 		case TABLA_A_RX_LINE_3_GAIN:
 		case TABLA_A_RX_LINE_4_GAIN:
-			if (snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0)
+			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
@@ -162,7 +162,7 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
 		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled > 0) && (snd_rec_ctrl_locked > 0)
+			if ((snd_ctrl_enabled > 0) && (snd_rec_ctrl_locked > 0))
 				ret = 0;
 			break;
 		default:
