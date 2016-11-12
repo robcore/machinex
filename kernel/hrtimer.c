@@ -1656,6 +1656,7 @@ out:
 	destroy_hrtimer_on_stack(&t.timer);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(hrtimer_nanosleep);
 
 SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
 		struct timespec __user *, rmtp)

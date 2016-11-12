@@ -1948,7 +1948,7 @@ SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 		int, maxevents, int, timeout)
 {
 	int error;
-	struct fd f;
+	struct file *file;
 	struct eventpoll *ep;
 
 	/* The maximum number of event must be greater than zero */
@@ -1956,35 +1956,42 @@ SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 		return -EINVAL;
 
 	/* Verify that the area passed by the user is writeable */
-	if (!access_ok(VERIFY_WRITE, events, maxevents * sizeof(struct epoll_event)))
-		return -EFAULT;
+	if (!access_ok(VERIFY_WRITE, events, maxevents * sizeof(struct epoll_event))) {
+		error = -EFAULT;
+		goto error_return;
+	}
 
 	/* Get the "struct file *" for the eventpoll file */
-	f = fdget(epfd);
-	if (!f.file)
-		return -EBADF;
+	error = -EBADF;
+	file = fget(epfd);
+	if (!file)
+		goto error_return;
 
 	/*
 	 * We have to check that the file structure underneath the fd
 	 * the user passed to us _is_ an eventpoll file.
 	 */
 	error = -EINVAL;
-	if (!is_file_epoll(f.file))
+	if (!is_file_epoll(file))
 		goto error_fput;
 
 	/*
 	 * At this point it is safe to assume that the "private_data" contains
 	 * our own data structure.
 	 */
-	ep = f.file->private_data;
+	ep = file->private_data;
 
 	/* Time to fish for events ... */
 	error = ep_poll(ep, events, maxevents, timeout);
 
 error_fput:
-	fdput(f);
+	fput(file);
+error_return:
+
 	return error;
 }
+
+#ifdef HAVE_SET_RESTORE_SIGMASK
 
 /*
  * Implement the event wait interface for the eventpoll file. It is the kernel
@@ -2029,6 +2036,8 @@ SYSCALL_DEFINE6(epoll_pwait, int, epfd, struct epoll_event __user *, events,
 
 	return error;
 }
+
+#endif /* HAVE_SET_RESTORE_SIGMASK */
 
 #ifdef CONFIG_COMPAT
 COMPAT_SYSCALL_DEFINE6(epoll_pwait, int, epfd,
