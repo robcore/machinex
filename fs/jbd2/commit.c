@@ -33,22 +33,15 @@
 #define SPLIT_DEBUG
 
 /*
- * IO end handler for temporary buffer_heads handling writes to the journal.
+ * Default IO end handler for temporary BJ_IO buffer_heads.
  */
 static void journal_end_buffer_io_sync(struct buffer_head *bh, int uptodate)
 {
-	struct buffer_head *orig_bh = bh->b_private;
-
 	BUFFER_TRACE(bh, "");
 	if (uptodate)
 		set_buffer_uptodate(bh);
 	else
 		clear_buffer_uptodate(bh);
-	if (orig_bh) {
-		clear_bit_unlock(BH_Shadow, &orig_bh->b_state);
-		smp_mb__after_clear_bit();
-		wake_up_bit(&orig_bh->b_state, BH_Shadow);
-	}
 	unlock_buffer(bh);
 }
 
@@ -109,6 +102,7 @@ static int journal_submit_commit_record(journal_t *journal,
 					__u32 crc32_sum,
 					struct cause_list* cause_list)
 {
+	struct journal_head *descriptor;
 	struct commit_header *tmp;
 	struct buffer_head *bh;
 	int ret;
@@ -119,10 +113,11 @@ static int journal_submit_commit_record(journal_t *journal,
 	if (is_journal_aborted(journal))
 		return 0;
 
-	bh = jbd2_journal_get_descriptor_buffer(journal);
-	if (!bh)
+	descriptor = jbd2_journal_get_descriptor_buffer(journal);
+	if (!descriptor)
 		return 1;
 
+	bh = jh2bh(descriptor);
 	bh->causes = get_cause_list(cause_list);
 
 	tmp = (struct commit_header *)bh->b_data;
@@ -171,6 +166,7 @@ static int journal_wait_on_commit_record(journal_t *journal,
 	if (unlikely(!buffer_uptodate(bh)))
 		ret = -EIO;
 	put_bh(bh);            /* One for getblk() */
+	jbd2_journal_put_journal_head(bh2jh(bh));
 
 	return ret;
 }
@@ -344,8 +340,7 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 {
 	struct transaction_stats_s stats;
 	transaction_t *commit_transaction;
-	struct journal_head *jh;
-	struct buffer_head *descriptor;
+	struct journal_head *jh, *new_jh, *descriptor;
 	struct buffer_head **wbuf = journal->j_wbuf;
 	int bufs;
 	int flags;
@@ -374,8 +369,6 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 	struct timeval wait_start, wait_end;
 #endif
 
-	LIST_HEAD(io_bufs);
-	LIST_HEAD(log_bufs);
 
 	/*
 	 * First job: lock down the current transaction and wait for
@@ -536,7 +529,7 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 
 	blk_start_plug(&plug);
 	jbd2_journal_write_revoke_records(journal, commit_transaction,
-					  &log_bufs, WRITE_SYNC, cause_list);
+					  WRITE_SYNC, cause_list);
 	blk_finish_plug(&plug);
 
 	jbd_debug(3, "JBD2: commit phase 2\n");
@@ -562,8 +555,8 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 		 atomic_read(&commit_transaction->t_outstanding_credits));
 
 	err = 0;
-	bufs = 0;
 	descriptor = NULL;
+	bufs = 0;
 	blk_start_plug(&plug);
 	while (commit_transaction->t_buffers) {
 
@@ -595,6 +588,8 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 		   record the metadata buffer. */
 
 		if (!descriptor) {
+			struct buffer_head *bh;
+
 			J_ASSERT (bufs == 0);
 
 			jbd_debug(4, "JBD2: get descriptor\n");
@@ -605,26 +600,26 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 				continue;
 			}
 
+			bh = jh2bh(descriptor);
 			jbd_debug(4, "JBD2: got buffer %llu (%p)\n",
-				(unsigned long long)descriptor->b_blocknr,
-				descriptor->b_data);
-			header = (journal_header_t *)descriptor->b_data;
+				(unsigned long long)bh->b_blocknr, bh->b_data);
+			header = (journal_header_t *)&bh->b_data[0];
 			header->h_magic     = cpu_to_be32(JBD2_MAGIC_NUMBER);
 			header->h_blocktype = cpu_to_be32(JBD2_DESCRIPTOR_BLOCK);
 			header->h_sequence  = cpu_to_be32(commit_transaction->t_tid);
 
-			tagp = &descriptor->b_data[sizeof(journal_header_t)];
-			space_left = descriptor->b_size -
-						sizeof(journal_header_t);
+			tagp = &bh->b_data[sizeof(journal_header_t)];
+			space_left = bh->b_size - sizeof(journal_header_t);
 			first_tag = 1;
-			set_buffer_jwrite(descriptor);
-			set_buffer_dirty(descriptor);
-			wbuf[bufs++] = descriptor;
+			set_buffer_jwrite(bh);
+			set_buffer_dirty(bh);
+			wbuf[bufs++] = bh;
 
 			/* Record it so that we can wait for IO
                            completion later */
-			BUFFER_TRACE(descriptor, "ph3: file as descriptor");
-			jbd2_file_log_bh(&log_bufs, descriptor);
+			BUFFER_TRACE(bh, "ph3: file as descriptor");
+			jbd2_journal_file_buffer(descriptor, commit_transaction,
+					BJ_LogCtl);
 		}
 
 		/* Where is the buffer to be written? */
@@ -647,23 +642,29 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 
 		/* Bump b_count to prevent truncate from stumbling over
                    the shadowed buffer!  @@@ This can go if we ever get
-                   rid of the shadow pairing of buffers. */
+                   rid of the BJ_IO/BJ_Shadow pairing of buffers. */
 		atomic_inc(&jh2bh(jh)->b_count);
 
-		/*
-		 * Make a temporary IO buffer with which to write it out
-		 * (this will requeue the metadata buffer to BJ_Shadow).
-		 */
+		/* Make a temporary IO buffer with which to write it out
+                   (this will requeue both the metadata buffer and the
+                   temporary IO buffer). new_bh goes on BJ_IO*/
+
 		set_bit(BH_JWrite, &jh2bh(jh)->b_state);
+		/*
+		 * akpm: jbd2_journal_write_metadata_buffer() sets
+		 * new_bh->b_transaction to commit_transaction.
+		 * We need to clean this up before we release new_bh
+		 * (which is of type BJ_IO)
+		 */
 		JBUFFER_TRACE(jh, "ph3: write metadata");
 		flags = jbd2_journal_write_metadata_buffer(commit_transaction,
-						jh, &wbuf[bufs], blocknr);
+						      jh, &new_jh, blocknr);
 		if (flags < 0) {
 			jbd2_journal_abort(journal, flags);
 			continue;
 		}
-		jbd2_file_log_bh(&io_bufs, wbuf[bufs]);
-
+		set_bit(BH_JWrite, &jh2bh(new_jh)->b_state);
+		wbuf[bufs++] = jh2bh(new_jh);
 		(jh2bh(new_jh))->causes = jh->causes;
 		jh->causes = NULL;
 		set_cause_list_type((jh2bh(new_jh))->causes, SPLIT_JOURNAL_META);
@@ -682,7 +683,6 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 		tag->t_flags = cpu_to_be32(tag_flag);
 		tagp += tag_bytes;
 		space_left -= tag_bytes;
-		bufs++;
 
 		if (first_tag) {
 			memcpy (tagp, journal->j_uuid, 16);
@@ -777,7 +777,7 @@ start_journal_io:
 	commit_transaction->t_state = T_COMMIT_DFLUSH;
 	write_unlock(&journal->j_state_lock);
 
-	/*
+	/* 
 	 * If the journal is not located on the file system device,
 	 * then we must flush the file system device before we issue
 	 * the commit record
@@ -802,7 +802,7 @@ start_journal_io:
            the log.  Before we can commit it, wait for the IO so far to
            complete.  Control buffers being written are on the
            transaction's t_log_list queue, and metadata buffers are on
-           the io_bufs list.
+           the t_iobuf_list queue.
 
 	   Wait for the buffers in reverse order.  That way we are
 	   less likely to be woken up until all IOs have completed, and
@@ -811,33 +811,47 @@ start_journal_io:
 
 	jbd_debug(3, "JBD2: commit phase 3\n");
 
-	while (!list_empty(&io_bufs)) {
-		struct buffer_head *bh = list_entry(io_bufs.prev,
-						    struct buffer_head,
-						    b_assoc_buffers);
+	/*
+	 * akpm: these are BJ_IO, and j_list_lock is not needed.
+	 * See __journal_try_to_free_buffer.
+	 */
+wait_for_iobuf:
+	while (commit_transaction->t_iobuf_list != NULL) {
+		struct buffer_head *bh;
 
-		wait_on_buffer(bh);
-		cond_resched();
+		jh = commit_transaction->t_iobuf_list->b_tprev;
+		bh = jh2bh(jh);
+		if (buffer_locked(bh)) {
+			wait_on_buffer(bh);
+			goto wait_for_iobuf;
+		}
+		if (cond_resched())
+			goto wait_for_iobuf;
 
 		if (unlikely(!buffer_uptodate(bh)))
 			err = -EIO;
-		jbd2_unfile_log_bh(bh);
+
+		clear_buffer_jwrite(bh);
+
+		JBUFFER_TRACE(jh, "ph4: unfile after journal write");
+		jbd2_journal_unfile_buffer(journal, jh);
 
 		/*
-		 * The list contains temporary buffer heads created by
-		 * jbd2_journal_write_metadata_buffer().
+		 * ->t_iobuf_list should contain only dummy buffer_heads
+		 * which were created by jbd2_journal_write_metadata_buffer().
 		 */
 		BUFFER_TRACE(bh, "dumping temporary bh");
+		jbd2_journal_put_journal_head(jh);
 		__brelse(bh);
 		J_ASSERT_BH(bh, atomic_read(&bh->b_count) == 0);
 		free_buffer_head(bh);
 
-		/* We also have to refile the corresponding shadowed buffer */
+		/* We also have to unlock and free the corresponding
+                   shadowed buffer */
 		jh = commit_transaction->t_shadow_list->b_tprev;
 		bh = jh2bh(jh);
-		clear_buffer_jwrite(bh);
+		clear_bit(BH_JWrite, &bh->b_state);
 		J_ASSERT_BH(bh, buffer_jbddirty(bh));
-		J_ASSERT_BH(bh, !buffer_shadow(bh));
 
 		/* The metadata is now released for reuse, but we need
                    to remember it against this transaction so that when
@@ -845,6 +859,14 @@ start_journal_io:
                    required. */
 		JBUFFER_TRACE(jh, "file as BJ_Forget");
 		jbd2_journal_file_buffer(jh, commit_transaction, BJ_Forget);
+		/*
+		 * Wake up any transactions which were waiting for this IO to
+		 * complete. The barrier must be here so that changes by
+		 * jbd2_journal_file_buffer() take effect before wake_up_bit()
+		 * does the waitqueue check.
+		 */
+		smp_mb();
+		wake_up_bit(&bh->b_state, BH_Unshadow);
 		JBUFFER_TRACE(jh, "brelse shadowed buffer");
 		__brelse(bh);
 	}
@@ -854,19 +876,26 @@ start_journal_io:
 	jbd_debug(3, "JBD2: commit phase 4\n");
 
 	/* Here we wait for the revoke record and descriptor record buffers */
-	while (!list_empty(&log_bufs)) {
+ wait_for_ctlbuf:
+	while (commit_transaction->t_log_list != NULL) {
 		struct buffer_head *bh;
 
-		bh = list_entry(log_bufs.prev, struct buffer_head, b_assoc_buffers);
-		wait_on_buffer(bh);
-		cond_resched();
+		jh = commit_transaction->t_log_list->b_tprev;
+		bh = jh2bh(jh);
+		if (buffer_locked(bh)) {
+			wait_on_buffer(bh);
+			goto wait_for_ctlbuf;
+		}
+		if (cond_resched())
+			goto wait_for_ctlbuf;
 
 		if (unlikely(!buffer_uptodate(bh)))
 			err = -EIO;
 
 		BUFFER_TRACE(bh, "ph5: control buffer writeout done: unfile");
 		clear_buffer_jwrite(bh);
-		jbd2_unfile_log_bh(bh);
+		jbd2_journal_unfile_buffer(journal, jh);
+		jbd2_journal_put_journal_head(jh);
 		__brelse(bh);		/* One for getblk */
 		/* AKPM: bforget here */
 	}
@@ -934,7 +963,9 @@ start_journal_io:
 	J_ASSERT(list_empty(&commit_transaction->t_inode_list));
 	J_ASSERT(commit_transaction->t_buffers == NULL);
 	J_ASSERT(commit_transaction->t_checkpoint_list == NULL);
+	J_ASSERT(commit_transaction->t_iobuf_list == NULL);
 	J_ASSERT(commit_transaction->t_shadow_list == NULL);
+	J_ASSERT(commit_transaction->t_log_list == NULL);
 
 restart_loop:
 	/*
@@ -1123,22 +1154,14 @@ restart_loop:
 		commit_transaction->t_cpnext->t_cpprev =
 			commit_transaction;
 		commit_transaction->t_cpprev->t_cpnext =
-			commit_transaction;
+				commit_transaction;
 	}
 	spin_unlock(&journal->j_list_lock);
 	/* Drop all spin_locks because commit_callback may be block.
 	 * __journal_remove_checkpoint() can not destroy transaction
 	 * under us because it is not marked as T_FINISHED yet */
-	if (journal->j_commit_callback) {
+	if (journal->j_commit_callback)
 		journal->j_commit_callback(journal, commit_transaction);
-		spin_lock(&journal->j_list_lock);
-		if (commit_transaction->t_dropped) {
-//			to_free = 1;
-		} else {
-			commit_transaction->t_callbacked = 1;
-		}
-		spin_unlock(&journal->j_list_lock);
-	}
 
 	trace_jbd2_end_commit(journal, commit_transaction);
 	jbd_debug(1, "JBD2: commit %d complete, head %d\n",
