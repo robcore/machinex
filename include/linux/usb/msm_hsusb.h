@@ -227,6 +227,9 @@ struct msm_otg_platform_data {
 	int ovp_ctrl_gpio;
 	int otg_power_irq;
 #endif
+#if defined(CONFIG_SEC_PRODUCT_8960)
+    bool smb347s;
+#endif
 	const char *mhl_dev_name;
 #ifdef CONFIG_USB_SWITCH_TSU6721
 	int (*get_usb_state)(int data);

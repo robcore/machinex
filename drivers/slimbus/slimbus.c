@@ -233,17 +233,6 @@ int slim_driver_register(struct slim_driver *drv)
 }
 EXPORT_SYMBOL_GPL(slim_driver_register);
 
-/*
- * slim_driver_unregister: Undo effects of slim_driver_register
- * @drv: Client driver to be unregistered
- */
-void slim_driver_unregister(struct slim_driver *drv)
-{
-	if (drv)
-		driver_unregister(&drv->driver);
-}
-EXPORT_SYMBOL_GPL(slim_driver_unregister);
-
 #define slim_ctrl_attr_gr NULL
 
 static void slim_ctrl_release(struct device *dev)
@@ -385,24 +374,6 @@ int slim_register_board_info(struct slim_boardinfo const *info, unsigned n)
 EXPORT_SYMBOL_GPL(slim_register_board_info);
 
 /*
- * slim_ctrl_add_boarddevs: Add devices registered by board-info
- * @ctrl: Controller to which these devices are to be added to.
- * This API is called by controller when it is up and running.
- * If devices on a controller were registered before controller,
- * this will make sure that they get probed when controller is up.
- */
-void slim_ctrl_add_boarddevs(struct slim_controller *ctrl)
-{
-	struct sbi_boardinfo *bi;
-	mutex_lock(&board_lock);
-	list_add_tail(&ctrl->list, &slim_ctrl_list);
-	list_for_each_entry(bi, &board_list, list)
-		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
-	mutex_unlock(&board_lock);
-}
-EXPORT_SYMBOL_GPL(slim_ctrl_add_boarddevs);
-
-/*
  * slim_busnum_to_ctrl: Map bus number to controller
  * @busnum: Bus number
  * Returns controller representing this bus number
@@ -424,6 +395,7 @@ EXPORT_SYMBOL_GPL(slim_busnum_to_ctrl);
 static int slim_register_controller(struct slim_controller *ctrl)
 {
 	int ret = 0;
+	struct sbi_boardinfo *bi;
 
 	/* Can't register until after driver model init */
 	if (WARN_ON(!slimbus_type.p)) {
@@ -491,6 +463,15 @@ static int slim_register_controller(struct slim_controller *ctrl)
 	ctrl->wq = create_singlethread_workqueue(dev_name(&ctrl->dev));
 	if (!ctrl->wq)
 		goto err_workq_failed;
+	/*
+	 * If devices on a controller were registered before controller,
+	 * this will make sure that they get probed now that controller is up
+	 */
+	mutex_lock(&board_lock);
+	list_add_tail(&ctrl->list, &slim_ctrl_list);
+	list_for_each_entry(bi, &board_list, list)
+		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
+	mutex_unlock(&board_lock);
 
 	return 0;
 
@@ -512,10 +493,6 @@ out_list:
 /* slim_remove_device: Remove the effect of slim_add_device() */
 void slim_remove_device(struct slim_device *sbdev)
 {
-	struct slim_controller *ctrl = sbdev->ctrl;
-	mutex_lock(&ctrl->m_ctrl);
-	list_del_init(&sbdev->dev_list);
-	mutex_unlock(&ctrl->m_ctrl);
 	device_unregister(&sbdev->dev);
 }
 EXPORT_SYMBOL_GPL(slim_remove_device);
@@ -2929,7 +2906,7 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 					pch = list_entry(pos,
 						struct slim_pending_ch,
 						pending);
-					if (pch->chan == chan) {
+					if (pch->chan == slc->chan) {
 						list_del(&pch->pending);
 						kfree(pch);
 						add_mark_removal = false;

@@ -181,8 +181,6 @@ struct tty_struct *alloc_tty_struct(void)
 
 void free_tty_struct(struct tty_struct *tty)
 {
-	if (!tty)
-		return;
 	if (tty->dev)
 		put_device(tty->dev);
 	kfree(tty->write_buf);
@@ -826,8 +824,9 @@ void disassociate_ctty(int on_exit)
 	spin_lock_irq(&current->sighand->siglock);
 	put_pid(current->signal->tty_old_pgrp);
 	current->signal->tty_old_pgrp = NULL;
+	spin_unlock_irq(&current->sighand->siglock);
 
-	tty = tty_kref_get(current->signal->tty);
+	tty = get_current_tty();
 	if (tty) {
 		unsigned long flags;
 		spin_lock_irqsave(&tty->ctrl_lock, flags);
@@ -844,7 +843,6 @@ void disassociate_ctty(int on_exit)
 #endif
 	}
 
-	spin_unlock_irq(&current->sighand->siglock);
 	/* Now clear signal->tty under the lock */
 	read_lock(&tasklist_lock);
 	session_clear_tty(task_session(current));
@@ -940,14 +938,6 @@ void start_tty(struct tty_struct *tty)
 
 EXPORT_SYMBOL(start_tty);
 
-/* We limit tty time update visibility to every 8 seconds or so. */
-static void tty_update_time(struct timespec *time)
-{
-	unsigned long sec = get_seconds();
-	if (abs(sec - time->tv_sec) & ~7)
-		time->tv_sec = sec;
-}
-
 /**
  *	tty_read	-	read method for tty device files
  *	@file: pointer to tty file
@@ -984,10 +974,8 @@ static ssize_t tty_read(struct file *file, char __user *buf, size_t count,
 	else
 		i = -EIO;
 	tty_ldisc_deref(ld);
-
 	if (i > 0)
-		tty_update_time(&inode->i_atime);
-
+		inode->i_atime = current_fs_time(inode->i_sb);
 	return i;
 }
 
@@ -1090,7 +1078,7 @@ static inline ssize_t do_tty_write(
 	}
 	if (written) {
 		struct inode *inode = file->f_path.dentry->d_inode;
-		tty_update_time(&inode->i_mtime);
+		inode->i_mtime = current_fs_time(inode->i_sb);
 		ret = written;
 	}
 out:
@@ -1635,8 +1623,6 @@ int tty_release(struct inode *inode, struct file *filp)
 	int	devpts;
 	int	idx;
 	char	buf[64];
-	long	timeout = 0;
-	int	once = 1;
 
 	if (tty_paranoia_check(tty, inode, __func__))
 		return 0;
@@ -1717,18 +1703,11 @@ int tty_release(struct inode *inode, struct file *filp)
 		if (!do_sleep)
 			break;
 
-		if (once) {
-			once = 0;
-			printk(KERN_WARNING "%s: %s: read/write wait queue active!\n",
+		printk(KERN_WARNING "%s: %s: read/write wait queue active!\n",
 				__func__, tty_name(tty, buf));
-		}
 		tty_unlock();
 		mutex_unlock(&tty_mutex);
-		schedule_timeout_killable(timeout);
-		if (timeout < 120 * HZ)
-			timeout = 2 * timeout + 1;
-		else
-			timeout = MAX_SCHEDULE_TIMEOUT;
+		schedule();
 	}
 
 	/*
@@ -2020,24 +1999,8 @@ retry_open:
 	if (!noctty &&
 	    current->signal->leader &&
 	    !current->signal->tty &&
-	    tty->session == NULL) {
-		/*
-		 * Don't let a process that only has write access to the tty
-		 * obtain the privileges associated with having a tty as
-		 * controlling terminal (being able to reopen it with full
-		 * access through /dev/tty, being able to perform pushback).
-		 * Many distributions set the group of all ttys to "tty" and
-		 * grant write-only access to all terminals for setgid tty
-		 * binaries, which should not imply full privileges on all ttys.
-		 *
-		 * This could theoretically break old code that performs open()
-		 * on a write-only file descriptor. In that case, it might be
-		 * necessary to also permit this if
-		 * inode_permission(inode, MAY_READ) == 0.
-		 */
-		if (filp->f_mode & FMODE_READ)
-			__proc_set_tty(current, tty);
-	}
+	    tty->session == NULL)
+		__proc_set_tty(current, tty);
 	spin_unlock_irq(&current->sighand->siglock);
 	tty_unlock();
 	mutex_unlock(&tty_mutex);
@@ -2326,7 +2289,7 @@ static int fionbio(struct file *file, int __user *p)
  *		Takes ->siglock() when updating signal->tty
  */
 
-static int tiocsctty(struct tty_struct *tty, struct file *file, int arg)
+static int tiocsctty(struct tty_struct *tty, int arg)
 {
 	int ret = 0;
 	if (current->signal->leader && (task_session(current) == tty->session))
@@ -2359,13 +2322,6 @@ static int tiocsctty(struct tty_struct *tty, struct file *file, int arg)
 			goto unlock;
 		}
 	}
-
-	/* See the comment in tty_open(). */
-	if ((file->f_mode & FMODE_READ) == 0 && !capable(CAP_SYS_ADMIN)) {
-		ret = -EPERM;
-		goto unlock;
-	}
-
 	proc_set_tty(current, tty);
 unlock:
 	mutex_unlock(&tty_mutex);
@@ -2745,7 +2701,7 @@ long tty_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		no_tty();
 		return 0;
 	case TIOCSCTTY:
-		return tiocsctty(tty, file, arg);
+		return tiocsctty(tty, arg);
 	case TIOCGPGRP:
 		return tiocgpgrp(tty, real_tty, p);
 	case TIOCSPGRP:
@@ -2855,13 +2811,6 @@ static long tty_compat_ioctl(struct file *file, unsigned int cmd,
 }
 #endif
 
-static int this_tty(const void *t, struct file *file, unsigned fd)
-{
-	if (likely(file->f_op->read != tty_read))
-		return 0;
-	return file_tty(file) != t ? 0 : fd + 1;
-}
-	
 /*
  * This implements the "Secure Attention Key" ---  the idea is to
  * prevent trojan horses by killing all processes associated with this
@@ -3120,37 +3069,21 @@ void tty_unregister_device(struct tty_driver *driver, unsigned index)
 }
 EXPORT_SYMBOL(tty_unregister_device);
 
-/**
- * __tty_alloc_driver -- allocate tty driver
- * @lines: count of lines this driver can handle at most
- * @owner: module which is repsonsible for this driver
- * @flags: some of TTY_DRIVER_* flags, will be set in driver->flags
- *
- * This should not be called directly, some of the provided macros should be
- * used instead. Use IS_ERR and friends on @retval.
- */
-struct tty_driver *__tty_alloc_driver(unsigned int lines, struct module *owner,
-		unsigned long flags)
+struct tty_driver *__alloc_tty_driver(int lines, struct module *owner)
 {
 	struct tty_driver *driver;
 
-	if (!lines)
-		return ERR_PTR(-EINVAL);
-
 	driver = kzalloc(sizeof(struct tty_driver), GFP_KERNEL);
-	if (!driver)
-		return ERR_PTR(-ENOMEM);
-
-	kref_init(&driver->kref);
-	driver->magic = TTY_DRIVER_MAGIC;
-	driver->num = lines;
-	driver->owner = owner;
-	driver->flags = flags;
-	/* later we'll move allocation of tables here */
-
+	if (driver) {
+		kref_init(&driver->kref);
+		driver->magic = TTY_DRIVER_MAGIC;
+		driver->num = lines;
+		driver->owner = owner;
+		/* later we'll move allocation of tables here */
+	}
 	return driver;
 }
-EXPORT_SYMBOL(__tty_alloc_driver);
+EXPORT_SYMBOL(__alloc_tty_driver);
 
 static void destruct_tty_driver(struct kref *kref)
 {

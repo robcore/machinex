@@ -2,7 +2,7 @@ if BLOCK
 
 menu "IO Schedulers"
 
-config IOSCHED_SCHED_AFQ
+config IOSCHED_AFQ
 	bool
 	default y
 	---help---

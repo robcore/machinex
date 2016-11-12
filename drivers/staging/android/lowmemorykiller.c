@@ -251,7 +251,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_SAMP_HOTNESS
 		int hotness_adj = 0;
 #endif
-
 		if (tsk->flags & PF_KTHREAD)
 			continue;
 

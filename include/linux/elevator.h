@@ -142,7 +142,6 @@ struct elevator_ops
 	elevator_init_fn *elevator_init_fn;
 	elevator_exit_fn *elevator_exit_fn;
 	elevator_registered_fn *elevator_registered_fn;
-};
 
 	// these are called WITHOUT the queue_lock
 	elevator_read_entry_fn *elevator_read_entry_fn;
