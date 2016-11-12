@@ -84,7 +84,7 @@ static void free_fdtable_work(struct work_struct *work)
 	}
 }
 
-void free_fdtable_rcu(struct rcu_head *rcu)
+static void free_fdtable_rcu(struct rcu_head *rcu)
 {
 	struct fdtable *fdt = container_of(rcu, struct fdtable, rcu);
 	struct fdtable_defer *fddef;
@@ -114,6 +114,11 @@ void free_fdtable_rcu(struct rcu_head *rcu)
 		spin_unlock(&fddef->lock);
 		put_cpu_var(fdtable_defer_list);
 	}
+}
+
+static inline void free_fdtable(struct fdtable *fdt)
+{
+	call_rcu(&fdt->rcu, free_fdtable_rcu);
 }
 
 /*
@@ -220,7 +225,7 @@ static int expand_fdtable(struct files_struct *files, int nr)
 	 */
 	if (unlikely(new_fdt->max_fds <= nr)) {
 		__free_fdtable(new_fdt);
-		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)"); 
+		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)");
 		return -EMFILE;
 	}
 	/*
