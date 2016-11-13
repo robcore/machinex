@@ -946,8 +946,8 @@ int msm_pm_wait_cpu_shutdown(unsigned int cpu)
 
 		if (acc_sts & msm_pm_slp_sts[cpu].mask)
 			return 0;
-		udelay(10000);
-		WARN(++timeout == 10, "CPU%u didn't collape within 10ms\n",
+		mdelay(20);
+		WARN(++timeout == 20, "CPU%u didn't collape within 10ms\n",
 					cpu);
 	}
 
