@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -166,7 +166,6 @@ int msm_iommu_map_contig_buffer(unsigned long phys,
 {
 	unsigned long iova;
 	int ret;
-	struct iommu_domain *domain;
 
 	if (size & (align - 1))
 		return -EINVAL;
@@ -182,14 +181,8 @@ int msm_iommu_map_contig_buffer(unsigned long phys,
 	if (ret)
 		return -ENOMEM;
 
-	domain = msm_get_iommu_domain(domain_no);
-	if (!domain) {
-		pr_err("%s: Could not find domain %u. Unable to map\n",
-			__func__, domain_no);
-		msm_free_iova_address(iova, domain_no, partition_no, size);
-		return -EINVAL;
-	}
-	ret = msm_iommu_map_iova_phys(domain, iova, phys, size, cached);
+	ret = msm_iommu_map_iova_phys(msm_get_iommu_domain(domain_no), iova,
+					phys, size, cached);
 
 	if (ret)
 		msm_free_iova_address(iova, domain_no, partition_no, size);
@@ -205,18 +198,10 @@ void msm_iommu_unmap_contig_buffer(unsigned long iova,
 					unsigned int partition_no,
 					unsigned long size)
 {
-	struct iommu_domain *domain;
-
 	if (!msm_use_iommu())
 		return;
 
-	domain = msm_get_iommu_domain(domain_no);
-	if (domain) {
-		iommu_unmap_range(domain, iova, size);
-	} else {
-		pr_err("%s: Could not find domain %u. Unable to unmap\n",
-			__func__, domain_no);
-	}
+	iommu_unmap_range(msm_get_iommu_domain(domain_no), iova, size);
 	msm_free_iova_address(iova, domain_no, partition_no, size);
 }
 EXPORT_SYMBOL(msm_iommu_unmap_contig_buffer);
@@ -306,9 +291,7 @@ int msm_allocate_iova_address(unsigned int iommu_domain,
 	if (!pool->gpool)
 		return -EINVAL;
 
-	mutex_lock(&pool->pool_mutex);
 	va = gen_pool_alloc_aligned(pool->gpool, size, ilog2(align));
-	mutex_unlock(&pool->pool_mutex);
 	if (va) {
 		pool->free -= size;
 		/* Offset because genpool can't handle 0 addresses */
@@ -353,9 +336,7 @@ void msm_free_iova_address(unsigned long iova,
 	if (pool->paddr == 0)
 		iova += SZ_4K;
 
-	mutex_lock(&pool->pool_mutex);
 	gen_pool_free(pool->gpool, iova, size);
-	mutex_unlock(&pool->pool_mutex);
 }
 
 int msm_register_domain(struct msm_iova_layout *layout)
@@ -372,7 +353,7 @@ int msm_register_domain(struct msm_iova_layout *layout)
 	if (!data)
 		return -ENOMEM;
 
-	pools = kzalloc(sizeof(struct mem_pool) * layout->npartitions,
+	pools = kmalloc(sizeof(struct mem_pool) * layout->npartitions,
 			GFP_KERNEL);
 
 	if (!pools)
@@ -389,7 +370,6 @@ int msm_register_domain(struct msm_iova_layout *layout)
 
 		pools[i].paddr = layout->partitions[i].start;
 		pools[i].size = layout->partitions[i].size;
-		mutex_init(&pools[i].pool_mutex);
 
 		/*
 		 * genalloc can't handle a pool starting at address 0.

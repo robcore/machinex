@@ -36,22 +36,24 @@
 	reserve:    Enable libgenpool to simulate tail allocations
 */
 
-int allocate_head(struct ocmem_zone *z, unsigned long size,
-							unsigned long *offset)
+unsigned long allocate_head(struct ocmem_zone *z, unsigned long size)
 {
-	*offset  = gen_pool_alloc(z->z_pool, size);
 
-	if (!(*offset))
+	unsigned long offset;
+
+	offset  = gen_pool_alloc(z->z_pool, size);
+
+	if (!offset)
 		return -ENOMEM;
 
 	z->z_head += size;
 	z->z_free -= size;
-	return 0;
+	return offset;
 }
 
-int allocate_tail(struct ocmem_zone *z, unsigned long size,
-							unsigned long *offset)
+unsigned long allocate_tail(struct ocmem_zone *z, unsigned long size)
 {
+	unsigned long offset;
 	unsigned long reserve;
 	unsigned long head;
 
@@ -61,17 +63,17 @@ int allocate_tail(struct ocmem_zone *z, unsigned long size,
 	reserve = z->z_tail - z->z_head - size;
 	if (reserve) {
 		head = gen_pool_alloc(z->z_pool, reserve);
-		*offset = gen_pool_alloc(z->z_pool, size);
+		offset = gen_pool_alloc(z->z_pool, size);
 		gen_pool_free(z->z_pool, head, reserve);
 	} else
-		*offset = gen_pool_alloc(z->z_pool, size);
+		offset = gen_pool_alloc(z->z_pool, size);
 
-	if (!(*offset))
+	if (!offset)
 		return -ENOMEM;
 
 	z->z_tail -= size;
 	z->z_free -= size;
-	return 0;
+	return offset;
 }
 
 int free_head(struct ocmem_zone *z, unsigned long offset,
