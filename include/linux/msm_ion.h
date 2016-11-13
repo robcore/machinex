@@ -274,6 +274,33 @@ struct ion_flush_data {
 	unsigned int length;
 };
 
+/* struct ion_flag_data - information about flags for this buffer
+ *
+ * @handle:	handle to get flags from
+ * @flags:	flags of this handle
+ *
+ * Takes handle as an input and outputs the flags from the handle
+ * in the flag field.
+ */
+struct ion_flag_data {
+	struct ion_handle *handle;
+	unsigned long flags;
+};
+
+/* struct ion_buffer_data
+ *
+ * @handle:	handle for the buffer being queried
+ * @paddr:	The physical address of the buffer referenced by the handle
+ * @length:	The length of the buffer referenced by the handle
+ *
+ * Gets the physicial address of the given handle
+ */
+struct ion_buffer_data {
+	struct ion_handle *handle;
+	unsigned long paddr;
+	unsigned int length;
+};
+
 #define ION_IOC_MSM_MAGIC 'M'
 
 /**
@@ -297,5 +324,21 @@ struct ion_flush_data {
  */
 #define ION_IOC_CLEAN_INV_CACHES	_IOWR(ION_IOC_MSM_MAGIC, 2, \
 						struct ion_flush_data)
+
+/**
+ * DOC: ION_IOC_GET_FLAGS - get the flags of the handle
+ *
+ * Gets the flags of the current handle which indicate cachability,
+ * secure state etc.
+ */
+#define ION_IOC_GET_FLAGS		_IOWR(ION_IOC_MSM_MAGIC, 3, \
+						struct ion_flag_data)
+/**
+ * DOC: ION_IOC_GET_PHYS - get the physical address of the handle
+ *
+ * Gets the physicial address of the given handle
+ */
+#define ION_IOC_GET_PHYS	_IOWR(ION_IOC_MSM_MAGIC, 4, \
+						struct ion_buffer_data)
 
 #endif

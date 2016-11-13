@@ -613,7 +613,7 @@ static long msm_ion_custom_ioctl(struct ion_client *client,
 		start = (unsigned long) data.vaddr;
 		end = (unsigned long) data.vaddr + data.length;
 
-		if (start && check_vaddr_bounds(start, end)) {
+		if (check_vaddr_bounds(start, end)) {
 			pr_err("%s: virtual address %p is out of bounds\n",
 				__func__, data.vaddr);
 			return -EINVAL;
@@ -640,6 +640,41 @@ static long msm_ion_custom_ioctl(struct ion_client *client,
 			return ret;
 		break;
 
+	}
+	case ION_IOC_GET_FLAGS:
+	{
+		struct ion_flag_data data;
+		int ret;
+		if (copy_from_user(&data, (void __user *)arg,
+					sizeof(struct ion_flag_data)))
+			return -EFAULT;
+
+		ret = ion_handle_get_flags(client, data.handle, &data.flags);
+		if (ret < 0)
+			return ret;
+		if (copy_to_user((void __user *)arg, &data,
+					sizeof(struct ion_flag_data)))
+			return -EFAULT;
+		break;
+	}
+	case ION_IOC_GET_PHYS:
+	{
+		struct ion_buffer_data data;
+		int ret = 0;
+
+		if (copy_from_user(&data, (void __user *)arg,
+					sizeof(struct ion_buffer_data)))
+			return -EFAULT;
+
+		ret = ion_phys(client, data.handle,
+				(ion_phys_addr_t*)(&data.paddr), &data.length);
+		if (ret < 0)
+			return ret;
+
+		if (copy_to_user((void __user *)arg, &data,
+					sizeof(struct ion_buffer_data)))
+			return -EFAULT;
+		break;
 	}
 	default:
 		return -ENOTTY;
@@ -705,10 +740,10 @@ static int msm_ion_probe(struct platform_device *pdev)
 
 		ion_device_add_heap(idev, heaps[i]);
 	}
-	check_for_heap_overlap(pdata->heaps, num_heaps);
 	if (pdata_needs_to_be_freed)
 		free_pdata(pdata);
 
+	check_for_heap_overlap(pdata->heaps, num_heaps);
 	platform_set_drvdata(pdev, idev);
 	return 0;
 

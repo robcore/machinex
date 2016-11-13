@@ -23,7 +23,6 @@
 #include <linux/mm.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
-#include <linux/vmalloc.h>
 #include <linux/iommu.h>
 #include <linux/seq_file.h>
 #include "ion_priv.h"
@@ -241,78 +240,25 @@ int ion_carveout_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 			void *vaddr, unsigned int offset, unsigned int length,
 			unsigned int cmd)
 {
-	void (*outer_cache_op)(phys_addr_t, phys_addr_t) = NULL;
+	void (*outer_cache_op)(phys_addr_t, phys_addr_t);
 	struct ion_carveout_heap *carveout_heap =
 	     container_of(heap, struct  ion_carveout_heap, heap);
-	unsigned int size_to_vmap, total_size;
-	int i, j;
-	void *ptr = NULL;
-	ion_phys_addr_t buff_phys = buffer->priv_phys;
 
-	if (!vaddr) {
-		/*
-		 * Split the vmalloc space into smaller regions in
-		 * order to clean and/or invalidate the cache.
-		 */
-		size_to_vmap = ((VMALLOC_END - VMALLOC_START)/8);
-		total_size = buffer->size;
-
-		for (i = 0; i < total_size; i += size_to_vmap) {
-			size_to_vmap = min(size_to_vmap, total_size - i);
-			for (j = 0; j < 10 && size_to_vmap; ++j) {
-				ptr = ioremap(buff_phys, size_to_vmap);
-				if (ptr) {
-					switch (cmd) {
-					case ION_IOC_CLEAN_CACHES:
-						dmac_clean_range(ptr,
-							ptr + size_to_vmap);
-						outer_cache_op =
-							outer_clean_range;
-						break;
-					case ION_IOC_INV_CACHES:
-						dmac_inv_range(ptr,
-							ptr + size_to_vmap);
-						outer_cache_op =
-							outer_inv_range;
-						break;
-					case ION_IOC_CLEAN_INV_CACHES:
-						dmac_flush_range(ptr,
-							ptr + size_to_vmap);
-						outer_cache_op =
-							outer_flush_range;
-						break;
-					default:
-						return -EINVAL;
-					}
-					buff_phys += size_to_vmap;
-					break;
-				} else {
-					size_to_vmap >>= 1;
-				}
-			}
-			if (!ptr) {
-				pr_err("Couldn't io-remap the memory\n");
-				return -EINVAL;
-			}
-			iounmap(ptr);
-		}
-	} else {
-		switch (cmd) {
-		case ION_IOC_CLEAN_CACHES:
-			dmac_clean_range(vaddr, vaddr + length);
-			outer_cache_op = outer_clean_range;
-			break;
-		case ION_IOC_INV_CACHES:
-			dmac_inv_range(vaddr, vaddr + length);
-			outer_cache_op = outer_inv_range;
-			break;
-		case ION_IOC_CLEAN_INV_CACHES:
-			dmac_flush_range(vaddr, vaddr + length);
-			outer_cache_op = outer_flush_range;
-			break;
-		default:
-			return -EINVAL;
-		}
+	switch (cmd) {
+	case ION_IOC_CLEAN_CACHES:
+		dmac_clean_range(vaddr, vaddr + length);
+		outer_cache_op = outer_clean_range;
+		break;
+	case ION_IOC_INV_CACHES:
+		dmac_inv_range(vaddr, vaddr + length);
+		outer_cache_op = outer_inv_range;
+		break;
+	case ION_IOC_CLEAN_INV_CACHES:
+		dmac_flush_range(vaddr, vaddr + length);
+		outer_cache_op = outer_flush_range;
+		break;
+	default:
+		return -EINVAL;
 	}
 
 	if (carveout_heap->has_outer_cache) {
@@ -323,7 +269,7 @@ int ion_carveout_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 }
 
 static int ion_carveout_print_debug(struct ion_heap *heap, struct seq_file *s,
-				    const struct list_head *mem_map)
+				    const struct rb_root *mem_map)
 {
 	struct ion_carveout_heap *carveout_heap =
 		container_of(heap, struct ion_carveout_heap, heap);
@@ -337,14 +283,16 @@ static int ion_carveout_print_debug(struct ion_heap *heap, struct seq_file *s,
 		unsigned long size = carveout_heap->total_size;
 		unsigned long end = base+size;
 		unsigned long last_end = base;
-		struct mem_map_data *data;
+		struct rb_node *n;
 
 		seq_printf(s, "\nMemory Map\n");
 		seq_printf(s, "%16.s %14.s %14.s %14.s\n",
 			   "client", "start address", "end address",
 			   "size (hex)");
 
-		list_for_each_entry(data, mem_map, node) {
+		for (n = rb_first(mem_map); n; n = rb_next(n)) {
+			struct mem_map_data *data =
+					rb_entry(n, struct mem_map_data, node);
 			const char *client_name = "(null)";
 
 			if (last_end < data->addr) {
