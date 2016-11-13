@@ -414,6 +414,9 @@ static void f2fs_put_super(struct super_block *sb)
 	if (sbi->s_dirty && get_pages(sbi, F2FS_DIRTY_NODES))
 		write_checkpoint(sbi, true);
 
+	/* normally superblock is clean, so we need to release this */
+	release_dirty_inode(sbi);
+
 	iput(sbi->node_inode);
 	iput(sbi->meta_inode);
 

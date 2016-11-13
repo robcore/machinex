@@ -52,7 +52,7 @@ enum rmnet_ioctl_cmds_e {
 struct QMI_QOS_HDR_S {
 	unsigned char    version;
 	unsigned char    flags;
-	unsigned long    flow_id;
+	uint32_t         flow_id;
 };
 
 /* QMI QoS Aligned header definition */
