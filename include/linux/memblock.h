@@ -156,6 +156,7 @@ phys_addr_t memblock_alloc_base(phys_addr_t size, phys_addr_t align,
 phys_addr_t __memblock_alloc_base(phys_addr_t size, phys_addr_t align,
 				  phys_addr_t max_addr);
 phys_addr_t memblock_phys_mem_size(void);
+phys_addr_t memblock_mem_size(unsigned long limit_pfn);
 phys_addr_t memblock_start_of_DRAM(void);
 phys_addr_t memblock_end_of_DRAM(void);
 void memblock_enforce_memory_limit(phys_addr_t memory_limit);
@@ -181,6 +182,8 @@ static inline void memblock_dump_all(void)
  */
 void memblock_set_current_limit(phys_addr_t limit);
 
+
+phys_addr_t memblock_get_current_limit(void);
 
 /*
  * pfn conversion functions

@@ -631,7 +631,7 @@ static void pcpu_free_chunk(struct pcpu_chunk *chunk)
 	if (!chunk)
 		return;
 	pcpu_mem_free(chunk->map, chunk->map_alloc * sizeof(chunk->map[0]));
-	kfree(chunk);
+	pcpu_mem_free(chunk, pcpu_chunk_struct_size);
 }
 
 /*
@@ -1370,7 +1370,7 @@ int __init pcpu_setup_first_chunk(const struct pcpu_alloc_info *ai,
 
 #ifdef CONFIG_SMP
 
-const char *pcpu_fc_names[PCPU_FC_NR] __initdata = {
+const char * const pcpu_fc_names[PCPU_FC_NR] __initconst = {
 	[PCPU_FC_AUTO]	= "auto",
 	[PCPU_FC_EMBED]	= "embed",
 	[PCPU_FC_PAGE]	= "page",
