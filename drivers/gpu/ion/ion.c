@@ -2,7 +2,7 @@
  * drivers/gpu/ion/ion.c
  *
  * Copyright (C) 2011 Google, Inc.
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -24,7 +24,6 @@
 #include <linux/list.h>
 #include <linux/memblock.h>
 #include <linux/miscdevice.h>
-#include <linux/export.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
 #include <linux/rbtree.h>
@@ -299,7 +298,7 @@ static struct ion_handle *ion_handle_create(struct ion_client *client,
 	if (!handle)
 		return ERR_PTR(-ENOMEM);
 	kref_init(&handle->ref);
-	RB_CLEAR_NODE(&handle->node);
+	rb_init_node(&handle->node);
 	handle->client = client;
 	ion_buffer_get(buffer);
 	handle->buffer = buffer;
@@ -459,7 +458,7 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 		return ERR_PTR(-ENODEV);
 
 	if (IS_ERR(buffer)) {
-		pr_debug("ION is unable to allocate 0x%x bytes (alignment: "
+		pr_info("ION is unable to allocate 0x%x bytes (alignment: "
 			 "0x%x) from heap(s) %sfor client %s with heap "
 			 "mask 0x%x\n",
 			len, align, dbg_str, client->name, client->heap_mask);
@@ -625,8 +624,23 @@ int ion_map_iommu(struct ion_client *client, struct ion_handle *handle,
 			unsigned long flags, unsigned long iommu_flags)
 {
 	struct ion_buffer *buffer;
-	struct ion_iommu_map *iommu_map;
+	struct ion_iommu_map *iommu_map = NULL;
 	int ret = 0;
+
+	if (client == NULL) {
+		pr_err("%s: client pointer is null!\n", __func__);
+		return -EINVAL;
+	}
+
+	if (handle == NULL) {
+		pr_err("%s: null handle pointer!\n", __func__);
+		return -EINVAL;
+	}
+
+	if (handle->buffer == NULL) {
+		pr_err("%s: null buffer pointer!\n", __func__);
+		return -EINVAL;
+	}
 
 	if (ION_IS_CACHED(flags)) {
 		pr_err("%s: Cannot map iommu as cached.\n", __func__);
@@ -689,6 +703,12 @@ int ion_map_iommu(struct ion_client *client, struct ion_handle *handle,
 			if (iommu_map->flags & ION_IOMMU_UNMAP_DELAYED)
 				kref_get(&iommu_map->ref);
 		}
+#if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
+		else {
+            ret = -EINVAL;
+            goto out;
+        }
+#endif
 	} else {
 		if (iommu_map->flags != iommu_flags) {
 			pr_err("%s: handle %p is already mapped with iommu flags %lx, trying to map with flags %lx\n",
@@ -732,6 +752,21 @@ void ion_unmap_iommu(struct ion_client *client, struct ion_handle *handle,
 {
 	struct ion_iommu_map *iommu_map;
 	struct ion_buffer *buffer;
+
+	if (client == NULL) {
+		pr_err("%s: null client pointer!\n", __func__);
+		return;
+	}
+
+	if (handle == NULL) {
+		pr_err("%s: null handle pointer!\n", __func__);
+		return;
+	}
+
+	if (handle->buffer == NULL) {
+		pr_err("%s: null buffer pointer!\n", __func__);
+		return;
+	}
 
 	mutex_lock(&client->lock);
 	buffer = handle->buffer;
@@ -1078,17 +1113,33 @@ static void ion_unmap_dma_buf(struct dma_buf_attachment *attachment,
 {
 }
 
+static void ion_vma_open(struct vm_area_struct *vma)
+{
+	struct ion_buffer *buffer = vma->vm_private_data;
+
+	pr_debug("%s: %d\n", __func__, __LINE__);
+
+	mutex_lock(&buffer->lock);
+	buffer->umap_cnt++;
+	mutex_unlock(&buffer->lock);
+}
+
 static void ion_vma_close(struct vm_area_struct *vma)
 {
 	struct ion_buffer *buffer = vma->vm_private_data;
 
 	pr_debug("%s: %d\n", __func__, __LINE__);
 
+	mutex_lock(&buffer->lock);
+	buffer->umap_cnt--;
+	mutex_unlock(&buffer->lock);
+
 	if (buffer->heap->ops->unmap_user)
 		buffer->heap->ops->unmap_user(buffer->heap, buffer);
 }
 
 static struct vm_operations_struct ion_vm_ops = {
+	.open = ion_vma_open,
 	.close = ion_vma_close,
 };
 
@@ -1106,12 +1157,15 @@ static int ion_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 	mutex_lock(&buffer->lock);
 	/* now map it to userspace */
 	ret = buffer->heap->ops->map_user(buffer->heap, buffer, vma);
-	mutex_unlock(&buffer->lock);
 
 	if (ret) {
+		mutex_unlock(&buffer->lock);
 		pr_err("%s: failure mapping buffer to userspace\n",
 		       __func__);
 	} else {
+		buffer->umap_cnt++;
+		mutex_unlock(&buffer->lock);
+
 		vma->vm_ops = &ion_vm_ops;
 		/*
 		 * move the buffer into the vm_private_data so we can access it
@@ -1379,6 +1433,9 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case ION_IOC_CLEAN_INV_CACHES:
 		return client->dev->custom_ioctl(client,
 						ION_IOC_CLEAN_INV_CACHES, arg);
+	case ION_IOC_GET_FLAGS:
+		return client->dev->custom_ioctl(client,
+						ION_IOC_GET_FLAGS, arg);
 	default:
 		return -ENOTTY;
 	}
