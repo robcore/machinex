@@ -89,6 +89,8 @@ unsigned long get_wchan(struct task_struct *p);
 #define cpu_relax()			barrier()
 #endif
 
+void cpu_idle_wait(void);
+
 /*
  * Create a new kernel thread
  */
