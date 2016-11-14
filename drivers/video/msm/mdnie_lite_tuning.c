@@ -313,7 +313,7 @@ void sending_tuning_cmd(void)
 	}
 }
 
-void mDNIe_Set_Mode(void)
+void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 {
 	struct msm_fb_data_type *mfd;
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
