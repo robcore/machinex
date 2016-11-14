@@ -356,6 +356,8 @@ static int __init alarm_dev_init(void)
 
 	wake_lock_init(&alarm_wake_lock, WAKE_LOCK_SUSPEND, "alarm");
 
+	power_on_alarm_init();
+
 	return 0;
 }
 
