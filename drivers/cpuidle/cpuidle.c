@@ -41,6 +41,33 @@ void disable_cpuidle(void)
 	off = 1;
 }
 
+#if defined(CONFIG_ARCH_HAS_CPU_IDLE_WAIT)
+static void cpuidle_kick_cpus(void)
+{
+	cpu_idle_wait();
+}
+#endif
+
+static int __cpuidle_register_device(struct cpuidle_device *dev);
+
+static inline int cpuidle_enter(struct cpuidle_device *dev,
+				struct cpuidle_driver *drv, int index)
+{
+	struct cpuidle_state *target_state = &drv->states[index];
+	return target_state->enter(dev, drv, index);
+}
+
+static inline int cpuidle_enter_tk(struct cpuidle_device *dev,
+			       struct cpuidle_driver *drv, int index)
+{
+	return cpuidle_wrap_enter(dev, drv, index, cpuidle_enter);
+}
+
+typedef int (*cpuidle_enter_t)(struct cpuidle_device *dev,
+			       struct cpuidle_driver *drv, int index);
+
+static cpuidle_enter_t cpuidle_enter_ops;
+
 /**
  * cpuidle_play_dead - cpu off-lining
  *
@@ -84,7 +111,10 @@ int cpuidle_idle_call(void)
 	struct cpuidle_driver *drv = cpuidle_get_driver();
 	int next_state, entered_state;
 
-	if (off || !initialized)
+	if (off)
+		return -ENODEV;
+
+	if (!initialized)
 		return -ENODEV;
 
 	/* check if the device is ready */
@@ -145,7 +175,7 @@ void cpuidle_uninstall_idle_handler(void)
 {
 	if (enabled_devices) {
 		initialized = 0;
-		kick_all_cpus_sync();
+		cpuidle_kick_cpus();
 	}
 }
 

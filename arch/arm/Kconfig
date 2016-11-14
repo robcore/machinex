@@ -188,7 +188,7 @@ config ARCH_HAS_CPUFREQ
 	  it.
 
 config ARCH_HAS_CPU_IDLE_WAIT
-       def_bool n
+       def_bool y
 
 config GENERIC_HWEIGHT
 	bool

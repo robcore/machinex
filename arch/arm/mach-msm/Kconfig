@@ -88,6 +88,7 @@ config ARCH_MSM8X60
 	select MSM_RPM_REGULATOR
 	select GPIO_MSM_V2
 	select MSM_PIL
+	select ARCH_HAS_CPU_IDLE_WAIT
 	select MSM_DIRECT_SCLK_ACCESS
 	select MSM_RPM
 	select MSM_XO
