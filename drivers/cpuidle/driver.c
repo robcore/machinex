@@ -94,4 +94,3 @@ void cpuidle_unregister_driver(struct cpuidle_driver *drv)
 }
 
 EXPORT_SYMBOL_GPL(cpuidle_unregister_driver);
-
