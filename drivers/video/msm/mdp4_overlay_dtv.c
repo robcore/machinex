@@ -723,6 +723,11 @@ int mdp4_dtv_off(struct platform_device *pdev)
 		vp->update_cnt = 0;     /* empty queue */
 	}
 
+	if (vctrl->vsync_irq_enabled) {
+		vctrl->vsync_irq_enabled = 0;
+		vsync_irq_disable(INTR_PRIMARY_VSYNC, MDP_PRIM_VSYNC_TERM);
+	}
+
 	ret = panel_next_off(pdev);
 	mdp_footswitch_ctrl(FALSE);
 
