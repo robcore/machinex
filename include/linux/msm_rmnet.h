@@ -1,16 +1,3 @@
-/* Copyright (c) 2010, The Linux Foundation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
-
 #ifndef _MSM_RMNET_H_
 #define _MSM_RMNET_H_
 
@@ -19,7 +6,6 @@
 #define RMNET_MODE_LLP_ETH  (0x01)
 #define RMNET_MODE_LLP_IP   (0x02)
 #define RMNET_MODE_QOS      (0x04)
-#define RMNET_MODE_ALIGNED_QOS      (0x08)
 #define RMNET_MODE_MASK     (RMNET_MODE_LLP_ETH | \
 			     RMNET_MODE_LLP_IP  | \
 			     RMNET_MODE_QOS)
@@ -43,7 +29,6 @@ enum rmnet_ioctl_cmds_e {
 	RMNET_IOCTL_CLOSE            = 0x000089F9, /* Close transport port   */
 	RMNET_IOCTL_FLOW_ENABLE	     = 0x000089FA, /* Flow enable	     */
 	RMNET_IOCTL_FLOW_DISABLE     = 0x000089FB, /* Flow disable	     */
-	RMNET_IOCTL_SET_ALIGNED_QOS_ENABLE = 0x000089FC, /*Set aligned QoS   */
 	RMNET_IOCTL_MAX
 };
 
@@ -52,14 +37,7 @@ enum rmnet_ioctl_cmds_e {
 struct QMI_QOS_HDR_S {
 	unsigned char    version;
 	unsigned char    flags;
-	uint32_t         flow_id;
-};
-
-/* QMI QoS Aligned header definition */
-#define QMI_QOS_ALIGNED_HDR_S  __attribute((__packed__)) qmi_qos_aligned_hdr_s
-struct QMI_QOS_ALIGNED_HDR_S {
-	struct QMI_QOS_HDR_S hdr;
-	unsigned char reserved[2];
+	unsigned long    flow_id;
 };
 
 #endif /* _MSM_RMNET_H_ */
