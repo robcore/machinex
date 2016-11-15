@@ -273,14 +273,6 @@ struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd);
 int ion_handle_get_flags(struct ion_client *client, struct ion_handle *handle,
 				unsigned long *flags);
 
-/**
- * heap flags - the lower 16 bits are used by core ion, the upper 16
- * bits are reserved for use by the heaps themselves.
- */
-#define ION_FLAG_CACHED 1		/* mappings of this buffer should be
-					   cached, ion will do cache
-					   maintenance when the buffer is
-					   mapped for dma */
 
 /**
  * ion_map_iommu - map the given handle into an iommu
