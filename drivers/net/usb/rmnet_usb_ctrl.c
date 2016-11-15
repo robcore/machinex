@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -38,10 +38,6 @@ module_param_array(rmnet_dev_names, charp, NULL, S_IRUGO | S_IWUSR);
 #define ACM_CTRL_RI		BIT(2)
 #define ACM_CTRL_CD		BIT(3)
 
-/* polling interval for Interrupt ep */
-#define HS_INTERVAL		7
-#define FS_LS_INTERVAL		3
-
 /*echo modem_wait > /sys/class/hsicctl/hsicctlx/modem_wait*/
 static ssize_t modem_wait_store(struct device *d, struct device_attribute *attr,
 		const char *buf, size_t n)
@@ -79,14 +75,13 @@ module_param_named(dump_ctrl_msg, ctl_msg_dbg_mask, int,
 enum {
 	MSM_USB_CTL_DEBUG = 1U << 0,
 	MSM_USB_CTL_DUMP_BUFFER = 1U << 1,
-	MSM_USB_CTL_NOTI_DEBUG = 1U << 2,
 };
 
 #define DUMP_BUFFER(prestr, cnt, buf) \
 do { \
 	if (ctl_msg_dbg_mask & MSM_USB_CTL_DUMP_BUFFER) \
 			print_hex_dump(KERN_INFO, prestr, DUMP_PREFIX_NONE, \
-					16, 1, buf, cnt > 16 ? 16 : cnt, false); \
+					16, 1, buf, cnt, false); \
 } while (0)
 
 #define DBG(x...) \
@@ -95,16 +90,9 @@ do { \
 				pr_info(x); \
 		} while (0)
 
-#define DBG_NOTI(x...) \
-		do { \
-			if (ctl_msg_dbg_mask & MSM_USB_CTL_NOTI_DEBUG) \
-				pr_info(x); \
-		} while (0)
-
 /* passed in rmnet_usb_ctrl_init */
 static int num_devs;
 static int insts_per_dev;
-
 
 /* dynamically allocated 2-D array of num_devs*insts_per_dev ctrl_devs */
 static struct rmnet_ctrl_dev **ctrl_devs;
@@ -193,7 +181,7 @@ static void get_encap_work(struct work_struct *w)
 		dev->get_encap_failure_cnt++;
 		return;
 	}
-	init_completion(&dev->rx_wait);
+
 	usb_fill_control_urb(dev->rcvurb, udev,
 				usb_rcvctrlpipe(udev, 0),
 				(unsigned char *)dev->in_ctlreq,
@@ -214,13 +202,7 @@ static void get_encap_work(struct work_struct *w)
 			__func__, status);
 		goto resubmit_int_urb;
 	}
-	status = wait_for_completion_timeout(&dev->rx_wait,
-	msecs_to_jiffies(1000));
-	if (!status) {
-		dev->rcvurb_killed++;
-		dev_err(dev->devicep, "killing the rcvurb\n");
-		usb_kill_urb(dev->rcvurb);
-	}
+
 	return;
 
 resubmit_int_urb:
@@ -244,16 +226,13 @@ static void notification_available_cb(struct urb *urb)
 	struct usb_cdc_notification	*ctrl;
 	struct usb_device		*udev;
 	struct rmnet_ctrl_dev		*dev = urb->context;
-	unsigned int 		iface_num;
 
 	udev = interface_to_usbdev(dev->intf);
-	iface_num = dev->intf->cur_altsetting->desc.bInterfaceNumber;
 
 	switch (urb->status) {
 	case 0:
 	/*if non zero lenght of data received while unlink*/
 	case -ENOENT:
-		DBG_NOTI("[NACB:%d]<", iface_num);
 		/*success*/
 		break;
 
@@ -324,23 +303,19 @@ static void resp_avail_cb(struct urb *urb)
 	void				*cpkt;
 	int				ch_id, status = 0;
 	size_t				cpkt_size = 0;
-	unsigned int		iface_num;
 
 	udev = interface_to_usbdev(dev->intf);
-	complete(&dev->rx_wait);
-	iface_num = dev->intf->cur_altsetting->desc.bInterfaceNumber;
 
 	usb_autopm_put_interface_async(dev->intf);
 
 	switch (urb->status) {
 	case 0:
 		/*success*/
-	case -ENOENT:
-		/* rcvurb killed upon timeout */
 		break;
 
 	/*do not resubmit*/
 	case -ESHUTDOWN:
+	case -ENOENT:
 	case -ECONNRESET:
 	case -EPROTO:
 		return;
@@ -415,16 +390,12 @@ resubmit_int_urb:
 				"%s: Error re-submitting Int URB %d\n",
 				__func__, status);
 		}
-		DBG_NOTI("[CHKRA:%d]>", iface_num);
 	}
 }
 
 int rmnet_usb_ctrl_start_rx(struct rmnet_ctrl_dev *dev)
 {
 	int	retval = 0;
-	unsigned int 		iface_num;
-
-	iface_num = dev->intf->cur_altsetting->desc.bInterfaceNumber;
 
 	usb_anchor_urb(dev->inturb, &dev->rx_submitted);
 	retval = usb_submit_urb(dev->inturb, GFP_KERNEL);
@@ -433,8 +404,7 @@ int rmnet_usb_ctrl_start_rx(struct rmnet_ctrl_dev *dev)
 		if (retval != -ENODEV)
 			dev_err(dev->devicep,
 			"%s Intr submit %d\n", __func__, retval);
-	} else
-		DBG_NOTI("[CHKRA:%d]>", iface_num);
+	}
 
 	return retval;
 }
@@ -967,9 +937,7 @@ int rmnet_usb_ctrl_probe(struct usb_interface *intf,
 		dev->intf->cur_altsetting->desc.bInterfaceNumber;
 	dev->in_ctlreq->wLength = cpu_to_le16(DEFAULT_READ_URB_LENGTH);
 
-	interval = max((int)int_in->desc.bInterval,
-			(udev->speed == USB_SPEED_HIGH) ? HS_INTERVAL
-							: FS_LS_INTERVAL);
+	interval = int_in->desc.bInterval;
 
 	usb_fill_int_urb(dev->inturb, udev,
 			 dev->int_pipe,
@@ -997,8 +965,6 @@ int rmnet_usb_ctrl_probe(struct usb_interface *intf,
 		set_bit(RMNET_CTRL_DEV_READY, &dev->status);
 		wake_up(&dev->open_wait_queue);
 	}
-
-	ctl_msg_dbg_mask = 0;
 
 	return 0;
 }

@@ -80,7 +80,6 @@ struct rmnet_ctrl_dev {
 
 	struct workqueue_struct	*wq;
 	struct work_struct	get_encap_work;
-	struct completion rx_wait;
 
 	unsigned long		status;
 
@@ -101,7 +100,6 @@ struct rmnet_ctrl_dev {
 	unsigned int		set_ctrl_line_state_cnt;
 	unsigned int		tx_ctrl_err_cnt;
 	unsigned int		zlp_cnt;
-	unsigned int		rcvurb_killed;
 };
 
 extern struct workqueue_struct	*usbnet_wq;
