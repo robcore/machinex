@@ -321,7 +321,7 @@ int mdp4_dsi_video_pipe_commit(int cndx, int wait)
 }
 
 static void mdp4_video_vsync_irq_ctrl(int cndx, int enable)
-{       
+{
 	struct vsycn_ctrl *vctrl;
 
 	vctrl = &vsync_ctrl_db[cndx];
@@ -378,7 +378,7 @@ void mdp4_dsi_video_wait4vsync(int cndx)
 
 	if (atomic_read(&vctrl->suspend) > 0)
 		return;
-	
+
 	mdp4_video_vsync_irq_ctrl(cndx, 1);
 
 	ret = wait_event_interruptible_timeout(vctrl->wait_queue, 1,
@@ -388,7 +388,7 @@ void mdp4_dsi_video_wait4vsync(int cndx)
 		pr_err("%s timeout ret=%d", __func__, ret);
 
 	mdp4_video_vsync_irq_ctrl(cndx, 0);
-	
+
 	mdp4_stat.wait4vsync0++;
 
 }
@@ -482,7 +482,6 @@ ssize_t mdp4_dsi_video_show_event(struct device *dev,
 	cndx = 0;
 	vctrl = &vsync_ctrl_db[0];
 
-	sec_debug_mdp_set_value(SEC_DEBUG_VSYNC_SYSFS_EVENT, SEC_DEBUG_IN);
 	timestamp = vctrl->vsync_time;
 
 	ret = wait_event_interruptible(vctrl->wait_queue,
@@ -494,7 +493,6 @@ ssize_t mdp4_dsi_video_show_event(struct device *dev,
 	vsync_tick = ktime_to_ns(vctrl->vsync_time);
 	ret = scnprintf(buf, PAGE_SIZE, "VSYNC=%llu", vsync_tick);
 	buf[strlen(buf) + 1] = '\0';
-	sec_debug_mdp_set_value(SEC_DEBUG_VSYNC_SYSFS_EVENT, SEC_DEBUG_OUT);
 	return ret;
 }
 
