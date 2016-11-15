@@ -1352,7 +1352,7 @@ static int __init msm_pm_setup_saved_state(void)
 
 	return 0;
 }
-arch_initcall(msm_pm_setup_saved_state);
+core_initcall(msm_pm_setup_saved_state);
 
 static int __init msm_pm_init(void)
 {
