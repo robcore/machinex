@@ -18,13 +18,8 @@
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9xxx_registers.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
-#include <linux/mfd/wcd9xxx/wcd9xxx-slimslave.h>
-#include <linux/delay.h>
-#include <linux/irqdomain.h>
 #include <linux/interrupt.h>
-#include <linux/of.h>
-#include <linux/of_irq.h>
-#include <linux/slab.h>
+
 #include <mach/cpuidle.h>
 
 #define BYTE_BIT_MASK(nr)		(1UL << ((nr) % BITS_PER_BYTE))
@@ -32,18 +27,19 @@
 
 #define WCD9XXX_SYSTEM_RESUME_TIMEOUT_MS 100
 
-#ifdef CONFIG_OF
-struct wcd9xxx_irq_drv_data {
-	struct irq_domain *domain;
-	int irq;
+struct wcd9xxx_irq {
+	bool level;
 };
-#endif
 
-static int virq_to_phyirq(struct wcd9xxx *wcd9xxx, int virq);
-static int phyirq_to_virq(struct wcd9xxx *wcd9xxx, int irq);
-static unsigned int wcd9xxx_irq_get_upstream_irq(struct wcd9xxx *wcd9xxx);
-static void wcd9xxx_irq_put_upstream_irq(struct wcd9xxx *wcd9xxx);
-static int wcd9xxx_map_irq(struct wcd9xxx *wcd9xxx, int irq);
+static struct wcd9xxx_irq wcd9xxx_irqs[TABLA_NUM_IRQS] = {
+	[0] = { .level = 1},
+/* All other wcd9xxx interrupts are edge triggered */
+};
+
+static inline int irq_to_wcd9xxx_irq(struct wcd9xxx *wcd9xxx, int irq)
+{
+	return irq - wcd9xxx->irq_base;
+}
 
 static void wcd9xxx_irq_lock(struct irq_data *data)
 {
@@ -62,9 +58,8 @@ static void wcd9xxx_irq_sync_unlock(struct irq_data *data)
 		 */
 		if (wcd9xxx->irq_masks_cur[i] != wcd9xxx->irq_masks_cache[i]) {
 			wcd9xxx->irq_masks_cache[i] = wcd9xxx->irq_masks_cur[i];
-			wcd9xxx_reg_write(wcd9xxx,
-					  WCD9XXX_A_INTR_MASK0 + i,
-					  wcd9xxx->irq_masks_cur[i]);
+			wcd9xxx_reg_write(wcd9xxx, TABLA_A_INTR_MASK0+i,
+				wcd9xxx->irq_masks_cur[i]);
 		}
 	}
 
@@ -74,7 +69,7 @@ static void wcd9xxx_irq_sync_unlock(struct irq_data *data)
 static void wcd9xxx_irq_enable(struct irq_data *data)
 {
 	struct wcd9xxx *wcd9xxx = irq_data_get_irq_chip_data(data);
-	int wcd9xxx_irq = virq_to_phyirq(wcd9xxx, data->irq);
+	int wcd9xxx_irq = irq_to_wcd9xxx_irq(wcd9xxx, data->irq);
 	wcd9xxx->irq_masks_cur[BIT_BYTE(wcd9xxx_irq)] &=
 		~(BYTE_BIT_MASK(wcd9xxx_irq));
 }
@@ -82,14 +77,9 @@ static void wcd9xxx_irq_enable(struct irq_data *data)
 static void wcd9xxx_irq_disable(struct irq_data *data)
 {
 	struct wcd9xxx *wcd9xxx = irq_data_get_irq_chip_data(data);
-	int wcd9xxx_irq = virq_to_phyirq(wcd9xxx, data->irq);
+	int wcd9xxx_irq = irq_to_wcd9xxx_irq(wcd9xxx, data->irq);
 	wcd9xxx->irq_masks_cur[BIT_BYTE(wcd9xxx_irq)]
-		|= BYTE_BIT_MASK(wcd9xxx_irq);
-}
-
-static void wcd9xxx_irq_mask(struct irq_data *d)
-{
-	/* do nothing but required as linux calls irq_mask without NULL check */
+			|= BYTE_BIT_MASK(wcd9xxx_irq);
 }
 
 static struct irq_chip wcd9xxx_irq_chip = {
@@ -98,7 +88,6 @@ static struct irq_chip wcd9xxx_irq_chip = {
 	.irq_bus_sync_unlock = wcd9xxx_irq_sync_unlock,
 	.irq_disable = wcd9xxx_irq_disable,
 	.irq_enable = wcd9xxx_irq_enable,
-	.irq_mask = wcd9xxx_irq_mask,
 };
 
 enum wcd9xxx_pm_state wcd9xxx_pm_cmpxchg(struct wcd9xxx *wcd9xxx,

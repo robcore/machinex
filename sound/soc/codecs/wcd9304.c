@@ -2462,7 +2462,7 @@ static void hphocp_off_report(struct sitar_priv *sitar,
 		/* reset retry counter as PA is turned off signifying
 		* start of new OCP detection session
 		*/
-		if (WCD9XXX_IRQ_HPH_PA_OCPL_FAULT)
+		if (SITAR_IRQ_HPH_PA_OCPL_FAULT)
 			sitar->hphlocp_cnt = 0;
 		else
 			sitar->hphrocp_cnt = 0;
@@ -2474,16 +2474,14 @@ static void hphlocp_off_report(struct work_struct *work)
 {
 	struct sitar_priv *sitar = container_of(work, struct sitar_priv,
 		hphlocp_work);
-	hphocp_off_report(sitar, SND_JACK_OC_HPHL,
-			  WCD9XXX_IRQ_HPH_PA_OCPL_FAULT);
+	hphocp_off_report(sitar, SND_JACK_OC_HPHL, SITAR_IRQ_HPH_PA_OCPL_FAULT);
 }
 
 static void hphrocp_off_report(struct work_struct *work)
 {
 	struct sitar_priv *sitar = container_of(work, struct sitar_priv,
 		hphrocp_work);
-	hphocp_off_report(sitar, SND_JACK_OC_HPHR,
-			  WCD9XXX_IRQ_HPH_PA_OCPR_FAULT);
+	hphocp_off_report(sitar, SND_JACK_OC_HPHR, SITAR_IRQ_HPH_PA_OCPR_FAULT);
 }
 
 static int sitar_hph_pa_event(struct snd_soc_dapm_widget *w,
@@ -4113,7 +4111,7 @@ static short __sitar_codec_sta_dce(struct snd_soc_codec *codec, int dce,
 	short bias_value;
 	struct sitar_priv *sitar = snd_soc_codec_get_drvdata(codec);
 
-	wcd9xxx_disable_irq(codec->control_data, WCD9XXX_IRQ_MBHC_POTENTIAL);
+	wcd9xxx_disable_irq(codec->control_data, SITAR_IRQ_MBHC_POTENTIAL);
 	if (noreldetection)
 		sitar_turn_onoff_rel_detection(codec, false);
 
@@ -4149,7 +4147,7 @@ static short __sitar_codec_sta_dce(struct snd_soc_codec *codec, int dce,
 
 	if (noreldetection)
 		sitar_turn_onoff_rel_detection(codec, true);
-	wcd9xxx_enable_irq(codec->control_data, WCD9XXX_IRQ_MBHC_POTENTIAL);
+	wcd9xxx_enable_irq(codec->control_data, SITAR_IRQ_MBHC_POTENTIAL);
 
 	return bias_value;
 }
@@ -4377,7 +4375,7 @@ void sitar_mbhc_cal(struct snd_soc_codec *codec)
 	sitar = snd_soc_codec_get_drvdata(codec);
 	calibration = sitar->mbhc_cfg.calibration;
 
-	wcd9xxx_disable_irq(codec->control_data, WCD9XXX_IRQ_MBHC_POTENTIAL);
+	wcd9xxx_disable_irq(codec->control_data, SITAR_IRQ_MBHC_POTENTIAL);
 	sitar_turn_onoff_rel_detection(codec, false);
 
 	/* First compute the DCE / STA wait times
@@ -4779,9 +4777,9 @@ static void sitar_codec_report_plug(struct snd_soc_codec *codec, int insertion,
 		}
 		sitar_set_and_turnoff_hph_padac(codec);
 		hphocp_off_report(sitar, SND_JACK_OC_HPHR,
-				  WCD9XXX_IRQ_HPH_PA_OCPR_FAULT);
+				  SITAR_IRQ_HPH_PA_OCPR_FAULT);
 		hphocp_off_report(sitar, SND_JACK_OC_HPHL,
-				  WCD9XXX_IRQ_HPH_PA_OCPL_FAULT);
+				  SITAR_IRQ_HPH_PA_OCPL_FAULT);
 		sitar->current_plug = PLUG_TYPE_NONE;
 		sitar->mbhc_polling_active = false;
 	} else {
@@ -5305,9 +5303,9 @@ static int sitar_mbhc_init_and_calibrate(struct snd_soc_codec *codec)
 		snd_soc_update_bits(codec, SITAR_A_RX_HPH_OCP_CTL,
 							0x10, 0x10);
 		wcd9xxx_enable_irq(codec->control_data,
-				   WCD9XXX_IRQ_HPH_PA_OCPL_FAULT);
+					SITAR_IRQ_HPH_PA_OCPL_FAULT);
 		wcd9xxx_enable_irq(codec->control_data,
-				   WCD9XXX_IRQ_HPH_PA_OCPR_FAULT);
+					SITAR_IRQ_HPH_PA_OCPR_FAULT);
 		/* Bootup time detection */
 		sitar_hs_gpio_handler(codec);
 	}
@@ -5810,7 +5808,7 @@ static irqreturn_t sitar_hs_insert_irq(int irq, void *data)
 
 	pr_debug("%s: enter\n", __func__);
 	SITAR_ACQUIRE_LOCK(priv->codec_resource_lock);
-	wcd9xxx_disable_irq(codec->control_data, WCD9XXX_IRQ_MBHC_INSERTION);
+	wcd9xxx_disable_irq(codec->control_data, SITAR_IRQ_MBHC_INSERTION);
 
 	snd_soc_update_bits(codec, SITAR_A_CDC_MBHC_INT_CTL, 0x03, 0x00);
 
