@@ -213,6 +213,7 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 			kp.arg = &mode->idle_enabled;
 			ret = param_set_byte(buf, &kp);
 		}
+
 		break;
 	}
 
@@ -687,7 +688,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 	int64_t time = 0;
 
 	if (msm_pm_use_qtimer)
-		return ktime_to_ns(ktime_get());
+		return sched_clock();
 
 	time = msm_timer_get_sclk_time(period);
 	if (!time)
@@ -699,7 +700,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
 	if (msm_pm_use_qtimer)
-		return ktime_to_ns(ktime_get()) - time;
+		return sched_clock() - time;
 
 	if (time != 0) {
 		int64_t end_time = msm_timer_get_sclk_time(NULL);
@@ -801,6 +802,9 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 				allow = false;
 			break;
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
+			if (!allow)
+				break;
+
 			if (!dev->cpu && msm_rpm_local_request_is_outstanding()) {
 				allow = false;
 				break;
@@ -915,7 +919,6 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 	default:
 		__WARN();
 		goto cpuidle_enter_bail;
-		break;
 	}
 
 	time = ktime_to_ns(ktime_get()) - time;
@@ -1109,6 +1112,7 @@ enter_exit:
 	return 0;
 }
 
+#ifdef CONFIG_SEC_DEBUG
 enum {
 	MSM_PM_SECDEBUG_LEVLE1 = BIT(0),
 };
@@ -1117,6 +1121,7 @@ static int msm_pm_secdebug_mask;
 module_param_named(
 	secdebug, msm_pm_secdebug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
+#endif
 
 static int msm_pm_prepare_late(void)
 {
