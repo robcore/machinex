@@ -332,7 +332,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 #ifdef CONFIG_POWERSUSPEND
 static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
 #else
-static void __ref alucard_hotplug_power_suspend(struct early_suspend *handler)
+static void __ref alucard_hotplug_power_suspend(struct power_suspend *handler)
 #endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
@@ -366,7 +366,7 @@ static struct power_suspend alucard_hotplug_power_suspend_driver = {
 	.resume = alucard_hotplug_resume,
 };
 #else
-static struct power_suspend alucard_hotplug_early_suspend_driver = {
+static struct power_suspend alucard_hotplug_power_suspend_driver = {
 	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
 	.suspend = alucard_hotplug_power_suspend,
 	.resume = alucard_hotplug_power_resume,
@@ -424,7 +424,7 @@ static int hotplug_start(void)
 #if defined(CONFIG_POWERSUSPEND)
 	register_power_suspend(&alucard_hotplug_power_suspend_driver);
 #elif defined(CONFIG_POWERSUSPEND)
-	register_power_suspend(&alucard_hotplug_early_suspend_driver);
+	register_power_suspend(&alucard_hotplug_power_suspend_driver);
 #endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 	return 0;
@@ -440,7 +440,7 @@ static void hotplug_stop(void)
 #if defined(CONFIG_POWERSUSPEND)
 	unregister_power_suspend(&alucard_hotplug_power_suspend_driver);
 #elif defined(CONFIG_POWERSUSPEND)
-	unregister_power_suspend(&alucard_hotplug_early_suspend_driver);
+	unregister_power_suspend(&alucard_hotplug_power_suspend_driver);
 #endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 	cancel_delayed_work_sync(&alucard_hotplug_work);

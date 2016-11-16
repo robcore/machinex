@@ -229,7 +229,7 @@ void htc_pwrsink_resume_late(struct power_suspend *h)
 	htc_pwrsink_set(PWRSINK_SYSTEM_LOAD, 100);
 }
 
-struct power_suspend htc_pwrsink_early_suspend = {
+struct power_suspend htc_pwrsink_power_suspend = {
 	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
 	.suspend = htc_pwrsink_suspend_early,
 	.resume = htc_pwrsink_resume_late,
@@ -256,7 +256,7 @@ static int __init htc_pwrsink_probe(struct platform_device *pdev)
 		htc_pwrsink_power_suspend.suspend = pdata->suspend_early;
 	if (pdata->resume_late)
 		htc_pwrsink_power_suspend.resume = pdata->resume_late;
-	register_power_suspend(&htc_pwrsink_early_suspend);
+	register_power_suspend(&htc_pwrsink_power_suspend);
 
 	return 0;
 }
