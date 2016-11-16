@@ -209,7 +209,7 @@ extern const struct dev_pm_ops kgsl_pm_ops;
 struct power_suspend;
 int kgsl_suspend_driver(struct platform_device *pdev, pm_message_t state);
 int kgsl_resume_driver(struct platform_device *pdev);
-void kgsl_power_suspend_driver(struct early_suspend *h);
+void kgsl_power_suspend_driver(struct power_suspend *h);
 void kgsl_power_resume_driver(struct power_suspend *h);
 
 void kgsl_trace_regwrite(struct kgsl_device *device, unsigned int offset,
