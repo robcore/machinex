@@ -535,7 +535,7 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-#if defined(CONFIG_SEC_DEBUG)
+#ifdef(CONFIG_SEC_DEBUG)
 	secdbg_sched_msg("+pc(I:%d,R:%d)", from_idle, notify_rpm);
 	collapsed = msm_pm_l2x0_power_collapse();
 	secdbg_sched_msg("-pc(%d)", collapsed);
@@ -1125,15 +1125,8 @@ module_param_named(
 
 static int msm_pm_prepare_late(void)
 {
-	if (msm_pm_secdebug_mask & MSM_PM_SECDEBUG_LEVLE1) {
-		regulator_showall_enabled();
-		msm_gpio_print_enabled();
-		pm_gpio_dbg_showall(1);
-		pm_mpp_dbg_showall(1);
-	} else {
 		pm_gpio_dbg_showall(0);
 		pm_mpp_dbg_showall(0);
-	}
 
 #ifdef CONFIG_SEC_GPIO_DVS
 	/************************ Caution !!! ****************************/
