@@ -321,7 +321,6 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 							  delay);
 }
 
-#if defined(CONFIG_POWERSUSPEND)
 #ifdef CONFIG_POWERSUSPEND
 static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
 #endif
