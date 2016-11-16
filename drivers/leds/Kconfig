@@ -304,7 +304,7 @@ config LEDS_PM8XXX
 	depends on MFD_PM8XXX
 	help
 	  This option enables support for LEDs connected over PMIC8XXX
-	  (Power Management IC) chip on Qualcomm reference boards,
+	  ( Management IC) chip on Qualcomm reference boards,
 	  for example SURF and FFAs.
 
 	  To compile this driver as a module, choose M here: the module will
@@ -609,7 +609,7 @@ config LEDS_TRIGGER_DEFAULT_ON
 
 config LEDS_TRIGGER_SLEEP
 	tristate "LED Sleep Mode Trigger"
-	depends on LEDS_TRIGGERS && HAS_POWERSUSPEND
+	depends on LEDS_TRIGGERS && POWERSUSPEND
 	help
 	  This turns LEDs on when the screen is off but the cpu still running.
 
