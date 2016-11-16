@@ -76,10 +76,6 @@
 #include <linux/powersuspend.h>
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
-
 //#define DEBUG_LAZYPLUG
 #undef DEBUG_LAZYPLUG
 
@@ -402,10 +398,7 @@ static void wakeup_boost_lazy(void)
 	}
 }
 
-#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_POWERSUSPEND)
 #ifdef CONFIG_POWERSUSPEND
-static void lazyplug_suspend(struct power_suspend *handler)
-#else
 static void lazyplug_suspend(struct power_suspend *handler)
 #endif
 {
@@ -433,8 +426,6 @@ static void cpu_all_up(struct work_struct *work)
 
 #ifdef CONFIG_POWERSUSPEND
 static void lazyplug_resume(struct power_suspend *handler)
-#else
-static void lazyplug_resume(struct power_suspend *handler)
 #endif
 {
 	if (lazyplug_active) {
@@ -458,14 +449,6 @@ static struct power_suspend lazyplug_power_suspend_driver = {
 	.resume = lazyplug_resume,
 };
 #endif  /* CONFIG_POWERSUSPEND */
-
-#ifdef CONFIG_POWERSUSPEND
-static struct power_suspend lazyplug_early_suspend_driver = {
-        .level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-        .suspend = lazyplug_suspend,
-        .resume = lazyplug_resume,
-};
-#endif	/* CONFIG_POWERSUSPEND */
 
 static unsigned int Lnr_run_profile_sel = 0;
 static unsigned int Ltouch_boost_active = true;
@@ -590,9 +573,6 @@ int __init lazyplug_init(void)
 
 #ifdef CONFIG_POWERSUSPEND
 	register_power_suspend(&lazyplug_power_suspend_driver);
-#endif
-#ifdef CONFIG_POWERSUSPEND
-	register_power_suspend(&lazyplug_early_suspend_driver);
 #endif
 
 	lazyplug_wq = alloc_workqueue("lazyplug",
