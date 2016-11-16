@@ -66,7 +66,7 @@ struct esd_data_t {
 };
 struct mipi_controls {
 	struct platform_device *mipi_dev;
-//#if defined(CONFIG_HAS_POWERSUSPEND)
+//#if defined(CONFIG_POWERSUSPEND)
 //	struct power_suspend power_suspend;
 //#endif
 };

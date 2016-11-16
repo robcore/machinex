@@ -166,7 +166,7 @@ struct tc360_data {
 #endif
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void tc360_power_suspend(struct power_suspend *h);
 static void tc360_power_resume(struct power_suspend *h);
 #endif
@@ -886,7 +886,7 @@ err:
 
 /* early suspend is not removed for debugging. */
 /*
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&data->power_suspend);
 #endif
 */
@@ -1784,7 +1784,7 @@ static int __devinit tc360_probe(struct i2c_client *client,
 		break;
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	data->power_suspend.suspend = tc360_power_suspend;
 	data->power_suspend.resume = tc360_power_resume;
@@ -1844,7 +1844,7 @@ static int __devexit tc360_remove(struct i2c_client *client)
 {
 	struct tc360_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);
@@ -1861,7 +1861,7 @@ static int __devexit tc360_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) || defined(CONFIG_POWERSUSPEND)
 static int tc360_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1981,7 +1981,7 @@ out:
 }
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void tc360_power_suspend(struct power_suspend *h)
 {
 	struct tc360_data *data;
@@ -1997,7 +1997,7 @@ static void tc360_power_resume(struct power_suspend *h)
 }
 #endif
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) || defined(CONFIG_POWERSUSPEND)
 static const struct dev_pm_ops tc360_pm_ops = {
 	.suspend	= tc360_suspend,
 	.resume		= tc360_resume,
@@ -2015,7 +2015,7 @@ static struct i2c_driver tc360_driver = {
 	.remove		= tc360_remove,
 	.driver = {
 		.name	= TC360_DEVICE,
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 		.pm	= &tc360_pm_ops,
 #endif
 	},

@@ -77,10 +77,10 @@ struct mipi_samsung_driver_data {
 	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
 	struct mipi_panel_data *mpd;
 	struct display_status dstat;
-//#if defined(CONFIG_HAS_POWERSUSPEND)
+//#if defined(CONFIG_POWERSUSPEND)
 //	struct power_suspend power_suspend;
 //#endif
-//#if defined(CONFIG_HAS_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+//#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	struct platform_device *msm_pdev;
 //#endif
 };

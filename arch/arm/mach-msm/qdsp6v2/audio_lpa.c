@@ -1133,7 +1133,7 @@ static int audio_release(struct inode *inode, struct file *file)
 	q6asm_audio_client_free(audio->ac);
 	audlpa_reset_ion_region(audio);
 	ion_client_destroy(audio->client);
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&audio->suspend_ctl.node);
 #endif
 	audio->opened = 0;
@@ -1183,7 +1183,7 @@ static void audlpa_post_event(struct audio *audio, int type,
 	wake_up(&audio->event_wait);
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void audlpa_suspend(struct power_suspend *h)
 {
 	struct audlpa_suspend_ctl *ctl =
@@ -1361,7 +1361,7 @@ static int audio_open(struct inode *inode, struct file *file)
 	if (IS_ERR(audio->dentry))
 		pr_err("%s: debugfs_create_file failed\n", __func__);
 #endif
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	audio->suspend_ctl.node.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
 	audio->suspend_ctl.node.resume = audlpa_resume;
 	audio->suspend_ctl.node.suspend = audlpa_suspend;

@@ -26,9 +26,9 @@
 
 #if defined(CONFIG_POWERSUSPEND)
 #include <linux/powersuspend.h>
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
+#elif defined(CONFIG_POWERSUSPEND)
+#include <linux/powersuspend.h>
+#endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 struct hotplug_cpuinfo {
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -61,7 +61,7 @@ static struct hotplug_tuners {
 	unsigned int max_cpus_online_susp;
 	unsigned int hp_io_is_busy;
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	unsigned int hotplug_suspend;
 	bool suspended;
 	bool force_cpu_up;
@@ -75,7 +75,7 @@ static struct hotplug_tuners {
 	.max_cpus_online_susp = 1,
 	.hp_io_is_busy = 0,
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	.hotplug_suspend = 0,
 	.suspended = false,
 	.force_cpu_up = false,
@@ -168,7 +168,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	int online_cpus = 0;
 	unsigned int rq_avg;
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	bool force_up = hotplug_tuners_ins.force_cpu_up;
 #endif
 	HOTPLUG_STATUS hotplug_onoff[NR_CPUS] = {IDLE, IDLE, IDLE, IDLE};
@@ -178,7 +178,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	rq_avg = get_nr_run_avg();
 
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	if (hotplug_tuners_ins.suspended)
 		upmax_cpus_online = hotplug_tuners_ins.max_cpus_online_susp;
 	else
@@ -247,7 +247,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 					++offline_cpu;
 					continue;
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 			} else if (force_up == true || (online_cpus + online_cpu) < min_cpus_online) {
 #else
 			} else if ((online_cpus + online_cpu) < min_cpus_online) {
@@ -310,7 +310,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	}
 
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	if (force_up == true)
 		hotplug_tuners_ins.force_cpu_up = false;
 #endif
@@ -328,11 +328,11 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 							  delay);
 }
 
-#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_POWERSUSPEND)
 #ifdef CONFIG_POWERSUSPEND
 static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
 #else
-static void __ref alucard_hotplug_early_suspend(struct early_suspend *handler)
+static void __ref alucard_hotplug_power_suspend(struct early_suspend *handler)
 #endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
@@ -346,8 +346,8 @@ static void __ref alucard_hotplug_early_suspend(struct early_suspend *handler)
 #ifdef CONFIG_POWERSUSPEND
 static void __ref alucard_hotplug_resume(struct power_suspend *handler)
 #else
-static void __ref alucard_hotplug_late_resume(
-				struct early_suspend *handler)
+static void __ref alucard_hotplug_power_resume(
+				struct power_suspend *handler)
 #endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
@@ -366,13 +366,13 @@ static struct power_suspend alucard_hotplug_power_suspend_driver = {
 	.resume = alucard_hotplug_resume,
 };
 #else
-static struct early_suspend alucard_hotplug_early_suspend_driver = {
+static struct power_suspend alucard_hotplug_early_suspend_driver = {
 	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-	.suspend = alucard_hotplug_early_suspend,
-	.resume = alucard_hotplug_late_resume,
+	.suspend = alucard_hotplug_power_suspend,
+	.resume = alucard_hotplug_power_resume,
 };
 #endif
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
+#endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 static int hotplug_start(void)
 {
@@ -393,7 +393,7 @@ static int hotplug_start(void)
 	}
 
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	hotplug_tuners_ins.suspended = false;
 	hotplug_tuners_ins.force_cpu_up = false;
 #endif
@@ -417,15 +417,15 @@ static int hotplug_start(void)
 						msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate));
 
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	mutex_init(&hotplug_tuners_ins.alu_hotplug_mutex);
 #endif
 
 #if defined(CONFIG_POWERSUSPEND)
 	register_power_suspend(&alucard_hotplug_power_suspend_driver);
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	register_early_suspend(&alucard_hotplug_early_suspend_driver);
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
+#elif defined(CONFIG_POWERSUSPEND)
+	register_power_suspend(&alucard_hotplug_early_suspend_driver);
+#endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 	return 0;
 }
@@ -433,15 +433,15 @@ static int hotplug_start(void)
 static void hotplug_stop(void)
 {
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	mutex_destroy(&hotplug_tuners_ins.alu_hotplug_mutex);
 #endif
 
 #if defined(CONFIG_POWERSUSPEND)
 	unregister_power_suspend(&alucard_hotplug_power_suspend_driver);
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	unregister_early_suspend(&alucard_hotplug_early_suspend_driver);
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
+#elif defined(CONFIG_POWERSUSPEND)
+	unregister_power_suspend(&alucard_hotplug_early_suspend_driver);
+#endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 	cancel_delayed_work_sync(&alucard_hotplug_work);
 
@@ -465,7 +465,7 @@ show_one(max_cpus_online, max_cpus_online);
 show_one(max_cpus_online_susp, max_cpus_online_susp);
 show_one(hp_io_is_busy, hp_io_is_busy);
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 show_one(hotplug_suspend, hotplug_suspend);
 #endif
 
@@ -746,7 +746,7 @@ static ssize_t store_hp_io_is_busy(struct kobject *a, struct attribute *b,
  * if set = 0, then hoplug will be active all the time.
  */
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 static ssize_t store_hotplug_suspend(struct kobject *a,
 				struct attribute *b,
 				const char *buf, size_t count)
@@ -781,7 +781,7 @@ define_one_global_rw(max_cpus_online);
 define_one_global_rw(max_cpus_online_susp);
 define_one_global_rw(hp_io_is_busy);
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 define_one_global_rw(hotplug_suspend);
 #endif
 
@@ -817,7 +817,7 @@ static struct attribute *alucard_hotplug_attributes[] = {
 	&max_cpus_online_susp.attr,
 	&hp_io_is_busy.attr,
 #if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
+	defined(CONFIG_POWERSUSPEND)
 	&hotplug_suspend.attr,
 #endif
 	NULL

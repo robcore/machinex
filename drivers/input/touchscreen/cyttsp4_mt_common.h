@@ -30,7 +30,7 @@
 #include <linux/cyttsp4_bus.h>
 
 #include <linux/delay.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include <linux/gpio.h>
@@ -73,7 +73,7 @@ struct cyttsp4_mt_data {
 	struct input_dev *input;
 	struct cyttsp4_mt_function mt_function;
 	struct mutex report_lock;	/* Used to serialize reports */
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend es;
 	bool is_suspended;
 #endif

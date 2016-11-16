@@ -84,7 +84,7 @@ static struct pointer_trace tr_data[MAX_TRACE];
 static int tr_last_index;
 #endif
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static void touch_power_suspend(struct power_suspend *h);
 static void touch_power_resume(struct power_suspend *h);
 #endif
@@ -1856,7 +1856,7 @@ static int touch_probe(struct i2c_client *client,
 		ts->accuracy_filter.touch_max_count = one_sec / 2;
 	}
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 //	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	ts->power_suspend.suspend = touch_power_suspend;
 	ts->power_suspend.resume = touch_power_resume;
@@ -1948,7 +1948,7 @@ static int touch_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static void touch_power_suspend(struct power_suspend *h)
 {
 	struct lge_touch_data *ts =

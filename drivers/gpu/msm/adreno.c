@@ -111,7 +111,7 @@ static struct adreno_device device_3d0 = {
 		},
 		.iomemname = KGSL_3D0_REG_MEMORY,
 		.ftbl = &adreno_functable,
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 		.display_off = {
 			//.level = POWER_SUSPEND_LEVEL_STOP_DRAWING,
 			.suspend = kgsl_power_suspend_driver,

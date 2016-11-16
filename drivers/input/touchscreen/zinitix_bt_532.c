@@ -26,7 +26,7 @@
 #include <linux/miscdevice.h>
 #include <linux/interrupt.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #if defined(CONFIG_PM_RUNTIME)
@@ -444,7 +444,7 @@ struct bt532_ts_info {
 	struct timer_list		esd_timeout_tmr;
 	struct timer_list		*p_esd_timeout_tmr;
 #endif
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend		power_suspend;
 #endif
 	struct semaphore		raw_data_lock;
@@ -599,7 +599,7 @@ static inline s32 read_firmware_data(struct i2c_client *client,
 	return length;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void bt532_ts_power_suspend(struct power_suspend *h);
 static void bt532_ts_power_resume(struct power_suspend *h);
 #endif
@@ -1876,7 +1876,7 @@ out:
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void bt532_ts_power_resume(struct power_suspend *h)
 {
 	struct bt532_ts_info *info = misc_info;
@@ -1965,9 +1965,9 @@ static void bt532_ts_power_suspend(struct power_suspend *h)
 	up(&info->work_lock);
 	return;
 }
-#endif	/* CONFIG_HAS_POWERSUSPEND */
+#endif	/* CONFIG_POWERSUSPEND */
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 static int bt532_ts_resume(struct device *dev)
 {
 	struct bt532_ts_info *info = dev_get_drvdata(dev);
@@ -1984,7 +1984,7 @@ static int bt532_ts_resume(struct device *dev)
 
 	bt532_power_control(info, POWER_ON_SEQUENCE);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	info->work_state = RESUME;
 #else
 	enable_irq(info->irq);
@@ -2007,7 +2007,7 @@ static int bt532_ts_suspend(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct bt532_ts_info *info = i2c_get_clientdata(client);
 
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	disable_irq(info->irq);
 #endif
 #if ESD_TIMER_INTERVAL
@@ -2019,13 +2019,13 @@ static int bt532_ts_suspend(struct device *dev)
 		dev_err(&client->dev, "%s: Invalid work proceedure (%d)\n",
 			__func__, info->work_state);
 		up(&info->work_lock);
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 		enable_irq(info->irq);
 #endif
 		return 0;
 	}
 
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	clear_report_data(info);
 
 #if ESD_TIMER_INTERVAL
@@ -3640,7 +3640,7 @@ static int bt532_ts_probe(struct i2c_client *client,
 		goto err_request_irq;
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	info->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	info->power_suspend.suspend = bt532_ts_power_suspend;
 	info->power_suspend.resume = bt532_ts_power_resume;
@@ -3731,7 +3731,7 @@ static int bt532_ts_remove(struct i2c_client *client)
 
 	misc_deregister(&touch_misc_device);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&info->power_suspend);
 #endif
 
@@ -3751,7 +3751,7 @@ static struct i2c_device_id bt532_idtable[] = {
 	{ }
 };
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 static const struct dev_pm_ops bt532_ts_pm_ops = {
 #if defined(CONFIG_PM_RUNTIME)
 	SET_RUNTIME_PM_OPS(bt532_ts_suspend, bt532_ts_resume, NULL)
@@ -3768,7 +3768,7 @@ static struct i2c_driver bt532_ts_driver = {
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= ZINITIX_NAME,
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 		.pm	= &bt532_ts_pm_ops,
 #endif
 	},

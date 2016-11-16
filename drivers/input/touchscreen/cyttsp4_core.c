@@ -47,7 +47,7 @@
 
 #include <linux/cyttsp4_core.h>
 #include <linux/cyttsp4_regs.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #define CY_CORE_MODE_CHANGE_TIMEOUT		1000
@@ -207,7 +207,7 @@ struct cyttsp4_core_data {
 	wait_queue_head_t sleep_q;
 	int irq;
 
-	#if defined(CONFIG_HAS_POWERSUSPEND)
+	#if defined(CONFIG_POWERSUSPEND)
 	struct power_suspend power_suspend;
 	#endif
 	struct workqueue_struct *startup_work_q;
@@ -383,7 +383,7 @@ struct device *sec_touchkey;
 static u16 home_sensitivity=0;
 /*static u16 back_sensitivity=0; FIX BUILD ERROR CANE3G*/
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static void cyttsp4_ts_power_suspend(struct power_suspend *h);
 static void cyttsp4_ts_power_resume(struct power_suspend *h);
 #endif
@@ -4265,7 +4265,7 @@ static void cyttsp4_free_si_ptrs(struct cyttsp4_core_data *cd)
 	kfree(si->btn_rec_data);
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static void cyttsp4_ts_power_suspend(struct power_suspend *h)
 {
 	int rc;
@@ -4329,7 +4329,7 @@ static int cyttsp4_core_resume(struct device *dev)
 #endif
 
 static const struct dev_pm_ops cyttsp4_core_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	SET_SYSTEM_SLEEP_PM_OPS(cyttsp4_core_suspend, cyttsp4_core_resume)
 #endif
 	SET_RUNTIME_PM_OPS(cyttsp4_core_suspend, cyttsp4_core_resume, NULL)
@@ -4720,7 +4720,7 @@ static int cyttsp4_core_probe(struct cyttsp4_core *core)
 		goto error_startup;
 	}
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	printk(KERN_ERR "%s: register powersuspend.\n", __func__);
 //	cd->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	cd->power_suspend.suspend = cyttsp4_ts_power_suspend;
@@ -4840,7 +4840,7 @@ static int cyttsp4_core_release(struct cyttsp4_core *core)
 
 	remove_sysfs_interfaces(dev);
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	unregister_power_suspend(&cd->power_suspend);
 #endif
 	free_irq(cd->irq, cd);

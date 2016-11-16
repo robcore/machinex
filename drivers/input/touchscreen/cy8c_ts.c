@@ -47,7 +47,7 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 #include <linux/powersuspend.h>
 #endif
 /* Power-suspend level
@@ -129,7 +129,7 @@ struct cy8c_ts {
 	bool int_pending;
 	struct mutex sus_lock;
 	u32 pen_irq;
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	struct power_suspend		power_suspend;
 #endif
 };
@@ -548,7 +548,7 @@ err_power_off:
 	return rc;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void cy8c_ts_power_suspend(struct power_suspend *h)
 {
 	struct cy8c_ts *ts = container_of(h, struct cy8c_ts, power_suspend);
@@ -565,7 +565,7 @@ static void cy8c_ts_power_resume(struct power_suspend *h)
 #endif
 
 static struct dev_pm_ops cy8c_ts_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend	= cy8c_ts_suspend,
 	.resume		= cy8c_ts_resume,
 #endif
@@ -708,7 +708,7 @@ config_irq_gpio:
 
 	device_init_wakeup(&client->dev, ts->pdata->wakeup);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
 						CY8C_TS_SUSPEND_LEVEL;
 	ts->power_suspend.suspend = cy8c_ts_power_suspend;
@@ -747,7 +747,7 @@ static int __devexit cy8c_ts_remove(struct i2c_client *client)
 {
 	struct cy8c_ts *ts = i2c_get_clientdata(client);
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	unregister_power_suspend(&ts->power_suspend);
 #endif
 	pm_runtime_set_suspended(&client->dev);

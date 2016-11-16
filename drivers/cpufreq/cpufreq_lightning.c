@@ -875,7 +875,7 @@ static int cpufreq_governor_lightning(struct cpufreq_policy *policy,
 }
 
 
-static void cpufreq_lightning_early_suspend(struct power_suspend *h)
+static void cpufreq_lightning_power_suspend(struct power_suspend *h)
 {
 	mutex_lock(&lightning_mutex);
 	stored_sampling_rate = min_sampling_rate;
@@ -883,16 +883,16 @@ static void cpufreq_lightning_early_suspend(struct power_suspend *h)
 	mutex_unlock(&lightning_mutex);
 }
 
-static void cpufreq_lightning_late_resume(struct power_suspend *h)
+static void cpufreq_lightning_power_resume(struct power_suspend *h)
 {
 	mutex_lock(&lightning_mutex);
 	min_sampling_rate = stored_sampling_rate;
 	mutex_unlock(&lightning_mutex);
 }
 
-static struct power_suspend cpufreq_lightning_early_suspend_info = {
-	.suspend = cpufreq_lightning_early_suspend,
-	.resume = cpufreq_lightning_late_resume,
+static struct power_suspend cpufreq_lightning_power_suspend_info = {
+	.suspend = cpufreq_lightning_power_suspend,
+	.resume = cpufreq_lightning_power_resume,
 };
 
 
@@ -921,7 +921,7 @@ static int __init cpufreq_gov_lightning_init(void)
 	}
 
 
-	register_power_suspend(&cpufreq_lightning_early_suspend_info);
+	register_power_suspend(&cpufreq_lightning_power_suspend_info);
 
 	return cpufreq_register_governor(&cpufreq_gov_lightning);
 }
@@ -930,7 +930,7 @@ static void __exit cpufreq_gov_lightning_exit(void)
 {
 	cpufreq_unregister_governor(&cpufreq_gov_lightning);
 
-	unregister_power_suspend(&cpufreq_lightning_early_suspend_info);
+	unregister_power_suspend(&cpufreq_lightning_power_suspend_info);
 
 	destroy_workqueue(input_wq);
 }

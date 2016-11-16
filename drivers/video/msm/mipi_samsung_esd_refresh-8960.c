@@ -303,7 +303,7 @@ static int __devinit mipi_esd_refresh_probe(struct platform_device *pdev)
 		return 0;
 	}
 #endif
-/*#if defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_POWERSUSPEND)
 	mipi_control.power_suspend.suspend = mipi_samsung_esd_power_suspend;
 	mipi_control.power_suspend.resume = mipi_samsung_esd_power_resume;
 //	mipi_control.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN - 5;

@@ -851,7 +851,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	if (mipi->mode == DSI_VIDEO_MODE)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
 
-#if !defined(CONFIG_HAS_EARLYSUSPEND)
+#if !defined(CONFIG_POWERSUSPEND)
 	mipi_samsung_disp_send_cmd(mfd, PANEL_LATE_ON, false);
 #endif
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH)
@@ -1065,8 +1065,8 @@ int  mipi_samsung_disp_blank(struct platform_device *pdev,int blank)
 	return 0;
 }
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void mipi_samsung_disp_early_suspend(struct early_suspend *h)
+#if defined(CONFIG_POWERSUSPEND)
+static void mipi_samsung_disp_power_suspend(struct early_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
 	pr_info("%s", __func__);
@@ -1107,7 +1107,7 @@ static void mipi_samsung_disp_early_suspend(struct early_suspend *h)
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 }
 
-static void mipi_samsung_disp_late_resume(struct early_suspend *h)
+static void mipi_samsung_disp_power_resume(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
 #if defined(CONFIG_FB_MDP4_ENHANCE)
@@ -1595,15 +1595,15 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 	msm_fb_added_dev = msm_fb_add_device(pdev);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
 #endif
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	msd.early_suspend.suspend = mipi_samsung_disp_early_suspend;
-	msd.early_suspend.resume = mipi_samsung_disp_late_resume;
-	msd.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	register_early_suspend(&msd.early_suspend);
+#if defined(CONFIG_POWERSUSPEND)
+	msd.power_suspend.suspend = mipi_samsung_disp_early_suspend;
+	msd.power_suspend.resume = mipi_samsung_disp_power_resume;
+	msd.power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	register_power_suspend(&msd.early_suspend);
 
 #endif
 

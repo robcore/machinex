@@ -25,7 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include <linux/wakelock.h>
@@ -36,8 +36,8 @@
 #include <linux/timer.h>
 #include <linux/alarmtimer.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
-#undef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
+#undef CONFIG_POWERSUSPEND
 #endif
 
 #ifdef CONFIG_SENSORS_SSP_SENSORHUB
@@ -401,7 +401,7 @@ struct ssp_data {
 	void (*report_sensor_data[SENSOR_MAX])(struct ssp_data *,
 		struct sensor_value *);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 

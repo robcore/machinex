@@ -52,7 +52,7 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/workqueue.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include "bmp18x.h"
@@ -96,7 +96,7 @@ struct bmp18x_data {
 	u32	temp_measurement_period;
 	u32	last_temp_measurement;
 	s32	b6; /* calculated temperature correction coefficient */
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 	struct input_dev	*input;
@@ -105,7 +105,7 @@ struct bmp18x_data {
 	u32					enable;
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void bmp18x_power_suspend(struct power_suspend *h);
 static void bmp18x_power_resume(struct power_suspend *h);
 #endif
@@ -622,7 +622,7 @@ __devinit int bmp18x_probe(struct device *dev, struct bmp18x_data_bus *data_bus)
 	data->delay  = BMP_DELAY_DEFAULT;
 	data->enable = 0;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 /*	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 */
 	data->power_suspend.suspend = bmp18x_power_suspend;
@@ -647,7 +647,7 @@ EXPORT_SYMBOL(bmp18x_probe);
 int bmp18x_remove(struct device *dev)
 {
 	struct bmp18x_data *data = dev_get_drvdata(dev);
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&data->power_suspend);
 #endif
 	sysfs_remove_group(&dev->kobj, &bmp18x_attr_group);
@@ -681,7 +681,7 @@ int bmp18x_enable(struct device *dev)
 EXPORT_SYMBOL(bmp18x_enable);
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void bmp18x_power_suspend(struct power_suspend *h)
 {
 	struct bmp18x_data *data =

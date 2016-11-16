@@ -95,8 +95,8 @@ struct mipi_novatek_driver_data {
 	struct msm_panel_common_pdata *mipi_novatek_disp_pdata;
 	struct mipi_panel_data *mpd;
 	struct display_status dstat;
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	struct early_suspend early_suspend;
+#if defined(CONFIG_POWERSUSPEND)
+	struct power_suspend early_suspend;
 #endif
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 	struct platform_device *msm_pdev;

@@ -277,13 +277,13 @@ void set_esd_disable(void)
 	}
 }
 
-static void mipi_samsung_esd_early_suspend(struct early_suspend *h)
+static void mipi_samsung_esd_power_suspend(struct early_suspend *h)
 {
 	pr_info("Early Suspend:ESD IRQ is disabled\n");
 	disable_irq(esd_enable->pdata->esd_gpio_irq);
 }
 
-static void mipi_samsung_esd_late_resume(struct early_suspend *h)
+static void mipi_samsung_esd_power_resume(struct power_suspend *h)
 {
 	pr_info("Late Resume:ESD IRQ is enabled\n");
 	enable_irq(esd_enable->pdata->esd_gpio_irq);
@@ -309,11 +309,11 @@ static int __devinit mipi_esd_refresh_probe(struct platform_device *pdev)
 		return 0;
 	}
 #endif
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-	mipi_control.early_suspend.suspend = mipi_samsung_esd_early_suspend;
-	mipi_control.early_suspend.resume = mipi_samsung_esd_late_resume;
-	mipi_control.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 5;
-	register_early_suspend(&mipi_control.early_suspend);
+#if defined(CONFIG_POWERSUSPEND)
+	mipi_control.power_suspend.suspend = mipi_samsung_esd_early_suspend;
+	mipi_control.power_suspend.resume = mipi_samsung_esd_power_resume;
+	mipi_control.power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 5;
+	register_power_suspend(&mipi_control.early_suspend);
 #endif
 
 #if defined(CONFIG_MACH_MELIUS_EUR_OPEN) || defined(CONFIG_MACH_MELIUS_EUR_LTE)\

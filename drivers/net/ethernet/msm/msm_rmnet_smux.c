@@ -31,7 +31,7 @@
 #include <linux/smux.h>
 #include <linux/ip.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -92,7 +92,7 @@ static struct net_device *netdevs[RMNET_SMUX_DEVICE_COUNT];
 #ifdef CONFIG_MSM_RMNET_DEBUG
 static unsigned long timeout_us;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 /*
  * If early suspend is enabled then we specify two timeout values,
  * screen on (default), and screen is off.
@@ -148,7 +148,7 @@ static int __init rmnet_late_init(void)
 }
 
 late_initcall(rmnet_late_init);
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 
 /* Returns 1 if packet caused rmnet to wakeup, 0 otherwise. */
 static int rmnet_cause_wakeup(struct rmnet_private *p)
@@ -193,13 +193,13 @@ static ssize_t timeout_store(struct device *d,
 			     struct device_attribute *attr,
 			     const char *buf, size_t n)
 {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	struct rmnet_private *p = netdev_priv(to_net_dev(d));
 	p->timeout_us = timeout_us = strict_strtoul(buf, NULL, 10);
 #else
 /* If using early suspend/resume hooks do not write the value on store. */
 	timeout_us = strict_strtoul(buf, NULL, 10);
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 	return n;
 }
 
@@ -864,9 +864,9 @@ static int __init rmnet_init(void)
 
 #ifdef CONFIG_MSM_RMNET_DEBUG
 	timeout_us = 0;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	timeout_suspend_us = 0;
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 #endif /* CONFIG_MSM_RMNET_DEBUG */
 
 	for (n = 0; n < RMNET_SMUX_DEVICE_COUNT; n++) {
@@ -907,14 +907,14 @@ static int __init rmnet_init(void)
 			continue;
 		if (device_create_file(d, &dev_attr_wakeups_rcv))
 			continue;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 		if (device_create_file(d, &dev_attr_timeout_suspend))
 			continue;
 
 		/* Only care about rmnet0 for suspend/resume tiemout hooks. */
 		if (n == 0)
 			rmnet0 = d;
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 #endif /* CONFIG_MSM_RMNET_DEBUG */
 
 	}

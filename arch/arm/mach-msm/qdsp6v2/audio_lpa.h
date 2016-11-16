@@ -28,7 +28,7 @@ struct buffer {
 	unsigned addr;
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 struct audlpa_suspend_ctl {
 	struct power_suspend node;
 	struct audio *audio;
@@ -69,7 +69,7 @@ struct audio {
 	int buf_refresh;
 	int teos; /* valid only if tunnel mode & no data left for decoder */
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct audlpa_suspend_ctl suspend_ctl;
 #endif
 

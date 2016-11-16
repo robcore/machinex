@@ -40,7 +40,7 @@ struct cy8c_ts_data {
 
 struct workqueue_struct *cypress_touch_wq;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void cy8c_ts_power_suspend(struct power_suspend *h);
 static void cy8c_ts_power_resume(struct power_suspend *h);
 #endif
@@ -319,7 +319,7 @@ static int cy8c_ts_probe(struct i2c_client *client,
 		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	ts->power_suspend.suspend = cy8c_ts_power_suspend;
 	ts->power_suspend.resume = cy8c_ts_power_resume;
@@ -407,7 +407,7 @@ static int cy8c_ts_resume(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void cy8c_ts_power_suspend(struct power_suspend *h)
 {
 	struct cy8c_ts_data *ts;
@@ -432,7 +432,7 @@ static struct i2c_driver cy8c_ts_driver = {
 	.id_table = cy8c_ts_i2c_id,
 	.probe = cy8c_ts_probe,
 	.remove = cy8c_ts_remove,
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend = cy8c_ts_suspend,
 	.resume = cy8c_ts_resume,
 #endif

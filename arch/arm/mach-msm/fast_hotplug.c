@@ -451,7 +451,7 @@ static void hotplug_power_suspend(struct power_suspend *h) {
 	}
 }
 
-static void hotplug_late_resume(struct power_suspend *h) {
+static void hotplug_power_resume(struct power_suspend *h) {
 	if(enabled){
 #if 0
 		pr_info(HOTPLUG_INFO_TAG"Screen on, let's boost the cpu !");
@@ -468,7 +468,7 @@ static void hotplug_late_resume(struct power_suspend *h) {
 
 static struct power_suspend hotplug_power_suspend_handler = {
 	.suspend = hotplug_power_suspend,
-	.resume = hotplug_late_resume,
+	.resume = hotplug_power_resume,
 };
 /*
  * Initialization of the module

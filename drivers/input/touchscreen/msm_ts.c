@@ -28,7 +28,7 @@
 #include <linux/pm.h>
 #include <linux/slab.h>
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 #include <linux/powersuspend.h>
 #endif
 
@@ -69,7 +69,7 @@ struct msm_ts {
 	unsigned int			sample_irq;
 	unsigned int			pen_up_irq;
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	struct power_suspend		power_suspend;
 #endif
 	struct device			*dev;
@@ -289,14 +289,14 @@ msm_ts_resume(struct device *dev)
 }
 
 static struct dev_pm_ops msm_touchscreen_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend	= msm_ts_suspend,
 	.resume		= msm_ts_resume,
 #endif
 };
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void msm_ts_power_suspend(struct power_suspend *h)
 {
 	struct msm_ts *ts = container_of(h, struct msm_ts, power_suspend);
@@ -429,7 +429,7 @@ static int __devinit msm_ts_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ts);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
 //						TSSC_SUSPEND_LEVEL;
 	ts->power_suspend.suspend = msm_ts_power_suspend;
@@ -476,7 +476,7 @@ static int __devexit msm_ts_remove(struct platform_device *pdev)
 	free_irq(ts->pen_up_irq, ts);
 	input_unregister_device(ts->input_dev);
 	iounmap(ts->tssc_base);
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&ts->power_suspend);
 #endif
 	platform_set_drvdata(pdev, NULL);

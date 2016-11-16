@@ -11,7 +11,7 @@
 #define DEBUG
 
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/platform_device.h>
 #include <linux/leds.h>
 #include <linux/wakelock.h>
@@ -24,7 +24,7 @@
 
 struct flashlight_struct {
 	struct led_classdev fl_lcdev;
-	struct early_suspend early_suspend_flashlight;
+	struct power_suspend early_suspend_flashlight;
 	spinlock_t spin_lock;
 	struct hrtimer timer;
 	int brightness;
@@ -147,7 +147,7 @@ static void fl_lcdev_brightness_set(struct led_classdev *led_cdev,
 	flashlight_control(level);
 }
 
-static void flashlight_early_suspend(struct early_suspend *handler)
+static void flashlight_power_suspend(struct early_suspend *handler)
 {
 	flashlight_control(FLASHLIGHT_OFF);
 }
@@ -216,10 +216,10 @@ static int flashlight_probe(struct platform_device *pdev)
 	hrtimer_init(&the_fl.timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	the_fl.timer.function = flashlight_timeout;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	the_fl.early_suspend_flashlight.suspend = flashlight_early_suspend;
-	the_fl.early_suspend_flashlight.resume = NULL;
-	register_early_suspend(&the_fl.early_suspend_flashlight);
+#ifdef CONFIG_POWERSUSPEND
+	the_fl.power_suspend_flashlight.suspend = flashlight_early_suspend;
+	the_fl.power_suspend_flashlight.resume = NULL;
+	register_power_suspend(&the_fl.early_suspend_flashlight);
 #endif
 
 	return 0;
@@ -240,7 +240,7 @@ static int flashlight_remove(struct platform_device *pdev)
 	pr_debug("%s\n", __func__);
 
 	hrtimer_cancel(&the_fl.timer);
-	unregister_early_suspend(&the_fl.early_suspend_flashlight);
+	unregister_power_suspend(&the_fl.early_suspend_flashlight);
 	flashlight_control(FLASHLIGHT_OFF);
 	led_classdev_unregister(&the_fl.fl_lcdev);
 	if (fl_pdata->torch)

@@ -236,7 +236,7 @@ extern wl_iw_extra_params_t  g_wl_iw_params;
 
 #if defined(CUSTOMER_HW4) && defined(CONFIG_PARTIALSUSPEND_SLP)
 #include <linux/partialsuspend_slp.h>
-#define CONFIG_HAS_POWERSUSPEND
+#define CONFIG_POWERSUSPEND
 #define DHD_USE_POWERSUSPEND
 #define register_power_suspend		register_pre_suspend
 #define unregister_power_suspend	unregister_pre_suspend

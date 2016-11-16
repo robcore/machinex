@@ -27,7 +27,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/string.h>
 #include <linux/of_gpio.h>
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 #include <linux/powersuspend.h>
 #endif
 /* Early-suspend level
@@ -345,7 +345,7 @@ struct mxt_data {
 	struct regulator *vcc_ana;
 	struct regulator *vcc_dig;
 	struct regulator *vcc_i2c;
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	struct power_suspend power_suspend;
 #endif
 
@@ -2244,7 +2244,7 @@ static int mxt_resume(struct device *dev)
 	return 0;
 }
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static void mxt_power_suspend(struct power_suspend *h)
 {
 	struct mxt_data *data = container_of(h, struct mxt_data, power_suspend);
@@ -2261,7 +2261,7 @@ static void mxt_power_resume(struct power_suspend *h)
 #endif
 
 static const struct dev_pm_ops mxt_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend	= mxt_suspend,
 	.resume		= mxt_resume,
 #endif
@@ -2698,7 +2698,7 @@ static int __devinit mxt_probe(struct i2c_client *client,
 	if (error)
 		goto err_unregister_device;
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 //	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
 //						MXT_SUSPEND_LEVEL;
 	data->power_suspend.suspend = mxt_power_suspend;
@@ -2746,7 +2746,7 @@ static int __devexit mxt_remove(struct i2c_client *client)
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	free_irq(data->irq, data);
 	input_unregister_device(data->input_dev);
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	unregister_power_suspend(&data->power_suspend);
 #endif
 

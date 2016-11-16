@@ -652,7 +652,7 @@ static void msm_batt_update_psy_status(void)
 	}
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 struct batt_modify_client_req {
 
 	u32 client_handle;
@@ -1169,7 +1169,7 @@ static int msm_batt_cleanup(void)
 		}
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	if (msm_batt_info.power_suspend.suspend == msm_batt_power_suspend)
 		unregister_power_suspend(&msm_batt_info.power_suspend);
 #endif
@@ -1424,7 +1424,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	msm_batt_info.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	msm_batt_info.power_suspend.suspend = msm_batt_power_suspend;
 	msm_batt_info.power_suspend.resume = msm_batt_power_resume;

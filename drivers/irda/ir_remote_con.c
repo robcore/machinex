@@ -53,7 +53,7 @@ struct ir_remocon_data {
 	int on_off;
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void ir_remocon_power_suspend(struct power_suspend *h);
 static void ir_remocon_power_resume(struct power_suspend *h);
 #endif
@@ -390,7 +390,7 @@ static int __devinit ir_remocon_probe(struct i2c_client *client,
 		pr_err("Failed to create device file(%s)!\n",
 				dev_attr_check_ir.attr.name);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	data->power_suspend.suspend = ir_remocon_power_suspend;
 	data->power_suspend.resume = ir_remocon_power_resume;
@@ -404,7 +404,7 @@ err_free_mem:
 	return error;
 }
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) || defined(CONFIG_POWERSUSPEND)
 static int ir_remocon_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -423,7 +423,7 @@ static int ir_remocon_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void ir_remocon_power_suspend(struct power_suspend *h)
 {
 	struct ir_remocon_data *data;
@@ -439,7 +439,7 @@ static void ir_remocon_power_resume(struct power_suspend *h)
 }
 #endif
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 static const struct dev_pm_ops ir_remocon_pm_ops = {
 	.suspend	= ir_remocon_suspend,
 	.resume	= ir_remocon_resume,
@@ -468,7 +468,7 @@ static struct i2c_driver mc96_i2c_driver = {
 	},
 	.probe = ir_remocon_probe,
 	.remove = __devexit_p(ir_remocon_remove),
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 	.pm	= &ir_remocon_pm_ops,
 #endif
 

@@ -31,7 +31,7 @@
 #ifdef CONFIG_FB
 #include <linux/notifier.h>
 #include <linux/fb.h>
-#elif defined CONFIG_HAS_POWERSUSPEND
+#elif defined CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -231,7 +231,7 @@ struct synaptics_rmi4_data {
 #ifdef CONFIG_FB
 	struct notifier_block fb_notif;
 #else
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 #endif

@@ -1048,7 +1048,7 @@ static void lulzactive_power_suspend(struct power_suspend *handler) {
 	}
 }
 
-static void lulzactive_late_resume(struct power_suspend *handler) {
+static void lulzactive_power_resume(struct power_suspend *handler) {
 	power_suspended = 0;
 	up_sample_time = up_sample_time_awake;
 	down_sample_time = down_sample_time_awake;
@@ -1062,7 +1062,7 @@ static void lulzactive_late_resume(struct power_suspend *handler) {
 
 static struct power_suspend lulzactive_lulz_power_suspend = {
 		.suspend = lulzactive_power_suspend,
-		.resume = lulzactive_late_resume,
+		.resume = lulzactive_power_resume,
 };
 
 static int lulzactive_pm_notifier_event(struct notifier_block *this,

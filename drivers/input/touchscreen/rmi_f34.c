@@ -21,7 +21,7 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include <linux/i2c/synaptics_rmi.h>

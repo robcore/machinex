@@ -23,7 +23,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/module.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 /* Early-suspend level */
@@ -36,7 +36,7 @@ struct pdm_led_data {
 	struct led_classdev cdev;
 	void __iomem *perph_base;
 	int pdm_offset;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 };
@@ -73,7 +73,7 @@ static int msm_led_pdm_suspend(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void msm_led_pdm_power_suspend(struct power_suspend *h)
 {
 	struct pdm_led_data *led = container_of(h,
@@ -85,7 +85,7 @@ static void msm_led_pdm_power_suspend(struct power_suspend *h)
 #endif
 
 static const struct dev_pm_ops msm_led_pdm_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend	= msm_led_pdm_suspend,
 #endif
 };
@@ -163,7 +163,7 @@ static int __devinit msm_pdm_led_probe(struct platform_device *pdev)
 		goto err_led_reg;
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	led->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
 //						LED_SUSPEND_LEVEL;
 	led->power_suspend.suspend = msm_led_pdm_power_suspend;
@@ -189,7 +189,7 @@ static int __devexit msm_pdm_led_remove(struct platform_device *pdev)
 	struct pdm_led_data *led = platform_get_drvdata(pdev);
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&led->power_suspend);
 #endif
 	pm_runtime_set_suspended(&pdev->dev);

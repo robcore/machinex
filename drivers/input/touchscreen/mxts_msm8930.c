@@ -26,7 +26,7 @@
 #include <asm/unaligned.h>
 #include <linux/firmware.h>
 #include <linux/string.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -4311,7 +4311,7 @@ out:
 	return ret;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #define mxt_suspend	NULL
 #define mxt_resume	NULL
 
@@ -4478,7 +4478,7 @@ static int __devinit mxt_probe(struct i2c_client *client,
 		goto err_touch_init;
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 2;
 	data->power_suspend.suspend = mxt_power_suspend;
 	data->power_suspend.resume = mxt_power_resume;
@@ -4519,7 +4519,7 @@ static int __devexit mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);

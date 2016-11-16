@@ -31,7 +31,7 @@
 #include <linux/irq.h>
 #include <linux/gpio.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 

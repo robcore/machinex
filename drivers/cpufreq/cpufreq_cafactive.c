@@ -1529,21 +1529,21 @@ unsigned int cpufreq_cafactive_get_hispeed_freq(int cpu)
 	return tunables->hispeed_freq;
 }
 
-static void cafactive_early_suspend(struct power_suspend *handler)
+static void cafactive_power_suspend(struct power_suspend *handler)
 {
 	suspended = true;
 	return;
 }
 
-static void cafactive_late_resume(struct power_suspend *handler)
+static void cafactive_power_resume(struct power_suspend *handler)
 {
 	suspended = false;
 	return;
 }
 
 static struct power_suspend cafactive_suspend = {
-	.suspend = cafactive_early_suspend,
-	.resume = cafactive_late_resume,
+	.suspend = cafactive_power_suspend,
+	.resume = cafactive_power_resume,
 };
 
 static int __init cpufreq_cafactive_init(void)

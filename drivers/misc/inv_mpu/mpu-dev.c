@@ -62,7 +62,7 @@
 #endif
 #include <linux/akm8975.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -113,7 +113,7 @@ struct mpu_private_data {
 	struct hrtimer activate_timer;
 	int activate_timeout;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 	int gyro_bias[3];
@@ -1083,7 +1083,7 @@ static long mpu_dev_ioctl(struct file *file,
 	return retval;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 void mpu_dev_power_suspend(struct power_suspend *h)
 {
 	struct mpu_private_data *mpu =
@@ -2555,7 +2555,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		goto out_gsensorcal_failed;
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //		mpu->power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB + 1;
 		mpu->power_suspend.suspend = mpu_dev_power_suspend;
 		mpu->power_suspend.resume = mpu_dev_power_resume;

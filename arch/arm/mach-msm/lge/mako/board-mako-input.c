@@ -33,7 +33,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/i2c.h>
 
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/input/lge_touch_core.h>
 #include <mach/board_lge.h>
 #include "board-mako.h"

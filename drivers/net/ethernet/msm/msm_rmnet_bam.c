@@ -31,7 +31,7 @@
 #include <linux/platform_device.h>
 #include <net/pkt_sched.h>
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -92,7 +92,7 @@ struct rmnet_private {
 #ifdef CONFIG_MSM_RMNET_DEBUG
 static unsigned long timeout_us;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 /*
  * If power suspend is enabled then we specify two timeout values,
  * screen on (default), and screen is off.
@@ -191,7 +191,7 @@ DEVICE_ATTR(wakeups_rcv, 0444, wakeups_rcv_show, NULL);
 static ssize_t timeout_store(struct device *d, struct device_attribute *attr,
 			     const char *buf, size_t n)
 {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	struct rmnet_private *p = netdev_priv(to_net_dev(d));
 	p->timeout_us = timeout_us = strict_strtoul(buf, NULL, 10);
 #else
@@ -860,7 +860,7 @@ static int bam_rmnet_rev_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_MSM_RMNET_DEBUG
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static int rmnet_debug_init_timeout_suspend(struct net_device *dev)
 {
 	struct device *d;
@@ -914,7 +914,7 @@ static int __init rmnet_init(void)
 
 #ifdef CONFIG_MSM_RMNET_DEBUG
 	timeout_us = 0;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	timeout_suspend_us = 0;
 #endif
 #endif
@@ -958,7 +958,7 @@ static int __init rmnet_init(void)
 			continue;
 		if (device_create_file(d, &dev_attr_wakeups_rcv))
 			continue;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 		if (device_create_file(d, &dev_attr_timeout_suspend))
 			continue;
 

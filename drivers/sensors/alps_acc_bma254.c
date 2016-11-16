@@ -7,7 +7,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/input.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include <linux/regulator/consumer.h>
@@ -211,7 +211,7 @@ struct bma254_platform_data {
 };
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static struct power_suspend bma254_power_suspend_handler;
 #endif
 
@@ -971,7 +971,7 @@ static int bma254_probe(struct i2c_client *client,
 	}
 #endif
 #endif
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	register_power_suspend(&bma254_power_suspend_handler);
 #endif
 	ret = sensors_register(bma_device, NULL, bma254_attrs,
@@ -1027,7 +1027,7 @@ static int __devexit bma254_remove(struct i2c_client *client)
 #endif
 	pr_info("%s\n", __func__);
 	bma254_activate(0, 0, atomic_read(&delay));
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&bma254_power_suspend_handler);
 #endif
 #ifdef CONFIG_BMA254_SMART_ALERT
@@ -1037,7 +1037,7 @@ static int __devexit bma254_remove(struct i2c_client *client)
 return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void bma254_power_suspend(struct power_suspend *handler)
 {
 	pr_info("%s\n", __func__);
@@ -1069,7 +1069,7 @@ static struct i2c_driver bma254_driver = {
 	.resume = bma254_resume
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static struct power_suspend bma254_power_suspend_handler = {
 	.suspend = bma254_power_suspend,
 	.resume  = bma254_power_resume,

@@ -1449,7 +1449,7 @@ static int mxt224_internal_resume(struct mxt224_data *data)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #define mxt224_suspend	NULL
 #define mxt224_resume	NULL
 
@@ -2965,7 +2965,7 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 		pr_err("Failed to create device file(%s)!\n",
 				dev_attr_set_module_on.attr.name);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	data->power_suspend.suspend = mxt224_power_suspend;
 	data->power_suspend.resume = mxt224_power_resume;
@@ -3001,7 +3001,7 @@ static int __devexit mxt224_remove(struct i2c_client *client)
 {
 	struct mxt224_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&data->power_suspend);
 #endif
 	free_irq(client->irq, data);

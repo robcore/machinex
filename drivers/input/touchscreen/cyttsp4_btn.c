@@ -30,7 +30,7 @@
 #include <linux/cyttsp4_bus.h>
 
 #include <linux/delay.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include <linux/gpio.h>
@@ -60,7 +60,7 @@ struct cyttsp4_btn_data {
 	struct cyttsp4_btn_platform_data *pdata;
 	struct cyttsp4_sysinfo *si;
 	struct input_dev *input;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend es;
 	bool is_suspended;
 #endif
@@ -379,7 +379,7 @@ void cyttsp4_btn_close(struct input_dev *input)
 	pm_runtime_put(dev);
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void cyttsp4_btn_power_suspend(struct power_suspend *h)
 {
 	struct cyttsp4_btn_data *bd =
@@ -533,7 +533,7 @@ static int cyttsp4_btn_probe(struct cyttsp4_device *ttsp)
 			cyttsp4_setup_input_attention, 0);
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	bd->es.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	bd->es.suspend = cyttsp4_btn_power_suspend;
 	bd->es.resume = cyttsp4_btn_power_resume;
@@ -561,7 +561,7 @@ static int cyttsp4_btn_release(struct cyttsp4_device *ttsp)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	/*
 	 * This check is to prevent pm_runtime usage_count drop below zero
 	 * because of removing the module while in suspended state

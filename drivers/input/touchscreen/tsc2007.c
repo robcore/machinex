@@ -28,7 +28,7 @@
 #include <linux/i2c/tsc2007.h>
 #include <linux/pm.h>
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 #include <linux/powersuspend.h>
 //#define TSC2007_SUSPEND_LEVEL 1
 #endif
@@ -97,7 +97,7 @@ struct tsc2007 {
 	int			(*get_pendown_state)(void);
 	void			(*clear_penirq)(void);
 	int			(*power_shutdown)(bool);
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	struct power_suspend	power_suspend;
 #endif
 };
@@ -336,7 +336,7 @@ static int tsc2007_resume(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void tsc2007_power_suspend(struct power_suspend *h)
 {
 	struct tsc2007 *ts = container_of(h, struct tsc2007, power_suspend);
@@ -353,7 +353,7 @@ static void tsc2007_power_resume(struct power_suspend *h)
 #endif
 
 static const struct dev_pm_ops tsc2007_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend	= tsc2007_suspend,
 	.resume		= tsc2007_resume,
 #endif
@@ -443,7 +443,7 @@ static int __devinit tsc2007_probe(struct i2c_client *client,
 	if (err)
 		goto err_free_irq;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
 //						TSC2007_SUSPEND_LEVEL;
 	ts->power_suspend.suspend = tsc2007_power_suspend;
@@ -475,7 +475,7 @@ static int __devexit tsc2007_remove(struct i2c_client *client)
 	if (pdata->exit_platform_hw)
 		pdata->exit_platform_hw();
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&ts->power_suspend);
 #endif
 	input_unregister_device(ts->input);

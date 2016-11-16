@@ -44,9 +44,9 @@
 #include <linux/mutex.h>
 #include <linux/debugfs.h>
 #include <linux/regulator/consumer.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 
 #define CY_DECLARE_GLOBALS
 
@@ -79,9 +79,9 @@ struct cyttsp {
 	struct regulator **vdd;
 	struct dentry *dir;
 	char fw_fname[FW_FNAME_LEN];
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 };
 static u8 irq_cnt;		/* comparison counter with register valuw */
 static u32 irq_cnt_total;	/* total interrupts */
@@ -89,10 +89,10 @@ static u32 irq_err_cnt;		/* count number of touch interrupts with err */
 #define CY_IRQ_CNT_MASK	0x000000FF	/* mapped for sizeof count in reg */
 #define CY_IRQ_CNT_REG	0x00		/* tt_undef[0]=reg 0x1B - Gen3 only */
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void cyttsp_power_suspend(struct power_suspend *handler);
 static void cyttsp_power_resume(struct power_suspend *handler);
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 
 #define CYTTSP_DEBUG_DIR_NAME	"ts_debug"
 
@@ -129,7 +129,7 @@ MODULE_DEVICE_TABLE(i2c, cyttsp_id);
 
 #ifdef CONFIG_PM
 static const struct dev_pm_ops cyttsp_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend = cyttsp_suspend,
 	.resume = cyttsp_resume,
 #endif
@@ -2854,14 +2854,14 @@ static int __devinit cyttsp_probe(struct i2c_client *client,
 		}
 	}
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	if (!(retval < CY_OK)) {
 //		ts->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 		ts->power_suspend.suspend = cyttsp_power_suspend;
 		ts->power_suspend.resume = cyttsp_power_resume;
 		register_power_suspend(&ts->power_suspend);
 	}
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 	device_init_wakeup(&client->dev, ts->platform_data->wakeup);
 	mutex_init(&ts->mutex);
 
@@ -3110,9 +3110,9 @@ static int __devexit cyttsp_remove(struct i2c_client *client)
 	if (ts->platform_data->regulator_info)
 		cyttsp_power_device(ts, false);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&ts->power_suspend);
-#endif /* CONFIG_HAS_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 
 	mutex_destroy(&ts->mutex);
 
@@ -3137,7 +3137,7 @@ static int __devexit cyttsp_remove(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void cyttsp_power_suspend(struct power_suspend *handler)
 {
 	struct cyttsp *ts;
@@ -3153,7 +3153,7 @@ static void cyttsp_power_resume(struct power_suspend *handler)
 	ts = container_of(handler, struct cyttsp, power_suspend);
 	cyttsp_resume(&ts->client->dev);
 }
-#endif  /* CONFIG_HAS_POWERSUSPEND */
+#endif  /* CONFIG_POWERSUSPEND */
 
 static int cyttsp_init(void)
 {

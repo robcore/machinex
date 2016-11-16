@@ -63,7 +63,7 @@ struct mipi_dsi2lvds_driver_data {
 		struct platform_device *msm_pdev;
 #endif
 
-//#if defined(CONFIG_HAS_POWERSUSPEND)
+//#if defined(CONFIG_POWERSUSPEND)
 //	struct power_suspend power_suspend;
 //#endif
 	struct display_status dstat;

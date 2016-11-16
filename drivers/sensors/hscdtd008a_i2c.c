@@ -21,7 +21,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/input.h>
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include "sensors_head.h"
@@ -57,7 +57,7 @@
 #define CHIP_DEV_VENDOR	"ALPS"
 
 static struct i2c_driver hscd_driver;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static struct power_suspend hscd_power_suspend_handler;
 #endif
 
@@ -527,7 +527,7 @@ static int __devexit hscd_remove(struct i2c_client *client)
 {
 	printk("[HSCD] remove\n");
 	hscd_activate(0, 0, atomic_read(&delay));
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&hscd_power_suspend_handler);
 #endif
 	kfree(hscd_data->this_client);
@@ -554,7 +554,7 @@ static int hscd_resume(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void hscd_power_suspend(struct power_suspend *handler)
 {
 #ifdef ALPS_DEBUG
@@ -584,13 +584,13 @@ static struct i2c_driver hscd_driver = {
 	.driver = {
 	.name = HSCD_DRIVER_NAME,
 	},
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend = hscd_suspend,
 	.resume = hscd_resume,
 #endif
 };
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static struct power_suspend hscd_power_suspend_handler = {
 	.suspend = hscd_power_suspend,
 	.resume = hscd_power_resume,

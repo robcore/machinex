@@ -68,7 +68,7 @@
 #include "wlan_hdd_p2p.h"
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include "wlan_hdd_power.h"
@@ -95,7 +95,7 @@
 #include "qc_sap_ioctl.h"
 #define WE_MAX_STR_LEN 1024
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 extern void hdd_suspend_wlan(struct power_suspend *wlan_suspend);
 extern void hdd_resume_wlan(struct power_suspend *wlan_suspend);
 #endif
@@ -3285,7 +3285,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
     int set_value = value[1];
     int ret = 0; /* success */
     int enable_pbm, enable_mp;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
     v_U8_t nEnableSuspendOld;
 #endif
     INIT_COMPLETION(pWextState->completion_var);
@@ -3434,7 +3434,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
                  sme_DisablePowerSave(hHal, ePMC_STANDBY_MODE_POWER_SAVE);
                  break;
               case  8: //Request Standby
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
                  (void)hdd_enter_standby(pAdapter->pHddCtx);
 #endif
@@ -3446,9 +3446,9 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
               case  10://Stop Auto BMPS Timer
                  sme_StopAutoBmpsTimer(hHal);
                  break;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
               case  11://suspend to standby
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
                  nEnableSuspendOld = (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend;
                  (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend = 1;
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
@@ -3458,7 +3458,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
 #endif
                  break;
               case  12://suspend to deep sleep
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
                  nEnableSuspendOld = (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend;
                  (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->nEnableSuspend = 2;
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
@@ -3468,7 +3468,7 @@ static int iw_setint_getnone(struct net_device *dev, struct iw_request_info *inf
 #endif
                  break;
               case  13://resume from suspend
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #ifdef FEATURE_WLAN_NON_INTEGRATED_SOC
                  hdd_resume_wlan(NULL);
 #endif

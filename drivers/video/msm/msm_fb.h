@@ -40,7 +40,7 @@
 #include <linux/switch.h>
 #include <linux/msm_mdp.h>
 
-//#ifdef CONFIG_HAS_POWERSUSPEND
+//#ifdef CONFIG_POWERSUSPEND
 //#include <linux/powersuspend.h>
 //#endif
 
@@ -164,7 +164,7 @@ struct msm_fb_data_type {
 	struct dentry *sub_dir;
 #endif
 
-/*#ifdef CONFIG_HAS_POWERSUSPEND
+/*#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #ifdef CONFIG_FB_MSM_MDDI
 	struct power_suspend mddi_power_suspend;

@@ -163,7 +163,7 @@ extern int first_pixel_start_y;
 struct dentry *mdp_dir;
 #endif
 
-//#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+//#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 //static int mdp_suspend(struct platform_device *pdev, pm_message_t state);
 //#else
 #define mdp_suspend NULL
@@ -172,7 +172,7 @@ struct dentry *mdp_dir;
 struct timeval mdp_dma2_timeval;
 struct timeval mdp_ppp_timeval;
 
-//#ifdef CONFIG_HAS_POWERSUSPEND
+//#ifdef CONFIG_POWERSUSPEND
 //static struct power_suspend power_suspend;
 //#endif
 
@@ -3473,7 +3473,7 @@ static void mdp_suspend_sub(void)
 }
 #endif
 
-/*#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+/*#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 static int mdp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	if (pdev->id == 0) {
@@ -3488,7 +3488,7 @@ static int mdp_suspend(struct platform_device *pdev, pm_message_t state)
 }
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void mdp_power_suspend(struct power_suspend *h)
 {
 	mdp_suspend_sub();
@@ -3530,7 +3530,7 @@ static int mdp_remove(struct platform_device *pdev)
 
 static int mdp_register_driver(void)
 {
-/*#ifdef CONFIG_HAS_POWERSUSPEND
+/*#ifdef CONFIG_POWERSUSPEND
 //	power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB - 1;
 	power_suspend.suspend = mdp_power_suspend;
 	power_suspend.resume = mdp_power_resume;

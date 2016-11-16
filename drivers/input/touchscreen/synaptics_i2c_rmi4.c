@@ -124,7 +124,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 #if defined(CONFIG_FB)
 static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data);
-#elif defined(CONFIG_HAS_POWERSUSPEND)
+#elif defined(CONFIG_POWERSUSPEND)
 static void synaptics_rmi4_power_suspend(struct power_suspend *h);
 
 static void synaptics_rmi4_power_resume(struct power_suspend *h);
@@ -308,7 +308,7 @@ static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 			"Unable to register fb_notifier: %d\n", retval);
 	return;
 }
-#elif defined CONFIG_HAS_POWERSUSPEND
+#elif defined CONFIG_POWERSUSPEND
 static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 {
 /*	rmi4_data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -2585,7 +2585,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 
 	return 0;
 }
-#elif defined(CONFIG_HAS_POWERSUSPEND)
+#elif defined(CONFIG_POWERSUSPEND)
  /**
  * synaptics_rmi4_power_suspend()
  *
@@ -2768,7 +2768,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 	return 0;
 }
 
-#if (!defined(CONFIG_FB) && !defined(CONFIG_HAS_POWERSUSPEND))
+#if (!defined(CONFIG_FB) && !defined(CONFIG_POWERSUSPEND))
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,

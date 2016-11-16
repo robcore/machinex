@@ -24,7 +24,7 @@
 #include <linux/pm.h>
 #include <linux/slab.h>
 
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 #include <linux/powersuspend.h>
 #endif
 
@@ -79,7 +79,7 @@ struct marimba_tsadc {
 	struct clk	*codec_ssbi;
 	struct device *child_tssc;
 	bool clk_enabled;
-#if defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	struct power_suspend		power_suspend;
 #endif
 };
@@ -522,14 +522,14 @@ fail_tsadc_power:
 }
 
 static struct dev_pm_ops tsadc_pm_ops = {
-#ifndef CONFIG_HAS_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend = marimba_tsadc_suspend,
 	.resume = marimba_tsadc_resume,
 #endif
 };
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void marimba_tsadc_power_suspend(struct power_suspend *h)
 {
 	struct marimba_tsadc *tsadc = container_of(h, struct marimba_tsadc,
@@ -609,7 +609,7 @@ static int __devinit marimba_tsadc_probe(struct platform_device *pdev)
 	tsadc->child_tssc = child;
 	platform_set_drvdata(pdev, tsadc);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	tsadc->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN +
 //						 TSADC_SUSPEND_LEVEL;
 	tsadc->power_suspend.suspend = marimba_tsadc_power_suspend;
@@ -657,7 +657,7 @@ static int __devexit marimba_tsadc_remove(struct platform_device *pdev)
 	if (tsadc->pdata->marimba_tsadc_power)
 		rc = tsadc->pdata->marimba_tsadc_power(0);
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&tsadc->power_suspend);
 #endif
 

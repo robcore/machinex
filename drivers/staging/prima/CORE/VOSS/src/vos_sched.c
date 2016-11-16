@@ -1395,7 +1395,7 @@ VOS_STATUS vos_watchdog_chip_reset ( vos_chip_reset_reason_type  reason )
         return VOS_STATUS_E_FAILURE;
     }
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
     if(VOS_STATUS_SUCCESS != hdd_wlan_reset_initialization())
     {
        /* This can fail if card got removed by SDCC during resume */
@@ -2055,7 +2055,7 @@ VOS_STATUS vos_watchdog_wlan_shutdown(void)
     }
     /* Update Riva Reset Statistics */
     pHddCtx->hddRivaResetStats++;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
     if(VOS_STATUS_SUCCESS != hdd_wlan_reset_initialization())
     {
        VOS_ASSERT(0);

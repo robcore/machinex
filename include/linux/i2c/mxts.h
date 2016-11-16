@@ -16,7 +16,7 @@
 #ifndef __MXT_H__
 #define __MXT_H__
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -491,7 +491,7 @@ struct mxt_data {
 	u8 max_reportid;
 	u8 finger_mask ;
 	bool mxt_enabled;
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 #ifdef TSP_BOOSTER

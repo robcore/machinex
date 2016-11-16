@@ -333,7 +333,7 @@ struct mms_fw_image {
 	u8 data[0];
 } __packed;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void mms_ts_power_suspend(struct power_suspend *h);
 static void mms_ts_power_resume(struct power_suspend *h);
 #endif
@@ -3023,7 +3023,7 @@ static int __devinit mms_ts_probe(struct i2c_client *client,
 
 	info->enabled = true;
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 //	info->powersuspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	info->power_suspend.suspend = mms_ts_power_suspend;
 	info->power_suspend.resume = mms_ts_power_resume;
@@ -3073,7 +3073,7 @@ static int __devexit mms_ts_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) || defined(CONFIG_POWERSUSPEND)
 static int mms_ts_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -3128,7 +3128,7 @@ static int mms_ts_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void mms_ts_power_suspend(struct power_suspend *h)
 {
 	struct mms_ts_info *info;
@@ -3144,7 +3144,7 @@ static void mms_ts_power_resume(struct power_suspend *h)
 }
 #endif
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 static const struct dev_pm_ops mms_ts_pm_ops = {
 	.suspend	= mms_ts_suspend,
 	.resume		= mms_ts_resume,
@@ -3162,7 +3162,7 @@ static struct i2c_driver mms_ts_driver = {
 	.remove		= __devexit_p(mms_ts_remove),
 	.driver = {
 		.name = "mms_ts",
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 		.pm	= &mms_ts_pm_ops,
 #endif
 	},
