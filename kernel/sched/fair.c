@@ -3142,6 +3142,8 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p, int sync)
 	return 0;
 }
 
+static DEFINE_PER_CPU(bool, dbs_boost_needed);
+
 /*
  * find_idlest_group finds and returns the least busy CPU group within the
  * domain.
