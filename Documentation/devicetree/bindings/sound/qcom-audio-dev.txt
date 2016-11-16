@@ -121,6 +121,25 @@ Required properties:
  - qcom,msm_bus,vectors:                   Arrays of unsigned integers representing:
                                            master-id, slave-id, arbitrated bandwidth,
                                            instantaneous bandwidth
+* wcd9xxx_intc
+
+Required properties:
+
+ - compatible :                            "qcom,wcd9xxx-irq"
+
+ - interrupt-controller :                  Mark this device node as an interrupt
+                                           controller
+
+ - #interrupt-cells :                      Should be 1
+
+ - interrupt-parent :                      Parent interrupt controller
+
+ - interrupts :                            Interrupt number on the parent
+                                           interrupt controller
+
+ - interrupt-names :                       Name of interrupt on the parent
+                                           interrupt controller
+
 Example:
 
         qcom,msm-pcm {
