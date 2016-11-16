@@ -150,6 +150,8 @@ struct msm_rpm_ack_msg {
 	uint32_t id_ack;
 };
 
+static int irq_process;
+
 LIST_HEAD(msm_rpm_ack_list);
 
 static void msm_rpm_notify_sleep_chain(struct rpm_message_header *hdr,
@@ -533,18 +535,20 @@ static void msm_rpm_smd_work(struct work_struct *work)
 	uint32_t msg_id;
 	int errno;
 	char buf[MAX_ERR_BUFFER_SIZE] = {0};
+	unsigned long flags;
 
-	if (!spin_trylock(&msm_rpm_data.smd_lock_read))
-		return;
-	while (smd_is_pkt_avail(msm_rpm_data.ch_info)) {
+	while (smd_is_pkt_avail(msm_rpm_data.ch_info) && !irq_process) {
+		spin_lock_irqsave(&msm_rpm_data.smd_lock_read, flags);
 		if (msm_rpm_read_smd_data(buf)) {
+			spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read,
+					flags);
 			break;
 		}
 		msg_id = msm_rpm_get_msg_id_from_ack(buf);
 		errno = msm_rpm_get_error_from_ack(buf);
 		msm_rpm_process_ack(msg_id, errno);
+		spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read, flags);
 	}
-	spin_unlock(&msm_rpm_data.smd_lock_read);
 }
 
 #define DEBUG_PRINT_BUFFER_SIZE 512
@@ -799,14 +803,7 @@ static int msm_rpm_send_data(struct msm_rpm_request *cdata,
 
 int msm_rpm_send_request(struct msm_rpm_request *handle)
 {
-	int ret;
-	static DEFINE_MUTEX(send_mtx);
-
-	mutex_lock(&send_mtx);
-	ret = msm_rpm_send_data(handle, MSM_RPM_MSG_REQUEST_TYPE, false);
-	mutex_unlock(&send_mtx);
-
-	return ret;
+	return msm_rpm_send_data(handle, MSM_RPM_MSG_REQUEST_TYPE, false);
 }
 EXPORT_SYMBOL(msm_rpm_send_request);
 
@@ -863,6 +860,7 @@ int msm_rpm_wait_for_ack_noirq(uint32_t msg_id)
 		return 0;
 
 	spin_lock_irqsave(&msm_rpm_data.smd_lock_read, flags);
+	irq_process = true;
 
 	elem = msm_rpm_get_entry_from_msg_id(msg_id);
 
@@ -893,6 +891,7 @@ int msm_rpm_wait_for_ack_noirq(uint32_t msg_id)
 	rc = elem->errno;
 	msm_rpm_free_list_entry(elem);
 wait_ack_cleanup:
+	irq_process = false;
 	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read, flags);
 	return rc;
 }

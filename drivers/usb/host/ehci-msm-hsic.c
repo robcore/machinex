@@ -1046,8 +1046,6 @@ fail:
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
 }
 
-#ifdef CONFIG_PM
-
 static int ehci_hsic_bus_suspend(struct usb_hcd *hcd)
 {
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
@@ -1290,13 +1288,6 @@ static void ehci_msm_set_autosuspend_delay(struct usb_device *dev)
 		pm_runtime_set_autosuspend_delay(&dev->dev, 200);
 }
 #endif
-
-#else
-
-#define ehci_hsic_bus_suspend	NULL
-#define ehci_hsic_bus_resume	NULL
-
-#endif	/* CONFIG_PM */
 
 static struct hc_driver msm_hsic_driver = {
 	.description		= hcd_name,

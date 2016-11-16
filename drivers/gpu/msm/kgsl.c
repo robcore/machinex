@@ -1567,7 +1567,6 @@ static long kgsl_ioctl_rb_issueibcmds(struct kgsl_device_private *dev_priv,
 				      unsigned int cmd, void *data)
 {
 	int result = 0;
-	int i = 0;
 	struct kgsl_ringbuffer_issueibcmds *param = data;
 	struct kgsl_ibdesc *ibdesc;
 	struct kgsl_context *context;
@@ -1636,16 +1635,6 @@ static long kgsl_ioctl_rb_issueibcmds(struct kgsl_device_private *dev_priv,
 		ibdesc[0].gpuaddr = param->ibdesc_addr;
 		ibdesc[0].sizedwords = param->numibs;
 		param->numibs = 1;
-	}
-
-	for (i = 0; i < param->numibs; i++) {
-		if (!kgsl_mmu_gpuaddr_in_range(ibdesc[i].gpuaddr)) {
-			result = -ERANGE;
-			KGSL_DRV_ERR(dev_priv->device,
-				     "invalid ib base GPU virtual addr %x\n",
-				     ibdesc[i].gpuaddr);
-			goto free_ibdesc;
-		}
 	}
 
 	result = dev_priv->device->ftbl->issueibcmds(dev_priv,
@@ -2186,16 +2175,11 @@ static int kgsl_setup_ashmem(struct kgsl_mem_entry *entry,
 #endif
 
 static int kgsl_setup_ion(struct kgsl_mem_entry *entry,
-		struct kgsl_pagetable *pagetable, void *data)
+		struct kgsl_pagetable *pagetable, int fd)
 {
 	struct ion_handle *handle;
 	struct scatterlist *s;
 	struct sg_table *sg_table;
-	struct kgsl_map_user_mem *param = data;
-	int fd = param->fd;
-
-	if (!param->len)
-		return -EINVAL;
 
 	if (IS_ERR_OR_NULL(kgsl_ion_client))
 		return -ENODEV;
@@ -2327,7 +2311,8 @@ static long kgsl_ioctl_map_user_mem(struct kgsl_device_private *dev_priv,
 		entry->memtype = KGSL_MEM_ENTRY_ASHMEM;
 		break;
 	case KGSL_USER_MEM_TYPE_ION:
-		result = kgsl_setup_ion(entry, private->pagetable, data);
+		result = kgsl_setup_ion(entry, private->pagetable,
+			param->fd);
 		break;
 	default:
 		KGSL_CORE_ERR("Invalid memory type: %x\n", memtype);

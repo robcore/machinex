@@ -1,0 +1,2445 @@
+<6>[    0.000000] Booting Linux on physical CPU 0x0
+<6>[    0.000000] Initializing cgroup subsys cpu
+<5>[    0.000000] Linux version 3.4.113-machinex-Mark43 (robcore)(gcc version 5.3.0 (crosstool-NG crosstool-ng-1.21.0-345-ga2573ff - GNU GCC 5.3 - Cortex-A15) ) #1 SMP PREEMPT Tue Nov 15 19:13:34 MST 2016
+<4>[    0.000000] CPU: ARMv7 Processor [511f06f0] revision 0 (ARMv7), cr=10c5387d
+<4>[    0.000000] CPU: PIPT / VIPT nonaliasing data cache, PIPT instruction cache
+<4>[    0.000000] Machine: SAMSUNG JF
+<2>[    0.000000] Truncating memory at 0xc0000000 to fit in 32-bit physical address space
+<6>[    0.000000] memory pool 3 (start fe2ff000 size 1d00000) initialized
+<6>[    0.000000] Initialized persistent memory from 8fd00000-8fdfffff
+<6>[    0.000000] Memory policy: Data cache writealloc
+<4>[    0.000000] BUG: map for 0x81500000 at 0xc1300000 can not be mapped using pages, ignoring.
+<6>[    0.000000] socinfo_init: v7, id=153, ver=2.0, raw_id=1819, raw_ver=1819, hw_plat=8, hw_plat_ver=65536
+<6>[    0.000000]  accessory_chip=0, hw_plat_subtype=1, pmic_model=25, pmic_die_revision=1
+<7>[    0.000000] On node 0 totalpages: 479743
+<7>[    0.000000]   Normal zone: 1299 pages used for memmap
+<7>[    0.000000]   Normal zone: 0 pages reserved
+<7>[    0.000000]   Normal zone: 119021 pages, LIFO batch:31
+<7>[    0.000000]   HighMem zone: 3306 pages used for memmap
+<7>[    0.000000]   HighMem zone: 356117 pages, LIFO batch:31
+<6>[    0.000000] allocating 16908288 bytes at c3461000 (83661000 physical) for fb
+<6>[    0.000000] PERCPU: Embedded 11 pages/cpu @c4484000 s20672 r8192 d16192 u45056
+<7>[    0.000000] pcpu-alloc: s20672 r8192 d16192 u45056 alloc=11*4096
+<7>[    0.000000] pcpu-alloc: [0] 0 [0] 1 [0] 2 [0] 3 
+<4>[    0.000000] Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 475138
+<5>[    0.000000] Kernel command line: console=null androidboot.hardware=qcom user_debug=23 ehci-hcd.park=3 sec_log=0x100000@0xffe00008 sec_dbg=0x80000@0xfff00008 sec_debug.reset_reason=0x1a2b3c00 androidboot.warranty_bit=1 lcd_attached=1 lcd_id=0x428047 androidboot.debug_level=0x4f4c sec_debug.enable=0 sec_debug.enable_user=0 androidboot.cp_debug_level=0x55FF sec_debug.enable_cp_debug=0 cordon=34059091c951699dc48a9895e82630cf connie=SGH-I337M_NULL_CAN_9322e2b6f09151194feff539fc0f750f lpj=67678 loglevel=4 samsung.hardware=SGH-I337M androidboot.emmc_checksum=3 androidboot.warranty_bit=1 androidboot.bootloader=I337MVLUGOH1 androidboot.nvdata_backup=0 androidboot.boot_recovery=0 androidboot.check_recovery_condition=0x0 level=0x574f4c44 vmalloc=450m sec_pvs=0 batt_id_value=0 diag=0 androidboot.csb_val=1 androidboot.emmc=true androidboot.serialno=670f74d8 androidboot.baseband=mdm
+<6>[    0.000000] lcd_attached_status lcd_attached
+<3>[    0.000000] sec_tsp_mode: LCD_ID = 0x428047, val: 0X428047, ret1: 0x8
+<6>[    0.000000] sec_tsp_mode : synaptics
+<6>[    0.000000] sec_bat_current_boot_mode : normal
+<6>[    0.000000] PID hash table entries: 2048 (order: 1, 8192 bytes)
+<6>[    0.000000] Dentry cache hash table entries: 65536 (order: 6, 262144 bytes)
+<6>[    0.000000] Inode-cache hash table entries: 32768 (order: 5, 131072 bytes)
+<6>[    0.000000] Memory: 124MB 73MB 18MB 255MB 1403MB = 1873MB total
+<5>[    0.000000] Memory: 1856028k/1993244k available, 62944k reserved, 1437692K highmem
+<5>[    0.000000] Virtual kernel memory layout:
+<5>[    0.000000]     vector  : 0xffff0000 - 0xffff1000   (   4 kB)
+<5>[    0.000000]     timers  : 0xfffef000 - 0xffff0000   (   4 kB)
+<5>[    0.000000]     fixmap  : 0xfff00000 - 0xfffe0000   ( 896 kB)
+<5>[    0.000000]     vmalloc : 0xe3000000 - 0xff000000   ( 448 MB)
+<5>[    0.000000]     lowmem  : 0xc0000000 - 0xe2e00000   ( 558 MB)
+<5>[    0.000000]     pkmap   : 0xbfe00000 - 0xc0000000   (   2 MB)
+<5>[    0.000000]     modules : 0xbf000000 - 0xbfe00000   (  14 MB)
+<5>[    0.000000]       .text : 0xc0008000 - 0xc12fc6e0   (19410 kB)
+<5>[    0.000000]       .init : 0xc1300000 - 0xc1406000   (1048 kB)
+<5>[    0.000000]       .data : 0xc1406000 - 0xc156a038   (1425 kB)
+<5>[    0.000000]        .bss : 0xc156a038 - 0xc17935b0   (2214 kB)
+<6>[    0.000000] SLUB: Genslabs=11, HWalign=64, Order=0-3, MinObjects=0, CPUs=4, Nodes=1
+<6>[    0.000000] Preemptible hierarchical RCU implementation.
+<6>[    0.000000] 	RCU dyntick-idle grace-period acceleration is enabled.
+<6>[    0.000000] NR_IRQS:953
+<6>[    0.000000] tvec base lock initialized for cpu0
+<6>[    0.000000] tvec base lock initialized for cpu4
+<6>[    0.000000] hrtimer base lock initialized for cpu0
+<6>[    0.000000] sched_clock: 32 bits at 32kHz, resolution 30517ns, wraps every 131071999ms
+<6>[    0.000000] Switching to timer-based delay loop, resolution 148ns
+<6>[    0.000000] Console: colour dummy device 80x30
+<6>[    0.000152] Calibrating delay loop (skipped) preset value.. 13.53 BogoMIPS (lpj=67678)
+<6>[    0.000152] pid_max: default: 32768 minimum: 301
+<6>[    0.000335] Security Framework initialized
+<6>[    0.000366] SELinux:  Initializing.
+<7>[    0.000427] SELinux:  Starting in permissive mode
+<6>[    0.000518] Mount-cache hash table entries: 512
+<6>[    0.001434] Initializing cgroup subsys debug
+<6>[    0.001434] Initializing cgroup subsys cpuacct
+<6>[    0.001434] Initializing cgroup subsys freezer
+<6>[    0.001495] CPU: Testing write buffer coherency: ok
+<6>[    0.001800] CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
+<6>[    0.001831] hw perfevents: enabled with ARMv7 Krait PMU driver, 5 counters available
+<6>[    0.001922] Setting up static identity map for 0x80f6aaf8 - 0x80f6ab74
+<6>[    0.004455] tvec base lock initialized for cpu1
+<6>[    0.004455] hrtimer base lock initialized for cpu1
+<6>[    0.005462] CPU1: thread -1, cpu 1, socket 0, mpidr 80000001
+<6>[    0.006439] tvec base lock initialized for cpu2
+<6>[    0.006469] hrtimer base lock initialized for cpu2
+<6>[    0.007293] CPU2: thread -1, cpu 2, socket 0, mpidr 80000002
+<6>[    0.008209] tvec base lock initialized for cpu3
+<6>[    0.008209] hrtimer base lock initialized for cpu3
+<6>[    0.009033] CPU3: thread -1, cpu 3, socket 0, mpidr 80000003
+<6>[    0.009216] Brought up 4 CPUs
+<6>[    0.009216] SMP: Total of 4 processors activated (54.14 BogoMIPS).
+<6>[    0.010498] devtmpfs: initialized
+<6>[    0.024536] initlevel:0=early, 5 registered initcalls
+<6>[    0.026000] initlevel:1=core, 30 registered initcalls
+<6>[    0.027160] VFP support v0.3: implementor 51 architecture 64 part 6f variant 1 rev 0
+<6>[    0.027923] dummy: 
+<6>[    0.028259] NET: Registered protocol family 16
+<6>[    0.028320] initlevel:2=postcore, 29 registered initcalls
+<3>[    0.029571] AXI: msm_bus_fabric_init_driver(): msm_bus_fabric_init_driver
+<3>[    0.029876] MSM_DCVS: msm_dcvs_early_init: Unable to initialize DCVS err=4
+<6>[    0.030944] initlevel:3=arch, 20 registered initcalls
+<6>[    0.032165] meminfo_init: smem ram ptable found: ver: 0 len: 6
+<6>[    0.032165] Found 2 memory banks grouped into 16 memory regions
+<6>[    0.032379] gpiochip_add: registered GPIOs 0 to 151 on device: msmgpio
+<6>[    0.033203] socinfo_init: v7, id=153, ver=2.0, raw_id=1819, raw_ver=1819, hw_plat=8, hw_plat_ver=65536
+<6>[    0.033203]  accessory_chip=0, hw_plat_subtype=1, pmic_model=25, pmic_die_revision=1
+<6>[    0.033233] msm_rpm_init: RPM firmware 3.0.16842920
+<3>[    0.051116] msm_rpm_get_status(): Status id 433 not defined for target
+<3>[    0.051147] msm_rpm_get_status(): Status id 433 not defined for target
+<6>[    0.066955] cypress gpio init in apq8064_init_gpiomux
+<6>[    0.066955] apq8064_init_gpiomux: config touch_irq config.
+<6>[    0.067932] gpio_vreg_probe: id=203, name=ext_mpp8, gpio=203, gpio_label=ext_mpp8_en
+<6>[    0.068237] gpio_vreg_probe: id=77, name=ext_3p3v, gpio=77, gpio_label=ext_3p3v_en
+<6>[    0.068450] pm8921_probe: PMIC revision 1: F1
+<6>[    0.068450] pm8921_probe: PMIC revision 2: 0C
+<6>[    0.068481] pm8921_probe: PMIC version: PM8917 rev 1.0
+<6>[    0.068481] pm8921_probe: PMIC Restart Reason: Triggered from KPD (power key press), warm boot
+<6>[    0.069488] gpiochip_add: registered GPIOs 152 to 189 on device: pm-gpio
+<6>[    0.069915] pm_gpio_probe: OK: base=152, ngpio=38
+<6>[    0.070220] gpiochip_add: registered GPIOs 196 to 205 on device: pm8xxx-mpp
+<6>[    0.070281] pm8xxx_mpp_probe: OK: base=196, ngpio=10
+<6>[    0.075042] pm8821_probe: PMIC revision 1: PM8821 rev F3
+<6>[    0.075073] pm8821_probe: PMIC revision 2: PM8821 rev 0B
+<6>[    0.075073] pm8821_probe: PMIC version: PM8821 ver 2.1
+<6>[    0.075592] gpiochip_add: registered GPIOs 208 to 211 on device: pm8xxx-mpp
+<6>[    0.075622] pm8xxx_mpp_probe: OK: base=208, ngpio=4
+<6>[    0.076110] gpio_vreg_probe: id=174, name=ext_ts_sw, gpio=174, gpio_label=ext_ts_sw_en
+<6>[    0.077209] saw_probe: id=0, name=8921_s5
+<6>[    0.077514] saw_probe: id=1, name=8921_s6
+<6>[    0.077789] saw_probe: id=2, name=8821_s0
+<6>[    0.078063] saw_probe: id=3, name=8821_s1
+<6>[    0.085052] persistent_ram: found existing buffer, size 8143, start 8143
+<6>[    0.089477] console [ram-1] enabled
+<6>[    0.090576] apq8064_init_mmc: SDC4 is for Externel SD in system_rev 10
+<7>[    0.090728] [slimbus] starting init set up : 10 0
+<6>[    0.091491] samsung sys class init.
+<6>[    0.091552] samsung sys class end.
+<7>[    0.091735] [TSP] System revision, LPM mode : 10 0
+<7>[    0.091766] [TSP]START S5000_tsp_input_init
+<6>[    0.091766] S5000_tsp_input_init: synaptics : el_type : 0, touch_type = 8[normal mode]
+<7>[    0.091796] [TSP]END S5000_tsp_input_init
+<6>[    0.092620] [lcd] apq8064_init_fb
+<7>[    0.094268] [JC] apq8064_init_cam: In
+<7>[    0.094512] [S5K6B2YX] apq8064_init_cam: GPIO_CAM_VT_EN: 0
+<6>[    0.096374] [SSP]sensor_power_on_vdd
+<3>[    0.097869] sensor_power_on_vdd: done
+<6>[    0.098266] bcm2079x_sw_i2c_config is called
+<6>[    0.098266] [NFC] bcm2079x_init done
+<6>[    0.148529] =[ES325]=es325_start_api=====
+<6>[    0.148559] brcm_wlan_init: start
+<6>[    0.148620] brcm_init_wlan_mem: WIFI MEM Allocated
+<6>[    0.148773] hw-breakpoint: found 5 (+1 reserved) breakpoint and 4 watchpoint registers.
+<6>[    0.148773] hw-breakpoint: maximum watchpoint size is 8 bytes.
+<6>[    0.149597] Switching to clocksource gp_timer
+<3>[    0.152618] i2c i2c-4: Failed to register i2c client imx135 at 0x10 (-16)
+<3>[    0.152770] i2c i2c-4: Can't create device at 0x10
+<3>[    0.153167] i2c i2c-4: Failed to register i2c client s5k3l1yx at 0x34 (-16)
+<3>[    0.153320] i2c i2c-4: Can't create device at 0x34
+<6>[    0.154907] sps:BAM 0x12244000 enabled: ver:0x5, number of pipes:20
+<6>[    0.154907] sps:BAM 0x12244000 is registered.
+<6>[    0.155487] sps:sps is ready.
+<6>[    0.155761] initlevel:4=subsys, 65 registered initcalls
+<6>[    0.186584] bio: create slab <bio-0> at 0
+<6>[    0.187866] ION heap vmalloc created
+<6>[    0.187896] ION heap mm created at a0000000 with size 6600000
+<6>[    0.187927] ION heap mm_fw created at 9fe00000 with size 1e0000
+<6>[    0.187957] ION heap mfc created at a6600000 with size 42000
+<6>[    0.187988] ION heap iommu created
+<6>[    0.188049] ION heap qsecom created at fe2ff000 with size 1700000
+<6>[    0.188110] ION heap audio created at ff9ff000 with size 4cf000
+<3>[    0.188140] ion_heap_create: Invalid heap type 3
+<5>[    0.189392] SCSI subsystem initialized
+<6>[    0.189544] ++++MSM SB controller is up!
+<6>[    0.189758] sps:BAM 0x28084000 enabled: ver:0x12, number of pipes:31
+<6>[    0.189758] sps:BAM 0x28084000 is registered.
+<6>[    0.190582] ----MSM SB controller is up!
+<6>[    0.190917] usbcore: registered new interface driver usbfs
+<6>[    0.191009] usbcore: registered new interface driver hub
+<6>[    0.191192] usbcore: registered new device driver usb
+<6>[    0.191497] input: pmic8xxx_pwrkey as /devices/platform/msm_ssbi.0/pm8921-core/pm8xxx-pwrkey/input/input0
+<6>[    0.191955] slimbus:1 laddr:0x0, EAPC:0x5:0x50
+<6>[    0.192047] slimbus:1 laddr:0x1, EAPC:0x1:0x50
+<6>[    0.192108] slimbus:1 laddr:0x2, EAPC:0x0:0x50
+<6>[    0.192199] slimbus:1 laddr:0x3, EAPC:0x1:0x2
+<6>[    0.192291] slimbus:1 laddr:0x4, EAPC:0x0:0x2
+<3>[    0.192352] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+<3>[    0.192535] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+<3>[    0.192779] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+<3>[    0.193054] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+<6>[    0.264801] max77693-safeout max77693-safeout: max77693_pmic_probe
+<6>[    0.264984] regulator regulator.64: func:max77693_reg_enable
+<6>[    0.265838] regulator regulator.64: func:max77693_get_voltage
+<6>[    0.265869] regulator regulator.64: func:max77693_get_voltage_register
+<6>[    0.266357] regulator regulator.64: func:max77693_list_voltage_safeout
+<3>[    0.266510] Error-Bad Function Input
+<6>[    0.266723] regulator regulator.65: func:max77693_get_voltage
+<6>[    0.266754] regulator regulator.65: func:max77693_get_voltage_register
+<6>[    0.267242] regulator regulator.65: func:max77693_list_voltage_safeout
+<3>[    0.267364] Error-Bad Function Input
+<6>[    0.267547] regulator regulator.66: func:max77693_reg_enable
+<6>[    0.268676] i2c-gpio i2c-gpio.12: using pins 22 (SDA) and 23 (SCL)
+<6>[    0.268981] i2c-gpio i2c-gpio.13: using pins 205 (SDA) and 204 (SCL)
+<6>[    0.269195] i2c-gpio i2c-gpio.21: using pins 6 (SDA) and 7 (SCL)
+<6>[    0.269409] i2c-gpio i2c-gpio.17: using pins 10 (SDA) and 11 (SCL)
+<6>[    0.269897] i2c-gpio i2c-gpio.9: using pins 36 (SDA) and 37 (SCL)
+<6>[    0.270080] i2c-gpio i2c-gpio.16: using pins 33 (SDA) and 26 (SCL)
+<6>[    0.270355] i2c-gpio i2c-gpio.11: using pins 0 (SDA) and 1 (SCL)
+<6>[    0.270446] Linux media interface: v0.10
+<6>[    0.270507] Linux video capture interface: v2.00
+<6>[    0.271301] msm_iommu_dev: device vpe mapped at e3400000, with 2 ctx banks
+<6>[    0.271392] msm_iommu_dev: device mdp0 mapped at e3600000, with 2 ctx banks
+<6>[    0.271484] msm_iommu_dev: device mdp1 mapped at e3800000, with 2 ctx banks
+<6>[    0.271606] msm_iommu_dev: device rot mapped at e3a00000, with 2 ctx banks
+<6>[    0.271728] msm_iommu_dev: device ijpeg mapped at e3c00000, with 2 ctx banks
+<6>[    0.271820] msm_iommu_dev: device vfe mapped at e3e00000, with 2 ctx banks
+<6>[    0.271942] msm_iommu_dev: device vcodec_a mapped at e4000000, with 2 ctx banks
+<6>[    0.272033] msm_iommu_dev: device vcodec_b mapped at e4200000, with 2 ctx banks
+<6>[    0.272155] msm_iommu_dev: device gfx3d mapped at e4400000, with 3 ctx banks
+<6>[    0.272247] msm_iommu_dev: device jpegd mapped at e4600000, with 2 ctx banks
+<6>[    0.272369] msm_iommu_dev: device gfx3d1 mapped at e4800000, with 3 ctx banks
+<6>[    0.272491] msm_iommu_dev: device vcap mapped at e4a00000, with 2 ctx banks
+<6>[    0.272979] msm_iommu_ctx msm_iommu_ctx.2: context vpe_src using bank 0
+<6>[    0.273162] msm_iommu_ctx msm_iommu_ctx.3: context vpe_dst using bank 1
+<6>[    0.273376] msm_iommu_ctx msm_iommu_ctx.4: context mdp_port0_cb0 using bank 0
+<6>[    0.273590] msm_iommu_ctx msm_iommu_ctx.5: context mdp_port0_cb1 using bank 1
+<6>[    0.273773] msm_iommu_ctx msm_iommu_ctx.6: context mdp_port1_cb0 using bank 0
+<6>[    0.273986] msm_iommu_ctx msm_iommu_ctx.7: context mdp_port1_cb1 using bank 1
+<6>[    0.274169] msm_iommu_ctx msm_iommu_ctx.8: context rot_src using bank 0
+<6>[    0.274383] msm_iommu_ctx msm_iommu_ctx.9: context rot_dst using bank 1
+<6>[    0.274566] msm_iommu_ctx msm_iommu_ctx.10: context ijpeg_src using bank 0
+<6>[    0.274749] msm_iommu_ctx msm_iommu_ctx.11: context ijpeg_dst using bank 1
+<6>[    0.274963] msm_iommu_ctx msm_iommu_ctx.12: context vfe_imgwr using bank 0
+<6>[    0.275146] msm_iommu_ctx msm_iommu_ctx.13: context vfe_misc using bank 1
+<6>[    0.275360] msm_iommu_ctx msm_iommu_ctx.14: context vcodec_a_stream using bank 0
+<6>[    0.275573] msm_iommu_ctx msm_iommu_ctx.15: context vcodec_a_mm1 using bank 1
+<6>[    0.275817] msm_iommu_ctx msm_iommu_ctx.16: context vcodec_b_mm2 using bank 0
+<6>[    0.276092] msm_iommu_ctx msm_iommu_ctx.17: context gfx3d_user using bank 0
+<6>[    0.276367] msm_iommu_ctx msm_iommu_ctx.18: context gfx3d_priv using bank 1
+<6>[    0.276550] msm_iommu_ctx msm_iommu_ctx.0: context jpegd_src using bank 0
+<6>[    0.276733] msm_iommu_ctx msm_iommu_ctx.1: context jpegd_dst using bank 1
+<6>[    0.277038] msm_iommu_ctx msm_iommu_ctx.19: context gfx3d1_user using bank 0
+<6>[    0.277282] msm_iommu_ctx msm_iommu_ctx.20: context gfx3d1_priv using bank 1
+<6>[    0.277496] msm_iommu_ctx msm_iommu_ctx.21: context vcap_vc using bank 0
+<6>[    0.277679] msm_iommu_ctx msm_iommu_ctx.22: context vcap_vp using bank 1
+<6>[    0.277709] [SENSORS CORE] sensors_class_init
+<6>[    0.277893] Advanced Linux Sound Architecture Driver Version 1.0.25.
+<6>[    0.278381] Bluetooth: Core ver 2.16
+<6>[    0.278442] NET: Registered protocol family 31
+<6>[    0.278442] Bluetooth: HCI device and connection manager initialized
+<6>[    0.278472] Bluetooth: HCI socket layer initialized
+<6>[    0.278472] Bluetooth: L2CAP socket layer initialized
+<6>[    0.278808] Bluetooth: SCO socket layer initialized
+<6>[    0.279083] cfg80211: Calling CRDA to update world regulatory domain
+<6>[    0.279571] initlevel:5=fs, 24 registered initcalls
+<6>[    0.322845] NET: Registered protocol family 2
+<6>[    0.330902] IP route cache hash table entries: 16384 (order: 4, 65536 bytes)
+<6>[    0.331329] TCP established hash table entries: 65536 (order: 7, 524288 bytes)
+<6>[    0.331939] TCP bind hash table entries: 65536 (order: 7, 524288 bytes)
+<6>[    0.332550] TCP: Hash tables configured (established 65536 bind 65536)
+<6>[    0.332550] TCP: reno registered
+<6>[    0.332550] UDP hash table entries: 256 (order: 1, 8192 bytes)
+<6>[    0.332580] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes)
+<6>[    0.332855] NET: Registered protocol family 1
+<6>[    0.333282] RPC: Registered named UNIX socket transport module.
+<6>[    0.333282] RPC: Registered udp transport module.
+<6>[    0.333312] RPC: Registered tcp transport module.
+<6>[    0.333312] RPC: Registered tcp NFSv4.1 backchannel transport module.
+<6>[    0.333648] Trying to unpack rootfs image as initramfs...
+<6>[    0.494262] Freeing initrd memory: 2432K (c2000000 - c2260000)
+<6>[    0.494293] initlevel:6=device, 724 registered initcalls
+<6>[    0.496398] Detected 9 counters on the L2CC PMU.
+<6>[    0.497650] pil-q6v4-lpass pil-q6v4-lpass: using secure boot
+<3>[    0.533203] smd_channel_probe_worker: allocation table not initialized
+<6>[    0.542175] NET: Registered protocol family 27
+<6>[    0.547546] acpuclk-8064 acpuclk-8064: SPEED BIN: 2
+<6>[    0.547576] acpuclk-8064 acpuclk-8064: ACPU PVS: 3
+<6>[    0.550415] acpuclk-8064 acpuclk-8064: CPU Frequencies Supported: 15
+<4>[    0.550567] ####init
+<3>[    0.551635] genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
+<3>[    0.551849] genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 319
+<3>[    0.552093] mdm_modem_probe: registered mdm id 0
+<3>[    0.552154] mdm_do_first_power_on:id 0: Powering on modem for the first time
+<6>[    0.602905] mdm_pblrdy_change: mdm id 0: pbl ready:1
+<6>[    0.602935] mdm_status_change: status = 1: mdm id 0 is now ready
+<3>[    0.603393] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
+<3>[    0.603424] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+<6>[    0.840850] usbcore: registered new interface driver hsic_sysmon
+<6>[    0.841064] sec-thermistor sec-thermistor: sec_therm_probe: SEC Thermistor Driver Loading
+<6>[    0.841888] futex hash table entries: 1024 (order: 4, 65536 bytes)
+<4>[    0.842742] highmem bounce pool size: 64 pages
+<6>[    0.845916] exFAT: Core Version 1.2.12
+<6>[    0.845916] exFAT: FS Version 1.2.12
+<6>[    0.846435] Registering sdcardfs 2.1.1
+<5>[    0.846527] NFS: Registering the id_resolver key type
+<6>[    0.847076] fuse init (API version 7.18)
+<7>[    0.847381] SELinux:  Registering netfilter hooks
+<6>[    0.849792] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 249)
+<6>[    0.849792] io scheduler noop registered
+<6>[    0.849822] io scheduler deadline registered
+<6>[    0.849822] io scheduler row registered
+<6>[    0.849884] io scheduler cfq registered (default)
+<6>[    0.850036] io scheduler bfq registered
+<6>[    0.850067] BFQ I/O-scheduler: v7r8
+<6>[    0.850067] io scheduler sio registered
+<6>[    0.850067] io scheduler fifo registered
+<6>[    0.850067] io scheduler zen registered
+<6>[    0.850067] io scheduler vr registered
+<6>[    0.850097] io scheduler fiops registered
+<6>[    0.850097] io scheduler sioplus registered
+<6>[    0.850097] io scheduler tripndroid registered
+<6>[    0.850311] [secgpio_dvs] secgpio_dvs_probe has been created!!!
+<6>[    0.850402] [secgpio_dvs] secgpio_dvs_init has been initialized!!!
+<6>[    0.851684] mipi_dsi base phy_addr = 0x4700000 virt = 0xe4d00000
+<6>[    0.851715] mmss_sfpb  base phy_addr = 0x5700000,virt = 0xe31ae000
+<6>[    0.851806] [lcd] mipi_samsung_disp_init start
+<6>[    0.851928] [lcd] mipi_samsung_disp_probe start
+<6>[    0.851959] [lcd] pdev->id =0,  pdev-name = mipi_samsung_full_hd
+<6>[    0.851959] [lcd] mipi_samsung_disp_probe end since pdev-id is 0
+<7>[    0.851989] [lcd] mipi_video_samsung_octa_full_hd_pt_init start
+<6>[    0.852020] get_ldi_chip : 1 LSI
+<6>[    0.852020] [lcd] mipi_samsung_device_register start
+<6>[    0.852111] [lcd] mipi_samsung_disp_probe start
+<6>[    0.852111] [lcd] msm_fb_add_device : mipi_samsung_full_hd
+<6>[    0.857910] FrameBuffer[0] 1080x1920 size=16711680 bytes is registered successfully!
+<7>[    0.858123] Registered led device: lcd-backlight
+<6>[    0.858154] mdp4_reg_csc_fs: kobject_uevent(KOBJ_ADD)
+<6>[    0.858245] [lcd] lcd_device_register for panel start
+<6>[    0.858306] [lcd] backlight_device_register for panel start
+<6>[    0.858367] [mipi_samsung_disp_probe] CONFIG_MDNIE_LITE_TUNING ok ! init class called!
+<3>[    0.858367] [mdnie lite] start!
+<3>[    0.858489] [mdnie lite] end!
+<6>[    0.858581] [lcd] mipi_samsung_disp_probe end
+<6>[    0.858581] [lcd] mipi_samsung_device_register end
+<7>[    0.858581] mipi_video_samsung_octa_full_hd_pt_init: get_lcd_attached(1)!
+<7>[    0.858612] [lcd] mipi_video_samsung_octa_full_hd_pt_init end
+<7>[    0.858612] [lcd] mipi_video_magna_octa_full_hd_pt_init start
+<6>[    0.858612] get_ldi_chip : 1 LSI
+<6>[    0.859771] FrameBuffer[1] 1920x1080 size=0 bytes is registered successfully!
+<6>[    0.859954] mdp4_dtv_vsync_init: ndx=0
+<3>[    0.860046] hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddb04c08
+<6>[    0.860107] hdmi_msm hdmi_msm.1: hdmi_msm_config_hdcp_feature: HDCP Feature: Disabled
+<3>[    0.860443] Inside writeback_driver_init
+<3>[    0.860656] Inside writeback_probe
+<6>[    0.861022] FrameBuffer[2] 1280x720 size=0 bytes is registered successfully!
+<6>[    0.861907] 
+<6>[    0.861907]  msm_vidc_enc: Inside vid_enc_init()
+<6>[    0.862121] 
+<6>[    0.862121]  msm_vidc_enc: Inside vid_enc_vcd_init()
+<6>[    0.862640] input: sii8240_rcp as /devices/virtual/input/input1
+<6>[    0.863861] msm_serial: driver initialized
+<6>[    0.864196] msm_serial_hs.0: ttyHS0 at MMIO 0x16540000 (irq = 188) is a MSM HS UART
+<3>[    0.864196] Unknown PM state 0
+<3>[    0.864257] Unknown PM state 3
+<6>[    0.864471] msm_serial_hs module loaded
+<6>[    0.864593] msm_serial_hsl: detected port #1
+<6>[    0.864685] msm_serial_hsl.1: ttyHSL1 at MMIO 0x12450000 (irq = 225) is a MSM
+<6>[    0.864837] msm_serial_hsl: detected port #0
+<6>[    0.864837] msm_serial_hsl_probe: Found wakeup gpio 83
+<6>[    0.864959] msm_serial_hsl.0: ttyHSL0 at MMIO 0x16640000 (irq = 190) is a MSM
+<6>[    0.865112] msm_serial_hsl: driver initialized
+<6>[    0.866271] msm_rotator_probe: rotator_hw_revision=2
+<6>[    0.866455] diagchar_core isn't enabled.
+<6>[    0.867156] kgsl kgsl-3d0: |kgsl_iommu_init| MMU type set for device is IOMMU
+<6>[    0.871490] brd: module loaded
+<6>[    0.873443] loop: module loaded
+<6>[    0.874481] init tzic
+<6>[    0.874694] bcm2079x-i2c 17-0077: bcm2079x_probe, probing bcm2079x driver flags = 0
+<6>[    0.874847] bcm2079x-i2c 17-0077: requesting IRQ 660 with IRQF_NO_SUSPEND
+<6>[    0.874969] bcm2079x-i2c 17-0077: bcm2079x_probe, probing bcm2079x driver exited successfully
+<6>[    0.875152] func:max77693_muic_init
+<6>[    0.875335] func:max77693_muic_probe
+<6>[    0.875335] max77693-muic max77693-muic: adc:871 chgtype:875, adc1k874
+<6>[    0.875457] input: max77693-muic as /devices/platform/i2c-gpio.12/i2c-12/12-0066/max77693-muic/input/input2
+<6>[    0.875518] MUIC ret=0
+<6>[    0.875518] max77693-muic max77693-muic: func:max77693_muic_set_adcdbset value:2
+<6>[    0.875518] max77693-muic max77693-muic: max77693_muic_set_adcdbset: ADCDBSET(0x20)
+<6>[    0.876922] max77693_muic_probe: CDETCTRL1(0x0d)
+<6>[    0.877410] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:20
+<6>[    0.877441] max77693-muic max77693-muic: func:max77693_muic_irq_init
+<6>[    0.885711] max77693-muic max77693-muic: adc:871 chgtype:875 adc1k:874 vbvolt:879
+<6>[    0.886108] max77693-muic max77693-muic: max77693_muic_irq_init: reg=7, val=9
+<6>[    0.886505] max77693-muic max77693-muic: max77693_muic_irq_init: reg=8, val=11
+<6>[    0.886901] max77693-muic max77693-muic: max77693_muic_irq_init: reg=9, val=0
+<6>[    0.887329] max77693-muic max77693-muic: max77693_muic_irq_init: reg=1, val=0
+<6>[    0.887725] max77693-muic max77693-muic: max77693_muic_irq_init: reg=2, val=0
+<6>[    0.888122] max77693-muic max77693-muic: max77693_muic_irq_init: reg=3, val=0
+<6>[    0.888580] tabla-slim tabla-slim: Platform data from board file
+<6>[    0.921417] slimbus:1 laddr:0x5, EAPC:0x1:0x60
+<6>[    0.921478] slimbus:1 laddr:0x6, EAPC:0x0:0x60
+<6>[    0.930419] max77693-muic:max77693_muic_dock_detect CONTROL1:9
+<6>[    0.930908] max77693-muic:max77693_muic_dock_detect STATUS1:0x3f, 2:0x41
+<6>[    0.930908] max77693-muic:max77693_muic_dock_detect adc:1f adcerr:0 chgtyp:1 vb:40 dxovp:0 cable_type:20
+<3>[    1.050842] wcd9xxx_slim_probe: failed to get slimbus tabla-slim logical address: -6
+<6>[    1.052978] tabla2x-slim tabla2x-slim: Platform data from board file
+<6>[    1.115875] wcd9xxx_check_codec_type: codec is tabla_codec
+<6>[    1.115905] wcd9xxx_check_codec_type: Read codec idbytes & version
+<6>[    1.115905] byte_0[00000002] byte_1[00000000] byte_2[00000000]
+<6>[    1.115905]  byte_3[00000001] version = 2 ret = 34
+<4>[    1.116973] i2c-core: driver [tabla-i2c-core] using legacy suspend method
+<4>[    1.116973] i2c-core: driver [tabla-i2c-core] using legacy resume method
+<4>[    1.117065] i2c-core: driver [sitar-i2c-core] using legacy suspend method
+<4>[    1.117065] i2c-core: driver [sitar-i2c-core] using legacy resume method
+<4>[    1.117126] i2c-core: driver [wcd9xxx-i2c-core] using legacy suspend method
+<4>[    1.117156] i2c-core: driver [wcd9xxx-i2c-core] using legacy resume method
+<6>[    1.117706] SCSI Media Changer driver v0.25 
+<6>[    1.118041] spi_qsd spi_qsd.0: master is unqueued, this is deprecated
+<6>[    1.118743] tun: Universal TUN/TAP device driver, 1.6
+<6>[    1.118743] tun: (C) 1999-2004 Max Krasnyansky <maxk@qualcomm.com>
+<6>[    1.119842] PPP generic driver version 2.4.2
+<6>[    1.119934] PPP BSD Compression module registered
+<6>[    1.119964] PPP Deflate Compression module registered
+<6>[    1.120697] PPP MPPE Compression module registered
+<6>[    1.120697] NET: Registered protocol family 24
+<6>[    1.120697] SLIP: version 0.8.4-NET3.019-NEWTTY (dynamic channels, max=256) (6 bit encapsulation enabled).
+<6>[    1.120727] CSLIP: code copyright 1989 Regents of the University of California.
+<6>[    1.120788] usbcore: registered new interface driver asix
+<6>[    1.120849] usbcore: registered new interface driver cdc_ether
+<6>[    1.120880] usbcore: registered new interface driver net1080
+<6>[    1.120910] usbcore: registered new interface driver cdc_subset
+<6>[    1.120971] usbcore: registered new interface driver zaurus
+<6>[    1.121063] usbcore: registered new interface driver cdc_ncm
+<6>[    1.121124] msm_otg msm_otg: msm_otg probe
+<3>[    1.121154] msm_otg msm_otg: failed to get phy_clk
+<6>[    1.121276] msm_otg msm_otg: OTG regs = e31e4000
+<6>[    1.123352] msm_otg msm_otg: success to host_notify_dev_register
+<6>[    1.123504] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+<6>[    1.136108] msm_hsic_host msm_hsic_host: Qualcomm EHCI Host Controller using HSIC
+<6>[    1.136138] msm_hsic_host msm_hsic_host: new USB bus registered, assigned bus number 1
+<6>[    1.160125] msm_hsic_host msm_hsic_host: irq 261, io mem 0x12510000
+<6>[    1.180541] msm_hsic_host msm_hsic_host: USB 2.0 started, EHCI 1.00
+<6>[    1.180694] usb usb1: New USB device found, idVendor=1d6b, idProduct=0002
+<6>[    1.180694] usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+<6>[    1.180725] usb usb1: Product: Qualcomm EHCI Host Controller using HSIC
+<6>[    1.180725] usb usb1: Manufacturer: Linux 3.4.113-machinex-Mark43 ehci_hcd
+<6>[    1.180725] usb usb1: SerialNumber: msm_hsic_host
+<6>[    1.181060] hub 1-0:1.0: USB hub found
+<6>[    1.181091] hub 1-0:1.0: 1 port detected
+<3>[    1.181396] genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
+<6>[    1.181793] usbcore: registered new interface driver cdc_acm
+<6>[    1.181793] cdc_acm: USB Abstract Control Model driver for USB modems and ISDN adapters
+<6>[    1.181854] usbcore: registered new interface driver usblp
+<6>[    1.181854] Initializing USB Mass Storage driver...
+<6>[    1.181915] usbcore: registered new interface driver usb-storage
+<6>[    1.181915] USB Mass Storage support registered
+<6>[    1.181976] usbcore: registered new interface driver ums-cypress
+<6>[    1.182006] usbcore: registered new interface driver ums-jumpshot
+<6>[    1.182037] usbcore: registered new interface driver ums-sddr09
+<6>[    1.182067] usbcore: registered new interface driver ums-sddr55
+<6>[    1.182159] usbcore: registered new interface driver usbserial
+<6>[    1.182159] usbserial: USB Serial Driver core
+<6>[    1.182189] usbcore: registered new interface driver pl2303
+<6>[    1.182220] USB Serial support registered for pl2303
+<6>[    1.182250] usbcore: registered new interface driver qc_csvt
+<6>[    1.182281] USB Serial support registered for qc_csvt
+<6>[    1.182312] usbcore: registered new interface driver usb_ehset_test
+<6>[    1.182373] usbcore: registered new interface driver diag_bridge
+<6>[    1.182525] usbcore: registered new interface driver mdm_bridge
+<6>[    1.182983] usbcore: registered new interface driver ks_bridge
+<6>[    1.182983] ksb_init: init done
+<6>[    1.183471] usb: android_probe pdata: c1482cac
+<6>[    1.183563] msm_otg msm_otg: phy_reset: success
+<6>[    1.183624] msm_hsusb msm_hsusb: [ci13xxx_start] hw_ep_max = 32
+<7>[    1.183685] usb: android_bind disconnect
+<7>[    1.184478] [mtp_setup] 	line = [1601]
+<6>[    1.184875] android_usb gadget: Mass Storage Function, version: 2009/09/11
+<6>[    1.184875] android_usb gadget: Number of LUNs=1
+<6>[    1.184875]  lun0: LUN: removable file: (no medium)
+<6>[    1.185241] android_bind : serial_string: 0123456789ABCDEF
+<7>[    1.185241] usb: composite_bind idVendor=0x0, idProduct=0x0
+<7>[    1.185241] usb: composite_bind bcdDevice=0x0
+<7>[    1.185272] usb: composite_bind composite_manufacturer=
+<6>[    1.185272] android_usb gadget: android_usb ready
+<6>[    1.186553] synaptics_power_onoff: enable l17
+<6>[    1.187042] synaptics_power_onoff: enable l22
+<3>[    1.290191] couldn't get usb power supply
+<6>[    1.290832] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f34_init: [IC] [date, revision, version, panel] [06/08, 0xB0, 0x5C, 0x03]
+<6>[    1.291290] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_check_status: status_code: 1
+<6>[    1.291717] msm_otg msm_otg: USB in low power mode
+<6>[    1.292175] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f12_init: globe touch disabled(0x19)
+<6>[    1.293121] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f12_init: Function 12 max x = 1079 max y = 1919
+<6>[    1.293670] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f12_init: 12 num_Rx:28 num_Tx:16, node:192, threshold:30, gloved sensitivity:f9
+<6>[    1.293823] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_glove_mode_enables: [00]: glove disable
+<6>[    1.296630] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f51_init: proximity controls:[0X51]
+<6>[    1.296630] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f51_set_enables: disable
+<6>[    1.298980] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_query_device: Number of interrupt registers = 1 sum of intr_count = 6
+<6>[    1.300018] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_query_device: F34 : NUM_SOURCE[21] NUM_INT_REG[00] INT_MASK[00]
+<6>[    1.300018] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_query_device: F12 : NUM_SOURCE[01] NUM_INT_REG[00] INT_MASK[04]
+<6>[    1.300048] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_query_device: F51 : NUM_SOURCE[41] NUM_INT_REG[00] INT_MASK[20]
+<6>[    1.300048] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_query_device: Interrupt enable mask 0 = 0x24
+<6>[    1.300567] input: sec_touchscreen as /devices/platform/qup_i2c.3/i2c-3/3-0020/input/input3
+<6>[    1.302368] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f54_set_control: query_base_addr: 132, control_base_addr: 10c, data_base_addr: 100, command_base_addr: 131
+<6>[    1.304473] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_fwu_init: ic revision is B0 type.
+<6>[    1.304473] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_fwu_init: [IC] [F01 product info, ID(revision)] [0x0000 0x0000, SY 01(0XB0)], PANEL : 0x03
+<6>[    1.305633] synaptics_rmi4_i2c 3-0020: synaptics_fw_updater: booting, user_FW
+<6>[    1.305664] synaptics_rmi4_i2c 3-0020: fwu_start_reflash: Requesting firmware image tsp_synaptics/synaptics_b0_5_1.fw
+<6>[    1.305664] synaptics_rmi4_i2c 3-0020: fwu_check_skip_reflash: [FW size. revision, version] [62976, 0xB0/0xB0(BIN/IC), 0x5C/0x5C(BIN/IC)]
+<6>[    1.305664] synaptics_rmi4_i2c 3-0020: fwu_check_skip_reflash: [Panel, mode, prog] [0x03, 0x00, 0x00]
+<6>[    1.305694] synaptics_rmi4_i2c 3-0020: fwu_check_skip_reflash: do not need to update fw
+<6>[    1.305694] synaptics_rmi4_i2c 3-0020: fwu_start_reflash: End of reflash process
+<6>[    1.305694] synaptics_tsp_register_callback: [synaptics] charger callback!
+<6>[    1.305694] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_power_suspend
+<6>[    1.306121] synaptics_power_onoff: disable l17
+<6>[    1.306427] synaptics_power_onoff: disable l22
+<6>[    1.306945] lis3dh_acc accelerometer driver: init
+<4>[    1.307006] i2c-core: driver [lis3dh_acc] using legacy suspend method
+<4>[    1.307006] i2c-core: driver [lis3dh_acc] using legacy resume method
+<6>[    1.307281] rtc-pm8xxx rtc-pm8xxx: rtc core: registered pm8xxx_rtc as rtc0
+<6>[    1.307525] i2c /dev entries driver
+<6>[    1.308624] lirc_dev: IR Remote Control driver registered, major 237 
+<6>[    1.308624] IR NEC protocol handler initialized
+<6>[    1.308624] IR RC5(x) protocol handler initialized
+<6>[    1.308624] IR RC6 protocol handler initialized
+<6>[    1.308654] IR JVC protocol handler initialized
+<6>[    1.308654] IR Sony protocol handler initialized
+<6>[    1.308654] IR RC5 (streamzap) protocol handler initialized
+<6>[    1.308654] IR SANYO protocol handler initialized
+<6>[    1.308654] IR MCE Keyboard/mouse protocol handler initialized
+<6>[    1.308685] IR LIRC bridge handler initialized
+<6>[    1.309143] usbcore: registered new interface driver uvcvideo
+<6>[    1.309143] USB Video Class driver (1.1.1)
+<7>[    1.309967] [JC] jc_i2c_probe:E
+<3>[    1.309967] [jc_spi_init:336] Entered
+<3>[    1.310028] [jc_spi_probe:301] Entered
+<3>[    1.310119] [jc_spi_probe:311] jc_spi successfully probed
+<3>[    1.310272] jc_config_isp_irq~~~~~~~~~~
+<3>[    1.310394] msm_eeprom_probe probe_fail
+<7>[    1.310455] [JC] jc_enum_fmt:Index is 0
+<7>[    1.310455] [JC] jc_enum_fmt:Index is 1
+<7>[    1.310455] [JC] jc_enum_fmt:Index is 0
+<6>[    1.310729] msm_server_update_sensor_info mctl_node_name[0] = video1
+<7>[    1.310821] [JC] jc_init_vreg_port:E
+<7>[    1.314147] [JC] jc_i2c_probe:X
+<3>[    1.314239] msm_sensor_i2c_probe s5k6b2yx probe succeeded
+<3>[    1.314331] msm_eeprom_probe probe_fail
+<6>[    1.314666] msm_server_update_sensor_info mctl_node_name[1] = video3
+<6>[    1.315368] msm_cam_server_request_irq IRQ Router hw is not present. 
+<6>[    1.315490] msm_cam_server_request_irq IRQ Router hw is not present. 
+<6>[    1.316192] msm_cam_server_request_irq IRQ Router hw is not present. 
+<6>[    1.341156] pm8xxx_tm_probe: OK
+<6>[    1.341400] pm8xxx_tm_probe: OK
+<6>[    1.341827] device-mapper: ioctl: 4.22.0-ioctl (2011-10-19) initialised: dm-devel@redhat.com
+<6>[    1.341888] Bluetooth: HCI UART driver ver 2.2
+<6>[    1.341888] Bluetooth: HCI H4 protocol initialized
+<6>[    1.341888] Bluetooth: BlueSleep Mode Driver Ver 1.1
+<6>[    1.344146] cpuidle: using governor ladder
+<6>[    1.344146] cpuidle: using governor menu
+<6>[    1.344818] mmc0: SDCC Version: 0x06000018
+<6>[    1.352020] mmc0: bam physical base=0x12402000
+<6>[    1.352020] mmc0: bam virtual base=0xe3308000
+<6>[    1.352020] sps:BAM 0x12402000 is registered.
+<6>[    1.352020] mmc0: BAM device registered. bam_handle=0xddda7800
+<6>[    1.352111] sps:BAM 0x12402000 enabled: ver:0x5, number of pipes:6
+<6>[    1.352264] mmc0: Qualcomm MSM SDCC-BAM at 0x0000000012402000 irq 130
+<6>[    1.352264] mmc0: Qualcomm MSM SDCC-DML at 0x0000000012400800
+<3>[    1.352325] mmc0: No card detect facilities available
+<6>[    1.358428] mmc0: Qualcomm MSM SDCC-core at 0x0000000012400000 irq 136,0 dma -1 dmacrcri -1
+<6>[    1.358428] mmc0: Controller capabilities: 0x0000079a
+<6>[    1.358428] mmc0: 8 bit data mode enabled
+<6>[    1.358428] mmc0: 4 bit data mode disabled
+<6>[    1.358459] mmc0: polling status mode disabled
+<6>[    1.358459] mmc0: MMC clock 400000 -> 192000000 Hz, PCLK 0 Hz
+<6>[    1.358459] mmc0: Slot eject status = 0
+<6>[    1.358459] mmc0: Power save feature enable = 1
+<6>[    1.358459] mmc0: SPS-BAM data transfer mode available
+<6>[    1.360656] mmc1: SDCC Version: 0x06000018
+<6>[    1.367736] mmc1: bam physical base=0x12182000
+<6>[    1.367736] mmc1: bam virtual base=0xe3368000
+<6>[    1.367767] sps:BAM 0x12182000 is registered.
+<6>[    1.367767] mmc1: BAM device registered. bam_handle=0xddda7e00
+<6>[    1.367828] sps:BAM 0x12182000 enabled: ver:0x5, number of pipes:6
+<6>[    1.367980] mmc1: Qualcomm MSM SDCC-BAM at 0x0000000012182000 irq 128
+<6>[    1.367980] mmc1: Qualcomm MSM SDCC-DML at 0x0000000012180800
+<4>[    1.367980] Set MMC_PM_IGNORE_PM_NOTIFY|MMC_PM_KEEP_POWER
+<4>[    1.368011] brcm_wifi_status:301 status 0
+<6>[    1.368041] brcm_wifi_status_register: callback is c09c6118, devid is ddd31440
+<6>[    1.375823] mmc1: Qualcomm MSM SDCC-core at 0x0000000012180000 irq 134,0 dma -1 dmacrcri -1
+<6>[    1.375823] mmc1: Controller capabilities: 0x0000079a
+<6>[    1.375823] mmc1: 8 bit data mode disabled
+<6>[    1.375823] mmc1: 4 bit data mode enabled
+<6>[    1.375854] mmc1: polling status mode disabled
+<6>[    1.375854] mmc1: MMC clock 400000 -> 192000000 Hz, PCLK 0 Hz
+<6>[    1.375854] mmc1: Slot eject status = 1
+<6>[    1.375854] mmc1: Power save feature enable = 1
+<6>[    1.375854] mmc1: SPS-BAM data transfer mode available
+<6>[    1.377288] mmc2: SDCC Version: 0x06000018
+<6>[    1.384765] mmc2: bam physical base=0x12142000
+<6>[    1.384765] mmc2: bam virtual base=0xe33a4000
+<6>[    1.384765] sps:BAM 0x12142000 is registered.
+<6>[    1.384765] mmc2: BAM device registered. bam_handle=0xdde38800
+<6>[    1.384857] sps:BAM 0x12142000 enabled: ver:0x5, number of pipes:6
+<6>[    1.384979] mmc2: Qualcomm MSM SDCC-BAM at 0x0000000012142000 irq 129
+<6>[    1.384979] mmc2: Qualcomm MSM SDCC-DML at 0x0000000012140800
+<7>[    1.385253] msmsdcc_probe : Change sysfs Card Detect
+<6>[    1.392303] mmc2: Qualcomm MSM SDCC-core at 0x0000000012140000 irq 135,664 dma -1 dmacrcri -1
+<6>[    1.392303] mmc2: Controller capabilities: 0x0000079a
+<6>[    1.392303] mmc2: 8 bit data mode disabled
+<6>[    1.392333] mmc2: 4 bit data mode enabled
+<6>[    1.392333] mmc2: polling status mode disabled
+<6>[    1.392333] mmc2: MMC clock 400000 -> 40000000 Hz, PCLK 0 Hz
+<6>[    1.392333] mmc2: Slot eject status = 0
+<6>[    1.392333] mmc2: Power save feature enable = 1
+<6>[    1.392333] mmc2: SPS-BAM data transfer mode available
+<7>[    1.396575] Registered led device: led_r
+<7>[    1.401092] Registered led device: led_g
+<7>[    1.405639] Registered led device: led_b
+<6>[    1.409942] LED Booting Pattern on
+<7>[    1.413970] Registered led device: leds-sec1
+<7>[    1.415466] [LED] max77693_led_get_en_value: led mode: 0x1, on: 0
+<7>[    1.417205] Registered led device: torch-sec1
+<7>[    1.418731] [LED] max77693_led_get_en_value: led mode: 0x2, on: 0
+<6>[    1.422332] Successfully registered hid_synaptics_driver
+<6>[    1.422424] usbcore: registered new interface driver usbhid
+<6>[    1.422424] usbhid: USB HID core driver
+<6>[    1.422943] ashmem: initialized
+<6>[    1.423034] logger: created 128K log 'log_main'
+<6>[    1.423126] logger: created 64K log 'log_events'
+<6>[    1.423217] logger: created 256K log 'log_radio'
+<6>[    1.423309] logger: created 64K log 'log_system'
+<6>[    1.424041] mckernelapi : Mobicore API module initialized!
+<6>[    1.424072] MobiCore mcd: MobiCore Driver, Build: Mon Nov  7 03:06:55 2016
+<6>[    1.424072] MobiCore mcd: MobiCore mcDrvModuleApi version is 1.1
+<6>[    1.424072] MobiCore mcd: MobiCore *** t-base-202-APQ8064-Android-V003 ###
+<6>[    1.429809] sec-fuelgauge 11-0036: 0x02(0xc4), 0x03(0x90), 0x04(0xa0), 0x05(0x6e), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x76), 0x0d(0x1c), 
+<6>[    1.432983] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x99), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[    1.433807] sec-fuelgauge 11-0036: MAX17048 Fuel-Gauge Ver 0x0012
+<3>[    1.433868] power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+<3>[    1.433959] power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+<6>[    1.435699] sec_fuelgauge_probe: fg_irq: 573, capacity_max: 1000, cpacity_max_margin: 50, capacity_min: 0,calculation_type: 0xf, fuel_alert_soc: 2,
+<6>[    1.435699] repeated_fuelalert: 0, RCOMP0: 0x76,RCOMP_charging: 0x76, temp_cohot: -700,temp_cocold: -4875, is_using_model_data: 1,type_str: SDI,
+<4>[    1.435729] i2c-core: driver [sec-fuelgauge] using legacy suspend method
+<4>[    1.435729] i2c-core: driver [sec-fuelgauge] using legacy resume method
+<6>[    1.435760] func:max77693_charger_init
+<6>[    1.435882] max77693_charger_probe: MAX77693 Charger driver probe
+<6>[    1.437805] max77693_dump_reg
+<6>[    1.438201] max77693: c: 0xb0(0x40)
+<6>[    1.438598] max77693: c: 0xb1(0xff)
+<6>[    1.439025] max77693: c: 0xb2(0x5d)
+<6>[    1.439422] max77693: c: 0xb3(0x60)
+<6>[    1.439819] max77693: c: 0xb4(0x31)
+<6>[    1.440246] max77693: c: 0xb5(0x00)
+<6>[    1.440643] max77693: c: 0xb6(0xb6)
+<6>[    1.441040] max77693: c: 0xb7(0x05)
+<6>[    1.441436] max77693: c: 0xb8(0x30)
+<6>[    1.441864] max77693: c: 0xb9(0x8e)
+<6>[    1.442260] max77693: c: 0xba(0x20)
+<6>[    1.442657] max77693: c: 0xbb(0xdd)
+<6>[    1.443054] max77693: c: 0xbc(0xd6)
+<6>[    1.443450] max77693: c: 0xbd(0x0c)
+<6>[    1.443847] max77693: c: 0xbe(0x40)
+<6>[    1.444244] max77693: c: 0xbf(0xbf)
+<6>[    1.444671] max77693: c: 0xc0(0x17)
+<6>[    1.445068] max77693: c: 0xc1(0x19)
+<6>[    1.445465] max77693: c: 0xc2(0x00)
+<6>[    1.445861] max77693: c: 0xc3(0x67)
+<6>[    1.446258] max77693: c: 0xc4(0xc4)
+<6>[    1.446655] max77693: c: 0xc5(0xc5)
+<6>[    1.447235] max77693_get_charger_state: CHG_DTLS : 0x 1
+<6>[    1.447662] max77693_get_health_state: reg_data(0x3)
+<3>[    1.447662] max77693_get_health_state: Fail to get psy (battery)
+<6>[    1.448944] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[    1.449768] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[    1.449798] power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+<6>[    1.450714] max77693_get_charger_state: CHG_DTLS : 0x 1
+<6>[    1.451110] max77693_get_health_state: reg_data(0x3)
+<3>[    1.451110] max77693_get_health_state: Fail to get psy (battery)
+<6>[    1.452392] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[    1.453216] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[    1.453216] power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+<6>[    1.457427] ssp_get_positions, position acc : 3, mag = 5
+<6>[    1.457427] 
+<6>[    1.457427] #####################################################
+<6>[    1.457458] [SSP] change_rev = 1
+<6>[    1.462127] Enabling Packed WR for the Toshiba eMMC
+<6>[    1.462127] mmc0: BKOPS_EN bit is not set
+<3>[    1.466735] qup_i2c qup_i2c.2: QUP: I2C status flags :0x11100c8, irq:228
+<3>[    1.466796] qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+<4>[    1.466888] [SSP] Firm Rev is invalid(16777215). Retry.
+<3>[    1.474945] mmc0: RX still active
+<3>[    1.474975] mmc0: SDCC PWR is ON
+<3>[    1.475036] mmc0: SDCC clks are ON, MCLK rate=400000
+<3>[    1.475128] mmc0: SDCC irq is enabled
+<3>[    1.475189] mmc0: MCI_TEST_INPUT = 0x000003fe
+<3>[    1.475250] mmc0: got_dataend=0, prog_enable=0, wait_for_auto_prog_done=0, got_auto_prog_done=0, req_tout_ms=10000
+<6>[    1.475433] sps:BAM 0x12402000 enabled: ver:0x5, number of pipes:6
+<6>[    1.490509] sps:BAM 0x12402000 enabled: ver:0x5, number of pipes:6
+<6>[    1.490692] sps:BAM 0x12402000 enabled: ver:0x5, number of pipes:6
+<6>[    1.495758] mmc0: new HS200 MMC card at address 0001
+<6>[    1.496032] mmcblk0: mmc0:0001 016GE4 14.6 GiB 
+<6>[    1.499359]  mmcblk0: p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20 p21 p22 p23 p24 p25 p26 p27 p28 p29
+<6>[    1.520202] usb 1-1: new high-speed USB device number 2 using msm_hsic_host
+<6>[    1.533996] [SSP] MCU Firm Rev : Old = 14111200, New = 14122200
+<6>[    1.534118] input: accelerometer_sensor as /devices/virtual/input/input4
+<6>[    1.534301] input: gyro_sensor as /devices/virtual/input/input5
+<6>[    1.534454] input: pressure_sensor as /devices/virtual/input/input6
+<6>[    1.534606] input: gesture_sensor as /devices/virtual/input/input7
+<6>[    1.534759] input: light_sensor as /devices/virtual/input/input8
+<6>[    1.534912] input: proximity_sensor as /devices/virtual/input/input9
+<6>[    1.535064] input: temp_humidity_sensor as /devices/virtual/input/input10
+<6>[    1.535186] input: geomagnetic_sensor as /devices/virtual/input/input11
+<6>[    1.535339] input: sig_motion_sensor as /devices/virtual/input/input12
+<6>[    1.535491] input: step_det_sensor as /devices/virtual/input/input13
+<6>[    1.535644] input: step_cnt_sensor as /devices/virtual/input/input14
+<6>[    1.535797] input: meta_event as /devices/virtual/input/input15
+<6>[    1.535980] [SSP]: requesting IRQ 651
+<3>[    1.536010] genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 651
+<6>[    1.536712] input: ssp_context as /devices/virtual/input/input16
+<6>[    1.536956] ssp_enable, enable = 1, old enable = 1
+<6>[    1.536987] [SSP]: ssp_probe - probe success!
+<6>[    1.536987] [SSP]: Firmware update is scheduled
+<6>[    1.536987] #####################################################
+<6>[    1.536987] 
+<6>[    1.537506] usbcore: registered new interface driver snd-usb-audio
+<6>[    1.538391] es325_init(): entry
+<6>[    1.538482] es325_init(): slim_driver_register()
+<6>[    1.538513] es325_enable_ext_clk: enable=1
+<6>[    1.538513] es325_enable_ext_clk: Clk_Get osr_clk
+<6>[    1.577209] usb 1-1: New USB device found, idVendor=05c6, idProduct=9008
+<6>[    1.577209] usb 1-1: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+<6>[    1.577209] usb 1-1: Product: QHSUSB__BULK
+<6>[    1.577209] usb 1-1: Manufacturer: Qualcomm CDMA Technologies MSM
+<6>[    1.588714] =[ES325]=es325_start_api=====
+<6>[    1.588806] es325-codec es325-codec-gen0: es325_slim_device_up: name=es325-codec-gen0
+<6>[    1.588806] es325-codec es325-codec-gen0: es325_slim_device_up: laddr=3
+<6>[    1.588806] es325_init(): exit
+<6>[    1.588806] es325-codec es325-codec-gen0: es325_slim_device_up: priv=c1789f70
+<6>[    1.588836] fw_download(): called
+<6>[    1.588836] fw_download(): es325 gen0 LA=3
+<6>[    1.588836] es325_bootup(): entry
+<6>[    1.589538] msm_pcm_probe: dev name msm-voip-dsp
+<6>[    1.589691] msm-dai-q6-mi2s msm-dai-q6-mi2s: msm_dai_q6_mi2s_platform_data_validation: playback sdline 0 capture sdline 8
+<6>[    1.589691] msm-dai-q6-mi2s msm-dai-q6-mi2s: msm_dai_q6_mi2s_platform_data_validation: playback ch_max 0 capture ch_mx 8
+<3>[    1.589965] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+<3>[    1.590057] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+<6>[    1.590545] msm_pcm_probe: dev name msm-pcm-dsp
+<6>[    1.590759] msm_pcm_probe: dev name msm-multi-ch-pcm-dsp
+<6>[    1.590911] msm_pcm_probe: dev name msm-lowlatency-pcm-dsp
+<6>[    1.591522] msm_compr_probe: dev name msm-compr-dsp
+<6>[    1.591979] msm-pcm-lpa msm-pcm-lpa: msm_pcm_probe: dev name msm-pcm-lpa
+<6>[    1.592773] tabla codec probe...
+<6>[    1.596893] tabla_codec tabla_codec: es325_remote_add_codec_controls(): entry
+<6>[    1.596893] tabla_codec tabla_codec: es325_remote_add_codec_controls(): codec->name = tabla_codec
+<6>[    1.632965] asoc: snd-soc-dummy-dai <-> MultiMedia1 mapping ok
+<6>[    1.633605] asoc: snd-soc-dummy-dai <-> MultiMedia2 mapping ok
+<6>[    1.634277] asoc: snd-soc-dummy-dai <-> CS-VOICE mapping ok
+<6>[    1.634918] asoc: snd-soc-dummy-dai <-> VoIP mapping ok
+<6>[    1.635528] asoc: snd-soc-dummy-dai <-> MultiMedia3 mapping ok
+<6>[    1.636199] asoc: snd-soc-dummy-dai <-> SLIMBUS0_HOSTLESS mapping ok
+<6>[    1.636840] asoc: snd-soc-dummy-dai <-> INT_FM_HOSTLESS mapping ok
+<6>[    1.637451] asoc: msm-stub-rx <-> msm-dai-q6.241 mapping ok
+<6>[    1.638061] asoc: msm-stub-tx <-> msm-dai-q6.240 mapping ok
+<6>[    1.638732] asoc: snd-soc-dummy-dai <-> MultiMedia4 mapping ok
+<6>[    1.638854] es325_bootup(): write ES325_BOOT_CMD
+<6>[    1.638854] es325_bootup(): msg[0] = 0x01
+<6>[    1.638885] es325_bootup(): msg[1] = 0x00
+<6>[    1.638885] es325_bootup(): msg[2] = 0x00
+<6>[    1.638885] es325_bootup(): msg[3] = 0x00
+<6>[    1.639373] asoc: snd-soc-dummy-dai <-> AUXPCM_HOSTLESS mapping ok
+<6>[    1.640014] asoc: snd-soc-dummy-dai <-> HDMI_HOSTLESS mapping ok
+<6>[    1.640716] asoc: snd-soc-dummy-dai <-> VOICE_STUB mapping ok
+<6>[    1.641387] asoc: snd-soc-dummy-dai <-> VOLTE_STUB mapping ok
+<6>[    1.642028] asoc: snd-soc-dummy-dai <-> MultiMedia5 mapping ok
+<6>[    1.642700] asoc: snd-soc-dummy-dai <-> VOICE2_STUB mapping ok
+<6>[    1.643737] asoc: tabla_rx1 <-> msm-dai-q6.16384 mapping ok
+<6>[    1.646606] asoc: tabla_tx1 <-> msm-dai-q6.16385 mapping ok
+<6>[    1.647186] asoc: msm-stub-rx <-> msm-dai-q6.12288 mapping ok
+<6>[    1.647796] asoc: msm-stub-tx <-> msm-dai-q6.12289 mapping ok
+<6>[    1.648376] asoc: msm-stub-rx <-> msm-dai-q6.12292 mapping ok
+<6>[    1.648956] asoc: msm-stub-tx <-> msm-dai-q6.12293 mapping ok
+<6>[    1.649566] asoc: msm-stub-rx <-> msm-dai-q6-hdmi.8 mapping ok
+<6>[    1.650146] asoc: msm-stub-rx <-> msm-dai-q6.224 mapping ok
+<6>[    1.650756] asoc: msm-stub-tx <-> msm-dai-q6.225 mapping ok
+<6>[    1.651367] asoc: msm-stub-rx <-> msm-dai-q6.2 mapping ok
+<6>[    1.651977] asoc: msm-stub-tx <-> msm-dai-q6.3 mapping ok
+<6>[    1.652557] asoc: tabla_rx2 <-> msm-dai-stub mapping ok
+<6>[    1.653198] asoc: tabla_tx1 <-> msm-dai-stub mapping ok
+<6>[    1.653839] asoc: msm-stub-rx <-> msm-dai-q6.16386 mapping ok
+<6>[    1.654449] asoc: msm-stub-tx <-> msm-dai-q6.16387 mapping ok
+<6>[    1.655151] asoc: tabla_tx2 <-> msm-dai-q6.16389 mapping ok
+<6>[    1.655792] asoc: tabla_rx3 <-> msm-dai-q6.16388 mapping ok
+<6>[    1.656402] asoc: msm-stub-rx <-> msm-dai-q6.16392 mapping ok
+<6>[    1.657104] asoc: msm-stub-tx <-> msm-dai-q6.16393 mapping ok
+<6>[    1.657714] asoc: tabla_tx3 <-> msm-dai-stub mapping ok
+<6>[    1.658325] asoc: msm-stub-rx <-> msm-dai-q6.16390 mapping ok
+<6>[    1.659027] asoc: msm-stub-tx <-> msm-dai-q6.16391 mapping ok
+<6>[    1.661285] input: apq8064-tabla-snd-card Button Jack as /devices/platform/soc-audio.0/sound/card0/input17
+<6>[    1.661468] input: apq8064-tabla-snd-card Headset Jack as /devices/platform/soc-audio.0/sound/card0/input18
+<4>[    1.662872] mmc2: host does not support reading read-only switch. assuming write-enable.
+<6>[    1.665008] GACT probability NOT on
+<6>[    1.665008] Mirror/redirect action on
+<6>[    1.665039] u32 classifier
+<6>[    1.665039]     Actions configured
+<6>[    1.665039] Netfilter messages via NETLINK v0.30.
+<6>[    1.665069] nf_conntrack version 0.5.0 (16384 buckets, 65536 max)
+<6>[    1.665313] ctnetlink v0.93: registering with nfnetlink.
+<6>[    1.665344] NF_TPROXY: Transparent proxy support initialized, version 4.1.0
+<6>[    1.665374] NF_TPROXY: Copyright (c) 2006-2007 BalaBit IT Ltd.
+<6>[    1.665588] xt_time: kernel timezone is -0000
+<6>[    1.665771] ip_tables: (C) 2000-2006 Netfilter Core Team
+<6>[    1.665924] arp_tables: (C) 2002 David S. Miller
+<6>[    1.665954] TCP: bic registered
+<6>[    1.665954] TCP: cubic registered
+<6>[    1.665954] TCP: westwood registered
+<6>[    1.665954] TCP: highspeed registered
+<6>[    1.665954] TCP: hybla registered
+<6>[    1.665985] TCP: htcp registered
+<6>[    1.665985] TCP: vegas registered
+<6>[    1.665985] TCP: veno registered
+<6>[    1.665985] TCP: scalable registered
+<6>[    1.665985] TCP: lp registered
+<6>[    1.665985] TCP: yeah registered
+<6>[    1.665985] TCP: illinois registered
+<6>[    1.666015] Initializing XFRM netlink socket
+<6>[    1.666229] NET: Registered protocol family 10
+<6>[    1.666870] Mobile IPv6
+<6>[    1.666870] ip6_tables: (C) 2000-2006 Netfilter Core Team
+<6>[    1.666961] IPv6 over IPv4 tunneling driver
+<6>[    1.667297] NET: Registered protocol family 17
+<6>[    1.667327] NET: Registered protocol family 15
+<5>[    1.667358] Bridge firewalling registered
+<6>[    1.667388] Ebtables v2.0 registered
+<6>[    1.667419] Bluetooth: HIDP (Human Interface Emulation) ver 1.2
+<5>[    1.667510] Registering the dns_resolver key type
+<6>[    1.667572] initlevel:7=late, 70 registered initcalls
+<5>[    1.668090] Registering SWP/SWPB emulation handler
+<6>[    1.668823] clock_late_init: Removing enables held for handed-off clocks
+<6>[    1.670989] mmc2: new high speed SDHC card at address 0001
+<6>[    1.671295] mmcblk1: mmc2:0001 00000 29.4 GiB 
+<6>[    1.672271] MSM Watchdog Initialized
+<6>[    1.672912] msm_hotplug: Device init
+<6>[    1.673248]  mmcblk1: p1
+<6>[    1.678253] bricked_hotplug: msm_mpdec_init init complete.
+<6>[    1.678497] msm-sleeper version 4.1
+<6>[    1.678527] msm_sleeper: Device init
+<6>[    1.678558] intelli_plug: version 5.4
+<6>[    1.678985] mako_hotplug: init
+<6>[    1.679656] zswap: loading zswap
+<6>[    1.679748] zswap: using lzo compressor
+<6>[    1.680694] regulator regulator.66: func:max77693_reg_is_enabled
+<6>[    1.681060] regulator regulator.65: func:max77693_reg_is_enabled
+<6>[    1.681427] regulator regulator.64: func:max77693_reg_is_enabled
+<6>[    1.682159] sec_jack_probe : Registering jack driver
+<6>[    1.682403] sec_jack_detect_work: detect_irq(0)
+<7>[    1.682647] gpio_set_debounce: gpio-186 status -22
+<7>[    1.682739] gpio_set_debounce: gpio-188 status -22
+<7>[    1.682800] gpio_set_debounce: gpio-181 status -22
+<6>[    1.683013] input: gpio-keys as /devices/platform/gpio-keys/input/input19
+<7>[    1.684448] cypress_power_on is finished.
+<6>[    1.688934] es325_bootup(): read boot cmd ack
+<6>[    1.689025] es325_bootup(): msg[0] = 0x01
+<6>[    1.689025] es325_bootup(): msg[1] = 0x01
+<6>[    1.689056] es325_bootup(): msg[2] = 0x01
+<6>[    1.689056] es325_bootup(): msg[3] = 0x01
+<6>[    1.739105] es325_bootup(): write firmware image
+<6>[    1.739105] es325_bootup(): buf_frames = 47700
+<6>[    1.749359] input: sec_touchkey as /devices/platform/i2c-gpio.16/i2c-16/16-0020/input/input20
+<3>[    1.757232] genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 662
+<7>[    1.759765] Registered led device: button-backlight
+<6>[    1.759796] [Touchkey] IC FW Version: 0x1c
+<6>[    1.759826] [Touchkey] IC ID Version: 0x05
+<6>[    1.759826] cypress_touchkey 16-0020: [TouchKey] FW update does not need!
+<3>[    1.820312] cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>[    1.861297] cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[    2.001861] cypress_touchkey 16-0020: [Touchkey] Register TA Callback
+<6>[    2.001922] [Touchkey] DONE(cypress_touchkey_probe)!
+<6>[    2.002075] rtc-pm8xxx rtc-pm8xxx: setting system clock to 2014-11-16 02:47:31 UTC (1416106051)
+<6>[    2.002288] pm8921_charger_probe: pm8921-charger driver Loading SKIP!!!
+<4>[    2.002288] pm8921-charger: probe of pm8921-charger failed with error -22
+<3>[    2.002746] Unable to register core for 0
+<4>[    2.002868] msm_dcvs_gov: probe of msm_dcvs_gov failed with error -22
+<6>[    2.002990] lazyplug: version 1.0 by arter97
+<6>[    2.002990]           based on intelli_plug by faux123
+<6>[    2.003021] sec_touchscreen found and connected!
+<3>[    2.008148] sec-battery sec-battery: sec_battery_probe: Failed to Enable Wakeup Source(-6)
+<6>[    2.010833] sec_bat_check_cable_result_callback set ldo on
+<6>[    2.011840] sec_bat_check_cable_result_callback set ldo off
+<6>[    2.012786] gpiochip_add: registered GPIOs 300 to 315 on device: ice-fpga-gpio
+<6>[    2.012817] barcode_emul_ice4: barcode_emul_probe probe!
+<6>[    2.012878] barcode_emul_ice4: barcode_emul_probe setting gpio config.
+<6>[    2.012878] barcode_gpio_config
+<6>[    2.012939] barcode_emul_poweron onoff : 1
+<6>[    2.013000] barcode_emul_poweron gpio switch on
+<3>[    2.013183] barcode_emul_ice4: probe complete barcode_emul_probe
+<6>[    2.013336] ALSA device list:
+<6>[    2.013336]   #0: apq8064-tabla-snd-card
+<3>[    2.013397] Warning: unable to open an initial console.
+<6>[    2.013824] Freeing unused kernel memory: 1048K (c1300000 - c1406000)
+<4>[    2.015045] !@Boot: start init process
+<7>[    2.019226] SELinux: 2048 avtab hash slots, 18649 rules.
+<6>[    2.020416] sec-fuelgauge 11-0036: 0x02(0xca), 0x03(0xb0), 0x04(0xa0), 0x05(0x6e), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x76), 0x0d(0x1e), 
+<7>[    2.022766] SELinux: 2048 avtab hash slots, 18649 rules.
+<7>[    2.022796] SELinux:  1 users, 2 roles, 1530 types, 0 bools, 1 sens, 1024 cats
+<7>[    2.022796] SELinux:  86 classes, 18649 rules
+<6>[    2.023925] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x99), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[    2.024414] max77693_get_input_current: CHG_CNFG_09(0x17)
+<7>[    2.024841] SELinux:  Completing initialization.
+<7>[    2.024841] SELinux:  Setting up existing superblocks.
+<7>[    2.024871] SELinux: initialized (dev sysfs, type sysfs), uses genfs_contexts
+<7>[    2.024871] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    2.024932] SELinux: initialized (dev selinuxfs, type selinuxfs), uses genfs_contexts
+<7>[    2.024993] SELinux: initialized (dev devpts, type devpts), uses transition SIDs
+<7>[    2.025024] SELinux: initialized (dev anon_inodefs, type anon_inodefs), uses genfs_contexts
+<7>[    2.025024] SELinux: initialized (dev pipefs, type pipefs), uses task SIDs
+<7>[    2.025054] SELinux: initialized (dev sockfs, type sockfs), uses task SIDs
+<7>[    2.025054] SELinux: initialized (dev debugfs, type debugfs), uses genfs_contexts
+<6>[    2.030273] barcode_emul_ice4: barcode_fpga_fimrware_update_start
+<7>[    2.031585] SELinux: initialized (dev devtmpfs, type devtmpfs), uses transition SIDs
+<7>[    2.032287] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    2.032318] SELinux: initialized (dev proc, type proc), uses genfs_contexts
+<7>[    2.032348] SELinux: initialized (dev bdev, type bdev), not configured for labeling
+<7>[    2.032348] SELinux: initialized (dev rootfs, type rootfs), uses genfs_contexts
+<7>[    2.032684] SELinux: initialized (dev sysfs, type sysfs), uses genfs_contexts
+<6>[    2.041625] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4053mV),Inow(460mA),SOC(80%),Tbat(281)
+<6>[    2.041625] sec-battery sec-battery: sec_bat_monitor_work: Status(Discharging), mode(None), Health(Good), Cable(1), siop_level(100)
+<6>[    2.042236] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:20
+<5>[    2.161254] random: nonblocking pool is initialized
+<7>[    2.180816] [keys] flip_cover_work : 1
+<6>[    2.530517] [SSP] : work_function_firmware_update
+<6>[    2.530517] [SSP]: forced_to_download_binary - mcu binany update!
+<6>[    2.530517] ssp_enable, enable = 0, old enable = 0
+<6>[    2.530548] [SSP] forced_to_download_binary, DL state = 3
+<6>[    2.530548] [SSP] ssp_change_to_bootmode
+<3>[    2.586059] init: /init.qcom.rc: 643: invalid command '/system/bin/log'
+<3>[    2.586395] init: /init.qcom.rc: 771: invalid command 'Limit'
+<3>[    2.588012] init: /init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+<3>[    2.588134] init: /init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+<3>[    2.588256] init: /init.carrier.rc: 195: ignored duplicate definition of service 'edmaudit'
+<3>[    2.588409] init: /init.container.rc: 52: invalid option 'start'
+<3>[    2.593322] init: invalid uid 'mfc'
+<3>[    2.593383] init: invalid uid 'mfc'
+<3>[    2.593444] init: invalid uid 'mfc'
+<3>[    2.593536] init: invalid uid 'mfc'
+<3>[    2.593597] init: invalid uid 'mfc'
+<3>[    2.593658] init: invalid uid 'mfc'
+<3>[    2.593749] init: invalid uid 'mfc'
+<3>[    2.593811] init: invalid uid 'mfc'
+<3>[    2.593872] init: invalid uid 'mfc'
+<3>[    2.594268] init: invalid uid 'fm_radio'
+<6>[    3.061279] sec-fuelgauge 11-0036: 0x02(0xc7), 0x03(0x00), 0x04(0xa0), 0x05(0x6e), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[    3.064514] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x99), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[    3.064544] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[    3.064971] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[    3.074645] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3980mV),Inow(460mA),SOC(80%),Tbat(281)
+<6>[    3.074645] sec-battery sec-battery: sec_bat_monitor_work: Status(Discharging), mode(None), Health(Good), Cable(1), siop_level(100)
+<6>[    3.075256] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:20
+<6>[    3.690826] [SSP] ssp_load_fw start!!!
+<6>[    3.899902] max77693-muic max77693-muic: func:max77693_muic_init_detect
+<6>[    3.900512] max77693-muic max77693-muic: func:max77693_muic_detect_dev CONTROL1:9
+<6>[    3.901214] max77693-muic max77693-muic: func:max77693_muic_detect_dev irq:-1 ret:0
+<6>[    3.901245] max77693-muic max77693-muic: max77693_muic_detect_dev: STATUS1:0x3f, 2:0x41
+<6>[    3.901245] max77693-muic max77693-muic: adc:1f adcerr:0 chgtyp:1 cable_type:14
+<6>[    3.901275] max77693-muic max77693-muic: max77693_muic_detect_dev: ATTACHED
+<6>[    3.901275] max77693-muic max77693-muic: func:max77693_muic_handle_attach st1:3f st2:41 cable_type:20
+<6>[    3.901275] max77693-muic max77693-muic: func:max77693_muic_attach_usb_type adc:1f cable_type:20
+<6>[    3.901275] max77693-muic max77693-muic: max77693_muic_attach_usb_type:USB
+<6>[    3.901275] max77693-muic max77693-muic: func:max77693_muic_set_charging_type cable_type:1 force_disable:0
+<6>[    3.901306] synaptics_rmi4_i2c 3-0020: synaptics_ta_cb: ta_status : 1
+<3>[    3.901306] synaptics_rmi4_i2c 3-0020: synaptics_ta_cb: device is in suspend state or reflash.
+<6>[    3.901428] cypress_touchkey 16-0020: touchkey_ta_cb : 0x05
+<6>[    3.901428] [Touchkey] IC id 20065
+<6>[    3.901428] cypress_touchkey 16-0020: touchkey_ta_setting
+<6>[    3.902862] cypress_touchkey 16-0020: TA connect!!!
+<6>[    4.012268] cypress_touchkey 16-0020: TA Enabled
+<3>[    4.012268] max77693_muic_charger_cb: cable type for charger: MUIC(1), CHARGER(4)
+<6>[    4.012329] sec_bat_check_cable_result_callback set ldo on
+<6>[    4.012847] max77693-muic max77693-muic: func:max77693_muic_set_usb_path path:0
+<6>[    4.012878] MUIC safeout path=0
+<6>[    4.012878] regulator regulator.64: func:max77693_reg_is_enabled
+<6>[    4.013702] regulator regulator.65: func:max77693_reg_is_enabled
+<6>[    4.014495] max77693-muic max77693-muic: max77693_muic_set_usb_path: AP_USB_MODE
+<6>[    4.014495] max77693-muic max77693-muic: max77693_muic_set_usb_path: Set manual path
+<6>[    4.016601] max77693-muic max77693-muic: max77693_muic_set_usb_path: CNTL1(0x09)
+<6>[    4.017425] max77693-muic max77693-muic: max77693_muic_set_usb_path: CNTL2(0x3e)
+<6>[    4.017730] max77693_set_charge_current: reg_data(0x8d), charge(460)
+<6>[    4.020812] max77693_set_topoff_current: reg_data(0x24), topoff(200)
+<6>[    4.031738] sec-fuelgauge 11-0036: 0x02(0xc6), 0x03(0x00), 0x04(0xa0), 0x05(0x6e), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[    4.034942] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x99), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[    4.034973] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[    4.035400] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[    4.072631] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3960mV),Inow(460mA),SOC(80%),Tbat(281)
+<6>[    4.073486] max77693_get_health_state: reg_data(0x3)
+<6>[    4.074737] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[    4.074737] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[    4.075317] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[    4.460876] max77693_chgin_init_work 
+<6>[    4.527801] es325_bootup(): write ES325_SYNC_CMD
+<6>[    4.527832] es325_bootup(): msg[0] = 0x80
+<6>[    4.527832] es325_bootup(): msg[1] = 0x00
+<6>[    4.527832] es325_bootup(): msg[2] = 0x00
+<6>[    4.527832] es325_bootup(): msg[3] = 0x00
+<6>[    4.577911] es325_bootup(): read sync cmd ack
+<6>[    4.578002] es325_bootup(): msg[0] = 0x80
+<6>[    4.578002] es325_bootup(): msg[1] = 0x00
+<6>[    4.578033] es325_bootup(): msg[2] = 0x00
+<6>[    4.578033] es325_bootup(): msg[3] = 0x00
+<6>[    4.578033] es325_bootup(): firmware sync ack good=0x80000000
+<6>[    4.578033] es325_bootup(): exit
+<6>[    4.578033] fw_download(): bootup rc=0
+<6>[    4.578033] fw_download(): would release firmware here...
+<6>[    4.578063] fw_download(): registering sound soc
+<6>[    4.578094] fw_download(): register_snd_soc rc=0
+<6>[    4.578155] GAC:es325_fixed_config(): msg = 08003190
+<6>[    4.598236] GAC:es325_fixed_config(): msg = 50003190
+<6>[    4.618255] fw_download(): release module
+<6>[    4.618286] fw_download(): exiting fw_download
+<6>[    4.618286] es325-codec es325-codec-gen0: wrapper es325_slim_device_up(): es325-codec-gen0
+<6>[    4.618286] +[ES325]=es325_sleep()=
+<6>[    4.638366] -[ES325]=es325_sleep()=
+<6>[    4.638397] =[ES325]=es325_wrapper_sleep_internal disable clock
+<6>[    4.638397] es325_enable_ext_clk: enable=0
+<6>[    4.638427] es325-codec es325-codec-gen0: wrapper es325_slim_device_up: es325 sleep default
+<6>[    4.638427] es325-codec es325-codec-gen0: wrapper es325_slim_device_up: device up complete
+<6>[    4.754547] [SSP] Updated 14615 bytes / 139465 bytes
+<3>[    4.758087] power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+<6>[    4.761352] max77693_get_charger_state: CHG_DTLS : 0x 1
+<6>[    4.761779] max77693_get_health_state: reg_data(0x3)
+<6>[    4.763092] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[    4.763946] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[    4.763946] power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+<7>[    4.971130] SELinux: initialized (dev cgroup, type cgroup), uses genfs_contexts
+<7>[    4.971557] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    4.974060] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    4.974945] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    4.975280] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    5.031097] SELinux: initialized (dev cgroup, type cgroup), uses genfs_contexts
+<6>[    5.036651] FAT-fs (mmcblk0p1[179:1]): trying to mount...
+<6>[    5.047485] FAT-fs (mmcblk0p1[179:1]): mounted successfully!
+<7>[    5.047637] SELinux: initialized (dev mmcblk0p1, type vfat), uses mountpoint labeling
+<6>[    5.047790] FAT-fs (mmcblk0p2[179:2]): trying to mount...
+<6>[    5.052886] FAT-fs (mmcblk0p2[179:2]): mounted successfully!
+<7>[    5.052917] SELinux: initialized (dev mmcblk0p2, type vfat), uses mountpoint labeling
+<6>[    5.058410] frandom: Seeded global generator now (used by erandom)
+<6>[    5.061645] EXT4-fs (mmcblk0p16): mounted filesystem with ordered data mode. Opts: errors=panic
+<7>[    5.061676] SELinux: initialized (dev mmcblk0p16, type ext4), uses xattr
+<6>[    5.061920] fs_mgr: __mount(source=/dev/block/platform/msm_sdcc.1/by-name/system,target=/system,type=ext4)=0
+<4>[    5.062622] CryptfsFSCK: Decryption operation succeeded
+<6>[    5.064666] fs_mgr: Running /system/bin/e2fsck on /dev/block/platform/msm_sdcc.1/by-name/userdata
+<6>[    5.090576] sec-fuelgauge 11-0036: 0x02(0xc8), 0x03(0xa0), 0x04(0xa0), 0x05(0x6e), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[    5.093566] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x99), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[    5.093566] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[    5.093933] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[    5.112304] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3991mV),Inow(460mA),SOC(80%),Tbat(281)
+<6>[    5.113037] max77693_get_health_state: reg_data(0x3)
+<6>[    5.114135] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[    5.114135] sec-battery sec-battery: sec_bat_time_management: Charging Time : 1 secs
+<6>[    5.114166] sec-battery sec-battery: sec_bat_temperature: HT(600), HR(400), LT(-50), LR(0)
+<6>[    5.114166] sec-battery sec-battery: sec_bat_fullcharged_check: Charging Mode : Normal
+<6>[    5.114166] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[    5.114715] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[    5.131378] e2fsck: e2fsck 1.42.9 (28-Dec-2013)
+<6>[    5.131439] e2fsck: skipping journal recoverybecause INCOMPAT_RECOVER was clear.
+<6>[    5.131439] e2fsck: check whether gdt & bitmap free count is vaild
+<6>[    5.131469] e2fsck: Superblock last mount time (__bionic_open_tzdata_path: ANDROID_DATA not set!
+<6>[    5.131469] e2fsck: __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<6>[    5.131500] e2fsck: __bionic_open_tzdata_path: ANDROID_DATA not set!
+<6>[    5.131500] e2fsck: __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<6>[    5.131500] e2fsck: __bionic_open_tzdata_path: ANDROID_DATA not set!
+<6>[    5.131530] e2fsck: __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<6>[    5.131530] e2fsck: Wed Nov 16 02:41:06 2016,
+<6>[    5.131530] e2fsck: 	now = Sun Nov 16 02:47:34 2014) is in the future.
+<6>[    5.131561] e2fsck: Fix? yes
+<6>[    5.131561] e2fsck: 
+<6>[    5.131561] e2fsck: Superblock last write time (Wed Nov 16 02:41:06 2016,
+<6>[    5.131591] e2fsck: 	now = Sun Nov 16 02:47:34 2014) is in the future.
+<6>[    5.131591] e2fsck: Fix? yes
+<6>[    5.131591] e2fsck: 
+<6>[    5.131622] e2fsck: /dev/block/platform/msm_sdcc.1/by-name/userdata: clean, 49271/638976 files, 1755478/2554876 blocks
+<6>[    5.131622] e2fsck: ext2fs_close2 : normal operation, return 0
+<6>[    5.135620] EXT4-fs (mmcblk0p29): mounted filesystem with ordered data mode. Opts: noauto_da_alloc,discard,journal_async_commit,errors=panic
+<7>[    5.135650] SELinux: initialized (dev mmcblk0p29, type ext4), uses xattr
+<6>[    5.135681] fs_mgr: __mount(source=/dev/block/platform/msm_sdcc.1/by-name/userdata,target=/data,type=ext4)=0
+<3>[    5.136505] init: Running /dev/block/platform/msm_sdcc.1/by-name/cache on ext4
+<4>[    5.141510] e2fsck 1.42.9 (28-Dec-2013)
+<4>[    5.144714] skipping journal recoverybecause INCOMPAT_RECOVER was clear.
+<4>[    5.144744] check whether gdt & bitmap free count is vaild
+<4>[    5.150421] Superblock last mount time (__bionic_open_tzdata_path: ANDROID_DATA not set!
+<4>[    5.150512] __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<4>[    5.150512] __bionic_open_tzdata_path: ANDROID_DATA not set!
+<4>[    5.150543] __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<4>[    5.150543] __bionic_open_tzdata_path: ANDROID_DATA not set!
+<4>[    5.150573] __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<4>[    5.150634] Wed Nov 16 02:47:17 2016,
+<4>[    5.150634] 	now = Sun Nov 16 02:47:34 2014) is in the future.
+<4>[    5.150665] Fix? yes
+<4>[    5.150665] 
+<4>[    5.150695] Superblock last write time (Wed Nov 16 02:47:17 2016,
+<4>[    5.150726] 	now = Sun Nov 16 02:47:34 2014) is in the future.
+<4>[    5.150756] Fix? yes
+<4>[    5.150756] 
+<4>[    5.151275] /dev/block/platform/msm_sdcc.1/by-name/cache: clean, 23/132736 files, 17457/529920 blocks
+<4>[    5.155395] ext2fs_close2 : normal operation, return 0
+<6>[    5.159515] EXT4-fs (mmcblk0p18): mounted filesystem with ordered data mode. Opts: noauto_da_alloc,discard,journal_async_commit,errors=panic
+<7>[    5.159545] SELinux: initialized (dev mmcblk0p18, type ext4), uses xattr
+<3>[    5.159637] init: Running /dev/block/platform/msm_sdcc.1/by-name/efs on ext4
+<4>[    5.165344] e2fsck 1.42.9 (28-Dec-2013)
+<4>[    5.167541] skipping journal recoverybecause INCOMPAT_RECOVER was clear.
+<4>[    5.167572] check whether gdt & bitmap free count is vaild
+<4>[    5.167633] Superblock last mount time (__bionic_open_tzdata_path: ANDROID_DATA not set!
+<4>[    5.167694] __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<4>[    5.167724] __bionic_open_tzdata_path: ANDROID_DATA not set!
+<4>[    5.167724] __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<4>[    5.167755] __bionic_open_tzdata_path: ANDROID_DATA not set!
+<4>[    5.167755] __bionic_open_tzdata_path: ANDROID_ROOT not set!
+<4>[    5.167816] Wed Nov 16 02:47:09 2016,
+<4>[    5.167846] 	now = Sun Nov 16 02:47:34 2014) is in the future.
+<4>[    5.167877] Fix? yes
+<4>[    5.167877] 
+<4>[    5.167877] Superblock last write time (Wed Nov 16 02:47:09 2016,
+<4>[    5.167938] 	now = Sun Nov 16 02:47:34 2014) is in the future.
+<4>[    5.167968] Fix? yes
+<4>[    5.167968] 
+<4>[    5.168029] /dev/block/platform/msm_sdcc.1/by-name/efs: clean, 58/880 files, 1139/3488 blocks
+<4>[    5.172119] ext2fs_close2 : normal operation, return 0
+<6>[    5.176177] EXT4-fs (mmcblk0p10): mounted filesystem with ordered data mode. Opts: noauto_da_alloc,discard,journal_async_commit,errors=panic
+<7>[    5.176208] SELinux: initialized (dev mmcblk0p10, type ext4), uses xattr
+<6>[    5.179962] EXT4-fs (mmcblk0p27): mounted filesystem with ordered data mode. Opts: barrier=1
+<7>[    5.179962] SELinux: initialized (dev mmcblk0p27, type ext4), uses xattr
+<3>[    5.180847] init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+<4>[    5.185607] e2fsck 1.42.9 (28-Dec-2013)
+<4>[    5.188964] skipping journal recoverybecause INCOMPAT_RECOVER was clear.
+<4>[    5.189025] check whether gdt & bitmap free count is vaild
+<4>[    5.189117] /dev/block/platform/msm_sdcc.1/by-name/persdata: clean, 21/576 files, 1126/2304 blocks
+<4>[    5.189514] ext2fs_close2 : normal operation, return 0
+<6>[    5.193420] EXT4-fs (mmcblk0p26): mounted filesystem with ordered data mode. Opts: barrier=1
+<7>[    5.193420] SELinux: initialized (dev mmcblk0p26, type ext4), uses xattr
+<4>[    5.203582] SELinux:  Could not stat /data/system/container: No such file or directory.
+<7>[    5.207702] [mtpg_open]	line = [478]
+<7>[    5.207702] [mtpg_release_device]	line = [1085]
+<7>[    5.207733] [mtpg_open]	line = [478]
+<7>[    5.207763] [mtpg_release_device]	line = [1085]
+<6>[    5.216278] tamper_fuse before = 1
+<3>[    5.249267] init: do_restorecon: Could not access /carrier
+<3>[    5.304687] init: failed to open '/sys/devices/soc0/soc_id'
+<3>[    5.304840] init: failed to open '/sys/devices/soc0/platform_version'
+<3>[    5.304962] init: failed to open '/sys/devices/soc0/hw_platform'
+<3>[    5.305084] init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
+<3>[    5.411468] Unknown PM state 0
+<6>[    5.411560] (msm_serial_hs) msm_hs_startup - dma wake lock
+<6>[    5.412628] (msm_serial_hs) msm_hs_shutdown - dma wake unlock
+<3>[    5.412628] Unknown PM state 3
+<3>[    5.412811] Unknown PM state 0
+<6>[    5.412841] (msm_serial_hs) msm_hs_startup - dma wake lock
+<6>[    5.413818] (msm_serial_hs) msm_hs_shutdown - dma wake unlock
+<3>[    5.413848] Unknown PM state 3
+<6>[    5.424987] bcm2079x-i2c 17-0077: dev node major=10, minor=34
+<6>[    5.425018] bcm2079x-i2c 17-0077: dev node major=10, minor=34
+<3>[    5.434509] init: Warning!  Service lmkd needs a SELinux domain defined; please fix!
+<3>[    5.437713] init: Warning!  Service modem-sh needs a SELinux domain defined; please fix!
+<3>[    5.438354] init: Warning!  Service qcom-c_core-sh needs a SELinux domain defined; please fix!
+<3>[    5.438995] init: Warning!  Service config_bluetooth needs a SELinux domain defined; please fix!
+<3>[    5.439666] init: Warning!  Service qcom-usb-sh needs a SELinux domain defined; please fix!
+<6>[    5.444732] healthd: Healthd mode is android
+<3>[    5.451354] Unknown PM state 0
+<6>[    5.451477] (msm_serial_hs) msm_hs_startup - dma wake lock
+<4>[    5.453155] msm_serial_hs: Rx break
+<6>[    5.453186] (msm_serial_hs) msm_hs_shutdown - dma wake unlock
+<3>[    5.453216] Unknown PM state 3
+<3>[    5.453430] Unknown PM state 0
+<6>[    5.453491] (msm_serial_hs) msm_hs_startup - dma wake lock
+<4>[    5.455627] msm_serial_hs: Rx break
+<6>[    5.455688] (msm_serial_hs) msm_hs_shutdown - dma wake unlock
+<3>[    5.455688] Unknown PM state 3
+<6>[    5.462738] Adding 1048572k swap on /dev/block/vnswap0.  Priority:-1 extents:1 across:1048572k SSFS
+<6>[    5.468658] volume_up_key wakeup status 0
+<6>[    5.468658] volume_down_key wakeup status 0
+<6>[    5.468688] home_key wakeup status 1
+<3>[    5.469238] init: service 'console' requires console
+<7>[    5.470184] usb: enable_store enabled=0, !dev->enabled=1
+<7>[    5.470458] usb: functions_store buff=mtp,acm,adb
+<7>[    5.470458] usb: android_enable_function name=mtp
+<7>[    5.470458] usb: android_enable_function name=acm
+<7>[    5.470489] usb: android_enable_function name=adb
+<7>[    5.470581] usb: enable_store enabled=1, !dev->enabled=1
+<7>[    5.470611] usb: enable_store f:mtp
+<7>[    5.470611] usb: enable_store f:acm
+<7>[    5.470611] usb: acm is enabled. (bcdDevice=0x400)
+<7>[    5.470611] usb: enable_store f:adb
+<7>[    5.470611] usb: enable_store vendor=4e8,product=6860,bcdDevice=400
+<7>[    5.470642] ,Class=0,SubClass=0,Protocol=0
+<7>[    5.470642] usb: enable_store next cmd : usb_add_config
+<3>[    5.473968] init: Warning!  Service scs needs a SELinux domain defined; please fix!
+<3>[    5.485046] init: cannot find '/system/bin/debuggerd64', disabling 'debuggerd64'
+<3>[    5.486206] init: Warning!  Service DR-daemon needs a SELinux domain defined; please fix!
+<3>[    5.495330] init: cannot find '/sbin/settings', disabling 'settings'
+<3>[    5.495666] init: Warning!  Service qcom-c_main-sh needs a SELinux domain defined; please fix!
+<6>[    5.511596] adb_open
+<7>[    5.511596] usb: android_bind_enabled_functions f:mtp
+<7>[    5.511627] [mtpg_function_bind]	line = [1232]
+<7>[    5.511657] usb: android_bind_enabled_functions f:acm
+<3>[    5.516601] init: Warning!  Service macloader needs a SELinux domain defined; please fix!
+<6>[    5.517089] DUN is registerd
+<7>[    5.517089] usb: android_bind_enabled_functions f:adb
+<3>[    5.517303] init: Warning!  Service sec-sh needs a SELinux domain defined; please fix!
+<3>[    5.517700] init: cannot find '/system/bin/rf4ce', disabling 'rf4ce'
+<3>[    5.518493] init: cannot find '/system/bin/imsqmidaemon', disabling 'imsqmidaemon'
+<6>[    5.536590] warning: `qcks' uses 32-bit capabilities (legacy support in use)
+<6>[    5.537811] mdm_modem_ioctl: Powering on mdm id 0
+<3>[    5.571655] init: Warning!  Service zygote needs a SELinux domain defined; please fix!
+<3>[    5.572845] init: cannot find '/system/bin/sdp_cryptod', disabling 'sdp_cryptod'
+<6>[    5.573974] max77693-muic max77693-muic: func:max77693_muic_show_manualsw ap(0),cp(1),vps(2)sw_path:0
+<4>[    5.579132] init.sec.boot.sh: start
+<3>[    5.582061] init: cannot find '/system/bin/dpmd', disabling 'dpmd'
+<3>[    5.582244] init: cannot find '/system/bin/loc_launcher', disabling 'loc_launcher'
+<3>[    5.582550] init: Warning!  Service qcom-sh needs a SELinux domain defined; please fix!
+<3>[    5.583923] init: Warning!  Service ppd needs a SELinux domain defined; please fix!
+<3>[    5.588500] init: cannot find '/system/bin/vcsFPService', disabling 'vcsFPService'
+<3>[    5.652740] init: untracked pid 299 exited with status 0
+<6>[    5.695404] sdcardfs: version 2.1.1
+<6>[    5.695404] sdcardfs: dev_name -> /data/knox/sdcard
+<6>[    5.695404] sdcardfs: options -> uid=1000,gid=1000,wgid=1015
+<6>[    5.695587] sdcardfs: mounted on top of /data/knox/sdcard type ext4
+<7>[    5.695617] SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
+<6>[    5.696197] sdcardfs: version 2.1.1
+<6>[    5.696197] sdcardfs: dev_name -> /data/privatemode
+<6>[    5.696197] sdcardfs: options -> uid=1000,gid=1000,wgid=1015
+<6>[    5.696228] sdcardfs: mounted on top of /data/privatemode type ext4
+<7>[    5.696258] SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
+<3>[    5.717681] init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+<6>[    5.726898] sdcardfs: version 2.1.1
+<6>[    5.726898] sdcardfs: dev_name -> /data/media
+<6>[    5.726928] sdcardfs: options -> uid=1023,gid=1023,wgid=1015,derive=legacy,reserved_mb=20
+<6>[    5.727783] sdcardfs: read_package_list
+<6>[    5.727874] sdcardfs: created packagelist pkgld/335
+<6>[    5.728210] sdcardfs: mounted on top of /data/media type ext4
+<7>[    5.728240] SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
+<6>[    5.728363] EXT4-fs (mmcblk0p16): re-mounted. Opts: (null)
+<3>[    5.776641] init: service 'console' requires console
+<3>[    5.826965] init: no such service 'quipc_igsn'
+<6>[    5.857147] MobiCore mcd: *** <t MTK, Build: Nov  5 2014, 18:40:38 ***
+<6>[    5.857177] MobiCore mcd: *** jenkins-Generic_integration_build-1111 ###
+<3>[    5.860778] init: no such service 'quipc_main'
+<6>[    5.987976] rmnet usb ctrl Initialized.
+<6>[    5.988098] usbcore: registered new interface driver rmnet_usb
+<4>[    6.041900] QSEECOM: qseecom_load_app: App (skmm_ta) does'nt exist, loading apps for first time
+<4>[    6.052368] QSEECOM: qseecom_load_app: App with id 1 (skmm_ta) now loaded
+<3>[    6.073516] init: untracked pid 353 exited with status 1
+<6>[    6.125152] [SSP] Updated 29486 bytes / 139465 bytes
+<6>[    6.385650] mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[    6.385742] mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<3>[    6.402496] init: untracked pid 484 exited with status 0
+<3>[    6.406616] init: untracked pid 421 exited with status 1
+<6>[    6.432464] mipi_dsi_controller_cfg: DSI status=8 failed
+<6>[    6.432525] [lcd] DSI REGULATOR SET ...
+<6>[    6.432617] [lcd] PANEL REGULATOR SET ...
+<4>[    6.450347] healthd: batteryPogoOnlnePath not found
+<4>[    6.450347] healthd: BatteryHighVoltageChargerPath not found
+<4>[    6.450347] healthd: batteryCapacitymaxPath not found
+<6>[    6.452239] healthd: battery l=80 v=3991 t=28.1 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[    6.452239] healthd-android: healthd_mode_android_battery_update
+<6>[    6.452270] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[    6.452270] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[    6.541595] [lcd] PANEL ON
+<6>[    6.541625] [lcd] DSI ON
+<6>[    6.586822] mipi_samsung_manufacture_id id0:  0x42, id1: 0x80, id2: 0x47
+<6>[    6.586822] cmd_set_change : ldi_rev : I 
+<6>[    6.587707] read_reg : C8[33] : 00 12 01 10 00 39 .5e 5f 5e 59 5c 59 .48 4c 47 4e 53 52 .60 62 61 5e 62 5f .51 5c 52 44 5b 47 .02 03 02 01 16 01 .
+<6>[    6.587707] #### LSI panel!!
+<6>[    6.587982] read_reg : C8[7] : 01 16 01 12 01 18 .0a 42 03 00 00 00 .
+<6>[    6.588348] read_reg : C8[15] : 7e 7f 7f 7d 7d 7d .7b 7c 7c 7f 7e 7d .7f 80 80 00 00 00 .
+<6>[    6.588470] read_reg : A1[4] : 0b d4 0c aa ff ff .
+<6>[    6.588500] coordinate_tunning x : 3028, y : 3242, tune_number : 5
+<6>[    6.588531] gamma_cell_determine ldi_revision: 0x428047
+<6>[    6.588562] generate_gray_scale end
+<6>[    6.589080] [mipi_samsung_disp_on]
+<4>[    6.589080] Rob's Panel Hook Msg.Rob's DSI ON HOOK
+<6>[    6.589080] [POWERSUSPEND] panel resquests wakeup.
+<6>[    6.589080] [POWERSUSPEND] state change requested, but unchanged ?! Ignored !
+<6>[    6.838684] [mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[    6.838684] [mdnie lite] is negative Mode On = 0
+<3>[    6.838684] [mdnie lite]  = UI MODE =
+<3>[    6.838714] [mdnie lite]  = DYNAMIC MODE =
+<3>[    6.838714] [mdnie lite]  send tuning cmd!!
+<3>[    6.871826] [mdnie lite] mDNIe_Set_Mode end , mode(0), background(0)
+<6>[    6.872589] hdmi_msm hdmi_msm.1: hdmi_msm_hpd_feature: 1
+<6>[    7.198028] barcode_emul_ice4: FPGA firmware update success
+<6>[    7.250427] barcode_emul_ice4: ice_gpiox_get : num = 1 , val = 0
+<7>[    7.303131] SELinux: 2048 avtab hash slots, 24997 rules.
+<6>[    7.321807] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_power_resume
+<6>[    7.322326] synaptics_power_onoff: enable l17
+<7>[    7.325683] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    7.325714] SELinux:  1 users, 2 roles, 1530 types, 0 bools, 1 sens, 1024 cats
+<7>[    7.325714] SELinux:  86 classes, 24997 rules
+<6>[    7.331756] synaptics_power_onoff: enable l22
+<4>[    7.391693] mdp4_overlay_borderfill_stage_up mixer(0) start
+<4>[    7.391693] mdp4_overlay_borderfill_stage_up mixer(0) end
+<6>[    7.403228] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[    7.403259] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[    7.403259] APR: Unable to load q6 image, error:-19
+<6>[    7.410156] LED Powering Pattern on
+<7>[    7.413787] led pattern : 6 is activated
+<6>[    7.441986] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_glove_mode_enables: [00]: glove disable
+<6>[    7.442108] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_reinit_device: proximity controls:[0X51]
+<3>[    7.537780] init: untracked pid 315 exited with status 1
+<6>[    7.551788] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f51_set_enables: disable
+<6>[    7.552032] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_reinit_device: Interrupt enable mask register[0] = 0x24
+<6>[    7.552917] synaptics_rmi4_i2c 3-0020: synaptics_charger_conn: device_control : 20, ta_status : 1
+<6>[    7.569885] touch_tout1_on
+<6>[    7.625244] [SSP] Updated 44107 bytes / 139465 bytes
+<3>[    7.724792] init: untracked pid 587 exited with status 1
+<7>[    7.895294] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    7.922180] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    7.922241] SELinux:  1 users, 2 roles, 1530 types, 0 bools, 1 sens, 1024 cats
+<7>[    7.922241] SELinux:  86 classes, 24997 rules
+<6>[    8.082763] [SSP]: show_sensors_enable - cur_enable = 0
+<6>[    8.083007] [SSP]: set_sensors_enable - new_enable = 16, old_enable = 0
+<6>[    8.083007] [SSP]: enable_sensor - add 16, New = 200000000ns
+<3>[    8.083007] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[    8.083160] [SSP]: show_sensors_enable - cur_enable = 16
+<6>[    8.083190] [SSP]: set_sensors_enable - new_enable = 0, old_enable = 16
+<6>[    8.083190] [SSP]: ssp_remove_sensor - remove sensor = 16, current state = 0
+<3>[    8.083221] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[    8.465667] adb_release
+<7>[    8.465698] usb: usb_remove_config cdev->config=  (null), config=c1eded80
+<7>[    8.465698] [mtpg_function_unbind]	line = [1207]
+<6>[    8.465728] DUN is unregisterd
+<6>[    8.923706] [SSP] Updated 58978 bytes / 139465 bytes
+<7>[    8.961181] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<7>[    9.161102] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    9.187835] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    9.187866] SELinux:  1 users, 2 roles, 1530 types, 0 bools, 1 sens, 1024 cats
+<7>[    9.187866] SELinux:  86 classes, 24997 rules
+<3>[    9.439392] init: untracked pid 654 exited with status 1
+<7>[    9.472229] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    9.497955] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[    9.497985] SELinux:  1 users, 2 roles, 1530 types, 0 bools, 1 sens, 1024 cats
+<7>[    9.497985] SELinux:  86 classes, 24997 rules
+<3>[    9.586669] init: untracked pid 764 exited with status 1
+<7>[    9.673370] usb: android_bind_enabled_functions f:mtp
+<7>[    9.673400] [mtpg_function_bind]	line = [1232]
+<7>[    9.673431] usb: android_bind_enabled_functions f:acm
+<6>[    9.673431] DUN is registerd
+<7>[    9.673431] usb: android_bind_enabled_functions f:adb
+<3>[    9.682159] init: untracked pid 794 exited with status 0
+<6>[   10.131713] [SSP] Updated 73599 bytes / 139465 bytes
+<7>[   10.798583] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[   10.824066] SELinux: 2048 avtab hash slots, 24997 rules.
+<7>[   10.824096] SELinux:  1 users, 2 roles, 1530 types, 0 bools, 1 sens, 1024 cats
+<7>[   10.824096] SELinux:  86 classes, 24997 rules
+<6>[   10.901947] max77693-muic max77693-muic: func:max77693_muic_usb_detect info->muic_data->sw_path:0
+<6>[   10.901947] MUIC usb_cb:1
+<6>[   10.901977] msm_otg msm_otg: MUIC: BSV set
+<6>[   10.904449] msm_otg msm_otg: USB exited from low power mode
+<6>[   10.913391] msm_hsusb msm_hsusb: CI13XXX_CONTROLLER_RESET_EVENT received
+<6>[   10.913391] msm_hsusb msm_hsusb: CI13XXX_CONTROLLER_CONNECT_EVENT received
+<7>[   11.021331] usb: composite_disconnect
+<7>[   11.021331] usb: android_disconnect cable state (1)
+<7>[   11.029357] usb: android_work config=  (null),connected=0,sw_connected=0
+<6>[   11.029388] android_work: android_work: did not send uevent (0 0   (null))
+<3>[   11.054046] init: untracked pid 797 exited with status 1
+<7>[   11.143829] usb: GET_DES
+<7>[   11.144104] usb: android_work config=  (null),connected=1,sw_connected=0
+<6>[   11.144287] android_work: android_work: sent uevent USB_STATE=CONNECTED
+<7>[   11.147430] usb: composite_disconnect
+<7>[   11.147460] usb: android_disconnect cable state (1)
+<7>[   11.147521] usb: android_work config=  (null),connected=0,sw_connected=1
+<6>[   11.147644] android_work: android_work: sent uevent USB_STATE=DISCONNECTED
+<3>[   11.226104] init: untracked pid 894 exited with status 1
+<7>[   11.299804] usb: GET_DES
+<7>[   11.299957] usb: set_config_number single config
+<7>[   11.299957] usb: set_interface_count next_interface_id=4
+<7>[   11.300201] usb: set_config_number single config
+<7>[   11.300201] usb: set_interface_count next_interface_id=4
+<6>[   11.301086] android_usb gadget: high-speed config #1: android_usb
+<7>[   11.301239] usb: SET_CON
+<7>[   11.301483] usb: android_work config=c1eded80,connected=1,sw_connected=0
+<6>[   11.310607] [SSP] Updated 88470 bytes / 139465 bytes
+<6>[   11.352020] android_work: android_work: sent uevent USB_STATE=CONFIGURED
+<6>[   12.082031] [SSP]: debug_work_func(0) - Sensor state: 0x0, RC: 0, MS: 0
+<6>[   12.082061] [SSP] : debug_work_func firmware downloading state = 3
+<6>[   12.176513] mdm_modem_ioctl: normal boot of mdm id 0 done
+<3>[   12.401885] apr_tal:open timeout
+<3>[   12.402008] APR: Unable to open handle
+<3>[   12.402191] q6asm_audio_client_alloc Registration with APR failed
+<3>[   12.402282] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   12.402557] msm_pcm_open: Could not allocate memory
+<3>[   12.402587] asoc: can't open platform msm-pcm-dsp
+<3>[   12.402679]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   12.409027] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[   12.409057] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[   12.409088] APR: Unable to load q6 image, error:-19
+<6>[   12.494262] [SSP] Updated 103091 bytes / 139465 bytes
+<6>[   12.740722] mdm_status_change: status = 1: mdm id 0 is now ready
+<6>[   12.740936] msm_hsic_host msm_hsic_host: remove, state 1
+<6>[   12.740966] usb usb1: USB disconnect, device number 1
+<6>[   12.740966] usb 1-1: USB disconnect, device number 2
+<6>[   12.745422] msm_hsic_host msm_hsic_host: USB bus 1 deregistered
+<6>[   12.826538] msm_hsic_host msm_hsic_host: Qualcomm EHCI Host Controller using HSIC
+<6>[   12.826568] msm_hsic_host msm_hsic_host: new USB bus registered, assigned bus number 1
+<6>[   12.851928] msm_hsic_host msm_hsic_host: irq 261, io mem 0x12510000
+<6>[   12.871826] msm_hsic_host msm_hsic_host: USB 2.0 started, EHCI 1.00
+<6>[   12.872131] usb usb1: New USB device found, idVendor=1d6b, idProduct=0002
+<6>[   12.872161] usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+<6>[   12.872161] usb usb1: Product: Qualcomm EHCI Host Controller using HSIC
+<6>[   12.872161] usb usb1: Manufacturer: Linux 3.4.113-machinex-Mark43 ehci_hcd
+<6>[   12.872192] usb usb1: SerialNumber: msm_hsic_host
+<6>[   12.873687] hub 1-0:1.0: USB hub found
+<6>[   12.873748] hub 1-0:1.0: 1 port detected
+<3>[   12.874420] genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
+<6>[   13.301849] usb 1-1: new high-speed USB device number 2 using msm_hsic_host
+<6>[   13.365661] usb 1-1: New USB device found, idVendor=05c6, idProduct=904c
+<6>[   13.365692] usb 1-1: New USB device strings: Mfr=3, Product=2, SerialNumber=0
+<6>[   13.365692] usb 1-1: Product: Qualcomm CDMA Technologies MSM
+<6>[   13.365692] usb 1-1: Manufacturer: Qualcomm, Incorporated
+<6>[   13.379699] qc_csvt 1-1:1.4: qc_csvt converter detected
+<6>[   13.379974] usb 1-1: qc_csvt converter now attached to ttyUSB0
+<6>[   13.382171] rmnet_usb 1-1:1.6: rmnet_usb0: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, 72:4b:46:57:c5:14
+<6>[   13.383087] rmnet_usb 1-1:1.7: rmnet_usb1: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, 72:4b:46:57:c5:14
+<6>[   13.383972] rmnet_usb 1-1:1.8: rmnet_usb2: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, 72:4b:46:57:c5:14
+<6>[   13.643646] [SSP] Updated 117962 bytes / 139465 bytes
+<6>[   13.750793] [SSP]: show_sensors_enable - cur_enable = 0
+<6>[   13.750823] [SSP]: set_sensors_enable - new_enable = 4, old_enable = 0
+<6>[   13.752441] [SSP]: mag_open_hwoffset: -3, 1, 1
+<6>[   13.752502] [SSP] : set_hw_offset, skip DL state = 3
+<6>[   13.752502] [SSP]: enable_sensor - add 4, New = 200000000ns
+<3>[   13.752532] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.754241] [SSP]: show_sensors_enable - cur_enable = 4
+<6>[   13.754302] [SSP]: set_sensors_enable - new_enable = 5, old_enable = 4
+<6>[   13.754638] [SSP]: open accel calibration -2412, 12535, -6655
+<6>[   13.754638] [SSP]: enable_sensor - add 1, New = 200000000ns
+<3>[   13.754638] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.755035] [SSP]: show_sensors_enable - cur_enable = 5
+<6>[   13.755065] [SSP]: set_sensors_enable - new_enable = 7, old_enable = 5
+<6>[   13.755401] [SSP]: open gyro calibration 84, 123, 244
+<6>[   13.755432] [SSP]: enable_sensor - add 2, New = 200000000ns
+<3>[   13.755432] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.755706] [SSP]: show_sensors_enable - cur_enable = 7
+<6>[   13.755767] [SSP]: set_sensors_enable - new_enable = 15, old_enable = 7
+<6>[   13.757049] [SSP]: open barometer calibration 200
+<6>[   13.757049] [SSP]: enable_sensor - add 8, New = 200000000ns
+<3>[   13.757049] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.757415] [SSP]: show_sensors_enable - cur_enable = 15
+<6>[   13.757446] [SSP]: set_sensors_enable - new_enable = 47, old_enable = 15
+<6>[   13.757965] [SSP]: proximity_open_lcd_ldi - 42
+<6>[   13.758422] proximity_open_calibration: proximity ps_canc = 0, ps_thresh hi - 60 lo - 45
+<6>[   13.758422] [SSP]: set_proximity_threshold - Skip this function!!!, proximity sensor is not connected(0x0)
+<6>[   13.758422] [SSP]: enable_sensor - add 32, New = 200000000ns
+<3>[   13.758453] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.758544] [SSP]: proximity_open_lcd_ldi - 42
+<6>[   13.758575] proximity_open_calibration: proximity ps_canc = 0, ps_thresh hi - 60 lo - 45
+<6>[   13.758575] [SSP]: set_proximity_threshold - Skip this function!!!, proximity sensor is not connected(0x0)
+<6>[   13.758911] [SSP]: show_sensors_enable - cur_enable = 47
+<6>[   13.758972] [SSP]: set_sensors_enable - new_enable = 175, old_enable = 47
+<6>[   13.758972] [SSP]: enable_sensor - add 128, New = 200000000ns
+<3>[   13.758972] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.762634] [SSP] engine_version2_store - engine_ver2 = SHTC1_v2.1.10.23_140103, SHTC1_v2.1.10.23_140103
+<6>[   13.762786] [SSP] engine_version_store - engine_ver = SHTC1_v2.1.10.0_140103, SHTC1_v2.1.10.0_140103
+<6>[   13.763031] [SSP]: show_sensors_enable - cur_enable = 175
+<6>[   13.763092] [SSP]: set_sensors_enable - new_enable = 2223, old_enable = 175
+<6>[   13.763092] [SSP]: enable_sensor - add 2048, New = 200000000ns
+<3>[   13.763092] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.763336] [SSP]: show_sensors_enable - cur_enable = 2223
+<6>[   13.763366] [SSP]: set_sensors_enable - new_enable = 6319, old_enable = 2223
+<6>[   13.763366] [SSP]: enable_sensor - add 4096, New = 200000000ns
+<3>[   13.763366] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.763641] [SSP]: show_sensors_enable - cur_enable = 6319
+<6>[   13.763671] [SSP]: set_sensors_enable - new_enable = 14511, old_enable = 6319
+<6>[   13.763671] [SSP]: enable_sensor - add 8192, New = 200000000ns
+<3>[   13.763702] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.764038] [SSP]: show_sensors_enable - cur_enable = 14511
+<6>[   13.764099] [SSP]: set_sensors_enable - new_enable = 14510, old_enable = 14511
+<6>[   13.764099] [SSP]: ssp_remove_sensor - remove sensor = 1, current state = 14510
+<3>[   13.764099] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.764282] [SSP]: show_sensors_enable - cur_enable = 14510
+<6>[   13.764312] [SSP]: set_sensors_enable - new_enable = 14506, old_enable = 14510
+<6>[   13.764343] [SSP]: ssp_remove_sensor - remove sensor = 4, current state = 14506
+<3>[   13.764404] [SSP]: mag_store_hwoffset - get_hw_offset failed
+<3>[   13.764465] mag_store_hwoffset success
+<3>[   13.764556] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.764678] [SSP]: show_sensors_enable - cur_enable = 14506
+<6>[   13.764709] [SSP]: set_sensors_enable - new_enable = 14504, old_enable = 14506
+<6>[   13.764709] [SSP]: ssp_remove_sensor - remove sensor = 2, current state = 14504
+<3>[   13.764739] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.764862] [SSP]: show_sensors_enable - cur_enable = 14504
+<6>[   13.764892] [SSP]: set_sensors_enable - new_enable = 14496, old_enable = 14504
+<6>[   13.764923] [SSP]: ssp_remove_sensor - remove sensor = 8, current state = 14496
+<3>[   13.764923] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.765014] [SSP]: show_sensors_enable - cur_enable = 14496
+<6>[   13.765045] [SSP]: set_sensors_enable - new_enable = 14464, old_enable = 14496
+<6>[   13.765075] [SSP]: ssp_remove_sensor - remove sensor = 32, current state = 14464
+<3>[   13.765075] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.765228] [SSP]: show_sensors_enable - cur_enable = 14464
+<6>[   13.765258] [SSP]: set_sensors_enable - new_enable = 14336, old_enable = 14464
+<6>[   13.765258] [SSP]: ssp_remove_sensor - remove sensor = 128, current state = 14336
+<3>[   13.765258] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.765380] [SSP]: show_sensors_enable - cur_enable = 14336
+<6>[   13.765441] [SSP]: set_sensors_enable - new_enable = 14336, old_enable = 14336
+<6>[   13.765502] [SSP]: show_sensors_enable - cur_enable = 14336
+<6>[   13.765533] [SSP]: set_sensors_enable - new_enable = 14336, old_enable = 14336
+<6>[   13.765594] [SSP]: show_sensors_enable - cur_enable = 14336
+<6>[   13.765655] [SSP]: set_sensors_enable - new_enable = 14336, old_enable = 14336
+<6>[   13.765716] [SSP]: show_sensors_enable - cur_enable = 14336
+<6>[   13.765747] [SSP]: set_sensors_enable - new_enable = 12288, old_enable = 14336
+<6>[   13.765747] [SSP]: ssp_remove_sensor - remove sensor = 2048, current state = 12288
+<3>[   13.765747] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.765899] [SSP]: show_sensors_enable - cur_enable = 12288
+<6>[   13.765930] [SSP]: set_sensors_enable - new_enable = 8192, old_enable = 12288
+<6>[   13.765930] [SSP]: ssp_remove_sensor - remove sensor = 4096, current state = 8192
+<3>[   13.765960] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   13.766052] [SSP]: show_sensors_enable - cur_enable = 8192
+<6>[   13.766082] [SSP]: set_sensors_enable - new_enable = 0, old_enable = 8192
+<6>[   13.766082] [SSP]: ssp_remove_sensor - remove sensor = 8192, current state = 0
+<3>[   13.766113] [SSP] send_instruction - Skip Inst! DL state = 3
+<6>[   14.786865] [SSP] Updated 132849 bytes / 139465 bytes
+<6>[   15.136047] sec-fuelgauge 11-0036: 0x02(0xc5), 0x03(0x50), 0x04(0xa0), 0x05(0x30), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   15.140869] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x7a), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   15.140899] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[   15.144042] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   15.159301] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3946mV),Inow(460mA),SOC(80%),Tbat(281)
+<6>[   15.160034] max77693_get_health_state: reg_data(0x3)
+<6>[   15.161132] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   15.161132] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   15.161621] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   15.164611] healthd: battery l=80 v=3946 t=28.1 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   15.164611] healthd-android: healthd_mode_android_battery_update
+<6>[   15.164642] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   15.164642] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   15.275787] [SSP] Firmware download is success.(139465 bytes)
+<4>[   16.860198] [mxpower] STATE_NOTIFIER ACTIVE
+<6>[   17.030761] EXT4-fs (mmcblk0p16): re-mounted. Opts: (null)
+<4>[   17.090362] [machinex] Machinex Init Complete
+<3>[   17.401916] apr_tal:open timeout
+<3>[   17.402008] APR: Unable to open handle
+<3>[   17.402099] q6asm_audio_client_alloc Registration with APR failed
+<3>[   17.402252] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   17.402343] msm_pcm_open: Could not allocate memory
+<3>[   17.402374] asoc: can't open platform msm-pcm-dsp
+<3>[   17.402526]  MSM8960 Media1: dpcm: failed to start FE -12
+<7>[   17.794006] TX UART: 0d 0a 2b 55 41 52 54 20 52 45 41 44 59 0d 0a     ..+UART READY..
+<6>[   18.281829] [SSP] forced_to_download_binary, DL state = 4
+<6>[   18.284118] [SSP] MCU device ID = 85, reading ID = 85
+<6>[   18.284179] [SSP] Sensor Posision A : 3, G : 3, M: 5, P: 0
+<6>[   18.284820] ssp_enable, enable = 1, old enable = 1
+<6>[   18.285858] proximity_open_calibration: proximity ps_canc = 0, ps_thresh hi - 60 lo - 45
+<6>[   18.286590] [SSP]: Proximity Threshold - 60, 45
+<6>[   18.286956] select_irq_msg: MSG2SSP_NO_DATA irq [0]: 0xcf, [1]: 0x55
+<6>[   18.287506] [SSP]: set_hw_offset: x: -1, y: 1, z: 1
+<6>[   18.287567] ssp_sensorhub_report_notice: reset
+<6>[   18.287567] [SSP] forced_to_download_binary, DL state = 5
+<6>[   18.287994] [SSP] MCU Firm Rev : New = 14122200
+<6>[   18.423675] binder: release 259:259 transaction 1324 in, still active
+<6>[   18.423706] binder: release 259:1241 transaction 1328 in, still active
+<6>[   18.533203] tamper_fuse before = 1
+<6>[   19.890991] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[   19.890991] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[   19.891021] APR: Unable to load q6 image, error:-19
+<6>[   22.961944] max77693-muic max77693-muic: func:max77693_muic_dock_usb_detect info->muic_data->sw_path:0
+<6>[   23.081878] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<3>[   24.881805] apr_tal:open timeout
+<3>[   24.881866] APR: Unable to open handle
+<3>[   24.881927] q6asm_audio_client_alloc Registration with APR failed
+<3>[   24.882019] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   24.882080] msm_pcm_open: Could not allocate memory
+<3>[   24.882080] asoc: can't open platform msm-pcm-dsp
+<3>[   24.882171]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   24.885406] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[   24.885406] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[   24.885437] APR: Unable to load q6 image, error:-19
+<6>[   25.361694] sec-fuelgauge 11-0036: 0x02(0xca), 0x03(0xe0), 0x04(0xa0), 0x05(0x30), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   25.365783] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x7a), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   25.365875] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[   25.366455] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   25.377563] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4057mV),Inow(460mA),SOC(80%),Tbat(281)
+<6>[   25.378875] max77693_get_health_state: reg_data(0x3)
+<6>[   25.380706] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   25.380737] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   25.383514] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   25.393035] healthd: battery l=80 v=4057 t=28.1 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   25.393096] healthd-android: healthd_mode_android_battery_update
+<6>[   25.393157] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   25.393218] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   25.922058] max77693-muic max77693-muic: func:max77693_muic_mhl_detect cable_type:1
+<6>[   28.318389] [SSP]: MSG From MCU - Init
+<6>[   28.318389] Gyro Temp Init
+<6>[   28.318389] CheckLightLux Init
+<6>[   28.318389] AD 6 1 0 1
+<6>[   28.334350] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[   29.881927] apr_tal:open timeout
+<3>[   29.882110] APR: Unable to open handle
+<3>[   29.882293] q6asm_audio_client_alloc Registration with APR failed
+<3>[   29.882659] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   29.882843] msm_pcm_open: Could not allocate memory
+<3>[   29.882843] asoc: can't open platform msm-pcm-dsp
+<3>[   29.883178]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   34.081848] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<6>[   35.392181] sec-fuelgauge 11-0036: 0x02(0xca), 0x03(0x80), 0x04(0xa0), 0x05(0x30), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   35.395782] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x7a), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   35.395812] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[   35.396331] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   35.409362] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4050mV),Inow(460mA),SOC(80%),Tbat(282)
+<6>[   35.410308] max77693_get_health_state: reg_data(0x3)
+<6>[   35.411743] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   35.411834] sec-battery sec-battery: sec_bat_time_management: Charging Time : 31 secs
+<6>[   35.411834] sec-battery sec-battery: sec_bat_temperature: HT(600), HR(400), LT(-50), LR(0)
+<6>[   35.411865] sec-battery sec-battery: sec_bat_fullcharged_check: Charging Mode : Normal
+<6>[   35.411865] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   35.412658] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   35.415985] healthd: battery l=80 v=4050 t=28.2 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   35.416046] healthd-android: healthd_mode_android_battery_update
+<6>[   35.416076] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   35.416107] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   38.234191] sdcardfs: inotify event: 00000400
+<6>[   38.234222] sdcardfs: inotify event: 00008000
+<6>[   38.235870] sdcardfs: read_package_list
+<6>[   38.356414] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   38.488159] binder: 231:231 BC_REQUEST_DEATH_NOTIFICATION death notification already set
+<6>[   38.501281] BatteryPropertiesRegistrar: registerListener : start
+<6>[   38.503295] healthd: battery l=80 v=4050 t=28.2 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   38.503326] healthd-android: healthd_mode_android_battery_update
+<6>[   38.503356] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   38.503356] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   38.503387] : 
+<6>[   38.504791] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   38.504821] BatteryPropertiesRegistrar: registerListener : done
+<6>[   40.060791] synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<6>[   40.060821] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_glove_mode_enables: [00]: glove disable
+<6>[   40.062438] [Touchkey] IC id 20065
+<6>[   40.173309] cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[   40.173370] [Touchkey] IC id 20065
+<4>[   40.219787] lowmem_shrink: convert oom_adj to oom_score_adj:
+<4>[   40.219818] oom_adj 0 => oom_score_adj 0
+<4>[   40.219818] oom_adj 1 => oom_score_adj 58
+<4>[   40.219848] oom_adj 2 => oom_score_adj 117
+<4>[   40.219848] oom_adj 4 => oom_score_adj 235
+<4>[   40.219848] oom_adj 9 => oom_score_adj 529
+<4>[   40.219848] oom_adj 15 => oom_score_adj 1000
+<7>[   40.233306] [TouchKey] normal_mode Enabled
+<7>[   40.602233] led pattern : 0 is activated
+<3>[   40.614807] init: Warning!  Service usf-post-boot needs a SELinux domain defined; please fix!
+<6>[   42.136077] [SSP]: send_instruction - Inst = 0xb1, Sensor Type = 0xe, data = 0
+<6>[   42.568328] sdcardfs: inotify event: 00000400
+<6>[   42.568359] sdcardfs: inotify event: 00008000
+<6>[   42.569366] sdcardfs: read_package_list
+<6>[   42.672943] [SSP]: MSG From MCU - Start
+<6>[   42.672943] AL14 0 1 64 16384
+<6>[   42.672943] SMRC 14 0 8
+<6>[   42.672943] PRO
+<6>[   42.672943] ProxiSet=0
+<6>[   42.672943] AD 8 1 1 1
+<6>[   42.672943] SMA 14 0 8
+<6>[   43.787414] binder: 231:231 BC_REQUEST_DEATH_NOTIFICATION death notification already set
+<3>[   44.190124] q6asm_get_audio_client: invalid session: -1
+<4>[   44.190307] audio client is null
+<3>[   44.198333] q6asm_get_audio_client: invalid session: -1
+<4>[   44.198516] audio client is null
+<7>[   44.253784] usb: state_show buf=CONFIGURED
+<6>[   44.260467] acc_open
+<6>[   44.260498] acc_release
+<3>[   44.491271] [mdnie lite]  = UI MODE =
+<3>[   44.491333] [mdnie lite]  = DYNAMIC MODE =
+<3>[   44.491424] [mdnie lite]  send tuning cmd!!
+<3>[   44.537048] [mdnie lite] mDNIe_Set_Mode end , mode(0), background(0)
+<3>[   44.537658] [mdnie lite]  = UI MODE =
+<3>[   44.537994] [mdnie lite]  = DYNAMIC MODE =
+<3>[   44.538055] [mdnie lite]  send tuning cmd!!
+<3>[   44.586883] [mdnie lite] mDNIe_Set_Mode end , mode(0), background(0)
+<6>[   45.081909] [SSP]: debug_work_func(2) - Sensor state: 0x3fff, RC: 0, MS: 0
+<7>[   45.361968] [TouchKey] cypress_touchkey_led_work:0x10 
+<6>[   45.419494] mipi_samsung_auto_brightness_store : skip first auto brightness store (0) (0)!!
+<7>[   45.431915] [TouchKey] cypress_touchkey_led_work:0x20 
+<6>[   45.432342] brightness_control brightness_level : 0, candela : 300, auto : 0
+<6>[   45.434356] sec-fuelgauge 11-0036: 0x02(0xcb), 0x03(0x10), 0x04(0xa0), 0x05(0x30), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   45.438262] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x5c), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   45.438293] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>[   45.438873] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   45.449188] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4061mV),Inow(460mA),SOC(80%),Tbat(282)
+<6>[   45.450073] max77693_get_health_state: reg_data(0x3)
+<6>[   45.451324] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   45.451354] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   45.451721] mipi_samsung_disp_backlight 300
+<6>[   45.452178] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   45.458007] healthd: battery l=80 v=4061 t=28.2 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   45.458038] healthd-android: healthd_mode_android_battery_update
+<6>[   45.458068] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   45.458068] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   45.458099] : 
+<6>[   45.460845] BatteryPropertiesRegistrar: notifyListeners : done
+<4>[   45.543212] dhd_module_init in
+<4>[   45.543579] found wifi platform device bcmdhd_wlan
+<4>[   45.544372] Power-up adapter 'DHD generic adapter'
+<4>[   45.545104] wifi_platform_set_power = 1
+<4>[   45.545135] WiFi: trying to acquire BT lock
+<4>[   45.545135] ####btlock acquired cookie: WiFi
+<4>[   45.545166] wifi_platform_set_power: btlock acquired
+<4>[   45.545166] check BCM4335, check_bcm4335_rev 
+<4>[   45.545227] /data/.rev file Found
+<4>[   45.551971] Found BCM4335B0
+<6>[   45.552032] ------------------------------------------------
+<6>[   45.552032] ------------------------------------------------
+<6>[   45.552062] brcm_wlan_power Enter: power on
+<6>[   45.597595] barcode_emul_ice4: ice_gpiox_get : num = 4 , val = 0
+<6>[   45.597625] barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 1
+<3>[   45.621185] hostwake line change [BT]
+<4>[   45.632110] [brcm_wlan_power] Bluetooth Power On.
+<6>[   45.691925] barcode_emul_ice4: ice_gpiox_set : num = 3 , val = 1
+<6>[   45.831939] barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 0
+<4>[   45.861968] [brcm_wlan_power] BT_REG_OFF.
+<4>[   46.071868] wifi_platform_bus_enumerate device present 1
+<4>[   46.071868] brcm_wifi_status:301 status 1
+<6>[   46.071868] mmc1: Slot status change detected (0 -> 1)
+<4>[   46.131042] mmc1: queuing unknown CIS tuple 0x80 (2 bytes)
+<4>[   46.133819] mmc1: queuing unknown CIS tuple 0x80 (7 bytes)
+<4>[   46.135406] mmc1: queuing unknown CIS tuple 0x80 (3 bytes)
+<4>[   46.202148] mmc1: remove initialize and start re-tuning timerto prevent CMD53 request timeout 
+<6>[   46.202789] sps:BAM 0x12182000 enabled: ver:0x5, number of pipes:6
+<4>[   46.207458] mmc1: queuing unknown CIS tuple 0x91 (3 bytes)
+<6>[   46.207489] mmc1: new ultra high speed SDR104 SDIO card at address 0001
+<4>[   46.226715] bcmsdh_sdmmc: bcmsdh_sdmmc_probe Enter
+<4>[   46.226806] bcmsdh_sdmmc: bcmsdh_sdmmc_probe Enter
+<4>[   46.226806] bus num (host idx)=1, slot num (rca)=1
+<4>[   46.226837] found adapter info 'DHD generic adapter'
+<4>[   46.226867] alloc static buf at c7e80000!
+<4>[   46.236206] F1 signature OK, socitype:0x1 chip:0x4335 rev:0x1 pkg:0x0
+<4>[   46.237060] DHD: dongle ram size is set to 786432(orig 786432) at 0x180000
+<4>[   46.258789] wl_create_event_handler(): thread:wl_event_handler:68a started
+<6>[   46.258819] CFG80211-INFO2) wl_event_handler : tsk Enter, tsk = 0xdc75a620
+<4>[   46.265380] p2p0: P2P Interface Registered
+<4>[   46.265563] dhd_attach(): thread:dhd_watchdog_thread:68b started
+<4>[   46.266387] dhd_attach(): thread:dhd_dpc:68c started
+<4>[   46.266540] dhd_attach(): thread:dhd_rxf:68d started
+<4>[   46.266571] dhd_deferred_work_init: work queue initialized 
+<4>[   46.276123] CHIP VER = [0x1]
+<4>[   46.276123] ----- CHIP bcm4335_B0 -----
+<4>[   46.276184] dhdsdio_download_firmware: firmware path=/system/etc/wifi/bcmdhd_sta.bin, nvram path=/system/etc/wifi/nvram_net.txt_semcosh
+<4>[   46.439147] dhdsdio_write_vars: Download, Upload and compare of NVRAM succeeded.
+<4>[   46.575958] dhd_bus_init: enable 0x06, ready 0x06 (waited 0us)
+<4>[   46.578033] dhd_wl_ioctl: WLC_GET_VAR: cisdump, ret = -23
+<4>[   46.578033] [WIFI_SEC] dhd_check_module_cid: CIS reading failed, ret=-23
+<4>[   46.589813] Firmware up: op_mode=0x0015, MAC=c0:f3:2c
+<4>[   46.598602] [WIFI_SEC] sec_control_pm: POWER_VAL = 1 
+<4>[   46.598632] dhdcdc_set_ioctl: SET PM to 2
+<4>[   46.604888] dhd_wl_ioctl: WLC_SET_VAR: aibss_bcn_force_config, ret = -23
+<4>[   46.604888] dhd_preinit_ioctls Set aibss_bcn_force_config to 500, 5000, 5000 failed -23
+<4>[   46.624816] Firmware version = wl0: Mar  5 2015 16:46:55 version 6.30.171.24.64 (B0 Station/P2P)
+<4>[   46.625640] [WIFI_SEC] .wifiver.info already saved.
+<4>[   46.626586] dhd_wl_ioctl: WLC_SET_VAR: ampdu_hostreorder, ret = -23
+<4>[   46.626586] dhd_preinit_ioctls wl ampdu_hostreorder failed -23
+<4>[   46.627105] dhd_wl_ioctl: WLC_GET_VAR: pfnlbest, ret = -23
+<4>[   46.628326] dhd_wl_ioctl: WLC_GET_VAR: cisdump, ret = -23
+<4>[   46.628356] [WIFI_SEC] dhd_check_module_mac: Check module mac by legacy FW : c0:f3:2c
+<4>[   46.629333] [WIFI_SEC] Check Mac address in .mac.info 
+<4>[   46.629333] Dongle Host Driver, version 1.141.64.13 (security_patch)
+<4>[   46.629364] Compiled in drivers/net/wireless/bcmdhd on Nov 15 2016 at 19:12:43
+<4>[   46.635253] Register interface [wlan0]  MAC: c0:f3:2c
+<4>[   46.635253] 
+<4>[   46.635925] ####btlock released, cookie: WiFi
+<4>[   46.635925] wl_android_post_init: btlock released
+<6>[   46.845001] CFG80211-INFO2) wl_cfg80211_attach_post : p2p0: p2p_dev_addr=c2:f3:2c
+<6>[   47.322631] CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[   47.356353] binder: release 1421:1421 transaction 7801 in, still active
+<6>[   47.356384] binder: release 1421:1439 transaction 7906 in, still active
+<3>[   47.412811] WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for CA as US rev 0
+<6>[   47.472869] tamper_fuse before = 1
+<6>[   48.058319] CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=3
+<4>[   48.062774] dhd_wl_ioctl: WLC_IOCTL: cmd: 23, ret = -17
+<6>[   48.067901] CFG80211-INFO2) wl_cfg80211_connect : Connectting withc8:26:15 channel (1) ssid "something", len (9)
+<4>[   48.067932] 
+<4>[   48.102905] wl_bss_connect_done succeeded with c8:26:15
+<4>[   48.106414] dhdcdc_set_ioctl: SET PM to 0
+<4>[   48.116821] ETHER_TYPE_802_1X: ver 2, type 3, replay 0
+<4>[   48.117248] ETHER_TYPE_802_1X [TX]: ver 1, type 3, replay 0
+<4>[   48.136169] ETHER_TYPE_802_1X: ver 2, type 3, replay 1
+<4>[   48.138641] ETHER_TYPE_802_1X [TX]: ver 1, type 3, replay 1
+<4>[   48.139678] wl_bss_connect_done succeeded with c8:26:15
+<6>[   48.141967] CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[   48.409515] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   49.025146] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[   49.025177] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[   49.025177] APR: Unable to load q6 image, error:-19
+<6>[   49.390960] FAT-fs (mmcblk1p1[179:33]): trying to mount...
+<6>[   49.395324] FAT-fs (mmcblk1p1[179:33]): mounted successfully!
+<7>[   49.395355] SELinux: initialized (dev mmcblk1p1, type vfat), uses xattr
+<6>[   49.497772] sdcardfs: version 2.1.1
+<6>[   49.497772] sdcardfs: dev_name -> /mnt/media_rw/extSdCard
+<6>[   49.497772] sdcardfs: options -> uid=1023,gid=1023,wgid=1023,derive=unified,lower_fs=fat
+<6>[   49.498229] sdcardfs: created packagelist pkgld/2083
+<6>[   49.498229] sdcardfs: mounted on top of /mnt/media_rw/extSdCard type vfat
+<7>[   49.498260] SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
+<6>[   49.499053] sdcardfs: read_package_list
+<6>[   49.802490] bcm2079x-i2c 17-0077: dev node major=10, minor=34
+<6>[   49.804046] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
+<6>[   49.804077] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
+<6>[   49.804077] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 0):
+<6>[   49.814971] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 1):
+<6>[   50.563476] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
+<6>[   50.563476] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
+<6>[   50.563507] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 0):
+<6>[   50.575042] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 1):
+<6>[   50.803588] sdcardfs: inotify event: 00000400
+<6>[   50.803619] sdcardfs: inotify event: 00000400
+<6>[   50.803710] sdcardfs: inotify event: 00008000
+<6>[   50.805267] sdcardfs: read_package_list
+<6>[   50.808593] sdcardfs: inotify event: 00008000
+<6>[   50.808654] sdcardfs: read_package_list
+<6>[   51.368560] msm_thermal: already running...
+<6>[   51.368591] msm_thermal: enabled = 1
+<6>[   51.410125] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
+<6>[   51.410156] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
+<6>[   51.414337] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
+<6>[   51.414337] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
+<6>[   51.420745] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 1):
+<6>[   51.420776] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: release wake lock, count_irq = 0[machinex] Machinex Post-Init Finishing Up
+<4>[   51.747528] [mxpower] SUPER LATE RPM LPM WORKAOUND
+<4>[   51.749847] [machinex] Machinex Post-Init COMPLETE
+<6>[   51.860137] CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=4
+<6>[   52.279022] sec-battery sec-battery: sec_bat_event_set: ignore duplicated deactivation of same event
+<6>[   52.920928] bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 0):
+<3>[   54.021850] apr_tal:open timeout
+<3>[   54.021911] APR: Unable to open handle
+<3>[   54.021972] q6asm_audio_client_alloc Registration with APR failed
+<3>[   54.022064] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   54.022094] msm_pcm_open: Could not allocate memory
+<3>[   54.022125] asoc: can't open platform msm-pcm-dsp
+<3>[   54.022216]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   54.025787] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[   54.025817] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[   54.025848] APR: Unable to load q6 image, error:-19
+<6>[   55.461364] sec-fuelgauge 11-0036: 0x02(0xbc), 0x03(0xa0), 0x04(0x9f), 0x05(0xf1), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   55.464752] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x3c), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   55.464813] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 79
+<6>[   55.465209] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   55.474426] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3772mV),Inow(460mA),SOC(79%),Tbat(282)
+<6>[   55.475158] max77693_get_health_state: reg_data(0x3)
+<6>[   55.476287] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   55.476287] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   55.476776] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   55.483734] healthd: battery l=79 v=3772 t=28.2 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   55.483764] healthd-android: healthd_mode_android_battery_update
+<6>[   55.483764] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   55.483764] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   55.483764] : 
+<6>[   55.485076] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   56.081848] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<7>[   57.121826] p2p0: no IPv6 routers present
+<4>[   58.121826] dhdcdc_set_ioctl: SET PM to 2
+<6>[   58.418579] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[   59.021972] apr_tal:open timeout
+<3>[   59.022155] APR: Unable to open handle
+<3>[   59.022338] q6asm_audio_client_alloc Registration with APR failed
+<3>[   59.022644] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   59.022827] msm_pcm_open: Could not allocate memory
+<3>[   59.022827] asoc: can't open platform msm-pcm-dsp
+<3>[   59.023162]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   59.836853] binder: release 1847:1847 transaction 9913 in, still active
+<6>[   59.950378] tamper_fuse before = 1
+<6>[   60.808013] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[   60.808044] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[   60.808074] APR: Unable to load q6 image, error:-19
+<6>[   65.495788] sec-fuelgauge 11-0036: 0x02(0xc9), 0x03(0x90), 0x04(0x9f), 0x05(0xb3), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   65.500122] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x1d), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   65.500152] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[   65.500793] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   65.513214] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4031mV),Inow(460mA),SOC(79%),Tbat(283)
+<6>[   65.514556] max77693_get_health_state: reg_data(0x3)
+<6>[   65.516387] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   65.516418] sec-battery sec-battery: sec_bat_time_management: Charging Time : 61 secs
+<6>[   65.516448] sec-battery sec-battery: sec_bat_temperature: HT(600), HR(400), LT(-50), LR(0)
+<6>[   65.516479] sec-battery sec-battery: sec_bat_fullcharged_check: Charging Mode : Normal
+<6>[   65.516510] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   65.517761] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   65.541320] healthd: battery l=79 v=4031 t=28.3 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   65.541381] healthd-android: healthd_mode_android_battery_update
+<6>[   65.541412] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   65.541473] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   65.541473] : 
+<6>[   65.545288] BatteryPropertiesRegistrar: notifyListeners : done
+<3>[   65.801910] apr_tal:open timeout
+<3>[   65.802032] APR: Unable to open handle
+<3>[   65.802124] q6asm_audio_client_alloc Registration with APR failed
+<3>[   65.802307] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   65.802398] msm_pcm_open: Could not allocate memory
+<3>[   65.802429] asoc: can't open platform msm-pcm-dsp
+<3>[   65.802612]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   65.806640] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[   65.806640] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[   65.806671] APR: Unable to load q6 image, error:-19
+<6>[   67.081939] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<6>[   68.455017] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[   70.801879] apr_tal:open timeout
+<3>[   70.802001] APR: Unable to open handle
+<3>[   70.802093] q6asm_audio_client_alloc Registration with APR failed
+<3>[   70.802246] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   70.802337] msm_pcm_open: Could not allocate memory
+<3>[   70.802337] asoc: can't open platform msm-pcm-dsp
+<3>[   70.802520]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   71.548217] binder: release 2803:2803 transaction 32148 in, still active
+<6>[   71.548248] binder: release 2803:2824 transaction 36670 in, still active
+<6>[   71.688629] tamper_fuse before = 1
+<6>[   72.471313] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[   72.471313] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[   72.471343] APR: Unable to load q6 image, error:-19
+<6>[   75.534210] sec-fuelgauge 11-0036: 0x02(0xc9), 0x03(0x60), 0x04(0x9f), 0x05(0xb3), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   75.538543] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x1d), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   75.538574] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[   75.539215] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   75.552398] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4027mV),Inow(460mA),SOC(79%),Tbat(284)
+<6>[   75.553741] max77693_get_health_state: reg_data(0x3)
+<6>[   75.555633] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   75.555664] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   75.559204] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   75.565155] healthd: battery l=79 v=4027 t=28.4 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   75.565216] healthd-android: healthd_mode_android_battery_update
+<6>[   75.565246] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   75.565307] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   75.565307] : 
+<6>[   75.567871] BatteryPropertiesRegistrar: notifyListeners : done
+<3>[   77.462097] apr_tal:open timeout
+<3>[   77.462280] APR: Unable to open handle
+<3>[   77.462432] q6asm_audio_client_alloc Registration with APR failed
+<3>[   77.462738] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   77.462921] msm_pcm_open: Could not allocate memory
+<3>[   77.462951] asoc: can't open platform msm-pcm-dsp
+<3>[   77.463256]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   77.471313] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[   77.471343] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[   77.471405] APR: Unable to load q6 image, error:-19
+<6>[   78.081909] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<6>[   78.477264] max77693_get_input_current: CHG_CNFG_09(0x17)
+<3>[   82.461944] apr_tal:open timeout
+<3>[   82.462158] APR: Unable to open handle
+<3>[   82.462310] q6asm_audio_client_alloc Registration with APR failed
+<3>[   82.462646] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   82.462799] msm_pcm_open: Could not allocate memory
+<3>[   82.462829] asoc: can't open platform msm-pcm-dsp
+<3>[   82.463165]  MSM8960 Media1: dpcm: failed to start FE -12
+<3>[   82.643829] q6asm_get_audio_client: invalid session: -1
+<4>[   82.643920] audio client is null
+<3>[   82.657684] q6asm_get_audio_client: invalid session: -1
+<4>[   82.657745] audio client is null
+<6>[   83.264434] binder: release 2833:2833 transaction 38447 in, still active
+<6>[   83.264465] binder: release 2833:2862 transaction 43814 in, still active
+<6>[   83.264495] binder: undelivered transaction 43816
+<6>[   83.377349] tamper_fuse before = 1
+<6>[   83.844543] [Touchkey] IC id 20065
+<6>[   83.953399] cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[   83.953491] [Touchkey] IC id 20065
+<6>[   83.953491] synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<6>[   83.953521] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_glove_mode_enables: [00]: glove disable
+<7>[   84.013305] [TouchKey] normal_mode Enabled
+<6>[   84.245849] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[   84.245849] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[   84.245880] APR: Unable to load q6 image, error:-19
+<6>[   88.471893] sec-fuelgauge 11-0036: 0x02(0xc6), 0x03(0xa0), 0x04(0x9f), 0x05(0xb3), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   88.474822] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x15), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   88.474822] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[   88.475219] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   88.485931] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3972mV),Inow(460mA),SOC(79%),Tbat(284)
+<6>[   88.486663] max77693_get_health_state: reg_data(0x3)
+<6>[   88.487762] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   88.487762] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   88.495147] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   88.495544] healthd: battery l=79 v=3972 t=28.4 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   88.495544] healthd-android: healthd_mode_android_battery_update
+<6>[   88.495574] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   88.495574] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   88.495574] : 
+<6>[   88.496856] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   88.506134] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   89.081909] [SSP]: debug_work_func(2) - Sensor state: 0x3fff, RC: 0, MS: 0
+<3>[   89.242004] apr_tal:open timeout
+<3>[   89.242248] APR: Unable to open handle
+<3>[   89.242431] q6asm_audio_client_alloc Registration with APR failed
+<3>[   89.242767] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   89.242950] msm_pcm_open: Could not allocate memory
+<3>[   89.242980] asoc: can't open platform msm-pcm-dsp
+<3>[   89.243347]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   89.252868] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[   89.252899] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[   89.252960] APR: Unable to load q6 image, error:-19
+<3>[   94.251831] apr_tal:open timeout
+<3>[   94.251892] APR: Unable to open handle
+<3>[   94.251953] q6asm_audio_client_alloc Registration with APR failed
+<3>[   94.252044] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[   94.252105] msm_pcm_open: Could not allocate memory
+<3>[   94.252105] asoc: can't open platform msm-pcm-dsp
+<3>[   94.252197]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[   94.858673] binder: release 2876:2876 transaction 45971 in, still active
+<6>[   94.989379] tamper_fuse before = 1
+<6>[   95.739959] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[   95.739959] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[   95.739990] APR: Unable to load q6 image, error:-19
+<6>[   98.497589] sec-fuelgauge 11-0036: 0x02(0xc8), 0x03(0x70), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[   98.500488] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf6), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[   98.500488] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[   98.500854] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[   98.513977] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4008mV),Inow(460mA),SOC(79%),Tbat(285)
+<6>[   98.514709] max77693_get_health_state: reg_data(0x3)
+<6>[   98.515747] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[   98.515777] sec-battery sec-battery: sec_bat_time_management: Charging Time : 94 secs
+<6>[   98.515777] sec-battery sec-battery: sec_bat_temperature: HT(600), HR(400), LT(-50), LR(0)
+<6>[   98.515777] sec-battery sec-battery: sec_bat_fullcharged_check: Charging Mode : Normal
+<6>[   98.515808] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[   98.516937] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[   98.518188] healthd: battery l=79 v=4008 t=28.5 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[   98.518218] healthd-android: healthd_mode_android_battery_update
+<6>[   98.518218] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[   98.518249] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[   98.518249] : 
+<6>[   98.527404] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[   98.536682] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  100.081848] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<3>[  100.731842] apr_tal:open timeout
+<3>[  100.731903] APR: Unable to open handle
+<3>[  100.731964] q6asm_audio_client_alloc Registration with APR failed
+<3>[  100.732055] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  100.732116] msm_pcm_open: Could not allocate memory
+<3>[  100.732116] asoc: can't open platform msm-pcm-dsp
+<3>[  100.732208]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  100.736663] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  100.736694] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  100.736694] APR: Unable to load q6 image, error:-19
+<3>[  105.731842] apr_tal:open timeout
+<3>[  105.731903] APR: Unable to open handle
+<3>[  105.731964] q6asm_audio_client_alloc Registration with APR failed
+<3>[  105.732055] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  105.732116] msm_pcm_open: Could not allocate memory
+<3>[  105.732116] asoc: can't open platform msm-pcm-dsp
+<3>[  105.732208]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  106.627044] binder: release 2952:2952 transaction 48117 in, still active
+<6>[  106.763305] tamper_fuse before = 1
+<6>[  106.898529] [SSP]: show_sensors_enable - cur_enable = 0
+<6>[  106.898620] [SSP]: set_sensors_enable - new_enable = 1, old_enable = 0
+<6>[  106.898620] [SSP]: enable_sensor - add 1, New = 200000000ns
+<6>[  106.902038] [SSP]: send_instruction - Inst = 0xa1, Sensor Type = 0x0, data = 3
+<6>[  106.930633] [SSP]: MSG From MCU - AKO
+<6>[  106.930633] AD 0 1 0 1
+<6>[  107.568420] binder: undelivered transaction 49057
+<6>[  107.568603] binder: undelivered transaction 49047
+<6>[  107.590423] [SSP]: show_sensors_enable - cur_enable = 1
+<6>[  107.590454] [SSP]: set_sensors_enable - new_enable = 0, old_enable = 1
+<6>[  107.590484] [SSP]: ssp_remove_sensor - remove sensor = 1, current state = 0
+<6>[  107.592681] [SSP]: send_instruction - Inst = 0xa2, Sensor Type = 0x0, data = 3
+<6>[  107.688201] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  107.688201] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  107.688232] APR: Unable to load q6 image, error:-19
+<6>[  108.531249] sec-fuelgauge 11-0036: 0x02(0xc4), 0x03(0x60), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[  108.534240] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf6), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  108.534240] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  108.534606] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  108.543670] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3927mV),Inow(460mA),SOC(79%),Tbat(286)
+<6>[  108.544372] max77693_get_health_state: reg_data(0x3)
+<6>[  108.545471] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  108.545471] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  108.547119] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  108.549743] healthd: battery l=79 v=3927 t=28.6 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  108.549743] healthd-android: healthd_mode_android_battery_update
+<6>[  108.549774] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  108.549774] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  108.549774] : 
+<6>[  108.550964] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[  108.552368] [SSP]: MSG From MCU - AKC
+<6>[  108.552398] RM 0 0 0 0
+<6>[  108.565399] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  108.567047] [SSP]: ssp_send_cmd - command 0xda
+<6>[  108.567047] [SSP] temphumidity_send_accuracy - accuracy = 3
+<6>[  111.083892] [SSP]: debug_work_func(5) - Sensor state: 0x3fff, RC: 0, MS: 0
+<3>[  112.683715] apr_tal:open timeout
+<3>[  112.683929] APR: Unable to open handle
+<3>[  112.684112] q6asm_audio_client_alloc Registration with APR failed
+<3>[  112.684478] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  112.684661] msm_pcm_open: Could not allocate memory
+<3>[  112.684692] asoc: can't open platform msm-pcm-dsp
+<3>[  112.685028]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  112.703216] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  112.703247] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  112.703308] APR: Unable to load q6 image, error:-19
+<3>[  117.703735] apr_tal:open timeout
+<3>[  117.703948] APR: Unable to open handle
+<3>[  117.704132] q6asm_audio_client_alloc Registration with APR failed
+<3>[  117.704467] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  117.704681] msm_pcm_open: Could not allocate memory
+<3>[  117.704681] asoc: can't open platform msm-pcm-dsp
+<3>[  117.705047]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  118.430816] binder: release 2974:2974 transaction 49538 in, still active
+<6>[  118.468627] tamper_fuse before = 1
+<6>[  118.561218] sec-fuelgauge 11-0036: 0x02(0xca), 0x03(0x50), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[  118.574188] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf6), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  118.574188] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  118.574554] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  118.584869] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4046mV),Inow(460mA),SOC(79%),Tbat(287)
+<6>[  118.585571] max77693_get_health_state: reg_data(0x3)
+<6>[  118.586639] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  118.586639] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  118.589569] healthd: battery l=79 v=4046 t=28.7 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  118.589599] healthd-android: healthd_mode_android_battery_update
+<6>[  118.589599] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  118.589630] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  118.589630] : 
+<6>[  118.591369] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  118.612915] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[  118.622344] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  119.426666] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  119.426666] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  119.426696] APR: Unable to load q6 image, error:-19
+<6>[  122.083770] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<3>[  124.423706] apr_tal:open timeout
+<3>[  124.423919] APR: Unable to open handle
+<3>[  124.424102] q6asm_audio_client_alloc Registration with APR failed
+<3>[  124.424468] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  124.424652] msm_pcm_open: Could not allocate memory
+<3>[  124.424682] asoc: can't open platform msm-pcm-dsp
+<3>[  124.424865]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  124.439636] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  124.439666] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  124.439727] APR: Unable to load q6 image, error:-19
+<6>[  126.454193] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  126.729309] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[24] V[5c]
+<6>[  127.027679] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  127.194793] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[14] V[5c]
+<6>[  128.239257] cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>[  128.628662] cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>[  128.634613] sec-fuelgauge 11-0036: 0x02(0xcc), 0x03(0xd0), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[  128.637481] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf9), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  128.637481] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  128.637847] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  128.656188] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4096mV),Inow(460mA),SOC(79%),Tbat(288)
+<6>[  128.656890] max77693_get_health_state: reg_data(0x3)
+<6>[  128.657958] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  128.657958] sec-battery sec-battery: sec_bat_time_management: Charging Time : 124 secs
+<6>[  128.657958] sec-battery sec-battery: sec_bat_temperature: HT(600), HR(400), LT(-50), LR(0)
+<6>[  128.657989] sec-battery sec-battery: sec_bat_fullcharged_check: Charging Mode : Normal
+<6>[  128.657989] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  128.658752] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  128.661010] healthd: battery l=79 v=4096 t=28.8 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  128.661010] healthd-android: healthd_mode_android_battery_update
+<6>[  128.661041] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  128.661041] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  128.661041] : 
+<6>[  128.662963] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  128.668060] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[  128.890106] cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>[  128.907257] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  129.069976] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[14] V[5c]
+<6>[  129.094390] cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<3>[  129.431854] apr_tal:open timeout
+<3>[  129.431915] APR: Unable to open handle
+<3>[  129.432006] q6asm_audio_client_alloc Registration with APR failed
+<3>[  129.432128] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  129.432250] msm_pcm_open: Could not allocate memory
+<3>[  129.432250] asoc: can't open platform msm-pcm-dsp
+<3>[  129.432342]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  129.765350] cypress_touchkey 16-0020: cypress_touchkey_interrupt: menu P 1, ver: 0x1c
+<6>[  130.030426] binder: release 3063:3063 transaction 49954 in, still active
+<6>[  130.030456] binder: release 3063:3084 transaction 50247 in, still active
+<6>[  130.069030] tamper_fuse before = 1
+<6>[  130.161651] cypress_touchkey 16-0020: cypress_touchkey_interrupt: menu R 2, ver: 0x1c
+<6>[  130.546020] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  130.691284] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[12] V[5c]
+<6>[  130.928192] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  130.928192] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  130.928222] APR: Unable to load q6 image, error:-19
+<6>[  133.083709] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<6>[  135.231262] brightness_control brightness_level : 300, candela : 10, auto : 0
+<6>[  135.258911] mipi_samsung_disp_backlight 0
+<6>[  135.450103] [SSP]: ssp_send_cmd - command 0xd1
+<7>[  135.460998] led_lowpower mode set to 1
+<7>[  135.465789] led pattern : 0 is activated
+<6>[  135.475494] CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[  135.479278] [lcd] mipi_samsung_disp_off
+<6>[  135.486572] [lcd] PANEL OFF
+<6>[  135.486602] [lcd] DSI OFF
+<4>[  135.487670] Rob's DSI OFF HOOK
+<6>[  135.487670] [POWERSUSPEND] panel resquests sleep.
+<6>[  135.487670] [POWERSUSPEND] state activated.
+<6>[  135.487701] [POWERSUSPEND] entering suspend...
+<6>[  135.487731] [POWERSUSPEND] suspending...
+<6>[  135.487731] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_power_suspend
+<6>[  135.488250] synaptics_power_onoff: disable l17
+<6>[  135.488616] synaptics_power_onoff: disable l22
+<4>[  135.488647] dhd_power_suspend: enter
+<4>[  135.488647] dhd_set_suspend: force extra Suspend setting 
+<4>[  135.492492] dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[  135.493621] [POWERSUSPEND] suspend completed.
+<3>[  135.921966] apr_tal:open timeout
+<3>[  135.922180] APR: Unable to open handle
+<3>[  135.922393] q6asm_audio_client_alloc Registration with APR failed
+<3>[  135.922729] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  135.923095] msm_pcm_open: Could not allocate memory
+<3>[  135.923126] asoc: can't open platform msm-pcm-dsp
+<3>[  135.923339]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  135.932373] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  135.932403] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  135.932464] APR: Unable to load q6 image, error:-19
+<6>[  136.106170] mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[  136.117797] mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[  136.120452] [lcd] PANEL ON
+<6>[  136.120697] [lcd] DSI ON
+<6>[  136.167144] [mipi_samsung_disp_on]
+<4>[  136.167144] Rob's Panel Hook Msg.Rob's DSI ON HOOK
+<6>[  136.167175] [POWERSUSPEND] panel resquests wakeup.
+<6>[  136.167175] [POWERSUSPEND] state deactivated.
+<6>[  136.167236] [POWERSUSPEND] entering resume...
+<6>[  136.167236] [POWERSUSPEND] resuming...
+<4>[  136.167266] dhd_power_resume: enter
+<4>[  136.167297] dhd_set_suspend: Remove extra suspend setting 
+<6>[  136.178405] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_power_resume
+<6>[  136.178955] synaptics_power_onoff: enable l17
+<6>[  136.179626] synaptics_power_onoff: enable l22
+<6>[  136.282470] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_glove_mode_enables: [00]: glove disable
+<6>[  136.282653] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_reinit_device: proximity controls:[0X51]
+<6>[  136.391906] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_f51_set_enables: disable
+<6>[  136.392517] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_reinit_device: Interrupt enable mask register[0] = 0x24
+<6>[  136.393554] synaptics_rmi4_i2c 3-0020: synaptics_charger_conn: device_control : 20, ta_status : 1
+<6>[  136.393737] [POWERSUSPEND] resume completed.
+<6>[  136.499725] [mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[  136.499755] [mdnie lite] is negative Mode On = 0
+<3>[  136.499755] [mdnie lite]  = UI MODE =
+<3>[  136.499786] [mdnie lite]  = DYNAMIC MODE =
+<3>[  136.499786] [mdnie lite]  send tuning cmd!!
+<3>[  136.549530] [mdnie lite] mDNIe_Set_Mode end , mode(0), background(0)
+<6>[  137.139099] brightness_control brightness_level : 10, candela : 300, auto : 0
+<6>[  137.164550] mipi_samsung_disp_backlight 300
+<6>[  138.039001] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  138.246154] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[18] V[5c]
+<6>[  138.462158] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  138.653778] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  138.655578] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[17] V[5c]
+<6>[  138.675048] sec-fuelgauge 11-0036: 0x02(0xcb), 0x03(0x20), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[  138.679260] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf9), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  138.679290] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  138.679962] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  138.690429] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4062mV),Inow(460mA),SOC(79%),Tbat(288)
+<6>[  138.691711] max77693_get_health_state: reg_data(0x3)
+<6>[  138.693664] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  138.693725] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  138.695190] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  138.699981] healthd: battery l=79 v=4062 t=28.8 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  138.700042] healthd-android: healthd_mode_android_battery_update
+<6>[  138.700073] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  138.700134] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  138.700134] : 
+<6>[  138.700317] BatteryPropertiesRegistrar: notifyListeners : done
+<6>[  139.171264] CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=2
+<6>[  139.197418] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  139.336608] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[12] V[5c]
+<6>[  140.545989] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  140.680847] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[11] V[5c]
+<3>[  140.931945] apr_tal:open timeout
+<3>[  140.932128] APR: Unable to open handle
+<3>[  140.932312] q6asm_audio_client_alloc Registration with APR failed
+<3>[  140.932647] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  140.933013] msm_pcm_open: Could not allocate memory
+<3>[  140.933013] asoc: can't open platform msm-pcm-dsp
+<3>[  140.933227]  MSM8960 Media1: dpcm: failed to start FE -12
+<3>[  141.085571] q6asm_get_audio_client: invalid session: -1
+<4>[  141.085693] audio client is null
+<6>[  141.093383] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<3>[  141.100524] q6asm_get_audio_client: invalid session: -1
+<4>[  141.100585] audio client is null
+<6>[  141.223297] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[11] V[5c]
+<6>[  141.277648] [SSP]: ssp_send_cmd - command 0xd2
+<6>[  141.293457] [SSP]: send_instruction - Inst = 0xc1, Sensor Type = 0xe, data = 2
+<6>[  141.311340] [SSP]: send_instruction - Inst = 0xb2, Sensor Type = 0xe, data = 0
+<6>[  141.671051] binder: release 3087:3087 transaction 50294 in, still active
+<6>[  141.822570] tamper_fuse before = 1
+<6>[  142.680694] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  142.680694] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  142.680725] APR: Unable to load q6 image, error:-19
+<3>[  147.671844] apr_tal:open timeout
+<3>[  147.671905] APR: Unable to open handle
+<3>[  147.671966] q6asm_audio_client_alloc Registration with APR failed
+<3>[  147.672058] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  147.672149] msm_pcm_open: Could not allocate memory
+<3>[  147.672149] asoc: can't open platform msm-pcm-dsp
+<3>[  147.672210]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  147.675506] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  147.675537] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  147.675537] APR: Unable to load q6 image, error:-19
+<6>[  148.670837] [SSP]: MSG From MCU - Stop
+<6>[  148.670867] PRC
+<6>[  148.670867] RM 8 0 1 0
+<6>[  148.670867] SMR 14 256 8
+<6>[  148.670867] RL14 0 0 64 0
+<6>[  148.683319] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  149.258300] sec-fuelgauge 11-0036: 0x02(0xc9), 0x03(0xb0), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[  149.261169] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf9), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  149.261169] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  149.261535] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  149.282104] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4033mV),Inow(460mA),SOC(79%),Tbat(289)
+<6>[  149.282806] max77693_get_health_state: reg_data(0x3)
+<6>[  149.283874] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  149.283874] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  149.285675] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  149.289093] healthd: battery l=79 v=4033 t=28.9 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  149.289123] healthd-android: healthd_mode_android_battery_update
+<6>[  149.289123] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  149.289154] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  149.289154] : 
+<6>[  149.290618] BatteryPropertiesRegistrar: notifyListeners : done
+<3>[  152.673736] apr_tal:open timeout
+<3>[  152.673950] APR: Unable to open handle
+<3>[  152.674163] q6asm_audio_client_alloc Registration with APR failed
+<3>[  152.674499] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  152.674835] msm_pcm_open: Could not allocate memory
+<3>[  152.674865] asoc: can't open platform msm-pcm-dsp
+<3>[  152.675048]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  153.524383] binder: release 3149:3149 transaction 53172 in, still active
+<6>[  153.702209] tamper_fuse before = 1
+<6>[  154.034698] [SSP]: show_sensors_enable - cur_enable = 0
+<6>[  154.034759] [SSP]: set_sensors_enable - new_enable = 1, old_enable = 0
+<6>[  154.034759] [SSP]: enable_sensor - add 1, New = 200000000ns
+<6>[  154.037445] [SSP]: send_instruction - Inst = 0xa1, Sensor Type = 0x0, data = 3
+<6>[  154.133880] [SSP]: show_sensors_enable - cur_enable = 1
+<6>[  154.133911] [SSP]: set_sensors_enable - new_enable = 0, old_enable = 1
+<6>[  154.133941] [SSP]: ssp_remove_sensor - remove sensor = 1, current state = 0
+<6>[  154.134307] [SSP]: MSG From MCU - AKO
+<6>[  154.134307] AD 0 1 0 1
+<6>[  154.136840] [SSP]: send_instruction - Inst = 0xa2, Sensor Type = 0x0, data = 3
+<6>[  154.334686] [SSP]: ssp_send_cmd - command 0xd1
+<6>[  154.348876] [SSP]: send_instruction - Inst = 0xb1, Sensor Type = 0xe, data = 0
+<6>[  154.358154] CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[  154.545013] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  154.545013] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  154.545043] APR: Unable to load q6 image, error:-19
+<6>[  154.859161] [SSP]: MSG From MCU - AKC
+<6>[  154.859191] RM 0 0 0 0
+<6>[  154.859191] Start
+<6>[  154.859191] AL14 0 1 64 16384
+<6>[  154.859191] SMRC 14 0 8
+<6>[  154.859191] PRO
+<6>[  154.859191] ProxiSet=0
+<6>[  154.859222] AD 8 1 1 1
+<6>[  154.859222] SMA 14 0 8
+<6>[  155.839233] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  156.092895] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[22] V[5c]
+<6>[  156.125549] synaptics_rmi4_i2c 3-0020: [0][P] 0x01
+<6>[  156.200317] synaptics_rmi4_i2c 3-0020: [0][R] 0x00 M[6] V[5c]
+<6>[  158.073730] CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=3
+<6>[  158.728790] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  159.300933] sec-fuelgauge 11-0036: 0x02(0xce), 0x03(0x00), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x71), 0x0d(0x1e), 
+<6>[  159.315277] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf9), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  159.315338] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  159.315979] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  159.328247] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4120mV),Inow(460mA),SOC(79%),Tbat(290)
+<6>[  159.328979] max77693_get_health_state: reg_data(0x3)
+<6>[  159.330017] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  159.330017] sec-battery sec-battery: sec_bat_time_management: Charging Time : 155 secs
+<6>[  159.330047] sec-battery sec-battery: sec_bat_temperature: HT(600), HR(400), LT(-50), LR(0)
+<6>[  159.330047] sec-battery sec-battery: sec_bat_fullcharged_check: Charging Mode : Normal
+<6>[  159.330047] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  159.331756] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  159.334320] healthd: battery l=79 v=4120 t=29.0 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  159.334350] healthd-android: healthd_mode_android_battery_update
+<6>[  159.334350] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  159.334381] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  159.334381] : 
+<6>[  159.336700] BatteryPropertiesRegistrar: notifyListeners : done
+<3>[  159.543853] apr_tal:open timeout
+<3>[  159.544067] APR: Unable to open handle
+<3>[  159.544250] q6asm_audio_client_alloc Registration with APR failed
+<3>[  159.544586] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  159.544921] msm_pcm_open: Could not allocate memory
+<3>[  159.544952] asoc: can't open platform msm-pcm-dsp
+<3>[  159.545135]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  159.561706] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  159.561737] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  159.561950] APR: Unable to load q6 image, error:-19
+<3>[  164.561828] apr_tal:open timeout
+<3>[  164.561889] APR: Unable to open handle
+<3>[  164.561981] q6asm_audio_client_alloc Registration with APR failed
+<3>[  164.562042] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  164.562133] msm_pcm_open: Could not allocate memory
+<3>[  164.562133] asoc: can't open platform msm-pcm-dsp
+<3>[  164.562194]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  165.081848] [SSP]: debug_work_func(5) - Sensor state: 0x3fff, RC: 0, MS: 0
+<6>[  165.209472] binder: release 3189:3189 transaction 54737 in, still active
+<6>[  165.306030] tamper_fuse before = 1
+<6>[  166.161468] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  166.161468] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  166.161499] APR: Unable to load q6 image, error:-19
+<6>[  168.744812] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  169.346313] sec-fuelgauge 11-0036: 0x02(0xcd), 0x03(0x00), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x70), 0x0d(0x1e), 
+<6>[  169.350738] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xf9), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  169.350769] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  169.351470] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  169.363403] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4098mV),Inow(460mA),SOC(79%),Tbat(291)
+<6>[  169.364715] max77693_get_health_state: reg_data(0x3)
+<6>[  169.366668] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  169.366699] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  169.376647] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  169.377441] healthd: battery l=79 v=4098 t=29.1 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  169.377502] healthd-android: healthd_mode_android_battery_update
+<6>[  169.377532] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  169.377593] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  169.377593] : 
+<6>[  169.378540] BatteryPropertiesRegistrar: notifyListeners : done
+<3>[  171.152008] apr_tal:open timeout
+<3>[  171.152221] APR: Unable to open handle
+<3>[  171.152557] q6asm_audio_client_alloc Registration with APR failed
+<3>[  171.152770] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  171.153106] msm_pcm_open: Could not allocate memory
+<3>[  171.153137] asoc: can't open platform msm-pcm-dsp
+<3>[  171.153320]  MSM8960 Media1: dpcm: failed to start FE -12
+<6>[  171.177947] tabla_startup(): wrapper substream = subdevice #0  stream = 1 id=2
+<6>[  171.177978] =[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
+<3>[  171.178039] APR: Unable to load q6 image, error:-19
+<6>[  176.083862] [SSP]: debug_work_func(1) - Sensor state: 0x3fff, RC: 0, MS: 0
+<3>[  176.173736] apr_tal:open timeout
+<3>[  176.173919] APR: Unable to open handle
+<3>[  176.174255] q6asm_audio_client_alloc Registration with APR failed
+<3>[  176.174468] q6asm_audio_client_free: APR Common Port Already Closed
+<6>[  176.174804] msm_pcm_open: Could not allocate memory
+<3>[  176.174835] asoc: can't open platform msm-pcm-dsp
+<3>[  176.175018]  MSM8960 Media1: dpcm: failed to start FE -12
+<3>[  176.526336] q6asm_get_audio_client: invalid session: -1
+<4>[  176.526367] audio client is null
+<3>[  176.548980] q6asm_get_audio_client: invalid session: -1
+<4>[  176.549041] audio client is null
+<6>[  176.562774] [Touchkey] IC id 20065
+<3>[  176.606933] q6asm_get_audio_client: invalid session: -1
+<4>[  176.607055] audio client is null
+<3>[  176.623352] q6asm_get_audio_client: invalid session: -1
+<4>[  176.623413] audio client is null
+<6>[  176.673217] cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[  176.673309] synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<6>[  176.673309] [Touchkey] IC id 20065
+<6>[  176.673339] synaptics_rmi4_i2c 3-0020: synaptics_rmi4_glove_mode_enables: [00]: glove disable
+<7>[  176.733215] [TouchKey] normal_mode Enabled
+<6>[  177.851257] binder: release 3248:3248 transaction 57327 in, still active
+<6>[  177.851287] binder: release 3248:3291 transaction 56459 in, still active
+<6>[  177.894256] tamper_fuse before = 1
+<6>[  178.674224] [SSP]: show_sensors_enable - cur_enable = 0
+<6>[  178.674316] [SSP]: set_sensors_enable - new_enable = 1, old_enable = 0
+<6>[  178.674316] [SSP]: enable_sensor - add 1, New = 200000000ns
+<6>[  178.676971] [SSP]: send_instruction - Inst = 0xa1, Sensor Type = 0x0, data = 3
+<6>[  178.743865] tabla_startup(): wrapper substream = subdevice #0  stream = 0 id=1
+<6>[  178.743865] =[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
+<3>[  178.743896] APR: Unable to load q6 image, error:-19
+<6>[  178.757446] [SSP]: MSG From MCU - AKO
+<6>[  178.757446] AD 0 1 0 1
+<6>[  178.768890] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  179.030700] [SSP]: show_sensors_enable - cur_enable = 1
+<6>[  179.030731] [SSP]: set_sensors_enable - new_enable = 0, old_enable = 1
+<6>[  179.030761] [SSP]: ssp_remove_sensor - remove sensor = 1, current state = 0
+<6>[  179.032928] [SSP]: send_instruction - Inst = 0xa2, Sensor Type = 0x0, data = 3
+<6>[  179.112762] [SSP]: show_sensors_enable - cur_enable = 0
+<6>[  179.112854] [SSP]: set_sensors_enable - new_enable = 1, old_enable = 0
+<6>[  179.112884] [SSP]: enable_sensor - add 1, New = 200000000ns
+<6>[  179.115539] [SSP]: send_instruction - Inst = 0xa1, Sensor Type = 0x0, data = 3
+<6>[  179.179107] [SSP]: MSG From MCU - AKC
+<6>[  179.179107] RM 0 0 0 0
+<6>[  179.179107] AKO
+<6>[  179.179107] AD 0 1 0 1
+<6>[  179.379150] sec-fuelgauge 11-0036: 0x02(0xca), 0x03(0xd0), 0x04(0x9f), 0x05(0x74), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x70), 0x0d(0x1e), 
+<6>[  179.382598] sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xff), 0x17(0xfb), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>[  179.382629] sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>[  179.383117] max77693_get_input_current: CHG_CNFG_09(0x17)
+<6>[  179.397430] sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4056mV),Inow(460mA),SOC(79%),Tbat(291)
+<6>[  179.398406] max77693_get_health_state: reg_data(0x3)
+<6>[  179.399841] max77693_get_health_state: vbus_state : 0x3, chg_dtls : 0x1
+<6>[  179.399871] sec-battery sec-battery: sec_bat_monitor_work: Status(Charging), mode(Normal), Health(Good), Cable(4), siop_level(100)
+<6>[  179.400726] max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x41 CABLE:1
+<6>[  179.409667] healthd: battery l=79 v=4056 t=29.1 h=2 st=2 c=0 o=4 ca=460 ct=1 ps=0 chg=u
+<6>[  179.409698] healthd-android: healthd_mode_android_battery_update
+<6>[  179.409729] BatteryPropertiesRegistrar: notifyListeners : start
+<6>[  179.409759] IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>[  179.409759] : 
+<6>[  179.422424] BatteryPropertiesRegistrar: notifyListeners : done

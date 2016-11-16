@@ -71,8 +71,7 @@ obj-$(CONFIG_MSM_SECURE_IO) += scm-io.o
 obj-$(CONFIG_MSM_PIL) += peripheral-loader.o
 obj-$(CONFIG_MSM_PIL) += scm-pas.o
 obj-$(CONFIG_MSM_PIL_QDSP6V3) += pil-q6v3.o
-obj-$(CONFIG_MSM_PIL_LPASS_QDSP6V4) += pil-q6v4.o pil-q6v4-lpass.o
-obj-$(CONFIG_MSM_PIL_MODEM_QDSP6V4) += pil-q6v4.o pil-q6v4-mss.o
+obj-$(CONFIG_MSM_PIL_QDSP6V4) += pil-q6v4.o
 obj-$(CONFIG_MSM_PIL_LPASS_QDSP6V5) += pil-q6v5.o pil-q6v5-lpass.o
 obj-$(CONFIG_MSM_PIL_MSS_QDSP6V5) += pil-q6v5.o pil-q6v5-mss.o
 obj-$(CONFIG_MSM_PIL_MBA) += pil-mba.o
@@ -200,6 +199,8 @@ ifdef CONFIG_MSM_SUBSYSTEM_RESTART
 	obj-$(CONFIG_ARCH_MSM8X60) += modem-8660.o lpass-8660.o
 endif
 obj-$(CONFIG_MSM_SYSMON_COMM) += sysmon.o
+obj-$(CONFIG_MSM_MODEM_8960) += modem-8960.o
+obj-$(CONFIG_MSM_LPASS_8960) += lpass-8960.o
 obj-$(CONFIG_MSM_WCNSS_SSR_8960) += wcnss-ssr-8960.o
 obj-$(CONFIG_MSM_GSS_SSR_8064) += gss-8064.o
 
