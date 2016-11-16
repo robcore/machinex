@@ -118,6 +118,7 @@
 #define MSM8064_RPM_MASTER_STATS_BASE	0x10BB00
 #define MSM8064_PC_CNTR_PHYS	(APQ8064_IMEM_PHYS + 0x664)
 #define MSM8064_PC_CNTR_SIZE		0x40
+#define MSM8064_RPM_MASTER_STATS_BASE	0x10BB00
 
 #define GPIO_CAM_SPI_MOSI		51
 #define GPIO_CAM_SPI_MISO		52
@@ -2740,6 +2741,37 @@ struct platform_device apq8064_rpm_stat_device = {
 	.id = -1,
 	.dev = {
 		.platform_data = &msm_rpm_stat_pdata,
+	},
+};
+
+static struct resource resources_rpm_master_stats[] = {
+	{
+		.start	= MSM8064_RPM_MASTER_STATS_BASE,
+		.end	= MSM8064_RPM_MASTER_STATS_BASE + SZ_256,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static char *master_names[] = {
+	"KPSS",
+	"MPSS",
+	"LPASS",
+	"RIVA",
+	"DSPS",
+};
+
+static struct msm_rpm_master_stats_platform_data msm_rpm_master_stat_pdata = {
+	.masters = master_names,
+	.nomasters = ARRAY_SIZE(master_names),
+};
+
+struct platform_device apq8064_rpm_master_stat_device = {
+	.name = "msm_rpm_master_stat",
+	.id = -1,
+	.num_resources	= ARRAY_SIZE(resources_rpm_master_stats),
+	.resource	= resources_rpm_master_stats,
+	.dev = {
+		.platform_data = &msm_rpm_master_stat_pdata,
 	},
 };
 
