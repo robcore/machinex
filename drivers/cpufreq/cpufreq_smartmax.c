@@ -1260,7 +1260,6 @@ static int __init cpufreq_smartmax_init(void) {
 #ifdef CONFIG_POWERSUSPEND
 	smartmax_power_suspend_handler.suspend = smartmax_early_suspend;
 	smartmax_power_suspend_handler.resume = smartmax_power_resume;
-	smartmax_power_suspend_handler.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 100;
 #endif
 	
 	return cpufreq_register_governor(&cpufreq_gov_smartmax);

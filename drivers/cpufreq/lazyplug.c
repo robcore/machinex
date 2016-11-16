@@ -400,7 +400,7 @@ static void wakeup_boost_lazy(void)
 
 #ifdef CONFIG_POWERSUSPEND
 static void lazyplug_suspend(struct power_suspend *handler)
-#endif
+
 {
 	if (lazyplug_active) {
 		pr_info("lazyplug: screen-off, turn off cores\n");
@@ -414,6 +414,7 @@ static void lazyplug_suspend(struct power_suspend *handler)
 		cpu_all_ctrl(false);
 	}
 }
+#endif
 
 static void cpu_all_up(struct work_struct *work);
 static DECLARE_WORK(cpu_all_up_work, cpu_all_up);
@@ -426,7 +427,7 @@ static void cpu_all_up(struct work_struct *work)
 
 #ifdef CONFIG_POWERSUSPEND
 static void lazyplug_resume(struct power_suspend *handler)
-#endif
+
 {
 	if (lazyplug_active) {
 		pr_info("lazyplug: screen-on, turn on cores\n");

@@ -881,9 +881,6 @@ static void asswax_power_resume(struct power_suspend *handler) {
 static struct power_suspend asswax_power_suspend = {
 	.suspend = asswax_power_suspend,
 	.resume = asswax_power_resume,
-#ifdef CONFIG_MACH_HERO
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
-#endif
 };
 
 static int __init cpufreq_asswax_init(void)
