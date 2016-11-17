@@ -14,7 +14,6 @@
 #include <linux/sched.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
-#include <linux/vmalloc.h>
 #include <linux/stddef.h>
 #include <linux/unistd.h>
 #include <linux/user.h>
@@ -60,8 +59,6 @@ static const char *isa_modes[] = {
 
 extern void setup_mm_for_reboot(void);
 
-static volatile int hlt_counter;
-
 #ifdef CONFIG_SMP
 void arch_trigger_all_cpu_backtrace(void)
 {
@@ -73,41 +70,6 @@ void arch_trigger_all_cpu_backtrace(void)
 	dump_stack();
 }
 #endif
-
-void disable_hlt(void)
-{
-	hlt_counter++;
-}
-
-EXPORT_SYMBOL(disable_hlt);
-
-void enable_hlt(void)
-{
-	hlt_counter--;
-}
-
-EXPORT_SYMBOL(enable_hlt);
-
-int get_hlt(void)
-{
-	return hlt_counter;
-}
-EXPORT_SYMBOL(get_hlt);
-
-static int __init nohlt_setup(char *__unused)
-{
-	hlt_counter = 1;
-	return 1;
-}
-
-static int __init hlt_setup(char *__unused)
-{
-	hlt_counter = 0;
-	return 1;
-}
-
-__setup("nohlt", nohlt_setup);
-__setup("hlt", hlt_setup);
 
 extern void call_with_stack(void (*fn)(void *), void *arg, void *sp);
 typedef void (*phys_reset_t)(unsigned long);
@@ -241,58 +203,38 @@ static void default_idle(void)
 	local_irq_enable();
 }
 
-void (*pm_idle)(void) = default_idle;
-EXPORT_SYMBOL(pm_idle);
-
-/*
- * The idle thread, has rather strange semantics for calling pm_idle,
- * but this is what x86 does and we need to do the same, so that
- * things like cpuidle get called in the same way.  The only difference
- * is that we always respect 'hlt_counter' to prevent low power idle.
- */
-void cpu_idle(void)
+void arch_cpu_idle_prepare(void)
 {
 	local_fiq_enable();
+}
 
-	/* endless idle loop with no priority at all */
-	while (1) {
-		idle_notifier_call_chain(IDLE_START);
-		tick_nohz_idle_enter();
-		rcu_idle_enter();
-		while (!need_resched()) {
-			/*
-			 * We need to disable interrupts here
-			 * to ensure we don't miss a wakeup call.
-			 */
-			local_irq_disable();
+void arch_cpu_idle_enter(void)
+{
+	idle_notifier_call_chain(IDLE_START);
 #ifdef CONFIG_PL310_ERRATA_769419
-			wmb();
+	wmb();
 #endif
-			if (hlt_counter) {
-				local_irq_enable();
-				cpu_relax();
-			} else if (!need_resched()) {
-				stop_critical_timings();
-				if (cpuidle_idle_call())
-					pm_idle();
-				start_critical_timings();
-				/*
-				 * pm_idle functions must always
-				 * return with IRQs enabled.
-				 */
-				WARN_ON(irqs_disabled());
-			} else
-				local_irq_enable();
-		}
-		rcu_idle_exit();
-		tick_nohz_idle_exit();
-		idle_notifier_call_chain(IDLE_END);
-		schedule_preempt_disabled();
+}
+
+void arch_cpu_idle_exit(void)
+{
+	idle_notifier_call_chain(IDLE_END);
+}
+
 #ifdef CONFIG_HOTPLUG_CPU
-		if (cpu_is_offline(smp_processor_id()))
-			cpu_die();
+void arch_cpu_idle_dead(void)
+{
+	cpu_die();
+}
 #endif
-	}
+
+/*
+ * Called from the core idle loop.
+ */
+void arch_cpu_idle(void)
+{
+	if (cpuidle_idle_call())
+		default_idle();
 }
 
 static char reboot_mode = 'h';
@@ -305,31 +247,77 @@ int __init reboot_setup(char *str)
 
 __setup("reboot=", reboot_setup);
 
+/*
+ * Called by kexec, immediately prior to machine_kexec().
+ *
+ * This must completely disable all secondary CPUs; simply causing those CPUs
+ * to execute e.g. a RAM-based pin loop is not sufficient. This allows the
+ * kexec'd kernel to use any and all RAM as it sees fit, without having to
+ * avoid any code or data used by any SW CPU pin loop. The CPU hotplug
+ * functionality embodied in disable_nonboot_cpus() to achieve this.
+ */
+
 void machine_shutdown(void)
 {
-	preempt_disable();
 #ifdef CONFIG_SMP
-	smp_send_stop();
+	/*
+	 * Disable preemption so we're guaranteed to
+	 * run to power off or reboot and prevent
+	 * the possibility of switching to another
+	 * thread that might wind up blocking on
+	 * one of the stopped CPUs.
+	 */
+	preempt_disable();
+
 #endif
+	disable_nonboot_cpus();
 }
+
+/*
+ * Halting simply requires that the secondary CPUs stop performing any
+ * activity (executing tasks, handling interrupts). smp_send_stop()
+ * achieves this.
+ */
 
 void machine_halt(void)
 {
-	machine_shutdown();
+	preempt_disable();
+	smp_send_stop();
 	local_irq_disable();
 	while (1);
 }
 
+/*
+ * Power-off simply requires that the secondary CPUs stop performing any
+ * activity (executing tasks, handling interrupts). smp_send_stop()
+ * achieves this. When the system power is turned off, it will take all CPUs
+ * with it.
+ */
+
 void machine_power_off(void)
 {
-	machine_shutdown();
+	preempt_disable();
+	smp_send_stop();
 	if (pm_power_off)
 		pm_power_off();
 }
 
+/*
+ * Restart requires that the secondary CPUs stop performing any activity
+ * while the primary CPU resets the system. Systems with a single CPU can
+ * use soft_restart() as their machine descriptor's .restart hook, since that
+ * will cause the only available CPU to reset. Systems with multiple CPUs must
+ * provide a HW restart implementation, to ensure that all CPUs reset at once.
+ * This is required so that any code running after reset on the primary CPU
+ * doesn't have to co-ordinate with other CPUs to ensure they aren't still
+ * executing pre-reset code, and using RAM that the primary CPU's code wishes
+ * to use. Implementing such co-ordination would be essentially impossible.
+ */
+
 void machine_restart(char *cmd)
 {
-	machine_shutdown();
+	preempt_disable();
+	smp_send_stop();
 
 	/* Flush the console to make sure all the relevant messages make it
 	 * out to the console drivers */
@@ -362,16 +350,6 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 	if (addr < PAGE_OFFSET || addr > -256UL)
 		return;
 
-	if (is_vmalloc_addr((void *)addr))
-	{
-		struct vm_struct *area = find_vm_area((void *)addr);
-		if (area && area->flags & VM_IOREMAP)
-		{
-			pr_err("%s: not dumping ioremapped address\n",__func__);
-			return;
-		}
-	}
-
 	printk("\n%s: %#lx:\n", name, addr);
 
 	/*
@@ -391,12 +369,7 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 		printk("%04lx ", (unsigned long)p & 0xffff);
 		for (j = 0; j < 8; j++) {
 			u32	data;
-			/*
-			 * vmalloc addresses may point to
-			 * memory-mapped peripherals
-			 */
-			if (is_vmalloc_addr(p) ||
-			    probe_kernel_address(p, data)) {
+			if (probe_kernel_address(p, data)) {
 				printk(" ********");
 			} else {
 				printk(" %08x", data);
@@ -410,44 +383,25 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 {
 	mm_segment_t fs;
-	unsigned long is_user;
 
 	fs = get_fs();
-	is_user = user_mode(regs);
-
 	set_fs(KERNEL_DS);
-	if (!is_user || regs->ARM_pc < TASK_SIZE)
-		show_data(regs->ARM_pc - nbytes, nbytes * 2, "PC");
-	if (!is_user || regs->ARM_lr < TASK_SIZE)
-		show_data(regs->ARM_lr - nbytes, nbytes * 2, "LR");
-	if (!is_user || regs->ARM_sp < TASK_SIZE)
-		show_data(regs->ARM_sp - nbytes, nbytes * 2, "SP");
-	if (!is_user || regs->ARM_ip < TASK_SIZE)
-		show_data(regs->ARM_ip - nbytes, nbytes * 2, "IP");
-	if (!is_user || regs->ARM_fp < TASK_SIZE)
-		show_data(regs->ARM_fp - nbytes, nbytes * 2, "FP");
-	if (!is_user || regs->ARM_r0 < TASK_SIZE)
-		show_data(regs->ARM_r0 - nbytes, nbytes * 2, "R0");
-	if (!is_user || regs->ARM_r1 < TASK_SIZE)
-		show_data(regs->ARM_r1 - nbytes, nbytes * 2, "R1");
-	if (!is_user || regs->ARM_r2 < TASK_SIZE)
-		show_data(regs->ARM_r2 - nbytes, nbytes * 2, "R2");
-	if (!is_user || regs->ARM_r3 < TASK_SIZE)
-		show_data(regs->ARM_r3 - nbytes, nbytes * 2, "R3");
-	if (!is_user || regs->ARM_r4 < TASK_SIZE)
-		show_data(regs->ARM_r4 - nbytes, nbytes * 2, "R4");
-	if (!is_user || regs->ARM_r5 < TASK_SIZE)
-		show_data(regs->ARM_r5 - nbytes, nbytes * 2, "R5");
-	if (!is_user || regs->ARM_r6 < TASK_SIZE)
-		show_data(regs->ARM_r6 - nbytes, nbytes * 2, "R6");
-	if (!is_user || regs->ARM_r7 < TASK_SIZE)
-		show_data(regs->ARM_r7 - nbytes, nbytes * 2, "R7");
-	if (!is_user || regs->ARM_r8 < TASK_SIZE)
-		show_data(regs->ARM_r8 - nbytes, nbytes * 2, "R8");
-	if (!is_user || regs->ARM_r9 < TASK_SIZE)
-		show_data(regs->ARM_r9 - nbytes, nbytes * 2, "R9");
-	if (!is_user || regs->ARM_r10 < TASK_SIZE)
-		show_data(regs->ARM_r10 - nbytes, nbytes * 2, "R10");
+	show_data(regs->ARM_pc - nbytes, nbytes * 2, "PC");
+	show_data(regs->ARM_lr - nbytes, nbytes * 2, "LR");
+	show_data(regs->ARM_sp - nbytes, nbytes * 2, "SP");
+	show_data(regs->ARM_ip - nbytes, nbytes * 2, "IP");
+	show_data(regs->ARM_fp - nbytes, nbytes * 2, "FP");
+	show_data(regs->ARM_r0 - nbytes, nbytes * 2, "R0");
+	show_data(regs->ARM_r1 - nbytes, nbytes * 2, "R1");
+	show_data(regs->ARM_r2 - nbytes, nbytes * 2, "R2");
+	show_data(regs->ARM_r3 - nbytes, nbytes * 2, "R3");
+	show_data(regs->ARM_r4 - nbytes, nbytes * 2, "R4");
+	show_data(regs->ARM_r5 - nbytes, nbytes * 2, "R5");
+	show_data(regs->ARM_r6 - nbytes, nbytes * 2, "R6");
+	show_data(regs->ARM_r7 - nbytes, nbytes * 2, "R7");
+	show_data(regs->ARM_r8 - nbytes, nbytes * 2, "R8");
+	show_data(regs->ARM_r9 - nbytes, nbytes * 2, "R9");
+	show_data(regs->ARM_r10 - nbytes, nbytes * 2, "R10");
 	set_fs(fs);
 }
 
@@ -456,6 +410,12 @@ void __show_regs(struct pt_regs *regs)
 	unsigned long flags;
 	char buf[64];
 
+#ifdef CONFIG_LGE_CRASH_HANDLER
+#ifdef CONFIG_CPU_CP15_MMU
+	unsigned int c1, c2;
+#endif
+	set_crash_store_enable();
+#endif
 	printk("CPU: %d    %s  (%s %.*s)\n",
 		raw_smp_processor_id(), print_tainted(),
 		init_utsname()->release,
@@ -463,7 +423,11 @@ void __show_regs(struct pt_regs *regs)
 		init_utsname()->version);
 	print_symbol("PC is at %s\n", instruction_pointer(regs));
 	print_symbol("LR is at %s\n", regs->ARM_lr);
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	printk("pc : <%08lx>    lr : <%08lx>    psr: %08lx\n"
+#else
 	printk("pc : [<%08lx>]    lr : [<%08lx>]    psr: %08lx\n"
+#endif
 	       "sp : %08lx  ip : %08lx  fp : %08lx\n",
 		regs->ARM_pc, regs->ARM_lr, regs->ARM_cpsr,
 		regs->ARM_sp, regs->ARM_ip, regs->ARM_fp);
@@ -476,6 +440,9 @@ void __show_regs(struct pt_regs *regs)
 	printk("r3 : %08lx  r2 : %08lx  r1 : %08lx  r0 : %08lx\n",
 		regs->ARM_r3, regs->ARM_r2,
 		regs->ARM_r1, regs->ARM_r0);
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	set_crash_store_disable();
+#endif
 
 	flags = regs->ARM_cpsr;
 	buf[0] = flags & PSR_N_BIT ? 'N' : 'n';
@@ -503,11 +470,18 @@ void __show_regs(struct pt_regs *regs)
 			    : "=r" (transbase), "=r" (dac));
 			snprintf(buf, sizeof(buf), "  Table: %08x  DAC: %08x",
 			  	transbase, dac);
+#if defined(CONFIG_CPU_CP15_MMU) && defined(CONFIG_LGE_CRASH_HANDLER)
+			c1 = transbase;
+			c2 = dac;
+#endif
 		}
 #endif
 		asm("mrc p15, 0, %0, c1, c0\n" : "=r" (ctrl));
 
 		printk("Control: %08x%s\n", ctrl, buf);
+#if defined(CONFIG_CPU_CP15_MMU) && defined(CONFIG_LGE_CRASH_HANDLER)
+		lge_save_ctx(regs, ctrl, c1, c2);
+#endif
 	}
 #endif
 
@@ -698,15 +672,15 @@ unsigned long arch_randomize_brk(struct mm_struct *mm)
  * atomic helpers. Insert it into the gate_vma so that it is visible
  * through ptrace and /proc/<pid>/mem.
  */
-static struct vm_area_struct gate_vma;
+static struct vm_area_struct gate_vma = {
+	.vm_start	= 0xffff0000,
+	.vm_end		= 0xffff0000 + PAGE_SIZE,
+	.vm_flags	= VM_READ | VM_EXEC | VM_MAYREAD | VM_MAYEXEC,
+};
 
 static int __init gate_vma_init(void)
 {
-	gate_vma.vm_start	= 0xffff0000;
-	gate_vma.vm_end		= 0xffff0000 + PAGE_SIZE;
-	gate_vma.vm_page_prot	= PAGE_READONLY_EXEC;
-	gate_vma.vm_flags	= VM_READ | VM_EXEC |
-				  VM_MAYREAD | VM_MAYEXEC;
+	gate_vma.vm_page_prot = PAGE_READONLY_EXEC;
 	return 0;
 }
 arch_initcall(gate_vma_init);

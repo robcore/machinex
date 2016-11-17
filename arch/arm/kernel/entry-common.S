@@ -8,6 +8,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <asm/assembler.h>
 #include <asm/unistd.h>
 #include <asm/ftrace.h>
 #include <asm/unwind.h>
@@ -36,7 +37,9 @@ ret_fast_syscall:
  UNWIND(.fnstart	)
  UNWIND(.cantunwind	)
 	disable_irq				@ disable interrupts
-	ldr	r1, [tsk, #TI_FLAGS]
+	ldr	r1, [tsk, #TI_FLAGS]		@ re-check for syscall tracing
+	tst	r1, #_TIF_SYSCALL_WORK
+	bne	__sys_trace_return
 	tst	r1, #_TIF_WORK_MASK
 	bne	fast_work_pending
 #if defined(CONFIG_IRQSOFF_TRACER)
@@ -57,15 +60,18 @@ fast_work_pending:
 work_pending:
 	tst	r1, #_TIF_NEED_RESCHED
 	bne	work_resched
-	tst	r1, #_TIF_SIGPENDING|_TIF_NOTIFY_RESUME
-	beq	no_work_pending
+	/*
+	 * TIF_SIGPENDING or TIF_NOTIFY_RESUME must've been set if we got here
+	 */
+	ldr	r2, [sp, #S_PSR]
 	mov	r0, sp				@ 'regs'
+	tst	r2, #15				@ are we returning to user mode?
+	bne	no_work_pending			@ no?  just leave, then...
 	mov	r2, why				@ 'syscall'
 	tst	r1, #_TIF_SIGPENDING		@ delivering a signal?
 	movne	why, #0				@ prevent further restarts
 	bl	do_notify_resume
 	b	ret_slow_syscall		@ Check work again
-ENDPROC(ret_fast_syscall)
 
 work_resched:
 	bl	schedule
@@ -191,7 +197,7 @@ ENDPROC(ret_from_fork)
 1: 	mcount_get_lr	r1			@ lr of instrumented func
 	mcount_adjust_addr	r0, lr		@ instrumented function
 	adr	lr, BSYM(2f)
-	ret	r2
+	mov	pc, r2
 2:	mcount_exit
 .endm
 
@@ -340,8 +346,8 @@ ENDPROC(ftrace_stub)
  *-----------------------------------------------------------------------------
  */
 
-	/* If we're optimising for StrongARM the resulting code won't
-	   run on an ARM7 and we can save a couple of instructions.
+	/* If we're optimising for StrongARM the resulting code won't 
+	   run on an ARM7 and we can save a couple of instructions.  
 								--pb */
 #ifdef CONFIG_CPU_ARM710
 #define A710(code...) code
@@ -468,7 +474,7 @@ ENTRY(vector_swi)
 2:	mov	why, #0				@ no longer a real syscall
 	cmp	scno, #(__ARM_NR_BASE - __NR_SYSCALL_BASE)
 	eor	r0, scno, #__NR_SYSCALL_BASE	@ put OS number back
-	bcs	arm_syscall
+	bcs	arm_syscall	
 	b	sys_ni_syscall			@ not private func
 ENDPROC(vector_swi)
 
@@ -658,4 +664,5 @@ ENTRY(sys_oabi_call_table)
 #undef OBSOLETE
 
 #endif
+
 

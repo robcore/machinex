@@ -1463,15 +1463,7 @@ struct vm_struct *get_vm_area_caller(unsigned long size, unsigned long flags,
 #endif
 }
 
-/**
- *	find_vm_area  -  find a continuous kernel virtual area
- *	@addr:		base address
- *
- *	Search for the kernel VM area starting at @addr, and return it.
- *	It is up to the caller to do all required locking to keep the returned
- *	pointer valid.
- */
-struct vm_struct *find_vm_area(const void *addr)
+static struct vm_struct *find_vm_area(const void *addr)
 {
 	struct vmap_area *va;
 
@@ -1757,7 +1749,7 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
 	 * structures allocated in the __get_vm_area_node() function contain
 	 * references to the virtual address of the vmalloc'ed block.
 	 */
-	kmemleak_alloc(addr, real_size, 2, gfp_mask);
+	kmemleak_alloc(addr, real_size, 3, gfp_mask);
 
 	return addr;
 
@@ -2678,9 +2670,6 @@ static int s_show(struct seq_file *m, void *p)
 
 	if (v->flags & VM_VPAGES)
 		seq_printf(m, " vpages");
-
-	if (v->flags & VM_LOWMEM)
-		seq_printf(m, " lowmem");
 
 	show_numa_info(m, v);
 	seq_putc(m, '\n');
