@@ -76,7 +76,7 @@ ENTRY(v7_flush_icache_all)
 	mov	r0, #0
 	ALT_SMP(mcr	p15, 0, r0, c7, c1, 0)		@ invalidate I-cache inner shareable
 	ALT_UP(mcr	p15, 0, r0, c7, c5, 0)		@ I+BTB cache invalidate
-	ret	lr
+	mov	pc, lr
 ENDPROC(v7_flush_icache_all)
 
 /*
@@ -168,7 +168,7 @@ finished:
 	mcr	p15, 2, r10, c0, c0, 0		@ select current cache level in cssr
 	dsb	st
 	isb
-	ret	lr
+	mov	pc, lr
 ENDPROC(v7_flush_dcache_all)
 
 /*
@@ -191,7 +191,7 @@ ENTRY(v7_flush_kern_cache_all)
 	ALT_UP(mcr	p15, 0, r0, c7, c5, 0)	@ I+BTB cache invalidate
  ARM(	ldmfd	sp!, {r4-r5, r7, r9-r11, lr}	)
  THUMB(	ldmfd	sp!, {r4-r7, r9-r11, lr}	)
-	ret	lr
+	mov	pc, lr
 ENDPROC(v7_flush_kern_cache_all)
 
 /*
@@ -235,7 +235,7 @@ ENTRY(v7_flush_user_cache_all)
  *	- we have a VIPT cache.
  */
 ENTRY(v7_flush_user_cache_range)
-	ret	lr
+	mov	pc, lr
 ENDPROC(v7_flush_user_cache_all)
 ENDPROC(v7_flush_user_cache_range)
 
@@ -296,7 +296,7 @@ ENTRY(v7_coherent_user_range)
 	ALT_UP(mcr	p15, 0, r0, c7, c5, 6)	@ invalidate BTB
 	dsb	ishst
 	isb
-	ret	lr
+	mov	pc, lr
 
 /*
  * Fault handling for the cache operation above. If the virtual address in r0
@@ -307,7 +307,7 @@ ENTRY(v7_coherent_user_range)
 	dsb
 #endif
 	mov	r0, #-EFAULT
-	ret	lr
+	mov	pc, lr
  UNWIND(.fnend		)
 ENDPROC(v7_coherent_kern_range)
 ENDPROC(v7_coherent_user_range)
@@ -439,7 +439,7 @@ ENTRY(v7_dma_unmap_area)
 	add	r1, r1, r0
 	teq	r2, #DMA_TO_DEVICE
 	bne	v7_dma_inv_range
-	ret	lr
+	mov	pc, lr
 ENDPROC(v7_dma_unmap_area)
 
 	__INITDATA

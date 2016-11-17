@@ -2,8 +2,6 @@
  * relocate_kernel.S - put the kernel image in place to boot
  */
 
-#include <linux/linkage.h>
-#include <asm/assembler.h>
 #include <asm/kexec.h>
 #include <asm/assembler.h>
 

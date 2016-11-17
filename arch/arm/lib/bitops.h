@@ -1,4 +1,3 @@
-#include <asm/assembler.h>
 #include <asm/unwind.h>
 #include <asm/assembler.h>
 
@@ -67,7 +66,7 @@ UNWIND(	.fnstart	)
 	\instr	r2, r2, r3
 	str	r2, [r1, r0, lsl #2]
 	restore_irqs ip
-	ret	lr
+	mov	pc, lr
 UNWIND(	.fnend		)
 ENDPROC(\name		)
 	.endm
@@ -95,7 +94,7 @@ UNWIND(	.fnstart	)
 	\store	r2, [r1]
 	moveq	r0, #0
 	restore_irqs ip
-	ret	lr
+	mov	pc, lr
 UNWIND(	.fnend		)
 ENDPROC(\name		)
 	.endm

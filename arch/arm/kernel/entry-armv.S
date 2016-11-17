@@ -240,7 +240,7 @@ svc_preempt:
 1:	bl	preempt_schedule_irq		@ irq en/disable is done inside
 	ldr	r0, [tsk, #TI_FLAGS]		@ get new tasks TI_FLAGS
 	tst	r0, #_TIF_NEED_RESCHED
-	reteq	r8				@ go again
+	moveq	pc, r8				@ go again
 	b	1b
 #endif
 
@@ -522,7 +522,7 @@ ENDPROC(__und_usr)
  * The out of line fixup for the ldrt instructions above.
  */
 	.pushsection .fixup, "ax"
-4:	ret	r9
+4:	mov	pc, r9
 	.popsection
 	.pushsection __ex_table,"a"
 	.long	1b, 4b
@@ -608,33 +608,33 @@ call_fpe:
  THUMB(	add	pc, r8			)
 	nop
 
-	ret.w	lr				@ CP#0
+	movw_pc	lr				@ CP#0
 	W(b)	do_fpe				@ CP#1 (FPE)
 	W(b)	do_fpe				@ CP#2 (FPE)
-	ret.w	lr				@ CP#3
+	movw_pc	lr				@ CP#3
 #ifdef CONFIG_CRUNCH
 	b	crunch_task_enable		@ CP#4 (MaverickCrunch)
 	b	crunch_task_enable		@ CP#5 (MaverickCrunch)
 	b	crunch_task_enable		@ CP#6 (MaverickCrunch)
 #else
-	ret.w	lr				@ CP#4
-	ret.w	lr				@ CP#5
-	ret.w	lr				@ CP#6
+	movw_pc	lr				@ CP#4
+	movw_pc	lr				@ CP#5
+	movw_pc	lr				@ CP#6
 #endif
-	ret.w	lr				@ CP#7
-	ret.w	lr				@ CP#8
-	ret.w	lr				@ CP#9
+	movw_pc	lr				@ CP#7
+	movw_pc	lr				@ CP#8
+	movw_pc	lr				@ CP#9
 #ifdef CONFIG_VFP
 	W(b)	do_vfp				@ CP#10 (VFP)
 	W(b)	do_vfp				@ CP#11 (VFP)
 #else
-	ret.w	lr				@ CP#10 (VFP)
-	ret.w	lr				@ CP#11 (VFP)
+	movw_pc	lr				@ CP#10 (VFP)
+	movw_pc	lr				@ CP#11 (VFP)
 #endif
-	ret.w	lr				@ CP#12
-	ret.w	lr				@ CP#13
-	ret.w	lr				@ CP#14 (Debug)
-	ret.w	lr				@ CP#15 (Control)
+	movw_pc	lr				@ CP#12
+	movw_pc	lr				@ CP#13
+	movw_pc	lr				@ CP#14 (Debug)
+	movw_pc	lr				@ CP#15 (Control)
 
 #ifdef NEED_CPU_ARCHITECTURE
 	.align	2
@@ -687,7 +687,7 @@ ENTRY(fp_enter)
 	.popsection
 
 ENTRY(no_fp)
-	ret	lr
+	mov	pc, lr
 ENDPROC(no_fp)
 
 __und_usr_fault_32:
@@ -784,7 +784,7 @@ ENDPROC(__switch_to)
 #ifdef CONFIG_ARM_THUMB
 	bx	\reg
 #else
-	ret	\reg
+	mov	pc, \reg
 #endif
 	.endm
 
@@ -967,7 +967,7 @@ kuser_cmpxchg64_fixup:
 #if __LINUX_ARM_ARCH__ < 6
 	bcc	kuser_cmpxchg32_fixup
 #endif
-	ret	lr
+	mov	pc, lr
 	.previous
 
 #else
@@ -1035,7 +1035,7 @@ kuser_cmpxchg32_fixup:
 	subs	r8, r4, r7
 	rsbcss	r8, r8, #(2b - 1b)
 	strcs	r7, [sp, #S_PC]
-	ret	lr
+	mov	pc, lr
 	.previous
 
 #else

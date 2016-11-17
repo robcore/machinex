@@ -41,7 +41,7 @@ ENTRY(vfp_null_entry)
 	sub	r11, r4, #1		@ decrement it
 	str	r11, [r10, #TI_PREEMPT]
 #endif
-	ret	lr
+	mov	pc, lr
 ENDPROC(vfp_null_entry)
 
 	.align	2
