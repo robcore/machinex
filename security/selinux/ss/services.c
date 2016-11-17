@@ -735,9 +735,6 @@ out:
 	kfree(n);
 	kfree(t);
 
-#ifdef CONFIG_ALWAYS_ENFORCE
-	selinux_enforcing = 1;
-#endif
 	if (!selinux_enforcing)
 		return 0;
 	return -EPERM;
