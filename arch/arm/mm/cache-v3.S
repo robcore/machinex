@@ -53,7 +53,7 @@ ENTRY(v3_flush_kern_cache_all)
 ENTRY(v3_flush_user_cache_range)
 	mov	ip, #0
 	mcreq	p15, 0, ip, c7, c0, 0		@ flush ID cache
-	mov	pc, lr
+	ret	lr
 
 /*
  *	coherent_kern_range(start, end)
@@ -104,7 +104,7 @@ ENTRY(v3_flush_kern_dcache_area)
 ENTRY(v3_dma_flush_range)
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c0, 0		@ flush ID cache
-	mov	pc, lr
+	ret	lr
 
 /*
  *	dma_unmap_area(start, size, dir)
@@ -124,7 +124,7 @@ ENTRY(v3_dma_unmap_area)
  *	- dir	- DMA direction
  */
 ENTRY(v3_dma_map_area)
-	mov	pc, lr
+	ret	lr
 ENDPROC(v3_dma_unmap_area)
 ENDPROC(v3_dma_map_area)
 
