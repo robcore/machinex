@@ -23,7 +23,7 @@
 					    usage_count */
 #define RPM_AUTO		0x08	/* Use autosuspend_delay */
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_RUNTIME
 
 extern struct workqueue_struct *pm_wq;
 
@@ -155,6 +155,9 @@ static inline void pm_runtime_set_autosuspend_delay(struct device *dev,
 						int delay) {}
 static inline unsigned long pm_runtime_autosuspend_expiration(
 				struct device *dev) { return 0; }
+
+static inline void pm_runtime_update_max_time_suspended(struct device *dev,
+							s64 delta_ns) {}
 
 #endif /* !CONFIG_PM_RUNTIME */
 
