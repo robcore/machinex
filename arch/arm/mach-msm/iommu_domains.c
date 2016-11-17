@@ -124,7 +124,7 @@ void msm_iommu_unmap_extra(struct iommu_domain *domain,
 
 static int msm_iommu_map_iova_phys(struct iommu_domain *domain,
 				unsigned long iova,
-				unsigned long phys,
+				phys_addr_t phys,
 				unsigned long size,
 				int cached)
 {
@@ -156,7 +156,7 @@ err1:
 
 }
 
-int msm_iommu_map_contig_buffer(unsigned long phys,
+int msm_iommu_map_contig_buffer(phys_addr_t phys,
 				unsigned int domain_no,
 				unsigned int partition_no,
 				unsigned long size,
