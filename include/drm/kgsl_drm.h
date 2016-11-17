@@ -76,7 +76,7 @@ DRM_IOWR(DRM_COMMAND_BASE + DRM_KGSL_GEM_CREATE_FD, \
 struct drm_kgsl_gem_create_fd)
 
 /* Maximum number of sub buffers per GEM object */
-#define DRM_KGSL_GEM_MAX_BUFFERS 2
+#define DRM_KGSL_GEM_MAX_BUFFERS 3
 
 /* Memory types - these define the source and caching policies
    of the GEM memory chunk */
