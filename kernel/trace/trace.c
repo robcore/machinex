@@ -3792,6 +3792,8 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 	struct page *pages[2];
 	int nr_pages = 1;
 	ssize_t written;
+	void *page1;
+	void *page2 = NULL;
 	int offset;
 	int size;
 	int len;
@@ -3834,8 +3836,9 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 		goto out;
 	}
 
-	for (i = 0; i < nr_pages; i++)
-		map_page[i] = kmap_atomic(pages[i]);
+	page1 = kmap_atomic(pages[0]);
+	if (nr_pages == 2)
+		page2 = kmap_atomic(pages[1]);
 
 	local_save_flags(irq_flags);
 	size = sizeof(*entry) + cnt + 2; /* possible \n added */
@@ -3853,10 +3856,10 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 
 	if (nr_pages == 2) {
 		len = PAGE_SIZE - offset;
-		memcpy(&entry->buf, map_page[0] + offset, len);
-		memcpy(&entry->buf[len], map_page[1], cnt - len);
+		memcpy(&entry->buf, page1 + offset, len);
+		memcpy(&entry->buf[len], page2, cnt - len);
 	} else
-		memcpy(&entry->buf, map_page[0] + offset, cnt);
+		memcpy(&entry->buf, page1 + offset, cnt);
 
 	if (entry->buf[cnt - 1] != '\n') {
 		entry->buf[cnt] = '\n';
@@ -3873,10 +3876,11 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 	*fpos += written;
 
  out_unlock:
-	for (i = 0; i < nr_pages; i++){
-		kunmap_atomic(map_page[i]);
-		put_page(pages[i]);
-	}
+	if (nr_pages == 2)
+		kunmap_atomic(page2);
+	kunmap_atomic(page1);
+	while (nr_pages > 0)
+		put_page(pages[--nr_pages]);
  out:
 	return written;
 }
