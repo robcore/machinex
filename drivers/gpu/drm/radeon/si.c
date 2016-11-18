@@ -2291,6 +2291,7 @@ static int si_gpu_soft_reset(struct radeon_device *rdev)
 		      SOFT_RESET_GDS |
 		      SOFT_RESET_PA |
 		      SOFT_RESET_SC |
+		      SOFT_RESET_BCI |
 		      SOFT_RESET_SPI |
 		      SOFT_RESET_SX |
 		      SOFT_RESET_TC |
@@ -4025,10 +4026,6 @@ int si_init(struct radeon_device *rdev)
 	struct radeon_ring *ring = &rdev->ring[RADEON_RING_TYPE_GFX_INDEX];
 	int r;
 
-	/* This don't do much */
-	r = radeon_gem_init(rdev);
-	if (r)
-		return r;
 	/* Read BIOS */
 	if (!radeon_get_bios(rdev)) {
 		if (ASIC_IS_AVIVO(rdev))

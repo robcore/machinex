@@ -370,7 +370,6 @@ void r600_audio_schedule_polling(struct radeon_device *rdev);
 void r600_audio_enable_polling(struct drm_encoder *encoder);
 void r600_audio_disable_polling(struct drm_encoder *encoder);
 void r600_audio_fini(struct radeon_device *rdev);
-void r600_hdmi_init(struct drm_encoder *encoder);
 int r600_hdmi_buffer_status_changed(struct drm_encoder *encoder);
 void r600_hdmi_update_audio_settings(struct drm_encoder *encoder);
 /* r600 blit */

@@ -197,4 +197,10 @@
 #define R600_HDMI_CONFIG1                 0x7600
 #define R600_HDMI_CONFIG2                 0x7a00
 
+#define DCE2_HDMI_OFFSET0		(0x7400 - 0x7400)
+#define DCE2_HDMI_OFFSET1		(0x7700 - 0x7400)
+/* DCE3.2 second instance starts at 0x7800 */
+#define DCE3_HDMI_OFFSET0		(0x7400 - 0x7400)
+#define DCE3_HDMI_OFFSET1		(0x7800 - 0x7400)
+
 #endif

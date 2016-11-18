@@ -165,7 +165,9 @@ static void r600_hdmi_videoinfoframe(
 {
 	struct drm_device *dev = encoder->dev;
 	struct radeon_device *rdev = dev->dev_private;
-	uint32_t offset = to_radeon_encoder(encoder)->hdmi_offset;
+	struct radeon_encoder *radeon_encoder = to_radeon_encoder(encoder);
+	struct radeon_encoder_atom_dig *dig = radeon_encoder->enc_priv;
+	uint32_t offset = dig->afmt->offset;
 
 	uint8_t frame[14];
 
@@ -231,7 +233,9 @@ static void r600_hdmi_audioinfoframe(
 {
 	struct drm_device *dev = encoder->dev;
 	struct radeon_device *rdev = dev->dev_private;
-	uint32_t offset = to_radeon_encoder(encoder)->hdmi_offset;
+	struct radeon_encoder *radeon_encoder = to_radeon_encoder(encoder);
+	struct radeon_encoder_atom_dig *dig = radeon_encoder->enc_priv;
+	uint32_t offset = dig->afmt->offset;
 
 	uint8_t frame[11];
 
@@ -258,11 +262,13 @@ static void r600_hdmi_audioinfoframe(
 /*
  * test if audio buffer is filled enough to start playing
  */
-static int r600_hdmi_is_audio_buffer_filled(struct drm_encoder *encoder)
+static bool r600_hdmi_is_audio_buffer_filled(struct drm_encoder *encoder)
 {
 	struct drm_device *dev = encoder->dev;
 	struct radeon_device *rdev = dev->dev_private;
-	uint32_t offset = to_radeon_encoder(encoder)->hdmi_offset;
+	struct radeon_encoder *radeon_encoder = to_radeon_encoder(encoder);
+	struct radeon_encoder_atom_dig *dig = radeon_encoder->enc_priv;
+	uint32_t offset = dig->afmt->offset;
 
 	return (RREG32(offset+R600_HDMI_STATUS) & 0x10) != 0;
 }
@@ -360,7 +366,9 @@ void r600_hdmi_update_audio_settings(struct drm_encoder *encoder)
 {
 	struct drm_device *dev = encoder->dev;
 	struct radeon_device *rdev = dev->dev_private;
-	uint32_t offset = to_radeon_encoder(encoder)->hdmi_offset;
+	struct radeon_encoder *radeon_encoder = to_radeon_encoder(encoder);
+	struct radeon_encoder_atom_dig *dig = radeon_encoder->enc_priv;
+	uint32_t offset;
 
 	int channels = r600_audio_channels(rdev);
 	int rate = r600_audio_rate(rdev);

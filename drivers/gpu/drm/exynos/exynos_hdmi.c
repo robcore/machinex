@@ -361,6 +361,13 @@ static const u8 hdmiphy_conf27_027[32] = {
 	0x54, 0xe3, 0x24, 0x00, 0x00, 0x00, 0x01, 0x00,
 };
 
+static const u8 hdmiphy_conf74_176[32] = {
+	0x01, 0xd1, 0x1f, 0x10, 0x40, 0x5b, 0xef, 0x08,
+	0x81, 0xa0, 0xb9, 0xd8, 0x45, 0xa0, 0xac, 0x80,
+	0x5a, 0x80, 0x11, 0x04, 0x02, 0x22, 0x44, 0x86,
+	0x54, 0xa6, 0x24, 0x01, 0x00, 0x00, 0x01, 0x00,
+};
+
 static const u8 hdmiphy_conf74_25[32] = {
 	0x01, 0xd1, 0x1f, 0x10, 0x40, 0x40, 0xf8, 0x08,
 	0x81, 0xa0, 0xba, 0xd8, 0x45, 0xa0, 0xac, 0x80,
@@ -750,6 +757,63 @@ static const struct hdmi_preset_conf hdmi_conf_1080i60 = {
 	},
 };
 
+static const struct hdmi_preset_conf hdmi_conf_1080p30 = {
+	.core = {
+		.h_blank = {0x18, 0x01},
+		.v2_blank = {0x65, 0x04},
+		.v1_blank = {0x2d, 0x00},
+		.v_line = {0x65, 0x04},
+		.h_line = {0x98, 0x08},
+		.hsync_pol = {0x00},
+		.vsync_pol = {0x00},
+		.int_pro_mode = {0x00},
+		.v_blank_f0 = {0xff, 0xff},
+		.v_blank_f1 = {0xff, 0xff},
+		.h_sync_start = {0x56, 0x00},
+		.h_sync_end = {0x82, 0x00},
+		.v_sync_line_bef_2 = {0x09, 0x00},
+		.v_sync_line_bef_1 = {0x04, 0x00},
+		.v_sync_line_aft_2 = {0xff, 0xff},
+		.v_sync_line_aft_1 = {0xff, 0xff},
+		.v_sync_line_aft_pxl_2 = {0xff, 0xff},
+		.v_sync_line_aft_pxl_1 = {0xff, 0xff},
+		.v_blank_f2 = {0xff, 0xff},
+		.v_blank_f3 = {0xff, 0xff},
+		.v_blank_f4 = {0xff, 0xff},
+		.v_blank_f5 = {0xff, 0xff},
+		.v_sync_line_aft_3 = {0xff, 0xff},
+		.v_sync_line_aft_4 = {0xff, 0xff},
+		.v_sync_line_aft_5 = {0xff, 0xff},
+		.v_sync_line_aft_6 = {0xff, 0xff},
+		.v_sync_line_aft_pxl_3 = {0xff, 0xff},
+		.v_sync_line_aft_pxl_4 = {0xff, 0xff},
+		.v_sync_line_aft_pxl_5 = {0xff, 0xff},
+		.v_sync_line_aft_pxl_6 = {0xff, 0xff},
+		.vact_space_1 = {0xff, 0xff},
+		.vact_space_2 = {0xff, 0xff},
+		.vact_space_3 = {0xff, 0xff},
+		.vact_space_4 = {0xff, 0xff},
+		.vact_space_5 = {0xff, 0xff},
+		.vact_space_6 = {0xff, 0xff},
+		/* other don't care */
+	},
+	.tg = {
+		0x00, /* cmd */
+		0x98, 0x08, /* h_fsz */
+		0x18, 0x01, 0x80, 0x07, /* hact */
+		0x65, 0x04, /* v_fsz */
+		0x01, 0x00, 0x33, 0x02, /* vsync */
+		0x2d, 0x00, 0x38, 0x04, /* vact */
+		0x33, 0x02, /* field_chg */
+		0x48, 0x02, /* vact_st2 */
+		0x00, 0x00, /* vact_st3 */
+		0x00, 0x00, /* vact_st4 */
+		0x01, 0x00, 0x01, 0x00, /* vsync top/bot */
+		0x01, 0x00, 0x33, 0x02, /* field top/bot */
+		0x00, /* 3d FP */
+	},
+};
+
 static const struct hdmi_preset_conf hdmi_conf_1080p50 = {
 	.core = {
 		.h_blank = {0xd0, 0x02},
@@ -864,6 +928,7 @@ static const struct hdmi_conf hdmi_confs[] = {
 	{ 1280, 720, 60, false, hdmiphy_conf74_25, &hdmi_conf_720p60 },
 	{ 1920, 1080, 50, true, hdmiphy_conf74_25, &hdmi_conf_1080i50 },
 	{ 1920, 1080, 60, true, hdmiphy_conf74_25, &hdmi_conf_1080i60 },
+	{ 1920, 1080, 30, false, hdmiphy_conf74_176, &hdmi_conf_1080p30 },
 	{ 1920, 1080, 50, false, hdmiphy_conf148_5, &hdmi_conf_1080p50 },
 	{ 1920, 1080, 60, false, hdmiphy_conf148_5, &hdmi_conf_1080p60 },
 };
@@ -1215,10 +1280,12 @@ static int hdmi_get_edid(void *ctx, struct drm_connector *connector,
 
 	raw_edid = drm_get_edid(connector, hdata->ddc_port->adapter);
 	if (raw_edid) {
+		hdata->dvi_mode = !drm_detect_hdmi_monitor(raw_edid);
 		memcpy(edid, raw_edid, min((1 + raw_edid->extensions)
 					* EDID_LENGTH, len));
-		DRM_DEBUG_KMS("width[%d] x height[%d]\n",
-				raw_edid->width_cm, raw_edid->height_cm);
+		DRM_DEBUG_KMS("%s : width[%d] x height[%d]\n",
+			(hdata->dvi_mode ? "dvi monitor" : "hdmi monitor"),
+			raw_edid->width_cm, raw_edid->height_cm);
 	} else {
 		return -ENODEV;
 	}
@@ -1463,10 +1530,7 @@ static void hdmi_audio_init(struct hdmi_context *hdata)
 
 static void hdmi_audio_control(struct hdmi_context *hdata, bool onoff)
 {
-	u32 mod;
-
-	mod = hdmi_reg_read(hdata, HDMI_MODE_SEL);
-	if (mod & HDMI_DVI_MODE_EN)
+	if (hdata->dvi_mode)
 		return;
 
 	hdmi_reg_writeb(hdata, HDMI_AUI_CON, onoff ? 2 : 0);
@@ -1513,6 +1577,14 @@ static void hdmi_conf_init(struct hdmi_context *hdata)
 		HDMI_MODE_HDMI_EN, HDMI_MODE_MASK);
 	/* disable bluescreen */
 	hdmi_reg_writemask(hdata, HDMI_CON_0, 0, HDMI_BLUE_SCR_EN);
+
+	if (hdata->dvi_mode) {
+		/* choose DVI mode */
+		hdmi_reg_writemask(hdata, HDMI_MODE_SEL,
+				HDMI_MODE_DVI_EN, HDMI_MODE_MASK);
+		hdmi_reg_writeb(hdata, HDMI_CON_2,
+				HDMI_VID_PREAMBLE_DIS | HDMI_GUARD_BAND_DIS);
+	}
 
 	if (hdata->is_v13) {
 		/* choose bluescreen (fecal) color */

@@ -57,6 +57,8 @@ struct hdmi_win_data {
 	unsigned int		fb_y;
 	unsigned int		fb_width;
 	unsigned int		fb_height;
+	unsigned int		src_width;
+	unsigned int		src_height;
 	unsigned int		mode_width;
 	unsigned int		mode_height;
 	unsigned int		scan_flags;
@@ -352,10 +354,7 @@ static void vp_video_buffer(struct mixer_context *ctx, int win)
 	struct mixer_resources *res = &ctx->mixer_res;
 	unsigned long flags;
 	struct hdmi_win_data *win_data;
-	unsigned int full_width, full_height, width, height;
 	unsigned int x_ratio, y_ratio;
-	unsigned int src_x_offset, src_y_offset, dst_x_offset, dst_y_offset;
-	unsigned int mode_width, mode_height;
 	unsigned int buf_num;
 	dma_addr_t luma_addr[2], chroma_addr[2];
 	bool tiled_mode = false;
@@ -382,21 +381,9 @@ static void vp_video_buffer(struct mixer_context *ctx, int win)
 		return;
 	}
 
-	full_width = win_data->fb_width;
-	full_height = win_data->fb_height;
-	width = win_data->crtc_width;
-	height = win_data->crtc_height;
-	mode_width = win_data->mode_width;
-	mode_height = win_data->mode_height;
-
 	/* scaling feature: (src << 16) / dst */
-	x_ratio = (width << 16) / width;
-	y_ratio = (height << 16) / height;
-
-	src_x_offset = win_data->fb_x;
-	src_y_offset = win_data->fb_y;
-	dst_x_offset = win_data->crtc_x;
-	dst_y_offset = win_data->crtc_y;
+	x_ratio = (win_data->src_width << 16) / win_data->crtc_width;
+	y_ratio = (win_data->src_height << 16) / win_data->crtc_height;
 
 	if (buf_num == 2) {
 		luma_addr[0] = win_data->dma_addr;
@@ -404,7 +391,7 @@ static void vp_video_buffer(struct mixer_context *ctx, int win)
 	} else {
 		luma_addr[0] = win_data->dma_addr;
 		chroma_addr[0] = win_data->dma_addr
-			+ (full_width * full_height);
+			+ (win_data->fb_width * win_data->fb_height);
 	}
 
 	if (win_data->scan_flags & DRM_MODE_FLAG_INTERLACE) {
@@ -413,8 +400,8 @@ static void vp_video_buffer(struct mixer_context *ctx, int win)
 			luma_addr[1] = luma_addr[0] + 0x40;
 			chroma_addr[1] = chroma_addr[0] + 0x40;
 		} else {
-			luma_addr[1] = luma_addr[0] + full_width;
-			chroma_addr[1] = chroma_addr[0] + full_width;
+			luma_addr[1] = luma_addr[0] + win_data->fb_width;
+			chroma_addr[1] = chroma_addr[0] + win_data->fb_width;
 		}
 	} else {
 		ctx->interlace = false;
@@ -435,26 +422,26 @@ static void vp_video_buffer(struct mixer_context *ctx, int win)
 	vp_reg_writemask(res, VP_MODE, val, VP_MODE_FMT_MASK);
 
 	/* setting size of input image */
-	vp_reg_write(res, VP_IMG_SIZE_Y, VP_IMG_HSIZE(full_width) |
-		VP_IMG_VSIZE(full_height));
+	vp_reg_write(res, VP_IMG_SIZE_Y, VP_IMG_HSIZE(win_data->fb_width) |
+		VP_IMG_VSIZE(win_data->fb_height));
 	/* chroma height has to reduced by 2 to avoid chroma distorions */
-	vp_reg_write(res, VP_IMG_SIZE_C, VP_IMG_HSIZE(full_width) |
-		VP_IMG_VSIZE(full_height / 2));
+	vp_reg_write(res, VP_IMG_SIZE_C, VP_IMG_HSIZE(win_data->fb_width) |
+		VP_IMG_VSIZE(win_data->fb_height / 2));
 
-	vp_reg_write(res, VP_SRC_WIDTH, width);
-	vp_reg_write(res, VP_SRC_HEIGHT, height);
+	vp_reg_write(res, VP_SRC_WIDTH, win_data->src_width);
+	vp_reg_write(res, VP_SRC_HEIGHT, win_data->src_height);
 	vp_reg_write(res, VP_SRC_H_POSITION,
-			VP_SRC_H_POSITION_VAL(src_x_offset));
-	vp_reg_write(res, VP_SRC_V_POSITION, src_y_offset);
+			VP_SRC_H_POSITION_VAL(win_data->fb_x));
+	vp_reg_write(res, VP_SRC_V_POSITION, win_data->fb_y);
 
-	vp_reg_write(res, VP_DST_WIDTH, width);
-	vp_reg_write(res, VP_DST_H_POSITION, dst_x_offset);
+	vp_reg_write(res, VP_DST_WIDTH, win_data->crtc_width);
+	vp_reg_write(res, VP_DST_H_POSITION, win_data->crtc_x);
 	if (ctx->interlace) {
-		vp_reg_write(res, VP_DST_HEIGHT, height / 2);
-		vp_reg_write(res, VP_DST_V_POSITION, dst_y_offset / 2);
+		vp_reg_write(res, VP_DST_HEIGHT, win_data->crtc_height / 2);
+		vp_reg_write(res, VP_DST_V_POSITION, win_data->crtc_y / 2);
 	} else {
-		vp_reg_write(res, VP_DST_HEIGHT, height);
-		vp_reg_write(res, VP_DST_V_POSITION, dst_y_offset);
+		vp_reg_write(res, VP_DST_HEIGHT, win_data->crtc_height);
+		vp_reg_write(res, VP_DST_V_POSITION, win_data->crtc_y);
 	}
 
 	vp_reg_write(res, VP_H_RATIO, x_ratio);
@@ -468,8 +455,8 @@ static void vp_video_buffer(struct mixer_context *ctx, int win)
 	vp_reg_write(res, VP_TOP_C_PTR, chroma_addr[0]);
 	vp_reg_write(res, VP_BOT_C_PTR, chroma_addr[1]);
 
-	mixer_cfg_scan(ctx, mode_height);
-	mixer_cfg_rgb_fmt(ctx, mode_height);
+	mixer_cfg_scan(ctx, win_data->mode_height);
+	mixer_cfg_rgb_fmt(ctx, win_data->mode_height);
 	mixer_cfg_layer(ctx, win, true);
 	mixer_run(ctx);
 
@@ -484,10 +471,8 @@ static void mixer_graph_buffer(struct mixer_context *ctx, int win)
 	struct mixer_resources *res = &ctx->mixer_res;
 	unsigned long flags;
 	struct hdmi_win_data *win_data;
-	unsigned int full_width, width, height;
 	unsigned int x_ratio, y_ratio;
 	unsigned int src_x_offset, src_y_offset, dst_x_offset, dst_y_offset;
-	unsigned int mode_width, mode_height;
 	dma_addr_t dma_addr;
 	unsigned int fmt;
 	u32 val;
@@ -510,26 +495,17 @@ static void mixer_graph_buffer(struct mixer_context *ctx, int win)
 		fmt = ARGB8888;
 	}
 
-	dma_addr = win_data->dma_addr;
-	full_width = win_data->fb_width;
-	width = win_data->crtc_width;
-	height = win_data->crtc_height;
-	mode_width = win_data->mode_width;
-	mode_height = win_data->mode_height;
-
 	/* 2x scaling feature */
 	x_ratio = 0;
 	y_ratio = 0;
 
-	src_x_offset = win_data->fb_x;
-	src_y_offset = win_data->fb_y;
 	dst_x_offset = win_data->crtc_x;
 	dst_y_offset = win_data->crtc_y;
 
 	/* converting dma address base and source offset */
-	dma_addr = dma_addr
-		+ (src_x_offset * win_data->bpp >> 3)
-		+ (src_y_offset * full_width * win_data->bpp >> 3);
+	dma_addr = win_data->dma_addr
+		+ (win_data->fb_x * win_data->bpp >> 3)
+		+ (win_data->fb_y * win_data->fb_width * win_data->bpp >> 3);
 	src_x_offset = 0;
 	src_y_offset = 0;
 
@@ -546,10 +522,10 @@ static void mixer_graph_buffer(struct mixer_context *ctx, int win)
 		MXR_GRP_CFG_FORMAT_VAL(fmt), MXR_GRP_CFG_FORMAT_MASK);
 
 	/* setup geometry */
-	mixer_reg_write(res, MXR_GRAPHIC_SPAN(win), full_width);
+	mixer_reg_write(res, MXR_GRAPHIC_SPAN(win), win_data->fb_width);
 
-	val  = MXR_GRP_WH_WIDTH(width);
-	val |= MXR_GRP_WH_HEIGHT(height);
+	val  = MXR_GRP_WH_WIDTH(win_data->crtc_width);
+	val |= MXR_GRP_WH_HEIGHT(win_data->crtc_height);
 	val |= MXR_GRP_WH_H_SCALE(x_ratio);
 	val |= MXR_GRP_WH_V_SCALE(y_ratio);
 	mixer_reg_write(res, MXR_GRAPHIC_WH(win), val);
@@ -567,8 +543,8 @@ static void mixer_graph_buffer(struct mixer_context *ctx, int win)
 	/* set buffer address to mixer */
 	mixer_reg_write(res, MXR_GRAPHIC_BASE(win), dma_addr);
 
-	mixer_cfg_scan(ctx, mode_height);
-	mixer_cfg_rgb_fmt(ctx, mode_height);
+	mixer_cfg_scan(ctx, win_data->mode_height);
+	mixer_cfg_rgb_fmt(ctx, win_data->mode_height);
 	mixer_cfg_layer(ctx, win, true);
 	mixer_run(ctx);
 
@@ -665,6 +641,8 @@ static void mixer_win_mode_set(void *ctx,
 	win_data->fb_y = overlay->fb_y;
 	win_data->fb_width = overlay->fb_width;
 	win_data->fb_height = overlay->fb_height;
+	win_data->src_width = overlay->src_width;
+	win_data->src_height = overlay->src_height;
 
 	win_data->mode_width = overlay->mode_width;
 	win_data->mode_height = overlay->mode_height;
@@ -773,7 +751,7 @@ static irqreturn_t mixer_irq_handler(int irq, void *arg)
 	struct exynos_drm_hdmi_context *drm_hdmi_ctx = arg;
 	struct mixer_context *ctx = drm_hdmi_ctx->ctx;
 	struct mixer_resources *res = &ctx->mixer_res;
-	u32 val, val_base;
+	u32 val, base, shadow;
 
 	spin_lock(&res->reg_slock);
 
@@ -784,12 +762,14 @@ static irqreturn_t mixer_irq_handler(int irq, void *arg)
 	if (val & MXR_INT_STATUS_VSYNC) {
 		/* interlace scan need to check shadow register */
 		if (ctx->interlace) {
-			val_base = mixer_reg_read(res, MXR_GRAPHIC_BASE_S(0));
-			if (ctx->win_data[0].dma_addr != val_base)
+			base = mixer_reg_read(res, MXR_GRAPHIC_BASE(0));
+			shadow = mixer_reg_read(res, MXR_GRAPHIC_BASE_S(0));
+			if (base != shadow)
 				goto out;
 
-			val_base = mixer_reg_read(res, MXR_GRAPHIC_BASE_S(1));
-			if (ctx->win_data[1].dma_addr != val_base)
+			base = mixer_reg_read(res, MXR_GRAPHIC_BASE(1));
+			shadow = mixer_reg_read(res, MXR_GRAPHIC_BASE_S(1));
+			if (base != shadow)
 				goto out;
 		}
 
