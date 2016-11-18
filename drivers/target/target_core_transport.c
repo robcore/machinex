@@ -1384,7 +1384,7 @@ struct se_device *transport_add_device_to_core_hba(
 	 * Setup the Asymmetric Logical Unit Assignment for struct se_device
 	 */
 	if (core_setup_alua(dev, force_pt) < 0)
-		goto out;
+		goto err_dev_list;
 
 	/*
 	 * Startup the struct se_device processing thread
@@ -1394,7 +1394,7 @@ struct se_device *transport_add_device_to_core_hba(
 	if (IS_ERR(dev->process_thread)) {
 		pr_err("Unable to create kthread: LIO_%s\n",
 			dev->transport->name);
-		goto out;
+		goto err_dev_list;
 	}
 	/*
 	 * Setup work_queue for QUEUE_FULL
@@ -1412,7 +1412,7 @@ struct se_device *transport_add_device_to_core_hba(
 		if (!inquiry_prod || !inquiry_rev) {
 			pr_err("All non TCM/pSCSI plugins require"
 				" INQUIRY consts\n");
-			goto out;
+			goto err_wq;
 		}
 
 		strncpy(&dev->se_sub_dev->t10_wwn.vendor[0], "LIO-ORG", 8);
@@ -1422,7 +1422,10 @@ struct se_device *transport_add_device_to_core_hba(
 	scsi_dump_inquiry(dev);
 
 	return dev;
-out:
+
+err_wq:
+	destroy_workqueue(dev->tmr_wq);
+err_dev_list:
 	kthread_stop(dev->process_thread);
 
 	spin_lock(&hba->device_lock);
