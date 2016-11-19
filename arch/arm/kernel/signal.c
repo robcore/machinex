@@ -550,11 +550,11 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 /*
  * OK, we're invoking a handler
  */
-static int
+static void
 handle_signal(unsigned long sig, struct k_sigaction *ka,
-	      siginfo_t *info, sigset_t *oldset,
-	      struct pt_regs * regs)
+		siginfo_t *info, struct pt_regs *regs)
 {
+	sigset_t *oldset = sigmask_to_save();
 	struct task_struct *tsk = current;
 	int usig = sig;
 	int ret;
@@ -574,15 +574,13 @@ handle_signal(unsigned long sig, struct k_sigaction *ka,
 
 	if (ret != 0) {
 		force_sigsegv(sig, tsk);
-		return ret;
+		return;
 	}
 
 	/*
 	 * Block the signal if we were successful.
 	 */
 	block_sigmask(ka, sig);
-
-	return 0;
 }
 
 /*
@@ -630,8 +628,6 @@ static void do_signal(struct pt_regs *regs, int syscall)
 	 */
 	signr = get_signal_to_deliver(&info, &ka, regs, NULL);
 	if (signr > 0) {
-		sigset_t *oldset;
-
 		/*
 		 * Depending on the signal settings we may need to revert the
 		 * decision to restart the system call.  But skip this if a
@@ -648,20 +644,7 @@ static void do_signal(struct pt_regs *regs, int syscall)
 			clear_thread_flag(TIF_SYSCALL_RESTARTSYS);
 		}
 
-		if (test_thread_flag(TIF_RESTORE_SIGMASK))
-			oldset = &current->saved_sigmask;
-		else
-			oldset = &current->blocked;
-		if (handle_signal(signr, &ka, &info, oldset, regs) == 0) {
-			/*
-			 * A signal was successfully delivered; the saved
-			 * sigmask will have been stored in the signal frame,
-			 * and will be restored by sigreturn, so we can simply
-			 * clear the TIF_RESTORE_SIGMASK flag.
-			 */
-			if (test_thread_flag(TIF_RESTORE_SIGMASK))
-				clear_thread_flag(TIF_RESTORE_SIGMASK);
-		}
+		handle_signal(signr, &ka, &info, regs);
 		return;
 	}
 

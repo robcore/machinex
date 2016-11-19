@@ -22,10 +22,10 @@ EXPORT_SYMBOL(unblock_signals);
 /*
  * OK, we're invoking a handler
  */
-static int handle_signal(struct pt_regs *regs, unsigned long signr,
-			 struct k_sigaction *ka, siginfo_t *info,
-			 sigset_t *oldset)
+static void handle_signal(struct pt_regs *regs, unsigned long signr,
+			 struct k_sigaction *ka, siginfo_t *info)
 {
+	sigset_t *oldset = sigmask_to_save();
 	unsigned long sp;
 	int err;
 
@@ -69,8 +69,6 @@ static int handle_signal(struct pt_regs *regs, unsigned long signr,
 		force_sigsegv(signr, current);
 	else
 		block_sigmask(ka, signr);
-
-	return err;
 }
 
 static int kern_do_signal(struct pt_regs *regs)
