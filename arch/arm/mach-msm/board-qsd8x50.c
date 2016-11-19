@@ -13,7 +13,6 @@
 
 #include <linux/kernel.h>
 #include <linux/irq.h>
-#include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/android_pmem.h>
 #include <linux/bootmem.h>
