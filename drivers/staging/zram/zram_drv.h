@@ -101,6 +101,11 @@ struct zram_stats {
 	u32 pages_expand;	/* % of incompressible pages */
 };
 
+struct zram_slot_free {
+	unsigned long index;
+	struct zram_slot_free *next;
+};
+
 struct zram {
 	struct zs_pool *mem_pool;
 	void *compress_workmem;
@@ -120,6 +125,7 @@ struct zram {
 	 * we can store in a disk.
 	 */
 	u64 disksize;	/* bytes */
+	spinlock_t slot_free_lock;
 
 	struct zram_stats stats;
 };
