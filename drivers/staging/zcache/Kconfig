@@ -3,7 +3,6 @@ config ZCACHE
 	# X86 dependency is because zsmalloc uses non-portable pte/tlb
 	# functions
 	depends on (CLEANCACHE || FRONTSWAP) && CRYPTO=y
-	select ZSMALLOC
 	select CRYPTO_LZO
 	default n
 	help
