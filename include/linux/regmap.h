@@ -191,6 +191,7 @@ struct regmap_irq {
  * @status_base: Base status register address.
  * @mask_base:   Base mask register address.
  * @ack_base:    Base ack address.  If zero then the chip is clear on read.
+ * @wake_base:   Base address for wake enables.  If zero unsupported.
  *
  * @num_regs:    Number of registers in each control bank.
  * @irqs:        Descriptors for individual IRQs.  Interrupt numbers are
@@ -203,6 +204,7 @@ struct regmap_irq_chip {
 	unsigned int status_base;
 	unsigned int mask_base;
 	unsigned int ack_base;
+	unsigned int wake_base;
 
 	int num_regs;
 
