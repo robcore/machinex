@@ -92,6 +92,13 @@ enum mem_cgroup_stat_index {
 	MEM_CGROUP_STAT_NSTATS,
 };
 
+static const char * const mem_cgroup_stat_names[] = {
+	"cache",
+	"rss",
+	"mapped_file",
+	"swap",
+};
+
 enum mem_cgroup_events_index {
 	MEM_CGROUP_EVENTS_PGPGIN,	/* # of pages paged in */
 	MEM_CGROUP_EVENTS_PGPGOUT,	/* # of pages paged out */
@@ -99,6 +106,14 @@ enum mem_cgroup_events_index {
 	MEM_CGROUP_EVENTS_PGMAJFAULT,	/* # of major page-faults */
 	MEM_CGROUP_EVENTS_NSTATS,
 };
+
+static const char * const mem_cgroup_events_names[] = {
+	"pgpgin",
+	"pgpgout",
+	"pgfault",
+	"pgmajfault",
+};
+
 /*
  * Per memcg event counter is incremented at every pagein/pageout. With THP,
  * it will be incremated by the number of pages. This counter is used for
@@ -249,8 +264,8 @@ struct mem_cgroup {
 		 */
 		struct rcu_head rcu_freeing;
 		/*
-		 * But when using vfree(), that cannot be done at
-		 * interrupt time, so we must then queue the work.
+		 * We also need some space for a worker in deferred freeing.
+		 * By the time we call it, rcu_freeing is no longer in use.
 		 */
 		struct work_struct work_freeing;
 	};
@@ -427,6 +442,7 @@ void sock_update_memcg(struct sock *sk)
 {
 	if (mem_cgroup_sockets_enabled) {
 		struct mem_cgroup *memcg;
+		struct cg_proto *cg_proto;
 
 		BUG_ON(!sk->sk_prot->proto_cgroup);
 
@@ -446,9 +462,10 @@ void sock_update_memcg(struct sock *sk)
 
 		rcu_read_lock();
 		memcg = mem_cgroup_from_task(current);
-		if (!mem_cgroup_is_root(memcg)) {
+		cg_proto = sk->sk_prot->proto_cgroup(memcg);
+		if (!mem_cgroup_is_root(memcg) && memcg_proto_active(cg_proto)) {
 			mem_cgroup_get(memcg);
-			sk->sk_cgrp = sk->sk_prot->proto_cgroup(memcg);
+			sk->sk_cgrp = cg_proto;
 		}
 		rcu_read_unlock();
 	}
@@ -476,6 +493,19 @@ struct cg_proto *tcp_proto_cgroup(struct mem_cgroup *memcg)
 EXPORT_SYMBOL(tcp_proto_cgroup);
 #endif /* CONFIG_INET */
 #endif /* CONFIG_CGROUP_MEM_RES_CTLR_KMEM */
+
+#if defined(CONFIG_INET) && defined(CONFIG_CGROUP_MEM_RES_CTLR_KMEM)
+static void disarm_sock_keys(struct mem_cgroup *memcg)
+{
+	if (!memcg_proto_activated(&memcg->tcp_mem.cg_proto))
+		return;
+	static_key_slow_dec(&memcg_socket_limit_enabled);
+}
+#else
+static void disarm_sock_keys(struct mem_cgroup *memcg)
+{
+}
+#endif
 
 static void drain_all_stock_async(struct mem_cgroup *memcg);
 
@@ -747,7 +777,7 @@ static void mem_cgroup_charge_statistics(struct mem_cgroup *memcg,
 }
 
 unsigned long
-mem_cgroup_get_lruvec_size(struct lruvec *lruvec, enum lru_list lru)
+mem_cgroup_get_lru_size(struct lruvec *lruvec, enum lru_list lru)
 {
 	struct mem_cgroup_per_zone *mz;
 
@@ -1089,7 +1119,7 @@ EXPORT_SYMBOL(mem_cgroup_count_vm_event);
 /**
  * mem_cgroup_zone_lruvec - get the lru list vector for a zone and memcg
  * @zone: zone of the wanted lruvec
- * @mem: memcg of the wanted lruvec
+ * @memcg: memcg of the wanted lruvec
  *
  * Returns the lru list vector holding pages for the given @zone and
  * @mem.  This can be the global zone lruvec, if the memory controller
@@ -1122,19 +1152,11 @@ struct lruvec *mem_cgroup_zone_lruvec(struct zone *zone,
  */
 
 /**
- * mem_cgroup_lru_add_list - account for adding an lru page and return lruvec
- * @zone: zone of the page
+ * mem_cgroup_page_lruvec - return lruvec for adding an lru page
  * @page: the page
- * @lru: current lru
- *
- * This function accounts for @page being added to @lru, and returns
- * the lruvec for the given @zone and the memcg @page is charged to.
- *
- * The callsite is then responsible for physically linking the page to
- * the returned lruvec->lists[@lru].
+ * @zone: zone of the page
  */
-struct lruvec *mem_cgroup_lru_add_list(struct zone *zone, struct page *page,
-				       enum lru_list lru)
+struct lruvec *mem_cgroup_page_lruvec(struct page *page, struct zone *zone)
 {
 	struct mem_cgroup_per_zone *mz;
 	struct mem_cgroup *memcg;
@@ -1147,7 +1169,7 @@ struct lruvec *mem_cgroup_lru_add_list(struct zone *zone, struct page *page,
 	memcg = pc->mem_cgroup;
 
 	/*
-	 * Surreptitiously switch any uncharged page to root:
+	 * Surreptitiously switch any uncharged offlist page to root:
 	 * an uncharged page off lru does nothing to secure
 	 * its former mem_cgroup from sudden removal.
 	 *
@@ -1155,65 +1177,35 @@ struct lruvec *mem_cgroup_lru_add_list(struct zone *zone, struct page *page,
 	 * under page_cgroup lock: between them, they make all uses
 	 * of pc->mem_cgroup safe.
 	 */
-	if (!PageCgroupUsed(pc) && memcg != root_mem_cgroup)
+	if (!PageLRU(page) && !PageCgroupUsed(pc) && memcg != root_mem_cgroup)
 		pc->mem_cgroup = memcg = root_mem_cgroup;
 
 	mz = page_cgroup_zoneinfo(memcg, page);
-	/* compound_order() is stabilized through lru_lock */
-	mz->lru_size[lru] += 1 << compound_order(page);
 	return &mz->lruvec;
 }
 
 /**
- * mem_cgroup_lru_del_list - account for removing an lru page
- * @page: the page
- * @lru: target lru
+ * mem_cgroup_update_lru_size - account for adding or removing an lru page
+ * @lruvec: mem_cgroup per zone lru vector
+ * @lru: index of lru list the page is sitting on
+ * @nr_pages: positive when adding or negative when removing
  *
- * This function accounts for @page being removed from @lru.
- *
- * The callsite is then responsible for physically unlinking
- * @page->lru.
+ * This function must be called when a page is added to or removed from an
+ * lru list.
  */
-void mem_cgroup_lru_del_list(struct page *page, enum lru_list lru)
+void mem_cgroup_update_lru_size(struct lruvec *lruvec, enum lru_list lru,
+				int nr_pages)
 {
 	struct mem_cgroup_per_zone *mz;
-	struct mem_cgroup *memcg;
-	struct page_cgroup *pc;
+	unsigned long *lru_size;
 
 	if (mem_cgroup_disabled())
 		return;
 
-	pc = lookup_page_cgroup(page);
-	memcg = pc->mem_cgroup;
-	VM_BUG_ON(!memcg);
-	mz = page_cgroup_zoneinfo(memcg, page);
-	/* huge page split is done under lru_lock. so, we have no races. */
-	VM_BUG_ON(mz->lru_size[lru] < (1 << compound_order(page)));
-	mz->lru_size[lru] -= 1 << compound_order(page);
-}
-
-/**
- * mem_cgroup_lru_move_lists - account for moving a page between lrus
- * @zone: zone of the page
- * @page: the page
- * @from: current lru
- * @to: target lru
- *
- * This function accounts for @page being moved between the lrus @from
- * and @to, and returns the lruvec for the given @zone and the memcg
- * @page is charged to.
- *
- * The callsite is then responsible for physically relinking
- * @page->lru to the returned lruvec->lists[@to].
- */
-struct lruvec *mem_cgroup_lru_move_lists(struct zone *zone,
-					 struct page *page,
-					 enum lru_list from,
-					 enum lru_list to)
-{
-	/* XXX: Optimize this, especially for @from == @to */
-	mem_cgroup_lru_del_list(page, from);
-	return mem_cgroup_lru_add_list(zone, page, to);
+	mz = container_of(lruvec, struct mem_cgroup_per_zone, lruvec);
+	lru_size = mz->lru_size + lru;
+	*lru_size += nr_pages;
+	VM_BUG_ON((long)(*lru_size) < 0);
 }
 
 /*
@@ -1283,8 +1275,8 @@ int mem_cgroup_inactive_anon_is_low(struct lruvec *lruvec)
 	unsigned long active;
 	unsigned long gb;
 
-	inactive = mem_cgroup_get_lruvec_size(lruvec, LRU_INACTIVE_ANON);
-	active = mem_cgroup_get_lruvec_size(lruvec, LRU_ACTIVE_ANON);
+	inactive = mem_cgroup_get_lru_size(lruvec, LRU_INACTIVE_ANON);
+	active = mem_cgroup_get_lru_size(lruvec, LRU_ACTIVE_ANON);
 
 	gb = (inactive + active) >> (30 - PAGE_SHIFT);
 	if (gb)
@@ -1300,28 +1292,10 @@ int mem_cgroup_inactive_file_is_low(struct lruvec *lruvec)
 	unsigned long active;
 	unsigned long inactive;
 
-	inactive = mem_cgroup_get_lruvec_size(lruvec, LRU_INACTIVE_FILE);
-	active = mem_cgroup_get_lruvec_size(lruvec, LRU_ACTIVE_FILE);
+	inactive = mem_cgroup_get_lru_size(lruvec, LRU_INACTIVE_FILE);
+	active = mem_cgroup_get_lru_size(lruvec, LRU_ACTIVE_FILE);
 
 	return (active > inactive);
-}
-
-struct zone_reclaim_stat *
-mem_cgroup_get_reclaim_stat_from_page(struct page *page)
-{
-	struct page_cgroup *pc;
-	struct mem_cgroup_per_zone *mz;
-
-	if (mem_cgroup_disabled())
-		return NULL;
-
-	pc = lookup_page_cgroup(page);
-	if (!PageCgroupUsed(pc))
-		return NULL;
-	/* Ensure pc->mem_cgroup is visible after reading PCG_USED. */
-	smp_rmb();
-	mz = page_cgroup_zoneinfo(pc->mem_cgroup, page);
-	return &mz->lruvec.reclaim_stat;
 }
 
 #define mem_cgroup_from_res_counter(counter, member)	\
@@ -2645,6 +2619,7 @@ static void __mem_cgroup_commit_charge(struct mem_cgroup *memcg,
 {
 	struct page_cgroup *pc = lookup_page_cgroup(page);
 	struct zone *uninitialized_var(zone);
+	struct lruvec *lruvec;
 	bool was_on_lru = false;
 	bool anon;
 
@@ -2667,8 +2642,9 @@ static void __mem_cgroup_commit_charge(struct mem_cgroup *memcg,
 		zone = page_zone(page);
 		spin_lock_irq(&zone->lru_lock);
 		if (PageLRU(page)) {
+			lruvec = mem_cgroup_zone_lruvec(zone, pc->mem_cgroup);
 			ClearPageLRU(page);
-			del_page_from_lru_list(zone, page, page_lru(page));
+			del_page_from_lru_list(page, lruvec, page_lru(page));
 			was_on_lru = true;
 		}
 	}
@@ -2686,9 +2662,10 @@ static void __mem_cgroup_commit_charge(struct mem_cgroup *memcg,
 
 	if (lrucare) {
 		if (was_on_lru) {
+			lruvec = mem_cgroup_zone_lruvec(zone, pc->mem_cgroup);
 			VM_BUG_ON(PageLRU(page));
 			SetPageLRU(page);
-			add_page_to_lru_list(zone, page, page_lru(page));
+			add_page_to_lru_list(page, lruvec, page_lru(page));
 		}
 		spin_unlock_irq(&zone->lru_lock);
 	}
@@ -4191,92 +4168,6 @@ static int mem_cgroup_move_charge_write(struct cgroup *cgrp,
 }
 #endif
 
-
-/* For read statistics */
-enum {
-	MCS_CACHE,
-	MCS_RSS,
-	MCS_FILE_MAPPED,
-	MCS_PGPGIN,
-	MCS_PGPGOUT,
-	MCS_SWAP,
-	MCS_PGFAULT,
-	MCS_PGMAJFAULT,
-	MCS_INACTIVE_ANON,
-	MCS_ACTIVE_ANON,
-	MCS_INACTIVE_FILE,
-	MCS_ACTIVE_FILE,
-	MCS_UNEVICTABLE,
-	NR_MCS_STAT,
-};
-
-struct mcs_total_stat {
-	s64 stat[NR_MCS_STAT];
-};
-
-static const char *memcg_stat_strings[NR_MCS_STAT] = {
-	"cache",
-	"rss",
-	"mapped_file",
-	"pgpgin",
-	"pgpgout",
-	"swap",
-	"pgfault",
-	"pgmajfault",
-	"inactive_anon",
-	"active_anon",
-	"inactive_file",
-	"active_file",
-	"unevictable",
-};
-
-static void
-mem_cgroup_get_local_stat(struct mem_cgroup *memcg, struct mcs_total_stat *s)
-{
-	s64 val;
-
-	/* per cpu stat */
-	val = mem_cgroup_read_stat(memcg, MEM_CGROUP_STAT_CACHE);
-	s->stat[MCS_CACHE] += val * PAGE_SIZE;
-	val = mem_cgroup_read_stat(memcg, MEM_CGROUP_STAT_RSS);
-	s->stat[MCS_RSS] += val * PAGE_SIZE;
-	val = mem_cgroup_read_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED);
-	s->stat[MCS_FILE_MAPPED] += val * PAGE_SIZE;
-	val = mem_cgroup_read_events(memcg, MEM_CGROUP_EVENTS_PGPGIN);
-	s->stat[MCS_PGPGIN] += val;
-	val = mem_cgroup_read_events(memcg, MEM_CGROUP_EVENTS_PGPGOUT);
-	s->stat[MCS_PGPGOUT] += val;
-	if (do_swap_account) {
-		val = mem_cgroup_read_stat(memcg, MEM_CGROUP_STAT_SWAPOUT);
-		s->stat[MCS_SWAP] += val * PAGE_SIZE;
-	}
-	val = mem_cgroup_read_events(memcg, MEM_CGROUP_EVENTS_PGFAULT);
-	s->stat[MCS_PGFAULT] += val;
-	val = mem_cgroup_read_events(memcg, MEM_CGROUP_EVENTS_PGMAJFAULT);
-	s->stat[MCS_PGMAJFAULT] += val;
-
-	/* per zone stat */
-	val = mem_cgroup_nr_lru_pages(memcg, BIT(LRU_INACTIVE_ANON));
-	s->stat[MCS_INACTIVE_ANON] += val * PAGE_SIZE;
-	val = mem_cgroup_nr_lru_pages(memcg, BIT(LRU_ACTIVE_ANON));
-	s->stat[MCS_ACTIVE_ANON] += val * PAGE_SIZE;
-	val = mem_cgroup_nr_lru_pages(memcg, BIT(LRU_INACTIVE_FILE));
-	s->stat[MCS_INACTIVE_FILE] += val * PAGE_SIZE;
-	val = mem_cgroup_nr_lru_pages(memcg, BIT(LRU_ACTIVE_FILE));
-	s->stat[MCS_ACTIVE_FILE] += val * PAGE_SIZE;
-	val = mem_cgroup_nr_lru_pages(memcg, BIT(LRU_UNEVICTABLE));
-	s->stat[MCS_UNEVICTABLE] += val * PAGE_SIZE;
-}
-
-static void
-mem_cgroup_get_total_stat(struct mem_cgroup *memcg, struct mcs_total_stat *s)
-{
-	struct mem_cgroup *iter;
-
-	for_each_mem_cgroup_tree(iter, memcg)
-		mem_cgroup_get_local_stat(iter, s);
-}
-
 #ifdef CONFIG_NUMA
 static int mem_control_numa_stat_show(struct cgroup *cont, struct cftype *cft,
 				      struct seq_file *m)
@@ -4324,23 +4215,40 @@ static int mem_control_numa_stat_show(struct cgroup *cont, struct cftype *cft,
 }
 #endif /* CONFIG_NUMA */
 
+static const char * const mem_cgroup_lru_names[] = {
+	"inactive_anon",
+	"active_anon",
+	"inactive_file",
+	"active_file",
+	"unevictable",
+};
+
+static inline void mem_cgroup_lru_names_not_uptodate(void)
+{
+	BUILD_BUG_ON(ARRAY_SIZE(mem_cgroup_lru_names) != NR_LRU_LISTS);
+}
+
 static int mem_control_stat_show(struct cgroup *cont, struct cftype *cft,
 				 struct seq_file *m)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
-	struct mcs_total_stat mystat;
-	int i;
+	struct mem_cgroup *mi;
+	unsigned int i;
 
-	memset(&mystat, 0, sizeof(mystat));
-	mem_cgroup_get_local_stat(memcg, &mystat);
-
-
-	for (i = 0; i < NR_MCS_STAT; i++) {
-		if (i == MCS_SWAP && !do_swap_account)
+	for (i = 0; i < MEM_CGROUP_STAT_NSTATS; i++) {
+		if (i == MEM_CGROUP_STAT_SWAPOUT && !do_swap_account)
 			continue;
-		seq_printf(m, "%s %llu\n", memcg_stat_strings[i],
-			   (unsigned long long)mystat.stat[i]);
+		seq_printf(m, "%s %ld\n", mem_cgroup_stat_names[i],
+			   mem_cgroup_read_stat(memcg, i) * PAGE_SIZE);
 	}
+
+	for (i = 0; i < MEM_CGROUP_EVENTS_NSTATS; i++)
+		seq_printf(m, "%s %lu\n", mem_cgroup_events_names[i],
+			   mem_cgroup_read_events(memcg, i));
+
+	for (i = 0; i < NR_LRU_LISTS; i++)
+		seq_printf(m, "%s %lu\n", mem_cgroup_lru_names[i],
+			   mem_cgroup_nr_lru_pages(memcg, BIT(i)) * PAGE_SIZE);
 
 	/* Hierarchical information */
 	{
@@ -4352,13 +4260,31 @@ static int mem_control_stat_show(struct cgroup *cont, struct cftype *cft,
 				   memsw_limit);
 	}
 
-	memset(&mystat, 0, sizeof(mystat));
-	mem_cgroup_get_total_stat(memcg, &mystat);
-	for (i = 0; i < NR_MCS_STAT; i++) {
-		if (i == MCS_SWAP && !do_swap_account)
+	for (i = 0; i < MEM_CGROUP_STAT_NSTATS; i++) {
+		long long val = 0;
+
+		if (i == MEM_CGROUP_STAT_SWAPOUT && !do_swap_account)
 			continue;
-		seq_printf(m, "total_%s %llu\n", memcg_stat_strings[i],
-			   (unsigned long long)mystat.stat[i]);
+		for_each_mem_cgroup_tree(mi, memcg)
+			val += mem_cgroup_read_stat(mi, i) * PAGE_SIZE;
+		seq_printf(m, "total_%s %lld\n", mem_cgroup_stat_names[i], val);
+	}
+
+	for (i = 0; i < MEM_CGROUP_EVENTS_NSTATS; i++) {
+		unsigned long long val = 0;
+
+		for_each_mem_cgroup_tree(mi, memcg)
+			val += mem_cgroup_read_events(mi, i);
+		seq_printf(m, "total_%s %llu\n",
+			   mem_cgroup_events_names[i], val);
+	}
+
+	for (i = 0; i < NR_LRU_LISTS; i++) {
+		unsigned long long val = 0;
+
+		for_each_mem_cgroup_tree(mi, memcg)
+			val += mem_cgroup_nr_lru_pages(mi, BIT(i)) * PAGE_SIZE;
+		seq_printf(m, "total_%s %llu\n", mem_cgroup_lru_names[i], val);
 	}
 
 #ifdef CONFIG_DEBUG_VM
@@ -4961,23 +4887,40 @@ out_free:
 }
 
 /*
- * Helpers for freeing a vzalloc()ed mem_cgroup by RCU,
+ * Helpers for freeing a kmalloc()ed/vzalloc()ed mem_cgroup by RCU,
  * but in process context.  The work_freeing structure is overlaid
  * on the rcu_freeing structure, which itself is overlaid on memsw.
  */
-static void vfree_work(struct work_struct *work)
+static void free_work(struct work_struct *work)
 {
 	struct mem_cgroup *memcg;
+	int size = sizeof(struct mem_cgroup);
 
 	memcg = container_of(work, struct mem_cgroup, work_freeing);
-	vfree(memcg);
+	/*
+	 * We need to make sure that (at least for now), the jump label
+	 * destruction code runs outside of the cgroup lock. This is because
+	 * get_online_cpus(), which is called from the static_branch update,
+	 * can't be called inside the cgroup_lock. cpusets are the ones
+	 * enforcing this dependency, so if they ever change, we might as well.
+	 *
+	 * schedule_work() will guarantee this happens. Be careful if you need
+	 * to move this code around, and make sure it is outside
+	 * the cgroup_lock.
+	 */
+	disarm_sock_keys(memcg);
+	if (size < PAGE_SIZE)
+		kfree(memcg);
+	else
+		vfree(memcg);
 }
-static void vfree_rcu(struct rcu_head *rcu_head)
+
+static void free_rcu(struct rcu_head *rcu_head)
 {
 	struct mem_cgroup *memcg;
 
 	memcg = container_of(rcu_head, struct mem_cgroup, rcu_freeing);
-	INIT_WORK(&memcg->work_freeing, vfree_work);
+	INIT_WORK(&memcg->work_freeing, free_work);
 	schedule_work(&memcg->work_freeing);
 }
 
@@ -5003,10 +4946,7 @@ static void __mem_cgroup_free(struct mem_cgroup *memcg)
 		free_mem_cgroup_per_zone_info(memcg, node);
 
 	free_percpu(memcg->stat);
-	if (sizeof(struct mem_cgroup) < PAGE_SIZE)
-		kfree_rcu(memcg, rcu_freeing);
-	else
-		call_rcu(&memcg->rcu_freeing, vfree_rcu);
+	call_rcu(&memcg->rcu_freeing, free_rcu);
 }
 
 static void mem_cgroup_get(struct mem_cgroup *memcg)

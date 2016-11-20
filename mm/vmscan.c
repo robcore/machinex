@@ -200,10 +200,10 @@ bool zone_reclaimable(struct zone *zone)
 	return zone->pages_scanned < zone_reclaimable_pages(zone) * 6;
 }
 
-static unsigned long get_lruvec_size(struct lruvec *lruvec, enum lru_list lru)
+static unsigned long get_lru_size(struct lruvec *lruvec, enum lru_list lru)
 {
 	if (!mem_cgroup_disabled())
-		return mem_cgroup_get_lruvec_size(lruvec, lru);
+		return mem_cgroup_get_lru_size(lruvec, lru);
 
 	return zone_page_state(lruvec_zone(lruvec), NR_LRU_BASE + lru);
 }
@@ -1156,15 +1156,13 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 		unsigned long *nr_scanned, struct scan_control *sc,
 		isolate_mode_t mode, enum lru_list lru)
 {
-	struct list_head *src;
+	struct list_head *src = &lruvec->lists[lru];
 	unsigned long nr_taken = 0;
 	unsigned long scan;
-	int file = is_file_lru(lru);
-
-	src = &lruvec->lists[lru];
 
 	for (scan = 0; scan < nr_to_scan && !list_empty(src); scan++) {
 		struct page *page;
+		int nr_pages;
 
 		page = lru_to_page(src);
 		prefetchw_prev_lru_page(page, src, flags);
@@ -1189,11 +1187,8 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	}
 
 	*nr_scanned = scan;
-
-	trace_mm_vmscan_lru_isolate(sc->order,
-			nr_to_scan, scan,
-			nr_taken,
-			mode, file);
+	trace_mm_vmscan_lru_isolate(sc->order, nr_to_scan, scan,
+				    nr_taken, mode, is_file_lru(lru));
 	return nr_taken;
 }
 
@@ -1230,15 +1225,16 @@ int isolate_lru_page(struct page *page)
 
 	if (PageLRU(page)) {
 		struct zone *zone = page_zone(page);
+		struct lruvec *lruvec;
 
 		spin_lock_irq(&zone->lru_lock);
+		lruvec = mem_cgroup_page_lruvec(page, zone);
 		if (PageLRU(page)) {
 			int lru = page_lru(page);
-			ret = 0;
 			get_page(page);
 			ClearPageLRU(page);
-
-			del_page_from_lru_list(zone, page, lru);
+			del_page_from_lru_list(page, lruvec, lru);
+			ret = 0;
 		}
 		spin_unlock_irq(&zone->lru_lock);
 	}
@@ -1276,8 +1272,7 @@ static int too_many_isolated(struct zone *zone, int file,
 }
 
 static noinline_for_stack void
-putback_inactive_pages(struct lruvec *lruvec,
-		       struct list_head *page_list)
+putback_inactive_pages(struct lruvec *lruvec, struct list_head *page_list)
 {
 	struct zone_reclaim_stat *reclaim_stat = &lruvec->reclaim_stat;
 	struct zone *zone = lruvec_zone(lruvec);
@@ -1298,9 +1293,13 @@ putback_inactive_pages(struct lruvec *lruvec,
 			spin_lock_irq(&zone->lru_lock);
 			continue;
 		}
+
+		lruvec = mem_cgroup_page_lruvec(page, zone);
+
 		SetPageLRU(page);
 		lru = page_lru(page);
-		add_page_to_lru_list(zone, page, lru);
+		add_page_to_lru_list(page, lruvec, lru);
+
 		if (is_active_lru(lru)) {
 			int file = is_file_lru(lru);
 			int numpages = hpage_nr_pages(page);
@@ -1309,7 +1308,7 @@ putback_inactive_pages(struct lruvec *lruvec,
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);
 			__ClearPageActive(page);
-			del_page_from_lru_list(zone, page, lru);
+			del_page_from_lru_list(page, lruvec, lru);
 
 			if (unlikely(PageCompound(page))) {
 				spin_unlock_irq(&zone->lru_lock);
@@ -1371,11 +1370,9 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	if (global_reclaim(sc)) {
 		zone->pages_scanned += nr_scanned;
 		if (current_is_kswapd())
-			__count_zone_vm_events(PGSCAN_KSWAPD, zone,
-					       nr_scanned);
+			__count_zone_vm_events(PGSCAN_KSWAPD, zone, nr_scanned);
 		else
-			__count_zone_vm_events(PGSCAN_DIRECT, zone,
-					       nr_scanned);
+			__count_zone_vm_events(PGSCAN_DIRECT, zone, nr_scanned);
 	}
 	spin_unlock_irq(&zone->lru_lock);
 
@@ -1597,8 +1594,8 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	 */
 	reclaim_stat->recent_rotated[file] += nr_rotated;
 
-	move_active_pages_to_lru(zone, &l_active, &l_hold, lru);
-	move_active_pages_to_lru(zone, &l_inactive, &l_hold, lru - LRU_ACTIVE);
+	move_active_pages_to_lru(lruvec, &l_active, &l_hold, lru);
+	move_active_pages_to_lru(lruvec, &l_inactive, &l_hold, lru - LRU_ACTIVE);
 	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, -nr_taken);
 	spin_unlock_irq(&zone->lru_lock);
 
@@ -1679,9 +1676,9 @@ static int inactive_file_is_low(struct lruvec *lruvec)
 	return inactive_file_is_low_global(lruvec_zone(lruvec));
 }
 
-static int inactive_list_is_low(struct lruvec *lruvec, int file)
+static int inactive_list_is_low(struct lruvec *lruvec, enum lru_list lru)
 {
-	if (file)
+	if (is_file_lru(lru))
 		return inactive_file_is_low(lruvec);
 	else
 		return inactive_anon_is_low(lruvec);
@@ -1690,10 +1687,8 @@ static int inactive_list_is_low(struct lruvec *lruvec, int file)
 static unsigned long shrink_list(enum lru_list lru, unsigned long nr_to_scan,
 				 struct lruvec *lruvec, struct scan_control *sc)
 {
-	int file = is_file_lru(lru);
-
 	if (is_active_lru(lru)) {
-		if (inactive_list_is_low(lruvec, file))
+		if (inactive_list_is_low(lruvec, lru))
 			shrink_active_list(nr_to_scan, lruvec, sc, lru);
 		return 0;
 	}
@@ -1759,10 +1754,10 @@ static void get_scan_count(struct mem_cgroup_zone *mz, struct scan_control *sc,
 		goto out;
 	}
 
-	anon  = get_lruvec_size(lruvec, LRU_ACTIVE_ANON) +
-		get_lruvec_size(lruvec, LRU_INACTIVE_ANON);
-	file  = get_lruvec_size(lruvec, LRU_ACTIVE_FILE) +
-		get_lruvec_size(lruvec, LRU_INACTIVE_FILE);
+	anon  = get_lru_size(lruvec, LRU_ACTIVE_ANON) +
+		get_lru_size(lruvec, LRU_INACTIVE_ANON);
+	file  = get_lru_size(lruvec, LRU_ACTIVE_FILE) +
+		get_lru_size(lruvec, LRU_INACTIVE_FILE);
 
 	if (global_reclaim(sc)) {
 		free  = zone_page_state(mz->zone, NR_FREE_PAGES);
@@ -3605,6 +3600,7 @@ void check_move_unevictable_pages(struct page **pages, int nr_pages)
 			zone = pagezone;
 			spin_lock_irq(&zone->lru_lock);
 		}
+		lruvec = mem_cgroup_page_lruvec(page, zone);
 
 		if (!PageLRU(page) || !PageUnevictable(page))
 			continue;
