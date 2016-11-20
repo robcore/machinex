@@ -496,7 +496,6 @@ static void update_min_vruntime(struct cfs_rq *cfs_rq)
 			vruntime = min_vruntime(vruntime, se->vruntime);
 	}
 
-	/* ensure we never gain time by being placed backwards. */
 	cfs_rq->min_vruntime = max_vruntime(cfs_rq->min_vruntime, vruntime);
 #ifndef CONFIG_64BIT
 	smp_wmb();
@@ -629,7 +628,7 @@ calc_delta_fair(unsigned long delta, struct sched_entity *se)
 /*
  * The idea is to set a period in which each task runs once.
  *
- * When there are too many tasks (sched_nr_latency) we have to stretch
+ * When there are too many tasks (sysctl_sched_nr_latency) we have to stretch
  * this period because otherwise the slices get too small.
  *
  * p = (nr <= nl) ? l : l*nr/nl
@@ -676,7 +675,7 @@ static u64 sched_slice(struct cfs_rq *cfs_rq, struct sched_entity *se)
 }
 
 /*
- * We calculate the vruntime slice of a to-be-inserted task.
+ * We calculate the vruntime slice of a to be inserted task
  *
  * vs = s/w
  */
@@ -4325,23 +4324,19 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 			load = target_load(i, load_idx);
 		} else {
 			load = source_load(i, load_idx);
-			scaled_load = load * SCHED_POWER_SCALE
-					/ cpu_rq(i)->cpu_power;
 			if (load > max_cpu_load)
-				max_cpu_load = scaled_load;
-
-			if (min_cpu_load > scaled_load)
-				min_cpu_load = scaled_load;
-		}
+				max_cpu_load = load;
+			if (min_cpu_load > load)
+				min_cpu_load = load;
 
 			if (nr_running > max_nr_running)
 				max_nr_running = nr_running;
 			if (min_nr_running > nr_running)
 				min_nr_running = nr_running;
- 		}
+		}
 
 		sgs->group_load += load;
-		sgs->sum_nr_running += nr_running
+		sgs->sum_nr_running += nr_running;
 		sgs->sum_weighted_load += weighted_cpuload(i);
 		if (idle_cpu(i))
 			sgs->idle_cpus++;
