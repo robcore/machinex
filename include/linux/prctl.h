@@ -127,8 +127,13 @@
 #define PR_SET_PTRACER 0x59616d61
 # define PR_SET_PTRACER_ANY ((unsigned long)-1)
 
-#define PR_SET_CHILD_SUBREAPER 36
-#define PR_GET_CHILD_SUBREAPER 37
+#define PR_SET_CHILD_SUBREAPER	36
+#define PR_GET_CHILD_SUBREAPER	37
+
+#define PR_SET_NO_NEW_PRIVS	38
+#define PR_GET_NO_NEW_PRIVS	39
+
+#define PR_GET_TID_ADDRESS	40
 
 /* Sets the timerslack for arbitrary threads
  * arg2 slack value, 0 means "use default"
