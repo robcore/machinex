@@ -29,6 +29,7 @@
 #include <linux/notifier.h>
 #include <asm/cputime.h>
 #include <linux/powersuspend.h>
+#include <linux/pm.h>
 
 
 #define cputime64_add(__a, __b) ((__a) + (__b))
@@ -50,7 +51,7 @@ static unsigned int awake_ideal_freq;
  * that practically when sleep_ideal_freq==0 the awake_ideal_freq is used
  * also when suspended).
  */
-#define DEFAULT_SLEEP_IDEAL_FREQ 702000
+#define DEFAULT_SLEEP_IDEAL_FREQ 384000
 static unsigned int sleep_ideal_freq;
 
 /*
@@ -111,7 +112,7 @@ static unsigned int sample_rate_jiffies;
 
 /*************** End of tunables ***************/
 
-
+void (*pm_idle)(void);
 static void (*pm_idle_old)(void);
 static atomic_t active_count = ATOMIC_INIT(0);
 
@@ -862,8 +863,8 @@ static int __init cpufreq_xperience_init(void)
 	}
 
 	// Scale up is high priority
-	up_wq = create_workqueue("kxperience_up");
-	down_wq = create_workqueue("kxperience_down");
+	up_wq = alloc_workqueue("kxperience_up", WQ_HIGHPRI, 1);
+	down_wq = alloc_workqueue("kxperience_down", 0, 1);
 	if (!up_wq || !down_wq)
 		return -ENOMEM;
 
