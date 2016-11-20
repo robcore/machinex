@@ -7,7 +7,7 @@
  *  Copyright (C) 2002       Stephen Rothwell, IBM Corporation
  *  Copyright (C) 1997-2000  Jakub Jelinek  (jakub@redhat.com)
  *  Copyright (C) 1998       Eddie C. Dost  (ecd@skynet.be)
- *  Copyright (C) 2001,2002  Andi Kleen, SuSE Labs 
+ *  Copyright (C) 2001,2002  Andi Kleen, SuSE Labs
  *  Copyright (C) 2003       Pavel Machek (pavel@ucw.cz)
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -212,7 +212,7 @@ asmlinkage long compat_sys_newfstat(unsigned int fd,
 
 static int put_compat_statfs(struct compat_statfs __user *ubuf, struct kstatfs *kbuf)
 {
-	
+
 	if (sizeof ubuf->f_blocks == 4) {
 		if ((kbuf->f_blocks | kbuf->f_bfree | kbuf->f_bavail |
 		     kbuf->f_bsize | kbuf->f_frsize) & 0xffffffff00000000ULL)
@@ -509,7 +509,7 @@ compat_sys_io_getevents(aio_context_t ctx_id,
 	struct timespec __user *ut = NULL;
 
 	ret = -EFAULT;
-	if (unlikely(!access_ok(VERIFY_WRITE, events, 
+	if (unlikely(!access_ok(VERIFY_WRITE, events,
 				nr * sizeof(struct io_event))))
 		goto out;
 	if (timeout) {
@@ -519,7 +519,7 @@ compat_sys_io_getevents(aio_context_t ctx_id,
 		ut = compat_alloc_user_space(sizeof(*ut));
 		if (copy_to_user(ut, &t, sizeof(t)) )
 			goto out;
-	} 
+	}
 	ret = sys_io_getevents(ctx_id, min_nr, nr, events, ut);
 out:
 	return ret;
@@ -621,7 +621,7 @@ copy_iocb(long nr, u32 __user *ptr32, struct iocb __user * __user *ptr64)
 asmlinkage long
 compat_sys_io_submit(aio_context_t ctx_id, int nr, u32 __user *iocb)
 {
-	struct iocb __user * __user *iocb64; 
+	struct iocb __user * __user *iocb64;
 	long ret;
 
 	if (unlikely(nr < 0))
@@ -629,7 +629,7 @@ compat_sys_io_submit(aio_context_t ctx_id, int nr, u32 __user *iocb)
 
 	if (nr > MAX_AIO_SUBMITS)
 		nr = MAX_AIO_SUBMITS;
-	
+
 	iocb64 = compat_alloc_user_space(nr * sizeof(*iocb64));
 	ret = copy_iocb(nr, iocb, iocb64);
 	if (!ret)
@@ -1088,7 +1088,7 @@ static ssize_t compat_do_readv_writev(int type, struct file *file,
 		goto out;
 
 	ret = compat_rw_copy_check_uvector(type, uvector, nr_segs,
-					       UIO_FASTIOV, iovstack, &iov, 1);
+					UIO_FASTIOV, iovstack, &iov);
 	if (ret <= 0)
 		goto out;
 
