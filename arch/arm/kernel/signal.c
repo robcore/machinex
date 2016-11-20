@@ -555,12 +555,6 @@ handle_signal(unsigned long sig, struct k_sigaction *ka,
 	int ret;
 
 	/*
-	 * translate the signal
-	 */
-	if (usig < 32 && thread->exec_domain && thread->exec_domain->signal_invmap)
-		usig = thread->exec_domain->signal_invmap[usig];
-
-	/*
 	 * Set up the stack frame
 	 */
 	if (ka->sa.sa_flags & SA_SIGINFO)
