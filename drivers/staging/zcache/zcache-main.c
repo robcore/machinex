@@ -34,7 +34,7 @@
 #include <linux/idr.h>
 #include "tmem.h"
 
-#include <linux/zsmalloc.h>
+#include "../zsmalloc/zsmalloc.h"
 
 #if (!defined(CONFIG_CLEANCACHE) && !defined(CONFIG_FRONTSWAP))
 #error "zcache is useless without CONFIG_CLEANCACHE or CONFIG_FRONTSWAP"
