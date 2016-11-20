@@ -4299,8 +4299,7 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 {
 	unsigned long scaled_load, load, max_cpu_load, min_cpu_load, max_nr_running;
 	int i;
-	unsigned int balance_cpu = -1;
-	unsigned long balance_load = ~0UL;
+	unsigned int balance_cpu = -1, first_idle_cpu = 0;
 	unsigned long avg_load_per_task = 0;
 
 	if (local_group)
@@ -4316,11 +4315,12 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 
 		/* Bias balancing toward cpus of our domain */
 		if (local_group) {
-			load = target_load(i, load_idx);
-			if (load < balance_load || idle_cpu(i)) {
-				balance_load = load;
+			if (idle_cpu(i) && !first_idle_cpu) {
+				first_idle_cpu = 1;
 				balance_cpu = i;
 			}
+
+			load = target_load(i, load_idx);
 		} else {
 			load = source_load(i, load_idx);
 			scaled_load = load * SCHED_POWER_SCALE
@@ -4348,8 +4348,7 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 	 */
 	if (local_group) {
 		if (idle != CPU_NEWLY_IDLE) {
-			if (balance_cpu != this_cpu ||
-			    cmpxchg(&group->balance_cpu, -1, balance_cpu) != -1) {
+			if (balance_cpu != env->dst_cpu) {
 				*balance = 0;
 				return;
 			}
@@ -5414,7 +5413,7 @@ static void rebalance_domains(int cpu, enum cpu_idle_type idle)
 	int balance = 1;
 	struct rq *rq = cpu_rq(cpu);
 	unsigned long interval;
-	struct sched_domain *sd, *last = NULL;
+	struct sched_domain *sd;
 	/* Earliest time when we have to do rebalance again */
 	unsigned long next_balance = jiffies + 60*HZ;
 	int update_next_balance = 0;
@@ -5493,9 +5492,6 @@ out:
 		rq->max_idle_balance_cost =
 			max((u64)sysctl_sched_migration_cost, max_cost);
 	}
-	for (sd = last; sd; sd = sd->child)
-		(void)cmpxchg(&sd->groups->balance_cpu, cpu, -1);
-
 	rcu_read_unlock();
 
 	/*
