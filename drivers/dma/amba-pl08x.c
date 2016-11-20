@@ -1324,7 +1324,7 @@ static struct dma_async_tx_descriptor *pl08x_prep_slave_sg(
 	int ret, tmp;
 
 	dev_dbg(&pl08x->adev->dev, "%s prepare transaction of %d bytes from %s\n",
-			__func__, sgl->length, plchan->name);
+			__func__, sg_dma_len(sgl), plchan->name);
 
 	txd = pl08x_get_txd(plchan, flags);
 	if (!txd) {
@@ -1378,11 +1378,11 @@ static struct dma_async_tx_descriptor *pl08x_prep_slave_sg(
 
 		dsg->len = sg_dma_len(sg);
 		if (direction == DMA_MEM_TO_DEV) {
-			dsg->src_addr = sg_phys(sg);
+			dsg->src_addr = sg_dma_address(sg);
 			dsg->dst_addr = slave_addr;
 		} else {
 			dsg->src_addr = slave_addr;
-			dsg->dst_addr = sg_phys(sg);
+			dsg->dst_addr = sg_dma_address(sg);
 		}
 	}
 
