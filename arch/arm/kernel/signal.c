@@ -429,7 +429,6 @@ setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 		cpsr &= ~PSR_IT_MASK;
 #endif
 
-
 		if (thumb) {
 			cpsr |= PSR_T_BIT;
 		} else
@@ -548,10 +547,10 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
  */
 static void
 handle_signal(unsigned long sig, struct k_sigaction *ka,
-		siginfo_t *info, struct pt_regs *regs)
+	      siginfo_t *info, struct pt_regs *regs)
 {
-	sigset_t *oldset = sigmask_to_save();
 	struct task_struct *tsk = current;
+	sigset_t *oldset = sigmask_to_save();
 	int usig = sig;
 	int ret;
 
@@ -664,8 +663,6 @@ do_notify_resume(struct pt_regs *regs, unsigned int thread_flags, int syscall)
 	if (thread_flags & _TIF_NOTIFY_RESUME) {
 		clear_thread_flag(TIF_NOTIFY_RESUME);
 		tracehook_notify_resume(regs);
-		if (current->replacement_session_keyring)
-			key_replace_session_keyring();
 	}
 }
 
