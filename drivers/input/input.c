@@ -1723,33 +1723,30 @@ static void input_dev_toggle(struct input_dev *dev, bool activate)
  *
  * This function tries to reset the state of an opened input device and
  * bring internal state and state if the hardware in sync with each other.
- * We mark all keys as released, restore LED state, repeat rate, etc.
+ * We restore LED state, repeat rate, etc.
  */
 void input_reset_device(struct input_dev *dev)
 {
 	mutex_lock(&dev->mutex);
 
-	if (dev->users) {
+	if (dev->users)
 		input_dev_toggle(dev, true);
+
+	mutex_unlock(&dev->mutex);
 
 		/*
 		 * Keys that have been pressed at suspend time are unlikely
-		 * to be still pressed when we resume.
+		 * to be still pressed when we resume, but that doesn't mean
+		 * it won't happen.  We are disabling the below sequence for those
+		 * who need to use screen off functions, sucka.
 		 */
-#if !defined (CONFIG_SEC_PRODUCT_8930)
-#ifdef CONFIG_SAMSUNG_LPM_MODE
+#if 0
 		if (!poweroff_charging) {
 			spin_lock_irq(&dev->event_lock);
-#if !defined(CONFIG_SEC_TORCH_FLASH)
 			input_dev_release_keys(dev);
-#endif
 			spin_unlock_irq(&dev->event_lock);
 		}
 #endif
-#endif
-	}
-
-	mutex_unlock(&dev->mutex);
 }
 EXPORT_SYMBOL(input_reset_device);
 
