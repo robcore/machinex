@@ -41,6 +41,7 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/rculist.h>
+#include <linux/poll.h>
 #include <linux/irq_work.h>
 
 #include <asm/uaccess.h>
@@ -1146,12 +1147,12 @@ static int console_trylock_for_printk(unsigned int cpu)
 			retval = 0;
 		}
 	}
-	
+
     printk_cpu = UINT_MAX;
     raw_spin_unlock(&logbuf_lock);
 	if (wake)
 		up(&console_sem);
-	
+
 	return retval;
 }
 static const char recursion_bug_msg [] =
@@ -1321,7 +1322,7 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 	 * Try to acquire and then immediately release the
 	 * console semaphore. The release will do all the
 	 * actual magic (print out buffers, wake up klogd,
-	 * etc). 
+	 * etc).
 	 *
 	 * The console_trylock_for_printk() function
 	 * will release 'logbuf_lock' regardless of whether it
