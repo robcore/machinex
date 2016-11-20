@@ -46,18 +46,23 @@ static ssize_t led_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
-	unsigned long state;
 	ssize_t ret = -EINVAL;
+	char *after;
+	unsigned long state = simple_strtoul(buf, &after, 10);
+	size_t count = after - buf;
 
-	ret = kstrtoul(buf, 10, &state);
-	if (ret)
-		return ret;
+	if (isspace(*after))
+		count++;
 
-	if (state == LED_OFF)
-		led_trigger_remove(led_cdev);
-	led_set_brightness(led_cdev, state);
+	if (count == size) {
+		ret = count;
 
-	return size;
+		if (state == LED_OFF)
+			led_trigger_remove(led_cdev);
+		led_set_brightness(led_cdev, state);
+	}
+
+	return ret;
 }
 
 static ssize_t led_max_brightness_store(struct device *dev,

@@ -356,6 +356,11 @@ static struct dentry *ext2_fh_to_parent(struct super_block *sb, struct fid *fid,
 				    ext2_nfs_get_inode);
 }
 
+/* Yes, most of these are left as NULL!!
+ * A NULL value implies the default, which works with ext2-like file
+ * systems, but can be improved upon.
+ * Currently only get_parent is required.
+ */
 static const struct export_operations ext2_export_ops = {
 	.fh_to_dentry = ext2_fh_to_dentry,
 	.fh_to_parent = ext2_fh_to_parent,
@@ -1437,6 +1442,7 @@ static ssize_t ext2_quota_write(struct super_block *sb, int type,
 	struct buffer_head tmp_bh;
 	struct buffer_head *bh;
 
+	mutex_lock_nested(&inode->i_mutex, I_MUTEX_QUOTA);
 	while (towrite > 0) {
 		tocopy = sb->s_blocksize - offset < towrite ?
 				sb->s_blocksize - offset : towrite;
@@ -1466,13 +1472,16 @@ static ssize_t ext2_quota_write(struct super_block *sb, int type,
 		blk++;
 	}
 out:
-	if (len == towrite)
+	if (len == towrite) {
+		mutex_unlock(&inode->i_mutex);
 		return err;
+	}
 	if (inode->i_size < off+len-towrite)
 		i_size_write(inode, off+len-towrite);
 	inode->i_version++;
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	mark_inode_dirty(inode);
+	mutex_unlock(&inode->i_mutex);
 	return len - towrite;
 }
 

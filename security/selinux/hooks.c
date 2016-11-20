@@ -2123,13 +2123,6 @@ static int selinux_bprm_set_creds(struct linux_binprm *bprm)
 		new_tsec->sid = old_tsec->exec_sid;
 		/* Reset exec SID on execve. */
 		new_tsec->exec_sid = 0;
-
-		/*
-		 * Minimize confusion: if no_new_privs and a transition is
-		 * explicitly requested, then fail the exec.
-		 */
-		if (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS)
-			return -EPERM;
 	} else {
 		/* Check for a default transition on this program. */
 		rc = security_transition_sid(old_tsec->sid, isec->sid,
@@ -2143,8 +2136,7 @@ static int selinux_bprm_set_creds(struct linux_binprm *bprm)
 	ad.selinux_audit_data = &sad;
 	ad.u.path = bprm->file->f_path;
 
-	if ((bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID) ||
-	    (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS))
+	if (bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID)
 		new_tsec->sid = old_tsec->sid;
 
 	if (new_tsec->sid == old_tsec->sid) {
@@ -3193,7 +3185,9 @@ error:
 	return rc;
 }
 
-static int selinux_mmap_addr(unsigned long addr)
+static int selinux_file_mmap(struct file *file, unsigned long reqprot,
+			     unsigned long prot, unsigned long flags,
+			     unsigned long addr, unsigned long addr_only)
 {
 	int rc = 0;
 	u32 sid = current_sid();
@@ -3212,12 +3206,10 @@ static int selinux_mmap_addr(unsigned long addr)
 	}
 
 	/* do DAC check on address space usage */
-	return cap_mmap_addr(addr);
-}
+	rc = cap_file_mmap(file, reqprot, prot, flags, addr, addr_only);
+	if (rc || addr_only)
+		return rc;
 
-static int selinux_mmap_file(struct file *file, unsigned long reqprot,
-			     unsigned long prot, unsigned long flags)
-{
 	if (selinux_checkreqprot)
 		prot = reqprot;
 
@@ -5865,8 +5857,7 @@ static struct security_operations selinux_ops = {
 	.file_alloc_security =		selinux_file_alloc_security,
 	.file_free_security =		selinux_file_free_security,
 	.file_ioctl =			selinux_file_ioctl,
-	.mmap_file =			selinux_mmap_file,
-	.mmap_addr =			selinux_mmap_addr,
+	.file_mmap =			selinux_file_mmap,
 	.file_mprotect =		selinux_file_mprotect,
 	.file_lock =			selinux_file_lock,
 	.file_fcntl =			selinux_file_fcntl,

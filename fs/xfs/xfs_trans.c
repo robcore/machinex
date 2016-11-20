@@ -585,7 +585,7 @@ xfs_trans_t *
 _xfs_trans_alloc(
 	xfs_mount_t	*mp,
 	uint		type,
-	xfs_km_flags_t	memflags)
+	uint		memflags)
 {
 	xfs_trans_t	*tp;
 

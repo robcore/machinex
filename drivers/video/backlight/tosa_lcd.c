@@ -174,8 +174,7 @@ static int __devinit tosa_lcd_probe(struct spi_device *spi)
 	int ret;
 	struct tosa_lcd_data *data;
 
-	data = devm_kzalloc(&spi->dev, sizeof(struct tosa_lcd_data),
-				GFP_KERNEL);
+	data = kzalloc(sizeof(struct tosa_lcd_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
@@ -188,7 +187,7 @@ static int __devinit tosa_lcd_probe(struct spi_device *spi)
 
 	ret = spi_setup(spi);
 	if (ret < 0)
-		return ret;
+		goto err_spi;
 
 	data->spi = spi;
 	dev_set_drvdata(&spi->dev, data);
@@ -225,6 +224,8 @@ err_gpio_dir:
 	gpio_free(TOSA_GPIO_TG_ON);
 err_gpio_tg:
 	dev_set_drvdata(&spi->dev, NULL);
+err_spi:
+	kfree(data);
 	return ret;
 }
 
@@ -241,6 +242,7 @@ static int __devexit tosa_lcd_remove(struct spi_device *spi)
 
 	gpio_free(TOSA_GPIO_TG_ON);
 	dev_set_drvdata(&spi->dev, NULL);
+	kfree(data);
 
 	return 0;
 }

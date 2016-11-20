@@ -15,7 +15,6 @@
 #include <linux/regmap.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
-#include <linux/irqdomain.h>
 #include <linux/slab.h>
 
 #include "internal.h"
@@ -27,10 +26,6 @@ struct regmap_irq_chip_data {
 	struct regmap_irq_chip *chip;
 
 	int irq_base;
-	struct irq_domain *domain;
-
-	int irq;
-	int wake_count;
 
 	void *status_reg_buf;
 	unsigned int *status_buf;
@@ -42,7 +37,7 @@ static inline const
 struct regmap_irq *irq_to_regmap_irq(struct regmap_irq_chip_data *data,
 				     int irq)
 {
-	return &data->chip->irqs[irq];
+	return &data->chip->irqs[irq - data->irq_base];
 }
 
 static void regmap_irq_lock(struct irq_data *data)
@@ -70,23 +65,13 @@ static void regmap_irq_sync_unlock(struct irq_data *data)
 				d->chip->mask_base + i);
 	}
 
-	/* If we've changed our wakeup count propagate it to the parent */
-	if (d->wake_count < 0)
-		for (i = d->wake_count; i < 0; i++)
-			irq_set_irq_wake(d->irq, 0);
-	else if (d->wake_count > 0)
-		for (i = 0; i < d->wake_count; i++)
-			irq_set_irq_wake(d->irq, 1);
-
-	d->wake_count = 0;
-
 	mutex_unlock(&d->lock);
 }
 
 static void regmap_irq_enable(struct irq_data *data)
 {
 	struct regmap_irq_chip_data *d = irq_data_get_irq_chip_data(data);
-	const struct regmap_irq *irq_data = irq_to_regmap_irq(d, data->hwirq);
+	const struct regmap_irq *irq_data = irq_to_regmap_irq(d, data->irq);
 
 	d->mask_buf[irq_data->reg_offset] &= ~irq_data->mask;
 }
@@ -94,31 +79,9 @@ static void regmap_irq_enable(struct irq_data *data)
 static void regmap_irq_disable(struct irq_data *data)
 {
 	struct regmap_irq_chip_data *d = irq_data_get_irq_chip_data(data);
-	const struct regmap_irq *irq_data = irq_to_regmap_irq(d, data->hwirq);
+	const struct regmap_irq *irq_data = irq_to_regmap_irq(d, data->irq);
 
 	d->mask_buf[irq_data->reg_offset] |= irq_data->mask;
-}
-
-static int regmap_irq_set_wake(struct irq_data *data, unsigned int on)
-{
-	struct regmap_irq_chip_data *d = irq_data_get_irq_chip_data(data);
-	struct regmap *map = d->map;
-	const struct regmap_irq *irq_data = irq_to_regmap_irq(d, data->hwirq);
-
-	if (!d->chip->wake_base)
-		return -EINVAL;
-
-	if (on) {
-		d->wake_buf[irq_data->reg_offset / map->reg_stride]
-			&= ~irq_data->mask;
-		d->wake_count++;
-	} else {
-		d->wake_buf[irq_data->reg_offset / map->reg_stride]
-			|= irq_data->mask;
-		d->wake_count--;
-	}
-
-	return 0;
 }
 
 static struct irq_chip regmap_irq_chip = {
@@ -127,7 +90,6 @@ static struct irq_chip regmap_irq_chip = {
 	.irq_bus_sync_unlock	= regmap_irq_sync_unlock,
 	.irq_disable		= regmap_irq_disable,
 	.irq_enable		= regmap_irq_enable,
-	.irq_set_wake		= regmap_irq_set_wake,
 };
 
 static irqreturn_t regmap_irq_thread(int irq, void *d)
@@ -185,7 +147,7 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 	for (i = 0; i < chip->num_irqs; i++) {
 		if (data->status_buf[chip->irqs[i].reg_offset] &
 		    chip->irqs[i].mask) {
-			handle_nested_irq(irq_find_mapping(data->domain, i));
+			handle_nested_irq(data->irq_base + i);
 			handled = true;
 		}
 	}
@@ -195,31 +157,6 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 	else
 		return IRQ_NONE;
 }
-
-static int regmap_irq_map(struct irq_domain *h, unsigned int virq,
-			  irq_hw_number_t hw)
-{
-	struct regmap_irq_chip_data *data = h->host_data;
-
-	irq_set_chip_data(virq, data);
-	irq_set_chip_and_handler(virq, &regmap_irq_chip, handle_edge_irq);
-	irq_set_nested_thread(virq, 1);
-
-	/* ARM needs us to explicitly flag the IRQ as valid
-	 * and will set them noprobe when we do so. */
-#ifdef CONFIG_ARM
-	set_irq_flags(virq, IRQF_VALID);
-#else
-	irq_set_noprobe(virq);
-#endif
-
-	return 0;
-}
-
-static struct irq_domain_ops regmap_domain_ops = {
-	.map	= regmap_irq_map,
-	.xlate	= irq_domain_xlate_twocell,
-};
 
 /**
  * regmap_add_irq_chip(): Use standard regmap IRQ controller handling
@@ -241,23 +178,19 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 			struct regmap_irq_chip_data **data)
 {
 	struct regmap_irq_chip_data *d;
-	int i;
+	int cur_irq, i;
 	int ret = -ENOMEM;
 
-	if (irq_base) {
-		irq_base = irq_alloc_descs(irq_base, 0, chip->num_irqs, 0);
-		if (irq_base < 0) {
-			dev_warn(map->dev, "Failed to allocate IRQs: %d\n",
-				 irq_base);
-			return irq_base;
-		}
+	irq_base = irq_alloc_descs(irq_base, 0, chip->num_irqs, 0);
+	if (irq_base < 0) {
+		dev_warn(map->dev, "Failed to allocate IRQs: %d\n",
+			 irq_base);
+		return irq_base;
 	}
 
 	d = kzalloc(sizeof(*d), GFP_KERNEL);
 	if (!d)
 		return -ENOMEM;
-
-	*data = d;
 
 	d->status_buf = kzalloc(sizeof(unsigned int) * chip->num_regs,
 				GFP_KERNEL);
@@ -279,14 +212,6 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 	if (!d->mask_buf_def)
 		goto err_alloc;
 
-	if (chip->wake_base) {
-		d->wake_buf = kzalloc(sizeof(unsigned int) * chip->num_regs,
-				      GFP_KERNEL);
-		if (!d->wake_buf)
-			goto err_alloc;
-	}
-
-	d->irq = irq;
 	d->map = map;
 	d->chip = chip;
 	d->irq_base = irq_base;
@@ -307,33 +232,34 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 		}
 	}
 
-	if (irq_base)
-		d->domain = irq_domain_add_legacy(map->dev->of_node,
-						  chip->num_irqs, irq_base, 0,
-						  &regmap_domain_ops, d);
-	else
-		d->domain = irq_domain_add_linear(map->dev->of_node,
-						  chip->num_irqs,
-						  &regmap_domain_ops, d);
-	if (!d->domain) {
-		dev_err(map->dev, "Failed to create IRQ domain\n");
-		ret = -ENOMEM;
-		goto err_alloc;
+	/* Register them with genirq */
+	for (cur_irq = irq_base;
+	     cur_irq < chip->num_irqs + irq_base;
+	     cur_irq++) {
+		irq_set_chip_data(cur_irq, d);
+		irq_set_chip_and_handler(cur_irq, &regmap_irq_chip,
+					 handle_edge_irq);
+		irq_set_nested_thread(cur_irq, 1);
+
+		/* ARM needs us to explicitly flag the IRQ as valid
+		 * and will set them noprobe when we do so. */
+#ifdef CONFIG_ARM
+		set_irq_flags(cur_irq, IRQF_VALID);
+#else
+		irq_set_noprobe(cur_irq);
+#endif
 	}
 
 	ret = request_threaded_irq(irq, NULL, regmap_irq_thread, irq_flags,
 				   chip->name, d);
 	if (ret != 0) {
 		dev_err(map->dev, "Failed to request IRQ %d: %d\n", irq, ret);
-		goto err_domain;
+		goto err_alloc;
 	}
 
 	return 0;
 
-err_domain:
-	/* Should really dispose of the domain but... */
 err_alloc:
-	kfree(d->wake_buf);
 	kfree(d->mask_buf_def);
 	kfree(d->mask_buf);
 	kfree(d->status_reg_buf);
@@ -355,8 +281,6 @@ void regmap_del_irq_chip(int irq, struct regmap_irq_chip_data *d)
 		return;
 
 	free_irq(irq, d);
-	/* We should unmap the domain but... */
-	kfree(d->wake_buf);
 	kfree(d->mask_buf_def);
 	kfree(d->mask_buf);
 	kfree(d->status_reg_buf);
@@ -374,25 +298,6 @@ EXPORT_SYMBOL_GPL(regmap_del_irq_chip);
  */
 int regmap_irq_chip_get_base(struct regmap_irq_chip_data *data)
 {
-	WARN_ON(!data->irq_base);
 	return data->irq_base;
 }
 EXPORT_SYMBOL_GPL(regmap_irq_chip_get_base);
-
-/**
- * regmap_irq_get_virq(): Map an interrupt on a chip to a virtual IRQ
- *
- * Useful for drivers to request their own IRQs.
- *
- * @data: regmap_irq controller to operate on.
- * @irq: index of the interrupt requested in the chip IRQs
- */
-int regmap_irq_get_virq(struct regmap_irq_chip_data *data, int irq)
-{
-	/* Handle holes in the IRQ list */
-	if (!data->chip->irqs[irq].mask)
-		return -EINVAL;
-
-	return irq_create_mapping(data->domain, irq);
-}
-EXPORT_SYMBOL_GPL(regmap_irq_get_virq);

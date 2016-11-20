@@ -157,8 +157,9 @@ const_debug unsigned int sysctl_sched_features =
 #define SCHED_FEAT(name, enabled)	\
 	#name ,
 
-static const char * const sched_feat_names[] = {
+static __read_mostly char *sched_feat_names[] = {
 #include "features.h"
+	NULL
 };
 
 #undef SCHED_FEAT
@@ -3616,7 +3617,6 @@ static noinline void __schedule_bug(struct task_struct *prev)
 	if (irqs_disabled())
 		print_irqtrace_events(prev);
 	dump_stack();
-	add_taint(TAINT_WARN);
 }
 
 /*
@@ -6212,20 +6212,15 @@ static cpumask_var_t sched_domains_tmpmask; /* sched_domains_mutex */
 
 #ifdef CONFIG_SCHED_DEBUG
 
-static __read_mostly int sched_debug_enabled;
+static __read_mostly int sched_domain_debug_enabled;
 
-static int __init sched_debug_setup(char *str)
+static int __init sched_domain_debug_setup(char *str)
 {
-	sched_debug_enabled = 1;
+	sched_domain_debug_enabled = 1;
 
 	return 0;
 }
-early_param("sched_debug", sched_debug_setup);
-
-static inline bool sched_debug(void)
-{
-	return sched_debug_enabled;
-}
+early_param("sched_debug", sched_domain_debug_setup);
 
 static int sched_domain_debug_one(struct sched_domain *sd, int cpu, int level,
 				  struct cpumask *groupmask)
@@ -6265,12 +6260,7 @@ static int sched_domain_debug_one(struct sched_domain *sd, int cpu, int level,
 			break;
 		}
 
-		/*
-		 * Even though we initialize ->power to something semi-sane,
-		 * we leave power_orig unset. This allows us to detect if
-		 * domain iteration is still funny without causing /0 traps.
-		 */
-		if (!group->sgp->power_orig) {
+		if (!group->sgp->power) {
 			printk(KERN_CONT "\n");
 			printk(KERN_ERR "ERROR: domain->cpu_power not "
 					"set\n");
@@ -6318,7 +6308,7 @@ static void sched_domain_debug(struct sched_domain *sd, int cpu)
 {
 	int level = 0;
 
-	if (!sched_debug_enabled)
+	if (!sched_domain_debug_enabled)
 		return;
 
 	if (!sd) {
@@ -6339,10 +6329,6 @@ static void sched_domain_debug(struct sched_domain *sd, int cpu)
 }
 #else /* !CONFIG_SCHED_DEBUG */
 # define sched_domain_debug(sd, cpu) do { } while (0)
-static inline bool sched_debug(void)
-{
-	return false;
-}
 #endif /* CONFIG_SCHED_DEBUG */
 
 static int sd_degenerate(struct sched_domain *sd)
@@ -6717,44 +6703,6 @@ struct sched_domain_topology_level {
 	struct sd_data      data;
 };
 
-/*
- * Build an iteration mask that can exclude certain CPUs from the upwards
- * domain traversal.
- *
- * Asymmetric node setups can result in situations where the domain tree is of
- * unequal depth, make sure to skip domains that already cover the entire
- * range.
- *
- * In that case build_sched_domains() will have terminated the iteration early
- * and our sibling sd spans will be empty. Domains should always include the
- * cpu they're built on, so check that.
- *
- */
-static void build_group_mask(struct sched_domain *sd, struct sched_group *sg)
-{
-	const struct cpumask *span = sched_domain_span(sd);
-	struct sd_data *sdd = sd->private;
-	struct sched_domain *sibling;
-	int i;
-
-	for_each_cpu(i, span) {
-		sibling = *per_cpu_ptr(sdd->sd, i);
-		if (!cpumask_test_cpu(i, sched_domain_span(sibling)))
-			continue;
-
-		cpumask_set_cpu(i, sched_group_mask(sg));
-	}
-}
-
-/*
- * Return the canonical balance cpu for this group, this is the first cpu
- * of this group that's also in the iteration mask.
- */
-int group_balance_cpu(struct sched_group *sg)
-{
-	return cpumask_first_and(sched_group_cpus(sg), sched_group_mask(sg));
-}
-
 static int
 build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 {
@@ -6773,12 +6721,6 @@ build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 		if (cpumask_test_cpu(i, covered))
 			continue;
 
-		child = *per_cpu_ptr(sdd->sd, i);
-
-		/* See the comment near build_group_mask(). */
-		if (!cpumask_test_cpu(i, sched_domain_span(child)))
-			continue;
-
 		sg = kzalloc_node(sizeof(struct sched_group) + cpumask_size(),
 				GFP_KERNEL, cpu_to_node(cpu));
 
@@ -6786,6 +6728,8 @@ build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 			goto fail;
 
 		sg_span = sched_group_cpus(sg);
+
+		child = *per_cpu_ptr(sdd->sd, i);
 		if (child->child) {
 			child = child->child;
 			cpumask_copy(sg_span, sched_domain_span(child));
@@ -6795,24 +6739,14 @@ build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 		cpumask_or(covered, covered, sg_span);
 
 		sg->sgp = *per_cpu_ptr(sdd->sgp, i);
-		if (atomic_inc_return(&sg->sgp->ref) == 1)
-			build_group_mask(sd, sg);
+		atomic_inc(&sg->sgp->ref);
+		sg->balance_cpu = -1;
 
-		/*
-		 * Initialize sgp->power such that even if we mess up the
-		 * domains and no possible iteration will get us here, we won't
-		 * die on a /0 trap.
-		 */
-		sg->sgp->power = SCHED_POWER_SCALE * cpumask_weight(sg_span);
-
-		/*
-		 * Make sure the first group of this domain contains the
-		 * canonical balance cpu. Otherwise the sched_domain iteration
-		 * breaks. See update_sg_lb_stats().
-		 */
 		if ((!groups && cpumask_test_cpu(cpu, sg_span)) ||
-		    group_balance_cpu(sg) == cpu)
+			       cpumask_first(sg_span) == cpu) {
+			WARN_ON_ONCE(!cpumask_test_cpu(cpu, sg_span));
 			groups = sg;
+		}
 
 		if (!first)
 			first = sg;
@@ -6885,7 +6819,7 @@ build_sched_groups(struct sched_domain *sd, int cpu)
 		group = get_group(i, sdd, &sg);
 		cpumask_clear(sched_group_cpus(sg));
 		sg->sgp->power = 0;
-		cpumask_setall(sched_group_mask(sg));
+		sg->balance_cpu = -1;
 
 		for_each_cpu(j, span) {
 			if (get_group(j, sdd, NULL) != group)
@@ -6927,7 +6861,7 @@ static void init_sched_groups_power(int cpu, struct sched_domain *sd)
 		sg = sg->next;
 	} while (sg != sd->groups);
 
-	if (cpu != group_balance_cpu(sg))
+	if (cpu != group_first_cpu(sg))
 		return;
 
 	update_group_power(sd, cpu);
@@ -7089,13 +7023,14 @@ static struct sched_domain_topology_level *sched_domain_topology = default_topol
 #ifdef CONFIG_NUMA
 
 static int sched_domains_numa_levels;
+static int sched_domains_numa_scale;
 static int *sched_domains_numa_distance;
 static struct cpumask ***sched_domains_numa_masks;
 static int sched_domains_curr_level;
 
 static inline int sd_local_flags(int level)
 {
-	if (sched_domains_numa_distance[level] > RECLAIM_DISTANCE)
+	if (sched_domains_numa_distance[level] > REMOTE_DISTANCE)
 		return 0;
 
 	return SD_BALANCE_EXEC | SD_BALANCE_FORK | SD_WAKE_AFFINE;
@@ -7154,42 +7089,6 @@ static const struct cpumask *sd_numa_mask(int cpu)
 	return sched_domains_numa_masks[sched_domains_curr_level][cpu_to_node(cpu)];
 }
 
-static void sched_numa_warn(const char *str)
-{
-	static int done = false;
-	int i,j;
-
-	if (done)
-		return;
-
-	done = true;
-
-	printk(KERN_WARNING "ERROR: %s\n\n", str);
-
-	for (i = 0; i < nr_node_ids; i++) {
-		printk(KERN_WARNING "  ");
-		for (j = 0; j < nr_node_ids; j++)
-			printk(KERN_CONT "%02d ", node_distance(i,j));
-		printk(KERN_CONT "\n");
-	}
-	printk(KERN_WARNING "\n");
-}
-
-static bool find_numa_distance(int distance)
-{
-	int i;
-
-	if (distance == node_distance(0, 0))
-		return true;
-
-	for (i = 0; i < sched_domains_numa_levels; i++) {
-		if (sched_domains_numa_distance[i] == distance)
-			return true;
-	}
-
-	return false;
-}
-
 static void sched_init_numa(void)
 {
 	int next_distance, curr_distance = node_distance(0, 0);
@@ -7197,6 +7096,7 @@ static void sched_init_numa(void)
 	int level = 0;
 	int i, j, k;
 
+	sched_domains_numa_scale = curr_distance;
 	sched_domains_numa_distance = kzalloc(sizeof(int) * nr_node_ids, GFP_KERNEL);
 	if (!sched_domains_numa_distance)
 		return;
@@ -7207,41 +7107,23 @@ static void sched_init_numa(void)
 	 *
 	 * Assumes node_distance(0,j) includes all distances in
 	 * node_distance(i,j) in order to avoid cubic time.
+	 *
+	 * XXX: could be optimized to O(n log n) by using sort()
 	 */
 	next_distance = curr_distance;
 	for (i = 0; i < nr_node_ids; i++) {
 		for (j = 0; j < nr_node_ids; j++) {
-			for (k = 0; k < nr_node_ids; k++) {
-				int distance = node_distance(i, k);
-
-				if (distance > curr_distance &&
-				    (distance < next_distance ||
-				     next_distance == curr_distance))
-					next_distance = distance;
-
-				/*
-				 * While not a strong assumption it would be nice to know
-				 * about cases where if node A is connected to B, B is not
-				 * equally connected to A.
-				 */
-				if (sched_debug() && node_distance(k, i) != distance)
-					sched_numa_warn("Node-distance not symmetric");
-
-				if (sched_debug() && i && !find_numa_distance(distance))
-					sched_numa_warn("Node-0 not representative");
-			}
-			if (next_distance != curr_distance) {
-				sched_domains_numa_distance[level++] = next_distance;
-				sched_domains_numa_levels = level;
-				curr_distance = next_distance;
-			} else break;
+			int distance = node_distance(0, j);
+			if (distance > curr_distance &&
+					(distance < next_distance ||
+					 next_distance == curr_distance))
+				next_distance = distance;
 		}
-
-		/*
-		 * In case of sched_debug() we verify the above assumption.
-		 */
-		if (!sched_debug())
-			break;
+		if (next_distance != curr_distance) {
+			sched_domains_numa_distance[level++] = next_distance;
+			sched_domains_numa_levels = level;
+			curr_distance = next_distance;
+		} else break;
 	}
 	/*
 	 * 'level' contains the number of unique distances, excluding the
@@ -7266,7 +7148,7 @@ static void sched_init_numa(void)
 			return;
 
 		for (j = 0; j < nr_node_ids; j++) {
-			struct cpumask *mask = kzalloc(cpumask_size(), GFP_KERNEL);
+			struct cpumask *mask = kzalloc_node(cpumask_size(), GFP_KERNEL, j);
 			if (!mask)
 				return;
 
@@ -7353,7 +7235,7 @@ static int __sdt_alloc(const struct cpumask *cpu_map)
 
 			*per_cpu_ptr(sdd->sg, j) = sg;
 
-			sgp = kzalloc_node(sizeof(struct sched_group_power) + cpumask_size(),
+			sgp = kzalloc_node(sizeof(struct sched_group_power),
 					GFP_KERNEL, cpu_to_node(j));
 			if (!sgp)
 				return -ENOMEM;
@@ -7550,6 +7432,7 @@ static int init_sched_domains(const struct cpumask *cpu_map)
 	if (!doms_cur)
 		doms_cur = &fallback_doms;
 	cpumask_andnot(doms_cur[0], cpu_map, cpu_isolated_map);
+	dattr_cur = NULL;
 	err = build_sched_domains(doms_cur[0], NULL);
 	register_sched_domain_sysctl();
 

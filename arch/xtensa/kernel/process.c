@@ -143,16 +143,13 @@ void flush_thread(void)
 }
 
 /*
- * this gets called so that we can store coprocessor state into memory and
- * copy the current task into the new thread.
+ * This is called before the thread is copied. 
  */
-int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src)
+void prepare_to_copy(struct task_struct *tsk)
 {
 #if XTENSA_HAVE_COPROCESSORS
-	coprocessor_flush_all(task_thread_info(src));
+	coprocessor_flush_all(task_thread_info(tsk));
 #endif
-	*dst = *src;
-	return 0;
 }
 
 /*

@@ -6,7 +6,7 @@
  * for more details.
  *
  * Copyright (C) 2008 Emlix GmbH <info@emlix.com>
- * Author:	Oskar Schirmer <oskar@scara.com>
+ * Author:	Oskar Schirmer <os@emlix.com>
  */
 
 #ifndef __DRIVERS_I2C_BUSSES_I2C_S6000_H

@@ -281,6 +281,10 @@ static int __bprm_mm_init(struct linux_binprm *bprm)
 	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
 	INIT_LIST_HEAD(&vma->anon_vma_chain);
 
+	err = security_file_mmap(NULL, 0, 0, 0, vma->vm_start, 1);
+	if (err)
+		goto err;
+
 	err = insert_vm_struct(mm, vma);
 	if (err)
 		goto err;
@@ -821,7 +825,6 @@ static int exec_mmap(struct mm_struct *mm)
 	/* Notify parent that we're no longer interested in the old VM */
 	tsk = current;
 	old_mm = current->mm;
-	sync_mm_rss(old_mm);
 	mm_release(tsk, old_mm);
 
 	if (old_mm) {
@@ -1303,13 +1306,6 @@ static int check_unsafe_exec(struct linux_binprm *bprm)
 		else
 			bprm->unsafe |= LSM_UNSAFE_PTRACE;
 	}
-
-	/*
-	 * This isn't strictly necessary, but it makes it harder for LSMs to
-	 * mess up.
-	 */
-	if (task_no_new_privs(current))
-		bprm->unsafe |= LSM_UNSAFE_NO_NEW_PRIVS;
 
 	n_fs = 1;
 	spin_lock(&p->fs->lock);
@@ -1972,21 +1968,8 @@ static int coredump_wait(int exit_code, struct core_state *core_state)
 		core_waiters = zap_threads(tsk, mm, core_state, exit_code);
 	up_write(&mm->mmap_sem);
 
-	if (core_waiters > 0) {
-		struct core_thread *ptr;
-
+	if (core_waiters > 0)
 		wait_for_completion(&core_state->startup);
-		/*
-		 * Wait for all the threads to become inactive, so that
-		 * all the thread context (extended register state, like
-		 * fpu etc) gets copied to the memory.
-		 */
-		ptr = core_state->dumper.next;
-		while (ptr != NULL) {
-			wait_task_inactive(ptr->task, 0);
-			ptr = ptr->next;
-		}
-	}
 
 	return core_waiters;
 }

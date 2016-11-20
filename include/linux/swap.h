@@ -234,8 +234,8 @@ extern unsigned int nr_free_pagecache_pages(void);
 /* linux/mm/swap.c */
 extern void __lru_cache_add(struct page *, enum lru_list lru);
 extern void lru_cache_add_lru(struct page *, enum lru_list lru);
-extern void lru_add_page_tail(struct page *page, struct page *page_tail,
-			      struct lruvec *lruvec);
+extern void lru_add_page_tail(struct zone* zone,
+			      struct page *page, struct page *page_tail);
 extern void activate_page(struct page *);
 extern void mark_page_accessed(struct page *);
 extern void lru_add_drain(void);
@@ -389,6 +389,7 @@ struct backing_dev_info;
 #ifdef CONFIG_CGROUP_MEM_RES_CTLR
 extern void
 mem_cgroup_uncharge_swapcache(struct page *page, swp_entry_t ent, bool swapout);
+extern int mem_cgroup_count_swap_user(swp_entry_t ent, struct page **pagep);
 #else
 static inline void
 mem_cgroup_uncharge_swapcache(struct page *page, swp_entry_t ent, bool swapout)
@@ -476,11 +477,6 @@ static inline void delete_from_swap_cache(struct page *page)
 {
 }
 
-static inline int page_swapcount(struct page *page)
-{
-	return 0;
-}
-
 #define reuse_swap_page(page)	(page_mapcount(page) == 1)
 
 static inline int try_to_free_swap(struct page *page)
@@ -499,6 +495,14 @@ static inline void
 mem_cgroup_uncharge_swapcache(struct page *page, swp_entry_t ent)
 {
 }
+
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR
+static inline int
+mem_cgroup_count_swap_user(swp_entry_t ent, struct page **pagep)
+{
+	return 0;
+}
+#endif
 
 #endif /* CONFIG_SWAP */
 #endif /* __KERNEL__*/

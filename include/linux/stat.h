@@ -58,15 +58,14 @@
 
 #include <linux/types.h>
 #include <linux/time.h>
-#include <linux/uidgid.h>
 
 struct kstat {
 	u64		ino;
 	dev_t		dev;
 	umode_t		mode;
 	unsigned int	nlink;
-	kuid_t		uid;
-	kgid_t		gid;
+	uid_t		uid;
+	gid_t		gid;
 	dev_t		rdev;
 	loff_t		size;
 	struct timespec  atime;

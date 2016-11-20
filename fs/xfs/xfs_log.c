@@ -3141,7 +3141,7 @@ xlog_ticket_alloc(
 	int		cnt,
 	char		client,
 	bool		permanent,
-	xfs_km_flags_t	alloc_flags)
+	int		alloc_flags)
 {
 	struct xlog_ticket *tic;
 	uint		num_headers;

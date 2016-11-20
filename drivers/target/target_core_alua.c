@@ -67,24 +67,18 @@ int target_emulate_report_target_port_groups(struct se_task *task)
 	struct t10_alua_tg_pt_gp *tg_pt_gp;
 	struct t10_alua_tg_pt_gp_member *tg_pt_gp_mem;
 	unsigned char *buf;
-	u32 rd_len = 0, off;
-	int ext_hdr = (cmd->t_task_cdb[1] & 0x20);
+	u32 rd_len = 0, off = 4; /* Skip over RESERVED area to first
+				    Target port group descriptor */
 	/*
-	 * Skip over RESERVED area to first Target port group descriptor
-	 * depending on the PARAMETER DATA FORMAT type..
+	 * Need at least 4 bytes of response data or else we can't
+	 * even fit the return data length.
 	 */
-	if (ext_hdr != 0)
-		off = 8;
-	else
-		off = 4;
-
-	if (cmd->data_length < off) {
-		pr_warn("REPORT TARGET PORT GROUPS allocation length %u too"
-			" small for %s header\n", cmd->data_length,
-			(ext_hdr) ? "extended" : "normal");
-		cmd->scsi_sense_reason = TCM_INVALID_CDB_FIELD;
+	if (cmd->data_length < 4) {
+		pr_warn("REPORT TARGET PORT GROUPS allocation length %u"
+			" too small\n", cmd->data_length);
 		return -EINVAL;
 	}
+
 	buf = transport_kmap_data_sg(cmd);
 
 	spin_lock(&su_dev->t10_alua.tg_pt_gps_lock);
@@ -165,31 +159,11 @@ int target_emulate_report_target_port_groups(struct se_task *task)
 	/*
 	 * Set the RETURN DATA LENGTH set in the header of the DataIN Payload
 	 */
-	put_unaligned_be32(rd_len, &buf[0]);
+	buf[0] = ((rd_len >> 24) & 0xff);
+	buf[1] = ((rd_len >> 16) & 0xff);
+	buf[2] = ((rd_len >> 8) & 0xff);
+	buf[3] = (rd_len & 0xff);
 
-	/*
-	 * Fill in the Extended header parameter data format if requested
-	 */
-	if (ext_hdr != 0) {
-		buf[4] = 0x10;
-		/*
-		 * Set the implict transition time (in seconds) for the application
-		 * client to use as a base for it's transition timeout value.
-		 *
-		 * Use the current tg_pt_gp_mem -> tg_pt_gp membership from the LUN
-		 * this CDB was received upon to determine this value individually
-		 * for ALUA target port group.
-		 */
-		port = cmd->se_lun->lun_sep;
-		tg_pt_gp_mem = port->sep_alua_tg_pt_gp_mem;
-		if (tg_pt_gp_mem) {
-			spin_lock(&tg_pt_gp_mem->tg_pt_gp_mem_lock);
-			tg_pt_gp = tg_pt_gp_mem->tg_pt_gp;
-			if (tg_pt_gp)
-				buf[5] = tg_pt_gp->tg_pt_gp_implict_trans_secs;
-			spin_unlock(&tg_pt_gp_mem->tg_pt_gp_mem_lock);
-		}
-	}
 	transport_kunmap_data_sg(cmd);
 
 	task->task_scsi_status = GOOD;
@@ -1390,7 +1364,6 @@ struct t10_alua_tg_pt_gp *core_alua_allocate_tg_pt_gp(
 	 */
 	tg_pt_gp->tg_pt_gp_nonop_delay_msecs = ALUA_DEFAULT_NONOP_DELAY_MSECS;
 	tg_pt_gp->tg_pt_gp_trans_delay_msecs = ALUA_DEFAULT_TRANS_DELAY_MSECS;
-	tg_pt_gp->tg_pt_gp_implict_trans_secs = ALUA_DEFAULT_IMPLICT_TRANS_SECS;
 
 	if (def_group) {
 		spin_lock(&su_dev->t10_alua.tg_pt_gps_lock);
@@ -1883,37 +1856,6 @@ ssize_t core_alua_store_trans_delay_msecs(
 		return -EINVAL;
 	}
 	tg_pt_gp->tg_pt_gp_trans_delay_msecs = (int)tmp;
-
-	return count;
-}
-
-ssize_t core_alua_show_implict_trans_secs(
-	struct t10_alua_tg_pt_gp *tg_pt_gp,
-	char *page)
-{
-	return sprintf(page, "%d\n", tg_pt_gp->tg_pt_gp_implict_trans_secs);
-}
-
-ssize_t core_alua_store_implict_trans_secs(
-	struct t10_alua_tg_pt_gp *tg_pt_gp,
-	const char *page,
-	size_t count)
-{
-	unsigned long tmp;
-	int ret;
-
-	ret = strict_strtoul(page, 0, &tmp);
-	if (ret < 0) {
-		pr_err("Unable to extract implict_trans_secs\n");
-		return -EINVAL;
-	}
-	if (tmp > ALUA_MAX_IMPLICT_TRANS_SECS) {
-		pr_err("Passed implict_trans_secs: %lu, exceeds"
-			" ALUA_MAX_IMPLICT_TRANS_SECS: %d\n", tmp,
-			ALUA_MAX_IMPLICT_TRANS_SECS);
-		return  -EINVAL;
-	}
-	tg_pt_gp->tg_pt_gp_implict_trans_secs = (int)tmp;
 
 	return count;
 }

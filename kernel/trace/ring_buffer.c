@@ -937,10 +937,6 @@ static int rb_check_pages(struct ring_buffer_per_cpu *cpu_buffer)
 	struct list_head *head = cpu_buffer->pages;
 	struct buffer_page *bpage, *tmp;
 
-	/* Reset the head page if it exists */
-	if (cpu_buffer->head_page)
-		rb_set_head_page(cpu_buffer);
-
 	rb_head_page_deactivate(cpu_buffer);
 
 	if (RB_WARN_ON(cpu_buffer, head->next->prev != head))
@@ -1302,11 +1298,6 @@ int ring_buffer_resize(struct ring_buffer *buffer, unsigned long size)
 	 * Always succeed at resizing a non-existent buffer:
 	 */
 	if (!buffer)
-		return size;
-
-	/* Make sure the requested buffer exists */
-	if (cpu_id != RING_BUFFER_ALL_CPUS &&
-	    !cpumask_test_cpu(cpu_id, buffer->cpumask))
 		return size;
 
 	size = DIV_ROUND_UP(size, BUF_PAGE_SIZE);

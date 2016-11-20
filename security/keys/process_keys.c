@@ -732,8 +732,6 @@ try_again:
 	if (ret < 0)
 		goto invalid_key;
 
-	key->last_used_at = current_kernel_time().tv_sec;
-
 error:
 	put_cred(cred);
 	return key_ref;

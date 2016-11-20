@@ -3258,7 +3258,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	 * Note: s_es must be initialized as soon as possible because
 	 *       some ext4 macro-instructions depend on its value
 	 */
-	es = (struct ext4_super_block *) (bh->b_data + offset);
+	es = (struct ext4_super_block *) (((char *)bh->b_data) + offset);
 	sbi->s_es = es;
 	sb->s_magic = le16_to_cpu(es->s_magic);
 	if (sb->s_magic != EXT4_SUPER_MAGIC)
@@ -3418,7 +3418,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 			       "Can't read superblock on 2nd try");
 			goto failed_mount;
 		}
-		es = (struct ext4_super_block *)(bh->b_data + offset);
+		es = (struct ext4_super_block *)(((char *)bh->b_data) + offset);
 		sbi->s_es = es;
 		if (es->s_magic != cpu_to_le16(EXT4_SUPER_MAGIC)) {
 			ext4_msg(sb, KERN_ERR,
@@ -3616,7 +3616,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 					  GFP_KERNEL);
 	if (sbi->s_group_desc == NULL) {
 		ext4_msg(sb, KERN_ERR, "not enough memory");
-		ret = -ENOMEM;
 		goto failed_mount;
 	}
 
@@ -3674,7 +3673,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	}
 	if (err) {
 		ext4_msg(sb, KERN_ERR, "insufficient memory");
-		ret = err;
 		goto failed_mount3;
 	}
 
@@ -3882,7 +3880,7 @@ no_journal:
 	}
 
 	ext4_ext_init(sb);
-	err = ext4_mb_init(sb);
+	err = ext4_mb_init(sb, needs_recovery);
 	if (err) {
 		ext4_msg(sb, KERN_ERR, "failed to initialize mballoc (%d)",
 			 err);
@@ -4095,7 +4093,7 @@ static journal_t *ext4_get_dev_journal(struct super_block *sb,
 		goto out_bdev;
 	}
 
-	es = (struct ext4_super_block *) (bh->b_data + offset);
+	es = (struct ext4_super_block *) (((char *)bh->b_data) + offset);
 	if ((le16_to_cpu(es->s_magic) != EXT4_SUPER_MAGIC) ||
 	    !(le32_to_cpu(es->s_feature_incompat) &
 	      EXT4_FEATURE_INCOMPAT_JOURNAL_DEV)) {
@@ -4978,6 +4976,7 @@ static ssize_t ext4_quota_write(struct super_block *sb, int type,
 		return -EIO;
 	}
 
+	mutex_lock_nested(&inode->i_mutex, I_MUTEX_QUOTA);
 	bh = ext4_bread(handle, inode, blk, 1, &err);
 	if (!bh)
 		goto out;
@@ -4993,13 +4992,16 @@ static ssize_t ext4_quota_write(struct super_block *sb, int type,
 	err = ext4_handle_dirty_metadata(handle, NULL, bh);
 	brelse(bh);
 out:
-	if (err)
+	if (err) {
+		mutex_unlock(&inode->i_mutex);
 		return err;
+	}
 	if (inode->i_size < off + len) {
 		i_size_write(inode, off + len);
 		EXT4_I(inode)->i_disksize = inode->i_size;
 		ext4_mark_inode_dirty(handle, inode);
 	}
+	mutex_unlock(&inode->i_mutex);
 	return len;
 }
 

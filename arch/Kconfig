@@ -170,14 +170,6 @@ config USE_GENERIC_SMP_HELPERS
 config GENERIC_SMP_IDLE_THREAD
        bool
 
-# Select if arch has its private alloc_task_struct() function
-config ARCH_TASK_STRUCT_ALLOCATOR
-	bool
-
-# Select if arch has its private alloc_thread_info() function
-config ARCH_THREAD_INFO_ALLOCATOR
-	bool
-
 config HAVE_REGS_AND_STACK_ACCESS_API
 	bool
 	help
@@ -259,30 +251,6 @@ config HAVE_CONTEXT_TRACKING
 	  wrapped as well. Irqs are already protected inside
 	  rcu_irq_enter/rcu_irq_exit() but preemption or signal handling on
 	  irq exit still need to be protected.
-
-config HAVE_ARCH_SECCOMP_FILTER
-	bool
-	help
-	  An arch should select this symbol if it provides all of these things:
-	  - syscall_get_arch()
-	  - syscall_get_arguments()
-	  - syscall_rollback()
-	  - syscall_set_return_value()
-	  - SIGSYS siginfo_t support
-	  - secure_computing is called from a ptrace_event()-safe context
-	  - secure_computing return value is checked and a return value of -1
-	    results in the system call being skipped immediately.
-	  - seccomp syscall wired up
-
-config SECCOMP_FILTER
-	def_bool y
-	depends on HAVE_ARCH_SECCOMP_FILTER && SECCOMP && NET
-	help
-	  Enable tasks to build secure computing environments defined
-	  in terms of Berkeley Packet Filter programs which implement
-	  task-defined system call filtering polices.
-
-	  See Documentation/prctl/seccomp_filter.txt for details.
 
 config HAVE_ARCH_SECCOMP_FILTER
 	bool

@@ -273,8 +273,8 @@ static long region_count(struct list_head *head, long f, long t)
 
 	/* Locate each segment we overlap with, and count that overlap. */
 	list_for_each_entry(rg, head, link) {
-		long seg_from;
-		long seg_to;
+		int seg_from;
+		int seg_to;
 
 		if (rg->to <= f)
 			continue;

@@ -33,6 +33,8 @@ typedef uint32_t key_perm_t;
 
 struct key;
 
+#define key_replace_session_keyring()	do { } while (0)
+
 #ifdef CONFIG_KEYS
 
 #undef KEY_DEBUGGING
@@ -136,7 +138,6 @@ struct key {
 		time_t		expiry;		/* time at which key expires (or 0) */
 		time_t		revoked_at;	/* time at which key was revoked */
 	};
-	time_t			last_used_at;	/* last time used for LRU keyring discard */
 	uid_t			uid;
 	gid_t			gid;
 	key_perm_t		perm;		/* access permissions */

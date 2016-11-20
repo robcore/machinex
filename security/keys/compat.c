@@ -24,7 +24,7 @@
  *
  * If successful, 0 will be returned.
  */
-static long compat_keyctl_instantiate_key_iov(
+long compat_keyctl_instantiate_key_iov(
 	key_serial_t id,
 	const struct compat_iovec __user *_payload_iov,
 	unsigned ioc,
@@ -33,7 +33,7 @@ static long compat_keyctl_instantiate_key_iov(
 	struct iovec iovstack[UIO_FASTIOV], *iov = iovstack;
 	long ret;
 
-	if (!_payload_iov || !ioc)
+	if (_payload_iov == 0 || ioc == 0)
 		goto no_payload;
 
 	ret = compat_rw_copy_check_uvector(WRITE, _payload_iov, ioc,

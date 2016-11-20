@@ -1984,13 +1984,6 @@ static void ptrace_do_notify(int signr, int exit_code, int why)
 void ptrace_notify(int exit_code)
 {
 	BUG_ON((exit_code & (0x7f | ~0xffff)) != SIGTRAP);
-	if (unlikely(current->task_works)) {
-		if (test_and_clear_ti_thread_flag(current_thread_info(),
-						   TIF_NOTIFY_RESUME)) {
-			smp_mb__after_clear_bit();
-			task_work_run();
-		}
-	}
 
 	spin_lock_irq(&current->sighand->siglock);
 	ptrace_do_notify(SIGTRAP, exit_code, CLD_TRAPPED);
@@ -2210,14 +2203,6 @@ int get_signal_to_deliver(siginfo_t *info, struct k_sigaction *return_ka,
 	struct sighand_struct *sighand = current->sighand;
 	struct signal_struct *signal = current->signal;
 	int signr;
-
-	if (unlikely(current->task_works)) {
-		if (test_and_clear_ti_thread_flag(current_thread_info(),
-						   TIF_NOTIFY_RESUME)) {
-			smp_mb__after_clear_bit();
-			task_work_run();
-		}
-	}
 
 relock:
 	/*
@@ -2971,8 +2956,7 @@ SYSCALL_DEFINE3(rt_sigqueueinfo, pid_t, pid, int, sig,
 	/* Not even root can pretend to send signals from the kernel.
 	 * Nor can they impersonate a kill()/tgkill(), which adds source info.
 	 */
-	if ((info.si_code >= 0 || info.si_code == SI_TKILL) &&
-	    (task_pid_vnr(current) != pid)) {
+	if (info.si_code >= 0 || info.si_code == SI_TKILL) {
 		/* We used to allow any < 0 si_code */
 		WARN_ON_ONCE(info.si_code < 0);
 		return -EPERM;
@@ -2992,8 +2976,7 @@ long do_rt_tgsigqueueinfo(pid_t tgid, pid_t pid, int sig, siginfo_t *info)
 	/* Not even root can pretend to send signals from the kernel.
 	 * Nor can they impersonate a kill()/tgkill(), which adds source info.
 	 */
-	if ((info->si_code >= 0 || info->si_code == SI_TKILL) &&
-	    (task_pid_vnr(current) != pid)) {
+	if (info->si_code >= 0 || info->si_code == SI_TKILL) {
 		/* We used to allow any < 0 si_code */
 		WARN_ON_ONCE(info->si_code < 0);
 		return -EPERM;
@@ -3059,7 +3042,7 @@ int do_sigaction(int sig, struct k_sigaction *act, struct k_sigaction *oact)
 	return 0;
 }
 
-int
+int 
 do_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, unsigned long sp)
 {
 	stack_t oss;

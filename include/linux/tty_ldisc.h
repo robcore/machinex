@@ -110,7 +110,6 @@
 #include <linux/fs.h>
 #include <linux/wait.h>
 #include <linux/pps_kernel.h>
-#include <linux/wait.h>
 
 struct tty_ldisc_ops {
 	int	magic;
@@ -155,7 +154,6 @@ struct tty_ldisc_ops {
 struct tty_ldisc {
 	struct tty_ldisc_ops *ops;
 	atomic_t users;
-	wait_queue_head_t wq_idle;
 };
 
 #define TTY_LDISC_MAGIC	0x5403

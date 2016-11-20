@@ -558,8 +558,6 @@ enum perf_event_type {
 	PERF_RECORD_MAX,			/* non-ABI */
 };
 
-#define PERF_MAX_STACK_DEPTH		127
-
 enum perf_callchain_context {
 	PERF_CONTEXT_HV			= (__u64)-32,
 	PERF_CONTEXT_KERNEL		= (__u64)-128,
@@ -613,6 +611,8 @@ struct perf_guest_info_callbacks {
 #include <linux/atomic.h>
 #include <linux/sysfs.h>
 #include <asm/local.h>
+
+#define PERF_MAX_STACK_DEPTH		255
 
 struct perf_callchain_entry {
 	__u64				nr;
@@ -1136,14 +1136,11 @@ struct perf_sample_data {
 	struct perf_branch_stack	*br_stack;
 };
 
-static inline void perf_sample_data_init(struct perf_sample_data *data,
-					 u64 addr, u64 period)
+static inline void perf_sample_data_init(struct perf_sample_data *data, u64 addr)
 {
-	/* remaining struct members initialized in perf_prepare_sample() */
 	data->addr = addr;
 	data->raw  = NULL;
 	data->br_stack = NULL;
-	data->period	= period;
 }
 
 extern void perf_output_sample(struct perf_output_handle *handle,

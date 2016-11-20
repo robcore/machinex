@@ -312,16 +312,7 @@ void journal_commit_transaction(journal_t *journal)
 	/* Do we need to erase the effects of a prior journal_flush? */
 	if (journal->j_flags & JFS_FLUSHED) {
 		jbd_debug(3, "super block updated\n");
-		mutex_lock(&journal->j_checkpoint_mutex);
-		/*
-		 * We hold j_checkpoint_mutex so tail cannot change under us.
-		 * We don't need any special data guarantees for writing sb
-		 * since journal is empty and it is ok for write to be
-		 * flushed only with transaction commit.
-		 */
-		journal_update_sb_log_tail(journal, journal->j_tail_sequence,
-					   journal->j_tail, WRITE_SYNC);
-		mutex_unlock(&journal->j_checkpoint_mutex);
+		journal_update_superblock(journal, 1);
 	} else {
 		jbd_debug(3, "superblock not updated\n");
 	}

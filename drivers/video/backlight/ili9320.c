@@ -220,7 +220,7 @@ int __devinit ili9320_probe_spi(struct spi_device *spi,
 
 	/* allocate and initialse our state */
 
-	ili = devm_kzalloc(&spi->dev, sizeof(struct ili9320), GFP_KERNEL);
+	ili = kzalloc(sizeof(struct ili9320), GFP_KERNEL);
 	if (ili == NULL) {
 		dev_err(dev, "no memory for device\n");
 		return -ENOMEM;
@@ -240,7 +240,8 @@ int __devinit ili9320_probe_spi(struct spi_device *spi,
 	lcd = lcd_device_register("ili9320", dev, ili, &ili9320_ops);
 	if (IS_ERR(lcd)) {
 		dev_err(dev, "failed to register lcd device\n");
-		return PTR_ERR(lcd);
+		ret = PTR_ERR(lcd);
+		goto err_free;
 	}
 
 	ili->lcd = lcd;
@@ -258,6 +259,9 @@ int __devinit ili9320_probe_spi(struct spi_device *spi,
  err_unregister:
 	lcd_device_unregister(lcd);
 
+ err_free:
+	kfree(ili);
+
 	return ret;
 }
 
@@ -268,6 +272,7 @@ int __devexit ili9320_remove(struct ili9320 *ili)
 	ili9320_power(ili, FB_BLANK_POWERDOWN);
 
 	lcd_device_unregister(ili->lcd);
+	kfree(ili);
 
 	return 0;
 }

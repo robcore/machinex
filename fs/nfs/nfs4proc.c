@@ -2814,7 +2814,8 @@ static int _nfs4_proc_remove(struct inode *dir, struct qstr *name)
 	struct nfs_server *server = NFS_SERVER(dir);
 	struct nfs_removeargs args = {
 		.fh = NFS_FH(dir),
-		.name = *name,
+		.name.len = name->len,
+		.name.name = name->name,
 		.bitmask = server->attr_bitmask,
 	};
 	struct nfs_removeres res = {

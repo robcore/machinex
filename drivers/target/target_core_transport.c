@@ -331,9 +331,9 @@ void target_get_session(struct se_session *se_sess)
 }
 EXPORT_SYMBOL(target_get_session);
 
-void target_put_session(struct se_session *se_sess)
+int target_put_session(struct se_session *se_sess)
 {
-	kref_put(&se_sess->sess_kref, target_release_session);
+	return kref_put(&se_sess->sess_kref, target_release_session);
 }
 EXPORT_SYMBOL(target_put_session);
 
@@ -2165,7 +2165,7 @@ static inline int transport_execute_task_attr(struct se_cmd *cmd)
  * Called from fabric module context in transport_generic_new_cmd() and
  * transport_generic_process_write()
  */
-static void transport_execute_tasks(struct se_cmd *cmd)
+static int transport_execute_tasks(struct se_cmd *cmd)
 {
 	int add_tasks;
 	struct se_device *se_dev = cmd->se_dev;
@@ -2704,7 +2704,6 @@ static int transport_generic_cmd_sequencer(
 		cmd->se_cmd_flags |= SCF_SCSI_DATA_SG_IO_CDB;
 		break;
 	case WRITE_10:
-	case WRITE_VERIFY:
 		sectors = transport_get_sectors_10(cdb, cmd, &sector_ret);
 		if (sector_ret)
 			goto out_unsupported_cdb;
@@ -3143,38 +3142,6 @@ static int transport_generic_cmd_sequencer(
 		 */
 		if (cmd->se_dev->dev_task_attr_type == SAM_TASK_ATTR_EMULATED)
 			cmd->sam_task_attr = MSG_HEAD_TAG;
-		cmd->se_cmd_flags |= SCF_SCSI_CONTROL_SG_IO_CDB;
-		break;
-	case ATA_16:
-		/* Only support ATA passthrough to pSCSI backends.. */
-		if (!passthrough)
-			goto out_unsupported_cdb;
-
-		/* T_LENGTH */
-		switch (cdb[2] & 0x3) {
-		case 0x0:
-			sectors = 0;
-			break;
-		case 0x1:
-			sectors = (((cdb[1] & 0x1) ? cdb[3] : 0) << 8) | cdb[4];
-			break;
-		case 0x2:
-			sectors = (((cdb[1] & 0x1) ? cdb[5] : 0) << 8) | cdb[6];
-			break;
-		case 0x3:
-			pr_err("T_LENGTH=0x3 not supported for ATA_16\n");
-			goto out_invalid_cdb_field;
-		}
-
-		/* BYTE_BLOCK */
-		if (cdb[2] & 0x4) {
-			/* BLOCK T_TYPE: 512 or sector */
-			size = sectors * ((cdb[2] & 0x10) ?
-				dev->se_sub_dev->se_dev_attrib.block_size : 512);
-		} else {
-			/* BYTE */
-			size = sectors;
-		}
 		cmd->se_cmd_flags |= SCF_SCSI_CONTROL_SG_IO_CDB;
 		break;
 	default:

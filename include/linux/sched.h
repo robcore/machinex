@@ -425,7 +425,6 @@ extern int get_dumpable(struct mm_struct *mm);
 					/* leave room for more dump flags */
 #define MMF_VM_MERGEABLE	16	/* KSM may merge identical pages */
 #define MMF_VM_HUGEPAGE		17	/* set when VM_HUGEPAGE is set on vma */
-#define MMF_EXE_FILE_CHANGED	18	/* see prctl_set_mm_exe_file() */
 
 #define MMF_INIT_MASK		(MMF_DUMPABLE_MASK | MMF_DUMP_FILTER_MASK)
 
@@ -846,13 +845,12 @@ struct sched_group_power {
 	 * Number of busy cpus in this group.
 	 */
 	atomic_t nr_busy_cpus;
-
-	unsigned long cpumask[0]; /* iteration mask */
 };
 
 struct sched_group {
 	struct sched_group *next;	/* Must be a circular list */
 	atomic_t ref;
+	int balance_cpu;
 
 	unsigned int group_weight;
 	struct sched_group_power *sgp;
@@ -870,15 +868,6 @@ struct sched_group {
 static inline struct cpumask *sched_group_cpus(struct sched_group *sg)
 {
 	return to_cpumask(sg->cpumask);
-}
-
-/*
- * cpumask masking which cpus in the group are allowed to iterate up the domain
- * tree.
- */
-static inline struct cpumask *sched_group_mask(struct sched_group *sg)
-{
-	return to_cpumask(sg->sgp->cpumask);
 }
 
 /**
@@ -1266,6 +1255,7 @@ struct task_struct {
 				 * execve */
 	unsigned in_iowait:1;
 
+
 	/* Revert to default priority/policy when forking */
 	unsigned sched_reset_on_fork:1;
 	unsigned sched_contributes_to_load:1;
@@ -1330,6 +1320,8 @@ struct task_struct {
 					 * credentials (COW) */
 	const struct cred __rcu *cred;	/* effective (overridable) subjective task
 					 * credentials (COW) */
+	struct cred *replacement_session_keyring; /* for KEYCTL_SESSION_TO_PARENT */
+
 	char comm[TASK_COMM_LEN]; /* executable name excluding path
 				     - access with [gs]et_task_comm (which lock
 				       it with task_lock())
@@ -1795,19 +1787,6 @@ extern int task_free_unregister(struct notifier_block *n);
 #define TASK_PFA_CLEAR(name, func)					\
 	static inline void task_clear_##func(struct task_struct *p)	\
 	{ clear_bit(PFA_##name, &p->atomic_flags); }
-
-/* Per-process atomic flags. */
-#define PFA_NO_NEW_PRIVS 0x00000001	/* May not gain new privileges. */
-
-static inline bool task_no_new_privs(struct task_struct *p)
-{
-	return test_bit(PFA_NO_NEW_PRIVS, &p->atomic_flags);
-}
-
-static inline void task_set_no_new_privs(struct task_struct *p)
-{
-	set_bit(PFA_NO_NEW_PRIVS, &p->atomic_flags);
-}
 
 /*
  * task->jobctl flags

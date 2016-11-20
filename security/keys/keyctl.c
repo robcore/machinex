@@ -1106,7 +1106,7 @@ long keyctl_instantiate_key_iov(key_serial_t id,
 	struct iovec iovstack[UIO_FASTIOV], *iov = iovstack;
 	long ret;
 
-	if (!_payload_iov || !ioc)
+	if (_payload_iov == 0 || ioc == 0)
 		goto no_payload;
 
 	ret = rw_copy_check_uvector(WRITE, _payload_iov, ioc,

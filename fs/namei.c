@@ -2456,6 +2456,7 @@ common:
 out:
 	if (want_write)
 		mnt_drop_write(nd->path.mnt);
+	path_put(&save_parent);
 	terminate_walk(nd);
 	return filp;
 

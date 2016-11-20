@@ -168,8 +168,7 @@ static int __devinit lms283gf05_probe(struct spi_device *spi)
 			goto err;
 	}
 
-	st = devm_kzalloc(&spi->dev, sizeof(struct lms283gf05_state),
-				GFP_KERNEL);
+	st = kzalloc(sizeof(struct lms283gf05_state), GFP_KERNEL);
 	if (st == NULL) {
 		dev_err(&spi->dev, "No memory for device state\n");
 		ret = -ENOMEM;
@@ -179,7 +178,7 @@ static int __devinit lms283gf05_probe(struct spi_device *spi)
 	ld = lcd_device_register("lms283gf05", &spi->dev, st, &lms_ops);
 	if (IS_ERR(ld)) {
 		ret = PTR_ERR(ld);
-		goto err;
+		goto err2;
 	}
 
 	st->spi = spi;
@@ -194,6 +193,8 @@ static int __devinit lms283gf05_probe(struct spi_device *spi)
 
 	return 0;
 
+err2:
+	kfree(st);
 err:
 	if (pdata != NULL)
 		gpio_free(pdata->reset_gpio);
@@ -210,6 +211,8 @@ static int __devexit lms283gf05_remove(struct spi_device *spi)
 
 	if (pdata != NULL)
 		gpio_free(pdata->reset_gpio);
+
+	kfree(st);
 
 	return 0;
 }

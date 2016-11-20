@@ -2992,6 +2992,7 @@ static ssize_t ext3_quota_write(struct super_block *sb, int type,
 			(unsigned long long)off, (unsigned long long)len);
 		return -EIO;
 	}
+	mutex_lock_nested(&inode->i_mutex, I_MUTEX_QUOTA);
 	bh = ext3_bread(handle, inode, blk, 1, &err);
 	if (!bh)
 		goto out;
@@ -3015,8 +3016,10 @@ static ssize_t ext3_quota_write(struct super_block *sb, int type,
 	}
 	brelse(bh);
 out:
-	if (err)
+	if (err) {
+		mutex_unlock(&inode->i_mutex);
 		return err;
+	}
 	if (inode->i_size < off + len) {
 		i_size_write(inode, off + len);
 		EXT3_I(inode)->i_disksize = inode->i_size;
@@ -3024,6 +3027,7 @@ out:
 	inode->i_version++;
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	ext3_mark_inode_dirty(handle, inode);
+	mutex_unlock(&inode->i_mutex);
 	return len;
 }
 

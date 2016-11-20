@@ -482,7 +482,7 @@ static int __devinit ams369fg06_probe(struct spi_device *spi)
 	struct backlight_device *bd = NULL;
 	struct backlight_properties props;
 
-	lcd = devm_kzalloc(&spi->dev, sizeof(struct ams369fg06), GFP_KERNEL);
+	lcd = kzalloc(sizeof(struct ams369fg06), GFP_KERNEL);
 	if (!lcd)
 		return -ENOMEM;
 
@@ -492,7 +492,7 @@ static int __devinit ams369fg06_probe(struct spi_device *spi)
 	ret = spi_setup(spi);
 	if (ret < 0) {
 		dev_err(&spi->dev, "spi setup failed.\n");
-		return ret;
+		goto out_free_lcd;
 	}
 
 	lcd->spi = spi;
@@ -501,13 +501,15 @@ static int __devinit ams369fg06_probe(struct spi_device *spi)
 	lcd->lcd_pd = spi->dev.platform_data;
 	if (!lcd->lcd_pd) {
 		dev_err(&spi->dev, "platform data is NULL\n");
-		return -EFAULT;
+		goto out_free_lcd;
 	}
 
 	ld = lcd_device_register("ams369fg06", &spi->dev, lcd,
 		&ams369fg06_lcd_ops);
-	if (IS_ERR(ld))
-		return PTR_ERR(ld);
+	if (IS_ERR(ld)) {
+		ret = PTR_ERR(ld);
+		goto out_free_lcd;
+	}
 
 	lcd->ld = ld;
 
@@ -545,6 +547,8 @@ static int __devinit ams369fg06_probe(struct spi_device *spi)
 
 out_lcd_unregister:
 	lcd_device_unregister(ld);
+out_free_lcd:
+	kfree(lcd);
 	return ret;
 }
 
@@ -555,6 +559,7 @@ static int __devexit ams369fg06_remove(struct spi_device *spi)
 	ams369fg06_power(lcd, FB_BLANK_POWERDOWN);
 	backlight_device_unregister(lcd->bd);
 	lcd_device_unregister(lcd->ld);
+	kfree(lcd);
 
 	return 0;
 }

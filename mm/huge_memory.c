@@ -630,12 +630,16 @@ static int __do_huge_pmd_anonymous_page(struct mm_struct *mm,
 					unsigned long haddr, pmd_t *pmd,
 					struct page *page)
 {
+	int ret = 0;
 	pgtable_t pgtable;
 
 	VM_BUG_ON(!PageCompound(page));
 	pgtable = pte_alloc_one(mm, haddr);
-	if (unlikely(!pgtable))
+	if (unlikely(!pgtable)) {
+		mem_cgroup_uncharge_page(page);
+		put_page(page);
 		return VM_FAULT_OOM;
+	}
 
 	clear_huge_page(page, haddr, HPAGE_PMD_NR);
 	__SetPageUptodate(page);
@@ -665,7 +669,7 @@ static int __do_huge_pmd_anonymous_page(struct mm_struct *mm,
 		spin_unlock(&mm->page_table_lock);
 	}
 
-	return 0;
+	return ret;
 }
 
 static inline gfp_t alloc_hugepage_gfpmask(int defrag, gfp_t extra_gfp)
@@ -714,14 +718,8 @@ int do_huge_pmd_anonymous_page(struct mm_struct *mm, struct vm_area_struct *vma,
 			put_page(page);
 			goto out;
 		}
-		if (unlikely(__do_huge_pmd_anonymous_page(mm, vma, haddr, pmd,
-							  page))) {
-			mem_cgroup_uncharge_page(page);
-			put_page(page);
-			goto out;
-		}
 
-		return 0;
+		return __do_huge_pmd_anonymous_page(mm, vma, haddr, pmd, page);
 	}
 out:
 	/*
@@ -967,10 +965,8 @@ int do_huge_pmd_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	spin_lock(&mm->page_table_lock);
 	put_page(page);
 	if (unlikely(!pmd_same(*pmd, orig_pmd))) {
-		spin_unlock(&mm->page_table_lock);
 		mem_cgroup_uncharge_page(new_page);
 		put_page(new_page);
-		goto out;
 	} else {
 		pmd_t entry;
 		VM_BUG_ON(!PageHead(page));
@@ -1225,13 +1221,10 @@ static void __split_huge_page_refcount(struct page *page)
 {
 	int i;
 	struct zone *zone = page_zone(page);
-	struct lruvec *lruvec;
 	int tail_count = 0;
 
 	/* prevent PageLRU to go away from under us, and freeze lru stats */
 	spin_lock_irq(&zone->lru_lock);
-	lruvec = mem_cgroup_page_lruvec(page, zone);
-
 	compound_lock(page);
 	/* complete memcg works before add pages to LRU */
 	mem_cgroup_split_huge_fixup(page);
@@ -1306,12 +1299,13 @@ static void __split_huge_page_refcount(struct page *page)
 		BUG_ON(!PageDirty(page_tail));
 		BUG_ON(!PageSwapBacked(page_tail));
 
-		lru_add_page_tail(page, page_tail, lruvec);
+
+		lru_add_page_tail(zone, page, page_tail);
 	}
 	atomic_sub(tail_count, &page->_count);
 	BUG_ON(atomic_read(&page->_count) <= 0);
 
-	__mod_zone_page_state(zone, NR_ANON_TRANSPARENT_HUGEPAGES, -1);
+	__dec_zone_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
 	__mod_zone_page_state(zone, NR_ANON_PAGES, HPAGE_PMD_NR);
 
 	ClearPageCompound(page);
