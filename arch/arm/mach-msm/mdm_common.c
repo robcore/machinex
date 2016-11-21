@@ -64,7 +64,7 @@
 	(sizeof(DEVICE_BASE_NAME) + MAX_DEVICE_DIGITS)
 
 #define RD_BUF_SIZE			100
-#define SFR_MAX_RETRIES		10
+#define SFR_MAX_RETRIES		1000
 #define SFR_RETRY_INTERVAL	1000
 
 enum gpio_update_config {
@@ -403,7 +403,8 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 			struct mdm_device, sfr_reason_work);
 
 	pdata = mdev->mdm_data.pdata;
-	do {
+
+	for (++ntries < SFR_MAX_RETRIES); {
 		if (pdata->sysmon_subsys_id_valid)
 		{
 			msleep(SFR_RETRY_INTERVAL);
@@ -414,17 +415,14 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 				 * The sysmon device may not have been probed as
 				 * yet after the restart.
 				 */
-				pr_err("%s: Error retrieving restart reason,"
-						"ret = %d %d/%d tries\n",
-						__func__, ret,
-						ntries + 1,
-						SFR_MAX_RETRIES);
+				printk("Restart Reason Override");
+				break;
 			} else {
-				pr_err("mdm restart reason: %s\n", sfr_buf);
+				printk("Restart Reason Override");
 				break;
 			}
 		}
-	} while (++ntries < SFR_MAX_RETRIES);
+	}
 }
 
 static void mdm2ap_status_check(struct work_struct *work)
@@ -481,7 +479,7 @@ static void mdm_update_gpio_configs(struct mdm_device *mdev,
 	}
 }
 
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
+#if 0
 static unsigned char *mdm_read_err_report(void)
 {
 	/* Read CP error report from mdm_err.log in tombstones */
