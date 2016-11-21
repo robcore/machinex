@@ -32,7 +32,7 @@
 static int orig_up_threshold = 90;
 static int g_count = 0;
 
-#define DEF_SAMPLING_RATE			(30000)
+#define DEF_SAMPLING_RATE			(1500)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define DEF_FREQUENCY_UP_THRESHOLD		(90)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
@@ -43,12 +43,12 @@ static int g_count = 0;
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
-#define UI_DYNAMIC_SAMPLING_RATE		(15000)
+#define UI_DYNAMIC_SAMPLING_RATE		(0)
 #define DBS_SWITCH_MODE_TIMEOUT			(1000)
 #define INPUT_EVENT_MIN_TIMEOUT 		(0)
 #define INPUT_EVENT_MAX_TIMEOUT 		(3000)
 #define INPUT_EVENT_TIMEOUT			(500)
-#define MIN_SAMPLING_RATE_RATIO			(2)
+#define MIN_SAMPLING_RATE_RATIO			(0)
 
 static unsigned int min_sampling_rate;
 static unsigned int skip_electroactive = 0;
@@ -154,10 +154,10 @@ static struct dbs_tuners {
 	.up_threshold_any_cpu_load = DEF_FREQUENCY_UP_THRESHOLD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 1026000,
-	.optimal_freq = 918000,
+	.sync_freq = 918000,
+	.optimal_freq = 1134000,
 	.io_is_busy = 0,
-	.two_phase_freq = 1566000,
+	.two_phase_freq = 1674000,
 	.ui_sampling_rate = UI_DYNAMIC_SAMPLING_RATE,
 	.input_event_timeout = INPUT_EVENT_TIMEOUT,
 	.gboost = 1,
@@ -446,9 +446,9 @@ static ssize_t store_ui_sampling_rate(struct kobject *a, struct attribute *b,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-
+#if 0
 	dbs_tuners_ins.ui_sampling_rate = max(input, min_sampling_rate);
-
+#endif
 	return count;
 }
 
@@ -1291,7 +1291,9 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 			spin_lock_irqsave(&input_boost_lock, flags);
 			input_event_boost = true;
 			input_event_boost_expired = jiffies + usecs_to_jiffies(dbs_tuners_ins.input_event_timeout * 1000);
+#if 0
 			dbs_tuners_ins.sampling_rate = dbs_tuners_ins.ui_sampling_rate;
+#endif
 			spin_unlock_irqrestore(&input_boost_lock, flags);
 
 			boost_min_freq(input_event_min_freq);
@@ -1535,8 +1537,9 @@ bail_incorrect_governor:
 
 bail_acq_sema_failed:
 		put_online_cpus();
-
+#if 0
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.ui_sampling_rate;
+#endif
 	}
 
 	return 0;
