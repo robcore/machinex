@@ -305,6 +305,12 @@ static void update_sampling_rate(unsigned int new_rate)
 		policy = cpufreq_cpu_get(cpu);
 		if (!policy)
 			continue;
+
+		if (policy->governor != &cpufreq_gov_electroactive) {
+			cpufreq_cpu_put(policy);
+			continue;
+		}
+
 		dbs_info = &per_cpu(od_cpu_dbs_info, policy->cpu);
 		cpufreq_cpu_put(policy);
 
@@ -321,7 +327,7 @@ static void update_sampling_rate(unsigned int new_rate)
 		if (time_before(next_sampling, appointed_at)) {
 
 			mutex_unlock(&dbs_info->timer_mutex);
-			cancel_delayed_work_sync(&dbs_info->work);
+			cancel_delayed_work(&dbs_info->work);
 			mutex_lock(&dbs_info->timer_mutex);
 
 			schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work,
@@ -428,13 +434,20 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 {
 	unsigned int input;
 	int ret;
+
 	ret = sscanf(buf, "%u", &input);
+
 	if (ret != 1)
 		return -EINVAL;
+
 	if (input == dbs_tuners_ins.origin_sampling_rate)
 		return count;
+
+	mutex_lock(&policy_dbs->timer_mutex);
 	update_sampling_rate(input);
 	dbs_tuners_ins.origin_sampling_rate = dbs_tuners_ins.sampling_rate;
+	mutex_unlock(&policy_dbs->timer_mutex);
+
 	return count;
 }
 
@@ -443,9 +456,12 @@ static ssize_t store_ui_sampling_rate(struct kobject *a, struct attribute *b,
 {
 	unsigned int input;
 	int ret;
+
 	ret = sscanf(buf, "%u", &input);
+
 	if (ret != 1)
 		return -EINVAL;
+
 #if 0
 	dbs_tuners_ins.ui_sampling_rate = max(input, min_sampling_rate);
 #endif
