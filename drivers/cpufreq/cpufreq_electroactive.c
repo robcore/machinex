@@ -32,9 +32,9 @@
 static int orig_up_threshold = 90;
 static int g_count = 0;
 
-#define DEF_SAMPLING_RATE			(1500)
+#define DEF_SAMPLING_RATE			(0)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
-#define DEF_FREQUENCY_UP_THRESHOLD		(90)
+#define DEF_FREQUENCY_UP_THRESHOLD		(85)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
@@ -46,9 +46,9 @@ static int g_count = 0;
 #define UI_DYNAMIC_SAMPLING_RATE		(0)
 #define DBS_SWITCH_MODE_TIMEOUT			(1000)
 #define INPUT_EVENT_MIN_TIMEOUT 		(0)
-#define INPUT_EVENT_MAX_TIMEOUT 		(3000)
+#define INPUT_EVENT_MAX_TIMEOUT 		(1000)
 #define INPUT_EVENT_TIMEOUT			(500)
-#define MIN_SAMPLING_RATE_RATIO			(0)
+#define MIN_SAMPLING_RATE_RATIO			(1)
 
 static unsigned int min_sampling_rate;
 static unsigned int skip_electroactive = 0;
@@ -440,13 +440,13 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input == dbs_tuners_ins.origin_sampling_rate)
-		return count;
+	//if (input == dbs_tuners_ins.origin_sampling_rate)
+		//return count;
 
-	mutex_lock(&policy_dbs->timer_mutex);
+#if 0
 	update_sampling_rate(input);
 	dbs_tuners_ins.origin_sampling_rate = dbs_tuners_ins.sampling_rate;
-	mutex_unlock(&policy_dbs->timer_mutex);
+#endif
 
 	return count;
 }
