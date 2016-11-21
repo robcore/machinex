@@ -404,9 +404,8 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 
 	pdata = mdev->mdm_data.pdata;
 
-	for (++ntries < SFR_MAX_RETRIES); {
-		if (pdata->sysmon_subsys_id_valid)
-		{
+	do {
+		if (pdata->sysmon_subsys_id_valid); {
 			msleep(SFR_RETRY_INTERVAL);
 			ret = sysmon_get_reason(pdata->sysmon_subsys_id,
 					sfr_buf, sizeof(sfr_buf));
@@ -423,6 +422,7 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 			}
 		}
 	}
+	while (++ntries < SFR_MAX_RETRIES);
 }
 
 static void mdm2ap_status_check(struct work_struct *work)
