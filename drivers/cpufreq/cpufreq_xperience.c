@@ -1,7 +1,9 @@
 /*
  * drivers/cpufreq/cpufreq_xperience.c
  *
- * Copyright (C) 2011-2014 The XPerience PRoject
+ * Copyright (C) 2010 Google, Inc.
+ *           (C) 2014 LoungeKatt <twistedumbrella@gmail.com>
+ *			 (C) 2014 The XPerience PRoject
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,6 +16,16 @@
  *
  * Autor: Carlos Jesús B.C (Aka Klozz or TeamMEX@XDA)
  * Based on smartassv2
+ *
+ * Author: Erasmux
+ *
+ * Based on the interactive governor By Mike Chan (mike@android.com)
+ * which was adaptated to 2.6.29 kernel by Nadlabak (pavel@doshaska.net)
+ *
+ * SMP support based on mod by faux123
+ *
+ * For a general overview of smartassV2 see the relavent part in
+ * Documentation/cpu-freq/governors.txt
  *
  */
 
@@ -42,7 +54,7 @@
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ 1026000
+#define DEFAULT_AWAKE_IDEAL_FREQ 918000
 static unsigned int awake_ideal_freq;
 
 /*
@@ -241,10 +253,10 @@ inline static int target_freq(struct cpufreq_policy *policy, struct xperience_in
 			// to ramp up to *at least* current + ramp_up_step.
 			if (new_freq > old_freq && prefered_relation==CPUFREQ_RELATION_H
 			    && !cpufreq_frequency_table_target(policy,table,new_freq,
-							       CPUFREQ_RELATION_L,&index))
+							       CPUFREQ_RELATION_C,&index))
 				target = table[index].frequency;
 			// simlarly for ramping down:
-			else if (new_freq < old_freq && prefered_relation==CPUFREQ_RELATION_L
+			else if (new_freq < old_freq && prefered_relation==CPUFREQ_RELATION_C
 				&& !cpufreq_frequency_table_target(policy,table,new_freq,
 								   CPUFREQ_RELATION_H,&index))
 				target = table[index].frequency;
@@ -404,7 +416,7 @@ static void cpufreq_xperience_freq_change_time_work(struct work_struct *work)
 	int ramp_dir;
 	struct xperience_info_s *this_xperience;
 	struct cpufreq_policy *policy;
-	unsigned int relation = CPUFREQ_RELATION_L;
+	unsigned int relation = CPUFREQ_RELATION_C;
 	for_each_possible_cpu(cpu) {
 		this_xperience = &per_cpu(xperience_info, cpu);
 		if (!work_cpumask_test_and_clear(cpu))
@@ -495,7 +507,8 @@ static ssize_t store_debug_mask(struct kobject *kobj, struct attribute *attr, co
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0)
 		debug_mask = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_up_rate_us(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -510,7 +523,8 @@ static ssize_t store_up_rate_us(struct kobject *kobj, struct attribute *attr, co
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input >= 0 && input <= 100000000)
 		up_rate_us = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_down_rate_us(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -525,7 +539,8 @@ static ssize_t store_down_rate_us(struct kobject *kobj, struct attribute *attr, 
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input >= 0 && input <= 100000000)
 		down_rate_us = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_sleep_ideal_freq(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -543,7 +558,8 @@ static ssize_t store_sleep_ideal_freq(struct kobject *kobj, struct attribute *at
 		if (suspended)
 			xperience_update_min_max_allcpus();
 	}
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_sleep_wakeup_freq(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -558,7 +574,8 @@ static ssize_t store_sleep_wakeup_freq(struct kobject *kobj, struct attribute *a
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input >= 0)
 		sleep_wakeup_freq = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_awake_ideal_freq(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -576,7 +593,8 @@ static ssize_t store_awake_ideal_freq(struct kobject *kobj, struct attribute *at
 		if (!suspended)
 			xperience_update_min_max_allcpus();
 	}
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_sample_rate_jiffies(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -591,7 +609,8 @@ static ssize_t store_sample_rate_jiffies(struct kobject *kobj, struct attribute 
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input > 0 && input <= 1000)
 		sample_rate_jiffies = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_ramp_up_step(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -606,7 +625,8 @@ static ssize_t store_ramp_up_step(struct kobject *kobj, struct attribute *attr, 
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input >= 0)
 		ramp_up_step = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_ramp_down_step(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -621,7 +641,8 @@ static ssize_t store_ramp_down_step(struct kobject *kobj, struct attribute *attr
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input >= 0)
 		ramp_down_step = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_max_cpu_load(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -636,7 +657,8 @@ static ssize_t store_max_cpu_load(struct kobject *kobj, struct attribute *attr, 
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input > 0 && input <= 100)
 		max_cpu_load = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 static ssize_t show_min_cpu_load(struct kobject *kobj, struct attribute *attr, char *buf)
@@ -651,7 +673,8 @@ static ssize_t store_min_cpu_load(struct kobject *kobj, struct attribute *attr, 
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input > 0 && input < 100)
 		min_cpu_load = input;
-	return res;
+	else return -EINVAL;
+	return count;
 }
 
 #define define_global_rw_attr(_name)		\
@@ -743,7 +766,7 @@ static int cpufreq_governor_xperience(struct cpufreq_policy *new_policy,
 		else if (this_xperience->cur_policy->cur < new_policy->min) {
 			dprintk(XPERIENCE_DEBUG_JUMPS,"xperienceI: jumping to new min freq: %d\n",new_policy->min);
 			__cpufreq_driver_target(this_xperience->cur_policy,
-						new_policy->min, CPUFREQ_RELATION_L);
+						new_policy->min, CPUFREQ_RELATION_C);
 		}
 
 		if (this_xperience->cur_policy->cur < new_policy->max && !timer_pending(&this_xperience->timer))
@@ -786,7 +809,7 @@ static void xperience_suspend(int cpu, int suspend)
 		dprintk(XPERIENCE_DEBUG_JUMPS,"xperienceS: awaking at %d\n",new_freq);
 
 		__cpufreq_driver_target(policy, new_freq,
-					CPUFREQ_RELATION_L);
+					CPUFREQ_RELATION_C);
 	} else {
 		// to avoid wakeup issues with quick sleep/wakeup don't change actual frequency when entering sleep
 		// to allow some time to settle down. Instead we just reset our statistics (and reset the timer).
@@ -893,4 +916,3 @@ module_exit(cpufreq_xperience_exit);
 MODULE_AUTHOR ("Carlos Jesús B.C (Klozz-TeamMEX)<xxx.reptar.rawrr.xxx@gmail.com>");
 MODULE_DESCRIPTION ("'cpufreq_XPerience' - A smart cpufreq governor");
 MODULE_LICENSE ("GPL");
-
