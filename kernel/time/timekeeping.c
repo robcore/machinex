@@ -140,7 +140,10 @@ static void timekeeping_update(bool clearntp)
 		timekeeper.ntp_error = 0;
 		ntp_clear();
 	}
-	update_vsyscall(tk);
+	tk_update_leap_state(&timekeeper);
+	update_rt_offset();
+	update_vsyscall(&timekeeper.xtime, &timekeeper.wall_to_monotonic,
+			 timekeeper.clock, timekeeper.mult);
 }
 
 
