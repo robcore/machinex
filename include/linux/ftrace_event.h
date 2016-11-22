@@ -304,10 +304,9 @@ extern void *perf_trace_buf_prepare(int size, unsigned short type,
 
 static inline void
 perf_trace_buf_submit(void *raw_data, int size, int rctx, u64 addr,
-		       u64 count, struct pt_regs *regs, void *head,
-		       struct task_struct *task)
+		       u64 count, struct pt_regs *regs, void *head)
 {
-	perf_tp_event(addr, count, raw_data, size, regs, head, rctx, task);
+	perf_tp_event(addr, count, raw_data, size, regs, head, rctx);
 }
 #endif
 

@@ -572,15 +572,6 @@ static const struct usb_device_id products[] = {
 		.bInterfaceProtocol = 0xff,
 		.driver_info        = (unsigned long)&qmi_wwan_force_int4,
 	},
-	{	/* ZTE MF821D */
-		.match_flags        = USB_DEVICE_ID_MATCH_DEVICE | USB_DEVICE_ID_MATCH_INT_INFO,
-		.idVendor           = 0x19d2,
-		.idProduct          = 0x0326,
-		.bInterfaceClass    = 0xff,
-		.bInterfaceSubClass = 0xff,
-		.bInterfaceProtocol = 0xff,
-		.driver_info        = (unsigned long)&qmi_wwan_force_int4,
-	},
 	{	/* ZTE (Vodafone) K3520-Z */
 		.match_flags	    = USB_DEVICE_ID_MATCH_DEVICE | USB_DEVICE_ID_MATCH_INT_INFO,
 		.idVendor           = 0x19d2,
@@ -740,27 +731,10 @@ static const struct usb_device_id products[] = {
 };
 MODULE_DEVICE_TABLE(usb, products);
 
-static int qmi_wwan_probe(struct usb_interface *intf, const struct usb_device_id *prod)
-{
-	struct usb_device_id *id = (struct usb_device_id *)prod;
-
-	/* Workaround to enable dynamic IDs.  This disables usbnet
-	 * blacklisting functionality.  Which, if required, can be
-	 * reimplemented here by using a magic "blacklist" value
-	 * instead of 0 in the static device id table
-	 */
-	if (!id->driver_info) {
-		dev_dbg(&intf->dev, "setting defaults for dynamic device id\n");
-		id->driver_info = (unsigned long)&qmi_wwan_shared;
-	}
-
-	return usbnet_probe(intf, id);
-}
-
 static struct usb_driver qmi_wwan_driver = {
 	.name		      = "qmi_wwan",
 	.id_table	      = products,
-	.probe		      = qmi_wwan_probe,
+	.probe		      =	usbnet_probe,
 	.disconnect	      = usbnet_disconnect,
 	.suspend	      = qmi_wwan_suspend,
 	.resume		      =	qmi_wwan_resume,

@@ -286,7 +286,7 @@ perf_ftrace_function_call(unsigned long ip, unsigned long parent_ip)
 
 	head = this_cpu_ptr(event_function.perf_events);
 	perf_trace_buf_submit(entry, ENTRY_SIZE, rctx, 0,
-			      1, &regs, head, NULL);
+			      1, &regs, head);
 
 #undef ENTRY_SIZE
 }
