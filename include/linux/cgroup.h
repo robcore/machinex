@@ -155,9 +155,11 @@ enum {
 	 */
 	CGRP_WAIT_ON_RMDIR,
 	/*
-	 * Clone cgroup values when creating a new child cgroup
+	 * Clone the parent's configuration when creating a new child
+	 * cpuset cgroup.  For historical reasons, this option can be
+	 * specified at mount time and thus is implemented here.
 	 */
-	CGRP_CLONE_CHILDREN,
+	CGRP_CPUSET_CLONE_CHILDREN,
 };
 
 struct cgroup {
@@ -168,6 +170,8 @@ struct cgroup {
 	 * necessarily indicate the number of tasks in the cgroup
 	 */
 	atomic_t count;
+
+	int id;				/* ida allocated in-hierarchy ID */
 
 	/*
 	 * We link our 'sibling' struct into our parent's 'children'.
@@ -479,7 +483,6 @@ struct cgroup_subsys {
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup *cgrp, struct cgroup *old_cgrp,
 		     struct task_struct *task);
-	void (*post_clone)(struct cgroup *cgrp);
 	void (*bind)(struct cgroup *root);
 
 	int subsys_id;
@@ -603,13 +606,13 @@ static inline struct cgroup* task_cgroup(struct task_struct *task,
  * @cgroup: cgroup whose children to walk
  *
  * Walk @cgroup's children.  Must be called under rcu_read_lock().  A child
- * cgroup which hasn't finished ->post_create() or already has finished
- * ->pre_destroy() may show up during traversal and it's each subsystem's
+ * cgroup which hasn't finished ->css_online() or already has finished
+ * ->css_offline() may show up during traversal and it's each subsystem's
  * responsibility to verify that each @pos is alive.
  *
- * If a subsystem synchronizes against the parent in its ->post_create()
- * and before starting iterating, a cgroup which finished ->post_create()
- * is guaranteed to be visible in the future iterations.
+ * If a subsystem synchronizes against the parent in its ->css_online() and
+ * before starting iterating, a cgroup which finished ->css_online() is
+ * guaranteed to be visible in the future iterations.
  */
 #define cgroup_for_each_child(pos, cgroup)				\
 	list_for_each_entry_rcu(pos, &(cgroup)->children, sibling)
@@ -623,19 +626,19 @@ struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
  * @cgroup: cgroup whose descendants to walk
  *
  * Walk @cgroup's descendants.  Must be called under rcu_read_lock().  A
- * descendant cgroup which hasn't finished ->post_create() or already has
- * finished ->pre_destroy() may show up during traversal and it's each
+ * descendant cgroup which hasn't finished ->css_online() or already has
+ * finished ->css_offline() may show up during traversal and it's each
  * subsystem's responsibility to verify that each @pos is alive.
  *
- * If a subsystem synchronizes against the parent in its ->post_create()
- * and before starting iterating, and synchronizes against @pos on each
- * iteration, any descendant cgroup which finished ->post_create() is
+ * If a subsystem synchronizes against the parent in its ->css_online() and
+ * before starting iterating, and synchronizes against @pos on each
+ * iteration, any descendant cgroup which finished ->css_offline() is
  * guaranteed to be visible in the future iterations.
  *
  * In other words, the following guarantees that a descendant can't escape
  * state updates of its ancestors.
  *
- * my_post_create(@cgrp)
+ * my_online(@cgrp)
  * {
  *	Lock @cgrp->parent and @cgrp;
  *	Inherit state from @cgrp->parent;
@@ -668,7 +671,7 @@ struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
  * iteration should lock and unlock both @pos->parent and @pos.
  *
  * Alternatively, a subsystem may choose to use a single global lock to
- * synchronize ->post_create() and ->pre_destroy() against tree-walking
+ * synchronize ->css_online() and ->css_offline() against tree-walking
  * operations.
  */
 #define cgroup_for_each_descendant_pre(pos, cgroup)			\

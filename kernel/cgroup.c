@@ -137,6 +137,9 @@ struct cgroupfs_root {
 	/* Hierarchy-specific flags */
 	unsigned long flags;
 
+	/* IDs for cgroups in this hierarchy */
+	struct ida cgroup_ida;
+
 	/* The path to use for release notifications. */
 	char release_agent_path[PATH_MAX];
 
@@ -291,11 +294,6 @@ static int cgroup_is_releasable(const struct cgroup *cgrp)
 static int notify_on_release(const struct cgroup *cgrp)
 {
 	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
-}
-
-static int clone_children(const struct cgroup *cgrp)
-{
-	return test_bit(CGRP_CLONE_CHILDREN, &cgrp->flags);
 }
 
 /*
@@ -920,7 +918,7 @@ static void cgroup_diput(struct dentry *dentry, struct inode *inode)
 		 * Release the subsystem state objects.
 		 */
 		for_each_subsys(cgrp->root, ss)
-			ss->destroy(cgrp);
+			ss->css_free(cgrp);
 
 		cgrp->root->number_of_cgroups--;
 		mutex_unlock(&cgroup_mutex);
@@ -939,6 +937,7 @@ static void cgroup_diput(struct dentry *dentry, struct inode *inode)
 
 		simple_xattrs_free(&cgrp->xattrs);
 
+		ida_simple_remove(&cgrp->root->cgroup_ida, cgrp->id);
 		kfree_rcu(cgrp, rcu_head);
 	} else {
 		struct cfent *cfe = __d_cfe(dentry);
@@ -1158,7 +1157,7 @@ struct cgroup_sb_opts {
 	unsigned long subsys_bits;
 	unsigned long flags;
 	char *release_agent;
-	bool clone_children;
+	bool cpuset_clone_children;
 	char *name;
 	/* User explicitly requested empty subsystem */
 	bool none;
@@ -1209,7 +1208,7 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 			continue;
 		}
 		if (!strcmp(token, "clone_children")) {
-			opts->clone_children = true;
+			opts->cpuset_clone_children = true;
 			continue;
 		}
 		if (!strcmp(token, "xattr")) {
@@ -1428,6 +1427,7 @@ static void init_cgroup_housekeeping(struct cgroup *cgrp)
 	INIT_LIST_HEAD(&cgrp->children);
 	INIT_LIST_HEAD(&cgrp->files);
 	INIT_LIST_HEAD(&cgrp->css_sets);
+	INIT_LIST_HEAD(&cgrp->allcg_node);
 	INIT_LIST_HEAD(&cgrp->release_list);
 	INIT_LIST_HEAD(&cgrp->pidlists);
 	mutex_init(&cgrp->pidlist_mutex);
@@ -1514,12 +1514,13 @@ static struct cgroupfs_root *cgroup_root_from_opts(struct cgroup_sb_opts *opts)
 
 	root->subsys_bits = opts->subsys_bits;
 	root->flags = opts->flags;
+	ida_init(&root->cgroup_ida);
 	if (opts->release_agent)
 		strcpy(root->release_agent_path, opts->release_agent);
 	if (opts->name)
 		strcpy(root->name, opts->name);
-	if (opts->clone_children)
-		set_bit(CGRP_CLONE_CHILDREN, &root->top_cgroup.flags);
+	if (opts->cpuset_clone_children)
+		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &root->top_cgroup.flags);
 	return root;
 }
 
@@ -1532,6 +1533,7 @@ static void cgroup_drop_root(struct cgroupfs_root *root)
 	spin_lock(&hierarchy_id_lock);
 	ida_remove(&hierarchy_ida, root->hierarchy_id);
 	spin_unlock(&hierarchy_id_lock);
+	ida_destroy(&root->cgroup_ida);
 	kfree(root);
 }
 
@@ -4039,7 +4041,7 @@ fail:
 static u64 cgroup_clone_children_read(struct cgroup *cgrp,
 				    struct cftype *cft)
 {
-	return clone_children(cgrp);
+	return test_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 }
 
 static int cgroup_clone_children_write(struct cgroup *cgrp,
@@ -4047,9 +4049,9 @@ static int cgroup_clone_children_write(struct cgroup *cgrp,
 				     u64 val)
 {
 	if (val)
-		set_bit(CGRP_CLONE_CHILDREN, &cgrp->flags);
+		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 	else
-		clear_bit(CGRP_CLONE_CHILDREN, &cgrp->flags);
+		clear_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 	return 0;
 }
 
@@ -4216,8 +4218,8 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	if (notify_on_release(parent))
 		set_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
 
-	if (clone_children(parent))
-		set_bit(CGRP_CLONE_CHILDREN, &cgrp->flags);
+	if (test_bit(CGRP_CPUSET_CLONE_CHILDREN, &parent->flags))
+		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 
 	for_each_subsys(root, ss) {
 		struct cgroup_subsys_state *css = ss->create(cgrp);
@@ -4232,8 +4234,9 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 			if (err)
 				goto err_destroy;
 		}
-		/* At error, ->destroy() callback has to free assigned ID. */
-		if (clone_children(parent) && ss->post_clone)
+		/* At error, ->css_free() callback has to free assigned ID. */
+		if (test_bit(CGRP_CPUSET_CLONE_CHILDREN, &parent->flags) &&
+		    ss->post_clone)
 			ss->post_clone(cgrp);
 	}
 
@@ -4271,7 +4274,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 	for_each_subsys(root, ss) {
 		if (cgrp->subsys[ss->subsys_id])
-			ss->destroy(cgrp);
+			ss->css_free(cgrp);
 	}
 
 	mutex_unlock(&cgroup_mutex);
@@ -4549,13 +4552,15 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 
 	printk(KERN_INFO "Initializing cgroup subsys %s\n", ss->name);
 
+	mutex_lock(&cgroup_mutex);
+
 	/* init base cftset */
 	cgroup_init_cftsets(ss);
 
 	/* Create the top cgroup state for this subsystem */
 	list_add(&ss->sibling, &rootnode.subsys_list);
 	ss->root = &rootnode;
-	css = ss->create(dummytop);
+	css = ss->css_alloc(dummytop);
 	/* We don't handle early failures gracefully */
 	BUG_ON(IS_ERR(css));
 	init_cgroup_css(css, ss, dummytop);
@@ -4564,7 +4569,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	 * pointer to this state - since the subsystem is
 	 * newly registered, all tasks and hence the
 	 * init_css_set is in the subsystem's top cgroup. */
-	init_css_set.subsys[ss->subsys_id] = dummytop->subsys[ss->subsys_id];
+	init_css_set.subsys[ss->subsys_id] = css;
 
 	need_forkexit_callback |= ss->fork || ss->exit;
 
@@ -4576,7 +4581,9 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	ss->active = 1;
 
 	if (ss->post_create)
-		ss->post_create(&ss->root->top_cgroup);
+		ss->post_create(dummytop);
+
+	mutex_unlock(&cgroup_mutex);
 
 	/* this function shouldn't be used with modular subsystems, since they
 	 * need to register a subsys_id, among other things */
@@ -4602,7 +4609,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 
 	/* check name and function validity */
 	if (ss->name == NULL || strlen(ss->name) > MAX_CGROUP_TYPE_NAMELEN ||
-	    ss->create == NULL || ss->destroy == NULL)
+	    ss->css_alloc == NULL || ss->css_free == NULL)
 		return -EINVAL;
 
 	/*
@@ -4648,10 +4655,11 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	subsys[i] = ss;
 
 	/*
-	 * no ss->create seems to need anything important in the ss struct, so
-	 * this can happen first (i.e. before the rootnode attachment).
+	 * no ss->css_alloc seems to need anything important in the ss
+	 * struct, so this can happen first (i.e. before the rootnode
+	 * attachment).
 	 */
-	css = ss->create(dummytop);
+	css = ss->css_alloc(dummytop);
 	if (IS_ERR(css)) {
 		/* failure case - need to deassign the subsys[] slot. */
 		subsys[i] = NULL;
@@ -4702,7 +4710,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	ss->active = 1;
 
 	if (ss->post_create)
-		ss->post_create(&ss->root->top_cgroup);
+		ss->post_create(dummytop);
 
 	/* success! */
 	mutex_unlock(&cgroup_mutex);
@@ -4757,12 +4765,12 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	write_unlock(&css_set_lock);
 
 	/*
-	 * remove subsystem's css from the dummytop and free it - need to free
-	 * before marking as null because ss->destroy needs the cgrp->subsys
-	 * pointer to find their state. note that this also takes care of
-	 * freeing the css_id.
+	 * remove subsystem's css from the dummytop and free it - need to
+	 * free before marking as null because ss->css_free needs the
+	 * cgrp->subsys pointer to find their state. note that this also
+	 * takes care of freeing the css_id.
 	 */
-	ss->destroy(dummytop);
+	ss->css_free(dummytop);
 	dummytop->subsys[ss->subsys_id] = NULL;
 
 	mutex_unlock(&cgroup_mutex);
@@ -4800,8 +4808,8 @@ int __init cgroup_init_early(void)
 
 		BUG_ON(!ss->name);
 		BUG_ON(strlen(ss->name) > MAX_CGROUP_TYPE_NAMELEN);
-		BUG_ON(!ss->create);
-		BUG_ON(!ss->destroy);
+		BUG_ON(!ss->css_alloc);
+		BUG_ON(!ss->css_free);
 		if (ss->subsys_id != i) {
 			printk(KERN_ERR "cgroup: Subsys %s id == %d\n",
 			       ss->name, ss->subsys_id);
@@ -5596,7 +5604,7 @@ struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id)
 }
 
 #ifdef CONFIG_CGROUP_DEBUG
-static struct cgroup_subsys_state *debug_create(struct cgroup *cont)
+static struct cgroup_subsys_state *debug_css_alloc(struct cgroup *cont)
 {
 	struct cgroup_subsys_state *css = kzalloc(sizeof(*css), GFP_KERNEL);
 
@@ -5606,7 +5614,7 @@ static struct cgroup_subsys_state *debug_create(struct cgroup *cont)
 	return css;
 }
 
-static void debug_destroy(struct cgroup *cont)
+static void debug_css_free(struct cgroup *cont)
 {
 	kfree(cont->subsys[debug_subsys_id]);
 }
@@ -5735,8 +5743,8 @@ static struct cftype debug_files[] =  {
 
 struct cgroup_subsys debug_subsys = {
 	.name = "debug",
-	.create = debug_create,
-	.destroy = debug_destroy,
+	.css_alloc = debug_css_alloc,
+	.css_free = debug_css_free,
 	.subsys_id = debug_subsys_id,
 	.base_cftypes = debug_files,
 };

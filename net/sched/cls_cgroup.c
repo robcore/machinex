@@ -34,7 +34,7 @@ static inline struct cgroup_cls_state *task_cls_state(struct task_struct *p)
 			    struct cgroup_cls_state, css);
 }
 
-static struct cgroup_subsys_state *cgrp_create(struct cgroup *cgrp)
+static struct cgroup_subsys_state *cgrp_css_alloc(struct cgroup *cgrp)
 {
 	struct cgroup_cls_state *cs;
 
@@ -48,7 +48,7 @@ static struct cgroup_subsys_state *cgrp_create(struct cgroup *cgrp)
 	return &cs->css;
 }
 
-static void cgrp_destroy(struct cgroup *cgrp)
+static void cgrp_css_free(struct cgroup *cgrp)
 {
 	kfree(cgrp_cls_state(cgrp));
 }

@@ -108,7 +108,7 @@ static void update_netdev_tables(void)
 	rtnl_unlock();
 }
 
-static struct cgroup_subsys_state *cgrp_create(struct cgroup *cgrp)
+static struct cgroup_subsys_state *cgrp_css_alloc(struct cgroup *cgrp)
 {
 	struct cgroup_netprio_state *cs;
 	int ret;
@@ -132,7 +132,7 @@ static struct cgroup_subsys_state *cgrp_create(struct cgroup *cgrp)
 	return &cs->css;
 }
 
-static void cgrp_destroy(struct cgroup *cgrp)
+static void cgrp_css_free(struct cgroup *cgrp)
 {
 	struct cgroup_netprio_state *cs;
 	struct net_device *dev;

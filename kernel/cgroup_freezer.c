@@ -141,7 +141,7 @@ static struct cgroup_subsys_state *freezer_create(struct cgroup *cgroup)
 	return &freezer->css;
 }
 
-static void freezer_destroy(struct cgroup *cgroup)
+static void freezer_css_free(struct cgroup *cgroup)
 {
 	struct freezer *freezer = cgroup_freezer(cgroup);
 
