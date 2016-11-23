@@ -69,8 +69,6 @@
 #include <net/netns/generic.h>
 #include <net/rtnetlink.h>
 #include <net/sock.h>
-#include <net/cls_cgroup.h>
-
 // ------------- START of KNOX_VPN ------------------//
 #include <linux/types.h>
 #include <linux/udp.h>

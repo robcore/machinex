@@ -18,12 +18,13 @@
 #include <linux/rcupdate.h>
 
 
-#if IS_ENABLED(CONFIG_NETPRIO_CGROUP)
 struct netprio_map {
 	struct rcu_head rcu;
 	u32 priomap_len;
 	u32 priomap[];
 };
+
+#ifdef CONFIG_CGROUPS
 
 struct cgroup_netprio_state {
 	struct cgroup_subsys_state css;
@@ -71,15 +72,17 @@ static inline u32 task_netprioidx(struct task_struct *p)
 	return idx;
 }
 
-#endif
-
-#else /* !CONFIG_NETPRIO_CGROUP */
+#else
 
 static inline u32 task_netprioidx(struct task_struct *p)
 {
 	return 0;
 }
 
+#endif /* CONFIG_NETPRIO_CGROUP */
+
+#else
 #define sock_update_netprioidx(sk)
+#endif
 
 #endif  /* _NET_CLS_CGROUP_H */

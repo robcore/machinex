@@ -88,12 +88,11 @@ static DEFINE_MUTEX(cgroup_root_mutex);
 
 /*
  * Generate an array of cgroup subsystem pointers. At boot time, this is
- * populated with the built in subsystems, and modular subsystems are
+ * populated up to CGROUP_BUILTIN_SUBSYS_COUNT, and modular subsystems are
  * registered after that. The mutable section of this array is protected by
  * cgroup_mutex.
  */
-#define SUBSYS(_x) [_x ## _subsys_id] = &_x ## _subsys,
-#define IS_SUBSYS_ENABLED(option) IS_BUILTIN(option)
+#define SUBSYS(_x) &_x ## _subsys,
 static struct cgroup_subsys *subsys[CGROUP_SUBSYS_COUNT] = {
 #include <linux/cgroup_subsys.h>
 };
@@ -1319,7 +1318,7 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 	 * take duplicate reference counts on a subsystem that's already used,
 	 * but rebind_subsystems handles this case.
 	 */
-	for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+	for (i = CGROUP_BUILTIN_SUBSYS_COUNT; i < CGROUP_SUBSYS_COUNT; i++) {
 		unsigned long bit = 1UL << i;
 
 		if (!(bit & opts->subsys_bits))
@@ -1335,7 +1334,7 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 		 * raced with a module_delete call, and to the user this is
 		 * essentially a "subsystem doesn't exist" case.
 		 */
-		for (i--; i >= 0; i--) {
+		for (i--; i >= CGROUP_BUILTIN_SUBSYS_COUNT; i--) {
 			/* drop refcounts only on the ones we took */
 			unsigned long bit = 1UL << i;
 
@@ -1352,7 +1351,7 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 static void drop_parsed_module_refcounts(unsigned long subsys_bits)
 {
 	int i;
-	for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+	for (i = CGROUP_BUILTIN_SUBSYS_COUNT; i < CGROUP_SUBSYS_COUNT; i++) {
 		unsigned long bit = 1UL << i;
 
 		if (!(bit & subsys_bits))
@@ -1694,6 +1693,7 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 
 		free_cg_links(&tmp_cg_links);
 
+		BUG_ON(!list_empty(&root_cgrp->sibling));
 		BUG_ON(!list_empty(&root_cgrp->children));
 		BUG_ON(root->number_of_cgroups != 1);
 
@@ -1742,6 +1742,7 @@ static void cgroup_kill_sb(struct super_block *sb) {
 
 	BUG_ON(root->number_of_cgroups != 1);
 	BUG_ON(!list_empty(&cgrp->children));
+	BUG_ON(!list_empty(&cgrp->sibling));
 
 	mutex_lock(&cgroup_mutex);
 	mutex_lock(&cgroup_root_mutex);
@@ -4238,7 +4239,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 			ss->post_clone(cgrp);
 	}
 
-	list_add_tail_rcu(&cgrp->sibling, &cgrp->parent->children);
+	list_add(&cgrp->sibling, &cgrp->parent->children);
 	root->number_of_cgroups++;
 
 	err = cgroup_create_dir(cgrp, dentry, mode);
@@ -4265,7 +4266,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
  err_remove:
 
-	list_del_rcu(&cgrp->sibling);
+	list_del(&cgrp->sibling);
 	root->number_of_cgroups--;
 
  err_destroy:
@@ -4501,7 +4502,7 @@ again:
 	raw_spin_unlock(&release_list_lock);
 
 	/* delete this cgroup from parent->children */
-	list_del_rcu(&cgrp->sibling);
+	list_del_init(&cgrp->sibling);
 
 	list_del_init(&cgrp->allcg_node);
 
@@ -4576,9 +4577,6 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 
 	ss->active = 1;
 
-	if (ss->post_create)
-		ss->post_create(&ss->root->top_cgroup);
-
 	/* this function shouldn't be used with modular subsystems, since they
 	 * need to register a subsys_id, among other things */
 	BUG_ON(ss->module);
@@ -4620,7 +4618,8 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	 * since cgroup_init_subsys will have already taken care of it.
 	 */
 	if (ss->module == NULL) {
-		/* a sanity check */
+		/* a few sanity checks */
+		BUG_ON(ss->subsys_id >= CGROUP_BUILTIN_SUBSYS_COUNT);
 		BUG_ON(subsys[ss->subsys_id] != ss);
 		return 0;
 	}
@@ -4634,7 +4633,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	 */
 	mutex_lock(&cgroup_mutex);
 	/* find the first empty slot in the array */
-	for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+	for (i = CGROUP_BUILTIN_SUBSYS_COUNT; i < CGROUP_SUBSYS_COUNT; i++) {
 		if (subsys[i] == NULL)
 			break;
 	}
@@ -4701,9 +4700,6 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 
 	ss->active = 1;
 
-	if (ss->post_create)
-		ss->post_create(&ss->root->top_cgroup);
-
 	/* success! */
 	mutex_unlock(&cgroup_mutex);
 	return 0;
@@ -4733,6 +4729,7 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 
 	mutex_lock(&cgroup_mutex);
 	/* deassign the subsys_id */
+	BUG_ON(ss->subsys_id < CGROUP_BUILTIN_SUBSYS_COUNT);
 	subsys[ss->subsys_id] = NULL;
 
 	/* remove subsystem from rootnode's list of subsystems */
@@ -4793,12 +4790,9 @@ int __init cgroup_init_early(void)
 	list_add(&init_css_set_link.cg_link_list,
 		 &init_css_set.cg_links);
 
-	for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+	/* at bootup time, we don't worry about modular subsystems */
+	for (i = 0; i < CGROUP_BUILTIN_SUBSYS_COUNT; i++) {
 		struct cgroup_subsys *ss = subsys[i];
-
-		/* at bootup time, we don't worry about modular subsystems */
-		if (!ss || ss->module)
-			continue;
 
 		BUG_ON(!ss->name);
 		BUG_ON(strlen(ss->name) > MAX_CGROUP_TYPE_NAMELEN);
@@ -4832,12 +4826,9 @@ int __init cgroup_init(void)
 	if (err)
 		return err;
 
-	for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+	/* at bootup time, we don't worry about modular subsystems */
+	for (i = 0; i < CGROUP_BUILTIN_SUBSYS_COUNT; i++) {
 		struct cgroup_subsys *ss = subsys[i];
-
-		/* at bootup time, we don't worry about modular subsystems */
-		if (!ss || ss->module)
-			continue;
 		if (!ss->early_init)
 			cgroup_init_subsys(ss);
 		if (ss->use_id)
@@ -5115,13 +5106,12 @@ void cgroup_exit(struct task_struct *tsk, int run_callbacks)
 	tsk->cgroups = &init_css_set;
 
 	if (run_callbacks && need_forkexit_callback) {
-		for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+		/*
+		 * modular subsystems can't use callbacks, so no need to lock
+		 * the subsys array
+		 */
+		for (i = 0; i < CGROUP_BUILTIN_SUBSYS_COUNT; i++) {
 			struct cgroup_subsys *ss = subsys[i];
-
-			/* modular subsystems can't use callbacks */
-			if (!ss || ss->module)
-				continue;
-
 			if (ss->exit) {
 				struct cgroup *old_cgrp =
 					rcu_dereference_raw(cg->subsys[i])->cgroup;
@@ -5307,16 +5297,12 @@ static int __init cgroup_disable(char *str)
 	while ((token = strsep(&str, ",")) != NULL) {
 		if (!*token)
 			continue;
-		for (i = 0; i < CGROUP_SUBSYS_COUNT; i++) {
+		/*
+		 * cgroup_disable, being at boot time, can't know about module
+		 * subsystems, so we don't worry about them.
+		 */
+		for (i = 0; i < CGROUP_BUILTIN_SUBSYS_COUNT; i++) {
 			struct cgroup_subsys *ss = subsys[i];
-
-			/*
-			 * cgroup_disable, being at boot time, can't
-			 * know about module subsystems, so we don't
-			 * worry about them.
-			 */
-			if (!ss || ss->module)
-				continue;
 
 			if (!strcmp(token, ss->name)) {
 				ss->disabled = 1;
