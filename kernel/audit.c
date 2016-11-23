@@ -185,7 +185,7 @@ void audit_panic(const char *message)
 	case AUDIT_FAIL_SILENT:
 		break;
 	case AUDIT_FAIL_PRINTK:
-		printk(KERN_ERR "audit: %s\n", message);
+		pr_debug(KERN_ERR "audit: %s\n", message);
 		break;
 	case AUDIT_FAIL_PANIC:
 		/* test audit_pid since printk is always losey, why bother? */
@@ -255,7 +255,7 @@ void audit_log_lost(const char *message)
 	}
 
 	if (print) {
-		printk(KERN_WARNING
+		pr_debug(KERN_WARNING
 			"audit: audit_lost=%d audit_rate_limit=%d "
 			"audit_backlog_limit=%d\n",
 			atomic_read(&audit_lost),
@@ -407,7 +407,7 @@ static void kauditd_send_skb(struct sk_buff *skb)
 	err = netlink_unicast(audit_sock, skb, audit_nlk_pid, 0);
 	if (err < 0) {
 		BUG_ON(err != -ECONNREFUSED); /* Shouldn't happen */
-		printk(KERN_ERR "audit: *NO* daemon at audit_pid=%d\n", audit_pid);
+		pr_debug(KERN_ERR "audit: *NO* daemon at audit_pid=%d\n", audit_pid);
 		audit_log_lost("auditd disappeared\n");
 		audit_pid = 0;
 		/* we might get lucky and get this in the next auditd */
@@ -416,7 +416,7 @@ static void kauditd_send_skb(struct sk_buff *skb)
 #ifdef CONFIG_PROC_AVC
 		struct nlmsghdr *nlh = nlmsg_hdr(skb);
 		char *data = NLMSG_DATA(nlh);
-	
+
 		if (nlh->nlmsg_type != AUDIT_EOE && nlh->nlmsg_type != AUDIT_NETFILTER_CFG) {
 			sec_avc_log("%s\n", data);
 		}
@@ -731,7 +731,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 							audit_pid, loginuid,
 							sessionid, sid, 1);
 
-			audit_pid = new_pid;
+			audit_pid = 0;
 			audit_nlk_pid = NETLINK_CB(skb).pid;
 		}
 		if (status_get->mask & AUDIT_STATUS_RATE_LIMIT) {
@@ -978,7 +978,7 @@ static int __init audit_init(void)
 	if (audit_initialized == AUDIT_DISABLED)
 		return 0;
 
-	printk(KERN_INFO "audit: initializing netlink socket (%s)\n",
+	pr_debug(KERN_INFO "audit: initializing netlink socket (%s)\n",
 	       audit_default ? "enabled" : "disabled");
 	audit_sock = netlink_kernel_create(&init_net, NETLINK_AUDIT, 0,
 					   audit_receive, NULL, THIS_MODULE);
@@ -1009,7 +1009,7 @@ static int __init audit_enable(char *str)
 	if (!audit_default)
 		audit_initialized = AUDIT_DISABLED;
 
-	printk(KERN_INFO "audit: %s", audit_default ? "enabled" : "disabled");
+	pr_debug(KERN_INFO "audit: %s", audit_default ? "enabled" : "disabled");
 
 	if (audit_initialized == AUDIT_INITIALIZED) {
 		audit_enabled = audit_default;
@@ -1192,7 +1192,7 @@ struct audit_buffer *audit_log_start(struct audit_context *ctx, gfp_t gfp_mask,
 			continue;
 		}
 		if (audit_rate_check())
-			printk(KERN_WARNING
+			pr_debug(KERN_WARNING
 			       "audit: audit_backlog=%d > "
 			       "audit_backlog_limit=%d\n",
 			       skb_queue_len(&audit_skb_queue),
