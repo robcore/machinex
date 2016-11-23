@@ -21,6 +21,7 @@
 #include <mach/qdsp6v2/audio_acdb.h>
 #include <mach/qdsp6v2/rtac.h>
 #include <mach/socinfo.h>
+#include <mach/qdsp6v2/apr_tal.h>
 
 #include "sound/apr_audio-v2.h"
 #include "sound/q6afe-v2.h"
@@ -193,6 +194,8 @@ static bool is_volte_session(u16 session_id)
 
 static int voice_apr_register(void)
 {
+	void *modem_mvm, *modem_cvs, *modem_cvp;
+
 	pr_debug("%s\n", __func__);
 
 	mutex_lock(&common.common_lock);
@@ -209,6 +212,18 @@ static int voice_apr_register(void)
 			pr_err("%s: Unable to register MVM\n", __func__);
 			goto err;
 		}
+
+		/*
+		 * Register with modem for SSR callback. The APR handle
+		 * is not stored since it is used only to receive notifications
+		 * and not for communication
+		 */
+		modem_mvm = apr_register("MODEM", "MVM",
+						qdsp_mvm_callback,
+						0xFFFFFFFF, &common);
+		if (modem_mvm == NULL)
+			pr_err("%s: Unable to register MVM for MODEM\n",
+					__func__);
 	}
 
 	if (common.apr_q6_cvs == NULL) {
@@ -224,6 +239,18 @@ static int voice_apr_register(void)
 		}
 
 		rtac_set_voice_handle(RTAC_CVS, common.apr_q6_cvs);
+		/*
+		 * Register with modem for SSR callback. The APR handle
+		 * is not stored since it is used only to receive notifications
+		 * and not for communication
+		 */
+		modem_cvs = apr_register("MODEM", "CVS",
+						qdsp_cvs_callback,
+						0xFFFFFFFF, &common);
+		 if (modem_cvs == NULL)
+			pr_err("%s: Unable to register CVS for MODEM\n",
+					__func__);
+
 	}
 
 	if (common.apr_q6_cvp == NULL) {
@@ -239,6 +266,18 @@ static int voice_apr_register(void)
 		}
 
 		rtac_set_voice_handle(RTAC_CVP, common.apr_q6_cvp);
+		/*
+		 * Register with modem for SSR callback. The APR handle
+		 * is not stored since it is used only to receive notifications
+		 * and not for communication
+		 */
+		modem_cvp = apr_register("MODEM", "CVP",
+						qdsp_cvp_callback,
+						0xFFFFFFFF, &common);
+		if (modem_cvp == NULL)
+			pr_err("%s: Unable to register CVP for MODEM\n",
+					__func__);
+
 	}
 
 	mutex_unlock(&common.common_lock);
@@ -596,8 +635,9 @@ static int voice_destroy_mvm_cvs_session(struct voice_data *v)
 	cvs_handle = voice_get_cvs_handle(v);
 
 	/* MVM, CVS sessions are destroyed only for Full control sessions. */
-	if (is_voip_session(v->session_id)) {
-		pr_debug("%s: MVM detach stream\n", __func__);
+	if (is_voip_session(v->session_id) || v->voc_state == VOC_ERROR) {
+		pr_debug("%s: MVM detach stream, VOC_STATE: %d\n", __func__,
+				v->voc_state);
 
 		/* Detach voice stream. */
 		detach_stream.hdr.hdr_field =
@@ -3409,11 +3449,14 @@ int voc_end_voice_call(uint16_t session_id)
 
 	mutex_lock(&v->lock);
 
-	if (v->voc_state == VOC_RUN) {
+	if (v->voc_state == VOC_RUN || v->voc_state == VOC_ERROR) {
+		pr_debug("%s: VOC_STATE: %d\n", __func__, v->voc_state);
+
 		if (v->dev_tx.port_id != RT_PROXY_PORT_001_TX &&
 			v->dev_rx.port_id != RT_PROXY_PORT_001_RX)
 			afe_sidetone(v->dev_tx.port_id, v->dev_rx.port_id,
 					0, 0);
+
 		ret = voice_destroy_vocproc(v);
 		if (ret < 0)
 			pr_err("%s:  destroy voice failed\n", __func__);
@@ -3438,6 +3481,13 @@ int voc_start_voice_call(uint16_t session_id)
 	}
 
 	mutex_lock(&v->lock);
+
+	if (v->voc_state == VOC_ERROR) {
+		pr_debug("%s: VOC in ERR state\n", __func__);
+
+		voice_destroy_mvm_cvs_session(v);
+		v->voc_state = VOC_INIT;
+	}
 
 	if ((v->voc_state == VOC_INIT) ||
 		(v->voc_state == VOC_RELEASE)) {
@@ -3509,6 +3559,7 @@ static int32_t qdsp_mvm_callback(struct apr_client_data *data, void *priv)
 	struct common_data *c = NULL;
 	struct voice_data *v = NULL;
 	int i = 0;
+	uint16_t session_id = 0;
 
 	if ((data == NULL) || (priv == NULL)) {
 		pr_err("%s: data or priv is NULL\n", __func__);
@@ -3517,6 +3568,36 @@ static int32_t qdsp_mvm_callback(struct apr_client_data *data, void *priv)
 
 	c = priv;
 
+	pr_debug("%s: Payload Length = %d, opcode=%x\n", __func__,
+		data->payload_size, data->opcode);
+
+	if (data->opcode == RESET_EVENTS) {
+
+		if (data->reset_proc == APR_DEST_MODEM) {
+			pr_debug("%s: Received MODEM reset event\n", __func__);
+
+			session_id = voc_get_session_id(VOICE_SESSION_NAME);
+			v = voice_get_session(session_id);
+			if (v != NULL)
+				v->voc_state = VOC_ERROR;
+
+			session_id = voc_get_session_id(VOLTE_SESSION_NAME);
+			v = voice_get_session(session_id);
+			if (v != NULL)
+				v->voc_state = VOC_ERROR;
+		} else {
+			pr_debug("%s: Reset event received in Voice service\n",
+				__func__);
+			apr_reset(c->apr_q6_mvm);
+			c->apr_q6_mvm = NULL;
+
+			/* Sub-system restart is applicable to all sessions. */
+			for (i = 0; i < MAX_VOC_SESSIONS; i++)
+				c->voice[i].mvm_handle = 0;
+		}
+		return 0;
+	}
+
 	pr_debug("%s: session_id 0x%x\n", __func__, data->dest_port);
 
 	v = voice_get_session(data->dest_port);
@@ -3524,23 +3605,6 @@ static int32_t qdsp_mvm_callback(struct apr_client_data *data, void *priv)
 		pr_err("%s: v is NULL\n", __func__);
 
 		return -EINVAL;
-	}
-
-	pr_debug("%s: Payload Length = %d, opcode=%x\n", __func__,
-		data->payload_size, data->opcode);
-
-	if (data->opcode == RESET_EVENTS) {
-		pr_debug("%s: Reset event received in Voice service\n",
-			 __func__);
-
-		apr_reset(c->apr_q6_mvm);
-		c->apr_q6_mvm = NULL;
-
-		/* Sub-system restart is applicable to all sessions. */
-		for (i = 0; i < MAX_VOC_SESSIONS; i++)
-			c->voice[i].mvm_handle = 0;
-
-		return 0;
 	}
 
 	if (data->opcode == APR_BASIC_RSP_RESULT) {
@@ -3596,6 +3660,7 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 	struct common_data *c = NULL;
 	struct voice_data *v = NULL;
 	int i = 0;
+	uint16_t session_id = 0;
 
 	if ((data == NULL) || (priv == NULL)) {
 		pr_err("%s: data or priv is NULL\n", __func__);
@@ -3605,29 +3670,41 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 	c = priv;
 
 	pr_debug("%s: session_id 0x%x\n", __func__, data->dest_port);
+	pr_debug("%s: Payload Length = %d, opcode=%x\n", __func__,
+		data->payload_size, data->opcode);
+
+	if (data->opcode == RESET_EVENTS) {
+		if (data->reset_proc == APR_DEST_MODEM) {
+			pr_debug("%s: Received Modem reset event\n", __func__);
+
+			session_id = voc_get_session_id(VOICE_SESSION_NAME);
+			v = voice_get_session(session_id);
+			if (v != NULL)
+				v->voc_state = VOC_ERROR;
+
+			session_id = voc_get_session_id(VOLTE_SESSION_NAME);
+			v = voice_get_session(session_id);
+			if (v != NULL)
+				v->voc_state = VOC_ERROR;
+		} else {
+			pr_debug("%s: Reset event received in Voice service\n",
+				 __func__);
+
+			apr_reset(c->apr_q6_cvs);
+			c->apr_q6_cvs = NULL;
+
+			/* Sub-system restart is applicable to all sessions. */
+			for (i = 0; i < MAX_VOC_SESSIONS; i++)
+				c->voice[i].cvs_handle = 0;
+		}
+		return 0;
+	}
 
 	v = voice_get_session(data->dest_port);
 	if (v == NULL) {
 		pr_err("%s: v is NULL\n", __func__);
 
 		return -EINVAL;
-	}
-
-	pr_debug("%s: Payload Length = %d, opcode=%x\n", __func__,
-		data->payload_size, data->opcode);
-
-	if (data->opcode == RESET_EVENTS) {
-		pr_debug("%s: Reset event received in Voice service\n",
-			 __func__);
-
-		apr_reset(c->apr_q6_cvs);
-		c->apr_q6_cvs = NULL;
-
-		/* Sub-system restart is applicable to all sessions. */
-		for (i = 0; i < MAX_VOC_SESSIONS; i++)
-			c->voice[i].cvs_handle = 0;
-
-		return 0;
 	}
 
 	if (data->opcode == APR_BASIC_RSP_RESULT) {
@@ -3747,6 +3824,7 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 	struct common_data *c = NULL;
 	struct voice_data *v = NULL;
 	int i = 0;
+	uint16_t session_id = 0;
 
 	if ((data == NULL) || (priv == NULL)) {
 		pr_err("%s: data or priv is NULL\n", __func__);
@@ -3755,28 +3833,38 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 
 	c = priv;
 
+	if (data->opcode == RESET_EVENTS) {
+		if (data->reset_proc == APR_DEST_MODEM) {
+			pr_debug("%s: Received Modem reset event\n", __func__);
+
+			session_id = voc_get_session_id(VOICE_SESSION_NAME);
+			v = voice_get_session(session_id);
+			if (v != NULL)
+				v->voc_state = VOC_ERROR;
+
+			session_id = voc_get_session_id(VOLTE_SESSION_NAME);
+			v = voice_get_session(session_id);
+			if (v != NULL)
+				v->voc_state = VOC_ERROR;
+		} else {
+			pr_debug("%s: Reset event received in Voice service\n",
+				 __func__);
+
+			apr_reset(c->apr_q6_cvp);
+			c->apr_q6_cvp = NULL;
+
+			/* Sub-system restart is applicable to all sessions. */
+			for (i = 0; i < MAX_VOC_SESSIONS; i++)
+				c->voice[i].cvp_handle = 0;
+		}
+		return 0;
+	}
+
 	v = voice_get_session(data->dest_port);
 	if (v == NULL) {
 		pr_err("%s: v is NULL\n", __func__);
 
 		return -EINVAL;
-	}
-
-	pr_debug("%s: Payload Length = %d, opcode=%x\n", __func__,
-		data->payload_size, data->opcode);
-
-	if (data->opcode == RESET_EVENTS) {
-		pr_debug("%s: Reset event received in Voice service\n",
-			 __func__);
-
-		apr_reset(c->apr_q6_cvp);
-		c->apr_q6_cvp = NULL;
-
-		/* Sub-system restart is applicable to all sessions. */
-		for (i = 0; i < MAX_VOC_SESSIONS; i++)
-			c->voice[i].cvp_handle = 0;
-
-		return 0;
 	}
 
 	if (data->opcode == APR_BASIC_RSP_RESULT) {
