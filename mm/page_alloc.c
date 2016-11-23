@@ -5760,8 +5760,7 @@ void set_pageblock_flags_group(struct page *page, unsigned long flags,
  * MIGRATE_MOVABLE block might include unmovable pages. It means you can't
  * expect this function should be exact.
  */
-static bool
-__has_unmovable_pages(struct zone *zone, struct page *page, int count)
+bool has_unmovable_pages(struct zone *zone, struct page *page, int count)
 {
 	unsigned long pfn, iter, found;
 	int mt;
@@ -5839,67 +5838,6 @@ bool is_pageblock_removable_nolock(struct page *page)
 		return false;
 
 	return !__has_unmovable_pages(zone, page, 0);
-}
-
-int set_migratetype_isolate(struct page *page)
-{
-	struct zone *zone;
-	unsigned long flags, pfn;
-	struct memory_isolate_notify arg;
-	int notifier_ret;
-	int ret = -EBUSY;
-
-	zone = page_zone(page);
-
-	spin_lock_irqsave(&zone->lock, flags);
-
-	pfn = page_to_pfn(page);
-	arg.start_pfn = pfn;
-	arg.nr_pages = pageblock_nr_pages;
-	arg.pages_found = 0;
-
-	/*
-	 * It may be possible to isolate a pageblock even if the
-	 * migratetype is not MIGRATE_MOVABLE. The memory isolation
-	 * notifier chain is used by balloon drivers to return the
-	 * number of pages in a range that are held by the balloon
-	 * driver to shrink memory. If all the pages are accounted for
-	 * by balloons, are free, or on the LRU, isolation can continue.
-	 * Later, for example, when memory hotplug notifier runs, these
-	 * pages reported as "can be isolated" should be isolated(freed)
-	 * by the balloon driver through the memory notifier chain.
-	 */
-	notifier_ret = memory_isolate_notify(MEM_ISOLATE_COUNT, &arg);
-	notifier_ret = notifier_to_errno(notifier_ret);
-	if (notifier_ret)
-		goto out;
-	/*
-	 * FIXME: Now, memory hotplug doesn't call shrink_slab() by itself.
-	 * We just check MOVABLE pages.
-	 */
-	if (!__has_unmovable_pages(zone, page, arg.pages_found))
-		ret = 0;
-	/*
-	 * Unmovable means "not-on-lru" pages. If Unmovable pages are
-	 * larger than removable-by-driver pages reported by notifier,
-	 * we'll fail.
-	 */
-
-out:
-	if (!ret) {
-		unsigned long nr_pages;
-		int migratetype = get_pageblock_migratetype(page);
-
-		set_pageblock_migratetype(page, MIGRATE_ISOLATE);
-		nr_pages = move_freepages_block(zone, page, MIGRATE_ISOLATE);
-
-		__mod_zone_freepage_state(zone, -nr_pages, migratetype);
-	}
-
-	spin_unlock_irqrestore(&zone->lock, flags);
-	if (!ret)
-		drain_all_pages();
-	return ret;
 }
 
 #ifdef CONFIG_CMA
