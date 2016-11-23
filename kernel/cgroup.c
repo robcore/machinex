@@ -898,47 +898,54 @@ static int cgroup_call_pre_destroy(struct cgroup *cgrp)
 	return ret;
 }
 
+static void cgroup_free_fn(struct work_struct *work)
+{
+	struct cgroup *cgrp = container_of(work, struct cgroup, free_work);
+	struct cgroup_subsys *ss;
+
+	mutex_lock(&cgroup_mutex);
+	/*
+	 * Release the subsystem state objects.
+	 */
+	for_each_subsys(cgrp->root, ss)
+		ss->css_free(cgrp);
+
+	cgrp->root->number_of_cgroups--;
+	mutex_unlock(&cgroup_mutex);
+
+	/*
+	 * Drop the active superblock reference that we took when we
+	 * created the cgroup
+	 */
+	deactivate_super(cgrp->root->sb);
+
+	/*
+	 * if we're getting rid of the cgroup, refcount should ensure
+	 * that there are no pidlists left.
+	 */
+	BUG_ON(!list_empty(&cgrp->pidlists));
+
+	simple_xattrs_free(&cgrp->xattrs);
+
+	ida_simple_remove(&cgrp->root->cgroup_ida, cgrp->id);
+	kfree(cgrp);
+}
+
+static void cgroup_free_rcu(struct rcu_head *head)
+{
+	struct cgroup *cgrp = container_of(head, struct cgroup, rcu_head);
+
+	schedule_work(&cgrp->free_work);
+}
+
 static void cgroup_diput(struct dentry *dentry, struct inode *inode)
 {
 	/* is dentry a directory ? if so, kfree() associated cgroup */
 	if (S_ISDIR(inode->i_mode)) {
 		struct cgroup *cgrp = dentry->d_fsdata;
-		struct cgroup_subsys *ss;
+
 		BUG_ON(!(cgroup_is_removed(cgrp)));
-		/* It's possible for external users to be holding css
-		 * reference counts on a cgroup; css_put() needs to
-		 * be able to access the cgroup after decrementing
-		 * the reference count in order to know if it needs to
-		 * queue the cgroup to be handled by the release
-		 * agent */
-		synchronize_rcu();
-
-		mutex_lock(&cgroup_mutex);
-		/*
-		 * Release the subsystem state objects.
-		 */
-		for_each_subsys(cgrp->root, ss)
-			ss->css_free(cgrp);
-
-		cgrp->root->number_of_cgroups--;
-		mutex_unlock(&cgroup_mutex);
-
-		/*
-		 * Drop the active superblock reference that we took when we
-		 * created the cgroup
-		 */
-		deactivate_super(cgrp->root->sb);
-
-		/*
-		 * if we're getting rid of the cgroup, refcount should ensure
-		 * that there are no pidlists left.
-		 */
-		BUG_ON(!list_empty(&cgrp->pidlists));
-
-		simple_xattrs_free(&cgrp->xattrs);
-
-		ida_simple_remove(&cgrp->root->cgroup_ida, cgrp->id);
-		kfree_rcu(cgrp, rcu_head);
+		call_rcu(&cgrp->rcu_head, cgroup_free_rcu);
 	} else {
 		struct cfent *cfe = __d_cfe(dentry);
 		struct cgroup *cgrp = dentry->d_parent->d_fsdata;
@@ -967,13 +974,17 @@ static void remove_dir(struct dentry *d)
 	dput(parent);
 }
 
-static int cgroup_rm_file(struct cgroup *cgrp, const struct cftype *cft)
+static void cgroup_rm_file(struct cgroup *cgrp, const struct cftype *cft)
 {
 	struct cfent *cfe;
 
 	lockdep_assert_held(&cgrp->dentry->d_inode->i_mutex);
 	lockdep_assert_held(&cgroup_mutex);
 
+	/*
+	 * If we're doing cleanup due to failure of cgroup_create(),
+	 * the corresponding @cfe may not exist.
+	 */
 	list_for_each_entry(cfe, &cgrp->files, node) {
 		struct dentry *d = cfe->dentry;
 
@@ -986,9 +997,8 @@ static int cgroup_rm_file(struct cgroup *cgrp, const struct cftype *cft)
 		list_del_init(&cfe->node);
 		dput(d);
 
-		return 0;
+		break;
 	}
-	return -ENOENT;
 }
 
 /**
@@ -1430,6 +1440,7 @@ static void init_cgroup_housekeeping(struct cgroup *cgrp)
 	INIT_LIST_HEAD(&cgrp->allcg_node);
 	INIT_LIST_HEAD(&cgrp->release_list);
 	INIT_LIST_HEAD(&cgrp->pidlists);
+	INIT_WORK(&cgrp->free_work, cgroup_free_fn);
 	mutex_init(&cgrp->pidlist_mutex);
 	INIT_LIST_HEAD(&cgrp->event_list);
 	spin_lock_init(&cgrp->event_list_lock);
@@ -1804,7 +1815,7 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 	struct dentry *dentry = rcu_dereference_check(cgrp->dentry,
 						      cgroup_lock_is_held());
 
-	if (!dentry || cgrp == dummytop) {
+	if (cgrp == dummytop) {
 		/*
 		 * Inactive subsystems have no dentry for their root
 		 * cgroup
@@ -2728,7 +2739,7 @@ static struct dentry *cgroup_lookup(struct inode *dir, struct dentry *dentry, st
  */
 static inline struct cftype *__file_cft(struct file *file)
 {
-	if (file->f_dentry->d_inode->i_fop != &cgroup_file_operations)
+	if (file_inode(file)->i_fop != &cgroup_file_operations)
 		return ERR_PTR(-EINVAL);
 	return __d_cft(file->f_dentry);
 }
@@ -2883,14 +2894,14 @@ static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
 		if ((cft->flags & CFTYPE_ONLY_ON_ROOT) && cgrp->parent)
 			continue;
 
-		if (is_add)
+		if (is_add) {
 			err = cgroup_add_file(cgrp, subsys, cft);
-		else
-			err = cgroup_rm_file(cgrp, cft);
-		if (err) {
-			pr_warning("cgroup_addrm_files: failed to %s %s, err=%d\n",
-				   is_add ? "add" : "remove", cft->name, err);
+			if (err)
+				pr_warn("cgroup_addrm_files: failed to add %s, err=%d\n",
+					cft->name, err);
 			ret = err;
+		} else {
+			cgroup_rm_file(cgrp, cft);
 		}
 	}
 	return ret;
@@ -3130,6 +3141,32 @@ struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
 	return NULL;
 }
 EXPORT_SYMBOL_GPL(cgroup_next_descendant_pre);
+
+/**
+ * cgroup_rightmost_descendant - return the rightmost descendant of a cgroup
+ * @pos: cgroup of interest
+ *
+ * Return the rightmost descendant of @pos.  If there's no descendant,
+ * @pos is returned.  This can be used during pre-order traversal to skip
+ * subtree of @pos.
+ */
+struct cgroup *cgroup_rightmost_descendant(struct cgroup *pos)
+{
+	struct cgroup *last, *tmp;
+
+	WARN_ON_ONCE(!rcu_read_lock_held());
+
+	do {
+		last = pos;
+		/* ->prev isn't RCU safe, walk ->next till the end */
+		pos = NULL;
+		list_for_each_entry_rcu(tmp, &last->children, sibling)
+			pos = tmp;
+	} while (pos);
+
+	return last;
+}
+EXPORT_SYMBOL_GPL(cgroup_rightmost_descendant);
 
 static struct cgroup *cgroup_leftmost_descendant(struct cgroup *pos)
 {
@@ -3868,7 +3905,12 @@ static void cgroup_event_remove(struct work_struct *work)
 			remove);
 	struct cgroup *cgrp = event->cgrp;
 
+	remove_wait_queue(event->wqh, &event->wait);
+
 	event->cft->unregister_event(cgrp, event->cft, event->eventfd);
+
+	/* Notify userspace the event is going away. */
+	eventfd_signal(event->eventfd, 1);
 
 	eventfd_ctx_put(event->eventfd);
 	kfree(event);
@@ -3889,15 +3931,25 @@ static int cgroup_event_wake(wait_queue_t *wait, unsigned mode,
 	unsigned long flags = (unsigned long)key;
 
 	if (flags & POLLHUP) {
-		__remove_wait_queue(event->wqh, &event->wait);
-		spin_lock(&cgrp->event_list_lock);
-		list_del_init(&event->list);
-		spin_unlock(&cgrp->event_list_lock);
 		/*
-		 * We are in atomic context, but cgroup_event_remove() may
-		 * sleep, so we have to call it in workqueue.
+		 * If the event has been detached at cgroup removal, we
+		 * can simply return knowing the other side will cleanup
+		 * for us.
+		 *
+		 * We can't race against event freeing since the other
+		 * side will require wqh->lock via remove_wait_queue(),
+		 * which we hold.
 		 */
-		schedule_work(&event->remove);
+		spin_lock(&cgrp->event_list_lock);
+		if (!list_empty(&event->list)) {
+			list_del_init(&event->list);
+			/*
+			 * We are in atomic context, but cgroup_event_remove()
+			 * may sleep, so we have to call it in workqueue.
+			 */
+			schedule_work(&event->remove);
+		}
+		spin_unlock(&cgrp->event_list_lock);
 	}
 
 	return 0;
@@ -3969,7 +4021,7 @@ static int cgroup_write_event_control(struct cgroup *cgrp, struct cftype *cft,
 
 	/* the process need read permission on control file */
 	/* AV: shouldn't we check that it's been opened for read instead? */
-	ret = inode_permission(cfile->f_path.dentry->d_inode, MAY_READ);
+	ret = inode_permission(file_inode(cfile), MAY_READ);
 	if (ret < 0)
 		goto fail;
 
@@ -4209,6 +4261,9 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	mutex_lock(&cgroup_mutex);
 
 	init_cgroup_housekeeping(cgrp);
+
+	dentry->d_fsdata = cgrp;
+	cgrp->dentry = dentry;
 
 	cgrp->parent = parent;
 	cgrp->root = parent->root;
@@ -4516,20 +4571,14 @@ again:
 	/*
 	 * Unregister events and notify userspace.
 	 * Notify userspace about cgroup removing only after rmdir of cgroup
-	 * directory to avoid race between userspace and kernelspace. Use
-	 * a temporary list to avoid a deadlock with cgroup_event_wake(). Since
-	 * cgroup_event_wake() is called with the wait queue head locked,
-	 * remove_wait_queue() cannot be called while holding event_list_lock.
+	 * directory to avoid race between userspace and kernelspace.
 	 */
 	spin_lock(&cgrp->event_list_lock);
-	list_splice_init(&cgrp->event_list, &tmp_list);
-	spin_unlock(&cgrp->event_list_lock);
-	list_for_each_entry_safe(event, tmp, &tmp_list, list) {
+	list_for_each_entry_safe(event, tmp, &cgrp->event_list, list) {
 		list_del_init(&event->list);
-		remove_wait_queue(event->wqh, &event->wait);
-		eventfd_signal(event->eventfd, 1);
 		schedule_work(&event->remove);
 	}
+	spin_unlock(&cgrp->event_list_lock);
 
 	mutex_unlock(&cgroup_mutex);
 	return 0;
@@ -5592,7 +5641,7 @@ struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id)
 	struct inode *inode;
 	struct cgroup_subsys_state *css;
 
-	inode = f->f_dentry->d_inode;
+	inode = file_inode(f);
 	/* check in cgroup filesystem dir */
 	if (inode->i_op != &cgroup_dir_inode_operations)
 		return ERR_PTR(-EBADF);
