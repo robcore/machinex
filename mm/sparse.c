@@ -65,12 +65,14 @@ static struct mem_section noinline __init_refok *sparse_index_alloc(int nid)
 
 	if (slab_is_available()) {
 		if (node_state(nid, N_HIGH_MEMORY))
-			section = kzalloc_node(array_size, GFP_KERNEL, nid);
+			section = kmalloc_node(array_size, GFP_KERNEL, nid);
 		else
-			section = kzalloc(array_size, GFP_KERNEL);
-	} else {
+			section = kmalloc(array_size, GFP_KERNEL);
+	} else
 		section = alloc_bootmem_node(NODE_DATA(nid), array_size);
-	}
+
+	if (section)
+		memset(section, 0, array_size);
 
 	return section;
 }
@@ -131,8 +133,6 @@ int __section_nr(struct mem_section* ms)
 		if ((ms >= root) && (ms < (root + SECTIONS_PER_ROOT)))
 		     break;
 	}
-
-	VM_BUG_ON(root_nr == NR_SECTION_ROOTS);
 
 	return (root_nr * SECTIONS_PER_ROOT) + (ms - root);
 }
