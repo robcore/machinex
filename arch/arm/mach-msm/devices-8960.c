@@ -4436,6 +4436,7 @@ struct platform_device msm_dsps_device = {
 
 static struct resource coresight_tpiu_resources[] = {
 	{
+		.name  = "tpiu-base",
 		.start = CORESIGHT_TPIU_PHYS_BASE,
 		.end   = CORESIGHT_TPIU_PHYS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
@@ -4461,6 +4462,7 @@ struct platform_device coresight_tpiu_device = {
 
 static struct resource coresight_etb_resources[] = {
 	{
+		.name  = "etb-base",
 		.start = CORESIGHT_ETB_PHYS_BASE,
 		.end   = CORESIGHT_ETB_PHYS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
@@ -4487,6 +4489,7 @@ struct platform_device coresight_etb_device = {
 
 static struct resource coresight_funnel_resources[] = {
 	{
+		.name  = "funnel-base",
 		.start = CORESIGHT_FUNNEL_PHYS_BASE,
 		.end   = CORESIGHT_FUNNEL_PHYS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
@@ -4519,11 +4522,13 @@ struct platform_device coresight_funnel_device = {
 
 static struct resource coresight_stm_resources[] = {
 	{
+		.name  = "stm-base",
 		.start = CORESIGHT_STM_PHYS_BASE,
 		.end   = CORESIGHT_STM_PHYS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	{
+		.name  = "stm-data-base",
 		.start = CORESIGHT_STM_CHANNEL_PHYS_BASE,
 		.end   = CORESIGHT_STM_CHANNEL_PHYS_BASE + SZ_1M + SZ_512K - 1,
 		.flags = IORESOURCE_MEM,
@@ -4556,6 +4561,7 @@ struct platform_device coresight_stm_device = {
 
 static struct resource coresight_etm0_resources[] = {
 	{
+		.name  = "etm-base",
 		.start = CORESIGHT_ETM0_PHYS_BASE,
 		.end   = CORESIGHT_ETM0_PHYS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
@@ -4588,6 +4594,7 @@ struct platform_device coresight_etm0_device = {
 
 static struct resource coresight_etm1_resources[] = {
 	{
+		.name  = "etm-base",
 		.start = CORESIGHT_ETM1_PHYS_BASE,
 		.end   = CORESIGHT_ETM1_PHYS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
