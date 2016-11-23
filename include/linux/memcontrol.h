@@ -102,9 +102,9 @@ int mm_match_cgroup(const struct mm_struct *mm, const struct mem_cgroup *cgroup)
 
 extern struct cgroup_subsys_state *mem_cgroup_css(struct mem_cgroup *memcg);
 
-extern void
-mem_cgroup_prepare_migration(struct page *page, struct page *newpage,
-			     struct mem_cgroup **memcgp);
+extern int
+mem_cgroup_prepare_migration(struct page *page,
+	struct page *newpage, struct mem_cgroup **memcgp, gfp_t gfp_mask);
 extern void mem_cgroup_end_migration(struct mem_cgroup *memcg,
 	struct page *oldpage, struct page *newpage, bool migration_ok);
 
@@ -299,10 +299,11 @@ static inline struct cgroup_subsys_state
 	return NULL;
 }
 
-static inline void
+static inline int
 mem_cgroup_prepare_migration(struct page *page, struct page *newpage,
-			     struct mem_cgroup **memcgp)
+	struct mem_cgroup **memcgp, gfp_t gfp_mask)
 {
+	return 0;
 }
 
 static inline void mem_cgroup_end_migration(struct mem_cgroup *memcg,
