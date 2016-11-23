@@ -17,7 +17,6 @@
 #include <linux/timer.h>
 #include <linux/writeback.h>
 #include <linux/atomic.h>
-#include <linux/sysctl.h>
 
 struct page;
 struct device;
@@ -306,8 +305,6 @@ void set_bdi_congested(struct backing_dev_info *bdi, int sync);
 long congestion_wait(int sync, long timeout);
 long congestion_wait_kswapd(int sync, long timeout);
 long wait_iff_congested(struct zone *zone, int sync, long timeout);
-int pdflush_proc_obsolete(struct ctl_table *table, int write,
-		void __user *buffer, size_t *lenp, loff_t *ppos);
 
 static inline bool bdi_cap_stable_pages_required(struct backing_dev_info *bdi)
 {

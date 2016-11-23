@@ -33,7 +33,6 @@
 #include <linux/memcontrol.h>
 #include <linux/syscalls.h>
 #include <linux/hugetlb.h>
-#include <linux/hugetlb_cgroup.h>
 #include <linux/gfp.h>
 
 #include <asm/tlbflush.h>
@@ -699,6 +698,7 @@ static int __unmap_and_move(struct page *page, struct page *newpage,
 {
 	int rc = -EAGAIN;
 	int remap_swapcache = 1;
+	int charge = 0;
 	struct mem_cgroup *mem;
 	struct anon_vma *anon_vma = NULL;
 
@@ -740,7 +740,12 @@ static int __unmap_and_move(struct page *page, struct page *newpage,
 	}
 
 	/* charge against new page */
-	mem_cgroup_prepare_migration(page, newpage, &mem);
+	charge = mem_cgroup_prepare_migration(page, newpage, &mem, GFP_KERNEL);
+	if (charge == -ENOMEM) {
+		rc = -ENOMEM;
+		goto unlock;
+	}
+	BUG_ON(charge);
 
 	if (PageWriteback(page)) {
 		/*
@@ -830,7 +835,8 @@ skip_unmap:
 		put_anon_vma(anon_vma);
 
 uncharge:
-	mem_cgroup_end_migration(mem, page, newpage, rc == 0);
+	if (!charge)
+		mem_cgroup_end_migration(mem, page, newpage, rc == 0);
 unlock:
 	unlock_page(page);
 out:
@@ -941,13 +947,16 @@ static int unmap_and_move_huge_page(new_page_t get_new_page,
 
 	if (anon_vma)
 		put_anon_vma(anon_vma);
-
-	if (!rc)
-		hugetlb_cgroup_migrate(hpage, new_hpage);
-
 	unlock_page(hpage);
+
 out:
+	if (rc != -EAGAIN) {
+		list_del(&hpage->lru);
+		put_page(hpage);
+	}
+
 	put_page(new_hpage);
+
 	if (result) {
 		if (rc)
 			*result = rc;
@@ -1029,32 +1038,48 @@ out:
 	return nr_failed + retry;
 }
 
-int migrate_huge_page(struct page *hpage, new_page_t get_new_page,
-		      unsigned long private, bool offlining,
-		      enum migrate_mode mode)
+int migrate_huge_pages(struct list_head *from,
+		new_page_t get_new_page, unsigned long private, bool offlining,
+		enum migrate_mode mode)
 {
-	int pass, rc;
+	int retry = 1;
+	int nr_failed = 0;
+	int pass = 0;
+	struct page *page;
+	struct page *page2;
+	int rc;
 
-	for (pass = 0; pass < 10; pass++) {
-		rc = unmap_and_move_huge_page(get_new_page,
-					      private, hpage, pass > 2, offlining,
-					      mode);
-		switch (rc) {
-		case -ENOMEM:
-			goto out;
-		case -EAGAIN:
-			/* try again */
+	for (pass = 0; pass < 10 && retry; pass++) {
+		retry = 0;
+
+		list_for_each_entry_safe(page, page2, from, lru) {
 			cond_resched();
-			break;
-		case 0:
-			goto out;
-		default:
-			rc = -EIO;
-			goto out;
+
+			rc = unmap_and_move_huge_page(get_new_page,
+					private, page, pass > 2, offlining,
+					mode);
+
+			switch(rc) {
+			case -ENOMEM:
+				goto out;
+			case -EAGAIN:
+				retry++;
+				break;
+			case 0:
+				break;
+			default:
+				/* Permanent failure */
+				nr_failed++;
+				break;
+			}
 		}
 	}
+	rc = 0;
 out:
-	return rc;
+	if (rc)
+		return rc;
+
+	return nr_failed + retry;
 }
 
 #ifdef CONFIG_NUMA

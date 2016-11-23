@@ -43,6 +43,7 @@ Currently, these files are in /proc/sys/vm:
 - mmap_min_addr
 - nr_hugepages
 - nr_overcommit_hugepages
+- nr_pdflush_threads
 - nr_trim_pages         (only if CONFIG_MMU=n)
 - numa_zonelist_order
 - oom_dump_tasks
@@ -441,6 +442,16 @@ See Documentation/vm/hugetlbpage.txt
 
 ==============================================================
 
+nr_pdflush_threads
+
+The current number of pdflush threads.  This value is read-only.
+The value changes according to the number of dirty pages in the system.
+
+When necessary, additional pdflush threads are created, one per second, up to
+nr_pdflush_threads_max.
+
+==============================================================
+
 nr_trim_pages
 
 This is available only on NOMMU kernels.
@@ -579,23 +590,15 @@ of physical RAM.  See above.
 
 page-cluster
 
-page-cluster controls the number of pages up to which consecutive pages
-are read in from swap in a single attempt. This is the swap counterpart
-to page cache readahead.
-The mentioned consecutivity is not in terms of virtual/physical addresses,
-but consecutive on swap space - that means they were swapped out together.
+page-cluster controls the number of pages which are written to swap in
+a single attempt.  The swap I/O size.
 
 It is a logarithmic value - setting it to zero means "1 page", setting
 it to 1 means "2 pages", setting it to 2 means "4 pages", etc.
-Zero disables swap readahead completely.
 
 The default value is three (eight pages at a time).  There may be some
 small benefits in tuning this to a different value if your workload is
 swap-intensive.
-
-Lower values mean lower latencies for initial faults, but at the same time
-extra faults and I/O delays for following faults if they would have been part of
-that consecutive pages readahead would have brought in.
 
 =============================================================
 

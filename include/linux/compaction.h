@@ -59,7 +59,7 @@ static inline bool compaction_deferred(struct zone *zone, int order)
 	if (++zone->compact_considered > defer_limit)
 		zone->compact_considered = defer_limit;
 
-	return zone->compact_considered < defer_limit;
+	return zone->compact_considered < (1UL << zone->compact_defer_shift);
 }
 
 /* Returns true if restarting compaction after many failures */
@@ -100,7 +100,7 @@ static inline void defer_compaction(struct zone *zone, int order)
 
 static inline bool compaction_deferred(struct zone *zone, int order)
 {
-	return true;
+	return 1;
 }
 
 #endif /* CONFIG_COMPACTION */

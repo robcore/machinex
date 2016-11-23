@@ -528,7 +528,7 @@ static unsigned int refill_fl(struct adapter *adap, struct sge_fl *q, int n,
 #endif
 
 	while (n--) {
-		pg = __skb_alloc_page(gfp, NULL);
+		pg = alloc_page(gfp);
 		if (unlikely(!pg)) {
 			q->alloc_failed++;
 			break;

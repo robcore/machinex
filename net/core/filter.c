@@ -83,14 +83,6 @@ int sk_filter(struct sock *sk, struct sk_buff *skb)
 	int err;
 	struct sk_filter *filter;
 
-	/*
-	 * If the skb was allocated from pfmemalloc reserves, only
-	 * allow SOCK_MEMALLOC sockets to use it as this socket is
-	 * helping free memory
-	 */
-	if (skb_pfmemalloc(skb) && !sock_flag(sk, SOCK_MEMALLOC))
-		return -ENOMEM;
-
 	err = security_sock_rcv_skb(sk, skb);
 	if (err)
 		return err;
@@ -166,14 +158,6 @@ unsigned int sk_run_filter(const struct sk_buff *skb,
 			continue;
 		case BPF_S_ALU_DIV_K:
 			A = reciprocal_divide(A, K);
-			continue;
-		case BPF_S_ALU_MOD_X:
-			if (X == 0)
-				return 0;
-			A %= X;
-			continue;
-		case BPF_S_ALU_MOD_K:
-			A %= K;
 			continue;
 		case BPF_S_ALU_AND_X:
 			A &= X;
@@ -478,8 +462,6 @@ int sk_chk_filter(struct sock_filter *filter, unsigned int flen)
 		[BPF_ALU|BPF_MUL|BPF_K]  = BPF_S_ALU_MUL_K,
 		[BPF_ALU|BPF_MUL|BPF_X]  = BPF_S_ALU_MUL_X,
 		[BPF_ALU|BPF_DIV|BPF_X]  = BPF_S_ALU_DIV_X,
-		[BPF_ALU|BPF_MOD|BPF_K]  = BPF_S_ALU_MOD_K,
-		[BPF_ALU|BPF_MOD|BPF_X]  = BPF_S_ALU_MOD_X,
 		[BPF_ALU|BPF_AND|BPF_K]  = BPF_S_ALU_AND_K,
 		[BPF_ALU|BPF_AND|BPF_X]  = BPF_S_ALU_AND_X,
 		[BPF_ALU|BPF_OR|BPF_K]   = BPF_S_ALU_OR_K,
@@ -541,11 +523,6 @@ int sk_chk_filter(struct sock_filter *filter, unsigned int flen)
 			if (ftest->k == 0)
 				return -EINVAL;
 			ftest->k = reciprocal_value(ftest->k);
-			break;
-		case BPF_S_ALU_MOD_K:
-			/* check for division by zero */
-			if (ftest->k == 0)
-				return -EINVAL;
 			break;
 		case BPF_S_LD_MEM:
 		case BPF_S_LDX_MEM:

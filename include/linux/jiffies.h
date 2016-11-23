@@ -39,6 +39,9 @@
 # error Invalid value of HZ.
 #endif
 
+/* LATCH is used in the interval timer and ftape setup. */
+#define LATCH  ((CLOCK_TICK_RATE + HZ/2) / HZ)	/* For divider */
+
 /* Suppose we want to divide two numbers NOM and DEN: NOM/DEN, then we can
  * improve accuracy by shifting LSH bits, hence calculating:
  *     (NOM << LSH) / DEN
@@ -51,10 +54,14 @@
 #define SH_DIV(NOM,DEN,LSH) (   (((NOM) / (DEN)) << (LSH))              \
                              + ((((NOM) % (DEN)) << (LSH)) + (DEN) / 2) / (DEN))
 
-extern int register_refined_jiffies(long clock_tick_rate);
+/*
+ * HZ is the requested value. However the CLOCK_TICK_RATE may not allow
+ * for exactly HZ. So SHIFTED_HZ is high res HZ ("<< 8" is for accuracy)
+ */
+# define SHIFTED_HZ (SH_DIV(CLOCK_TICK_RATE, LATCH, 8))
 
 /* TICK_NSEC is the time between ticks in nsec assuming SHIFTED_HZ */
-#define TICK_NSEC ((NSEC_PER_SEC+HZ/2)/HZ)
+#define TICK_NSEC (SH_DIV(1000000UL * 1000, SHIFTED_HZ, 8))
 
 /* TICK_USEC is the time between ticks in usec assuming fake USER_HZ */
 #define TICK_USEC ((1000000UL + USER_HZ/2) / USER_HZ)
@@ -90,7 +97,7 @@ static inline u64 get_jiffies_64(void)
 #endif
 
 /*
- *	These inlines deal with timer wrapping correctly. You are
+ *	These inlines deal with timer wrapping correctly. You are 
  *	strongly encouraged to use them
  *	1. Because people otherwise forget
  *	2. Because if the timer wrap changes in future you won't have to
@@ -426,4 +433,5 @@ extern u64 nsecs_to_jiffies64(u64 n);
 extern unsigned long nsecs_to_jiffies(u64 n);
 
 #define TIMESTAMP_SIZE	30
+
 #endif

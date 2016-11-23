@@ -920,7 +920,7 @@ check_pages_isolated_cb(unsigned long start_pfn, unsigned long nr_pages,
 {
 	int ret;
 	long offlined = *(long *)data;
-	ret = test_pages_isolated(start_pfn, start_pfn + nr_pages, true);
+	ret = test_pages_isolated(start_pfn, start_pfn + nr_pages);
 	offlined = nr_pages;
 	if (!ret)
 		*(long *)data += offlined;
@@ -967,8 +967,7 @@ static int __ref offline_pages(unsigned long start_pfn,
 	nr_pages = end_pfn - start_pfn;
 
 	/* set above range as isolated */
-	ret = start_isolate_page_range(start_pfn, end_pfn,
-				       MIGRATE_MOVABLE, true);
+	ret = start_isolate_page_range(start_pfn, end_pfn, MIGRATE_MOVABLE);
 	if (ret)
 		goto out;
 
@@ -1047,9 +1046,6 @@ repeat:
 		total_unmovable_pages -= offlined_pages;
 #endif
 	init_per_zone_wmark_min();
-
-	if (!populated_zone(zone))
-		zone_pcp_reset(zone);
 
 	if (!node_present_pages(node)) {
 		node_clear_state(node, N_HIGH_MEMORY);

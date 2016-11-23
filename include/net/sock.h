@@ -613,7 +613,6 @@ enum sock_flags {
 	SOCK_RCVTSTAMPNS, /* %SO_TIMESTAMPNS setting */
 	SOCK_LOCALROUTE, /* route locally only, %SO_DONTROUTE setting */
 	SOCK_QUEUE_SHRUNK, /* write queue has been shrunk recently */
-	SOCK_MEMALLOC, /* VM depends on this socket for swapping */
 	SOCK_TIMESTAMPING_TX_HARDWARE,  /* %SOF_TIMESTAMPING_TX_HARDWARE */
 	SOCK_TIMESTAMPING_TX_SOFTWARE,  /* %SOF_TIMESTAMPING_TX_SOFTWARE */
 	SOCK_TIMESTAMPING_RX_HARDWARE,  /* %SOF_TIMESTAMPING_RX_HARDWARE */
@@ -649,26 +648,6 @@ static inline void sock_reset_flag(struct sock *sk, enum sock_flags flag)
 static inline int sock_flag(struct sock *sk, enum sock_flags flag)
 {
 	return test_bit(flag, &sk->sk_flags);
-}
-
-#ifdef CONFIG_NET
-extern struct static_key memalloc_socks;
-static inline int sk_memalloc_socks(void)
-{
-	return static_key_false(&memalloc_socks);
-}
-#else
-
-static inline int sk_memalloc_socks(void)
-{
-	return 0;
-}
-
-#endif
-
-static inline gfp_t sk_gfp_atomic(struct sock *sk, gfp_t gfp_mask)
-{
-	return GFP_ATOMIC | (sk->sk_allocation & __GFP_MEMALLOC);
 }
 
 static inline void sk_acceptq_removed(struct sock *sk)
@@ -744,13 +723,8 @@ static inline __must_check int sk_add_backlog(struct sock *sk, struct sk_buff *s
 	return 0;
 }
 
-extern int __sk_backlog_rcv(struct sock *sk, struct sk_buff *skb);
-
 static inline int sk_backlog_rcv(struct sock *sk, struct sk_buff *skb)
 {
-	if (sk_memalloc_socks() && skb_pfmemalloc(skb))
-		return __sk_backlog_rcv(sk, skb);
-
 	return sk->sk_backlog_rcv(sk, skb);
 }
 
@@ -814,8 +788,6 @@ extern int sk_stream_wait_memory(struct sock *sk, long *timeo_p);
 extern void sk_stream_wait_close(struct sock *sk, long timeo_p);
 extern int sk_stream_error(struct sock *sk, int flags, int err);
 extern void sk_stream_kill_queues(struct sock *sk);
-extern void sk_set_memalloc(struct sock *sk);
-extern void sk_clear_memalloc(struct sock *sk);
 
 extern int sk_wait_data(struct sock *sk, long *timeo);
 
@@ -940,7 +912,7 @@ struct proto {
 #ifdef SOCK_REFCNT_DEBUG
 	atomic_t		socks;
 #endif
-#ifdef CONFIG_MEMCG_KMEM
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_KMEM
 	/*
 	 * cgroup specific init/deinit functions. Called once for all
 	 * protocols that implement it, from cgroups populate function.
@@ -1000,7 +972,7 @@ static inline void sk_refcnt_debug_release(const struct sock *sk)
 #define sk_refcnt_debug_release(sk) do { } while (0)
 #endif /* SOCK_REFCNT_DEBUG */
 
-#if defined(CONFIG_MEMCG_KMEM) && defined(CONFIG_NET)
+#if defined(CONFIG_CGROUP_MEM_RES_CTLR_KMEM) && defined(CONFIG_NET)
 extern struct static_key memcg_socket_limit_enabled;
 static inline struct cg_proto *parent_cg_proto(struct proto *proto,
 					       struct cg_proto *cg_proto)

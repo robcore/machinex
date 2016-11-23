@@ -825,7 +825,6 @@ static int exec_mmap(struct mm_struct *mm)
 	/* Notify parent that we're no longer interested in the old VM */
 	tsk = current;
 	old_mm = current->mm;
-	sync_mm_rss(old_mm);
 	mm_release(tsk, old_mm);
 
 	if (old_mm) {
@@ -895,11 +894,9 @@ static int de_thread(struct task_struct *tsk)
 		sig->notify_count--;
 
 	while (sig->notify_count) {
-		__set_current_state(TASK_KILLABLE);
+		__set_current_state(TASK_UNINTERRUPTIBLE);
 		spin_unlock_irq(lock);
 		schedule();
-		if (unlikely(__fatal_signal_pending(tsk)))
-			goto killed;
 		spin_lock_irq(lock);
 	}
 	spin_unlock_irq(lock);
@@ -1016,14 +1013,6 @@ no_thread_group:
 
 	BUG_ON(!thread_group_leader(tsk));
 	return 0;
-
-killed:
-	/* protects against exit_notify() and __exit_signal() */
-	read_lock(&tasklist_lock);
-	sig->group_exit_task = NULL;
-	sig->notify_count = 0;
-	read_unlock(&tasklist_lock);
-	return -EAGAIN;
 }
 
 /*

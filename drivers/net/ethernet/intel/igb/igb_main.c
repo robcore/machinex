@@ -6244,7 +6244,7 @@ static bool igb_alloc_mapped_page(struct igb_ring *rx_ring,
 		return true;
 
 	if (!page) {
-		page = __skb_alloc_page(GFP_ATOMIC, bi->skb);
+		page = alloc_page(GFP_ATOMIC | __GFP_COLD);
 		bi->page = page;
 		if (unlikely(!page)) {
 			rx_ring->rx_stats.alloc_failed++;
