@@ -69,6 +69,7 @@
 #include <linux/percpu.h>
 #include <linux/crash_dump.h>
 #include <linux/tboot.h>
+#include <linux/jiffies.h>
 
 #include <video/edid.h>
 

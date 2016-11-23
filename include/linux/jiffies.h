@@ -51,20 +51,10 @@
 #define SH_DIV(NOM,DEN,LSH) (   (((NOM) / (DEN)) << (LSH))              \
                              + ((((NOM) % (DEN)) << (LSH)) + (DEN) / 2) / (DEN))
 
-/* LATCH is used in the interval timer and ftape setup. */
-# define LATCH ((CLOCK_TICK_RATE + HZ/2) / HZ)	/* For divider */
-
-/*
- * HZ is the requested value. However the CLOCK_TICK_RATE may not allow
- * for exactly HZ. So SHIFTED_HZ is high res HZ ("<< 8" is for accuracy)
- */
-# define SHIFTED_HZ (SH_DIV(CLOCK_TICK_RATE, LATCH, 8))
-#else
-# define SHIFTED_HZ (HZ << 8)
-#endif
+extern int register_refined_jiffies(long clock_tick_rate);
 
 /* TICK_NSEC is the time between ticks in nsec assuming SHIFTED_HZ */
-#define TICK_NSEC (SH_DIV(1000000UL * 1000, SHIFTED_HZ, 8))
+#define TICK_NSEC ((NSEC_PER_SEC+HZ/2)/HZ)
 
 /* TICK_USEC is the time between ticks in usec assuming fake USER_HZ */
 #define TICK_USEC ((1000000UL + USER_HZ/2) / USER_HZ)
@@ -436,5 +426,3 @@ extern u64 nsecs_to_jiffies64(u64 n);
 extern unsigned long nsecs_to_jiffies(u64 n);
 
 #define TIMESTAMP_SIZE	30
-
-#endif
