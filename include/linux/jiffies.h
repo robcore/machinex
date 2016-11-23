@@ -39,9 +39,6 @@
 # error Invalid value of HZ.
 #endif
 
-/* LATCH is used in the interval timer and ftape setup. */
-#define LATCH  ((CLOCK_TICK_RATE + HZ/2) / HZ)	/* For divider */
-
 /* Suppose we want to divide two numbers NOM and DEN: NOM/DEN, then we can
  * improve accuracy by shifting LSH bits, hence calculating:
  *     (NOM << LSH) / DEN
@@ -54,11 +51,17 @@
 #define SH_DIV(NOM,DEN,LSH) (   (((NOM) / (DEN)) << (LSH))              \
                              + ((((NOM) % (DEN)) << (LSH)) + (DEN) / 2) / (DEN))
 
+/* LATCH is used in the interval timer and ftape setup. */
+# define LATCH ((CLOCK_TICK_RATE + HZ/2) / HZ)	/* For divider */
+
 /*
  * HZ is the requested value. However the CLOCK_TICK_RATE may not allow
  * for exactly HZ. So SHIFTED_HZ is high res HZ ("<< 8" is for accuracy)
  */
 # define SHIFTED_HZ (SH_DIV(CLOCK_TICK_RATE, LATCH, 8))
+#else
+# define SHIFTED_HZ (HZ << 8)
+#endif
 
 /* TICK_NSEC is the time between ticks in nsec assuming SHIFTED_HZ */
 #define TICK_NSEC (SH_DIV(1000000UL * 1000, SHIFTED_HZ, 8))
@@ -97,7 +100,7 @@ static inline u64 get_jiffies_64(void)
 #endif
 
 /*
- *	These inlines deal with timer wrapping correctly. You are 
+ *	These inlines deal with timer wrapping correctly. You are
  *	strongly encouraged to use them
  *	1. Because people otherwise forget
  *	2. Because if the timer wrap changes in future you won't have to
