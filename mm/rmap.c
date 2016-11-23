@@ -653,27 +653,6 @@ unsigned long page_address_in_vma(struct page *page, struct vm_area_struct *vma)
 	return vma_address(page, vma);
 }
 
-pmd_t *mm_find_pmd(struct mm_struct *mm, unsigned long address)
-{
-	pgd_t *pgd;
-	pud_t *pud;
-	pmd_t *pmd = NULL;
-
-	pgd = pgd_offset(mm, address);
-	if (!pgd_present(*pgd))
-		goto out;
-
-	pud = pud_offset(pgd, address);
-	if (!pud_present(*pud))
-		goto out;
-
-	pmd = pmd_offset(pud, address);
-	if (!pmd_present(*pmd))
-		pmd = NULL;
-out:
-	return pmd;
-}
-
 /*
  * Check that @page is mapped at @address into @mm.
  *
@@ -686,6 +665,8 @@ out:
 pte_t *__page_check_address(struct page *page, struct mm_struct *mm,
 			  unsigned long address, spinlock_t **ptlp, int sync)
 {
+	pgd_t *pgd;
+	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
 	spinlock_t *ptl;
@@ -700,10 +681,17 @@ pte_t *__page_check_address(struct page *page, struct mm_struct *mm,
 		goto check;
 	}
 
-	pmd = mm_find_pmd(mm, address);
-	if (!pmd)
+	pgd = pgd_offset(mm, address);
+	if (!pgd_present(*pgd))
 		return NULL;
 
+	pud = pud_offset(pgd, address);
+	if (!pud_present(*pud))
+		return NULL;
+
+	pmd = pmd_offset(pud, address);
+	if (!pmd_present(*pmd))
+		return NULL;
 	if (pmd_trans_huge(*pmd))
 		return NULL;
 
@@ -1449,6 +1437,8 @@ static int try_to_unmap_cluster(unsigned long cursor, unsigned int *mapcount,
 		struct vm_area_struct *vma, struct page *check_page)
 {
 	struct mm_struct *mm = vma->vm_mm;
+	pgd_t *pgd;
+	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
 	pte_t pteval;
@@ -1466,8 +1456,16 @@ static int try_to_unmap_cluster(unsigned long cursor, unsigned int *mapcount,
 	if (end > vma->vm_end)
 		end = vma->vm_end;
 
-	pmd = mm_find_pmd(mm, address);
-	if (!pmd)
+	pgd = pgd_offset(mm, address);
+	if (!pgd_present(*pgd))
+		return ret;
+
+	pud = pud_offset(pgd, address);
+	if (!pud_present(*pud))
+		return ret;
+
+	pmd = pmd_offset(pud, address);
+	if (!pmd_present(*pmd))
 		return ret;
 
 	/*

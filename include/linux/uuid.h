@@ -67,6 +67,4 @@ static inline int uuid_be_cmp(const uuid_be u1, const uuid_be u2)
 extern void uuid_le_gen(uuid_le *u);
 extern void uuid_be_gen(uuid_be *u);
 
-#endif /* __KERNEL__ */
-
 #endif
