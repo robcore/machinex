@@ -58,6 +58,7 @@ enum {
 	VOC_RUN,
 	VOC_CHANGE,
 	VOC_RELEASE,
+	VOC_ERROR,
 };
 
 /* Common */
