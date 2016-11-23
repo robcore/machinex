@@ -4657,7 +4657,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 		zone->reclaim_stat.recent_rotated[0] = 0;
 		zone->reclaim_stat.recent_rotated[1] = 0;
 		zone->reclaim_stat.recent_scanned[0] = 0;
-		zone->reclaim_stat.recent_scanned[1] = 0;.
+		zone->reclaim_stat.recent_scanned[1] = 0;
 		if (!size)
 			continue;
 
