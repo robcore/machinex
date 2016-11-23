@@ -299,7 +299,8 @@ int get_kernel_pages(const struct kvec *kiov, int nr_segs, int write,
 		if (WARN_ON(kiov[seg].iov_len != PAGE_SIZE))
 			return seg;
 
-		pages[seg] = kmap_to_page(kiov[seg].iov_base);
+		/* virt_to_page sanity checks the PFN */
+		pages[seg] = virt_to_page(kiov[seg].iov_base);
 		page_cache_get(pages[seg]);
 	}
 
