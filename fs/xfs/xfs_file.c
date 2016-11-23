@@ -857,7 +857,7 @@ xfs_file_fallocate(
 	loff_t		offset,
 	loff_t		len)
 {
-	struct inode	*inode = file_inode(file);
+	struct inode	*inode = file->f_path.dentry->d_inode;
 	long		error;
 	loff_t		new_size = 0;
 	xfs_flock64_t	bf;
@@ -958,7 +958,7 @@ xfs_file_readdir(
 	void		*dirent,
 	filldir_t	filldir)
 {
-	struct inode	*inode = file_inode(filp);
+	struct inode	*inode = filp->f_path.dentry->d_inode;
 	xfs_inode_t	*ip = XFS_I(inode);
 	int		error;
 	size_t		bufsize;

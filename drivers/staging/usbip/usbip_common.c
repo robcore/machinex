@@ -408,7 +408,7 @@ struct socket *sockfd_to_socket(unsigned int sockfd)
 		return NULL;
 	}
 
-	inode = file_inode(file);
+	inode = file->f_dentry->d_inode;
 
 	if (!inode || !S_ISSOCK(inode->i_mode))
 		return NULL;

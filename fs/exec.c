@@ -135,7 +135,7 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
 		goto out;
 
 	error = -EINVAL;
-	if (!S_ISREG(file_inode(file)->i_mode))
+	if (!S_ISREG(file->f_path.dentry->d_inode->i_mode))
 		goto exit;
 
 	error = -EACCES;
@@ -779,7 +779,7 @@ struct file *open_exec(const char *name)
 		goto out;
 
 	err = -EACCES;
-	if (!S_ISREG(file_inode(file)->i_mode))
+	if (!S_ISREG(file->f_path.dentry->d_inode->i_mode))
 		goto exit;
 
 	if (file->f_path.mnt->mnt_flags & MNT_NOEXEC)
@@ -825,7 +825,6 @@ static int exec_mmap(struct mm_struct *mm)
 	/* Notify parent that we're no longer interested in the old VM */
 	tsk = current;
 	old_mm = current->mm;
-	sync_mm_rss(old_mm);
 	mm_release(tsk, old_mm);
 
 	if (old_mm) {
@@ -1134,7 +1133,7 @@ EXPORT_SYMBOL(flush_old_exec);
 
 void would_dump(struct linux_binprm *bprm, struct file *file)
 {
-	if (inode_permission(file_inode(file), MAY_READ) < 0)
+	if (inode_permission(file->f_path.dentry->d_inode, MAY_READ) < 0)
 		bprm->interp_flags |= BINPRM_FLAGS_ENFORCE_NONDUMP;
 }
 EXPORT_SYMBOL(would_dump);

@@ -220,7 +220,7 @@ SYSCALL_ALIAS(sys_ftruncate64, SyS_ftruncate64);
 
 int do_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 {
-	struct inode *inode = file_inode(file);
+	struct inode *inode = file->f_path.dentry->d_inode;
 	long ret;
 
 	if (offset < 0 || len <= 0)

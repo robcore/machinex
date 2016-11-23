@@ -245,7 +245,7 @@ static inline struct hstate *hstate_inode(struct inode *i)
 
 static inline struct hstate *hstate_file(struct file *f)
 {
-	return hstate_inode(file_inode(f));
+	return hstate_inode(f->f_dentry->d_inode);
 }
 
 static inline struct hstate *hstate_vma(struct vm_area_struct *vma)

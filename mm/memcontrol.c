@@ -5128,7 +5128,7 @@ err_cleanup:
 }
 
 static struct cgroup_subsys_state * __ref
-mem_cgroup_css_alloc(struct cgroup *cont)
+mem_cgroup_create(struct cgroup *cont)
 {
 	struct mem_cgroup *memcg, *parent;
 	long error = -ENOMEM;
@@ -5799,9 +5799,9 @@ static void mem_cgroup_move_task(struct cgroup *cont,
 struct cgroup_subsys mem_cgroup_subsys = {
 	.name = "memory",
 	.subsys_id = mem_cgroup_subsys_id,
-	.css_alloc = mem_cgroup_css_alloc,
-	.css_offline = mem_cgroup_css_offline,
-	.css_free = mem_cgroup_css_free,
+	.create = mem_cgroup_create,
+	.pre_destroy = mem_cgroup_pre_destroy,
+	.destroy = mem_cgroup_destroy,
 	.can_attach = mem_cgroup_can_attach,
 	.cancel_attach = mem_cgroup_cancel_attach,
 	.attach = mem_cgroup_move_task,

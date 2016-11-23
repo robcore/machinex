@@ -107,7 +107,7 @@ static long d7s_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int error = 0;
 	u8 ireg = 0;
 
-	if (D7S_MINOR != iminor(file_inode(file)))
+	if (D7S_MINOR != iminor(file->f_path.dentry->d_inode))
 		return -ENODEV;
 
 	mutex_lock(&d7s_mutex);

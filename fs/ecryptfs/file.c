@@ -125,7 +125,7 @@ static int ecryptfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 
 	lower_file = ecryptfs_file_to_lower(file);
 	lower_file->f_pos = file->f_pos;
-	inode = file_inode(file);
+	inode = file->f_path.dentry->d_inode;
 	memset(&buf, 0, sizeof(buf));
 	buf.dirent = dirent;
 	buf.dentry = file->f_path.dentry;
@@ -140,7 +140,7 @@ static int ecryptfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 		goto out;
 	if (rc >= 0)
 		fsstack_copy_attr_atime(inode,
-					file_inode(lower_file));
+					lower_file->f_path.dentry->d_inode);
 out:
 	return rc;
 }

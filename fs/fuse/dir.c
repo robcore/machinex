@@ -1132,7 +1132,7 @@ static int fuse_readdir(struct file *file, void *dstbuf, filldir_t filldir)
 	int err;
 	size_t nbytes;
 	struct page *page;
-	struct inode *inode = file_inode(file);
+	struct inode *inode = file->f_path.dentry->d_inode;
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	struct fuse_req *req;
 

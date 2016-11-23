@@ -458,7 +458,7 @@ static int smack_sb_umount(struct vfsmount *mnt, int flags)
  */
 static int smack_bprm_set_creds(struct linux_binprm *bprm)
 {
-	struct inode *inode = file_inode(bprm->file);
+	struct inode *inode = bprm->file->f_path.dentry->d_inode;
 	struct task_smack *bsp = bprm->cred->security;
 	struct inode_smack *isp;
 	int rc;
@@ -1363,7 +1363,7 @@ static int smack_file_receive(struct file *file)
  */
 static int smack_dentry_open(struct file *file, const struct cred *cred)
 {
-	struct inode_smack *isp = file_inode(file)->i_security;
+	struct inode_smack *isp = file->f_path.dentry->d_inode->i_security;
 
 	file->f_security = isp->smk_inode;
 

@@ -8131,6 +8131,7 @@ static void free_sched_group(struct task_group *tg)
 struct task_group *sched_create_group(struct task_group *parent)
 {
 	struct task_group *tg;
+	unsigned long flags;
 
 	tg = kzalloc(sizeof(*tg), GFP_KERNEL);
 	if (!tg)
@@ -8142,17 +8143,6 @@ struct task_group *sched_create_group(struct task_group *parent)
 	if (!alloc_rt_sched_group(tg, parent))
 		goto err;
 
-	return tg;
-
-err:
-	free_sched_group(tg);
-	return ERR_PTR(-ENOMEM);
-}
-
-void sched_online_group(struct task_group *tg, struct task_group *parent)
-{
-	unsigned long flags;
-
 	spin_lock_irqsave(&task_group_lock, flags);
 	list_add_rcu(&tg->list, &task_groups);
 
@@ -8162,6 +8152,12 @@ void sched_online_group(struct task_group *tg, struct task_group *parent)
 	INIT_LIST_HEAD(&tg->children);
 	list_add_rcu(&tg->siblings, &parent->children);
 	spin_unlock_irqrestore(&task_group_lock, flags);
+
+	return tg;
+
+err:
+	free_sched_group(tg);
+	return ERR_PTR(-ENOMEM);
 }
 
 /* rcu callback to free various structures associated with a task group */
@@ -8174,12 +8170,6 @@ static void free_sched_group_rcu(struct rcu_head *rhp)
 /* Destroy runqueue etc associated with a task group */
 void sched_destroy_group(struct task_group *tg)
 {
-	/* wait for possible concurrent references to cfs_rqs complete */
-	call_rcu(&tg->rcu, free_sched_group_rcu);
-}
-
-void sched_offline_group(struct task_group *tg)
-{
 	unsigned long flags;
 	int i;
 
@@ -8191,6 +8181,9 @@ void sched_offline_group(struct task_group *tg)
 	list_del_rcu(&tg->list);
 	list_del_rcu(&tg->siblings);
 	spin_unlock_irqrestore(&task_group_lock, flags);
+
+	/* wait for possible concurrent references to cfs_rqs complete */
+	call_rcu(&tg->rcu, free_sched_group_rcu);
 }
 
 /* change task's runqueue when it moves between groups.
@@ -8544,7 +8537,7 @@ static inline struct task_group *cgroup_tg(struct cgroup *cgrp)
 			    struct task_group, css);
 }
 
-static struct cgroup_subsys_state *cpu_cgroup_css_alloc(struct cgroup *cgrp)
+static struct cgroup_subsys_state *cpu_cgroup_create(struct cgroup *cgrp)
 {
 	struct task_group *tg, *parent;
 
@@ -8561,31 +8554,11 @@ static struct cgroup_subsys_state *cpu_cgroup_css_alloc(struct cgroup *cgrp)
 	return &tg->css;
 }
 
-static int cpu_cgroup_css_online(struct cgroup *cgrp)
-{
-	struct task_group *tg = cgroup_tg(cgrp);
-	struct task_group *parent;
-
-	if (!cgrp->parent)
-		return 0;
-
-	parent = cgroup_tg(cgrp->parent);
-	sched_online_group(tg, parent);
-	return 0;
-}
-
-static void cpu_cgroup_css_free(struct cgroup *cgrp)
+static void cpu_cgroup_destroy(struct cgroup *cgrp)
 {
 	struct task_group *tg = cgroup_tg(cgrp);
 
 	sched_destroy_group(tg);
-}
-
-static void cpu_cgroup_css_offline(struct cgroup *cgrp)
-{
-	struct task_group *tg = cgroup_tg(cgrp);
-
-	sched_offline_group(tg);
 }
 
 static int cpu_cgroup_can_attach(struct cgroup *cgrp,
@@ -8970,10 +8943,8 @@ static struct cftype cpu_files[] = {
 
 struct cgroup_subsys cpu_cgroup_subsys = {
 	.name		= "cpu",
-	.css_alloc	= cpu_cgroup_css_alloc,
-	.css_free	= cpu_cgroup_css_free,
-	.css_online	= cpu_cgroup_css_online,
-	.css_offline	= cpu_cgroup_css_offline,
+	.create		= cpu_cgroup_create,
+	.destroy	= cpu_cgroup_destroy,
 	.can_attach	= cpu_cgroup_can_attach,
 	.attach		= cpu_cgroup_attach,
 	.allow_attach	= subsys_cgroup_allow_attach,
@@ -8995,7 +8966,7 @@ struct cgroup_subsys cpu_cgroup_subsys = {
  */
 
 /* create a new cpu accounting group */
-static struct cgroup_subsys_state *cpuacct_css_alloc(struct cgroup *cgrp)
+static struct cgroup_subsys_state *cpuacct_create(struct cgroup *cgrp)
 {
 	struct cpuacct *ca;
 
@@ -9025,7 +8996,7 @@ out:
 }
 
 /* destroy an existing cpu accounting group */
-static void cpuacct_css_free(struct cgroup *cgrp)
+static void cpuacct_destroy(struct cgroup *cgrp)
 {
 	struct cpuacct *ca = cgroup_ca(cgrp);
 
@@ -9196,8 +9167,8 @@ void cpuacct_charge(struct task_struct *tsk, u64 cputime)
 
 struct cgroup_subsys cpuacct_subsys = {
 	.name = "cpuacct",
-	.css_alloc = cpuacct_css_alloc,
-	.css_free = cpuacct_css_free,
+	.create = cpuacct_create,
+	.destroy = cpuacct_destroy,
 	.subsys_id = cpuacct_subsys_id,
 	.base_cftypes = files,
 };

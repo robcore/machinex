@@ -875,7 +875,7 @@ static int autofs4_root_ioctl_unlocked(struct inode *inode, struct file *filp,
 static long autofs4_root_ioctl(struct file *filp,
 			       unsigned int cmd, unsigned long arg)
 {
-	struct inode *inode = file_inode(filp);
+	struct inode *inode = filp->f_dentry->d_inode;
 	return autofs4_root_ioctl_unlocked(inode, filp, cmd, arg);
 }
 
@@ -883,7 +883,7 @@ static long autofs4_root_ioctl(struct file *filp,
 static long autofs4_root_compat_ioctl(struct file *filp,
 			     unsigned int cmd, unsigned long arg)
 {
-	struct inode *inode = file_inode(filp);
+	struct inode *inode = filp->f_path.dentry->d_inode;
 	int ret;
 
 	if (cmd == AUTOFS_IOC_READY || cmd == AUTOFS_IOC_FAIL)

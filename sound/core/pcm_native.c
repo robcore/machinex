@@ -1591,7 +1591,7 @@ static struct file *snd_pcm_file_fd(int fd)
 	file = fget(fd);
 	if (!file)
 		return NULL;
-	inode = file_inode(file);
+	inode = file->f_path.dentry->d_inode;
 	if (!S_ISCHR(inode->i_mode) ||
 	    imajor(inode) != snd_major) {
 		fput(file);

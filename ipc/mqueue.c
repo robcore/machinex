@@ -349,7 +349,7 @@ static int mqueue_unlink(struct inode *dir, struct dentry *dentry)
 static ssize_t mqueue_read_file(struct file *filp, char __user *u_data,
 				size_t count, loff_t *off)
 {
-	struct mqueue_inode_info *info = MQUEUE_I(file_inode(filp));
+	struct mqueue_inode_info *info = MQUEUE_I(filp->f_path.dentry->d_inode);
 	char buffer[FILENT_SIZE];
 	ssize_t ret;
 
@@ -370,13 +370,13 @@ static ssize_t mqueue_read_file(struct file *filp, char __user *u_data,
 	if (ret <= 0)
 		return ret;
 
-	file_inode(filp)->i_atime = file_inode(filp)->i_ctime = CURRENT_TIME;
+	filp->f_path.dentry->d_inode->i_atime = filp->f_path.dentry->d_inode->i_ctime = CURRENT_TIME;
 	return ret;
 }
 
 static int mqueue_flush_file(struct file *filp, fl_owner_t id)
 {
-	struct mqueue_inode_info *info = MQUEUE_I(file_inode(filp));
+	struct mqueue_inode_info *info = MQUEUE_I(filp->f_path.dentry->d_inode);
 
 	spin_lock(&info->lock);
 	if (task_tgid(current) == info->notify_owner)
@@ -388,7 +388,7 @@ static int mqueue_flush_file(struct file *filp, fl_owner_t id)
 
 static unsigned int mqueue_poll_file(struct file *filp, struct poll_table_struct *poll_tab)
 {
-	struct mqueue_inode_info *info = MQUEUE_I(file_inode(filp));
+	struct mqueue_inode_info *info = MQUEUE_I(filp->f_path.dentry->d_inode);
 	int retval = 0;
 
 	poll_wait(filp, &info->wait_q, poll_tab);
