@@ -53,6 +53,19 @@ static inline bool hugetlb_cgroup_disabled(void)
 	return false;
 }
 
+extern int hugetlb_cgroup_charge_cgroup(int idx, unsigned long nr_pages,
+					struct hugetlb_cgroup **ptr);
+extern void hugetlb_cgroup_commit_charge(int idx, unsigned long nr_pages,
+					 struct hugetlb_cgroup *h_cg,
+					 struct page *page);
+extern void hugetlb_cgroup_uncharge_page(int idx, unsigned long nr_pages,
+					 struct page *page);
+extern void hugetlb_cgroup_uncharge_cgroup(int idx, unsigned long nr_pages,
+					   struct hugetlb_cgroup *h_cg);
+extern int hugetlb_cgroup_file_init(int idx) __init;
+extern void hugetlb_cgroup_migrate(struct page *oldhpage,
+				   struct page *newhpage);
+
 #else
 static inline struct hugetlb_cgroup *hugetlb_cgroup_from_page(struct page *page)
 {
@@ -68,6 +81,45 @@ int set_hugetlb_cgroup(struct page *page, struct hugetlb_cgroup *h_cg)
 static inline bool hugetlb_cgroup_disabled(void)
 {
 	return true;
+}
+
+static inline int
+hugetlb_cgroup_charge_cgroup(int idx, unsigned long nr_pages,
+			     struct hugetlb_cgroup **ptr)
+{
+	return 0;
+}
+
+static inline void
+hugetlb_cgroup_commit_charge(int idx, unsigned long nr_pages,
+			     struct hugetlb_cgroup *h_cg,
+			     struct page *page)
+{
+	return;
+}
+
+static inline void
+hugetlb_cgroup_uncharge_page(int idx, unsigned long nr_pages, struct page *page)
+{
+	return;
+}
+
+static inline void
+hugetlb_cgroup_uncharge_cgroup(int idx, unsigned long nr_pages,
+			       struct hugetlb_cgroup *h_cg)
+{
+	return;
+}
+
+static inline int __init hugetlb_cgroup_file_init(int idx)
+{
+	return 0;
+}
+
+static inline void hugetlb_cgroup_migrate(struct page *oldhpage,
+					  struct page *newhpage)
+{
+	return;
 }
 
 #endif  /* CONFIG_MEM_RES_CTLR_HUGETLB */
