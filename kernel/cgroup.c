@@ -1693,7 +1693,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 
 		free_cg_links(&tmp_cg_links);
 
-		BUG_ON(!list_empty(&root_cgrp->sibling));
 		BUG_ON(!list_empty(&root_cgrp->children));
 		BUG_ON(root->number_of_cgroups != 1);
 
@@ -1742,7 +1741,6 @@ static void cgroup_kill_sb(struct super_block *sb) {
 
 	BUG_ON(root->number_of_cgroups != 1);
 	BUG_ON(!list_empty(&cgrp->children));
-	BUG_ON(!list_empty(&cgrp->sibling));
 
 	mutex_lock(&cgroup_mutex);
 	mutex_lock(&cgroup_root_mutex);
@@ -3092,6 +3090,92 @@ static void cgroup_enable_task_cg_lists(void)
 	write_unlock(&css_set_lock);
 }
 
+/**
+ * cgroup_next_descendant_pre - find the next descendant for pre-order walk
+ * @pos: the current position (%NULL to initiate traversal)
+ * @cgroup: cgroup whose descendants to walk
+ *
+ * To be used by cgroup_for_each_descendant_pre().  Find the next
+ * descendant to visit for pre-order traversal of @cgroup's descendants.
+ */
+struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
+					  struct cgroup *cgroup)
+{
+	struct cgroup *next;
+
+	WARN_ON_ONCE(!rcu_read_lock_held());
+
+	/* if first iteration, pretend we just visited @cgroup */
+	if (!pos) {
+		if (list_empty(&cgroup->children))
+			return NULL;
+		pos = cgroup;
+	}
+
+	/* visit the first child if exists */
+	next = list_first_or_null_rcu(&pos->children, struct cgroup, sibling);
+	if (next)
+		return next;
+
+	/* no child, visit my or the closest ancestor's next sibling */
+	do {
+		next = list_entry_rcu(pos->sibling.next, struct cgroup,
+				      sibling);
+		if (&next->sibling != &pos->parent->children)
+			return next;
+
+		pos = pos->parent;
+	} while (pos != cgroup);
+
+	return NULL;
+}
+EXPORT_SYMBOL_GPL(cgroup_next_descendant_pre);
+
+static struct cgroup *cgroup_leftmost_descendant(struct cgroup *pos)
+{
+	struct cgroup *last;
+
+	do {
+		last = pos;
+		pos = list_first_or_null_rcu(&pos->children, struct cgroup,
+					     sibling);
+	} while (pos);
+
+	return last;
+}
+
+/**
+ * cgroup_next_descendant_post - find the next descendant for post-order walk
+ * @pos: the current position (%NULL to initiate traversal)
+ * @cgroup: cgroup whose descendants to walk
+ *
+ * To be used by cgroup_for_each_descendant_post().  Find the next
+ * descendant to visit for post-order traversal of @cgroup's descendants.
+ */
+struct cgroup *cgroup_next_descendant_post(struct cgroup *pos,
+					   struct cgroup *cgroup)
+{
+	struct cgroup *next;
+
+	WARN_ON_ONCE(!rcu_read_lock_held());
+
+	/* if first iteration, visit the leftmost descendant */
+	if (!pos) {
+		next = cgroup_leftmost_descendant(cgroup);
+		return next != cgroup ? next : NULL;
+	}
+
+	/* if there's an unvisited sibling, visit its leftmost descendant */
+	next = list_entry_rcu(pos->sibling.next, struct cgroup, sibling);
+	if (&next->sibling != &pos->parent->children)
+		return cgroup_leftmost_descendant(next);
+
+	/* no sibling left, visit parent */
+	next = pos->parent;
+	return next != cgroup ? next : NULL;
+}
+EXPORT_SYMBOL_GPL(cgroup_next_descendant_post);
+
 void cgroup_iter_start(struct cgroup *cgrp, struct cgroup_iter *it)
 	__acquires(css_set_lock)
 {
@@ -4153,7 +4237,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 			ss->post_clone(cgrp);
 	}
 
-	list_add(&cgrp->sibling, &cgrp->parent->children);
+	list_add_tail_rcu(&cgrp->sibling, &cgrp->parent->children);
 	root->number_of_cgroups++;
 
 	err = cgroup_create_dir(cgrp, dentry, mode);
@@ -4180,7 +4264,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
  err_remove:
 
-	list_del(&cgrp->sibling);
+	list_del_rcu(&cgrp->sibling);
 	root->number_of_cgroups--;
 
  err_destroy:
@@ -4416,7 +4500,7 @@ again:
 	raw_spin_unlock(&release_list_lock);
 
 	/* delete this cgroup from parent->children */
-	list_del_init(&cgrp->sibling);
+	list_del_rcu(&cgrp->sibling);
 
 	list_del_init(&cgrp->allcg_node);
 
@@ -4490,6 +4574,9 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	BUG_ON(!list_empty(&init_task.tasks));
 
 	ss->active = 1;
+
+	if (ss->post_create)
+		ss->post_create(&ss->root->top_cgroup);
 
 	/* this function shouldn't be used with modular subsystems, since they
 	 * need to register a subsys_id, among other things */
@@ -4613,6 +4700,9 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	write_unlock(&css_set_lock);
 
 	ss->active = 1;
+
+	if (ss->post_create)
+		ss->post_create(&ss->root->top_cgroup);
 
 	/* success! */
 	mutex_unlock(&cgroup_mutex);
