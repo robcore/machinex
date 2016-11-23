@@ -496,7 +496,7 @@ mem_cgroup_uncharge_swapcache(struct page *page, swp_entry_t ent)
 {
 }
 
-#ifdef CONFIG_CGROUP_MEM_RES_CTLR
+#ifdef CONFIG_MEMCG
 static inline int
 mem_cgroup_count_swap_user(swp_entry_t ent, struct page **pagep)
 {
