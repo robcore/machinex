@@ -12,6 +12,9 @@ subdir-$(CONFIG_SECURITY_YAMA)		+= yama
 # always enable default capabilities
 obj-y					+= commoncap.o
 obj-$(CONFIG_MMU)			+= min_addr.o
+# Knox SDP
+obj-$(CONFIG_SDP) += sdp/
+obj-$(CONFIG_SDP) += sdp/built-in.o
 
 # Object file lists
 obj-$(CONFIG_SECURITY)			+= security.o capability.o

@@ -5,6 +5,7 @@
 menu "Security options"
 
 source security/keys/Kconfig
+source security/sdp/Kconfig
 
 config SECURITY_DMESG_RESTRICT
 	bool "Restrict unprivileged access to the kernel syslog"
