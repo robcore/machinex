@@ -619,10 +619,13 @@ static struct node_attr node_state_attr[] = {
 	_NODE_ATTR(possible, N_POSSIBLE),
 	_NODE_ATTR(online, N_ONLINE),
 	_NODE_ATTR(has_normal_memory, N_NORMAL_MEMORY),
-	_NODE_ATTR(has_cpu, N_CPU),
 #ifdef CONFIG_HIGHMEM
 	_NODE_ATTR(has_high_memory, N_HIGH_MEMORY),
 #endif
+#ifdef CONFIG_MOVABLE_NODE
+	&node_state_attr[N_MEMORY].attr.attr,
+#endif
+	_NODE_ATTR(has_cpu, N_CPU),
 };
 
 static struct attribute *node_state_attrs[] = {
@@ -632,6 +635,9 @@ static struct attribute *node_state_attrs[] = {
 	&node_state_attr[3].attr.attr,
 #ifdef CONFIG_HIGHMEM
 	&node_state_attr[4].attr.attr,
+#endif
+#ifdef CONFIG_MOVABLE_NODE
+	&node_state_attr[5].attr.attr,
 #endif
 	NULL
 };
