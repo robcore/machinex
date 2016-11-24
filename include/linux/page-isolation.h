@@ -33,24 +33,5 @@ int test_pages_isolated(unsigned long start_pfn, unsigned long end_pfn);
 extern int set_migratetype_isolate(struct page *page);
 extern void unset_migratetype_isolate(struct page *page, unsigned migratetype);
 
-#ifdef CONFIG_MEMORY_ISOLATION
-static inline bool is_migrate_isolate_page(struct page *page)
-{
-	return get_pageblock_migratetype(page) == MIGRATE_ISOLATE;
-}
-static inline bool is_migrate_isolate(int migratetype)
-{
-	return migratetype == MIGRATE_ISOLATE;
-}
-#else
-static inline bool is_migrate_isolate_page(struct page *page)
-{
-	return false;
-}
-static inline bool is_migrate_isolate(int migratetype)
-{
-	return false;
-}
-#endif
 
 #endif

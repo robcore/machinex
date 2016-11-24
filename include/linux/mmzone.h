@@ -57,9 +57,7 @@ enum {
 	 */
 	MIGRATE_CMA,
 #endif
-#ifdef CONFIG_MEMORY_ISOLATION
 	MIGRATE_ISOLATE,	/* can't allocate from here */
-#endif
 	MIGRATE_TYPES
 };
 

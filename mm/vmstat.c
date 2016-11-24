@@ -619,9 +619,7 @@ static char * const migratetype_names[MIGRATE_TYPES] = {
 #ifdef CONFIG_CMA
 	"CMA",
 #endif
-#ifdef CONFIG_MEMORY_ISOLATION
 	"Isolate",
-#endif
 };
 
 static void *frag_start(struct seq_file *m, loff_t *pos)
