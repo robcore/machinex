@@ -2,12 +2,22 @@
 # Key management configuration
 #
 
-config SDP
-	bool "Enable SDP"
+config KEYS
+	bool "Enable access key retention support"
 	help
-	  This is a fake Kconfig description i am using
-	  to test out a security feature found on better
-	  samsung devices.
+	  This option provides support for retaining authentication tokens and
+	  access keys in the kernel.
+
+	  It also includes provision of methods by which such keys might be
+	  associated with a process so that network filesystems, encryption
+	  support and the like can find them.
+
+	  Furthermore, a special type of key is available that acts as keyring:
+	  a searchable sequence of keys. Each process is equipped with access
+	  to five standard keyrings: UID-specific, GID-specific, session,
+	  process and thread.
+
+	  If you are unsure as to whether this is required, answer N.
 
 config TRUSTED_KEYS
 	tristate "TRUSTED KEYS"

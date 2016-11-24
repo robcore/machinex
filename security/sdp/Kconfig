@@ -1,9 +1,0 @@
-#
-# Key management configuration
-#
-
-config sdp
-	bool "Enable sdp support"
-	help
-	  This is a fake Kconfig description i am using
-	  to test out a security feature found on better
