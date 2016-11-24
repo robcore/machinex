@@ -896,8 +896,6 @@ static int phy_init_seq[] = {
 #define PMIC_GPIO_DP_IRQ	PM8921_GPIO_IRQ(PM8921_IRQ_BASE, PMIC_GPIO_DP)
 #define MSM_MPM_PIN_USB1_OTGSESSVLD	40
 
-#define PMIC_GPIO_DP		27    /* PMIC GPIO for D+ change */
-#define PMIC_GPIO_DP_IRQ	PM8921_GPIO_IRQ(PM8921_IRQ_BASE, PMIC_GPIO_DP)
 static struct msm_otg_platform_data msm_otg_pdata = {
 	.mode			= USB_OTG,
 	.otg_control		= OTG_PMIC_CONTROL,
