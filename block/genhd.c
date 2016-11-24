@@ -18,6 +18,7 @@
 #include <linux/mutex.h>
 #include <linux/idr.h>
 #include <linux/log2.h>
+#include <linux/pm_runtime.h>
 
 #ifdef CONFIG_BLOCK_SUPPORT_STLOG
 #include <linux/stlog.h>
@@ -521,7 +522,7 @@ static void register_disk(struct gendisk *disk)
 	int err;
 
 #ifdef CONFIG_BLOCK_SUPPORT_STLOG
-	int major 		= disk->major;	
+	int major 		= disk->major;
 	int first_minor 	= disk->first_minor;
 #endif
 
@@ -542,6 +543,14 @@ static void register_disk(struct gendisk *disk)
 			return;
 		}
 	}
+
+	/*
+	 * avoid probable deadlock caused by allocating memory with
+	 * GFP_KERNEL in runtime_resume callback of its all ancestor
+	 * devices
+	 */
+	pm_runtime_set_memalloc_noio(ddev, true);
+
 	disk->part0.holder_dir = kobject_create_and_add("holders", &ddev->kobj);
 	disk->slave_dir = kobject_create_and_add("slaves", &ddev->kobj);
 
@@ -635,7 +644,7 @@ void add_disk(struct gendisk *disk)
 	retval = sysfs_create_link(&disk_to_dev(disk)->kobj, &bdi->dev->kobj,
 				   "bdi");
 	WARN_ON(retval);
-	
+
 	/*
 	 * Limit default readahead size for small devices.
 	 *        disk size    readahead size
@@ -717,11 +726,12 @@ void del_gendisk(struct gendisk *disk)
 	disk->driverfs_dev = NULL;
 	if (!sysfs_deprecated)
 		sysfs_remove_link(block_depr, dev_name(disk_to_dev(disk)));
+	pm_runtime_set_memalloc_noio(disk_to_dev(disk), false);
 #ifdef CONFIG_BLOCK_SUPPORT_STLOG
 	dev=disk_to_dev(disk);
 	ST_LOG("<%s> KOBJ_REMOVE %d:%d %s",
 	__func__,MAJOR(dev->devt),MINOR(dev->devt),dev->kobj.name);
-#endif	
+#endif
 	device_del(disk_to_dev(disk));
 }
 EXPORT_SYMBOL(del_gendisk);
