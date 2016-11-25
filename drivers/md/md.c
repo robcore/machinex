@@ -1202,7 +1202,10 @@ static int super_90_validate(struct mddev *mddev, struct md_rdev *rdev)
 		mddev->dev_sectors = ((sector_t)sb->size) * 2;
 		mddev->events = ev1;
 		mddev->bitmap_info.offset = 0;
+		mddev->bitmap_info.space = 0;
+		/* bitmap can use 60 K after the 4K superblocks */
 		mddev->bitmap_info.default_offset = MD_SB_BYTES >> 9;
+		mddev->bitmap_info.default_space = 64*2 - (MD_SB_BYTES >> 9);
 		mddev->reshape_backwards = 0;
 
 		if (mddev->minor_version >= 91) {
@@ -1239,9 +1242,12 @@ static int super_90_validate(struct mddev *mddev, struct md_rdev *rdev)
 		mddev->max_disks = MD_SB_DISKS;
 
 		if (sb->state & (1<<MD_SB_BITMAP_PRESENT) &&
-		    mddev->bitmap_info.file == NULL)
+		    mddev->bitmap_info.file == NULL) {
 			mddev->bitmap_info.offset =
 				mddev->bitmap_info.default_offset;
+			mddev->bitmap_info.space =
+				mddev->bitmap_info.space;
+		}
 
 	} else if (mddev->pers == NULL) {
 		/* Insist on good event counter while assembling, except
@@ -1682,7 +1688,12 @@ static int super_1_validate(struct mddev *mddev, struct md_rdev *rdev)
 		mddev->dev_sectors = le64_to_cpu(sb->size);
 		mddev->events = ev1;
 		mddev->bitmap_info.offset = 0;
+		mddev->bitmap_info.space = 0;
+		/* Default location for bitmap is 1K after superblock
+		 * using 3K - total of 4K
+		 */
 		mddev->bitmap_info.default_offset = 1024 >> 9;
+		mddev->bitmap_info.default_space = (4096-1024) >> 9;
 		mddev->reshape_backwards = 0;
 
 		mddev->recovery_cp = le64_to_cpu(sb->resync_offset);
@@ -1691,9 +1702,23 @@ static int super_1_validate(struct mddev *mddev, struct md_rdev *rdev)
 		mddev->max_disks =  (4096-256)/2;
 
 		if ((le32_to_cpu(sb->feature_map) & MD_FEATURE_BITMAP_OFFSET) &&
-		    mddev->bitmap_info.file == NULL )
+		    mddev->bitmap_info.file == NULL) {
 			mddev->bitmap_info.offset =
 				(__s32)le32_to_cpu(sb->bitmap_offset);
+			/* Metadata doesn't record how much space is available.
+			 * For 1.0, we assume we can use up to the superblock
+			 * if before, else to 4K beyond superblock.
+			 * For others, assume no change is possible.
+			 */
+			if (mddev->minor_version > 0)
+				mddev->bitmap_info.space = 0;
+			else if (mddev->bitmap_info.offset > 0)
+				mddev->bitmap_info.space =
+					8 - mddev->bitmap_info.offset;
+			else
+				mddev->bitmap_info.space =
+					-mddev->bitmap_info.offset;
+		}
 
 		if ((le32_to_cpu(sb->feature_map) & MD_FEATURE_RESHAPE_ACTIVE)) {
 			mddev->reshape_position = le64_to_cpu(sb->reshape_position);
@@ -1969,7 +1994,7 @@ super_1_allow_new_offset(struct md_rdev *rdev,
 	bitmap = rdev->mddev->bitmap;
 	if (bitmap && !rdev->mddev->bitmap_info.file &&
 	    rdev->sb_start + rdev->mddev->bitmap_info.offset +
-	    bitmap->file_pages * (PAGE_SIZE>>9) > new_offset)
+	    bitmap->storage.file_pages * (PAGE_SIZE>>9) > new_offset)
 		return 0;
 	if (rdev->badblocks.sector + rdev->badblocks.size > new_offset)
 		return 0;
@@ -5123,7 +5148,8 @@ int md_run(struct mddev *mddev)
 		err = -EINVAL;
 		mddev->pers->stop(mddev);
 	}
-	if (err == 0 && mddev->pers->sync_request) {
+	if (err == 0 && mddev->pers->sync_request &&
+	    (mddev->bitmap_info.file || mddev->bitmap_info.offset)) {
 		err = bitmap_create(mddev);
 		if (err) {
 			printk(KERN_ERR "%s: failed to create bitmap (%d)\n",
@@ -5289,6 +5315,7 @@ static void md_clean(struct mddev *mddev)
 	mddev->merge_check_needed = 0;
 	mddev->bitmap_info.offset = 0;
 	mddev->bitmap_info.default_offset = 0;
+	mddev->bitmap_info.default_space = 0;
 	mddev->bitmap_info.chunksize = 0;
 	mddev->bitmap_info.daemon_sleep = 0;
 	mddev->bitmap_info.max_write_behind = 0;
@@ -5655,7 +5682,7 @@ static int get_bitmap_file(struct mddev * mddev, void __user * arg)
 		goto out;
 
 	/* bitmap disabled, zero the first byte and copy out */
-	if (!mddev->bitmap || !mddev->bitmap->file) {
+	if (!mddev->bitmap || !mddev->bitmap->storage.file) {
 		file->pathname[0] = '\0';
 		goto copy_out;
 	}
@@ -5664,7 +5691,8 @@ static int get_bitmap_file(struct mddev * mddev, void __user * arg)
 	if (!buf)
 		goto out;
 
-	ptr = d_path(&mddev->bitmap->file->f_path, buf, sizeof(file->pathname));
+	ptr = d_path(&mddev->bitmap->storage.file->f_path,
+		     buf, sizeof(file->pathname));
 	if (IS_ERR(ptr))
 		goto out;
 
@@ -6109,6 +6137,7 @@ static int set_array_info(struct mddev * mddev, mdu_array_info_t *info)
 	set_bit(MD_CHANGE_DEVS, &mddev->flags);
 
 	mddev->bitmap_info.default_offset = MD_SB_BYTES >> 9;
+	mddev->bitmap_info.default_space = 64*2 - (MD_SB_BYTES >> 9);
 	mddev->bitmap_info.offset = 0;
 
 	mddev->reshape_position = MaxSector;
@@ -6157,11 +6186,7 @@ static int update_size(struct mddev *mddev, sector_t num_sectors)
 	 */
 	if (mddev->sync_thread)
 		return -EBUSY;
-	if (mddev->bitmap)
-		/* Sorry, cannot grow a bitmap yet, just remove it,
-		 * grow, and re-add.
-		 */
-		return -EBUSY;
+
 	rdev_for_each(rdev, mddev) {
 		sector_t avail = rdev->sectors;
 
@@ -6291,6 +6316,8 @@ static int update_array_info(struct mddev *mddev, mdu_array_info_t *info)
 				return -EINVAL;
 			mddev->bitmap_info.offset =
 				mddev->bitmap_info.default_offset;
+			mddev->bitmap_info.space =
+				mddev->bitmap_info.default_space;
 			mddev->pers->quiesce(mddev, 1);
 			rv = bitmap_create(mddev);
 			if (!rv)
@@ -6302,7 +6329,7 @@ static int update_array_info(struct mddev *mddev, mdu_array_info_t *info)
 			/* remove the bitmap */
 			if (!mddev->bitmap)
 				return -ENOENT;
-			if (mddev->bitmap->file)
+			if (mddev->bitmap->storage.file)
 				return -EINVAL;
 			mddev->pers->quiesce(mddev, 1);
 			bitmap_destroy(mddev);
@@ -7868,7 +7895,7 @@ void md_check_recovery(struct mddev *mddev)
 			goto unlock;
 
 		if (mddev->pers->sync_request) {
-			if (spares && mddev->bitmap && ! mddev->bitmap->file) {
+			if (spares) {
 				/* We are adding a device or devices to an array
 				 * which has the bitmap stored on all devices.
 				 * So make sure all bitmap pages get written
