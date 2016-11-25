@@ -167,14 +167,15 @@ static int omap_1510_local_bus_init(void)
 
 static void start_hnp(struct ohci_hcd *ohci)
 {
-	const unsigned	port = ohci_to_hcd(ohci)->self.otg_port - 1;
+	struct usb_hcd *hcd = ohci_to_hcd(ohci);
+	const unsigned	port = hcd->self.otg_port - 1;
 	unsigned long	flags;
 	u32 l;
 
-	otg_start_hnp(ohci->transceiver->otg);
+	otg_start_hnp(hcd->phy->otg);
 
 	local_irq_save(flags);
-	ohci->transceiver->state = OTG_STATE_A_SUSPEND;
+	hcd->phy->state = OTG_STATE_A_SUSPEND;
 	writel (RH_PS_PSS, &ohci->regs->roothub.portstatus [port]);
 	l = omap_readl(OTG_CTRL);
 	l &= ~OTG_A_BUSREQ;
