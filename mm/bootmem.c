@@ -204,7 +204,7 @@ static unsigned long __init free_all_bootmem_core(bootmem_data_t *bdata)
 			unsigned long off = 0;
 
 			vec >>= start & (BITS_PER_LONG - 1);
-			while (vec && off < BITS_PER_LONG) {
+			while (vec) {
 				if (vec & 1) {
 					page = pfn_to_page(start + off);
 					__free_pages_bootmem(page, 0);
@@ -489,7 +489,7 @@ static unsigned long __init align_off(struct bootmem_data *bdata,
 	return ALIGN(base + off, align) - base;
 }
 
-static void * __init alloc_bootmem_core(struct bootmem_data *bdata,
+static void * __init alloc_bootmem_bdata(struct bootmem_data *bdata,
 					unsigned long size, unsigned long align,
 					unsigned long goal, unsigned long limit)
 {
@@ -610,7 +610,7 @@ static void * __init alloc_arch_preferred_bootmem(bootmem_data_t *bdata,
 		p_bdata = bootmem_arch_preferred_node(bdata, size, align,
 							goal, limit);
 		if (p_bdata)
-			return alloc_bootmem_core(p_bdata, size, align,
+			return alloc_bootmem_bdata(p_bdata, size, align,
 							goal, limit);
 	}
 #endif
@@ -636,7 +636,7 @@ restart:
 		if (limit && bdata->node_min_pfn >= PFN_DOWN(limit))
 			break;
 
-		region = alloc_bootmem_core(bdata, size, align, goal, limit);
+		region = alloc_bootmem_bdata(bdata, size, align, goal, limit);
 		if (region)
 			return region;
 	}
@@ -716,7 +716,7 @@ static void * __init ___alloc_bootmem_node(bootmem_data_t *bdata,
 	if (ptr)
 		return ptr;
 
-	ptr = alloc_bootmem_core(bdata, size, align, goal, limit);
+	ptr = alloc_bootmem_bdata(bdata, size, align, goal, limit);
 	if (ptr)
 		return ptr;
 
@@ -765,7 +765,7 @@ void * __init __alloc_bootmem_node_high(pg_data_t *pgdat, unsigned long size,
 		unsigned long new_goal;
 
 		new_goal = MAX_DMA32_PFN << PAGE_SHIFT;
-		ptr = alloc_bootmem_core(pgdat->bdata, size, align,
+		ptr = alloc_bootmem_bdata(pgdat->bdata, size, align,
 						 new_goal, 0);
 		if (ptr)
 			return ptr;
@@ -798,7 +798,7 @@ void * __init alloc_bootmem_section(unsigned long size,
 	if (goal + size > limit)
 		limit = 0;
 
-	return alloc_bootmem_core(bdata, size, SMP_CACHE_BYTES, goal, limit);
+	return alloc_bootmem_bdata(bdata, size, SMP_CACHE_BYTES, goal, 0);
 }
 #endif
 
@@ -814,7 +814,7 @@ void * __init __alloc_bootmem_node_nopanic(pg_data_t *pgdat, unsigned long size,
 	if (ptr)
 		return ptr;
 
-	ptr = alloc_bootmem_core(pgdat->bdata, size, align, goal, 0);
+	ptr = alloc_bootmem_bdata(pgdat->bdata, size, align, goal, 0);
 	if (ptr)
 		return ptr;
 
