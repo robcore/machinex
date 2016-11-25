@@ -66,7 +66,10 @@
 /* Background thread name pattern */
 #define UBI_BGT_NAME_PATTERN "ubi_bgt%dd"
 
-/* This marker in the EBA table means that the LEB is um-mapped */
+/*
+ * This marker in the EBA table means that the LEB is um-mapped.
+ * NOTE! It has to have the same value as %UBI_ALL.
+ */
 #define UBI_LEB_UNMAPPED -1
 
 /*
