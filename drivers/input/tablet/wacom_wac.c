@@ -772,7 +772,7 @@ static int wacom_tpc_single_touch(struct wacom_wac *wacom, size_t len)
 			prox = data[0] & 0x01;
 			x = get_unaligned_le16(&data[1]);
 			y = get_unaligned_le16(&data[3]);
-		} else { /* with capacity */
+		} else {
 			prox = data[1] & 0x01;
 			x = le16_to_cpup((__le16 *)&data[2]);
 			y = le16_to_cpup((__le16 *)&data[4]);
@@ -844,6 +844,7 @@ static int wacom_tpc_irq(struct wacom_wac *wacom, size_t len)
 		case WACOM_REPORT_TPC1FG:
 		case WACOM_REPORT_TPCHID:
 		case WACOM_REPORT_TPCST:
+		case WACOM_REPORT_TPC1FGE:
 			return wacom_tpc_single_touch(wacom, len);
 
 		case WACOM_REPORT_PENABLED:
@@ -1115,6 +1116,7 @@ void wacom_wac_irq(struct wacom_wac *wacom_wac, size_t len)
 		break;
 
 	case TABLETPC:
+	case TABLETPCE:
 	case TABLETPC2FG:
 		sync = wacom_tpc_irq(wacom_wac, len);
 		break;
@@ -1385,6 +1387,7 @@ void wacom_setup_input_capabilities(struct input_dev *input_dev,
 		/* fall through */
 
 	case TABLETPC:
+	case TABLETPCE:
 		__clear_bit(ABS_MISC, input_dev->absbit);
 
 		__set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
@@ -1680,6 +1683,12 @@ static const struct wacom_features wacom_features_0xE6 =
 static const struct wacom_features wacom_features_0xEC =
 	{ "Wacom ISDv4 EC",       WACOM_PKGLEN_GRAPHIRE,  25710, 14500,  255,
 	  0, TABLETPC,    WACOM_INTUOS_RES, WACOM_INTUOS_RES };
+static const struct wacom_features wacom_features_0xED =
+	{ "Wacom ISDv4 ED",       WACOM_PKGLEN_GRAPHIRE,  26202, 16325,  255,
+	  0, TABLETPCE, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
+static const struct wacom_features wacom_features_0xEF =
+	{ "Wacom ISDv4 EF",       WACOM_PKGLEN_GRAPHIRE,  26202, 16325,  255,
+	  0, TABLETPC, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
 static const struct wacom_features wacom_features_0x47 =
 	{ "Wacom Intuos2 6x8",    WACOM_PKGLEN_INTUOS,    20320, 16240, 1023,
 	  31, INTUOS, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
@@ -1838,6 +1847,8 @@ const struct usb_device_id wacom_ids[] = {
 	{ USB_DEVICE_WACOM(0xE3) },
 	{ USB_DEVICE_WACOM(0xE6) },
 	{ USB_DEVICE_WACOM(0xEC) },
+	{ USB_DEVICE_WACOM(0xED) },
+	{ USB_DEVICE_WACOM(0xEF) },
 	{ USB_DEVICE_WACOM(0x47) },
 	{ USB_DEVICE_WACOM(0xF4) },
 	{ USB_DEVICE_LENOVO(0x6004) },
