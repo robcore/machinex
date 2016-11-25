@@ -544,7 +544,6 @@ int iwlagn_mac_config(struct ieee80211_hw *hw, u32 changed)
 	struct iwl_rxon_context *ctx;
 	struct ieee80211_conf *conf = &hw->conf;
 	struct ieee80211_channel *channel = conf->channel;
-	const struct iwl_channel_info *ch_info;
 	int ret = 0;
 
 	IWL_DEBUG_MAC80211(priv, "enter: changed %#x", changed);
@@ -581,14 +580,6 @@ int iwlagn_mac_config(struct ieee80211_hw *hw, u32 changed)
 	}
 
 	if (changed & IEEE80211_CONF_CHANGE_CHANNEL) {
-		ch_info = iwl_get_channel_info(priv, channel->band,
-					       channel->hw_value);
-		if (!is_channel_valid(ch_info)) {
-			IWL_DEBUG_MAC80211(priv, "leave - invalid channel\n");
-			ret = -EINVAL;
-			goto out;
-		}
-
 		for_each_context(priv, ctx) {
 			/* Configure HT40 channels */
 			if (ctx->ht.enabled != conf_is_ht(conf))
