@@ -5597,6 +5597,18 @@ slow_path:
 	if (len < (th->doff << 2) || tcp_checksum_complete_user(sk, skb))
 		goto csum_error;
 
+	if (sk->sk_rx_dst) {
+		struct dst_entry *dst = sk->sk_rx_dst;
+		if (unlikely(dst->obsolete)) {
+			if (dst->ops->check(dst, 0) == NULL) {
+				dst_release(dst);
+				sk->sk_rx_dst = NULL;
+			}
+		}
+	}
+	if (unlikely(sk->sk_rx_dst == NULL))
+		sk->sk_rx_dst = dst_clone(skb_dst(skb));
+
 	/*
 	 *	Standard slow path.
 	 */
@@ -5763,7 +5775,8 @@ static int tcp_rcv_synsent_state_process(struct sock *sk, struct sk_buff *skb,
 
 		smp_mb();
 		tcp_set_state(sk, TCP_ESTABLISHED);
-
+	if (skb != NULL) {
+		sk->sk_rx_dst = dst_clone(skb_dst(skb));
 		security_inet_conn_established(sk, skb);
 
 		/* Make sure socket is routed, for correct metrics.  */
