@@ -271,6 +271,9 @@ static struct dentry *dfs_rootdir;
  */
 int ubi_debugfs_init(void)
 {
+	if (!IS_ENABLED(DEBUG_FS))
+		return 0;
+
 	dfs_rootdir = debugfs_create_dir("ubi", NULL);
 	if (IS_ERR_OR_NULL(dfs_rootdir)) {
 		int err = dfs_rootdir ? -ENODEV : PTR_ERR(dfs_rootdir);
@@ -288,7 +291,8 @@ int ubi_debugfs_init(void)
  */
 void ubi_debugfs_exit(void)
 {
-	debugfs_remove(dfs_rootdir);
+	if (IS_ENABLED(DEBUG_FS))
+		debugfs_remove(dfs_rootdir);
 }
 
 /* Read an UBI debugfs file */
@@ -410,6 +414,9 @@ int ubi_debugfs_init_dev(struct ubi_device *ubi)
 	struct dentry *dent;
 	struct ubi_debug_info *d = ubi->dbg;
 
+	if (!IS_ENABLED(DEBUG_FS))
+		return 0;
+
 	n = snprintf(d->dfs_dir_name, UBI_DFS_DIR_LEN + 1, UBI_DFS_DIR_NAME,
 		     ubi->ubi_num);
 	if (n == UBI_DFS_DIR_LEN) {
@@ -477,7 +484,8 @@ out:
  */
 void ubi_debugfs_exit_dev(struct ubi_device *ubi)
 {
-	debugfs_remove_recursive(ubi->dbg->dfs_dir);
+	if (IS_ENABLED(DEBUG_FS))
+		debugfs_remove_recursive(ubi->dbg->dfs_dir);
 }
 
 #endif /* CONFIG_MTD_UBI_DEBUG */
