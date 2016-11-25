@@ -361,7 +361,7 @@ EXPORT_SYMBOL(drm_framebuffer_cleanup);
  * @funcs: callbacks for the new CRTC
  *
  * LOCKING:
- * Caller must hold mode config lock.
+ * Takes mode_config lock.
  *
  * Inits a new object created as base part of an driver crtc object.
  *
@@ -606,6 +606,7 @@ int drm_plane_init(struct drm_device *dev, struct drm_plane *plane,
 	if (ret)
 		goto out;
 
+	plane->base.properties = &plane->properties;
 	plane->dev = dev;
 	plane->funcs = funcs;
 	plane->format_types = kmalloc(sizeof(uint32_t) * format_count,
@@ -1827,7 +1828,7 @@ int drm_mode_setcrtc(struct drm_device *dev, void *data,
 	struct drm_display_mode *mode = NULL;
 	struct drm_mode_set set;
 	uint32_t __user *set_connectors_ptr;
-	int ret = 0;
+	int ret;
 	int i;
 
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
@@ -2208,7 +2209,7 @@ int drm_mode_addfb2(struct drm_device *dev,
 	struct drm_mode_fb_cmd2 *r = data;
 	struct drm_mode_config *config = &dev->mode_config;
 	struct drm_framebuffer *fb;
-	int ret = 0;
+	int ret;
 
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
 		return -EINVAL;
@@ -2365,7 +2366,7 @@ int drm_mode_dirtyfb_ioctl(struct drm_device *dev,
 	struct drm_framebuffer *fb;
 	unsigned flags;
 	int num_clips;
-	int ret = 0;
+	int ret;
 
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
 		return -EINVAL;
@@ -2564,7 +2565,7 @@ int drm_mode_attachmode_ioctl(struct drm_device *dev,
 	struct drm_display_mode *mode;
 	struct drm_mode_object *obj;
 	struct drm_mode_modeinfo *umode = &mode_cmd->mode;
-	int ret = 0;
+	int ret;
 
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
 		return -EINVAL;
@@ -2618,7 +2619,7 @@ int drm_mode_detachmode_ioctl(struct drm_device *dev,
 	struct drm_connector *connector;
 	struct drm_display_mode mode;
 	struct drm_mode_modeinfo *umode = &mode_cmd->mode;
-	int ret = 0;
+	int ret;
 
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
 		return -EINVAL;
@@ -2710,6 +2711,34 @@ struct drm_property *drm_property_create_enum(struct drm_device *dev, int flags,
 }
 EXPORT_SYMBOL(drm_property_create_enum);
 
+struct drm_property *drm_property_create_bitmask(struct drm_device *dev,
+					 int flags, const char *name,
+					 const struct drm_prop_enum_list *props,
+					 int num_values)
+{
+	struct drm_property *property;
+	int i, ret;
+
+	flags |= DRM_MODE_PROP_BITMASK;
+
+	property = drm_property_create(dev, flags, name, num_values);
+	if (!property)
+		return NULL;
+
+	for (i = 0; i < num_values; i++) {
+		ret = drm_property_add_enum(property, i,
+				      props[i].type,
+				      props[i].name);
+		if (ret) {
+			drm_property_destroy(dev, property);
+			return NULL;
+		}
+	}
+
+	return property;
+}
+EXPORT_SYMBOL(drm_property_create_bitmask);
+
 struct drm_property *drm_property_create_range(struct drm_device *dev, int flags,
 					 const char *name,
 					 uint64_t min, uint64_t max)
@@ -2734,7 +2763,14 @@ int drm_property_add_enum(struct drm_property *property, int index,
 {
 	struct drm_property_enum *prop_enum;
 
-	if (!(property->flags & DRM_MODE_PROP_ENUM))
+	if (!(property->flags & (DRM_MODE_PROP_ENUM | DRM_MODE_PROP_BITMASK)))
+		return -EINVAL;
+
+	/*
+	 * Bitmask enum properties have the additional constraint of values
+	 * from 0 to 63
+	 */
+	if ((property->flags & DRM_MODE_PROP_BITMASK) && (value > 63))
 		return -EINVAL;
 
 	if (!list_empty(&property->enum_blob_list)) {
@@ -2880,7 +2916,7 @@ int drm_mode_getproperty_ioctl(struct drm_device *dev,
 	}
 	property = obj_to_property(obj);
 
-	if (property->flags & DRM_MODE_PROP_ENUM) {
+	if (property->flags & (DRM_MODE_PROP_ENUM | DRM_MODE_PROP_BITMASK)) {
 		list_for_each_entry(prop_enum, &property->enum_blob_list, head)
 			enum_count++;
 	} else if (property->flags & DRM_MODE_PROP_BLOB) {
@@ -2905,7 +2941,7 @@ int drm_mode_getproperty_ioctl(struct drm_device *dev,
 	}
 	out_resp->count_values = value_count;
 
-	if (property->flags & DRM_MODE_PROP_ENUM) {
+	if (property->flags & (DRM_MODE_PROP_ENUM | DRM_MODE_PROP_BITMASK)) {
 		if ((out_resp->count_enum_blobs >= enum_count) && enum_count) {
 			copied = 0;
 			enum_ptr = (struct drm_mode_property_enum __user *)(unsigned long)out_resp->enum_blob_ptr;
@@ -3027,7 +3063,7 @@ int drm_mode_connector_update_edid_property(struct drm_connector *connector,
 					    struct edid *edid)
 {
 	struct drm_device *dev = connector->dev;
-	int ret = 0, size;
+	int ret, size;
 
 	if (connector->edid_blob_ptr)
 		drm_property_destroy_blob(dev, connector->edid_blob_ptr);
@@ -3060,6 +3096,12 @@ static bool drm_property_change_is_valid(struct drm_property *property,
 		if (value < property->values[0] || value > property->values[1])
 			return false;
 		return true;
+	} else if (property->flags & DRM_MODE_PROP_BITMASK) {
+		int i;
+		__u64 valid_mask = 0;
+		for (i = 0; i < property->num_values; i++)
+			valid_mask |= (1ULL << property->values[i]);
+		return !(value & ~valid_mask);
 	} else {
 		int i;
 		for (i = 0; i < property->num_values; i++)
@@ -3114,6 +3156,21 @@ static int drm_mode_crtc_set_obj_prop(struct drm_mode_object *obj,
 
 	if (crtc->funcs->set_property)
 		ret = crtc->funcs->set_property(crtc, property, value);
+	if (!ret)
+		drm_object_property_set_value(obj, property, value);
+
+	return ret;
+}
+
+static int drm_mode_plane_set_obj_prop(struct drm_mode_object *obj,
+				      struct drm_property *property,
+				      uint64_t value)
+{
+	int ret = -EINVAL;
+	struct drm_plane *plane = obj_to_plane(obj);
+
+	if (plane->funcs->set_property)
+		ret = plane->funcs->set_property(plane, property, value);
 	if (!ret)
 		drm_object_property_set_value(obj, property, value);
 
@@ -3220,6 +3277,9 @@ int drm_mode_obj_set_property_ioctl(struct drm_device *dev, void *data,
 		break;
 	case DRM_MODE_OBJECT_CRTC:
 		ret = drm_mode_crtc_set_obj_prop(arg_obj, property, arg->value);
+		break;
+	case DRM_MODE_OBJECT_PLANE:
+		ret = drm_mode_plane_set_obj_prop(arg_obj, property, arg->value);
 		break;
 	}
 
@@ -3347,6 +3407,11 @@ int drm_mode_gamma_get_ioctl(struct drm_device *dev,
 		goto out;
 	}
 	crtc = obj_to_crtc(obj);
+
+	if (crtc->funcs->gamma_set == NULL) {
+		ret = -ENOSYS;
+		goto out;
+	}
 
 	/* memcpy into gamma store */
 	if (crtc_lut->gamma_size != crtc->gamma_size) {

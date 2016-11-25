@@ -755,11 +755,11 @@ struct drm_driver {
 	 * @dev: DRM device
 	 * @crtc: counter to fetch
 	 *
-	 * Driver callback for fetching a raw hardware vblank counter
-	 * for @crtc.  If a device doesn't have a hardware counter, the
-	 * driver can simply return the value of drm_vblank_count and
-	 * make the enable_vblank() and disable_vblank() hooks into no-ops,
-	 * leaving interrupts enabled at all times.
+	 * Driver callback for fetching a raw hardware vblank counter for @crtc.
+	 * If a device doesn't have a hardware counter, the driver can simply
+	 * return the value of drm_vblank_count. The DRM core will account for
+	 * missed vblank events while interrupts where disabled based on system
+	 * timestamps.
 	 *
 	 * Wraparound handling and loss of events due to modesetting is dealt
 	 * with in the DRM core code.
@@ -941,7 +941,7 @@ struct drm_driver {
 			    uint32_t handle);
 
 	/* Driver private ops for this object */
-	struct vm_operations_struct *gem_vm_ops;
+	const struct vm_operations_struct *gem_vm_ops;
 
 	int major;
 	int minor;
