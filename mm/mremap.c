@@ -372,10 +372,6 @@ static unsigned long mremap_to(unsigned long addr,
 	if ((addr <= new_addr) && (addr+old_len) > new_addr)
 		goto out;
 
-	ret = security_file_mmap(NULL, 0, 0, 0, new_addr, 1);
-	if (ret)
-		goto out;
-
 	ret = do_munmap(mm, new_addr, new_len);
 	if (ret)
 		goto out;
@@ -531,9 +527,6 @@ unsigned long do_mremap(unsigned long addr,
 			goto out;
 		}
 
-		ret = security_file_mmap(NULL, 0, 0, 0, new_addr, 1);
-		if (ret)
-			goto out;
 		ret = move_vma(vma, addr, old_len, new_len, new_addr);
 	}
 out:
