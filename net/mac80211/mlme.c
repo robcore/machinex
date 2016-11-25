@@ -1293,6 +1293,22 @@ static void ieee80211_sta_wmm_params(struct ieee80211_local *local,
 	sdata->vif.bss_conf.qos = true;
 }
 
+static void __ieee80211_stop_poll(struct ieee80211_sub_if_data *sdata)
+{
+	lockdep_assert_held(&sdata->local->mtx);
+
+	sdata->u.mgd.flags &= ~(IEEE80211_STA_CONNECTION_POLL |
+				IEEE80211_STA_BEACON_POLL);
+	ieee80211_run_deferred_scan(sdata->local);
+}
+
+static void ieee80211_stop_poll(struct ieee80211_sub_if_data *sdata)
+{
+	mutex_lock(&sdata->local->mtx);
+	__ieee80211_stop_poll(sdata);
+	mutex_unlock(&sdata->local->mtx);
+}
+
 static u32 ieee80211_handle_bss_capability(struct ieee80211_sub_if_data *sdata,
 					   u16 capab, bool erp_valid, u8 erp)
 {
@@ -1358,8 +1374,7 @@ static void ieee80211_set_associated(struct ieee80211_sub_if_data *sdata,
 	sdata->u.mgd.flags |= IEEE80211_STA_RESET_SIGNAL_AVE;
 
 	/* just to be sure */
-	sdata->u.mgd.flags &= ~(IEEE80211_STA_CONNECTION_POLL |
-				IEEE80211_STA_BEACON_POLL);
+	ieee80211_stop_poll(sdata);
 
 	ieee80211_led_assoc(local, 1);
 
@@ -2459,8 +2474,8 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 			       "to a received beacon\n", sdata->name);
 		}
 #endif
-		ifmgd->flags &= ~IEEE80211_STA_BEACON_POLL;
 		mutex_lock(&local->iflist_mtx);
+		ifmgd->flags &= ~IEEE80211_STA_BEACON_POLL;
 		ieee80211_recalc_ps(local, -1);
 		mutex_unlock(&local->iflist_mtx);
 	}
@@ -2661,8 +2676,7 @@ static void ieee80211_sta_connection_lost(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	u8 frame_buf[DEAUTH_DISASSOC_LEN];
 
-	ifmgd->flags &= ~(IEEE80211_STA_CONNECTION_POLL |
-			  IEEE80211_STA_BEACON_POLL);
+	__ieee80211_stop_poll(sdata);
 
 	ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH, reason,
 			       false, frame_buf);
@@ -2940,8 +2954,7 @@ static void ieee80211_restart_sta_timer(struct ieee80211_sub_if_data *sdata)
 	u32 flags;
 
 	if (sdata->vif.type == NL80211_IFTYPE_STATION) {
-		sdata->u.mgd.flags &= ~(IEEE80211_STA_BEACON_POLL |
-					IEEE80211_STA_CONNECTION_POLL);
+		__ieee80211_stop_poll(sdata);
 
 		/* let's probe the connection once */
 		flags = sdata->local->hw.flags;
@@ -3010,7 +3023,10 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 	if (test_and_clear_bit(TMR_RUNNING_CHANSW, &ifmgd->timers_running))
 		add_timer(&ifmgd->chswitch_timer);
 	ieee80211_sta_reset_beacon_monitor(sdata);
+
+	mutex_lock(&sdata->local->mtx);
 	ieee80211_restart_sta_timer(sdata);
+	mutex_unlock(&sdata->local->mtx);
 }
 #endif
 
