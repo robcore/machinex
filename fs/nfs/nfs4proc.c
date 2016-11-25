@@ -5238,7 +5238,7 @@ int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred)
 		.flags = EXCHGID4_FLAG_SUPP_MOVED_REFER,
 	};
 	struct nfs41_exchange_id_res res = {
-		.client = clp,
+		0
 	};
 	int status;
 	struct rpc_message msg = {
@@ -5281,22 +5281,22 @@ int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred)
 
 	status = rpc_call_sync(clp->cl_rpcclient, &msg, RPC_TASK_TIMEOUT);
 	if (status == 0)
-		status = nfs4_check_cl_exchange_flags(clp->cl_exchange_flags);
+		status = nfs4_check_cl_exchange_flags(res.flags);
 
 	if (status == 0) {
+		clp->cl_clientid = res.clientid;
+		clp->cl_exchange_flags = (res.flags & ~EXCHGID4_FLAG_CONFIRMED_R);
+		if (!(res.flags & EXCHGID4_FLAG_CONFIRMED_R))
+			clp->cl_seqid = res.seqid;
+
 		kfree(clp->cl_serverowner);
 		clp->cl_serverowner = res.server_owner;
 		res.server_owner = NULL;
-	}
 
-	if (status == 0) {
 		/* use the most recent implementation id */
 		kfree(clp->cl_implid);
 		clp->cl_implid = res.impl_id;
-	} else
-		kfree(res.impl_id);
 
-	if (status == 0) {
 		if (clp->cl_serverscope != NULL &&
 		    !nfs41_same_server_scope(clp->cl_serverscope,
 					     res.server_scope)) {
@@ -5311,7 +5311,8 @@ int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred)
 			clp->cl_serverscope = res.server_scope;
 			goto out;
 		}
-	}
+	} else
+		kfree(res.impl_id);
 
 out_server_owner:
 	kfree(res.server_owner);
@@ -5326,6 +5327,65 @@ out:
 			clp->cl_implid->date.nseconds);
 	dprintk("<-- %s status= %d\n", __func__, status);
 	return status;
+}
+
+static int _nfs4_proc_destroy_clientid(struct nfs_client *clp,
+		struct rpc_cred *cred)
+{
+	struct rpc_message msg = {
+		.rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_DESTROY_CLIENTID],
+		.rpc_argp = clp,
+		.rpc_cred = cred,
+	};
+	int status;
+
+	status = rpc_call_sync(clp->cl_rpcclient, &msg, RPC_TASK_TIMEOUT);
+	if (status)
+		pr_warn("NFS: Got error %d from the server %s on "
+			"DESTROY_CLIENTID.", status, clp->cl_hostname);
+	return status;
+}
+
+static int nfs4_proc_destroy_clientid(struct nfs_client *clp,
+		struct rpc_cred *cred)
+{
+	unsigned int loop;
+	int ret;
+
+	for (loop = NFS4_MAX_LOOP_ON_RECOVER; loop != 0; loop--) {
+		ret = _nfs4_proc_destroy_clientid(clp, cred);
+		switch (ret) {
+		case -NFS4ERR_DELAY:
+		case -NFS4ERR_CLIENTID_BUSY:
+			ssleep(1);
+			break;
+		default:
+			return ret;
+		}
+	}
+	return 0;
+}
+
+int nfs4_destroy_clientid(struct nfs_client *clp)
+{
+	struct rpc_cred *cred;
+	int ret = 0;
+
+	if (clp->cl_mvops->minor_version < 1)
+		goto out;
+	if (clp->cl_exchange_flags == 0)
+		goto out;
+	cred = nfs4_get_exchange_id_cred(clp);
+	ret = nfs4_proc_destroy_clientid(clp, cred);
+	if (cred)
+		put_rpccred(cred);
+	switch (ret) {
+	case 0:
+	case -NFS4ERR_STALE_CLIENTID:
+		clp->cl_exchange_flags = 0;
+	}
+out:
+	return ret;
 }
 
 struct nfs4_get_lease_time_data {

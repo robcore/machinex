@@ -210,6 +210,7 @@ extern int nfs4_proc_setclientid(struct nfs_client *, u32, unsigned short, struc
 extern int nfs4_proc_setclientid_confirm(struct nfs_client *, struct nfs4_setclientid_res *arg, struct rpc_cred *);
 extern int nfs4_proc_bind_conn_to_session(struct nfs_client *, struct rpc_cred *cred)
 extern int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred);
+extern int nfs4_destroy_clientid(struct nfs_client *clp);
 extern int nfs4_init_clientid(struct nfs_client *, struct rpc_cred *);
 extern int nfs41_init_clientid(struct nfs_client *, struct rpc_cred *);
 extern int nfs4_do_close(struct nfs4_state *state, gfp_t gfp_mask, int wait, bool roc);
