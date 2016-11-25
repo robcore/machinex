@@ -445,7 +445,7 @@ static void __init pcibios_init_hw(struct hw_pci *hw)
 			if (!sys->bus)
 				panic("PCI: unable to scan bus!");
 
-			busnr = sys->bus->subordinate + 1;
+			busnr = sys->bus->busn_res.end + 1;
 
 			list_add(&sys->node, &hw->buses);
 		} else {
