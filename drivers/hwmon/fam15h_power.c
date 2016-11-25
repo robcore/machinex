@@ -272,15 +272,4 @@ static struct pci_driver fam15h_power_driver = {
 	.resume = fam15h_power_resume,
 };
 
-static int __init fam15h_power_init(void)
-{
-	return pci_register_driver(&fam15h_power_driver);
-}
-
-static void __exit fam15h_power_exit(void)
-{
-	pci_unregister_driver(&fam15h_power_driver);
-}
-
-module_init(fam15h_power_init)
-module_exit(fam15h_power_exit)
+module_pci_driver(fam15h_power_driver);
