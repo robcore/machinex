@@ -457,6 +457,8 @@ static bool nfs4_cb_match_client(const struct sockaddr *addr,
 	    clp->cl_cons_state == NFS_CS_SESSION_INITING))
 		return false;
 
+	smp_rmb();
+
 	/* Match the version and minorversion */
 	if (clp->rpc_ops->version != 4 ||
 	    clp->cl_minorversion != minorversion)
@@ -505,6 +507,17 @@ static struct nfs_client *nfs_match_client(const struct nfs_client_initdata *dat
 	return NULL;
 }
 
+static bool nfs_client_init_is_complete(const struct nfs_client *clp)
+{
+	return clp->cl_cons_state != NFS_CS_INITING;
+}
+
+int nfs_wait_client_init_complete(const struct nfs_client *clp)
+{
+	return wait_event_killable(nfs_client_active_wq,
+			nfs_client_init_is_complete(clp));
+}
+
 /*
  * Found an existing client.  Make sure it's ready before returning.
  */
@@ -514,8 +527,7 @@ nfs_found_client(const struct nfs_client_initdata *cl_init,
 {
 	int error;
 
-	error = wait_event_killable(nfs_client_active_wq,
-				clp->cl_cons_state < NFS_CS_INITING);
+	error = nfs_wait_client_init_complete(clp);
 	if (error < 0) {
 		nfs_put_client(clp);
 		return ERR_PTR(-ERESTARTSYS);
@@ -526,6 +538,8 @@ nfs_found_client(const struct nfs_client_initdata *cl_init,
 		nfs_put_client(clp);
 		return ERR_PTR(error);
 	}
+
+	smp_rmb();
 
 	BUG_ON(clp->cl_cons_state != NFS_CS_READY);
 
@@ -585,24 +599,9 @@ nfs_get_client(const struct nfs_client_initdata *cl_init,
  */
 void nfs_mark_client_ready(struct nfs_client *clp, int state)
 {
+	smp_wmb();
 	clp->cl_cons_state = state;
 	wake_up_all(&nfs_client_active_wq);
-}
-
-/*
- * With sessions, the client is not marked ready until after a
- * successful EXCHANGE_ID and CREATE_SESSION.
- *
- * Map errors cl_cons_state errors to EPROTONOSUPPORT to indicate
- * other versions of NFS can be tried.
- */
-int nfs4_check_client_ready(struct nfs_client *clp)
-{
-	if (!nfs4_has_session(clp))
-		return 0;
-	if (clp->cl_cons_state < NFS_CS_READY)
-		return -EPROTONOSUPPORT;
-	return 0;
 }
 
 /*
@@ -1336,7 +1335,7 @@ static int nfs4_init_client_minor_version(struct nfs_client *clp)
 		 * so that the client back channel can find the
 		 * nfs_client struct
 		 */
-		clp->cl_cons_state = NFS_CS_SESSION_INITING;
+		nfs_mark_client_ready(clp, NFS_CS_SESSION_INITING);
 	}
 #endif /* CONFIG_NFS_V4_1 */
 
