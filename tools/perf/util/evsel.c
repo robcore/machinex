@@ -461,7 +461,10 @@ int perf_event__parse_sample(const union perf_event *event, u64 type,
 	 * used for cross-endian analysis. See git commit 65014ab3
 	 * for why this goofiness is needed.
 	 */
-	union u64_swap u;
+	union {
+		u64 val64;
+		u32 val32[2];
+	} u;
 
 	memset(data, 0, sizeof(*data));
 	data->cpu = data->pid = data->tid = -1;
@@ -604,7 +607,10 @@ int perf_event__synthesize_sample(union perf_event *event, u64 type,
 	 * used for cross-endian analysis. See git commit 65014ab3
 	 * for why this goofiness is needed.
 	 */
-	union u64_swap u;
+	union {
+		u64 val64;
+		u32 val32[2];
+	} u;
 
 	array = event->sample.array;
 
