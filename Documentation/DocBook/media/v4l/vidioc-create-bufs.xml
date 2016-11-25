@@ -101,7 +101,7 @@ information.</para>
 <constant>V4L2_MEMORY_USERPTR</constant>.</entry>
 	  </row>
 	  <row>
-	    <entry>&v4l2-format;</entry>
+	    <entry>struct&nbsp;v4l2_format</entry>
 	    <entry><structfield>format</structfield></entry>
 	    <entry>Filled in by the application, preserved by the driver.</entry>
 	  </row>
