@@ -820,6 +820,9 @@ struct tps65910 {
 	/* GPIO Handling */
 	struct gpio_chip gpio;
 
+	/* Device node parsed board data */
+	struct tps65910_board *of_plat_data;
+
 	/* IRQ Handling */
 	struct mutex irq_lock;
 	int chip_irq;

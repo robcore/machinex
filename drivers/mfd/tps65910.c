@@ -112,6 +112,7 @@ static int tps65910_i2c_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 	}
 
+	tps65910->of_plat_data = of_pmic_plat_data;
 	i2c_set_clientdata(i2c, tps65910);
 	tps65910->dev = &i2c->dev;
 	tps65910->i2c_client = i2c;
