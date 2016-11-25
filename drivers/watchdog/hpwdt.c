@@ -858,16 +858,6 @@ static struct pci_driver hpwdt_driver = {
 	.remove = __devexit_p(hpwdt_exit),
 };
 
-static void __exit hpwdt_cleanup(void)
-{
-	pci_unregister_driver(&hpwdt_driver);
-}
-
-static int __init hpwdt_init(void)
-{
-	return pci_register_driver(&hpwdt_driver);
-}
-
 MODULE_AUTHOR("Tom Mingarelli");
 MODULE_DESCRIPTION("hp watchdog driver");
 MODULE_LICENSE("GPL");
@@ -890,5 +880,4 @@ MODULE_PARM_DESC(priority, "The hpwdt driver handles NMIs first or last"
 		" (default = 0/Last)\n");
 #endif /* !CONFIG_HPWDT_NMI_DECODING */
 
-module_init(hpwdt_init);
-module_exit(hpwdt_cleanup);
+module_pci_driver(hpwdt_driver);
