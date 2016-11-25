@@ -64,6 +64,7 @@
 #include "iostat.h"
 #include "callback.h"
 #include "pnfs.h"
+#include "netns.h"
 
 #define NFSDBG_FACILITY		NFSDBG_PROC
 
@@ -3965,13 +3966,21 @@ wait_on_recovery:
 	return -EAGAIN;
 }
 
-static void nfs4_construct_boot_verifier(struct nfs_client *clp,
-					 nfs4_verifier *bootverf)
+static void nfs4_init_boot_verifier(const struct nfs_client *clp,
+				    nfs4_verifier *bootverf)
 {
 	__be32 verf[2];
 
-	verf[0] = (__be32)clp->cl_boot_time.tv_sec;
-	verf[1] = (__be32)clp->cl_boot_time.tv_nsec;
+	if (test_bit(NFS4CLNT_PURGE_STATE, &clp->cl_state)) {
+		/* An impossible timestamp guarantees this value
+		 * will never match a generated boot time. */
+		verf[0] = 0;
+		verf[1] = (__be32)(NSEC_PER_SEC + 1);
+	} else {
+		struct nfs_net *nn = net_generic(clp->cl_net, nfs_net_id);
+		verf[0] = (__be32)nn->boot_time.tv_sec;
+		verf[1] = (__be32)nn->boot_time.tv_nsec;
+	}
 	memcpy(bootverf->data, verf, sizeof(bootverf->data));
 }
 
@@ -3994,7 +4003,7 @@ int nfs4_proc_setclientid(struct nfs_client *clp, u32 program,
 	int loop = 0;
 	int status;
 
-	nfs4_construct_boot_verifier(clp, &sc_verifier);
+	nfs4_init_boot_verifier(clp, &sc_verifier);
 
 	for(;;) {
 		rcu_read_lock();
@@ -5119,7 +5128,8 @@ out_inval:
 }
 
 static bool
-nfs41_same_server_scope(struct server_scope *a, struct server_scope *b)
+nfs41_same_server_scope(struct nfs41_server_scope *a,
+			struct nfs41_server_scope *b)
 {
 	if (a->server_scope_sz == b->server_scope_sz &&
 	    memcmp(a->server_scope, b->server_scope, a->server_scope_sz) == 0)
@@ -5158,7 +5168,7 @@ int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred)
 	dprintk("--> %s\n", __func__);
 	BUG_ON(clp == NULL);
 
-	nfs4_construct_boot_verifier(clp, &verifier);
+	nfs4_init_boot_verifier(clp, &verifier);
 
 	args.id_len = scnprintf(args.id, sizeof(args.id),
 				"%s/%s/%u",
@@ -5166,55 +5176,71 @@ int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred)
 				clp->cl_rpcclient->cl_nodename,
 				clp->cl_rpcclient->cl_auth->au_flavor);
 
-	res.server_scope = kzalloc(sizeof(struct server_scope), GFP_KERNEL);
-	if (unlikely(!res.server_scope)) {
+	res.server_owner = kzalloc(sizeof(struct nfs41_server_owner),
+					GFP_KERNEL);
+	if (unlikely(res.server_owner == NULL)) {
 		status = -ENOMEM;
 		goto out;
 	}
 
+	res.server_scope = kzalloc(sizeof(struct nfs41_server_scope),
+					GFP_KERNEL);
+	if (unlikely(res.server_scope == NULL)) {
+		status = -ENOMEM;
+		goto out_server_owner;
+	}
+
 	res.impl_id = kzalloc(sizeof(struct nfs41_impl_id), GFP_KERNEL);
-	if (unlikely(!res.impl_id)) {
+	if (unlikely(res.impl_id == NULL)) {
 		status = -ENOMEM;
 		goto out_server_scope;
 	}
 
 	status = rpc_call_sync(clp->cl_rpcclient, &msg, RPC_TASK_TIMEOUT);
-	if (!status)
+	if (status == 0)
 		status = nfs4_check_cl_exchange_flags(clp->cl_exchange_flags);
 
-	if (!status) {
+	if (status == 0) {
+		kfree(clp->cl_serverowner);
+		clp->cl_serverowner = res.server_owner;
+		res.server_owner = NULL;
+	}
+
+	if (status == 0) {
 		/* use the most recent implementation id */
-		kfree(clp->impl_id);
-		clp->impl_id = res.impl_id;
+		kfree(clp->cl_implid);
+		clp->cl_implid = res.impl_id;
 	} else
 		kfree(res.impl_id);
 
-	if (!status) {
-		if (clp->server_scope &&
-		    !nfs41_same_server_scope(clp->server_scope,
+	if (status == 0) {
+		if (clp->cl_serverscope != NULL &&
+		    !nfs41_same_server_scope(clp->cl_serverscope,
 					     res.server_scope)) {
 			dprintk("%s: server_scope mismatch detected\n",
 				__func__);
 			set_bit(NFS4CLNT_SERVER_SCOPE_MISMATCH, &clp->cl_state);
-			kfree(clp->server_scope);
-			clp->server_scope = NULL;
+			kfree(clp->cl_serverscope);
+			clp->cl_serverscope = NULL;
 		}
 
-		if (!clp->server_scope) {
-			clp->server_scope = res.server_scope;
+		if (clp->cl_serverscope == NULL) {
+			clp->cl_serverscope = res.server_scope;
 			goto out;
 		}
 	}
 
+out_server_owner:
+	kfree(res.server_owner);
 out_server_scope:
 	kfree(res.server_scope);
 out:
-	if (clp->impl_id)
+	if (clp->cl_implid != NULL)
 		dprintk("%s: Server Implementation ID: "
 			"domain: %s, name: %s, date: %llu,%u\n",
-			__func__, clp->impl_id->domain, clp->impl_id->name,
-			clp->impl_id->date.seconds,
-			clp->impl_id->date.nseconds);
+			__func__, clp->cl_implid->domain, clp->cl_implid->name,
+			clp->cl_implid->date.seconds,
+			clp->cl_implid->date.nseconds);
 	dprintk("<-- %s status= %d\n", __func__, status);
 	return status;
 }

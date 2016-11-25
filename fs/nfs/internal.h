@@ -241,10 +241,9 @@ extern int nfs4_init_ds_session(struct nfs_client *clp);
 
 /* proc.c */
 void nfs_close_context(struct nfs_open_context *ctx, int is_sync);
-extern int nfs_init_client(struct nfs_client *clp,
+extern struct nfs_client *nfs_init_client(struct nfs_client *clp,
 			   const struct rpc_timeout *timeparms,
-			   const char *ip_addr, rpc_authflavor_t authflavour,
-			   int noresvport);
+			   const char *ip_addr, rpc_authflavor_t authflavour);
 
 /* dir.c */
 extern int nfs_access_cache_shrinker(struct shrinker *shrink,
@@ -346,11 +345,10 @@ extern int nfs_migrate_page(struct address_space *,
 /* nfs4proc.c */
 extern void __nfs4_read_done_cb(struct nfs_read_data *);
 extern void nfs4_reset_read(struct rpc_task *task, struct nfs_read_data *data);
-extern int nfs4_init_client(struct nfs_client *clp,
+extern struct nfs_client *nfs4_init_client(struct nfs_client *clp,
 			    const struct rpc_timeout *timeparms,
 			    const char *ip_addr,
-			    rpc_authflavor_t authflavour,
-			    int noresvport);
+			    rpc_authflavor_t authflavour);
 extern void nfs4_reset_write(struct rpc_task *task, struct nfs_write_data *data);
 extern int _nfs4_call_sync(struct rpc_clnt *clnt,
 			   struct nfs_server *server,
