@@ -31,6 +31,7 @@
 #include <linux/mutex.h>
 #include <linux/timer.h>
 #include <linux/slab.h>
+#include <crypto/hash.h>
 #endif
 
 #define journal_oom_retry 1
@@ -295,7 +296,8 @@ typedef struct journal_superblock_s
 #define JBD2_KNOWN_ROCOMPAT_FEATURES	0
 #define JBD2_KNOWN_INCOMPAT_FEATURES	(JBD2_FEATURE_INCOMPAT_REVOKE | \
 					JBD2_FEATURE_INCOMPAT_64BIT | \
-					JBD2_FEATURE_INCOMPAT_ASYNC_COMMIT)
+					JBD2_FEATURE_INCOMPAT_ASYNC_COMMIT | \
+					JBD2_FEATURE_INCOMPAT_CSUM_V2)
 
 #ifdef __KERNEL__
 
@@ -992,6 +994,12 @@ struct journal_s
 	 * superblock pointer here
 	 */
 	void *j_private;
+
+	/* Reference to checksum algorithm driver via cryptoapi */
+	struct crypto_shash *j_chksum_driver;
+
+	/* Precomputed journal UUID checksum for seeding other checksums */
+	__u32 j_csum_seed;
 };
 
 /*
@@ -1331,6 +1339,25 @@ static inline int jbd_space_needed(journal_t *journal)
 #define BJ_Types	5
 
 extern int jbd_blocks_per_page(struct inode *inode);
+
+static inline u32 jbd2_chksum(journal_t *journal, u32 crc,
+			      const void *address, unsigned int length)
+{
+	struct {
+		struct shash_desc shash;
+		char ctx[crypto_shash_descsize(journal->j_chksum_driver)];
+	} desc;
+	int err;
+
+	desc.shash.tfm = journal->j_chksum_driver;
+	desc.shash.flags = 0;
+	*(u32 *)desc.ctx = crc;
+
+	err = crypto_shash_update(&desc.shash, address, length);
+	BUG_ON(err);
+
+	return *(u32 *)desc.ctx;
+}
 
 #ifdef __KERNEL__
 
