@@ -1725,8 +1725,6 @@ int jbd2_journal_destroy(journal_t *journal)
 		iput(journal->j_inode);
 	if (journal->j_revoke)
 		jbd2_journal_destroy_revoke(journal);
-	if (journal->j_chksum_driver)
-		crypto_free_shash(journal->j_chksum_driver);
 	kfree(journal->j_wbuf);
 	kfree(journal);
 
@@ -2196,16 +2194,10 @@ int jbd2_journal_blocks_per_page(struct inode *inode)
  */
 size_t journal_tag_bytes(journal_t *journal)
 {
-	journal_block_tag_t tag;
-	size_t x = 0;
-
-	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2))
-		x += sizeof(tag.t_checksum);
-
 	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_64BIT))
-		return x + JBD2_TAG_SIZE64;
+		return JBD2_TAG_SIZE64;
 	else
-		return x + JBD2_TAG_SIZE32;
+		return JBD2_TAG_SIZE32;
 }
 
 /*
