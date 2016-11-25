@@ -44,12 +44,12 @@
  * function for a USB device, it also illustrates a technique of
  * double-buffering for increased throughput.
  *
- * For more information about MSF and in particular its module
- * parameters and sysfs interface read the
- * <Documentation/usb/mass-storage.txt> file.
- */
-
-/*
+ * Function supports multiple logical units (LUNs).  Backing storage
+ * for each LUN is provided by a regular file or a block device.
+ * Access for each LUN can be limited to read-only.  Moreover, the
+ * function can indicate that LUN is removable and/or CD-ROM.  (The
+ * later implies read-only access.)
+ *
  * MSF is configured by specifying a fsg_config structure.  It has the
  * following fields:
  *
@@ -75,6 +75,25 @@
  *	->nofua		Flag specifying that FUA flag in SCSI WRITE(10,12)
  *				commands for this LUN shall be ignored.
  *
+ *	lun_name_format	A printf-like format for names of the LUN
+ *				devices.  This determines how the
+ *				directory in sysfs will be named.
+ *				Unless you are using several MSFs in
+ *				a single gadget (as opposed to single
+ *				MSF in many configurations) you may
+ *				leave it as NULL (in which case
+ *				"lun%d" will be used).  In the format
+ *				you can use "%d" to index LUNs for
+ *				MSF's with more than one LUN.  (Beware
+ *				that there is only one integer given
+ *				as an argument for the format and
+ *				specifying invalid format may cause
+ *				unspecified behaviour.)
+ *	thread_name	Name of the kernel thread process used by the
+ *				MSF.  You can safely set it to NULL
+ *				(in which case default "file-storage"
+ *				will be used).
+ *
  *	vendor_name
  *	product_name
  *	release		Information used as a reply to INQUIRY
@@ -94,6 +113,62 @@
  * structure causes error).  The CD-ROM emulation includes a single
  * data track and no audio tracks; hence there need be only one
  * backing file per LUN.
+ *
+ *
+ * MSF includes support for module parameters.  If gadget using it
+ * decides to use it, the following module parameters will be
+ * available:
+ *
+ *	file=filename[,filename...]
+ *			Names of the files or block devices used for
+ *				backing storage.
+ *	ro=b[,b...]	Default false, boolean for read-only access.
+ *	removable=b[,b...]
+ *			Default true, boolean for removable media.
+ *	cdrom=b[,b...]	Default false, boolean for whether to emulate
+ *				a CD-ROM drive.
+ *	nofua=b[,b...]	Default false, booleans for ignore FUA flag
+ *				in SCSI WRITE(10,12) commands
+ *	luns=N		Default N = number of filenames, number of
+ *				LUNs to support.
+ *	stall		Default determined according to the type of
+ *				USB device controller (usually true),
+ *				boolean to permit the driver to halt
+ *				bulk endpoints.
+ *
+ * The module parameters may be prefixed with some string.  You need
+ * to consult gadget's documentation or source to verify whether it is
+ * using those module parameters and if it does what are the prefixes
+ * (look for FSG_MODULE_PARAMETERS() macro usage, what's inside it is
+ * the prefix).
+ *
+ *
+ * Requirements are modest; only a bulk-in and a bulk-out endpoint are
+ * needed.  The memory requirement amounts to two 16K buffers, size
+ * configurable by a parameter.  Support is included for both
+ * full-speed and high-speed operation.
+ *
+ * Note that the driver is slightly non-portable in that it assumes a
+ * single memory/DMA buffer will be useable for bulk-in, bulk-out, and
+ * interrupt-in endpoints.  With most device controllers this isn't an
+ * issue, but there may be some with hardware restrictions that prevent
+ * a buffer from being used by more than one endpoint.
+ *
+ *
+ * The pathnames of the backing files and the ro settings are
+ * available in the attribute files "file" and "ro" in the lun<n> (or
+ * to be more precise in a directory which name comes from
+ * "lun_name_format" option!) subdirectory of the gadget's sysfs
+ * directory.  If the "removable" option is set, writing to these
+ * files will simulate ejecting/loading the medium (writing an empty
+ * line means eject) and adjusting a write-enable tab.  Changes to the
+ * ro setting are not allowed when the medium is loaded or if CD-ROM
+ * emulation is being used.
+ *
+ * When a LUN receive an "eject" SCSI request (Start/Stop Unit),
+ * if the LUN is removable, the backing file is released to simulate
+ * ejection.
+ *
  *
  * This function is heavily based on "File-backed Storage Gadget" by
  * Alan Stern which in turn is heavily based on "Gadget Zero" by David
@@ -136,7 +211,7 @@
  * In normal operation the main thread is started during the gadget's
  * fsg_bind() callback and stopped during fsg_unbind().  But it can
  * also exit when it receives a signal, and there's no point leaving
- * the gadget running when the thread is dead.  As of this moment, MSF
+ * the gadget running when the thread is dead.  At of this moment, MSF
  * provides no way to deregister the gadget when thread dies -- maybe
  * a callback functions is needed.
  *
@@ -355,6 +430,9 @@ struct fsg_config {
 		char cdrom;
 		char nofua;
 	} luns[FSG_MAX_LUNS];
+
+	const char		*lun_name_format;
+	const char		*thread_name;
 
 	/* Callback functions. */
 	const struct fsg_operations	*ops;
@@ -3235,7 +3313,11 @@ static struct fsg_common *fsg_common_init(struct fsg_common *common,
 		curlun->dev.parent = &gadget->dev;
 		/* curlun->dev.driver = &fsg_driver.driver; XXX */
 		dev_set_drvdata(&curlun->dev, &common->filesem);
-		dev_set_name(&curlun->dev, "lun%d", i);
+		dev_set_name(&curlun->dev,
+			     cfg->lun_name_format
+			   ? cfg->lun_name_format
+			   : "lun%d",
+			     i);
 
 		rc = device_register(&curlun->dev);
 		if (rc) {
@@ -3331,7 +3413,8 @@ buffhds_first_it:
 
 	/* Tell the thread to start working */
 	common->thread_task =
-		kthread_create(fsg_main_thread, common, "file-storage");
+		kthread_create(fsg_main_thread, common,
+			       cfg->thread_name ?: "file-storage");
 	if (IS_ERR(common->thread_task)) {
 		rc = PTR_ERR(common->thread_task);
 		goto error_release;
@@ -3638,7 +3721,8 @@ fsg_config_from_params(struct fsg_config *cfg,
 	for (i = 0, lun = cfg->luns; i < cfg->nluns; ++i, ++lun) {
 		lun->ro = !!params->ro[i];
 		lun->cdrom = !!params->cdrom[i];
-		lun->removable = !!params->removable[i];
+		lun->removable = /* Removable by default */
+			params->removable_count <= i || params->removable[i];
 		lun->filename =
 			params->file_count > i && params->file[i][0]
 			? params->file[i]
@@ -3646,6 +3730,8 @@ fsg_config_from_params(struct fsg_config *cfg,
 	}
 
 	/* Let MSF use defaults */
+	cfg->lun_name_format = 0;
+	cfg->thread_name = 0;
 	cfg->vendor_name = 0;
 	cfg->product_name = 0;
 	cfg->release = 0xffff;

@@ -506,42 +506,6 @@ static int ieee80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 	return ret;
 }
 
-static int ieee80211_set_channel(struct wiphy *wiphy,
-				 struct net_device *netdev,
-				 struct ieee80211_channel *chan,
-				 enum nl80211_channel_type channel_type)
-{
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-	struct ieee80211_sub_if_data *sdata = NULL;
-
-	if (netdev)
-		sdata = IEEE80211_DEV_TO_SUB_IF(netdev);
-
-	switch (ieee80211_get_channel_mode(local, NULL)) {
-	case CHAN_MODE_HOPPING:
-		return -EBUSY;
-	case CHAN_MODE_FIXED:
-		if (local->oper_channel != chan ||
-		    (!sdata && local->_oper_channel_type != channel_type))
-			return -EBUSY;
-		if (!sdata && local->_oper_channel_type == channel_type)
-			return 0;
-		break;
-	case CHAN_MODE_UNDEFINED:
-		break;
-	}
-
-	if (!ieee80211_set_channel_type(local, sdata, channel_type))
-		return -EBUSY;
-
-	local->oper_channel = chan;
-
-	/* auto-detects changes */
-	ieee80211_hw_config(local, 0);
-
-	return 0;
-}
-
 static int ieee80211_set_probe_resp(struct ieee80211_sub_if_data *sdata,
 				    const u8 *resp, size_t resp_len)
 {
@@ -655,11 +619,6 @@ static int ieee80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
 	old = rtnl_dereference(sdata->u.ap.beacon);
 	if (old)
 		return -EALREADY;
-
-	err = ieee80211_set_channel(wiphy, dev, params->channel,
-				    params->channel_type);
-	if (err)
-		return err;
 
 	/*
 	 * Apply control port protocol, this allows us to
@@ -1397,12 +1356,6 @@ static int ieee80211_join_mesh(struct wiphy *wiphy, struct net_device *dev,
 	err = copy_mesh_setup(ifmsh, setup);
 	if (err)
 		return err;
-
-	err = ieee80211_set_channel(wiphy, dev, setup->channel,
-				    setup->channel_type);
-	if (err)
-		return err;
-
 	ieee80211_start_mesh(sdata);
 
 	return 0;
@@ -1518,6 +1471,55 @@ static int ieee80211_set_txq_params(struct wiphy *wiphy,
 			    params->queue);
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+static int ieee80211_set_channel(struct wiphy *wiphy,
+				 struct net_device *netdev,
+				 struct ieee80211_channel *chan,
+				 enum nl80211_channel_type channel_type)
+{
+	struct ieee80211_local *local = wiphy_priv(wiphy);
+	struct ieee80211_sub_if_data *sdata = NULL;
+	struct ieee80211_channel *old_oper;
+	enum nl80211_channel_type old_oper_type;
+	enum nl80211_channel_type old_vif_oper_type= NL80211_CHAN_NO_HT;
+
+	if (netdev)
+		sdata = IEEE80211_DEV_TO_SUB_IF(netdev);
+
+	switch (ieee80211_get_channel_mode(local, NULL)) {
+	case CHAN_MODE_HOPPING:
+		return -EBUSY;
+	case CHAN_MODE_FIXED:
+		if (local->oper_channel != chan)
+			return -EBUSY;
+		if (!sdata && local->_oper_channel_type == channel_type)
+			return 0;
+		break;
+	case CHAN_MODE_UNDEFINED:
+		break;
+	}
+
+	if (sdata)
+		old_vif_oper_type = sdata->vif.bss_conf.channel_type;
+	old_oper_type = local->_oper_channel_type;
+
+	if (!ieee80211_set_channel_type(local, sdata, channel_type))
+		return -EBUSY;
+
+	old_oper = local->oper_channel;
+	local->oper_channel = chan;
+
+	/* Update driver if changes were actually made. */
+	if ((old_oper != local->oper_channel) ||
+	    (old_oper_type != local->_oper_channel_type))
+		ieee80211_hw_config(local, IEEE80211_CONF_CHANGE_CHANNEL);
+
+	if (sdata && sdata->vif.type != NL80211_IFTYPE_MONITOR &&
+	    old_vif_oper_type != sdata->vif.bss_conf.channel_type)
+		ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_HT);
 
 	return 0;
 }
@@ -1889,9 +1891,6 @@ static int ieee80211_set_bitrate_mask(struct wiphy *wiphy,
 	struct ieee80211_local *local = wdev_priv(dev->ieee80211_ptr);
 	int i, ret;
 
-	if (!ieee80211_sdata_running(sdata))
-		return -ENETDOWN;
-
 	if (local->hw.flags & IEEE80211_HW_HAS_RATE_CONTROL) {
 		ret = drv_set_bitrate_mask(local, sdata, mask);
 		if (ret)
@@ -1982,6 +1981,8 @@ static int ieee80211_cancel_remain_on_channel_hw(struct ieee80211_local *local,
 	local->hw_roc_cookie = 0;
 	local->hw_roc_channel = NULL;
 
+	ieee80211_recalc_idle(local);
+
 	return 0;
 }
 
@@ -2041,7 +2042,7 @@ static int ieee80211_mgmt_tx(struct wiphy *wiphy, struct net_device *dev,
 	struct ieee80211_work *wk;
 	const struct ieee80211_mgmt *mgmt = (void *)buf;
 	u32 flags;
-	bool is_offchan = false, in_hw_roc = false;
+	bool is_offchan = false;
 
 	if (dont_wait_for_ack)
 		flags = IEEE80211_TX_CTL_NO_ACK;
@@ -2061,7 +2062,6 @@ static int ieee80211_mgmt_tx(struct wiphy *wiphy, struct net_device *dev,
 	if (chan == local->hw_roc_channel) {
 		/* TODO: check channel type? */
 		is_offchan = false;
-		in_hw_roc = true;
 		flags |= IEEE80211_TX_CTL_TX_OFFCHAN;
 	}
 
@@ -2156,7 +2156,7 @@ static int ieee80211_mgmt_tx(struct wiphy *wiphy, struct net_device *dev,
 	 * wait is involved, we might otherwise not be on
 	 * the right channel for long enough!
 	 */
-	if (!is_offchan && !wait && (in_hw_roc || !sdata->vif.bss_conf.idle)) {
+	if (!is_offchan && !wait && !sdata->vif.bss_conf.idle) {
 		ieee80211_tx_skb(sdata, skb);
 		return 0;
 	}
@@ -2469,7 +2469,7 @@ static int ieee80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 		return -EINVAL;
 
 #ifdef CONFIG_MAC80211_VERBOSE_TDLS_DEBUG
-	pr_debug("TDLS mgmt action %d peer %pM\n", action_code, peer);
+	printk(KERN_DEBUG "TDLS mgmt action %d peer %pM\n", action_code, peer);
 #endif
 
 	skb = dev_alloc_skb(local->hw.extra_tx_headroom +
@@ -2580,7 +2580,7 @@ static int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 		return -EINVAL;
 
 #ifdef CONFIG_MAC80211_VERBOSE_TDLS_DEBUG
-	pr_debug("TDLS oper %d peer %pM\n", oper, peer);
+	printk(KERN_DEBUG "TDLS oper %d peer %pM\n", oper, peer);
 #endif
 
 	switch (oper) {

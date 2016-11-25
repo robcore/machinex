@@ -266,7 +266,7 @@ static const unsigned char *ftrace_nop_replace(void)
 }
 
 static int
-ftrace_modify_code_direct(unsigned long ip, unsigned const char *old_code,
+ftrace_modify_code(unsigned long ip, unsigned const char *old_code,
 		   unsigned const char *new_code)
 {
 	unsigned char replaced[MCOUNT_INSN_SIZE];
@@ -307,20 +307,7 @@ int ftrace_make_nop(struct module *mod,
 	old = ftrace_call_replace(ip, addr);
 	new = ftrace_nop_replace();
 
-	/*
-	 * On boot up, and when modules are loaded, the MCOUNT_ADDR
-	 * is converted to a nop, and will never become MCOUNT_ADDR
-	 * again. This code is either running before SMP (on boot up)
-	 * or before the code will ever be executed (module load).
-	 * We do not want to use the breakpoint version in this case,
-	 * just modify the code directly.
-	 */
-	if (addr == MCOUNT_ADDR)
-		return ftrace_modify_code_direct(rec->ip, old, new);
-
-	/* Normal cases use add_brk_on_nop */
-	WARN_ONCE(1, "invalid use of ftrace_make_nop");
-	return -EINVAL;
+	return ftrace_modify_code(rec->ip, old, new);
 }
 
 int ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
@@ -331,8 +318,20 @@ int ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
 	old = ftrace_nop_replace();
 	new = ftrace_call_replace(ip, addr);
 
-	/* Should only be called when module is loaded */
-	return ftrace_modify_code_direct(rec->ip, old, new);
+	return ftrace_modify_code(rec->ip, old, new);
+}
+
+int ftrace_update_ftrace_func(ftrace_func_t func)
+{
+	unsigned long ip = (unsigned long)(&ftrace_call);
+	unsigned char old[MCOUNT_INSN_SIZE], *new;
+	int ret;
+
+	memcpy(old, &ftrace_call, MCOUNT_INSN_SIZE);
+	new = ftrace_call_replace(ip, (unsigned long)func);
+	ret = ftrace_modify_code(ip, old, new);
+
+	return ret;
 }
 
 int __init ftrace_dyn_arch_init(void *data)
@@ -391,29 +390,6 @@ int ftrace_disable_ftrace_graph_caller(void)
 }
 
 #endif /* !CONFIG_DYNAMIC_FTRACE */
-
-static int
-ftrace_modify_code(unsigned long ip, unsigned const char *old_code,
-		   unsigned const char *new_code);
-
-int ftrace_update_ftrace_func(ftrace_func_t func)
-{
-	unsigned long ip = (unsigned long)(&ftrace_call);
-	unsigned char old[MCOUNT_INSN_SIZE], *new;
-	int ret;
-
-	memcpy(old, &ftrace_call, MCOUNT_INSN_SIZE);
-	new = ftrace_call_replace(ip, (unsigned long)func);
-
-	/* See comment above by declaration of modifying_ftrace_code */
-	atomic_inc(&modifying_ftrace_code);
-
-	ret = ftrace_modify_code(ip, old, new);
-
-	atomic_dec(&modifying_ftrace_code);
-
-	return ret;
-}
 
 /*
  * Hook the return address and push it in the stack of return addrs

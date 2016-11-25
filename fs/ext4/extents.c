@@ -602,7 +602,7 @@ ext4_ext_binsearch_idx(struct inode *inode,
 	}
 
 	path->p_idx = l - 1;
-	ext_debug("  -> %u->%lld ", le32_to_cpu(path->p_idx->ei_block),
+	ext_debug("  -> %d->%lld ", le32_to_cpu(path->p_idx->ei_block),
 		  ext4_idx_pblock(path->p_idx));
 
 #ifdef CHECK_BINSEARCH
@@ -4884,8 +4884,8 @@ int ext4_ext_punch_hole(struct file *file, loff_t offset, loff_t length)
 
 	/* Now release the pages */
 	if (last_page_offset > first_page_offset) {
-		truncate_pagecache_range(inode, first_page_offset,
-					 last_page_offset - 1);
+		truncate_inode_pages_range(mapping, first_page_offset,
+					   last_page_offset-1);
 	}
 
 	/* finish any pending end_io work */

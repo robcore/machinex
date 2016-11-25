@@ -24,7 +24,8 @@
  * because we *may* be doing work on-operating channel, and want our
  * hardware unconditionally awake, but still let the AP send us normal frames.
  */
-static void ieee80211_offchannel_ps_enable(struct ieee80211_sub_if_data *sdata)
+static void ieee80211_offchannel_ps_enable(struct ieee80211_sub_if_data *sdata,
+					   bool tell_ap)
 {
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
@@ -45,8 +46,8 @@ static void ieee80211_offchannel_ps_enable(struct ieee80211_sub_if_data *sdata)
 		ieee80211_hw_config(local, IEEE80211_CONF_CHANGE_PS);
 	}
 
-	if (!local->offchannel_ps_enabled ||
-	    !(local->hw.flags & IEEE80211_HW_PS_NULLFUNC_STACK))
+	if (tell_ap && (!local->offchannel_ps_enabled ||
+			!(local->hw.flags & IEEE80211_HW_PS_NULLFUNC_STACK)))
 		/*
 		 * If power save was enabled, no need to send a nullfunc
 		 * frame because AP knows that we are sleeping. But if the
@@ -129,7 +130,7 @@ void ieee80211_offchannel_stop_vifs(struct ieee80211_local *local)
 			netif_tx_stop_all_queues(sdata->dev);
 			if (sdata->vif.type == NL80211_IFTYPE_STATION &&
 			    sdata->u.mgd.associated)
-				ieee80211_offchannel_ps_enable(sdata);
+				ieee80211_offchannel_ps_enable(sdata, true);
 		}
 	}
 	mutex_unlock(&local->iflist_mtx);
@@ -201,6 +202,8 @@ static void ieee80211_hw_roc_start(struct work_struct *work)
 					  GFP_KERNEL);
 	}
 
+	ieee80211_recalc_idle(local);
+
 	mutex_unlock(&local->mtx);
 }
 
@@ -251,6 +254,8 @@ static void ieee80211_hw_roc_done(struct work_struct *work)
 
 	local->hw_roc_channel = NULL;
 	local->hw_roc_cookie = 0;
+
+	ieee80211_recalc_idle(local);
 
 	mutex_unlock(&local->mtx);
 }

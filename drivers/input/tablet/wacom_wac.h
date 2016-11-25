@@ -42,7 +42,6 @@
 #define WACOM_REPORT_TPC2FG		13
 #define WACOM_REPORT_TPCHID		15
 #define WACOM_REPORT_TPCST		16
-#define WACOM_REPORT_TPC1FGE		18
 
 /* device quirks */
 #define WACOM_QUIRK_MULTI_INPUT		0x0001
@@ -57,6 +56,8 @@ enum {
 	PTU,
 	PL,
 	DTU,
+	BAMBOO_PT,
+	WIRELESS,
 	INTUOS,
 	INTUOS3S,
 	INTUOS3,
@@ -69,10 +70,7 @@ enum {
 	CINTIQ,
 	WACOM_BEE,
 	WACOM_MO,
-	WIRELESS,
-	BAMBOO_PT,
-	TABLETPC,   /* add new TPC below */
-	TABLETPCE,
+	TABLETPC,
 	TABLETPC2FG,
 	MAX_TYPE
 };

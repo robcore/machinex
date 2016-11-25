@@ -634,7 +634,7 @@ static int BoxSetRegister(struct usb_serial *serial, unsigned short Uart_Number,
 
 /*
  * qt_setuart
- * issues a SET_UART vendor-specific request on the default control pipe
+ * issuse a SET_UART vendor-spcific request on the default control pipe
  * If successful sets baud rate divisor and LCR value
  */
 static int qt_setuart(struct usb_serial *serial, unsigned short Uart_Number,
@@ -1435,7 +1435,7 @@ static inline int qt_real_tiocmset(struct tty_struct *tty,
 		return -ESPIPE;
 
 	/*
-	 * Turn off the RTS and DTR and loopback and then only turn on what was
+	 * Turn off the RTS and DTR and loopbcck and then only turn on what was
 	 * asked for
 	 */
 	mcr &= ~(SERIAL_MCR_RTS | SERIAL_MCR_DTR | SERIAL_MCR_LOOP);

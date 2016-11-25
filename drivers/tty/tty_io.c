@@ -1404,9 +1404,6 @@ struct tty_struct *tty_init_dev(struct tty_driver *driver, int idx)
 	if (retval < 0)
 		goto err_deinit_tty;
 
-	if (!tty->port)
-		tty->port = driver->ports[idx];
-
 	/*
 	 * Structures all installed ... call the ldisc open routines.
 	 * If we fail here just call release_tty to clean up.  No need
@@ -3104,7 +3101,6 @@ static void destruct_tty_driver(struct kref *kref)
 		kfree(p);
 		cdev_del(&driver->cdev);
 	}
-	kfree(driver->ports);
 	kfree(driver);
 }
 
@@ -3143,18 +3139,6 @@ int tty_register_driver(struct tty_driver *driver)
 		if (!p)
 			return -ENOMEM;
 	}
-	/*
-	 * There is too many lines in PTY and we won't need the array there
-	 * since it has an ->install hook where it assigns ports properly.
-	 */
-	if (driver->type != TTY_DRIVER_TYPE_PTY) {
-		driver->ports = kcalloc(driver->num, sizeof(struct tty_port *),
-				GFP_KERNEL);
-		if (!driver->ports) {
-			error = -ENOMEM;
-			goto err_free_p;
-		}
-	}
 
 	if (!driver->major) {
 		error = alloc_chrdev_region(&dev, driver->minor_start,
@@ -3167,8 +3151,10 @@ int tty_register_driver(struct tty_driver *driver)
 		dev = MKDEV(driver->major, driver->minor_start);
 		error = register_chrdev_region(dev, driver->num, driver->name);
 	}
-	if (error < 0)
-		goto err_free_p;
+	if (error < 0) {
+		kfree(p);
+		return error;
+	}
 
 	if (p) {
 		driver->ttys = (struct tty_struct **)p;
@@ -3181,8 +3167,13 @@ int tty_register_driver(struct tty_driver *driver)
 	cdev_init(&driver->cdev, &tty_fops);
 	driver->cdev.owner = driver->owner;
 	error = cdev_add(&driver->cdev, dev, driver->num);
-	if (error)
-		goto err_unreg_char;
+	if (error) {
+		unregister_chrdev_region(dev, driver->num);
+		driver->ttys = NULL;
+		driver->termios = NULL;
+		kfree(p);
+		return error;
+	}
 
 	mutex_lock(&tty_mutex);
 	list_add(&driver->tty_drivers, &tty_drivers);
@@ -3209,14 +3200,13 @@ err:
 	list_del(&driver->tty_drivers);
 	mutex_unlock(&tty_mutex);
 
-err_unreg_char:
 	unregister_chrdev_region(dev, driver->num);
 	driver->ttys = NULL;
 	driver->termios = NULL;
-err_free_p: /* destruct_tty_driver will free driver->ports */
 	kfree(p);
 	return error;
 }
+
 EXPORT_SYMBOL(tty_register_driver);
 
 /*

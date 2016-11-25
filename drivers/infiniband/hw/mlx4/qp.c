@@ -305,8 +305,8 @@ static int set_rq_size(struct mlx4_ib_dev *dev, struct ib_qp_cap *cap,
 		       int is_user, int has_rq, struct mlx4_ib_qp *qp)
 {
 	/* Sanity check RQ size before proceeding */
-	if (cap->max_recv_wr > dev->dev->caps.max_wqes - MLX4_IB_SQ_MAX_SPARE ||
-	    cap->max_recv_sge > min(dev->dev->caps.max_sq_sg, dev->dev->caps.max_rq_sg))
+	if (cap->max_recv_wr  > dev->dev->caps.max_wqes  ||
+	    cap->max_recv_sge > dev->dev->caps.max_rq_sg)
 		return -EINVAL;
 
 	if (!has_rq) {
@@ -324,17 +324,8 @@ static int set_rq_size(struct mlx4_ib_dev *dev, struct ib_qp_cap *cap,
 		qp->rq.wqe_shift = ilog2(qp->rq.max_gs * sizeof (struct mlx4_wqe_data_seg));
 	}
 
-	/* leave userspace return values as they were, so as not to break ABI */
-	if (is_user) {
-		cap->max_recv_wr  = qp->rq.max_post = qp->rq.wqe_cnt;
-		cap->max_recv_sge = qp->rq.max_gs;
-	} else {
-		cap->max_recv_wr  = qp->rq.max_post =
-			min(dev->dev->caps.max_wqes - MLX4_IB_SQ_MAX_SPARE, qp->rq.wqe_cnt);
-		cap->max_recv_sge = min(qp->rq.max_gs,
-					min(dev->dev->caps.max_sq_sg,
-					    dev->dev->caps.max_rq_sg));
-	}
+	cap->max_recv_wr  = qp->rq.max_post = qp->rq.wqe_cnt;
+	cap->max_recv_sge = qp->rq.max_gs;
 
 	return 0;
 }
@@ -345,8 +336,8 @@ static int set_kernel_sq_size(struct mlx4_ib_dev *dev, struct ib_qp_cap *cap,
 	int s;
 
 	/* Sanity check SQ size before proceeding */
-	if (cap->max_send_wr  > (dev->dev->caps.max_wqes - MLX4_IB_SQ_MAX_SPARE) ||
-	    cap->max_send_sge > min(dev->dev->caps.max_sq_sg, dev->dev->caps.max_rq_sg) ||
+	if (cap->max_send_wr	 > dev->dev->caps.max_wqes  ||
+	    cap->max_send_sge	 > dev->dev->caps.max_sq_sg ||
 	    cap->max_inline_data + send_wqe_overhead(type, qp->flags) +
 	    sizeof (struct mlx4_wqe_inline_seg) > dev->dev->caps.max_sq_desc_sz)
 		return -EINVAL;

@@ -739,6 +739,7 @@ cleanup_all:
 	f->f_path.dentry = NULL;
 	f->f_path.mnt = NULL;
 cleanup_file:
+	put_filp(f);
 	dput(dentry);
 	mntput(mnt);
 	return ERR_PTR(error);
@@ -756,8 +757,6 @@ static struct file *__dentry_open(struct dentry *dentry, struct vfsmount *mnt,
 			fput(res);
 			res = ERR_PTR(error);
 		}
-	} else {
-		put_filp(f);
 	}
 	return res;
 }

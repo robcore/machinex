@@ -1840,11 +1840,6 @@ enum ieee80211_frame_release_type {
  *	to also unregister the device. If it returns 1, then mac80211
  *	will also go through the regular complete restart on resume.
  *
- * @set_wakeup: Enable or disable wakeup when WoWLAN configuration is
- *	modified. The reason is that device_set_wakeup_enable() is
- *	supposed to be called when the configuration changes, not only
- *	in suspend().
- *
  * @add_interface: Called when a netdevice attached to the hardware is
  *	enabled. Because it is not called for monitor mode devices, @start
  *	and @stop must be implemented.
@@ -2075,13 +2070,7 @@ enum ieee80211_frame_release_type {
  *	offload. Frames to transmit on the off-channel channel are transmitted
  *	normally except for the %IEEE80211_TX_CTL_TX_OFFCHAN flag. When the
  *	duration (which will always be non-zero) expires, the driver must call
- *	ieee80211_remain_on_channel_expired().
- *	The driver must not call ieee80211_remain_on_channel_expired() before
- *	the TX status for a frame that was sent off-channel, otherwise the TX
- *	status is reported to userspace in an invalid way.
- *	Note that this callback may be called while the device is in IDLE and
- *	must be accepted in this case.
- *	This callback may sleep.
+ *	ieee80211_remain_on_channel_expired(). This callback may sleep.
  * @cancel_remain_on_channel: Requests that an ongoing off-channel period is
  *	aborted before it expires. This callback may sleep.
  *
@@ -2847,7 +2836,6 @@ __le16 ieee80211_ctstoself_duration(struct ieee80211_hw *hw,
  * ieee80211_generic_frame_duration - Calculate the duration field for a frame
  * @hw: pointer obtained from ieee80211_alloc_hw().
  * @vif: &struct ieee80211_vif pointer from the add_interface callback.
- * @band: the band to calculate the frame duration on
  * @frame_len: the length of the frame.
  * @rate: the rate at which the frame is going to be transmitted.
  *
@@ -3432,6 +3420,16 @@ void ieee80211_cqm_rssi_notify(struct ieee80211_vif *vif,
 			       gfp_t gfp);
 
 /**
+ * ieee80211_get_operstate - get the operstate of the vif
+ *
+ * @vif: &struct ieee80211_vif pointer from the add_interface callback.
+ *
+ * The driver might need to know the operstate of the net_device
+ * (specifically, whether the link is IF_OPER_UP after resume)
+ */
+unsigned char ieee80211_get_operstate(struct ieee80211_vif *vif);
+
+/**
  * ieee80211_chswitch_done - Complete channel switch process
  * @vif: &struct ieee80211_vif pointer from the add_interface callback.
  * @success: make the channel switch successful or not
@@ -3712,29 +3710,4 @@ int ieee80211_add_srates_ie(struct ieee80211_vif *vif, struct sk_buff *skb);
 
 int ieee80211_add_ext_srates_ie(struct ieee80211_vif *vif,
 				struct sk_buff *skb);
-
-/* Extra debugging macros */
-
-#ifdef CONFIG_MAC80211_HT_DEBUG
-#define ht_vdbg(fmt, ...)			\
-	pr_debug(fmt, ##__VA_ARGS__)
-#else
-#define ht_vdbg(fmt, ...)			\
-do {						\
-	if (0)					\
-		pr_debug(fmt, ##__VA_ARGS__);	\
-} while (0)
-#endif
-
-#ifdef CONFIG_MAC80211_IBSS_DEBUG
-#define ibss_vdbg(fmt, ...)			\
-	pr_debug(fmt, ##__VA_ARGS__)
-#else
-#define ibss_vdbg(fmt, ...)			\
-do {						\
-	if (0)					\
-		pr_debug(fmt, ##__VA_ARGS__);	\
-} while (0)
-#endif
-
 #endif /* MAC80211_H */

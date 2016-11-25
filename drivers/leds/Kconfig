@@ -50,19 +50,6 @@ config LEDS_LM3530
 	  controlled manually or using PWM input or using ambient
 	  light automatically.
 
-config LEDS_LM3533
-	tristate "LED support for LM3533"
-	depends on LEDS_CLASS
-	depends on MFD_LM3533
-	help
-	  This option enables support for the LEDs on National Semiconductor /
-	  TI LM3533 Lighting Power chips.
-
-	  The LEDs can be controlled directly, through PWM input, or by the
-	  ambient-light-sensor interface. The chip supports
-	  hardware-accelerated blinking with maximum on and off periods of 9.8
-	  and 77 seconds respectively.
-
 config LEDS_LOCOMO
 	tristate "LED Support for Locomo device"
 	depends on LEDS_CLASS
@@ -490,7 +477,7 @@ config LEDS_NETXBIG
 
 config LEDS_ASIC3
 	bool "LED support for the HTC ASIC3"
-	depends on LEDS_CLASS=y
+	depends on LEDS_CLASS
 	depends on MFD_ASIC3
 	default y
 	help
@@ -501,7 +488,7 @@ config LEDS_ASIC3
 
 config LEDS_RENESAS_TPU
 	bool "LED support for Renesas TPU"
-	depends on LEDS_CLASS=y && HAVE_CLK && GENERIC_GPIO
+	depends on LEDS_CLASS && HAVE_CLK && GENERIC_GPIO
 	help
 	  This option enables build of the LED TPU platform driver,
 	  suitable to drive any TPU channel on newer Renesas SoCs.
@@ -618,14 +605,6 @@ config LEDS_TRIGGER_DEFAULT_ON
 	depends on LEDS_TRIGGERS
 	help
 	  This allows LEDs to be initialised in the ON state.
-	  If unsure, say Y.
-
-config LEDS_TRIGGER_TRANSIENT
-	tristate "LED Transient Trigger"
-	depends on LEDS_TRIGGERS
-	help
-	  This allows one time activation of a transient state on
-	  GPIO/PWM based hadrware.
 	  If unsure, say Y.
 
 config LEDS_TRIGGER_SLEEP

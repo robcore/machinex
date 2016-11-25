@@ -33,6 +33,7 @@
 
 #include <mach/hardware.h>
 #include <mach/dma.h>
+#include <mach/audio.h>
 
 #include "../../arm/pxa2xx-pcm.h"
 #include "pxa-ssp.h"
@@ -194,7 +195,7 @@ static void pxa_ssp_set_scr(struct ssp_device *ssp, u32 div)
 {
 	u32 sscr0 = pxa_ssp_read_reg(ssp, SSCR0);
 
-	if (ssp->type == PXA25x_SSP) {
+	if (cpu_is_pxa25x() && ssp->type == PXA25x_SSP) {
 		sscr0 &= ~0x0000ff00;
 		sscr0 |= ((div - 2)/2) << 8; /* 2..512 */
 	} else {
@@ -212,7 +213,7 @@ static u32 pxa_ssp_get_scr(struct ssp_device *ssp)
 	u32 sscr0 = pxa_ssp_read_reg(ssp, SSCR0);
 	u32 div;
 
-	if (ssp->type == PXA25x_SSP)
+	if (cpu_is_pxa25x() && ssp->type == PXA25x_SSP)
 		div = ((sscr0 >> 8) & 0xff) * 2 + 2;
 	else
 		div = ((sscr0 >> 8) & 0xfff) + 1;
@@ -242,7 +243,7 @@ static int pxa_ssp_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 		break;
 	case PXA_SSP_CLK_PLL:
 		/* Internal PLL is fixed */
-		if (ssp->type == PXA25x_SSP)
+		if (cpu_is_pxa25x())
 			priv->sysclk = 1843200;
 		else
 			priv->sysclk = 13000000;
@@ -266,11 +267,11 @@ static int pxa_ssp_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 
 	/* The SSP clock must be disabled when changing SSP clock mode
 	 * on PXA2xx.  On PXA3xx it must be enabled when doing so. */
-	if (ssp->type != PXA3xx_SSP)
+	if (!cpu_is_pxa3xx())
 		clk_disable(ssp->clk);
 	val = pxa_ssp_read_reg(ssp, SSCR0) | sscr0;
 	pxa_ssp_write_reg(ssp, SSCR0, val);
-	if (ssp->type != PXA3xx_SSP)
+	if (!cpu_is_pxa3xx())
 		clk_enable(ssp->clk);
 
 	return 0;
@@ -294,20 +295,24 @@ static int pxa_ssp_set_dai_clkdiv(struct snd_soc_dai *cpu_dai,
 	case PXA_SSP_AUDIO_DIV_SCDB:
 		val = pxa_ssp_read_reg(ssp, SSACD);
 		val &= ~SSACD_SCDB;
-		if (ssp->type == PXA3xx_SSP)
+#if defined(CONFIG_PXA3xx)
+		if (cpu_is_pxa3xx())
 			val &= ~SSACD_SCDX8;
+#endif
 		switch (div) {
 		case PXA_SSP_CLK_SCDB_1:
 			val |= SSACD_SCDB;
 			break;
 		case PXA_SSP_CLK_SCDB_4:
 			break;
+#if defined(CONFIG_PXA3xx)
 		case PXA_SSP_CLK_SCDB_8:
-			if (ssp->type == PXA3xx_SSP)
+			if (cpu_is_pxa3xx())
 				val |= SSACD_SCDX8;
 			else
 				return -EINVAL;
 			break;
+#endif
 		default:
 			return -EINVAL;
 		}
@@ -333,8 +338,10 @@ static int pxa_ssp_set_dai_pll(struct snd_soc_dai *cpu_dai, int pll_id,
 	struct ssp_device *ssp = priv->ssp;
 	u32 ssacd = pxa_ssp_read_reg(ssp, SSACD) & ~0x70;
 
-	if (ssp->type == PXA3xx_SSP)
+#if defined(CONFIG_PXA3xx)
+	if (cpu_is_pxa3xx())
 		pxa_ssp_write_reg(ssp, SSACDD, 0);
+#endif
 
 	switch (freq_out) {
 	case 5622000:
@@ -359,10 +366,11 @@ static int pxa_ssp_set_dai_pll(struct snd_soc_dai *cpu_dai, int pll_id,
 		break;
 
 	default:
+#ifdef CONFIG_PXA3xx
 		/* PXA3xx has a clock ditherer which can be used to generate
 		 * a wider range of frequencies - calculate a value for it.
 		 */
-		if (ssp->type == PXA3xx_SSP) {
+		if (cpu_is_pxa3xx()) {
 			u32 val;
 			u64 tmp = 19968;
 			tmp *= 1000000;
@@ -379,6 +387,7 @@ static int pxa_ssp_set_dai_pll(struct snd_soc_dai *cpu_dai, int pll_id,
 				val, freq_out);
 			break;
 		}
+#endif
 
 		return -EINVAL;
 	}
@@ -587,8 +596,10 @@ static int pxa_ssp_hw_params(struct snd_pcm_substream *substream,
 	/* bit size */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-		if (ssp->type == PXA3xx_SSP)
+#ifdef CONFIG_PXA3xx
+		if (cpu_is_pxa3xx())
 			sscr0 |= SSCR0_FPCKE;
+#endif
 		sscr0 |= SSCR0_DataSize(16);
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
@@ -613,7 +624,9 @@ static int pxa_ssp_hw_params(struct snd_pcm_substream *substream,
 			* trying and failing a lot; some of the registers
 			* needed for that mode are only available on PXA3xx.
 			*/
-			if (ssp->type != PXA3xx_SSP)
+
+#ifdef CONFIG_PXA3xx
+			if (!cpu_is_pxa3xx())
 				return -EINVAL;
 
 			sspsp |= SSPSP_SFRMWDTH(width * 2);
@@ -621,6 +634,9 @@ static int pxa_ssp_hw_params(struct snd_pcm_substream *substream,
 			sspsp |= SSPSP_EDMYSTOP(3);
 			sspsp |= SSPSP_DMYSTOP(3);
 			sspsp |= SSPSP_DMYSTRT(1);
+#else
+			return -EINVAL;
+#endif
 		} else {
 			/* The frame width is the width the LRCLK is
 			 * asserted for; the delay is expressed in

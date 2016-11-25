@@ -26,7 +26,6 @@
 #include "backref.h"
 #include "extent_io.h"
 #include "check-integrity.h"
-#include "rcu-string.h"
 
 /*
  * This is only the first step towards a full-features scrub. It reads all
@@ -51,7 +50,7 @@ struct scrub_dev;
 struct scrub_page {
 	struct scrub_block	*sblock;
 	struct page		*page;
-	struct btrfs_device	*dev;
+	struct block_device	*bdev;
 	u64			flags;  /* extent flags */
 	u64			generation;
 	u64			logical;
@@ -87,7 +86,6 @@ struct scrub_block {
 		unsigned int	header_error:1;
 		unsigned int	checksum_error:1;
 		unsigned int	no_io_error_seen:1;
-		unsigned int	generation_error:1; /* also sets header_error */
 	};
 };
 
@@ -321,10 +319,10 @@ static int scrub_print_warning_inode(u64 inum, u64 offset, u64 root, void *ctx)
 	 * hold all of the paths here
 	 */
 	for (i = 0; i < ipath->fspath->elem_cnt; ++i)
-		printk_in_rcu(KERN_WARNING "btrfs: %s at logical %llu on dev "
+		printk(KERN_WARNING "btrfs: %s at logical %llu on dev "
 			"%s, sector %llu, root %llu, inode %llu, offset %llu, "
 			"length %llu, links %u (path: %s)\n", swarn->errstr,
-			swarn->logical, rcu_str_deref(swarn->dev->name),
+			swarn->logical, swarn->dev->name,
 			(unsigned long long)swarn->sector, root, inum, offset,
 			min(isize - offset, (u64)PAGE_SIZE), nlink,
 			(char *)(unsigned long)ipath->fspath->val[i]);
@@ -333,10 +331,10 @@ static int scrub_print_warning_inode(u64 inum, u64 offset, u64 root, void *ctx)
 	return 0;
 
 err:
-	printk_in_rcu(KERN_WARNING "btrfs: %s at logical %llu on dev "
+	printk(KERN_WARNING "btrfs: %s at logical %llu on dev "
 		"%s, sector %llu, root %llu, inode %llu, offset %llu: path "
 		"resolving failed with ret=%d\n", swarn->errstr,
-		swarn->logical, rcu_str_deref(swarn->dev->name),
+		swarn->logical, swarn->dev->name,
 		(unsigned long long)swarn->sector, root, inum, offset, ret);
 
 	free_ipath(ipath);
@@ -390,11 +388,10 @@ static void scrub_print_warning(const char *errstr, struct scrub_block *sblock)
 		do {
 			ret = tree_backref_for_extent(&ptr, eb, ei, item_size,
 							&ref_root, &ref_level);
-			printk_in_rcu(KERN_WARNING
+			printk(KERN_WARNING
 				"btrfs: %s at logical %llu on dev %s, "
 				"sector %llu: metadata %s (level %d) in tree "
-				"%llu\n", errstr, swarn.logical,
-				rcu_str_deref(dev->name),
+				"%llu\n", errstr, swarn.logical, dev->name,
 				(unsigned long long)swarn.sector,
 				ref_level ? "node" : "leaf",
 				ret < 0 ? -1 : ref_level,
@@ -583,11 +580,9 @@ out:
 		spin_lock(&sdev->stat_lock);
 		++sdev->stat.uncorrectable_errors;
 		spin_unlock(&sdev->stat_lock);
-
-		printk_ratelimited_in_rcu(KERN_ERR
+		printk_ratelimited(KERN_ERR
 			"btrfs: unable to fixup (nodatasum) error at logical %llu on dev %s\n",
-			(unsigned long long)fixup->logical,
-			rcu_str_deref(sdev->dev->name));
+			(unsigned long long)fixup->logical, sdev->dev->name);
 	}
 
 	btrfs_free_path(path);
@@ -681,8 +676,6 @@ static int scrub_handle_errored_block(struct scrub_block *sblock_to_check)
 		sdev->stat.read_errors++;
 		sdev->stat.uncorrectable_errors++;
 		spin_unlock(&sdev->stat_lock);
-		btrfs_dev_stat_inc_and_print(sdev->dev,
-					     BTRFS_DEV_STAT_READ_ERRS);
 		goto out;
 	}
 
@@ -694,8 +687,6 @@ static int scrub_handle_errored_block(struct scrub_block *sblock_to_check)
 		sdev->stat.read_errors++;
 		sdev->stat.uncorrectable_errors++;
 		spin_unlock(&sdev->stat_lock);
-		btrfs_dev_stat_inc_and_print(sdev->dev,
-					     BTRFS_DEV_STAT_READ_ERRS);
 		goto out;
 	}
 	BUG_ON(failed_mirror_index >= BTRFS_MAX_MIRRORS);
@@ -709,8 +700,6 @@ static int scrub_handle_errored_block(struct scrub_block *sblock_to_check)
 		sdev->stat.read_errors++;
 		sdev->stat.uncorrectable_errors++;
 		spin_unlock(&sdev->stat_lock);
-		btrfs_dev_stat_inc_and_print(sdev->dev,
-					     BTRFS_DEV_STAT_READ_ERRS);
 		goto out;
 	}
 
@@ -737,16 +726,12 @@ static int scrub_handle_errored_block(struct scrub_block *sblock_to_check)
 		spin_unlock(&sdev->stat_lock);
 		if (__ratelimit(&_rs))
 			scrub_print_warning("i/o error", sblock_to_check);
-		btrfs_dev_stat_inc_and_print(sdev->dev,
-					     BTRFS_DEV_STAT_READ_ERRS);
 	} else if (sblock_bad->checksum_error) {
 		spin_lock(&sdev->stat_lock);
 		sdev->stat.csum_errors++;
 		spin_unlock(&sdev->stat_lock);
 		if (__ratelimit(&_rs))
 			scrub_print_warning("checksum error", sblock_to_check);
-		btrfs_dev_stat_inc_and_print(sdev->dev,
-					     BTRFS_DEV_STAT_CORRUPTION_ERRS);
 	} else if (sblock_bad->header_error) {
 		spin_lock(&sdev->stat_lock);
 		sdev->stat.verify_errors++;
@@ -754,12 +739,6 @@ static int scrub_handle_errored_block(struct scrub_block *sblock_to_check)
 		if (__ratelimit(&_rs))
 			scrub_print_warning("checksum/header error",
 					    sblock_to_check);
-		if (sblock_bad->generation_error)
-			btrfs_dev_stat_inc_and_print(sdev->dev,
-				BTRFS_DEV_STAT_GENERATION_ERRS);
-		else
-			btrfs_dev_stat_inc_and_print(sdev->dev,
-				BTRFS_DEV_STAT_CORRUPTION_ERRS);
 	}
 
 	if (sdev->readonly)
@@ -941,20 +920,18 @@ corrected_error:
 			spin_lock(&sdev->stat_lock);
 			sdev->stat.corrected_errors++;
 			spin_unlock(&sdev->stat_lock);
-			printk_ratelimited_in_rcu(KERN_ERR
+			printk_ratelimited(KERN_ERR
 				"btrfs: fixed up error at logical %llu on dev %s\n",
-				(unsigned long long)logical,
-				rcu_str_deref(sdev->dev->name));
+				(unsigned long long)logical, sdev->dev->name);
 		}
 	} else {
 did_not_correct_error:
 		spin_lock(&sdev->stat_lock);
 		sdev->stat.uncorrectable_errors++;
 		spin_unlock(&sdev->stat_lock);
-		printk_ratelimited_in_rcu(KERN_ERR
+		printk_ratelimited(KERN_ERR
 			"btrfs: unable to fixup (regular) error at logical %llu on dev %s\n",
-			(unsigned long long)logical,
-			rcu_str_deref(sdev->dev->name));
+			(unsigned long long)logical, sdev->dev->name);
 	}
 
 out:
@@ -1022,8 +999,8 @@ static int scrub_setup_recheck_block(struct scrub_dev *sdev,
 			page = sblock->pagev + page_index;
 			page->logical = logical;
 			page->physical = bbio->stripes[mirror_index].physical;
-			/* for missing devices, dev->bdev is NULL */
-			page->dev = bbio->stripes[mirror_index].dev;
+			/* for missing devices, bdev is NULL */
+			page->bdev = bbio->stripes[mirror_index].dev->bdev;
 			page->mirror_num = mirror_index + 1;
 			page->page = alloc_page(GFP_NOFS);
 			if (!page->page) {
@@ -1067,7 +1044,7 @@ static int scrub_recheck_block(struct btrfs_fs_info *fs_info,
 		struct scrub_page *page = sblock->pagev + page_num;
 		DECLARE_COMPLETION_ONSTACK(complete);
 
-		if (page->dev->bdev == NULL) {
+		if (page->bdev == NULL) {
 			page->io_error = 1;
 			sblock->no_io_error_seen = 0;
 			continue;
@@ -1077,7 +1054,7 @@ static int scrub_recheck_block(struct btrfs_fs_info *fs_info,
 		bio = bio_alloc(GFP_NOFS, 1);
 		if (!bio)
 			return -EIO;
-		bio->bi_bdev = page->dev->bdev;
+		bio->bi_bdev = page->bdev;
 		bio->bi_sector = page->physical >> 9;
 		bio->bi_end_io = scrub_complete_bio_end_io;
 		bio->bi_private = &complete;
@@ -1126,14 +1103,11 @@ static void scrub_recheck_block_checksum(struct btrfs_fs_info *fs_info,
 		h = (struct btrfs_header *)mapped_buffer;
 
 		if (sblock->pagev[0].logical != le64_to_cpu(h->bytenr) ||
+		    generation != le64_to_cpu(h->generation) ||
 		    memcmp(h->fsid, fs_info->fsid, BTRFS_UUID_SIZE) ||
 		    memcmp(h->chunk_tree_uuid, fs_info->chunk_tree_uuid,
-			   BTRFS_UUID_SIZE)) {
+			   BTRFS_UUID_SIZE))
 			sblock->header_error = 1;
-		} else if (generation != le64_to_cpu(h->generation)) {
-			sblock->header_error = 1;
-			sblock->generation_error = 1;
-		}
 		csum = h->csum;
 	} else {
 		if (!have_csum)
@@ -1209,7 +1183,7 @@ static int scrub_repair_page_from_good_copy(struct scrub_block *sblock_bad,
 		bio = bio_alloc(GFP_NOFS, 1);
 		if (!bio)
 			return -EIO;
-		bio->bi_bdev = page_bad->dev->bdev;
+		bio->bi_bdev = page_bad->bdev;
 		bio->bi_sector = page_bad->physical >> 9;
 		bio->bi_end_io = scrub_complete_bio_end_io;
 		bio->bi_private = &complete;
@@ -1223,12 +1197,6 @@ static int scrub_repair_page_from_good_copy(struct scrub_block *sblock_bad,
 
 		/* this will also unplug the queue */
 		wait_for_completion(&complete);
-		if (!bio_flagged(bio, BIO_UPTODATE)) {
-			btrfs_dev_stat_inc_and_print(page_bad->dev,
-				BTRFS_DEV_STAT_WRITE_ERRS);
-			bio_put(bio);
-			return -EIO;
-		}
 		bio_put(bio);
 	}
 
@@ -1385,8 +1353,7 @@ static int scrub_checksum_super(struct scrub_block *sblock)
 	u64 mapped_size;
 	void *p;
 	u32 crc = ~(u32)0;
-	int fail_gen = 0;
-	int fail_cor = 0;
+	int fail = 0;
 	u64 len;
 	int index;
 
@@ -1397,13 +1364,13 @@ static int scrub_checksum_super(struct scrub_block *sblock)
 	memcpy(on_disk_csum, s->csum, sdev->csum_size);
 
 	if (sblock->pagev[0].logical != le64_to_cpu(s->bytenr))
-		++fail_cor;
+		++fail;
 
 	if (sblock->pagev[0].generation != le64_to_cpu(s->generation))
-		++fail_gen;
+		++fail;
 
 	if (memcmp(s->fsid, fs_info->fsid, BTRFS_UUID_SIZE))
-		++fail_cor;
+		++fail;
 
 	len = BTRFS_SUPER_INFO_SIZE - BTRFS_CSUM_SIZE;
 	mapped_size = PAGE_SIZE - BTRFS_CSUM_SIZE;
@@ -1428,9 +1395,9 @@ static int scrub_checksum_super(struct scrub_block *sblock)
 
 	btrfs_csum_final(crc, calculated_csum);
 	if (memcmp(calculated_csum, on_disk_csum, sdev->csum_size))
-		++fail_cor;
+		++fail;
 
-	if (fail_cor + fail_gen) {
+	if (fail) {
 		/*
 		 * if we find an error in a super block, we just report it.
 		 * They will get written with the next transaction commit
@@ -1439,15 +1406,9 @@ static int scrub_checksum_super(struct scrub_block *sblock)
 		spin_lock(&sdev->stat_lock);
 		++sdev->stat.super_errors;
 		spin_unlock(&sdev->stat_lock);
-		if (fail_cor)
-			btrfs_dev_stat_inc_and_print(sdev->dev,
-				BTRFS_DEV_STAT_CORRUPTION_ERRS);
-		else
-			btrfs_dev_stat_inc_and_print(sdev->dev,
-				BTRFS_DEV_STAT_GENERATION_ERRS);
 	}
 
-	return fail_cor + fail_gen;
+	return fail;
 }
 
 static void scrub_block_get(struct scrub_block *sblock)
@@ -1591,7 +1552,7 @@ static int scrub_pages(struct scrub_dev *sdev, u64 logical, u64 len,
 			return -ENOMEM;
 		}
 		spage->sblock = sblock;
-		spage->dev = sdev->dev;
+		spage->bdev = sdev->dev->bdev;
 		spage->flags = flags;
 		spage->generation = gen;
 		spage->logical = logical;

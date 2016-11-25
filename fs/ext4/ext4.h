@@ -1215,7 +1215,6 @@ struct ext4_sb_info {
 	struct proc_dir_entry *s_proc;
 	struct kobject s_kobj;
 	struct completion s_kobj_unregister;
-	struct super_block *s_sb;
 
 	/* Journaling */
 	struct journal_s *s_journal;
@@ -1914,7 +1913,7 @@ extern void ext4_end_bitmap_read(struct buffer_head *bh, int uptodate);
 /* mballoc.c */
 extern long ext4_mb_stats;
 extern long ext4_mb_max_to_scan;
-extern int ext4_mb_init(struct super_block *);
+extern int ext4_mb_init(struct super_block *, int);
 extern int ext4_mb_release(struct super_block *);
 extern ext4_fsblk_t ext4_mb_new_blocks(handle_t *,
 				struct ext4_allocation_request *, int *);

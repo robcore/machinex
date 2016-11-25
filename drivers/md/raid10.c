@@ -165,11 +165,10 @@ out_free_pages:
 	while (j--)
 		for (i = 0; i < RESYNC_PAGES ; i++)
 			safe_put_page(r10_bio->devs[j].bio->bi_io_vec[i].bv_page);
-	j = 0;
+	j = -1;
 out_free_bio:
-	for ( ; j < nalloc; j++) {
-		if (r10_bio->devs[j].bio)
-			bio_put(r10_bio->devs[j].bio);
+	while (++j < nalloc) {
+		bio_put(r10_bio->devs[j].bio);
 		if (r10_bio->devs[j].repl_bio)
 			bio_put(r10_bio->devs[j].repl_bio);
 	}

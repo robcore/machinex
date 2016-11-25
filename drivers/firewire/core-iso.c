@@ -122,7 +122,7 @@ EXPORT_SYMBOL(fw_iso_buffer_destroy);
 /* Convert DMA address to offset into virtually contiguous buffer. */
 size_t fw_iso_buffer_lookup(struct fw_iso_buffer *buffer, dma_addr_t completed)
 {
-	size_t i;
+	int i;
 	dma_addr_t address;
 	ssize_t offset;
 

@@ -70,94 +70,6 @@ static int get_rdev_dev_by_ifindex(struct net *netns, struct nlattr **attrs,
 	return 0;
 }
 
-static struct cfg80211_registered_device *
-__cfg80211_rdev_from_attrs(struct net *netns, struct nlattr **attrs)
-{
-	struct cfg80211_registered_device *rdev = NULL, *tmp;
-	struct net_device *netdev;
-
-	assert_cfg80211_lock();
-
-	if (!attrs[NL80211_ATTR_WIPHY] &&
-	    !attrs[NL80211_ATTR_IFINDEX])
-		return ERR_PTR(-EINVAL);
-
-	if (attrs[NL80211_ATTR_WIPHY])
-		rdev = cfg80211_rdev_by_wiphy_idx(
-				nla_get_u32(attrs[NL80211_ATTR_WIPHY]));
-
-	if (attrs[NL80211_ATTR_IFINDEX]) {
-		int ifindex = nla_get_u32(attrs[NL80211_ATTR_IFINDEX]);
-		netdev = dev_get_by_index(netns, ifindex);
-		if (netdev) {
-			if (netdev->ieee80211_ptr)
-				tmp = wiphy_to_dev(
-						netdev->ieee80211_ptr->wiphy);
-			else
-				tmp = NULL;
-
-			dev_put(netdev);
-
-			/* not wireless device -- return error */
-			if (!tmp)
-				return ERR_PTR(-EINVAL);
-
-			/* mismatch -- return error */
-			if (rdev && tmp != rdev)
-				return ERR_PTR(-EINVAL);
-
-			rdev = tmp;
-		}
-	}
-
-	if (!rdev)
-		return ERR_PTR(-ENODEV);
-
-	if (netns != wiphy_net(&rdev->wiphy))
-		return ERR_PTR(-ENODEV);
-
-	return rdev;
-}
-
-/*
- * This function returns a pointer to the driver
- * that the genl_info item that is passed refers to.
- * If successful, it returns non-NULL and also locks
- * the driver's mutex!
- *
- * This means that you need to call cfg80211_unlock_rdev()
- * before being allowed to acquire &cfg80211_mutex!
- *
- * This is necessary because we need to lock the global
- * mutex to get an item off the list safely, and then
- * we lock the rdev mutex so it doesn't go away under us.
- *
- * We don't want to keep cfg80211_mutex locked
- * for all the time in order to allow requests on
- * other interfaces to go through at the same time.
- *
- * The result of this can be a PTR_ERR and hence must
- * be checked with IS_ERR() for errors.
- */
-static struct cfg80211_registered_device *
-cfg80211_get_dev_from_info(struct net *netns, struct genl_info *info)
-{
-	struct cfg80211_registered_device *rdev;
-
-	mutex_lock(&cfg80211_mutex);
-	rdev = __cfg80211_rdev_from_attrs(netns, info->attrs);
-
-	/* if it is not an error we grab the lock on
-	 * it to assure it won't be going away while
-	 * we operate on it */
-	if (!IS_ERR(rdev))
-		mutex_lock(&rdev->mtx);
-
-	mutex_unlock(&cfg80211_mutex);
-
-	return rdev;
-}
-
 /* policy for the attributes */
 static const struct nla_policy nl80211_policy[NL80211_ATTR_MAX+1] = {
 	[NL80211_ATTR_WIPHY] = { .type = NLA_U32 },
@@ -338,7 +250,7 @@ nl80211_rekey_policy[NUM_NL80211_REKEY_DATA] = {
 
 static const struct nla_policy
 nl80211_match_policy[NL80211_SCHED_SCAN_MATCH_ATTR_MAX + 1] = {
-	[NL80211_SCHED_SCAN_MATCH_ATTR_SSID] = { .type = NLA_BINARY,
+	[NL80211_ATTR_SCHED_SCAN_MATCH_SSID] = { .type = NLA_BINARY,
 						 .len = IEEE80211_MAX_SSID_LEN },
 };
 
@@ -984,12 +896,7 @@ static int nl80211_send_wiphy(struct sk_buff *msg, u32 pid, u32 seq, int flags,
 		i++;
 		NLA_PUT_U32(msg, i, NL80211_CMD_SET_WIPHY_NETNS);
 	}
-	if (dev->ops->set_channel || dev->ops->start_ap ||
-	    dev->ops->join_mesh) {
-		i++;
-		if (nla_put_u32(msg, i, NL80211_CMD_SET_CHANNEL))
-			goto nla_put_failure;
-	}
+	CMD(set_channel, SET_CHANNEL);
 	CMD(set_wds_peer, SET_WDS_PEER);
 	if (dev->wiphy.flags & WIPHY_FLAG_SUPPORTS_TDLS) {
 		CMD(tdls_mgmt, TDLS_MGMT);
@@ -1214,15 +1121,10 @@ static int parse_txq_params(struct nlattr *tb[],
 static bool nl80211_can_set_dev_channel(struct wireless_dev *wdev)
 {
 	/*
-	 * You can only set the channel explicitly for WDS interfaces,
-	 * all others have their channel managed via their respective
-	 * "establish a connection" command (connect, join, ...)
-	 *
-	 * For AP/GO and mesh mode, the channel can be set with the
-	 * channel userspace API, but is only stored and passed to the
-	 * low-level driver when the AP starts or the mesh is joined.
-	 * This is for backward compatibility, userspace can also give
-	 * the channel in the start-ap or join-mesh commands instead.
+	 * You can only set the channel explicitly for AP, mesh
+	 * and WDS type interfaces; all others have their channel
+	 * managed via their respective "establish a connection"
+	 * command (connect, join, ...)
 	 *
 	 * Monitors are special as they are normally slaved to
 	 * whatever else is going on, so they behave as though
@@ -1230,6 +1132,7 @@ static bool nl80211_can_set_dev_channel(struct wireless_dev *wdev)
 	 */
 	return !wdev ||
 		wdev->iftype == NL80211_IFTYPE_AP ||
+		wdev->iftype == NL80211_IFTYPE_WDS ||
 		wdev->iftype == NL80211_IFTYPE_MESH_POINT ||
 		wdev->iftype == NL80211_IFTYPE_MONITOR ||
 		wdev->iftype == NL80211_IFTYPE_P2P_GO;
@@ -1239,7 +1142,6 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
 				 struct wireless_dev *wdev,
 				 struct genl_info *info)
 {
-	struct ieee80211_channel *channel;
 	enum nl80211_channel_type channel_type = NL80211_CHAN_NO_HT;
 	u32 freq;
 	int result;
@@ -1263,28 +1165,7 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
 	freq = nla_get_u32(info->attrs[NL80211_ATTR_WIPHY_FREQ]);
 
 	mutex_lock(&rdev->devlist_mtx);
-	if (wdev) switch (wdev->iftype) {
-	case NL80211_IFTYPE_AP:
-	case NL80211_IFTYPE_P2P_GO:
-		if (wdev->beacon_interval) {
-			result = -EBUSY;
-			break;
-		}
-		channel = rdev_freq_to_chan(rdev, freq, channel_type);
-		if (!channel || !cfg80211_can_beacon_sec_chan(&rdev->wiphy,
-							      channel,
-							      channel_type)) {
-			result = -EINVAL;
-			break;
-		}
-		wdev->preset_chan = channel;
-		wdev->preset_chantype = channel_type;
-		result = 0;
-		break;
-	case NL80211_IFTYPE_MESH_POINT:
-		result = cfg80211_set_mesh_freq(rdev, wdev, freq, channel_type);
-		break;
-	default:
+	if (wdev) {
 		wdev_lock(wdev);
 		result = cfg80211_set_freq(rdev, wdev, freq, channel_type);
 		wdev_unlock(wdev);
@@ -1363,8 +1244,7 @@ static int nl80211_set_wiphy(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	if (!netdev) {
-		rdev = __cfg80211_rdev_from_attrs(genl_info_net(info),
-						  info->attrs);
+		rdev = __cfg80211_rdev_from_info(info);
 		if (IS_ERR(rdev)) {
 			mutex_unlock(&cfg80211_mutex);
 			return PTR_ERR(rdev);
@@ -1374,7 +1254,8 @@ static int nl80211_set_wiphy(struct sk_buff *skb, struct genl_info *info)
 		result = 0;
 
 		mutex_lock(&rdev->mtx);
-	} else if (nl80211_can_set_dev_channel(netdev->ieee80211_ptr))
+	} else if (netif_running(netdev) &&
+		   nl80211_can_set_dev_channel(netdev->ieee80211_ptr))
 		wdev = netdev->ieee80211_ptr;
 	else
 		wdev = NULL;
@@ -2261,33 +2142,6 @@ static int nl80211_parse_beacon(struct genl_info *info,
 	return 0;
 }
 
-static bool nl80211_get_ap_channel(struct cfg80211_registered_device *rdev,
-				   struct cfg80211_ap_settings *params)
-{
-	struct wireless_dev *wdev;
-	bool ret = false;
-
-	mutex_lock(&rdev->devlist_mtx);
-
-	list_for_each_entry(wdev, &rdev->netdev_list, list) {
-		if (wdev->iftype != NL80211_IFTYPE_AP &&
-		    wdev->iftype != NL80211_IFTYPE_P2P_GO)
-			continue;
-
-		if (!wdev->preset_chan)
-			continue;
-
-		params->channel = wdev->preset_chan;
-		params->channel_type = wdev->preset_chantype;
-		ret = true;
-		break;
-	}
-
-	mutex_unlock(&rdev->devlist_mtx);
-
-	return ret;
-}
-
 static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 {
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
@@ -2374,35 +2228,9 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 			info->attrs[NL80211_ATTR_INACTIVITY_TIMEOUT]);
 	}
 
-	if (info->attrs[NL80211_ATTR_WIPHY_FREQ]) {
-		enum nl80211_channel_type channel_type = NL80211_CHAN_NO_HT;
-
-		if (info->attrs[NL80211_ATTR_WIPHY_CHANNEL_TYPE] &&
-		    !nl80211_valid_channel_type(info, &channel_type))
-			return -EINVAL;
-
-		params.channel = rdev_freq_to_chan(rdev,
-			nla_get_u32(info->attrs[NL80211_ATTR_WIPHY_FREQ]),
-			channel_type);
-		if (!params.channel)
-			return -EINVAL;
-		params.channel_type = channel_type;
-	} else if (wdev->preset_chan) {
-		params.channel = wdev->preset_chan;
-		params.channel_type = wdev->preset_chantype;
-	} else if (!nl80211_get_ap_channel(rdev, &params))
-		return -EINVAL;
-
-	if (!cfg80211_can_beacon_sec_chan(&rdev->wiphy, params.channel,
-					  params.channel_type))
-		return -EINVAL;
-
 	err = rdev->ops->start_ap(&rdev->wiphy, dev, &params);
-	if (!err) {
-		wdev->preset_chan = params.channel;
-		wdev->preset_chantype = params.channel_type;
+	if (!err)
 		wdev->beacon_interval = params.beacon_interval;
-	}
 	return err;
 }
 
@@ -4290,7 +4118,7 @@ static int nl80211_start_sched_scan(struct sk_buff *skb,
 			nla_parse(tb, NL80211_SCHED_SCAN_MATCH_ATTR_MAX,
 				  nla_data(attr), nla_len(attr),
 				  nl80211_match_policy);
-			ssid = tb[NL80211_SCHED_SCAN_MATCH_ATTR_SSID];
+			ssid = tb[NL80211_ATTR_SCHED_SCAN_MATCH_SSID];
 			if (ssid) {
 				if (nla_len(ssid) > IEEE80211_MAX_SSID_LEN) {
 					err = -EINVAL;
@@ -5151,18 +4979,21 @@ static int nl80211_testmode_dump(struct sk_buff *skb,
 				  nl80211_policy);
 		if (err)
 			return err;
+		if (nl80211_fam.attrbuf[NL80211_ATTR_WIPHY]) {
+			phy_idx = nla_get_u32(
+				nl80211_fam.attrbuf[NL80211_ATTR_WIPHY]);
+		} else {
+			struct net_device *netdev;
 
-		mutex_lock(&cfg80211_mutex);
-		rdev = __cfg80211_rdev_from_attrs(sock_net(skb->sk),
-						  nl80211_fam.attrbuf);
-		if (IS_ERR(rdev)) {
-			mutex_unlock(&cfg80211_mutex);
-			return PTR_ERR(rdev);
+			err = get_rdev_dev_by_ifindex(sock_net(skb->sk),
+						      nl80211_fam.attrbuf,
+						      &rdev, &netdev);
+			if (err)
+				return err;
+			dev_put(netdev);
+			phy_idx = rdev->wiphy_idx;
+			cfg80211_unlock_rdev(rdev);
 		}
-		phy_idx = rdev->wiphy_idx;
-		rdev = NULL;
-		mutex_unlock(&cfg80211_mutex);
-
 		if (nl80211_fam.attrbuf[NL80211_ATTR_TESTDATA])
 			cb->args[1] =
 				(long)nl80211_fam.attrbuf[NL80211_ATTR_TESTDATA];
@@ -6127,24 +5958,6 @@ static int nl80211_join_mesh(struct sk_buff *skb, struct genl_info *info)
 			return err;
 	}
 
-	if (info->attrs[NL80211_ATTR_WIPHY_FREQ]) {
-		enum nl80211_channel_type channel_type = NL80211_CHAN_NO_HT;
-
-		if (info->attrs[NL80211_ATTR_WIPHY_CHANNEL_TYPE] &&
-		    !nl80211_valid_channel_type(info, &channel_type))
-			return -EINVAL;
-
-		setup.channel = rdev_freq_to_chan(rdev,
-			nla_get_u32(info->attrs[NL80211_ATTR_WIPHY_FREQ]),
-			channel_type);
-		if (!setup.channel)
-			return -EINVAL;
-		setup.channel_type = channel_type;
-	} else {
-		/* cfg80211_join_mesh() will sort it out */
-		setup.channel = NULL;
-	}
-
 	return cfg80211_join_mesh(rdev, dev, &setup, &cfg);
 }
 
@@ -6533,7 +6346,7 @@ static int nl80211_pre_doit(struct genl_ops *ops, struct sk_buff *skb,
 		rtnl_lock();
 
 	if (ops->internal_flags & NL80211_FLAG_NEED_WIPHY) {
-		rdev = cfg80211_get_dev_from_info(genl_info_net(info), info);
+		rdev = cfg80211_get_dev_from_info(info);
 		if (IS_ERR(rdev)) {
 			if (rtnl)
 				rtnl_unlock();

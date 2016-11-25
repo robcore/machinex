@@ -226,22 +226,6 @@ static inline struct thread_info *current_thread_info(void)
 		      KERNEL_STACK_OFFSET - THREAD_SIZE);
 	return ti;
 }
-static inline void clear_restore_sigmask(void)
-{
-	current_thread_info()->status &= ~TS_RESTORE_SIGMASK;
-}
-static inline bool test_restore_sigmask(void)
-{
-	return current_thread_info()->status & TS_RESTORE_SIGMASK;
-}
-static inline bool test_and_clear_restore_sigmask(void)
-{
-	struct thread_info *ti = current_thread_info();
-	if (!(ti->status & TS_RESTORE_SIGMASK))
-		return false;
-	ti->status &= ~TS_RESTORE_SIGMASK;
-	return true;
-}
 
 #else /* !__ASSEMBLY__ */
 

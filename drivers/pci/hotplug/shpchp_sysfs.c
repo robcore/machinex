@@ -73,13 +73,13 @@ static ssize_t show_ctrl (struct device *dev, struct device_attribute *attr, cha
 		}
 	}
 	out += sprintf(out, "Free resources: bus numbers\n");
-	for (busnr = bus->busn_res.start; busnr <= bus->busn_res.end; busnr++) {
+	for (busnr = bus->secondary; busnr <= bus->subordinate; busnr++) {
 		if (!pci_find_bus(pci_domain_nr(bus), busnr))
 			break;
 	}
-	if (busnr < bus->busn_res.end)
+	if (busnr < bus->subordinate)
 		out += sprintf(out, "start = %8.8x, length = %8.8x\n",
-				busnr, (int)(bus->busn_res.end - busnr));
+				busnr, (bus->subordinate - busnr));
 
 	return out - buf;
 }

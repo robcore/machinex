@@ -279,96 +279,58 @@ done:
 	return 0;
 }
 
-static int pty_common_install(struct tty_driver *driver, struct tty_struct *tty,
-		bool legacy)
+/* Traditional BSD devices */
+#ifdef CONFIG_LEGACY_PTYS
+
+static int pty_install(struct tty_driver *driver, struct tty_struct *tty)
 {
 	struct tty_struct *o_tty;
-	struct tty_port *ports[2];
 	int idx = tty->index;
-	int retval = -ENOMEM;
+	int retval;
 
 	o_tty = alloc_tty_struct();
-	ports[0] = kmalloc(sizeof **ports, GFP_KERNEL);
-	ports[1] = kmalloc(sizeof **ports, GFP_KERNEL);
-	if (!o_tty || !ports[0] || !ports[1])
-		goto err_free_tty;
+	if (!o_tty)
+		return -ENOMEM;
 	if (!try_module_get(driver->other->owner)) {
 		/* This cannot in fact currently happen */
+		retval = -ENOMEM;
 		goto err_free_tty;
 	}
 	initialize_tty_struct(o_tty, driver->other, idx);
 
-	if (legacy) {
-		/* We always use new tty termios data so we can do this
-		   the easy way .. */
-		retval = tty_init_termios(tty);
-		if (retval)
-			goto err_deinit_tty;
+	/* We always use new tty termios data so we can do this
+	   the easy way .. */
+	retval = tty_init_termios(tty);
+	if (retval)
+		goto err_deinit_tty;
 
-		retval = tty_init_termios(o_tty);
-		if (retval)
-			goto err_free_termios;
-
-		driver->other->ttys[idx] = o_tty;
-		driver->ttys[idx] = tty;
-	} else {
-		tty->termios = kzalloc(sizeof(struct ktermios[2]), GFP_KERNEL);
-		if (tty->termios == NULL)
-			goto err_deinit_tty;
-		*tty->termios = driver->init_termios;
-		tty->termios_locked = tty->termios + 1;
-
-		o_tty->termios = kzalloc(sizeof(struct ktermios[2]),
-				GFP_KERNEL);
-		if (o_tty->termios == NULL)
-			goto err_free_termios;
-		*o_tty->termios = driver->other->init_termios;
-		o_tty->termios_locked = o_tty->termios + 1;
-	}
+	retval = tty_init_termios(o_tty);
+	if (retval)
+		goto err_free_termios;
 
 	/*
 	 * Everything allocated ... set up the o_tty structure.
 	 */
+	driver->other->ttys[idx] = o_tty;
 	tty_driver_kref_get(driver->other);
 	if (driver->subtype == PTY_TYPE_MASTER)
 		o_tty->count++;
 	/* Establish the links in both directions */
 	tty->link   = o_tty;
 	o_tty->link = tty;
-	tty_port_init(ports[0]);
-	tty_port_init(ports[1]);
-	o_tty->port = ports[0];
-	tty->port = ports[1];
 
 	tty_driver_kref_get(driver);
 	tty->count++;
+	driver->ttys[idx] = tty;
 	return 0;
 err_free_termios:
-	if (legacy)
-		tty_free_termios(tty);
-	else
-		kfree(tty->termios);
+	tty_free_termios(tty);
 err_deinit_tty:
 	deinitialize_tty_struct(o_tty);
 	module_put(o_tty->driver->owner);
 err_free_tty:
-	kfree(ports[0]);
-	kfree(ports[1]);
 	free_tty_struct(o_tty);
 	return retval;
-}
-
-static void pty_cleanup(struct tty_struct *tty)
-{
-	kfree(tty->port);
-}
-
-/* Traditional BSD devices */
-#ifdef CONFIG_LEGACY_PTYS
-
-static int pty_install(struct tty_driver *driver, struct tty_struct *tty)
-{
-	return pty_common_install(driver, tty, true);
 }
 
 static int pty_bsd_ioctl(struct tty_struct *tty,
@@ -401,7 +363,6 @@ static const struct tty_operations master_pty_ops_bsd = {
 	.unthrottle = pty_unthrottle,
 	.set_termios = pty_set_termios,
 	.ioctl = pty_bsd_ioctl,
-	.cleanup = pty_cleanup,
 	.resize = pty_resize
 };
 
@@ -415,7 +376,6 @@ static const struct tty_operations slave_pty_ops_bsd = {
 	.chars_in_buffer = pty_chars_in_buffer,
 	.unthrottle = pty_unthrottle,
 	.set_termios = pty_set_termios,
-	.cleanup = pty_cleanup,
 	.resize = pty_resize
 };
 
@@ -542,17 +502,66 @@ static void pty_unix98_shutdown(struct tty_struct *tty)
 
 static int pty_unix98_install(struct tty_driver *driver, struct tty_struct *tty)
 {
-	return pty_common_install(driver, tty, false);
+	struct tty_struct *o_tty;
+	int idx = tty->index;
+
+	o_tty = alloc_tty_struct();
+	if (!o_tty)
+		return -ENOMEM;
+	if (!try_module_get(driver->other->owner)) {
+		/* This cannot in fact currently happen */
+		goto err_free_tty;
+	}
+	initialize_tty_struct(o_tty, driver->other, idx);
+
+	tty->termios = kzalloc(sizeof(struct ktermios[2]), GFP_KERNEL);
+	if (tty->termios == NULL)
+		goto err_free_mem;
+	*tty->termios = driver->init_termios;
+	tty->termios_locked = tty->termios + 1;
+
+	o_tty->termios = kzalloc(sizeof(struct ktermios[2]), GFP_KERNEL);
+	if (o_tty->termios == NULL)
+		goto err_free_mem;
+	*o_tty->termios = driver->other->init_termios;
+	o_tty->termios_locked = o_tty->termios + 1;
+
+	tty_driver_kref_get(driver->other);
+	if (driver->subtype == PTY_TYPE_MASTER)
+		o_tty->count++;
+	/* Establish the links in both directions */
+	tty->link   = o_tty;
+	o_tty->link = tty;
+	/*
+	 * All structures have been allocated, so now we install them.
+	 * Failures after this point use release_tty to clean up, so
+	 * there's no need to null out the local pointers.
+	 */
+	tty_driver_kref_get(driver);
+	tty->count++;
+	return 0;
+err_free_mem:
+	deinitialize_tty_struct(o_tty);
+	kfree(o_tty->termios);
+	kfree(tty->termios);
+	module_put(o_tty->driver->owner);
+err_free_tty:
+	free_tty_struct(o_tty);
+	return -ENOMEM;
 }
 
-static void pty_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
+static void ptm_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
+{
+}
+
+static void pts_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
 {
 }
 
 static const struct tty_operations ptm_unix98_ops = {
 	.lookup = ptm_unix98_lookup,
 	.install = pty_unix98_install,
-	.remove = pty_unix98_remove,
+	.remove = ptm_unix98_remove,
 	.open = pty_open,
 	.close = pty_close,
 	.write = pty_write,
@@ -563,14 +572,13 @@ static const struct tty_operations ptm_unix98_ops = {
 	.set_termios = pty_set_termios,
 	.ioctl = pty_unix98_ioctl,
 	.shutdown = pty_unix98_shutdown,
-	.cleanup = pty_cleanup,
 	.resize = pty_resize
 };
 
 static const struct tty_operations pty_unix98_ops = {
 	.lookup = pts_unix98_lookup,
 	.install = pty_unix98_install,
-	.remove = pty_unix98_remove,
+	.remove = pts_unix98_remove,
 	.open = pty_open,
 	.close = pty_close,
 	.write = pty_write,
@@ -579,8 +587,7 @@ static const struct tty_operations pty_unix98_ops = {
 	.chars_in_buffer = pty_chars_in_buffer,
 	.unthrottle = pty_unthrottle,
 	.set_termios = pty_set_termios,
-	.shutdown = pty_unix98_shutdown,
-	.cleanup = pty_cleanup,
+	.shutdown = pty_unix98_shutdown
 };
 
 /**

@@ -71,54 +71,6 @@
  *
  */
 
-
-/*
- * This allocator is designed for use with zcache and zram. Thus, the
- * allocator is supposed to work well under low memory conditions. In
- * particular, it never attempts higher order page allocation which is
- * very likely to fail under memory pressure. On the other hand, if we
- * just use single (0-order) pages, it would suffer from very high
- * fragmentation -- any object of size PAGE_SIZE/2 or larger would occupy
- * an entire page. This was one of the major issues with its predecessor
- * (xvmalloc).
- *
- * To overcome these issues, zsmalloc allocates a bunch of 0-order pages
- * and links them together using various 'struct page' fields. These linked
- * pages act as a single higher-order page i.e. an object can span 0-order
- * page boundaries. The code refers to these linked pages as a single entity
- * called zspage.
- *
- * Following is how we use various fields and flags of underlying
- * struct page(s) to form a zspage.
- *
- * Usage of struct page fields:
- *	page->first_page: points to the first component (0-order) page
- *	page->index (union with page->freelist): offset of the first object
- *		starting in this page. For the first page, this is
- *		always 0, so we use this field (aka freelist) to point
- *		to the first free object in zspage.
- *	page->lru: links together all component pages (except the first page)
- *		of a zspage
- *
- *	For _first_ page only:
- *
- *	page->private (union with page->first_page): refers to the
- *		component page after the first page
- *	page->freelist: points to the first free object in zspage.
- *		Free objects are linked together using in-place
- *		metadata.
- *	page->objects: maximum number of objects we can store in this
- *		zspage (class->zspage_order * PAGE_SIZE / class->size)
- *	page->lru: links together first pages of various zspages.
- *		Basically forming list of zspages in a fullness group.
- *	page->mapping: class index and fullness group of the zspage
- *
- * Usage of struct page flags:
- *	PG_private: identifies the first component page
- *	PG_private2: identifies the last component page
- *
- */
-
 #ifdef CONFIG_ZSMALLOC_DEBUG
 #define DEBUG
 #endif
@@ -619,6 +571,12 @@ static void zs_copy_unmap_object(char *buf, struct page *firstpage,
 	kunmap_atomic(addr);
 }
 
+/*
+ * If this becomes a separate module, register zs_init() with
+ * module_init(), zs_exit with module_exit(), and remove zs_initialized
+*/
+static int zs_initialized;
+
 static int zs_cpu_notifier(struct notifier_block *nb, unsigned long action,
 				void *pcpu)
 {
@@ -682,7 +640,7 @@ fail:
 
 struct zs_pool *zs_create_pool(const char *name, gfp_t flags)
 {
-	int i, ovhd_size;
+	int i, error, ovhd_size;
 	struct zs_pool *pool;
 
 	if (!name)
@@ -709,8 +667,27 @@ struct zs_pool *zs_create_pool(const char *name, gfp_t flags)
 
 	}
 
+	/*
+	 * If this becomes a separate module, register zs_init with
+	 * module_init, and remove this block
+	*/
+	if (!zs_initialized) {
+		error = zs_init();
+		if (error)
+			goto cleanup;
+		zs_initialized = 1;
+	}
+
 	pool->flags = flags;
 	pool->name = name;
+
+	error = 0; /* Success */
+
+cleanup:
+	if (error) {
+		zs_destroy_pool(pool);
+		pool = NULL;
+	}
 
 	return pool;
 }
@@ -935,9 +912,3 @@ u64 zs_get_total_size_bytes(struct zs_pool *pool)
 	return npages << PAGE_SHIFT;
 }
 EXPORT_SYMBOL_GPL(zs_get_total_size_bytes);
-
-module_init(zs_init);
-module_exit(zs_exit);
-
-MODULE_LICENSE("Dual BSD/GPL");
-MODULE_AUTHOR("Nitin Gupta <ngupta@vflare.org>");

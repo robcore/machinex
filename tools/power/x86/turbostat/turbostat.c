@@ -74,8 +74,8 @@ int backwards_count;
 char *progname;
 
 int num_cpus;
-cpu_set_t *cpu_present_set, *cpu_mask;
-size_t cpu_present_setsize, cpu_mask_size;
+cpu_set_t *cpu_mask;
+size_t cpu_mask_size;
 
 struct counters {
 	unsigned long long tsc;		/* per thread */
@@ -104,12 +104,6 @@ struct timeval tv_even;
 struct timeval tv_odd;
 struct timeval tv_delta;
 
-int mark_cpu_present(int pkg, int core, int cpu)
-{
-	CPU_SET_S(cpu, cpu_present_setsize, cpu_present_set);
-	return 0;
-}
-
 /*
  * cpu_mask_init(ncpus)
  *
@@ -125,18 +119,6 @@ void cpu_mask_init(int ncpus)
 	}
 	cpu_mask_size = CPU_ALLOC_SIZE(ncpus);
 	CPU_ZERO_S(cpu_mask_size, cpu_mask);
-
-	/*
-	 * Allocate and initialize cpu_present_set
-	 */
-	cpu_present_set = CPU_ALLOC(ncpus);
-	if (cpu_present_set == NULL) {
-		perror("CPU_ALLOC");
-		exit(3);
-	}
-	cpu_present_setsize = CPU_ALLOC_SIZE(ncpus);
-	CPU_ZERO_S(cpu_present_setsize, cpu_present_set);
-	for_all_cpus(mark_cpu_present);
 }
 
 void cpu_mask_uninit()
@@ -144,9 +126,6 @@ void cpu_mask_uninit()
 	CPU_FREE(cpu_mask);
 	cpu_mask = NULL;
 	cpu_mask_size = 0;
-	CPU_FREE(cpu_present_set);
-	cpu_present_set = NULL;
-	cpu_present_setsize = 0;
 }
 
 int cpu_migrate(int cpu)
@@ -1069,9 +1048,6 @@ int fork_it(char **argv)
 	int retval;
 	pid_t child_pid;
 	get_counters(cnt_even);
-
-        /* clear affinity side-effect of get_counters() */
-        sched_setaffinity(0, cpu_present_setsize, cpu_present_set);
 	gettimeofday(&tv_even, (struct timezone *)NULL);
 
 	child_pid = fork();

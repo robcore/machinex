@@ -15,7 +15,7 @@
 
 #ifdef CONFIG_MAC80211_VERBOSE_MHWMP_DEBUG
 #define mhwmp_dbg(fmt, args...) \
-	pr_debug("Mesh HWMP (%s): " fmt "\n", sdata->name, ##args)
+	printk(KERN_DEBUG "Mesh HWMP (%s): " fmt "\n", sdata->name, ##args)
 #else
 #define mhwmp_dbg(fmt, args...)   do { (void)(0); } while (0)
 #endif
@@ -303,7 +303,7 @@ int mesh_path_error_tx(u8 ttl, u8 *target, __le32 target_sn,
 }
 
 void ieee80211s_update_metric(struct ieee80211_local *local,
-		struct sta_info *sta, struct sk_buff *skb)
+		struct sta_info *stainfo, struct sk_buff *skb)
 {
 	struct ieee80211_tx_info *txinfo = IEEE80211_SKB_CB(skb);
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *) skb->data;
@@ -315,14 +315,15 @@ void ieee80211s_update_metric(struct ieee80211_local *local,
 	failed = !(txinfo->flags & IEEE80211_TX_STAT_ACK);
 
 	/* moving average, scaled to 100 */
-	sta->fail_avg = ((80 * sta->fail_avg + 5) / 100 + 20 * failed);
-	if (sta->fail_avg > 95)
-		mesh_plink_broken(sta);
+	stainfo->fail_avg = ((80 * stainfo->fail_avg + 5) / 100 + 20 * failed);
+	if (stainfo->fail_avg > 95)
+		mesh_plink_broken(stainfo);
 }
 
 static u32 airtime_link_metric_get(struct ieee80211_local *local,
 				   struct sta_info *sta)
 {
+	struct ieee80211_supported_band *sband;
 	struct rate_info rinfo;
 	/* This should be adjusted for each device */
 	int device_constant = 1 << ARITH_SHIFT;
@@ -331,6 +332,8 @@ static u32 airtime_link_metric_get(struct ieee80211_local *local,
 	int rate, err;
 	u32 tx_time, estimated_retx;
 	u64 result;
+
+	sband = local->hw.wiphy->bands[local->hw.conf.channel->band];
 
 	if (sta->fail_avg >= 100)
 		return MAX_METRIC;

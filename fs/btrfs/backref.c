@@ -106,7 +106,6 @@ struct __prelim_ref {
 	struct btrfs_key key_for_search;
 	int level;
 	int count;
-	struct extent_inode_elem *inode_list;
 	u64 parent;
 	u64 wanted_disk_byte;
 };
@@ -167,7 +166,6 @@ static int __add_prelim_ref(struct list_head *head, u64 root_id,
 	else
 		memset(&ref->key_for_search, 0, sizeof(ref->key_for_search));
 
-	ref->inode_list = NULL;
 	ref->level = level;
 	ref->count = count;
 	ref->parent = parent;
@@ -179,26 +177,18 @@ static int __add_prelim_ref(struct list_head *head, u64 root_id,
 
 static int add_all_parents(struct btrfs_root *root, struct btrfs_path *path,
 				struct ulist *parents, int level,
-				struct btrfs_key *key, u64 time_seq,
-				u64 wanted_disk_byte,
+				struct btrfs_key *key, u64 wanted_disk_byte,
 				const u64 *extent_item_pos)
 {
 	int ret;
-	int slot = path->slots[level];
+	int slot;
 	struct extent_buffer *eb = path->nodes[level];
 	struct btrfs_file_extent_item *fi;
-	struct extent_inode_elem *eie = NULL;
 	u64 disk_byte;
 	u64 wanted_objectid = key->objectid;
 
 add_parent:
-	if (level == 0 && extent_item_pos) {
-		fi = btrfs_item_ptr(eb, slot, struct btrfs_file_extent_item);
-		ret = check_extent_in_eb(key, eb, fi, *extent_item_pos, &eie);
-		if (ret < 0)
-			return ret;
-	}
-	ret = ulist_add(parents, eb->start, (unsigned long)eie, GFP_NOFS);
+	ret = ulist_add(parents, eb->start, 0, GFP_NOFS);
 	if (ret < 0)
 		return ret;
 
@@ -212,8 +202,7 @@ add_parent:
 	 * repeat this until we don't find any additional EXTENT_DATA items.
 	 */
 	while (1) {
-		eie = NULL;
-		ret = btrfs_next_old_leaf(root, path, time_seq);
+		ret = btrfs_next_leaf(root, path);
 		if (ret < 0)
 			return ret;
 		if (ret)
@@ -242,7 +231,6 @@ add_parent:
  */
 static int __resolve_indirect_ref(struct btrfs_fs_info *fs_info,
 					int search_commit_root,
-					u64 time_seq,
 					struct __prelim_ref *ref,
 					struct ulist *parents,
 					const u64 *extent_item_pos)
@@ -278,7 +266,7 @@ static int __resolve_indirect_ref(struct btrfs_fs_info *fs_info,
 		goto out;
 
 	path->lowest_level = level;
-	ret = btrfs_search_old_slot(root, &ref->key_for_search, path, time_seq);
+	ret = btrfs_search_slot(NULL, root, &ref->key_for_search, path, 0, 0);
 	pr_debug("search slot in root %llu (level %d, ref count %d) returned "
 		 "%d for key (%llu %u %llu)\n",
 		 (unsigned long long)ref->root_id, level, ref->count, ret,
@@ -295,10 +283,18 @@ static int __resolve_indirect_ref(struct btrfs_fs_info *fs_info,
 		goto out;
 	}
 
-	if (level == 0)
-		btrfs_item_key_to_cpu(eb, &key, path->slots[0]);
+	if (level == 0) {
+		if (ret == 1 && path->slots[0] >= btrfs_header_nritems(eb)) {
+			ret = btrfs_next_leaf(root, path);
+			if (ret)
+				goto out;
+			eb = path->nodes[0];
+		}
 
-	ret = add_all_parents(root, path, parents, level, &key, time_seq,
+		btrfs_item_key_to_cpu(eb, &key, path->slots[0]);
+	}
+
+	ret = add_all_parents(root, path, parents, level, &key,
 				ref->wanted_disk_byte, extent_item_pos);
 out:
 	btrfs_free_path(path);
@@ -309,7 +305,7 @@ out:
  * resolve all indirect backrefs from the list
  */
 static int __resolve_indirect_refs(struct btrfs_fs_info *fs_info,
-				   int search_commit_root, u64 time_seq,
+				   int search_commit_root,
 				   struct list_head *head,
 				   const u64 *extent_item_pos)
 {
@@ -337,8 +333,7 @@ static int __resolve_indirect_refs(struct btrfs_fs_info *fs_info,
 		if (ref->count == 0)
 			continue;
 		err = __resolve_indirect_ref(fs_info, search_commit_root,
-					     time_seq, ref, parents,
-					     extent_item_pos);
+					     ref, parents, extent_item_pos);
 		if (err) {
 			if (ret == 0)
 				ret = err;
@@ -349,8 +344,6 @@ static int __resolve_indirect_refs(struct btrfs_fs_info *fs_info,
 		ULIST_ITER_INIT(&uiter);
 		node = ulist_next(parents, &uiter);
 		ref->parent = node ? node->val : 0;
-		ref->inode_list =
-			node ? (struct extent_inode_elem *)node->aux : 0;
 
 		/* additional parents require new refs being added here */
 		while ((node = ulist_next(parents, &uiter))) {
@@ -361,8 +354,6 @@ static int __resolve_indirect_refs(struct btrfs_fs_info *fs_info,
 			}
 			memcpy(new_ref, ref, sizeof(*ref));
 			new_ref->parent = node->val;
-			new_ref->inode_list =
-					(struct extent_inode_elem *)node->aux;
 			list_add(&new_ref->list, &ref->list);
 		}
 		ulist_reinit(parents);
@@ -759,8 +750,7 @@ static int __add_keyed_refs(struct btrfs_fs_info *fs_info,
  */
 static int find_parent_nodes(struct btrfs_trans_handle *trans,
 			     struct btrfs_fs_info *fs_info, u64 bytenr,
-			     u64 delayed_ref_seq, u64 time_seq,
-			     struct ulist *refs, struct ulist *roots,
+			     u64 seq, struct ulist *refs, struct ulist *roots,
 			     const u64 *extent_item_pos)
 {
 	struct btrfs_key key;
@@ -823,8 +813,7 @@ again:
 				btrfs_put_delayed_ref(&head->node);
 				goto again;
 			}
-			ret = __add_delayed_refs(head, delayed_ref_seq,
-						 &prefs_delayed);
+			ret = __add_delayed_refs(head, seq, &prefs_delayed);
 			if (ret) {
 				spin_unlock(&delayed_refs->lock);
 				goto out;
@@ -865,8 +854,8 @@ again:
 	if (ret)
 		goto out;
 
-	ret = __resolve_indirect_refs(fs_info, search_commit_root, time_seq,
-				      &prefs, extent_item_pos);
+	ret = __resolve_indirect_refs(fs_info, search_commit_root, &prefs,
+				      extent_item_pos);
 	if (ret)
 		goto out;
 
@@ -886,7 +875,7 @@ again:
 		}
 		if (ref->count && ref->parent) {
 			struct extent_inode_elem *eie = NULL;
-			if (extent_item_pos && !ref->inode_list) {
+			if (extent_item_pos) {
 				u32 bsz;
 				struct extent_buffer *eb;
 				bsz = btrfs_level_size(fs_info->extent_root,
@@ -896,22 +885,10 @@ again:
 				BUG_ON(!eb);
 				ret = find_extent_in_eb(eb, bytenr,
 							*extent_item_pos, &eie);
-				ref->inode_list = eie;
 				free_extent_buffer(eb);
 			}
-			ret = ulist_add_merge(refs, ref->parent,
-					      (unsigned long)ref->inode_list,
-					      (unsigned long *)&eie, GFP_NOFS);
-			if (!ret && extent_item_pos) {
-				/*
-				 * we've recorded that parent, so we must extend
-				 * its inode list here
-				 */
-				BUG_ON(!eie);
-				while (eie->next)
-					eie = eie->next;
-				eie->next = ref->inode_list;
-			}
+			ret = ulist_add(refs, ref->parent,
+					(unsigned long)eie, GFP_NOFS);
 			BUG_ON(ret < 0);
 		}
 		kfree(ref);
@@ -968,8 +945,7 @@ static void free_leaf_list(struct ulist *blocks)
  */
 static int btrfs_find_all_leafs(struct btrfs_trans_handle *trans,
 				struct btrfs_fs_info *fs_info, u64 bytenr,
-				u64 delayed_ref_seq, u64 time_seq,
-				struct ulist **leafs,
+				u64 seq, struct ulist **leafs,
 				const u64 *extent_item_pos)
 {
 	struct ulist *tmp;
@@ -984,8 +960,8 @@ static int btrfs_find_all_leafs(struct btrfs_trans_handle *trans,
 		return -ENOMEM;
 	}
 
-	ret = find_parent_nodes(trans, fs_info, bytenr, delayed_ref_seq,
-				time_seq, *leafs, tmp, extent_item_pos);
+	ret = find_parent_nodes(trans, fs_info, bytenr, seq, *leafs, tmp,
+				extent_item_pos);
 	ulist_free(tmp);
 
 	if (ret < 0 && ret != -ENOENT) {
@@ -1011,8 +987,7 @@ static int btrfs_find_all_leafs(struct btrfs_trans_handle *trans,
  */
 int btrfs_find_all_roots(struct btrfs_trans_handle *trans,
 				struct btrfs_fs_info *fs_info, u64 bytenr,
-				u64 delayed_ref_seq, u64 time_seq,
-				struct ulist **roots)
+				u64 seq, struct ulist **roots)
 {
 	struct ulist *tmp;
 	struct ulist_node *node = NULL;
@@ -1030,8 +1005,8 @@ int btrfs_find_all_roots(struct btrfs_trans_handle *trans,
 
 	ULIST_ITER_INIT(&uiter);
 	while (1) {
-		ret = find_parent_nodes(trans, fs_info, bytenr, delayed_ref_seq,
-					time_seq, tmp, *roots, NULL);
+		ret = find_parent_nodes(trans, fs_info, bytenr, seq,
+					tmp, *roots, NULL);
 		if (ret < 0 && ret != -ENOENT) {
 			ulist_free(tmp);
 			ulist_free(*roots);
@@ -1363,8 +1338,7 @@ int iterate_extent_inodes(struct btrfs_fs_info *fs_info,
 	struct ulist *roots = NULL;
 	struct ulist_node *ref_node = NULL;
 	struct ulist_node *root_node = NULL;
-	struct seq_list seq_elem = {};
-	struct seq_list tree_mod_seq_elem = {};
+	struct seq_list seq_elem;
 	struct ulist_iterator ref_uiter;
 	struct ulist_iterator root_uiter;
 	struct btrfs_delayed_ref_root *delayed_refs = NULL;
@@ -1383,20 +1357,17 @@ int iterate_extent_inodes(struct btrfs_fs_info *fs_info,
 		spin_lock(&delayed_refs->lock);
 		btrfs_get_delayed_seq(delayed_refs, &seq_elem);
 		spin_unlock(&delayed_refs->lock);
-		btrfs_get_tree_mod_seq(fs_info, &tree_mod_seq_elem);
 	}
 
 	ret = btrfs_find_all_leafs(trans, fs_info, extent_item_objectid,
-				   seq_elem.seq, tree_mod_seq_elem.seq, &refs,
-				   &extent_item_pos);
+				   seq_elem.seq, &refs, &extent_item_pos);
 	if (ret)
 		goto out;
 
 	ULIST_ITER_INIT(&ref_uiter);
 	while (!ret && (ref_node = ulist_next(refs, &ref_uiter))) {
 		ret = btrfs_find_all_roots(trans, fs_info, ref_node->val,
-						seq_elem.seq,
-						tree_mod_seq_elem.seq, &roots);
+						seq_elem.seq, &roots);
 		if (ret)
 			break;
 		ULIST_ITER_INIT(&root_uiter);
@@ -1417,7 +1388,6 @@ int iterate_extent_inodes(struct btrfs_fs_info *fs_info,
 	ulist_free(roots);
 out:
 	if (!search_commit_root) {
-		btrfs_put_tree_mod_seq(fs_info, &tree_mod_seq_elem);
 		btrfs_put_delayed_seq(delayed_refs, &seq_elem);
 		btrfs_end_transaction(trans, fs_info->extent_root);
 	}

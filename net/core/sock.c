@@ -1481,11 +1481,6 @@ void sock_rfree(struct sk_buff *skb)
 }
 EXPORT_SYMBOL(sock_rfree);
 
-void sock_edemux(struct sk_buff *skb)
-{
-	sock_put(skb->sk);
-}
-EXPORT_SYMBOL(sock_edemux);
 
 int sock_i_uid(struct sock *sk)
 {

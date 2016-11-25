@@ -868,7 +868,7 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget,
 			/* do we need to add this widget to the list ? */
 			if (list) {
 				int err;
-				err = dapm_list_add_widget(list, path->source);
+				err = dapm_list_add_widget(list, path->sink);
 				if (err < 0) {
 					dev_err(widget->dapm->dev, "could not add widget %s\n",
 						widget->name);

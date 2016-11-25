@@ -370,8 +370,6 @@ static inline int pci_channel_offline(struct pci_dev *pdev)
 	return (pdev->error_state != pci_channel_io_normal);
 }
 
-extern struct resource busn_resource;
-
 struct pci_host_bridge_window {
 	struct list_head list;
 	struct resource *res;		/* host bridge aperture (CPU address) */
@@ -416,7 +414,6 @@ struct pci_bus {
 	struct list_head slots;		/* list of slots on this bus */
 	struct resource *resource[PCI_BRIDGE_RESOURCE_NUM];
 	struct list_head resources;	/* address space routed to this bus */
-	struct resource busn_res;	/* bus numbers routed to this bus */
 
 	struct pci_ops	*ops;		/* configuration access functions */
 	void		*sysdata;	/* hook for sys-specific extension */
@@ -424,6 +421,8 @@ struct pci_bus {
 
 	unsigned char	number;		/* bus number */
 	unsigned char	primary;	/* number of primary bridge */
+	unsigned char	secondary;	/* number of secondary bridge */
+	unsigned char	subordinate;	/* max number of subordinate buses */
 	unsigned char	max_bus_speed;	/* enum pci_bus_speed */
 	unsigned char	cur_bus_speed;	/* enum pci_bus_speed */
 
@@ -469,32 +468,6 @@ static inline bool pci_dev_msi_enabled(struct pci_dev *pci_dev) { return false; 
 #define PCIBIOS_BAD_REGISTER_NUMBER	0x87
 #define PCIBIOS_SET_FAILED		0x88
 #define PCIBIOS_BUFFER_TOO_SMALL	0x89
-
-/*
- * Translate above to generic errno for passing back through non-pci.
- */
-static inline int pcibios_err_to_errno(int err)
-{
-	if (err <= PCIBIOS_SUCCESSFUL)
-		return err; /* Assume already errno */
-
-	switch (err) {
-	case PCIBIOS_FUNC_NOT_SUPPORTED:
-		return -ENOENT;
-	case PCIBIOS_BAD_VENDOR_ID:
-		return -EINVAL;
-	case PCIBIOS_DEVICE_NOT_FOUND:
-		return -ENODEV;
-	case PCIBIOS_BAD_REGISTER_NUMBER:
-		return -EFAULT;
-	case PCIBIOS_SET_FAILED:
-		return -EIO;
-	case PCIBIOS_BUFFER_TOO_SMALL:
-		return -ENOSPC;
-	}
-
-	return -ENOTTY;
-}
 
 /* Low-level architecture-dependent routines */
 
@@ -690,9 +663,6 @@ struct pci_bus *pci_scan_bus(int bus, struct pci_ops *ops, void *sysdata);
 struct pci_bus *pci_create_root_bus(struct device *parent, int bus,
 				    struct pci_ops *ops, void *sysdata,
 				    struct list_head *resources);
-int pci_bus_insert_busn_res(struct pci_bus *b, int bus, int busmax);
-int pci_bus_update_busn_res_end(struct pci_bus *b, int busmax);
-void pci_bus_release_busn_res(struct pci_bus *b);
 struct pci_bus * __devinit pci_scan_root_bus(struct device *parent, int bus,
 					     struct pci_ops *ops, void *sysdata,
 					     struct list_head *resources);
@@ -712,7 +682,7 @@ int __must_check pci_bus_add_device(struct pci_dev *dev);
 void pci_read_bridge_bases(struct pci_bus *child);
 struct resource *pci_find_parent_resource(const struct pci_dev *dev,
 					  struct resource *res);
-u8 pci_swizzle_interrupt_pin(const struct pci_dev *dev, u8 pin);
+u8 pci_swizzle_interrupt_pin(struct pci_dev *dev, u8 pin);
 int pci_get_interrupt_pin(struct pci_dev *dev, struct pci_dev **bridge);
 u8 pci_common_swizzle(struct pci_dev *dev, u8 *pinp);
 extern struct pci_dev *pci_dev_get(struct pci_dev *dev);
@@ -739,6 +709,8 @@ enum pci_lost_interrupt_reason pci_lost_interrupt(struct pci_dev *dev);
 int pci_find_capability(struct pci_dev *dev, int cap);
 int pci_find_next_capability(struct pci_dev *dev, u8 pos, int cap);
 int pci_find_ext_capability(struct pci_dev *dev, int cap);
+int pci_bus_find_ext_capability(struct pci_bus *bus, unsigned int devfn,
+				int cap);
 int pci_find_ht_capability(struct pci_dev *dev, int ht_cap);
 int pci_find_next_ht_capability(struct pci_dev *dev, int pos, int ht_cap);
 struct pci_bus *pci_find_next_bus(const struct pci_bus *from);
@@ -799,14 +771,6 @@ static inline int pci_write_config_dword(const struct pci_dev *dev, int where,
 {
 	return pci_bus_write_config_dword(dev->bus, dev->devfn, where, val);
 }
-
-/* user-space driven config access */
-int pci_user_read_config_byte(struct pci_dev *dev, int where, u8 *val);
-int pci_user_read_config_word(struct pci_dev *dev, int where, u16 *val);
-int pci_user_read_config_dword(struct pci_dev *dev, int where, u32 *val);
-int pci_user_write_config_byte(struct pci_dev *dev, int where, u8 val);
-int pci_user_write_config_word(struct pci_dev *dev, int where, u16 val);
-int pci_user_write_config_dword(struct pci_dev *dev, int where, u32 val);
 
 int __must_check pci_enable_device(struct pci_dev *dev);
 int __must_check pci_enable_device_io(struct pci_dev *dev);
@@ -1723,8 +1687,7 @@ extern void pci_release_bus_of_node(struct pci_bus *bus);
 /* Arch may override this (weak) */
 extern struct device_node * __weak pcibios_get_phb_of_node(struct pci_bus *bus);
 
-static inline struct device_node *
-pci_device_to_OF_node(const struct pci_dev *pdev)
+static inline struct device_node *pci_device_to_OF_node(struct pci_dev *pdev)
 {
 	return pdev ? pdev->dev.of_node : NULL;
 }

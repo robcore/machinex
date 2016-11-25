@@ -40,7 +40,7 @@ enum {
 
 /*
  * ================================================================
- * Configuration default value
+ * Configration default value
  * ================================================================
  */
 #define DEFAULT_MULTICASTLISTMAX	32	/* standard */

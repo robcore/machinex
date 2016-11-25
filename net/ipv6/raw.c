@@ -327,10 +327,9 @@ static void rawv6_err(struct sock *sk, struct sk_buff *skb,
 		return;
 
 	harderr = icmpv6_err_convert(type, code, &err);
-	if (type == ICMPV6_PKT_TOOBIG) {
-		ip6_sk_update_pmtu(skb, sk, info);
+	if (type == ICMPV6_PKT_TOOBIG)
 		harderr = (np->pmtudisc == IPV6_PMTUDISC_DO);
-	}
+
 	if (np->recverr) {
 		u8 *payload = skb->data;
 		if (!inet->hdrincl)

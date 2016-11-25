@@ -109,7 +109,7 @@ unsigned char pci_bus_max_busnr(struct pci_bus* bus)
 	struct list_head *tmp;
 	unsigned char max, n;
 
-	max = bus->busn_res.end;
+	max = bus->subordinate;
 	list_for_each(tmp, &bus->children) {
 		n = pci_bus_max_busnr(pci_bus_b(tmp));
 		if(n > max)
@@ -134,6 +134,30 @@ void __iomem *pci_ioremap_bar(struct pci_dev *pdev, int bar)
 }
 EXPORT_SYMBOL_GPL(pci_ioremap_bar);
 #endif
+
+#if 0
+/**
+ * pci_max_busnr - returns maximum PCI bus number
+ *
+ * Returns the highest PCI bus number present in the system global list of
+ * PCI buses.
+ */
+unsigned char __devinit
+pci_max_busnr(void)
+{
+	struct pci_bus *bus = NULL;
+	unsigned char max, n;
+
+	max = 0;
+	while ((bus = pci_find_next_bus(bus)) != NULL) {
+		n = pci_bus_max_busnr(bus);
+		if(n > max)
+			max = n;
+	}
+	return max;
+}
+
+#endif  /*  0  */
 
 #define PCI_FIND_CAP_TTL	48
 
@@ -253,38 +277,6 @@ int pci_bus_find_capability(struct pci_bus *bus, unsigned int devfn, int cap)
 }
 
 /**
- * pci_pcie_cap2 - query for devices' PCI_CAP_ID_EXP v2 capability structure
- * @dev: PCI device to check
- *
- * Like pci_pcie_cap() but also checks that the PCIe capability version is
- * >= 2.  Note that v1 capability structures could be sparse in that not
- * all register fields were required.  v2 requires the entire structure to
- * be present size wise, while still allowing for non-implemented registers
- * to exist but they must be hardwired to 0.
- *
- * Due to the differences in the versions of capability structures, one
- * must be careful not to try and access non-existant registers that may
- * exist in early versions - v1 - of Express devices.
- *
- * Returns the offset of the PCIe capability structure as long as the
- * capability version is >= 2; otherwise 0 is returned.
- */
-static int pci_pcie_cap2(struct pci_dev *dev)
-{
-	u16 flags;
-	int pos;
-
-	pos = pci_pcie_cap(dev);
-	if (pos) {
-		pci_read_config_word(dev, pos + PCI_EXP_FLAGS, &flags);
-		if ((flags & PCI_EXP_FLAGS_VERS) < 2)
-			pos = 0;
-	}
-
-	return pos;
-}
-
-/**
  * pci_find_ext_capability - Find an extended capability
  * @dev: PCI device to query
  * @cap: capability code
@@ -335,6 +327,49 @@ int pci_find_ext_capability(struct pci_dev *dev, int cap)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(pci_find_ext_capability);
+
+/**
+ * pci_bus_find_ext_capability - find an extended capability
+ * @bus:   the PCI bus to query
+ * @devfn: PCI device to query
+ * @cap:   capability code
+ *
+ * Like pci_find_ext_capability() but works for pci devices that do not have a
+ * pci_dev structure set up yet.
+ *
+ * Returns the address of the requested capability structure within the
+ * device's PCI configuration space or 0 in case the device does not
+ * support it.
+ */
+int pci_bus_find_ext_capability(struct pci_bus *bus, unsigned int devfn,
+				int cap)
+{
+	u32 header;
+	int ttl;
+	int pos = PCI_CFG_SPACE_SIZE;
+
+	/* minimum 8 bytes per capability */
+	ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
+
+	if (!pci_bus_read_config_dword(bus, devfn, pos, &header))
+		return 0;
+	if (header == 0xffffffff || header == 0)
+		return 0;
+
+	while (ttl-- > 0) {
+		if (PCI_EXT_CAP_ID(header) == cap)
+			return pos;
+
+		pos = PCI_EXT_CAP_NEXT(header);
+		if (pos < PCI_CFG_SPACE_SIZE)
+			break;
+
+		if (!pci_bus_read_config_dword(bus, devfn, pos, &header))
+			break;
+	}
+
+	return 0;
+}
 
 static int __pci_find_next_ht_cap(struct pci_dev *dev, int pos, int ht_cap)
 {
@@ -782,6 +817,12 @@ EXPORT_SYMBOL(pci_choose_state);
 		((flags & PCI_EXP_FLAGS_VERS) > 1 ||	\
 		 (type == PCI_EXP_TYPE_ROOT_PORT ||	\
 		  type == PCI_EXP_TYPE_RC_EC))
+#define pcie_cap_has_devctl2(type, flags)		\
+		((flags & PCI_EXP_FLAGS_VERS) > 1)
+#define pcie_cap_has_lnkctl2(type, flags)		\
+		((flags & PCI_EXP_FLAGS_VERS) > 1)
+#define pcie_cap_has_sltctl2(type, flags)		\
+		((flags & PCI_EXP_FLAGS_VERS) > 1)
 
 static struct pci_cap_saved_state *pci_find_saved_cap(
 	struct pci_dev *pci_dev, char cap)
@@ -824,14 +865,13 @@ static int pci_save_pcie_state(struct pci_dev *dev)
 		pci_read_config_word(dev, pos + PCI_EXP_SLTCTL, &cap[i++]);
 	if (pcie_cap_has_rtctl(dev->pcie_type, flags))
 		pci_read_config_word(dev, pos + PCI_EXP_RTCTL, &cap[i++]);
+	if (pcie_cap_has_devctl2(dev->pcie_type, flags))
+		pci_read_config_word(dev, pos + PCI_EXP_DEVCTL2, &cap[i++]);
+	if (pcie_cap_has_lnkctl2(dev->pcie_type, flags))
+		pci_read_config_word(dev, pos + PCI_EXP_LNKCTL2, &cap[i++]);
+	if (pcie_cap_has_sltctl2(dev->pcie_type, flags))
+		pci_read_config_word(dev, pos + PCI_EXP_SLTCTL2, &cap[i++]);
 
-	pos = pci_pcie_cap2(dev);
-	if (!pos)
-		return 0;
-
-	pci_read_config_word(dev, pos + PCI_EXP_DEVCTL2, &cap[i++]);
-	pci_read_config_word(dev, pos + PCI_EXP_LNKCTL2, &cap[i++]);
-	pci_read_config_word(dev, pos + PCI_EXP_SLTCTL2, &cap[i++]);
 	return 0;
 }
 
@@ -858,14 +898,12 @@ static void pci_restore_pcie_state(struct pci_dev *dev)
 		pci_write_config_word(dev, pos + PCI_EXP_SLTCTL, cap[i++]);
 	if (pcie_cap_has_rtctl(dev->pcie_type, flags))
 		pci_write_config_word(dev, pos + PCI_EXP_RTCTL, cap[i++]);
-
-	pos = pci_pcie_cap2(dev);
-	if (!pos)
-		return;
-
-	pci_write_config_word(dev, pos + PCI_EXP_DEVCTL2, cap[i++]);
-	pci_write_config_word(dev, pos + PCI_EXP_LNKCTL2, cap[i++]);
-	pci_write_config_word(dev, pos + PCI_EXP_SLTCTL2, cap[i++]);
+	if (pcie_cap_has_devctl2(dev->pcie_type, flags))
+		pci_write_config_word(dev, pos + PCI_EXP_DEVCTL2, cap[i++]);
+	if (pcie_cap_has_lnkctl2(dev->pcie_type, flags))
+		pci_write_config_word(dev, pos + PCI_EXP_LNKCTL2, cap[i++]);
+	if (pcie_cap_has_sltctl2(dev->pcie_type, flags))
+		pci_write_config_word(dev, pos + PCI_EXP_SLTCTL2, cap[i++]);
 }
 
 
@@ -1940,19 +1978,23 @@ void pci_enable_ari(struct pci_dev *dev)
 {
 	int pos;
 	u32 cap;
-	u16 ctrl;
+	u16 flags, ctrl;
 	struct pci_dev *bridge;
 
 	if (pcie_ari_disabled || !pci_is_pcie(dev) || dev->devfn)
 		return;
 
 	bridge = dev->bus->self;
-	if (!bridge)
+	if (!bridge || !pci_is_pcie(bridge))
 		return;
 
-	/* ARI is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(bridge);
+	pos = pci_pcie_cap(bridge);
 	if (!pos)
+		return;
+
+	/* ARI is a PCIe v2 feature */
+	pci_read_config_word(bridge, pos + PCI_EXP_FLAGS, &flags);
+	if ((flags & PCI_EXP_FLAGS_VERS) < 2)
 		return;
 
 	pci_read_config_dword(bridge, pos + PCI_EXP_DEVCAP2, &cap);
@@ -1971,7 +2013,7 @@ void pci_enable_ari(struct pci_dev *dev)
 }
 
 /**
- * pci_enable_ido - enable ID-based Ordering on a device
+ * pci_enable_ido - enable ID-based ordering on a device
  * @dev: the PCI device
  * @type: which types of IDO to enable
  *
@@ -1984,8 +2026,7 @@ void pci_enable_ido(struct pci_dev *dev, unsigned long type)
 	int pos;
 	u16 ctrl;
 
-	/* ID-based Ordering is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return;
 
@@ -2008,8 +2049,10 @@ void pci_disable_ido(struct pci_dev *dev, unsigned long type)
 	int pos;
 	u16 ctrl;
 
-	/* ID-based Ordering is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	if (!pci_is_pcie(dev))
+		return;
+
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return;
 
@@ -2048,8 +2091,10 @@ int pci_enable_obff(struct pci_dev *dev, enum pci_obff_signal_type type)
 	u16 ctrl;
 	int ret;
 
-	/* OBFF is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	if (!pci_is_pcie(dev))
+		return -ENOTSUPP;
+
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return -ENOTSUPP;
 
@@ -2099,8 +2144,10 @@ void pci_disable_obff(struct pci_dev *dev)
 	int pos;
 	u16 ctrl;
 
-	/* OBFF is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	if (!pci_is_pcie(dev))
+		return;
+
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return;
 
@@ -2122,8 +2169,10 @@ bool pci_ltr_supported(struct pci_dev *dev)
 	int pos;
 	u32 cap;
 
-	/* LTR is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	if (!pci_is_pcie(dev))
+		return false;
+
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return false;
 
@@ -2152,8 +2201,7 @@ int pci_enable_ltr(struct pci_dev *dev)
 	if (!pci_ltr_supported(dev))
 		return -ENOTSUPP;
 
-	/* LTR is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return -ENOTSUPP;
 
@@ -2188,8 +2236,7 @@ void pci_disable_ltr(struct pci_dev *dev)
 	if (!pci_ltr_supported(dev))
 		return;
 
-	/* LTR is a PCIe cap v2 feature */
-	pos = pci_pcie_cap2(dev);
+	pos = pci_pcie_cap(dev);
 	if (!pos)
 		return;
 
@@ -2318,7 +2365,7 @@ void pci_enable_acs(struct pci_dev *dev)
  * number is always 0 (see the Implementation Note in section 2.2.8.1 of
  * the PCI Express Base Specification, Revision 2.1)
  */
-u8 pci_swizzle_interrupt_pin(const struct pci_dev *dev, u8 pin)
+u8 pci_swizzle_interrupt_pin(struct pci_dev *dev, u8 pin)
 {
 	int slot;
 

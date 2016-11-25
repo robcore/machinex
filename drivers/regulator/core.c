@@ -1402,7 +1402,7 @@ void devm_regulator_put(struct regulator *regulator)
 {
 	int rc;
 
-	rc = devres_release(regulator->dev, devm_regulator_release,
+	rc = devres_destroy(regulator->dev, devm_regulator_release,
 			    devm_regulator_match, regulator);
 	if (rc == 0)
 		regulator_put(regulator);
@@ -2438,7 +2438,7 @@ static void _notifier_call_chain(struct regulator_dev *rdev,
 				  unsigned long event, void *data)
 {
 	/* call rdev chain first */
-	blocking_notifier_call_chain(&rdev->notifier, event, data);
+	blocking_notifier_call_chain(&rdev->notifier, event, NULL);
 }
 
 /**

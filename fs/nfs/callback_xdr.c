@@ -698,7 +698,7 @@ static __be32 encode_cb_sequence_res(struct svc_rqst *rqstp,
 				       const struct cb_sequenceres *res)
 {
 	__be32 *p;
-	__be32 status = res->csr_status;
+	unsigned status = res->csr_status;
 
 	if (unlikely(status != 0))
 		goto out;

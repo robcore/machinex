@@ -630,7 +630,7 @@ ChipDescript* ChipHelper_GetVersionUniFi(CsrUint16 ver)
 }
 
 
-ChipDescript *ChipHelper_Null(void)
+ChipDescript* ChipHelper_Null()
 {
     return &chip_device_desc_null;
 }

@@ -211,8 +211,8 @@ static inline u8 iwl_tfd_get_num_tbs(struct iwl_tfd *tfd)
 	return tfd->num_tbs & 0x1f;
 }
 
-static void iwl_unmap_tfd(struct iwl_trans *trans, struct iwl_cmd_meta *meta,
-			  struct iwl_tfd *tfd, enum dma_data_direction dma_dir)
+static void iwlagn_unmap_tfd(struct iwl_trans *trans, struct iwl_cmd_meta *meta,
+		     struct iwl_tfd *tfd, enum dma_data_direction dma_dir)
 {
 	int i;
 	int num_tbs;
@@ -242,7 +242,7 @@ static void iwl_unmap_tfd(struct iwl_trans *trans, struct iwl_cmd_meta *meta,
 }
 
 /**
- * iwl_txq_free_tfd - Free all chunks referenced by TFD [txq->q.read_ptr]
+ * iwlagn_txq_free_tfd - Free all chunks referenced by TFD [txq->q.read_ptr]
  * @trans - transport private data
  * @txq - tx queue
  * @dma_dir - the direction of the DMA mapping
@@ -250,8 +250,8 @@ static void iwl_unmap_tfd(struct iwl_trans *trans, struct iwl_cmd_meta *meta,
  * Does NOT advance any TFD circular buffer read/write indexes
  * Does NOT free the TFD itself (which is within circular buffer)
  */
-void iwl_txq_free_tfd(struct iwl_trans *trans, struct iwl_tx_queue *txq,
-		      enum dma_data_direction dma_dir)
+void iwlagn_txq_free_tfd(struct iwl_trans *trans, struct iwl_tx_queue *txq,
+			 enum dma_data_direction dma_dir)
 {
 	struct iwl_tfd *tfd_tmp = txq->tfds;
 
@@ -262,8 +262,7 @@ void iwl_txq_free_tfd(struct iwl_trans *trans, struct iwl_tx_queue *txq,
 	lockdep_assert_held(&txq->lock);
 
 	/* We have only q->n_window txq->entries, but we use q->n_bd tfds */
-	iwl_unmap_tfd(trans, &txq->entries[idx].meta, &tfd_tmp[rd_ptr],
-		      dma_dir);
+	iwlagn_unmap_tfd(trans, &txq->meta[idx], &tfd_tmp[rd_ptr], dma_dir);
 
 	/* free SKB */
 	if (txq->skbs) {
@@ -836,9 +835,9 @@ static int iwl_enqueue_hcmd(struct iwl_trans *trans, struct iwl_host_cmd *cmd)
 					   (void *)cmddata[i],
 					   cmdlen[i], DMA_BIDIRECTIONAL);
 		if (dma_mapping_error(trans->dev, phys_addr)) {
-			iwl_unmap_tfd(trans, out_meta,
-				      &txq->tfds[q->write_ptr],
-				      DMA_BIDIRECTIONAL);
+			iwlagn_unmap_tfd(trans, out_meta,
+					 &txq->tfds[q->write_ptr],
+					 DMA_BIDIRECTIONAL);
 			idx = -ENOMEM;
 			goto out;
 		}
@@ -953,7 +952,8 @@ void iwl_tx_cmd_complete(struct iwl_trans *trans, struct iwl_rx_cmd_buffer *rxb,
 
 	txq->time_stamp = jiffies;
 
-	iwl_unmap_tfd(trans, meta, &txq->tfds[index], DMA_BIDIRECTIONAL);
+	iwlagn_unmap_tfd(trans, meta, &txq->tfds[index],
+			 DMA_BIDIRECTIONAL);
 
 	/* Input error checking is done when commands are added to queue. */
 	if (meta->flags & CMD_WANT_SKB) {
@@ -1148,7 +1148,7 @@ int iwl_tx_queue_reclaim(struct iwl_trans *trans, int txq_id, int index,
 
 		iwlagn_txq_inval_byte_cnt_tbl(trans, txq);
 
-		iwl_txq_free_tfd(trans, txq, DMA_TO_DEVICE);
+		iwlagn_txq_free_tfd(trans, txq, DMA_TO_DEVICE);
 		freed++;
 	}
 	return freed;

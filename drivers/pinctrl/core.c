@@ -57,7 +57,7 @@ static LIST_HEAD(pinctrl_maps);
 	list_for_each_entry(_maps_node_, &pinctrl_maps, node) \
 		for (_i_ = 0, _map_ = &_maps_node_->maps[_i_]; \
 			_i_ < _maps_node_->num_maps; \
-			_i_++, _map_ = &_maps_node_->maps[_i_])
+			i++, _map_ = &_maps_node_->maps[_i_])
 
 const char *pinctrl_dev_get_name(struct pinctrl_dev *pctldev)
 {

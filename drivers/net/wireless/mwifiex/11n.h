@@ -105,7 +105,8 @@ static inline u8 mwifiex_space_avail_for_new_ba_stream(
 		priv = adapter->priv[i];
 		if (priv)
 			ba_stream_num += mwifiex_wmm_list_len(
-				&priv->tx_ba_stream_tbl_ptr);
+						(struct list_head *)
+						&priv->tx_ba_stream_tbl_ptr);
 	}
 
 	return ((ba_stream_num <

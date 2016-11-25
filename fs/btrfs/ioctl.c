@@ -52,7 +52,6 @@
 #include "locking.h"
 #include "inode-map.h"
 #include "backref.h"
-#include "rcu-string.h"
 
 /* Mask out flags that are inappropriate for the given type of inode. */
 static inline __u32 btrfs_mask_flags(umode_t mode, __u32 flags)
@@ -262,7 +261,6 @@ static int btrfs_ioctl_setflags(struct file *file, void __user *arg)
 	}
 
 	btrfs_update_iflags(inode);
-	inode_inc_iversion(inode);
 	inode->i_ctime = CURRENT_TIME;
 	ret = btrfs_update_inode(trans, root, inode);
 
@@ -786,12 +784,48 @@ none:
 	return -ENOENT;
 }
 
-static struct extent_map *defrag_lookup_extent(struct inode *inode, u64 start)
+/*
+ * Validaty check of prev em and next em:
+ * 1) no prev/next em
+ * 2) prev/next em is an hole/inline extent
+ */
+static int check_adjacent_extents(struct inode *inode, struct extent_map *em)
 {
 	struct extent_map_tree *em_tree = &BTRFS_I(inode)->extent_tree;
+	struct extent_map *prev = NULL, *next = NULL;
+	int ret = 0;
+
+	read_lock(&em_tree->lock);
+	prev = lookup_extent_mapping(em_tree, em->start - 1, (u64)-1);
+	next = lookup_extent_mapping(em_tree, em->start + em->len, (u64)-1);
+	read_unlock(&em_tree->lock);
+
+	if ((!prev || prev->block_start >= EXTENT_MAP_LAST_BYTE) &&
+	    (!next || next->block_start >= EXTENT_MAP_LAST_BYTE))
+		ret = 1;
+	free_extent_map(prev);
+	free_extent_map(next);
+
+	return ret;
+}
+
+static int should_defrag_range(struct inode *inode, u64 start, u64 len,
+			       int thresh, u64 *last_len, u64 *skip,
+			       u64 *defrag_end)
+{
 	struct extent_io_tree *io_tree = &BTRFS_I(inode)->io_tree;
-	struct extent_map *em;
-	u64 len = PAGE_CACHE_SIZE;
+	struct extent_map *em = NULL;
+	struct extent_map_tree *em_tree = &BTRFS_I(inode)->extent_tree;
+	int ret = 1;
+
+	/*
+	 * make sure that once we start defragging an extent, we keep on
+	 * defragging it
+	 */
+	if (start < *defrag_end)
+		return 1;
+
+	*skip = 0;
 
 	/*
 	 * hopefully we have this extent in the tree already, try without
@@ -808,48 +842,8 @@ static struct extent_map *defrag_lookup_extent(struct inode *inode, u64 start)
 		unlock_extent(io_tree, start, start + len - 1);
 
 		if (IS_ERR(em))
-			return NULL;
+			return 0;
 	}
-
-	return em;
-}
-
-static bool defrag_check_next_extent(struct inode *inode, struct extent_map *em)
-{
-	struct extent_map *next;
-	bool ret = true;
-
-	/* this is the last extent */
-	if (em->start + em->len >= i_size_read(inode))
-		return false;
-
-	next = defrag_lookup_extent(inode, em->start + em->len);
-	if (!next || next->block_start >= EXTENT_MAP_LAST_BYTE)
-		ret = false;
-
-	free_extent_map(next);
-	return ret;
-}
-
-static int should_defrag_range(struct inode *inode, u64 start, int thresh,
-			       u64 *last_len, u64 *skip, u64 *defrag_end)
-{
-	struct extent_map *em;
-	int ret = 1;
-	bool next_mergeable = true;
-
-	/*
-	 * make sure that once we start defragging an extent, we keep on
-	 * defragging it
-	 */
-	if (start < *defrag_end)
-		return 1;
-
-	*skip = 0;
-
-	em = defrag_lookup_extent(inode, start);
-	if (!em)
-		return 0;
 
 	/* this will cover holes, and inline extents */
 	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
@@ -857,15 +851,18 @@ static int should_defrag_range(struct inode *inode, u64 start, int thresh,
 		goto out;
 	}
 
-	next_mergeable = defrag_check_next_extent(inode, em);
+	/* If we have nothing to merge with us, just skip. */
+	if (check_adjacent_extents(inode, em)) {
+		ret = 0;
+		goto out;
+	}
 
 	/*
-	 * we hit a real extent, if it is big or the next extent is not a
-	 * real extent, don't bother defragging it
+	 * we hit a real extent, if it is big don't bother defragging it again
 	 */
-	if ((*last_len == 0 || *last_len >= thresh) &&
-	    (em->len >= thresh || !next_mergeable))
+	if ((*last_len == 0 || *last_len >= thresh) && em->len >= thresh)
 		ret = 0;
+
 out:
 	/*
 	 * last_len ends up being a counter of how many bytes we've defragged.
@@ -1144,8 +1141,8 @@ int btrfs_defrag_file(struct inode *inode, struct file *file,
 			break;
 
 		if (!should_defrag_range(inode, (u64)i << PAGE_CACHE_SHIFT,
-					 extent_thresh, &last_len, &skip,
-					 &defrag_end)) {
+					 PAGE_CACHE_SIZE, extent_thresh,
+					 &last_len, &skip, &defrag_end)) {
 			unsigned long next;
 			/*
 			 * the should_defrag function tells us how much to skip
@@ -1306,14 +1303,6 @@ static noinline int btrfs_ioctl_resize(struct btrfs_root *root,
 		ret = -EINVAL;
 		goto out_free;
 	}
-	if (device->fs_devices && device->fs_devices->seeding) {
-		printk(KERN_INFO "btrfs: resizer unable to apply on "
-		       "seeding device %llu\n",
-		       (unsigned long long)devid);
-		ret = -EINVAL;
-		goto out_free;
-	}
-
 	if (!strcmp(sizestr, "max"))
 		new_size = device->bdev->bd_inode->i_size;
 	else {
@@ -1355,9 +1344,8 @@ static noinline int btrfs_ioctl_resize(struct btrfs_root *root,
 	do_div(new_size, root->sectorsize);
 	new_size *= root->sectorsize;
 
-	printk_in_rcu(KERN_INFO "btrfs: new size for %s is %llu\n",
-		      rcu_str_deref(device->name),
-		      (unsigned long long)new_size);
+	printk(KERN_INFO "btrfs: new size for %s is %llu\n",
+		device->name, (unsigned long long)new_size);
 
 	if (new_size > old_size) {
 		trans = btrfs_start_transaction(root, 0);
@@ -2274,17 +2262,10 @@ static long btrfs_ioctl_dev_info(struct btrfs_root *root, void __user *arg)
 	di_args->bytes_used = dev->bytes_used;
 	di_args->total_bytes = dev->total_bytes;
 	memcpy(di_args->uuid, dev->uuid, sizeof(di_args->uuid));
-	if (dev->name) {
-		struct rcu_string *name;
-
-		rcu_read_lock();
-		name = rcu_dereference(dev->name);
-		strncpy(di_args->path, name->str, sizeof(di_args->path));
-		rcu_read_unlock();
-		di_args->path[sizeof(di_args->path) - 1] = 0;
-	} else {
+	if (dev->name)
+		strncpy(di_args->path, dev->name, sizeof(di_args->path));
+	else
 		di_args->path[0] = '\0';
-	}
 
 out:
 	if (ret == 0 && copy_to_user(arg, di_args, sizeof(*di_args)))
@@ -2646,7 +2627,6 @@ static noinline long btrfs_ioctl_clone(struct file *file, unsigned long srcfd,
 			btrfs_mark_buffer_dirty(leaf);
 			btrfs_release_path(path);
 
-			inode_inc_iversion(inode);
 			inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 
 			/*
@@ -2939,7 +2919,7 @@ long btrfs_ioctl_space_info(struct btrfs_root *root, void __user *arg)
 		up_read(&info->groups_sem);
 	}
 
-	user_dest = (struct btrfs_ioctl_space_info __user *)
+	user_dest = (struct btrfs_ioctl_space_info *)
 		(arg + sizeof(struct btrfs_ioctl_space_args));
 
 	if (copy_to_user(user_dest, dest_orig, alloc_size))
@@ -3059,28 +3039,6 @@ static long btrfs_ioctl_scrub_progress(struct btrfs_root *root,
 		return PTR_ERR(sa);
 
 	ret = btrfs_scrub_progress(root, sa->devid, &sa->progress);
-
-	if (copy_to_user(arg, sa, sizeof(*sa)))
-		ret = -EFAULT;
-
-	kfree(sa);
-	return ret;
-}
-
-static long btrfs_ioctl_get_dev_stats(struct btrfs_root *root,
-				      void __user *arg, int reset_after_read)
-{
-	struct btrfs_ioctl_get_dev_stats *sa;
-	int ret;
-
-	if (reset_after_read && !capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
-	sa = memdup_user(arg, sizeof(*sa));
-	if (IS_ERR(sa))
-		return PTR_ERR(sa);
-
-	ret = btrfs_get_dev_stats(root, sa, reset_after_read);
 
 	if (copy_to_user(arg, sa, sizeof(*sa)))
 		ret = -EFAULT;
@@ -3259,9 +3217,8 @@ void update_ioctl_balance_args(struct btrfs_fs_info *fs_info, int lock,
 	}
 }
 
-static long btrfs_ioctl_balance(struct file *file, void __user *arg)
+static long btrfs_ioctl_balance(struct btrfs_root *root, void __user *arg)
 {
-	struct btrfs_root *root = BTRFS_I(fdentry(file)->d_inode)->root;
 	struct btrfs_fs_info *fs_info = root->fs_info;
 	struct btrfs_ioctl_balance_args *bargs;
 	struct btrfs_balance_control *bctl;
@@ -3272,10 +3229,6 @@ static long btrfs_ioctl_balance(struct file *file, void __user *arg)
 
 	if (fs_info->sb->s_flags & MS_RDONLY)
 		return -EROFS;
-
-	ret = mnt_want_write(file->f_path.mnt);
-	if (ret)
-		return ret;
 
 	mutex_lock(&fs_info->volume_mutex);
 	mutex_lock(&fs_info->balance_mutex);
@@ -3343,7 +3296,6 @@ out_bargs:
 out:
 	mutex_unlock(&fs_info->balance_mutex);
 	mutex_unlock(&fs_info->volume_mutex);
-	mnt_drop_write(file->f_path.mnt);
 	return ret;
 }
 
@@ -3439,7 +3391,7 @@ long btrfs_ioctl(struct file *file, unsigned int
 	case BTRFS_IOC_DEV_INFO:
 		return btrfs_ioctl_dev_info(root, argp);
 	case BTRFS_IOC_BALANCE:
-		return btrfs_ioctl_balance(file, NULL);
+		return btrfs_ioctl_balance(root, NULL);
 	case BTRFS_IOC_CLONE:
 		return btrfs_ioctl_clone(file, arg, 0, 0, 0);
 	case BTRFS_IOC_CLONE_RANGE:
@@ -3472,15 +3424,11 @@ long btrfs_ioctl(struct file *file, unsigned int
 	case BTRFS_IOC_SCRUB_PROGRESS:
 		return btrfs_ioctl_scrub_progress(root, argp);
 	case BTRFS_IOC_BALANCE_V2:
-		return btrfs_ioctl_balance(file, argp);
+		return btrfs_ioctl_balance(root, argp);
 	case BTRFS_IOC_BALANCE_CTL:
 		return btrfs_ioctl_balance_ctl(root, arg);
 	case BTRFS_IOC_BALANCE_PROGRESS:
 		return btrfs_ioctl_balance_progress(root, argp);
-	case BTRFS_IOC_GET_DEV_STATS:
-		return btrfs_ioctl_get_dev_stats(root, argp, 0);
-	case BTRFS_IOC_GET_AND_RESET_DEV_STATS:
-		return btrfs_ioctl_get_dev_stats(root, argp, 1);
 	}
 
 	return -ENOTTY;

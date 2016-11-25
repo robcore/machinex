@@ -419,8 +419,6 @@ static void tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 		} else
 			dst_hold(dst);
 
-		dst->ops->update_pmtu(dst, ntohl(info));
-
 		if (inet_csk(sk)->icsk_pmtu_cookie > dst_mtu(dst)) {
 			tcp_sync_mss(sk, dst_mtu(dst));
 			tcp_simple_retransmit(sk);
@@ -482,8 +480,7 @@ out:
 
 
 static int tcp_v6_send_synack(struct sock *sk, struct request_sock *req,
-			      struct request_values *rvp,
-			      u16 queue_mapping)
+			      struct request_values *rvp)
 {
 	struct inet6_request_sock *treq = inet6_rsk(req);
 	struct ipv6_pinfo *np = inet6_sk(sk);
@@ -521,7 +518,6 @@ static int tcp_v6_send_synack(struct sock *sk, struct request_sock *req,
 		__tcp_v6_send_check(skb, &treq->loc_addr, &treq->rmt_addr);
 
 		fl6.daddr = treq->rmt_addr;
-		skb_set_queue_mapping(skb, queue_mapping);
 		err = ip6_xmit(sk, skb, &fl6, rcu_dereference(np->opt),
 			       np->tclass);
 		err = net_xmit_eval(err);
@@ -530,6 +526,7 @@ static int tcp_v6_send_synack(struct sock *sk, struct request_sock *req,
 done:
 	if (opt && opt != np->opt)
 		sock_kfree_s(sk, opt, opt->tot_len);
+	dst_release(dst);
 	return err;
 }
 
@@ -537,7 +534,7 @@ static int tcp_v6_rtx_synack(struct sock *sk, struct request_sock *req,
 			     struct request_values *rvp)
 {
 	TCP_INC_STATS_BH(sock_net(sk), TCP_MIB_RETRANSSEGS);
-	return tcp_v6_send_synack(sk, req, rvp, 0);
+	return tcp_v6_send_synack(sk, req, rvp);
 }
 
 static void tcp_v6_reqsk_destructor(struct request_sock *req)
@@ -1227,8 +1224,7 @@ have_isn:
 	security_inet_conn_request(sk, skb, req);
 
 	if (tcp_v6_send_synack(sk, req,
-			       (struct request_values *)&tmp_ext,
-			       skb_get_queue_mapping(skb)) ||
+			       (struct request_values *)&tmp_ext) ||
 	    want_cookie)
 		goto drop_and_free;
 

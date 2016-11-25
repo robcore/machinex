@@ -76,6 +76,8 @@
 #include "iwl-eeprom.h"
 #include "iwl-agn-hw.h"
 
+#define IWL_MASK(lo, hi) ((1 << (hi)) | ((1 << (hi)) - (1 << (lo))))
+
 #define SCD_QUEUECHAIN_SEL_ALL(trans, trans_pcie)	\
 	(((1<<cfg(trans)->base_params->num_of_queues) - 1) &\
 	(~(1<<(trans_pcie)->cmd_queue)))
@@ -428,7 +430,7 @@ static void iwl_tx_queue_unmap(struct iwl_trans *trans, int txq_id)
 
 	spin_lock_bh(&txq->lock);
 	while (q->write_ptr != q->read_ptr) {
-		iwl_txq_free_tfd(trans, txq, dma_dir);
+		iwlagn_txq_free_tfd(trans, txq, dma_dir);
 		q->read_ptr = iwl_queue_inc_wrap(q->read_ptr, q->n_bd);
 	}
 	spin_unlock_bh(&txq->lock);
@@ -1477,7 +1479,7 @@ static int iwl_trans_pcie_tx(struct iwl_trans *trans, struct sk_buff *skb,
 			DMA_BIDIRECTIONAL);
 
 	trace_iwlwifi_dev_tx(trans->dev,
-			     &txq->tfds[txq->q.write_ptr],
+			     &((struct iwl_tfd *)txq->tfds)[txq->q.write_ptr],
 			     sizeof(struct iwl_tfd),
 			     &dev_cmd->hdr, firstlen,
 			     skb->data + hdr_len, secondlen);

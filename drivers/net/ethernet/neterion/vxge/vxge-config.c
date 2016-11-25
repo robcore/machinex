@@ -2346,7 +2346,7 @@ void __vxge_hw_blockpool_blocks_add(struct __vxge_hw_blockpool *blockpool)
 
 	for (i = 0; i < nreq; i++)
 		vxge_os_dma_malloc_async(
-			(blockpool->hldev)->pdev,
+			((struct __vxge_hw_device *)blockpool->hldev)->pdev,
 			blockpool->hldev, VXGE_HW_BLOCK_SIZE);
 }
 
@@ -2428,13 +2428,13 @@ __vxge_hw_blockpool_blocks_remove(struct __vxge_hw_blockpool *blockpool)
 			break;
 
 		pci_unmap_single(
-			(blockpool->hldev)->pdev,
+			((struct __vxge_hw_device *)blockpool->hldev)->pdev,
 			((struct __vxge_hw_blockpool_entry *)p)->dma_addr,
 			((struct __vxge_hw_blockpool_entry *)p)->length,
 			PCI_DMA_BIDIRECTIONAL);
 
 		vxge_os_dma_free(
-			(blockpool->hldev)->pdev,
+			((struct __vxge_hw_device *)blockpool->hldev)->pdev,
 			((struct __vxge_hw_blockpool_entry *)p)->memblock,
 			&((struct __vxge_hw_blockpool_entry *)p)->acc_handle);
 
@@ -4059,7 +4059,7 @@ __vxge_hw_vpath_sw_reset(struct __vxge_hw_device *hldev, u32 vp_id)
 	enum vxge_hw_status status = VXGE_HW_OK;
 	struct __vxge_hw_virtualpath *vpath;
 
-	vpath = &hldev->virtual_paths[vp_id];
+	vpath = (struct __vxge_hw_virtualpath *)&hldev->virtual_paths[vp_id];
 
 	if (vpath->ringh) {
 		status = __vxge_hw_ring_reset(vpath->ringh);

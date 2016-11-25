@@ -44,7 +44,6 @@
 #include "free-space-cache.h"
 #include "inode-map.h"
 #include "check-integrity.h"
-#include "rcu-string.h"
 
 static struct extent_io_ops btree_extent_io_ops;
 static void end_workqueue_fn(struct btrfs_work *work);
@@ -1154,6 +1153,7 @@ static void __setup_root(u32 nodesize, u32 leafsize, u32 sectorsize,
 	root->orphan_block_rsv = NULL;
 
 	INIT_LIST_HEAD(&root->dirty_list);
+	INIT_LIST_HEAD(&root->orphan_list);
 	INIT_LIST_HEAD(&root->root_list);
 	spin_lock_init(&root->orphan_lock);
 	spin_lock_init(&root->inode_lock);
@@ -1166,7 +1166,6 @@ static void __setup_root(u32 nodesize, u32 leafsize, u32 sectorsize,
 	atomic_set(&root->log_commit[0], 0);
 	atomic_set(&root->log_commit[1], 0);
 	atomic_set(&root->log_writers, 0);
-	atomic_set(&root->orphan_inodes, 0);
 	root->log_batch = 0;
 	root->log_transid = 0;
 	root->last_log_commit = 0;
@@ -2007,8 +2006,7 @@ int open_ctree(struct super_block *sb,
 	BTRFS_I(fs_info->btree_inode)->root = tree_root;
 	memset(&BTRFS_I(fs_info->btree_inode)->location, 0,
 	       sizeof(struct btrfs_key));
-	set_bit(BTRFS_INODE_DUMMY,
-		&BTRFS_I(fs_info->btree_inode)->runtime_flags);
+	BTRFS_I(fs_info->btree_inode)->dummy_inode = 1;
 	insert_inode_hash(fs_info->btree_inode);
 
 	spin_lock_init(&fs_info->block_group_cache_lock);
@@ -2119,7 +2117,7 @@ int open_ctree(struct super_block *sb,
 
 	features = btrfs_super_incompat_flags(disk_super);
 	features |= BTRFS_FEATURE_INCOMPAT_MIXED_BACKREF;
-	if (tree_root->fs_info->compress_type == BTRFS_COMPRESS_LZO)
+	if (tree_root->fs_info->compress_type & BTRFS_COMPRESS_LZO)
 		features |= BTRFS_FEATURE_INCOMPAT_COMPRESS_LZO;
 
 	/*
@@ -2360,13 +2358,6 @@ retry_root_backup:
 	fs_info->generation = generation;
 	fs_info->last_trans_committed = generation;
 
-	ret = btrfs_init_dev_stats(fs_info);
-	if (ret) {
-		printk(KERN_ERR "btrfs: failed to init dev_stats: %d\n",
-		       ret);
-		goto fail_block_groups;
-	}
-
 	ret = btrfs_init_space_info(fs_info);
 	if (ret) {
 		printk(KERN_ERR "Failed to initial space info: %d\n", ret);
@@ -2570,20 +2561,18 @@ recovery_tree_root:
 
 static void btrfs_end_buffer_write_sync(struct buffer_head *bh, int uptodate)
 {
+	char b[BDEVNAME_SIZE];
+
 	if (uptodate) {
 		set_buffer_uptodate(bh);
 	} else {
-		struct btrfs_device *device = (struct btrfs_device *)
-			bh->b_private;
-
-		printk_ratelimited_in_rcu(KERN_WARNING "lost page write due to "
-					  "I/O error on %s\n",
-					  rcu_str_deref(device->name));
+		printk_ratelimited(KERN_WARNING "lost page write due to "
+					"I/O error on %s\n",
+				       bdevname(bh->b_bdev, b));
 		/* note, we dont' set_buffer_write_io_error because we have
 		 * our own ways of dealing with the IO errors
 		 */
 		clear_buffer_uptodate(bh);
-		btrfs_dev_stat_inc_and_print(device, BTRFS_DEV_STAT_WRITE_ERRS);
 	}
 	unlock_buffer(bh);
 	put_bh(bh);
@@ -2698,7 +2687,6 @@ static int write_dev_supers(struct btrfs_device *device,
 			set_buffer_uptodate(bh);
 			lock_buffer(bh);
 			bh->b_end_io = btrfs_end_buffer_write_sync;
-			bh->b_private = device;
 		}
 
 		/*
@@ -2751,15 +2739,12 @@ static int write_dev_flush(struct btrfs_device *device, int wait)
 		wait_for_completion(&device->flush_wait);
 
 		if (bio_flagged(bio, BIO_EOPNOTSUPP)) {
-			printk_in_rcu("btrfs: disabling barriers on dev %s\n",
-				      rcu_str_deref(device->name));
+			printk("btrfs: disabling barriers on dev %s\n",
+			       device->name);
 			device->nobarriers = 1;
 		}
 		if (!bio_flagged(bio, BIO_UPTODATE)) {
 			ret = -EIO;
-			if (!bio_flagged(bio, BIO_EOPNOTSUPP))
-				btrfs_dev_stat_inc_and_print(device,
-					BTRFS_DEV_STAT_FLUSH_ERRS);
 		}
 
 		/* drop the reference from the wait == 0 run */
@@ -3402,6 +3387,7 @@ int btrfs_destroy_delayed_refs(struct btrfs_transaction *trans,
 
 	delayed_refs = &trans->delayed_refs;
 
+again:
 	spin_lock(&delayed_refs->lock);
 	if (delayed_refs->num_entries == 0) {
 		spin_unlock(&delayed_refs->lock);
@@ -3409,36 +3395,31 @@ int btrfs_destroy_delayed_refs(struct btrfs_transaction *trans,
 		return ret;
 	}
 
-	while ((node = rb_first(&delayed_refs->root)) != NULL) {
+	node = rb_first(&delayed_refs->root);
+	while (node) {
 		ref = rb_entry(node, struct btrfs_delayed_ref_node, rb_node);
+		node = rb_next(node);
+
+		ref->in_tree = 0;
+		rb_erase(&ref->rb_node, &delayed_refs->root);
+		delayed_refs->num_entries--;
 
 		atomic_set(&ref->refs, 1);
 		if (btrfs_delayed_ref_is_head(ref)) {
 			struct btrfs_delayed_ref_head *head;
 
 			head = btrfs_delayed_node_to_head(ref);
-			if (!mutex_trylock(&head->mutex)) {
-				atomic_inc(&ref->refs);
-				spin_unlock(&delayed_refs->lock);
-
-				/* Need to wait for the delayed ref to run */
-				mutex_lock(&head->mutex);
-				mutex_unlock(&head->mutex);
-				btrfs_put_delayed_ref(ref);
-
-				continue;
-			}
-
+			spin_unlock(&delayed_refs->lock);
+			mutex_lock(&head->mutex);
 			kfree(head->extent_op);
 			delayed_refs->num_heads--;
 			if (list_empty(&head->cluster))
 				delayed_refs->num_heads_ready--;
 			list_del_init(&head->cluster);
+			mutex_unlock(&head->mutex);
+			btrfs_put_delayed_ref(ref);
+			goto again;
 		}
-		ref->in_tree = 0;
-		rb_erase(&ref->rb_node, &delayed_refs->root);
-		delayed_refs->num_entries--;
-
 		spin_unlock(&delayed_refs->lock);
 		btrfs_put_delayed_ref(ref);
 
@@ -3526,9 +3507,11 @@ static int btrfs_destroy_marked_extents(struct btrfs_root *root,
 			     &(&BTRFS_I(page->mapping->host)->io_tree)->buffer,
 					       offset >> PAGE_CACHE_SHIFT);
 			spin_unlock(&dirty_pages->buffer_lock);
-			if (eb)
+			if (eb) {
 				ret = test_and_clear_bit(EXTENT_BUFFER_DIRTY,
 							 &eb->bflags);
+				atomic_set(&eb->refs, 1);
+			}
 			if (PageWriteback(page))
 				end_page_writeback(page);
 
@@ -3542,8 +3525,8 @@ static int btrfs_destroy_marked_extents(struct btrfs_root *root,
 				spin_unlock_irq(&page->mapping->tree_lock);
 			}
 
+			page->mapping->a_ops->invalidatepage(page, 0);
 			unlock_page(page);
-			page_cache_release(page);
 		}
 	}
 
@@ -3557,10 +3540,8 @@ static int btrfs_destroy_pinned_extent(struct btrfs_root *root,
 	u64 start;
 	u64 end;
 	int ret;
-	bool loop = true;
 
 	unpin = pinned_extents;
-again:
 	while (1) {
 		ret = find_first_extent_bit(unpin, 0, &start, &end,
 					    EXTENT_DIRTY);
@@ -3570,15 +3551,6 @@ again:
 		clear_extent_dirty(unpin, start, end, GFP_NOFS);
 		btrfs_error_unpin_extent_range(root, start, end);
 		cond_resched();
-	}
-
-	if (loop) {
-		if (unpin == &root->fs_info->freed_extents[0])
-			unpin = &root->fs_info->freed_extents[1];
-		else
-			unpin = &root->fs_info->freed_extents[0];
-		loop = false;
-		goto again;
 	}
 
 	return 0;
@@ -3594,23 +3566,21 @@ void btrfs_cleanup_one_transaction(struct btrfs_transaction *cur_trans,
 	/* FIXME: cleanup wait for commit */
 	cur_trans->in_commit = 1;
 	cur_trans->blocked = 1;
-	wake_up(&root->fs_info->transaction_blocked_wait);
+	if (waitqueue_active(&root->fs_info->transaction_blocked_wait))
+		wake_up(&root->fs_info->transaction_blocked_wait);
 
 	cur_trans->blocked = 0;
-	wake_up(&root->fs_info->transaction_wait);
+	if (waitqueue_active(&root->fs_info->transaction_wait))
+		wake_up(&root->fs_info->transaction_wait);
 
 	cur_trans->commit_done = 1;
-	wake_up(&cur_trans->commit_wait);
-
-	btrfs_destroy_delayed_inodes(root);
-	btrfs_assert_delayed_root_empty(root);
+	if (waitqueue_active(&cur_trans->commit_wait))
+		wake_up(&cur_trans->commit_wait);
 
 	btrfs_destroy_pending_snapshots(cur_trans);
 
 	btrfs_destroy_marked_extents(root, &cur_trans->dirty_pages,
 				     EXTENT_DIRTY);
-	btrfs_destroy_pinned_extent(root,
-				    root->fs_info->pinned_extents);
 
 	/*
 	memset(cur_trans, 0, sizeof(*cur_trans));
@@ -3659,9 +3629,6 @@ int btrfs_cleanup_transaction(struct btrfs_root *root)
 		if (waitqueue_active(&t->commit_wait))
 			wake_up(&t->commit_wait);
 
-		btrfs_destroy_delayed_inodes(root);
-		btrfs_assert_delayed_root_empty(root);
-
 		btrfs_destroy_pending_snapshots(t);
 
 		btrfs_destroy_delalloc_inodes(root);
@@ -3690,6 +3657,17 @@ int btrfs_cleanup_transaction(struct btrfs_root *root)
 	return 0;
 }
 
+static int btree_writepage_io_failed_hook(struct bio *bio, struct page *page,
+					  u64 start, u64 end,
+					  struct extent_state *state)
+{
+	struct super_block *sb = page->mapping->host->i_sb;
+	struct btrfs_fs_info *fs_info = btrfs_sb(sb);
+	btrfs_error(fs_info, -EIO,
+		    "Error occured while writing out btree at %llu", start);
+	return -EIO;
+}
+
 static struct extent_io_ops btree_extent_io_ops = {
 	.write_cache_pages_lock_hook = btree_lock_page_hook,
 	.readpage_end_io_hook = btree_readpage_end_io_hook,
@@ -3697,4 +3675,5 @@ static struct extent_io_ops btree_extent_io_ops = {
 	.submit_bio_hook = btree_submit_bio_hook,
 	/* note we're sharing with inode.c for the merge bio hook */
 	.merge_bio_hook = btrfs_merge_bio_hook,
+	.writepage_io_failed_hook = btree_writepage_io_failed_hook,
 };

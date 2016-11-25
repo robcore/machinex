@@ -127,7 +127,8 @@ static void sh_mipi_shutdown(struct platform_device *pdev)
 	sh_mipi_dsi_enable(mipi, false);
 }
 
-static int sh_mipi_setup(struct sh_mipi *mipi, struct sh_mipi_dsi_info *pdata)
+static int __init sh_mipi_setup(struct sh_mipi *mipi,
+				struct sh_mipi_dsi_info *pdata)
 {
 	void __iomem *base = mipi->base;
 	struct sh_mobile_lcdc_chan_cfg *ch = pdata->lcd_chan;
@@ -550,7 +551,7 @@ efindslot:
 	return ret;
 }
 
-static int __devexit sh_mipi_remove(struct platform_device *pdev)
+static int __exit sh_mipi_remove(struct platform_device *pdev)
 {
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct resource *res2 = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -591,7 +592,7 @@ static int __devexit sh_mipi_remove(struct platform_device *pdev)
 }
 
 static struct platform_driver sh_mipi_driver = {
-	.remove		= __devexit_p(sh_mipi_remove),
+	.remove		= __exit_p(sh_mipi_remove),
 	.shutdown	= sh_mipi_shutdown,
 	.driver = {
 		.name	= "sh-mipi-dsi",

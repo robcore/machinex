@@ -683,7 +683,6 @@ static void nfs_direct_write_release(void *calldata)
 					dreq->flags = NFS_ODIRECT_RESCHED_WRITES;
 				}
 		}
-		nfs_release_request(req);
 	}
 out_unlock:
 	spin_unlock(&dreq->lock);

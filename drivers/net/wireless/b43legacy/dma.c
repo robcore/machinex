@@ -52,7 +52,7 @@ struct b43legacy_dmadesc32 *op32_idx2desc(struct b43legacy_dmaring *ring,
 	desc = ring->descbase;
 	desc = &(desc[slot]);
 
-	return desc;
+	return (struct b43legacy_dmadesc32 *)desc;
 }
 
 static void op32_fill_descriptor(struct b43legacy_dmaring *ring,

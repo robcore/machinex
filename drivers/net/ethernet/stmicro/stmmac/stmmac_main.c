@@ -42,7 +42,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/prefetch.h>
-#include <linux/pci.h>
 #ifdef CONFIG_STMMAC_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -638,7 +637,7 @@ static void stmmac_tx(struct stmmac_priv *priv)
 
 		priv->hw->desc->release_tx_desc(p);
 
-		priv->dirty_tx++;
+		entry = (++priv->dirty_tx) % txsize;
 	}
 	if (unlikely(netif_queue_stopped(priv->dev) &&
 		     stmmac_tx_avail(priv) > STMMAC_TX_THRESH(priv))) {
@@ -794,9 +793,8 @@ static u32 stmmac_get_synopsys_id(struct stmmac_priv *priv)
 
 /**
  * stmmac_selec_desc_mode
- * @priv : private structure
- * Description: select the Enhanced/Alternate or Normal descriptors
- */
+ * @dev : device pointer
+ * Description: select the Enhanced/Alternate or Normal descriptors */
 static void stmmac_selec_desc_mode(struct stmmac_priv *priv)
 {
 	if (priv->plat->enh_desc) {
@@ -1257,6 +1255,7 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 		display_ring(priv->dma_rx, rxsize);
 	}
 #endif
+	count = 0;
 	while (!priv->hw->desc->get_rx_owner(p)) {
 		int status;
 
@@ -1792,8 +1791,6 @@ static int stmmac_hw_init(struct stmmac_priv *priv)
 /**
  * stmmac_dvr_probe
  * @device: device pointer
- * @plat_dat: platform data pointer
- * @addr: iobase memory address
  * Description: this is the main probe function used to
  * call the alloc_etherdev, allocate the priv structure.
  */
@@ -1992,30 +1989,6 @@ int stmmac_restore(struct net_device *ndev)
 	return stmmac_open(ndev);
 }
 #endif /* CONFIG_PM */
-
-static int __init stmmac_init(void)
-{
-	int err = 0;
-
-	err = platform_driver_register(&stmmac_pltfr_driver);
-
-	if (!err) {
-		err = pci_register_driver(&stmmac_pci_driver);
-		if (err)
-			platform_driver_unregister(&stmmac_pltfr_driver);
-	}
-
-	return err;
-}
-
-static void __exit stmmac_exit(void)
-{
-	pci_unregister_driver(&stmmac_pci_driver);
-	platform_driver_unregister(&stmmac_pltfr_driver);
-}
-
-module_init(stmmac_init);
-module_exit(stmmac_exit);
 
 #ifndef MODULE
 static int __init stmmac_cmdline_opt(char *str)

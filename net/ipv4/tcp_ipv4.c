@@ -813,8 +813,7 @@ static void tcp_v4_reqsk_send_ack(struct sock *sk, struct sk_buff *skb,
  */
 static int tcp_v4_send_synack(struct sock *sk, struct dst_entry *dst,
 			      struct request_sock *req,
-			      struct request_values *rvp,
-			      u16 queue_mapping)
+			      struct request_values *rvp)
 {
 	const struct inet_request_sock *ireq = inet_rsk(req);
 	struct flowi4 fl4;
@@ -830,13 +829,13 @@ static int tcp_v4_send_synack(struct sock *sk, struct dst_entry *dst,
 	if (skb) {
 		__tcp_v4_send_check(skb, ireq->loc_addr, ireq->rmt_addr);
 
-		skb_set_queue_mapping(skb, queue_mapping);
 		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr,
 					    ireq->rmt_addr,
 					    ireq->opt);
 		err = net_xmit_eval(err);
 	}
 
+	dst_release(dst);
 	return err;
 }
 
@@ -844,7 +843,7 @@ static int tcp_v4_rtx_synack(struct sock *sk, struct request_sock *req,
 			      struct request_values *rvp)
 {
 	TCP_INC_STATS_BH(sock_net(sk), TCP_MIB_RETRANSSEGS);
-	return tcp_v4_send_synack(sk, NULL, req, rvp, 0);
+	return tcp_v4_send_synack(sk, NULL, req, rvp);
 }
 
 /*
@@ -1415,8 +1414,7 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 	tcp_rsk(req)->snt_synack = tcp_time_stamp;
 
 	if (tcp_v4_send_synack(sk, dst, req,
-			       (struct request_values *)&tmp_ext,
-			       skb_get_queue_mapping(skb)) ||
+			       (struct request_values *)&tmp_ext) ||
 	    want_cookie)
 		goto drop_and_free;
 
@@ -1660,52 +1658,6 @@ csum_err:
 	goto discard;
 }
 EXPORT_SYMBOL(tcp_v4_do_rcv);
-
-int tcp_v4_early_demux(struct sk_buff *skb)
-{
-	struct net *net = dev_net(skb->dev);
-	const struct iphdr *iph;
-	const struct tcphdr *th;
-	struct sock *sk;
-	int err;
-
-	err = -ENOENT;
-	if (skb->pkt_type != PACKET_HOST)
-		goto out_err;
-
-	if (!pskb_may_pull(skb, ip_hdrlen(skb) + sizeof(struct tcphdr)))
-		goto out_err;
-
-	iph = ip_hdr(skb);
-	th = (struct tcphdr *) ((char *)iph + ip_hdrlen(skb));
-
-	if (th->doff < sizeof(struct tcphdr) / 4)
-		goto out_err;
-
-	if (!pskb_may_pull(skb, ip_hdrlen(skb) + th->doff * 4))
-		goto out_err;
-
-	sk = __inet_lookup_established(net, &tcp_hashinfo,
-				       iph->saddr, th->source,
-				       iph->daddr, th->dest,
-				       skb->dev->ifindex);
-	if (sk) {
-		skb->sk = sk;
-		skb->destructor = sock_edemux;
-		if (sk->sk_state != TCP_TIME_WAIT) {
-			struct dst_entry *dst = sk->sk_rx_dst;
-			if (dst)
-				dst = dst_check(dst, 0);
-			if (dst) {
-				skb_dst_set_noref(skb, dst);
-				err = 0;
-			}
-		}
-	}
-
-out_err:
-	return err;
-}
 
 /*
  *	From tcp_input.c

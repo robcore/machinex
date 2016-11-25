@@ -141,9 +141,6 @@ struct iwl_op_mode_ops {
 	void (*nic_config)(struct iwl_op_mode *op_mode);
 };
 
-int iwl_opmode_register(const char *name, const struct iwl_op_mode_ops *ops);
-void iwl_opmode_deregister(const char *name);
-
 /**
  * struct iwl_op_mode - operational mode
  *

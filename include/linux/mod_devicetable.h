@@ -122,8 +122,7 @@ struct usb_device_id {
 	__u8		bInterfaceNumber;
 
 	/* not matched against */
-	kernel_ulong_t	driver_info
-		__attribute__((aligned(sizeof(kernel_ulong_t))));
+	kernel_ulong_t	driver_info;
 };
 
 /* Some useful macros to use to create struct usb_device_id */

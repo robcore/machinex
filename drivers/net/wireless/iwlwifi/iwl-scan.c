@@ -101,8 +101,11 @@ static void iwl_complete_scan(struct iwl_priv *priv, bool aborted)
 		ieee80211_scan_completed(priv->hw, aborted);
 	}
 
-	if (priv->scan_type == IWL_SCAN_ROC)
-		iwl_scan_roc_expired(priv);
+	if (priv->scan_type == IWL_SCAN_ROC) {
+		ieee80211_remain_on_channel_expired(priv->hw);
+		priv->hw_roc_channel = NULL;
+		schedule_delayed_work(&priv->hw_roc_disable_work, 10 * HZ);
+	}
 
 	priv->scan_type = IWL_SCAN_NORMAL;
 	priv->scan_vif = NULL;
@@ -131,8 +134,11 @@ static void iwl_process_scan_complete(struct iwl_priv *priv)
 		goto out_settings;
 	}
 
-	if (priv->scan_type == IWL_SCAN_ROC)
-		iwl_scan_roc_expired(priv);
+	if (priv->scan_type == IWL_SCAN_ROC) {
+		ieee80211_remain_on_channel_expired(priv->hw);
+		priv->hw_roc_channel = NULL;
+		schedule_delayed_work(&priv->hw_roc_disable_work, 10 * HZ);
+	}
 
 	if (priv->scan_type != IWL_SCAN_NORMAL && !aborted) {
 		int err;
@@ -494,6 +500,7 @@ static int iwl_get_channels_for_scan(struct iwl_priv *priv,
 {
 	struct ieee80211_channel *chan;
 	const struct ieee80211_supported_band *sband;
+	const struct iwl_channel_info *ch_info;
 	u16 passive_dwell = 0;
 	u16 active_dwell = 0;
 	int added, i;
@@ -518,7 +525,16 @@ static int iwl_get_channels_for_scan(struct iwl_priv *priv,
 		channel = chan->hw_value;
 		scan_ch->channel = cpu_to_le16(channel);
 
-		if (!is_active || (chan->flags & IEEE80211_CHAN_PASSIVE_SCAN))
+		ch_info = iwl_get_channel_info(priv, band, channel);
+		if (!is_channel_valid(ch_info)) {
+			IWL_DEBUG_SCAN(priv,
+				       "Channel %d is INVALID for this band.\n",
+				       channel);
+			continue;
+		}
+
+		if (!is_active || is_channel_passive(ch_info) ||
+		    (chan->flags & IEEE80211_CHAN_PASSIVE_SCAN))
 			scan_ch->type = SCAN_CHANNEL_TYPE_PASSIVE;
 		else
 			scan_ch->type = SCAN_CHANNEL_TYPE_ACTIVE;
@@ -914,10 +930,8 @@ static int iwlagn_request_scan(struct iwl_priv *priv, struct ieee80211_vif *vif)
 	set_bit(STATUS_SCAN_HW, &priv->status);
 
 	ret = iwlagn_set_pan_params(priv);
-	if (ret) {
-		clear_bit(STATUS_SCAN_HW, &priv->status);
+	if (ret)
 		return ret;
-	}
 
 	ret = iwl_dvm_send_cmd(priv, &cmd);
 	if (ret) {
@@ -1078,42 +1092,5 @@ void iwl_cancel_scan_deferred_work(struct iwl_priv *priv)
 		mutex_lock(&priv->mutex);
 		iwl_force_scan_end(priv);
 		mutex_unlock(&priv->mutex);
-	}
-}
-
-void iwl_scan_roc_expired(struct iwl_priv *priv)
-{
-	/*
-	 * The status bit should be set here, to prevent a race
-	 * where the atomic_read returns 1, but before the execution continues
-	 * iwl_scan_offchannel_skb_status() checks if the status bit is set
-	 */
-	set_bit(STATUS_SCAN_ROC_EXPIRED, &priv->status);
-
-	if (atomic_read(&priv->num_aux_in_flight) == 0) {
-		ieee80211_remain_on_channel_expired(priv->hw);
-		priv->hw_roc_channel = NULL;
-		schedule_delayed_work(&priv->hw_roc_disable_work,
-				      10 * HZ);
-
-		clear_bit(STATUS_SCAN_ROC_EXPIRED, &priv->status);
-	} else {
-		IWL_DEBUG_SCAN(priv, "ROC done with %d frames in aux\n",
-			       atomic_read(&priv->num_aux_in_flight));
-	}
-}
-
-void iwl_scan_offchannel_skb(struct iwl_priv *priv)
-{
-	WARN_ON(!priv->hw_roc_start_notified);
-	atomic_inc(&priv->num_aux_in_flight);
-}
-
-void iwl_scan_offchannel_skb_status(struct iwl_priv *priv)
-{
-	if (atomic_dec_return(&priv->num_aux_in_flight) == 0 &&
-	    test_bit(STATUS_SCAN_ROC_EXPIRED, &priv->status)) {
-		IWL_DEBUG_SCAN(priv, "0 aux frames. Calling ROC expired\n");
-		iwl_scan_roc_expired(priv);
 	}
 }

@@ -499,7 +499,7 @@ void debugfs_remove(struct dentry *dentry)
 	struct dentry *parent;
 	int ret;
 
-	if (IS_ERR_OR_NULL(dentry))
+	if (!dentry)
 		return;
 
 	parent = dentry->d_parent;
@@ -530,7 +530,7 @@ void debugfs_remove_recursive(struct dentry *dentry)
 {
 	struct dentry *child, *next, *parent;
 
-	if (IS_ERR_OR_NULL(dentry))
+	if (!dentry)
 		return;
 
 	parent = dentry->d_parent;

@@ -498,12 +498,6 @@ static int iwlagn_mac_resume(struct ieee80211_hw *hw)
 	return 1;
 }
 
-static void iwlagn_mac_set_wakeup(struct ieee80211_hw *hw, bool enabled)
-{
-	struct iwl_priv *priv = IWL_MAC80211_GET_DVM(hw);
-
-	device_set_wakeup_enable(priv->trans->dev, enabled);
-}
 #endif
 
 static void iwlagn_mac_tx(struct ieee80211_hw *hw, struct sk_buff *skb)
@@ -854,6 +848,7 @@ static void iwlagn_mac_channel_switch(struct ieee80211_hw *hw,
 				struct ieee80211_channel_switch *ch_switch)
 {
 	struct iwl_priv *priv = IWL_MAC80211_GET_DVM(hw);
+	const struct iwl_channel_info *ch_info;
 	struct ieee80211_conf *conf = &hw->conf;
 	struct ieee80211_channel *channel = ch_switch->channel;
 	struct iwl_ht_config *ht_conf = &priv->current_ht_config;
@@ -889,6 +884,12 @@ static void iwlagn_mac_channel_switch(struct ieee80211_hw *hw,
 	ch = channel->hw_value;
 	if (le16_to_cpu(ctx->active.channel) == ch)
 		goto out;
+
+	ch_info = iwl_get_channel_info(priv, channel->band, ch);
+	if (!is_channel_valid(ch_info)) {
+		IWL_DEBUG_MAC80211(priv, "invalid channel\n");
+		goto out;
+	}
 
 	priv->current_ht_config.smps = conf->smps_mode;
 
@@ -1565,7 +1566,6 @@ struct ieee80211_ops iwlagn_hw_ops = {
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwlagn_mac_suspend,
 	.resume = iwlagn_mac_resume,
-	.set_wakeup = iwlagn_mac_set_wakeup,
 #endif
 	.add_interface = iwlagn_mac_add_interface,
 	.remove_interface = iwlagn_mac_remove_interface,

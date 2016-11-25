@@ -1,10 +1,6 @@
 /*
  * Copyright (c) 2012  Bjørn Mork <bjorn@mork.no>
  *
- * The probing code is heavily inspired by cdc_ether, which is:
- * Copyright (C) 2003-2005 by David Brownell
- * Copyright (C) 2006 by Ole Andre Vadla Ravnas (ActiveSync)
- *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 2 as published by the Free Software Foundation.
@@ -20,7 +16,11 @@
 #include <linux/usb/usbnet.h>
 #include <linux/usb/cdc-wdm.h>
 
-/* This driver supports wwan (3G/LTE/?) devices using a vendor
+/* The name of the CDC Device Management driver */
+#define DM_DRIVER "cdc_wdm"
+
+/*
+ * This driver supports wwan (3G/LTE/?) devices using a vendor
  * specific management protocol called Qualcomm MSM Interface (QMI) -
  * in addition to the more common AT commands over serial interface
  * management
@@ -32,73 +32,33 @@
  * management protocol is used in place of the standard CDC
  * notifications NOTIFY_NETWORK_CONNECTION and NOTIFY_SPEED_CHANGE
  *
- * Alternatively, control and data functions can be combined in a
- * single USB interface.
- *
  * Handling a protocol like QMI is out of the scope for any driver.
- * It is exported as a character device using the cdc-wdm driver as
- * a subdriver, enabling userspace applications ("modem managers") to
- * handle it.
+ * It can be exported as a character device using the cdc-wdm driver,
+ * which will enable userspace applications ("modem managers") to
+ * handle it.  This may be required to use the network interface
+ * provided by the driver.
  *
  * These devices may alternatively/additionally be configured using AT
- * commands on a serial interface
+ * commands on any of the serial interfaces driven by the option driver
+ *
+ * This driver binds only to the data ("slave") interface to enable
+ * the cdc-wdm driver to bind to the control interface.  It still
+ * parses the CDC functional descriptors on the control interface to
+ *  a) verify that this is indeed a handled interface (CDC Union
+ *     header lists it as slave)
+ *  b) get MAC address and other ethernet config from the CDC Ethernet
+ *     header
+ *  c) enable user bind requests against the control interface, which
+ *     is the common way to bind to CDC Ethernet Control Model type
+ *     interfaces
+ *  d) provide a hint to the user about which interface is the
+ *     corresponding management interface
  */
-
-/* driver specific data */
-struct qmi_wwan_state {
-	struct usb_driver *subdriver;
-	atomic_t pmcount;
-	unsigned long unused;
-	struct usb_interface *control;
-	struct usb_interface *data;
-};
-
-/* collect all three endpoints and register subdriver */
-static int qmi_wwan_register_subdriver(struct usbnet *dev)
-{
-	int rv;
-	struct usb_driver *subdriver = NULL;
-	struct qmi_wwan_state *info = (void *)&dev->data;
-
-	/* collect bulk endpoints */
-	rv = usbnet_get_endpoints(dev, info->data);
-	if (rv < 0)
-		goto err;
-
-	/* update status endpoint if separate control interface */
-	if (info->control != info->data)
-		dev->status = &info->control->cur_altsetting->endpoint[0];
-
-	/* require interrupt endpoint for subdriver */
-	if (!dev->status) {
-		rv = -EINVAL;
-		goto err;
-	}
-
-	/* for subdriver power management */
-	atomic_set(&info->pmcount, 0);
-
-	/* register subdriver */
-	subdriver = usb_cdc_wdm_register(info->control, &dev->status->desc, 512, &qmi_wwan_cdc_wdm_manage_power);
-	if (IS_ERR(subdriver)) {
-		dev_err(&info->control->dev, "subdriver registration failed\n");
-		rv = PTR_ERR(subdriver);
-		goto err;
-	}
-
-	/* prevent usbnet from using status endpoint */
-	dev->status = NULL;
-
-	/* save subdriver struct for suspend/resume wrappers */
-	info->subdriver = subdriver;
-
-err:
-	return rv;
-}
 
 static int qmi_wwan_bind(struct usbnet *dev, struct usb_interface *intf)
 {
 	int status = -1;
+	struct usb_interface *control = NULL;
 	u8 *buf = intf->cur_altsetting->extra;
 	int len = intf->cur_altsetting->extralen;
 	struct usb_interface_descriptor *desc = &intf->cur_altsetting->desc;
@@ -106,14 +66,25 @@ static int qmi_wwan_bind(struct usbnet *dev, struct usb_interface *intf)
 	struct usb_cdc_ether_desc *cdc_ether = NULL;
 	u32 required = 1 << USB_CDC_HEADER_TYPE | 1 << USB_CDC_UNION_TYPE;
 	u32 found = 0;
-	struct usb_driver *driver = driver_of(intf);
-	struct qmi_wwan_state *info = (void *)&dev->data;
+	atomic_t *pmcount = (void *)&dev->data[1];
 
-	BUILD_BUG_ON((sizeof(((struct usbnet *)0)->data) < sizeof(struct qmi_wwan_state)));
+	atomic_set(pmcount, 0);
 
-	/* require a single interrupt status endpoint for subdriver */
-	if (intf->cur_altsetting->desc.bNumEndpoints != 1)
-		goto err;
+	/*
+	 * assume a data interface has no additional descriptors and
+	 * that the control and data interface are numbered
+	 * consecutively - this holds for the Huawei device at least
+	 */
+	if (len == 0 && desc->bInterfaceNumber > 0) {
+		control = usb_ifnum_to_if(dev->udev, desc->bInterfaceNumber - 1);
+		if (!control)
+			goto err;
+
+		buf = control->cur_altsetting->extra;
+		len = control->cur_altsetting->extralen;
+		dev_dbg(&intf->dev, "guessing \"control\" => %s, \"data\" => this\n",
+			dev_name(&control->dev));
+	}
 
 	while (len > 3) {
 		struct usb_descriptor_header *h = (void *)buf;
@@ -177,17 +148,10 @@ next_desc:
 		goto err;
 	}
 
-	/* verify CDC Union */
-	if (desc->bInterfaceNumber != cdc_union->bMasterInterface0) {
-		dev_err(&intf->dev, "bogus CDC Union: master=%u\n", cdc_union->bMasterInterface0);
-		goto err;
-	}
-
-	/* need to save these for unbind */
-	info->control = intf;
-	info->data = usb_ifnum_to_if(dev->udev,	cdc_union->bSlaveInterface0);
-	if (!info->data) {
-		dev_err(&intf->dev, "bogus CDC Union: slave=%u\n", cdc_union->bSlaveInterface0);
+	/* give the user a helpful hint if trying to bind to the wrong interface */
+	if (cdc_union && desc->bInterfaceNumber == cdc_union->bMasterInterface0) {
+		dev_err(&intf->dev, "leaving \"control\" interface for " DM_DRIVER " - try binding to %s instead!\n",
+			dev_name(&usb_ifnum_to_if(dev->udev, cdc_union->bSlaveInterface0)->dev));
 		goto err;
 	}
 
@@ -197,16 +161,15 @@ next_desc:
 		usbnet_get_ethernet_addr(dev, cdc_ether->iMACAddress);
 	}
 
-	/* claim data interface and set it up */
-	status = usb_driver_claim_interface(driver, info->data, dev);
-	if (status < 0)
-		goto err;
+	/* success! point the user to the management interface */
+	if (control)
+		dev_info(&intf->dev, "Use \"" DM_DRIVER "\" for QMI interface %s\n",
+			dev_name(&control->dev));
 
-	status = qmi_wwan_register_subdriver(dev);
-	if (status < 0) {
-		usb_set_intfdata(info->data, NULL);
-		usb_driver_release_interface(driver, info->data);
-	}
+	/* XXX: add a sysfs symlink somewhere to help management applications find it? */
+
+	/* collect bulk endpoints now that we know intf == "data" interface */
+	status = usbnet_get_endpoints(dev, intf);
 
 err:
 	return status;
@@ -302,12 +265,12 @@ static const struct net_device_ops qmi_wwan_netdev_ops = {
 /* using a counter to merge subdriver requests with our own into a combined state */
 static int qmi_wwan_manage_power(struct usbnet *dev, int on)
 {
-	struct qmi_wwan_state *info = (void *)&dev->data;
+	atomic_t *pmcount = (void *)&dev->data[1];
 	int rv = 0;
 
-	dev_dbg(&dev->intf->dev, "%s() pmcount=%d, on=%d\n", __func__, atomic_read(&info->pmcount), on);
+	dev_dbg(&dev->intf->dev, "%s() pmcount=%d, on=%d\n", __func__, atomic_read(pmcount), on);
 
-	if ((on && atomic_add_return(1, &info->pmcount) == 1) || (!on && atomic_dec_and_test(&info->pmcount))) {
+	if ((on && atomic_add_return(1, pmcount) == 1) || (!on && atomic_dec_and_test(pmcount))) {
 		/* need autopm_get/put here to ensure the usbcore sees the new value */
 		rv = usb_autopm_get_interface(dev->intf);
 		if (rv < 0)
@@ -332,11 +295,16 @@ static int qmi_wwan_cdc_wdm_manage_power(struct usb_interface *intf, int on)
 /* Some devices combine the "control" and "data" functions into a
  * single interface with all three endpoints: interrupt + bulk in and
  * out
- */
+ *
+ * Setting up cdc-wdm as a subdriver owning the interrupt endpoint
+ * will let it provide userspace access to the encapsulated QMI
+ * protocol without interfering with the usbnet operations.
+  */
 static int qmi_wwan_bind_shared(struct usbnet *dev, struct usb_interface *intf)
 {
 	int rv;
-	struct qmi_wwan_state *info = (void *)&dev->data;
+	struct usb_driver *subdriver = NULL;
+	atomic_t *pmcount = (void *)&dev->data[1];
 
 	/* ZTE makes devices where the interface descriptors and endpoint
 	 * configurations of two or more interfaces are identical, even
@@ -352,10 +320,30 @@ static int qmi_wwan_bind_shared(struct usbnet *dev, struct usb_interface *intf)
 		goto err;
 	}
 
-	/*  control and data is shared */
-	info->control = intf;
-	info->data = intf;
-	rv = qmi_wwan_register_subdriver(dev);
+	atomic_set(pmcount, 0);
+
+	/* collect all three endpoints */
+	rv = usbnet_get_endpoints(dev, intf);
+	if (rv < 0)
+		goto err;
+
+	/* require interrupt endpoint for subdriver */
+	if (!dev->status) {
+		rv = -EINVAL;
+		goto err;
+	}
+
+	subdriver = usb_cdc_wdm_register(intf, &dev->status->desc, 512, &qmi_wwan_cdc_wdm_manage_power);
+	if (IS_ERR(subdriver)) {
+		rv = PTR_ERR(subdriver);
+		goto err;
+	}
+
+	/* can't let usbnet use the interrupt endpoint */
+	dev->status = NULL;
+
+	/* save subdriver struct for suspend/resume wrappers */
+	dev->data[0] = (unsigned long)subdriver;
 
 	/* Never use the same address on both ends of the link, even
 	 * if the buggy firmware told us to.
@@ -373,30 +361,14 @@ err:
 	return rv;
 }
 
-static void qmi_wwan_unbind(struct usbnet *dev, struct usb_interface *intf)
+static void qmi_wwan_unbind_shared(struct usbnet *dev, struct usb_interface *intf)
 {
-	struct qmi_wwan_state *info = (void *)&dev->data;
-	struct usb_driver *driver = driver_of(intf);
-	struct usb_interface *other;
+	struct usb_driver *subdriver = (void *)dev->data[0];
 
-	if (info->subdriver && info->subdriver->disconnect)
-		info->subdriver->disconnect(info->control);
+	if (subdriver && subdriver->disconnect)
+		subdriver->disconnect(intf);
 
-	/* allow user to unbind using either control or data */
-	if (intf == info->control)
-		other = info->data;
-	else
-		other = info->control;
-
-	/* only if not shared */
-	if (other && intf != other) {
-		usb_set_intfdata(other, NULL);
-		usb_driver_release_interface(driver, other);
-	}
-
-	info->subdriver = NULL;
-	info->data = NULL;
-	info->control = NULL;
+	dev->data[0] = (unsigned long)NULL;
 }
 
 /* suspend/resume wrappers calling both usbnet and the cdc-wdm
@@ -408,15 +380,15 @@ static void qmi_wwan_unbind(struct usbnet *dev, struct usb_interface *intf)
 static int qmi_wwan_suspend(struct usb_interface *intf, pm_message_t message)
 {
 	struct usbnet *dev = usb_get_intfdata(intf);
-	struct qmi_wwan_state *info = (void *)&dev->data;
+	struct usb_driver *subdriver = (void *)dev->data[0];
 	int ret;
 
 	ret = usbnet_suspend(intf, message);
 	if (ret < 0)
 		goto err;
 
-	if (info->subdriver && info->subdriver->suspend)
-		ret = info->subdriver->suspend(intf, message);
+	if (subdriver && subdriver->suspend)
+		ret = subdriver->suspend(intf, message);
 	if (ret < 0)
 		usbnet_resume(intf);
 err:
@@ -426,33 +398,33 @@ err:
 static int qmi_wwan_resume(struct usb_interface *intf)
 {
 	struct usbnet *dev = usb_get_intfdata(intf);
-	struct qmi_wwan_state *info = (void *)&dev->data;
+	struct usb_driver *subdriver = (void *)dev->data[0];
 	int ret = 0;
 
-	if (info->subdriver && info->subdriver->resume)
-		ret = info->subdriver->resume(intf);
+	if (subdriver && subdriver->resume)
+		ret = subdriver->resume(intf);
 	if (ret < 0)
 		goto err;
 	ret = usbnet_resume(intf);
-	if (ret < 0 && info->subdriver && info->subdriver->resume && info->subdriver->suspend)
-		info->subdriver->suspend(intf, PMSG_SUSPEND);
+	if (ret < 0 && subdriver && subdriver->resume && subdriver->suspend)
+		subdriver->suspend(intf, PMSG_SUSPEND);
 err:
 	return ret;
 }
 
+
 static const struct driver_info	qmi_wwan_info = {
-	.description	= "WWAN/QMI device",
+	.description	= "QMI speaking wwan device",
 	.flags		= FLAG_WWAN,
 	.bind		= qmi_wwan_bind,
-	.unbind		= qmi_wwan_unbind,
 	.manage_power	= qmi_wwan_manage_power,
 };
 
 static const struct driver_info	qmi_wwan_shared = {
-	.description	= "WWAN/QMI device",
+	.description	= "QMI speaking wwan device with combined interface",
 	.flags		= FLAG_WWAN,
 	.bind		= qmi_wwan_bind_shared,
-	.unbind		= qmi_wwan_unbind,
+	.unbind		= qmi_wwan_unbind_shared,
 	.manage_power	= qmi_wwan_manage_power,
 	.rx_fixup       = qmi_wwan_rx_fixup,
 };
@@ -470,7 +442,7 @@ static const struct driver_info	qmi_wwan_force_int1 = {
 	.description	= "Qualcomm WWAN/QMI device",
 	.flags		= FLAG_WWAN,
 	.bind		= qmi_wwan_bind_shared,
-	.unbind		= qmi_wwan_unbind,
+	.unbind		= qmi_wwan_unbind_shared,
 	.manage_power	= qmi_wwan_manage_power,
 	.data		= BIT(1), /* interface whitelist bitmap */
 };
@@ -497,7 +469,7 @@ static const struct driver_info	qmi_wwan_force_int4 = {
 	.description	= "Qualcomm WWAN/QMI device",
 	.flags		= FLAG_WWAN,
 	.bind		= qmi_wwan_bind_shared,
-	.unbind		= qmi_wwan_unbind,
+	.unbind		= qmi_wwan_unbind_shared,
 	.manage_power	= qmi_wwan_manage_power,
 	.data		= BIT(4), /* interface whitelist bitmap */
 };
@@ -542,7 +514,7 @@ static const struct usb_device_id products[] = {
 		.idVendor           = HUAWEI_VENDOR_ID,
 		.bInterfaceClass    = USB_CLASS_VENDOR_SPEC,
 		.bInterfaceSubClass = 1,
-		.bInterfaceProtocol = 9, /* CDC Ethernet *control* interface */
+		.bInterfaceProtocol = 8, /* NOTE: This is the *slave* interface of the CDC Union! */
 		.driver_info        = (unsigned long)&qmi_wwan_info,
 	},
 	{	/* Vodafone/Huawei K5005 (12d1:14c8) and similar modems */
@@ -550,7 +522,7 @@ static const struct usb_device_id products[] = {
 		.idVendor           = HUAWEI_VENDOR_ID,
 		.bInterfaceClass    = USB_CLASS_VENDOR_SPEC,
 		.bInterfaceSubClass = 1,
-		.bInterfaceProtocol = 57, /* CDC Ethernet *control* interface */
+		.bInterfaceProtocol = 56, /* NOTE: This is the *slave* interface of the CDC Union! */
 		.driver_info        = (unsigned long)&qmi_wwan_info,
 	},
 	{	/* Huawei E392, E398 and possibly others in "Windows mode"
@@ -770,7 +742,17 @@ static struct usb_driver qmi_wwan_driver = {
 	.supports_autosuspend = 1,
 };
 
-module_usb_driver(qmi_wwan_driver);
+static int __init qmi_wwan_init(void)
+{
+	return usb_register(&qmi_wwan_driver);
+}
+module_init(qmi_wwan_init);
+
+static void __exit qmi_wwan_exit(void)
+{
+	usb_deregister(&qmi_wwan_driver);
+}
+module_exit(qmi_wwan_exit);
 
 MODULE_AUTHOR("Bjørn Mork <bjorn@mork.no>");
 MODULE_DESCRIPTION("Qualcomm MSM Interface (QMI) WWAN driver");
