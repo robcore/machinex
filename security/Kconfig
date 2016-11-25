@@ -6,12 +6,6 @@ menu "Security options"
 
 source security/keys/Kconfig
 
-config SDP
-	bool "SDP KNOX BULLSHIT"
-	default y
-	help
-	  This is pretty fake
-
 config SECURITY_DMESG_RESTRICT
 	bool "Restrict unprivileged access to the kernel syslog"
 	default n
