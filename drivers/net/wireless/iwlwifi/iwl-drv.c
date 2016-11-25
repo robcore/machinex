@@ -74,8 +74,33 @@
 /* private includes */
 #include "iwl-fw-file.h"
 
+/******************************************************************************
+ *
+ * module boiler plate
+ *
+ ******************************************************************************/
+
+/*
+ * module name, copyright, version, etc.
+ */
+#define DRV_DESCRIPTION	"Intel(R) Wireless WiFi driver for Linux"
+
+#ifdef CONFIG_IWLWIFI_DEBUG
+#define VD "d"
+#else
+#define VD
+#endif
+
+#define DRV_VERSION     IWLWIFI_VERSION VD
+
+MODULE_DESCRIPTION(DRV_DESCRIPTION);
+MODULE_VERSION(DRV_VERSION);
+MODULE_AUTHOR(DRV_COPYRIGHT " " DRV_AUTHOR);
+MODULE_LICENSE("GPL");
+
 /**
  * struct iwl_drv - drv common data
+ * @list: list of drv structures using this opmode
  * @fw: the iwl_fw structure
  * @shrd: pointer to common shared structure
  * @op_mode: the running op_mode
@@ -84,6 +109,7 @@
  * @request_firmware_complete: the firmware has been obtained from user space
  */
 struct iwl_drv {
+	struct list_head list;
 	struct iwl_fw fw;
 
 	struct iwl_shared *shrd;
@@ -95,7 +121,17 @@ struct iwl_drv {
 	struct completion request_firmware_complete;
 };
 
+#define DVM_OP_MODE	0
+#define MVM_OP_MODE	1
 
+static struct iwlwifi_opmode_table {
+	const char *name;			/* name: iwldvm, iwlmvm, etc */
+	const struct iwl_op_mode_ops *ops;	/* pointer to op_mode ops */
+	struct list_head drv;		/* list of devices using this op_mode */
+} iwlwifi_opmode_table[] = {		/* ops set when driver is initialized */
+	{ .name = "iwldvm", .ops = NULL },
+	{ .name = "iwlmvm", .ops = NULL },
+};
 
 /*
  * struct fw_sec: Just for the image parsing proccess.
@@ -745,7 +781,6 @@ static int validate_sec_sizes(struct iwl_drv *drv,
 	return 0;
 }
 
-
 /**
  * iwl_ucode_callback - callback when firmware was loaded
  *
@@ -758,6 +793,7 @@ static void iwl_ucode_callback(const struct firmware *ucode_raw, void *context)
 	const struct iwl_cfg *cfg = cfg(drv);
 	struct iwl_fw *fw = &drv->fw;
 	struct iwl_ucode_header *ucode;
+	struct iwlwifi_opmode_table *op;
 	int err;
 	struct iwl_firmware_pieces pieces;
 	const unsigned int api_max = cfg->ucode_api_max;

@@ -160,6 +160,9 @@ struct iwl_cmd_header {
 	__le16 sequence;
 } __packed;
 
+/* iwl_cmd_header flags value */
+#define IWL_CMD_FAILED_MSK 0x40
+
 
 #define FH_RSCSR_FRAME_SIZE_MSK		0x00003FFF	/* bits 0-13 */
 
@@ -276,6 +279,8 @@ static inline struct page *rxb_steal_page(struct iwl_rx_cmd_buffer *r)
 }
 
 #define MAX_NO_RECLAIM_CMDS	6
+
+#define IWL_MASK(lo, hi) ((1 << (hi)) | ((1 << (hi)) - (1 << (lo))))
 
 /**
  * struct iwl_trans_config - transport configuration

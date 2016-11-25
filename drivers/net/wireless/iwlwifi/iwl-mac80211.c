@@ -498,6 +498,12 @@ static int iwlagn_mac_resume(struct ieee80211_hw *hw)
 	return 1;
 }
 
+static void iwlagn_mac_set_wakeup(struct ieee80211_hw *hw, bool enabled)
+{
+	struct iwl_priv *priv = IWL_MAC80211_GET_DVM(hw);
+
+	device_set_wakeup_enable(priv->trans->dev, enabled);
+}
 #endif
 
 static void iwlagn_mac_tx(struct ieee80211_hw *hw, struct sk_buff *skb)
@@ -1566,6 +1572,7 @@ struct ieee80211_ops iwlagn_hw_ops = {
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwlagn_mac_suspend,
 	.resume = iwlagn_mac_resume,
+	.set_wakeup = iwlagn_mac_set_wakeup,
 #endif
 	.add_interface = iwlagn_mac_add_interface,
 	.remove_interface = iwlagn_mac_remove_interface,
