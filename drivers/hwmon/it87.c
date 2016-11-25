@@ -218,6 +218,7 @@ static const u8 IT87_REG_FANX_MIN[]	= { 0x1b, 0x1c, 0x1d, 0x85, 0x87 };
 
 #define IT87_REG_VIN_ENABLE    0x50
 #define IT87_REG_TEMP_ENABLE   0x51
+#define IT87_REG_TEMP_EXTRA    0x55
 #define IT87_REG_BEEP_ENABLE   0x5c
 
 #define IT87_REG_CHIPID        0x58
@@ -238,6 +239,7 @@ struct it87_sio_data {
 	u8 skip_vid;
 	u8 skip_fan;
 	u8 skip_pwm;
+	u8 skip_temp;
 };
 
 /*
@@ -262,6 +264,7 @@ struct it87_data {
 	u8 has_fan;		/* Bitfield, fans enabled */
 	u16 fan[5];		/* Register values, possibly combined */
 	u16 fan_min[5];		/* Register values, possibly combined */
+	u8 has_temp;		/* Bitfield, temp sensors enabled */
 	s8 temp[3];		/* Register value */
 	s8 temp_high[3];	/* Register value */
 	s8 temp_low[3];		/* Register value */
@@ -1438,23 +1441,37 @@ static const struct attribute_group it87_group_in[9] = {
 	{ .attrs = it87_attributes_in[8] },
 };
 
-static struct attribute *it87_attributes[] = {
+static struct attribute *it87_attributes_temp[3][6] = {
+{
 	&sensor_dev_attr_temp1_input.dev_attr.attr,
-	&sensor_dev_attr_temp2_input.dev_attr.attr,
-	&sensor_dev_attr_temp3_input.dev_attr.attr,
 	&sensor_dev_attr_temp1_max.dev_attr.attr,
-	&sensor_dev_attr_temp2_max.dev_attr.attr,
-	&sensor_dev_attr_temp3_max.dev_attr.attr,
 	&sensor_dev_attr_temp1_min.dev_attr.attr,
-	&sensor_dev_attr_temp2_min.dev_attr.attr,
-	&sensor_dev_attr_temp3_min.dev_attr.attr,
 	&sensor_dev_attr_temp1_type.dev_attr.attr,
-	&sensor_dev_attr_temp2_type.dev_attr.attr,
-	&sensor_dev_attr_temp3_type.dev_attr.attr,
 	&sensor_dev_attr_temp1_alarm.dev_attr.attr,
+	NULL
+} , {
+	&sensor_dev_attr_temp2_input.dev_attr.attr,
+	&sensor_dev_attr_temp2_max.dev_attr.attr,
+	&sensor_dev_attr_temp2_min.dev_attr.attr,
+	&sensor_dev_attr_temp2_type.dev_attr.attr,
 	&sensor_dev_attr_temp2_alarm.dev_attr.attr,
+	NULL
+} , {
+	&sensor_dev_attr_temp3_input.dev_attr.attr,
+	&sensor_dev_attr_temp3_max.dev_attr.attr,
+	&sensor_dev_attr_temp3_min.dev_attr.attr,
+	&sensor_dev_attr_temp3_type.dev_attr.attr,
 	&sensor_dev_attr_temp3_alarm.dev_attr.attr,
+	NULL
+} };
 
+static const struct attribute_group it87_group_temp[3] = {
+	{ .attrs = it87_attributes_temp[0] },
+	{ .attrs = it87_attributes_temp[1] },
+	{ .attrs = it87_attributes_temp[2] },
+};
+
+static struct attribute *it87_attributes[] = {
 	&dev_attr_alarms.attr,
 	&sensor_dev_attr_intrusion0_alarm.dev_attr.attr,
 	&dev_attr_name.attr,
@@ -1477,15 +1494,10 @@ static struct attribute *it87_attributes_in_beep[] = {
 	NULL
 };
 
-static struct attribute *it87_attributes_beep[] = {
+static struct attribute *it87_attributes_temp_beep[] = {
 	&sensor_dev_attr_temp1_beep.dev_attr.attr,
 	&sensor_dev_attr_temp2_beep.dev_attr.attr,
 	&sensor_dev_attr_temp3_beep.dev_attr.attr,
-	NULL
-};
-
-static const struct attribute_group it87_group_beep = {
-	.attrs = it87_attributes_beep,
 };
 
 static struct attribute *it87_attributes_fan16[5][3+1] = { {
@@ -1870,9 +1882,15 @@ static int __init it87_find(unsigned short *address,
 		 * On IT8782F, UART6 pins overlap with VIN5, VIN6, and VIN7.
 		 * While VIN7 can be routed to the internal voltage divider,
 		 * VIN5 and VIN6 are not available if UART6 is enabled.
+		 *
+		 * Also, temp3 is not available if UART6 is enabled and TEMPIN3
+		 * is the temperature source. Since we can not read the
+		 * temperature source here, skip_temp is preliminary.
 		 */
-		if (uart6)
+		if (uart6) {
 			sio_data->skip_in |= (1 << 5) | (1 << 6);
+			sio_data->skip_temp |= (1 << 2);
+		}
 
 		sio_data->beep_pin = superio_inb(IT87_SIO_BEEP_PIN_REG) & 0x3f;
 	}
@@ -1919,8 +1937,14 @@ static void it87_remove_files(struct device *dev)
 			sysfs_remove_file(&dev->kobj,
 					  it87_attributes_in_beep[i]);
 	}
-	if (sio_data->beep_pin)
-		sysfs_remove_group(&dev->kobj, &it87_group_beep);
+	for (i = 0; i < 3; i++) {
+		if (!(data->has_temp & (1 << i)))
+			continue;
+		sysfs_remove_group(&dev->kobj, &it87_group_temp[i]);
+		if (sio_data->beep_pin)
+			sysfs_remove_file(&dev->kobj,
+					  it87_attributes_temp_beep[i]);
+	}
 	for (i = 0; i < 5; i++) {
 		if (!(data->has_fan & (1 << i)))
 			continue;
@@ -1965,19 +1989,17 @@ static int __devinit it87_probe(struct platform_device *pdev)
 	};
 
 	res = platform_get_resource(pdev, IORESOURCE_IO, 0);
-	if (!request_region(res->start, IT87_EC_EXTENT, DRVNAME)) {
+	if (!devm_request_region(&pdev->dev, res->start, IT87_EC_EXTENT,
+				 DRVNAME)) {
 		dev_err(dev, "Failed to request region 0x%lx-0x%lx\n",
 			(unsigned long)res->start,
 			(unsigned long)(res->start + IT87_EC_EXTENT - 1));
-		err = -EBUSY;
-		goto ERROR0;
+		return -EBUSY;
 	}
 
-	data = kzalloc(sizeof(struct it87_data), GFP_KERNEL);
-	if (!data) {
-		err = -ENOMEM;
-		goto ERROR1;
-	}
+	data = devm_kzalloc(&pdev->dev, sizeof(struct it87_data), GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
 
 	data->addr = res->start;
 	data->type = sio_data->type;
@@ -1986,10 +2008,8 @@ static int __devinit it87_probe(struct platform_device *pdev)
 
 	/* Now, we do the remaining detection. */
 	if ((it87_read_value(data, IT87_REG_CONFIG) & 0x80)
-	 || it87_read_value(data, IT87_REG_CHIPID) != 0x90) {
-		err = -ENODEV;
-		goto ERROR2;
-	}
+	 || it87_read_value(data, IT87_REG_CHIPID) != 0x90)
+		return -ENODEV;
 
 	platform_set_drvdata(pdev, data);
 
@@ -2013,32 +2033,47 @@ static int __devinit it87_probe(struct platform_device *pdev)
 			data->in_scaled |= (1 << 7);	/* in7 is VCCH5V */
 	}
 
+	data->has_temp = 0x07;
+	if (sio_data->skip_temp & (1 << 2)) {
+		if (sio_data->type == it8782
+		    && !(it87_read_value(data, IT87_REG_TEMP_EXTRA) & 0x80))
+			data->has_temp &= ~(1 << 2);
+	}
+
 	/* Initialize the IT87 chip */
 	it87_init_device(pdev);
 
 	/* Register sysfs hooks */
 	err = sysfs_create_group(&dev->kobj, &it87_group);
 	if (err)
-		goto ERROR2;
+		return err;
 
 	for (i = 0; i < 9; i++) {
 		if (sio_data->skip_in & (1 << i))
 			continue;
 		err = sysfs_create_group(&dev->kobj, &it87_group_in[i]);
 		if (err)
-			goto ERROR4;
+			goto error;
 		if (sio_data->beep_pin && it87_attributes_in_beep[i]) {
 			err = sysfs_create_file(&dev->kobj,
 						it87_attributes_in_beep[i]);
 			if (err)
-				goto ERROR4;
+				goto error;
 		}
 	}
 
-	if (sio_data->beep_pin) {
-		err = sysfs_create_group(&dev->kobj, &it87_group_beep);
+	for (i = 0; i < 3; i++) {
+		if (!(data->has_temp & (1 << i)))
+			continue;
+		err = sysfs_create_group(&dev->kobj, &it87_group_temp[i]);
 		if (err)
-			goto ERROR4;
+			goto error;
+		if (sio_data->beep_pin) {
+			err = sysfs_create_file(&dev->kobj,
+						it87_attributes_temp_beep[i]);
+			if (err)
+				goto error;
+		}
 	}
 
 	/* Do not create fan files for disabled fans */
@@ -2049,13 +2084,13 @@ static int __devinit it87_probe(struct platform_device *pdev)
 			continue;
 		err = sysfs_create_group(&dev->kobj, &fan_group[i]);
 		if (err)
-			goto ERROR4;
+			goto error;
 
 		if (sio_data->beep_pin) {
 			err = sysfs_create_file(&dev->kobj,
 						it87_attributes_fan_beep[i]);
 			if (err)
-				goto ERROR4;
+				goto error;
 			if (!fan_beep_need_rw)
 				continue;
 
@@ -2080,14 +2115,14 @@ static int __devinit it87_probe(struct platform_device *pdev)
 			err = sysfs_create_group(&dev->kobj,
 						 &it87_group_pwm[i]);
 			if (err)
-				goto ERROR4;
+				goto error;
 
 			if (!has_old_autopwm(data))
 				continue;
 			err = sysfs_create_group(&dev->kobj,
 						 &it87_group_autopwm[i]);
 			if (err)
-				goto ERROR4;
+				goto error;
 		}
 	}
 
@@ -2097,7 +2132,7 @@ static int __devinit it87_probe(struct platform_device *pdev)
 		data->vid = sio_data->vid_value;
 		err = sysfs_create_group(&dev->kobj, &it87_group_vid);
 		if (err)
-			goto ERROR4;
+			goto error;
 	}
 
 	/* Export labels for internal sensors */
@@ -2107,25 +2142,19 @@ static int __devinit it87_probe(struct platform_device *pdev)
 		err = sysfs_create_file(&dev->kobj,
 					it87_attributes_label[i]);
 		if (err)
-			goto ERROR4;
+			goto error;
 	}
 
 	data->hwmon_dev = hwmon_device_register(dev);
 	if (IS_ERR(data->hwmon_dev)) {
 		err = PTR_ERR(data->hwmon_dev);
-		goto ERROR4;
+		goto error;
 	}
 
 	return 0;
 
-ERROR4:
+error:
 	it87_remove_files(dev);
-ERROR2:
-	platform_set_drvdata(pdev, NULL);
-	kfree(data);
-ERROR1:
-	release_region(res->start, IT87_EC_EXTENT);
-ERROR0:
 	return err;
 }
 
@@ -2135,10 +2164,6 @@ static int __devexit it87_remove(struct platform_device *pdev)
 
 	hwmon_device_unregister(data->hwmon_dev);
 	it87_remove_files(&pdev->dev);
-
-	release_region(data->addr, IT87_EC_EXTENT);
-	platform_set_drvdata(pdev, NULL);
-	kfree(data);
 
 	return 0;
 }
@@ -2392,6 +2417,8 @@ static struct it87_data *it87_update_device(struct device *dev)
 			}
 		}
 		for (i = 0; i < 3; i++) {
+			if (!(data->has_temp & (1 << i)))
+				continue;
 			data->temp[i] =
 				it87_read_value(data, IT87_REG_TEMP(i));
 			data->temp_high[i] =
