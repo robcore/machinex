@@ -43,6 +43,7 @@
 #include <linux/list.h>
 #include <linux/vmalloc.h>
 #include <linux/rtnetlink.h>
+#include <net/ip6_route.h>
 #include <net/icmp.h>
 #include <net/ipv6.h>
 #include <net/protocol.h>
