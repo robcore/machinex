@@ -576,6 +576,8 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 
 		lruvec = mem_cgroup_page_lruvec(page, zone);
 
+		lruvec = mem_cgroup_page_lruvec(page, zone);
+
 		/* Try isolate the page */
 		if (__isolate_lru_page(page, mode) != 0)
 			continue;

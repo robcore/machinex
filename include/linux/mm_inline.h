@@ -41,8 +41,8 @@ add_page_to_lru_list(struct zone *zone, struct page *page, enum lru_list lru)
 	__mod_zone_page_state(zone, NR_LRU_BASE + lru, hpage_nr_pages(page));
 }
 
-static __always_inline void
-del_page_from_lru_list(struct zone *zone, struct page *page, enum lru_list lru)
+static __always_inline void del_page_from_lru_list(struct page *page,
+				struct lruvec *lruvec, enum lru_list lru)
 {
 	list_del(&page->lru);
 	__mod_zone_page_state(zone, NR_LRU_BASE + lru, -hpage_nr_pages(page));
