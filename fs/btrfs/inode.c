@@ -844,7 +844,7 @@ static noinline int cow_file_range(struct inode *inode,
 	if (IS_ERR(trans)) {
 		extent_clear_unlock_delalloc(inode,
 			     &BTRFS_I(inode)->io_tree,
-			     start, end, NULL,
+			     start, end, locked_page,
 			     EXTENT_CLEAR_UNLOCK_PAGE |
 			     EXTENT_CLEAR_UNLOCK |
 			     EXTENT_CLEAR_DELALLOC |
@@ -977,7 +977,7 @@ out:
 out_unlock:
 	extent_clear_unlock_delalloc(inode,
 		     &BTRFS_I(inode)->io_tree,
-		     start, end, NULL,
+		     start, end, locked_page,
 		     EXTENT_CLEAR_UNLOCK_PAGE |
 		     EXTENT_CLEAR_UNLOCK |
 		     EXTENT_CLEAR_DELALLOC |
@@ -1000,8 +1000,10 @@ static noinline void async_cow_start(struct btrfs_work *work)
 	compress_file_range(async_cow->inode, async_cow->locked_page,
 			    async_cow->start, async_cow->end, async_cow,
 			    &num_added);
-	if (num_added == 0)
+	if (num_added == 0) {
+		iput(async_cow->inode);
 		async_cow->inode = NULL;
+	}
 }
 
 /*
@@ -1034,6 +1036,8 @@ static noinline void async_cow_free(struct btrfs_work *work)
 {
 	struct async_cow *async_cow;
 	async_cow = container_of(work, struct async_cow, work);
+	if (async_cow->inode)
+		iput(async_cow->inode);
 	kfree(async_cow);
 }
 
@@ -1052,7 +1056,7 @@ static int cow_file_range_async(struct inode *inode, struct page *locked_page,
 	while (start < end) {
 		async_cow = kmalloc(sizeof(*async_cow), GFP_NOFS);
 		BUG_ON(!async_cow); /* -ENOMEM */
-		async_cow->inode = inode;
+		async_cow->inode = igrab(inode);
 		async_cow->root = root;
 		async_cow->locked_page = locked_page;
 		async_cow->start = start;
@@ -1150,8 +1154,18 @@ static noinline int run_delalloc_nocow(struct inode *inode,
 	u64 ino = btrfs_ino(inode);
 
 	path = btrfs_alloc_path();
-	if (!path)
+	if (!path) {
+		extent_clear_unlock_delalloc(inode,
+			     &BTRFS_I(inode)->io_tree,
+			     start, end, locked_page,
+			     EXTENT_CLEAR_UNLOCK_PAGE |
+			     EXTENT_CLEAR_UNLOCK |
+			     EXTENT_CLEAR_DELALLOC |
+			     EXTENT_CLEAR_DIRTY |
+			     EXTENT_SET_WRITEBACK |
+			     EXTENT_END_WRITEBACK);
 		return -ENOMEM;
+	}
 
 	nolock = btrfs_is_free_space_inode(root, inode);
 
@@ -1161,6 +1175,15 @@ static noinline int run_delalloc_nocow(struct inode *inode,
 		trans = btrfs_join_transaction(root);
 
 	if (IS_ERR(trans)) {
+		extent_clear_unlock_delalloc(inode,
+			     &BTRFS_I(inode)->io_tree,
+			     start, end, locked_page,
+			     EXTENT_CLEAR_UNLOCK_PAGE |
+			     EXTENT_CLEAR_UNLOCK |
+			     EXTENT_CLEAR_DELALLOC |
+			     EXTENT_CLEAR_DIRTY |
+			     EXTENT_SET_WRITEBACK |
+			     EXTENT_END_WRITEBACK);
 		btrfs_free_path(path);
 		return PTR_ERR(trans);
 	}
@@ -1347,8 +1370,11 @@ out_check:
 	}
 	btrfs_release_path(path);
 
-	if (cur_offset <= end && cow_start == (u64)-1)
+	if (cur_offset <= end && cow_start == (u64)-1) {
 		cow_start = cur_offset;
+		cur_offset = end;
+	}
+
 	if (cow_start != (u64)-1) {
 		ret = cow_file_range(inode, locked_page, cow_start, end,
 				     page_started, nr_written, 1);
@@ -1367,6 +1393,17 @@ error:
 	if (!ret)
 		ret = err;
 
+	if (ret && cur_offset < end)
+		extent_clear_unlock_delalloc(inode,
+			     &BTRFS_I(inode)->io_tree,
+			     cur_offset, end, locked_page,
+			     EXTENT_CLEAR_UNLOCK_PAGE |
+			     EXTENT_CLEAR_UNLOCK |
+			     EXTENT_CLEAR_DELALLOC |
+			     EXTENT_CLEAR_DIRTY |
+			     EXTENT_SET_WRITEBACK |
+			     EXTENT_END_WRITEBACK);
+
 	btrfs_free_path(path);
 	return ret;
 }
@@ -1381,20 +1418,23 @@ static int run_delalloc_range(struct inode *inode, struct page *locked_page,
 	int ret;
 	struct btrfs_root *root = BTRFS_I(inode)->root;
 
-	if (BTRFS_I(inode)->flags & BTRFS_INODE_NODATACOW)
+	if (BTRFS_I(inode)->flags & BTRFS_INODE_NODATACOW) {
 		ret = run_delalloc_nocow(inode, locked_page, start, end,
 					 page_started, 1, nr_written);
-	else if (BTRFS_I(inode)->flags & BTRFS_INODE_PREALLOC)
+	} else if (BTRFS_I(inode)->flags & BTRFS_INODE_PREALLOC) {
 		ret = run_delalloc_nocow(inode, locked_page, start, end,
 					 page_started, 0, nr_written);
-	else if (!btrfs_test_opt(root, COMPRESS) &&
-		 !(BTRFS_I(inode)->force_compress) &&
-		 !(BTRFS_I(inode)->flags & BTRFS_INODE_COMPRESS))
+	} else if (!btrfs_test_opt(root, COMPRESS) &&
+		   !(BTRFS_I(inode)->force_compress) &&
+		   !(BTRFS_I(inode)->flags & BTRFS_INODE_COMPRESS)) {
 		ret = cow_file_range(inode, locked_page, start, end,
 				      page_started, nr_written, 1);
-	else
+	} else {
+		set_bit(BTRFS_INODE_HAS_ASYNC_EXTENT,
+			&BTRFS_I(inode)->runtime_flags);
 		ret = cow_file_range_async(inode, locked_page, start, end,
 					   page_started, nr_written);
+	}
 	return ret;
 }
 
