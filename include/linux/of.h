@@ -164,11 +164,6 @@ static inline const char* of_node_full_name(struct device_node *np)
 	return np ? np->full_name : "<no-node>";
 }
 
-static inline const char* of_node_full_name(struct device_node *np)
-{
-	return np ? np->full_name : "<no-node>";
-}
-
 extern struct device_node *of_find_node_by_name(struct device_node *from,
 	const char *name);
 #define for_each_node_by_name(dn, name) \
@@ -272,11 +267,6 @@ extern void of_detach_node(struct device_node *);
 
 #define of_match_ptr(_ptr)	(_ptr)
 #else /* CONFIG_OF */
-
-static inline const char* of_node_full_name(struct device_node *np)
-{
-	return "<no-node>";
-}
 
 static inline const char* of_node_full_name(struct device_node *np)
 {
