@@ -191,7 +191,7 @@ static void nfs4_setup_readdir(u64 cookie, __be32 *verifier, struct dentry *dent
 	memset(&readdir->verifier, 0, sizeof(readdir->verifier));
 	if (cookie == 2)
 		return;
-	
+
 	/*
 	 * NFSv4 servers do not return entries for '.' and '..'
 	 * Therefore, we fake these entries here.  We let '.'
@@ -200,7 +200,7 @@ static void nfs4_setup_readdir(u64 cookie, __be32 *verifier, struct dentry *dent
 	 * instead of 1 or 2.
 	 */
 	start = p = kmap_atomic(*readdir->pages);
-	
+
 	if (cookie == 0) {
 		*p++ = xdr_one;                                  /* next */
 		*p++ = xdr_zero;                   /* cookie, first word */
@@ -213,7 +213,7 @@ static void nfs4_setup_readdir(u64 cookie, __be32 *verifier, struct dentry *dent
 		*p++ = htonl(8);              /* attribute buffer length */
 		p = xdr_encode_hyper(p, NFS_FILEID(dentry->d_inode));
 	}
-	
+
 	*p++ = xdr_one;                                  /* next */
 	*p++ = xdr_zero;                   /* cookie, first word */
 	*p++ = xdr_two;                   /* cookie, second word */
@@ -1192,7 +1192,7 @@ static int nfs4_open_recover_helper(struct nfs4_opendata *opendata, fmode_t fmod
 	nfs4_init_opendata_res(opendata);
 	ret = _nfs4_recover_proc_open(opendata);
 	if (ret != 0)
-		return ret; 
+		return ret;
 	newstate = nfs4_opendata_to_nfs4_state(opendata);
 	if (IS_ERR(newstate))
 		return PTR_ERR(newstate);
@@ -1813,7 +1813,14 @@ static inline void nfs4_exclusive_attrset(struct nfs4_opendata *opendata, struct
 /*
  * Returns a referenced nfs4_state
  */
-static int _nfs4_do_open(struct inode *dir, struct dentry *dentry, fmode_t fmode, int flags, struct iattr *sattr, struct rpc_cred *cred, struct nfs4_state **res)
+static int _nfs4_do_open(struct inode *dir,
+			struct dentry *dentry,
+			fmode_t fmode,
+			int flags,
+			struct iattr *sattr,
+			struct rpc_cred *cred,
+			struct nfs4_state **res,
+			struct nfs4_threshold **ctx_th)
 {
 	struct nfs4_state_owner  *sp;
 	struct nfs4_state     *state = NULL;
@@ -1838,6 +1845,11 @@ static int _nfs4_do_open(struct inode *dir, struct dentry *dentry, fmode_t fmode
 	if (opendata == NULL)
 		goto err_put_state_owner;
 
+	if (ctx_th && server->attr_bitmask[2] & FATTR4_WORD2_MDSTHRESHOLD) {
+		opendata->f_attr.mdsthreshold = pnfs_mdsthreshold_alloc();
+		if (!opendata->f_attr.mdsthreshold)
+			goto err_opendata_put;
+	}
 	if (dentry->d_inode != NULL)
 		opendata->state = nfs4_get_open_state(dentry->d_inode, sp);
 
@@ -1863,11 +1875,19 @@ static int _nfs4_do_open(struct inode *dir, struct dentry *dentry, fmode_t fmode
 			nfs_setattr_update_inode(state->inode, sattr);
 		nfs_post_op_update_inode(state->inode, opendata->o_res.f_attr);
 	}
+
+	if (pnfs_use_threshold(ctx_th, opendata->f_attr.mdsthreshold, server))
+		*ctx_th = opendata->f_attr.mdsthreshold;
+	else
+		kfree(opendata->f_attr.mdsthreshold);
+	opendata->f_attr.mdsthreshold = NULL;
+
 	nfs4_opendata_put(opendata);
 	nfs4_put_state_owner(sp);
 	*res = state;
 	return 0;
 err_opendata_put:
+	kfree(opendata->f_attr.mdsthreshold);
 	nfs4_opendata_put(opendata);
 err_put_state_owner:
 	nfs4_put_state_owner(sp);
@@ -1877,7 +1897,13 @@ out_err:
 }
 
 
-static struct nfs4_state *nfs4_do_open(struct inode *dir, struct dentry *dentry, fmode_t fmode, int flags, struct iattr *sattr, struct rpc_cred *cred)
+static struct nfs4_state *nfs4_do_open(struct inode *dir,
+					struct dentry *dentry,
+					fmode_t fmode,
+					int flags,
+					struct iattr *sattr,
+					struct rpc_cred *cred,
+					struct nfs4_threshold **ctx_th)
 {
 	struct nfs4_exception exception = { };
 	struct nfs4_state *res;
@@ -1885,7 +1911,8 @@ static struct nfs4_state *nfs4_do_open(struct inode *dir, struct dentry *dentry,
 
 	fmode &= FMODE_READ|FMODE_WRITE;
 	do {
-		status = _nfs4_do_open(dir, dentry, fmode, flags, sattr, cred, &res);
+		status = _nfs4_do_open(dir, dentry, fmode, flags, sattr, cred,
+				       &res, ctx_th);
 		if (status == 0)
 			break;
 		/* NOTE: BAD_SEQID means the server and client disagree about the
@@ -2140,13 +2167,13 @@ static const struct rpc_call_ops nfs4_close_ops = {
 	.rpc_release = nfs4_free_closedata,
 };
 
-/* 
- * It is possible for data to be read/written from a mem-mapped file 
+/*
+ * It is possible for data to be read/written from a mem-mapped file
  * after the sys_close call (which hits the vfs layer as a flush).
- * This means that we can't safely call nfsv4 close on a file until 
+ * This means that we can't safely call nfsv4 close on a file until
  * the inode is cleared. This in turn means that we are not good
- * NFSv4 citizens - we do not indicate to the server to update the file's 
- * share state even when we are done with one of the three share 
+ * NFSv4 citizens - we do not indicate to the server to update the file's
+ * share state even when we are done with one of the three share
  * stateid's in the inode.
  *
  * NOTE: Caller must be holding the sp->so_owner semaphore!
@@ -2217,7 +2244,8 @@ nfs4_atomic_open(struct inode *dir, struct nfs_open_context *ctx, int open_flags
 	struct nfs4_state *state;
 
 	/* Protect against concurrent sillydeletes */
-	state = nfs4_do_open(dir, ctx->dentry, ctx->mode, open_flags, attr, ctx->cred);
+	state = nfs4_do_open(dir, ctx->dentry, ctx->mode, open_flags, attr,
+			     ctx->cred, &ctx->mdsthreshold);
 	if (IS_ERR(state))
 		return ERR_CAST(state);
 	ctx->state = state;
@@ -2463,7 +2491,7 @@ static int _nfs4_proc_getattr(struct nfs_server *server, struct nfs_fh *fhandle,
 		.rpc_argp = &args,
 		.rpc_resp = &res,
 	};
-	
+
 	nfs_fattr_init(fattr);
 	return nfs4_call_sync(server->client, server, &msg, &args.seq_args, &res.seq_res, 0);
 }
@@ -2480,7 +2508,7 @@ static int nfs4_proc_getattr(struct nfs_server *server, struct nfs_fh *fhandle, 
 	return err;
 }
 
-/* 
+/*
  * The file is not closed if it is opened due to the a request to change
  * the size of the file. The open call will not be needed once the
  * VFS layer lookup-intents are implemented.
@@ -2510,7 +2538,7 @@ nfs4_proc_setattr(struct dentry *dentry, struct nfs_fattr *fattr,
 		pnfs_return_layout(inode);
 
 	nfs_fattr_init(fattr);
-	
+
 	/* Search for an existing open(O_WRITE) file */
 	if (sattr->ia_valid & ATTR_FILE) {
 		struct nfs_open_context *ctx;
@@ -2794,7 +2822,7 @@ nfs4_proc_create(struct inode *dir, struct dentry *dentry, struct iattr *sattr,
 		fmode = ctx->mode;
 	}
 	sattr->ia_mode &= ~current_umask();
-	state = nfs4_do_open(dir, de, fmode, flags, sattr, cred);
+	state = nfs4_do_open(dir, de, fmode, flags, sattr, cred, NULL);
 	d_drop(dentry);
 	if (IS_ERR(state)) {
 		status = PTR_ERR(state);
@@ -2949,7 +2977,7 @@ static int _nfs4_proc_rename(struct inode *old_dir, struct qstr *old_name,
 		.rpc_resp = &res,
 	};
 	int status = -ENOMEM;
-	
+
 	res.old_fattr = nfs_alloc_fattr();
 	res.new_fattr = nfs_alloc_fattr();
 	if (res.old_fattr == NULL || res.new_fattr == NULL)
@@ -3101,7 +3129,7 @@ static int _nfs4_proc_symlink(struct inode *dir, struct dentry *dentry,
 	data->msg.rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_SYMLINK];
 	data->arg.u.symlink.pages = &page;
 	data->arg.u.symlink.len = len;
-	
+
 	status = nfs4_do_create(dir, dentry, data);
 
 	nfs4_free_createdata(data);
@@ -3234,7 +3262,7 @@ static int _nfs4_proc_mknod(struct inode *dir, struct dentry *dentry,
 		data->arg.u.device.specdata1 = MAJOR(rdev);
 		data->arg.u.device.specdata2 = MINOR(rdev);
 	}
-	
+
 	status = nfs4_do_create(dir, dentry, data);
 
 	nfs4_free_createdata(data);
@@ -3436,7 +3464,7 @@ EXPORT_SYMBOL_GPL(nfs4_reset_read);
 static int nfs4_write_done_cb(struct rpc_task *task, struct nfs_write_data *data)
 {
 	struct inode *inode = data->inode;
-	
+
 	if (nfs4_async_handle_error(task, NFS_SERVER(inode), data->args.context->state) == -EAGAIN) {
 		rpc_restart_call_prepare(task);
 		return -EAGAIN;
@@ -4203,8 +4231,8 @@ int nfs4_proc_delegreturn(struct inode *inode, struct rpc_cred *cred, const nfs4
 #define NFS4_LOCK_MINTIMEOUT (1 * HZ)
 #define NFS4_LOCK_MAXTIMEOUT (30 * HZ)
 
-/* 
- * sleep, with exponential backoff, and retry the LOCK operation. 
+/*
+ * sleep, with exponential backoff, and retry the LOCK operation.
  */
 static unsigned long
 nfs4_set_lock_task_retry(unsigned long timeout)
@@ -5139,6 +5167,60 @@ nfs41_same_server_scope(struct nfs41_server_scope *a,
 }
 
 /*
+ * nfs4_proc_bind_conn_to_session()
+ *
+ * The 4.1 client currently uses the same TCP connection for the
+ * fore and backchannel.
+ */
+int nfs4_proc_bind_conn_to_session(struct nfs_client *clp)
+{
+	int status;
+	struct nfs41_bind_conn_to_session_res res;
+	struct rpc_message msg = {
+		.rpc_proc =
+			&nfs4_procedures[NFSPROC4_CLNT_BIND_CONN_TO_SESSION],
+		.rpc_argp = clp,
+		.rpc_resp = &res,
+	};
+
+	dprintk("--> %s\n", __func__);
+	BUG_ON(clp == NULL);
+
+	res.session = kzalloc(sizeof(struct nfs4_session), GFP_NOFS);
+	if (unlikely(res.session == NULL)) {
+		status = -ENOMEM;
+		goto out;
+	}
+
+	status = rpc_call_sync(clp->cl_rpcclient, &msg, RPC_TASK_TIMEOUT);
+	if (status == 0) {
+		if (memcmp(res.session->sess_id.data,
+		    clp->cl_session->sess_id.data, NFS4_MAX_SESSIONID_LEN)) {
+			dprintk("NFS: %s: Session ID mismatch\n", __func__);
+			status = -EIO;
+			goto out_session;
+		}
+		if (res.dir != NFS4_CDFS4_BOTH) {
+			dprintk("NFS: %s: Unexpected direction from server\n",
+				__func__);
+			status = -EIO;
+			goto out_session;
+		}
+		if (res.use_conn_in_rdma_mode) {
+			dprintk("NFS: %s: Server returned RDMA mode = true\n",
+				__func__);
+			status = -EIO;
+			goto out_session;
+		}
+	}
+out_session:
+	kfree(res.session);
+out:
+	dprintk("<-- %s status= %d\n", __func__, status);
+	return status;
+}
+
+/*
  * nfs4_proc_exchange_id()
  *
  * Since the clientid has expired, all compounds using sessions
@@ -5680,7 +5762,7 @@ int nfs4_proc_destroy_session(struct nfs4_session *session)
 static int nfs41_check_session_ready(struct nfs_client *clp)
 {
 	int ret;
-	
+
 	if (clp->cl_cons_state == NFS_CS_SESSION_INITING) {
 		ret = nfs4_client_recover_expired_lease(clp);
 		if (ret)

@@ -35,6 +35,15 @@ static inline int nfs_fsid_equal(const struct nfs_fsid *a, const struct nfs_fsid
 	return a->major == b->major && a->minor == b->minor;
 }
 
+struct nfs4_threshold {
+	__u32	bm;
+	__u32	l_type;
+	__u64	rd_sz;
+	__u64	wr_sz;
+	__u64	rd_io_sz;
+	__u64	wr_io_sz;
+};
+
 struct nfs_fattr {
 	unsigned int		valid;		/* which fields are valid */
 	umode_t			mode;
@@ -67,6 +76,7 @@ struct nfs_fattr {
 	unsigned long		gencount;
 	struct nfs4_string	*owner_name;
 	struct nfs4_string	*group_name;
+	struct nfs4_threshold	*mdsthreshold;	/* pNFS threshold hints */
 };
 
 #define NFS_ATTR_FATTR_TYPE		(1U << 0)
@@ -1085,6 +1095,12 @@ struct nfs41_impl_id {
 	char				domain[NFS4_OPAQUE_LIMIT + 1];
 	char				name[NFS4_OPAQUE_LIMIT + 1];
 	struct nfstime4			date;
+};
+
+struct nfs41_bind_conn_to_session_res {
+	struct nfs4_session		*session;
+	u32				dir;
+	bool				use_conn_in_rdma_mode;
 };
 
 struct nfs41_exchange_id_res {

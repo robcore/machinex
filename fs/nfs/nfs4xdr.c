@@ -101,9 +101,12 @@ static int nfs4_stat_to_errno(int);
 #define nfs4_path_maxsz		(1 + ((3 + NFS4_MAXPATHLEN) >> 2))
 #define nfs4_owner_maxsz	(1 + XDR_QUADLEN(IDMAP_NAMESZ))
 #define nfs4_group_maxsz	(1 + XDR_QUADLEN(IDMAP_NAMESZ))
+/* We support only one layout type per file system */
+#define decode_mdsthreshold_maxsz (1 + 1 + nfs4_fattr_bitmap_maxsz + 1 + 8)
 /* This is based on getfattr, which uses the most attributes: */
 #define nfs4_fattr_value_maxsz	(1 + (1 + 2 + 2 + 4 + 2 + 1 + 1 + 2 + 2 + \
-				3 + 3 + 3 + nfs4_owner_maxsz + nfs4_group_maxsz))
+				3 + 3 + 3 + nfs4_owner_maxsz + \
+				nfs4_group_maxsz + decode_mdsthreshold_maxsz))
 #define nfs4_fattr_maxsz	(nfs4_fattr_bitmap_maxsz + \
 				nfs4_fattr_value_maxsz)
 #define decode_getattr_maxsz    (op_decode_hdr_maxsz + nfs4_fattr_maxsz)
@@ -323,6 +326,16 @@ static int nfs4_stat_to_errno(int);
 				     1 /* csr_flags */ + \
 				     decode_channel_attrs_maxsz + \
 				     decode_channel_attrs_maxsz)
+#define encode_bind_conn_to_session_maxsz  (op_encode_hdr_maxsz + \
+				     /* bctsa_sessid */ \
+				     XDR_QUADLEN(NFS4_MAX_SESSIONID_LEN) + \
+				     1 /* bctsa_dir */ + \
+				     1 /* bctsa_use_conn_in_rdma_mode */)
+#define decode_bind_conn_to_session_maxsz  (op_decode_hdr_maxsz +	\
+				     /* bctsr_sessid */ \
+				     XDR_QUADLEN(NFS4_MAX_SESSIONID_LEN) + \
+				     1 /* bctsr_dir */ + \
+				     1 /* bctsr_use_conn_in_rdma_mode */)
 #define encode_destroy_session_maxsz    (op_encode_hdr_maxsz + 4)
 #define decode_destroy_session_maxsz    (op_decode_hdr_maxsz)
 #define encode_sequence_maxsz	(op_encode_hdr_maxsz + \
@@ -740,6 +753,12 @@ static int nfs4_stat_to_errno(int);
 				decode_putfh_maxsz + \
 				decode_secinfo_maxsz)
 #if defined(CONFIG_NFS_V4_1)
+#define NFS4_enc_bind_conn_to_session_sz \
+				(compound_encode_hdr_maxsz + \
+				 encode_bind_conn_to_session_maxsz)
+#define NFS4_dec_bind_conn_to_session_sz \
+				(compound_decode_hdr_maxsz + \
+				 decode_bind_conn_to_session_maxsz)
 #define NFS4_enc_exchange_id_sz \
 				(compound_encode_hdr_maxsz + \
 				 encode_exchange_id_maxsz)
@@ -1194,6 +1213,16 @@ static void encode_getfattr(struct xdr_stream *xdr, const u32* bitmask, struct c
 {
 	encode_getattr_two(xdr, bitmask[0] & nfs4_fattr_bitmap[0],
 			   bitmask[1] & nfs4_fattr_bitmap[1], hdr);
+}
+
+static void encode_getfattr_open(struct xdr_stream *xdr, const u32 *bitmask,
+				 struct compound_hdr *hdr)
+{
+	encode_getattr_three(xdr,
+			     bitmask[0] & nfs4_fattr_bitmap[0],
+			     bitmask[1] & nfs4_fattr_bitmap[1],
+			     bitmask[2] & FATTR4_WORD2_MDSTHRESHOLD,
+			     hdr);
 }
 
 static void encode_fsinfo(struct xdr_stream *xdr, const u32* bitmask, struct compound_hdr *hdr)
@@ -1680,6 +1709,20 @@ static void encode_secinfo(struct xdr_stream *xdr, const struct qstr *name, stru
 
 #if defined(CONFIG_NFS_V4_1)
 /* NFSv4.1 operations */
+static void encode_bind_conn_to_session(struct xdr_stream *xdr,
+				   struct nfs4_session *session,
+				   struct compound_hdr *hdr)
+{
+	__be32 *p;
+
+	encode_op_hdr(xdr, OP_BIND_CONN_TO_SESSION,
+		decode_bind_conn_to_session_maxsz, hdr);
+	encode_opaque_fixed(xdr, session->sess_id.data, NFS4_MAX_SESSIONID_LEN);
+	p = xdr_reserve_space(xdr, 8);
+	*p++ = cpu_to_be32(NFS4_CDFC4_BACK_OR_BOTH);
+	*p = 0;	/* use_conn_in_rdma_mode = False */
+}
+
 static void encode_exchange_id(struct xdr_stream *xdr,
 			       struct nfs41_exchange_id_args *args,
 			       struct compound_hdr *hdr)
@@ -2049,7 +2092,7 @@ static void nfs4_xdr_enc_lookup_root(struct rpc_rqst *req,
 	encode_sequence(xdr, &args->seq_args, &hdr);
 	encode_putrootfh(xdr, &hdr);
 	encode_getfh(xdr, &hdr);
-	encode_getfattr(xdr, args->bitmask, &hdr);
+	encode_getfattr_open(xdr, args->bitmask, &hdr);
 	encode_nops(&hdr);
 }
 
@@ -2653,6 +2696,22 @@ static void nfs4_xdr_enc_secinfo(struct rpc_rqst *req,
 }
 
 #if defined(CONFIG_NFS_V4_1)
+/*
+ * BIND_CONN_TO_SESSION request
+ */
+static void nfs4_xdr_enc_bind_conn_to_session(struct rpc_rqst *req,
+				struct xdr_stream *xdr,
+				struct nfs_client *clp)
+{
+	struct compound_hdr hdr = {
+		.minorversion = clp->cl_mvops->minor_version,
+	};
+
+	encode_compound_hdr(xdr, req, &hdr);
+	encode_bind_conn_to_session(xdr, clp->cl_session, &hdr);
+	encode_nops(&hdr);
+}
+
 /*
  * EXCHANGE_ID request
  */
@@ -4237,6 +4296,110 @@ xdr_error:
 	return status;
 }
 
+static int decode_threshold_hint(struct xdr_stream *xdr,
+				  uint32_t *bitmap,
+				  uint64_t *res,
+				  uint32_t hint_bit)
+{
+	__be32 *p;
+
+	*res = 0;
+	if (likely(bitmap[0] & hint_bit)) {
+		p = xdr_inline_decode(xdr, 8);
+		if (unlikely(!p))
+			goto out_overflow;
+		xdr_decode_hyper(p, res);
+	}
+	return 0;
+out_overflow:
+	print_overflow_msg(__func__, xdr);
+	return -EIO;
+}
+
+static int decode_first_threshold_item4(struct xdr_stream *xdr,
+					struct nfs4_threshold *res)
+{
+	__be32 *p, *savep;
+	uint32_t bitmap[3] = {0,}, attrlen;
+	int status;
+
+	/* layout type */
+	p = xdr_inline_decode(xdr, 4);
+	if (unlikely(!p)) {
+		print_overflow_msg(__func__, xdr);
+		return -EIO;
+	}
+	res->l_type = be32_to_cpup(p);
+
+	/* thi_hintset bitmap */
+	status = decode_attr_bitmap(xdr, bitmap);
+	if (status < 0)
+		goto xdr_error;
+
+	/* thi_hintlist length */
+	status = decode_attr_length(xdr, &attrlen, &savep);
+	if (status < 0)
+		goto xdr_error;
+	/* thi_hintlist */
+	status = decode_threshold_hint(xdr, bitmap, &res->rd_sz, THRESHOLD_RD);
+	if (status < 0)
+		goto xdr_error;
+	status = decode_threshold_hint(xdr, bitmap, &res->wr_sz, THRESHOLD_WR);
+	if (status < 0)
+		goto xdr_error;
+	status = decode_threshold_hint(xdr, bitmap, &res->rd_io_sz,
+				       THRESHOLD_RD_IO);
+	if (status < 0)
+		goto xdr_error;
+	status = decode_threshold_hint(xdr, bitmap, &res->wr_io_sz,
+				       THRESHOLD_WR_IO);
+	if (status < 0)
+		goto xdr_error;
+
+	status = verify_attr_len(xdr, savep, attrlen);
+	res->bm = bitmap[0];
+
+	dprintk("%s bm=0x%x rd_sz=%llu wr_sz=%llu rd_io=%llu wr_io=%llu\n",
+		 __func__, res->bm, res->rd_sz, res->wr_sz, res->rd_io_sz,
+		res->wr_io_sz);
+xdr_error:
+	dprintk("%s ret=%d!\n", __func__, status);
+	return status;
+}
+
+/*
+ * Thresholds on pNFS direct I/O vrs MDS I/O
+ */
+static int decode_attr_mdsthreshold(struct xdr_stream *xdr,
+				    uint32_t *bitmap,
+				    struct nfs4_threshold *res)
+{
+	__be32 *p;
+	int status = 0;
+	uint32_t num;
+
+	if (unlikely(bitmap[2] & (FATTR4_WORD2_MDSTHRESHOLD - 1U)))
+		return -EIO;
+	if (likely(bitmap[2] & FATTR4_WORD2_MDSTHRESHOLD)) {
+		p = xdr_inline_decode(xdr, 4);
+		if (unlikely(!p))
+			goto out_overflow;
+		num = be32_to_cpup(p);
+		if (num == 0)
+			return 0;
+		if (num > 1)
+			printk(KERN_INFO "%s: Warning: Multiple pNFS layout "
+				"drivers per filesystem not supported\n",
+				__func__);
+
+		status = decode_first_threshold_item4(xdr, res);
+	}
+	return status;
+out_overflow:
+	print_overflow_msg(__func__, xdr);
+	return -EIO;
+}
+
 static int decode_getfattr_attrs(struct xdr_stream *xdr, uint32_t *bitmap,
 		struct nfs_fattr *fattr, struct nfs_fh *fh,
 		struct nfs4_fs_locations *fs_loc,
@@ -4342,6 +4505,10 @@ static int decode_getfattr_attrs(struct xdr_stream *xdr, uint32_t *bitmap,
 	if (status < 0)
 		goto xdr_error;
 	fattr->valid |= status;
+
+	status = decode_attr_mdsthreshold(xdr, bitmap, fattr->mdsthreshold);
+	if (status < 0)
+		goto xdr_error;
 
 xdr_error:
 	dprintk("%s: xdr returned %d\n", __func__, -status);
@@ -5295,6 +5462,37 @@ out_overflow:
 static int decode_sessionid(struct xdr_stream *xdr, struct nfs4_sessionid *sid)
 {
 	return decode_opaque_fixed(xdr, sid->data, NFS4_MAX_SESSIONID_LEN);
+}
+
+static int decode_bind_conn_to_session(struct xdr_stream *xdr,
+				struct nfs41_bind_conn_to_session_res *res)
+{
+	__be32 *p;
+	int status;
+
+	status = decode_op_hdr(xdr, OP_BIND_CONN_TO_SESSION);
+	if (!status)
+		status = decode_sessionid(xdr, &res->session->sess_id);
+	if (unlikely(status))
+		return status;
+
+	/* dir flags, rdma mode bool */
+	p = xdr_inline_decode(xdr, 8);
+	if (unlikely(!p))
+		goto out_overflow;
+
+	res->dir = be32_to_cpup(p++);
+	if (res->dir == 0 || res->dir > NFS4_CDFS4_BOTH)
+		return -EIO;
+	if (be32_to_cpup(p) == 0)
+		res->use_conn_in_rdma_mode = false;
+	else
+		res->use_conn_in_rdma_mode = true;
+
+	return 0;
+out_overflow:
+	print_overflow_msg(__func__, xdr);
+	return -EIO;
 }
 
 static int decode_create_session(struct xdr_stream *xdr,
@@ -6613,6 +6811,22 @@ out:
 
 #if defined(CONFIG_NFS_V4_1)
 /*
+ * Decode BIND_CONN_TO_SESSION response
+ */
+static int nfs4_xdr_dec_bind_conn_to_session(struct rpc_rqst *rqstp,
+					struct xdr_stream *xdr,
+					void *res)
+{
+	struct compound_hdr hdr;
+	int status;
+
+	status = decode_compound_hdr(xdr, &hdr);
+	if (!status)
+		status = decode_bind_conn_to_session(xdr, res);
+	return status;
+}
+
+/*
  * Decode EXCHANGE_ID response
  */
 static int nfs4_xdr_dec_exchange_id(struct rpc_rqst *rqstp,
@@ -7093,6 +7307,8 @@ struct rpc_procinfo	nfs4_procedures[] = {
 	PROC(RELEASE_LOCKOWNER,	enc_release_lockowner,	dec_release_lockowner),
 	PROC(SECINFO,		enc_secinfo,		dec_secinfo),
 #if defined(CONFIG_NFS_V4_1)
+	PROC(BIND_CONN_TO_SESSION,
+			enc_bind_conn_to_session, dec_bind_conn_to_session),
 	PROC(EXCHANGE_ID,	enc_exchange_id,	dec_exchange_id),
 	PROC(CREATE_SESSION,	enc_create_session,	dec_create_session),
 	PROC(DESTROY_SESSION,	enc_destroy_session,	dec_destroy_session),
