@@ -208,7 +208,7 @@ struct rpc_clnt *nfs4_create_sec_client(struct rpc_clnt *, struct inode *, struc
 /* nfs4proc.c */
 extern int nfs4_proc_setclientid(struct nfs_client *, u32, unsigned short, struct rpc_cred *, struct nfs4_setclientid_res *);
 extern int nfs4_proc_setclientid_confirm(struct nfs_client *, struct nfs4_setclientid_res *arg, struct rpc_cred *);
-extern int nfs4_proc_bind_conn_to_session(struct nfs_client *);
+extern int nfs4_proc_bind_conn_to_session(struct nfs_client *, struct rpc_cred *cred)
 extern int nfs4_proc_exchange_id(struct nfs_client *clp, struct rpc_cred *cred);
 extern int nfs4_init_clientid(struct nfs_client *, struct rpc_cred *);
 extern int nfs41_init_clientid(struct nfs_client *, struct rpc_cred *);
@@ -237,8 +237,8 @@ extern int nfs41_setup_sequence(struct nfs4_session *session,
 		struct rpc_task *task);
 extern void nfs4_destroy_session(struct nfs4_session *session);
 extern struct nfs4_session *nfs4_alloc_session(struct nfs_client *clp);
-extern int nfs4_proc_create_session(struct nfs_client *);
-extern int nfs4_proc_destroy_session(struct nfs4_session *);
+extern int nfs4_proc_create_session(struct nfs_client *, struct rpc_cred *);
+extern int nfs4_proc_destroy_session(struct nfs4_session *, struct rpc_cred *);
 extern int nfs4_init_session(struct nfs_server *server);
 extern int nfs4_proc_get_lease_time(struct nfs_client *clp,
 		struct nfs_fsinfo *fsinfo);

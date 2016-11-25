@@ -5172,7 +5172,7 @@ nfs41_same_server_scope(struct nfs41_server_scope *a,
  * The 4.1 client currently uses the same TCP connection for the
  * fore and backchannel.
  */
-int nfs4_proc_bind_conn_to_session(struct nfs_client *clp)
+int nfs4_proc_bind_conn_to_session(struct nfs_client *clp, struct rpc_cred *cred)
 {
 	int status;
 	struct nfs41_bind_conn_to_session_res res;
@@ -5181,6 +5181,7 @@ int nfs4_proc_bind_conn_to_session(struct nfs_client *clp)
 			&nfs4_procedures[NFSPROC4_CLNT_BIND_CONN_TO_SESSION],
 		.rpc_argp = clp,
 		.rpc_resp = &res,
+		.rpc_cred = cred,
 	};
 
 	dprintk("--> %s\n", __func__);
@@ -5547,8 +5548,12 @@ struct nfs4_session *nfs4_alloc_session(struct nfs_client *clp)
 void nfs4_destroy_session(struct nfs4_session *session)
 {
 	struct rpc_xprt *xprt;
+	struct rpc_cred *cred;
 
-	nfs4_proc_destroy_session(session);
+	cred = nfs4_get_exchange_id_cred(session->clp);
+	nfs4_proc_destroy_session(session, cred);
+	if (cred)
+		put_rpccred(cred);
 
 	rcu_read_lock();
 	xprt = rcu_dereference(session->clp->cl_rpcclient->cl_xprt);
@@ -5658,7 +5663,8 @@ static int nfs4_verify_channel_attrs(struct nfs41_create_session_args *args,
 	return nfs4_verify_back_channel_attrs(args, session);
 }
 
-static int _nfs4_proc_create_session(struct nfs_client *clp)
+static int _nfs4_proc_create_session(struct nfs_client *clp,
+		struct rpc_cred *cred)
 {
 	struct nfs4_session *session = clp->cl_session;
 	struct nfs41_create_session_args args = {
@@ -5672,6 +5678,7 @@ static int _nfs4_proc_create_session(struct nfs_client *clp)
 		.rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_CREATE_SESSION],
 		.rpc_argp = &args,
 		.rpc_resp = &res,
+		.rpc_cred = cred,
 	};
 	int status;
 
@@ -5696,7 +5703,7 @@ static int _nfs4_proc_create_session(struct nfs_client *clp)
  * It is the responsibility of the caller to verify the session is
  * expired before calling this routine.
  */
-int nfs4_proc_create_session(struct nfs_client *clp)
+int nfs4_proc_create_session(struct nfs_client *clp, struct rpc_cred *cred)
 {
 	int status;
 	unsigned *ptr;
@@ -5704,7 +5711,7 @@ int nfs4_proc_create_session(struct nfs_client *clp)
 
 	dprintk("--> %s clp=%p session=%p\n", __func__, clp, session);
 
-	status = _nfs4_proc_create_session(clp);
+	status = _nfs4_proc_create_session(clp, cred);
 	if (status)
 		goto out;
 
@@ -5726,10 +5733,15 @@ out:
  * Issue the over-the-wire RPC DESTROY_SESSION.
  * The caller must serialize access to this routine.
  */
-int nfs4_proc_destroy_session(struct nfs4_session *session)
+int nfs4_proc_destroy_session(struct nfs4_session *session,
+		struct rpc_cred *cred)
 {
+	struct rpc_message msg = {
+		.rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_DESTROY_SESSION],
+		.rpc_argp = session,
+		.rpc_cred = cred,
+	};
 	int status = 0;
-	struct rpc_message msg;
 
 	dprintk("--> nfs4_proc_destroy_session\n");
 
@@ -5737,10 +5749,6 @@ int nfs4_proc_destroy_session(struct nfs4_session *session)
 	if (session->clp->cl_cons_state != NFS_CS_READY)
 		return status;
 
-	msg.rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_DESTROY_SESSION];
-	msg.rpc_argp = session;
-	msg.rpc_resp = NULL;
-	msg.rpc_cred = NULL;
 	status = rpc_call_sync(session->clp->cl_rpcclient, &msg, RPC_TASK_TIMEOUT);
 
 	if (status)
