@@ -1207,6 +1207,9 @@ static int do_test(int m)
 	case 109:
 		ret += tcrypt_test("vmac(aes)");
 		break;
+	case 110:
+		ret += tcrypt_test("hmac(crc32)");
+		break;
 
 	case 150:
 		ret += tcrypt_test("ansi_cprng");
@@ -1578,6 +1581,29 @@ static int do_test(int m)
 				   speed_template_32_64);
 		test_acipher_speed("xts(serpent)", DECRYPT, sec, NULL, 0,
 				   speed_template_32_64);
+		break;
+
+	case 504:
+		test_acipher_speed("ecb(twofish)", ENCRYPT, sec, NULL, 0,
+				   speed_template_16_24_32);
+		test_acipher_speed("ecb(twofish)", DECRYPT, sec, NULL, 0,
+				   speed_template_16_24_32);
+		test_acipher_speed("cbc(twofish)", ENCRYPT, sec, NULL, 0,
+				   speed_template_16_24_32);
+		test_acipher_speed("cbc(twofish)", DECRYPT, sec, NULL, 0,
+				   speed_template_16_24_32);
+		test_acipher_speed("ctr(twofish)", ENCRYPT, sec, NULL, 0,
+				   speed_template_16_24_32);
+		test_acipher_speed("ctr(twofish)", DECRYPT, sec, NULL, 0,
+				   speed_template_16_24_32);
+		test_acipher_speed("lrw(twofish)", ENCRYPT, sec, NULL, 0,
+				   speed_template_32_40_48);
+		test_acipher_speed("lrw(twofish)", DECRYPT, sec, NULL, 0,
+				   speed_template_32_40_48);
+		test_acipher_speed("xts(twofish)", ENCRYPT, sec, NULL, 0,
+				   speed_template_32_48_64);
+		test_acipher_speed("xts(twofish)", DECRYPT, sec, NULL, 0,
+				   speed_template_32_48_64);
 		break;
 
 	case 1000:
