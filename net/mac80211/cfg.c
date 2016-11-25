@@ -521,7 +521,8 @@ static int ieee80211_set_channel(struct wiphy *wiphy,
 	case CHAN_MODE_HOPPING:
 		return -EBUSY;
 	case CHAN_MODE_FIXED:
-		if (local->oper_channel != chan)
+		if (local->oper_channel != chan ||
+		    (!sdata && local->_oper_channel_type != channel_type))
 			return -EBUSY;
 		if (!sdata && local->_oper_channel_type == channel_type)
 			return 0;
@@ -1887,6 +1888,9 @@ static int ieee80211_set_bitrate_mask(struct wiphy *wiphy,
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = wdev_priv(dev->ieee80211_ptr);
 	int i, ret;
+
+	if (!ieee80211_sdata_running(sdata))
+		return -ENETDOWN;
 
 	if (local->hw.flags & IEEE80211_HW_HAS_RATE_CONTROL) {
 		ret = drv_set_bitrate_mask(local, sdata, mask);
