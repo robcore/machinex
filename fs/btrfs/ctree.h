@@ -1129,6 +1129,15 @@ struct btrfs_fs_info {
 	spinlock_t delayed_iput_lock;
 	struct list_head delayed_iputs;
 
+	/* this protects tree_mod_seq_list */
+	spinlock_t tree_mod_seq_lock;
+	atomic_t tree_mod_seq;
+	struct list_head tree_mod_seq_list;
+
+	/* this protects tree_mod_log */
+	rwlock_t tree_mod_log_lock;
+	struct rb_root tree_mod_log;
+
 	atomic_t nr_async_submits;
 	atomic_t async_submit_draining;
 	atomic_t nr_async_bios;
@@ -2496,11 +2505,11 @@ struct extent_buffer *btrfs_alloc_free_block(struct btrfs_trans_handle *trans,
 					struct btrfs_root *root, u32 blocksize,
 					u64 parent, u64 root_objectid,
 					struct btrfs_disk_key *key, int level,
-					u64 hint, u64 empty_size, int for_cow);
+					u64 hint, u64 empty_size);
 void btrfs_free_tree_block(struct btrfs_trans_handle *trans,
 			   struct btrfs_root *root,
 			   struct extent_buffer *buf,
-			   u64 parent, int last_ref, int for_cow);
+			   u64 parent, int last_ref);
 struct extent_buffer *btrfs_init_new_buffer(struct btrfs_trans_handle *trans,
 					    struct btrfs_root *root,
 					    u64 bytenr, u32 blocksize,
@@ -3097,5 +3106,12 @@ int btrfs_reada_wait(void *handle);
 void btrfs_reada_detach(void *handle);
 int btree_readahead_hook(struct btrfs_root *root, struct extent_buffer *eb,
 			 u64 start, int err);
+
+/* delayed seq elem */
+struct seq_list {
+	struct list_head list;
+	u64 seq;
+	u32 flags;
+};
 
 #endif
