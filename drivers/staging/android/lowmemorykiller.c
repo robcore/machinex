@@ -254,6 +254,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (tsk->flags & PF_KTHREAD)
 			continue;
 
+		/* if task no longer has any memory ignore it */
+		if (test_task_flag(tsk, TIF_MM_RELEASED))
+			continue;
+
 		if (time_before_eq(jiffies, lowmem_deathpending_timeout)) {
 			if (test_task_flag(tsk, TIF_MEMDIE)) {
 				rcu_read_unlock();
@@ -389,10 +393,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d ,hotness %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize,selected_hotness_adj);
-#else
-		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
-			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize);
 #endif
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
@@ -404,7 +404,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef LMK_COUNT_READ
 		lmk_count++;
 #endif
-	} 	 else
+		rcu_read_unlock();
+
+	} else
 		rcu_read_unlock();
 #endif
 
