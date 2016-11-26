@@ -31,7 +31,7 @@ SUBSYS(cpuacct)
 
 /* */
 
-#ifdef CONFIG_MEMCG
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR
 SUBSYS(mem_cgroup)
 #endif
 

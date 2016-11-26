@@ -12,7 +12,7 @@ enum {
 #ifndef __GENERATING_BOUNDS_H
 #include <generated/bounds.h>
 
-#ifdef CONFIG_MEMCG
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR
 #include <linux/bit_spinlock.h>
 
 /*
@@ -82,7 +82,7 @@ static inline void unlock_page_cgroup(struct page_cgroup *pc)
 	bit_spin_unlock(PCG_LOCK, &pc->flags);
 }
 
-#else /* CONFIG_MEMCG */
+#else /* CONFIG_CGROUP_MEM_RES_CTLR */
 struct page_cgroup;
 
 static inline void __meminit pgdat_page_cgroup_init(struct pglist_data *pgdat)
@@ -102,11 +102,11 @@ static inline void __init page_cgroup_init_flatmem(void)
 {
 }
 
-#endif /* CONFIG_MEMCG */
+#endif /* CONFIG_CGROUP_MEM_RES_CTLR */
 
 #include <linux/swap.h>
 
-#ifdef CONFIG_MEMCG_SWAP
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 extern unsigned short swap_cgroup_cmpxchg(swp_entry_t ent,
 					unsigned short old, unsigned short new);
 extern unsigned short swap_cgroup_record(swp_entry_t ent, unsigned short id);
@@ -138,7 +138,7 @@ static inline void swap_cgroup_swapoff(int type)
 	return;
 }
 
-#endif /* CONFIG_MEMCG_SWAP */
+#endif /* CONFIG_CGROUP_MEM_RES_CTLR_SWAP */
 
 #endif /* !__GENERATING_BOUNDS_H */
 

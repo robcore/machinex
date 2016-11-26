@@ -64,12 +64,12 @@ EXPORT_SYMBOL(mem_cgroup_subsys);
 #define MEM_CGROUP_RECLAIM_RETRIES	5
 static struct mem_cgroup *root_mem_cgroup __read_mostly;
 
-#ifdef CONFIG_MEMCG_SWAP
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 /* Turned on only when memory cgroup is enabled && really_do_swap_account = 1 */
 int do_swap_account __read_mostly;
 
 /* for remember boot option*/
-#ifdef CONFIG_MEMCG_SWAP_ENABLED
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP_ENABLED
 static int really_do_swap_account __initdata = 1;
 #else
 static int really_do_swap_account __initdata = 0;
@@ -443,7 +443,7 @@ struct mem_cgroup *mem_cgroup_from_css(struct cgroup_subsys_state *s)
 }
 
 /* Writing them here to avoid exposing memcg's inner layout */
-#ifdef CONFIG_MEMCG_KMEM
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_KMEM
 #include <net/sock.h>
 #include <net/ip.h>
 
@@ -506,7 +506,7 @@ struct cg_proto *tcp_proto_cgroup(struct mem_cgroup *memcg)
 }
 EXPORT_SYMBOL(tcp_proto_cgroup);
 #endif /* CONFIG_INET */
-#endif /* CONFIG_MEMCG_KMEM */
+#endif /* CONFIG_CGROUP_MEM_RES_CTLR_KMEM */
 
 #if defined(CONFIG_INET) && defined(CONFIG_CGROUP_MEM_RES_CTLR_KMEM)
 static void disarm_sock_keys(struct mem_cgroup *memcg)
@@ -3333,7 +3333,7 @@ mem_cgroup_uncharge_swapcache(struct page *page, swp_entry_t ent, bool swapout)
 }
 #endif
 
-#ifdef CONFIG_MEMCG_SWAP
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 /*
  * called from swap_entry_free(). remove record in swap_cgroup and
  * uncharge "memsw" account.
@@ -4781,7 +4781,7 @@ static int mem_cgroup_oom_control_write(struct cgroup *cgrp,
 	return 0;
 }
 
-#ifdef CONFIG_MEMCG_KMEM
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_KMEM
 static int memcg_init_kmem(struct mem_cgroup *memcg, struct cgroup_subsys *ss)
 {
 	return mem_cgroup_sockets_init(memcg, ss);
@@ -4876,7 +4876,7 @@ static struct cftype mem_cgroup_files[] = {
 		.read_seq_string = mem_control_numa_stat_show,
 	},
 #endif
-#ifdef CONFIG_MEMCG_SWAP
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 	{
 		.name = "memsw.usage_in_bytes",
 		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_USAGE),
@@ -5064,7 +5064,7 @@ struct mem_cgroup *parent_mem_cgroup(struct mem_cgroup *memcg)
 }
 EXPORT_SYMBOL(parent_mem_cgroup);
 
-#ifdef CONFIG_MEMCG_SWAP
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 static void __init enable_swap_cgroup(void)
 {
 	if (!mem_cgroup_disabled() && really_do_swap_account)
@@ -5807,7 +5807,7 @@ struct cgroup_subsys mem_cgroup_subsys = {
 	.__DEPRECATED_clear_css_refs = true,
 };
 
-#ifdef CONFIG_MEMCG_SWAP
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 static int __init enable_swap_account(char *s)
 {
 	/* consider enabled if no parameter or 1 is given */
