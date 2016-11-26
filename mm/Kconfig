@@ -1,6 +1,6 @@
 config SELECT_MEMORY_MODEL
 	def_bool y
-	depends on EXPERIMENTAL || ARCH_SELECT_MEMORY_MODEL
+	depends on ARCH_SELECT_MEMORY_MODEL
 
 choice
 	prompt "Memory model"
@@ -446,6 +446,43 @@ config FRONTSWAP
 
 	  If unsure, say Y to enable frontswap.
 
+config ZSWAP
+	bool "Compressed cache for swap pages (EXPERIMENTAL)"
+	depends on FRONTSWAP && CRYPTO=y
+	select CRYPTO_LZO
+	select ZPOOL
+	default n
+	help
+	  A lightweight compressed cache for swap pages.  It takes
+	  pages that are in the process of being swapped out and attempts to
+	  compress them into a dynamically allocated RAM-based memory pool.
+	  This can result in a significant I/O reduction on swap device and,
+	  in the case where decompressing from RAM is faster that swap device
+	  reads, can also improve workload performance.
+
+	  This is marked experimental because it is a new feature (as of
+	  v3.11) that interacts heavily with memory reclaim.  While these
+	  interactions don't cause any known issues on simple memory setups,
+	  they have not be fully explored on the large set of potential
+	  configurations and workloads that exist.
+
+config ZPOOL
+	tristate "Common API for compressed memory storage"
+	default n
+ 	help
+	  Compressed memory storage API.  This allows using either zbud or
+	  zsmalloc.
+
+config ZBUD
+	tristate "Low density storage for compressed pages"
+	default n
+	help
+	  A special purpose allocator for storing compressed pages.
+	  It is designed to store up to two compressed pages per physical
+	  page.  While this design limits storage density, it has simple and
+	  deterministic reclaim properties that make it preferable to a higher
+	  density approach when reclaim will be used.
+
 config ZSMALLOC_NEW
 	tristate "Memory allocator for compressed pages"
 	depends on !ZSMALLOC
@@ -470,26 +507,6 @@ config PGTABLE_MAPPING
 
 	  You can check speed with zsmalloc benchmark[1].
 	  [1] https://github.com/spartacus06/zsmalloc
-
-config ZSWAP
-	bool "In-kernel swap page compression"
-	depends on FRONTSWAP && CRYPTO
-	select CRYPTO_LZO
-	select ZSMALLOC_NEW
-	default n
-	help
-	  Zswap is a backend for the frontswap mechanism in the VMM.
-	  It receives pages from frontswap and attempts to store them
-	  in a compressed memory pool, resulting in an effective
-	  partial memory reclaim.  In addition, pages and be retrieved
-	  from this compressed store much faster than most tradition
-	  swap devices resulting in reduced I/O and faster performance
-	  for many workloads.
-
-config ZSWAP_ENABLE_WRITEBACK
-	bool "Enable writeback"
-	depends on ZSWAP
-	default n
 
 config DIRECT_RECLAIM_FILE_PAGES_ONLY
 	bool "Reclaim file pages only on direct reclaim path"
