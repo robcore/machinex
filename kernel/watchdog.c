@@ -27,7 +27,7 @@
 #include <asm/irq_regs.h>
 #include <linux/perf_event.h>
 
-#include <mach/mmi_watchdog.h>
+#include <mach/jfdt_watchdog.h>
 
 int watchdog_enabled = 1;
 int __read_mostly watchdog_thresh = 10;

@@ -24,7 +24,7 @@
 #include <mach/gpiomux.h>
 #include <mach/restart.h>
 
-#include "board-8960.h"
+#include "board-8064.h"
 #include "timer.h"
 
 static u32 fdt_start_address; /* flattened device tree address */
@@ -111,7 +111,7 @@ static int __init parse_tag_flat_dev_tree_address(const struct tag *tag)
 }
 __tagtable(ATAG_FLAT_DEV_TREE_ADDRESS, parse_tag_flat_dev_tree_address);
 
-MACHINE_START(SAMSUNG JF, "SAMSUNG JF")
+MACHINE_START(JF, "SAMSUNG JF")
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,

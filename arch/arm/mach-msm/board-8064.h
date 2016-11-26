@@ -193,4 +193,17 @@ int brcm_wifi_status_register(
 		    void (*callback)(int card_present, void *dev_id), void *dev_id);
 unsigned int brcm_wifi_status(struct device *dev);
 #endif
+
+/* Exported functions for OEM machine types */
+void msm8960_reserve(void);
+void msm8960_early_memory(void);
+void msm8960_allocate_memory_regions(void);
+void msm8960_map_io(void);
+void msm8960_init_irq(void);
+void msm8960_mtp_init(void);
+struct msm8960_oem_init_ptrs {
+	void (*msm_gpio_init)(void);
+};
+extern struct msm8960_oem_init_ptrs msm8960_oem_funcs;
+
 #endif
