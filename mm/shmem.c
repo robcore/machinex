@@ -93,12 +93,6 @@ static struct vfsmount *shm_mnt;
 
 // variant of the XATTR for CGROUPS backport
 
-struct shmem_falloc {
-       wait_queue_head_t *waitq; /* faults into hole wait for punch to end */
-       pgoff_t start;          /* start of range currently being fallocated */
-       pgoff_t next;           /* the next page offset to be fallocated */
-};
-
 /*
  * shmem_fallocate and shmem_writepage communicate via inode->i_private
  * (with i_mutex making sure that it has only one user at a time):
@@ -603,13 +597,6 @@ static void shmem_undo_range(struct inode *inode, loff_t lstart, loff_t lend,
 	shmem_recalc_inode(inode);
 	spin_unlock(&info->lock);
 }
-
-void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
-{
-	shmem_undo_range(inode, lstart, lend, false);
-	inode->i_ctime = inode->i_mtime = CURRENT_TIME;
-}
-EXPORT_SYMBOL_GPL(shmem_truncate_range);
 
 static int shmem_setattr(struct dentry *dentry, struct iattr *attr)
 {
