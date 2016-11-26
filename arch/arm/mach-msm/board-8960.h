@@ -111,6 +111,14 @@ extern struct msm_rtb_platform_data msm8960_rtb_pdata;
 extern struct msm_cache_dump_platform_data msm8960_cache_dump_pdata;
 extern void msm8960_add_vidc_device(void);
 
+/* Exported functions for OEM machine types */
+void msm8960_reserve(void);
+void msm8960_early_memory(void);
+void msm8960_allocate_memory_regions(void);
+void msm8960_map_io(void);
+void msm8960_init_irq(void);
+void msm8960_mtp_init(void);
+
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
 int brcm_wlan_init(void);
 int brcm_wifi_status_register(
