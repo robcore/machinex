@@ -377,12 +377,9 @@ repeat:
 	core->freq_change_us = (uint32_t)ktime_to_us(
 					ktime_sub(ktime_get(), time_start));
 
-	if (core->type == MSM_DCVS_CORE_TYPE_CPU &&
-	    core->type_core_num == 0) {
-		mutex_lock(&param_update_mutex);
-		check_power_collapse_modes(core);
-		mutex_unlock(&param_update_mutex);
-	}
+	mutex_lock(&param_update_mutex);
+	check_power_collapse_modes(core);
+	mutex_unlock(&param_update_mutex);
 
 	/**
 	 * Update algorithm with new freq and time taken to change
@@ -595,8 +592,7 @@ int msm_dcvs_update_algo_params(void)
 				mutex_unlock(&param_update_mutex);
 				return ret;
 			}
-			if (cpu == 0)
-				check_power_collapse_modes(core);
+			check_power_collapse_modes(core);
 		}
 		memcpy(&curr_params, new_params,
 		       sizeof(struct msm_dcvs_algo_param));
