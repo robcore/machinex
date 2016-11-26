@@ -1108,6 +1108,8 @@ void nfs4_schedule_lease_recovery(struct nfs_client *clp)
 		return;
 	if (!test_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state))
 		set_bit(NFS4CLNT_CHECK_LEASE, &clp->cl_state);
+	dprintk("%s: scheduling lease recovery for server %s\n", __func__,
+			clp->cl_hostname);
 	nfs4_schedule_state_manager(clp);
 }
 EXPORT_SYMBOL_GPL(nfs4_schedule_lease_recovery);
@@ -1124,6 +1126,8 @@ static void nfs40_handle_cb_pathdown(struct nfs_client *clp)
 {
 	set_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state);
 	nfs_expire_all_delegations(clp);
+	dprintk("%s: handling CB_PATHDOWN recovery for server %s\n", __func__,
+			clp->cl_hostname);
 }
 
 void nfs4_schedule_path_down_recovery(struct nfs_client *clp)
@@ -1160,6 +1164,8 @@ void nfs4_schedule_stateid_recovery(const struct nfs_server *server, struct nfs4
 	struct nfs_client *clp = server->nfs_client;
 
 	nfs4_state_mark_reclaim_nograce(clp, state);
+	dprintk("%s: scheduling stateid recovery for server %s\n", __func__,
+			clp->cl_hostname);
 	nfs4_schedule_state_manager(clp);
 }
 EXPORT_SYMBOL_GPL(nfs4_schedule_stateid_recovery);
@@ -1479,15 +1485,21 @@ static int nfs4_recovery_handle_error(struct nfs_client *clp, int error)
 		case -NFS4ERR_BADSLOT:
 		case -NFS4ERR_BAD_HIGH_SLOT:
 		case -NFS4ERR_DEADSESSION:
-		case -NFS4ERR_CONN_NOT_BOUND_TO_SESSION:
 		case -NFS4ERR_SEQ_FALSE_RETRY:
 		case -NFS4ERR_SEQ_MISORDERED:
 			set_bit(NFS4CLNT_SESSION_RESET, &clp->cl_state);
 			/* Zero session reset errors */
 			break;
+		case -NFS4ERR_CONN_NOT_BOUND_TO_SESSION:
+			set_bit(NFS4CLNT_BIND_CONN_TO_SESSION, &clp->cl_state);
+			break;
 		default:
+			dprintk("%s: failed to handle error %d for server %s\n",
+					__func__, error, clp->cl_hostname);
 			return error;
 	}
+	dprintk("%s: handled error %d for server %s\n", __func__, error,
+			clp->cl_hostname);
 	return 0;
 }
 
@@ -1581,13 +1593,19 @@ static int nfs4_handle_reclaim_lease_error(struct nfs_client *clp, int status)
 	case -NFS4ERR_MINOR_VERS_MISMATCH:
 		if (clp->cl_cons_state == NFS_CS_SESSION_INITING)
 			nfs_mark_client_ready(clp, -EPROTONOSUPPORT);
+		dprintk("%s: exit with error %d for server %s\n",
+				__func__, -EPROTONOSUPPORT, clp->cl_hostname);
 		return -EPROTONOSUPPORT;
 	case -NFS4ERR_NOT_SAME: /* FixMe: implement recovery
 				 * in nfs4_exchange_id */
 	default:
+		dprintk("%s: exit with error %d for server %s\n", __func__,
+				status, clp->cl_hostname);
 		return status;
 	}
 	set_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state);
+	dprintk("%s: handled error %d for server %s\n", __func__, status,
+			clp->cl_hostname);
 	return 0;
 }
 
@@ -1609,11 +1627,17 @@ static int nfs4_reclaim_lease(struct nfs_client *clp)
 }
 
 #ifdef CONFIG_NFS_V4_1
-void nfs4_schedule_session_recovery(struct nfs4_session *session)
+void nfs4_schedule_session_recovery(struct nfs4_session *session, int err)
 {
 	struct nfs_client *clp = session->clp;
 
-	set_bit(NFS4CLNT_SESSION_RESET, &clp->cl_state);
+	switch (err) {
+	default:
+		set_bit(NFS4CLNT_SESSION_RESET, &clp->cl_state);
+		break;
+	case -NFS4ERR_CONN_NOT_BOUND_TO_SESSION:
+		set_bit(NFS4CLNT_BIND_CONN_TO_SESSION, &clp->cl_state);
+	}
 	nfs4_schedule_lease_recovery(clp);
 }
 EXPORT_SYMBOL_GPL(nfs4_schedule_session_recovery);
@@ -1621,6 +1645,8 @@ EXPORT_SYMBOL_GPL(nfs4_schedule_session_recovery);
 void nfs41_handle_recall_slot(struct nfs_client *clp)
 {
 	set_bit(NFS4CLNT_RECALL_SLOT, &clp->cl_state);
+	dprintk("%s: scheduling slot recall for server %s\n", __func__,
+			clp->cl_hostname);
 	nfs4_schedule_state_manager(clp);
 }
 
@@ -1630,6 +1656,8 @@ static void nfs4_reset_all_state(struct nfs_client *clp)
 		set_bit(NFS4CLNT_PURGE_STATE, &clp->cl_state);
 		clear_bit(NFS4CLNT_LEASE_CONFIRM, &clp->cl_state);
 		nfs4_state_start_reclaim_nograce(clp);
+		dprintk("%s: scheduling reset of all state for server %s!\n",
+				__func__, clp->cl_hostname);
 		nfs4_schedule_state_manager(clp);
 	}
 }
@@ -1638,6 +1666,8 @@ static void nfs41_handle_server_reboot(struct nfs_client *clp)
 {
 	if (test_and_set_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state) == 0) {
 		nfs4_state_start_reclaim_reboot(clp);
+		dprintk("%s: server %s rebooted!\n", __func__,
+				clp->cl_hostname);
 		nfs4_schedule_state_manager(clp);
 	}
 }
@@ -1645,12 +1675,15 @@ static void nfs41_handle_server_reboot(struct nfs_client *clp)
 static void nfs41_handle_state_revoked(struct nfs_client *clp)
 {
 	nfs4_reset_all_state(clp);
+	dprintk("%s: state revoked on server %s\n", __func__, clp->cl_hostname);
 }
 
 static void nfs41_handle_recallable_state_revoked(struct nfs_client *clp)
 {
 	/* This will need to handle layouts too */
 	nfs_expire_all_delegations(clp);
+	dprintk("%s: Recallable state revoked on server %s!\n", __func__,
+			clp->cl_hostname);
 }
 
 static void nfs41_handle_backchannel_fault(struct nfs_client *clp)
@@ -1658,6 +1691,8 @@ static void nfs41_handle_backchannel_fault(struct nfs_client *clp)
 	nfs_expire_all_delegations(clp);
 	if (test_and_set_bit(NFS4CLNT_SESSION_RESET, &clp->cl_state) == 0)
 		nfs4_schedule_state_manager(clp);
+	dprintk("%s: server %s declared a backchannel fault\n", __func__,
+			clp->cl_hostname);
 }
 
 static void nfs41_handle_cb_path_down(struct nfs_client *clp)
@@ -1718,13 +1753,17 @@ static int nfs4_reset_session(struct nfs_client *clp)
 	memset(clp->cl_session->sess_id.data, 0, NFS4_MAX_SESSIONID_LEN);
 	status = nfs4_proc_create_session(clp, cred);
 	if (status) {
-		status = nfs4_recovery_handle_error(clp, status);
+		dprintk("%s: session reset failed with status %d for server %s!\n",
+			__func__, status, clp->cl_hostname);
+		status = nfs4_handle_reclaim_lease_error(clp, status);
 		goto out;
 	}
 	clear_bit(NFS4CLNT_SESSION_RESET, &clp->cl_state);
 	/* create_session negotiated new slot table */
 	clear_bit(NFS4CLNT_RECALL_SLOT, &clp->cl_state);
 	clear_bit(NFS4CLNT_BIND_CONN_TO_SESSION, &clp->cl_state);
+	dprintk("%s: session reset was successful for server %s!\n",
+			__func__, clp->cl_hostname);
 
 	 /* Let the state manager reestablish state */
 	if (!test_bit(NFS4CLNT_LEASE_EXPIRED, &clp->cl_state))
@@ -1768,11 +1807,25 @@ static int nfs4_bind_conn_to_session(struct nfs_client *clp)
 	struct rpc_cred *cred;
 	int ret;
 
+	nfs4_begin_drain_session(clp);
 	cred = nfs4_get_exchange_id_cred(clp);
 	ret = nfs4_proc_bind_conn_to_session(clp, cred);
 	if (cred)
 		put_rpccred(cred);
-	return ret;
+	clear_bit(NFS4CLNT_BIND_CONN_TO_SESSION, &clp->cl_state);
+	switch (ret) {
+	case 0:
+		dprintk("%s: bind_conn_to_session was successful for server %s!\n",
+			__func__, clp->cl_hostname);
+		break;
+	case -NFS4ERR_DELAY:
+		ssleep(1);
+		set_bit(NFS4CLNT_BIND_CONN_TO_SESSION, &clp->cl_state);
+		break;
+	default:
+		return nfs4_recovery_handle_error(clp, ret);
+	}
+	return 0;
 }
 #else /* CONFIG_NFS_V4_1 */
 static int nfs4_reset_session(struct nfs_client *clp) { return 0; }
@@ -1842,6 +1895,7 @@ static void nfs4_state_manager(struct nfs_client *clp)
 			status = nfs4_bind_conn_to_session(clp);
 			if (status < 0)
 				goto out_error;
+			continue;
 		}
 
 		/* First recover reboot state... */
