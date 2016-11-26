@@ -25,11 +25,13 @@
 #include <linux/init.h>
 #include <linux/vfs.h>
 #include <linux/mount.h>
+#include <linux/ramfs.h>
 #include <linux/pagemap.h>
 #include <linux/file.h>
 #include <linux/mm.h>
 #include <linux/export.h>
 #include <linux/swap.h>
+#include <linux/aio.h>
 
 static struct vfsmount *shm_mnt;
 
@@ -78,27 +80,12 @@ static struct vfsmount *shm_mnt;
 #define SHORT_SYMLINK_LEN 128
 
 /*
- * shmem_fallocate and shmem_writepage communicate via inode->i_private
- * (with i_mutex making sure that it has only one user at a time):
- * we would prefer not to enlarge the shmem inode just for that.
- */
-
-//variant which was added in 3.4.100
-//struct shmem_falloc {
-//	pgoff_t start;		/* start of range currently being fallocated */
-//	pgoff_t next;		/* the next page offset to be fallocated */
-//	pgoff_t nr_falloced;	/* how many new pages have been fallocated */
-//	pgoff_t nr_unswapped;	/* how often writepage refused to swap out */
-//};
-
-// variant of the XATTR for CGROUPS backport
-
-/*
- * shmem_fallocate and shmem_writepage communicate via inode->i_private
- * (with i_mutex making sure that it has only one user at a time):
- * we would prefer not to enlarge the shmem inode just for that.
+ * shmem_fallocate communicates with shmem_fault or shmem_writepage via
+ * inode->i_private (with i_mutex making sure that it has only one user at
+ * a time): we would prefer not to enlarge the shmem inode just for that.
  */
 struct shmem_falloc {
+	wait_queue_head_t *waitq; /* faults into hole wait for punch to end */
 	pgoff_t start;		/* start of range currently being fallocated */
 	pgoff_t next;		/* the next page offset to be fallocated */
 	pgoff_t nr_falloced;	/* how many new pages have been fallocated */
@@ -539,14 +526,14 @@ static void shmem_undo_range(struct inode *inode, loff_t lstart, loff_t lend,
 		return;
 
 	index = start;
-	while (index <= end) {
+	while (index < end) {
 		cond_resched();
 		pvec.nr = shmem_find_get_pages_and_swap(mapping, index,
 				min(end - index, (pgoff_t)PAGEVEC_SIZE),
 							pvec.pages, indices);
 		if (!pvec.nr) {
-			/* If all gone or hole-punch, we're done */
-			if (index == start || unfalloc)
+			/* If all gone or hole-punch or unfalloc, we're done */
+			if (index == start || end != -1)
 				break;
 			/* But if truncating, restart to make sure all gone */
 			index = start;
@@ -577,15 +564,15 @@ static void shmem_undo_range(struct inode *inode, loff_t lstart, loff_t lend,
 				if (page->mapping == mapping) {
 					VM_BUG_ON(PageWriteback(page));
 					truncate_inode_page(mapping, page);
-			} else {
-				/* Page was replaced by swap: retry */
-				unlock_page(page);
-				index--;
-				break;
+				} else {
+					/* Page was replaced by swap: retry */
+					unlock_page(page);
+					index--;
+					break;
+				}
 			}
 			unlock_page(page);
 		}
-	if ((index == start || unfalloc) && indices[0] >= end) {
 		shmem_deswap_pagevec(&pvec);
 		pagevec_release(&pvec);
 		mem_cgroup_uncharge_end();
@@ -598,7 +585,7 @@ static void shmem_undo_range(struct inode *inode, loff_t lstart, loff_t lend,
 	spin_unlock(&info->lock);
 }
 
-static int shmem_setattr(struct dentry *dentry, iattr *attr)
+static int shmem_setattr(struct dentry *dentry, struct iattr *attr)
 {
 	struct inode *inode = dentry->d_inode;
 	int error;
@@ -1282,7 +1269,7 @@ static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	 * prevent the hole-punch from ever completing: which in turn
 	 * locks writers out with its hold on i_mutex.  So refrain from
 	 * faulting pages into the hole while it's being punched.  Although
-	 * shmem_truncate_range() does remove the additions, it may be unable to
+	 * shmem_undo_range() does remove the additions, it may be unable to
 	 * keep up, as each new page needs its own unmap_mapping_range() call,
 	 * and the i_mmap tree grows ever slower to scan if new vmas are added.
 	 *
@@ -1300,6 +1287,7 @@ static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		spin_lock(&inode->i_lock);
 		shmem_falloc = inode->i_private;
 		if (shmem_falloc &&
+		    shmem_falloc->waitq &&
 		    vmf->pgoff >= shmem_falloc->start &&
 		    vmf->pgoff < shmem_falloc->next) {
 			wait_queue_head_t *shmem_falloc_waitq;
@@ -1320,7 +1308,7 @@ static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 			schedule();
 
 			/*
-			 * shmem_falloc_waitq points into the vmtruncate_range()
+			 * shmem_falloc_waitq points into the shmem_fallocate()
 			 * stack of the hole-punching task: shmem_falloc_waitq
 			 * is usually invalid by the time we reach here, but
 			 * finish_wait() does not dereference it in that case;
@@ -1343,47 +1331,6 @@ static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		mem_cgroup_count_vm_event(vma->vm_mm, PGMAJFAULT);
 	}
 	return ret;
-}
-
-int vmtruncate_range(struct inode *inode, loff_t lstart, loff_t lend)
-{
-	/*
-	 * If the underlying filesystem is not going to provide
-	 * a way to truncate a range of blocks (punch a hole) -
-	 * we should return failure right now.
-	 * Only CONFIG_SHMEM shmem.c ever supported i_op->truncate_range().
-	 */
-	if (inode->i_op->truncate_range != shmem_truncate_range)
-		return -ENOSYS;
-
-	mutex_lock(&inode->i_mutex);
-	{
-		struct shmem_falloc shmem_falloc;
-		struct address_space *mapping = inode->i_mapping;
-		loff_t unmap_start = round_up(lstart, PAGE_SIZE);
-		loff_t unmap_end = round_down(1 + lend, PAGE_SIZE) - 1;
-		DECLARE_WAIT_QUEUE_HEAD_ONSTACK(shmem_falloc_waitq);
-
-		shmem_falloc.waitq = &shmem_falloc_waitq;
-		shmem_falloc.start = unmap_start >> PAGE_SHIFT;
-		shmem_falloc.next = (unmap_end + 1) >> PAGE_SHIFT;
-		spin_lock(&inode->i_lock);
-		inode->i_private = &shmem_falloc;
-		spin_unlock(&inode->i_lock);
-
-		if ((u64)unmap_end > (u64)unmap_start)
-			unmap_mapping_range(mapping, unmap_start,
-					    1 + unmap_end - unmap_start, 0);
-		shmem_truncate_range(inode, lstart, lend);
-		/* No need to unmap again: hole-punching leaves COWed pages */
-
-		spin_lock(&inode->i_lock);
-		inode->i_private = NULL;
-		wake_up_all(&shmem_falloc_waitq);
-		spin_unlock(&inode->i_lock);
-	}
-	mutex_unlock(&inode->i_mutex);
-	return 0;
 }
 
 #ifdef CONFIG_NUMA
@@ -2740,7 +2687,7 @@ static const struct address_space_operations shmem_aops = {
 static const struct file_operations shmem_file_operations = {
 	.mmap		= shmem_mmap,
 #ifdef CONFIG_TMPFS
-	.llseek		= shmem_file_llseek,
+	.llseek		= generic_file_llseek,
 	.read		= do_sync_read,
 	.write		= do_sync_write,
 	.read_iter	= shmem_file_read_iter,

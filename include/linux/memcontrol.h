@@ -258,6 +258,9 @@ static inline struct lruvec *mem_cgroup_zone_lruvec(struct zone *zone,
 
 static inline struct lruvec *mem_cgroup_page_lruvec(struct page *page,
 						    struct zone *zone)
+{
+return &zone->lruvec;
+}
 
 static inline struct lruvec *mem_cgroup_lru_add_list(struct zone *zone,
 						     struct page *page,
