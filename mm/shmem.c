@@ -598,7 +598,7 @@ static void shmem_undo_range(struct inode *inode, loff_t lstart, loff_t lend,
 	spin_unlock(&info->lock);
 }
 
-static int shmem_setattr(struct dentry *dentry, struct iattr *attr)
+static int shmem_setattr(struct dentry *dentry, iattr *attr)
 {
 	struct inode *inode = dentry->d_inode;
 	int error;
