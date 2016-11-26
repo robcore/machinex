@@ -1079,7 +1079,7 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	data = kcalloc(sizeof(*data), GFP_KERNEL);
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data) {
 		dev_err(&client->adapter->dev,
 			"failed to allocate driver data.\n");
