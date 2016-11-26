@@ -29,7 +29,7 @@ static __always_inline void add_page_to_lru_list(struct page *page,
 				struct lruvec *lruvec, enum lru_list lru)
 {
 	int nr_pages = hpage_nr_pages(page);
-	mem_cgroup_update_lru_size(lruvec, lru, nr_pages);;
+	mem_cgroup_update_lru_size(lruvec, lru, nr_pages);
 #ifdef CONFIG_SCFS_LOWER_PAGECACHE_INVALIDATION
 	if (PageNocache(page))
 		list_add_tail(&page->lru, &lruvec->lists[lru]);
@@ -72,7 +72,7 @@ static inline enum lru_list page_lru_base_type(struct page *page)
  * Returns the LRU list a page was on, as an index into the array of LRU
  * lists; and clears its Unevictable or Active flags, ready for freeing.
  */
-static inline enum lru_list page_off_lru(struct page *page)
+static __always_inline enum lru_list page_off_lru(struct page *page)
 {
 	enum lru_list lru;
 
@@ -96,7 +96,7 @@ static inline enum lru_list page_off_lru(struct page *page)
  * Returns the LRU list a page should be on, as an index
  * into the array of LRU lists.
  */
-static inline enum lru_list page_lru(struct page *page)
+static __always_inline enum lru_list page_lru(struct page *page)
 {
 	enum lru_list lru;
 

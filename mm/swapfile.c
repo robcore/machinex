@@ -773,7 +773,7 @@ int free_swap_and_cache(swp_entry_t entry)
 	return p != NULL;
 }
 
-#ifdef CONFIG_MEMCG
+#ifdef CONFIG_CGROUP_MEM_RES_CTLR
 /**
  * mem_cgroup_count_swap_user - count the user of a swap entry
  * @ent: the swap entry to be checked

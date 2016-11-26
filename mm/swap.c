@@ -30,6 +30,7 @@
 #include <linux/backing-dev.h>
 #include <linux/memcontrol.h>
 #include <linux/gfp.h>
+#include <linux/uio.h>
 #include <linux/hugetlb.h>
 
 #include "internal.h"
@@ -48,13 +49,15 @@ static DEFINE_PER_CPU(struct pagevec, lru_deactivate_pvecs);
 static void __page_cache_release(struct page *page)
 {
 	if (PageLRU(page)) {
-		unsigned long flags;
 		struct zone *zone = page_zone(page);
+		struct lruvec *lruvec;
+		unsigned long flags;
 
 		spin_lock_irqsave(&zone->lru_lock, flags);
+		lruvec = mem_cgroup_page_lruvec(page, zone);
 		VM_BUG_ON(!PageLRU(page));
 		__ClearPageLRU(page);
-		del_page_from_lru_list(zone, page, page_off_lru(page));
+		del_page_from_lru_list(page, lruvec, page_off_lru(page));
 		spin_unlock_irqrestore(&zone->lru_lock, flags);
 	}
 }
@@ -69,8 +72,7 @@ static void __put_compound_page(struct page *page)
 {
 	compound_page_dtor *dtor;
 
-	if (!PageHuge(page))
-		__page_cache_release(page);
+	__page_cache_release(page);
 	dtor = get_compound_page_dtor(page);
 	(*dtor)(page);
 }
@@ -166,6 +168,7 @@ out_put_single:
 			VM_BUG_ON(atomic_read(&page_head->_count) <= 0);
 			VM_BUG_ON(atomic_read(&page->_count) != 0);
 			compound_unlock_irqrestore(page_head, flags);
+
 			if (put_page_testzero(page_head)) {
 				if (PageHead(page_head))
 					__put_compound_page(page_head);
