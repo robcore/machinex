@@ -118,6 +118,10 @@ void msm8960_allocate_memory_regions(void);
 void msm8960_map_io(void);
 void msm8960_init_irq(void);
 void msm8960_mtp_init(void);
+struct msm8960_oem_init_ptrs {
+	void (*msm_gpio_init)(void);
+};
+extern struct msm8960_oem_init_ptrs msm8960_oem_funcs;
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
 int brcm_wlan_init(void);
