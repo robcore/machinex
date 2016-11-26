@@ -839,8 +839,6 @@ static ssize_t nfs_direct_write_schedule_iovec(struct nfs_direct_req *dreq,
 		pos += vec->iov_len;
 	}
 
-	NFS_I(dreq->inode)->write_io += desc.pg_bytes_written;
-
 	/*
 	 * If no bytes were started, return the error, and let the
 	 * generic layer handle the completion.
