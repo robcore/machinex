@@ -194,7 +194,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #endif
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	unsigned long nr_to_scan = sc->nr_to_scan;
-	struct reclaim_state *reclaim_state = current->reclaim_state;
 #ifndef CONFIG_CMA
 	int other_free = global_page_state(NR_FREE_PAGES);
 #else
@@ -202,9 +201,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				global_page_state(NR_FREE_CMA_PAGES);
 #endif
 	int other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
-#if defined(CONFIG_RUNTIME_COMPCACHE) || defined(CONFIG_ZSWAP)
-	other_file -= total_swapcache_pages;
-#endif /* CONFIG_RUNTIME_COMPCACHE || CONFIG_ZSWAP */
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
@@ -362,7 +360,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (selected[i]) {
 #ifdef CONFIG_SAMP_HOTNESS
 			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
-				     size %d, free memory = %d, reclaimable memory = %d ,hotness %d\n",
+				     size %d, free memory = %d ,hotness %d\n",
 				     selected[i]->pid, selected[i]->comm,
 				     selected_oom_score_adj[i],
 				     selected_tasksize[i],
@@ -370,7 +368,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 					 selected_hotness_adj);
 #else
 			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
-				     size %d, free memory = %d, reclaimable memory = %d\n",
+				     size %d, free memory = %d,
 				     selected[i]->pid, selected[i]->comm,
 				     selected_oom_score_adj[i],
 				     selected_tasksize[i],
@@ -380,8 +378,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			send_sig(SIGKILL, selected[i], 0);
 			set_tsk_thread_flag(selected[i], TIF_MEMDIE);
 			rem -= selected_tasksize[i];
-			if(reclaim_state)
-				reclaim_state->reclaimed_slab += selected_tasksize[i];
 #ifdef LMK_COUNT_READ
 			lmk_count++;
 #endif
@@ -392,15 +388,13 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_SAMP_HOTNESS
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d ,hotness %d\n",
 			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize,selected_hotness_adj);
+			     selected_oom_score_adj, selected_tasksize, selected_hotness_adj);
 #endif
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
 		msleep_interruptible(20);
-		if(reclaim_state)
-			reclaim_state->reclaimed_slab = selected_tasksize;
 #ifdef LMK_COUNT_READ
 		lmk_count++;
 #endif
@@ -408,7 +402,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 	} else
 		rcu_read_unlock();
-#endif
 
 	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
 		     nr_to_scan, sc->gfp_mask, rem);
@@ -720,14 +713,14 @@ static int test_task_flag(struct task_struct *p, int flag)
 {
 	struct task_struct *t = p;
 
-	do {
+	for_each_thread(p,t) {
 		task_lock(t);
 		if (test_tsk_thread_flag(t, flag)) {
 			task_unlock(t);
 			return 1;
 		}
 		task_unlock(t);
-	} while_each_thread(p, t);
+	}
 
 	return 0;
 }
