@@ -570,10 +570,8 @@ hit_next:
 		if (err)
 			goto out;
 		if (state->end <= end) {
-			clear_state_bit(tree, state, &bits, wake);
-			if (last_end == (u64)-1)
-				goto out;
-			start = last_end + 1;
+			state = clear_state_bit(tree, state, &bits, wake);
+			goto next;
 		}
 		goto search_again;
 	}
@@ -781,7 +779,6 @@ hit_next:
 	 * Just lock what we found and keep going
 	 */
 	if (state->start == start && state->end <= end) {
-		struct rb_node *next_node;
 		if (state->state & exclusive_bits) {
 			*failed_start = state->start;
 			err = -EEXIST;
@@ -789,20 +786,15 @@ hit_next:
 		}
 
 		set_state_bits(tree, state, &bits);
-
 		cache_state(state, cached_state);
 		merge_state(tree, state);
 		if (last_end == (u64)-1)
 			goto out;
-
 		start = last_end + 1;
-		next_node = rb_next(&state->rb_node);
-		if (next_node && start < end && prealloc && !need_resched()) {
-			state = rb_entry(next_node, struct extent_state,
-					 rb_node);
-			if (state->start == start)
-				goto hit_next;
-		}
+		state = next_state(state);
+		if (start < end && state && state->start == start &&
+		    !need_resched())
+			goto hit_next;
 		goto search_again;
 	}
 
@@ -845,6 +837,10 @@ hit_next:
 			if (last_end == (u64)-1)
 				goto out;
 			start = last_end + 1;
+			state = next_state(state);
+			if (start < end && state && state->start == start &&
+			    !need_resched())
+				goto hit_next;
 		}
 		goto search_again;
 	}
@@ -994,21 +990,14 @@ hit_next:
 	 * Just lock what we found and keep going
 	 */
 	if (state->start == start && state->end <= end) {
-		struct rb_node *next_node;
-
 		set_state_bits(tree, state, &bits);
-		clear_state_bit(tree, state, &clear_bits, 0);
+		state = clear_state_bit(tree, state, &clear_bits, 0);
 		if (last_end == (u64)-1)
 			goto out;
-
 		start = last_end + 1;
-		next_node = rb_next(&state->rb_node);
-		if (next_node && start < end && prealloc && !need_resched()) {
-			state = rb_entry(next_node, struct extent_state,
-					 rb_node);
-			if (state->start == start)
-				goto hit_next;
-		}
+		if (start < end && state && state->start == start &&
+		    !need_resched())
+			goto hit_next;
 		goto search_again;
 	}
 
@@ -1042,10 +1031,13 @@ hit_next:
 			goto out;
 		if (state->end <= end) {
 			set_state_bits(tree, state, &bits);
-			clear_state_bit(tree, state, &clear_bits, 0);
+			state = clear_state_bit(tree, state, &clear_bits, 0);
 			if (last_end == (u64)-1)
 				goto out;
 			start = last_end + 1;
+			if (start < end && state && state->start == start &&
+			    !need_resched())
+				goto hit_next;
 		}
 		goto search_again;
 	}
@@ -1173,9 +1165,8 @@ int set_extent_uptodate(struct extent_io_tree *tree, u64 start, u64 end,
 			      cached_state, mask);
 }
 
-static int clear_extent_uptodate(struct extent_io_tree *tree, u64 start,
-				 u64 end, struct extent_state **cached_state,
-				 gfp_t mask)
+int clear_extent_uptodate(struct extent_io_tree *tree, u64 start, u64 end,
+			  struct extent_state **cached_state, gfp_t mask)
 {
 	return clear_extent_bit(tree, start, end, EXTENT_UPTODATE, 0, 0,
 				cached_state, mask);
@@ -1957,6 +1948,7 @@ int repair_io_failure(struct btrfs_mapping_tree *map_tree, u64 start,
 	if (!test_bit(BIO_UPTODATE, &bio->bi_flags)) {
 		/* try to remap that extent elsewhere? */
 		bio_put(bio);
+		btrfs_dev_stat_inc_and_print(dev, BTRFS_DEV_STAT_WRITE_ERRS);
 		return -EIO;
 	}
 
@@ -2256,17 +2248,7 @@ int end_extent_writepage(struct page *page, int err, u64 start, u64 end)
 			uptodate = 0;
 	}
 
-	if (!uptodate && tree->ops &&
-	    tree->ops->writepage_io_failed_hook) {
-		ret = tree->ops->writepage_io_failed_hook(NULL, page,
-						 start, end, NULL);
-		/* Writeback already completed */
-		if (ret == 0)
-			return 1;
-	}
-
 	if (!uptodate) {
-		clear_extent_uptodate(tree, start, end, NULL, GFP_NOFS);
 		ClearPageUptodate(page);
 		SetPageError(page);
 	}
@@ -2381,10 +2363,23 @@ static void end_bio_extent_readpage(struct bio *bio, int err)
 		if (uptodate && tree->ops && tree->ops->readpage_end_io_hook) {
 			ret = tree->ops->readpage_end_io_hook(page, start, end,
 							      state, mirror);
-			if (ret)
+			if (ret) {
+				/* no IO indicated but software detected errors
+				 * in the block, either checksum errors or
+				 * issues with the contents */
+				struct btrfs_root *root =
+					BTRFS_I(page->mapping->host)->root;
+				struct btrfs_device *device;
+
 				uptodate = 0;
-			else
+				device = btrfs_find_device_for_logical(
+						root, start, mirror);
+				if (device)
+					btrfs_dev_stat_inc_and_print(device,
+						BTRFS_DEV_STAT_CORRUPTION_ERRS);
+			} else {
 				clean_io_failure(start, page);
+			}
 		}
 
 		if (!uptodate && tree->ops && tree->ops->readpage_io_failed_hook) {
@@ -3198,7 +3193,7 @@ static int write_one_eb(struct extent_buffer *eb,
 	u64 offset = eb->start;
 	unsigned long i, num_pages;
 	int rw = (epd->sync_io ? WRITE_SYNC : WRITE);
-	int ret;
+	int ret = 0;
 
 	clear_bit(EXTENT_BUFFER_IOERR, &eb->bflags);
 	num_pages = num_extent_pages(eb->start, eb->len);

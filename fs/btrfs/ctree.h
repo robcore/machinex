@@ -1384,7 +1384,7 @@ struct btrfs_root {
 	struct list_head root_list;
 
 	spinlock_t orphan_lock;
-	struct list_head orphan_list;
+	atomic_t orphan_inodes;
 	struct btrfs_block_rsv *orphan_block_rsv;
 	int orphan_item_inserted;
 	int orphan_cleanup_state;
@@ -2668,6 +2668,8 @@ int btrfs_duplicate_item(struct btrfs_trans_handle *trans,
 int btrfs_search_slot(struct btrfs_trans_handle *trans, struct btrfs_root
 		      *root, struct btrfs_key *key, struct btrfs_path *p, int
 		      ins_len, int cow);
+int btrfs_search_old_slot(struct btrfs_root *root, struct btrfs_key *key,
+			  struct btrfs_path *p, u64 time_seq);
 int btrfs_realloc_node(struct btrfs_trans_handle *trans,
 		       struct btrfs_root *root, struct extent_buffer *parent,
 		       int start_slot, int cache_only, u64 *last_ret,
@@ -3113,5 +3115,10 @@ struct seq_list {
 	u64 seq;
 	u32 flags;
 };
+
+void btrfs_get_tree_mod_seq(struct btrfs_fs_info *fs_info,
+			    struct seq_list *elem);
+void btrfs_put_tree_mod_seq(struct btrfs_fs_info *fs_info,
+			    struct seq_list *elem);
 
 #endif
