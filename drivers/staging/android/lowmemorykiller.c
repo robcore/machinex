@@ -43,8 +43,8 @@
 #include <linux/memory.h>
 #include <linux/memory_hotplug.h>
 #include <linux/ratelimit.h>
-#if defined(CONFIG_RUNTIME_COMPCACHE) || defined(CONFIG_ZSWAP)
 #include <linux/swap.h>
+#if defined (CONFIG_SWAP) && (defined (CONFIG_ZSWAP) || defined (CONFIG_ZRAM))
 #include <linux/fs.h>
 #endif /* CONFIG_RUNTIME_COMPCACHE || CONFIG_ZSWAP */
 
@@ -170,11 +170,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #endif
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	unsigned long nr_to_scan = sc->nr_to_scan;
-#ifndef CONFIG_CMA
-	int other_free = global_page_state(NR_FREE_PAGES);
-#else
+#if defined (CONFIG_CMA)
 	int other_free = global_page_state(NR_FREE_PAGES) -
 				global_page_state(NR_FREE_CMA_PAGES);
+#else
+	int other_free = global_page_state(NR_FREE_PAGES);
 #endif
 	int other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
 
