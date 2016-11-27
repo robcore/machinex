@@ -29,20 +29,14 @@ extern void gfs2_free_clones(struct gfs2_rgrpd *rgd);
 extern int gfs2_rgrp_go_lock(struct gfs2_holder *gh);
 extern void gfs2_rgrp_go_unlock(struct gfs2_holder *gh);
 
-extern struct gfs2_qadata *gfs2_qadata_get(struct gfs2_inode *ip);
-static inline void gfs2_qadata_put(struct gfs2_inode *ip)
-{
-	BUG_ON(ip->i_qadata == NULL);
-	kfree(ip->i_qadata);
-	ip->i_qadata = NULL;
-}
-
 extern int gfs2_inplace_reserve(struct gfs2_inode *ip, u32 requested);
 extern void gfs2_inplace_release(struct gfs2_inode *ip);
 
 extern int gfs2_alloc_blocks(struct gfs2_inode *ip, u64 *bn, unsigned int *n,
 			     bool dinode, u64 *generation);
 
+extern int gfs2_rs_alloc(struct gfs2_inode *ip);
+extern void gfs2_rs_delete(struct gfs2_inode *ip);
 extern void __gfs2_free_blocks(struct gfs2_inode *ip, u64 bstart, u32 blen, int meta);
 extern void gfs2_free_meta(struct gfs2_inode *ip, u64 bstart, u32 blen);
 extern void gfs2_free_di(struct gfs2_rgrpd *rgd, struct gfs2_inode *ip);
@@ -67,5 +61,13 @@ extern int gfs2_rgrp_send_discards(struct gfs2_sbd *sdp, u64 offset,
 				   struct buffer_head *bh,
 				   const struct gfs2_bitmap *bi, unsigned minlen, u64 *ptrimmed);
 extern int gfs2_fitrim(struct file *filp, void __user *argp);
+
+/* This is how to tell if a reservation is "inplace" reserved: */
+static inline int gfs2_mb_reserved(struct gfs2_inode *ip)
+{
+	if (ip->i_res && ip->i_res->rs_requested)
+		return 1;
+	return 0;
+}
 
 #endif /* __RGRP_DOT_H__ */
