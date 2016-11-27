@@ -30,6 +30,7 @@
  *
  */
 
+#define REALLY_WANT_TRACEPOINTS
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -95,39 +96,21 @@ static unsigned long lowmem_deathpending_timeout;
 			printk(x);			\
 	} while (0)
 
-#if defined(CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE)
-static void dump_tasks_info(void)
+static int test_task_flag(struct task_struct *p, int flag)
 {
-	struct task_struct *p;
-	struct task_struct *task;
+	struct task_struct *t = p;
 
-	pr_info("[ pid ]   uid	tgid total_vm	   rss cpu oom_adj oom_score_adj name\n");
-	for_each_process(p) {
-		/* check unkillable tasks */
-		if (is_global_init(p))
-			continue;
-		if (p->flags & PF_KTHREAD)
-			continue;
-
-		task = find_lock_task_mm(p);
-		if (!task) {
-			/*
-			* This is a kthread or all of p's threads have already
-			* detached their mm's.	There's no need to report
-			* them; they can't be oom killed anyway.
-			*/
-			continue;
+	for_each_thread(p,t) {
+		task_lock(t);
+		if (test_tsk_thread_flag(t, flag)) {
+			task_unlock(t);
+			return 1;
 		}
-
-		pr_info("[%5d] %5d %5d %8lu %8lu %3u	 %3d	     %5d %s\n",
-		task->pid, task_uid(task), task->tgid,
-		task->mm->total_vm, get_mm_rss(task->mm),
-		task_cpu(task), task->signal->oom_adj,
-		task->signal->oom_score_adj, task->comm);
-		task_unlock(task);
+		task_unlock(t);
 	}
+
+	return 0;
 }
-#endif
 
 int can_use_cma_pages(gfp_t gfp_mask)
 {
@@ -169,13 +152,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #else
 	struct task_struct *selected = NULL;
 #endif
-#ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO
-#ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE
-	static DEFINE_RATELIMIT_STATE(lmk_rs, DEFAULT_RATELIMIT_INTERVAL, 0);
-#else
-	static DEFINE_RATELIMIT_STATE(lmk_rs, 6*DEFAULT_RATELIMIT_INTERVAL, 0);
-#endif
-#endif
 	int rem = 0;
 	int tasksize;
 	int i;
@@ -202,7 +178,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #endif
 	int other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
 
-#ifdef CONFIG_ZRAM_FOR_ANDROID
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
@@ -215,16 +190,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 	}
 	if (nr_to_scan > 0)
-		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %d\n",
-				nr_to_scan, sc->gfp_mask, other_free,
-				other_file, min_score_adj);
 	rem = global_page_state(NR_ACTIVE_ANON) +
 		global_page_state(NR_ACTIVE_FILE) +
 		global_page_state(NR_INACTIVE_ANON) +
 		global_page_state(NR_INACTIVE_FILE);
 	if (nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
-		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
-			     nr_to_scan, sc->gfp_mask, rem);
 
 		if (nr_to_scan > 0)
 			mutex_unlock(&scan_mutex);
@@ -259,6 +229,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (time_before_eq(jiffies, lowmem_deathpending_timeout)) {
 			if (test_task_flag(tsk, TIF_MEMDIE)) {
 				rcu_read_unlock();
+				/* give the system time to free up the memory */
+				msleep_interruptible(20);
+				mutex_unlock(&scan_mutex);
 				return 0;
 			}
 		}
@@ -275,10 +248,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		tasksize = get_mm_rss(p->mm);
 #if defined(CONFIG_ZSWAP)
 		if (atomic_read(&zswap_stored_pages)) {
-			lowmem_print(3, "shown tasksize : %d\n", tasksize);
 			tasksize += atomic_read(&zswap_pool_pages) * get_mm_counter(p->mm, MM_SWAPENTS)
 				/ atomic_read(&zswap_stored_pages);
-			lowmem_print(3, "real tasksize : %d\n", tasksize);
 		}
 #endif
 
@@ -321,10 +292,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 						max_selected_oom_idx = i;
 				}
 			}
-
-			lowmem_print(2, "select %d (%s), adj %d, \
-					size %d, to kill\n",
-				p->pid, p->comm, oom_score_adj, tasksize);
 		}
 #else
 		if (selected) {
@@ -351,29 +318,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_SAMP_HOTNESS
 		selected_hotness_adj = hotness_adj;
 #endif
-		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
-			     p->pid, p->comm, oom_score_adj, tasksize);
 #endif
 	}
 #ifdef ENHANCED_LMK_ROUTINE
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
 		if (selected[i]) {
-#ifdef CONFIG_SAMP_HOTNESS
-			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
-				     size %d, free memory = %d ,hotness %d\n",
-				     selected[i]->pid, selected[i]->comm,
-				     selected_oom_score_adj[i],
-				     selected_tasksize[i],
-					 other_free, other_file,
-					 selected_hotness_adj);
-#else
-			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
-				     size %d, free memory = %d,
-				     selected[i]->pid, selected[i]->comm,
-				     selected_oom_score_adj[i],
-				     selected_tasksize[i],
-					 other_free, other_file);
-#endif
 			lowmem_deathpending_timeout = jiffies + HZ;
 			send_sig(SIGKILL, selected[i], 0);
 			set_tsk_thread_flag(selected[i], TIF_MEMDIE);
@@ -381,30 +330,13 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef LMK_COUNT_READ
 			lmk_count++;
 #endif
-		}
-	}
-#else
-	if (selected) {
-#ifdef CONFIG_SAMP_HOTNESS
-		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d ,hotness %d\n",
-			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize, selected_hotness_adj);
-#endif
-		lowmem_deathpending_timeout = jiffies + HZ;
-		send_sig(SIGKILL, selected, 0);
-		set_tsk_thread_flag(selected, TIF_MEMDIE);
-		rem -= selected_tasksize;
-		msleep_interruptible(20);
-#ifdef LMK_COUNT_READ
-		lmk_count++;
 #endif
 		rcu_read_unlock();
-
+		msleep_interruptible(20);
 	} else
 		rcu_read_unlock();
+	}
 
-	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
-		     nr_to_scan, sc->gfp_mask, rem);
 	mutex_unlock(&scan_mutex);
 	return rem;
 }
@@ -442,23 +374,8 @@ static int android_oom_handler(struct notifier_block *nb,
 	int selected_tasksize = 0;
 	int selected_oom_score_adj;
 #endif
-#ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE
-	static DEFINE_RATELIMIT_STATE(oom_rs, DEFAULT_RATELIMIT_INTERVAL/5, 1);
-#endif
 
 	unsigned long *freed = data;
-
-	/* show status */
-	pr_warning("%s invoked Android-oom-killer: "
-		"oom_adj=%d, oom_score_adj=%d\n",
-		current->comm, current->signal->oom_adj,
-		current->signal->oom_score_adj);
-#ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE
-	dump_stack();
-	show_mem(SHOW_MEM_FILTER_NODES);
-	if (__ratelimit(&oom_rs))
-		dump_tasks_info();
-#endif
 
 	min_score_adj = 0;
 #ifdef MULTIPLE_OOM_KILLER
@@ -489,7 +406,6 @@ static int android_oom_handler(struct notifier_block *nb,
 			continue;
 		}
 		if (fatal_signal_pending(p)) {
-			lowmem_print(2, "skip slow dying process %d\n", p->pid);
 			task_unlock(p);
 			continue;
 		}
@@ -498,8 +414,6 @@ static int android_oom_handler(struct notifier_block *nb,
 		if (tasksize <= 0)
 			continue;
 
-		lowmem_print(2, "oom: ------ %d (%s), adj %d, size %d\n",
-			     p->pid, p->comm, oom_score_adj, tasksize);
 #ifdef MULTIPLE_OOM_KILLER
 		if (all_selected_oom < OOM_DEPTH) {
 			for (i = 0; i < OOM_DEPTH; i++) {
@@ -532,10 +446,6 @@ static int android_oom_handler(struct notifier_block *nb,
 						max_selected_oom_idx = i;
 				}
 			}
-
-			lowmem_print(2, "oom: max_selected_oom_idx(%d) select %d (%s), adj %d, \
-					size %d, to kill\n",
-				max_selected_oom_idx, p->pid, p->comm, oom_score_adj, tasksize);
 		}
 #else
 		if (selected) {
@@ -548,18 +458,11 @@ static int android_oom_handler(struct notifier_block *nb,
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;
-		lowmem_print(2, "oom: select %d (%s), adj %d, size %d, to kill\n",
-			     p->pid, p->comm, oom_score_adj, tasksize);
 #endif
 	}
 #ifdef MULTIPLE_OOM_KILLER
 	for (i = 0; i < OOM_DEPTH; i++) {
 		if (selected[i]) {
-			lowmem_print(1, "oom: send sigkill to %d (%s), adj %d,\
-				     size %d\n",
-				     selected[i]->pid, selected[i]->comm,
-				     selected_oom_score_adj[i],
-				     selected_tasksize[i]);
 			send_sig(SIGKILL, selected[i], 0);
 			rem -= selected_tasksize[i];
 			*freed += (unsigned long)selected_tasksize[i];
@@ -571,9 +474,6 @@ static int android_oom_handler(struct notifier_block *nb,
 	}
 #else
 	if (selected) {
-		lowmem_print(1, "oom: send sigkill to %d (%s), adj %d, size %d\n",
-			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize);
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
@@ -585,7 +485,6 @@ static int android_oom_handler(struct notifier_block *nb,
 #endif
 	read_unlock(&tasklist_lock);
 
-	lowmem_print(2, "oom: get memory %lu", *freed);
 	return rem;
 }
 
@@ -644,13 +543,10 @@ static void lowmem_autodetect_oom_adj_values(void)
 	if (oom_score_adj <= OOM_ADJUST_MAX)
 		return;
 
-	lowmem_print(1, "lowmem_shrink: convert oom_adj to oom_score_adj:\n");
 	for (i = 0; i < array_size; i++) {
 		oom_adj = lowmem_adj[i];
 		oom_score_adj = lowmem_oom_adj_to_oom_score_adj(oom_adj);
 		lowmem_adj[i] = oom_score_adj;
-		lowmem_print(1, "oom_adj %d => oom_score_adj %d\n",
-			     oom_adj, oom_score_adj);
 	}
 }
 
@@ -708,23 +604,6 @@ module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 #ifdef LMK_COUNT_READ
 module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #endif
-
-static int test_task_flag(struct task_struct *p, int flag)
-{
-	struct task_struct *t = p;
-
-	for_each_thread(p,t) {
-		task_lock(t);
-		if (test_tsk_thread_flag(t, flag)) {
-			task_unlock(t);
-			return 1;
-		}
-		task_unlock(t);
-	}
-
-	return 0;
-}
-
 #ifdef OOM_COUNT_READ
 module_param_named(oomcount, oom_count, uint, S_IRUGO);
 #endif

@@ -446,6 +446,14 @@ config FRONTSWAP
 
 	  If unsure, say Y to enable frontswap.
 
+config ZSWAP
+	bool "Enable frontswap to cache swap pages if tmem is present"
+	default y
+	help
+	  You know what this is.
+
+	  If unsure, say Y to enable zswap.
+
 config PGTABLE_MAPPING
 	bool "Use page table mapping to access object in zsmalloc"
 	depends on ZSMALLOC

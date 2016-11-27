@@ -59,7 +59,7 @@ static ssize_t disksize_store(struct device *dev,
 		pr_info("Cannot change disksize for initialized device\n");
 		return -EBUSY;
 	}
-#ifdef CONFIG_ZRAM_FOR_ANDROID
+#ifdef CONFIG_ZRAM
 	if (!disksize) {
 		disksize = default_disksize_perc_ram *
 					((totalram_pages << PAGE_SHIFT) / 100);
