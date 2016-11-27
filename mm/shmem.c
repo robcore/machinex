@@ -516,7 +516,7 @@ void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 		struct page *page = NULL;
 		shmem_getpage(inode, end, &page, SGP_READ, NULL);
 		if (page) {
-			zero_user_segment(page, 0, partial_end
+			zero_user_segment(page, partial_start, top);
 			set_page_dirty(page);
 			unlock_page(page);
 			page_cache_release(page);
