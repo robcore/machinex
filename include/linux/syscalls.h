@@ -844,6 +844,8 @@ asmlinkage long sys_name_to_handle_at(int dfd, const char __user *name,
 asmlinkage long sys_open_by_handle_at(int mountdirfd,
 				      struct file_handle __user *handle,
 				      int flags);
+asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
+			 unsigned long idx1, unsigned long idx2);
 asmlinkage long sys_setns(int fd, int nstype);
 asmlinkage long sys_process_vm_readv(pid_t pid,
 				     const struct iovec __user *lvec,
