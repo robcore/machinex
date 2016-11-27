@@ -62,9 +62,6 @@ const struct mesh_config default_mesh_config = {
 };
 
 const struct mesh_setup default_mesh_setup = {
-	/* cfg80211_join_mesh() will pick a channel if needed */
-	.channel = NULL,
-	.channel_type = NL80211_CHAN_NO_HT,
 	.path_sel_proto = IEEE80211_PATH_PROTOCOL_HWMP,
 	.path_metric = IEEE80211_PATH_METRIC_AIRTIME,
 	.ie = NULL,
