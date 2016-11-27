@@ -158,7 +158,6 @@ void set_power_suspend_state(int new_state)
 void set_power_suspend_state_panel_hook(int new_state)
 {
 	pr_info("[POWERSUSPEND] panel resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
-	#endif
 	// Yank555.lu : Only allow panel hook changes in panel mode
 	if (mode == POWER_SUSPEND_PANEL)
 		set_power_suspend_state(new_state);
