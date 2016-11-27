@@ -99,15 +99,13 @@ void res_counter_uncharge_locked(struct res_counter *counter, unsigned long val)
 	counter->usage -= val;
 }
 
-void res_counter_uncharge_until(struct res_counter *counter,
-				struct res_counter *top,
-				unsigned long val)
+void res_counter_uncharge(struct res_counter *counter, unsigned long val)
 {
 	unsigned long flags;
 	struct res_counter *c;
 
 	local_irq_save(flags);
-	for (c = counter; c != top; c = c->parent) {
+	for (c = counter; c != NULL; c = c->parent) {
 		spin_lock(&c->lock);
 		res_counter_uncharge_locked(c, val);
 		spin_unlock(&c->lock);
@@ -115,10 +113,6 @@ void res_counter_uncharge_until(struct res_counter *counter,
 	local_irq_restore(flags);
 }
 
-void res_counter_uncharge(struct res_counter *counter, unsigned long val)
-{
-	res_counter_uncharge_until(counter, NULL, val);
-}
 
 static inline unsigned long long *
 res_counter_member(struct res_counter *counter, int member)

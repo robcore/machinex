@@ -314,6 +314,8 @@ struct sbridge_pvt {
 	struct sbridge_info	info;
 	struct sbridge_channel	channel[NUM_CHANNELS];
 
+	int 			csrow_map[NUM_CHANNELS][MAX_DIMMS];
+
 	/* Memory type detection */
 	bool			is_mirrored, is_lockstep, is_close_pg;
 
@@ -381,8 +383,8 @@ static inline int numrank(u32 mtr)
 	int ranks = (1 << RANK_CNT_BITS(mtr));
 
 	if (ranks > 4) {
-		edac_dbg(0, "Invalid number of ranks: %d (max = 4) raw value = %x (%04x)\n",
-			 ranks, (unsigned int)RANK_CNT_BITS(mtr), mtr);
+		debugf0("Invalid number of ranks: %d (max = 4) raw value = %x (%04x)",
+			ranks, (unsigned int)RANK_CNT_BITS(mtr), mtr);
 		return -EINVAL;
 	}
 
@@ -394,8 +396,8 @@ static inline int numrow(u32 mtr)
 	int rows = (RANK_WIDTH_BITS(mtr) + 12);
 
 	if (rows < 13 || rows > 18) {
-		edac_dbg(0, "Invalid number of rows: %d (should be between 14 and 17) raw value = %x (%04x)\n",
-			 rows, (unsigned int)RANK_WIDTH_BITS(mtr), mtr);
+		debugf0("Invalid number of rows: %d (should be between 14 and 17) raw value = %x (%04x)",
+			rows, (unsigned int)RANK_WIDTH_BITS(mtr), mtr);
 		return -EINVAL;
 	}
 
@@ -407,8 +409,8 @@ static inline int numcol(u32 mtr)
 	int cols = (COL_WIDTH_BITS(mtr) + 10);
 
 	if (cols > 12) {
-		edac_dbg(0, "Invalid number of cols: %d (max = 4) raw value = %x (%04x)\n",
-			 cols, (unsigned int)COL_WIDTH_BITS(mtr), mtr);
+		debugf0("Invalid number of cols: %d (max = 4) raw value = %x (%04x)",
+			cols, (unsigned int)COL_WIDTH_BITS(mtr), mtr);
 		return -EINVAL;
 	}
 
@@ -475,8 +477,8 @@ static struct pci_dev *get_pdev_slot_func(u8 bus, unsigned slot,
 
 		if (PCI_SLOT(sbridge_dev->pdev[i]->devfn) == slot &&
 		    PCI_FUNC(sbridge_dev->pdev[i]->devfn) == func) {
-			edac_dbg(1, "Associated %02x.%02x.%d with %p\n",
-				 bus, slot, func, sbridge_dev->pdev[i]);
+			debugf1("Associated %02x.%02x.%d with %p\n",
+				bus, slot, func, sbridge_dev->pdev[i]);
 			return sbridge_dev->pdev[i];
 		}
 	}
@@ -485,13 +487,28 @@ static struct pci_dev *get_pdev_slot_func(u8 bus, unsigned slot,
 }
 
 /**
- * check_if_ecc_is_active() - Checks if ECC is active
+ * sbridge_get_active_channels() - gets the number of channels and csrows
  * bus:		Device bus
+ * @channels:	Number of channels that will be returned
+ * @csrows:	Number of csrows found
+ *
+ * Since EDAC core needs to know in advance the number of available channels
+ * and csrows, in order to allocate memory for csrows/channels, it is needed
+ * to run two similar steps. At the first step, implemented on this function,
+ * it checks the number of csrows/channels present at one socket, identified
+ * by the associated PCI bus.
+ * this is used in order to properly allocate the size of mci components.
+ * Note: one csrow is one dimm.
  */
-static int check_if_ecc_is_active(const u8 bus)
+static int sbridge_get_active_channels(const u8 bus, unsigned *channels,
+				      unsigned *csrows)
 {
 	struct pci_dev *pdev = NULL;
+	int i, j;
 	u32 mcmtr;
+
+	*channels = 0;
+	*csrows = 0;
 
 	pdev = get_pdev_slot_func(bus, 15, 0);
 	if (!pdev) {
@@ -534,7 +551,7 @@ static int check_if_ecc_is_active(const u8 bus)
 	return 0;
 }
 
-static int get_dimm_config(struct mem_ctl_info *mci)
+static int get_dimm_config(const struct mem_ctl_info *mci)
 {
 	struct sbridge_pvt *pvt = mci->pvt_info;
 	struct csrow_info *csr;
@@ -600,11 +617,9 @@ static int get_dimm_config(struct mem_ctl_info *mci)
 		u32 mtr;
 
 		for (j = 0; j < ARRAY_SIZE(mtr_regs); j++) {
-			dimm = EDAC_DIMM_PTR(mci->layers, mci->dimms, mci->n_layers,
-				       i, j, 0);
 			pci_read_config_dword(pvt->pci_tad[i],
 					      mtr_regs[j], &mtr);
-			edac_dbg(4, "Channel #%d  MTR%d = %x\n", i, j, mtr);
+			debugf4("Channel #%d  MTR%d = %x\n", i, j, mtr);
 			if (IS_DIMM_PRESENT(mtr)) {
 				pvt->channel[i].dimms++;
 
@@ -620,15 +635,29 @@ static int get_dimm_config(struct mem_ctl_info *mci)
 					pvt->sbridge_dev->mc, i, j,
 					size, npages,
 					banks, ranks, rows, cols);
+				csr = &mci->csrows[csrow];
 
-				dimm->nr_pages = npages;
-				dimm->grain = 32;
-				dimm->dtype = (banks == 8) ? DEV_X8 : DEV_X4;
-				dimm->mtype = mtype;
-				dimm->edac_mode = mode;
-				snprintf(dimm->label, sizeof(dimm->label),
+				csr->first_page = last_page;
+				csr->last_page = last_page + npages - 1;
+				csr->page_mask = 0UL;	/* Unused */
+				csr->nr_pages = npages;
+				csr->grain = 32;
+				csr->csrow_idx = csrow;
+				csr->dtype = (banks == 8) ? DEV_X8 : DEV_X4;
+				csr->ce_count = 0;
+				csr->ue_count = 0;
+				csr->mtype = mtype;
+				csr->edac_mode = mode;
+				csr->nr_channels = 1;
+				csr->channels[0].chan_idx = i;
+				csr->channels[0].ce_count = 0;
+				pvt->csrow_map[i][j] = csrow;
+				snprintf(csr->channels[0].label,
+					 sizeof(csr->channels[0].label),
 					 "CPU_SrcID#%u_Channel#%u_DIMM#%u",
 					 pvt->sbridge_dev->source_id, i, j);
+				last_page += npages;
+				csrow++;
 			}
 		}
 	}
@@ -707,8 +736,8 @@ static void get_memory_layout(const struct mem_ctl_info *mci)
 			if (j > 0 && sad_interl == sad_pkg(reg, j))
 				break;
 
-			edac_dbg(0, "SAD#%d, interleave #%d: %d\n",
-				 n_sads, j, sad_pkg(reg, j));
+			debugf0("SAD#%d, interleave #%d: %d\n",
+			n_sads, j, sad_pkg(reg, j));
 		}
 	}
 
@@ -816,10 +845,11 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 				 u8 *socket,
 				 long *channel_mask,
 				 u8 *rank,
-				 char **area_type, char *msg)
+				 char *area_type)
 {
 	struct mem_ctl_info	*new_mci;
 	struct sbridge_pvt *pvt = mci->pvt_info;
+	char			msg[256];
 	int 			n_rir, n_sads, n_tads, sad_way, sck_xch;
 	int			sad_interl, idx, base_ch;
 	int			interleave_mode;
@@ -841,10 +871,12 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 	 */
 	if ((addr > (u64) pvt->tolm) && (addr < (1LL << 32))) {
 		sprintf(msg, "Error at TOLM area, on addr 0x%08Lx", addr);
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 	if (addr >= (u64)pvt->tohm) {
 		sprintf(msg, "Error at MMIOH area, on addr 0x%016Lx", addr);
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 
@@ -861,6 +893,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		limit = SAD_LIMIT(reg);
 		if (limit <= prv) {
 			sprintf(msg, "Can't discover the memory socket");
+			edac_mc_handle_ce_no_info(mci, msg);
 			return -EINVAL;
 		}
 		if  (addr <= limit)
@@ -869,9 +902,10 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 	}
 	if (n_sads == MAX_SAD) {
 		sprintf(msg, "Can't discover the memory socket");
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
-	*area_type = get_dram_attr(reg);
+	area_type = get_dram_attr(reg);
 	interleave_mode = INTERLEAVE_MODE(reg);
 
 	pci_read_config_dword(pvt->pci_sad0, interleave_list[n_sads],
@@ -881,16 +915,16 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		if (sad_way > 0 && sad_interl == sad_pkg(reg, sad_way))
 			break;
 		sad_interleave[sad_way] = sad_pkg(reg, sad_way);
-		edac_dbg(0, "SAD interleave #%d: %d\n",
-			 sad_way, sad_interleave[sad_way]);
+		debugf0("SAD interleave #%d: %d\n",
+			sad_way, sad_interleave[sad_way]);
 	}
-	edac_dbg(0, "mc#%d: Error detected on SAD#%d: address 0x%016Lx < 0x%016Lx, Interleave [%d:6]%s\n",
-		 pvt->sbridge_dev->mc,
-		 n_sads,
-		 addr,
-		 limit,
-		 sad_way + 7,
-		 interleave_mode ? "" : "XOR[18:16]");
+	debugf0("mc#%d: Error detected on SAD#%d: address 0x%016Lx < 0x%016Lx, Interleave [%d:6]%s\n",
+		pvt->sbridge_dev->mc,
+		n_sads,
+		addr,
+		limit,
+		sad_way + 7,
+		interleave_mode ? "" : "XOR[18:16]");
 	if (interleave_mode)
 		idx = ((addr >> 6) ^ (addr >> 16)) & 7;
 	else
@@ -909,11 +943,12 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		break;
 	default:
 		sprintf(msg, "Can't discover socket interleave");
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 	*socket = sad_interleave[idx];
-	edac_dbg(0, "SAD interleave index: %d (wayness %d) = CPU socket %d\n",
-		 idx, sad_way, *socket);
+	debugf0("SAD interleave index: %d (wayness %d) = CPU socket %d\n",
+		idx, sad_way, *socket);
 
 	/*
 	 * Move to the proper node structure, in order to access the
@@ -923,6 +958,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 	if (!new_mci) {
 		sprintf(msg, "Struct for socket #%u wasn't initialized",
 			*socket);
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 	mci = new_mci;
@@ -938,6 +974,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		limit = TAD_LIMIT(reg);
 		if (limit <= prv) {
 			sprintf(msg, "Can't discover the memory channel");
+			edac_mc_handle_ce_no_info(mci, msg);
 			return -EINVAL;
 		}
 		if  (addr <= limit)
@@ -977,6 +1014,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		break;
 	default:
 		sprintf(msg, "Can't discover the TAD target");
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 	*channel_mask = 1 << base_ch;
@@ -990,6 +1028,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 			break;
 		default:
 			sprintf(msg, "Invalid mirror set. Can't decode addr");
+			edac_mc_handle_ce_no_info(mci, msg);
 			return -EINVAL;
 		}
 	} else
@@ -1000,16 +1039,16 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 
 	offset = TAD_OFFSET(tad_offset);
 
-	edac_dbg(0, "TAD#%d: address 0x%016Lx < 0x%016Lx, socket interleave %d, channel interleave %d (offset 0x%08Lx), index %d, base ch: %d, ch mask: 0x%02lx\n",
-		 n_tads,
-		 addr,
-		 limit,
-		 (u32)TAD_SOCK(reg),
-		 ch_way,
-		 offset,
-		 idx,
-		 base_ch,
-		 *channel_mask);
+	debugf0("TAD#%d: address 0x%016Lx < 0x%016Lx, socket interleave %d, channel interleave %d (offset 0x%08Lx), index %d, base ch: %d, ch mask: 0x%02lx\n",
+		n_tads,
+		addr,
+		limit,
+		(u32)TAD_SOCK(reg),
+		ch_way,
+		offset,
+		idx,
+		base_ch,
+		*channel_mask);
 
 	/* Calculate channel address */
 	/* Remove the TAD offset */
@@ -1017,6 +1056,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 	if (offset > addr) {
 		sprintf(msg, "Can't calculate ch addr: TAD offset 0x%08Lx is too high for addr 0x%08Lx!",
 			offset, addr);
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 	addr -= offset;
@@ -1056,6 +1096,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 	if (n_rir == MAX_RIR_RANGES) {
 		sprintf(msg, "Can't discover the memory rank for ch addr 0x%08Lx",
 			ch_addr);
+		edac_mc_handle_ce_no_info(mci, msg);
 		return -EINVAL;
 	}
 	rir_way = RIR_WAY(reg);
@@ -1070,12 +1111,12 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 			      &reg);
 	*rank = RIR_RNK_TGT(reg);
 
-	edac_dbg(0, "RIR#%d: channel address 0x%08Lx < 0x%08Lx, RIR interleave %d, index %d\n",
-		 n_rir,
-		 ch_addr,
-		 limit,
-		 rir_way,
-		 idx);
+	debugf0("RIR#%d: channel address 0x%08Lx < 0x%08Lx, RIR interleave %d, index %d\n",
+		n_rir,
+		ch_addr,
+		limit,
+		rir_way,
+		idx);
 
 	return 0;
 }
@@ -1092,14 +1133,14 @@ static void sbridge_put_devices(struct sbridge_dev *sbridge_dev)
 {
 	int i;
 
-	edac_dbg(0, "\n");
+	debugf0(__FILE__ ": %s()\n", __func__);
 	for (i = 0; i < sbridge_dev->n_devs; i++) {
 		struct pci_dev *pdev = sbridge_dev->pdev[i];
 		if (!pdev)
 			continue;
-		edac_dbg(0, "Removing dev %02x:%02x.%d\n",
-			 pdev->bus->number,
-			 PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
+		debugf0("Removing dev %02x:%02x.%d\n",
+			pdev->bus->number,
+			PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
 		pci_dev_put(pdev);
 	}
 }
@@ -1205,9 +1246,10 @@ static int sbridge_get_onedevice(struct pci_dev **prev,
 		return -ENODEV;
 	}
 
-	edac_dbg(0, "Detected dev %02x:%d.%d PCI ID %04x:%04x\n",
-		 bus, dev_descr->dev, dev_descr->func,
-		 PCI_VENDOR_ID_INTEL, dev_descr->dev_id);
+	debugf0("Detected dev %02x:%d.%d PCI ID %04x:%04x\n",
+		bus, dev_descr->dev,
+		dev_descr->func,
+		PCI_VENDOR_ID_INTEL, dev_descr->dev_id);
 
 	/*
 	 * As stated on drivers/pci/search.c, the reference count for
@@ -1324,10 +1366,10 @@ static int mci_bind_devs(struct mem_ctl_info *mci,
 			goto error;
 		}
 
-		edac_dbg(0, "Associated PCI %02x.%02d.%d with dev = %p\n",
-			 sbridge_dev->bus,
-			 PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn),
-			 pdev);
+		debugf0("Associated PCI %02x.%02d.%d with dev = %p\n",
+			sbridge_dev->bus,
+			PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn),
+			pdev);
 	}
 
 	/* Check if everything were registered */
@@ -1368,8 +1410,7 @@ static void sbridge_mce_output_error(struct mem_ctl_info *mci,
 {
 	struct mem_ctl_info *new_mci;
 	struct sbridge_pvt *pvt = mci->pvt_info;
-	enum hw_event_mc_err_type tp_event;
-	char *type, *optype, msg[256];
+	char *type, *optype, *msg, *recoverable_msg;
 	bool ripv = GET_BITFIELD(m->mcgstatus, 0, 0);
 	bool overflow = GET_BITFIELD(m->status, 62, 62);
 	bool uncorrected_error = GET_BITFIELD(m->status, 61, 61);
@@ -1381,21 +1422,13 @@ static void sbridge_mce_output_error(struct mem_ctl_info *mci,
 	u32 optypenum = GET_BITFIELD(m->status, 4, 6);
 	long channel_mask, first_channel;
 	u8  rank, socket;
-	int rc, dimm;
-	char *area_type = NULL;
+	int csrow, rc, dimm;
+	char *area_type = "Unknown";
 
-	if (uncorrected_error) {
-		if (ripv) {
-			type = "FATAL";
-			tp_event = HW_EVENT_ERR_FATAL;
-		} else {
-			type = "NON_FATAL";
-			tp_event = HW_EVENT_ERR_UNCORRECTED;
-		}
-	} else {
-		type = "CORRECTED";
-		tp_event = HW_EVENT_ERR_CORRECTED;
-	}
+	if (ripv)
+		type = "NON_FATAL";
+	else
+		type = "FATAL";
 
 	/*
 	 * According with Table 15-9 of the Intel Archictecture spec vol 3A,
@@ -1413,19 +1446,19 @@ static void sbridge_mce_output_error(struct mem_ctl_info *mci,
 	} else {
 		switch (optypenum) {
 		case 0:
-			optype = "generic undef request error";
+			optype = "generic undef request";
 			break;
 		case 1:
-			optype = "memory read error";
+			optype = "memory read";
 			break;
 		case 2:
-			optype = "memory write error";
+			optype = "memory write";
 			break;
 		case 3:
-			optype = "addr/cmd error";
+			optype = "addr/cmd";
 			break;
 		case 4:
-			optype = "memory scrubbing error";
+			optype = "memory scrubbing";
 			break;
 		default:
 			optype = "reserved";
@@ -1434,13 +1467,13 @@ static void sbridge_mce_output_error(struct mem_ctl_info *mci,
 	}
 
 	rc = get_memory_error_data(mci, m->addr, &socket,
-				   &channel_mask, &rank, &area_type, msg);
+				   &channel_mask, &rank, area_type);
 	if (rc < 0)
-		goto err_parsing;
+		return;
 	new_mci = get_mci_for_node_id(socket);
 	if (!new_mci) {
-		strcpy(msg, "Error: socket got corrupted!");
-		goto err_parsing;
+		edac_mc_handle_ce_no_info(mci, "Error: socket got corrupted!");
+		return;
 	}
 	mci = new_mci;
 	pvt = mci->pvt_info;
@@ -1454,39 +1487,45 @@ static void sbridge_mce_output_error(struct mem_ctl_info *mci,
 	else
 		dimm = 2;
 
+	csrow = pvt->csrow_map[first_channel][dimm];
+
+	if (uncorrected_error && recoverable)
+		recoverable_msg = " recoverable";
+	else
+		recoverable_msg = "";
 
 	/*
-	 * FIXME: On some memory configurations (mirror, lockstep), the
-	 * Memory Controller can't point the error to a single DIMM. The
-	 * EDAC core should be handling the channel mask, in order to point
-	 * to the group of dimm's where the error may be happening.
+	 * FIXME: What should we do with "channel" information on mcelog?
+	 * Probably, we can just discard it, as the channel information
+	 * comes from the get_memory_error_data() address decoding
 	 */
-	snprintf(msg, sizeof(msg),
-		 "count:%d%s%s area:%s err_code:%04x:%04x socket:%d channel_mask:%ld rank:%d",
-		 core_err_cnt,
-		 overflow ? " OVERFLOW" : "",
-		 (uncorrected_error && recoverable) ? " recoverable" : "",
-		 area_type,
-		 mscod, errcode,
-		 socket,
-		 channel_mask,
-		 rank);
+	msg = kasprintf(GFP_ATOMIC,
+			"%d %s error(s): %s on %s area %s%s: cpu=%d Err=%04x:%04x (ch=%d), "
+			"addr = 0x%08llx => socket=%d, Channel=%ld(mask=%ld), rank=%d\n",
+			core_err_cnt,
+			area_type,
+			optype,
+			type,
+			recoverable_msg,
+			overflow ? "OVERFLOW" : "",
+			m->cpu,
+			mscod, errcode,
+			channel,		/* 1111b means not specified */
+			(long long) m->addr,
+			socket,
+			first_channel,		/* This is the real channel on SB */
+			channel_mask,
+			rank);
 
-	edac_dbg(0, "%s\n", msg);
-
-	/* FIXME: need support for channel mask */
+	debugf0("%s", msg);
 
 	/* Call the helper to output message */
-	edac_mc_handle_error(tp_event, mci,
-			     m->addr >> PAGE_SHIFT, m->addr & ~PAGE_MASK, 0,
-			     channel, dimm, -1,
-			     optype, msg);
-	return;
-err_parsing:
-	edac_mc_handle_error(tp_event, mci, 0, 0, 0,
-			     -1, -1, -1,
-			     msg, "");
+	if (uncorrected_error)
+		edac_mc_handle_fbd_ue(mci, csrow, 0, 0, msg);
+	else
+		edac_mc_handle_fbd_ce(mci, csrow, 0, msg);
 
+	kfree(msg);
 }
 
 /*
@@ -1619,7 +1658,8 @@ static void sbridge_unregister_mci(struct sbridge_dev *sbridge_dev)
 	struct sbridge_pvt *pvt;
 
 	if (unlikely(!mci || !mci->pvt_info)) {
-		edac_dbg(0, "MC: dev = %p\n", &sbridge_dev->pdev[0]->dev);
+		debugf0("MC: " __FILE__ ": %s(): dev = %p\n",
+			__func__, &sbridge_dev->pdev[0]->dev);
 
 		sbridge_printk(KERN_ERR, "Couldn't find mci handler\n");
 		return;
@@ -1627,11 +1667,11 @@ static void sbridge_unregister_mci(struct sbridge_dev *sbridge_dev)
 
 	pvt = mci->pvt_info;
 
-	debugf0("MC: mci = %p, dev = %p\n",
-		mci, &sbridge_dev->pdev[0]->dev);
+	debugf0("MC: " __FILE__ ": %s(): mci = %p, dev = %p\n",
+		__func__, mci, &sbridge_dev->pdev[0]->dev);
 
 	/* Remove MC sysfs nodes */
-	edac_mc_del_mc(mci->pdev);
+	edac_mc_del_mc(mci->dev);
 
 	debugf1("%s: free mci struct\n", mci->ctl_name);
 	kfree(mci->ctl_name);
@@ -1642,30 +1682,21 @@ static void sbridge_unregister_mci(struct sbridge_dev *sbridge_dev)
 static int sbridge_register_mci(struct sbridge_dev *sbridge_dev)
 {
 	struct mem_ctl_info *mci;
-	struct edac_mc_layer layers[2];
 	struct sbridge_pvt *pvt;
-	int rc;
+	int rc, channels, csrows;
 
 	/* Check the number of active and not disabled channels */
-	rc = check_if_ecc_is_active(sbridge_dev->bus);
+	rc = sbridge_get_active_channels(sbridge_dev->bus, &channels, &csrows);
 	if (unlikely(rc < 0))
 		return rc;
 
 	/* allocate a new MC control structure */
-	layers[0].type = EDAC_MC_LAYER_CHANNEL;
-	layers[0].size = NUM_CHANNELS;
-	layers[0].is_virt_csrow = false;
-	layers[1].type = EDAC_MC_LAYER_SLOT;
-	layers[1].size = MAX_DIMMS;
-	layers[1].is_virt_csrow = true;
-	mci = edac_mc_alloc(sbridge_dev->mc, ARRAY_SIZE(layers), layers,
-			    sizeof(*pvt));
-
+	mci = edac_mc_alloc(sizeof(*pvt), csrows, channels, sbridge_dev->mc);
 	if (unlikely(!mci))
 		return -ENOMEM;
 
-	edac_dbg(0, "MC: mci = %p, dev = %p\n",
-		 mci, &sbridge_dev->pdev[0]->dev);
+	debugf0("MC: " __FILE__ ": %s(): mci = %p, dev = %p\n",
+		__func__, mci, &sbridge_dev->pdev[0]->dev);
 
 	pvt = mci->pvt_info;
 	memset(pvt, 0, sizeof(*pvt));
@@ -1696,11 +1727,12 @@ static int sbridge_register_mci(struct sbridge_dev *sbridge_dev)
 	get_memory_layout(mci);
 
 	/* record ptr to the generic device */
-	mci->pdev = &sbridge_dev->pdev[0]->dev;
+	mci->dev = &sbridge_dev->pdev[0]->dev;
 
 	/* add this new MC control structure to EDAC's list of MCs */
 	if (unlikely(edac_mc_add_mc(mci))) {
-		edac_dbg(0, "MC: failed edac_mc_add_mc()\n");
+		debugf0("MC: " __FILE__
+			": %s(): failed edac_mc_add_mc()\n", __func__);
 		rc = -EINVAL;
 		goto fail0;
 	}
@@ -1747,8 +1779,7 @@ static int __devinit sbridge_probe(struct pci_dev *pdev,
 	mc = 0;
 
 	list_for_each_entry(sbridge_dev, &sbridge_edac_list, list) {
-		edac_dbg(0, "Registering MC#%d (%d of %d)\n",
-			 mc, mc + 1, num_mc);
+		debugf0("Registering MC#%d (%d of %d)\n", mc, mc + 1, num_mc);
 		sbridge_dev->mc = mc++;
 		rc = sbridge_register_mci(sbridge_dev);
 		if (unlikely(rc < 0))
@@ -1778,7 +1809,7 @@ static void __devexit sbridge_remove(struct pci_dev *pdev)
 {
 	struct sbridge_dev *sbridge_dev;
 
-	edac_dbg(0, "\n");
+	debugf0(__FILE__ ": %s()\n", __func__);
 
 	/*
 	 * we have a trouble here: pdev value for removal will be wrong, since
@@ -1827,7 +1858,7 @@ static int __init sbridge_init(void)
 {
 	int pci_rc;
 
-	edac_dbg(2, "\n");
+	debugf2("MC: " __FILE__ ": %s()\n", __func__);
 
 	/* Ensure that the OPSTATE is set correctly for POLL or NMI */
 	opstate_init();
@@ -1851,7 +1882,7 @@ static int __init sbridge_init(void)
  */
 static void __exit sbridge_exit(void)
 {
-	edac_dbg(2, "\n");
+	debugf2("MC: " __FILE__ ": %s()\n", __func__);
 	pci_unregister_driver(&sbridge_driver);
 	mce_unregister_decode_chain(&sbridge_mce_dec);
 }

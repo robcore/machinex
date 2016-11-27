@@ -32,7 +32,7 @@
 static int orig_up_threshold = 90;
 static int g_count = 0;
 
-#define DEF_SAMPLING_RATE			(60000)
+#define DEF_SAMPLING_RATE			(0)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define DEF_FREQUENCY_UP_THRESHOLD		(80)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
@@ -47,7 +47,7 @@ static int g_count = 0;
 #define DBS_SWITCH_MODE_TIMEOUT			(1000)
 #define INPUT_EVENT_MIN_TIMEOUT 		(0)
 #define INPUT_EVENT_MAX_TIMEOUT 		(1000)
-#define INPUT_EVENT_TIMEOUT			(1000)
+#define INPUT_EVENT_TIMEOUT			(500)
 #define MIN_SAMPLING_RATE_RATIO			(0)
 
 static unsigned int min_sampling_rate;

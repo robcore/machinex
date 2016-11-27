@@ -18,8 +18,6 @@
 #include "util.h"
 #include "callchain.h"
 
-__thread struct callchain_cursor callchain_cursor;
-
 bool ip_callchain__valid(struct ip_callchain *chain,
 			 const union perf_event *event)
 {

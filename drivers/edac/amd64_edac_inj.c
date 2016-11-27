@@ -158,8 +158,7 @@ static ssize_t amd64_inject_write_store(struct mem_ctl_info *mci,
 		/* Issue 'word' and 'bit' along with the READ request */
 		amd64_write_pci_cfg(pvt->F3, F10_NB_ARRAY_DATA, word_bits);
 
-		edac_dbg(0, "section=0x%x word_bits=0x%x\n",
-			 section, word_bits);
+		debugf0("section=0x%x word_bits=0x%x\n", section, word_bits);
 
 		return count;
 	}

@@ -256,7 +256,6 @@ struct ab8500 {
 struct regulator_reg_init;
 struct regulator_init_data;
 struct ab8500_gpio_platform_data;
-struct ab8500_codec_platform_data;
 
 /**
  * struct ab8500_platform_data - AB8500 platform data
@@ -275,7 +274,6 @@ struct ab8500_platform_data {
 	int num_regulator;
 	struct regulator_init_data *regulator;
 	struct ab8500_gpio_platform_data *gpio;
-	struct ab8500_codec_platform_data *codec;
 };
 
 extern int __devinit ab8500_init(struct ab8500 *ab8500,

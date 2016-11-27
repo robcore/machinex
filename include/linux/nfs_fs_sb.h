@@ -17,7 +17,7 @@ struct nfs4_sequence_args;
 struct nfs4_sequence_res;
 struct nfs_server;
 struct nfs4_minor_version_ops;
-struct nfs41_server_scope;
+struct server_scope;
 struct nfs41_impl_id;
 
 /*
@@ -35,9 +35,6 @@ struct nfs_client {
 #define NFS_CS_RENEWD		3		/* - renewd started */
 #define NFS_CS_STOP_RENEW	4		/* no more state to renew */
 #define NFS_CS_CHECK_LEASE_TIME	5		/* need to check lease time */
-	unsigned long		cl_flags;	/* behavior switches */
-#define NFS_CS_NORESVPORT	0		/* - use ephemeral src port */
-#define NFS_CS_DISCRTRY		1		/* - disconnect on RPC retry */
 	struct sockaddr_storage	cl_addr;	/* server identifier */
 	size_t			cl_addrlen;
 	char *			cl_hostname;	/* hostname of server */
@@ -64,6 +61,9 @@ struct nfs_client {
 
 	struct rpc_wait_queue	cl_rpcwaitq;
 
+	/* used for the setclientid verifier */
+	struct timespec		cl_boot_time;
+
 	/* idmapper */
 	struct idmap *		cl_idmap;
 
@@ -79,17 +79,16 @@ struct nfs_client {
 	u32			cl_seqid;
 	/* The flags used for obtaining the clientid during EXCHANGE_ID */
 	u32			cl_exchange_flags;
-	struct nfs4_session	*cl_session;	/* shared session */
-	struct nfs41_server_owner *cl_serverowner;
-	struct nfs41_server_scope *cl_serverscope;
-	struct nfs41_impl_id	*cl_implid;
+	struct nfs4_session	*cl_session; 	/* sharred session */
 #endif /* CONFIG_NFS_V4 */
 
 #ifdef CONFIG_NFS_FSCACHE
 	struct fscache_cookie	*fscache;	/* client index cache cookie */
 #endif
 
-	struct net		*cl_net;
+	struct server_scope	*server_scope;	/* from exchange_id */
+	struct nfs41_impl_id	*impl_id;	/* from exchange_id */
+	struct net		*net;
 };
 
 /*

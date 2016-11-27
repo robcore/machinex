@@ -449,7 +449,7 @@ static struct gpiomux_setting sx150x_suspended_cfg = {
 static struct gpiomux_setting sx150x_active_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_NONE,
+	.pull = GPIOMUX_PULL_DOWN,
 };
 
 #ifdef CONFIG_USB_EHCI_MSM_HSIC

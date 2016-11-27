@@ -1201,7 +1201,7 @@ static int __devinit read_eeprom (void __iomem *ioaddr, int location, int addr_l
 	}
 
 	/* Terminate the EEPROM access. */
-	RTL_W8(Cfg9346, 0);
+	RTL_W8 (Cfg9346, ~EE_CS);
 	eeprom_delay ();
 
 	return retval;

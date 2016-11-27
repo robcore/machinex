@@ -176,7 +176,28 @@ nfs4_ds_connect(struct nfs_server *mds_srv, struct nfs4_pnfs_ds *ds)
 		goto out;
 	}
 
-	status = nfs4_init_ds_session(clp, mds_srv->nfs_client->cl_lease_time);
+	if ((clp->cl_exchange_flags & EXCHGID4_FLAG_MASK_PNFS) != 0) {
+		if (!is_ds_client(clp)) {
+			status = -ENODEV;
+			goto out_put;
+		}
+		ds->ds_clp = clp;
+		dprintk("%s [existing] server=%s\n", __func__,
+			ds->ds_remotestr);
+		goto out;
+	}
+
+	/*
+	 * Do not set NFS_CS_CHECK_LEASE_TIME instead set the DS lease to
+	 * be equal to the MDS lease. Renewal is scheduled in create_session.
+	 */
+	spin_lock(&mds_srv->nfs_client->cl_lock);
+	clp->cl_lease_time = mds_srv->nfs_client->cl_lease_time;
+	spin_unlock(&mds_srv->nfs_client->cl_lock);
+	clp->cl_last_renewal = jiffies;
+
+	/* New nfs_client */
+	status = nfs4_init_ds_session(clp);
 	if (status)
 		goto out_put;
 
@@ -581,7 +602,7 @@ decode_device(struct inode *ino, struct pnfs_device *pdev, gfp_t gfp_flags)
 
 		mp_count = be32_to_cpup(p); /* multipath count */
 		for (j = 0; j < mp_count; j++) {
-			da = decode_ds_addr(NFS_SERVER(ino)->nfs_client->cl_net,
+			da = decode_ds_addr(NFS_SERVER(ino)->nfs_client->net,
 					    &stream, gfp_flags);
 			if (da)
 				list_add_tail(&da->da_node, &dsaddrs);

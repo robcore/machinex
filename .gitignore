@@ -39,9 +39,6 @@ modules.builtin
 *.txt.rej
 *.rej
 *.S.rej
-*.o.cmd
-*.cmd
-boot.img-zImage
 
 #
 # Top-level generic files
@@ -54,7 +51,6 @@ boot.img-zImage
 /System.map
 /Module.markers
 /Module.symvers
-/out
 
 #
 # Debian directory (make deb-pkg)

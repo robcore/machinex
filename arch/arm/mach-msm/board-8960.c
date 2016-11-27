@@ -802,7 +802,7 @@ static struct reserve_info msm8960_reserve_info __initdata = {
 	.paddr_to_memtype = msm8960_paddr_to_memtype,
 };
 
-void __init msm8960_early_memory(void)
+static void __init msm8960_early_memory(void)
 {
 	reserve_info = &msm8960_reserve_info;
 }
@@ -825,13 +825,13 @@ static int __init ext_display_setup(char *param)
 }
 early_param("ext_display", ext_display_setup);
 
-void __init msm8960_reserve(void)
+static void __init msm8960_reserve(void)
 {
 	msm8960_set_display_params(prim_panel_name, ext_panel_name);
 	msm_reserve();
 }
 
-void __init msm8960_allocate_memory_regions(void)
+static void __init msm8960_allocate_memory_regions(void)
 {
 	msm8960_allocate_fb_region();
 }
@@ -1441,7 +1441,7 @@ static struct platform_device msm_device_tspp = {
 
 #define MSM_SHARED_RAM_PHYS 0x80000000
 
-void __init msm8960_map_io(void)
+static void __init msm8960_map_io(void)
 {
 	msm_shared_ram_phys = MSM_SHARED_RAM_PHYS;
 	msm_map_msm8960_io();
@@ -1450,7 +1450,7 @@ void __init msm8960_map_io(void)
 		pr_err("socinfo_init() failed!\n");
 }
 
-void __init msm8960_init_irq(void)
+static void __init msm8960_init_irq(void)
 {
 	struct msm_mpm_device_data *data = NULL;
 
@@ -2767,8 +2767,6 @@ static void __init bt_power_init(void)
 #define bt_power_init(x) do {} while (0)
 #endif
 
-struct msm8960_oem_init_ptrs msm8960_oem_funcs;
-
 static struct platform_device *common_devices[] __initdata = {
 	&msm8960_device_dmov,
 	&msm_device_smd,
@@ -3331,7 +3329,7 @@ static void __init msm8960ab_update_retention_spm(void)
 	}
 }
 
-void __init msm8960_cdp_init(void)
+static void __init msm8960_cdp_init(void)
 {
 	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
 		pr_err("meminfo_init() failed!\n");
@@ -3372,9 +3370,6 @@ void __init msm8960_cdp_init(void)
 					machine_is_msm8960_liquid())
 		msm_device_hsic_host.dev.parent = &smsc_hub_device.dev;
 	msm8960_init_gpiomux();
-	if (msm8960_oem_funcs.msm_gpio_init)
-		msm8960_oem_funcs.msm_gpio_init();
-
 	msm8960_device_qup_spi_gsbi1.dev.platform_data =
 				&msm8960_qup_spi_gsbi1_pdata;
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));

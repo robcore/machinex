@@ -1988,13 +1988,6 @@ static int hdspm_get_system_sample_rate(struct hdspm *hdspm)
 	period = hdspm_read(hdspm, HDSPM_RD_PLL_FREQ);
 	rate = hdspm_calc_dds_value(hdspm, period);
 
-	if (rate > 207000) {
-		/* Unreasonable high sample rate as seen on PCI MADI cards.
-		 * Use the cached value instead.
-		 */
-		rate = hdspm->system_sample_rate;
-	}
-
 	return rate;
 }
 

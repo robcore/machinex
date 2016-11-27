@@ -79,18 +79,22 @@ int gfs2_meta_check_ii(struct gfs2_sbd *sdp, struct buffer_head *bh,
 		       const char *type, const char *function,
 		       char *file, unsigned int line);
 
-static inline int gfs2_meta_check(struct gfs2_sbd *sdp,
-				    struct buffer_head *bh)
+static inline int gfs2_meta_check_i(struct gfs2_sbd *sdp,
+				    struct buffer_head *bh,
+				    const char *function,
+				    char *file, unsigned int line)
 {
 	struct gfs2_meta_header *mh = (struct gfs2_meta_header *)bh->b_data;
 	u32 magic = be32_to_cpu(mh->mh_magic);
-	if (unlikely(magic != GFS2_MAGIC)) {
-		printk(KERN_ERR "GFS2: Magic number missing at %llu\n",
-		       (unsigned long long)bh->b_blocknr);
-		return -EIO;
-	}
+	if (unlikely(magic != GFS2_MAGIC))
+		return gfs2_meta_check_ii(sdp, bh, "magic number", function,
+					  file, line);
 	return 0;
 }
+
+#define gfs2_meta_check(sdp, bh) \
+gfs2_meta_check_i((sdp), (bh), __func__, __FILE__, __LINE__)
+
 
 int gfs2_metatype_check_ii(struct gfs2_sbd *sdp, struct buffer_head *bh,
 			   u16 type, u16 t,

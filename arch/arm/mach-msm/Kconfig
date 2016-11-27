@@ -1070,13 +1070,6 @@ config MACH_MSM9615_MTP
 	help
 	  Support for the Qualcomm MSM9615 MTP device.
 
-config MACH_JFDT
-	bool "JFDT"
-	select USE_OF
-	select OF_FLATTREE_HOST_BYTEORDER
-	help
-	  Samsung Galaxy S4 Device Tree Boardfile.
-
 config MSM_USE_TSIF1
 	depends on ARCH_MSM8X60
 	bool "MSM8x60 use TSIF1"

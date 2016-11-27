@@ -1090,7 +1090,7 @@ F:	drivers/media/video/s5p-fimc/
 ARM/SAMSUNG S5P SERIES Multi Format Codec (MFC) SUPPORT
 M:	Kyungmin Park <kyungmin.park@samsung.com>
 M:	Kamil Debski <k.debski@samsung.com>
-M:	Jeongtae Park <jtp.park@samsung.com>
+M:     Jeongtae Park <jtp.park@samsung.com>
 L:	linux-arm-kernel@lists.infradead.org
 L:	linux-media@vger.kernel.org
 S:	Maintained
@@ -1783,9 +1783,6 @@ F:	include/linux/cfag12864b.h
 CFG80211 and NL80211
 M:	Johannes Berg <johannes@sipsolutions.net>
 L:	linux-wireless@vger.kernel.org
-W:	http://wireless.kernel.org/
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211.git
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211-next.git
 S:	Maintained
 F:	include/linux/nl80211.h
 F:	include/net/cfg80211.h
@@ -2116,11 +2113,11 @@ S:	Orphan
 F:	drivers/net/wan/pc300*
 
 CYTTSP TOUCHSCREEN DRIVER
-M:	Javier Martinez Canillas <javier@dowhile0.org>
-L:	linux-input@vger.kernel.org
-S:	Maintained
-F:	drivers/input/touchscreen/cyttsp*
-F:	include/linux/input/cyttsp.h
+M:      Javier Martinez Canillas <javier@dowhile0.org>
+L:      linux-input@vger.kernel.org
+S:      Maintained
+F:      drivers/input/touchscreen/cyttsp*
+F:      include/linux/input/cyttsp.h
 
 DAMA SLAVE for AX.25
 M:	Joerg Reuter <jreuter@yaina.de>
@@ -2240,7 +2237,7 @@ F:	include/linux/device-mapper.h
 F:	include/linux/dm-*.h
 
 DIOLAN U2C-12 I2C DRIVER
-M:	Guenter Roeck <linux@roeck-us.net>
+M:	Guenter Roeck <guenter.roeck@ericsson.com>
 L:	linux-i2c@vger.kernel.org
 S:	Maintained
 F:	drivers/i2c/busses/i2c-diolan-u2c.c
@@ -3103,7 +3100,7 @@ F:	drivers/tty/hvc/
 
 HARDWARE MONITORING
 M:	Jean Delvare <khali@linux-fr.org>
-M:	Guenter Roeck <linux@roeck-us.net>
+M:	Guenter Roeck <guenter.roeck@ericsson.com>
 L:	lm-sensors@lm-sensors.org
 W:	http://www.lm-sensors.org/
 T:	quilt kernel.org/pub/linux/kernel/people/jdelvare/linux-2.6/jdelvare-hwmon/
@@ -3203,8 +3200,10 @@ F:	include/linux/clockchips.h
 F:	include/linux/hrtimer.h
 
 HIGH-SPEED SCC DRIVER FOR AX.25
+M:	Klaus Kudielka <klaus.kudielka@ieee.org>
 L:	linux-hams@vger.kernel.org
-S:	Orphan
+W:	http://www.nt.tuwien.ac.at/~kkudielk/Linux/
+S:	Maintained
 F:	drivers/net/hamradio/dmascc.c
 F:	drivers/net/hamradio/scc.c
 
@@ -4300,8 +4299,7 @@ MAC80211
 M:	Johannes Berg <johannes@sipsolutions.net>
 L:	linux-wireless@vger.kernel.org
 W:	http://linuxwireless.org/
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211.git
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211-next.git
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/linville/wireless.git
 S:	Maintained
 F:	Documentation/networking/mac80211-injection.txt
 F:	include/net/mac80211.h
@@ -4312,8 +4310,7 @@ M:	Stefano Brivio <stefano.brivio@polimi.it>
 M:	Mattias Nissler <mattias.nissler@gmx.de>
 L:	linux-wireless@vger.kernel.org
 W:	http://linuxwireless.org/en/developers/Documentation/mac80211/RateControl/PID
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211.git
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211-next.git
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/linville/wireless.git
 S:	Maintained
 F:	net/mac80211/rc80211_pid*
 
@@ -4372,13 +4369,6 @@ L:	linux-fbdev@vger.kernel.org
 S:	Orphan
 F:	drivers/video/matrox/matroxfb_*
 F:	include/linux/matroxfb.h
-
-MAX16065 HARDWARE MONITOR DRIVER
-M:	Guenter Roeck <linux@roeck-us.net>
-L:	lm-sensors@lm-sensors.org
-S:	Maintained
-F:	Documentation/hwmon/max16065
-F:	drivers/hwmon/max16065.c
 
 MAX6650 HARDWARE MONITOR AND FAN CONTROLLER DRIVER
 M:	"Hans J. Koch" <hjk@hansjkoch.de>
@@ -4490,6 +4480,12 @@ M:	Pavel Pisa <ppisa@pikron.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 F:	drivers/mmc/host/imxmmc.*
+
+MOUSE AND MISC DEVICES [GENERAL]
+M:	Alessandro Rubini <rubini@ipvvis.unipv.it>
+S:	Maintained
+F:	drivers/input/mouse/
+F:	include/linux/gpio_mouse.h
 
 MOXA SMARTIO/INDUSTIO/INTELLIO SERIAL CARD
 M:	Jiri Slaby <jirislaby@gmail.com>
@@ -5125,7 +5121,7 @@ F:	drivers/leds/leds-pca9532.c
 F:	include/linux/leds-pca9532.h
 
 PCA9541 I2C BUS MASTER SELECTOR DRIVER
-M:	Guenter Roeck <linux@roeck-us.net>
+M:	Guenter Roeck <guenter.roeck@ericsson.com>
 L:	linux-i2c@vger.kernel.org
 S:	Maintained
 F:	drivers/i2c/muxes/pca9541.c
@@ -5145,7 +5141,7 @@ S:	Maintained
 F:	drivers/firmware/pcdp.*
 
 PCI ERROR RECOVERY
-M:	Linas Vepstas <linasvepstas@gmail.com>
+M:     Linas Vepstas <linasvepstas@gmail.com>
 L:	linux-pci@vger.kernel.org
 S:	Supported
 F:	Documentation/PCI/pci-error-recovery.txt
@@ -5273,7 +5269,7 @@ F:	drivers/video/fb-puv3.c
 F:	drivers/rtc/rtc-puv3.c
 
 PMBUS HARDWARE MONITORING DRIVERS
-M:	Guenter Roeck <linux@roeck-us.net>
+M:	Guenter Roeck <guenter.roeck@ericsson.com>
 L:	lm-sensors@lm-sensors.org
 W:	http://www.lm-sensors.org/
 W:	http://www.roeck-us.net/linux/drivers/
@@ -5676,9 +5672,6 @@ F:	include/linux/remoteproc.h
 RFKILL
 M:	Johannes Berg <johannes@sipsolutions.net>
 L:	linux-wireless@vger.kernel.org
-W:	http://wireless.kernel.org/
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211.git
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jberg/mac80211-next.git
 S:	Maintained
 F:	Documentation/rfkill.txt
 F:	net/rfkill/
@@ -6642,7 +6635,7 @@ F:	include/linux/taskstats*
 F:	kernel/taskstats.c
 
 TC CLASSIFIER
-M:	Jamal Hadi Salim <jhs@mojatatu.com>
+M:	Jamal Hadi Salim <hadi@cyberus.ca>
 L:	netdev@vger.kernel.org
 S:	Maintained
 F:	include/linux/pkt_cls.h
@@ -7687,14 +7680,6 @@ W:	http://mjpeg.sourceforge.net/driver-zoran/
 T:	Mercurial http://linuxtv.org/hg/v4l-dvb
 S:	Odd Fixes
 F:	drivers/media/video/zoran/
-
-ZRAM COMPRESSED RAM BLOCK DEVICE DRVIER
-M:	Minchan Kim <minchan@kernel.org>
-M:	Nitin Gupta <ngupta@vflare.org>
-L:	linux-kernel@vger.kernel.org
-S:	Maintained
-F:	drivers/block/zram/
-F:	Documentation/blockdev/zram.txt
 
 ZS DECSTATION Z85C30 SERIAL DRIVER
 M:	"Maciej W. Rozycki" <macro@linux-mips.org>

@@ -959,17 +959,14 @@ static inline int cmos_poweroff(struct device *dev)
 
 static u32 rtc_handler(void *context)
 {
-	struct device *dev = context;
-
-	pm_wakeup_event(dev, 0);
 	acpi_clear_event(ACPI_EVENT_RTC);
 	acpi_disable_event(ACPI_EVENT_RTC, 0);
 	return ACPI_INTERRUPT_HANDLED;
 }
 
-static inline void rtc_wake_setup(struct device *dev)
+static inline void rtc_wake_setup(void)
 {
-	acpi_install_fixed_event_handler(ACPI_EVENT_RTC, rtc_handler, dev);
+	acpi_install_fixed_event_handler(ACPI_EVENT_RTC, rtc_handler, NULL);
 	/*
 	 * After the RTC handler is installed, the Fixed_RTC event should
 	 * be disabled. Only when the RTC alarm is set will it be enabled.
@@ -1002,7 +999,7 @@ cmos_wake_setup(struct device *dev)
 	if (acpi_disabled)
 		return;
 
-	rtc_wake_setup(dev);
+	rtc_wake_setup();
 	acpi_rtc_info.wake_on = rtc_wake_on;
 	acpi_rtc_info.wake_off = rtc_wake_off;
 

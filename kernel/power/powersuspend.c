@@ -4,7 +4,6 @@
  * Copyright (C) 2013 Paul Reioux
  *
  * Modified by Jean-Pierre Rasquin <yank555.lu@gmail.com>
- * Further modified by Rob Patershuk <robpatershuk@gmail.com>
  *
  *  v1.1 - make powersuspend not depend on a userspace initiator anymore,
  *         but use a hook in autosleep instead.
@@ -23,8 +22,6 @@
  *
  * v1.7.1 - Add autosleep and hybrid modes back
  *
- * v1.8.0 - All out remove any option but Panel
- *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -42,8 +39,8 @@
 #include <linux/workqueue.h>
 
 #define MAJOR_VERSION	1
-#define MINOR_VERSION	8
-#define SUB_MINOR_VERSION 0
+#define MINOR_VERSION	7
+#define SUB_MINOR_VERSION 1
 
 struct workqueue_struct *suspend_work_queue;
 
@@ -56,7 +53,7 @@ static DECLARE_WORK(power_resume_work, power_resume);
 static DEFINE_SPINLOCK(state_lock);
 
 static int state; // Yank555.lu : Current powersave state (screen on / off)
-static int mode = POWER_SUSPEND_PANEL;  // robcore: Fixed powersave mode  (panel)
+static int mode;  // Yank555.lu : Current powersave mode  (kernel / userspace / panel / hybrid)
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -155,11 +152,21 @@ void set_power_suspend_state(int new_state)
 	}
 }
 
+void set_power_suspend_state_autosleep_hook(int new_state)
+{
+	pr_info("[POWERSUSPEND] autosleep resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	// Yank555.lu : Only allow autosleep hook changes in autosleep & hybrid mode
+	if (mode == POWER_SUSPEND_AUTOSLEEP || mode == POWER_SUSPEND_HYBRID)
+		set_power_suspend_state(new_state);
+}
+
+EXPORT_SYMBOL(set_power_suspend_state_autosleep_hook);
+
 void set_power_suspend_state_panel_hook(int new_state)
 {
 	pr_info("[POWERSUSPEND] panel resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
-	// Yank555.lu : Only allow panel hook changes in panel mode
-	if (mode == POWER_SUSPEND_PANEL)
+	// Yank555.lu : Only allow autosleep hook changes in autosleep & hybrid mode
+	if (mode == POWER_SUSPEND_PANEL || mode == POWER_SUSPEND_HYBRID)
 		set_power_suspend_state(new_state);
 }
 
@@ -173,10 +180,28 @@ static ssize_t power_suspend_state_show(struct kobject *kobj,
         return sprintf(buf, "%u\n", state);
 }
 
+static ssize_t power_suspend_state_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int new_state = 0;
+
+	// Yank555.lu : Only allow sysfs changes from userspace mode
+	if (mode != POWER_SUSPEND_USERSPACE)
+		return -EINVAL;
+
+	sscanf(buf, "%d\n", &new_state);
+
+	pr_info("[POWERSUSPEND] userspace resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	if(new_state == POWER_SUSPEND_ACTIVE || new_state == POWER_SUSPEND_INACTIVE)
+		set_power_suspend_state(new_state);
+
+	return count;
+}
+
 static struct kobj_attribute power_suspend_state_attribute =
-	__ATTR(power_suspend_state, 0444,
+	__ATTR(power_suspend_state, 0666,
 		power_suspend_state_show,
-		NULL);
+		power_suspend_state_store);
 
 static ssize_t power_suspend_mode_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -184,10 +209,28 @@ static ssize_t power_suspend_mode_show(struct kobject *kobj,
         return sprintf(buf, "%u\n", mode);
 }
 
+static ssize_t power_suspend_mode_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int data = 0;
+
+	sscanf(buf, "%d\n", &data);
+
+	switch (data) {
+		case POWER_SUSPEND_AUTOSLEEP:
+		case POWER_SUSPEND_PANEL:
+		case POWER_SUSPEND_USERSPACE:
+		case POWER_SUSPEND_HYBRID:	mode = data;
+						return count;
+		default:
+			return -EINVAL;
+	}
+}
+
 static struct kobj_attribute power_suspend_mode_attribute =
-	__ATTR(power_suspend_mode, 0444,
+	__ATTR(power_suspend_mode, 0666,
 		power_suspend_mode_show,
-		NULL);
+		power_suspend_mode_store);
 
 static ssize_t power_suspend_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -243,6 +286,7 @@ static int __init power_suspend_init(void)
 		return -ENOMEM;
 	}
 
+//	mode = POWER_SUSPEND_USERSPACE;	// Yank555.lu : Default to userspace mode
 	mode = POWER_SUSPEND_PANEL;	// Yank555.lu : Default to display panel mode
 
 	return 0;

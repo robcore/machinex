@@ -35,7 +35,7 @@
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <linux/ks8851_mll.h>
+#include <asm/io.h>
 
 #define	DRV_NAME	"ks8851_mll"
 
@@ -1515,7 +1515,6 @@ static int __devinit ks8851_probe(struct platform_device *pdev)
 	struct net_device *netdev;
 	struct ks_net *ks;
 	u16 id, data;
-	struct ks8851_mll_platform_data *pdata;
 
 	io_d = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	io_c = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -1597,27 +1596,17 @@ static int __devinit ks8851_probe(struct platform_device *pdev)
 	ks_disable_qmu(ks);
 	ks_setup(ks);
 	ks_setup_int(ks);
+	memcpy(netdev->dev_addr, ks->mac_addr, 6);
 
 	data = ks_rdreg16(ks, KS_OBCR);
 	ks_wrreg16(ks, KS_OBCR, data | OBCR_ODS_16MA);
 
-	/* overwriting the default MAC address */
-	pdata = pdev->dev.platform_data;
-	if (!pdata) {
-		netdev_err(netdev, "No platform data\n");
-		err = -ENODEV;
-		goto err_pdata;
-	}
-	memcpy(ks->mac_addr, pdata->mac_addr, 6);
-	if (!is_valid_ether_addr(ks->mac_addr)) {
-		/* Use random MAC address if none passed */
-		random_ether_addr(ks->mac_addr);
-		netdev_info(netdev, "Using random mac address\n");
-	}
-	netdev_info(netdev, "Mac address is: %pM\n", ks->mac_addr);
+	/**
+	 * If you want to use the default MAC addr,
+	 * comment out the 2 functions below.
+	 */
 
-	memcpy(netdev->dev_addr, ks->mac_addr, 6);
-
+	random_ether_addr(netdev->dev_addr);
 	ks_set_mac(ks, netdev->dev_addr);
 
 	id = ks_rdreg16(ks, KS_CIDER);
@@ -1626,8 +1615,6 @@ static int __devinit ks8851_probe(struct platform_device *pdev)
 		    (id >> 8) & 0xff, (id >> 4) & 0xf, (id >> 1) & 0x7);
 	return 0;
 
-err_pdata:
-	unregister_netdev(netdev);
 err_register:
 err_get_irq:
 	iounmap(ks->hw_addr_cmd);

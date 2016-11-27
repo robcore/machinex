@@ -80,8 +80,6 @@ EXPORT_SYMBOL(framebuffer_alloc);
  */
 void framebuffer_release(struct fb_info *info)
 {
-	if (!info)
-		return;
 	kfree(info->apertures);
 	kfree(info);
 }

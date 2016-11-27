@@ -91,7 +91,7 @@ static inline void wdt_reset(void)
 static void wdt_timer_tick(unsigned long data)
 {
 	if (time_before(jiffies, next_heartbeat) ||
-	   (!watchdog_active(&wdt_dev))) {
+	   (!test_bit(WDOG_ACTIVE, &wdt_dev.status))) {
 		wdt_reset();
 		mod_timer(&timer, jiffies + WDT_HEARTBEAT);
 	} else

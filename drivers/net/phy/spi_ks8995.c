@@ -11,8 +11,6 @@
  * by the Free Software Foundation.
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -359,7 +357,7 @@ static struct spi_driver ks8995_driver = {
 
 static int __init ks8995_init(void)
 {
-	pr_info(DRV_DESC " version " DRV_VERSION "\n");
+	printk(KERN_INFO DRV_DESC " version " DRV_VERSION"\n");
 
 	return spi_register_driver(&ks8995_driver);
 }

@@ -442,7 +442,6 @@ static ssize_t nfs_direct_read(struct kiocb *iocb, const struct iovec *iov,
 	result = nfs_direct_read_schedule_iovec(dreq, iov, nr_segs, pos);
 	if (!result)
 		result = nfs_direct_wait(dreq);
-	NFS_I(inode)->read_io += result;
 out_release:
 	nfs_direct_req_release(dreq);
 out:

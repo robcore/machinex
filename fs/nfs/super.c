@@ -786,8 +786,8 @@ static void show_pnfs(struct seq_file *m, struct nfs_server *server)
 
 static void show_implementation_id(struct seq_file *m, struct nfs_server *nfss)
 {
-	if (nfss->nfs_client && nfss->nfs_client->cl_implid) {
-		struct nfs41_impl_id *impl_id = nfss->nfs_client->cl_implid;
+	if (nfss->nfs_client && nfss->nfs_client->impl_id) {
+		struct nfs41_impl_id *impl_id = nfss->nfs_client->impl_id;
 		seq_printf(m, "\n\timpl_id:\tname='%s',domain='%s',"
 			   "date='%llu,%u'",
 			   impl_id->name, impl_id->domain,
@@ -1837,7 +1837,6 @@ static int nfs_validate_mount_data(void *options,
 	if (data == NULL)
 		goto out_no_data;
 
-	args->version = NFS_DEFAULT_VERSION;
 	switch (data->version) {
 	case 1:
 		data->namlen = 0;
@@ -2590,8 +2589,6 @@ static int nfs4_validate_mount_data(void *options,
 
 	if (data == NULL)
 		goto out_no_data;
-
-	args->version = 4;
 
 	switch (data->version) {
 	case 1:

@@ -94,7 +94,6 @@ struct gfs2_rgrpd {
 	u64 rd_igeneration;
 	struct gfs2_bitmap *rd_bits;
 	struct gfs2_sbd *rd_sbd;
-	struct gfs2_rgrp_lvb *rd_rgl;
 	u32 rd_last_alloc;
 	u32 rd_flags;
 #define GFS2_RDF_CHECK		0x10000000 /* check for unlinked inodes */
@@ -300,14 +299,16 @@ struct gfs2_glock {
 
 #define GFS2_MIN_LVB_SIZE 32	/* Min size of LVB that gfs2 supports */
 
+struct gfs2_qadata { /* quota allocation data */
+	/* Quota stuff */
+	struct gfs2_quota_data *qa_qd[2*MAXQUOTAS];
+	struct gfs2_holder qa_qd_ghs[2*MAXQUOTAS];
+	unsigned int qa_qd_num;
+};
+
 struct gfs2_blkreserv {
 	u32 rs_requested; /* Filled in by caller of gfs2_inplace_reserve() */
 	struct gfs2_holder rs_rgd_gh; /* Filled in by gfs2_inplace_reserve() */
-
-	/* ancillary quota stuff */
-	struct gfs2_quota_data *rs_qa_qd[2 * MAXQUOTAS];
-	struct gfs2_holder rs_qa_qd_ghs[2 * MAXQUOTAS];
-	unsigned int rs_qa_qd_num;
 };
 
 enum {
@@ -328,6 +329,7 @@ struct gfs2_inode {
 	struct gfs2_glock *i_gl; /* Move into i_gh? */
 	struct gfs2_holder i_iopen_gh;
 	struct gfs2_holder i_gh; /* for prepare/commit_write only */
+	struct gfs2_qadata *i_qadata; /* quota allocation data */
 	struct gfs2_blkreserv *i_res; /* resource group block reservation */
 	struct gfs2_rgrpd *i_rgd;
 	u64 i_goal;	/* goal block for allocations */
@@ -484,7 +486,6 @@ struct gfs2_args {
 	unsigned int ar_discard:1;		/* discard requests */
 	unsigned int ar_errors:2;               /* errors=withdraw | panic */
 	unsigned int ar_nobarrier:1;            /* do not send barriers */
-	unsigned int ar_rgrplvb:1;		/* use lvbs for rgrp info */
 	int ar_commit;				/* Commit interval */
 	int ar_statfs_quantum;			/* The fast statfs interval */
 	int ar_quota_quantum;			/* The quota interval */

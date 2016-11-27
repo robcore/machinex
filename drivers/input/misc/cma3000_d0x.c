@@ -58,7 +58,7 @@
 
 /*
  * Bit weights in mg for bit 0, other bits need
- * multiply factor 2^n. Eight bit is the sign bit.
+ * multipy factor 2^n. Eight bit is the sign bit.
  */
 #define BIT_TO_2G  18
 #define BIT_TO_8G  71

@@ -134,12 +134,13 @@ static void mlx4_en_event(struct mlx4_dev *dev, void *endev_ptr,
 	struct mlx4_en_dev *mdev = (struct mlx4_en_dev *) endev_ptr;
 	struct mlx4_en_priv *priv;
 
+	if (!mdev->pndev[port])
+		return;
+
+	priv = netdev_priv(mdev->pndev[port]);
 	switch (event) {
 	case MLX4_DEV_EVENT_PORT_UP:
 	case MLX4_DEV_EVENT_PORT_DOWN:
-		if (!mdev->pndev[port])
-			return;
-		priv = netdev_priv(mdev->pndev[port]);
 		/* To prevent races, we poll the link state in a separate
 		  task rather than changing it here */
 		priv->link_state = event;
@@ -151,10 +152,7 @@ static void mlx4_en_event(struct mlx4_dev *dev, void *endev_ptr,
 		break;
 
 	default:
-		if (port < 1 || port > dev->caps.num_ports ||
-		    !mdev->pndev[port])
-			return;
-		mlx4_warn(mdev, "Unhandled event %d for port %d\n", event, port);
+		mlx4_warn(mdev, "Unhandled event: %d\n", event);
 	}
 }
 

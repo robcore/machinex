@@ -27,8 +27,6 @@
 #include <asm/irq_regs.h>
 #include <linux/perf_event.h>
 
-#include <mach/jfdt_watchdog.h>
-
 int watchdog_enabled = 1;
 int __read_mostly watchdog_thresh = 10;
 static int __read_mostly watchdog_disabled;
@@ -302,9 +300,7 @@ static enum hrtimer_restart watchdog_timer_fn(struct hrtimer *hrtimer)
 		/* only warn once */
 		if (__this_cpu_read(soft_watchdog_warn) == true)
 			return HRTIMER_RESTART;
-#ifdef CONFIG_MACH_JFDT
-		touch_hw_watchdog();
-#endif
+
 		printk(KERN_EMERG "BUG: soft lockup - CPU#%d stuck for %us! [%s:%d]\n",
 			smp_processor_id(), duration,
 			current->comm, task_pid_nr(current));

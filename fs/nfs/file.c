@@ -417,7 +417,6 @@ static int nfs_write_end(struct file *file, struct address_space *mapping,
 
 	if (status < 0)
 		return status;
-	NFS_I(mapping->host)->write_io += copied;
 	return copied;
 }
 

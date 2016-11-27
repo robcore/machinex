@@ -2,7 +2,6 @@
  * wm8731.c  --  WM8731 ALSA SoC Audio driver
  *
  * Copyright 2005 Openedhand Ltd.
- * Copyright 2006-12 Wolfson Microelectronics, plc
  *
  * Author: Richard Purdie <richard@openedhand.com>
  *

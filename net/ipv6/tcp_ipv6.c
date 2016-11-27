@@ -526,6 +526,7 @@ static int tcp_v6_send_synack(struct sock *sk, struct request_sock *req,
 done:
 	if (opt && opt != np->opt)
 		sock_kfree_s(sk, opt, opt->tot_len);
+	dst_release(dst);
 	return err;
 }
 
@@ -2134,7 +2135,7 @@ struct proto tcpv6_prot = {
 	.compat_setsockopt	= compat_tcp_setsockopt,
 	.compat_getsockopt	= compat_tcp_getsockopt,
 #endif
-#ifdef CONFIG_CGROUP_MEM_RES_CTLR_KMEM
+#ifdef CONFIG_MEMCG_KMEM
 	.proto_cgroup		= tcp_proto_cgroup,
 #endif
 	.clear_sk		= tcp_v6_clear_sk,

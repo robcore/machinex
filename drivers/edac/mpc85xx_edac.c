@@ -268,7 +268,7 @@ static int __devinit mpc85xx_pci_err_probe(struct platform_device *op)
 	out_be32(pdata->pci_vbase + MPC85XX_PCI_ERR_DR, ~0);
 
 	if (edac_pci_add_device(pci, pdata->edac_idx) > 0) {
-		edac_dbg(3, "failed edac_pci_add_device()\n");
+		debugf3("%s(): failed edac_pci_add_device()\n", __func__);
 		goto err;
 	}
 
@@ -291,7 +291,7 @@ static int __devinit mpc85xx_pci_err_probe(struct platform_device *op)
 	}
 
 	devres_remove_group(&op->dev, mpc85xx_pci_err_probe);
-	edac_dbg(3, "success\n");
+	debugf3("%s(): success\n", __func__);
 	printk(KERN_INFO EDAC_MOD_STR " PCI err registered\n");
 
 	return 0;
@@ -309,7 +309,7 @@ static int mpc85xx_pci_err_remove(struct platform_device *op)
 	struct edac_pci_ctl_info *pci = dev_get_drvdata(&op->dev);
 	struct mpc85xx_pci_pdata *pdata = pci->pvt_info;
 
-	edac_dbg(0, "\n");
+	debugf0("%s()\n", __func__);
 
 	out_be32(pdata->pci_vbase + MPC85XX_PCI_ERR_CAP_DR,
 		 orig_pci_err_cap_dr);
@@ -570,7 +570,7 @@ static int __devinit mpc85xx_l2_err_probe(struct platform_device *op)
 	pdata->edac_idx = edac_dev_idx++;
 
 	if (edac_device_add_device(edac_dev) > 0) {
-		edac_dbg(3, "failed edac_device_add_device()\n");
+		debugf3("%s(): failed edac_device_add_device()\n", __func__);
 		goto err;
 	}
 
@@ -599,7 +599,7 @@ static int __devinit mpc85xx_l2_err_probe(struct platform_device *op)
 
 	devres_remove_group(&op->dev, mpc85xx_l2_err_probe);
 
-	edac_dbg(3, "success\n");
+	debugf3("%s(): success\n", __func__);
 	printk(KERN_INFO EDAC_MOD_STR " L2 err registered\n");
 
 	return 0;
@@ -617,7 +617,7 @@ static int mpc85xx_l2_err_remove(struct platform_device *op)
 	struct edac_device_ctl_info *edac_dev = dev_get_drvdata(&op->dev);
 	struct mpc85xx_l2_pdata *pdata = edac_dev->pvt_info;
 
-	edac_dbg(0, "\n");
+	debugf0("%s()\n", __func__);
 
 	if (edac_op_state == EDAC_OPSTATE_INT) {
 		out_be32(pdata->l2_vbase + MPC85XX_L2_ERRINTEN, 0);
@@ -814,7 +814,7 @@ static void mpc85xx_mc_check(struct mem_ctl_info *mci)
 	pfn = err_addr >> PAGE_SHIFT;
 
 	for (row_index = 0; row_index < mci->nr_csrows; row_index++) {
-		csrow = mci->csrows[row_index];
+		csrow = &mci->csrows[row_index];
 		if ((pfn >= csrow->first_page) && (pfn <= csrow->last_page))
 			break;
 	}
@@ -855,16 +855,12 @@ static void mpc85xx_mc_check(struct mem_ctl_info *mci)
 		mpc85xx_mc_printk(mci, KERN_ERR, "PFN out of range!\n");
 
 	if (err_detect & DDR_EDE_SBE)
-		edac_mc_handle_error(HW_EVENT_ERR_CORRECTED, mci,
-				     pfn, err_addr & ~PAGE_MASK, syndrome,
-				     row_index, 0, -1,
-				     mci->ctl_name, "");
+		edac_mc_handle_ce(mci, pfn, err_addr & ~PAGE_MASK,
+				  syndrome, row_index, 0, mci->ctl_name);
 
 	if (err_detect & DDR_EDE_MBE)
-		edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci,
-				     pfn, err_addr & ~PAGE_MASK, syndrome,
-				     row_index, 0, -1,
-				     mci->ctl_name, "");
+		edac_mc_handle_ue(mci, pfn, err_addr & ~PAGE_MASK,
+				  row_index, mci->ctl_name);
 
 	out_be32(pdata->mc_vbase + MPC85XX_MC_ERR_DETECT, err_detect);
 }
@@ -888,7 +884,6 @@ static void __devinit mpc85xx_init_csrows(struct mem_ctl_info *mci)
 {
 	struct mpc85xx_mc_pdata *pdata = mci->pvt_info;
 	struct csrow_info *csrow;
-	struct dimm_info *dimm;
 	u32 sdram_ctl;
 	u32 sdtype;
 	enum mem_type mtype;
@@ -934,9 +929,7 @@ static void __devinit mpc85xx_init_csrows(struct mem_ctl_info *mci)
 		u32 start;
 		u32 end;
 
-		csrow = mci->csrows[index];
-		dimm = csrow->channels[0]->dimm;
-
+		csrow = &mci->csrows[index];
 		cs_bnds = in_be32(pdata->mc_vbase + MPC85XX_MC_CS_BNDS_0 +
 				  (index * MPC85XX_MC_CS_BNDS_OFS));
 
@@ -952,21 +945,19 @@ static void __devinit mpc85xx_init_csrows(struct mem_ctl_info *mci)
 
 		csrow->first_page = start;
 		csrow->last_page = end;
-
-		dimm->nr_pages = end + 1 - start;
-		dimm->grain = 8;
-		dimm->mtype = mtype;
-		dimm->dtype = DEV_UNKNOWN;
+		csrow->nr_pages = end + 1 - start;
+		csrow->grain = 8;
+		csrow->mtype = mtype;
+		csrow->dtype = DEV_UNKNOWN;
 		if (sdram_ctl & DSC_X32_EN)
-			dimm->dtype = DEV_X32;
-		dimm->edac_mode = EDAC_SECDED;
+			csrow->dtype = DEV_X32;
+		csrow->edac_mode = EDAC_SECDED;
 	}
 }
 
 static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 {
 	struct mem_ctl_info *mci;
-	struct edac_mc_layer layers[2];
 	struct mpc85xx_mc_pdata *pdata;
 	struct resource r;
 	u32 sdram_ctl;
@@ -975,14 +966,7 @@ static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 	if (!devres_open_group(&op->dev, mpc85xx_mc_err_probe, GFP_KERNEL))
 		return -ENOMEM;
 
-	layers[0].type = EDAC_MC_LAYER_CHIP_SELECT;
-	layers[0].size = 4;
-	layers[0].is_virt_csrow = true;
-	layers[1].type = EDAC_MC_LAYER_CHANNEL;
-	layers[1].size = 1;
-	layers[1].is_virt_csrow = false;
-	mci = edac_mc_alloc(edac_mc_idx, ARRAY_SIZE(layers), layers,
-			    sizeof(*pdata));
+	mci = edac_mc_alloc(sizeof(*pdata), 4, 1, edac_mc_idx);
 	if (!mci) {
 		devres_release_group(&op->dev, mpc85xx_mc_err_probe);
 		return -ENOMEM;
@@ -991,9 +975,9 @@ static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 	pdata = mci->pvt_info;
 	pdata->name = "mpc85xx_mc_err";
 	pdata->irq = NO_IRQ;
-	mci->pdev = &op->dev;
+	mci->dev = &op->dev;
 	pdata->edac_idx = edac_mc_idx++;
-	dev_set_drvdata(mci->pdev, mci);
+	dev_set_drvdata(mci->dev, mci);
 	mci->ctl_name = pdata->name;
 	mci->dev_name = pdata->name;
 
@@ -1027,7 +1011,7 @@ static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 		goto err;
 	}
 
-	edac_dbg(3, "init mci\n");
+	debugf3("%s(): init mci\n", __func__);
 	mci->mtype_cap = MEM_FLAG_RDDR | MEM_FLAG_RDDR2 |
 	    MEM_FLAG_DDR | MEM_FLAG_DDR2;
 	mci->edac_ctl_cap = EDAC_FLAG_NONE | EDAC_FLAG_SECDED;
@@ -1089,7 +1073,7 @@ static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 	}
 
 	devres_remove_group(&op->dev, mpc85xx_mc_err_probe);
-	edac_dbg(3, "success\n");
+	debugf3("%s(): success\n", __func__);
 	printk(KERN_INFO EDAC_MOD_STR " MC err registered\n");
 
 	return 0;
@@ -1107,7 +1091,7 @@ static int mpc85xx_mc_err_remove(struct platform_device *op)
 	struct mem_ctl_info *mci = dev_get_drvdata(&op->dev);
 	struct mpc85xx_mc_pdata *pdata = mci->pvt_info;
 
-	edac_dbg(0, "\n");
+	debugf0("%s()\n", __func__);
 
 	if (edac_op_state == EDAC_OPSTATE_INT) {
 		out_be32(pdata->mc_vbase + MPC85XX_MC_ERR_INT_EN, 0);

@@ -2549,7 +2549,8 @@ static void transparent_hugepage_adjust(struct kvm_vcpu *vcpu,
 			*gfnp = gfn;
 			kvm_release_pfn_clean(pfn);
 			pfn &= ~mask;
-			kvm_get_pfn(pfn);
+			if (!get_page_unless_zero(pfn_to_page(pfn)))
+				BUG();
 			*pfnp = pfn;
 		}
 	}

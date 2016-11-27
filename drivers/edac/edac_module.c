@@ -15,7 +15,7 @@
 #include "edac_core.h"
 #include "edac_module.h"
 
-#define EDAC_VERSION "Ver: 3.0.0"
+#define EDAC_VERSION "Ver: 2.1.0"
 
 #ifdef CONFIG_EDAC_DEBUG
 /* Values of 0 to 4 will generate output */
@@ -90,7 +90,10 @@ static int __init edac_init(void)
 	 */
 	edac_pci_clear_parity_errors();
 
-	err = edac_mc_sysfs_init();
+	/*
+	 * now set up the mc_kset under the edac class object
+	 */
+	err = edac_sysfs_setup_mc_kset();
 	if (err)
 		goto error;
 
@@ -98,10 +101,14 @@ static int __init edac_init(void)
 	err = edac_workqueue_setup();
 	if (err) {
 		edac_printk(KERN_ERR, EDAC_MC, "init WorkQueue failure\n");
-		goto error;
+		goto workq_fail;
 	}
 
 	return 0;
+
+	/* Error teardown stack */
+workq_fail:
+	edac_sysfs_teardown_mc_kset();
 
 error:
 	return err;
@@ -113,11 +120,11 @@ error:
  */
 static void __exit edac_exit(void)
 {
-	edac_dbg(0, "\n");
+	debugf0("%s()\n", __func__);
 
 	/* tear down the various subsystems */
 	edac_workqueue_teardown();
-	edac_mc_sysfs_exit();
+	edac_sysfs_teardown_mc_kset();
 }
 
 /*

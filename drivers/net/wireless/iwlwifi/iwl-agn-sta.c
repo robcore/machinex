@@ -678,7 +678,7 @@ void iwl_restore_stations(struct iwl_priv *priv, struct iwl_rxon_context *ctx)
 						~IWL_STA_DRIVER_ACTIVE;
 				priv->stations[i].used &=
 						~IWL_STA_UCODE_INPROGRESS;
-				continue;
+				spin_unlock_bh(&priv->sta_lock);
 			}
 			/*
 			 * Rate scaling has already been initialized, send

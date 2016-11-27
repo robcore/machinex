@@ -69,7 +69,7 @@ static int gfs2_unstuffer_page(struct gfs2_inode *ip, struct buffer_head *dibh,
 	if (!PageUptodate(page)) {
 		void *kaddr = kmap(page);
 		u64 dsize = i_size_read(inode);
-
+ 
 		if (dsize > (dibh->b_size - sizeof(struct gfs2_dinode)))
 			dsize = dibh->b_size - sizeof(struct gfs2_dinode);
 
@@ -1045,13 +1045,12 @@ static int trunc_dealloc(struct gfs2_inode *ip, u64 size)
 		lblock = (size - 1) >> sdp->sd_sb.sb_bsize_shift;
 
 	find_metapath(sdp, lblock, &mp, ip->i_height);
-	error = gfs2_rindex_update(sdp);
-	if (error)
-		return error;
+	if (!gfs2_qadata_get(ip))
+		return -ENOMEM;
 
 	error = gfs2_quota_hold(ip, NO_QUOTA_CHANGE, NO_QUOTA_CHANGE);
 	if (error)
-		return error;
+		goto out;
 
 	while (height--) {
 		struct strip_mine sm;
@@ -1065,6 +1064,8 @@ static int trunc_dealloc(struct gfs2_inode *ip, u64 size)
 
 	gfs2_quota_unhold(ip);
 
+out:
+	gfs2_qadata_put(ip);
 	return error;
 }
 
@@ -1166,14 +1167,18 @@ static int do_grow(struct inode *inode, u64 size)
 	struct gfs2_inode *ip = GFS2_I(inode);
 	struct gfs2_sbd *sdp = GFS2_SB(inode);
 	struct buffer_head *dibh;
+	struct gfs2_qadata *qa = NULL;
 	int error;
 
 	if (gfs2_is_stuffed(ip) &&
 	    (size > (sdp->sd_sb.sb_bsize - sizeof(struct gfs2_dinode)))) {
+		qa = gfs2_qadata_get(ip);
+		if (qa == NULL)
+			return -ENOMEM;
 
 		error = gfs2_quota_lock_check(ip);
 		if (error)
-			return error;
+			goto do_grow_alloc_put;
 
 		error = gfs2_inplace_reserve(ip, 1);
 		if (error)
@@ -1207,6 +1212,8 @@ do_grow_release:
 		gfs2_inplace_release(ip);
 do_grow_qunlock:
 		gfs2_quota_unlock(ip);
+do_grow_alloc_put:
+		gfs2_qadata_put(ip);
 	}
 	return error;
 }

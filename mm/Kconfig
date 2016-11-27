@@ -1,6 +1,6 @@
 config SELECT_MEMORY_MODEL
 	def_bool y
-	depends on ARCH_SELECT_MEMORY_MODEL
+	depends on EXPERIMENTAL || ARCH_SELECT_MEMORY_MODEL
 
 choice
 	prompt "Memory model"
@@ -367,16 +367,6 @@ choice
 	  benefit.
 endchoice
 
-config CROSS_MEMORY_ATTACH
-	bool "Cross Memory Support"
-	depends on MMU
-	default y
-	help
-	  Enabling this option adds the system calls process_vm_readv and
-	  process_vm_writev which allow a process with the correct privileges
-	  to directly read from or write to to another process's address space.
-	  See the man page for more details.
-
 #
 # UP and nommu archs use km based percpu allocator
 #
@@ -520,16 +510,6 @@ config SWAP_ENABLE_READAHEAD
 	  also paged in expecting those pages will be used in near future.
 	  This behaviour is good at disk-based system, but not on in-memory
 	  compression (e.g. zram).
-
-config ZBUD
-	tristate
-	default n
-	help
-	  A special purpose allocator for storing compressed pages.
-	  It is designed to store up to two compressed pages per physical
-	  page.  While this design limits storage density, it has simple and
-	  deterministic reclaim properties that make it preferable to a higher
-	  density approach when reclaim will be used.
 
 config MIN_DIRTY_THRESH_PAGES
 	int "The lower bound of VM dirty_thresh value in number of pages"
