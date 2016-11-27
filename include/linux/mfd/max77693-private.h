@@ -354,6 +354,8 @@ struct max77693_dev {
 	struct i2c_client *haptic; /* 0x90; Haptic */
 	struct mutex iolock;
 
+	struct irq_domain *irq_domain;
+
 	int type;
 
 	int irq;
@@ -449,5 +451,9 @@ enum {
 };
 
 #endif /* CONFIG_MFD_MAX77693 */
+
+extern int max77693_irq_init(struct max77693_dev *max77686);
+extern void max77693_irq_exit(struct max77693_dev *max77686);
+extern int max77693_irq_resume(struct max77693_dev *max77686);
 
 #endif /*  __LINUX_MFD_MAX77693_PRIV_H */
