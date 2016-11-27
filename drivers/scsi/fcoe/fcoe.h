@@ -68,7 +68,6 @@ do {                                                            	\
  * @netdev:	      The associated net device
  * @fcoe_packet_type: FCoE packet type
  * @fip_packet_type:  FIP packet type
- * @ctlr:	      The FCoE controller (for FIP)
  * @oem:	      The offload exchange manager for all local port
  *		      instances associated with this port
  * This structure is 1:1 with a net devive.
@@ -83,7 +82,11 @@ struct fcoe_interface {
 	struct fc_exch_mgr *oem;
 };
 
-#define fcoe_from_ctlr(fip) container_of(fip, struct fcoe_interface, ctlr)
+#define fcoe_to_ctlr(x)						\
+	(struct fcoe_ctlr *)(((struct fcoe_ctlr *)(x)) - 1)
+
+#define fcoe_from_ctlr(x)			\
+	((struct fcoe_interface *)((x) + 1))
 
 /**
  * fcoe_netdev() - Return the net device associated with a local port
