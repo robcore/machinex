@@ -585,6 +585,13 @@ static void shmem_undo_range(struct inode *inode, loff_t lstart, loff_t lend,
 	spin_unlock(&info->lock);
 }
 
+void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
+{
+	shmem_undo_range(inode, lstart, lend, false);
+	inode->i_ctime = inode->i_mtime = CURRENT_TIME;
+}
+EXPORT_SYMBOL_GPL(shmem_truncate_range);
+
 static int shmem_setattr(struct dentry *dentry, struct iattr *attr)
 {
 	struct inode *inode = dentry->d_inode;
@@ -2881,12 +2888,13 @@ void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 	truncate_inode_pages_range(inode->i_mapping, lstart, lend);
 }
 EXPORT_SYMBOL_GPL(shmem_truncate_range);
-
+	/*
 int vmtruncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 {
-	/* Only CONFIG_SHMEM shmem.c ever supported i_op->truncate_range(). */
+ Only CONFIG_SHMEM shmem.c ever supported i_op->truncate_range()
 	return -ENOSYS;
 }
+	*/
 
 #define shmem_vm_ops				generic_file_vm_ops
 #define shmem_file_operations			ramfs_file_operations
