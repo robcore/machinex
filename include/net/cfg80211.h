@@ -441,8 +441,6 @@ struct cfg80211_acl_data {
  *
  * Used to configure an AP interface.
  *
- * @channel: the channel to start the AP on
- * @channel_type: the channel type to use
  * @beacon: beacon data
  * @beacon_interval: beacon interval
  * @dtim_period: DTIM period
@@ -458,9 +456,6 @@ struct cfg80211_acl_data {
  *	MAC address based access control
  */
 struct cfg80211_ap_settings {
-	struct ieee80211_channel *channel;
-	enum nl80211_channel_type channel_type;
-
 	struct cfg80211_beacon_data beacon;
 
 	int beacon_interval, dtim_period;
@@ -884,8 +879,6 @@ struct mesh_config {
 
 /**
  * struct mesh_setup - 802.11s mesh setup configuration
- * @channel: the channel to start the mesh network on
- * @channel_type: the channel type to use
  * @mesh_id: the mesh ID
  * @mesh_id_len: length of the mesh ID, at least 1 and at most 32 bytes
  * @path_sel_proto: which path selection protocol to use
@@ -899,8 +892,6 @@ struct mesh_config {
  * These parameters are fixed when the mesh is created.
  */
 struct mesh_setup {
-	struct ieee80211_channel *channel;
-	enum nl80211_channel_type channel_type;
 	const u8 *mesh_id;
 	u8 mesh_id_len;
 	u8  path_sel_proto;
@@ -2371,10 +2362,7 @@ struct cfg80211_cached_keys;
  * @netdev: (private) Used to reference back to the netdev
  * @current_bss: (private) Used by the internal configuration code
  * @channel: (private) Used by the internal configuration code to track
- *	the user-set AP, monitor and WDS channel
- * @preset_chan: (private) Used by the internal configuration code to
- *	track the channel to be used for AP later
- * @preset_chantype: (private) the corresponding channel type
+ *	user-set AP, monitor and WDS channels for wireless extensions
  * @bssid: (private) Used by the internal configuration code
  * @ssid: (private) Used by the internal configuration code
  * @ssid_len: (private) Used by the internal configuration code
@@ -2425,8 +2413,6 @@ struct wireless_dev {
 
 	struct cfg80211_internal_bss *current_bss; /* associated / joined */
 	struct ieee80211_channel *channel;
-	struct ieee80211_channel *preset_chan;
-	enum nl80211_channel_type preset_chantype;
 
 	bool ps;
 	int ps_timeout;

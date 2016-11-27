@@ -655,11 +655,6 @@ static int ieee80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
 	if (old)
 		return -EALREADY;
 
-	err = ieee80211_set_channel(wiphy, dev, params->channel,
-				    params->channel_type);
-	if (err)
-		return err;
-
 	/*
 	 * Apply control port protocol, this allows us to
 	 * not encrypt dynamic WEP control frames.
@@ -1396,12 +1391,6 @@ static int ieee80211_join_mesh(struct wiphy *wiphy, struct net_device *dev,
 	err = copy_mesh_setup(ifmsh, setup);
 	if (err)
 		return err;
-
-	err = ieee80211_set_channel(wiphy, dev, setup->channel,
-				    setup->channel_type);
-	if (err)
-		return err;
-
 	ieee80211_start_mesh(sdata);
 
 	return 0;
