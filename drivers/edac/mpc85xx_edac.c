@@ -981,7 +981,8 @@ static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 	layers[1].type = EDAC_MC_LAYER_CHANNEL;
 	layers[1].size = 1;
 	layers[1].is_virt_csrow = false;
-	mci = edac_mc_alloc(edac_mc_idx, ARRAY_SIZE(layers), sizeof(*pdata));
+	mci = edac_mc_alloc(edac_mc_idx, ARRAY_SIZE(layers), layers,
+			    sizeof(*pdata));
 	if (!mci) {
 		devres_release_group(&op->dev, mpc85xx_mc_err_probe);
 		return -ENOMEM;
@@ -990,9 +991,9 @@ static int __devinit mpc85xx_mc_err_probe(struct platform_device *op)
 	pdata = mci->pvt_info;
 	pdata->name = "mpc85xx_mc_err";
 	pdata->irq = NO_IRQ;
-	mci->dev = &op->dev;
+	mci->pdev = &op->dev;
 	pdata->edac_idx = edac_mc_idx++;
-	dev_set_drvdata(mci->dev, mci);
+	dev_set_drvdata(mci->pdev, mci);
 	mci->ctl_name = pdata->name;
 	mci->dev_name = pdata->name;
 

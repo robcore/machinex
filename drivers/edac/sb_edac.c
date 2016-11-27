@@ -1633,7 +1633,7 @@ static void sbridge_unregister_mci(struct sbridge_dev *sbridge_dev)
 		__func__, mci, &sbridge_dev->pdev[0]->dev);
 
 	/* Remove MC sysfs nodes */
-	edac_mc_del_mc(mci->dev);
+	edac_mc_del_mc(mci->pdev);
 
 	debugf1("%s: free mci struct\n", mci->ctl_name);
 	kfree(mci->ctl_name);
@@ -1698,7 +1698,7 @@ static int sbridge_register_mci(struct sbridge_dev *sbridge_dev)
 	get_memory_layout(mci);
 
 	/* record ptr to the generic device */
-	mci->dev = &sbridge_dev->pdev[0]->dev;
+	mci->pdev = &sbridge_dev->pdev[0]->dev;
 
 	/* add this new MC control structure to EDAC's list of MCs */
 	if (unlikely(edac_mc_add_mc(mci))) {
