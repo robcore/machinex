@@ -995,14 +995,13 @@ static inline unsigned long round_hint_to_min(unsigned long hint)
  * The caller must hold down_write(&current->mm->mmap_sem).
  */
 
-static unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
+unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 			unsigned long len, unsigned long prot,
 			unsigned long flags, unsigned long pgoff)
 {
 	struct mm_struct * mm = current->mm;
 	struct inode *inode;
 	vm_flags_t vm_flags;
-	int error;
 	unsigned long reqprot = prot;
 #ifdef CONFIG_SDCARD_FS
 	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
@@ -1129,10 +1128,6 @@ static unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 		}
 	}
 
-	error = security_mmap_addr(addr);
-	if (error)
-		return error;
-
 	error = security_mmap_file(file, reqprot, prot, flags);
 	if (error)
 		return error;
@@ -1140,16 +1135,25 @@ static unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 	return mmap_region(file, addr, len, flags, vm_flags, pgoff);
 }
 
-unsigned long do_mmap(struct file *file, unsigned long addr,
+unsigned long vm_mmap(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
 	unsigned long flag, unsigned long offset)
 {
+	unsigned long ret;
+	struct mm_struct *mm = current->mm;
+
 	if (unlikely(offset + PAGE_ALIGN(len) < offset))
 		return -EINVAL;
 	if (unlikely(offset & ~PAGE_MASK))
 		return -EINVAL;
-	return do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
-}
+
+	ret = security_mmap_file(file, prot, flag);
+	if (!ret) {
+		down_write(&mm->mmap_sem);
+		ret = do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
+		up_write(&mm->mmap_sem);
+	}
+	return ret;
 
 unsigned long vm_mmap(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
@@ -1672,7 +1676,9 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
 	if (addr & ~PAGE_MASK)
 		return -EINVAL;
 
-	return arch_rebalance_pgtables(addr, len);
+	addr = arch_rebalance_pgtables(addr, len);
+	error = security_mmap_addr(addr);
+	return error ? error : addr;
 }
 
 EXPORT_SYMBOL(get_unmapped_area);
@@ -2229,7 +2235,6 @@ int do_munmap(struct mm_struct *mm, unsigned long start, size_t len)
 
 	return 0;
 }
-EXPORT_SYMBOL(do_munmap);
 
 int vm_munmap(unsigned long start, size_t len)
 {
@@ -2276,10 +2281,6 @@ static unsigned long do_brk(unsigned long addr, unsigned long len)
 	len = PAGE_ALIGN(len);
 	if (!len)
 		return addr;
-
-	error = security_mmap_addr(addr);
-	if (error)
-		return error;
 
 	flags = VM_DATA_DEFAULT_FLAGS | VM_ACCOUNT | mm->def_flags;
 
@@ -2622,10 +2623,6 @@ int install_special_mapping(struct mm_struct *mm,
 
 	vma->vm_ops = &special_mapping_vmops;
 	vma->vm_private_data = pages;
-
-	ret = security_mmap_addr(vma->vm_start);
-	if (ret)
-		goto out;
 
 	ret = insert_vm_struct(mm, vma);
 	if (ret)
