@@ -455,23 +455,47 @@ unlock:
 	return ret;
 }
 
-int tree_mod_alloc(struct btrfs_fs_info *fs_info, gfp_t flags,
-		   struct tree_mod_elem **tm_ret)
+static inline int tree_mod_dont_log(struct btrfs_fs_info *fs_info,
+				    struct extent_buffer *eb) {
+	smp_mb();
+	if (list_empty(&(fs_info)->tree_mod_seq_list))
+		return 1;
+	if (!eb)
+		return 0;
+	if (btrfs_header_level(eb) == 0)
+		return 1;
+	return 0;
+}
+
+static inline int tree_mod_alloc(struct btrfs_fs_info *fs_info, gfp_t flags,
+				 struct tree_mod_elem **tm_ret)
 {
 	struct tree_mod_elem *tm;
-	u64 seq = 0;
+	int seq;
 
-	smp_mb();
-	if (list_empty(&fs_info->tree_mod_seq_list))
+	if (tree_mod_dont_log(fs_info, NULL))
 		return 0;
 
 	tm = *tm_ret = kzalloc(sizeof(*tm), flags);
 	if (!tm)
 		return -ENOMEM;
 
-	__get_tree_mod_seq(fs_info, &tm->elem);
-	seq = tm->elem.seq;
 	tm->elem.flags = 0;
+	spin_lock(&fs_info->tree_mod_seq_lock);
+	if (list_empty(&fs_info->tree_mod_seq_list)) {
+		/*
+		 * someone emptied the list while we were waiting for the lock.
+		 * we must not add to the list, because no blocker exists. items
+		 * are removed from the list only when the existing blocker is
+		 * removed from the list.
+		 */
+		kfree(tm);
+		seq = 0;
+	} else {
+		__get_tree_mod_seq(fs_info, &tm->elem);
+		seq = tm->elem.seq;
+	}
+	spin_unlock(&fs_info->tree_mod_seq_lock);
 
 	return seq;
 }
@@ -516,15 +540,18 @@ tree_mod_log_insert_move(struct btrfs_fs_info *fs_info,
 	int ret;
 	int i;
 
-	ret = tree_mod_alloc(fs_info, flags, &tm);
-	if (ret <= 0)
-		return ret;
+	if (tree_mod_dont_log(fs_info, eb))
+		return 0;
 
 	for (i = 0; i + dst_slot < src_slot && i < nr_items; i++) {
 		ret = tree_mod_log_insert_key(fs_info, eb, i + dst_slot,
 					      MOD_LOG_KEY_REMOVE_WHILE_MOVING);
 		BUG_ON(ret < 0);
 	}
+
+	ret = tree_mod_alloc(fs_info, flags, &tm);
+	if (ret <= 0)
+		return ret;
 
 	tm->index = eb->start >> PAGE_CACHE_SHIFT;
 	tm->slot = src_slot;
@@ -630,8 +657,7 @@ tree_mod_log_eb_copy(struct btrfs_fs_info *fs_info, struct extent_buffer *dst,
 	int ret;
 	int i;
 
-	smp_mb();
-	if (list_empty(&fs_info->tree_mod_seq_list))
+	if (tree_mod_dont_log(fs_info, NULL))
 		return;
 
 	if (btrfs_header_level(dst) == 0 && btrfs_header_level(src) == 0)
@@ -678,11 +704,7 @@ static void tree_mod_log_free_eb(struct btrfs_fs_info *fs_info,
 	int ret;
 	u32 nritems;
 
-	smp_mb();
-	if (list_empty(&fs_info->tree_mod_seq_list))
-		return;
-
-	if (btrfs_header_level(eb) == 0)
+	if (tree_mod_dont_log(fs_info, eb))
 		return;
 
 	nritems = btrfs_header_nritems(eb);
@@ -1054,7 +1076,9 @@ __tree_mod_log_rewind(struct extent_buffer *eb, u64 time_seq,
 			n--;
 			break;
 		case MOD_LOG_MOVE_KEYS:
-			memmove_extent_buffer(eb, tm->slot, tm->move.dst_slot,
+			o_dst = btrfs_node_key_ptr_offset(tm->slot);
+			o_src = btrfs_node_key_ptr_offset(tm->move.dst_slot);
+			memmove_extent_buffer(eb, o_dst, o_src,
 					      tm->move.nr_items * p_size);
 			break;
 		case MOD_LOG_ROOT_REPLACE:
@@ -1105,6 +1129,7 @@ tree_mod_log_rewind(struct btrfs_fs_info *fs_info, struct extent_buffer *eb,
 		btrfs_set_header_backref_rev(eb_rewin,
 					     btrfs_header_backref_rev(eb));
 		btrfs_set_header_owner(eb_rewin, btrfs_header_owner(eb));
+		btrfs_set_header_level(eb_rewin, btrfs_header_level(eb));
 	} else {
 		eb_rewin = btrfs_clone_extent_buffer(eb);
 		BUG_ON(!eb_rewin);
@@ -2591,7 +2616,6 @@ int btrfs_search_old_slot(struct btrfs_root *root, struct btrfs_key *key,
 	}
 
 again:
-	level = 0;
 	b = get_old_root(root, time_seq);
 	extent_buffer_get(b);
 	level = btrfs_header_level(b);
@@ -4533,9 +4557,7 @@ static void del_ptr(struct btrfs_trans_handle *trans, struct btrfs_root *root,
 			      btrfs_node_key_ptr_offset(slot + 1),
 			      sizeof(struct btrfs_key_ptr) *
 			      (nritems - slot - 1));
-	}
-
-	if (tree_mod_log && level) {
+	} else if (tree_mod_log && level) {
 		ret = tree_mod_log_insert_key(root->fs_info, parent, slot,
 					      MOD_LOG_KEY_REMOVE);
 		BUG_ON(ret < 0);
