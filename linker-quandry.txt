@@ -1,0 +1,11 @@
+mm/built-in.o: In function `shmem_setattr':
+zsmalloc.c:(.text+0x28a70): undefined reference to `shmem_truncate_range'
+mm/built-in.o: In function `shmem_evict_inode':
+zsmalloc.c:(.text+0x28ed0): undefined reference to `shmem_truncate_range'
+mm/built-in.o: In function `shmem_fallocate':
+zsmalloc.c:(.text+0x2b80c): undefined reference to `shmem_truncate_range'
+/root/machinex/Makefile:903: recipe for target '.tmp_vmlinux1' failed
+make[1]: *** [.tmp_vmlinux1] Error 1
+Makefile:130: recipe for target 'sub-make' failed
+make: *** [sub-make] Error 2
+Build failed, Skipped Ramdisk Creation
