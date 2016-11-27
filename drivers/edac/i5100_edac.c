@@ -434,7 +434,7 @@ static void i5100_handle_ce(struct mem_ctl_info *mci,
 	edac_mc_handle_error(HW_EVENT_ERR_CORRECTED, mci,
 			     0, 0, syndrome,
 			     chan, rank, -1,
-			     msg, detail, NULL);
+			     msg, detail);
 }
 
 static void i5100_handle_ue(struct mem_ctl_info *mci,
@@ -456,7 +456,7 @@ static void i5100_handle_ue(struct mem_ctl_info *mci,
 	edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci,
 			     0, 0, syndrome,
 			     chan, rank, -1,
-			     msg, detail, NULL);
+			     msg, detail);
 }
 
 static void i5100_read_log(struct mem_ctl_info *mci, int chan,
@@ -859,8 +859,8 @@ static void __devinit i5100_init_csrows(struct mem_ctl_info *mci)
 				i5100_rank_to_slot(mci, chan, rank));
 		}
 
-		debugf2("dimm channel %d, rank %d, size %ld\n",
-			chan, rank, (long)PAGES_TO_MiB(npages));
+		edac_dbg(2, "dimm channel %d, rank %d, size %ld\n",
+			 chan, rank, (long)PAGES_TO_MiB(npages));
 	}
 }
 

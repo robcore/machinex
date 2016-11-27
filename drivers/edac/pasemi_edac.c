@@ -111,15 +111,15 @@ static void pasemi_edac_process_error_info(struct mem_ctl_info *mci, u32 errsta)
 	if (errsta & (MCDEBUG_ERRSTA_MBE_STATUS |
 		      MCDEBUG_ERRSTA_RFL_STATUS)) {
 		edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci,
-				     mci->csrows[cs].first_page, 0, 0,
-				     cs, 0, -1, mci->ctl_name, "", NULL);
+				     mci->csrows[cs]->first_page, 0, 0,
+				     cs, 0, -1, mci->ctl_name, "");
 	}
 
 	/* correctable/single-bit errors */
 	if (errsta & MCDEBUG_ERRSTA_SBE_STATUS)
 		edac_mc_handle_error(HW_EVENT_ERR_CORRECTED, mci,
-				     mci->csrows[cs].first_page, 0, 0,
-				     cs, 0, -1, mci->ctl_name, "", NULL);
+				     mci->csrows[cs]->first_page, 0, 0,
+				     cs, 0, -1, mci->ctl_name, "");
 }
 
 static void pasemi_edac_check(struct mem_ctl_info *mci)
@@ -141,8 +141,8 @@ static int pasemi_edac_init_csrows(struct mem_ctl_info *mci,
 	int index;
 
 	for (index = 0; index < mci->nr_csrows; index++) {
-		csrow = &mci->csrows[index];
-		dimm = csrow->channels[0].dimm;
+		csrow = mci->csrows[index];
+		dimm = csrow->channels[0]->dimm;
 
 		pci_read_config_dword(pdev,
 				      MCDRAM_RANKCFG + (index * 12),

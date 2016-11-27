@@ -42,60 +42,80 @@
 static DEFINE_MUTEX(mem_ctls_mutex);
 static LIST_HEAD(mc_devices);
 
+unsigned edac_dimm_info_location(struct dimm_info *dimm, char *buf,
+			         unsigned len)
+{
+	struct mem_ctl_info *mci = dimm->mci;
+	int i, n, count = 0;
+	char *p = buf;
+
+	for (i = 0; i < mci->n_layers; i++) {
+		n = snprintf(p, len, "%s %d ",
+			      edac_layer_name[mci->layers[i].type],
+			      dimm->location[i]);
+		p += n;
+		len -= n;
+		count += n;
+		if (!len)
+			break;
+	}
+
+	return count;
+}
+
 #ifdef CONFIG_EDAC_DEBUG
 
 static void edac_mc_dump_channel(struct rank_info *chan)
 {
-	debugf4("\tchannel = %p\n", chan);
-	debugf4("\tchannel->chan_idx = %d\n", chan->chan_idx);
-	debugf4("\tchannel->csrow = %p\n\n", chan->csrow);
-	debugf4("\tchannel->dimm = %p\n", chan->dimm);
+	edac_dbg(4, "  channel->chan_idx = %d\n", chan->chan_idx);
+	edac_dbg(4, "    channel = %p\n", chan);
+	edac_dbg(4, "    channel->csrow = %p\n", chan->csrow);
+	edac_dbg(4, "    channel->dimm = %p\n", chan->dimm);
 }
 
-static void edac_mc_dump_dimm(struct dimm_info *dimm)
+static void edac_mc_dump_dimm(struct dimm_info *dimm, int number)
 {
-	int i;
+	char location[80];
 
-	debugf4("\tdimm = %p\n", dimm);
-	debugf4("\tdimm->label = '%s'\n", dimm->label);
-	debugf4("\tdimm->nr_pages = 0x%x\n", dimm->nr_pages);
-	debugf4("\tdimm location ");
-	for (i = 0; i < dimm->mci->n_layers; i++) {
-		printk(KERN_CONT "%d", dimm->location[i]);
-		if (i < dimm->mci->n_layers - 1)
-			printk(KERN_CONT ".");
-	}
-	printk(KERN_CONT "\n");
-	debugf4("\tdimm->grain = %d\n", dimm->grain);
-	debugf4("\tdimm->nr_pages = 0x%x\n", dimm->nr_pages);
+	edac_dimm_info_location(dimm, location, sizeof(location));
+
+	edac_dbg(4, "%s%i: %smapped as virtual row %d, chan %d\n",
+		 dimm->mci->mem_is_per_rank ? "rank" : "dimm",
+		 number, location, dimm->csrow, dimm->cschannel);
+	edac_dbg(4, "  dimm = %p\n", dimm);
+	edac_dbg(4, "  dimm->label = '%s'\n", dimm->label);
+	edac_dbg(4, "  dimm->nr_pages = 0x%x\n", dimm->nr_pages);
+	edac_dbg(4, "  dimm->grain = %d\n", dimm->grain);
+	edac_dbg(4, "  dimm->nr_pages = 0x%x\n", dimm->nr_pages);
 }
 
 static void edac_mc_dump_csrow(struct csrow_info *csrow)
 {
-	debugf4("\tcsrow = %p\n", csrow);
-	debugf4("\tcsrow->csrow_idx = %d\n", csrow->csrow_idx);
-	debugf4("\tcsrow->first_page = 0x%lx\n", csrow->first_page);
-	debugf4("\tcsrow->last_page = 0x%lx\n", csrow->last_page);
-	debugf4("\tcsrow->page_mask = 0x%lx\n", csrow->page_mask);
-	debugf4("\tcsrow->nr_channels = %d\n", csrow->nr_channels);
-	debugf4("\tcsrow->channels = %p\n", csrow->channels);
-	debugf4("\tcsrow->mci = %p\n\n", csrow->mci);
+	edac_dbg(4, "csrow->csrow_idx = %d\n", csrow->csrow_idx);
+	edac_dbg(4, "  csrow = %p\n", csrow);
+	edac_dbg(4, "  csrow->first_page = 0x%lx\n", csrow->first_page);
+	edac_dbg(4, "  csrow->last_page = 0x%lx\n", csrow->last_page);
+	edac_dbg(4, "  csrow->page_mask = 0x%lx\n", csrow->page_mask);
+	edac_dbg(4, "  csrow->nr_channels = %d\n", csrow->nr_channels);
+	edac_dbg(4, "  csrow->channels = %p\n", csrow->channels);
+	edac_dbg(4, "  csrow->mci = %p\n", csrow->mci);
 }
 
 static void edac_mc_dump_mci(struct mem_ctl_info *mci)
 {
-	debugf3("\tmci = %p\n", mci);
-	debugf3("\tmci->mtype_cap = %lx\n", mci->mtype_cap);
-	debugf3("\tmci->edac_ctl_cap = %lx\n", mci->edac_ctl_cap);
-	debugf3("\tmci->edac_cap = %lx\n", mci->edac_cap);
-	debugf4("\tmci->edac_check = %p\n", mci->edac_check);
-	debugf3("\tmci->nr_csrows = %d, csrows = %p\n",
-		mci->nr_csrows, mci->csrows);
-	debugf3("\tmci->nr_dimms = %d, dimms = %p\n",
-		mci->tot_dimms, mci->dimms);
-	debugf3("\tdev = %p\n", mci->pdev);
-	debugf3("\tmod_name:ctl_name = %s:%s\n", mci->mod_name, mci->ctl_name);
-	debugf3("\tpvt_info = %p\n\n", mci->pvt_info);
+	edac_dbg(3, "\tmci = %p\n", mci);
+	edac_dbg(3, "\tmci->mtype_cap = %lx\n", mci->mtype_cap);
+	edac_dbg(3, "\tmci->edac_ctl_cap = %lx\n", mci->edac_ctl_cap);
+	edac_dbg(3, "\tmci->edac_cap = %lx\n", mci->edac_cap);
+	edac_dbg(4, "\tmci->edac_check = %p\n", mci->edac_check);
+	edac_dbg(3, "\tmci->nr_csrows = %d, csrows = %p\n",
+		 mci->nr_csrows, mci->csrows);
+	edac_dbg(3, "\tmci->nr_dimms = %d, dimms = %p\n",
+		 mci->tot_dimms, mci->dimms);
+	edac_dbg(3, "\tdev = %p\n", mci->pdev);
+	edac_dbg(3, "\tmod_name:ctl_name = %s:%s\n",
+		 mci->mod_name, mci->ctl_name);
+	edac_dbg(3, "\tpvt_info = %p\n\n", mci->pvt_info);
 }
 
 #endif				/* CONFIG_EDAC_DEBUG */
@@ -169,7 +189,7 @@ void *edac_align_ptr(void **p, unsigned size, int n_elems)
 	else
 		return (char *)ptr;
 
-	r = size % align;
+	r = (unsigned long)p % align;
 
 	if (r == 0)
 		return (char *)ptr;
@@ -210,15 +230,15 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 {
 	struct mem_ctl_info *mci;
 	struct edac_mc_layer *layer;
-	struct csrow_info *csi, *csr;
-	struct rank_info *chi, *chp, *chan;
+	struct csrow_info *csr;
+	struct rank_info *chan;
 	struct dimm_info *dimm;
 	u32 *ce_per_layer[EDAC_MAX_LAYERS], *ue_per_layer[EDAC_MAX_LAYERS];
 	unsigned pos[EDAC_MAX_LAYERS];
 	unsigned size, tot_dimms = 1, count = 1;
 	unsigned tot_csrows = 1, tot_channels = 1, tot_errcount = 0;
 	void *pvt, *p, *ptr = NULL;
-	int i, j, err, row, chn, n, len;
+	int i, j, row, chn, n, len, off;
 	bool per_rank = false;
 
 	BUG_ON(n_layers > EDAC_MAX_LAYERS || n_layers == 0);
@@ -244,26 +264,24 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 	 */
 	mci = edac_align_ptr(&ptr, sizeof(*mci), 1);
 	layer = edac_align_ptr(&ptr, sizeof(*layer), n_layers);
-	csi = edac_align_ptr(&ptr, sizeof(*csi), tot_csrows);
-	chi = edac_align_ptr(&ptr, sizeof(*chi), tot_csrows * tot_channels);
-	dimm = edac_align_ptr(&ptr, sizeof(*dimm), tot_dimms);
 	for (i = 0; i < n_layers; i++) {
 		count *= layers[i].size;
-		debugf4("%s: errcount layer %d size %d\n", __func__, i, count);
+		edac_dbg(4, "errcount layer %d size %d\n", i, count);
 		ce_per_layer[i] = edac_align_ptr(&ptr, sizeof(u32), count);
 		ue_per_layer[i] = edac_align_ptr(&ptr, sizeof(u32), count);
 		tot_errcount += 2 * count;
 	}
 
-	debugf4("%s: allocating %d error counters\n", __func__, tot_errcount);
+	edac_dbg(4, "allocating %d error counters\n", tot_errcount);
 	pvt = edac_align_ptr(&ptr, sz_pvt, 1);
 	size = ((unsigned long)pvt) + sz_pvt;
 
-	debugf1("%s(): allocating %u bytes for mci data (%d %s, %d csrows/channels)\n",
-		__func__, size,
-		tot_dimms,
-		per_rank ? "ranks" : "dimms",
-		tot_csrows * tot_channels);
+	edac_dbg(1, "allocating %u bytes for mci data (%d %s, %d csrows/channels)\n",
+		 size,
+		 tot_dimms,
+		 per_rank ? "ranks" : "dimms",
+		 tot_csrows * tot_channels);
+
 	mci = kzalloc(size, GFP_KERNEL);
 	if (mci == NULL)
 		return NULL;
@@ -272,9 +290,6 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 	 * rather than an imaginary chunk of memory located at address 0.
 	 */
 	layer = (struct edac_mc_layer *)(((char *)mci) + ((unsigned long)layer));
-	csi = (struct csrow_info *)(((char *)mci) + ((unsigned long)csi));
-	chi = (struct rank_info *)(((char *)mci) + ((unsigned long)chi));
-	dimm = (struct dimm_info *)(((char *)mci) + ((unsigned long)dimm));
 	for (i = 0; i < n_layers; i++) {
 		mci->ce_per_layer[i] = (u32 *)((char *)mci + ((unsigned long)ce_per_layer[i]));
 		mci->ue_per_layer[i] = (u32 *)((char *)mci + ((unsigned long)ue_per_layer[i]));
@@ -283,8 +298,6 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 
 	/* setup index and various internal pointers */
 	mci->mc_idx = mc_num;
-	mci->csrows = csi;
-	mci->dimms  = dimm;
 	mci->tot_dimms = tot_dimms;
 	mci->pvt_info = pvt;
 	mci->n_layers = n_layers;
@@ -295,40 +308,57 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 	mci->mem_is_per_rank = per_rank;
 
 	/*
-	 * Fill the csrow struct
+	 * Alocate and fill the csrow/channels structs
 	 */
+	mci->csrows = kcalloc(sizeof(*mci->csrows), tot_csrows, GFP_KERNEL);
+	if (!mci->csrows)
+		goto error;
 	for (row = 0; row < tot_csrows; row++) {
-		csr = &csi[row];
+		csr = kzalloc(sizeof(**mci->csrows), GFP_KERNEL);
+		if (!csr)
+			goto error;
+		mci->csrows[row] = csr;
 		csr->csrow_idx = row;
 		csr->mci = mci;
 		csr->nr_channels = tot_channels;
-		chp = &chi[row * tot_channels];
-		csr->channels = chp;
+		csr->channels = kcalloc(sizeof(*csr->channels), tot_channels,
+					GFP_KERNEL);
+		if (!csr->channels)
+			goto error;
 
 		for (chn = 0; chn < tot_channels; chn++) {
-			chan = &chp[chn];
+			chan = kzalloc(sizeof(**csr->channels), GFP_KERNEL);
+			if (!chan)
+				goto error;
+			csr->channels[chn] = chan;
 			chan->chan_idx = chn;
 			chan->csrow = csr;
 		}
 	}
 
 	/*
-	 * Fill the dimm struct
+	 * Allocate and fill the dimm structs
 	 */
+	mci->dimms  = kcalloc(sizeof(*mci->dimms), tot_dimms, GFP_KERNEL);
+	if (!mci->dimms)
+		goto error;
+
 	memset(&pos, 0, sizeof(pos));
 	row = 0;
 	chn = 0;
-	debugf4("%s: initializing %d %s\n", __func__, tot_dimms,
-		per_rank ? "ranks" : "dimms");
 	for (i = 0; i < tot_dimms; i++) {
-		chan = &csi[row].channels[chn];
-		dimm = EDAC_DIMM_PTR(layer, mci->dimms, n_layers,
-			       pos[0], pos[1], pos[2]);
-		dimm->mci = mci;
+		chan = mci->csrows[row]->channels[chn];
+		off = EDAC_DIMM_OFF(layer, n_layers, pos[0], pos[1], pos[2]);
+		if (off < 0 || off >= tot_dimms) {
+			edac_mc_printk(mci, KERN_ERR, "EDAC core bug: EDAC_DIMM_OFF is trying to do an illegal data access\n");
+			goto error;
+		}
 
-		debugf2("%s: %d: %s%zd (%d:%d:%d): row %d, chan %d\n", __func__,
-			i, per_rank ? "rank" : "dimm", (dimm - mci->dimms),
-			pos[0], pos[1], pos[2], row, chn);
+		dimm = kzalloc(sizeof(**mci->dimms), GFP_KERNEL);
+		if (!dimm)
+			goto error;
+		mci->dimms[off] = dimm;
+		dimm->mci = mci;
 
 		/*
 		 * Copy DIMM location and initialize it.
@@ -372,16 +402,6 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 	}
 
 	mci->op_state = OP_ALLOC;
-	INIT_LIST_HEAD(&mci->grp_kobj_list);
-
-	/*
-	 * Initialize the 'root' kobj for the edac_mc controller
-	 */
-	err = edac_mc_register_sysfs_main_kobj(mci);
-	if (err) {
-		kfree(mci);
-		return NULL;
-	}
 
 	/* at this point, the root kobj is valid, and in order to
 	 * 'free' the object, then the function:
@@ -391,6 +411,28 @@ struct mem_ctl_info *edac_mc_alloc(unsigned mc_num,
 	 */
 
 	return mci;
+
+error:
+	if (mci->dimms) {
+		for (i = 0; i < tot_dimms; i++)
+			kfree(mci->dimms[i]);
+		kfree(mci->dimms);
+	}
+	if (mci->csrows) {
+		for (chn = 0; chn < tot_channels; chn++) {
+			csr = mci->csrows[chn];
+			if (csr) {
+				for (chn = 0; chn < tot_channels; chn++)
+					kfree(csr->channels[chn]);
+				kfree(csr);
+			}
+			kfree(mci->csrows[i]);
+		}
+		kfree(mci->csrows);
+	}
+	kfree(mci);
+
+	return NULL;
 }
 EXPORT_SYMBOL_GPL(edac_mc_alloc);
 
@@ -401,12 +443,10 @@ EXPORT_SYMBOL_GPL(edac_mc_alloc);
  */
 void edac_mc_free(struct mem_ctl_info *mci)
 {
-	debugf1("%s()\n", __func__);
+	edac_dbg(1, "\n");
 
-	edac_mc_unregister_sysfs_main_kobj(mci);
-
-	/* free the mci instance memory here */
-	kfree(mci);
+	/* the mci instance is freed here, when the sysfs object is dropped */
+	edac_unregister_sysfs(mci);
 }
 EXPORT_SYMBOL_GPL(edac_mc_free);
 
@@ -423,7 +463,7 @@ struct mem_ctl_info *find_mci_by_dev(struct device *dev)
 	struct mem_ctl_info *mci;
 	struct list_head *item;
 
-	debugf3("%s()\n", __func__);
+	edac_dbg(3, "\n");
 
 	list_for_each(item, &mc_devices) {
 		mci = list_entry(item, struct mem_ctl_info, link);
@@ -491,7 +531,7 @@ static void edac_mc_workq_function(struct work_struct *work_req)
  */
 static void edac_mc_workq_setup(struct mem_ctl_info *mci, unsigned msec)
 {
-	debugf0("%s()\n", __func__);
+	edac_dbg(0, "\n");
 
 	/* if this instance is not in the POLL state, then simply return */
 	if (mci->op_state != OP_RUNNING_POLL)
@@ -518,8 +558,7 @@ static void edac_mc_workq_teardown(struct mem_ctl_info *mci)
 
 	status = cancel_delayed_work(&mci->work);
 	if (status == 0) {
-		debugf0("%s() not canceled, flush the queue\n",
-			__func__);
+		edac_dbg(0, "not canceled, flush the queue\n");
 
 		/* workq instance might be running, wait for it */
 		flush_workqueue(edac_workqueue);
@@ -651,7 +690,7 @@ EXPORT_SYMBOL(edac_mc_find);
 /* FIXME - should a warning be printed if no error detection? correction? */
 int edac_mc_add_mc(struct mem_ctl_info *mci)
 {
-	debugf0("%s()\n", __func__);
+	edac_dbg(0, "\n");
 
 #ifdef CONFIG_EDAC_DEBUG
 	if (edac_debug_level >= 3)
@@ -661,15 +700,22 @@ int edac_mc_add_mc(struct mem_ctl_info *mci)
 		int i;
 
 		for (i = 0; i < mci->nr_csrows; i++) {
+			struct csrow_info *csrow = mci->csrows[i];
+			u32 nr_pages = 0;
 			int j;
 
-			edac_mc_dump_csrow(&mci->csrows[i]);
-			for (j = 0; j < mci->csrows[i].nr_channels; j++)
-				edac_mc_dump_channel(&mci->csrows[i].
-						channels[j]);
+			for (j = 0; j < csrow->nr_channels; j++)
+				nr_pages += csrow->channels[j]->dimm->nr_pages;
+			if (!nr_pages)
+				continue;
+			edac_mc_dump_csrow(csrow);
+			for (j = 0; j < csrow->nr_channels; j++)
+				if (csrow->channels[j]->dimm->nr_pages)
+					edac_mc_dump_channel(csrow->channels[j]);
 		}
 		for (i = 0; i < mci->tot_dimms; i++)
-			edac_mc_dump_dimm(&mci->dimms[i]);
+			if (mci->dimms[i]->nr_pages)
+				edac_mc_dump_dimm(mci->dimms[i], i);
 	}
 #endif
 	mutex_lock(&mem_ctls_mutex);
@@ -723,7 +769,7 @@ struct mem_ctl_info *edac_mc_del_mc(struct device *dev)
 {
 	struct mem_ctl_info *mci;
 
-	debugf0("%s()\n", __func__);
+	edac_dbg(0, "\n");
 
 	mutex_lock(&mem_ctls_mutex);
 
@@ -761,7 +807,7 @@ static void edac_mc_scrub_block(unsigned long page, unsigned long offset,
 	void *virt_addr;
 	unsigned long flags = 0;
 
-	debugf3("%s()\n", __func__);
+	edac_dbg(3, "\n");
 
 	/* ECC error page was not in our memory. Ignore it. */
 	if (!pfn_valid(page))
@@ -788,26 +834,26 @@ static void edac_mc_scrub_block(unsigned long page, unsigned long offset,
 /* FIXME - should return -1 */
 int edac_mc_find_csrow_by_page(struct mem_ctl_info *mci, unsigned long page)
 {
-	struct csrow_info *csrows = mci->csrows;
+	struct csrow_info **csrows = mci->csrows;
 	int row, i, j, n;
 
-	debugf1("MC%d: %s(): 0x%lx\n", mci->mc_idx, __func__, page);
+	edac_dbg(1, "MC%d: 0x%lx\n", mci->mc_idx, page);
 	row = -1;
 
 	for (i = 0; i < mci->nr_csrows; i++) {
-		struct csrow_info *csrow = &csrows[i];
+		struct csrow_info *csrow = csrows[i];
 		n = 0;
 		for (j = 0; j < csrow->nr_channels; j++) {
-			struct dimm_info *dimm = csrow->channels[j].dimm;
+			struct dimm_info *dimm = csrow->channels[j]->dimm;
 			n += dimm->nr_pages;
 		}
 		if (n == 0)
 			continue;
 
-		debugf3("MC%d: %s(): first(0x%lx) page(0x%lx) last(0x%lx) "
-			"mask(0x%lx)\n", mci->mc_idx, __func__,
-			csrow->first_page, page, csrow->last_page,
-			csrow->page_mask);
+		edac_dbg(3, "MC%d: first(0x%lx) page(0x%lx) last(0x%lx) mask(0x%lx)\n",
+			 mci->mc_idx,
+			 csrow->first_page, page, csrow->last_page,
+			 csrow->page_mask);
 
 		if ((page >= csrow->first_page) &&
 		    (page <= csrow->last_page) &&
@@ -983,9 +1029,6 @@ static void edac_ue_error(struct mem_ctl_info *mci,
  * @other_detail:	Technical details about the event that
  *			may help hardware manufacturers and
  *			EDAC developers to analyse the event
- * @arch_log:		Architecture-specific struct that can
- *			be used to add extended information to the
- *			tracepoint, like dumping MCE registers.
  */
 void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 			  struct mem_ctl_info *mci,
@@ -996,8 +1039,7 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 			  const int mid_layer,
 			  const int low_layer,
 			  const char *msg,
-			  const char *other_detail,
-			  const void *arch_log)
+			  const char *other_detail)
 {
 	/* FIXME: too much for stack: move it to some pre-alocated area */
 	char detail[80], location[80];
@@ -1011,7 +1053,7 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 	u16 error_count;	/* FIXME: make it a parameter */
 	u8 grain_bits;
 
-	debugf3("MC%d: %s()\n", mci->mc_idx, __func__);
+	edac_dbg(3, "MC%d\n", mci->mc_idx);
 
 	/*
 	 * Check if the event report is consistent and if the memory
@@ -1057,7 +1099,7 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 	p = label;
 	*p = '\0';
 	for (i = 0; i < mci->tot_dimms; i++) {
-		struct dimm_info *dimm = &mci->dimms[i];
+		struct dimm_info *dimm = mci->dimms[i];
 
 		if (top_layer >= 0 && top_layer != dimm->location[0])
 			continue;
@@ -1089,11 +1131,9 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 			 * get csrow/channel of the DIMM, in order to allow
 			 * incrementing the compat API counters
 			 */
-			debugf4("%s: %s csrows map: (%d,%d)\n",
-				__func__,
-				mci->mem_is_per_rank ? "rank" : "dimm",
-				dimm->csrow, dimm->cschannel);
-
+			edac_dbg(4, "%s csrows map: (%d,%d)\n",
+				 mci->mem_is_per_rank ? "rank" : "dimm",
+				 dimm->csrow, dimm->cschannel);
 			if (row == -1)
 				row = dimm->csrow;
 			else if (row >= 0 && row != dimm->csrow)
@@ -1109,19 +1149,18 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 	if (!enable_per_layer_report) {
 		strcpy(label, "any memory");
 	} else {
-		debugf4("%s: csrow/channel to increment: (%d,%d)\n",
-			__func__, row, chan);
+		edac_dbg(4, "csrow/channel to increment: (%d,%d)\n", row, chan);
 		if (p == label)
 			strcpy(label, "unknown memory");
 		if (type == HW_EVENT_ERR_CORRECTED) {
 			if (row >= 0) {
-				mci->csrows[row].ce_count++;
+				mci->csrows[row]->ce_count++;
 				if (chan >= 0)
-					mci->csrows[row].channels[chan].ce_count++;
+					mci->csrows[row]->channels[chan]->ce_count++;
 			}
 		} else
 			if (row >= 0)
-				mci->csrows[row].ue_count++;
+				mci->csrows[row]->ue_count++;
 	}
 
 	/* Fill the RAM location data */

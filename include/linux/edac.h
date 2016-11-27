@@ -13,9 +13,11 @@
 #define _LINUX_EDAC_H_
 
 #include <linux/atomic.h>
+#include <linux/device.h>
 #include <linux/kobject.h>
 #include <linux/completion.h>
 #include <linux/workqueue.h>
+#include <linux/debugfs.h>
 
 struct device;
 
@@ -410,7 +412,44 @@ struct edac_mc_layer {
 #define EDAC_MAX_LAYERS		3
 
 /**
- * EDAC_DIMM_PTR - Macro responsible to find a pointer inside a pointer array
+ * EDAC_DIMM_OFF - Macro responsible to get a pointer offset inside a pointer array
+ *		   for the element given by [layer0,layer1,layer2] position
+ *
+ * @layers:	a struct edac_mc_layer array, describing how many elements
+ *		were allocated for each layer
+ * @n_layers:	Number of layers at the @layers array
+ * @layer0:	layer0 position
+ * @layer1:	layer1 position. Unused if n_layers < 2
+ * @layer2:	layer2 position. Unused if n_layers < 3
+ *
+ * For 1 layer, this macro returns &var[layer0] - &var
+ * For 2 layers, this macro is similar to allocate a bi-dimensional array
+ *		and to return "&var[layer0][layer1] - &var"
+ * For 3 layers, this macro is similar to allocate a tri-dimensional array
+ *		and to return "&var[layer0][layer1][layer2] - &var"
+ *
+ * A loop could be used here to make it more generic, but, as we only have
+ * 3 layers, this is a little faster.
+ * By design, layers can never be 0 or more than 3. If that ever happens,
+ * a NULL is returned, causing an OOPS during the memory allocation routine,
+ * with would point to the developer that he's doing something wrong.
+ */
+#define EDAC_DIMM_OFF(layers, nlayers, layer0, layer1, layer2) ({		\
+	int __i;							\
+	if ((nlayers) == 1)						\
+		__i = layer0;						\
+	else if ((nlayers) == 2)					\
+		__i = (layer1) + ((layers[1]).size * (layer0));		\
+	else if ((nlayers) == 3)					\
+		__i = (layer2) + ((layers[2]).size * ((layer1) +	\
+			    ((layers[1]).size * (layer0))));		\
+	else								\
+		__i = -EINVAL;						\
+	__i;								\
+})
+
+/**
+ * EDAC_DIMM_PTR - Macro responsible to get a pointer inside a pointer array
  *		   for the element given by [layer0,layer1,layer2] position
  *
  * @layers:	a struct edac_mc_layer array, describing how many elements
@@ -427,30 +466,20 @@ struct edac_mc_layer {
  *		and to return "&var[layer0][layer1]"
  * For 3 layers, this macro is similar to allocate a tri-dimensional array
  *		and to return "&var[layer0][layer1][layer2]"
- *
- * A loop could be used here to make it more generic, but, as we only have
- * 3 layers, this is a little faster.
- * By design, layers can never be 0 or more than 3. If that ever happens,
- * a NULL is returned, causing an OOPS during the memory allocation routine,
- * with would point to the developer that he's doing something wrong.
  */
 #define EDAC_DIMM_PTR(layers, var, nlayers, layer0, layer1, layer2) ({	\
-	typeof(var) __p;						\
-	if ((nlayers) == 1)						\
-		__p = &var[layer0];					\
-	else if ((nlayers) == 2)					\
-		__p = &var[(layer1) + ((layers[1]).size * (layer0))];	\
-	else if ((nlayers) == 3)					\
-		__p = &var[(layer2) + ((layers[2]).size * ((layer1) +	\
-			    ((layers[1]).size * (layer0))))];		\
-	else								\
+	typeof(*var) __p;						\
+	int ___i = EDAC_DIMM_OFF(layers, nlayers, layer0, layer1, layer2);	\
+	if (___i < 0)							\
 		__p = NULL;						\
+	else								\
+		__p = (var)[___i];					\
 	__p;								\
 })
 
-
-/* FIXME: add the proper per-location error counts */
 struct dimm_info {
+	struct device dev;
+
 	char label[EDAC_MC_LABEL_LEN + 1];	/* DIMM label on motherboard */
 
 	/* Memory location data */
@@ -492,6 +521,8 @@ struct rank_info {
 };
 
 struct csrow_info {
+	struct device dev;
+
 	/* Used only by edac_mc_find_csrow_by_page() */
 	unsigned long first_page;	/* first page number in csrow */
 	unsigned long last_page;	/* last page number in csrow */
@@ -505,44 +536,26 @@ struct csrow_info {
 
 	struct mem_ctl_info *mci;	/* the parent */
 
-	struct kobject kobj;	/* sysfs kobject for this csrow */
-
 	/* channel information for this csrow */
 	u32 nr_channels;
-	struct rank_info *channels;
+	struct rank_info **channels;
 };
 
-struct mcidev_sysfs_group {
-	const char *name;				/* group name */
-	const struct mcidev_sysfs_attribute *mcidev_attr; /* group attributes */
-};
-
-struct mcidev_sysfs_group_kobj {
-	struct list_head list;		/* list for all instances within a mc */
-
-	struct kobject kobj;		/* kobj for the group */
-
-	const struct mcidev_sysfs_group *grp;	/* group description table */
-	struct mem_ctl_info *mci;	/* the parent */
-};
-
-/* mcidev_sysfs_attribute structure
- *	used for driver sysfs attributes and in mem_ctl_info
- * 	sysfs top level entries
+/*
+ * struct errcount_attribute - used to store the several error counts
  */
-struct mcidev_sysfs_attribute {
-	/* It should use either attr or grp */
-	struct attribute attr;
-	const struct mcidev_sysfs_group *grp;	/* Points to a group of attributes */
-
-	/* Ops for show/store values at the attribute - not used on group */
-        ssize_t (*show)(struct mem_ctl_info *,char *);
-        ssize_t (*store)(struct mem_ctl_info *, const char *,size_t);
+struct errcount_attribute_data {
+	int n_layers;
+	int pos[EDAC_MAX_LAYERS];
+	int layer0, layer1, layer2;
 };
 
 /* MEMORY controller information structure
  */
 struct mem_ctl_info {
+	struct device			dev;
+	struct bus_type			bus;
+
 	struct list_head link;	/* for global list of mem_ctl_info structs */
 
 	struct module *owner;	/* Module owner of this control struct */
@@ -584,10 +597,18 @@ struct mem_ctl_info {
 	unsigned long (*ctl_page_to_phys) (struct mem_ctl_info * mci,
 					   unsigned long page);
 	int mc_idx;
-	struct csrow_info *csrows;
+	struct csrow_info **csrows;
 	unsigned nr_csrows, num_cschannel;
 
-	/* Memory Controller hierarchy */
+	/*
+	 * Memory Controller hierarchy
+	 *
+	 * There are basically two types of memory controller: the ones that
+	 * sees memory sticks ("dimms"), and the ones that sees memory ranks.
+	 * All old memory controllers enumerate memories per rank, but most
+	 * of the recent drivers enumerate memories per DIMM, instead.
+	 * When the memory controller is per rank, mem_is_per_rank is true.
+	 */
 	unsigned n_layers;
 	struct edac_mc_layer *layers;
 	bool mem_is_per_rank;
@@ -596,7 +617,7 @@ struct mem_ctl_info {
 	 * DIMM info. Will eventually remove the entire csrows_info some day
 	 */
 	unsigned tot_dimms;
-	struct dimm_info *dimms;
+	struct dimm_info **dimms;
 
 	/*
 	 * FIXME - what about controllers on other busses? - IDs must be
@@ -622,12 +643,6 @@ struct mem_ctl_info {
 
 	struct completion complete;
 
-	/* edac sysfs device control */
-	struct kobject edac_mci_kobj;
-
-	/* list for all grp instances within a mc */
-	struct list_head grp_kobj_list;
-
 	/* Additional top controller level attributes, but specified
 	 * by the low level driver.
 	 *
@@ -645,6 +660,12 @@ struct mem_ctl_info {
 
 	/* the internal state of this controller instance */
 	int op_state;
+
+#ifdef CONFIG_EDAC_DEBUG
+	struct dentry *debugfs;
+	u8 fake_inject_layer[EDAC_MAX_LAYERS];
+	u32 fake_inject_ue;
+#endif
 };
 
 #endif
