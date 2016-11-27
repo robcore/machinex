@@ -102,6 +102,7 @@ struct nfs_open_context {
 	int error;
 
 	struct list_head list;
+	struct nfs4_threshold	*mdsthreshold;
 };
 
 struct nfs_open_dir_context {
@@ -203,6 +204,9 @@ struct nfs_inode {
 	struct pnfs_layout_hdr *layout;
 	atomic_t		commits_outstanding;
 #endif /* CONFIG_NFS_V4*/
+	/* how many bytes have been written/read and how many bytes queued up */
+	__u64 write_io;
+	__u64 read_io;
 #ifdef CONFIG_NFS_FSCACHE
 	struct fscache_cookie	*fscache;
 #endif
@@ -648,6 +652,7 @@ nfs_fileid_to_ino_t(u64 fileid)
 #define NFSDBG_FSCACHE		0x0800
 #define NFSDBG_PNFS		0x1000
 #define NFSDBG_PNFS_LD		0x2000
+#define NFSDBG_STATE		0x4000
 #define NFSDBG_ALL		0xFFFF
 
 #ifdef __KERNEL__

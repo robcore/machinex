@@ -567,6 +567,7 @@ EXPORT_SYMBOL(dput);
  
 int d_invalidate(struct dentry * dentry)
 {
+	const unsigned char *cs;
 	/*
 	 * If it's already been dropped, return OK.
 	 */
@@ -1258,6 +1259,13 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	if (!dentry)
 		return NULL;
 
+	/*
+	 * We guarantee that the inline name is always NUL-terminated.
+	 * This way the memcpy() done by the name switching in rename
+	 * will still always have a NUL at the end, even if we might
+	 * be overwriting an internal NUL character
+	 */
+	dentry->d_iname[DNAME_INLINE_LEN-1] = 0;
 	if (name->len > DNAME_INLINE_LEN-1) {
 		dname = kmalloc(name->len + 1, GFP_KERNEL);
 		if (!dname) {
@@ -1267,12 +1275,15 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	} else  {
 		dname = dentry->d_iname;
 	}	
-	dentry->d_name.name = dname;
 
 	dentry->d_name.len = name->len;
 	dentry->d_name.hash = name->hash;
 	memcpy(dname, name->name, name->len);
 	dname[name->len] = 0;
+
+	/* Make sure we always see the terminating NUL character */
+	smp_wmb();
+	dentry->d_name.name = dname;
 
 	dentry->d_count = 1;
 	dentry->d_flags = 0;

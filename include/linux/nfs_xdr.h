@@ -35,6 +35,15 @@ static inline int nfs_fsid_equal(const struct nfs_fsid *a, const struct nfs_fsid
 	return a->major == b->major && a->minor == b->minor;
 }
 
+struct nfs4_threshold {
+	__u32	bm;
+	__u32	l_type;
+	__u64	rd_sz;
+	__u64	wr_sz;
+	__u64	rd_io_sz;
+	__u64	wr_io_sz;
+};
+
 struct nfs_fattr {
 	unsigned int		valid;		/* which fields are valid */
 	umode_t			mode;
@@ -67,6 +76,7 @@ struct nfs_fattr {
 	unsigned long		gencount;
 	struct nfs4_string	*owner_name;
 	struct nfs4_string	*group_name;
+	struct nfs4_threshold	*mdsthreshold;	/* pNFS threshold hints */
 };
 
 #define NFS_ATTR_FATTR_TYPE		(1U << 0)
@@ -1070,13 +1080,13 @@ struct nfs41_exchange_id_args {
 	u32				flags;
 };
 
-struct server_owner {
+struct nfs41_server_owner {
 	uint64_t			minor_id;
 	uint32_t			major_id_sz;
 	char				major_id[NFS4_OPAQUE_LIMIT];
 };
 
-struct server_scope {
+struct nfs41_server_scope {
 	uint32_t			server_scope_sz;
 	char 				server_scope[NFS4_OPAQUE_LIMIT];
 };
@@ -1087,10 +1097,18 @@ struct nfs41_impl_id {
 	struct nfstime4			date;
 };
 
+struct nfs41_bind_conn_to_session_res {
+	struct nfs4_session		*session;
+	u32				dir;
+	bool				use_conn_in_rdma_mode;
+};
+
 struct nfs41_exchange_id_res {
-	struct nfs_client		*client;
+	u64				clientid;
+	u32				seqid;
 	u32				flags;
-	struct server_scope		*server_scope;
+	struct nfs41_server_owner	*server_owner;
+	struct nfs41_server_scope	*server_scope;
 	struct nfs41_impl_id		*impl_id;
 };
 
@@ -1287,8 +1305,9 @@ struct nfs_rpc_ops {
 				struct nfs_open_context *ctx,
 				int open_flags,
 				struct iattr *iattr);
-	int	(*init_client) (struct nfs_client *, const struct rpc_timeout *,
-				const char *, rpc_authflavor_t, int);
+	struct nfs_client *
+		(*init_client) (struct nfs_client *, const struct rpc_timeout *,
+				const char *, rpc_authflavor_t);
 	int	(*secinfo)(struct inode *, const struct qstr *, struct nfs4_secinfo_flavors *);
 };
 

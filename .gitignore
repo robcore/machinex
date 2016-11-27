@@ -39,6 +39,7 @@ modules.builtin
 *.txt.rej
 *.rej
 *.S.rej
+boot.img-zImage
 
 #
 # Top-level generic files
