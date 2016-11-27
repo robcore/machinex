@@ -516,7 +516,7 @@ void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 		struct page *page = NULL;
 		shmem_getpage(inode, end, &page, SGP_READ, NULL);
 		if (page) {
-			zero_user_segment(page, partial_start, top);
+			zero_user_segment(page, 0, partial_end);
 			set_page_dirty(page);
 			unlock_page(page);
 			page_cache_release(page);
@@ -526,18 +526,21 @@ void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 		return;
 
 	index = start;
-	while (index <= end) {
+	for ( ; ; ) {
 		cond_resched();
 		pvec.nr = shmem_find_get_pages_and_swap(mapping, index,
-			min(end - index, (pgoff_t)PAGEVEC_SIZE),
+				min(end - index, (pgoff_t)PAGEVEC_SIZE),
 							pvec.pages, indices);
 		if (!pvec.nr) {
-			/* If all gone or hole-punch, we're done */
-			if (index == start || end != -1)
+			if (index == start)
 				break;
-			/* But if truncating, restart to make sure all gone */
 			index = start;
 			continue;
+		}
+		if (index == start && indices[0] >= end) {
+			shmem_deswap_pagevec(&pvec);
+			pagevec_release(&pvec);
+			break;
 		}
 		mem_cgroup_uncharge_start();
 		for (i = 0; i < pagevec_count(&pvec); i++) {
@@ -548,12 +551,8 @@ void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 				break;
 
 			if (radix_tree_exceptional_entry(page)) {
-				if (shmem_free_swap(mapping, index, page)) {
-					/* Swap was replaced by page: retry */
-					index--;
-					break;
-				}
-				nr_swaps_freed++;
+				nr_swaps_freed += !shmem_free_swap(mapping,
+								index, page);
 				continue;
 			}
 
@@ -561,15 +560,9 @@ void shmem_truncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 			if (page->mapping == mapping) {
 				VM_BUG_ON(PageWriteback(page));
 				truncate_inode_page(mapping, page);
-			} else {
-				/* Page was replaced by swap: retry */
-				unlock_page(page);
-				index--;
-				break;
 			}
 			unlock_page(page);
 		}
-	if (index == start && indices[0] >= end) {
 		shmem_deswap_pagevec(&pvec);
 		pagevec_release(&pvec);
 		mem_cgroup_uncharge_end();
