@@ -85,6 +85,7 @@
 #include <linux/cpu.h>
 #include <linux/vmalloc.h>
 #include <linux/hardirq.h>
+#include <linux/preempt.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
 

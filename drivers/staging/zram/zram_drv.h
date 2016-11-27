@@ -26,6 +26,18 @@
  */
 static const unsigned max_num_devices = 32;
 
+/*
+ * Stored at beginning of each compressed object.
+ *
+ * It stores back-reference to table entry which points to this
+ * object. This is required to support memory defragmentation.
+ */
+struct zobj_header {
+#if 0
+	u32 table_idx;
+#endif
+};
+
 /*-- Configurable parameters */
 
 /* Default zram disk size: 25% of total RAM */
@@ -39,8 +51,8 @@ static const size_t max_zpage_size = PAGE_SIZE / 4 * 3;
 
 /*
  * NOTE: max_zpage_size must be less than or equal to:
- *   ZS_MAX_ALLOC_SIZE. Otherwise, zs_malloc() would
- * always return failure.
+ *   ZS_MAX_ALLOC_SIZE - sizeof(struct zobj_header)
+ * otherwise, xv_malloc() would always return failure.
  */
 
 /*-- End of configurable params */
@@ -56,6 +68,9 @@ static const size_t max_zpage_size = PAGE_SIZE / 4 * 3;
 
 /* Flags for zram pages (table[page_no].flags) */
 enum zram_pageflags {
+	/* Page is stored uncompressed */
+	ZRAM_UNCOMPRESSED,
+
 	/* Page consists entirely of zeros */
 	ZRAM_ZERO,
 
@@ -66,11 +81,11 @@ enum zram_pageflags {
 
 /* Allocated for each disk page */
 struct table {
-	unsigned long handle;
+	void *handle;
 	u16 size;	/* object size (excluding header) */
 	u8 count;	/* object ref count (not yet used) */
 	u8 flags;
-} __aligned(4);
+} __attribute__((aligned(4)));
 
 struct zram_stats {
 	u64 compr_size;		/* compressed size of pages stored */
@@ -83,7 +98,12 @@ struct zram_stats {
 	u32 pages_zero;		/* no. of zero filled pages */
 	u32 pages_stored;	/* no. of pages currently stored */
 	u32 good_compress;	/* % of pages with compression ratio<=50% */
-	u32 bad_compress;	/* % of pages with compression ratio>=75% */
+	u32 pages_expand;	/* % of incompressible pages */
+};
+
+struct zram_slot_free {
+	unsigned long index;
+	struct zram_slot_free *next;
 };
 
 struct zram {
@@ -92,8 +112,9 @@ struct zram {
 	void *compress_buffer;
 	struct table *table;
 	spinlock_t stat64_lock;	/* protect 64-bit stats */
-	struct rw_semaphore lock; /* protect compression buffers and table
-				   * against concurrent read and writes */
+	struct rw_semaphore lock; /* protect compression buffers, table,
+				   * 32bit stat counters against concurrent
+				   * notifications, reads and writes */
 	struct request_queue *queue;
 	struct gendisk *disk;
 	int init_done;
@@ -104,6 +125,7 @@ struct zram {
 	 * we can store in a disk.
 	 */
 	u64 disksize;	/* bytes */
+	spinlock_t slot_free_lock;
 
 	struct zram_stats stats;
 };

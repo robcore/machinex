@@ -79,12 +79,16 @@ static u64 zswap_duplicate_entry;
 **********************************/
 /* Enable/disable zswap (enabled by default, fixed at boot for now) */
 static bool zswap_enabled = 1;
-module_param_named(enabled, zswap_enabled, bool, 0);
+module_param_named(enabled, zswap_enabled, bool, 0644);
 
 /* Compressor to be used by zswap (fixed at boot for now) */
+#ifdef CONFIG_CRYPTO_LZ4
+#define ZSWAP_COMPRESSOR_DEFAULT "lz4"
+#else
 #define ZSWAP_COMPRESSOR_DEFAULT "lzo"
+#endif
 static char *zswap_compressor = ZSWAP_COMPRESSOR_DEFAULT;
-module_param_named(compressor, zswap_compressor, charp, 0);
+module_param_named(compressor, zswap_compressor, charp, 0644);
 
 /* The maximum percentage of memory that the compressed pool can occupy */
 static unsigned int zswap_max_pool_percent = 20;
@@ -371,18 +375,18 @@ static int zswap_cpu_init(void)
 {
 	unsigned long cpu;
 
-	cpu_notifier_register_begin();
+	get_online_cpus();
 	for_each_online_cpu(cpu)
 		if (__zswap_cpu_notifier(CPU_UP_PREPARE, cpu) != NOTIFY_OK)
 			goto cleanup;
-	__register_cpu_notifier(&zswap_cpu_notifier_block);
-	cpu_notifier_register_done();
+	register_cpu_notifier(&zswap_cpu_notifier_block);
+	put_online_cpus();
 	return 0;
 
 cleanup:
 	for_each_online_cpu(cpu)
 		__zswap_cpu_notifier(CPU_UP_CANCELED, cpu);
-	cpu_notifier_register_done();
+	put_online_cpus();
 	return -ENOMEM;
 }
 
@@ -886,16 +890,6 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 
 	/* update stats */
 	atomic_inc(&zswap_stored_pages);
-
-	/* Debugging code for zswap kernel panic */
-	{
-	/* check whether page is file page */
-		if (!PageAnon(page) && !PageSwapCache(page)) {
-			struct address_space *mapping = page_file_mapping(page);
-			printk(KERN_ALERT
-				"BUG: file page is swapped out (mapping = %p)\n", mapping);
-		}
-	}
 
 	return 0;
 

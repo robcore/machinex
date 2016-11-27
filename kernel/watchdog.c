@@ -302,7 +302,7 @@ static enum hrtimer_restart watchdog_timer_fn(struct hrtimer *hrtimer)
 		/* only warn once */
 		if (__this_cpu_read(soft_watchdog_warn) == true)
 			return HRTIMER_RESTART;
-#ifdef CONFIG_MACH_MSM8960_MMI
+#ifdef CONFIG_MACH_JFDT
 		touch_hw_watchdog();
 #endif
 		printk(KERN_EMERG "BUG: soft lockup - CPU#%d stuck for %us! [%s:%d]\n",

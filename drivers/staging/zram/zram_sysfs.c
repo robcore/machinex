@@ -15,7 +15,6 @@
 #include <linux/device.h>
 #include <linux/genhd.h>
 #include <linux/mm.h>
-#include <linux/kernel.h>
 
 #include "zram_drv.h"
 
@@ -46,12 +45,13 @@ static ssize_t disksize_show(struct device *dev,
 static ssize_t disksize_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
+	int ret;
 	u64 disksize;
 	struct zram *zram = dev_to_zram(dev);
 
-	disksize = memparse(buf, NULL);
-	if (!disksize)
-		return -EINVAL;
+	ret = kstrtoull(buf, 10, &disksize);
+	if (ret)
+		return ret;
 
 	down_write(&zram->init_lock);
 	if (zram->init_done) {
@@ -59,7 +59,7 @@ static ssize_t disksize_store(struct device *dev,
 		pr_info("Cannot change disksize for initialized device\n");
 		return -EBUSY;
 	}
-#ifdef CONFIG_ZRAM
+#ifdef CONFIG_ZRAM_FOR_ANDROID
 	if (!disksize) {
 		disksize = default_disksize_perc_ram *
 					((totalram_pages << PAGE_SHIFT) / 100);
@@ -91,20 +91,27 @@ static ssize_t reset_store(struct device *dev,
 	zram = dev_to_zram(dev);
 	bdev = bdget_disk(zram->disk, 0);
 
+	if (!bdev)
+		return -ENOMEM;
+
 	/* Do not reset an active device! */
-	if (bdev->bd_holders)
-		return -EBUSY;
+	if (bdev->bd_holders) {
+		ret = -EBUSY;
+		goto out;
+	}
 
 	ret = kstrtou16(buf, 10, &do_reset);
 	if (ret)
-		return ret;
+		goto out;
 
-	if (!do_reset)
-		return -EINVAL;
+	if (!do_reset) {
+		ret = -EINVAL;
+		goto out;
+	}
 
 	/* Make sure all pending I/O is finished */
-	if (bdev)
-		fsync_bdev(bdev);
+	fsync_bdev(bdev);
+	bdput(bdev);
 
 	down_write(&zram->init_lock);
 	if (zram->init_done)
@@ -112,6 +119,10 @@ static ssize_t reset_store(struct device *dev,
 	up_write(&zram->init_lock);
 
 	return len;
+
+out:
+	bdput(bdev);
+	return ret;
 }
 
 static ssize_t num_reads_show(struct device *dev,
