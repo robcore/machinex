@@ -22,6 +22,7 @@
 #include <linux/io.h>
 
 #include <asm/cacheflush.h>
+#include <asm/hardware/gic.h>
 #include <asm/smp_plat.h>
 #include <asm/smp_scu.h>
 
@@ -41,7 +42,7 @@ extern void exynos4_secondary_startup(void);
  * boot "holding pen"
  */
 
-volatile int pen_release = -1;
+volatile int __cpuinitdata pen_release = -1;
 
 /*
  * Write pen_release in a way that is guaranteed to be visible to all
@@ -63,8 +64,15 @@ static void __iomem *scu_base_addr(void)
 
 static DEFINE_SPINLOCK(boot_lock);
 
-void platform_secondary_init(unsigned int cpu)
+void __cpuinit platform_secondary_init(unsigned int cpu)
 {
+	/*
+	 * if any interrupts are already enabled for the primary
+	 * core (e.g. timer irq), then they will not have been enabled
+	 * for us: do so
+	 */
+	gic_secondary_init(0);
+
 	/*
 	 * let the primary processor know we're out of the
 	 * pen, then head off into the C entry point
@@ -78,7 +86,7 @@ void platform_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
-int boot_secondary(unsigned int cpu, struct task_struct *idle)
+int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 
