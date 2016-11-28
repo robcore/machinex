@@ -1663,6 +1663,7 @@ static void __exit ipu_idmac_exit(struct ipu *ipu)
 
 static int __init ipu_probe(struct platform_device *pdev)
 {
+	struct ipu_platform_data *pdata = pdev->dev.platform_data;
 	struct resource *mem_ipu, *mem_ic;
 	int ret;
 
@@ -1670,7 +1671,7 @@ static int __init ipu_probe(struct platform_device *pdev)
 
 	mem_ipu	= platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	mem_ic	= platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!mem_ipu || !mem_ic)
+	if (!pdata || !mem_ipu || !mem_ic)
 		return -EINVAL;
 
 	ipu_data.dev = &pdev->dev;
@@ -1687,9 +1688,10 @@ static int __init ipu_probe(struct platform_device *pdev)
 		goto err_noirq;
 
 	ipu_data.irq_err = ret;
+	ipu_data.irq_base = pdata->irq_base;
 
-	dev_dbg(&pdev->dev, "fn irq %u, err irq %u\n",
-		ipu_data.irq_fn, ipu_data.irq_err);
+	dev_dbg(&pdev->dev, "fn irq %u, err irq %u, irq-base %u\n",
+		ipu_data.irq_fn, ipu_data.irq_err, ipu_data.irq_base);
 
 	/* Remap IPU common registers */
 	ipu_data.reg_ipu = ioremap(mem_ipu->start, resource_size(mem_ipu));

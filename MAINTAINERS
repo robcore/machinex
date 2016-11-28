@@ -3200,8 +3200,10 @@ F:	include/linux/clockchips.h
 F:	include/linux/hrtimer.h
 
 HIGH-SPEED SCC DRIVER FOR AX.25
+M:	Klaus Kudielka <klaus.kudielka@ieee.org>
 L:	linux-hams@vger.kernel.org
-S:	Orphan
+W:	http://www.nt.tuwien.ac.at/~kkudielk/Linux/
+S:	Maintained
 F:	drivers/net/hamradio/dmascc.c
 F:	drivers/net/hamradio/scc.c
 
@@ -4479,6 +4481,12 @@ L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 F:	drivers/mmc/host/imxmmc.*
 
+MOUSE AND MISC DEVICES [GENERAL]
+M:	Alessandro Rubini <rubini@ipvvis.unipv.it>
+S:	Maintained
+F:	drivers/input/mouse/
+F:	include/linux/gpio_mouse.h
+
 MOXA SMARTIO/INDUSTIO/INTELLIO SERIAL CARD
 M:	Jiri Slaby <jirislaby@gmail.com>
 S:	Maintained
@@ -4597,8 +4605,8 @@ L:	netfilter@vger.kernel.org
 L:	coreteam@netfilter.org
 W:	http://www.netfilter.org/
 W:	http://www.iptables.org/
-T:	git git://1984.lsi.us.es/nf
-T:	git git://1984.lsi.us.es/nf-next
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/netfilter/nf-2.6.git
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/netfilter/nf-next-2.6.git
 S:	Supported
 F:	include/linux/netfilter*
 F:	include/linux/netfilter/

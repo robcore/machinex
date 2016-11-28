@@ -1670,9 +1670,7 @@ static int replay_one_buffer(struct btrfs_root *log, struct extent_buffer *eb,
 	int i;
 	int ret;
 
-	ret = btrfs_read_buffer(eb, gen);
-	if (ret)
-		return ret;
+	btrfs_read_buffer(eb, gen);
 
 	level = btrfs_header_level(eb);
 
@@ -1793,11 +1791,7 @@ static noinline int walk_down_log_tree(struct btrfs_trans_handle *trans,
 
 			path->slots[*level]++;
 			if (wc->free) {
-				ret = btrfs_read_buffer(next, ptr_gen);
-				if (ret) {
-					free_extent_buffer(next);
-					return ret;
-				}
+				btrfs_read_buffer(next, ptr_gen);
 
 				btrfs_tree_lock(next);
 				btrfs_set_lock_blocking(next);
@@ -1814,11 +1808,7 @@ static noinline int walk_down_log_tree(struct btrfs_trans_handle *trans,
 			free_extent_buffer(next);
 			continue;
 		}
-		ret = btrfs_read_buffer(next, ptr_gen);
-		if (ret) {
-			free_extent_buffer(next);
-			return ret;
-		}
+		btrfs_read_buffer(next, ptr_gen);
 
 		WARN_ON(*level <= 0);
 		if (path->nodes[*level-1])
@@ -3080,6 +3070,21 @@ out:
 	return ret;
 }
 
+static int inode_in_log(struct btrfs_trans_handle *trans,
+		 struct inode *inode)
+{
+	struct btrfs_root *root = BTRFS_I(inode)->root;
+	int ret = 0;
+
+	mutex_lock(&root->log_mutex);
+	if (BTRFS_I(inode)->logged_trans == trans->transid &&
+	    BTRFS_I(inode)->last_sub_trans <= root->last_log_commit)
+		ret = 1;
+	mutex_unlock(&root->log_mutex);
+	return ret;
+}
+
+
 /*
  * helper function around btrfs_log_inode to make sure newly created
  * parent directories also end up in the log.  A minimal inode and backref
@@ -3120,7 +3125,7 @@ int btrfs_log_inode_parent(struct btrfs_trans_handle *trans,
 	if (ret)
 		goto end_no_trans;
 
-	if (btrfs_inode_in_log(inode, trans->transid)) {
+	if (inode_in_log(trans, inode)) {
 		ret = BTRFS_NO_LOG_SYNC;
 		goto end_no_trans;
 	}

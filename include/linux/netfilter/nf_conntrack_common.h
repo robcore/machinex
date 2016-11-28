@@ -83,10 +83,6 @@ enum ip_conntrack_status {
 	/* Conntrack is a fake untracked entry */
 	IPS_UNTRACKED_BIT = 12,
 	IPS_UNTRACKED = (1 << IPS_UNTRACKED_BIT),
-
-	/* Conntrack got a helper explicitly attached via CT target. */
-	IPS_HELPER_BIT = 13,
-	IPS_HELPER = (1 << IPS_HELPER_BIT),
 };
 
 /* Connection tracking event types */

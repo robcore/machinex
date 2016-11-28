@@ -36,7 +36,7 @@ static void rproc_virtio_notify(struct virtqueue *vq)
 	struct rproc *rproc = rvring->rvdev->rproc;
 	int notifyid = rvring->notifyid;
 
-	dev_dbg(&rproc->dev, "kicking vq index: %d\n", notifyid);
+	dev_dbg(rproc->dev, "kicking vq index: %d\n", notifyid);
 
 	rproc->ops->kick(rproc, notifyid);
 }
@@ -57,7 +57,7 @@ irqreturn_t rproc_vq_interrupt(struct rproc *rproc, int notifyid)
 {
 	struct rproc_vring *rvring;
 
-	dev_dbg(&rproc->dev, "vq index %d is interrupted\n", notifyid);
+	dev_dbg(rproc->dev, "vq index %d is interrupted\n", notifyid);
 
 	rvring = idr_find(&rproc->notifyids, notifyid);
 	if (!rvring || !rvring->vq)
@@ -74,21 +74,17 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 {
 	struct rproc_vdev *rvdev = vdev_to_rvdev(vdev);
 	struct rproc *rproc = vdev_to_rproc(vdev);
-	struct device *dev = &rproc->dev;
 	struct rproc_vring *rvring;
 	struct virtqueue *vq;
 	void *addr;
-	int len, size, ret;
+	int len, size;
 
 	/* we're temporarily limited to two virtqueues per rvdev */
 	if (id >= ARRAY_SIZE(rvdev->vring))
 		return ERR_PTR(-EINVAL);
 
-	ret = rproc_alloc_vring(rvdev, id);
-	if (ret)
-		return ERR_PTR(ret);
-
 	rvring = &rvdev->vring[id];
+
 	addr = rvring->va;
 	len = rvring->len;
 
@@ -96,7 +92,7 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 	size = vring_size(len, rvring->align);
 	memset(addr, 0, size);
 
-	dev_dbg(dev, "vring%d: va %p qsz %d notifyid %d\n",
+	dev_dbg(rproc->dev, "vring%d: va %p qsz %d notifyid %d\n",
 					id, addr, len, rvring->notifyid);
 
 	/*
@@ -106,8 +102,7 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 	vq = vring_new_virtqueue(len, rvring->align, vdev, false, addr,
 					rproc_virtio_notify, callback, name);
 	if (!vq) {
-		dev_err(dev, "vring_new_virtqueue %s failed\n", name);
-		rproc_free_vring(rvring);
+		dev_err(rproc->dev, "vring_new_virtqueue %s failed\n", name);
 		return ERR_PTR(-ENOMEM);
 	}
 
@@ -130,7 +125,6 @@ static void rproc_virtio_del_vqs(struct virtio_device *vdev)
 		rvring = vq->priv;
 		rvring->vq = NULL;
 		vring_del_virtqueue(vq);
-		rproc_free_vring(rvring);
 	}
 }
 
@@ -153,7 +147,7 @@ static int rproc_virtio_find_vqs(struct virtio_device *vdev, unsigned nvqs,
 	/* now that the vqs are all set, boot the remote processor */
 	ret = rproc_boot(rproc);
 	if (ret) {
-		dev_err(&rproc->dev, "rproc_boot() failed %d\n", ret);
+		dev_err(rproc->dev, "rproc_boot() failed %d\n", ret);
 		goto error;
 	}
 
@@ -225,7 +219,7 @@ static struct virtio_config_ops rproc_virtio_config_ops = {
 
 /*
  * This function is called whenever vdev is released, and is responsible
- * to decrement the remote processor's refcount which was taken when vdev was
+ * to decrement the remote processor's refcount taken when vdev was
  * added.
  *
  * Never call this function directly; it will be called by the driver
@@ -234,13 +228,9 @@ static struct virtio_config_ops rproc_virtio_config_ops = {
 static void rproc_vdev_release(struct device *dev)
 {
 	struct virtio_device *vdev = dev_to_virtio(dev);
-	struct rproc_vdev *rvdev = vdev_to_rvdev(vdev);
 	struct rproc *rproc = vdev_to_rproc(vdev);
 
-	list_del(&rvdev->node);
-	kfree(rvdev);
-
-	put_device(&rproc->dev);
+	kref_put(&rproc->refcount, rproc_release);
 }
 
 /**
@@ -255,7 +245,7 @@ static void rproc_vdev_release(struct device *dev)
 int rproc_add_virtio_dev(struct rproc_vdev *rvdev, int id)
 {
 	struct rproc *rproc = rvdev->rproc;
-	struct device *dev = &rproc->dev;
+	struct device *dev = rproc->dev;
 	struct virtio_device *vdev = &rvdev->vdev;
 	int ret;
 
@@ -272,11 +262,11 @@ int rproc_add_virtio_dev(struct rproc_vdev *rvdev, int id)
 	 * Therefore we must increment the rproc refcount here, and decrement
 	 * it _only_ when the vdev is released.
 	 */
-	get_device(&rproc->dev);
+	kref_get(&rproc->refcount);
 
 	ret = register_virtio_device(vdev);
 	if (ret) {
-		put_device(&rproc->dev);
+		kref_put(&rproc->refcount, rproc_release);
 		dev_err(dev, "failed to register vdev: %d\n", ret);
 		goto out;
 	}

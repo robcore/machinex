@@ -143,7 +143,6 @@ struct regmap *devm_regmap_init_spi(struct spi_device *dev,
 void regmap_exit(struct regmap *map);
 int regmap_reinit_cache(struct regmap *map,
 			const struct regmap_config *config);
-struct regmap *dev_get_regmap(struct device *dev, const char *name);
 int regmap_write(struct regmap *map, unsigned int reg, unsigned int val);
 int regmap_raw_write(struct regmap *map, unsigned int reg,
 		     const void *val, size_t val_len);
@@ -216,7 +215,7 @@ struct regmap_irq_chip {
 struct regmap_irq_chip_data;
 
 int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
-			int irq_base, const struct regmap_irq_chip *chip,
+			int irq_base, struct regmap_irq_chip *chip,
 			struct regmap_irq_chip_data **data);
 void regmap_del_irq_chip(int irq, struct regmap_irq_chip_data *data);
 int regmap_irq_chip_get_base(struct regmap_irq_chip_data *data);
@@ -329,13 +328,6 @@ static inline int regmap_register_patch(struct regmap *map,
 {
 	WARN_ONCE(1, "regmap API is disabled");
 	return -EINVAL;
-}
-
-static inline struct regmap *dev_get_regmap(struct device *dev,
-					    const char *name)
-{
-	WARN_ONCE(1, "regmap API is disabled");
-	return NULL;
 }
 
 #endif

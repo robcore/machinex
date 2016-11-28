@@ -1048,10 +1048,7 @@ static int validate_mmap_request(struct file *file,
 	}
 
 	/* allow the security API to have its say */
-	ret = security_mmap_addr(addr);
-	if (ret < 0)
-		return ret;
-	ret = security_mmap_file(file, reqprot, prot, flags);
+	ret = security_file_mmap(file, reqprot, prot, flags, addr, 0);
 	if (ret < 0)
 		return ret;
 

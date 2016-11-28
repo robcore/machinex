@@ -1040,14 +1040,6 @@ void __cleanup_sighand(struct sighand_struct *sighand)
 		signalfd_cleanup(sighand);
 		kmem_cache_free(sighand_cachep, sighand);
 	}
-
-	/*
-	 * Final rss-counter synchronization. After this point there must be
-	 * no pagefaults into this mm from the current context.  Otherwise
-	 * mm->rss_stat will be inconsistent.
-	 */
-	if (mm)
-		sync_mm_rss(mm);
 }
 
 

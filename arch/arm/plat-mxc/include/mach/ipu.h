@@ -110,6 +110,10 @@ enum ipu_rotate_mode {
 	IPU_ROTATE_90_LEFT = 7,
 };
 
+struct ipu_platform_data {
+	unsigned int	irq_base;
+};
+
 /*
  * Enumeration of DI ports for ADC.
  */

@@ -173,9 +173,6 @@ static int btrfs_csum_sizes[] = { 4, 0 };
 #define BTRFS_FT_XATTR		8
 #define BTRFS_FT_MAX		9
 
-/* ioprio of readahead is set to idle */
-#define BTRFS_IOPRIO_READA (IOPRIO_PRIO_VALUE(IOPRIO_CLASS_IDLE, 0))
-
 /*
  * The key defines the order in the tree, and so it also defines (optimal)
  * block layout.
@@ -826,14 +823,6 @@ struct btrfs_csum_item {
 	u8 csum;
 } __attribute__ ((__packed__));
 
-struct btrfs_dev_stats_item {
-	/*
-	 * grow this item struct at the end for future enhancements and keep
-	 * the existing values unchanged
-	 */
-	__le64 values[BTRFS_DEV_STAT_VALUES_MAX];
-} __attribute__ ((__packed__));
-
 /* different types of block groups (and chunks) */
 #define BTRFS_BLOCK_GROUP_DATA		(1ULL << 0)
 #define BTRFS_BLOCK_GROUP_SYSTEM	(1ULL << 1)
@@ -1395,7 +1384,7 @@ struct btrfs_root {
 	struct list_head root_list;
 
 	spinlock_t orphan_lock;
-	atomic_t orphan_inodes;
+	struct list_head orphan_list;
 	struct btrfs_block_rsv *orphan_block_rsv;
 	int orphan_item_inserted;
 	int orphan_cleanup_state;
@@ -1526,12 +1515,6 @@ struct btrfs_ioctl_defrag_range_args {
 #define BTRFS_CHUNK_ITEM_KEY	228
 
 #define BTRFS_BALANCE_ITEM_KEY	248
-
-/*
- * Persistantly stores the io stats in the device tree.
- * One key for all stats, (0, BTRFS_DEV_STATS_KEY, devid).
- */
-#define BTRFS_DEV_STATS_KEY	249
 
 /*
  * string items are for debugging.  They just store a short string of
@@ -2441,30 +2424,6 @@ static inline u32 btrfs_file_extent_inline_item_len(struct extent_buffer *eb,
 	return btrfs_item_size(eb, e) - offset;
 }
 
-/* btrfs_dev_stats_item */
-static inline u64 btrfs_dev_stats_value(struct extent_buffer *eb,
-					struct btrfs_dev_stats_item *ptr,
-					int index)
-{
-	u64 val;
-
-	read_extent_buffer(eb, &val,
-			   offsetof(struct btrfs_dev_stats_item, values) +
-			    ((unsigned long)ptr) + (index * sizeof(u64)),
-			   sizeof(val));
-	return val;
-}
-
-static inline void btrfs_set_dev_stats_value(struct extent_buffer *eb,
-					     struct btrfs_dev_stats_item *ptr,
-					     int index, u64 val)
-{
-	write_extent_buffer(eb, &val,
-			    offsetof(struct btrfs_dev_stats_item, values) +
-			     ((unsigned long)ptr) + (index * sizeof(u64)),
-			    sizeof(val));
-}
-
 static inline struct btrfs_fs_info *btrfs_sb(struct super_block *sb)
 {
 	return sb->s_fs_info;
@@ -2709,8 +2668,6 @@ int btrfs_duplicate_item(struct btrfs_trans_handle *trans,
 int btrfs_search_slot(struct btrfs_trans_handle *trans, struct btrfs_root
 		      *root, struct btrfs_key *key, struct btrfs_path *p, int
 		      ins_len, int cow);
-int btrfs_search_old_slot(struct btrfs_root *root, struct btrfs_key *key,
-			  struct btrfs_path *p, u64 time_seq);
 int btrfs_realloc_node(struct btrfs_trans_handle *trans,
 		       struct btrfs_root *root, struct extent_buffer *parent,
 		       int start_slot, int cache_only, u64 *last_ret,
@@ -3157,16 +3114,4 @@ struct seq_list {
 	u32 flags;
 };
 
-void btrfs_get_tree_mod_seq(struct btrfs_fs_info *fs_info,
-			    struct seq_list *elem);
-void btrfs_put_tree_mod_seq(struct btrfs_fs_info *fs_info,
-			    struct seq_list *elem);
-
-static inline int is_fstree(u64 rootid)
-{
-	if (rootid == BTRFS_FS_TREE_OBJECTID ||
-	    (s64)rootid >= (s64)BTRFS_FIRST_FREE_OBJECTID)
-		return 1;
-	return 0;
-}
 #endif

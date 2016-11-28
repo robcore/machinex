@@ -437,7 +437,3 @@ CsrBool CsrIsSpace(CsrUint8 c)
             return FALSE;
     }
 }
-
-MODULE_DESCRIPTION("CSR Operating System Kernel Abstraction");
-MODULE_AUTHOR("Cambridge Silicon Radio Ltd.");
-MODULE_LICENSE("GPL and additional rights");

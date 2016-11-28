@@ -196,6 +196,7 @@ late_initcall(clk_debug_init);
 static inline int clk_debug_register(struct clk *clk) { return 0; }
 #endif /* CONFIG_COMMON_CLK_DEBUG */
 
+#ifdef CONFIG_COMMON_CLK_DISABLE_UNUSED
 /* caller must hold prepare_lock */
 static void clk_disable_unused_subtree(struct clk *clk)
 {
@@ -245,6 +246,9 @@ static int clk_disable_unused(void)
 	return 0;
 }
 late_initcall(clk_disable_unused);
+#else
+static inline int clk_disable_unused(struct clk *clk) { return 0; }
+#endif /* CONFIG_COMMON_CLK_DISABLE_UNUSED */
 
 /***    helper functions   ***/
 

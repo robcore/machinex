@@ -1,3 +1,4 @@
+header-y += ip_queue.h
 header-y += ip_tables.h
 header-y += ipt_CLUSTERIP.h
 header-y += ipt_ECN.h

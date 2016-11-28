@@ -25,11 +25,12 @@ static inline int page_is_file_cache(struct page *page)
 	return !PageSwapBacked(page);
 }
 
-static __always_inline void add_page_to_lru_list(struct page *page,
-				struct lruvec *lruvec, enum lru_list lru)
+static __always_inline void
+add_page_to_lru_list(struct zone *zone, struct page *page, enum lru_list lru)
 {
-	int nr_pages = hpage_nr_pages(page);
-	mem_cgroup_update_lru_size(lruvec, lru, nr_pages);
+	struct lruvec *lruvec;
+
+	lruvec = mem_cgroup_lru_add_list(zone, page, lru);
 #ifdef CONFIG_SCFS_LOWER_PAGECACHE_INVALIDATION
 	if (PageNocache(page))
 		list_add_tail(&page->lru, &lruvec->lists[lru]);
@@ -38,16 +39,16 @@ static __always_inline void add_page_to_lru_list(struct page *page,
 #else
 	list_add(&page->lru, &lruvec->lists[lru]);
 #endif
-	__mod_zone_page_state(lruvec_zone(lruvec), NR_LRU_BASE + lru, nr_pages);
+	__mod_zone_page_state(zone, NR_LRU_BASE + lru, hpage_nr_pages(page));
 }
 
-static __always_inline void del_page_from_lru_list(struct page *page,
-				struct lruvec *lruvec, enum lru_list lru)
+static __always_inline void
+del_page_from_lru_list(struct zone *zone, struct page *page, enum lru_list lru)
 {
-	int nr_pages = hpage_nr_pages(page);
-	mem_cgroup_update_lru_size(lruvec, lru, -nr_pages);
+	mem_cgroup_lru_del_list(page, lru);
 	list_del(&page->lru);
-	__mod_zone_page_state(lruvec_zone(lruvec), NR_LRU_BASE + lru, -nr_pages);}
+	__mod_zone_page_state(zone, NR_LRU_BASE + lru, -hpage_nr_pages(page));
+}
 
 /**
  * page_lru_base_type - which LRU list type should a page be on?

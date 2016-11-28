@@ -29,7 +29,6 @@
 #include <linux/ioport.h>
 #include <linux/init.h>
 #include <linux/mutex.h>
-#include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <asm/io.h>
 

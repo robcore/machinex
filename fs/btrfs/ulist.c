@@ -146,20 +146,11 @@ EXPORT_SYMBOL(ulist_free);
 int ulist_add(struct ulist *ulist, u64 val, unsigned long aux,
 	      gfp_t gfp_mask)
 {
-	return ulist_add_merge(ulist, val, aux, NULL, gfp_mask);
-}
-
-int ulist_add_merge(struct ulist *ulist, u64 val, unsigned long aux,
-		    unsigned long *old_aux, unsigned long gfp_mask)
-{
 	int i;
 
 	for (i = 0; i < ulist->nnodes; ++i) {
-		if (ulist->nodes[i].val == val) {
-			if (old_aux)
-				*old_aux = ulist->nodes[i].aux;
+		if (ulist->nodes[i].val == val)
 			return 0;
-		}
 	}
 
 	if (ulist->nnodes >= ulist->nodes_alloced) {
