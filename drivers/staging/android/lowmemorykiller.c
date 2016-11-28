@@ -42,10 +42,10 @@
 #include <linux/memory.h>
 #include <linux/memory_hotplug.h>
 #include <linux/ratelimit.h>
-#if defined(CONFIG_RUNTIME_COMPCACHE) || defined(CONFIG_ZSWAP)
+#if defined(CONFIG_ZSWAP)
 #include <linux/swap.h>
 #include <linux/fs.h>
-#endif /* CONFIG_RUNTIME_COMPCACHE || CONFIG_ZSWAP */
+#endif /* CONFIG_ZSWAP */
 
 #define ENHANCED_LMK_ROUTINE
 #define LMK_COUNT_READ
@@ -202,9 +202,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				global_page_state(NR_FREE_CMA_PAGES);
 #endif
 	int other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
-#if defined(CONFIG_RUNTIME_COMPCACHE) || defined(CONFIG_ZSWAP)
+#if defined(CONFIG_ZSWAP)
 	other_file -= total_swapcache_pages;
-#endif /* CONFIG_RUNTIME_COMPCACHE || CONFIG_ZSWAP */
+#endif /* CONFIG_ZSWAP */
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
@@ -267,7 +267,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				mutex_unlock(&scan_mutex);
 				return 0;
 		}
-		
+
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
 			task_unlock(p);
@@ -359,7 +359,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef ENHANCED_LMK_ROUTINE
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
 		if (selected[i]) {
-#ifdef CONFIG_SAMP_HOTNESS			
+#ifdef CONFIG_SAMP_HOTNESS
 			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
 				     size %d, free memory = %d, reclaimable memory = %d ,hotness %d\n",
 				     selected[i]->pid, selected[i]->comm,
