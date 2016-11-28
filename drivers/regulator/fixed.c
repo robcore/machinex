@@ -37,7 +37,6 @@ struct fixed_voltage_data {
 	struct regulator_dev *dev;
 	int microvolts;
 	int gpio;
-	unsigned startup_delay;
 	bool enable_high;
 	bool is_enabled;
 };
@@ -62,11 +61,11 @@ of_get_fixed_voltage_config(struct device *dev)
 	config = devm_kzalloc(dev, sizeof(struct fixed_voltage_config),
 								 GFP_KERNEL);
 	if (!config)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	config->init_data = of_get_regulator_init_data(dev, dev->of_node);
 	if (!config->init_data)
-		return NULL;
+		return ERR_PTR(-EINVAL);
 
 	init_data = config->init_data;
 	init_data->constraints.apply_uV = 0;
@@ -77,13 +76,26 @@ of_get_fixed_voltage_config(struct device *dev)
 	} else {
 		dev_err(dev,
 			 "Fixed regulator specified with variable voltages\n");
-		return NULL;
+		return ERR_PTR(-EINVAL);
 	}
 
 	if (init_data->constraints.boot_on)
 		config->enabled_at_boot = true;
 
 	config->gpio = of_get_named_gpio(np, "gpio", 0);
+	/*
+	 * of_get_named_gpio() currently returns ENODEV rather than
+	 * EPROBE_DEFER. This code attempts to be compatible with both
+	 * for now; the ENODEV check can be removed once the API is fixed.
+	 * of_get_named_gpio() doesn't differentiate between a missing
+	 * property (which would be fine here, since the GPIO is optional)
+	 * and some other error. Patches have been posted for both issues.
+	 * Once they are check in, we should replace this with:
+	 * if (config->gpio < 0 && config->gpio != -ENOENT)
+	 */
+	if ((config->gpio == -ENODEV) || (config->gpio == -EPROBE_DEFER))
+		return ERR_PTR(-EPROBE_DEFER);
+
 	delay = of_get_property(np, "startup-delay-us", NULL);
 	if (delay)
 		config->startup_delay = be32_to_cpu(*delay);
@@ -125,13 +137,6 @@ static int fixed_voltage_disable(struct regulator_dev *dev)
 	return 0;
 }
 
-static int fixed_voltage_enable_time(struct regulator_dev *dev)
-{
-	struct fixed_voltage_data *data = rdev_get_drvdata(dev);
-
-	return data->startup_delay;
-}
-
 static int fixed_voltage_get_voltage(struct regulator_dev *dev)
 {
 	struct fixed_voltage_data *data = rdev_get_drvdata(dev);
@@ -157,7 +162,6 @@ static struct regulator_ops fixed_voltage_ops = {
 	.is_enabled = fixed_voltage_is_enabled,
 	.enable = fixed_voltage_enable,
 	.disable = fixed_voltage_disable,
-	.enable_time = fixed_voltage_enable_time,
 	.get_voltage = fixed_voltage_get_voltage,
 	.list_voltage = fixed_voltage_list_voltage,
 };
@@ -168,10 +172,13 @@ static int __devinit reg_fixed_voltage_probe(struct platform_device *pdev)
 	struct fixed_voltage_data *drvdata;
 	int ret;
 
-	if (pdev->dev.of_node)
+	if (pdev->dev.of_node) {
 		config = of_get_fixed_voltage_config(&pdev->dev);
-	else
+		if (IS_ERR(config))
+			return PTR_ERR(config);
+	} else {
 		config = pdev->dev.platform_data;
+	}
 
 	if (!config)
 		return -ENOMEM;
@@ -193,12 +200,13 @@ static int __devinit reg_fixed_voltage_probe(struct platform_device *pdev)
 	drvdata->desc.owner = THIS_MODULE;
 	drvdata->desc.ops = &fixed_voltage_ops;
 
+	drvdata->desc.enable_time = config->startup_delay;
+
 	if (config->microvolts)
 		drvdata->desc.n_voltages = 1;
 
 	drvdata->microvolts = config->microvolts;
 	drvdata->gpio = config->gpio;
-	drvdata->startup_delay = config->startup_delay;
 
 	if (gpio_is_valid(config->gpio)) {
 		drvdata->enable_high = config->enable_high;
