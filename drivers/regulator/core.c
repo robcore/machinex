@@ -23,7 +23,6 @@
 #include <linux/mutex.h>
 #include <linux/suspend.h>
 #include <linux/delay.h>
-#include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
@@ -1139,7 +1138,7 @@ overflow_err:
 static int _regulator_get_enable_time(struct regulator_dev *rdev)
 {
 	if (!rdev->desc->ops->enable_time)
-		return rdev->desc->enable_time;
+		return 0;
 	return rdev->desc->ops->enable_time(rdev);
 }
 
@@ -1423,54 +1422,10 @@ static int _regulator_can_change_status(struct regulator_dev *rdev)
 		return 0;
 }
 
-static int _regulator_do_enable(struct regulator_dev *rdev)
-{
-	int ret, delay;
-
-	/* Query before enabling in case configuration dependent.  */
-	ret = _regulator_get_enable_time(rdev);
-	if (ret >= 0) {
-		delay = ret;
-	} else {
-		rdev_warn(rdev, "enable_time() failed: %d\n", ret);
-		delay = 0;
-	}
-
-	trace_regulator_enable(rdev_get_name(rdev));
-
-	if (rdev->ena_gpio) {
-		gpio_set_value_cansleep(rdev->ena_gpio,
-					!rdev->ena_gpio_invert);
-		rdev->ena_gpio_state = 1;
-	} else if (rdev->desc->ops->enable) {
-		ret = rdev->desc->ops->enable(rdev);
-		if (ret < 0)
-			return ret;
-	} else {
-		return -EINVAL;
-	}
-
-	/* Allow the regulator to ramp; it would be useful to extend
-	 * this for bulk operations so that the regulators can ramp
-	 * together.  */
-	trace_regulator_enable_delay(rdev_get_name(rdev));
-
-	if (delay >= 1000) {
-		mdelay(delay / 1000);
-		udelay(delay % 1000);
-	} else if (delay) {
-		udelay(delay);
-	}
-
-	trace_regulator_enable_complete(rdev_get_name(rdev));
-
-	return 0;
-}
-
 /* locks held by regulator_enable() */
 static int _regulator_enable(struct regulator_dev *rdev)
 {
-	int ret;
+	int ret, delay;
 
 	/* check voltage and requested load before enabling */
 	if (rdev->constraints &&
@@ -1484,9 +1439,39 @@ static int _regulator_enable(struct regulator_dev *rdev)
 			if (!_regulator_can_change_status(rdev))
 				return -EPERM;
 
-			ret = _regulator_do_enable(rdev);
+			if (!rdev->desc->ops->enable)
+				return -EINVAL;
+
+			/* Query before enabling in case configuration
+			 * dependent.  */
+			ret = _regulator_get_enable_time(rdev);
+			if (ret >= 0) {
+				delay = ret;
+			} else {
+				rdev_warn(rdev, "enable_time() failed: %d\n",
+					   ret);
+				delay = 0;
+			}
+
+			trace_regulator_enable(rdev_get_name(rdev));
+
+			/* Allow the regulator to ramp; it would be useful
+			 * to extend this for bulk operations so that the
+			 * regulators can ramp together.  */
+			ret = rdev->desc->ops->enable(rdev);
 			if (ret < 0)
 				return ret;
+
+			trace_regulator_enable_delay(rdev_get_name(rdev));
+
+			if (delay >= 1000) {
+				mdelay(delay / 1000);
+				udelay(delay % 1000);
+			} else if (delay) {
+				udelay(delay);
+			}
+
+			trace_regulator_enable_complete(rdev_get_name(rdev));
 
 		} else if (ret < 0) {
 			rdev_err(rdev, "is_enabled() failed: %d\n", ret);
@@ -1537,30 +1522,6 @@ int regulator_enable(struct regulator *regulator)
 }
 EXPORT_SYMBOL_GPL(regulator_enable);
 
-static int _regulator_do_disable(struct regulator_dev *rdev)
-{
-	int ret;
-
-	trace_regulator_disable(rdev_get_name(rdev));
-
-	if (rdev->ena_gpio) {
-		gpio_set_value_cansleep(rdev->ena_gpio,
-					rdev->ena_gpio_invert);
-		rdev->ena_gpio_state = 0;
-
-	} else if (rdev->desc->ops->disable) {
-		ret = rdev->desc->ops->disable(rdev);
-		if (ret != 0)
-			return ret;
-	}
-
-	trace_regulator_disable_complete(rdev_get_name(rdev));
-
-	_notifier_call_chain(rdev, REGULATOR_EVENT_DISABLE,
-			     NULL);
-	return 0;
-}
-
 /* locks held by regulator_disable() */
 static int _regulator_disable(struct regulator_dev *rdev)
 {
@@ -1575,12 +1536,20 @@ static int _regulator_disable(struct regulator_dev *rdev)
 	    (rdev->constraints && !rdev->constraints->always_on)) {
 
 		/* we are last user */
-		if (_regulator_can_change_status(rdev)) {
-			ret = _regulator_do_disable(rdev);
+		if (_regulator_can_change_status(rdev) &&
+		    rdev->desc->ops->disable) {
+			trace_regulator_disable(rdev_get_name(rdev));
+
+			ret = rdev->desc->ops->disable(rdev);
 			if (ret < 0) {
 				rdev_err(rdev, "failed to disable\n");
 				return ret;
 			}
+
+			trace_regulator_disable_complete(rdev_get_name(rdev));
+
+			_notifier_call_chain(rdev, REGULATOR_EVENT_DISABLE,
+					     NULL);
 		}
 
 		rdev->use_count = 0;
@@ -1739,10 +1708,6 @@ EXPORT_SYMBOL_GPL(regulator_disable_deferred);
 
 static int _regulator_is_enabled(struct regulator_dev *rdev)
 {
-	/* A GPIO control always takes precedence */
-	if (rdev->ena_gpio)
-		return rdev->ena_gpio_state;
-
 	/* If we don't know then assume that the regulator is always on */
 	if (!rdev->desc->ops->is_enabled)
 		return 1;
@@ -1858,17 +1823,7 @@ EXPORT_SYMBOL_GPL(regulator_list_voltage);
 int regulator_is_supported_voltage(struct regulator *regulator,
 				   int min_uV, int max_uV)
 {
-	struct regulator_dev *rdev = regulator->rdev;
 	int i, voltages, ret;
-
-	/* If we can't change voltage check the current voltage */
-	if (!(rdev->constraints->valid_ops_mask & REGULATOR_CHANGE_VOLTAGE)) {
-		ret = regulator_get_voltage(regulator);
-		if (ret >= 0)
-			return (min_uV >= ret && ret <= max_uV);
-		else
-			return ret;
-	}
 
 	ret = regulator_count_voltages(regulator);
 	if (ret < 0)
@@ -3409,26 +3364,6 @@ struct regulator_dev *regulator_register(struct regulator_desc *regulator_desc,
 
 	dev_set_drvdata(&rdev->dev, rdev);
 
-	if (config->ena_gpio) {
-		ret = gpio_request_one(config->ena_gpio,
-				       GPIOF_DIR_OUT | config->ena_gpio_flags,
-				       rdev_get_name(rdev));
-		if (ret != 0) {
-			rdev_err(rdev, "Failed to request enable GPIO%d: %d\n",
-				 config->ena_gpio, ret);
-			goto clean;
-		}
-
-		rdev->ena_gpio = config->ena_gpio;
-		rdev->ena_gpio_invert = config->ena_gpio_invert;
-
-		if (config->ena_gpio_flags & GPIOF_OUT_INIT_HIGH)
-			rdev->ena_gpio_state = 1;
-
-		if (rdev->ena_gpio_invert)
-			rdev->ena_gpio_state = !rdev->ena_gpio_state;
-	}
-
 	/* set regulator constraints */
 	if (init_data)
 		constraints = &init_data->constraints;
@@ -3505,8 +3440,6 @@ unset_supplies:
 scrub:
 	if (rdev->supply)
 		regulator_put(rdev->supply);
-	if (rdev->ena_gpio)
-		gpio_free(rdev->ena_gpio);
 	kfree(rdev->constraints);
 	device_unregister(&rdev->dev);
 	/* device core frees rdev */
@@ -3543,8 +3476,6 @@ void regulator_unregister(struct regulator_dev *rdev)
 	unset_regulator_supplies(rdev);
 	list_del(&rdev->list);
 	kfree(rdev->constraints);
-	if (rdev->ena_gpio)
-		gpio_free(rdev->ena_gpio);
 	device_unregister(&rdev->dev);
 	mutex_unlock(&regulator_list_mutex);
 }
