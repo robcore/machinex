@@ -37,6 +37,17 @@ config USER_RC_INPUT
 
 source "drivers/media/rc/keymaps/Kconfig"
 
+config IR_LIRC_CODEC
+	tristate "Enable IR to LIRC bridge"
+	depends on RC_CORE
+	depends on LIRC
+	default y
+
+	---help---
+	   Enable this option to pass raw IR to and from userspace via
+	   the LIRC interface.
+
+
 config IR_NEC_DECODER
 	tristate "Enable IR raw decoder for the NEC protocol"
 	depends on RC_CORE
@@ -119,16 +130,6 @@ config IR_MCE_KBD_DECODER
 	   Enable this option if you have a Microsoft Remote Keyboard for
 	   Windows Media Center Edition, which you would like to use with
 	   a raw IR receiver in your system.
-
-config IR_LIRC_CODEC
-	tristate "Enable IR to LIRC bridge"
-	depends on RC_CORE
-	depends on LIRC
-	default y
-
-	---help---
-	   Enable this option to pass raw IR to and from userspace via
-	   the LIRC interface.
 
 config RC_ATI_REMOTE
 	tristate "ATI / X10 based USB RF remote controls"
