@@ -4741,10 +4741,10 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 		zone_pcp_init(zone);
 		for_each_lru(lru)
 			INIT_LIST_HEAD(&zone->lruvec.lists[lru]);
-		zone->reclaim_stat.recent_rotated[0] = 0;
-		zone->reclaim_stat.recent_rotated[1] = 0;
-		zone->reclaim_stat.recent_scanned[0] = 0;
-		zone->reclaim_stat.recent_scanned[1] = 0;
+		zone->lruvec.reclaim_stat.recent_rotated[0] = 0;
+		zone->lruvec.reclaim_stat.recent_rotated[1] = 0;
+		zone->lruvec.reclaim_stat.recent_scanned[0] = 0;
+		zone->lruvec.reclaim_stat.recent_scanned[1] = 0;
 		zap_zone_vm_stats(zone);
 		zone->flags = 0;
 		if (!size)
@@ -6492,7 +6492,7 @@ bool is_free_buddy_page(struct page *page)
 }
 #endif
 
-static struct trace_print_flags pageflag_names[] = {
+static const struct trace_print_flags pageflag_names[] = {
 	{1UL << PG_locked,		"locked"	},
 	{1UL << PG_error,		"error"		},
 	{1UL << PG_referenced,		"referenced"	},
@@ -6532,7 +6532,9 @@ static struct trace_print_flags pageflag_names[] = {
 	{1UL << PG_nocache,		"nocache"	},
 #endif
 	{1UL << PG_readahead,           "PG_readahead"  },
-	{-1UL,				NULL		},
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
+	{1UL << PG_compound_lock,	"compound_lock"	},
+#endif
 };
 
 static void dump_page_flags(unsigned long flags)
@@ -6546,7 +6548,7 @@ static void dump_page_flags(unsigned long flags)
 	/* remove zone id */
 	flags &= (1UL << NR_PAGEFLAGS) - 1;
 
-	for (i = 0; pageflag_names[i].name && flags; i++) {
+	for (i = 0; i < ARRAY_SIZE(pageflag_names) && flags; i++) {
 
 		mask = pageflag_names[i].mask;
 		if ((flags & mask) != mask)
