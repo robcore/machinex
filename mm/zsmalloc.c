@@ -87,6 +87,7 @@
 #include <linux/preempt.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
+#include "internal.h"
 
 #include <linux/zsmalloc.h>
 
