@@ -556,7 +556,6 @@ void ext4_error_inode(struct inode *inode, const char *function,
 	else
 		printk(KERN_ERR "__ext4_error: failed to allocate page buf for panic msg\n");
 	va_end(args);
-	save_error_info(sb, function, line);
 
 	ext4_handle_error(inode->i_sb, page_buf);
 	if (page_buf)
