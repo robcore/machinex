@@ -6532,9 +6532,6 @@ static struct trace_print_flags pageflag_names[] = {
 	{1UL << PG_nocache,		"nocache"	},
 #endif
 	{1UL << PG_readahead,           "PG_readahead"  },
-#ifdef CONFIG_TRANSPARENT_HUGEPAGE
-	{1UL << PG_compound_lock,	"compound_lock"	},
-#endif
 	{-1UL,				NULL		},
 };
 
