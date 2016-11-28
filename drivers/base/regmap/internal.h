@@ -38,7 +38,6 @@ struct regmap {
 	void *work_buf;     /* Scratch buffer used to format I/O */
 	struct regmap_format format;  /* Buffer format */
 	const struct regmap_bus *bus;
-	const char *name;
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs;
