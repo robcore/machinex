@@ -75,8 +75,7 @@ static struct inode *__lookup_free_space_inode(struct btrfs_root *root,
 		return ERR_PTR(-ENOENT);
 	}
 
-	mapping_set_gfp_mask(inode->i_mapping,
-			mapping_gfp_mask(inode->i_mapping) & ~__GFP_FS);
+	inode->i_mapping->flags &= ~__GFP_FS;
 
 	return inode;
 }
@@ -366,7 +365,7 @@ static int io_ctl_prepare_pages(struct io_ctl *io_ctl, struct inode *inode,
 
 static void io_ctl_set_generation(struct io_ctl *io_ctl, u64 generation)
 {
-	__le64 *val;
+	u64 *val;
 
 	io_ctl_map_page(io_ctl, 1);
 
@@ -389,7 +388,7 @@ static void io_ctl_set_generation(struct io_ctl *io_ctl, u64 generation)
 
 static int io_ctl_check_generation(struct io_ctl *io_ctl, u64 generation)
 {
-	__le64 *gen;
+	u64 *gen;
 
 	/*
 	 * Skip the crc area.  If we don't check crcs then we just have a 64bit
@@ -973,9 +972,7 @@ int __btrfs_write_out_cache(struct btrfs_root *root, struct inode *inode,
 		goto out;
 
 
-	ret = filemap_write_and_wait(inode->i_mapping);
-	if (ret)
-		goto out;
+	btrfs_wait_ordered_range(inode, 0, (u64)-1);
 
 	key.objectid = BTRFS_FREE_SPACE_OBJECTID;
 	key.offset = offset;

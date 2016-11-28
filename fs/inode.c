@@ -1522,7 +1522,8 @@ static int update_time(struct inode *inode, struct timespec *time, int flags)
 
 /**
  *	touch_atime	-	update the access time
- *	@path: the &struct path to update
+ *	@mnt: mount the inode is accessed on
+ *	@dentry: dentry accessed
  *
  *	Update the accessed time on an inode and mark it for writeback.
  *	This function automatically handles read only file systems and media,
