@@ -1,0 +1,15 @@
+#!/bin/bash
+#patch -p1 -R < "patches-all/9536-i2c.patch"
+#patch -p1 -R < "patches-all/9535-wdog.patch"
+#patch -p1 -R < "patches-all/9534-net-and-fs-updates.patch"
+patch -p1 -R < "patches-all/9533-rescounter-remove-__must_check-from-res_counter_char.patch"
+patch -p1 -R < "patches-all/9532-memcg-don-t-uncharge-in-mem_cgroup_move_accounting.patch"
+patch -p1 -R < "patches-all/9531-memcg-move-charges-to-root-cgroup-if-use_hierarchy-0.patch"
+patch -p1 -R < "patches-all/9530-memcg-use-res_counter_uncharge_until-in-move_parent.patch"
+patch -p1 -R < "patches-all/9529-rescounters-add-res_counter_uncharge_until.patch"
+patch -p1 -R < "patches-all/9528-mm-vmscan-kill-struct-mem_cgroup_zone.patch"
+#patch -p1 -R < "patches-all/9527-mm-vmscan-push-lruvec-pointer-into-should_continue.patch"
+#patch -p1 -R < "patches-all/9526-mm-vmscan-push-lruvec-pointer-into-shrink_list.patch"
+#patch -p1 -R < "patches-all/9525-fucking-decimated-compcache.patch"
+#patch -p1 -R < "patches-all/9524-mm-patches-as-well-as-gutted-compcache-from-vmscan-a.patch"
+
