@@ -555,7 +555,7 @@ __do_cache_op(unsigned long start, unsigned long end)
 static inline int
 do_cache_op(unsigned long start, unsigned long end, int flags)
 {
-	
+
 	if (end < start || flags)
 		return -EINVAL;
 
@@ -895,6 +895,11 @@ void __init early_trap_init(void *vectors_base)
 	memcpy((void *)vectors + 0x1000, __stubs_start, __stubs_end - __stubs_start);
 
 	kuser_init(vectors_base);
+
+	memcpy((void *)(vectors + KERN_SIGRETURN_CODE - CONFIG_VECTORS_BASE),
+	       sigreturn_codes, sizeof(sigreturn_codes));
+	memcpy((void *)(vectors + KERN_RESTART_CODE - CONFIG_VECTORS_BASE),
+	       syscall_restart_code, sizeof(syscall_restart_code));
 
 	flush_icache_range(vectors, vectors + PAGE_SIZE * 2);
 	modify_domain(DOMAIN_USER, DOMAIN_CLIENT);
