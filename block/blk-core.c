@@ -473,8 +473,8 @@ static int blk_init_free_list(struct request_queue *q)
 	init_waitqueue_head(&rl->wait[BLK_RW_ASYNC]);
 
 	rl->rq_pool = mempool_create_node(BLKDEV_MIN_RQ, mempool_alloc_slab,
-				mempool_free_slab, request_cachep, q->node);
-
+					  mempool_free_slab, request_cachep,
+					  GFP_KERNEL, q->node);
 	if (!rl->rq_pool)
 		return -ENOMEM;
 
@@ -948,45 +948,42 @@ out:
  * Returns %NULL on failure, with @q->queue_lock held.
  * Returns !%NULL on success, with @q->queue_lock *not held*.
  */
-static struct request *get_request_wait(struct request_queue *q, int rw_flags,
-					struct bio *bio)
+static struct request *get_request(struct request_queue *q, int rw_flags,
+				   struct bio *bio, gfp_t gfp_mask)
 {
 	const bool is_sync = rw_is_sync(rw_flags) != 0;
+	DEFINE_WAIT(wait);
+	struct request_list *rl = &q->rq;
 	struct request *rq;
+retry:
+	rq = __get_request(q, rw_flags, bio, gfp_mask);
+	if (rq)
+		return rq;
 
-	rq = get_request(q, rw_flags, bio, GFP_NOIO);
-	while (!rq) {
-		DEFINE_WAIT(wait);
-		struct request_list *rl = &q->rq;
+	if (!(gfp_mask & __GFP_WAIT) || unlikely(blk_queue_dead(q)))
+		return NULL;
 
-		if (unlikely(blk_queue_dead(q)))
-			return NULL;
+	/* wait on @rl and retry */
+	prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
+				  TASK_UNINTERRUPTIBLE);
 
-		prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
-				TASK_UNINTERRUPTIBLE);
+	trace_block_sleeprq(q, bio, rw_flags & 1);
 
-		trace_block_sleeprq(q, bio, rw_flags & 1);
+	spin_unlock_irq(q->queue_lock);
+	io_schedule();
 
-		spin_unlock_irq(q->queue_lock);
-		io_schedule();
+	/*
+	 * After sleeping, we become a "batching" process and will be able
+	 * to allocate at least one request, and up to a big batch of them
+	 * for a small period time.  See ioc_batching, ioc_set_batching
+	 */
+	create_io_context(GFP_NOIO, q->node);
+	ioc_set_batching(q, current->io_context);
 
-		/*
-		 * After sleeping, we become a "batching" process and
-		 * will be able to allocate at least one request, and
-		 * up to a big batch of them for a small period time.
-		 * See ioc_batching, ioc_set_batching
-		 */
-		create_io_context(current, GFP_NOIO, q->node);
-		ioc_set_batching(q, current->io_context);
+	spin_lock_irq(q->queue_lock);
+	finish_wait(&rl->wait[is_sync], &wait);
 
-		spin_lock_irq(q->queue_lock);
-		finish_wait(&rl->wait[is_sync], &wait);
-
-		rq = get_request(q, rw_flags, bio, GFP_NOIO);
-	};
-
-	return rq;
-}
+	goto retry;
 
 struct request *blk_get_request(struct request_queue *q, int rw, gfp_t gfp_mask)
 {
