@@ -255,8 +255,8 @@ struct mem_cgroup {
 		 */
 		struct rcu_head rcu_freeing;
 		/*
-		 * We also need some space for a worker in deferred freeing.
-		 * By the time we call it, rcu_freeing is no longer in use.
+		 * But when using vfree(), that cannot be done at
+		 * interrupt time, so we must then queue the work.
 		 */
 		struct work_struct work_freeing;
 	};
@@ -442,7 +442,6 @@ void sock_update_memcg(struct sock *sk)
 {
 	if (mem_cgroup_sockets_enabled) {
 		struct mem_cgroup *memcg;
-		struct cg_proto *cg_proto;
 
 		BUG_ON(!sk->sk_prot->proto_cgroup);
 
@@ -462,10 +461,9 @@ void sock_update_memcg(struct sock *sk)
 
 		rcu_read_lock();
 		memcg = mem_cgroup_from_task(current);
-		cg_proto = sk->sk_prot->proto_cgroup(memcg);
-		if (!mem_cgroup_is_root(memcg) && memcg_proto_active(cg_proto)) {
+		if (!mem_cgroup_is_root(memcg)) {
 			mem_cgroup_get(memcg);
-			sk->sk_cgrp = cg_proto;
+			sk->sk_cgrp = sk->sk_prot->proto_cgroup(memcg);
 		}
 		rcu_read_unlock();
 	}
@@ -493,19 +491,6 @@ struct cg_proto *tcp_proto_cgroup(struct mem_cgroup *memcg)
 EXPORT_SYMBOL(tcp_proto_cgroup);
 #endif /* CONFIG_INET */
 #endif /* CONFIG_MEMCG_KMEM */
-
-#if defined(CONFIG_INET) && defined(CONFIG_CGROUP_MEM_RES_CTLR_KMEM)
-static void disarm_sock_keys(struct mem_cgroup *memcg)
-{
-	if (!memcg_proto_activated(&memcg->tcp_mem.cg_proto))
-		return;
-	static_key_slow_dec(&memcg_socket_limit_enabled);
-}
-#else
-static void disarm_sock_keys(struct mem_cgroup *memcg)
-{
-}
-#endif
 
 static void drain_all_stock_async(struct mem_cgroup *memcg);
 
@@ -5020,40 +5005,23 @@ out_free:
 }
 
 /*
- * Helpers for freeing a kmalloc()ed/vzalloc()ed mem_cgroup by RCU,
+ * Helpers for freeing a vzalloc()ed mem_cgroup by RCU,
  * but in process context.  The work_freeing structure is overlaid
  * on the rcu_freeing structure, which itself is overlaid on memsw.
  */
-static void free_work(struct work_struct *work)
+static void vfree_work(struct work_struct *work)
 {
 	struct mem_cgroup *memcg;
-	int size = sizeof(struct mem_cgroup);
 
 	memcg = container_of(work, struct mem_cgroup, work_freeing);
-	/*
-	 * We need to make sure that (at least for now), the jump label
-	 * destruction code runs outside of the cgroup lock. This is because
-	 * get_online_cpus(), which is called from the static_branch update,
-	 * can't be called inside the cgroup_lock. cpusets are the ones
-	 * enforcing this dependency, so if they ever change, we might as well.
-	 *
-	 * schedule_work() will guarantee this happens. Be careful if you need
-	 * to move this code around, and make sure it is outside
-	 * the cgroup_lock.
-	 */
-	disarm_sock_keys(memcg);
-	if (size < PAGE_SIZE)
-		kfree(memcg);
-	else
-		vfree(memcg);
+	vfree(memcg);
 }
-
-static void free_rcu(struct rcu_head *rcu_head)
+static void vfree_rcu(struct rcu_head *rcu_head)
 {
 	struct mem_cgroup *memcg;
 
 	memcg = container_of(rcu_head, struct mem_cgroup, rcu_freeing);
-	INIT_WORK(&memcg->work_freeing, free_work);
+	INIT_WORK(&memcg->work_freeing, vfree_work);
 	schedule_work(&memcg->work_freeing);
 }
 
@@ -5079,7 +5047,10 @@ static void __mem_cgroup_free(struct mem_cgroup *memcg)
 		free_mem_cgroup_per_zone_info(memcg, node);
 
 	free_percpu(memcg->stat);
-	call_rcu(&memcg->rcu_freeing, free_rcu);
+	if (sizeof(struct mem_cgroup) < PAGE_SIZE)
+		kfree_rcu(memcg, rcu_freeing);
+	else
+		call_rcu(&memcg->rcu_freeing, vfree_rcu);
 }
 
 static void mem_cgroup_get(struct mem_cgroup *memcg)
