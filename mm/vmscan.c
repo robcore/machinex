@@ -1863,7 +1863,7 @@ static inline bool should_continue_reclaim(struct mem_cgroup_zone *mz,
 	 */
 	lruvec = mem_cgroup_zone_lruvec(mz->zone, mz->mem_cgroup);
 	pages_for_compaction = (2UL << sc->order);
-	inactive_lru_pages = get_lruvec_size(lruvec, LRU_INACTIVE_FILE);;
+	inactive_lru_pages = get_lruvec_size(lruvec, LRU_INACTIVE_FILE);
 	if (get_nr_swap_pages() > 0)
 		inactive_lru_pages += get_lruvec_size(lruvec,
 						      LRU_INACTIVE_ANON);
