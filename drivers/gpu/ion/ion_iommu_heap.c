@@ -32,7 +32,7 @@ struct ion_iommu_heap {
 	struct ion_heap heap;
 	unsigned int has_outer_cache;
 	struct ion_page_pool **cached_pools;
-	struct ion_page_pool **uncached_pools
+	struct ion_page_pool **uncached_pools;
 };
 
 /*
