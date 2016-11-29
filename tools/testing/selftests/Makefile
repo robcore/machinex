@@ -1,4 +1,4 @@
-TARGETS = breakpoints vm
+TARGETS = breakpoints vm  epoll
 
 all:
 	for TARGET in $(TARGETS); do \
