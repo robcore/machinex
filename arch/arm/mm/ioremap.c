@@ -25,7 +25,6 @@
 #include <linux/mm.h>
 #include <linux/vmalloc.h>
 #include <linux/io.h>
-#include <linux/sizes.h>
 
 #include <asm/cp15.h>
 #include <asm/cputype.h>
@@ -33,6 +32,7 @@
 #include <asm/mmu_context.h>
 #include <asm/pgalloc.h>
 #include <asm/tlbflush.h>
+#include <asm/sizes.h>
 #include <asm/system_info.h>
 
 #include <asm/mach/map.h>
@@ -319,7 +319,6 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
  	if (!area)
  		return NULL;
  	addr = (unsigned long)area->addr;
-	area->phys_addr = __pfn_to_phys(pfn);
 
 #if !defined(CONFIG_SMP) && !defined(CONFIG_ARM_LPAE)
 	if (DOMAIN_IO == 0 &&
