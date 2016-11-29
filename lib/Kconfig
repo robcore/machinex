@@ -405,4 +405,9 @@ config QMI_ENCDEC
 	  The kernel drivers receive the QMI message over a transport
 	  and then decode it into a C structure.
 
+config OID_REGISTRY
+	tristate
+	help
+	  Enable fast lookup object identifier registry.
+
 endmenu
