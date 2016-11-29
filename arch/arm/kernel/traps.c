@@ -893,9 +893,6 @@ void __init early_trap_init(void *vectors_base)
 	 */
 	memcpy((void *)vectors, __vectors_start, __vectors_end - __vectors_start);
 	memcpy((void *)vectors + 0x1000, __stubs_start, __stubs_end - __stubs_start);
-
-	memcpy((void *)(vectors + KERN_SIGRETURN_CODE - CONFIG_VECTORS_BASE),
-	       sigreturn_codes, sizeof(sigreturn_codes));
 	memcpy((void *)(vectors + KERN_RESTART_CODE - CONFIG_VECTORS_BASE),
 	       syscall_restart_code, sizeof(syscall_restart_code));
 
