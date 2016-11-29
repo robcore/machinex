@@ -352,9 +352,8 @@ static irqreturn_t ab8500_irq(int irq, void *dev)
 		do {
 			int bit = __ffs(value);
 			int line = i * 8 + bit;
-			int virq = ab8500_irq_get_virq(ab8500, line);
 
-			handle_nested_irq(virq);
+			handle_nested_irq(ab8500->irq_base + line);
 			value &= ~(1 << bit);
 		} while (value);
 	}

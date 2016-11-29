@@ -275,7 +275,7 @@ fail:
 		if (fbi)
 			framebuffer_release(fbi);
 		if (fb)
-			drm_framebuffer_remove(fb);
+			fb->funcs->destroy(fb);
 	}
 
 	return ret;
@@ -397,7 +397,7 @@ void omap_fbdev_free(struct drm_device *dev)
 
 	/* this will free the backing object */
 	if (fbdev->fb)
-		drm_framebuffer_remove(fbdev->fb);
+		fbdev->fb->funcs->destroy(fbdev->fb);
 
 	kfree(fbdev);
 

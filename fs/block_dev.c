@@ -100,7 +100,7 @@ void kill_bdev(struct block_device *bdev)
 
 	invalidate_bh_lrus();
 	truncate_inode_pages(mapping, 0);
-}
+}	
 EXPORT_SYMBOL(kill_bdev);
 
 /* Invalidate clean unused buffers and pagecache. */
@@ -123,8 +123,6 @@ EXPORT_SYMBOL(invalidate_bdev);
 
 int set_blocksize(struct block_device *bdev, int size)
 {
-	struct address_space *mapping;
-
 	/* Size must be a power of two, and between 512 and PAGE_SIZE */
 	if (size > PAGE_SIZE || size < 512 || !is_power_of_2(size))
 		return -EINVAL;
@@ -133,20 +131,6 @@ int set_blocksize(struct block_device *bdev, int size)
 	if (size < bdev_logical_block_size(bdev))
 		return -EINVAL;
 
-	/* Prevent starting I/O or mapping the device */
-	percpu_down_write(&bdev->bd_block_size_semaphore);
-
-	/* Check that the block device is not memory mapped */
-	mapping = bdev->bd_inode->i_mapping;
-	mutex_lock(&mapping->i_mmap_mutex);
-	if (!prio_tree_empty(&mapping->i_mmap) ||
-	    !list_empty(&mapping->i_mmap_nonlinear)) {
-		mutex_unlock(&mapping->i_mmap_mutex);
-		percpu_up_write(&bdev->bd_block_size_semaphore);
-		return -EBUSY;
-	}
-	mutex_unlock(&mapping->i_mmap_mutex);
-
 	/* Don't change the size if it is same as current */
 	if (bdev->bd_block_size != size) {
 		sync_blockdev(bdev);
@@ -154,9 +138,6 @@ int set_blocksize(struct block_device *bdev, int size)
 		bdev->bd_inode->i_blkbits = blksize_bits(size);
 		kill_bdev(bdev);
 	}
-
-	percpu_up_write(&bdev->bd_block_size_semaphore);
-
 	return 0;
 }
 
@@ -439,13 +420,13 @@ out:
 	mutex_unlock(&bd_inode->i_mutex);
 	return retval;
 }
-
+	
 int blkdev_fsync(struct file *filp, loff_t start, loff_t end, int datasync)
 {
 	struct inode *bd_inode = filp->f_mapping->host;
 	struct block_device *bdev = I_BDEV(bd_inode);
 	int error;
-
+	
 	error = filemap_write_and_wait_range(filp->f_mapping, start, end);
 	if (error)
 		return error;
@@ -475,12 +456,6 @@ static struct inode *bdev_alloc_inode(struct super_block *sb)
 	struct bdev_inode *ei = kmem_cache_alloc(bdev_cachep, GFP_KERNEL);
 	if (!ei)
 		return NULL;
-
-	if (unlikely(percpu_init_rwsem(&ei->bdev.bd_block_size_semaphore))) {
-		kmem_cache_free(bdev_cachep, ei);
-		return NULL;
-	}
-
 	return &ei->vfs_inode;
 }
 
@@ -488,8 +463,6 @@ static void bdev_i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
 	struct bdev_inode *bdi = BDEV_I(inode);
-
-	percpu_free_rwsem(&bdi->bdev.bd_block_size_semaphore);
 
 	kmem_cache_free(bdev_cachep, bdi);
 }
@@ -666,7 +639,7 @@ void bdput(struct block_device *bdev)
 }
 
 EXPORT_SYMBOL(bdput);
-
+ 
 static struct block_device *bd_acquire(struct inode *inode)
 {
 	struct block_device *bdev;
@@ -1609,22 +1582,6 @@ static long block_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	return blkdev_ioctl(bdev, mode, cmd, arg);
 }
 
-ssize_t blkdev_aio_read(struct kiocb *iocb, const struct iovec *iov,
-			unsigned long nr_segs, loff_t pos)
-{
-	ssize_t ret;
-	struct block_device *bdev = I_BDEV(iocb->ki_filp->f_mapping->host);
-
-	percpu_down_read(&bdev->bd_block_size_semaphore);
-
-	ret = generic_file_aio_read(iocb, iov, nr_segs, pos);
-
-	percpu_up_read(&bdev->bd_block_size_semaphore);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(blkdev_aio_read);
-
 /*
  * Write data to the block device.  Only intended for the block device itself
  * and the raw driver which basically is a fake block device.
@@ -1636,16 +1593,12 @@ ssize_t blkdev_aio_write(struct kiocb *iocb, const struct iovec *iov,
 			 unsigned long nr_segs, loff_t pos)
 {
 	struct file *file = iocb->ki_filp;
-	struct block_device *bdev = I_BDEV(file->f_mapping->host);
 	struct blk_plug plug;
 	ssize_t ret;
 
 	BUG_ON(iocb->ki_pos != pos);
 
 	blk_start_plug(&plug);
-
-	percpu_down_read(&bdev->bd_block_size_semaphore);
-
 	ret = __generic_file_aio_write(iocb, iov, nr_segs, &iocb->ki_pos);
 	if (ret > 0 || ret == -EIOCBQUEUED) {
 		ssize_t err;
@@ -1654,11 +1607,7 @@ ssize_t blkdev_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		if (err < 0 && ret > 0)
 			ret = err;
 	}
-
-	percpu_up_read(&bdev->bd_block_size_semaphore);
-
 	blk_finish_plug(&plug);
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(blkdev_aio_write);
@@ -1677,20 +1626,6 @@ static ssize_t blkdev_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	if (size < iocb->ki_left)
 		nr_segs = iov_shorten((struct iovec *)iov, nr_segs, size);
 	return generic_file_aio_read(iocb, iov, nr_segs, pos);
-}
-
-static int blkdev_mmap(struct file *file, struct vm_area_struct *vma)
-{
-	int ret;
-	struct block_device *bdev = I_BDEV(file->f_mapping->host);
-
-	percpu_down_read(&bdev->bd_block_size_semaphore);
-
-	ret = generic_file_mmap(file, vma);
-
-	percpu_up_read(&bdev->bd_block_size_semaphore);
-
-	return ret;
 }
 
 /*
@@ -1726,7 +1661,7 @@ const struct file_operations def_blk_fops = {
 	.write		= do_sync_write,
 	.aio_read	= blkdev_aio_read,
 	.aio_write	= blkdev_aio_write,
-	.mmap		= blkdev_mmap,
+	.mmap		= generic_file_mmap,
 	.fsync		= blkdev_fsync,
 	.unlocked_ioctl	= block_ioctl,
 #ifdef CONFIG_COMPAT
