@@ -60,9 +60,9 @@ struct cpufreq_alucard_cpuinfo {
 	struct cpufreq_frequency_table *freq_table;
 	struct delayed_work work;
 	struct cpufreq_policy *cur_policy;
-	int cpu;
-	int min_index;
-	int max_index;
+	unsigned int cpu;
+	unsigned int min_index;
+	unsigned int max_index;
 	int pump_inc_step;
 	int pump_inc_step_at_min_freq;
 	int pump_dec_step;
@@ -474,9 +474,9 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	unsigned int wall_time, idle_time;
 	unsigned int index = 0;
 	unsigned int hi_index = 0;
-	int cur_load = -1;
+	unsigned int cur_load = -1;
 	unsigned int cpu;
-	int io_busy = alucard_tuners_ins.io_is_busy;
+	unsigned int io_busy = alucard_tuners_ins.io_is_busy;
 	unsigned int cpus_up_rate = alucard_tuners_ins.cpus_up_rate;
 	unsigned int cpus_down_rate = alucard_tuners_ins.cpus_down_rate;
 	bool check_up = false, check_down = false;
@@ -593,7 +593,7 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 	unsigned int cpu;
 	struct cpufreq_alucard_cpuinfo *this_alucard_cpuinfo;
 	int rc, delay;
-	int io_busy;
+	unsigned int io_busy;
 
 	cpu = policy->cpu;
 	io_busy = alucard_tuners_ins.io_is_busy;
