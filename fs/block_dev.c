@@ -1663,22 +1663,6 @@ ssize_t blkdev_aio_write(struct kiocb *iocb, const struct iovec *iov,
 }
 EXPORT_SYMBOL_GPL(blkdev_aio_write);
 
-static ssize_t blkdev_aio_read(struct kiocb *iocb, const struct iovec *iov,
-			 unsigned long nr_segs, loff_t pos)
-{
-	struct file *file = iocb->ki_filp;
-	struct inode *bd_inode = file->f_mapping->host;
-	loff_t size = i_size_read(bd_inode);
-
-	if (pos >= size)
-		return 0;
-
-	size -= pos;
-	if (size < iocb->ki_left)
-		nr_segs = iov_shorten((struct iovec *)iov, nr_segs, size);
-	return generic_file_aio_read(iocb, iov, nr_segs, pos);
-}
-
 int blkdev_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	int ret;
