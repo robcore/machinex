@@ -853,7 +853,7 @@ static void rts51x_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 		} else {
 			usb_stor_dbg(us, "NOT working scsi, not SS\n");
 			chip->proto_handler_backup(srb, us);
-			/* Check wether card is plugged in */
+			/* Check whether card is plugged in */
 			if (srb->cmnd[0] == TEST_UNIT_READY) {
 				if (srb->result == SAM_STAT_GOOD) {
 					SET_LUN_READY(chip, srb->device->lun);

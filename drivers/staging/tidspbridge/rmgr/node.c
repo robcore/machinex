@@ -727,7 +727,7 @@ DBAPI node_alloc_msg_buf(struct node_object *hnode, u32 usize,
 		case 4:
 			break;
 		default:
-			/* alignment value not suportted */
+			/* alignment value not supportted */
 			status = -EPERM;
 			break;
 		}
