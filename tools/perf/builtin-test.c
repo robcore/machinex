@@ -33,7 +33,6 @@ static int test__vmlinux_matches_kallsyms(void)
 	struct map *kallsyms_map, *vmlinux_map;
 	struct machine kallsyms, vmlinux;
 	enum map_type type = MAP__FUNCTION;
-	long page_size = sysconf(_SC_PAGE_SIZE);
 	struct ref_reloc_sym ref_reloc_sym = { .name = "_stext", };
 
 	/*
@@ -997,7 +996,6 @@ static void segfault_handler(int sig __used, siginfo_t *info __used, void *uc __
 
 static int __test__rdpmc(void)
 {
-	long page_size = sysconf(_SC_PAGE_SIZE);
 	volatile int tmp = 0;
 	u64 i, loops = 1000;
 	int n;
