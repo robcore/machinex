@@ -577,7 +577,7 @@ void ctrl_alt_del(void)
 	else
 		kill_cad_pid(SIGINT, 1);
 }
-
+	
 /*
  * Unprivileged users may change the real gid to the effective gid
  * or vice versa.  (BSD-style)
@@ -1764,7 +1764,7 @@ static int prctl_set_mm(int opt, unsigned long addr,
 	if (!capable(CAP_SYS_RESOURCE))
 		return -EPERM;
 
-	if (addr >= TASK_SIZE || addr < mmap_min_addr)
+	if (addr >= TASK_SIZE)
 		return -EINVAL;
 
 	down_read(&mm->mmap_sem);
@@ -1857,19 +1857,9 @@ out:
 
 	return error;
 }
-
-static int prctl_get_tid_address(struct task_struct *me, int __user **tid_addr)
-{
-	return put_user(me->clear_child_tid, tid_addr);
-}
-
 #else /* CONFIG_CHECKPOINT_RESTORE */
 static int prctl_set_mm(int opt, unsigned long addr,
 			unsigned long arg4, unsigned long arg5)
-{
-	return -EINVAL;
-}
-static int prctl_get_tid_address(struct task_struct *me, int __user **tid_addr)
 {
 	return -EINVAL;
 }
@@ -2147,9 +2137,6 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 				else
 					return -EINVAL;
 				break;
-		case PR_GET_TID_ADDRESS:
-			error = prctl_get_tid_address(me, (int __user **)arg2);
-			break;
 			default:
 				return -EINVAL;
 			}
@@ -2196,16 +2183,6 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 			put_task_struct(tsk);
 			error = 0;
 			break;
-		case PR_SET_NO_NEW_PRIVS:
-			if (arg2 != 1 || arg3 || arg4 || arg5)
-				return -EINVAL;
-
-			task_set_no_new_privs(current);
-			break;
-		case PR_GET_NO_NEW_PRIVS:
-			if (arg2 || arg3 || arg4 || arg5)
-				return -EINVAL;
-			return task_no_new_privs(current) ? 1 : 0;
 		default:
 			error = -EINVAL;
 			break;

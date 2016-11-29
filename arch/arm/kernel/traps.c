@@ -555,7 +555,7 @@ __do_cache_op(unsigned long start, unsigned long end)
 static inline int
 do_cache_op(unsigned long start, unsigned long end, int flags)
 {
-
+	
 	if (end < start || flags)
 		return -EINVAL;
 
