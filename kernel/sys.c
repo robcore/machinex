@@ -1764,7 +1764,7 @@ static int prctl_set_mm(int opt, unsigned long addr,
 	if (!capable(CAP_SYS_RESOURCE))
 		return -EPERM;
 
-	if (addr >= TASK_SIZE)
+	if (addr >= TASK_SIZE || addr < mmap_min_addr)
 		return -EINVAL;
 
 	down_read(&mm->mmap_sem);
@@ -1857,9 +1857,19 @@ out:
 
 	return error;
 }
+
+static int prctl_get_tid_address(struct task_struct *me, int __user **tid_addr)
+{
+	return put_user(me->clear_child_tid, tid_addr);
+}
+
 #else /* CONFIG_CHECKPOINT_RESTORE */
 static int prctl_set_mm(int opt, unsigned long addr,
 			unsigned long arg4, unsigned long arg5)
+{
+	return -EINVAL;
+}
+static int prctl_get_tid_address(struct task_struct *me, int __user **tid_addr)
 {
 	return -EINVAL;
 }
@@ -2137,6 +2147,9 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 				else
 					return -EINVAL;
 				break;
+		case PR_GET_TID_ADDRESS:
+			error = prctl_get_tid_address(me, (int __user **)arg2);
+			break;
 			default:
 				return -EINVAL;
 			}
