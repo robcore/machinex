@@ -192,23 +192,7 @@ static int seccomp_check_filter(struct sock_filter *filter, unsigned int flen)
 	}
 	return 0;
 }
-#endif /* CONFIG_SECCOMP_FILTER */
 
-static inline bool seccomp_may_assign_mode(unsigned long seccomp_mode)
-{
-	if (current->seccomp.mode && current->seccomp.mode != seccomp_mode)
-		return false;
-
-	return true;
-}
-
-static inline void seccomp_assign_mode(unsigned long seccomp_mode)
-{
-	current->seccomp.mode = seccomp_mode;
-	set_tsk_thread_flag(current, TIF_SECCOMP);
-}
-
-#ifdef CONFIG_SECCOMP_FILTER
 /**
  * seccomp_run_filters - evaluates all seccomp filters against @syscall
  * @syscall: number of the current system call
@@ -402,7 +386,7 @@ static struct seccomp_filter *seccomp_prepare_filter(struct sock_fprog *fprog)
 	 * This avoids scenarios where unprivileged tasks can affect the
 	 * behavior of privileged children.
 	 */
-	if (!current->no_new_privs &&
+	if (!task_no_new_privs(current) &&
 	    security_capable_noaudit(current_cred(), current_user_ns(),
 				     CAP_SYS_ADMIN) != 0)
 		return ERR_PTR(-EACCES);
@@ -702,7 +686,8 @@ static long seccomp_set_mode_strict(void)
 
 	spin_lock_irq(&current->sighand->siglock);
 
-	if (!seccomp_may_assign_mode(seccomp_mode))
+	if (current->seccomp.mode &&
+	    current->seccomp.mode != seccomp_mode)
 		goto out;
 
 #ifdef TIF_NOTSC
