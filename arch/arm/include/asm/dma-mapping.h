@@ -303,6 +303,13 @@ static inline int dma_mmap_nonconsistent(struct device *dev,
 extern void __init init_dma_coherent_pool_size(unsigned long size);
 
 /*
+ * This can be called during early boot to increase the size of the atomic
+ * coherent DMA pool above the default value of 256KiB. It must be called
+ * before postcore_initcall.
+ */
+extern void __init init_dma_coherent_pool_size(unsigned long size);
+
+/*
  * This can be called during boot to increase the size of the consistent
  * DMA region above it's default value of 2MB. It must be called before the
  * memory allocator is initialised, i.e. before any core_initcall.

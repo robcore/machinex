@@ -306,6 +306,8 @@ static void *__alloc_from_contiguous(struct device *dev, size_t size,
 
 #define DEFAULT_DMA_COHERENT_POOL_SIZE	SZ_256K
 
+#define DEFAULT_DMA_COHERENT_POOL_SIZE	SZ_256K
+
 struct dma_pool {
 	size_t size;
 	spinlock_t lock;
@@ -325,6 +327,21 @@ static int __init early_coherent_pool(char *p)
 	return 0;
 }
 early_param("coherent_pool", early_coherent_pool);
+
+void __init init_dma_coherent_pool_size(unsigned long size)
+{
+	/*
+	 * Catch any attempt to set the pool size too late.
+	 */
+	BUG_ON(atomic_pool.vaddr);
+
+	/*
+	 * Set architecture specific coherent pool size only if
+	 * it has not been changed by kernel command line parameter.
+	 */
+	if (atomic_pool.size == DEFAULT_DMA_COHERENT_POOL_SIZE)
+		atomic_pool.size = size;
+}
 
 void __init init_dma_coherent_pool_size(unsigned long size)
 {
@@ -365,7 +382,7 @@ static int __init atomic_pool_init(void)
 
 	if (IS_ENABLED(CONFIG_CMA))
 		ptr = __alloc_from_contiguous(NULL, pool->size, prot, &page,
-						atomic_pool_init, NULL);
+						NULL);
 	else
 		ptr = __alloc_remap_buffer(NULL, pool->size, GFP_KERNEL, prot,
 					   &page, NULL);
@@ -552,7 +569,7 @@ static bool __in_atomic_pool(void *start, size_t size)
 	void *pool_start = pool->vaddr;
 	void *pool_end = pool->vaddr + pool->size;
 
-	if (start < pool_start || start > pool_end)
+	if (start < pool_start || start >= pool_end)
 		return false;
 
 	if (end <= pool_end)
