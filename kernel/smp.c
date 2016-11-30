@@ -120,16 +120,16 @@ void __init call_function_init(void)
  * previous function call. For multi-cpu calls its even more interesting
  * as we'll have to ensure no other cpu is observing our csd.
  */
-static void csd_lock_wait(struct call_single_data *data)
+static void csd_lock_wait(struct call_single_data *csd)
 {
-	while (data->flags & CSD_FLAG_LOCK)
+	while (csd->flags & CSD_FLAG_LOCK)
 		cpu_relax();
 }
 
-static void csd_lock(struct call_single_data *data)
+static void csd_lock(struct call_single_data *csd)
 {
-	csd_lock_wait(data);
-	data->flags |= CSD_FLAG_LOCK;
+	csd_lock_wait(csd);
+	csd->flags |= CSD_FLAG_LOCK;
 
 	/*
 	 * prevent CPU from reordering the above assignment
@@ -139,16 +139,16 @@ static void csd_lock(struct call_single_data *data)
 	smp_mb();
 }
 
-static void csd_unlock(struct call_single_data *data)
+static void csd_unlock(struct call_single_data *csd)
 {
-	WARN_ON(!(data->flags & CSD_FLAG_LOCK));
+	WARN_ON(!(csd->flags & CSD_FLAG_LOCK));
 
 	/*
 	 * ensure we're all done before releasing data:
 	 */
 	smp_mb();
 
-	data->flags &= ~CSD_FLAG_LOCK;
+	csd->flags &= ~CSD_FLAG_LOCK;
 }
 
 /*
@@ -157,7 +157,7 @@ static void csd_unlock(struct call_single_data *data)
  * ->func, ->info, and ->flags set.
  */
 static
-void generic_exec_single(int cpu, struct call_single_data *data, int wait)
+void generic_exec_single(int cpu, struct call_single_data *csd, int wait)
 {
 	struct call_single_queue *dst = &per_cpu(call_single_queue, cpu);
 	unsigned long flags;
@@ -165,7 +165,7 @@ void generic_exec_single(int cpu, struct call_single_data *data, int wait)
 
 	raw_spin_lock_irqsave(&dst->lock, flags);
 	ipi = list_empty(&dst->list);
-	list_add_tail(&data->list, &dst->list);
+	list_add_tail(&csd->list, &dst->list);
 	raw_spin_unlock_irqrestore(&dst->lock, flags);
 
 	/*
@@ -183,7 +183,7 @@ void generic_exec_single(int cpu, struct call_single_data *data, int wait)
 		arch_send_call_function_single_ipi(cpu);
 
 	if (wait)
-		csd_lock_wait(data);
+		csd_lock_wait(csd);
 }
 
 /*
@@ -293,7 +293,6 @@ void generic_smp_call_function_single_interrupt(void)
 static void flush_smp_call_function_queue(bool warn_cpu_offline)
 {
 	struct call_single_queue *q = &__get_cpu_var(call_single_queue);
-	unsigned int data_flags;
 	LIST_HEAD(list);
 	static bool warned;
 
@@ -311,25 +310,26 @@ static void flush_smp_call_function_queue(bool warn_cpu_offline)
 	}
 
 	while (!list_empty(&list)) {
-		struct call_single_data *data;
+		struct call_single_data *csd;
+		unsigned int csd_flags;
 
-		data = list_entry(list.next, struct call_single_data, list);
-		list_del(&data->list);
+		csd = list_entry(list.next, struct call_single_data, list);
+		list_del(&csd->list);
 
 		/*
-		 * 'data' can be invalid after this call if flags == 0
+		 * 'csd' can be invalid after this call if flags == 0
 		 * (when called through generic_exec_single()),
 		 * so save them away before making the call:
 		 */
-		data_flags = data->flags;
+		csd_flags = csd->flags;
 
-		data->func(data->info);
+		csd->func(csd->info);
 
 		/*
 		 * Unlocked CSDs are valid through generic_exec_single():
 		 */
-		if (data_flags & CSD_FLAG_LOCK)
-			csd_unlock(data);
+		if (csd_flags & CSD_FLAG_LOCK)
+			csd_unlock(csd);
 	}
 }
 
@@ -374,16 +374,16 @@ int smp_call_function_single(int cpu, smp_call_func_t func, void *info,
 		local_irq_restore(flags);
 	} else {
 		if ((unsigned)cpu < nr_cpu_ids && cpu_online(cpu)) {
-			struct call_single_data *data = &d;
+			struct call_single_data *csd = &d;
 
 			if (!wait)
-				data = &__get_cpu_var(csd_data);
+				csd = &__get_cpu_var(csd_data);
 
-			csd_lock(data);
+			csd_lock(csd);
 
-			data->func = func;
-			data->info = info;
-			generic_exec_single(cpu, data, wait);
+			csd->func = func;
+			csd->info = info;
+			generic_exec_single(cpu, csd, wait);
 		} else {
 			err = -ENXIO;	/* CPU not online */
 		}
@@ -450,7 +450,7 @@ EXPORT_SYMBOL_GPL(smp_call_function_any);
  * pre-allocated data structure. Useful for embedding @data inside
  * other structures, for instance.
  */
-void __smp_call_function_single(int cpu, struct call_single_data *data,
+void __smp_call_function_single(int cpu, struct call_single_data *csd,
 				int wait)
 {
 	unsigned int this_cpu;
@@ -468,11 +468,11 @@ void __smp_call_function_single(int cpu, struct call_single_data *data,
 
 	if (cpu == this_cpu) {
 		local_irq_save(flags);
-		data->func(data->info);
+		csd->func(csd->info);
 		local_irq_restore(flags);
 	} else {
-		csd_lock(data);
-		generic_exec_single(cpu, data, wait);
+		csd_lock(csd);
+		generic_exec_single(cpu, csd, wait);
 	}
 	put_cpu();
 }
@@ -527,11 +527,11 @@ void smp_call_function_many(const struct cpumask *mask,
 		return;
 	}
 
-	data = &__get_cpu_var(cfd_data);
+	cfd = &__get_cpu_var(cfd_data);
 	csd_lock(&data->csd);
 
 	/* This BUG_ON verifies our reuse assertions and can be removed */
-	BUG_ON(atomic_read(&data->refs) || !cpumask_empty(data->cpumask));
+	BUG_ON(atomic_read(&data->refs) || !cpumask_empty(cfd->cpumask));
 
 	/*
 	 * The global call function queue list add and delete are protected
@@ -563,9 +563,9 @@ void smp_call_function_many(const struct cpumask *mask,
 	smp_wmb();
 
 	/* We rely on the "and" being processed before the store */
-	cpumask_and(data->cpumask, mask, cpu_online_mask);
-	cpumask_clear_cpu(this_cpu, data->cpumask);
-	refs = cpumask_weight(data->cpumask);
+	cpumask_and(cfd->cpumask, mask, cpu_online_mask);
+	cpumask_clear_cpu(this_cpu, cfd->cpumask);
+	refs = cpumask_weight(cfd->cpumask);
 
 	/* Some callers race with other cpus changing the passed mask */
 	if (unlikely(!refs)) {
@@ -574,11 +574,11 @@ void smp_call_function_many(const struct cpumask *mask,
 	}
 
 	/*
-	 * After we put an entry into the list, data->cpumask
+	 * After we put an entry into the list, cfd->cpumask
 	 * may be cleared again when another CPU sends another IPI for
-	 * a SMP function call, so data->cpumask will be zero.
+	 * a SMP function call, so cfd->cpumask will be zero.
 	 */
-	cpumask_copy(data->cpumask_ipi, data->cpumask);
+	cpumask_copy(cfd->cpumask_ipi, cfd->cpumask);
 	raw_spin_lock_irqsave(&call_function.lock, flags);
 	/*
 	 * Place entry at the _HEAD_ of the list, so that any cpu still
@@ -602,7 +602,7 @@ void smp_call_function_many(const struct cpumask *mask,
 	smp_mb();
 
 	/* Send a message to all CPUs in the map */
-	arch_send_call_function_ipi_mask(data->cpumask_ipi);
+	arch_send_call_function_ipi_mask(cfd->cpumask_ipi);
 
 	/* Optionally wait for the CPUs to complete */
 	if (wait)
