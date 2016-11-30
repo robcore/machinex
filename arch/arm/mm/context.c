@@ -37,11 +37,16 @@
  * should be unique within all running processes.
  */
 #define ASID_FIRST_VERSION	(1ULL << ASID_BITS)
+#define NUM_USER_ASIDS		(ASID_FIRST_VERSION - 1)
+
+#define ASID_TO_IDX(asid)	((asid & ~ASID_MASK) - 1)
+#define IDX_TO_ASID(idx)	((idx + 1) & ~ASID_MASK)
 
 static DEFINE_RAW_SPINLOCK(cpu_asid_lock);
-static u64 cpu_last_asid = ASID_FIRST_VERSION;
+static atomic64_t asid_generation = ATOMIC64_INIT(ASID_FIRST_VERSION);
+static DECLARE_BITMAP(asid_map, NUM_USER_ASIDS);
 
-static DEFINE_PER_CPU(u64, active_asids);
+static DEFINE_PER_CPU(atomic64_t, active_asids);
 static DEFINE_PER_CPU(u64, reserved_asids);
 static cpumask_t tlb_flush_pending;
 
@@ -113,11 +118,19 @@ arch_initcall(contextidr_notifier_init);
 static void flush_context(unsigned int cpu)
 {
 	int i;
+	u64 asid;
 
-	/* Update the list of reserved ASIDs. */
-	per_cpu(active_asids, cpu) = 0;
-	for_each_possible_cpu(i)
-		per_cpu(reserved_asids, i) = per_cpu(active_asids, i);
+	/* Update the list of reserved ASIDs and the ASID bitmap. */
+	bitmap_clear(asid_map, 0, NUM_USER_ASIDS);
+	for_each_possible_cpu(i) {
+		if (i == cpu) {
+			asid = 0;
+		} else {
+			asid = atomic64_xchg(&per_cpu(active_asids, i), 0);
+			__set_bit(ASID_TO_IDX(asid), asid_map);
+		}
+		per_cpu(reserved_asids, i) = asid;
+	}
 
 	/* Queue a TLB invalidate and flush the I-cache if necessary. */
 	if (!tlb_ops_need_broadcast())
@@ -129,11 +142,11 @@ static void flush_context(unsigned int cpu)
 		__flush_icache_all();
 }
 
-static int is_reserved_asid(u64 asid, u64 mask)
+static int is_reserved_asid(u64 asid)
 {
 	int cpu;
 	for_each_possible_cpu(cpu)
-		if ((per_cpu(reserved_asids, cpu) & mask) == (asid & mask))
+		if (per_cpu(reserved_asids, cpu) == asid)
 			return 1;
 	return 0;
 }
@@ -141,24 +154,29 @@ static int is_reserved_asid(u64 asid, u64 mask)
 static void new_context(struct mm_struct *mm, unsigned int cpu)
 {
 	u64 asid = mm->context.id;
+	u64 generation = atomic64_read(&asid_generation);
 
-	if (asid != 0 && is_reserved_asid(asid, ULLONG_MAX)) {
+	if (asid != 0 && is_reserved_asid(asid)) {
 		/*
 		 * Our current ASID was active during a rollover, we can
 		 * continue to use it and this was just a false alarm.
 		 */
-		asid = (cpu_last_asid & ASID_MASK) | (asid & ~ASID_MASK);
+		asid = generation | (asid & ~ASID_MASK);
 	} else {
 		/*
 		 * Allocate a free ASID. If we can't find one, take a
 		 * note of the currently active ASIDs and mark the TLBs
 		 * as requiring flushes.
 		 */
-		do {
-			asid = ++cpu_last_asid;
-			if ((asid & ~ASID_MASK) == 0)
-				flush_context(cpu);
-		} while (is_reserved_asid(asid, ~ASID_MASK));
+		asid = find_first_zero_bit(asid_map, NUM_USER_ASIDS);
+		if (asid == NUM_USER_ASIDS) {
+			generation = atomic64_add_return(ASID_FIRST_VERSION,
+							 &asid_generation);
+			flush_context(cpu);
+			asid = find_first_zero_bit(asid_map, NUM_USER_ASIDS);
+		}
+		__set_bit(asid, asid_map);
+		asid = generation | IDX_TO_ASID(asid);
 		cpumask_clear(mm_cpumask(mm));
 	}
 
@@ -176,12 +194,16 @@ void check_and_switch_context(struct mm_struct *mm, struct task_struct *tsk)
 	cpu_set_asid(0);
 	isb();
 
+	if (!((mm->context.id ^ atomic64_read(&asid_generation)) >> ASID_BITS)
+	    && atomic64_xchg(&per_cpu(active_asids, cpu), mm->context.id))
+		goto switch_mm_fastpath;
+
 	raw_spin_lock_irqsave(&cpu_asid_lock, flags);
 	/* Check that our ASID belongs to the current generation. */
-	if ((mm->context.id ^ cpu_last_asid) >> ASID_BITS)
+	if ((mm->context.id ^ atomic64_read(&asid_generation)) >> ASID_BITS)
 		new_context(mm, cpu);
 
-	*this_cpu_ptr(&active_asids) = mm->context.id;
+	atomic64_set(&per_cpu(active_asids, cpu), mm->context.id);
 	cpumask_set_cpu(cpu, mm_cpumask(mm));
 
 	if (cpumask_test_and_clear_cpu(cpu, &tlb_flush_pending)) {
@@ -190,5 +212,6 @@ void check_and_switch_context(struct mm_struct *mm, struct task_struct *tsk)
 	}
 	raw_spin_unlock_irqrestore(&cpu_asid_lock, flags);
 
+switch_mm_fastpath:
 	cpu_switch_mm(mm->pgd, mm);
 }
