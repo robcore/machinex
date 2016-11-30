@@ -56,10 +56,10 @@ hotplug_cfd(struct notifier_block *nfb, unsigned long action, void *hcpu)
 	switch (action) {
 	case CPU_UP_PREPARE:
 	case CPU_UP_PREPARE_FROZEN:
-		if (!zalloc_cpumask_var_node(&data->cpumask, GFP_KERNEL,
+		if (!zalloc_cpumask_var_node(&cfd->cpumask, GFP_KERNEL,
 				cpu_to_node(cpu)))
 			return notifier_from_errno(-ENOMEM);
-		if (!zalloc_cpumask_var_node(&data->cpumask_ipi, GFP_KERNEL,
+		if (!zalloc_cpumask_var_node(&cfd->cpumask_ipi, GFP_KERNEL,
 				cpu_to_node(cpu)))
 			return notifier_from_errno(-ENOMEM);
 		break;
@@ -70,8 +70,8 @@ hotplug_cfd(struct notifier_block *nfb, unsigned long action, void *hcpu)
 
 	case CPU_DEAD:
 	case CPU_DEAD_FROZEN:
-		free_cpumask_var(data->cpumask);
-		free_cpumask_var(data->cpumask_ipi);
+		free_cpumask_var(cfd->cpumask);
+		free_cpumask_var(cfd->cpumask_ipi);
 		break;
 
 	case CPU_DYING:
@@ -527,7 +527,7 @@ void smp_call_function_many(const struct cpumask *mask,
 		return;
 	}
 
-	cfd = &__get_cpu_var(cfd_data);
+	data = &__get_cpu_var(cfd_data);
 	csd_lock(&data->csd);
 
 	/* This BUG_ON verifies our reuse assertions and can be removed */
