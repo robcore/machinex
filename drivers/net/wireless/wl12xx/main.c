@@ -924,7 +924,7 @@ static irqreturn_t wl1271_irq(int irq, void *cookie)
 		 * wl1271_ps_elp_wakeup cannot be called concurrently.
 		 */
 		clear_bit(WL1271_FLAG_IRQ_RUNNING, &wl->flags);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 
 		wl12xx_fw_status(wl, wl->fw_status);
 		intr = le32_to_cpu(wl->fw_status->intr);

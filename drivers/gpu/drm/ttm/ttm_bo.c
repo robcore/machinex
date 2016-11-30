@@ -493,7 +493,7 @@ static void ttm_bo_cleanup_memtype_use(struct ttm_buffer_object *bo)
 	/*
 	 * Make processes trying to reserve really pick it up.
 	 */
-	smp_mb__after_atomic_dec();
+	smp_mb__after_atomic();
 	wake_up_all(&bo->event_queue);
 }
 

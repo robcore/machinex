@@ -184,8 +184,10 @@ void check_and_switch_context(struct mm_struct *mm, struct task_struct *tsk)
 	*this_cpu_ptr(&active_asids) = mm->context.id;
 	cpumask_set_cpu(cpu, mm_cpumask(mm));
 
-	if (cpumask_test_and_clear_cpu(cpu, &tlb_flush_pending))
+	if (cpumask_test_and_clear_cpu(cpu, &tlb_flush_pending)) {
+		local_flush_bp_all();
 		local_flush_tlb_all();
+	}
 	raw_spin_unlock_irqrestore(&cpu_asid_lock, flags);
 
 	cpu_switch_mm(mm->pgd, mm);

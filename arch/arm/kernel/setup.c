@@ -1077,9 +1077,11 @@ void __init setup_arch(char **cmdline_p)
 	unflatten_device_tree();
 
 #ifdef CONFIG_SMP
-	if (is_smp())
+	if (is_smp()) {
+		smp_set_ops(mdesc->smp);
 		smp_init_cpus();
 		smp_build_mpidr_hash();
+	}
 #endif
 	reserve_crashkernel();
 

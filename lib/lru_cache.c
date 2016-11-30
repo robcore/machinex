@@ -45,7 +45,7 @@ MODULE_LICENSE("GPL");
 
 #define RETURN(x...)     do { \
 	clear_bit(__LC_PARANOIA, &lc->flags); \
-	smp_mb__after_clear_bit(); return x ; } while (0)
+	smp_mb__after_atomic(); return x ; } while (0)
 
 /* BUG() if e is not one of the elements tracked by lc */
 #define PARANOIA_LC_ELEMENT(lc, e) do {	\
@@ -439,7 +439,7 @@ void lc_changed(struct lru_cache *lc, struct lc_element *e)
 	lc->changing_element = NULL;
 	lc->new_number = LC_FREE;
 	clear_bit(__LC_DIRTY, &lc->flags);
-	smp_mb__after_clear_bit();
+	smp_mb__after_atomic();
 	RETURN();
 }
 
@@ -464,7 +464,7 @@ unsigned int lc_put(struct lru_cache *lc, struct lc_element *e)
 		list_move(&e->list, &lc->lru);
 		lc->used--;
 		clear_bit(__LC_STARVING, &lc->flags);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 	}
 	RETURN(e->refcnt);
 }

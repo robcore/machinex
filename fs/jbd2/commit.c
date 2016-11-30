@@ -43,7 +43,7 @@ static void journal_end_buffer_io_sync(struct buffer_head *bh, int uptodate)
 		clear_buffer_uptodate(bh);
 	if (orig_bh) {
 		clear_bit_unlock(BH_Shadow, &orig_bh->b_state);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 		wake_up_bit(&orig_bh->b_state, BH_Shadow);
 	}
 	unlock_buffer(bh);
@@ -222,7 +222,7 @@ static int journal_submit_data_buffers(journal_t *journal,
 		spin_lock(&journal->j_list_lock);
 		J_ASSERT(jinode->i_transaction == commit_transaction);
 		clear_bit(__JI_COMMIT_RUNNING, &jinode->i_flags);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 		wake_up_bit(&jinode->i_flags, __JI_COMMIT_RUNNING);
 	}
 	spin_unlock(&journal->j_list_lock);
@@ -260,7 +260,7 @@ static int journal_finish_inode_data_buffers(journal_t *journal,
 		}
 		spin_lock(&journal->j_list_lock);
 		clear_bit(__JI_COMMIT_RUNNING, &jinode->i_flags);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 		wake_up_bit(&jinode->i_flags, __JI_COMMIT_RUNNING);
 	}
 
@@ -713,7 +713,7 @@ start_journal_io:
 	commit_transaction->t_state = T_COMMIT_DFLUSH;
 	write_unlock(&journal->j_state_lock);
 
-	/* 
+	/*
 	 * If the journal is not located on the file system device,
 	 * then we must flush the file system device before we issue
 	 * the commit record
