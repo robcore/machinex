@@ -88,7 +88,6 @@
 #include "devices-msm8x60.h"
 #include "smd_private.h"
 #include "sysmon.h"
-#include "core.h"
 
 #ifdef CONFIG_SEC_THERMISTOR
 #include <mach/sec_thermistor.h>
@@ -3470,7 +3469,6 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 MACHINE_END
 
 MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
-	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,

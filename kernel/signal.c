@@ -1987,7 +1987,7 @@ void ptrace_notify(int exit_code)
 	if (unlikely(current->task_works)) {
 		if (test_and_clear_ti_thread_flag(current_thread_info(),
 						   TIF_NOTIFY_RESUME)) {
-			smp_mb__after_atomic();
+			smp_mb__after_clear_bit();
 			task_work_run();
 		}
 	}
@@ -2214,7 +2214,7 @@ int get_signal_to_deliver(siginfo_t *info, struct k_sigaction *return_ka,
 	if (unlikely(current->task_works)) {
 		if (test_and_clear_ti_thread_flag(current_thread_info(),
 						   TIF_NOTIFY_RESUME)) {
-			smp_mb__after_atomic();
+			smp_mb__after_clear_bit();
 			task_work_run();
 		}
 	}
@@ -2393,7 +2393,7 @@ relock:
 }
 
 /**
- * signal_delivered -
+ * signal_delivered - 
  * @sig:		number of signal being delivered
  * @info:		siginfo_t of signal being delivered
  * @ka:			sigaction setting that chose the handler

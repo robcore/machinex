@@ -19,6 +19,7 @@
 #include <linux/mm.h>
 #include <linux/err.h>
 #include <linux/cpu.h>
+#include <linux/smp.h>
 #include <linux/seq_file.h>
 #include <linux/irq.h>
 #include <linux/percpu.h>
@@ -27,7 +28,6 @@
 #include <linux/cpufreq.h>
 
 #include <linux/atomic.h>
-#include <asm/smp.h>
 #include <asm/cacheflush.h>
 #include <asm/cpu.h>
 #include <asm/cputype.h>
@@ -44,7 +44,6 @@
 #include <asm/localtimer.h>
 #include <asm/smp_plat.h>
 #include <asm/mpu.h>
-#include <asm/mach/arch.h>
 
 #if defined(CONFIG_SEC_DEBUG)
 #include <mach/sec_debug.h>
@@ -60,7 +59,7 @@ struct secondary_data secondary_data;
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
  */
-volatile int pen_release = -1;
+volatile int __cpuinitdata pen_release = -1;
 
 enum ipi_msg_type {
 	IPI_WAKEUP,
@@ -73,14 +72,6 @@ enum ipi_msg_type {
 };
 
 static DECLARE_COMPLETION(cpu_running);
-
-static struct smp_operations smp_ops;
-
-void __init smp_set_ops(struct smp_operations *ops)
-{
-	if (ops)
-		smp_ops = *ops;
-};
 
 int __cpu_up(unsigned int cpu, struct task_struct *idle)
 {
@@ -124,42 +115,9 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 	return ret;
 }
 
-/* platform specific SMP operations */
-void __init smp_init_cpus(void)
-{
-	if (smp_ops.smp_init_cpus)
-		smp_ops.smp_init_cpus();
-}
-
-int boot_secondary(unsigned int cpu, struct task_struct *idle)
-{
-	if (smp_ops.smp_boot_secondary)
-		return smp_ops.smp_boot_secondary(cpu, idle);
-	return -ENOSYS;
-}
-
 #ifdef CONFIG_HOTPLUG_CPU
 static void percpu_timer_stop(void);
 
-static int platform_cpu_kill(unsigned int cpu)
-{
-	if (smp_ops.cpu_kill)
-		return smp_ops.cpu_kill(cpu);
-	return 1;
-}
-
-static int platform_cpu_disable(unsigned int cpu)
-{
-	if (smp_ops.cpu_disable)
-		return smp_ops.cpu_disable(cpu);
-
-	/*
-	 * By default, allow disabling all CPUs except the first one,
-	 * since this is special on a lot of platforms, e.g. because
-	 * of clock tick interrupts.
-	 */
-	return cpu == 0 ? -EPERM : 0;
-}
 /*
  * __cpu_disable runs on the processor to be shutdown.
  */
@@ -278,8 +236,7 @@ void __ref cpu_die(void)
 	 * The return path should not be used for platforms which can
 	 * power off the CPU.
 	 */
-	if (smp_ops.cpu_die)
-		smp_ops.cpu_die(cpu);
+	platform_cpu_die(cpu);
 
 	/*
 	 * Do not return to the idle loop - jump back to the secondary
@@ -303,7 +260,6 @@ static void smp_store_cpu_info(unsigned int cpuid)
 	struct cpuinfo_arm *cpu_info = &per_cpu(cpu_data, cpuid);
 
 	cpu_info->loops_per_jiffy = loops_per_jiffy;
-	cpu_info->cpuid = read_cpuid_id();
 
 	store_cpu_topology(cpuid);
 }
@@ -322,7 +278,6 @@ asmlinkage void secondary_start_kernel(void)
 	 * switch away from it before attempting any exclusive accesses.
 	 */
 	cpu_switch_mm(mm->pgd, mm);
-	local_flush_bp_all();
 	enter_lazy_tlb(mm, current);
 	local_flush_tlb_all();
 
@@ -345,8 +300,7 @@ asmlinkage void secondary_start_kernel(void)
 	/*
 	 * Give the platform a chance to do its own initialisation.
 	 */
-	if (smp_ops.smp_secondary_init)
-		smp_ops.smp_secondary_init(cpu);
+	platform_secondary_init(cpu);
 
         smp_store_cpu_info(cpu);
 
@@ -419,8 +373,8 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		/*
 		 * Initialise the present map, which describes the set of CPUs
 		 * actually populated at the present time. A platform should
-		 * re-initialize the map in the platforms smp_prepare_cpus()
-		 * if present != possible (e.g. physical hotplug).
+		 * re-initialize the map in platform_smp_prepare_cpus() if
+		 * present != possible (e.g. physical hotplug).
 		 */
 		init_cpu_present(cpu_possible_mask);
 
@@ -428,8 +382,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		 * Initialise the SCU if there are more than one CPU
 		 * and let them know where to start.
 		 */
-		if (smp_ops.smp_prepare_cpus)
-			smp_ops.smp_prepare_cpus(max_cpus);
+		platform_smp_prepare_cpus(max_cpus);
 	}
 }
 
@@ -437,18 +390,12 @@ static void (*smp_cross_call)(const struct cpumask *, unsigned int);
 
 void __init set_smp_cross_call(void (*fn)(const struct cpumask *, unsigned int))
 {
-	if (!smp_cross_call)
-		smp_cross_call = fn;
+	smp_cross_call = fn;
 }
 
 void arch_send_call_function_ipi_mask(const struct cpumask *mask)
 {
 	smp_cross_call(mask, IPI_CALL_FUNC);
-}
-
-void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
-{
-	smp_cross_call(mask, IPI_WAKEUP);
 }
 
 void arch_send_call_function_single_ipi(int cpu)
@@ -474,7 +421,7 @@ void show_ipi_list(struct seq_file *p, int prec)
 	for (i = 0; i < NR_IPI; i++) {
 		seq_printf(p, "%*s%u: ", prec - 1, "IPI", i);
 
-		for_each_online_cpu(cpu)
+		for_each_present_cpu(cpu)
 			seq_printf(p, "%10u ",
 				   __get_irq_stat(cpu, ipi_irqs[i]));
 
@@ -508,7 +455,6 @@ void tick_broadcast(const struct cpumask *mask)
 static void broadcast_timer_set_mode(enum clock_event_mode mode,
 	struct clock_event_device *evt)
 {
-	set_my_cpu_offset(per_cpu_offset(smp_processor_id()));
 }
 
 static void broadcast_timer_setup(struct clock_event_device *evt)
@@ -566,7 +512,7 @@ static void percpu_timer_stop(void)
 
 static DEFINE_RAW_SPINLOCK(stop_lock);
 
-static struct pt_regs __percpu regs_before_stop;
+DEFINE_PER_CPU(struct pt_regs, regs_before_stop);
 /*
  * ipi_cpu_stop - handle IPI from smp_send_stop()
  */
@@ -631,7 +577,7 @@ void smp_send_all_cpu_backtrace(void)
 	}
 
 	clear_bit(0, &backtrace_flag);
-	smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 }
 
 /*
@@ -667,7 +613,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 	switch (ipinr) {
 	case IPI_WAKEUP:
 		break;
-
 #ifdef CONFIG_GENERIC_CLOCKEVENTS_BROADCAST
 	case IPI_TIMER:
 		irq_enter();
@@ -675,7 +620,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		irq_exit();
 		break;
 #endif
-
 	case IPI_RESCHEDULE:
 		scheduler_ipi();
 		break;
@@ -712,7 +656,9 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 
 void smp_send_reschedule(int cpu)
 {
-	BUG_ON(cpu_is_offline(cpu));
+	if (WARN_ON(cpu_is_offline(cpu))) {
+		return;
+	}
 	smp_cross_call(cpumask_of(cpu), IPI_RESCHEDULE);
 }
 
@@ -723,13 +669,12 @@ void smp_send_stop(void)
 
 	cpumask_copy(&mask, cpu_online_mask);
 	cpumask_clear_cpu(smp_processor_id(), &mask);
-	if (!cpumask_empty(&mask))
-		smp_cross_call(&mask, IPI_CPU_STOP);
+	smp_cross_call(&mask, IPI_CPU_STOP);
 
 	/* Wait up to one second for other CPUs to stop */
-	timeout = USEC_PER_SEC;
+	timeout = MSEC_PER_SEC;
 	while (num_active_cpus() > 1 && timeout--)
-		udelay(1);
+		mdelay(1);
 
 	if (num_active_cpus() > 1)
 		pr_warning("SMP: failed to stop secondary CPUs\n");

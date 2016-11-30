@@ -295,7 +295,7 @@ static inline int may_grant(const struct gfs2_glock *gl, const struct gfs2_holde
 static void gfs2_holder_wake(struct gfs2_holder *gh)
 {
 	clear_bit(HIF_WAIT, &gh->gh_iflags);
-	smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 	wake_up_bit(&gh->gh_iflags, HIF_WAIT);
 }
 
@@ -326,7 +326,7 @@ static inline void do_error(struct gfs2_glock *gl, const int ret)
 /**
  * do_promote - promote as many requests as possible on the current queue
  * @gl: The glock
- *
+ * 
  * Returns: 1 if there is a blocked holder at the head of the list, or 2
  *          if a type specific operation is underway.
  */
@@ -428,7 +428,7 @@ static void gfs2_demote_wake(struct gfs2_glock *gl)
 {
 	gl->gl_demote_state = LM_ST_EXCLUSIVE;
 	clear_bit(GLF_DEMOTE, &gl->gl_flags);
-	smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 	wake_up_bit(&gl->gl_flags, GLF_DEMOTE);
 }
 
@@ -634,7 +634,7 @@ out:
 
 out_sched:
 	clear_bit(GLF_LOCK, &gl->gl_flags);
-	smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 	gfs2_glock_hold(gl);
 	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 		gfs2_glock_put_nolock(gl);
@@ -642,7 +642,7 @@ out_sched:
 
 out_unlock:
 	clear_bit(GLF_LOCK, &gl->gl_flags);
-	smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 	return;
 }
 
@@ -968,7 +968,7 @@ void gfs2_print_dbg(struct seq_file *seq, const char *fmt, ...)
  * Eventually we should move the recursive locking trap to a
  * debugging option or something like that. This is the fast
  * path and needs to have the minimum number of distractions.
- *
+ * 
  */
 
 static inline void add_to_queue(struct gfs2_holder *gh)
@@ -1424,7 +1424,7 @@ static int gfs2_shrink_glock_memory(struct shrinker *shrink,
 				nr--;
 			}
 			clear_bit(GLF_LOCK, &gl->gl_flags);
-			smp_mb__after_atomic();
+			smp_mb__after_clear_bit();
 			if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
 				gfs2_glock_put_nolock(gl);
 			spin_unlock(&gl->gl_spin);

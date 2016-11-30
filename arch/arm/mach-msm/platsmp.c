@@ -29,7 +29,6 @@
 #include "pm.h"
 #include "scm-boot.h"
 #include "spm.h"
-#include "core.h"
 
 #define VDD_SC1_ARRAY_CLAMP_GFS_CTL 0x15A0
 #define SCSS_CPU1CORE_RESET 0xD80
@@ -52,7 +51,7 @@ static void write_pen_release(int val)
 
 static DEFINE_SPINLOCK(boot_lock);
 
-static void msm_secondary_init(unsigned int cpu)
+void platform_secondary_init(unsigned int cpu)
 {
 	WARN_ON(msm_platform_secondary_init(cpu));
 
@@ -186,7 +185,7 @@ static int cold_boot_flags[] = {
 	SCM_FLAG_COLDBOOT_CPU3,
 };
 
-static int msm_boot_secondary(unsigned int cpu, struct task_struct *idle)
+int boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	int ret;
 	unsigned int flag = 0;
@@ -234,7 +233,7 @@ static int msm_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 * the boot monitor to read the system wide flags register,
 	 * and branch to the address found there.
 	 */
-	arch_send_wakeup_ipi_mask(cpumask_of(cpu));
+	gic_raise_softirq(cpumask_of(cpu), 1);
 
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
@@ -257,7 +256,7 @@ static int msm_boot_secondary(unsigned int cpu, struct task_struct *idle)
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
-static void __init msm_smp_init_cpus(void)
+void __init smp_init_cpus(void)
 {
 	unsigned int i, ncores = get_core_count();
 
@@ -269,18 +268,10 @@ static void __init msm_smp_init_cpus(void)
 
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
+
+	set_smp_cross_call(gic_raise_softirq);
 }
 
-static void __init msm_smp_prepare_cpus(unsigned int max_cpus)
+void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
 }
-
-struct smp_operations msm_smp_ops __initdata = {
-	.smp_init_cpus		= msm_smp_init_cpus,
-	.smp_prepare_cpus	= msm_smp_prepare_cpus,
-	.smp_secondary_init	= msm_secondary_init,
-	.smp_boot_secondary	= msm_boot_secondary,
-#ifdef CONFIG_HOTPLUG_CPU
-	.cpu_die		= msm_cpu_die,
-#endif
-};

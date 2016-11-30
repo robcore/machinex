@@ -103,7 +103,6 @@
 #include "smd_private.h"
 #include "pm-boot.h"
 #include "msm_watchdog.h"
-#include "core.h"
 
 #if defined(CONFIG_BT) && defined(CONFIG_BT_HCIUART_ATH3K)
 #include <linux/wlan_plat.h>
@@ -3476,7 +3475,6 @@ MACHINE_START(MSM8960_CDP, "QCT MSM8960 CDP")
 MACHINE_END
 
 MACHINE_START(MSM8960_MTP, "QCT MSM8960 MTP")
-	.smp = smp_ops(msm_smp_ops),
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,

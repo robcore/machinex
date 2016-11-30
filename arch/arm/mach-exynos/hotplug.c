@@ -21,6 +21,8 @@
 
 #include <mach/regs-pmu.h>
 
+extern volatile int pen_release;
+
 static inline void cpu_enter_lowpower(void)
 {
 	unsigned int v;

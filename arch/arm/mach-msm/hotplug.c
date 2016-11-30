@@ -22,7 +22,6 @@
 
 #include "pm.h"
 #include "spm.h"
-#include "core.h"
 
 static cpumask_t cpu_dying_mask;
 
@@ -61,12 +60,22 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 	}
 }
 
+int platform_cpu_kill(unsigned int cpu)
+{
+	int ret = 0;
+
+	if (cpumask_test_and_clear_cpu(cpu, &cpu_dying_mask))
+		ret = msm_pm_wait_cpu_shutdown(cpu);
+
+	return ret ? 0 : 1;
+}
+
 /*
  * platform-specific code to shutdown a CPU
  *
  * Called with IRQs disabled
  */
-void __ref msm_cpu_die(unsigned int cpu)
+void platform_cpu_die(unsigned int cpu)
 {
 	int spurious = 0;
 
@@ -86,6 +95,15 @@ void __ref msm_cpu_die(unsigned int cpu)
 
 	if (spurious)
 		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
+}
+
+int platform_cpu_disable(unsigned int cpu)
+{
+	/*
+	 * we don't allow CPU 0 to be shutdown (it is still too special
+	 * e.g. clock tick interrupts)
+	 */
+	return cpu == 0 ? -EPERM : 0;
 }
 
 #define CPU_SHIFT	0
@@ -158,8 +176,7 @@ int msm_platform_secondary_init(unsigned int cpu)
 
 	if (!(*warm_boot)) {
 		*warm_boot = 1;
-		if (cpu)
-			return 0;
+		return 0;
 	}
 	msm_jtag_restore_state();
 #if defined(CONFIG_VFP) && defined (CONFIG_CPU_PM)
