@@ -44,7 +44,7 @@
 #endif
 #include <mach/socinfo.h>
 #include <mach/proc_comm.h>
-#include <mach/msm_smem.h>
+//#include <mach/msm_smem.h>
 #include <mach/msm_smsm.h>
 #include <asm/smp_scu.h>
 

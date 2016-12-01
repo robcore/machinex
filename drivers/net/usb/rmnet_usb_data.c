@@ -885,6 +885,9 @@ static const struct usb_device_id vidpids[] = {
 	{ USB_DEVICE_INTERFACE_NUMBER(0x05c6, 0x9079, 8),
 	.driver_info = (unsigned long)&rmnet_usb_info,
 	},
+	{ USB_DEVICE_INTERFACE_NUMBER(0x05c6, 0x908A, 6), /*mux over hsic mdm*/
+	.driver_info = (unsigned long)&rmnet_info,
+	},
 
 	{ }, /* Terminating entry */
 };
@@ -898,7 +901,7 @@ static struct usb_driver rmnet_usb = {
 	.disconnect = rmnet_usb_disconnect,
 	.suspend    = rmnet_usb_suspend,
 	.resume     = rmnet_usb_resume,
-	.supports_autosuspend = true,
+	.supports_autosuspend = 1,
 };
 
 static int rmnet_data_start(void)
@@ -914,13 +917,13 @@ static int rmnet_data_start(void)
 	/* initialize ctrl devices */
 	retval = rmnet_usb_ctrl_init(no_rmnet_devs, no_rmnet_insts_per_dev);
 	if (retval) {
-		err("rmnet_usb_cmux_init failed: %d", retval);
+		pr_err("rmnet_usb_cmux_init failed: %d", retval);
 		return retval;
 	}
 
 	retval = usb_register(&rmnet_usb);
 	if (retval) {
-		err("usb_register failed: %d", retval);
+		pr_err("usb_register failed: %d", retval);
 		return retval;
 	}
 

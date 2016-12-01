@@ -163,13 +163,13 @@ config ARCH_MSM8960
 	select CLEANCACHE
 	select MSM_MULTIMEDIA_USE_ION
 	select MULTI_IRQ_HANDLER
-	select MSM_PM8X60 if PM
 	select HOLES_IN_ZONE if SPARSEMEM
 	select MSM_RUN_QUEUE_STATS
 	select ARM_HAS_SG_CHAIN
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
+	select MSM_PM8X60 if PM
 	select HAS_MACH_MEMUTILS
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
@@ -204,12 +204,12 @@ config ARCH_MSM8930
 	select ARCH_HAS_HOLES_MEMORYMODEL
 	select MSM_ULTRASOUND
 	select MULTI_IRQ_HANDLER
-	select MSM_PM8X60 if PM
 	select HOLES_IN_ZONE if SPARSEMEM
 	select ARM_HAS_SG_CHAIN
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
+	select MSM_PM8X60 if PM
 	select HAS_MACH_MEMUTILS
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
@@ -233,7 +233,6 @@ config ARCH_APQ8064
 	select MSM_RPM
 	select MSM_SPM_V2
 	select MSM_L2_SPM
-	select MSM_PM8X60 if PM
 	select CPU_HAS_L2_PMU
 	select HOLES_IN_ZONE if SPARSEMEM
 	select CLEANCACHE
@@ -244,6 +243,7 @@ config ARCH_APQ8064
 	select SPARSEMEM_ALLOC_MEM_MAP_TOGETHER if SPARSEMEM
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
+	select MSM_PM8X60 if PM
 	select HAS_MACH_MEMUTILS
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
@@ -2100,7 +2100,6 @@ config MSM_HW3D
 	  library.
 
 config MSM_ADSP
-	depends on (ARCH_MSM7X01A || ARCH_MSM7X25 || ARCH_MSM7X27)
 	tristate "MSM ADSP driver"
 	default y
 	help
@@ -2289,7 +2288,6 @@ endchoice
 
 choice
 	prompt "Power management timeout action"
-	default MSM_PM_TIMEOUT_HALT
 	help
 	  Selects the Application Processor's action when Power Management
 	  times out waiting for Modem's handshake.

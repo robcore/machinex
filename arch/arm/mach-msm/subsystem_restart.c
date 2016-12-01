@@ -39,6 +39,7 @@
 #endif
 
 #include "smd_private.h"
+#include "sysmon.h"
 
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
@@ -85,7 +86,7 @@ struct subsys_device {
 	void *restart_order;
 };
 
-static int enable_ramdumps;
+static int enable_ramdumps = 0;
 module_param(enable_ramdumps, int, S_IRUGO | S_IWUSR);
 
 struct workqueue_struct *ssr_wq;
@@ -110,16 +111,15 @@ static DEFINE_MUTEX(restart_log_mutex);
 
 /* MSM 8x60 restart ordering info */
 static const char * const _order_8x60_all[] = {
-	"external_modem",  "modem", "lpass"
+	"external_modem",  "modem", "mdm", "lpass"
 };
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 
 static const char * const _order_8x60_modems[] = {"external_modem", "modem"};
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
-#ifndef CONFIG_MACH_JF
 /* MSM 8960 restart ordering info */
-static const char * const order_8960[] = {"modem", "lpass"};
+static const char * const order_8960[] = {"external_modem", "modem", "external_modem_mdm", "lpass", "mdm"};
 
 
 static struct subsys_soc_restart_order restart_orders_8960_one = {
@@ -131,10 +131,10 @@ static struct subsys_soc_restart_order restart_orders_8960_one = {
 static struct subsys_soc_restart_order *restart_orders_8960[] = {
 	&restart_orders_8960_one,
 };
-#endif
+
 /*SGLTE restart ordering info*/
 static const char * const order_8960_sglte[] = {"external_modem",
-						"modem"};
+						"modem", "lpass"};
 
 static struct subsys_soc_restart_order restart_orders_8960_fusion_sglte = {
 	.subsystem_list = order_8960_sglte,
@@ -147,7 +147,7 @@ static struct subsys_soc_restart_order *restart_orders_8960_sglte[] = {
 	};
 
 /* SGLTE2 restart ordering info*/
-static const char * const order_8064_sglte2[] = {"external_modem",
+static const char * const order_8064_sglte2[] = {"external_modem", "modem", "mdm",
 						"external_modem_mdm"};
 
 static struct subsys_soc_restart_order restart_orders_8064_fusion_sglte2 = {
@@ -166,7 +166,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_INDEPENDENT;
+static int restart_level = RESET_SUBSYS_COUPLED;
 
 int get_restart_level()
 {
@@ -180,11 +180,6 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 	int old_val = restart_level;
 	int subtype;
 
-	if (cpu_is_msm9615()) {
-		pr_err("Only Phase 1 subsystem restart is supported\n");
-		return -EINVAL;
-	}
-
 	ret = param_set_int(val, kp);
 	if (ret)
 		return ret;
@@ -193,15 +188,8 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 	case RESET_SUBSYS_INDEPENDENT_SOC:
 		pr_info("Rob, you sneaky sonuvabitch.\n");
 	case RESET_SUBSYS_INDEPENDENT:
-		subtype = socinfo_get_platform_subtype();
-		if ((subtype == PLATFORM_SUBTYPE_SGLTE) ||
-			(subtype == PLATFORM_SUBTYPE_SGLTE2)) {
-			pr_info("Phase 3 is currently unsupported. Using phase 2 instead.\n");
-			restart_level = RESET_SUBSYS_COUPLED;
-		}
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SOC:
-		pr_info("Phase %d behavior activated.\n", restart_level);
 		break;
 	default:
 		restart_level = old_val;
@@ -224,7 +212,6 @@ static void subsys_set_state(struct subsys_device *subsys,
 		spin_unlock_irqrestore(&subsys->restart_lock, flags);
 		return;
 	}
-	spin_unlock_irqrestore(&subsys->restart_lock, flags);
 }
 
 static struct subsys_soc_restart_order *
@@ -252,10 +239,10 @@ found:
 	return order;
 }
 
-static int max_restarts;
+static int max_restarts = 10;
 module_param(max_restarts, int, 0644);
 
-static long max_history_time = 3600;
+static long max_history_time = 4800;
 module_param(max_history_time, long, 0644);
 
 static void do_epoch_check(struct subsys_device *dev)

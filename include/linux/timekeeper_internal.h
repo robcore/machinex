@@ -73,4 +73,22 @@ struct timekeeper {
 	/* Seqlock for all timekeeper values */
 	seqlock_t		lock;
 };
+
+
+#ifdef CONFIG_GENERIC_TIME_VSYSCALL_OLD
+extern void
+update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
+			struct clocksource *c, u32 mult);
+extern void update_vsyscall_tz(void);
+#else
+static inline void
+update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
+					struct clocksource *c, u32 mult)
+{
+}
+static inline void update_vsyscall_tz(void)
+{
+}
+#endif
+
 #endif /* _LINUX_TIMEKEEPER_INTERNAL_H */

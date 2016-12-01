@@ -161,14 +161,14 @@ static void rmnet_power_resume(struct power_suspend *handler) {
 	}
 }
 
-static struct power_suspend rmnet_power_suspend = {
+static struct power_suspend msm_rmnet_power_suspend = {
 	.suspend = rmnet_power_suspend,
 	.resume = rmnet_power_resume,
 };
 
 static int __init rmnet_late_init(void)
 {
-	register_power_suspend(&rmnet_power_suspend);
+	register_power_suspend(&msm_rmnet_power_suspend);
 	return 0;
 }
 

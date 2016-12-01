@@ -385,7 +385,6 @@ done:
 int q6asm_set_io_mode(struct audio_client *ac, uint32_t mode)
 {
 	if (ac == NULL) {
-		pr_err("%s APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 
@@ -396,9 +395,10 @@ int q6asm_set_io_mode(struct audio_client *ac, uint32_t mode)
 		ac->io_mode &= ~ASYNC_IO_MODE;
 		ac->io_mode |= SYNC_IO_MODE;
 	} else {
-		pr_err("%s:Not an valid IO Mode:%d\n", __func__, ac->io_mode);
 		return -EINVAL;
 	}
+
+	return 0;
 }
 
 struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
@@ -2840,6 +2840,7 @@ int q6asm_memory_map(struct audio_client *ac, uint32_t buf_add, int dir,
 	mem_map.mempool_id = 0; /* EBI */
 	mem_map.reserved = 0;
 
+	mem_map.hdr.token = (uint32_t)ac;
 	q6asm_add_mmaphdr(&mem_map.hdr,
 			sizeof(struct asm_stream_cmd_memory_map), TRUE);
 
@@ -3614,7 +3615,7 @@ int q6asm_set_sa_ep(struct audio_client *ac,int *param)
 		return rc;
 	}
 	cmd = (struct asm_pp_params_command *)packet;
-	
+
 	q6asm_add_hdr_async(ac,&cmd->hdr, sz, true);
 	cmd->hdr.opcode = ASM_STREAM_CMD_SET_PP_PARAMS;
 	cmd->payload = NULL;

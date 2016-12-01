@@ -651,7 +651,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	if (this_afe.task != current)
 		this_afe.task = current;
 
-	this_afe.task->comm, this_afe.task->pid);
 	return 0;
 
 fail_cmd:
@@ -715,8 +714,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 		 * is L-PCM, the AFE_PORT_AUDIO_IF_CONFIG is used
 		 * to make the backward compatible.
 		 */
-		pr_debug("%s: afe_config->mi2s.format = %d\n", __func__,
-				 afe_config->mi2s.format);
 		if (afe_config->mi2s.format == MSM_AFE_I2S_FORMAT_LPCM)
 			config.hdr.opcode = AFE_PORT_AUDIO_IF_CONFIG;
 		else
@@ -965,7 +962,6 @@ int afe_apply_gain(u16 port_id, u16 gain)
 	}
 
 	if (afe_validate_port(port_id) < 0) {
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
