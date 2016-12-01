@@ -1,5 +1,5 @@
 /*
- *  drivers/cpufreq/cpufreq_electroative.c
+ *  drivers/cpufreq/cpufreq_electroactive.c
  *
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
@@ -15,18 +15,26 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/cpufreq.h>
+#include <linux/cpumask.h>
 #include <linux/cpu.h>
 #include <linux/jiffies.h>
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
 #include <linux/hrtimer.h>
-#include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/input.h>
+#include <linux/moduleparam.h>
+#include <linux/rwsem.h>
+#include <linux/tick.h>
+#include <linux/time.h>
+#include <linux/timer.h>
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/kernel_stat.h>
+#include <asm/cputime.h>
+#include <linux/touchboost.h>
 
 #include <mach/kgsl.h>
 static int orig_up_threshold = 90;
@@ -78,7 +86,6 @@ enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
 struct cpu_dbs_info_s {
 	u64 prev_cpu_idle;
-	u64 prev_cpu_iowait;
 	u64 prev_cpu_wall;
 	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
@@ -163,15 +170,9 @@ static struct dbs_tuners {
 	.gboost = 1,
 };
 
-static inline u64 get_cpu_iowait_time(unsigned int cpu, u64 *wall)
-{
-	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
-
-	if (iowait_time == -1ULL)
-		return 0;
-
-	return iowait_time;
-}
+static int
+dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
+		     void *data)
 
 static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 					  unsigned int freq_next,
@@ -243,6 +244,10 @@ static int electroactive_powersave_bias_setspeed(struct cpufreq_policy *policy,
 	}
 	return 0;
 }
+
+static struct notifier_block dbs_cpufreq_notifier_block = {
+	.notifier_call = dbs_cpufreq_notifier
+};
 
 static void electroactive_powersave_bias_init_cpu(int cpu)
 {
@@ -440,31 +445,7 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	//if (input == dbs_tuners_ins.origin_sampling_rate)
-		//return count;
-
-#if 0
-	update_sampling_rate(input);
-	dbs_tuners_ins.origin_sampling_rate = dbs_tuners_ins.sampling_rate;
-#endif
-
-	return count;
-}
-
-static ssize_t store_ui_sampling_rate(struct kobject *a, struct attribute *b,
-				      const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-
-	if (ret != 1)
-		return -EINVAL;
-
-#if 0
-	dbs_tuners_ins.ui_sampling_rate = max(input, min_sampling_rate);
-#endif
+	dbs_tuners_ins.sampling_rate = max(input, min_sampling_rate);
 	return count;
 }
 
@@ -764,7 +745,6 @@ static struct attribute *dbs_attributes[] = {
 	&sync_freq.attr,
 	&two_phase_freq.attr,
 	&input_event_min_freq.attr,
-	&ui_sampling_rate.attr,
 	&input_event_timeout.attr,
 	&gboost.attr,
 	NULL
@@ -850,15 +830,6 @@ static void dbs_init_freq_map_table(struct cpufreq_policy *policy)
 	init_timer(&freq_mode_timer);
 	freq_mode_timer.function = switch_mode_timer;
 	freq_mode_timer.data = 0;
-
-#if 0
-	for (i = 0; i < TABLE_SIZE; i++) {
-		pr_info("Table %d shows:\n", i+1);
-		for (j = 0; j < cnt; j++) {
-			pr_info("%02d: %8u\n", j, tblmap[i][j]);
-		}
-	}
-#endif
 }
 
 static void dbs_deinit_freq_map_table(void)
@@ -958,8 +929,8 @@ static unsigned int get_cpu_current_load(unsigned int j, unsigned int *record)
 {
 	unsigned int cur_load = 0;
 	struct cpu_dbs_info_s *j_dbs_info;
-	u64 cur_wall_time, cur_idle_time, cur_iowait_time;
-	unsigned int idle_time, wall_time, iowait_time;
+	u64 cur_wall_time, cur_idle_time;
+	unsigned int idle_time, wall_time;
 
 	j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 
@@ -967,7 +938,6 @@ static unsigned int get_cpu_current_load(unsigned int j, unsigned int *record)
 		*record = j_dbs_info->prev_load;
 
 	cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
-	cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
 
 	wall_time = (unsigned int)
 		(cur_wall_time - j_dbs_info->prev_cpu_wall);
@@ -976,10 +946,6 @@ static unsigned int get_cpu_current_load(unsigned int j, unsigned int *record)
 	idle_time = (unsigned int)
 		(cur_idle_time - j_dbs_info->prev_cpu_idle);
 	j_dbs_info->prev_cpu_idle = cur_idle_time;
-
-	iowait_time = (unsigned int)
-		(cur_iowait_time - j_dbs_info->prev_cpu_iowait);
-	j_dbs_info->prev_cpu_iowait = cur_iowait_time;
 
 	if (dbs_tuners_ins.ignore_nice) {
 		u64 cur_nice;
@@ -993,9 +959,6 @@ static unsigned int get_cpu_current_load(unsigned int j, unsigned int *record)
 		j_dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 		idle_time += jiffies_to_usecs(cur_nice_jiffies);
 	}
-
-	if (dbs_tuners_ins.io_is_busy && idle_time >= iowait_time)
-		idle_time -= iowait_time;
 
 	if (unlikely(!wall_time || wall_time < idle_time))
 		return j_dbs_info->prev_load;
@@ -1307,9 +1270,7 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 			spin_lock_irqsave(&input_boost_lock, flags);
 			input_event_boost = true;
 			input_event_boost_expired = jiffies + usecs_to_jiffies(dbs_tuners_ins.input_event_timeout * 1000);
-#if 0
-			dbs_tuners_ins.sampling_rate = dbs_tuners_ins.ui_sampling_rate;
-#endif
+
 			spin_unlock_irqrestore(&input_boost_lock, flags);
 
 			boost_min_freq(input_event_min_freq);
