@@ -43,11 +43,11 @@ static int g_count = 0;
 #define DEF_SAMPLING_RATE			(60000)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define DEF_FREQUENCY_UP_THRESHOLD		(85)
-#define DEF_SAMPLING_DOWN_FACTOR		(1)
-#define MAX_SAMPLING_DOWN_FACTOR		(10000)
+#define DEF_SAMPLING_DOWN_FACTOR		(2)
+#define MAX_SAMPLING_DOWN_FACTOR		(42)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
-#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(60000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
@@ -149,7 +149,6 @@ static struct dbs_tuners {
 	unsigned int io_is_busy;
 	unsigned int two_phase_freq;
 	unsigned int origin_sampling_rate;
-	unsigned int ui_sampling_rate;
 	unsigned int input_event_timeout;
 	int gboost;
 } dbs_tuners_ins = {
@@ -165,7 +164,6 @@ static struct dbs_tuners {
 	.optimal_freq = 1134000,
 	.io_is_busy = 0,
 	.two_phase_freq = 1674000,
-	.ui_sampling_rate = UI_DYNAMIC_SAMPLING_RATE,
 	.input_event_timeout = INPUT_EVENT_TIMEOUT,
 	.gboost = 1,
 };
@@ -360,7 +358,7 @@ static ssize_t store_input_event_timeout(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1782000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1674000} ;
 
 static ssize_t show_two_phase_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)
@@ -396,7 +394,7 @@ static ssize_t store_two_phase_freq(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static int input_event_min_freq_array[NR_CPUS] = {1134000, 1134000, 1134000, 1134000} ;
+static int input_event_min_freq_array[NR_CPUS] = {1242000, 1242000, 1242000, 1242000} ;
 
 static ssize_t show_input_event_min_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)
@@ -431,8 +429,6 @@ static ssize_t store_input_event_min_freq(struct kobject *a, struct attribute *b
 
 	return count;
 }
-
-show_one(ui_sampling_rate, ui_sampling_rate);
 
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
@@ -727,7 +723,6 @@ define_one_global_rw(up_threshold_any_cpu_load);
 define_one_global_rw(sync_freq);
 define_one_global_rw(two_phase_freq);
 define_one_global_rw(input_event_min_freq);
-define_one_global_rw(ui_sampling_rate);
 define_one_global_rw(input_event_timeout);
 define_one_global_rw(gboost);
 
@@ -1514,9 +1509,6 @@ bail_incorrect_governor:
 
 bail_acq_sema_failed:
 		put_online_cpus();
-#if 0
-		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.ui_sampling_rate;
-#endif
 	}
 
 	return 0;
@@ -1537,7 +1529,7 @@ static int __init cpufreq_gov_dbs_init(void)
 		dbs_tuners_ins.up_threshold = MICRO_FREQUENCY_UP_THRESHOLD;
 		dbs_tuners_ins.down_differential =
 					MICRO_FREQUENCY_DOWN_DIFFERENTIAL;
-		min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
+		min_sampling_rate = DEF_SAMPLING_RATE;
 	} else {
 
 		min_sampling_rate =
