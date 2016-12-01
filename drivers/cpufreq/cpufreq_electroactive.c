@@ -1352,6 +1352,22 @@ static struct input_handler dbs_input_handler = {
 	.id_table	= dbs_ids,
 };
 
+static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
+					     unsigned long val,
+					     void *data)
+{
+	switch (val) {
+	case IDLE_START:
+		cpufreq_interactive_idle_start();
+		break;
+	case IDLE_END:
+		cpufreq_interactive_idle_end();
+		break;
+	}
+
+static struct notifier_block cpufreq_interactive_idle_nb = {
+	.notifier_call = cpufreq_interactive_idle_notifier,
+};
 
 void set_input_event_min_freq_by_cpu ( int cpu_nr, int cpufreq){
 	input_event_min_freq_array[cpu_nr-1] = cpufreq;
@@ -1397,6 +1413,8 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				mutex_unlock(&dbs_mutex);
 				return rc;
 			}
+
+			idle_notifier_register(&cpufreq_interactive_idle_nb);
 
 			latency = policy->cpuinfo.transition_latency / 1000;
 			if (latency == 0)
