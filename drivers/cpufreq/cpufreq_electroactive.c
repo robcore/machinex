@@ -170,7 +170,7 @@ static struct dbs_tuners {
 
 static int
 dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
-		     void *data)
+		     void *data);
 
 static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 					  unsigned int freq_next,
