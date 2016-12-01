@@ -256,9 +256,7 @@ static void notification_available_cb(struct urb *urb)
 		goto resubmit_int_urb;
 	}
 
-	if (!urb->actual_length)
-		return;
-
+	usb_mark_last_busy(udev);
 	ctrl = urb->transfer_buffer;
 
 	switch (ctrl->bNotificationType) {
@@ -273,7 +271,6 @@ static void notification_available_cb(struct urb *urb)
 			wake_up(&dev->open_wait_queue);
 		}
 
-		usb_mark_last_busy(udev);
 		queue_work(dev->wq, &dev->get_encap_work);
 
 		return;
@@ -381,8 +378,8 @@ static void resp_avail_cb(struct urb *urb)
 resubmit_int_urb:
 	/*check if it is already submitted in resume*/
 	if (!dev->inturb->anchor) {
-		usb_mark_last_busy(udev);
 		usb_anchor_urb(dev->inturb, &dev->rx_submitted);
+		usb_mark_last_busy(udev);
 		status = usb_submit_urb(dev->inturb, GFP_ATOMIC);
 		if (status) {
 			usb_unanchor_urb(dev->inturb);
@@ -945,11 +942,11 @@ int rmnet_usb_ctrl_probe(struct usb_interface *intf,
 			 dev->intbuf, wMaxPacketSize,
 			 notification_available_cb, dev, interval);
 
-	usb_mark_last_busy(udev);
 	ret = rmnet_usb_ctrl_start_rx(dev);
 	if (ret) {
 		usb_free_urb(dev->inturb);
 		kfree(dev->intbuf);
+		usb_mark_last_busy(udev);
 		return ret;
 	}
 
