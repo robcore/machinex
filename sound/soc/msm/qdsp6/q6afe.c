@@ -51,7 +51,7 @@ bool afe_close_done[2] = {true, true};
 static int32_t afe_callback(struct apr_client_data *data, void *priv)
 {
 	if (data->opcode == RESET_EVENTS) {
-		pr_info("q6afe: reset event = %d %d apr[%p]\n",
+		pr_debug("q6afe: reset event = %d %d apr[%p]\n",
 			data->reset_event, data->reset_proc, this_afe.apr);
 		if (this_afe.apr) {
 			apr_reset(this_afe.apr);
@@ -74,7 +74,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		/* payload[1] contains the error status for response */
 		if (payload[1] != 0) {
 			atomic_set(&this_afe.status, -1);
-			pr_err("%s: cmd = 0x%x returned error = 0x%x\n",
+			pr_debug("%s: cmd = 0x%x returned error = 0x%x\n",
 					__func__, payload[0], payload[1]);
 		}
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
@@ -106,7 +106,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 				port_id = RT_PROXY_PORT_001_RX;
 				break;
 			default:
-				pr_err("Unknown cmd 0x%x\n",
+				pr_debug("Unknown cmd 0x%x\n",
 						payload[0]);
 				break;
 			}
@@ -182,7 +182,7 @@ int afe_get_port_type(u16 port_id)
 		break;
 
 	default:
-		pr_err("%s: invalid port id %d\n", __func__, port_id);
+		pr_debug("%s: invalid port id %d\n", __func__, port_id);
 		ret = -EINVAL;
 	}
 
@@ -356,7 +356,7 @@ int afe_q6_interface_prepare(void)
 			0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 		}
 	}
@@ -405,7 +405,7 @@ static void afe_send_cal_block(int32_t path, u16 port_id)
 	atomic_set(&this_afe.state, 1);
 	result = apr_send_pkt(this_afe.apr, (uint32_t *) &afe_cal);
 	if (result < 0) {
-		pr_err("%s: AFE cal for port %d failed\n",
+		pr_debug("%s: AFE cal for port %d failed\n",
 			__func__, port_id);
 	}
 
@@ -413,7 +413,7 @@ static void afe_send_cal_block(int32_t path, u16 port_id)
 				 (atomic_read(&this_afe.state) == 0),
 				 msecs_to_jiffies(TIMEOUT_MS));
 	if (!result) {
-		pr_err("%s: wait_event timeout SET AFE CAL\n", __func__);
+		pr_debug("%s: wait_event timeout SET AFE CAL\n", __func__);
 		goto done;
 	}
 
@@ -429,7 +429,6 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 	int index = 0;
 	int ret = -EINVAL;
 
-	pr_debug("%s\n", __func__);
 
 	delay_entry.sample_rate = rate;
 	if (afe_get_port_type(port_id) == MSM_AFE_PORT_TYPE_TX)
@@ -438,12 +437,10 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 		ret = get_hw_delay(RX_CAL, &delay_entry);
 
 	if (ret != 0) {
-		pr_debug("%s: Failed to get hw delay info\n", __func__);
 		goto done;
 	}
 	index = port_id;
 	if (index < 0) {
-		pr_debug("%s: AFE port index invalid!\n", __func__);
 		goto done;
 	}
 
@@ -472,8 +469,6 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &config);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed\n", __func__,
-			port_id);
 		ret = -EINVAL;
 		goto done;
 	}
@@ -483,26 +478,20 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 				msecs_to_jiffies(TIMEOUT_MS));
 
 	if (!ret) {
-		pr_err("%s: wait_event timeout IF CONFIG\n", __func__);
 		ret = -EINVAL;
 		goto done;
 	}
 	if (atomic_read(&this_afe.status) != 0) {
-		pr_err("%s: config cmd failed\n", __func__);
 		ret = -EINVAL;
 		goto done;
 	}
 
 done:
-	pr_debug("%s port_id %u rate %u delay_usec %d status %d\n",
-		__func__, port_id, rate, delay_entry.delay_usec, ret);
 	return ret;
 }
 
 void afe_send_cal(u16 port_id)
 {
-	pr_debug("%s\n", __func__);
-
 	if (afe_get_port_type(port_id) == MSM_AFE_PORT_TYPE_TX)
 		afe_send_cal_block(TX_CAL, port_id);
 	else if (afe_get_port_type(port_id) == MSM_AFE_PORT_TYPE_RX)
@@ -520,7 +509,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	int ret;
 
 	if (!afe_config) {
-		pr_err("%s: Error, no configuration data\n", __func__);
 		ret = -EINVAL;
 		return ret;
 	}
@@ -528,23 +516,16 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 
 	if ((port_id == RT_PROXY_DAI_001_RX) ||
 		(port_id == RT_PROXY_DAI_002_TX)) {
-		pr_debug("%s: before incrementing pcm_afe_instance %d"\
-				" port_id %d\n", __func__,
-				pcm_afe_instance[port_id & 0x1], port_id);
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
 		pcm_afe_instance[port_id & 0x1]++;
 		return 0;
 	}
 	if ((port_id == RT_PROXY_DAI_002_RX) ||
 		(port_id == RT_PROXY_DAI_001_TX)) {
-		pr_debug("%s: before incrementing proxy_afe_instance %d"\
-				" port_id %d\n", __func__,
-				proxy_afe_instance[port_id & 0x1], port_id);
 		if (!afe_close_done[port_id & 0x1]) {
 			/*close pcm dai corresponding to the proxy dai*/
 			afe_close(port_id - 0x10);
 			pcm_afe_instance[port_id & 0x1]++;
-			pr_debug("%s: reconfigure afe port again\n", __func__);
 		}
 		proxy_afe_instance[port_id & 0x1]++;
 		afe_close_done[port_id & 0x1] = false;
@@ -597,8 +578,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 			 * is L-PCM, the AFE_PORT_AUDIO_IF_CONFIG is used
 			 * to make the backward compatible.
 			 */
-			pr_debug("%s: afe_config->mi2s.format = %d\n", __func__,
-					 afe_config->mi2s.format);
 			if (afe_config->mi2s.format == MSM_AFE_I2S_FORMAT_LPCM)
 				config.hdr.opcode = AFE_PORT_AUDIO_IF_CONFIG;
 			else
@@ -611,9 +590,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	}
 
 	if (afe_validate_port(port_id) < 0) {
-
-		pr_err("%s: Failed : Invalid Port id = %d\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -624,8 +600,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	atomic_set(&this_afe.status, 0);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &config);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -635,12 +609,10 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 				msecs_to_jiffies(TIMEOUT_MS));
 
 	if (!ret) {
-		pr_err("%s: wait_event timeout IF CONFIG\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
 	if (atomic_read(&this_afe.status) != 0) {
-		pr_err("%s: config cmd failed\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -664,8 +636,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &start);
 
 	if (IS_ERR_VALUE(ret)) {
-		pr_err("%s: AFE enable for port %d failed\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -674,7 +644,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 			(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout PORT START\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -682,7 +651,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	if (this_afe.task != current)
 		this_afe.task = current;
 
-	pr_debug("task_name = %s pid = %d\n",
 	this_afe.task->comm, this_afe.task->pid);
 	return 0;
 
@@ -698,7 +666,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 	int ret = 0;
 
 	if (!afe_config) {
-		pr_err("%s: Error, no configuration data\n", __func__);
 		ret = -EINVAL;
 		return ret;
 	}
@@ -761,9 +728,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 	}
 
 	if (afe_validate_port(port_id) < 0) {
-
-		pr_err("%s: Failed : Invalid Port id = %d\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -775,8 +739,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 	atomic_set(&this_afe.status, 0);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &config);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -785,12 +747,10 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 			(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
 	if (atomic_read(&this_afe.status) != 0) {
-		pr_err("%s: config cmd failed\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -808,8 +768,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &start);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -817,7 +775,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 			(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -825,8 +782,6 @@ int afe_open(u16 port_id, union afe_port_config *afe_config, int rate)
 	if (this_afe.task != current)
 		this_afe.task = current;
 
-	pr_debug("task_name = %s pid = %d\n",
-			this_afe.task->comm, this_afe.task->pid);
 	return 0;
 fail_cmd:
 	return ret;
@@ -862,7 +817,6 @@ int afe_loopback(u16 enable, u16 dst_port, u16 src_port)
 
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &lb_cmd);
 	if (ret < 0) {
-		pr_err("%s: AFE loopback failed\n", __func__);
 		ret = -EINVAL;
 		goto done;
 	}
@@ -870,7 +824,6 @@ int afe_loopback(u16 enable, u16 dst_port, u16 src_port)
 		(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 	}
 done:
@@ -885,9 +838,6 @@ int afe_loopback_cfg(u16 enable, u16 dst_port, u16 src_port, u16 mode)
 	ret = afe_q6_interface_prepare();
 	if (ret != 0)
 		return ret;
-
-	pr_debug("%s: src_port %d, dst_port %d\n",
-		  __func__, src_port, dst_port);
 
 	lp_cfg.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
@@ -917,8 +867,6 @@ int afe_loopback_cfg(u16 enable, u16 dst_port, u16 src_port, u16 mode)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &lp_cfg);
 	if (ret < 0) {
-		pr_err("%s: AFE loopback config failed for src_port %d, dst_port %d\n",
-			   __func__, src_port, dst_port);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -927,7 +875,7 @@ int afe_loopback_cfg(u16 enable, u16 dst_port, u16 src_port, u16 mode)
 		(atomic_read(&this_afe.state) == 0),
 			msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+		pr_debug("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -944,26 +892,19 @@ int afe_loopback_gain(u16 port_id, u16 volume)
 	if (this_afe.apr == NULL) {
 		this_afe.apr = apr_register("ADSP", "AFE", afe_callback,
 					0xFFFFFFFF, &this_afe);
-		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
 	}
 
 	if (afe_validate_port(port_id) < 0) {
-
-		pr_err("%s: Failed : Invalid Port id = %d\n", __func__,
-				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
 
 	/* RX ports numbers are even .TX ports numbers are odd. */
 	if (port_id % 2 == 0) {
-		pr_err("%s: Failed : afe loopback gain only for TX ports."
-			" port_id %d\n", __func__, port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -995,7 +936,7 @@ int afe_loopback_gain(u16 port_id, u16 volume)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &set_param);
 	if (ret < 0) {
-		pr_err("%s: AFE param set failed for port %d\n",
+		pr_debug("%s: AFE param set failed for port %d\n",
 					__func__, port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
@@ -1004,8 +945,7 @@ int afe_loopback_gain(u16 port_id, u16 volume)
 	ret = wait_event_timeout(this_afe.wait,
 		(atomic_read(&this_afe.state) == 0),
 			msecs_to_jiffies(TIMEOUT_MS));
-	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+	if (ret < 0) {
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1020,13 +960,11 @@ int afe_apply_gain(u16 port_id, u16 gain)
 	int ret = 0;
 
 	if (this_afe.apr == NULL) {
-		pr_err("%s: AFE is not opened\n", __func__);
 		ret = -EPERM;
 		goto fail_cmd;
 	}
 
 	if (afe_validate_port(port_id) < 0) {
-		pr_err("%s: Failed : Invalid Port id = %d\n", __func__,
 				port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
@@ -1034,13 +972,9 @@ int afe_apply_gain(u16 port_id, u16 gain)
 
 	/* RX ports numbers are even .TX ports numbers are odd. */
 	if (port_id % 2 == 0) {
-		pr_err("%s: Failed : afe apply gain only for TX ports."
-			" port_id %d\n", __func__, port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
-
-	pr_debug("%s: %d %hX\n", __func__, port_id, gain);
 
 	set_gain.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
@@ -1056,8 +990,6 @@ int afe_apply_gain(u16 port_id, u16 gain)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &set_gain);
 	if (ret < 0) {
-		pr_err("%s: AFE Gain set failed for port %d\n",
-					__func__, port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1065,8 +997,7 @@ int afe_apply_gain(u16 port_id, u16 gain)
 	ret = wait_event_timeout(this_afe.wait,
 		(atomic_read(&this_afe.state) == 0),
 			msecs_to_jiffies(TIMEOUT_MS));
-	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+	if (ret < 0) {
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1082,7 +1013,7 @@ int afe_pseudo_port_start_nowait(u16 port_id)
 
 	pr_debug("%s: port_id=%d\n", __func__, port_id);
 	if (this_afe.apr == NULL) {
-		pr_err("%s: AFE APR is not registered\n", __func__);
+		pr_debug("%s: AFE APR is not registered\n", __func__);
 		return -ENODEV;
 	}
 
@@ -1100,7 +1031,7 @@ int afe_pseudo_port_start_nowait(u16 port_id)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &start);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed %d\n",
+		pr_debug("%s: AFE enable for port %d failed %d\n",
 		       __func__, port_id, ret);
 		return -EINVAL;
 	}
@@ -1131,7 +1062,7 @@ int afe_start_pseudo_port(u16 port_id)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &start);
 	if (ret < 0) {
-		pr_err("%s: AFE enable for port %d failed %d\n",
+		pr_debug("%s: AFE enable for port %d failed %d\n",
 		       __func__, port_id, ret);
 		return -EINVAL;
 	}
@@ -1140,7 +1071,7 @@ int afe_start_pseudo_port(u16 port_id)
 				 (atomic_read(&this_afe.state) == 0),
 				 msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+		pr_debug("%s: wait_event timeout\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1155,7 +1086,7 @@ int afe_pseudo_port_stop_nowait(u16 port_id)
 	pr_debug("%s: port_id=%d\n", __func__, port_id);
 
 	if (this_afe.apr == NULL) {
-		pr_err("%s: AFE is already closed\n", __func__);
+		pr_debug("%s: AFE is already closed\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1172,7 +1103,7 @@ int afe_pseudo_port_stop_nowait(u16 port_id)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &stop);
 	if (ret < 0) {
-		pr_err("%s: AFE close failed %d\n", __func__, ret);
+		pr_debug("%s: AFE close failed %d\n", __func__, ret);
 		return -EINVAL;
 	}
 
@@ -1188,7 +1119,7 @@ int afe_stop_pseudo_port(u16 port_id)
 	pr_debug("%s: port_id=%d\n", __func__, port_id);
 
 	if (this_afe.apr == NULL) {
-		pr_err("%s: AFE is already closed\n", __func__);
+		pr_debug("%s: AFE is already closed\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1205,7 +1136,6 @@ int afe_stop_pseudo_port(u16 port_id)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &stop);
 	if (ret < 0) {
-		pr_err("%s: AFE close failed %d\n", __func__, ret);
 		return -EINVAL;
 	}
 
@@ -1213,7 +1143,6 @@ int afe_stop_pseudo_port(u16 port_id)
 				 (atomic_read(&this_afe.state) == 0),
 				 msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1232,7 +1161,7 @@ int afe_cmd_memory_map(u32 dma_addr_p, u32 dma_buf_sz)
 					0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
@@ -1253,7 +1182,7 @@ int afe_cmd_memory_map(u32 dma_addr_p, u32 dma_buf_sz)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &mregion);
 	if (ret < 0) {
-		pr_err("%s: AFE memory map cmd failed %d\n",
+		pr_debug("%s: AFE memory map cmd failed %d\n",
 		       __func__, ret);
 		ret = -EINVAL;
 		return ret;
@@ -1263,7 +1192,7 @@ int afe_cmd_memory_map(u32 dma_addr_p, u32 dma_buf_sz)
 				 (atomic_read(&this_afe.state) == 0),
 				 msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+		pr_debug("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		return ret;
 	}
@@ -1283,7 +1212,7 @@ int afe_cmd_memory_map_nowait(u32 dma_addr_p, u32 dma_buf_sz)
 					0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
@@ -1303,7 +1232,7 @@ int afe_cmd_memory_map_nowait(u32 dma_addr_p, u32 dma_buf_sz)
 
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &mregion);
 	if (ret < 0) {
-		pr_err("%s: AFE memory map cmd failed %d\n",
+		pr_debug("%s: AFE memory map cmd failed %d\n",
 			__func__, ret);
 		ret = -EINVAL;
 	}
@@ -1322,7 +1251,7 @@ int afe_cmd_memory_unmap(u32 dma_addr_p)
 					0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
@@ -1340,7 +1269,7 @@ int afe_cmd_memory_unmap(u32 dma_addr_p)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &mregion);
 	if (ret < 0) {
-		pr_err("%s: AFE memory unmap cmd failed %d\n",
+		pr_debug("%s: AFE memory unmap cmd failed %d\n",
 		       __func__, ret);
 		ret = -EINVAL;
 		return ret;
@@ -1350,7 +1279,7 @@ int afe_cmd_memory_unmap(u32 dma_addr_p)
 				 (atomic_read(&this_afe.state) == 0),
 				 msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+		pr_debug("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		return ret;
 	}
@@ -1369,7 +1298,7 @@ int afe_cmd_memory_unmap_nowait(u32 dma_addr_p)
 					0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
@@ -1386,7 +1315,7 @@ int afe_cmd_memory_unmap_nowait(u32 dma_addr_p)
 
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &mregion);
 	if (ret < 0) {
-		pr_err("%s: AFE memory unmap cmd failed %d\n",
+		pr_debug("%s: AFE memory unmap cmd failed %d\n",
 			__func__, ret);
 		ret = -EINVAL;
 	}
@@ -1408,7 +1337,7 @@ int afe_register_get_events(u16 port_id,
 					0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
@@ -1439,7 +1368,7 @@ int afe_register_get_events(u16 port_id,
 
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &rtproxy);
 	if (ret < 0) {
-		pr_err("%s: AFE  reg. rtproxy_event failed %d\n",
+		pr_debug("%s: AFE  reg. rtproxy_event failed %d\n",
 			   __func__, ret);
 		ret = -EINVAL;
 		return ret;
@@ -1459,7 +1388,7 @@ int afe_unregister_get_events(u16 port_id)
 					0xFFFFFFFF, &this_afe);
 		pr_debug("%s: Register AFE\n", __func__);
 		if (this_afe.apr == NULL) {
-			pr_err("%s: Unable to register AFE\n", __func__);
+			pr_debug("%s: Unable to register AFE\n", __func__);
 			ret = -ENODEV;
 			return ret;
 		}
@@ -1491,7 +1420,7 @@ int afe_unregister_get_events(u16 port_id)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &rtproxy);
 	if (ret < 0) {
-		pr_err("%s: AFE enable Unreg. rtproxy_event failed %d\n",
+		pr_debug("%s: AFE enable Unreg. rtproxy_event failed %d\n",
 			   __func__, ret);
 		ret = -EINVAL;
 		return ret;
@@ -1501,7 +1430,7 @@ int afe_unregister_get_events(u16 port_id)
 				 (atomic_read(&this_afe.state) == 0),
 				 msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+		pr_debug("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		return ret;
 	}
@@ -1514,7 +1443,7 @@ int afe_rt_proxy_port_write(u32 buf_addr_p, int bytes)
 	struct afe_cmd_rtport_wr afecmd_wr;
 
 	if (this_afe.apr == NULL) {
-		pr_err("%s:register to AFE is not done\n", __func__);
+		pr_debug("%s:register to AFE is not done\n", __func__);
 		ret = -ENODEV;
 		return ret;
 	}
@@ -1535,7 +1464,7 @@ int afe_rt_proxy_port_write(u32 buf_addr_p, int bytes)
 
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &afecmd_wr);
 	if (ret < 0) {
-		pr_err("%s: AFE rtproxy write to port 0x%x failed %d\n",
+		pr_debug("%s: AFE rtproxy write to port 0x%x failed %d\n",
 			   __func__, afecmd_wr.port_id, ret);
 		ret = -EINVAL;
 		return ret;
@@ -1550,7 +1479,7 @@ int afe_rt_proxy_port_read(u32 buf_addr_p, int bytes)
 	struct afe_cmd_rtport_rd afecmd_rd;
 
 	if (this_afe.apr == NULL) {
-		pr_err("%s: register to AFE is not done\n", __func__);
+		pr_debug("%s: register to AFE is not done\n", __func__);
 		ret = -ENODEV;
 		return ret;
 	}
@@ -1571,7 +1500,7 @@ int afe_rt_proxy_port_read(u32 buf_addr_p, int bytes)
 
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &afecmd_rd);
 	if (ret < 0) {
-		pr_err("%s: AFE rtproxy read  cmd to port 0x%x failed %d\n",
+		pr_debug("%s: AFE rtproxy read  cmd to port 0x%x failed %d\n",
 			   __func__, afecmd_rd.port_id, ret);
 		ret = -EINVAL;
 		return ret;
@@ -1640,24 +1569,24 @@ static ssize_t afe_debug_write(struct file *filp,
 
 			if ((param[0] != AFE_LOOPBACK_ON) && (param[0] !=
 				AFE_LOOPBACK_OFF)) {
-				pr_err("%s: Error, parameter 0 incorrect\n",
+				pr_debug("%s: Error, parameter 0 incorrect\n",
 					__func__);
 				rc = -EINVAL;
 				goto afe_error;
 			}
 			if ((afe_validate_port(param[1]) < 0) ||
 			    (afe_validate_port(param[2])) < 0) {
-				pr_err("%s: Error, invalid afe port\n",
+				pr_debug("%s: Error, invalid afe port\n",
 					__func__);
 			}
 			if (this_afe.apr == NULL) {
-				pr_err("%s: Error, AFE not opened\n", __func__);
+				pr_debug("%s: Error, AFE not opened\n", __func__);
 				rc = -EINVAL;
 			} else {
 				rc = afe_loopback(param[0], param[1], param[2]);
 			}
 		} else {
-			pr_err("%s: Error, invalid parameters\n", __func__);
+			pr_debug("%s: Error, invalid parameters\n", __func__);
 			rc = -EINVAL;
 		}
 
@@ -1667,14 +1596,14 @@ static ssize_t afe_debug_write(struct file *filp,
 			pr_info("%s %lu %lu\n", lb_str, param[0], param[1]);
 
 			if (afe_validate_port(param[0]) < 0) {
-				pr_err("%s: Error, invalid afe port\n",
+				pr_debug("%s: Error, invalid afe port\n",
 					__func__);
 				rc = -EINVAL;
 				goto afe_error;
 			}
 
 			if (param[1] > 100) {
-				pr_err("%s: Error, volume shoud be 0 to 100"
+				pr_debug("%s: Error, volume shoud be 0 to 100"
 					" percentage param = %lu\n",
 					__func__, param[1]);
 				rc = -EINVAL;
@@ -1684,13 +1613,13 @@ static ssize_t afe_debug_write(struct file *filp,
 			param[1] = (Q6AFE_MAX_VOLUME * param[1]) / 100;
 
 			if (this_afe.apr == NULL) {
-				pr_err("%s: Error, AFE not opened\n", __func__);
+				pr_debug("%s: Error, AFE not opened\n", __func__);
 				rc = -EINVAL;
 			} else {
 				rc = afe_loopback_gain(param[0], param[1]);
 			}
 		} else {
-			pr_err("%s: Error, invalid parameters\n", __func__);
+			pr_debug("%s: Error, invalid parameters\n", __func__);
 			rc = -EINVAL;
 		}
 	}
@@ -1699,7 +1628,7 @@ afe_error:
 	if (rc == 0)
 		rc = cnt;
 	else
-		pr_err("%s: rc = %d\n", __func__, rc);
+		pr_debug("%s: rc = %d\n", __func__, rc);
 
 	return rc;
 }
@@ -1731,7 +1660,7 @@ int afe_sidetone(u16 tx_port_id, u16 rx_port_id, u16 enable, uint16_t gain)
 	atomic_set(&this_afe.state, 1);
 	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &cmd_sidetone);
 	if (ret < 0) {
-		pr_err("%s: AFE sidetone failed for tx_port:%d rx_port:%d\n",
+		pr_debug("%s: AFE sidetone failed for tx_port:%d rx_port:%d\n",
 					__func__, tx_port_id, rx_port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
@@ -1740,8 +1669,8 @@ int afe_sidetone(u16 tx_port_id, u16 rx_port_id, u16 enable, uint16_t gain)
 	ret = wait_event_timeout(this_afe.wait,
 		(atomic_read(&this_afe.state) == 0),
 			msecs_to_jiffies(TIMEOUT_MS));
-	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+	if (ret < 0) {
+		pr_debug("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1756,7 +1685,7 @@ int afe_port_stop_nowait(int port_id)
 	int ret = 0;
 
 	if (this_afe.apr == NULL) {
-		pr_err("AFE is already closed\n");
+		pr_debug("AFE is already closed\n");
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1779,7 +1708,7 @@ int afe_port_stop_nowait(int port_id)
 		pr_info("%s: Need to reset, calling APR deregister", __func__);
 		return apr_deregister(this_afe.apr);
 	} else if (IS_ERR_VALUE(ret)) {
-		pr_err("%s: AFE close failed\n", __func__);
+		pr_debug("%s: AFE close failed\n", __func__);
 		ret = -EINVAL;
 	}
 
@@ -1794,7 +1723,7 @@ int afe_close(int port_id)
 	int ret = 0;
 
 	if (this_afe.apr == NULL) {
-		pr_err("AFE is already closed\n");
+		pr_debug("AFE is already closed\n");
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1849,7 +1778,7 @@ int afe_close(int port_id)
 	}
 
 	if (ret < 0) {
-		pr_err("%s: AFE close failed\n", __func__);
+		pr_debug("%s: AFE close failed\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
@@ -1858,7 +1787,7 @@ int afe_close(int port_id)
 			(atomic_read(&this_afe.state) == 0),
 					msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
-		pr_err("%s: wait_event timeout\n", __func__);
+		pr_debug("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
 		goto fail_cmd;
 	}

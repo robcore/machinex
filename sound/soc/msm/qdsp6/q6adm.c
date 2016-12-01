@@ -360,9 +360,6 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 			default:
 				pr_err("%s: Unknown Cmd: 0x%x\n", __func__,
 								payload[0]);
-            	pr_err("%s:err code = 0x%x %x %x size = %d\n", __func__,
-                        data->opcode, payload[0], payload[1],
-		                       data->payload_size);
 				break;
 			}
 			return 0;
@@ -395,9 +392,6 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 		default:
 			pr_err("%s: Unknown cmd:0x%x\n", __func__,
 							data->opcode);
-           	pr_err("%s:err code = 0x%x %x %x size = %d\n", __func__,
-                    data->opcode, payload[0], payload[1],
-	                       data->payload_size);
 			break;
 		}
 	}
@@ -448,7 +442,7 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal)
 			__func__, port_id, aud_cal->cal_paddr);
 		result = -EINVAL;
 		goto done;
-	} 
+	}
 	/* Wait for the callback */
 	result = wait_event_timeout(this_adm.wait,
 		atomic_read(&this_adm.copp_stat[index]),
@@ -1069,10 +1063,7 @@ int adm_matrix_map(int session_id, int path, int num_copps,
 			rtac_add_adm_device(port_id[i],
 				atomic_read(&this_adm.copp_id[tmp]),
 				path, session_id);
-		else
-			pr_debug("%s: Invalid port index %d",
-				__func__, tmp);
-	}
+		}
 	return 0;
 
 fail_cmd:

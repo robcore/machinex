@@ -399,9 +399,6 @@ int q6asm_set_io_mode(struct audio_client *ac, uint32_t mode)
 		pr_err("%s:Not an valid IO Mode:%d\n", __func__, ac->io_mode);
 		return -EINVAL;
 	}
-
-	pr_debug("%s:Set Mode to %d\n", __func__, ac->io_mode);
-	return 0;
 }
 
 struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
@@ -2843,8 +2840,6 @@ int q6asm_memory_map(struct audio_client *ac, uint32_t buf_add, int dir,
 	mem_map.mempool_id = 0; /* EBI */
 	mem_map.reserved = 0;
 
-	pr_debug("%s: audio_client addr %x\n", __func__, (uint32_t)ac);
-	mem_map.hdr.token = (uint32_t)ac;
 	q6asm_add_mmaphdr(&mem_map.hdr,
 			sizeof(struct asm_stream_cmd_memory_map), TRUE);
 
@@ -2888,7 +2883,6 @@ int q6asm_memory_unmap(struct audio_client *ac, uint32_t buf_add, int dir)
 	}
 	pr_debug("%s: Session[%d]\n", __func__, ac->session);
 
-	pr_debug("%s: audio_client addr %x\n", __func__, (uint32_t)ac);
 	mem_unmap.hdr.token = (uint32_t)ac;
 	q6asm_add_mmaphdr(&mem_unmap.hdr,
 			sizeof(struct asm_stream_cmd_memory_unmap), TRUE);

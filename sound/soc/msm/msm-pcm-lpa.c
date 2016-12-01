@@ -119,13 +119,6 @@ static void event_handler(uint32_t opcode,
 			break;
 		}
 
-		pr_debug("%s:writing %d bytes of buffer[%d] to dsp 2\n",
-				__func__, prtd->pcm_count, prtd->out_head);
-		pr_debug("%s:writing buffer[%d] from 0x%08x\n",
-				__func__, prtd->out_head,
-				((unsigned int)buf[0].phys
-				+ (prtd->out_head * prtd->pcm_count)));
-
 		if (prtd->meta_data_mode) {
 			memcpy(&output_meta_data, (char *)(buf->data +
 				prtd->out_head * prtd->pcm_count),
@@ -183,11 +176,6 @@ static void event_handler(uint32_t opcode,
 				" of buffer to dsp\n",
 				__func__, prtd->pcm_count);
 			buf = prtd->audio_client->port[IN].buf;
-
-			pr_debug("%s:writing buffer[%d] from 0x%08x\n",
-				__func__, prtd->out_head,
-				((unsigned int)buf[0].phys +
-				(prtd->out_head * prtd->pcm_count)));
 
 			if (prtd->meta_data_mode) {
 				memcpy(&output_meta_data, (char *)(buf->data +
@@ -271,14 +259,7 @@ static int msm_pcm_restart(struct snd_pcm_substream *substream)
 	pr_err("%s\n", __func__);
 	memset(&output_meta_data, 0x0, sizeof(struct output_meta_data_st));
 	if (runtime->render_flag & SNDRV_RENDER_STOPPED) {
-		buf = prtd->audio_client->port[IN].buf;
-
-		pr_debug("%s:writing %d bytes of buffer[%d] to dsp 2\n",
-				__func__, prtd->pcm_count, prtd->out_head);
-		pr_debug("%s:writing buffer[%d] from 0x%08x\n",
-				__func__, prtd->out_head,
-				((unsigned int)buf[0].phys
-				+ (prtd->out_head * prtd->pcm_count)));
+		buf = prtd->audio_client->port[IN].buf
 
 		if (prtd->meta_data_mode) {
 			memcpy(&output_meta_data, (char *)(buf->data +
@@ -288,12 +269,6 @@ static int msm_pcm_restart(struct snd_pcm_substream *substream)
 		} else {
 			param.len = prtd->pcm_count;
 		}
-		pr_debug("meta_data_length: %d, frame_length: %d\n",
-			 output_meta_data.meta_data_length,
-			 output_meta_data.frame_size);
-		pr_debug("timestamp_msw: %d, timestamp_lsw: %d\n",
-			 output_meta_data.timestamp_msw,
-			 output_meta_data.timestamp_lsw);
 
 		param.paddr = (unsigned long)buf[0].phys +
 				(prtd->out_head * prtd->pcm_count) +
@@ -454,7 +429,7 @@ int lpa_set_volume(unsigned volume)
 		rc = q6asm_set_lrgain(lpa_audio.prtd->audio_client,
 					(volume >> 16) & 0xFFFF,
 					volume & 0xFFFF);
-		if (rc < 0) {
+		if (!rc) {
 			pr_err("%s: Send Volume command failed"
 					" rc=%d\n", __func__, rc);
 		}
