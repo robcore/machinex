@@ -23,13 +23,11 @@
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
-#include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/kernel_stat.h>
 #include <asm/cputime.h>
 
 static int active_count;
@@ -44,13 +42,19 @@ struct cpufreq_interactive_cpuinfo {
 	u64 cputime_speedadj_timestamp;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *freq_table;
+	spinlock_t target_freq_lock; /*protects target freq */
 	unsigned int target_freq;
 	unsigned int floor_freq;
+	unsigned int max_freq;
+	unsigned int timer_rate;
+	int timer_slack_val;
+	unsigned int min_sample_time;
 	u64 floor_validate_time;
 	u64 hispeed_validate_time;
 	struct rw_semaphore enable_sem;
 	int governor_enabled;
 	int prev_load;
+	bool limits_changed;
 };
 
 static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
@@ -79,16 +83,28 @@ static unsigned int *target_loads = default_target_loads;
 static int ntarget_loads = ARRAY_SIZE(default_target_loads);
 
 /*
+ * Frequency calculation threshold.  Avoid freq oscillations up to this
+ * threshold and allow for dynamic changes above (default cpuinfo min).
+*/
+static unsigned long freq_calc_thresh;
+
+/*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  */
-#define DEFAULT_MIN_SAMPLE_TIME (60 * USEC_PER_MSEC)
-static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
+#define DEFAULT_MIN_SAMPLE_TIME (50 * USEC_PER_MSEC)
+static unsigned int default_min_sample_time[] = {DEFAULT_MIN_SAMPLE_TIME};
+static spinlock_t min_sample_time_lock;
+static unsigned int *min_sample_times = default_min_sample_time;
+static int nmin_sample_times = ARRAY_SIZE(default_min_sample_time);
 
 /*
  * The sample rate of the timer used to increase frequency
  */
-#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
-static unsigned long timer_rate = DEFAULT_TIMER_RATE;
+#define DEFAULT_TIMER_RATE (40000)
+static unsigned int default_timer_rate[] = { DEFAULT_TIMER_RATE };
+static spinlock_t timer_rate_lock;
+static unsigned int *timer_rates = default_timer_rate;
+static int ntimer_rates = ARRAY_SIZE(default_timer_rate);
 
 /* Busy SDF parameters*/
 #define MIN_BUSY_TIME (100 * USEC_PER_MSEC)
@@ -113,35 +129,27 @@ static u64 boostpulse_endtime;
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
  * minimum before wakeup to reduce speed, or -1 if unnecessary.
  */
-#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
-static int timer_slack_val = DEFAULT_TIMER_SLACK;
+#define DEFAULT_TIMER_SLACK (60000)
+static int default_timer_slack_val[] = { DEFAULT_TIMER_SLACK };
+static spinlock_t timer_slack_lock;
+static int *timer_slack_vals = default_timer_slack_val;
+static int ntimer_slack_vals = ARRAY_SIZE(default_timer_slack_val);
 
 static bool io_is_busy = 0;
 
 /*
- * If the max load among the other CPUs is higher than sync_freq_load_threshold
- * then do not let the frequency to drop below sync_freq
+ * If the max load among other CPUs is higher than up_threshold_any_cpu_load
+ * or if the highest frequency among the other CPUs is higher than
+ * up_threshold_any_cpu_freq then do not let the frequency to drop below
+ * sync_freq
  */
-static unsigned int sync_freq_load_threshold;
-static unsigned int sync_freq;
+static unsigned int up_threshold_any_cpu_load = 80;
+static unsigned int sync_freq = 810000;
+static unsigned int up_threshold_any_cpu_freq = 1026000;
 
-static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
-		unsigned int event);
-
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE
-static
-#endif
-struct cpufreq_governor cpufreq_gov_interactive = {
-	.name = "interactive",
-	.governor = cpufreq_governor_interactive,
-	.max_transition_latency = 10000000,
-	.owner = THIS_MODULE,
-};
-
-
-static void cpufreq_interactive_timer_resched(
-	struct cpufreq_interactive_cpuinfo *pcpu)
+static void cpufreq_interactive_timer_resched(unsigned long cpu)
 {
+	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
 	unsigned long expires;
 	unsigned long flags;
 	u64 now = ktime_to_us(ktime_get());
