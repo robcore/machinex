@@ -118,8 +118,8 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* 1000000us - 1s */
 #define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
-#define DEFAULT_INPUT_BOOST_FREQ 1242000
-int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
+#define DEFAULT_MX_BOOST_FREQ 1242000
+int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 
 /*
  * Making sure cpufreq stays low when it needs to stay low
@@ -466,8 +466,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 	}
 
 	if (boosted) {
-		if (new_freq < input_boost_freq)
-			new_freq = input_boost_freq;
+		if (new_freq < mx_boost_freq)
+			new_freq = mx_boost_freq;
  	}
 
 	if (counter > 0) {
@@ -1133,13 +1133,13 @@ timer_rate = val_round;
 static struct global_attr timer_rate_attr = __ATTR(timer_rate, 0644,
 		show_timer_rate, store_timer_rate);
 
-static ssize_t show_input_boost_freq(struct kobject *kobj, struct attribute *attr,
+static ssize_t show_mx_boost_freq(struct kobject *kobj, struct attribute *attr,
                                      char *buf)
 {
-	return sprintf(buf, "%d\n", input_boost_freq);
+	return sprintf(buf, "%d\n", mx_boost_freq);
 }
 
-static ssize_t store_input_boost_freq(struct kobject *kobj, struct attribute *attr,
+static ssize_t store_mx_boost_freq(struct kobject *kobj, struct attribute *attr,
                                       const char *buf, size_t count)
 {
 	int ret;
@@ -1149,13 +1149,13 @@ static ssize_t store_input_boost_freq(struct kobject *kobj, struct attribute *at
 	if (ret < 0)
 		return ret;
 
-	input_boost_freq = val;
+	mx_boost_freq = val;
 	return count;
 
 }
 
-static struct global_attr input_boost_freq_attr = __ATTR(input_boost_freq, 0644,
-		show_input_boost_freq, store_input_boost_freq);
+static struct global_attr mx_boost_freq_attr = __ATTR(mx_boost_freq, 0644,
+		show_mx_boost_freq, store_mx_boost_freq);
 
 static ssize_t show_timer_slack(
 	struct kobject *kobj, struct attribute *attr, char *buf)
@@ -1277,7 +1277,7 @@ static struct attribute *interactive_attributes[] = {
 	&go_hispeed_load_attr.attr,
 	&min_sample_time_attr.attr,
 	&timer_rate_attr.attr,
-	&input_boost_freq_attr.attr,
+	&mx_boost_freq_attr.attr,
 	&timer_slack.attr,
 	&io_is_busy_attr.attr,
 	&boostpulse_duration.attr,
@@ -1536,7 +1536,7 @@ static void __exit cpufreq_interactive_exit(void)
 	put_task_struct(speedchange_task);
 }
 
-module_exit(cpufreq_machinactive_exit);
+module_exit(cpufreq_interactive_exit);
 
 MODULE_AUTHOR("Mike Chan <mike@android.com>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
