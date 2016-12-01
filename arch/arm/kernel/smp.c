@@ -672,9 +672,9 @@ void smp_send_stop(void)
 	smp_cross_call(&mask, IPI_CPU_STOP);
 
 	/* Wait up to one second for other CPUs to stop */
-	timeout = MSEC_PER_SEC;
+	timeout = USEC_PER_SEC;
 	while (num_active_cpus() > 1 && timeout--)
-		mdelay(1);
+		udelay(1);
 
 	if (num_active_cpus() > 1)
 		pr_warning("SMP: failed to stop secondary CPUs\n");
