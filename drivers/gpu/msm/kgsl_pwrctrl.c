@@ -39,11 +39,11 @@ struct device *stored_dev;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_MACHINACTIVE
-int graphics_boost_machinactive = 0;
+int graphics_boost_machinactive = 4;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
-int graphics_boost_elementalx = 0;
+int graphics_boost_elementalx = 5;
 #endif
 
 struct clk_pair {
