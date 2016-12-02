@@ -39,11 +39,11 @@ struct device *stored_dev;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_MACHINACTIVE
-int graphics_boost_machinactive = 3;
+int graphics_boost_machinactive = 0;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
-int graphics_boost_elementalx = 3;
+int graphics_boost_elementalx = 0;
 #endif
 
 struct clk_pair {
@@ -128,8 +128,6 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	struct kgsl_pwrlevel *pwrlevel;
 	int delta;
 	int level;
-	int max_pwrlevel = max_t(int, pwr->thermal_pwrlevel, pwr->max_pwrlevel);
-	int min_pwrlevel = max_t(int, pwr->thermal_pwrlevel, pwr->min_pwrlevel);
 
 	/* Adjust the power level to the current constraints */
 	new_level = _adjust_pwrlevel(pwr, new_level);
@@ -187,7 +185,7 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 			clk_set_rate(pwr->ebi1_clk, pwrlevel->bus_freq);
 	}
 
-	//trace_kgsl_pwrlevel(device, pwr->active_pwrlevel, pwrlevel->gpu_freq);
+	trace_kgsl_pwrlevel(device, pwr->active_pwrlevel, pwrlevel->gpu_freq);
 
 #ifdef CONFIG_CPU_FREQ_GOV_MACHINACTIVE
         graphics_boost_machinactive = pwr->active_pwrlevel;
