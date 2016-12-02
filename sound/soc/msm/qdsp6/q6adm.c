@@ -1063,7 +1063,10 @@ int adm_matrix_map(int session_id, int path, int num_copps,
 			rtac_add_adm_device(port_id[i],
 				atomic_read(&this_adm.copp_id[tmp]),
 				path, session_id);
-		}
+		else
+			pr_debug("%s: Invalid port index %d",
+				__func__, tmp);
+	}
 	return 0;
 
 fail_cmd:
