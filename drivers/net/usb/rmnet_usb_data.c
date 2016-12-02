@@ -760,10 +760,15 @@ static int rmnet_usb_probe(struct usb_interface *iface,
 
 	usb_enable_autosuspend(udev);
 
+	udev = unet->udev;
+
+	device_set_wakeup_enable(&udev->dev, 1);
+	device_set_wakeup_enable(&udev->parent->dev, 1);
+
 	if (udev->parent && !udev->parent->parent) {
 		/* allow modem and roothub to wake up suspended system */
-		device_set_wakeup_enable(&udev->dev, 1);
-		device_set_wakeup_enable(&udev->parent->dev, 1);
++		pm_runtime_set_autosuspend_delay(&udev->dev, 1000);
++		pm_runtime_set_autosuspend_delay(&udev->parent->dev, 200);
 	}
 
 	return 0;

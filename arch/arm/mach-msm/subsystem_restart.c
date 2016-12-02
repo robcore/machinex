@@ -371,7 +371,6 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
-	if (restart_level != RESET_SUBSYS_INDEPENDENT)
 		soc_restart_order = dev->restart_order;
 
 	/*
@@ -492,14 +491,6 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 int subsystem_restart_dev(struct subsys_device *dev)
 {
 	const char *name;
-
-	if (!get_device(&dev->dev))
-		return -ENODEV;
-
-	if (!try_module_get(dev->owner)) {
-		put_device(&dev->dev);
-		return -ENODEV;
-	}
 
 	name = dev->desc->name;
 
