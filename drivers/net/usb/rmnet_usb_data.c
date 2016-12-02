@@ -396,11 +396,7 @@ static __be16 rmnet_ip_type_trans(struct sk_buff *skb,
 		protocol = htons(ETH_P_IPV6);
 		break;
 	default:
-		/*
-		 * There is no good way to determine if a packet has
-		 * a MAP header. For now default to MAP protocol
-		 */
-		protocol = htons(ETH_P_MAP);
+		pr_debug("if you are reading this, you are screwed.");
 	}
 
 	return protocol;
@@ -575,30 +571,6 @@ static int rmnet_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		DBG0("[%s] rmnet_ioctl(): close transport port\n", dev->name);
 		break;
 
-	case RMNET_IOCTL_GET_SUPPORTED_FEATURES:
-		break;
-
-	case RMNET_IOCTL_SET_MRU:
-		if (test_bit(EVENT_DEV_OPEN, &unet->flags))
-			return -EBUSY;
-
-		/* 16K max */
-		if ((size_t)ifr->ifr_ifru.ifru_data > 0x4000)
-			return -EINVAL;
-
-		unet->rx_urb_size = (size_t)ifr->ifr_ifru.ifru_data;
-		DBG0("[%s] rmnet_ioctl(): SET MRU to %u\n", dev->name,
-				unet->rx_urb_size);
-		break;
-
-	case RMNET_IOCTL_GET_MRU:
-		ifr->ifr_ifru.ifru_data = (void *)unet->rx_urb_size;
-		break;
-
-	case RMNET_IOCTL_GET_DRIVER_NAME:
-		rc = copy_to_user(ifr->ifr_ifru.ifru_data, unet->driver_name,
-				strlen(unet->driver_name));
-		break;
 	default:
 		dev_err(&unet->intf->dev, "[%s] error: "
 			"rmnet_ioct called for unsupported cmd[%d]",
