@@ -118,14 +118,6 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		}
 		msleep(100);
 	}
-/*
-	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
-		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
-	if (mdm_drv->ap2mdm_status_gpio > 0)
-		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 0);
-	if (mdm_drv->ap2mdm_wakeup_gpio > 0)
-		gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 0);
-*/
 
 	/* Assert the soft reset line whether mdm2ap_status went low or not */
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
@@ -149,21 +141,13 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 {
 	int i;
 	int pblrdy;
-	int kpd_direction_assert = 1,
-		kpd_direction_de_assert = 0;
-
-	if (mdm_drv->pdata->kpd_not_inverted) {
-		kpd_direction_assert = 0;
-		kpd_direction_de_assert = 1;
-	}
 
 	if (mdm_drv->power_on_count != 1) {
-		pr_err("%s:id %d: Calling fn when power_on_count != 1\n",
+		pr_debug("%s:id %d: Calling fn when power_on_count != 1\n",
 			   __func__, mdm_drv->device_id);
 		return;
 	}
-
-	pr_err("%s:id %d: Powering on modem for the first time\n",
+	pr_debug("%s:id %d: Powering on modem for the first time\n",
 		   __func__, mdm_drv->device_id);
 	mdm_peripheral_disconnect(mdm_drv);
 
@@ -211,7 +195,7 @@ static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
 	int i;
 	int pblrdy;
 
-	pr_err("%s: id %d:  soft resetting mdm modem\n",
+	pr_debug("%s: id %d:  soft resetting mdm modem\n",
 		   __func__, mdm_drv->device_id);
 	mdm_peripheral_disconnect(mdm_drv);
 	mdm_toggle_soft_reset(mdm_drv);
@@ -267,18 +251,21 @@ static void debug_state_changed(int value)
 
 static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 {
+	if (!mdm_drv->pdata->peripheral_platform_device)
+		return;
+
+	pr_debug("%s: id %d: value:%d\n", __func__,
+			 value, mdm_drv->device_id);
+
 	if (value) {
 		mdm_peripheral_disconnect(mdm_drv);
-		mdm_peripheral_connect(mdm_drv);
 		mdelay(100);
+		mdm_peripheral_connect(mdm_drv);
 		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 		} else {
 			mdm_toggle_soft_reset(mdm_drv);
 			mdelay(10);
-			mdm_peripheral_disconnect(mdm_drv);
-			mdm_peripheral_connect(mdm_drv);
-			mdelay(100);
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 		}
 	}
