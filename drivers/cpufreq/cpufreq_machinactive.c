@@ -63,6 +63,7 @@ struct cpufreq_interactive_cpuinfo {
 	struct rw_semaphore enable_sem;
 	int governor_enabled;
 	unsigned int two_phase_freq;
+	unsigned int gboost;
 };
 
 static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
@@ -475,7 +476,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 /*gboost*/
 	if (gboost && cpu_load < go_hispeed_load)
 			new_freq = pcpu->policy->max * cpu_load / (graphics_boost_machinactive * 10);
-		
+
 	if (counter > 0) {
 		counter--;
 		if (counter == 0) {
@@ -1312,7 +1313,7 @@ static struct attribute *interactive_attributes[] = {
 	&align_windows_attr.attr,
 	&use_freq_calc_thresh_attr.attr,
 	&closest_freq_selection_attr.attr,
-	&gboost,
+	&gboost_attr.attr,
 	NULL,
 };
 
