@@ -76,11 +76,11 @@ static struct mutex gov_lock;
 static unsigned int hispeed_freq = 1890000;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 99
+#define DEFAULT_GO_HISPEED_LOAD 95
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 85
+#define DEFAULT_TARGET_LOAD 80
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -95,7 +95,7 @@ static unsigned long freq_calc_thresh = 384000;
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  */
-#define DEFAULT_MIN_SAMPLE_TIME (50 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (60 * USEC_PER_MSEC)
 static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 
 /*
@@ -118,7 +118,7 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* 1000000us - 1s */
 #define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
-#define DEFAULT_MX_BOOST_FREQ 1242000
+#define DEFAULT_MX_BOOST_FREQ 1350000
 int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 
 /*
@@ -129,7 +129,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 /*
  * Default thread migration boost cpufreq
  */
-#define CPU_SYNC_FREQ 1026000
+#define CPU_SYNC_FREQ 1134000
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
@@ -152,14 +152,14 @@ static bool closest_freq_selection = true;
  * Stay at max freq for at least max_freq_hysteresis before dropping
  * frequency.
  */
-#define DEFAULT_HYSTERESIS 4
+#define DEFAULT_HYSTERESIS 5
 static unsigned int max_freq_hysteresis = DEFAULT_HYSTERESIS;
 
 static bool io_is_busy = 0;
 
 static bool use_freq_calc_thresh = true;
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1674000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1782000} ;
 
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif)
