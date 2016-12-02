@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +37,10 @@ module_param_array(rmnet_dev_names, charp, NULL, S_IRUGO | S_IWUSR);
 #define ACM_CTRL_CTS		BIT(1)
 #define ACM_CTRL_RI		BIT(2)
 #define ACM_CTRL_CD		BIT(3)
+
+/* polling interval for Interrupt ep */
+#define HS_INTERVAL		7
+#define FS_LS_INTERVAL		3
 
 /*echo modem_wait > /sys/class/hsicctl/hsicctlx/modem_wait*/
 static ssize_t modem_wait_store(struct device *d, struct device_attribute *attr,
@@ -256,7 +260,6 @@ static void notification_available_cb(struct urb *urb)
 		goto resubmit_int_urb;
 	}
 
-	usb_mark_last_busy(udev);
 	ctrl = urb->transfer_buffer;
 
 	switch (ctrl->bNotificationType) {
@@ -271,6 +274,7 @@ static void notification_available_cb(struct urb *urb)
 			wake_up(&dev->open_wait_queue);
 		}
 
+		usb_mark_last_busy(udev);
 		queue_work(dev->wq, &dev->get_encap_work);
 
 		return;
@@ -378,8 +382,8 @@ static void resp_avail_cb(struct urb *urb)
 resubmit_int_urb:
 	/*check if it is already submitted in resume*/
 	if (!dev->inturb->anchor) {
-		usb_anchor_urb(dev->inturb, &dev->rx_submitted);
 		usb_mark_last_busy(udev);
+		usb_anchor_urb(dev->inturb, &dev->rx_submitted);
 		status = usb_submit_urb(dev->inturb, GFP_ATOMIC);
 		if (status) {
 			usb_unanchor_urb(dev->inturb);
@@ -935,18 +939,20 @@ int rmnet_usb_ctrl_probe(struct usb_interface *intf,
 		dev->intf->cur_altsetting->desc.bInterfaceNumber;
 	dev->in_ctlreq->wLength = cpu_to_le16(DEFAULT_READ_URB_LENGTH);
 
-	interval = int_in->desc.bInterval;
+	interval = max((int)int_in->desc.bInterval,
+			(udev->speed == USB_SPEED_HIGH) ? HS_INTERVAL
+							: FS_LS_INTERVAL);
 
 	usb_fill_int_urb(dev->inturb, udev,
 			 dev->int_pipe,
 			 dev->intbuf, wMaxPacketSize,
 			 notification_available_cb, dev, interval);
 
+	usb_mark_last_busy(udev);
 	ret = rmnet_usb_ctrl_start_rx(dev);
 	if (ret) {
 		usb_free_urb(dev->inturb);
 		kfree(dev->intbuf);
-		usb_mark_last_busy(udev);
 		return ret;
 	}
 
