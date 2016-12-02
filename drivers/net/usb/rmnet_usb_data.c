@@ -767,8 +767,8 @@ static int rmnet_usb_probe(struct usb_interface *iface,
 
 	if (udev->parent && !udev->parent->parent) {
 		/* allow modem and roothub to wake up suspended system */
-+		pm_runtime_set_autosuspend_delay(&udev->dev, 1000);
-+		pm_runtime_set_autosuspend_delay(&udev->parent->dev, 200);
+		pm_runtime_set_autosuspend_delay(&udev->dev, 1000);
+		pm_runtime_set_autosuspend_delay(&udev->parent->dev, 200);
 	}
 
 	return 0;
