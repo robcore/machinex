@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,9 +28,6 @@
 					sizeof(struct QMI_QOS_HDR_S))
 #define RMNET_HEADROOM			sizeof(struct QMI_QOS_HDR_S)
 #define RMNET_TAILROOM			MAX_PAD_BYTES(4);
-
-static unsigned int override_data_muxing = 0;
-module_param(override_data_muxing, uint, S_IRUGO | S_IWUSR);
 
 static unsigned int no_rmnet_devs = 1;
 module_param(no_rmnet_devs, uint, S_IRUGO | S_IWUSR);
@@ -370,8 +367,8 @@ static struct sk_buff *rmnet_usb_tx_fixup(struct usbnet *dev,
 		qmih->flow_id = skb->mark;
 	 }
 
-	if (!override_data_muxing && dev->data[4])
-		rmnet_usb_data_mux(skb, dev->data[3]);
+	if (dev->data[4])
+		skb = rmnet_usb_data_mux(skb, dev->data[3]);
 
 	if (skb)
 		DBG1("[%s] Tx packet #%lu len=%d mark=0x%x\n",
@@ -386,8 +383,6 @@ static __be16 rmnet_ip_type_trans(struct sk_buff *skb,
 {
 	__be16	protocol = 0;
 
-	skb->dev = dev;
-
 	switch (skb->data[0] & 0xf0) {
 	case 0x40:
 		protocol = htons(ETH_P_IP);
@@ -396,7 +391,8 @@ static __be16 rmnet_ip_type_trans(struct sk_buff *skb,
 		protocol = htons(ETH_P_IPV6);
 		break;
 	default:
-		pr_debug("if you are reading this, you are screwed.");
+		pr_err("[%s] rmnet_recv() L3 protocol decode error: 0x%02x",
+		       dev->name, skb->data[0] & 0xf0);
 	}
 
 	return protocol;
@@ -413,7 +409,7 @@ static void rmnet_usb_rx_complete(struct urb *rx_urb)
 
 	unet_offset =  dev->driver_info->data * no_rmnet_insts_per_dev;
 
-	if (!override_data_muxing && !rx_urb->status && dev->data[4]) {
+	if (!rx_urb->status && dev->data[4]) {
 		mux_id = rmnet_usb_data_dmux(skb, rx_urb);
 		if (mux_id < 0) {
 			/*resubmit urb and free skb in rx_complete*/
@@ -422,7 +418,6 @@ static void rmnet_usb_rx_complete(struct urb *rx_urb)
 			/*map urb to actual network iface based on mux id*/
 			unet_id = unet_offset + mux_id;
 			skb->dev = unet_list[unet_id]->net;
-			entry->dev = unet_list[unet_id];
 		}
 	}
 
@@ -572,9 +567,6 @@ static int rmnet_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		break;
 
 	default:
-		dev_err(&unet->intf->dev, "[%s] error: "
-			"rmnet_ioct called for unsupported cmd[%d]",
-			dev->name, cmd);
 		return -EINVAL;
 	}
 
@@ -799,15 +791,16 @@ static void rmnet_usb_disconnect(struct usb_interface *intf)
 	struct usbnet		*unet = usb_get_intfdata(intf);
 	struct rmnet_ctrl_dev	*dev;
 	unsigned int		n, rdev_cnt, unet_id;
+	struct driver_info	*info = unet->driver_info;
+	bool			mux = unet->data[4];
 
-	rdev_cnt = unet->data[4] ? no_rmnet_insts_per_dev : 1;
+	rdev_cnt = mux ? no_rmnet_insts_per_dev : 1;
 
 	device_set_wakeup_enable(&unet->udev->dev, 0);
 
 	for (n = 0; n < rdev_cnt; n++) {
-		unet_id = n + unet->driver_info->data * no_rmnet_insts_per_dev;
-		unet =
-		unet->data[4] ? unet_list[unet_id] : usb_get_intfdata(intf);
+		unet_id = n + info->data * no_rmnet_insts_per_dev;
+		unet = mux ? unet_list[unet_id] : usb_get_intfdata(intf);
 		device_remove_file(&unet->net->dev, &dev_attr_dbg_mask);
 
 		dev = (struct rmnet_ctrl_dev *)unet->data[1];
@@ -892,9 +885,6 @@ static const struct usb_device_id vidpids[] = {
 	{ USB_DEVICE_INTERFACE_NUMBER(0x05c6, 0x9079, 8),
 	.driver_info = (unsigned long)&rmnet_usb_info,
 	},
-	{ USB_DEVICE_INTERFACE_NUMBER(0x05c6, 0x908A, 6), /*mux over hsic mdm*/
-	.driver_info = (unsigned long)&rmnet_info,
-	},
 
 	{ }, /* Terminating entry */
 };
@@ -924,13 +914,13 @@ static int rmnet_data_start(void)
 	/* initialize ctrl devices */
 	retval = rmnet_usb_ctrl_init(no_rmnet_devs, no_rmnet_insts_per_dev);
 	if (retval) {
-		pr_err("rmnet_usb_cmux_init failed: %d", retval);
+		err("rmnet_usb_cmux_init failed: %d", retval);
 		return retval;
 	}
 
 	retval = usb_register(&rmnet_usb);
 	if (retval) {
-		pr_err("usb_register failed: %d", retval);
+		err("usb_register failed: %d", retval);
 		return retval;
 	}
 

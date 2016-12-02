@@ -38,12 +38,12 @@
 struct device *stored_dev;
 #endif
 
-#ifdef CONFIG_CPU_FREQ_GOV_MACHINACTIVE
-int graphics_boost_machinactive = 4;
+#ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
+int graphics_boost_electroactive = 6;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
-int graphics_boost_elementalx = 5;
+int graphics_boost_elementalx = 4;
 #endif
 
 struct clk_pair {
@@ -187,8 +187,8 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 
 	trace_kgsl_pwrlevel(device, pwr->active_pwrlevel, pwrlevel->gpu_freq);
 
-#ifdef CONFIG_CPU_FREQ_GOV_MACHINACTIVE
-        graphics_boost_machinactive = pwr->active_pwrlevel;
+#ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
+        graphics_boost_electroactive = pwr->active_pwrlevel;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX

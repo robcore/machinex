@@ -102,22 +102,22 @@ static const char	hcd_name [] = "ehci_hcd";
 
 /* Initial IRQ latency:  faster than hw default */
 static int log2_irq_thresh = 0;		// 0 to 6
-module_param (log2_irq_thresh, int, 0644);
+module_param (log2_irq_thresh, int, S_IRUGO);
 MODULE_PARM_DESC (log2_irq_thresh, "log2 IRQ latency, 1-64 microframes");
 
-/* initial park setting:  faster than hw default */
+/* initial park setting:  slower than hw default */
 static unsigned park = 0;
-module_param (park, uint, 0644);
+module_param (park, uint, S_IRUGO);
 MODULE_PARM_DESC (park, "park setting; 1-3 back-to-back async packets");
 
 /* for flakey hardware, ignore overcurrent indicators */
 static bool ignore_oc = 0;
-module_param (ignore_oc, bool, 0644);
+module_param (ignore_oc, bool, S_IRUGO);
 MODULE_PARM_DESC (ignore_oc, "ignore bogus hardware overcurrent indications");
 
 /* for link power management(LPM) feature */
 static unsigned int hird;
-module_param(hird, int, 0644);
+module_param(hird, int, S_IRUGO);
 MODULE_PARM_DESC(hird, "host initiated resume duration, +1 for each 75us");
 
 #define	INTR_MASK (STS_IAA | STS_FATAL | STS_PCD | STS_ERR | STS_INT)

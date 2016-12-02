@@ -474,17 +474,6 @@ config CPU_FREQ_DEFAULT_GOV_HELLSACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
-config CPU_FREQ_DEFAULT_GOV_MACHINACTIVE
-	bool "machinactive"
-	select CPU_FREQ_GOV_MACHINACTIVE
-	help
-	  Use the CPUFreq governor 'machinactive' as default. This allows
-	  you to get a full dynamic cpu frequency capable system by simply
-	  loading your cpufreq low-level hardware driver, using the
-	  'interactive' governor for latency-sensitive workloads.
-	  It is essentially a combo of interactive, intelliactive, and
-	  hellsactive, with the inclusion of graphics boosting by flar2.
-
 config CPU_FREQ_DEFAULT_GOV_RAGINGMOLASSES
 	bool "ragingmolasses"
 	select CPU_FREQ_GOV_RAGINMOLASSES
@@ -1147,13 +1136,6 @@ config CPU_FREQ_GOV_HELLSACTIVE
 	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say N.
-
-config CPU_FREQ_GOV_MACHINACTIVE
-	tristate "'machinactive' cpufreq policy governor"
-	help
-	  'machinactive' - This driver is Pure Cocaine.
-
-	  If in doubt, say Y.
 
 config CPU_FREQ_GOV_ARTERACTIVE
 	tristate "'arteractive' cpufreq policy governor"

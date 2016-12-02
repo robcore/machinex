@@ -907,14 +907,13 @@ static void rmnet_smd_connect_work(struct work_struct *w)
 		 * Register platform driver to be notified in case SMD channels
 		 * later becomes ready to be opened.
 		 */
-		if (!dev->is_pdrv_used) {
-			ret = platform_driver_register(&dev->pdrv);
-			if (ret)
-				ERROR(cdev, "pdrv %s register failed %d\n",
-						dev->pdrv.driver.name, ret);
-			else
-				dev->is_pdrv_used = 1;
-		}
+		ret = platform_driver_register(&dev->pdrv);
+		if (ret)
+			ERROR(cdev, "Platform driver %s register failed %d\n",
+					dev->pdrv.driver.name, ret);
+		else
+			dev->is_pdrv_used = 1;
+
 		return;
 	}
 	wait_event(dev->smd_ctl.wait, test_bit(CH_OPENED,

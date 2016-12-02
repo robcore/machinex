@@ -52,7 +52,6 @@ obj-$(CONFIG_CPU_FREQ_GOV_LULZACTIVE)		+= cpufreq_lulzactive.o
 obj-$(CONFIG_CPU_FREQ_GOV_MEDUSA)		+= cpufreq_medusa.o
 obj-$(CONFIG_CPU_FREQ_GOV_BACON)	+= cpufreq_bacon.o
 obj-$(CONFIG_CPU_FREQ_GOV_HELLSACTIVE)	+= cpufreq_hellsactive.o
-obj-$(CONFIG_CPU_FREQ_GOV_MACHINACTIVE)	+= cpufreq_machinactive.o
 obj-$(CONFIG_CPU_FREQ_GOV_ARTERACTIVE)	+= cpufreq_arteractive.o
 obj-$(CONFIG_CPU_FREQ_GOV_ELECTROACTIVE)+= cpufreq_electroactive.o
 obj-$(CONFIG_CPU_FREQ_GOV_ELECTRODEMAND)+= cpufreq_electrodemand.o

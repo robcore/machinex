@@ -39,7 +39,6 @@
 #endif
 
 #include "smd_private.h"
-#include "sysmon.h"
 
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
@@ -180,6 +179,11 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 	int ret;
 	int old_val = restart_level;
 	int subtype;
+
+	if (cpu_is_msm9615()) {
+		pr_err("Only Phase 1 subsystem restart is supported\n");
+		return -EINVAL;
+	}
 
 	ret = param_set_int(val, kp);
 	if (ret)
@@ -501,9 +505,7 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 
 int subsystem_restart_dev(struct subsys_device *dev)
 {
-	const char *name;
-
-	name = dev->desc->name;
+	const char *name = dev->desc->name;
 
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
@@ -520,16 +522,22 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = 0;
+		enable_ramdumps = 1;
 		/* Fall through */
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
 		break;
 	case RESET_SOC:
+		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.", name);
 /* It should be used for APQ model to distingush AP side or MDM side */
+#ifdef CONFIG_SEC_DEBUG
+		panic("%s crashed: subsys-restart: Resetting the SoC",
+			name);
+#else
 		panic("subsys-restart: Resetting the SoC - %s crashed.",
 			name);
+#endif
 		break;
 	default:
 		pr_err("subsys-restart: Unknown restart level!\n");

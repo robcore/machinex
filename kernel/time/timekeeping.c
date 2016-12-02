@@ -143,7 +143,8 @@ static void timekeeping_update(bool clearntp)
 	tk_update_leap_state(&timekeeper);
 	update_rt_offset();
 	update_vsyscall(&timekeeper.xtime, &timekeeper.wall_to_monotonic,
-			 timekeeper.clock, timekeeper.mult);}
+			 timekeeper.clock, timekeeper.mult);
+}
 
 
 /**
