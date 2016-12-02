@@ -1,9 +1,10 @@
 /*
- * drivers/cpufreq/cpufreq_hellsactive.c
+ * drivers/cpufreq/cpufreq_machinactive.c
  *
  * Copyright (C) 2010 Google, Inc.
  * Copyright (C) 2014 Paul Reioux
  * Copyright (C) 2014 Laurent Hess
+ * Copyright (C) 2016 Rob Patershuk
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -17,6 +18,7 @@
  * Author: Mike Chan (mike@android.com)
  * Author: Paul Reioux (reioux@gmail.com) Modified for intelliactive
  * Author: Laurent Hess (hellsgod@gmx.ch) Modified for hellsactive
+ * Author: Rob Patershuk (robpatershuk@gmail.com) Modified for machinactive
  */
 
 #include <linux/cpu.h>
@@ -71,14 +73,14 @@ static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
 /* Hi speed to bump to from lo speed when load burst (default max) */
-static unsigned int hispeed_freq = 1782000;
+static unsigned int hispeed_freq = 1890000;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 99
+#define DEFAULT_GO_HISPEED_LOAD 95
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 85
+#define DEFAULT_TARGET_LOAD 80
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -116,8 +118,8 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* 1000000us - 1s */
 #define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
-#define DEFAULT_INPUT_BOOST_FREQ 1242000
-int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
+#define DEFAULT_MX_BOOST_FREQ 1242000
+int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 
 /*
  * Making sure cpufreq stays low when it needs to stay low
@@ -133,7 +135,9 @@ int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
  * minimum before wakeup to reduce speed, or -1 if unnecessary.
  */
-#define DEFAULT_TIMER_SLACK 10000
+
+//(4 * DEFAULT_TIMER_RATE)
+#define DEFAULT_TIMER_SLACK -1
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 /*
@@ -150,14 +154,14 @@ static bool closest_freq_selection = true;
  * Stay at max freq for at least max_freq_hysteresis before dropping
  * frequency.
  */
-#define DEFAULT_HYSTERESIS 4
+#define DEFAULT_HYSTERESIS 5
 static unsigned int max_freq_hysteresis = DEFAULT_HYSTERESIS;
 
 static bool io_is_busy = 0;
 
 static bool use_freq_calc_thresh = true;
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1566000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1782000} ;
 
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif)
@@ -464,8 +468,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 	}
 
 	if (boosted) {
-		if (new_freq < input_boost_freq)
-			new_freq = input_boost_freq;
+		if (new_freq < mx_boost_freq)
+			new_freq = mx_boost_freq;
  	}
 
 	if (counter > 0) {
@@ -985,7 +989,6 @@ static ssize_t store_above_hispeed_delay(
 	nabove_hispeed_delay = ntokens;
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
 	return count;
-
 }
 
 static struct global_attr above_hispeed_delay_attr =
@@ -1132,13 +1135,13 @@ timer_rate = val_round;
 static struct global_attr timer_rate_attr = __ATTR(timer_rate, 0644,
 		show_timer_rate, store_timer_rate);
 
-static ssize_t show_input_boost_freq(struct kobject *kobj, struct attribute *attr,
+static ssize_t show_mx_boost_freq(struct kobject *kobj, struct attribute *attr,
                                      char *buf)
 {
-	return sprintf(buf, "%d\n", input_boost_freq);
+	return sprintf(buf, "%d\n", mx_boost_freq);
 }
 
-static ssize_t store_input_boost_freq(struct kobject *kobj, struct attribute *attr,
+static ssize_t store_mx_boost_freq(struct kobject *kobj, struct attribute *attr,
                                       const char *buf, size_t count)
 {
 	int ret;
@@ -1148,13 +1151,13 @@ static ssize_t store_input_boost_freq(struct kobject *kobj, struct attribute *at
 	if (ret < 0)
 		return ret;
 
-	input_boost_freq = val;
+	mx_boost_freq = val;
 	return count;
 
 }
 
-static struct global_attr input_boost_freq_attr = __ATTR(input_boost_freq, 0644,
-		show_input_boost_freq, store_input_boost_freq);
+static struct global_attr mx_boost_freq_attr = __ATTR(mx_boost_freq, 0644,
+		show_mx_boost_freq, store_mx_boost_freq);
 
 static ssize_t show_timer_slack(
 	struct kobject *kobj, struct attribute *attr, char *buf)
@@ -1276,7 +1279,7 @@ static struct attribute *interactive_attributes[] = {
 	&go_hispeed_load_attr.attr,
 	&min_sample_time_attr.attr,
 	&timer_rate_attr.attr,
-	&input_boost_freq_attr.attr,
+	&mx_boost_freq_attr.attr,
 	&timer_slack.attr,
 	&io_is_busy_attr.attr,
 	&boostpulse_duration.attr,
@@ -1290,7 +1293,7 @@ static struct attribute *interactive_attributes[] = {
 
 static struct attribute_group interactive_attr_group = {
 	.attrs = interactive_attributes,
-	.name = "hellsactive",
+	.name = "machinactive",
 };
 
 static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
@@ -1313,7 +1316,7 @@ static struct notifier_block cpufreq_interactive_idle_nb = {
 	.notifier_call = cpufreq_interactive_idle_notifier,
 };
 
-static int cpufreq_governor_hellsactive(struct cpufreq_policy *policy,
+static int cpufreq_governor_machinactive(struct cpufreq_policy *policy,
 		unsigned int event)
 {
 	int rc;
@@ -1470,12 +1473,12 @@ static int cpufreq_governor_hellsactive(struct cpufreq_policy *policy,
 	return 0;
 }
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_HELLSACTIVE
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_MACHINACTIVE
 static
 #endif
-struct cpufreq_governor cpufreq_gov_hellsactive = {
-	.name = "hellsactive",
-	.governor = cpufreq_governor_hellsactive,
+struct cpufreq_governor cpufreq_gov_machinactive = {
+	.name = "machinactive",
+	.governor = cpufreq_governor_machinactive,
 	.max_transition_latency = 10000000,
 	.owner = THIS_MODULE,
 };
@@ -1484,7 +1487,7 @@ static void cpufreq_interactive_nop_timer(unsigned long data)
 {
 }
 
-static int __init cpufreq_hellsactive_init(void)
+static int __init cpufreq_machinactive_init(void)
 {
 	unsigned int i;
 	struct cpufreq_interactive_cpuinfo *pcpu;
@@ -1509,7 +1512,7 @@ static int __init cpufreq_hellsactive_init(void)
 	mutex_init(&gov_lock);
 	speedchange_task =
 		kthread_create(cpufreq_interactive_speedchange_task, NULL,
-			       "cfhellsactive");
+			       "cfmachinactive");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
@@ -1519,18 +1522,18 @@ static int __init cpufreq_hellsactive_init(void)
 	/* NB: wake up so the thread does not look hung to the freezer */
 	wake_up_process(speedchange_task);
 
-	return cpufreq_register_governor(&cpufreq_gov_hellsactive);
+	return cpufreq_register_governor(&cpufreq_gov_machinactive);
 }
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_HELLSACTIVE
-fs_initcall(cpufreq_hellsactive_init);
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_MACHINACTIVE
+fs_initcall(cpufreq_machinactive_init);
 #else
-module_init(cpufreq_hellsactive_init);
+module_init(cpufreq_machinactive_init);
 #endif
 
 static void __exit cpufreq_interactive_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_hellsactive);
+	cpufreq_unregister_governor(&cpufreq_gov_machinactive);
 	kthread_stop(speedchange_task);
 	put_task_struct(speedchange_task);
 }
@@ -1540,7 +1543,7 @@ module_exit(cpufreq_interactive_exit);
 MODULE_AUTHOR("Mike Chan <mike@android.com>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_AUTHOR("Laurent Hess <hellsgod@gmx.ch>");
-MODULE_DESCRIPTION("'cpufreq_hellsactive' - A cpufreq governor for "
-	"Latency sensitive workloads based on Google, faux, CAF and some patches from franciscofranco");
+MODULE_AUTHOR("Rob Patersuk <robpatershuk@gmail.com>");
+MODULE_DESCRIPTION("'cpufreq_machinactive' - A cpufreq governor for "
+	"Latency sensitive workloads based on Google, faux, CAF, franciscofranco, and hellsgod");
 MODULE_LICENSE("GPL");
-

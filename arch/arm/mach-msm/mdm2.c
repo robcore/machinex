@@ -158,12 +158,12 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 	}
 
 	if (mdm_drv->power_on_count != 1) {
-		pr_err("%s:id %d: Calling fn when power_on_count != 1\n",
+		pr_debug("%s:id %d: Calling fn when power_on_count != 1\n",
 			   __func__, mdm_drv->device_id);
-		return;
+		//return;
 	}
 
-	pr_err("%s:id %d: Powering on modem for the first time\n",
+	pr_debug("%s:id %d: Powering on modem for the first time\n",
 		   __func__, mdm_drv->device_id);
 	mdm_peripheral_disconnect(mdm_drv);
 
@@ -250,9 +250,9 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 	 * power-on request because it would the be first request from
 	 * user space but we're already powered on. Ignore it.
 	 */
-	if (mdm_drv->pdata->early_power_on &&
-			(mdm_drv->power_on_count == 2))
-		return;
+	//if (mdm_drv->pdata->early_power_on &&
+			//(mdm_drv->power_on_count == 2))
+		//return;
 
 	if (mdm_drv->power_on_count == 1)
 		mdm_do_first_power_on(mdm_drv);
