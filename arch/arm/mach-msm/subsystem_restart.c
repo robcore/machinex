@@ -186,7 +186,6 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		pr_info("Rob, you sneaky sonuvabitch.\n");
 	case RESET_SUBSYS_INDEPENDENT:
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SOC:
@@ -239,10 +238,10 @@ found:
 	return order;
 }
 
-static int max_restarts = 10;
+static int max_restarts;
 module_param(max_restarts, int, 0644);
 
-static long max_history_time = 4800;
+static long max_history_time = 3600;
 module_param(max_history_time, long, 0644);
 
 static void do_epoch_check(struct subsys_device *dev)
@@ -492,7 +491,17 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 
 int subsystem_restart_dev(struct subsys_device *dev)
 {
-	const char *name = dev->desc->name;
+	const char *name;
+
+	if (!get_device(&dev->dev))
+		return -ENODEV;
+
+	if (!try_module_get(dev->owner)) {
+		put_device(&dev->dev);
+		return -ENODEV;
+	}
+
+	name = dev->desc->name;
 
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
@@ -509,19 +518,15 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = 1;
+		enable_ramdumps = 0;
 		/* Fall through */
 	case RESET_SUBSYS_COUPLED:
+		__subsystem_restart_dev(dev);
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
 		break;
 	case RESET_SOC:
-		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.", name);
 /* It should be used for APQ model to distingush AP side or MDM side */
-#ifdef CONFIG_SEC_DEBUG
-		panic("%s crashed: subsys-restart: Resetting the SoC",
-			name);
-#else
 		panic("subsys-restart: Resetting the SoC - %s crashed.",
 			name);
 #endif
@@ -629,12 +634,12 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-#ifndef CONFIG_MACH_JF
+
 	if (cpu_is_msm8960() || cpu_is_msm8930()) {
 		restart_orders = restart_orders_8960;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
 	}
-#endif
+
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);
@@ -655,7 +660,7 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SUBSYS_INDEPENDENT;
+	restart_level = RESET_SUBSYS_COUPLED;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
