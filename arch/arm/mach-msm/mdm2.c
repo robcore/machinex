@@ -141,6 +141,8 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 {
 	int i;
 	int pblrdy;
+	int kpd_direction_assert = 1,
+		kpd_direction_de_assert = 0;
 
 	if (mdm_drv->power_on_count != 1) {
 		pr_debug("%s:id %d: Calling fn when power_on_count != 1\n",

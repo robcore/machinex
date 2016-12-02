@@ -106,7 +106,7 @@ module_param (log2_irq_thresh, int, 0644);
 MODULE_PARM_DESC (log2_irq_thresh, "log2 IRQ latency, 1-64 microframes");
 
 /* initial park setting:  faster than hw default */
-static unsigned park = 3;
+static unsigned park = 0;
 module_param (park, uint, 0644);
 MODULE_PARM_DESC (park, "park setting; 1-3 back-to-back async packets");
 
