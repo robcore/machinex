@@ -111,7 +111,7 @@ static DEFINE_MUTEX(restart_log_mutex);
 
 /* MSM 8x60 restart ordering info */
 static const char * const _order_8x60_all[] = {
-	"external_modem",  "modem", "mdm", "lpass"
+	"external_modem",  "modem", "lpass"
 };
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 
@@ -120,7 +120,7 @@ DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
 #ifndef CONFIG_MACH_JF
 /* MSM 8960 restart ordering info */
-static const char * const order_8960[] = {"external_modem", "modem", "external_modem_mdm", "lpass", "mdm"};
+static const char * const order_8960[] = {"modem", "lpass"};
 
 
 static struct subsys_soc_restart_order restart_orders_8960_one = {
@@ -135,7 +135,7 @@ static struct subsys_soc_restart_order *restart_orders_8960[] = {
 #endif
 /*SGLTE restart ordering info*/
 static const char * const order_8960_sglte[] = {"external_modem",
-						"modem", "lpass"};
+						"modem"};
 
 static struct subsys_soc_restart_order restart_orders_8960_fusion_sglte = {
 	.subsystem_list = order_8960_sglte,
@@ -148,7 +148,7 @@ static struct subsys_soc_restart_order *restart_orders_8960_sglte[] = {
 	};
 
 /* SGLTE2 restart ordering info*/
-static const char * const order_8064_sglte2[] = {"external_modem", "modem", "mdm",
+static const char * const order_8064_sglte2[] = {"external_modem",
 						"external_modem_mdm"};
 
 static struct subsys_soc_restart_order restart_orders_8064_fusion_sglte2 = {
@@ -187,6 +187,7 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
+		pr_info("Rob, you sneaky sonuvabitch.\n");
 	case RESET_SUBSYS_INDEPENDENT:
 		subtype = socinfo_get_platform_subtype();
 		if ((subtype == PLATFORM_SUBTYPE_SGLTE) ||
@@ -196,6 +197,7 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 		}
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SOC:
+		pr_info("Phase %d behavior activated.\n", restart_level);
 		break;
 	default:
 		restart_level = old_val;
@@ -521,7 +523,6 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		enable_ramdumps = 0;
 		/* Fall through */
 	case RESET_SUBSYS_COUPLED:
-		__subsystem_restart_dev(dev);
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
 		break;

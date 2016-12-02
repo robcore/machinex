@@ -90,7 +90,7 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
  * Frequency calculation threshold. Avoid freq oscillations up to this
  * threshold and allow for dynamic changes above (default policy->min).
  */
-static unsigned long freq_calc_thresh = 384000;
+static unsigned long freq_calc_thresh;
 
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
@@ -118,7 +118,7 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* 1000000us - 1s */
 #define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
-#define DEFAULT_MX_BOOST_FREQ 1350000
+#define DEFAULT_MX_BOOST_FREQ 1242000
 int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 
 /*
@@ -135,7 +135,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
  * minimum before wakeup to reduce speed, or -1 if unnecessary.
  */
-#define DEFAULT_TIMER_SLACK 10000
+#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 /*

@@ -29,7 +29,7 @@
 #define RMNET_HEADROOM			sizeof(struct QMI_QOS_HDR_S)
 #define RMNET_TAILROOM			MAX_PAD_BYTES(4);
 
-static unsigned int override_data_muxing = 1;
+static unsigned int override_data_muxing = 0;
 module_param(override_data_muxing, uint, S_IRUGO | S_IWUSR);
 
 static unsigned int no_rmnet_devs = 1;
@@ -908,7 +908,7 @@ static struct usb_driver rmnet_usb = {
 	.disconnect = rmnet_usb_disconnect,
 	.suspend    = rmnet_usb_suspend,
 	.resume     = rmnet_usb_resume,
-	.supports_autosuspend = 1,
+	.supports_autosuspend = true,
 };
 
 static int rmnet_data_start(void)

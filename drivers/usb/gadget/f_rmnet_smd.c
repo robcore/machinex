@@ -874,6 +874,9 @@ static void rmnet_smd_disable(struct usb_function *f)
 	struct rmnet_smd_dev *dev = container_of(f, struct rmnet_smd_dev,
 								function);
 
+	if (!atomic_read(&dev->online))
+		return;
+
 	atomic_set(&dev->online, 0);
 
 	usb_ep_fifo_flush(dev->epnotify);

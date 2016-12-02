@@ -100,6 +100,15 @@ static unsigned long timeout_us;
 static unsigned long timeout_suspend_us;
 static struct device *rmnet0;
 
+/* Set timeout in us when the screen is off. */
+static ssize_t timeout_suspend_store(struct device *d,
+				     struct device_attribute *attr,
+				     const char *buf, size_t n)
+{
+	timeout_suspend_us = strict_strtoul(buf, NULL, 10);
+	return n;
+}
+
 static ssize_t timeout_suspend_show(struct device *d,
 				    struct device_attribute *attr,
 				    char *buf)
@@ -109,7 +118,7 @@ static ssize_t timeout_suspend_show(struct device *d,
 }
 
 static DEVICE_ATTR(timeout_suspend, 0664, timeout_suspend_show,
-				   NULL);
+				   timeout_suspend_store);
 
 static void rmnet_power_suspend(struct power_suspend *handler)
 {
@@ -127,14 +136,14 @@ static void rmnet_power_resume(struct power_suspend *handler)
 	}
 }
 
-static struct power_suspend msm_rmnet_power_suspend = {
+static struct power_suspend rmnet_power_suspend = {
 	.suspend = rmnet_power_suspend,
 	.resume = rmnet_power_resume,
 };
 
 static int __init rmnet_late_init(void)
 {
-	register_power_suspend(&msm_rmnet_power_suspend);
+	register_power_suspend(&rmnet_power_suspend);
 	return 0;
 }
 
@@ -179,6 +188,21 @@ static ssize_t wakeups_rcv_show(struct device *d,
 
 DEVICE_ATTR(wakeups_rcv, 0444, wakeups_rcv_show, NULL);
 
+/* Set timeout in us. */
+static ssize_t timeout_store(struct device *d,
+			     struct device_attribute *attr,
+			     const char *buf, size_t n)
+{
+#ifndef CONFIG_POWERSUSPEND
+	struct rmnet_private *p = netdev_priv(to_net_dev(d));
+	p->timeout_us = timeout_us = strict_strtoul(buf, NULL, 10);
+#else
+/* If using early suspend/resume hooks do not write the value on store. */
+	timeout_us = strict_strtoul(buf, NULL, 10);
+#endif /* CONFIG_POWERSUSPEND */
+	return n;
+}
+
 static ssize_t timeout_show(struct device *d,
 			    struct device_attribute *attr,
 			    char *buf)
@@ -188,7 +212,7 @@ static ssize_t timeout_show(struct device *d,
 	return snprintf(buf, PAGE_SIZE, "%lu\n", timeout_us);
 }
 
-DEVICE_ATTR(timeout, 0664, timeout_show, NULL);
+DEVICE_ATTR(timeout, 0664, timeout_show, timeout_store);
 #endif /* CONFIG_MSM_RMNET_DEBUG */
 
 /* Forward declaration */
