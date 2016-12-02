@@ -118,6 +118,7 @@ DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 static const char * const _order_8x60_modems[] = {"external_modem", "modem"};
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
+#ifndef CONFIG_MACH_JF
 /* MSM 8960 restart ordering info */
 static const char * const order_8960[] = {"external_modem", "modem", "external_modem_mdm", "lpass", "mdm"};
 
@@ -131,7 +132,7 @@ static struct subsys_soc_restart_order restart_orders_8960_one = {
 static struct subsys_soc_restart_order *restart_orders_8960[] = {
 	&restart_orders_8960_one,
 };
-
+#endif
 /*SGLTE restart ordering info*/
 static const char * const order_8960_sglte[] = {"external_modem",
 						"modem", "lpass"};
@@ -166,7 +167,7 @@ static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
 static struct subsys_soc_restart_order **restart_orders;
 static int n_restart_orders;
 
-static int restart_level = RESET_SUBSYS_COUPLED;
+static int restart_level = RESET_SUBSYS_INDEPENDENT;
 
 int get_restart_level()
 {
@@ -187,6 +188,12 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
 	case RESET_SUBSYS_INDEPENDENT:
+		subtype = socinfo_get_platform_subtype();
+		if ((subtype == PLATFORM_SUBTYPE_SGLTE) ||
+			(subtype == PLATFORM_SUBTYPE_SGLTE2)) {
+			pr_info("Phase 3 is currently unsupported. Using phase 2 instead.\n");
+			restart_level = RESET_SUBSYS_COUPLED;
+		}
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SOC:
 		break;
@@ -211,6 +218,7 @@ static void subsys_set_state(struct subsys_device *subsys,
 		spin_unlock_irqrestore(&subsys->restart_lock, flags);
 		return;
 	}
+	spin_unlock_irqrestore(&subsys->restart_lock, flags);
 }
 
 static struct subsys_soc_restart_order *
@@ -371,6 +379,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
+	if (restart_level != RESET_SUBSYS_INDEPENDENT)
 		soc_restart_order = dev->restart_order;
 
 	/*
@@ -624,12 +633,12 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-
+#ifndef CONFIG_MACH_JF
 	if (cpu_is_msm8960() || cpu_is_msm8930()) {
 		restart_orders = restart_orders_8960;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
 	}
-
+#endif
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);
@@ -650,7 +659,7 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-	restart_level = RESET_SUBSYS_COUPLED;
+	restart_level = RESET_SUBSYS_INDEPENDENT;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
