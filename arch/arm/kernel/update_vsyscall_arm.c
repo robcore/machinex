@@ -11,7 +11,7 @@
  */
 
 #include <linux/export.h>
-#include <linux/clocksource.h>
+#include <linux/timekeeper_internal.h>
 #include <linux/time.h>
 #include "update_vsyscall_arm.h"
 /*
