@@ -42,7 +42,7 @@ static long dummy_clk_round_rate(struct clk *clk, unsigned long rate)
 	return rate;
 }
 
-static struct clk_ops clk_ops_dummy = {
+struct clk_ops clk_ops_dummy = {
 	.reset = dummy_clk_reset,
 	.set_rate = dummy_clk_set_rate,
 	.set_max_rate = dummy_clk_set_max_rate,

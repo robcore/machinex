@@ -983,6 +983,7 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 			ret = wait_for_completion_timeout(&complete, HZ);
 			if (!ret) {
 				struct slim_msg_txn *txn;
+				dev_err(&ctrl->dev, "slimbus Read timed out");
 				mutex_lock(&ctrl->m_ctrl);
 				txn = ctrl->txnt[tid];
 				/* Invalidate the transaction */
@@ -994,6 +995,7 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 				ret = 0;
 		} else if (ret < 0 && !msg->comp) {
 			struct slim_msg_txn *txn;
+			dev_err(&ctrl->dev, "slimbus Read error");
 			mutex_lock(&ctrl->m_ctrl);
 			txn = ctrl->txnt[tid];
 			/* Invalidate the transaction */
@@ -1068,8 +1070,11 @@ int slim_alloc_mgrports(struct slim_device *sb, enum slim_port_req req,
 		}
 		break;
 	}
-	if (i >= ctrl->nports)
+	if (i >= ctrl->nports) {
 		ret = -EDQUOT;
+		goto alloc_err;
+	}
+	ret = 0;
 	for (j = i; j < i + nphysp; j++) {
 		ctrl->ports[j].state = SLIM_P_UNCFG;
 		ctrl->ports[j].req = req;
