@@ -137,7 +137,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
  */
 
 //(4 * DEFAULT_TIMER_RATE)
-#define DEFAULT_TIMER_SLACK -1
+#define DEFAULT_TIMER_SLACK 10000
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 /*
