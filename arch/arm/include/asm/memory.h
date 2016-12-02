@@ -296,6 +296,14 @@ static inline __deprecated void *bus_to_virt(unsigned long x)
 #define arch_has_speculative_dfetch()	0
 #endif
 
+/*
+ * Optional coherency support.  Currently used only by selected
+ * Intel XSC3-based systems.
+ */
+#ifndef arch_is_coherent
+#define arch_is_coherent()		0
+#endif
+
 #endif
 
 #include <asm-generic/memory_model.h>
