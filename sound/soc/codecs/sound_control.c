@@ -118,7 +118,7 @@ void snd_cache_write(unsigned int reg, unsigned int value)
 	if (tmp != NULL)
 		*tmp = value;
 }
-EXPORT_SYMBOL(snd_cache_write);
+EXPORT_SYMBOL_GPL(snd_cache_write);
 
 unsigned int snd_cache_read(unsigned int reg)
 {
@@ -127,7 +127,7 @@ unsigned int snd_cache_read(unsigned int reg)
 	else
 		return -1;
 }
-EXPORT_SYMBOL(snd_cache_read);
+EXPORT_SYMBOL_GPL(snd_cache_read);
 
 int snd_reg_access(unsigned int reg)
 {
@@ -171,7 +171,7 @@ int snd_reg_access(unsigned int reg)
 
 	return ret;
 }
-EXPORT_SYMBOL(snd_reg_access);
+EXPORT_SYMBOL_GPL(snd_reg_access);
 
 static ssize_t sound_control_enabled_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -468,6 +468,6 @@ static void sound_control_exit(void)
 module_init(sound_control_init);
 module_exit(sound_control_exit);
 
-MODULE_LICENSE("GPLv2");
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
