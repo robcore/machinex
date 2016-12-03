@@ -462,12 +462,12 @@ static void cpufreq_interactive_timer(unsigned long data)
 			else
 				new_freq = choose_freq(pcpu, loadadjfreq);
 	}
-
+#if 0
 	if (boosted) {
 		if (new_freq < input_boost_freq)
 			new_freq = input_boost_freq;
  	}
-
+#endif
 	if (counter > 0) {
 		counter--;
 		if (counter == 0) {

@@ -36,6 +36,7 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
+#include <linux/touchboost.h>
 
 static int active_count;
 
@@ -75,11 +76,11 @@ static struct mutex gov_lock;
 static unsigned int hispeed_freq = 1890000;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 95
+#define DEFAULT_GO_HISPEED_LOAD 90
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 80
+#define DEFAULT_TARGET_LOAD 75
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -100,7 +101,7 @@ static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 /*
  * The sample rate of the timer used to increase frequency
  */
-#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_RATE (10 * USEC_PER_MSEC)
 static unsigned long timer_rate = DEFAULT_TIMER_RATE;
 
 /*
@@ -115,7 +116,7 @@ static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 
 /* 1000000us - 1s */
-#define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
+#define DEFAULT_BOOSTPULSE_DURATION 100000 /*One Tenth of a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
 /*
 #define DEFAULT_MX_BOOST_FREQ 1242000
@@ -137,7 +138,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
  */
 
 //(4 * DEFAULT_TIMER_RATE)
-#define DEFAULT_TIMER_SLACK 10000
+#define DEFAULT_TIMER_SLACK 0 //disabled
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 /*
@@ -148,13 +149,13 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 static bool align_windows = true;
 
 /* Improves frequency selection for more energy */
-static bool closest_freq_selection = true;
+static bool closest_freq_selection = false;
 
 /*
  * Stay at max freq for at least max_freq_hysteresis before dropping
  * frequency.
  */
-#define DEFAULT_HYSTERESIS 5
+#define DEFAULT_HYSTERESIS 8
 static unsigned int max_freq_hysteresis = DEFAULT_HYSTERESIS;
 
 static bool io_is_busy = 0;
@@ -425,11 +426,11 @@ static void cpufreq_interactive_timer(unsigned long data)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / pcpu->policy->cur;
-	boosted = now < boostpulse_duration_val;
+	boosted = now < (get_input_time() + boostpulse_duration_val);
 
-	if (counter < 5) {
+	if (counter < 8) {
 		counter++;
-		if (counter > 2) {
+		if (counter > 1) {
 			phase = 1;
 		}
 	}
