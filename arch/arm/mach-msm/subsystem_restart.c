@@ -375,7 +375,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
-	if (restart_level = !RESET_SUBSYS_INDEPENDENT)
+	if (restart_level != RESET_SUBSYS_INDEPENDENT)
 		soc_restart_order = dev->restart_order;
 
 	/*
@@ -628,7 +628,12 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-
+#ifndef CONFIG_MACH_JF
+	if (cpu_is_msm8960() || cpu_is_msm8930()) {
+		restart_orders = restart_orders_8960;
+		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
+	}
+#endif
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);
@@ -638,12 +643,12 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = restart_orders_8064_sglte2;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8064_sglte2);
 	}
-
+#if 0
 	if (cpu_is_msm8960() || cpu_is_msm8930() || cpu_is_apq8064()) {
 		restart_orders = restart_orders_modem_8960;
 		n_restart_orders = ARRAY_SIZE(restart_orders_modem_8960);
 	}
-
+#endif
 	for (i = 0; i < n_restart_orders; i++) {
 		mutex_init(&restart_orders[i]->powerup_lock);
 		mutex_init(&restart_orders[i]->shutdown_lock);
