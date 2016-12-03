@@ -220,7 +220,7 @@ struct comp_dgtl_gain_offset {
 	u8 half_db_gain;
 };
 
-const static struct comp_dgtl_gain_offset
+static const struct comp_dgtl_gain_offset
 			comp_dgtl_gain[MAX_PA_GAIN_OPTIONS] = {
 	{0, 0},
 	{1, 1},
@@ -488,7 +488,7 @@ static int tabla_codec_enable_charge_pump(struct snd_soc_dapm_widget *w,
 	pr_debug("%s %d\n", __func__, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		msleep(15);
+		//msleep(15);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLK_OTHR_CTL, 0x01,
 			0x01);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLSG_CTL, 0x08, 0x08);
@@ -1081,6 +1081,8 @@ static int tabla_codec_hphr_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -1108,6 +1110,8 @@ static int tabla_codec_hphl_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -2170,11 +2174,8 @@ static int tabla_codec_enable_clock_block(struct snd_soc_codec *codec,
 			tabla_codec_enable_config_mode(codec, 0);
 		}
 	}
-#ifndef CONFIG_MACH_M2
+
 	snd_soc_update_bits(codec, TABLA_A_CLK_BUFF_EN1, 0x01, 0x01);
-#else
-	snd_soc_update_bits(codec, TABLA_A_CLK_BUFF_EN1, 0x05, 0x05);
-#endif
 	snd_soc_update_bits(codec, TABLA_A_CLK_BUFF_EN2, 0x02, 0x00);
 	/* on MCLK */
 	snd_soc_update_bits(codec, TABLA_A_CLK_BUFF_EN2, 0x04, 0x04);
@@ -2316,9 +2317,9 @@ static int tabla_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x40);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-		pr_debug("%s: sleeping 16 us after %s PA turn on\n",
+		pr_debug("%s: sleeping 16 ms after %s PA turn on\n",
 				__func__, w->name);
-		usleep_range(16, 16);
+		usleep_range(16000, 16000);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x00);
@@ -3044,15 +3045,15 @@ static int tabla_codec_enable_ear_rx_bias(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		tabla_enable_rx_bias(codec, 1);
+		usleep_range(1000, 1000);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		msleep(40);
 		tabla_enable_rx_bias(codec, 0);
+		usleep_range(1000, 1000);
 		break;
 	}
 	return 0;
 }
-
 
 static int tabla_codec_enable_rx_bias(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
@@ -4139,7 +4140,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 #endif
 }
 #ifdef CONFIG_SOUND_CONTROL
-EXPORT_SYMBOL(tabla_write);
+EXPORT_SYMBOL_GPL(tabla_write);
 #endif
 
 #ifndef CONFIG_SOUND_CONTROL
@@ -4167,7 +4168,7 @@ unsigned int tabla_read(struct snd_soc_codec *codec,
 	return val;
 }
 #ifdef CONFIG_SOUND_CONTROL
-EXPORT_SYMBOL(tabla_read);
+EXPORT_SYMBOL_GPL(tabla_read);
 #endif
 
 static s16 tabla_get_current_v_ins(struct tabla_priv *tabla, bool hu)
@@ -8932,7 +8933,7 @@ static const struct file_operations poke_reg_fops = {
 
 #ifdef CONFIG_SOUND_CONTROL
 struct snd_soc_codec *snd_engine_codec_ptr;
-EXPORT_SYMBOL(snd_engine_codec_ptr);
+EXPORT_SYMBOL_GPL(snd_engine_codec_ptr);
 #endif
 
 static int tabla_codec_probe(struct snd_soc_codec *codec)
