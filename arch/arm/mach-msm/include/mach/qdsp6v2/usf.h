@@ -99,7 +99,7 @@ enum us_detect_mode_enum {
 #define USF_MAX_CLIENT_NAME_SIZE	20
 
 /* Max number of the ports (mics/speakers) */
-#define USF_MAX_PORT_NUM                8
+#define USF_MAX_PORT_NUM                4
 
 /* Info structure common for TX and RX */
 struct us_xx_info_type {

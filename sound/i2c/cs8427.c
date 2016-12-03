@@ -269,7 +269,6 @@ int snd_cs8427_create(struct snd_i2c_bus *bus,
 	chip->reset_timeout = reset_timeout;
 	snd_cs8427_reset(device);
 
-#if 0	// it's nice for read tests
 	{
 	char buf[128];
 	int xx;
@@ -279,8 +278,7 @@ int snd_cs8427_create(struct snd_i2c_bus *bus,
 	for (xx = 0; xx < 127; xx++)
 		printk(KERN_DEBUG "reg[0x%x] = 0x%x\n", xx+1, buf[xx]);
 	}
-#endif
-	
+
 	if (r_cs8427)
 		*r_cs8427 = device;
 	return 0;
