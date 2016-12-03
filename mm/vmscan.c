@@ -494,10 +494,12 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
  */
 static int __remove_mapping(struct address_space *mapping, struct page *page)
 {
+	unsigned long flags;
+
 	BUG_ON(!PageLocked(page));
 	BUG_ON(mapping != page_mapping(page));
 
-	spin_lock_irq(&mapping->tree_lock);
+	spin_lock_irqsave(&mapping->tree_lock, flags);
 	/*
 	 * The non racy check for a busy page.
 	 *
@@ -542,7 +544,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page)
 		freepage = mapping->a_ops->freepage;
 
 		__delete_from_page_cache(page);
-		spin_unlock_irq(&mapping->tree_lock);
+		spin_unlock_irqrestore(&mapping->tree_lock, flags);
 		mem_cgroup_uncharge_cache_page(page);
 
 		if (freepage != NULL)
@@ -552,7 +554,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page)
 	return 1;
 
 cannot_free:
-	spin_unlock_irq(&mapping->tree_lock);
+	spin_unlock_irqrestore(&mapping->tree_lock, flags);
 	return 0;
 }
 
