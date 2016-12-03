@@ -17,7 +17,7 @@
 
 #define CPUFREQ_HARDLIMIT_VERSION "v2.2 by Yank555.lu"
 
-/* Default frequencies for hammerhead */
+/* Default frequencies for MACH_JF */
 #define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
 #define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
 #define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
