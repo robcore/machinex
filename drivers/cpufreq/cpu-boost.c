@@ -42,7 +42,8 @@ static struct work_struct input_boost_work;
 static struct notifier_block notif;
 #endif
 
-static bool input_boost_enabled;
+static bool input_boost_enabled = true;
+module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
@@ -64,7 +65,6 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 	int i, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
-	bool enabled = false;
 
 	/* single number: apply to all CPUs */
 	if (!ntokens) {
@@ -73,15 +73,6 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 		for_each_possible_cpu(i)
 			per_cpu(sync_info, i).input_boost_freq = val;
 		}
-
-	for_each_possible_cpu(i) {
-		if (per_cpu(sync_info, i).input_boost_freq) {
-			enabled = true;
-			break;
-		}
-	}
-	input_boost_enabled = enabled;
-
 	return 0;
 }
 
@@ -300,8 +291,7 @@ static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 		case CPU_ONLINE:
-			if (!hotplug_boost || !input_boost_enabled ||
-			     work_pending(&input_boost_work))
+			if (!hotplug_boost || work_pending(&input_boost_work))
 				break;
 			pr_debug("Hotplug boost for CPU%lu\n", (long)hcpu);
 			queue_work(cpu_boost_wq, &input_boost_work);
@@ -320,8 +310,7 @@ static struct notifier_block __refdata cpu_nblk = {
 #ifdef CONFIG_STATE_NOTIFIER
 static void __wakeup_boost(void)
 {
-	if (!wakeup_boost || !input_boost_enabled ||
-	     work_pending(&input_boost_work))
+	if (!wakeup_boost || work_pending(&input_boost_work))
 		return;
 	pr_debug("Wakeup boost for display on event.\n");
 	queue_work(cpu_boost_wq, &input_boost_work);
