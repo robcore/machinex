@@ -117,19 +117,17 @@ DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 static const char * const _order_8x60_modems[] = {"external_modem", "modem"};
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
-#ifndef CONFIG_MACH_JF
-/* MSM 8960 restart ordering info */
-static const char * const order_8960[] = {"modem", "lpass"};
+#if 0
+static const char * const order_modem_8960[] = {"modem"};
 
-
-static struct subsys_soc_restart_order restart_orders_8960_one = {
-	.subsystem_list = order_8960,
-	.count = ARRAY_SIZE(order_8960),
+static struct subsys_soc_restart_order restart_orders_modem_8960 = {
+	.subsystem_list = order_modem_8960,
+	.count = ARRAY_SIZE(order_modem_8960),
 	.subsys_ptrs = {[ARRAY_SIZE(order_8960)] = NULL}
 	};
 
-static struct subsys_soc_restart_order *restart_orders_8960[] = {
-	&restart_orders_8960_one,
+static struct subsys_soc_restart_order *restart_orders_modem_8960[] = {
+	&restart_orders_modem_8960,
 };
 #endif
 /*SGLTE restart ordering info*/
@@ -191,17 +189,9 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		pr_info("Rob, you sneaky sonuvabitch.\n");
 	case RESET_SUBSYS_INDEPENDENT:
-		subtype = socinfo_get_platform_subtype();
-		if ((subtype == PLATFORM_SUBTYPE_SGLTE) ||
-			(subtype == PLATFORM_SUBTYPE_SGLTE2)) {
-			pr_info("Phase 3 is currently unsupported. Using phase 2 instead.\n");
-			restart_level = RESET_SUBSYS_COUPLED;
-		}
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SOC:
-		pr_info("Phase %d behavior activated.\n", restart_level);
 		break;
 	default:
 		restart_level = old_val;
@@ -385,7 +375,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
-	if (restart_level != RESET_SUBSYS_INDEPENDENT)
+	if (restart_level = !RESET_SUBSYS_INDEPENDENT)
 		soc_restart_order = dev->restart_order;
 
 	/*
@@ -524,17 +514,13 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	case RESET_SUBSYS_INDEPENDENT_SOC:
 		enable_ramdumps = 1;
 		/* Fall through */
-	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
 		break;
+	case RESET_SUBSYS_COUPLED:
 	case RESET_SOC:
 		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.", name);
 /* It should be used for APQ model to distingush AP side or MDM side */
-#ifdef CONFIG_SEC_DEBUG
-		panic("%s crashed: subsys-restart: Resetting the SoC",
-			name);
-#else
 		panic("subsys-restart: Resetting the SoC - %s crashed.",
 			name);
 #endif
@@ -642,12 +628,7 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-#ifndef CONFIG_MACH_JF
-	if (cpu_is_msm8960() || cpu_is_msm8930()) {
-		restart_orders = restart_orders_8960;
-		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
-	}
-#endif
+
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);
@@ -656,6 +637,11 @@ static int __init ssr_init_soc_restart_orders(void)
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE2) {
 		restart_orders = restart_orders_8064_sglte2;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8064_sglte2);
+	}
+
+	if (cpu_is_msm8960() || cpu_is_msm8930() || cpu_is_apq8064()) {
+		restart_orders = restart_orders_modem_8960;
+		n_restart_orders = ARRAY_SIZE(restart_orders_modem_8960);
 	}
 
 	for (i = 0; i < n_restart_orders; i++) {

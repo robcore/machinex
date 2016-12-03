@@ -47,7 +47,7 @@
 #include <mach/sec_debug.h>
 #endif
 
-#define MDM_MODEM_TIMEOUT	6000
+#define MDM_MODEM_TIMEOUT	12000
 #define MDM_MODEM_DELTA	100
 #define MDM_BOOT_TIMEOUT	60000L
 #define MDM_RDUMP_TIMEOUT	120000L
