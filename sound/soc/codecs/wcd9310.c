@@ -4140,7 +4140,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 #endif
 }
 #ifdef CONFIG_SOUND_CONTROL
-EXPORT_SYMBOL_GPL(tabla_write);
+EXPORT_SYMBOL(tabla_write);
 #endif
 
 #ifndef CONFIG_SOUND_CONTROL
@@ -4168,7 +4168,7 @@ unsigned int tabla_read(struct snd_soc_codec *codec,
 	return val;
 }
 #ifdef CONFIG_SOUND_CONTROL
-EXPORT_SYMBOL_GPL(tabla_read);
+EXPORT_SYMBOL(tabla_read);
 #endif
 
 static s16 tabla_get_current_v_ins(struct tabla_priv *tabla, bool hu)
@@ -8304,7 +8304,7 @@ int tabla_hs_detect(struct snd_soc_codec *codec,
 
 	return rc;
 }
-EXPORT_SYMBOL_GPL(tabla_hs_detect);
+EXPORT_SYMBOL(tabla_hs_detect);
 
 static irqreturn_t tabla_slimbus_irq(int irq, void *data)
 {
@@ -8933,7 +8933,7 @@ static const struct file_operations poke_reg_fops = {
 
 #ifdef CONFIG_SOUND_CONTROL
 struct snd_soc_codec *snd_engine_codec_ptr;
-EXPORT_SYMBOL_GPL(snd_engine_codec_ptr);
+EXPORT_SYMBOL(snd_engine_codec_ptr);
 #endif
 
 static int tabla_codec_probe(struct snd_soc_codec *codec)
