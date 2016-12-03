@@ -740,6 +740,9 @@ void diag_send_data(struct diag_master_table entry, unsigned char *buf,
 					__func__, entry.client_id);
 			}
 		}
+	} else if (driver->ch && !buf &&
+		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
+		chk_logging_wakeup();
 	}
 }
 
@@ -808,6 +811,9 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 				}
 			}
 		}
+	} else if (driver->ch_wcnss && !buf &&
+		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
+		chk_logging_wakeup();
 	}
 #if defined(CONFIG_DIAG_OVER_USB)
 	/* Check for the command/respond msg for the maximum packet length */
@@ -1147,6 +1153,9 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 			encode_rsp_and_send(15);
 			return 0;
 		}
+	} else if (driver->chqdsp && !buf &&
+		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
+		chk_logging_wakeup();
 	}
 	/* Return the Delayed Response Wrap Status */
 	else if ((*buf == 0x4b) && (*(buf+1) == 0x32) &&
