@@ -17,11 +17,13 @@
 #define __MACH_CLK_PROVIDER_H
 
 #include <linux/types.h>
+#include <linux/err.h>
 #include <linux/list.h>
 #include <linux/clkdev.h>
 #include <linux/spinlock.h>
 #include <linux/mutex.h>
 #include <linux/regulator/consumer.h>
+#include <linux/seq_file.h>
 #include <mach/clk.h>
 
 /*
@@ -90,6 +92,14 @@ struct clk_vdd_class {
 		.level_votes = (int [_num_levels]) {}, \
 		.num_levels = _num_levels, \
 		.cur_level = _num_levels, \
+		.lock = __MUTEX_INITIALIZER(_name.lock) \
+	}
+
+#define DEFINE_VDD_REGS_INIT(_name, _num_regulators) \
+	struct clk_vdd_class _name = { \
+		.class_name = #_name, \
+		.regulator = (struct regulator * [_num_regulators]) {}, \
+		.num_regulators = _num_regulators, \
 		.lock = __MUTEX_INITIALIZER(_name.lock) \
 	}
 
