@@ -523,7 +523,6 @@ int subsystem_restart_dev(struct subsys_device *dev)
 /* It should be used for APQ model to distingush AP side or MDM side */
 		panic("subsys-restart: Resetting the SoC - %s crashed.",
 			name);
-#endif
 		break;
 	default:
 		pr_err("subsys-restart: Unknown restart level!\n");
