@@ -177,9 +177,9 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x5400000
+#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
-#define MSM_ION_QSECOM_SIZE	0x780000 /* (7.5MB) */
+#define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	8
 #else
 #define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
@@ -597,7 +597,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.reusable = FMEM_ENABLED,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
-	.is_cma = 1,
+	.is_cma = 0,
 	.no_nonsecure_alloc = 1,
 };
 
@@ -2554,7 +2554,7 @@ static struct wcd9xxx_pdata apq8064_tabla_platform_data = {
 	.irq = MSM_GPIO_TO_INT(42),
 	.irq_base = TABLA_INTERRUPT_BASE,
 	.num_irqs = NR_WCD9XXX_IRQS,
-	.reset_gpio = PM8921_GPIO_PM_TO_SYS(34),
+	.reset_gpio = PM8921_GPIO_PM_TO_SYS(38),
 	.micbias = {
 		.ldoh_v = TABLA_LDOH_2P85_V,
 		.cfilt1_mv = 1800,
@@ -2621,7 +2621,7 @@ static struct wcd9xxx_pdata apq8064_tabla20_platform_data = {
 	.irq = MSM_GPIO_TO_INT(42),
 	.irq_base = TABLA_INTERRUPT_BASE,
 	.num_irqs = NR_WCD9XXX_IRQS,
-	.reset_gpio = PM8921_GPIO_PM_TO_SYS(34),
+	.reset_gpio = PM8921_GPIO_PM_TO_SYS(38),
 	.micbias = {
 		.ldoh_v = TABLA_LDOH_2P85_V,
 		.cfilt1_mv = 1800,
@@ -2641,14 +2641,14 @@ static struct wcd9xxx_pdata apq8064_tabla20_platform_data = {
 	},
 	{
 		.name = "CDC_VDDA_RX",
-		.min_uV = 1800000,
-		.max_uV = 1800000,
+		.min_uV = 2200000,
+		.max_uV = 2200000,
 		.optimum_uA = WCD9XXX_CDC_VDDA_RX_CUR_MAX,
 	},
 	{
 		.name = "CDC_VDDA_TX",
-		.min_uV = 1800000,
-		.max_uV = 1800000,
+		.min_uV = 2200000,
+		.max_uV = 2200000,
 		.optimum_uA = WCD9XXX_CDC_VDDA_TX_CUR_MAX,
 	},
 	{
