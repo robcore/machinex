@@ -451,6 +451,7 @@ static void *msm_bus_noc_allocate_noc_data(struct platform_device *pdev,
 			GFP_KERNEL);
 		if (!ninfo->cdata[i].slv) {
 			MSM_BUS_DBG("Couldn't alloc mem for noc master-bw\n");
+			kfree(ninfo->cdata[i].mas);
 			goto err;
 		}
 	}
