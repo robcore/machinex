@@ -25,7 +25,7 @@
 #include <linux/time.h>
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
-#endif
+#endifz
 
 struct cpu_sync {
 	int cpu;

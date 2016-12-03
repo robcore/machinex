@@ -36,7 +36,6 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
-#include <linux/touchboost.h>
 
 static int active_count;
 
@@ -118,9 +117,10 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* 1000000us - 1s */
 #define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
+/*
 #define DEFAULT_MX_BOOST_FREQ 1242000
 int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
-
+*/
 /*
  * Making sure cpufreq stays low when it needs to stay low
  */
@@ -129,7 +129,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 /*
  * Default thread migration boost cpufreq
  */
-#define CPU_SYNC_FREQ 1134000
+#define CPU_SYNC_FREQ 810000
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
@@ -425,7 +425,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / pcpu->policy->cur;
-	boosted = now < (get_input_time() + boostpulse_duration_val);
+	boosted = now < boostpulse_duration_val;
 
 	if (counter < 5) {
 		counter++;
@@ -466,11 +466,12 @@ static void cpufreq_interactive_timer(unsigned long data)
 			else
 				new_freq = choose_freq(pcpu, loadadjfreq);
 	}
-
+/*
 	if (boosted) {
 		if (new_freq < mx_boost_freq)
 			new_freq = mx_boost_freq;
  	}
+*/
 
 	if (counter > 0) {
 		counter--;
@@ -1135,6 +1136,7 @@ timer_rate = val_round;
 static struct global_attr timer_rate_attr = __ATTR(timer_rate, 0644,
 		show_timer_rate, store_timer_rate);
 
+#if 0
 static ssize_t show_mx_boost_freq(struct kobject *kobj, struct attribute *attr,
                                      char *buf)
 {
@@ -1158,7 +1160,7 @@ static ssize_t store_mx_boost_freq(struct kobject *kobj, struct attribute *attr,
 
 static struct global_attr mx_boost_freq_attr = __ATTR(mx_boost_freq, 0644,
 		show_mx_boost_freq, store_mx_boost_freq);
-
+#endif
 static ssize_t show_timer_slack(
 	struct kobject *kobj, struct attribute *attr, char *buf)
 {
@@ -1279,7 +1281,7 @@ static struct attribute *interactive_attributes[] = {
 	&go_hispeed_load_attr.attr,
 	&min_sample_time_attr.attr,
 	&timer_rate_attr.attr,
-	&mx_boost_freq_attr.attr,
+	//&mx_boost_freq_attr.attr,
 	&timer_slack.attr,
 	&io_is_busy_attr.attr,
 	&boostpulse_duration.attr,
