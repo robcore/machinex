@@ -36,7 +36,7 @@ static struct snd_soc_dai_driver msm_stub_dais[] = {
 			.channels_min = 1,
 			.channels_max = 8,
 			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = (SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		},
 	},
 };
