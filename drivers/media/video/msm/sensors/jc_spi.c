@@ -138,13 +138,11 @@ int spi_xmit(const u8 *addr,const int len)
 			spi_message_add_tail(xfer, &msg);
 			ret = spi_sync(g_spi, &msg);
 			if (ret < 0)
-				printk("spi_sync ret: %d\n",ret);
 			duplicate_len = duplicate_len - BUF_SIZE_FOR_SPI;
 			check_len = check_len + 1;
 		} else {
 
 			if (!buf_for_tx) {
-				printk("Error allocating DMA memory\n");
 				kfree(xfer);
 				return 0;
 			}
@@ -174,7 +172,6 @@ int spi_xmit(const u8 *addr,const int len)
 			spi_message_add_tail(xfer, &msg);
 			ret = spi_sync(g_spi, &msg);
 			if (ret < 0)
-				printk("spi_sync ret: %d\n",ret);
 			duplicate_len = 0;
 		}
 	}
@@ -206,10 +203,6 @@ int spi_xmit_rx(u8 *in_buf, size_t len)
 
 	ret = spi_sync(g_spi, &msg);
 
-	if (ret < 0)
-		cam_err("%s - error %d\n",
-				__func__, ret);
-
 	return ret;
 }
 
@@ -224,8 +217,6 @@ int jc_spi_read(u8 *buf, size_t len, const int rxSize)
 	for (k = 0; k < count; k++) {
 		ret = spi_xmit_rx(&buf[rxSize*k], rxSize);
 		if (ret < 0) {
-			cam_err("%s - error %d\n",
-				__func__, ret);
 			return -EINVAL;
 		}
 	}
@@ -233,8 +224,6 @@ int jc_spi_read(u8 *buf, size_t len, const int rxSize)
 	if (extra != 0) {
 		ret = spi_xmit_rx(&buf[rxSize*k], extra);
 		if (ret < 0) {
-			cam_err("%s - error %d\n",
-				__func__, ret);
 			return -EINVAL;
 		}
 	}
@@ -257,8 +246,6 @@ int jc_spi_write(const u8 *addr, const int len, const int txSize)
 	u8 paddingData[8];
 	u32 count = len/txSize;
 	u32 extra = len%txSize;
-	cam_err("Entered\n");
-	cam_err("count = %d extra = %d\n", count, extra);
 
 	memset(paddingData, 0, sizeof(paddingData));
 
@@ -266,17 +253,14 @@ int jc_spi_write(const u8 *addr, const int len, const int txSize)
 		ret = spi_xmit(&addr[j], txSize);
 		j += txSize;
 		if (ret < 0) {
-			cam_err("failed to write spi_xmit\n");
 			goto exit_err;
 		}
-		cam_err("Delay!!!\n");
 		usleep(50*1000);
 	}
 
 	if (extra) {
 		ret = spi_xmit(&addr[j], extra);
 		if (ret < 0) {
-			cam_err("failed to write spi_xmit\n");
 			goto exit_err;
 		}
 	}
@@ -285,11 +269,9 @@ int jc_spi_write(const u8 *addr, const int len, const int txSize)
 		memset(paddingData, 0, sizeof(paddingData));
 		ret = spi_xmit(paddingData, 8);
 		if (ret < 0) {
-			cam_err("failed to write spi_xmit\n");
 			goto exit_err;
 		}
 	}
-	cam_err("Finish!!\n");
 exit_err:
 	return ret;
 }
@@ -298,17 +280,12 @@ static int jc_spi_probe(struct spi_device *spi)
 {
 	int ret;
 
-	cam_err("Entered\n");
-
 	if (spi_setup(spi)) {
-		cam_err("failed to setup spi for jc_spi\n");
 		ret = -EINVAL;
 		goto err_setup;
 	}
 
 	g_spi = spi;
-
-	cam_err("jc_spi successfully probed\n");
 
 	return 0;
 
@@ -333,8 +310,6 @@ static struct spi_driver jc_spi_driver = {
 
 int jc_spi_init(void)
 {
-	cam_err("Entered\n");
-
 	return spi_register_driver(&jc_spi_driver);
 }
 
