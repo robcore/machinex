@@ -186,7 +186,7 @@ static ssize_t set_enable_irq(struct device *dev,
 	} else if (!dTemp) {
 		disable_debug_timer(data);
 		ssp_enable(data, 0);
-	} else
+	}
 
 	return size;
 }

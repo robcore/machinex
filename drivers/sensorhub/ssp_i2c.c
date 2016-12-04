@@ -105,7 +105,7 @@ int ssp_i2c_read(struct ssp_data *data, char *pTxData, u16 uTxLength,
 			iDiffTime = (int)cur_time.tv_sec - iTimeTemp;
 			iTimeTemp = (int)cur_time.tv_sec;
 			if (iDiffTime >= 4) {
-					__func__, iDiffTime);
+				pr_debug("logging everything is fun");
 				break;
 			}
 			mdelay(10);
@@ -206,7 +206,6 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	} else if (chRxbuf != MSG_ACK) {
 		while (iRetries--) {
 			mdelay(10);
-				__func__);
 			if (waiting_wakeup_mcu(data) < 0)
 				return ERROR;
 			iRet = ssp_i2c_read(data, &(chTxbuf[0]),
