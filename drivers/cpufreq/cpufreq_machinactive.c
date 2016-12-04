@@ -426,7 +426,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / pcpu->policy->cur;
-	boosted = now < (get_input_time() + boostpulse_duration_val);
+	boosted = now < boostpulse_duration_val;
 
 	if (counter < 8) {
 		counter++;
