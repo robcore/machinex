@@ -406,7 +406,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
-
 	if (!pcpu->governor_enabled)
 		goto exit;
 
@@ -420,13 +419,13 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->last_evaluated_jiffy = get_jiffies_64();
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 
-	if (!delta_time)
+	if (WARN_ON_ONCE(!delta_time))
 		goto rearm;
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	cpu_load = loadadjfreq / pcpu->target_freq;
+	cpu_load = loadadjfreq / pcpu->policy->cur;
 	boosted = now < (get_input_time() + boostpulse_duration_val);
 
 	if (counter < 8) {
@@ -439,11 +438,11 @@ static void cpufreq_interactive_timer(unsigned long data)
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
 	if (cpu_load >= go_hispeed_load || boosted) {
-		if (pcpu->target_freq < hispeed_freq) {
+		if (pcpu->policy->cur < hispeed_freq) {
 			nr_cpus = num_online_cpus();
 
 			pcpu->two_phase_freq = two_phase_freq_array[nr_cpus-1];
-			if (pcpu->two_phase_freq < pcpu->target_freq)
+			if (pcpu->two_phase_freq < pcpu->policy->cur)
 				phase = 1;
 			if (pcpu->two_phase_freq != 0 && phase == 0) {
 				new_freq = pcpu->two_phase_freq;
@@ -482,10 +481,10 @@ static void cpufreq_interactive_timer(unsigned long data)
 		}
 	}
 
-	if (pcpu->target_freq >= hispeed_freq &&
-	    new_freq > pcpu->target_freq &&
+	if (pcpu->policy->cur >= hispeed_freq &&
+	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->hispeed_validate_time <
-	    freq_to_above_hispeed_delay(pcpu->target_freq)) {
+	    freq_to_above_hispeed_delay(pcpu->policy->cur)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -541,8 +540,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * till next timer interrupt arrives, new_freq remains same as
 	 * actual freq. Don't go for setting same frequency again.
 	 */
-	if (pcpu->target_freq == new_freq) {
-		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
+	if (pcpu->target_freq == new_freq
+		&& pcpu->policy->cur == new_freq) {
+	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm_if_notmax;
 	}
 
@@ -581,17 +581,14 @@ static void cpufreq_interactive_idle_start(void)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
-
 	if (!pcpu->governor_enabled)
-		up_read(&pcpu->enable_sem);
-		return;
+		goto exit;
 
 	/* Cancel the timer if cpu is offline */
 	if (cpu_is_offline(cpu)) {
 		del_timer(&pcpu->cpu_timer);
 		del_timer(&pcpu->cpu_slack_timer);
-		up_read(&pcpu->enable_sem);
-		return;
+		goto exit;
 	}
 
 	pending = timer_pending(&pcpu->cpu_timer);
@@ -624,7 +621,7 @@ static void cpufreq_interactive_idle_start(void)
 			}
 		}
 	}
-
+exit:
 	up_read(&pcpu->enable_sem);
 }
 
@@ -994,6 +991,7 @@ static ssize_t store_above_hispeed_delay(
 	nabove_hispeed_delay = ntokens;
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
 	return count;
+
 }
 
 static struct global_attr above_hispeed_delay_attr =
