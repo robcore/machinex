@@ -55,7 +55,6 @@ static int ssp_wait_for_chg(struct ssp_data *data)
 		udelay(20);
 
 	if (timeout_counter > count) {
-		dev_err(&data->client->dev, "ssp_wait_for_chg() timeout!\n");
 		return -EIO;
 	}
 
@@ -83,12 +82,10 @@ recheck:
 	pr_debug("%s, uVal = 0x%x\n", __func__, uVal);
 	if (uVal & 0x20) {
 		if (i2c_master_recv(client, &uTemp, 1) != 1) {
-			pr_err("[SSP]: %s - i2c recv fail\n", __func__);
 			return -EIO;
 		}
 
 		if (i2c_master_recv(client, &uTemp, 1) != 1) {
-			pr_err("[SSP]: %s - i2c recv fail\n", __func__);
 			return -EIO;
 		}
 
@@ -96,20 +93,20 @@ recheck:
 	}
 
 	if ((uVal & 0xF0) == BL_APP_CRC_FAIL) {
-		pr_info("[SSP] SSP_APP_CRC_FAIL - There is no bootloader.\n");
+		pr_debug("[SSP] SSP_APP_CRC_FAIL - There is no bootloader.\n");
 		if (i2c_master_recv(client, &uVal, 1) != 1) {
-			pr_err("[SSP]: %s - i2c recv fail\n", __func__);
+			pr_debug("[SSP]: %s - i2c recv fail\n", __func__);
 			return -EIO;
 		}
 
 		if (uVal & 0x20) {
 			if (i2c_master_recv(client, &uTemp, 1) != 1) {
-				pr_err("[SSP]: %s - i2c recv fail\n", __func__);
+				pr_debug("[SSP]: %s - i2c recv fail\n", __func__);
 				return -EIO;
 			}
 
 			if (i2c_master_recv(client, &uTemp, 1) != 1) {
-				pr_err("[SSP]: %s - i2c recv fail\n", __func__);
+				pr_debug("[SSP]: %s - i2c recv fail\n", __func__);
 				return -EIO;
 			}
 
@@ -134,7 +131,7 @@ recheck:
 	}
 
 	if (uVal != uState) {
-		pr_err("[SSP]: %s - Invalid bootloader mode state\n", __func__);
+		pr_debug("[SSP]: %s - Invalid bootloader mode state\n", __func__);
 		return -EINVAL;
 	}
 
@@ -149,7 +146,7 @@ static int unlock_bootloader(struct i2c_client *client)
 	uBuf[1] = BL_UNLOCK_CMD_MSB;
 
 	if (i2c_master_send(client, uBuf, 2) != 2) {
-		pr_err("[SSP]: %s - i2c send failed\n", __func__);
+		pr_debug("[SSP]: %s - i2c send failed\n", __func__);
 		return -EIO;
 	}
 
@@ -160,7 +157,7 @@ static int fw_write(struct i2c_client *client,
 	const u8 *pData, unsigned int uFrameSize)
 {
 	if (i2c_master_send(client, pData, uFrameSize) != uFrameSize) {
-		pr_err("[SSP]: %s - i2c send failed\n", __func__);
+		pr_debug("[SSP]: %s - i2c send failed\n", __func__);
 		return -EIO;
 	}
 
@@ -182,7 +179,7 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 	mm_segment_t old_fs = get_fs();
 	struct ssp_data *data = i2c_get_clientdata(client);
 
-	pr_info("[SSP] ssp_load_ums_fw start!!!\n");
+	pr_debug("[SSP] ssp_load_ums_fw start!!!\n");
 
 	old_fs = get_fs();
 	set_fs(get_ds());
@@ -192,17 +189,17 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 	fp = filp_open(fw_path, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		iRet = ERROR;
-		pr_err("file %s open error:%d\n", fw_path, (s32)fp);
+		pr_debug("file %s open error:%d\n", fw_path, (s32)fp);
 		goto err_open;
 	}
 
 	uFSize = (unsigned int)fp->f_path.dentry->d_inode->i_size;
-	pr_info("ssp_load_ums firmware size: %u\n", uFSize);
+	pr_debug("ssp_load_ums firmware size: %u\n", uFSize);
 
 	buff = kzalloc((size_t)uFSize, GFP_KERNEL);
 	if (!buff) {
 		iRet = ERROR;
-		pr_err("fail to alloc buffer for fw\n");
+		pr_debug("fail to alloc buffer for fw\n");
 		goto err_alloc;
 	}
 
@@ -210,14 +207,14 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 			(unsigned int)uFSize, &fp->f_pos);
 	if (uNRead != uFSize) {
 		iRet = ERROR;
-		pr_err("fail to read file %s (nread = %u)\n", fw_path, uNRead);
+		pr_debug("fail to read file %s (nread = %u)\n", fw_path, uNRead);
 		goto err_fw_size;
 	}
 
 	/* Unlock bootloader */
 	iRet = unlock_bootloader(client);
 	if (iRet < 0) {
-		pr_err("[SSP] %s - unlock_bootloader failed! %d\n",
+		pr_debug("[SSP] %s - unlock_bootloader failed! %d\n",
 			__func__, iRet);
 		goto out;
 	}
@@ -226,7 +223,7 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 		if (data->ssp_changes == SSP_MCU_L5) {
 			iRet = ssp_wait_for_chg(data);
 			if (iRet < 0) {
-				pr_err("[SSP] %s - ssp_wait_for_chg failed! %d\n",
+				pr_debug("[SSP] %s - ssp_wait_for_chg failed! %d\n",
 					__func__, iRet);
 				goto out;
 			}
@@ -235,11 +232,11 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 			iCheckWatingFrameDataError++;
 			if (iCheckWatingFrameDataError > 10) {
 				iRet = ERROR;
-				pr_err("[SSP]: %s - F/W update fail\n",
+				pr_debug("[SSP]: %s - F/W update fail\n",
 					__func__);
 				goto out;
 			} else {
-				pr_err("[SSP]: %s - F/W data_error %d, retry\n",
+				pr_debug("[SSP]: %s - F/W data_error %d, retry\n",
 					__func__, iCheckWatingFrameDataError);
 				continue;
 			}
@@ -258,7 +255,7 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 		if (data->ssp_changes == SSP_MCU_L5) {
 			iRet = ssp_wait_for_chg(data);
 			if (iRet < 0) {
-				pr_err("[SSP] %s - ssp_wait_for_chg failed! %d\n",
+				pr_debug("[SSP] %s - ssp_wait_for_chg failed! %d\n",
 					__func__, iRet);
 				goto out;
 			}
@@ -267,11 +264,11 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 			iCheckFrameCrcError++;
 			if (iCheckFrameCrcError > 10) {
 				iRet = ERROR;
-				pr_err("[SSP]: %s - F/W Update Fail. crc err\n",
+				pr_debug("[SSP]: %s - F/W Update Fail. crc err\n",
 					__func__);
 				goto out;
 			} else {
-				pr_err("[SSP]: %s - F/W crc_error %d, retry\n",
+				pr_debug("[SSP]: %s - F/W crc_error %d, retry\n",
 					__func__, iCheckFrameCrcError);
 				continue;
 			}
@@ -279,7 +276,7 @@ static int load_ums_fw_bootmode(struct i2c_client *client, const char *pFn)
 
 		uPos += uFrameSize;
 		if (count++ == 100) {
-			pr_info("[SSP] Updated %u bytes / %u bytes\n", uPos,
+			pr_debug("[SSP] Updated %u bytes / %u bytes\n", uPos,
 				uFSize);
 			count = 0;
 		}
@@ -309,11 +306,11 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 	int count = 0;
 	struct ssp_data *data = i2c_get_clientdata(client);
 
-	pr_info("[SSP] ssp_load_fw start!!!\n");
+	pr_debug("[SSP] ssp_load_fw start!!!\n");
 
 	iRet = request_firmware(&fw, pFn, &client->dev);
 	if (iRet) {
-		pr_err("[SSP]: %s - Unable to open firmware %s\n",
+		pr_debug("[SSP]: %s - Unable to open firmware %s\n",
 			__func__, pFn);
 		return iRet;
 	}
@@ -321,7 +318,7 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 	/* Unlock bootloader */
 	iRet = unlock_bootloader(client);
 	if (iRet < 0) {
-		pr_err("[SSP] %s - unlock_bootloader failed! %d\n",
+		pr_debug("[SSP] %s - unlock_bootloader failed! %d\n",
 			__func__, iRet);
 		goto out;
 	}
@@ -330,7 +327,7 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 		if (data->ssp_changes == SSP_MCU_L5) {
 			iRet = ssp_wait_for_chg(data);
 			if (iRet < 0) {
-				pr_err("[SSP] %s - ssp_wait_for_chg failed! %d\n",
+				pr_debug("[SSP] %s - ssp_wait_for_chg failed! %d\n",
 					__func__, iRet);
 				goto out;
 			}
@@ -339,11 +336,11 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 		if (iRet) {
 			iCheckWatingFrameDataError++;
 			if (iCheckWatingFrameDataError > 10) {
-				pr_err("[SSP]: %s - F/W update fail\n",
+				pr_debug("[SSP]: %s - F/W update fail\n",
 					__func__);
 				goto out;
 			} else {
-				pr_err("[SSP]: %s - F/W data_error %d, retry\n",
+				pr_debug("[SSP]: %s - F/W data_error %d, retry\n",
 					__func__, iCheckWatingFrameDataError);
 				continue;
 			}
@@ -362,7 +359,7 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 		if (data->ssp_changes == SSP_MCU_L5) {
 			iRet = ssp_wait_for_chg(data);
 			if (iRet < 0) {
-				pr_err("[SSP] %s - ssp_wait_for_chg failed! %d\n",
+				pr_debug("[SSP] %s - ssp_wait_for_chg failed! %d\n",
 					__func__, iRet);
 				goto out;
 			}
@@ -371,11 +368,11 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 		if (iRet) {
 			iCheckFrameCrcError++;
 			if (iCheckFrameCrcError > 10) {
-				pr_err("[SSP]: %s - F/W Update Fail. crc err\n",
+				pr_debug("[SSP]: %s - F/W Update Fail. crc err\n",
 					__func__);
 				goto out;
 			} else {
-				pr_err("[SSP]: %s - F/W crc_error %d, retry\n",
+				pr_debug("[SSP]: %s - F/W crc_error %d, retry\n",
 					__func__, iCheckFrameCrcError);
 				continue;
 			}
@@ -383,13 +380,13 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 
 		uPos += uFrameSize;
 		if (count++ == 100) {
-			pr_info("[SSP] Updated %d bytes / %zd bytes\n", uPos,
+			pr_debug("[SSP] Updated %d bytes / %zd bytes\n", uPos,
 				fw->size);
 			count = 0;
 		}
 		mdelay(1);
 	}
-	pr_info("[SSP] Firmware download is success.(%d bytes)\n", uPos);
+	pr_debug("[SSP] Firmware download is success.(%d bytes)\n", uPos);
 out:
 	release_firmware(fw);
 	return iRet;
@@ -422,9 +419,9 @@ void toggle_mcu_reset(struct ssp_data *data)
 	data->client->addr = BOOTLOADER_SLAVE_ADDR;
 
 	if (i2c_master_send(data->client, uBuf, 2) != 2)
-		pr_info("[SSP]: %s - ssp_Normal Mode\n", __func__);
+		pr_debug("[SSP]: %s - ssp_Normal Mode\n", __func__);
 	else
-		pr_info("[SSP]: %s - ssp_load_fw_bootmode\n", __func__);
+		pr_debug("[SSP]: %s - ssp_load_fw_bootmode\n", __func__);
 
 	data->client->addr = APP_SLAVE_ADDR;
 }
@@ -433,7 +430,7 @@ static int update_mcu_bin(struct ssp_data *data, int iBinType)
 {
 	int iRet = SUCCESS;
 
-	pr_info("[SSP] ssp_change_to_bootmode\n");
+	pr_debug("[SSP] ssp_change_to_bootmode\n");
 	change_to_bootmode(data);
 	data->client->addr = BOOTLOADER_SLAVE_ADDR;
 
@@ -455,7 +452,7 @@ static int update_mcu_bin(struct ssp_data *data, int iBinType)
 			BL_UMS_FW_NAME);
 		break;
 	default:
-		pr_err("[SSP] binary type error!!\n");
+		pr_debug("[SSP] binary type error!!\n");
 	}
 
 	msleep(SSP_SW_RESET_TIME);
@@ -474,7 +471,7 @@ int forced_to_download_binary(struct ssp_data *data, int iBinType)
 	ssp_enable(data, false);
 
 	data->fw_dl_state = FW_DL_STATE_DOWNLOADING;
-	pr_info("[SSP] %s, DL state = %d\n", __func__,
+	pr_debug("[SSP] %s, DL state = %d\n", __func__,
 	data->fw_dl_state);
 
 	iRet = update_mcu_bin(data, iBinType);
@@ -484,7 +481,7 @@ int forced_to_download_binary(struct ssp_data *data, int iBinType)
 	}
 
 	data->fw_dl_state = FW_DL_STATE_SYNC;
-	pr_info("[SSP] %s, DL state = %d\n", __func__, data->fw_dl_state);
+	pr_debug("[SSP] %s, DL state = %d\n", __func__, data->fw_dl_state);
 	iRet = initialize_mcu(data);
 	if (iRet < 0) {
 		iRet = ERROR;
@@ -500,7 +497,7 @@ int forced_to_download_binary(struct ssp_data *data, int iBinType)
 #endif
 
 	data->fw_dl_state = FW_DL_STATE_DONE;
-	pr_info("[SSP] %s, DL state = %d\n", __func__, data->fw_dl_state);
+	pr_debug("[SSP] %s, DL state = %d\n", __func__, data->fw_dl_state);
 
 	iRet = SUCCESS;
 out:
@@ -516,7 +513,7 @@ static unsigned int check_firmware_rev(struct ssp_data *data)
 
 	iRet = ssp_i2c_read(data, &chTxData, 1, chRxBuf, 3, 0);
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - i2c fail %d\n", __func__, iRet);
+		pr_debug("[SSP]: %s - i2c fail %d\n", __func__, iRet);
 	} else
 		uRev = ((unsigned int)chRxBuf[0] << 16)
 			| ((unsigned int)chRxBuf[1] << 8) | chRxBuf[2];
@@ -528,7 +525,7 @@ int check_fwbl(struct ssp_data *data)
 	int iRet;
 	unsigned int fw_revision;
 
-	pr_info("[SSP] change_rev = %d\n", data->ssp_changes);
+	pr_debug("[SSP] change_rev = %d\n", data->ssp_changes);
 
 	if (data->ssp_changes == SSP_MCU_L0)
 		fw_revision = SSP_FIRMWARE_REVISION;
@@ -548,7 +545,7 @@ int check_fwbl(struct ssp_data *data)
 		iRet = check_bootloader(data->client, BL_WAITING_BOOTLOAD_CMD);
 
 		if (iRet >= 0) {
-			pr_info("[SSP] ssp_load_fw_bootmode\n");
+			pr_debug("[SSP] ssp_load_fw_bootmode\n");
 
 			return FW_DL_STATE_NEED_TO_SCHEDULE;
 		} else {
@@ -558,25 +555,25 @@ int check_fwbl(struct ssp_data *data)
 			data->uCurFirmRev = get_firmware_rev(data);
 			if (data->uCurFirmRev == SSP_INVALID_REVISION ||\
 				data->uCurFirmRev == ERROR) {
-				pr_err("[SSP] MCU is not working, FW download failed\n");
+				pr_debug("[SSP] MCU is not working, FW download failed\n");
 				return FW_DL_STATE_FAIL;
 			} else if (data->uCurFirmRev != fw_revision) {
-				pr_info("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
+				pr_debug("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
 					data->uCurFirmRev, fw_revision);
 
 				return FW_DL_STATE_NEED_TO_SCHEDULE;
 			}
-			pr_info("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
+			pr_debug("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
 				data->uCurFirmRev, fw_revision);
 		}
 	} else {
 		if (data->uCurFirmRev != fw_revision) {
-			pr_info("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
+			pr_debug("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
 				data->uCurFirmRev, fw_revision);
 
 			return FW_DL_STATE_NEED_TO_SCHEDULE;
 		}
-		pr_info("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
+		pr_debug("[SSP] MCU Firm Rev : Old = %8u, New = %8u\n",
 			data->uCurFirmRev, fw_revision);
 	}
 

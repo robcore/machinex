@@ -53,8 +53,6 @@ static void enable_sensor(struct ssp_data *data,
 
 	switch (data->aiCheckStatus[iSensorType]) {
 	case ADD_SENSOR_STATE:
-		pr_info("[SSP]: %s - add %u, New = %lldns\n",
-			 __func__, 1 << iSensorType, dNewDelay);
 
 		uBuf[1] = (u8)get_msdelay(dNewDelay);
 		uBuf[0] = (u8)get_delay_cmd(uBuf[1]);
@@ -86,9 +84,6 @@ static void enable_sensor(struct ssp_data *data,
 			== get_msdelay(data->adDelayBuf[iSensorType]))
 			break;
 
-		pr_info("[SSP]: %s - Change %u, New = %lldns\n",
-			__func__, 1 << iSensorType, dNewDelay);
-
 		uBuf[1] = (u8)get_msdelay(dNewDelay);
 		uBuf[0] = (u8)get_delay_cmd(uBuf[1]);
 		send_instruction(data, CHANGE_DELAY, iSensorType, uBuf, 2);
@@ -113,9 +108,6 @@ static void change_sensor_delay(struct ssp_data *data,
 			== get_msdelay(data->adDelayBuf[iSensorType]))
 			break;
 
-		pr_info("[SSP]: %s - Change %u, New = %lldns\n",
-			__func__, 1 << iSensorType, dNewDelay);
-
 		uBuf[1] = (u8)get_msdelay(dNewDelay);
 		uBuf[0] = (u8)get_delay_cmd(uBuf[1]);
 		send_instruction(data, CHANGE_DELAY, iSensorType, uBuf, 2);
@@ -133,9 +125,6 @@ static int ssp_remove_sensor(struct ssp_data *data,
 {
 	u8 uBuf[2];
 	int64_t dSensorDelay = data->adDelayBuf[uChangedSensor];
-
-	ssp_dbg("[SSP]: %s - remove sensor = %d, current state = %d\n",
-		__func__, (1 << uChangedSensor), uNewEnable);
 
 	data->adDelayBuf[uChangedSensor] = DEFUALT_POLLING_DELAY;
 
@@ -157,7 +146,7 @@ static int ssp_remove_sensor(struct ssp_data *data,
 		}
 	} else if (uChangedSensor == GEOMAGNETIC_SENSOR) {
 		if (mag_store_hwoffset(data))
-			pr_err("mag_store_hwoffset success\n");
+			pr_debug("mag_store_hwoffset success\n");
 	}
 
 	if (atomic_read(&data->aSensorEnable) & (1 << uChangedSensor)) {
@@ -179,8 +168,6 @@ static ssize_t show_enable_irq(struct device *dev,
 {
 	struct ssp_data *data = dev_get_drvdata(dev);
 
-	ssp_dbg("[SSP]: %s - %d\n", __func__, !data->bSspShutdown);
-
 	return sprintf(buf, "%d\n", !data->bSspShutdown);
 }
 
@@ -193,7 +180,6 @@ static ssize_t set_enable_irq(struct device *dev,
 	if (kstrtou8(buf, 10, &dTemp) < 0)
 		return -1;
 
-	pr_info("[SSP] %s - %d start\n", __func__, dTemp);
 	if (dTemp) {
 		reset_mcu(data);
 		enable_debug_timer(data);
@@ -201,8 +187,7 @@ static ssize_t set_enable_irq(struct device *dev,
 		disable_debug_timer(data);
 		ssp_enable(data, 0);
 	} else
-		pr_err("[SSP] %s - invalid value\n", __func__);
-	pr_info("[SSP] %s - %d end\n", __func__, dTemp);
+
 	return size;
 }
 
@@ -210,9 +195,6 @@ static ssize_t show_sensors_enable(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	struct ssp_data *data = dev_get_drvdata(dev);
-
-	ssp_dbg("[SSP]: %s - cur_enable = %d\n", __func__,
-		 atomic_read(&data->aSensorEnable));
 
 	return sprintf(buf, "%9u\n", atomic_read(&data->aSensorEnable));
 }
@@ -229,8 +211,6 @@ static ssize_t set_sensors_enable(struct device *dev,
 		return -1;
 
 	uNewEnable = (unsigned int)dTemp;
-	ssp_dbg("[SSP]: %s - new_enable = %u, old_enable = %u\n", __func__,
-		 uNewEnable, atomic_read(&data->aSensorEnable));
 
 	if (uNewEnable == atomic_read(&data->aSensorEnable))
 		return size;
@@ -256,12 +236,12 @@ static ssize_t set_sensors_enable(struct device *dev,
 					} else if (uChangedSensor == GEOMAGNETIC_SENSOR) {
 						iRet = mag_open_hwoffset(data);
 						if (iRet < 0)
-							pr_err("[SSP]: %s - mag_open_hw_offset"
+							pr_debug("[SSP]: %s - mag_open_hw_offset"
 							" failed, %d\n", __func__, iRet);
 
 						iRet = set_hw_offset(data);
 						if (iRet < 0) {
-							pr_err("[SSP]: %s - set_hw_offset failed\n",
+							pr_debug("[SSP]: %s - set_hw_offset failed\n",
 								__func__);
 						}
 					}
@@ -293,7 +273,6 @@ static ssize_t set_flush(struct device *dev,
 	input_report_rel(data->meta_input_dev, REL_HWHEEL, sensor_type + 1);
 	input_sync(data->meta_input_dev);
 
-	pr_info("[SSP] flush %d", sensor_type);
 	return size;
 }
 

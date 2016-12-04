@@ -25,7 +25,6 @@ int waiting_wakeup_mcu(struct ssp_data *data)
 		mdelay(5);
 
 	if (iDelaycnt >= LIMIT_DELAY_CNT) {
-		pr_err("[SSP]: %s - MCU Irq Timeout!!\n", __func__);
 		data->uBusyCnt++;
 	} else {
 		data->uBusyCnt = 0;
@@ -38,7 +37,6 @@ int waiting_wakeup_mcu(struct ssp_data *data)
 		mdelay(5);
 
 	if (iDelaycnt >= LIMIT_DELAY_CNT) {
-		pr_err("[SSP]: %s - MCU Wakeup Timeout!!\n", __func__);
 		data->uTimeOutCnt++;
 	} else {
 		data->uTimeOutCnt = 0;
@@ -58,7 +56,6 @@ int waiting_init_mcu(struct ssp_data *data)
 		mdelay(5);
 
 	if (iDelaycnt >= LIMIT_DELAY_CNT) {
-		pr_err("[SSP]: %s - MCU Irq Timeout!!\n", __func__);
 		data->uBusyCnt++;
 	} else {
 		data->uBusyCnt = 0;
@@ -70,7 +67,6 @@ int waiting_init_mcu(struct ssp_data *data)
 		mdelay(5);
 
 	if (iDelaycnt >= LIMIT_DELAY_CNT) {
-		pr_err("[SSP]: %s - MCU Wakeup Timeout!!\n", __func__);
 		data->uTimeOutCnt++;
 	} else {
 		data->uTimeOutCnt = 0;
@@ -109,12 +105,9 @@ int ssp_i2c_read(struct ssp_data *data, char *pTxData, u16 uTxLength,
 			iDiffTime = (int)cur_time.tv_sec - iTimeTemp;
 			iTimeTemp = (int)cur_time.tv_sec;
 			if (iDiffTime >= 4) {
-				pr_err("[SSP]: %s - i2c time out %d!\n",
 					__func__, iDiffTime);
 				break;
 			}
-			pr_err("[SSP]: %s - i2c transfer error %d! retry...\n",
-				__func__, iRet);
 			mdelay(10);
 		} else {
 			return SUCCESS;
@@ -135,13 +128,10 @@ int ssp_send_cmd(struct ssp_data *data, char command)
 	iRet = ssp_i2c_read(data, &command, 1, &chRxBuf, 1, DEFAULT_RETRIES);
 
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - command 0x%x failed %d\n",
-				__func__, command, iRet);
 		return ERROR;
 	} else if (chRxBuf != MSG_ACK) {
 		while (iRetries--) {
 			mdelay(10);
-			pr_err("[SSP]: %s - command 0x%x retry...\n", __func__, command);
 			iRet = ssp_i2c_read(data, &command, 1, &chRxBuf, 1,
 				DEFAULT_RETRIES);
 			if ((iRet == SUCCESS) && (chRxBuf == MSG_ACK))
@@ -155,7 +145,6 @@ int ssp_send_cmd(struct ssp_data *data, char command)
 	}
 
 	data->uInstFailCnt = 0;
-	ssp_dbg("[SSP]: %s - command 0x%x\n", __func__, command);
 
 	return SUCCESS;
 }
@@ -168,13 +157,9 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	int iRet = 0, iRetries = DEFAULT_RETRIES;
 
 	if (data->fw_dl_state == FW_DL_STATE_DOWNLOADING) {
-		pr_err("[SSP] %s - Skip Inst! DL state = %d\n",
-			__func__, data->fw_dl_state);
 		return SUCCESS;
 	} else if ((!(data->uSensorState & (1 << uSensorType)))
 		&& (uInst <= CHANGE_DELAY)) {
-		pr_err("[SSP]: %s - Bypass Inst Skip! - %u\n",
-			__func__, uSensorType);
 		return FAIL;
 	}
 
@@ -217,12 +202,10 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	iRet = ssp_i2c_read(data, &(chTxbuf[0]), uLength + 4, &chRxbuf, 1,
 		DEFAULT_RETRIES);
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - Instruction CMD Fail %d\n", __func__, iRet);
 		return ERROR;
 	} else if (chRxbuf != MSG_ACK) {
 		while (iRetries--) {
 			mdelay(10);
-			pr_err("[SSP]: %s - Instruction CMD retry...\n",
 				__func__);
 			if (waiting_wakeup_mcu(data) < 0)
 				return ERROR;
@@ -239,8 +222,7 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	}
 
 	data->uInstFailCnt = 0;
-	ssp_dbg("[SSP]: %s - Inst = 0x%x, Sensor Type = 0x%x, data = %u\n",
-		__func__, chTxbuf[2], chTxbuf[3], chTxbuf[4]);
+
 	return SUCCESS;
 }
 
@@ -275,12 +257,9 @@ int set_sensor_position(struct ssp_data *data)
 	chTxBuf[3] = data->mag_position;
 	chTxBuf[4] = 0;
 
-	pr_info("[SSP] Sensor Posision A : %u, G : %u, M: %u, P: %u\n",
-		chTxBuf[1], chTxBuf[2], chTxBuf[3], chTxBuf[4]);
-
 	iRet = ssp_i2c_read(data, chTxBuf, 5, &chRxData, 1, DEFAULT_RETRIES);
 	if ((chRxData != MSG_ACK) || (iRet != SUCCESS)) {
-		pr_err("[SSP]: %s - i2c fail %d\n", __func__, iRet);
+		pr_debug("[SSP]: %s - i2c fail %d\n", __func__, iRet);
 		iRet = ERROR;
 	}
 
@@ -295,14 +274,14 @@ void set_proximity_threshold(struct ssp_data *data,
 	int iRet = 0, iRetries = DEFAULT_RETRIES;
 
 	if (!(data->uSensorState & 0x20)) {
-		pr_info("[SSP]: %s - Skip this function!!!"\
+		pr_debug("[SSP]: %s - Skip this function!!!"\
 			", proximity sensor is not connected(0x%x)\n",
 			__func__, data->uSensorState);
 		return;
 	}
 	if (waiting_wakeup_mcu(data) < 0 ||
 		data->fw_dl_state == FW_DL_STATE_DOWNLOADING) {
-		pr_info("[SSP] : %s, skip DL state = %d\n", __func__,
+		pr_debug("[SSP] : %s, skip DL state = %d\n", __func__,
 			data->fw_dl_state);
 		return;
 	}
@@ -313,13 +292,13 @@ void set_proximity_threshold(struct ssp_data *data,
 
 	iRet = ssp_i2c_read(data, chTxBuf, 3, &chRxBuf, 1, DEFAULT_RETRIES);
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - SENSOR_PROXTHRESHOLD CMD fail %d\n",
+		pr_debug("[SSP]: %s - SENSOR_PROXTHRESHOLD CMD fail %d\n",
 			__func__, iRet);
 		return;
 	} else if (chRxBuf != MSG_ACK) {
 		while (iRetries--) {
 			mdelay(10);
-			pr_err("[SSP]: %s - MSG2SSP_AP_SENSOR_PROXTHRESHOLD "\
+			pr_debug("[SSP]: %s - MSG2SSP_AP_SENSOR_PROXTHRESHOLD "\
 				"CMD retry...\n", __func__);
 			iRet = ssp_i2c_read(data, chTxBuf, 3, &chRxBuf, 1,
 				DEFAULT_RETRIES);
@@ -334,7 +313,7 @@ void set_proximity_threshold(struct ssp_data *data,
 	}
 
 	data->uInstFailCnt = 0;
-	pr_info("[SSP]: Proximity Threshold - %u, %u\n", uData1, uData2);
+	pr_debug("[SSP]: Proximity Threshold - %u, %u\n", uData1, uData2);
 }
 
 void set_proximity_barcode_enable(struct ssp_data *data, bool bEnable)
@@ -353,13 +332,13 @@ void set_proximity_barcode_enable(struct ssp_data *data, bool bEnable)
 
 	iRet = ssp_i2c_read(data, chTxBuf, 2, &chRxBuf, 1, DEFAULT_RETRIES);
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - SENSOR_BARCODE_EMUL CMD fail %d\n",
+		pr_debug("[SSP]: %s - SENSOR_BARCODE_EMUL CMD fail %d\n",
 				__func__, iRet);
 		return;
 	} else if (chRxBuf != MSG_ACK) {
 		while (iRetries--) {
 			mdelay(10);
-			pr_err("[SSP]: %s - MSG2SSP_AP_SENSOR_BARCODE_EMUL "\
+			pr_debug("[SSP]: %s - MSG2SSP_AP_SENSOR_BARCODE_EMUL "\
 				"CMD retry...\n", __func__);
 			iRet = ssp_i2c_read(data, chTxBuf, 2, &chRxBuf, 1,
 				DEFAULT_RETRIES);
@@ -374,7 +353,7 @@ void set_proximity_barcode_enable(struct ssp_data *data, bool bEnable)
 	}
 
 	data->uInstFailCnt = 0;
-	pr_info("[SSP] Proximity Barcode En : %u\n", bEnable);
+	pr_debug("[SSP] Proximity Barcode En : %u\n", bEnable);
 }
 
 void set_gesture_current(struct ssp_data *data, unsigned char uData1)
@@ -385,7 +364,7 @@ void set_gesture_current(struct ssp_data *data, unsigned char uData1)
 
 	if (waiting_wakeup_mcu(data) < 0 ||
 		data->fw_dl_state == FW_DL_STATE_DOWNLOADING) {
-		pr_info("[SSP] : %s, skip DL state = %d\n", __func__,
+		pr_debug("[SSP] : %s, skip DL state = %d\n", __func__,
 			data->fw_dl_state);
 		return;
 	}
@@ -395,13 +374,13 @@ void set_gesture_current(struct ssp_data *data, unsigned char uData1)
 
 	iRet = ssp_i2c_read(data, chTxBuf, 2, &chRxBuf, 1, DEFAULT_RETRIES);
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - SENSOR_GESTURE_CURRENT CMD fail %d\n",
+		pr_debug("[SSP]: %s - SENSOR_GESTURE_CURRENT CMD fail %d\n",
 			__func__, iRet);
 		return;
 	} else if (chRxBuf != MSG_ACK) {
 		while (iRetries--) {
 			mdelay(10);
-			pr_err("[SSP]: %s - MSG2SSP_AP_SENSOR_GESTURE_CURRENT "\
+			pr_debug("[SSP]: %s - MSG2SSP_AP_SENSOR_GESTURE_CURRENT "\
 				"CMD retry...\n", __func__);
 			iRet = ssp_i2c_read(data, chTxBuf, 2, &chRxBuf, 1,
 				DEFAULT_RETRIES);
@@ -416,7 +395,7 @@ void set_gesture_current(struct ssp_data *data, unsigned char uData1)
 	}
 
 	data->uInstFailCnt = 0;
-	pr_info("[SSP]: Gesture Current Setting - %u\n", uData1);
+	pr_debug("[SSP]: Gesture Current Setting - %u\n", uData1);
 }
 
 unsigned int get_sensor_scanning_info(struct ssp_data *data)
@@ -430,7 +409,7 @@ unsigned int get_sensor_scanning_info(struct ssp_data *data)
 
 	iRet = ssp_i2c_read(data, &chTxBuf, 1, chRxData, 2, DEFAULT_RETRIES);
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - i2c failed %d\n", __func__, iRet);
+		pr_debug("[SSP]: %s - i2c failed %d\n", __func__, iRet);
 		return 0;
 	}
 	return ((unsigned int)chRxData[0] << 8) | chRxData[1];
@@ -448,7 +427,7 @@ unsigned int get_firmware_rev(struct ssp_data *data)
 
 	iRet = ssp_i2c_read(data, &chTxData, 1, chRxBuf, 3, DEFAULT_RETRIES);
 	if (iRet != SUCCESS)
-		pr_err("[SSP]: %s - i2c fail %d\n", __func__, iRet);
+		pr_debug("[SSP]: %s - i2c fail %d\n", __func__, iRet);
 	else
 		uRev = ((unsigned int)chRxBuf[0] << 16)
 			| ((unsigned int)chRxBuf[1] << 8) | chRxBuf[2];
@@ -473,11 +452,11 @@ int get_fuserom_data(struct ssp_data *data)
 	uLength = ((unsigned int)chRxBuf[0] << 8) + (unsigned int)chRxBuf[1];
 
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - MSG2SSP_AP_STT - i2c fail %d\n",
+		pr_debug("[SSP]: %s - MSG2SSP_AP_STT - i2c fail %d\n",
 				__func__, iRet);
 		goto err_read_fuserom;
 	} else if (uLength <= 0) {
-		pr_err("[SSP]: %s - No ready data. length = %u\n",
+		pr_debug("[SSP]: %s - No ready data. length = %u\n",
 				__func__, uLength);
 		goto err_read_fuserom;
 	} else {
@@ -492,7 +471,7 @@ int get_fuserom_data(struct ssp_data *data)
 		iRet = ssp_i2c_read(data, chTxBuf, 1, data->pchLibraryBuf,
 			(u16)data->iLibraryLength, DEFAULT_RETRIES);
 		if (iRet != SUCCESS) {
-			pr_err("[SSP]: %s - Fail to receive SSP data %d\n",
+			pr_debug("[SSP]: %s - Fail to receive SSP data %d\n",
 				__func__, iRet);
 			kfree(data->pchLibraryBuf);
 			data->iLibraryLength = 0;
@@ -504,7 +483,7 @@ int get_fuserom_data(struct ssp_data *data)
 	data->uFuseRomData[1] = data->pchLibraryBuf[1];
 	data->uFuseRomData[2] = data->pchLibraryBuf[2];
 
-	pr_info("[SSP] FUSE ROM Data %d , %d, %d\n", data->uFuseRomData[0],
+	pr_debug("[SSP] FUSE ROM Data %d , %d, %d\n", data->uFuseRomData[0],
 		data->uFuseRomData[1], data->uFuseRomData[2]);
 
 	data->iLibraryLength = 0;
@@ -528,7 +507,7 @@ static int ssp_receive_msg(struct ssp_data *data,  u8 uLength)
 	if (uLength > 0) {
 		pchRcvDataFrame = kzalloc((uLength * sizeof(char)), GFP_KERNEL);
 		if (pchRcvDataFrame == NULL) {
-			pr_err("[SSP]: %s - failed to allocate memory\n",
+			pr_debug("[SSP]: %s - failed to allocate memory\n",
 				__func__);
 			iRet = -ENOMEM;
 			return iRet;
@@ -537,13 +516,13 @@ static int ssp_receive_msg(struct ssp_data *data,  u8 uLength)
 		iRet = ssp_i2c_read(data, &chTxBuf, 1, pchRcvDataFrame,
 				(u16)uLength, 0);
 		if (iRet != SUCCESS) {
-			pr_err("[SSP]: %s - Fail to receive data %d\n",
+			pr_debug("[SSP]: %s - Fail to receive data %d\n",
 				__func__, iRet);
 			kfree(pchRcvDataFrame);
 			return ERROR;
 		}
 	} else {
-		pr_err("[SSP]: %s - No ready data. length = %d\n",
+		pr_debug("[SSP]: %s - No ready data. length = %d\n",
 			__func__, uLength);
 		return FAIL;
 	}
@@ -565,7 +544,7 @@ int select_irq_msg(struct ssp_data *data)
 	iRet = ssp_i2c_read(data, &chTxBuf, 1, chRxBuf, 2, 0);
 
 	if (iRet != SUCCESS) {
-		pr_err("[SSP]: %s - MSG2SSP_SSD error %d\n", __func__, iRet);
+		pr_debug("[SSP]: %s - MSG2SSP_SSD error %d\n", __func__, iRet);
 		return ERROR;
 	} else {
 		if (chRxBuf[0] == MSG2SSP_RTS) {
@@ -575,21 +554,21 @@ int select_irq_msg(struct ssp_data *data)
 		}
 #ifdef CONFIG_SENSORS_SSP_SENSORHUB
 		else if (chRxBuf[0] == MSG2SSP_STT) {
-			pr_info("%s: MSG2SSP_STT irq", __func__);
+			pr_debug("%s: MSG2SSP_STT irq", __func__);
 			iRet = ssp_sensorhub_handle_large_data(data,
 					(u8)chRxBuf[1]);
 			if (iRet < 0) {
-				pr_err("%s: ssp sensorhub large data err(%d)",
+				pr_debug("%s: ssp sensorhub large data err(%d)",
 					__func__, iRet);
 			}
 			data->uSsdFailCnt = 0;
 		}
 #endif
 		else if (chRxBuf[0] == MSG2SSP_NO_DATA) {
-			pr_info("%s: MSG2SSP_NO_DATA irq [0]: 0x%x, [1]: 0x%x\n",
+			pr_debug("%s: MSG2SSP_NO_DATA irq [0]: 0x%x, [1]: 0x%x\n",
 				__func__, chRxBuf[0], chRxBuf[1]);
 		} else {
-			pr_err("[SSP]: %s - MSG2SSP_SSD Data fail "\
+			pr_debug("[SSP]: %s - MSG2SSP_SSD Data fail "\
 				"[0]: 0x%x, [1]: 0x%x\n", __func__,
 				chRxBuf[0], chRxBuf[1]);
 			if ((chRxBuf[0] == 0) && (chRxBuf[1] == 0))

@@ -71,7 +71,7 @@ void sync_sensor_state(struct ssp_data *data)
 	proximity_open_calibration(data);
 	iRet = set_hw_offset(data);
 	if (iRet < 0) {
-		pr_err("[SSP]: %s - set_hw_offset failed\n", __func__);
+		pr_debug("[SSP]: %s - set_hw_offset failed\n", __func__);
 	}
 
 	udelay(10);
@@ -163,11 +163,11 @@ static void debug_work_func(struct work_struct *work)
 
 	if (data->fw_dl_state >= FW_DL_STATE_DOWNLOADING &&
 		data->fw_dl_state < FW_DL_STATE_DONE) {
-		pr_info("[SSP] : %s firmware downloading state = %d\n",
+		pr_debug("[SSP] : %s firmware downloading state = %d\n",
 			__func__, data->fw_dl_state);
 		return;
 	} else if (data->fw_dl_state == FW_DL_STATE_FAIL) {
-		pr_err("[SSP] : %s firmware download failed = %d\n",
+		pr_debug("[SSP] : %s firmware download failed = %d\n",
 			__func__, data->fw_dl_state);
 		return;
 	}
@@ -189,7 +189,7 @@ static void debug_work_func(struct work_struct *work)
 		&& (data->bSspShutdown == false)) {
 
 		if (data->uResetCnt < LIMIT_RESET_CNT) {
-			pr_info("[SSP] : %s - uSsdFailCnt(%u), uInstFailCnt(%u),"\
+			pr_debug("[SSP] : %s - uSsdFailCnt(%u), uInstFailCnt(%u),"\
 				"uIrqFailCnt(%u), uTimeOutCnt(%u), uBusyCnt(%u)\n",
 				__func__, data->uSsdFailCnt, data->uInstFailCnt, data->uIrqFailCnt,
 				data->uTimeOutCnt, data->uBusyCnt);
