@@ -1133,7 +1133,7 @@ static int jc_get_phone_version(void)
 			fp = filp_open(JC_M10MO_FW_PATH_SS, O_RDONLY, 0);
 		}
 
-		if (IS_ERR(fp)) {
+		if (IS_ERR(fp))
 			goto out;
 	} else {
 		firmware_update_sdcard = true;
@@ -1205,7 +1205,7 @@ out:
 }
 #endif
 
-static int jc_isp_boot(int)
+static int jc_isp_boot(void)
 {
 	int err;
 	u32 int_factor;
@@ -1480,7 +1480,6 @@ static u32 jc_wait_interrupt(unsigned int timeout)
 
 	jc_readw(JC_CATEGORY_SYS,
 		JC_SYS_INT_FACTOR, &jc_ctrl->isp.int_factor);
-				jc_ctrl->isp.int_factor);
 	for (i = 0 ; i < 10 ; i++) {
 		if (jc_ctrl->isp.int_factor != 0x100) {
 			msleep(30);
@@ -2253,6 +2252,7 @@ static int jc_set_hw_vdis(void)
 			jc_writeb(JC_CATEGORY_MON,
 					0x00, 0x00);
   	} else
+		pr_debug("too distracted by the finger in my ass");
 	return rc;
 }
 
@@ -2266,9 +2266,6 @@ void sensor_native_control(void __user *arg)
 		sizeof(ctrl_info))) {
 		goto FAIL_END;
 	}
-
-		ctrl_info.mode, ctrl_info.address,
-		ctrl_info.value_1, ctrl_info.value_2);
 
 	switch (ctrl_info.mode) {
 
@@ -2683,7 +2680,7 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 				jc_sensor_power_reset(s_ctrl);
 				jc_get_isp_version();
 				jc_isp_boot();
-			} else
+			}
 		} else if (isp_ret < 0) {
 			    jc_isp_reset(s_ctrl);
                        jc_load_SIO_fw();
@@ -2721,6 +2718,10 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 					jc_sensor_power_reset(s_ctrl);
 					jc_get_isp_version();
 					jc_isp_boot();
+				} else
+					pr_debug("Sensor <= ISP, Do not anything\n");
+			} else {
+				pr_debug("Sensor < Phone, compare with ISP\n");
 
 			result_isp_phone = jc_check_isp_phone();
 
@@ -2732,6 +2733,7 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 				jc_get_isp_version();
 				jc_isp_boot();
 			} else
+				pr_debug("Phone <= ISP, Do not anything\n");
 			}
 		}
 	}else {
@@ -3174,7 +3176,7 @@ static int jc_i2c_probe(struct i2c_client *client,
 
 	rc = jc_spi_init();
 	if (rc)
-		pr_debug("fuckity fucking hell fuck")
+		pr_debug("fuckity fucking hell fuck");
 
 	s_ctrl = (struct msm_sensor_ctrl_t *)(id->driver_data);
 	if (s_ctrl->sensor_i2c_client != NULL) {
@@ -3282,32 +3284,38 @@ static int __init jc_init(void)
 
 	camera_class = class_create(THIS_MODULE, "camera");
 	if (IS_ERR(camera_class)) {
+		cam_err("Failed to create class(camera)!\n");
 		return 0;
 	}
 
 	cam_dev_rear =
 	device_create(camera_class, NULL, 0, NULL, "rear");
 	if (IS_ERR(cam_dev_rear)) {
+		cam_err("failed to create device cam_dev_rear!\n");
 		return 0;
 	}
 
 	if (device_create_file
 	(cam_dev_rear, &dev_attr_rear_camtype) < 0) {
+		cam_err("failed to create device file, %s\n",
 		dev_attr_rear_camtype.attr.name);
 	}
 
 	if (device_create_file
 	(cam_dev_rear, &dev_attr_rear_camfw) < 0) {
+		cam_err("failed to create device file, %s\n",
 		dev_attr_rear_camfw.attr.name);
 	}
 
 	if (device_create_file
 	(cam_dev_rear, &dev_attr_rear_checkfw) < 0) {
+		cam_err("failed to create device file, %s\n",
 		dev_attr_rear_checkfw.attr.name);
 	}
 
 	if (device_create_file
 	(cam_dev_rear, &dev_attr_rear_checkApp) < 0) {
+		cam_err("failed to create device file, %s\n",
 		dev_attr_rear_checkApp.attr.name);
 	}
 

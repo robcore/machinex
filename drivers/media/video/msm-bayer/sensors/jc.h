@@ -21,23 +21,23 @@
 #ifdef JC_DEBUG
 #define CAM_DEBUG(fmt, arg...)	\
 do {\
-	printk(KERN_DEBUG "[JC] %s:" fmt "\n", \
+	pr_debug(KERN_DEBUG "[JC] %s:" fmt "\n", \
 	__func__, ##arg); } \
 	while (0)
 
 #define cam_info(fmt, arg...)	\
 do {\
-	printk(KERN_INFO "[JC] %s:" fmt "\n", __func__, ##arg); } \
+	pr_debug(KERN_INFO "[JC] %s:" fmt "\n", __func__, ##arg); } \
 	while (0)
 
 #define cam_err(fmt, arg...)	\
 do {\
-	printk(KERN_ERR "[JC] %s:" fmt "\n", __func__, ##arg); } \
+	pr_debug(KERN_ERR "[JC] %s:" fmt "\n", __func__, ##arg); } \
 	while (0)
 
 #define cam_i2c_dbg(fmt, arg...)	\
 do { \
-	printk(KERN_ERR "[JC] %s:" fmt "\n", __func__, ##arg); } \
+	pr_debug(KERN_ERR "[JC] %s:" fmt "\n", __func__, ##arg); } \
 	while (0)
 #else
 #define CAM_DEBUG(fmt, arg...)
