@@ -116,9 +116,9 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* 1000000us - 1s */
 #define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
-#define DEFAULT_INPUT_BOOST_FREQ 1242000
+/*#define DEFAULT_INPUT_BOOST_FREQ 1242000
 int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
-
+*/
 /*
  * Making sure cpufreq stays low when it needs to stay low
  */
@@ -133,8 +133,8 @@ int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
  * minimum before wakeup to reduce speed, or -1 if unnecessary.
  */
-#define DEFAULT_TIMER_SLACK 10000
-static int timer_slack_val = DEFAULT_TIMER_SLACK;
+//#define DEFAULT_TIMER_SLACK 10000
+static int timer_slack_val = (4 * DEFAULT_TIMER_RATE);
 
 /*
  * Whether to align timer windows across all CPUs. When
@@ -144,7 +144,7 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 static bool align_windows = true;
 
 /* Improves frequency selection for more energy */
-static bool closest_freq_selection = true;
+static bool closest_freq_selection = false;
 
 /*
  * Stay at max freq for at least max_freq_hysteresis before dropping
@@ -415,7 +415,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->last_evaluated_jiffy = get_jiffies_64();
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 
-	if (WARN_ON_ONCE(!delta_time))
+	if (!delta_time)
 		goto rearm;
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
@@ -440,9 +440,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 			pcpu->two_phase_freq = two_phase_freq_array[nr_cpus-1];
 			if (pcpu->two_phase_freq < pcpu->target_freq)
 				phase = 1;
-			if (pcpu->two_phase_freq != 0 && phase == 0)
+			if (pcpu->two_phase_freq != 0 && phase == 0) {
 				new_freq = pcpu->two_phase_freq;
-			else
+			} else
 				new_freq = hispeed_freq;
 		} else {
 			if (use_freq_calc_thresh && new_freq > freq_calc_thresh)
@@ -454,13 +454,15 @@ static void cpufreq_interactive_timer(unsigned long data)
 				new_freq = hispeed_freq;
 		}
 
-	} else if (cpu_load <= DOWN_LOW_LOAD_THRESHOLD)
+	} else if (cpu_load <= DOWN_LOW_LOAD_THRESHOLD) {
 		new_freq = pcpu->policy->min;
-	else
-			if (use_freq_calc_thresh && new_freq > freq_calc_thresh)
+	} else {
+
+	if (use_freq_calc_thresh && new_freq > freq_calc_thresh)
 				new_freq = pcpu->policy->max * cpu_load / 100;
 			else
 				new_freq = choose_freq(pcpu, loadadjfreq);
+	}
 
 	if (counter > 0) {
 		counter--;
@@ -495,18 +497,20 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (pcpu->target_freq >= pcpu->policy->max
 	    && new_freq < pcpu->target_freq
-	    && now - pcpu->max_freq_idle_start_time < max_freq_hysteresis)
+	    && now - pcpu->max_freq_idle_start_time < max_freq_hysteresis) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
+	}
 
 	/*
 	 * Do not scale below floor_freq unless we have been at or above the
 	 * floor frequency for the minimum sample time since last validated.
 	 */
 	if (new_freq < pcpu->floor_freq) {
-		if (now - pcpu->floor_validate_time < min_sample_time)
+		if (now - pcpu->floor_validate_time < min_sample_time) {
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 			goto rearm;
+		}
 	}
 
 	/*
@@ -566,14 +570,17 @@ static void cpufreq_interactive_idle_start(void)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
+
 	if (!pcpu->governor_enabled)
-		goto exit;
+		up_read(&pcpu->enable_sem);
+		return;
 
 	/* Cancel the timer if cpu is offline */
 	if (cpu_is_offline(cpu)) {
 		del_timer(&pcpu->cpu_timer);
 		del_timer(&pcpu->cpu_slack_timer);
-		goto exit;
+		up_read(&pcpu->enable_sem);
+		return;
 	}
 
 	pending = timer_pending(&pcpu->cpu_timer);
@@ -606,7 +613,7 @@ static void cpufreq_interactive_idle_start(void)
 			}
 		}
 	}
-exit:
+
 	up_read(&pcpu->enable_sem);
 }
 
@@ -976,7 +983,6 @@ static ssize_t store_above_hispeed_delay(
 	nabove_hispeed_delay = ntokens;
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
 	return count;
-
 }
 
 static struct global_attr above_hispeed_delay_attr =
@@ -1123,6 +1129,7 @@ timer_rate = val_round;
 static struct global_attr timer_rate_attr = __ATTR(timer_rate, 0644,
 		show_timer_rate, store_timer_rate);
 
+#if 0
 static ssize_t show_input_boost_freq(struct kobject *kobj, struct attribute *attr,
                                      char *buf)
 {
@@ -1146,7 +1153,7 @@ static ssize_t store_input_boost_freq(struct kobject *kobj, struct attribute *at
 
 static struct global_attr input_boost_freq_attr = __ATTR(input_boost_freq, 0644,
 		show_input_boost_freq, store_input_boost_freq);
-
+#endif
 static ssize_t show_timer_slack(
 	struct kobject *kobj, struct attribute *attr, char *buf)
 {
@@ -1267,7 +1274,7 @@ static struct attribute *interactive_attributes[] = {
 	&go_hispeed_load_attr.attr,
 	&min_sample_time_attr.attr,
 	&timer_rate_attr.attr,
-	&input_boost_freq_attr.attr,
+	//&input_boost_freq_attr.attr,
 	&timer_slack.attr,
 	&io_is_busy_attr.attr,
 	&boostpulse_duration.attr,
@@ -1534,4 +1541,3 @@ MODULE_AUTHOR("Laurent Hess <hellsgod@gmx.ch>");
 MODULE_DESCRIPTION("'cpufreq_hellsactive' - A cpufreq governor for "
 	"Latency sensitive workloads based on Google, faux, CAF and some patches from franciscofranco");
 MODULE_LICENSE("GPL");
-

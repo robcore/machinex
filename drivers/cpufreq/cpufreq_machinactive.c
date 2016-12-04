@@ -420,7 +420,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->last_evaluated_jiffy = get_jiffies_64();
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 
-	if (WARN_ON_ONCE(!delta_time))
+	if (!delta_time)
 		goto rearm;
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
@@ -581,14 +581,17 @@ static void cpufreq_interactive_idle_start(void)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
+
 	if (!pcpu->governor_enabled)
-		goto exit;
+		up_read(&pcpu->enable_sem);
+		return;
 
 	/* Cancel the timer if cpu is offline */
 	if (cpu_is_offline(cpu)) {
 		del_timer(&pcpu->cpu_timer);
 		del_timer(&pcpu->cpu_slack_timer);
-		goto exit;
+		up_read(&pcpu->enable_sem);
+		return;
 	}
 
 	pending = timer_pending(&pcpu->cpu_timer);
@@ -621,7 +624,7 @@ static void cpufreq_interactive_idle_start(void)
 			}
 		}
 	}
-exit:
+
 	up_read(&pcpu->enable_sem);
 }
 
