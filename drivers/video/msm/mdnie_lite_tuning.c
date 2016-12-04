@@ -970,7 +970,9 @@ static ssize_t mdnieset_user_select_file_cmd_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-
+	if (mdnie_lock)
+		return -EINVAL;
+	else
 	return size;
 }
 
@@ -1031,12 +1033,12 @@ static ssize_t outdoor_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-	DPRINT("outdoor value = %d, scenario = %d\n",
-		value, mdnie_tun_state.scenario);
+	if (mdnie_lock)
+		return size;
+
 
 	if (value < OUTDOOR_OFF_MODE || value >= MAX_OUTDOOR_MODE) {
-		DPRINT("[ERROR] : wrong outdoor mode value : %d\n",
-				value);
+		pr_debug("[ERROR] : wrong outdoor mode value");
 	}
 
 	mdnie_tun_state.outdoor = value;
@@ -1070,10 +1072,6 @@ static ssize_t negative_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-	//DPRINT
-	    //("negative_store, input value = %d\n",
-	     //value);
-
 	mdnie_tun_state.negative = value;
 
 	mDNIe_set_negative(mdnie_tun_state.negative);
@@ -1096,7 +1094,6 @@ void is_negative_on(void)
 		free_tun_cmd();
 	} else {
 		/* check the mode and tuning again when wake up*/
-		//DPRINT("negative off when resume, tuning again!\n");
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
 }
@@ -1118,8 +1115,6 @@ static ssize_t playspeed_store(struct device *dev,
 {
 	int value;
 	sscanf(buf, "%d", &value);
-
-	//DPRINT("[Play Speed Set]play speed value = %d\n", value);
 
 	is_play_speed_1_5(value);
 	return size;
