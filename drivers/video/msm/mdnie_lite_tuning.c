@@ -64,9 +64,10 @@
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 #define MDNIE_VERSION "Version: 1.3 (by Wootever)"
 static struct mipi_samsung_driver_data *mdnie_msd;
-
 #endif
 
+/*robs master switch hook*/
+static unsigned int mdnie_lock = 1;
 #define MDNIE_LITE_TUN_DEBUG
 
 #ifdef MDNIE_LITE_TUN_DEBUG
@@ -781,7 +782,6 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	sending_tuning_cmd();
 	free_tun_cmd();
 
-	DPRINT("mDNIe_Set_Mode end , mode(%d), background(%d)\n",
 		mode, mdnie_tun_state.background);
 }
 
@@ -830,6 +830,22 @@ void is_play_speed_1_5(int enable)
  * #
  * ##########################################################*/
 
+static ssize_t mdnie_lock_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%u\n", mdnie_lock);
+}
+
+static ssize_t mdnie_lock_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int val;
+
+		sscanf(buf, "%u", &val);
+		mdnie_lock = val;
+	    return size;
+}
+
+static DEVICE_ATTR(mdnie_lock, 0664, mdnie_lock_show, mdnie_lock_store)
+
 static ssize_t mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -843,11 +859,11 @@ static ssize_t mode_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-	//DPRINT("set background mode : %d\n", value);
+
+	if (mdnie_lock)
+		return size;
 
 	if (value < DYNAMIC_MODE || value >= MAX_BACKGROUND_MODE) {
-		//DPRINT("[ERROR] wrong backgound mode value : %d\n",
-			//value);
 		return size;
 	}
 
@@ -857,17 +873,12 @@ static ssize_t mode_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(mode, 0666, mode_show, mode_store);
+static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
 
 static ssize_t scenario_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	//DPRINT("called %s\n", __func__);
-
-	//DPRINT("%s\n",
-		//scenario_name[mdnie_tun_state.scenario]);
-
 	return snprintf(buf, 256, "%s\n",
 		scenario_name[mdnie_tun_state.scenario]);
 }
@@ -880,9 +891,10 @@ static ssize_t scenario_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
+	if (mdnie_lock)
+		return size;
+
 	if (value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE) {
-		//DPRINT("[ERROR] wrong Scenario mode value : %d\n",
-			//value);
 		return size;
 	}
 
@@ -927,34 +939,7 @@ static ssize_t scenario_store(struct device *dev,
 		mdnie_tun_state.scenario = mDNIe_eBOOK_MODE;
 		break;
 
-#ifdef BROWSER_COLOR_TONE_SET
-	case SIG_MDNIE_BROWSER_TONE1:
-		mdnie_tun_state.scenario = mDNIe_BROWSER_TONE1;
-		break;
-	case SIG_MDNIE_BROWSER_TONE2:
-		mdnie_tun_state.scenario = mDNIe_BROWSER_TONE2;
-		break;
-	case SIG_MDNIE_BROWSER_TONE3:
-		mdnie_tun_state.scenario = mDNIe_BROWSER_TONE3;
-		break;
-#endif
-
-
-#if defined(CONFIG_TDMB)
-	case SIG_MDNIE_DMB_MODE:
-		mdnie_tun_state.scenario = mDNIe_DMB_MODE;
-		break;
-	case SIG_MDNIE_DMB_WARM_MODE:
-		mdnie_tun_state.scenario = mDNIe_DMB_WARM_MODE;
-		break;
-	case SIG_MDNIE_DMB_COLD_MODE:
-		mdnie_tun_state.scenario = mDNIe_DMB_COLD_MODE;
-		break;
-#endif
-
 	default:
-		//DPRINT("scenario_store value is wrong : value(%d)\n",
-		       //value);
 		break;
 	}
 
@@ -962,12 +947,11 @@ static ssize_t scenario_store(struct device *dev,
 		DPRINT("already negative mode(%d), do not set mode(%d)\n",
 			mdnie_tun_state.negative, mdnie_tun_state.scenario);
 	} else {
-		//DPRINT(" %s, input value = %d\n", __func__, value);
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
 	return size;
 }
-static DEVICE_ATTR(scenario, 0666, scenario_show,
+static DEVICE_ATTR(scenario, 0664, scenario_show,
 		   scenario_store);
 
 static ssize_t mdnieset_user_select_file_cmd_show(struct device *dev,
@@ -975,7 +959,6 @@ static ssize_t mdnieset_user_select_file_cmd_show(struct device *dev,
 						  char *buf)
 {
 	int mdnie_ui = 0;
-	//DPRINT("called %s\n", __func__);
 
 	return snprintf(buf, 256, "%u\n", mdnie_ui);
 }
@@ -988,14 +971,11 @@ static ssize_t mdnieset_user_select_file_cmd_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-	//DPRINT
-	//("inmdnieset_user_select_file_cmd_store, input value = %d\n",
-	     //value);
 
 	return size;
 }
 
-static DEVICE_ATTR(mdnieset_user_select_file_cmd, 0666,
+static DEVICE_ATTR(mdnieset_user_select_file_cmd, 0664,
 		   mdnieset_user_select_file_cmd_show,
 		   mdnieset_user_select_file_cmd_store);
 
@@ -1004,7 +984,6 @@ static ssize_t mdnieset_init_file_cmd_show(struct device *dev,
 					   char *buf)
 {
 	char temp[] = "mdnieset_init_file_cmd_show\n\0";
-	//DPRINT("called %s\n", __func__);
 	strcat(buf, temp);
 	return strlen(buf);
 }
@@ -1016,7 +995,9 @@ static ssize_t mdnieset_init_file_cmd_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-	//DPRINT("mdnieset_init_file_cmd_store  : value(%d)\n", value);
+
+	if (mdnie_lock)
+		return size;
 
 	switch (value) {
 	case 0:
@@ -1024,9 +1005,6 @@ static ssize_t mdnieset_init_file_cmd_store(struct device *dev,
 		break;
 
 	default:
-		//printk(KERN_ERR
-		       //"mdnieset_init_file_cmd_store value is wrong : value(%d)\n",
-		       //value);
 		break;
 	}
 	mDNIe_Set_Mode(mdnie_tun_state.scenario);
@@ -1034,7 +1012,7 @@ static ssize_t mdnieset_init_file_cmd_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(mdnieset_init_file_cmd, 0666, mdnieset_init_file_cmd_show,
+static DEVICE_ATTR(mdnieset_init_file_cmd, 0664, mdnieset_init_file_cmd_show,
 		   mdnieset_init_file_cmd_store);
 
 static ssize_t outdoor_show(struct device *dev,
@@ -1074,7 +1052,7 @@ static ssize_t outdoor_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(outdoor, 0666, outdoor_show, outdoor_store);
+static DEVICE_ATTR(outdoor, 0664, outdoor_show, outdoor_store);
 
 static ssize_t negative_show(struct device *dev,
 					      struct device_attribute *attr,
@@ -1123,7 +1101,7 @@ void is_negative_on(void)
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
 }
-static DEVICE_ATTR(negative, 666,
+static DEVICE_ATTR(negative, 664,
 		   negative_show,
 		   negative_store);
 
@@ -1147,7 +1125,7 @@ static ssize_t playspeed_store(struct device *dev,
 	is_play_speed_1_5(value);
 	return size;
 }
-static DEVICE_ATTR(playspeed, 0666,
+static DEVICE_ATTR(playspeed, 0664,
 			playspeed_show,
 			playspeed_store);
 
@@ -1222,7 +1200,7 @@ static ssize_t accessibility_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(accessibility, 0666,
+static DEVICE_ATTR(accessibility, 0664,
 			accessibility_show,
 			accessibility_store);
 
@@ -1256,7 +1234,7 @@ int is_cabc_on ( void )
 	return cabc;
 }
 #endif
-static DEVICE_ATTR(cabc, 0666,
+static DEVICE_ATTR(cabc, 0664,
 			cabc_show,
 			cabc_store);
 #endif
@@ -1751,22 +1729,15 @@ void coordinate_tunning(int x, int y)
 	memcpy(&DYNAMIC_UI_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&DYNAMIC_VIDEO_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&DYNAMIC_VT_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT)
-	memcpy(&DYNAMIC_eBOOK_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-#else
 	memcpy(&DYNAMIC_EBOOK_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-#endif
 
 	memcpy(&STANDARD_BROWSER_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_GALLERY_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_UI_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_VIDEO_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_VT_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT)
-	memcpy(&STANDARD_eBOOK_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-#else
 	memcpy(&STANDARD_EBOOK_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-#endif
+
 	memcpy(&AUTO_BROWSER_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&AUTO_CAMERA_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&AUTO_GALLERY_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
@@ -1775,6 +1746,4 @@ void coordinate_tunning(int x, int y)
 	memcpy(&AUTO_VT_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 
 	memcpy(&CAMERA_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-
 }
-
