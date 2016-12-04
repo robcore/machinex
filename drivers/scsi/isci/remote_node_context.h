@@ -76,8 +76,9 @@
 #define SCIC_SDS_REMOTE_NODE_CONTEXT_INVALID_INDEX    0x0FFF
 
 enum sci_remote_node_suspension_reasons {
-	SCU_HARDWARE_SUSPENSION,
-	SCI_SOFTWARE_SUSPENSION
+	SCI_HW_SUSPEND,
+	SCI_SW_SUSPEND_NORMAL,
+	SCI_SW_SUSPEND_LINKHANG_DETECT
 };
 #define SCI_SOFTWARE_SUSPEND_CMD SCU_CONTEXT_COMMAND_POST_RNC_SUSPEND_TX_RX
 #define SCI_SOFTWARE_SUSPEND_EXPECTED_EVENT SCU_EVENT_TL_RNC_SUSPEND_TX_RX
@@ -168,6 +169,8 @@ struct sci_remote_node_context {
 	 * context suspension.
 	 */
 	u32 suspend_type;
+	enum sci_remote_node_suspension_reasons suspend_reason;
+	u32 suspend_count;
 
 	/**
 	 * This field is true if the remote node context is resuming from its current
@@ -201,6 +204,8 @@ void sci_remote_node_context_construct(struct sci_remote_node_context *rnc,
 bool sci_remote_node_context_is_ready(
 	struct sci_remote_node_context *sci_rnc);
 
+bool sci_remote_node_context_is_suspended(struct sci_remote_node_context *sci_rnc);
+
 enum sci_status sci_remote_node_context_event_handler(struct sci_remote_node_context *sci_rnc,
 							   u32 event_code);
 enum sci_status sci_remote_node_context_destruct(struct sci_remote_node_context *sci_rnc,
@@ -208,9 +213,7 @@ enum sci_status sci_remote_node_context_destruct(struct sci_remote_node_context 
 						      void *callback_parameter);
 enum sci_status sci_remote_node_context_suspend(struct sci_remote_node_context *sci_rnc,
 						     u32 suspend_type,
-						     u32 suspension_code,
-						     scics_sds_remote_node_context_callback cb_fn,
-						     void *cb_p);
+						     u32 suspension_code);
 enum sci_status sci_remote_node_context_resume(struct sci_remote_node_context *sci_rnc,
 						    scics_sds_remote_node_context_callback cb_fn,
 						    void *cb_p);

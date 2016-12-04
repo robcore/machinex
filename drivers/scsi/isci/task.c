@@ -317,13 +317,10 @@ static int isci_task_execute_tmf(struct isci_host *ihost,
 		spin_unlock_irqrestore(&ihost->scic_lock, flags);
 		goto err_tci;
 	}
-	/* add the request to the remote device request list. */
-	list_add(&ireq->dev_node, &idev->reqs_in_process);
+	spin_unlock_irqrestore(&ihost->scic_lock, flags);
 
 	/* The RNC must be unsuspended before the TMF can get a response. */
-	sci_remote_device_resume(idev, NULL, NULL);
-
-	spin_unlock_irqrestore(&ihost->scic_lock, flags);
+	isci_remote_device_resume_from_abort(ihost, idev);
 
 	/* Wait for the TMF to complete, or a timeout. */
 	timeleft = wait_for_completion_timeout(&completion,
@@ -442,16 +439,18 @@ int isci_task_lu_reset(struct domain_device *dev, u8 *lun)
 		goto out;
 	}
 
+	/* Suspend the RNC, kill all TCs */
+	if (isci_remote_device_suspend_terminate(ihost, idev, NULL)
+	    != SCI_SUCCESS) {
+		/* The suspend/terminate only fails if isci_get_device fails */
+		ret = TMF_RESP_FUNC_FAILED;
+		goto out;
+	}
+	/* All pending I/Os have been terminated and cleaned up. */
 	if (dev_is_sata(dev)) {
 		sas_ata_schedule_reset(dev);
 		ret = TMF_RESP_FUNC_COMPLETE;
 	} else {
-		/* Suspend the RNC, kill all TCs */
-		if (isci_remote_device_suspend_terminate(ihost, idev, NULL)
-		    != SCI_SUCCESS) {
-			ret = TMF_RESP_FUNC_FAILED;
-			goto out;
-		}
 		/* Send the task management part of the reset. */
 		ret = isci_task_send_lu_reset_sas(ihost, idev, lun);
 	}
@@ -556,10 +555,10 @@ int isci_task_abort_task(struct sas_task *task)
 	    sas_protocol_ata(task->task_proto) ||
 	    test_bit(IREQ_COMPLETE_IN_TARGET, &old_request->flags)) {
 
-		/* No task to send, so explicitly resume the device here */
-		sci_remote_device_resume(idev, NULL, NULL);
-
 		spin_unlock_irqrestore(&ihost->scic_lock, flags);
+
+		/* No task to send, so explicitly resume the device here */
+		isci_remote_device_resume_from_abort(ihost, idev);
 
 		dev_warn(&ihost->pdev->dev,
 			 "%s: %s request"
@@ -721,8 +720,8 @@ isci_task_request_complete(struct isci_host *ihost,
 	 */
 	set_bit(IREQ_TERMINATED, &ireq->flags);
 
-	isci_free_tag(ihost, ireq->io_tag);
-	list_del_init(&ireq->dev_node);
+	if (!test_bit(IREQ_NO_AUTO_FREE_TAG, &ireq->flags))
+		isci_free_tag(ihost, ireq->io_tag);
 
 	/* The task management part completes last. */
 	if (tmf_complete)
@@ -760,7 +759,7 @@ static int isci_reset_device(struct isci_host *ihost,
 		reset_stat = sas_phy_reset(phy, !dev_is_sata(dev));
 
 	/* Explicitly resume the RNC here, since there was no task sent. */
-	isci_remote_device_resume(ihost, idev, NULL, NULL);
+	isci_remote_device_resume_from_abort(ihost, idev);
 
 	dev_dbg(&ihost->pdev->dev, "%s: idev %p complete, reset_stat=%d.\n",
 		__func__, idev, reset_stat);

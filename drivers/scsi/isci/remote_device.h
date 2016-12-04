@@ -85,12 +85,14 @@ struct isci_remote_device {
 	#define IDEV_GONE 3
 	#define IDEV_IO_READY 4
 	#define IDEV_IO_NCQERROR 5
+	#define IDEV_RNC_LLHANG_ENABLED 6
+	#define IDEV_ABORT_PATH_ACTIVE 7
+	#define IDEV_ABORT_PATH_RESUME_PENDING 8
 	unsigned long flags;
 	struct kref kref;
 	struct isci_port *isci_port;
 	struct domain_device *domain_dev;
 	struct list_head node;
-	struct list_head reqs_in_process;
 	struct sci_base_state_machine sm;
 	u32 device_port_width;
 	enum sas_linkrate connection_rate;
@@ -100,6 +102,8 @@ struct isci_remote_device {
 	u32 started_request_count;
 	struct isci_request *working_request;
 	u32 not_ready_reason;
+	scics_sds_remote_node_context_callback abort_resume_cb;
+	void *abort_resume_cbparam;
 };
 
 #define ISCI_REMOTE_DEVICE_START_TIMEOUT 5000
@@ -309,12 +313,7 @@ static inline void sci_remote_device_decrement_request_count(struct isci_remote_
 		idev->started_request_count--;
 }
 
-static inline void isci_dev_set_hang_detection_timeout(
-	struct isci_remote_device *idev,
-	u32 timeout)
-{
-	sci_port_set_hang_detection_timeout(idev->owning_port, timeout);
-}
+void isci_dev_set_hang_detection_timeout(struct isci_remote_device *idev, u32 timeout);
 
 enum sci_status sci_remote_device_frame_handler(
 	struct isci_remote_device *idev,
@@ -362,11 +361,9 @@ enum sci_status sci_remote_device_resume(
 	scics_sds_remote_node_context_callback cb_fn,
 	void *cb_p);
 
-enum sci_status isci_remote_device_resume(
+enum sci_status isci_remote_device_resume_from_abort(
 	struct isci_host *ihost,
-	struct isci_remote_device *idev,
-	scics_sds_remote_node_context_callback cb_fn,
-	void *cb_p);
+	struct isci_remote_device *idev);
 
 enum sci_status isci_remote_device_reset(
 	struct isci_host *ihost,

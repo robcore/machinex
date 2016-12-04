@@ -87,6 +87,7 @@ struct isci_request {
 	#define IREQ_PENDING_ABORT 4 /* Set == device was not suspended yet */
 	#define IREQ_TC_ABORT_POSTED 5
 	#define IREQ_ABORT_PATH_ACTIVE 6
+	#define IREQ_NO_AUTO_FREE_TAG 7 /* Set when being explicitly managed */
 	unsigned long flags;
 	/* XXX kill ttype and ttype_ptr, allocate full sas_task */
 	union ttype_ptr_union {
@@ -96,8 +97,6 @@ struct isci_request {
 	struct isci_host *isci_host;
 	/* For use in the requests_to_{complete|abort} lists: */
 	struct list_head completed_node;
-	/* For use in the reqs_in_process list: */
-	struct list_head dev_node;
 	dma_addr_t request_daddr;
 	dma_addr_t zero_scatter_daddr;
 	unsigned int num_sg_entries;
