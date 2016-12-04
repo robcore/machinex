@@ -29,11 +29,7 @@
 
 #include "ubifs.h"
 
-#ifdef CONFIG_UBIFS_FS_DEBUG
 static int dbg_check_bud_bytes(struct ubifs_info *c);
-#else
-#define dbg_check_bud_bytes(c) 0
-#endif
 
 /**
  * ubifs_search_bud - search bud LEB.
@@ -743,8 +739,6 @@ out_free:
 	return err;
 }
 
-#ifdef CONFIG_UBIFS_FS_DEBUG
-
 /**
  * dbg_check_bud_bytes - make sure bud bytes calculation are all right.
  * @c: UBIFS file-system description object
@@ -776,5 +770,3 @@ static int dbg_check_bud_bytes(struct ubifs_info *c)
 
 	return err;
 }
-
-#endif /* CONFIG_UBIFS_FS_DEBUG */
