@@ -882,13 +882,11 @@ extern char fw_path2[MOD_PARAM_PATHLEN];
 /* Flag to indicate if we should download firmware on driver load */
 extern uint dhd_download_fw_on_driverload;
 
-#if defined(WL_CFG80211) && defined(SUPPORT_DEEP_SLEEP)
 /* Flags to indicate if we distingish power off policy when
  * user set the memu "Keep Wi-Fi on during sleep" to "Never"
  */
 extern int trigger_deep_sleep;
 int dhd_deepsleep(struct net_device *dev, int flag);
-#endif /* WL_CFG80211 && SUPPORT_DEEP_SLEEP */
 
 /* For supporting multiple interfaces */
 #define DHD_MAX_IFS	16
