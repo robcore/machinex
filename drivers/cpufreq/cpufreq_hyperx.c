@@ -24,7 +24,8 @@
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
-#include <linux/sched/rt.h>
+//#include <linux/sched/rt.h>
+#include "../../kernel/sched/sched.h"
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
@@ -33,9 +34,6 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
-
-#define CREATE_TRACE_POINTS
-#include <trace/events/cpufreq_hyperx.h>
 
 struct cpufreq_hyperx_cpuinfo {
 	struct timer_list cpu_timer;
@@ -87,10 +85,10 @@ static unsigned int default_above_hispeed_delay[] = {
 struct cpufreq_hyperx_tunables {
 	int usage_count;
 	/* Hi speed to bump to from lo speed when load burst (default max) */
-	unsigned int hispeed_freq;
+	unsigned int hispeed_freq = 1674000;
 	/* Go to hi speed when CPU load at or above this value. */
 #define DEFAULT_GO_HISPEED_LOAD 95
-	unsigned long go_hispeed_load;
+	unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 	/* Target load. Lower values result in higher CPU speeds. */
 	spinlock_t target_loads_lock;
 	unsigned int *target_loads;
@@ -100,7 +98,7 @@ struct cpufreq_hyperx_tunables {
 	 * down.
 	 */
 #define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
-	unsigned long min_sample_time;
+	unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 	/*
 	 * The sample rate of the timer used to increase frequency
 	 */
@@ -123,8 +121,8 @@ struct cpufreq_hyperx_tunables {
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
-	int timer_slack_val;
-	bool io_is_busy;
+	int timer_slack_val = DEFAULT_TIMER_SLACK;
+	bool io_is_busy = 0;
 
 	/* scheduler input related flags */
 	bool use_sched_load;
@@ -474,9 +472,6 @@ static void cpufreq_hyperx_timer(unsigned long data)
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
-		trace_cpufreq_hyperx_notyet(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -496,8 +491,6 @@ static void cpufreq_hyperx_timer(unsigned long data)
 	    && new_freq < pcpu->target_freq
 	    && now - pcpu->max_freq_idle_start_time <
 	    tunables->max_freq_hysteresis) {
-		trace_cpufreq_hyperx_notyet(data, cpu_load,
-			pcpu->target_freq, pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -509,9 +502,6 @@ static void cpufreq_hyperx_timer(unsigned long data)
 	if (new_freq < pcpu->floor_freq) {
 		if (now - pcpu->floor_validate_time <
 				tunables->min_sample_time) {
-			trace_cpufreq_hyperx_notyet(
-				data, cpu_load, pcpu->target_freq,
-				pcpu->policy->cur, new_freq);
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 			goto rearm;
 		}
@@ -532,15 +522,9 @@ static void cpufreq_hyperx_timer(unsigned long data)
 
 	if (pcpu->target_freq == new_freq &&
 			pcpu->target_freq <= pcpu->policy->cur) {
-		trace_cpufreq_hyperx_already(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm_if_notmax;
 	}
-
-	trace_cpufreq_hyperx_target(data, cpu_load, pcpu->target_freq,
-					 pcpu->policy->cur, new_freq);
 
 	pcpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
@@ -701,9 +685,6 @@ static int cpufreq_hyperx_speedchange_task(void *data)
 					pjcpu->hispeed_validate_time = hvt;
 				}
 			}
-			trace_cpufreq_hyperx_setspeed(cpu,
-						     pcpu->target_freq,
-						     pcpu->policy->cur);
 
 			up_read(&pcpu->enable_sem);
 		}
@@ -776,7 +757,6 @@ static int load_change_callback(struct notifier_block *nb, unsigned long val,
 		return 0;
 	}
 
-	trace_cpufreq_hyperx_load_change(cpu);
 	del_timer(&pcpu->cpu_timer);
 	del_timer(&pcpu->cpu_slack_timer);
 	cpufreq_hyperx_timer(cpu);
@@ -1114,11 +1094,9 @@ static ssize_t store_boost(struct cpufreq_hyperx_tunables *tunables,
 	tunables->boost_val = val;
 
 	if (tunables->boost_val) {
-		trace_cpufreq_hyperx_boost("on");
 		cpufreq_hyperx_boost();
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-		trace_cpufreq_hyperx_unboost("off");
 	}
 
 	return count;
@@ -1136,7 +1114,6 @@ static ssize_t store_boostpulse(struct cpufreq_hyperx_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
-	trace_cpufreq_hyperx_boost("pulse");
 	cpufreq_hyperx_boost();
 	return count;
 }

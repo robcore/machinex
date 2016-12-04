@@ -36,9 +36,6 @@
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/cpufreq_barry_allen.h>
-
 static int active_count;
 
 static bool ba_locked = false;
@@ -118,7 +115,7 @@ static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 
 /* Non-zero means indefinite speed boost active */
-static int boost_val;
+static int boost_val = 1;
 /* Duration of a boot pulse in usecs */
 static int boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 /* End time of boost pulse in ktime converted to usecs */
@@ -143,9 +140,9 @@ static bool io_is_busy = 0;
  * up_threshold_any_cpu_freq then do not let the frequency to drop below
  * sync_freq
  */
-static unsigned int up_threshold_any_cpu_load;
-static unsigned int sync_freq;
-static unsigned int up_threshold_any_cpu_freq;
+static unsigned int up_threshold_any_cpu_load = 99;
+static unsigned int sync_freq = 1566000;
+static unsigned int up_threshold_any_cpu_freq = 85;
 
 static int cpufreq_governor_barry_allen(struct cpufreq_policy *policy,
 		unsigned int event);
@@ -446,9 +443,6 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(pcpu->policy->cur)) {
-		trace_cpufreq_barry_allen_notyet(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
 		goto rearm;
 	}
 
@@ -478,9 +472,6 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 
 	if (new_freq < pcpu->floor_freq) {
 		if (now - pcpu->floor_validate_time < mod_min_sample_time) {
-			trace_cpufreq_barry_allen_notyet(
-				data, cpu_load, pcpu->target_freq,
-				pcpu->policy->cur, new_freq);
 			goto rearm;
 		}
 	}
@@ -500,14 +491,8 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 
 	if (pcpu->target_freq == new_freq &&
 			pcpu->target_freq <= pcpu->policy->cur) {
-		trace_cpufreq_barry_allen_already(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
 		goto rearm_if_notmax;
 	}
-
-	trace_cpufreq_barry_allen_target(data, cpu_load, pcpu->target_freq,
-					 pcpu->policy->cur, new_freq);
 
 	pcpu->target_freq = new_freq;
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
@@ -655,9 +640,6 @@ static int cpufreq_barry_allen_speedchange_task(void *data)
 					pjcpu->hispeed_validate_time = now;
 				}
 			}
-			trace_cpufreq_barry_allen_setspeed(cpu,
-						     pcpu->target_freq,
-						     pcpu->policy->cur);
 
 			up_read(&pcpu->enable_sem);
 		}
@@ -674,7 +656,7 @@ static void cpufreq_barry_allen_boost(void)
 	struct cpufreq_barry_allen_cpuinfo *pcpu;
 
 	boosted = true;
-	
+
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
 	for_each_online_cpu(i) {
@@ -1039,7 +1021,7 @@ static ssize_t show_ba_locked(struct kobject *kobj,
 {
 	if (ba_locked)
 		return snprintf(buf, PAGE_SIZE, "1\n");
-	
+
 	return snprintf(buf, PAGE_SIZE, "0\n");
 }
 
@@ -1058,7 +1040,7 @@ static ssize_t store_ba_locked(
 		ba_locked = true;
 	else
 		ba_locked = false;
-	
+
 	return count;
 }
 
@@ -1089,12 +1071,8 @@ static ssize_t store_boost(struct kobject *kobj, struct attribute *attr,
 	boost_val = val;
 
 	if (boost_val) {
-		trace_cpufreq_barry_allen_boost("on");
 		if (!boosted)
 			cpufreq_barry_allen_boost();
-	} else {
-		trace_cpufreq_barry_allen_unboost("off");
-	}
 
 	return count;
 }
@@ -1115,7 +1093,6 @@ static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
 		return ret;
 
 	boostpulse_endtime = ktime_to_us(ktime_get()) + boostpulse_duration_val;
-	trace_cpufreq_barry_allen_boost("pulse");
 	if (!boosted)
 		cpufreq_barry_allen_boost();
 	return count;
