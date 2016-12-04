@@ -44,6 +44,8 @@ struct persistent_ram {
 };
 
 struct persistent_ram_zone {
+	phys_addr_t paddr;
+	size_t size;
 	void *vaddr;
 	struct persistent_ram_buffer *buffer;
 	size_t buffer_size;
@@ -71,10 +73,9 @@ int persistent_ram_early_init(struct persistent_ram *ram);
 struct persistent_ram_zone * __init persistent_ram_new(phys_addr_t start,
 						       size_t size,
 						       bool ecc);
-
+void persistent_ram_free(struct persistent_ram_zone *prz);
 struct persistent_ram_zone *persistent_ram_init_ringbuffer(struct device *dev,
 		bool ecc);
-
 int persistent_ram_write(struct persistent_ram_zone *prz, const void *s,
 	unsigned int count);
 
