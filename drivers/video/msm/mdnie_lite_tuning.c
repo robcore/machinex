@@ -843,7 +843,7 @@ static ssize_t mdnie_lock_store(struct device *dev, struct device_attribute *att
 	    return size;
 }
 
-static DEVICE_ATTR(mdnie_lock, 0664, mdnie_lock_show, mdnie_lock_store)
+static DEVICE_ATTR(mdnie_lock, 0664, mdnie_lock_show, mdnie_lock_store);
 
 static ssize_t mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
