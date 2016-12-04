@@ -47,7 +47,7 @@
 #define JC_DUMP_FW	1
 #define JC_CHECK_FW	1
 #define JC_MEM_READ	1
-#define ISP_DEBUG_LOG	1
+#define ISP_DEBUG_LOG	0
 #define JC_SPI_WRITE
 #define FW_WRITE_SIZE 262144 /*2097152*/
 #define VERIFY_CHIP_ERASED 32
@@ -75,7 +75,7 @@
 //static char FW_buf[2197152] = {0}; /*static QCTK 2MB*/
 #endif
 #define CHECK_ERR(x)	if ((x) < 0) { \
-				cam_err("i2c failed, err %d\n", x); \
+				pr_debug("I LOVE TO PRINT THINGS\n"); \
 				return x; \
 			}
 
@@ -1205,7 +1205,7 @@ out:
 }
 #endif
 
-static int jc_isp_boot(void)
+static int jc_isp_boot(int)
 {
 	int err;
 	u32 int_factor;
