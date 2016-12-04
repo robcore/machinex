@@ -406,6 +406,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
+
 	if (!pcpu->governor_enabled)
 		goto exit;
 
@@ -437,7 +438,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	if (cpu_load >= go_hispeed_load|| boosted) {
+	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->target_freq < hispeed_freq) {
 			nr_cpus = num_online_cpus();
 
@@ -540,8 +541,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * till next timer interrupt arrives, new_freq remains same as
 	 * actual freq. Don't go for setting same frequency again.
 	 */
-	if pcpu->target_freq == new_freq {
-	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
+	if (pcpu->target_freq == new_freq) {
+		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm_if_notmax;
 	}
 

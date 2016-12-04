@@ -401,6 +401,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
+
 	if (!pcpu->governor_enabled)
 		goto exit;
 
@@ -439,9 +440,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 			pcpu->two_phase_freq = two_phase_freq_array[nr_cpus-1];
 			if (pcpu->two_phase_freq < pcpu->target_freq)
 				phase = 1;
-			if (pcpu->two_phase_freq != 0 && phase == 0) {
+			if (pcpu->two_phase_freq != 0 && phase == 0)
 				new_freq = pcpu->two_phase_freq;
-			} else
+			else
 				new_freq = hispeed_freq;
 		} else {
 			if (use_freq_calc_thresh && new_freq > freq_calc_thresh)
@@ -453,21 +454,14 @@ static void cpufreq_interactive_timer(unsigned long data)
 				new_freq = hispeed_freq;
 		}
 
-	} else if (cpu_load <= DOWN_LOW_LOAD_THRESHOLD) {
+	} else if (cpu_load <= DOWN_LOW_LOAD_THRESHOLD)
 		new_freq = pcpu->policy->min;
-	} else {
-
-	if (use_freq_calc_thresh && new_freq > freq_calc_thresh)
+	else
+			if (use_freq_calc_thresh && new_freq > freq_calc_thresh)
 				new_freq = pcpu->policy->max * cpu_load / 100;
 			else
 				new_freq = choose_freq(pcpu, loadadjfreq);
-	}
-#if 0
-	if (boosted) {
-		if (new_freq < input_boost_freq)
-			new_freq = input_boost_freq;
- 	}
-#endif
+
 	if (counter > 0) {
 		counter--;
 		if (counter == 0) {
@@ -501,20 +495,18 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (pcpu->target_freq >= pcpu->policy->max
 	    && new_freq < pcpu->target_freq
-	    && now - pcpu->max_freq_idle_start_time < max_freq_hysteresis) {
+	    && now - pcpu->max_freq_idle_start_time < max_freq_hysteresis)
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
-	}
 
 	/*
 	 * Do not scale below floor_freq unless we have been at or above the
 	 * floor frequency for the minimum sample time since last validated.
 	 */
 	if (new_freq < pcpu->floor_freq) {
-		if (now - pcpu->floor_validate_time < min_sample_time) {
+		if (now - pcpu->floor_validate_time < min_sample_time)
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 			goto rearm;
-		}
 	}
 
 	/*
@@ -534,8 +526,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * till next timer interrupt arrives, new_freq remains same as
 	 * actual freq. Don't go for setting same frequency again.
 	 */
-	if pcpu->target_freq == new_freq {
-	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
+	if (pcpu->target_freq == new_freq) {
+		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm_if_notmax;
 	}
 
