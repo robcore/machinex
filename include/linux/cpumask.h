@@ -11,6 +11,8 @@
 #include <linux/bitmap.h>
 #include <linux/bug.h>
 
+extern unsigned int apq_hp_max_online_cpus;
+
 typedef struct cpumask { DECLARE_BITMAP(bits, NR_CPUS); } cpumask_t;
 
 /**
@@ -224,6 +226,19 @@ int cpumask_any_but(const struct cpumask *mask, unsigned int cpu);
 	for ((cpu) = -1;					\
 		(cpu) = cpumask_next_zero((cpu), (mask)),	\
 		(cpu) < nr_cpu_ids;)
+
+/**
+ * for_each_cpu_not_adj - iterate over every cpu in a complemented mask
+ * @cpu: the (optionally unsigned) integer iterator
+ * @mask: the cpumask pointer
+ *
+ * After the loop, cpu >= apq_hp_max_online_cpus.
+ */
+
+#define for_each_cpu_not_adj(cpu, mask)				\
+	for ((cpu) = -1;					\
+		(cpu) = cpumask_next_zero((cpu), (mask)),	\
+		(cpu) < apq_hp_max_online_cpus;)
 
 /**
  * for_each_cpu_and - iterate over every cpu in both masks

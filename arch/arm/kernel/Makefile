@@ -34,6 +34,7 @@ obj-$(CONFIG_ISA_DMA)		+= dma-isa.o
 obj-$(CONFIG_PCI)		+= bios32.o isa.o
 obj-$(CONFIG_ARM_CPU_SUSPEND)	+= sleep.o suspend.o
 obj-$(CONFIG_SMP)		+= smp.o smp_tlb.o
+obj-$(CONFIG_APQ_HOTPLUG) 	+= apq_hotplug.o
 obj-$(CONFIG_ASMP) 		+= autosmp.o
 obj-$(CONFIG_HIBERNATION)	+= hibernate.o
 obj-$(CONFIG_HAVE_ARM_SCU)	+= smp_scu.o
