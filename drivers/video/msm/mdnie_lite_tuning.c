@@ -1552,6 +1552,11 @@ void init_mdnie_class(void)
 		pr_err("Failed to create device(mdnie)!\n");
 
 	if (device_create_file
+		(tune_mdnie_dev, &dev_attr_mdnie_lock) < 0)
+		pr_err("Failed to create device file(%s)!\n",
+			dev_attr_mode.attr.name);
+
+	if (device_create_file
 	    (tune_mdnie_dev, &dev_attr_scenario) < 0)
 		pr_err("Failed to create device file(%s)!\n",
 	       dev_attr_scenario.attr.name);
