@@ -75,10 +75,10 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 
 	limited_max_freq = max_freq;
 	if (max_freq != MSM_CPUFREQ_NO_LIMIT)
-		pr_info("%s: Limiting cpu%d max frequency to %d (TEMP=%ld)\n",
+		pr_debug("%s: Limiting cpu%d max frequency to %d (TEMP=%ld)\n",
 				KBUILD_MODNAME, cpu, max_freq, current_temp);
 	else
-		pr_info("%s: Max frequency reset for cpu%d\n",
+		pr_debug("%s: Max frequency reset for cpu%d\n",
 				KBUILD_MODNAME, cpu);
 
 	ret = cpufreq_update_policy(cpu);
@@ -113,11 +113,11 @@ static void do_core_control(long temp)
 				continue;
 			if (cpus_offlined & BIT(i) && !cpu_online(i))
 				continue;
-			pr_info("%s: Set Offline: CPU%d Temp: %ld\n",
+			pr_debug("%s: Set Offline: CPU%d Temp: %ld\n",
 					KBUILD_MODNAME, i, temp);
 			ret = cpu_down(i);
 			if (ret)
-				pr_err("%s: Error %d offline core %d\n",
+				pr_debug("%s: Error %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
 			cpus_offlined |= BIT(i);
 			break;
@@ -129,7 +129,7 @@ static void do_core_control(long temp)
 			if (!(cpus_offlined & BIT(i)))
 				continue;
 			cpus_offlined &= ~BIT(i);
-			pr_info("%s: Allow Online CPU%d Temp: %ld\n",
+			pr_debug("%s: Allow Online CPU%d Temp: %ld\n",
 					KBUILD_MODNAME, i, temp);
 			/* If this core is already online, then bring up the
 			 * next offlined core.
@@ -138,7 +138,7 @@ static void do_core_control(long temp)
 				continue;
 			ret = cpu_up(i);
 			if (ret)
-				pr_err("%s: Error %d online core %d\n",
+				pr_debug("%s: Error %d online core %d\n",
 						KBUILD_MODNAME, ret, i);
 			break;
 		}
@@ -230,7 +230,7 @@ static void __ref msm_therm_temp_log(struct work_struct *work)
                ret = sprintf(buffer + added , "(%d --- %ld)", i ,temp );
                added += ret;
           }
-          pr_info("%s: Debug Temp for Sensors %s",KBUILD_MODNAME,buffer);
+          pr_debug("%s: Debug Temp for Sensors %s",KBUILD_MODNAME,buffer);
 
     }
     schedule_delayed_work(&temp_log_work, HZ*5);
@@ -245,7 +245,7 @@ static int msm_thermal_cpu_callback(struct notifier_block *nfb,
 		if (core_control_enabled &&
 			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
 			(cpus_offlined & BIT(cpu))) {
-			pr_info(
+			pr_debug(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
 			return NOTIFY_BAD;
@@ -289,10 +289,10 @@ static int set_enabled(const char *val, const struct kernel_param *kp)
 	if (!enabled)
 		disable_msm_thermal();
 	else
-		pr_info("%s: no action for enabled = %d\n",
+		pr_debug("%s: no action for enabled = %d\n",
 				KBUILD_MODNAME, enabled);
 
-	pr_info("%s: enabled = %d\n", KBUILD_MODNAME, enabled);
+	pr_debug("%s: enabled = %d\n", KBUILD_MODNAME, enabled);
 
 	return ret;
 }
@@ -323,7 +323,7 @@ static int update_offline_cores(int val)
 			continue;
 		ret = cpu_down(cpu);
 		if (ret)
-			pr_err("%s: Unable to offline cpu%d\n",
+			pr_debug("%s: Unable to offline cpu%d\n",
 				KBUILD_MODNAME, cpu);
 	}
 	return ret;
@@ -344,7 +344,7 @@ static ssize_t store_cc_enabled(struct kobject *kobj,
 	mutex_lock(&core_control_mutex);
 	ret = kstrtoint(buf, 10, &val);
 	if (ret) {
-		pr_err("%s: Invalid input %s\n", KBUILD_MODNAME, buf);
+		pr_debug("%s: Invalid input %s\n", KBUILD_MODNAME, buf);
 		goto done_store_cc;
 	}
 
@@ -353,11 +353,11 @@ static ssize_t store_cc_enabled(struct kobject *kobj,
 
 	core_control_enabled = !!val;
 	if (core_control_enabled) {
-		pr_info("%s: Core control enabled\n", KBUILD_MODNAME);
+		pr_debug("%s: Core control enabled\n", KBUILD_MODNAME);
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 		update_offline_cores(cpus_offlined);
 	} else {
-		pr_info("%s: Core control disabled\n", KBUILD_MODNAME);
+		pr_debug("%s: Core control disabled\n", KBUILD_MODNAME);
 		unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
@@ -381,12 +381,12 @@ static ssize_t store_cpus_offlined(struct kobject *kobj,
 	mutex_lock(&core_control_mutex);
 	ret = kstrtouint(buf, 10, &val);
 	if (ret) {
-		pr_err("%s: Invalid input %s\n", KBUILD_MODNAME, buf);
+		pr_debug("%s: Invalid input %s\n", KBUILD_MODNAME, buf);
 		goto done_cc;
 	}
 
 	if (enabled) {
-		pr_err("%s: Ignoring request; polling thread is enabled.\n",
+		pr_debug("%s: Ignoring request; polling thread is enabled.\n",
 				KBUILD_MODNAME);
 		goto done_cc;
 	}
@@ -424,7 +424,7 @@ static __init int msm_thermal_add_cc_nodes(void)
 
 	module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
 	if (!module_kobj) {
-		pr_err("%s: cannot find kobject for module\n",
+		pr_debug("%s: cannot find kobject for module\n",
 			KBUILD_MODNAME);
 		ret = -ENOENT;
 		goto done_cc_nodes;
@@ -432,7 +432,7 @@ static __init int msm_thermal_add_cc_nodes(void)
 
 	cc_kobj = kobject_create_and_add("core_control", module_kobj);
 	if (!cc_kobj) {
-		pr_err("%s: cannot create core control kobj\n",
+		pr_debug("%s: cannot create core control kobj\n",
 				KBUILD_MODNAME);
 		ret = -ENOMEM;
 		goto done_cc_nodes;
@@ -440,7 +440,7 @@ static __init int msm_thermal_add_cc_nodes(void)
 
 	ret = sysfs_create_group(cc_kobj, &cc_attr_group);
 	if (ret) {
-		pr_err("%s: cannot create group\n", KBUILD_MODNAME);
+		pr_debug("%s: cannot create group\n", KBUILD_MODNAME);
 		goto done_cc_nodes;
 	}
 
@@ -521,7 +521,7 @@ static int __devinit msm_thermal_dev_probe(struct platform_device *pdev)
 
 fail:
 	if (ret)
-		pr_err("%s: Failed reading node=%s, key=%s\n",
+		pr_debug("%s: Failed reading node=%s, key=%s\n",
 		       __func__, node->full_name, key);
 	else
 		ret = msm_thermal_init(&data);
