@@ -243,7 +243,7 @@ extern wl_iw_extra_params_t  g_wl_iw_params;
 #define power_suspend				pre_suspend
 //#define POWER_SUSPEND_LEVEL_BLANK_SCREEN		50
 #else
-#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 #include <linux/powersuspend.h>
 #endif /* defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND) */
 #endif /* CUSTOMER_HW4 && CONFIG_PARTIALSUSPEND_SLP */
@@ -442,7 +442,7 @@ typedef struct dhd_info {
 	atomic_t pend_8021x_cnt;
 	dhd_attach_states_t dhd_state;
 
-#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 	struct power_suspend power_suspend;
 #endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
 
@@ -1133,7 +1133,7 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	return ret;
 }
 
-#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 static void dhd_power_suspend(struct power_suspend *h)
 {
 	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
@@ -4176,7 +4176,7 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	}
 #endif /* CONFIG_PM_SLEEP */
 
-#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 	dhd->power_suspend.suspend = dhd_power_suspend;
 	dhd->power_suspend.resume = dhd_power_resume;
 	register_power_suspend(&dhd->power_suspend);
@@ -5986,7 +5986,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd_inet6addr_notifier_registered = FALSE;
 		unregister_inet6addr_notifier(&dhd_inet6addr_notifier);
 	}
-#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_POWERSUSPEND_DONE) {
 		if (dhd->power_suspend.suspend)
 			unregister_power_suspend(&dhd->power_suspend);
@@ -6776,7 +6776,7 @@ int net_os_set_suspend(struct net_device *dev, int val, int force)
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	if (dhd) {
-#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
 		ret = dhd_set_suspend(val, &dhd->pub);
 #else
 		ret = dhd_suspend_resume_helper(dhd, val, force);
