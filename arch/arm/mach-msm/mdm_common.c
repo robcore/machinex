@@ -51,7 +51,7 @@
 #define MDM_MODEM_DELTA	100
 #define MDM_BOOT_TIMEOUT	60000L
 #define MDM_RDUMP_TIMEOUT	120000L
-#define MDM2AP_STATUS_TIMEOUT_MS 60000L
+#define MDM2AP_STATUS_TIMEOUT_MS 120000L
 
 /* Allow a maximum device id of this many digits */
 #define MAX_DEVICE_DIGITS  10
@@ -340,10 +340,10 @@ static irqreturn_t mdm_vddmin_change(int irq, void *dev_id)
 	value = gpio_get_value(
 	   vddmin_res->mdm2ap_vddmin_gpio);
 	if (value == 0)
-		pr_info("External Modem id %d entered Vddmin\n",
+		pr_debug("External Modem id %d entered Vddmin\n",
 				mdev->mdm_data.device_id);
 	else
-		pr_info("External Modem id %d exited Vddmin\n",
+		pr_debug("External Modem id %d exited Vddmin\n",
 				mdev->mdm_data.device_id);
 handled:
 	return IRQ_HANDLED;
@@ -364,7 +364,7 @@ static void mdm_setup_vddmin_gpios(void)
 		if (!vddmin_res)
 			continue;
 
-		pr_info("Enabling vddmin logging on modem id %d\n",
+		pr_debug("Enabling vddmin logging on modem id %d\n",
 				mdev->mdm_data.device_id);
 		req.id = vddmin_res->rpm_id;
 		req.value =
@@ -521,7 +521,7 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 			 __func__, _IOC_NR(cmd), mdev->mdm_data.device_id);
 	switch (cmd) {
 	case WAKE_CHARM:
-		pr_info("%s: Powering on mdm id %d\n",
+		pr_debug("%s: Powering on mdm id %d\n",
 				__func__, mdev->mdm_data.device_id);
 		mdm_ops->power_on_mdm_cb(mdm_drv);
 		break;
@@ -540,7 +540,7 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 					 __func__, mdev->mdm_data.device_id);
 			mdm_drv->mdm_boot_status = -EIO;
 		} else {
-			pr_info("%s: normal boot of mdm id %d done\n",
+			pr_debug("%s: normal boot of mdm id %d done\n",
 					__func__, mdev->mdm_data.device_id);
 			mdm_drv->mdm_boot_status = 0;
 		}
@@ -567,7 +567,8 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 		if (status)
 			mdm_drv->mdm_ram_dump_status = -EIO;
 		else {
-			pr_info("%s: ramdump collection completed\n", __func__);
+			pr_debug("%s: ramdump collection completed\n",
+					 __func__);
 			mdm_drv->mdm_ram_dump_status = 0;
 #ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
 			if (sec_debug_is_enabled()) {
@@ -615,15 +616,11 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 			pr_debug("%s Image upgrade not supported\n", __func__);
 		break;
 	case SHUTDOWN_CHARM:
-		if (!mdm_drv->pdata->send_shdn ||
-				!mdm_drv->pdata->sysmon_subsys_id_valid) {
-			pr_debug("%s shutdown not supported for this mdm\n",
-					__func__);
+		if (!mdm_drv->pdata->send_shdn)
 			break;
-		}
 		atomic_set(&mdm_drv->mdm_ready, 0);
 		if (mdm_debug_mask & MDM_DEBUG_MASK_SHDN_LOG)
-			pr_info("Sending shutdown request to mdm\n");
+			pr_debug("Sending shutdown request to mdm\n");
 		ret = sysmon_send_shutdown(mdm_drv->pdata->sysmon_subsys_id);
 		if (ret)
 			pr_err("%s:Graceful shutdown of mdm failed, ret = %d\n",
