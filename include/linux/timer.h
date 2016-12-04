@@ -161,7 +161,7 @@ static inline void init_timer_on_stack_key(struct timer_list *timer,
  * @timer: the timer in question
  *
  * timer_pending will tell whether a given timer is currently pending,
- * or not. Callers must ensure serialization wrt. other operations done
+ * or not. Callers must ensure serialization with other operations done
  * to this timer, eg. interrupt contexts, or other CPUs on SMP.
  *
  * return value: 1 if the timer is pending, 0 if not.

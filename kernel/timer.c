@@ -1453,13 +1453,6 @@ SYSCALL_DEFINE1(alarm, unsigned int, seconds)
  * should be moved into arch/i386 instead?
  */
 
-#ifndef __alpha__
-
-/*
- * The Alpha uses getxpid, getxuid, and getxgid instead.  Maybe this
- * should be moved into arch/i386 instead?
- */
-
 /**
  * sys_getpid - return the thread group id of the current process
  *
@@ -1514,8 +1507,6 @@ SYSCALL_DEFINE0(getegid)
 	/* Only we change this so SMP safe */
 	return  current_egid();
 }
-
-#endif
 
 #endif
 

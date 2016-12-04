@@ -178,7 +178,7 @@ static u64 round_to_nw_start(u64 jif)
 static void cpufreq_interactive_timer_resched(unsigned long cpu)
 {
 	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
-	u64 expires;
+	unsigned long expires;
 	unsigned long flags;
 
 	spin_lock_irqsave(&pcpu->load_lock, flags);
@@ -209,7 +209,7 @@ static void cpufreq_interactive_timer_resched(unsigned long cpu)
 static void cpufreq_interactive_timer_start(int cpu)
 {
 	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
-	u64 expires = round_to_nw_start(pcpu->last_evaluated_jiffy);
+	unsigned long expires = round_to_nw_start(pcpu->last_evaluated_jiffy);
 	unsigned long flags;
 
 	spin_lock_irqsave(&pcpu->load_lock, flags);
@@ -420,7 +420,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	cpu_load = loadadjfreq / pcpu->policy->cur;
+	cpu_load = loadadjfreq / pcpu->target_freq;
 	boosted = now < (get_input_time() + boostpulse_duration_val);
 
 	if (counter < 5) {
@@ -432,12 +432,12 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	if (cpu_load >= go_hispeed_load) {
-		if (pcpu->policy->cur < hispeed_freq) {
+	if (cpu_load >= go_hispeed_load|| boosted)) {
+		if (pcpu->target_freq < hispeed_freq) {
 			nr_cpus = num_online_cpus();
 
 			pcpu->two_phase_freq = two_phase_freq_array[nr_cpus-1];
-			if (pcpu->two_phase_freq < pcpu->policy->cur)
+			if (pcpu->two_phase_freq < pcpu->target_freq)
 				phase = 1;
 			if (pcpu->two_phase_freq != 0 && phase == 0) {
 				new_freq = pcpu->two_phase_freq;
@@ -475,10 +475,10 @@ static void cpufreq_interactive_timer(unsigned long data)
 		}
 	}
 
-	if (pcpu->policy->cur >= hispeed_freq &&
-	    new_freq > pcpu->policy->cur &&
+	if (pcpu->target_freq >= hispeed_freq &&
+	    new_freq > pcpu->target_freq &&
 	    now - pcpu->hispeed_validate_time <
-	    freq_to_above_hispeed_delay(pcpu->policy->cur)) {
+	    freq_to_above_hispeed_delay(pcpu->target_freq)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -534,8 +534,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * till next timer interrupt arrives, new_freq remains same as
 	 * actual freq. Don't go for setting same frequency again.
 	 */
-	if (pcpu->target_freq == new_freq
-		&& pcpu->policy->cur == new_freq) {
+	if (pcpu->target_freq == new_freq {
 	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm_if_notmax;
 	}
