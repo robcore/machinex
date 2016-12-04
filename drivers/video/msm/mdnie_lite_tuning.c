@@ -782,7 +782,6 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	sending_tuning_cmd();
 	free_tun_cmd();
 
-		mode, mdnie_tun_state.background);
 }
 
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
