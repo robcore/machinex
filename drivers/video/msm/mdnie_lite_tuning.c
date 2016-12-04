@@ -1621,7 +1621,7 @@ void init_mdnie_class(void)
 #endif
 
 	mdnie_tun_state.mdnie_enable = true;
-
+	mdnie_lock = 0;
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 	update_mdnie_copy_mode();
 	update_mdnie_gamma_curve();
