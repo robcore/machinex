@@ -3130,7 +3130,7 @@ static struct mdm_vddmin_resource mdm_vddmin_rscs = {
 static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
+	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct mdm_platform_data mdm_platform_data = {
@@ -3146,8 +3146,8 @@ static struct mdm_platform_data mdm_platform_data = {
 	.sysmon_subsys_id_valid = 1,
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
 	.no_a2m_errfatal_on_ssr = 1,
-#if 0
 	.subsys_name = "modem",
+#if 0
 	.subsys_device = "modem_8960_dev"
 #endif
 };
@@ -3209,11 +3209,11 @@ static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.ramdump_delay_ms = 2000,
      /* delay between two PS_HOLDs */
 	.ps_hold_delay_ms = 500,
+	.peripheral_platform_device = NULL,
 	.ramdump_timeout_ms = 600000,
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
 	.no_a2m_errfatal_on_ssr = 1,
-	.kpd_not_inverted = 1,
 	.subsys_name = "external_modem",
 };
 
