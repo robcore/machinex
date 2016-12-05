@@ -1523,8 +1523,10 @@ static int dn_rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq,
 	unsigned char *b = skb_tail_pointer(skb);
 	long expires;
 
-	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*r), flags);
-	r = NLMSG_DATA(nlh);
+	nlh = nlmsg_put(skb, pid, seq, event, sizeof(*r), flags);
+	if (!nlh)
+		goto out_nlmsg_trim;
+	r = nlmsg_data(nlh);
 	r->rtm_family = AF_DECnet;
 	r->rtm_dst_len = 16;
 	r->rtm_src_len = 0;
@@ -1564,7 +1566,7 @@ static int dn_rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq,
 	nlh->nlmsg_len = skb_tail_pointer(skb) - b;
 	return skb->len;
 
-nlmsg_failure:
+out_nlmsg_trim:
 rtattr_failure:
 	nlmsg_trim(skb, b);
 	return -1;
@@ -1577,7 +1579,7 @@ static int dn_cache_getroute(struct sk_buff *in_skb, struct nlmsghdr *nlh, void 
 {
 	struct net *net = sock_net(in_skb->sk);
 	struct rtattr **rta = arg;
-	struct rtmsg *rtm = NLMSG_DATA(nlh);
+	struct rtmsg *rtm = nlmsg_data(nlh);
 	struct dn_route *rt = NULL;
 	struct dn_skb_cb *cb;
 	int err;
@@ -1674,7 +1676,7 @@ int dn_cache_dump(struct sk_buff *skb, struct netlink_callback *cb)
 
 	if (NLMSG_PAYLOAD(cb->nlh, 0) < sizeof(struct rtmsg))
 		return -EINVAL;
-	if (!(((struct rtmsg *)NLMSG_DATA(cb->nlh))->rtm_flags&RTM_F_CLONED))
+	if (!(((struct rtmsg *)nlmsg_data(cb->nlh))->rtm_flags&RTM_F_CLONED))
 		return 0;
 
 	s_h = cb->args[0];
