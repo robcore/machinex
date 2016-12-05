@@ -848,7 +848,7 @@ static DEVICE_ATTR(mdnie_lock, 0664, mdnie_lock_show, mdnie_lock_store);
 static ssize_t mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, 256, "%s\n",
+	return snprintf(buf, 256, "Current Background Mode : %s\n",
 		background_name[mdnie_tun_state.background]);
 }
 
@@ -878,7 +878,7 @@ static ssize_t scenario_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	return snprintf(buf, 256, "%s\n",
+	return snprintf(buf, 256, "Current Scenario Mode : %s\n",
 		scenario_name[mdnie_tun_state.scenario]);
 }
 
@@ -1020,7 +1020,6 @@ static ssize_t outdoor_show(struct device *dev,
 					      struct device_attribute *attr,
 					      char *buf)
 {
-	//DPRINT("called %s\n", __func__);
 	return snprintf(buf, 256, "%s\n",
 		(mdnie_tun_state.outdoor == 0) ? "Disabled" : "Enabled");
 }
@@ -1097,7 +1096,7 @@ void is_negative_on(void)
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
 }
-static DEVICE_ATTR(negative, 664,
+static DEVICE_ATTR(negative, 0664,
 		   negative_show,
 		   negative_store);
 
