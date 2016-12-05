@@ -15,10 +15,19 @@ tristate "Netfilter NFACCT over NFNETLINK interface"
 config NETFILTER_NETLINK_CTHELPER
 tristate "Netfilter CTHELPER over NFNETLINK interface"
 	depends on NETFILTER_ADVANCED
+	depends on NETFILTER_NETLINK_QUEUE_CT
 	select NETFILTER_NETLINK
 	help
 	  If this option is enabled, the kernel will include support
 	  for user-space connection tracking helpers via NFNETLINK.
+
+config NETFILTER_NETLINK_QUEUE_CT
+        bool "NFQUEUE integration with Connection Tracking"
+        default n
+        depends on NETFILTER_NETLINK_QUEUE
+	help
+	  If this option is enabled, NFQUEUE can include Connection Tracking
+	  information together with the packet is the enqueued via NFNETLINK.
 
 config NETFILTER_NETLINK_QUEUE
 	tristate "Netfilter NFQUEUE over NFNETLINK interface"
@@ -27,7 +36,7 @@ config NETFILTER_NETLINK_QUEUE
 	help
 	  If this option is enabled, the kernel will include support
 	  for queueing packets via NFNETLINK.
-	  
+
 config NETFILTER_NETLINK_LOG
 	tristate "Netfilter LOG over NFNETLINK interface"
 	default m if NETFILTER_ADVANCED=n
@@ -342,6 +351,14 @@ config NF_CT_NETLINK_TIMEOUT
 	  policies to flows, instead of using the global timeout policy.
 
 	  If unsure, say `N'.
+
+config NETFILTER_NETLINK_QUEUE_CT
+        bool "NFQUEUE integration with Connection Tracking"
+        default n
+        depends on NETFILTER_NETLINK_QUEUE
+	help
+	  If this option is enabled, NFQUEUE can include Connection Tracking
+	  information together with the packet is the enqueued via NFNETLINK.
 
 endif # NF_CONNTRACK
 
@@ -1078,7 +1095,7 @@ config NETFILTER_XT_MATCH_REALM
 	  This option adds a `realm' match, which allows you to use the realm
 	  key from the routing subsystem inside iptables.
 
-	  This match pretty much resembles the CONFIG_NET_CLS_ROUTE4 option 
+	  This match pretty much resembles the CONFIG_NET_CLS_ROUTE4 option
 	  in tc world.
 
 	  If you want to compile it as a module, say M here and read
@@ -1100,7 +1117,7 @@ config NETFILTER_XT_MATCH_SCTP
 	depends on NETFILTER_ADVANCED
 	default IP_SCTP
 	help
-	  With this option enabled, you will be able to use the 
+	  With this option enabled, you will be able to use the
 	  `sctp' match in order to match on SCTP source/destination ports
 	  and SCTP chunk types.
 
