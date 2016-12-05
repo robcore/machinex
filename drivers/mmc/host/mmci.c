@@ -1207,7 +1207,9 @@ static int __devinit mmci_probe(struct amba_device *dev,
 
 	/* must have platform data */
 	if (!plat) {
-		ret = -EINVAL;
+		plat = devm_kzalloc(&dev->dev, sizeof(*plat), GFP_KERNEL);
+		if (!plat)
+		ret = -ENOMEM;
 		goto out;
 	}
 
