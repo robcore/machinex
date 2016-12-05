@@ -515,7 +515,7 @@ void icmpv6_send(struct sk_buff *skb, u8 type, u8 code, __u32 info)
 	err = ip6_append_data(sk, icmpv6_getfrag, &msg,
 			      len + sizeof(struct icmp6hdr),
 			      sizeof(struct icmp6hdr), hlimit,
-			      np->tclass, NULL, &fl6, (struct rt6_info*)dst,
+			      np->tclass, NULL, &fl6, (struct rt6_info *)dst,
 			      MSG_DONTWAIT, np->dontfrag);
 	if (err) {
 		ICMP6_INC_STATS(net, idev, ICMP6_MIB_OUTERRORS);
@@ -599,7 +599,7 @@ static void icmpv6_echo_reply(struct sk_buff *skb)
 
 	err = ip6_append_data(sk, icmpv6_getfrag, &msg, skb->len + sizeof(struct icmp6hdr),
 				sizeof(struct icmp6hdr), hlimit, np->tclass, NULL, &fl6,
-				(struct rt6_info*)dst, MSG_DONTWAIT,
+				(struct rt6_info *)dst, MSG_DONTWAIT,
 				np->dontfrag);
 
 	if (err) {
@@ -979,7 +979,6 @@ int icmpv6_err_convert(u8 type, u8 code, int *err)
 
 	return fatal;
 }
-
 EXPORT_SYMBOL(icmpv6_err_convert);
 
 #ifdef CONFIG_SYSCTL
