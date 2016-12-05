@@ -527,6 +527,7 @@ ENDPROC(__und_usr)
  * The out of line fixup for the ldrt instructions above.
  */
 	.pushsection .fixup, "ax"
+	.align	2
 4:	ret	r9
 	.popsection
 	.pushsection __ex_table,"a"
