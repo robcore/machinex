@@ -34,6 +34,7 @@
 #include "volumes.h"
 #include "async-thread.h"
 #include "check-integrity.h"
+#include "rcu-string.h"
 
 static int init_first_rw_device(struct btrfs_trans_handle *trans,
 				struct btrfs_root *root,
@@ -61,7 +62,7 @@ static void free_fs_devices(struct btrfs_fs_devices *fs_devices)
 		device = list_entry(fs_devices->devices.next,
 				    struct btrfs_device, dev_list);
 		list_del(&device->dev_list);
-		kfree(device->name);
+		rcu_string_free(device->name);
 		kfree(device);
 	}
 	kfree(fs_devices);
@@ -331,8 +332,8 @@ static noinline int device_list_add(const char *path,
 {
 	struct btrfs_device *device;
 	struct btrfs_fs_devices *fs_devices;
+	struct rcu_string *name;
 	u64 found_transid = btrfs_super_generation(disk_super);
-	char *name;
 
 	fs_devices = find_fsid(disk_super->fsid);
 	if (!fs_devices) {
@@ -365,11 +366,13 @@ static noinline int device_list_add(const char *path,
 		memcpy(device->uuid, disk_super->dev_item.uuid,
 		       BTRFS_UUID_SIZE);
 		spin_lock_init(&device->io_lock);
-		device->name = kstrdup(path, GFP_NOFS);
-		if (!device->name) {
+
+		name = rcu_string_strdup(path, GFP_NOFS);
+		if (!name) {
 			kfree(device);
 			return -ENOMEM;
 		}
+		rcu_assign_pointer(device->name, name);
 		INIT_LIST_HEAD(&device->dev_alloc_list);
 
 		/* init readahead state */
@@ -386,12 +389,12 @@ static noinline int device_list_add(const char *path,
 
 		device->fs_devices = fs_devices;
 		fs_devices->num_devices++;
-	} else if (!device->name || strcmp(device->name, path)) {
-		name = kstrdup(path, GFP_NOFS);
+	} else if (!device->name || strcmp(device->name->str, path)) {
+		name = rcu_string_strdup(path, GFP_NOFS);
 		if (!name)
 			return -ENOMEM;
-		kfree(device->name);
-		device->name = name;
+		rcu_string_free(device->name);
+		rcu_assign_pointer(device->name, name);
 		if (device->missing) {
 			fs_devices->missing_devices--;
 			device->missing = 0;
@@ -426,15 +429,22 @@ static struct btrfs_fs_devices *clone_fs_devices(struct btrfs_fs_devices *orig)
 
 	/* We have held the volume lock, it is safe to get the devices. */
 	list_for_each_entry(orig_dev, &orig->devices, dev_list) {
+		struct rcu_string *name;
+
 		device = kzalloc(sizeof(*device), GFP_NOFS);
 		if (!device)
 			goto error;
 
-		device->name = kstrdup(orig_dev->name, GFP_NOFS);
-		if (!device->name) {
+		/*
+		 * This is ok to do without rcu read locked because we hold the
+		 * uuid mutex so nothing we touch in here is going to disappear.
+		 */
+		name = rcu_string_strdup(orig_dev->name->str, GFP_NOFS);
+		if (!name) {
 			kfree(device);
 			goto error;
 		}
+		rcu_assign_pointer(device->name, name);
 
 		device->devid = orig_dev->devid;
 		device->work.func = pending_bios_fn;
@@ -487,7 +497,7 @@ again:
 		}
 		list_del_init(&device->dev_list);
 		fs_devices->num_devices--;
-		kfree(device->name);
+		rcu_string_free(device->name);
 		kfree(device);
 	}
 
@@ -512,7 +522,7 @@ static void __free_device(struct work_struct *work)
 	if (device->bdev)
 		blkdev_put(device->bdev, device->mode);
 
-	kfree(device->name);
+	rcu_string_free(device->name);
 	kfree(device);
 }
 
@@ -536,6 +546,7 @@ static int __btrfs_close_devices(struct btrfs_fs_devices *fs_devices)
 	mutex_lock(&fs_devices->device_list_mutex);
 	list_for_each_entry(device, &fs_devices->devices, dev_list) {
 		struct btrfs_device *new_device;
+		struct rcu_string *name;
 
 		if (device->bdev)
 			fs_devices->open_devices--;
@@ -551,8 +562,11 @@ static int __btrfs_close_devices(struct btrfs_fs_devices *fs_devices)
 		new_device = kmalloc(sizeof(*new_device), GFP_NOFS);
 		BUG_ON(!new_device); /* -ENOMEM */
 		memcpy(new_device, device, sizeof(*new_device));
-		new_device->name = kstrdup(device->name, GFP_NOFS);
-		BUG_ON(device->name && !new_device->name); /* -ENOMEM */
+
+		/* Safe because we are under uuid_mutex */
+		name = rcu_string_strdup(device->name->str, GFP_NOFS);
+		BUG_ON(device->name && !name); /* -ENOMEM */
+		rcu_assign_pointer(new_device->name, name);
 		new_device->bdev = NULL;
 		new_device->writeable = 0;
 		new_device->in_fs_metadata = 0;
@@ -624,9 +638,9 @@ static int __btrfs_open_devices(struct btrfs_fs_devices *fs_devices,
 		if (!device->name)
 			continue;
 
-		bdev = blkdev_get_by_path(device->name, flags, holder);
+		bdev = blkdev_get_by_path(device->name->str, flags, holder);
 		if (IS_ERR(bdev)) {
-			printk(KERN_INFO "open %s failed\n", device->name);
+			printk(KERN_INFO "open %s failed\n", device->name->str);
 			goto error;
 		}
 		filemap_write_and_wait(bdev->bd_inode->i_mapping);
@@ -1636,6 +1650,7 @@ int btrfs_init_new_device(struct btrfs_root *root, char *device_path)
 	struct block_device *bdev;
 	struct list_head *devices;
 	struct super_block *sb = root->fs_info->sb;
+	struct rcu_string *name;
 	u64 total_bytes;
 	int seeding_dev = 0;
 	int ret = 0;
@@ -1675,23 +1690,24 @@ int btrfs_init_new_device(struct btrfs_root *root, char *device_path)
 		goto error;
 	}
 
-	device->name = kstrdup(device_path, GFP_NOFS);
-	if (!device->name) {
+	name = rcu_string_strdup(device_path, GFP_NOFS);
+	if (!name) {
 		kfree(device);
 		ret = -ENOMEM;
 		goto error;
 	}
+	rcu_assign_pointer(device->name, name);
 
 	ret = find_next_devid(root, &device->devid);
 	if (ret) {
-		kfree(device->name);
+		rcu_string_free(device->name);
 		kfree(device);
 		goto error;
 	}
 
 	trans = btrfs_start_transaction(root, 0);
 	if (IS_ERR(trans)) {
-		kfree(device->name);
+		rcu_string_free(device->name);
 		kfree(device);
 		ret = PTR_ERR(trans);
 		goto error;
@@ -1800,7 +1816,7 @@ error_trans:
 	unlock_chunks(root);
 	btrfs_abort_transaction(trans, root, ret);
 	btrfs_end_transaction(trans, root);
-	kfree(device->name);
+	rcu_string_free(device->name);
 	kfree(device);
 error:
 	blkdev_put(bdev, FMODE_EXCL);
@@ -4161,10 +4177,17 @@ int btrfs_map_bio(struct btrfs_root *root, int rw, struct bio *bio,
 		bio->bi_sector = bbio->stripes[dev_nr].physical >> 9;
 		dev = bbio->stripes[dev_nr].dev;
 		if (dev && dev->bdev && (rw != WRITE || dev->writeable)) {
+#ifdef DEBUG
+			struct rcu_string *name;
+
+			rcu_read_lock();
+			name = rcu_dereference(dev->name);
 			pr_debug("btrfs_map_bio: rw %d, secor=%llu, dev=%lu "
 				 "(%s id %llu), size=%u\n", rw,
 				 (u64)bio->bi_sector, (u_long)dev->bdev->bd_dev,
-				 dev->name, dev->devid, bio->bi_size);
+				 name->str, dev->devid, bio->bi_size);
+			rcu_read_unlock();
+#endif
 			bio->bi_bdev = dev->bdev;
 			if (async_submit)
 				schedule_bio(root, dev, rw, bio);
