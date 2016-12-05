@@ -3056,8 +3056,9 @@ static int rt_fill_info(struct net *net,
 	    nla_put_be32(skb, RTA_MARK, rt->rt_mark))
 		goto nla_put_failure;
 
-	if (rt->rt_uid != (uid_t) -1)
-		NLA_PUT_BE32(skb, RTA_UID, rt->rt_uid);
+	if (rt->rt_uid != (uid_t) -1 &&
+		nla_put_be32(skb, RTA_UID, rt->rt_uid));
+		goto nla_put_failure;
 
 	error = rt->dst.error;
 	if (peer) {
