@@ -2165,7 +2165,7 @@ static inline int transport_execute_task_attr(struct se_cmd *cmd)
  * Called from fabric module context in transport_generic_new_cmd() and
  * transport_generic_process_write()
  */
-static int transport_execute_tasks(struct se_cmd *cmd)
+static void transport_execute_tasks(struct se_cmd *cmd)
 {
 	int add_tasks;
 	struct se_device *se_dev = cmd->se_dev;
@@ -2190,9 +2190,7 @@ static int transport_execute_tasks(struct se_cmd *cmd)
 		return 0;
 	}
 
-execute_tasks:
 	__transport_execute_tasks(se_dev, NULL);
-	return 0;
 }
 
 /*
