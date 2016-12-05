@@ -340,14 +340,13 @@ config NF_CT_NETLINK_HELPER
 	select NETFILTER_NETLINK
 	depends on NF_CT_NETLINK
 	depends on NETFILTER_NETLINK_QUEUE
+	depends on NETFILTER_NETLINK_QUEUE_CT
 	depends on NETFILTER_ADVANCED
-	NETFILTER_NETLINK_QUEUE
 	help
 	  This option enables the user-space connection tracking helpers
 	  infrastructure.
 
 	  If unsure, say `N'.
-
 
 config NETFILTER_NETLINK_QUEUE_CT
         bool "NFQUEUE integration with Connection Tracking"
