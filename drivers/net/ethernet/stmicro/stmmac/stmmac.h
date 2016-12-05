@@ -81,7 +81,6 @@ struct stmmac_priv {
 	struct stmmac_counters mmc;
 	struct dma_features dma_cap;
 	int hw_cap_support;
-	int synopsys_id;
 };
 
 extern int phyaddr;
