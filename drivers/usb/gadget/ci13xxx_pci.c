@@ -60,6 +60,11 @@ static int __devinit ci13xxx_pci_probe(struct pci_dev *pdev,
 	if (id == NULL)
 		return -EINVAL;
 
+	if (!driver) {
+		dev_err(&pdev->dev, "device doesn't provide driver data\n");
+		return -ENODEV;
+	}
+
 	retval = pci_enable_device(pdev);
 	if (retval)
 		goto done;
