@@ -594,8 +594,7 @@ static int fib_nl_fill_rule(struct sk_buff *skb, struct fib_rule *rule,
 	frh = nlmsg_data(nlh);
 	frh->family = ops->family;
 	frh->table = rule->table;
-	if (nla_put_u32(skb, FRA_TABLE, rule->table))
-		goto nla_put_failure;
+	NLA_PUT_U32(skb, FRA_TABLE, rule->table);
 	frh->res1 = 0;
 	frh->res2 = 0;
 	frh->action = rule->action;
@@ -606,28 +605,30 @@ static int fib_nl_fill_rule(struct sk_buff *skb, struct fib_rule *rule,
 		frh->flags |= FIB_RULE_UNRESOLVED;
 
 	if (rule->iifname[0]) {
-		if (nla_put_string(skb, FRA_IIFNAME, rule->iifname))
-			goto nla_put_failure;
+		NLA_PUT_STRING(skb, FRA_IIFNAME, rule->iifname);
+
 		if (rule->iifindex == -1)
 			frh->flags |= FIB_RULE_IIF_DETACHED;
 	}
 
 	if (rule->oifname[0]) {
-		if (nla_put_string(skb, FRA_OIFNAME, rule->oifname))
-			goto nla_put_failure;
+		NLA_PUT_STRING(skb, FRA_OIFNAME, rule->oifname);
+
 		if (rule->oifindex == -1)
 			frh->flags |= FIB_RULE_OIF_DETACHED;
 	}
 
-	if ((rule->pref &&
-	     nla_put_u32(skb, FRA_PRIORITY, rule->pref)) ||
-	    (rule->mark &&
-	     nla_put_u32(skb, FRA_FWMARK, rule->mark)) ||
-	    ((rule->mark_mask || rule->mark) &&
-	     nla_put_u32(skb, FRA_FWMASK, rule->mark_mask)) ||
-	    (rule->target &&
-	     nla_put_u32(skb, FRA_GOTO, rule->target)))
-		goto nla_put_failure;
+	if (rule->pref)
+		NLA_PUT_U32(skb, FRA_PRIORITY, rule->pref);
+
+	if (rule->mark)
+		NLA_PUT_U32(skb, FRA_FWMARK, rule->mark);
+
+	if (rule->mark_mask || rule->mark)
+		NLA_PUT_U32(skb, FRA_FWMASK, rule->mark_mask);
+
+	if (rule->target)
+		NLA_PUT_U32(skb, FRA_GOTO, rule->target);
 
 	if (uid_valid(rule->uid_start))
 	     nla_put_uid(skb, FRA_UID_START, rule->uid_start);

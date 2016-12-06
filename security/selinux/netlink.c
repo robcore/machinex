@@ -19,7 +19,6 @@
 #include <linux/netlink.h>
 #include <linux/selinux_netlink.h>
 #include <net/net_namespace.h>
-#include <net/netlink.h>
 
 #include "security.h"
 
@@ -48,7 +47,7 @@ static void selnl_add_payload(struct nlmsghdr *nlh, int len, int msgtype, void *
 {
 	switch (msgtype) {
 	case SELNL_MSG_SETENFORCE: {
-		struct selnl_msg_setenforce *msg = nlmsg_data(nlh);
+		struct selnl_msg_setenforce *msg = NLMSG_DATA(nlh);
 
 		memset(msg, 0, len);
 		msg->val = *((int *)data);
@@ -56,7 +55,7 @@ static void selnl_add_payload(struct nlmsghdr *nlh, int len, int msgtype, void *
 	}
 
 	case SELNL_MSG_POLICYLOAD: {
-		struct selnl_msg_policyload *msg = nlmsg_data(nlh);
+		struct selnl_msg_policyload *msg = NLMSG_DATA(nlh);
 
 		memset(msg, 0, len);
 		msg->seqno = *((u32 *)data);
@@ -82,9 +81,7 @@ static void selnl_notify(int msgtype, void *data)
 		goto oom;
 
 	tmp = skb->tail;
-	nlh = nlmsg_put(skb, 0, 0, msgtype, len, 0);
-	if (!nlh)
-		goto out_kfree_skb;
+	nlh = NLMSG_PUT(skb, 0, 0, msgtype, len);
 	selnl_add_payload(nlh, len, msgtype, data);
 	nlh->nlmsg_len = skb->tail - tmp;
 	NETLINK_CB(skb).dst_group = SELNLGRP_AVC;
@@ -92,7 +89,7 @@ static void selnl_notify(int msgtype, void *data)
 out:
 	return;
 
-out_kfree_skb:
+nlmsg_failure:
 	kfree_skb(skb);
 oom:
 	printk(KERN_ERR "SELinux:  OOM in %s\n", __func__);

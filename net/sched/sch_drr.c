@@ -260,8 +260,7 @@ static int drr_dump_class(struct Qdisc *sch, unsigned long arg,
 	nest = nla_nest_start(skb, TCA_OPTIONS);
 	if (nest == NULL)
 		goto nla_put_failure;
-	if (nla_put_u32(skb, TCA_DRR_QUANTUM, cl->quantum))
-		goto nla_put_failure;
+	NLA_PUT_U32(skb, TCA_DRR_QUANTUM, cl->quantum);
 	return nla_nest_end(skb, nest);
 
 nla_put_failure:

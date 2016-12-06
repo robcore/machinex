@@ -272,9 +272,8 @@ static int red_dump(struct Qdisc *sch, struct sk_buff *skb)
 	opts = nla_nest_start(skb, TCA_OPTIONS);
 	if (opts == NULL)
 		goto nla_put_failure;
-	if (nla_put(skb, TCA_RED_PARMS, sizeof(opt), &opt) ||
-	    nla_put_u32(skb, TCA_RED_MAX_P, q->parms.max_P))
-		goto nla_put_failure;
+	NLA_PUT(skb, TCA_RED_PARMS, sizeof(opt), &opt);
+	NLA_PUT_U32(skb, TCA_RED_MAX_P, q->parms.max_P);
 	return nla_nest_end(skb, opts);
 
 nla_put_failure:

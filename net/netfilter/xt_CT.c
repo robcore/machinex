@@ -113,8 +113,6 @@ static int xt_ct_tg_check_v0(const struct xt_tgchk_param *par)
 		goto err3;
 
 	if (info->helper[0]) {
-		struct nf_conntrack_helper *helper;
-
 		ret = -ENOENT;
 		proto = xt_ct_find_proto(par);
 		if (!proto) {
@@ -123,21 +121,19 @@ static int xt_ct_tg_check_v0(const struct xt_tgchk_param *par)
 			goto err3;
 		}
 
-		ret = -ENOENT;
-		helper = nf_conntrack_helper_try_module_get(info->helper,
-							    par->family,
-							    proto);
-		if (helper == NULL) {
-			pr_info("No such helper \"%s\"\n", info->helper);
-			goto err3;
-		}
-
 		ret = -ENOMEM;
-		help = nf_ct_helper_ext_add(ct, helper, GFP_KERNEL);
+		help = nf_ct_helper_ext_add(ct, GFP_KERNEL);
 		if (help == NULL)
 			goto err3;
 
-		help->helper = helper;
+		ret = -ENOENT;
+		help->helper = nf_conntrack_helper_try_module_get(info->helper,
+								  par->family,
+								  proto);
+		if (help->helper == NULL) {
+			pr_info("No such helper \"%s\"\n", info->helper);
+			goto err3;
+		}
 	}
 
 	__set_bit(IPS_TEMPLATE_BIT, &ct->status);
@@ -207,8 +203,6 @@ static int xt_ct_tg_check_v1(const struct xt_tgchk_param *par)
 		goto err3;
 
 	if (info->helper[0]) {
-		struct nf_conntrack_helper *helper;
-
 		ret = -ENOENT;
 		proto = xt_ct_find_proto(par);
 		if (!proto) {
@@ -217,21 +211,19 @@ static int xt_ct_tg_check_v1(const struct xt_tgchk_param *par)
 			goto err3;
 		}
 
-		ret = -ENOENT;
-		helper = nf_conntrack_helper_try_module_get(info->helper,
-							    par->family,
-							    proto);
-		if (helper == NULL) {
-			pr_info("No such helper \"%s\"\n", info->helper);
-			goto err3;
-		}
-
 		ret = -ENOMEM;
-		help = nf_ct_helper_ext_add(ct, helper, GFP_KERNEL);
+		help = nf_ct_helper_ext_add(ct, GFP_KERNEL);
 		if (help == NULL)
 			goto err3;
 
-		help->helper = helper;
+		ret = -ENOENT;
+		help->helper = nf_conntrack_helper_try_module_get(info->helper,
+								  par->family,
+								  proto);
+		if (help->helper == NULL) {
+			pr_info("No such helper \"%s\"\n", info->helper);
+			goto err3;
+		}
 	}
 
 #ifdef CONFIG_NF_CONNTRACK_TIMEOUT

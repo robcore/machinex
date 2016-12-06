@@ -670,12 +670,11 @@ static int virtnet_set_mac_address(struct net_device *dev, void *p)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
 	struct virtio_device *vdev = vi->vdev;
-	struct sockaddr *addr = p;
+	int ret;
 
-	if (!is_valid_ether_addr(addr->sa_data))
-		return -EADDRNOTAVAIL;
-	memcpy(dev->dev_addr, addr->sa_data, ETH_ALEN);
-	dev->addr_assign_type &= ~NET_ADDR_RANDOM;
+	ret = eth_mac_addr(dev, p);
+	if (ret)
+		return ret;
 
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_MAC))
 		vdev->config->set(vdev, offsetof(struct virtio_net_config, mac),

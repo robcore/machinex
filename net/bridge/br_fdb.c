@@ -487,14 +487,14 @@ static int fdb_fill_info(struct sk_buff *skb, const struct net_bridge *br,
 	ndm->ndm_ifindex = fdb->dst ? fdb->dst->dev->ifindex : br->dev->ifindex;
 	ndm->ndm_state   = fdb_to_nud(fdb);
 
-	if (nla_put(skb, NDA_LLADDR, ETH_ALEN, &fdb->addr))
-		goto nla_put_failure;
+	NLA_PUT(skb, NDA_LLADDR, ETH_ALEN, &fdb->addr);
+
 	ci.ndm_used	 = jiffies_to_clock_t(now - fdb->used);
 	ci.ndm_confirmed = 0;
 	ci.ndm_updated	 = jiffies_to_clock_t(now - fdb->updated);
 	ci.ndm_refcnt	 = 0;
-	if (nla_put(skb, NDA_CACHEINFO, sizeof(ci), &ci))
-		goto nla_put_failure;
+	NLA_PUT(skb, NDA_CACHEINFO, sizeof(ci), &ci);
+
 	return nlmsg_end(skb, nlh);
 
 nla_put_failure:

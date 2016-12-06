@@ -96,9 +96,8 @@ bitmap_port_list(const struct ip_set *set,
 			} else
 				goto nla_put_failure;
 		}
-		if (nla_put_net16(skb, IPSET_ATTR_PORT,
-				  htons(map->first_port + id)))
-			goto nla_put_failure;
+		NLA_PUT_NET16(skb, IPSET_ATTR_PORT,
+			      htons(map->first_port + id));
 		ipset_nest_end(skb, nested);
 	}
 	ipset_nest_end(skb, atd);
@@ -184,11 +183,10 @@ bitmap_port_tlist(const struct ip_set *set,
 			} else
 				goto nla_put_failure;
 		}
-		if (nla_put_net16(skb, IPSET_ATTR_PORT,
-				  htons(map->first_port + id)) ||
-		    nla_put_net32(skb, IPSET_ATTR_TIMEOUT,
-				  htonl(ip_set_timeout_get(members[id]))))
-			goto nla_put_failure;
+		NLA_PUT_NET16(skb, IPSET_ATTR_PORT,
+			      htons(map->first_port + id));
+		NLA_PUT_NET32(skb, IPSET_ATTR_TIMEOUT,
+			      htonl(ip_set_timeout_get(members[id])));
 		ipset_nest_end(skb, nested);
 	}
 	ipset_nest_end(skb, adt);
@@ -322,14 +320,13 @@ bitmap_port_head(struct ip_set *set, struct sk_buff *skb)
 	nested = ipset_nest_start(skb, IPSET_ATTR_DATA);
 	if (!nested)
 		goto nla_put_failure;
-	if (nla_put_net16(skb, IPSET_ATTR_PORT, htons(map->first_port)) ||
-	    nla_put_net16(skb, IPSET_ATTR_PORT_TO, htons(map->last_port)) ||
-	    nla_put_net32(skb, IPSET_ATTR_REFERENCES, htonl(set->ref - 1)) ||
-	    nla_put_net32(skb, IPSET_ATTR_MEMSIZE,
-			  htonl(sizeof(*map) + map->memsize)) ||
-	    (with_timeout(map->timeout) &&
-	     nla_put_net32(skb, IPSET_ATTR_TIMEOUT, htonl(map->timeout))))
-		goto nla_put_failure;
+	NLA_PUT_NET16(skb, IPSET_ATTR_PORT, htons(map->first_port));
+	NLA_PUT_NET16(skb, IPSET_ATTR_PORT_TO, htons(map->last_port));
+	NLA_PUT_NET32(skb, IPSET_ATTR_REFERENCES, htonl(set->ref - 1));
+	NLA_PUT_NET32(skb, IPSET_ATTR_MEMSIZE,
+		      htonl(sizeof(*map) + map->memsize));
+	if (with_timeout(map->timeout))
+		NLA_PUT_NET32(skb, IPSET_ATTR_TIMEOUT, htonl(map->timeout));
 	ipset_nest_end(skb, nested);
 
 	return 0;

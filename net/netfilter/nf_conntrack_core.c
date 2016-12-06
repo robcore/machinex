@@ -842,8 +842,7 @@ init_conntrack(struct net *net, struct nf_conn *tmpl,
 		__set_bit(IPS_EXPECTED_BIT, &ct->status);
 		ct->master = exp->master;
 		if (exp->helper) {
-			help = nf_ct_helper_ext_add(ct, exp->helper,
-						    GFP_ATOMIC);
+			help = nf_ct_helper_ext_add(ct, GFP_ATOMIC);
 			if (help)
 				rcu_assign_pointer(help->helper, exp->helper);
 		}
@@ -1173,9 +1172,8 @@ static struct nf_ct_ext_type nf_ct_zone_extend __read_mostly = {
 int nf_ct_port_tuple_to_nlattr(struct sk_buff *skb,
 			       const struct nf_conntrack_tuple *tuple)
 {
-	if (nla_put_be16(skb, CTA_PROTO_SRC_PORT, tuple->src.u.tcp.port) ||
-	    nla_put_be16(skb, CTA_PROTO_DST_PORT, tuple->dst.u.tcp.port))
-		goto nla_put_failure;
+	NLA_PUT_BE16(skb, CTA_PROTO_SRC_PORT, tuple->src.u.tcp.port);
+	NLA_PUT_BE16(skb, CTA_PROTO_DST_PORT, tuple->dst.u.tcp.port);
 	return 0;
 
 nla_put_failure:

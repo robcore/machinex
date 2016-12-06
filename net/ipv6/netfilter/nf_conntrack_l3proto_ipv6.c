@@ -143,11 +143,11 @@ static int ipv6_get_l4proto(const struct sk_buff *skb, unsigned int nhoff,
 	return NF_ACCEPT;
 }
 
-static unsigned int ipv6_helper(unsigned int hooknum,
-				struct sk_buff *skb,
-				const struct net_device *in,
-				const struct net_device *out,
-				int (*okfn)(struct sk_buff *))
+static unsigned int ipv6_confirm(unsigned int hooknum,
+				 struct sk_buff *skb,
+				 const struct net_device *in,
+				 const struct net_device *out,
+				 int (*okfn)(struct sk_buff *))
 {
 	struct nf_conn *ct;
 	const struct nf_conn_help *help;
@@ -161,15 +161,15 @@ static unsigned int ipv6_helper(unsigned int hooknum,
 	/* This is where we call the helper: as the packet goes out. */
 	ct = nf_ct_get(skb, &ctinfo);
 	if (!ct || ctinfo == IP_CT_RELATED_REPLY)
-		return NF_ACCEPT;
+		goto out;
 
 	help = nfct_help(ct);
 	if (!help)
-		return NF_ACCEPT;
+		goto out;
 	/* rcu_read_lock()ed by nf_hook_slow */
 	helper = rcu_dereference(help->helper);
 	if (!helper)
-		return NF_ACCEPT;
+		goto out;
 
 	protoff = nf_ct_ipv6_skip_exthdr(skb, extoff, &pnum,
 					 skb->len - extoff);
@@ -179,19 +179,12 @@ static unsigned int ipv6_helper(unsigned int hooknum,
 	}
 
 	ret = helper->help(skb, protoff, ct, ctinfo);
-	if (ret != NF_ACCEPT && (ret & NF_VERDICT_MASK) != NF_QUEUE) {
+	if (ret != NF_ACCEPT) {
 		nf_log_packet(NFPROTO_IPV6, hooknum, skb, in, out, NULL,
 			      "nf_ct_%s: dropping packet", helper->name);
+		return ret;
 	}
-	return ret;
-}
-
-static unsigned int ipv6_confirm(unsigned int hooknum,
-				 struct sk_buff *skb,
-				 const struct net_device *in,
-				 const struct net_device *out,
-				 int (*okfn)(struct sk_buff *))
-{
+out:
 	/* We've seen it coming out the other side: confirm it */
 	return nf_conntrack_confirm(skb);
 }
@@ -262,25 +255,11 @@ static struct nf_hook_ops ipv6_conntrack_ops[] __read_mostly = {
 		.priority	= NF_IP6_PRI_CONNTRACK,
 	},
 	{
-		.hook		= ipv6_helper,
-		.owner		= THIS_MODULE,
-		.pf		= NFPROTO_IPV6,
-		.hooknum	= NF_INET_POST_ROUTING,
-		.priority	= NF_IP6_PRI_CONNTRACK_HELPER,
-	},
-	{
 		.hook		= ipv6_confirm,
 		.owner		= THIS_MODULE,
 		.pf		= NFPROTO_IPV6,
 		.hooknum	= NF_INET_POST_ROUTING,
 		.priority	= NF_IP6_PRI_LAST,
-	},
-	{
-		.hook		= ipv6_helper,
-		.owner		= THIS_MODULE,
-		.pf		= NFPROTO_IPV6,
-		.hooknum	= NF_INET_LOCAL_IN,
-		.priority	= NF_IP6_PRI_CONNTRACK_HELPER,
 	},
 	{
 		.hook		= ipv6_confirm,
@@ -299,11 +278,10 @@ static struct nf_hook_ops ipv6_conntrack_ops[] __read_mostly = {
 static int ipv6_tuple_to_nlattr(struct sk_buff *skb,
 				const struct nf_conntrack_tuple *tuple)
 {
-	if (nla_put(skb, CTA_IP_V6_SRC, sizeof(u_int32_t) * 4,
-		    &tuple->src.u3.ip6) ||
-	    nla_put(skb, CTA_IP_V6_DST, sizeof(u_int32_t) * 4,
-		    &tuple->dst.u3.ip6))
-		goto nla_put_failure;
+	NLA_PUT(skb, CTA_IP_V6_SRC, sizeof(u_int32_t) * 4,
+		&tuple->src.u3.ip6);
+	NLA_PUT(skb, CTA_IP_V6_DST, sizeof(u_int32_t) * 4,
+		&tuple->dst.u3.ip6);
 	return 0;
 
 nla_put_failure:

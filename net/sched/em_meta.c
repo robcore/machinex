@@ -585,9 +585,8 @@ static void meta_var_apply_extras(struct meta_value *v,
 
 static int meta_var_dump(struct sk_buff *skb, struct meta_value *v, int tlv)
 {
-	if (v->val && v->len &&
-	    nla_put(skb, tlv, v->len, (void *) v->val))
-		goto nla_put_failure;
+	if (v->val && v->len)
+		NLA_PUT(skb, tlv, v->len, (void *) v->val);
 	return 0;
 
 nla_put_failure:
@@ -637,13 +636,10 @@ static void meta_int_apply_extras(struct meta_value *v,
 
 static int meta_int_dump(struct sk_buff *skb, struct meta_value *v, int tlv)
 {
-	if (v->len == sizeof(unsigned long)) {
-		if (nla_put(skb, tlv, sizeof(unsigned long), &v->val))
-			goto nla_put_failure;
-	} else if (v->len == sizeof(u32)) {
-		if (nla_put_u32(skb, tlv, v->val))
-			goto nla_put_failure;
-	}
+	if (v->len == sizeof(unsigned long))
+		NLA_PUT(skb, tlv, sizeof(unsigned long), &v->val);
+	else if (v->len == sizeof(u32))
+		NLA_PUT_U32(skb, tlv, v->val);
 
 	return 0;
 
@@ -835,8 +831,7 @@ static int em_meta_dump(struct sk_buff *skb, struct tcf_ematch *em)
 	memcpy(&hdr.left, &meta->lvalue.hdr, sizeof(hdr.left));
 	memcpy(&hdr.right, &meta->rvalue.hdr, sizeof(hdr.right));
 
-	if (nla_put(skb, TCA_EM_META_HDR, sizeof(hdr), &hdr))
-		goto nla_put_failure;
+	NLA_PUT(skb, TCA_EM_META_HDR, sizeof(hdr), &hdr);
 
 	ops = meta_type_ops(&meta->lvalue);
 	if (ops->dump(skb, &meta->lvalue, TCA_EM_META_LVALUE) < 0 ||

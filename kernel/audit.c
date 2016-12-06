@@ -387,7 +387,7 @@ static void audit_printk_skb(struct sk_buff *skb)
 {
 	struct nlmsghdr *nlh = nlmsg_hdr(skb);
 #ifdef CONFIG_PROC_AVC
-	char *data = nlmsg_data(nlh);
+	char *data = NLMSG_DATA(nlh);
 #endif
 
 	if (nlh->nlmsg_type != AUDIT_EOE && nlh->nlmsg_type != AUDIT_NETFILTER_CFG) {
@@ -528,15 +528,14 @@ struct sk_buff *audit_make_reply(int pid, int seq, int type, int done,
 	if (!skb)
 		return NULL;
 
-	nlh	= nlmsg_put(skb, pid, seq, t, size, flags);
-	if (!nlh)
-		goto out_kfree_skb;
-	data = nlmsg_data(nlh);
+	nlh	= NLMSG_NEW(skb, pid, seq, t, size, flags);
+	data	= NLMSG_DATA(nlh);
 	memcpy(data, payload, size);
 	return skb;
 
-out_kfree_skb:
-	kfree_skb(skb);
+nlmsg_failure:			/* Used by NLMSG_NEW */
+	if (skb)
+		kfree_skb(skb);
 	return NULL;
 }
 
@@ -693,7 +692,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 	sessionid = audit_get_sessionid(current);
 	security_task_getsecid(current, &sid);
 	seq  = nlh->nlmsg_seq;
-	data = nlmsg_data(nlh);
+	data = NLMSG_DATA(nlh);
 
 	switch (msg_type) {
 	case AUDIT_GET:
@@ -1074,15 +1073,13 @@ static struct audit_buffer * audit_buffer_alloc(struct audit_context *ctx,
 
 	ab->skb = nlmsg_new(AUDIT_BUFSIZ, gfp_mask);
 	if (!ab->skb)
-		goto err;
+		goto nlmsg_failure;
 
-	nlh = nlmsg_put(ab->skb, 0, 0, type, 0, 0);
-	if (!nlh)
-		goto out_kfree_skb;
+	nlh = NLMSG_NEW(ab->skb, 0, 0, type, 0, 0);
 
 	return ab;
 
-out_kfree_skb:
+nlmsg_failure:                  /* Used by NLMSG_NEW */
 	kfree_skb(ab->skb);
 	ab->skb = NULL;
 err:

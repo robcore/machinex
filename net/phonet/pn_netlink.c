@@ -116,8 +116,7 @@ static int fill_addr(struct sk_buff *skb, struct net_device *dev, u8 addr,
 	ifm->ifa_flags = IFA_F_PERMANENT;
 	ifm->ifa_scope = RT_SCOPE_LINK;
 	ifm->ifa_index = dev->ifindex;
-	if (nla_put_u8(skb, IFA_LOCAL, addr))
-		goto nla_put_failure;
+	NLA_PUT_U8(skb, IFA_LOCAL, addr);
 	return nlmsg_end(skb, nlh);
 
 nla_put_failure:
@@ -184,9 +183,8 @@ static int fill_route(struct sk_buff *skb, struct net_device *dev, u8 dst,
 	rtm->rtm_scope = RT_SCOPE_UNIVERSE;
 	rtm->rtm_type = RTN_UNICAST;
 	rtm->rtm_flags = 0;
-	if (nla_put_u8(skb, RTA_DST, dst) ||
-	    nla_put_u32(skb, RTA_OIF, dev->ifindex))
-		goto nla_put_failure;
+	NLA_PUT_U8(skb, RTA_DST, dst);
+	NLA_PUT_U32(skb, RTA_OIF, dev->ifindex);
 	return nlmsg_end(skb, nlh);
 
 nla_put_failure:

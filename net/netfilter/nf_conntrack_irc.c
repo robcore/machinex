@@ -223,6 +223,7 @@ static int help(struct sk_buff *skb, unsigned int protoff,
 }
 
 static struct nf_conntrack_helper irc[MAX_PORTS] __read_mostly;
+static char irc_names[MAX_PORTS][sizeof("irc-65535")] __read_mostly;
 static struct nf_conntrack_expect_policy irc_exp_policy;
 
 static void nf_conntrack_irc_fini(void);
@@ -230,6 +231,7 @@ static void nf_conntrack_irc_fini(void);
 static int __init nf_conntrack_irc_init(void)
 {
 	int i, ret;
+	char *tmpname;
 
 	if (max_dcc_channels < 1) {
 		printk(KERN_ERR "nf_ct_irc: max_dcc_channels must not be zero\n");
@@ -255,10 +257,12 @@ static int __init nf_conntrack_irc_init(void)
 		irc[i].me = THIS_MODULE;
 		irc[i].help = help;
 
+		tmpname = &irc_names[i][0];
 		if (ports[i] == IRC_PORT)
-			sprintf(irc[i].name, "irc");
+			sprintf(tmpname, "irc");
 		else
-			sprintf(irc[i].name, "irc-%u", i);
+			sprintf(tmpname, "irc-%u", i);
+		irc[i].name = tmpname;
 
 		ret = nf_conntrack_helper_register(&irc[i]);
 		if (ret) {

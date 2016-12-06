@@ -931,36 +931,33 @@ int fib_dump_info(struct sk_buff *skb, u32 pid, u32 seq, int event,
 		rtm->rtm_table = tb_id;
 	else
 		rtm->rtm_table = RT_TABLE_COMPAT;
-	if (nla_put_u32(skb, RTA_TABLE, tb_id))
-		goto nla_put_failure;
+	NLA_PUT_U32(skb, RTA_TABLE, tb_id);
 	rtm->rtm_type = type;
 	rtm->rtm_flags = fi->fib_flags;
 	rtm->rtm_scope = fi->fib_scope;
 	rtm->rtm_protocol = fi->fib_protocol;
 
-	if (rtm->rtm_dst_len &&
-	    nla_put_be32(skb, RTA_DST, dst))
-		goto nla_put_failure;
-	if (fi->fib_priority &&
-	    nla_put_u32(skb, RTA_PRIORITY, fi->fib_priority))
-		goto nla_put_failure;
+	if (rtm->rtm_dst_len)
+		NLA_PUT_BE32(skb, RTA_DST, dst);
+
+	if (fi->fib_priority)
+		NLA_PUT_U32(skb, RTA_PRIORITY, fi->fib_priority);
+
 	if (rtnetlink_put_metrics(skb, fi->fib_metrics) < 0)
 		goto nla_put_failure;
 
-	if (fi->fib_prefsrc &&
-	    nla_put_be32(skb, RTA_PREFSRC, fi->fib_prefsrc))
-		goto nla_put_failure;
+	if (fi->fib_prefsrc)
+		NLA_PUT_BE32(skb, RTA_PREFSRC, fi->fib_prefsrc);
+
 	if (fi->fib_nhs == 1) {
-		if (fi->fib_nh->nh_gw &&
-		    nla_put_be32(skb, RTA_GATEWAY, fi->fib_nh->nh_gw))
-			goto nla_put_failure;
-		if (fi->fib_nh->nh_oif &&
-		    nla_put_u32(skb, RTA_OIF, fi->fib_nh->nh_oif))
-			goto nla_put_failure;
+		if (fi->fib_nh->nh_gw)
+			NLA_PUT_BE32(skb, RTA_GATEWAY, fi->fib_nh->nh_gw);
+
+		if (fi->fib_nh->nh_oif)
+			NLA_PUT_U32(skb, RTA_OIF, fi->fib_nh->nh_oif);
 #ifdef CONFIG_IP_ROUTE_CLASSID
-		if (fi->fib_nh[0].nh_tclassid &&
-		    nla_put_u32(skb, RTA_FLOW, fi->fib_nh[0].nh_tclassid))
-			goto nla_put_failure;
+		if (fi->fib_nh[0].nh_tclassid)
+			NLA_PUT_U32(skb, RTA_FLOW, fi->fib_nh[0].nh_tclassid);
 #endif
 	}
 #ifdef CONFIG_IP_ROUTE_MULTIPATH
@@ -981,13 +978,11 @@ int fib_dump_info(struct sk_buff *skb, u32 pid, u32 seq, int event,
 			rtnh->rtnh_hops = nh->nh_weight - 1;
 			rtnh->rtnh_ifindex = nh->nh_oif;
 
-			if (nh->nh_gw &&
-			    nla_put_be32(skb, RTA_GATEWAY, nh->nh_gw))
-				goto nla_put_failure;
+			if (nh->nh_gw)
+				NLA_PUT_BE32(skb, RTA_GATEWAY, nh->nh_gw);
 #ifdef CONFIG_IP_ROUTE_CLASSID
-			if (nh->nh_tclassid &&
-			    nla_put_u32(skb, RTA_FLOW, nh->nh_tclassid))
-				goto nla_put_failure;
+			if (nh->nh_tclassid)
+				NLA_PUT_U32(skb, RTA_FLOW, nh->nh_tclassid);
 #endif
 			/* length of rtnetlink header + attributes */
 			rtnh->rtnh_len = nlmsg_get_pos(skb) - (void *) rtnh;

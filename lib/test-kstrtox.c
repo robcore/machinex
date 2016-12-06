@@ -11,7 +11,7 @@ struct test_fail {
 };
 
 #define DEFINE_TEST_FAIL(test)	\
-	const struct test_fail test[] __initconst
+	const struct test_fail test[] __initdata
 
 #define DECLARE_TEST_OK(type, test_type)	\
 	test_type {				\
@@ -21,7 +21,7 @@ struct test_fail {
 	}
 
 #define DEFINE_TEST_OK(type, test)	\
-	const type test[] __initconst
+	const type test[] __initdata
 
 #define TEST_FAIL(fn, type, fmt, test)					\
 {									\

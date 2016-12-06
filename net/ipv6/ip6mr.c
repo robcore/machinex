@@ -2224,15 +2224,14 @@ static int ip6mr_fill_mroute(struct mr6_table *mrt, struct sk_buff *skb,
 	rtm->rtm_src_len  = 128;
 	rtm->rtm_tos      = 0;
 	rtm->rtm_table    = mrt->id;
-	if (nla_put_u32(skb, RTA_TABLE, mrt->id))
-		goto nla_put_failure;
+	NLA_PUT_U32(skb, RTA_TABLE, mrt->id);
 	rtm->rtm_scope    = RT_SCOPE_UNIVERSE;
 	rtm->rtm_protocol = RTPROT_UNSPEC;
 	rtm->rtm_flags    = 0;
 
-	if (nla_put(skb, RTA_SRC, 16, &c->mf6c_origin) ||
-	    nla_put(skb, RTA_DST, 16, &c->mf6c_mcastgrp))
-		goto nla_put_failure;
+	NLA_PUT(skb, RTA_SRC, 16, &c->mf6c_origin);
+	NLA_PUT(skb, RTA_DST, 16, &c->mf6c_mcastgrp);
+
 	if (__ip6mr_fill_mroute(mrt, skb, c, rtm) < 0)
 		goto nla_put_failure;
 

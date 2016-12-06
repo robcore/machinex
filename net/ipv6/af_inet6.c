@@ -92,7 +92,7 @@ struct ipv6_params ipv6_defaults = {
 	.autoconf = 1,
 };
 
-static int disable_ipv6_mod;
+static int disable_ipv6_mod = 0;
 
 module_param_named(disable, disable_ipv6_mod, int, 0444);
 MODULE_PARM_DESC(disable, "Disable IPv6 module such that it is non-functional");
@@ -277,7 +277,7 @@ out_rcu_unlock:
 /* bind for INET6 API */
 int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 {
-	struct sockaddr_in6 *addr = (struct sockaddr_in6 *)uaddr;
+	struct sockaddr_in6 *addr=(struct sockaddr_in6 *)uaddr;
 	struct sock *sk = sock->sk;
 	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *np = inet6_sk(sk);
@@ -411,6 +411,7 @@ out_unlock:
 	rcu_read_unlock();
 	goto out;
 }
+
 EXPORT_SYMBOL(inet6_bind);
 
 int inet6_release(struct socket *sock)
@@ -428,6 +429,7 @@ int inet6_release(struct socket *sock)
 
 	return inet_release(sock);
 }
+
 EXPORT_SYMBOL(inet6_release);
 
 void inet6_destroy_sock(struct sock *sk)
@@ -438,12 +440,10 @@ void inet6_destroy_sock(struct sock *sk)
 
 	/* Release rx options */
 
-	skb = xchg(&np->pktoptions, NULL);
-	if (skb != NULL)
+	if ((skb = xchg(&np->pktoptions, NULL)) != NULL)
 		kfree_skb(skb);
 
-	skb = xchg(&np->rxpmtu, NULL);
-	if (skb != NULL)
+	if ((skb = xchg(&np->rxpmtu, NULL)) != NULL)
 		kfree_skb(skb);
 
 	/* Free flowlabels */
@@ -467,7 +467,7 @@ EXPORT_SYMBOL_GPL(inet6_destroy_sock);
 int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
 		 int *uaddr_len, int peer)
 {
-	struct sockaddr_in6 *sin = (struct sockaddr_in6 *)uaddr;
+	struct sockaddr_in6 *sin=(struct sockaddr_in6 *)uaddr;
 	struct sock *sk = sock->sk;
 	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *np = inet6_sk(sk);
@@ -498,6 +498,7 @@ int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
 	*uaddr_len = sizeof(*sin);
 	return 0;
 }
+
 EXPORT_SYMBOL(inet6_getname);
 
 int inet6_killaddr_ioctl(struct net *net, void __user *arg) {
@@ -520,7 +521,8 @@ int inet6_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 	struct sock *sk = sock->sk;
 	struct net *net = sock_net(sk);
 
-	switch (cmd) {
+	switch(cmd)
+	{
 	case SIOCGSTAMP:
 		return sock_get_timestamp(sk, (struct timeval __user *)arg);
 
@@ -548,6 +550,7 @@ int inet6_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 	/*NOTREACHED*/
 	return 0;
 }
+
 EXPORT_SYMBOL(inet6_ioctl);
 
 const struct proto_ops inet6_stream_ops = {
@@ -663,6 +666,7 @@ out_illegal:
 	       p->type);
 	goto out;
 }
+
 EXPORT_SYMBOL(inet6_register_protosw);
 
 void
@@ -680,6 +684,7 @@ inet6_unregister_protosw(struct inet_protosw *p)
 		synchronize_net();
 	}
 }
+
 EXPORT_SYMBOL(inet6_unregister_protosw);
 
 int inet6_sk_rebuild_header(struct sock *sk)
@@ -723,6 +728,7 @@ int inet6_sk_rebuild_header(struct sock *sk)
 
 	return 0;
 }
+
 EXPORT_SYMBOL_GPL(inet6_sk_rebuild_header);
 
 int ipv6_opt_accepted(struct sock *sk, struct sk_buff *skb)
@@ -744,6 +750,7 @@ int ipv6_opt_accepted(struct sock *sk, struct sk_buff *skb)
 	}
 	return 0;
 }
+
 EXPORT_SYMBOL_GPL(ipv6_opt_accepted);
 
 static int ipv6_gso_pull_exthdrs(struct sk_buff *skb, int proto)
@@ -1111,7 +1118,7 @@ static int __init inet6_init(void)
 	BUILD_BUG_ON(sizeof(struct inet6_skb_parm) > sizeof(dummy_skb->cb));
 
 	/* Register the socket-side information for inet6_create.  */
-	for (r = &inetsw6[0]; r < &inetsw6[SOCK_MAX]; ++r)
+	for(r = &inetsw6[0]; r < &inetsw6[SOCK_MAX]; ++r)
 		INIT_LIST_HEAD(r);
 
 	if (disable_ipv6_mod) {

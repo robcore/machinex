@@ -426,8 +426,7 @@ static int qdisc_dump_stab(struct sk_buff *skb, struct qdisc_size_table *stab)
 	nest = nla_nest_start(skb, TCA_STAB);
 	if (nest == NULL)
 		goto nla_put_failure;
-	if (nla_put(skb, TCA_STAB_BASE, sizeof(stab->szopts), &stab->szopts))
-		goto nla_put_failure;
+	NLA_PUT(skb, TCA_STAB_BASE, sizeof(stab->szopts), &stab->szopts);
 	nla_nest_end(skb, nest);
 
 	return skb->len;
@@ -975,7 +974,7 @@ check_loop_fn(struct Qdisc *q, unsigned long cl, struct qdisc_walker *w)
 static int tc_get_qdisc(struct sk_buff *skb, struct nlmsghdr *n, void *arg)
 {
 	struct net *net = sock_net(skb->sk);
-	struct tcmsg *tcm = nlmsg_data(n);
+	struct tcmsg *tcm = NLMSG_DATA(n);
 	struct nlattr *tca[TCA_MAX + 1];
 	struct net_device *dev;
 	u32 clid = tcm->tcm_parent;
@@ -1077,7 +1076,7 @@ static int tc_modify_qdisc(struct sk_buff *skb, struct nlmsghdr *n, void *arg)
 
 replay:
 	/* Reinit, just in case something touches this. */
-	tcm = nlmsg_data(n);
+	tcm = NLMSG_DATA(n);
 	clid = tcm->tcm_parent;
 	q = p = NULL;
 
@@ -1224,10 +1223,8 @@ static int tc_fill_qdisc(struct sk_buff *skb, struct Qdisc *q, u32 clid,
 	struct gnet_dump d;
 	struct qdisc_size_table *stab;
 
-	nlh = nlmsg_put(skb, pid, seq, event, sizeof(*tcm), flags);
-	if (!nlh)
-		goto out_nlmsg_trim;
-	tcm = nlmsg_data(nlh);
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*tcm), flags);
+	tcm = NLMSG_DATA(nlh);
 	tcm->tcm_family = AF_UNSPEC;
 	tcm->tcm__pad1 = 0;
 	tcm->tcm__pad2 = 0;
@@ -1235,8 +1232,7 @@ static int tc_fill_qdisc(struct sk_buff *skb, struct Qdisc *q, u32 clid,
 	tcm->tcm_parent = clid;
 	tcm->tcm_handle = q->handle;
 	tcm->tcm_info = atomic_read(&q->refcnt);
-	if (nla_put_string(skb, TCA_KIND, q->ops->id))
-		goto nla_put_failure;
+	NLA_PUT_STRING(skb, TCA_KIND, q->ops->id);
 	if (q->ops->dump && q->ops->dump(q, skb) < 0)
 		goto nla_put_failure;
 	q->qstats.qlen = q->q.qlen;
@@ -1263,7 +1259,7 @@ static int tc_fill_qdisc(struct sk_buff *skb, struct Qdisc *q, u32 clid,
 	nlh->nlmsg_len = skb_tail_pointer(skb) - b;
 	return skb->len;
 
-out_nlmsg_trim:
+nlmsg_failure:
 nla_put_failure:
 	nlmsg_trim(skb, b);
 	return -1;
@@ -1399,7 +1395,7 @@ done:
 static int tc_ctl_tclass(struct sk_buff *skb, struct nlmsghdr *n, void *arg)
 {
 	struct net *net = sock_net(skb->sk);
-	struct tcmsg *tcm = nlmsg_data(n);
+	struct tcmsg *tcm = NLMSG_DATA(n);
 	struct nlattr *tca[TCA_MAX + 1];
 	struct net_device *dev;
 	struct Qdisc *q = NULL;
@@ -1531,10 +1527,8 @@ static int tc_fill_tclass(struct sk_buff *skb, struct Qdisc *q,
 	struct gnet_dump d;
 	const struct Qdisc_class_ops *cl_ops = q->ops->cl_ops;
 
-	nlh = nlmsg_put(skb, pid, seq, event, sizeof(*tcm), flags);
-	if (!nlh)
-		goto out_nlmsg_trim;
-	tcm = nlmsg_data(nlh);
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*tcm), flags);
+	tcm = NLMSG_DATA(nlh);
 	tcm->tcm_family = AF_UNSPEC;
 	tcm->tcm__pad1 = 0;
 	tcm->tcm__pad2 = 0;
@@ -1542,8 +1536,7 @@ static int tc_fill_tclass(struct sk_buff *skb, struct Qdisc *q,
 	tcm->tcm_parent = q->handle;
 	tcm->tcm_handle = q->handle;
 	tcm->tcm_info = 0;
-	if (nla_put_string(skb, TCA_KIND, q->ops->id))
-		goto nla_put_failure;
+	NLA_PUT_STRING(skb, TCA_KIND, q->ops->id);
 	if (cl_ops->dump && cl_ops->dump(q, cl, skb, tcm) < 0)
 		goto nla_put_failure;
 
@@ -1560,7 +1553,7 @@ static int tc_fill_tclass(struct sk_buff *skb, struct Qdisc *q,
 	nlh->nlmsg_len = skb_tail_pointer(skb) - b;
 	return skb->len;
 
-out_nlmsg_trim:
+nlmsg_failure:
 nla_put_failure:
 	nlmsg_trim(skb, b);
 	return -1;
@@ -1651,7 +1644,7 @@ static int tc_dump_tclass_root(struct Qdisc *root, struct sk_buff *skb,
 
 static int tc_dump_tclass(struct sk_buff *skb, struct netlink_callback *cb)
 {
-	struct tcmsg *tcm = nlmsg_data(cb->nlh);
+	struct tcmsg *tcm = (struct tcmsg *)NLMSG_DATA(cb->nlh);
 	struct net *net = sock_net(skb->sk);
 	struct netdev_queue *dev_queue;
 	struct net_device *dev;

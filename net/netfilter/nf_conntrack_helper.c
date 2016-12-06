@@ -30,10 +30,8 @@
 #include <net/netfilter/nf_conntrack_extend.h>
 
 static DEFINE_MUTEX(nf_ct_helper_mutex);
-struct hlist_head *nf_ct_helper_hash __read_mostly;
-EXPORT_SYMBOL_GPL(nf_ct_helper_hash);
-unsigned int nf_ct_helper_hsize __read_mostly;
-EXPORT_SYMBOL_GPL(nf_ct_helper_hsize);
+static struct hlist_head *nf_ct_helper_hash __read_mostly;
+static unsigned int nf_ct_helper_hsize __read_mostly;
 static unsigned int nf_ct_helper_count __read_mostly;
 
 
@@ -102,14 +100,11 @@ nf_conntrack_helper_try_module_get(const char *name, u16 l3num, u8 protonum)
 }
 EXPORT_SYMBOL_GPL(nf_conntrack_helper_try_module_get);
 
-struct nf_conn_help *
-nf_ct_helper_ext_add(struct nf_conn *ct,
-		     struct nf_conntrack_helper *helper, gfp_t gfp)
+struct nf_conn_help *nf_ct_helper_ext_add(struct nf_conn *ct, gfp_t gfp)
 {
 	struct nf_conn_help *help;
 
-	help = nf_ct_ext_add_length(ct, NF_CT_EXT_HELPER,
-				    helper->data_len, gfp);
+	help = nf_ct_ext_add(ct, NF_CT_EXT_HELPER, gfp);
 	if (help)
 		INIT_HLIST_HEAD(&help->expectations);
 	else
@@ -141,19 +136,13 @@ int __nf_ct_try_assign_helper(struct nf_conn *ct, struct nf_conn *tmpl,
 	}
 
 	if (help == NULL) {
-		help = nf_ct_helper_ext_add(ct, helper, flags);
+		help = nf_ct_helper_ext_add(ct, flags);
 		if (help == NULL) {
 			ret = -ENOMEM;
 			goto out;
 		}
 	} else {
-		/* We only allow helper re-assignment of the same sort since
-		 * we cannot reallocate the helper extension area.
-		 */
-		if (help->helper != helper) {
-			RCU_INIT_POINTER(help->helper, NULL);
-			goto out;
-		}
+		memset(&help->help, 0, sizeof(help->help));
 	}
 
 	rcu_assign_pointer(help->helper, helper);
@@ -248,9 +237,6 @@ EXPORT_SYMBOL_GPL(nf_ct_helper_expectfn_find_by_symbol);
 
 int nf_conntrack_helper_register(struct nf_conntrack_helper *me)
 {
-	int ret = 0;
-	struct nf_conntrack_helper *cur;
-	struct hlist_node *n;
 	unsigned int h = helper_hash(&me->tuple);
 
 	BUG_ON(me->expect_policy == NULL);
@@ -258,19 +244,11 @@ int nf_conntrack_helper_register(struct nf_conntrack_helper *me)
 	BUG_ON(strlen(me->name) > NF_CT_HELPER_NAME_LEN - 1);
 
 	mutex_lock(&nf_ct_helper_mutex);
-	hlist_for_each_entry(cur, n, &nf_ct_helper_hash[h], hnode) {
-		if (strncmp(cur->name, me->name, NF_CT_HELPER_NAME_LEN) == 0 &&
-		    cur->tuple.src.l3num == me->tuple.src.l3num &&
-		    cur->tuple.dst.protonum == me->tuple.dst.protonum) {
-			ret = -EEXIST;
-			goto out;
-		}
-	}
 	hlist_add_head_rcu(&me->hnode, &nf_ct_helper_hash[h]);
 	nf_ct_helper_count++;
-out:
 	mutex_unlock(&nf_ct_helper_mutex);
-	return ret;
+
+	return 0;
 }
 EXPORT_SYMBOL_GPL(nf_conntrack_helper_register);
 

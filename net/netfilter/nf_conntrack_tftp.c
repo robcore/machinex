@@ -92,6 +92,7 @@ static int tftp_help(struct sk_buff *skb,
 }
 
 static struct nf_conntrack_helper tftp[MAX_PORTS][2] __read_mostly;
+static char tftp_names[MAX_PORTS][2][sizeof("tftp-65535")] __read_mostly;
 
 static const struct nf_conntrack_expect_policy tftp_exp_policy = {
 	.max_expected	= 1,
@@ -111,6 +112,7 @@ static void nf_conntrack_tftp_fini(void)
 static int __init nf_conntrack_tftp_init(void)
 {
 	int i, j, ret;
+	char *tmpname;
 
 	if (ports_c == 0)
 		ports[ports_c++] = TFTP_PORT;
@@ -127,10 +129,12 @@ static int __init nf_conntrack_tftp_init(void)
 			tftp[i][j].me = THIS_MODULE;
 			tftp[i][j].help = tftp_help;
 
+			tmpname = &tftp_names[i][j][0];
 			if (ports[i] == TFTP_PORT)
-				sprintf(tftp[i][j].name, "tftp");
+				sprintf(tmpname, "tftp");
 			else
-				sprintf(tftp[i][j].name, "tftp-%u", i);
+				sprintf(tmpname, "tftp-%u", i);
+			tftp[i][j].name = tmpname;
 
 			ret = nf_conntrack_helper_register(&tftp[i][j]);
 			if (ret) {

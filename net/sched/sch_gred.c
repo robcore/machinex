@@ -521,16 +521,14 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 	opts = nla_nest_start(skb, TCA_OPTIONS);
 	if (opts == NULL)
 		goto nla_put_failure;
-	if (nla_put(skb, TCA_GRED_DPS, sizeof(sopt), &sopt))
-		goto nla_put_failure;
+	NLA_PUT(skb, TCA_GRED_DPS, sizeof(sopt), &sopt);
 
 	for (i = 0; i < MAX_DPs; i++) {
 		struct gred_sched_data *q = table->tab[i];
 
 		max_p[i] = q ? q->parms.max_P : 0;
 	}
-	if (nla_put(skb, TCA_GRED_MAX_P, sizeof(max_p), max_p))
-		goto nla_put_failure;
+	NLA_PUT(skb, TCA_GRED_MAX_P, sizeof(max_p), max_p);
 
 	parms = nla_nest_start(skb, TCA_GRED_PARMS);
 	if (parms == NULL)

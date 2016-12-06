@@ -186,12 +186,11 @@ bitmap_ipmac_list(const struct ip_set *set,
 			} else
 				goto nla_put_failure;
 		}
-		if (nla_put_ipaddr4(skb, IPSET_ATTR_IP,
-				    htonl(map->first_ip + id)) ||
-		    (elem->match == MAC_FILLED &&
-		     nla_put(skb, IPSET_ATTR_ETHER, ETH_ALEN,
-			     elem->ether)))
-			goto nla_put_failure;
+		NLA_PUT_IPADDR4(skb, IPSET_ATTR_IP,
+				htonl(map->first_ip + id));
+		if (elem->match == MAC_FILLED)
+			NLA_PUT(skb, IPSET_ATTR_ETHER, ETH_ALEN,
+				elem->ether);
 		ipset_nest_end(skb, nested);
 	}
 	ipset_nest_end(skb, atd);
@@ -315,16 +314,14 @@ bitmap_ipmac_tlist(const struct ip_set *set,
 			} else
 				goto nla_put_failure;
 		}
-		if (nla_put_ipaddr4(skb, IPSET_ATTR_IP,
-				    htonl(map->first_ip + id)) ||
-		    (elem->match == MAC_FILLED &&
-		     nla_put(skb, IPSET_ATTR_ETHER, ETH_ALEN,
-			     elem->ether)))
-		    goto nla_put_failure;
+		NLA_PUT_IPADDR4(skb, IPSET_ATTR_IP,
+				htonl(map->first_ip + id));
+		if (elem->match == MAC_FILLED)
+			NLA_PUT(skb, IPSET_ATTR_ETHER, ETH_ALEN,
+				elem->ether);
 		timeout = elem->match == MAC_UNSET ? elem->timeout
 				: ip_set_timeout_get(elem->timeout);
-		if (nla_put_net32(skb, IPSET_ATTR_TIMEOUT, htonl(timeout)))
-		    goto nla_put_failure;
+		NLA_PUT_NET32(skb, IPSET_ATTR_TIMEOUT, htonl(timeout));
 		ipset_nest_end(skb, nested);
 	}
 	ipset_nest_end(skb, atd);
@@ -441,16 +438,14 @@ bitmap_ipmac_head(struct ip_set *set, struct sk_buff *skb)
 	nested = ipset_nest_start(skb, IPSET_ATTR_DATA);
 	if (!nested)
 		goto nla_put_failure;
-	if (nla_put_ipaddr4(skb, IPSET_ATTR_IP, htonl(map->first_ip)) ||
-	    nla_put_ipaddr4(skb, IPSET_ATTR_IP_TO, htonl(map->last_ip)) ||
-	    nla_put_net32(skb, IPSET_ATTR_REFERENCES, htonl(set->ref - 1)) ||
-	    nla_put_net32(skb, IPSET_ATTR_MEMSIZE,
-			  htonl(sizeof(*map) +
-				((map->last_ip - map->first_ip + 1) *
-				 map->dsize))) ||
-	    (with_timeout(map->timeout) &&
-	     nla_put_net32(skb, IPSET_ATTR_TIMEOUT, htonl(map->timeout))))
-		goto nla_put_failure;
+	NLA_PUT_IPADDR4(skb, IPSET_ATTR_IP, htonl(map->first_ip));
+	NLA_PUT_IPADDR4(skb, IPSET_ATTR_IP_TO, htonl(map->last_ip));
+	NLA_PUT_NET32(skb, IPSET_ATTR_REFERENCES, htonl(set->ref - 1));
+	NLA_PUT_NET32(skb, IPSET_ATTR_MEMSIZE,
+		      htonl(sizeof(*map)
+			    + (map->last_ip - map->first_ip + 1) * map->dsize));
+	if (with_timeout(map->timeout))
+		NLA_PUT_NET32(skb, IPSET_ATTR_TIMEOUT, htonl(map->timeout));
 	ipset_nest_end(skb, nested);
 
 	return 0;

@@ -775,8 +775,7 @@ static int macvlan_fill_info(struct sk_buff *skb,
 {
 	struct macvlan_dev *vlan = netdev_priv(dev);
 
-	if (nla_put_u32(skb, IFLA_MACVLAN_MODE, vlan->mode))
-		goto nla_put_failure;
+	NLA_PUT_U32(skb, IFLA_MACVLAN_MODE, vlan->mode);
 	return 0;
 
 nla_put_failure:

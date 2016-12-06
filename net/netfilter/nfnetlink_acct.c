@@ -109,8 +109,7 @@ nfnl_acct_fill_info(struct sk_buff *skb, u32 pid, u32 seq, u32 type,
 	nfmsg->version = NFNETLINK_V0;
 	nfmsg->res_id = 0;
 
-	if (nla_put_string(skb, NFACCT_NAME, acct->name))
-		goto nla_put_failure;
+	NLA_PUT_STRING(skb, NFACCT_NAME, acct->name);
 
 	if (type == NFNL_MSG_ACCT_GET_CTRZERO) {
 		pkts = atomic64_xchg(&acct->pkts, 0);
@@ -119,10 +118,9 @@ nfnl_acct_fill_info(struct sk_buff *skb, u32 pid, u32 seq, u32 type,
 		pkts = atomic64_read(&acct->pkts);
 		bytes = atomic64_read(&acct->bytes);
 	}
-	if (nla_put_be64(skb, NFACCT_PKTS, cpu_to_be64(pkts)) ||
-	    nla_put_be64(skb, NFACCT_BYTES, cpu_to_be64(bytes)) ||
-	    nla_put_be32(skb, NFACCT_USE, htonl(atomic_read(&acct->refcnt))))
-		goto nla_put_failure;
+	NLA_PUT_BE64(skb, NFACCT_PKTS, cpu_to_be64(pkts));
+	NLA_PUT_BE64(skb, NFACCT_BYTES, cpu_to_be64(bytes));
+	NLA_PUT_BE32(skb, NFACCT_USE, htonl(atomic_read(&acct->refcnt)));
 
 	nlmsg_end(skb, nlh);
 	return skb->len;

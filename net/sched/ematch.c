@@ -441,8 +441,7 @@ int tcf_em_tree_dump(struct sk_buff *skb, struct tcf_ematch_tree *tree, int tlv)
 	if (top_start == NULL)
 		goto nla_put_failure;
 
-	if (nla_put(skb, TCA_EMATCH_TREE_HDR, sizeof(tree->hdr), &tree->hdr))
-		goto nla_put_failure;
+	NLA_PUT(skb, TCA_EMATCH_TREE_HDR, sizeof(tree->hdr), &tree->hdr);
 
 	list_start = nla_nest_start(skb, TCA_EMATCH_TREE_LIST);
 	if (list_start == NULL)
@@ -458,8 +457,7 @@ int tcf_em_tree_dump(struct sk_buff *skb, struct tcf_ematch_tree *tree, int tlv)
 			.flags = em->flags
 		};
 
-		if (nla_put(skb, i + 1, sizeof(em_hdr), &em_hdr))
-			goto nla_put_failure;
+		NLA_PUT(skb, i + 1, sizeof(em_hdr), &em_hdr);
 
 		if (em->ops && em->ops->dump) {
 			if (em->ops->dump(skb, em) < 0)

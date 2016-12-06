@@ -3014,8 +3014,7 @@ static int rt_fill_info(struct net *net,
 	r->rtm_src_len	= 0;
 	r->rtm_tos	= rt->rt_key_tos;
 	r->rtm_table	= RT_TABLE_MAIN;
-	if (nla_put_u32(skb, RTA_TABLE, RT_TABLE_MAIN))
-		goto nla_put_failure;
+	NLA_PUT_U32(skb, RTA_TABLE, RT_TABLE_MAIN);
 	r->rtm_type	= rt->rt_type;
 	r->rtm_scope	= RT_SCOPE_UNIVERSE;
 	r->rtm_protocol = RTPROT_UNSPEC;
@@ -3023,42 +3022,34 @@ static int rt_fill_info(struct net *net,
 	if (rt->rt_flags & RTCF_NOTIFY)
 		r->rtm_flags |= RTM_F_NOTIFY;
 
-	if (nla_put_be32(skb, RTA_DST, rt->rt_dst))
-		goto nla_put_failure;
+	NLA_PUT_BE32(skb, RTA_DST, rt->rt_dst);
+
 	if (rt->rt_key_src) {
 		r->rtm_src_len = 32;
-		if (nla_put_be32(skb, RTA_SRC, rt->rt_key_src))
-			goto nla_put_failure;
+		NLA_PUT_BE32(skb, RTA_SRC, rt->rt_key_src);
 	}
-	if (rt->dst.dev &&
-	    nla_put_u32(skb, RTA_OIF, rt->dst.dev->ifindex))
-		goto nla_put_failure;
+	if (rt->dst.dev)
+		NLA_PUT_U32(skb, RTA_OIF, rt->dst.dev->ifindex);
 #ifdef CONFIG_IP_ROUTE_CLASSID
-	if (rt->dst.tclassid &&
-	    nla_put_u32(skb, RTA_FLOW, rt->dst.tclassid))
-		goto nla_put_failure;
+	if (rt->dst.tclassid)
+		NLA_PUT_U32(skb, RTA_FLOW, rt->dst.tclassid);
 #endif
-	if (rt_is_input_route(rt)) {
-		if (nla_put_be32(skb, RTA_PREFSRC, rt->rt_spec_dst))
-			goto nla_put_failure;
-	} else if (rt->rt_src != rt->rt_key_src) {
-		if (nla_put_be32(skb, RTA_PREFSRC, rt->rt_src))
-			goto nla_put_failure;
-	}
-	if (rt->rt_dst != rt->rt_gateway &&
-	    nla_put_be32(skb, RTA_GATEWAY, rt->rt_gateway))
-		goto nla_put_failure;
+	if (rt_is_input_route(rt))
+		NLA_PUT_BE32(skb, RTA_PREFSRC, rt->rt_spec_dst);
+	else if (rt->rt_src != rt->rt_key_src)
+		NLA_PUT_BE32(skb, RTA_PREFSRC, rt->rt_src);
+
+	if (rt->rt_dst != rt->rt_gateway)
+		NLA_PUT_BE32(skb, RTA_GATEWAY, rt->rt_gateway);
 
 	if (rtnetlink_put_metrics(skb, dst_metrics_ptr(&rt->dst)) < 0)
 		goto nla_put_failure;
 
-	if (rt->rt_mark &&
-	    nla_put_be32(skb, RTA_MARK, rt->rt_mark))
-		goto nla_put_failure;
+	if (rt->rt_mark)
+		NLA_PUT_BE32(skb, RTA_MARK, rt->rt_mark);
 
-	if (rt->rt_uid != (uid_t) -1 &&
-		nla_put_be32(skb, RTA_UID, rt->rt_uid));
-		goto nla_put_failure;
+	if (rt->rt_uid != (uid_t) -1)
+		NLA_PUT_BE32(skb, RTA_UID, rt->rt_uid);
 
 	error = rt->dst.error;
 	if (peer) {
@@ -3098,8 +3089,7 @@ static int rt_fill_info(struct net *net,
 			}
 		} else
 #endif
-			if (nla_put_u32(skb, RTA_IIF, rt->rt_iif))
-				goto nla_put_failure;
+			NLA_PUT_U32(skb, RTA_IIF, rt->rt_iif);
 	}
 
 	if (rtnl_put_cacheinfo(skb, &rt->dst, id, ts, tsage,

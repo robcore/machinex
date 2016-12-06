@@ -1100,9 +1100,8 @@ static void ndisc_ra_useropt(struct sk_buff *ra, struct nd_opt_hdr *opt)
 
 	memcpy(ndmsg + 1, opt, opt->nd_opt_len << 3);
 
-	if (nla_put(skb, NDUSEROPT_SRCADDR, sizeof(struct in6_addr),
-		    &ipv6_hdr(ra)->saddr))
-		goto nla_put_failure;
+	NLA_PUT(skb, NDUSEROPT_SRCADDR, sizeof(struct in6_addr),
+		&ipv6_hdr(ra)->saddr);
 	nlmsg_end(skb, nlh);
 
 	rtnl_notify(skb, net, 0, RTNLGRP_ND_USEROPT, NULL, GFP_ATOMIC);
