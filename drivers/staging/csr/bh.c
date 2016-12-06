@@ -32,45 +32,49 @@
  *      0 on success or else a Linux error code.
  * ---------------------------------------------------------------------------
  */
-int
-uf_start_thread(unifi_priv_t *priv, struct uf_thread *thread, int (*func)(void *))
+int uf_start_thread(unifi_priv_t *priv,
+		    struct uf_thread *thread, int (*func)(void *))
 {
-    if (thread->thread_task != NULL) {
-        unifi_error(priv, "%s thread already started\n", thread->name);
-        return 0;
-    }
+	if (thread->thread_task != NULL) {
+		unifi_error(priv, "%s thread already started\n", thread->name);
+		return 0;
+	}
 
-    /* Start the kernel thread that handles all h/w accesses. */
-    thread->thread_task = kthread_run(func, priv, "%s", thread->name);
-    if (IS_ERR(thread->thread_task)) {
-        return PTR_ERR(thread->thread_task);
-    }
+	/* Start the kernel thread that handles all h/w accesses. */
+	thread->thread_task = kthread_run(func, priv, "%s", thread->name);
+	if (IS_ERR(thread->thread_task))
+		return PTR_ERR(thread->thread_task);
 
-    /* Module parameter overides the thread priority */
-    if (bh_priority != -1) {
-        if (bh_priority >= 0 && bh_priority <= MAX_RT_PRIO) {
-            struct sched_param param;
-            priv->bh_thread.prio = bh_priority;
-            unifi_trace(priv, UDBG1, "%s thread (RT) priority = %d\n",
-                        thread->name, bh_priority);
-            param.sched_priority = bh_priority;
-            sched_setscheduler(thread->thread_task, SCHED_FIFO, &param);
-        } else if (bh_priority > MAX_RT_PRIO && bh_priority <= MAX_PRIO) {
-            priv->bh_thread.prio = bh_priority;
-            unifi_trace(priv, UDBG1, "%s thread priority = %d\n",
-                        thread->name, PRIO_TO_NICE(bh_priority));
-            set_user_nice(thread->thread_task, PRIO_TO_NICE(bh_priority));
-        } else {
-            priv->bh_thread.prio = DEFAULT_PRIO;
-            unifi_warning(priv, "%s thread unsupported (%d) priority\n",
-                          thread->name, bh_priority);
-        }
-    } else {
-        priv->bh_thread.prio = DEFAULT_PRIO;
-    }
-    unifi_trace(priv, UDBG2, "Started %s thread\n", thread->name);
+	/* Module parameter overides the thread priority */
+	if (bh_priority != -1) {
+		if (bh_priority >= 0 && bh_priority <= MAX_RT_PRIO) {
+			struct sched_param param;
+			priv->bh_thread.prio = bh_priority;
+			unifi_trace(priv, UDBG1,
+				"%s thread (RT) priority = %d\n",
+				thread->name, bh_priority);
+			param.sched_priority = bh_priority;
+			sched_setscheduler(thread->thread_task,
+					   SCHED_FIFO, &param);
+		} else if (bh_priority > MAX_RT_PRIO &&
+			   bh_priority <= MAX_PRIO) {
+			priv->bh_thread.prio = bh_priority;
+			unifi_trace(priv, UDBG1, "%s thread priority = %d\n",
+					thread->name,
+					PRIO_TO_NICE(bh_priority));
+			set_user_nice(thread->thread_task,
+				      PRIO_TO_NICE(bh_priority));
+		} else {
+			priv->bh_thread.prio = DEFAULT_PRIO;
+			unifi_warning(priv,
+				      "%s thread unsupported (%d) priority\n",
+				      thread->name, bh_priority);
+		}
+	} else
+		priv->bh_thread.prio = DEFAULT_PRIO;
+	unifi_trace(priv, UDBG2, "Started %s thread\n", thread->name);
 
-    return 0;
+	return 0;
 } /* uf_start_thread() */
 
 
@@ -88,18 +92,18 @@ uf_start_thread(unifi_priv_t *priv, struct uf_thread *thread, int (*func)(void *
  *
  * ---------------------------------------------------------------------------
  */
-    void
-uf_stop_thread(unifi_priv_t *priv, struct uf_thread *thread)
+void uf_stop_thread(unifi_priv_t *priv, struct uf_thread *thread)
 {
-    if (!thread->thread_task) {
-        unifi_notice(priv, "%s thread is already stopped\n", thread->name);
-        return;
-    }
+	if (!thread->thread_task) {
+		unifi_notice(priv, "%s thread is already stopped\n",
+							thread->name);
+		return;
+	}
 
-    unifi_trace(priv, UDBG2, "Stopping %s thread\n", thread->name);
+	unifi_trace(priv, UDBG2, "Stopping %s thread\n", thread->name);
 
-    kthread_stop(thread->thread_task);
-    thread->thread_task = NULL;
+	kthread_stop(thread->thread_task);
+	thread->thread_task = NULL;
 
 } /* uf_stop_thread() */
 
@@ -118,23 +122,24 @@ uf_stop_thread(unifi_priv_t *priv, struct uf_thread *thread)
  *
  * ---------------------------------------------------------------------------
  */
-    void
+void
 uf_wait_for_thread_to_stop(unifi_priv_t *priv, struct uf_thread *thread)
 {
-    /*
-     * kthread_stop() cannot handle the thread exiting while
-     * kthread_should_stop() is false, so sleep until kthread_stop()
-     * wakes us up.
-     */
-    unifi_trace(priv, UDBG2, "%s waiting for the stop signal.\n", thread->name);
-    set_current_state(TASK_INTERRUPTIBLE);
-    if (!kthread_should_stop()) {
-        unifi_trace(priv, UDBG2, "%s schedule....\n", thread->name);
-        schedule();
-    }
+	/*
+	 * kthread_stop() cannot handle the thread exiting while
+	 * kthread_should_stop() is false, so sleep until kthread_stop()
+	 * wakes us up
+	 */
+	unifi_trace(priv, UDBG2, "%s waiting for the stop signal.\n",
+							thread->name);
+	set_current_state(TASK_INTERRUPTIBLE);
+	if (!kthread_should_stop()) {
+		unifi_trace(priv, UDBG2, "%s schedule....\n", thread->name);
+		schedule();
+	}
 
-    thread->thread_task = NULL;
-    unifi_trace(priv, UDBG2, "%s exiting....\n", thread->name);
+	thread->thread_task = NULL;
+	unifi_trace(priv, UDBG2, "%s exiting....\n", thread->name);
 } /* uf_wait_for_thread_to_stop() */
 
 
