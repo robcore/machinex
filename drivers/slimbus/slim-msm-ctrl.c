@@ -21,6 +21,7 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 #include <linux/clk.h>
+#include <linux/pm_runtime.h>
 #include <linux/of.h>
 #include <linux/of_slimbus.h>
 #include <mach/sps.h>
@@ -46,6 +47,7 @@
 #define MSM_SLIM_PERF_SUMM_THRESHOLD	0x8000
 #define MSM_SLIM_NCHANS			32
 #define MSM_SLIM_NPORTS			24
+#define MSM_SLIM_AUTOSUSPEND		MSEC_PER_SEC
 
 /*
  * Need enough descriptors to receive present messages from slaves
@@ -320,17 +322,6 @@ struct msm_slim_sat {
 	int			stail;
 	spinlock_t lock;
 };
-
-#ifdef CONFIG_DEBUG_FS
-struct msm_slim_debug {
-        u8                     la;
-        u8                     direction;
-        u8                     port;
-        u8                     ch_num;
-};
-
-static struct msm_slim_debug slim_debug[2][MSM_SLIM_NPORTS];
-#endif
 
 static struct msm_slim_sat *msm_slim_alloc_sat(struct msm_slim_ctrl *dev);
 
@@ -946,10 +937,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 				txn->mc, txn->mt);
 		dev->wr_comp = NULL;
 	}
-	if (mc == SLIM_USR_MC_GENERIC_ACK) {
-		u32 mgrstat = readl_relaxed(dev->base + MGR_STATUS);
-		pr_info("-slimdebug-generic ack:0x %x, mgrstat:0x%x", pbuf[0], mgrstat);
-	} /* slimbus debug patch */
+
 	mutex_unlock(&dev->tx_lock);
 	if (msgv >= 0)
 		msm_slim_put_ctrl(dev);
@@ -1011,6 +999,27 @@ retry_laddr:
 		}
 	}
 	return ret;
+}
+
+static int msm_clk_pause_wakeup(struct slim_controller *ctrl)
+{
+	struct msm_slim_ctrl *dev = slim_get_ctrldata(ctrl);
+	enable_irq(dev->irq);
+	clk_prepare_enable(dev->rclk);
+	writel_relaxed(1, dev->base + FRM_WAKEUP);
+	/* Make sure framer wakeup write goes through before exiting function */
+	mb();
+	/*
+	 * Workaround: Currently, slave is reporting lost-sync messages
+	 * after slimbus comes out of clock pause.
+	 * Transaction with slave fail before slave reports that message
+	 * Give some time for that report to come
+	 * Slimbus wakes up in clock gear 10 at 24.576MHz. With each superframe
+	 * being 250 usecs, we wait for 20 superframes here to ensure
+	 * we get the message
+	 */
+	usleep_range(5000, 5000);
+	return 0;
 }
 
 static int msm_config_port(struct slim_controller *ctrl, u8 pn)
@@ -1098,8 +1107,6 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		/* part of grp. activating/removing 1 will take care of rest */
 		ret = slim_control_ch(&sat->satcl, sat->satch[i].chanh, oper,
 					false);
-		pr_info("-slimdebug-SAT oper:%d grp start:%d, ret:%d", oper,
-				sat->satch[i].chan, ret); /* slimbus debug patch */
 		if (!ret) {
 			for (i = 5; i < len; i++) {
 				int j;
@@ -1183,12 +1190,10 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 			*grph = chh[0];
 
 		/* part of group so activating 1 will take care of rest */
-		if (mc == SLIM_USR_MC_DEF_ACT_CHAN) {
+		if (mc == SLIM_USR_MC_DEF_ACT_CHAN)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
 					SLIM_CH_ACTIVATE, false);
-			pr_info("-slimdebug-SAT activate grp start: ret:%d", ret); /* slimbus debug patch */
-		}
 	}
 	return ret;
 }
@@ -1234,9 +1239,8 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 				e_addr[2] != QC_CHIPID_SL)
 				dev->pgdla = laddr;
 			if (!ret && !pm_runtime_enabled(dev->dev) &&
-				laddr == (QC_MSM_DEVS - 1)) {
+				laddr == (QC_MSM_DEVS - 1))
 				pm_runtime_enable(dev->dev);
-			}
 
 			if (!ret && msm_is_sat_dev(e_addr)) {
 				struct msm_slim_sat *sat = addr_to_sat(dev,
@@ -1284,10 +1288,6 @@ static void slim_sat_rxprocess(struct work_struct *work)
 	struct msm_slim_sat *sat = container_of(work, struct msm_slim_sat, wd);
 	struct msm_slim_ctrl *dev = sat->dev;
 	u8 buf[40];
-
-#ifdef CONFIG_DEBUG_FS
-	int index;
-#endif
 
 	while ((msm_sat_dequeue(sat, buf)) != -ENODATA) {
 		struct slim_msg_txn txn;
@@ -1485,17 +1485,6 @@ send_capability:
 			txn.wbuf = wbuf;
 			gen_ack = true;
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
-
-#ifdef CONFIG_DEBUG_FS
-			if(txn.la ==  0)
-				index = 0;
-			else
-				index = 1;
-			slim_debug[index][buf[4] &0x1f].la = txn.la;
-			slim_debug[index][buf[4] &0x1f].direction = txn.mc;
-			slim_debug[index][buf[4] &0x1f].port = buf[4] & 0x1f;
-			slim_debug[index][buf[4] &0x1f].ch_num = buf[5];
-#endif
 			break;
 		case SLIM_USR_MC_DISCONNECT_PORT:
 			txn.mc = SLIM_MSG_MC_DISCONNECT_PORT;
@@ -1508,16 +1497,6 @@ send_capability:
 			txn.wbuf = wbuf;
 			gen_ack = true;
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
-
-#ifdef CONFIG_DEBUG_FS
-			if(txn.la ==  0)
-				index = 0;
-			else
-				index = 1;
-			slim_debug[index][buf[4] &0x1f].direction = 0;
-			slim_debug[index][buf[4] &0x1f].port = 0;
-			slim_debug[index][buf[4] &0x1f].ch_num = 0;
-#endif
 			break;
 		case SLIM_MSG_MC_REPORT_ABSENT:
 			dev_info(dev->dev, "Received Report Absent Message\n");
@@ -1534,19 +1513,15 @@ send_capability:
 		wbuf[0] = tid;
 		if (!ret)
 			wbuf[1] = MSM_SAT_SUCCSS;
-		else {
+		else
 			wbuf[1] = 0;
-		}
 		txn.mc = SLIM_USR_MC_GENERIC_ACK;
 		txn.la = sat->satcl.laddr;
 		txn.rl = 6;
 		txn.len = 2;
 		txn.wbuf = wbuf;
 		txn.mt = SLIM_MSG_MT_SRC_REFERRED_USER;
-		ret = msm_xfer_msg(&dev->ctrl, &txn);
-		if (ret) {
-			ret = 0;
-		} /* slimbus debug patch */
+		msm_xfer_msg(&dev->ctrl, &txn);
 		if (satv >= 0)
 			msm_slim_put_ctrl(dev);
 	}
@@ -2003,53 +1978,6 @@ static void msm_slim_prg_slew(struct platform_device *pdev,
 	iounmap(slew_reg);
 }
 
-#ifdef CONFIG_DEBUG_FS
-static ssize_t slim_ch_show(struct device *dev,
-                                       struct device_attribute *attr,
-                                       char *buf)
-{
-	int length = 0;
-	int i;
-
-	for(i = 0; i < MSM_SLIM_NPORTS; i++)
-			if(slim_debug[0][i].direction)
-					length += sprintf(buf+length,
-					"=Index[%d]=laddr[%2d]=dir[0x%02x]=port[%d]=chnum[%d]=\n",
-					i, slim_debug[0][i].la, slim_debug[0][i].direction,
-					   slim_debug[0][i].port, slim_debug[0][i].ch_num);
-	for(i = 0; i < MSM_SLIM_NPORTS; i++)
-			if(slim_debug[1][i].direction)
-					length += sprintf(buf+length,
-					"=Index[%d]=laddr[%2d]=dir[0x%02x]=port[%d]=chnum[%d]=\n",
-					i, slim_debug[1][i].la, slim_debug[1][i].direction,
-					   slim_debug[1][i].port, slim_debug[1][i].ch_num);
-
-	return length;
-}
-static DEVICE_ATTR(slim_ch_status, 0644, slim_ch_show, NULL);
-
-static ssize_t slim_addr_show(struct device *dev,
-                                       struct device_attribute *attr,
-                                       char *buf)
-{
-	struct msm_slim_ctrl *slim_ctrl = dev_get_drvdata(dev);
-	struct slim_controller *ctrl = &slim_ctrl->ctrl;
-	int length = 0;
-	int i;
-
-	for(i = 0; i < ctrl->num_dev; i++)
-		if(ctrl->addrt[i].valid)
-			length += sprintf(buf+length,
-				"=laddr[%02d]=eaddr[ %02x%02x %02x %02x %02x %02x ]=\n",
-				i, ctrl->addrt[i].eaddr[5], ctrl->addrt[i].eaddr[4],
-				ctrl->addrt[i].eaddr[3], ctrl->addrt[i].eaddr[2],
-				ctrl->addrt[i].eaddr[1], ctrl->addrt[i].eaddr[0]);
-
-	return length;
-}
-static DEVICE_ATTR(slim_addr_status, 0644, slim_addr_show, NULL);
-#endif
-
 static int __devinit msm_slim_probe(struct platform_device *pdev)
 {
 	struct msm_slim_ctrl *dev;
@@ -2058,9 +1986,6 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	struct resource		*slim_mem, *slim_io;
 	struct resource		*irq, *bam_irq;
 	bool			rxreg_access = false;
-
-	pr_info("++++MSM SB controller is up!\n");
-
 	slim_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"slimbus_physical");
 	if (!slim_mem) {
@@ -2149,6 +2074,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	dev->ctrl.nports = MSM_SLIM_NPORTS;
 	dev->ctrl.set_laddr = msm_set_laddr;
 	dev->ctrl.xfer_msg = msm_xfer_msg;
+	dev->ctrl.wakeup =  msm_clk_pause_wakeup;
 	dev->ctrl.config_port = msm_config_port;
 	dev->ctrl.port_xfer = msm_slim_port_xfer;
 	dev->ctrl.port_xfer_status = msm_slim_port_xfer_status;
@@ -2288,18 +2214,11 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	if (pdev->dev.of_node)
 		of_register_slim_devices(&dev->ctrl);
 
-#ifdef CONFIG_DEBUG_FS
-	ret = device_create_file(&pdev->dev, &dev_attr_slim_ch_status);
-	if (ret)
-			dev_err(&pdev->dev, "%s(): error file sysfs create\n",
-					__func__);
-	ret = device_create_file(&pdev->dev, &dev_attr_slim_addr_status);
-	if (ret)
-			dev_err(&pdev->dev, "%s(): error file sysfs create\n",
-					__func__);
-#endif
-
-	pr_info("----MSM SB controller is up!\n");
+	pm_runtime_use_autosuspend(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, MSM_SLIM_AUTOSUSPEND);
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
 	return 0;
 
 err_ctrl_failed:
@@ -2344,9 +2263,8 @@ static int __devexit msm_slim_remove(struct platform_device *pdev)
 		kfree(sat->satcl.name);
 		kfree(sat);
 	}
-	disable_irq(dev->irq);
-	clk_disable_unprepare(dev->rclk);
-	clk_disable_unprepare(dev->hclk);
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_set_suspended(&pdev->dev);
 	free_irq(dev->irq, dev);
 	slim_del_controller(&dev->ctrl);
 	clk_put(dev->rclk);
@@ -2370,11 +2288,103 @@ static int __devexit msm_slim_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_RUNTIME
+static int msm_slim_runtime_idle(struct device *device)
+{
+	dev_dbg(device, "pm_runtime: idle...\n");
+	pm_request_autosuspend(device);
+	return -EAGAIN;
+}
+#endif
+
 /*
  * If PM_RUNTIME is not defined, these 2 functions become helper
  * functions to be called from system suspend/resume. So they are not
  * inside ifdef CONFIG_PM_RUNTIME
  */
+#ifdef CONFIG_PM_SLEEP
+static int msm_slim_runtime_suspend(struct device *device)
+{
+	struct platform_device *pdev = to_platform_device(device);
+	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
+	int ret;
+	dev_dbg(device, "pm_runtime: suspending...\n");
+	dev->state = MSM_CTRL_SLEEPING;
+	ret = slim_ctrl_clk_pause(&dev->ctrl, false, SLIM_CLK_UNSPECIFIED);
+	if (ret) {
+		dev_err(device, "clk pause not entered:%d", ret);
+		dev->state = MSM_CTRL_AWAKE;
+	} else {
+		dev->state = MSM_CTRL_ASLEEP;
+	}
+	return ret;
+}
+
+static int msm_slim_runtime_resume(struct device *device)
+{
+	struct platform_device *pdev = to_platform_device(device);
+	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
+	int ret = 0;
+	dev_dbg(device, "pm_runtime: resuming...\n");
+	if (dev->state == MSM_CTRL_ASLEEP)
+		ret = slim_ctrl_clk_pause(&dev->ctrl, true, 0);
+	if (ret) {
+		dev_err(device, "clk pause not exited:%d", ret);
+		dev->state = MSM_CTRL_ASLEEP;
+	} else {
+		dev->state = MSM_CTRL_AWAKE;
+	}
+	return ret;
+}
+
+static int msm_slim_suspend(struct device *dev)
+{
+	int ret = 0;
+	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
+		struct platform_device *pdev = to_platform_device(dev);
+		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
+		dev_dbg(dev, "system suspend");
+		ret = msm_slim_runtime_suspend(dev);
+		if (!ret) {
+			if (cdev->hclk)
+				clk_disable_unprepare(cdev->hclk);
+		}
+	}
+	if (ret == -EBUSY) {
+		/*
+		* If the clock pause failed due to active channels, there is
+		* a possibility that some audio stream is active during suspend
+		* We dont want to return suspend failure in that case so that
+		* display and relevant components can still go to suspend.
+		* If there is some other error, then it should be passed-on
+		* to system level suspend
+		*/
+		ret = 0;
+	}
+	return ret;
+}
+
+static int msm_slim_resume(struct device *dev)
+{
+	/* If runtime_pm is enabled, this resume shouldn't do anything */
+	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
+		struct platform_device *pdev = to_platform_device(dev);
+		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
+		int ret;
+		dev_dbg(dev, "system resume");
+		if (cdev->hclk)
+			clk_prepare_enable(cdev->hclk);
+		ret = msm_slim_runtime_resume(dev);
+		if (!ret) {
+			pm_runtime_mark_last_busy(dev);
+			pm_request_autosuspend(dev);
+		}
+		return ret;
+
+	}
+	return 0;
+}
+#endif /* CONFIG_PM_SLEEP */
 
 static const struct dev_pm_ops msm_slim_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(
@@ -2401,6 +2411,7 @@ static struct platform_driver msm_slim_driver = {
 	.driver	= {
 		.name = MSM_SLIM_NAME,
 		.owner = THIS_MODULE,
+		.pm = &msm_slim_dev_pm_ops,
 		.of_match_table = msm_slim_dt_match,
 	},
 };
