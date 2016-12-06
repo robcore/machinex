@@ -16,27 +16,6 @@
 #include <linux/slimbus/slimbus.h>
 #include <linux/mfd/wcd9xxx/core.h>
 
-/* Channel numbers to be used for each port */
-enum {
-	SLIM_TX_1   = 128,
-	SLIM_TX_2   = 129,
-	SLIM_TX_3   = 130,
-	SLIM_TX_4   = 131,
-	SLIM_TX_5   = 132,
-	SLIM_TX_6   = 133,
-	SLIM_TX_7   = 134,
-	SLIM_TX_8   = 135,
-	SLIM_TX_9   = 136,
-	SLIM_TX_10  = 137,
-	SLIM_RX_1   = 138,
-	SLIM_RX_2   = 139,
-	SLIM_RX_3   = 140,
-	SLIM_RX_4   = 141,
-	SLIM_RX_5   = 142,
-	SLIM_RX_6   = 143,
-	SLIM_RX_7   = 144,
-	SLIM_MAX    = 145
-};
 
 /*
  *  client is expected to give port ids in the range of

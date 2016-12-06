@@ -907,13 +907,6 @@ static int mdm9615_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
-		ret = snd_soc_dai_set_channel_map(codec_dai, 0, 0,
-				mdm9615_slim_0_rx_ch, rx_ch);
-		if (ret < 0) {
-			pr_err("%s: failed to set codec channel map\n",
-								__func__);
-			goto end;
-		}
 	} else {
 		ret = snd_soc_dai_get_channel_map(codec_dai,
 				&tx_ch_cnt, tx_ch, &rx_ch_cnt , rx_ch);
@@ -925,13 +918,6 @@ static int mdm9615_hw_params(struct snd_pcm_substream *substream,
 				mdm9615_slim_0_tx_ch, tx_ch, 0 , 0);
 		if (ret < 0) {
 			pr_err("%s: failed to set cpu chan map\n", __func__);
-			goto end;
-		}
-		ret = snd_soc_dai_set_channel_map(codec_dai,
-				mdm9615_slim_0_tx_ch, tx_ch, 0, 0);
-		if (ret < 0) {
-			pr_err("%s: failed to set codec channel map\n",
-								__func__);
 			goto end;
 		}
 	}
@@ -2117,6 +2103,15 @@ static int mdm9615_configure_headset_mic_gpios(void)
 		.out_strength   = PM_GPIO_STRENGTH_MED,
 		.function       = PM_GPIO_FUNC_NORMAL,
 	};
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+
+	/* Tabla SLIMBUS configuration
+	 * RX1, RX2, RX3, RX4, RX5, RX6, RX7
+	 * TX1, TX2, TX3, TX4, TX5, TX6, TX7, TX8, TX9, TX10
+	 */
+	unsigned int rx_ch[TABLA_RX_MAX] = {138, 139, 140, 141, 142, 143, 144};
+	unsigned int tx_ch[TABLA_TX_MAX]  = {128, 129, 130, 131, 132, 133, 134,
+					     135, 136, 137};
 
 	ret = gpio_request(PM8018_GPIO_PM_TO_SYS(23), "AV_SWITCH");
 	if (ret) {
