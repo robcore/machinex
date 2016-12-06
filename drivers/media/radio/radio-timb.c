@@ -223,7 +223,7 @@ static struct platform_driver timbradio_platform_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= timbradio_probe,
-	.remove		= __devexit_p(timbradio_remove),
+	.remove		= timbradio_remove,
 };
 
 module_platform_driver(timbradio_platform_driver);

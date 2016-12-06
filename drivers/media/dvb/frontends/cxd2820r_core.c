@@ -526,12 +526,12 @@ static enum dvbfe_search cxd2820r_search(struct dvb_frontend *fe)
 		if (ret)
 			goto error;
 
-		if (status & FE_HAS_LOCK)
+		if (status & FE_HAS_SIGNAL)
 			break;
 	}
 
 	/* check if we have a valid signal */
-	if (status & FE_HAS_LOCK) {
+	if (status) {
 		priv->last_tune_failed = 0;
 		return DVBFE_ALGO_SEARCH_SUCCESS;
 	} else {

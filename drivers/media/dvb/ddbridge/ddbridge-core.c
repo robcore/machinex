@@ -1696,7 +1696,7 @@ static struct pci_driver ddb_pci_driver = {
 	.name        = "DDBridge",
 	.id_table    = ddb_id_tbl,
 	.probe       = ddb_probe,
-	.remove      = __devexit_p(ddb_remove),
+	.remove      = ddb_remove,
 };
 
 static __init int module_init_ddbridge(void)
