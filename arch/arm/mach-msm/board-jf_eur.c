@@ -4397,6 +4397,7 @@ static struct esxxx_platform_data esxxx_platform_data = {
 	.wakeup_gpio	= PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_2MIC_WAKE),
 	.gpioa_gpio	= 2,
 	.es325_clk_cb	= es325_enable_ext_clk,
+	.es325_reset_cb = es325_start_api,
 	.gpiob_gpio	= 3
 };
 
@@ -4452,7 +4453,7 @@ static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi3_pdata = {
 };
 
 static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi4_pdata = {
-	.clk_freq = 400000,
+	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 };
 
