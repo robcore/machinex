@@ -1,4 +1,18 @@
 #!/bin/bash
+
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
+
+if [ -d $(pwd)/out ]; then
+	rm -rf $(pwd)/out;
+fi;
+export ARCH=arm
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+env KCONFIG_NOTIMESTAMP=true
+mkdir $(pwd)/out;
+cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+make ARCH=arm -j6 O=$(pwd)/out oldconfig;
+make ARCH=arm -S -s -j6 O=$(pwd)/out;
+if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	cp -p $(pwd)/out/arch/arm/boot/zImage $(pwd)/arch/arm/boot/zImage;
 	cp -p $(pwd)/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/arch/arm/boot/dhd.ko;
 	cp -p $(pwd)/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
@@ -13,3 +27,6 @@
 	rm image-new.img;
 	sh repackimg.sh --sudo;
 	cp -p image-new.img $(pwd)/machinex-new/boot.img
+else
+	echo "Build failed, Skipped Ramdisk Creation"
+fi;

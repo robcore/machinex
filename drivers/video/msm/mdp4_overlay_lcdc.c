@@ -306,7 +306,8 @@ int mdp4_lcdc_pipe_commit(int cndx, int wait)
 	return cnt;
 }
 
-static void mdp4_lcdc_vsync_irq_ctrl(int cndx, int enable){
+static void mdp4_lcdc_vsync_irq_ctrl(int cndx, int enable)
+{
 	struct vsycn_ctrl *vctrl;
 	static int vsync_irq_cnt;
 
