@@ -6938,6 +6938,7 @@ static s32 wl_cfg80211_hostapd_sec(
 				}
 				wl_cfgp2p_bss(cfg, dev, bssidx, 1);
 			}
+			p2p_scan(wl) = false;
 		}
 	} else {
 		WL_ERR(("No WPSIE in beacon \n"));
@@ -9250,6 +9251,7 @@ wl_notify_rx_mgmt_frame(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 					wl_stop_wait_next_action_frame(cfg, ndev);
 				}
 			}
+			p2p_scan(wl) = false;
 		}
 
 		if (act_frm) {
