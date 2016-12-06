@@ -720,9 +720,11 @@ static int pms_s_input(struct file *file, void *fh, unsigned int inp)
 	if (inp > 3)
 		return -EINVAL;
 
+	mutex_lock(&dev->lock);
 	dev->input = inp;
 	pms_videosource(dev, inp & 1);
 	pms_vcrinput(dev, inp >> 1);
+	mutex_unlock(&dev->lock);
 	return 0;
 }
 
@@ -740,6 +742,7 @@ static int pms_s_std(struct file *file, void *fh, v4l2_std_id *std)
 	int ret = 0;
 
 	dev->std = *std;
+	mutex_lock(&dev->lock);
 	if (dev->std & V4L2_STD_NTSC) {
 		pms_framerate(dev, 30);
 		pms_secamcross(dev, 0);
@@ -763,7 +766,8 @@ static int pms_s_std(struct file *file, void *fh, v4l2_std_id *std)
 		pms_format(dev, 0);
 		break;
 	}*/
-	return ret;
+	mutex_unlock(&dev->lock);
+	return 0;
 }
 
 static int pms_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -771,6 +775,7 @@ static int pms_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct pms *dev = container_of(ctrl->handler, struct pms, hdl);
 	int ret = 0;
 
+	mutex_lock(&dev->lock);
 	switch (ctrl->id) {
 	case V4L2_CID_BRIGHTNESS:
 		pms_brightness(dev, ctrl->val);
@@ -788,6 +793,7 @@ static int pms_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
+	mutex_unlock(&dev->lock);
 	return ret;
 }
 
@@ -835,11 +841,13 @@ static int pms_s_fmt_vid_cap(struct file *file, void *fh, struct v4l2_format *fm
 
 	if (ret)
 		return ret;
+	mutex_lock(&dev->lock);
 	dev->width = pix->width;
 	dev->height = pix->height;
 	dev->depth = (pix->pixelformat == V4L2_PIX_FMT_RGB555) ? 15 : 16;
 	pms_resolution(dev, dev->width, dev->height);
 	/* Ok we figured out what to use from our wide choice */
+	mutex_unlock(&dev->lock);
 	return 0;
 }
 
@@ -871,7 +879,9 @@ static ssize_t pms_read(struct file *file, char __user *buf,
 	struct pms *dev = video_drvdata(file);
 	int len;
 
+	mutex_lock(&dev->lock);
 	len = pms_capture(dev, buf, (dev->depth == 15), count);
+	mutex_unlock(&dev->lock);
 	return len;
 }
 
