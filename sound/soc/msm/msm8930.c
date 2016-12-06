@@ -40,7 +40,7 @@
 /* 8930 machine driver */
 #ifdef CONFIG_MFD_MAX77693
 #include <linux/mfd/max77693-private.h>
-#endif
+#endif 
 #define MSM8930_SPK_ON 1
 #define MSM8930_SPK_OFF 0
 
@@ -201,7 +201,7 @@ static struct ext_amp_work ext_amp_dwork;
 static void external_speaker_amp_work(struct work_struct *work)
 {
 	pr_debug("%s :: Ext Speaker Amp enable\n", __func__);
-
+	
 	if (msm8930_ext_spk_pamp == 0)
 		pr_debug("%s :: Ext Speaker Amp enable but msm8930_ext_spk_pamp is already 0\n", __func__);
 	else {
@@ -396,7 +396,7 @@ static void msm8930_dock_control_gpio(u32 onoff)
 
 	pr_info("%s: Enable dock en gpio %u, onoff %d\n",
 				__func__, GPIO_VPS_AMP_EN, onoff);
-#ifdef CONFIG_MFD_MAX77693
+#ifdef CONFIG_MFD_MAX77693	
 	max77693_muic_set_audio_switch(onoff);
 #else
 	if (onoff) {
@@ -548,7 +548,7 @@ static int msm8930_enable_codec_ext_clk(
 	int rtn;
 	pr_debug("%s: enable = %d\n", __func__, enable);
 
-	printk("Audio Team System Revision:%d \n",system_rev);
+	printk("Audio Team System Revision:%d \n",system_rev);	
 
 	//mutex_lock(&cdc_mclk_mutex);
 	if (enable) {
@@ -570,7 +570,7 @@ static int msm8930_enable_codec_ext_clk(
 #else
 			rtn = clk_set_rate(codec_clk, SITAR_EXT_CLK_RATE_REV10);
 			pr_debug("%s: clk_set_rate rtn = %x\n", __func__, rtn);
-#endif
+#endif 
 			rtn = clk_prepare_enable(codec_clk);
 			pr_debug("%s: clk_prepare_enable rtn = %x\n", __func__, rtn);
 				sitar_mclk_enable(codec, 1, dapm);
@@ -1131,6 +1131,13 @@ static int msm8930_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
+		ret = snd_soc_dai_set_channel_map(codec_dai, 0, 0,
+				msm8930_slim_0_rx_ch, rx_ch);
+		if (ret < 0) {
+			pr_err("%s: failed to set codec channel map\n",
+							       __func__);
+			goto end;
+		}
 	} else {
 		ret = snd_soc_dai_get_channel_map(codec_dai,
 				&tx_ch_cnt, tx_ch, &rx_ch_cnt , rx_ch);
@@ -1144,6 +1151,14 @@ static int msm8930_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
+		ret = snd_soc_dai_set_channel_map(codec_dai,
+				msm8930_slim_0_tx_ch, tx_ch, 0, 0);
+		if (ret < 0) {
+			pr_err("%s: failed to set codec channel map\n",
+							       __func__);
+			goto end;
+		}
+
 	}
 end:
 	return ret;
@@ -1155,14 +1170,6 @@ static int msm8930_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-
-	/* Tabla SLIMBUS configuration
-	 * RX1, RX2, RX3, RX4, RX5
-	 * TX1, TX2, TX3, TX4, TX5
-	 */
-	unsigned int rx_ch[SITAR_RX_MAX] = {138, 139, 140, 141, 142};
-	unsigned int tx_ch[SITAR_TX_MAX]  = {128, 129, 130, 131, 132};
 
 	pr_debug("%s()\n", __func__);
 
@@ -1205,9 +1212,6 @@ static int msm8930_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	codec_clk = clk_get(cpu_dai->dev, "osr_clk");
-
-	snd_soc_dai_set_channel_map(codec_dai, ARRAY_SIZE(tx_ch),
-				    tx_ch, ARRAY_SIZE(rx_ch), rx_ch);
 
 	/*
 	 * Switch is present only in 8930 CDP and SGLTE
@@ -1308,7 +1312,7 @@ static int msm8930_i2s_hw_params(struct snd_pcm_substream *substream,
 #if defined (CONFIG_WCD9304_CLK_9600)
 		} else {
 			bit_clk_set = I2S_MCLK_RATE / (rate * 2 *
-					NO_OF_BITS_PER_SAMPLE);
+					NO_OF_BITS_PER_SAMPLE);		
 		}
 #endif
 		ret = clk_set_rate(tx_bit_clk, bit_clk_set);
@@ -1329,7 +1333,7 @@ static int msm8930_i2s_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	pr_debug("%s()\n", __func__);
 
 
-	printk("Audio Team System Revision:%d \n",system_rev);
+	printk("Audio Team System Revision:%d \n",system_rev);	
 
 	rtd->pmdown_time = 0;
 
@@ -1689,9 +1693,9 @@ static int msm8930_mi2s_startup(struct snd_pcm_substream *substream)
 			}
 			else{
 				clk_set_rate(mi2s_osr_clk, 23040000);
-			}
+			}	
 			clk_prepare_enable(mi2s_osr_clk);
-		} else
+		} else 
 			pr_err("Failed to get mi2s_osr_clk\n");
 		mi2s_bit_clk = clk_get(cpu_dai->dev, "bit_clk");
 		if (IS_ERR(mi2s_bit_clk)) {
@@ -1873,7 +1877,7 @@ static int msm8930_i2s_startup(struct snd_pcm_substream *substream)
 		ret = clk_set_rate(rx_osr_clk, SITAR_EXT_CLK_RATE_REV10);
 		pr_debug("%s: clk_set_rate rx_osr rtn = %x, rate = %d\n",
 			__func__, ret, SITAR_EXT_CLK_RATE_REV10);
-#endif
+#endif 
 		ret = clk_prepare_enable(rx_osr_clk);
 		pr_info("%s: clk_prepare_enable rx_osr rtn = %x\n",__func__, ret);
 		rx_bit_clk = clk_get(cpu_dai->dev, "bit_clk");
@@ -1939,7 +1943,7 @@ static int msm8930_i2s_startup(struct snd_pcm_substream *substream)
 		ret = clk_set_rate(tx_osr_clk, SITAR_EXT_CLK_RATE_REV10);
 		pr_debug("%s: clk_set_rate tx_osr rtn = %x, rate = %d\n",
 			__func__, ret, SITAR_EXT_CLK_RATE_REV10);
-#endif
+#endif 
 		ret = clk_prepare_enable(tx_osr_clk);
 		pr_debug("%s: clk_prepare_enable tx_osr rtn = %x\n",__func__, ret);
 
