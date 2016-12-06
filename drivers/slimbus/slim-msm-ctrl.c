@@ -21,7 +21,6 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 #include <linux/clk.h>
-#include <linux/pm_runtime.h>
 #include <linux/of.h>
 #include <linux/of_slimbus.h>
 #include <mach/sps.h>
@@ -47,7 +46,6 @@
 #define MSM_SLIM_PERF_SUMM_THRESHOLD	0x8000
 #define MSM_SLIM_NCHANS			32
 #define MSM_SLIM_NPORTS			24
-#define MSM_SLIM_AUTOSUSPEND		MSEC_PER_SEC
 
 /*
  * Need enough descriptors to receive present messages from slaves
@@ -1013,27 +1011,6 @@ retry_laddr:
 		}
 	}
 	return ret;
-}
-
-static int msm_clk_pause_wakeup(struct slim_controller *ctrl)
-{
-	struct msm_slim_ctrl *dev = slim_get_ctrldata(ctrl);
-	enable_irq(dev->irq);
-	clk_prepare_enable(dev->rclk);
-	writel_relaxed(1, dev->base + FRM_WAKEUP);
-	/* Make sure framer wakeup write goes through before exiting function */
-	mb();
-	/*
-	 * Workaround: Currently, slave is reporting lost-sync messages
-	 * after slimbus comes out of clock pause.
-	 * Transaction with slave fail before slave reports that message
-	 * Give some time for that report to come
-	 * Slimbus wakes up in clock gear 10 at 24.576MHz. With each superframe
-	 * being 250 usecs, we wait for 20 superframes here to ensure
-	 * we get the message
-	 */
-	usleep_range(5000, 5000);
-	return 0;
 }
 
 static int msm_config_port(struct slim_controller *ctrl, u8 pn)
@@ -2172,7 +2149,6 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	dev->ctrl.nports = MSM_SLIM_NPORTS;
 	dev->ctrl.set_laddr = msm_set_laddr;
 	dev->ctrl.xfer_msg = msm_xfer_msg;
-	dev->ctrl.wakeup =  msm_clk_pause_wakeup;
 	dev->ctrl.config_port = msm_config_port;
 	dev->ctrl.port_xfer = msm_slim_port_xfer;
 	dev->ctrl.port_xfer_status = msm_slim_port_xfer_status;
@@ -2312,10 +2288,6 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	if (pdev->dev.of_node)
 		of_register_slim_devices(&dev->ctrl);
 
-	pm_runtime_use_autosuspend(&pdev->dev);
-	pm_runtime_set_autosuspend_delay(&pdev->dev, MSM_SLIM_AUTOSUSPEND);
-	pm_runtime_set_active(&pdev->dev);
-
 #ifdef CONFIG_DEBUG_FS
 	ret = device_create_file(&pdev->dev, &dev_attr_slim_ch_status);
 	if (ret)
@@ -2372,8 +2344,9 @@ static int __devexit msm_slim_remove(struct platform_device *pdev)
 		kfree(sat->satcl.name);
 		kfree(sat);
 	}
-	pm_runtime_disable(&pdev->dev);
-	pm_runtime_set_suspended(&pdev->dev);
+	disable_irq(dev->irq);
+	clk_disable_unprepare(dev->rclk);
+	clk_disable_unprepare(dev->hclk);
 	free_irq(dev->irq, dev);
 	slim_del_controller(&dev->ctrl);
 	clk_put(dev->rclk);
@@ -2397,102 +2370,11 @@ static int __devexit msm_slim_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
-static int msm_slim_runtime_idle(struct device *device)
-{
-	pm_request_autosuspend(device);
-	return -EAGAIN;
-}
-#endif
-
 /*
  * If PM_RUNTIME is not defined, these 2 functions become helper
  * functions to be called from system suspend/resume. So they are not
  * inside ifdef CONFIG_PM_RUNTIME
  */
-#ifdef CONFIG_PM_SLEEP
-static int msm_slim_runtime_suspend(struct device *device)
-{
-	struct platform_device *pdev = to_platform_device(device);
-	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
-	int ret;
-	dev_dbg(device, "pm_runtime: suspending...\n");
-	dev->state = MSM_CTRL_SLEEPING;
-	ret = slim_ctrl_clk_pause(&dev->ctrl, false, SLIM_CLK_UNSPECIFIED);
-	if (ret) {
-		dev_err(device, "clk pause not entered:%d", ret);
-		dev->state = MSM_CTRL_AWAKE;
-	} else {
-		dev->state = MSM_CTRL_ASLEEP;
-	}
-	return ret;
-}
-
-static int msm_slim_runtime_resume(struct device *device)
-{
-	struct platform_device *pdev = to_platform_device(device);
-	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
-	int ret = 0;
-	dev_dbg(device, "pm_runtime: resuming...\n");
-	if (dev->state == MSM_CTRL_ASLEEP)
-		ret = slim_ctrl_clk_pause(&dev->ctrl, true, 0);
-	if (ret) {
-		dev_err(device, "clk pause not exited:%d", ret);
-		dev->state = MSM_CTRL_ASLEEP;
-	} else {
-		dev->state = MSM_CTRL_AWAKE;
-	}
-	return ret;
-}
-
-static int msm_slim_suspend(struct device *dev)
-{
-	int ret = 0;
-	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
-		struct platform_device *pdev = to_platform_device(dev);
-		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
-		dev_dbg(dev, "system suspend");
-		ret = msm_slim_runtime_suspend(dev);
-		if (!ret) {
-			if (cdev->hclk)
-				clk_disable_unprepare(cdev->hclk);
-		}
-	}
-	if (ret == -EBUSY) {
-		/*
-		* If the clock pause failed due to active channels, there is
-		* a possibility that some audio stream is active during suspend
-		* We dont want to return suspend failure in that case so that
-		* display and relevant components can still go to suspend.
-		* If there is some other error, then it should be passed-on
-		* to system level suspend
-		*/
-		ret = 0;
-	}
-	return ret;
-}
-
-static int msm_slim_resume(struct device *dev)
-{
-	/* If runtime_pm is enabled, this resume shouldn't do anything */
-	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
-		struct platform_device *pdev = to_platform_device(dev);
-		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
-		int ret;
-		dev_dbg(dev, "system resume");
-		if (cdev->hclk)
-			clk_prepare_enable(cdev->hclk);
-		ret = msm_slim_runtime_resume(dev);
-		if (!ret) {
-			pm_runtime_mark_last_busy(dev);
-			pm_request_autosuspend(dev);
-		}
-		return ret;
-
-	}
-	return 0;
-}
-#endif /* CONFIG_PM_SLEEP */
 
 static const struct dev_pm_ops msm_slim_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(
@@ -2519,7 +2401,6 @@ static struct platform_driver msm_slim_driver = {
 	.driver	= {
 		.name = MSM_SLIM_NAME,
 		.owner = THIS_MODULE,
-		.pm = &msm_slim_dev_pm_ops,
 		.of_match_table = msm_slim_dt_match,
 	},
 };
