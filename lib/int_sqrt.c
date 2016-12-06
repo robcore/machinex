@@ -1,9 +1,3 @@
-/*
- * Copyright (C) 2013 Davidlohr Bueso <davidlohr.bueso@hp.com>
- *
- *  Based on the shift-and-subtract algorithm for computing integer
- *  square root from Guy L. Steele.
- */
 
 #include <linux/kernel.h>
 #include <linux/export.h>
@@ -14,33 +8,25 @@
  *
  * A very rough approximation to the sqrt() function.
  */
-inline unsigned long int_sqrt(unsigned long x)
-{
-	register unsigned long tmp;
-	register unsigned long place;
-	register unsigned long root = 0;
+ unsigned long int_sqrt(unsigned long x)
+ {
+	unsigned long op, res, one;
 
-	if (x <= 1)
-		return x;
+	op = x;
+	res = 0;
 
-	place = 1UL << (BITS_PER_LONG - 2);
+	one = 1UL << (BITS_PER_LONG - 2);
+	while (one > op)
+		one >>= 2;
 
-	do{
-		place >>= 2;
-	}while(place > x);
-
-	do {
-		tmp = root + place;
-		root >>= 1;
-
-		if (x >= tmp)
-		{
-			x -= tmp;
-			root += place;
+	while (one != 0) {
+		if (op >= res + one) {
+			op = op - (res + one);
+			res = res +  2 * one;
 		}
-		place >>= 2;
-	}while (place != 0);
-
-	return root;
+		res /= 2;
+		one /= 4;
+	}
+	return res;
 }
 EXPORT_SYMBOL(int_sqrt);
