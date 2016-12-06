@@ -508,7 +508,7 @@ static struct res *__vcm_reserve(struct vcm *vcm, size_t len, u32 attr)
 
 		break;
 	case VCM_EXT_KERNEL:
-		res->vm_area = alloc_vm_area(res->aligned_len);
+		res->vm_area = alloc_vm_area(res->aligned_len, NULL);
 		res->mapped = 0; /* be explicit */
 		if (!res->vm_area) {
 			vcm_err("NULL res->vm_area\n");

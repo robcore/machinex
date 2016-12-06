@@ -136,7 +136,7 @@ struct jzfb {
 	uint32_t pseudo_palette[16];
 };
 
-static const struct fb_fix_screeninfo jzfb_fix __devinitconst = {
+static const struct fb_fix_screeninfo jzfb_fix __devinitdata = {
 	.id		= "JZ4740 FB",
 	.type		= FB_TYPE_PACKED_PIXELS,
 	.visual		= FB_VISUAL_TRUECOLOR,
