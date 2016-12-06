@@ -1851,7 +1851,6 @@ static int __vb2_init_fileio(struct vb2_queue *q, int read)
 	 * (multiplane buffers are not supported).
 	 */
 	if (q->bufs[0]->num_planes != 1) {
-		fileio->req.count = 0;
 		ret = -EBUSY;
 		goto err_reqbufs;
 	}
@@ -1898,6 +1897,7 @@ static int __vb2_init_fileio(struct vb2_queue *q, int read)
 	return ret;
 
 err_reqbufs:
+	fileio->req.count = 0;
 	vb2_reqbufs(q, &fileio->req);
 
 err_kfree:
