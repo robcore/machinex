@@ -99,6 +99,14 @@ struct es325_cmd_access {
 #define NS_OFFSET 2
 
 #define ES325_NUM_CODEC_SLIM_DAIS	6
+int debug_for_dl_firmware = 0;
+
+enum {
+	BOOT_OK = 0,
+	BOOT_MSG_ERR,
+	BOOT_MSG_NACK,
+	SYNC_MSG_NACK
+};
 
 struct es325_slim_dai_data {
 	unsigned int rate;
@@ -181,6 +189,7 @@ static unsigned int es325_ap_tx1_ch_cnt = 1;
 unsigned int es325_tx1_route_enable;
 unsigned int es325_rx1_route_enable;
 unsigned int es325_rx2_route_enable;
+unsigned int es325_fw_downloaded = 0;
 
 static int es325_slim_rx_port_to_ch[ES325_SLIM_RX_PORTS] = {
 	152, 153, 154, 155, 134, 135
@@ -872,6 +881,10 @@ int es325_remote_cfg_slim_rx(int dai_id)
 	struct es325_priv *es325 = &es325_priv;
 	int be_id;
 	int rc = 0;
+	if(es325_fw_downloaded == 0) {
+		pr_err("%s():eS325 FW not ready, cfg_slim_rx rejected\n", __func__);
+		return rc;
+	}
 
 	if (dai_id != ES325_SLIM_1_PB
 	    && dai_id != ES325_SLIM_2_PB)
@@ -918,6 +931,10 @@ int es325_remote_cfg_slim_tx(int dai_id)
 	int ch_cnt;
 	int rc = 0;
 
+	if(es325_fw_downloaded == 0) {
+		pr_err("%s():eS325 FW not ready, cfg_slim_tx rejected\n", __func__);
+		return rc;
+	}
 	if (dai_id != ES325_SLIM_1_CAP)
 		return 0;
 
@@ -1933,7 +1950,7 @@ static ssize_t es325_slim_ch_show(struct device *dev,
 	struct es325_slim_dai_data* dai = priv->dai;
 	int length = 0;
 	int i, j;
-
+         
 	for(i = 0; i < ES325_NUM_CODEC_SLIM_DAIS; i++) {
 		length += sprintf(buf+length,"=dai[%d]=rate[%d]=ch_num=",i, dai[i].rate);
 		for(j = 0; j < dai[i].ch_tot; j++)
@@ -1954,7 +1971,7 @@ static ssize_t es325_reg_show(struct device *dev,
 	int i;
 	int size = 0;
 
-	length += sprintf(buf+length,"es325_reg : algo\n");
+	length += sprintf(buf+length,"es325_reg : algo\n");  
 	size = sizeof(es325_algo_paramid)/sizeof(unsigned short); /* 127 items */
 	for(i = ES325_MIC_CONFIG; i < size; i++)
 		length += sprintf(buf+length,"0x%04x : 0x%04x\n", i, es325_read(NULL, i));
@@ -1986,7 +2003,7 @@ static ssize_t es325_reg_write(struct device *dev,
 		return -EINVAL;
 
 	es325_write(NULL, reg, value);
-
+	
 	return size;
 }
 static DEVICE_ATTR(es325_reg, 0644, es325_reg_show, es325_reg_write);
@@ -2052,10 +2069,12 @@ static int es325_bootup(struct es325_priv *es325)
 	if (rc < 0) {
 		pr_err("%s(): ES325_BUS_READ_ERROR = %d\n", __func__,rc);
 		pr_err("%s(): firmware load failed boot ack\n", __func__);
+		debug_for_dl_firmware = BOOT_MSG_ERR;
 		return	rc;
 	}
 	if ((msg[0] != (ES325_BOOT_ACK >> 8)) || (msg[1] != (ES325_BOOT_ACK & 0x00ff))) {
 		pr_err("%s(): firmware load failed boot ack pattern", __func__);
+		debug_for_dl_firmware = BOOT_MSG_NACK;
 		return	-EIO;
 	}
 	usleep_range(50000, 50000);
@@ -2072,6 +2091,7 @@ static int es325_bootup(struct es325_priv *es325)
 		if (rc < 0) {
 			pr_err("%s(): ES325_BUS_WRITE_ERROR = %d\n", __func__,rc);
 			pr_err("%s(): firmware load failed\n", __func__);
+			debug_for_dl_firmware = buf_frames * ES325_FW_LOAD_BUF_SZ;
 			return -EIO;
 		}
 	}
@@ -2082,6 +2102,7 @@ static int es325_bootup(struct es325_priv *es325)
 		if (rc < 0) {
 			pr_err("%s(): ES325_BUS_WRITE_ERROR = %d\n", __func__,rc);
 			pr_err("%s(): firmware load failed\n", __func__);
+			debug_for_dl_firmware = es325->fw->size % ES325_FW_LOAD_BUF_SZ;
 			return -EIO;
 		}
 	}
@@ -2119,14 +2140,17 @@ static int es325_bootup(struct es325_priv *es325)
 		pr_err("%s(): ES325_BUS_READ_ERROR = %d\n", __func__,rc);
 		pr_err("%s(): error reading firmware sync ack rc=%d\n",
 		       __func__, rc);
+		debug_for_dl_firmware = SYNC_MSG_NACK;
 		return rc;
 	}
 	if (memcmp(msg, sync_ok, 4) == 0) {
 		pr_info("%s(): firmware sync ack good=0x%02x%02x%02x%02x\n",
 			__func__, msg[0], msg[1], msg[2], msg[3]);
+		es325_fw_downloaded = 1;
 	} else {
 		pr_err("%s(): firmware sync ack failed=0x%02x%02x%02x%02x\n",
 		       __func__, msg[0], msg[1], msg[2], msg[3]);
+		debug_for_dl_firmware = SYNC_MSG_NACK;
 		return -EIO;
 	}
 
@@ -2267,7 +2291,7 @@ es325_firmware_store(struct device *dev, struct device_attribute *attr,
 		es325_bootup(&es325_priv);
 		es325_fixed_config(&es325_priv);
 		msleep(100);
-
+		
 		es325_sleep(&es325_priv);
 		es325_priv.pdata->es325_clk_cb(0);
 		es325_priv.clock_on = 0;
@@ -2282,34 +2306,41 @@ static DEVICE_ATTR(firmware, 0644, NULL, es325_firmware_store);
 
 static int es325_sleep(struct es325_priv *es325)
 {
-	char pwr_cmd[] = {
-		0x90, 0x10, 0, 1
+	char smooth_rate_cmd[] = {
+		0x90, 0x4e, 0x00, 0x00 /* response not expected */
 	};
+	char pwr_cmd[] = {
+		0x90, 0x10, 0x00, 0x01 /* response not expected */
+	};
+
 	int rc;
-	int remain = 3;
+	int i = 0;
 
 	pr_info("+[ES325]=%s()=\n", __func__);
 
-	/* FIXME: check host vs bus ordering in the write. Why is this
-	 * still so confused?
-	 */
-LOOP:
+	/* Set Smooth Mute period to 0 ms */
 	rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
-			     ES325_WRITE_VE_WIDTH, pwr_cmd, 4, 1);
-	if (rc < 0) {
-		if (-remain > 0) {
-			pr_info("=[ES325]= wrapper %s sleep command failed remain count %d\n",
-				__func__, remain);
-			usleep_range(1000, 1100);
-			goto LOOP;
-		}
-	}
+				ES325_WRITE_VE_WIDTH, smooth_rate_cmd, 4, 1);
+	if (rc < 0)
+		pr_err("=[ES325]=%s(): Sleep Smooth Mute Set to 0 Fail, rc=%d\n", __func__, rc);
 
-	if (rc < 0) {
-		pr_err("=[ES325]= error sending sleep cmd rc=%d\n", rc);
-		return rc;
-	}
-	usleep_range(20000, 20000);
+	usleep_range(2000, 2100);
+
+	/* write pwr command, es325 to sleep mode */
+	do {
+		rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
+			     ES325_WRITE_VE_WIDTH, pwr_cmd, 4, 1);
+		if (rc == 0) {
+			/* wait 20 ms according to spec end return. 
+			   eS325 is sleeping */
+			msleep(20);
+			break;
+		}
+		pr_err("=[ES325]=%s(): slim write fail, rc=%d\n", __func__,rc);
+		usleep_range(1000, 1000);
+		i++;
+	} while (i <= 20);
+
 
 	pr_info("-[ES325]=%s()=\n", __func__);
 	return 0;
@@ -2559,7 +2590,7 @@ static void es325_update_VEQ_enable(void)
 		if (es325_VEQ_enable_new) {
 			cmd_str[7] = 0x01; /* VEQ Enable */
 		}
-
+		
 		memcpy(msg, cmd_str, 4);
 		pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 		ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -2604,7 +2635,7 @@ static void es325_update_BWE_enable(void)
 		if (es325_BWE_enable_new) {
 			cmd_str[7] = 0x01; /* BWE On */
 		}
-
+		
 		memcpy(msg, cmd_str, 4);
 		pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 		ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -2805,7 +2836,7 @@ static int es325_put_2mic_enable(struct snd_kcontrol *kcontrol,
 	pr_info("%s: wakeup_cnt=%d\n", __func__, es325_priv.wakeup_cnt);
 	mutex_lock(&es325_priv.pm_mutex);
 	if (es325_priv.wakeup_cnt) {
-		if ((es325_internal_route_num >= 1 &&
+		if ((es325_internal_route_num >= 1 && 
 			es325_internal_route_num < 3 + NS_OFFSET) ||
 			(es325_internal_route_num >= 1 + NETWORK_OFFSET &&
 			es325_internal_route_num < 3 + + NS_OFFSET + NETWORK_OFFSET)) {
@@ -3044,7 +3075,7 @@ static int es325_put_csout_gain_value(struct snd_kcontrol *kcontrol,
 	pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 	ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
 			ES325_WRITE_VE_WIDTH, msg, 4, 1);
-
+	
 /*	usleep_range(100, 100);
 	memcpy(msg, cmd_str1, 4);
 	pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
@@ -3057,7 +3088,7 @@ static int es325_put_csout_gain_value(struct snd_kcontrol *kcontrol,
 	ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
 			ES325_WRITE_VE_WIDTH, msg, 4, 1);*/
 	es325->rx_is_muted = true;
-	pr_info("=[ES325]=CS out gain set 0");
+	pr_info("=[ES325]=CS out gain set 0");		
 
 	return 0;
 }
@@ -4942,7 +4973,6 @@ static int es325_slim_probe(struct slim_device *sbdev)
 
 	if (clk_count++ == 0) {
 		pdata->es325_clk_cb(1);
-		pdata->es325_reset_cb();
 	}
 
 	rc = device_create_file(&sbdev->dev, &dev_attr_route_status);
@@ -4968,7 +4998,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);
 	rc = device_create_file(&sbdev->dev, &dev_attr_es325_cmd_reg);
 	if (rc)
-		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);
+		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);			
 	rc = device_create_file(&sbdev->dev, &dev_attr_firmware);
 	if (rc)
 		dev_err(&sbdev->dev, "%s(): error file firmware create\n",	__func__);
@@ -5046,6 +5076,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 	es325_priv.internal_route_config =  ES325_INTERNAL_ROUTE_MAX;
 	es325_priv.new_internal_route_config = ES325_INTERNAL_ROUTE_MAX;
 #endif
+	pr_info("%s: system_rev=%d, firmware=%s\n", __func__, system_rev, filename);
 	rc = request_firmware((const struct firmware **)&es325_priv.fw,
 			      filename, &sbdev->dev);
 	if (rc) {
@@ -5172,6 +5203,10 @@ void es325_wrapper_wakeup(struct snd_soc_dai *dai)
 #ifdef ES325_SLEEP
 	int rc;
 	struct es325_priv *es325 = &es325_priv;
+	if(es325_fw_downloaded==0) {
+		pr_err("%s():FW not ready, wakeup suspends, err_msg:%d\n", __func__,debug_for_dl_firmware);
+		return;
+	}
 	pr_debug("=[ES325]=%s dai_id=%d ch_wakeup=%d,wakeup_cnt=%d\n", __func__,
 		dai->id, es325->dai[dai->id-1].ch_wakeup, es325->wakeup_cnt);
 	if (!es325_remote_route_enable(dai)) {
@@ -5227,7 +5262,7 @@ EXPORT_SYMBOL_GPL(es325_wrapper_wakeup);
 	es325_Tx_NS = ES325_MAX_INVALID_TX_NS;
 	es325_VEQ_enable_new = ES325_MAX_INVALID_VEQ;
 	es325_BWE_enable_new = ES325_MAX_INVALID_BWE;
-	es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;
+	es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;	
 	mutex_unlock(&es325->pm_mutex);
 }
 #endif
