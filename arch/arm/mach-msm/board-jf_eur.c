@@ -3209,7 +3209,6 @@ static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.ramdump_delay_ms = 2000,
      /* delay between two PS_HOLDs */
 	.ps_hold_delay_ms = 500,
-	.peripheral_platform_device = NULL,
 	.ramdump_timeout_ms = 600000,
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,

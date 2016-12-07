@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
@@ -62,7 +62,7 @@ allowed_warnings = set([
    "xt_socket.c:161",
    "inet_hashtables.h:356",
    "xc4000.c:1049",
-   "xc4000.c:1063",	
+   "xc4000.c:1063",
    "f_qdss.c:586",
    "mipi_tc358764_dsi2lvds.c:746",
    "dynamic_debug.h:75",

@@ -41,7 +41,7 @@
 #include "es325-export.h"
 #endif
 
-static int cfilt_adjust_ms = 40;
+static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
 MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
 
@@ -3044,7 +3044,6 @@ static int tabla_codec_enable_ear_rx_bias(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		usleep_range(1000, 1000);
 		tabla_enable_rx_bias(codec, 1);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
