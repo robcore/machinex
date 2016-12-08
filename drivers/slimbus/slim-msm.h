@@ -12,6 +12,9 @@
 
 #ifndef _SLIM_MSM_H
 #define _SLIM_MSM_H
+
+#include <linux/irq.h>
+
 /* Per spec.max 40 bytes per received message */
 #define SLIM_RX_MSGQ_BUF_LEN	40
 
@@ -140,6 +143,12 @@ enum pgd_reg_v1 {
 	PGD_VE_STAT_V1		= 0x1710,
 };
 
+enum msm_slim_port_status {
+	MSM_PORT_OVERFLOW	= 1 << 2,
+	MSM_PORT_UNDERFLOW	= 1 << 3,
+	MSM_PORT_DISCONNECT	= 1 << 19,
+};
+
 enum msm_ctrl_state {
 	MSM_CTRL_AWAKE,
 	MSM_CTRL_SLEEPING,
@@ -190,7 +199,7 @@ struct msm_slim_ctrl {
 	struct mutex		tx_lock;
 	u8			pgdla;
 	bool			use_rx_msgqs;
-	int			pipe_b;
+	int			port_b;
 	struct completion	reconf;
 	bool			reconf_busy;
 	bool			chan_active;
@@ -234,6 +243,7 @@ int msm_slim_rx_enqueue(struct msm_slim_ctrl *dev, u32 *buf, u8 len);
 int msm_slim_rx_dequeue(struct msm_slim_ctrl *dev, u8 *buf);
 int msm_slim_get_ctrl(struct msm_slim_ctrl *dev);
 void msm_slim_put_ctrl(struct msm_slim_ctrl *dev);
+irqreturn_t msm_slim_port_irq_handler(struct msm_slim_ctrl *dev, u32 pstat);
 int msm_slim_init_endpoint(struct msm_slim_ctrl *dev, struct msm_slim_endp *ep);
 void msm_slim_free_endpoint(struct msm_slim_endp *ep);
 void msm_hw_set_port(struct msm_slim_ctrl *dev, u8 pn);
