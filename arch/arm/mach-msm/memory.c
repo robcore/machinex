@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/memory_alloc.h>
 #include <linux/memblock.h>
+#include <asm/memblock.h>
 #include <asm/pgtable.h>
 #include <asm/io.h>
 #include <asm/mach/map.h>
@@ -27,6 +28,7 @@
 #include <asm/setup.h>
 #include <asm/mach-types.h>
 #include <mach/msm_memtypes.h>
+#include <mach/memory.h>
 #include <linux/hardirq.h>
 #if defined(CONFIG_MSM_NPA_REMOTE)
 #include "npa_remote.h"
@@ -233,7 +235,7 @@ static void __init reserve_memory_for_mempools(void)
 	struct memtype_reserve *mt;
 	struct membank *mb;
 	int ret;
-	unsigned long size;
+	phys_addr_t size;
 
 	mt = &reserve_info->memtype_reserve_table[0];
 	for (memtype = 0; memtype < MEMTYPE_MAX; memtype++, mt++) {
@@ -305,7 +307,8 @@ void __init msm_reserve(void)
 	unsigned long msm_fixed_area_start;
 
 	memory_pool_init();
-	reserve_info->calculate_reserve_sizes();
+	if (reserve_info->calculate_reserve_sizes)
+		reserve_info->calculate_reserve_sizes();
 
 	msm_fixed_area_size = reserve_info->fixed_area_size;
 	msm_fixed_area_start = reserve_info->fixed_area_start;
@@ -398,7 +401,7 @@ static int reserve_memory_type(const char *mem_name,
 	return ret;
 }
 
-static int check_for_compat(unsigned long node)
+static int __init check_for_compat(unsigned long node)
 {
 	char **start = __compat_exports_start;
 
