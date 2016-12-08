@@ -192,6 +192,7 @@ static void cpufreq_interactive_timer_resched(unsigned long cpu)
 				     &pcpu->time_in_idle_timestamp, io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
+	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 	expires = round_to_nw_start(pcpu->last_evaluated_jiffy);
 	mod_timer_pinned(&pcpu->cpu_timer, expires);
 
@@ -199,8 +200,6 @@ static void cpufreq_interactive_timer_resched(unsigned long cpu)
 		expires += usecs_to_jiffies(timer_slack_val);
 		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
 	}
-
-	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 }
 
 /* The caller shall take enable_sem write semaphore to avoid any timer race.
@@ -215,13 +214,11 @@ static void cpufreq_interactive_timer_start(int cpu)
 
 	pcpu->cpu_timer.expires = expires;
 	if (cpu_online(cpu)) {
-		del_timer_sync(&pcpu->cpu_timer);
 		add_timer_on(&pcpu->cpu_timer, cpu);
 		if (timer_slack_val >= 0 && pcpu->target_freq >
 		     pcpu->policy->min) {
 			expires += usecs_to_jiffies(timer_slack_val);
 			pcpu->cpu_slack_timer.expires = expires;
-			del_timer_sync(&pcpu->cpu_slack_timer);
 			add_timer_on(&pcpu->cpu_slack_timer, cpu);
 		}
 	}
