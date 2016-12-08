@@ -1,5 +1,4 @@
 #!/bin/bash
-export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
@@ -22,6 +21,29 @@ find . -type f \( -iname \*.rej \
 				-o -iname \*.bkp \
 				-o -iname \*.ko \) \
 					| parallel rm -fv {};
+echo -n "Enter Kernel major version and press [ENTER]: "
+read MAJOR
+KERNEL_NAME=machinex
+KERNEL_VERSION=Mark$MAJOR
+
+read -n 1 -p "Is this a Next Version?  y/n  " reply
+if [[ $reply = "y" ]]; then
+	echo -n "Enter Next Version and press [ENTER]: "
+	read NEXT
+	SUBVERSION=Next$NEXT
+else
+	read -n 1 -p "Is this a Proto Version?  y/n  " reply2
+		if [[ $reply2 = "y" ]]; then
+		echo -n "Enter Proto Version and press [ENTER]: "
+		read PROTO
+		SUBVERSION=P$PROTO
+		fi
+OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+else
+OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
+fi
+
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export ARCH=arm
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 env KCONFIG_NOTIMESTAMP=true
@@ -47,6 +69,9 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	rm image-new.img;
 	sh repackimg.sh --sudo;
 	cp -p image-new.img $(pwd)/machinex-new/boot.img
+	mv $(pwd)/machinex-new $(pwd)/$OUTFOLDER
+	cd $OUTFOLDER
+	zip -r -9 - * > $OUTFOLDER.zip
 else
 	echo "Build failed, Skipped Ramdisk Creation"
 fi;
