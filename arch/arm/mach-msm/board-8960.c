@@ -1512,6 +1512,7 @@ static struct msm_tspp_platform_data tspp_platform_data = {
 	.gpios = tsif_gpios,
 	.tsif_pclk = "tsif_pclk",
 	.tsif_ref_clk = "tsif_ref_clk",
+	.tsif_vreg_present = 0,
 };
 
 static struct platform_device msm_device_tspp = {
