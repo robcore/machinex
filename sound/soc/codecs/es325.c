@@ -72,12 +72,12 @@ struct es325_cmd_access {
 #define ES325_SLIM_RX_PORTS		6
 #define ES325_SLIM_TX_PORTS		6
 
-#define ES325_SLIM_1_PB		0
-#define ES325_SLIM_1_CAP	1
-#define ES325_SLIM_2_PB		2
-#define ES325_SLIM_2_CAP	3
-#define ES325_SLIM_3_PB		4
-#define ES325_SLIM_3_CAP	5
+#define ES325_SLIM_1_PB		1
+#define ES325_SLIM_1_CAP	2
+#define ES325_SLIM_2_PB		3
+#define ES325_SLIM_2_CAP	4
+#define ES325_SLIM_3_PB		5
+#define ES325_SLIM_3_CAP	6
 
 #define ES325_SLIM_1_PB_MAX_CHANS	2
 #define ES325_SLIM_1_CAP_MAX_CHANS	2
@@ -503,37 +503,6 @@ static int es325_close_slim_tx(struct slim_device *sbdev, unsigned int *ch_num,
 			       unsigned int ch_cnt);
 static int es325_rx_ch_num_to_idx(int ch_num);
 static int es325_tx_ch_num_to_idx(int ch_num);
-static void es325_update_VEQ_enable(void);
-
-static struct platform_device msm_es325_mclk_dev = {
-	.name = "es325_mclk_dev_pdev",
-	.id = -1,
-	.dev = {
-		.init_name = "es325_mclk_dev",
-	},
-};
-
-static int es325_enable_ext_clk(int enable)
-{
-	int r = 0;
-	static struct clk *es325_codec_clk;
-	pr_info("%s: enable=%d\n", __func__, enable);
-
-	if (!es325_codec_clk) {
-		pr_info("%s: clk_get osr_clk\n", __func__);
-		es325_codec_clk = clk_get(&msm_es325_mclk_dev.dev, "osr_clk");
-	}
-
-	if (enable) {
-		clk_prepare_enable(es325_codec_clk);
-	} else {
-		clk_disable_unprepare(es325_codec_clk);
-		clk_put(es325_codec_clk);
-		es325_codec_clk = NULL;
-	}
-
-	return r;
-}
 
 static int es325_rx_ch_num_to_idx(int ch_num)
 {
@@ -561,91 +530,116 @@ static int es325_tx_ch_num_to_idx(int ch_num)
 			break;
 		}
 	}
+
 	return idx;
 }
 
 /* es325 -> codec - alsa playback function */
-static int es325_codec_cfg_slim_tx(struct es325_priv *es325, int dai_id, bool commit)
+static int es325_codec_cfg_slim_tx(struct es325_priv *es325, int dai_id)
 {
-	int rc;
+	int rc = 0;
+
 	/* start slim channels associated with id */
-	rc = es325_cfg_slim_tx(es325->gen0_client, es325->dai[ID(dai_id)].ch_num,
-			es325->dai[ID(dai_id)].ch_tot, es325->dai[ID(dai_id)].rate, commit);
+	rc = es325_cfg_slim_tx(es325->gen0_client,
+			       es325->dai[dai_id - 1].ch_num,
+			       es325->dai[dai_id - 1].ch_tot,
+			       es325->dai[dai_id - 1].rate, true);
+
 	return rc;
 }
 
 /* es325 <- codec - alsa capture function */
-static int es325_codec_cfg_slim_rx(struct es325_priv *es325, int dai_id, bool commit)
+static int es325_codec_cfg_slim_rx(struct es325_priv *es325, int dai_id)
 {
-	int rc;
+	int rc = 0;
+
 	/* start slim channels associated with id */
-	rc = es325_cfg_slim_rx(es325->gen0_client, es325->dai[ID(dai_id)].ch_num,
-			es325->dai[ID(dai_id)].ch_tot, es325->dai[ID(dai_id)].rate, commit);
+	rc = es325_cfg_slim_rx(es325->gen0_client,
+			       es325->dai[dai_id - 1].ch_num,
+			       es325->dai[dai_id - 1].ch_tot,
+			       es325->dai[dai_id - 1].rate, true);
+
 	return rc;
 }
 
 /* es325 -> codec - alsa playback function */
 static int es325_codec_close_slim_tx(struct es325_priv *es325, int dai_id)
 {
-	int rc;
+	int rc = 0;
+
 	/* close slim channels associated with id */
 	rc = es325_close_slim_tx(es325->gen0_client,
-			es325->dai[ID(dai_id)].ch_num, es325->dai[ID(dai_id)].ch_tot);
+				 es325->dai[dai_id - 1].ch_num,
+				 es325->dai[dai_id - 1].ch_tot);
+
 	return rc;
 }
 
 /* es325 <- codec - alsa capture function */
 static int es325_codec_close_slim_rx(struct es325_priv *es325, int dai_id)
 {
-	int rc;
+	int rc = 0;
+
 	/* close slim channels associated with id */
 	rc = es325_close_slim_rx(es325->gen0_client,
-			es325->dai[ID(dai_id)].ch_num, es325->dai[ID(dai_id)].ch_tot);
+				 es325->dai[dai_id - 1].ch_num,
+				 es325->dai[dai_id - 1].ch_tot);
+
 	return rc;
 }
 
-static void es325_alloc_slim_rx_chan(struct slim_device *sbdev)
+static int es325_alloc_slim_rx_chan(struct slim_device *sbdev)
 {
 	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_slim_ch *rx = es325_priv->slim_rx;
 	int i;
 	int port_id;
+	int rc = 0;
 
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
+	dev_dbg(&sbdev->dev, "%s(): entry\n", __func__);
 
 	for (i = 0; i < ES325_SLIM_RX_PORTS; i++) {
 		port_id = i;
 		rx[i].ch_num = es325_slim_rx_port_to_ch[i];
-		slim_get_slaveport(sbdev->laddr, port_id, &rx[i].sph, SLIM_SINK);
+		slim_get_slaveport(sbdev->laddr, port_id, &rx[i].sph,
+				   SLIM_SINK);
 		slim_query_ch(sbdev, rx[i].ch_num, &rx[i].ch_h);
 		dev_dbg(&sbdev->dev,
-			"=[ES325]=%s(): port_id = %d, ch_num = %d, sph = 0x%08x\n",
-			__func__, port_id, rx[i].ch_num, rx[i].sph);
+			"%s(): port_id = %d\n", __func__, port_id);
+		dev_dbg(&sbdev->dev,
+			"%s(): ch_num = %d\n", __func__, rx[i].ch_num);
+		dev_dbg(&sbdev->dev,
+			"%s(): sph = 0x%08x\n", __func__, rx[i].sph);
 	}
 
-	dev_dbg(&sbdev->dev, "-[ES325]=%s()\n", __func__);
+	return rc;
 }
 
-static void es325_alloc_slim_tx_chan(struct slim_device *sbdev)
+static int es325_alloc_slim_tx_chan(struct slim_device *sbdev)
 {
 	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_slim_ch *tx = es325_priv->slim_tx;
 	int i;
 	int port_id;
+	int rc = 0;
 
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
+	dev_dbg(&sbdev->dev, "%s(): entry\n", __func__);
 
 	for (i = 0; i < ES325_SLIM_TX_PORTS; i++) {
 		port_id = i + 10; /* ES325_SLIM_RX_PORTS; */
 		tx[i].ch_num = es325_slim_tx_port_to_ch[i];
-		slim_get_slaveport(sbdev->laddr, port_id, &tx[i].sph, SLIM_SRC);
+		slim_get_slaveport(sbdev->laddr, port_id, &tx[i].sph,
+				   SLIM_SRC);
 		slim_query_ch(sbdev, tx[i].ch_num, &tx[i].ch_h);
 		dev_dbg(&sbdev->dev,
-			"=[ES325]=%s(): port_id = %d, ch_num = %d, sph = 0x%08x\n",
-			__func__, port_id, tx[i].ch_num, tx[i].sph);
+			"%s(): port_id = %d\n", __func__, port_id);
+		dev_dbg(&sbdev->dev,
+			"%s(): ch_num = %d\n", __func__, tx[i].ch_num);
+		dev_dbg(&sbdev->dev,
+			"%s(): sph = 0x%08x\n", __func__, tx[i].sph);
 	}
 
-	dev_dbg(&sbdev->dev, "-[ES325]=%s()\n", __func__);
+	return rc;
 }
 
 static int es325_cfg_slim_rx(struct slim_device *sbdev, unsigned int *ch_num,
@@ -658,21 +652,22 @@ static int es325_cfg_slim_rx(struct slim_device *sbdev, unsigned int *ch_num,
 	u16 ch_h[ES325_SLIM_RX_PORTS] = {0};
 	struct slim_ch prop;
 	int i;
-	int idx;
-	int rc;
+	int idx = 0;
+	int ret = 0;
 
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
-	dev_dbg(&sbdev->dev, "=[ES325]=%s(): ch_cnt = %d, rate = %d\n",
-			__func__, ch_cnt, rate);
+	dev_dbg(&sbdev->dev, "+%s()==\n", __func__);
+	dev_dbg(&sbdev->dev, "%s(): ch_cnt = %d\n", __func__, ch_cnt);
+	dev_dbg(&sbdev->dev, "%s(): rate = %d\n", __func__, rate);
 
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_rx_ch_num_to_idx(ch_num[i]);
 		ch_h[i] = rx[idx].ch_h;
 		sph[i] = rx[idx].sph;
 
-		dev_dbg(&sbdev->dev,
-			"=[ES325]=%s(): idx = %d, ch_num[i] = %d, ch_h[i] = %d, sph[i] = 0x%08x\n",
-			__func__, idx, ch_num[i], ch_h[i], sph[i]);
+		dev_dbg(&sbdev->dev, "%s(): idx = %d\n", __func__, idx);
+		dev_dbg(&sbdev->dev, "%s(): ch_num[i] = %d\n", __func__, ch_num[i]);
+		dev_dbg(&sbdev->dev, "%s(): ch_h[i] = %d\n", __func__, ch_h[i]);
+		dev_dbg(&sbdev->dev, "%s(): sph[i] = 0x%08x\n", __func__, sph[i]);
 	}
 
 	prop.prot = SLIM_AUTO_ISO;
@@ -682,41 +677,44 @@ static int es325_cfg_slim_rx(struct slim_device *sbdev, unsigned int *ch_num,
 	prop.ratem = (rate/4000);
 	prop.sampleszbits = 16;
 
-	rc = slim_define_ch(sbdev, &prop, ch_h, ch_cnt, true, &grph);
-	if (rc < 0) {
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_define_ch() failed: %d\n", __func__, rc);
+	ret = slim_define_ch(sbdev, &prop, ch_h, ch_cnt, true, &grph);
+	if (ret < 0) {
+		dev_err(&sbdev->dev, "%s(): slim_define_ch() failed: %d\n",
+			__func__, ret);
 		goto slim_define_ch_error;
 	}
 	for (i = 0; i < ch_cnt; i++) {
-		rc = slim_connect_sink(sbdev, &sph[i], 1, ch_h[i]);
-		if (rc < 0) {
-			dev_err(&sbdev->dev, "=[ES325]=%s(): slim_connect_sink() failed: %d\n", __func__, rc);
+		ret = slim_connect_sink(sbdev, &sph[i], 1, ch_h[i]);
+		if (ret < 0) {
+			dev_err(&sbdev->dev,
+				"%s(): slim_connect_sink() failed: %d\n",
+				__func__, ret);
 			goto slim_connect_sink_error;
 		}
 	}
-
-	rc = slim_control_ch(sbdev, grph, SLIM_CH_ACTIVATE, true /*commit*/);
-	if (rc < 0) {
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_control_ch() failed: %d\n", __func__, rc);
+	ret = slim_control_ch(sbdev, grph, SLIM_CH_ACTIVATE, commit);
+	if (ret < 0) {
+		dev_err(&sbdev->dev,
+			"%s(): slim_control_ch() failed: %d\n",
+			__func__, ret);
 		goto slim_control_ch_error;
 	}
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_rx_ch_num_to_idx(ch_num[i]);
-		dev_dbg(&sbdev->dev, "=[ES325]=%s(): idx = %d\n", __func__, idx);
+		dev_dbg(&sbdev->dev, "%s(): idx = %d\n", __func__, idx);
 		rx[idx].grph = grph;
 	}
-	dev_dbg(&sbdev->dev, "-[ES325]=%s()\n", __func__);
-	return rc;
+	dev_dbg(&sbdev->dev, "-%s()==\n", __func__);
+	return 0;
 slim_control_ch_error:
 slim_connect_sink_error:
 	es325_close_slim_rx(sbdev, ch_num, ch_cnt);
 slim_define_ch_error:
-	dev_dbg(&sbdev->dev, "-[ES325]=%s() rc = %d\n", __func__, rc);
-	return rc;
+	return ret;
 }
 
 static int es325_cfg_slim_tx(struct slim_device *sbdev, unsigned int *ch_num,
-				unsigned int ch_cnt, unsigned int rate, bool commit)
+			     unsigned int ch_cnt, unsigned int rate, bool commit)
 {
 	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_slim_ch *tx = es325_priv->slim_tx;
@@ -725,19 +723,21 @@ static int es325_cfg_slim_tx(struct slim_device *sbdev, unsigned int *ch_num,
 	u16 ch_h[ES325_SLIM_TX_PORTS] = {0};
 	struct slim_ch prop;
 	int i;
-	int idx;
-	int rc;
+	int idx = 0;
+	int ret = 0;
 
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
-	dev_dbg(&sbdev->dev, "=[ES325]=%s(): ch_cnt = %d, rate = %d\n",	__func__, ch_cnt, rate);
+	dev_dbg(&sbdev->dev, "+%s()==\n", __func__);
+	dev_dbg(&sbdev->dev, "%s(): ch_cnt = %d\n", __func__, ch_cnt);
+	dev_dbg(&sbdev->dev, "%s(): rate = %d\n", __func__, rate);
 
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_tx_ch_num_to_idx(ch_num[i]);
 		ch_h[i] = tx[idx].ch_h;
 		sph[i] = tx[idx].sph;
-		dev_dbg(&sbdev->dev,
-			"=[ES325]=%s(): idx = %d ch_num[i] = %d ch_h[i] = %d sph[i] = 0x%08x\n",
-			__func__, idx, ch_num[i], ch_h[i], sph[i]);
+		dev_dbg(&sbdev->dev, "%s(): idx = %d\n", __func__, idx);
+		dev_dbg(&sbdev->dev, "%s(): ch_num[i] = %d\n", __func__, ch_num[i]);
+		dev_dbg(&sbdev->dev, "%s(): ch_h[i] = %d\n", __func__, ch_h[i]);
+		dev_dbg(&sbdev->dev, "%s(): sph[i] = 0x%08x\n", __func__, sph[i]);
 	}
 
 	prop.prot = SLIM_AUTO_ISO;
@@ -747,148 +747,159 @@ static int es325_cfg_slim_tx(struct slim_device *sbdev, unsigned int *ch_num,
 	prop.ratem = (rate/4000);
 	prop.sampleszbits = 16;
 
-	rc = slim_define_ch(sbdev, &prop, ch_h, ch_cnt, true, &grph);
-	if (rc < 0) {
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_define_ch() failed: %d\n", __func__, rc);
+	ret = slim_define_ch(sbdev, &prop, ch_h, ch_cnt, true, &grph);
+	if (ret < 0) {
+		dev_err(&sbdev->dev, "%s(): slim_define_ch() failed: %d\n",
+			__func__, ret);
 		goto slim_define_ch_error;
 	}
 	for (i = 0; i < ch_cnt; i++) {
-		rc = slim_connect_src(sbdev, sph[i], ch_h[i]);
-		if (rc < 0) {
-			dev_err(&sbdev->dev, "=[ES325]=%s(): slim_connect_src() failed: %d\n", __func__, rc);
-			dev_err(&sbdev->dev, "=[ES325]=%s(): ch_num[0] = %d\n", __func__, ch_num[0]);
+		ret = slim_connect_src(sbdev, sph[i], ch_h[i]);
+		if (ret < 0) {
+			dev_err(&sbdev->dev,
+				"%s(): slim_connect_src() failed: %d\n",
+				__func__, ret);
+			dev_err(&sbdev->dev,
+				"%s(): ch_num[0] = %d\n",
+				__func__, ch_num[0]);
 			goto slim_connect_src_error;
 		}
 	}
-
-	rc = slim_control_ch(sbdev, grph, SLIM_CH_ACTIVATE, true /*commit*/);
-	if (rc < 0) {
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_control_ch() failed: %d\n", __func__, rc);
+	ret = slim_control_ch(sbdev, grph, SLIM_CH_ACTIVATE, commit);
+	if (ret < 0) {
+		dev_err(&sbdev->dev,
+			"%s(): slim_control_ch() failed: %d\n",
+			__func__, ret);
 		goto slim_control_ch_error;
 	}
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_tx_ch_num_to_idx(ch_num[i]);
-		dev_dbg(&sbdev->dev, "=[ES325]=%s(): idx = %d\n", __func__, idx);
+		dev_dbg(&sbdev->dev, "%s(): idx = %d\n", __func__, idx);
 		tx[idx].grph = grph;
 	}
-	dev_dbg(&sbdev->dev, "-[ES325]=%s()\n", __func__);
-	return rc;
+	dev_dbg(&sbdev->dev, "-%s()==\n", __func__);
+	return 0;
 slim_control_ch_error:
 slim_connect_src_error:
 	es325_close_slim_tx(sbdev, ch_num, ch_cnt);
 slim_define_ch_error:
-	dev_dbg(&sbdev->dev, "-[ES325]=%s() rc = %d\n", __func__, rc);
-	return rc;
+	return ret;
 }
 
-static int es325_close_slim_rx(struct slim_device *sbdev, unsigned int *ch_num, unsigned int ch_cnt)
+static int es325_close_slim_rx(struct slim_device *sbdev, unsigned int *ch_num,
+			       unsigned int ch_cnt)
 {
 	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_slim_ch *rx = es325_priv->slim_rx;
 	u16 grph = 0;
 	u32 sph[ES325_SLIM_RX_PORTS] = {0};
 	int i;
-	int idx;
-	int rc;
+	int idx = 0;
+	int ret = 0;
 
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
+	dev_dbg(&sbdev->dev, "+%s()\n", __func__);
 
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_rx_ch_num_to_idx(ch_num[i]);
 		sph[i] = rx[idx].sph;
 		grph = rx[idx].grph;
-		dev_dbg(&sbdev->dev, "=[ES325]=%s() : sph[%d] = 0x%08x, grph[%d] = 0x%08x\n", __func__, i, sph[i], i, grph);
 	}
 
-	rc = slim_control_ch(sbdev, grph, SLIM_CH_REMOVE, true);
-	if (rc < 0) {
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_control_ch() failed: %d\n", __func__, rc);
+	ret = slim_control_ch(sbdev, grph, SLIM_CH_REMOVE, true);
+	if (ret < 0) {
+		dev_err(&sbdev->dev,
+			"%s(): slim_control_ch() failed: %d\n",
+			__func__, ret);
 		goto slim_control_ch_error;
 	}
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_rx_ch_num_to_idx(ch_num[i]);
-		dev_dbg(&sbdev->dev,"=[ES325]=%s(): idx = %d\n", __func__, idx);
+		dev_dbg(&sbdev->dev,"%s(): idx = %d\n", __func__, idx);
 		rx[idx].grph = 0;
 	}
-	rc = slim_disconnect_ports(sbdev, sph, ch_cnt);
-	if (rc < 0)
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_disconnect_ports() failed: %d\n", __func__, rc);
-
-	dev_dbg(&sbdev->dev, "=[ES325]=%s=close RX channel",__func__);
-	for (i = 0; i < ch_cnt; i++)
-		dev_dbg(&sbdev->dev, "[%d]",ch_num[i]);
+	ret = slim_disconnect_ports(sbdev, sph, ch_cnt);
+	if (ret < 0) {
+		dev_err(&sbdev->dev,
+			"%s(): slim_disconnect_ports() failed: %d\n",
+			__func__, ret);
+	}
 
 slim_control_ch_error:
-	dev_dbg(&sbdev->dev, "-[ES325]=%s()\n", __func__);
-	return rc;
+	printk("=[ES325]=%s=close RX channel",__func__);
+	for (i = 0; i < ch_cnt; i++)
+		printk("[%d]",ch_num[i]);
+	printk(" \n");
+
+	dev_dbg(&sbdev->dev, "-%s()\n", __func__);
+	return ret;
 }
 
-static int es325_close_slim_tx(struct slim_device *sbdev, unsigned int *ch_num, unsigned int ch_cnt)
+static int es325_close_slim_tx(struct slim_device *sbdev, unsigned int *ch_num,
+			       unsigned int ch_cnt)
 {
 	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_slim_ch *tx = es325_priv->slim_tx;
 	u16 grph = 0;
 	u32 sph[ES325_SLIM_TX_PORTS] = {0};
 	int i;
-	int idx;
-	int rc;
+	int idx = 0;
+	int ret = 0;
 
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
+	dev_dbg(&sbdev->dev, "+%s()\n", __func__);
 
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_tx_ch_num_to_idx(ch_num[i]);
 		sph[i] = tx[idx].sph;
-		grph = tx[idx].grph;
-		dev_dbg(&sbdev->dev, "=[ES325]=%s() : idx %d ch_num[%d] %d sph[%d] = 0x%08x, grph[%d] = 0x%08x\n",
-			__func__, idx, i, ch_num[i], i, sph[i], i, grph);
+		if(i == 0)
+			grph = tx[idx].grph;
 	}
 
-	rc = slim_control_ch(sbdev, grph, SLIM_CH_REMOVE, true);
-	if (rc < 0) {
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_connect_sink() failed: %d\n", __func__, rc);
+	ret = slim_control_ch(sbdev, grph, SLIM_CH_REMOVE, true);
+	if (ret < 0) {
+		dev_err(&sbdev->dev,
+			"%s(): slim_control_ch() failed: %d\n",
+			__func__, ret);
 		goto slim_control_ch_error;
 	}
 	for (i = 0; i < ch_cnt; i++) {
 		idx = es325_tx_ch_num_to_idx(ch_num[i]);
-		dev_dbg(&sbdev->dev, "=[ES325]=%s(): ch_num[%d] %d idx = %d\n", __func__, i, ch_num[i], idx);
+		dev_dbg(&sbdev->dev, "%s(): idx = %d\n", __func__, idx);
 		tx[idx].grph = 0;
 	}
-	rc = slim_disconnect_ports(sbdev, sph, ch_cnt);
-	if (rc < 0)
-		dev_err(&sbdev->dev, "=[ES325]=%s(): slim_disconnect_ports() failed: %d\n", __func__, rc);
-
-	dev_dbg(&sbdev->dev, "=[ES325]=%s() close TX channel",__func__);
-	for (i = 0; i < ch_cnt; i++)
-		dev_dbg(&sbdev->dev, "[%d]",ch_num[i]);
+	ret = slim_disconnect_ports(sbdev, sph, ch_cnt);
+	if (ret < 0) {
+		dev_err(&sbdev->dev,
+			"%s(): slim_disconnect_ports() failed: %d\n",
+			__func__, ret);
+	}
 
 slim_control_ch_error:
-	dev_dbg(&sbdev->dev, "-[ES325]=%s()\n", __func__);
-	return rc;
+	printk("=[ES325]=%s=close TX channel",__func__);
+	for (i = 0; i < ch_cnt; i++)
+		printk("[%d]",ch_num[i]);
+	printk(" \n");
+
+	dev_dbg(&sbdev->dev, "-%s()\n", __func__);
+	return ret;
 }
 
 int es325_remote_cfg_slim_rx(int dai_id)
 {
 	struct es325_priv *es325 = &es325_priv;
-	struct slim_device *sbdev = es325->gen0_client;
 	int be_id;
 	int rc = 0;
-
-	dev_dbg(&sbdev->dev, "+[ES325]=%s()\n", __func__);
-
-	if(FW_not_ready) {
-		dev_info(&sbdev->dev, "-[ES325]=%s() eS325 FW not ready, cfg_slim_rx rejected\n", __func__);
+	if(es325_fw_downloaded == 0) {
+		pr_err("%s():eS325 FW not ready, cfg_slim_rx rejected\n", __func__);
 		return rc;
 	}
 
-	if (dai_id != ES325_SLIM_1_PB && dai_id != ES325_SLIM_2_PB) {
-		dev_dbg(&sbdev->dev, "-[ES325]=%s() rc = %d\n", __func__, rc);
-		return rc;
-	}
+	if (dai_id != ES325_SLIM_1_PB
+	    && dai_id != ES325_SLIM_2_PB)
+		return 0;
 
 	/* This is for defending ch_tot is not reset */
 	if ((es325_rx1_route_enable == 0) && (es325_rx2_route_enable == 0)) {
-		dev_dbg(&sbdev->dev, "-[ES325]=%s() rc = %d\n", __func__, rc);
-		return rc;
+		return 0;
 	}
 
 	if (es325->dai[dai_id - 1].ch_tot != 0) {
