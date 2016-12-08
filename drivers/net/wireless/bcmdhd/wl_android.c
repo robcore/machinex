@@ -1031,12 +1031,6 @@ int wl_android_send_action_frame(struct net_device *dev, char *command, int tota
 		goto send_action_frame_out;
 	}
 
-	if (params->len > ANDROID_WIFI_ACTION_FRAME_SIZE) {
-		DHD_ERROR(("%s: Requested action frame len was out of range(%d)\n",
-			__FUNCTION__, params->len));
-		goto send_action_frame_out;
-	}
-
 	smbuf = kmalloc(WLC_IOCTL_MAXLEN, GFP_KERNEL);
 	if (smbuf == NULL) {
 		DHD_ERROR(("%s: failed to allocated memory %d bytes\n",
@@ -2751,7 +2745,8 @@ wl_android_set_miracast(struct net_device *dev, char *command, int total_len)
 			DHD_ERROR(("%s: Connected station's beacon interval: "
 				"%d and set mchan_algo to %d \n",
 				__FUNCTION__, val, config.param));
-		} else {
+		}
+		else {
 			config.param = MIRACAST_MCHAN_ALGO;
 		}
 		ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
@@ -2786,22 +2781,20 @@ wl_android_set_miracast(struct net_device *dev, char *command, int total_len)
 		if (ret) {
 			goto resume;
 		}
-
-		/* tunr off pm */
+		/* turn off pm */
 		ret = wldev_ioctl(dev, WLC_GET_PM, &val, sizeof(val), false);
-		if (ret) {
+		if(ret) {
 			goto resume;
 		}
-
 		if (val != PM_OFF) {
 			val = PM_OFF;
-			config.iovar = NULL;
-			config.ioctl = WLC_GET_PM;
-			config.arg = &val;
-			config.len = sizeof(int);
-			ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
+		config.iovar = NULL;
+		config.ioctl = WLC_GET_PM;
+		config.arg = &val;
+		config.len = sizeof(int);
+		ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
 			if (ret) {
-				goto resume;
+			goto resume;
 			}
 		}
 
@@ -3082,13 +3075,7 @@ int wl_android_set_ibss_routetable(struct net_device *dev, char *command, int to
 		err = -EINVAL;
 		goto exit;
 	}
-        if (entries > MAX_IBSS_ROUTE_TBL_ENTRY) {
-                WL_ERR(("Invalid entries number %u\n", entries));
-                err = -EINVAL;
-                goto exit;
-        }
-
-        WL_INFO(("Routing table count:%u\n", entries));
+	WL_INFO(("Routing table count:%d\n", entries));
 	route_tbl->num_entry = entries;
 
 	for (i = 0; i < entries; i++) {
@@ -3271,11 +3258,6 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	android_wifi_priv_cmd priv_cmd;
 
 	net_os_wake_lock(net);
-
-	if (!capable(CAP_NET_ADMIN)) {
-		ret = -EPERM;
-		goto exit;
-	}
 
 	if (!ifr->ifr_data) {
 		ret = -EINVAL;
