@@ -150,7 +150,7 @@ struct es325_slim_ch {
 #endif
 
 #if 1
-#define FIRMWARE_NAME "audience-es325-fw.bin"
+//#define FIRMWARE_NAME "audience-es325-fw.bin"
 //#define FIRMWARE_NAME "audience-es325-fw-eur.bin"
 #define FIRMWARE_NAME "audience-es325-fw-tmo.bin"
 #endif
