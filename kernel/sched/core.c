@@ -1177,7 +1177,7 @@ unsigned long wait_task_inactive(struct task_struct *p, long match_state)
 		 * is actually now running somewhere else!
 		 */
 		while (task_running(rq, p)) {
--			if (match_state && unlikely(p->state != match_state))
+			if (match_state && unlikely(p->state != match_state))
 				return 0;
 			cpu_relax();
 		}
