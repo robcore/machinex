@@ -28,19 +28,17 @@ KERNEL_VERSION=Mark$MAJOR
 
 read -n 1 -p "Is this a BETA?  y/n  " rep
 if [[ $rep = "y" ]]; then
-
 	read -n 1 -p "Is this a Next Version?  y/n  " reply
 	if [[ $reply = "y" ]]; then
 		echo -n "Enter Next Version and press [ENTER]: "
 		read NEXT
 		SUBVERSION=Next$NEXT
-		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 	else
 		echo -n "Enter Proto Version and press [ENTER]: "
 		read PROTO
 		SUBVERSION=P$PROTO
-		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 	fi
+OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 else
 OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 fi
