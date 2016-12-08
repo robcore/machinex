@@ -808,7 +808,7 @@ void msm_snddev_tx_route_deconfig(void);
 extern void msm8930_enable_ear_micbias(bool state);
 #endif
 
-extern phys_addr_t msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
+extern unsigned int msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
 
 
 #endif
