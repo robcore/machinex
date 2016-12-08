@@ -27,17 +27,15 @@ KERNEL_NAME=machinex
 KERNEL_VERSION=Mark$MAJOR
 
 read -s -n 1 -p "Enter 1 for Next, 2 for Proto, or 3 for Release  " rep
-if [[ $rep = "1" ]]; then
-	echo -n "Enter Next Version and press [ENTER]: "
-	read NEXT
+if [ $rep == 1 ]; then
+	read -s -n 1 -p "Enter Next Version  " NEXT
 	SUBVERSION=Next$NEXT
 	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
-else if [[ $rep = "2" ]]; then
-	echo -n "Enter Proto Version and press [ENTER]: "
-	read PROTO
+else if [ $rep == 2 ]; then
+	read -s -n 1 -p "Enter Proto Version  " PROTO
 	SUBVERSION=P$PROTO
 	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
-else if [[ $rep = "3" ]]; then
+else if [ $rep == 3 ]; then
 	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 fi
 
