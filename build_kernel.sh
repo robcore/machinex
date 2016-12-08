@@ -72,6 +72,15 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	mv $(pwd)/machinex-new $(pwd)/$OUTFOLDER
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
+	read -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
+	if [[ $repadb = "y" ]]; then
+		adb connect 192.168.1.103
+		sleep 5
+		adb push $OUTFOLDER.zip /storage/extSdCard
+		echo "Your kernel is ready to flash"
+	else
+		echo "Your Kernel can be found in AIK"
+	fi;
 else
 	echo "Build failed, Skipped Ramdisk Creation"
 fi;
