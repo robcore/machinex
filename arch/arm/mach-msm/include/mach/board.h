@@ -694,6 +694,7 @@ struct msm_mhl_platform_data {
 
 struct msm_i2c_platform_data {
 	int clk_freq;
+	bool clk_ctl_xfer;
 	uint32_t rmutex;
 	const char *rsl_id;
 	uint32_t pm_lat;
@@ -807,7 +808,7 @@ void msm_snddev_tx_route_deconfig(void);
 extern void msm8930_enable_ear_micbias(bool state);
 #endif
 
-extern unsigned int msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
+extern phys_addr_t msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
 
 
 #endif
