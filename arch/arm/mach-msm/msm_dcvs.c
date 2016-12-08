@@ -556,7 +556,6 @@ static enum hrtimer_restart msm_dcvs_core_slack_timer(struct hrtimer *timer)
 					struct dcvs_core, slack_timer);
 	uint32_t ret1;
 
-	trace_printk("dcvs: Slack timer fired for core=%s\n", core->core_name);
 	/**
 	 * Timer expired, notify TZ
 	 * Dont care about the third arg.
@@ -1265,9 +1264,6 @@ int msm_dcvs_idle(int dcvs_core_id, enum msm_core_idle_state state,
 		if (ret < 0 && ret != -13)
 			__err("Error (%d) sending idle enter for %s\n",
 					ret, core->core_name);
-#if 0
-		trace_msm_dcvs_idle("idle_enter_exit", core->core_name, 1);
-#endif
 		break;
 
 	case MSM_DCVS_IDLE_EXIT:
@@ -1277,12 +1273,6 @@ int msm_dcvs_idle(int dcvs_core_id, enum msm_core_idle_state state,
 			__err("Error (%d) sending idle exit for %s\n",
 					ret, core->core_name);
 		start_slack_timer(core, timer_interval_us);
-#if 0
-		trace_msm_dcvs_idle("idle_enter_exit", core->core_name, 0);
-		trace_msm_dcvs_iowait("iowait", core->core_name, iowaited);
-		trace_msm_dcvs_slack_time("slack_timer_dcvs", core->core_name,
-							timer_interval_us);
-#endif
 		break;
 	}
 
