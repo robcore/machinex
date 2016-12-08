@@ -812,6 +812,10 @@ static void adreno_iommu_setstate(struct kgsl_device *device,
 				KGSL_IOMMU_CONTEXT_USER))
 		goto done;
 
+	cmds += __adreno_add_idle_indirect_cmds(cmds,
+		device->mmu.setstate_memory.gpuaddr +
+		KGSL_IOMMU_SETSTATE_NOP_OFFSET);
+
 	if (cpu_is_msm8960())
 		cmds += adreno_add_change_mh_phys_limit_cmds(cmds, 0xFFFFF000,
 					device->mmu.setstate_memory.gpuaddr +
@@ -822,10 +826,7 @@ static void adreno_iommu_setstate(struct kgsl_device *device,
 					device->mmu.setstate_memory.gpuaddr +
 					KGSL_IOMMU_SETSTATE_NOP_OFFSET);
 
-		if (flags & KGSL_MMUFLAGS_TLBFLUSH)
-			cmds += __adreno_add_idle_indirect_cmds(cmds,
-				device->mmu.setstate_memory.gpuaddr +
-				KGSL_IOMMU_SETSTATE_NOP_OFFSET);
+	cmds += adreno_add_idle_cmds(adreno_dev, cmds);
 
 	/* Acquire GPU-CPU sync Lock here */
 	cmds += kgsl_mmu_sync_lock(&device->mmu, cmds);
