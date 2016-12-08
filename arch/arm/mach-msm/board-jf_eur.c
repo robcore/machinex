@@ -2707,8 +2707,7 @@ static int enable_100KHz_ls(int enable)
 static struct cs8427_platform_data cs8427_i2c_platform_data = {
 	.irq = SX150X_GPIO(1, 4),
 	.reset_gpio = SX150X_GPIO(1, 6),
-	.enable = SX150X_GPIO(1, 10),
-	.ls_gpio = SX150X_GPIO(1, 10),
+	.enable = enable_100KHz_ls,
 };
 
 static struct i2c_board_info cs8427_device_info[] __initdata = {

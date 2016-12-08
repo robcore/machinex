@@ -209,8 +209,7 @@ struct cs8427_platform_data {
 	int irq_base;
 	int num_irqs;
 	int reset_gpio;
-	int (*enable) (int enable, int gpio);
-	int ls_gpio;
+	int (*enable) (int enable);
 };
 
 struct snd_pcm_substream;
