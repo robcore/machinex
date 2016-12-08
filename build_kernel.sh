@@ -26,16 +26,16 @@ read MAJOR
 KERNEL_NAME=machinex
 KERNEL_VERSION=Mark$MAJOR
 
-read -n 1 -p "Is this a BETA?  y/n  " rep
+read -s -n 1 -p "Is this a BETA?  y/n  " rep
 if [[ $rep = "y" ]]; then
-	read -n 1 -p "Is this a Next Version?  y/n  " reply
+	read -s -n 1 -p "Is this a Next Version?  y/n  " reply
 	if [[ $reply = "y" ]]; then
 		echo -n "Enter Next Version and press [ENTER]: "
-		read NEXT
+		read -s NEXT
 		SUBVERSION=Next$NEXT
 	else
 		echo -n "Enter Proto Version and press [ENTER]: "
-		read PROTO
+		read -s PROTO
 		SUBVERSION=P$PROTO
 	fi
 OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
@@ -72,7 +72,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	mv $(pwd)/machinex-new $(pwd)/$OUTFOLDER
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
-	read -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
+	read -s -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
 	if [[ $repadb = "y" ]]; then
 		adb connect 192.168.1.103
 		sleep 5
