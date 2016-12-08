@@ -26,21 +26,19 @@ read MAJOR
 KERNEL_NAME=machinex
 KERNEL_VERSION=Mark$MAJOR
 
-read -s -n 1 -p "Is this a BETA?  y/n  " rep
-if [[ $rep = "y" ]]; then
-	read -s -n 1 -p "Is this a Next Version?  y/n  " reply
-	if [[ $reply = "y" ]]; then
-		echo -n "Enter Next Version and press [ENTER]: "
-		read NEXT
-		SUBVERSION=Next$NEXT
-	else
-		echo -n "Enter Proto Version and press [ENTER]: "
-		read PROTO
-		SUBVERSION=P$PROTO
-	fi
-OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
-else
-OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
+read -s -n 1 -p "Enter 1 for Next, 2 for Proto, or 3 for Release  " rep
+if [[ $rep = "1" ]]; then
+	echo -n "Enter Next Version and press [ENTER]: "
+	read NEXT
+	SUBVERSION=Next$NEXT
+	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+else if [[ $rep = "2" ]]; then
+	echo -n "Enter Proto Version and press [ENTER]: "
+	read PROTO
+	SUBVERSION=P$PROTO
+	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+else if [[ $rep = "3" ]]; then
+	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 fi
 
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -80,7 +78,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		echo "Your kernel is ready to flash"
 	else
-		echo "Your Kernel can be found in AIK"
+		echo "Fin"
 	fi;
 else
 	echo "Build failed, Skipped Ramdisk Creation"
