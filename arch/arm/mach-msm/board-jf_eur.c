@@ -582,7 +582,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int apq8064_paddr_to_memtype(unsigned int paddr)
+static int apq8064_paddr_to_memtype(phys_addr_t paddr)
 {
 	return MEMTYPE_EBI1;
 }
@@ -1043,6 +1043,7 @@ static void __init apq8064_calculate_reserve_sizes(void)
 	reserve_rtb_memory();
 	reserve_cache_dump_memory();
 	reserve_mpdcvs_memory();
+	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
 }
 
 static struct reserve_info apq8064_reserve_info __initdata = {
@@ -2707,6 +2708,7 @@ static struct cs8427_platform_data cs8427_i2c_platform_data = {
 	.irq = SX150X_GPIO(1, 4),
 	.reset_gpio = SX150X_GPIO(1, 6),
 	.enable = enable_100KHz_ls,
+	.ls_gpio = SX150X_GPIO(1, 10),
 };
 
 static struct i2c_board_info cs8427_device_info[] __initdata = {
