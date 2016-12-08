@@ -72,6 +72,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	mv $(pwd)/machinex-new $(pwd)/$OUTFOLDER
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	read -s -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
 	if [[ $repadb = "y" ]]; then
 		adb connect 192.168.1.103
