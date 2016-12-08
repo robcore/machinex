@@ -1013,10 +1013,10 @@ void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 		     irq_start);
 		irq_base = irq_start;
 	}
-	domain->priv = gic;
-	domain->ops = &gic_irq_domain_ops;
-	irq_domain_add(domain);
-	irq_domain_register(domain);
+	gic->domain = irq_domain_add_legacy(node, gic_irqs, irq_base,
+				    hwirq_base, &gic_irq_domain_ops, gic);
+	if (WARN_ON(!gic->domain))
+		return;
 
 #ifdef CONFIG_SMP
 	register_cpu_notifier(&gic_cpu_notifier);
