@@ -31,11 +31,11 @@ if [[ $rep = "y" ]]; then
 	read -s -n 1 -p "Is this a Next Version?  y/n  " reply
 	if [[ $reply = "y" ]]; then
 		echo -n "Enter Next Version and press [ENTER]: "
-		read -s NEXT
+		read NEXT
 		SUBVERSION=Next$NEXT
 	else
 		echo -n "Enter Proto Version and press [ENTER]: "
-		read -s PROTO
+		read PROTO
 		SUBVERSION=P$PROTO
 	fi
 OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
