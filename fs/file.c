@@ -476,6 +476,7 @@ void reset_files_struct(struct files_struct *files)
 	task_unlock(tsk);
 	put_files_struct(old);
 }
+EXPORT_SYMBOL(alloc_fd);
 
 void exit_files(struct task_struct *tsk)
 {
