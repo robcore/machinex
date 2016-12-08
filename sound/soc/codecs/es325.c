@@ -124,7 +124,7 @@ struct es325_slim_ch {
 	u16	ch_h;
 	u16	grph;
 };
-
+#if 0
 // add canada feature for adding WB firmware in ATT based kernel
 #if defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_CAN)
 #define FIRMWARE_NAME "audience-es325-fw-tmo.bin"
@@ -146,6 +146,13 @@ struct es325_slim_ch {
 #define FIRMWARE_NAME "audience-es325-fw-kor.bin"
 #else
 #define FIRMWARE_NAME "audience-es325-fw.bin"
+#endif
+#endif
+
+#if 1
+#define FIRMWARE_NAME "audience-es325-fw.bin"
+//#define FIRMWARE_NAME "audience-es325-fw-eur.bin"
+//#define FIRMWARE_NAME "audience-es325-fw-tmo.bin"
 #endif
 
 extern unsigned int system_rev;
@@ -1950,7 +1957,7 @@ static ssize_t es325_slim_ch_show(struct device *dev,
 	struct es325_slim_dai_data* dai = priv->dai;
 	int length = 0;
 	int i, j;
-         
+
 	for(i = 0; i < ES325_NUM_CODEC_SLIM_DAIS; i++) {
 		length += sprintf(buf+length,"=dai[%d]=rate[%d]=ch_num=",i, dai[i].rate);
 		for(j = 0; j < dai[i].ch_tot; j++)
@@ -1971,7 +1978,7 @@ static ssize_t es325_reg_show(struct device *dev,
 	int i;
 	int size = 0;
 
-	length += sprintf(buf+length,"es325_reg : algo\n");  
+	length += sprintf(buf+length,"es325_reg : algo\n");
 	size = sizeof(es325_algo_paramid)/sizeof(unsigned short); /* 127 items */
 	for(i = ES325_MIC_CONFIG; i < size; i++)
 		length += sprintf(buf+length,"0x%04x : 0x%04x\n", i, es325_read(NULL, i));
@@ -2003,7 +2010,7 @@ static ssize_t es325_reg_write(struct device *dev,
 		return -EINVAL;
 
 	es325_write(NULL, reg, value);
-	
+
 	return size;
 }
 static DEVICE_ATTR(es325_reg, 0644, es325_reg_show, es325_reg_write);
@@ -2291,7 +2298,7 @@ es325_firmware_store(struct device *dev, struct device_attribute *attr,
 		es325_bootup(&es325_priv);
 		es325_fixed_config(&es325_priv);
 		msleep(100);
-		
+
 		es325_sleep(&es325_priv);
 		es325_priv.pdata->es325_clk_cb(0);
 		es325_priv.clock_on = 0;
@@ -2331,7 +2338,7 @@ static int es325_sleep(struct es325_priv *es325)
 		rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
 			     ES325_WRITE_VE_WIDTH, pwr_cmd, 4, 1);
 		if (rc == 0) {
-			/* wait 20 ms according to spec end return. 
+			/* wait 20 ms according to spec end return.
 			   eS325 is sleeping */
 			msleep(20);
 			break;
@@ -2590,7 +2597,7 @@ static void es325_update_VEQ_enable(void)
 		if (es325_VEQ_enable_new) {
 			cmd_str[7] = 0x01; /* VEQ Enable */
 		}
-		
+
 		memcpy(msg, cmd_str, 4);
 		pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 		ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -2635,7 +2642,7 @@ static void es325_update_BWE_enable(void)
 		if (es325_BWE_enable_new) {
 			cmd_str[7] = 0x01; /* BWE On */
 		}
-		
+
 		memcpy(msg, cmd_str, 4);
 		pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 		ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
@@ -2836,7 +2843,7 @@ static int es325_put_2mic_enable(struct snd_kcontrol *kcontrol,
 	pr_info("%s: wakeup_cnt=%d\n", __func__, es325_priv.wakeup_cnt);
 	mutex_lock(&es325_priv.pm_mutex);
 	if (es325_priv.wakeup_cnt) {
-		if ((es325_internal_route_num >= 1 && 
+		if ((es325_internal_route_num >= 1 &&
 			es325_internal_route_num < 3 + NS_OFFSET) ||
 			(es325_internal_route_num >= 1 + NETWORK_OFFSET &&
 			es325_internal_route_num < 3 + + NS_OFFSET + NETWORK_OFFSET)) {
@@ -3075,7 +3082,7 @@ static int es325_put_csout_gain_value(struct snd_kcontrol *kcontrol,
 	pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
 	ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
 			ES325_WRITE_VE_WIDTH, msg, 4, 1);
-	
+
 /*	usleep_range(100, 100);
 	memcpy(msg, cmd_str1, 4);
 	pr_debug("%s: write=0x%x, 0x%x, 0x%x, 0x%x\n", __func__, msg[0], msg[1], msg[2], msg[3]);
@@ -3088,7 +3095,7 @@ static int es325_put_csout_gain_value(struct snd_kcontrol *kcontrol,
 	ret = es325_slim_write(es325, ES325_WRITE_VE_OFFSET,
 			ES325_WRITE_VE_WIDTH, msg, 4, 1);*/
 	es325->rx_is_muted = true;
-	pr_info("=[ES325]=CS out gain set 0");		
+	pr_info("=[ES325]=CS out gain set 0");
 
 	return 0;
 }
@@ -4998,7 +5005,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);
 	rc = device_create_file(&sbdev->dev, &dev_attr_es325_cmd_reg);
 	if (rc)
-		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);			
+		dev_err(&sbdev->dev, "%s(): error file sysfs create\n",	__func__);
 	rc = device_create_file(&sbdev->dev, &dev_attr_firmware);
 	if (rc)
 		dev_err(&sbdev->dev, "%s(): error file firmware create\n",	__func__);
@@ -5262,7 +5269,7 @@ EXPORT_SYMBOL_GPL(es325_wrapper_wakeup);
 	es325_Tx_NS = ES325_MAX_INVALID_TX_NS;
 	es325_VEQ_enable_new = ES325_MAX_INVALID_VEQ;
 	es325_BWE_enable_new = ES325_MAX_INVALID_BWE;
-	es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;	
+	es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;
 	mutex_unlock(&es325->pm_mutex);
 }
 #endif
