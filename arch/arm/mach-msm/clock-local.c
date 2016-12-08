@@ -380,7 +380,7 @@ u32 __branch_disable_reg(const struct branch *b, const char *name)
 		for (count = HALT_CHECK_MAX_LOOPS; !branch_clk_is_halted(b)
 					&& count > 0; count--)
 			udelay(1);
-		WARN(count == 0, "%s status stuck at 'on'", name);
+		WARN_ONCE(count == 0, "%s status stuck at 'on'", name);
 	}
 
 	return reg_val;
@@ -579,7 +579,7 @@ static long rcg_clk_round_rate(struct clk *c, unsigned long rate)
 }
 
 /* Return the nth supported frequency for a given clock. */
-static long rcg_clk_list_rate(struct clk *c, unsigned n)
+static int rcg_clk_list_rate(struct clk *c, unsigned n)
 {
 	struct rcg_clk *rcg = to_rcg_clk(c);
 
@@ -944,7 +944,7 @@ static long cdiv_clk_round_rate(struct clk *c, unsigned long rate)
 	return rate > to_cdiv_clk(c)->max_div ? -EPERM : rate;
 }
 
-static long cdiv_clk_list_rate(struct clk *c, unsigned n)
+static int cdiv_clk_list_rate(struct clk *c, unsigned n)
 {
 	return n > to_cdiv_clk(c)->max_div ? -ENXIO : n;
 }
