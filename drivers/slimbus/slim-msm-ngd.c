@@ -647,16 +647,7 @@ static int __devinit ngd_slim_probe(struct platform_device *pdev)
 	struct resource		*bam_mem;
 	struct resource		*slim_mem;
 	struct resource		*irq, *bam_irq;
-	enum apr_subsys_state q6_state;
 	u32 ngd_int;
-
-	q6_state = apr_get_q6_state();
-	if (q6_state == APR_SUBSYS_DOWN) {
-		dev_dbg(&pdev->dev, "defering %s, adsp_state %d\n", __func__,
-			q6_state);
-		return -EPROBE_DEFER;
-	} else
-		dev_dbg(&pdev->dev, "adsp is ready\n");
 
 	slim_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"slimbus_physical");
