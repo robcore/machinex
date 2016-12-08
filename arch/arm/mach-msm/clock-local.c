@@ -380,7 +380,7 @@ u32 __branch_disable_reg(const struct branch *b, const char *name)
 		for (count = HALT_CHECK_MAX_LOOPS; !branch_clk_is_halted(b)
 					&& count > 0; count--)
 			udelay(1);
-		WARN_ONCE(count == 0, "%s status stuck at 'on'", name);
+		//pr_debug(count == 0, "%s status stuck at 'on'", name);
 	}
 
 	return reg_val;
