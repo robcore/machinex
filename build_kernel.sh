@@ -26,19 +26,21 @@ read MAJOR
 KERNEL_NAME=machinex
 KERNEL_VERSION=Mark$MAJOR
 
-read -n 1 -p "Is this a Next Version?  y/n  " reply
-if [[ $reply = "y" ]]; then
-	echo -n "Enter Next Version and press [ENTER]: "
-	read NEXT
-	SUBVERSION=Next$NEXT
-else
-	read -n 1 -p "Is this a Proto Version?  y/n  " reply2
-		if [[ $reply2 = "y" ]]; then
+read -n 1 -p "Is this a BETA?  y/n  " rep
+if [[ $rep = "y" ]]; then
+
+	read -n 1 -p "Is this a Next Version?  y/n  " reply
+	if [[ $reply = "y" ]]; then
+		echo -n "Enter Next Version and press [ENTER]: "
+		read NEXT
+		SUBVERSION=Next$NEXT
+		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+	else
 		echo -n "Enter Proto Version and press [ENTER]: "
 		read PROTO
 		SUBVERSION=P$PROTO
-		fi
-OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+	fi
 else
 OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 fi
