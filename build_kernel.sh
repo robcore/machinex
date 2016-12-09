@@ -85,6 +85,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	fi;
 	read -s -n 1 -p "Cleanup?  y/n  " repcln
 	if [[ $repcln = "y" ]]; then
+		cd ~/machinex
 		sh $(pwd)/cleanup.sh
 	fi;
 else
