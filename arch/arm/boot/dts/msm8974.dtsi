@@ -25,11 +25,6 @@
 	compatible = "qcom,msm8974";
 	interrupt-parent = <&intc>;
 
-	aliases {
-		spi0 = &spi_0;
-		spi7 = &spi_7;
-	};
-
 	intc: interrupt-controller@F9000000 {
 		compatible = "qcom,msm-qgic2";
 		interrupt-controller;
