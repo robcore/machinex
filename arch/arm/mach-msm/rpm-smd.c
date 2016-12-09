@@ -154,6 +154,8 @@ static int irq_process;
 
 LIST_HEAD(msm_rpm_ack_list);
 
+static DECLARE_COMPLETION(data_ready);
+
 static void msm_rpm_notify_sleep_chain(struct rpm_message_header *hdr,
 		struct msm_rpm_kvp_data *kvp)
 {
@@ -348,7 +350,7 @@ static void msm_rpm_notify(void *data, unsigned event)
 
 	switch (event) {
 	case SMD_EVENT_DATA:
-		queue_work(msm_rpm_smd_wq, &pdata->work);
+		complete(&data_ready);
 		break;
 	case SMD_EVENT_OPEN:
 		complete(&pdata->smd_open);
@@ -537,16 +539,17 @@ static void msm_rpm_smd_work(struct work_struct *work)
 	char buf[MAX_ERR_BUFFER_SIZE] = {0};
 	unsigned long flags;
 
-	while (smd_is_pkt_avail(msm_rpm_data.ch_info) && !irq_process) {
+	while (1) {
+		wait_for_completion(&data_ready);
+
 		spin_lock_irqsave(&msm_rpm_data.smd_lock_read, flags);
-		if (msm_rpm_read_smd_data(buf)) {
-			spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read,
-					flags);
-			break;
+		while (smd_is_pkt_avail(msm_rpm_data.ch_info)) {
+			if (msm_rpm_read_smd_data(buf))
+				break;
+			msg_id = msm_rpm_get_msg_id_from_ack(buf);
+			errno = msm_rpm_get_error_from_ack(buf);
+			msm_rpm_process_ack(msg_id, errno);
 		}
-		msg_id = msm_rpm_get_msg_id_from_ack(buf);
-		errno = msm_rpm_get_error_from_ack(buf);
-		msm_rpm_process_ack(msg_id, errno);
 		spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read, flags);
 	}
 }
@@ -893,6 +896,9 @@ int msm_rpm_wait_for_ack_noirq(uint32_t msg_id)
 wait_ack_cleanup:
 	irq_process = false;
 	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read, flags);
+
+	if (smd_is_pkt_avail(msm_rpm_data.ch_info))
+		complete(&data_ready);
 	return rc;
 }
 EXPORT_SYMBOL(msm_rpm_wait_for_ack_noirq);
@@ -1024,6 +1030,7 @@ static int __devinit msm_rpm_dev_probe(struct platform_device *pdev)
 		msm_rpm_smd_wq = create_singlethread_workqueue("rpm-smd");
 		if (!msm_rpm_smd_wq)
 			return -EINVAL;
+		queue_work(msm_rpm_smd_wq, &msm_rpm_data.work);
 	}
 
 	of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
