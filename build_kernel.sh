@@ -79,8 +79,13 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 		sleep 5
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		echo "Your kernel is ready to flash"
+		adb kill-server
 	else
 		echo "Your Kernel can be found in AIK"
+	fi;
+	read -s -n 1 -p "Cleanup?  y/n  " repcln
+	if [[ $repcln = "y" ]]; then
+		sh $(pwd)/cleanup.sh
 	fi;
 else
 	echo "Build failed, Skipped Ramdisk Creation"
