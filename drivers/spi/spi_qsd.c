@@ -30,18 +30,19 @@
 #include <linux/workqueue.h>
 #include <linux/io.h>
 #include <linux/debugfs.h>
-#include <mach/msm_spi.h>
-#include <linux/dma-mapping.h>
-#include <linux/sched.h>
-#include <mach/dma.h>
-#include <asm/atomic.h>
-#include <linux/mutex.h>
 #include <linux/gpio.h>
 #include <linux/remote_spinlock.h>
 #include <linux/pm_qos.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
+#include <linux/dma-mapping.h>
+#include <linux/sched.h>
+#include <linux/mutex.h>
+#include <linux/atomic.h>
+#include <mach/msm_spi.h>
+#include <mach/sps.h>
+#include <mach/dma.h>
 #include "spi_qsd.h"
 
 static int msm_spi_pm_resume_runtime(struct device *device);
@@ -275,14 +276,18 @@ static void __init msm_spi_calculate_fifo_size(struct msm_spi *dd)
 		goto fifo_size_err;
 	}
 	/* DM mode is not available for this block size */
-	if (dd->input_block_size == 4 || dd->output_block_size == 4)
-		dd->use_dma = 0;
+	if (dd->qup_ver == SPI_QUP_VERSION_NONE) {
+		/* DM mode is not available for this block size */
+		if (dd->input_block_size == 4 || dd->output_block_size == 4)
+			dd->use_dma = 0;
 
-	if (dd->use_dma) {
-		dd->input_burst_size = max(dd->input_block_size,
-					DM_BURST_SIZE);
-		dd->output_burst_size = max(dd->output_block_size,
-					DM_BURST_SIZE);
+		/* DM mode is currently unsupported for different block sizes */
+		if (dd->input_block_size != dd->output_block_size)
+			dd->use_dma = 0;
+
+		if (dd->use_dma)
+			dd->burst_size = max(dd->input_block_size,
+							DM_BURST_SIZE);
 	}
 	return;
 
@@ -1002,56 +1007,190 @@ unmap_end:
 	}
 }
 
+static void msm_spi_bam_unmap_buffers(struct msm_spi *dd)
+{
+	struct device *dev;
+
+	 /* mapped by client */
+	if (dd->cur_msg->is_dma_mapped)
+		return;
+
+	dev = &dd->cur_msg->spi->dev;
+	if (dd->cur_transfer->rx_buf)
+		dma_unmap_single(dev, dd->cur_transfer->rx_dma,
+				dd->cur_transfer->len,
+				DMA_FROM_DEVICE);
+
+	if (dd->cur_transfer->tx_buf)
+		dma_unmap_single(dev, dd->cur_transfer->tx_dma,
+				dd->cur_transfer->len,
+				DMA_TO_DEVICE);
+}
+
+static inline void msm_spi_dma_unmap_buffers(struct msm_spi *dd)
+{
+	if (dd->mode == SPI_DMOV_MODE)
+		msm_spi_dmov_unmap_buffers(dd);
+	else if (dd->mode == SPI_BAM_MODE)
+		msm_spi_bam_unmap_buffers(dd);
+}
+
 /**
- * msm_use_dm - decides whether to use data mover for this
- * 		transfer
+ * msm_spi_use_dma - decides whether to use Data-Mover or BAM for
+ * the given transfer
  * @dd:       device
  * @tr:       transfer
  *
- * Start using DM if:
- * 1. Transfer is longer than 3*block size.
- * 2. Buffers should be aligned to cache line.
- * 3. For WR-RD or WR-WR transfers, if condition (1) and (2) above are met.
+ * Start using DMA if:
+ * 1. Is supported by HW
+ * 2. Is not diabled by platfrom data
+ * 3. Transfer size is greater than 3*block size.
+ * 4. Buffers are aligned to cache line.
+ * 5. Bytes-per-word is 8,16 or 32.
   */
-static inline int msm_use_dm(struct msm_spi *dd, struct spi_transfer *tr,
-			     u8 bpw)
+static inline bool
+msm_spi_use_dma(struct msm_spi *dd, struct spi_transfer *tr, u8 bpw)
 {
-	u32 cache_line = dma_get_cache_alignment();
-
 	if (!dd->use_dma)
-		return 0;
+		return false;
+
+	/* check constraints from platform data */
+	if ((dd->qup_ver == SPI_QUP_VERSION_BFAM) && !dd->pdata->use_bam)
+		return false;
 
 	if (dd->cur_msg_len < 3*dd->input_block_size)
-		return 0;
+		return false;
 
 	if (dd->multi_xfr && !dd->read_len && !dd->write_len)
-		return 0;
+		return false;
 
-	if (tr->tx_buf) {
-		if (!IS_ALIGNED((size_t)tr->tx_buf, cache_line))
-			return 0;
-	}
-	if (tr->rx_buf) {
-		if (!IS_ALIGNED((size_t)tr->rx_buf, cache_line))
-			return 0;
+	if (dd->qup_ver == SPI_QUP_VERSION_NONE) {
+		u32 cache_line = dma_get_cache_alignment();
+
+		if (tr->tx_buf) {
+			if (!IS_ALIGNED((size_t)tr->tx_buf, cache_line))
+				return 0;
+		}
+		if (tr->rx_buf) {
+			if (!IS_ALIGNED((size_t)tr->rx_buf, cache_line))
+				return false;
+		}
+
+		if (tr->cs_change &&
+		   ((bpw != 8) || (bpw != 16) || (bpw != 32)))
+			return false;
 	}
 
-	if (tr->cs_change &&
-	   ((bpw != 8) && (bpw != 16) && (bpw != 32)))
-		return 0;
-	return 1;
+	return true;
+}
+
+/**
+ * msm_spi_set_transfer_mode: Chooses optimal transfer mode. Sets dd->mode and
+ * prepares to process a transfer.
+ */
+static void
+msm_spi_set_transfer_mode(struct msm_spi *dd, u8 bpw, u32 read_count)
+{
+	if (msm_spi_use_dma(dd, dd->cur_transfer, bpw)) {
+		if (dd->qup_ver) {
+			dd->mode = SPI_BAM_MODE;
+		} else {
+			dd->mode = SPI_DMOV_MODE;
+			if (dd->write_len && dd->read_len) {
+				dd->tx_bytes_remaining = dd->write_len;
+				dd->rx_bytes_remaining = dd->read_len;
+			}
+		}
+	} else {
+		dd->mode = SPI_FIFO_MODE;
+		if (dd->multi_xfr) {
+			dd->read_len = dd->cur_transfer->len;
+			dd->write_len = dd->cur_transfer->len;
+		}
+	}
+}
+
+/**
+ * msm_spi_set_qup_io_modes: prepares register QUP_IO_MODES to process a
+ * transfer
+ */
+static void msm_spi_set_qup_io_modes(struct msm_spi *dd)
+{
+	u32 spi_iom;
+	spi_iom = readl_relaxed(dd->base + SPI_IO_MODES);
+	/* Set input and output transfer mode: FIFO, DMOV, or BAM */
+	spi_iom &= ~(SPI_IO_M_INPUT_MODE | SPI_IO_M_OUTPUT_MODE);
+	spi_iom = (spi_iom | (dd->mode << OUTPUT_MODE_SHIFT));
+	spi_iom = (spi_iom | (dd->mode << INPUT_MODE_SHIFT));
+	/* Turn on packing for data mover */
+	if ((dd->mode == SPI_DMOV_MODE) || (dd->mode == SPI_BAM_MODE))
+		spi_iom |= SPI_IO_M_PACK_EN | SPI_IO_M_UNPACK_EN;
+	else
+		spi_iom &= ~(SPI_IO_M_PACK_EN | SPI_IO_M_UNPACK_EN);
+
+	/*if (dd->mode == SPI_BAM_MODE) {
+		spi_iom |= SPI_IO_C_NO_TRI_STATE;
+		spi_iom &= ~(SPI_IO_C_CS_SELECT | SPI_IO_C_CS_N_POLARITY);
+	}*/
+	writel_relaxed(spi_iom, dd->base + SPI_IO_MODES);
+}
+
+static u32 msm_spi_calc_spi_ioc_clk_polarity(u32 spi_ioc, u8 mode)
+{
+	if (mode & SPI_CPOL)
+		spi_ioc |= SPI_IO_C_CLK_IDLE_HIGH;
+	else
+		spi_ioc &= ~SPI_IO_C_CLK_IDLE_HIGH;
+	return spi_ioc;
+}
+
+/**
+ * msm_spi_set_spi_io_control: prepares register SPI_IO_CONTROL to process the
+ * next transfer
+ * @return the new set value of SPI_IO_CONTROL
+ */
+static u32 msm_spi_set_spi_io_control(struct msm_spi *dd)
+{
+	u32 spi_ioc, spi_ioc_orig, chip_select;
+
+	spi_ioc = readl_relaxed(dd->base + SPI_IO_CONTROL);
+	spi_ioc_orig = spi_ioc;
+	spi_ioc = msm_spi_calc_spi_ioc_clk_polarity(spi_ioc
+						, dd->cur_msg->spi->mode);
+	/* Set chip-select */
+	chip_select = dd->cur_msg->spi->chip_select << 2;
+	if ((spi_ioc & SPI_IO_C_CS_SELECT) != chip_select)
+		spi_ioc = (spi_ioc & ~SPI_IO_C_CS_SELECT) | chip_select;
+	if (!dd->cur_transfer->cs_change)
+		spi_ioc |= SPI_IO_C_MX_CS_MODE;
+
+	if (spi_ioc != spi_ioc_orig)
+		writel_relaxed(spi_ioc, dd->base + SPI_IO_CONTROL);
+
+	return spi_ioc;
+}
+
+/**
+ * msm_spi_set_qup_op_mask: prepares register QUP_OPERATIONAL_MASK to process
+ * the next transfer
+ */
+static void msm_spi_set_qup_op_mask(struct msm_spi *dd)
+{
+	/* mask INPUT and OUTPUT service flags in to prevent IRQs on FIFO status
+	 * change in BAM mode */
+	u32 mask = (dd->mode == SPI_BAM_MODE) ?
+		QUP_OP_MASK_OUTPUT_SERVICE_FLAG | QUP_OP_MASK_INPUT_SERVICE_FLAG
+		: 0;
+	writel_relaxed(mask, dd->base + QUP_OPERATIONAL_MASK);
 }
 
 static void msm_spi_process_transfer(struct msm_spi *dd)
 {
 	u8  bpw;
-	u32 spi_ioc;
-	u32 spi_iom;
-	u32 spi_ioc_orig;
 	u32 max_speed;
-	u32 chip_select;
 	u32 read_count;
 	u32 timeout;
+	u32 spi_ioc;
 	u32 int_loopback = 0;
 
 	dd->tx_bytes_remaining = dd->cur_msg_len;
@@ -2364,8 +2503,7 @@ static int __devexit msm_spi_remove(struct platform_device *pdev)
 	spi_debugfs_exit(dd);
 	sysfs_remove_group(&pdev->dev.kobj, &dev_attr_grp);
 
-	msm_spi_teardown_dma(dd);
-
+	dd->dma_teardown(dd);
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_set_suspended(&pdev->dev);
 	clk_put(dd->clk);
