@@ -335,10 +335,14 @@ static void bluesleep_hostwake_task(unsigned long data)
  */
 static void bluesleep_outgoing_data(void)
 {
+	unsigned long irq_flags;
+
+	spin_lock_irqsave(&rw_lock, irq_flags);
+
 	/* log data passing by */
 	set_bit(BT_TXDATA, &flags);
 
-	BT_DBG("bluesleep_outgoing_data.");
+	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
 	/* if the tx side is sleeping... */
 	if (!test_bit(BT_EXT_WAKE, &flags)) {
@@ -484,6 +488,10 @@ static int bluesleep_hci_event(struct notifier_block *this,
  */
 static void bluesleep_tx_timer_expire(unsigned long data)
 {
+	unsigned long irq_flags;
+
+	spin_lock_irqsave(&rw_lock, irq_flags);
+
 	/* were we silent during the last timeout? */
 	if (!test_bit(BT_TXDATA, &flags)) {
 		BT_DBG("Tx has been idle");
@@ -500,6 +508,8 @@ static void bluesleep_tx_timer_expire(unsigned long data)
 
 	/* clear the incoming data flag */
 	clear_bit(BT_TXDATA, &flags);
+
+	spin_unlock_irqrestore(&rw_lock, irq_flags);
 }
 
 /**
@@ -522,10 +532,15 @@ static void bluesleep_start_wq(struct work_struct *work)
 {
 	int retval;
 	int ret;
+	unsigned long irq_flags;
+
+	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	if (test_bit(BT_PROTO, &flags)) {
 		return;
 	}
+
+	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
 	if (!atomic_dec_and_test(&open_count)) {
 		atomic_inc(&open_count);
@@ -534,7 +549,8 @@ static void bluesleep_start_wq(struct work_struct *work)
 	}
 
 	/* start the timer */
-	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
+
+	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
 
 	/* assert BT_WAKE */
 	if (bsi->has_ext_wake == 1) {
@@ -566,10 +582,14 @@ fail:
 static void bluesleep_stop_wq(struct work_struct *work)
 {
 	int ret;
+	unsigned long irq_flags;
+
+	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	if (!test_bit(BT_PROTO, &flags)) {
 		BT_ERR("(bluesleep_stop_wq) proto is not set. Failed to stop bluesleep");
 		bsi->uport = NULL;
+		spin_unlock_irqrestore(&rw_lock, irq_flags);
 		return;
 	}
 	/* assert BT_WAKE */
@@ -588,7 +608,7 @@ static void bluesleep_stop_wq(struct work_struct *work)
 	}
 
 	atomic_inc(&open_count);
-
+	spin_unlock_irqrestore(&rw_lock, irq_flags);
 #if BT_ENABLE_IRQ_WAKE
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
@@ -604,6 +624,9 @@ static void bluesleep_stop_wq(struct work_struct *work)
 static void bluesleep_abnormal_stop_wq(struct work_struct *work)
 {
 	int ret;
+	unsigned long irq_flags;
+
+	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	BT_ERR("bluesleep_abnormal_stop_wq");
 
@@ -623,6 +646,8 @@ static void bluesleep_abnormal_stop_wq(struct work_struct *work)
 	}
 
 	atomic_inc(&open_count);
+
+	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
 #if BT_ENABLE_IRQ_WAKE
 	if (disable_irq_wake(bsi->host_wake_irq))
@@ -999,7 +1024,8 @@ static int __init bluesleep_init(void)
 	}
 
 	/* Creating read/write "btwake" entry */
-	ent = create_proc_entry("btwake", 0, sleep_dir);
+	ent = create_proc_entry("btwake", S_IRUGO | S_IWUSR | S_IWGRP,
+			sleep_dir);
 	if (ent == NULL) {
 		BT_ERR("Unable to create /proc/%s/btwake entry", PROC_DIR);
 		retval = -ENOMEM;
@@ -1009,7 +1035,7 @@ static int __init bluesleep_init(void)
 	ent->write_proc = bluepower_write_proc_btwake;
 
 	/* read only proc entries */
-	if (create_proc_read_entry("hostwake", 0, sleep_dir,
+	if (create_proc_read_entry("hostwake", S_IRUGO, sleep_dir,
 				bluepower_read_proc_hostwake, NULL) == NULL) {
 		BT_ERR("Unable to create /proc/%s/hostwake entry", PROC_DIR);
 		retval = -ENOMEM;
@@ -1017,7 +1043,8 @@ static int __init bluesleep_init(void)
 	}
 
 	/* read/write proc entries */
-	ent = create_proc_entry("proto", 0, sleep_dir);
+	ent = create_proc_entry("proto", S_IRUGO | S_IWUSR | S_IWGRP,
+			sleep_dir);
 	if (ent == NULL) {
 		BT_ERR("Unable to create /proc/%s/proto entry", PROC_DIR);
 		retval = -ENOMEM;
@@ -1027,7 +1054,7 @@ static int __init bluesleep_init(void)
 	ent->write_proc = bluesleep_write_proc_proto;
 
 	/* read only proc entries */
-	if (create_proc_read_entry("asleep", 0,
+	if (create_proc_read_entry("asleep", S_IRUGO,
 			sleep_dir, bluesleep_read_proc_asleep, NULL) == NULL) {
 		BT_ERR("Unable to create /proc/%s/asleep entry", PROC_DIR);
 		retval = -ENOMEM;
@@ -1036,7 +1063,8 @@ static int __init bluesleep_init(void)
 
 #if BT_BLUEDROID_SUPPORT
 	/* read/write proc entries */
-	ent = create_proc_entry("lpm", 0, sleep_dir);
+	ent = create_proc_entry("lpm", S_IRUGO | S_IWUSR | S_IWGRP,
+			sleep_dir);
 	if (ent == NULL) {
 		BT_ERR("Unable to create /proc/%s/lpm entry", PROC_DIR);
 		retval = -ENOMEM;
@@ -1046,7 +1074,8 @@ static int __init bluesleep_init(void)
 	ent->write_proc = bluesleep_write_proc_lpm;
 
 	/* read/write proc entries */
-	ent = create_proc_entry("btwrite", 0, sleep_dir);
+	ent = create_proc_entry("btwrite", S_IRUGO | S_IWUSR | S_IWGRP,
+			sleep_dir);
 	if (ent == NULL) {
 		BT_ERR("Unable to create /proc/%s/btwrite entry", PROC_DIR);
 		retval = -ENOMEM;
