@@ -93,6 +93,20 @@ struct platform_device msm_device_uart2 = {
 	.resource	= resources_uart2,
 };
 
+struct platform_device msm_device_uart1 = {
+	.name	= "msm_serial",
+	.id	= 0,
+	.num_resources	= ARRAY_SIZE(resources_uart1),
+	.resource	= resources_uart1,
+};
+
+struct platform_device msm_device_uart2 = {
+	.name	= "msm_serial",
+	.id	= 1,
+	.num_resources	= ARRAY_SIZE(resources_uart2),
+	.resource	= resources_uart2,
+};
+
 struct platform_device msm_device_uart3 = {
 	.name	= "msm_serial",
 	.id	= 2,

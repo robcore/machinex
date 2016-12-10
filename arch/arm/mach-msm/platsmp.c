@@ -241,6 +241,8 @@ int boot_secondary(unsigned int cpu, struct task_struct *idle)
 		if (pen_release == -1)
 			break;
 
+		dmac_inv_range((void *)&pen_release,
+			       (void *)(&pen_release+sizeof(pen_release)));
 		udelay(10);
 	}
 

@@ -22,4 +22,8 @@
 #define ARCH_HAS_READ_CURRENT_TIMER
 #endif
 
+#ifdef CONFIG_HAVE_ARCH_HAS_CURRENT_TIMER
+#define ARCH_HAS_READ_CURRENT_TIMER
+#endif
+
 #endif
