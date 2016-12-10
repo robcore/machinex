@@ -1325,4 +1325,4 @@ __init static int init_events(void)
 
 	return 0;
 }
-early_initcall(init_events);
+device_initcall(init_events);
