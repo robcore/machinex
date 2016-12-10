@@ -803,7 +803,9 @@ static int mdm_subsys_shutdown(const struct subsys_desc *crashed_subsys)
 	struct mdm_modem_drv *mdm_drv = &mdev->mdm_data;
 	unsigned int mdm2ap_pblrdy_irq = gpio_to_irq(mdm_drv->mdm2ap_pblrdy);
 
-	mdm_drv->mdm_ready = 0;
+	pr_debug("%s: ssr on modem id %d\n", __func__,
+			 mdev->mdm_data.device_id);
+
 	mdm_ssr_started(mdev);
 	cancel_delayed_work(&mdev->mdm2ap_status_check_work);
 
