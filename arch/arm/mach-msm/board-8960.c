@@ -365,7 +365,7 @@ static struct ion_cp_heap_pdata cp_mm_msm8960_ion_pdata = {
 	.fixed_position = FIXED_MIDDLE,
 	.iommu_map_all = 1,
 	.iommu_2x_map_domain = VIDEO_DOMAIN,
-	.is_cma = 0,
+	.is_cma = 1,
 	.no_nonsecure_alloc = 1,
 };
 
@@ -1350,9 +1350,6 @@ static struct mdm_platform_data mdm_platform_data = {
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
 	//.no_a2m_errfatal_on_ssr = 1,
 	.subsys_name = "modem",
-#if 0
-	.subsys_device = "modem_8960_dev"
-#endif
 };
 
 static struct mdm_platform_data amdm_platform_data = {
@@ -1392,6 +1389,19 @@ static struct mdm_platform_data bmdm_platform_data = {
 	.no_a2m_errfatal_on_ssr = 1,
 };
 
+static struct mdm_platform_data sglte_platform_data = {
+	.mdm_version = "4.0",
+	.ramdump_delay_ms = 1000,
+	/* delay between two PS_HOLDs */
+	.ps_hold_delay_ms = 500,
+	.soft_reset_inverted = 1,
+	.peripheral_platform_device = NULL,
+	.ramdump_timeout_ms = 600000,
+	.no_powerdown_after_ramdumps = 1,
+	.image_upgrade_supported = 1,
+	.subsys_name = "external_modem"
+};
+
 static struct mdm_platform_data sglte2_mdm_platform_data = {
 	.mdm_version = "3.0",
 	.ramdump_delay_ms = 2000,
@@ -1416,8 +1426,7 @@ static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.ramdump_timeout_ms = 600000,
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
-	.no_a2m_errfatal_on_ssr = 1,
-	.subsys_name = "external_modem",
+	.subsys_name = "external_modem"
 };
 
 #define MSM_TSIF0_PHYS			(0x18200000)
