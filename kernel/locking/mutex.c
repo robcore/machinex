@@ -20,6 +20,7 @@
 #include <linux/mutex.h>
 #include <linux/ww_mutex.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/export.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
@@ -113,18 +114,16 @@ EXPORT_SYMBOL(mutex_lock);
  * We don't inline mspin_lock() so that perf can correctly account for the
  * time spent in this lock function.
  */
-typedef struct mspin_node {
-	struct mspin_node *next;
-	int		   locked;	/* 1 if lock acquired */
-} mspin_node_t;
+struct mspin_node {
+	struct mspin_node *next ;
+	int		  locked;	/* 1 if lock acquired */
+};
+#define	MLOCK(mutex)	((struct mspin_node **)&((mutex)->spin_mlock))
 
-typedef mspin_node_t	*mspin_lock_t;
-
-#define	MLOCK(mutex)	((mspin_lock_t *)&((mutex)->spin_mlock))
-
-static noinline void mspin_lock(mspin_lock_t *lock,  mspin_node_t *node)
+static noinline
+void mspin_lock(struct mspin_node **lock, struct mspin_node *node)
 {
-	mspin_node_t *prev;
+	struct mspin_node *prev;
 
 	/* Init node */
 	node->locked = 0;
@@ -143,9 +142,9 @@ static noinline void mspin_lock(mspin_lock_t *lock,  mspin_node_t *node)
 		arch_mutex_cpu_relax();
 }
 
-static void mspin_unlock(mspin_lock_t *lock,  mspin_node_t *node)
+static void mspin_unlock(struct mspin_node **lock, struct mspin_node *node)
 {
-	mspin_node_t *next = ACCESS_ONCE(node->next);
+	struct mspin_node *next = ACCESS_ONCE(node->next);
 
 	if (likely(!next)) {
 		/*
@@ -157,9 +156,72 @@ static void mspin_unlock(mspin_lock_t *lock,  mspin_node_t *node)
 		while (!(next = ACCESS_ONCE(node->next)))
 			arch_mutex_cpu_relax();
 	}
-	barrier();
 	ACCESS_ONCE(next->locked) = 1;
 	smp_wmb();
+}
+
+/*
+ * Mutex spinning code migrated from kernel/sched/core.c
+ */
+
+static inline bool owner_running(struct mutex *lock, struct task_struct *owner)
+{
+	if (lock->owner != owner)
+		return false;
+
+	/*
+	 * Ensure we emit the owner->on_cpu, dereference _after_ checking
+	 * lock->owner still matches owner, if that fails, owner might
+	 * point to free()d memory, if it still matches, the rcu_read_lock()
+	 * ensures the memory stays valid.
+	 */
+	barrier();
+
+	return owner->on_cpu;
+}
+
+/*
+ * Look out! "owner" is an entirely speculative pointer
+ * access and not reliable.
+ */
+static noinline
+int mutex_spin_on_owner(struct mutex *lock, struct task_struct *owner)
+{
+	rcu_read_lock();
+	while (owner_running(lock, owner)) {
+		if (need_resched())
+			break;
+
+		arch_mutex_cpu_relax();
+	}
+	rcu_read_unlock();
+
+	/*
+	 * We break out the loop above on need_resched() and when the
+	 * owner changed, which is a sign for heavy contention. Return
+	 * success only when lock->owner is NULL.
+	 */
+	return lock->owner == NULL;
+}
+
+/*
+ * Initial check for entering the mutex spinning loop
+ */
+static inline int mutex_can_spin_on_owner(struct mutex *lock)
+{
+	struct task_struct *owner;
+	int retval = 1;
+
+	rcu_read_lock();
+	owner = ACCESS_ONCE(lock->owner);
+	if (owner)
+		retval = owner->on_cpu;
+	rcu_read_unlock();
+	/*
+	 * if lock->owner is not set, the mutex owner may have just acquired
+	 * it and not set the owner yet or the mutex has been released.
+	 */
+	return retval;
 }
 #endif
 
@@ -386,7 +448,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 
 	for (;;) {
 		struct task_struct *owner;
-		mspin_node_t	    node;
+		struct mspin_node  node;
 
 		if (use_ww_ctx && ww_ctx->acquired > 0) {
 			struct ww_mutex *ww;
