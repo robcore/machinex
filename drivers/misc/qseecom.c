@@ -689,6 +689,26 @@ static int __qseecom_check_app_exists(struct qseecom_check_app_ireq req)
 	}
 }
 
+static int __qseecom_check_app_exists(struct qseecom_check_app_ireq req)
+{
+	int32_t ret;
+	struct qseecom_command_scm_resp resp;
+
+	/*  SCM_CALL  to check if app_id for the mentioned app exists */
+	ret = scm_call(SCM_SVC_TZSCHEDULER, 1,  &req,
+				sizeof(struct qseecom_check_app_ireq),
+				&resp, sizeof(resp));
+	if (ret) {
+		pr_err("scm_call to check if app is already loaded failed\n");
+		return -EINVAL;
+	}
+
+	if (resp.result == QSEOS_RESULT_FAILURE)
+		return 0;
+	else
+		return resp.data;
+}
+
 static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 {
 	struct qseecom_registered_app_list *entry = NULL;
@@ -2254,6 +2274,37 @@ static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
 	}
 }
 
+static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
+					void __user *argp)
+{
+
+	int32_t ret;
+	struct qseecom_qseos_app_load_query query_req;
+	struct qseecom_check_app_ireq req;
+
+	/* Copy the relevant information needed for loading the image */
+	if (__copy_from_user(&query_req,
+				(void __user *)argp,
+				sizeof(struct qseecom_qseos_app_load_query))) {
+		pr_err("copy_from_user failed\n");
+		return -EFAULT;
+	}
+
+	req.qsee_cmd_id = QSEOS_APP_LOOKUP_COMMAND;
+	memcpy(req.app_name, query_req.app_name, MAX_APP_NAME_SIZE);
+
+	ret = __qseecom_check_app_exists(req);
+	if (ret == -EINVAL) {
+		pr_err(" scm call to check if app is loaded failed");
+		return ret;	/* scm call failed */
+	} else if (ret > 0) {
+		pr_err("app is already loaded in QSEE");
+		return -EEXIST;	/* app already loaded */
+	} else {
+		return 0;	/* app not loaded */
+	}
+}
+
 static long qseecom_ioctl(struct file *file, unsigned cmd,
 		unsigned long arg)
 {
@@ -2526,6 +2577,14 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 	case QSEECOM_IOCTL_APP_LOADED_QUERY_REQ: {
 		data->type = QSEECOM_CLIENT_APP;
 		pr_debug("APP_LOAD_QUERY: qseecom_addr = 0x%x\n", (u32)data);
+		mutex_lock(&app_access_lock);
+		atomic_inc(&data->ioctl_count);
+		ret = qseecom_query_app_loaded(data, argp);
+		atomic_dec(&data->ioctl_count);
+		mutex_unlock(&app_access_lock);
+		break;
+	}
+	case QSEECOM_IOCTL_APP_LOADED_QUERY_REQ: {
 		mutex_lock(&app_access_lock);
 		atomic_inc(&data->ioctl_count);
 		ret = qseecom_query_app_loaded(data, argp);
