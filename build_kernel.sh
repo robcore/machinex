@@ -87,6 +87,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	if [[ $repcln = "y" ]]; then
 		cd ~/machinex
 		sh $(pwd)/cleanup.sh
+		echo "cleanup finished"
 	fi;
 else
 	echo "Build failed, Skipped Ramdisk Creation"
