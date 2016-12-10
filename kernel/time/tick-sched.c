@@ -809,8 +809,8 @@ static inline void tick_check_nohz_this_cpu(void) { }
  */
 void tick_check_idle(void)
 {
-+	tick_check_oneshot_broadcast_this_cpu();
-+	tick_check_nohz_this_cpu();
+	tick_check_oneshot_broadcast_this_cpu();
+	tick_check_nohz_this_cpu();
 }
 
 /*
