@@ -706,6 +706,10 @@ static void tick_nohz_handler(struct clock_event_device *dev)
 	update_process_times(user_mode(regs));
 	profile_tick(CPU_PROFILING);
 
+	/* No need to reprogram if we are running tickless  */
+	if (unlikely(ts->tick_stopped))
+		return;
+
 	while (tick_nohz_reprogram(ts, now)) {
 		now = ktime_get();
 		tick_do_update_jiffies64(now);
