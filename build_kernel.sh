@@ -21,6 +21,13 @@ find . -type f \( -iname \*.rej \
 				-o -iname \*.bkp \
 				-o -iname \*.ko \) \
 					| parallel rm -fv {};
+if [ -e /media/root/robcore/AIK/previous.txt ]; then
+	PREV=`cat /media/root/robcore/AIK/previous.txt`
+	echo "your previous version was $PREV"
+else
+	touch /media/root/robcore/AIK/previous.txt
+fi;
+
 echo -n "Enter Kernel major version and press [ENTER]: "
 read MAJOR
 KERNEL_NAME=machinex
@@ -72,7 +79,6 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	mv $(pwd)/machinex-new $(pwd)/$OUTFOLDER
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
-	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	read -s -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
 	if [[ $repadb = "y" ]]; then
 		adb connect 192.168.1.103
@@ -80,8 +86,6 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		echo "Your kernel is ready to flash"
 		adb kill-server
-	else
-		echo "Your Kernel can be found in AIK"
 	fi;
 	read -s -n 1 -p "Cleanup?  y/n  " repcln
 	if [[ $repcln = "y" ]]; then
@@ -89,6 +93,8 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 		sh $(pwd)/cleanup.sh
 		echo "cleanup finished"
 	fi;
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
+	echo "$OUTFOLDER/$OUTFOLDER.zip" > /media/root/robcore/AIK/previous.txt
 else
 	echo "Build failed, Skipped Ramdisk Creation"
 fi;
