@@ -32,6 +32,7 @@ config MSM_QPNP_INT
 	depends on ARCH_MSM8974
 	depends on SPMI
 	depends on OF_SPMI
+	depends on MSM_QPNP
 	bool "MSM QPNP INT"
 	help
 	  Say 'y' here to include support for the Qualcomm QPNP interrupt
