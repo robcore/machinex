@@ -24,6 +24,7 @@
 #include <linux/mutex.h>
 #include <linux/atomic.h>
 #include <linux/debugfs.h>
+#include <linux/module.h>
 #include <linux/regulator/consumer.h>
 #include <linux/string.h>
 #include <mach/vreg.h>
