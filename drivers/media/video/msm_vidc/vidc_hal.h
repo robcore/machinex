@@ -697,7 +697,7 @@ struct hfi_msg_session_property_info_packet {
 	u32 packet_type;
 	u32 session_id;
 	u32 num_properties;
-	u32 rg_property_data[1];
+	u32 rg_property_data[0];
 };
 
 struct hfi_msg_session_release_resources_done_packet {
