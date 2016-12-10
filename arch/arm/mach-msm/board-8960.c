@@ -365,7 +365,7 @@ static struct ion_cp_heap_pdata cp_mm_msm8960_ion_pdata = {
 	.fixed_position = FIXED_MIDDLE,
 	.iommu_map_all = 1,
 	.iommu_2x_map_domain = VIDEO_DOMAIN,
-	.is_cma = 1,
+	.is_cma = 0,
 	.no_nonsecure_alloc = 1,
 };
 
@@ -1333,7 +1333,7 @@ static struct mdm_vddmin_resource mdm_vddmin_rscs = {
 static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_NONE,
+	.pull = GPIOMUX_PULL_DOWN,
 };
 
 static struct mdm_platform_data mdm_platform_data = {
