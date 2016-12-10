@@ -491,7 +491,9 @@ static void hci_conn_idle(unsigned long arg)
 		BT_ERR("SCO Active : Do not allow SNIFF");
 		return;
 	}
+	hci_dev_lock(conn->hdev);
 	hci_conn_enter_sniff_mode(conn);
+	hci_dev_unlock(conn->hdev);
 }
 
 static void hci_conn_rssi_update(struct work_struct *work)
