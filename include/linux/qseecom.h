@@ -117,14 +117,6 @@ struct qseecom_qseos_app_load_query {
 	int app_id; /* out */
 };
 
-/*
- * struct qseecom_qseos_app_load_query - verify if app is loaded in qsee
- * @app_name[MAX_APP_NAME_SIZE]-  name of the app.
- */
-struct qseecom_qseos_app_load_query {
-	char app_name[MAX_APP_NAME_SIZE]; /* in */
-};
-
 #define QSEECOM_IOC_MAGIC    0x97
 
 
@@ -187,9 +179,5 @@ int qseecom_k_send_cmd(void *argp);
 
 //int __qseecom_k_process_incomplete_cmd(void *tmpdata, void *tmpresp);
 #endif
-
-#define QSEECOM_IOCTL_APP_LOADED_QUERY_REQ \
-	_IOWR(QSEECOM_IOC_MAGIC, 15, struct qseecom_qseos_app_load_query)
-
 
 #endif /* __QSEECOM_H_ */
