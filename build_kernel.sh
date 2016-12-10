@@ -26,9 +26,9 @@ read MAJOR
 KERNEL_NAME=machinex
 KERNEL_VERSION=Mark$MAJOR
 
-read -s -p "Is this a BETA?  y/n [ENTER]:  " rep
+read -s -n 1 -p "Is this a BETA?  y/n  " rep
 if [[ $rep = "y" ]]; then
-	read -s -p "Is this Next or Proto Version? [ENTER]: n/p  " reply
+	read -s -n 1 -p "Is this Next or Proto Version? n/p  " reply
 	if [[ $reply = "n" ]]; then
 		echo -n "Enter Next Version and press [ENTER]: "
 		read NEXT
@@ -73,7 +73,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-	read -s -p "Shall I adb push this for you, sir?  y/n  " repadb
+	read -s -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
 	if [[ $repadb = "y" ]]; then
 		adb connect 192.168.1.103
 		sleep 5
@@ -83,7 +83,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	else
 		echo "Your Kernel can be found in AIK"
 	fi;
-	read -s -p "Cleanup?  y/n  " repcln
+	read -s -n 1 -p "Cleanup?  y/n  " repcln
 	if [[ $repcln = "y" ]]; then
 		cd ~/machinex
 		sh $(pwd)/cleanup.sh
