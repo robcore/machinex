@@ -24,8 +24,6 @@ find . -type f \( -iname \*.rej \
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
-	rm -rf /media/root/robcore/AIK/previous.txt
-	touch /media/root/robcore/AIK/previous.txt
 fi;
 
 echo -n "Enter Kernel major version and press [ENTER]: "
