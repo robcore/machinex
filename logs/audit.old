@@ -1,0 +1,111 @@
+Linux version 3.4.111-machinex-3.4 (robcore@machina) (gcc version 5.3.0 (crosstool-NG crosstool-ng-1.21.0-345-ga2573ff - GNU GCC 5.3 - Cortex-A15) ) #1 SMP PREEMPT Mon Jun 27 10:22:57 MDT 2016
+
+type=2000 msg=audit(0.850:1): initialized
+type=1403 msg=audit(1403897839.570:11): policy loaded auid=4294967295 ses=4294967295
+type=1400 msg=audit(1403897847.586:12): avc:  denied  { entrypoint } for  pid=243 comm="init" path="/system/bin/logd" dev="mmcblk0p16" ino=144656 scontext=u:r:logd:s0 tcontext=u:object_r:system_file:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1403897847.586:12): arch=40000028 syscall=11 per=800000 success=yes exit=0 a0=b6dd7603 a1=b6dbaf88 a2=a9a64 a3=1000000 items=2 ppid=1 ppcomm=init pid=243 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="logd" exe="/system/bin/logd" subj=u:r:logd:s0 key=(null)
+type=1309 msg=audit(1403897847.586:12): argc=1 a0="/system/bin/logd"
+type=1307 msg=audit(1403897847.586:12):  cwd="/"
+type=1302 msg=audit(1403897847.586:12): item=0 name="/system/bin/logd" inode=144656 dev=b3:10 mode=0100755 ouid=0 ogid=2000 rdev=00:00 obj=u:object_r:system_file:s0
+type=1302 msg=audit(1403897847.586:12): item=1 name=(null) inode=144653 dev=b3:10 mode=0100755 ouid=0 ogid=2000 rdev=00:00 obj=u:object_r:system_file:s0
+type=1320 msg=audit(1403897847.586:12): 
+type=1400 msg=audit(1403897847.646:13): avc:  denied  { entrypoint } for  pid=281 comm="init" path="/system/etc/install-recovery.sh" dev="mmcblk0p16" ino=80382 scontext=u:r:install_recovery:s0 tcontext=u:object_r:system_file:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1403897847.646:13): arch=40000028 syscall=11 per=800000 success=yes exit=0 a0=b6dd8cfd a1=b6dbc3a8 a2=a9a64 a3=1000000 items=3 ppid=1 ppcomm=init pid=281 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="install-recover" exe="/system/bin/sh" subj=u:r:install_recovery:s0 key=(null)
+type=1309 msg=audit(1403897847.646:13): argc=2 a0="/system/bin/sh" a1="/system/bin/install-recovery.sh"
+type=1309 msg=audit(1403897847.646:13): argc=1 a0="/system/bin/sh"
+type=1307 msg=audit(1403897847.646:13):  cwd="/"
+type=1302 msg=audit(1403897847.646:13): item=0 name="/system/bin/install-recovery.sh" inode=80382 dev=b3:10 mode=0100755 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:system_file:s0
+type=1302 msg=audit(1403897847.646:13): item=1 name=(null) inode=144736 dev=b3:10 mode=0100755 ouid=0 ogid=2000 rdev=00:00 obj=u:object_r:system_file:s0
+type=1302 msg=audit(1403897847.646:13): item=2 name=(null) inode=144653 dev=b3:10 mode=0100755 ouid=0 ogid=2000 rdev=00:00 obj=u:object_r:system_file:s0
+type=1320 msg=audit(1403897847.646:13): 
+type=1400 msg=audit(1403897847.806:14): avc:  denied  { setattr } for  pid=357 comm="busybox" name="config.json.generate.driver" dev="rootfs" ino=5287 scontext=u:r:init:s0 tcontext=u:object_r:rootfs:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1403897847.806:14): arch=40000028 syscall=15 per=c00000 success=yes exit=0 a0=b0a500 a1=1ed a2=0 a3=1 items=1 ppid=287 ppcomm=ael.sh pid=357 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="busybox" exe="/sbin/busybox" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1403897847.806:14):  cwd="/"
+type=1302 msg=audit(1403897847.806:14): item=0 name="/res/synapse/config.json.generate.driver" inode=5287 dev=00:01 mode=0100644 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:rootfs:s0
+type=1320 msg=audit(1403897847.806:14): 
+type=1400 msg=audit(1403897847.826:15): avc:  denied  { dyntransition } for  pid=365 comm="daemonsu" scontext=u:r:install_recovery:s0 tcontext=u:r:init:s0 tclass=process SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1403897847.826:15): arch=40000028 syscall=4 per=800000 success=yes exit=11 a0=4 a1=b6f6dd42 a2=b a3=b6f0cb6c items=0 ppid=1 ppcomm=init pid=365 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="daemonsu" exe="/system/xbin/daemonsu" subj=u:r:init:s0 key=(null)
+type=1320 msg=audit(1403897847.826:15): 
+type=1400 msg=audit(1403897847.836:16): avc:  denied  { create } for  pid=361 comm="uci" name="config.json" scontext=u:r:init:s0 tcontext=u:object_r:rootfs:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1400 msg=audit(1403897847.836:16): avc:  denied  { write } for  pid=361 comm="uci" name="config.json" dev="rootfs" ino=5651 scontext=u:r:init:s0 tcontext=u:object_r:rootfs:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1403897847.836:16): arch=40000028 syscall=322 per=800000 success=yes exit=3 a0=ffffff9c a1=b6c2f1c4 a2=20241 a3=1b6 items=2 ppid=287 ppcomm=ael.sh pid=361 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="uci" exe="/system/bin/sh" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1403897847.836:16):  cwd="/"
+type=1302 msg=audit(1403897847.836:16): item=0 name="/res/synapse/" inode=5150 dev=00:01 mode=040755 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:rootfs:s0
+type=1302 msg=audit(1403897847.836:16): item=1 name="/res/synapse/config.json" inode=5651 dev=00:01 mode=0100600 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:rootfs:s0
+type=1320 msg=audit(1403897847.836:16): 
+type=1400 msg=audit(1467056241.533:21): avc:  denied  { read } for  pid=377 comm="daemonsu" name="supersu.cfg" dev="mmcblk0p29" ino=132284 scontext=u:r:init:s0 tcontext=u:object_r:app_data_file:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1400 msg=audit(1467056241.533:21): avc:  denied  { open } for  pid=377 comm="daemonsu" name="supersu.cfg" dev="mmcblk0p29" ino=132284 scontext=u:r:init:s0 tcontext=u:object_r:app_data_file:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056241.533:21): arch=40000028 syscall=322 per=800000 success=yes exit=4 a0=ffffff9c a1=bec9468c a2=20000 a3=0 items=1 ppid=1 ppcomm=init pid=377 auid=4294967295 uid=0 gid=1000 euid=0 suid=0 fsuid=0 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=4294967295 comm="daemonsu" exe="/system/xbin/daemonsu" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1467056241.533:21):  cwd="/"
+type=1302 msg=audit(1467056241.533:21): item=0 name="/data/user/0/eu.chainfire.supersu/files/supersu.cfg" inode=132284 dev=b3:1d mode=0100600 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1320 msg=audit(1467056241.533:21): 
+type=1400 msg=audit(1467056241.593:22): avc:  denied  { setattr } for  pid=484 comm="daemonsu" name="daemonsu" dev="mmcblk0p16" ino=112929 scontext=u:r:init:s0 tcontext=u:object_r:system_file:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056241.593:22): arch=40000028 syscall=333 per=800000 success=yes exit=0 a0=ffffff9c a1=b6f94dc0 a2=1ed a3=0 items=1 ppid=1 ppcomm=init pid=484 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="daemonsu" exe="/system/xbin/daemonsu" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1467056241.593:22):  cwd="/"
+type=1302 msg=audit(1467056241.593:22): item=0 name="/system/xbin/daemonsu" inode=112929 dev=b3:10 mode=0100755 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:system_file:s0
+type=1320 msg=audit(1467056241.593:22): 
+type=1400 msg=audit(1467056241.593:23): avc:  denied  { setattr } for  pid=484 comm="daemonsu" name="sugote" dev="mmcblk0p16" ino=112930 scontext=u:r:init:s0 tcontext=u:object_r:zygote_exec:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056241.593:23): arch=40000028 syscall=333 per=800000 success=yes exit=0 a0=ffffff9c a1=b6f9551c a2=1ed a3=0 items=1 ppid=1 ppcomm=init pid=484 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="daemonsu" exe="/system/xbin/daemonsu" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1467056241.593:23):  cwd="/"
+type=1305 msg=audit(1467056279.289:220): audit_enabled=1 old=1 auid=4294967295 ses=4294967295 subj=u:r:auditd:s0 res=1
+type=1400 msg=audit(1467056282.772:221): avc:  denied  { signull } for  pid=2520 comm="daemonsu" scontext=u:r:init:s0 tcontext=u:r:zygote:s0 tclass=process SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056282.772:221): arch=40000028 syscall=37 per=800000 success=yes exit=0 a0=9d9 a1=0 a2=1 a3=0 items=0 ppid=484 ppcomm=daemonsu pid=2520 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="daemonsu" exe="/system/xbin/daemonsu" subj=u:r:init:s0 key=(null)
+type=1320 msg=audit(1467056282.772:221): 
+type=1400 msg=audit(1467056287.197:222): avc:  denied  { signull } for  pid=2875 comm="daemonsu" scontext=u:r:init:s0 tcontext=u:r:zygote:s0 tclass=process SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056287.197:222): arch=40000028 syscall=37 per=800000 success=yes exit=0 a0=b3c a1=0 a2=1 a3=0 items=0 ppid=484 ppcomm=daemonsu pid=2875 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="daemonsu" exe="/system/xbin/daemonsu" subj=u:r:init:s0 key=(null)
+type=1320 msg=audit(1467056287.197:222): 
+type=1400 msg=audit(1467056306.075:223): avc:  denied  { write } for  pid=4936 comm="smd" name=".socket_smd" dev="mmcblk0p29" ino=138065 scontext=u:r:init:s0 tcontext=u:object_r:app_data_file:s0 tclass=sock_file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056306.075:223): arch=40000028 syscall=283 per=800000 success=yes exit=0 a0=4 a1=be8b5634 a2=32 a3=b6eebe60 items=1 ppid=4933 ppcomm=tmp-mksh pid=4936 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="smd" exe="/data/data/os.tools.scriptmanagerpro/bin/smd" subj=u:r:init:s0 key=(null)
+type=1306 msg=audit(1467056306.075:223): saddr=01002F646174612F646174612F6F732E746F6F6C732E7363726970746D616E6167657270726F2F2E736F636B65745F736D64
+type=1302 msg=audit(1467056306.075:223): item=0 name=(null) inode=138065 dev=b3:1d mode=0140666 ouid=10165 ogid=10165 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1320 msg=audit(1467056306.075:223): 
+type=1400 msg=audit(1467056306.215:224): avc:  denied  { create } for  pid=4938 comm="smd" name=".socket_smd_root" scontext=u:r:init:s0 tcontext=u:object_r:app_data_file:s0 tclass=sock_file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056306.215:224): arch=40000028 syscall=282 per=800000 success=yes exit=0 a0=5 a1=be8b54f4 a2=37 a3=b6eec758 items=3 ppid=1 ppcomm=init pid=4938 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="smd" exe="/data/data/os.tools.scriptmanagerpro/bin/smd" subj=u:r:init:s0 key=(null)
+type=1306 msg=audit(1467056306.215:224): saddr=01002F646174612F646174612F6F732E746F6F6C732E7363726970746D616E6167657270726F2F2E736F636B65745F736D645F726F6F74
+type=1302 msg=audit(1467056306.215:224): item=0 name=(null) inode=134836 dev=b3:1d mode=040755 ouid=10165 ogid=10165 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1302 msg=audit(1467056306.215:224): item=1 name=(null) inode=134836 dev=b3:1d mode=040755 ouid=10165 ogid=10165 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1302 msg=audit(1467056306.215:224): item=2 name=(null) inode=139229 dev=b3:1d mode=0140700 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1320 msg=audit(1467056306.215:224): 
+type=1400 msg=audit(1467056306.225:225): avc:  denied  { setattr } for  pid=4938 comm="smd" name=".socket_smd_root" dev="mmcblk0p29" ino=139229 scontext=u:r:init:s0 tcontext=u:object_r:app_data_file:s0 tclass=sock_file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056306.225:225): arch=40000028 syscall=333 per=800000 success=yes exit=0 a0=ffffff9c a1=be8b5872 a2=1b6 a3=0 items=1 ppid=1 ppcomm=init pid=4938 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="smd" exe="/data/data/os.tools.scriptmanagerpro/bin/smd" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1467056306.225:225):  cwd="/"
+type=1302 msg=audit(1467056306.225:225): item=0 name="/data/data/os.tools.scriptmanagerpro/.socket_smd_root" inode=139229 dev=b3:1d mode=0140700 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1320 msg=audit(1467056306.225:225): 
+type=1400 msg=audit(1467056306.696:226): avc:  denied  { execute } for  pid=4970 comm="tmp-mksh" name=".daemonize_recently" dev="tmpfs" ino=36410 scontext=u:r:init:s0 tcontext=u:object_r:device:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056306.696:226): arch=40000028 syscall=334 per=800000 success=yes exit=0 a0=ffffff9c a1=b6c2f204 a2=1 a3=0 items=1 ppid=4947 ppcomm=daemonsu pid=4970 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="tmp-mksh" exe="/tmp-mksh/tmp-mksh" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1467056306.696:226):  cwd="/"
+type=1302 msg=audit(1467056306.696:226): item=0 name="/dev/.daemonize_recently" inode=36410 dev=00:0b mode=0100700 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:device:s0
+type=1320 msg=audit(1467056306.696:226): 
+type=1400 msg=audit(1467056306.696:227): avc:  denied  { execute_no_trans } for  pid=4979 comm="tmp-mksh" path="/dev/.daemonize_recently" dev="tmpfs" ino=36410 scontext=u:r:init:s0 tcontext=u:object_r:device:s0 tclass=file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056306.696:227): arch=40000028 syscall=11 per=800000 success=yes exit=0 a0=b6c2f2a4 a1=b6c3b288 a2=b6c45084 a3=b6f1813c items=1 ppid=4970 ppcomm=tmp-mksh pid=4979 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm=".daemonize_rece" exe="/dev/.daemonize_recently" subj=u:r:init:s0 key=(null)
+type=1309 msg=audit(1467056306.696:227): argc=13 a0="/dev/.daemonize_recently" a1="/dev/.app_process_recently" a2="/dev/.app_process_recently" a3="/system/bin" a4="--nice-name=eu.chainfire.recently:root" a5="eu.chainfire.recently.Root" a6="age=0" a7="entries=0" a8="removeStaleTasks=0" a9="removeStaleDocuments=0" a10="googleSearches=0" a11="banSettings=0" a12="clearAll=1"
+type=1307 msg=audit(1467056306.696:227):  cwd="/"
+type=1302 msg=audit(1467056306.696:227): item=0 name="/dev/.daemonize_recently" inode=36410 dev=00:0b mode=0100700 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:device:s0
+type=1320 msg=audit(1467056306.696:227): 
+type=1403 msg=audit(1467056310.089:228): policy loaded auid=4294967295 ses=4294967295
+type=1300 msg=audit(1467056310.089:228): arch=40000028 syscall=4 per=800000 success=yes exit=402307 a0=9 a1=b6a85000 a2=62383 a3=b6f56b6c items=0 ppid=5407 ppcomm=tmp-mksh pid=5426 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="supolicy" exe="/system/xbin/supolicy" subj=u:r:init:s0 key=(null)
+type=1320 msg=audit(1467056310.089:228): 
+type=1400 msg=audit(1467056471.393:229): avc:  denied  { unlink } for  pid=4938 comm="smd" name=".socket_smd_root" dev="mmcblk0p29" ino=139229 scontext=u:r:init:s0 tcontext=u:object_r:app_data_file:s0 tclass=sock_file SEPF_GT-I9505_5.0.1-1_0039
+
+type=1300 msg=audit(1467056471.393:229): arch=40000028 syscall=328 per=800000 success=yes exit=0 a0=ffffff9c a1=be8b5872 a2=0 a3=b6e90004 items=2 ppid=1 ppcomm=init pid=4938 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="smd" exe="/data/data/os.tools.scriptmanagerpro/bin/smd" subj=u:r:init:s0 key=(null)
+type=1307 msg=audit(1467056471.393:229):  cwd="/"
+type=1302 msg=audit(1467056471.393:229): item=0 name="/data/data/os.tools.scriptmanagerpro/" inode=134836 dev=b3:1d mode=040755 ouid=10165 ogid=10165 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1302 msg=audit(1467056471.393:229): item=1 name="/data/data/os.tools.scriptmanagerpro/.socket_smd_root" inode=139229 dev=b3:1d mode=0140666 ouid=0 ogid=0 rdev=00:00 obj=u:object_r:app_data_file:s0
+type=1320 msg=audit(1467056471.393:229): 

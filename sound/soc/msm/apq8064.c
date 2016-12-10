@@ -41,6 +41,7 @@
 #endif
 
 /* 8064 machine driver */
+
 #define PM8921_GPIO_BASE		NR_GPIO_IRQS
 #define PM8921_GPIO_PM_TO_SYS(pm_gpio)  (pm_gpio - 1 + PM8921_GPIO_BASE)
 
@@ -182,7 +183,7 @@ static void msm_enable_ext_spk_amp_gpio(u32 spk_amp_gpio)
 			pr_err("%s: Failed to configure Bottom Spk Ampl"
 				" gpio %u\n", __func__, bottom_spk_pamp_gpio);
 		else {
-			pr_info("%s: enable Bottom spkr amp gpio\n", __func__);
+			pr_debug("%s: enable Bottom spkr amp gpio\n", __func__);
 			gpio_direction_output(bottom_spk_pamp_gpio, 1);
 		}
 
@@ -199,7 +200,7 @@ static void msm_enable_ext_spk_amp_gpio(u32 spk_amp_gpio)
 			pr_err("%s: Failed to configure Top Spk Ampl"
 				" gpio %u\n", __func__, top_spk_pamp_gpio);
 		else {
-			pr_info("%s: enable Top spkr amp gpio\n", __func__);
+			pr_debug("%s: enable Top spkr amp gpio\n", __func__);
 			gpio_direction_output(top_spk_pamp_gpio, 1);
 		}
 	} else {
@@ -216,7 +217,7 @@ static void msm_ext_spk_power_amp_on(u32 spk)
 		if ((msm_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_POS) &&
 			(msm_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_NEG)) {
 
-			pr_info("%s() External Bottom Speaker Ampl already "
+			pr_debug("%s() External Bottom Speaker Ampl already "
 				"turned on. spk = 0x%08x\n", __func__, spk);
 			return;
 		}
@@ -227,21 +228,21 @@ static void msm_ext_spk_power_amp_on(u32 spk)
 			(msm_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_NEG)) {
 
 			msm_enable_ext_spk_amp_gpio(bottom_spk_pamp_gpio);
-			pr_info("%s: slepping 4 ms after turning on external "
+			pr_debug("%s: slepping 4 ms after turning on external "
 				" Bottom Speaker Ampl\n", __func__);
 			usleep_range(4000, 4000);
 		}
 
 	} else if (spk & (TOP_SPK_AMP_POS | TOP_SPK_AMP_NEG | TOP_SPK_AMP)) {
 
-		pr_info("%s():top_spk_amp_state = 0x%x spk_event = 0x%x\n",
+		pr_debug("%s():top_spk_amp_state = 0x%x spk_event = 0x%x\n",
 			__func__, msm_ext_top_spk_pamp, spk);
 
 		if (((msm_ext_top_spk_pamp & TOP_SPK_AMP_POS) &&
 			(msm_ext_top_spk_pamp & TOP_SPK_AMP_NEG)) ||
 				(msm_ext_top_spk_pamp & TOP_SPK_AMP)) {
 
-			pr_info("%s() External Top Speaker Ampl already"
+			pr_debug("%s() External Top Speaker Ampl already"
 				"turned on. spk = 0x%08x\n", __func__, spk);
 			return;
 		}
@@ -256,7 +257,7 @@ static void msm_ext_spk_power_amp_on(u32 spk)
 			set_amp_gain(SPK_ON);
 #else
 			msm_enable_ext_spk_amp_gpio(top_spk_pamp_gpio);
-			pr_info("%s: sleeping 4 ms after turning on "
+			pr_debug("%s: sleeping 4 ms after turning on "
 				" external Top Speaker Ampl\n", __func__);
 			usleep_range(4000, 4000);
 #endif
@@ -280,14 +281,14 @@ static void msm_ext_spk_power_amp_off(u32 spk)
 		gpio_free(bottom_spk_pamp_gpio);
 		msm_ext_bottom_spk_pamp = 0;
 
-		pr_info("%s: sleeping 4 ms after turning off external Bottom"
+		pr_debug("%s: sleeping 4 ms after turning off external Bottom"
 			" Speaker Ampl\n", __func__);
 
 		usleep_range(4000, 4000);
 
 	} else if (spk & (TOP_SPK_AMP_POS | TOP_SPK_AMP_NEG | TOP_SPK_AMP)) {
 
-		pr_info("%s: top_spk_amp_state = 0x%x spk_event = 0x%x\n",
+		pr_debug("%s: top_spk_amp_state = 0x%x spk_event = 0x%x\n",
 				__func__, msm_ext_top_spk_pamp, spk);
 
 		if (!msm_ext_top_spk_pamp)
@@ -312,7 +313,7 @@ static void msm_ext_spk_power_amp_off(u32 spk)
 		gpio_free(top_spk_pamp_gpio);
 		msm_ext_top_spk_pamp = 0;
 
-		pr_info("%s: sleeping 4 ms after ext Top Spek Ampl is off\n",
+		pr_debug("%s: sleeping 4 ms after ext Top Spek Ampl is off\n",
 				__func__);
 
 		usleep_range(4000, 4000);
@@ -329,7 +330,7 @@ static void msm_ext_control(struct snd_soc_codec *codec)
 {
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
-	pr_info("%s: msm_spk_control = %d", __func__, msm_spk_control);
+	pr_debug("%s: msm_spk_control = %d", __func__, msm_spk_control);
 	if (msm_spk_control == MSM8064_SPK_ON) {
 		snd_soc_dapm_enable_pin(dapm, "Ext Spk Bottom Pos");
 		snd_soc_dapm_enable_pin(dapm, "Ext Spk Bottom Neg");
@@ -374,7 +375,7 @@ static int msm_set_spk(struct snd_kcontrol *kcontrol,
 static int msm_spkramp_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *k, int event)
 {
-	pr_info("%s() %x\n", __func__, SND_SOC_DAPM_EVENT_ON(event));
+	pr_debug("%s() %x\n", __func__, SND_SOC_DAPM_EVENT_ON(event));
 
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
 		if (!strncmp(w->name, "Ext Spk Bottom Pos", 18))
@@ -577,6 +578,8 @@ static const struct snd_soc_dapm_route apq8064_common_audio_map[] = {
 	{"HEADPHONE", NULL, "LDO_H"},
 
 	/* Speaker path */
+	{"Ext Spk Bottom Pos", NULL, "LINEOUT1"},
+	{"Ext Spk Bottom Neg", NULL, "LINEOUT3"},
 #ifdef CONFIG_SND_SOC_TPA2028D
 	{"Ext Spk Top", NULL, "LINEOUT1"},
 #else
@@ -866,7 +869,7 @@ static int msm_slim_1_rate_put(struct snd_kcontrol *kcontrol,
 		msm_slim_1_rate = SAMPLE_RATE_8KHZ;
 		break;
 	}
-	pr_info("%s: msm_slim_1_rate = %d\n", __func__,
+	pr_debug("%s: msm_slim_1_rate = %d\n", __func__,
 		 msm_slim_1_rate);
 	return 0;
 }
@@ -1053,7 +1056,6 @@ static int msm_hw_params(struct snd_pcm_substream *substream,
 	unsigned int rx_ch_cnt = 0, tx_ch_cnt = 0;
 	unsigned int num_tx_ch = 0;
 
-
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 
 		pr_debug("%s: rx_0_ch=%d\n", __func__, msm_slim_0_rx_ch);
@@ -1163,13 +1165,6 @@ static int msm_slimbus_2_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
-		ret = snd_soc_dai_set_channel_map(codec_dai, 0, 0,
-				num_rx_ch, rx_ch);
-		if (ret < 0) {
-			pr_err("%s: failed to set codec channel map\n",
-								__func__);
-			goto end;
-		}
 	} else {
 
 		num_tx_ch =  params_channels(params);
@@ -1188,13 +1183,6 @@ static int msm_slimbus_2_hw_params(struct snd_pcm_substream *substream,
 				num_tx_ch, tx_ch, 0 , 0);
 		if (ret < 0) {
 			pr_err("%s: failed to set cpu chan map\n", __func__);
-			goto end;
-		}
-		ret = snd_soc_dai_set_channel_map(codec_dai,
-				num_tx_ch, tx_ch, 0, 0);
-		if (ret < 0) {
-			pr_err("%s: failed to set codec channel map\n",
-								__func__);
 			goto end;
 		}
 	}
@@ -1343,7 +1331,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_add_routes(dapm, apq8064_common_audio_map,
 		ARRAY_SIZE(apq8064_common_audio_map));
 
-	if (machine_is_apq8064_mtp() || machine_is_apq8064_mako()) {
+	if (machine_is_apq8064_mtp()) {
 		snd_soc_dapm_add_routes(dapm, apq8064_mtp_audio_map,
 			ARRAY_SIZE(apq8064_mtp_audio_map));
 	} else  {
@@ -1389,7 +1377,6 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	codec_clk = clk_get(cpu_dai->dev, "osr_clk");
 
-#ifndef CONFIG_SWITCH_FSA8008
 	/* APQ8064 Rev 1.1 CDP and Liquid have mechanical switch */
 	revision = socinfo_get_version();
 	if (apq8064_hs_detect_use_gpio != -1) {
@@ -1438,9 +1425,6 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	err = tabla_hs_detect(codec, &mbhc_cfg);
 	*/
 	return err;
-#else
-	return 0;
-#endif
 }
 
 static int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
@@ -1569,7 +1553,7 @@ static int msm_hdmi_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *channels = hw_param_interval(params,
 					SNDRV_PCM_HW_PARAM_CHANNELS);
 
-	pr_info("%s channels->min %u channels->max %u ()\n", __func__,
+	pr_debug("%s channels->min %u channels->max %u ()\n", __func__,
 			channels->min, channels->max);
 
 	if (channels->max < 2)
@@ -1625,9 +1609,6 @@ static int msm_slim_1_tx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	rate->min = rate->max = msm_slim_1_rate;
 	channels->min = channels->max = msm_slim_1_tx_ch;
 
-	pr_info("%s: rate = %u channels = %u ()\n", __func__,
-			rate->min, channels->min);
-
 	return 0;
 }
 
@@ -1643,9 +1624,6 @@ static int msm_auxpcm_be_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	/* PCM only supports mono output with 8khz sample rate */
 	rate->min = rate->max = msm_slim_1_rate;
 	channels->min = channels->max = 1;
-
-	pr_info("%s: rate = %u channels = %u ()\n", __func__,
-			rate->min, channels->min);
 
 	return 0;
 }
@@ -1665,7 +1643,7 @@ static int msm_aux_pcm_get_gpios(void)
 {
 	int ret = 0;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 
 #ifdef CONFIG_SND_SOC_MSM_QDSP6_HDMI_AUDIO
 	ret = gpio_request(GPIO_AUX_PCM_DOUT, "AUX PCM DOUT");
@@ -1753,7 +1731,7 @@ static int msm_auxpcm_startup(struct snd_pcm_substream *substream)
 {
 	int ret = 0;
 
-	pr_info("%s(): substream = %s, auxpcm_rsc_ref counter = %d\n",
+	pr_debug("%s(): substream = %s, auxpcm_rsc_ref counter = %d\n",
 		__func__, substream->name, atomic_read(&auxpcm_rsc_ref));
 	if (atomic_inc_return(&auxpcm_rsc_ref) == 1)
 		ret = msm_aux_pcm_get_gpios();
@@ -1780,7 +1758,7 @@ static int msm_slimbus_1_startup(struct snd_pcm_substream *substream)
 static void msm_auxpcm_shutdown(struct snd_pcm_substream *substream)
 {
 
-	pr_info("%s(): substream = %s, auxpcm_rsc_ref counter = %d\n",
+	pr_debug("%s(): substream = %s, auxpcm_rsc_ref counter = %d\n",
 		__func__, substream->name, atomic_read(&auxpcm_rsc_ref));
 	if (atomic_dec_return(&auxpcm_rsc_ref) == 0)
 		msm_aux_pcm_free_gpios();
@@ -1836,6 +1814,7 @@ static struct snd_soc_ops msm_slimbus_4_be_ops = {
 	.hw_params = msm_slimbus_4_hw_params,
 	.shutdown = msm_shutdown,
 };
+
 static struct snd_soc_ops msm_slimbus_2_be_ops = {
 	.startup = msm_startup,
 	.hw_params = msm_slimbus_2_hw_params,

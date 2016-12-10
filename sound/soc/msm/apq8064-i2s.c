@@ -2446,6 +2446,14 @@ static struct snd_soc_dai_link msm_dai_delta_slim[] = {
 static struct snd_soc_dai_link msm_dai[] = {
 	/* FrontEnd DAI Links */
 	{
+		/*
+		 * In APQ8064 I2S platform, there is no playback support
+		 * only voice call is supported so there is no even system
+		 * tone or dialing tone which is by design because I2S clock
+		 * is provided by MDM which matches voice call sample rate
+		 * 8kHz or 16kHz while system tone is 48kHz. We disable the
+		 * playback by feeding the audio to AUX PCM port.
+		 */
 		.name = "MSM8960 Media1",
 		.stream_name = "MultiMedia1",
 		.cpu_dai_name	= "MultiMedia1",
