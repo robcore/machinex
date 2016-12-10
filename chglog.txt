@@ -1,0 +1,13 @@
+UPDATES - Mark54 - December 10, 2016
+CHANGELOG:
+- Lots of changes on this one.
+- Broke and fixed the sound artifact again.  Realistically, it is going to come and go as I update both backend and platform-specific code.  I appreciate your patience and will use this moment to remind you that I'm doing this for free ;)
+- REMOVED the NVIDIA "power efficient" patchset that our scheduling had come to rely on, so things are zippier from that.  Also had to go through and fix some of the scheduling fallout we had from relying on that, a BIG THANKS to my TESTING TEAM (ya'll know who you are, you lovable hoodlums) for dealing with a ton of unpredictable test-builds and helping me refine that section.
+- UPDATED MSM ION to where it should have been for a while, the changeset was entirely complete except for the ion driver itself.  Expect faster memory management.
+- Another recent (hopefully not in vain) attempt at modem standardization.  It would appear that different devices and network providers are contributing factors to modem issues, but I know I can get to the bottom of this eventually (and will continue working my rear-end off!).
+- IOMMU was apparently ready for the next stage of updates, which helps us further update the backend now that it is actually working well with kgsl/gpu stuff.  Actually, the vfe code was still configured to use *token passing despite my having reverted the rest of the system, so I'm surprised at the lack of failures (and not surprised at the failures I saw).  Moreso, I'm disappointed in the GCC compiler :P
+- Oh man lotsa stuff.  Customised our Wifi driver to be less restrictive with packet length, and less frustratingly "secure" via the Samsung PI1 code (which seemed all fancy but I really think had a lot of broken stuff in it).  Also I updated and optimized the heck out of that area.
+- more BAM driver bring up, I'll letcha know when the cool stuff with BAM starts happening.  I've imported the IPA driver which is a step in the right direction at least.
+- my build scripts are more convenient for me...so increased my efficiency, one could say? That kind of affects you.
+- removed a ton of unneccessary tracing in kgsl, dcvs, and similiar drivers that don't need it.
+-
