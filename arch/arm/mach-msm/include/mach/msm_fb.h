@@ -25,10 +25,6 @@ struct mddi_info;
 #define MSM_MDP_OUT_IF_FMT_RGB565 0
 #define MSM_MDP_OUT_IF_FMT_RGB666 1
 
-/* output interface format */
-#define MSM_MDP_OUT_IF_FMT_RGB565 0
-#define MSM_MDP_OUT_IF_FMT_RGB666 1
-
 struct msm_fb_data {
 	int xres;	/* x resolution in pixels */
 	int yres;	/* y resolution in pixels */
@@ -95,8 +91,6 @@ struct msm_mddi_platform_data {
 
 	/* fixup the mfr name, product id */
 	void (*fixup)(uint16_t *mfr_name, uint16_t *product_id);
-
-	int vsync_irq;
 
 	int vsync_irq;
 

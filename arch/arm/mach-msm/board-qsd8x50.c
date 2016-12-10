@@ -2132,7 +2132,6 @@ static int msm_sdcc_get_wpswitch(struct device *dv)
 		return -1;
 
 	pdev = container_of(dv, struct platform_device, dev);
-	msm_sdcc_setup_gpio(pdev->id, !!vdd);
 
 	wp_addr = ioremap(FPGA_SDCC_STATUS, 4);
 	if (!wp_addr) {

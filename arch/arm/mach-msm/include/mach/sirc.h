@@ -44,10 +44,6 @@ void msm_init_sirc(void);
 #include <mach/sirc-fsm9xxx.h>
 #else /* CONFIG_ARCH_FSM9XXX */
 
-#if defined(CONFIG_ARCH_FSM9XXX)
-#include <mach/sirc-fsm9xxx.h>
-#else /* CONFIG_ARCH_FSM9XXX */
-
 #define INT_UART1                     (FIRST_SIRC_IRQ + 0)
 #define INT_UART2                     (FIRST_SIRC_IRQ + 1)
 #define INT_UART3                     (FIRST_SIRC_IRQ + 2)
