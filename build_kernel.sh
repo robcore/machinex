@@ -104,7 +104,7 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 		echo "cleanup finished"
 	fi;
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-	echo "$OUTFOLDER/$OUTFOLDER.zip" > /media/root/robcore/AIK/previous.txt
+	echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	echo "MD5 is $SUMMY"
 else
