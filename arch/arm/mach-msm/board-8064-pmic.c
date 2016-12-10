@@ -286,14 +286,21 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 		}
 	}
 
-	if (machine_is_mpq8064_cdp() || machine_is_mpq8064_hrd()
-	    || machine_is_mpq8064_dtv())
-		apq8064_configure_gpios(pm8921_mpq_gpios,
-					ARRAY_SIZE(pm8921_mpq_gpios));
-
 	if (machine_is_mpq8064_hrd())
 		apq8064_configure_gpios(pm8921_mpq8064_hrd_gpios,
 					ARRAY_SIZE(pm8921_mpq8064_hrd_gpios));
+
+	if (machine_is_mpq8064_cdp() || machine_is_mpq8064_hrd()
+					|| machine_is_mpq8064_dtv())
+		for (i = 0; i < ARRAY_SIZE(pm8921_mpq_gpios); i++) {
+			rc = pm8xxx_gpio_config(pm8921_mpq_gpios[i].gpio,
+						&pm8921_mpq_gpios[i].config);
+			if (rc) {
+				pr_err("%s: pm8xxx_gpio_config: rc=%d\n",
+					__func__, rc);
+				break;
+			}
+		}
 
 	for (i = 0; i < ARRAY_SIZE(pm8xxx_mpps); i++) {
 		rc = pm8xxx_mpp_config(pm8xxx_mpps[i].mpp,
