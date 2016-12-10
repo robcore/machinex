@@ -26,27 +26,35 @@ if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	echo "your previous version was $PREV"
 fi;
 
-echo -n "Enter Kernel major version and press [ENTER]: "
-read MAJOR
-KERNEL_NAME=machinex
-KERNEL_VERSION=Mark$MAJOR
+read -s -n 1 -p "Override Naming Process?  y/n  " overide
+if [[ $overide = "n" ]]; then
 
-read -s -n 1 -p "Is this a BETA?  y/n  " rep
-if [[ $rep = "y" ]]; then
-	read -s -n 1 -p "Is this Next or Proto Version? n/p  " reply
-	if [[ $reply = "n" ]]; then
-		echo -n "Enter Next Version and press [ENTER]: "
-		read NEXT
-		SUBVERSION=Next$NEXT
+	echo -n "Enter Kernel major version and press [ENTER]: "
+	read MAJOR
+	KERNEL_NAME=machinex
+	KERNEL_VERSION=Mark$MAJOR
+
+	read -s -n 1 -p "Is this a BETA?  y/n  " rep
+	if [[ $rep = "y" ]]; then
+		read -s -n 1 -p "Is this Next or Proto Version? n/p  " reply
+		if [[ $reply = "n" ]]; then
+			echo -n "Enter Next Version and press [ENTER]: "
+			read NEXT
+			SUBVERSION=Next$NEXT
+		else
+			echo -n "Enter Proto Version and press [ENTER]: "
+			read PROTO
+			SUBVERSION=P$PROTO
+		fi
+	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 	else
-		echo -n "Enter Proto Version and press [ENTER]: "
-		read PROTO
-		SUBVERSION=P$PROTO
+	OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 	fi
-OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 else
-OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
-fi
+	echo -n "Whats the name then? [ENTER]: "
+	read OVNAME
+	OUTFOLDER=$OVNAME
+fi;
 
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export ARCH=arm
