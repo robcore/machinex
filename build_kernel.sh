@@ -57,6 +57,10 @@ if [[ $USEPRV = "n" ]]; then
 	fi;
 else
 	PRVS=`cat /media/root/robcore/AIK/previous.txt`
+	if [ -d /media/root/robcore/AIK/$PRVS ]; then
+		echo "removing previously compiled folder and zip of the same name"
+		rm -rf /media/root/robcore/AIK/$PRVS
+	fi;
 	OUTFOLDER=$PRVS
 fi;
 
