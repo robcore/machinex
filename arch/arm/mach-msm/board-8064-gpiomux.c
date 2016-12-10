@@ -449,7 +449,7 @@ static struct gpiomux_setting sx150x_suspended_cfg = {
 static struct gpiomux_setting sx150x_active_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_DOWN,
+	.pull = GPIOMUX_PULL_NONE,
 };
 
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
@@ -1372,7 +1372,6 @@ static struct msm_gpiomux_config sglte2_qsc_configs[] __initdata = {
 	{
 		.gpio = 51,
 		.settings = {
-			[GPIOMUX_ACTIVE] = &mdm2ap_status_cfg,
 			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,
 		}
 	},
