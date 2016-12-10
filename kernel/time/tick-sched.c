@@ -781,7 +781,7 @@ static void tick_nohz_kick_tick(struct tick_sched *ts, ktime_t now)
 #endif
 }
 
-static inline void tick_check_nohz(int cpu)
+static inline void tick_check_nohz_this_cpu(void)
 {
 	struct tick_sched *ts = &__get_cpu_var(tick_cpu_sched);
 	ktime_t now;
