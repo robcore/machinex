@@ -104,11 +104,6 @@ void apq8064_init_cam(void);
 void apq8064_bt_init(void);
 #endif
 
-/* Tabla slave address for I2C */
-#define APQ_8064_TABLA_I2C_SLAVE_ADDR		0x0d
-#define APQ_8064_TABLA_ANALOG_I2C_SLAVE_ADDR	0x77
-#define APQ_8064_TABLA_DIGITAL1_I2C_SLAVE_ADDR	0x66
-#define APQ_8064_TABLA_DIGITAL2_I2C_SLAVE_ADDR	0x55
 #define APQ_8064_GSBI1_QUP_I2C_BUS_ID 0
 #define APQ_8064_GSBI2_QUP_I2C_BUS_ID 2
 #define APQ_8064_GSBI3_QUP_I2C_BUS_ID 3
