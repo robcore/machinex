@@ -616,8 +616,12 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 			pr_debug("%s Image upgrade not supported\n", __func__);
 		break;
 	case SHUTDOWN_CHARM:
-		if (!mdm_drv->pdata->send_shdn)
+		if (!mdm_drv->pdata->send_shdn ||
+				!mdm_drv->pdata->sysmon_subsys_id_valid) {
+			pr_debug("%s shutdown not supported for this mdm\n",
+					__func__);
 			break;
+		}
 		atomic_set(&mdm_drv->mdm_ready, 0);
 		if (mdm_debug_mask & MDM_DEBUG_MASK_SHDN_LOG)
 			pr_debug("Sending shutdown request to mdm\n");
