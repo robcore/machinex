@@ -47,13 +47,16 @@ if [[ $USEPRV = "n" ]]; then
 				SUBVERSION=P$PROTO
 			fi
 		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		else
 		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
+		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		fi
 	else
 		echo -n "Whats the name then? [ENTER]: "
 		read OVNAME
 		OUTFOLDER=$OVNAME
+		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	fi;
 else
 	PRVS=`cat /media/root/robcore/AIK/previous.txt`
@@ -108,7 +111,6 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 		echo "cleanup finished"
 	fi;
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-	echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	echo "MD5 is $SUMMY"
 else
