@@ -100,9 +100,10 @@ if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
 	if [[ $repadb = "y" ]]; then
 		adb connect 192.168.1.103
 		sleep 5
+		adb connect 192.168.1.103
+		sleep 2
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		echo "Your kernel is ready to flash"
-		adb kill-server
 	fi;
 	read -s -n 1 -p "Cleanup?  y/n  " repcln
 	if [[ $repcln = "y" ]]; then
