@@ -2319,6 +2319,13 @@ static void __init mpq8064_pcie_init(void)
 	}
 }
 
+static struct platform_device mpq8064_device_ext_3p3v_vreg = {
+	.name			= "reg-fixed-voltage",
+	.dev			= {
+		.platform_data	= &mpq8064_3p3_regulator_pdata,
+	},
+};
+
 static struct platform_device apq8064_device_ext_5v_vreg __devinitdata = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= PM8921_MPP_PM_TO_SYS(7),
@@ -2352,6 +2359,16 @@ static struct platform_device apq8064_device_ext_ts_sw_vreg __devinitdata = {
 	.dev	= {
 		.platform_data
 			= &apq8064_gpio_regulator_pdata[GPIO_VREG_ID_EXT_TS_SW],
+	},
+};
+
+static struct platform_device
+apq8064_device_ext_3p3v_mpp4_vreg = {
+	.name	= GPIO_REGULATOR_DEV_NAME,
+	.id	= PM8921_MPP_PM_TO_SYS(4),
+	.dev	= {
+		.platform_data =
+		&apq8064_gpio_regulator_pdata[GPIO_VREG_ID_EXT_SATA_PWR],
 	},
 };
 
@@ -2401,6 +2418,14 @@ static struct platform_device *pm8921_common_devices[] __initdata = {
 	&apq8064_device_ext_5v_vreg,
 	&apq8064_device_ext_mpp8_vreg,
 	&apq8064_device_ext_3p3v_vreg,
+	&apq8064_device_ssbi_pmic1,
+	&apq8064_device_ssbi_pmic2,
+};
+
+static struct platform_device *pm8921_mpq_hrd_common_devices[] __initdata = {
+	&apq8064_device_ext_5v_vreg,
+	&apq8064_device_ext_mpp8_vreg,
+	&mpq8064_device_ext_3p3v_vreg,
 	&apq8064_device_ssbi_pmic1,
 	&apq8064_device_ssbi_pmic2,
 };
@@ -2723,6 +2748,7 @@ static struct msm_i2c_platform_data mpq8064_i2c_qup_gsbi5_pdata = {
 
 #define GSBI_DUAL_MODE_CODE 0x60
 #define MSM_GSBI1_PHYS		0x12440000
+#define MSM_GSBI5_PHYS		0x1A200000
 static void __init apq8064_i2c_init(void)
 {
 	void __iomem *gsbi_mem;
@@ -3075,6 +3101,14 @@ static struct i2c_registry apq8064_i2c_devices[] __initdata = {
 	},
 };
 
+static struct i2c_registry apq8064_tabla_i2c_devices[] __initdata = {
+	{
+		.bus = APQ_8064_GSBI1_QUP_I2C_BUS_ID,
+		.info = apq8064_tabla_i2c_device_info,
+		.len = ARRAY_SIZE(apq8064_tabla_i2c_device_info),
+	},
+};
+
 #define SX150X_EXP1_INT_N	PM8921_MPP_IRQ(PM8921_IRQ_BASE, 9)
 #define SX150X_EXP2_INT_N	MSM_GPIO_TO_INT(81)
 
@@ -3207,6 +3241,18 @@ static void __init register_i2c_devices(void)
 					mpq8064_i2c_devices[i].info,
 					mpq8064_i2c_devices[i].len);
 	}
+
+	if (machine_is_apq8064_mtp()) {
+		version = socinfo_get_platform_version();
+		if (SOCINFO_VERSION_MINOR(version) == 1)
+			for (i = 0; i < ARRAY_SIZE(apq8064_tabla_i2c_devices);
+				 ++i)
+				i2c_register_board_info(
+				apq8064_tabla_i2c_devices[i].bus,
+				apq8064_tabla_i2c_devices[i].info,
+				apq8064_tabla_i2c_devices[i].len);
+	}
+
 }
 
 static void enable_avc_i2c_bus(void)
