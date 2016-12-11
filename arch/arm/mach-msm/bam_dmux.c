@@ -1881,6 +1881,7 @@ static void disconnect_to_bam(void)
 		} else {
 			ssr_skipped_disconnect = 1;
 		}
+	}
 	unvote_dfab();
 
 	mutex_lock(&bam_rx_pool_mutexlock);
@@ -1980,7 +1981,7 @@ static void release_wakelock(void)
 #ifdef BAM_DMUX_FD
 		wake_lock_timeout(&bam_wakelock, wakelock_timeout * HZ);
 #endif
-		}
+	}
 	spin_unlock_irqrestore(&wakelock_reference_lock, flags);
 }
 
@@ -2249,6 +2250,7 @@ register_bam_failed:
 	if (!skip_iounmap)
 		iounmap(a2_virt_addr);
 ioremap_failed:
+	
 	return ret;
 }
 
@@ -2556,7 +2558,7 @@ static ssize_t show_waketime(struct device *dev,
 	if (!bamDmux_pkt_dev)
 		return 0;
 
-	return snprintf(buf, sizeof(*buf), "%u\n", wakelock_timeout);
+	return snprintf(buf, PAGE_SIZE, "%u\n", wakelock_timeout);
 }
 
 static ssize_t store_waketime(struct device *dev,
