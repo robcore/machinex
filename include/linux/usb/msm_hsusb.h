@@ -404,7 +404,9 @@ struct msm_hsic_host_platform_data {
 	bool phy_sof_workaround;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	unsigned log2_irq_thresh;
-
+	bool ignore_cal_pad_config;
+	int strobe_pad_offset;
+	int data_pad_offset;
 	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
 };

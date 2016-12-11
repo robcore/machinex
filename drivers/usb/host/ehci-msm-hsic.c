@@ -31,10 +31,12 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
-
+#include <linux/usb/hcd.h>
+#include <linux/usb/ulpi.h>
 #include <linux/usb/msm_hsusb_hw.h>
 #include <linux/usb/msm_hsusb.h>
 #include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/spinlock.h>
 #include <linux/kthread.h>
 #include <linux/wait.h>
@@ -109,6 +111,8 @@ struct msm_hsic_hcd {
 };
 
 struct msm_hsic_hcd *__mehci;
+
+static struct platform_driver ehci_msm_hsic_driver;
 
 static bool debug_bus_voting_enabled = true;
 
@@ -579,9 +583,25 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 			dev_err(mehci->dev, " gpio configuarion failed\n");
 			return ret;
 		}
-		/* Set LV_MODE=0x1 and DCC=0x2 in HSIC_GPIO PAD_CTL register */
-		writel_relaxed(HSIC_GPIO_PAD_VAL, HSIC_STROBE_GPIO_PAD_CTL);
-		writel_relaxed(HSIC_GPIO_PAD_VAL, HSIC_DATA_GPIO_PAD_CTL);
+		if (pdata->strobe_pad_offset) {
+			/* Set CORE_CTL_EN in STROBE GPIO PAD_CTL register */
+			reg = MSM_TLMM_BASE + pdata->strobe_pad_offset;
+			writel_relaxed(readl_relaxed(reg) | 0x2000000, reg);
+		} else {
+			/* Set LV_MODE=0x1 and DCC=0x2 in STROBE GPIO PAD_CTL */
+			reg = HSIC_STROBE_GPIO_PAD_CTL;
+			writel_relaxed(HSIC_GPIO_PAD_VAL, reg);
+		}
+
+		if (pdata->data_pad_offset) {
+			/* Set CORE_CTL_EN in HSIC_DATA GPIO PAD_CTL register */
+			reg = MSM_TLMM_BASE + pdata->data_pad_offset;
+			writel_relaxed(readl_relaxed(reg) | 0x2000000, reg);
+		} else {
+			/* Set LV_MODE=0x1 and DCC=0x2 in STROBE GPIO PAD_CTL */
+			reg = HSIC_DATA_GPIO_PAD_CTL;
+			writel_relaxed(HSIC_GPIO_PAD_VAL, reg);
+		}
 
 		mb();
 
@@ -1360,11 +1380,8 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 	/* alt_core_clk is for LINK to be used during PHY RESET
 	 * clock rate appropriately set by target specific clock driver */
 	mehci->alt_core_clk = clk_get(mehci->dev, "alt_core_clk");
-	if (IS_ERR(mehci->alt_core_clk)) {
-		dev_err(mehci->dev, "failed to core_clk\n");
-		ret = PTR_ERR(mehci->alt_core_clk);
-		goto put_core_clk;
-	}
+	if (IS_ERR(mehci->alt_core_clk))
+		dev_dbg(mehci->dev, "failed to get alt_core_clk\n");
 
 	/* phy_clk is required for HSIC PHY operation
 	 * clock rate appropriately set by target specific clock driver */
@@ -1382,7 +1399,6 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 		ret = PTR_ERR(mehci->cal_clk);
 		goto put_phy_clk;
 	}
-	clk_set_rate(mehci->cal_clk, 10000000);
 
 	/* ahb_clk is required for data transfers */
 	mehci->ahb_clk = clk_get(mehci->dev, "iface_clk");
@@ -1412,8 +1428,8 @@ put_cal_clk:
 put_phy_clk:
 	clk_put(mehci->phy_clk);
 put_alt_core_clk:
-	clk_put(mehci->alt_core_clk);
-put_core_clk:
+	if (!IS_ERR(mehci->alt_core_clk))
+		clk_put(mehci->alt_core_clk);
 	clk_put(mehci->core_clk);
 
 	return ret;
