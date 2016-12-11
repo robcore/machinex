@@ -139,7 +139,7 @@ VREG_CONSUMERS(L15) = {
 };
 VREG_CONSUMERS(L16) = {
 	REGULATOR_SUPPLY("8038_l16",		NULL),
-	REGULATOR_SUPPLY("core_vdd",		"pil_qdsp6v4.2"),
+	REGULATOR_SUPPLY("sw_core_vdd",		"pil-q6v4-modem"),
 };
 VREG_CONSUMERS(L17) = {
 	REGULATOR_SUPPLY("8038_l17",		NULL),
@@ -149,7 +149,7 @@ VREG_CONSUMERS(L18) = {
 };
 VREG_CONSUMERS(L19) = {
 	REGULATOR_SUPPLY("8038_l19",		NULL),
-	REGULATOR_SUPPLY("core_vdd",		"pil_qdsp6v4.1"),
+	REGULATOR_SUPPLY("fw_core_vdd",		"pil-q6v4-modem"),
 };
 VREG_CONSUMERS(L20) = {
 	REGULATOR_SUPPLY("8038_l20",		NULL),
@@ -173,8 +173,7 @@ VREG_CONSUMERS(L23) = {
 	REGULATOR_SUPPLY("hdmi_avdd",		"hdmi_msm.0"),
 	REGULATOR_SUPPLY("hdmi_vcc",		"hdmi_msm.0"),
 	REGULATOR_SUPPLY("pll_vdd",		"pil_riva"),
-	REGULATOR_SUPPLY("pll_vdd",		"pil_qdsp6v4.1"),
-	REGULATOR_SUPPLY("pll_vdd",		"pil_qdsp6v4.2"),
+	REGULATOR_SUPPLY("pll_vdd",		"pil-q6v4-modem"),
 };
 VREG_CONSUMERS(L24) = {
 	REGULATOR_SUPPLY("8038_l24",		NULL),
@@ -188,7 +187,7 @@ VREG_CONSUMERS(L26) = {
 };
 VREG_CONSUMERS(L27) = {
 	REGULATOR_SUPPLY("8038_l27",		NULL),
-	REGULATOR_SUPPLY("core_vdd",		"pil_qdsp6v4.0"),
+	REGULATOR_SUPPLY("core_vdd",		"pil-q6v4-lpass"),
 };
 VREG_CONSUMERS(S1) = {
 	REGULATOR_SUPPLY("8038_s1",		NULL),
