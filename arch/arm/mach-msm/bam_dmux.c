@@ -2015,7 +2015,6 @@ static int restart_notifier_cb(struct notifier_block *this,
 		/* wait till all bam_dmux writes completes */
 		synchronize_srcu(&bam_dmux_srcu);
 		BAM_DMUX_LOG("%s: ssr signaling complete\n", __func__);
-		cancel_work(&queue_rx_work);
 	}
 	if (code != SUBSYS_AFTER_SHUTDOWN)
 		return NOTIFY_DONE;
@@ -2250,7 +2249,7 @@ register_bam_failed:
 	if (!skip_iounmap)
 		iounmap(a2_virt_addr);
 ioremap_failed:
-	
+
 	return ret;
 }
 
