@@ -544,10 +544,6 @@ int kgsl_device_snapshot(struct kgsl_device *device, int hang)
 	struct timespec boot;
 	int ret = 0;
 
-	/* increment the hang count (on hang) for good book keeping */
-	if (hang)
-		device->snapshot_faultcount++;
-
 	/*
 	 * Bail if failed to get active count for GPU,
 	 * try again
@@ -702,22 +698,6 @@ done:
 	return itr.write;
 }
 
-/* Show the total number of hangs since device boot */
-static ssize_t faultcount_show(struct kgsl_device *device, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n", device->snapshot_faultcount);
-}
-
-/* Reset the total number of hangs since device boot */
-static ssize_t faultcount_store(struct kgsl_device *device, const char *buf,
-	size_t count)
-{
-	if (device && count > 0)
-		device->snapshot_faultcount = 0;
-
-	return count;
-}
-
 /* Show the timestamp of the last collected snapshot */
 static ssize_t timestamp_show(struct kgsl_device *device, char *buf)
 {
@@ -753,7 +733,6 @@ struct kgsl_snapshot_attribute attr_##_name = { \
 
 SNAPSHOT_ATTR(trigger, 0600, NULL, trigger_store);
 SNAPSHOT_ATTR(timestamp, 0444, timestamp_show, NULL);
-SNAPSHOT_ATTR(faultcount, 0644, faultcount_show, faultcount_store);
 
 static void snapshot_sysfs_release(struct kobject *kobj)
 {
@@ -819,7 +798,6 @@ int kgsl_device_snapshot_init(struct kgsl_device *device)
 
 	device->snapshot_maxsize = KGSL_SNAPSHOT_MEMSIZE;
 	device->snapshot_timestamp = 0;
-	device->snapshot_faultcount = 0;
 
 	INIT_LIST_HEAD(&device->snapshot_obj_list);
 
@@ -837,10 +815,6 @@ int kgsl_device_snapshot_init(struct kgsl_device *device)
 		goto done;
 
 	ret  = sysfs_create_file(&device->snapshot_kobj, &attr_timestamp.attr);
-	if (ret)
-		goto done;
-
-	ret  = sysfs_create_file(&device->snapshot_kobj, &attr_faultcount.attr);
 
 done:
 	return ret;
@@ -867,6 +841,5 @@ void kgsl_device_snapshot_close(struct kgsl_device *device)
 	device->snapshot = NULL;
 	device->snapshot_maxsize = 0;
 	device->snapshot_timestamp = 0;
-	device->snapshot_faultcount = 0;
 }
 EXPORT_SYMBOL(kgsl_device_snapshot_close);
