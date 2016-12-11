@@ -295,7 +295,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #endif
 	.mdp_iommu_split_domain = 1,
 	.cont_splash_enabled = 0x01,
-	.avtimer_phy = AVTIMER_PHYSICAL_ADDRESS,
+//	.avtimer_phy = AVTIMER_PHYSICAL_ADDRESS,
 };
 
 static char mipi_dsi_splash_is_enabled(void)
