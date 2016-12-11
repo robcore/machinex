@@ -235,7 +235,7 @@ static DECLARE_WORK(queue_rx_work, queue_rx_work_func);
 //static struct workqueue_struct *bam_mux_tx_workqueue;
 
 /* A2 power collaspe */
-#define UL_TIMEOUT_DELAY 1000	/* in ms */
+#define UL_TIMEOUT_DELAY 300	/* in ms */
 #define ENABLE_DISCONNECT_ACK	0x1
 static void toggle_apps_ack(void);
 static void reconnect_to_bam(void);
