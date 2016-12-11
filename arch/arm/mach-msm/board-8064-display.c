@@ -75,6 +75,7 @@
 #define MSM_FB_OVERLAY1_WRITEBACK_SIZE (0)
 #endif  /* CONFIG_FB_MSM_OVERLAY1_WRITEBACK */
 
+#define AVTIMER_PHYSICAL_ADDRESS 0x28009008
 
 static struct resource msm_fb_resources[] = {
 	{
@@ -281,7 +282,7 @@ static struct msm_bus_scale_pdata mdp_bus_scale_pdata = {
 
 static struct msm_panel_common_pdata mdp_pdata = {
 	.gpio = MDP_VSYNC_GPIO,
-	.mdp_max_clk = 266670000,
+	.mdp_max_clk = 266667000,
 	.mdp_max_bw = 2000000000,
 	.mdp_bw_ab_factor = 115,
 	.mdp_bw_ib_factor = 150,
@@ -294,6 +295,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #endif
 	.mdp_iommu_split_domain = 1,
 	.cont_splash_enabled = 0x01,
+	.avtimer_phy = AVTIMER_PHYSICAL_ADDRESS,
 };
 
 static char mipi_dsi_splash_is_enabled(void)
