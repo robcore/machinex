@@ -231,8 +231,8 @@ static void queue_rx_work_func(struct work_struct *work);
 static DECLARE_WORK(rx_timer_work, rx_timer_work_func);
 static DECLARE_WORK(queue_rx_work, queue_rx_work_func);
 
-//static struct workqueue_struct *bam_mux_rx_workqueue;
-//static struct workqueue_struct *bam_mux_tx_workqueue;
+static struct workqueue_struct *bam_mux_rx_workqueue;
+static struct workqueue_struct *bam_mux_tx_workqueue;
 
 /* A2 power collaspe */
 #define UL_TIMEOUT_DELAY 300	/* in ms */
@@ -438,7 +438,8 @@ static void __queue_rx(gfp_t alloc_flags)
 		list_add_tail(&info->list_node, &bam_rx_pool);
 		rx_len_cached = ++bam_rx_pool_len;
 		ret = sps_transfer_one(bam_rx_pipe, info->dma_address,
-			BUFFER_SIZE, info, 0);
+			BUFFER_SIZE, info,
+			SPS_IOVEC_FLAG_INT | SPS_IOVEC_FLAG_EOT);
 		if (ret) {
 			list_del(&info->list_node);
 			rx_len_cached = --bam_rx_pool_len;
@@ -681,7 +682,7 @@ static int bam_mux_write_cmd(void *data, uint32_t len)
 	spin_lock_irqsave(&bam_tx_pool_spinlock, flags);
 	list_add_tail(&pkt->list_node, &bam_tx_pool);
 	rc = sps_transfer_one(bam_tx_pipe, dma_address, len,
-				pkt, SPS_IOVEC_FLAG_EOT);
+				pkt, SPS_IOVEC_FLAG_INT | SPS_IOVEC_FLAG_EOT);
 	if (rc) {
 		DMUX_LOG_KERR("%s sps_transfer_one failed rc=%d\n",
 			__func__, rc);
@@ -854,7 +855,7 @@ int msm_bam_dmux_write(uint32_t id, struct sk_buff *skb)
 	spin_lock_irqsave(&bam_tx_pool_spinlock, flags);
 	list_add_tail(&pkt->list_node, &bam_tx_pool);
 	rc = sps_transfer_one(bam_tx_pipe, dma_address, skb->len,
-				pkt, SPS_IOVEC_FLAG_EOT);
+				pkt, SPS_IOVEC_FLAG_INT | SPS_IOVEC_FLAG_EOT);
 	if (rc) {
 		DMUX_LOG_KERR("%s sps_transfer_one failed rc=%d\n",
 			__func__, rc);
@@ -1135,7 +1136,7 @@ static void rx_switch_to_interrupt_mode(void)
 
 fail:
 	pr_err("%s: reverting to polling\n", __func__);
-	schedule_work(&rx_timer_work);
+	queue_work_on(0, bam_mux_rx_workqueue, &rx_timer_work);
 }
 
 static void rx_timer_work_func(struct work_struct *work)
@@ -1255,7 +1256,7 @@ static void bam_mux_tx_notify(struct sps_event_notify *notify)
 			dma_unmap_single(NULL, pkt->dma_address,
 						pkt->len,
 						DMA_TO_DEVICE);
-		schedule_work(&pkt->work);
+		queue_work(bam_mux_tx_workqueue, &pkt->work);
 		break;
 	default:
 		pr_err("%s: recieved unexpected event id %d\n", __func__,
@@ -1297,7 +1298,7 @@ static void bam_mux_rx_notify(struct sps_event_notify *notify)
 			 * run on core 0 so that netif_rx() in rmnet uses only
 			 * one queue
 			 */
-			schedule_work(&rx_timer_work);
+			queue_work_on(0, bam_mux_rx_workqueue, &rx_timer_work);
 		}
 		break;
 	default:
@@ -1411,11 +1412,12 @@ static void notify_all(int event, unsigned long data)
 	struct list_head *temp;
 	struct outside_notify_func *func;
 
-	BAM_DMUX_LOG("%s: event=%d, data=%lu\n", __func__, event, data);
-
 	for (i = 0; i < BAM_DMUX_NUM_CHANNELS; ++i) {
-		if (bam_ch_is_open(i))
+		if (bam_ch_is_open(i)) {
 			bam_ch[i].notify(bam_ch[i].priv, event, data);
+			BAM_DMUX_LOG("%s: cid=%d, event=%d, data=%lu\n",
+					__func__, i, event, data);
+		}
 	}
 
 	__list_for_each(temp, &bam_other_notify_funcs) {
@@ -1448,7 +1450,7 @@ int msm_bam_dmux_kickoff_ul_wakeup(void)
 	ul_packet_written = 1;
 	is_connected = bam_is_connected;
 	if (!is_connected)
-		schedule_work(&kickoff_ul_wakeup);
+		queue_work(bam_mux_tx_workqueue, &kickoff_ul_wakeup);
 	read_unlock(&ul_wakeup_lock);
 
 	return is_connected;
@@ -1513,7 +1515,7 @@ int msm_bam_dmux_ul_power_vote(void)
 	atomic_inc(&ul_ondemand_vote);
 	is_connected = bam_is_connected;
 	if (!is_connected)
-		schedule_work(&kickoff_ul_wakeup);
+		queue_work(bam_mux_tx_workqueue, &kickoff_ul_wakeup);
 	read_unlock(&ul_wakeup_lock);
 
 	return is_connected;
@@ -2137,6 +2139,7 @@ register_bam_failed:
 	if (!skip_iounmap)
 		iounmap(a2_virt_addr);
 ioremap_failed:
+	/*destroy_workqueue(bam_mux_workqueue);*/
 	return ret;
 }
 
@@ -2318,6 +2321,22 @@ static int bam_dmux_probe(struct platform_device *pdev)
 			pr_err("%s: unable to set dfab clock rate\n", __func__);
 	}
 
+	/*
+	 * setup the workqueue so that it can be pinned to core 0 and not
+	 * block the watchdog pet function, so that netif_rx() in rmnet
+	 * only uses one queue.
+	 */
+	bam_mux_rx_workqueue = alloc_workqueue("bam_dmux_rx",
+					WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, 1);
+	if (!bam_mux_rx_workqueue)
+		return -ENOMEM;
+
+	bam_mux_tx_workqueue = create_singlethread_workqueue("bam_dmux_tx");
+	if (!bam_mux_tx_workqueue) {
+		destroy_workqueue(bam_mux_rx_workqueue);
+		return -ENOMEM;
+	}
+
 	for (rc = 0; rc < BAM_DMUX_NUM_CHANNELS; ++rc) {
 		spin_lock_init(&bam_ch[rc].lock);
 		scnprintf(bam_ch[rc].name, BAM_DMUX_CH_NAME_MAX_LEN,
@@ -2326,6 +2345,8 @@ static int bam_dmux_probe(struct platform_device *pdev)
 		bam_ch[rc].pdev = platform_device_alloc(bam_ch[rc].name, 2);
 		if (!bam_ch[rc].pdev) {
 			pr_err("%s: platform device alloc failed\n", __func__);
+			destroy_workqueue(bam_mux_rx_workqueue);
+			destroy_workqueue(bam_mux_tx_workqueue);
 			return -ENOMEM;
 		}
 	}
@@ -2340,6 +2361,8 @@ static int bam_dmux_probe(struct platform_device *pdev)
 					bam_dmux_smsm_cb, NULL);
 
 	if (rc) {
+		destroy_workqueue(bam_mux_rx_workqueue);
+		destroy_workqueue(bam_mux_tx_workqueue);
 		pr_err("%s: smsm cb register failed, rc: %d\n", __func__, rc);
 		return -ENOMEM;
 	}
@@ -2348,6 +2371,8 @@ static int bam_dmux_probe(struct platform_device *pdev)
 					bam_dmux_smsm_ack_cb, NULL);
 
 	if (rc) {
+		destroy_workqueue(bam_mux_rx_workqueue);
+		destroy_workqueue(bam_mux_tx_workqueue);
 		smsm_state_cb_deregister(SMSM_MODEM_STATE,
 					SMSM_A2_POWER_CONTROL,
 					bam_dmux_smsm_cb, NULL);
