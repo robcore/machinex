@@ -817,7 +817,6 @@ static int32_t q6asm_mmapcallback(struct apr_client_data *data, void *priv)
 				data->reset_proc,
 				this_mmap.apr);
 		apr_reset(this_mmap.apr);
-		atomic_set(&this_mmap.ref_cnt, 0);
 		this_mmap.apr = NULL;
 		return 0;
 	}
