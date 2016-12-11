@@ -315,13 +315,6 @@ struct kfifo bam_dmux_state_log;
 static int bam_dmux_uplink_vote;
 static int bam_dmux_power_state;
 
-
-#define DMUX_LOG_KERR(fmt...) \
-do { \
-	BAM_DMUX_LOG(fmt); \
-	pr_err(fmt); \
-} while (0)
-
 static void *bam_ipc_log_txt;
 
 #define BAM_IPC_LOG_PAGES 5
@@ -361,6 +354,12 @@ do { \
 		disconnect_ack ? 'D' : 'd', \
 		args); \
 	} \
+} while (0)
+
+#define DMUX_LOG_KERR(fmt, args...) \
+do { \
+	BAM_DMUX_LOG(fmt, args); \
+	pr_err(fmt, args); \
 } while (0)
 
 static inline void set_tx_timestamp(struct tx_pkt_info *pkt)
@@ -1811,10 +1810,13 @@ static void disconnect_to_bam(void)
 
 	if (!power_management_only_mode) {
 		if (likely(!in_ssr)) {
+			BAM_DMUX_LOG("%s: disconnect tx\n", __func__);
 			sps_disconnect(bam_tx_pipe);
+			BAM_DMUX_LOG("%s: disconnect rx\n", __func__);
 			sps_disconnect(bam_rx_pipe);
 			__memzero(rx_desc_mem_buf.base, rx_desc_mem_buf.size);
 			__memzero(tx_desc_mem_buf.base, tx_desc_mem_buf.size);
+			BAM_DMUX_LOG("%s: device reset\n", __func__);
 			sps_device_reset(a2_device_handle);
 		} else {
 			ssr_skipped_disconnect = 1;
