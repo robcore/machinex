@@ -427,7 +427,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	if (!priv || !dev) {
 		ret = -EINVAL;
-		goto unlock;
+		goto fail;
 	}
 
 	iommu_drvdata = dev_get_drvdata(dev->parent);
@@ -436,28 +436,23 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	if (!iommu_drvdata || !ctx_drvdata || !ctx_dev) {
 		ret = -EINVAL;
-		goto unlock;
+		goto fail;
 	}
-
-	++ctx_drvdata->attach_count;
-
-	if (ctx_drvdata->attach_count > 1)
-		goto unlock;
 
 	if (!list_empty(&ctx_drvdata->attached_elm)) {
 		ret = -EBUSY;
-		goto unlock;
+		goto fail;
 	}
 
 	list_for_each_entry(tmp_drvdata, &priv->list_attached, attached_elm)
 		if (tmp_drvdata == ctx_drvdata) {
 			ret = -EBUSY;
-			goto unlock;
+			goto fail;
 		}
 
 	ret = __enable_clocks(iommu_drvdata);
 	if (ret)
-		goto unlock;
+		goto fail;
 
 	__program_context(iommu_drvdata->base, ctx_dev->num, iommu_drvdata->ncb,
 			  __pa(priv->pgtable), priv->redirect,
@@ -467,7 +462,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
 
 	ctx_drvdata->attached_domain = domain;
-unlock:
+fail:
 	mutex_unlock(&msm_iommu_lock);
 	return ret;
 }
@@ -476,6 +471,7 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 				 struct device *dev)
 {
 	struct msm_priv *priv;
+	struct msm_iommu_ctx_dev *ctx_dev;
 	struct msm_iommu_drvdata *iommu_drvdata;
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	int ret;
@@ -484,23 +480,18 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 	priv = domain->priv;
 
 	if (!priv || !dev)
-		goto unlock;
+		goto fail;
 
 	iommu_drvdata = dev_get_drvdata(dev->parent);
 	ctx_drvdata = dev_get_drvdata(dev);
+	ctx_dev = dev->platform_data;
 
-	if (!iommu_drvdata || !ctx_drvdata)
-		goto unlock;
-
-	--ctx_drvdata->attach_count;
-	BUG_ON(ctx_drvdata->attach_count < 0);
-
-	if (ctx_drvdata->attach_count > 0)
-		goto unlock;
+	if (!iommu_drvdata || !ctx_drvdata || !ctx_dev)
+		goto fail;
 
 	ret = __enable_clocks(iommu_drvdata);
 	if (ret)
-		goto unlock;
+		goto fail;
 
 	msm_iommu_remote_spin_lock();
 
@@ -514,7 +505,7 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 	__disable_clocks(iommu_drvdata);
 	list_del_init(&ctx_drvdata->attached_elm);
 	ctx_drvdata->attached_domain = NULL;
-unlock:
+fail:
 	mutex_unlock(&msm_iommu_lock);
 }
 

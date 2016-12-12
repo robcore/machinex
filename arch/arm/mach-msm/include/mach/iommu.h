@@ -102,7 +102,6 @@ struct msm_iommu_drvdata {
  * @name		Human-readable name of this context device
  * @sids		List of Stream IDs mapped to this context (v2 only)
  * @nsid		Number of Stream IDs mapped to this context (v2 only)
- * @attach_count	Number of time this context has been attached.
  *
  * A msm_iommu_ctx_drvdata holds the driver data for a single context bank
  * within each IOMMU hardware instance
@@ -115,7 +114,6 @@ struct msm_iommu_ctx_drvdata {
 	const char *name;
 	u32 sids[MAX_NUM_SMR];
 	unsigned int nsid;
-	int attach_count;
 };
 
 /*
