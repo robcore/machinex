@@ -1,0 +1,53 @@
+root@machina:/media/root/robcore/android/hammerhead-franco/patches# girly 'l.is_secure' | sort -d
+1patches/0132-iommu-msm-Don-t-read-write-secure-CB-registers.patch
+1patches/0184-msm-Add-support-for-parsing-domain-info-from-dt.patch
+1patches/1978-msm-vidc-Read-iommu-groups-from-dtsi.patch
+1patches/1979-msm-vidc-Use-iommu-groups-instead-of-maps.patch
+1patches/2016-iommu-msm-Refactor-ASID-assignment.patch
+1patches/2700-iommu-msm-Consolidate-definitions-for-msm_priv.patch
+1patches/3738-msm-mdss-enable-setting-secure-destination-for-write.patch
+1patches/6526-msm-mdss-refactor-performance-calculations.patch
+2patches/7364-iommu-msm-Support-secure-programming-of-global-regis.patch
+2patches/7998-mobicore-New-branch-incorporating-QC-code-review-sug.patch
+2patches/7999-mobicore-MobiCore-1.2-kernel-module-Changes-to-MC11.patch
+2patches/8132-iommu-msm-Don-t-read-write-secure-CB-registers.patch
+2patches/8184-msm-Add-support-for-parsing-domain-info-from-dt.patch
+5patches/6215-nl-cfg-mac-80211-Allow-Setting-Multicast-Rate-in-Mes.patch
+8patches/2179-nl80211-Introduce-NL80211_MESH_SETUP_USERSPACE_AMPE.patch
+root@machina:/media/root/robcore/android/hammerhead-franco/patches# girly 'drivers/iommu/msm_iommu_sec.c' | sort -d
+1patches/0010-iommu-msm-Fix-usage-of-uninitialized-variables.patch
+1patches/0554-msm-iommu-Program-certain-glb-regs-for-all-IOMMU.patch
+1patches/0725-msm-iommu-Suppress-kmemleak-warning-for-sec_ptbl.patch
+1patches/1218-msm-iommu-Rename-iommu-driver-files.patch
+1patches/1222-iommu-msm-Change-driver-name.patch
+1patches/1223-msm-iommu-Add-support-for-halting-IOMMU.patch
+1patches/1224-iommu-msm-Add-attached-detached-call.patch
+1patches/1232-iommu-msm-Do-not-access-halt-regs.-to-early.patch
+1patches/2017-iommu-msm-Only-program-registers-once.patch
+1patches/2430-msm-scm-change-svc-id-SCM_SVC_CP-to-a-more-generic-S.patch
+1patches/2700-iommu-msm-Consolidate-definitions-for-msm_priv.patch
+1patches/2948-iommu-msm-Turn-on-clocks-for-secure-IOMMU.patch
+1patches/3013-ion-Replace-memory-protect-unprotect-map-unmap-calls.patch
+1patches/4932-iommu-msm-add-page-fault-handler-for-secure-context-.patch
+1patches/6113-msm-iommu-remove-tlb_invalidate-from-the-map-calls.patch
+2patches/6493-iommu-msm-Support-for-secure-context-banks.patch
+2patches/7364-iommu-msm-Support-secure-programming-of-global-regis.patch
+2patches/8010-iommu-msm-Fix-usage-of-uninitialized-variables.patch
+root@machina:/media/root/robcore/android/hammerhead-franco/patches# medit 1patches/1222-iommu-msm-Change-driver-name.patch &
+[1] 12348
+root@machina:/media/root/robcore/android/hammerhead-franco/patches# girly 'msm_iommu_bfb_settings' | sort -d
+1patches/0439-iommu-msm-Add-support-for-additional-custom-clk.patch
+1patches/0440-iommu-msm-Add-support-for-alt.-regulator.patch
+1patches/0554-msm-iommu-Program-certain-glb-regs-for-all-IOMMU.patch
+1patches/1223-msm-iommu-Add-support-for-halting-IOMMU.patch
+1patches/1716-msm-iommu-Remove-register-offset-sanity-check.patch
+1patches/2016-iommu-msm-Refactor-ASID-assignment.patch
+1patches/2017-iommu-msm-Only-program-registers-once.patch
+1patches/4680-iommu-msm-Add-bus-voting-to-IOMMU-driver.patch
+2patches/6111-iommu-msm-Support-configuring-BFB-settings.patch
+2patches/6257-iommu-msm-Read-SMT-size-from-hardware-registers.patch
+2patches/6493-iommu-msm-Support-for-secure-context-banks.patch
+2patches/6984-iommu-msm-Fix-lockdep-warnings-by-removing-virtual-i.patch
+2patches/7364-iommu-msm-Support-secure-programming-of-global-regis.patch
+2patches/7870-msm-IOMMU-Add-IOMMU-support-for-8910.patch
+[1]+  Done                    medit 1patches/1222-iommu-msm-Change-driver-name.patch
