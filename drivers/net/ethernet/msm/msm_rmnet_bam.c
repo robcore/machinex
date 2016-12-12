@@ -42,6 +42,11 @@ static int msm_rmnet_bam_debug_mask;
 module_param_named(debug_enable, msm_rmnet_bam_debug_mask,
 			int, S_IRUGO | S_IWUSR | S_IWGRP);
 
+static unsigned long int msm_rmnet_bam_headroom_check_failure;
+module_param(msm_rmnet_bam_headroom_check_failure, ulong, S_IRUGO);
+MODULE_PARM_DESC(msm_rmnet_bam_headroom_check_failure,
+		 "Number of packets with insufficient headroom");
+
 #define DEBUG_MASK_LVL0 (1U << 0)
 #define DEBUG_MASK_LVL1 (1U << 1)
 #define DEBUG_MASK_LVL2 (1U << 2)
@@ -59,8 +64,6 @@ module_param_named(debug_enable, msm_rmnet_bam_debug_mask,
 
 /* allow larger frames */
 #define RMNET_DATA_LEN 2000
-
-#define RMNET_BAM_DRIVER_NAME "rmnet_bam"
 
 #define DEVICE_ID_INVALID   -1
 
@@ -288,6 +291,23 @@ static void bam_recv_notify(void *dev, struct sk_buff *skb)
 			((struct net_device *)dev)->name, __func__);
 }
 
+static struct sk_buff *_rmnet_add_headroom(struct sk_buff **skb,
+					   struct net_device *dev)
+{
+	struct sk_buff *skbn;
+
+	if (skb_headroom(*skb) < dev->needed_headroom) {
+		msm_rmnet_bam_headroom_check_failure++;
+		skbn = skb_realloc_headroom(*skb, dev->needed_headroom);
+		kfree_skb(*skb);
+		*skb = skbn;
+	} else {
+		skbn = *skb;
+	}
+
+	return skbn;
+}
+
 static int _rmnet_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct rmnet_private *p = netdev_priv(dev);
@@ -296,6 +316,10 @@ static int _rmnet_xmit(struct sk_buff *skb, struct net_device *dev)
 	u32 opmode;
 	unsigned long flags;
 
+	if (unlikely(!_rmnet_add_headroom(&skb, dev))) {
+		dev->stats.tx_dropped++;
+		return NETDEV_TX_OK;
+	}
 	/* For QoS mode, prepend QMI header and assign flow ID from skb->mark */
 	spin_lock_irqsave(&p->lock, flags);
 	opmode = p->operation_mode;
@@ -565,48 +589,6 @@ static const struct net_device_ops rmnet_ops_ip = {
 	.ndo_validate_addr = 0,
 };
 
-static int rmnet_ioctl_extended(struct net_device *dev, struct ifreq *ifr)
-{
-	struct rmnet_ioctl_extended_s ext_cmd;
-	int rc = 0;
-	struct rmnet_private *p = netdev_priv(dev);
-
-
-	rc = copy_from_user(&ext_cmd, ifr->ifr_ifru.ifru_data,
-			    sizeof(ext_cmd));
-
-	if (rc) {
-		pr_err("%s: copy_from_user failed ,error %d", __func__, rc);
-		return rc;
-	}
-
-	switch (ext_cmd.extended_ioctl) {
-	case RMNET_IOCTL_SET_MRU:
-		/* Transport MRU is fixed, so do nothing */
-		break;
-	case RMNET_IOCTL_GET_EPID:
-		ext_cmd.u.data = p->ch_id;
-		break;
-	case RMNET_IOCTL_GET_SUPPORTED_FEATURES:
-		ext_cmd.u.data = 0;
-		break;
-	case RMNET_IOCTL_GET_DRIVER_NAME:
-		strlcpy(ext_cmd.u.if_name, RMNET_BAM_DRIVER_NAME,
-			sizeof(ext_cmd.u.if_name));
-		break;
-	default:
-		rc = -EINVAL;
-		break;
-	}
-
-	rc = copy_to_user(ifr->ifr_ifru.ifru_data, &ext_cmd, sizeof(ext_cmd));
-
-	if (rc)
-		pr_err("%s: copy_to_user failed, error %d", __func__, rc);
-
-	return rc;
-}
-
 static int rmnet_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	struct rmnet_private *p = netdev_priv(dev);
@@ -713,10 +695,6 @@ static int rmnet_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		rc = __rmnet_close(dev);
 		DBG0("[%s] rmnet_ioctl(): close transport port\n",
 			dev->name);
-		break;
-
-	case RMNET_IOCTL_EXTENDED:          /* Extended IOCTL's        */
-		rc = rmnet_ioctl_extended(dev, ifr);
 		break;
 
 	default:
