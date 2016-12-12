@@ -103,7 +103,7 @@ void platform_secondary_init(unsigned int cpu)
 	 */
 	write_pen_release(-1);
 
-	/* clear the IPC1(SPI-8) pending SPI */
+	/* clear the IPC pending SPI */
 	if (power_collapsed) {
 		raise_clear_spi(1, false);
 		clear_pending_spi(MSM8625_INT_ACSR_MP_CORE_IPC1);
