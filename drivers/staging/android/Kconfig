@@ -106,6 +106,14 @@ config SEC_OOM_KILLER
 	  Hence, it makes more sense that we select the oom victim
 	  as android does when LMK is invoked.
 
+config ANDROID_LMK_ADJ_RBTREE
+	bool "Android Low Memory Killer: Red-Black Tree search"
+	depends on ANDROID_LOW_MEMORY_KILLER
+	default y
+	---help---
+	  Utilize RB Tree for walking the tasklist.. O(log n) vs O(n)
+	  much speedier for long task list!
+
 source "drivers/staging/android/switch/Kconfig"
 
 config ANDROID_INTF_ALARM_DEV
