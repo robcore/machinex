@@ -26,17 +26,21 @@ if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	echo "your previous version was $PREV"
 fi;
 
-read -s -n 1 -p "Use Previous Name?  y/n  " USEPRV
+echo -n "Use Previous Name?  y/n [ENTER]: "
+read USEPRV
 if [[ $USEPRV = "n" ]]; then
-	read -s -n 1 -p "Override Naming Process?  y/n  " overide
+	echo -n "Override Naming Process?  y/n [ENTER]: "
+	read overide
 	if [[ $overide = "n" ]]; then
 		echo -n "Enter Kernel major version and press [ENTER]: "
 		read MAJOR
 		KERNEL_NAME=machinex
 		KERNEL_VERSION=Mark$MAJOR
-		read -s -n 1 -p "Is this a BETA?  y/n  " rep
+		echo -n "Is this a BETA?  y/n [ENTER]: "
+		read rep
 		if [[ $rep = "y" ]]; then
-			read -s -n 1 -p "Is this Next or Proto Version? n/p  " reply
+			echo -n "Is this Next or Proto Version? n/p [ENTER]: "
+			read reply
 			if [[ $reply = "n" ]]; then
 				echo -n "Enter Next Version and press [ENTER]: "
 				read NEXT
@@ -53,7 +57,7 @@ if [[ $USEPRV = "n" ]]; then
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		fi
 	else
-		echo -n "Whats the name then? [ENTER]: "
+		echo -n "What is its name? [ENTER]: "
 		read OVNAME
 		OUTFOLDER=$OVNAME
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -67,6 +71,9 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
+echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
+read AUTO
+
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export ARCH=arm
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
@@ -78,39 +85,48 @@ mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make ARCH=arm -S -s -j6 O=$(pwd)/out;
-if [ -e $(pwd)/out/arch/arm/boot/zImage ]; then
-	cp -p $(pwd)/out/arch/arm/boot/zImage $(pwd)/arch/arm/boot/zImage;
-	cp -p $(pwd)/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/arch/arm/boot/dhd.ko;
-	cp -p $(pwd)/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/arch/arm/boot/scsi_wait_scan.ko;
-	mv $(pwd)/arch/arm/boot/zImage $(pwd)/arch/arm/boot/boot.img-zImage;
+if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
-	rm -rf machinex-new;
-	cp -R -p machina-new machinex-new;
-	cp -p ~/machinex/arch/arm/boot/dhd.ko $(pwd)/machinex-new/system/lib/modules/dhd.ko;
-	cp -p ~/machinex/arch/arm/boot/scsi_wait_scan.ko $(pwd)/machinex-new/system/lib/modules/scsi_wait_scan.ko;
+	cp -R -p machina-new $OUTFOLDER;
+	cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
+	cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
 	rm $(pwd)/split_img/boot.img-zImage;
-	cp -p ~/machinex/arch/arm/boot/boot.img-zImage $(pwd)/split_img/boot.img-zImage;
+	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
 	sh repackimg.sh --sudo;
-	cp -p image-new.img $(pwd)/machinex-new/boot.img
-	mv $(pwd)/machinex-new $(pwd)/$OUTFOLDER
+	cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
-	read -s -n 1 -p "Shall I adb push this for you, sir?  y/n  " repadb
-	if [[ $repadb = "y" ]]; then
+
+	if [[ $AUTO = "n" ]]; then
+		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
+		read repadb
+		if [[ $repadb = "y" ]]; then
+			adb connect 192.168.1.103
+			sleep 5
+			adb connect 192.168.1.103
+			sleep 2
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "Your kernel is ready to flash"
+		fi;
+		echo -n "Cleanup?  y/n [ENTER]: "
+		read repcln
+		if [[ $repcln = "y" ]]; then
+			cd ~/machinex
+			sh $(pwd)/cleanup.sh
+			echo "cleanup finished"
+		fi;
+	else
 		adb connect 192.168.1.103
 		sleep 5
 		adb connect 192.168.1.103
 		sleep 2
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "Your kernel is ready to flash"
-	fi;
-	read -s -n 1 -p "Cleanup?  y/n  " repcln
-	if [[ $repcln = "y" ]]; then
 		cd ~/machinex
 		sh $(pwd)/cleanup.sh
-		echo "cleanup finished"
+		echo "Your kernel is ready to flash, and cleanup finished"
 	fi;
+
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	echo "MD5 is $SUMMY"

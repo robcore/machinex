@@ -432,8 +432,7 @@ static inline void l2cap_ertm_start_retrans_timer(struct l2cap_pinfo *pi)
 {
 	BT_DBG("pi %p", pi);
 	if (!delayed_work_pending(&pi->monitor_work) && pi->retrans_timeout) {
-		cancel_delayed_work(&pi->retrans_work);
-		queue_delayed_work(_l2cap_wq, &pi->retrans_work,
+		mod_delayed_work(_l2cap_wq, &pi->retrans_work,
 			msecs_to_jiffies(pi->retrans_timeout));
 	}
 }
@@ -448,9 +447,8 @@ static inline void l2cap_ertm_start_monitor_timer(struct l2cap_pinfo *pi)
 {
 	BT_DBG("pi %p", pi);
 	l2cap_ertm_stop_retrans_timer(pi);
-	cancel_delayed_work(&pi->monitor_work);
 	if (pi->monitor_timeout) {
-		queue_delayed_work(_l2cap_wq, &pi->monitor_work,
+		mod_delayed_work(_l2cap_wq, &pi->monitor_work,
 				msecs_to_jiffies(pi->monitor_timeout));
 	}
 }
@@ -976,8 +974,6 @@ struct sock *l2cap_find_sock_by_fixed_cid_and_dir(__le16 cid, bdaddr_t *src,
 
 	sk_for_each(sk, node, &l2cap_sk_list.head) {
 
-		BT_DBG("sock %p scid %d check cid : %d ", sk, l2cap_pi(sk)->scid, cid);
-
 		if (incoming && !l2cap_pi(sk)->incoming)
 			continue;
 
@@ -1221,7 +1217,10 @@ void l2cap_conn_del(struct hci_conn *hcon, int err, u8 is_process)
 			else
 				bh_lock_sock(sk);
 			l2cap_chan_del(sk, err);
-			bh_unlock_sock(sk);
+			if (is_process)
+				release_sock(sk);
+			else
+				bh_unlock_sock(sk);
 			l2cap_sock_kill(sk);
 			sk = next;
 		} else
