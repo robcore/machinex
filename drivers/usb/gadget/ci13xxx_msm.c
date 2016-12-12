@@ -286,19 +286,6 @@ void ci13xxx_msm_shutdown(struct platform_device *pdev)
 	ci13xxx_pullup(&_udc->gadget, 0);
 }
 
-void msm_hw_bam_disable(bool bam_disable)
-{
-	u32 val;
-	struct ci13xxx *udc = _udc;
-
-	if (bam_disable)
-		val = readl_relaxed(USB_GENCONFIG) | GENCONFIG_BAM_DISABLE;
-	else
-		val = readl_relaxed(USB_GENCONFIG) & ~GENCONFIG_BAM_DISABLE;
-
-	writel_relaxed(val, USB_GENCONFIG);
-}
-
 static struct platform_driver ci13xxx_msm_driver = {
 	.probe = ci13xxx_msm_probe,
 	.driver = { .name = "msm_hsusb", },
