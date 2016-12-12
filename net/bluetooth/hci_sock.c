@@ -269,7 +269,7 @@ static inline int hci_sock_bound_ioctl(struct sock *sk, unsigned int cmd, unsign
 	switch (cmd) {
 	case HCISETRAW:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 
 		if (test_bit(HCI_QUIRK_RAW_DEVICE, &hdev->quirks))
 			return -EPERM;
@@ -289,12 +289,12 @@ static inline int hci_sock_bound_ioctl(struct sock *sk, unsigned int cmd, unsign
 
 	case HCIBLOCKADDR:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 		return hci_blacklist_add(hdev, (void __user *) arg);
 
 	case HCIUNBLOCKADDR:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 		return hci_blacklist_del(hdev, (void __user *) arg);
 
 	case HCISETAUTHINFO:
@@ -327,7 +327,7 @@ static int hci_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long a
 
 	case HCIDEVUP:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 
 		err =  hci_dev_open(arg);
 		if (!err || err == -EALREADY)
@@ -337,17 +337,17 @@ static int hci_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long a
 
 	case HCIDEVDOWN:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 		return hci_dev_close(arg);
 
 	case HCIDEVRESET:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 		return hci_dev_reset(arg);
 
 	case HCIDEVRESTAT:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 		return hci_dev_reset_stat(arg);
 
 	case HCISETSCAN:
@@ -359,7 +359,7 @@ static int hci_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long a
 	case HCISETACLMTU:
 	case HCISETSCOMTU:
 		if (!capable(CAP_NET_ADMIN))
-			return -EACCES;
+			return -EPERM;
 		return hci_dev_cmd(cmd, argp);
 
 	case HCIINQUIRY:
