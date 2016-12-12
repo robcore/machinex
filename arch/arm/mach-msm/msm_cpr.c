@@ -466,6 +466,10 @@ static void cpr_set_vdd(struct msm_cpr *cpr, enum cpr_action action)
 			return;
 		}
 
+		/* Keep down step upto two per interrupt to avoid any spike */
+		if (error_step > 2)
+			error_step = 2;
+
 		/* Calculte new PMIC voltage */
 		new_volt = curr_volt - (error_step * cpr->vp->step_size);
 		pr_debug("DOWN_INT: new_volt: %d\n", new_volt);
