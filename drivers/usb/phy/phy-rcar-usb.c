@@ -142,7 +142,7 @@ static void rcar_usb_phy_shutdown(struct usb_phy *phy)
 	spin_unlock_irqrestore(&priv->lock, flags);
 }
 
-static int __devinit rcar_usb_phy_probe(struct platform_device *pdev)
+static int rcar_usb_phy_probe(struct platform_device *pdev)
 {
 	struct rcar_usb_phy_priv *priv;
 	struct resource *res0, *res1;
@@ -196,7 +196,7 @@ static int __devinit rcar_usb_phy_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit rcar_usb_phy_remove(struct platform_device *pdev)
+static int rcar_usb_phy_remove(struct platform_device *pdev)
 {
 	struct rcar_usb_phy_priv *priv = platform_get_drvdata(pdev);
 
@@ -210,7 +210,7 @@ static struct platform_driver rcar_usb_phy_driver = {
 		.name	= "rcar_usb_phy",
 	},
 	.probe		= rcar_usb_phy_probe,
-	.remove		= __devexit_p(rcar_usb_phy_remove),
+	.remove		= rcar_usb_phy_remove,
 };
 
 module_platform_driver(rcar_usb_phy_driver);
