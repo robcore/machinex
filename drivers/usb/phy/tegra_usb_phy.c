@@ -24,7 +24,6 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
-#include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/ulpi.h>
@@ -35,6 +34,19 @@
 #define TEGRA_USB_SIZE		SZ_16K
 
 #define ULPI_VIEWPORT		0x170
+
+#define USB_PORTSC1		0x184
+#define   USB_PORTSC1_PTS(x)	(((x) & 0x3) << 30)
+#define   USB_PORTSC1_PSPD(x)	(((x) & 0x3) << 26)
+#define   USB_PORTSC1_PHCD	(1 << 23)
+#define   USB_PORTSC1_WKOC	(1 << 22)
+#define   USB_PORTSC1_WKDS	(1 << 21)
+#define   USB_PORTSC1_WKCN	(1 << 20)
+#define   USB_PORTSC1_PTC(x)	(((x) & 0xf) << 16)
+#define   USB_PORTSC1_PP	(1 << 12)
+#define   USB_PORTSC1_SUSP	(1 << 7)
+#define   USB_PORTSC1_PE	(1 << 2)
+#define   USB_PORTSC1_CCS	(1 << 0)
 
 #define USB_SUSP_CTRL		0x400
 #define   USB_WAKE_ON_CNNT_EN_DEV	(1 << 3)
@@ -196,6 +208,11 @@ static struct tegra_utmip_config utmip_default[] = {
 	},
 };
 
+static inline bool phy_is_ulpi(struct tegra_usb_phy *phy)
+{
+	return (phy->instance == 1);
+}
+
 static int utmip_pad_open(struct tegra_usb_phy *phy)
 {
 	phy->pad_clk = clk_get_sys("utmip-pad", NULL);
@@ -204,7 +221,7 @@ static int utmip_pad_open(struct tegra_usb_phy *phy)
 		return PTR_ERR(phy->pad_clk);
 	}
 
-	if (phy->is_legacy_phy) {
+	if (phy->instance == 0) {
 		phy->pad_regs = phy->regs;
 	} else {
 		phy->pad_regs = ioremap(TEGRA_USB_BASE, TEGRA_USB_SIZE);
@@ -219,7 +236,7 @@ static int utmip_pad_open(struct tegra_usb_phy *phy)
 
 static void utmip_pad_close(struct tegra_usb_phy *phy)
 {
-	if (!phy->is_legacy_phy)
+	if (phy->instance != 0)
 		iounmap(phy->pad_regs);
 	clk_put(phy->pad_clk);
 }
@@ -288,7 +305,7 @@ static void utmi_phy_clk_disable(struct tegra_usb_phy *phy)
 	unsigned long val;
 	void __iomem *base = phy->regs;
 
-	if (phy->is_legacy_phy) {
+	if (phy->instance == 0) {
 		val = readl(base + USB_SUSP_CTRL);
 		val |= USB_SUSP_SET;
 		writel(val, base + USB_SUSP_CTRL);
@@ -298,8 +315,13 @@ static void utmi_phy_clk_disable(struct tegra_usb_phy *phy)
 		val = readl(base + USB_SUSP_CTRL);
 		val &= ~USB_SUSP_SET;
 		writel(val, base + USB_SUSP_CTRL);
-	} else
-		phy->set_phcd(&phy->u_phy, true);
+	}
+
+	if (phy->instance == 2) {
+		val = readl(base + USB_PORTSC1);
+		val |= USB_PORTSC1_PHCD;
+		writel(val, base + USB_PORTSC1);
+	}
 
 	if (utmi_wait_register(base + USB_SUSP_CTRL, USB_PHY_CLK_VALID, 0) < 0)
 		pr_err("%s: timeout waiting for phy to stabilize\n", __func__);
@@ -310,7 +332,7 @@ static void utmi_phy_clk_enable(struct tegra_usb_phy *phy)
 	unsigned long val;
 	void __iomem *base = phy->regs;
 
-	if (phy->is_legacy_phy) {
+	if (phy->instance == 0) {
 		val = readl(base + USB_SUSP_CTRL);
 		val |= USB_SUSP_CLR;
 		writel(val, base + USB_SUSP_CTRL);
@@ -320,8 +342,13 @@ static void utmi_phy_clk_enable(struct tegra_usb_phy *phy)
 		val = readl(base + USB_SUSP_CTRL);
 		val &= ~USB_SUSP_CLR;
 		writel(val, base + USB_SUSP_CTRL);
-	} else
-		phy->set_phcd(&phy->u_phy, false);
+	}
+
+	if (phy->instance == 2) {
+		val = readl(base + USB_PORTSC1);
+		val &= ~USB_PORTSC1_PHCD;
+		writel(val, base + USB_PORTSC1);
+	}
 
 	if (utmi_wait_register(base + USB_SUSP_CTRL, USB_PHY_CLK_VALID,
 						     USB_PHY_CLK_VALID))
@@ -338,7 +365,7 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 	val |= UTMIP_RESET;
 	writel(val, base + USB_SUSP_CTRL);
 
-	if (phy->is_legacy_phy) {
+	if (phy->instance == 0) {
 		val = readl(base + USB1_LEGACY_CTRL);
 		val |= USB1_NO_LEGACY_MODE;
 		writel(val, base + USB1_LEGACY_CTRL);
@@ -413,14 +440,16 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 	val |= UTMIP_BIAS_PDTRK_COUNT(0x5);
 	writel(val, base + UTMIP_BIAS_CFG1);
 
-	if (phy->is_legacy_phy) {
+	if (phy->instance == 0) {
 		val = readl(base + UTMIP_SPARE_CFG0);
 		if (phy->mode == TEGRA_USB_PHY_MODE_DEVICE)
 			val &= ~FUSE_SETUP_SEL;
 		else
 			val |= FUSE_SETUP_SEL;
 		writel(val, base + UTMIP_SPARE_CFG0);
-	} else {
+	}
+
+	if (phy->instance == 2) {
 		val = readl(base + USB_SUSP_CTRL);
 		val |= UTMIP_PHY_ENABLE;
 		writel(val, base + USB_SUSP_CTRL);
@@ -430,7 +459,7 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 	val &= ~UTMIP_RESET;
 	writel(val, base + USB_SUSP_CTRL);
 
-	if (phy->is_legacy_phy) {
+	if (phy->instance == 0) {
 		val = readl(base + USB1_LEGACY_CTRL);
 		val &= ~USB1_VBUS_SENSE_CTL_MASK;
 		val |= USB1_VBUS_SENSE_CTL_A_SESS_VLD;
@@ -443,8 +472,11 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 
 	utmi_phy_clk_enable(phy);
 
-	if (!phy->is_legacy_phy)
-		phy->set_pts(&phy->u_phy, 0);
+	if (phy->instance == 2) {
+		val = readl(base + USB_PORTSC1);
+		val &= ~USB_PORTSC1_PTS(~0);
+		writel(val, base + USB_PORTSC1);
+	}
 
 	return 0;
 }
@@ -589,6 +621,10 @@ static int ulpi_phy_power_on(struct tegra_usb_phy *phy)
 		return ret;
 	}
 
+	val = readl(base + USB_PORTSC1);
+	val |= USB_PORTSC1_WKOC | USB_PORTSC1_WKDS | USB_PORTSC1_WKCN;
+	writel(val, base + USB_PORTSC1);
+
 	val = readl(base + USB_SUSP_CTRL);
 	val |= USB_SUSP_CLR;
 	writel(val, base + USB_SUSP_CTRL);
@@ -603,7 +639,16 @@ static int ulpi_phy_power_on(struct tegra_usb_phy *phy)
 
 static int ulpi_phy_power_off(struct tegra_usb_phy *phy)
 {
+	unsigned long val;
+	void __iomem *base = phy->regs;
 	struct tegra_ulpi_config *config = phy->config;
+
+	/* Clear WKCN/WKDS/WKOC wake-on events that can cause the USB
+	 * Controller to immediately bring the ULPI PHY out of low power
+	 */
+	val = readl(base + USB_PORTSC1);
+	val &= ~(USB_PORTSC1_WKOC | USB_PORTSC1_WKDS | USB_PORTSC1_WKCN);
+	writel(val, base + USB_PORTSC1);
 
 	clk_disable(phy->clk);
 	return gpio_direction_output(config->reset_gpio, 0);
@@ -615,7 +660,7 @@ static int	tegra_phy_init(struct usb_phy *x)
 	struct tegra_ulpi_config *ulpi_config;
 	int err;
 
-	if (phy->is_ulpi_phy) {
+	if (phy_is_ulpi(phy)) {
 		ulpi_config = phy->config;
 		phy->clk = clk_get_sys(NULL, ulpi_config->clk);
 		if (IS_ERR(phy->clk)) {
@@ -653,7 +698,7 @@ static void tegra_usb_phy_close(struct usb_phy *x)
 {
 	struct tegra_usb_phy *phy = container_of(x, struct tegra_usb_phy, u_phy);
 
-	if (phy->is_ulpi_phy)
+	if (phy_is_ulpi(phy))
 		clk_put(phy->clk);
 	else
 		utmip_pad_close(phy);
@@ -664,7 +709,7 @@ static void tegra_usb_phy_close(struct usb_phy *x)
 
 static int tegra_usb_phy_power_on(struct tegra_usb_phy *phy)
 {
-	if (phy->is_ulpi_phy)
+	if (phy_is_ulpi(phy))
 		return ulpi_phy_power_on(phy);
 	else
 		return utmi_phy_power_on(phy);
@@ -672,7 +717,7 @@ static int tegra_usb_phy_power_on(struct tegra_usb_phy *phy)
 
 static int tegra_usb_phy_power_off(struct tegra_usb_phy *phy)
 {
-	if (phy->is_ulpi_phy)
+	if (phy_is_ulpi(phy))
 		return ulpi_phy_power_off(phy);
 	else
 		return utmi_phy_power_off(phy);
@@ -688,18 +733,14 @@ static int	tegra_usb_phy_suspend(struct usb_phy *x, int suspend)
 }
 
 struct tegra_usb_phy *tegra_usb_phy_open(struct device *dev, int instance,
-	void __iomem *regs, void *config, enum tegra_usb_phy_mode phy_mode,
-	void (*set_pts)(struct usb_phy *x, u8 pts_val),
-	void (*set_phcd)(struct usb_phy *x, bool enable))
-
+	void __iomem *regs, void *config, enum tegra_usb_phy_mode phy_mode)
 {
 	struct tegra_usb_phy *phy;
 	unsigned long parent_rate;
 	int i;
 	int err;
-	struct device_node *np = dev->of_node;
 
-	phy = kzalloc(sizeof(struct tegra_usb_phy), GFP_KERNEL);
+	phy = kmalloc(sizeof(struct tegra_usb_phy), GFP_KERNEL);
 	if (!phy)
 		return ERR_PTR(-ENOMEM);
 
@@ -708,18 +749,9 @@ struct tegra_usb_phy *tegra_usb_phy_open(struct device *dev, int instance,
 	phy->config = config;
 	phy->mode = phy_mode;
 	phy->dev = dev;
-	phy->is_legacy_phy =
-		of_property_read_bool(np, "nvidia,has-legacy-mode");
-	phy->set_pts = set_pts;
-	phy->set_phcd = set_phcd;
-	err = of_property_match_string(np, "phy_type", "ulpi");
-	if (err < 0)
-		phy->is_ulpi_phy = false;
-	else
-		phy->is_ulpi_phy = true;
 
 	if (!phy->config) {
-		if (phy->is_ulpi_phy) {
+		if (phy_is_ulpi(phy)) {
 			pr_err("%s: ulpi phy configuration missing", __func__);
 			err = -EINVAL;
 			goto err0;
@@ -764,40 +796,45 @@ err0:
 }
 EXPORT_SYMBOL_GPL(tegra_usb_phy_open);
 
-void tegra_usb_phy_preresume(struct usb_phy *x)
+void tegra_usb_phy_preresume(struct tegra_usb_phy *phy)
 {
-	struct tegra_usb_phy *phy = container_of(x, struct tegra_usb_phy, u_phy);
-
-	if (!phy->is_ulpi_phy)
+	if (!phy_is_ulpi(phy))
 		utmi_phy_preresume(phy);
 }
 EXPORT_SYMBOL_GPL(tegra_usb_phy_preresume);
 
-void tegra_usb_phy_postresume(struct usb_phy *x)
+void tegra_usb_phy_postresume(struct tegra_usb_phy *phy)
 {
-	struct tegra_usb_phy *phy = container_of(x, struct tegra_usb_phy, u_phy);
-
-	if (!phy->is_ulpi_phy)
+	if (!phy_is_ulpi(phy))
 		utmi_phy_postresume(phy);
 }
 EXPORT_SYMBOL_GPL(tegra_usb_phy_postresume);
 
-void tegra_ehci_phy_restore_start(struct usb_phy *x,
+void tegra_ehci_phy_restore_start(struct tegra_usb_phy *phy,
 				 enum tegra_usb_phy_port_speed port_speed)
 {
-	struct tegra_usb_phy *phy = container_of(x, struct tegra_usb_phy, u_phy);
-
-	if (!phy->is_ulpi_phy)
+	if (!phy_is_ulpi(phy))
 		utmi_phy_restore_start(phy, port_speed);
 }
 EXPORT_SYMBOL_GPL(tegra_ehci_phy_restore_start);
 
-void tegra_ehci_phy_restore_end(struct usb_phy *x)
+void tegra_ehci_phy_restore_end(struct tegra_usb_phy *phy)
 {
-	struct tegra_usb_phy *phy = container_of(x, struct tegra_usb_phy, u_phy);
-
-	if (!phy->is_ulpi_phy)
+	if (!phy_is_ulpi(phy))
 		utmi_phy_restore_end(phy);
 }
 EXPORT_SYMBOL_GPL(tegra_ehci_phy_restore_end);
 
+void tegra_usb_phy_clk_disable(struct tegra_usb_phy *phy)
+{
+	if (!phy_is_ulpi(phy))
+		utmi_phy_clk_disable(phy);
+}
+EXPORT_SYMBOL_GPL(tegra_usb_phy_clk_disable);
+
+void tegra_usb_phy_clk_enable(struct tegra_usb_phy *phy)
+{
+	if (!phy_is_ulpi(phy))
+		utmi_phy_clk_enable(phy);
+}
+EXPORT_SYMBOL_GPL(tegra_usb_phy_clk_enable);
