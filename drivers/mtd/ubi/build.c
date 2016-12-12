@@ -835,8 +835,7 @@ static int autoresize(struct ubi_device *ubi, int vol_id)
 		 * No available PEBs to re-size the volume, clear the flag on
 		 * flash and exit.
 		 */
-		memcpy(&vtbl_rec, &ubi->vtbl[vol_id],
-		       sizeof(struct ubi_vtbl_record));
+		vtbl_rec = ubi->vtbl[vol_id];
 		err = ubi_change_vtbl_record(ubi, vol_id, &vtbl_rec);
 		if (err)
 			ubi_err("cannot clean auto-resize flag for volume %d",
