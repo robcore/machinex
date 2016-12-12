@@ -20,9 +20,11 @@
 
 extern pgprot_t     pgprot_kernel;
 extern struct platform_device *msm_iommu_root_dev;
+extern struct bus_type msm_iommu_sec_bus_type;
 
 /* Domain attributes */
 #define MSM_IOMMU_DOMAIN_PT_CACHEABLE	0x1
+#define MSM_IOMMU_DOMAIN_PT_SECURE	0x2
 
 /* Mask for the cache policy attribute */
 #define MSM_IOMMU_CP_MASK		0x03
@@ -89,6 +91,7 @@ struct msm_iommu_drvdata {
 	struct clk *aclk;
 	const char *name;
 	struct regulator *gdsc;
+	int sec_id;
 	unsigned int nsmr;
 };
 
