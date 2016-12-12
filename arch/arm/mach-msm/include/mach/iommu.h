@@ -40,6 +40,8 @@ extern struct bus_type msm_iommu_sec_bus_type;
 /* Maximum number of SMT entries allowed by the system */
 #define MAX_NUM_SMR	128
 
+#define MAX_NUM_BFB_REGS	32
+
 /**
  * struct msm_iommu_dev - a single IOMMU hardware instance
  * name		Human-readable name given to this IOMMU HW instance
@@ -66,6 +68,17 @@ struct msm_iommu_ctx_dev {
 	int mids[MAX_NUM_MIDS];
 };
 
+/**
+ * struct msm_iommu_bfb_settings - a set of IOMMU BFB tuning parameters
+ * regs		An array of register offsets to configure
+ * data		Values to write to corresponding registers
+ * length	Number of valid entries in the offset/val arrays
+ */
+struct msm_iommu_bfb_settings {
+	unsigned int regs[MAX_NUM_BFB_REGS];
+	unsigned int data[MAX_NUM_BFB_REGS];
+	int length;
+};
 
 /**
  * struct msm_iommu_drvdata - A single IOMMU hardware instance
@@ -78,6 +91,7 @@ struct msm_iommu_ctx_dev {
  * @name:	Human-readable name of this IOMMU device
  * @gdsc:	Regulator needed to power this HW block (v2 only)
  * @nsmr:	Size of the SMT on this HW block (v2 only)
+ * @bfb_settings: Optional BFB performance tuning parameters
  *
  * A msm_iommu_drvdata holds the global driver data about a single piece
  * of an IOMMU hardware instance.
@@ -93,6 +107,7 @@ struct msm_iommu_drvdata {
 	struct regulator *gdsc;
 	int sec_id;
 	unsigned int nsmr;
+	struct msm_iommu_bfb_settings *bfb_settings;
 };
 
 /**
