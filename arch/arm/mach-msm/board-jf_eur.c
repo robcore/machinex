@@ -89,7 +89,6 @@
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
 #include <linux/sec_jack.h>
-#include <linux/sound/cs8427.h>
 #include <linux/persistent_ram.h>
 #include <linux/platform_data/ram_console.h>
 #include <linux/i2c/cypress_touchkey.h>
@@ -2682,7 +2681,7 @@ static struct slim_device apq8064_slim_tabla20 = {
  * clock is running at 100KHz and voltage levels are at 3.3
  * and 5 volts
  */
-static int enable_100KHz_ls(int enable)
+static int enable_100KHz_ls(int enable, int gpio)
 {
 	if (enable)
 		gpio_direction_output(gpio, 1);
