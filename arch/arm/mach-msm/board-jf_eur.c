@@ -89,17 +89,13 @@
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
 #include <linux/sec_jack.h>
-#include "clock.h"
-
-#include <mach/apq8064-gpio.h>
-
-#ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
-#include <linux/i2c/cypress_touchkey.h>
-#endif
-
+#include <linux/sound/cs8427.h>
 #include <linux/persistent_ram.h>
 #include <linux/platform_data/ram_console.h>
+#include <linux/i2c/cypress_touchkey.h>
+#include <mach/apq8064-gpio.h>
 
+#include "clock.h"
 #include "msm_watchdog.h"
 #include "board-8064.h"
 #include "clock.h"
