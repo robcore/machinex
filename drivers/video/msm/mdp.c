@@ -180,7 +180,7 @@ static u32 mdp_irq;
 
 static uint32 mdp_prim_panel_type = NO_PANEL;
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-extern struct mutex power_state_chagne;
+extern struct mutex power_state_change;
 boolean mdp_shutdown_check = FALSE;
 #endif
 #ifndef CONFIG_FB_MSM_MDP22
@@ -2858,9 +2858,9 @@ static void mdp_shutdown(struct platform_device *pdev)
 	pr_info("%s: panel_next_off seq\n", __func__);
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 	mdp_shutdown_check = true;
-	mutex_lock(&power_state_chagne);
+	mutex_lock(&power_state_change);
 	panel_next_off(pdev);
-	mutex_unlock(&power_state_chagne);
+	mutex_unlock(&power_state_change);
 #else
 	panel_next_off(pdev);
 #endif

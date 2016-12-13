@@ -140,7 +140,7 @@ static int bl_scale, bl_min_lvl;
 
 DEFINE_MUTEX(msm_fb_notify_update_sem);
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-DEFINE_MUTEX(power_state_chagne);
+DEFINE_MUTEX(power_state_change);
 #endif
 
 void msmfb_no_update_notify_timer_cb(unsigned long data)
@@ -1044,7 +1044,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-		mutex_lock(&power_state_chagne);
+		mutex_lock(&power_state_change);
 #endif
 		bl_updated = 0;
 		if (!mfd->panel_power_on) {
@@ -1057,7 +1057,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			}
 		}
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-		mutex_unlock(&power_state_chagne);
+		mutex_unlock(&power_state_change);
 #endif
 		break;
 
@@ -1067,7 +1067,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	case FB_BLANK_POWERDOWN:
 	default:
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-		mutex_lock(&power_state_chagne);
+		mutex_lock(&power_state_change);
 #endif
 		if (mfd->panel_power_on) {
 			int curr_pwr_state;
@@ -1096,7 +1096,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->op_enable = TRUE;
 		}
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-		mutex_unlock(&power_state_chagne);
+		mutex_unlock(&power_state_change);
 #endif
 		break;
 	}

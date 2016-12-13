@@ -85,7 +85,7 @@ static struct platform_driver mipi_dsi_driver = {
 struct device dsi_dev;
 
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
-extern struct mutex power_state_chagne;
+extern struct mutex power_state_change;
 static struct platform_device *pdev_for_esd;
 #endif
 #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_WVGA_PT) \
@@ -514,7 +514,7 @@ void esd_recovery(void)
 		mfd = platform_get_drvdata(pdev_for_esd);
 
 		if (mfd->panel_power_on == TRUE) {
-			mutex_lock(&power_state_chagne);
+			mutex_lock(&power_state_change);
 
 			panel_next_off(pdev_for_esd);
 
@@ -556,7 +556,7 @@ void esd_recovery(void)
 #if defined(CONFIG_MDNIE_LITE_TUNING)
 			is_negative_on();
 #endif
-			mutex_unlock(&power_state_chagne);
+			mutex_unlock(&power_state_change);
 		}
 	}
 }

@@ -2641,7 +2641,7 @@ static void sec_bat_save_extended_cable_type(
 	int cable_main, cable_sub, cable_power;
 
 	/*
-	 * If type is chagned, clear old value and set new one
+	 * If type is changed, clear old value and set new one
 	 */
 	cable_main = GET_MAIN_CABLE_TYPE(extended_cable_type);
 	battery->extended_cable_type =

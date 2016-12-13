@@ -2180,7 +2180,7 @@ void mipi_dsi_error(void)
 }
 
 #if defined(RUNTIME_MIPI_CLK_CHANGE)
-static int runtime_clk_chagne;
+static int runtime_clk_change;
 static int goal_fps;
 int mipi_runtime_clk_change(int fps)
 {
@@ -2188,7 +2188,7 @@ int mipi_runtime_clk_change(int fps)
 
 	mutex_lock(&fps_done_mutex);
 
-	runtime_clk_chagne = 1;
+	runtime_clk_change = 1;
 	goal_fps = fps;
 
 	INIT_COMPLETION(dsi_fps_comp);
@@ -2275,13 +2275,13 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		*/
 #if defined(RUNTIME_MIPI_CLK_CHANGE)
 #if defined(CONFIG_FB_MSM_CAMERA_CSC)
-		if (runtime_clk_chagne) {
+		if (runtime_clk_change) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
 
 			} else {
 				mipi_dsi_configure_dividers(goal_fps);
-				runtime_clk_chagne = 0;
+				runtime_clk_change = 0;
 				mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK, 0);
 				mipi_dsi_disable_irq_nosync(DSI_VIDEO_TERM);
 				complete(&dsi_fps_comp);
@@ -2323,13 +2323,13 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 			spin_unlock(&dsi_mdp_lock);
 		}
 #else
-		if (runtime_clk_chagne) {
+		if (runtime_clk_change) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
 
 			} else {
 				mipi_dsi_configure_dividers(goal_fps);
-				runtime_clk_chagne = 0;
+				runtime_clk_change = 0;
 				mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK, 0);
 				mipi_dsi_disable_irq_nosync(DSI_VIDEO_TERM);
 				complete(&dsi_fps_comp);

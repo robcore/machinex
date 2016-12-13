@@ -104,7 +104,7 @@ static char *split_token_from_name(int op, char *args, u64 * token)
 }
 
 /**
- * aa_setprocattr_chagnehat - handle procattr interface to change_hat
+ * aa_setprocattr_changehat - handle procattr interface to change_hat
  * @args: args received from writing to /proc/<pid>/attr/current (NOT NULL)
  * @size: size of the args
  * @test: true if this is a test of change_hat permissions

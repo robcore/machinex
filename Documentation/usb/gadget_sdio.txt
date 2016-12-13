@@ -21,7 +21,7 @@ S/W Control Flow:
 Driver maintains two sdio channels, one for data and one for control.
 Data pipe is dedicated sdio channel where as control is a muxed channel.
 Incase of sdio control pipe, driver registers for control information
-chagnes from modem side. Whenever new information is available, it
+changes from modem side. Whenever new information is available, it
 would queue a interrupt endpoint w/ new info. Laptop can also send the
 DTR and RTS information as part of SET Encapsulated command.
 

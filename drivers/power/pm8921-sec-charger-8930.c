@@ -379,7 +379,7 @@ static int get_prop_charge_type(struct pm8921_chg_chip *chip);
 static int get_prop_batt_status(struct pm8921_chg_chip *chip);
 
 
-/*  
+/*
  Disable PM8921 internal charger and BMS for SAMSUNG
  MSM8960 products that don't use QCOM internal charger
 */
@@ -810,7 +810,7 @@ static int pm_chg_ibatmax_set(struct pm8921_chg_chip *chip, int chg_current)
 {
 	u8 temp;
 
-	pr_info("%s : ibat is chagned (%d)---------\n", __func__, chg_current);
+	pr_info("%s : ibat is changed (%d)---------\n", __func__, chg_current);
 	if (chg_current < PM8921_CHG_IBATMAX_MIN
 			|| chg_current > PM8921_CHG_IBATMAX_MAX) {
 		pr_err("bad mA=%d asked to set\n", chg_current);
@@ -2000,7 +2000,7 @@ static int get_prop_batt_capacity(struct pm8921_chg_chip *chip)
 		__func__, chip->capacity_raw, percent_soc);
 	return percent_soc;
 }
-/* unused function 
+/* unused function
 static int get_prop_batt_current_max(struct pm8921_chg_chip *chip)
 {
 	return pm8921_bms_get_current_max();
@@ -3001,7 +3001,7 @@ ssize_t sec_bat_store_attrs(
 	case SIOP_LEVEL:
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			if (chip->batt_status == POWER_SUPPLY_STATUS_CHARGING) {
-#ifdef 	CONFIG_MACH_BAFFIN		
+#ifdef 	CONFIG_MACH_BAFFIN
 				pr_info("%s : SIOP level to %d, original is %d\n",
 						__func__, x, chip->siop_level);
 
@@ -3017,7 +3017,7 @@ ssize_t sec_bat_store_attrs(
 				{
 					x=0;
 				}
-				
+
 				if((chip->batt_pdata->chg_current_table[chip->cable_type].vbus > chip->batt_pdata->chg_current_table[CABLE_TYPE_USB].vbus)&&(x != chip->siop_level))
 				{
 					charging_current =
@@ -3058,7 +3058,7 @@ ssize_t sec_bat_store_attrs(
 				pr_info("%s : SIOP level to %d(%dmA)\n",
 					__func__, chip->siop_level,
 					usb_target_ma);
-#endif				
+#endif
 			}
 			ret = count;
 		}
@@ -4847,7 +4847,7 @@ static void adjust_vdd_max_for_fastchg(struct pm8921_chg_chip *chip,
 	pm_chg_vddmax_get(the_chip, &programmed_vdd_max);
 
 	delta_mv =  chip->max_voltage_mv - vbat_batt_terminal_mv;
-		
+
 	if (delta_mv > 0) /* meaning we want to increase the vddmax */ {
 		if (delta_mv < MIN_DELTA_MV_TO_INCREASE_VDD_MAX) {
 			pr_debug("vbat term = %d is not low enough to warrant a increase in vdd_max\n", vbat_batt_terminal_mv);
