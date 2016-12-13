@@ -1103,7 +1103,7 @@ static ssize_t mipi_samsung_disp_backlight_show(struct device *dev,
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	rc = return sprintf(buf, "%d\n", mfd->bl_level);
+	rc = sprintf(buf, "%d\n", mfd->bl_level);
 
 	return rc;
 }
