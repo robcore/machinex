@@ -1155,7 +1155,6 @@ static int enable_100KHz_ls(int enable)
 	else
 		gpio_direction_output(gpio, 0);
 	return 0;
-	return ret;
 }
 
 static struct cs8427_platform_data cs8427_i2c_platform_data = {
