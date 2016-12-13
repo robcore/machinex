@@ -70,6 +70,12 @@ enum {
 	TABLA_NUM_IRQS,
 };
 
+
+#define TAIKO_VERSION_1_0	0
+#define TAIKO_IS_1_0(ver) \
+	((ver == TAIKO_VERSION_1_0) ? 1 : 0)
+
+
 enum {
 	SITAR_IRQ_SLIMBUS = 0,
 	SITAR_IRQ_MBHC_REMOVAL,
