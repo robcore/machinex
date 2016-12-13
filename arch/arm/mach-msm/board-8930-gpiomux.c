@@ -1101,22 +1101,6 @@ int __init sglte8930_init_gpiomux(void)
 	return 0;
 }
 
-static struct gpiomux_setting gyro_int_line = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_NONE,
-};
-
-static struct msm_gpiomux_config msm8930_gyro_int_config[] __initdata = {
-	{
-		.gpio = 69,	/* Gyro Interrupt Line */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &gyro_int_line,
-			[GPIOMUX_ACTIVE] = &gyro_int_line,
-		},
-	},
-};
-
 int __init msm8930_init_gpiomux(void)
 {
 	int rc = msm_gpiomux_init(NR_GPIO_IRQS);
@@ -1195,10 +1179,6 @@ int __init msm8930_init_gpiomux(void)
 			ARRAY_SIZE(msm8930_gyro_int_config));
 
 	msm_gpiomux_install(msm_sitar_config, ARRAY_SIZE(msm_sitar_config));
-
-	if (machine_is_msm8930_fluid() || machine_is_msm8930_mtp())
-		msm_gpiomux_install(msm8930_gyro_int_config,
-			ARRAY_SIZE(msm8930_gyro_int_config));
 
 	return 0;
 }
