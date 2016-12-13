@@ -107,10 +107,8 @@ do { \
 /* LPG Control for RAMP_CONTROL */
 #define QPNP_RAMP_START_MASK			0x01
 
-#define QPNP_ENABLE_LUT_V0(value) (value |= QPNP_RAMP_START_MASK)
-#define QPNP_DISABLE_LUT_V0(value) (value &= ~QPNP_RAMP_START_MASK)
-#define QPNP_ENABLE_LUT_V1(value, id) (value |= BIT(id))
-#define QPNP_DISABLE_LUT_V1(value, id) (value &= ~BIT(id))
+#define QPNP_ENABLE_LUT(value) (value |= QPNP_RAMP_START_MASK)
+#define QPNP_DISABLE_LUT(value) (value &= ~QPNP_RAMP_START_MASK)
 
 /* LPG Control for RAMP_STEP_DURATION_LSB */
 #define QPNP_RAMP_STEP_DURATION_LSB_MASK	0xFF
@@ -156,17 +154,9 @@ do { \
 #define PRE_DIVIDE_5		5
 #define PRE_DIVIDE_6		6
 
-#define SPMI_LPG_REG_BASE_OFFSET	0x40
-#define SPMI_LPG_REVISION2_OFFSET	0x1
-#define SPMI_LPG_REV1_RAMP_CONTROL_OFFSET	0x86
-#define SPMI_LPG_REG_ADDR(b, n)	(b + SPMI_LPG_REG_BASE_OFFSET + (n))
+#define SPMI_LPG_REG_ADDR_BASE	0x40
+#define SPMI_LPG_REG_ADDR(b, n)	(b + SPMI_LPG_REG_ADDR_BASE + (n))
 #define SPMI_MAX_BUF_LEN	8
-
-/* LPG revisions */
-enum qpnp_lpg_revision {
-	QPNP_LPG_REVISION_0 = 0x0,
-	QPNP_LPG_REVISION_1 = 0x1,
-};
 
 /* SPMI LPG registers */
 enum qpnp_lpg_registers_list {
@@ -264,7 +254,6 @@ struct qpnp_lpg_chip {
 	struct	mutex		lpg_mutex;
 	struct	qpnp_lpg_config	lpg_config;
 	u8	qpnp_lpg_registers[QPNP_TOTAL_LPG_SPMI_REGISTERS];
-	enum qpnp_lpg_revision	revision;
 };
 
 /* Internal functions */
@@ -823,68 +812,34 @@ static int qpnp_lpg_enable_lut(struct pwm_device *pwm)
 {
 	struct qpnp_lpg_config	*lpg_config = &pwm->chip->lpg_config;
 	struct qpnp_lpg_chip	*chip = pwm->chip;
-	u8			value, mask, *reg;
-	u16			addr;
+	u8			value, mask;
 
 	value = pwm->chip->qpnp_lpg_registers[QPNP_RAMP_CONTROL];
-	reg = &pwm->chip->qpnp_lpg_registers[QPNP_RAMP_CONTROL];
 
-	switch (chip->revision) {
-	case QPNP_LPG_REVISION_0:
-		QPNP_ENABLE_LUT_V0(value);
-		mask = QPNP_RAMP_START_MASK;
-		addr = SPMI_LPG_REG_ADDR(lpg_config->base_addr,
-					QPNP_RAMP_CONTROL);
-		break;
-	case QPNP_LPG_REVISION_1:
-		QPNP_ENABLE_LUT_V1(value, pwm->pwm_config.channel_id);
-		mask = BIT(pwm->pwm_config.channel_id);
-		addr = lpg_config->lut_base_addr +
-				SPMI_LPG_REV1_RAMP_CONTROL_OFFSET;
-	default:
-		pr_err("Invalid LPG revision\n");
-		return -EINVAL;
-	}
+	QPNP_ENABLE_LUT(value);
 
-	qpnp_lpg_save(reg, mask, value);
+	mask = QPNP_RAMP_START_MASK;
 
-	return spmi_ext_register_writel(chip->spmi_dev->ctrl,
-			chip->spmi_dev->sid, addr, reg, 1);
+	return qpnp_lpg_save_and_write(value, mask,
+		&pwm->chip->qpnp_lpg_registers[QPNP_RAMP_CONTROL],
+		lpg_config->base_addr, QPNP_RAMP_CONTROL, 1, chip);
 }
 
-static int qpnp_lpg_disable_lut(struct pwm_device *pwm)
+static int qpnp_disable_lut(struct pwm_device *pwm)
 {
 	struct qpnp_lpg_config	*lpg_config = &pwm->chip->lpg_config;
 	struct qpnp_lpg_chip	*chip = pwm->chip;
-	u8			value, mask, *reg;
-	u16			addr;
+	u8			value, mask;
 
 	value = pwm->chip->qpnp_lpg_registers[QPNP_RAMP_CONTROL];
-	reg = &pwm->chip->qpnp_lpg_registers[QPNP_RAMP_CONTROL];
 
-	switch (chip->revision) {
-	case QPNP_LPG_REVISION_0:
-		QPNP_DISABLE_LUT_V0(value);
-		mask = QPNP_RAMP_START_MASK;
-		addr = SPMI_LPG_REG_ADDR(lpg_config->base_addr,
-					QPNP_RAMP_CONTROL);
-		break;
-	case QPNP_LPG_REVISION_1:
-		QPNP_DISABLE_LUT_V1(value, pwm->pwm_config.channel_id);
-		mask = BIT(pwm->pwm_config.channel_id);
-		addr = lpg_config->lut_base_addr +
-			SPMI_LPG_REV1_RAMP_CONTROL_OFFSET;
-		break;
-	default:
-		pr_err("Invalid LPG revision\n");
-		return -EINVAL;
-		break;
-	}
+	QPNP_DISABLE_LUT(value);
 
-	qpnp_lpg_save(reg, mask, value);
+	mask = QPNP_RAMP_START_MASK;
 
-	return spmi_ext_register_writel(chip->spmi_dev->ctrl,
-			chip->spmi_dev->sid, addr, reg, 1);
+	return qpnp_lpg_save_and_write(value, mask,
+		&pwm->chip->qpnp_lpg_registers[QPNP_RAMP_CONTROL],
+		lpg_config->base_addr, QPNP_RAMP_CONTROL, 1, chip);
 }
 
 static int qpnp_lpg_enable_pwm(struct pwm_device *pwm)
@@ -892,7 +847,6 @@ static int qpnp_lpg_enable_pwm(struct pwm_device *pwm)
 	struct qpnp_lpg_config	*lpg_config = &pwm->chip->lpg_config;
 	struct qpnp_lpg_chip	*chip = pwm->chip;
 	u8			value, mask;
-	int			rc;
 
 	value = pwm->chip->qpnp_lpg_registers[QPNP_ENABLE_CONTROL];
 
@@ -900,23 +854,12 @@ static int qpnp_lpg_enable_pwm(struct pwm_device *pwm)
 
 	mask = QPNP_EN_PWM_OUTPUT_MASK;
 
-	rc = qpnp_lpg_save_and_write(value, mask,
+	return qpnp_lpg_save_and_write(value, mask,
 		&pwm->chip->qpnp_lpg_registers[QPNP_ENABLE_CONTROL],
 		lpg_config->base_addr, QPNP_ENABLE_CONTROL, 1, chip);
-	if (rc)
-		goto out;
-
-	/*
-	 * Due to LPG hardware bug, in the PWM mode, having enabled PWM,
-	 * We have to write PWM values one more time.
-	 */
-	return qpnp_lpg_save_pwm_value(pwm);
-
-out:
-	return rc;
 }
 
-static int qpnp_lpg_disable_pwm(struct pwm_device *pwm)
+static int qpnp_disable_pwm(struct pwm_device *pwm)
 {
 	struct qpnp_lpg_config	*lpg_config = &pwm->chip->lpg_config;
 	struct qpnp_lpg_chip	*chip = pwm->chip;
@@ -1129,8 +1072,8 @@ void pwm_free(struct pwm_device *pwm)
 	pwm_config = &pwm->pwm_config;
 
 	if (pwm_config->in_use) {
-		qpnp_lpg_disable_pwm(pwm);
-		qpnp_lpg_disable_lut(pwm);
+		qpnp_disable_pwm(pwm);
+		qpnp_disable_lut(pwm);
 		pwm_config->in_use = 0;
 		pwm_config->lable = NULL;
 	}
@@ -1214,9 +1157,9 @@ void pwm_disable(struct pwm_device *pwm)
 	if (pwm_config->in_use) {
 		if (QPNP_IS_PWM_CONFIG_SELECTED(
 			chip->qpnp_lpg_registers[QPNP_ENABLE_CONTROL]))
-			qpnp_lpg_disable_pwm(pwm);
+			qpnp_disable_pwm(pwm);
 		else
-			qpnp_lpg_disable_lut(pwm);
+			qpnp_disable_lut(pwm);
 	}
 
 	mutex_unlock(&pwm->chip->lpg_mutex);
@@ -1652,19 +1595,6 @@ static int __devinit qpnp_pwm_probe(struct spmi_device *spmi)
 		goto failed_config;
 
 	id = chip->pwm_dev.pwm_config.channel_id;
-
-	spmi_ext_register_readl(chip->spmi_dev->ctrl,
-		chip->spmi_dev->sid,
-		chip->lpg_config.base_addr + SPMI_LPG_REVISION2_OFFSET,
-		(u8 *) &chip->revision, 1);
-
-	if (chip->revision < QPNP_LPG_REVISION_0 ||
-		chip->revision > QPNP_LPG_REVISION_1) {
-		pr_err("Unknown LPG revision detected, rev:%d\n",
-						chip->revision);
-		rc = -EINVAL;
-		goto failed_insert;
-	}
 
 	rc = radix_tree_insert(&lpg_dev_tree, id, chip);
 
