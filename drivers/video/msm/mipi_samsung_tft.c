@@ -57,7 +57,7 @@ struct pm_gpio gpio_get_param = {
 static int err_fg_working;
 #endif
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static int current_fps = 0;
 #endif
 
@@ -304,7 +304,7 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
 	mfd->resume_state = MIPI_RESUME_STATE;
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	current_fps = mfd->panel_info.mipi.frame_rate;
 #endif
 
@@ -373,7 +373,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	}
 #endif
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	current_fps = mfd->panel_info.mipi.frame_rate;
 #endif
 
@@ -417,7 +417,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
 		mipi_runtime_clk_change(mfd->panel_info.mipi.frame_rate);
 #endif
@@ -728,7 +728,7 @@ static struct lcd_ops mipi_samsung_disp_props = {
 	.set_power = NULL,
 };
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static ssize_t mipi_samsung_fps_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -836,7 +836,7 @@ static DEVICE_ATTR(auto_brightness, S_IRUGO | S_IWUSR | S_IWGRP,
 static DEVICE_ATTR(backlight, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_disp_backlight_show,
 			mipi_samsung_disp_backlight_store);
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static DEVICE_ATTR(fps_change, S_IRUGO | S_IWUSR | S_IWGRP,
 		mipi_samsung_fps_show,
 		mipi_samsung_fps_store);
@@ -1205,7 +1205,7 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_backlight.attr.name);
 	}
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 			&dev_attr_fps_change.attr);
 	if (ret) {

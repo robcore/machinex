@@ -67,7 +67,7 @@ extern struct sec_debug_mdp sec_debug_mdp;
 
 void mipi_dsi_configure_dividers(int fps);
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static struct mutex fps_done_mutex;
 static struct completion dsi_fps_comp;
 /*
@@ -134,7 +134,7 @@ void mipi_dsi_init(void)
 	INIT_LIST_HEAD(&pre_kickoff_list);
 	INIT_LIST_HEAD(&post_kickoff_list);
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	mutex_init(&fps_done_mutex);
 	init_completion(&dsi_fps_comp);
 #endif
@@ -2179,7 +2179,7 @@ void mipi_dsi_error(void)
 	mipi_dsi_dln0_phy_err();	/* mask0, 0x3e00000 */
 }
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static int runtime_clk_chagne;
 static int goal_fps;
 int mipi_runtime_clk_change(int fps)
@@ -2273,7 +2273,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		/*
 		* do something  here
 		*/
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 #if defined(CONFIG_FB_MSM_CAMERA_CSC)
 		if (runtime_clk_chagne) {
 			if (inpdw(MDP_BASE+0x90014)) {

@@ -65,7 +65,7 @@ struct mutex dsi_tx_mutex;
 int touch_display_status;
 DEFINE_MUTEX(brightness_mutex);
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static int current_fps;
 #endif
 
@@ -567,7 +567,7 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 	if ((msd.mpd->manufacture_id & 0xFF) == 0)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_NEED_FLIP, false);
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	current_fps = mfd->panel_info.mipi.frame_rate;
 #endif
 
@@ -682,7 +682,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
 #endif*/
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	if (mfd->panel_info.mipi.frame_rate != current_fps)
 		mipi_runtime_clk_change(mfd->panel_info.mipi.frame_rate);
 #endif
@@ -1032,7 +1032,7 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 	return size;
 }
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static int atoi(const char *name)
 {
 	int val = 0;
@@ -1216,7 +1216,7 @@ static DEVICE_ATTR(backlight, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_disp_backlight_show,
 			mipi_samsung_disp_backlight_store);
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 static DEVICE_ATTR(fps_change, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_fps_show,
 			mipi_samsung_fps_store);
@@ -1564,7 +1564,7 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_backlight.attr.name);
 	}
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 						&dev_attr_fps_change.attr);
 	if (ret) {

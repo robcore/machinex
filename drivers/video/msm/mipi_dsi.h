@@ -406,9 +406,9 @@ void mipi_dsi_cmd_mdp_busy(void);
 void update_lane_config(struct msm_panel_info *pinfo);
 #endif
 
-#define RUMTIME_MIPI_CLK_CHANGE
+#define RUNTIME_MIPI_CLK_CHANGE
 
-#if defined(RUMTIME_MIPI_CLK_CHANGE)
+#if defined(RUNTIME_MIPI_CLK_CHANGE)
 int mipi_runtime_clk_change(int fps);
 void mipi_dsi_configure_dividers(int fps);
 #endif
