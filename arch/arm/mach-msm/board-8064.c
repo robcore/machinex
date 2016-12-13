@@ -1150,20 +1150,11 @@ static struct slim_device apq8064_slim_tabla20 = {
  */
 static int enable_100KHz_ls(int enable)
 {
-	int ret = 0;
-	if (enable) {
-		ret = gpio_request(SX150X_GPIO(1, 10),
-					"cs8427_100KHZ_ENABLE");
-		if (ret) {
-			pr_err("%s: Failed to request gpio %d\n", __func__,
-				SX150X_GPIO(1, 10));
-			return ret;
-		}
-		gpio_direction_output(SX150X_GPIO(1, 10), 1);
-	} else {
-		gpio_direction_output(SX150X_GPIO(1, 10), 0);
-		gpio_free(SX150X_GPIO(1, 10));
-	}
+	if (enable)
+		gpio_direction_output(gpio, 1);
+	else
+		gpio_direction_output(gpio, 0);
+	return 0;
 	return ret;
 }
 
