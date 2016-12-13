@@ -867,7 +867,6 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 
 	rc = snprintf((char *)buf, sizeof(*buf), "%d\n",
 			msd.dstat.auto_brightness);
-	pr_info("auot_brightness: %d\n", *buf);
 
 	return rc;
 }
@@ -924,23 +923,15 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		msd.dstat.auto_brightness = 6;
 	else if (sysfs_streq(buf, "7")) // HBM mode (HBM + PSRE)
 		msd.dstat.auto_brightness = 7;
-	else
-		pr_info("%s: Invalid argument!!", __func__);
-
-	if (!first_auto_br) {
-		pr_info("%s : skip first auto brightness store (%d) (%d)!!\n",
-				__func__, msd.dstat.auto_brightness, mfd->bl_level);
-		first_auto_br++;
+	else {
 		return size;
 	}
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		msd.mpd->first_bl_hbm_psre = 1;
 		mipi_samsung_disp_backlight(mfd);
-		pr_info("%s : %d\n",__func__,msd.dstat.auto_brightness);
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
-		pr_info("%s : panel is off state!!\n", __func__);
 	}
 
 	return size;
@@ -958,7 +949,6 @@ static ssize_t mipi_samsung_disp_acl_show(struct device *dev,
 	int rc;
 
 	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", msd.mpd->acl_status);
-	pr_info("acl status: %d\n", *buf);
 
 	return rc;
 }
@@ -975,7 +965,6 @@ static ssize_t mipi_samsung_disp_acl_store(struct device *dev,
 	else if (sysfs_streq(buf, "0"))
 		msd.mpd->acl_status = false;
 	else {
-		pr_info("%s: Invalid argument!!", __func__);
 		return size;
 	}
 
@@ -998,7 +987,6 @@ static ssize_t mipi_samsung_disp_siop_show(struct device *dev,
 	int rc;
 
 	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", msd.mpd->siop_status);
-	pr_info("siop status: %d\n", *buf);
 
 	return rc;
 }
@@ -1079,7 +1067,6 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 	else if (level == 2)
 		goal_fps = 51;
 	else {
-		pr_info("%s fps set error : invalid level %d", __func__, level);
 		return size;
 	}
 
@@ -1133,9 +1120,7 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		mipi_samsung_disp_backlight(mfd);
-		pr_info("%s : level (%d)\n",__func__,level);
 	} else {
-		pr_info("%s : panel is off state!!\n", __func__);
 	}
 
 	return size;
@@ -1188,7 +1173,7 @@ static ssize_t mipi_samsung_temperature_store(struct device *dev,
 		pr_info("%s msd.mpd->temperature : %d msd.mpd->temperature_value : 0x%x", __func__,
 						msd.mpd->temperature, msd.mpd->temperature_value);
 	} else {
-		pr_info("%s : panel is off state!!\n", __func__);
+		pr_debug("%s : panel is off state!!\n", __func__);
 	}
 
 	return size;
