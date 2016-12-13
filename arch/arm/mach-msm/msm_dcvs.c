@@ -185,29 +185,6 @@ static void force_start_slack_timer(struct dcvs_core *core, int slack_us)
 	spin_unlock_irqrestore(&core->idle_state_change_lock, flags);
 }
 
-static void force_start_slack_timer(struct dcvs_core *core, int slack_us)
-{
-	unsigned long flags;
-	int ret;
-
-	spin_lock_irqsave(&core->idle_state_change_lock, flags);
-
-	/*
-	 * only start the timer if governor is not stopped
-	 */
-	if (slack_us != 0) {
-		ret = hrtimer_start(&core->slack_timer,
-				ktime_set(0, slack_us * 1000),
-				HRTIMER_MODE_REL_PINNED);
-		if (ret) {
-			pr_err("%s Failed to start timer ret = %d\n",
-					core->core_name, ret);
-		}
-	}
-
-	spin_unlock_irqrestore(&core->idle_state_change_lock, flags);
-}
-
 static void stop_slack_timer(struct dcvs_core *core)
 {
 	unsigned long flags;
@@ -1223,8 +1200,6 @@ int msm_dcvs_freq_sink_stop(int dcvs_core_id)
 	uint32_t ret1;
 	uint32_t freq;
 	unsigned long flags;
-	int new_freq;
-	int timer_interval_us;
 
 	if (dcvs_core_id < 0 || dcvs_core_id > CORES_MAX) {
 		pr_err("%s invalid dcvs_core_id = %d returning -EINVAL\n",
