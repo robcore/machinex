@@ -31,11 +31,6 @@ struct buspm_alloc_params {
 	int size;
 };
 
-enum msm_buspm_ioc_cmds {
-	MSM_BUSPM_SPDM_CLK_DIS = 0,
-	MSM_BUSPM_SPDM_CLK_EN,
-};
-
 #define MSM_BUSPM_IOC_MAGIC	'p'
 
 #define MSM_BUSPM_IOC_FREE	\
@@ -52,7 +47,4 @@ enum msm_buspm_ioc_cmds {
 
 #define MSM_BUSPM_IOC_RD_PHYS_ADDR	\
 	_IOR(MSM_BUSPM_IOC_MAGIC, 4, unsigned long)
-
-#define MSM_BUSPM_IOC_CMD	\
-	_IOR(MSM_BUSPM_IOC_MAGIC, 5, uint32_t)
 #endif
