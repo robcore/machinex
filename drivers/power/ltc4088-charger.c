@@ -180,9 +180,11 @@ static int pm_power_get_property(struct power_supply *psy,
 	struct ltc4088_chg_chip *chip;
 
 	if (psy->type == POWER_SUPPLY_TYPE_USB) {
-		chip = container_of(psy, struct ltc4088_chg_chip,
-						usb_psy);
+		chip = container_of(psy, struct ltc4088_chg_chip, usb_psy);
 		switch (psp) {
+		case POWER_SUPPLY_PROP_TYPE:
+			psy.type = val->intval;
+			break;
 		case POWER_SUPPLY_PROP_ONLINE:
 			if (chip->max_current)
 				val->intval = 1;

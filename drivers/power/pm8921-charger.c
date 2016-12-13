@@ -1402,6 +1402,8 @@ static int pm_power_get_property_mains(struct power_supply *psy,
 			val->intval = is_usb_chg_plugged_in(the_chip);
 
 		break;
+	case POWER_SUPPLY_PROP_TYPE:
+		return pm8921_set_usb_power_supply_type(val->intval);
 	default:
 		return -EINVAL;
 	}
