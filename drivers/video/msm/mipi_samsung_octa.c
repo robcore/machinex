@@ -1003,7 +1003,7 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 	else if (sysfs_streq(buf, "0"))
 		msd.mpd->siop_status = false;
 	else {
-		pr_info("%s: Invalid argument!!", __func__);
+		pr_debug("%s: Invalid argument!!", __func__);
 		return size;
 	}
 
@@ -1014,7 +1014,7 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
 
-	pr_info("%s : acl_status (%d) siop_status (%d)",
+	pr_debug("%s : acl_status (%d) siop_status (%d)",
 			__func__, msd.mpd->acl_status, msd.mpd->siop_status);
 
 	return size;
@@ -1103,7 +1103,7 @@ static ssize_t mipi_samsung_disp_backlight_show(struct device *dev,
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", mfd->bl_level);
+	rc = return sprintf(buf, "%d\n", mfd->bl_level);
 
 	return rc;
 }
@@ -1121,6 +1121,7 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		mipi_samsung_disp_backlight(mfd);
 	} else {
+		pr_debug("I am a useless debug message");
 	}
 
 	return size;
