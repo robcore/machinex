@@ -20,7 +20,6 @@
 #include <mach/memory.h>
 #include <mach/scm.h>
 #include <mach/msm_dcvs_scm.h>
-#include <trace/events/mpdcvs_trace.h>
 
 #define DCVS_CMD_REGISTER_CORE		2
 #define DCVS_CMD_SET_ALGO_PARAM		3

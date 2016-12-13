@@ -27,7 +27,6 @@
 #include <asm/atomic.h>
 #include <asm/page.h>
 #include <mach/msm_dcvs.h>
-#include <trace/events/mpdcvs_trace.h>
 
 #define CORE_HANDLE_OFFSET (0xA0)
 #define __err(f, ...) pr_err("MSM_DCVS: %s: " f, __func__, __VA_ARGS__)
