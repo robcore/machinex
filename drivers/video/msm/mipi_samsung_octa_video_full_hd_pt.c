@@ -1288,7 +1288,6 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		//pr_info("%s lcd error bl_level : %d", __func__, bl_level);
 		backlightlevel = GAMMA_300CD;
 		break;
 	}
@@ -2020,7 +2019,7 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 300;
-	pinfo.bl_min = 1;
+	pinfo.bl_min = 10;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;

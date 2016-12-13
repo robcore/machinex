@@ -1763,8 +1763,6 @@ static int brightness_control(int bl_level)
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
-	//pr_info("%s brightness_level : %d, candela : %d, auto : %d\n",
-//					__func__, mipi_pd.brightness_level, candela, get_auto_brightness());
 	cmd_size = 0;
 
 	/* LEVEL KEY ON */
@@ -1954,9 +1952,10 @@ static int brightness_control(int bl_level)
 static int acl_control(int bl_level)
 {
 
-	if (get_auto_brightness() == 6) {
+	if (get_auto_brightness() == 6)
 		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	}
+	else if (get_auto_brightness() == 0)
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 
 	return 1;
 }
@@ -2164,7 +2163,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 300;
-	pinfo.bl_min = 1;
+	pinfo.bl_min = 10;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;
