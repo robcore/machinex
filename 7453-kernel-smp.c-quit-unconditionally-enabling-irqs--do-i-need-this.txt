@@ -1,0 +1,313 @@
+From 1a4d7bc6e8baf2ae61623ad26a677035e7769474 Mon Sep 17 00:00:00 2001
+From: David Daney <david.daney@cavium.com>
+Date: Wed, 11 Sep 2013 14:23:29 -0700
+Subject: [PATCH 7453/9000] kernel/smp.c: quit unconditionally enabling irqs in
+ on_each_cpu_mask().
+
+As in commit f21afc25f9ed ("smp.h: Use local_irq_{save,restore}() in
+!SMP version of on_each_cpu()"), we don't want to enable irqs if they
+are not already enabled.
+
+I don't know of any bugs currently caused by this unconditional
+local_irq_enable(), but I want to use this function in MIPS/OCTEON early
+boot (when we have early_boot_irqs_disabled).  This also makes this
+function have similar semantics to on_each_cpu() which is good in
+itself.
+
+Signed-off-by: David Daney <david.daney@cavium.com>
+Cc: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Christoph Lameter <cl@linux.com>
+Cc: Chris Metcalf <cmetcalf@tilera.com>
+Cc: Peter Zijlstra <a.p.zijlstra@chello.nl>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+genirq: Allow forcing cpu affinity of interrupts
+
+commit 01f8fa4f01d8362358eb90e412bd7ae18a3ec1ad upstream.
+
+The current implementation of irq_set_affinity() refuses rightfully to
+route an interrupt to an offline cpu.
+
+But there is a special case, where this is actually desired. Some of
+the ARM SoCs have per cpu timers which require setting the affinity
+during cpu startup where the cpu is not yet in the online mask.
+
+If we can't do that, then the local timer interrupt for the about to
+become online cpu is routed to some random online cpu.
+
+The developers of the affected machines tried to work around that
+issue, but that results in a massive mess in that timer code.
+
+We have a yet unused argument in the set_affinity callbacks of the irq
+chips, which I added back then for a similar reason. It was never
+required so it got not used. But I'm happy that I never removed it.
+
+That allows us to implement a sane handling of the above scenario. So
+the affected SoC drivers can add the required force handling to their
+interrupt chip, switch the timer code to irq_force_affinity() and
+things just work.
+
+This does not affect any existing user of irq_set_affinity().
+
+Tagged for stable to allow a simple fix of the affected SoC clock
+event drivers.
+
+Reported-and-tested-by: Krzysztof Kozlowski <k.kozlowski@samsung.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: Kyungmin Park <kyungmin.park@samsung.com>
+Cc: Marek Szyprowski <m.szyprowski@samsung.com>
+Cc: Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
+Cc: Tomasz Figa <t.figa@samsung.com>,
+Cc: Daniel Lezcano <daniel.lezcano@linaro.org>,
+Cc: Kukjin Kim <kgene.kim@samsung.com>
+Cc: linux-arm-kernel@lists.infradead.org,
+Link: http://lkml.kernel.org/r/20140416143315.717251504@linutronix.de
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+
+ARM: 8133/1: use irq_set_affinity with force=false when migrating irqs
+
+Since commit 1dbfa187dad ("ARM: irq migration: force migration off CPU
+going down") the ARM interrupt migration code on cpu offline calls
+irqchip.irq_set_affinity() with the argument force=true. At the point
+of this change the argument had no effect because it was not used by
+any interrupt chip driver and there was no semantics defined.
+
+This changed with commit 01f8fa4f01d8 ("genirq: Allow forcing cpu
+affinity of interrupts") which made the force argument useful to route
+interrupts to not yet online cpus without checking the target cpu
+against the cpu online mask. The following commit ffde1de64012
+("irqchip: gic: Support forced affinity setting") implemented this for
+the GIC interrupt controller.
+
+As a consequence the ARM cpu offline irq migration fails if CPU0 is
+offlined, because CPU0 is still set in the affinity mask and the
+validataion against cpu online mask is skipped to the force argument
+being true. The following first_cpu(mask) selection always selects
+CPU0 as the target.
+
+Solve the issue by calling irq_set_affinity() with force=false from
+the CPU offline irq migration code so the GIC driver validates the
+affinity mask against CPU online mask and therefore removes CPU0 from
+the possible target candidates.
+
+Tested on TC2 hotpluging CPU0 in and out. Without this patch the system
+locks up as the IRQs are not migrated away from CPU0.
+
+Signed-off-by: Sudeep Holla <sudeep.holla@arm.com>
+Acked-by: Thomas Gleixner <tglx@linutronix.de>
+Acked-by: Mark Rutland <mark.rutland@arm.com>
+Cc: <stable@vger.kernel.org> # 3.10.x
+Signed-off-by: Russell King <rmk+kernel@arm.linux.org.uk>
+
+irq: Set CPU affinity right on thread creation
+
+As irq_thread_check_affinity is called ONLY inside the while loop in
+the irq thread, the core affinity is set only when an interrupt
+occurs. This patch sets the core affinity right after the irq thread
+is created and before it waits for interrupts. In real-tiime targets
+that do not typically change the core affinity of irqs during
+run-time, this patch will save additional latency of an irq thread in
+setting the core affinity during the first interrupt occurrence for
+that irq.
+
+Change-Id: I4db2caefe0286437cddfe348a0f1e63db91ee749
+Signed-off-by: Sankara S Muthukrishnan <sankara.m@ni.com>
+Acked-by: Steven Rostedt <rostedt@goodmis.org>
+Link: http://lkml.kernel.org/r/CAFQPvXeVZ858WFYimEU5uvLNxLDd6bJMmqWihFmbCf3ntokz0A@mail.gmail.com
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: franciscofranco <franciscofranco.1990@gmail.com>
+---
+ arch/arm/kernel/irq.c                |  2 +-
+ arch/mips/cavium-octeon/octeon-irq.c |  2 +-
+ include/linux/interrupt.h            | 35 ++++++++++++++++++++++++++++++++++-
+ include/linux/irq.h                  |  3 ++-
+ kernel/irq/manage.c                  | 19 ++++++++-----------
+ kernel/smp.c                         | 11 +++++++----
+ 6 files changed, 53 insertions(+), 19 deletions(-)
+
+diff --git a/arch/arm/kernel/irq.c b/arch/arm/kernel/irq.c
+index 647ce3e..2725af7 100644
+--- a/arch/arm/kernel/irq.c
++++ b/arch/arm/kernel/irq.c
+@@ -173,7 +173,7 @@ static bool migrate_one_irq(struct irq_desc *desc)
+ 	c = irq_data_get_irq_chip(d);
+ 	if (!c->irq_set_affinity)
+ 		pr_debug("IRQ%u: unable to set affinity\n", d->irq);
+-	else if (c->irq_set_affinity(d, affinity, true) == IRQ_SET_MASK_OK && ret)
++	else if (c->irq_set_affinity(d, affinity, false) == IRQ_SET_MASK_OK && ret)
+ 		cpumask_copy(d->affinity, affinity);
+ 
+ 	return ret;
+diff --git a/arch/mips/cavium-octeon/octeon-irq.c b/arch/mips/cavium-octeon/octeon-irq.c
+index ffd4ae6..4ef98b8 100644
+--- a/arch/mips/cavium-octeon/octeon-irq.c
++++ b/arch/mips/cavium-octeon/octeon-irq.c
+@@ -527,7 +527,7 @@ static void octeon_irq_cpu_offline_ciu(struct irq_data *data)
+ 		cpumask_clear(&new_affinity);
+ 		cpumask_set_cpu(cpumask_first(cpu_online_mask), &new_affinity);
+ 	}
+-	__irq_set_affinity_locked(data, &new_affinity);
++	irq_set_affinity_locked(data, &new_affinity, false);
+ }
+ 
+ static int octeon_irq_ciu_set_affinity(struct irq_data *data,
+diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
+index 1dbdbda..dca5d72 100644
+--- a/include/linux/interrupt.h
++++ b/include/linux/interrupt.h
+@@ -245,7 +245,40 @@ static inline int check_wakeup_irqs(void) { return 0; }
+ 
+ extern cpumask_var_t irq_default_affinity;
+ 
+-extern int irq_set_affinity(unsigned int irq, const struct cpumask *cpumask);
++/* Internal implementation. Use the helpers below */
++extern int __irq_set_affinity(unsigned int irq, const struct cpumask *cpumask,
++			      bool force);
++
++/**
++ * irq_set_affinity - Set the irq affinity of a given irq
++ * @irq:	Interrupt to set affinity
++ * @mask:	cpumask
++ *
++ * Fails if cpumask does not contain an online CPU
++ */
++static inline int
++irq_set_affinity(unsigned int irq, const struct cpumask *cpumask)
++{
++	return __irq_set_affinity(irq, cpumask, false);
++}
++
++/**
++ * irq_force_affinity - Force the irq affinity of a given irq
++ * @irq:	Interrupt to set affinity
++ * @mask:	cpumask
++ *
++ * Same as irq_set_affinity, but without checking the mask against
++ * online cpus.
++ *
++ * Solely for low level cpu hotplug code, where we need to make per
++ * cpu interrupts affine before the cpu becomes online.
++ */
++static inline int
++irq_force_affinity(unsigned int irq, const struct cpumask *cpumask)
++{
++	return __irq_set_affinity(irq, cpumask, true);
++}
++
+ extern int irq_can_set_affinity(unsigned int irq);
+ extern int irq_select_affinity(unsigned int irq);
+ 
+diff --git a/include/linux/irq.h b/include/linux/irq.h
+index 2a67ab2..64f8254 100644
+--- a/include/linux/irq.h
++++ b/include/linux/irq.h
+@@ -388,7 +388,8 @@ extern void remove_percpu_irq(unsigned int irq, struct irqaction *act);
+ 
+ extern void irq_cpu_online(void);
+ extern void irq_cpu_offline(void);
+-extern int __irq_set_affinity_locked(struct irq_data *data,  const struct cpumask *cpumask);
++extern int irq_set_affinity_locked(struct irq_data *data,
++				   const struct cpumask *cpumask, bool force);
+ 
+ #ifdef CONFIG_GENERIC_HARDIRQS
+ 
+diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
+index 99af5c3..85d135b 100644
+--- a/kernel/irq/manage.c
++++ b/kernel/irq/manage.c
+@@ -146,7 +146,7 @@ int irq_do_set_affinity(struct irq_data *data, const struct cpumask *mask,
+ 	struct irq_chip *chip = irq_data_get_irq_chip(data);
+ 	int ret;
+ 
+-	ret = chip->irq_set_affinity(data, mask, false);
++	ret = chip->irq_set_affinity(data, mask, force);
+ 	switch (ret) {
+ 	case IRQ_SET_MASK_OK:
+ 		cpumask_copy(data->affinity, mask);
+@@ -158,7 +158,8 @@ int irq_do_set_affinity(struct irq_data *data, const struct cpumask *mask,
+ 	return ret;
+ }
+ 
+-int __irq_set_affinity_locked(struct irq_data *data, const struct cpumask *mask)
++int irq_set_affinity_locked(struct irq_data *data, const struct cpumask *mask,
++			    bool force)
+ {
+ 	struct irq_chip *chip = irq_data_get_irq_chip(data);
+ 	struct irq_desc *desc = irq_data_to_desc(data);
+@@ -168,7 +169,7 @@ int __irq_set_affinity_locked(struct irq_data *data, const struct cpumask *mask)
+ 		return -EINVAL;
+ 
+ 	if (irq_can_move_pcntxt(data)) {
+-		ret = irq_do_set_affinity(data, mask, false);
++		ret = irq_do_set_affinity(data, mask, force);
+ 	} else {
+ 		irqd_set_move_pending(data);
+ 		irq_copy_pending(desc, mask);
+@@ -183,13 +184,7 @@ int __irq_set_affinity_locked(struct irq_data *data, const struct cpumask *mask)
+ 	return ret;
+ }
+ 
+-/**
+- *	irq_set_affinity - Set the irq affinity of a given irq
+- *	@irq:		Interrupt to set affinity
+- *	@mask:		cpumask
+- *
+- */
+-int irq_set_affinity(unsigned int irq, const struct cpumask *mask)
++int __irq_set_affinity(unsigned int irq, const struct cpumask *mask, bool force)
+ {
+ 	struct irq_desc *desc = irq_to_desc(irq);
+ 	unsigned long flags;
+@@ -199,7 +194,7 @@ int irq_set_affinity(unsigned int irq, const struct cpumask *mask)
+ 		return -EINVAL;
+ 
+ 	raw_spin_lock_irqsave(&desc->lock, flags);
+-	ret =  __irq_set_affinity_locked(irq_desc_get_irq_data(desc), mask);
++	ret = irq_set_affinity_locked(irq_desc_get_irq_data(desc), mask, force);
+ 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+ 	return ret;
+ }
+@@ -834,6 +829,8 @@ static int irq_thread(void *data)
+ 	sched_setscheduler(current, SCHED_FIFO, &param);
+ 	current->irq_thread = 1;
+ 
++	irq_thread_check_affinity(desc, action);
++
+ 	while (!irq_wait_for_interrupt(action)) {
+ 		irqreturn_t action_ret;
+ 
+diff --git a/kernel/smp.c b/kernel/smp.c
+index d47300a..f330860 100644
+--- a/kernel/smp.c
++++ b/kernel/smp.c
+@@ -725,8 +725,10 @@ EXPORT_SYMBOL(on_each_cpu);
+  *
+  * If @wait is true, then returns once @func has returned.
+  *
+- * You must not call this function with disabled interrupts or
+- * from a hardware interrupt handler or from a bottom half handler.
++ * You must not call this function with disabled interrupts or from a
++ * hardware interrupt handler or from a bottom half handler.  The
++ * exception is that it may be used during early boot while
++ * early_boot_irqs_disabled is set.
+  */
+ void on_each_cpu_mask(const struct cpumask *mask, smp_call_func_t func,
+ 			void *info, bool wait)
+@@ -735,9 +737,10 @@ void on_each_cpu_mask(const struct cpumask *mask, smp_call_func_t func,
+ 
+ 	smp_call_function_many(mask, func, info, wait);
+ 	if (cpumask_test_cpu(cpu, mask)) {
+-		local_irq_disable();
++		unsigned long flags;
++		local_irq_save(flags);
+ 		func(info);
+-		local_irq_enable();
++		local_irq_restore(flags);
+ 	}
+ 	put_cpu();
+ }
+-- 
+2.9.3
+
