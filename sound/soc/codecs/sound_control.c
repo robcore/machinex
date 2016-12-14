@@ -21,7 +21,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	6
+#define SOUND_CONTROL_MINOR_VERSION	7
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -33,10 +33,9 @@ unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
-#define REG_SZ	21
-static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0 };
+#define REG_SZ	17
+static unsigned int cached_regs[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			    0, 0, 0, 0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -94,18 +93,6 @@ static unsigned int *cache_select(unsigned int reg)
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
 			out = &cached_regs[17];
 			break;
-		case TABLA_A_RX_LINE_1_GAIN:
-			out = &cached_regs[18];
-			break;
-		case TABLA_A_RX_LINE_2_GAIN:
-			out = &cached_regs[19];
-			break;
-		case TABLA_A_RX_LINE_3_GAIN:
-			out = &cached_regs[20];
-			break;
-		case TABLA_A_RX_LINE_4_GAIN:
-			out = &cached_regs[21];
-			break;
 	}
 
 	return out;
@@ -142,11 +129,6 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
-		/* Line out gain */
-		case TABLA_A_RX_LINE_1_GAIN:
-		case TABLA_A_RX_LINE_2_GAIN:
-		case TABLA_A_RX_LINE_3_GAIN:
-		case TABLA_A_RX_LINE_4_GAIN:
 			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
