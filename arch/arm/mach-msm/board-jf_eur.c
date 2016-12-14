@@ -3198,6 +3198,7 @@ static struct mdm_platform_data sglte2_qsc_platform_data = {
 	.no_powerdown_after_ramdumps = 1,
 	.image_upgrade_supported = 1,
 	.no_a2m_errfatal_on_ssr = 1,
+	.kpd_not_inverted = 1,
 	.subsys_name = "external_modem",
 };
 
@@ -4340,7 +4341,7 @@ static void es325_2MIC_RST_init(void)
 void es325_start_api(void)
 {
 	es325_enable_VDD_CORE();
-	mdelay(40);
+	mdelay(50);
 	es325_2MIC_RST_init();
 	pr_info("=[ES325]=%s=====\n",__func__);
 }
@@ -4363,7 +4364,7 @@ int es325_enable_ext_clk(int enable)
 	}
 
 	if (enable) {
-		clk_set_rate(es325_codec_clk, 24576000); //12288000
+		clk_set_rate(es325_codec_clk, 12288000);
 		clk_prepare_enable(es325_codec_clk);
 	} else {
 		clk_disable_unprepare(es325_codec_clk);

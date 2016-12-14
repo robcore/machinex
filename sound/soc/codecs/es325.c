@@ -2331,7 +2331,7 @@ static int es325_sleep(struct es325_priv *es325)
 	if (rc < 0)
 		pr_err("=[ES325]=%s(): Sleep Smooth Mute Set to 0 Fail, rc=%d\n", __func__, rc);
 
-	usleep_range(2000, 2100);
+	usleep_range(2000, 2000);
 
 	/* write pwr command, es325 to sleep mode */
 	do {
@@ -2344,7 +2344,7 @@ static int es325_sleep(struct es325_priv *es325)
 			break;
 		}
 		pr_err("=[ES325]=%s(): slim write fail, rc=%d\n", __func__,rc);
-		usleep_range(1000, 1000);
+		usleep_range(20000, 20000);
 		i++;
 	} while (i <= 20);
 
@@ -4980,7 +4980,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 
 	if (clk_count++ == 0) {
 		pdata->es325_clk_cb(1);
-		pdata->es325_reset_cb();
+		//pdata->es325_reset_cb();
 	}
 
 	rc = device_create_file(&sbdev->dev, &dev_attr_route_status);
