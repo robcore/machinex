@@ -501,17 +501,16 @@ static int sound_control_init(void)
 	sysfs_result = sysfs_create_group(sound_control_kobj,
 			&sound_control_attr_group);
 
-	if (sysfs_result) {
-		pr_info("%s sysfs create failed!\n", __FUNCTION__);
-		kobject_put(sound_control_kobj);
-
-	return sysfs_result;
-}
-
 	snd_ctrl_enabled = 1;
 	snd_ctrl_locked = 1;
 	snd_rec_ctrl_locked = 1;
 
+	if (sysfs_result) {
+		pr_info("%s sysfs create failed!\n", __FUNCTION__);
+		kobject_put(sound_control_kobj);
+	}
+
+	return sysfs_result;
 }
 
 static void sound_control_exit(void)
