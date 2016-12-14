@@ -38,6 +38,8 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #define SMART_DIMMING_DEBUG
 */
 
+struct SMART_DIM *gpsmart;
+
 static char max_lux_table[GAMMA_SET_MAX];
 static char min_lux_table[GAMMA_SET_MAX];
 
@@ -89,18 +91,6 @@ static char VT_300CD_R;
 static char VT_300CD_G;
 static char VT_300CD_B;
 
-struct SMART_DIM *gpsmart;
-
-static int color_mods[5][9] = {
-	{ 0,  0,  5, -18, -16, -10,  3,  0,  0, },
-	{ 0,  0,  2,  -9,  -8,  -5,  1,  0,  0, },
-	{ 0,  0,  0,   0,   0,   0,  0,  0,  0, },
-	{ 0,  0, -2,   9,   8,   5, -1,  0,  0, },
-	{ 0,  0, -5,  18,  16,  10, -3,  0,  0, }
-};
-
-unsigned int panelval = 2;
-
 static int char_to_int(char data1)
 {
 	int cal_data;
@@ -124,6 +114,22 @@ static int char_to_int_v255(char data1, char data2)
 		cal_data = data2;
 
 	return cal_data;
+}
+
+unsigned int panelval = 2;
+
+static int color_mods[5][9] = {
+	{ 0,  0,  5, -18, -16, -10,  3,  0,  0, },
+	{ 0,  0,  2,  -9,  -8,  -5,  1,  0,  0, },
+	{ 0,  0,  0,   0,   0,   0,  0,  0,  0, },
+	{ 0,  0, -2,   9,   8,   5, -1,  0,  0, },
+	{ 0,  0, -5,  18,  16,  10, -3,  0,  0, }
+};
+
+void panel_load_colors(unsigned int val)
+{
+		panelval = val;
+		smart_dimming_init(gpsmart);
 }
 
 #define v255_coefficient 72
@@ -223,7 +229,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_R;
-	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+	result_1 = result_2 = vt_coefficient[LSB] + color_mods[panelval][0]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -231,7 +237,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_G;
-	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+	result_1 = result_2 = vt_coefficient[LSB] + color_mods[panelval][1]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -239,7 +245,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_B;
-	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+	result_1 = result_2 = vt_coefficient[LSB] + color_mods[panelval][2]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -3867,12 +3873,6 @@ void log_sorting(char *dst, char *src)
 }
 #endif
 
-void panel_load_colors(unsigned int val)
-{
-		panelval = val;
-		smart_dimming_init(gpsmart);
-}
-
 int smart_dimming_init(struct SMART_DIM *psmart)
 {
 	int lux_loop;
@@ -3883,7 +3883,7 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	char log_buf[GAMMA_SET_MAX];
 	memset(pBuffer, 0x00, 256);
 #endif
-
+	gpsmart = psmart;
 	id1 = (psmart->ldi_revision & 0x00FF0000) >> 16;
 	id2 = (psmart->ldi_revision & 0x0000FF00) >> 8;
 	id3 = psmart->ldi_revision & 0xFF;
@@ -3997,7 +3997,7 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 		memset(pBuffer, 0x00, 256);
 	}
 #endif
-	gpsmart = psmart;
+
 		/*re-initialize panel value*/
 	panelval = 2;
 
