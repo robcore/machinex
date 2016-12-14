@@ -253,8 +253,6 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
     return count;
 }
 
-static unsigned int selected_reg = 0xdeadbeef;
-
 static ssize_t sound_reg_select_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
