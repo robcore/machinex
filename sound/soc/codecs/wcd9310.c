@@ -488,6 +488,7 @@ static int tabla_codec_enable_charge_pump(struct snd_soc_dapm_widget *w,
 	pr_debug("%s %d\n", __func__, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		msleep(15);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLK_OTHR_CTL, 0x01,
 			0x01);
 		snd_soc_update_bits(codec, TABLA_A_CDC_CLSG_CTL, 0x08, 0x08);
@@ -1080,8 +1081,6 @@ static int tabla_codec_hphr_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_B6_CTL,
 				    1 << w->shift, 0);
 		break;
-	default:
-		return -EINVAL;
 	}
 	return 0;
 }
@@ -1109,8 +1108,6 @@ static int tabla_codec_hphl_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_B6_CTL,
 				    1 << w->shift, 0);
 		break;
-	default:
-		return -EINVAL;
 	}
 	return 0;
 }
@@ -2316,9 +2313,9 @@ static int tabla_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x40);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-		pr_debug("%s: sleeping 16 ms after %s PA turn on\n",
+		pr_debug("%s: sleeping 16 us after %s PA turn on\n",
 				__func__, w->name);
-		usleep_range(16000, 16000);
+		usleep_range(16, 16);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x00);
@@ -3046,6 +3043,7 @@ static int tabla_codec_enable_ear_rx_bias(struct snd_soc_dapm_widget *w,
 		tabla_enable_rx_bias(codec, 1);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		msleep(40);
 		tabla_enable_rx_bias(codec, 0);
 		break;
 	}
