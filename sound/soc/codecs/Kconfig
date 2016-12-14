@@ -205,10 +205,10 @@ config SND_SOC_JZ4740_CODEC
 	tristate
 
 config SND_SOC_L3
-	tristate
+       tristate
 
 config SND_SOC_DA7210
-	tristate
+        tristate
 
 config SND_SOC_DFBMCS320
 	tristate
@@ -217,16 +217,16 @@ config SND_SOC_DMIC
 	tristate
 
 config SND_SOC_MAX98088
-	tristate
+       tristate
 
 config SND_SOC_MAX98095
-	tristate
+       tristate
 
 config SND_SOC_MAX9850
 	tristate
 
 config SND_SOC_PCM3008
-	tristate
+       tristate
 
 config SND_SOC_RT5631
 	tristate
@@ -278,10 +278,10 @@ config SND_SOC_TWL6040
 	tristate
 
 config SND_SOC_UDA134X
-	tristate
+       tristate
 
 config SND_SOC_UDA1380
-	tristate
+        tristate
 
 config SND_SOC_WCD9304
 	tristate

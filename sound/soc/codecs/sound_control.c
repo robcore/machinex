@@ -19,24 +19,22 @@
 #include <linux/kallsyms.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
-#include "wcd9310.h"
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	7
+#define SOUND_CONTROL_MINOR_VERSION	6
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
-unsigned int snd_ctrl_enabled;
-unsigned int snd_ctrl_locked;
-unsigned int snd_rec_ctrl_locked;
-static unsigned int selected_reg = 0xdeadbeef;
+unsigned int snd_ctrl_enabled = 1;
+unsigned int snd_ctrl_locked = 2;
+unsigned int snd_rec_ctrl_locked = 2;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 #define REG_SZ	21
-static unsigned int cached_regs[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+static unsigned int cached_regs[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			    0 };
 
@@ -138,90 +136,33 @@ int snd_reg_access(unsigned int reg)
 	switch (reg) {
 		/* Digital Headphones Gain */
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled) // && (snd_ctrl_locked))
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		/* Line out gain */
 		case TABLA_A_RX_LINE_1_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_RX_LINE_2_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_RX_LINE_3_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_RX_LINE_4_GAIN:
-			if (snd_ctrl_enabled)
+			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled) // && (snd_rec_ctrl_locked))
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
-				ret = 0;
-			break;
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled)
+			if ((snd_ctrl_enabled > 0) && (snd_rec_ctrl_locked > 0))
 				ret = 0;
 			break;
 		default:
@@ -245,21 +186,28 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 
     sscanf(buf, "%u", &val);
 
-    if (val > 1)
+    if (val > 1) {
         val = 1;
+	}
+
+	if (val < 0) {
+		val = 0;
+	}
 
     snd_ctrl_enabled = val;
 
     return count;
 }
 
+static unsigned int selected_reg = 0xdeadbeef;
+
 static ssize_t sound_reg_select_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	sscanf(buf, "%u", &selected_reg);
-
 	if (!snd_ctrl_enabled)
 		return count;
+
+	sscanf(buf, "%u", &selected_reg);
 
 	return count;
 }
@@ -290,6 +238,36 @@ static ssize_t sound_reg_write_store(struct kobject *kobj,
 	return count;
 }
 
+static ssize_t speaker_gain_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u %u\n",
+			tabla_read(snd_engine_codec_ptr,
+				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
+			tabla_read(snd_engine_codec_ptr,
+				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
+}
+
+static ssize_t speaker_gain_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int lval, rval;
+
+	sscanf(buf, "%u %u", &lval, &rval);
+
+	if (!snd_ctrl_enabled)
+		return count;
+
+	snd_ctrl_locked = 0;
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
+	snd_ctrl_locked = 2;
+
+	return count;
+}
+
 static ssize_t headphone_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -315,38 +293,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
-	snd_ctrl_locked = 1;
-
-	return count;
-}
-
-static ssize_t speaker_gain_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u %u\n",
-			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
-			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
-}
-
-static ssize_t speaker_gain_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int lval, rval;
-
-	sscanf(buf, "%u %u", &lval, &rval);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
-	/* For mono speaker lval = rval */
-	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
-	snd_ctrl_locked = 1;
+	snd_ctrl_locked = 2;
 
 	return count;
 }
@@ -372,7 +319,7 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	snd_rec_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
-	snd_rec_ctrl_locked = 1;
+	snd_rec_ctrl_locked = 2;
 
 	return count;
 }
@@ -398,7 +345,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	snd_rec_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
-	snd_rec_ctrl_locked = 1;
+	snd_rec_ctrl_locked = 2;
 
 	return count;
 }
@@ -489,6 +436,10 @@ static int sound_control_init(void)
 {
 	int sysfs_result;
 
+	snd_ctrl_enabled = 1;
+	snd_ctrl_locked = 2;
+	snd_rec_ctrl_locked = 2;
+
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
 
@@ -500,10 +451,6 @@ static int sound_control_init(void)
 
 	sysfs_result = sysfs_create_group(sound_control_kobj,
 			&sound_control_attr_group);
-
-	snd_ctrl_enabled = 1;
-	snd_ctrl_locked = 1;
-	snd_rec_ctrl_locked = 1;
 
 	if (sysfs_result) {
 		pr_info("%s sysfs create failed!\n", __FUNCTION__);

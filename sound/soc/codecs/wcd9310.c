@@ -220,7 +220,7 @@ struct comp_dgtl_gain_offset {
 	u8 half_db_gain;
 };
 
-static const struct comp_dgtl_gain_offset
+const static struct comp_dgtl_gain_offset
 			comp_dgtl_gain[MAX_PA_GAIN_OPTIONS] = {
 	{0, 0},
 	{1, 1},
@@ -1080,6 +1080,8 @@ static int tabla_codec_hphr_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -1107,6 +1109,8 @@ static int tabla_codec_hphl_dem_input_selection(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_B6_CTL,
 				    1 << w->shift, 0);
 		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -4090,7 +4094,7 @@ static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 #define TABLA_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
 
 #ifdef CONFIG_SOUND_CONTROL
-extern int snd_ctrl_enabled;
+extern unsigned int snd_ctrl_enabled;
 extern int snd_reg_access(unsigned int);
 extern unsigned int snd_cache_read(unsigned int);
 extern void snd_cache_write(unsigned int, unsigned int);
@@ -6755,7 +6759,7 @@ static irqreturn_t tabla_dce_handler(int irq, void *data)
 	u16 *btn_high;
 	int btn = -1, meas = 0;
 	struct tabla_priv *priv = data;
-	struct tabla_mbhc_btn_detect_cfg *d =
+	const struct tabla_mbhc_btn_detect_cfg *d =
 	    TABLA_MBHC_CAL_BTN_DET_PTR(priv->mbhc_cfg.calibration);
 	short btnmeas[d->n_btn_meas + 1];
 	struct snd_soc_codec *codec = priv->codec;
@@ -8324,7 +8328,7 @@ static irqreturn_t tabla_slimbus_irq(int irq, void *data)
 				pr_debug("%s: port %x disconnect value %x\n",
 					__func__, i*8 + j, val);
 				port_id = i*8 + j;
-				for (k = 0; k < ARRAY_SIZE(tabla_p->dai); k++) {
+				for (k = 0; k < ARRAY_SIZE(tabla_dai); k++) {
 					ch_mask_temp = 1 << port_id;
 					if (ch_mask_temp &
 						tabla_p->dai[k].ch_mask) {
@@ -9210,7 +9214,7 @@ static int tabla_codec_remove(struct snd_soc_codec *codec)
 	tabla_codec_enable_bandgap(codec, TABLA_BANDGAP_OFF);
 	if (tabla->mbhc_fw)
 		release_firmware(tabla->mbhc_fw);
-	for (i = 0; i < ARRAY_SIZE(tabla->dai); i++)
+	for (i = 0; i < ARRAY_SIZE(tabla_dai); i++)
 		kfree(tabla->dai[i].ch_num);
 	mutex_destroy(&tabla->codec_resource_lock);
 #ifdef CONFIG_DEBUG_FS
