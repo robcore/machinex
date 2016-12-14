@@ -187,41 +187,41 @@ int snd_reg_access(unsigned int reg)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			(snd_ctrl_enabled)
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		default:
