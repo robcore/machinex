@@ -138,90 +138,90 @@ int snd_reg_access(unsigned int reg)
 	switch (reg) {
 		/* Digital Headphones Gain */
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled) // && (snd_ctrl_locked))
 				ret = 0;
 			break;
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		/* Line out gain */
 		case TABLA_A_RX_LINE_1_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_RX_LINE_2_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_RX_LINE_3_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_RX_LINE_4_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_ctrl_locked))
+			if (snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			if (snd_ctrl_enabled) // && (snd_rec_ctrl_locked))
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled)// && (snd_rec_ctrl_locked))
+			(snd_ctrl_enabled)
 				ret = 0;
 			break;
 		default:

@@ -6452,7 +6452,7 @@ void tabla_mbhc_cal(struct snd_soc_codec *codec)
 	tabla_turn_onoff_rel_detection(codec, true);
 }
 
-void *tabla_mbhc_cal_btn_det_mp(struct tabla_mbhc_btn_detect_cfg* btn_det,
+void *tabla_mbhc_cal_btn_det_mp(const struct tabla_mbhc_btn_detect_cfg* btn_det,
 				const enum tabla_mbhc_btn_det_mem mem)
 {
 	void *ret = &btn_det->_v_btn_low;
