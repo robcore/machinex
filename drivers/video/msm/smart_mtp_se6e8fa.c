@@ -116,7 +116,7 @@ static int char_to_int_v255(char data1, char data2)
 	return cal_data;
 }
 
-unsigned int panelval = 2;
+unsigned int panelval;
 
 static int color_mods[5][9] = {
 	{ 0,  0,  5, -18, -16, -10,  3,  0,  0, },
