@@ -4340,7 +4340,7 @@ static void es325_2MIC_RST_init(void)
 void es325_start_api(void)
 {
 	es325_enable_VDD_CORE();
-	mdelay(50);
+	mdelay(40);
 	es325_2MIC_RST_init();
 	pr_info("=[ES325]=%s=====\n",__func__);
 }
@@ -4357,15 +4357,13 @@ int es325_enable_ext_clk(int enable)
 {
 	int r = 0;
 	static struct clk *es325_codec_clk;
-	pr_info("%s: enable=%d\n", __func__, enable);
 
 	if (!es325_codec_clk) {
-		pr_info("%s: Clk_Get osr_clk\n", __func__);
 		es325_codec_clk = clk_get(&msm_es325_mclk_dev.dev, "osr_clk");
 	}
 
 	if (enable) {
-		clk_set_rate(es325_codec_clk, 12288000);
+		clk_set_rate(es325_codec_clk, 24576000); //12288000
 		clk_prepare_enable(es325_codec_clk);
 	} else {
 		clk_disable_unprepare(es325_codec_clk);
