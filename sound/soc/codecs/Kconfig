@@ -302,13 +302,7 @@ config SND_SOC_CS8427
 	tristate
 
 config SND_SOC_WCD9320
-	tristate
-
-config SND_SOC_SOUND_CONTROL
-	tristate "Generic WCD93xx Sound Engine"
-	default y
-	help
-	  This is a sound engine with sysfs controls for wcd9xxx
+        tristate
 
 config SND_SOC_WL1273
 	tristate
@@ -469,3 +463,9 @@ config SND_SOC_TPA2028D
 	default n
 	help
 	  Texas Instruments 3W Mono Class-D Audio Amplifier
+
+config SOUND_CONTROL
+	tristate "Generic WCD93xx Sound Engine"
+	default y
+	help
+	  This is a sound engine with sysfs controls for wcd9xxx

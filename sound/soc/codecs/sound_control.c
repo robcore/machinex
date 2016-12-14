@@ -241,7 +241,7 @@ static ssize_t sound_reg_write_store(struct kobject *kobj,
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d %d\n",
+	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
 				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(snd_engine_codec_ptr,
@@ -253,7 +253,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 {
 	unsigned int lval, rval;
 
-	sscanf(buf, "%d %d", &lval, &rval);
+	sscanf(buf, "%u %u", &lval, &rval);
 
 	if (!snd_ctrl_enabled)
 		return count;
@@ -271,7 +271,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 static ssize_t headphone_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d %d\n",
+	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
 				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
 			tabla_read(snd_engine_codec_ptr,
@@ -283,7 +283,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 {
 	unsigned int lval, rval;
 
-	sscanf(buf, "%d %d", &lval, &rval);
+	sscanf(buf, "%u %u", &lval, &rval);
 
 	if (!snd_ctrl_enabled)
 		return count;
@@ -301,7 +301,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n",
+	return sprintf(buf, "%u\n",
 		tabla_read(snd_engine_codec_ptr,
 			TABLA_A_CDC_TX6_VOL_CTL_GAIN));
 }
@@ -311,7 +311,7 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 {
 	unsigned int lval;
 
-	sscanf(buf, "%d", &lval);
+	sscanf(buf, "%u", &lval);
 
 	if (!snd_ctrl_enabled)
 		return count;
@@ -327,7 +327,7 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 static ssize_t mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n",
+	return sprintf(buf, "%u\n",
 		tabla_read(snd_engine_codec_ptr,
 			TABLA_A_CDC_TX7_VOL_CTL_GAIN));
 }
@@ -337,7 +337,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 {
 	unsigned int lval;
 
-	sscanf(buf, "%d", &lval);
+	sscanf(buf, "%u", &lval);
 
 	if (!snd_ctrl_enabled)
 		return count;
