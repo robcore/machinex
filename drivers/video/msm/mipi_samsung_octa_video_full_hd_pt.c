@@ -1619,12 +1619,12 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 1)
-		bl_level = 1;
+	if (bl_level < 10)
+		bl_level = 10;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
-	pr_info("%s brightness_level : %d, candela : %d, auto : %d\n",
+	pr_debug("%s brightness_level : %d, candela : %d, auto : %d\n",
 					__func__, mipi_pd.brightness_level, candela, get_auto_brightness());
 
 	cmd_size = 0;
@@ -1678,7 +1678,6 @@ static int brightness_control(int bl_level)
 		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
 			samsung_brightness_elvss_ref[16] = get_elvss_offset();
 	}
-	//pr_debug("%s: 0xb6_17th(%x)!!\n", __func__, samsung_brightness_elvss_ref[16]);
 
 	// ELVSS lOW TEMPERATURE
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
@@ -2019,7 +2018,7 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 300;
-	pinfo.bl_min = 10;
+	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;

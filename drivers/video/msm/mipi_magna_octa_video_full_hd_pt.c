@@ -1758,8 +1758,8 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 1)
-		bl_level = 1;
+	if (bl_level < 10)
+		bl_level = 10;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
@@ -2163,7 +2163,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 300;
-	pinfo.bl_min = 10;
+	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;
