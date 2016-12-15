@@ -102,10 +102,12 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
 		if [[ $repadb = "y" ]]; then
+			echo "ENABLE ADB WIRELESS"
+			sleep 10
+			adb connect 192.168.1.103
+			sleep 7
 			adb connect 192.168.1.103
 			sleep 5
-			adb connect 192.168.1.103
-			sleep 2
 			adb push $OUTFOLDER.zip /storage/extSdCard
 			echo "Your kernel is ready to flash"
 		fi;
@@ -117,10 +119,12 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "cleanup finished"
 		fi;
 	else
+		echo "ENABLE ADB WIRELESS"
+		sleep 10
+		adb connect 192.168.1.103
+		sleep 7
 		adb connect 192.168.1.103
 		sleep 5
-		adb connect 192.168.1.103
-		sleep 2
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		cd ~/machinex
 		sh $(pwd)/cleanup.sh
