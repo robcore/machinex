@@ -1540,7 +1540,7 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 
 	/*calculate candela level
 	if (pSmart->brightness_level > AOR_FIX_CD) {
-		/* 300CD ~ 190CD
+			300CD ~ 190CD
 		bl_level = pSmart->brightness_level;
 	} else */
 	if ((pSmart->brightness_level <= AOR_FIX_CD) &&

@@ -1284,7 +1284,7 @@ static int get_candela_index(int bl_level)
 	case 252 ... 253:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 254 ... 255:
+	case 254 ... 300:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1317,8 +1317,8 @@ static int elvss_array_default[][2] = {
 	{260, 0x03},	/* 260CD 15*/
 	{270, 0x02},	/* 270CD 16*/
 	{280, 0x02},	/* 280CD 17*/
-	{290, 0x01},	/* 290CD 18*/
-	{300, 0x00},	/* 300CD 19*/
+	{290, 0x02},	/* 290CD 18*/
+	{300, 0x02},	/* 300CD 19*/
 };
 
 static int elvss_array[][2] = {
@@ -1339,8 +1339,8 @@ static int elvss_array[][2] = {
 	{234, 0x05},	/* 234CD 13*/
 	{249, 0x04},	/* 249CD 14*/
 	{265, 0x03},	/* 265CD 15*/
-	{282, 0x01},	/* 282CD 16*/
-	{300, 0x00},	/* 300CD 17*/
+	{282, 0x03},	/* 282CD 16*/
+	{300, 0x03},	/* 300CD 17*/
 };
 #define EVLSS_ARRAY_SIZE (sizeof(elvss_array)/sizeof(elvss_array[0]))
 
@@ -1392,9 +1392,6 @@ static int get_elvss_value(int candela, int id3)
 static void aor_copy_vt888(int candela)
 {
 	if (candela >= 190) {
-		memcpy(samsung_brightness_aor_ref, samsung_brightness_aor_0,
-					sizeof(samsung_brightness_aor_ref));
-	} else if (candela >= 110) {
 		memcpy(samsung_brightness_aor_ref, samsung_brightness_aor_40,
 					sizeof(samsung_brightness_aor_ref));
 	} else if (candela >= 100) {
@@ -1433,9 +1430,6 @@ static void aor_copy_vt888(int candela)
 static void aor_copy_vt232(int candela)
 {
 	if (candela >= 190) {
-		memcpy(samsung_brightness_aor_ref, samsung_brightness_aor_0,
-					sizeof(samsung_brightness_aor_ref));
-	} else if (candela >= 110) {
 		memcpy(samsung_brightness_aor_ref, samsung_brightness_aor_40,
 					sizeof(samsung_brightness_aor_ref));
 	} else if (candela >= 100) {
@@ -1474,9 +1468,6 @@ static void aor_copy_vt232(int candela)
 static void aor_copy_CCG6(int candela)
 {
 	if (candela >= 183) {
-		memcpy(samsung_brightness_aor_ref, samsung_brightness_aor_0,
-					sizeof(samsung_brightness_aor_ref));
-	} else if (candela >= 111) {
 		memcpy(samsung_brightness_aor_ref, samsung_brightness_aor_40,
 					sizeof(samsung_brightness_aor_ref));
 	} else if (candela == 105) {
@@ -1665,19 +1656,11 @@ static int brightness_control(int bl_level)
 
 	samsung_brightness_elvss_ref[2] = elvss_value;
 
-	if (mipi_pd.ldi_rev >= 'G')
-		samsung_brightness_elvss_ref[1] = 0x2C;
-
-	if (mipi_pd.ldi_rev >= 'H') {
-		if (get_auto_brightness() == 6)
-			samsung_brightness_elvss_ref[2] = 0x01;
-	} else {
-		if (get_auto_brightness() == 6)
-			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
-			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
-			samsung_brightness_elvss_ref[16] = get_elvss_offset();
-	}
+	if (get_auto_brightness() == 6)
+		/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
+		samsung_brightness_elvss_ref[16] = get_elvss_400cd();
+	else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
+		samsung_brightness_elvss_ref[16] = get_elvss_offset();
 
 	// ELVSS lOW TEMPERATURE
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {

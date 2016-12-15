@@ -1340,7 +1340,7 @@ static int get_candela_index(int bl_level)
 	case 252 ... 253:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 254 ... 255:
+	case 254 ... 300:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1502,9 +1502,6 @@ static void aor_copy(int id2, int candela)
 {
 	if ((id2 & EL_METERIAL_MASK) == TULIP) {
 		if (candela >= 249) {
-			memcpy(magna_brightness_aor_ref, magna_brightness_aor_0,
-						sizeof(magna_brightness_aor_ref));
-		} else if (candela >= 234) {
 			memcpy(magna_brightness_aor_ref, magna_brightness_aor_7p1,
 						sizeof(magna_brightness_aor_ref));
 		} else if (candela >= 220) {
@@ -1618,9 +1615,6 @@ static void aor_copy(int id2, int candela)
 		}
 	} else {
 	if (candela >= 183) {
-		memcpy(magna_brightness_aor_ref, magna_brightness_aor_0,
-					sizeof(magna_brightness_aor_ref));
-	} else if (candela >= 111) {
 		memcpy(magna_brightness_aor_ref, magna_brightness_aor_40,
 					sizeof(magna_brightness_aor_ref));
 	} else if (candela == 105) {
