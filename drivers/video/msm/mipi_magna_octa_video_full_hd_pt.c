@@ -1502,6 +1502,9 @@ static void aor_copy(int id2, int candela)
 {
 	if ((id2 & EL_METERIAL_MASK) == TULIP) {
 		if (candela >= 249) {
+			memcpy(magna_brightness_aor_ref, magna_brightness_aor_0,
+						sizeof(magna_brightness_aor_ref));
+		} else if (candela >= 234) {
 			memcpy(magna_brightness_aor_ref, magna_brightness_aor_7p1,
 						sizeof(magna_brightness_aor_ref));
 		} else if (candela >= 220) {
@@ -1615,6 +1618,9 @@ static void aor_copy(int id2, int candela)
 		}
 	} else {
 	if (candela >= 183) {
+		memcpy(magna_brightness_aor_ref, magna_brightness_aor_0,
+					sizeof(magna_brightness_aor_ref));
+	} else if (candela >= 111) {
 		memcpy(magna_brightness_aor_ref, magna_brightness_aor_40,
 					sizeof(magna_brightness_aor_ref));
 	} else if (candela == 105) {

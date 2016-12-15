@@ -89,6 +89,16 @@ static char VT_300CD_R;
 static char VT_300CD_G;
 static char VT_300CD_B;
 
+static int color_mods[5][9] = {
+	{ -24, -22, -20, -18, -16, -10, -7, -4,  0 },
+	{ -21, -19, -18,  -9,  -6,  -4, -4, -2, -1 },
+	{   0,   0,   0,   0,   0,   0,  0,  0,  0 },
+	{  21,  19,  18,   9,   6,   4,  4,  2,  1 },
+	{  24,  22,  20,  18,  16,  10,  7,  4,  0 }
+};
+unsigned int panelval = 2;
+struct SMART_DIM *gpsmart;
+
 static int char_to_int(char data1)
 {
 	int cal_data;
@@ -102,6 +112,12 @@ static int char_to_int(char data1)
 	return cal_data;
 }
 
+void panel_load_colors(unsigned int val)
+{
+		panelval = val;
+		smart_dimming_init(gpsmart);
+}
+
 static int char_to_int_v255(char data1, char data2)
 {
 	int cal_data;
@@ -112,24 +128,6 @@ static int char_to_int_v255(char data1, char data2)
 		cal_data = data2;
 
 	return cal_data;
-}
-
-struct SMART_DIM *gpsmart;
-
-unsigned int panelval;
-
-static int color_mods[5][9] = {
-	{ 0,  0,  5, -18, -16, -10,  3,  0,  0, },
-	{ 0,  0,  2,  -9,  -8,  -5,  1,  0,  0, },
-	{ 0,  0,  0,   0,   0,   0,  0,  0,  0, },
-	{ 0,  0, -2,   9,   8,   5, -1,  0,  0, },
-	{ 0,  0, -5,  18,  16,  10, -3,  0,  0, }
-};
-
-void panel_load_colors(unsigned int val)
-{
-		panelval = val;
-		smart_dimming_init(gpsmart);
 }
 
 #define v255_coefficient 72
@@ -212,6 +210,61 @@ static void v255_hexa(int *index, struct SMART_DIM *pSmart, char *str)
 	str[4] = (result_3 & 0xff00) >> 8;
 	str[5] = result_3 & 0xff;
 
+}
+
+static int vt_coefficient[] = {
+	0, 12, 24, 36, 48,
+	60, 72, 84, 96, 108,
+	138, 148, 158, 168,
+	178, 186,
+};
+#define vt_denominator 860
+static int vt_adjustment(struct SMART_DIM *pSmart)
+{
+	unsigned long long result_1, result_2, result_3, result_4;
+	unsigned long long add_mtp;
+	int LSB;
+
+	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
+	add_mtp = LSB + VT_300CD_R;
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][6]) << BIT_SHIFT;
+	do_div(result_2, vt_denominator);
+	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
+	result_4 = S6E8FA_VREG0_REF - result_3;
+	pSmart->GRAY.VT_TABLE.R_Gray = result_4;
+
+	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
+	add_mtp = LSB + VT_300CD_G;
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][7]) << BIT_SHIFT;
+	do_div(result_2, vt_denominator);
+	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
+	result_4 = S6E8FA_VREG0_REF - result_3;
+	pSmart->GRAY.VT_TABLE.G_Gray = result_4;
+
+	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
+	add_mtp = LSB + VT_300CD_B;
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][8]) << BIT_SHIFT;
+	do_div(result_2, vt_denominator);
+	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
+	result_4 = S6E8FA_VREG0_REF - result_3;
+	pSmart->GRAY.VT_TABLE.B_Gray = result_4;
+
+#ifdef SMART_DIMMING_DEBUG
+	pr_info("%s VT RED:%d GREEN:%d BLUE:%d\n", __func__,
+			pSmart->GRAY.VT_TABLE.R_Gray,
+			pSmart->GRAY.VT_TABLE.G_Gray,
+			pSmart->GRAY.VT_TABLE.B_Gray);
+#endif
+
+	return 0;
+
+}
+
+static void vt_hexa(int *index, struct SMART_DIM *pSmart, char *str)
+{
+	str[30] = VT_300CD_R;
+	str[31] = VT_300CD_G;
+	str[32] = VT_300CD_B;
 }
 
 #define v203_coefficient 64
@@ -844,60 +897,6 @@ static void v3_hexa(int *index, struct SMART_DIM *pSmart, char *str)
 
 }
 
-static int vt_coefficient[] = {
-	0, 12, 24, 36, 48,
-	60, 72, 84, 96, 108,
-	138, 148, 158, 168,
-	178, 186,
-};
-#define vt_denominator 860
-static int vt_adjustment(struct SMART_DIM *pSmart)
-{
-	unsigned long long result_1, result_2, result_3, result_4;
-	unsigned long long add_mtp;
-	int LSB;
-
-	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
-	add_mtp = LSB + VT_300CD_R;
-	result_1 = result_2 = (vt_coefficient[LSB] + add_mtp + color_mods[panelval][0]) << BIT_SHIFT;
-	do_div(result_2, vt_denominator);
-	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
-	result_4 = S6E8FA_VREG0_REF - result_3;
-	pSmart->GRAY.VT_TABLE.R_Gray = result_4;
-
-	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
-	add_mtp = LSB + VT_300CD_G;
-	result_1 = result_2 = (vt_coefficient[LSB] + add_mtp + color_mods[panelval][1]) << BIT_SHIFT;
-	do_div(result_2, vt_denominator);
-	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
-	result_4 = S6E8FA_VREG0_REF - result_3;
-	pSmart->GRAY.VT_TABLE.G_Gray = result_4;
-
-	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
-	add_mtp = LSB + VT_300CD_B;
-	result_1 = result_2 = (vt_coefficient[LSB] + add_mtp + color_mods[panelval][2]) << BIT_SHIFT;
-	do_div(result_2, vt_denominator);
-	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
-	result_4 = S6E8FA_VREG0_REF - result_3;
-	pSmart->GRAY.VT_TABLE.B_Gray = result_4;
-
-#ifdef SMART_DIMMING_DEBUG
-	pr_info("%s VT RED:%d GREEN:%d BLUE:%d\n", __func__,
-			pSmart->GRAY.VT_TABLE.R_Gray,
-			pSmart->GRAY.VT_TABLE.G_Gray,
-			pSmart->GRAY.VT_TABLE.B_Gray);
-#endif
-
-	return 0;
-
-}
-
-static void vt_hexa(int *index, struct SMART_DIM *pSmart, char *str)
-{
-	str[30] = VT_300CD_R;
-	str[31] = VT_300CD_G;
-	str[32] = VT_300CD_B;
-}
 
 /*V0,V1,V3,V11,V23,V35,V51,V87,V151,V203,V255*/
 int S6E8FA_ARRAY[S6E8FA_MAX] = {0, 1, 3, 11, 23, 35, 51, 87, 151, 203, 255};
@@ -1247,6 +1246,8 @@ char offset_cal(int offset,  int value)
 {
 	if (value - offset < 0)
 		return 0;
+	else if (value - offset > 300)
+		return 0xFF;
 	else
 		return value - offset;
 }
@@ -1313,10 +1314,6 @@ void mtp_offset_substraction(struct SMART_DIM *pSmart, int *str)
 	str[27] = offset_cal(char_to_int(pSmart->MTP.R_OFFSET.OFFSET_3), str[27]);
 	str[28] = offset_cal(char_to_int(pSmart->MTP.G_OFFSET.OFFSET_3), str[28]);
 	str[29] = offset_cal(char_to_int(pSmart->MTP.B_OFFSET.OFFSET_3), str[29]);
-
-	str[30] = offset_cal(char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1), str[30]);
-	str[31] = offset_cal(char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1), str[31]);
-	str[32] = offset_cal(char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1), str[32]);
 }
 
 
@@ -1387,8 +1384,8 @@ void(*Make_hexa[S6E8FA_TABLE_MAX])(int*, struct SMART_DIM*, char*) = {
 *	AOR fix range : 180CD ~ 110CD  AOR 40%
 *	AOR adjust range : 100CD ~ 10CD
 */
-#define AOR_FIX_CD 300
-#define AOR_ADJUST_CD 10
+#define AOR_FIX_CD 180
+#define AOR_ADJUST_CD 110
 
 static int aor_fix_bl_leve_vt888[] = {
 	170,	/* 110CD */
@@ -1538,12 +1535,11 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 	int point_index;
 	int cnt;
 
-	/*calculate candela level
+	/*calculate candela level */
 	if (pSmart->brightness_level > AOR_FIX_CD) {
-			300CD ~ 190CD
+		/* 300CD ~ 190CD */
 		bl_level = pSmart->brightness_level;
-	} else */
-	if ((pSmart->brightness_level <= AOR_FIX_CD) &&
+	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
 				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
 		/* 180CD ~ 110CD */
 		aor_bl_level = (pSmart->brightness_level / 10) - 11;
@@ -1615,8 +1611,8 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 	/*
 	*	180CD ~ 110CD compensation
 	*/
-	if ((pSmart->brightness_level <= 300) &&
-				(pSmart->brightness_level >= 100)) {
+	if ((pSmart->brightness_level <= 180) &&
+				(pSmart->brightness_level >= 110)) {
 		/* V255 */
 		level_255_temp = (str[0] << 8) | str[1] ;
 		level_255_temp +=  adding_180cd_110cd_vt888[0][0];
@@ -1996,16 +1992,15 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 
 	/*
 	*	290CD ~ 10CD compensation
-
+	*/
 	if (pSmart->brightness_level >= 290)
-		bl_index[5] += 1;  V51
+		bl_index[5] += 1; /* V51 */
 	else if (pSmart->brightness_level == 280)
-		bl_index[4] += 1; V35
+		bl_index[4] += 1; /* V35 */
 	else if (pSmart->brightness_level == 260) {
-		bl_index[1] += 1;
-		bl_index[4] += 1;
-	} else 	*/
-	 if ((pSmart->brightness_level <= 300) &&
+		bl_index[1] += 1; /*V3*/
+		bl_index[4] += 1; /* V35 */
+	} else if ((pSmart->brightness_level <= 250) &&
 					(pSmart->brightness_level >= 190))
 		bl_index[1] += 1; /*V3*/
 	else if ((pSmart->brightness_level <= 130) &&
