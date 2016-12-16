@@ -59,7 +59,7 @@ struct pm_gpio gpio_get_param = {
 
 unsigned int Lpanel_colors = 2;
 extern void panel_load_colors(unsigned int val);
-struct mipi_samsung_driver_data msd;
+static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;
 int touch_display_status;
@@ -92,7 +92,7 @@ int get_ldi_chip(void)
 	return ldi_manupacture;
 }
 
-int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
+static int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
 		enum mipi_samsung_cmd_list cmd,
 		unsigned char lock)
 {

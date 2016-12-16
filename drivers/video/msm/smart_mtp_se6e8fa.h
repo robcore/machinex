@@ -93,8 +93,8 @@ extern int get_ldi_chip(void);
 
 
 #define MTP_START_ADDR 0xC8
-#define LUMINANCE_MAX 65
-#define GAMMA_SET_MAX 35
+#define LUMINANCE_MAX 54
+#define GAMMA_SET_MAX 33
 #define BIT_SHIFT 22
 /*
 	it means BIT_SHIFT is 22.  pow(2,BIT_SHIFT) is 4194304.
@@ -157,10 +157,6 @@ extern int get_ldi_chip(void);
 #define V3_300CD_R_20 0x80
 #define V3_300CD_G_20 0x80
 #define V3_300CD_B_20 0x80
-
-#define V0_300CD_R_20 0x00
-#define V0_300CD_G_20 0x00
-#define V0_300CD_B_20 0x00
 
 #define VT_300CD_R_20 0x00
 #define VT_300CD_G_20 0x00
@@ -230,7 +226,6 @@ struct MTP_SET {
 	char OFFSET_23;
 	char OFFSET_11;
 	char OFFSET_3;
-	char OFFSET_0;
 	char OFFSET_1;
 } __packed;
 
