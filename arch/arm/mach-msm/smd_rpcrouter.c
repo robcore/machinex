@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/smd_rpcrouter.c
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2007-2011, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2007-2012, The Linux Foundation. All rights reserved.
  * Author: San Mehat <san@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -40,6 +40,7 @@
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
+#include <linux/reboot.h>
 
 #include <asm/byteorder.h>
 
@@ -158,6 +159,7 @@ static atomic_t pm_mid = ATOMIC_INIT(1);
 static void do_read_data(struct work_struct *work);
 static void do_create_pdevs(struct work_struct *work);
 static void do_create_rpcrouter_pdev(struct work_struct *work);
+static int msm_rpcrouter_close(void);
 
 static DECLARE_WORK(work_create_pdevs, do_create_pdevs);
 static DECLARE_WORK(work_create_rpcrouter_pdev, do_create_rpcrouter_pdev);
@@ -212,6 +214,24 @@ static DEFINE_MUTEX(xprt_info_list_lock);
 
 DECLARE_COMPLETION(rpc_remote_router_up);
 static atomic_t pending_close_count = ATOMIC_INIT(0);
+
+static int msm_rpc_reboot_call(struct notifier_block *this,
+			unsigned long code, void *_cmd)
+{
+	 switch (code) {
+	 case SYS_RESTART:
+	 case SYS_HALT:
+	 case SYS_POWER_OFF:
+		msm_rpcrouter_close();
+		break;
+	 }
+	 return NOTIFY_DONE;
+}
+
+static struct notifier_block msm_rpc_reboot_notifier = {
+	.notifier_call = msm_rpc_reboot_call,
+	.priority = 100
+};
 
 /*
  * Search for transport (xprt) that matches the provided PID.
@@ -525,12 +545,13 @@ static void rpcrouter_register_board_dev(struct rr_server *server)
 			D("%s: registering device %x\n",
 			  __func__, board_info->dev->prog);
 			list_del(&board_info->list);
+			spin_unlock_irqrestore(&rpc_board_dev_list_lock, flags);
 			rc = platform_device_register(&board_info->dev->pdev);
 			if (rc)
 				pr_err("%s: board dev register failed %d\n",
 				       __func__, rc);
 			kfree(board_info);
-			break;
+			return;
 		}
 	}
 	spin_unlock_irqrestore(&rpc_board_dev_list_lock, flags);
@@ -625,7 +646,7 @@ struct msm_rpc_endpoint *msm_rpcrouter_create_local_endpoint(dev_t dev)
 int msm_rpcrouter_destroy_local_endpoint(struct msm_rpc_endpoint *ept)
 {
 	int rc;
-	union rr_control_msg msg = { 0 };
+	union rr_control_msg msg;
 	struct msm_rpc_reply *reply, *reply_tmp;
 	unsigned long flags;
 	struct rpcrouter_xprt_info *xprt_info;
@@ -760,7 +781,7 @@ static void handle_server_restart(struct rr_server *server,
 static int process_control_msg(struct rpcrouter_xprt_info *xprt_info,
 			       union rr_control_msg *msg, int len)
 {
-	union rr_control_msg ctl = { 0 };
+	union rr_control_msg ctl;
 	struct rr_server *server;
 	struct rr_remote_endpoint *r_ept;
 	int rc = 0;
@@ -1191,7 +1212,7 @@ packet_complete:
 done:
 
 	if (hdr.confirm_rx) {
-		union rr_control_msg msg = { 0 };
+		union rr_control_msg msg;
 
 		msg.cmd = RPCROUTER_CTRL_CMD_RESUME_TX;
 		msg.cli.pid = hdr.dst_pid;
@@ -2050,7 +2071,7 @@ int msm_rpc_register_server(struct msm_rpc_endpoint *ept,
 			    uint32_t prog, uint32_t vers)
 {
 	int rc;
-	union rr_control_msg msg = { 0 };
+	union rr_control_msg msg;
 	struct rr_server *server;
 	struct rpcrouter_xprt_info *xprt_info;
 
@@ -2128,10 +2149,10 @@ int msm_rpc_get_curr_pkt_size(struct msm_rpc_endpoint *ept)
 	return rc;
 }
 
-int msm_rpcrouter_close(void)
+static int msm_rpcrouter_close(void)
 {
 	struct rpcrouter_xprt_info *xprt_info;
-	union rr_control_msg ctl = { 0 };
+	union rr_control_msg ctl;
 
 	ctl.cmd = RPCROUTER_CTRL_CMD_BYE;
 	mutex_lock(&xprt_info_list_lock);
@@ -2515,7 +2536,9 @@ static int __init rpcrouter_init(void)
 	msm_rpc_connect_timeout_ms = 0;
 	smd_rpcrouter_debug_mask |= SMEM_LOG;
 	debugfs_init();
-
+	ret = register_reboot_notifier(&msm_rpc_reboot_notifier);
+	if (ret)
+		pr_err("%s: Failed to register reboot notifier", __func__);
 
 	/* Initialize what we need to start processing */
 	rpcrouter_workqueue =
