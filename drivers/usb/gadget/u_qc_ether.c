@@ -343,12 +343,13 @@ void gether_qc_cleanup_name(const char *netname)
  * @link: the USB link, set up with endpoints, descriptors matching
  *	current device speed, and any framing wrapper(s) set up.
  * Context: irqs blocked
+ * @netif_enable: if true, net interface will be turned on
  *
  * This is called to let the network layer know the connection
  * is active ("carrier detect").
  */
 struct net_device *gether_qc_connect_name(struct qc_gether *link,
-		const char *netname)
+		const char *netname, bool netif_enable)
 {
 	struct net_device *net_dev;
 	struct eth_qc_dev *dev;
@@ -375,9 +376,11 @@ struct net_device *gether_qc_connect_name(struct qc_gether *link,
 	}
 	spin_unlock(&dev->lock);
 
-	netif_carrier_on(dev->net);
-	if (netif_running(dev->net))
-		netif_wake_queue(dev->net);
+	if (netif_enable) {
+		netif_carrier_on(dev->net);
+		if (netif_running(dev->net))
+			netif_wake_queue(dev->net);
+	}
 
 	return dev->net;
 }
