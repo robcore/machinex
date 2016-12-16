@@ -114,11 +114,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			adb connect 192.168.1.103
 			sleep 5
 			adb push $OUTFOLDER.zip /storage/extSdCard
-			if [ $SDB == $SUMMY ]; then
-				echo "MD5 MATCHES - Your kernel is ready to flash"
-			else
-				echo "MD5 MISMATCH, push again!"
-			fi;
+			echo "push complete"
 		fi;
 		echo -n "Cleanup?  y/n [ENTER]: "
 		read repcln
@@ -135,14 +131,9 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		adb connect 192.168.1.103
 		sleep 5
 		adb push $OUTFOLDER.zip /storage/extSdCard
-			if [ $SDB -eq $SUMMY ]; then
-				echo "MD5 MATCHES - Your kernel is ready to flash"
-			else
-				echo "MD5 MISMATCH, push again!"
-			fi;
 		cd ~/machinex
 		sh $(pwd)/cleanup.sh
-		echo "cleanup finished"
+		echo "push and cleanup finished"
 	fi;
 
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
