@@ -239,7 +239,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 	unsigned long long add_mtp;
 	int LSB;
 
-	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
+	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1 & 0x0F);
 	add_mtp = LSB + VT_300CD_R;
 	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
@@ -247,7 +247,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 	result_4 = S6E8FA_VREG0_REF - result_3;
 	pSmart->GRAY.VT_TABLE.R_Gray = result_4;
 
-	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
+	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1 >> 4);
 	add_mtp = LSB + VT_300CD_G;
 	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
@@ -276,9 +276,8 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 static void vt_hexa(int *index, struct SMART_DIM *pSmart, char *str)
 {
-	str[30] = VT_300CD_R;
-	str[31] = VT_300CD_G;
-	str[32] = VT_300CD_B;
+	str[33] = VT_300CD_G;
+	str[34] = VT_300CD_B;
 }
 
 #define v203_coefficient 64
@@ -911,6 +910,12 @@ static void v3_hexa(int *index, struct SMART_DIM *pSmart, char *str)
 
 }
 
+static void v0_hexa(int *index, struct SMART_DIM *pSmart, char *str)
+{
+	str[30] = V0_300CD_R;
+	str[31] = V0_300CD_G;
+	str[32] = V0_300CD_B;
+}
 
 /*V0,V1,V3,V11,V23,V35,V51,V87,V151,V203,V255*/
 int S6E8FA_ARRAY[S6E8FA_MAX] = {0, 1, 3, 11, 23, 35, 51, 87, 151, 203, 255};
@@ -1260,7 +1265,7 @@ char offset_cal(int offset,  int value)
 {
 	if (value - offset < 0)
 		return 0;
-	else if (value - offset > 300)
+	else if (value - offset > 255)
 		return 0xFF;
 	else
 		return value - offset;
@@ -1330,8 +1335,6 @@ void mtp_offset_substraction(struct SMART_DIM *pSmart, int *str)
 	str[29] = offset_cal(char_to_int(pSmart->MTP.B_OFFSET.OFFSET_3), str[29]);
 }
 
-
-
 static int searching_function(long long candela, int *index, int gamma_curve)
 {
 	long long delta_1 = 0, delta_2 = 0;
@@ -1347,6 +1350,12 @@ static int searching_function(long long candela, int *index, int gamma_curve)
 		if (gamma_curve == GAMMA_CURVE_1P9) {
 			delta_1 = candela - curve_1p9[cnt];
 			delta_2 = candela - curve_1p9[cnt+1];
+		} else if (gamma_curve == GAMMA_CURVE_2P15) {
+			delta_1 = candela - curve_2p15[cnt];
+			delta_2 = candela - curve_2p15cnt+1];
+		} else if (gamma_curve == GAMMA_CURVE_2P2) {
+			delta_1 = candela - curve_2p2[cnt];
+			delta_2 = candela - curve_2p2[cnt+1];
 		} else {
 			delta_1 = candela - curve_2p2[cnt];
 			delta_2 = candela - curve_2p2[cnt+1];
@@ -1387,6 +1396,7 @@ void(*Make_hexa[S6E8FA_TABLE_MAX])(int*, struct SMART_DIM*, char*) = {
 	v23_hexa,
 	v11_hexa,
 	v3_hexa,
+	v0_hexa,
 	vt_hexa,
 };
 
@@ -1562,15 +1572,25 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 		/* 100CD ~ 10CD */
 		bl_level = AOR_ADJUST_CD;
 	}
+	if (pSmart->brightness_level < 350) {
+		for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
+			point_index = S6E8FA_ARRAY[cnt+1];
+			temp_cal_data =
+			((long long)(candela_coeff_2p15[point_index])) *
+			((long long)(bl_level));
+			candela_level[cnt] = temp_cal_data;
+		}
 
-	for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
-		point_index = S6E8FA_ARRAY[cnt+1];
-		temp_cal_data =
-		((long long)(candela_coeff_2p2[point_index])) *
-		((long long)(bl_level));
-		candela_level[cnt] = temp_cal_data;
+	} else {
+		for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
+			point_index = S6E8FA_ARRAY[cnt+1];
+			temp_cal_data =
+			((long long)(candela_coeff_2p2[point_index])) *
+			((long long)(bl_level));
+			candela_level[cnt] = temp_cal_data;
+		}
+
 	}
-
 
 #ifdef SMART_DIMMING_DEBUG
 	printk(KERN_INFO "\n candela_1:%llu  candela_3:%llu  candela_11:%llu ",
@@ -3699,9 +3719,13 @@ static void set_max_lux_table(void)
 	max_lux_table[28] = V3_300CD_G;
 	max_lux_table[29] = V3_300CD_B;
 
-	max_lux_table[30] = VT_300CD_R;
-	max_lux_table[31] = VT_300CD_G;
-	max_lux_table[32] = VT_300CD_B;
+	max_lux_table[30] = V0_300CD_R;
+	max_lux_table[31] = V0_300CD_G;
+	max_lux_table[32] = V0_300CD_B;
+
+	max_lux_table[33] = (VT_300CD_G << 4) | VT_300CD_R;
+	max_lux_table[34] = VT_300CD_B;
+
 
 }
 
@@ -3789,6 +3813,10 @@ static void gamma_cell_determine(int ldi_revision)
 	V3_300CD_G = V3_300CD_G_20;
 	V3_300CD_B = V3_300CD_B_20;
 
+	V0_300CD_R = V0_300CD_R_20;
+	V0_300CD_G = V0_300CD_G_20;
+	V0_300CD_B = V0_300CD_B_20;
+
 	VT_300CD_R = VT_300CD_R_20;
 	VT_300CD_G = VT_300CD_G_20;
 	VT_300CD_B = VT_300CD_B_20;
@@ -3798,8 +3826,8 @@ static void mtp_sorting(struct SMART_DIM *psmart)
 {
 	int sorting[GAMMA_SET_MAX] = {
 		0, 1, 6, 9, 12, 15, 18, 21, 24, 27, 30, /* R*/
-		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31, /* G */
-		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, /* B */
+		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31,33, /* G */
+		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 34,/* B */
 	};
 	int loop;
 	char *pfrom, *pdest;

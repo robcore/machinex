@@ -158,6 +158,10 @@ extern int get_ldi_chip(void);
 #define V3_300CD_G_20 0x80
 #define V3_300CD_B_20 0x80
 
+#define V0_300CD_R_20 0x00
+#define V0_300CD_G_20 0x00
+#define V0_300CD_B_20 0x00
+
 #define VT_300CD_R_20 0x00
 #define VT_300CD_G_20 0x00
 #define VT_300CD_B_20 0x00
@@ -226,6 +230,7 @@ struct MTP_SET {
 	char OFFSET_23;
 	char OFFSET_11;
 	char OFFSET_3;
+	char OFFSET_0;
 	char OFFSET_1;
 } __packed;
 
