@@ -152,12 +152,6 @@ unsigned int msm_spm_get_vdd(unsigned int cpu);
  * @cpu: core id
  */
 int msm_spm_turn_on_cpu_rail(unsigned int cpu);
-#else
-static inline int msm_spm_turn_on_cpu_rail(unsigned int cpu)
-{
-	return -ENOSYS;
-}
-#endif
 
 /* Internal low power management specific functions */
 
@@ -240,6 +234,7 @@ static inline int msm_spm_apcs_set_phase(unsigned int phase_cnt)
 {
 	return -ENOSYS;
 }
+#endif /* defined(CONFIG_MSM_L2_SPM) */
 #else /* defined(CONFIG_MSM_SPM_V1) || defined(CONFIG_MSM_SPM_V2) */
 static inline int msm_spm_set_low_power_mode(unsigned int mode, bool notify_rpm)
 {
