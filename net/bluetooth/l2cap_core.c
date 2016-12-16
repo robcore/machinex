@@ -432,7 +432,7 @@ static inline void l2cap_ertm_start_retrans_timer(struct l2cap_pinfo *pi)
 {
 	BT_DBG("pi %p", pi);
 	if (!delayed_work_pending(&pi->monitor_work) && pi->retrans_timeout) {
-		mod_delayed_work(_l2cap_wq, &pi->retrans_work,
+		queue_delayed_work(_l2cap_wq, &pi->retrans_work,
 			msecs_to_jiffies(pi->retrans_timeout));
 	}
 }
@@ -448,7 +448,7 @@ static inline void l2cap_ertm_start_monitor_timer(struct l2cap_pinfo *pi)
 	BT_DBG("pi %p", pi);
 	l2cap_ertm_stop_retrans_timer(pi);
 	if (pi->monitor_timeout) {
-		mod_delayed_work(_l2cap_wq, &pi->monitor_work,
+		queue_delayed_work(_l2cap_wq, &pi->monitor_work,
 				msecs_to_jiffies(pi->monitor_timeout));
 	}
 }
