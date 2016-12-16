@@ -214,7 +214,7 @@ void __dst_free(struct dst_entry *dst)
 	if (dst_garbage.timer_inc > DST_GC_INC) {
 		dst_garbage.timer_inc = DST_GC_INC;
 		dst_garbage.timer_expires = DST_GC_MIN;
-		queue_delayed_work(system_wq, &dst_gc_work,
+		mod_delayed_work(system_wq, &dst_gc_work,
 				 dst_garbage.timer_expires);
 	}
 	spin_unlock_bh(&dst_garbage.lock);
