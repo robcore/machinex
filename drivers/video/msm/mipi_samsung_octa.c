@@ -59,7 +59,7 @@ struct pm_gpio gpio_get_param = {
 
 unsigned int Lpanel_colors = 2;
 extern void panel_load_colors(unsigned int val);
-static struct mipi_samsung_driver_data msd;
+struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;
 int touch_display_status;
