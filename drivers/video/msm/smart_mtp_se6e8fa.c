@@ -33,6 +33,8 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 
 #include "smart_mtp_se6e8fa.h"
 #include "smart_mtp_2p2_gamma.h"
+#include "mipi_dsi.h"
+#include "mipi_samsung_octa.h"
 
 /*
 #define SMART_DIMMING_DEBUG
@@ -85,19 +87,27 @@ static char V3_300CD_R;
 static char V3_300CD_G;
 static char V3_300CD_B;
 
+static char V0_300CD_R;
+static char V0_300CD_G;
+static char V0_300CD_B;
+
 static char VT_300CD_R;
 static char VT_300CD_G;
 static char VT_300CD_B;
 
-static int color_mods[5][9] = {
-	{ -24, -22, -20, -18, -16, -10, -7, -4,  0 },
-	{ -21, -19, -18,  -9,  -6,  -4, -4, -2, -1 },
-	{   0,   0,   0,   0,   0,   0,  0,  0,  0 },
-	{  21,  19,  18,   9,   6,   4,  4,  2,  1 },
-	{  24,  22,  20,  18,  16,  10,  7,  4,  0 }
+static int color_mods[5][27] = {
+	{ -30, -28, -26, -24, -22, -20, -18, -16, -10, -7, -4, -1,  0,  0,  0, -1,  4,  7,  10,  16,  18,  20,  22,  24,  26,  28,  30, },
+	{ -27, -25, -23, -21, -19, -18,  -9,  -6,  -5, -4, -2,  0,  0,  0,  0,  0,  2,  4,   5,   6,   9,  18,  19,  21,  23,  25,  27, },
+	{   0,   0,   0,   0,   0,   0,   0,   0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
+	{  27,  25,  23,  21,  19,  18,   9,   6,   5,  4,  2,  0,  0,  0,  0,  0, -2, -4,  -5,  -6,  -9, -18, -19, -21, -23, -25, -27, },
+	{  30,  28,  26,  24,  22,  20,  18,  16,  10,  7,  4,  1,  0,  0,  0,  1, -4, -7, -10, -16, -18, -20, -22, -24, -26, -28, -30, }
 };
 unsigned int panelval = 2;
 struct SMART_DIM *gpsmart;
+
+extern int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
+		enum mipi_samsung_cmd_list cmd,
+		unsigned char lock);
 
 static int char_to_int(char data1)
 {
@@ -110,12 +120,6 @@ static int char_to_int(char data1)
 		cal_data = data1;
 
 	return cal_data;
-}
-
-void panel_load_colors(unsigned int val)
-{
-		panelval = val;
-		smart_dimming_init(gpsmart);
 }
 
 static int char_to_int_v255(char data1, char data2)
@@ -225,25 +229,25 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 	unsigned long long add_mtp;
 	int LSB;
 
-	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
+	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1 & 0x0F);
 	add_mtp = LSB + VT_300CD_R;
-	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][6]) << BIT_SHIFT;
+	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
 	pSmart->GRAY.VT_TABLE.R_Gray = result_4;
 
-	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
+	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_T >> 4);
 	add_mtp = LSB + VT_300CD_G;
-	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][7]) << BIT_SHIFT;
+	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
 	pSmart->GRAY.VT_TABLE.G_Gray = result_4;
 
-	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
+	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_T);
 	add_mtp = LSB + VT_300CD_B;
-	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][8]) << BIT_SHIFT;
+	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -262,9 +266,8 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 static void vt_hexa(int *index, struct SMART_DIM *pSmart, char *str)
 {
-	str[30] = VT_300CD_R;
-	str[31] = VT_300CD_G;
-	str[32] = VT_300CD_B;
+	str[33] = VT_300CD_G;
+	str[34] = VT_300CD_B;
 }
 
 #define v203_coefficient 64
@@ -436,7 +439,7 @@ static int v87_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V87_300CD_R;
 	result_1 = (pSmart->GRAY.VT_TABLE.R_Gray)
 			- (pSmart->RGB_OUTPUT.R_VOLTAGE.level_151);
-	result_2 = (v87_coefficient + add_mtp + color_mods[panelval][0]) << BIT_SHIFT;
+	result_2 = (v87_coefficient + add_mtp + color_mods[panelval][9]) << BIT_SHIFT;
 	do_div(result_2, v87_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.R_Gray) - result_3;
@@ -446,7 +449,7 @@ static int v87_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V87_300CD_G;
 	result_1 = (pSmart->GRAY.VT_TABLE.G_Gray)
 			- (pSmart->RGB_OUTPUT.G_VOLTAGE.level_151);
-	result_2 = (v87_coefficient + add_mtp + color_mods[panelval][1]) << BIT_SHIFT;
+	result_2 = (v87_coefficient + add_mtp + color_mods[panelval][10]) << BIT_SHIFT;
 	do_div(result_2, v87_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.G_Gray) - result_3;
@@ -456,7 +459,7 @@ static int v87_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V87_300CD_B;
 	result_1 = (pSmart->GRAY.VT_TABLE.B_Gray)
 			- (pSmart->RGB_OUTPUT.B_VOLTAGE.level_151);
-	result_2 = (v87_coefficient + add_mtp + color_mods[panelval][2]) << BIT_SHIFT;
+	result_2 = (v87_coefficient + add_mtp + color_mods[panelval][11]) << BIT_SHIFT;
 	do_div(result_2, v87_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.B_Gray) - result_3;
@@ -514,7 +517,7 @@ static int v51_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V51_300CD_R;
 	result_1 = (pSmart->GRAY.VT_TABLE.R_Gray)
 			- (pSmart->RGB_OUTPUT.R_VOLTAGE.level_87);
-	result_2 = (v51_coefficient + add_mtp + color_mods[panelval][3]) << BIT_SHIFT;
+	result_2 = (v51_coefficient + add_mtp + color_mods[panelval][12]) << BIT_SHIFT;
 	do_div(result_2, v51_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.R_Gray) - result_3;
@@ -524,7 +527,7 @@ static int v51_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V51_300CD_G;
 	result_1 = (pSmart->GRAY.VT_TABLE.G_Gray)
 			- (pSmart->RGB_OUTPUT.G_VOLTAGE.level_87);
-	result_2 = (v51_coefficient + add_mtp + color_mods[panelval][4]) << BIT_SHIFT;
+	result_2 = (v51_coefficient + add_mtp + color_mods[panelval][13]) << BIT_SHIFT;
 	do_div(result_2, v51_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.G_Gray) - result_3;
@@ -534,7 +537,7 @@ static int v51_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V51_300CD_B;
 	result_1 = (pSmart->GRAY.VT_TABLE.B_Gray)
 			- (pSmart->RGB_OUTPUT.B_VOLTAGE.level_87);
-	result_2 = (v51_coefficient + add_mtp + color_mods[panelval][5]) << BIT_SHIFT;
+	result_2 = (v51_coefficient + add_mtp + color_mods[panelval][14]) << BIT_SHIFT;
 	do_div(result_2, v51_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.B_Gray) - result_3;
@@ -593,7 +596,7 @@ static int v35_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V35_300CD_R;
 	result_1 = (pSmart->GRAY.VT_TABLE.R_Gray)
 			- (pSmart->RGB_OUTPUT.R_VOLTAGE.level_51);
-	result_2 = (v35_coefficient + add_mtp + color_mods[panelval][6]) << BIT_SHIFT;
+	result_2 = (v35_coefficient + add_mtp + color_mods[panelval][15]) << BIT_SHIFT;
 	do_div(result_2, v35_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.R_Gray) - result_3;
@@ -603,7 +606,7 @@ static int v35_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V35_300CD_G;
 	result_1 = (pSmart->GRAY.VT_TABLE.G_Gray)
 			- (pSmart->RGB_OUTPUT.G_VOLTAGE.level_51);
-	result_2 = (v35_coefficient + add_mtp + color_mods[panelval][7]) << BIT_SHIFT;
+	result_2 = (v35_coefficient + add_mtp + color_mods[panelval][16]) << BIT_SHIFT;
 	do_div(result_2, v35_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.G_Gray) - result_3;
@@ -613,7 +616,7 @@ static int v35_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V35_300CD_B;
 	result_1 = (pSmart->GRAY.VT_TABLE.B_Gray)
 			- (pSmart->RGB_OUTPUT.B_VOLTAGE.level_51);
-	result_2 = (v35_coefficient + add_mtp + color_mods[panelval][8]) << BIT_SHIFT;
+	result_2 = (v35_coefficient + add_mtp + color_mods[panelval][17]) << BIT_SHIFT;
 	do_div(result_2, v35_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.B_Gray) - result_3;
@@ -672,7 +675,7 @@ static int v23_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V23_300CD_R;
 	result_1 = (pSmart->GRAY.VT_TABLE.R_Gray)
 			- (pSmart->RGB_OUTPUT.R_VOLTAGE.level_35);
-	result_2 = (v23_coefficient + add_mtp + color_mods[panelval][0]) << BIT_SHIFT;
+	result_2 = (v23_coefficient + add_mtp + color_mods[panelval][18]) << BIT_SHIFT;
 	do_div(result_2, v23_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.R_Gray) - result_3;
@@ -682,7 +685,7 @@ static int v23_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V23_300CD_G;
 	result_1 = (pSmart->GRAY.VT_TABLE.G_Gray)
 			- (pSmart->RGB_OUTPUT.G_VOLTAGE.level_35);
-	result_2 = (v23_coefficient + add_mtp + color_mods[panelval][1]) << BIT_SHIFT;
+	result_2 = (v23_coefficient + add_mtp + color_mods[panelval][19]) << BIT_SHIFT;
 	do_div(result_2, v23_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.G_Gray) - result_3;
@@ -692,7 +695,7 @@ static int v23_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V23_300CD_B;
 	result_1 = (pSmart->GRAY.VT_TABLE.B_Gray)
 			- (pSmart->RGB_OUTPUT.B_VOLTAGE.level_35);
-	result_2 = (v23_coefficient + add_mtp + color_mods[panelval][2]) << BIT_SHIFT;
+	result_2 = (v23_coefficient + add_mtp + color_mods[panelval][20]) << BIT_SHIFT;
 	do_div(result_2, v23_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.B_Gray) - result_3;
@@ -751,7 +754,7 @@ static int v11_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V11_300CD_R;
 	result_1 = (pSmart->GRAY.VT_TABLE.R_Gray)
 			- (pSmart->RGB_OUTPUT.R_VOLTAGE.level_23);
-	result_2 = (v11_coefficient + add_mtp + color_mods[panelval][3]) << BIT_SHIFT;
+	result_2 = (v11_coefficient + add_mtp + color_mods[panelval][21]) << BIT_SHIFT;
 	do_div(result_2, v11_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.R_Gray) - result_3;
@@ -761,7 +764,7 @@ static int v11_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V11_300CD_G;
 	result_1 = (pSmart->GRAY.VT_TABLE.G_Gray)
 			- (pSmart->RGB_OUTPUT.G_VOLTAGE.level_23);
-	result_2 = (v11_coefficient + add_mtp + color_mods[panelval][4]) << BIT_SHIFT;
+	result_2 = (v11_coefficient + add_mtp + color_mods[panelval][22]) << BIT_SHIFT;
 	do_div(result_2, v11_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.G_Gray) - result_3;
@@ -771,7 +774,7 @@ static int v11_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V11_300CD_B;
 	result_1 = (pSmart->GRAY.VT_TABLE.B_Gray)
 			- (pSmart->RGB_OUTPUT.B_VOLTAGE.level_23);
-	result_2 = (v11_coefficient + add_mtp + color_mods[panelval][5]) << BIT_SHIFT;
+	result_2 = (v11_coefficient + add_mtp + color_mods[panelval][23]) << BIT_SHIFT;
 	do_div(result_2, v11_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->GRAY.VT_TABLE.B_Gray) - result_3;
@@ -830,7 +833,7 @@ static int v3_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V3_300CD_R;
 	result_1 = (S6E8FA_VREG0_REF)
 			- (pSmart->RGB_OUTPUT.R_VOLTAGE.level_11);
-	result_2 = (v3_coefficient + add_mtp + color_mods[panelval][6]) << BIT_SHIFT;
+	result_2 = (v3_coefficient + add_mtp + color_mods[panelval][24]) << BIT_SHIFT;
 	do_div(result_2, v3_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (S6E8FA_VREG0_REF) - result_3;
@@ -840,7 +843,7 @@ static int v3_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V3_300CD_G;
 	result_1 = (S6E8FA_VREG0_REF)
 			- (pSmart->RGB_OUTPUT.G_VOLTAGE.level_11);
-	result_2 = (v3_coefficient + add_mtp + color_mods[panelval][7]) << BIT_SHIFT;
+	result_2 = (v3_coefficient + add_mtp + color_mods[panelval][25]) << BIT_SHIFT;
 	do_div(result_2, v3_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (S6E8FA_VREG0_REF) - result_3;
@@ -850,7 +853,7 @@ static int v3_adjustment(struct SMART_DIM *pSmart)
 	add_mtp = LSB + V3_300CD_B;
 	result_1 = (S6E8FA_VREG0_REF)
 			- (pSmart->RGB_OUTPUT.B_VOLTAGE.level_11);
-	result_2 = (v3_coefficient + add_mtp + color_mods[panelval][8]) << BIT_SHIFT;
+	result_2 = (v3_coefficient + add_mtp + color_mods[panelval][26]) << BIT_SHIFT;
 	do_div(result_2, v3_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (S6E8FA_VREG0_REF) - result_3;
@@ -897,6 +900,12 @@ static void v3_hexa(int *index, struct SMART_DIM *pSmart, char *str)
 
 }
 
+static void v0_hexa(int *index, struct SMART_DIM *pSmart, char *str)
+{
+	str[30] = V0_300CD_R;
+	str[31] = V0_300CD_G;
+	str[32] = V0_300CD_B;
+}
 
 /*V0,V1,V3,V11,V23,V35,V51,V87,V151,V203,V255*/
 int S6E8FA_ARRAY[S6E8FA_MAX] = {0, 1, 3, 11, 23, 35, 51, 87, 151, 203, 255};
@@ -1373,6 +1382,7 @@ void(*Make_hexa[S6E8FA_TABLE_MAX])(int*, struct SMART_DIM*, char*) = {
 	v23_hexa,
 	v11_hexa,
 	v3_hexa,
+	v0_hexa,
 	vt_hexa,
 };
 
@@ -1536,14 +1546,36 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 	int cnt;
 
 	/*calculate candela level */
-	if (pSmart->brightness_level > AOR_FIX_CD) {
-		/* 300CD ~ 190CD */
-		bl_level = pSmart->brightness_level;
-	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
-				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
-		/* 180CD ~ 110CD */
-		aor_bl_level = (pSmart->brightness_level / 10) - 11;
-		bl_level = aor_fix_bl_leve_vt888[aor_bl_level];
+	if ((pSmart->brightness_level <= 300) &&
+			(pSmart->brightness_level >= 265)) {
+		if (pSmart->brightness_level == 300)
+			bl_level = 303;
+		else if (pSmart->brightness_level == 282)
+			bl_level = 286;
+		else if (pSmart->brightness_level == 265)
+			bl_level = 269;
+		else if (pSmart->brightness_level == 249)
+			bl_level = 252;
+	} else if ((pSmart->brightness_level < 249) &&
+				(pSmart->brightness_level >= 183)) {
+		/* 183CD ~ 249CD */
+		bl_level = 249;
+	} else if ((pSmart->brightness_level < 183) &&
+				(pSmart->brightness_level >= 110)) {
+		if (pSmart->brightness_level == 111)
+			bl_level = 180;
+		else if (pSmart->brightness_level == 119)
+			bl_level = 190;
+		else if (pSmart->brightness_level == 126)
+			bl_level = 200;
+		else if (pSmart->brightness_level == 134)
+			bl_level = 211;
+		else if (pSmart->brightness_level == 143)
+			bl_level = 222;
+		else if (pSmart->brightness_level == 152)
+			bl_level = 235;
+		else if (pSmart->brightness_level == 162)
+			bl_level = 249;
 	} else {
 		/* 100CD ~ 10CD */
 		bl_level = AOR_ADJUST_CD;
@@ -1886,6 +1918,7 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	int bl_level, aor_bl_level;
 	int level_255_temp = 0;
 	int level_255_temp_MSB = 0;
+
 	int point_index;
 	int cnt;
 
@@ -2386,12 +2419,22 @@ static void gamma_init_evt1(
 	int table_index;
 
 	/*calculate candela level */
-	if (pSmart->brightness_level > AOR_FIX_CD) {
-		/* 300CD ~ 190CD */
-		bl_level = pSmart->brightness_level;
-	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
-				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
-		/* 180CD ~ 110CD */
+	if ((pSmart->brightness_level <= 300) &&
+			(pSmart->brightness_level >= 265)) {
+		if (pSmart->brightness_level == 300)
+			bl_level = 303;
+		else if (pSmart->brightness_level == 282)
+			bl_level = 286;
+		else if (pSmart->brightness_level == 265)
+			bl_level = 269;
+		else if (pSmart->brightness_level == 249)
+			bl_level = 252;
+	} else if ((pSmart->brightness_level < 249) &&
+				(pSmart->brightness_level >= 183)) {
+		/* 183CD ~ 249CD */
+		bl_level = 249;
+	} else if ((pSmart->brightness_level < 183) &&
+				(pSmart->brightness_level >= 110)) {
 		if (pSmart->brightness_level == 111)
 			bl_level = 180;
 		else if (pSmart->brightness_level == 119)
@@ -2406,8 +2449,6 @@ static void gamma_init_evt1(
 			bl_level = 235;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
-		else
-			bl_level = 263;
 	} else {
 		/* 100CD ~ 10CD */
 		bl_level = AOR_ADJUST_CD;
@@ -2728,12 +2769,23 @@ static void gamma_init_evt1_second(
 	int table_index;
 
 	/*calculate candela level */
-	if (pSmart->brightness_level > AOR_FIX_CD) {
-		/* 300CD ~ 190CD */
-		bl_level = pSmart->brightness_level;
-	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
-				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
-		/* 180CD ~ 110CD */
+	if ((pSmart->brightness_level <= 300) &&
+			(pSmart->brightness_level >= 265)) {
+		if (pSmart->brightness_level == 300)
+			bl_level = 303;
+		else if (pSmart->brightness_level == 282)
+			bl_level = 286;
+		else if (pSmart->brightness_level == 265)
+			bl_level = 269;
+		else if (pSmart->brightness_level == 249)
+			bl_level = 252;
+	} else if ((pSmart->brightness_level < 249) &&
+				(pSmart->brightness_level >= 183)) {
+		/* 183CD ~ 249CD */
+		bl_level = 249;
+	} else if ((pSmart->brightness_level < 183) &&
+				(pSmart->brightness_level >= 110)) {
+		/* 77CD ~ 172CD */
 		if (pSmart->brightness_level == 111)
 			bl_level = 176;
 		else if (pSmart->brightness_level == 119)
@@ -2748,8 +2800,6 @@ static void gamma_init_evt1_second(
 			bl_level = 234;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
-		else
-			bl_level = 263;
 	} else {
 		/* 100CD ~ 10CD */
 		bl_level = AOR_ADJUST_CD;
@@ -3081,12 +3131,23 @@ static void gamma_init_evt1_third(
 	int table_index;
 
 	/*calculate candela level */
-	if (pSmart->brightness_level > AOR_FIX_CD) {
-		/* 300CD ~ 190CD */
-		bl_level = pSmart->brightness_level;
-	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
-				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
-		/* 180CD ~ 110CD */
+	if ((pSmart->brightness_level <= 300) &&
+		(pSmart->brightness_level >= 265)) {
+		/* 265CD ~ 350CD */
+		if (pSmart->brightness_level == 300)
+			bl_level = 300;
+		else if (pSmart->brightness_level == 282)
+			bl_level = 283;
+		else if (pSmart->brightness_level == 265)
+			bl_level = 268;
+		else if (pSmart->brightness_level == 249)
+			bl_level = 252;
+	} else if ((pSmart->brightness_level < 265) &&
+		(pSmart->brightness_level >= 183)) {
+		/* 183CD ~ 265CD */
+		bl_level = 252;
+	} else if ((pSmart->brightness_level < 183) &&
+				(pSmart->brightness_level > 110)) {
 		if (pSmart->brightness_level == 111)
 			bl_level = 181;
 		else if (pSmart->brightness_level == 119)
@@ -3101,8 +3162,6 @@ static void gamma_init_evt1_third(
 			bl_level = 239;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 253;
-		else
-			bl_level = 267;
 	} else {
 		/* 100CD ~ 10CD */
 		bl_level = AOR_ADJUST_CD;
@@ -3419,21 +3478,21 @@ static void gamma_init_Tulip_first(
 	int table_index;
 
 	/*calculate candela level */
-	if (pSmart->brightness_level >= AOR_TULIP_FIRST_BL_LEVEL) {
-		/* 300CD ~ 265CD */
-		if (pSmart->brightness_level == 265)
-			bl_level = 267;
+	if ((pSmart->brightness_level <= 300) &&
+		(pSmart->brightness_level >= 265)) {
+		/* 265CD ~ 350CD */
+		if (pSmart->brightness_level == 300)
+			bl_level = 304;
 		else if (pSmart->brightness_level == 282)
 			bl_level = 283;
-		else
-			bl_level = 300;
-	} else if ((pSmart->brightness_level < AOR_TULIP_FIRST_BL_LEVEL) &&
-				(pSmart->brightness_level >= AOR_TULIP_SECOND_BL_LEVEL)) {
-		/* 249CD ~ 172(162)CD */
-		bl_level = 251;
-	} else if ((pSmart->brightness_level < AOR_TULIP_SECOND_BL_LEVEL) &&
-				(pSmart->brightness_level >= AOR_TULIP_THIRD_BL_LEVEL)) {
-		/* 162(152)CD ~ 72CD */
+		else if (pSmart->brightness_level == 265)
+			bl_level = 269;
+	} else if ((pSmart->brightness_level < 265) &&
+				(pSmart->brightness_level >= 183)) {
+		/* 183CD ~ 265CD */
+		bl_level = 252;
+	} else if ((pSmart->brightness_level < 183) &&
+				(pSmart->brightness_level >= 72)) {
 		if (pSmart->brightness_level == 72)
 			bl_level = 118;
 		else if (pSmart->brightness_level == 77)
@@ -3460,8 +3519,6 @@ static void gamma_init_Tulip_first(
 			bl_level = 226;
 		else if (pSmart->brightness_level == 152)
 			bl_level = 239;
-		else
-			bl_level = 251;
 	} else {
 		/* 68(64)CD ~ 10CD */
 		bl_level = AOR_ADJUST_TULIP_CD;
@@ -3685,9 +3742,13 @@ static void set_max_lux_table(void)
 	max_lux_table[28] = V3_300CD_G;
 	max_lux_table[29] = V3_300CD_B;
 
-	max_lux_table[30] = VT_300CD_R;
-	max_lux_table[31] = VT_300CD_G;
-	max_lux_table[32] = VT_300CD_B;
+	max_lux_table[30] = V0_300CD_R;
+	max_lux_table[31] = V0_300CD_G;
+	max_lux_table[32] = V0_300CD_B;
+
+	max_lux_table[33] = (VT_300CD_G << 4) | VT_300CD_R;
+	max_lux_table[34] = VT_300CD_B;
+
 
 }
 
@@ -3775,6 +3836,10 @@ static void gamma_cell_determine(int ldi_revision)
 	V3_300CD_G = V3_300CD_G_20;
 	V3_300CD_B = V3_300CD_B_20;
 
+	V0_300CD_R = V0_300CD_R_20;
+	V0_300CD_G = V0_300CD_G_20;
+	V0_300CD_B = V0_300CD_B_20;
+
 	VT_300CD_R = VT_300CD_R_20;
 	VT_300CD_G = VT_300CD_G_20;
 	VT_300CD_B = VT_300CD_B_20;
@@ -3784,8 +3849,8 @@ static void mtp_sorting(struct SMART_DIM *psmart)
 {
 	int sorting[GAMMA_SET_MAX] = {
 		0, 1, 6, 9, 12, 15, 18, 21, 24, 27, 30, /* R*/
-		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31, /* G */
-		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, /* B */
+		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31,33, /* G */
+		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 34,/* B */
 	};
 	int loop;
 	char *pfrom, *pdest;
@@ -4003,4 +4068,10 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	return 0;
 }
 
+void panel_load_colors(unsigned int val)
+{
+		panelval = val;
+		smart_dimming_init(gpsmart);
+		mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
+}
 

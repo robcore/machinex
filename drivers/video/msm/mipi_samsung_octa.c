@@ -92,7 +92,7 @@ int get_ldi_chip(void)
 	return ldi_manupacture;
 }
 
-static int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
+int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
 		enum mipi_samsung_cmd_list cmd,
 		unsigned char lock)
 {
