@@ -152,6 +152,12 @@ unsigned int msm_spm_get_vdd(unsigned int cpu);
  * @cpu: core id
  */
 int msm_spm_turn_on_cpu_rail(unsigned int cpu);
+#else
+static inline int msm_spm_turn_on_cpu_rail(unsigned int cpu)
+{
+	return -ENOSYS;
+}
+#endif
 
 /* Internal low power management specific functions */
 
