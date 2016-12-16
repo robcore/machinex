@@ -114,111 +114,10 @@ static int color_mods[5][27] = {
 unsigned int panelval = 2;
 struct SMART_DIM *gpsmart;
 extern struct mipi_samsung_driver_data msd;
-extern struct mutex dsi_tx_mutex;
 
-int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
+extern int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
 		enum mipi_samsung_cmd_list cmd,
-		unsigned char lock)
-{
-	struct dsi_cmd_desc *cmd_desc;
-	struct dcs_cmd_req cmdreq;
-	int cmd_size = 0;
-#ifdef CMD_DEBUG
-	int i,j;
-#endif
-
-	if (mfd->panel.type == MIPI_VIDEO_PANEL)
-		mutex_lock(&dsi_tx_mutex);
-	else {
-		if (lock)
-			mutex_lock(&mfd->dma->ov_mutex);
-	}
-	cmdreq.flags =	CMD_REQ_COMMIT;
-
-		switch (cmd) {
-		case PANEL_READY_TO_ON:
-			cmd_desc = msd.mpd->ready_to_on.cmd;
-			cmd_size = msd.mpd->ready_to_on.size;
-			break;
-		case PANEL_ON:
-			cmd_desc = msd.mpd->on.cmd;
-			cmd_size = msd.mpd->on.size;
-			break;
-		case PANEL_OFF:
-			cmd_desc = msd.mpd->off.cmd;
-			cmd_size = msd.mpd->off.size;
-			break;
-		case PANEL_LATE_ON:
-			cmd_desc = msd.mpd->late_on.cmd;
-			cmd_size = msd.mpd->late_on.size;
-			break;
-		case PANEL_EARLY_OFF:
-			cmd_desc = msd.mpd->early_off.cmd;
-			cmd_size = msd.mpd->early_off.size;
-			break;
-		case PANEL_BRIGHT_CTRL:
-			cmd_desc = msd.mpd->brightness.cmd;
-			cmd_size = msd.mpd->brightness.size;
-			cmdreq.flags =  CMD_REQ_SINGLE_TX |CMD_REQ_COMMIT;
-			break;
-		case PANEL_MTP_ENABLE:
-			cmd_desc = msd.mpd->mtp_enable.cmd;
-			cmd_size = msd.mpd->mtp_enable.size;
-			break;
-		case PANEL_MTP_DISABLE:
-			cmd_desc = msd.mpd->mtp_disable.cmd;
-			cmd_size = msd.mpd->mtp_disable.size;
-			break;
-		case PANEL_NEED_FLIP:
-			cmd_desc = msd.mpd->need_flip.cmd;
-			cmd_size = msd.mpd->need_flip.size;
-			break;
-		case PANEL_ACL_CONTROL:
-			cmd_desc = msd.mpd->acl_cmds.cmd;
-			cmd_size = msd.mpd->acl_cmds.size;
-			break;
-		case PANLE_TOUCH_KEY:
-			cmd_desc = msd.mpd->touch_key.cmd;
-			cmd_size = msd.mpd->touch_key.size;
-			break;
-		case PANEL_LPTS:
-			cmd_desc = msd.mpd->lpts.cmd;
-			cmd_size = msd.mpd->lpts.size;
-			break;
-		default:
-			pr_info("%s UNKNOW CMD", __func__);
-			goto unknown_command;
-			;
-	}
-
-	if (!cmd_size)
-		goto unknown_command;
-
-	cmdreq.cmds = cmd_desc;
-	cmdreq.cmds_cnt = cmd_size;
-	cmdreq.rlen = 0;
-	cmdreq.cb = NULL;
-
-	mipi_dsi_cmdlist_put(&cmdreq);
-
-	if (mfd->panel.type == MIPI_VIDEO_PANEL)
-		mutex_unlock(&dsi_tx_mutex);
-	else {
-		if (lock)
-			mutex_unlock(&mfd->dma->ov_mutex);
-	}
-
-	return 0;
-
-unknown_command:
-	if (mfd->panel.type == MIPI_VIDEO_PANEL)
-		mutex_unlock(&dsi_tx_mutex);
-	else {
-		if (lock)
-			mutex_unlock(&mfd->dma->ov_mutex);
-	}
-	return 0;
-}
+		unsigned char lock);
 
 static int char_to_int(char data1)
 {
@@ -4141,6 +4040,8 @@ DEFINE_MUTEX(color_mutex);
 void panel_load_colors(unsigned int val)
 {
 	struct msm_fb_data_type *mfd;
+
+	mfd = platform_get_drvdata(msd.msm_pdev);
 
 		panelval = val;
 		smart_dimming_init(gpsmart);
