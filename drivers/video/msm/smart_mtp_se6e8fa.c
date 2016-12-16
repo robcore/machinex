@@ -46,7 +46,6 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
 /*
-/*
 #define SMART_DIMMING_DEBUG
 */
 
@@ -4065,12 +4064,8 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 
 void panel_load_colors(unsigned int val)
 {
-	struct msm_fb_data_type *mfd;
-
-	mfd = platform_get_drvdata(msd.msm_pdev);
-
 		panelval = val;
 		smart_dimming_init(gpsmart);
-		mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
+		//mipi_samsung_disp_send_cmd(PANEL_BRIGHT_CTRL, true);
 }
 
