@@ -101,7 +101,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
-
+	SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
+	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
@@ -113,7 +114,11 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			adb connect 192.168.1.103
 			sleep 5
 			adb push $OUTFOLDER.zip /storage/extSdCard
-			echo "Your kernel is ready to flash"
+			if [ $SDB == $SUMMY ]; then
+				echo "MD5 MATCHES - Your kernel is ready to flash"
+			else
+				echo "MD5 MISMATCH, push again!"
+			fi;
 		fi;
 		echo -n "Cleanup?  y/n [ENTER]: "
 		read repcln
@@ -130,13 +135,17 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		adb connect 192.168.1.103
 		sleep 5
 		adb push $OUTFOLDER.zip /storage/extSdCard
+			if [ $SDB == $SUMMY ]; then
+				echo "MD5 MATCHES - Your kernel is ready to flash"
+			else
+				echo "MD5 MISMATCH, push again!"
+			fi;
 		cd ~/machinex
 		sh $(pwd)/cleanup.sh
-		echo "Your kernel is ready to flash, and cleanup finished"
+		echo "cleanup finished"
 	fi;
 
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	echo "MD5 is $SUMMY"
 else
 	echo "Build failed, Skipped Ramdisk Creation"
