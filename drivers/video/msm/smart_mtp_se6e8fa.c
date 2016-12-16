@@ -1681,9 +1681,6 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 			bl_level = 235;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
-	} else {
-		/* 100CD ~ 10CD */
-		bl_level = AOR_ADJUST_CD;
 	}
 
 	for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
@@ -2033,11 +2030,10 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
 				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
 		/* 180CD ~ 110CD */
-		aor_bl_level = (pSmart->brightness_level;
-		bl_level = aor_fix_bl_leve_vt232[aor_bl_level];
+		bl_level = pSmart->brightness_level;
 	} else {
 		/* 100CD ~ 10CD */
-		bl_level = AOR_ADJUST_CD;
+		bl_level = pSmart->brightness_level;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -2131,12 +2127,11 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	*	290CD ~ 10CD compensation
 	*/
 	if (pSmart->brightness_level >= 290)
-		bl_index[5] += 1; /* V51 */
+		bl_index[1] += 1; /*V3*/
 	else if (pSmart->brightness_level == 280)
-		bl_index[4] += 1; /* V35 */
+		bl_index[1] += 1; /*V3*/
 	else if (pSmart->brightness_level == 260) {
 		bl_index[1] += 1; /*V3*/
-		bl_index[4] += 1; /* V35 */
 	} else if ((pSmart->brightness_level <= 250) &&
 					(pSmart->brightness_level >= 190))
 		bl_index[1] += 1; /*V3*/
@@ -2213,19 +2208,6 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	/* To avoid overflow */
 	for (cnt = 0; cnt < GAMMA_SET_MAX; cnt++)
 		gamma_setting[cnt] = str[cnt];
-
-	/*
-	*	180CD ~ 110CD compensation
-	*/
-	if ((pSmart->brightness_level <= 180) &&
-				(pSmart->brightness_level >= 110)) {
-		point_index = 18 - (pSmart->brightness_level / 10);
-
-		for (cnt = 15; cnt < 27; cnt++) {
-			gamma_setting[cnt] +=
-				adding_180cd_110cd_vt232[point_index][cnt - 15];
-		}
-	}
 
 	if (pSmart->brightness_level <= 100) {
 		point_index = 10 - (pSmart->brightness_level / 10);
@@ -2553,9 +2535,6 @@ static void gamma_init_evt1(
 			bl_level = 235;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
-	} else {
-		/* 100CD ~ 10CD */
-		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -2904,9 +2883,6 @@ static void gamma_init_evt1_second(
 			bl_level = 234;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
-	} else {
-		/* 100CD ~ 10CD */
-		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -3266,9 +3242,6 @@ static void gamma_init_evt1_third(
 			bl_level = 239;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 253;
-	} else {
-		/* 100CD ~ 10CD */
-		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
