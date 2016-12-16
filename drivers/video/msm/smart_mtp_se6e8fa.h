@@ -93,8 +93,8 @@ extern int get_ldi_chip(void);
 
 
 #define MTP_START_ADDR 0xC8
-#define LUMINANCE_MAX 54
-#define GAMMA_SET_MAX 33
+#define LUMINANCE_MAX 65
+#define GAMMA_SET_MAX 35
 #define BIT_SHIFT 22
 /*
 	it means BIT_SHIFT is 22.  pow(2,BIT_SHIFT) is 4194304.
