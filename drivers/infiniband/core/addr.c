@@ -156,7 +156,7 @@ static void set_timeout(unsigned long time)
 	if ((long)delay <= 0)
 		delay = 1;
 
-	queue_delayed_work(addr_wq, &work, delay);
+	mod_delayed_work(addr_wq, &work, delay);
 }
 
 static void queue_req(struct addr_req *req)

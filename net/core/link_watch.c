@@ -124,7 +124,7 @@ static void linkwatch_schedule_work(int urgent)
 	 * override the existing timer.
 	 */
 	if (test_bit(LW_URGENT, &linkwatch_flags))
-		queue_delayed_work(system_wq, &linkwatch_work, 0);
+		mod_delayed_work(system_wq, &linkwatch_work, 0);
 	else
 		schedule_delayed_work(&linkwatch_work, delay);
 }

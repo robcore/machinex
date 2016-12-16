@@ -492,7 +492,7 @@ static void edac_mc_workq_setup(struct mem_ctl_info *mci, unsigned msec)
 		return;
 
 	INIT_DELAYED_WORK(&mci->work, edac_mc_workq_function);
-	queue_delayed_work(edac_workqueue, &mci->work, msecs_to_jiffies(msec));
+	mod_delayed_work(edac_workqueue, &mci->work, msecs_to_jiffies(msec));
 }
 
 /*
