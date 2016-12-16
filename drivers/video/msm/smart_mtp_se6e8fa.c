@@ -209,6 +209,15 @@ int mipi_samsung_disp_send_cmd(struct msm_fb_data_type *mfd,
 	}
 
 	return 0;
+
+unknown_command:
+	if (mfd->panel.type == MIPI_VIDEO_PANEL)
+		mutex_unlock(&dsi_tx_mutex);
+	else {
+		if (lock)
+			mutex_unlock(&mfd->dma->ov_mutex);
+	}
+	return 0;
 }
 
 static int char_to_int(char data1)
@@ -4155,6 +4164,7 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	return 0;
 }
 
+DEFINE_MUTEX(color_mutex);
 void panel_load_colors(unsigned int val)
 {
 	struct msm_fb_data_type *mfd;
@@ -4162,8 +4172,8 @@ void panel_load_colors(unsigned int val)
 		panelval = val;
 		smart_dimming_init(gpsmart);
 
-		mutex_lock(&brightness_mutex);
+		mutex_lock(&color_mutex);
 		mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
-		mutex_unlock(&brightness_mutex);
+		mutex_unlock(&color_mutex);
 }
 
