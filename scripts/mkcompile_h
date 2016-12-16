@@ -28,13 +28,15 @@ export LC_ALL
 
 if [ -z "$KBUILD_BUILD_VERSION" ]; then
 	if [ -r .version ]; then
-		VERSION=`cat .version`
+		#VERSION=`cat .version`
+		VERSION=007
 	else
-		VERSION=0
-		echo 0 > .version
+		VERSION=007
+		echo 007 > .version
 	fi
 else
-	VERSION=$KBUILD_BUILD_VERSION
+	#VERSION=$KBUILD_BUILD_VERSION
+	VERSION=007
 fi
 
 if [ -z "$KBUILD_BUILD_TIMESTAMP" ]; then
@@ -68,7 +70,7 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
 
 ( echo /\* This file is auto generated, version $VERSION \*/
   if [ -n "$CONFIG_FLAGS" ] ; then echo "/* $CONFIG_FLAGS */"; fi
-  
+
   echo \#define UTS_MACHINE \"$ARCH\"
 
   echo \#define UTS_VERSION \"`echo $UTS_VERSION | $UTS_TRUNCATE`\"
@@ -84,7 +86,7 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
 # recompilations.
 # We don't consider the file changed if only the date/time changed.
 # A kernel config change will increase the generation number, thus
-# causing compile.h to be updated (including date/time) due to the 
+# causing compile.h to be updated (including date/time) due to the
 # changed comment in the
 # first line.
 
