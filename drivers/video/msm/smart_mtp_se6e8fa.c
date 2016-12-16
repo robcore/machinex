@@ -1398,7 +1398,7 @@ void(*Make_hexa[S6E8FA_TABLE_MAX])(int*, struct SMART_DIM*, char*) = {
 *	AOR fix range : 180CD ~ 110CD  AOR 40%
 *	AOR adjust range : 100CD ~ 10CD
 */
-#define AOR_FIX_CD 110
+#define AOR_FIX_CD 180
 #define AOR_ADJUST_CD 110
 
 static int aor_fix_bl_leve_vt888[] = {
@@ -1550,36 +1550,17 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 	int cnt;
 
 	/*calculate candela level */
-	if ((pSmart->brightness_level <= 300) &&
-			(pSmart->brightness_level >= 265)) {
-		if (pSmart->brightness_level == 300)
-			bl_level = 303;
-		else if (pSmart->brightness_level == 282)
-			bl_level = 286;
-		else if (pSmart->brightness_level == 265)
-			bl_level = 269;
-		else if (pSmart->brightness_level == 249)
-			bl_level = 252;
-	} else if ((pSmart->brightness_level < 249) &&
-				(pSmart->brightness_level >= 183)) {
-		/* 183CD ~ 249CD */
-		bl_level = 249;
-	} else if ((pSmart->brightness_level < 183) &&
-				(pSmart->brightness_level >= 110)) {
-		if (pSmart->brightness_level == 111)
-			bl_level = 180;
-		else if (pSmart->brightness_level == 119)
-			bl_level = 190;
-		else if (pSmart->brightness_level == 126)
-			bl_level = 200;
-		else if (pSmart->brightness_level == 134)
-			bl_level = 211;
-		else if (pSmart->brightness_level == 143)
-			bl_level = 222;
-		else if (pSmart->brightness_level == 152)
-			bl_level = 235;
-		else if (pSmart->brightness_level == 162)
-			bl_level = 249;
+	if (pSmart->brightness_level > AOR_FIX_CD) {
+		/* 300CD ~ 190CD */
+		bl_level = pSmart->brightness_level;
+	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
+				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
+		/* 180CD ~ 110CD */
+		aor_bl_level = (pSmart->brightness_level / 10) - 11;
+		bl_level = aor_fix_bl_leve_vt888[aor_bl_level];
+	} else {
+		/* 100CD ~ 10CD */
+		bl_level = AOR_ADJUST_CD;
 	}
 
 	for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
@@ -1929,10 +1910,11 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
 				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
 		/* 180CD ~ 110CD */
-		bl_level = pSmart->brightness_level;
+		aor_bl_level = (pSmart->brightness_level / 10) - 11;
+		bl_level = aor_fix_bl_leve_vt232[aor_bl_level];
 	} else {
 		/* 100CD ~ 10CD */
-		bl_level = pSmart->brightness_level;
+		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -2025,12 +2007,13 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	/*
 	*	290CD ~ 10CD compensation
 	*/
-	if (pSmart->brightness_level >= 290)
-		bl_index[1] += 1; /*V3*/
+	if (pSmart->brightness_level == 290)
+		bl_index[5] += 1; /* V51 */
 	else if (pSmart->brightness_level == 280)
-		bl_index[1] += 1; /*V3*/
+		bl_index[4] += 1; /* V35 */
 	else if (pSmart->brightness_level == 260) {
 		bl_index[1] += 1; /*V3*/
+		bl_index[4] += 1; /* V35 */
 	} else if ((pSmart->brightness_level <= 250) &&
 					(pSmart->brightness_level >= 190))
 		bl_index[1] += 1; /*V3*/
@@ -2107,6 +2090,19 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 	/* To avoid overflow */
 	for (cnt = 0; cnt < GAMMA_SET_MAX; cnt++)
 		gamma_setting[cnt] = str[cnt];
+
+	/*
+	*	180CD ~ 110CD compensation
+	*/
+	if ((pSmart->brightness_level <= 180) &&
+				(pSmart->brightness_level >= 110)) {
+		point_index = 18 - (pSmart->brightness_level / 10);
+
+		for (cnt = 15; cnt < 27; cnt++) {
+			gamma_setting[cnt] +=
+				adding_180cd_110cd_vt232[point_index][cnt - 15];
+		}
+	}
 
 	if (pSmart->brightness_level <= 100) {
 		point_index = 10 - (pSmart->brightness_level / 10);
@@ -2404,22 +2400,12 @@ static void gamma_init_evt1(
 	int table_index;
 
 	/*calculate candela level */
-	if ((pSmart->brightness_level <= 300) &&
-			(pSmart->brightness_level >= 265)) {
-		if (pSmart->brightness_level == 300)
-			bl_level = 303;
-		else if (pSmart->brightness_level == 282)
-			bl_level = 286;
-		else if (pSmart->brightness_level == 265)
-			bl_level = 269;
-		else if (pSmart->brightness_level == 249)
-			bl_level = 252;
-	} else if ((pSmart->brightness_level < 249) &&
-				(pSmart->brightness_level >= 183)) {
-		/* 183CD ~ 249CD */
-		bl_level = 249;
-	} else if ((pSmart->brightness_level < 183) &&
-				(pSmart->brightness_level >= 110)) {
+	if (pSmart->brightness_level > AOR_FIX_CD) {
+		/* 300CD ~ 190CD */
+		bl_level = pSmart->brightness_level;
+	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
+				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
+		/* 180CD ~ 110CD */
 		if (pSmart->brightness_level == 111)
 			bl_level = 180;
 		else if (pSmart->brightness_level == 119)
@@ -2434,6 +2420,11 @@ static void gamma_init_evt1(
 			bl_level = 235;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
+		else
+			bl_level = 263;
+	} else {
+		/* 100CD ~ 10CD */
+		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -2751,23 +2742,12 @@ static void gamma_init_evt1_second(
 	int table_index;
 
 	/*calculate candela level */
-	if ((pSmart->brightness_level <= 300) &&
-			(pSmart->brightness_level >= 265)) {
-		if (pSmart->brightness_level == 300)
-			bl_level = 303;
-		else if (pSmart->brightness_level == 282)
-			bl_level = 286;
-		else if (pSmart->brightness_level == 265)
-			bl_level = 269;
-		else if (pSmart->brightness_level == 249)
-			bl_level = 252;
-	} else if ((pSmart->brightness_level < 249) &&
-				(pSmart->brightness_level >= 183)) {
-		/* 183CD ~ 249CD */
-		bl_level = 249;
-	} else if ((pSmart->brightness_level < 183) &&
-				(pSmart->brightness_level >= 110)) {
-		/* 77CD ~ 172CD */
+	if (pSmart->brightness_level > AOR_FIX_CD) {
+		/* 300CD ~ 190CD */
+		bl_level = pSmart->brightness_level;
+	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
+				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
+		/* 180CD ~ 110CD */
 		if (pSmart->brightness_level == 111)
 			bl_level = 176;
 		else if (pSmart->brightness_level == 119)
@@ -2782,6 +2762,11 @@ static void gamma_init_evt1_second(
 			bl_level = 234;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 249;
+		else
+			bl_level = 263;
+	} else {
+		/* 100CD ~ 10CD */
+		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -3110,23 +3095,12 @@ static void gamma_init_evt1_third(
 	int table_index;
 
 	/*calculate candela level */
-	if ((pSmart->brightness_level <= 300) &&
-		(pSmart->brightness_level >= 265)) {
-		/* 265CD ~ 350CD */
-		if (pSmart->brightness_level == 300)
-			bl_level = 300;
-		else if (pSmart->brightness_level == 282)
-			bl_level = 283;
-		else if (pSmart->brightness_level == 265)
-			bl_level = 268;
-		else if (pSmart->brightness_level == 249)
-			bl_level = 252;
-	} else if ((pSmart->brightness_level < 265) &&
-		(pSmart->brightness_level >= 183)) {
-		/* 183CD ~ 265CD */
-		bl_level = 252;
-	} else if ((pSmart->brightness_level < 183) &&
-				(pSmart->brightness_level > 110)) {
+	if (pSmart->brightness_level > AOR_FIX_CD) {
+		/* 300CD ~ 190CD */
+		bl_level = pSmart->brightness_level;
+	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
+				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
+		/* 180CD ~ 110CD */
 		if (pSmart->brightness_level == 111)
 			bl_level = 181;
 		else if (pSmart->brightness_level == 119)
@@ -3141,6 +3115,11 @@ static void gamma_init_evt1_third(
 			bl_level = 239;
 		else if (pSmart->brightness_level == 162)
 			bl_level = 253;
+		else
+			bl_level = 267;
+	} else {
+		/* 100CD ~ 10CD */
+		bl_level = AOR_ADJUST_CD;
 	}
 
 	if ((pSmart->brightness_level <= 300) &&
@@ -3454,21 +3433,21 @@ static void gamma_init_Tulip_first(
 	int table_index;
 
 	/*calculate candela level */
-	if ((pSmart->brightness_level <= 300) &&
-		(pSmart->brightness_level >= 265)) {
-		/* 265CD ~ 350CD */
-		if (pSmart->brightness_level == 300)
-			bl_level = 304;
+	if (pSmart->brightness_level >= AOR_TULIP_FIRST_BL_LEVEL) {
+		/* 300CD ~ 265CD */
+		if (pSmart->brightness_level == 265)
+			bl_level = 267;
 		else if (pSmart->brightness_level == 282)
 			bl_level = 283;
-		else if (pSmart->brightness_level == 265)
-			bl_level = 269;
-	} else if ((pSmart->brightness_level < 265) &&
-				(pSmart->brightness_level >= 183)) {
-		/* 183CD ~ 265CD */
-		bl_level = 252;
-	} else if ((pSmart->brightness_level < 183) &&
-				(pSmart->brightness_level >= 72)) {
+		else
+			bl_level = 300;
+	} else if ((pSmart->brightness_level < AOR_TULIP_FIRST_BL_LEVEL) &&
+				(pSmart->brightness_level >= AOR_TULIP_SECOND_BL_LEVEL)) {
+		/* 249CD ~ 172(162)CD */
+		bl_level = 251;
+	} else if ((pSmart->brightness_level < AOR_TULIP_SECOND_BL_LEVEL) &&
+				(pSmart->brightness_level >= AOR_TULIP_THIRD_BL_LEVEL)) {
+		/* 162(152)CD ~ 72CD */
 		if (pSmart->brightness_level == 72)
 			bl_level = 118;
 		else if (pSmart->brightness_level == 77)
@@ -3495,6 +3474,8 @@ static void gamma_init_Tulip_first(
 			bl_level = 226;
 		else if (pSmart->brightness_level == 152)
 			bl_level = 239;
+		else
+			bl_level = 251;
 	} else {
 		/* 68(64)CD ~ 10CD */
 		bl_level = AOR_ADJUST_TULIP_CD;
@@ -4036,7 +4017,6 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	return 0;
 }
 
-DEFINE_MUTEX(color_mutex);
 void panel_load_colors(unsigned int val)
 {
 	struct msm_fb_data_type *mfd;
@@ -4046,8 +4026,6 @@ void panel_load_colors(unsigned int val)
 		panelval = val;
 		smart_dimming_init(gpsmart);
 
-		mutex_lock(&color_mutex);
 		mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
-		mutex_unlock(&color_mutex);
 }
 
