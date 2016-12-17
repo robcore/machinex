@@ -348,39 +348,6 @@ int diag_process_smd_read_data(struct diag_smd_info *smd_info, void *buf,
 	return 0;
 }
 
-/*
- * This function should be called if you feel that the logging process may
- * need to be woken up. For instance, if the logging mode is MEMORY_DEVICE MODE
- * and while trying to read data from a SMD data channel there are no buffers
- * available to read the data into, then this function should be called to
- * determine if the logging process needs to be woken up.
- */
-void chk_logging_wakeup(void)
-{
-	int i;
-
-	/* Find the index of the logging process */
-	for (i = 0; i < driver->num_clients; i++)
-		if (driver->client_map[i].pid ==
-			driver->logging_process_id)
-			break;
-
-	if (i < driver->num_clients) {
-		/* At very high logging rates a race condition can
-		 * occur where the buffers containing the data from
-		 * an smd channel are all in use, but the data_ready
-		 * flag is cleared. In this case, the buffers never
-		 * have their data read/logged.  Detect and remedy this
-		 * situation.
-		 */
-		if ((driver->data_ready[i] & USER_SPACE_LOG_TYPE) == 0) {
-			driver->data_ready[i] |= USER_SPACE_LOG_TYPE;
-			pr_debug("diag: Force wakeup of logging process\n");
-			wake_up_interruptible(&driver->wait_q);
-		}
-	}
-}
-
 void diag_smd_send_req(struct diag_smd_info *smd_info)
 {
 	void *buf = NULL, *temp_buf = NULL;
@@ -773,9 +740,6 @@ void diag_send_data(struct diag_master_table entry, unsigned char *buf,
 					__func__, entry.client_id);
 			}
 		}
-	} else if (driver->ch && !buf &&
-		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
-		chk_logging_wakeup();
 	}
 }
 
@@ -844,9 +808,6 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 				}
 			}
 		}
-	} else if (driver->ch_wcnss && !buf &&
-		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
-		chk_logging_wakeup();
 	}
 #if defined(CONFIG_DIAG_OVER_USB)
 	/* Check for the command/respond msg for the maximum packet length */
@@ -1186,9 +1147,6 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 			encode_rsp_and_send(15);
 			return 0;
 		}
-	} else if (driver->chqdsp && !buf &&
-		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
-		chk_logging_wakeup();
 	}
 	/* Return the Delayed Response Wrap Status */
 	else if ((*buf == 0x4b) && (*(buf+1) == 0x32) &&

@@ -68,16 +68,6 @@
 static int hs_serial_debug_mask = 1;
 module_param_named(debug_mask, hs_serial_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-/*
- * There are 3 different kind of UART Core available on MSM.
- * High Speed UART (i.e. Legacy HSUART), GSBI based HSUART
- * and BSLP based HSUART.
- */
-enum uart_core_type {
-	LEGACY_HSUART,
-	GSBI_HSUART,
-	BLSP_HSUART,
-};
 
 enum flush_reason {
 	FLUSH_NONE,
@@ -337,10 +327,7 @@ static inline int is_gsbi_uart(struct msm_hs_port *msm_uport)
 	/* assume gsbi uart if gsbi resource found in pdata */
 	return ((msm_uport->mapped_gsbi != NULL));
 }
-static unsigned int is_blsp_uart(struct msm_hs_port *msm_uport)
-{
-	return (msm_uport->uart_type == BLSP_HSUART);
-}
+
 static inline unsigned int msm_hs_read(struct uart_port *uport,
 				       unsigned int offset)
 {
@@ -2356,6 +2343,24 @@ static int uartdm_init_port(struct uart_port *uport)
 	struct msm_hs_tx *tx = &msm_uport->tx;
 	struct msm_hs_rx *rx = &msm_uport->rx;
 
+	/* Allocate the command pointer. Needs to be 64 bit aligned */
+	tx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
+	if (!tx->command_ptr)
+		return -ENOMEM;
+
+	tx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
+	if (!tx->command_ptr_ptr) {
+		ret = -ENOMEM;
+		goto free_tx_command_ptr;
+	}
+
+	tx->mapped_cmd_ptr = dma_map_single(uport->dev, tx->command_ptr,
+					    sizeof(dmov_box), DMA_TO_DEVICE);
+	tx->mapped_cmd_ptr_ptr = dma_map_single(uport->dev,
+						tx->command_ptr_ptr,
+						sizeof(u32), DMA_TO_DEVICE);
+	tx->xfer.cmdptr = DMOV_CMD_ADDR(tx->mapped_cmd_ptr_ptr);
+
 	init_waitqueue_head(&rx->wait);
 	init_waitqueue_head(&tx->wait);
 	wake_lock_init(&rx->wake_lock, WAKE_LOCK_SUSPEND, "msm_serial_hs_rx");
@@ -2382,40 +2387,12 @@ static int uartdm_init_port(struct uart_port *uport)
 		goto free_pool;
 	}
 
-	/* Set up Uart Receive */
-	msm_hs_write(uport, UARTDM_RFWR_ADDR, 0);
-
-	INIT_DELAYED_WORK(&rx->flip_insert_work, flip_insert_work);
-
-	if (is_blsp_uart(msm_uport))
-		return ret;
-
-	/* Allocate the command pointer. Needs to be 64 bit aligned */
-	tx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
-	if (!tx->command_ptr) {
-		return -ENOMEM;
-		goto free_rx_buffer;
-	}
-
-	tx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
-	if (!tx->command_ptr_ptr) {
-		ret = -ENOMEM;
-		goto free_tx_command_ptr;
-	}
-
-	tx->mapped_cmd_ptr = dma_map_single(uport->dev, tx->command_ptr,
-					sizeof(dmov_box), DMA_TO_DEVICE);
-	tx->mapped_cmd_ptr_ptr = dma_map_single(uport->dev,
-						tx->command_ptr_ptr,
-						sizeof(u32), DMA_TO_DEVICE);
-	tx->xfer.cmdptr = DMOV_CMD_ADDR(tx->mapped_cmd_ptr_ptr);
-
 	/* Allocate the command pointer. Needs to be 64 bit aligned */
 	rx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
 	if (!rx->command_ptr) {
 		pr_err("%s(): cannot allocate rx->command_ptr", __func__);
 		ret = -ENOMEM;
-		goto free_tx_command_ptr_ptr;
+		goto free_rx_buffer;
 	}
 
 	rx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
@@ -2429,6 +2406,9 @@ static int uartdm_init_port(struct uart_port *uport)
 					 (msm_uport->rx_buf_size >> 4);
 
 	rx->command_ptr->dst_row_addr = rx->rbuffer;
+
+	/* Set up Uart Receive */
+	msm_hs_write(uport, UARTDM_RFWR_ADDR, 0);
 
 	rx->xfer.complete_func = msm_hs_dmov_rx_callback;
 	rx->xfer.exec_func = msm_hs_dmov_rx_exec_callback;
@@ -2450,20 +2430,12 @@ static int uartdm_init_port(struct uart_port *uport)
 					    sizeof(u32), DMA_TO_DEVICE);
 	rx->xfer.cmdptr = DMOV_CMD_ADDR(rx->cmdptr_dmaaddr);
 
+	INIT_DELAYED_WORK(&rx->flip_insert_work, flip_insert_work);
+
 	return ret;
 
 free_rx_command_ptr:
 	kfree(rx->command_ptr);
-
-free_tx_command_ptr_ptr:
-	kfree(msm_uport->tx.command_ptr_ptr);
-	dma_unmap_single(uport->dev, msm_uport->tx.mapped_cmd_ptr_ptr,
-			sizeof(u32), DMA_TO_DEVICE);
-	dma_unmap_single(uport->dev, msm_uport->tx.mapped_cmd_ptr,
-			sizeof(dmov_box), DMA_TO_DEVICE);
-
-free_tx_command_ptr:
-	kfree(msm_uport->tx.command_ptr);
 
 free_rx_buffer:
 	dma_pool_free(msm_uport->rx.pool, msm_uport->rx.buffer,
@@ -2593,10 +2565,8 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	msm_uport->is_shutdown = true;
 
 	msm_uport->clk = clk_get(&pdev->dev, "core_clk");
-	if (IS_ERR(msm_uport->clk)) {
-		ret = PTR_ERR(msm_uport->clk);
-		goto unmap_memory;
-	}
+	if (IS_ERR(msm_uport->clk))
+		return PTR_ERR(msm_uport->clk);
 
 	msm_uport->pclk = clk_get(&pdev->dev, "iface_clk");
 	/*
@@ -2609,7 +2579,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	ret = clk_set_rate(msm_uport->clk, uport->uartclk);
 	if (ret) {
 		printk(KERN_WARNING "Error setting clock rate on UART\n");
-		goto unmap_memory;
+		return ret;
 	}
 
 	msm_uport->hsuart_wq = alloc_workqueue("k_hsuart",
@@ -2617,8 +2587,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	if (!msm_uport->hsuart_wq) {
 		pr_err("%s(): Unable to create workqueue hsuart_wq\n",
 								__func__);
-		ret =  -ENOMEM;
-		goto unmap_memory;
+		return -ENOMEM;
 	}
 
 	INIT_WORK(&msm_uport->clock_off_w, hsuart_clock_off_work);
@@ -2662,23 +2631,14 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_clock.attr);
 	if (unlikely(ret))
-		goto unmap_memory;
+		return ret;
 
 	msm_serial_debugfs_init(msm_uport, pdev->id);
 
 	uport->line = pdev->id;
 	if (pdata != NULL && pdata->userid && pdata->userid <= UARTDM_NR)
 		uport->line = pdata->userid;
-	ret = uart_add_one_port(&msm_hs_driver, uport);
-	if (!ret)
-		return ret;
-
-unmap_memory:
-	iounmap(uport->membase);
-	if (is_blsp_uart(msm_uport))
-		iounmap(msm_uport->bam_base);
-
-	return ret;
+	return uart_add_one_port(&msm_hs_driver, uport);
 }
 
 static int __init msm_serial_hs_init(void)
