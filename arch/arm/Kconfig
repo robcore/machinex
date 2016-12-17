@@ -668,7 +668,6 @@ config ARCH_MMP
 	select CLKDEV_LOOKUP
 	select GENERIC_CLOCKEVENTS
 	select GPIO_PXA
-	select TICK_ONESHOT
 	select PLAT_PXA
 	select SPARSE_IRQ
 	select GENERIC_ALLOCATOR
@@ -752,7 +751,6 @@ config ARCH_PXA
 	select ARCH_REQUIRE_GPIOLIB
 	select GENERIC_CLOCKEVENTS
 	select GPIO_PXA
-	select TICK_ONESHOT
 	select PLAT_PXA
 	select SPARSE_IRQ
 	select AUTO_ZRELADDR
@@ -827,7 +825,6 @@ config ARCH_SA1100
 	select CPU_FREQ
 	select GENERIC_CLOCKEVENTS
 	select CLKDEV_LOOKUP
-	select TICK_ONESHOT
 	select ARCH_REQUIRE_GPIOLIB
 	select HAVE_IDE
 	select NEED_MACH_MEMORY_H
@@ -1678,7 +1675,6 @@ config ARM_ARCH_TIMER
 config HAVE_ARM_TWD
 	bool
 	depends on SMP
-	select TICK_ONESHOT
 	help
 	  This options enables support for the ARM timer and watchdog unit
 
