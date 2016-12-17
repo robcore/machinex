@@ -210,7 +210,6 @@ xfs_open_by_handle(
 	struct inode		*inode;
 	struct dentry		*dentry;
 	fmode_t			fmode;
-	struct path		path;
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -XFS_ERROR(EPERM);
@@ -255,10 +254,8 @@ xfs_open_by_handle(
 		goto out_dput;
 	}
 
-	path.mnt = parfilp->f_path.mnt;
-	path.dentry = dentry;
-	filp = dentry_open(&path, hreq->oflags, cred);
-	dput(dentry);
+	filp = dentry_open(dentry, mntget(parfilp->f_path.mnt),
+			   hreq->oflags, cred);
 	if (IS_ERR(filp)) {
 		put_unused_fd(fd);
 		return PTR_ERR(filp);

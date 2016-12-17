@@ -782,7 +782,7 @@ __be32
 nfsd_open(struct svc_rqst *rqstp, struct svc_fh *fhp, umode_t type,
 			int may_flags, struct file **filp)
 {
-	struct path	path;
+	struct dentry	*dentry;
 	struct inode	*inode;
 	int		flags = O_RDONLY|O_LARGEFILE;
 	__be32		err;
@@ -799,9 +799,8 @@ nfsd_open(struct svc_rqst *rqstp, struct svc_fh *fhp, umode_t type,
 	if (err)
 		goto out;
 
-	path.mnt = fhp->fh_export->ex_path.mnt;
-	path.dentry = fhp->fh_dentry;
-	inode = path.dentry->d_inode;
+	dentry = fhp->fh_dentry;
+	inode = dentry->d_inode;
 
 	/* Disallow write access to files with the append-only bit set
 	 * or any access when mandatory locking enabled

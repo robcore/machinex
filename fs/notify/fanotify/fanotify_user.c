@@ -61,6 +61,8 @@ static struct fsnotify_event *get_one_event(struct fsnotify_group *group,
 static int create_fd(struct fsnotify_group *group, struct fsnotify_event *event)
 {
 	int client_fd;
+	struct dentry *dentry;
+	struct vfsmount *mnt;
 	struct file *new_file;
 
 	pr_debug("%s: group=%p event=%p\n", __func__, group, event);
@@ -79,10 +81,12 @@ static int create_fd(struct fsnotify_group *group, struct fsnotify_event *event)
 	 * we need a new file handle for the userspace program so it can read even if it was
 	 * originally opened O_WRONLY.
 	 */
+	dentry = dget(event->path.dentry);
+	mnt = mntget(event->path.mnt);
 	/* it's possible this event was an overflow event.  in that case dentry and mnt
 	 * are NULL;  That's fine, just don't call dentry open */
-	if (event->path.dentry && event->path.mnt)
-		new_file = dentry_open(&event->path,
+	if (dentry && mnt)
+		new_file = dentry_open(dentry, mnt,
 				       group->fanotify_data.f_flags | FMODE_NONOTIFY,
 				       current_cred());
 	else

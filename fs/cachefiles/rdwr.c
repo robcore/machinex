@@ -891,7 +891,6 @@ int cachefiles_write_page(struct fscache_storage *op, struct page *page)
 	struct cachefiles_cache *cache;
 	mm_segment_t old_fs;
 	struct file *file;
-	struct path path;
 	loff_t pos, eof;
 	size_t len;
 	void *data;

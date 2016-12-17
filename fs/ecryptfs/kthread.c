@@ -29,7 +29,8 @@
 
 struct ecryptfs_open_req {
 	struct file **lower_file;
-	struct path path;
+	struct dentry *lower_dentry;
+	struct vfsmount *lower_mnt;
 	struct completion done;
 	struct list_head kthread_ctl_list;
 };
@@ -73,7 +74,10 @@ static int ecryptfs_threadfn(void *ignored)
 					       struct ecryptfs_open_req,
 					       kthread_ctl_list);
 			list_del(&req->kthread_ctl_list);
-			*req->lower_file = dentry_open(&req->path,
+			dget(req->lower_dentry);
+			mntget(req->lower_mnt);
+			(*req->lower_file) = dentry_open(
+				req->lower_dentry, req->lower_mnt,
 				(O_RDWR | O_LARGEFILE), current_cred());
 			complete(&req->done);
 		}
