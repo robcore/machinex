@@ -852,7 +852,7 @@ static void clk_change_rate(struct clk *clk)
 		best_parent_rate = clk->parent->rate;
 
 	if (clk->ops->set_rate)
-		clk->ops->set_rate(clk->hw, clk->new_rate);
+		clk->ops->set_rate(clk->hw, clk->new_rate, clk->parent->rate);
 
 	if (clk->ops->recalc_rate)
 		clk->rate = clk->ops->recalc_rate(clk->hw, best_parent_rate);
