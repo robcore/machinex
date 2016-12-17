@@ -2797,7 +2797,7 @@ static void
 zoran_vm_close (struct vm_area_struct *vma)
 {
 	struct zoran_mapping *map = vma->vm_private_data;
-	struct zoran_fh *fh = map->file->private_data;
+	struct zoran_fh *fh = map->fh;
 	struct zoran *zr = fh->zr;
 	int i;
 
@@ -2924,7 +2924,7 @@ zoran_mmap (struct file           *file,
 		res = -ENOMEM;
 		goto mmap_unlock_and_return;
 	}
-	map->file = file;
+	map->fh = fh;
 	map->count = 1;
 
 	vma->vm_ops = &zoran_vm_ops;
