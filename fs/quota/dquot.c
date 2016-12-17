@@ -8,7 +8,7 @@
  * on the Melbourne quota system as used on BSD derived systems. The internal
  * implementation is based on one of the several variants of the LINUX
  * inode-subsystem with added complexity of the diskquota system.
- * 
+ *
  * Author:	Marco van Wieringen <mvw@planets.elm.net>
  *
  * Fixes:   Dmitry Gorodchanin <pgmdsg@ibi.com>, 11 Feb 96
@@ -50,7 +50,7 @@
  *		Added journalled quota support, fix lock inversion problems
  *		Jan Kara, <jack@suse.cz>, 2003,2004
  *
- * (C) Copyright 1994 - 1997 Marco van Wieringen 
+ * (C) Copyright 1994 - 1997 Marco van Wieringen
  */
 
 #include <linux/errno.h>
@@ -197,7 +197,7 @@ static struct quota_format_type *find_quota_format(int id)
 		int qm;
 
 		spin_unlock(&dq_list_lock);
-		
+
 		for (qm = 0; module_names[qm].qm_fmt_id &&
 			     module_names[qm].qm_fmt_id != id; qm++)
 			;
@@ -603,12 +603,14 @@ out:
 }
 EXPORT_SYMBOL(dquot_scan_active);
 
-int dquot_quota_sync(struct super_block *sb, int type, int wait)
+/* Write all dquot structures to quota files */
+int dquot_writeback_dquots(struct super_block *sb, int type)
 {
 	struct list_head *dirty;
 	struct dquot *dquot;
 	struct quota_info *dqopt = sb_dqopt(sb);
 	int cnt;
+	int err, ret = 0;
 
 	mutex_lock(&dqopt->dqonoff_mutex);
 	for (cnt = 0; cnt < MAXQUOTAS; cnt++) {
@@ -632,7 +634,9 @@ int dquot_quota_sync(struct super_block *sb, int type, int wait)
 			atomic_inc(&dquot->dq_count);
 			spin_unlock(&dq_list_lock);
 			dqstats_inc(DQST_LOOKUPS);
-			sb->dq_op->write_dquot(dquot);
+			err = sb->dq_op->write_dquot(dquot);
+			if (!ret && err)
+				err = ret;
 			dqput(dquot);
 			spin_lock(&dq_list_lock);
 		}
@@ -647,6 +651,21 @@ int dquot_quota_sync(struct super_block *sb, int type, int wait)
 	mutex_unlock(&dqopt->dqonoff_mutex);
 
 	if (!wait || (sb_dqopt(sb)->flags & DQUOT_QUOTA_SYS_FILE))
+	return ret;
+}
+EXPORT_SYMBOL(dquot_writeback_dquots);
+
+/* Write all dquot structures to disk and make them visible from userspace */
+int dquot_quota_sync(struct super_block *sb, int type)
+{
+	struct quota_info *dqopt = sb_dqopt(sb);
+	int cnt;
+	int ret;
+
+	ret = dquot_writeback_dquots(sb, type);
+	if (ret)
+		return ret;
+	if (dqopt->flags & DQUOT_QUOTA_SYS_FILE)
 		return 0;
 
 	/* This is not very clever (and fast) but currently I don't know about
@@ -2199,7 +2218,7 @@ out_lock:
 out_fmt:
 	put_quota_format(fmt);
 
-	return error; 
+	return error;
 }
 
 /* Reenable quotas on remount RW */
@@ -2502,7 +2521,7 @@ EXPORT_SYMBOL(dquot_set_dqblk);
 int dquot_get_dqinfo(struct super_block *sb, int type, struct if_dqinfo *ii)
 {
 	struct mem_dqinfo *mi;
-  
+
 	mutex_lock(&sb_dqopt(sb)->dqonoff_mutex);
 	if (!sb_has_quota_active(sb, type)) {
 		mutex_unlock(&sb_dqopt(sb)->dqonoff_mutex);
