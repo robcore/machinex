@@ -868,17 +868,21 @@ struct file *dentry_open(const struct path *path, int flags,
 	validate_creds(cred);
 
 	/* We must always pass in a valid mount pointer. */
-	BUG_ON(!mnt);
+	BUG_ON(!path->mnt);
 
 	error = -ENFILE;
 	f = get_empty_filp();
-	if (f == NULL) {
-		dput(dentry);
-		mntput(mnt);
+	if (f == NULL)
 		return ERR_PTR(error);
 	}
 
 	f->f_flags = flags;
+	f->f_path = *path;
+	path_get(&f->f_path);
+ 	error = do_dentry_open(f, NULL, cred);
+ 	if (!error) {
+ 		error = open_check_o_direct(f);
+
 	return __dentry_open(dentry, mnt, f, NULL, cred);
 }
 EXPORT_SYMBOL(dentry_open);

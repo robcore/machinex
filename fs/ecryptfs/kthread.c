@@ -136,28 +136,22 @@ int ecryptfs_privileged_open(struct file **lower_file,
 	int flags = O_LARGEFILE;
 	int rc = 0;
 
-+	init_completion(&req.done);
-+	req.lower_file = lower_file;
-+	req.path.dentry = lower_dentry;
-+	req.path.mnt = lower_mnt;
+	init_completion(&req.done);
+	req.lower_file = lower_file;
+	req.path.dentry = lower_dentry;
+	req.path.mnt = lower_mnt;
 
 	/* Corresponding dput() and mntput() are done when the
 	 * lower file is fput() when all eCryptfs files for the inode are
 	 * released. */
-	dget(lower_dentry);
-	mntget(lower_mnt);
 	flags |= IS_RDONLY(lower_dentry->d_inode) ? O_RDONLY : O_RDWR;
-	(*lower_file) = dentry_open(lower_dentry, lower_mnt, flags, cred);
+	(*lower_file) = dentry_open(&req.path, flags, cred);
 	if (!IS_ERR(*lower_file))
 		goto out;
 	if (flags & O_RDONLY) {
 		rc = PTR_ERR((*lower_file));
 		goto out;
 	}
-	init_completion(&req.done);
-	req.lower_file = lower_file;
-	req.lower_dentry = lower_dentry;
-	req.lower_mnt = lower_mnt;
 	mutex_lock(&ecryptfs_kthread_ctl.mux);
 	if (ecryptfs_kthread_ctl.flags & ECRYPTFS_KTHREAD_ZOMBIE) {
 		rc = -EIO;
