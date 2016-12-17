@@ -228,7 +228,7 @@ static int __tty_buffer_request_room(struct tty_struct *tty, size_t size)
 
 /**
  *	tty_buffer_request_room		-	grow tty buffer if needed
- *	@port: tty port structure
+ *	@tty: tty structure
  *	@size: size desired
  *
  *	Make at least size bytes of linear space available for the tty

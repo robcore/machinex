@@ -521,7 +521,6 @@ void jsm_input(struct jsm_channel *ch)
 {
 	struct jsm_board *bd;
 	struct tty_struct *tp;
-	struct tty_port *port;
 	u32 rmask;
 	u16 head;
 	u16 tail;
@@ -537,8 +536,7 @@ void jsm_input(struct jsm_channel *ch)
 	if (!ch)
 		return;
 
-	port = &ch->uart_port.state->port;
-	tp = port->tty;
+	tp = ch->uart_port.state->port.tty;
 
 	bd = ch->ch_bd;
 	if(!bd)
@@ -601,7 +599,7 @@ void jsm_input(struct jsm_channel *ch)
 		return;
 	}
 
-	len = tty_buffer_request_room(port, data_len);
+	len = tty_buffer_request_room(tp, data_len);
 	n = len;
 
 	/*

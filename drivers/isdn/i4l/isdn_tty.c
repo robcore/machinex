@@ -63,7 +63,6 @@ char *isdn_tty_revision = "$Revision: 1.1.2.3 $";
 static int
 isdn_tty_try_read(modem_info *info, struct sk_buff *skb)
 {
-	struct tty_port *port = &info->port;
 	int c;
 	int len;
 	struct tty_struct *tty;
@@ -2324,7 +2323,6 @@ void
 isdn_tty_at_cout(char *msg, modem_info *info)
 {
 	struct tty_struct *tty;
-	struct tty_port *port = &info->port;
 	atemu *m = &info->emu;
 	char *p;
 	char c;

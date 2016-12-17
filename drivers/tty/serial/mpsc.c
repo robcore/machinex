@@ -937,8 +937,7 @@ static int serial_polled;
 static int mpsc_rx_intr(struct mpsc_port_info *pi)
 {
 	struct mpsc_rx_desc *rxre;
-	struct tty_port *port = &pi->port.state->port;
-	struct tty_struct *tty = port->tty;
+	struct tty_struct *tty = pi->port.state->port.tty;
 	u32	cmdstat, bytes_in, i;
 	int	rc = 0;
 	u8	*bp;
@@ -969,7 +968,8 @@ static int mpsc_rx_intr(struct mpsc_port_info *pi)
 		}
 #endif
 		/* Following use of tty struct directly is deprecated */
-		if (tty_buffer_request_room(port, bytes_in) < bytes_in) {
+		if (unlikely(tty_buffer_request_room(tty, bytes_in)
+					< bytes_in)) {
 			if (tty->low_latency)
 				tty_flip_buffer_push(tty);
 			/*
