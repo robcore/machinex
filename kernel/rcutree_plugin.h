@@ -1556,14 +1556,6 @@ static void rcu_prepare_for_idle(int cpu)
 {
 }
 
-/*
- * Don't bother keeping a running count of the number of RCU callbacks
- * posted because CONFIG_RCU_FAST_NO_HZ=n.
- */
-static void rcu_idle_count_callbacks_posted(void)
-{
-}
-
 #else /* #if !defined(CONFIG_RCU_FAST_NO_HZ) */
 
 /*
