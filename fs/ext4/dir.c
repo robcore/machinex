@@ -332,7 +332,7 @@ loff_t ext4_dir_llseek(struct file *file, loff_t offset, int origin)
 
 	if (likely(dx_dir))
 		return generic_file_llseek_size(file, offset, origin,
-						    htree_max, htree_max);
+						    htree_max);
 	else
 		return ext4_llseek(file, offset, origin);
 }
