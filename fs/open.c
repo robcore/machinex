@@ -859,11 +859,7 @@ struct file *nameidata_to_filp(struct nameidata *nd)
 	return filp;
 }
 
-/*
- * dentry_open() will have done dput(dentry) and mntput(mnt) if it returns an
- * error.
- */
-struct file *dentry_open(struct dentry *dentry, struct vfsmount *mnt, int flags,
+struct file *dentry_open(const struct path *path, int flags,
 			 const struct cred *cred)
 {
 	int error;
