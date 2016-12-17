@@ -891,7 +891,6 @@ int cachefiles_write_page(struct fscache_storage *op, struct page *page)
 	struct cachefiles_cache *cache;
 	mm_segment_t old_fs;
 	struct file *file;
-	struct path path;
 	loff_t pos, eof;
 	size_t len;
 	void *data;
@@ -926,9 +925,10 @@ int cachefiles_write_page(struct fscache_storage *op, struct page *page)
 
 	/* write the page to the backing filesystem and let it store it in its
 	 * own time */
-	path.mnt = cache->mnt;
-	path.dentry = object->backer;
-	file = dentry_open(&path, O_RDWR | O_LARGEFILE, cache->cache_cred);
+	dget(object->backer);
+	mntget(cache->mnt);
+	file = dentry_open(object->backer, cache->mnt, O_RDWR | O_LARGEFILE,
+			   cache->cache_cred);
 	if (IS_ERR(file)) {
 		ret = PTR_ERR(file);
 		goto error_2;

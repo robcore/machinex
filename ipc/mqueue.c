@@ -603,8 +603,8 @@ static int mq_attr_ok(struct ipc_namespace *ipc_ns, struct mq_attr *attr)
 /*
  * Invoked when creating a new queue via sys_mq_open
  */
-static struct file *do_create(struct ipc_namespace *ipc_ns, struct inode *dir,
-			struct path *path, int oflag, umode_t mode,
+static struct file *do_create(struct ipc_namespace *ipc_ns, struct dentry *dir,
+			struct dentry *dentry, int oflag, umode_t mode,
 			struct mq_attr *attr)
 {
 	const struct cred *cred = current_cred();
@@ -695,49 +695,52 @@ SYSCALL_DEFINE4(mq_open, const char __user *, u_name, int, oflag, umode_t, mode,
 	if (fd < 0)
 		goto out_putname;
 
-	error = 0;
-	mutex_lock(&root->d_inode->i_mutex);
-	path.dentry = lookup_one_len(name, root, strlen(name));
-	if (IS_ERR(path.dentry)) {
-		error = PTR_ERR(path.dentry);
+	mutex_lock(&ipc_ns->mq_mnt->mnt_root->d_inode->i_mutex);
+	dentry = lookup_one_len(name, ipc_ns->mq_mnt->mnt_root, strlen(name));
+	if (IS_ERR(dentry)) {
+		error = PTR_ERR(dentry);
 		goto out_putfd;
 	}
-	path.mnt = mntget(ipc_ns->mq_mnt);
+	mntget(ipc_ns->mq_mnt);
 
 	if (oflag & O_CREAT) {
-		if (path.dentry->d_inode) {	/* entry already exists */
-			audit_inode(name, path.dentry);
+		if (dentry->d_inode) {	/* entry already exists */
+			audit_inode(name, dentry);
 			if (oflag & O_EXCL) {
 				error = -EEXIST;
 				goto out;
 			}
-			filp = do_open(&path, oflag);
+			filp = do_open(ipc_ns, dentry, oflag);
 		} else {
-			filp = do_create(ipc_ns, root->d_inode,
-						&path, oflag, mode,
+			filp = do_create(ipc_ns, ipc_ns->mq_mnt->mnt_root,
+						dentry, oflag, mode,
 						u_attr ? &attr : NULL);
 		}
 	} else {
-		if (!path.dentry->d_inode) {
+		if (!dentry->d_inode) {
 			error = -ENOENT;
 			goto out;
 		}
-		audit_inode(name, path.dentry);
-		filp = do_open(&path, oflag);
+		audit_inode(name, dentry);
+		filp = do_open(ipc_ns, dentry, oflag);
 	}
 
-	if (!IS_ERR(filp))
-		fd_install(fd, filp);
-	else
+	if (IS_ERR(filp)) {
 		error = PTR_ERR(filp);
-out:
-	path_put(&path);
-out_putfd:
-	if (error) {
-		put_unused_fd(fd);
-		fd = error;
+		goto out_putfd;
 	}
-	mutex_unlock(&root->d_inode->i_mutex);
+
+	fd_install(fd, filp);
+	goto out_upsem;
+
+out:
+	dput(dentry);
+	mntput(ipc_ns->mq_mnt);
+out_putfd:
+	put_unused_fd(fd);
+	fd = error;
+out_upsem:
+	mutex_unlock(&ipc_ns->mq_mnt->mnt_root->d_inode->i_mutex);
 out_putname:
 	putname(name);
 	return fd;
