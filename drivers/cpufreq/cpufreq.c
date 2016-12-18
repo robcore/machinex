@@ -108,7 +108,6 @@ void unlock_policy_rwsem_##mode(int cpu)				\
 	BUG_ON(policy_cpu == -1);					\
 	up_##mode(&per_cpu(cpu_policy_rwsem, policy_cpu));		\
 }
-EXPORT_SYMBOL_GPL(have_governor_per_policy);
 
 unlock_policy_rwsem(read, cpu);
 unlock_policy_rwsem(write, cpu);
@@ -199,9 +198,6 @@ EXPORT_SYMBOL_GPL(get_cpu_idle_time);
 
 struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
 {
-	if (have_governor_per_policy())
-		return policy->kobj;
-	else
 		return cpufreq_global_kobject;
 }
 EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
