@@ -32,6 +32,10 @@
 #define ADM1_CRCI_GSBI6_RX_SEL         0x800
 #define ADM1_CRCI_GSBI6_TX_SEL         0x400
 
+#define MSM_ENABLE_UART_CLOCK 13
+#define MSM_DISABLE_UART_CLOCK 14
+#define MSM_GET_UART_CLOCK_STATUS 15
+
 enum msm_hsl_regs {
 	UARTDM_MR1,
 	UARTDM_MR2,
@@ -58,6 +62,14 @@ enum msm_hsl_regs {
 
 #define UARTDM_MR1_ADDR 0x0
 #define UARTDM_MR2_ADDR 0x4
+
+/* TRANSFER_CONTROL Register for UARTDM Core v1.4 */
+#define UARTDM_RX_TRANS_CTRL_ADDR      0xcc
+
+/* TRANSFER_CONTROL Register bits */
+#define RX_STALE_AUTO_RE_EN		0x1
+#define RX_TRANS_AUTO_RE_ACTIVATE	0x2
+#define RX_DMRX_CYCLIC_EN		0x4
 
 /* write only register */
 #define UARTDM_CSR_ADDR    0x8
