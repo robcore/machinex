@@ -57,9 +57,6 @@
 #include <linux/wakelock.h>
 #include <linux/debugfs.h>
 #include <linux/gpio.h>
-#include <linux/of.h>
-#include <linux/of_device.h>
-#include <linux/of_gpio.h>
 #include <asm/atomic.h>
 #include <asm/irq.h>
 
@@ -72,16 +69,6 @@
 static int hs_serial_debug_mask = 0;
 module_param_named(debug_mask, hs_serial_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-/*
- * There are 3 different kind of UART Core available on MSM.
- * High Speed UART (i.e. Legacy HSUART), GSBI based HSUART
- * and BSLP based HSUART.
- */
-enum uart_core_type {
-	LEGACY_HSUART,
-	GSBI_HSUART,
-	BLSP_HSUART,
-};
 
 enum flush_reason {
 	FLUSH_NONE,
@@ -196,13 +183,6 @@ struct msm_hs_port {
 	struct workqueue_struct *hsuart_wq; /* hsuart workqueue */
 	struct mutex clk_mutex; /* mutex to guard against clock off/clock on */
 	bool tty_flush_receive;
-	enum uart_core_type uart_type;
-	u32 bam_handle;
-	resource_size_t bam_mem;
-	int bam_irq;
-	unsigned char __iomem *bam_base;
-	unsigned int bam_tx_ep_pipe_index;
-	unsigned int bam_rx_ep_pipe_index;
 	bool rx_discard_flush_issued;
 	enum uart_func_mode func_mode;
 	bool is_shutdown;
@@ -215,8 +195,6 @@ struct msm_hs_port {
 #define UARTDM_RX_BUF_SIZE 512
 #define RETRY_TIMEOUT 5
 #define UARTDM_NR 256
-#define BAM_PIPE_MIN 0
-#define BAM_PIPE_MAX 11
 #define RX_FLUSH_COMPLETE_TIMEOUT 300 /* In jiffies */
 
 static struct dentry *debug_base;
@@ -356,10 +334,7 @@ static inline int is_gsbi_uart(struct msm_hs_port *msm_uport)
 	/* assume gsbi uart if gsbi resource found in pdata */
 	return ((msm_uport->mapped_gsbi != NULL));
 }
-static unsigned int is_blsp_uart(struct msm_hs_port *msm_uport)
-{
-	return (msm_uport->uart_type == BLSP_HSUART);
-}
+
 static inline unsigned int msm_hs_read(struct uart_port *uport,
 				       unsigned int offset)
 {
@@ -2380,6 +2355,24 @@ static int uartdm_init_port(struct uart_port *uport)
 	struct msm_hs_tx *tx = &msm_uport->tx;
 	struct msm_hs_rx *rx = &msm_uport->rx;
 
+	/* Allocate the command pointer. Needs to be 64 bit aligned */
+	tx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
+	if (!tx->command_ptr)
+		return -ENOMEM;
+
+	tx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
+	if (!tx->command_ptr_ptr) {
+		ret = -ENOMEM;
+		goto free_tx_command_ptr;
+	}
+
+	tx->mapped_cmd_ptr = dma_map_single(uport->dev, tx->command_ptr,
+					    sizeof(dmov_box), DMA_TO_DEVICE);
+	tx->mapped_cmd_ptr_ptr = dma_map_single(uport->dev,
+						tx->command_ptr_ptr,
+						sizeof(u32), DMA_TO_DEVICE);
+	tx->xfer.cmdptr = DMOV_CMD_ADDR(tx->mapped_cmd_ptr_ptr);
+
 	init_waitqueue_head(&rx->wait);
 	init_waitqueue_head(&tx->wait);
 	wake_lock_init(&rx->wake_lock, WAKE_LOCK_SUSPEND, "msm_serial_hs_rx");
@@ -2406,38 +2399,12 @@ static int uartdm_init_port(struct uart_port *uport)
 		goto free_pool;
 	}
 
-	/* Set up Uart Receive */
-	msm_hs_write(uport, UARTDM_RFWR_ADDR, 0);
-
-	if (is_blsp_uart(msm_uport))
-		return ret;
-
-	/* Allocate the command pointer. Needs to be 64 bit aligned */
-	tx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
-	if (!tx->command_ptr) {
-		return -ENOMEM;
-		goto free_rx_buffer;
-	}
-
-	tx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
-	if (!tx->command_ptr_ptr) {
-		ret = -ENOMEM;
-		goto free_tx_command_ptr;
-	}
-
-	tx->mapped_cmd_ptr = dma_map_single(uport->dev, tx->command_ptr,
-					sizeof(dmov_box), DMA_TO_DEVICE);
-	tx->mapped_cmd_ptr_ptr = dma_map_single(uport->dev,
-						tx->command_ptr_ptr,
-						sizeof(u32), DMA_TO_DEVICE);
-	tx->xfer.cmdptr = DMOV_CMD_ADDR(tx->mapped_cmd_ptr_ptr);
-
 	/* Allocate the command pointer. Needs to be 64 bit aligned */
 	rx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
 	if (!rx->command_ptr) {
 		pr_err("%s(): cannot allocate rx->command_ptr", __func__);
 		ret = -ENOMEM;
-		goto free_tx_command_ptr_ptr;
+		goto free_rx_buffer;
 	}
 
 	rx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
@@ -2451,6 +2418,9 @@ static int uartdm_init_port(struct uart_port *uport)
 					 (msm_uport->rx_buf_size >> 4);
 
 	rx->command_ptr->dst_row_addr = rx->rbuffer;
+
+	/* Set up Uart Receive */
+	msm_hs_write(uport, UARTDM_RFWR_ADDR, 0);
 
 	rx->xfer.complete_func = msm_hs_dmov_rx_callback;
 	rx->xfer.exec_func = msm_hs_dmov_rx_exec_callback;
@@ -2472,20 +2442,12 @@ static int uartdm_init_port(struct uart_port *uport)
 					    sizeof(u32), DMA_TO_DEVICE);
 	rx->xfer.cmdptr = DMOV_CMD_ADDR(rx->cmdptr_dmaaddr);
 
+	INIT_DELAYED_WORK(&rx->flip_insert_work, flip_insert_work);
+
 	return ret;
 
 free_rx_command_ptr:
 	kfree(rx->command_ptr);
-
-free_tx_command_ptr_ptr:
-	kfree(msm_uport->tx.command_ptr_ptr);
-	dma_unmap_single(uport->dev, msm_uport->tx.mapped_cmd_ptr_ptr,
-			sizeof(u32), DMA_TO_DEVICE);
-	dma_unmap_single(uport->dev, msm_uport->tx.mapped_cmd_ptr,
-			sizeof(dmov_box), DMA_TO_DEVICE);
-
-free_tx_command_ptr:
-	kfree(msm_uport->tx.command_ptr);
 
 free_rx_buffer:
 	dma_pool_free(msm_uport->rx.pool, msm_uport->rx.buffer,
@@ -2499,92 +2461,15 @@ exit_tasket_init:
 	wake_lock_destroy(&msm_uport->dma_wake_lock);
 	tasklet_kill(&msm_uport->tx.tlet);
 	tasklet_kill(&msm_uport->rx.tlet);
+	dma_unmap_single(uport->dev, msm_uport->tx.mapped_cmd_ptr_ptr,
+			sizeof(u32), DMA_TO_DEVICE);
+	dma_unmap_single(uport->dev, msm_uport->tx.mapped_cmd_ptr,
+			sizeof(dmov_box), DMA_TO_DEVICE);
+	kfree(msm_uport->tx.command_ptr_ptr);
+
+free_tx_command_ptr:
+	kfree(msm_uport->tx.command_ptr);
 	return ret;
-}
-
-struct msm_serial_hs_platform_data
-	*msm_hs_dt_to_pdata(struct platform_device *pdev)
-{
-	struct device_node *node = pdev->dev.of_node;
-	struct msm_serial_hs_platform_data *pdata;
-	int rx_to_inject, ret;
-
-	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata) {
-		pr_err("unable to allocate memory for platform data\n");
-		return ERR_PTR(-ENOMEM);
-	}
-
-	/* UART TX GPIO */
-	pdata->uart_tx_gpio = of_get_named_gpio(node,
-					"qcom,tx-gpio", 0);
-	if (pdata->uart_tx_gpio < 0)
-		pr_debug("uart_tx_gpio is not available\n");
-
-	/* UART RX GPIO */
-	pdata->uart_rx_gpio = of_get_named_gpio(node,
-					"qcom,rx-gpio", 0);
-	if (pdata->uart_rx_gpio < 0)
-		pr_debug("uart_rx_gpio is not available\n");
-
-	/* UART CTS GPIO */
-	pdata->uart_cts_gpio = of_get_named_gpio(node,
-					"qcom,cts-gpio", 0);
-	if (pdata->uart_cts_gpio < 0)
-		pr_debug("uart_cts_gpio is not available\n");
-
-	/* UART RFR GPIO */
-	pdata->uart_rfr_gpio = of_get_named_gpio(node,
-					"qcom,rfr-gpio", 0);
-	if (pdata->uart_rfr_gpio < 0)
-		pr_debug("uart_rfr_gpio is not available\n");
-
-	pdata->inject_rx_on_wakeup = of_property_read_bool(node,
-				"qcom,inject-rx-on-wakeup");
-
-	if (pdata->inject_rx_on_wakeup) {
-		ret = of_property_read_u32(node, "qcom,rx-char-to-inject",
-						&rx_to_inject);
-		if (ret < 0) {
-			pr_err("Error: Rx_char_to_inject not specified.\n");
-			return ERR_PTR(ret);
-		}
-		pdata->rx_to_inject = (char)rx_to_inject;
-	}
-
-	ret = of_property_read_u32(node, "qcom,bam-tx-ep-pipe-index",
-				&pdata->bam_tx_ep_pipe_index);
-	if (ret < 0) {
-		pr_err("Error: Getting UART BAM TX EP Pipe Index.\n");
-		return ERR_PTR(ret);
-	}
-
-	if (!(pdata->bam_tx_ep_pipe_index >= BAM_PIPE_MIN &&
-		pdata->bam_tx_ep_pipe_index <= BAM_PIPE_MAX)) {
-		pr_err("Error: Invalid UART BAM TX EP Pipe Index.\n");
-		return ERR_PTR(-EINVAL);
-	}
-
-	ret = of_property_read_u32(node, "qcom,bam-rx-ep-pipe-index",
-					&pdata->bam_rx_ep_pipe_index);
-	if (ret < 0) {
-		pr_err("Error: Getting UART BAM RX EP Pipe Index.\n");
-		return ERR_PTR(ret);
-	}
-
-	if (!(pdata->bam_rx_ep_pipe_index >= BAM_PIPE_MIN &&
-		pdata->bam_rx_ep_pipe_index <= BAM_PIPE_MAX)) {
-		pr_err("Error: Invalid UART BAM RX EP Pipe Index.\n");
-		return ERR_PTR(-EINVAL);
-	}
-
-	pr_debug("tx_ep_pipe_index:%d rx_ep_pipe_index:%d\n"
-		"tx_gpio:%d rx_gpio:%d rfr_gpio:%d cts_gpio:%d",
-		pdata->bam_tx_ep_pipe_index, pdata->bam_rx_ep_pipe_index,
-		pdata->uart_tx_gpio, pdata->uart_rx_gpio, pdata->uart_cts_gpio,
-		pdata->uart_rfr_gpio);
-
-	return pdata;
 }
 
 static int __devinit msm_hs_probe(struct platform_device *pdev)
@@ -2593,27 +2478,11 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	struct uart_port *uport;
 	struct msm_hs_port *msm_uport;
 	unsigned int data;
-	struct resource *core_resource;
-	struct resource *bam_resource;
 	struct resource *resource;
-	int core_irqres, bam_irqres;
 	struct msm_serial_hs_platform_data *pdata = pdev->dev.platform_data;
-	struct device_node *node = pdev->dev.of_node;
-
-	if (pdev->dev.of_node) {
-		dev_dbg(&pdev->dev, "device tree enabled\n");
-		pdata = msm_hs_dt_to_pdata(pdev);
-		if (IS_ERR(pdata))
-			return PTR_ERR(pdata);
-
-		of_property_read_u32(node, "cell-index",
-					&pdev->id);
-
-		pdev->dev.platform_data = pdata;
-	}
 
 	if (pdev->id < 0 || pdev->id >= UARTDM_NR) {
-		pr_err("Invalid plaform device ID = %d\n", pdev->id);
+		printk(KERN_ERR "Invalid plaform device ID = %d\n", pdev->id);
 		return -EINVAL;
 	}
 
@@ -2622,75 +2491,19 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 	uport->dev = &pdev->dev;
 
-	if (pdev->dev.of_node)
-		msm_uport->uart_type = BLSP_HSUART;
+	resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (unlikely(!resource))
+		return -ENXIO;
+	uport->mapbase = resource->start;  /* virtual address */
 
-	/* Get required resources for BAM HSUART */
-	if (is_blsp_uart(msm_uport)) {
-		core_resource = platform_get_resource_byname(pdev,
-					IORESOURCE_MEM, "core_mem");
-		bam_resource = platform_get_resource_byname(pdev,
-					IORESOURCE_MEM, "bam_mem");
-		core_irqres = platform_get_irq_byname(pdev, "core_irq");
-		bam_irqres = platform_get_irq_byname(pdev, "bam_irq");
+	uport->membase = ioremap(uport->mapbase, PAGE_SIZE);
+	if (unlikely(!uport->membase))
+		return -ENOMEM;
 
-		if (!core_resource) {
-			pr_err("Invalid core HSUART Resources.\n");
-			return -ENXIO;
-		}
+	uport->irq = platform_get_irq(pdev, 0);
+	if (unlikely((int)uport->irq < 0))
+		return -ENXIO;
 
-		if (!bam_resource) {
-			pr_err("Invalid BAM HSUART Resources.\n");
-			return -ENXIO;
-		}
-
-		if (!core_irqres) {
-			pr_err("Invalid core irqres Resources.\n");
-			return -ENXIO;
-		}
-		if (!bam_irqres) {
-			pr_err("Invalid bam irqres Resources.\n");
-			return -ENXIO;
-		}
-
-		uport->mapbase = core_resource->start;
-
-		uport->membase = ioremap(uport->mapbase,
-					resource_size(core_resource));
-		if (unlikely(!uport->membase)) {
-			pr_err("UART Resource ioremap Failed.\n");
-			return -ENOMEM;
-		}
-		msm_uport->bam_mem = bam_resource->start;
-		msm_uport->bam_base = ioremap(msm_uport->bam_mem,
-					resource_size(bam_resource));
-		if (unlikely(!msm_uport->bam_base)) {
-			pr_err("UART BAM Resource ioremap Failed.\n");
-			iounmap(uport->membase);
-			return -ENOMEM;
-		}
-
-		uport->irq = core_irqres;
-		msm_uport->bam_irq = bam_irqres;
-
-	} else {
-
-		resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		if (unlikely(!resource))
-			return -ENXIO;
-		uport->mapbase = resource->start;
-		uport->membase = ioremap(uport->mapbase,
-					resource_size(resource));
-		if (unlikely(!uport->membase))
-			return -ENOMEM;
-
-		uport->irq = platform_get_irq(pdev, 0);
-		if (unlikely((int)uport->irq < 0)) {
-			pr_err("UART IRQ Failed.\n");
-			iounmap(uport->membase);
-			return -ENXIO;
-		}
-	}
 	if (pdata == NULL)
 		msm_uport->wakeup.irq = -1;
 	else {
@@ -2699,41 +2512,61 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 		msm_uport->wakeup.inject_rx = pdata->inject_rx_on_wakeup;
 		msm_uport->wakeup.rx_to_inject = pdata->rx_to_inject;
 
-		if (unlikely(msm_uport->wakeup.irq < 0)) {
-			ret = -ENXIO;
-			goto unmap_memory;
-		}
+		if (unlikely(msm_uport->wakeup.irq < 0))
+			return -ENXIO;
 
-		if (is_blsp_uart(msm_uport)) {
-			msm_uport->bam_tx_ep_pipe_index =
-					pdata->bam_tx_ep_pipe_index;
-			msm_uport->bam_rx_ep_pipe_index =
-					pdata->bam_rx_ep_pipe_index;
+	}
+
+	/* Identify UART functional mode as 2-wire or 4-wire. */
+	if (pdata && pdata->config_gpio) {
+		switch (pdata->config_gpio) {
+		case 4:
+			if (gpio_is_valid(pdata->uart_tx_gpio)
+				&& gpio_is_valid(pdata->uart_rx_gpio)
+				&& gpio_is_valid(pdata->uart_cts_gpio)
+				&& gpio_is_valid(pdata->uart_rfr_gpio)) {
+					msm_uport->func_mode = UART_FOUR_WIRE;
+			} else {
+				pr_err("%s(): Wrong GPIO Number for 4-Wire.\n",
+								__func__);
+				return -EINVAL;
+			}
+			break;
+		case 2:
+			if (gpio_is_valid(pdata->uart_tx_gpio)
+				&& gpio_is_valid(pdata->uart_rx_gpio)) {
+					msm_uport->func_mode = UART_TWO_WIRE;
+			} else {
+				pr_err("%s(): Wrong GPIO Number for 2-Wire.\n",
+								__func__);
+				return -EINVAL;
+			}
+			break;
+		default:
+			pr_err("%s(): Invalid number of GPIOs.\n", __func__);
+			pdata->config_gpio = 0;
+			return -EINVAL;
 		}
 	}
 
-	if (!is_blsp_uart(msm_uport)) {
+	if (pdata && pdata->uartdm_rx_buf_size)
+		msm_uport->rx_buf_size = pdata->uartdm_rx_buf_size;
+	else
+		msm_uport->rx_buf_size = UARTDM_RX_BUF_SIZE;
 
-		resource = platform_get_resource_byname(pdev,
-					IORESOURCE_DMA, "uartdm_channels");
-		if (unlikely(!resource)) {
-			ret =  -ENXIO;
-			goto unmap_memory;
-		}
+	resource = platform_get_resource_byname(pdev, IORESOURCE_DMA,
+						"uartdm_channels");
+	if (unlikely(!resource))
+		return -ENXIO;
+	msm_uport->dma_tx_channel = resource->start;
+	msm_uport->dma_rx_channel = resource->end;
 
-		msm_uport->dma_tx_channel = resource->start;
-		msm_uport->dma_rx_channel = resource->end;
-
-		resource = platform_get_resource_byname(pdev,
-					IORESOURCE_DMA, "uartdm_crci");
-		if (unlikely(!resource)) {
-			ret = -ENXIO;
-			goto unmap_memory;
-		}
-
-		msm_uport->dma_tx_crci = resource->start;
-		msm_uport->dma_rx_crci = resource->end;
-	}
+	resource = platform_get_resource_byname(pdev, IORESOURCE_DMA,
+						"uartdm_crci");
+	if (unlikely(!resource))
+		return -ENXIO;
+	msm_uport->dma_tx_crci = resource->start;
+	msm_uport->dma_rx_crci = resource->end;
 
 	uport->iotype = UPIO_MEM;
 	uport->fifosize = 64;
@@ -2744,10 +2577,8 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	msm_uport->is_shutdown = true;
 
 	msm_uport->clk = clk_get(&pdev->dev, "core_clk");
-	if (IS_ERR(msm_uport->clk)) {
-		ret = PTR_ERR(msm_uport->clk);
-		goto unmap_memory;
-	}
+	if (IS_ERR(msm_uport->clk))
+		return PTR_ERR(msm_uport->clk);
 
 	msm_uport->pclk = clk_get(&pdev->dev, "iface_clk");
 	/*
@@ -2760,7 +2591,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	ret = clk_set_rate(msm_uport->clk, uport->uartclk);
 	if (ret) {
 		printk(KERN_WARNING "Error setting clock rate on UART\n");
-		goto unmap_memory;
+		return ret;
 	}
 
 	msm_uport->hsuart_wq = alloc_workqueue("k_hsuart",
@@ -2768,8 +2599,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	if (!msm_uport->hsuart_wq) {
 		pr_err("%s(): Unable to create workqueue hsuart_wq\n",
 								__func__);
-		ret =  -ENOMEM;
-		goto unmap_memory;
+		return -ENOMEM;
 	}
 
 	INIT_WORK(&msm_uport->clock_off_w, hsuart_clock_off_work);
@@ -2781,7 +2611,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	ret = uartdm_init_port(uport);
 	if (unlikely(ret)) {
 		msm_hs_clock_unvote(msm_uport);
-		goto unmap_memory;
+		return ret;
 	}
 
 	/* configure the CR Protection to Enable */
@@ -2813,23 +2643,14 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_clock.attr);
 	if (unlikely(ret))
-		goto unmap_memory;
+		return ret;
 
 	msm_serial_debugfs_init(msm_uport, pdev->id);
 
 	uport->line = pdev->id;
 	if (pdata != NULL && pdata->userid && pdata->userid <= UARTDM_NR)
 		uport->line = pdata->userid;
-	ret = uart_add_one_port(&msm_hs_driver, uport);
-	if (!ret)
-		return ret;
-
-unmap_memory:
-	iounmap(uport->membase);
-	if (is_blsp_uart(msm_uport))
-		iounmap(msm_uport->bam_base);
-
-	return ret;
+	return uart_add_one_port(&msm_hs_driver, uport);
 }
 
 static int __init msm_serial_hs_init(void)
@@ -3021,12 +2842,6 @@ static const struct dev_pm_ops msm_hs_dev_pm_ops = {
 	.runtime_suspend = msm_hs_runtime_suspend,
 	.runtime_resume  = msm_hs_runtime_resume,
 	.runtime_idle    = msm_hs_runtime_idle,
-
-};
-
-static struct of_device_id msm_hs_match_table[] = {
-	{ .compatible = "qcom,msm-hsuart-v14" },
-	{}
 };
 #endif
 
@@ -3037,7 +2852,6 @@ static struct platform_driver msm_serial_hs_platform_driver = {
 		.name = "msm_serial_hs",
 		/*Bluesleep manages uart clk control*/
 		/*.pm   = &msm_hs_dev_pm_ops,*/
-		/*.of_match_table = msm_hs_match_table,*/
 	},
 };
 

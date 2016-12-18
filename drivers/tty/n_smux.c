@@ -70,7 +70,7 @@ static int disable_ipc_logging =1; //suck it
 int smux_byte_loopback;
 module_param_named(byte_loopback, smux_byte_loopback,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-int smux_simulate_wakeup_delay = 0; //eat my dick
+int smux_simulate_wakeup_delay = 1;
 module_param_named(simulate_wakeup_delay, smux_simulate_wakeup_delay,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -3904,8 +3904,12 @@ static int __init smux_init(void)
 		SMUX_ERR("%s: lch_init failed\n", __func__);
 		return ret;
 	}
-	
-	disable_ipc_logging = 1;
+
+	log_ctx = ipc_log_context_create(1, "smux");
+	if (!log_ctx) {
+		pr_debug("unable to create log context for nsmux\n");
+		disable_ipc_logging = 1;
+	}
 
 	return 0;
 }
