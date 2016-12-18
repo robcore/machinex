@@ -57,9 +57,9 @@ if [[ $USEPRV = "n" ]]; then
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		fi
 	else
-		echo -n "What is its name? [ENTER]: "
+		echo -n "Name? (Mark-Number-P-N?) [ENTER]: "
 		read OVNAME
-		OUTFOLDER=$OVNAME
+		OUTFOLDER=machinex-$OVNAME
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	fi;
 else
