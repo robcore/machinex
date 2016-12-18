@@ -16,9 +16,21 @@
 #include <linux/quotaops.h>
 #include <linux/backing-dev.h>
 #include "internal.h"
+#ifdef CONFIG_ASYNC_FSYNC
+#include <linux/statfs.h>
+#endif
 
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
 			SYNC_FILE_RANGE_WAIT_AFTER)
+
+#ifdef CONFIG_ASYNC_FSYNC
+#define FLAG_ASYNC_FSYNC        0x1
+static struct workqueue_struct *fsync_workqueue = NULL;
+struct fsync_work {
+	struct work_struct work;
+	char pathname[256];
+};
+#endif
 
 /*
  * Do the filesystem syncing work. For simple filesystems
@@ -258,13 +270,52 @@ static int do_fsync(unsigned int fd, int datasync)
 {
 	struct file *file;
 	int ret = -EBADF;
-
 	int fput_needed;
+#ifdef CONFIG_ASYNC_FSYNC
+	struct fsync_work *fwork;
+#endif
 
 	file = fget_light(fd, &fput_needed);
 	if (file) {
+		ktime_t fsync_t, fsync_diff;
+		char pathname[256], *path;
+		path = d_path(&(file->f_path), pathname, sizeof(pathname));
+		if (IS_ERR(path))
+			path = "(unknown)";
+#ifdef CONFIG_ASYNC_FSYNC
+		else if (async_fsync(file, fd)) {
+			if (!fsync_workqueue)
+				fsync_workqueue =
+					create_singlethread_workqueue("fsync");
+			if (!fsync_workqueue)
+				goto no_async;
+
+			if (IS_ERR(path))
+				goto no_async;
+
+			fwork = kmalloc(sizeof(*fwork), GFP_KERNEL);
+			if (fwork) {
+				strncpy(fwork->pathname, path,
+					sizeof(fwork->pathname) - 1);
+				INIT_WORK(&fwork->work, do_afsync_work);
+				queue_work(fsync_workqueue, &fwork->work);
+				fput_light(file, fput_needed);
+				return 0;
+			}
+		}
+no_async:
+#endif
+		fsync_t = ktime_get();
 		ret = vfs_fsync(file, datasync);
 		fput_light(file, fput_needed);
+		fsync_diff = ktime_sub(ktime_get(), fsync_t);
+		if (ktime_to_ms(fsync_diff) >= 5000) {
+                        pr_debug("VFS: %s pid:%d(%s)(parent:%d/%s)\
+				takes %lld ms to fsync %s.\n", __func__,
+				current->pid, current->comm,
+				current->parent->pid, current->parent->comm,
+				ktime_to_ms(fsync_diff), path);
+		}
 	}
 	return ret;
 }
