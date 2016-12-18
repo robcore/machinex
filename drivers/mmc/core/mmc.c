@@ -41,13 +41,6 @@ static const unsigned int tacc_mant[] = {
 	0,	10,	12,	13,	15,	20,	25,	30,
 	35,	40,	45,	50,	55,	60,	70,	80,
 };
-#ifdef CONFIG_ASYNC_FSYNC
-static unsigned int perf_degr;
-int emmc_perf_degr(void)
-{
-	return perf_degr;
-}
-#endif
 
 #define UNSTUFF_BITS(resp,start,size)					\
 	({								\
