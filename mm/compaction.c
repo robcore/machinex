@@ -454,6 +454,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 	unsigned long flags;
 	bool locked = false;
 	struct page *page = NULL, *valid_page = NULL;
+	struct lruvec *lruvec;
 
 	/*
 	 * Ensure that there are not too many pages isolated from the LRU
