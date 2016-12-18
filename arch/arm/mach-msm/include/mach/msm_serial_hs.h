@@ -45,8 +45,6 @@ struct msm_serial_hs_platform_data {
 	int uart_cts_gpio;
 	int uart_rfr_gpio;
 	int userid;
-	unsigned bam_tx_ep_pipe_index;
-	unsigned bam_rx_ep_pipe_index;
 	int uartdm_rx_buf_size;
 };
 
