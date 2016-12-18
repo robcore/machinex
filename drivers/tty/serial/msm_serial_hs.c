@@ -40,6 +40,7 @@
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/atomic.h>
 #include <linux/kernel.h>
 #include <linux/timer.h>
 #include <linux/clk.h>
@@ -57,6 +58,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/gpio.h>
 #include <asm/atomic.h>
 #include <asm/irq.h>
 
@@ -64,6 +66,7 @@
 #include <mach/dma.h>
 #include <mach/sps.h>
 #include <mach/msm_serial_hs.h>
+#include <mach/msm_bus.h>
 
 #include "msm_serial_hs_hwreg.h"
 #define UART_SPS_CONS_PERIPHERAL 0
@@ -211,6 +214,10 @@ struct msm_hs_port {
 	 * callback event object registered for an SPS connection end point.
 	 */
 	struct sps_event_notify notify;
+	/* bus client handler */
+	u32 bus_perf_client;
+	/* BLSP UART required BUS Scaling data */
+	struct msm_bus_scale_pdata *bus_scale_table;
 };
 
 #define MSM_UARTDM_BURST_SIZE 16   /* DM burst size (in bytes) */
@@ -220,6 +227,8 @@ struct msm_hs_port {
 #define UARTDM_NR 256
 #define BAM_PIPE_MIN 0
 #define BAM_PIPE_MAX 11
+#define BUS_SCALING 1
+#define BUS_RESET 0
 
 static struct dentry *debug_base;
 static struct msm_hs_port q_uart_port[UARTDM_NR];
@@ -295,6 +304,21 @@ static unsigned int is_blsp_uart(struct msm_hs_port *msm_uport)
 {
 	return (msm_uport->uart_type == BLSP_HSUART);
 }
+
+static void msm_hs_bus_voting(struct msm_hs_port *msm_uport, unsigned int vote)
+{
+	int ret;
+
+	if (is_blsp_uart(msm_uport) && msm_uport->bus_perf_client) {
+		pr_debug("Bus voting:%d\n", vote);
+		ret = msm_bus_scale_client_update_request(
+				msm_uport->bus_perf_client, vote);
+		if (ret)
+			pr_err("%s(): Failed for Bus voting: %d\n",
+							__func__, vote);
+	}
+}
+
 static inline unsigned int msm_hs_read(struct uart_port *uport,
 				       unsigned int offset)
 {
@@ -363,6 +387,8 @@ static int msm_serial_loopback_enable_set(void *data, u64 val)
 	unsigned long flags;
 	int ret = 0;
 
+	msm_hs_bus_voting(msm_uport, BUS_SCALING);
+
 	clk_prepare_enable(msm_uport->clk);
 	if (msm_uport->pclk)
 		clk_prepare_enable(msm_uport->pclk);
@@ -394,6 +420,7 @@ static int msm_serial_loopback_enable_set(void *data, u64 val)
 	if (msm_uport->pclk)
 		clk_disable_unprepare(msm_uport->pclk);
 
+	msm_hs_bus_voting(msm_uport, BUS_RESET);
 	return 0;
 }
 
@@ -403,6 +430,8 @@ static int msm_serial_loopback_enable_get(void *data, u64 *val)
 	struct uart_port *uport = &(msm_uport->uport);
 	unsigned long flags;
 	int ret = 0;
+
+	msm_hs_bus_voting(msm_uport, BUS_SCALING);
 
 	clk_prepare_enable(msm_uport->clk);
 	if (msm_uport->pclk)
@@ -417,6 +446,8 @@ static int msm_serial_loopback_enable_get(void *data, u64 *val)
 		clk_disable_unprepare(msm_uport->pclk);
 
 	*val = (ret & UARTDM_MR2_LOOP_MODE_BMSK) ? 1 : 0;
+
+	msm_hs_bus_voting(msm_uport, BUS_RESET);
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(loopback_enable_fops, msm_serial_loopback_enable_get,
@@ -824,6 +855,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	struct sps_pipe *sps_pipe_handle = rx->prod.pipe_handle;
 
 	mutex_lock(&msm_uport->clk_mutex);
+	msm_hs_write(uport, UARTDM_IMR_ADDR, 0);
 
 	/*
 	 * Disable Rx channel of UARTDM
@@ -916,7 +948,6 @@ static void msm_hs_set_termios(struct uart_port *uport,
 
 	uport->read_status_mask = (termios->c_cflag & CREAD);
 
-	msm_hs_write(uport, UARTDM_IMR_ADDR, 0);
 
 	/* Set Transmit software time out */
 	uart_update_timeout(uport, c_cflag, bps);
@@ -1029,6 +1060,14 @@ static void msm_hs_stop_rx_locked(struct uart_port *uport)
 	}
 	if (!is_blsp_uart(msm_uport) && msm_uport->rx.flush != FLUSH_SHUTDOWN)
 		msm_uport->rx.flush = FLUSH_STOP;
+
+	/* During uart port close, due to spurious rx stale interrupt,
+	 * the rx state machine is causing BUG_ON to be hit in
+	 * msm_hs_shutdown causing kernel panic.
+	 * Hence fixing the same by handling the rx state machine.
+	 */
+	if (is_blsp_uart(msm_uport) && msm_uport->rx.flush == FLUSH_DATA_READY)
+		msm_uport->rx.flush = FLUSH_SHUTDOWN;
 }
 
 /*  Transmit the next chunk of data */
@@ -1702,7 +1741,11 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	wake_unlock(&msm_uport->dma_wake_lock);
 
 	spin_unlock_irqrestore(&uport->lock, flags);
+
+	/* Reset PNOC Bus Scaling */
+	msm_hs_bus_voting(msm_uport, BUS_RESET);
 	mutex_unlock(&msm_uport->clk_mutex);
+
 	return 1;
 }
 
@@ -1872,6 +1915,10 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 		wake_lock(&msm_uport->dma_wake_lock);
 		disable_irq_nosync(msm_uport->wakeup.irq);
 		spin_unlock_irqrestore(&uport->lock, flags);
+
+		/* Vote for PNOC BUS Scaling */
+		msm_hs_bus_voting(msm_uport, BUS_SCALING);
+
 		ret = clk_prepare_enable(msm_uport->clk);
 		if (ret) {
 			dev_err(uport->dev, "Clock ON Failure"
@@ -1965,6 +2012,100 @@ static const char *msm_hs_type(struct uart_port *port)
 	return ("MSM HS UART");
 }
 
+/**
+ * msm_hs_unconfig_uart_gpios: Unconfigures UART GPIOs
+ * @uport: uart port
+ */
+static void msm_hs_unconfig_uart_gpios(struct uart_port *uport)
+{
+	struct platform_device *pdev = to_platform_device(uport->dev);
+	const struct msm_serial_hs_platform_data *pdata =
+					pdev->dev.platform_data;
+
+	if (pdata) {
+		if (gpio_is_valid(pdata->uart_tx_gpio))
+			gpio_free(pdata->uart_tx_gpio);
+		if (gpio_is_valid(pdata->uart_rx_gpio))
+			gpio_free(pdata->uart_rx_gpio);
+		if (gpio_is_valid(pdata->uart_cts_gpio))
+			gpio_free(pdata->uart_cts_gpio);
+		if (gpio_is_valid(pdata->uart_rfr_gpio))
+			gpio_free(pdata->uart_rfr_gpio);
+	} else {
+		pr_err("Error:Pdata is NULL.\n");
+	}
+}
+
+/**
+ * msm_hs_config_uart_gpios - Configures UART GPIOs
+ * @uport: uart port
+ */
+static int msm_hs_config_uart_gpios(struct uart_port *uport)
+{
+	struct platform_device *pdev = to_platform_device(uport->dev);
+	const struct msm_serial_hs_platform_data *pdata =
+					pdev->dev.platform_data;
+	int ret = 0;
+
+	if (pdata) {
+		if (gpio_is_valid(pdata->uart_tx_gpio)) {
+			ret = gpio_request(pdata->uart_tx_gpio,
+							"UART_TX_GPIO");
+			if (unlikely(ret)) {
+				pr_err("gpio request failed for:%d\n",
+					pdata->uart_tx_gpio);
+				goto exit_uart_config;
+			}
+		}
+
+		if (gpio_is_valid(pdata->uart_rx_gpio)) {
+			ret = gpio_request(pdata->uart_rx_gpio,
+							"UART_RX_GPIO");
+			if (unlikely(ret)) {
+				pr_err("gpio request failed for:%d\n",
+					pdata->uart_rx_gpio);
+				goto uart_tx_unconfig;
+			}
+		}
+
+		if (gpio_is_valid(pdata->uart_cts_gpio)) {
+			ret = gpio_request(pdata->uart_cts_gpio,
+							"UART_CTS_GPIO");
+			if (unlikely(ret)) {
+				pr_err("gpio request failed for:%d\n",
+					pdata->uart_cts_gpio);
+				goto uart_rx_unconfig;
+			}
+		}
+
+		if (gpio_is_valid(pdata->uart_rfr_gpio)) {
+			ret = gpio_request(pdata->uart_rfr_gpio,
+							"UART_RFR_GPIO");
+			if (unlikely(ret)) {
+				pr_err("gpio request failed for:%d\n",
+					pdata->uart_rfr_gpio);
+				goto uart_cts_unconfig;
+			}
+		}
+	} else {
+		pr_err("Pdata is NULL.\n");
+		ret = -EINVAL;
+	}
+	return ret;
+
+uart_cts_unconfig:
+	if (gpio_is_valid(pdata->uart_cts_gpio))
+		gpio_free(pdata->uart_cts_gpio);
+uart_rx_unconfig:
+	if (gpio_is_valid(pdata->uart_rx_gpio))
+		gpio_free(pdata->uart_rx_gpio);
+uart_tx_unconfig:
+	if (gpio_is_valid(pdata->uart_tx_gpio))
+		gpio_free(pdata->uart_tx_gpio);
+exit_uart_config:
+	return ret;
+}
+
 /* Called when port is opened */
 static int msm_hs_startup(struct uart_port *uport)
 {
@@ -1998,10 +2139,17 @@ static int msm_hs_startup(struct uart_port *uport)
 		return ret;
 	}
 
-	if (pdata && pdata->gpio_config)
-		if (unlikely(pdata->gpio_config(1)))
-			dev_err(uport->dev, "Cannot configure gpios\n");
-
+	if (is_blsp_uart(msm_uport)) {
+		ret = msm_hs_config_uart_gpios(uport);
+		if (ret) {
+			pr_err("Uart GPIO request failed\n");
+			goto deinit_uart_clk;
+		}
+	} else {
+		if (pdata && pdata->gpio_config)
+			if (unlikely(pdata->gpio_config(1)))
+				dev_err(uport->dev, "Cannot configure gpios\n");
+	}
 
 	/* SPS Connect for BAM endpoints */
 	if (is_blsp_uart(msm_uport)) {
@@ -2009,7 +2157,7 @@ static int msm_hs_startup(struct uart_port *uport)
 		ret = msm_hs_spsconnect_tx(uport);
 		if (ret) {
 			pr_err("msm_serial_hs: SPS connect failed for TX");
-			goto deinit_uart_clk;
+			goto unconfig_uart_gpios;
 		}
 
 		/* SPS connect for RX */
@@ -2116,6 +2264,9 @@ static int msm_hs_startup(struct uart_port *uport)
 		disable_irq(msm_uport->wakeup.irq);
 	}
 
+	/* Vote for PNOC BUS Scaling */
+	msm_hs_bus_voting(msm_uport, BUS_SCALING);
+
 	spin_lock_irqsave(&uport->lock, flags);
 
 	msm_hs_start_rx_locked(uport);
@@ -2138,6 +2289,9 @@ sps_disconnect_rx:
 sps_disconnect_tx:
 	if (is_blsp_uart(msm_uport))
 		sps_disconnect(sps_pipe_handle_tx);
+unconfig_uart_gpios:
+	if (is_blsp_uart(msm_uport))
+		msm_hs_unconfig_uart_gpios(uport);
 deinit_uart_clk:
 	clk_disable_unprepare(msm_uport->clk);
 	if (msm_uport->pclk)
@@ -2553,9 +2707,13 @@ deregister_bam:
 	return rc;
 }
 
+#define BLSP_UART_NR	12
+static int deviceid[BLSP_UART_NR] = {0};
+static atomic_t msm_serial_hs_next_id = ATOMIC_INIT(0);
+
 static int __devinit msm_hs_probe(struct platform_device *pdev)
 {
-	int ret;
+	int ret = 0, alias_num = -1;
 	struct uart_port *uport;
 	struct msm_hs_port *msm_uport;
 	struct resource *core_resource;
@@ -2563,7 +2721,6 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	struct resource *resource;
 	int core_irqres, bam_irqres;
 	struct msm_serial_hs_platform_data *pdata = pdev->dev.platform_data;
-	struct device_node *node = pdev->dev.of_node;
 
 	if (pdev->dev.of_node) {
 		dev_dbg(&pdev->dev, "device tree enabled\n");
@@ -2571,8 +2728,32 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 		if (IS_ERR(pdata))
 			return PTR_ERR(pdata);
 
-		of_property_read_u32(node, "cell-index",
-					&pdev->id);
+		if (pdev->id == -1) {
+			pdev->id = atomic_inc_return(&msm_serial_hs_next_id)-1;
+			deviceid[pdev->id] = 1;
+		}
+
+		/* Use alias from device tree if present
+		 * Alias is used as an optional property
+		 */
+		alias_num = of_alias_get_id(pdev->dev.of_node, "uart");
+		if (alias_num >= 0) {
+			/* If alias_num is between 0 and 11, check that it not
+			 * equal to previous incremented pdev-ids. If it is
+			 * equal to previous pdev.ids , fail deviceprobe.
+			 */
+			if (alias_num < BLSP_UART_NR) {
+				if (deviceid[alias_num] == 0) {
+					pdev->id = alias_num;
+				} else {
+					pr_err("alias_num=%d already used\n",
+								alias_num);
+					return -EINVAL;
+				}
+			} else {
+				pdev->id = alias_num;
+			}
+		}
 
 		pdev->dev.platform_data = pdata;
 	}
@@ -2637,6 +2818,20 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 		uport->irq = core_irqres;
 		msm_uport->bam_irq = bam_irqres;
 
+		msm_uport->bus_scale_table = msm_bus_cl_get_pdata(pdev);
+		if (!msm_uport->bus_scale_table) {
+			pr_err("BLSP UART: Bus scaling is disabled.\n");
+		} else {
+			msm_uport->bus_perf_client =
+				msm_bus_scale_register_client
+					(msm_uport->bus_scale_table);
+			if (IS_ERR(&msm_uport->bus_perf_client)) {
+				pr_err("%s(): Bus client register failed.\n",
+								__func__);
+				ret = -EINVAL;
+				goto unmap_memory;
+			}
+		}
 	} else {
 
 		resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -2666,7 +2861,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 		if (unlikely(msm_uport->wakeup.irq < 0)) {
 			ret = -ENXIO;
-			goto unmap_memory;
+			goto deregister_bus_client;
 		}
 
 		if (is_blsp_uart(msm_uport)) {
@@ -2683,7 +2878,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 					IORESOURCE_DMA, "uartdm_channels");
 		if (unlikely(!resource)) {
 			ret =  -ENXIO;
-			goto unmap_memory;
+			goto deregister_bus_client;
 		}
 
 		msm_uport->dma_tx_channel = resource->start;
@@ -2693,7 +2888,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 					IORESOURCE_DMA, "uartdm_crci");
 		if (unlikely(!resource)) {
 			ret = -ENXIO;
-			goto unmap_memory;
+			goto deregister_bus_client;
 		}
 
 		msm_uport->dma_tx_crci = resource->start;
@@ -2710,7 +2905,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	msm_uport->clk = clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(msm_uport->clk)) {
 		ret = PTR_ERR(msm_uport->clk);
-		goto unmap_memory;
+		goto deregister_bus_client;
 	}
 
 	msm_uport->pclk = clk_get(&pdev->dev, "iface_clk");
@@ -2724,7 +2919,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	ret = clk_set_rate(msm_uport->clk, uport->uartclk);
 	if (ret) {
 		printk(KERN_WARNING "Error setting clock rate on UART\n");
-		goto unmap_memory;
+		goto put_clk;
 	}
 
 	msm_uport->hsuart_wq = alloc_workqueue("k_hsuart",
@@ -2733,7 +2928,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 		pr_err("%s(): Unable to create workqueue hsuart_wq\n",
 								__func__);
 		ret =  -ENOMEM;
-		goto unmap_memory;
+		goto put_clk;
 	}
 
 	INIT_WORK(&msm_uport->clock_off_w, hsuart_clock_off_work);
@@ -2751,9 +2946,11 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 		ret = msm_hs_sps_init(msm_uport);
 		if (unlikely(ret)) {
 			pr_err("SPS Initialization failed ! err=%d", ret);
-			goto unmap_memory;
+			goto destroy_mutex;
 		}
 	}
+
+	msm_hs_bus_voting(msm_uport, BUS_SCALING);
 
 	clk_prepare_enable(msm_uport->clk);
 	if (msm_uport->pclk)
@@ -2761,18 +2958,12 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 	ret = uartdm_init_port(uport);
 	if (unlikely(ret)) {
-		clk_disable_unprepare(msm_uport->clk);
-		if (msm_uport->pclk)
-			clk_disable_unprepare(msm_uport->pclk);
-		goto unmap_memory;
+		goto err_clock;
 	}
 
 	/* configure the CR Protection to Enable */
 	msm_hs_write(uport, UARTDM_CR_ADDR, CR_PROTECTION_EN);
 
-	clk_disable_unprepare(msm_uport->clk);
-	if (msm_uport->pclk)
-		clk_disable_unprepare(msm_uport->pclk);
 
 	/*
 	 * Enable Command register protection before going ahead as this hw
@@ -2789,7 +2980,7 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 
 	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_clock.attr);
 	if (unlikely(ret))
-		goto unmap_memory;
+		goto err_clock;
 
 	msm_serial_debugfs_init(msm_uport, pdev->id);
 
@@ -2797,9 +2988,35 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	if (pdata != NULL && pdata->userid && pdata->userid <= UARTDM_NR)
 		uport->line = pdata->userid;
 	ret = uart_add_one_port(&msm_hs_driver, uport);
-	if (!ret)
+	if (!ret) {
+		msm_hs_bus_voting(msm_uport, BUS_RESET);
+		clk_disable_unprepare(msm_uport->clk);
+		if (msm_uport->pclk)
+			clk_disable_unprepare(msm_uport->pclk);
 		return ret;
+	}
 
+err_clock:
+
+	msm_hs_bus_voting(msm_uport, BUS_RESET);
+	clk_disable_unprepare(msm_uport->clk);
+	if (msm_uport->pclk)
+		clk_disable_unprepare(msm_uport->pclk);
+
+destroy_mutex:
+	mutex_destroy(&msm_uport->clk_mutex);
+	destroy_workqueue(msm_uport->hsuart_wq);
+
+put_clk:
+	if (msm_uport->pclk)
+		clk_put(msm_uport->pclk);
+
+	if (msm_uport->clk)
+		clk_put(msm_uport->clk);
+
+deregister_bus_client:
+	if (is_blsp_uart(msm_uport))
+		msm_bus_scale_unregister_client(msm_uport->bus_perf_client);
 unmap_memory:
 	iounmap(uport->membase);
 	if (is_blsp_uart(msm_uport))
@@ -2903,6 +3120,10 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	 * Hence mb() requires here.
 	 */
 	mb();
+
+	/* Reset PNOC Bus Scaling */
+	msm_hs_bus_voting(msm_uport, BUS_RESET);
+
 	if (msm_uport->clk_state != MSM_HS_CLK_OFF) {
 		/* to balance clk_state */
 		clk_disable_unprepare(msm_uport->clk);
@@ -2923,9 +3144,13 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	if (use_low_power_wakeup(msm_uport))
 		free_irq(msm_uport->wakeup.irq, msm_uport);
 
-	if (pdata && pdata->gpio_config)
-		if (pdata->gpio_config(0))
-			dev_err(uport->dev, "GPIO config error\n");
+	if (is_blsp_uart(msm_uport)) {
+		msm_hs_unconfig_uart_gpios(uport);
+	} else {
+		if (pdata && pdata->gpio_config)
+			if (pdata->gpio_config(0))
+				dev_err(uport->dev, "GPIO config error\n");
+	}
 }
 
 static void __exit msm_serial_hs_exit(void)
