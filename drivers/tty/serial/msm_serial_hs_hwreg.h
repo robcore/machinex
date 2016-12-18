@@ -1,19 +1,19 @@
 /* drivers/serial/msm_serial_hs_hwreg.h
  *
  * Copyright (c) 2007-2009, 2012, The Linux Foundation. All rights reserved.
- * 
+ *
  * All source code in this file is licensed under the following license
  * except where indicated.
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 2 as published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, you can find it at http://www.fsf.org
  */
@@ -81,11 +81,22 @@ enum msm_hs_regs {
 	UART_DM_TXFS,
 	UART_DM_RXFS,
 	UART_DM_RX_TRANS_CTRL,
+	UART_DM_BCR,
 	UART_DM_LAST,
 };
 
 #define UARTDM_MR1_ADDR 0x0
 #define UARTDM_MR2_ADDR 0x4
+
+/*
+ * UARTDM Core v1.4 STALE_IRQ_EMPTY bit defination
+ * Stale interrupt will fire if bit is set when RX-FIFO is empty
+ */
+#define UARTDM_BCR_TX_BREAK_DISABLE	0x1
+#define UARTDM_BCR_STALE_IRQ_EMPTY	0x2
+#define UARTDM_BCR_RX_DMRX_LOW_EN	0x4
+#define UARTDM_BCR_RX_STAL_IRQ_DMRX_EQL	0x10
+#define UARTDM_BCR_RX_DMRX_1BYTE_RES_EN	0x20
 
 /* TRANSFER_CONTROL Register for UARTDM Core v1.4 */
 #define UARTDM_RX_TRANS_CTRL_ADDR      0xcc
