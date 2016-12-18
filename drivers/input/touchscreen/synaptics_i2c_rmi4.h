@@ -228,7 +228,7 @@ struct synaptics_rmi4_data {
 			unsigned char *data, unsigned short length);
 	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable);
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
-#ifdef CONFIG_FB
+#if 0
 	struct notifier_block fb_notif;
 #else
 #ifdef CONFIG_POWERSUSPEND
