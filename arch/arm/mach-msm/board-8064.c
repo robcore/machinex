@@ -1780,11 +1780,17 @@ static struct mdm_vddmin_resource mdm_vddmin_rscs = {
 	.drive_strength = 8,
 	.mdm2ap_vddmin_gpio = 80,
 };
-
+/* let's match the gpiomux's 8ma, that could be a problem...
 static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
+}; */
+
+static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct mdm_platform_data mdm_platform_data = {
