@@ -40,6 +40,7 @@
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/atomic.h>
 #include <linux/kernel.h>
 #include <linux/timer.h>
 #include <linux/delay.h>
@@ -68,7 +69,7 @@
 
 #include "msm_serial_hs_hwreg.h"
 
-static int hs_serial_debug_mask = 1;
+static int hs_serial_debug_mask = 0;
 module_param_named(debug_mask, hs_serial_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 /*
@@ -246,11 +247,13 @@ struct uart_port * msm_hs_get_port_by_id(int num)
 static int msm_hs_clock_vote(struct msm_hs_port *msm_uport)
 {
 	int ret = 0;
+	mutex_lock(&msm_uport->clk_mutex);
 	if (atomic_inc_return(&msm_uport->clk_count) == 1) {
 		ret = clk_prepare_enable(msm_uport->clk);
 		if (ret) {
 			dev_err(msm_uport->uport.dev,
 			"%s: could not turn on clk %d \n", __func__, ret);
+			mutex_unlock(&msm_uport->clk_mutex);
 			return ret;
 		}
 		if (msm_uport->pclk) {
@@ -260,12 +263,14 @@ static int msm_hs_clock_vote(struct msm_hs_port *msm_uport)
 				dev_err(msm_uport->uport.dev,
 					"%s: could not turn on pclk %d \n",
 								__func__, ret);
+				mutex_unlock(&msm_uport->clk_mutex);
 				return ret;
 			}
 		}
 
 		msm_uport->clk_state = MSM_HS_CLK_ON;
 	}
+	mutex_unlock(&msm_uport->clk_mutex);
 	return ret;
 }
 
@@ -282,6 +287,7 @@ static void msm_hs_clock_unvote(struct msm_hs_port *msm_uport)
 		return;
 	}
 
+	mutex_lock(&msm_uport->clk_mutex);
 	ret = atomic_dec_return(&msm_uport->clk_count);
 	if (ret == 0) {
 		clk_disable_unprepare(msm_uport->clk);
@@ -289,6 +295,7 @@ static void msm_hs_clock_unvote(struct msm_hs_port *msm_uport)
 			clk_disable_unprepare(msm_uport->pclk);
 		msm_uport->clk_state = MSM_HS_CLK_OFF;
 	}
+	mutex_unlock(&msm_uport->clk_mutex);
 }
 
 static ssize_t show_clock(struct device *dev, struct device_attribute *attr,
@@ -1785,6 +1792,11 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	mutex_lock(&msm_uport->clk_mutex);
 	spin_lock_irqsave(&uport->lock, flags);
 
+	if (msm_uport->clk_state == MSM_HS_CLK_OFF) {
+		spin_unlock_irqrestore(&uport->lock, flags);
+		mutex_unlock(&msm_uport->clk_mutex);
+		return 1;
+	}
 	/* Cancel if tx tty buffer is not empty, dma is in flight,
 	 * or tx fifo is not empty */
 	if (msm_uport->clk_state != MSM_HS_CLK_REQUEST_OFF ||

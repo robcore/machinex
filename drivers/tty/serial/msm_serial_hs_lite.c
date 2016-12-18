@@ -104,6 +104,7 @@ struct msm_hsl_port {
 	int			tx_timeout;
 	short			cons_flags;
 	struct msm_hsl_wakeup	wakeup;
+	struct mutex		clk_mutex;
 };
 
 #define UARTDM_VERSION_11_13	0
@@ -160,7 +161,7 @@ static const unsigned int regmap[][UARTDM_LAST] = {
 
 static struct of_device_id msm_hsl_match_table[] = {
 	{	.compatible = "qcom,msm-lsuart-v14",
-		.data = (void *)UARTDM_VERSION_14
+		.data = (void *)UARTDM_VERSION_14,
 	},
 	{}
 };
@@ -944,14 +945,14 @@ static void msm_hsl_set_termios(struct uart_port *port,
 				struct ktermios *termios,
 				struct ktermios *old)
 {
-	unsigned long flags;
 	unsigned int baud, mr;
 	unsigned int vid;
+	struct msm_hsl_port *msm_hsl_port = UART_TO_MSM(port);
 
 	if (!termios->c_cflag)
 		return;
 
-	spin_lock_irqsave(&port->lock, flags);
+	mutex_lock(&msm_hsl_port->clk_mutex);
 
 	/* calculate and set baud rate */
 	baud = uart_get_baud_rate(port, termios, old, 300, 460800);
@@ -1017,7 +1018,7 @@ static void msm_hsl_set_termios(struct uart_port *port,
 
 	uart_update_timeout(port, termios->c_cflag, baud);
 
-	spin_unlock_irqrestore(&port->lock, flags);
+	mutex_unlock(&msm_hsl_port->clk_mutex);
 }
 
 static const char *msm_hsl_type(struct uart_port *port)
@@ -1324,11 +1325,6 @@ static void msm_hsl_console_write(struct console *co, const char *s,
 
 	BUG_ON(co->index < 0 || co->index >= UART_NR);
 
-#ifdef CONFIG_MACH_APQ8064_MAKO
-	if (mako_console_stopped())
-		return;
-#endif
-
 	port = get_port_from_line(co->index);
 	msm_hsl_port = UART_TO_MSM(port);
 	vid = msm_hsl_port->ver_id;
@@ -1620,6 +1616,7 @@ static int __devinit msm_serial_hsl_probe(struct platform_device *pdev)
 		pr_err("%s():Can't create console attribute\n", __func__);
 #endif
 	msm_hsl_debugfs_init(msm_hsl_port, get_line(pdev));
+	mutex_init(&msm_hsl_port->clk_mutex);
 
 	/* Temporarily increase the refcount on the GSBI clock to avoid a race
 	 * condition with the earlyprintk handover mechanism.
@@ -1646,6 +1643,7 @@ static int __devexit msm_serial_hsl_remove(struct platform_device *pdev)
 
 	device_set_wakeup_capable(&pdev->dev, 0);
 	platform_set_drvdata(pdev, NULL);
+	mutex_destroy(&msm_hsl_port->clk_mutex);
 	uart_remove_one_port(&msm_hsl_uart_driver, port);
 
 	clk_put(msm_hsl_port->pclk);
