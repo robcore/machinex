@@ -101,7 +101,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
-	SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
+	#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
