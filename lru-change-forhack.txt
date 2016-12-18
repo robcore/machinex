@@ -1,0 +1,2 @@
+		del_page_from_lru_list(page, lruvec, page_lru(page));
+		del_page_from_lru_list(zone, page, page_lru(page));
