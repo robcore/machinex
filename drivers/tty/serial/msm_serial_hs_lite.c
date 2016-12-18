@@ -48,7 +48,6 @@
 #include <asm/byteorder.h>
 #include <mach/board.h>
 #include <mach/msm_serial_hs_lite.h>
-#include <mach/msm_bus.h>
 #include <asm/mach-types.h>
 #include "msm_serial_hs_hwreg.h"
 #if defined(CONFIG_SEC_PRODUCT_8960)
@@ -105,7 +104,6 @@ struct msm_hsl_port {
 	int			tx_timeout;
 	short			cons_flags;
 	struct msm_hsl_wakeup	wakeup;
-	struct mutex		clk_mutex;
 };
 
 #define UARTDM_VERSION_11_13	0
@@ -899,12 +897,6 @@ static int msm_hsl_startup(struct uart_port *port)
 	else
 		rfr_level = port->fifosize;
 
-	/*
-	 * Use rfr_level value in Words to program
-	 * MR1 register for UARTDM Core.
-	 */
-	rfr_level = (rfr_level / 4);
-
 	spin_lock_irqsave(&port->lock, flags);
 
 	vid = msm_hsl_port->ver_id;
@@ -952,14 +944,14 @@ static void msm_hsl_set_termios(struct uart_port *port,
 				struct ktermios *termios,
 				struct ktermios *old)
 {
+	unsigned long flags;
 	unsigned int baud, mr;
 	unsigned int vid;
-	struct msm_hsl_port *msm_hsl_port = UART_TO_MSM(port);
 
 	if (!termios->c_cflag)
 		return;
 
-	mutex_lock(&msm_hsl_port->clk_mutex);
+	spin_lock_irqsave(&port->lock, flags);
 
 	/* calculate and set baud rate */
 	baud = uart_get_baud_rate(port, termios, old, 300, 460800);
@@ -1025,7 +1017,7 @@ static void msm_hsl_set_termios(struct uart_port *port,
 
 	uart_update_timeout(port, termios->c_cflag, baud);
 
-	mutex_unlock(&msm_hsl_port->clk_mutex);
+	spin_unlock_irqrestore(&port->lock, flags);
 }
 
 static const char *msm_hsl_type(struct uart_port *port)
@@ -1623,7 +1615,6 @@ static int __devinit msm_serial_hsl_probe(struct platform_device *pdev)
 		pr_err("%s():Can't create console attribute\n", __func__);
 #endif
 	msm_hsl_debugfs_init(msm_hsl_port, get_line(pdev));
-	mutex_init(&msm_hsl_port->clk_mutex);
 
 	/* Temporarily increase the refcount on the GSBI clock to avoid a race
 	 * condition with the earlyprintk handover mechanism.
@@ -1650,7 +1641,6 @@ static int __devexit msm_serial_hsl_remove(struct platform_device *pdev)
 
 	device_set_wakeup_capable(&pdev->dev, 0);
 	platform_set_drvdata(pdev, NULL);
-	mutex_destroy(&msm_hsl_port->clk_mutex);
 	uart_remove_one_port(&msm_hsl_uart_driver, port);
 
 	clk_put(msm_hsl_port->pclk);

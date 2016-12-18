@@ -64,7 +64,7 @@ static int smux_debug_mask = MSM_SMUX_DEBUG | MSM_SMUX_POWER_INFO;
 module_param_named(debug_mask, smux_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
-static int disable_ipc_logging =1; //suck it
+static int disable_ipc_logging;
 
 /* Simulated wakeup used for testing */
 int smux_byte_loopback;
@@ -3907,7 +3907,6 @@ static int __init smux_init(void)
 
 	log_ctx = ipc_log_context_create(1, "smux");
 	if (!log_ctx) {
-		pr_debug("unable to create log context for nsmux\n");
 		disable_ipc_logging = 1;
 	}
 

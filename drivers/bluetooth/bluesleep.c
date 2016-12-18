@@ -46,7 +46,6 @@
 #include <linux/termios.h>
 #include <linux/wakelock.h>
 #include <mach/gpio.h>
-#include <linux/gpio.h>
 #include <linux/serial_core.h>
 #include <mach/msm_serial_hs.h>
 

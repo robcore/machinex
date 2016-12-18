@@ -1310,8 +1310,7 @@ handle_newline:
 			tty->canon_data++;
 			spin_unlock_irqrestore(&tty->read_lock, flags);
 			kill_fasync(&tty->fasync, SIGIO, POLL_IN);
-			if (waitqueue_active(&tty->read_wait))
-				wake_up_interruptible(&tty->read_wait);
+			wake_up_interruptible(&tty->read_wait);
 			return;
 		}
 	}
@@ -1434,8 +1433,7 @@ static void n_tty_receive_buf(struct tty_struct *tty, const unsigned char *cp,
 	if ((!tty->icanon && (tty->read_cnt >= tty->minimum_to_wake)) ||
 		L_EXTPROC(tty)) {
 		kill_fasync(&tty->fasync, SIGIO, POLL_IN);
-		if (waitqueue_active(&tty->read_wait))
-			wake_up_interruptible(&tty->read_wait);
+		wake_up_interruptible(&tty->read_wait);
 	}
 
 	/*
@@ -1876,15 +1874,19 @@ do_it_again:
 					if (tty_put_user(tty, c, b++)) {
 						retval = -EFAULT;
 						b--;
+						spin_lock_irqsave(&tty->read_lock, flags);
 						break;
 					}
 					nr--;
 				}
 				if (eol) {
 					tty_audit_push(tty);
+					spin_lock_irqsave(&tty->read_lock, flags);
 					break;
 				}
+				spin_lock_irqsave(&tty->read_lock, flags);
 			}
+			spin_unlock_irqrestore(&tty->read_lock, flags);
 			if (retval)
 				break;
 		} else {
