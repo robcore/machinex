@@ -64,13 +64,13 @@ static int smux_debug_mask = MSM_SMUX_DEBUG | MSM_SMUX_POWER_INFO;
 module_param_named(debug_mask, smux_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
-static int disable_ipc_logging;
+static int disable_ipc_logging =1; //suck it
 
 /* Simulated wakeup used for testing */
 int smux_byte_loopback;
 module_param_named(byte_loopback, smux_byte_loopback,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-int smux_simulate_wakeup_delay = 1;
+int smux_simulate_wakeup_delay = 0; //eat my dick
 module_param_named(simulate_wakeup_delay, smux_simulate_wakeup_delay,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
