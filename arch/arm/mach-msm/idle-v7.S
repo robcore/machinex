@@ -25,7 +25,6 @@
 #ifdef CONFIG_ARCH_MSM_KRAIT
 #define SCM_SVC_BOOT 0x1
 #define SCM_CMD_TERMINATE_PC 0x2
-#define SCM_CMD_CORE_HOTPLUGGED 0x10
 #endif
 
 ENTRY(msm_arch_idle)
@@ -100,7 +99,7 @@ skip_hp_debug1:
 #ifdef CONFIG_ARCH_MSM_KRAIT
 	ldr	r0, =SCM_SVC_BOOT
 	ldr	r1, =SCM_CMD_TERMINATE_PC
-	ldr	r2, =SCM_CMD_CORE_HOTPLUGGED
+	mov	r2, #0
 	bl	scm_call_atomic1
 #else
 	mrc     p15, 0, r3, c1, c0, 0    /* read current CR    */
