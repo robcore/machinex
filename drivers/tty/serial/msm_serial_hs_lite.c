@@ -48,6 +48,7 @@
 #include <asm/byteorder.h>
 #include <mach/board.h>
 #include <mach/msm_serial_hs_lite.h>
+#include <mach/msm_bus.h>
 #include <asm/mach-types.h>
 #include "msm_serial_hs_hwreg.h"
 #if defined(CONFIG_SEC_PRODUCT_8960)

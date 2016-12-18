@@ -3904,8 +3904,8 @@ static int __init smux_init(void)
 		SMUX_ERR("%s: lch_init failed\n", __func__);
 		return ret;
 	}
-		disable_ipc_logging = 1;
-	}
+	
+	disable_ipc_logging = 1;
 
 	return 0;
 }
