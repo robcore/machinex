@@ -81,21 +81,24 @@ static inline int tty_put_user(struct tty_struct *tty, unsigned char x,
 }
 
 /**
- *	n_tty_set__room	-	receive space
+ *	n_tty_set_room	-	receive space
  *	@tty: terminal
  *
- *	Called by the driver to find out how much data it is
- *	permitted to feed to the line discipline without any being lost
- *	and thus to manage flow control. Not serialized. Answers for the
- *	"instant".
+ *	Sets tty->receive_room to reflect the currently available space
+ *	in the input buffer, and re-schedules the flip buffer work if space
+ *	just became available.
+ *
+ *	Locks: Concurrent update is protected with read_lock
  */
 
 static void n_tty_set_room(struct tty_struct *tty)
 {
 	int left;
 	int old_left;
+	unsigned long flags;
 
-	/* tty->read_cnt is not read locked ? */
+	spin_lock_irqsave(&tty->read_lock, flags);
+
 	if (I_PARMRK(tty)) {
 		/* Multiply read_cnt by 3, since each byte might take up to
 		 * three times as many spaces when PARMRK is set (depending on
@@ -114,6 +117,8 @@ static void n_tty_set_room(struct tty_struct *tty)
 		left = tty->icanon && !tty->canon_data;
 	old_left = tty->receive_room;
 	tty->receive_room = left;
+
+	spin_unlock_irqrestore(&tty->read_lock, flags);
 
 	/* Did this open up the receive buffer? We may need to flip */
 	if (left && !old_left)
@@ -1305,7 +1310,8 @@ handle_newline:
 			tty->canon_data++;
 			spin_unlock_irqrestore(&tty->read_lock, flags);
 			kill_fasync(&tty->fasync, SIGIO, POLL_IN);
-			wake_up_interruptible(&tty->read_wait);
+			if (waitqueue_active(&tty->read_wait))
+				wake_up_interruptible(&tty->read_wait);
 			return;
 		}
 	}
@@ -1428,7 +1434,8 @@ static void n_tty_receive_buf(struct tty_struct *tty, const unsigned char *cp,
 	if ((!tty->icanon && (tty->read_cnt >= tty->minimum_to_wake)) ||
 		L_EXTPROC(tty)) {
 		kill_fasync(&tty->fasync, SIGIO, POLL_IN);
-		wake_up_interruptible(&tty->read_wait);
+		if (waitqueue_active(&tty->read_wait))
+			wake_up_interruptible(&tty->read_wait);
 	}
 
 	/*
@@ -1826,7 +1833,6 @@ do_it_again:
 				retval = -ERESTARTSYS;
 				break;
 			}
-			/* FIXME: does n_tty_set_room need locking ? */
 			n_tty_set_room(tty);
 			timeout = schedule_timeout(timeout);
 			BUG_ON(!tty->read_buf);
@@ -1846,13 +1852,13 @@ do_it_again:
 
 		if (tty->icanon && !L_EXTPROC(tty)) {
 			/* N.B. avoid overrun if nr == 0 */
-			spin_lock_irqsave(&tty->read_lock, flags);
 			while (nr && tty->read_cnt) {
 				int eol;
 
 				eol = test_and_clear_bit(tty->read_tail,
 						tty->read_flags);
 				c = tty->read_buf[tty->read_tail];
+				spin_lock_irqsave(&tty->read_lock, flags);
 				tty->read_tail = ((tty->read_tail+1) &
 						  (N_TTY_BUF_SIZE-1));
 				tty->read_cnt--;
@@ -1870,19 +1876,15 @@ do_it_again:
 					if (tty_put_user(tty, c, b++)) {
 						retval = -EFAULT;
 						b--;
-						spin_lock_irqsave(&tty->read_lock, flags);
 						break;
 					}
 					nr--;
 				}
 				if (eol) {
 					tty_audit_push(tty);
-					spin_lock_irqsave(&tty->read_lock, flags);
 					break;
 				}
-				spin_lock_irqsave(&tty->read_lock, flags);
 			}
-			spin_unlock_irqrestore(&tty->read_lock, flags);
 			if (retval)
 				break;
 		} else {
