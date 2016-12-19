@@ -1378,7 +1378,9 @@ static void pnfs_ld_handle_read_error(struct nfs_read_data *data)
 		clear_bit(NFS_INO_LAYOUTCOMMIT, &NFS_I(hdr->inode)->flags);
 		pnfs_return_layout(hdr->inode);
 	}
-	data->task.tk_status = pnfs_read_done_resend_to_mds(hdr->inode, &hdr->pages);
+	if (!test_and_set_bit(NFS_IOHDR_REDO, &hdr->flags))
+		data->task.tk_status = pnfs_read_done_resend_to_mds(hdr->inode,
+								&hdr->pages);
 }
 
 /*
@@ -1393,7 +1395,6 @@ void pnfs_ld_read_done(struct nfs_read_data *data)
 		hdr->mds_ops->rpc_call_done(&data->task, data);
 	} else
 		pnfs_ld_handle_read_error(data);
-	put_lseg(hdr->lseg);
 	hdr->mds_ops->rpc_release(data);
 }
 EXPORT_SYMBOL_GPL(pnfs_ld_read_done);
@@ -1404,11 +1405,11 @@ pnfs_read_through_mds(struct nfs_pageio_descriptor *desc,
 {
 	struct nfs_pgio_header *hdr = data->header;
 
-	list_splice_tail_init(&hdr->pages, &desc->pg_list);
-	if (hdr->req && list_empty(&hdr->req->wb_list))
-		nfs_list_add_request(hdr->req, &desc->pg_list);
-	nfs_pageio_reset_read_mds(desc);
-	desc->pg_recoalesce = 1;
+	if (!test_and_set_bit(NFS_IOHDR_REDO, &hdr->flags)) {
+		list_splice_tail_init(&hdr->pages, &desc->pg_list);
+		nfs_pageio_reset_read_mds(desc);
+		desc->pg_recoalesce = 1;
+	}
 	nfs_readdata_release(data);
 }
 
@@ -1426,18 +1427,13 @@ pnfs_try_to_read_data(struct nfs_read_data *rdata,
 	enum pnfs_try_status trypnfs;
 
 	hdr->mds_ops = call_ops;
-	hdr->lseg = get_lseg(lseg);
 
 	dprintk("%s: Reading ino:%lu %u@%llu\n",
 		__func__, inode->i_ino, rdata->args.count, rdata->args.offset);
 
 	trypnfs = nfss->pnfs_curr_ld->read_pagelist(rdata);
-	if (trypnfs == PNFS_NOT_ATTEMPTED) {
-		put_lseg(hdr->lseg);
-		hdr->lseg = NULL;
-	} else {
+	if (trypnfs != PNFS_NOT_ATTEMPTED)
 		nfs_inc_stats(inode, NFSIOS_PNFS_READ);
-	}
 	dprintk("%s End (trypnfs:%d)\n", __func__, trypnfs);
 	return trypnfs;
 }
@@ -1453,7 +1449,7 @@ pnfs_do_multiple_reads(struct nfs_pageio_descriptor *desc, struct list_head *hea
 	while (!list_empty(head)) {
 		enum pnfs_try_status trypnfs;
 
-		data = list_entry(head->next, struct nfs_read_data, list);
+		data = list_first_entry(head, struct nfs_read_data, list);
 		list_del_init(&data->list);
 
 		trypnfs = pnfs_try_to_read_data(data, call_ops, lseg);
@@ -1463,20 +1459,41 @@ pnfs_do_multiple_reads(struct nfs_pageio_descriptor *desc, struct list_head *hea
 	put_lseg(lseg);
 }
 
+static void pnfs_readhdr_free(struct nfs_pgio_header *hdr)
+{
+	put_lseg(hdr->lseg);
+	nfs_readhdr_free(hdr);
+}
+
 int
 pnfs_generic_pg_readpages(struct nfs_pageio_descriptor *desc)
 {
-	LIST_HEAD(head);
+	struct nfs_read_header *rhdr;
+	struct nfs_pgio_header *hdr;
 	int ret;
 
-	ret = nfs_generic_pagein(desc, &head);
-	if (ret != 0) {
+	rhdr = nfs_readhdr_alloc();
+	if (!rhdr) {
+		nfs_async_read_error(&desc->pg_list);
+		ret = -ENOMEM;
 		put_lseg(desc->pg_lseg);
 		desc->pg_lseg = NULL;
 		return ret;
 	}
-	pnfs_do_multiple_reads(desc, &head);
-	return 0;
+	hdr = &rhdr->header;
+	nfs_pgheader_init(desc, hdr, pnfs_readhdr_free);
+	hdr->lseg = get_lseg(desc->pg_lseg);
+	atomic_inc(&hdr->refcnt);
+	ret = nfs_generic_pagein(desc, hdr);
+	if (ret != 0) {
+		put_lseg(desc->pg_lseg);
+		desc->pg_lseg = NULL;
+		set_bit(NFS_IOHDR_REDO, &hdr->flags);
+	} else
+		pnfs_do_multiple_reads(desc, &hdr->rpc_list);
+	if (atomic_dec_and_test(&hdr->refcnt))
+		nfs_read_completion(hdr);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(pnfs_generic_pg_readpages);
 
