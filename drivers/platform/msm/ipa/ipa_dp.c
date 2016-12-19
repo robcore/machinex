@@ -16,6 +16,8 @@
 #include <linux/netdevice.h>
 #include "ipa_i.h"
 
+#ifdef list_next_entry
+#undef list_next_entry
 #define list_next_entry(pos, member) \
 	list_entry(pos->member.next, typeof(*pos), member)
 #define IPA_LAST_DESC_COOKIE 0xFFFF
@@ -1084,4 +1086,4 @@ void ipa_cleanup_rx(void)
 	}
 	spin_unlock_irqrestore(&sys->spinlock, irq_flags);
 }
-
+#endif
