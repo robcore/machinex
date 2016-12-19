@@ -6,7 +6,7 @@
  *  OS-independent nfs remote procedure call functions
  *
  *  Tuned by Alan Cox <A.Cox@swansea.ac.uk> for >3K buffers
- *  so at last we can have decent(ish) throughput off a 
+ *  so at last we can have decent(ish) throughput off a
  *  Sun server.
  *
  *  Coding optimized and cleaned up by Florian La Roche.
@@ -119,7 +119,7 @@ nfs_proc_setattr(struct dentry *dentry, struct nfs_fattr *fattr,
 		 struct iattr *sattr)
 {
 	struct inode *inode = dentry->d_inode;
-	struct nfs_sattrargs	arg = { 
+	struct nfs_sattrargs	arg = {
 		.fh	= NFS_FH(inode),
 		.sattr	= sattr
 	};
@@ -296,7 +296,7 @@ out:
 	dprintk("NFS reply mknod: %d\n", status);
 	return status;
 }
-  
+
 static int
 nfs_proc_remove(struct inode *dir, struct qstr *name)
 {
@@ -305,7 +305,7 @@ nfs_proc_remove(struct inode *dir, struct qstr *name)
 		.name.len = name->len,
 		.name.name = name->name,
 	};
-	struct rpc_message msg = { 
+	struct rpc_message msg = {
 		.rpc_proc = &nfs_procedures[NFSPROC_REMOVE],
 		.rpc_argp = &arg,
 	};
@@ -604,9 +604,11 @@ nfs_proc_pathconf(struct nfs_server *server, struct nfs_fh *fhandle,
 
 static int nfs_read_done(struct rpc_task *task, struct nfs_read_data *data)
 {
-	nfs_invalidate_atime(data->inode);
+	struct inode *inode = data->header->inode;
+
+	nfs_invalidate_atime(inode);
 	if (task->tk_status >= 0) {
-		nfs_refresh_inode(data->inode, data->res.fattr);
+		nfs_refresh_inode(inode, data->res.fattr);
 		/* Emulate the eof flag, which isn't normally needed in NFSv2
 		 * as it is guaranteed to always return the file attributes
 		 */
@@ -628,8 +630,10 @@ static void nfs_proc_read_rpc_prepare(struct rpc_task *task, struct nfs_read_dat
 
 static int nfs_write_done(struct rpc_task *task, struct nfs_write_data *data)
 {
+	struct inode *inode = data->header->inode;
+
 	if (task->tk_status >= 0)
-		nfs_post_op_update_inode_force_wcc(data->inode, data->res.fattr);
+		nfs_post_op_update_inode_force_wcc(inode, data->res.fattr);
 	return 0;
 }
 
