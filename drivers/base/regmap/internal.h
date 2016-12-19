@@ -79,9 +79,6 @@ struct regmap {
 
 	struct reg_default *patch;
 	int patch_regs;
-
-	/* if set, converts bulk rw to single rw */
-	bool use_single_rw;
 };
 
 struct regcache_ops {

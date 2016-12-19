@@ -210,7 +210,6 @@ struct regmap *regmap_init(struct device *dev,
 	map->format.pad_bytes = config->pad_bits / 8;
 	map->format.val_bytes = DIV_ROUND_UP(config->val_bits, 8);
 	map->format.buf_size += map->format.pad_bytes;
-	map->use_single_rw = config->use_single_rw;
 	map->dev = dev;
 	map->bus = bus;
 	map->max_register = config->max_register;
@@ -302,9 +301,6 @@ struct regmap *regmap_init(struct device *dev,
 		map->format.parse_val = regmap_parse_32;
 		break;
 	}
-
-	if (map->format.format_write)
-		map->use_single_rw = true;
 
 	if (!map->format.format_write &&
 	    !(map->format.format_reg && map->format.format_val))
@@ -642,22 +638,7 @@ int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 		for (i = 0; i < val_count * val_bytes; i += val_bytes)
 			map->format.parse_val(wval + i);
 	}
-	/*
-	 * Some devices does not support bulk write, for
-	 * them we have a series of single write operations.
-	 */
-	if (map->use_single_rw) {
-		for (i = 0; i < val_count; i++) {
-			ret = regmap_raw_write(map,
-						reg + (i * map->reg_stride),
-						val + (i * val_bytes),
-						val_bytes);
-			if (ret != 0)
-				return ret;
-		}
-	} else {
-		ret = _regmap_raw_write(map, reg, wval, val_bytes * val_count);
-	}
+	ret = _regmap_raw_write(map, reg, wval, val_bytes * val_count);
 
 	if (val_bytes != 1)
 		kfree(wval);
@@ -719,9 +700,6 @@ static int _regmap_read(struct regmap *map, unsigned int reg,
 		*val = map->format.parse_val(map->work_buf);
 		trace_regmap_reg_read(map->dev, reg, *val);
 	}
-
-	if (ret == 0 && !map->cache_bypass)
-		regcache_write(map, reg, *val);
 
 	return ret;
 }
@@ -818,25 +796,9 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 		return -EINVAL;
 
 	if (vol || map->cache_type == REGCACHE_NONE) {
-		/*
-		 * Some devices does not support bulk read, for
-		 * them we have a series of single read operations.
-		 */
-		if (map->use_single_rw) {
-			for (i = 0; i < val_count; i++) {
-				ret = regmap_raw_read(map,
-						reg + (i * map->reg_stride),
-						val + (i * val_bytes),
-						val_bytes);
-				if (ret != 0)
-					return ret;
-			}
-		} else {
-			ret = regmap_raw_read(map, reg, val,
-					      val_bytes * val_count);
-			if (ret != 0)
-				return ret;
-		}
+		ret = regmap_raw_read(map, reg, val, val_bytes * val_count);
+		if (ret != 0)
+			return ret;
 
 		for (i = 0; i < val_count * val_bytes; i += val_bytes)
 			map->format.parse_val(val + i);
