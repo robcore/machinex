@@ -71,7 +71,7 @@ static uint32_t oom_count = 0;
 #define OOM_DEPTH 7
 #endif
 
-static uint32_t lowmem_debug_level = 0;
+static uint32_t lowmem_debug_level = 1;
 static int lowmem_adj[6] = {
 	0,
 	1,
@@ -154,10 +154,11 @@ int can_use_cma_pages(gfp_t gfp_mask)
 	return can_use;
 }
 
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
 static struct task_struct *pick_next_from_adj_tree(struct task_struct *task);
 static struct task_struct *pick_first_task(void);
 static struct task_struct *pick_last_task(void);
-static int lmk_rbtree = 0;
+#endif
 
 static DEFINE_MUTEX(scan_mutex);
 
@@ -207,7 +208,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				global_page_state(NR_FREE_CMA_PAGES);
 #endif
 	int other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
-	int lmk_rbtree;
 #if defined(CONFIG_ZSWAP)
 	other_file -= total_swapcache_pages;
 #endif /* CONFIG_ZSWAP */
@@ -248,242 +248,125 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #endif
 
 	rcu_read_lock();
-	if (lmk_rbtree) {
-		for (tsk = pick_first_task();
-			tsk != pick_last_task();
-			tsk = pick_next_from_adj_tree(tsk)) {
-
-			struct task_struct *p;
-			int oom_score_adj;
-#ifdef ENHANCED_LMK_ROUTINE
-			int is_exist_oom_task = 0;
-#endif
-#ifdef CONFIG_SAMP_HOTNESS
-			int hotness_adj = 0;
-#endif
-			if (tsk->flags & PF_KTHREAD)
-				continue;
-
-			p = find_lock_task_mm(tsk);
-			if (!p)
-				continue;
-
-			if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
-				time_before_eq(jiffies, lowmem_deathpending_timeout)) {
-					task_unlock(p);
-					rcu_read_unlock();
-					/* give the system time to free up the memory */
-					msleep_interruptible(20);
-					mutex_unlock(&scan_mutex);
-					return 0;
-			}
-
-			oom_score_adj = p->signal->oom_score_adj;
-			if (oom_score_adj < min_score_adj) {
-				task_unlock(p);
-				continue;
-			}
-			tasksize = get_mm_rss(p->mm);
-#if defined(CONFIG_ZSWAP)
-			if (atomic_read(&zswap_stored_pages)) {
-				lowmem_print(3, "shown tasksize : %d\n", tasksize);
-				tasksize += atomic_read(&zswap_pool_pages) * get_mm_counter(p->mm, MM_SWAPENTS)
-					/ atomic_read(&zswap_stored_pages);
-				lowmem_print(3, "real tasksize : %d\n", tasksize);
-			}
-#endif
-
-#ifdef CONFIG_SAMP_HOTNESS
-			hotness_adj = p->signal->hotness_adj;
-#endif
-			task_unlock(p);
-			if (tasksize <= 0)
-				continue;
-
-#ifdef ENHANCED_LMK_ROUTINE
-			if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH) {
-				for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
-					if (!selected[i]) {
-						is_exist_oom_task = 1;
-						max_selected_oom_idx = i;
-						break;
-					}
-				}
-			} else if (selected_oom_score_adj[max_selected_oom_idx] < oom_score_adj ||
-				(selected_oom_score_adj[max_selected_oom_idx] == oom_score_adj &&
-				selected_tasksize[max_selected_oom_idx] < tasksize)) {
-				is_exist_oom_task = 1;
-			}
-
-			if (is_exist_oom_task) {
-				selected[max_selected_oom_idx] = p;
-				selected_tasksize[max_selected_oom_idx] = tasksize;
-				selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
-
-				if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH)
-					all_selected_oom++;
-
-				if (all_selected_oom == LOWMEM_DEATHPENDING_DEPTH) {
-					for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
-						if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
-							max_selected_oom_idx = i;
-						else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
-							selected_tasksize[i] < selected_tasksize[max_selected_oom_idx])
-							max_selected_oom_idx = i;
-					}
-				}
-
-				lowmem_print(2, "select %d (%s), adj %d, \
-						size %d, to kill\n",
-					p->pid, p->comm, oom_score_adj, tasksize);
-			}
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
+	for (tsk = pick_first_task();
+		tsk != pick_last_task();
+		tsk = pick_next_from_adj_tree(tsk)) {
 #else
-			if (selected) {
+	for_each_process(tsk) {
+#endif
+		struct task_struct *p;
+		int oom_score_adj;
+#ifdef ENHANCED_LMK_ROUTINE
+		int is_exist_oom_task = 0;
+#endif
 #ifdef CONFIG_SAMP_HOTNESS
-				if (min_score_adj <= lowmem_adj[4]) {
+		int hotness_adj = 0;
 #endif
-				if (oom_score_adj < selected_oom_score_adj)
-					continue;
-				if (oom_score_adj == selected_oom_score_adj &&
-				    tasksize <= selected_tasksize)
-					continue;
-#ifdef CONFIG_SAMP_HOTNESS
-				} else {
-					if (hotness_adj > selected_hotness_adj)
-						continue;
-					if (hotness_adj == selected_hotness_adj && tasksize <= selected_tasksize)
-						continue;
-				}
-#endif
-			}
-			selected = p;
-			selected_tasksize = tasksize;
-			selected_oom_score_adj = oom_score_adj;
-#ifdef CONFIG_SAMP_HOTNESS
-			selected_hotness_adj = hotness_adj;
-#endif
-			lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
-				     p->pid, p->comm, oom_score_adj, tasksize);
-#endif
+		if (tsk->flags & PF_KTHREAD)
+			continue;
+
+		p = find_lock_task_mm(tsk);
+		if (!p)
+			continue;
+
+		if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
+			time_before_eq(jiffies, lowmem_deathpending_timeout)) {
+				task_unlock(p);
+				rcu_read_unlock();
+				/* give the system time to free up the memory */
+				msleep_interruptible(20);
+				mutex_unlock(&scan_mutex);
+				return 0;
 		}
 
-	} else {
-
-		for_each_process(tsk) {
-			struct task_struct *p;
-			int oom_score_adj;
-#ifdef ENHANCED_LMK_ROUTINE
-			int is_exist_oom_task = 0;
-#endif
-#ifdef CONFIG_SAMP_HOTNESS
-			int hotness_adj = 0;
-#endif
-			if (tsk->flags & PF_KTHREAD)
-				continue;
-
-			p = find_lock_task_mm(tsk);
-			if (!p)
-				continue;
-
-			if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
-				time_before_eq(jiffies, lowmem_deathpending_timeout)) {
-					task_unlock(p);
-					rcu_read_unlock();
-					/* give the system time to free up the memory */
-					msleep_interruptible(20);
-					mutex_unlock(&scan_mutex);
-					return 0;
-			}
-
-			oom_score_adj = p->signal->oom_score_adj;
-			if (oom_score_adj < min_score_adj) {
-				task_unlock(p);
-				continue;
-			}
-			tasksize = get_mm_rss(p->mm);
-#if defined(CONFIG_ZSWAP)
-			if (atomic_read(&zswap_stored_pages)) {
-				lowmem_print(3, "shown tasksize : %d\n", tasksize);
-				tasksize += atomic_read(&zswap_pool_pages) * get_mm_counter(p->mm, MM_SWAPENTS)
-					/ atomic_read(&zswap_stored_pages);
-				lowmem_print(3, "real tasksize : %d\n", tasksize);
-			}
-#endif
-
-#ifdef CONFIG_SAMP_HOTNESS
-			hotness_adj = p->signal->hotness_adj;
-#endif
+		oom_score_adj = p->signal->oom_score_adj;
+		if (oom_score_adj < min_score_adj) {
 			task_unlock(p);
-			if (tasksize <= 0)
-				continue;
+			continue;
+		}
+		tasksize = get_mm_rss(p->mm);
+#if defined(CONFIG_ZSWAP)
+		if (atomic_read(&zswap_stored_pages)) {
+			lowmem_print(3, "shown tasksize : %d\n", tasksize);
+			tasksize += atomic_read(&zswap_pool_pages) * get_mm_counter(p->mm, MM_SWAPENTS)
+				/ atomic_read(&zswap_stored_pages);
+			lowmem_print(3, "real tasksize : %d\n", tasksize);
+		}
+#endif
+
+#ifdef CONFIG_SAMP_HOTNESS
+		hotness_adj = p->signal->hotness_adj;
+#endif
+		task_unlock(p);
+		if (tasksize <= 0)
+			continue;
 
 #ifdef ENHANCED_LMK_ROUTINE
-			if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH) {
+		if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH) {
+			for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
+				if (!selected[i]) {
+					is_exist_oom_task = 1;
+					max_selected_oom_idx = i;
+					break;
+				}
+			}
+		} else if (selected_oom_score_adj[max_selected_oom_idx] < oom_score_adj ||
+			(selected_oom_score_adj[max_selected_oom_idx] == oom_score_adj &&
+			selected_tasksize[max_selected_oom_idx] < tasksize)) {
+			is_exist_oom_task = 1;
+		}
+
+		if (is_exist_oom_task) {
+			selected[max_selected_oom_idx] = p;
+			selected_tasksize[max_selected_oom_idx] = tasksize;
+			selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
+
+			if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH)
+				all_selected_oom++;
+
+			if (all_selected_oom == LOWMEM_DEATHPENDING_DEPTH) {
 				for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
-					if (!selected[i]) {
-						is_exist_oom_task = 1;
+					if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
 						max_selected_oom_idx = i;
-						break;
-					}
+					else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
+						selected_tasksize[i] < selected_tasksize[max_selected_oom_idx])
+						max_selected_oom_idx = i;
 				}
-			} else if (selected_oom_score_adj[max_selected_oom_idx] < oom_score_adj ||
-				(selected_oom_score_adj[max_selected_oom_idx] == oom_score_adj &&
-				selected_tasksize[max_selected_oom_idx] < tasksize)) {
-				is_exist_oom_task = 1;
 			}
 
-			if (is_exist_oom_task) {
-				selected[max_selected_oom_idx] = p;
-				selected_tasksize[max_selected_oom_idx] = tasksize;
-				selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
-
-				if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH)
-					all_selected_oom++;
-
-				if (all_selected_oom == LOWMEM_DEATHPENDING_DEPTH) {
-					for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
-						if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
-							max_selected_oom_idx = i;
-						else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
-							selected_tasksize[i] < selected_tasksize[max_selected_oom_idx])
-							max_selected_oom_idx = i;
-					}
-				}
-
-				lowmem_print(2, "select %d (%s), adj %d, \
-						size %d, to kill\n",
-					p->pid, p->comm, oom_score_adj, tasksize);
-			}
+			lowmem_print(2, "select %d (%s), adj %d, \
+					size %d, to kill\n",
+				p->pid, p->comm, oom_score_adj, tasksize);
+		}
 #else
-			if (selected) {
+		if (selected) {
 #ifdef CONFIG_SAMP_HOTNESS
-				if (min_score_adj <= lowmem_adj[4]) {
+			if (min_score_adj <= lowmem_adj[4]) {
 #endif
-				if (oom_score_adj < selected_oom_score_adj)
-					continue;
-				if (oom_score_adj == selected_oom_score_adj &&
-				    tasksize <= selected_tasksize)
-					continue;
+			if (oom_score_adj < selected_oom_score_adj)
+				continue;
+			if (oom_score_adj == selected_oom_score_adj &&
+			    tasksize <= selected_tasksize)
+				continue;
 #ifdef CONFIG_SAMP_HOTNESS
-				} else {
-					if (hotness_adj > selected_hotness_adj)
-						continue;
-					if (hotness_adj == selected_hotness_adj && tasksize <= selected_tasksize)
-						continue;
-				}
-#endif
+			} else {
+				if (hotness_adj > selected_hotness_adj)
+					continue;
+				if (hotness_adj == selected_hotness_adj && tasksize <= selected_tasksize)
+					continue;
 			}
-			selected = p;
-			selected_tasksize = tasksize;
-			selected_oom_score_adj = oom_score_adj;
-#ifdef CONFIG_SAMP_HOTNESS
-			selected_hotness_adj = hotness_adj;
-#endif
-			lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
-				     p->pid, p->comm, oom_score_adj, tasksize);
 #endif
 		}
-	}
+		selected = p;
+		selected_tasksize = tasksize;
+		selected_oom_score_adj = oom_score_adj;
+#ifdef CONFIG_SAMP_HOTNESS
+		selected_hotness_adj = hotness_adj;
+#endif
+		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
+			     p->pid, p->comm, oom_score_adj, tasksize);
+#endif
 	}
 #ifdef ENHANCED_LMK_ROUTINE
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
@@ -623,11 +506,11 @@ static int android_oom_handler(struct notifier_block *nb,
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
 			task_unlock(p);
-
-		if (lmk_rbtree)
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
 			break;
-		else
+#else
 			continue;
+#endif
 		}
 		tasksize = get_mm_rss(p->mm);
 		task_unlock(p);
@@ -676,12 +559,11 @@ static int android_oom_handler(struct notifier_block *nb,
 #else
 		if (selected) {
 			if (oom_score_adj < selected_oom_score_adj)
-
-				if (lmk_rbtree)
-					break;
-				else
-					continue;
-
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
+				break;
+#else
+				continue;
+#endif
 			if (oom_score_adj == selected_oom_score_adj &&
 			    tasksize <= selected_tasksize)
 				continue;
@@ -832,6 +714,7 @@ static const struct kparam_array __param_arr_adj = {
 };
 #endif
 
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
 DEFINE_SPINLOCK(lmk_lock);
 struct rb_root tasks_scoreadj = RB_ROOT;
 void add_2_adj_tree(struct task_struct *task)
@@ -843,31 +726,27 @@ void add_2_adj_tree(struct task_struct *task)
 	/*
  * 	 * Find the right place in the rbtree:
  * 	 	 */
-	if (lmk_rbtree) {
-		spin_lock(&lmk_lock);
-		while (*link) {
-			parent = *link;
-			task_entry = rb_entry(parent, struct task_struct, adj_node);
+	spin_lock(&lmk_lock);
+	while (*link) {
+		parent = *link;
+		task_entry = rb_entry(parent, struct task_struct, adj_node);
 
-			if (key < task_entry->signal->oom_score_adj)
-				link = &parent->rb_right;
-			else
-				link = &parent->rb_left;
-		}
-
-		rb_link_node(&task->adj_node, parent, link);
-		rb_insert_color(&task->adj_node, &tasks_scoreadj);
-		spin_unlock(&lmk_lock);
+		if (key < task_entry->signal->oom_score_adj)
+			link = &parent->rb_right;
+		else
+			link = &parent->rb_left;
 	}
+
+	rb_link_node(&task->adj_node, parent, link);
+	rb_insert_color(&task->adj_node, &tasks_scoreadj);
+	spin_unlock(&lmk_lock);
 }
 
 void delete_from_adj_tree(struct task_struct *task)
 {
-	if (lmk_rbtree) {
-		spin_lock(&lmk_lock);
-		rb_erase(&task->adj_node, &tasks_scoreadj);
-		spin_unlock(&lmk_lock);
-	}
+	spin_lock(&lmk_lock);
+	rb_erase(&task->adj_node, &tasks_scoreadj);
+	spin_unlock(&lmk_lock);
 }
 
 
@@ -875,51 +754,46 @@ static struct task_struct *pick_next_from_adj_tree(struct task_struct *task)
 {
 	struct rb_node *next;
 
-	if (lmk_rbtree) {
-		spin_lock(&lmk_lock);
-		next = rb_next(&task->adj_node);
-		spin_unlock(&lmk_lock);
+	spin_lock(&lmk_lock);
+	next = rb_next(&task->adj_node);
+	spin_unlock(&lmk_lock);
 
-		if (!next)
-			return NULL;
+	if (!next)
+		return NULL;
 
-		 return rb_entry(next, struct task_struct, adj_node);
-	}
+	 return rb_entry(next, struct task_struct, adj_node);
 }
 
 static struct task_struct *pick_first_task(void)
 {
 	struct rb_node *left;
 
-	if (lmk_rbtree) {
-		spin_lock(&lmk_lock);
-		left = rb_first(&tasks_scoreadj);
-		spin_unlock(&lmk_lock);
+	spin_lock(&lmk_lock);
+	left = rb_first(&tasks_scoreadj);
+	spin_unlock(&lmk_lock);
 
-		if (!left)
-			return NULL;
+	if (!left)
+		return NULL;
 
-		return rb_entry(left, struct task_struct, adj_node);
-		if (lmk_rbtree) {
-
+	return rb_entry(left, struct task_struct, adj_node);
 }
 
 static struct task_struct *pick_last_task(void)
 {
 	struct rb_node *right;
-	if (lmk_rbtree) {
-		spin_lock(&lmk_lock);
-		right = rb_last(&tasks_scoreadj);
-		spin_unlock(&lmk_lock);
 
-		if (!right)
-			return NULL;
+	spin_lock(&lmk_lock);
+	right = rb_last(&tasks_scoreadj);
+	spin_unlock(&lmk_lock);
 
-		return rb_entry(right, struct task_struct, adj_node);
-	}
+	if (!right)
+		return NULL;
+
+	return rb_entry(right, struct task_struct, adj_node);
 }
+#endif
 
-module_param_named(cost, lowmem_shrinker.seeks, int, 0644);
+module_param_named(cost, lowmem_shrinker.seeks, int, S_IRUGO | S_IWUSR);
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 __module_param_call(MODULE_PARAM_PREFIX, adj,
 		    &lowmem_adj_array_ops,
@@ -928,22 +802,22 @@ __module_param_call(MODULE_PARAM_PREFIX, adj,
 __MODULE_PARM_TYPE(adj, "array of int");
 #else
 module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
-			 0644);
+			 S_IRUGO | S_IWUSR);
 #endif
-module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size, 0664);
-module_param_named(debug_level, lowmem_debug_level, uint, 0644);
+module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
+			 S_IRUGO | S_IWUSR);
+module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 #ifdef LMK_COUNT_READ
-module_param_named(lmkcount, lmk_count, uint, 0444;
+module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #endif
 
 
 #ifdef OOM_COUNT_READ
-module_param_named(oomcount, oom_count, uint, 0444);
+module_param_named(oomcount, oom_count, uint, S_IRUGO);
 #endif
-
-module_param_named(lmk_rbtree, lmk_rbtree, int, 0644);
 
 module_init(lowmem_init);
 module_exit(lowmem_exit);
 
 MODULE_LICENSE("GPL");
+
