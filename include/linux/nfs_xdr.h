@@ -1226,6 +1226,7 @@ struct nfs_pgio_header {
 	const struct rpc_call_ops *mds_ops;
 	void (*release) (struct nfs_pgio_header *hdr);
 	const struct nfs_pgio_completion_ops *completion_ops;
+	struct nfs_direct_req	*dreq;
 	spinlock_t		lock;
 	/* fields protected by lock */
 	int			pnfs_error;
@@ -1238,8 +1239,6 @@ struct nfs_read_header {
 	struct nfs_pgio_header	header;
 	struct nfs_read_data	rpc_data;
 };
-
-struct nfs_direct_req;
 
 struct nfs_write_data {
 	struct nfs_pgio_header	*header;
@@ -1282,6 +1281,7 @@ struct nfs_commit_data {
 
 struct nfs_pgio_completion_ops {
 	void	(*error_cleanup)(struct list_head *head);
+	void	(*init_hdr)(struct nfs_pgio_header *hdr);
 	void	(*completion)(struct nfs_pgio_header *hdr);
 };
 
