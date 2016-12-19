@@ -1481,9 +1481,7 @@ static void set_report_size(void)
 					sizeof(f54->control.reg_41->data));
 			mutex_unlock(&f54->control_mutex);
 			if (retval < 0) {
-				dev_dbg(&rmi4_data->i2c_client->dev,
-						"%s: Failed to read control reg_41\n",
-						__func__);
+				pr_debug("rmi-couldn't do the thing");
 				f54->report_size = 0;
 				break;
 			}
@@ -1581,9 +1579,7 @@ static int do_preparation(void)
 				&value,
 				sizeof(f54->control.reg_7->data));
 		if (retval < 0) {
-			dev_err(&rmi4_data->i2c_client->dev,
-					"%s: Failed to disable CBC\n",
-					__func__);
+			pr_debug("rmi-couldn't do the thing");
 			return retval;
 		}
 	}
@@ -1611,9 +1607,7 @@ static int do_preparation(void)
 				&value,
 				sizeof(f54->control.reg_41->data));
 		if (retval < 0) {
-			dev_err(&rmi4_data->i2c_client->dev,
-					"%s: Failed to disable signal clarity\n",
-					__func__);
+			pr_debug("rmi-couldn't do the thing");
 			return retval;
 		}
 	}
@@ -1625,9 +1619,7 @@ static int do_preparation(void)
 			&command,
 			sizeof(command));
 	if (retval < 0) {
-		dev_err(&rmi4_data->i2c_client->dev,
-				"%s: Failed to write force update command\n",
-				__func__);
+		pr_debug("rmi-couldn't do the thing");
 		return retval;
 	}
 
@@ -1638,9 +1630,7 @@ static int do_preparation(void)
 				&value,
 				sizeof(value));
 		if (retval < 0) {
-			dev_err(&rmi4_data->i2c_client->dev,
-					"%s: Failed to read command register\n",
-					__func__);
+			pr_debug("rmi-couldn't do the thing");
 			return retval;
 		}
 
@@ -1652,9 +1642,7 @@ static int do_preparation(void)
 	} while (timeout_count < FORCE_TIMEOUT_100MS);
 
 	if (timeout_count == FORCE_TIMEOUT_100MS) {
-		dev_err(&rmi4_data->i2c_client->dev,
-				"%s: Timed out waiting for force update\n",
-				__func__);
+		pr_debug("rmi-couldn't do the thing");
 		return -ETIMEDOUT;
 	}
 
@@ -1665,9 +1653,7 @@ static int do_preparation(void)
 			&command,
 			sizeof(command));
 	if (retval < 0) {
-		dev_err(&rmi4_data->i2c_client->dev,
-				"%s: Failed to write force cal command\n",
-				__func__);
+		pr_debug("rmi-couldn't do the thing");
 		return retval;
 	}
 
@@ -1678,9 +1664,7 @@ static int do_preparation(void)
 				&value,
 				sizeof(value));
 		if (retval < 0) {
-			dev_err(&rmi4_data->i2c_client->dev,
-					"%s: Failed to read command register\n",
-					__func__);
+			pr_debug("rmi-couldn't do the thing");
 			return retval;
 		}
 
@@ -1692,9 +1676,7 @@ static int do_preparation(void)
 	} while (timeout_count < FORCE_TIMEOUT_100MS);
 
 	if (timeout_count == FORCE_TIMEOUT_100MS) {
-		dev_err(&rmi4_data->i2c_client->dev,
-				"%s: Timed out waiting for force cal\n",
-				__func__);
+		pr_debug("rmi-couldn't do the thing");
 		return -ETIMEDOUT;
 	}
 
@@ -1715,14 +1697,10 @@ static void timeout_set_status(struct work_struct *work)
 				&command,
 				sizeof(command));
 		if (retval < 0) {
-			dev_err(&rmi4_data->i2c_client->dev,
-					"%s: Failed to read command register\n",
-					__func__);
+			pr_debug("rmi-couldn't do the thing");
 			f54->status = -ETIMEDOUT;
 		} else if (command & COMMAND_GET_REPORT) {
-			dev_err(&rmi4_data->i2c_client->dev,
-					"%s: Report type not supported by FW\n",
-					__func__);
+			pr_debug("rmi-couldn't do the thing");
 			f54->status = -ETIMEDOUT;
 		} else {
 			queue_delayed_work(f54->status_workqueue,
@@ -1741,8 +1719,7 @@ static void timeout_set_status(struct work_struct *work)
 		mutex_lock(&f54->status_mutex);
 		retval = synaptics_rmi4_reset_device(rmi4_data);
 		if (retval < 0)
-			dev_info(&rmi4_data->i2c_client->dev,
-					"%s: reset fail.\n", __func__);
+			pr_debug("rmi-couldn't do the thing");
 		f54->status = STATUS_IDLE;
 		mutex_unlock(&f54->status_mutex);
 	}
@@ -1762,8 +1739,6 @@ static void print_raw_hex_report(void)
 {
 	unsigned int ii;
 
-	pr_info("%s: Report data (raw hex)\n", __func__);
-
 	switch (f54->report_type) {
 	case F54_16BIT_IMAGE:
 	case F54_RAW_16BIT_IMAGE:
@@ -1775,7 +1750,7 @@ static void print_raw_hex_report(void)
 	case F54_SENSOR_SPEED:
 	case F54_ADC_RANGE:
 		for (ii = 0; ii < f54->report_size; ii += 2) {
-			pr_info("%03d: 0x%02x%02x\n",
+			pr_debug("%03d: 0x%02x%02x\n",
 					ii / 2,
 					f54->report_data[ii + 1],
 					f54->report_data[ii]);
@@ -1784,7 +1759,7 @@ static void print_raw_hex_report(void)
 	case F54_ABS_RAW_CAP:
 	case F54_ABS_DELTA_CAP:
 		for (ii = 0; ii < f54->report_size; ii += 4) {
-			pr_info("%03d: 0x%02x%02x%02x%02x\n",
+			pr_debug("%03d: 0x%02x%02x%02x%02x\n",
 					ii / 4,
 					f54->report_data[ii + 3],
 					f54->report_data[ii + 2],
@@ -1794,7 +1769,7 @@ static void print_raw_hex_report(void)
 		break;
 	default:
 		for (ii = 0; ii < f54->report_size; ii++)
-			pr_info("%03d: 0x%02x\n", ii, f54->report_data[ii]);
+			pr_debug("%03d: 0x%02x\n", ii, f54->report_data[ii]);
 		break;
 	}
 
@@ -1815,7 +1790,7 @@ static void print_image_report(void)
 	case F54_TRUE_BASELINE:
 	case F54_FULL_RAW_CAP:
 	case F54_FULL_RAW_CAP_RX_COUPLING_COMP:
-		pr_info("%s: Report data (image)\n", __func__);
+		pr_debug("%s: Report data (image)\n", __func__);
 
 		report_data = (short *)f54->report_data;
 
@@ -1834,12 +1809,12 @@ static void print_image_report(void)
 
 				report_data++;
 			}
-			pr_info("");
+			pr_debug("");
 		}
-		pr_info("%s: End of report\n", __func__);
+		pr_debug("%s: End of report\n", __func__);
 		break;
 	default:
-		pr_info("%s: Image not supported for report type %d\n",
+		pr_debug("%s: Image not supported for report type %d\n",
 				__func__, f54->report_type);
 	}
 

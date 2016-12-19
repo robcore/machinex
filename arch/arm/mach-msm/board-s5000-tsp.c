@@ -52,7 +52,7 @@ static int __init sec_tsp_reboot_mode(char *mode)
 	else
 		recovery_mode_enter = false;
 
-	printk(KERN_ERR "%s: %d, %s\n", __func__, ret, mode);
+	pr_debug("tsp-doing a thing\n");
 
 	return 1;
 }
@@ -68,7 +68,7 @@ __setup("androidboot.check_recovery_condition=0x", sec_tsp_reboot_mode);
 void synaptics_tsp_register_callback(struct synaptics_rmi_callbacks *cb)
 {
 	charger_callbacks = cb;
-	pr_info("%s: [synaptics] charger callback!\n", __func__);
+	pr_debug("%s: [synaptics] charger callback!\n", __func__);
 }
 
 static int touch_sleep_time;
@@ -85,14 +85,12 @@ void synaptics_power_onoff(bool enable)
 	if (!reg_l17) {
 		reg_l17 = regulator_get(NULL, "8921_l17");
 		if (IS_ERR(reg_l17)) {
-			printk(KERN_ERR "%s: could not get 8921_l17, rc = %ld\n",
-					__func__, PTR_ERR(reg_l17));
+			pr_debug("could not get 8921_l17\n");
 			return;
 		}
 		ret = regulator_set_voltage(reg_l17, 3300000, 3300000);
 		if (ret) {
-			printk(KERN_ERR "%s: unable to set ldo17 voltage to 3.3V\n",
-					__func__);
+			pr_debug("unable to set ldo17 voltage to 3.3V\n");
 			return;
 		}
 	}
@@ -100,15 +98,13 @@ void synaptics_power_onoff(bool enable)
 	if (!reg_l22) {
 		reg_l22 = regulator_get(NULL, "8921_l22");
 		if (IS_ERR(reg_l22)) {
-			printk(KERN_ERR "%s: could not get 8921_l22, rc = %ld\n",
-					__func__, PTR_ERR(reg_l22));
+			pr_debug("could not get 8921_l22\n");
 			return;
 		}
 	}
 	ret = regulator_set_voltage(reg_l22, 1800000, 1800000);
 	if (ret) {
-		printk(KERN_ERR"%s: unable to set ldo22 voltage to 1.8V\n",
-				__func__);
+		pr_debug("unable to set ldo22 voltage to 1.8V\n");
 		return;
 	}
 
@@ -116,19 +112,17 @@ void synaptics_power_onoff(bool enable)
 		if (!regulator_is_enabled(reg_l17)) {
 			ret = regulator_enable(reg_l17);
 			if (ret)
-				printk(KERN_ERR "%s: enable l17 failed, rc=%d\n",
-						__func__, ret);
+				pr_debug("l17-didn't do the thing\n");
 			else
-				printk(KERN_INFO "%s: enable l17\n", __func__);
+				pr_debug("l17-did the thing\n");
 		}
 
 		if (!regulator_is_enabled(reg_l22)) {
 			ret = regulator_enable(reg_l22);
 			if (ret)
-				printk(KERN_ERR "%s: enable l22 failed, rc=%d\n",
-						__func__, ret);
+				pr_debug("l22-didn't do the thing\n");
 			else
-				printk(KERN_INFO "%s: enable l22\n", __func__);
+				pr_debug("l22-did the thing\n");
 		}
 
 		msleep(touch_sleep_time);
@@ -137,19 +131,17 @@ void synaptics_power_onoff(bool enable)
 		if (regulator_is_enabled(reg_l17)) {
 			ret = regulator_disable(reg_l17);
 			if (ret)
-				printk(KERN_ERR "%s: disable l17 failed, rc=%d\n",
-						__func__, ret);
+				pr_debug("l17-didn't disable the thing\n");
 			else
-				printk(KERN_INFO "%s: disable l17\n", __func__);
+				pr_debug("l17-disabled the thing\n");
 		}
 
 		if (regulator_is_enabled(reg_l22)) {
 			ret = regulator_disable(reg_l22);
 			if (ret)
-				printk(KERN_ERR "%s: disable l22 failed, rc=%d\n",
-						__func__, ret);
+				pr_debug("l122-didn't disable the thing\n");
 			else
-				printk(KERN_INFO "%s: disable l22\n", __func__);
+				pr_debug("l2-disabled the thing\n");
 		}
 	}
 
@@ -245,13 +237,12 @@ void __init S5000_tsp_input_init(int version)
 {
 	int ret;
 	int touch_type, el_type;
-	printk(KERN_DEBUG "[TSP]START %s\n", __func__);
 
 	touch_type = (version >> 12) & 0xF;
 	el_type = (version >> 8) & 0x1;
 
 #if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	/* JACITVE USE ONLY B Type */ 
+	/* JACITVE USE ONLY B Type */
 	touch_sleep_time = SYNAPTICS_HW_RESET_TIME_B0;
 #else
 	/* IF TSP IS is A1, B0 version : ID2 value is 40
@@ -280,16 +271,13 @@ void __init S5000_tsp_input_init(int version)
 #else
 	rmi4_platformdata.recovery_mode = false;
 #endif
-	printk(KERN_INFO "%s: synaptics : el_type : %x, touch_type = %x[%s]\n",
-			__func__, el_type, touch_type,
-			rmi4_platformdata.recovery_mode ? "recovery mode" : "normal mode");
 
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR)
 	if(system_rev >= BOARD_REV08)  {
 		rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
@@ -301,7 +289,7 @@ void __init S5000_tsp_input_init(int version)
 		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
 		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
@@ -313,7 +301,7 @@ void __init S5000_tsp_input_init(int version)
         rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
@@ -324,7 +312,7 @@ void __init S5000_tsp_input_init(int version)
         rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
@@ -335,7 +323,7 @@ void __init S5000_tsp_input_init(int version)
 		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
 		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
@@ -347,7 +335,7 @@ void __init S5000_tsp_input_init(int version)
 		rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
@@ -359,7 +347,7 @@ void __init S5000_tsp_input_init(int version)
 		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
 		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
 		if (ret != 0) {
-			printk(KERN_ERR"tsp int request failed, ret=%d", ret);
+			pr_debug("tsp-couldn't do the thing\n");
 			return ;
 		}
 		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
@@ -368,6 +356,6 @@ void __init S5000_tsp_input_init(int version)
 			ARRAY_SIZE(bus2_i2c_devices));
 	}
 #endif
-	printk(KERN_DEBUG "[TSP]END %s\n", __func__);
+	pr_debug("tsp-did the thing\n");
 	return ;
 }
