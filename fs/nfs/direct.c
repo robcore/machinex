@@ -618,7 +618,7 @@ static void nfs_direct_write_complete(struct nfs_direct_req *dreq, struct inode 
 			if (dreq->commit_data != NULL)
 				nfs_commit_free(dreq->commit_data);
 			nfs_direct_free_writedata(dreq);
-			nfs_inode_dio_write_done(inode);
+			nfs_zap_mapping(inode, inode->i_mapping);
 			nfs_direct_complete(dreq);
 	}
 }
