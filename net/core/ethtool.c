@@ -1311,6 +1311,7 @@ int dev_ethtool(struct net *net, struct ifreq *ifr)
 	case ETHTOOL_GSET:
 	case ETHTOOL_GDRVINFO:
 	case ETHTOOL_GMSGLVL:
+	case ETHTOOL_GLINK:
 	case ETHTOOL_GCOALESCE:
 	case ETHTOOL_GRINGPARAM:
 	case ETHTOOL_GPAUSEPARAM:
@@ -1319,6 +1320,7 @@ int dev_ethtool(struct net *net, struct ifreq *ifr)
 	case ETHTOOL_GSG:
 	case ETHTOOL_GSSET_INFO:
 	case ETHTOOL_GSTRINGS:
+	case ETHTOOL_GSTATS:
 	case ETHTOOL_GTSO:
 	case ETHTOOL_GPERMADDR:
 	case ETHTOOL_GUFO:
@@ -1331,7 +1333,11 @@ int dev_ethtool(struct net *net, struct ifreq *ifr)
 	case ETHTOOL_GRXCLSRLCNT:
 	case ETHTOOL_GRXCLSRULE:
 	case ETHTOOL_GRXCLSRLALL:
+	case ETHTOOL_GRXFHINDIR:
 	case ETHTOOL_GFEATURES:
+	case ETHTOOL_GCHANNELS:
+	case ETHTOOL_GET_TS_INFO:
+	case ETHTOOL_GEEE:
 		break;
 	default:
 		if (!capable(CAP_NET_ADMIN))
