@@ -791,7 +791,7 @@ static bool blk_rq_should_init_elevator(struct bio *bio)
 }
 
 /**
- * get_request - get a free request
+ * __get_request - get a free request
  * @q: request_queue to allocate request from
  * @rw_flags: RW and SYNC flags
  * @bio: bio to allocate request for (can be %NULL)
@@ -804,8 +804,8 @@ static bool blk_rq_should_init_elevator(struct bio *bio)
  * Returns %NULL on failure, with @q->queue_lock held.
  * Returns !%NULL on success, with @q->queue_lock *not held*.
  */
-static struct request *get_request(struct request_queue *q, int rw_flags,
-				   struct bio *bio, gfp_t gfp_mask)
+static struct request *__get_request(struct request_queue *q, int rw_flags,
+				     struct bio *bio, gfp_t gfp_mask)
 {
 	struct request *rq = NULL;
 	struct request_list *rl = &q->rq;
@@ -961,55 +961,53 @@ out:
  * Returns %NULL on failure, with @q->queue_lock held.
  * Returns !%NULL on success, with @q->queue_lock *not held*.
  */
-static struct request *get_request_wait(struct request_queue *q, int rw_flags,
-					struct bio *bio)
+static struct request *get_request(struct request_queue *q, int rw_flags,
+				   struct bio *bio, gfp_t gfp_mask)
 {
 	const bool is_sync = rw_is_sync(rw_flags) != 0;
+	DEFINE_WAIT(wait);
+	struct request_list *rl = &q->rq;
 	struct request *rq;
+retry:
+	rq = __get_request(q, rw_flags, bio, gfp_mask);
+	if (rq)
+		return rq;
 
-	rq = get_request(q, rw_flags, bio, GFP_NOIO);
-	while (!rq) {
-		DEFINE_WAIT(wait);
-		struct request_list *rl = &q->rq;
+	if (!(gfp_mask & __GFP_WAIT) || unlikely(blk_queue_dead(q)))
+		return NULL;
 
-		if (unlikely(blk_queue_dead(q)))
-			return NULL;
+	/* wait on @rl and retry */
+	prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
+				  TASK_UNINTERRUPTIBLE);
 
-		prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
-				TASK_UNINTERRUPTIBLE);
+	trace_block_sleeprq(q, bio, rw_flags & 1);
 
-		trace_block_sleeprq(q, bio, rw_flags & 1);
 
 		spin_unlock_irq(q->queue_lock);
 		io_schedule();
 
-		/*
-		 * After sleeping, we become a "batching" process and
-		 * will be able to allocate at least one request, and
-		 * up to a big batch of them for a small period time.
-		 * See ioc_batching, ioc_set_batching
-		 */
-		create_io_context(current, GFP_NOIO, q->node);
-		ioc_set_batching(q, current->io_context);
+	spin_unlock_irq(q->queue_lock);
+	io_schedule();
 
-		spin_lock_irq(q->queue_lock);
-		finish_wait(&rl->wait[is_sync], &wait);
+	/*
+	 * After sleeping, we become a "batching" process and will be able
+	 * to allocate at least one request, and up to a big batch of them
+	 * for a small period time.  See ioc_batching, ioc_set_batching
+	 */
+	create_io_context(GFP_NOIO, q->node);
+	ioc_set_batching(q, current->io_context);
 
-		rq = get_request(q, rw_flags, bio, GFP_NOIO);
-	};
+	spin_lock_irq(q->queue_lock);
+	finish_wait(&rl->wait[is_sync], &wait);
 
-	return rq;
+	goto retry;
 }
-
 struct request *blk_get_request(struct request_queue *q, int rw, gfp_t gfp_mask)
 {
 	struct request *rq;
 
 	spin_lock_irq(q->queue_lock);
-	if (gfp_mask & __GFP_WAIT)
-		rq = get_request_wait(q, rw, NULL);
-	else
-		rq = get_request(q, rw, NULL, gfp_mask);
+	rq = get_request(q, rw, NULL, gfp_mask);
 	if (!rq)
 		spin_unlock_irq(q->queue_lock);
 	/* q->queue_lock is unlocked at this point */
@@ -1456,7 +1454,7 @@ get_rq:
 	 * Grab a free request. This is might sleep but can not fail.
 	 * Returns with the queue unlocked.
 	 */
-	req = get_request_wait(q, rw_flags, bio);
+	req = get_request(q, rw_flags, bio, GFP_NOIO);
 	if (unlikely(!req)) {
 		bio_endio(bio, -ENODEV);	/* @q is dead */
 		goto out_unlock;
