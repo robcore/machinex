@@ -4251,7 +4251,7 @@ void update_group_power(struct sched_domain *sd, int cpu)
 		} while (group != child->groups);
 	}
 
-	sdg->sgp->power_orig = sdg->sgp->power = power;
+	sdg->sgp->power = power;
 }
 
 /*
@@ -4304,7 +4304,7 @@ static inline void update_sg_lb_stats(struct sched_domain *sd,
 	unsigned long avg_load_per_task = 0;
 
 	if (local_group)
-		balance_cpu = group_balance_cpu(group);
+		balance_cpu = group_first_cpu(group);
 
 	/* Tally up the load of all CPUs in the group */
 	max_cpu_load = 0;
