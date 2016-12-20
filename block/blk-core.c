@@ -994,7 +994,7 @@ retry:
 	 * to allocate at least one request, and up to a big batch of them
 	 * for a small period time.  See ioc_batching, ioc_set_batching
 	 */
-	create_io_context(GFP_NOIO, q->node);
+	create_io_context(NULL, GFP_NOIO, q->node);
 	ioc_set_batching(q, current->io_context);
 
 	spin_lock_irq(q->queue_lock);
