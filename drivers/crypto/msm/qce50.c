@@ -1330,9 +1330,8 @@ static int _setup_cipher_aes_cmdlistptrs(struct qce_device *pdev,
 		unsigned char **pvaddr, enum qce_cipher_mode_enum mode,
 		bool key_128)
 {
-	struct sps_command_element *ce_vaddr =
-				(struct sps_command_element *)(*pvaddr);
-	uint32_t ce_vaddr_start = (uint32_t)(*pvaddr);
+	struct sps_command_element *ce_vaddr;
+	uint32_t ce_vaddr_start;
 	struct qce_cmdlistptr_ops *cmdlistptr = &pdev->ce_sps.cmdlistptr;
 	struct qce_cmdlist_info *pcl_info = NULL;
 	int i = 0;
@@ -1344,6 +1343,10 @@ static int _setup_cipher_aes_cmdlistptrs(struct qce_device *pdev,
 	uint32_t beats = (pdev->ce_sps.ce_burst_size >> 3) - 1;
 	uint32_t pipe_pair = pdev->ce_sps.pipe_pair_index;
 
+	*pvaddr = (unsigned char *) ALIGN(((unsigned int)(*pvaddr)),
+					pdev->ce_sps.ce_burst_size);
+	ce_vaddr = (struct sps_command_element *)(*pvaddr);
+	ce_vaddr_start = (uint32_t)(*pvaddr);
 	crypto_cfg = (beats << CRYPTO_REQ_SIZE) |
 			BIT(CRYPTO_MASK_DOUT_INTR) |
 			BIT(CRYPTO_MASK_DIN_INTR) |
@@ -1519,9 +1522,8 @@ static int _setup_cipher_des_cmdlistptrs(struct qce_device *pdev,
 		bool mode_cbc)
 {
 
-	struct sps_command_element *ce_vaddr =
-				(struct sps_command_element *)(*pvaddr);
-	uint32_t ce_vaddr_start = (uint32_t)(*pvaddr);
+	struct sps_command_element *ce_vaddr;
+	uint32_t ce_vaddr_start;
 	struct qce_cmdlistptr_ops *cmdlistptr = &pdev->ce_sps.cmdlistptr;
 	struct qce_cmdlist_info *pcl_info = NULL;
 	int i = 0;
@@ -1532,6 +1534,10 @@ static int _setup_cipher_des_cmdlistptrs(struct qce_device *pdev,
 	uint32_t beats = (pdev->ce_sps.ce_burst_size >> 3) - 1;
 	uint32_t pipe_pair = pdev->ce_sps.pipe_pair_index;
 
+	*pvaddr = (unsigned char *) ALIGN(((unsigned int)(*pvaddr)),
+					pdev->ce_sps.ce_burst_size);
+	ce_vaddr = (struct sps_command_element *)(*pvaddr);
+	ce_vaddr_start = (uint32_t)(*pvaddr);
 	crypto_cfg = (beats << CRYPTO_REQ_SIZE) |
 			BIT(CRYPTO_MASK_DOUT_INTR) |
 			BIT(CRYPTO_MASK_DIN_INTR) |
@@ -1663,9 +1669,8 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 		unsigned char **pvaddr, enum qce_hash_alg_enum alg,
 		bool key_128)
 {
-	struct sps_command_element *ce_vaddr =
-			(struct sps_command_element *)(*pvaddr);
-	uint32_t ce_vaddr_start = (uint32_t)(*pvaddr);
+	struct sps_command_element *ce_vaddr;
+	uint32_t ce_vaddr_start;
 	struct qce_cmdlistptr_ops *cmdlistptr = &pdev->ce_sps.cmdlistptr;
 	struct qce_cmdlist_info *pcl_info = NULL;
 	int i = 0;
@@ -1676,6 +1681,10 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 	uint32_t beats = (pdev->ce_sps.ce_burst_size >> 3) - 1;
 	uint32_t pipe_pair = pdev->ce_sps.pipe_pair_index;
 
+	*pvaddr = (unsigned char *) ALIGN(((unsigned int)(*pvaddr)),
+					pdev->ce_sps.ce_burst_size);
+	ce_vaddr_start = (uint32_t)(*pvaddr);
+	ce_vaddr = (struct sps_command_element *)(*pvaddr);
 	crypto_cfg = (beats << CRYPTO_REQ_SIZE) |
 			BIT(CRYPTO_MASK_DOUT_INTR) |
 			BIT(CRYPTO_MASK_DIN_INTR) |
@@ -1889,9 +1898,8 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 static int _setup_aead_cmdlistptrs(struct qce_device *pdev,
 				unsigned char **pvaddr, bool key_128)
 {
-	struct sps_command_element *ce_vaddr =
-				(struct sps_command_element *)(*pvaddr);
-	uint32_t ce_vaddr_start = (uint32_t)(*pvaddr);
+	struct sps_command_element *ce_vaddr;
+	uint32_t ce_vaddr_start;
 	struct qce_cmdlistptr_ops *cmdlistptr = &pdev->ce_sps.cmdlistptr;
 	struct qce_cmdlist_info *pcl_info = NULL;
 	int i = 0;
@@ -1902,6 +1910,10 @@ static int _setup_aead_cmdlistptrs(struct qce_device *pdev,
 	uint32_t beats = (pdev->ce_sps.ce_burst_size >> 3) - 1;
 	uint32_t pipe_pair = pdev->ce_sps.pipe_pair_index;
 
+	*pvaddr = (unsigned char *) ALIGN(((unsigned int)(*pvaddr)),
+					pdev->ce_sps.ce_burst_size);
+	ce_vaddr_start = (uint32_t)(*pvaddr);
+	ce_vaddr = (struct sps_command_element *)(*pvaddr);
 	crypto_cfg = (beats << CRYPTO_REQ_SIZE) |
 			BIT(CRYPTO_MASK_DOUT_INTR) |
 			BIT(CRYPTO_MASK_DIN_INTR) |
@@ -2028,12 +2040,14 @@ static int _setup_aead_cmdlistptrs(struct qce_device *pdev,
 static int _setup_unlock_pipe_cmdlistptrs(struct qce_device *pdev,
 		unsigned char **pvaddr)
 {
-	struct sps_command_element *ce_vaddr =
-			(struct sps_command_element *)(*pvaddr);
+	struct sps_command_element *ce_vaddr;
 	uint32_t ce_vaddr_start = (uint32_t)(*pvaddr);
 	struct qce_cmdlistptr_ops *cmdlistptr = &pdev->ce_sps.cmdlistptr;
 	struct qce_cmdlist_info *pcl_info = NULL;
 
+	*pvaddr = (unsigned char *) ALIGN(((unsigned int)(*pvaddr)),
+					pdev->ce_sps.ce_burst_size);
+	ce_vaddr = (struct sps_command_element *)(*pvaddr);
 	cmdlistptr->unlock_all_pipes.cmdlist = (uint32_t)ce_vaddr;
 	pcl_info = &(cmdlistptr->unlock_all_pipes);
 
@@ -2067,7 +2081,7 @@ static int qce_setup_cmdlistptrs(struct qce_device *pdev,
 	 */
 	ce_vaddr =
 		(struct sps_command_element *) ALIGN(((unsigned int) ce_vaddr),
-									16);
+					pdev->ce_sps.ce_burst_size);
 	*pvaddr = (unsigned char *) ce_vaddr;
 
 	_setup_cipher_aes_cmdlistptrs(pdev, pvaddr, QCE_MODE_CBC, true);
@@ -2107,8 +2121,8 @@ static int qce_setup_ce_sps_data(struct qce_device *pce_dev)
 	unsigned char *vaddr;
 
 	vaddr = pce_dev->coh_vmem;
-	vaddr = (unsigned char *) ALIGN(((unsigned int)vaddr),  16);
-
+	vaddr = (unsigned char *) ALIGN(((unsigned int)vaddr),
+					pce_dev->ce_sps.ce_burst_size);
 	/* Allow for 256 descriptor (cmd and data) entries per pipe */
 	pce_dev->ce_sps.in_transfer.iovec = (struct sps_iovec *)vaddr;
 	pce_dev->ce_sps.in_transfer.iovec_phys =
@@ -2121,6 +2135,8 @@ static int qce_setup_ce_sps_data(struct qce_device *pce_dev)
 	vaddr += MAX_BAM_DESCRIPTORS * 8;
 
 	qce_setup_cmdlistptrs(pce_dev, &vaddr);
+	vaddr = (unsigned char *) ALIGN(((unsigned int)vaddr),
+					pce_dev->ce_sps.ce_burst_size);
 	pce_dev->ce_sps.result_dump = (uint32_t)vaddr;
 	pce_dev->ce_sps.result = (struct ce_result_dump_format *)vaddr;
 	vaddr += 128;
