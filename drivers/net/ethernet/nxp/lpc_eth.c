@@ -431,7 +431,7 @@ struct netdata_local {
 	spinlock_t		lock;
 	void __iomem		*net_base;
 	u32			msg_enable;
-	struct sk_buff		*skb[ENET_TX_DESC];
+	unsigned int		skblen[ENET_TX_DESC];
 	unsigned int		last_tx_idx;
 	unsigned int		num_used_tx_buffs;
 	struct mii_bus		*mii_bus;
@@ -893,12 +893,11 @@ err_out:
 static void __lpc_handle_xmit(struct net_device *ndev)
 {
 	struct netdata_local *pldat = netdev_priv(ndev);
-	struct sk_buff *skb;
 	u32 txcidx, *ptxstat, txstat;
 
 	txcidx = readl(LPC_ENET_TXCONSUMEINDEX(pldat->net_base));
 	while (pldat->last_tx_idx != txcidx) {
-		skb = pldat->skb[pldat->last_tx_idx];
+		unsigned int skblen = pldat->skblen[pldat->last_tx_idx];
 
 		/* A buffer is available, get buffer status */
 		ptxstat = &pldat->tx_stat_v[pldat->last_tx_idx];
@@ -935,9 +934,8 @@ static void __lpc_handle_xmit(struct net_device *ndev)
 		} else {
 			/* Update stats */
 			ndev->stats.tx_packets++;
-			ndev->stats.tx_bytes += skb->len;
+			ndev->stats.tx_bytes += skblen;
 		}
-		dev_kfree_skb_irq(skb);
 
 		txcidx = readl(LPC_ENET_TXCONSUMEINDEX(pldat->net_base));
 	}
@@ -1122,7 +1120,7 @@ static int lpc_eth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	memcpy(pldat->tx_buff_v + txidx * ENET_MAXF_SIZE, skb->data, len);
 
 	/* Save the buffer and increment the buffer counter */
-	pldat->skb[txidx] = skb;
+	pldat->skblen[txidx] = len;
 	pldat->num_used_tx_buffs++;
 
 	/* Start transmit */
@@ -1137,6 +1135,7 @@ static int lpc_eth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	spin_unlock_irq(&pldat->lock);
 
+	dev_kfree_skb(skb);
 	return NETDEV_TX_OK;
 }
 
