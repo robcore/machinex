@@ -517,32 +517,15 @@ out_err_nodisable:
 	return ERR_PTR(r);
 }
 
-/*
- * Avoid using vmalloc for a small buffer.
- * Should not be used when the size is statically known.
- */
-void *kvm_kvzalloc(unsigned long size)
-{
-	if (size > PAGE_SIZE)
-		return vzalloc(size);
-	else
-		return kzalloc(size, GFP_KERNEL);
-}
-
-void kvm_kvfree(const void *addr)
-{
-	if (is_vmalloc_addr(addr))
-		vfree(addr);
-	else
-		kfree(addr);
-}
-
 static void kvm_destroy_dirty_bitmap(struct kvm_memory_slot *memslot)
 {
 	if (!memslot->dirty_bitmap)
 		return;
 
-	kvm_kvfree(memslot->dirty_bitmap);
+	if (2 * kvm_dirty_bitmap_bytes(memslot) > PAGE_SIZE)
+		vfree(memslot->dirty_bitmap_head);
+	else
+		kfree(memslot->dirty_bitmap_head);
 
 	memslot->dirty_bitmap = NULL;
 	memslot->dirty_bitmap_head = NULL;
@@ -637,7 +620,11 @@ static int kvm_create_dirty_bitmap(struct kvm_memory_slot *memslot)
 #ifndef CONFIG_S390
 	unsigned long dirty_bytes = 2 * kvm_dirty_bitmap_bytes(memslot);
 
-	memslot->dirty_bitmap = kvm_kvzalloc(dirty_bytes);
+	if (dirty_bytes > PAGE_SIZE)
+		memslot->dirty_bitmap = vzalloc(dirty_bytes);
+	else
+		memslot->dirty_bitmap = kzalloc(dirty_bytes, GFP_KERNEL);
+
 	if (!memslot->dirty_bitmap)
 		return -ENOMEM;
 

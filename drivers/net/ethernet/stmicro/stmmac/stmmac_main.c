@@ -637,7 +637,7 @@ static void stmmac_tx(struct stmmac_priv *priv)
 
 		priv->hw->desc->release_tx_desc(p);
 
-		priv->dirty_tx++;
+		entry = (++priv->dirty_tx) % txsize;
 	}
 	if (unlikely(netif_queue_stopped(priv->dev) &&
 		     stmmac_tx_avail(priv) > STMMAC_TX_THRESH(priv))) {
@@ -1255,6 +1255,7 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 		display_ring(priv->dma_rx, rxsize);
 	}
 #endif
+	count = 0;
 	while (!priv->hw->desc->get_rx_owner(p)) {
 		int status;
 

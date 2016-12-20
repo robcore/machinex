@@ -64,9 +64,6 @@ static bool __read_mostly enable_unrestricted_guest = 1;
 module_param_named(unrestricted_guest,
 			enable_unrestricted_guest, bool, S_IRUGO);
 
-static bool __read_mostly enable_ept_ad_bits = 1;
-module_param_named(eptad, enable_ept_ad_bits, bool, S_IRUGO);
-
 static bool __read_mostly emulate_invalid_guest_state = 0;
 module_param(emulate_invalid_guest_state, bool, S_IRUGO);
 
@@ -781,11 +778,6 @@ static inline bool cpu_has_vmx_ept_1g_page(void)
 static inline bool cpu_has_vmx_ept_4levels(void)
 {
 	return vmx_capability.ept & VMX_EPT_PAGE_WALK_4_BIT;
-}
-
-static inline bool cpu_has_vmx_ept_ad_bits(void)
-{
-	return vmx_capability.ept & VMX_EPT_AD_BIT;
 }
 
 static inline bool cpu_has_vmx_invept_individual_addr(void)
@@ -2633,11 +2625,7 @@ static __init int hardware_setup(void)
 	    !cpu_has_vmx_ept_4levels()) {
 		enable_ept = 0;
 		enable_unrestricted_guest = 0;
-		enable_ept_ad_bits = 0;
 	}
-
-	if (!cpu_has_vmx_ept_ad_bits())
-		enable_ept_ad_bits = 0;
 
 	if (!cpu_has_vmx_unrestricted_guest())
 		enable_unrestricted_guest = 0;
@@ -3019,8 +3007,6 @@ static u64 construct_eptp(unsigned long root_hpa)
 	/* TODO write the value reading from MSR */
 	eptp = VMX_EPT_DEFAULT_MT |
 		VMX_EPT_DEFAULT_GAW << VMX_EPT_GAW_EPTP_SHIFT;
-	if (enable_ept_ad_bits)
-		eptp |= VMX_EPT_AD_ENABLE_BIT;
 	eptp |= (root_hpa & PAGE_MASK);
 
 	return eptp;
@@ -7296,10 +7282,8 @@ static int __init vmx_init(void)
 	vmx_disable_intercept_for_msr(MSR_IA32_SYSENTER_EIP, false);
 
 	if (enable_ept) {
-		kvm_mmu_set_mask_ptes(0ull,
-			(enable_ept_ad_bits) ? VMX_EPT_ACCESS_BIT : 0ull,
-			(enable_ept_ad_bits) ? VMX_EPT_DIRTY_BIT : 0ull,
-			0ull, VMX_EPT_EXECUTABLE_MASK);
+		kvm_mmu_set_mask_ptes(0ull, 0ull, 0ull, 0ull,
+				VMX_EPT_EXECUTABLE_MASK);
 		ept_set_mmio_spte_mask();
 		kvm_enable_tdp();
 	} else
