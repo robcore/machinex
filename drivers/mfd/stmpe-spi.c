@@ -122,6 +122,7 @@ MODULE_DEVICE_TABLE(spi, stmpe_id);
 static struct spi_driver stmpe_spi_driver = {
 	.driver = {
 		.name	= "stmpe-spi",
+		.bus	= &spi_bus_type,
 		.owner	= THIS_MODULE,
 #ifdef CONFIG_PM
 		.pm	= &stmpe_dev_pm_ops,

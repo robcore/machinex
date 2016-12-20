@@ -864,7 +864,7 @@ config TOUCHSCREEN_USB_EASYTOUCH
 	bool "EasyTouch USB Touch controller device support" if EMBEDDED
 	depends on TOUCHSCREEN_USB_COMPOSITE
 	help
-	  Say Y here if you have an EasyTouch USB Touch controller.
+	  Say Y here if you have a EasyTouch USB Touch controller device support.
 	  If unsure, say N.
 
 config TOUCHSCREEN_TOUCHIT213

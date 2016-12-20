@@ -3543,10 +3543,8 @@ gro_result_t napi_skb_finish(gro_result_t ret, struct sk_buff *skb)
 
 	case GRO_DROP:
 	case GRO_MERGED_FREE:
-		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD)
-			kmem_cache_free(skbuff_head_cache, skb);
-		else
-			__kfree_skb(skb);		break;
+		kfree_skb(skb);
+		break;
 
 	case GRO_HELD:
 	case GRO_MERGED:
@@ -3757,7 +3755,7 @@ static int process_backlog(struct napi_struct *napi, int quota)
 
 			break;
 		}
-
+		
 		skb_queue_splice_tail_init(&sd->input_pkt_queue,
 					   &sd->process_queue);
 		rps_unlock(sd);

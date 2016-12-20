@@ -480,12 +480,11 @@ static int wacom_retrieve_hid_descriptor(struct usb_interface *intf,
 	    (features->type != BAMBOO_PT))
 		goto out;
 
-	error = usb_get_extra_descriptor(interface, HID_DEVICET_HID, &hid_desc);
-	if (error) {
-		error = usb_get_extra_descriptor(&interface->endpoint[0],
-						 HID_DEVICET_REPORT, &hid_desc);
-		if (error) {
-			printk(KERN_ERR "wacom: can not retrieve extra class descriptor\n");
+	if (usb_get_extra_descriptor(interface, HID_DEVICET_HID, &hid_desc)) {
+		if (usb_get_extra_descriptor(&interface->endpoint[0],
+				HID_DEVICET_REPORT, &hid_desc)) {
+			printk("wacom: can not retrieve extra class descriptor\n");
+			error = 1;
 			goto out;
 		}
 	}
@@ -939,13 +938,13 @@ static void wacom_wireless_work(struct work_struct *work)
 	wacom = usb_get_intfdata(usbdev->config->interface[1]);
 	if (wacom->wacom_wac.input)
 		input_unregister_device(wacom->wacom_wac.input);
-	wacom->wacom_wac.input = NULL;
+	wacom->wacom_wac.input = 0;
 
 	/* Touch interface */
 	wacom = usb_get_intfdata(usbdev->config->interface[2]);
 	if (wacom->wacom_wac.input)
 		input_unregister_device(wacom->wacom_wac.input);
-	wacom->wacom_wac.input = NULL;
+	wacom->wacom_wac.input = 0;
 
 	if (wacom_wac->pid == 0) {
 		printk(KERN_INFO "wacom: wireless tablet disconnected\n");

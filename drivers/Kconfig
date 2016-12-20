@@ -175,6 +175,4 @@ source "drivers/motor_msm8930/Kconfig"
 source "drivers/pwm/Kconfig"
 
 source "drivers/secfilter/Kconfig"
-
-source "drivers/memory/Kconfig"
 endmenu

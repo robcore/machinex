@@ -70,7 +70,7 @@ struct clk {
 #define DEFINE_CLK_FIXED_RATE(_name, _flags, _rate,		\
 				_fixed_rate_flags)		\
 	static struct clk _name;				\
-	static const char *_name##_parent_names[] = {};		\
+	static char *_name##_parent_names[] = {};		\
 	static struct clk_fixed_rate _name##_hw = {		\
 		.hw = {						\
 			.clk = &_name,				\
@@ -85,7 +85,7 @@ struct clk {
 				_flags, _reg, _bit_idx,		\
 				_gate_flags, _lock)		\
 	static struct clk _name;				\
-	static const char *_name##_parent_names[] = {		\
+	static char *_name##_parent_names[] = {			\
 		_parent_name,					\
 	};							\
 	static struct clk *_name##_parents[] = {		\
@@ -107,7 +107,7 @@ struct clk {
 				_flags, _reg, _shift, _width,	\
 				_divider_flags, _lock)		\
 	static struct clk _name;				\
-	static const char *_name##_parent_names[] = {		\
+	static char *_name##_parent_names[] = {			\
 		_parent_name,					\
 	};							\
 	static struct clk *_name##_parents[] = {		\
@@ -166,8 +166,6 @@ struct clk {
  * Returns 0 on success, otherwise an error code.
  */
 int __clk_init(struct device *dev, struct clk *clk);
-
-struct clk *__clk_register(struct device *dev, struct clk_hw *hw);
 
 #endif /* CONFIG_COMMON_CLK */
 #endif /* CLK_PRIVATE_H */

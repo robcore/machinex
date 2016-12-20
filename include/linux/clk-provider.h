@@ -15,6 +15,19 @@
 
 #ifdef CONFIG_COMMON_CLK
 
+/**
+ * struct clk_hw - handle for traversing from a struct clk to its corresponding
+ * hardware-specific structure.  struct clk_hw should be declared within struct
+ * clk_foo and then referenced by the struct clk instance that uses struct
+ * clk_foo's clk_ops
+ *
+ * clk: pointer to the struct clk instance that points back to this struct
+ * clk_hw instance
+ */
+struct clk_hw {
+	struct clk *clk;
+};
+
 /*
  * flags used across common struct clk.  these flags should only affect the
  * top-level framework.  custom flags for dealing with hardware specifics
@@ -25,8 +38,6 @@
 #define CLK_SET_RATE_PARENT	BIT(2) /* propagate rate change up one level */
 #define CLK_IGNORE_UNUSED	BIT(3) /* do not gate even if unused */
 #define CLK_IS_ROOT		BIT(4) /* root clk, has no parent */
-
-struct clk_hw;
 
 /**
  * struct clk_ops -  Callback operations for hardware clocks; these are to
@@ -109,41 +120,6 @@ struct clk_ops {
 	int		(*set_rate)(struct clk_hw *hw, unsigned long,
 				    unsigned long);
 	void		(*init)(struct clk_hw *hw);
-};
-
-/**
- * struct clk_init_data - holds init data that's common to all clocks and is
- * shared between the clock provider and the common clock framework.
- *
- * @name: clock name
- * @ops: operations this clock supports
- * @parent_names: array of string names for all possible parents
- * @num_parents: number of possible parents
- * @flags: framework-level hints and quirks
- */
-struct clk_init_data {
-	const char		*name;
-	const struct clk_ops	*ops;
-	const char		**parent_names;
-	u8			num_parents;
-	unsigned long		flags;
-};
-
-/**
- * struct clk_hw - handle for traversing from a struct clk to its corresponding
- * hardware-specific structure.  struct clk_hw should be declared within struct
- * clk_foo and then referenced by the struct clk instance that uses struct
- * clk_foo's clk_ops
- *
- * @clk: pointer to the struct clk instance that points back to this struct
- * clk_hw instance
- *
- * @init: pointer to struct clk_init_data that contains the init data shared
- * with the common clock framework.
- */
-struct clk_hw {
-	struct clk *clk;
-	struct clk_init_data *init;
 };
 
 /*
@@ -279,7 +255,12 @@ struct clk *clk_register_mux(struct device *dev, const char *name,
 /**
  * clk_register - allocate a new clock, register it and return an opaque cookie
  * @dev: device that is registering this clock
+ * @name: clock name
+ * @ops: operations this clock supports
  * @hw: link to hardware-specific clock data
+ * @parent_names: array of string names for all possible parents
+ * @num_parents: number of possible parents
+ * @flags: framework-level hints and quirks
  *
  * clk_register is the primary interface for populating the clock tree with new
  * clock nodes.  It returns a pointer to the newly allocated struct clk which
@@ -287,7 +268,9 @@ struct clk *clk_register_mux(struct device *dev, const char *name,
  * rest of the clock API.  In the event of an error clk_register will return an
  * error code; drivers must test for an error code after calling clk_register.
  */
-struct clk *clk_register(struct device *dev, struct clk_hw *hw);
+struct clk *clk_register(struct device *dev, const char *name,
+		const struct clk_ops *ops, struct clk_hw *hw,
+		const char **parent_names, u8 num_parents, unsigned long flags);
 
 void clk_unregister(struct clk *clk);
 

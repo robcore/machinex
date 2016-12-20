@@ -675,7 +675,6 @@ static int decode_fattr3(struct xdr_stream *xdr, struct nfs_fattr *fattr)
 	p = xdr_decode_nfstime3(p, &fattr->atime);
 	p = xdr_decode_nfstime3(p, &fattr->mtime);
 	xdr_decode_nfstime3(p, &fattr->ctime);
-	fattr->change_attr = nfs_timespec_to_change_attr(&fattr->ctime);
 
 	fattr->valid |= NFS_ATTR_FATTR_V3;
 	return 0;
@@ -726,14 +725,12 @@ static int decode_wcc_attr(struct xdr_stream *xdr, struct nfs_fattr *fattr)
 		goto out_overflow;
 
 	fattr->valid |= NFS_ATTR_FATTR_PRESIZE
-		| NFS_ATTR_FATTR_PRECHANGE
 		| NFS_ATTR_FATTR_PREMTIME
 		| NFS_ATTR_FATTR_PRECTIME;
 
 	p = xdr_decode_size3(p, &fattr->pre_size);
 	p = xdr_decode_nfstime3(p, &fattr->pre_mtime);
 	xdr_decode_nfstime3(p, &fattr->pre_ctime);
-	fattr->pre_change_attr = nfs_timespec_to_change_attr(&fattr->pre_ctime);
 
 	return 0;
 out_overflow:
@@ -1290,7 +1287,7 @@ static void nfs3_xdr_enc_readdirplus3args(struct rpc_rqst *req,
  *	};
  */
 static void encode_commit3args(struct xdr_stream *xdr,
-			       const struct nfs_commitargs *args)
+			       const struct nfs_writeargs *args)
 {
 	__be32 *p;
 
@@ -1303,7 +1300,7 @@ static void encode_commit3args(struct xdr_stream *xdr,
 
 static void nfs3_xdr_enc_commit3args(struct rpc_rqst *req,
 				     struct xdr_stream *xdr,
-				     const struct nfs_commitargs *args)
+				     const struct nfs_writeargs *args)
 {
 	encode_commit3args(xdr, args);
 }
@@ -2322,7 +2319,7 @@ out_status:
  */
 static int nfs3_xdr_dec_commit3res(struct rpc_rqst *req,
 				   struct xdr_stream *xdr,
-				   struct nfs_commitres *result)
+				   struct nfs_writeres *result)
 {
 	enum nfs_stat status;
 	int error;

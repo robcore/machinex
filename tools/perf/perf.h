@@ -207,17 +207,10 @@ extern const char perf_version_string[];
 
 void pthread__unblock_sigwinch(void);
 
-struct perf_target {
-	const char   *pid;
-	const char   *tid;
-	const char   *cpu_list;
-	const char   *uid_str;
-	uid_t	     uid;
-	bool	     system_wide;
-};
-
 struct perf_record_opts {
-	struct perf_target target;
+	const char   *target_pid;
+	const char   *target_tid;
+	uid_t	     uid;
 	bool	     call_graph;
 	bool	     group;
 	bool	     inherit_stat;
@@ -230,6 +223,7 @@ struct perf_record_opts {
 	bool	     sample_time;
 	bool	     sample_id_all_missing;
 	bool	     exclude_guest_missing;
+	bool	     system_wide;
 	bool	     period;
 	unsigned int freq;
 	unsigned int mmap_pages;
@@ -237,6 +231,7 @@ struct perf_record_opts {
 	int	     branch_stack;
 	u64	     default_interval;
 	u64	     user_interval;
+	const char   *cpu_list;
 };
 
 #endif
