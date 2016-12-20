@@ -1266,6 +1266,10 @@ enum ieee80211_hw_flags {
  * @max_tx_aggregation_subframes: maximum number of subframes in an
  *	aggregate an HT driver will transmit, used by the peer as a
  *	hint to size its reorder buffer.
+ *
+ * @netdev_features: netdev features to be set in each netdev created
+ *	from this HW. Note only HW checksum features are currently
+ *	compatible with mac80211. Other feature bits will be rejected.
  */
 struct ieee80211_hw {
 	struct ieee80211_conf conf;
@@ -1286,6 +1290,7 @@ struct ieee80211_hw {
 	u8 max_rate_tries;
 	u8 max_rx_aggregation_subframes;
 	u8 max_tx_aggregation_subframes;
+	netdev_features_t netdev_features;
 };
 
 /**
