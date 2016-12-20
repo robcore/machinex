@@ -59,6 +59,8 @@ static void nfc_llcp_socket_release(struct nfc_llcp_local *local)
 			release_sock(sk);
 
 			sock_orphan(sk);
+
+			s->local = NULL;
 		}
 
 		parent_sk = &parent->sk;
@@ -81,6 +83,8 @@ static void nfc_llcp_socket_release(struct nfc_llcp_local *local)
 				release_sock(accept_sk);
 
 				sock_orphan(accept_sk);
+
+				lsk->local = NULL;
 			}
 		}
 
@@ -92,37 +96,11 @@ static void nfc_llcp_socket_release(struct nfc_llcp_local *local)
 		release_sock(parent_sk);
 
 		sock_orphan(parent_sk);
+
+		parent->local = NULL;
 	}
 
 	mutex_unlock(&local->socket_lock);
-}
-
-struct nfc_llcp_local *nfc_llcp_local_get(struct nfc_llcp_local *local)
-{
-	kref_get(&local->ref);
-
-	return local;
-}
-
-static void local_release(struct kref *ref)
-{
-	struct nfc_llcp_local *local;
-
-	local = container_of(ref, struct nfc_llcp_local, ref);
-
-	list_del(&local->list);
-	nfc_llcp_socket_release(local);
-	del_timer_sync(&local->link_timer);
-	skb_queue_purge(&local->tx_queue);
-	destroy_workqueue(local->tx_wq);
-	destroy_workqueue(local->rx_wq);
-	kfree_skb(local->rx_pending);
-	kfree(local);
-}
-
-int nfc_llcp_local_put(struct nfc_llcp_local *local)
-{
-	return kref_put(&local->ref, local_release);
 }
 
 static void nfc_llcp_clear_sdp(struct nfc_llcp_local *local)
@@ -619,7 +597,7 @@ enqueue:
 
 	new_sock = nfc_llcp_sock(new_sk);
 	new_sock->dev = local->dev;
-	new_sock->local = nfc_llcp_local_get(local);
+	new_sock->local = local;
 	new_sock->nfc_protocol = sock->nfc_protocol;
 	new_sock->ssap = bound_sap;
 	new_sock->dsap = ssap;
@@ -941,7 +919,6 @@ int nfc_llcp_register_device(struct nfc_dev *ndev)
 
 	local->dev = ndev;
 	INIT_LIST_HEAD(&local->list);
-	kref_init(&local->ref);
 	mutex_init(&local->sdp_lock);
 	mutex_init(&local->socket_lock);
 	init_timer(&local->link_timer);
@@ -1014,7 +991,14 @@ void nfc_llcp_unregister_device(struct nfc_dev *dev)
 		return;
 	}
 
-	nfc_llcp_local_put(local);
+	list_del(&local->list);
+	nfc_llcp_socket_release(local);
+	del_timer_sync(&local->link_timer);
+	skb_queue_purge(&local->tx_queue);
+	destroy_workqueue(local->tx_wq);
+	destroy_workqueue(local->rx_wq);
+	kfree_skb(local->rx_pending);
+	kfree(local);
 }
 
 int __init nfc_llcp_init(void)
