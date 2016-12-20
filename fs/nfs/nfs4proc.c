@@ -2836,7 +2836,6 @@ static int _nfs4_proc_remove(struct inode *dir, struct qstr *name)
 		.fh = NFS_FH(dir),
 		.name.len = name->len,
 		.name.name = name->name,
-		.bitmask = server->attr_bitmask,
 	};
 	struct nfs_removeres res = {
 		.server = server,
@@ -2846,19 +2845,11 @@ static int _nfs4_proc_remove(struct inode *dir, struct qstr *name)
 		.rpc_argp = &args,
 		.rpc_resp = &res,
 	};
-	int status = -ENOMEM;
-
-	res.dir_attr = nfs_alloc_fattr();
-	if (res.dir_attr == NULL)
-		goto out;
+	int status;
 
 	status = nfs4_call_sync(server->client, server, &msg, &args.seq_args, &res.seq_res, 1);
-	if (status == 0) {
+	if (status == 0)
 		update_changeattr(dir, &res.cinfo);
-		nfs_post_op_update_inode(dir, res.dir_attr);
-	}
-	nfs_free_fattr(res.dir_attr);
-out:
 	return status;
 }
 
@@ -2880,7 +2871,6 @@ static void nfs4_proc_unlink_setup(struct rpc_message *msg, struct inode *dir)
 	struct nfs_removeargs *args = msg->rpc_argp;
 	struct nfs_removeres *res = msg->rpc_resp;
 
-	args->bitmask = server->cache_consistency_bitmask;
 	res->server = server;
 	msg->rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_REMOVE];
 	nfs41_init_sequence(&args->seq_args, &res->seq_res, 1);
@@ -2905,7 +2895,6 @@ static int nfs4_proc_unlink_done(struct rpc_task *task, struct inode *dir)
 	if (nfs4_async_handle_error(task, res->server, NULL) == -EAGAIN)
 		return 0;
 	update_changeattr(dir, &res->cinfo);
-	nfs_post_op_update_inode(dir, res->dir_attr);
 	return 1;
 }
 
@@ -2916,7 +2905,6 @@ static void nfs4_proc_rename_setup(struct rpc_message *msg, struct inode *dir)
 	struct nfs_renameres *res = msg->rpc_resp;
 
 	msg->rpc_proc = &nfs4_procedures[NFSPROC4_CLNT_RENAME];
-	arg->bitmask = server->attr_bitmask;
 	res->server = server;
 	nfs41_init_sequence(&arg->seq_args, &res->seq_res, 1);
 }
@@ -2942,9 +2930,7 @@ static int nfs4_proc_rename_done(struct rpc_task *task, struct inode *old_dir,
 		return 0;
 
 	update_changeattr(old_dir, &res->old_cinfo);
-	nfs_post_op_update_inode(old_dir, res->old_fattr);
 	update_changeattr(new_dir, &res->new_cinfo);
-	nfs_post_op_update_inode(new_dir, res->new_fattr);
 	return 1;
 }
 
@@ -2957,7 +2943,6 @@ static int _nfs4_proc_rename(struct inode *old_dir, struct qstr *old_name,
 		.new_dir = NFS_FH(new_dir),
 		.old_name = old_name,
 		.new_name = new_name,
-		.bitmask = server->attr_bitmask,
 	};
 	struct nfs_renameres res = {
 		.server = server,
@@ -3021,18 +3006,15 @@ static int _nfs4_proc_link(struct inode *inode, struct inode *dir, struct qstr *
 	int status = -ENOMEM;
 
 	res.fattr = nfs_alloc_fattr();
-	res.dir_attr = nfs_alloc_fattr();
-	if (res.fattr == NULL || res.dir_attr == NULL)
+	if (res.fattr == NULL)
 		goto out;
 
 	status = nfs4_call_sync(server->client, server, &msg, &arg.seq_args, &res.seq_res, 1);
 	if (!status) {
 		update_changeattr(dir, &res.cinfo);
-		nfs_post_op_update_inode(dir, res.dir_attr);
 		nfs_post_op_update_inode(inode, res.fattr);
 	}
 out:
-	nfs_free_fattr(res.dir_attr);
 	nfs_free_fattr(res.fattr);
 	return status;
 }
