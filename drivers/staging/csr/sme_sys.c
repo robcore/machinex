@@ -1575,7 +1575,6 @@ void CsrWifiRouterMaPacketReqHandler(void* drvpriv, CsrWifiFsmEvent* msg)
     r = _sys_packet_req(priv, &signal, mareq->subscriptionHandle,
             mareq->frameLength, mareq->frame, snap_protocol);
 
-#define MAX_RETRY 2
     if (r && mareq->cfmRequested)
     {
         CsrWifiRouterMaPacketCfmSend(msg->source,interfaceTag,
