@@ -185,40 +185,7 @@ int usbnet_get_ethernet_addr(struct usbnet *dev, int iMACAddress)
 }
 EXPORT_SYMBOL_GPL(usbnet_get_ethernet_addr);
 
-static void intr_complete (struct urb *urb)
-{
-	struct usbnet	*dev = urb->context;
-	int		status = urb->status;
-
-	switch (status) {
-	/* success */
-	case 0:
-		dev->driver_info->status(dev, urb);
-		break;
-
-	/* software-driven interface shutdown */
-	case -ENOENT:		/* urb killed */
-	case -ESHUTDOWN:	/* hardware gone */
-		netif_dbg(dev, ifdown, dev->net,
-			  "intr shutdown, code %d\n", status);
-		return;
-
-	/* NOTE:  not throttling like RX/TX, since this endpoint
-	 * already polls infrequently
-	 */
-	default:
-		netdev_dbg(dev->net, "intr status %d\n", status);
-		break;
-	}
-
-	if (!netif_running (dev->net))
-		return;
-
-	status = usb_submit_urb (urb, GFP_ATOMIC);
-	if (status != 0)
-		netif_err(dev, timer, dev->net,
-			  "intr resubmit --> %d\n", status);
-}
+static void intr_complete (struct urb *urb);
 
 static int init_status (struct usbnet *dev, struct usb_interface *intf)
 {
@@ -564,6 +531,42 @@ block:
 	netif_dbg(dev, rx_err, dev->net, "no read resubmitted\n");
 }
 EXPORT_SYMBOL_GPL(rx_complete);
+
+static void intr_complete (struct urb *urb)
+{
+	struct usbnet	*dev = urb->context;
+	int		status = urb->status;
+
+	switch (status) {
+	/* success */
+	case 0:
+		dev->driver_info->status(dev, urb);
+		break;
+
+	/* software-driven interface shutdown */
+	case -ENOENT:		/* urb killed */
+	case -ESHUTDOWN:	/* hardware gone */
+		netif_dbg(dev, ifdown, dev->net,
+			  "intr shutdown, code %d\n", status);
+		return;
+
+	/* NOTE:  not throttling like RX/TX, since this endpoint
+	 * already polls infrequently
+	 */
+	default:
+		netdev_dbg(dev->net, "intr status %d\n", status);
+		break;
+	}
+
+	if (!netif_running (dev->net))
+		return;
+
+	memset(urb->transfer_buffer, 0, urb->transfer_buffer_length);
+	status = usb_submit_urb (urb, GFP_ATOMIC);
+	if (status != 0)
+		netif_err(dev, timer, dev->net,
+			  "intr resubmit --> %d\n", status);
+}
 
 /*-------------------------------------------------------------------------*/
 void usbnet_pause_rx(struct usbnet *dev)
@@ -1326,6 +1329,7 @@ void usbnet_disconnect (struct usb_interface *intf)
 	usb_free_urb(dev->interrupt);
 
 	free_netdev(net);
+	usb_put_dev (xdev);
 }
 EXPORT_SYMBOL_GPL(usbnet_disconnect);
 
@@ -1380,6 +1384,8 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	}
 	xdev = interface_to_usbdev (udev);
 	interface = udev->cur_altsetting;
+
+	usb_get_dev (xdev);
 
 	status = -ENOMEM;
 
@@ -1508,6 +1514,7 @@ out3:
 out1:
 	free_netdev(net);
 out:
+	usb_put_dev(xdev);
 	return status;
 }
 EXPORT_SYMBOL_GPL(usbnet_probe);

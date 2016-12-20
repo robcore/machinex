@@ -249,7 +249,8 @@ int pci_read_irq_line(struct pci_dev *pci_dev)
 	} else {
 		pr_debug(" Got one, spec %d cells (0x%08x 0x%08x...) on %s\n",
 			 oirq.size, oirq.specifier[0], oirq.specifier[1],
-			 of_node_full_name(oirq.controller));
+			 oirq.controller ? oirq.controller->full_name :
+			 "<default>");
 
 		virq = irq_create_of_mapping(oirq.controller, oirq.specifier,
 					     oirq.size);
@@ -1491,7 +1492,8 @@ static void __devinit pcibios_scan_phb(struct pci_controller *hose)
 	struct pci_bus *bus;
 	struct device_node *node = hose->dn;
 
-	pr_debug("PCI: Scanning PHB %s\n", of_node_full_name(node));
+	pr_debug("PCI: Scanning PHB %s\n",
+		 node ? node->full_name : "<NO NAME>");
 
 	pcibios_setup_phb_resources(hose, &resources);
 

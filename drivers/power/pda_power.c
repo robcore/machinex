@@ -134,13 +134,13 @@ static void update_charger(void)
 			regulator_set_current_limit(ac_draw, max_uA, max_uA);
 			if (!regulator_enabled) {
 				dev_dbg(dev, "charger on (AC)\n");
-				WARN_ON(regulator_enable(ac_draw));
+				regulator_enable(ac_draw);
 				regulator_enabled = 1;
 			}
 		} else {
 			if (regulator_enabled) {
 				dev_dbg(dev, "charger off\n");
-				WARN_ON(regulator_disable(ac_draw));
+				regulator_disable(ac_draw);
 				regulator_enabled = 0;
 			}
 		}

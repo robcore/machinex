@@ -275,7 +275,7 @@
 
 #define DWC3_DSTS_RXFIFOEMPTY		(1 << 17)
 
-#define DWC3_DSTS_SOFFN_MASK		(0x3fff << 3)
+#define DWC3_DSTS_SOFFN_MASK		(0x3ff << 3)
 #define DWC3_DSTS_SOFFN(n)		(((n) & DWC3_DSTS_SOFFN_MASK) >> 3)
 
 #define DWC3_DSTS_CONNECTSPD		(7 << 0)
@@ -490,7 +490,7 @@ enum dwc3_device_state {
 #define DWC3_TRB_SIZE_MASK	(0x00ffffff)
 #define DWC3_TRB_SIZE_LENGTH(n)	((n) & DWC3_TRB_SIZE_MASK)
 #define DWC3_TRB_SIZE_PCM1(n)	(((n) & 0x03) << 24)
-#define DWC3_TRB_SIZE_TRBSTS(n)	(((n) & (0x0f << 28)) >> 28)
+#define DWC3_TRB_SIZE_TRBSTS(n)	(((n) & (0x0f << 28) >> 28))
 
 #define DWC3_TRBSTS_OK			0
 #define DWC3_TRBSTS_MISSED_ISOC		1

@@ -4,7 +4,8 @@
  * Author:	Sjur Brendeland/sjur.brandeland@stericsson.com
  * License terms: GNU General Public License (GPL) version 2
  *
- * Borrowed heavily from file: pn_dev.c. Thanks to Remi Denis-Courmont
+ * Borrowed heavily from file: pn_dev.c. Thanks to
+ *  Remi Denis-Courmont <remi.denis-courmont@nokia.com>
  *  and Sakari Ailus <sakari.ailus@nokia.com>
  */
 
