@@ -3699,6 +3699,7 @@ CONFIG_IR_REMOCON_FPGA=y
 # CONFIG_MSM_VIBRATOR is not set
 # CONFIG_PWM is not set
 # CONFIG_SEC_NET_FILTER is not set
+# CONFIG_MEMORY is not set
 
 #
 # File systems
