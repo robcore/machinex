@@ -127,9 +127,10 @@
 #define PR_SET_PTRACER 0x59616d61
 # define PR_SET_PTRACER_ANY ((unsigned long)-1)
 
-#define PR_SET_CHILD_SUBREAPER 36
-#define PR_GET_CHILD_SUBREAPER 37
+#define PR_SET_CHILD_SUBREAPER	36
+#define PR_GET_CHILD_SUBREAPER	37
 
+#define PR_GET_TID_ADDRESS	40
 /*
  * Get effective timerslack value for the process.
  * It can be higher than PR_GET_TIMERSLACK.
