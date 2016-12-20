@@ -16,26 +16,25 @@
 #include <linux/module.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/bitops.h>
 #include <linux/kallsyms.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	7
+#define SOUND_CONTROL_MINOR_VERSION	8
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 1;
 unsigned int snd_ctrl_locked = 2;
-unsigned int snd_rec_ctrl_locked = 2;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 #define REG_SZ	17
-static unsigned int cached_regs[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0, 0, 0, 0 };
+static unsigned int cached_regs[] = { 0, 0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -48,50 +47,14 @@ static unsigned int *cache_select(unsigned int reg)
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 			out = &cached_regs[2];
 			break;
-		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
+		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
 			out = &cached_regs[3];
 			break;
-		case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
+		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 			out = &cached_regs[4];
 			break;
-		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-			out = &cached_regs[5];
-			break;
-		case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
-			out = &cached_regs[6];
-			break;
-		case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
-			out = &cached_regs[7];
-			break;
-		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
-			out = &cached_regs[8];
-			break;
-		case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
-			out = &cached_regs[9];
-			break;
-		case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
-			out = &cached_regs[10];
-			break;
-		case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
-			out = &cached_regs[11];
-			break;
-		case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
-			out = &cached_regs[12];
-			break;
-		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
-			out = &cached_regs[13];
-			break;
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			out = &cached_regs[14];
-			break;
-		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
-			out = &cached_regs[15];
-			break;
-		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
-			out = &cached_regs[16];
-			break;
-		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			out = &cached_regs[17];
+			out = &cached_regs[5];
 			break;
 	}
 
@@ -121,30 +84,18 @@ int snd_reg_access(unsigned int reg)
 	int ret = 1;
 
 	switch (reg) {
-		/* Digital Headphones Gain */
+		/* Digital Headphones/Speaker Gain */
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
-		case TABLA_A_CDC_RX3_VOL_CTL_B2_CTL:
-		case TABLA_A_CDC_RX4_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-		case TABLA_A_CDC_RX6_VOL_CTL_B2_CTL:
-		case TABLA_A_CDC_RX7_VOL_CTL_B2_CTL:
 			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
-		case TABLA_A_CDC_TX1_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX2_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX3_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX4_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX5_VOL_CTL_GAIN:
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
-		case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled > 0) && (snd_rec_ctrl_locked > 0))
+			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
 		default:
@@ -298,10 +249,10 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	snd_rec_ctrl_locked = 0;
+	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
-	snd_rec_ctrl_locked = 2;
+	snd_ctrl_locked = 2;
 
 	return count;
 }
@@ -324,10 +275,10 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	snd_rec_ctrl_locked = 0;
+	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
-	snd_rec_ctrl_locked = 2;
+	snd_ctrl_locked = 2;
 
 	return count;
 }
@@ -360,7 +311,7 @@ static struct kobj_attribute sound_reg_read_attribute =
 
 static struct kobj_attribute sound_reg_write_attribute =
 	__ATTR(sound_reg_write,
-		0666,
+		0222,
 		NULL,
 		sound_reg_write_store);
 
@@ -420,7 +371,6 @@ static int sound_control_init(void)
 
 	snd_ctrl_enabled = 1;
 	snd_ctrl_locked = 2;
-	snd_rec_ctrl_locked = 2;
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
