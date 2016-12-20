@@ -574,9 +574,9 @@ static int process_map(struct ocmem_req *req, unsigned long start,
 	if (rc < 0)
 		goto core_clock_fail;
 
-	rc = ocmem_enable_iface_clock();
+ 	rc = ocmem_enable_iface_clock();
 
-	if (rc < 0)
+ 	if (rc < 0)
 		goto iface_clock_fail;
 
 	rc = ocmem_enable_br_clock();
@@ -586,25 +586,16 @@ static int process_map(struct ocmem_req *req, unsigned long start,
 
 	rc = do_map(req);
 
-	if (rc < 0) {
-		pr_err("ocmem: Failed to map request %p for %d\n",
-							req, req->owner);
+	if (rc < 0)
 		goto process_map_fail;
 
-	}
-
-	if (ocmem_lock(req->owner, phys_to_offset(req->req_start), req->req_sz,
-							get_mode(req->owner))) {
-		pr_err("ocmem: Failed to secure request %p for %d\n", req,
-				req->owner);
-		rc = -EINVAL;
-		goto lock_failed;
-	}
-
 	return 0;
-lock_failed:
-	do_unmap(req);
+
 process_map_fail:
+	ocmem_disable_br_clock();
+br_clock_fail:
+	ocmem_disable_iface_clock();
+iface_clock_fail:
 	ocmem_disable_core_clock();
 core_clock_fail:
 	pr_err("ocmem: Failed to map ocmem request\n");
@@ -629,6 +620,7 @@ static int process_unmap(struct ocmem_req *req, unsigned long start,
 	if (rc < 0)
 		goto process_unmap_fail;
 
+	ocmem_disable_br_clock();
 	ocmem_disable_iface_clock();
 	ocmem_disable_core_clock();
 	return 0;
