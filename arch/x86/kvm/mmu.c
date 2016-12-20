@@ -1166,7 +1166,8 @@ static int kvm_age_rmapp(struct kvm *kvm, unsigned long *rmapp,
 	int young = 0;
 
 	/*
-	 * Emulate the accessed bit for EPT, by checking if this page has
+	 * In case of absence of EPT Access and Dirty Bits supports,
+	 * emulate the accessed bit for EPT, by checking if this page has
 	 * an EPT mapping, and clearing it if it does. On the next access,
 	 * a new EPT mapping will be established.
 	 * This has some overhead, but not as much as the cost of swapping
