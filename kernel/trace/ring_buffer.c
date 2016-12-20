@@ -1051,7 +1051,6 @@ rb_allocate_cpu_buffer(struct ring_buffer *buffer, int cpu)
 	rb_init_page(bpage->page);
 
 	INIT_LIST_HEAD(&cpu_buffer->reader_page->list);
-	INIT_LIST_HEAD(&cpu_buffer->new_pages);
 
 	ret = rb_allocate_pages(cpu_buffer, buffer->pages);
 	if (ret < 0)
