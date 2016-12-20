@@ -1004,7 +1004,6 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 	struct mm_struct * mm = current->mm;
 	struct inode *inode;
 	vm_flags_t vm_flags;
-	unsigned long reqprot = prot;
 #ifdef CONFIG_SDCARD_FS
 	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
 		file = sdcardfs_lower_file(file);
@@ -1129,10 +1128,6 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 			return -EINVAL;
 		}
 	}
-
-	error = security_mmap_file(file, reqprot, prot, flags);
-	if (error)
-		return error;
 
 	return mmap_region(file, addr, len, flags, vm_flags, pgoff);
 }
