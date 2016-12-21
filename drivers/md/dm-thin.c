@@ -2295,6 +2295,36 @@ static int process_set_transaction_id_mesg(unsigned argc, char **argv, struct po
 	return 0;
 }
 
+static int process_reserve_metadata_snap_mesg(unsigned argc, char **argv, struct pool *pool)
+{
+	int r;
+
+	r = check_arg_count(argc, 1);
+	if (r)
+		return r;
+
+	r = dm_pool_reserve_metadata_snap(pool->pmd);
+	if (r)
+		DMWARN("reserve_metadata_snap message failed.");
+
+	return r;
+}
+
+static int process_release_metadata_snap_mesg(unsigned argc, char **argv, struct pool *pool)
+{
+	int r;
+
+	r = check_arg_count(argc, 1);
+	if (r)
+		return r;
+
+	r = dm_pool_release_metadata_snap(pool->pmd);
+	if (r)
+		DMWARN("release_metadata_snap message failed.");
+
+	return r;
+}
+
 /*
  * Messages supported:
  *   create_thin	<dev_id>
@@ -2302,6 +2332,8 @@ static int process_set_transaction_id_mesg(unsigned argc, char **argv, struct po
  *   delete		<dev_id>
  *   trim		<dev_id> <new_size_in_sectors>
  *   set_transaction_id <current_trans_id> <new_trans_id>
+ *   reserve_metadata_snap
+ *   release_metadata_snap
  */
 static int pool_message(struct dm_target *ti, unsigned argc, char **argv)
 {
@@ -2320,6 +2352,12 @@ static int pool_message(struct dm_target *ti, unsigned argc, char **argv)
 
 	else if (!strcasecmp(argv[0], "set_transaction_id"))
 		r = process_set_transaction_id_mesg(argc, argv, pool);
+
+	else if (!strcasecmp(argv[0], "reserve_metadata_snap"))
+		r = process_reserve_metadata_snap_mesg(argc, argv, pool);
+
+	else if (!strcasecmp(argv[0], "release_metadata_snap"))
+		r = process_release_metadata_snap_mesg(argc, argv, pool);
 
 	else
 		DMWARN("Unrecognised thin pool target message received: %s", argv[0]);
@@ -2387,7 +2425,7 @@ static void pool_status(struct dm_target *ti, status_type_t type,
 			goto err;
 		}
 
-		r = dm_pool_get_held_metadata_root(pool->pmd, &held_root);
+		r = dm_pool_get_metadata_snap(pool->pmd, &held_root);
 		if (r) {
 			DMERR("dm_pool_get_metadata_snap returned %d", r);
 			goto err;
@@ -2486,7 +2524,7 @@ static struct target_type pool_target = {
 	.name = "thin-pool",
 	.features = DM_TARGET_SINGLETON | DM_TARGET_ALWAYS_WRITEABLE |
 		    DM_TARGET_IMMUTABLE,
-	.version = {1, 1, 1},
+	.version = {1, 2, 0},
 	.module = THIS_MODULE,
 	.ctr = pool_ctr,
 	.dtr = pool_dtr,
