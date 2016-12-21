@@ -248,6 +248,24 @@ static int journal_submit_data_buffers(journal_t *journal,
 	return ret;
 }
 
+static void jbd2_descr_block_csum_set(journal_t *j,
+				      struct journal_head *descriptor)
+{
+	struct jbd2_journal_block_tail *tail;
+	__u32 csum;
+
+	if (!JBD2_HAS_INCOMPAT_FEATURE(j, JBD2_FEATURE_INCOMPAT_CSUM_V2))
+		return;
+
+	tail = (struct jbd2_journal_block_tail *)
+			(jh2bh(descriptor)->b_data + j->j_blocksize -
+			sizeof(struct jbd2_journal_block_tail));
+	tail->t_checksum = 0;
+	csum = jbd2_chksum(j, j->j_csum_seed, jh2bh(descriptor)->b_data,
+			   j->j_blocksize);
+	tail->t_checksum = cpu_to_be32(csum);
+}
+
 /*
  * Wait for data submitted for writeout, refile inodes to proper
  * transaction if needed.
@@ -282,6 +300,7 @@ static int journal_finish_inode_data_buffers(journal_t *journal,
 		smp_mb__after_clear_bit();
 		wake_up_bit(&jinode->i_flags, __JI_COMMIT_RUNNING);
 	}
+	jbd2_commit_block_csum_set(journal, descriptor);
 
 	/* Now refile inode to proper lists */
 	list_for_each_entry_safe(jinode, next_i,
