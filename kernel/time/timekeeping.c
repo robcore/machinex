@@ -497,6 +497,7 @@ u64 timekeeping_max_deferment(void)
 {
 	unsigned long seq;
 	u64 ret;
+
 	do {
 		seq = read_seqbegin(&timekeeper.lock);
 
