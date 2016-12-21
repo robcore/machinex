@@ -26,7 +26,7 @@
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 
-#include <mach/iommu_hw-v2.h>
+#include <mach/iommu_hw-v1.h>
 #include <mach/iommu.h>
 
 static int msm_iommu_parse_bfb_settings(struct platform_device *pdev,
