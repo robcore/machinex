@@ -1016,7 +1016,8 @@ static inline void
 renew_client_locked(struct nfs4_client *clp)
 {
 	if (is_client_expired(clp)) {
-		dprintk("%s: client (clientid %08x/%08x) already expired\n",
+		WARN_ON(1);
+		printk("%s: client (clientid %08x/%08x) already expired\n",
 			__func__,
 			clp->cl_clientid.cl_boot,
 			clp->cl_clientid.cl_id);
@@ -1532,9 +1533,9 @@ static bool client_has_state(struct nfs4_client *clp)
 	 *
 	 * Also note we should probably be using this in 4.0 case too.
 	 */
-	return list_empty(&clp->cl_openowners)
-		&& list_empty(&clp->cl_delegations)
-		&& list_empty(&clp->cl_sessions);
+	return !list_empty(&clp->cl_openowners)
+		|| !list_empty(&clp->cl_delegations)
+		|| !list_empty(&clp->cl_sessions);
 }
 
 __be32
@@ -1609,16 +1610,15 @@ nfsd4_exchange_id(struct svc_rqst *rqstp,
 				status = nfserr_clid_inuse;
 				goto out;
 			}
-			goto expire_client;
+			expire_client(conf);
+			goto out_new;
 		}
 		if (verfs_match) { /* case 2 */
-			exid->flags |= EXCHGID4_FLAG_CONFIRMED_R;
+			conf->cl_exchange_flags |= EXCHGID4_FLAG_CONFIRMED_R;
 			new = conf;
 			goto out_copy;
 		}
 		/* case 5, client reboot */
-expire_client:
-		expire_client(conf);
 		goto out_new;
 	}
 
@@ -1645,7 +1645,7 @@ out_copy:
 	exid->clientid.cl_boot = new->cl_clientid.cl_boot;
 	exid->clientid.cl_id = new->cl_clientid.cl_id;
 
-	exid->seqid = 1;
+	exid->seqid = new->cl_cs_slot.sl_seqid + 1;
 	nfsd4_set_ex_flags(new, exid);
 
 	dprintk("nfsd4_exchange_id seqid %d flags %x\n",
@@ -1745,16 +1745,10 @@ nfsd4_create_session(struct svc_rqst *rqstp,
 		cs_slot = &conf->cl_cs_slot;
 		status = check_slot_seqid(cr_ses->seqid, cs_slot->sl_seqid, 0);
 		if (status == nfserr_replay_cache) {
-			dprintk("Got a create_session replay! seqid= %d\n",
-				cs_slot->sl_seqid);
-			/* Return the cached reply status */
 			status = nfsd4_replay_create_session(cr_ses, cs_slot);
 			goto out;
 		} else if (cr_ses->seqid != cs_slot->sl_seqid + 1) {
 			status = nfserr_seq_misordered;
-			dprintk("Sequence misordered!\n");
-			dprintk("Expected seqid= %d but got seqid= %d\n",
-				cs_slot->sl_seqid, cr_ses->seqid);
 			goto out;
 		}
 	} else if (unconf) {
@@ -1763,7 +1757,6 @@ nfsd4_create_session(struct svc_rqst *rqstp,
 			status = nfserr_clid_inuse;
 			goto out;
 		}
-
 		cs_slot = &unconf->cl_cs_slot;
 		status = check_slot_seqid(cr_ses->seqid, cs_slot->sl_seqid, 0);
 		if (status) {
@@ -1771,7 +1764,6 @@ nfsd4_create_session(struct svc_rqst *rqstp,
 			status = nfserr_seq_misordered;
 			goto out;
 		}
-
 		confirm_me = true;
 		conf = unconf;
 	} else {
@@ -1808,8 +1800,14 @@ nfsd4_create_session(struct svc_rqst *rqstp,
 
 	/* cache solo and embedded create sessions under the state lock */
 	nfsd4_cache_create_session(cr_ses, cs_slot, status);
-	if (confirm_me)
+	if (confirm_me) {
+		unsigned int hash = clientstr_hashval(unconf->cl_recdir);
+		struct nfs4_client *old =
+			find_confirmed_client_by_str(conf->cl_recdir, hash);
+		if (old)
+			expire_client(old);
 		move_to_confirmed(conf);
+	}
 out:
 	nfs4_unlock_state();
 	dprintk("%s returns %d\n", __func__, ntohl(status));
@@ -2067,13 +2065,6 @@ out:
 	return status;
 }
 
-static inline bool has_resources(struct nfs4_client *clp)
-{
-	return !list_empty(&clp->cl_openowners)
-		|| !list_empty(&clp->cl_delegations)
-		|| !list_empty(&clp->cl_sessions);
-}
-
 __be32
 nfsd4_destroy_clientid(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate, struct nfsd4_destroy_clientid *dc)
 {
@@ -2087,7 +2078,7 @@ nfsd4_destroy_clientid(struct svc_rqst *rqstp, struct nfsd4_compound_state *csta
 	if (conf) {
 		clp = conf;
 
-		if (!is_client_expired(conf) && has_resources(conf)) {
+		if (!is_client_expired(conf) && client_has_state(conf)) {
 			status = nfserr_clientid_busy;
 			goto out;
 		}
@@ -2165,17 +2156,13 @@ nfsd4_setclientid(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	if (status)
 		return status;
 
-	/* 
-	 * XXX The Duplicate Request Cache (DRC) has been checked (??)
-	 * We get here on a DRC miss.
-	 */
-
 	strhashval = clientstr_hashval(dname);
 
+	/* Cases below refer to rfc 3530 section 14.2.33: */
 	nfs4_lock_state();
 	conf = find_confirmed_client_by_str(dname, strhashval);
 	if (conf) {
-		/* RFC 3530 14.2.33 CASE 0: */
+		/* case 0: */
 		status = nfserr_clid_inuse;
 		if (clp_used_exchangeid(conf))
 			goto out;
@@ -2188,63 +2175,18 @@ nfsd4_setclientid(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 			goto out;
 		}
 	}
-	/*
-	 * section 14.2.33 of RFC 3530 (under the heading "IMPLEMENTATION")
-	 * has a description of SETCLIENTID request processing consisting
-	 * of 5 bullet points, labeled as CASE0 - CASE4 below.
-	 */
 	unconf = find_unconfirmed_client_by_str(dname, strhashval);
-	status = nfserr_jukebox;
-	if (!conf) {
-		/*
-		 * RFC 3530 14.2.33 CASE 4:
-		 * placed first, because it is the normal case
-		 */
-		if (unconf)
-			expire_client(unconf);
-		new = create_client(clname, dname, rqstp, &clverifier);
-		if (new == NULL)
-			goto out;
-		gen_clid(new);
-	} else if (same_verf(&conf->cl_verifier, &clverifier)) {
-		/*
-		 * RFC 3530 14.2.33 CASE 1:
-		 * probable callback update
-		 */
-		if (unconf) {
-			/* Note this is removing unconfirmed {*x***},
-			 * which is stronger than RFC recommended {vxc**}.
-			 * This has the advantage that there is at most
-			 * one {*x***} in either list at any time.
-			 */
-			expire_client(unconf);
-		}
-		new = create_client(clname, dname, rqstp, &clverifier);
-		if (new == NULL)
-			goto out;
-		copy_clid(new, conf);
-	} else if (!unconf) {
-		/*
-		 * RFC 3530 14.2.33 CASE 2:
-		 * probable client reboot; state will be removed if
-		 * confirmed.
-		 */
-		new = create_client(clname, dname, rqstp, &clverifier);
-		if (new == NULL)
-			goto out;
-		gen_clid(new);
-	} else {
-		/*
-		 * RFC 3530 14.2.33 CASE 3:
-		 * probable client reboot; state will be removed if
-		 * confirmed.
-		 */
+	if (unconf)
 		expire_client(unconf);
-		new = create_client(clname, dname, rqstp, &clverifier);
-		if (new == NULL)
-			goto out;
+	status = nfserr_jukebox;
+	new = create_client(clname, dname, rqstp, &clverifier);
+	if (new == NULL)
+		goto out;
+	if (conf && same_verf(&conf->cl_verifier, &clverifier))
+		/* case 1: probable callback update */
+		copy_clid(new, conf);
+	else /* case 4 (new client) or cases 2, 3 (client reboot): */
 		gen_clid(new);
-	}
 	/*
 	 * XXX: we should probably set this at creation time, and check
 	 * for consistent minorversion use throughout:
@@ -2262,11 +2204,6 @@ out:
 }
 
 
-/*
- * Section 14.2.34 of RFC 3530 (under the heading "IMPLEMENTATION") has
- * a description of SETCLIENTID_CONFIRM request processing consisting of 4
- * bullets, labeled as CASE1 - CASE4 below.
- */
 __be32
 nfsd4_setclientid_confirm(struct svc_rqst *rqstp,
 			 struct nfsd4_compound_state *cstate,
@@ -2279,77 +2216,46 @@ nfsd4_setclientid_confirm(struct svc_rqst *rqstp,
 
 	if (STALE_CLIENTID(clid))
 		return nfserr_stale_clientid;
-	/* 
-	 * XXX The Duplicate Request Cache (DRC) has been checked (??)
-	 * We get here on a DRC miss.
-	 */
-
 	nfs4_lock_state();
 
 	conf = find_confirmed_client(clid);
 	unconf = find_unconfirmed_client(clid);
-
 	/*
-	 * section 14.2.34 of RFC 3530 has a description of
-	 * SETCLIENTID_CONFIRM request processing consisting
-	 * of 4 bullet points, labeled as CASE1 - CASE4 below.
+	 * We try hard to give out unique clientid's, so if we get an
+	 * attempt to confirm the same clientid with a different cred,
+	 * there's a bug somewhere.  Let's charitably assume it's our
+	 * bug.
 	 */
-	status = nfserr_clid_inuse;
-	if (conf && unconf && same_verf(&confirm, &unconf->cl_confirm)) {
-		/*
-		 * RFC 3530 14.2.34 CASE 1:
-		 * callback update
-		 */
-		if (!same_creds(&conf->cl_cred, &unconf->cl_cred))
-			status = nfserr_clid_inuse;
-		else {
-			nfsd4_change_callback(conf, &unconf->cl_cb_conn);
-			nfsd4_probe_callback(conf);
-			expire_client(unconf);
+	status = nfserr_serverfault;
+	if (unconf && !same_creds(&unconf->cl_cred, &rqstp->rq_cred))
+		goto out;
+	if (conf && !same_creds(&conf->cl_cred, &rqstp->rq_cred))
+		goto out;
+	/* cases below refer to rfc 3530 section 14.2.34: */
+	if (!unconf || !same_verf(&confirm, &unconf->cl_confirm)) {
+		if (conf && !unconf) /* case 2: probable retransmit */
 			status = nfs_ok;
-		}
-	} else if (conf && !unconf) {
-		/*
-		 * RFC 3530 14.2.34 CASE 2:
-		 * probable retransmitted request; play it safe and
-		 * do nothing.
-		 */
-		if (!same_creds(&conf->cl_cred, &rqstp->rq_cred))
-			status = nfserr_clid_inuse;
-		else
-			status = nfs_ok;
-	} else if (!conf && unconf
-			&& same_verf(&unconf->cl_confirm, &confirm)) {
-		/*
-		 * RFC 3530 14.2.34 CASE 3:
-		 * Normal case; new or rebooted client:
-		 */
-		if (!same_creds(&unconf->cl_cred, &rqstp->rq_cred)) {
-			status = nfserr_clid_inuse;
-		} else {
-			unsigned int hash =
-				clientstr_hashval(unconf->cl_recdir);
-			conf = find_confirmed_client_by_str(unconf->cl_recdir,
-							    hash);
-			if (conf) {
-				nfsd4_client_record_remove(conf);
-				expire_client(conf);
-			}
-			move_to_confirmed(unconf);
-			conf = unconf;
-			nfsd4_probe_callback(conf);
-			status = nfs_ok;
-		}
-	} else if ((!conf || (conf && !same_verf(&conf->cl_confirm, &confirm)))
-	    && (!unconf || (unconf && !same_verf(&unconf->cl_confirm,
-				    				&confirm)))) {
-		/*
-		 * RFC 3530 14.2.34 CASE 4:
-		 * Client probably hasn't noticed that we rebooted yet.
-		 */
-		status = nfserr_stale_clientid;
+		else /* case 4: client hasn't noticed we rebooted yet? */
+			status = nfserr_stale_clientid;
+		goto out;
 	}
+	status = nfs_ok;
+	if (conf) { /* case 1: callback update */
+		nfsd4_change_callback(conf, &unconf->cl_cb_conn);
+		nfsd4_probe_callback(conf);
+		expire_client(unconf);
+	} else { /* case 3: normal case; new or rebooted client */
+		unsigned int hash = clientstr_hashval(unconf->cl_recdir);
 
+		conf = find_confirmed_client_by_str(unconf->cl_recdir, hash);
+		if (conf) {
+			nfsd4_client_record_remove(conf);
+			expire_client(conf);
+		}
+		move_to_confirmed(unconf);
+		nfsd4_probe_callback(unconf);
+	}
+out:
 	nfs4_unlock_state();
 	return status;
 }
