@@ -1081,9 +1081,7 @@ free_client(struct nfs4_client *clp)
 		list_del(&ses->se_perclnt);
 		nfsd4_put_session_locked(ses);
 	}
-	if (clp->cl_cred.cr_group_info)
-		put_group_info(clp->cl_cred.cr_group_info);
-	kfree(clp->cl_principal);
+	free_svc_cred(&clp->cl_cred);
 	kfree(clp->cl_name.data);
 	idr_remove_all(&clp->cl_stateids);
 	idr_destroy(&clp->cl_stateids);
@@ -1166,12 +1164,20 @@ static void copy_clid(struct nfs4_client *target, struct nfs4_client *source)
 	target->cl_clientid.cl_id = source->cl_clientid.cl_id; 
 }
 
-static void copy_cred(struct svc_cred *target, struct svc_cred *source)
+static int copy_cred(struct svc_cred *target, struct svc_cred *source)
 {
+	if (source->cr_principal) {
+		target->cr_principal =
+				kstrdup(source->cr_principal, GFP_KERNEL);
+		if (target->cr_principal == NULL)
+			return -ENOMEM;
+	} else
+		target->cr_principal = NULL;
 	target->cr_uid = source->cr_uid;
 	target->cr_gid = source->cr_gid;
 	target->cr_group_info = source->cr_group_info;
 	get_group_info(target->cr_group_info);
+	return 0;
 }
 
 static int same_name(const char *n1, const char *n2)
@@ -1238,25 +1244,20 @@ static struct nfs4_client *create_client(struct xdr_netobj name, char *recdir,
 {
 	struct nfs4_client *clp;
 	struct sockaddr *sa = svc_addr(rqstp);
-	char *princ;
+	int ret;
 
 	clp = alloc_client(name);
 	if (clp == NULL)
 		return NULL;
 
 	INIT_LIST_HEAD(&clp->cl_sessions);
-
-	princ = svc_gss_principal(rqstp);
-	if (princ) {
-		clp->cl_principal = kstrdup(princ, GFP_KERNEL);
-		if (clp->cl_principal == NULL) {
-			spin_lock(&client_lock);
-			free_client(clp);
-			spin_unlock(&client_lock);
-			return NULL;
-		}
+	ret = copy_cred(&clp->cl_cred, &rqstp->rq_cred);
+	if (ret) {
+		spin_lock(&client_lock);
+		free_client(clp);
+		spin_unlock(&client_lock);
+		return NULL;
 	}
-
 	idr_init(&clp->cl_stateids);
 	memcpy(clp->cl_recdir, recdir, HEXDIR_LEN);
 	atomic_set(&clp->cl_refcount, 0);
@@ -1275,7 +1276,6 @@ static struct nfs4_client *create_client(struct xdr_netobj name, char *recdir,
 	copy_verf(clp, verf);
 	rpc_copy_addr((struct sockaddr *) &clp->cl_addr, sa);
 	clp->cl_flavor = rqstp->rq_flavor;
-	copy_cred(&clp->cl_cred, &rqstp->rq_cred);
 	gen_confirm(clp);
 	clp->cl_cb_session = NULL;
 	return clp;
@@ -1504,6 +1504,19 @@ nfsd4_set_ex_flags(struct nfs4_client *new, struct nfsd4_exchange_id *clid)
 	clid->flags = new->cl_exchange_flags;
 }
 
+static bool client_has_state(struct nfs4_client *clp)
+{
+	/*
+	 * Note clp->cl_openowners check isn't quite right: there's no
+	 * need to count owners without stateid's.
+	 *
+	 * Also note we should probably be using this in 4.0 case too.
+	 */
+	return list_empty(&clp->cl_openowners)
+		&& list_empty(&clp->cl_delegations)
+		&& list_empty(&clp->cl_sessions);
+}
+
 __be32
 nfsd4_exchange_id(struct svc_rqst *rqstp,
 		  struct nfsd4_compound_state *cstate,
@@ -1516,6 +1529,7 @@ nfsd4_exchange_id(struct svc_rqst *rqstp,
 	char			addr_str[INET6_ADDRSTRLEN];
 	nfs4_verifier		verf = exid->verifier;
 	struct sockaddr		*sa = svc_addr(rqstp);
+	bool	update = exid->flags & EXCHGID4_FLAG_UPD_CONFIRMED_REC_A;
 
 	rpc_ntop(sa, addr_str, sizeof(addr_str));
 	dprintk("%s rqstp=%p exid=%p clname.len=%u clname.data=%p "
@@ -1541,71 +1555,64 @@ nfsd4_exchange_id(struct svc_rqst *rqstp,
 	status = nfs4_make_rec_clidname(dname, &exid->clname);
 
 	if (status)
-		goto error;
+		return status;
 
 	strhashval = clientstr_hashval(dname);
 
+	/* Cases below refer to rfc 5661 section 18.35.4: */
 	nfs4_lock_state();
-	status = nfs_ok;
-
 	conf = find_confirmed_client_by_str(dname, strhashval);
 	if (conf) {
-		if (!clp_used_exchangeid(conf)) {
-			status = nfserr_clid_inuse; /* XXX: ? */
-			goto out;
-		}
-		if (!same_verf(&verf, &conf->cl_verifier)) {
-			/* 18.35.4 case 8 */
-			if (exid->flags & EXCHGID4_FLAG_UPD_CONFIRMED_REC_A) {
-				status = nfserr_not_same;
+		bool creds_match = same_creds(&conf->cl_cred, &rqstp->rq_cred);
+		bool verfs_match = same_verf(&verf, &conf->cl_verifier);
+
+		if (update) {
+			if (!clp_used_exchangeid(conf)) { /* buggy client */
+				status = nfserr_inval;
 				goto out;
 			}
-			/* Client reboot: destroy old state */
-			expire_client(conf);
-			goto out_new;
-		}
-		if (!same_creds(&conf->cl_cred, &rqstp->rq_cred)) {
-			/* 18.35.4 case 9 */
-			if (exid->flags & EXCHGID4_FLAG_UPD_CONFIRMED_REC_A) {
+			if (!creds_match) { /* case 9 */
 				status = nfserr_perm;
 				goto out;
 			}
-			expire_client(conf);
-			goto out_new;
+			if (!verfs_match) { /* case 8 */
+				status = nfserr_not_same;
+				goto out;
+			}
+			/* case 6 */
+			exid->flags |= EXCHGID4_FLAG_CONFIRMED_R;
+			new = conf;
+			goto out_copy;
 		}
-		/*
-		 * Set bit when the owner id and verifier map to an already
-		 * confirmed client id (18.35.3).
-		 */
-		exid->flags |= EXCHGID4_FLAG_CONFIRMED_R;
-
-		/*
-		 * Falling into 18.35.4 case 2, possible router replay.
-		 * Leave confirmed record intact and return same result.
-		 */
-		copy_verf(conf, &verf);
-		new = conf;
-		goto out_copy;
+		if (!creds_match) { /* case 3 */
+			if (client_has_state(conf)) {
+				status = nfserr_clid_inuse;
+				goto out;
+			}
+			goto expire_client;
+		}
+		if (verfs_match) { /* case 2 */
+			exid->flags |= EXCHGID4_FLAG_CONFIRMED_R;
+			new = conf;
+			goto out_copy;
+		}
+		/* case 5, client reboot */
+expire_client:
+		expire_client(conf);
+		goto out_new;
 	}
 
-	/* 18.35.4 case 7 */
-	if (exid->flags & EXCHGID4_FLAG_UPD_CONFIRMED_REC_A) {
+	if (update) { /* case 7 */
 		status = nfserr_noent;
 		goto out;
 	}
 
 	unconf  = find_unconfirmed_client_by_str(dname, strhashval);
-	if (unconf) {
-		/*
-		 * Possible retry or client restart.  Per 18.35.4 case 4,
-		 * a new unconfirmed record should be generated regardless
-		 * of whether any properties have changed.
-		 */
+	if (unconf) /* case 4, possible retry or client restart */
 		expire_client(unconf);
-	}
 
+	/* case 1 (normal case) */
 out_new:
-	/* Normal case */
 	new = create_client(exid->clname, dname, rqstp, &verf);
 	if (new == NULL) {
 		status = nfserr_jukebox;
@@ -1627,8 +1634,6 @@ out_copy:
 
 out:
 	nfs4_unlock_state();
-error:
-	dprintk("nfsd4_exchange_id returns %d\n", ntohl(status));
 	return status;
 }
 
