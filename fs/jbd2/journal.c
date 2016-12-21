@@ -134,6 +134,15 @@ void jbd2_superblock_csum_set(journal_t *j, journal_superblock_t *sb)
 	sb->s_checksum = jbd2_superblock_csum(j, sb);
 }
 
+/* Checksumming functions */
+int jbd2_verify_csum_type(journal_t *j, journal_superblock_t *sb)
+{
+	if (!JBD2_HAS_INCOMPAT_FEATURE(j, JBD2_FEATURE_INCOMPAT_CSUM_V2))
+		return 1;
+
+	return sb->s_checksum_type == JBD2_CRC32C_CHKSUM;
+}
+
 /*
  * Helper function used to manage commit timeouts
  */
@@ -1464,6 +1473,9 @@ static int journal_get_superblock(journal_t *journal)
 	if (buffer_verified(bh))
 		return 0;
 
+	if (buffer_verified(bh))
+		return 0;
+
 	sb = journal->j_superblock;
 
 	err = -EINVAL;
@@ -1535,6 +1547,21 @@ static int journal_get_superblock(journal_t *journal)
 	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		journal->j_csum_seed = jbd2_chksum(journal, ~0, sb->s_uuid,
 						   sizeof(sb->s_uuid));
+
+	set_buffer_verified(bh);
+
+	if (JBD2_HAS_COMPAT_FEATURE(journal, JBD2_FEATURE_COMPAT_CHECKSUM) &&
+	    JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2)) {
+		/* Can't have checksum v1 and v2 on at the same time! */
+		printk(KERN_ERR "JBD: Can't enable checksumming v1 and v2 "
+		       "at the same time!\n");
+		goto out;
+	}
+
+	if (!jbd2_verify_csum_type(journal, sb)) {
+		printk(KERN_ERR "JBD: Unknown checksum type\n");
+		goto out;
+	}
 
 	set_buffer_verified(bh);
 
@@ -1721,6 +1748,10 @@ int jbd2_journal_destroy(journal_t *journal)
 int jbd2_journal_check_used_features (journal_t *journal, unsigned long compat,
 				 unsigned long ro, unsigned long incompat)
 {
+#define INCOMPAT_FEATURE_ON(f) \
+		((incompat & (f)) && !(sb->s_feature_incompat & cpu_to_be32(f)))
+#define COMPAT_FEATURE_ON(f) \
+		((compat & (f)) && !(sb->s_feature_compat & cpu_to_be32(f)))
 	journal_superblock_t *sb;
 
 	if (!compat && !ro && !incompat)
