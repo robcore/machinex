@@ -326,10 +326,10 @@ xfs_map_blocks(
 
 	ASSERT(ip->i_d.di_format != XFS_DINODE_FMT_BTREE ||
 	       (ip->i_df.if_flags & XFS_IFEXTENTS));
-	ASSERT(offset <= mp->m_maxioffset);
+	ASSERT(offset <= mp->m_super->s_maxbytes);
 
-	if (offset + count > mp->m_maxioffset)
-		count = mp->m_maxioffset - offset;
+	if (offset + count > mp->m_super->s_maxbytes)
+		count = mp->m_super->s_maxbytes - offset;
 	end_fsb = XFS_B_TO_FSB(mp, (xfs_ufsize_t)offset + count);
 	offset_fsb = XFS_B_TO_FSBT(mp, offset);
 	error = xfs_bmapi_read(ip, offset_fsb, end_fsb - offset_fsb,
@@ -984,10 +984,15 @@ xfs_vm_writepage(
 				imap_valid = 0;
 			}
 		} else {
-			if (PageUptodate(page)) {
+			if (PageUptodate(page))
 				ASSERT(buffer_mapped(bh));
-				imap_valid = 0;
-			}
+			/*
+			 * This buffer is not uptodate and will not be
+			 * written to disk.  Ensure that we will put any
+			 * subsequent writeable buffers into a new
+			 * ioend.
+			 */
+			imap_valid = 0;
 			continue;
 		}
 
@@ -1153,9 +1158,9 @@ __xfs_get_blocks(
 		lockmode = xfs_ilock_map_shared(ip);
 	}
 
-	ASSERT(offset <= mp->m_maxioffset);
-	if (offset + size > mp->m_maxioffset)
-		size = mp->m_maxioffset - offset;
+	ASSERT(offset <= mp->m_super->s_maxbytes);
+	if (offset + size > mp->m_super->s_maxbytes)
+		size = mp->m_super->s_maxbytes - offset;
 	end_fsb = XFS_B_TO_FSB(mp, (xfs_ufsize_t)offset + size);
 	offset_fsb = XFS_B_TO_FSBT(mp, offset);
 
