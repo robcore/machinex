@@ -318,6 +318,12 @@ static inline pgoff_t basepage_index(struct page *page)
 	return __basepage_index(page);
 }
 
+static inline int hstate_index(struct hstate *h)
+{
+	return h - hstates;
+}
+
+
 #else	/* CONFIG_HUGETLB_PAGE */
 struct hstate {};
 #define alloc_huge_page_node(h, nid) NULL
@@ -336,6 +342,7 @@ static inline unsigned int pages_per_huge_page(struct hstate *h)
 	return 1;
 }
 #define hstate_index_to_shift(index) 0
+#define hstate_index(h) 0
 
 static inline pgoff_t basepage_index(struct page *page)
 {
