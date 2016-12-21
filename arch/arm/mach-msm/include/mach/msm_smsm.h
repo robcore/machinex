@@ -101,7 +101,7 @@ void *smem_alloc(unsigned id, unsigned size);
 #else
 void *smem_alloc(unsigned id, unsigned size)
 {
-	return NULL;
+	return (phys_addr_t) NULL;
 }
 #endif
 void *smem_alloc2(unsigned id, unsigned size_in);
