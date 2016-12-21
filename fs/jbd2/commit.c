@@ -150,7 +150,7 @@ static int journal_submit_commit_record(journal_t *journal,
 		tmp->h_chksum_size 	= JBD2_CRC32_CHKSUM_SIZE;
 		tmp->h_chksum[0] 	= cpu_to_be32(crc32_sum);
 	}
-	jbd2_commit_block_csum_set(journal, descriptor);
+	jbd2_commit_block_csum_set(journal, bh);
 
 	JBUFFER_TRACE(descriptor, "submit commit block");
 	lock_buffer(bh);
