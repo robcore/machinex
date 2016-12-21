@@ -545,18 +545,14 @@ static int pty_unix98_install(struct tty_driver *driver, struct tty_struct *tty)
 	return pty_common_install(driver, tty, false);
 }
 
-static void ptm_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
-{
-}
-
-static void pts_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
+static void pty_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
 {
 }
 
 static const struct tty_operations ptm_unix98_ops = {
 	.lookup = ptm_unix98_lookup,
 	.install = pty_unix98_install,
-	.remove = ptm_unix98_remove,
+	.remove = pty_unix98_remove,
 	.open = pty_open,
 	.close = pty_close,
 	.write = pty_write,
@@ -574,7 +570,7 @@ static const struct tty_operations ptm_unix98_ops = {
 static const struct tty_operations pty_unix98_ops = {
 	.lookup = pts_unix98_lookup,
 	.install = pty_unix98_install,
-	.remove = pts_unix98_remove,
+	.remove = pty_unix98_remove,
 	.open = pty_open,
 	.close = pty_close,
 	.write = pty_write,
