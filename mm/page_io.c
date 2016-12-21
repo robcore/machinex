@@ -21,6 +21,7 @@
 #include <linux/writeback.h>
 #include <linux/aio.h>
 #include <linux/blkdev.h>
+#include <linux/blk_types.h>
 #include <linux/frontswap.h>
 #include <asm/pgtable.h>
 
