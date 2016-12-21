@@ -206,6 +206,11 @@ static void wcd9xxx_irq_dispatch(struct wcd9xxx *wcd9xxx, int irqbit)
 	}
 }
 
+static int wcd9xxx_num_irq_regs(const struct wcd9xxx *wcd9xxx)
+{
+	return (wcd9xxx->num_irqs / 8) + ((wcd9xxx->num_irqs % 8) ? 1 : 0);
+}
+
 static irqreturn_t wcd9xxx_irq_thread(int irq, void *data)
 {
 	int ret;
