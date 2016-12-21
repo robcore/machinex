@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -392,7 +392,7 @@ static struct msm_iommu_dev vcap_iommu = {
 };
 
 static struct platform_device msm_device_iommu_jpegd = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 0,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -403,7 +403,7 @@ static struct platform_device msm_device_iommu_jpegd = {
 };
 
 static struct platform_device msm_device_iommu_vpe = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 1,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -414,7 +414,7 @@ static struct platform_device msm_device_iommu_vpe = {
 };
 
 static struct platform_device msm_device_iommu_mdp0 = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 2,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -425,7 +425,7 @@ static struct platform_device msm_device_iommu_mdp0 = {
 };
 
 static struct platform_device msm_device_iommu_mdp1 = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 3,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -436,7 +436,7 @@ static struct platform_device msm_device_iommu_mdp1 = {
 };
 
 static struct platform_device msm_device_iommu_rot = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 4,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -447,7 +447,7 @@ static struct platform_device msm_device_iommu_rot = {
 };
 
 static struct platform_device msm_device_iommu_ijpeg = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 5,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -458,7 +458,7 @@ static struct platform_device msm_device_iommu_ijpeg = {
 };
 
 static struct platform_device msm_device_iommu_vfe = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 6,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -469,7 +469,7 @@ static struct platform_device msm_device_iommu_vfe = {
 };
 
 static struct platform_device msm_device_iommu_vcodec_a = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 7,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -480,7 +480,7 @@ static struct platform_device msm_device_iommu_vcodec_a = {
 };
 
 static struct platform_device msm_device_iommu_vcodec_b = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 8,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -491,7 +491,7 @@ static struct platform_device msm_device_iommu_vcodec_b = {
 };
 
 static struct platform_device msm_device_iommu_gfx3d = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 9,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -502,7 +502,7 @@ static struct platform_device msm_device_iommu_gfx3d = {
 };
 
 static struct platform_device msm_device_iommu_gfx3d1 = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 10,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -513,7 +513,7 @@ static struct platform_device msm_device_iommu_gfx3d1 = {
 };
 
 static struct platform_device msm_device_iommu_gfx2d0 = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 10,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -524,7 +524,7 @@ static struct platform_device msm_device_iommu_gfx2d0 = {
 };
 
 static struct platform_device msm_device_iommu_gfx2d1 = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 11,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -535,7 +535,7 @@ static struct platform_device msm_device_iommu_gfx2d1 = {
 };
 
 static struct platform_device msm_device_iommu_vcap = {
-	.name = "msm_iommu",
+	.name = "msm_iommu-v0",
 	.id = 11,
 	.dev = {
 		.parent = &msm_root_iommu_dev.dev,
@@ -994,8 +994,8 @@ static struct platform_device *msm_iommu_jpegd_ctx_devs[] = {
 static int __init iommu_init(void)
 {
 	int ret;
-	if (!msm_soc_version_supports_iommu_v1()) {
-		pr_err("IOMMU v1 is not supported on this SoC version.\n");
+	if (!msm_soc_version_supports_iommu_v0()) {
+		pr_err("IOMMU v0 is not supported on this SoC version.\n");
 		return -ENODEV;
 	}
 
