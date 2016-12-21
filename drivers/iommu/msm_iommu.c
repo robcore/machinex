@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,7 +27,7 @@
 #include <asm/cacheflush.h>
 #include <asm/sizes.h>
 
-#include <mach/iommu_hw-v0.h>
+#include <mach/iommu_hw-8xxx.h>
 #include <mach/iommu.h>
 #include <mach/msm_smsm.h>
 
@@ -1347,7 +1347,7 @@ static void __init setup_iommu_tex_classes(void)
 
 static int __init msm_iommu_init(void)
 {
-	if (!msm_soc_version_supports_iommu_v0())
+	if (!msm_soc_version_supports_iommu_v1())
 		return -ENODEV;
 
 	msm_iommu_lock_initialize();

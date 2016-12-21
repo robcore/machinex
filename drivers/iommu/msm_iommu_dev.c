@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,7 +22,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 
-#include <mach/iommu_hw-v0.h>
+#include <mach/iommu_hw-8xxx.h>
 #include <mach/iommu.h>
 
 struct iommu_ctx_iter_data {

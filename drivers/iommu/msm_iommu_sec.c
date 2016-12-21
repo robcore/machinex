@@ -28,7 +28,7 @@
 
 #include <asm/sizes.h>
 
-#include <mach/iommu_hw-v1.h>
+#include <mach/iommu_hw-v2.h>
 #include <mach/iommu.h>
 #include <mach/scm.h>
 
@@ -78,7 +78,7 @@ static int msm_iommu_sec_ptbl_init(void)
 	unsigned int spare;
 	int ret, ptbl_ret;
 
-	for_each_compatible_node(np, NULL, "qcom,msm-smmu-v1")
+	for_each_compatible_node(np, NULL, "qcom,msm-smmu-v2")
 		if (of_find_property(np, "qcom,iommu-secure-id", NULL))
 			break;
 
