@@ -33,6 +33,7 @@ struct iommu_group;
 struct bus_type;
 struct device;
 struct iommu_domain;
+struct notifier_block;
 
 /* iommu fault flags */
 #define IOMMU_FAULT_READ	0x0
