@@ -104,8 +104,6 @@ static int nfs4_map_errors(int err)
 		return -EINVAL;
 	case -NFS4ERR_SHARE_DENIED:
 		return -EACCES;
-	case -NFS4ERR_MINOR_VERS_MISMATCH:
-		return -EPROTONOSUPPORT;
 	default:
 		dprintk("%s could not handle NFSv4 error %d\n",
 				__func__, -err);
@@ -2541,14 +2539,6 @@ nfs4_proc_setattr(struct dentry *dentry, struct nfs_fattr *fattr,
 
 	nfs_fattr_init(fattr);
 
-	/* Deal with open(O_TRUNC) */
-	if (sattr->ia_valid & ATTR_OPEN)
-		sattr->ia_valid &= ~(ATTR_MTIME|ATTR_CTIME|ATTR_OPEN);
-
-	/* Optimization: if the end result is no change, don't RPC */
-	if ((sattr->ia_valid & ~(ATTR_FILE)) == 0)
-		return 0;
-
 	/* Search for an existing open(O_WRITE) file */
 	if (sattr->ia_valid & ATTR_FILE) {
 		struct nfs_open_context *ctx;
@@ -2559,6 +2549,10 @@ nfs4_proc_setattr(struct dentry *dentry, struct nfs_fattr *fattr,
 			state = ctx->state;
 		}
 	}
+
+	/* Deal with open(O_TRUNC) */
+	if (sattr->ia_valid & ATTR_OPEN)
+		sattr->ia_valid &= ~(ATTR_MTIME|ATTR_CTIME|ATTR_OPEN);
 
 	status = nfs4_do_setattr(inode, cred, fattr, sattr, state);
 	if (status == 0)
@@ -5347,7 +5341,7 @@ static int _nfs4_proc_destroy_clientid(struct nfs_client *clp,
 
 	status = rpc_call_sync(clp->cl_rpcclient, &msg, RPC_TASK_TIMEOUT);
 	if (status)
-		dprintk("NFS: Got error %d from the server %s on "
+		pr_warn("NFS: Got error %d from the server %s on "
 			"DESTROY_CLIENTID.", status, clp->cl_hostname);
 	return status;
 }

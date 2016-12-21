@@ -127,7 +127,7 @@ static int expkey_parse(struct cache_detail *cd, char *mesg, int mlen)
 	if (key.h.expiry_time == 0)
 		goto out;
 
-	key.ek_client = dom;
+	key.ek_client = dom;	
 	key.ek_fsidtype = fsidtype;
 	memcpy(key.ek_fsid, buf, len);
 
@@ -186,7 +186,7 @@ static int expkey_show(struct seq_file *m,
 		   ek->ek_fsidtype);
 	for (i=0; i < key_len(ek->ek_fsidtype)/4; i++)
 		seq_printf(m, "%08x", ek->ek_fsid[i]);
-	if (test_bit(CACHE_VALID, &h->flags) &&
+	if (test_bit(CACHE_VALID, &h->flags) && 
 	    !test_bit(CACHE_NEGATIVE, &h->flags)) {
 		seq_printf(m, " ");
 		seq_path(m, &ek->ek_path, "\\ \t\n");
@@ -541,7 +541,7 @@ static int svc_export_parse(struct cache_detail *cd, char *mesg, int mlen)
 		if (err || an_int < 0)
 			goto out3;
 		exp.ex_flags= an_int;
-
+	
 		/* anon uid */
 		err = get_int(&mesg, &an_int);
 		if (err)
@@ -633,7 +633,7 @@ static int svc_export_show(struct seq_file *m,
 	seq_putc(m, '\t');
 	seq_escape(m, exp->ex_client->name, " \t\n\\");
 	seq_putc(m, '(');
-	if (test_bit(CACHE_VALID, &h->flags) &&
+	if (test_bit(CACHE_VALID, &h->flags) && 
 	    !test_bit(CACHE_NEGATIVE, &h->flags)) {
 		exp_flags(m, exp->ex_flags, exp->ex_fsid,
 			  exp->ex_anon_uid, exp->ex_anon_gid, &exp->ex_fslocs);
@@ -707,7 +707,7 @@ static struct cache_head *svc_export_alloc(void)
 		return NULL;
 }
 
-static struct cache_detail svc_export_cache = {
+struct cache_detail svc_export_cache = {
 	.owner		= THIS_MODULE,
 	.hash_size	= EXPORT_HASHMAX,
 	.hash_table	= export_table,
@@ -768,7 +768,7 @@ exp_find_key(svc_client *clp, int fsid_type, u32 *fsidv, struct cache_req *reqp)
 {
 	struct svc_expkey key, *ek;
 	int err;
-
+	
 	if (!clp)
 		return ERR_PTR(-ENOENT);
 
@@ -901,13 +901,13 @@ __be32 check_nfsd_access(struct svc_export *exp, struct svc_rqst *rqstp)
 		return 0;
 	/* ip-address based client; check sec= export option: */
 	for (f = exp->ex_flavors; f < end; f++) {
-		if (f->pseudoflavor == rqstp->rq_cred.cr_flavor)
+		if (f->pseudoflavor == rqstp->rq_flavor)
 			return 0;
 	}
 	/* defaults in absence of sec= options: */
 	if (exp->ex_nflavors == 0) {
-		if (rqstp->rq_cred.cr_flavor == RPC_AUTH_NULL ||
-		    rqstp->rq_cred.cr_flavor == RPC_AUTH_UNIX)
+		if (rqstp->rq_flavor == RPC_AUTH_NULL ||
+		    rqstp->rq_flavor == RPC_AUTH_UNIX)
 			return 0;
 	}
 	return nfserr_wrongsec;
@@ -1034,14 +1034,14 @@ static void *e_start(struct seq_file *m, loff_t *pos)
 	loff_t n = *pos;
 	unsigned hash, export;
 	struct cache_head *ch;
-
+	
 	read_lock(&svc_export_cache.hash_lock);
 	if (!n--)
 		return SEQ_START_TOKEN;
 	hash = n >> 32;
 	export = n & ((1LL<<32) - 1);
 
-
+	
 	for (ch=export_table[hash]; ch; ch=ch->next)
 		if (!export--)
 			return ch;

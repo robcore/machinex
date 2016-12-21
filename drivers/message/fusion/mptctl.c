@@ -1250,6 +1250,7 @@ mptctl_getiocinfo (unsigned long arg, unsigned int data_size)
 	int			iocnum;
 	unsigned int		port;
 	int			cim_rev;
+	u8			revision;
 	struct scsi_device 	*sdev;
 	VirtDevice		*vdevice;
 
@@ -1323,7 +1324,8 @@ mptctl_getiocinfo (unsigned long arg, unsigned int data_size)
 	pdev = (struct pci_dev *) ioc->pcidev;
 
 	karg->pciId = pdev->device;
-	karg->hwRev = pdev->revision;
+	pci_read_config_byte(pdev, PCI_CLASS_REVISION, &revision);
+	karg->hwRev = revision;
 	karg->subSystemDevice = pdev->subsystem_device;
 	karg->subSystemVendor = pdev->subsystem_vendor;
 

@@ -2027,6 +2027,8 @@ static void rt_set_nexthop(struct rtable *rt, const struct flowi4 *fl4,
 
 	if (dst_mtu(dst) > IP_MAX_MTU)
 		dst_metric_set(dst, RTAX_MTU, IP_MAX_MTU);
+	if (dst_metric_raw(dst, RTAX_ADVMSS) > 65535 - 40)
+		dst_metric_set(dst, RTAX_ADVMSS, 65535 - 40);
 
 #ifdef CONFIG_IP_ROUTE_CLASSID
 #ifdef CONFIG_IP_MULTIPLE_TABLES
@@ -2062,12 +2064,8 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 		return -EINVAL;
 
 	if (ipv4_is_multicast(saddr) || ipv4_is_lbcast(saddr) ||
-	    skb->protocol != htons(ETH_P_IP))
+	    ipv4_is_loopback(saddr) || skb->protocol != htons(ETH_P_IP))
 		goto e_inval;
-
-	if (likely(!IN_DEV_ROUTE_LOCALNET(in_dev)))
-		if (ipv4_is_loopback(saddr))
-			goto e_inval;
 
 	if (ipv4_is_zeronet(saddr)) {
 		if (!ipv4_is_local_multicast(daddr))
@@ -2313,7 +2311,8 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	   by fib_lookup.
 	 */
 
-	if (ipv4_is_multicast(saddr) || ipv4_is_lbcast(saddr))
+	if (ipv4_is_multicast(saddr) || ipv4_is_lbcast(saddr) ||
+	    ipv4_is_loopback(saddr))
 		goto martian_source;
 
 	if (ipv4_is_lbcast(daddr) || (saddr == 0 && daddr == 0))
@@ -2325,16 +2324,8 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	if (ipv4_is_zeronet(saddr))
 		goto martian_source;
 
-	if (ipv4_is_zeronet(daddr))
+	if (ipv4_is_zeronet(daddr) || ipv4_is_loopback(daddr))
 		goto martian_destination;
-
-	if (likely(!IN_DEV_ROUTE_LOCALNET(in_dev))) {
-		if (ipv4_is_loopback(daddr))
-			goto martian_destination;
-
-		if (ipv4_is_loopback(saddr))
-			goto martian_source;
-	}
 
 	/*
 	 *	Now we are ready to route packet.
@@ -2575,13 +2566,8 @@ static struct rtable *__mkroute_output(const struct fib_result *res,
 	u16 type = res->type;
 	struct rtable *rth;
 
-	in_dev = __in_dev_get_rcu(dev_out);
-	if (!in_dev)
+	if (ipv4_is_loopback(fl4->saddr) && !(dev_out->flags & IFF_LOOPBACK))
 		return ERR_PTR(-EINVAL);
-
-	if (likely(!IN_DEV_ROUTE_LOCALNET(in_dev)))
-		if (ipv4_is_loopback(fl4->saddr) && !(dev_out->flags & IFF_LOOPBACK))
-			return ERR_PTR(-EINVAL);
 
 	if (ipv4_is_lbcast(fl4->daddr))
 		type = RTN_BROADCAST;
@@ -2592,6 +2578,10 @@ static struct rtable *__mkroute_output(const struct fib_result *res,
 
 	if (dev_out->flags & IFF_LOOPBACK)
 		flags |= RTCF_LOCAL;
+
+	in_dev = __in_dev_get_rcu(dev_out);
+	if (!in_dev)
+		return ERR_PTR(-EINVAL);
 
 	if (type == RTN_BROADCAST) {
 		flags |= RTCF_BROADCAST | RTCF_LOCAL;

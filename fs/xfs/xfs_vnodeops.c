@@ -177,7 +177,7 @@ xfs_free_eofblocks(
 	 * of the file.  If not, then there is nothing to do.
 	 */
 	end_fsb = XFS_B_TO_FSB(mp, (xfs_ufsize_t)XFS_ISIZE(ip));
-	last_fsb = XFS_B_TO_FSB(mp, mp->m_super->s_maxbytes);
+	last_fsb = XFS_B_TO_FSB(mp, (xfs_ufsize_t)XFS_MAXIOFFSET(mp));
 	if (last_fsb <= end_fsb)
 		return 0;
 	map_len = last_fsb - end_fsb;
@@ -1919,7 +1919,7 @@ xfs_alloc_file_space(
 
 error0:	/* Cancel bmap, unlock inode, unreserve quota blocks, cancel trans */
 	xfs_bmap_cancel(&free_list);
-	xfs_trans_unreserve_quota_nblks(tp, ip, (long)qblocks, 0, quota_flag);
+	xfs_trans_unreserve_quota_nblks(tp, ip, qblocks, 0, quota_flag);
 
 error1:	/* Just cancel transaction */
 	xfs_trans_cancel(tp, XFS_TRANS_RELEASE_LOG_RES | XFS_TRANS_ABORT);
@@ -2265,10 +2265,10 @@ xfs_change_file_space(
 
 	llen = bf->l_len > 0 ? bf->l_len - 1 : bf->l_len;
 
-	if (bf->l_start < 0 ||
-	    bf->l_start > mp->m_super->s_maxbytes ||
-	    bf->l_start + llen < 0 ||
-	    bf->l_start + llen > mp->m_super->s_maxbytes)
+	if (   (bf->l_start < 0)
+	    || (bf->l_start > XFS_MAXIOFFSET(mp))
+	    || (bf->l_start + llen < 0)
+	    || (bf->l_start + llen > XFS_MAXIOFFSET(mp)))
 		return XFS_ERROR(EINVAL);
 
 	bf->l_whence = 0;

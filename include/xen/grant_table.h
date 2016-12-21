@@ -46,8 +46,6 @@
 
 #include <xen/features.h>
 
-#define GNTTAB_RESERVED_XENSTORE 1
-
 /* NR_GRANT_FRAMES must be less than or equal to that configured in Xen */
 #define NR_GRANT_FRAMES 4
 

@@ -508,7 +508,8 @@ static void ieee80211_mesh_housekeeping(struct ieee80211_sub_if_data *sdata,
 	bool free_plinks;
 
 #ifdef CONFIG_MAC80211_VERBOSE_DEBUG
-	pr_debug("%s: running mesh housekeeping\n", sdata->name);
+	printk(KERN_DEBUG "%s: running mesh housekeeping\n",
+	       sdata->name);
 #endif
 
 	ieee80211_sta_expire(sdata, IEEE80211_MESH_PEER_INACTIVITY_LIMIT);

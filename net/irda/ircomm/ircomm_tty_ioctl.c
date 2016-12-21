@@ -81,7 +81,7 @@ static void ircomm_tty_change_speed(struct ircomm_tty_cb *self)
 		cval |= IRCOMM_PARITY_EVEN;
 
 	/* Determine divisor based on baud rate */
-	baud = tty_get_baud_rate(tty);
+	baud = tty_get_baud_rate(self->tty);
 	if (!baud)
 		baud = 9600;	/* B0 transition handled in rs_set_termios */
 
@@ -90,19 +90,19 @@ static void ircomm_tty_change_speed(struct ircomm_tty_cb *self)
 
 	/* CTS flow control flag and modem status interrupts */
 	if (cflag & CRTSCTS) {
-		self->port.flags |= ASYNC_CTS_FLOW;
+		self->flags |= ASYNC_CTS_FLOW;
 		self->settings.flow_control |= IRCOMM_RTS_CTS_IN;
 		/* This got me. Bummer. Jean II */
 		if (self->service_type == IRCOMM_3_WIRE_RAW)
 			IRDA_WARNING("%s(), enabling RTS/CTS on link that doesn't support it (3-wire-raw)\n", __func__);
 	} else {
-		self->port.flags &= ~ASYNC_CTS_FLOW;
+		self->flags &= ~ASYNC_CTS_FLOW;
 		self->settings.flow_control &= ~IRCOMM_RTS_CTS_IN;
 	}
 	if (cflag & CLOCAL)
-		self->port.flags &= ~ASYNC_CHECK_CD;
+		self->flags &= ~ASYNC_CHECK_CD;
 	else
-		self->port.flags |= ASYNC_CHECK_CD;
+		self->flags |= ASYNC_CHECK_CD;
 #if 0
 	/*
 	 * Set up parity check flag
@@ -159,7 +159,7 @@ void ircomm_tty_set_termios(struct tty_struct *tty,
 		return;
 	}
 
-	ircomm_tty_change_speed(self, tty);
+	ircomm_tty_change_speed(self);
 
 	/* Handle transition to B0 status */
 	if ((old_termios->c_cflag & CBAUD) &&
@@ -270,10 +270,10 @@ static int ircomm_tty_get_serial_info(struct ircomm_tty_cb *self,
 
 	memset(&info, 0, sizeof(info));
 	info.line = self->line;
-	info.flags = self->port.flags;
+	info.flags = self->flags;
 	info.baud_base = self->settings.data_rate;
-	info.close_delay = self->port.close_delay;
-	info.closing_wait = self->port.closing_wait;
+	info.close_delay = self->close_delay;
+	info.closing_wait = self->closing_wait;
 
 	/* For compatibility  */
 	info.type = PORT_16550A;

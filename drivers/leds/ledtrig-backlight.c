@@ -120,7 +120,6 @@ static void bl_trig_activate(struct led_classdev *led)
 	ret = fb_register_client(&n->notifier);
 	if (ret)
 		dev_err(led->dev, "unable to register backlight trigger\n");
-	led->activated = true;
 
 	return;
 
@@ -134,11 +133,10 @@ static void bl_trig_deactivate(struct led_classdev *led)
 	struct bl_trig_notifier *n =
 		(struct bl_trig_notifier *) led->trigger_data;
 
-	if (led->activated) {
+	if (n) {
 		device_remove_file(led->dev, &dev_attr_inverted);
 		fb_unregister_client(&n->notifier);
 		kfree(n);
-		led->activated = false;
 	}
 }
 

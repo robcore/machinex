@@ -1106,15 +1106,4 @@ int snd_pcm_add_volume_ctls(struct snd_pcm *pcm, int stream,
 			   unsigned long private_value,
 			   struct snd_pcm_volume **info_ret);
 
-/**
- * Get a string naming the direction of a stream
- */
-static inline const char *snd_pcm_stream_str(struct snd_pcm_substream *substream)
-{
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		return "Playback";
-	else
-		return "Capture";
-}
-
 #endif /* __SOUND_PCM_H */

@@ -442,7 +442,7 @@ static bool perf_session__read_build_ids(struct perf_session *session, bool with
 	return ret;
 }
 
-static int write_tracing_data(int fd, struct perf_header *h __used,
+static int write_trace_info(int fd, struct perf_header *h __used,
 			    struct perf_evlist *evlist)
 {
 	return read_tracing_data(fd, &evlist->entries);
@@ -1471,7 +1471,7 @@ out:
 	return err;
 }
 
-static int process_tracing_data(struct perf_file_section *section __unused,
+static int process_trace_info(struct perf_file_section *section __unused,
 			      struct perf_header *ph __unused,
 			      int feat __unused, int fd)
 {
@@ -1507,11 +1507,11 @@ struct feature_ops {
 		.full_only = true }
 
 /* feature_ops not implemented: */
-#define print_tracing_data	NULL
-#define print_build_id		NULL
+#define print_trace_info		NULL
+#define print_build_id			NULL
 
 static const struct feature_ops feat_ops[HEADER_LAST_FEATURE] = {
-	FEAT_OPP(HEADER_TRACING_DATA,	tracing_data),
+	FEAT_OPP(HEADER_TRACE_INFO,	trace_info),
 	FEAT_OPP(HEADER_BUILD_ID,	build_id),
 	FEAT_OPA(HEADER_HOSTNAME,	hostname),
 	FEAT_OPA(HEADER_OSRELEASE,	osrelease),
@@ -2090,35 +2090,6 @@ static int read_attr(int fd, struct perf_header *ph,
 	return ret <= 0 ? -1 : 0;
 }
 
-static int perf_evsel__set_tracepoint_name(struct perf_evsel *evsel)
-{
-	struct event_format *event = trace_find_event(evsel->attr.config);
-	char bf[128];
-
-	if (event == NULL)
-		return -1;
-
-	snprintf(bf, sizeof(bf), "%s:%s", event->system, event->name);
-	evsel->name = strdup(bf);
-	if (event->name == NULL)
-		return -1;
-
-	return 0;
-}
-
-static int perf_evlist__set_tracepoint_names(struct perf_evlist *evlist)
-{
-	struct perf_evsel *pos;
-
-	list_for_each_entry(pos, &evlist->entries, node) {
-		if (pos->attr.type == PERF_TYPE_TRACEPOINT &&
-		    perf_evsel__set_tracepoint_name(pos))
-			return -1;
-	}
-
-	return 0;
-}
-
 int perf_session__read_header(struct perf_session *session, int fd)
 {
 	struct perf_header *header = &session->header;
@@ -2199,9 +2170,6 @@ int perf_session__read_header(struct perf_session *session, int fd)
 				      perf_file_section__process);
 
 	lseek(fd, header->data_offset, SEEK_SET);
-
-	if (perf_evlist__set_tracepoint_names(session->evlist))
-		goto out_delete_evlist;
 
 	header->frozen = 1;
 	return 0;

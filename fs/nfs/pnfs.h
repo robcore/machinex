@@ -332,7 +332,7 @@ static inline bool
 pnfs_use_threshold(struct nfs4_threshold **dst, struct nfs4_threshold *src,
 		   struct nfs_server *nfss)
 {
-	return (dst && src && src->bm != 0 && nfss->pnfs_curr_ld &&
+	return (dst && src && src->bm != 0 &&
 					nfss->pnfs_curr_ld->id == src->l_type);
 }
 

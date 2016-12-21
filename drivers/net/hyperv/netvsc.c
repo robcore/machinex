@@ -42,7 +42,6 @@ static struct netvsc_device *alloc_net_device(struct hv_device *device)
 	if (!net_device)
 		return NULL;
 
-	init_waitqueue_head(&net_device->wait_drain);
 	net_device->start_remove = false;
 	net_device->destroy = false;
 	net_device->dev = device;
@@ -388,8 +387,12 @@ int netvsc_device_remove(struct hv_device *device)
 	spin_unlock_irqrestore(&device->channel->inbound_lock, flags);
 
 	/* Wait for all send completions */
-	wait_event(net_device->wait_drain,
-		   atomic_read(&net_device->num_outstanding_sends) == 0);
+	while (atomic_read(&net_device->num_outstanding_sends)) {
+		dev_info(&device->device,
+			"waiting for %d requests to complete...\n",
+			atomic_read(&net_device->num_outstanding_sends));
+		udelay(100);
+	}
 
 	netvsc_disconnect_vsp(net_device);
 
@@ -461,9 +464,6 @@ static void netvsc_send_completion(struct hv_device *device,
 			nvsc_packet->completion.send.send_completion_ctx);
 
 		atomic_dec(&net_device->num_outstanding_sends);
-
-		if (net_device->destroy && num_outstanding_sends == 0)
-			wake_up(&net_device->wait_drain);
 
 		if (netif_queue_stopped(ndev) && !net_device->start_remove)
 			netif_wake_queue(ndev);

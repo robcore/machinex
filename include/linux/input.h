@@ -116,7 +116,6 @@ struct input_keymap_entry {
 
 /**
  * EVIOCGMTSLOTS(len) - get MT slot values
- * @len: size of the data buffer in bytes
  *
  * The ioctl buffer argument should be binary equivalent to
  *

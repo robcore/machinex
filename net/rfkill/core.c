@@ -339,7 +339,7 @@ static void __rfkill_switch_all(const enum rfkill_type type, bool blocked)
 
 	rfkill_global_states[type].cur = blocked;
 	list_for_each_entry(rfkill, &rfkill_list, node) {
-		if (rfkill->type != type && type != RFKILL_TYPE_ALL)
+		if (rfkill->type != type)
 			continue;
 
 		rfkill_set_block(rfkill, blocked);

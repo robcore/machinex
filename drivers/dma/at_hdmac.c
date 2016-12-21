@@ -9,9 +9,10 @@
  * (at your option) any later version.
  *
  *
- * This supports the Atmel AHB DMA Controller found in several Atmel SoCs.
- * The only Atmel DMA Controller that is not covered by this driver is the one
- * found on AT91SAM9263.
+ * This supports the Atmel AHB DMA Controller,
+ *
+ * The driver has currently been tested with the Atmel AT91SAM9RL
+ * and AT91SAM9G45 series.
  */
 
 #include <linux/clk.h>

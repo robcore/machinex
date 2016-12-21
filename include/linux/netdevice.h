@@ -1023,9 +1023,10 @@ struct net_device {
 	 */
 	char			name[IFNAMSIZ];
 
-	/* device name hash chain, please keep it close to name[] */
-	struct hlist_node	name_hlist;
+	struct pm_qos_request	pm_qos_req;
 
+	/* device name hash chain */
+	struct hlist_node	name_hlist;
 	/* snmp alias */
 	char 			*ifalias;
 
@@ -1301,8 +1302,6 @@ struct net_device {
 
 	/* group the device belongs to */
 	int group;
-
-	struct pm_qos_request	pm_qos_req;
 };
 #define to_net_dev(d) container_of(d, struct net_device, dev)
 

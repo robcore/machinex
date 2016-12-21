@@ -2918,9 +2918,6 @@ int dbg_debugfs_init_fs(struct ubifs_info *c)
 	struct dentry *dent;
 	struct ubifs_debug_info *d = c->dbg;
 
-	if (!IS_ENABLED(DEBUG_FS))
-		return 0;
-
 	n = snprintf(d->dfs_dir_name, UBIFS_DFS_DIR_LEN + 1, UBIFS_DFS_DIR_NAME,
 		     c->vi.ubi_num, c->vi.vol_id);
 	if (n == UBIFS_DFS_DIR_LEN) {
@@ -3013,8 +3010,7 @@ out:
  */
 void dbg_debugfs_exit_fs(struct ubifs_info *c)
 {
-	if (IS_ENABLED(DEBUG_FS))
-		debugfs_remove_recursive(c->dbg->dfs_dir);
+	debugfs_remove_recursive(c->dbg->dfs_dir);
 }
 
 struct ubifs_global_debug_info ubifs_dbg;
@@ -3099,9 +3095,6 @@ int dbg_debugfs_init(void)
 	const char *fname;
 	struct dentry *dent;
 
-	if (!IS_ENABLED(DEBUG_FS))
-		return 0;
-
 	fname = "ubifs";
 	dent = debugfs_create_dir(fname, NULL);
 	if (IS_ERR_OR_NULL(dent))
@@ -3166,8 +3159,7 @@ out:
  */
 void dbg_debugfs_exit(void)
 {
-	if (IS_ENABLED(DEBUG_FS))
-		debugfs_remove_recursive(dfs_rootdir);
+	debugfs_remove_recursive(dfs_rootdir);
 }
 
 /**
