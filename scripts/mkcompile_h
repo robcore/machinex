@@ -26,15 +26,32 @@ set -f
 LC_ALL=C
 export LC_ALL
 
-VERSION=mx
+if [ -z "$KBUILD_BUILD_VERSION" ]; then
+	if [ -r .version ]; then
+		VERSION=`cat .version`
+	else
+		VERSION=0
+		echo 0 > .version
+	fi
+else
+	VERSION=$KBUILD_BUILD_VERSION
+fi
 
 if [ -z "$KBUILD_BUILD_TIMESTAMP" ]; then
 	TIMESTAMP=`date`
 else
 	TIMESTAMP=$KBUILD_BUILD_TIMESTAMP
 fi
-LINUX_COMPILE_BY=robcore
-LINUX_COMPILE_HOST=machina
+if test -z "$KBUILD_BUILD_USER"; then
+	LINUX_COMPILE_BY=robcore
+else
+	LINUX_COMPILE_BY=$KBUILD_BUILD_USER
+fi
+if test -z "$KBUILD_BUILD_HOST"; then
+	LINUX_COMPILE_HOST=machina
+else
+	LINUX_COMPILE_HOST=$KBUILD_BUILD_HOST
+fi
 
 UTS_VERSION="#$VERSION"
 CONFIG_FLAGS=""
@@ -51,7 +68,7 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
 
 ( echo /\* This file is auto generated, version $VERSION \*/
   if [ -n "$CONFIG_FLAGS" ] ; then echo "/* $CONFIG_FLAGS */"; fi
-
+  
   echo \#define UTS_MACHINE \"$ARCH\"
 
   echo \#define UTS_VERSION \"`echo $UTS_VERSION | $UTS_TRUNCATE`\"
@@ -67,7 +84,7 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
 # recompilations.
 # We don't consider the file changed if only the date/time changed.
 # A kernel config change will increase the generation number, thus
-# causing compile.h to be updated (including date/time) due to the
+# causing compile.h to be updated (including date/time) due to the 
 # changed comment in the
 # first line.
 
