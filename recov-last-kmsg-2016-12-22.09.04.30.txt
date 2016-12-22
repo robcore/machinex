@@ -1,0 +1,126 @@
+[    0.000000] Truncating memory at 0xc0000000 to fit in 32-bit physical address space
+[    0.000000] sec_tsp_mode: LCD_ID = 0x428047, val: 0X428047, ret1: 0x8
+[    0.031372] AXI: msm_bus_fabric_init_driver(): msm_bus_fabric_init_driver
+[    0.031738] MSM_DCVS: msm_dcvs_early_init: Unable to initialize DCVS err=4
+[    0.054382] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054412] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054443] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054443] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054473] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054504] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054504] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.054534] msm_rpm_get_status(): Status id 433 not defined for target
+[    0.145507] sensor_power_on_vdd: done
+[    0.198944] i2c i2c-4: Failed to register i2c client imx135 at 0x10 (-16)
+[    0.199127] i2c i2c-4: Can't create device at 0x10
+[    0.199523] i2c i2c-4: Failed to register i2c client s5k3l1yx at 0x34 (-16)
+[    0.199737] i2c i2c-4: Can't create device at 0x34
+[    0.231811] ion_heap_create: Invalid heap type 3
+[    0.236267] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+[    0.236541] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[    0.237091] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+[    0.237243] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[    0.312896] Error-Bad Function Input
+[    0.313751] Error-Bad Function Input
+[    0.664672] smd_channel_probe_worker: allocation table not initialized
+[    0.674316] dma_test_init, minor number 37
+[    0.682373] mdm_modem_probe: registered mdm id 0
+[    0.682586] mdm_do_first_power_on:id 0: Powering on modem for the first time
+[    0.731781] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
+[    0.731994] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[    0.984283] cont_splash_clk_ctrl: dsi_esc_clk - clk_set_rate failed
+[    0.991729] [mdnie lite] start!
+[    0.991851] [mdnie lite] end!
+[    0.993347] hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group df058c08
+[    0.993713] Inside writeback_driver_init
+[    0.993957] Inside writeback_probe
+[    0.996826] Unknown PM state 0
+[    0.996887] Unknown PM state 3
+[    1.188049] wcd9xxx_slim_probe: failed to get slimbus tabla-slim logical address: -6
+[    1.255889] msm_otg msm_otg: failed to get phy_clk
+[    1.427185] couldn't get usb power supply
+[    1.447387] [jc_spi_init:336] Entered
+[    1.447479] [jc_spi_probe:301] Entered
+[    1.447631] [jc_spi_probe:311] jc_spi successfully probed
+[    1.447692] jc_config_isp_irq~~~~~~~~~~
+[    1.447845] msm_eeprom_probe probe_fail
+[    1.451690] msm_sensor_i2c_probe s5k6b2yx probe succeeded
+[    1.451751] msm_eeprom_probe probe_fail
+[    1.485717] mmc0: No card detect facilities available
+[    1.609588] power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+[    1.609741] power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+[    1.626770] max77693_get_health_state: Fail to get psy (battery)
+[    1.629486] power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+[    1.631195] max77693_get_health_state: Fail to get psy (battery)
+[    1.633819] power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+[    1.647277] msm_audio_init: Not the right machine type
+[    1.659027] mmc0: msmsdcc_execute_tuning: found good phase = 0
+[    1.659240] mmc0: msmsdcc_execute_tuning: found good phase = 1
+[    1.659454] mmc0: msmsdcc_execute_tuning: found good phase = 2
+[    1.659576] mmc0: msmsdcc_execute_tuning: found good phase = 3
+[    1.659759] mmc0: msmsdcc_execute_tuning: found good phase = 4
+[    1.660552] mmc0: msmsdcc_execute_tuning: found good phase = 7
+[    1.660736] mmc0: msmsdcc_execute_tuning: found good phase = 8
+[    1.660888] mmc0: msmsdcc_execute_tuning: found good phase = 9
+[    1.661071] mmc0: msmsdcc_execute_tuning: found good phase = 10
+[    1.661224] mmc0: msmsdcc_execute_tuning: found good phase = 11
+[    1.661407] mmc0: msmsdcc_execute_tuning: found good phase = 12
+[    1.661560] mmc0: msmsdcc_execute_tuning: found good phase = 13
+[    1.661743] mmc0: msmsdcc_execute_tuning: found good phase = 14
+[    1.661895] mmc0: msmsdcc_execute_tuning: found good phase = 15
+[    1.662017] mmc0: msmsdcc_execute_tuning: finally setting the tuning phase to 0
+[    1.920074] Unable to register core for 0
+[    1.925720] sec-battery sec-battery: sec_battery_probe: Failed to Enable Wakeup Source(-6)
+[    1.939727] irda_device_init called!
+[    1.940216] barcode_emul_ice4: probe complete barcode_emul_probe
+[    1.940582] brcm_wlan_power: WL_REG_ON  failed to pull up
+[    1.940734] brcm_wlan_power: WL_REG_ON  failed to pull down
+[    3.954132] brcm_wlan_power: WL_REG_ON  failed to pull up
+[    3.954284] brcm_wlan_power: WL_REG_ON  failed to pull down
+[    4.033081] synaptics_rmi4_i2c 3-0020: synaptics_ta_cb: device is in suspend state or reflash.
+[    5.964141] brcm_wlan_power: WL_REG_ON  failed to pull up
+[    5.964294] brcm_wlan_power: WL_REG_ON  failed to pull down
+[    8.349517] mmc1: msmsdcc_execute_tuning: found good phase = 0
+[    8.349700] mmc1: msmsdcc_execute_tuning: found good phase = 1
+[    8.349853] mmc1: msmsdcc_execute_tuning: found good phase = 2
+[    8.350036] mmc1: msmsdcc_execute_tuning: found good phase = 3
+[    8.350189] mmc1: msmsdcc_execute_tuning: found good phase = 4
+[    8.350372] mmc1: msmsdcc_execute_tuning: found good phase = 5
+[    8.350524] mmc1: msmsdcc_execute_tuning: found good phase = 6
+[    8.351318] mmc1: msmsdcc_execute_tuning: found good phase = 9
+[    8.351440] mmc1: msmsdcc_execute_tuning: found good phase = 10
+[    8.351654] mmc1: msmsdcc_execute_tuning: found good phase = 11
+[    8.351776] mmc1: msmsdcc_execute_tuning: found good phase = 12
+[    8.351959] mmc1: msmsdcc_execute_tuning: found good phase = 13
+[    8.352111] mmc1: msmsdcc_execute_tuning: found good phase = 14
+[    8.352355] mmc1: msmsdcc_execute_tuning: found good phase = 15
+[    8.352416] mmc1: msmsdcc_execute_tuning: finally setting the tuning phase to 2
+[   10.010192] init: /init.rc: 61: invalid command 'load_system_props'
+[   10.010345] init: could not import file '/init.recovery.logd.rc' from '/init.rc'
+[   10.013641] healthd: wakealarm_init: timerfd_create failed
+[   12.254547] power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+[   12.331726] power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+[   12.583862] init: Unable to open persistent property directory /data/property errno: 2
+[   12.584045] init: Unable to open persistent property directory /data/property errno: 2
+[   12.587097] init: Warning!  Service recovery needs a SELinux domain defined; please fix!
+[   13.194824] [mdnie lite] is negative Mode On = 0
+[   13.194854] [mdnie lite] negative off when resume, tuning again!
+[   13.194885] [mdnie lite] mDNIe_Set_Mode start , mode(0), background(1)
+[   13.194885] [mdnie lite]  = UI MODE =
+[   13.194885] [mdnie lite]  = STANDARD MODE =
+[   13.194915] [mdnie lite]  send tuning cmd!!
+[   13.244598] [mdnie lite] mDNIe_Set_Mode end , mode(0), background(1)
+[   13.931579] [mdnie lite] is negative Mode On = 0
+[   13.931579] [mdnie lite] negative off when resume, tuning again!
+[   13.931610] [mdnie lite] mDNIe_Set_Mode start , mode(0), background(1)
+[   13.931640] [mdnie lite]  = UI MODE =
+[   13.931640] [mdnie lite]  = STANDARD MODE =
+[   13.931640] [mdnie lite]  send tuning cmd!!
+[   13.981353] [mdnie lite] mDNIe_Set_Mode end , mode(0), background(1)
+[   32.809661] SysRq : Emergency Remount R/O
+[   33.429992] qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+[   33.430084] qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+[   33.430267] MFD is Null
+[   33.433471] Restarting system with command ''.
+
+No errors detected
