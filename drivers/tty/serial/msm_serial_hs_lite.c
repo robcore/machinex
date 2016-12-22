@@ -1531,8 +1531,6 @@ static int __devinit msm_serial_hsl_probe(struct platform_device *pdev)
 	if (unlikely(get_line(pdev) < 0 || get_line(pdev) >= UART_NR))
 		return -ENXIO;
 
-	pr_info("detected port #%d (ttyHSL%d)\n", pdev->id, line);
-
 	port = get_port_from_line(get_line(pdev));
 	port->dev = &pdev->dev;
 	port->uartclk = 7372800;
