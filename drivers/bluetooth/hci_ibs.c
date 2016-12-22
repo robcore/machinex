@@ -273,7 +273,6 @@ static void ibs_wq_awake_device(struct work_struct *work)
 	mod_timer(&ibs->wake_retrans_timer, jiffies + wake_retrans);
 
 	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
-
 }
 
 static void ibs_wq_awake_rx(struct work_struct *work)
