@@ -254,8 +254,9 @@ static irqreturn_t wcd9xxx_irq_thread(int irq, void *data)
 			wcd9xxx_irq_dispatch(wcd9xxx, i);
 	}
 	for (i = WCD9XXX_IRQ_BG_PRECHARGE; i < wcd9xxx->num_irqs; i++) {
- 		if (status[BIT_BYTE(i)] & BYTE_BIT_MASK(i))
- 			wcd9xxx_irq_dispatch(wcd9xxx, i);
+		if (status[BIT_BYTE(i)] & BYTE_BIT_MASK(i))
+			wcd9xxx_irq_dispatch(wcd9xxx, i);
+	}
 	wcd9xxx_unlock_sleep(wcd9xxx);
 
 	return IRQ_HANDLED;
@@ -427,7 +428,6 @@ void wcd9xxx_irq_exit(struct wcd9xxx *wcd9xxx)
 	mutex_destroy(&wcd9xxx->irq_lock);
 	mutex_destroy(&wcd9xxx->nested_irq_lock);
 }
-
 
 #ifndef CONFIG_OF
 static int phyirq_to_virq(struct wcd9xxx *wcd9xxx, int offset)
