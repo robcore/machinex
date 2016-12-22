@@ -1819,7 +1819,9 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	mb();
 
 	/* we really want to clock off */
+	mutex_unlock(&msm_uport->clk_mutex);
 	msm_hs_clock_unvote(msm_uport);
+	mutex_lock(&msm_uport->clk_mutex);
 
 	spin_lock_irqsave(&uport->lock, flags);
 	if (use_low_power_wakeup(msm_uport)) {
@@ -2263,8 +2265,8 @@ static int msm_hs_startup(struct uart_port *uport)
 
 		ret = request_threaded_irq(msm_uport->wakeup.irq, NULL,
 					msm_hs_wakeup_isr,
-					IRQF_TRIGGER_FALLING |
-					IRQF_ONESHOT, "msm_hs_wakeup", msm_uport);
+					IRQF_TRIGGER_FALLING,
+					"msm_hs_wakeup", msm_uport);
 
 		if (unlikely(ret)) {
 			pr_err("%s():Err getting uart wakeup_irq\n", __func__);
