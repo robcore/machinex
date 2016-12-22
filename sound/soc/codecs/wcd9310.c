@@ -139,6 +139,8 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event);
 
+struct snd_soc_codec *snd_engine_codec_ptr;
+EXPORT_SYMBOL(snd_engine_codec_ptr);
 
 enum tabla_bandgap_type {
 	TABLA_BANDGAP_OFF = 0,
@@ -2964,7 +2966,7 @@ static int tabla_codec_enable_dec(struct snd_soc_dapm_widget *w,
 					msecs_to_jiffies(300));
 		}
 		/* apply the digital gain after the decimator is enabled*/
-		if ((w->shift + offset) < ARRAY_SIZE(tx_digital_gain_reg))
+		if ((w->shift) < ARRAY_SIZE(tx_digital_gain_reg))
 			snd_soc_write(codec,
 				  tx_digital_gain_reg[w->shift + offset],
 				  snd_soc_read(codec,
@@ -4093,24 +4095,16 @@ static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 
 #define TABLA_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
 
-#ifdef CONFIG_SOUND_CONTROL
 extern unsigned int snd_ctrl_enabled;
 extern int snd_reg_access(unsigned int);
 extern unsigned int snd_cache_read(unsigned int);
 extern void snd_cache_write(unsigned int, unsigned int);
-#endif
 
-#ifndef CONFIG_SOUND_CONTROL
-static
-#endif
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
 {
 	int ret;
-#ifdef CONFIG_SOUND_CONTROL
 	int val;
-#endif
-
 	BUG_ON(reg > TABLA_MAX_REGISTER);
 
 	if (!tabla_volatile(codec, reg)) {
@@ -4120,7 +4114,6 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 				reg, ret);
 	}
 
-#ifdef CONFIG_SOUND_CONTROL
 	if (!snd_ctrl_enabled)
 		return wcd9xxx_reg_write(codec->control_data, reg, value);
 
@@ -4132,17 +4125,9 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		val = value;
 	}
 	return wcd9xxx_reg_write(codec->control_data, reg, val);
-#else
-	return wcd9xxx_reg_write(codec->control_data, reg, value);
-#endif
 }
-#ifdef CONFIG_SOUND_CONTROL
 EXPORT_SYMBOL(tabla_write);
-#endif
 
-#ifndef CONFIG_SOUND_CONTROL
-static
-#endif
 unsigned int tabla_read(struct snd_soc_codec *codec,
 				unsigned int reg)
 {
@@ -4164,9 +4149,7 @@ unsigned int tabla_read(struct snd_soc_codec *codec,
 	val = wcd9xxx_reg_read(codec->control_data, reg);
 	return val;
 }
-#ifdef CONFIG_SOUND_CONTROL
 EXPORT_SYMBOL(tabla_read);
-#endif
 
 static s16 tabla_get_current_v_ins(struct tabla_priv *tabla, bool hu)
 {
@@ -8925,11 +8908,6 @@ static const struct file_operations poke_reg_fops = {
 };
 #endif
 
-#ifdef CONFIG_SOUND_CONTROL
-struct snd_soc_codec *snd_engine_codec_ptr;
-EXPORT_SYMBOL(snd_engine_codec_ptr);
-#endif
-
 static int tabla_codec_probe(struct snd_soc_codec *codec)
 {
 	struct wcd9xxx *control;
@@ -8938,11 +8916,6 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	int ret = 0;
 	int i;
 	int ch_cnt;
-
-#ifdef CONFIG_SOUND_CONTROL
-	pr_info("tabla codec probe...\n");
-	snd_engine_codec_ptr = codec;
-#endif
 
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
 	control = codec->control_data;
@@ -9184,6 +9157,7 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	}
 #endif
 	codec->ignore_pmdown_time = 1;
+	snd_engine_codec_ptr = codec;
 	return ret;
 
 err_hphr_ocp_irq:

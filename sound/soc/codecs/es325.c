@@ -4980,7 +4980,6 @@ static int es325_slim_probe(struct slim_device *sbdev)
 
 	if (clk_count++ == 0) {
 		pdata->es325_clk_cb(1);
-		pdata->es325_reset_cb();
 	}
 
 	rc = device_create_file(&sbdev->dev, &dev_attr_route_status);

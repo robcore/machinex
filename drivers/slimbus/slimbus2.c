@@ -374,6 +374,24 @@ int slim_register_board_info(struct slim_boardinfo const *info, unsigned n)
 EXPORT_SYMBOL_GPL(slim_register_board_info);
 
 /*
+ * slim_ctrl_add_boarddevs: Add devices registered by board-info
+ * @ctrl: Controller to which these devices are to be added to.
+ * This API is called by controller when it is up and running.
+ * If devices on a controller were registered before controller,
+ * this will make sure that they get probed when controller is up.
+ */
+void slim_ctrl_add_boarddevs(struct slim_controller *ctrl)
+{
+	struct sbi_boardinfo *bi;
+	mutex_lock(&board_lock);
+	list_add_tail(&ctrl->list, &slim_ctrl_list);
+	list_for_each_entry(bi, &board_list, list)
+		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
+	mutex_unlock(&board_lock);
+}
+EXPORT_SYMBOL_GPL(slim_ctrl_add_boarddevs);
+
+/*
  * slim_busnum_to_ctrl: Map bus number to controller
  * @busnum: Bus number
  * Returns controller representing this bus number
@@ -395,7 +413,6 @@ EXPORT_SYMBOL_GPL(slim_busnum_to_ctrl);
 static int slim_register_controller(struct slim_controller *ctrl)
 {
 	int ret = 0;
-	struct sbi_boardinfo *bi;
 
 	/* Can't register until after driver model init */
 	if (WARN_ON(!slimbus_type.p)) {
@@ -463,15 +480,6 @@ static int slim_register_controller(struct slim_controller *ctrl)
 	ctrl->wq = create_singlethread_workqueue(dev_name(&ctrl->dev));
 	if (!ctrl->wq)
 		goto err_workq_failed;
-	/*
-	 * If devices on a controller were registered before controller,
-	 * this will make sure that they get probed now that controller is up
-	 */
-	mutex_lock(&board_lock);
-	list_add_tail(&ctrl->list, &slim_ctrl_list);
-	list_for_each_entry(bi, &board_list, list)
-		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
-	mutex_unlock(&board_lock);
 
 	return 0;
 
@@ -493,6 +501,10 @@ out_list:
 /* slim_remove_device: Remove the effect of slim_add_device() */
 void slim_remove_device(struct slim_device *sbdev)
 {
+	struct slim_controller *ctrl = sbdev->ctrl;
+	mutex_lock(&ctrl->m_ctrl);
+	list_del_init(&sbdev->dev_list);
+	mutex_unlock(&ctrl->m_ctrl);
 	device_unregister(&sbdev->dev);
 }
 EXPORT_SYMBOL_GPL(slim_remove_device);
@@ -603,9 +615,12 @@ void slim_msg_response(struct slim_controller *ctrl, u8 *reply, u8 tid, u8 len)
 
 	mutex_lock(&ctrl->m_ctrl);
 	txn = ctrl->txnt[tid];
-	if (txn == NULL) {
-		dev_err(&ctrl->dev, "Got response to invalid TID:%d, len:%d",
+	if (txn == NULL || txn->rbuf == NULL) {
+		if (txn == NULL)
+			dev_err(&ctrl->dev, "Got response to invalid TID:%d, len:%d",
 				tid, len);
+		else
+			dev_err(&ctrl->dev, "Invalid client buffer passed\n");
 		mutex_unlock(&ctrl->m_ctrl);
 		return;
 	}
@@ -984,7 +999,6 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 			if (!ret) {
 				struct slim_msg_txn *txn;
 				mutex_lock(&ctrl->m_ctrl);
-				dev_err(&ctrl->dev, "slimbus Read timed out");
 				txn = ctrl->txnt[tid];
 				/* Invalidate the transaction */
 				ctrl->txnt[tid] = NULL;
@@ -996,7 +1010,6 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 		} else if (ret < 0 && !msg->comp) {
 			struct slim_msg_txn *txn;
 			mutex_lock(&ctrl->m_ctrl);
-			dev_err(&ctrl->dev, "slimbus Read error");
 			txn = ctrl->txnt[tid];
 			/* Invalidate the transaction */
 			ctrl->txnt[tid] = NULL;
@@ -1012,6 +1025,28 @@ xfer_err:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(slim_xfer_msg);
+
+/*
+ * User message:
+ * slim_user_msg: Send user message that is interpreted by destination device
+ * @sb: Client handle sending the message
+ * @la: Destination device for this user message
+ * @mt: Message Type (Soruce-referred, or Destination-referred)
+ * @mc: Message Code
+ * @msg: Message structure (start offset, number of bytes) to be sent
+ * @buf: data buffer to be sent
+ * @len: data buffer size in bytes
+ */
+int slim_user_msg(struct slim_device *sb, u8 la, u8 mt, u8 mc,
+				struct slim_ele_access *msg, u8 *buf, u8 len)
+{
+	if (!sb || !sb->ctrl || !msg || mt == SLIM_MSG_MT_CORE)
+		return -EINVAL;
+	if (!sb->ctrl->xfer_user_msg)
+		return -EPROTONOSUPPORT;
+	return sb->ctrl->xfer_user_msg(sb->ctrl, la, mt, mc, msg, buf, len);
+}
+EXPORT_SYMBOL(slim_user_msg);
 
 /*
  * slim_alloc_mgrports: Allocate port on manager side.
@@ -1210,7 +1245,7 @@ int slim_connect_src(struct slim_device *sb, u32 srch, u16 chanh)
 	if (flow != SLIM_SRC)
 		return -EINVAL;
 
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 
 	if (slc->state == SLIM_CH_FREE) {
 		ret = -ENOTCONN;
@@ -1232,7 +1267,7 @@ int slim_connect_src(struct slim_device *sb, u32 srch, u16 chanh)
 		slc->srch = srch;
 
 connect_src_err:
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(slim_connect_src);
@@ -1259,7 +1294,7 @@ int slim_connect_sink(struct slim_device *sb, u32 *sinkh, int nsink, u16 chanh)
 	if (!sinkh || !nsink)
 		return -EINVAL;
 
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 
 	/*
 	 * Once channel is removed, its ports can be considered disconnected
@@ -1297,7 +1332,7 @@ int slim_connect_sink(struct slim_device *sb, u32 *sinkh, int nsink, u16 chanh)
 	slc->nsink += nsink;
 
 connect_sink_err:
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(slim_connect_sink);
@@ -1314,11 +1349,11 @@ int slim_disconnect_ports(struct slim_device *sb, u32 *ph, int nph)
 	struct slim_controller *ctrl = sb->ctrl;
 	int i;
 
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 
 	for (i = 0; i < nph; i++)
 		disconnect_port_ch(ctrl, ph[i]);
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(slim_disconnect_ports);
@@ -1336,7 +1371,7 @@ EXPORT_SYMBOL_GPL(slim_disconnect_ports);
  * Client will call slim_port_get_xfer_status to get error and/or number of
  * bytes transferred if used asynchronously.
  */
-int slim_port_xfer(struct slim_device *sb, u32 ph, u8 *iobuf, u32 len,
+int slim_port_xfer(struct slim_device *sb, u32 ph, phys_addr_t iobuf, u32 len,
 				struct completion *comp)
 {
 	struct slim_controller *ctrl = sb->ctrl;
@@ -1366,7 +1401,7 @@ EXPORT_SYMBOL_GPL(slim_port_xfer);
  * processed from the multiple transfers.
  */
 enum slim_port_err slim_port_get_xfer_status(struct slim_device *sb, u32 ph,
-			u8 **done_buf, u32 *done_len)
+			phys_addr_t *done_buf, u32 *done_len)
 {
 	struct slim_controller *ctrl = sb->ctrl;
 	u8 pn = SLIM_HDL_TO_PORT(ph);
@@ -1379,7 +1414,7 @@ enum slim_port_err slim_port_get_xfer_status(struct slim_device *sb, u32 ph,
 	 */
 	if (la != SLIM_LA_MANAGER) {
 		if (done_buf)
-			*done_buf = NULL;
+			*done_buf = 0;
 		if (done_len)
 			*done_len = 0;
 		return SLIM_P_NOT_OWNED;
@@ -1654,13 +1689,13 @@ int slim_alloc_ch(struct slim_device *sb, u16 *chanh)
 
 	if (!ctrl)
 		return -EINVAL;
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 	for (i = 0; i < ctrl->nchans; i++) {
 		if (ctrl->chans[i].state == SLIM_CH_FREE)
 			break;
 	}
 	if (i >= ctrl->nchans) {
-		mutex_unlock(&ctrl->m_ctrl);
+		mutex_unlock(&ctrl->sched.m_reconf);
 		return -EXFULL;
 	}
 	*chanh = i;
@@ -1668,7 +1703,7 @@ int slim_alloc_ch(struct slim_device *sb, u16 *chanh)
 	ctrl->chans[i].state = SLIM_CH_ALLOCATED;
 	ctrl->chans[i].chan = (u8)(ctrl->reserved + i);
 
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(slim_alloc_ch);
@@ -1692,7 +1727,7 @@ int slim_query_ch(struct slim_device *sb, u8 ch, u16 *chanh)
 	int ret = 0;
 	if (!ctrl || !chanh)
 		return -EINVAL;
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 	/* start with modulo number */
 	i = ch % ctrl->nchans;
 
@@ -1723,7 +1758,7 @@ int slim_query_ch(struct slim_device *sb, u8 ch, u16 *chanh)
 		i = (i + 1) % ctrl->nchans;
 	}
 query_out:
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	dev_dbg(&ctrl->dev, "query ch:%d,hdl:%d,ref:%d,ret:%d",
 				ch, i, ctrl->chans[i].ref, ret);
 	return ret;
@@ -1745,26 +1780,26 @@ int slim_dealloc_ch(struct slim_device *sb, u16 chanh)
 	if (!ctrl)
 		return -EINVAL;
 
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 	if (slc->state == SLIM_CH_FREE) {
-		mutex_unlock(&ctrl->m_ctrl);
+		mutex_unlock(&ctrl->sched.m_reconf);
 		return -ENOTCONN;
 	}
 	if (slc->ref > 1) {
 		slc->ref--;
-		mutex_unlock(&ctrl->m_ctrl);
+		mutex_unlock(&ctrl->sched.m_reconf);
 		dev_dbg(&ctrl->dev, "remove chan:%d,hdl:%d,ref:%d",
 					slc->chan, chanh, slc->ref);
 		return 0;
 	}
 	if (slc->state >= SLIM_CH_PENDING_ACTIVE) {
 		dev_err(&ctrl->dev, "Channel:%d should be removed first", chan);
-		mutex_unlock(&ctrl->m_ctrl);
+		mutex_unlock(&ctrl->sched.m_reconf);
 		return -EISCONN;
 	}
 	slc->ref--;
 	slc->state = SLIM_CH_FREE;
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	dev_dbg(&ctrl->dev, "remove chan:%d,hdl:%d,ref:%d",
 				slc->chan, chanh, slc->ref);
 	return 0;
@@ -1806,7 +1841,7 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 
 	if (!ctrl || !chanh || !prop || !nchan)
 		return -EINVAL;
-	mutex_lock(&ctrl->m_ctrl);
+	mutex_lock(&ctrl->sched.m_reconf);
 	for (i = 0; i < nchan; i++) {
 		u8 chan = SLIM_HDL_TO_CHIDX(chanh[i]);
 		struct slim_ich *slc = &ctrl->chans[chan];
@@ -1820,18 +1855,10 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 			if (prop->ratem != slc->prop.ratem ||
 			prop->sampleszbits != slc->prop.sampleszbits ||
 			prop->baser != slc->prop.baser) {
-                printk("=[slim]=%s=[slc->state=%d][slc->ref=%d] \
-                        [ratem=%d][samplezbis=%d][baser=%d]\n",
-                        __func__, slc->state, slc->ref, slc->prop.ratem, \
-                        slc->prop.sampleszbits, slc->prop.baser);
 				ret = -EISCONN;
 				goto err_define_ch;
 			}
 		} else if (slc->state > SLIM_CH_DEFINED) {
-            printk("=[slim]=%s=[slc->state=%d][slc->ref=%d] \
-                    [ratem=%d][samplezbis=%d][baser=%d]\n",
-                    __func__, slc->state, slc->ref, slc->prop.ratem, \
-                    slc->prop.sampleszbits, slc->prop.baser);
 			ret = -EISCONN;
 			goto err_define_ch;
 		} else {
@@ -1858,7 +1885,7 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 	}
 err_define_ch:
 	dev_dbg(&ctrl->dev, "define_ch: ch:%d, ret:%d", *chanh, ret);
-	mutex_unlock(&ctrl->m_ctrl);
+	mutex_unlock(&ctrl->sched.m_reconf);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(slim_define_ch);
@@ -2559,11 +2586,12 @@ static void slim_chan_changes(struct slim_device *sb, bool revert)
 					struct slim_pending_ch, pending);
 		struct slim_ich *slc = &ctrl->chans[pch->chan];
 		u32 sl = slc->seglen << slc->rootexp;
-		if (revert) {
+		if (revert || slc->def > 0) {
 			if (slc->coeff == SLIM_COEFF_3)
 				sl *= 3;
 			ctrl->sched.usedslots += sl;
-			slc->def = 1;
+			if (revert)
+				slc->def++;
 			slc->state = SLIM_CH_ACTIVE;
 		} else
 			slim_remove_ch(ctrl, slc);
@@ -2609,7 +2637,6 @@ int slim_reconfigure_now(struct slim_device *sb)
 	struct slim_pending_ch *pch;
 
 	mutex_lock(&ctrl->sched.m_reconf);
-	mutex_lock(&ctrl->m_ctrl);
 	/*
 	 * If there are no pending changes from this client, avoid sending
 	 * the reconfiguration sequence
@@ -2624,18 +2651,21 @@ int slim_reconfigure_now(struct slim_device *sb)
 			slc = &ctrl->chans[pch->chan];
 			if (slc->def > 0)
 				slc->def--;
-			/* Disconnect source port to free it up */
-			if (SLIM_HDL_TO_LA(slc->srch) == sb->laddr)
-				slc->srch = 0;
-			if (slc->def != 0) {
+			// Disconnect source port to free it up
+			//if (SLIM_HDL_TO_LA(slc->srch) == sb->laddr)
+			//	slc->srch = 0;
+			/*
+			 * If controller overrides BW allocation,
+			 * delete this in remove channel itself
+			 */
+			if (slc->def != 0 && !ctrl->allocbw) {
 				list_del(&pch->pending);
 				kfree(pch);
 			}
 		}
 		if (list_empty(&sb->mark_removal)) {
-			mutex_unlock(&ctrl->m_ctrl);
 			mutex_unlock(&ctrl->sched.m_reconf);
-			pr_info("SLIM_CL: skip reconfig sequence\n");
+			//pr_info("SLIM_CL: skip reconfig sequence\n");
 			return 0;
 		}
 	}
@@ -2683,14 +2713,14 @@ int slim_reconfigure_now(struct slim_device *sb)
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
 			SLIM_MSG_MC_NEXT_SUBFRAME_MODE, 0, SLIM_MSG_MT_CORE,
 			NULL, (u8 *)&subframe, 1, 4, NULL, 0, NULL);
-		pr_info("-slimdebug-sending subframe:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
+		//pr_info("-slimdebug-sending subframe:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
 	}
 	if (!ret && clkgear != ctrl->clkgear) {
 		wbuf[0] = (u8)(clkgear & 0xFF);
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
 			SLIM_MSG_MC_NEXT_CLOCK_GEAR, 0, SLIM_MSG_MT_CORE,
 			NULL, wbuf, 1, 4, NULL, 0, NULL);
-		pr_info("-slimdebug-sending clkgear:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
+		//pr_info("-slimdebug-sending clkgear:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
 	}
 	if (ret)
 		goto revert_reconfig;
@@ -2820,16 +2850,13 @@ int slim_reconfigure_now(struct slim_device *sb)
 		ctrl->sched.msgsl = ctrl->sched.pending_msgsl;
 		sb->cur_msgsl = sb->pending_msgsl;
 		slim_chan_changes(sb, false);
-		mutex_unlock(&ctrl->m_ctrl);
 		mutex_unlock(&ctrl->sched.m_reconf);
-		pr_info("-slimdebug-slim reconfig done!"); /* slimbus debug patch */
 		return 0;
 	}
 
 revert_reconfig:
 	/* Revert channel changes */
 	slim_chan_changes(sb, true);
-	mutex_unlock(&ctrl->m_ctrl);
 	mutex_unlock(&ctrl->sched.m_reconf);
 	return ret;
 }
@@ -2879,14 +2906,11 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 	}
 
 	mutex_lock(&sb->sldev_reconf);
-	mutex_lock(&ctrl->m_ctrl);
 	do {
 		struct slim_pending_ch *pch;
 		u8 add_mark_removal  = true;
 
 		slc = &ctrl->chans[chan];
-		pr_info("-slimdebug-chan:%d,ctrl:%d,def:%d, ref:%d", slc->chan,
-			chctrl, slc->def, slc->ref); /* slimbus debug patch */
 		if (slc->state < SLIM_CH_DEFINED) {
 			ret = -ENOTCONN;
 			break;
@@ -2919,7 +2943,7 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 					pch = list_entry(pos,
 						struct slim_pending_ch,
 						pending);
-					if (pch->chan == slc->chan) {
+					if (pch->chan == chan) {
 						list_del(&pch->pending);
 						kfree(pch);
 						add_mark_removal = false;
@@ -2938,7 +2962,6 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		if (nchan < SLIM_GRP_TO_NCHAN(chanh))
 			chan = SLIM_HDL_TO_CHIDX(slc->nextgrp);
 	} while (nchan < SLIM_GRP_TO_NCHAN(chanh));
-	mutex_unlock(&ctrl->m_ctrl);
 	if (!ret && commit == true)
 		ret = slim_reconfigure_now(sb);
 	mutex_unlock(&sb->sldev_reconf);
@@ -3013,8 +3036,15 @@ int slim_ctrl_clk_pause(struct slim_controller *ctrl, bool wakeup, u8 restart)
 		 */
 		if (ctrl->clk_state == SLIM_CLK_PAUSED && ctrl->wakeup)
 			ret = ctrl->wakeup(ctrl);
+		/*
+		 * If wakeup fails, make sure that next attempt can succeed.
+		 * Since we already consumed pause_comp, complete it so
+		 * that next wakeup isn't blocked forever
+		 */
 		if (!ret)
 			ctrl->clk_state = SLIM_CLK_ACTIVE;
+		else
+			complete(&ctrl->pause_comp);
 		mutex_unlock(&ctrl->m_ctrl);
 		return ret;
 	} else {

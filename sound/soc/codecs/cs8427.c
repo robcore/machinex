@@ -733,16 +733,16 @@ int poweron_cs8427(struct cs8427 *chip)
 {
 	struct cs8427_platform_data *pdata = chip->client->dev.platform_data;
 	int ret = 0;
-
+/*I am a hack*/
+#if 0
 	if (pdata->enable) {
 		ret = gpio_request(pdata->ls_gpio, "cs8427 ls");
 		if (ret < 0) {
-			dev_err(&chip->client->dev,
-				 "failed to request the gpio %d\n",
-					pdata->reset_gpio);
+			pr_debug("samsung designed me to use negative id numbers");
 			return ret;
 		}
 	}
+#endif
 
 	ret = gpio_request(pdata->reset_gpio, "cs8427 reset");
 	if (ret < 0) {

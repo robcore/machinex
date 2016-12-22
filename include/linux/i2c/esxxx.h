@@ -34,9 +34,7 @@ struct esxxx_platform_data {
 	unsigned int	int_gpio;
 /*DKB*/
 	int (*es325_clk_cb) (int);
-	void (*es325_reset_cb) (void);
 /*DKB*/
-	struct slim_device intf_device;	
 };
 
 #endif /* __ESXXX_H__ */
