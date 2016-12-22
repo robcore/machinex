@@ -5385,6 +5385,12 @@ static struct snd_soc_dai_driver tabla_i2s_dai[] = {
 	},
 };
 
+static int tabla_codec_enable_chmask(struct tabla_priv *tabla_p,
+				     int event, int index)
+{
+	int  ret = 0;
+	struct wcd9xxx_ch *ch;
+
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
 		list_for_each_entry(ch,

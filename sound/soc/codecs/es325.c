@@ -9,6 +9,17 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
+ *
+ *       1.05    Genisim Tsilker <gtsilker@audience.com>
+ *                   -  Combine SLIMBus Request - Response (Read - Write) 
+ *                      in es325_request_response function.
+ *                   - Flexible waiting time for es325 response (up to 20 ms).
+ *                   - Flexible waiting time for es325 sleep / wakeup (up to 20 ms).
+ *                   - In case of sequential "slim_control_ch" requests only last one
+ *                     commits "slim_control_ch" (SLIMBus reconfiguration).
+ *                   - Add support for DTS (Device Tree Source)
+ *                   - Remove unused comments.
+ *                   - Remove code related to i2c / i2s supports.
  */
 
 /* #define DEBUG */
@@ -55,6 +66,8 @@
 #include <linux/i2c/esxxx.h> /* TODO: common location for i2c and slimbus */
 #include "es325.h"
 #include "es325-export.h"
+#include <linux/clk.h>
+#include <linux/of_gpio.h>
 
 #ifdef CONFIG_SND_SOC_ES325_SLIM
 #define PREVENT_SLIMBUS_SLEEP_IN_FW_DL
@@ -98,12 +111,12 @@ struct es325_cmd_access {
 #define ES325_SLIM_2_CAP_OFFSET	2
 #define ES325_SLIM_3_CAP_OFFSET	4
 
-#define NARROW_BAND 0
-#define WIDE_BAND 1
-#define NETWORK_OFFSET 21
-#define NS_OFFSET 2
+#define NARROW_BAND	0
+#define WIDE_BAND	1
+#define NETWORK_OFFSET	21
 
 #define ES325_NUM_CODEC_SLIM_DAIS	6
+
 int debug_for_dl_firmware = 0;
 
 enum {
@@ -112,6 +125,7 @@ enum {
 	BOOT_MSG_NACK,
 	SYNC_MSG_NACK
 };
+	
 
 struct es325_slim_dai_data {
 	unsigned int rate;
@@ -160,6 +174,8 @@ struct es325_slim_ch {
 //#define FIRMWARE_NAME "audience-es325-fw-tmo.bin"
 #endif
 
+#define		ID(id)		(id)
+
 extern unsigned int system_rev;
 
 #define ES325_MAX_INVALID_VEQ 0xFFFF
@@ -172,6 +188,9 @@ static unsigned int es325_BWE_enable = ES325_MAX_INVALID_BWE;
 static unsigned int es325_BWE_enable_new = ES325_MAX_INVALID_BWE;
 static unsigned int es325_Tx_NS = ES325_MAX_INVALID_TX_NS;
 static unsigned int es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;
+#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
+extern void msm_slim_es325_write_flag_set(int flag);
+#endif 
 
 /* codec private data */
 struct es325_priv {
@@ -203,6 +222,8 @@ unsigned int es325_tx1_route_enable;
 unsigned int es325_rx1_route_enable;
 unsigned int es325_rx2_route_enable;
 unsigned int es325_fw_downloaded = 0;
+unsigned int FW_not_ready = 1;
+static unsigned int uart_enable = 0;
 
 static int es325_slim_rx_port_to_ch[ES325_SLIM_RX_PORTS] = {
 	152, 153, 154, 155, 134, 135
