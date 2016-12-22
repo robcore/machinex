@@ -26,9 +26,8 @@
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
-unsigned int snd_ctrl_enabled;
-unsigned int snd_ctrl_locked;
-static unsigned int selected_reg = 0xdeadbeef;
+unsigned int snd_ctrl_enabled = 1;
+unsigned int snd_ctrl_locked = 2;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -62,30 +61,6 @@ static unsigned int *cache_select(unsigned int reg)
 	return out;
 }
 
-static ssize_t sound_control_enabled_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", snd_ctrl_enabled);
-}
-
-static ssize_t sound_control_enabled_store(struct kobject *kobj,
-        struct kobj_attribute *attr, const char *buf, size_t count)
-{
-    unsigned int val;
-
-    sscanf(buf, "%u", &val);
-
-    if (val > 1)
-        val = 1;
-
-	if (val < 1)
-		snd_ctrl_locked = 0;
-
-    snd_ctrl_enabled = val;
-
-    return count;
-}
-
 void snd_cache_write(unsigned int reg, unsigned int value)
 {
 	unsigned int *tmp = cache_select(reg);
@@ -113,14 +88,14 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled > 0)
+			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled > 0)
+			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
 				ret = 0;
 			break;
 		default:
@@ -131,13 +106,39 @@ int snd_reg_access(unsigned int reg)
 }
 EXPORT_SYMBOL(snd_reg_access);
 
+static ssize_t sound_control_enabled_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", snd_ctrl_enabled);
+}
+
+static ssize_t sound_control_enabled_store(struct kobject *kobj,
+        struct kobj_attribute *attr, const char *buf, size_t count)
+{
+    unsigned int val;
+
+    sscanf(buf, "%u", &val);
+
+    if (val > 1) {
+        val = 1;
+	}
+
+	if (val < 0) {
+		val = 0;
+	}
+
+    snd_ctrl_enabled = val;
+
+    return count;
+}
+
+static unsigned int selected_reg = 0xdeadbeef;
+
 static ssize_t sound_reg_select_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
+	if (!snd_ctrl_enabled)
 		return count;
-	}
 
 	sscanf(buf, "%u", &selected_reg);
 
@@ -161,10 +162,8 @@ static ssize_t sound_reg_write_store(struct kobject *kobj,
 
 	sscanf(buf, "%u", &out);
 
-	if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
+	if (!snd_ctrl_enabled)
 		return count;
-	}
 
 	if (selected_reg != 0xdeadbeef)
 		tabla_write(snd_engine_codec_ptr, selected_reg, out);
@@ -189,10 +188,8 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u", &lval, &rval);
 
-	if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
+	if (!snd_ctrl_enabled)
 		return count;
-	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -221,10 +218,8 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u", &lval, &rval);
 
-	if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
+	if (!snd_ctrl_enabled)
 		return count;
-	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -251,10 +246,8 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u", &lval);
 
-	if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
+	if (!snd_ctrl_enabled)
 		return count;
-	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -279,10 +272,8 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u", &lval);
 
-	if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
+	if (!snd_ctrl_enabled)
 		return count;
-	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -378,6 +369,9 @@ static int sound_control_init(void)
 {
 	int sysfs_result;
 
+	snd_ctrl_enabled = 1;
+	snd_ctrl_locked = 2;
+
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
 
@@ -395,16 +389,11 @@ static int sound_control_init(void)
 		kobject_put(sound_control_kobj);
 	}
 
-	snd_ctrl_enabled = 1;
-	snd_ctrl_locked = 2;
-
 	return sysfs_result;
 }
 
 static void sound_control_exit(void)
 {
-	snd_ctrl_locked = 0;
-	snd_ctrl_enabled = 0;
 	if (sound_control_kobj != NULL)
 		kobject_put(sound_control_kobj);
 }
@@ -414,3 +403,4 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
+
