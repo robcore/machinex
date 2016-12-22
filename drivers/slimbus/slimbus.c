@@ -618,7 +618,7 @@ void slim_msg_response(struct slim_controller *ctrl, u8 *reply, u8 tid, u8 len)
 	if (txn == NULL || txn->rbuf == NULL) {
 			dev_err(&ctrl->dev, "Got response to invalid TID:%d, len:%d",
 				tid, len);
-		else
+		} else {
 			dev_err(&ctrl->dev, "Invalid client buffer passed\n");
 		mutex_unlock(&ctrl->m_ctrl);
 		return;
