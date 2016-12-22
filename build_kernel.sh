@@ -79,6 +79,7 @@ export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export KBUILD_BUILD_VERSION=00
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 env KCONFIG_NOTIMESTAMP=true
