@@ -258,6 +258,11 @@ enum sitar_mbhc_state {
 	MBHC_STATE_RELEASE,
 };
 
+static const u32 vport_check_table[NUM_CODEC_DAIS] = {
+	0,					/* AIF1_PB */
+	0,					/* AIF1_CAP */
+};
+
 struct hpf_work {
 	struct sitar_priv *sitar;
 	u32 decimator;
@@ -266,16 +271,6 @@ struct hpf_work {
 };
 
 static struct hpf_work tx_hpf_work[NUM_DECIMATORS];
-
-static const u32 vport_check_table[NUM_CODEC_DAIS] = {
-	0,					/* AIF1_PB */
-	0,					/* AIF1_CAP */
-};
-
-static const u32 vport_check_table[NUM_CODEC_DAIS] = {
-	0,					/* AIF1_PB */
-	0,					/* AIF1_CAP */
-};
 
 struct sitar_priv {
 	struct snd_soc_codec *codec;
@@ -1494,201 +1489,6 @@ pr_err:
 err:
 	mutex_unlock(&codec->mutex);
 	return -EINVAL;
-}
-
-static const struct soc_enum slim_rx_mux_enum =
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(slim_rx_mux_text), slim_rx_mux_text);
-
-static const struct snd_kcontrol_new sitar_aif_pb_mux[SITAR_RX_MAX] = {
-	SOC_DAPM_ENUM_EXT("SLIM RX1 MUX", slim_rx_mux_enum,
-			  slim_rx_mux_get, slim_rx_mux_put),
-	SOC_DAPM_ENUM_EXT("SLIM RX2 MUX", slim_rx_mux_enum,
-			  slim_rx_mux_get, slim_rx_mux_put),
-	SOC_DAPM_ENUM_EXT("SLIM RX3 MUX", slim_rx_mux_enum,
-			  slim_rx_mux_get, slim_rx_mux_put),
-	SOC_DAPM_ENUM_EXT("SLIM RX4 MUX", slim_rx_mux_enum,
-			  slim_rx_mux_get, slim_rx_mux_put),
-	SOC_DAPM_ENUM_EXT("SLIM RX5 MUX", slim_rx_mux_enum,
-			  slim_rx_mux_get, slim_rx_mux_put)
-};
-
-static const struct snd_kcontrol_new sitar_aif_cap_mixer[SITAR_TX_MAX] = {
-	SOC_SINGLE_EXT("SLIM TX1", SND_SOC_NOPM, SITAR_TX1, 1, 0,
-			slim_tx_mixer_get, slim_tx_mixer_put),
-	SOC_SINGLE_EXT("SLIM TX2", SND_SOC_NOPM, SITAR_TX2, 1, 0,
-			slim_tx_mixer_get, slim_tx_mixer_put),
-	SOC_SINGLE_EXT("SLIM TX3", SND_SOC_NOPM, SITAR_TX3, 1, 0,
-			slim_tx_mixer_get, slim_tx_mixer_put),
-	SOC_SINGLE_EXT("SLIM TX4", SND_SOC_NOPM, SITAR_TX4, 1, 0,
-			slim_tx_mixer_get, slim_tx_mixer_put),
-	SOC_SINGLE_EXT("SLIM TX5", SND_SOC_NOPM, SITAR_TX5, 1, 0,
-			slim_tx_mixer_get, slim_tx_mixer_put),
-};
-
-
-static int slim_tx_vport_validation(u32 dai_id, u32 port_id,
-				    struct sitar_priv *sitar_p)
-{
-	struct wcd9xxx_ch *ch;
-	int ret = 0;
-	int index = 0;
-	u32 vtable = vport_check_table[dai_id];
-	pr_debug("%s: dai_id %u vtable 0x%x port_id %u\n", __func__,
-		 dai_id, vtable, port_id);
-	while (vtable) {
-		if (vtable & 1) {
-			list_for_each_entry(ch,
-				&sitar_p->dai[index].wcd9xxx_ch_list,
-				list) {
-				pr_debug("%s: index %u ch->port%u  vtable 0x%x\n",
-					__func__, index, ch->port, vtable);
-				if (ch->port == port_id) {
-					pr_err("%s: TX%u is used by AIF%u_CAP Mixer\n",
-						__func__, port_id + 1,
-						(index + 1)/2);
-					ret = -EINVAL;
-					break;
-				}
-			}
-		}
-		if (ret)
-			break;
-		index++;
-		vtable = vtable >> 1;
-	}
-	return ret;
-}
-
-static int slim_tx_mixer_get(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-
-	ucontrol->value.integer.value[0] = widget->value;
-	return 0;
-}
-
-static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
-			     struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-	struct snd_soc_codec *codec = widget->codec;
-	struct sitar_priv *sitar_p = snd_soc_codec_get_drvdata(codec);
-	struct wcd9xxx *core = dev_get_drvdata(codec->dev->parent);
-	struct soc_multi_mixer_control *mixer =
-		((struct soc_multi_mixer_control *)kcontrol->private_value);
-	u32 dai_id = widget->shift;
-	u32 port_id = mixer->shift;
-	u32 enable = ucontrol->value.integer.value[0];
-
-	mutex_lock(&codec->mutex);
-
-	if (sitar_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
-		if (dai_id != AIF1_CAP) {
-			dev_err(codec->dev, "%s: invalid AIF for I2C mode\n",
-				__func__);
-			mutex_unlock(&codec->mutex);
-			return -EINVAL;
-		}
-	}
-
-	switch (dai_id) {
-	case AIF1_CAP:
-		if (enable && !(widget->value & 1 << port_id)) {
-			if (slim_tx_vport_validation(dai_id,
-						     port_id, sitar_p)) {
-				pr_info("%s: TX%u is used by other virtual port\n",
-					__func__, port_id + 1);
-				mutex_unlock(&codec->mutex);
-				return -EINVAL;
-			}
-			widget->value |= 1 << port_id;
-			list_add_tail(&core->tx_chs[port_id].list,
-			&sitar_p->dai[dai_id].wcd9xxx_ch_list);
-		} else if (!enable && (widget->value & 1 << port_id)) {
-			widget->value &= ~(1<<port_id);
-			list_del_init(&core->tx_chs[port_id].list);
-		} else {
-			if (enable)
-				pr_info("%s: TX%u port is used by this virtual port\n",
-					__func__, port_id + 1);
-			else
-				pr_info("%s: TX%u port is not used by this virtual port\n",
-					__func__, port_id + 1);
-			/* avoid update power function */
-			mutex_unlock(&codec->mutex);
-			return 0;
-		}
-	break;
-	default:
-		pr_err("Unknown AIF %d\n", dai_id);
-		mutex_unlock(&codec->mutex);
-		return -EINVAL;
-	}
-
-	pr_debug("%s: name %s sname %s updated value %u shift %d\n", __func__,
-		widget->name, widget->sname, widget->value, widget->shift);
-	snd_soc_dapm_mixer_update_power(widget, kcontrol, enable);
-	mutex_unlock(&codec->mutex);
-	return 0;
-}
-
-static int slim_rx_mux_get(struct snd_kcontrol *kcontrol,
-			   struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-
-	ucontrol->value.enumerated.item[0] = widget->value;
-	return 0;
-}
-
-static const char * const slim_rx_mux_text[] = {
-	"ZERO", "AIF1_PB"
-};
-
-static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
-			   struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-	struct snd_soc_codec *codec = widget->codec;
-	struct sitar_priv *sitar_p = snd_soc_codec_get_drvdata(codec);
-	struct wcd9xxx *core = dev_get_drvdata(codec->dev->parent);
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	u32 port_id = widget->shift;
-
-	widget->value = ucontrol->value.enumerated.item[0];
-
-	mutex_lock(&codec->mutex);
-
-	if (sitar_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
-		if (widget->value > 1) {
-			dev_err(codec->dev, "%s: invalid AIF for I2C mode\n",
-				__func__);
-			mutex_unlock(&codec->mutex);
-			return -EINVAL;
-		}
-	}
-
-	switch (widget->value) {
-	case 0:
-		list_del_init(&core->rx_chs[port_id].list);
-		break;
-	case 1:
-		list_add_tail(&core->rx_chs[port_id].list,
-			      &sitar_p->dai[AIF1_PB].wcd9xxx_ch_list);
-		break;
-	default:
-		pr_err("Unknown AIF %d\n", widget->value);
-		mutex_unlock(&codec->mutex);
-		return -EINVAL;
-	}
-	snd_soc_dapm_mux_update_power(widget, kcontrol, 1, widget->value, e);
-	mutex_unlock(&codec->mutex);
-	return 0;
 }
 
 static const struct soc_enum slim_rx_mux_enum =

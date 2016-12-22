@@ -104,6 +104,8 @@ enum {
 	RX_MIX1_INP_SEL_RX7,
 };
 
+#define MAX_PA_GAIN_OPTIONS  13
+
 #define TABLA_COMP_DIGITAL_GAIN_OFFSET 3
 
 #define TABLA_MCLK_RATE_12288KHZ 12288000
@@ -1380,9 +1382,9 @@ static const struct snd_kcontrol_new tabla_snd_controls[] = {
 	tabla_get_iir_band_audio_mixer, tabla_put_iir_band_audio_mixer),
 	SOC_SINGLE_MULTI_EXT("IIR2 Band5", IIR2, BAND5, 255, 0, 5,
 	tabla_get_iir_band_audio_mixer, tabla_put_iir_band_audio_mixer),
-	SOC_SINGLE_EXT("COMP1 Switch", SND_SOC_NOPM, COMPANDER_1, 1, 0,
+	SOC_SINGLE_EXT("COMP1 Switch", SND_SOC_NOPM, 1, COMPANDER_1, 0,
 				   tabla_get_compander, tabla_set_compander),
-	SOC_SINGLE_EXT("COMP2 Switch", SND_SOC_NOPM, COMPANDER_2, 1, 0,
+	SOC_SINGLE_EXT("COMP2 Switch", SND_SOC_NOPM, 0, COMPANDER_2, 0,
 				   tabla_get_compander, tabla_set_compander),
 };
 
@@ -4767,7 +4769,6 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		pr_err("%s: Invalid\n", __func__);
 		return -EINVAL;
 	}
-
 	pr_debug("%s(): dai_name = %s DAI-ID %x tx_ch %d rx_ch %d\n"
 		 "tabla->intf_type %d\n",
 		 __func__, dai->name, dai->id, tx_num, rx_num,
@@ -4801,7 +4802,7 @@ static int tabla_get_channel_map(struct snd_soc_dai *dai,
 				    list) {
 			rx_slot[i++] = ch->ch_num;
 		}
-+		*rx_num = i;
+		*rx_num = i;
 		break;
 	case AIF1_CAP:
 	case AIF2_CAP:
@@ -5384,75 +5385,32 @@ static struct snd_soc_dai_driver tabla_i2s_dai[] = {
 	},
 };
 
-static int tabla_codec_enable_chmask(struct tabla_priv *tabla_p,
-				     int event, int index)
-{
-	int  ret = 0;
-	struct wcd9xxx_ch *ch;
-
-	if (up) {
-		list_for_each_entry(ch, &dai->wcd9xxx_ch_list, list) {
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		list_for_each_entry(ch,
+			&tabla_p->dai[index].wcd9xxx_ch_list, list) {
 			ret = wcd9xxx_get_slave_port(ch->ch_num);
 			if (ret < 0) {
 				pr_err("%s: Invalid slave port ID: %d\n",
-				       __func__, ret);
+					__func__, ret);
 				ret = -EINVAL;
-			} else {
-				set_bit(ret, &dai->ch_mask);
+				break;
 			}
+			tabla_p->dai[index].ch_mask |= 1 << ret;
 		}
-	} else {
-		ret = wait_event_timeout(dai->dai_wait, (dai->ch_mask == 0),
-					 msecs_to_jiffies(
-						     SLIM_CLOSE_TIMEOUT));
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		ret = wait_event_timeout(tabla_p->dai[index].dai_wait,
+					(tabla_p->dai[index].ch_mask == 0),
+				msecs_to_jiffies(SLIM_CLOSE_TIMEOUT));
 		if (!ret) {
-			pr_err("%s: Slim close tx/rx wait timeout\n", __func__);
-			ret = -ETIMEDOUT;
-		} else {
-			ret = 0;
+			pr_err("%s: Slim close tx/rx wait timeout\n",
+				__func__);
+			ret = -EINVAL;
 		}
+		break;
 	}
 	return ret;
-}
-
-static void tabla_codec_enable_int_port(struct wcd9xxx_codec_dai_data *dai,
-					  struct snd_soc_codec *codec)
-{
-	struct wcd9xxx_ch *ch;
-	int port_num = 0;
-	unsigned short reg = 0;
-	u8 val = 0;
-	if (!dai || !codec) {
-		pr_err("%s: Invalid params\n", __func__);
-		return;
-	}
-	list_for_each_entry(ch, &dai->wcd9xxx_ch_list, list) {
-		if (ch->port >= TABLA_RX_PORT_START_NUMBER) {
-			port_num = ch->port - TABLA_RX_PORT_START_NUMBER;
-			reg = TABLA_SLIM_PGD_PORT_INT_EN0 + (port_num / 8);
-			val = wcd9xxx_interface_reg_read(codec->control_data,
-				reg);
-			if (!(val & (1 << (port_num % 8)))) {
-				val |= (1 << (port_num % 8));
-				wcd9xxx_interface_reg_write(
-					codec->control_data, reg, val);
-				val = wcd9xxx_interface_reg_read(
-					codec->control_data, reg);
-			}
-		} else {
-			port_num = ch->port;
-			reg = TABLA_SLIM_PGD_PORT_INT_TX_EN0 + (port_num / 8);
-			val = wcd9xxx_interface_reg_read(codec->control_data,
-				reg);
-			if (!(val & (1 << (port_num % 8)))) {
-				val |= (1 << (port_num % 8));
-				wcd9xxx_interface_reg_write(codec->control_data,
-					reg, val);
-				val = wcd9xxx_interface_reg_read(
-					codec->control_data, reg);
-			}
-		}
-	}
 }
 
 static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
@@ -5462,56 +5420,65 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 	struct wcd9xxx *core;
 	struct snd_soc_codec *codec = w->codec;
 	struct tabla_priv *tabla_p = snd_soc_codec_get_drvdata(codec);
-	int ret = 0;
+	u32  ret = 0;
 	struct wcd9xxx_codec_dai_data *dai;
 
 	core = dev_get_drvdata(codec->dev->parent);
 
 	pr_debug("%s: event called! codec name %s num_dai %d\n"
 		"stream name %s event %d\n",
-		__func__, w->codec->name, w->codec->num_dai, w->sname, event);
+		__func__, w->codec->name, w->codec->num_dai,
+		w->sname, event);
 
 	/* Execute the callback only if interface type is slimbus */
-	if (tabla_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS)
+	if (tabla_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
+		if (event == SND_SOC_DAPM_POST_PMD && (core != NULL) &&
+		    (core->dev != NULL) &&
+		    (core->dev->parent != NULL)) {
+			pm_runtime_mark_last_busy(core->dev->parent);
+			pm_runtime_put(core->dev->parent);
+		}
 		return 0;
-
-	dai = &tabla_p->dai[w->shift];
+	}
 	pr_debug("%s: w->name %s w->shift %d event %d\n",
-		 __func__, w->name, w->shift, event);
+		__func__, w->name, w->shift, event);
+	dai = &tabla_p->dai[w->shift];
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		dai->bus_down_in_recovery = false;
-		tabla_codec_enable_int_port(dai, codec);
-		(void) taiko_codec_enable_slim_chmask(dai, true);
-#if defined(CONFIG_SND_SOC_ES325)
-		ret = es325_remote_cfg_slim_rx(w->shift);
-#endif
+		ret = tabla_codec_enable_chmask(tabla_p, SND_SOC_DAPM_POST_PMU,
+						w->shift);
 		ret = wcd9xxx_cfg_slim_sch_rx(core, &dai->wcd9xxx_ch_list,
 					      dai->rate, dai->bit_width,
 					      &dai->grph);
+#if defined(CONFIG_SND_SOC_ES325)
+		ret = es325_remote_cfg_slim_rx(w->shift);
+#endif
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 #if defined(CONFIG_SND_SOC_ES325)
 		ret = es325_remote_close_slim_rx(w->shift);
 #endif
-		ret = wcd9xxx_close_slim_sch_rx(core, &dai->wcd9xxx_ch_list,
+		ret = wcd9xxx_close_slim_sch_rx(core,
+						&dai->wcd9xxx_ch_list,
 						dai->grph);
-		if (!dai->bus_down_in_recovery)
-			ret = tabla_codec_enable_slim_chmask(dai, false);
-
+		ret = tabla_codec_enable_chmask(tabla_p, SND_SOC_DAPM_POST_PMD,
+						w->shift);
 		if (ret < 0) {
 			ret = wcd9xxx_disconnect_port(core,
 						      &dai->wcd9xxx_ch_list,
 						      dai->grph);
-			pr_debug("%s: Disconnect RX port, ret = %d\n",
-				 __func__, ret);
+			pr_info("%s: Disconnect RX port, ret = %d\n",
+				__func__, ret);
 		}
-		dai->bus_down_in_recovery = false;
+		if ((core != NULL) &&
+			(core->dev != NULL) &&
+			(core->dev->parent != NULL)) {
+			pm_runtime_mark_last_busy(core->dev->parent);
+			pm_runtime_put(core->dev->parent);
+		}
 		break;
 	}
-	return ret;
-}
 
 	return ret;
 }
@@ -5528,24 +5495,31 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 
 	core = dev_get_drvdata(codec->dev->parent);
 
-	pr_debug("%s: event called! codec name %s num_dai %d stream name %s\n",
-		__func__, w->codec->name, w->codec->num_dai, w->sname);
+	pr_debug("%s: event called! codec name %s num_dai %d\n"
+		 "stream name %s\n", __func__, w->codec->name,
+		 w->codec->num_dai, w->sname);
 
 	/* Execute the callback only if interface type is slimbus */
-	if (tabla_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS)
+	if (tabla_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
+		if (event == SND_SOC_DAPM_POST_PMD && (core != NULL) &&
+		    (core->dev != NULL) &&
+		    (core->dev->parent != NULL)) {
+			pm_runtime_mark_last_busy(core->dev->parent);
+			pm_runtime_put(core->dev->parent);
+		}
 		return 0;
+	}
 
-	pr_debug("%s(): w->name %s event %d w->shift %d\n",
-		__func__, w->name, event, w->shift);
+	pr_debug("%s(): %s %d\n", __func__, w->name, event);
 
 	dai = &tabla_p->dai[w->shift];
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		tabla_codec_enable_int_port(dai, codec);
-		dai->bus_down_in_recovery = false;
-		(void) taiko_codec_enable_slim_chmask(dai, true);
+		ret = tabla_codec_enable_chmask(tabla_p, SND_SOC_DAPM_POST_PMU,
+						w->shift);
 		ret = wcd9xxx_cfg_slim_sch_tx(core, &dai->wcd9xxx_ch_list,
-					      dai->rate, dai->bit_width,
+					      dai->rate,
+					      dai->bit_width,
 					      &dai->grph);
 #if defined(CONFIG_SND_SOC_ES325)
 		ret = es325_remote_cfg_slim_tx(w->shift);
@@ -5557,21 +5531,21 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 #endif
 		ret = wcd9xxx_close_slim_sch_tx(core, &dai->wcd9xxx_ch_list,
 						dai->grph);
-		if (!dai->bus_down_in_recovery)
-			ret = tabla_codec_enable_slim_chmask(dai, false);
-
+		ret = tabla_codec_enable_chmask(tabla_p, SND_SOC_DAPM_POST_PMD,
+						w->shift);
 		if (ret < 0) {
 			ret = wcd9xxx_disconnect_port(core,
 						      &dai->wcd9xxx_ch_list,
 						      dai->grph);
-			pr_debug("%s: Disconnect RX port, ret = %d\n",
-				 __func__, ret);
+			pr_info("%s: Disconnect TX port, ret = %d\n",
+				__func__, ret);
 		}
-		dai->bus_down_in_recovery = false;
-		break;
-	}
-	return ret;
-}
+		if ((core != NULL) &&
+			(core->dev != NULL) &&
+			(core->dev->parent != NULL)) {
+			pm_runtime_mark_last_busy(core->dev->parent);
+			pm_runtime_put(core->dev->parent);
+		}
 		break;
 	}
 	return ret;
@@ -6397,8 +6371,6 @@ static int tabla_codec_enable_hs_detect(struct snd_soc_codec *codec,
 		}
 
 		/* setup for insertion detection */
-		snd_soc_update_bits(codec, TABLA_A_CDC_MBHC_INT_CTL, 0x2, 0);
-	} else {
 		pr_debug("setup for removal detection\n");
 		/* Make sure the HPH schmitt trigger is OFF */
 		snd_soc_update_bits(codec, TABLA_A_MBHC_HPH, 0x12, 0x00);
