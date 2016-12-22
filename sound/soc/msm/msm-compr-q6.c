@@ -480,6 +480,7 @@ static int msm_compr_capture_prepare(struct snd_pcm_substream *substream)
 	struct compr_audio *compr = runtime->private_data;
 	struct msm_audio *prtd = &compr->prtd;
 	struct audio_buffer *buf = prtd->audio_client->port[OUT].buf;
+	struct snd_codec *codec = &compr->info.codec_param.codec;
 	struct audio_aio_read_param read_param;
 	int ret = 0;
 	int i;
@@ -713,7 +714,7 @@ static void populate_codec_list(struct compr_audio *compr,
 	compr->info.compr_cap.codecs[7] = SND_AUDIOCODEC_DTS_PASS_THROUGH;
 	compr->info.compr_cap.codecs[8] = SND_AUDIOCODEC_AMRWB;
 	compr->info.compr_cap.codecs[9] = SND_AUDIOCODEC_AMRWBPLUS;
-	/* Add new codecs here */
+	/* Add new codecs here and update num_codecs*/
 }
 
 static int msm_compr_open(struct snd_pcm_substream *substream)
