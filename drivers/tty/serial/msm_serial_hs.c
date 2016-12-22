@@ -40,7 +40,6 @@
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
-#include <linux/atomic.h>
 #include <linux/kernel.h>
 #include <linux/timer.h>
 #include <linux/delay.h>
@@ -901,11 +900,6 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	/* Disable all UART interrupts */
 	msm_hs_write(uport, UARTDM_IMR_ADDR, 0);
 
-	/* Clear the Rx Ready Ctl bit */
-	data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-	data &= ~UARTDM_MR1_RX_RDY_CTL_BMSK;
-	msm_hs_write(uport, UARTDM_MR1_ADDR, data);
-	mb();
 	/* Enable RFR so remote UART doesn't send any data. */
 	msm_hs_write(uport, UARTDM_CR_ADDR, RFR_HIGH);
 
@@ -1019,6 +1013,22 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	/* Set Transmit software time out */
 	uart_update_timeout(uport, c_cflag, bps);
 
+	/*
+	 * Configure HW flow control
+	 * UART Core would see status of CTS line when it is sending data
+	 * to remote uart to confirm that it can receive or not.
+	 * UART Core would trigger RFR if it is not having any space with
+	 * RX FIFO.
+	 */
+	data = msm_hs_read(uport, UARTDM_MR1_ADDR);
+	data &= ~(UARTDM_MR1_CTS_CTL_BMSK | UARTDM_MR1_RX_RDY_CTL_BMSK);
+	if (c_cflag & CRTSCTS) {
+		data |= UARTDM_MR1_CTS_CTL_BMSK;
+		data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
+	}
+
+	msm_hs_write(uport, UARTDM_MR1_ADDR, data);
+
 	/* Enable previously enabled all UART interrupts. */
 	msm_hs_write(uport, UARTDM_IMR_ADDR, msm_uport->imr_reg);
 
@@ -1063,21 +1073,8 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	/* Start Rx Transfer */
 	msm_hs_start_rx_locked(&msm_uport->uport);
 
-	/*
-	 * Configure HW flow control
-	 * UART Core would see status of CTS line when it is sending data
-	 * to remote uart to confirm that it can receive or not.
-	 * UART Core would trigger RFR if it is not having any space with
-	 * RX FIFO.
-	 */
-	data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-	data &= ~(UARTDM_MR1_CTS_CTL_BMSK | UARTDM_MR1_RX_RDY_CTL_BMSK);
-	if (c_cflag & CRTSCTS) {
-		data |= UARTDM_MR1_CTS_CTL_BMSK;
-		data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
-	}
-
-	msm_hs_write(uport, UARTDM_MR1_ADDR, data);
+	/* Disable RFR so remote UART can send data. */
+	msm_hs_write(uport, UARTDM_CR_ADDR, RFR_LOW);
 	mb();
 
 	msm_uport->termios_in_progress = false;
@@ -1131,7 +1128,6 @@ static void msm_hs_stop_tx_locked(struct uart_port *uport)
 static void msm_hs_stop_rx_locked(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-	unsigned long data;
 
 	if (msm_uport->clk_state == MSM_HS_CLK_OFF)
 		return;
@@ -1139,10 +1135,6 @@ static void msm_hs_stop_rx_locked(struct uart_port *uport)
 	/* Disable RxStale Event Mechanism */
 	msm_hs_write(uport, UARTDM_CR_ADDR, STALE_EVENT_DISABLE);
 
-	/* Clear the Rx Ready Ctl bit */
-	data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-	data &= ~UARTDM_MR1_RX_RDY_CTL_BMSK;
-	msm_hs_write(uport, UARTDM_MR1_ADDR, data);
 	/* Enable RFR so remote UART doesn't send any data. */
 	msm_hs_write(uport, UARTDM_CR_ADDR, RFR_HIGH);
 
@@ -1644,11 +1636,6 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
-	if(msm_uport == NULL) {
-		printk(KERN_INFO "(msm_serial_hs) msm_hs_set_mctrl - msm_uport is NULL, so return..\n");
-		return;
-	}
-
 	if (msm_uport->clk_state == MSM_HS_CLK_OFF) {
 		pr_err("%s:Failing as GSBI clocks are OFF\n", __func__);
 		return;
@@ -1753,7 +1740,6 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 {
 	unsigned long sr_status;
 	unsigned long flags;
-	unsigned int data;
 	int ret;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	struct circ_buf *tx_buf = &uport->state->xmit;
@@ -1766,13 +1752,6 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	if (msm_uport->clk_state != MSM_HS_CLK_REQUEST_OFF ||
 	    !uart_circ_empty(tx_buf) || msm_uport->tx.dma_in_flight ||
 	    msm_uport->imr_reg & UARTDM_ISR_TXLEV_BMSK) {
-		if (msm_uport->clk_req_off_state > CLK_REQ_OFF_START) {
-			/* Enable auto RFR */
-			data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-			data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
-			msm_hs_write(uport, UARTDM_MR1_ADDR, data);
-			mb();
-		}
 		spin_unlock_irqrestore(&uport->lock, flags);
 		mutex_unlock(&msm_uport->clk_mutex);
 		return -1;
@@ -1789,14 +1768,6 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	/* Make sure forced RXSTALE flush complete */
 	switch (msm_uport->clk_req_off_state) {
 	case CLK_REQ_OFF_START:
-		data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-		/*disable auto ready-for-receiving */
-		data &= ~UARTDM_MR1_RX_RDY_CTL_BMSK;
-		msm_hs_write(uport, UARTDM_MR1_ADDR, data);
-		mb();
-		/* set RFR_N to high */
-		msm_hs_write(uport, UARTDM_CR_ADDR, RFR_HIGH);
-
 		msm_uport->clk_req_off_state = CLK_REQ_OFF_RXSTALE_ISSUED;
 		wake_lock(&msm_uport->rx.wake_lock);
 		msm_hs_write(uport, UARTDM_CR_ADDR, FORCE_STALE_EVENT);
@@ -1841,12 +1812,6 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 
 	spin_unlock_irqrestore(&uport->lock, flags);
 
-	/* Enable auto RFR */
-	data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-	data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
-	msm_hs_write(uport, UARTDM_MR1_ADDR, data);
-	mb();
-
 	/* we really want to clock off */
 	msm_hs_clock_unvote(msm_uport);
 
@@ -1857,6 +1822,7 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	}
 	printk(KERN_INFO "(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock\n");
 	wake_unlock(&msm_uport->dma_wake_lock);
+
 	spin_unlock_irqrestore(&uport->lock, flags);
 	mutex_unlock(&msm_uport->clk_mutex);
 	return 1;
@@ -2043,11 +2009,6 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	unsigned int data;
 	int ret = 0;
 
-	if(msm_uport == NULL) {
-		printk(KERN_INFO "(msm_serial_hs) msm_hs_request_clock_on - msm_uport is NULL, so return..\n");
-		return;
-	}
-
 	if(msm_uport->is_shutdown) {
 		printk(KERN_INFO "(msm_serial_hs) msm_hs_request_clock_on - uart shutdown, so return..\n");
 		return;
@@ -2067,8 +2028,7 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	case MSM_HS_CLK_OFF:
 		printk(KERN_INFO "(msm_serial_hs) msm_hs_check_clock_on - dma wake lock\n");
 		wake_lock(&msm_uport->dma_wake_lock);
-		if (use_low_power_wakeup(msm_uport))
-			disable_irq_nosync(msm_uport->wakeup.irq);
+		disable_irq_nosync(msm_uport->wakeup.irq);
 		spin_unlock_irqrestore(&uport->lock, flags);
 		ret = msm_hs_clock_vote(msm_uport);
 		if (ret) {
@@ -2091,12 +2051,6 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 			mb();
 		}
 		hrtimer_try_to_cancel(&msm_uport->clk_off_timer);
-
-		/* Enable Auto Ready for recieving */
-		data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-		data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
-		msm_hs_write(uport, UARTDM_MR1_ADDR, data);
-		mb();
 		if (msm_uport->rx.flush == FLUSH_SHUTDOWN)
 			msm_hs_start_rx_locked(uport);
 		if (msm_uport->rx.flush == FLUSH_STOP)
@@ -2292,8 +2246,8 @@ static int msm_hs_startup(struct uart_port *uport)
 
 		ret = request_threaded_irq(msm_uport->wakeup.irq, NULL,
 					msm_hs_wakeup_isr,
-					IRQF_TRIGGER_FALLING |
-					IRQF_ONESHOT, "msm_hs_wakeup", msm_uport);
+					IRQF_TRIGGER_FALLING,
+					"msm_hs_wakeup", msm_uport);
 
 		if (unlikely(ret)) {
 			pr_err("%s():Err getting uart wakeup_irq\n", __func__);
@@ -2306,11 +2260,8 @@ static int msm_hs_startup(struct uart_port *uport)
 
 	msm_hs_start_rx_locked(uport);
 
-	/* Enable Auto Ready for recieving */
-	data = msm_hs_read(uport, UARTDM_MR1_ADDR);
-	data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
-	msm_hs_write(uport, UARTDM_MR1_ADDR, data);
-	mb();
+	/* Allow remote UART to send data by setting RFR GPIO to HIGH. */
+	msm_hs_write(uport, UARTDM_CR_ADDR, RFR_LOW);
 
 	spin_unlock_irqrestore(&uport->lock, flags);
 
@@ -2321,8 +2272,7 @@ static int msm_hs_startup(struct uart_port *uport)
 free_uart_irq:
 	free_irq(uport->irq, msm_uport);
 free_wake_irq:
-	if (use_low_power_wakeup(msm_uport))
-		irq_set_irq_wake(msm_uport->wakeup.irq, 0);
+	irq_set_irq_wake(msm_uport->wakeup.irq, 0);
 unconfigure_uart_gpio:
 	if (pdata && pdata->config_gpio)
 		msm_hs_unconfig_uart_gpios(uport);
@@ -2796,7 +2746,6 @@ static void __exit msm_serial_hs_exit(void)
 	uart_unregister_driver(&msm_hs_driver);
 }
 
-#if 0 /*Bluesleep manages uart clk control*/
 static int msm_hs_runtime_idle(struct device *dev)
 {
 	/*
@@ -2839,8 +2788,7 @@ static struct platform_driver msm_serial_hs_platform_driver = {
 	.remove = __devexit_p(msm_hs_remove),
 	.driver = {
 		.name = "msm_serial_hs",
-		/*Bluesleep manages uart clk control*/
-		/*.pm   = &msm_hs_dev_pm_ops,*/
+		.pm   = &msm_hs_dev_pm_ops,
 	},
 };
 
