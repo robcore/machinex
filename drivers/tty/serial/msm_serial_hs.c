@@ -910,48 +910,19 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	msm_hs_write(uport, UARTDM_CR_ADDR, RFR_HIGH);
 
 	/*
-	 * It is quite possible that previous graceful flush is not
-	 * completed and set_termios() request has been received.
-	 * Hence wait here to make sure that it is completed and
-	 * queued one more UART RX CMD with ADM.
+	 * Disable Rx channel of UARTDM
+	 * DMA Rx Stall happens if enqueue and flush of Rx command happens
+	 * concurrently. Hence before changing the baud rate/protocol
+	 * configuration and sending flush command to ADM, disable the Rx
+	 * channel of UARTDM.
+	 * Note: should not reset the receiver here immediately as it is not
+	 * suggested to do disable/reset or reset/disable at the same time.
 	 */
-	if (msm_uport->rx.dma_in_flight &&
-			msm_uport->rx.flush == FLUSH_DATA_READY) {
-		spin_unlock_irqrestore(&uport->lock, flags);
-		ret = wait_event_timeout(msm_uport->rx.wait,
-			msm_uport->rx.flush == FLUSH_NONE,
-			RX_FLUSH_COMPLETE_TIMEOUT);
-		if (!ret) {
-			pr_err("%s(): timeout for Rx cmd completion\n",
-							__func__);
-			spin_lock_irqsave(&uport->lock, flags);
-			print_uart_registers(msm_uport);
-			spin_unlock_irqrestore(&uport->lock, flags);
-			BUG_ON(1);
-		}
+	data = msm_hs_read(uport, UART_DM_DMEN);
+	/* Disable UARTDM RX BAM Interface */
+	data &= ~UARTDM_RX_BAM_ENABLE_BMSK;
 
-		spin_lock_irqsave(&uport->lock, flags);
-	}
-
-	/*
-	 * Wait for queued Rx CMD to ADM driver to be programmed
-	 * with ADM hardware before going and changing UART baud rate.
-	 * Below udelay(500) is required as exec_cmd callback is called
-	 * before actually programming ADM hardware with cmd.
-	 */
-	if (msm_uport->rx.dma_in_flight) {
-		spin_unlock_irqrestore(&uport->lock, flags);
-		ret = wait_event_timeout(msm_uport->rx.wait,
-			msm_uport->rx.cmd_exec == true,
-			RX_FLUSH_COMPLETE_TIMEOUT);
-		if (!ret)
-			pr_err("%s(): timeout for rx cmd to be program\n",
-								__func__);
-		else
-			udelay(500);
-
-		spin_lock_irqsave(&uport->lock, flags);
-	}
+	msm_hs_write(uport, UART_DM_DMEN, data);
 
 	/* 300 is the minimum baud support by the driver  */
 	bps = uart_get_baud_rate(uport, termios, oldtermios, 200, 4000000);

@@ -1171,7 +1171,6 @@ static void msm_hsl_power(struct uart_port *port, unsigned int state,
 		break;
 	default:
 		pr_err("Unknown PM state %d\n", state);
-							__func__, state);
 	}
 }
 
