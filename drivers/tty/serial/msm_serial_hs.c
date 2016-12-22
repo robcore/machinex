@@ -65,9 +65,12 @@
 
 #include <mach/hardware.h>
 #include <mach/dma.h>
+#include <mach/sps.h>
 #include <mach/msm_serial_hs.h>
 
 #include "msm_serial_hs_hwreg.h"
+#define UART_SPS_CONS_PERIPHERAL 0
+#define UART_SPS_PROD_PERIPHERAL 1
 
 static int hs_serial_debug_mask = 1;
 module_param_named(debug_mask, hs_serial_debug_mask,
@@ -108,6 +111,17 @@ enum msm_hs_clk_req_off_state_e {
 	CLK_REQ_OFF_RXSTALE_FLUSHED,
 };
 
+/* SPS data structures to support HSUART with BAM
+ * @sps_pipe - This struct defines BAM pipe descriptor
+ * @sps_connect - This struct defines a connection's end point
+ * @sps_register - This struct defines a event registration parameters
+ */
+struct msm_hs_sps_ep_conn_data {
+	struct sps_pipe *pipe_handle;
+	struct sps_connect config;
+	struct sps_register_event event;
+};
+
 struct msm_hs_tx {
 	unsigned int tx_ready_int_en;  /* ok to dma more tx */
 	unsigned int dma_in_flight;    /* tx dma in progress */
@@ -121,6 +135,7 @@ struct msm_hs_tx {
 	int tx_count;
 	dma_addr_t dma_base;
 	struct tasklet_struct tlet;
+	struct msm_hs_sps_ep_conn_data cons;
 };
 
 struct msm_hs_rx {
@@ -138,6 +153,7 @@ struct msm_hs_rx {
 	struct wake_lock wake_lock;
 	struct delayed_work flip_insert_work;
 	struct tasklet_struct tlet;
+	struct msm_hs_sps_ep_conn_data prod;
 	bool dma_in_flight;
 	bool cmd_exec;
 };
@@ -195,13 +211,23 @@ struct msm_hs_port {
 	struct work_struct clock_off_w; /* work for actual clock off */
 	struct workqueue_struct *hsuart_wq; /* hsuart workqueue */
 	struct mutex clk_mutex; /* mutex to guard against clock off/clock on */
+	struct work_struct reset_bam_rx; /* work for reset bam rx endpoint */
+	struct work_struct disconnect_rx_endpoint; /* disconnect rx_endpoint */
 	bool tty_flush_receive;
 	bool rx_discard_flush_issued;
 	enum uart_func_mode func_mode;
 	bool is_shutdown;
 	bool termios_in_progress;
 	int rx_buf_size;
+ 	unsigned char __iomem *bam_base;
+ 	unsigned int bam_tx_ep_pipe_index;
+ 	unsigned int bam_rx_ep_pipe_index;
+	/* struct sps_event_notify is an argument passed when triggering a
+	 * callback event object registered for an SPS connection end point.
+	 */
+	struct sps_event_notify notify;
 };
+
 
 #define MSM_UARTDM_BURST_SIZE 16   /* DM burst size (in bytes) */
 #define UARTDM_TX_BUF_SIZE UART_XMIT_SIZE
@@ -218,6 +244,8 @@ static struct platform_driver msm_serial_hs_platform_driver;
 static struct uart_driver msm_hs_driver;
 static struct uart_ops msm_hs_ops;
 static void msm_hs_start_rx_locked(struct uart_port *uport);
+static void msm_serial_hs_rx_tlet(unsigned long tlet_ptr);
+static void flip_insert_work(struct work_struct *work);
 
 #define UARTDM_TO_MSM(uart_port) \
 	container_of((uart_port), struct msm_hs_port, uport)
@@ -445,13 +473,25 @@ static int msm_serial_loopback_enable_set(void *data, u64 val)
 	if (val) {
 		spin_lock_irqsave(&uport->lock, flags);
 		ret = msm_hs_read(uport, UARTDM_MR2_ADDR);
-		ret |= UARTDM_MR2_LOOP_MODE_BMSK;
+		if (is_blsp_uart(msm_uport))
+			ret |= (UARTDM_MR2_LOOP_MODE_BMSK |
+				UARTDM_MR2_RFR_CTS_LOOP_MODE_BMSK);
+		else
+		if (is_blsp_uart(msm_uport))
+			ret |= (UARTDM_MR2_LOOP_MODE_BMSK |
+				UARTDM_MR2_RFR_CTS_LOOP_MODE_BMSK);
+		else
+			ret |= UARTDM_MR2_LOOP_MODE_BMSK;
 		msm_hs_write(uport, UARTDM_MR2_ADDR, ret);
 		spin_unlock_irqrestore(&uport->lock, flags);
 	} else {
 		spin_lock_irqsave(&uport->lock, flags);
 		ret = msm_hs_read(uport, UARTDM_MR2_ADDR);
-		ret &= ~UARTDM_MR2_LOOP_MODE_BMSK;
+		if (is_blsp_uart(msm_uport))
+			ret &= ~(UARTDM_MR2_LOOP_MODE_BMSK |
+				UARTDM_MR2_RFR_CTS_LOOP_MODE_BMSK);
+		else
+			ret &= ~UARTDM_MR2_LOOP_MODE_BMSK;
 		msm_hs_write(uport, UARTDM_MR2_ADDR, ret);
 		spin_unlock_irqrestore(&uport->lock, flags);
 	}
@@ -707,6 +747,89 @@ static int msm_hs_init_clk(struct uart_port *uport)
 	return 0;
 }
 
+
+/* Connect a UART peripheral's SPS endpoint(consumer endpoint)
+ *
+ * Also registers a SPS callback function for the consumer
+ * process with the SPS driver
+ *
+ * @uport - Pointer to uart uport structure
+ *
+ * @return - 0 if successful else negative value.
+ *
+ */
+
+static int msm_hs_spsconnect_tx(struct uart_port *uport)
+{
+	int ret;
+	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+	struct msm_hs_tx *tx = &msm_uport->tx;
+	struct sps_pipe *sps_pipe_handle = tx->cons.pipe_handle;
+	struct sps_connect *sps_config = &tx->cons.config;
+	struct sps_register_event *sps_event = &tx->cons.event;
+
+	/* Establish connection between peripheral and memory endpoint */
+	ret = sps_connect(sps_pipe_handle, sps_config);
+	if (ret) {
+		pr_err("msm_serial_hs: sps_connect() failed for tx!!\n"
+		"pipe_handle=0x%x ret=%d", (u32)sps_pipe_handle, ret);
+		return ret;
+	}
+	/* Register callback event for EOT (End of transfer) event. */
+	ret = sps_register_event(sps_pipe_handle, sps_event);
+	if (ret) {
+		pr_err("msm_serial_hs: sps_connect() failed for tx!!\n"
+		"pipe_handle=0x%x ret=%d", (u32)sps_pipe_handle, ret);
+		goto reg_event_err;
+	}
+	return 0;
+
+reg_event_err:
+	sps_disconnect(sps_pipe_handle);
+	return ret;
+}
+
+/* Connect a UART peripheral's SPS endpoint(producer endpoint)
+ *
+ * Also registers a SPS callback function for the producer
+ * process with the SPS driver
+ *
+ * @uport - Pointer to uart uport structure
+ *
+ * @return - 0 if successful else negative value.
+ *
+ */
+
+static int msm_hs_spsconnect_rx(struct uart_port *uport)
+{
+	int ret;
+	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+	struct msm_hs_rx *rx = &msm_uport->rx;
+	struct sps_pipe *sps_pipe_handle = rx->prod.pipe_handle;
+	struct sps_connect *sps_config = &rx->prod.config;
+	struct sps_register_event *sps_event = &rx->prod.event;
+
+	/* Establish connection between peripheral and memory endpoint */
+	ret = sps_connect(sps_pipe_handle, sps_config);
+	if (ret) {
+		pr_err("msm_serial_hs: sps_connect() failed for rx!!\n"
+		"pipe_handle=0x%x ret=%d", (u32)sps_pipe_handle, ret);
+		return ret;
+	}
+	/* Register callback event for EOT (End of transfer) event. */
+	ret = sps_register_event(sps_pipe_handle, sps_event);
+	if (ret) {
+		pr_err("msm_serial_hs: sps_connect() failed for rx!!\n"
+		"pipe_handle=0x%x ret=%d", (u32)sps_pipe_handle, ret);
+		goto reg_event_err;
+	}
+	return 0;
+
+reg_event_err:
+	sps_disconnect(sps_pipe_handle);
+	return ret;
+}
+
 /*
  * programs the UARTDM_CSR register with correct bit rates
  *
@@ -716,9 +839,8 @@ static int msm_hs_init_clk(struct uart_port *uport)
  * Goal is to have around 8 ms before indicate stale.
  * roundup (((Bit Rate * .008) / 10) + 1
  */
-static unsigned long msm_hs_set_bps_locked(struct uart_port *uport,
-			       unsigned int bps,
-				unsigned long flags)
+static void msm_hs_set_bps_locked(struct uart_port *uport,
+			       unsigned int bps)
 {
 	unsigned long rxstale;
 	unsigned long data;
@@ -820,24 +942,18 @@ static unsigned long msm_hs_set_bps_locked(struct uart_port *uport,
 		uport->uartclk = 7372800;
 	}
 
-	spin_unlock_irqrestore(&uport->lock, flags);
-
 	if (curr_uartclk != uport->uartclk) {
 		if (clk_set_rate(msm_uport->clk, uport->uartclk)) {
 			pr_err("%s(): Error setting clock rate on UART\n",
 								__func__);
 			WARN_ON(1);
-			spin_lock_irqsave(&uport->lock, flags);
-			return flags;
 		}
 	}
 
-	spin_lock_irqsave(&uport->lock, flags);
 	data = rxstale & UARTDM_IPR_STALE_LSB_BMSK;
 	data |= UARTDM_IPR_STALE_TIMEOUT_MSB_BMSK & (rxstale << 2);
 
 	msm_hs_write(uport, UARTDM_IPR_ADDR, data);
-	return flags;
 }
 
 
@@ -890,6 +1006,23 @@ static void msm_hs_set_std_bps_locked(struct uart_port *uport,
 	msm_hs_write(uport, UARTDM_IPR_ADDR, data);
 }
 
+
+/* Reset BAM RX Endpoint Pipe Index from workqueue context*/
+
+static void hsuart_reset_bam_rx_work(struct work_struct *w)
+{
+	struct msm_hs_port *msm_uport = container_of(w, struct msm_hs_port,
+							reset_bam_rx);
+	struct uart_port *uport = &msm_uport->uport;
+	struct msm_hs_rx *rx = &msm_uport->rx;
+	struct sps_pipe *sps_pipe_handle = rx->prod.pipe_handle;
+
+	sps_disconnect(sps_pipe_handle);
+	msm_hs_spsconnect_rx(uport);
+
+	msm_serial_hs_rx_tlet((unsigned long) &rx->tlet);
+}
+
 /*
  * termios :  new ktermios
  * oldtermios:  old ktermios previous setting
@@ -903,13 +1036,13 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	int ret;
 	unsigned int bps;
 	unsigned long data;
-	unsigned long flags;
 	unsigned int c_cflag = termios->c_cflag;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+	struct msm_hs_rx *rx = &msm_uport->rx;
+	struct sps_pipe *sps_pipe_handle = rx->prod.pipe_handle;
 	bool error_case = false;
 
 	mutex_lock(&msm_uport->clk_mutex);
-	spin_lock_irqsave(&uport->lock, flags);
 
 	msm_uport->termios_in_progress = true;
 
@@ -936,11 +1069,15 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	 * Note: should not reset the receiver here immediately as it is not
 	 * suggested to do disable/reset or reset/disable at the same time.
 	 */
-	data = msm_hs_read(uport, UART_DM_DMEN);
-	/* Disable UARTDM RX BAM Interface */
-	data &= ~UARTDM_RX_BAM_ENABLE_BMSK;
+ 	data = msm_hs_read(uport, UARTDM_DMEN_ADDR);
+	if (is_blsp_uart(msm_uport)) {
+		/* Disable UARTDM RX BAM Interface */
+		data &= ~UARTDM_RX_BAM_ENABLE_BMSK;
+	} else {
+		data &= ~UARTDM_RX_DM_EN_BMSK;
+	}
 
-	msm_hs_write(uport, UART_DM_DMEN, data);
+	msm_hs_write(uport, UARTDM_DMEN_ADDR, data)
 
 	/* 300 is the minimum baud support by the driver  */
 	bps = uart_get_baud_rate(uport, termios, oldtermios, 200, 4000000);
@@ -953,7 +1090,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	if (!uport->uartclk)
 		msm_hs_set_std_bps_locked(uport, bps);
 	else
-		flags = msm_hs_set_bps_locked(uport, bps, flags);
+		msm_hs_set_bps_locked(uport, bps);
 
 	data = msm_hs_read(uport, UARTDM_MR2_ADDR);
 	data &= ~UARTDM_MR2_PARITY_MODE_BMSK;
@@ -1107,6 +1244,20 @@ static void msm_hs_stop_tx_locked(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	msm_uport->tx.tx_ready_int_en = 0;
+}
+
+/* Disconnect BAM RX Endpoint Pipe Index from workqueue context*/
+static void hsuart_disconnect_rx_endpoint_work(struct work_struct *w)
+{
+	struct msm_hs_port *msm_uport = container_of(w, struct msm_hs_port,
+						disconnect_rx_endpoint);
+	struct msm_hs_rx *rx = &msm_uport->rx;
+	struct sps_pipe *sps_pipe_handle = rx->prod.pipe_handle;
+
+	sps_disconnect(sps_pipe_handle);
+	wake_lock_timeout(&msm_uport->rx.wake_lock, HZ / 2);
+	msm_uport->rx.flush = FLUSH_SHUTDOWN;
+	wake_up(&msm_uport->rx.wait);
 }
 
 /*
@@ -1931,8 +2082,14 @@ static irqreturn_t msm_hs_isr(int irq, void *dev)
 			msm_dmov_flush(msm_uport->dma_rx_channel, 1);
 			} else {
 				rx->flush = FLUSH_IGNORE;
-				/* Discard Flush */
-				msm_dmov_flush(msm_uport->dma_rx_channel, 0);
+		if (is_blsp_uart(msm_uport)) {
+			sps_disconnect(sps_pipe_handle);
+			msm_hs_spsconnect_rx(uport);
+			msm_serial_hs_rx_tlet((unsigned long) &rx->tlet);
+		} else {
+			/* do discard flush */
+			msm_dmov_flush(msm_uport->dma_rx_channel, 0);
+		}
 			}
 		}
 
@@ -1994,8 +2151,6 @@ static irqreturn_t msm_hs_isr(int irq, void *dev)
 	/* Change in CTS interrupt */
 	if (isr_status & UARTDM_ISR_DELTA_CTS_BMSK)
 		msm_hs_handle_delta_cts_locked(uport);
-
-	spin_unlock_irqrestore(&uport->lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -2935,7 +3090,13 @@ static void msm_hs_shutdown(struct uart_port *uport)
 
 	/* disable UART RX interface to DM */
 	data = msm_hs_read(uport, UARTDM_DMEN_ADDR);
-	data &= ~UARTDM_RX_DM_EN_BMSK;
+	if (is_blsp_uart(msm_uport)) {
+		/* Disable UARTDM RX BAM Interface */
+		data &= ~UARTDM_RX_BAM_ENABLE_BMSK;
+	} else {
+		data &= ~UARTDM_RX_DM_EN_BMSK;
+	}
+
 	msm_hs_write(uport, UARTDM_DMEN_ADDR, data);
 
 	cancel_delayed_work_sync(&msm_uport->rx.flip_insert_work);
