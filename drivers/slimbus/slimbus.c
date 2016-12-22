@@ -2650,9 +2650,9 @@ int slim_reconfigure_now(struct slim_device *sb)
 			slc = &ctrl->chans[pch->chan];
 			if (slc->def > 0)
 				slc->def--;
-			/* Disconnect source port to free it up */
-			if (SLIM_HDL_TO_LA(slc->srch) == sb->laddr)
-				slc->srch = 0;
+			// Disconnect source port to free it up
+			//if (SLIM_HDL_TO_LA(slc->srch) == sb->laddr)
+			//	slc->srch = 0;
 			/*
 			 * If controller overrides BW allocation,
 			 * delete this in remove channel itself
