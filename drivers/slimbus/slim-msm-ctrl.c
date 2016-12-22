@@ -98,8 +98,8 @@ enum mgr_intr {
 
 enum frm_cfg {
 	FRM_ACTIVE	= 1,
-	CLK_GEAR	= 10,
-	ROOT_FREQ	= 12,
+	CLK_GEAR	= 7,
+	ROOT_FREQ	= 11,
 	REF_CLK_GEAR	= 15,
 	INTR_WAKE	= 19,
 };
@@ -699,17 +699,17 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 				e_addr[1] = 0x01;
 
 				ret = slim_assign_laddr(&dev->ctrl, e_addr, 6,
-							&laddr, false);
+							&laddr, true); //hack for our shitty es325 driver
 
 				e_addr[1] = 0x00;
 
 				ret = slim_assign_laddr(&dev->ctrl, e_addr,
-							6, &laddr, false);
+							6, &laddr, true); //hack for our shitty es325 driver
 
 			} else
 #endif
 			ret = slim_assign_laddr(&dev->ctrl, e_addr, 6, &laddr,
-						false);
+						true); //hack for our shitty es325 driver
 			/* Is this Qualcomm ported generic device? */
 			if (!ret && e_addr[5] == QC_MFGID_LSB &&
 				e_addr[4] == QC_MFGID_MSB &&

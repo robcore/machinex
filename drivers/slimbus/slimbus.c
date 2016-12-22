@@ -2586,12 +2586,11 @@ static void slim_chan_changes(struct slim_device *sb, bool revert)
 					struct slim_pending_ch, pending);
 		struct slim_ich *slc = &ctrl->chans[pch->chan];
 		u32 sl = slc->seglen << slc->rootexp;
-		if (revert || slc->def > 0) {
+		if (revert) {
 			if (slc->coeff == SLIM_COEFF_3)
 				sl *= 3;
 			ctrl->sched.usedslots += sl;
-			if (revert)
-				slc->def++;
+			slc->def = 1;
 			slc->state = SLIM_CH_ACTIVE;
 		} else
 			slim_remove_ch(ctrl, slc);
@@ -2651,14 +2650,11 @@ int slim_reconfigure_now(struct slim_device *sb)
 			slc = &ctrl->chans[pch->chan];
 			if (slc->def > 0)
 				slc->def--;
-			// Disconnect source port to free it up
-			//if (SLIM_HDL_TO_LA(slc->srch) == sb->laddr)
-			//	slc->srch = 0;
-			/*
-			 * If controller overrides BW allocation,
-			 * delete this in remove channel itself
-			 */
-			if (slc->def != 0 && !ctrl->allocbw) {
+			 //Disconnect source port to free it up
+			if (SLIM_HDL_TO_LA(slc->srch) == sb->laddr)
+				slc->srch = 0;
+			//hack for our shitty es325 driver
+			if (slc->def != 0) {
 				list_del(&pch->pending);
 				kfree(pch);
 			}
@@ -2691,14 +2687,14 @@ int slim_reconfigure_now(struct slim_device *sb)
 		slc->state = SLIM_CH_SUSPENDED;
 	}
 
-	/*
+	/* HAXXORED
 	 * Controller can override default channel scheduling algorithm.
 	 * (e.g. if controller needs to use fixed channel scheduling based
 	 * on number of channels)
-	 */
+
 	if (ctrl->allocbw)
 		ret = ctrl->allocbw(sb, &subframe, &clkgear);
-	else
+	else */
 		ret = slim_allocbw(sb, &subframe, &clkgear);
 
 	if (!ret) {
@@ -2943,7 +2939,7 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 					pch = list_entry(pos,
 						struct slim_pending_ch,
 						pending);
-					if (pch->chan == chan) {
+					if (pch->chan == slc->chan) {
 						list_del(&pch->pending);
 						kfree(pch);
 						add_mark_removal = false;
