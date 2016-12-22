@@ -578,8 +578,6 @@ static const struct snd_soc_dapm_route apq8064_common_audio_map[] = {
 	{"HEADPHONE", NULL, "LDO_H"},
 
 	/* Speaker path */
-	{"Ext Spk Bottom Pos", NULL, "LINEOUT1"},
-	{"Ext Spk Bottom Neg", NULL, "LINEOUT3"},
 #ifdef CONFIG_SND_SOC_TPA2028D
 	{"Ext Spk Top", NULL, "LINEOUT1"},
 #else
@@ -1165,6 +1163,13 @@ static int msm_slimbus_2_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
+		ret = snd_soc_dai_set_channel_map(codec_dai, 0, 0,
+				num_rx_ch, rx_ch);
+		if (ret < 0) {
+			pr_err("%s: failed to set codec channel map\n",
+								__func__);
+			goto end;
+		}
 	} else {
 
 		num_tx_ch =  params_channels(params);
@@ -1183,6 +1188,13 @@ static int msm_slimbus_2_hw_params(struct snd_pcm_substream *substream,
 				num_tx_ch, tx_ch, 0 , 0);
 		if (ret < 0) {
 			pr_err("%s: failed to set cpu chan map\n", __func__);
+			goto end;
+		}
+		ret = snd_soc_dai_set_channel_map(codec_dai,
+				num_tx_ch, tx_ch, 0, 0);
+		if (ret < 0) {
+			pr_err("%s: failed to set codec channel map\n",
+								__func__);
 			goto end;
 		}
 	}
@@ -1331,7 +1343,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_add_routes(dapm, apq8064_common_audio_map,
 		ARRAY_SIZE(apq8064_common_audio_map));
 
-	if (machine_is_apq8064_mtp()) {
+	if (machine_is_apq8064_mtp() || machine_is_apq8064_mako()) {
 		snd_soc_dapm_add_routes(dapm, apq8064_mtp_audio_map,
 			ARRAY_SIZE(apq8064_mtp_audio_map));
 	} else  {

@@ -54,7 +54,7 @@
 #define GPIO_SEC_I2S_RX_WS   48
 #define GPIO_SEC_I2S_RX_DOUT 49
 #define GPIO_SEC_I2S_RX_MCLK 50
-#define I2S_MCLK_RATE 12288000
+#define I2S_MCLK_RATE 1536000
 
 #define GPIO_MI2S_WS     27
 #define GPIO_MI2S_SCLK   28
@@ -719,6 +719,13 @@ static int msm_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
+		ret = snd_soc_dai_set_channel_map(codec_dai, 0, 0,
+				msm_slim_0_rx_ch, rx_ch);
+		if (ret < 0) {
+			pr_err("%s: failed to set codec channel map\n",
+								__func__);
+			goto end;
+		}
 	} else {
 		ret = snd_soc_dai_get_channel_map(codec_dai,
 				&tx_ch_cnt, tx_ch, &rx_ch_cnt , rx_ch);
@@ -732,6 +739,14 @@ static int msm_hw_params(struct snd_pcm_substream *substream,
 			pr_err("%s: failed to set cpu chan map\n", __func__);
 			goto end;
 		}
+		ret = snd_soc_dai_set_channel_map(codec_dai,
+				msm_slim_0_tx_ch, tx_ch, 0, 0);
+		if (ret < 0) {
+			pr_err("%s: failed to set codec channel map\n",
+								__func__);
+			goto end;
+		}
+
 
 	}
 end:

@@ -1520,10 +1520,6 @@ int q6asm_open_write_compressed(struct audio_client *ac, uint32_t format)
 			rc);
 		goto fail_cmd;
 	}
-	if (atomic_read(&ac->cmd_response)) {
-		pr_err("%s: format = %x not supported\n", __func__, format);
-		goto fail_cmd;
-	}
 	return 0;
 fail_cmd:
 	return -EINVAL;
