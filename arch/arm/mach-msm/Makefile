@@ -67,6 +67,7 @@ $(obj)/smd_rpc_sym.c: $(src)/smd_rpc_sym $(src)/mkrpcsym.pl
 	$(call if_changed,mkrpcsym)
 
 obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o remote_spinlock.o smd_private.o
+obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
 
 obj-$(CONFIG_MSM_SCM) += scm.o scm-boot.o
 obj-$(CONFIG_MSM_SECURE_IO) += scm-io.o
@@ -92,9 +93,10 @@ obj-$(CONFIG_MSM_FIQ_SUPPORT) += fiq_glue.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-rfkill.o
 obj-$(CONFIG_MSM_BAM_DMUX) += bam_dmux.o
 obj-$(CONFIG_MSM_SMD_LOGGING) += smem_log.o
-obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging.o
 ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging_debug.o
+else
+obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging.o
 endif
 obj-y += socinfo.o
 ifndef CONFIG_ARCH_MSM9615
@@ -369,6 +371,11 @@ obj-$(CONFIG_MACH_JFDT) += board-jfdt.o
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
 CFLAGS_board-9615.o += -Idrivers/usb/gadget
 
+obj-$(CONFIG_ARCH_RANDOM) += early_random.o
+
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
+obj-$(CONFIG_LCD_KCAL) += msm_kcal_ctrl.o
+
 obj-$(CONFIG_ARCH_FSM9XXX) += board-fsm9xxx.o
 
 obj-$(CONFIG_TROUT_BATTCHG) += htc_battery.o
@@ -467,8 +474,12 @@ obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
-
-obj-$(CONFIG_ARCH_RANDOM) += early_random.o
+obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
+obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
+obj-$(CONFIG_MSM_SLEEPER) += msm_sleeper.o
+obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
+obj-$(CONFIG_BLU_PLUG) += blu_plug.o
+obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
 
 ifdef CONFIG_SEC_THERMISTOR
 obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o
@@ -481,21 +492,10 @@ obj-$(CONFIG_MACH_JF) += fusion3-thermistor.o
 obj-$(CONFIG_MACH_M2) += midas-thermistor.o
 endif
 
-
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
-
 obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o
 
-obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
-obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
-obj-$(CONFIG_MSM_SLEEPER) += msm_sleeper.o
-obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
-obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
-obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
-obj-$(CONFIG_DYN_HOTPLUG) += dyn_hotplug.o
-obj-$(CONFIG_BLU_PLUG) += blu_plug.o
-obj-$(CONFIG_FAST_HOTPLUG) += fast_hotplug.o
-obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
-obj-$(CONFIG_STATE_HELPER)		+= state_helper.o
-obj-$(CONFIG_LCD_KCAL) += msm_kcal_ctrl.o
-obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
+#obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
+#obj-$(CONFIG_DYN_HOTPLUG) += dyn_hotplug.o
+#obj-$(CONFIG_FAST_HOTPLUG) += fast_hotplug.o
+#obj-$(CONFIG_STATE_HELPER)		+= state_helper.o
