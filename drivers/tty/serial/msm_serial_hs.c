@@ -2781,7 +2781,6 @@ static const struct dev_pm_ops msm_hs_dev_pm_ops = {
 	.runtime_resume  = msm_hs_runtime_resume,
 	.runtime_idle    = msm_hs_runtime_idle,
 };
-#endif
 
 static struct platform_driver msm_serial_hs_platform_driver = {
 	.probe	= msm_hs_probe,
