@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Google, Inc.
- * Copyright (C) 2010-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2010-2013, The Linux Foundation. All rights reserved.
  * Author: Nick Pelly <npelly@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
