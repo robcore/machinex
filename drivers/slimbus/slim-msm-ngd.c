@@ -34,6 +34,9 @@
 #define SLIM_LA_MGR	0xFF
 #define SLIM_ROOT_FREQ	24576000
 
+#ifdef CONFIG_SND_SOC_ES325_SLIM
+#define PREVENT_SLIMBUS_SLEEP_IN_FW_DL
+#endif
 #define NGD_BASE_V1(r)	(((r) % 2) ? 0x800 : 0xA00)
 #define NGD_BASE_V2(r)	(((r) % 2) ? 0x1000 : 0x2000)
 #define NGD_BASE(r, v) ((v) ? NGD_BASE_V2(r) : NGD_BASE_V1(r))
@@ -77,6 +80,26 @@ enum ngd_offsets {
 	NGD_ENUMERATED		= 0x1,
 	NGD_TX_BUSY		= 0x0,
 };
+
+enum ngd_status {
+	NGD_LADDR		= 1 << 1,
+};
+
+extern unsigned int system_rev;
+static int ngd_slim_runtime_resume(struct device *device);
+static int ngd_slim_power_up(struct msm_slim_ctrl *dev, bool mdm_restart);
+#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
+static int es325_slim_write_flag = 0;
+void msm_slim_es325_write_flag_set(int flag)
+{
+	pr_info("%s():es325_slim_write_flag = %d\n", __func__, flag);
+	if(es325_slim_write_flag != flag) {
+		es325_slim_write_flag = flag;
+		pr_info("%s():es325_slim_write_flag = %d\n", __func__, es325_slim_write_flag);
+	}
+}
+EXPORT_SYMBOL(msm_slim_es325_write_flag_set);
+#endif
 
 static irqreturn_t ngd_slim_interrupt(int irq, void *d)
 {
@@ -698,7 +721,7 @@ static int ngd_slim_rx_msgq_thread(void *data)
 
 	while (!kthread_should_stop()) {
 		set_current_state(TASK_INTERRUPTIBLE);
-		wait_for_completion(notify);
+		wait_for_completion_interruptible(notify);
 		/* 1 irq notification per message */
 		if (!dev->use_rx_msgqs) {
 			msm_slim_rx_dequeue(dev, (u8 *)buffer);
