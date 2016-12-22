@@ -13,7 +13,6 @@
 #ifndef __MFD_TABLA_CORE_H__
 #define __MFD_TABLA_CORE_H__
 
-#include <linux/types.h>
 #include <linux/interrupt.h>
 #include <linux/pm_qos.h>
 #include <linux/platform_device.h>
@@ -197,7 +196,7 @@ struct wcd9xxx {
 	int (*read_dev)(struct wcd9xxx *wcd9xxx, unsigned short reg,
 			int bytes, void *dest, bool interface_reg);
 	int (*write_dev)(struct wcd9xxx *wcd9xxx, unsigned short reg,
-			int bytes, void *src, bool interface_reg);
+			 int bytes, void *src, bool interface_reg);
 
 	u32 num_of_supplies;
 	struct regulator_bulk_data *supplies;
@@ -209,6 +208,9 @@ struct wcd9xxx {
 	struct pm_qos_request pm_qos_req;
 	int wlock_holders;
 
+	int num_rx_port;
+	int num_tx_port;
+
 	u8 idbyte[4];
 
 	unsigned int irq_base;
@@ -216,9 +218,6 @@ struct wcd9xxx {
 	u8 irq_masks_cur[WCD9XXX_NUM_IRQ_REGS];
 	u8 irq_masks_cache[WCD9XXX_NUM_IRQ_REGS];
 	bool irq_level_high[WCD9XXX_MAX_NUM_IRQS];
-	/* Slimbus or I2S port */
-	u32 num_rx_port;
-	u32 num_tx_port;
 	int num_irqs;
 	struct wcd9xxx_ch *rx_chs;
 	struct wcd9xxx_ch *tx_chs;
