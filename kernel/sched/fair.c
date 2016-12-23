@@ -4938,7 +4938,7 @@ redo:
 		goto out_balanced;
 	}
 
-	BUG_ON(busiest == this_rq);
+	BUG_ON(busiest == env.dst_rq);
 
 	schedstat_add(sd, lb_imbalance[idle], imbalance);
 
@@ -4961,7 +4961,7 @@ redo:
 		update_h_load(env.src_cpu);
 more_balance:
 		local_irq_save(flags);
-		double_rq_lock(this_rq, busiest);
+		double_rq_lock(env.dst_rq, busiest);
 
 		/*
 		 * cur_ld_moved - load moved in current iteration
@@ -4969,7 +4969,7 @@ more_balance:
 		 */
 		cur_ld_moved = move_tasks(&env);
 		ld_moved += cur_ld_moved;
-		double_rq_unlock(this_rq, busiest);
+		double_rq_unlock(env.dst_rq, busiest);
 		local_irq_restore(flags);
 
 		/*
