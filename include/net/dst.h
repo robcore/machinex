@@ -110,7 +110,7 @@ static inline void dst_set_neighbour(struct dst_entry *dst, struct neighbour *ne
 }
 
 extern u32 *dst_cow_metrics_generic(struct dst_entry *dst, unsigned long old);
-extern const u32 dst_default_metrics[RTAX_MAX];
+extern const u32 dst_default_metrics[];
 
 #define DST_METRICS_READ_ONLY	0x1UL
 #define __DST_METRICS_PTR(Y)	\
