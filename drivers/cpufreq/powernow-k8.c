@@ -1558,6 +1558,9 @@ static int powernowk8_init(void)
 	if (!x86_match_cpu(powernow_k8_ids))
 		return -ENODEV;
 
+	if (static_cpu_has(X86_FEATURE_HW_PSTATE))
+		pr_warn(PFX "support for this CPU is deprecated, use acpi-cpufreq instead.\n");
+
 	for_each_online_cpu(i) {
 		int rc;
 		smp_call_function_single(i, check_supported_cpu, &rc, 1);
@@ -1567,9 +1570,6 @@ static int powernowk8_init(void)
 
 	if (supported_cpus != num_online_cpus())
 		return -ENODEV;
-
-	printk(KERN_INFO PFX "Found %d %s (%d cpu cores) (" VERSION ")\n",
-		num_online_nodes(), boot_cpu_data.x86_model_id, supported_cpus);
 
 	if (boot_cpu_has(X86_FEATURE_CPB)) {
 
@@ -1589,16 +1589,23 @@ static int powernowk8_init(void)
 			struct msr *reg = per_cpu_ptr(msrs, cpu);
 			cpb_enabled |= !(!!(reg->l & BIT(25)));
 		}
-
-		printk(KERN_INFO PFX "Core Performance Boosting: %s.\n",
-			(cpb_enabled ? "on" : "off"));
 	}
 
 	rv = cpufreq_register_driver(&cpufreq_amd64_driver);
-	if (rv < 0 && boot_cpu_has(X86_FEATURE_CPB)) {
-		unregister_cpu_notifier(&cpb_nb);
-		msrs_free(msrs);
-		msrs = NULL;
+
+	if (!rv)
+		pr_info(PFX "Found %d %s (%d cpu cores) (" VERSION ")\n",
+			num_online_nodes(), boot_cpu_data.x86_model_id,
+			supported_cpus);
+
+	if (boot_cpu_has(X86_FEATURE_CPB)) {
+		if (rv < 0) {
+			unregister_cpu_notifier(&cpb_nb);
+			msrs_free(msrs);
+			msrs = NULL;
+		} else
+			pr_info(PFX "Core Performance Boosting: %s.\n",
+				(cpb_enabled ? "on" : "off"));
 	}
 	return rv;
 }
