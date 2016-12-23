@@ -425,7 +425,6 @@ armpmu_release_hardware(struct arm_pmu *armpmu)
 		armpmu->free_pmu_irq(irq);
 	}
 
-	release_pmu(armpmu->type);
 }
 
 static int
@@ -438,12 +437,6 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
 
 	if (!pmu_device)
 		return -ENODEV;
-
-	err = reserve_pmu(armpmu->type);
-	if (err) {
-		pr_warning("unable to reserve pmu\n");
-		return err;
-	}
 
 	plat = dev_get_platdata(&pmu_device->dev);
 	if (plat && plat->handle_irq)
@@ -751,7 +744,6 @@ static void __init cpu_pmu_init(struct arm_pmu *armpmu)
 		raw_spin_lock_init(&events->pmu_lock);
 	}
 	armpmu->get_hw_events = armpmu_get_cpu_events;
-	armpmu->type = ARM_PMU_DEVICE_CPU;
 }
 
 static int cpu_has_active_perf(int cpu)
