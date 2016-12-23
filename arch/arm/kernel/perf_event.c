@@ -237,7 +237,6 @@ armpmu_stop(struct perf_event *event, int flags)
 	 */
 	if (!(hwc->state & PERF_HES_STOPPED)) {
 		armpmu->disable(hwc, hwc->idx);
-		barrier(); /* why? */
 		armpmu_event_update(event, hwc, hwc->idx);
 		hwc->state |= PERF_HES_STOPPED | PERF_HES_UPTODATE;
 	}
