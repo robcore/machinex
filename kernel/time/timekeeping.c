@@ -1115,6 +1115,10 @@ static void update_wall_time(void)
 	if (offset < timekeeper.cycle_interval)
 		goto out;
 
+	/* Check if there's really nothing to do */
+	if (offset < tk->cycle_interval)
+		goto out;
+
 	/*
 	 * Finally, make sure that after the rounding
 	 * xtime.tv_nsec isn't larger than NSEC_PER_SEC
