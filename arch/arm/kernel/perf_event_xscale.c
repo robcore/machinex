@@ -432,7 +432,7 @@ xscale1pmu_write_counter(int counter, u32 val)
 
 static int xscale_map_event(struct perf_event *event)
 {
-	return armpmu_map_event(event, &xscale_perf_map,
+	return map_cpu_event(event, &xscale_perf_map,
 				&xscale_perf_cache_map, 0xFF);
 }
 
@@ -452,7 +452,7 @@ static struct arm_pmu xscale1pmu = {
 	.max_period	= (1LLU << 32) - 1,
 };
 
-static struct arm_pmu *__devinit xscale1pmu_init(void)
+static struct arm_pmu *__init xscale1pmu_init(void)
 {
 	return &xscale1pmu;
 }
@@ -824,17 +824,17 @@ static struct arm_pmu xscale2pmu = {
 	.max_period	= (1LLU << 32) - 1,
 };
 
-static struct arm_pmu *__devinit xscale2pmu_init(void)
+static struct arm_pmu *__init xscale2pmu_init(void)
 {
 	return &xscale2pmu;
 }
 #else
-static struct arm_pmu *__devinit xscale1pmu_init(void)
+static struct arm_pmu *__init xscale1pmu_init(void)
 {
 	return NULL;
 }
 
-static struct arm_pmu *__devinit xscale2pmu_init(void)
+static struct arm_pmu *__init xscale2pmu_init(void)
 {
 	return NULL;
 }
