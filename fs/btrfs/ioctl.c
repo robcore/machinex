@@ -1383,7 +1383,6 @@ static noinline int btrfs_ioctl_snap_create_transid(struct file *file,
 						    bool readonly)
 {
 	struct btrfs_root *root = BTRFS_I(fdentry(file)->d_inode)->root;
-	struct file *src_file;
 	int namelen;
 	int ret = 0;
 
@@ -1406,15 +1405,14 @@ static noinline int btrfs_ioctl_snap_create_transid(struct file *file,
 		ret = btrfs_mksubvol(&file->f_path, name, namelen,
 				     NULL, transid, readonly);
 	} else {
+		struct fd src = fdget(fd);
 		struct inode *src_inode;
-		int fput_needed;
-		src_file = fget_light(fd, &fput_needed);
-		if (!src_file) {
+		if (!src.file) {
 			ret = -EINVAL;
 			goto out;
 		}
 
-		src_inode = src_file->f_path.dentry->d_inode;
+		src_inode = src.file->f_path.dentry->d_inode;
 		if (src_inode->i_sb != file->f_path.dentry->d_inode->i_sb) {
 			printk(KERN_INFO "btrfs: Snapshot src from "
 			       "another FS\n");
@@ -1424,7 +1422,7 @@ static noinline int btrfs_ioctl_snap_create_transid(struct file *file,
 					     BTRFS_I(src_inode)->root,
 					     transid, readonly, inherit);
 		}
-		fput_light(src_file, fput_needed);
+		fdput(src);
 	}
 out:
 	return ret;
@@ -2289,7 +2287,7 @@ static noinline long btrfs_ioctl_clone(struct file *file, unsigned long srcfd,
 {
 	struct inode *inode = fdentry(file)->d_inode;
 	struct btrfs_root *root = BTRFS_I(inode)->root;
-	struct file *src_file;
+	struct fd src_file;
 	struct inode *src;
 	struct btrfs_trans_handle *trans;
 	struct btrfs_path *path;
@@ -2298,7 +2296,7 @@ static noinline long btrfs_ioctl_clone(struct file *file, unsigned long srcfd,
 	struct btrfs_key key;
 	u32 nritems;
 	int slot;
-	int ret, fput_needed;
+	int ret;
 	u64 len = olen;
 	u64 bs = root->fs_info->sb->s_blocksize;
 	u64 hint_byte;
@@ -2324,20 +2322,20 @@ static noinline long btrfs_ioctl_clone(struct file *file, unsigned long srcfd,
 	if (ret)
 		return ret;
 
-	src_file = fget_light(srcfd, &fput_needed);
-	if (!src_file) {
+	src_file = fdget(srcfd);
+	if (!src_file.file) {
 		ret = -EBADF;
 		goto out_drop_write;
 	}
 
-	src = src_file->f_dentry->d_inode;
+	src = src_file.file->f_dentry->d_inode;
 
 	ret = -EINVAL;
 	if (src == inode)
 		goto out_fput;
 
 	/* the src must be open for reading */
-	if (!(src_file->f_mode & FMODE_READ))
+	if (!(src_file.file->f_mode & FMODE_READ))
 		goto out_fput;
 
 	/* don't make the dst file partly checksummed */
@@ -2671,7 +2669,7 @@ out_unlock:
 	vfree(buf);
 	btrfs_free_path(path);
 out_fput:
-	fput_light(src_file, fput_needed);
+	fdput(src_file);
 out_drop_write:
 	mnt_drop_write_file(file);
 	return ret;
