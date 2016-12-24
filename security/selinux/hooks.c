@@ -2266,8 +2266,6 @@ static inline void flush_unauthorized_files(const struct cred *cred,
 	spin_lock(&files->file_lock);
 	for (;;) {
 		unsigned long set, i;
-		int fd;
-
 		j++;
 		i = j * BITS_PER_LONG;
 		fdt = files_fdtable(files);
@@ -2278,41 +2276,25 @@ static inline void flush_unauthorized_files(const struct cred *cred,
 			continue;
 		spin_unlock(&files->file_lock);
 		for ( ; set ; i++, set >>= 1) {
-			if (set & 1) {
-				file = fget(i);
-				if (!file)
-					continue;
-				if (file_has_perm(cred,
-						  file,
-						  file_to_av(file))) {
-					sys_close(i);
-					fd = get_unused_fd();
-					if (fd != i) {
-						if (fd >= 0)
-							put_unused_fd(fd);
-						fput(file);
-						continue;
-					}
-					if (devnull) {
-						get_file(devnull);
-					} else {
-						devnull = dentry_open(
-							dget(selinux_null),
-							mntget(selinuxfs_mount),
-							O_RDWR, cred);
-						if (IS_ERR(devnull)) {
-							devnull = NULL;
-							put_unused_fd(fd);
-							fput(file);
-							continue;
-						}
-					}
-					fd_install(fd, devnull);
+			if (!(set & 1))
+				continue;
+			file = fget(i);
+			if (!file)
+				continue;
+			if (file_has_perm(cred, file, file_to_av(file))) {
+				if (devnull) {
+					get_file(devnull);
+				} else {
+					devnull = dentry_open(&selinux_null,
+								O_RDWR, cred);
+					if (IS_ERR(devnull))
+						devnull = NULL;
 				}
-				fput(file);
+				replace_fd(i, devnull, 0);
 			}
-		}
-		spin_lock(&files->file_lock);
+			fput(file);
+ 		}
+ 		spin_lock(&files->file_lock);
 
 	}
 	spin_unlock(&files->file_lock);
