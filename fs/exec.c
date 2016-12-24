@@ -2073,8 +2073,9 @@ static void wait_for_dump_helpers(struct file *file)
  */
 static int umh_pipe_setup(struct subprocess_info *info, struct cred *new)
 {
-	struct file *rp, *wp;
+	struct file *files[2];
 	struct coredump_params *cp = (struct coredump_params *)info->data;
+	struct files_struct *cf = current->files;
 	int err = create_pipe_files(files, 0);
 	if (err)
 		return err;
