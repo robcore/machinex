@@ -136,11 +136,8 @@ static int icmp_filter(const struct sock *sk, const struct sk_buff *skb)
 	struct icmphdr _hdr;
 	const struct icmphdr *hdr;
 
-	pr_err("icmp_filter skb_transport_offset %d data-head %ld len %d/%d\n",
-		skb_transport_offset(skb), skb->data - skb->head, skb->len, skb->data_len);
 	hdr = skb_header_pointer(skb, skb_transport_offset(skb),
 				 sizeof(_hdr), &_hdr);
-	pr_err("head %p data %p hdr %p type %d\n", skb->head, skb->data, hdr, hdr ? hdr->type : -1);
 	if (!hdr)
 		return 1;
 

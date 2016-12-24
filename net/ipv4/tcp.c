@@ -1011,7 +1011,7 @@ new_segment:
 				if (err)
 					goto do_fault;
 			} else {
-				int merge = 1;
+				int merge = 0;
 				int i = skb_shinfo(skb)->nr_frags;
 				struct page *page = sk->sk_sndmsg_page;
 				int off;
