@@ -618,7 +618,8 @@ static int audit_netlink_ok(struct sk_buff *skb, u16 msg_type)
 }
 
 static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
-				     uid_t auid, u32 ses, u32 sid)
+				     u32 pid, u32 uid, uid_t auid, u32 ses,
+				     u32 sid)
 {
 	int rc = 0;
 	char *ctx = NULL;
@@ -631,9 +632,7 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
 
 	*ab = audit_log_start(NULL, GFP_KERNEL, msg_type);
 	audit_log_format(*ab, "pid=%d uid=%u auid=%u ses=%u",
-			 task_tgid_vnr(current),
-			 from_kuid(&init_user_ns, current_uid()),
-			 auid, ses);
+			 pid, uid, auid, ses);
 	if (sid) {
 		rc = security_secid_to_secctx(sid, &ctx, &len);
 		if (rc)
@@ -649,7 +648,7 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
 
 static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 {
-	u32			seq, sid;
+	u32			uid, pid, seq, sid;
 	void			*data;
 	struct audit_status	*status_get, status_set;
 	int			err;
@@ -675,6 +674,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		return err;
 	}
 
+	pid  = NETLINK_CREDS(skb)->pid;
+	uid  = NETLINK_CREDS(skb)->uid;
 	loginuid = audit_get_loginuid(current);
 	sessionid = audit_get_sessionid(current);
 	security_task_getsecid(current, &sid);
@@ -746,7 +747,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 				if (err)
 					break;
 			}
-			audit_log_common_recv_msg(&ab, msg_type,
+			audit_log_common_recv_msg(&ab, msg_type, pid, uid,
 						  loginuid, sessionid, sid);
 
 			if (msg_type != AUDIT_USER_TTY)
@@ -762,7 +763,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 					size--;
 				audit_log_n_untrustedstring(ab, data, size);
 			}
-			audit_set_pid(ab, NETLINK_CB(skb).pid);
+			audit_set_pid(ab, pid);
 			audit_log_end(ab);
 		}
 		break;
@@ -771,8 +772,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		if (nlmsg_len(nlh) < sizeof(struct audit_rule))
 			return -EINVAL;
 		if (audit_enabled == AUDIT_LOCKED) {
-			audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-						  loginuid, sessionid, sid);
+			audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE, pid,
+						  uid, loginuid, sessionid, sid);
 
 			audit_log_format(ab, " audit_enabled=%d res=0",
 					 audit_enabled);
@@ -782,7 +783,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		/* fallthrough */
 	case AUDIT_LIST:
 		err = audit_receive_filter(msg_type, NETLINK_CB(skb).pid,
-					   seq, data, nlmsg_len(nlh),
+					   uid, seq, data, nlmsg_len(nlh),
 					   loginuid, sessionid, sid);
 		break;
 	case AUDIT_ADD_RULE:
@@ -790,8 +791,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		if (nlmsg_len(nlh) < sizeof(struct audit_rule_data))
 			return -EINVAL;
 		if (audit_enabled == AUDIT_LOCKED) {
-			audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-						  loginuid, sessionid, sid);
+			audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE, pid,
+						  uid, loginuid, sessionid, sid);
 
 			audit_log_format(ab, " audit_enabled=%d res=0",
 					 audit_enabled);
@@ -801,14 +802,14 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		/* fallthrough */
 	case AUDIT_LIST_RULES:
 		err = audit_receive_filter(msg_type, NETLINK_CB(skb).pid,
-					   seq, data, nlmsg_len(nlh),
+					   uid, seq, data, nlmsg_len(nlh),
 					   loginuid, sessionid, sid);
 		break;
 	case AUDIT_TRIM:
 		audit_trim_trees();
 
-		audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-					  loginuid, sessionid, sid);
+		audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE, pid,
+					  uid, loginuid, sessionid, sid);
 
 		audit_log_format(ab, " op=trim res=1");
 		audit_log_end(ab);
@@ -839,8 +840,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		/* OK, here comes... */
 		err = audit_tag_tree(old, new);
 
-		audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-					  loginuid, sessionid, sid);
+		audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE, pid,
+					  uid, loginuid, sessionid, sid);
 
 		audit_log_format(ab, " op=make_equiv old=");
 		audit_log_untrustedstring(ab, old);
