@@ -3336,6 +3336,7 @@ asmlinkage void __sched notrace preempt_schedule(void)
 	if (likely(!preemptible()))
 		return;
 
+	rcu_user_exit();
 	do {
 		add_preempt_count_notrace(PREEMPT_ACTIVE);
 		__schedule();
