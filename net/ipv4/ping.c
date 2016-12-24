@@ -232,10 +232,10 @@ exit:
 	return sk;
 }
 
-static void inet_get_ping_group_range_net(struct net *net, gid_t *low,
-					  gid_t *high)
+static void inet_get_ping_group_range_net(struct net *net, kgid_t *low,
+					  kgid_t *high)
 {
-	gid_t *data = net->ipv4.sysctl_ping_group_range;
+	kgid_t *data = net->ipv4.sysctl_ping_group_range;
 	unsigned seq;
 	do {
 		seq = read_seqbegin(&sysctl_local_ports.lock);
@@ -249,20 +249,14 @@ static void inet_get_ping_group_range_net(struct net *net, gid_t *low,
 int ping_init_sock(struct sock *sk)
 {
 	struct net *net = sock_net(sk);
-	gid_t group = current_egid();
-	gid_t range[2];
+	kgid_t group = current_egid();
 	struct group_info *group_info;
 	int i, j, count;
 	kgid_t low, high;
 	int ret = 0;
 
-	inet_get_ping_group_range_net(net, range, range+1);
-	low = make_kgid(&init_user_ns, range[0]);
-	high = make_kgid(&init_user_ns, range[1]);
-	if (!gid_valid(low) || !gid_valid(high) || gid_lt(high, low))
-		return -EACCES;
-
-	if (range[0] <= group && group <= range[1])
+	inet_get_ping_group_range_net(net, &low, &high);
+	if (gid_lte(low, group) && gid_lte(group, high))
 		return 0;
 
 	group_info = get_current_groups();
