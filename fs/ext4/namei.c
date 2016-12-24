@@ -1109,7 +1109,7 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
 
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
 	ci_name_buf[0] = '\0';
-	if (nd && (nd->flags & LOOKUP_CASE_INSENSITIVE))
+	if (flags & LOOKUP_CASE_INSENSITIVE)
 		bh = ext4_find_entry(dir, &dentry->d_name, &de, ci_name_buf);
 	else
 		bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL);

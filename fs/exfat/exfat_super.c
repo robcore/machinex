@@ -324,13 +324,13 @@ static int __exfat_revalidate(struct dentry *dentry)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 static int exfat_revalidate(struct dentry *dentry, unsigned int flags)
 #else
 static int exfat_revalidate(struct dentry *dentry, struct nameidata *nd)
 #endif
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
@@ -343,13 +343,13 @@ static int exfat_revalidate(struct dentry *dentry, struct nameidata *nd)
 	return __exfat_revalidate(dentry);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 static int exfat_revalidate_ci(struct dentry *dentry, unsigned int flags)
 #else
 static int exfat_revalidate_ci(struct dentry *dentry, struct nameidata *nd)
 #endif
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
@@ -642,7 +642,7 @@ const struct file_operations exfat_dir_operations = {
 	.fsync      = exfat_file_fsync,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 static int exfat_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 						bool excl)
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
@@ -726,7 +726,7 @@ static int exfat_d_anon_disconn(struct dentry *dentry)
 	return IS_ROOT(dentry) && (dentry->d_flags & DCACHE_DISCONNECTED);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 static struct dentry *exfat_lookup(struct inode *dir, struct dentry *dentry,
 						   unsigned int flags)
 #else
@@ -1838,7 +1838,7 @@ static void exfat_evict_inode(struct inode *inode)
 	}
 
 	invalidate_inode_buffers(inode);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,00)
 	clear_inode(inode);
 #else
 	clear_inode(inode);
@@ -2001,7 +2001,7 @@ const struct super_operations exfat_sops = {
 	.evict_inode  = exfat_evict_inode,
 #endif
 	.put_super     = exfat_put_super,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,00)
 	.write_super   = exfat_write_super,
 #endif
 	.sync_fs       = exfat_sync_fs,
