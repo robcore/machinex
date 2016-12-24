@@ -5168,6 +5168,8 @@ static int active_load_balance_cpu_stop(void *data)
 	int target_cpu = busiest_rq->push_cpu;
 	struct rq *target_rq = cpu_rq(target_cpu);
 	struct sched_domain *sd;
+	struct sched_group *sg;
+	int i;
 
 	raw_spin_lock_irq(&busiest_rq->lock);
 
