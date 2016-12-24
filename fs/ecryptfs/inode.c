@@ -207,7 +207,7 @@ out:
  */
 static struct inode *
 ecryptfs_do_create2(struct inode *directory_inode,
-		   struct dentry *ecryptfs_dentry, umode_t mode, struct nameidata *nd)
+		   struct dentry *ecryptfs_dentry, umode_t mode)
 {
 	int rc;
 	struct dentry *lower_dentry;
@@ -236,7 +236,7 @@ ecryptfs_do_create2(struct inode *directory_inode,
 		nd->path.dentry = lower_dentry;
 		nd->path.mnt = lower_mnt;
 	}
-	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, nd);
+	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, true);
 	if (nd) {
 		nd->path.dentry = dentry_save;
 		nd->path.mnt = vfsmount_save;
