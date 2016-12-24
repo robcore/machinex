@@ -503,7 +503,7 @@ void do_coredump(siginfo_t *siginfo, struct pt_regs *regs)
 	if (__get_dumpable(cprm.mm_flags) == SUID_DUMPABLE_SAFE) {
 		/* Setuid core dump mode */
 		flag = O_EXCL;		/* Stop rewrite attacks */
-		cred->fsuid = GLOBAL_ROOT_UID;	/* Dump root private */
+		cred->fsuid = 0;	/* Dump root private */
 		need_nonrelative = true;
 	}
 
