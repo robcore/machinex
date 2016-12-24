@@ -1190,6 +1190,7 @@ void sock_update_classid(struct sock *sk)
 }
 EXPORT_SYMBOL(sock_update_classid);
 
+#if IS_ENABLED(CONFIG_NETPRIO_CGROUP)
 void sock_update_netprioidx(struct sock *sk, struct task_struct *task)
 {
 	if (in_interrupt())
@@ -1198,6 +1199,7 @@ void sock_update_netprioidx(struct sock *sk, struct task_struct *task)
 	sk->sk_cgrp_prioidx = task_netprioidx(task);
 }
 EXPORT_SYMBOL_GPL(sock_update_netprioidx);
+#endif
 #endif
 
 /**
