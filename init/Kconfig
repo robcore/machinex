@@ -275,6 +275,65 @@ config POSIX_MQUEUE_SYSCTL
 	depends on SYSCTL
 	default y
 
+config FHANDLE
+	bool "open by fhandle syscalls"
+	select EXPORTFS
+	help
+	  If you say Y here, a user level program will be able to map
+	  file names to handle and then later use the handle for
+	  different file system operations. This is useful in implementing
+	  userspace file servers, which now track files using handles instead
+	  of names. The handle would remain the same even if file names
+	  get renamed. Enables open_by_handle_at(2) and name_to_handle_at(2)
+	  syscalls.
+
+config AUDIT
+	bool "Auditing support"
+	depends on NET
+	help
+	  Enable auditing infrastructure that can be used with another
+	  kernel subsystem, such as SELinux (which requires this for
+	  logging of avc messages output).  Does not do system-call
+	  auditing without CONFIG_AUDITSYSCALL.
+
+config AUDITSYSCALL
+	bool "Enable system-call auditing support"
+	depends on AUDIT && (X86 || PPC || S390 || IA64 || UML || SPARC64 || SUPERH || (ARM && AEABI && !OABI_COMPAT))
+	default y if SECURITY_SELINUX
+	help
+	  Enable low-overhead system-call auditing infrastructure that
+	  can be used independently or with another kernel subsystem,
+	  such as SELinux.
+
+config AUDIT_WATCH
+	def_bool y
+	depends on AUDITSYSCALL
+	select FSNOTIFY
+
+config AUDIT_TREE
+	def_bool y
+	depends on AUDITSYSCALL
+	select FSNOTIFY
+
+config AUDIT_LOGINUID_IMMUTABLE
+	bool "Make audit loginuid immutable"
+	depends on AUDIT
+	help
+	  The config option toggles if a task setting its loginuid requires
+	  CAP_SYS_AUDITCONTROL or if that task should require no special permissions
+	  but should instead only allow setting its loginuid if it was never
+	  previously set.  On systems which use systemd or a similar central
+	  process to restart login services this should be set to true.  On older
+	  systems in which an admin would typically have to directly stop and
+	  start processes this should be set to false.  Setting this to true allows
+	  one to drop potentially dangerous capabilites from the login tasks,
+	  but may not be backwards compatible with older init systems.
+
+source "kernel/irq/Kconfig"
+source "kernel/time/Kconfig"
+
+menu "CPU/Task time and stats accounting"
+
 config VIRT_CPU_ACCOUNTING
 	bool "Deterministic task and CPU time accounting"
 	depends on HAVE_VIRT_CPU_ACCOUNTING
@@ -312,18 +371,6 @@ config BSD_PROCESS_ACCT_V3
 	  with previous v0/v1/v2 file formats, so you will need updated tools
 	  for processing it. A preliminary version of these tools is available
 	  at <http://www.gnu.org/software/acct/>.
-
-config FHANDLE
-	bool "open by fhandle syscalls"
-	select EXPORTFS
-	help
-	  If you say Y here, a user level program will be able to map
-	  file names to handle and then later use the handle for
-	  different file system operations. This is useful in implementing
-	  userspace file servers, which now track files using handles instead
-	  of names. The handle would remain the same even if file names
-	  get renamed. Enables open_by_handle_at(2) and name_to_handle_at(2)
-	  syscalls.
 
 config TASKSTATS
 	bool "Export task/process statistics through netlink (EXPERIMENTAL)"
@@ -367,50 +414,7 @@ config TASK_IO_ACCOUNTING
 
 	  Say N if unsure.
 
-config AUDIT
-	bool "Auditing support"
-	depends on NET
-	help
-	  Enable auditing infrastructure that can be used with another
-	  kernel subsystem, such as SELinux (which requires this for
-	  logging of avc messages output).  Does not do system-call
-	  auditing without CONFIG_AUDITSYSCALL.
-
-config AUDITSYSCALL
-	bool "Enable system-call auditing support"
-	depends on AUDIT && (X86 || PPC || S390 || IA64 || UML || SPARC64 || SUPERH || ARM)
-	default y if SECURITY_SELINUX
-	help
-	  Enable low-overhead system-call auditing infrastructure that
-	  can be used independently or with another kernel subsystem,
-	  such as SELinux.
-
-config AUDIT_WATCH
-	def_bool y
-	depends on AUDITSYSCALL
-	select FSNOTIFY
-
-config AUDIT_TREE
-	def_bool y
-	depends on AUDITSYSCALL
-	select FSNOTIFY
-
-config AUDIT_LOGINUID_IMMUTABLE
-	bool "Make audit loginuid immutable"
-	depends on AUDIT
-	help
-	  The config option toggles if a task setting its loginuid requires
-	  CAP_SYS_AUDITCONTROL or if that task should require no special permissions
-	  but should instead only allow setting its loginuid if it was never
-	  previously set.  On systems which use systemd or a similar central
-	  process to restart login services this should be set to true.  On older
-	  systems in which an admin would typically have to directly stop and
-	  start processes this should be set to false.  Setting this to true allows
-	  one to drop potentially dangerous capabilites from the login tasks,
-	  but may not be backwards compatible with older init systems.
-
-source "kernel/irq/Kconfig"
-source "kernel/time/Kconfig"
+endmenu # "CPU/Task time and stats accounting"
 
 menu "RCU Subsystem"
 
