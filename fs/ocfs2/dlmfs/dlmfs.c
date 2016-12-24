@@ -526,7 +526,7 @@ bail:
 static int dlmfs_create(struct inode *dir,
 			struct dentry *dentry,
 			umode_t mode,
-			bool excl)
+			struct nameidata *nd)
 {
 	int status = 0;
 	struct inode *inode;

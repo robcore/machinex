@@ -755,8 +755,11 @@ fail:
  */
 
 static int gfs2_create(struct inode *dir, struct dentry *dentry,
-		       umode_t mode, bool excl)
+		       umode_t mode, struct nameidata *nd)
 {
+	int excl = 0;
+	if (nd && (nd->flags & LOOKUP_EXCL))
+		excl = 1;
 	return gfs2_create_inode(dir, dentry, S_IFREG | mode, 0, NULL, 0, excl);
 }
 
@@ -772,7 +775,7 @@ static int gfs2_create(struct inode *dir, struct dentry *dentry,
  */
 
 static struct dentry *gfs2_lookup(struct inode *dir, struct dentry *dentry,
-				  unsigned int flags)
+				  struct nameidata *nd)
 {
 	struct inode *inode = gfs2_lookupi(dir, &dentry->d_name, 0);
 	if (inode && !IS_ERR(inode)) {

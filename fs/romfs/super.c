@@ -210,7 +210,7 @@ out:
  * look up an entry in a directory
  */
 static struct dentry *romfs_lookup(struct inode *dir, struct dentry *dentry,
-				   unsigned int flags)
+				   struct nameidata *nd)
 {
 	unsigned long offset, maxoff;
 	struct inode *inode;

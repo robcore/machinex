@@ -184,7 +184,7 @@ static int dbg_check_name(const struct ubifs_info *c,
 }
 
 static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
-				   unsigned int flags)
+				   struct nameidata *nd)
 {
 	int err;
 	union ubifs_key key;
@@ -246,7 +246,7 @@ out:
 }
 
 static int ubifs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
-			bool excl)
+			struct nameidata *nd)
 {
 	struct inode *inode;
 	struct ubifs_info *c = dir->i_sb->s_fs_info;

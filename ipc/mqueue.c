@@ -411,7 +411,7 @@ static void mqueue_evict_inode(struct inode *inode)
 }
 
 static int mqueue_create(struct inode *dir, struct dentry *dentry,
-				umode_t mode, bool excl)
+				umode_t mode, struct nameidata *nd)
 {
 	struct inode *inode;
 	struct mq_attr *attr = dentry->d_fsdata;
@@ -746,7 +746,7 @@ static struct file *do_create(struct ipc_namespace *ipc_ns, struct dentry *dir,
 	ret = mnt_want_write(ipc_ns->mq_mnt);
 	if (ret)
 		goto out;
-	ret = vfs_create(dir->d_inode, dentry, mode, true);
+	ret = vfs_create(dir->d_inode, dentry, mode, NULL);
 	dentry->d_fsdata = NULL;
 	if (ret)
 		goto out_drop_write;

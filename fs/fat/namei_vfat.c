@@ -41,9 +41,9 @@ static int vfat_revalidate_shortname(struct dentry *dentry)
 	return ret;
 }
 
-static int vfat_revalidate(struct dentry *dentry, unsigned int flags)
+static int vfat_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
-	if (flags & LOOKUP_RCU)
+	if (nd && nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	/* This is not negative dentry. Always valid. */
@@ -52,9 +52,9 @@ static int vfat_revalidate(struct dentry *dentry, unsigned int flags)
 	return vfat_revalidate_shortname(dentry);
 }
 
-static int vfat_revalidate_ci(struct dentry *dentry, unsigned int flags)
+static int vfat_revalidate_ci(struct dentry *dentry, struct nameidata *nd)
 {
-	if (flags & LOOKUP_RCU)
+	if (nd && nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	/*
@@ -74,7 +74,7 @@ static int vfat_revalidate_ci(struct dentry *dentry, unsigned int flags)
 	 * This may be nfsd (or something), anyway, we can't see the
 	 * intent of this. So, since this can be for creation, drop it.
 	 */
-	if (!flags)
+	if (!nd)
 		return 0;
 
 	/*
@@ -82,7 +82,7 @@ static int vfat_revalidate_ci(struct dentry *dentry, unsigned int flags)
 	 * case sensitive name which is specified by user if this is
 	 * for creation.
 	 */
-	if (flags & (LOOKUP_CREATE | LOOKUP_RENAME_TARGET))
+	if (nd->flags & (LOOKUP_CREATE | LOOKUP_RENAME_TARGET))
 		return 0;
 
 	return vfat_revalidate_shortname(dentry);
@@ -714,7 +714,7 @@ static int vfat_d_anon_disconn(struct dentry *dentry)
 }
 
 static struct dentry *vfat_lookup(struct inode *dir, struct dentry *dentry,
-				  unsigned int flags)
+				  struct nameidata *nd)
 {
 	struct super_block *sb = dir->i_sb;
 	struct fat_slot_info sinfo;
@@ -772,7 +772,7 @@ error:
 }
 
 static int vfat_create(struct inode *dir, struct dentry *dentry, umode_t mode,
-		       bool excl)
+		       struct nameidata *nd)
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;

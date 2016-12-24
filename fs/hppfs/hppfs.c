@@ -138,7 +138,7 @@ static int file_removed(struct dentry *dentry, const char *file)
 }
 
 static struct dentry *hppfs_lookup(struct inode *ino, struct dentry *dentry,
-				   unsigned int flags)
+				   struct nameidata *nd)
 {
 	struct dentry *proc_dentry, *parent;
 	struct qstr *name = &dentry->d_name;

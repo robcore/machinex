@@ -1094,7 +1094,7 @@ errout:
 	return NULL;
 }
 
-static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
+static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct inode *inode;
 	struct ext4_dir_entry_2 *de;
@@ -1109,7 +1109,7 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
 
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
 	ci_name_buf[0] = '\0';
-	if (flags & LOOKUP_CASE_INSENSITIVE)
+	if (nd && (nd->flags & LOOKUP_CASE_INSENSITIVE))
 		bh = ext4_find_entry(dir, &dentry->d_name, &de, ci_name_buf);
 	else
 		bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL);
@@ -1862,7 +1862,7 @@ static int ext4_add_nondir(handle_t *handle,
  * with d_instantiate().
  */
 static int ext4_create(struct inode *dir, struct dentry *dentry, umode_t mode,
-		       bool excl)
+		       struct nameidata *nd)
 {
 	handle_t *handle;
 	struct inode *inode;

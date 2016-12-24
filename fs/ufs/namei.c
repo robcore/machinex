@@ -46,7 +46,7 @@ static inline int ufs_add_nondir(struct dentry *dentry, struct inode *inode)
 	return err;
 }
 
-static struct dentry *ufs_lookup(struct inode * dir, struct dentry *dentry, unsigned int flags)
+static struct dentry *ufs_lookup(struct inode * dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct inode * inode = NULL;
 	ino_t ino;
@@ -71,7 +71,7 @@ static struct dentry *ufs_lookup(struct inode * dir, struct dentry *dentry, unsi
  * with d_instantiate(). 
  */
 static int ufs_create (struct inode * dir, struct dentry * dentry, umode_t mode,
-		bool excl)
+		struct nameidata *nd)
 {
 	struct inode *inode;
 	int err;

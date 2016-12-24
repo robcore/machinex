@@ -22,7 +22,7 @@
 
 static struct dentry *afs_mntpt_lookup(struct inode *dir,
 				       struct dentry *dentry,
-				       unsigned int flags);
+				       struct nameidata *nd);
 static int afs_mntpt_open(struct inode *inode, struct file *file);
 static void afs_mntpt_expiry_timed_out(struct work_struct *work);
 
@@ -104,7 +104,7 @@ out:
  */
 static struct dentry *afs_mntpt_lookup(struct inode *dir,
 				       struct dentry *dentry,
-				       unsigned int flags)
+				       struct nameidata *nd)
 {
 	_enter("%p,%p{%p{%s},%s}",
 	       dir,

@@ -158,7 +158,7 @@ static int ecryptfs_interpose(struct dentry *lower_dentry,
  */
 static struct inode *
 ecryptfs_do_create(struct inode *directory_inode,
-		   struct dentry *ecryptfs_dentry, umode_t mode)
+		struct dentry *ecryptfs_dentry, umode_t mode)
 {
 	int rc;
 	struct dentry *lower_dentry;
@@ -173,7 +173,7 @@ ecryptfs_do_create(struct inode *directory_inode,
 		inode = ERR_CAST(lower_dir_dentry);
 		goto out;
 	}
-	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, true);
+	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, NULL);
 	if (rc) {
 		printk(KERN_ERR "%s: Failure to create dentry in lower fs; "
 				"rc = [%d]\n", __func__, rc);
@@ -197,6 +197,7 @@ out:
  * @directory_inode: inode of the new file's dentry's parent in ecryptfs
  * @ecryptfs_dentry: New file's dentry in ecryptfs
  * @mode: The mode of the new file
+ * @nd: nameidata of ecryptfs' parent's dentry & vfsmount
  *
  * Creates the underlying file and the eCryptfs inode which will link to
  * it. It will also update the eCryptfs directory inode to mimic the
@@ -206,7 +207,7 @@ out:
  */
 static struct inode *
 ecryptfs_do_create2(struct inode *directory_inode,
-		   struct dentry *ecryptfs_dentry, umode_t mode)
+		   struct dentry *ecryptfs_dentry, umode_t mode, struct nameidata *nd)
 {
 	int rc;
 	struct dentry *lower_dentry;
@@ -229,9 +230,17 @@ ecryptfs_do_create2(struct inode *directory_inode,
 		inode = ERR_CAST(lower_dir_dentry);
 		goto out;
 	}
-
-	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, true);
-
+	if (nd) {
+		dentry_save = nd->path.dentry;
+		vfsmount_save = nd->path.mnt;
+		nd->path.dentry = lower_dentry;
+		nd->path.mnt = lower_mnt;
+	}
+	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, nd);
+	if (nd) {
+		nd->path.dentry = dentry_save;
+		nd->path.mnt = vfsmount_save;
+	}
 	if (rc) {
 		printk(KERN_ERR "%s: Failure to create dentry in lower fs; "
 		       "rc = [%d]\n", __func__, rc);
@@ -352,6 +361,7 @@ int ecryptfs_check_subfs(struct dentry *de, struct nameidata *nd, char *fs)
  * @dir: The inode of the directory in which to create the file.
  * @dentry: The eCryptfs dentry
  * @mode: The mode of the new file.
+ * @nd: nameidata
  *
  * Creates a new file.
  *
@@ -359,17 +369,17 @@ int ecryptfs_check_subfs(struct dentry *de, struct nameidata *nd, char *fs)
  */
 static int
 ecryptfs_create(struct inode *directory_inode, struct dentry *ecryptfs_dentry,
-		umode_t mode, bool excl)
+		umode_t mode, struct nameidata *nd)
 {
 	struct inode *ecryptfs_inode;
 	int rc;
 
-	if(ecryptfs_check_subfs(ecryptfs_dentry, 0, "sdcardfs") == 1)
+	if(ecryptfs_check_subfs(ecryptfs_dentry, nd, "sdcardfs") == 1)
 		ecryptfs_inode = ecryptfs_do_create2(directory_inode, ecryptfs_dentry,
-				mode);
+				mode, nd);
 	else
 		ecryptfs_inode = ecryptfs_do_create(directory_inode, ecryptfs_dentry, mode);
-
+		
 	if (unlikely(IS_ERR(ecryptfs_inode))) {
 		ecryptfs_printk(KERN_WARNING, "Failed to create file in"
 				"lower filesystem\n");
@@ -488,7 +498,7 @@ static int ecryptfs_lookup_interpose(struct dentry *dentry,
  */
 static struct dentry *ecryptfs_lookup(struct inode *ecryptfs_dir_inode,
 				      struct dentry *ecryptfs_dentry,
-				      unsigned int flags)
+				      struct nameidata *ecryptfs_nd)
 {
 	char *encrypted_and_encoded_name = NULL;
 	size_t encrypted_and_encoded_name_size;

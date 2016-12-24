@@ -285,13 +285,13 @@ static int omfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 }
 
 static int omfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
-		bool excl)
+		struct nameidata *nd)
 {
 	return omfs_add_node(dir, dentry, mode | S_IFREG);
 }
 
 static struct dentry *omfs_lookup(struct inode *dir, struct dentry *dentry,
-				  unsigned int flags)
+				  struct nameidata *nd)
 {
 	struct buffer_head *bh;
 	struct inode *inode = NULL;

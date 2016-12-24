@@ -1532,19 +1532,16 @@ static int proc_exe_link(struct dentry *dentry, struct path *exe_path)
 static void *proc_pid_follow_link(struct dentry *dentry, struct nameidata *nd)
 {
 	struct inode *inode = dentry->d_inode;
-	struct path path;
 	int error = -EACCES;
+
+	/* We don't need a base pointer in the /proc filesystem */
+	path_put(&nd->path);
 
 	/* Are we allowed to snoop on the tasks file descriptors? */
 	if (!proc_fd_access_allowed(inode))
 		goto out;
 
-	error = PROC_I(inode)->op.proc_get_link(dentry, &path);
-	if (error)
-		goto out;
-
-	nd_jump_link(nd, &path);
-	return NULL;
+	error = PROC_I(inode)->op.proc_get_link(dentry, &nd->path);
 out:
 	return ERR_PTR(error);
 }
@@ -1694,13 +1691,13 @@ int pid_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
  * made this apply to all per process world readable and executable
  * directories.
  */
-int pid_revalidate(struct dentry *dentry, unsigned int flags)
+int pid_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
 	struct inode *inode;
 	struct task_struct *task;
 	const struct cred *cred;
 
-	if (flags & LOOKUP_RCU)
+	if (nd && nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	inode = dentry->d_inode;
@@ -1814,7 +1811,7 @@ static int map_files_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	struct inode *inode;
 	int status = 0;
 
-	if (flags & LOOKUP_RCU)
+	if (nd && nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	if (!capable(CAP_SYS_ADMIN)) {
@@ -1944,7 +1941,7 @@ proc_map_files_instantiate(struct inode *dir, struct dentry *dentry,
 }
 
 static struct dentry *proc_map_files_lookup(struct inode *dir,
-		struct dentry *dentry, unsigned int flags)
+		struct dentry *dentry, struct nameidata *nd)
 {
 	unsigned long vm_start, vm_end;
 	struct vm_area_struct *vma;
@@ -2150,7 +2147,7 @@ static struct dentry *proc_pident_instantiate(struct inode *dir,
 	d_set_d_op(dentry, &pid_dentry_operations);
 	d_add(dentry, inode);
 	/* Close the race of the process dying before we return the dentry */
-	if (pid_revalidate(dentry, 0))
+	if (pid_revalidate(dentry, NULL))
 		error = NULL;
 out:
 	return error;
@@ -2350,7 +2347,7 @@ static const struct file_operations proc_attr_dir_operations = {
 };
 
 static struct dentry *proc_attr_dir_lookup(struct inode *dir,
-				struct dentry *dentry, unsigned int flags)
+				struct dentry *dentry, struct nameidata *nd)
 {
 	return proc_pident_lookup(dir, dentry,
 				  attr_dir_stuff, ARRAY_SIZE(attr_dir_stuff));
@@ -2765,8 +2762,7 @@ static const struct file_operations proc_tgid_base_operations = {
 	.llseek		= default_llseek,
 };
 
-static struct dentry *proc_tgid_base_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
-{
+static struct dentry *proc_tgid_base_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd){
 	return proc_pident_lookup(dir, dentry,
 				  tgid_base_stuff, ARRAY_SIZE(tgid_base_stuff));
 }
@@ -2889,13 +2885,13 @@ static struct dentry *proc_pid_instantiate(struct inode *dir,
 
 	d_add(dentry, inode);
 	/* Close the race of the process dying before we return the dentry */
-	if (pid_revalidate(dentry, 0))
+	if (pid_revalidate(dentry, NULL))
 		error = NULL;
 out:
 	return error;
 }
 
-struct dentry *proc_pid_lookup(struct inode *dir, struct dentry * dentry, unsigned int flags)
+struct dentry *proc_pid_lookup(struct inode *dir, struct dentry * dentry, struct nameidata *nd)
 {
 	struct dentry *result;
 	struct task_struct *task;
@@ -3118,8 +3114,7 @@ static int proc_tid_base_readdir(struct file * filp,
 				   tid_base_stuff,ARRAY_SIZE(tid_base_stuff));
 }
 
-static struct dentry *proc_tid_base_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
-{
+static struct dentry *proc_tid_base_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd){
 	return proc_pident_lookup(dir, dentry,
 				  tid_base_stuff, ARRAY_SIZE(tid_base_stuff));
 }
@@ -3157,13 +3152,13 @@ static struct dentry *proc_task_instantiate(struct inode *dir,
 
 	d_add(dentry, inode);
 	/* Close the race of the process dying before we return the dentry */
-	if (pid_revalidate(dentry, 0))
+	if (pid_revalidate(dentry, NULL))
 		error = NULL;
 out:
 	return error;
 }
 
-static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry, unsigned int flags)
+static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry, struct nameidata *nd)
 {
 	struct dentry *result = ERR_PTR(-ENOENT);
 	struct task_struct *task;

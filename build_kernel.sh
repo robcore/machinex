@@ -1,7 +1,5 @@
 #!/bin/bash
 
-washme()
-{
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
 fi;
@@ -23,14 +21,6 @@ find . -type f \( -iname \*.rej \
 				-o -iname \*.bkp \
 				-o -iname \*.ko \) \
 					| parallel rm -fv {};
-rm -f $(pwd)/arch/arm/boot/*.cmd >> /dev/null;
-rm -f $(pwd)/arch/arm/mach-msm/smd_rpc_sym.c >> /dev/null;
-rm -f $(pwd)/arch/arm/crypto/aesbs-core.S >> /dev/null;
-rm -f $(pwd)/r*.cpio >> /dev/null;
-rm -rf $(pwd)/include/generated >> /dev/null;
-rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
-}
-
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
@@ -83,16 +73,16 @@ fi;
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
+
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-export KBUILD_BUILD_VERSION=007
+export KBUILD_BUILD_VERSION=00
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 env KCONFIG_NOTIMESTAMP=true
-washme
 make clean;
 make distclean;
 make mrproper;
@@ -131,7 +121,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		read repcln
 		if [[ $repcln = "y" ]]; then
 			cd ~/machinex
-			washme
+			sh $(pwd)/cleanup.sh
 			echo "cleanup finished"
 		fi;
 	else
@@ -143,13 +133,21 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		sleep 5
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		cd ~/machinex
-		washme
+		sh $(pwd)/cleanup.sh
 		echo "push and cleanup finished"
 	fi;
 
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "MD5 is $SUMMY"
 else
-	washme
 	echo "Build failed, Skipped Ramdisk Creation"
+	echo -n "Cleanup?  y/n [ENTER]: "
+		read CLERN
+		if [[ $CLERN = "y" ]]; then
+			cd ~/machinex
+			sh $(pwd)/cleanup.sh
+			echo "cleanup finished"
+		else
+			echo "Repo left dirty"
+		fi;
 fi;

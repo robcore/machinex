@@ -4224,7 +4224,7 @@ static void btrfs_dentry_release(struct dentry *dentry)
 }
 
 static struct dentry *btrfs_lookup(struct inode *dir, struct dentry *dentry,
-				   unsigned int flags)
+				   struct nameidata *nd)
 {
 	struct dentry *ret;
 
@@ -4897,7 +4897,7 @@ out_unlock:
 }
 
 static int btrfs_create(struct inode *dir, struct dentry *dentry,
-			umode_t mode, bool excl)
+			umode_t mode, struct nameidata *nd)
 {
 	struct btrfs_trans_handle *trans;
 	struct btrfs_root *root = BTRFS_I(dir)->root;

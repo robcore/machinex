@@ -13,7 +13,7 @@
 #include "qnx6.h"
 
 struct dentry *qnx6_lookup(struct inode *dir, struct dentry *dentry,
-				unsigned int flags)
+				struct nameidata *nd)
 {
 	unsigned ino;
 	struct page *page;

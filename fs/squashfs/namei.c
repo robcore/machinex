@@ -134,7 +134,7 @@ out:
 
 
 static struct dentry *squashfs_lookup(struct inode *dir, struct dentry *dentry,
-				 unsigned int flags)
+				 struct nameidata *nd)
 {
 	const unsigned char *name = dentry->d_name.name;
 	int len = dentry->d_name.len;
