@@ -141,4 +141,13 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "MD5 is $SUMMY"
 else
 	echo "Build failed, Skipped Ramdisk Creation"
+	echo -n "Cleanup?  y/n [ENTER]: "
+		read CLERN
+		if [[ $CLERN = "y" ]]; then
+			cd ~/machinex
+			sh $(pwd)/cleanup.sh
+			echo "cleanup finished"
+		else
+			echo "Repo left dirty"
+		fi;
 fi;
