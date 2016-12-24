@@ -364,7 +364,7 @@ ecryptfs_create(struct inode *directory_inode, struct dentry *ecryptfs_dentry,
 	struct inode *ecryptfs_inode;
 	int rc;
 
-	if(ecryptfs_check_subfs(ecryptfs_dentry, NULL, "sdcardfs") == 1)
+	if(ecryptfs_check_subfs(ecryptfs_dentry, 0, "sdcardfs") == 1)
 		ecryptfs_inode = ecryptfs_do_create2(directory_inode, ecryptfs_dentry,
 				mode);
 	else

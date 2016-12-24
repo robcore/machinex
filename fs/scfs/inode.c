@@ -275,11 +275,7 @@ static struct inode * scfs_do_create(struct inode *parent_inode,
 		inode = ERR_CAST(lower_parent_dentry);
 		goto out;
 	}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	ret = vfs_create(lower_parent_dentry->d_inode, lower_file_dentry, mode, true);
-#else
-	ret = vfs_create(lower_parent_dentry->d_inode, lower_file_dentry, mode, NULL);
-#endif
 	if (ret) {
 		SCFS_PRINT_ERROR("error in vfs_create, lower create, ret : %d\n", ret);
 		inode = ERR_PTR(ret);
@@ -397,11 +393,7 @@ out:
  * create() for SCFS.
  */
 static int scfs_create(struct inode *parent_inode, struct dentry *scfs_dentry,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 		umode_t mode, bool dummy)
-#else
-		umode_t mode, struct nameidata *nd)
-#endif
 {
 	struct inode *scfs_inode;
 	int ret;
@@ -567,11 +559,7 @@ static int scfs_lookup_interpose(struct dentry *dentry, struct dentry *lower_den
  *  
  */
 static struct dentry * scfs_lookup(struct inode *dir, struct dentry *dentry,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	unsigned int flags)
-#else
-	struct nameidata *nd)
-#endif
 {
 	struct dentry *lower_dir_dentry, *lower_dentry;
 	int ret = 0;
