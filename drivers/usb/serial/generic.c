@@ -117,8 +117,6 @@ int usb_serial_generic_open(struct tty_struct *tty, struct usb_serial_port *port
 	int result = 0;
 	unsigned long flags;
 
-	dbg("%s - port %d", __func__, port->number);
-
 	/* clear the throttle flags */
 	spin_lock_irqsave(&port->lock, flags);
 	port->throttled = 0;
@@ -138,8 +136,6 @@ static void generic_cleanup(struct usb_serial_port *port)
 	struct usb_serial *serial = port->serial;
 	unsigned long flags;
 	int i;
-
-	dbg("%s - port %d", __func__, port->number);
 
 	if (serial->dev) {
 		/* shutdown any bulk transfers that might be going on */
@@ -161,7 +157,6 @@ static void generic_cleanup(struct usb_serial_port *port)
 
 void usb_serial_generic_close(struct usb_serial_port *port)
 {
-	dbg("%s - port %d", __func__, port->number);
 	generic_cleanup(port);
 }
 EXPORT_SYMBOL_GPL(usb_serial_generic_close);
@@ -242,8 +237,6 @@ int usb_serial_generic_write(struct tty_struct *tty,
 {
 	int result;
 
-	dbg("%s - port %d", __func__, port->number);
-
 	/* only do something if we have a bulk out endpoint */
 	if (!port->bulk_out_size)
 		return -ENODEV;
@@ -266,8 +259,6 @@ int usb_serial_generic_write_room(struct tty_struct *tty)
 	unsigned long flags;
 	int room;
 
-	dbg("%s - port %d", __func__, port->number);
-
 	if (!port->bulk_out_size)
 		return 0;
 
@@ -284,8 +275,6 @@ int usb_serial_generic_chars_in_buffer(struct tty_struct *tty)
 	struct usb_serial_port *port = tty->driver_data;
 	unsigned long flags;
 	int chars;
-
-	dbg("%s - port %d", __func__, port->number);
 
 	if (!port->bulk_out_size)
 		return 0;
@@ -327,8 +316,6 @@ int usb_serial_generic_submit_read_urbs(struct usb_serial_port *port,
 {
 	int res;
 	int i;
-
-	dbg("%s - port %d", __func__, port->number);
 
 	for (i = 0; i < ARRAY_SIZE(port->read_urbs); ++i) {
 		res = usb_serial_generic_submit_read_urb(port, i, mem_flags);
@@ -417,8 +404,6 @@ void usb_serial_generic_write_bulk_callback(struct urb *urb)
 	int status = urb->status;
 	int i;
 
-	dbg("%s - port %d", __func__, port->number);
-
 	for (i = 0; i < ARRAY_SIZE(port->write_urbs); ++i)
 		if (port->write_urbs[i] == urb)
 			break;
@@ -447,8 +432,6 @@ void usb_serial_generic_throttle(struct tty_struct *tty)
 	struct usb_serial_port *port = tty->driver_data;
 	unsigned long flags;
 
-	dbg("%s - port %d", __func__, port->number);
-
 	/* Set the throttle request flag. It will be picked up
 	 * by usb_serial_generic_read_bulk_callback(). */
 	spin_lock_irqsave(&port->lock, flags);
@@ -461,8 +444,6 @@ void usb_serial_generic_unthrottle(struct tty_struct *tty)
 {
 	struct usb_serial_port *port = tty->driver_data;
 	int was_throttled;
-
-	dbg("%s - port %d", __func__, port->number);
 
 	/* Clear the throttle flags */
 	spin_lock_irq(&port->lock);
@@ -559,8 +540,6 @@ void usb_serial_generic_disconnect(struct usb_serial *serial)
 {
 	int i;
 
-	dbg("%s", __func__);
-
 	/* stop reads and writes on all ports */
 	for (i = 0; i < serial->num_ports; ++i)
 		generic_cleanup(serial->port[i]);
@@ -569,5 +548,4 @@ EXPORT_SYMBOL_GPL(usb_serial_generic_disconnect);
 
 void usb_serial_generic_release(struct usb_serial *serial)
 {
-	dbg("%s", __func__);
 }

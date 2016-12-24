@@ -345,8 +345,6 @@ static void pkt_clear(struct garmin_data *garmin_data_p)
 	unsigned long flags;
 	struct garmin_packet *result = NULL;
 
-	dbg("%s", __func__);
-
 	spin_lock_irqsave(&garmin_data_p->lock, flags);
 	while (!list_empty(&garmin_data_p->pktlist)) {
 		result = (struct garmin_packet *)garmin_data_p->pktlist.next;
@@ -939,8 +937,6 @@ static int garmin_open(struct tty_struct *tty, struct usb_serial_port *port)
 	int status = 0;
 	struct garmin_data *garmin_data_p = usb_get_serial_port_data(port);
 
-	dbg("%s - port %d", __func__, port->number);
-
 	spin_lock_irqsave(&garmin_data_p->lock, flags);
 	garmin_data_p->mode  = initial_mode;
 	garmin_data_p->count = 0;
@@ -991,8 +987,6 @@ static void garmin_write_bulk_callback(struct urb *urb)
 		struct garmin_data *garmin_data_p =
 					usb_get_serial_port_data(port);
 
-		dbg("%s - port %d", __func__, port->number);
-
 		if (GARMIN_LAYERID_APPL == getLayerId(urb->transfer_buffer)) {
 
 			if (garmin_data_p->mode == MODE_GARMIN_SERIAL) {
@@ -1021,9 +1015,6 @@ static int garmin_write_bulk(struct usb_serial_port *port,
 	struct urb *urb;
 	unsigned char *buffer;
 	int status;
-
-	dbg("%s - port %d, state %d", __func__, port->number,
-		garmin_data_p->state);
 
 	spin_lock_irqsave(&garmin_data_p->lock, flags);
 	garmin_data_p->flags &= ~FLAGS_DROP_DATA;
@@ -1219,8 +1210,6 @@ static void garmin_read_bulk_callback(struct urb *urb)
 	int status = urb->status;
 	int retval;
 
-	dbg("%s - port %d", __func__, port->number);
-
 	if (!serial) {
 		dbg("%s - bad serial pointer, exiting", __func__);
 		return;
@@ -1379,7 +1368,6 @@ static void garmin_throttle(struct tty_struct *tty)
 	struct usb_serial_port *port = tty->driver_data;
 	struct garmin_data *garmin_data_p = usb_get_serial_port_data(port);
 
-	dbg("%s - port %d", __func__, port->number);
 	/* set flag, data received will be put into a queue
 	   for later processing */
 	spin_lock_irq(&garmin_data_p->lock);
@@ -1394,7 +1382,6 @@ static void garmin_unthrottle(struct tty_struct *tty)
 	struct garmin_data *garmin_data_p = usb_get_serial_port_data(port);
 	int status;
 
-	dbg("%s - port %d", __func__, port->number);
 	spin_lock_irq(&garmin_data_p->lock);
 	garmin_data_p->flags &= ~FLAGS_THROTTLED;
 	spin_unlock_irq(&garmin_data_p->lock);
@@ -1436,8 +1423,6 @@ static int garmin_attach(struct usb_serial *serial)
 	struct usb_serial_port *port = serial->port[0];
 	struct garmin_data *garmin_data_p = NULL;
 
-	dbg("%s", __func__);
-
 	garmin_data_p = kzalloc(sizeof(struct garmin_data), GFP_KERNEL);
 	if (garmin_data_p == NULL) {
 		dev_err(&port->dev, "%s - Out of memory\n", __func__);
@@ -1466,8 +1451,6 @@ static void garmin_disconnect(struct usb_serial *serial)
 	struct usb_serial_port *port = serial->port[0];
 	struct garmin_data *garmin_data_p = usb_get_serial_port_data(port);
 
-	dbg("%s", __func__);
-
 	usb_kill_urb(port->interrupt_in_urb);
 	del_timer_sync(&garmin_data_p->timer);
 }
@@ -1477,8 +1460,6 @@ static void garmin_release(struct usb_serial *serial)
 {
 	struct usb_serial_port *port = serial->port[0];
 	struct garmin_data *garmin_data_p = usb_get_serial_port_data(port);
-
-	dbg("%s", __func__);
 
 	kfree(garmin_data_p);
 }
