@@ -1079,15 +1079,11 @@ config UIDGID_CONVERTED
 	depends on NTFS_FS = n
 	depends on OCFS2_FS = n
 	depends on OMFS_FS = n
-	depends on PROC_FS = n
-	depends on PROC_SYSCTL = n
 	depends on QNX4FS_FS = n
 	depends on QNX6FS_FS = n
 	depends on REISERFS_FS = n
 	depends on SQUASHFS = n
-	depends on SYSFS = n
 	depends on SYSV_FS = n
-	depends on TMPFS = n
 	depends on UBIFS_FS = n
 	depends on UDF_FS = n
 	depends on UFS_FS = n
