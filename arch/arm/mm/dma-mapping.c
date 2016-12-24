@@ -758,7 +758,7 @@ static void *arm_coherent_dma_alloc(struct device *dev, size_t size,
 		return memory;
 
 	return __dma_alloc(dev, size, handle, gfp, prot, true,
-			   __builtin_return_address(0), no_kernel_mapping);
+			   __builtin_return_address(0));
 
 /*
  * Create userspace mapping for the DMA-coherent memory.
