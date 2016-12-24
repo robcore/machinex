@@ -264,6 +264,8 @@ static int ir_open(struct tty_struct *tty, struct usb_serial_port *port)
 {
 	int i;
 
+	dbg("%s - port %d", __func__, port->number);
+
 	for (i = 0; i < ARRAY_SIZE(port->write_urbs); ++i)
 		port->write_urbs[i]->transfer_flags = URB_ZERO_PACKET;
 
@@ -320,10 +322,15 @@ static void ir_process_read_urb(struct urb *urb)
 
 static void ir_set_termios_callback(struct urb *urb)
 {
+	struct usb_serial_port *port = urb->context;
+	int status = urb->status;
+
+	dbg("%s - port %d", __func__, port->number);
+
 	kfree(urb->transfer_buffer);
 
-	if (urb->status)
-		dbg("%s - non-zero urb status: %d", __func__, urb->status);
+	if (status)
+		dbg("%s - non-zero urb status: %d", __func__, status);
 }
 
 static void ir_set_termios(struct tty_struct *tty,
@@ -334,6 +341,8 @@ static void ir_set_termios(struct tty_struct *tty,
 	int result;
 	speed_t baud;
 	int ir_baud;
+
+	dbg("%s - port %d", __func__, port->number);
 
 	baud = tty_get_baud_rate(tty);
 

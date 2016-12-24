@@ -1451,8 +1451,7 @@ struct tcp_iter_state {
 	sa_family_t		family;
 	enum tcp_seq_states	state;
 	struct sock		*syn_wait_sk;
-	int			bucket, offset, sbucket, num;
-	kuid_t			uid;
+	int			bucket, offset, sbucket, num, uid;
 	loff_t			last_pos;
 };
 

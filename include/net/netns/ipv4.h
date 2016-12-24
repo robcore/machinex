@@ -5,7 +5,6 @@
 #ifndef __NETNS_IPV4_H__
 #define __NETNS_IPV4_H__
 
-#include <linux/uidgid.h>
 #include <net/inet_frag.h>
 
 struct ctl_table_header;
@@ -55,7 +54,7 @@ struct netns_ipv4 {
 	int sysctl_rt_cache_rebuild_count;
 	int current_rt_cache_rebuild_count;
 
-	kgid_t sysctl_ping_group_range[2];
+	unsigned int sysctl_ping_group_range[2];
 	long sysctl_tcp_mem[3];
 	int sysctl_fwmark_reflect;
 	int sysctl_tcp_fwmark_accept;

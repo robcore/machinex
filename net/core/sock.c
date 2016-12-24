@@ -812,8 +812,13 @@ void cred_to_ucred(struct pid *pid, const struct cred *cred,
 	if (cred) {
 		struct user_namespace *current_ns = current_user_ns();
 
-		ucred->uid = from_kuid_munged(current_ns, cred->euid);
-		ucred->gid = from_kgid_munged(current_ns, cred->egid);
+		if (use_effective) {
+			ucred->uid = user_ns_map_uid(current_ns, cred, cred->euid);
+			ucred->gid = user_ns_map_gid(current_ns, cred, cred->egid);
+		} else {
+			ucred->uid = user_ns_map_uid(current_ns, cred, cred->uid);
+			ucred->gid = user_ns_map_gid(current_ns, cred, cred->gid);
+		}
 	}
 }
 EXPORT_SYMBOL_GPL(cred_to_ucred);
@@ -1470,12 +1475,12 @@ void sock_rfree(struct sk_buff *skb)
 EXPORT_SYMBOL(sock_rfree);
 
 
-kuid_t sock_i_uid(struct sock *sk)
+int sock_i_uid(struct sock *sk)
 {
-	kuid_t uid;
+	int uid;
 
 	read_lock_bh(&sk->sk_callback_lock);
-	uid = sk->sk_socket ? SOCK_INODE(sk->sk_socket)->i_uid : GLOBAL_ROOT_UID;
+	uid = sk->sk_socket ? SOCK_INODE(sk->sk_socket)->i_uid : 0;
 	read_unlock_bh(&sk->sk_callback_lock);
 	return uid;
 }

@@ -259,8 +259,7 @@ static int __init init_dns_resolver(void)
 	if (!cred)
 		return -ENOMEM;
 
-	keyring = key_alloc(&key_type_keyring, ".dns_resolver",
-			    GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, cred,
+	keyring = key_alloc(&key_type_keyring, ".dns_resolver", 0, 0, cred,
 			    (KEY_POS_ALL & ~KEY_POS_SETATTR) |
 			    KEY_USR_VIEW | KEY_USR_READ,
 			    KEY_ALLOC_NOT_IN_QUOTA);

@@ -5,7 +5,7 @@
  *
  * We have a per-user structure to keep track of how many
  * processes, files etc the user has claimed, in order to be
- * able to have per-user limits for system resources.
+ * able to have per-user limits for system resources. 
  */
 
 #include <linux/init.h>
@@ -23,27 +23,10 @@
  * and 1 for... ?
  */
 struct user_namespace init_user_ns = {
-	.uid_map = {
-		.nr_extents = 1,
-		.extent[0] = {
-			.first = 0,
-			.lower_first = 0,
-			.count = 4294967295U,
-		},
-	},
-	.gid_map = {
-		.nr_extents = 1,
-		.extent[0] = {
-			.first = 0,
-			.lower_first = 0,
-			.count = 4294967295U,
-		},
-	},
 	.kref = {
 		.refcount	= ATOMIC_INIT(3),
 	},
-	.owner = GLOBAL_ROOT_UID,
-	.group = GLOBAL_ROOT_GID,
+	.creator = &root_user,
 	.proc_inum = PROC_USER_INIT_INO,
 };
 EXPORT_SYMBOL_GPL(init_user_ns);
@@ -53,14 +36,11 @@ EXPORT_SYMBOL_GPL(init_user_ns);
  * when changing user ID's (ie setuid() and friends).
  */
 
-#define UIDHASH_BITS	(CONFIG_BASE_SMALL ? 3 : 7)
-#define UIDHASH_SZ	(1 << UIDHASH_BITS)
 #define UIDHASH_MASK		(UIDHASH_SZ - 1)
 #define __uidhashfn(uid)	(((uid >> UIDHASH_BITS) + uid) & UIDHASH_MASK)
-#define uidhashentry(uid)	(uidhash_table + __uidhashfn((__kuid_val(uid))))
+#define uidhashentry(ns, uid)	((ns)->uidhash_table + __uidhashfn((uid)))
 
 static struct kmem_cache *uid_cachep;
-struct hlist_head uidhash_table[UIDHASH_SZ];
 
 /*
  * The uidhash_lock is mostly taken from process context, but it is
@@ -73,14 +53,14 @@ struct hlist_head uidhash_table[UIDHASH_SZ];
  */
 static DEFINE_SPINLOCK(uidhash_lock);
 
-/* root_user.__count is 1, for init task cred */
+/* root_user.__count is 2, 1 for init task cred, 1 for init_user_ns->user_ns */
 struct user_struct root_user = {
-	.__count	= ATOMIC_INIT(1),
+	.__count	= ATOMIC_INIT(2),
 	.processes	= ATOMIC_INIT(1),
 	.files		= ATOMIC_INIT(0),
 	.sigpending	= ATOMIC_INIT(0),
 	.locked_shm     = 0,
-	.uid		= GLOBAL_ROOT_UID,
+	.user_ns	= &init_user_ns,
 };
 
 /*
@@ -94,15 +74,16 @@ static void uid_hash_insert(struct user_struct *up, struct hlist_head *hashent)
 static void uid_hash_remove(struct user_struct *up)
 {
 	hlist_del_init(&up->uidhash_node);
+	put_user_ns(up->user_ns);
 }
 
-static struct user_struct *uid_hash_find(kuid_t uid, struct hlist_head *hashent)
+static struct user_struct *uid_hash_find(uid_t uid, struct hlist_head *hashent)
 {
 	struct user_struct *user;
 	struct hlist_node *h;
 
 	hlist_for_each_entry(user, h, hashent, uidhash_node) {
-		if (uid_eq(user->uid, uid)) {
+		if (user->uid == uid) {
 			atomic_inc(&user->__count);
 			return user;
 		}
@@ -131,13 +112,14 @@ static void free_user(struct user_struct *up, unsigned long flags)
  *
  * If the user_struct could not be found, return NULL.
  */
-struct user_struct *find_user(kuid_t uid)
+struct user_struct *find_user(uid_t uid)
 {
 	struct user_struct *ret;
 	unsigned long flags;
+	struct user_namespace *ns = current_user_ns();
 
 	spin_lock_irqsave(&uidhash_lock, flags);
-	ret = uid_hash_find(uid, uidhashentry(uid));
+	ret = uid_hash_find(uid, uidhashentry(ns, uid));
 	spin_unlock_irqrestore(&uidhash_lock, flags);
 	return ret;
 }
@@ -156,9 +138,9 @@ void free_uid(struct user_struct *up)
 		local_irq_restore(flags);
 }
 
-struct user_struct *alloc_uid(kuid_t uid)
+struct user_struct *alloc_uid(struct user_namespace *ns, uid_t uid)
 {
-	struct hlist_head *hashent = uidhashentry(uid);
+	struct hlist_head *hashent = uidhashentry(ns, uid);
 	struct user_struct *up, *new;
 
 	spin_lock_irq(&uidhash_lock);
@@ -173,6 +155,8 @@ struct user_struct *alloc_uid(kuid_t uid)
 		new->uid = uid;
 		atomic_set(&new->__count, 1);
 
+		new->user_ns = get_user_ns(ns);
+
 		/*
 		 * Before adding this, check whether we raced
 		 * on adding the same user already..
@@ -180,6 +164,7 @@ struct user_struct *alloc_uid(kuid_t uid)
 		spin_lock_irq(&uidhash_lock);
 		up = uid_hash_find(uid, hashent);
 		if (up) {
+			put_user_ns(ns);
 			key_put(new->uid_keyring);
 			key_put(new->session_keyring);
 			kmem_cache_free(uid_cachep, new);
@@ -204,11 +189,11 @@ static int __init uid_cache_init(void)
 			0, SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
 
 	for(n = 0; n < UIDHASH_SZ; ++n)
-		INIT_HLIST_HEAD(uidhash_table + n);
+		INIT_HLIST_HEAD(init_user_ns.uidhash_table + n);
 
 	/* Insert the root user immediately (init already runs as root) */
 	spin_lock_irq(&uidhash_lock);
-	uid_hash_insert(&root_user, uidhashentry(GLOBAL_ROOT_UID));
+	uid_hash_insert(&root_user, uidhashentry(&init_user_ns, 0));
 	spin_unlock_irq(&uidhash_lock);
 
 	return 0;

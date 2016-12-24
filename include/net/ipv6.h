@@ -228,10 +228,7 @@ struct ip6_flowlabel {
 	struct ipv6_txoptions	*opt;
 	unsigned long		linger;
 	u8			share;
-	union {
-		struct pid *pid;
-		kuid_t uid;
-	} owner;
+	u32			owner;
 	unsigned long		lastuse;
 	unsigned long		expires;
 	struct net		*fl_net;

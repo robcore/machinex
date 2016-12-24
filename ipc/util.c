@@ -248,8 +248,8 @@ int ipc_get_maxid(struct ipc_ids *ids)
  
 int ipc_addid(struct ipc_ids* ids, struct kern_ipc_perm* new, int size)
 {
-	kuid_t euid;
-	kgid_t egid;
+	uid_t euid;
+	gid_t egid;
 	int id, err;
 
 	if (size > IPCMNI)
@@ -605,14 +605,14 @@ void ipc_rcu_putref(void *ptr)
  
 int ipcperms(struct ipc_namespace *ns, struct kern_ipc_perm *ipcp, short flag)
 {
-	kuid_t euid = current_euid();
+	uid_t euid = current_euid();
 	int requested_mode, granted_mode;
 
 	audit_ipc_obj(ipcp);
 	requested_mode = (flag >> 6) | (flag >> 3) | flag;
 	granted_mode = ipcp->mode;
-	if (uid_eq(euid, ipcp->cuid) ||
-	    uid_eq(euid, ipcp->uid))
+	if (euid == ipcp->cuid ||
+	    euid == ipcp->uid)
 		granted_mode >>= 6;
 	else if (in_group_p(ipcp->cgid) || in_group_p(ipcp->gid))
 		granted_mode >>= 3;
@@ -642,10 +642,10 @@ int ipcperms(struct ipc_namespace *ns, struct kern_ipc_perm *ipcp, short flag)
 void kernel_to_ipc64_perm (struct kern_ipc_perm *in, struct ipc64_perm *out)
 {
 	out->key	= in->key;
-	out->uid	= from_kuid_munged(current_user_ns(), in->uid);
-	out->gid	= from_kgid_munged(current_user_ns(), in->gid);
-	out->cuid	= from_kuid_munged(current_user_ns(), in->cuid);
-	out->cgid	= from_kgid_munged(current_user_ns(), in->cgid);
+	out->uid	= in->uid;
+	out->gid	= in->gid;
+	out->cuid	= in->cuid;
+	out->cgid	= in->cgid;
 	out->mode	= in->mode;
 	out->seq	= in->seq;
 }
@@ -746,19 +746,12 @@ int ipcget(struct ipc_namespace *ns, struct ipc_ids *ids,
  * @in:  the permission given as input.
  * @out: the permission of the ipc to set.
  */
-int ipc_update_perm(struct ipc64_perm *in, struct kern_ipc_perm *out)
+void ipc_update_perm(struct ipc64_perm *in, struct kern_ipc_perm *out)
 {
-	kuid_t uid = make_kuid(current_user_ns(), in->uid);
-	kgid_t gid = make_kgid(current_user_ns(), in->gid);
-	if (!uid_valid(uid) || !gid_valid(gid))
-		return -EINVAL;
-
-	out->uid = uid;
-	out->gid = gid;
+	out->uid = in->uid;
+	out->gid = in->gid;
 	out->mode = (out->mode & ~S_IRWXUGO)
 		| (in->mode & S_IRWXUGO);
-
-	return 0;
 }
 
 /**
@@ -783,7 +776,7 @@ struct kern_ipc_perm *ipcctl_pre_down(struct ipc_namespace *ns,
 				      struct ipc64_perm *perm, int extra_perm)
 {
 	struct kern_ipc_perm *ipcp;
-	kuid_t euid;
+	uid_t euid;
 	int err;
 
 	down_write(&ids->rw_mutex);
@@ -799,7 +792,7 @@ struct kern_ipc_perm *ipcctl_pre_down(struct ipc_namespace *ns,
 					 perm->gid, perm->mode);
 
 	euid = current_euid();
-	if (uid_eq(euid, ipcp->cuid) || uid_eq(euid, ipcp->uid)  ||
+	if (euid == ipcp->cuid || euid == ipcp->uid  ||
 	    ns_capable(ns->user_ns, CAP_SYS_ADMIN))
 		return ipcp;
 

@@ -9826,7 +9826,7 @@ static int __devinit niu_pci_init_one(struct pci_dev *pdev,
 			goto err_out_release_parent;
 		}
 	}
-	if (err) {
+	if (err || dma_mask == DMA_BIT_MASK(32)) {
 		err = pci_set_dma_mask(pdev, DMA_BIT_MASK(32));
 		if (err) {
 			dev_err(&pdev->dev, "No usable DMA configuration, aborting\n");

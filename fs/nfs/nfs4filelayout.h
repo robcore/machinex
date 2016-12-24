@@ -33,13 +33,6 @@
 #include "pnfs.h"
 
 /*
- * Default data server connection timeout and retrans vaules.
- * Set by module paramters dataserver_timeo and dataserver_retrans.
- */
-#define NFS4_DEF_DS_TIMEO   60
-#define NFS4_DEF_DS_RETRANS 5
-
-/*
  * Field testing shows we need to support up to 4096 stripe indices.
  * We store each index as a u8 (u32 on the wire) to keep the memory footprint
  * reasonable. This in turn means we support a maximum of 256
@@ -69,8 +62,12 @@ struct nfs4_pnfs_ds {
 	atomic_t		ds_count;
 };
 
+/* nfs4_file_layout_dsaddr flags */
+#define NFS4_DEVICE_ID_NEG_ENTRY	0x00000001
+
 struct nfs4_file_layout_dsaddr {
 	struct nfs4_deviceid_node	id_node;
+	unsigned long			flags;
 	u32				stripe_count;
 	u8				*stripe_indices;
 	u32				ds_num;
@@ -108,23 +105,6 @@ static inline struct nfs4_deviceid_node *
 FILELAYOUT_DEVID_NODE(struct pnfs_layout_segment *lseg)
 {
 	return &FILELAYOUT_LSEG(lseg)->dsaddr->id_node;
-}
-
-static inline void
-filelayout_mark_devid_invalid(struct nfs4_deviceid_node *node)
-{
-	u32 *p = (u32 *)&node->deviceid;
-
-	printk(KERN_WARNING "NFS: Deviceid [%x%x%x%x] marked out of use.\n",
-		p[0], p[1], p[2], p[3]);
-
-	set_bit(NFS_DEVICEID_INVALID, &node->flags);
-}
-
-static inline bool
-filelayout_test_devid_invalid(struct nfs4_deviceid_node *node)
-{
-	return test_bit(NFS_DEVICEID_INVALID, &node->flags);
 }
 
 extern struct nfs_fh *

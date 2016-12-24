@@ -228,15 +228,13 @@ static int ext2_show_options(struct seq_file *seq, struct dentry *root)
 		seq_puts(seq, ",grpid");
 	if (!test_opt(sb, GRPID) && (def_mount_opts & EXT2_DEFM_BSDGROUPS))
 		seq_puts(seq, ",nogrpid");
-	if (!uid_eq(sbi->s_resuid, make_kuid(&init_user_ns, EXT2_DEF_RESUID)) ||
+	if (sbi->s_resuid != EXT2_DEF_RESUID ||
 	    le16_to_cpu(es->s_def_resuid) != EXT2_DEF_RESUID) {
-		seq_printf(seq, ",resuid=%u",
-				from_kuid_munged(&init_user_ns, sbi->s_resuid));
+		seq_printf(seq, ",resuid=%u", sbi->s_resuid);
 	}
-	if (!gid_eq(sbi->s_resgid, make_kgid(&init_user_ns, EXT2_DEF_RESGID)) ||
+	if (sbi->s_resgid != EXT2_DEF_RESGID ||
 	    le16_to_cpu(es->s_def_resgid) != EXT2_DEF_RESGID) {
-		seq_printf(seq, ",resgid=%u",
-				from_kgid_munged(&init_user_ns, sbi->s_resgid));
+		seq_printf(seq, ",resgid=%u", sbi->s_resgid);
 	}
 	if (test_opt(sb, ERRORS_RO)) {
 		int def_errors = le16_to_cpu(es->s_errors);
@@ -438,8 +436,6 @@ static int parse_options(char *options, struct super_block *sb)
 	struct ext2_sb_info *sbi = EXT2_SB(sb);
 	substring_t args[MAX_OPT_ARGS];
 	int option;
-	kuid_t uid;
-	kgid_t gid;
 
 	if (!options)
 		return 1;
@@ -466,23 +462,12 @@ static int parse_options(char *options, struct super_block *sb)
 		case Opt_resuid:
 			if (match_int(&args[0], &option))
 				return 0;
-			uid = make_kuid(current_user_ns(), option);
-			if (!uid_valid(uid)) {
-				ext2_msg(sb, KERN_ERR, "Invalid uid value %d", option);
-				return -1;
-
-			}
-			sbi->s_resuid = uid;
+			sbi->s_resuid = option;
 			break;
 		case Opt_resgid:
 			if (match_int(&args[0], &option))
 				return 0;
-			gid = make_kgid(current_user_ns(), option);
-			if (!gid_valid(gid)) {
-				ext2_msg(sb, KERN_ERR, "Invalid gid value %d", option);
-				return -1;
-			}
-			sbi->s_resgid = gid;
+			sbi->s_resgid = option;
 			break;
 		case Opt_sb:
 			/* handled by get_sb_block() instead of here */
@@ -856,8 +841,8 @@ static int ext2_fill_super(struct super_block *sb, void *data, int silent)
 	else
 		set_opt(sbi->s_mount_opt, ERRORS_RO);
 
-	sbi->s_resuid = make_kuid(&init_user_ns, le16_to_cpu(es->s_def_resuid));
-	sbi->s_resgid = make_kgid(&init_user_ns, le16_to_cpu(es->s_def_resgid));
+	sbi->s_resuid = le16_to_cpu(es->s_def_resuid);
+	sbi->s_resgid = le16_to_cpu(es->s_def_resgid);
 	
 	set_opt(sbi->s_mount_opt, RESERVATION);
 

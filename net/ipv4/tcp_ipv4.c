@@ -2451,7 +2451,7 @@ void tcp_proc_unregister(struct net *net, struct tcp_seq_afinfo *afinfo)
 EXPORT_SYMBOL(tcp_proc_unregister);
 
 static void get_openreq4(const struct sock *sk, const struct request_sock *req,
-			 struct seq_file *f, int i, kuid_t uid)
+			 struct seq_file *f, int i, int uid)
 {
 	const struct inet_request_sock *ireq = inet_rsk(req);
 	int ttd = req->expires - jiffies;
@@ -2468,7 +2468,7 @@ static void get_openreq4(const struct sock *sk, const struct request_sock *req,
 		1,    /* timers active (only the expire timer) */
 		jiffies_to_clock_t(ttd),
 		req->retrans,
-		from_kuid_munged(seq_user_ns(f), uid),
+		uid,
 		0,  /* non standard timer */
 		0, /* open_requests have no inode */
 		atomic_read(&sk->sk_refcnt),
@@ -2518,7 +2518,7 @@ static void get_tcp4_sock(struct sock *sk, struct seq_file *f, int i)
 		timer_active,
 		jiffies_to_clock_t(timer_expires - jiffies),
 		icsk->icsk_retransmits,
-		from_kuid_munged(seq_user_ns(f), sock_i_uid(sk)),
+		sock_i_uid(sk),
 		icsk->icsk_probes_out,
 		sock_i_ino(sk),
 		atomic_read(&sk->sk_refcnt), sk,

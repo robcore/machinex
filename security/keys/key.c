@@ -18,6 +18,7 @@
 #include <linux/workqueue.h>
 #include <linux/random.h>
 #include <linux/err.h>
+#include <linux/user_namespace.h>
 #include "internal.h"
 
 struct kmem_cache *key_jar;
@@ -51,7 +52,7 @@ void __key_check(const struct key *key)
  * Get the key quota record for a user, allocating a new record if one doesn't
  * already exist.
  */
-struct key_user *key_user_lookup(kuid_t uid)
+struct key_user *key_user_lookup(uid_t uid, struct user_namespace *user_ns)
 {
 	struct key_user *candidate = NULL, *user;
 	struct rb_node *parent = NULL;
@@ -66,9 +67,13 @@ try_again:
 		parent = *p;
 		user = rb_entry(parent, struct key_user, node);
 
-		if (uid_lt(uid, user->uid))
+		if (uid < user->uid)
 			p = &(*p)->rb_left;
-		else if (uid_gt(uid, user->uid))
+		else if (uid > user->uid)
+			p = &(*p)->rb_right;
+		else if (user_ns < user->user_ns)
+			p = &(*p)->rb_left;
+		else if (user_ns > user->user_ns)
 			p = &(*p)->rb_right;
 		else
 			goto found;
@@ -97,6 +102,7 @@ try_again:
 	atomic_set(&candidate->nkeys, 0);
 	atomic_set(&candidate->nikeys, 0);
 	candidate->uid = uid;
+	candidate->user_ns = get_user_ns(user_ns);
 	candidate->qnkeys = 0;
 	candidate->qnbytes = 0;
 	spin_lock_init(&candidate->lock);
@@ -125,6 +131,7 @@ void key_user_put(struct key_user *user)
 	if (atomic_dec_and_lock(&user->usage, &key_user_lock)) {
 		rb_erase(&user->node, &key_user_tree);
 		spin_unlock(&key_user_lock);
+		put_user_ns(user->user_ns);
 
 		kfree(user);
 	}
@@ -222,7 +229,7 @@ serial_exists:
  * key_alloc() calls don't race with module unloading.
  */
 struct key *key_alloc(struct key_type *type, const char *desc,
-		      kuid_t uid, kgid_t gid, const struct cred *cred,
+		      uid_t uid, gid_t gid, const struct cred *cred,
 		      key_perm_t perm, unsigned long flags)
 {
 	struct key_user *user = NULL;
@@ -246,16 +253,16 @@ struct key *key_alloc(struct key_type *type, const char *desc,
 	quotalen = desclen + type->def_datalen;
 
 	/* get hold of the key tracking for this user */
-	user = key_user_lookup(uid);
+	user = key_user_lookup(uid, cred->user->user_ns);
 	if (!user)
 		goto no_memory_1;
 
 	/* check that the user's quota permits allocation of another key and
 	 * its description */
 	if (!(flags & KEY_ALLOC_NOT_IN_QUOTA)) {
-		unsigned maxkeys = uid_eq(uid, GLOBAL_ROOT_UID) ?
+		unsigned maxkeys = (uid == 0) ?
 			key_quota_root_maxkeys : key_quota_maxkeys;
-		unsigned maxbytes = uid_eq(uid, GLOBAL_ROOT_UID) ?
+		unsigned maxbytes = (uid == 0) ?
 			key_quota_root_maxbytes : key_quota_maxbytes;
 
 		spin_lock(&user->lock);
@@ -373,7 +380,7 @@ int key_payload_reserve(struct key *key, size_t datalen)
 
 	/* contemplate the quota adjustment */
 	if (delta != 0 && test_bit(KEY_FLAG_IN_QUOTA, &key->flags)) {
-		unsigned maxbytes = uid_eq(key->user->uid, GLOBAL_ROOT_UID) ?
+		unsigned maxbytes = (key->user->uid == 0) ?
 			key_quota_root_maxbytes : key_quota_maxbytes;
 
 		spin_lock(&key->user->lock);

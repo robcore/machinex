@@ -472,6 +472,8 @@ static int cp210x_open(struct tty_struct *tty, struct usb_serial_port *port)
 {
 	int result;
 
+	dbg("%s - port %d", __func__, port->number);
+
 	result = cp210x_set_config_single(port, CP210X_IFC_ENABLE,
 								UART_ENABLE);
 	if (result) {
@@ -491,6 +493,8 @@ static int cp210x_open(struct tty_struct *tty, struct usb_serial_port *port)
 
 static void cp210x_close(struct usb_serial_port *port)
 {
+	dbg("%s - port %d", __func__, port->number);
+
 	usb_serial_generic_close(port);
 
 	mutex_lock(&port->serial->disc_mutex);
@@ -533,6 +537,8 @@ static void cp210x_get_termios_port(struct usb_serial_port *port,
 	unsigned int cflag, modem_ctl[4];
 	unsigned int baud;
 	unsigned int bits;
+
+	dbg("%s - port %d", __func__, port->number);
 
 	cp210x_get_config(port, CP210X_GET_BAUDRATE, &baud, 4);
 
@@ -831,6 +837,8 @@ static int cp210x_tiocmset_port(struct usb_serial_port *port,
 {
 	unsigned int control = 0;
 
+	dbg("%s - port %d", __func__, port->number);
+
 	if (set & TIOCM_RTS) {
 		control |= CONTROL_RTS;
 		control |= CONTROL_WRITE_RTS;
@@ -867,6 +875,8 @@ static int cp210x_tiocmget (struct tty_struct *tty)
 	unsigned int control;
 	int result;
 
+	dbg("%s - port %d", __func__, port->number);
+
 	cp210x_get_config(port, CP210X_GET_MDMSTS, &control, 1);
 
 	result = ((control & CONTROL_DTR) ? TIOCM_DTR : 0)
@@ -886,6 +896,7 @@ static void cp210x_break_ctl (struct tty_struct *tty, int break_state)
 	struct usb_serial_port *port = tty->driver_data;
 	unsigned int state;
 
+	dbg("%s - port %d", __func__, port->number);
 	if (break_state == 0)
 		state = BREAK_OFF;
 	else

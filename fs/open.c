@@ -335,8 +335,7 @@ SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
 
 	if (!issecure(SECURE_NO_SETUID_FIXUP)) {
 		/* Clear the capabilities if we switch to a non-root user */
-		kuid_t root_uid = make_kuid(override_cred->user_ns, 0);
-		if (!uid_eq(override_cred->uid, root_uid))
+		if (override_cred->uid)
 			cap_clear(override_cred->cap_effective);
 		else
 			override_cred->cap_effective =
@@ -525,24 +524,15 @@ static int chown_common(struct path *path, uid_t user, gid_t group)
 	struct inode *inode = path->dentry->d_inode;
 	int error;
 	struct iattr newattrs;
-	kuid_t uid;
-	kgid_t gid;
-
-	uid = make_kuid(current_user_ns(), user);
-	gid = make_kgid(current_user_ns(), group);
 
 	newattrs.ia_valid =  ATTR_CTIME;
 	if (user != (uid_t) -1) {
-		if (!uid_valid(uid))
-			return -EINVAL;
 		newattrs.ia_valid |= ATTR_UID;
-		newattrs.ia_uid = uid;
+		newattrs.ia_uid = user;
 	}
 	if (group != (gid_t) -1) {
-		if (!gid_valid(gid))
-			return -EINVAL;
 		newattrs.ia_valid |= ATTR_GID;
-		newattrs.ia_gid = gid;
+		newattrs.ia_gid = group;
 	}
 	if (!S_ISDIR(inode->i_mode))
 		newattrs.ia_valid |=
@@ -897,6 +887,50 @@ struct file *dentry_open(struct dentry *dentry, struct vfsmount *mnt, int flags,
 	return __dentry_open(dentry, mnt, f, NULL, cred);
 }
 EXPORT_SYMBOL(dentry_open);
+
+static void __put_unused_fd(struct files_struct *files, unsigned int fd)
+{
+	struct fdtable *fdt = files_fdtable(files);
+	__clear_open_fd(fd, fdt);
+	if (fd < files->next_fd)
+		files->next_fd = fd;
+}
+
+void put_unused_fd(unsigned int fd)
+{
+	struct files_struct *files = current->files;
+	spin_lock(&files->file_lock);
+	__put_unused_fd(files, fd);
+	spin_unlock(&files->file_lock);
+}
+
+EXPORT_SYMBOL(put_unused_fd);
+
+/*
+ * Install a file pointer in the fd array.
+ *
+ * The VFS is full of places where we drop the files lock between
+ * setting the open_fds bitmap and installing the file in the file
+ * array.  At any such point, we are vulnerable to a dup2() race
+ * installing a file in the array before us.  We need to detect this and
+ * fput() the struct file we are about to overwrite in this case.
+ *
+ * It should never happen - if we allow dup2() do it, _really_ bad things
+ * will follow.
+ */
+
+void fd_install(unsigned int fd, struct file *file)
+{
+	struct files_struct *files = current->files;
+	struct fdtable *fdt;
+	spin_lock(&files->file_lock);
+	fdt = files_fdtable(files);
+	BUG_ON(fdt->fd[fd] != NULL);
+	rcu_assign_pointer(fdt->fd[fd], file);
+	spin_unlock(&files->file_lock);
+}
+
+EXPORT_SYMBOL(fd_install);
 
 static inline int build_open_flags(int flags, umode_t mode, struct open_flags *op)
 {

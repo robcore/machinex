@@ -34,7 +34,8 @@ struct key_user root_key_user = {
 	.lock		= __SPIN_LOCK_UNLOCKED(root_key_user.lock),
 	.nkeys		= ATOMIC_INIT(2),
 	.nikeys		= ATOMIC_INIT(2),
-	.uid		= GLOBAL_ROOT_UID,
+	.uid		= 0,
+	.user_ns	= &init_user_ns,
 };
 
 /*
@@ -47,13 +48,11 @@ int install_user_keyrings(void)
 	struct key *uid_keyring, *session_keyring;
 	char buf[20];
 	int ret;
-	uid_t uid;
 
 	cred = current_cred();
 	user = cred->user;
-	uid = from_kuid(cred->user_ns, user->uid);
 
-	kenter("%p{%u}", user, uid);
+	kenter("%p{%u}", user, user->uid);
 
 	if (user->uid_keyring && user->session_keyring) {
 		kleave(" = 0 [exist]");
@@ -68,11 +67,11 @@ int install_user_keyrings(void)
 		 * - there may be one in existence already as it may have been
 		 *   pinned by a session, but the user_struct pointing to it
 		 *   may have been destroyed by setuid */
-		sprintf(buf, "_uid.%u", uid);
+		sprintf(buf, "_uid.%u", user->uid);
 
 		uid_keyring = find_keyring_by_name(buf, true);
 		if (IS_ERR(uid_keyring)) {
-			uid_keyring = keyring_alloc(buf, user->uid, INVALID_GID,
+			uid_keyring = keyring_alloc(buf, user->uid, (gid_t) -1,
 						    cred, KEY_ALLOC_IN_QUOTA,
 						    NULL);
 			if (IS_ERR(uid_keyring)) {
@@ -83,12 +82,12 @@ int install_user_keyrings(void)
 
 		/* get a default session keyring (which might also exist
 		 * already) */
-		sprintf(buf, "_uid_ses.%u", uid);
+		sprintf(buf, "_uid_ses.%u", user->uid);
 
 		session_keyring = find_keyring_by_name(buf, true);
 		if (IS_ERR(session_keyring)) {
 			session_keyring =
-				keyring_alloc(buf, user->uid, INVALID_GID,
+				keyring_alloc(buf, user->uid, (gid_t) -1,
 					      cred, KEY_ALLOC_IN_QUOTA, NULL);
 			if (IS_ERR(session_keyring)) {
 				ret = PTR_ERR(session_keyring);
@@ -854,7 +853,7 @@ void key_change_session_keyring(struct callback_head *twork)
 	new-> sgid	= old-> sgid;
 	new->fsgid	= old->fsgid;
 	new->user	= get_uid(old->user);
-	new->user_ns	= get_user_ns(new->user_ns);
+	new->user_ns	= new->user->user_ns;
 	new->group_info	= get_group_info(old->group_info);
 
 	new->securebits	= old->securebits;

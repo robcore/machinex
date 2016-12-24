@@ -902,8 +902,7 @@ static void netlink_rcv_wake(struct sock *sk)
 		wake_up_interruptible(&nlk->wait);
 }
 
-static int netlink_unicast_kernel(struct sock *sk, struct sk_buff *skb,
-				  struct sock *ssk)
+static int netlink_unicast_kernel(struct sock *sk, struct sk_buff *skb)
 {
 	int ret;
 	struct netlink_sock *nlk = nlk_sk(sk);
@@ -912,7 +911,6 @@ static int netlink_unicast_kernel(struct sock *sk, struct sk_buff *skb,
 	if (nlk->netlink_rcv != NULL) {
 		ret = skb->len;
 		skb_set_owner_r(skb, sk);
-		NETLINK_CB(skb).ssk = ssk;
 		nlk->netlink_rcv(skb);
 	}
 	kfree_skb(skb);
@@ -937,7 +935,7 @@ retry:
 		return PTR_ERR(sk);
 	}
 	if (netlink_is_kernel(sk))
-		return netlink_unicast_kernel(sk, skb, ssk);
+		return netlink_unicast_kernel(sk, skb);
 
 	if (sk_filter(sk, skb)) {
 		err = skb->len;

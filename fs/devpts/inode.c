@@ -98,8 +98,8 @@ static struct vfsmount *devpts_mnt;
 struct pts_mount_opts {
 	int setuid;
 	int setgid;
-	kuid_t   uid;
-	kgid_t   gid;
+	uid_t   uid;
+	gid_t   gid;
 	umode_t mode;
 	umode_t ptmxmode;
 	int newinstance;
@@ -158,13 +158,11 @@ static inline struct super_block *pts_sb_from_inode(struct inode *inode)
 static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 {
 	char *p;
-	kuid_t uid;
-	kgid_t gid;
 
 	opts->setuid  = 0;
 	opts->setgid  = 0;
-	opts->uid     = GLOBAL_ROOT_UID;
-	opts->gid     = GLOBAL_ROOT_GID;
+	opts->uid     = 0;
+	opts->gid     = 0;
 	opts->mode    = DEVPTS_DEFAULT_MODE;
 	opts->ptmxmode = DEVPTS_DEFAULT_PTMX_MODE;
 	opts->max     = NR_UNIX98_PTY_MAX;
@@ -186,19 +184,13 @@ static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 		case Opt_uid:
 			if (match_int(&args[0], &option))
 				return -EINVAL;
-			uid = make_kuid(current_user_ns(), option);
-			if (!uid_valid(uid))
-				return -EINVAL;
-			opts->uid = uid;
+			opts->uid = option;
 			opts->setuid = 1;
 			break;
 		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return -EINVAL;
-			gid = make_kgid(current_user_ns(), option);
-			if (!gid_valid(gid))
-				return -EINVAL;
-			opts->gid = gid;
+			opts->gid = option;
 			opts->setgid = 1;
 			break;
 		case Opt_mode:
@@ -324,9 +316,9 @@ static int devpts_show_options(struct seq_file *seq, struct dentry *root)
 	struct pts_mount_opts *opts = &fsi->mount_opts;
 
 	if (opts->setuid)
-		seq_printf(seq, ",uid=%u", from_kuid_munged(&init_user_ns, opts->uid));
+		seq_printf(seq, ",uid=%u", opts->uid);
 	if (opts->setgid)
-		seq_printf(seq, ",gid=%u", from_kgid_munged(&init_user_ns, opts->gid));
+		seq_printf(seq, ",gid=%u", opts->gid);
 	seq_printf(seq, ",mode=%03o", opts->mode);
 #ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	seq_printf(seq, ",ptmxmode=%03o", opts->ptmxmode);

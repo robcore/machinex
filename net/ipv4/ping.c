@@ -232,10 +232,10 @@ exit:
 	return sk;
 }
 
-static void inet_get_ping_group_range_net(struct net *net, kgid_t *low,
-					  kgid_t *high)
+static void inet_get_ping_group_range_net(struct net *net, gid_t *low,
+					  gid_t *high)
 {
-	kgid_t *data = net->ipv4.sysctl_ping_group_range;
+	gid_t *data = net->ipv4.sysctl_ping_group_range;
 	unsigned seq;
 	do {
 		seq = read_seqbegin(&sysctl_local_ports.lock);
@@ -249,14 +249,14 @@ static void inet_get_ping_group_range_net(struct net *net, kgid_t *low,
 int ping_init_sock(struct sock *sk)
 {
 	struct net *net = sock_net(sk);
-	kgid_t group = current_egid();
+	gid_t group = current_egid();
+	gid_t range[2];
 	struct group_info *group_info;
 	int i, j, count;
-	kgid_t low, high;
 	int ret = 0;
 
-	inet_get_ping_group_range_net(net, &low, &high);
-	if (gid_lte(low, group) && gid_lte(group, high))
+	inet_get_ping_group_range_net(net, range, range+1);
+	if (range[0] <= group && group <= range[1])
 		return 0;
 
 	group_info = get_current_groups();
@@ -265,8 +265,8 @@ int ping_init_sock(struct sock *sk)
 		int cp_count = min_t(int, NGROUPS_PER_BLOCK, count);
 
 		for (j = 0; j < cp_count; j++) {
-			kgid_t gid = group_info->blocks[i][j];
-			if (gid_lte(low, gid) && gid_lte(gid, high))
+			group = group_info->blocks[i][j];
+			if (range[0] <= group && group <= range[1])
 				goto out_release_group;
 		}
 
@@ -1099,9 +1099,7 @@ static void ping_format_sock(struct sock *sp, struct seq_file *f,
 		bucket, src, srcp, dest, destp, sp->sk_state,
 		sk_wmem_alloc_get(sp),
 		sk_rmem_alloc_get(sp),
-		0, 0L, 0,
-		from_kuid_munged(seq_user_ns(f), sock_i_uid(sp)),
-		0, sock_i_ino(sp),
+		0, 0L, 0, sock_i_uid(sp), 0, sock_i_ino(sp),
 		atomic_read(&sp->sk_refcnt), sp,
 		atomic_read(&sp->sk_drops));
 }
