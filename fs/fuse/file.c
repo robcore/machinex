@@ -1512,6 +1512,9 @@ static int fuse_getlk(struct file *file, struct file_lock *fl)
 	struct fuse_lk_out outarg;
 	int err;
 
+	if (fc->no_fallocate)
+		return -EOPNOTSUPP;
+
 	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
@@ -2118,6 +2121,10 @@ unsigned fuse_file_poll(struct file *file, poll_table *wait)
 	req->out.args[0].value = &outarg;
 	fuse_request_send(fc, req);
 	err = req->out.h.error;
+	if (err == -ENOSYS) {
+		fc->no_fallocate = 1;
+		err = -EOPNOTSUPP;
+	}
 	fuse_put_request(fc, req);
 
 	if (!err)
