@@ -44,6 +44,22 @@
 
 #include <trace/events/sched.h>
 
+#ifdef INVALID_UID
+#undef INVALID_UID
+#define INVALID_UID ((uid_t) -1)
+#ifdef uid_valid
+#undef uid_valid
+#define uid_valid(uid) ((uid) != -1)
+#ifdef uid_lte
+#undef uid_lte
+#define uid_lte(a, b) ((a) <= (b))
+#ifdef uid_eq
+#undef uid_eq
+#define uid_eq(a, b) ((a) == (b))
+#ifdef uid_gte
+#undef uid_gte
+#define uid_gte(a, b) ((a) >= (b))
+
 int core_uses_pid;
 char core_pattern[CORENAME_MAX_SIZE] = "core";
 unsigned int core_pipe_limit;
@@ -690,3 +706,7 @@ int dump_seek(struct file *file, loff_t off)
 	return ret;
 }
 EXPORT_SYMBOL(dump_seek);
+#endif
+#endif
+#endif
+#endif
