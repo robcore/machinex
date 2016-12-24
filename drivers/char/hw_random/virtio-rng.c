@@ -88,7 +88,7 @@ static struct hwrng virtio_hwrng = {
 	.read		= virtio_read,
 };
 
-static int virtrng_probe(struct virtio_device *vdev)
+static int probe_common(struct virtio_device *vdev)
 {
 	int err;
 
@@ -114,13 +114,23 @@ static int virtrng_probe(struct virtio_device *vdev)
 	return 0;
 }
 
-static void __devexit virtrng_remove(struct virtio_device *vdev)
+static void remove_common(struct virtio_device *vdev)
 {
 	vdev->config->reset(vdev);
 	busy = false;
 	hwrng_unregister(&virtio_hwrng);
 	vdev->config->del_vqs(vdev);
 	vq = NULL;
+}
+
+static int virtrng_probe(struct virtio_device *vdev)
+{
+	return probe_common(vdev);
+}
+
+static void __devexit virtrng_remove(struct virtio_device *vdev)
+{
+	remove_common(vdev);
 }
 
 static struct virtio_device_id id_table[] = {
