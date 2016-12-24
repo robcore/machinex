@@ -198,10 +198,10 @@ int target_scsi2_reservation_release(struct se_task *task)
 	struct se_cmd *cmd = task->task_se_cmd;
 	struct se_device *dev = cmd->se_dev;
 	struct se_session *sess = cmd->se_sess;
-	struct se_portal_group *tpg = sess->se_tpg;
+	struct se_portal_group *tpg;
 	int ret = 0, rc;
 
-	if (!sess || !tpg)
+	if (!sess || !sess->se_tpg)
 		goto out;
 	rc = target_check_scsi2_reservation_conflict(cmd);
 	if (rc == 1)
@@ -229,6 +229,7 @@ int target_scsi2_reservation_release(struct se_task *task)
 		dev->dev_res_bin_isid = 0;
 		dev->dev_flags &= ~DF_SPC2_RESERVATIONS_WITH_ISID;
 	}
+	tpg = sess->se_tpg;
 	pr_debug("SCSI-2 Released reservation for %s LUN: %u ->"
 		" MAPPED LUN: %u for %s\n", tpg->se_tpg_tfo->get_fabric_name(),
 		cmd->se_lun->unpacked_lun, cmd->se_deve->mapped_lun,
@@ -249,7 +250,7 @@ int target_scsi2_reservation_reserve(struct se_task *task)
 	struct se_cmd *cmd = task->task_se_cmd;
 	struct se_device *dev = cmd->se_dev;
 	struct se_session *sess = cmd->se_sess;
-	struct se_portal_group *tpg = sess->se_tpg;
+	struct se_portal_group *tpg;
 	int ret = 0, rc;
 
 	if ((cmd->t_task_cdb[1] & 0x01) &&
@@ -264,7 +265,7 @@ int target_scsi2_reservation_reserve(struct se_task *task)
 	 * This is currently the case for target_core_mod passthrough struct se_cmd
 	 * ops
 	 */
-	if (!sess || !tpg)
+	if (!sess || !sess->se_tpg)
 		goto out;
 	rc = target_check_scsi2_reservation_conflict(cmd);
 	if (rc == 1)
@@ -276,6 +277,7 @@ int target_scsi2_reservation_reserve(struct se_task *task)
 	}
 
 	ret = 0;
+	tpg = sess->se_tpg;
 	spin_lock(&dev->dev_reservation_lock);
 	if (dev->dev_reserved_node_acl &&
 	   (dev->dev_reserved_node_acl != sess->se_node_acl)) {
