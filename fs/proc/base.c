@@ -1691,13 +1691,13 @@ int pid_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
  * made this apply to all per process world readable and executable
  * directories.
  */
-int pid_revalidate(struct dentry *dentry, struct nameidata *nd)
+int pid_revalidate(struct dentry *dentry, unsigned int flags)
 {
 	struct inode *inode;
 	struct task_struct *task;
 	const struct cred *cred;
 
-	if (nd && nd->flags & LOOKUP_RCU)
+	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	inode = dentry->d_inode;
@@ -1811,7 +1811,7 @@ static int map_files_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	struct inode *inode;
 	int status = 0;
 
-	if (nd && nd->flags & LOOKUP_RCU)
+	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	if (!capable(CAP_SYS_ADMIN)) {
@@ -2147,7 +2147,7 @@ static struct dentry *proc_pident_instantiate(struct inode *dir,
 	d_set_d_op(dentry, &pid_dentry_operations);
 	d_add(dentry, inode);
 	/* Close the race of the process dying before we return the dentry */
-	if (pid_revalidate(dentry, NULL))
+	if (pid_revalidate(dentry, 0))
 		error = NULL;
 out:
 	return error;
@@ -2885,7 +2885,7 @@ static struct dentry *proc_pid_instantiate(struct inode *dir,
 
 	d_add(dentry, inode);
 	/* Close the race of the process dying before we return the dentry */
-	if (pid_revalidate(dentry, NULL))
+	if (pid_revalidate(dentry, 0))
 		error = NULL;
 out:
 	return error;
@@ -3152,7 +3152,7 @@ static struct dentry *proc_task_instantiate(struct inode *dir,
 
 	d_add(dentry, inode);
 	/* Close the race of the process dying before we return the dentry */
-	if (pid_revalidate(dentry, NULL))
+	if (pid_revalidate(dentry, 0))
 		error = NULL;
 out:
 	return error;
