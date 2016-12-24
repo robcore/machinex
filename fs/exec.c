@@ -2075,18 +2075,11 @@ static int umh_pipe_setup(struct subprocess_info *info, struct cred *new)
 {
 	struct file *rp, *wp;
 	struct coredump_params *cp = (struct coredump_params *)info->data;
+	int err = create_pipe_files(files, 0);
+	if (err)
+		return err;
 
-	wp = create_write_pipe(0);
-	if (IS_ERR(wp))
-		return PTR_ERR(wp);
-
-	rp = create_read_pipe(wp, 0);
-	if (IS_ERR(rp)) {
-		free_write_pipe(wp);
-		return PTR_ERR(rp);
-	}
-
-	cp->file = wp;
+	cp->file = files[1];
 
 	replace_fd(0, files[0], 0);
 	/* and disallow core files too */
