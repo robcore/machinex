@@ -23,7 +23,7 @@
  *	Try and keep these values and structures similar to BSD, especially
  *	the BPF code definitions which need to match so you can share filters
  */
- 
+
 struct sock_filter {	/* Filter block */
 	__u16	code;   /* Actual filter code */
 	__u8	jt;	/* Jump true */
@@ -127,7 +127,8 @@ struct sock_fprog {	/* Required for SO_ATTACH_FILTER. */
 #define SKF_AD_HATYPE	28
 #define SKF_AD_RXHASH	32
 #define SKF_AD_CPU	36
-#define SKF_AD_MAX	40
+#define SKF_AD_ALU_XOR_X	40
+#define SKF_AD_MAX	44
 #define SKF_NET_OFF   (-0x100000)
 #define SKF_LL_OFF    (-0x200000)
 
@@ -242,6 +243,7 @@ enum {
 	BPF_S_ANC_HATYPE,
 	BPF_S_ANC_RXHASH,
 	BPF_S_ANC_CPU,
+	BPF_S_ANC_ALU_XOR_X,
 	BPF_S_ANC_SECCOMP_LD_W,
 };
 
