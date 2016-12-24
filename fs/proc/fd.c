@@ -341,8 +341,9 @@ proc_fdinfo_instantiate(struct inode *dir, struct dentry *dentry,
 	return error;
 }
 
-static struct dentry *
-proc_lookupfdinfo(struct inode *dir, struct dentry *dentry, unsigned int flags)
+static struct dentry *proc_lookupfdinfo(struct inode *dir,
+					struct dentry *dentry,
+					struct nameidata *nd)
 {
 	return proc_lookupfd_common(dir, dentry, proc_fdinfo_instantiate);
 }
