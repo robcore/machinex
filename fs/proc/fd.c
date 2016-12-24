@@ -68,15 +68,15 @@ static const struct file_operations proc_fdinfo_file_operations = {
 	.release	= single_release,
 };
 
-static int tid_fd_revalidate(struct dentry *dentry, unsigned int flags)
+static int tid_fd_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
-	struct files_struct *files;
-	struct task_struct *task;
-	const struct cred *cred;
 	struct inode *inode;
+	struct task_struct *task;
 	int fd;
+	struct files_struct *files;
+	const struct cred *cred;
 
-	if (flags & LOOKUP_RCU)
+	if (nd && nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	inode = dentry->d_inode;
@@ -87,7 +87,6 @@ static int tid_fd_revalidate(struct dentry *dentry, unsigned int flags)
 		files = get_files_struct(task);
 		if (files) {
 			struct file *file;
-
 			rcu_read_lock();
 			file = fcheck_files(files, fd);
 			if (file) {
@@ -125,7 +124,6 @@ static int tid_fd_revalidate(struct dentry *dentry, unsigned int flags)
 		}
 		put_task_struct(task);
 	}
-
 	d_drop(dentry);
 	return 0;
 }
