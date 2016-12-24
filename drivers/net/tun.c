@@ -75,6 +75,7 @@
 #include <linux/tcp.h>
 #include <linux/ip.h>
 #include <net/ip.h>
+#include <net/cls_cgroup.h>
 
 #define META_MARK_BASE_LOWER 100
 #define META_UID_PID_MARK_BASE_LOWER 150
