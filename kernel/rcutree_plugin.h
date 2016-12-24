@@ -1746,6 +1746,26 @@ static void rcu_prepare_for_idle(int cpu)
 		return;
 	}
 
+	/* Adaptive-tick mode, where usermode execution is idle to RCU. */
+	if (!is_idle_task(current)) {
+		rdtp->dyntick_holdoff = jiffies - 1;
+		if (rcu_cpu_has_nonlazy_callbacks(cpu)) {
+			trace_rcu_prep_idle("User dyntick with callbacks");
+			rdtp->idle_gp_timer_expires =
+				round_up(jiffies + RCU_IDLE_GP_DELAY,
+					 RCU_IDLE_GP_DELAY);
+		} else if (rcu_cpu_has_callbacks(cpu)) {
+			rdtp->idle_gp_timer_expires =
+				round_jiffies(jiffies + RCU_IDLE_LAZY_GP_DELAY);
+			trace_rcu_prep_idle("User dyntick with lazy callbacks");
+		} else {
+			return;
+		}
+		tp = &rdtp->idle_gp_timer;
+		mod_timer_pinned(tp, rdtp->idle_gp_timer_expires);
+		return;
+	}
+
 	/*
 	 * If in holdoff mode, just return.  We will presumably have
 	 * refrained from disabling the scheduling-clock tick.
