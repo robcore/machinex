@@ -16,7 +16,7 @@
 #include <net/net_namespace.h>
 #include <net/sock.h>
 #include <net/fib_rules.h>
-#include <linux/uigid.h>
+#include <linux/uidgid.h>
 
 int fib_default_rule_add(struct fib_rules_ops *ops,
 			 u32 pref, u32 table, u32 flags)
