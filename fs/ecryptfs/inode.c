@@ -158,7 +158,7 @@ static int ecryptfs_interpose(struct dentry *lower_dentry,
  */
 static struct inode *
 ecryptfs_do_create(struct inode *directory_inode,
-		struct dentry *ecryptfs_dentry, umode_t mode)
+		   struct dentry *ecryptfs_dentry, umode_t mode)
 {
 	int rc;
 	struct dentry *lower_dentry;
@@ -197,7 +197,6 @@ out:
  * @directory_inode: inode of the new file's dentry's parent in ecryptfs
  * @ecryptfs_dentry: New file's dentry in ecryptfs
  * @mode: The mode of the new file
- * @nd: nameidata of ecryptfs' parent's dentry & vfsmount
  *
  * Creates the underlying file and the eCryptfs inode which will link to
  * it. It will also update the eCryptfs directory inode to mimic the
@@ -230,17 +229,9 @@ ecryptfs_do_create2(struct inode *directory_inode,
 		inode = ERR_CAST(lower_dir_dentry);
 		goto out;
 	}
-	if (nd) {
-		dentry_save = nd->path.dentry;
-		vfsmount_save = nd->path.mnt;
-		nd->path.dentry = lower_dentry;
-		nd->path.mnt = lower_mnt;
-	}
+
 	rc = vfs_create(lower_dir_dentry->d_inode, lower_dentry, mode, true);
-	if (nd) {
-		nd->path.dentry = dentry_save;
-		nd->path.mnt = vfsmount_save;
-	}
+
 	if (rc) {
 		printk(KERN_ERR "%s: Failure to create dentry in lower fs; "
 		       "rc = [%d]\n", __func__, rc);
@@ -375,7 +366,7 @@ ecryptfs_create(struct inode *directory_inode, struct dentry *ecryptfs_dentry,
 
 	if(ecryptfs_check_subfs(ecryptfs_dentry, NULL, "sdcardfs") == 1)
 		ecryptfs_inode = ecryptfs_do_create2(directory_inode, ecryptfs_dentry,
-				mode, NULL);
+				mode);
 	else
 		ecryptfs_inode = ecryptfs_do_create(directory_inode, ecryptfs_dentry, mode);
 
