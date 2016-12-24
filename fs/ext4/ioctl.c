@@ -227,7 +227,7 @@ group_extend_out:
 	case EXT4_IOC_MOVE_EXT: {
 		struct move_extent me;
 		struct file *donor_filp;
-		int err;
+		int err, fput_needed;
 
 		if (!(filp->f_mode & FMODE_READ) ||
 		    !(filp->f_mode & FMODE_WRITE))
@@ -238,7 +238,7 @@ group_extend_out:
 			return -EFAULT;
 		me.moved_len = 0;
 
-		donor_filp = fget(me.donor_fd);
+		donor_filp = fget_light(me.donor_fd, &fput_needed);
 		if (!donor_filp)
 			return -EBADF;
 
@@ -251,7 +251,8 @@ group_extend_out:
 			       EXT4_FEATURE_RO_COMPAT_BIGALLOC)) {
 			ext4_msg(sb, KERN_ERR,
 				 "Online defrag not supported with bigalloc");
-			return -EOPNOTSUPP;
+			err = -EOPNOTSUPP;
+			goto mext_out;
 		}
 
 		err = mnt_want_write_file(filp);
@@ -266,7 +267,7 @@ group_extend_out:
 				 &me, sizeof(me)))
 			err = -EFAULT;
 mext_out:
-		fput(donor_filp);
+		fput_light(donor_filp, fput_needed);
 		return err;
 	}
 

@@ -553,8 +553,9 @@ struct ib_uverbs_event_file *ib_uverbs_lookup_comp_file(int fd)
 {
 	struct ib_uverbs_event_file *ev_file = NULL;
 	struct file *filp;
+	int fput_needed;
 
-	filp = fget(fd);
+	filp = fget_light(fd, &fput_needed);
 	if (!filp)
 		return NULL;
 
@@ -570,7 +571,7 @@ struct ib_uverbs_event_file *ib_uverbs_lookup_comp_file(int fd)
 	kref_get(&ev_file->ref);
 
 out:
-	fput(filp);
+	fput_light(filp, fput_needed);
 	return ev_file;
 }
 

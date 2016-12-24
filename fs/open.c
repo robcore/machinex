@@ -144,16 +144,16 @@ COMPAT_SYSCALL_DEFINE2(truncate, const char __user *, path, compat_off_t, length
 
 static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 {
-	struct inode * inode;
+	struct inode *inode;
 	struct dentry *dentry;
-	struct file * file;
-	int error;
+	struct file *file;
+	int error, fput_needed;
 
 	error = -EINVAL;
 	if (length < 0)
 		goto out;
 	error = -EBADF;
-	file = fget(fd);
+	file = fget_light(fd, &fput_needed);
 	if (!file)
 		goto out;
 
@@ -182,7 +182,7 @@ static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 	if (!error)
 		error = do_truncate(dentry, length, ATTR_MTIME|ATTR_CTIME, file);
 out_putf:
-	fput(file);
+	fput_light(file, fput_needed);
 out:
 	return error;
 }
@@ -291,12 +291,12 @@ int do_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 SYSCALL_DEFINE(fallocate)(int fd, int mode, loff_t offset, loff_t len)
 {
 	struct file *file;
-	int error = -EBADF;
+	int error = -EBADF, fput_needed;
 
-	file = fget(fd);
+	file = fget_light(fd, &fput_needed);
 	if (file) {
 		error = do_fallocate(file, mode, offset, len);
-		fput(file);
+		fput_light(file, fput_needed);
 	}
 
 	return error;
@@ -613,23 +613,21 @@ out:
 
 SYSCALL_DEFINE3(fchown, unsigned int, fd, uid_t, user, gid_t, group)
 {
-	struct file * file;
-	int error = -EBADF;
-	struct dentry * dentry;
+	struct file *file;
+	int error = -EBADF, fput_needed;
 
-	file = fget(fd);
+	file = fget_light(fd, &fput_needed);
 	if (!file)
 		goto out;
 
 	error = mnt_want_write_file(file);
 	if (error)
 		goto out_fput;
-	dentry = file->f_path.dentry;
-	audit_inode(NULL, dentry);
+	audit_inode(NULL, file->f_path.dentry);
 	error = chown_common(&file->f_path, user, group);
 	mnt_drop_write_file(file);
 out_fput:
-	fput(file);
+	fput_light(file, fput_needed);
 out:
 	return error;
 }
