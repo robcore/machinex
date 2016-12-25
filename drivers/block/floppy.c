@@ -3610,9 +3610,7 @@ static void floppy_release(struct gendisk *disk, fmode_t mode)
 
 	mutex_lock(&floppy_mutex);
 	mutex_lock(&open_lock);
-	if (UDRS->fd_ref < 0)
-		UDRS->fd_ref = 0;
-	else if (!UDRS->fd_ref--) {
+	if (!UDRS->fd_ref--) {
 		DPRINT("floppy_release with fd_ref == 0");
 		UDRS->fd_ref = 0;
 	}
@@ -3646,13 +3644,7 @@ static int floppy_open(struct block_device *bdev, fmode_t mode)
 		set_bit(FD_VERIFY_BIT, &UDRS->flags);
 	}
 
-	if (UDRS->fd_ref == -1 || (UDRS->fd_ref && (mode & FMODE_EXCL)))
-		goto out2;
-
-	if (mode & FMODE_EXCL)
-		UDRS->fd_ref = -1;
-	else
-		UDRS->fd_ref++;
+	UDRS->fd_ref++;
 
 	opened_bdev[drive] = bdev;
 
@@ -3715,10 +3707,8 @@ static int floppy_open(struct block_device *bdev, fmode_t mode)
 	mutex_unlock(&floppy_mutex);
 	return 0;
 out:
-	if (UDRS->fd_ref < 0)
-		UDRS->fd_ref = 0;
-	else
-		UDRS->fd_ref--;
+	UDRS->fd_ref--;
+
 	if (!UDRS->fd_ref)
 		opened_bdev[drive] = NULL;
 out2:
