@@ -1906,11 +1906,6 @@ static int do_new_mount(struct path *path, const char *fstype, int flags,
 	if (!fstype)
 		return -EINVAL;
 
-	/* we need capabilities... */
-	user_ns = real_mount(path->mnt)->mnt_ns->user_ns;
-	if (!ns_capable(user_ns, CAP_SYS_ADMIN))
-		return -EPERM;
-
 	type = get_fs_type(fstype);
 	if (!type)
 		return -ENODEV;
@@ -1941,6 +1936,13 @@ static int do_new_mount(struct path *path, const char *fstype, int flags,
 	err = do_add_mount(real_mount(mnt), path, mnt_flags);
 	if (err)
 		mntput(mnt);
+#ifdef CONFIG_ASYNC_FSYNC
+	if (!err && ((!strcmp(fstype, "ext4") &&
+	    !strcmp(path->dentry->d_name.name, "data")) ||
+	     (!strcmp(fstype, "fuse") &&
+	    !strcmp(path->dentry->d_name.name, "emulated"))))
+                mnt->mnt_sb->fsync_flags |= FLAG_ASYNC_FSYNC;
+#endif
 	return err;
 }
 
