@@ -55,7 +55,7 @@ EXPORT_SYMBOL_GPL(tcp_death_row);
  * state.
  */
 
-static bool tcp_remember_stamp(struct sock *sk)
+static int tcp_remember_stamp(struct sock *sk)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
@@ -72,13 +72,13 @@ static bool tcp_remember_stamp(struct sock *sk)
 		}
 		if (release_it)
 			inet_putpeer(peer);
-		return true;
+		return 1;
 	}
 
-	return false;
+	return 0;
 }
 
-static bool tcp_tw_remember_stamp(struct inet_timewait_sock *tw)
+static int tcp_tw_remember_stamp(struct inet_timewait_sock *tw)
 {
 	struct sock *sk = (struct sock *) tw;
 	struct inet_peer *peer;
@@ -94,17 +94,17 @@ static bool tcp_tw_remember_stamp(struct inet_timewait_sock *tw)
 			peer->tcp_ts	   = tcptw->tw_ts_recent;
 		}
 		inet_putpeer(peer);
-		return true;
+		return 1;
 	}
-	return false;
+	return 0;
 }
 
-static bool tcp_in_window(u32 seq, u32 end_seq, u32 s_win, u32 e_win)
+static __inline__ int tcp_in_window(u32 seq, u32 end_seq, u32 s_win, u32 e_win)
 {
 	if (seq == s_win)
-		return true;
+		return 1;
 	if (after(end_seq, s_win) && before(seq, e_win))
-		return true;
+		return 1;
 	return seq == e_win && seq == end_seq;
 }
 
@@ -143,7 +143,7 @@ tcp_timewait_state_process(struct inet_timewait_sock *tw, struct sk_buff *skb,
 	struct tcp_options_received tmp_opt;
 	const u8 *hash_location;
 	struct tcp_timewait_sock *tcptw = tcp_twsk((struct sock *)tw);
-	bool paws_reject = false;
+	int paws_reject = 0;
 
 	tmp_opt.saw_tstamp = 0;
 	if (th->doff > (sizeof(*th) >> 2) && tcptw->tw_ts_recent_stamp) {
@@ -316,7 +316,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo)
 	struct inet_timewait_sock *tw = NULL;
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	const struct tcp_sock *tp = tcp_sk(sk);
-	bool recycle_ok = false;
+	int recycle_ok = 0;
 
 	if (tcp_death_row.sysctl_tw_recycle && tp->rx_opt.ts_recent_stamp)
 		recycle_ok = tcp_remember_stamp(sk);
@@ -574,7 +574,7 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 	struct sock *child;
 	const struct tcphdr *th = tcp_hdr(skb);
 	__be32 flg = tcp_flag_word(th) & (TCP_FLAG_RST|TCP_FLAG_SYN|TCP_FLAG_ACK);
-	bool paws_reject = false;
+	int paws_reject = 0;
 
 	tmp_opt.saw_tstamp = 0;
 	if (th->doff > (sizeof(struct tcphdr)>>2)) {

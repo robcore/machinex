@@ -535,7 +535,7 @@ static inline void tcp_mark_push(struct tcp_sock *tp, struct sk_buff *skb)
 	tp->pushed_seq = tp->write_seq;
 }
 
-static inline bool forced_push(const struct tcp_sock *tp)
+static inline int forced_push(const struct tcp_sock *tp)
 {
 	return after(tp->write_seq, tp->pushed_seq + (tp->max_window >> 1));
 }
@@ -1011,7 +1011,7 @@ new_segment:
 				if (err)
 					goto do_fault;
 			} else {
-				bool merge = false;
+				int merge = 0;
 				int i = skb_shinfo(skb)->nr_frags;
 				struct page *page = sk->sk_sndmsg_page;
 				int off;
@@ -1025,7 +1025,7 @@ new_segment:
 				    off != PAGE_SIZE) {
 					/* We can extend the last page
 					 * fragment. */
-					merge = true;
+					merge = 1;
 				} else if (i == MAX_SKB_FRAGS || !sg) {
 					/* Need to add new fragment and cannot
 					 * do this because interface is non-SG,
@@ -1207,7 +1207,7 @@ static int tcp_recv_urg(struct sock *sk, struct msghdr *msg, int len, int flags)
 void tcp_cleanup_rbuf(struct sock *sk, int copied)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
-	bool time_to_ack = false;
+	int time_to_ack = 0;
 
 	struct sk_buff *skb = skb_peek(&sk->sk_receive_queue);
 
@@ -1236,7 +1236,7 @@ void tcp_cleanup_rbuf(struct sock *sk, int copied)
 		      ((icsk->icsk_ack.pending & ICSK_ACK_PUSHED) &&
 		       !icsk->icsk_ack.pingpong)) &&
 		      !atomic_read(&sk->sk_rmem_alloc)))
-			time_to_ack = true;
+			time_to_ack = 1;
 	}
 
 	/* We send an ACK if we can now advertise a non-zero window
@@ -1258,7 +1258,7 @@ void tcp_cleanup_rbuf(struct sock *sk, int copied)
 			 * "Lots" means "at least twice" here.
 			 */
 			if (new_window && new_window >= 2 * rcv_window_now)
-				time_to_ack = true;
+				time_to_ack = 1;
 		}
 	}
 	if (time_to_ack)
@@ -1390,11 +1390,11 @@ int tcp_read_sock(struct sock *sk, read_descriptor_t *desc,
 				break;
 		}
 		if (tcp_hdr(skb)->fin) {
-			sk_eat_skb(sk, skb, false);
+			sk_eat_skb(sk, skb, 0);
 			++seq;
 			break;
 		}
-		sk_eat_skb(sk, skb, false);
+		sk_eat_skb(sk, skb, 0);
 		if (!desc->count)
 			break;
 		tp->copied_seq = seq;
@@ -1433,7 +1433,7 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	int target;		/* Read at least this many bytes */
 	long timeo;
 	struct task_struct *user_recv = NULL;
-	bool copied_early = false;
+	int copied_early = 0;
 	struct sk_buff *skb;
 	u32 urg_hole = 0;
 
@@ -1712,7 +1712,7 @@ do_prequeue:
 				dma_async_memcpy_issue_pending(tp->ucopy.dma_chan);
 
 				if ((offset + used) == skb->len)
-					copied_early = true;
+					copied_early = 1;
 
 			} else
 #endif
@@ -1746,7 +1746,7 @@ skip_copy:
 			goto found_fin_ok;
 		if (!(flags & MSG_PEEK)) {
 			sk_eat_skb(sk, skb, copied_early);
-			copied_early = false;
+			copied_early = 0;
 		}
 		continue;
 
@@ -1755,7 +1755,7 @@ skip_copy:
 		++*seq;
 		if (!(flags & MSG_PEEK)) {
 			sk_eat_skb(sk, skb, copied_early);
-			copied_early = false;
+			copied_early = 0;
 		}
 		break;
 	} while (len > 0);
@@ -2081,7 +2081,7 @@ EXPORT_SYMBOL(tcp_close);
 
 /* These states need RST on ABORT according to RFC793 */
 
-static inline bool tcp_need_reset(int state)
+static inline int tcp_need_reset(int state)
 {
 	return (1 << state) &
 	       (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT | TCPF_FIN_WAIT1 |
@@ -2970,13 +2970,13 @@ out_free:
 struct tcp_md5sig_pool __percpu *tcp_alloc_md5sig_pool(struct sock *sk)
 {
 	struct tcp_md5sig_pool __percpu *pool;
-	bool alloc = false;
+	int alloc = 0;
 
 retry:
 	spin_lock_bh(&tcp_md5sig_pool_lock);
 	pool = tcp_md5sig_pool;
 	if (tcp_md5sig_users++ == 0) {
-		alloc = true;
+		alloc = 1;
 		spin_unlock_bh(&tcp_md5sig_pool_lock);
 	} else if (!pool) {
 		tcp_md5sig_users--;

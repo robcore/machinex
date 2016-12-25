@@ -374,7 +374,7 @@ static void tcp_init_nondata_skb(struct sk_buff *skb, u32 seq, u8 flags)
 	TCP_SKB_CB(skb)->end_seq = seq;
 }
 
-static inline bool tcp_urg_mode(const struct tcp_sock *tp)
+static inline int tcp_urg_mode(const struct tcp_sock *tp)
 {
 	return tp->snd_una != tp->snd_up;
 }
@@ -1382,20 +1382,20 @@ static int tcp_init_tso_segs(const struct sock *sk, struct sk_buff *skb,
 }
 
 /* Minshall's variant of the Nagle send check. */
-static inline bool tcp_minshall_check(const struct tcp_sock *tp)
+static inline int tcp_minshall_check(const struct tcp_sock *tp)
 {
 	return after(tp->snd_sml, tp->snd_una) &&
 		!after(tp->snd_sml, tp->snd_nxt);
 }
 
-/* Return false, if packet can be sent now without violation Nagle's rules:
+/* Return 0, if packet can be sent now without violation Nagle's rules:
  * 1. It is full sized.
  * 2. Or it contains FIN. (already checked by caller)
  * 3. Or TCP_CORK is not set, and TCP_NODELAY is set.
  * 4. Or TCP_CORK is not set, and all sent packets are ACKed.
  *    With Minshall's modification: all sent small packets are ACKed.
  */
-static inline bool tcp_nagle_check(const struct tcp_sock *tp,
+static inline int tcp_nagle_check(const struct tcp_sock *tp,
 				  const struct sk_buff *skb,
 				  unsigned mss_now, int nonagle)
 {
@@ -1404,11 +1404,11 @@ static inline bool tcp_nagle_check(const struct tcp_sock *tp,
 		 (!nonagle && tp->packets_out && tcp_minshall_check(tp)));
 }
 
-/* Return true if the Nagle test allows this packet to be
+/* Return non-zero if the Nagle test allows this packet to be
  * sent now.
  */
-static inline bool tcp_nagle_test(const struct tcp_sock *tp, const struct sk_buff *skb,
-				  unsigned int cur_mss, int nonagle)
+static inline int tcp_nagle_test(const struct tcp_sock *tp, const struct sk_buff *skb,
+				 unsigned int cur_mss, int nonagle)
 {
 	/* Nagle rule does not apply to frames, which sit in the middle of the
 	 * write_queue (they have no chances to get new data).
@@ -1417,25 +1417,24 @@ static inline bool tcp_nagle_test(const struct tcp_sock *tp, const struct sk_buf
 	 * argument based upon the location of SKB in the send queue.
 	 */
 	if (nonagle & TCP_NAGLE_PUSH)
-		return true;
+		return 1;
 
 	/* Don't use the nagle rule for urgent data (or for the final FIN).
 	 * Nagle can be ignored during F-RTO too (see RFC4138).
 	 */
 	if (tcp_urg_mode(tp) || (tp->frto_counter == 2) ||
 	    (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN))
-		return true;
+		return 1;
 
 	if (!tcp_nagle_check(tp, skb, cur_mss, nonagle))
-		return true;
+		return 1;
 
-	return false;
+	return 0;
 }
 
 /* Does at least the first segment of SKB fit into the send window? */
-static bool tcp_snd_wnd_test(const struct tcp_sock *tp,
-			     const struct sk_buff *skb,
-			     unsigned int cur_mss)
+static inline int tcp_snd_wnd_test(const struct tcp_sock *tp, const struct sk_buff *skb,
+				   unsigned int cur_mss)
 {
 	u32 end_seq = TCP_SKB_CB(skb)->end_seq;
 
@@ -1468,7 +1467,7 @@ static unsigned int tcp_snd_test(const struct sock *sk, struct sk_buff *skb,
 }
 
 /* Test if sending is allowed right now. */
-bool tcp_may_send_now(struct sock *sk)
+int tcp_may_send_now(struct sock *sk)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
 	struct sk_buff *skb = tcp_send_head(sk);
@@ -1538,7 +1537,7 @@ static int tso_fragment(struct sock *sk, struct sk_buff *skb, unsigned int len,
  *
  * This algorithm is from John Heffner.
  */
-static bool tcp_tso_should_defer(struct sock *sk, struct sk_buff *skb)
+static int tcp_tso_should_defer(struct sock *sk, struct sk_buff *skb)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	const struct inet_connection_sock *icsk = inet_csk(sk);
@@ -1602,11 +1601,11 @@ static bool tcp_tso_should_defer(struct sock *sk, struct sk_buff *skb)
 	if (!tp->tso_deferred)
 		tp->tso_deferred = 1 | (jiffies << 1);
 
-	return true;
+	return 1;
 
 send_now:
 	tp->tso_deferred = 0;
-	return false;
+	return 0;
 }
 
 /* Create a new MTU probe if we are ready.
@@ -1748,11 +1747,11 @@ static int tcp_mtu_probe(struct sock *sk)
  * snd_up-64k-mss .. snd_up cannot be large. However, taking into
  * account rare use of URG, this is not a big flaw.
  *
- * Returns true, if no segments are in flight and we have queued segments,
- * but cannot send anything now because of SWS or another problem.
+ * Returns 1, if no segments are in flight and we have queued segments, but
+ * cannot send anything now because of SWS or another problem.
  */
-static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
-			   int push_one, gfp_t gfp)
+static int tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
+			  int push_one, gfp_t gfp)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct sk_buff *skb;
@@ -1766,7 +1765,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		/* Do MTU probing. */
 		result = tcp_mtu_probe(sk);
 		if (!result) {
-			return false;
+			return 0;
 		} else if (result > 0) {
 			sent_pkts = 1;
 		}
@@ -1827,7 +1826,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 	if (likely(sent_pkts)) {
 		tcp_cwnd_validate(sk);
-		return false;
+		return 0;
 	}
 	return !tp->packets_out && tcp_send_head(sk);
 }
@@ -2026,22 +2025,22 @@ static void tcp_collapse_retrans(struct sock *sk, struct sk_buff *skb)
 }
 
 /* Check if coalescing SKBs is legal. */
-static bool tcp_can_collapse(const struct sock *sk, const struct sk_buff *skb)
+static int tcp_can_collapse(const struct sock *sk, const struct sk_buff *skb)
 {
 	if (tcp_skb_pcount(skb) > 1)
-		return false;
+		return 0;
 	/* TODO: SACK collapsing could be used to remove this condition */
 	if (skb_shinfo(skb)->nr_frags != 0)
-		return false;
+		return 0;
 	if (skb_cloned(skb))
-		return false;
+		return 0;
 	if (skb == tcp_send_head(sk))
-		return false;
+		return 0;
 	/* Some heurestics for collapsing over SACK'd could be invented */
 	if (TCP_SKB_CB(skb)->sacked & TCPCB_SACKED_ACKED)
-		return false;
+		return 0;
 
-	return true;
+	return 1;
 }
 
 /* Collapse packets in the retransmit queue to make to create
@@ -2052,7 +2051,7 @@ static void tcp_retrans_try_collapse(struct sock *sk, struct sk_buff *to,
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct sk_buff *skb = to, *tmp;
-	bool first = true;
+	int first = 1;
 
 	if (!sysctl_tcp_retrans_collapse)
 		return;
@@ -2066,7 +2065,7 @@ static void tcp_retrans_try_collapse(struct sock *sk, struct sk_buff *to,
 		space -= skb->len;
 
 		if (first) {
-			first = false;
+			first = 0;
 			continue;
 		}
 
@@ -2215,18 +2214,18 @@ int tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 /* Check if we forward retransmits are possible in the current
  * window/congestion state.
  */
-static bool tcp_can_forward_retransmit(struct sock *sk)
+static int tcp_can_forward_retransmit(struct sock *sk)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	const struct tcp_sock *tp = tcp_sk(sk);
 
 	/* Forward retransmissions are possible only during Recovery. */
 	if (icsk->icsk_ca_state != TCP_CA_Recovery)
-		return false;
+		return 0;
 
 	/* No forward retransmissions in Reno are possible. */
 	if (tcp_is_reno(tp))
-		return false;
+		return 0;
 
 	/* Yeah, we have to make difficult choice between forward transmission
 	 * and retransmission... Both ways have their merits...
@@ -2237,9 +2236,9 @@ static bool tcp_can_forward_retransmit(struct sock *sk)
 	 */
 
 	if (tcp_may_send_now(sk))
-		return false;
+		return 0;
 
-	return true;
+	return 1;
 }
 
 /* This gets called after a retransmit timeout, and the initially
