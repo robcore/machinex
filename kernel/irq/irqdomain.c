@@ -324,6 +324,7 @@ EXPORT_SYMBOL_GPL(irq_domain_add_nomap);
 /**
  * irq_domain_add_tree()
  * @of_node: pointer to interrupt controller's device tree node.
+ * @size: Number of interrupts in the domain.
  * @ops: map/unmap domain callbacks
  *
  * Note: The radix tree will be allocated later during boot automatically
