@@ -1116,7 +1116,7 @@ unlock:
 		goto fail;
 	}
 
-	pr_info("gpiochip_add: registered GPIOs %d to %d on device: %s\n",
+	pr_debug("gpiochip_add: registered GPIOs %d to %d on device: %s\n",
 		chip->base, chip->base + chip->ngpio - 1,
 		chip->label ? : "generic");
 
