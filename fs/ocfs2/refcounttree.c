@@ -4466,11 +4466,20 @@ int ocfs2_reflink_ioctl(struct inode *inode,
 		goto out_dput;
 	}
 
+	error = mnt_want_write(new_path.mnt);
+	if (error) {
+		mlog_errno(error);
+		goto out_dput;
+	}
+
 	error = ocfs2_vfs_reflink(old_path.dentry,
 				  new_path.dentry->d_inode,
 				  new_dentry, preserve);
+	mnt_drop_write(new_path.mnt);
 out_dput:
-	done_path_create(&new_path, new_dentry);
+	dput(new_dentry);
+	mutex_unlock(&new_path.dentry->d_inode->i_mutex);
+	path_put(&new_path);
 out:
 	path_put(&old_path);
 

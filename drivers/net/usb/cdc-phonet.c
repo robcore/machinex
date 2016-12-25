@@ -457,7 +457,6 @@ static struct usb_driver usbpn_driver = {
 	.probe =	usbpn_probe,
 	.disconnect =	usbpn_disconnect,
 	.id_table =	usbpn_ids,
-	.disable_hub_initiated_lpm = 1,
 };
 
 module_usb_driver(usbpn_driver);

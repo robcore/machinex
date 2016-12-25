@@ -55,7 +55,6 @@
 #include <linux/cpu.h>
 #include <linux/mutex.h>
 #include <linux/async.h>
-#include <asm/unaligned.h>
 
 #include <scsi/scsi.h>
 #include <scsi/scsi_cmnd.h>
@@ -90,12 +89,6 @@ static void scsi_done(struct scsi_cmnd *cmd);
 unsigned int scsi_logging_level;
 #if defined(CONFIG_SCSI_LOGGING)
 EXPORT_SYMBOL(scsi_logging_level);
-#endif
-
-#if IS_ENABLED(CONFIG_PM) || IS_ENABLED(CONFIG_BLK_DEV_SD)
-/* sd and scsi_pm need to coordinate flushing async actions */
-LIST_HEAD(scsi_sd_probe_domain);
-EXPORT_SYMBOL(scsi_sd_probe_domain);
 #endif
 
 /* NB: These are exposed through /proc/scsi/scsi and form part of the ABI.
@@ -1361,7 +1354,6 @@ static void __exit exit_scsi(void)
 	scsi_exit_devinfo();
 	scsi_exit_procfs();
 	scsi_exit_queue();
-	async_unregister_domain(scsi_sd_probe_domain);
 }
 
 subsys_initcall(init_scsi);

@@ -1064,11 +1064,6 @@ static int init_inodecache(void)
 
 static void destroy_inodecache(void)
 {
-	/*
-	 * Make sure all delayed rcu free inodes are flushed before we
-	 * destroy cache.
-	 */
-	rcu_barrier();
 	kmem_cache_destroy(ext4_inode_cachep);
 }
 
@@ -2180,12 +2175,10 @@ static void ext4_orphan_cleanup(struct super_block *sb,
 	}
 
 	if (EXT4_SB(sb)->s_mount_state & EXT4_ERROR_FS) {
-		/* don't clear list on RO mount w/ errors */
-		if (es->s_last_orphan && !(s_flags & MS_RDONLY)) {
+		if (es->s_last_orphan)
 			jbd_debug(1, "Errors on filesystem, "
 				  "clearing orphan list.\n");
-			es->s_last_orphan = 0;
-		}
+		es->s_last_orphan = 0;
 		jbd_debug(1, "Skipping orphan recovery on fs with errors.\n");
 		return;
 	}
@@ -3808,7 +3801,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 		goto no_journal;
 	}
 
-	if (EXT4_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_64BIT) &&
+	if (ext4_blocks_count(es) > 0xffffffffULL &&
 	    !jbd2_journal_set_features(EXT4_SB(sb)->s_journal, 0, 0,
 				       JBD2_FEATURE_INCOMPAT_64BIT)) {
 		ext4_msg(sb, KERN_ERR, "Failed to set 64-bit journal feature");

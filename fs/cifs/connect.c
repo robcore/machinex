@@ -103,7 +103,7 @@ enum {
 	Opt_srcaddr, Opt_prefixpath,
 	Opt_iocharset, Opt_sockopt,
 	Opt_netbiosname, Opt_servern,
-	Opt_ver, Opt_vers, Opt_sec, Opt_cache,
+	Opt_ver, Opt_sec,
 
 	/* Mount options to be ignored */
 	Opt_ignore,
@@ -213,9 +213,9 @@ static const match_table_t cifs_mount_option_tokens = {
 	{ Opt_netbiosname, "netbiosname=%s" },
 	{ Opt_servern, "servern=%s" },
 	{ Opt_ver, "ver=%s" },
-	{ Opt_vers, "vers=%s" },
+	{ Opt_ver, "vers=%s" },
+	{ Opt_ver, "version=%s" },
 	{ Opt_sec, "sec=%s" },
-	{ Opt_cache, "cache=%s" },
 
 	{ Opt_ignore, "cred" },
 	{ Opt_ignore, "credentials" },
@@ -263,25 +263,6 @@ static const match_table_t cifs_secflavor_tokens = {
 	{ Opt_sec_none, "none" },
 
 	{ Opt_sec_err, NULL }
-};
-
-/* cache flavors */
-enum {
-	Opt_cache_loose,
-	Opt_cache_strict,
-	Opt_cache_none,
-	Opt_cache_err
-};
-
-static const match_table_t cifs_cacheflavor_tokens = {
-	{ Opt_cache_loose, "loose" },
-	{ Opt_cache_strict, "strict" },
-	{ Opt_cache_none, "none" },
-	{ Opt_cache_err, NULL }
-};
-
-static const match_table_t cifs_smb_version_tokens = {
-	{ Smb_1, SMB1_VERSION_STRING },
 };
 
 static int ip_connect(struct TCP_Server_Info *server);
@@ -1211,48 +1192,6 @@ static int cifs_parse_security_flavors(char *value,
 }
 
 static int
-cifs_parse_cache_flavor(char *value, struct smb_vol *vol)
-{
-	substring_t args[MAX_OPT_ARGS];
-
-	switch (match_token(value, cifs_cacheflavor_tokens, args)) {
-	case Opt_cache_loose:
-		vol->direct_io = false;
-		vol->strict_io = false;
-		break;
-	case Opt_cache_strict:
-		vol->direct_io = false;
-		vol->strict_io = true;
-		break;
-	case Opt_cache_none:
-		vol->direct_io = true;
-		vol->strict_io = false;
-		break;
-	default:
-		cERROR(1, "bad cache= option: %s", value);
-		return 1;
-	}
-	return 0;
-}
-
-static int
-cifs_parse_smb_version(char *value, struct smb_vol *vol)
-{
-	substring_t args[MAX_OPT_ARGS];
-
-	switch (match_token(value, cifs_smb_version_tokens, args)) {
-	case Smb_1:
-		vol->ops = &smb1_operations;
-		vol->vals = &smb1_values;
-		break;
-	default:
-		cERROR(1, "Unknown vers= option specified: %s", value);
-		return 1;
-	}
-	return 0;
-}
-
-static int
 cifs_parse_mount_options(const char *mountdata, const char *devname,
 			 struct smb_vol *vol)
 {
@@ -1270,8 +1209,6 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 	char *string = NULL;
 	char *tmp_end, *value;
 	char delim;
-	bool cache_specified = false;
-	static bool cache_warned = false;
 
 	separator[0] = ',';
 	separator[1] = 0;
@@ -1304,10 +1241,6 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 	vol->server_ino = 1;
 
 	vol->actimeo = CIFS_DEF_ACTIMEO;
-
-	/* FIXME: add autonegotiation -- for now, SMB1 is default */
-	vol->ops = &smb1_operations;
-	vol->vals = &smb1_values;
 
 	if (!mountdata)
 		goto cifs_parse_mount_err;
@@ -1493,20 +1426,10 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 			vol->seal = 1;
 			break;
 		case Opt_direct:
-			cache_specified = true;
-			vol->direct_io = true;
-			vol->strict_io = false;
-			cERROR(1, "The \"directio\" option will be removed in "
-				  "3.7. Please switch to the \"cache=none\" "
-				  "option.");
+			vol->direct_io = 1;
 			break;
 		case Opt_strictcache:
-			cache_specified = true;
-			vol->direct_io = false;
-			vol->strict_io = true;
-			cERROR(1, "The \"strictcache\" option will be removed "
-				"in 3.7. Please switch to the \"cache=strict\" "
-				"option.");
+			vol->strict_io = 1;
 			break;
 		case Opt_noac:
 			printk(KERN_WARNING "CIFS: Mount option noac not "
@@ -1923,7 +1846,8 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 			if (string == NULL)
 				goto out_nomem;
 
-			if (strnicmp(string, "1", 1) == 0) {
+			if (strnicmp(string, "cifs", 4) == 0 ||
+			    strnicmp(string, "1", 1) == 0) {
 				/* This is the default */
 				break;
 			}
@@ -1931,29 +1855,12 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 			printk(KERN_WARNING "CIFS: Invalid version"
 					    " specified\n");
 			goto cifs_parse_mount_err;
-		case Opt_vers:
-			string = match_strdup(args);
-			if (string == NULL)
-				goto out_nomem;
-
-			if (cifs_parse_smb_version(string, vol) != 0)
-				goto cifs_parse_mount_err;
-			break;
 		case Opt_sec:
 			string = match_strdup(args);
 			if (string == NULL)
 				goto out_nomem;
 
 			if (cifs_parse_security_flavors(string, vol) != 0)
-				goto cifs_parse_mount_err;
-			break;
-		case Opt_cache:
-			cache_specified = true;
-			string = match_strdup(args);
-			if (string == NULL)
-				goto out_nomem;
-
-			if (cifs_parse_cache_flavor(string, vol) != 0)
 				goto cifs_parse_mount_err;
 			break;
 		default:
@@ -1998,14 +1905,6 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 	else if (override_gid == 1)
 		printk(KERN_NOTICE "CIFS: ignoring forcegid mount option "
 				   "specified with no gid= option.\n");
-
-	/* FIXME: remove this block in 3.7 */
-	if (!cache_specified && !cache_warned) {
-		cache_warned = true;
-		printk(KERN_NOTICE "CIFS: no cache= option specified, using "
-				   "\"cache=loose\". This default will change "
-				   "to \"cache=strict\" in 3.7.\n");
-	}
 
 	kfree(mountdata_copy);
 	return 0;
@@ -2167,9 +2066,6 @@ match_security(struct TCP_Server_Info *server, struct smb_vol *vol)
 static int match_server(struct TCP_Server_Info *server, struct sockaddr *addr,
 			 struct smb_vol *vol)
 {
-	if ((server->vals != vol->vals) || (server->ops != vol->ops))
-		return 0;
-
 	if (!net_eq(cifs_net_ns(server), current->nsproxy->net_ns))
 		return 0;
 
@@ -2292,8 +2188,6 @@ cifs_get_tcp_session(struct smb_vol *volume_info)
 		goto out_err;
 	}
 
-	tcp_ses->ops = volume_info->ops;
-	tcp_ses->vals = volume_info->vals;
 	cifs_set_net_ns(tcp_ses, get_net(current->nsproxy->net_ns));
 	tcp_ses->hostname = extract_hostname(volume_info->UNC);
 	if (IS_ERR(tcp_ses->hostname)) {
@@ -3714,7 +3608,6 @@ cifs_setup_volume_info(struct smb_vol *volume_info, char *mount_data,
 
 	if (cifs_parse_mount_options(mount_data, devname, volume_info))
 		return -EINVAL;
-
 
 	if (volume_info->nullauth) {
 		cFYI(1, "Anonymous login");

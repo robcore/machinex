@@ -1740,20 +1740,16 @@ int ubifs_lpt_init(struct ubifs_info *c, int rd, int wr)
 	if (rd) {
 		err = lpt_init_rd(c);
 		if (err)
-			goto out_err;
+			return err;
 	}
 
 	if (wr) {
 		err = lpt_init_wr(c);
 		if (err)
-			goto out_err;
+			return err;
 	}
 
 	return 0;
-
-out_err:
-	ubifs_lpt_free(c, 0);
-	return err;
 }
 
 /**

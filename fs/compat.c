@@ -873,20 +873,22 @@ asmlinkage long compat_sys_old_readdir(unsigned int fd,
 	struct compat_old_linux_dirent __user *dirent, unsigned int count)
 {
 	int error;
-	struct fd f = fdget(fd);
+	struct file *file;
+	int fput_needed;
 	struct compat_readdir_callback buf;
 
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
 
 	buf.result = 0;
 	buf.dirent = dirent;
 
-	error = vfs_readdir(f.file, compat_fillonedir, &buf);
+	error = vfs_readdir(file, compat_fillonedir, &buf);
 	if (buf.result)
 		error = buf.result;
 
-	fdput(f);
+	fput_light(file, fput_needed);
 	return error;
 }
 
@@ -950,16 +952,17 @@ efault:
 asmlinkage long compat_sys_getdents(unsigned int fd,
 		struct compat_linux_dirent __user *dirent, unsigned int count)
 {
-	struct fd f;
+	struct file * file;
 	struct compat_linux_dirent __user * lastdirent;
 	struct compat_getdents_callback buf;
+	int fput_needed;
 	int error;
 
 	if (!access_ok(VERIFY_WRITE, dirent, count))
 		return -EFAULT;
 
-	f = fdget(fd);
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
 
 	buf.current_dir = dirent;
@@ -967,17 +970,17 @@ asmlinkage long compat_sys_getdents(unsigned int fd,
 	buf.count = count;
 	buf.error = 0;
 
-	error = vfs_readdir(f.file, compat_filldir, &buf);
+	error = vfs_readdir(file, compat_filldir, &buf);
 	if (error >= 0)
 		error = buf.error;
 	lastdirent = buf.previous;
 	if (lastdirent) {
-		if (put_user(f.file->f_pos, &lastdirent->d_off))
+		if (put_user(file->f_pos, &lastdirent->d_off))
 			error = -EFAULT;
 		else
 			error = count - buf.count;
 	}
-	fdput(f);
+	fput_light(file, fput_needed);
 	return error;
 }
 
@@ -1035,16 +1038,17 @@ efault:
 asmlinkage long compat_sys_getdents64(unsigned int fd,
 		struct linux_dirent64 __user * dirent, unsigned int count)
 {
-	struct fd f;
+	struct file * file;
 	struct linux_dirent64 __user * lastdirent;
 	struct compat_getdents_callback64 buf;
+	int fput_needed;
 	int error;
 
 	if (!access_ok(VERIFY_WRITE, dirent, count))
 		return -EFAULT;
 
-	f = fdget(fd);
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
 
 	buf.current_dir = dirent;
@@ -1052,18 +1056,18 @@ asmlinkage long compat_sys_getdents64(unsigned int fd,
 	buf.count = count;
 	buf.error = 0;
 
-	error = vfs_readdir(f.file, compat_filldir64, &buf);
+	error = vfs_readdir(file, compat_filldir64, &buf);
 	if (error >= 0)
 		error = buf.error;
 	lastdirent = buf.previous;
 	if (lastdirent) {
-		typeof(lastdirent->d_off) d_off = f.file->f_pos;
+		typeof(lastdirent->d_off) d_off = file->f_pos;
 		if (__put_user_unaligned(d_off, &lastdirent->d_off))
 			error = -EFAULT;
 		else
 			error = count - buf.count;
 	}
-	fdput(f);
+	fput_light(file, fput_needed);
 	return error;
 }
 #endif /* ! __ARCH_OMIT_COMPAT_SYS_GETDENTS64 */
@@ -1148,16 +1152,18 @@ asmlinkage ssize_t
 compat_sys_readv(unsigned long fd, const struct compat_iovec __user *vec,
 		 unsigned long vlen)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
+	int fput_needed;
 	ssize_t ret;
 	loff_t pos;
 
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
-	pos = f.file->f_pos;
-	ret = compat_readv(f.file, vec, vlen, &pos);
-	f.file->f_pos = pos;
-	fdput(f);
+	pos = file->f_pos;
+	ret = compat_readv(file, vec, vlen, &pos);
+	file->f_pos = pos;
+	fput_light(file, fput_needed);
 	return ret;
 }
 
@@ -1165,18 +1171,19 @@ asmlinkage ssize_t
 compat_sys_preadv64(unsigned long fd, const struct compat_iovec __user *vec,
 		    unsigned long vlen, loff_t pos)
 {
-	struct fd f;
+	struct file *file;
+	int fput_needed;
 	ssize_t ret;
 
 	if (pos < 0)
 		return -EINVAL;
-	f = fdget(fd);
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
 	ret = -ESPIPE;
-	if (f.file->f_mode & FMODE_PREAD)
-		ret = compat_readv(f.file, vec, vlen, &pos);
-	fdput(f);
+	if (file->f_mode & FMODE_PREAD)
+		ret = compat_readv(file, vec, vlen, &pos);
+	fput_light(file, fput_needed);
 	return ret;
 }
 
@@ -1214,16 +1221,18 @@ asmlinkage ssize_t
 compat_sys_writev(unsigned long fd, const struct compat_iovec __user *vec,
 		  unsigned long vlen)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
+	int fput_needed;
 	ssize_t ret;
 	loff_t pos;
 
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
-	pos = f.file->f_pos;
-	ret = compat_writev(f.file, vec, vlen, &pos);
-	f.file->f_pos = pos;
-	fdput(f);
+	pos = file->f_pos;
+	ret = compat_writev(file, vec, vlen, &pos);
+	file->f_pos = pos;
+	fput_light(file, fput_needed);
 	return ret;
 }
 
@@ -1231,18 +1240,19 @@ asmlinkage ssize_t
 compat_sys_pwritev64(unsigned long fd, const struct compat_iovec __user *vec,
 		     unsigned long vlen, loff_t pos)
 {
-	struct fd f;
+	struct file *file;
+	int fput_needed;
 	ssize_t ret;
 
 	if (pos < 0)
 		return -EINVAL;
-	f = fdget(fd);
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
 	ret = -ESPIPE;
-	if (f.file->f_mode & FMODE_PWRITE)
-		ret = compat_writev(f.file, vec, vlen, &pos);
-	fdput(f);
+	if (file->f_mode & FMODE_PWRITE)
+		ret = compat_writev(file, vec, vlen, &pos);
+	fput_light(file, fput_needed);
 	return ret;
 }
 

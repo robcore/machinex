@@ -327,7 +327,6 @@ static struct usb_driver cx82310_driver = {
 	.disconnect	= usbnet_disconnect,
 	.suspend	= usbnet_suspend,
 	.resume		= usbnet_resume,
-	.disable_hub_initiated_lpm = 1,
 };
 
 module_usb_driver(cx82310_driver);

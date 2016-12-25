@@ -736,7 +736,9 @@ MODULE_PARM_DESC(irq, "SEEQ 8005 IRQ number");
 int __init init_module(void)
 {
 	dev_seeq = seeq8005_probe(-1);
-	return PTR_RET(dev_seeq);
+	if (IS_ERR(dev_seeq))
+		return PTR_ERR(dev_seeq);
+	return 0;
 }
 
 void __exit cleanup_module(void)

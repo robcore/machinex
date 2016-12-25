@@ -47,7 +47,7 @@ static int anatop_set_voltage(struct regulator_dev *reg, int min_uV,
 				  int max_uV, unsigned *selector)
 {
 	struct anatop_regulator *anatop_reg = rdev_get_drvdata(reg);
-	u32 val, sel, mask;
+	u32 val, sel;
 	int uv;
 
 	uv = min_uV;
@@ -71,10 +71,11 @@ static int anatop_set_voltage(struct regulator_dev *reg, int min_uV,
 	val = anatop_reg->min_bit_val + sel;
 	*selector = sel;
 	dev_dbg(&reg->dev, "%s: calculated val %d\n", __func__, val);
-	mask = ((1 << anatop_reg->vol_bit_width) - 1) <<
-		anatop_reg->vol_bit_shift;
-	val <<= anatop_reg->vol_bit_shift;
-	anatop_write_reg(anatop_reg->mfd, anatop_reg->control_reg, val, mask);
+	anatop_set_bits(anatop_reg->mfd,
+			anatop_reg->control_reg,
+			anatop_reg->vol_bit_shift,
+			anatop_reg->vol_bit_width,
+			val);
 
 	return 0;
 }
@@ -87,9 +88,10 @@ static int anatop_get_voltage_sel(struct regulator_dev *reg)
 	if (!anatop_reg->control_reg)
 		return -ENOTSUPP;
 
-	val = anatop_read_reg(anatop_reg->mfd, anatop_reg->control_reg);
-	val = (val & ((1 << anatop_reg->vol_bit_width) - 1)) >>
-		anatop_reg->vol_bit_shift;
+	val = anatop_get_bits(anatop_reg->mfd,
+			      anatop_reg->control_reg,
+			      anatop_reg->vol_bit_shift,
+			      anatop_reg->vol_bit_width);
 
 	return val - anatop_reg->min_bit_val;
 }

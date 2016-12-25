@@ -761,7 +761,6 @@ static struct usb_driver bfusb_driver = {
 	.probe		= bfusb_probe,
 	.disconnect	= bfusb_disconnect,
 	.id_table	= bfusb_table,
-	.disable_hub_initiated_lpm = 1,
 };
 
 static int __init bfusb_init(void)

@@ -988,7 +988,6 @@ static struct usb_driver sierra_net_driver = {
 	.suspend = usbnet_suspend,
 	.resume = usbnet_resume,
 	.no_dynamic_id = 1,
-	.disable_hub_initiated_lpm = 1,
 };
 
 module_usb_driver(sierra_net_driver);

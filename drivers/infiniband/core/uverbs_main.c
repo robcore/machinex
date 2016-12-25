@@ -552,15 +552,16 @@ struct file *ib_uverbs_alloc_event_file(struct ib_uverbs_file *uverbs_file,
 struct ib_uverbs_event_file *ib_uverbs_lookup_comp_file(int fd)
 {
 	struct ib_uverbs_event_file *ev_file = NULL;
-	struct fd f = fdget(fd);
+	struct file *filp;
 
-	if (!f.file)
+	filp = fget(fd);
+	if (!filp)
 		return NULL;
 
-	if (f.file->f_op != &uverbs_event_fops)
+	if (filp->f_op != &uverbs_event_fops)
 		goto out;
 
-	ev_file = f.file->private_data;
+	ev_file = filp->private_data;
 	if (ev_file->is_async) {
 		ev_file = NULL;
 		goto out;
@@ -569,7 +570,7 @@ struct ib_uverbs_event_file *ib_uverbs_lookup_comp_file(int fd)
 	kref_get(&ev_file->ref);
 
 out:
-	fdput(f);
+	fput(filp);
 	return ev_file;
 }
 

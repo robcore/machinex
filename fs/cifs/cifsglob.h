@@ -152,28 +152,6 @@ struct cifs_cred {
  *****************************************************************
  */
 
-enum smb_version {
-	Smb_1 = 1,
-};
-
-struct mid_q_entry;
-struct TCP_Server_Info;
-struct cifsFileInfo;
-
-struct smb_version_operations {
-	int (*send_cancel)(struct TCP_Server_Info *, void *,
-			   struct mid_q_entry *);
-	bool (*compare_fids)(struct cifsFileInfo *, struct cifsFileInfo *);
-};
-
-struct smb_version_values {
-	char		*version_string;
-	__u32		large_lock_type;
-	__u32		exclusive_lock_type;
-	__u32		shared_lock_type;
-	__u32		unlock_lock_type;
-};
-
 struct smb_vol {
 	char *username;
 	char *password;
@@ -229,8 +207,6 @@ struct smb_vol {
 	bool sockopt_tcp_nodelay:1;
 	unsigned short int port;
 	unsigned long actimeo; /* attribute cache timeout (jiffies) */
-	struct smb_version_operations *ops;
-	struct smb_version_values *vals;
 	char *prepath;
 	struct sockaddr_storage srcaddr; /* allow binding to a local IP */
 	struct nls_table *local_nls;
@@ -268,8 +244,6 @@ struct TCP_Server_Info {
 	int srv_count; /* reference counter */
 	/* 15 character server name + 0x20 16th byte indicating type = srv */
 	char server_RFC1001_name[RFC1001_NAME_LEN_WITH_NULL];
-	struct smb_version_operations	*ops;
-	struct smb_version_values	*vals;
 	enum statusEnum tcpStatus; /* what we think the status is */
 	char *hostname; /* hostname portion of UNC string */
 	struct socket *ssocket;
@@ -575,7 +549,8 @@ struct cifsLockInfo {
 	__u64 offset;
 	__u64 length;
 	__u32 pid;
-	__u32 type;
+	__u8 type;
+	__u16 netfid;
 };
 
 /*
@@ -600,10 +575,6 @@ struct cifs_search_info {
 struct cifsFileInfo {
 	struct list_head tlist;	/* pointer to next fid owned by tcon */
 	struct list_head flist;	/* next fid (file instance) for this inode */
-	struct list_head llist;	/*
-				 * brlocks held by this fid, protected by
-				 * lock_mutex from cifsInodeInfo structure
-				 */
 	unsigned int uid;	/* allows finding which FileInfo structure */
 	__u32 pid;		/* process id who opened file */
 	__u16 netfid;		/* file id from remote */
@@ -646,12 +617,9 @@ void cifsFileInfo_put(struct cifsFileInfo *cifs_file);
  */
 
 struct cifsInodeInfo {
+	struct list_head llist;		/* brlocks for this inode */
 	bool can_cache_brlcks;
-	struct mutex lock_mutex;	/*
-					 * protect the field above and llist
-					 * from every cifsFileInfo structure
-					 * from openFileList
-					 */
+	struct mutex lock_mutex;	/* protect two fields above */
 	/* BB add in lists for dirty pages i.e. write caching info for oplock */
 	struct list_head openFileList;
 	__u32 cifsAttrs; /* e.g. DOS archive bit, sparse, compressed, system */
@@ -737,6 +705,7 @@ static inline void cifs_stats_bytes_read(struct cifs_tcon *tcon,
 
 #endif
 
+struct mid_q_entry;
 
 /*
  * This is the prototype for the mid receive function. This function is for
@@ -1075,7 +1044,12 @@ GLOBAL_EXTERN atomic_t smBufAllocCount;
 GLOBAL_EXTERN atomic_t midCount;
 
 /* Misc globals */
-GLOBAL_EXTERN bool enable_oplocks; /* enable or disable oplocks */
+GLOBAL_EXTERN unsigned int multiuser_mount; /* if enabled allows new sessions
+				to be established on existing mount if we
+				have the uid/password or Kerberos credential
+				or equivalent for current user */
+/* enable or disable oplocks */
+GLOBAL_EXTERN bool enable_oplocks;
 GLOBAL_EXTERN unsigned int lookupCacheEnabled;
 GLOBAL_EXTERN unsigned int global_secflags;	/* if on, session setup sent
 				with more secure ntlmssp2 challenge/resp */
@@ -1102,8 +1076,4 @@ void cifs_oplock_break(struct work_struct *work);
 extern const struct slow_work_ops cifs_oplock_break_ops;
 extern struct workqueue_struct *cifsiod_wq;
 
-/* Operations for different SMB versions */
-#define SMB1_VERSION_STRING	"1.0"
-extern struct smb_version_operations smb1_operations;
-extern struct smb_version_values smb1_values;
 #endif	/* _CIFS_GLOB_H */

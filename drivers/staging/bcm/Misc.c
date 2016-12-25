@@ -157,7 +157,12 @@ static int create_worker_threads(PMINI_ADAPTER psAdapter)
 
 static struct file *open_firmware_file(PMINI_ADAPTER Adapter, const char *path)
 {
-	struct file *flp = filp_open(path, O_RDONLY, S_IRWXU);
+	struct file *flp = NULL;
+	mm_segment_t oldfs;
+	oldfs = get_fs();
+	set_fs(get_ds());
+	flp = filp_open(path, O_RDONLY, S_IRWXU);
+	set_fs(oldfs);
 	if (IS_ERR(flp)) {
 		pr_err(DRV_NAME "Unable To Open File %s, err %ld", path, PTR_ERR(flp));
 		flp = NULL;
@@ -178,12 +183,14 @@ static int BcmFileDownload(PMINI_ADAPTER Adapter, const char *path, unsigned int
 {
 	int errorno = 0;
 	struct file *flp = NULL;
+	mm_segment_t oldfs;
 	struct timeval tv = {0};
 
 	flp = open_firmware_file(Adapter, path);
 	if (!flp) {
+		errorno = -ENOENT;
 		BCM_DEBUG_PRINT(Adapter, DBG_TYPE_INITEXIT, MP_INIT, DBG_LVL_ALL, "Unable to Open %s\n", path);
-		return -ENOENT;
+		goto exit_download;
 	}
 	BCM_DEBUG_PRINT(Adapter, DBG_TYPE_INITEXIT, MP_INIT, DBG_LVL_ALL, "Opened file is = %s and length =0x%lx to be downloaded at =0x%x", path, (unsigned long)flp->f_dentry->d_inode->i_size, loc);
 	do_gettimeofday(&tv);
@@ -194,7 +201,10 @@ static int BcmFileDownload(PMINI_ADAPTER Adapter, const char *path, unsigned int
 		errorno = -EIO;
 		goto exit_download;
 	}
+	oldfs = get_fs();
+	set_fs(get_ds());
 	vfs_llseek(flp, 0, 0);
+	set_fs(oldfs);
 	if (Adapter->bcm_file_readback_from_chip(Adapter->pvInterfaceAdapter, flp, loc)) {
 		BCM_DEBUG_PRINT(Adapter, DBG_TYPE_INITEXIT, MP_INIT, DBG_LVL_ALL, "Failed to read back firmware!");
 		errorno = -EIO;
@@ -202,7 +212,12 @@ static int BcmFileDownload(PMINI_ADAPTER Adapter, const char *path, unsigned int
 	}
 
 exit_download:
-	filp_close(flp, NULL);
+	oldfs = get_fs();
+	set_fs(get_ds());
+	if (flp && !(IS_ERR(flp)))
+		filp_close(flp, current->files);
+	set_fs(oldfs);
+
 	return errorno;
 }
 
@@ -1065,8 +1080,10 @@ OUT:
 static int bcm_parse_target_params(PMINI_ADAPTER Adapter)
 {
 	struct file *flp = NULL;
+	mm_segment_t oldfs = {0};
 	char *buff;
 	int len = 0;
+	loff_t pos = 0;
 
 	buff = kmalloc(BUFFER_1K, GFP_KERNEL);
 	if (!buff)
@@ -1086,16 +1103,20 @@ static int bcm_parse_target_params(PMINI_ADAPTER Adapter)
 		Adapter->pstargetparams = NULL;
 		return -ENOENT;
 	}
-	len = kernel_read(flp, 0, buff, BUFFER_1K);
-	filp_close(flp, NULL);
+	oldfs = get_fs();
+	set_fs(get_ds());
+	len = vfs_read(flp, (void __user __force *)buff, BUFFER_1K, &pos);
+	set_fs(oldfs);
 
 	if (len != sizeof(STARGETPARAMS)) {
 		BCM_DEBUG_PRINT(Adapter, DBG_TYPE_INITEXIT, MP_INIT, DBG_LVL_ALL, "Mismatch in Target Param Structure!\n");
 		kfree(buff);
 		kfree(Adapter->pstargetparams);
 		Adapter->pstargetparams = NULL;
+		filp_close(flp, current->files);
 		return -ENOENT;
 	}
+	filp_close(flp, current->files);
 
 	/* Check for autolink in config params */
 	/*

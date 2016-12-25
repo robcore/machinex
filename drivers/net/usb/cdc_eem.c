@@ -368,7 +368,6 @@ static struct usb_driver eem_driver = {
 	.disconnect =	usbnet_disconnect,
 	.suspend =	usbnet_suspend,
 	.resume =	usbnet_resume,
-	.disable_hub_initiated_lpm = 1,
 };
 
 module_usb_driver(eem_driver);

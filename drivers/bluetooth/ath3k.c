@@ -488,7 +488,6 @@ static struct usb_driver ath3k_driver = {
 	.probe		= ath3k_probe,
 	.disconnect	= ath3k_disconnect,
 	.id_table	= ath3k_table,
-	.disable_hub_initiated_lpm = 1,
 };
 
 static int __init ath3k_init(void)

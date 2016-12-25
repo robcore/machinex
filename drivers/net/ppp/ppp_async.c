@@ -613,7 +613,7 @@ ppp_async_encode(struct asyncppp *ap)
 	*buf++ = PPP_FLAG;
 	ap->olim = buf;
 
-	consume_skb(ap->tpkt);
+	kfree_skb(ap->tpkt);
 	ap->tpkt = NULL;
 	return 1;
 }

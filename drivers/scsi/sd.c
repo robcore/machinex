@@ -68,7 +68,6 @@
 #include <scsi/scsicam.h>
 
 #include "sd.h"
-#include "scsi_priv.h"
 #include "scsi_logging.h"
 
 MODULE_AUTHOR("Eric Youngdale");
@@ -2869,7 +2868,7 @@ static int sd_probe(struct device *dev)
 #endif
 
 	get_device(&sdkp->dev);	/* prevent release before async_schedule */
-	async_schedule_domain(sd_probe_async, sdkp, &scsi_sd_probe_domain);
+	async_schedule(sd_probe_async, sdkp);
 
 	return 0;
 
@@ -2915,7 +2914,7 @@ static int sd_remove(struct device *dev)
 
 	scsi_autopm_get_device(sdkp->device);
 
-	async_synchronize_full_domain(&scsi_sd_probe_domain);
+	async_synchronize_full();
 	blk_queue_prep_rq(sdkp->device->request_queue, scsi_prep_fn);
 	blk_queue_unprep_rq(sdkp->device->request_queue, NULL);
 	device_del(&sdkp->dev);

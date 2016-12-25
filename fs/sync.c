@@ -203,19 +203,21 @@ void emergency_sync(void)
  */
 SYSCALL_DEFINE1(syncfs, int, fd)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
 	struct super_block *sb;
 	int ret;
+	int fput_needed;
 
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		return -EBADF;
-	sb = f.file->f_dentry->d_sb;
+	sb = file->f_dentry->d_sb;
 
 	down_read(&sb->s_umount);
 	ret = sync_filesystem(sb);
 	up_read(&sb->s_umount);
 
-	fdput(f);
+	fput_light(file, fput_needed);
 	return ret;
 }
 
@@ -254,12 +256,15 @@ EXPORT_SYMBOL(vfs_fsync);
 
 static int do_fsync(unsigned int fd, int datasync)
 {
-	struct fd f = fdget(fd);
+	struct file *file;
 	int ret = -EBADF;
 
-	if (f.file) {
-		ret = vfs_fsync(f.file, datasync);
-		fdput(f);
+	int fput_needed;
+
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		ret = vfs_fsync(file, datasync);
+		fput_light(file, fput_needed);
 	}
 	return ret;
 }
@@ -342,9 +347,10 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 				unsigned int flags)
 {
 	int ret;
-	struct fd f;
+	struct file *file;
 	struct address_space *mapping;
 	loff_t endbyte;			/* inclusive */
+	int fput_needed;
 	umode_t i_mode;
 
 	ret = -EINVAL;
@@ -383,17 +389,17 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 		endbyte--;		/* inclusive */
 
 	ret = -EBADF;
-	f = fdget(fd);
-	if (!f.file)
+	file = fget_light(fd, &fput_needed);
+	if (!file)
 		goto out;
 
-	i_mode = f.file->f_path.dentry->d_inode->i_mode;
+	i_mode = file->f_path.dentry->d_inode->i_mode;
 	ret = -ESPIPE;
 	if (!S_ISREG(i_mode) && !S_ISBLK(i_mode) && !S_ISDIR(i_mode) &&
 			!S_ISLNK(i_mode))
 		goto out_put;
 
-	mapping = f.file->f_mapping;
+	mapping = file->f_mapping;
 	if (!mapping) {
 		ret = -EINVAL;
 		goto out_put;
@@ -416,7 +422,7 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 		ret = filemap_fdatawait_range(mapping, offset, endbyte);
 
 out_put:
-	fdput(f);
+	fput_light(file, fput_needed);
 out:
 	return ret;
 }
