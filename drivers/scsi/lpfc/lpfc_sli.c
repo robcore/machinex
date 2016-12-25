@@ -500,7 +500,7 @@ lpfc_resp_iocb(struct lpfc_hba *phba, struct lpfc_sli_ring *pring)
  * allocation is successful, it returns pointer to the newly
  * allocated iocb object else it returns NULL.
  **/
-static struct lpfc_iocbq *
+struct lpfc_iocbq *
 __lpfc_sli_get_iocbq(struct lpfc_hba *phba)
 {
 	struct list_head *lpfc_iocb_list = &phba->lpfc_iocb_list;
@@ -875,6 +875,9 @@ __lpfc_sli_get_sglq(struct lpfc_hba *phba, struct lpfc_iocbq *piocbq)
 	} else  if ((piocbq->iocb.ulpCommand == CMD_GEN_REQUEST64_CR) &&
 			!(piocbq->iocb_flag & LPFC_IO_LIBDFC))
 		ndlp = piocbq->context_un.ndlp;
+	else  if ((piocbq->iocb.ulpCommand == CMD_ELS_REQUEST64_CR) &&
+			(piocbq->iocb_flag & LPFC_IO_LIBDFC))
+		ndlp = piocbq->context_un.ndlp;
 	else
 		ndlp = piocbq->context1;
 
@@ -883,7 +886,7 @@ __lpfc_sli_get_sglq(struct lpfc_hba *phba, struct lpfc_iocbq *piocbq)
 	while (!found) {
 		if (!sglq)
 			return NULL;
-		if (lpfc_test_rrq_active(phba, ndlp, sglq->sli4_xritag)) {
+		if (lpfc_test_rrq_active(phba, ndlp, sglq->sli4_lxritag)) {
 			/* This xri has an rrq outstanding for this DID.
 			 * put it back in the list and get another xri.
 			 */
@@ -1257,7 +1260,7 @@ lpfc_sli_ringtxcmpl_put(struct lpfc_hba *phba, struct lpfc_sli_ring *pring,
 			struct lpfc_iocbq *piocb)
 {
 	list_add_tail(&piocb->list, &pring->txcmplq);
-	piocb->iocb_flag |= LPFC_IO_ON_Q;
+	piocb->iocb_flag |= LPFC_IO_ON_TXCMPLQ;
 	pring->txcmplq_cnt++;
 	if (pring->txcmplq_cnt > pring->txcmplq_max)
 		pring->txcmplq_max = pring->txcmplq_cnt;
@@ -2556,9 +2559,9 @@ lpfc_sli_iocbq_lookup(struct lpfc_hba *phba,
 	if (iotag != 0 && iotag <= phba->sli.last_iotag) {
 		cmd_iocb = phba->sli.iocbq_lookup[iotag];
 		list_del_init(&cmd_iocb->list);
-		if (cmd_iocb->iocb_flag & LPFC_IO_ON_Q) {
+		if (cmd_iocb->iocb_flag & LPFC_IO_ON_TXCMPLQ) {
 			pring->txcmplq_cnt--;
-			cmd_iocb->iocb_flag &= ~LPFC_IO_ON_Q;
+			cmd_iocb->iocb_flag &= ~LPFC_IO_ON_TXCMPLQ;
 		}
 		return cmd_iocb;
 	}
@@ -2591,14 +2594,14 @@ lpfc_sli_iocbq_lookup_by_tag(struct lpfc_hba *phba,
 
 	if (iotag != 0 && iotag <= phba->sli.last_iotag) {
 		cmd_iocb = phba->sli.iocbq_lookup[iotag];
-		list_del_init(&cmd_iocb->list);
-		if (cmd_iocb->iocb_flag & LPFC_IO_ON_Q) {
-			cmd_iocb->iocb_flag &= ~LPFC_IO_ON_Q;
+		if (cmd_iocb->iocb_flag & LPFC_IO_ON_TXCMPLQ) {
+			/* remove from txcmpl queue list */
+			list_del_init(&cmd_iocb->list);
+			cmd_iocb->iocb_flag &= ~LPFC_IO_ON_TXCMPLQ;
 			pring->txcmplq_cnt--;
+			return cmd_iocb;
 		}
-		return cmd_iocb;
 	}
-
 	lpfc_printf_log(phba, KERN_ERR, LOG_SLI,
 			"0372 iotag x%x is out off range: max iotag (x%x)\n",
 			iotag, phba->sli.last_iotag);
@@ -3466,6 +3469,9 @@ lpfc_sli_flush_fcp_rings(struct lpfc_hba *phba)
 	/* Retrieve everything on the txcmplq */
 	list_splice_init(&pring->txcmplq, &txcmplq);
 	pring->txcmplq_cnt = 0;
+
+	/* Indicate the I/O queues are flushed */
+	phba->hba_flag |= HBA_FCP_IOQ_FLUSH;
 	spin_unlock_irq(&phba->hbalock);
 
 	/* Flush the txq */
@@ -3877,6 +3883,7 @@ lpfc_sli4_brdreset(struct lpfc_hba *phba)
 {
 	struct lpfc_sli *psli = &phba->sli;
 	uint16_t cfg_value;
+	int rc;
 
 	/* Reset HBA */
 	lpfc_printf_log(phba, KERN_INFO, LOG_SLI,
@@ -3905,12 +3912,12 @@ lpfc_sli4_brdreset(struct lpfc_hba *phba)
 
 	/* Perform FCoE PCI function reset */
 	lpfc_sli4_queue_destroy(phba);
-	lpfc_pci_function_reset(phba);
+	rc = lpfc_pci_function_reset(phba);
 
 	/* Restore PCI cmd register */
 	pci_write_config_word(phba->pcidev, PCI_COMMAND, cfg_value);
 
-	return 0;
+	return rc;
 }
 
 /**
@@ -4002,6 +4009,7 @@ lpfc_sli_brdrestart_s4(struct lpfc_hba *phba)
 {
 	struct lpfc_sli *psli = &phba->sli;
 	uint32_t hba_aer_enabled;
+	int rc;
 
 	/* Restart HBA */
 	lpfc_printf_log(phba, KERN_INFO, LOG_SLI,
@@ -4011,7 +4019,7 @@ lpfc_sli_brdrestart_s4(struct lpfc_hba *phba)
 	/* Take PCIe device Advanced Error Reporting (AER) state */
 	hba_aer_enabled = phba->hba_flag & HBA_AER_ENABLED;
 
-	lpfc_sli4_brdreset(phba);
+	rc = lpfc_sli4_brdreset(phba);
 
 	spin_lock_irq(&phba->hbalock);
 	phba->pport->stopped = 0;
@@ -4028,7 +4036,7 @@ lpfc_sli_brdrestart_s4(struct lpfc_hba *phba)
 
 	lpfc_hba_down_post(phba);
 
-	return 0;
+	return rc;
 }
 
 /**
@@ -5923,6 +5931,8 @@ lpfc_sli4_hba_setup(struct lpfc_hba *phba)
 	else
 		phba->hba_flag &= ~HBA_FIP_SUPPORT;
 
+	phba->hba_flag &= ~HBA_FCP_IOQ_FLUSH;
+
 	if (phba->sli_rev != LPFC_SLI_REV4) {
 		lpfc_printf_log(phba, KERN_ERR, LOG_MBOX | LOG_SLI,
 			"0376 READ_REV Error. SLI Level %d "
@@ -7060,14 +7070,19 @@ lpfc_sli_issue_mbox_s4(struct lpfc_hba *phba, LPFC_MBOXQ_t *mboxq,
 		if (rc != MBX_SUCCESS)
 			lpfc_printf_log(phba, KERN_WARNING, LOG_MBOX | LOG_SLI,
 					"(%d):2541 Mailbox command x%x "
-					"(x%x/x%x) cannot issue Data: "
-					"x%x x%x\n",
+					"(x%x/x%x) failure: "
+					"mqe_sta: x%x mcqe_sta: x%x/x%x "
+					"Data: x%x x%x\n,",
 					mboxq->vport ? mboxq->vport->vpi : 0,
 					mboxq->u.mb.mbxCommand,
 					lpfc_sli_config_mbox_subsys_get(phba,
 									mboxq),
 					lpfc_sli_config_mbox_opcode_get(phba,
 									mboxq),
+					bf_get(lpfc_mqe_status, &mboxq->u.mqe),
+					bf_get(lpfc_mcqe_status, &mboxq->mcqe),
+					bf_get(lpfc_mcqe_ext_status,
+					       &mboxq->mcqe),
 					psli->sli_flag, flag);
 		return rc;
 	} else if (flag == MBX_POLL) {
@@ -7086,18 +7101,22 @@ lpfc_sli_issue_mbox_s4(struct lpfc_hba *phba, LPFC_MBOXQ_t *mboxq,
 			/* Successfully blocked, now issue sync mbox cmd */
 			rc = lpfc_sli4_post_sync_mbox(phba, mboxq);
 			if (rc != MBX_SUCCESS)
-				lpfc_printf_log(phba, KERN_ERR,
+				lpfc_printf_log(phba, KERN_WARNING,
 					LOG_MBOX | LOG_SLI,
-					"(%d):2597 Mailbox command "
-					"x%x (x%x/x%x) cannot issue "
-					"Data: x%x x%x\n",
-					mboxq->vport ?
-					mboxq->vport->vpi : 0,
+					"(%d):2597 Sync Mailbox command "
+					"x%x (x%x/x%x) failure: "
+					"mqe_sta: x%x mcqe_sta: x%x/x%x "
+					"Data: x%x x%x\n,",
+					mboxq->vport ? mboxq->vport->vpi : 0,
 					mboxq->u.mb.mbxCommand,
 					lpfc_sli_config_mbox_subsys_get(phba,
 									mboxq),
 					lpfc_sli_config_mbox_opcode_get(phba,
 									mboxq),
+					bf_get(lpfc_mqe_status, &mboxq->u.mqe),
+					bf_get(lpfc_mcqe_status, &mboxq->mcqe),
+					bf_get(lpfc_mcqe_ext_status,
+					       &mboxq->mcqe),
 					psli->sli_flag, flag);
 			/* Unblock the async mailbox posting afterward */
 			lpfc_sli4_async_mbox_unblock(phba);
@@ -7712,7 +7731,10 @@ lpfc_sli4_iocb2wqe(struct lpfc_hba *phba, struct lpfc_iocbq *iocbq,
 
 	switch (iocbq->iocb.ulpCommand) {
 	case CMD_ELS_REQUEST64_CR:
-		ndlp = (struct lpfc_nodelist *)iocbq->context1;
+		if (iocbq->iocb_flag & LPFC_IO_LIBDFC)
+			ndlp = iocbq->context_un.ndlp;
+		else
+			ndlp = (struct lpfc_nodelist *)iocbq->context1;
 		if (!iocbq->iocb.ulpLe) {
 			lpfc_printf_log(phba, KERN_ERR, LOG_SLI,
 				"2007 Only Limited Edition cmd Format"
@@ -13134,16 +13156,14 @@ lpfc_sli4_next_xritag(struct lpfc_hba *phba)
 	uint16_t xri_index;
 
 	xri_index = lpfc_sli4_alloc_xri(phba);
-	if (xri_index != NO_XRI)
-		return xri_index;
-
-	lpfc_printf_log(phba, KERN_ERR, LOG_SLI,
-			"2004 Failed to allocate XRI.last XRITAG is %d"
-			" Max XRI is %d, Used XRI is %d\n",
-			xri_index,
-			phba->sli4_hba.max_cfg_param.max_xri,
-			phba->sli4_hba.max_cfg_param.xri_used);
-	return NO_XRI;
+	if (xri_index == NO_XRI)
+		lpfc_printf_log(phba, KERN_WARNING, LOG_SLI,
+				"2004 Failed to allocate XRI.last XRITAG is %d"
+				" Max XRI is %d, Used XRI is %d\n",
+				xri_index,
+				phba->sli4_hba.max_cfg_param.max_xri,
+				phba->sli4_hba.max_cfg_param.xri_used);
+	return xri_index;
 }
 
 /**
@@ -14133,7 +14153,6 @@ lpfc_sli4_xri_inrange(struct lpfc_hba *phba,
 	return NO_XRI;
 }
 
-
 /**
  * lpfc_sli4_seq_abort_rsp - bls rsp to sequence abort
  * @phba: Pointer to HBA context object.
@@ -14148,7 +14167,7 @@ lpfc_sli4_seq_abort_rsp(struct lpfc_hba *phba,
 {
 	struct lpfc_iocbq *ctiocb = NULL;
 	struct lpfc_nodelist *ndlp;
-	uint16_t oxid, rxid;
+	uint16_t oxid, rxid, xri, lxri;
 	uint32_t sid, fctl;
 	IOCB_t *icmd;
 	int rc;
@@ -14167,8 +14186,6 @@ lpfc_sli4_seq_abort_rsp(struct lpfc_hba *phba,
 				"SID:x%x\n", oxid, sid);
 		return;
 	}
-	if (lpfc_sli4_xri_inrange(phba, rxid))
-		lpfc_set_rrq_active(phba, ndlp, rxid, oxid, 0);
 
 	/* Allocate buffer for rsp iocb */
 	ctiocb = lpfc_sli_get_iocbq(phba);
@@ -14199,13 +14216,24 @@ lpfc_sli4_seq_abort_rsp(struct lpfc_hba *phba,
 	ctiocb->sli4_lxritag = NO_XRI;
 	ctiocb->sli4_xritag = NO_XRI;
 
+	if (fctl & FC_FC_EX_CTX)
+		/* Exchange responder sent the abort so we
+		 * own the oxid.
+		 */
+		xri = oxid;
+	else
+		xri = rxid;
+	lxri = lpfc_sli4_xri_inrange(phba, xri);
+	if (lxri != NO_XRI)
+		lpfc_set_rrq_active(phba, ndlp, lxri,
+			(xri == oxid) ? rxid : oxid, 0);
 	/* If the oxid maps to the FCP XRI range or if it is out of range,
 	 * send a BLS_RJT.  The driver no longer has that exchange.
 	 * Override the IOCB for a BA_RJT.
 	 */
-	if (oxid > (phba->sli4_hba.max_cfg_param.max_xri +
+	if (xri > (phba->sli4_hba.max_cfg_param.max_xri +
 		    phba->sli4_hba.max_cfg_param.xri_base) ||
-	    oxid > (lpfc_sli4_get_els_iocb_cnt(phba) +
+	    xri > (lpfc_sli4_get_els_iocb_cnt(phba) +
 		    phba->sli4_hba.max_cfg_param.xri_base)) {
 		icmd->un.xseq64.w5.hcsw.Rctl = FC_RCTL_BA_RJT;
 		bf_set(lpfc_vndr_code, &icmd->un.bls_rsp, 0);
