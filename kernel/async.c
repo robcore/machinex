@@ -61,7 +61,8 @@ asynchronous and synchronous parts of the kernel.
 
 static async_cookie_t next_cookie = 1;
 
-#define MAX_WORK	32768
+#define MAX_WORK		32768
+#define ASYNC_COOKIE_MAX	ULLONG_MAX	/* infinity cookie */
 
 static LIST_HEAD(async_pending);
 static ASYNC_DOMAIN(async_dfl_domain);
@@ -103,7 +104,7 @@ static async_cookie_t __lowest_in_progress(struct async_domain *domain)
 	}
 
 	list_for_each_entry(entry, &async_pending, list)
-		if (entry->domain == domain) {
+		if (entry->domain == domain)
 			return entry->cookie;
 
 	return next_cookie;	/* "infinity" value */
@@ -258,7 +259,7 @@ void async_synchronize_full(void)
 			domain = list_first_entry(&async_domains, typeof(*domain), node);
 		spin_unlock_irq(&async_lock);
 
-		async_synchronize_cookie_domain(next_cookie, domain);
+		async_synchronize_cookie_domain(ASYNC_COOKIE_MAX, domain);
 	} while (!list_empty(&async_domains));
 	mutex_unlock(&async_register_mutex);
 }
@@ -293,7 +294,7 @@ EXPORT_SYMBOL_GPL(async_unregister_domain);
  */
 void async_synchronize_full_domain(struct async_domain *domain)
 {
-	async_synchronize_cookie_domain(next_cookie, domain);
+	async_synchronize_cookie_domain(ASYNC_COOKIE_MAX, domain);
 }
 EXPORT_SYMBOL_GPL(async_synchronize_full_domain);
 
