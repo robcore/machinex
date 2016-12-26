@@ -1024,8 +1024,8 @@ sec_battery_platform_data_t sec_battery_pdata = {
 		SEC_BATTERY_FULL_CONDITION_VCELL,
 // I am undecided between these possible vals, will try both to
 // see which is better
-//	.full_condition_soc = 97,
-// .full_condition_vcell = 4300,
+//	.full_condition_soc = 93,
+// .full_condition_vcell = 4250,
 	.full_condition_soc = 97,
 	.full_condition_vcell = 4300,
 
