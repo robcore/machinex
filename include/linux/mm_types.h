@@ -7,7 +7,6 @@
 #include <linux/list.h>
 #include <linux/radix-tree.h>
 #include <linux/spinlock.h>
-#include <linux/prio_tree.h>
 #include <linux/rbtree.h>
 #include <linux/rwsem.h>
 #include <linux/completion.h>
@@ -238,8 +237,7 @@ struct vm_area_struct {
 
 	/*
 	 * For areas with an address space and backing store,
-	 * linkage into the address_space->i_mmap prio tree, or
-	 * linkage to the list of like vmas hanging off its node, or
+	 * linkage into the address_space->i_mmap interval tree, or
 	 * linkage of vma in the address_space->i_mmap_nonlinear list.
 	 *
 	 * For private anonymous mappings, a pointer to a null terminated string
@@ -248,12 +246,10 @@ struct vm_area_struct {
 	 */
 	union {
 		struct {
-			struct list_head list;
-			void *parent;	/* aligns with prio_tree_node parent */
-			struct vm_area_struct *head;
-		} vm_set;
-
-		struct raw_prio_tree_node prio_tree_node;
+			struct rb_node rb;
+			unsigned long rb_subtree_last;
+		} linear;
+		struct list_head nonlinear;
 		const char __user *anon_name;
 	} shared;
 
