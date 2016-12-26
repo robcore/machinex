@@ -87,7 +87,7 @@ static int scfs_open(struct inode *inode, struct file *file)
 		}
 	} else if (sii->compressed && !sii->cinfo_array) {
 		/* 1st lower-open is for getting cinfo */
-		ret = scfs_initialize_lower_file(file->f_dentry, &lower_file, O_RDONLY); 
+		ret = scfs_initialize_lower_file(file->f_dentry, &lower_file, O_RDONLY);
 		if (ret) {
 			SCFS_PRINT_ERROR("err in get_lower_file %s\n",
 				file->f_dentry->d_name.name);
@@ -106,7 +106,7 @@ static int scfs_open(struct inode *inode, struct file *file)
 		fput(lower_file);
 	}
 
-	ret = scfs_initialize_lower_file(file->f_dentry, &lower_file, file->f_flags); 
+	ret = scfs_initialize_lower_file(file->f_dentry, &lower_file, file->f_flags);
 	if (ret) {
 		SCFS_PRINT_ERROR("err in get_lower_file %s\n",
 			file->f_dentry->d_name.name);
@@ -128,7 +128,7 @@ out:
 	mutex_unlock(&sii->cinfo_mutex);
 	SCFS_PRINT("lower, dentry name : %s, count : %d, ret : %d\n",
 		file->f_dentry->d_name.name, file->f_dentry->d_count, ret);
-	
+
 	return ret;
 }
 
@@ -263,7 +263,7 @@ static const struct vm_operations_struct scfs_file_vm_ops = {
  * SCFS doesn't have a writepage, so write with mmap has no effect.
  * First implementation was returning error when having VM_WRITE,
  * but some process in boot sequence uses mmap with VM_WRITE
- * - without write, just with flag - so, now using VM_WRITE is 
+ * - without write, just with flag - so, now using VM_WRITE is
  * available.
  */
 static int scfs_mmap(struct file *file, struct vm_area_struct *vma)
@@ -273,26 +273,24 @@ static int scfs_mmap(struct file *file, struct vm_area_struct *vma)
 	if (!mapping->a_ops->readpage)
 		return -ENOEXEC;
 
-	SCFS_PRINT("file %s\n", file->f_path.dentry->d_name.name);	
+	SCFS_PRINT("file %s\n", file->f_path.dentry->d_name.name);
 
 	//if (file->f_mode & FMODE_WRITE) {
 		/*
 	if (vma->vm_flags & VM_WRITE) {
 		SCFS_PRINT_ERROR("f_mode WRITE was set! error. "
-			"f_mode %x (FMODE_READ: %x FMODE_WRITE %x)\n", 
+			"f_mode %x (FMODE_READ: %x FMODE_WRITE %x)\n",
 			file->f_mode,
 			file->f_mode & FMODE_READ,
 			file->f_mode & FMODE_WRITE);
-	SCFS_PRINT_ERROR("filename : %s\n", file->f_path.dentry->d_name.name);	
+	SCFS_PRINT_ERROR("filename : %s\n", file->f_path.dentry->d_name.name);
 		return -EPERM;
 	}
 	*/
 
 	file_accessed(file);
 	vma->vm_ops = &scfs_file_vm_ops;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-	vma->vm_flags |= VM_CAN_NONLINEAR;
-#endif
+
  	SCFS_PRINT("VM flags: %lx "
  		"EXEC %lx IO %lx "
 		"SEQ %lx RAND %lx "
@@ -307,7 +305,7 @@ static int scfs_mmap(struct file *file, struct vm_area_struct *vma)
 		vma->vm_flags & VM_SHARED, vma->vm_flags & VM_MAYSHARE);
 
 	if (vma->vm_flags & VM_WRITE) {
-		SCFS_PRINT("VM_WRITE: file %s flags %lx VM_MAYWRITE %lx\n", 
+		SCFS_PRINT("VM_WRITE: file %s flags %lx VM_MAYWRITE %lx\n",
 			file->f_path.dentry->d_name.name,
 			vma->vm_flags,
 			vma->vm_flags & VM_MAYWRITE);
