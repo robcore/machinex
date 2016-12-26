@@ -2278,11 +2278,8 @@ static void khugepaged_wait_work(void)
 
 static void khugepaged_loop(void)
 {
-	struct page *hpage;
+	struct page *hpage = NULL;
 
-#ifdef CONFIG_NUMA
-	hpage = NULL;
-#endif
 	while (likely(khugepaged_enabled())) {
 #ifndef CONFIG_NUMA
 		hpage = khugepaged_alloc_hugepage();
@@ -2296,10 +2293,9 @@ static void khugepaged_loop(void)
 #endif
 
 		khugepaged_do_scan(&hpage);
-#ifndef CONFIG_NUMA
-		if (hpage)
+
+		if (!IS_ERR_OR_NULL(hpage))
 			put_page(hpage);
-#endif
 
 		khugepaged_wait_work();
 	}
