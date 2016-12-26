@@ -1358,7 +1358,6 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	if (is_idle_task(p) || (sched_ravg_window < min_sched_ravg_window))
 		return;
 
-	rcu_user_exit();
 	do {
 		s64 delta = 0;
 		int n;
@@ -3448,21 +3447,6 @@ void __wake_up_locked_key(wait_queue_head_t *q, unsigned int mode, void *key)
 	__wake_up_common(q, mode, 1, 0, key);
 }
 EXPORT_SYMBOL_GPL(__wake_up_locked_key);
-
-#ifdef CONFIG_RCU_USER_QS
-asmlinkage void __sched schedule_user(void)
-{
-	/*
-	 * If we come here after a random call to set_need_resched(),
-	 * or we have been woken up remotely but the IPI has not yet arrived,
-	 * we haven't yet exited the RCU idle mode. Do it here manually until
-	 * we find a better solution.
-	 */
-	rcu_user_exit();
-	schedule();
-	rcu_user_enter();
-}
-#endif
 
 #ifdef CONFIG_RCU_USER_QS
 asmlinkage void __sched schedule_user(void)
