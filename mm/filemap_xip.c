@@ -167,6 +167,7 @@ __xip_unmap (struct address_space * mapping,
 {
 	struct vm_area_struct *vma;
 	struct mm_struct *mm;
+	struct prio_tree_iter iter;
 	unsigned long address;
 	pte_t *pte;
 	pte_t pteval;
@@ -183,7 +184,7 @@ __xip_unmap (struct address_space * mapping,
 
 retry:
 	mutex_lock(&mapping->i_mmap_mutex);
-	vma_interval_tree_foreach(vma, &mapping->i_mmap, pgoff, pgoff) {
+	vma_prio_tree_foreach(vma, &iter, &mapping->i_mmap, pgoff, pgoff) {
 		mm = vma->vm_mm;
 		address = vma->vm_start +
 			((pgoff - vma->vm_pgoff) << PAGE_SHIFT);
@@ -192,13 +193,11 @@ retry:
 		if (pte) {
 			/* Nuke the page table entry. */
 			flush_cache_page(vma, address, pte_pfn(*pte));
-			pteval = ptep_clear_flush(vma, address, pte);
+			pteval = ptep_clear_flush_notify(vma, address, pte);
 			page_remove_rmap(page);
 			dec_mm_counter(mm, MM_FILEPAGES);
 			BUG_ON(pte_dirty(pteval));
 			pte_unmap_unlock(pte, ptl);
-			/* must invalidate_page _before_ freeing the page */
-			mmu_notifier_invalidate_page(mm, address);
 			page_cache_release(page);
 		}
 	}

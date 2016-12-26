@@ -402,13 +402,10 @@ static void collect_procs_anon(struct page *page, struct list_head *to_kill,
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
 	struct anon_vma *av;
-	pgoff_t pgoff;
 
 	av = page_lock_anon_vma(page);
 	if (av == NULL)	/* Not actually mapped anymore */
 		return;
-
-	pgoff = page->index << (PAGE_CACHE_SHIFT - PAGE_SHIFT);
 
 	read_lock(&tasklist_lock);
 	for_each_process (tsk) {
@@ -416,8 +413,7 @@ static void collect_procs_anon(struct page *page, struct list_head *to_kill,
 
 		if (!task_early_kill(tsk, force_early))
 			continue;
-		anon_vma_interval_tree_foreach(vmac, &av->rb_root,
-					       pgoff, pgoff) {
+		list_for_each_entry(vmac, &av->head, same_anon_vma) {
 			vma = vmac->vma;
 			if (!page_mapped_in_vma(page, vma))
 				continue;
@@ -437,6 +433,7 @@ static void collect_procs_file(struct page *page, struct list_head *to_kill,
 {
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
+	struct prio_tree_iter iter;
 	struct address_space *mapping = page->mapping;
 
 	mutex_lock(&mapping->i_mmap_mutex);
@@ -447,7 +444,7 @@ static void collect_procs_file(struct page *page, struct list_head *to_kill,
 		if (!task_early_kill(tsk, force_early))
 			continue;
 
-		vma_interval_tree_foreach(vma, &mapping->i_mmap, pgoff,
+		vma_prio_tree_foreach(vma, &iter, &mapping->i_mmap, pgoff,
 				      pgoff) {
 			/*
 			 * Send early kill signal to tasks where a vma covers

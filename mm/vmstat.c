@@ -498,18 +498,6 @@ void refresh_cpu_vm_stats(int cpu)
 			atomic_long_add(global_diff[i], &vm_stat[i]);
 }
 
-void drain_zonestat(struct zone *zone, struct per_cpu_pageset *pset)
-{
-	int i;
-
-	for (i = 0; i < NR_VM_ZONE_STAT_ITEMS; i++)
-		if (pset->vm_stat_diff[i]) {
-			int v = pset->vm_stat_diff[i];
-			pset->vm_stat_diff[i] = 0;
-			atomic_long_add(v, &zone->vm_stat[i]);
-			atomic_long_add(v, &vm_stat[i]);
-		}
-}
 #endif
 
 #ifdef CONFIG_NUMA
@@ -801,6 +789,7 @@ const char * const vmstat_text[] = {
 	"unevictable_pgs_munlocked",
 	"unevictable_pgs_cleared",
 	"unevictable_pgs_stranded",
+	"unevictable_pgs_mlockfreed",
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	"thp_fault_alloc",
