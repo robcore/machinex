@@ -384,7 +384,6 @@ void unlink_anon_vmas(struct vm_area_struct *vma)
 		if (RB_EMPTY_ROOT(&anon_vma->rb_root))
 			anon_vma->parent->degree--;
 			continue;
-		}
 
 		list_del(&avc->same_vma);
 		anon_vma_chain_free(avc);
