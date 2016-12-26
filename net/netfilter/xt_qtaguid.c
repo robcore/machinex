@@ -1778,7 +1778,6 @@ static void prdebug_full_state(int indent_level, const char *fmt, ...)
 	buff = kvasprintf(GFP_ATOMIC,
 			  fmt_buff, args);
 	BUG_ON(!buff);
-	pr_debug("%s", buff);
 	kfree(fmt_buff);
 	kfree(buff);
 	va_end(args);
@@ -1797,8 +1796,6 @@ static void prdebug_full_state(int indent_level, const char *fmt, ...)
 	spin_lock_bh(&iface_stat_list_lock);
 	prdebug_iface_stat_list(indent_level, &iface_stat_list);
 	spin_unlock_bh(&iface_stat_list_lock);
-
-	pr_debug("qtaguid: %s(): }\n", __func__);
 }
 #else
 static void prdebug_full_state(int indent_level, const char *fmt, ...) {}
@@ -1943,22 +1940,17 @@ static int ctrl_cmd_delete(const char *input)
 		goto err;
 	}
 	if (!valid_atag(acct_tag)) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		res = -EINVAL;
 		goto err;
 	}
 	if (argc < 3) {
 		uid = current_fsuid();
 	} else if (!can_impersonate_uid(uid)) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		res = -EPERM;
 		goto err;
 	}
 
 	tag = combine_atag_with_uid(acct_tag, uid);
-	CT_DEBUG("qtaguid: ctrl_delete(%s): "
-		 "looking for tag=0x%llx (uid=%u)\n",
-		 input, tag, uid);
 
 	/* Delete socket tags */
 	spin_lock_bh(&sock_tag_list_lock);
@@ -1969,9 +1961,6 @@ static int ctrl_cmd_delete(const char *input)
 		node = rb_next(node);
 		if (entry_uid != uid)
 			continue;
-
-		CT_DEBUG("qtaguid: ctrl_delete(%s): st tag=0x%llx (uid=%u)\n",
-			 input, st_entry->tag, entry_uid);
 
 		if (!acct_tag || st_entry->tag == tag) {
 			rb_erase(&st_entry->sock_node, &sock_tag_tree);
@@ -2000,12 +1989,6 @@ static int ctrl_cmd_delete(const char *input)
 	/* Counter sets are only on the uid tag, not full tag */
 	tcs_entry = tag_counter_set_tree_search(&tag_counter_set_tree, tag);
 	if (tcs_entry) {
-		CT_DEBUG("qtaguid: ctrl_delete(%s): "
-			 "erase tcs: tag=0x%llx (uid=%u) set=%d\n",
-			 input,
-			 tcs_entry->tn.tag,
-			 get_uid_from_tag(tcs_entry->tn.tag),
-			 tcs_entry->active_set);
 		rb_erase(&tcs_entry->tn.node, &tag_counter_set_tree);
 		kfree(tcs_entry);
 	}
@@ -2024,18 +2007,9 @@ static int ctrl_cmd_delete(const char *input)
 			entry_uid = get_uid_from_tag(ts_entry->tn.tag);
 			node = rb_next(node);
 
-			CT_DEBUG("qtaguid: ctrl_delete(%s): "
-				 "ts tag=0x%llx (uid=%u)\n",
-				 input, ts_entry->tn.tag, entry_uid);
-
 			if (entry_uid != uid)
 				continue;
 			if (!acct_tag || ts_entry->tn.tag == tag) {
-				CT_DEBUG("qtaguid: ctrl_delete(%s): "
-					 "erase ts: %s 0x%llx %u\n",
-					 input, iface_entry->ifname,
-					 get_atag_from_tag(ts_entry->tn.tag),
-					 entry_uid);
 				rb_erase(&ts_entry->tn.node,
 					 &iface_entry->tag_stat_tree);
 				kfree(ts_entry);
@@ -2052,10 +2026,6 @@ static int ctrl_cmd_delete(const char *input)
 		utd_entry = rb_entry(node, struct uid_tag_data, node);
 		entry_uid = utd_entry->uid;
 		node = rb_next(node);
-
-		CT_DEBUG("qtaguid: ctrl_delete(%s): "
-			 "utd uid=%u\n",
-			 input, entry_uid);
 
 		if (entry_uid != uid)
 			continue;
@@ -2085,20 +2055,15 @@ static int ctrl_cmd_counter_set(const char *input)
 	int counter_set;
 
 	argc = sscanf(input, "%c %d %u", &cmd, &counter_set, &uid);
-	CT_DEBUG("qtaguid: ctrl_counterset(%s): argc=%d cmd=%c "
-		 "set=%d uid=%u\n", input, argc, cmd,
-		 counter_set, uid);
 	if (argc != 3) {
 		res = -EINVAL;
 		goto err;
 	}
 	if (counter_set < 0 || counter_set >= IFS_MAX_COUNTER_SETS) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		res = -EINVAL;
 		goto err;
 	}
 	if (!can_manipulate_uids()) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		res = -EPERM;
 		goto err;
 	}
@@ -2110,17 +2075,11 @@ static int ctrl_cmd_counter_set(const char *input)
 		tcs = kzalloc(sizeof(*tcs), GFP_ATOMIC);
 		if (!tcs) {
 			spin_unlock_bh(&tag_counter_set_list_lock);
-			pr_err("qtaguid: ctrl_counterset(%s): "
-			       "failed to alloc counter set\n",
-			       input);
 			res = -ENOMEM;
 			goto err;
 		}
 		tcs->tn.tag = tag;
 		tag_counter_set_tree_insert(tcs, &tag_counter_set_tree);
-		CT_DEBUG("qtaguid: ctrl_counterset(%s): added tcs tag=0x%llx "
-			 "(uid=%u) set=%d\n",
-			 input, tag, get_uid_from_tag(tag), counter_set);
 	}
 	tcs->active_set = counter_set;
 	spin_unlock_bh(&tag_counter_set_list_lock);
@@ -2147,42 +2106,24 @@ static int ctrl_cmd_tag(const char *input)
 
 	/* Unassigned args will get defaulted later. */
 	argc = sscanf(input, "%c %d %llu %u", &cmd, &sock_fd, &acct_tag, &uid);
-	CT_DEBUG("qtaguid: ctrl_tag(%s): argc=%d cmd=%c sock_fd=%d "
-		 "acct_tag=0x%llx uid=%u\n", input, argc, cmd, sock_fd,
-		 acct_tag, uid);
 	if (argc < 2) {
 		res = -EINVAL;
 		goto err;
 	}
 	el_socket = sockfd_lookup(sock_fd, &res);  /* This locks the file */
-	if (!el_socket) {
-		pr_debug("qtaguid-I was designed to piss you off");
+	if (!el_socket)
 		goto err;
-	}
-	CT_DEBUG("qtaguid: ctrl_tag(%s): socket->...->f_count=%ld ->sk=%p\n",
-		 input, atomic_long_read(&el_socket->file->f_count),
-		 el_socket->sk);
+
 	if (argc < 3) {
 		acct_tag = make_atag_from_value(0);
 	} else if (!valid_atag(acct_tag)) {
-		pr_debug("qtaguid: ctrl_tag(%s): invalid tag\n", input);
 		res = -EINVAL;
 		goto err_put;
 	}
-	CT_DEBUG("qtaguid: ctrl_tag(%s): "
-		 "pid=%u tgid=%u uid=%u euid=%u fsuid=%u "
-		 "ctrl.gid=%u in_group()=%d in_egroup()=%d\n",
-		 input, current->pid, current->tgid, current_uid(),
-		 current_euid(), current_fsuid(),
-		 xt_qtaguid_ctrl_file->gid,
-		 in_group_p(xt_qtaguid_ctrl_file->gid),
-		 in_egroup_p(xt_qtaguid_ctrl_file->gid));
+
 	if (argc < 4) {
 		uid = current_fsuid();
 	} else if (!can_impersonate_uid(uid)) {
-		pr_debug("qtaguid: ctrl_tag(%s): "
-			"insufficient priv from pid=%u tgid=%u uid=%u\n",
-			input, current->pid, current->tgid, current_fsuid());
 		res = -EPERM;
 		goto err_put;
 	}
@@ -2200,10 +2141,6 @@ static int ctrl_cmd_tag(const char *input)
 	if (sock_tag_entry) {
 		struct tag_ref *prev_tag_ref_entry;
 
-		CT_DEBUG("qtaguid: ctrl_tag(%s): retag for sk=%p "
-			 "st@%p ...->f_count=%ld\n",
-			 input, el_socket->sk, sock_tag_entry,
-			 atomic_long_read(&el_socket->file->f_count));
 		/*
 		 * This is a re-tagging, so release the sock_fd that was
 		 * locked at the time of the 1st tagging.
@@ -2218,14 +2155,9 @@ static int ctrl_cmd_tag(const char *input)
 		prev_tag_ref_entry->num_sock_tags--;
 		sock_tag_entry->tag = full_tag;
 	} else {
-		CT_DEBUG("qtaguid: ctrl_tag(%s): newtag for sk=%p\n",
-			 input, el_socket->sk);
 		sock_tag_entry = kzalloc(sizeof(*sock_tag_entry),
 					 GFP_ATOMIC);
 		if (!sock_tag_entry) {
-			pr_debug("qtaguid: ctrl_tag(%s): "
-			       "socket tag alloc failed\n",
-			       input);
 			spin_unlock_bh(&sock_tag_list_lock);
 			res = -ENOMEM;
 			goto err_tag_unref_put;
@@ -2244,7 +2176,7 @@ static int ctrl_cmd_tag(const char *input)
 		 * opening the /dev/xt_qtaguid.
 		 */
 		if (IS_ERR_OR_NULL(pqd_entry))
-			pr_warn_once(
+			pr_debug_once(
 				"qtaguid: %s(): "
 				"User space forgot to open /dev/xt_qtaguid? "
 				"pid=%u tgid=%u uid=%u\n", __func__,
@@ -2260,9 +2192,6 @@ static int ctrl_cmd_tag(const char *input)
 	}
 	spin_unlock_bh(&sock_tag_list_lock);
 	/* We keep the ref to the socket (file) until it is untagged */
-	CT_DEBUG("qtaguid: ctrl_tag(%s): done st@%p ...->f_count=%ld\n",
-		 input, sock_tag_entry,
-		 atomic_long_read(&el_socket->file->f_count));
 	return 0;
 
 err_tag_unref_put:
@@ -2270,14 +2199,11 @@ err_tag_unref_put:
 	tag_ref_entry->num_sock_tags--;
 	free_tag_ref_from_utd_entry(tag_ref_entry, uid_tag_data_entry);
 err_put:
-	CT_DEBUG("qtaguid: ctrl_tag(%s): done. ...->f_count=%ld\n",
-		 input, atomic_long_read(&el_socket->file->f_count) - 1);
 	/* Release the sock_fd that was grabbed by sockfd_lookup(). */
 	sockfd_put(el_socket);
 	return res;
 
 err:
-	CT_DEBUG("qtaguid: ctrl_tag(%s): done.\n", input);
 	return res;
 }
 
@@ -2293,23 +2219,13 @@ static int ctrl_cmd_untag(const char *input)
 	struct proc_qtu_data *pqd_entry;
 
 	argc = sscanf(input, "%c %d", &cmd, &sock_fd);
-	CT_DEBUG("qtaguid: ctrl_untag(%s): argc=%d cmd=%c sock_fd=%d\n",
-		 input, argc, cmd, sock_fd);
 	if (argc < 2) {
 		res = -EINVAL;
 		goto err;
 	}
 	el_socket = sockfd_lookup(sock_fd, &res);  /* This locks the file */
-	if (!el_socket) {
-		pr_debug("qtaguid: ctrl_untag(%s): failed to lookup"
-			" sock_fd=%d err=%d pid=%u tgid=%u uid=%u\n",
-			input, sock_fd, res, current->pid, current->tgid,
-			current_fsuid());
+	if (!el_socket)
 		goto err;
-	}
-	CT_DEBUG("qtaguid: ctrl_untag(%s): socket->...->f_count=%ld ->sk=%p\n",
-		 input, atomic_long_read(&el_socket->file->f_count),
-		 el_socket->sk);
 	spin_lock_bh(&sock_tag_list_lock);
 	sock_tag_entry = get_sock_stat_nl(el_socket->sk);
 	if (!sock_tag_entry) {
@@ -2335,7 +2251,7 @@ static int ctrl_cmd_untag(const char *input)
 	 * opening the /dev/xt_qtaguid.
 	 */
 	if (IS_ERR_OR_NULL(pqd_entry))
-		pr_warn_once("qtaguid: %s(): "
+		pr_debug_once("qtaguid: %s(): "
 			     "User space forgot to open /dev/xt_qtaguid? "
 			     "pid=%u tgid=%u uid=%u\n", __func__,
 			     current->pid, current->tgid, current_fsuid());
@@ -2353,9 +2269,6 @@ static int ctrl_cmd_untag(const char *input)
 	 * and once more for the sockfd_lookup() here.
 	 */
 	sockfd_put(sock_tag_entry->socket);
-	CT_DEBUG("qtaguid: ctrl_untag(%s): done. st@%p ...->f_count=%ld\n",
-		 input, sock_tag_entry,
-		 atomic_long_read(&el_socket->file->f_count) - 1);
 	sockfd_put(el_socket);
 
 	kfree(sock_tag_entry);
@@ -2364,14 +2277,11 @@ static int ctrl_cmd_untag(const char *input)
 	return 0;
 
 err_put:
-	CT_DEBUG("qtaguid: ctrl_untag(%s): done. socket->...->f_count=%ld\n",
-		 input, atomic_long_read(&el_socket->file->f_count) - 1);
 	/* Release the sock_fd that was grabbed by sockfd_lookup(). */
 	sockfd_put(el_socket);
 	return res;
 
 err:
-	CT_DEBUG("qtaguid: ctrl_untag(%s): done.\n", input);
 	return res;
 }
 
@@ -2379,9 +2289,6 @@ static int qtaguid_ctrl_parse(const char *input, int count)
 {
 	char cmd;
 	int res;
-
-	CT_DEBUG("qtaguid: ctrl(%s): pid=%u tgid=%u uid=%u\n",
-		 input, current->pid, current->tgid, current_fsuid());
 
 	cmd = input[0];
 	/* Collect params for commands */
@@ -2409,7 +2316,6 @@ static int qtaguid_ctrl_parse(const char *input, int count)
 	if (!res)
 		res = count;
 err:
-	CT_DEBUG("qtaguid: ctrl(%s): res=%d\n", input, res);
 	return res;
 }
 
@@ -2465,16 +2371,8 @@ static int pp_stats_line(struct proc_print_info *ppi, int cnt_set)
 		uid_t stat_uid = get_uid_from_tag(tag);
 		/* Detailed tags are not available to everybody */
 		if (get_atag_from_tag(tag)
-		    && !can_read_other_uid_stats(stat_uid)) {
-			CT_DEBUG("qtaguid: stats line: "
-				 "%s 0x%llx %u: insufficient priv "
-				 "from pid=%u tgid=%u uid=%u stats.gid=%u\n",
-				 ppi->iface_entry->ifname,
-				 get_atag_from_tag(tag), stat_uid,
-				 current->pid, current->tgid, current_fsuid(),
-				 xt_qtaguid_stats_file->gid);
+		    && !can_read_other_uid_stats(stat_uid))
 			return 0;
-		}
 		if (ppi->item_index++ < ppi->items_to_skip)
 			return 0;
 		cnts = &ppi->ts_entry->counters;
@@ -2561,13 +2459,6 @@ static int qtaguid_stats_proc_read(char *page, char **num_items_returned,
 		return len;
 	}
 
-	CT_DEBUG("qtaguid:proc stats pid=%u tgid=%u uid=%u "
-		 "page=%p *num_items_returned=%p off=%ld "
-		 "char_count=%d *eof=%d\n",
-		 current->pid, current->tgid, current_fsuid(),
-		 page, *num_items_returned,
-		 items_to_skip, char_count, *eof);
-
 	if (*eof)
 		return 0;
 
@@ -2619,9 +2510,6 @@ static int qtudev_open(struct inode *inode, struct file *file)
 	if (unlikely(qtu_proc_handling_passive))
 		return 0;
 
-	DR_DEBUG("qtaguid: qtudev_open(): pid=%u tgid=%u uid=%u\n",
-		 current->pid, current->tgid, current_fsuid());
-
 	spin_lock_bh(&uid_tag_data_tree_lock);
 
 	/* Look for existing uid data, or alloc one. */
@@ -2635,19 +2523,12 @@ static int qtudev_open(struct inode *inode, struct file *file)
 	pqd_entry = proc_qtu_data_tree_search(&proc_qtu_data_tree,
 					      current->tgid);
 	if (pqd_entry) {
-		pr_err("qtaguid: qtudev_open(): %u/%u %u "
-		       "%s already opened\n",
-		       current->pid, current->tgid, current_fsuid(),
-		       QTU_DEV_NAME);
 		res = -EBUSY;
 		goto err_unlock_free_utd;
 	}
 
 	new_pqd_entry = kzalloc(sizeof(*new_pqd_entry), GFP_ATOMIC);
 	if (!new_pqd_entry) {
-		pr_err("qtaguid: qtudev_open(): %u/%u %u: "
-		       "proc data alloc failed\n",
-		       current->pid, current->tgid, current_fsuid());
 		res = -ENOMEM;
 		goto err_unlock_free_utd;
 	}
@@ -2660,8 +2541,6 @@ static int qtudev_open(struct inode *inode, struct file *file)
 				  &proc_qtu_data_tree);
 
 	spin_unlock_bh(&uid_tag_data_tree_lock);
-	DR_DEBUG("qtaguid: tracking data for uid=%u in pqd=%p\n",
-		 current_fsuid(), new_pqd_entry);
 	file->private_data = new_pqd_entry;
 	return 0;
 
@@ -2691,32 +2570,17 @@ static int qtudev_release(struct inode *inode, struct file *file)
 	 * Do not trust the current->pid, it might just be a kworker cleaning
 	 * up after a dead proc.
 	 */
-	DR_DEBUG("qtaguid: qtudev_release(): "
-		 "pid=%u tgid=%u uid=%u "
-		 "pqd_entry=%p->pid=%u utd_entry=%p->active_tags=%d\n",
-		 current->pid, current->tgid, pqd_entry->parent_tag_data->uid,
-		 pqd_entry, pqd_entry->pid, utd_entry,
-		 utd_entry->num_active_tags);
 
 	spin_lock_bh(&sock_tag_list_lock);
 	spin_lock_bh(&uid_tag_data_tree_lock);
 
 	list_for_each_safe(entry, next, &pqd_entry->sock_tag_list) {
 		st_entry = list_entry(entry, struct sock_tag, list);
-		DR_DEBUG("qtaguid: %s(): "
-			 "erase sock_tag=%p->sk=%p pid=%u tgid=%u uid=%u\n",
-			 __func__,
-			 st_entry, st_entry->sk,
-			 current->pid, current->tgid,
-			 pqd_entry->parent_tag_data->uid);
 
 		utd_entry = uid_tag_data_tree_search(
 			&uid_tag_data_tree,
 			get_uid_from_tag(st_entry->tag));
 		BUG_ON(IS_ERR_OR_NULL(utd_entry));
-		DR_DEBUG("qtaguid: %s(): "
-			 "looking for tag=0x%llx in utd_entry=%p\n", __func__,
-			 st_entry->tag, utd_entry);
 		tr = tag_ref_tree_search(&utd_entry->tag_ref_tree,
 					 st_entry->tag);
 		BUG_ON(!tr);
@@ -2749,9 +2613,6 @@ static int qtudev_release(struct inode *inode, struct file *file)
 
 
 	sock_tag_tree_erase(&st_to_free_tree);
-
-	prdebug_full_state(0, "%s(): pid=%u tgid=%u", __func__,
-			   current->pid, current->tgid);
 	return 0;
 }
 
@@ -2775,7 +2636,6 @@ static int __init qtaguid_proc_register(struct proc_dir_entry **res_procdir)
 	int ret;
 	*res_procdir = proc_mkdir(module_procdirname, init_net.proc_net);
 	if (!*res_procdir) {
-		pr_err("qtaguid: failed to create proc/.../xt_qtaguid\n");
 		ret = -ENOMEM;
 		goto no_dir;
 	}
@@ -2783,8 +2643,6 @@ static int __init qtaguid_proc_register(struct proc_dir_entry **res_procdir)
 	xt_qtaguid_ctrl_file = create_proc_entry("ctrl", proc_ctrl_perms,
 						*res_procdir);
 	if (!xt_qtaguid_ctrl_file) {
-		pr_err("qtaguid: failed to create xt_qtaguid/ctrl "
-			" file\n");
 		ret = -ENOMEM;
 		goto no_ctrl_entry;
 	}
@@ -2794,8 +2652,6 @@ static int __init qtaguid_proc_register(struct proc_dir_entry **res_procdir)
 	xt_qtaguid_stats_file = create_proc_entry("stats", proc_stats_perms,
 						*res_procdir);
 	if (!xt_qtaguid_stats_file) {
-		pr_err("qtaguid: failed to create xt_qtaguid/stats "
-			"file\n");
 		ret = -ENOMEM;
 		goto no_stats_entry;
 	}

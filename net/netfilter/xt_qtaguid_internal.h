@@ -31,13 +31,14 @@
 
 /*
  * (Un)Define these *DEBUG to compile out/in the pr_debug calls.
- * All undef: text size ~ 0x3030; all def: ~ 0x4404.
- */
+ * All undef: text size ~ 0x3030; all def: ~ 0x4404.  Thanks for the tip, don't mind if i do. --Rob
+
 #define IDEBUG
 #define MDEBUG
 #define RDEBUG
 #define CDEBUG
 #define DDEBUG
+ */
 
 #define MSK_DEBUG(mask, ...) do {                           \
 		if (unlikely(qtaguid_debug_mask & (mask)))  \
