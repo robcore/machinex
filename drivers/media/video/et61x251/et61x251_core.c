@@ -1552,7 +1552,7 @@ static int et61x251_mmap(struct file* filp, struct vm_area_struct *vma)
 	}
 
 	vma->vm_flags |= VM_IO;
-	vma->vm_flags |= VM_RESERVED;
+	vma->vm_flags |= VM_DONTDUMP;
 
 	pos = cam->frame[i].bufmem;
 	while (size > 0) { /* size is page-aligned */

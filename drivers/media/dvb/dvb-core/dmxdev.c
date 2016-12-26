@@ -825,7 +825,7 @@ static int dvb_dvr_mmap(struct file *filp, struct vm_area_struct *vma)
 		return ret;
 	}
 
-	vma->vm_flags |= VM_RESERVED;
+	vma->vm_flags |= VM_DONTDUMP;
 	vma->vm_flags |= VM_DONTEXPAND;
 
 	mutex_unlock(&dmxdev->mutex);
@@ -3345,7 +3345,7 @@ static int dvb_demux_mmap(struct file *filp, struct vm_area_struct *vma)
 		return ret;
 	}
 
-	vma->vm_flags |= VM_RESERVED;
+	vma->vm_flags |= VM_DONTDUMP;
 	vma->vm_flags |= VM_DONTEXPAND;
 
 	mutex_unlock(&dmxdevfilter->mutex);

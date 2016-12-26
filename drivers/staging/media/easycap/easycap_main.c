@@ -2453,7 +2453,7 @@ static int easycap_mmap(struct file *file, struct vm_area_struct *pvma)
 	JOT(8, "\n");
 
 	pvma->vm_ops = &easycap_vm_ops;
-	pvma->vm_flags |= VM_RESERVED;
+	pvma->vm_flags |= VM_DONTDUMP;
 	if (file)
 		pvma->vm_private_data = file->private_data;
 	easycap_vma_open(pvma);

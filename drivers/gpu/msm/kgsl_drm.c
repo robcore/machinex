@@ -1012,10 +1012,10 @@ int msm_drm_gem_mmap(struct file *filp, struct vm_area_struct *vma)
 	 * with "normal" memory then the mappings don't get flushed. */
 
 	if (TYPE_IS_MEM(gpriv->type)) {
-		vma->vm_flags |= VM_RESERVED | VM_DONTEXPAND;
+		vma->vm_flags |= VM_DONTDUMP | VM_DONTEXPAND;
 		vma->vm_ops = &kgsl_gem_kmem_vm_ops;
 	} else {
-		vma->vm_flags |= VM_RESERVED | VM_IO | VM_PFNMAP |
+		vma->vm_flags |= VM_DONTDUMP | VM_IO | VM_PFNMAP |
 			VM_DONTEXPAND;
 		vma->vm_ops = &kgsl_gem_phys_vm_ops;
 	}

@@ -191,7 +191,7 @@ static int tdmb_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	DPRINTK("%s\n", __func__);
 
-	vma->vm_flags |= VM_RESERVED;
+	vma->vm_flags |= VM_DONTDUMP;
 	size = vma->vm_end - vma->vm_start;
 	DPRINTK("size given : %x\n", size);
 
