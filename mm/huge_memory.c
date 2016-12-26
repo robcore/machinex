@@ -224,9 +224,6 @@ static ssize_t enabled_store(struct kobject *kobj,
 			ret = err;
 	}
 
-	if (ret > 0 && khugepaged_enabled())
-		set_recommended_min_free_kbytes();
-
 	return ret;
 }
 static struct kobj_attribute enabled_attr =
@@ -554,8 +551,6 @@ static int __init hugepage_init(void)
 		transparent_hugepage_flags = 0;
 
 	start_khugepaged();
-
-	set_recommended_min_free_kbytes();
 
 	return 0;
 out:
