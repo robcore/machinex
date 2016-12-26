@@ -913,7 +913,8 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		if (ret) {
 			pr_err("scm_call to unload app (id = %d) failed\n",
 					req.app_id);
-			return -EFAULT;
+			ret = -EFAULT;
+			goto unload_exit;
 		} else {
 			pr_warn("App id %d now unloaded\n", req.app_id);
 		}
@@ -931,7 +932,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			if (ret) {
 				pr_err("process_incomplete_cmd fail err: %d\n",
 						ret);
-				return ret;
+				goto unload_exit;
 			}
 		}
 	}
@@ -970,6 +971,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 								flags1);
 	}
+unload_exit:
 	qseecom_unmap_ion_allocated_memory(data);
 	data->released = true;
 	return ret;
@@ -1792,7 +1794,7 @@ int qseecom_send_command(struct qseecom_handle *handle, void *send_buf,
 	if (ret)
 		return ret;
 
-	pr_debug("sending cmd_req->rsp size: %u, ptr: 0x%p\n",
+	pr_debug("sending cmd_req->rsp size: %u, ptr: 0x%pK\n",
 			req.resp_len, req.resp_buf);
 	return ret;
 }
