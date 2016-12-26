@@ -652,13 +652,13 @@ static void free_pfn_range(u64 paddr, unsigned long size)
 }
 
 /*
- * track_pfn_vma_copy is called when vma that is covering the pfnmap gets
+ * track_pfn_copy is called when vma that is covering the pfnmap gets
  * copied through copy_page_range().
  *
  * If the vma has a linear pfn mapping for the entire range, we get the prot
  * from pte and reserve the entire vma range with single reserve_pfn_range call.
  */
-int track_pfn_vma_copy(struct vm_area_struct *vma)
+int track_pfn_copy(struct vm_area_struct *vma)
 {
 	resource_size_t paddr;
 	unsigned long prot;
@@ -682,15 +682,12 @@ int track_pfn_vma_copy(struct vm_area_struct *vma)
 }
 
 /*
- * track_pfn_vma_new is called when a _new_ pfn mapping is being established
- * for physical range indicated by pfn and size.
- *
  * prot is passed in as a parameter for the new mapping. If the vma has a
  * linear pfn mapping for the entire range reserve the entire vma range with
  * single reserve_pfn_range call.
  */
-int track_pfn_vma_new(struct vm_area_struct *vma, pgprot_t *prot,
-			unsigned long pfn, unsigned long size)
+int track_pfn_remap(struct vm_area_struct *vma, pgprot_t *prot,
+		    unsigned long pfn, unsigned long size)
 {
 	unsigned long flags;
 	resource_size_t paddr;
