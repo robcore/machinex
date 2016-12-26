@@ -346,7 +346,6 @@ static inline void mminit_validate_memmodel_limits(unsigned long *start_pfn,
 #define ZONE_RECLAIM_FULL	-1
 #define ZONE_RECLAIM_SOME	0
 #define ZONE_RECLAIM_SUCCESS	1
-#endif
 
 extern int hwpoison_filter(struct page *p);
 
@@ -357,6 +356,7 @@ extern u64 hwpoison_filter_flags_value;
 extern u64 hwpoison_filter_memcg;
 
 extern void set_pageblock_order(void);
+#endif	/* __MM_INTERNAL_H */
 
 /* The ALLOC_WMARK bits are used as an index to zone->watermark */
 #define ALLOC_WMARK_MIN		WMARK_MIN
