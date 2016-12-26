@@ -44,10 +44,8 @@
 #include <asm/localtimer.h>
 #include <asm/smp_plat.h>
 #include <asm/mpu.h>
+#include <asm/virt.h>
 
-#if defined(CONFIG_SEC_DEBUG)
-#include <mach/sec_debug.h>
-#endif
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
  * so we need some other way of telling a new secondary core
@@ -343,6 +341,8 @@ void __init smp_cpus_done(unsigned int max_cpus)
 	       num_online_cpus(),
 	       bogosum / (500000/HZ),
 	       (bogosum / (5000/HZ)) % 100);
+
+	hyp_mode_check();
 }
 
 void __init smp_prepare_boot_cpu(void)
