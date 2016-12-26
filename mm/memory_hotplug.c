@@ -102,6 +102,7 @@ static void get_page_bootmem(unsigned long info,  struct page *page,
 void __ref put_page_bootmem(struct page *page)
 {
 	unsigned long type;
+	struct zone *zone;
 	static DEFINE_MUTEX(ppb_lock);
 
 	type = (unsigned long) page->lru.next;
@@ -120,6 +121,12 @@ void __ref put_page_bootmem(struct page *page)
 		mutex_lock(&ppb_lock);
 		__free_pages_bootmem(page, 0);
 		mutex_unlock(&ppb_lock);
+
+		zone = page_zone(page);
+		zone_span_writelock(zone);
+		zone->present_pages++;
+		zone_span_writeunlock(zone);
+		totalram_pages++;
 	}
 
 }
