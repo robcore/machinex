@@ -68,7 +68,6 @@ __setup("androidboot.check_recovery_condition=0x", sec_tsp_reboot_mode);
 void synaptics_tsp_register_callback(struct synaptics_rmi_callbacks *cb)
 {
 	charger_callbacks = cb;
-	pr_debug("%s: [synaptics] charger callback!\n", __func__);
 }
 
 static int touch_sleep_time;
