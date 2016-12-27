@@ -163,8 +163,6 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 		//return;
 	}
 
-	pr_debug("%s:id %d: Powering on modem for the first time\n",
-		   __func__, mdm_drv->device_id);
 	mdm_peripheral_disconnect(mdm_drv);
 
 	/* If this is the first power-up after a panic, the modem may still
@@ -211,8 +209,6 @@ static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
 	int i;
 	int pblrdy;
 
-	pr_err("%s: id %d:  soft resetting mdm modem\n",
-		   __func__, mdm_drv->device_id);
 	mdm_peripheral_disconnect(mdm_drv);
 	mdm_toggle_soft_reset(mdm_drv);
 
