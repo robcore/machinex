@@ -44,10 +44,10 @@
 #define JC_ISP_TIMEOUT		3000
 
 #define JC_LOAD_FW_MAIN	1
-#define JC_DUMP_FW	1
+//#define JC_DUMP_FW	1
 #define JC_CHECK_FW	1
 #define JC_MEM_READ	1
-#define ISP_DEBUG_LOG	1
+//#define ISP_DEBUG_LOG	0
 #define JC_SPI_WRITE
 #define FW_WRITE_SIZE 262144 /*2097152*/
 #define VERIFY_CHIP_ERASED 32
