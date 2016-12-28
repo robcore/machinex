@@ -53,6 +53,9 @@ struct bus_type msm_iommu_sec_bus_type = {
 	.name = "msm_iommu_sec_bus",
 };
 
+static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
+				 unsigned int len);
+
 static inline void clean_pte(unsigned long *start, unsigned long *end,
 			     int redirect)
 {
