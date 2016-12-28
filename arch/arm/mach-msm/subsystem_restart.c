@@ -297,7 +297,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (time_first && n >= max_restarts_check) {
 		if ((curr_time->tv_sec - time_first->tv_sec) <
 				max_history_time_check) {
-			panic("Subsystems have crashed %d times in less than "\
+			WARN_ONCE(1, "Subsystems have crashed %d times in less than "\
 				"%ld seconds!", max_restarts_check,
 				max_history_time_check);
 		}
@@ -337,7 +337,7 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Shutting down %s\n", current, name);
 	if (dev->desc->shutdown(dev->desc) < 0) {
-		panic("subsys-restart: [%p]: Failed to shutdown %s!",
+		WARN_ONCE(1, "subsys-restart: [%p]: Failed to shutdown %s!",
 			current, name);
 	}
 	subsys_set_state(dev, SUBSYS_OFFLINE);
@@ -358,7 +358,7 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
-		panic("[%p]: Failed to powerup %s!", current, name);
+		WARN_ONCE(1, "[%p]: Failed to powerup %s!", current, name);
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
@@ -416,7 +416,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	 * order is being rebooted.
 	 */
 	if (!mutex_trylock(powerup_lock)) {
-		panic("%s[%p]: Subsystem died during powerup!",
+		WARN_ONCE(1, "%s[%p]: Subsystem died during powerup!",
 						__func__, current);
 	}
 
@@ -486,9 +486,7 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 			dev->state = SUBSYS_CRASHED;
 			wake_lock(&dev->wake_lock);
 			queue_work(ssr_wq, &dev->work);
-		} //else {
-			//panic("Subsystem %s crashed during SSR!", name);
-		//}
+		}
 	}
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
 }
@@ -512,7 +510,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = 1;
+		enable_ramdumps = 0;
 		/* Fall through */
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
@@ -627,12 +625,7 @@ static int __init ssr_init_soc_restart_orders(void)
 		restart_orders = orders_8x60_all;
 		n_restart_orders = ARRAY_SIZE(orders_8x60_all);
 	}
-#ifndef CONFIG_MACH_JF
-	if (cpu_is_msm8960() || cpu_is_msm8930()) {
-		restart_orders = restart_orders_8960;
-		n_restart_orders = ARRAY_SIZE(restart_orders_8960);
-	}
-#endif
+
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		restart_orders = restart_orders_8960_sglte;
 		n_restart_orders = ARRAY_SIZE(restart_orders_8960_sglte);
@@ -661,8 +654,10 @@ static int __init subsys_restart_init(void)
 	restart_level = RESET_SUBSYS_INDEPENDENT;
 
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
-	if (!ssr_wq)
-		panic("%s: out of memory\n", __func__);
+	if (!ssr_wq) {
+		pr_err("%s: out of memory\n", __func__);
+		return -ENOMEM;
+	}
 
 	return ssr_init_soc_restart_orders();
 }
