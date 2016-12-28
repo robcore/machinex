@@ -77,9 +77,6 @@ extern __init void add_static_vm_early(struct static_vm *svm);
 /* consistent regions used by dma_alloc_attrs() */
 #define VM_ARM_DMA_CONSISTENT	0x20000000
 
-/* consistent regions used by dma_alloc_attrs() */
-#define VM_ARM_DMA_CONSISTENT	0x20000000
-
 #endif
 
 #ifdef CONFIG_ZONE_DMA
