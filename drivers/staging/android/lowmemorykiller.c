@@ -47,7 +47,10 @@
 #include <linux/fs.h>
 #endif /* CONFIG_ZSWAP */
 
+#ifdef ENHANCED_LMK_ROUTINE
 #define ENHANCED_LMK_ROUTINE
+#endif
+
 #define LMK_COUNT_READ
 
 #ifdef ENHANCED_LMK_ROUTINE
