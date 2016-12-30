@@ -324,44 +324,20 @@ static int __exfat_revalidate(struct dentry *dentry)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 static int exfat_revalidate(struct dentry *dentry, unsigned int flags)
-#else
-static int exfat_revalidate(struct dentry *dentry, struct nameidata *nd)
-#endif
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
-	if (nd && nd->flags & LOOKUP_RCU)
-		return -ECHILD;
-#endif
 
 	if (dentry->d_inode)
 		return 1;
 	return __exfat_revalidate(dentry);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 static int exfat_revalidate_ci(struct dentry *dentry, unsigned int flags)
-#else
-static int exfat_revalidate_ci(struct dentry *dentry, struct nameidata *nd)
-#endif
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
-	unsigned int flags;
-
-	if (nd && nd->flags & LOOKUP_RCU)
-		return -ECHILD;
-
-	flags = nd ? nd->flags : 0;
-#else
-	flags = nd ? nd->flags : 0;
-#endif
 
 	if (dentry->d_inode)
 		return 1;
@@ -642,16 +618,8 @@ const struct file_operations exfat_dir_operations = {
 	.fsync      = exfat_file_fsync,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 static int exfat_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 						bool excl)
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
-static int exfat_create(struct inode *dir, struct dentry *dentry, umode_t mode,
-						struct nameidata *nd)
-#else
-static int exfat_create(struct inode *dir, struct dentry *dentry, int mode,
-						struct nameidata *nd)
-#endif
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;
@@ -726,13 +694,8 @@ static int exfat_d_anon_disconn(struct dentry *dentry)
 	return IS_ROOT(dentry) && (dentry->d_flags & DCACHE_DISCONNECTED);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 static struct dentry *exfat_lookup(struct inode *dir, struct dentry *dentry,
 						   unsigned int flags)
-#else
-static struct dentry *exfat_lookup(struct inode *dir, struct dentry *dentry,
-						   struct nameidata *nd)
-#endif
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;
@@ -923,11 +886,7 @@ out:
 	return err;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 static int exfat_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
-#else
-static int exfat_mkdir(struct inode *dir, struct dentry *dentry, int mode)
-#endif
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;
@@ -1086,7 +1045,8 @@ static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 	if ((S_ISDIR(old_inode->i_mode)) && (old_dir != new_dir)) {
 		drop_nlink(old_dir);
-		if (!new_inode) inc_nlink(new_dir);
+		if (!new_inode)
+			inc_nlink(new_dir);
 	}
 
 	old_dir->i_version++;
@@ -1116,7 +1076,8 @@ static int exfat_cont_expand(struct inode *inode, loff_t size)
 	loff_t start = i_size_read(inode), count = size - i_size_read(inode);
 	int err, err2;
 
-	if ((err = generic_cont_expand_simple(inode, size)) != 0)
+	err = generic_cont_expand_simple(inode, size);
+	if (err != 0)
 		return err;
 
 	inode->i_ctime = inode->i_mtime = CURRENT_TIME_SEC;
@@ -1125,12 +1086,11 @@ static int exfat_cont_expand(struct inode *inode, loff_t size)
 	if (IS_SYNC(inode)) {
 		err = filemap_fdatawrite_range(mapping, start, start + count - 1);
 		err2 = sync_mapping_buffers(mapping);
-		err = (err)?(err):(err2);
+		err = (err) ? (err) : (err2);
 		err2 = write_inode_now(inode, 1);
-		err = (err)?(err):(err2);
-		if (!err) {
+		err = (err) ? (err) : (err2);
+		if (!err)
 			err =  filemap_fdatawait_range(mapping, start, start + count - 1);
-		}
 	}
 	return err;
 }
@@ -1207,9 +1167,8 @@ static int exfat_setattr(struct dentry *dentry, struct iattr *attr)
 
 	error = inode_change_ok(inode, attr);
 	attr->ia_valid = ia_valid;
-	if (error) {
+	if (error)
 		return error;
-	}
 
 	if (((attr->ia_valid & ATTR_UID) &&
 		 (attr->ia_uid != sbi->options.fs_uid)) ||
@@ -1234,7 +1193,7 @@ static int exfat_setattr(struct dentry *dentry, struct iattr *attr)
 	if (attr->ia_valid & ATTR_SIZE) {
 		old_size = i_size_read(inode);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
-                down_write(&EXFAT_I(inode)->truncate_lock);
+		down_write(&EXFAT_I(inode)->truncate_lock);
 		truncate_setsize(inode, attr->ia_size);
 		_exfat_truncate(inode, old_size);
 		up_write(&EXFAT_I(inode)->truncate_lock);
@@ -1314,6 +1273,8 @@ const struct file_operations exfat_file_operations = {
 	.llseek      = generic_file_llseek,
 	.read        = do_sync_read,
 	.write       = do_sync_write,
+	.aio_read    = generic_file_aio_read,
+	.aio_write   = generic_file_aio_write,
 	.read_iter	= generic_file_read_iter,
 	.write_iter	= generic_file_write_iter,
 	.mmap        = generic_file_mmap,
@@ -1340,10 +1301,12 @@ static void _exfat_truncate(struct inode *inode, loff_t old_size)
 	if (EXFAT_I(inode)->mmu_private > i_size_read(inode))
 		EXFAT_I(inode)->mmu_private = i_size_read(inode);
 
-	if (EXFAT_I(inode)->fid.start_clu == 0) goto out;
+	if (EXFAT_I(inode)->fid.start_clu == 0)
+		goto out;
 
 	err = FsTruncateFile(inode, old_size, i_size_read(inode));
-	if (err) goto out;
+	if (err)
+		goto out;
 
 	inode->i_ctime = inode->i_mtime = CURRENT_TIME_SEC;
 	if (IS_DIRSYNC(inode))
@@ -1378,6 +1341,10 @@ const struct inode_operations exfat_file_inode_operations = {
 #endif
 };
 
+/*======================================================================*/
+/*  Address Space Operations                                            */
+/*======================================================================*/
+
 static int exfat_bmap(struct inode *inode, sector_t sector, sector_t *phys,
 					  unsigned long *mapped_blocks, int *create)
 {
@@ -1406,7 +1373,8 @@ static int exfat_bmap(struct inode *inode, sector_t sector, sector_t *phys,
 
 	last_block = (i_size_read(inode) + (blocksize - 1)) >> blocksize_bits;
 	if (sector >= last_block) {
-		if (*create == 0) return 0;
+		if (*create == 0)
+			return 0;
 	} else {
 		*create = 0;
 	}
@@ -1504,7 +1472,6 @@ static void exfat_write_failed(struct address_space *mapping, loff_t to)
 	}
 }
 #endif
-
 
 static int exfat_write_begin(struct file *file, struct address_space *mapping,
 				 loff_t pos, unsigned len, unsigned flags,
@@ -1631,7 +1598,8 @@ static inline unsigned long exfat_hash(loff_t i_pos)
 	return hash_32(i_pos, EXFAT_HASH_BITS);
 }
 
-static struct inode *exfat_iget(struct super_block *sb, loff_t i_pos) {
+static struct inode *exfat_iget(struct super_block *sb, loff_t i_pos)
+{
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	struct exfat_inode_info *info;
 	struct hlist_head *head = sbi->inode_hashtable + exfat_hash(i_pos);
@@ -1770,7 +1738,8 @@ static int exfat_sync_inode(struct inode *inode)
 	return exfat_write_inode(inode, NULL);
 }
 
-static struct inode *exfat_alloc_inode(struct super_block *sb) {
+static struct inode *exfat_alloc_inode(struct super_block *sb)
+{
 	struct exfat_inode_info *ei;
 
 	ei = kmem_cache_alloc(exfat_inode_cachep, GFP_NOFS);
@@ -1981,7 +1950,7 @@ static int exfat_show_options(struct seq_file *m, struct vfsmount *mnt)
 		seq_puts(m, ",errors=panic");
 	else
 		seq_puts(m, ",errors=remount-ro");
-#if EXFAT_CONFIG_DISCARD
+#ifdef CONFIG_EXFAT_DISCARD
 	if (opts->discard)
 		seq_printf(m, ",discard");
 #endif
@@ -2026,7 +1995,7 @@ enum {
 	Opt_err_panic,
 	Opt_err_ro,
 	Opt_err,
-#if EXFAT_CONFIG_DISCARD
+#ifdef CONFIG_EXFAT_DISCARD
 	Opt_discard,
 #endif
 };
@@ -2046,7 +2015,7 @@ static const match_table_t exfat_tokens = {
 	{Opt_err_cont, "errors=continue"},
 	{Opt_err_panic, "errors=panic"},
 	{Opt_err_ro, "errors=remount-ro"},
-#if EXFAT_CONFIG_DISCARD
+#ifdef CONFIG_EXFAT_DISCARD
 	{Opt_discard, "discard"},
 #endif
 	{Opt_err, NULL}
@@ -2069,7 +2038,7 @@ static int parse_options(char *options, int silent, int *debug,
 	opts->casesensitive = 0;
 	opts->tz_utc = 0;
 	opts->errors = EXFAT_ERRORS_RO;
-#if EXFAT_CONFIG_DISCARD
+#ifdef CONFIG_EXFAT_DISCARD
 	opts->discard = 0;
 #endif
 	*debug = 0;
@@ -2142,7 +2111,7 @@ static int parse_options(char *options, int silent, int *debug,
 		case Opt_debug:
 			*debug = 1;
 			break;
-#if EXFAT_CONFIG_DISCARD
+#ifdef CONFIG_EXFAT_DISCARD
 		case Opt_discard:
 			opts->discard = 1;
 			break;
@@ -2368,10 +2337,15 @@ static int __init exfat_init_inodecache(void)
 
 static void __exit exfat_destroy_inodecache(void)
 {
+	/*
+	 * Make sure all delayed rcu free inodes are flushed before we
+	 * destroy cache.
+	 */
+	rcu_barrier();
 	kmem_cache_destroy(exfat_inode_cachep);
 }
 
-#if EXFAT_CONFIG_KERNEL_DEBUG
+#ifdef CONFIG_EXFAT_KERNEL_DEBUG
 static void exfat_debug_kill_sb(struct super_block *sb)
 {
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
@@ -2383,6 +2357,8 @@ static void exfat_debug_kill_sb(struct super_block *sb)
 		flags = sbi->debug_flags;
 
 		if (flags & EXFAT_DEBUGFLAGS_INVALID_UMOUNT) {
+			/* invalidate_bdev drops all device cache include dirty.
+			   we use this to simulate device removal */
 			FsReleaseCache(sb);
 			invalidate_bdev(bdev);
 		}
@@ -2390,7 +2366,7 @@ static void exfat_debug_kill_sb(struct super_block *sb)
 
 	kill_block_super(sb);
 }
-#endif
+#endif /* CONFIG_EXFAT_KERNEL_DEBUG */
 
 static struct file_system_type exfat_fs_type = {
 	.owner       = THIS_MODULE,
@@ -2400,7 +2376,7 @@ static struct file_system_type exfat_fs_type = {
 #else
 	.mount       = exfat_fs_mount,
 #endif
-#if EXFAT_CONFIG_KERNEL_DEBUG
+#ifdef CONFIG_EXFAT_KERNEL_DEBUG
 	.kill_sb    = exfat_debug_kill_sb,
 #else
 	.kill_sb    = kill_block_super,
@@ -2415,7 +2391,8 @@ static int __init init_exfat_fs(void)
 	printk(KERN_INFO "exFAT: FS Version %s\n", EXFAT_VERSION);
 
 	err = exfat_init_inodecache();
-	if (err) return err;
+	if (err)
+		return err;
 
 	return register_filesystem(&exfat_fs_type);
 }

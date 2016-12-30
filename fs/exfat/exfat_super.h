@@ -65,6 +65,9 @@ struct exfat_mount_options {
 #define EXFAT_HASH_BITS    8
 #define EXFAT_HASH_SIZE    (1UL << EXFAT_HASH_BITS)
 
+/*
+ * EXFAT file system in-core superblock data
+ */
 struct exfat_sb_info {
 	FS_INFO_T fs_info;
 	BD_INFO_T bd_info;
@@ -92,7 +95,7 @@ struct exfat_inode_info {
 	char  *target;
 	loff_t mmu_private;    
 	loff_t i_pos;         
-	struct hlist_node i_hash_fat; 
+	struct hlist_node i_hash_fat;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 	struct rw_semaphore truncate_lock;
 #endif
@@ -101,10 +104,18 @@ struct exfat_inode_info {
 
 #define EXFAT_SB(sb)		((struct exfat_sb_info *)((sb)->s_fs_info))
 
-static inline struct exfat_inode_info *EXFAT_I(struct inode *inode) {
+static inline struct exfat_inode_info *EXFAT_I(struct inode *inode)
+{
 	return container_of(inode, struct exfat_inode_info, vfs_inode);
 }
 
+/*
+ * If ->i_mode can't hold S_IWUGO (i.e. ATTR_RO), we use ->i_attrs to
+ * save ATTR_RO instead of ->i_mode.
+ *
+ * If it's directory and !sbi->options.rodir, ATTR_RO isn't read-only
+ * bit, it's just used as flag for app.
+ */
 static inline int exfat_mode_can_hold_ro(struct inode *inode)
 {
 	struct exfat_sb_info *sbi = EXFAT_SB(inode->i_sb);
