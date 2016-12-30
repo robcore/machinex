@@ -23,6 +23,7 @@
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
 #include <linux/debug_locks.h>
+#include "sched/sched.h"
 
 /*
  * In the DEBUG case we are using the "NULL fastpath" for mutexes,
@@ -205,12 +206,9 @@ int mutex_spin_on_owner(struct mutex *lock, struct task_struct *owner)
 	return lock->owner == NULL;
 }
 
-int mutex_can_spin_on_owner(struct mutex *lock)
+static int mutex_can_spin_on_owner(struct mutex *lock)
 {
 	int retval = 1;
-
-	if (!sched_feat(OWNER_SPIN))
-		return 0;
 
 	rcu_read_lock();
 	if (lock->owner)
