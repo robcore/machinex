@@ -5303,29 +5303,26 @@ static inline void set_cpu_sd_state_busy(void)
 {
 	struct sched_domain *sd;
 	int cpu = smp_processor_id();
-	int clear = 0;
-
-	if (!test_bit(NOHZ_IDLE, nohz_flags(cpu)))
-		return;
 
 	rcu_read_lock();
-	for_each_domain(cpu, sd) {
-		atomic_inc(&sd->groups->sgp->nr_busy_cpus);
-		clear = 1;
-	}
-	rcu_read_unlock();
+	sd = rcu_dereference_check_sched_domain(this_rq()->sd);
 
-	if (likely(clear))
-    		clear_bit(NOHZ_IDLE, nohz_flags(cpu));
+	if (!sd || !sd->nohz_idle)
+		goto unlock;
+	sd->nohz_idle = 0;
+
+	for (; sd; sd = sd->parent)
+	atomic_inc(&sd->groups->sgp->nr_busy_cpus);
+unlock:
+	rcu_read_unlock();
 }
 
 void set_cpu_sd_state_idle(void)
 {
 	struct sched_domain *sd;
-	int cpu = smp_processor_id();
 
 	rcu_read_lock();
-	sd = rcu_dereference_check_sched_domain(cpu_rq(cpu)->sd);
+	sd = rcu_dereference_check_sched_domain(this_rq()->sd);
 
 	if (!sd || sd->nohz_idle)
 		goto unlock;
