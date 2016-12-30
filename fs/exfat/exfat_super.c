@@ -1950,7 +1950,7 @@ static int exfat_show_options(struct seq_file *m, struct vfsmount *mnt)
 		seq_puts(m, ",errors=panic");
 	else
 		seq_puts(m, ",errors=remount-ro");
-#ifdef CONFIG_EXFAT_DISCARD
+#if EXFAT_CONFIG_DISCARD
 	if (opts->discard)
 		seq_printf(m, ",discard");
 #endif
@@ -1995,7 +1995,7 @@ enum {
 	Opt_err_panic,
 	Opt_err_ro,
 	Opt_err,
-#ifdef CONFIG_EXFAT_DISCARD
+#if EXFAT_CONFIG_DISCARD
 	Opt_discard,
 #endif
 };
@@ -2015,7 +2015,7 @@ static const match_table_t exfat_tokens = {
 	{Opt_err_cont, "errors=continue"},
 	{Opt_err_panic, "errors=panic"},
 	{Opt_err_ro, "errors=remount-ro"},
-#ifdef CONFIG_EXFAT_DISCARD
+#if EXFAT_CONFIG_DISCARD
 	{Opt_discard, "discard"},
 #endif
 	{Opt_err, NULL}
@@ -2038,7 +2038,7 @@ static int parse_options(char *options, int silent, int *debug,
 	opts->casesensitive = 0;
 	opts->tz_utc = 0;
 	opts->errors = EXFAT_ERRORS_RO;
-#ifdef CONFIG_EXFAT_DISCARD
+#if EXFAT_CONFIG_DISCARD
 	opts->discard = 0;
 #endif
 	*debug = 0;
@@ -2111,7 +2111,7 @@ static int parse_options(char *options, int silent, int *debug,
 		case Opt_debug:
 			*debug = 1;
 			break;
-#ifdef CONFIG_EXFAT_DISCARD
+#if EXFAT_CONFIG_DISCARD
 		case Opt_discard:
 			opts->discard = 1;
 			break;
@@ -2345,7 +2345,7 @@ static void __exit exfat_destroy_inodecache(void)
 	kmem_cache_destroy(exfat_inode_cachep);
 }
 
-#ifdef CONFIG_EXFAT_KERNEL_DEBUG
+#if EXFAT_CONFIG_KERNEL_DEBUG
 static void exfat_debug_kill_sb(struct super_block *sb)
 {
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
@@ -2366,7 +2366,7 @@ static void exfat_debug_kill_sb(struct super_block *sb)
 
 	kill_block_super(sb);
 }
-#endif /* CONFIG_EXFAT_KERNEL_DEBUG */
+#endif
 
 static struct file_system_type exfat_fs_type = {
 	.owner       = THIS_MODULE,
@@ -2376,7 +2376,7 @@ static struct file_system_type exfat_fs_type = {
 #else
 	.mount       = exfat_fs_mount,
 #endif
-#ifdef CONFIG_EXFAT_KERNEL_DEBUG
+#if EXFAT_CONFIG_KERNEL_DEBUG
 	.kill_sb    = exfat_debug_kill_sb,
 #else
 	.kill_sb    = kill_block_super,
