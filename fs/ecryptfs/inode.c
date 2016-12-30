@@ -212,6 +212,7 @@ ecryptfs_do_create2(struct inode *directory_inode,
 	int rc;
 	struct dentry *lower_dentry;
 	struct dentry *lower_dir_dentry;
+	struct vfsmount *lower_mnt;
 	struct inode *inode;
 
 	lower_dentry = ecryptfs_dentry_to_lower(ecryptfs_dentry);
