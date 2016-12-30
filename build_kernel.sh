@@ -60,11 +60,11 @@ if [[ $USEPRV = "n" ]]; then
 				read PROTO
 				SUBVERSION=P$PROTO
 			fi
-		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
-		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
+			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		else
-		OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
-		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
+			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
+			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		fi
 	else
 		echo -n "Name? (Number-P-N) [ENTER]: "
@@ -91,6 +91,7 @@ export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cort
 export KBUILD_BUILD_VERSION=007
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
+export LOCALVERSION=-$OUTFOLDER
 env KCONFIG_NOTIMESTAMP=true
 washme
 make clean;
