@@ -25,7 +25,7 @@ out:
 	return err;
 }
 
-void __exit exit_nfs_v4(void)
+void exit_nfs_v4(void)
 {
 	nfs4_unregister_sysctl();
 	nfs_idmap_quit();
