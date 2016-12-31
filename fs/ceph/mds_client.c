@@ -1471,11 +1471,6 @@ retry:
 		else
 			len += 1 + temp->d_name.len;
 		temp = temp->d_parent;
-		if (temp == NULL) {
-			rcu_read_unlock();
-			pr_err("build_path corrupt dentry %p\n", dentry);
-			return ERR_PTR(-EINVAL);
-		}
 	}
 	rcu_read_unlock();
 	if (len)
@@ -1512,12 +1507,6 @@ retry:
 		if (pos)
 			path[--pos] = '/';
 		temp = temp->d_parent;
-		if (temp == NULL) {
-			rcu_read_unlock();
-			pr_err("build_path corrupt dentry\n");
-			kfree(path);
-			return ERR_PTR(-EINVAL);
-		}
 	}
 	rcu_read_unlock();
 	if (pos != 0 || read_seqretry(&rename_lock, seq)) {
