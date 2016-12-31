@@ -20,8 +20,6 @@
 #include <linux/nfs_page.h>
 #include <linux/module.h>
 
-#include "pnfs.h"
-
 #include "nfs4_fs.h"
 #include "internal.h"
 #include "iostat.h"
@@ -107,7 +105,7 @@ static void nfs_readpage_truncate_uninitialised_page(struct nfs_read_data *data)
 	}
 }
 
-void nfs_pageio_init_read_mds(struct nfs_pageio_descriptor *pgio,
+void nfs_pageio_init_read(struct nfs_pageio_descriptor *pgio,
 		struct inode *inode)
 {
 	nfs_pageio_init(pgio, inode, &nfs_pageio_read_ops,
@@ -120,13 +118,6 @@ void nfs_pageio_reset_read_mds(struct nfs_pageio_descriptor *pgio)
 	pgio->pg_bsize = NFS_SERVER(pgio->pg_inode)->rsize;
 }
 EXPORT_SYMBOL_GPL(nfs_pageio_reset_read_mds);
-
-static void nfs_pageio_init_read(struct nfs_pageio_descriptor *pgio,
-		struct inode *inode)
-{
-	if (!pnfs_pageio_init_read(pgio, inode))
-		nfs_pageio_init_read_mds(pgio, inode);
-}
 
 int nfs_readpage_async(struct nfs_open_context *ctx, struct inode *inode,
 		       struct page *page)
@@ -436,7 +427,7 @@ static void nfs_readpage_retry(struct rpc_task *task, struct nfs_read_data *data
 static void nfs_readpage_result_partial(struct rpc_task *task, void *calldata)
 {
 	struct nfs_read_data *data = calldata;
- 
+
 	if (nfs_readpage_result(task, data) != 0)
 		return;
 	if (task->tk_status < 0)
