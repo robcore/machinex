@@ -98,9 +98,8 @@ make clean;
 make distclean;
 make mrproper;
 mkdir $(pwd)/out;
-touch $(pwd)/out/localversion
-echo "$LV" > $(pwd)/out/localversion
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+echo CONFIG_LOCALVERSION="$LV" >> $(pwd)/out/.config;
 make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
