@@ -6901,6 +6901,7 @@ const struct nfs_rpc_ops nfs_v4_clientops = {
 	.open_context	= nfs4_atomic_open,
 	.have_delegation = nfs4_have_delegation,
 	.return_delegation = nfs4_inode_return_delegation,
+	.alloc_client	= nfs4_alloc_client,
 	.init_client	= nfs4_init_client,
 	.free_client	= nfs4_free_client,
 	.secinfo	= nfs4_proc_secinfo,
