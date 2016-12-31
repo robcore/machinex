@@ -1310,6 +1310,7 @@ struct nfs_rpc_ops {
 	struct nfs_client *
 		(*init_client) (struct nfs_client *, const struct rpc_timeout *,
 				const char *, rpc_authflavor_t);
+	void	(*free_client) (struct nfs_client *);
 	int	(*secinfo)(struct inode *, const struct qstr *, struct nfs4_secinfo_flavors *);
 };
 

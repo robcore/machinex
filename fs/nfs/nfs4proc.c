@@ -6902,6 +6902,7 @@ const struct nfs_rpc_ops nfs_v4_clientops = {
 	.have_delegation = nfs4_have_delegation,
 	.return_delegation = nfs4_inode_return_delegation,
 	.init_client	= nfs4_init_client,
+	.free_client	= nfs4_free_client,
 	.secinfo	= nfs4_proc_secinfo,
 };
 
