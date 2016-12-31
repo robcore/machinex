@@ -273,7 +273,6 @@ __acquires(ehci->lock)
 			/* ... update hc-wide periodic stats (for usbfs) */
 			ehci_to_hcd(ehci)->self.bandwidth_int_reqs--;
 		}
-		qh_put (qh);
 	}
 
 	if (unlikely(urb->unlinked)) {
@@ -953,7 +952,7 @@ qh_make (
 	default:
 		dbg ("bogus dev %p speed %d", urb->dev, urb->dev->speed);
 done:
-		qh_put (qh);
+		qh_destroy(ehci, qh);
 		return NULL;
 	}
 
@@ -1012,7 +1011,6 @@ static void qh_link_async (struct ehci_hcd *ehci, struct ehci_qh *qh)
 	head->qh_next.qh = qh;
 	head->hw->hw_next = dma;
 
-	qh_get(qh);
 	qh->xacterrs = 0;
 	qh->qh_state = QH_STATE_LINKED;
 	/* qtd completions reported later by interrupt */
@@ -1099,7 +1097,7 @@ static struct ehci_qh *qh_append_tds (
 			wmb ();
 			dummy->hw_token = token;
 
-			urb->hcpriv = qh_get (qh);
+			urb->hcpriv = qh;
 		}
 	}
 	return qh;
@@ -1281,7 +1279,6 @@ static void end_unlink_async (struct ehci_hcd *ehci)
 	// qh->hw_next = cpu_to_hc32(qh->qh_dma);
 	qh->qh_state = QH_STATE_IDLE;
 	qh->qh_next.qh = NULL;
-	qh_put (qh);			// refcount from reclaim
 
 	/* other unlink(s) may be pending (in QH_STATE_UNLINK_WAIT) */
 	next = qh->reclaim;
@@ -1300,7 +1297,6 @@ static void end_unlink_async (struct ehci_hcd *ehci)
 				&& ehci->async->qh_next.qh == NULL)
 			timer_action (ehci, TIMER_ASYNC_OFF);
 	}
-	qh_put(qh);			/* refcount from async list */
 
 	if (next) {
 		ehci->reclaim = NULL;
@@ -1345,7 +1341,7 @@ static void start_unlink_async (struct ehci_hcd *ehci, struct ehci_qh *qh)
 	}
 
 	qh->qh_state = QH_STATE_UNLINK;
-	ehci->reclaim = qh = qh_get (qh);
+	ehci->reclaim = qh;
 
 	prev = ehci->async;
 	while (prev->qh_next.qh != qh)
@@ -1399,12 +1395,10 @@ static void scan_async (struct ehci_hcd *ehci)
 			 * gets unlinked then ehci->qh_scan_next is adjusted
 			 * in start_unlink_async().
 			 */
-			qh = qh_get(qh);
 			temp = qh_completions(ehci, qh);
 			if (qh->needs_rescan)
 				unlink_async(ehci, qh);
 			qh->unlink_time = jiffies + EHCI_SHRINK_JIFFIES;
-			qh_put(qh);
 			if (temp != 0)
 				goto rescan;
 		}

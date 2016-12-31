@@ -609,7 +609,6 @@ static int qh_link_periodic (struct ehci_hcd *ehci, struct ehci_qh *qh)
 	}
 	qh->qh_state = QH_STATE_LINKED;
 	qh->xacterrs = 0;
-	qh_get (qh);
 
 	/* update per-qh bandwidth for usbfs */
 	ehci_to_hcd(ehci)->self.bandwidth_allocated += qh->period
@@ -653,7 +652,6 @@ static int qh_unlink_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 	/* qh->qh_next still "live" to HC */
 	qh->qh_state = QH_STATE_UNLINK;
 	qh->qh_next.ptr = NULL;
-	qh_put (qh);
 
 	/* maybe turn off periodic schedule */
 	return disable_periodic(ehci);
@@ -2344,7 +2342,7 @@ restart:
 			switch (hc32_to_cpu(ehci, type)) {
 			case Q_TYPE_QH:
 				/* handle any completions */
-				temp.qh = qh_get (q.qh);
+				temp.qh = q.qh;
 				type = Q_NEXT_TYPE(ehci, q.qh->hw->hw_next);
 				q = q.qh->qh_next;
 				if (temp.qh->stamp != ehci->periodic_stamp) {
@@ -2355,7 +2353,6 @@ restart:
 							temp.qh->needs_rescan))
 						intr_deschedule(ehci, temp.qh);
 				}
-				qh_put (temp.qh);
 				break;
 			case Q_TYPE_FSTN:
 				/* for "save place" FSTNs, look at QH entries

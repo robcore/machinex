@@ -1215,7 +1215,7 @@ idle_timeout:
 		if (qh->clearing_tt)
 			goto idle_timeout;
 		if (list_empty (&qh->qtd_list)) {
-			qh_put (qh);
+			qh_destroy(ehci, qh);
 			break;
 		}
 		/* else FALL THROUGH */
