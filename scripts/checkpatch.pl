@@ -1768,13 +1768,17 @@ sub process {
 
 # Check signature styles
 		if (!$in_header_lines &&
-		    $line =~ /^(\s*)($signature_tags)(\s*)(.*)/) {
+		    $line =~ /^(\s*)([a-z0-9_-]+by:|$signature_tags)(\s*)(.*)/i) {
 			my $space_before = $1;
 			my $sign_off = $2;
 			my $space_after = $3;
 			my $email = $4;
 			my $ucfirst_sign_off = ucfirst(lc($sign_off));
 
+			if ($sign_off !~ /$signature_tags/) {
+				WARN("BAD_SIGN_OFF",
+				     "Non-standard signature: $sign_off\n" . $herecurr);
+			}
 			if (defined $space_before && $space_before ne "") {
 				WARN("BAD_SIGN_OFF",
 				     "Do not use whitespace before $ucfirst_sign_off\n" . $herecurr);
@@ -2026,8 +2030,8 @@ sub process {
 
 			my $pos = pos_last_openparen($rest);
 			if ($pos >= 0) {
-				$line =~ /^\+([ \t]*)/;
-				my $newindent = $1;
+				$line =~ /^(\+| )([ \t]*)/;
+				my $newindent = $2;
 
 				my $goodtabindent = $oldindent .
 					"\t" x ($pos / 8) .
@@ -3532,6 +3536,12 @@ sub process {
 			     "sizeof(& should be avoided\n" . $herecurr);
 		}
 
+# check for sizeof without parenthesis
+		if ($line =~ /\bsizeof\s+((?:\*\s*|)$Lval|$Type(?:\s+$Lval|))/) {
+			WARN("SIZEOF_PARENTHESIS",
+			     "sizeof $1 should be sizeof($1)\n" . $herecurr);
+		}
+
 # check for line continuations in quoted strings with odd counts of "
 		if ($rawline =~ /\\$/ && $rawline =~ tr/"/"/ % 2) {
 			WARN("LINE_CONTINUATIONS",
@@ -3577,6 +3587,22 @@ sub process {
 				}
 				WARN("MINMAX",
 				     "$call() should probably be ${call}_t($cast, $arg1, $arg2)\n" . "$here\n$stat\n");
+			}
+		}
+
+# check usleep_range arguments
+		if ($^V && $^V ge 5.10.0 &&
+		    defined $stat &&
+		    $stat =~ /^\+(?:.*?)\busleep_range\s*\(\s*($FuncArg)\s*,\s*($FuncArg)\s*\)/) {
+			my $min = $1;
+			my $max = $7;
+			if ($min eq $max) {
+				WARN("USLEEP_RANGE",
+				     "usleep_range should not use min == max args; see Documentation/timers/timers-howto.txt\n" . "$here\n$stat\n");
+			} elsif ($min =~ /^\d+$/ && $max =~ /^\d+$/ &&
+				 $min > $max) {
+				WARN("USLEEP_RANGE",
+				     "usleep_range args reversed, use min then max; see Documentation/timers/timers-howto.txt\n" . "$here\n$stat\n");
 			}
 		}
 
