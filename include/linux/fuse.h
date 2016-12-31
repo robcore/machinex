@@ -54,6 +54,12 @@
  * 7.18
  *  - add FUSE_IOCTL_DIR flag
  *  - add FUSE_NOTIFY_DELETE
+ *
+ * 7.19
+ *  - add FUSE_FALLOCATE
+ *
+ * 7.20
+ *  - add FUSE_AUTO_INVAL_DATA
  */
 
 #ifndef _LINUX_FUSE_H
@@ -85,7 +91,7 @@
 #define FUSE_KERNEL_VERSION 7
 
 /** Minor version number of this interface */
-#define FUSE_KERNEL_MINOR_VERSION 18
+#define FUSE_KERNEL_MINOR_VERSION 20
 
 /** The node ID of the root inode */
 #define FUSE_ROOT_ID 1
@@ -164,6 +170,7 @@ struct fuse_file_lock {
  * FUSE_EXPORT_SUPPORT: filesystem handles lookups of "." and ".."
  * FUSE_DONT_MASK: don't apply umask to file mode on create operations
  * FUSE_FLOCK_LOCKS: remote locking for BSD style file locks
+ * FUSE_AUTO_INVAL_DATA: automatically invalidate cached pages
  */
 #define FUSE_ASYNC_READ		(1 << 0)
 #define FUSE_POSIX_LOCKS	(1 << 1)
@@ -173,6 +180,7 @@ struct fuse_file_lock {
 #define FUSE_BIG_WRITES		(1 << 5)
 #define FUSE_DONT_MASK		(1 << 6)
 #define FUSE_FLOCK_LOCKS	(1 << 10)
+#define FUSE_AUTO_INVAL_DATA	(1 << 12)
 
 /**
  * CUSE INIT request/reply flags
