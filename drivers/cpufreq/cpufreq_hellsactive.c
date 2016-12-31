@@ -99,7 +99,7 @@ static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 /*
  * The sample rate of the timer used to increase frequency
  */
-#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_RATE (10 * USEC_PER_MSEC)
 static unsigned long timer_rate = DEFAULT_TIMER_RATE;
 
 /*
@@ -114,7 +114,7 @@ static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 
 /* 1000000us - 1s */
-#define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
+#define DEFAULT_BOOSTPULSE_DURATION 100000 /*One Tenth of a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
 /*#define DEFAULT_INPUT_BOOST_FREQ 1242000
 int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
@@ -146,13 +146,13 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 static bool align_windows = true;
 
 /* Improves frequency selection for more energy */
-static bool closest_freq_selection = true;
+static bool closest_freq_selection = false;
 
 /*
  * Stay at max freq for at least max_freq_hysteresis before dropping
  * frequency.
  */
-#define DEFAULT_HYSTERESIS 4
+#define DEFAULT_HYSTERESIS 5
 static unsigned int max_freq_hysteresis = DEFAULT_HYSTERESIS;
 
 static bool io_is_busy = 0;
@@ -186,10 +186,9 @@ static void cpufreq_hellsactive_timer_resched(unsigned long cpu)
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(smp_processor_id(),
-				     &pcpu->time_in_idle_timestamp, io_is_busy);
+				  &pcpu->time_in_idle_timestamp, io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
-	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 	expires = round_to_nw_start(pcpu->last_evaluated_jiffy);
 	mod_timer_pinned(&pcpu->cpu_timer, expires);
 
@@ -197,6 +196,8 @@ static void cpufreq_hellsactive_timer_resched(unsigned long cpu)
 		expires += usecs_to_jiffies(timer_slack_val);
 		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
 	}
+
+	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 }
 
 /* The caller shall take enable_sem write semaphore to avoid any timer race.
@@ -422,14 +423,14 @@ static void cpufreq_hellsactive_timer(unsigned long data)
 
 	if (counter < 5) {
 		counter++;
-		if (counter > 2) {
+		if (counter > 1) {
 			phase = 1;
 		}
 	}
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	if (cpu_load >= go_hispeed_load) {
+	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->policy->cur < hispeed_freq) {
 			nr_cpus = num_online_cpus();
 
@@ -567,8 +568,10 @@ static void cpufreq_hellsactive_idle_start(void)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
-	if (!pcpu->governor_enabled)
-		goto exit;
+	if (!pcpu->governor_enabled) {
+		up_read(&pcpu->enable_sem);
+		return;
+	}
 
 	/* Cancel the timer if cpu is offline */
 	if (cpu_is_offline(cpu)) {
@@ -1415,9 +1418,9 @@ static int cpufreq_governor_hellsactive(struct cpufreq_policy *policy,
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
 
-			down_read(&pcpu->enable_sem);
+			down_write(&pcpu->enable_sem);
 			if (pcpu->governor_enabled == 0) {
-				up_read(&pcpu->enable_sem);
+				up_write(&pcpu->enable_sem);
 				continue;
 			}
 

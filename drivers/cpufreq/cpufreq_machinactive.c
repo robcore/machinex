@@ -189,10 +189,9 @@ static void cpufreq_machinactive_timer_resched(unsigned long cpu)
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(smp_processor_id(),
-				     &pcpu->time_in_idle_timestamp, io_is_busy);
+				  &pcpu->time_in_idle_timestamp, io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
-	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 	expires = round_to_nw_start(pcpu->last_evaluated_jiffy);
 	mod_timer_pinned(&pcpu->cpu_timer, expires);
 
@@ -200,6 +199,8 @@ static void cpufreq_machinactive_timer_resched(unsigned long cpu)
 		expires += usecs_to_jiffies(timer_slack_val);
 		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
 	}
+
+	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 }
 
 /* The caller shall take enable_sem write semaphore to avoid any timer race.
@@ -576,8 +577,10 @@ static void cpufreq_machinactive_idle_start(void)
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
-	if (!pcpu->governor_enabled)
-		goto exit;
+	if (!pcpu->governor_enabled) {
+		up_read(&pcpu->enable_sem);
+		return;
+	}
 
 	/* Cancel the timer if cpu is offline */
 	if (cpu_is_offline(cpu)) {
@@ -1354,8 +1357,8 @@ static int cpufreq_governor_machinactive(struct cpufreq_policy *policy,
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
 			pcpu->last_evaluated_jiffy = get_jiffies_64();
-			pcpu->governor_enabled = 1;
 			cpufreq_machinactive_timer_start(j);
+			pcpu->governor_enabled = 1;
 			up_write(&pcpu->enable_sem);
 		}
 
@@ -1424,9 +1427,9 @@ static int cpufreq_governor_machinactive(struct cpufreq_policy *policy,
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
 
-			down_read(&pcpu->enable_sem);
+			down_write(&pcpu->enable_sem);
 			if (pcpu->governor_enabled == 0) {
-				up_read(&pcpu->enable_sem);
+				up_write(&pcpu->enable_sem);
 				continue;
 			}
 
