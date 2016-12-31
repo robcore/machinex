@@ -663,18 +663,11 @@ int scfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 {
 	struct kstat lower_stat;
 	int ret;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	struct path path = {scfs_dentry_to_lower_mnt(dentry),
 		scfs_lower_dentry(dentry)};
-#endif
 
 	ret = vfs_getattr(
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 			&path,
-#else
-			scfs_dentry_to_lower_mnt(dentry),
-			scfs_lower_dentry(dentry),
-#endif
 			&lower_stat);
 	if (!ret) {
 		fsstack_copy_attr_all(dentry->d_inode,
