@@ -382,7 +382,7 @@ static void nfs_inode_add_request(struct inode *inode, struct nfs_page *req)
 	nfs_lock_request_dontget(req);
 
 	spin_lock(&inode->i_lock);
-	if (!nfsi->npages && nfs_have_delegation(inode, FMODE_WRITE))
+	if (!nfsi->npages && NFS_PROTO(inode)->have_delegation(inode, FMODE_WRITE))
 		inode->i_version++;
 	set_bit(PG_MAPPED, &req->wb_flags);
 	SetPagePrivate(req->wb_page);

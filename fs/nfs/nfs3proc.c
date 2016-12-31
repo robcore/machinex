@@ -898,6 +898,11 @@ static const struct inode_operations nfs3_file_inode_operations = {
 	.removexattr	= nfs3_removexattr,
 };
 
+static int nfs3_have_delegation(struct inode *inode, fmode_t flags)
+{
+	return 0;
+}
+
 const struct nfs_rpc_ops nfs_v3_clientops = {
 	.version	= 3,			/* protocol version */
 	.dentry_ops	= &nfs_dentry_operations,
@@ -940,5 +945,6 @@ const struct nfs_rpc_ops nfs_v3_clientops = {
 	.lock		= nfs3_proc_lock,
 	.clear_acl_cache = nfs3_forget_cached_acls,
 	.close_context	= nfs_close_context,
+	.have_delegation = nfs3_have_delegation,
 	.init_client	= nfs_init_client,
 };
