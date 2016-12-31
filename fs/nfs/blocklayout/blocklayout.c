@@ -240,14 +240,6 @@ bl_end_par_io_read(void *data, int unused)
 	schedule_work(&rdata->task.u.tk_work);
 }
 
-static bool
-bl_check_alignment(u64 offset, u32 len, unsigned long blkmask)
-{
-	if ((offset & blkmask) || (len & blkmask))
-		return false;
-	return true;
-}
-
 static enum pnfs_try_status
 bl_read_pagelist(struct nfs_read_data *rdata)
 {
@@ -262,9 +254,6 @@ bl_read_pagelist(struct nfs_read_data *rdata)
 
 	dprintk("%s enter nr_pages %u offset %lld count %u\n", __func__,
 	       rdata->npages, f_offset, (unsigned int)rdata->args.count);
-
-	if (!bl_check_alignment(f_offset, rdata->args.count, PAGE_CACHE_MASK))
-		goto use_mds;
 
 	par = alloc_parallel(rdata);
 	if (!par)
@@ -669,7 +658,7 @@ bl_write_pagelist(struct nfs_write_data *wdata, int sync)
 	struct bio *bio = NULL;
 	struct pnfs_block_extent *be = NULL, *cow_read = NULL;
 	sector_t isect, last_isect = 0, extent_length = 0;
-	struct parallel_io *par = NULL;
+	struct parallel_io *par;
 	loff_t offset = wdata->args.offset;
 	size_t count = wdata->args.count;
 	unsigned int pg_offset, pg_len, saved_len;
@@ -681,10 +670,6 @@ bl_write_pagelist(struct nfs_write_data *wdata, int sync)
 	    NFS_SERVER(wdata->inode)->pnfs_blksize >> PAGE_CACHE_SHIFT;
 
 	dprintk("%s enter, %Zu@%lld\n", __func__, count, offset);
-	/* Check for alignment first */
-	if (!bl_check_alignment(offset, count, PAGE_CACHE_MASK))
-		goto out_mds;
-
 	/* At this point, wdata->pages is a (sequential) list of nfs_pages.
 	 * We want to write each, and if there is an error set pnfs_error
 	 * to have it redone using nfs.
@@ -1155,32 +1140,14 @@ bl_clear_layoutdriver(struct nfs_server *server)
 	return 0;
 }
 
-static void
-bl_pg_init_read(struct nfs_pageio_descriptor *pgio, struct nfs_page *req)
-{
-	if (!bl_check_alignment(req->wb_offset, req->wb_bytes, PAGE_CACHE_MASK))
-		nfs_pageio_reset_read_mds(pgio);
-	else
-		pnfs_generic_pg_init_read(pgio, req);
-}
-
-static void
-bl_pg_init_write(struct nfs_pageio_descriptor *pgio, struct nfs_page *req)
-{
-	if (!bl_check_alignment(req->wb_offset, req->wb_bytes, PAGE_CACHE_MASK))
-		nfs_pageio_reset_write_mds(pgio);
-	else
-		pnfs_generic_pg_init_write(pgio, req);
-}
-
 static const struct nfs_pageio_ops bl_pg_read_ops = {
-	.pg_init = bl_pg_init_read,
+	.pg_init = pnfs_generic_pg_init_read,
 	.pg_test = pnfs_generic_pg_test,
 	.pg_doio = pnfs_generic_pg_readpages,
 };
 
 static const struct nfs_pageio_ops bl_pg_write_ops = {
-	.pg_init = bl_pg_init_write,
+	.pg_init = pnfs_generic_pg_init_write,
 	.pg_test = pnfs_generic_pg_test,
 	.pg_doio = pnfs_generic_pg_writepages,
 };
