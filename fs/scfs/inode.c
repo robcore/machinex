@@ -663,11 +663,13 @@ int scfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 {
 	struct kstat lower_stat;
 	int ret;
-	struct path path = {scfs_dentry_to_lower_mnt(dentry),
-		scfs_lower_dentry(dentry)};
+	//struct path path = {scfs_dentry_to_lower_mnt(dentry),
+		//scfs_lower_dentry(dentry)};
 
 	ret = vfs_getattr(
-			&path,
+			//&path,
+			scfs_dentry_to_lower_mnt(dentry),
+			scfs_lower_dentry(dentry),
 			&lower_stat);
 	if (!ret) {
 		fsstack_copy_attr_all(dentry->d_inode,
