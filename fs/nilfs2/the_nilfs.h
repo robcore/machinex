@@ -53,6 +53,7 @@ enum {
  * @ns_sbwtime: previous write time of super block
  * @ns_sbwcount: write count of super block
  * @ns_sbsize: size of valid data in super block
+ * @ns_mount_state: file system state
  * @ns_seg_seq: segment sequence counter
  * @ns_segnum: index number of the latest full segment.
  * @ns_nextnum: index number of the full segment index to be used next
@@ -231,9 +232,8 @@ THE_NILFS_FNS(SB_DIRTY, sb_dirty)
  * @count: refcount of this structure
  * @nilfs: nilfs object
  * @ifile: inode file
- * @root: root inode
  * @inodes_count: number of inodes
- * @blocks_count: number of blocks (Reserved)
+ * @blocks_count: number of blocks
  */
 struct nilfs_root {
 	__u64 cno;
