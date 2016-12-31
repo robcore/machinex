@@ -169,11 +169,11 @@ struct dentry *ocfs2_find_local_alias(struct inode *inode,
 				      u64 parent_blkno,
 				      int skip_unhashed)
 {
-	struct list_head *p;
+	struct hlist_node *p;
 	struct dentry *dentry = NULL;
 
 	spin_lock(&inode->i_lock);
-	list_for_each(p, &inode->i_dentry) {
+	hlist_for_each_entry(dentry, p, &inode->i_dentry, d_alias) {
 		dentry = list_entry(p, struct dentry, d_alias);
 
 		spin_lock(&dentry->d_lock);
