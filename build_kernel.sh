@@ -294,7 +294,7 @@ while [[ $# > 0 ]]
 	key="$1"
 
 	case $key in
-	     -m|--clean_make)
+	     -m|--mismatch)
 	    	MISMATCH
 	    	break
 	    	;;
