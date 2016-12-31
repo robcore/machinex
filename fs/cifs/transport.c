@@ -126,7 +126,6 @@ smb_sendv(struct TCP_Server_Info *server, struct kvec *iov, int n_vec)
 	int rc = 0;
 	int i = 0;
 	struct msghdr smb_msg;
-	__be32 *buf_len = (__be32 *)(iov[0].iov_base);
 	unsigned int len = iov[0].iov_len;
 	unsigned int total_len;
 	int first_vec = 0;
@@ -234,9 +233,6 @@ smb_sendv(struct TCP_Server_Info *server, struct kvec *iov, int n_vec)
 		cERROR(1, "Error %d sending data on socket to server", rc);
 	else
 		rc = 0;
-
-	/* Don't want to modify the buffer as a side effect of this call. */
-	*buf_len = cpu_to_be32(smb_buf_length);
 
 	return rc;
 }
@@ -364,7 +360,7 @@ cifs_setup_async_request(struct TCP_Server_Info *server, struct kvec *iov,
 	if (mid == NULL)
 		return -ENOMEM;
 
-	rc = cifs_sign_smb2(iov, nvec, server, &mid->sequence_number);
+	rc = cifs_sign_smbv(iov, nvec, server, &mid->sequence_number);
 	if (rc) {
 		DeleteMidQEntry(mid);
 		return rc;
@@ -564,7 +560,7 @@ cifs_setup_request(struct cifs_ses *ses, struct kvec *iov,
 	rc = allocate_mid(ses, hdr, &mid);
 	if (rc)
 		return rc;
-	rc = cifs_sign_smb2(iov, nvec, ses->server, &mid->sequence_number);
+	rc = cifs_sign_smbv(iov, nvec, ses->server, &mid->sequence_number);
 	if (rc)
 		delete_mid(mid);
 	*ret_mid = mid;

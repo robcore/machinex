@@ -1015,12 +1015,10 @@ cifs_push_posix_locks(struct cifsFileInfo *cfile)
 	unlock_flocks();
 
 	list_for_each_entry_safe(lck, tmp, &locks_to_send, llist) {
-		struct file_lock tmp_lock;
 		int stored_rc;
 
-		tmp_lock.fl_start = lck->offset;
 		stored_rc = CIFSSMBPosixLock(xid, tcon, lck->netfid, lck->pid,
-					     0, lck->length, &tmp_lock,
+					     lck->offset, lck->length, NULL,
 					     lck->type, 0);
 		if (stored_rc)
 			rc = stored_rc;
@@ -1123,7 +1121,7 @@ cifs_getlk(struct file *file, struct file_lock *flock, __u8 type,
 		else
 			posix_lock_type = CIFS_WRLCK;
 		rc = CIFSSMBPosixLock(xid, tcon, netfid, current->tgid,
-				      1 /* get */, length, flock,
+				      flock->fl_start, length, flock,
 				      posix_lock_type, wait_flag);
 		return rc;
 	}
@@ -1319,7 +1317,7 @@ cifs_setlk(struct file *file,  struct file_lock *flock, __u8 type,
 			posix_lock_type = CIFS_UNLCK;
 
 		rc = CIFSSMBPosixLock(xid, tcon, netfid, current->tgid,
-				      0 /* set */, length, flock,
+				      flock->fl_start, length, NULL,
 				      posix_lock_type, wait_flag);
 		goto out;
 	}
@@ -2860,7 +2858,7 @@ static int cifs_readpage(struct file *file, struct page *page)
 		return rc;
 	}
 
-	cFYI(1, "readpage %p at offset %d 0x%x\n",
+	cFYI(1, "readpage %p at offset %d 0x%x",
 		 page, (int)offset, (int)offset);
 
 	rc = cifs_readpage_worker(file, page, &offset);

@@ -532,7 +532,7 @@ init_cifs_idmap(void)
 	struct key *keyring;
 	int ret;
 
-	cFYI(1, "Registering the %s key type\n", cifs_idmap_key_type.name);
+	cFYI(1, "Registering the %s key type", cifs_idmap_key_type.name);
 
 	/* create an override credential set with a special thread keyring in
 	 * which requests are cached
@@ -579,7 +579,7 @@ init_cifs_idmap(void)
 	sidgidtree = RB_ROOT;
 	register_shrinker(&cifs_shrinker);
 
-	cFYI(1, "cifs idmap keyring: %d\n", key_serial(keyring));
+	cFYI(1, "cifs idmap keyring: %d", key_serial(keyring));
 	return 0;
 
 failed_put_key:
@@ -596,7 +596,7 @@ exit_cifs_idmap(void)
 	unregister_key_type(&cifs_idmap_key_type);
 	put_cred(root_cred);
 	unregister_shrinker(&cifs_shrinker);
-	cFYI(1, "Unregistered %s key type\n", cifs_idmap_key_type.name);
+	cFYI(1, "Unregistered %s key type", cifs_idmap_key_type.name);
 }
 
 void

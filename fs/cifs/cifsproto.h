@@ -388,8 +388,9 @@ extern int CIFSSMBLock(const int xid, struct cifs_tcon *tcon,
 			const bool waitFlag, const __u8 oplock_level);
 extern int CIFSSMBPosixLock(const int xid, struct cifs_tcon *tcon,
 			const __u16 smb_file_id, const __u32 netpid,
-			const int get_flag, const __u64 len, struct file_lock *,
-			const __u16 lock_type, const bool waitFlag);
+			const loff_t start_offset, const __u64 len,
+			struct file_lock *, const __u16 lock_type,
+			const bool waitFlag);
 extern int CIFSSMBTDis(const int xid, struct cifs_tcon *tcon);
 extern int CIFSSMBEcho(struct TCP_Server_Info *server);
 extern int CIFSSMBLogoff(const int xid, struct cifs_ses *ses);
@@ -400,7 +401,7 @@ extern struct cifs_tcon *tconInfoAlloc(void);
 extern void tconInfoFree(struct cifs_tcon *);
 
 extern int cifs_sign_smb(struct smb_hdr *, struct TCP_Server_Info *, __u32 *);
-extern int cifs_sign_smb2(struct kvec *iov, int n_vec, struct TCP_Server_Info *,
+extern int cifs_sign_smbv(struct kvec *iov, int n_vec, struct TCP_Server_Info *,
 			  __u32 *);
 extern int cifs_verify_signature(struct kvec *iov, unsigned int nr_iov,
 				 struct TCP_Server_Info *server,
