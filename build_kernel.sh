@@ -81,6 +81,7 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
+LV=-$OUTFOLDER
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -91,7 +92,6 @@ export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cort
 export KBUILD_BUILD_VERSION=007
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
-#export LOCALVERSION="-$OUTFOLDER"
 env KCONFIG_NOTIMESTAMP=true
 washme
 make clean;
@@ -99,7 +99,7 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 touch $(pwd)/out/localversion
-echo "-$OUTFOLDER" > $(pwd)/out/localversion
+echo "$LV" > $(pwd)/out/localversion
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make ARCH=arm -S -s -j6 O=$(pwd)/out;
