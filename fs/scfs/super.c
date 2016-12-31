@@ -172,11 +172,7 @@ static void scfs_evict_inode(struct inode *inode)
 	struct scfs_inode_info *sii = SCFS_I(inode);
 
 	truncate_inode_pages(&inode->i_data, 0);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	clear_inode(inode);
-#else
-	clear_inode(inode);
-#endif
 	/* to conserve memory, evicted inode will throw out the cluster info */
 	if (sii->cinfo_array) {
 		scfs_cinfo_free(sii, sii->cinfo_array);
@@ -566,7 +562,6 @@ static void scfs_kill_block_super(struct super_block *sb)
 	kmem_cache_free(scfs_sb_info_cache, sbi);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 static int scfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
 	struct dentry *lower_dentry;
@@ -592,43 +587,6 @@ static int scfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 out:
 	return ret;
 }
-#else
-static int scfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
-{
-	struct dentry *lower_dentry;
-	struct vfsmount *lower_mnt;
-	struct dentry *dentry_save = NULL;
-	struct vfsmount *vfsmount_save = NULL;
-	int ret = 1;
-
-	if (nd && nd->flags & LOOKUP_RCU)
-		return -ECHILD;
-
-	lower_dentry = scfs_lower_dentry(dentry);
-	lower_mnt = scfs_dentry_to_lower_mnt(dentry);
-	if (!lower_dentry->d_op || !lower_dentry->d_op->d_revalidate)
-		goto out;
-	if (nd) {
-		dentry_save = nd->path.dentry;
-		vfsmount_save = nd->path.mnt;
-		nd->path.dentry = lower_dentry;
-		nd->path.mnt = lower_mnt;
-	}
-	ret = lower_dentry->d_op->d_revalidate(lower_dentry, nd);
-	if (nd) {
-		nd->path.dentry = dentry_save;
-		nd->path.mnt = vfsmount_save;
-	}
-	if (dentry->d_inode) {
-		struct inode *lower_inode =
-			scfs_lower_inode(dentry->d_inode);
-
-		fsstack_copy_attr_all(dentry->d_inode, lower_inode);
-	}
-out:
-	return ret;
-}
-#endif
 
 static void scfs_d_release(struct dentry *dentry)
 {
