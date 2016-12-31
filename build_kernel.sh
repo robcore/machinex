@@ -81,7 +81,6 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
-LV=-$OUTFOLDER
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -99,7 +98,6 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-echo CONFIG_LOCALVERSION="$LV" >> $(pwd)/out/.config;
 make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
