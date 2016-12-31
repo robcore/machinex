@@ -49,7 +49,7 @@ void revert_fsids(const struct cred * old_cred)
 }
 
 static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
-			 umode_t mode, struct nameidata *nd)
+				umode_t mode, bool excl)
 {
 	int err = 0;
 	struct dentry *lower_dentry;
@@ -83,7 +83,7 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 
 	/* set last 16bytes of mode field to 0664 */
 	mode = (mode & S_IFMT) | 00664; 
-	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode, nd);
+	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode, true);
 
 	pathcpy(&nd->path, &saved_path);
 	if (err)
@@ -718,9 +718,6 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
 						sbi->options.derive, 0, 0)) {
 		dput(parent);
-		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n" 
-						 "  dentry: %s, task:%s\n",
-						 __func__, dentry->d_name.name, current->comm);
 		return -EACCES;
 	}
 	dput(parent);
