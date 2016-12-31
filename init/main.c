@@ -70,7 +70,6 @@
 #include <linux/shmem_fs.h>
 #include <linux/slab.h>
 #include <linux/perf_event.h>
-#include <linux/file.h>
 #include <linux/random.h>
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
@@ -909,8 +908,8 @@ static int __ref kernel_init(void *unused)
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
 
+
 	current->signal->flags |= SIGNAL_UNKILLABLE;
-	flush_delayed_fput();
 
 	if (ramdisk_execute_command) {
 		run_init_process(ramdisk_execute_command);
