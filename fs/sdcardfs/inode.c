@@ -78,14 +78,10 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	if (err)
 		goto out_unlock;
 
-	pathcpy(&saved_path, &nd->path);
-	pathcpy(&nd->path, &lower_path);
-
 	/* set last 16bytes of mode field to 0664 */
 	mode = (mode & S_IFMT) | 00664; 
 	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode, true);
 
-	pathcpy(&nd->path, &saved_path);
 	if (err)
 		goto out;
 
