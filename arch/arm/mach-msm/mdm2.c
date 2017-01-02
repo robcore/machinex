@@ -116,7 +116,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 					__func__, mdm_drv->device_id, i);
 			break;
 		}
-		msleep(100);
+		mdelay(100);
 	}
 /*
 	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
@@ -141,7 +141,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		* for the reset to fully take place. Sleep here to ensure the
 		* reset has occured before the function exits.
 		*/
-		msleep(4000);
+		mdelay(4000);
 	}
 }
 
@@ -181,7 +181,7 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 		pr_debug("%s: Pulling AP2MDM_KPDPWR gpio high\n", __func__);
 		gpio_direction_output(mdm_drv->ap2mdm_kpdpwr_n_gpio, 1);
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 1);
-		msleep(1000);
+		mdelay(1000);
 		gpio_direction_output(mdm_drv->ap2mdm_kpdpwr_n_gpio, 0);
 	} else {
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 1);
@@ -194,14 +194,14 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 		pblrdy = gpio_get_value(mdm_drv->mdm2ap_pblrdy);
 		if (pblrdy)
 			break;
-		usleep_range(5000, 5000);
+		udelay_range(5000, 5000);
 	}
 	pr_debug("%s: id %d: pblrdy i:%d\n", __func__,
 			 mdm_drv->device_id, i);
 
 start_mdm_peripheral:
 	mdm_peripheral_connect(mdm_drv);
-	msleep(200);
+	mdelay(200);
 }
 
 static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
@@ -219,7 +219,7 @@ static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
 		pblrdy = gpio_get_value(mdm_drv->mdm2ap_pblrdy);
 		if (pblrdy)
 			break;
-		usleep_range(5000, 5000);
+		udelay_range(5000, 5000);
 	}
 
 	pr_debug("%s: id %d: pblrdy i:%d\n", __func__,
@@ -227,7 +227,7 @@ static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
 
 start_mdm_peripheral:
 	mdm_peripheral_connect(mdm_drv);
-	msleep(200);
+	mdelay(200);
 }
 
 static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
@@ -246,9 +246,9 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 	 * power-on request because it would the be first request from
 	 * user space but we're already powered on. Ignore it.
 	 */
-	//if (mdm_drv->pdata->early_power_on &&
-			//(mdm_drv->power_on_count == 2))
-		//return;
+	if (mdm_drv->pdata->early_power_on &&
+			(mdm_drv->power_on_count == 2))
+		return;
 
 	if (mdm_drv->power_on_count == 1)
 		mdm_do_first_power_on(mdm_drv);
