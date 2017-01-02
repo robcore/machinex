@@ -524,7 +524,7 @@ int ip6_datagram_recv_ctl(struct sock *sk, struct msghdr *msg, struct sk_buff *s
 		u8 nexthdr = ipv6_hdr(skb)->nexthdr;
 
 		while (off <= opt->lastopt) {
-			unsigned len;
+			unsigned int len;
 			u8 *ptr = nh + off;
 
 			switch(nexthdr) {
