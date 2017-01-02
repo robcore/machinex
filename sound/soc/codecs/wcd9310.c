@@ -4248,14 +4248,11 @@ static void tabla_codec_calibrate_hs_polling(struct snd_soc_codec *codec)
 		      n_cic[tabla_codec_mclk_index(tabla)]);
 }
 
-#ifdef CONFIG_SND_SOC_ES325
 static int tabla_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct wcd9xxx *tabla_core = dev_get_drvdata(dai->codec->dev->parent);
 
-	pr_info("%s(): wrapper substream = %s  stream = %d id=%d\n" , __func__,
-		 substream->name, substream->stream, dai->id);
 	if ((tabla_core != NULL) &&
 	    (tabla_core->dev != NULL) &&
 	    (tabla_core->dev->parent != NULL)) {
@@ -4265,22 +4262,6 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-#else
-static int tabla_startup(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *dai)
-{
-	struct wcd9xxx *tabla_core = dev_get_drvdata(dai->codec->dev->parent);
-
-	pr_debug("%s(): substream = %s  stream = %d\n" , __func__,
-		 substream->name, substream->stream);
-	if ((tabla_core != NULL) &&
-	    (tabla_core->dev != NULL) &&
-	    (tabla_core->dev->parent != NULL))
-		pm_runtime_get_sync(tabla_core->dev->parent);
-
-	return 0;
-}
-#endif
 
 static void tabla_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -4297,8 +4278,6 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	if (dai->id <= NUM_CODEC_DAIS) {
 		if (tabla->dai[dai->id-1].ch_mask) {
 			active = 1;
-			pr_debug("%s(): Codec DAI: chmask[%d] = 0x%x\n",
-			__func__, dai->id-1, tabla->dai[dai->id-1].ch_mask);
 		}
 	}
 
@@ -4306,9 +4285,7 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	    (tabla_core->dev != NULL) &&
 	    (tabla_core->dev->parent != NULL) &&
 	    (active == 0)) {
-#ifdef CONFIG_SND_SOC_ES325
 		es325_wrapper_sleep(dai->id);
-#endif
 		pm_runtime_mark_last_busy(tabla_core->dev->parent);
 		pm_runtime_put(tabla_core->dev->parent);
 	}
@@ -4427,8 +4404,6 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		pr_err("%s: Invalid\n", __func__);
 		return -EINVAL;
 	}
-	dev_dbg(dai->dev,"%s(): dai_name = %s DAI-ID %x tx_ch %d rx_ch %d\n",
-			__func__, dai->name, dai->id, tx_num, rx_num);
 
 	if (dai->id == AIF1_PB || dai->id == AIF2_PB || dai->id == AIF3_PB) {
 		for (i = 0; i < rx_num; i++) {
@@ -4436,10 +4411,10 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 			tabla->dai[dai->id - 1].ch_act = 0;
 			tabla->dai[dai->id - 1].ch_tot = rx_num;
 		}
-		printk("=[WCD]=%s: APQ->", __func__);
+
 		for(i = 0; i < rx_num ; i++)
-			printk("[%d]",tabla->dai[dai->id - 1].ch_num[i]);
-		printk(" WCD channel mapping\n");
+			pr_debug("[%d]",tabla->dai[dai->id - 1].ch_num[i]);
+		pr_debug(" WCD channel mapping\n");
 	} else if (dai->id == AIF1_CAP || dai->id == AIF2_CAP ||
 		   dai->id == AIF3_CAP) {
 		tabla->dai[dai->id - 1].ch_tot = tx_num;
@@ -4448,21 +4423,17 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		 */
 		if ((tabla->dai[dai->id - 1].ch_tot != 0)
 			&& (tabla->dai[dai->id - 1].ch_act ==
-			tabla->dai[dai->id - 1].ch_tot)) {
-			pr_info("%s: ch_act = %d, ch_tot = %d\n", __func__,
-				tabla->dai[dai->id - 1].ch_act,
-				tabla->dai[dai->id - 1].ch_tot);
+			tabla->dai[dai->id - 1].ch_tot))
 			return 1;
-		}
 
 		tabla->dai[dai->id - 1].ch_act = 0;
 		for (i = 0; i < tx_num; i++)
 			tabla->dai[dai->id - 1].ch_num[i]  = tx_slot[i];
 
-		printk("=[WCD]=%s: APQ<-", __func__);
+		pr_debug("=[WCD]=%s: APQ<-", __func__);
 		for(i = 0; i < tx_num ; i++)
 			printk("[%d]",tabla->dai[dai->id - 1].ch_num[i]);
-		printk(" WCD channel mapping\n");
+		pr_debug(" WCD channel mapping\n");
 	}
 	return 0;
 }
