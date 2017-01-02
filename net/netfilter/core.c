@@ -290,3 +290,12 @@ void __init netfilter_init(void)
 	if (netfilter_log_init() < 0)
 		panic("cannot initialize nf_log");
 }
+
+#ifdef CONFIG_SYSCTL
+struct ctl_path nf_net_netfilter_sysctl_path[] = {
+	{ .procname = "net", },
+	{ .procname = "netfilter", },
+	{ }
+};
+EXPORT_SYMBOL_GPL(nf_net_netfilter_sysctl_path);
+#endif /* CONFIG_SYSCTL */

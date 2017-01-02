@@ -98,11 +98,18 @@ static struct ctl_table dccp_default_table[] = {
 	{ }
 };
 
+static struct ctl_path dccp_path[] = {
+	{ .procname = "net", },
+	{ .procname = "dccp", },
+	{ .procname = "default", },
+	{ }
+};
+
 static struct ctl_table_header *dccp_table_header;
 
 int __init dccp_sysctl_init(void)
 {
-	dccp_table_header = register_net_sysctl(&init_net, "net/dccp/default",
+	dccp_table_header = register_sysctl_paths(dccp_path,
 			dccp_default_table);
 
 	return dccp_table_header != NULL ? 0 : -ENOMEM;
@@ -111,7 +118,7 @@ int __init dccp_sysctl_init(void)
 void dccp_sysctl_exit(void)
 {
 	if (dccp_table_header != NULL) {
-		unregister_net_sysctl_table(dccp_table_header);
+		unregister_sysctl_table(dccp_table_header);
 		dccp_table_header = NULL;
 	}
 }

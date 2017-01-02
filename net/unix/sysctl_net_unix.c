@@ -26,6 +26,12 @@ static ctl_table unix_table[] = {
 	{ }
 };
 
+static struct ctl_path unix_path[] = {
+	{ .procname = "net", },
+	{ .procname = "unix", },
+	{ },
+};
+
 int __net_init unix_sysctl_register(struct net *net)
 {
 	struct ctl_table *table;
@@ -35,7 +41,7 @@ int __net_init unix_sysctl_register(struct net *net)
 		goto err_alloc;
 
 	table[0].data = &net->unx.sysctl_max_dgram_qlen;
-	net->unx.ctl = register_net_sysctl(net, "net/unix", table);
+	net->unx.ctl = register_net_sysctl_table(net, unix_path, table);
 	if (net->unx.ctl == NULL)
 		goto err_reg;
 
@@ -52,6 +58,6 @@ void unix_sysctl_unregister(struct net *net)
 	struct ctl_table *table;
 
 	table = net->unx.ctl->ctl_table_arg;
-	unregister_net_sysctl_table(net->unx.ctl);
+	unregister_sysctl_table(net->unx.ctl);
 	kfree(table);
 }

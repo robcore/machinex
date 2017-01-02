@@ -94,13 +94,19 @@ static struct ctl_table phonet_table[] = {
 	{ }
 };
 
+static struct ctl_path phonet_ctl_path[] = {
+	{ .procname = "net", },
+	{ .procname = "phonet", },
+	{ },
+};
+
 int __init phonet_sysctl_init(void)
 {
-	phonet_table_hrd = register_net_sysctl(&init_net, "net/phonet", phonet_table);
+	phonet_table_hrd = register_sysctl_paths(phonet_ctl_path, phonet_table);
 	return phonet_table_hrd == NULL ? -ENOMEM : 0;
 }
 
 void phonet_sysctl_exit(void)
 {
-	unregister_net_sysctl_table(phonet_table_hrd);
+	unregister_sysctl_table(phonet_table_hrd);
 }

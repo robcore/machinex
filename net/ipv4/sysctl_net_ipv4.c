@@ -841,6 +841,13 @@ static struct ctl_table ipv4_net_table[] = {
 	{ }
 };
 
+struct ctl_path net_ipv4_ctl_path[] = {
+	{ .procname = "net", },
+	{ .procname = "ipv4", },
+	{ },
+};
+EXPORT_SYMBOL_GPL(net_ipv4_ctl_path);
+
 static __net_init int ipv4_sysctl_init_net(struct net *net)
 {
 	struct ctl_table *table;
@@ -881,7 +888,8 @@ static __net_init int ipv4_sysctl_init_net(struct net *net)
 
 	tcp_init_mem(net);
 
-	net->ipv4.ipv4_hdr = register_net_sysctl(net, "net/ipv4", table);
+	net->ipv4.ipv4_hdr = register_net_sysctl_table(net,
+			net_ipv4_ctl_path, table);
 	if (net->ipv4.ipv4_hdr == NULL)
 		goto err_reg;
 
@@ -922,12 +930,12 @@ static __init int sysctl_ipv4_init(void)
 	if (!i->procname)
 		return -EINVAL;
 
-	hdr = register_net_sysctl(&init_net, "net/ipv4", ipv4_table);
+	hdr = register_sysctl_paths(net_ipv4_ctl_path, ipv4_table);
 	if (hdr == NULL)
 		return -ENOMEM;
 
 	if (register_pernet_subsys(&ipv4_sysctl_ops)) {
-		unregister_net_sysctl_table(hdr);
+		unregister_sysctl_table(hdr);
 		return -ENOMEM;
 	}
 

@@ -643,6 +643,12 @@ static struct ctl_table tr_table[] = {
 	},
 	{ },
 };
+
+static __initdata struct ctl_path tr_path[] = {
+	{ .procname = "net", },
+	{ .procname = "token-ring", },
+	{ }
+};
 #endif
 
 /*
@@ -656,7 +662,7 @@ static int __init rif_init(void)
 	setup_timer(&rif_timer, rif_check_expire, 0);
 	add_timer(&rif_timer);
 #ifdef CONFIG_SYSCTL
-	register_net_sysctl(&init_net, "net/token-ring", tr_table);
+	register_sysctl_paths(tr_path, tr_table);
 #endif
 	proc_net_fops_create(&init_net, "tr_rif", S_IRUGO, &rif_seq_fops);
 	return 0;

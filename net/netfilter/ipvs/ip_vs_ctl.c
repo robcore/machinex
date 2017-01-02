@@ -1846,6 +1846,13 @@ static struct ctl_table vs_vars[] = {
 	{ }
 };
 
+const struct ctl_path net_vs_ctl_path[] = {
+	{ .procname = "net", },
+	{ .procname = "ipv4", },
+	{ .procname = "vs", },
+	{ }
+};
+EXPORT_SYMBOL_GPL(net_vs_ctl_path);
 #endif
 
 #ifdef CONFIG_PROC_FS
@@ -3658,7 +3665,8 @@ int __net_init ip_vs_control_net_init_sysctl(struct net *net)
 	tbl[idx++].data = &ipvs->sysctl_nat_icmp_send;
 
 
-	ipvs->sysctl_hdr = register_net_sysctl(net, "net/ipv4/vs", tbl);
+	ipvs->sysctl_hdr = register_net_sysctl_table(net, net_vs_ctl_path,
+						     tbl);
 	if (ipvs->sysctl_hdr == NULL) {
 		if (!net_eq(net, &init_net))
 			kfree(tbl);

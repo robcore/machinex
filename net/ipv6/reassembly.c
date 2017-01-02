@@ -664,7 +664,7 @@ static int __net_init ip6_frags_ns_sysctl_register(struct net *net)
 		table[2].data = &net->ipv6.frags.timeout;
 	}
 
-	hdr = register_net_sysctl(net, "net/ipv6", table);
+	hdr = register_net_sysctl_table(net, net_ipv6_ctl_path, table);
 	if (hdr == NULL)
 		goto err_reg;
 
@@ -692,7 +692,7 @@ static struct ctl_table_header *ip6_ctl_header;
 
 static int ip6_frags_sysctl_register(void)
 {
-	ip6_ctl_header = register_net_sysctl(&init_net, "net/ipv6",
+	ip6_ctl_header = register_net_sysctl_rotable(net_ipv6_ctl_path,
 			ip6_frags_ctl_table);
 	return ip6_ctl_header == NULL ? -ENOMEM : 0;
 }

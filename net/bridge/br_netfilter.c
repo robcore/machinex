@@ -1007,6 +1007,12 @@ static ctl_table brnf_table[] = {
 	},
 	{ }
 };
+
+static struct ctl_path brnf_path[] = {
+	{ .procname = "net", },
+	{ .procname = "bridge", },
+	{ }
+};
 #endif
 
 int __init br_netfilter_init(void)
@@ -1023,7 +1029,7 @@ int __init br_netfilter_init(void)
 		return ret;
 	}
 #ifdef CONFIG_SYSCTL
-	brnf_sysctl_header = register_net_sysctl(&init_net, "net/bridge", brnf_table);
+	brnf_sysctl_header = register_sysctl_paths(brnf_path, brnf_table);
 	if (brnf_sysctl_header == NULL) {
 		printk(KERN_WARNING
 		       "br_netfilter: can't register to sysctl.\n");
@@ -1040,7 +1046,7 @@ void br_netfilter_fini(void)
 {
 	nf_unregister_hooks(br_nf_ops, ARRAY_SIZE(br_nf_ops));
 #ifdef CONFIG_SYSCTL
-	unregister_net_sysctl_table(brnf_sysctl_header);
+	unregister_sysctl_table(brnf_sysctl_header);
 #endif
 	dst_entries_destroy(&fake_dst_ops);
 }
