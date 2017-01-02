@@ -18,6 +18,7 @@
 #include <linux/sysfs.h>
 #include <linux/bitops.h>
 #include <linux/kallsyms.h>
+#include <linux/export.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
