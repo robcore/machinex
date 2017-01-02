@@ -39,8 +39,6 @@
 static void br_multicast_add_router(struct net_bridge *br,
 				    struct net_bridge_port *port);
 
-static void br_multicast_start_querier(struct net_bridge *br);
-
 #if IS_ENABLED(CONFIG_IPV6)
 static inline int ipv6_is_transient_multicast(const struct in6_addr *addr)
 {
@@ -746,21 +744,6 @@ static void br_multicast_local_router_expired(unsigned long data)
 {
 }
 
-static void br_multicast_querier_expired(unsigned long data)
-{
-	struct net_bridge_port *port = (void *)data;
-	struct net_bridge *br = port->br;
-
-	spin_lock(&br->multicast_lock);
-	if (!netif_running(br->dev) || br->multicast_disabled)
-		goto out;
-
-	br_multicast_start_querier(br);
-
-out:
-	spin_unlock(&br->multicast_lock);
-}
-
 static void __br_multicast_send_query(struct net_bridge *br,
 				      struct net_bridge_port *port,
 				      struct br_ip *ip)
@@ -787,7 +770,6 @@ static void br_multicast_send_query(struct net_bridge *br,
 	struct br_ip br_group;
 
 	if (!netif_running(br->dev) || br->multicast_disabled ||
-	    !br->multicast_querier ||
 	    timer_pending(&br->multicast_querier_timer))
 		return;
 
@@ -1578,7 +1560,6 @@ void br_multicast_init(struct net_bridge *br)
 	br->hash_max = 512;
 
 	br->multicast_router = 1;
-	br->multicast_querier = 0;
 	br->multicast_last_member_count = 2;
 	br->multicast_startup_query_count = 2;
 
@@ -1593,7 +1574,7 @@ void br_multicast_init(struct net_bridge *br)
 	setup_timer(&br->multicast_router_timer,
 		    br_multicast_local_router_expired, 0);
 	setup_timer(&br->multicast_querier_timer,
-		    br_multicast_querier_expired, 0);
+		    br_multicast_local_router_expired, 0);
 	setup_timer(&br->multicast_query_timer, br_multicast_query_expired,
 		    (unsigned long)br);
 }
@@ -1720,23 +1701,9 @@ unlock:
 	return err;
 }
 
-static void br_multicast_start_querier(struct net_bridge *br)
-{
-	struct net_bridge_port *port;
-
-	br_multicast_open(br);
-
-	list_for_each_entry(port, &br->port_list, list) {
-		if (port->state == BR_STATE_DISABLED ||
-		    port->state == BR_STATE_BLOCKING)
-			continue;
-
-		__br_multicast_enable_port(port);
-	}
-}
-
 int br_multicast_toggle(struct net_bridge *br, unsigned long val)
 {
+	struct net_bridge_port *port;
 	int err = 0;
 	struct net_bridge_mdb_htable *mdb;
 
@@ -1766,30 +1733,19 @@ rollback:
 			goto rollback;
 	}
 
-	br_multicast_start_querier(br);
+	br_multicast_open(br);
+	list_for_each_entry(port, &br->port_list, list) {
+		if (port->state == BR_STATE_DISABLED ||
+		    port->state == BR_STATE_BLOCKING)
+			continue;
+
+		__br_multicast_enable_port(port);
+	}
 
 unlock:
 	spin_unlock_bh(&br->multicast_lock);
 
 	return err;
-}
-
-int br_multicast_set_querier(struct net_bridge *br, unsigned long val)
-{
-	val = !!val;
-
-	spin_lock_bh(&br->multicast_lock);
-	if (br->multicast_querier == val)
-		goto unlock;
-
-	br->multicast_querier = val;
-	if (val)
-		br_multicast_start_querier(br);
-
-unlock:
-	spin_unlock_bh(&br->multicast_lock);
-
-	return 0;
 }
 
 int br_multicast_set_hash_max(struct net_bridge *br, unsigned long val)

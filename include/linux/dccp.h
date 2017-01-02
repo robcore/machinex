@@ -549,8 +549,6 @@ static inline const char *dccp_role(const struct sock *sk)
 	return NULL;
 }
 
-extern void dccp_syn_ack_timeout(struct sock *sk, struct request_sock *req);
-
 #endif /* __KERNEL__ */
 
 #endif /* _LINUX_DCCP_H */

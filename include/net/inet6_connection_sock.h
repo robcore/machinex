@@ -23,7 +23,7 @@ struct sock;
 struct sockaddr;
 
 extern int inet6_csk_bind_conflict(const struct sock *sk,
-				   const struct inet_bind_bucket *tb, bool relax);
+				   const struct inet_bind_bucket *tb);
 
 extern struct dst_entry* inet6_csk_route_req(struct sock *sk,
 					     const struct request_sock *req);
