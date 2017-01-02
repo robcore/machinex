@@ -1162,11 +1162,6 @@ static int __init inet6_init(void)
 	if (err)
 		goto out_sock_register_fail;
 
-#ifdef CONFIG_SYSCTL
-	err = ipv6_static_sysctl_register();
-	if (err)
-		goto static_sysctl_fail;
-#endif
 	tcpv6_prot.sysctl_mem = init_net.ipv4.sysctl_tcp_mem;
 
 	/*
@@ -1304,10 +1299,6 @@ ipmr_fail:
 icmp_fail:
 	unregister_pernet_subsys(&inet6_net_ops);
 register_pernet_fail:
-#ifdef CONFIG_SYSCTL
-	ipv6_static_sysctl_unregister();
-static_sysctl_fail:
-#endif
 	sock_unregister(PF_INET6);
 	rtnl_unregister_all(PF_INET6);
 out_sock_register_fail:
@@ -1336,9 +1327,6 @@ static void __exit inet6_exit(void)
 	/* Disallow any further netlink messages */
 	rtnl_unregister_all(PF_INET6);
 
-#ifdef CONFIG_SYSCTL
-	ipv6_sysctl_unregister();
-#endif
 	udpv6_exit();
 	udplitev6_exit();
 	tcpv6_exit();
@@ -1367,9 +1355,6 @@ static void __exit inet6_exit(void)
 	rawv6_exit();
 
 	unregister_pernet_subsys(&inet6_net_ops);
-#ifdef CONFIG_SYSCTL
-	ipv6_static_sysctl_unregister();
-#endif
 	proto_unregister(&rawv6_prot);
 	proto_unregister(&udplitev6_prot);
 	proto_unregister(&udpv6_prot);
