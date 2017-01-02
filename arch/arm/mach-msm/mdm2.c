@@ -38,7 +38,6 @@
 #include <mach/subsystem_restart.h>
 #include <linux/msm_charm.h>
 #include "msm_watchdog.h"
-//#include <linux/async.h>
 #include "devices.h"
 #include "clock.h"
 #include "mdm_private.h"
@@ -149,18 +148,10 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 {
 	int i;
 	int pblrdy;
-	int kpd_direction_assert = 1,
-		kpd_direction_de_assert = 0;
-
-	if (mdm_drv->pdata->kpd_not_inverted) {
-		kpd_direction_assert = 0;
-		kpd_direction_de_assert = 1;
-	}
-
 	if (mdm_drv->power_on_count != 1) {
 		pr_debug("%s:id %d: Calling fn when power_on_count != 1\n",
 			   __func__, mdm_drv->device_id);
-		//return;
+		return;
 	}
 
 	mdm_peripheral_disconnect(mdm_drv);
@@ -170,15 +161,12 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 	 * instead of just de-asserting it. No harm done if the modem was
 	 * powered down.
 	 */
-	if (!mdm_drv->pdata->no_reset_on_first_powerup)
-		mdm_toggle_soft_reset(mdm_drv);
-
+	mdm_toggle_soft_reset(mdm_drv);
 	/* If the device has a kpd pwr gpio then toggle it. */
 	if (GPIO_IS_VALID(mdm_drv->ap2mdm_kpdpwr_n_gpio)) {
 		/* Pull AP2MDM_KPDPWR gpio high and wait for PS_HOLD to settle,
 		 * then	pull it back low.
 		 */
-		pr_debug("%s: Pulling AP2MDM_KPDPWR gpio high\n", __func__);
 		gpio_direction_output(mdm_drv->ap2mdm_kpdpwr_n_gpio, 1);
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 1);
 		mdelay(1000);
@@ -194,7 +182,7 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 		pblrdy = gpio_get_value(mdm_drv->mdm2ap_pblrdy);
 		if (pblrdy)
 			break;
-		udelay_range(5000, 5000);
+		usleep_range(5000, 5000);
 	}
 	pr_debug("%s: id %d: pblrdy i:%d\n", __func__,
 			 mdm_drv->device_id, i);
@@ -219,7 +207,7 @@ static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
 		pblrdy = gpio_get_value(mdm_drv->mdm2ap_pblrdy);
 		if (pblrdy)
 			break;
-		udelay_range(5000, 5000);
+		usleep_range(5000, 5000);
 	}
 
 	pr_debug("%s: id %d: pblrdy i:%d\n", __func__,
