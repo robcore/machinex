@@ -178,7 +178,7 @@ struct rx_pkt_info {
 #define A2_SUMMING_THRESHOLD	4096
 #define A2_PHYS_BASE		0x124C2000
 #define A2_PHYS_SIZE		0x2000
-#define BUFFER_SIZE		2048
+#define BUFFER_SIZE		4096
 #define NUM_BUFFERS		32
 
 #ifndef A2_BAM_IRQ
@@ -237,6 +237,7 @@ static struct workqueue_struct *bam_mux_tx_workqueue;
 /* A2 power collaspe */
 #define UL_TIMEOUT_DELAY 300	/* in ms */
 #define ENABLE_DISCONNECT_ACK	0x1
+#define UL_WAKEUP_TIMEOUT_MS	600
 static void toggle_apps_ack(void);
 static void reconnect_to_bam(void);
 static void disconnect_to_bam(void);
@@ -275,6 +276,7 @@ static DEFINE_MUTEX(smsm_cb_lock);
 static DEFINE_MUTEX(delayed_ul_vote_lock);
 static int need_delayed_ul_vote;
 static int power_management_only_mode;
+static struct completion shutdown_completion;
 
 struct outside_notify_func {
 	void (*notify)(void *, int, unsigned long);
@@ -309,13 +311,6 @@ static int in_global_reset;
 struct kfifo bam_dmux_state_log;
 static int bam_dmux_uplink_vote;
 static int bam_dmux_power_state;
-
-
-#define DMUX_LOG_KERR(fmt...) \
-do { \
-	BAM_DMUX_LOG(fmt); \
-	pr_err(fmt); \
-} while (0)
 
 static void *bam_ipc_log_txt;
 
@@ -356,6 +351,12 @@ do { \
 		disconnect_ack ? 'D' : 'd', \
 		args); \
 	} \
+} while (0)
+
+#define DMUX_LOG_KERR(fmt, args...) \
+do { \
+	BAM_DMUX_LOG(fmt, args); \
+	pr_err(fmt, args); \
 } while (0)
 
 static inline void set_tx_timestamp(struct tx_pkt_info *pkt)
@@ -514,11 +515,12 @@ static void bam_mux_process_data(struct sk_buff *rx_skb)
 		notify = bam_ch[rx_hdr->ch_id].notify;
 		priv = bam_ch[rx_hdr->ch_id].priv;
 	}
-	spin_unlock_irqrestore(&bam_ch[rx_hdr->ch_id].lock, flags);
+
 	if (notify)
 		notify(priv, BAM_DMUX_RECEIVE, event_data);
 	else
 		dev_kfree_skb_any(rx_skb);
+	spin_unlock_irqrestore(&bam_ch[rx_hdr->ch_id].lock, flags);
 
 	queue_rx();
 }
@@ -1413,11 +1415,8 @@ static void notify_all(int event, unsigned long data)
 	struct outside_notify_func *func;
 
 	for (i = 0; i < BAM_DMUX_NUM_CHANNELS; ++i) {
-		if (bam_ch_is_open(i)) {
+		if (bam_ch_is_open(i))
 			bam_ch[i].notify(bam_ch[i].priv, event, data);
-			BAM_DMUX_LOG("%s: cid=%d, event=%d, data=%lu\n",
-					__func__, i, event, data);
-		}
 	}
 
 	__list_for_each(temp, &bam_other_notify_funcs) {
@@ -1498,7 +1497,7 @@ static inline void ul_powerdown_finish(void)
 		unvote_dfab();
 		complete_all(&dfab_unvote_completion);
 		wait_for_dfab = 0;
-		bam_dmux_ratelimit = 0;
+		bam_dmux_ratelimit = 1;
 	}
 }
 
@@ -1692,7 +1691,8 @@ static void ul_wakeup(void)
 	if (wait_for_ack) {
 		BAM_DMUX_LOG("%s waiting for previous ack\n", __func__);
 		ret = wait_for_completion_timeout(
-					&ul_wakeup_ack_completion, HZ);
+					&ul_wakeup_ack_completion,
+					msecs_to_jiffies(UL_WAKEUP_TIMEOUT_MS));
 		wait_for_ack = 0;
 		if (unlikely(ret == 0) && ssrestart_check()) {
 			mutex_unlock(&wakeup_lock);
@@ -1703,14 +1703,16 @@ static void ul_wakeup(void)
 	INIT_COMPLETION(ul_wakeup_ack_completion);
 	power_vote(1);
 	BAM_DMUX_LOG("%s waiting for wakeup ack\n", __func__);
-	ret = wait_for_completion_timeout(&ul_wakeup_ack_completion, HZ);
+	ret = wait_for_completion_timeout(&ul_wakeup_ack_completion,
+					msecs_to_jiffies(UL_WAKEUP_TIMEOUT_MS));
 	if (unlikely(ret == 0) && ssrestart_check()) {
 		mutex_unlock(&wakeup_lock);
 		BAM_DMUX_LOG("%s timeout wakeup ack\n", __func__);
 		return;
 	}
 	BAM_DMUX_LOG("%s waiting completion\n", __func__);
-	ret = wait_for_completion_timeout(&bam_connection_completion, HZ);
+	ret = wait_for_completion_timeout(&bam_connection_completion,
+					msecs_to_jiffies(UL_WAKEUP_TIMEOUT_MS));
 	if (unlikely(ret == 0) && ssrestart_check()) {
 		mutex_unlock(&wakeup_lock);
 		BAM_DMUX_LOG("%s timeout power on\n", __func__);

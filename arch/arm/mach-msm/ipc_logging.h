@@ -13,6 +13,8 @@
 #ifndef _IPC_LOGGING_H
 #define _IPC_LOGGING_H
 
+#include <mach/msm_ipc_logging.h>
+
 struct ipc_log_page_header {
 	uint32_t magic;
 	uint32_t nmagic; /* inverse of magic number */
@@ -65,7 +67,7 @@ enum {
 #define IS_MSG_TYPE(x) (((x) > TSV_TYPE_MSG_START) && \
 			((x) < TSV_TYPE_MSG_END))
 
-extern spinlock_t ipc_log_context_list_lock;
+extern rwlock_t ipc_log_context_list_lock;
 
 extern int msg_read(struct ipc_log_context *ilctxt,
 		    struct encode_context *ectxt);

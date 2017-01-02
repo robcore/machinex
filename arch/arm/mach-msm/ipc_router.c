@@ -58,6 +58,7 @@ static void *ipc_rtr_log_ctxt;
 #define IPC_RTR_LOG_PAGES 5
 #define DIAG(x...) pr_info("[RR] ERROR " x)
 
+#if defined(CONFIG_MSM_SMD_LOGGING)
 #if defined(DEBUG)
 #define D(x...) do { \
 if (ipc_rtr_log_ctxt) \
@@ -93,6 +94,7 @@ if (msm_ipc_router_debug_mask & R2R_RAW_HDR) \
 #define RAW(x...) do { } while (0)
 #define RAW_HDR(x...) do { } while (0)
 #define NTFY(x...) do { } while (0)
+#endif
 #endif
 
 #define IPC_ROUTER_LOG_EVENT_ERROR      0x00
@@ -1398,7 +1400,7 @@ static int msm_ipc_router_send_server_list(uint32_t node_id,
 
 	return 0;
 }
-
+#if defined(CONFIG_MSM_SMD_LOGGING)
 #if defined(DEBUG)
 static char *type_to_str(int i)
 {
@@ -1423,6 +1425,7 @@ static char *type_to_str(int i)
 		return "invalid";
 	}
 }
+#endif
 #endif
 
 static int broadcast_ctl_msg_locally(union rr_control_msg *msg)
@@ -3360,7 +3363,7 @@ static int __init msm_ipc_router_init(void)
 	ipc_rtr_log_ctxt = ipc_log_context_create(IPC_RTR_LOG_PAGES,
 						  "ipc_router");
 	if (!ipc_rtr_log_ctxt)
-		pr_err("%s: Unable to create IPC logging for IPC RTR",
+		pr_debug("%s: Unable to create IPC logging for IPC RTR",
 			__func__);
 
 	msm_ipc_router_workqueue =
