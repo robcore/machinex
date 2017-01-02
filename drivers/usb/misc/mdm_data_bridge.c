@@ -130,6 +130,8 @@ struct data_bridge {
 	unsigned int			tx_unthrottled_cnt;
 	unsigned int			rx_throttled_cnt;
 	unsigned int			rx_unthrottled_cnt;
+	unsigned long long		tx_num_of_bytes;
+	unsigned long long		rx_num_of_bytes;
 };
 
 static struct data_bridge	*__dev[MAX_BRIDGE_DEVICES];
@@ -234,6 +236,7 @@ static void data_bridge_process_rx(struct work_struct *work)
 
 	while (!rx_throttled(brdg) && (skb = skb_dequeue(&dev->rx_done))) {
 		dev->to_host++;
+		dev->rx_num_of_bytes += skb->len;
 		info = (struct timestamp_info *)skb->cb;
 		info->rx_done_sent = get_timestamp();
 		/* hand off sk_buff to client,they'll need to free it */
@@ -419,6 +422,8 @@ int data_bridge_open(struct bridge *brdg)
 	dev->tx_unthrottled_cnt = 0;
 	dev->rx_throttled_cnt = 0;
 	dev->rx_unthrottled_cnt = 0;
+	dev->tx_num_of_bytes = 0;
+	dev->rx_num_of_bytes = 0;
 
 	queue_work(dev->wq, &dev->process_rx_w);
 
@@ -519,6 +524,8 @@ static void data_bridge_write_cb(struct urb *urb)
 
 	switch (urb->status) {
 	case 0: /*success*/
+		dev->to_modem++;
+		dev->tx_num_of_bytes += skb->len;
 		dbg_timestamp("UL", skb);
 		break;
 	case -EPROTO:
@@ -619,7 +626,6 @@ int data_bridge_write(unsigned int id, struct sk_buff *skb)
 		goto free_urb;
 	}
 
-	dev->to_modem++;
 	dev_dbg(&dev->intf->dev, "%s: pending_txurbs: %u\n", __func__, pending);
 
 	/* flow control: last urb submitted but return -EBUSY */
@@ -855,6 +861,8 @@ static ssize_t data_bridge_read_stats(struct file *file, char __user *ubuf,
 				"tx urb drp cnt:     %u\n"
 				"to host:            %lu\n"
 				"to mdm:             %lu\n"
+				"rx number of bytes: %llu\n"
+				"tx number of bytes: %llu\n"
 				"tx throttled cnt:   %u\n"
 				"tx unthrottled cnt: %u\n"
 				"rx throttled cnt:   %u\n"
@@ -869,6 +877,8 @@ static ssize_t data_bridge_read_stats(struct file *file, char __user *ubuf,
 				dev->txurb_drp_cnt,
 				dev->to_host,
 				dev->to_modem,
+				dev->rx_num_of_bytes,
+				dev->tx_num_of_bytes,
 				dev->tx_throttled_cnt,
 				dev->tx_unthrottled_cnt,
 				dev->rx_throttled_cnt,
@@ -906,6 +916,8 @@ static ssize_t data_bridge_reset_stats(struct file *file,
 		dev->tx_unthrottled_cnt = 0;
 		dev->rx_throttled_cnt = 0;
 		dev->rx_unthrottled_cnt = 0;
+		dev->tx_num_of_bytes = 0;
+		dev->rx_num_of_bytes = 0;
 	}
 	return count;
 }
