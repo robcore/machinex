@@ -154,7 +154,7 @@ static int pm8xxx_rtc_set_time(struct device *dev, struct rtc_time *tm)
 		secs >>= 8;
 	}
 
-	dev_info(dev, "Seconds value to be written to RTC = %lu\n", secs);
+	dev_dbg(dev, "Seconds value to be written to RTC = %lu\n", secs);
 
 	spin_lock_irqsave(&rtc_dd->ctrl_reg_lock, irq_flags);
 	ctrl_reg = rtc_dd->ctrl_reg;
@@ -773,7 +773,6 @@ static int __devinit pm8xxx_rtc_probe(struct platform_device *pdev)
 	int rc;
 	u8 ctrl_reg;
 	bool rtc_write_enable = false;
-
 	struct pm8xxx_rtc *rtc_dd;
 	struct resource *rtc_resource;
 	const struct pm8xxx_rtc_platform_data *pdata =
@@ -942,7 +941,11 @@ static int pm8xxx_rtc_suspend(struct device *dev)
 #endif
 
 #ifdef CONFIG_RTC_AUTO_PWRON_PARAM
+static int __devexit pm8xxx_rtc_remove(struct platform_device *pdev)
+{
 	destroy_workqueue(sapa_workq);
+	return 0;
+}
 #endif
 
 static SIMPLE_DEV_PM_OPS(pm8xxx_rtc_pm_ops, pm8xxx_rtc_suspend, pm8xxx_rtc_resume);
