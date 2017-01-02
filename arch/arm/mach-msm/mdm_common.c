@@ -47,11 +47,11 @@
 #include <mach/sec_debug.h>
 #endif
 
-#define MDM_MODEM_TIMEOUT	12000
+#define MDM_MODEM_TIMEOUT	6000
 #define MDM_MODEM_DELTA	100
 #define MDM_BOOT_TIMEOUT	60000L
 #define MDM_RDUMP_TIMEOUT	120000L
-#define MDM2AP_STATUS_TIMEOUT_MS 120000L
+#define MDM2AP_STATUS_TIMEOUT_MS 60000L
 
 /* Allow a maximum device id of this many digits */
 #define MAX_DEVICE_DIGITS  10
@@ -64,7 +64,7 @@
 	(sizeof(DEVICE_BASE_NAME) + MAX_DEVICE_DIGITS)
 
 #define RD_BUF_SIZE			100
-#define SFR_MAX_RETRIES		1000
+#define SFR_MAX_RETRIES		100
 #define SFR_RETRY_INTERVAL	1000
 
 enum gpio_update_config {
