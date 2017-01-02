@@ -22,6 +22,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
+#include <linux/slab.h>
 #include <linux/clk.h>
 #include <mach/clk.h>
 

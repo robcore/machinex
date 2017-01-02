@@ -141,7 +141,7 @@ config ARCH_MSM8960
 	select CPU_V7
 	select GPIO_MSM_V2
 	select MSM_GPIOMUX
-	select MSM_SCM if SMP
+	select MSM_SCM
 	select MSM_DIRECT_SCLK_ACCESS
 	select REGULATOR
 	select MSM_RPM_REGULATOR
@@ -182,7 +182,7 @@ config ARCH_MSM8930
 	select CPU_V7
 	select GPIO_MSM_V2
 	select MSM_GPIOMUX
-	select MSM_SCM if SMP
+	select MSM_SCM
 	select MSM_DIRECT_SCLK_ACCESS
 	select REGULATOR
 	select MSM_RPM_REGULATOR
@@ -220,7 +220,7 @@ config ARCH_APQ8064
 	select GPIO_MSM_V2
 	select ARM_GIC
 	select CPU_V7
-	select MSM_SCM if SMP
+	select MSM_SCM
 	select MSM_GPIOMUX
 	select MSM_REMOTE_SPINLOCK_SFPB
 	select MSM_PIL
