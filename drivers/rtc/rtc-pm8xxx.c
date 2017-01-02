@@ -280,39 +280,17 @@ static int pm8xxx_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 
 	rtc_tm_to_time(&alarm->time, &secs);
 
-	/*
-	 * Read the current RTC time and verify if the alarm time is in the
-	 * past. If yes, return invalid.
-	 */
-	rc = pm8xxx_rtc_read_time(dev, &rtc_tm);
-	if (rc < 0) {
-		dev_err(dev, "Unamble to read RTC time\n");
-		return -EINVAL;
-	}
-
-	rtc_tm_to_time(&rtc_tm, &secs_rtc);
-	if (secs < secs_rtc) {
-		dev_err(dev, "Trying to set alarm in the past\n");
-		return -EINVAL;
-	}
-
 #ifdef CONFIG_RTC_AUTO_PWRON
 	if ( sapa_saved_time.enabled ) {
 		unsigned long secs_pwron;
 
 		/* If there are power on alarm before alarm time, ignore alarm */
 		rtc_tm_to_time(&sapa_saved_time.time, &secs_pwron);
-
-		if ( secs_rtc < secs_pwron && secs_pwron < secs ) {
-			pr_info("[SAPA] override with SAPA\n");
-			memcpy(alarm, &sapa_saved_time, sizeof(struct rtc_wkalrm));
-			secs = secs_pwron;
+		pr_info("secs_pwron=%lu, secs=%lu\n", secs_pwron, secs);
+		if ( secs_pwron < secs ) {
+			pr_info("RTC alarm don't need because of power on alarm\n");
+			return 0;
 		}
-		if (  secs_pwron < secs_rtc ) {
-			pr_info("[SAPA] clear\n");
-			sapa_saved_time.enabled = 0;
-		}
-
 	}
 #endif
 
@@ -391,9 +369,6 @@ static int pm8xxx_rtc_alarm_irq_enable(struct device *dev, unsigned int enable)
 	u8 ctrl_reg;
 	u8 value[4] = {0};
 
-#ifdef CONFIG_RTC_AUTO_PWRON
-	pr_info("[SAPA] irq=%d\n", enabled);
-#endif
 	spin_lock_irqsave(&rtc_dd->ctrl_reg_lock, irq_flags);
 	ctrl_reg = rtc_dd->ctrl_reg;
 	ctrl_reg = (enable) ? (ctrl_reg | PM8xxx_RTC_ALARM_ENABLE) :
@@ -462,6 +437,11 @@ static void sapa_store_kparam(struct rtc_wkalrm *alarm)
 	int MSB=0, LSB=0;
 	int alarm_mode = 0;
 	unsigned long secs;
+
+	if ( !sapa_workq ) {
+		pr_err("%s: pwron alarm work_queue not exist\n", __func__);
+		return ;
+	}
 
 	if ( alarm == &sapa_saved_time ) {
 		pr_err("%s: pwr on alarm param already was written\n", __func__);
