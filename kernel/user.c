@@ -5,7 +5,7 @@
  *
  * We have a per-user structure to keep track of how many
  * processes, files etc the user has claimed, in order to be
- * able to have per-user limits for system resources. 
+ * able to have per-user limits for system resources.
  */
 
 #include <linux/init.h>
@@ -23,10 +23,27 @@
  * and 1 for... ?
  */
 struct user_namespace init_user_ns = {
+	.uid_map = {
+		.nr_extents = 1,
+		.extent[0] = {
+			.first = 0,
+			.lower_first = 0,
+			.count = 4294967295,
+		},
+	},
+	.gid_map = {
+		.nr_extents = 1,
+		.extent[0] = {
+			.first = 0,
+			.lower_first = 0,
+			.count = 4294967295,
+		},
+	},
 	.kref = {
 		.refcount	= ATOMIC_INIT(3),
 	},
-	.creator = &root_user,
+	.owner = GLOBAL_ROOT_UID,
+	.group = GLOBAL_ROOT_GID,
 	.proc_inum = PROC_USER_INIT_INO,
 };
 EXPORT_SYMBOL_GPL(init_user_ns);
@@ -56,9 +73,9 @@ struct hlist_head uidhash_table[UIDHASH_SZ];
  */
 static DEFINE_SPINLOCK(uidhash_lock);
 
-/* root_user.__count is 2, 1 for init task cred, 1 for init_user_ns->user_ns */
+/* root_user.__count is 1, for init task cred */
 struct user_struct root_user = {
-	.__count	= ATOMIC_INIT(2),
+	.__count	= ATOMIC_INIT(1),
 	.processes	= ATOMIC_INIT(1),
 	.files		= ATOMIC_INIT(0),
 	.sigpending	= ATOMIC_INIT(0),

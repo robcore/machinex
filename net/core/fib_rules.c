@@ -17,11 +17,13 @@
 #include <net/sock.h>
 #include <net/fib_rules.h>
 
+#if 0
 #define INVALID_UID ((uid_t) -1)
 #define uid_valid(uid) ((uid) != -1)
 #define uid_lte(a, b) ((a) <= (b))
 #define uid_eq(a, b) ((a) == (b))
 #define uid_gte(a, b) ((a) >= (b))
+#endif
 
 int fib_default_rule_add(struct fib_rules_ops *ops,
 			 u32 pref, u32 table, u32 flags)
