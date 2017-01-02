@@ -902,6 +902,9 @@ static int __devexit pm8xxx_rtc_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_rtc *rtc_dd = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_RTC_AUTO_PWRON_PARAM
+	destroy_workqueue(sapa_workq);
+#endif
 	device_init_wakeup(&pdev->dev, 0);
 	free_irq(rtc_dd->rtc_alarm_irq, rtc_dd);
 	rtc_device_unregister(rtc_dd->rtc);
@@ -936,14 +939,6 @@ static int pm8xxx_rtc_suspend(struct device *dev)
 	sapa_dev_suspend = 1;
 #endif
 
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_RTC_AUTO_PWRON_PARAM
-static int __devexit pm8xxx_rtc_remove(struct platform_device *pdev)
-{
-	destroy_workqueue(sapa_workq);
 	return 0;
 }
 #endif
