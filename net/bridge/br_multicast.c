@@ -39,6 +39,8 @@
 static void br_multicast_add_router(struct net_bridge *br,
 				    struct net_bridge_port *port);
 
+static void br_multicast_start_querier(struct net_bridge *br);
+
 #if IS_ENABLED(CONFIG_IPV6)
 static inline int ipv6_is_transient_multicast(const struct in6_addr *addr)
 {
@@ -742,6 +744,21 @@ out:
 
 static void br_multicast_local_router_expired(unsigned long data)
 {
+}
+
+static void br_multicast_querier_expired(unsigned long data)
+{
+	struct net_bridge_port *port = (void *)data;
+	struct net_bridge *br = port->br;
+
+	spin_lock(&br->multicast_lock);
+	if (!netif_running(br->dev) || br->multicast_disabled)
+		goto out;
+
+	br_multicast_start_querier(br);
+
+out:
+	spin_unlock(&br->multicast_lock);
 }
 
 static void __br_multicast_send_query(struct net_bridge *br,
@@ -1574,7 +1591,7 @@ void br_multicast_init(struct net_bridge *br)
 	setup_timer(&br->multicast_router_timer,
 		    br_multicast_local_router_expired, 0);
 	setup_timer(&br->multicast_querier_timer,
-		    br_multicast_local_router_expired, 0);
+		    br_multicast_querier_expired, 0);
 	setup_timer(&br->multicast_query_timer, br_multicast_query_expired,
 		    (unsigned long)br);
 }
