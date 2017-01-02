@@ -29,6 +29,17 @@ int create_user_ns(struct cred *new)
 	struct user_struct *root_user;
 	int ret;
 
+	kuid_t owner = make_kuid(new->user_ns, new->euid);
+	kgid_t group = make_kgid(new->user_ns, new->egid);
+
+	/* The creator needs a mapping in the parent user namespace
+	 * or else we won't be able to reasonably tell userspace who
+	 * created a user_namespace.
+	 */
+	if (!kuid_has_mapping(parent_ns, owner) ||
+	    !kgid_has_mapping(parent_ns, group))
+		return -EPERM;
+
 	ns = kmem_cache_alloc(user_ns_cachep, GFP_KERNEL);
 	if (!ns)
 		return -ENOMEM;
@@ -50,7 +61,9 @@ int create_user_ns(struct cred *new)
 
 	/* set the new root user in the credentials under preparation */
 	ns->parent = parent_ns;
-	ns->creator = new->user;
+	ns->owner = owner;
+	ns->group = group;
+	free_uid(new->user);
 	new->user = root_user;
 	new->uid = new->euid = new->suid = new->fsuid = 0;
 	new->gid = new->egid = new->sgid = new->fsgid = 0;
@@ -70,7 +83,8 @@ int create_user_ns(struct cred *new)
 #endif
 	/* tgcred will be cleared in our caller bc CLONE_THREAD won't be set */
 
-	/* Leave the reference to our user_ns with the new cred */
+	/* Leave the new->user_ns reference with the new user namespace. */
+	/* Leave the reference to our user_ns with the new cred. */
 	new->user_ns = ns;
 
 	return 0;
@@ -109,12 +123,11 @@ uid_t user_ns_map_uid(struct user_namespace *to, const struct cred *cred, uid_t 
 	if (likely(to == cred->user_ns))
 		return uid;
 
-
 	/* Is cred->user the creator of the target user_ns
 	 * or the creator of one of it's parents?
 	 */
 	for ( tmp = to; tmp != &init_user_ns; tmp = tmp->parent ) {
-		if (cred->user == tmp->creator) {
+		if (uid_eq(cred->user->uid, tmp->owner)) {
 			return (uid_t)0;
 		}
 	}
@@ -134,7 +147,7 @@ gid_t user_ns_map_gid(struct user_namespace *to, const struct cred *cred, gid_t 
 	 * or the creator of one of it's parents?
 	 */
 	for ( tmp = to; tmp != &init_user_ns; tmp = tmp->parent ) {
-		if (cred->user == tmp->creator) {
+		if (uid_eq(cred->user->uid, tmp->owner)) {
 			return (gid_t)0;
 		}
 	}
