@@ -471,24 +471,24 @@ nametoid_update(struct ent *new, struct ent *old)
  */
 
 int
-nfsd_idmap_init(struct net *net)
+nfsd_idmap_init(void)
 {
 	int rv;
 
-	rv = cache_register_net(&idtoname_cache, net);
+	rv = cache_register_net(&idtoname_cache, &init_net);
 	if (rv)
 		return rv;
-	rv = cache_register_net(&nametoid_cache, net);
+	rv = cache_register_net(&nametoid_cache, &init_net);
 	if (rv)
-		cache_unregister_net(&idtoname_cache, net);
+		cache_unregister_net(&idtoname_cache, &init_net);
 	return rv;
 }
 
 void
-nfsd_idmap_shutdown(struct net *net)
+nfsd_idmap_shutdown(void)
 {
-	cache_unregister_net(&idtoname_cache, net);
-	cache_unregister_net(&nametoid_cache, net);
+	cache_unregister_net(&idtoname_cache, &init_net);
+	cache_unregister_net(&nametoid_cache, &init_net);
 }
 
 static int
