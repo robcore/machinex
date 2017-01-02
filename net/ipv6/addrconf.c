@@ -151,7 +151,7 @@ static void addrconf_type_change(struct net_device *dev,
 				 unsigned long event);
 static int addrconf_ifdown(struct net_device *dev, int how);
 
-static void addrconf_dad_start(struct inet6_ifaddr *ifp, u32 flags);
+static void addrconf_dad_start(struct inet6_ifaddr *ifp);
 static void addrconf_dad_timer(unsigned long data);
 static void addrconf_dad_completed(struct inet6_ifaddr *ifp);
 static void addrconf_dad_run(struct inet6_dev *idev);
@@ -940,7 +940,7 @@ retry:
 	ift->tstamp = tmp_tstamp;
 	spin_unlock_bh(&ift->lock);
 
-	addrconf_dad_start(ift, 0);
+	addrconf_dad_start(ift);
 	in6_ifa_put(ift);
 	in6_dev_put(idev);
 out:
@@ -2014,7 +2014,7 @@ ok:
 
 			update_lft = create = 1;
 			ifp->cstamp = jiffies;
-			addrconf_dad_start(ifp, RTF_ADDRCONF|RTF_PREFIX_RT);
+			addrconf_dad_start(ifp);
 		}
 
 		if (ifp) {
@@ -2293,7 +2293,7 @@ static int inet6_addr_add(struct net *net, int ifindex, const struct in6_addr *p
 		 * that the Optimistic flag should not be set for
 		 * manually configured addresses
 		 */
-		addrconf_dad_start(ifp, 0);
+		addrconf_dad_start(ifp);
 		in6_ifa_put(ifp);
 		addrconf_verify(0);
 		return 0;
@@ -2522,7 +2522,7 @@ static void addrconf_add_linklocal(struct inet6_dev *idev, const struct in6_addr
 	ifp = ipv6_add_addr(idev, addr, 64, IFA_LINK, addr_flags);
 	if (!IS_ERR(ifp)) {
 		addrconf_prefix_route(&ifp->addr, ifp->prefix_len, idev->dev, 0, 0);
-		addrconf_dad_start(ifp, 0);
+		addrconf_dad_start(ifp);
 		in6_ifa_put(ifp);
 	}
 }
@@ -3020,7 +3020,7 @@ static void addrconf_dad_kick(struct inet6_ifaddr *ifp)
 	addrconf_mod_timer(ifp, AC_DAD, rand_num);
 }
 
-static void addrconf_dad_start(struct inet6_ifaddr *ifp, u32 flags)
+static void addrconf_dad_start(struct inet6_ifaddr *ifp)
 {
 	struct inet6_dev *idev = ifp->idev;
 	struct net_device *dev = idev->dev;
