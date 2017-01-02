@@ -4812,9 +4812,12 @@ static int bond_validate(struct nlattr *tb[], struct nlattr *data[])
 	return 0;
 }
 
-static int bond_get_tx_queues(struct net *net, struct nlattr *tb[])
+static int bond_get_tx_queues(struct net *net, struct nlattr *tb[],
+			      unsigned int *num_queues,
+			      unsigned int *real_num_queues)
 {
-	return tx_queues;
+	*num_queues = tx_queues;
+	return 0;
 }
 
 static struct rtnl_link_ops bond_link_ops __read_mostly = {
