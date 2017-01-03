@@ -118,8 +118,6 @@ dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
 
 	policy = this_dbs_info->cur_policy;
 
-	cpufreq_notify_utilization(policy, load);
-
 	/*
 	 * we only care if our internally tracked freq moves outside
 	 * the 'valid' ranges of freqency available to us otherwise
