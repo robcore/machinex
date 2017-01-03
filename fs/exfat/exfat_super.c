@@ -77,6 +77,9 @@
 #include <linux/exportfs.h>
 #include <linux/mount.h>
 #include <linux/vfs.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
+#include <linux/aio.h>
+#endif
 #include <linux/parser.h>
 #include <linux/uio.h>
 #include <linux/writeback.h>
@@ -86,6 +89,7 @@
 #include <linux/sched.h>
 #include <linux/fs_struct.h>
 #include <linux/namei.h>
+#include <linux/vmalloc.h>
 #include <asm/current.h>
 #include <asm/unaligned.h>
 
@@ -257,7 +261,7 @@ static void exfat_write_super(struct super_block *sb);
 
 static void __lock_super(struct super_block *sb)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 	lock_super(sb);
 #else
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
@@ -267,7 +271,7 @@ static void __lock_super(struct super_block *sb)
 
 static void __unlock_super(struct super_block *sb)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 	unlock_super(sb);
 #else
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
@@ -277,7 +281,7 @@ static void __unlock_super(struct super_block *sb)
 
 static int __is_sb_dirty(struct super_block *sb)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
         return sb->s_dirt;
 #else
         struct exfat_sb_info *sbi = EXFAT_SB(sb);
@@ -287,7 +291,7 @@ static int __is_sb_dirty(struct super_block *sb)
 
 static void __set_sb_clean(struct super_block *sb)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 	sb->s_dirt = 0;
 #else
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
@@ -1970,7 +1974,7 @@ const struct super_operations exfat_sops = {
 	.evict_inode  = exfat_evict_inode,
 #endif
 	.put_super     = exfat_put_super,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,00)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 	.write_super   = exfat_write_super,
 #endif
 	.sync_fs       = exfat_sync_fs,
@@ -2213,9 +2217,8 @@ static int exfat_fill_super(struct super_block *sb, void *data, int silent)
 		exfat_mnt_msg(sb, 1, 0, "failed to mount! (ENOMEM)");
 		return -ENOMEM;
 	}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
+
 	mutex_init(&sbi->s_lock);
-#endif
 	sb->s_fs_info = sbi;
 
 	sb->s_flags |= MS_NODIRATIME;
@@ -2269,11 +2272,7 @@ static int exfat_fill_super(struct super_block *sb, void *data, int silent)
 	error = -ENOMEM;
 	exfat_attach(root_inode, EXFAT_I(root_inode)->i_pos);
 	insert_inode_hash(root_inode);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
 	sb->s_root = d_make_root(root_inode);
-#else
-	sb->s_root = d_alloc_root(root_inode);
-#endif
 	if (!sb->s_root) {
 		printk(KERN_ERR "[EXFAT] Getting the root inode failed\n");
 		goto out_fail2;
@@ -2297,7 +2296,10 @@ out_fail:
 	if (sbi->options.iocharset != exfat_default_iocharset)
 		kfree(sbi->options.iocharset);
 	sb->s_fs_info = NULL;
-	kfree(sbi);
+	if (!sbi->use_vmalloc)
+		kfree(sbi);
+	else
+		vfree(sbi);
 	return error;
 }
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
