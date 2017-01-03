@@ -116,10 +116,6 @@ config CGROUP_BFQIO
 	  filesystem interface.  The name of the subsystem will be
 	  bfqio.
 
-config IOSCHED_MAPLE
-	tristate "Maple I/O scheduler"
-	default y
-
 config IOSCHED_CFQ
 	tristate "CFQ I/O scheduler"
 	# If BLK_CGROUP is a module, CFQ has to be built as module.
@@ -168,9 +164,6 @@ choice
 	config DEFAULT_BFQ
 		bool "BFQ" if IOSCHED_BFQ=y
 
-	config DEFAULT_MAPLE
-		bool "Maple" if IOSCHED_MAPLE=y
-
 	config DEFAULT_NOOP
 		bool "No-op"
 
@@ -204,7 +197,6 @@ config DEFAULT_IOSCHED
 	default "fiops" if DEFAULT_FIOPS
 	default "sioplus" if DEFAULT_SIOPLUS
 	default "tripndroid" if DEFAULT_TRIPNDROID
-	default "maple" if DEFAULT_MAPLE
 
 endmenu
 
