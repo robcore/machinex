@@ -160,6 +160,7 @@ fi;
 
 function MISMATCH()
 {
+echo "Building CONFIG_SECTION_MISMATCH kernel"
 	if [ -e /media/root/robcore/AIK/previous.txt ]; then
 		PREV=`cat /media/root/robcore/AIK/previous.txt`
 		echo "your previous version was $PREV"
