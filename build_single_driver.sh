@@ -47,4 +47,11 @@ make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 echo -n "What am I building? [ENTER] "
 read DRV
 make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$DRV;
-washme
+echo -n "cleanup? y/n [ENTER] "
+read CLN
+if [ $CLN == y ]; then
+	washme
+else
+	echo "not clean"
+fi;
+
