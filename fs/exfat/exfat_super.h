@@ -73,11 +73,11 @@ struct exfat_sb_info {
 	BD_INFO_T bd_info;
 
 	struct exfat_mount_options options;
+	int use_vmalloc;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
 	int s_dirt;
 	struct mutex s_lock;
-#endif
+
 	struct nls_table *nls_disk;
 	struct nls_table *nls_io; 
 
