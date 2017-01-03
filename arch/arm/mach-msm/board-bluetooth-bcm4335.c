@@ -40,6 +40,7 @@
 #include <linux/barcode_emul.h>
 #include <mach/apq8064-gpio.h>
 #include <mach/gpiomux.h>
+#include <mach/msm_ipc_logging.h>
 
 #define BT_UART_CFG
 #define BT_LPM_ENABLE
