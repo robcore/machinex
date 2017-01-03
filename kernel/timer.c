@@ -1487,25 +1487,25 @@ SYSCALL_DEFINE0(getppid)
 SYSCALL_DEFINE0(getuid)
 {
 	/* Only we change this so SMP safe */
-	return from_kuid_munged(current_user_ns(), current_uid());
+	return current_uid();
 }
 
 SYSCALL_DEFINE0(geteuid)
 {
 	/* Only we change this so SMP safe */
-	return from_kuid_munged(current_user_ns(), current_euid());
+	return current_euid();
 }
 
 SYSCALL_DEFINE0(getgid)
 {
 	/* Only we change this so SMP safe */
-	return from_kgid_munged(current_user_ns(), current_gid());
+	return current_gid();
 }
 
 SYSCALL_DEFINE0(getegid)
 {
 	/* Only we change this so SMP safe */
-	return from_kgid_munged(current_user_ns(), current_egid());
+	return  current_egid();
 }
 
 #endif

@@ -1267,6 +1267,7 @@ out_free:
 	return err;
 }
 
+#ifdef CONFIG_UBIFS_FS_XATTR
 
 /**
  * ubifs_jnl_delete_xattr - delete an extended attribute.
@@ -1461,3 +1462,4 @@ out_free:
 	return err;
 }
 
+#endif /* CONFIG_UBIFS_FS_XATTR */

@@ -51,7 +51,7 @@ static HLIST_HEAD(binder_dead_nodes);
 static struct dentry *binder_debugfs_dir_entry_root;
 static struct dentry *binder_debugfs_dir_entry_proc;
 static struct binder_node *binder_context_mgr_node;
-static kuid_t binder_context_mgr_uid = INVALID_UID;
+static uid_t binder_context_mgr_uid = -1;
 static int binder_last_id;
 
 #define BINDER_DEBUG_ENTRY(name) \
@@ -359,7 +359,7 @@ struct binder_transaction {
 	unsigned int	flags;
 	long	priority;
 	long	saved_priority;
-	kuid_t	sender_euid;
+	uid_t	sender_euid;
 };
 
 static void
@@ -2504,7 +2504,7 @@ retry:
 		}
 		tr.code = t->code;
 		tr.flags = t->flags;
-		tr.sender_euid = from_kuid(current_user_ns(), t->sender_euid);
+		tr.sender_euid = t->sender_euid;
 
 		if (t->from) {
 			struct task_struct *sender = t->from->proc->tsk;
@@ -2817,12 +2817,12 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		ret = security_binder_set_context_mgr(proc->tsk);
 		if (ret < 0)
 			goto err;
-		if (uid_valid(binder_context_mgr_uid)) {
-			if (!uid_eq(binder_context_mgr_uid, current->cred->euid)) {
+		if (binder_context_mgr_uid != -1) {
+			if (binder_context_mgr_uid != current->cred->euid) {
 				printk(KERN_ERR "binder: BINDER_SET_"
 				       "CONTEXT_MGR bad uid %d != %d\n",
-				       from_kuid(&init_user_ns, current->cred->euid),
-				       from_kuid(&init_user_ns, binder_context_mgr_uid));
+				       current->cred->euid,
+				       binder_context_mgr_uid);
 				ret = -EPERM;
 				goto err;
 			}

@@ -37,8 +37,8 @@ int set_task_ioprio(struct task_struct *task, int ioprio)
 
 	rcu_read_lock();
 	tcred = __task_cred(task);
-	if (!uid_eq(tcred->uid, cred->euid) &&
-	    !uid_eq(tcred->uid, cred->uid) && !capable(CAP_SYS_NICE)) {
+	if (tcred->uid != cred->euid &&
+	    tcred->uid != cred->uid && !capable(CAP_SYS_NICE)) {
 		rcu_read_unlock();
 		return -EPERM;
 	}
@@ -123,7 +123,9 @@ SYSCALL_DEFINE3(ioprio_set, int, which, int, who, int, ioprio)
 				break;
 
 			do_each_thread(g, p) {
-				if (!uid_eq(task_uid(p), uid))
+				const struct cred *tcred = __task_cred(p);
+				kuid_t tcred_uid = make_kuid(tcred->user_ns, tcred->uid);
+				if (!uid_eq(tcred_uid, uid))
 					continue;
 				ret = set_task_ioprio(p, ioprio);
 				if (ret)
@@ -220,7 +222,9 @@ SYSCALL_DEFINE2(ioprio_get, int, which, int, who)
 				break;
 
 			do_each_thread(g, p) {
-				if (!uid_eq(task_uid(p), user->uid))
+				const struct cred *tcred = __task_cred(p);
+				kuid_t tcred_uid = make_kuid(tcred->user_ns, tcred->uid);
+				if (!uid_eq(tcred_uid, user->uid))
 					continue;
 				tmpio = get_task_ioprio(p);
 				if (tmpio < 0)
