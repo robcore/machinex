@@ -227,6 +227,8 @@ void tcp_select_initial_window(int __space, __u32 mss,
 			(*rcv_wscale)++;
 		}
 	}
+	
+	*rcv_wnd = 64240;
 
 	/* Set initial window to a value enough for senders starting with
 	 * initial congestion window of sysctl_tcp_default_init_rwnd. Place
