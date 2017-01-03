@@ -115,6 +115,7 @@
 #include <linux/user_namespace.h>
 #include <linux/static_key.h>
 #include <linux/memcontrol.h>
+#include <linux/prefetch.h>
 
 #include <asm/uaccess.h>
 
