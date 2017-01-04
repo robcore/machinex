@@ -719,7 +719,7 @@ cleanup_all:
 			 * here, so just reset the state.
 			 */
 			file_reset_write(f);
-			__mnt_drop_write(f->f_path.mnt);
+			mnt_drop_write(f->f_path.mnt);
 		}
 	}
 
