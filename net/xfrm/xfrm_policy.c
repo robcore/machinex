@@ -1354,8 +1354,6 @@ static inline struct xfrm_dst *xfrm_alloc_dst(struct net *net, int family)
 		memset(&xdst->u.rt6.rt6i_table, 0,
 			sizeof(*xdst) - sizeof(struct dst_entry));
 		xdst->flo.ops = &xfrm_bundle_fc_ops;
-		if (afinfo->init_dst)
-			afinfo->init_dst(net, xdst);
 	} else
 		xdst = ERR_PTR(-ENOBUFS);
 
