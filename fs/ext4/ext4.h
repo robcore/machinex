@@ -1288,6 +1288,9 @@ struct ext4_sb_info {
 	unsigned long s_sectors_written_start;
 	u64 s_kbytes_written;
 
+	/* the size of zero-out chunk */
+	unsigned int s_extent_max_zeroout_kb;
+
 	unsigned int s_log_groups_per_flex;
 	struct flex_groups *s_flex_groups;
 	ext4_group_t s_flex_groups_allocated;
