@@ -283,15 +283,9 @@ struct beacon_data {
 	struct rcu_head rcu_head;
 };
 
-struct probe_resp {
-	struct rcu_head rcu_head;
-	int len;
-	u8 data[0];
-};
-
 struct ieee80211_if_ap {
 	struct beacon_data __rcu *beacon;
-	struct probe_resp __rcu *probe_resp;
+	struct sk_buff __rcu *probe_resp;
 
 	struct list_head vlans;
 

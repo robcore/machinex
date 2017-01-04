@@ -96,9 +96,13 @@ static int __init iptable_filter_init(void)
 	filter_ops = xt_hook_link(&packet_filter, iptable_filter_hook);
 	if (IS_ERR(filter_ops)) {
 		ret = PTR_ERR(filter_ops);
-		unregister_pernet_subsys(&iptable_filter_net_ops);
+		goto cleanup_table;
 	}
 
+	return ret;
+
+ cleanup_table:
+	unregister_pernet_subsys(&iptable_filter_net_ops);
 	return ret;
 }
 

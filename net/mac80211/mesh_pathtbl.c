@@ -209,17 +209,23 @@ void mesh_path_assign_nexthop(struct mesh_path *mpath, struct sta_info *sta)
 {
 	struct sk_buff *skb;
 	struct ieee80211_hdr *hdr;
+	struct sk_buff_head tmpq;
 	unsigned long flags;
 
 	rcu_assign_pointer(mpath->next_hop, sta);
 
+	__skb_queue_head_init(&tmpq);
+
 	spin_lock_irqsave(&mpath->frame_queue.lock, flags);
-	skb_queue_walk(&mpath->frame_queue, skb) {
+
+	while ((skb = __skb_dequeue(&mpath->frame_queue)) != NULL) {
 		hdr = (struct ieee80211_hdr *) skb->data;
 		memcpy(hdr->addr1, sta->sta.addr, ETH_ALEN);
 		memcpy(hdr->addr2, mpath->sdata->vif.addr, ETH_ALEN);
+		__skb_queue_tail(&tmpq, skb);
 	}
 
+	skb_queue_splice(&tmpq, &mpath->frame_queue);
 	spin_unlock_irqrestore(&mpath->frame_queue.lock, flags);
 }
 

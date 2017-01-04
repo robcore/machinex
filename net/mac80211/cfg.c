@@ -509,23 +509,25 @@ static int ieee80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 static int ieee80211_set_probe_resp(struct ieee80211_sub_if_data *sdata,
 				    const u8 *resp, size_t resp_len)
 {
-	struct probe_resp *new, *old;
+	struct sk_buff *new, *old;
 
 	if (!resp || !resp_len)
-		return -EINVAL;
+		return 1;
 
 	old = rtnl_dereference(sdata->u.ap.probe_resp);
 
-	new = kzalloc(sizeof(struct probe_resp) + resp_len, GFP_KERNEL);
+	new = dev_alloc_skb(resp_len);
 	if (!new)
 		return -ENOMEM;
 
-	new->len = resp_len;
-	memcpy(new->data, resp, resp_len);
+	memcpy(skb_put(new, resp_len), resp, resp_len);
 
 	rcu_assign_pointer(sdata->u.ap.probe_resp, new);
-	if (old)
-		kfree_rcu(old, rcu_head);
+	if (old) {
+		/* TODO: use call_rcu() */
+		synchronize_rcu();
+		dev_kfree_skb(old);
+	}
 
 	return 0;
 }
