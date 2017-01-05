@@ -289,6 +289,7 @@ static void nlmsvc_free_block(struct kref *kref)
 	dprintk("lockd: freeing block %p...\n", block);
 
 	/* Remove block from file's list of blocks */
+	mutex_lock(&file->f_mutex);
 	list_del_init(&block->b_flist);
 	mutex_unlock(&file->f_mutex);
 
@@ -302,7 +303,7 @@ static void nlmsvc_free_block(struct kref *kref)
 static void nlmsvc_release_block(struct nlm_block *block)
 {
 	if (block != NULL)
-		kref_put_mutex(&block->b_count, nlmsvc_free_block, &block->b_file->f_mutex);
+		kref_put(&block->b_count, nlmsvc_free_block);
 }
 
 /*
