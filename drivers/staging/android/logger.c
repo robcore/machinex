@@ -766,11 +766,11 @@ static struct logger_log VAR = { \
 #ifdef CONFIG_SEC_LOGGER_BUFFER_EXPANSION
 DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, CONFIG_LOGCAT_SIZE*512*2*CONFIG_SEC_LOGGER_BUFFER_EXPANSION_SIZE) // 2MB
 #else
-DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, CONFIG_LOGCAT_SIZE*512*2)	// 1MB
+DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, CONFIG_LOGCAT_SIZE*256)
 #endif
-DEFINE_LOGGER_DEVICE(log_events, LOGGER_LOG_EVENTS, CONFIG_LOGCAT_SIZE*512)	// 512KB
-DEFINE_LOGGER_DEVICE(log_radio, LOGGER_LOG_RADIO, CONFIG_LOGCAT_SIZE*512*4)	// 2MB
-DEFINE_LOGGER_DEVICE(log_system, LOGGER_LOG_SYSTEM, CONFIG_LOGCAT_SIZE*512)	// 512KB
+DEFINE_LOGGER_DEVICE(log_events, LOGGER_LOG_EVENTS, CONFIG_LOGCAT_SIZE*256)
+DEFINE_LOGGER_DEVICE(log_radio, LOGGER_LOG_RADIO, CONFIG_LOGCAT_SIZE*256)
+DEFINE_LOGGER_DEVICE(log_system, LOGGER_LOG_SYSTEM, CONFIG_LOGCAT_SIZE*256)
 
 static struct logger_log *get_log_from_minor(int minor)
 {
@@ -832,6 +832,7 @@ int sec_debug_subsys_set_logger_info(
 	return 0;
 }
 #endif
+
 static int __init logger_init(void)
 {
 	int ret;
@@ -851,11 +852,11 @@ static int __init logger_init(void)
 	ret = init_log(&log_system);
 	if (unlikely(ret))
 		goto out;
-
 #ifdef CONFIG_SEC_DEBUG
 	sec_getlog_supply_loggerinfo(_buf_log_main, _buf_log_radio,
 				     _buf_log_events, _buf_log_system);
 #endif
+
 out:
 	return ret;
 }
