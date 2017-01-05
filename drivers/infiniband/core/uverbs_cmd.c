@@ -702,7 +702,7 @@ ssize_t ib_uverbs_open_xrcd(struct ib_uverbs_file *file,
 	struct ib_xrcd                 *xrcd = NULL;
 	struct file                    *f = NULL;
 	struct inode                   *inode = NULL;
-	int				ret = 0;
+	int				ret = 0, fput_needed;
 	int				new_xrcd = 0;
 
 	if (out_len < sizeof resp)
@@ -719,18 +719,13 @@ ssize_t ib_uverbs_open_xrcd(struct ib_uverbs_file *file,
 
 	if (cmd.fd != -1) {
 		/* search for file descriptor */
-		f = fget(cmd.fd);
+		f = fget_light(cmd.fd, &fput_needed);
 		if (!f) {
 			ret = -EBADF;
 			goto err_tree_mutex_unlock;
 		}
 
 		inode = f->f_dentry->d_inode;
-		if (!inode) {
-			ret = -EBADF;
-			goto err_tree_mutex_unlock;
-		}
-
 		xrcd = find_xrcd(file->device, inode);
 		if (!xrcd && !(cmd.oflags & O_CREAT)) {
 			/* no file descriptor. Need CREATE flag */
@@ -796,7 +791,7 @@ ssize_t ib_uverbs_open_xrcd(struct ib_uverbs_file *file,
 	}
 
 	if (f)
-		fput(f);
+		fput_light(f, fput_needed);
 
 	mutex_lock(&file->mutex);
 	list_add_tail(&obj->uobject.list, &file->ucontext->xrcd_list);
@@ -826,7 +821,7 @@ err:
 
 err_tree_mutex_unlock:
 	if (f)
-		fput(f);
+		fput_light(f, fput_needed);
 
 	mutex_unlock(&file->device->xrcd_tree_mutex);
 
