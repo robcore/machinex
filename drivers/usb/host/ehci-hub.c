@@ -358,10 +358,10 @@ static int ehci_bus_resume (struct usb_hcd *hcd)
 	}
 
 	if (unlikely(ehci->debug)) {
-		if (!dbgp_reset_prep(hcd))
+		if (!dbgp_reset_prep())
 			ehci->debug = NULL;
 		else
-			dbgp_external_startup(hcd);
+			dbgp_external_startup();
 	}
 
 	/* Ideally and we've got a real resume here, and no port's power
