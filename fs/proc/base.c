@@ -137,7 +137,7 @@ struct pid_entry {
 		NULL, &proc_single_file_operations,	\
 		{ .proc_show = show } )
 
-static int proc_fd_permission(struct inode *inode, int mask);
+int proc_fd_permission(struct inode *inode, int mask);
 
 /* ANDROID is for special files in /proc. */
 #define ANDROID(NAME, MODE, OTYPE)			\
