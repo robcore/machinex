@@ -58,6 +58,7 @@ static inline struct fd fdget_raw(unsigned int fd)
 	return (struct fd){f,b};
 }
 
+extern int f_dupfd(unsigned int from, struct file *file, unsigned flags);
 extern void set_close_on_exec(unsigned int fd, int flag);
 extern void put_filp(struct file *);
 extern int get_unused_fd_flags(unsigned flags);
