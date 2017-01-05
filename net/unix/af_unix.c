@@ -593,7 +593,6 @@ static int unix_listen(struct socket *sock, int backlog)
 	struct sock *sk = sock->sk;
 	struct unix_sock *u = unix_sk(sk);
 	struct pid *old_pid = NULL;
-	const struct cred *old_cred = NULL;
 
 	err = -EOPNOTSUPP;
 	if (sock->type != SOCK_STREAM && sock->type != SOCK_SEQPACKET)
@@ -615,8 +614,6 @@ static int unix_listen(struct socket *sock, int backlog)
 out_unlock:
 	unix_state_unlock(sk);
 	put_pid(old_pid);
-	if (old_cred)
-		put_cred(old_cred);
 out:
 	return err;
 }
