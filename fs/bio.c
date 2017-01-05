@@ -53,7 +53,6 @@ static struct biovec_slab bvec_slabs[BIOVEC_NR_POOLS] __read_mostly = {
  * IO code that does not need private memory pools.
  */
 struct bio_set *fs_bio_set;
-EXPORT_SYMBOL(fs_bio_set);
 
 /*
  * Our slab pool management
@@ -232,37 +231,26 @@ fallback:
 	return bvl;
 }
 
-static void __bio_free(struct bio *bio)
+void bio_free(struct bio *bio, struct bio_set *bs)
 {
-	bio_disassociate_task(bio);
+	void *p;
+
+	if (bio_has_allocated_vec(bio))
+		bvec_free_bs(bs, bio->bi_io_vec, BIO_POOL_IDX(bio));
 
 	if (bio_integrity(bio))
 		bio_integrity_free(bio);
-}
 
-static void bio_free(struct bio *bio)
-{
-	struct bio_set *bs = bio->bi_pool;
-	void *p;
-
-	__bio_free(bio);
-
-	if (bs) {
-		if (bio_has_allocated_vec(bio))
-			bvec_free_bs(bs, bio->bi_io_vec, BIO_POOL_IDX(bio));
-
-		/*
-		 * If we have front padding, adjust the bio pointer before freeing
-		 */
-		p = bio;
+	/*
+	 * If we have front padding, adjust the bio pointer before freeing
+	 */
+	p = bio;
+	if (bs->front_pad)
 		p -= bs->front_pad;
 
-		mempool_free(p, bs->bio_pool);
-	} else {
-		/* Bio was allocated by bio_kmalloc() */
-		kfree(bio);
-	}
+	mempool_free(p, bs->bio_pool);
 }
+EXPORT_SYMBOL(bio_free);
 
 void bio_init(struct bio *bio)
 {
@@ -286,7 +274,10 @@ void bio_reset(struct bio *bio)
 {
 	unsigned long flags = bio->bi_flags & (~0UL << BIO_RESET_BITS);
 
-	__bio_free(bio);
+	if (bio_integrity(bio))
+		bio_integrity_free(bio);
+
+	bio_disassociate_task(bio);
 
 	memset(bio, 0, BIO_RESET_BYTES);
 	bio->bi_flags = flags|(1 << BIO_UPTODATE);
@@ -300,58 +291,39 @@ EXPORT_SYMBOL(bio_reset);
  * @bs:		the bio_set to allocate from.
  *
  * Description:
- *   If @bs is NULL, uses kmalloc() to allocate the bio; else the allocation is
- *   backed by the @bs's mempool.
- *
- *   When @bs is not NULL, if %__GFP_WAIT is set then bio_alloc will always be
- *   able to allocate a bio. This is due to the mempool guarantees. To make this
- *   work, callers must never allocate more than 1 bio at a time from this pool.
- *   Callers that need to allocate more than 1 bio must always submit the
- *   previously allocated bio for IO before attempting to allocate a new one.
- *   Failure to do so can cause deadlocks under memory pressure.
- *
- *   RETURNS:
- *   Pointer to new bio on success, NULL on failure.
- */
+ *   bio_alloc_bioset will try its own mempool to satisfy the allocation.
+ *   If %__GFP_WAIT is set then we will block on the internal pool waiting
+ *   for a &struct bio to become free.
+ **/
 struct bio *bio_alloc_bioset(gfp_t gfp_mask, int nr_iovecs, struct bio_set *bs)
 {
-	unsigned front_pad;
-	unsigned inline_vecs;
 	unsigned long idx = BIO_POOL_NONE;
 	struct bio_vec *bvl = NULL;
 	struct bio *bio;
 	void *p;
 
-	if (!bs) {
-		if (nr_iovecs > UIO_MAXIOV)
-			return NULL;
-
-		p = kmalloc(sizeof(struct bio) +
-			    nr_iovecs * sizeof(struct bio_vec),
-			    gfp_mask);
-		front_pad = 0;
-		inline_vecs = nr_iovecs;
-	} else {
-		p = mempool_alloc(bs->bio_pool, gfp_mask);
-		front_pad = bs->front_pad;
-		inline_vecs = BIO_INLINE_VECS;
-	}
-
+	p = mempool_alloc(bs->bio_pool, gfp_mask);
 	if (unlikely(!p))
 		return NULL;
+	bio = p + bs->front_pad;
 
-	bio = p + front_pad;
 	bio_init(bio);
+	bio->bi_pool = bs;
 
-	if (nr_iovecs > inline_vecs) {
+	if (unlikely(!nr_iovecs))
+		goto out_set;
+
+	if (nr_iovecs <= BIO_INLINE_VECS) {
+		bvl = bio->bi_inline_vecs;
+		nr_iovecs = BIO_INLINE_VECS;
+	} else {
 		bvl = bvec_alloc_bs(gfp_mask, nr_iovecs, &idx, bs);
 		if (unlikely(!bvl))
 			goto err_free;
-	} else if (nr_iovecs) {
-		bvl = bio->bi_inline_vecs;
-	}
 
-	bio->bi_pool = bs;
+		nr_iovecs = bvec_nr_vecs(idx);
+	}
+out_set:
 	bio->bi_flags |= idx << BIO_POOL_OFFSET;
 	bio->bi_max_vecs = nr_iovecs;
 	bio->bi_io_vec = bvl;
@@ -362,6 +334,70 @@ err_free:
 	return NULL;
 }
 EXPORT_SYMBOL(bio_alloc_bioset);
+
+/**
+ *	bio_alloc - allocate a new bio, memory pool backed
+ *	@gfp_mask: allocation mask to use
+ *	@nr_iovecs: number of iovecs
+ *
+ *	bio_alloc will allocate a bio and associated bio_vec array that can hold
+ *	at least @nr_iovecs entries. Allocations will be done from the
+ *	fs_bio_set. Also see @bio_alloc_bioset and @bio_kmalloc.
+ *
+ *	If %__GFP_WAIT is set, then bio_alloc will always be able to allocate
+ *	a bio. This is due to the mempool guarantees. To make this work, callers
+ *	must never allocate more than 1 bio at a time from this pool. Callers
+ *	that need to allocate more than 1 bio must always submit the previously
+ *	allocated bio for IO before attempting to allocate a new one. Failure to
+ *	do so can cause livelocks under memory pressure.
+ *
+ *	RETURNS:
+ *	Pointer to new bio on success, NULL on failure.
+ */
+struct bio *bio_alloc(gfp_t gfp_mask, unsigned int nr_iovecs)
+{
+	return bio_alloc_bioset(gfp_mask, nr_iovecs, fs_bio_set);
+}
+EXPORT_SYMBOL(bio_alloc);
+
+static void bio_kmalloc_destructor(struct bio *bio)
+{
+	if (bio_integrity(bio))
+		bio_integrity_free(bio);
+	kfree(bio);
+}
+
+/**
+ * bio_kmalloc - allocate a bio for I/O using kmalloc()
+ * @gfp_mask:   the GFP_ mask given to the slab allocator
+ * @nr_iovecs:	number of iovecs to pre-allocate
+ *
+ * Description:
+ *   Allocate a new bio with @nr_iovecs bvecs.  If @gfp_mask contains
+ *   %__GFP_WAIT, the allocation is guaranteed to succeed.
+ *
+ **/
+struct bio *bio_kmalloc(gfp_t gfp_mask, unsigned int nr_iovecs)
+{
+	struct bio *bio;
+
+	if (nr_iovecs > UIO_MAXIOV)
+		return NULL;
+
+	bio = kmalloc(sizeof(struct bio) + nr_iovecs * sizeof(struct bio_vec),
+		      gfp_mask);
+	if (unlikely(!bio))
+		return NULL;
+
+	bio_init(bio);
+	bio->bi_flags |= BIO_POOL_NONE << BIO_POOL_OFFSET;
+	bio->bi_max_vecs = nr_iovecs;
+	bio->bi_io_vec = bio->bi_inline_vecs;
+	bio->bi_destructor = bio_kmalloc_destructor;
+
+	return bio;
+}
+EXPORT_SYMBOL(bio_kmalloc);
 
 void zero_fill_bio(struct bio *bio)
 {
@@ -393,9 +429,19 @@ void bio_put(struct bio *bio)
 	/*
 	 * last put frees it
 	 */
-	if (atomic_dec_and_test(&bio->bi_cnt))
-		bio_free(bio);
+	if (atomic_dec_and_test(&bio->bi_cnt)) {
+		bio->bi_next = NULL;
 
+		/*
+		 * This if statement is temporary - bi_pool is replacing
+		 * bi_destructor, but bi_destructor will be taken out in another
+		 * patch.
+		 */
+		if (bio->bi_pool)
+			bio_free(bio, bio->bi_pool);
+		else
+			bio->bi_destructor(bio);
+	}
 }
 EXPORT_SYMBOL(bio_put);
 
@@ -437,19 +483,16 @@ void __bio_clone(struct bio *bio, struct bio *bio_src)
 EXPORT_SYMBOL(__bio_clone);
 
 /**
- *	bio_clone_bioset -	clone a bio
+ *	bio_clone	-	clone a bio
  *	@bio: bio to clone
  *	@gfp_mask: allocation priority
- *	@bs: bio_set to allocate from
  *
  * 	Like __bio_clone, only also allocates the returned bio
  */
-struct bio *bio_clone_bioset(struct bio *bio, gfp_t gfp_mask,
-			     struct bio_set *bs)
+struct bio *bio_clone(struct bio *bio, gfp_t gfp_mask)
 {
-	struct bio *b;
+	struct bio *b = bio_alloc(gfp_mask, bio->bi_max_vecs);
 
-	b = bio_alloc_bioset(gfp_mask, bio->bi_max_vecs, bs);
 	if (!b)
 		return NULL;
 
@@ -468,7 +511,7 @@ struct bio *bio_clone_bioset(struct bio *bio, gfp_t gfp_mask,
 
 	return b;
 }
-EXPORT_SYMBOL(bio_clone_bioset);
+EXPORT_SYMBOL(bio_clone);
 
 /**
  *	bio_get_nr_vecs		- return approx number of vecs
@@ -1039,7 +1082,7 @@ static struct bio *__bio_map_user_iov(struct request_queue *q,
 
 			if (len <= 0)
 				break;
-
+			
 			if (bytes > len)
 				bytes = len;
 
