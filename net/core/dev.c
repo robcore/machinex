@@ -3303,10 +3303,12 @@ ncls:
 		else
 			ret = pt_prev->func(skb, skb->dev, pt_prev, orig_dev);
 	} else {
+drop:
 		atomic_long_inc(&skb->dev->rx_dropped);
 		kfree_skb(skb);
 		/* Jamal, now you will not able to escape explaining
 		 * me how you were going to use this. :-)
+		 * Yeah Jamal, you bastard! :-) (smiley faces make that less insulting, right?)
 		 */
 		ret = NET_RX_DROP;
 	}
