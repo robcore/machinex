@@ -3299,7 +3299,7 @@ ncls:
 
 	if (pt_prev) {
 		if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
-			ret = -ENOMEM;
+			goto drop;
 		else
 			ret = pt_prev->func(skb, skb->dev, pt_prev, orig_dev);
 	} else {
