@@ -349,6 +349,13 @@ else
 fi;
 }
 
+function CHKVERS() {
+if [ -e /media/root/robcore/AIK/previous.txt ]; then
+	PREV=`cat /media/root/robcore/AIK/previous.txt`
+	echo "your previous version was $PREV"
+fi;
+}
+
 if [ $# = 0 ] ; then
 	NORMAL
 fi
@@ -365,6 +372,11 @@ while [[ $# > 0 ]]
 
 	     -r|--rebuild)
 	    	REBUILD
+	    	break
+	    	;;
+
+	     -c|--chkvers)
+	    	CHKVERS
 	    	break
 	    	;;
 
