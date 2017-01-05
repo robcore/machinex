@@ -231,26 +231,37 @@ fallback:
 	return bvl;
 }
 
-void bio_free(struct bio *bio, struct bio_set *bs)
+static void __bio_free(struct bio *bio)
 {
-	void *p;
-
-	if (bio_has_allocated_vec(bio))
-		bvec_free_bs(bs, bio->bi_io_vec, BIO_POOL_IDX(bio));
+	bio_disassociate_task(bio);
 
 	if (bio_integrity(bio))
 		bio_integrity_free(bio);
+}
 
-	/*
-	 * If we have front padding, adjust the bio pointer before freeing
-	 */
-	p = bio;
-	if (bs->front_pad)
+static void bio_free(struct bio *bio)
+{
+	struct bio_set *bs = bio->bi_pool;
+	void *p;
+
+	__bio_free(bio);
+
+	if (bs) {
+		if (bio_has_allocated_vec(bio))
+			bvec_free_bs(bs, bio->bi_io_vec, BIO_POOL_IDX(bio));
+
+		/*
+		 * If we have front padding, adjust the bio pointer before freeing
+		 */
+		p = bio;
 		p -= bs->front_pad;
 
-	mempool_free(p, bs->bio_pool);
+		mempool_free(p, bs->bio_pool);
+	} else {
+		/* Bio was allocated by bio_kmalloc() */
+		kfree(bio);
+	}
 }
-EXPORT_SYMBOL(bio_free);
 
 void bio_init(struct bio *bio)
 {
@@ -274,10 +285,7 @@ void bio_reset(struct bio *bio)
 {
 	unsigned long flags = bio->bi_flags & (~0UL << BIO_RESET_BITS);
 
-	if (bio_integrity(bio))
-		bio_integrity_free(bio);
-
-	bio_disassociate_task(bio);
+	__bio_free(bio);
 
 	memset(bio, 0, BIO_RESET_BYTES);
 	bio->bi_flags = flags|(1 << BIO_UPTODATE);
@@ -360,13 +368,6 @@ struct bio *bio_alloc(gfp_t gfp_mask, unsigned int nr_iovecs)
 }
 EXPORT_SYMBOL(bio_alloc);
 
-static void bio_kmalloc_destructor(struct bio *bio)
-{
-	if (bio_integrity(bio))
-		bio_integrity_free(bio);
-	kfree(bio);
-}
-
 /**
  * bio_kmalloc - allocate a bio for I/O using kmalloc()
  * @gfp_mask:   the GFP_ mask given to the slab allocator
@@ -393,7 +394,6 @@ struct bio *bio_kmalloc(gfp_t gfp_mask, unsigned int nr_iovecs)
 	bio->bi_flags |= BIO_POOL_NONE << BIO_POOL_OFFSET;
 	bio->bi_max_vecs = nr_iovecs;
 	bio->bi_io_vec = bio->bi_inline_vecs;
-	bio->bi_destructor = bio_kmalloc_destructor;
 
 	return bio;
 }
@@ -429,19 +429,9 @@ void bio_put(struct bio *bio)
 	/*
 	 * last put frees it
 	 */
-	if (atomic_dec_and_test(&bio->bi_cnt)) {
-		bio->bi_next = NULL;
+	if (atomic_dec_and_test(&bio->bi_cnt))
+		bio_free(bio);
 
-		/*
-		 * This if statement is temporary - bi_pool is replacing
-		 * bi_destructor, but bi_destructor will be taken out in another
-		 * patch.
-		 */
-		if (bio->bi_pool)
-			bio_free(bio, bio->bi_pool);
-		else
-			bio->bi_destructor(bio);
-	}
 }
 EXPORT_SYMBOL(bio_put);
 
@@ -1082,7 +1072,7 @@ static struct bio *__bio_map_user_iov(struct request_queue *q,
 
 			if (len <= 0)
 				break;
-			
+
 			if (bytes > len)
 				bytes = len;
 
