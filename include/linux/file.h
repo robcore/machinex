@@ -60,7 +60,6 @@ static inline struct fd fdget_raw(unsigned int fd)
 
 extern void set_close_on_exec(unsigned int fd, int flag);
 extern void put_filp(struct file *);
-extern int alloc_fd(unsigned start, unsigned flags);
 extern int get_unused_fd_flags(unsigned flags);
 #define get_unused_fd() get_unused_fd_flags(0)
 extern void put_unused_fd(unsigned int fd);
