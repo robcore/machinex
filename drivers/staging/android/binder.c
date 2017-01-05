@@ -421,7 +421,7 @@ repeat:
 #if 1
 	/* Sanity check */
 	if (fdt->fd[fd] != NULL) {
-		pr_warn("get_unused_fd: slot %d not NULL!\n", fd);
+		printk(KERN_WARNING "get_unused_fd: slot %d not NULL!\n", fd);
 		fdt->fd[fd] = NULL;
 	}
 #endif
