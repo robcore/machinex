@@ -14,56 +14,88 @@
 
 #define PROC_FDINFO_MAX 64
 
-static int proc_fd_info(struct inode *inode, struct path *path, char *info)
+static int seq_show(struct seq_file *m, void *v)
 {
-	struct task_struct *task = get_proc_task(inode);
 	struct files_struct *files = NULL;
-	struct file *file;
-	int fd = proc_fd(inode);
+	int f_flags = 0, ret = -ENOENT;
+	struct file *file = NULL;
+	struct task_struct *task;
 
-	if (task) {
-		files = get_files_struct(task);
-		put_task_struct(task);
-	}
+	task = get_proc_task(m->private);
+	if (!task)
+		return -ENOENT;
+
+	files = get_files_struct(task);
+	put_task_struct(task);
+
 	if (files) {
-		/*
-		 * We are not taking a ref to the file structure, so we must
-		 * hold ->file_lock.
-		 */
+		int fd = proc_fd(m->private);
+
 		spin_lock(&files->file_lock);
 		file = fcheck_files(files, fd);
 		if (file) {
-			unsigned int f_flags;
-			struct fdtable *fdt;
+			struct fdtable *fdt = files_fdtable(files);
 
-			fdt = files_fdtable(files);
 			f_flags = file->f_flags & ~O_CLOEXEC;
 			if (close_on_exec(fd, fdt))
 				f_flags |= O_CLOEXEC;
 
-			if (path) {
-				*path = file->f_path;
-				path_get(&file->f_path);
-			}
-			if (info)
-				snprintf(info, PROC_FDINFO_MAX,
-					 "pos:\t%lli\n"
-					 "flags:\t0%o\n",
-					 (long long) file->f_pos,
-					 f_flags);
-			spin_unlock(&files->file_lock);
-			put_files_struct(files);
-			return 0;
+			get_file(file);
+			ret = 0;
 		}
 		spin_unlock(&files->file_lock);
 		put_files_struct(files);
 	}
-	return -ENOENT;
+
+	if (!ret) {
+                seq_printf(m, "pos:\t%lli\nflags:\t0%o\n",
+			   (long long)file->f_pos, f_flags);
+		fput(file);
+	}
+
+	return ret;
 }
+
+static int seq_fdinfo_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, seq_show, inode);
+}
+
+static const struct file_operations proc_fdinfo_file_operations = {
+	.open		= seq_fdinfo_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static int proc_fd_link(struct dentry *dentry, struct path *path)
 {
-	return proc_fd_info(dentry->d_inode, path, NULL);
+	struct files_struct *files = NULL;
+	struct task_struct *task;
+	int ret = -ENOENT;
+
+	task = get_proc_task(dentry->d_inode);
+	if (task) {
+		files = get_files_struct(task);
+		put_task_struct(task);
+	}
+
+	if (files) {
+		int fd = proc_fd(dentry->d_inode);
+		struct file *fd_file;
+
+		spin_lock(&files->file_lock);
+		fd_file = fcheck_files(files, fd);
+		if (fd_file) {
+			*path = fd_file->f_path;
+			path_get(&fd_file->f_path);
+			ret = 0;
+		}
+		spin_unlock(&files->file_lock);
+		put_files_struct(files);
+	}
+
+	return ret;
 }
 
 static int tid_fd_revalidate(struct dentry *dentry, unsigned int flags)
@@ -250,22 +282,6 @@ static int proc_readfd(struct file *filp, void *dirent, filldir_t filldir)
 {
 	return proc_readfd_common(filp, dirent, filldir, proc_fd_instantiate);
 }
-
-static ssize_t proc_fdinfo_read(struct file *file, char __user *buf,
-				      size_t len, loff_t *ppos)
-{
-	char tmp[PROC_FDINFO_MAX];
-	int err = proc_fd_info(file->f_path.dentry->d_inode, NULL, tmp);
-	if (!err)
-		err = simple_read_from_buffer(buf, len, ppos, tmp, strlen(tmp));
-	return err;
-}
-
-static const struct file_operations proc_fdinfo_file_operations = {
-	.open           = nonseekable_open,
-	.read		= proc_fdinfo_read,
-	.llseek		= no_llseek,
-};
 
 static const struct file_operations proc_fd_operations = {
 	.read		= generic_read_dir,
