@@ -286,6 +286,69 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 	fi;
 }
 
+function REBUILD()
+{
+if [ -e /media/root/robcore/AIK/previous.txt ]; then
+	PREV=`cat /media/root/robcore/AIK/previous.txt`
+	echo "your previous version was $PREV"
+fi;
+
+PRVS=`cat /media/root/robcore/AIK/previous.txt`
+if [ -d /media/root/robcore/AIK/$PRVS ]; then
+	echo "removing previously compiled folder and zip of the same name"
+	rm -rf /media/root/robcore/AIK/$PRVS
+fi;
+OUTFOLDER=$PRVS
+#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
+export ARCH=arm
+#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export KBUILD_LOCALVERSION=-$OUTFOLDER
+export KBUILD_BUILD_VERSION=04
+export USE_CCACHE=1
+export CCACHE_DIR=~/.ccache
+env KCONFIG_NOTIMESTAMP=true
+WASHME
+make clean;
+make distclean;
+make mrproper;
+mkdir $(pwd)/out;
+cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+make ARCH=arm -j6 O=$(pwd)/out oldconfig;
+make ARCH=arm -S -s -j6 O=$(pwd)/out;
+if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
+	cd /media/root/robcore/AIK;
+	cp -R -p machina-new $OUTFOLDER;
+	cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
+	cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	rm $(pwd)/split_img/boot.img-zImage;
+	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
+	rm image-new.img;
+	sh repackimg.sh --sudo;
+	cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
+	cd $OUTFOLDER
+	zip -r -9 - * > $OUTFOLDER.zip
+	#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
+	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
+	echo "ENABLE ADB WIRELESS"
+	sleep 10
+	adb connect 192.168.1.103
+	sleep 7
+	adb connect 192.168.1.103
+	sleep 5
+	adb push $OUTFOLDER.zip /storage/extSdCard
+	cd ~/machinex
+	WASHME
+	echo "push and cleanup finished"
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
+	echo "MD5 is $SUMMY"
+else
+	WASHME
+	echo "Build failed, Skipped Ramdisk Creation"
+fi;
+}
+
 if [ $# = 0 ] ; then
 	NORMAL
 fi
@@ -297,6 +360,11 @@ while [[ $# > 0 ]]
 	case $key in
 	     -m|--mismatch)
 	    	MISMATCH
+	    	break
+	    	;;
+
+	     -r|--rebuild)
+	    	REBUILD
 	    	break
 	    	;;
 
