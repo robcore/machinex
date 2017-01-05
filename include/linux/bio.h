@@ -239,7 +239,6 @@ extern struct bio *bio_clone(struct bio *, gfp_t);
 extern int submit_bio_wait(int rw, struct bio *bio);
 
 extern void bio_init(struct bio *);
-extern void bio_reset(struct bio *);
 
 extern int bio_add_page(struct bio *, struct page *, unsigned int,unsigned int);
 extern int bio_add_pc_page(struct request_queue *, struct bio *, struct page *,
