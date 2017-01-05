@@ -51,7 +51,9 @@ echo -n "cleanup? y/n [ENTER] "
 read CLN
 if [ $CLN == y ]; then
 	washme
-else
+else if [ $CLN == n ]; then
 	echo "not clean"
+else
+	washme
 fi;
 
