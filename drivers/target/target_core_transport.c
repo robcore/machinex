@@ -1732,13 +1732,6 @@ void target_submit_cmd(struct se_cmd *se_cmd, struct se_session *se_sess,
 		transport_generic_request_failure(se_cmd);
 		return;
 	}
-
-	/*
-	 * Check if we need to delay processing because of ALUA
-	 * Active/NonOptimized primary access state..
-	 */
-	core_alua_check_nonop_delay(se_cmd);
-
 	/*
 	 * Dispatch se_cmd descriptor to se_lun->lun_se_dev backend
 	 * for immediate execution of READs, otherwise wait for
@@ -2400,12 +2393,12 @@ static inline u32 transport_get_size(
 		} else /* bytes */
 			return sectors;
 	}
-
+#if 0
 	pr_debug("Returning block_size: %u, sectors: %u == %u for"
-		" %s object\n", dev->se_sub_dev->se_dev_attrib.block_size,
-		sectors, dev->se_sub_dev->se_dev_attrib.block_size * sectors,
-		dev->transport->name);
-
+			" %s object\n", dev->se_sub_dev->se_dev_attrib.block_size, sectors,
+			dev->se_sub_dev->se_dev_attrib.block_size * sectors,
+			dev->transport->name);
+#endif
 	return dev->se_sub_dev->se_dev_attrib.block_size * sectors;
 }
 
@@ -2623,10 +2616,11 @@ static int transport_generic_cmd_sequencer(
 		 * by the ALUA primary or secondary access state..
 		 */
 		if (ret > 0) {
+#if 0
 			pr_debug("[%s]: ALUA TG Port not available,"
 				" SenseKey: NOT_READY, ASC/ASCQ: 0x04/0x%02x\n",
 				cmd->se_tfo->get_fabric_name(), alua_ascq);
-
+#endif
 			transport_set_sense_codes(cmd, 0x04, alua_ascq);
 			cmd->se_cmd_flags |= SCF_SCSI_CDB_EXCEPTION;
 			cmd->scsi_sense_reason = TCM_CHECK_CONDITION_NOT_READY;
@@ -3193,8 +3187,7 @@ static int transport_generic_cmd_sequencer(
 	}
 
 	if (cmd->se_cmd_flags & SCF_SCSI_DATA_SG_IO_CDB &&
-	    (sectors > dev->se_sub_dev->se_dev_attrib.fabric_max_sectors ||
-	     sectors > dev->se_sub_dev->se_dev_attrib.max_sectors)) {
+	    sectors > dev->se_sub_dev->se_dev_attrib.fabric_max_sectors) {
 		printk_ratelimited(KERN_ERR "SCSI OP %02xh with too big sectors %u\n",
 				   cdb[0], sectors);
 		goto out_invalid_cdb_field;
@@ -3456,7 +3449,12 @@ static void transport_free_dev_tasks(struct se_cmd *cmd)
 	while (!list_empty(&dispose_list)) {
 		task = list_first_entry(&dispose_list, struct se_task, t_list);
 
+		if (task->task_sg != cmd->t_data_sg &&
+		    task->task_sg != cmd->t_bidi_data_sg)
+			kfree(task->task_sg);
+
 		list_del(&task->t_list);
+
 		cmd->se_dev->transport->free_task(task);
 	}
 }
@@ -3708,6 +3706,76 @@ static inline sector_t transport_limit_task_sectors(
 	return sectors;
 }
 
+
+/*
+ * This function can be used by HW target mode drivers to create a linked
+ * scatterlist from all contiguously allocated struct se_task->task_sg[].
+ * This is intended to be called during the completion path by TCM Core
+ * when struct target_core_fabric_ops->check_task_sg_chaining is enabled.
+ */
+void transport_do_task_sg_chain(struct se_cmd *cmd)
+{
+	struct scatterlist *sg_first = NULL;
+	struct scatterlist *sg_prev = NULL;
+	int sg_prev_nents = 0;
+	struct scatterlist *sg;
+	struct se_task *task;
+	u32 chained_nents = 0;
+	int i;
+
+	BUG_ON(!cmd->se_tfo->task_sg_chaining);
+
+	/*
+	 * Walk the struct se_task list and setup scatterlist chains
+	 * for each contiguously allocated struct se_task->task_sg[].
+	 */
+	list_for_each_entry(task, &cmd->t_task_list, t_list) {
+		if (!task->task_sg)
+			continue;
+
+		if (!sg_first) {
+			sg_first = task->task_sg;
+			chained_nents = task->task_sg_nents;
+		} else {
+			sg_chain(sg_prev, sg_prev_nents, task->task_sg);
+			chained_nents += task->task_sg_nents;
+		}
+		/*
+		 * For the padded tasks, use the extra SGL vector allocated
+		 * in transport_allocate_data_tasks() for the sg_prev_nents
+		 * offset into sg_chain() above.
+		 *
+		 * We do not need the padding for the last task (or a single
+		 * task), but in that case we will never use the sg_prev_nents
+		 * value below which would be incorrect.
+		 */
+		sg_prev_nents = (task->task_sg_nents + 1);
+		sg_prev = task->task_sg;
+	}
+	/*
+	 * Setup the starting pointer and total t_tasks_sg_linked_no including
+	 * padding SGs for linking and to mark the end.
+	 */
+	cmd->t_tasks_sg_chained = sg_first;
+	cmd->t_tasks_sg_chained_no = chained_nents;
+
+	pr_debug("Setup cmd: %p cmd->t_tasks_sg_chained: %p and"
+		" t_tasks_sg_chained_no: %u\n", cmd, cmd->t_tasks_sg_chained,
+		cmd->t_tasks_sg_chained_no);
+
+	for_each_sg(cmd->t_tasks_sg_chained, sg,
+			cmd->t_tasks_sg_chained_no, i) {
+
+		pr_debug("SG[%d]: %p page: %p length: %d offset: %d\n",
+			i, sg, sg_page(sg), sg->length, sg->offset);
+		if (sg_is_chain(sg))
+			pr_debug("SG: %p sg_is_chain=1\n", sg);
+		if (sg_is_last(sg))
+			pr_debug("SG: %p sg_is_last=1\n", sg);
+	}
+}
+EXPORT_SYMBOL(transport_do_task_sg_chain);
+
 /*
  * Break up cmd into chunks transport can handle
  */
@@ -3717,35 +3785,112 @@ transport_allocate_data_tasks(struct se_cmd *cmd,
 	struct scatterlist *cmd_sg, unsigned int sgl_nents)
 {
 	struct se_device *dev = cmd->se_dev;
-	struct se_dev_attrib *attr = &dev->se_sub_dev->se_dev_attrib;
-	sector_t sectors;
-	struct se_task *task;
-	unsigned long flags;
+	int task_count, i;
+	unsigned long long lba;
+	sector_t sectors, dev_max_sectors;
+	u32 sector_size;
 
 	if (transport_cmd_get_valid_sectors(cmd) < 0)
 		return -EINVAL;
 
-	sectors = DIV_ROUND_UP(cmd->data_length, attr->block_size);
+	dev_max_sectors = dev->se_sub_dev->se_dev_attrib.max_sectors;
+	sector_size = dev->se_sub_dev->se_dev_attrib.block_size;
 
-	BUG_ON(cmd->data_length % attr->block_size);
-	BUG_ON(sectors > attr->max_sectors);
+	WARN_ON(cmd->data_length % sector_size);
 
-	task = transport_generic_get_task(cmd, data_direction);
-	if (!task)
-		return -ENOMEM;
+	lba = cmd->t_task_lba;
+	sectors = DIV_ROUND_UP(cmd->data_length, sector_size);
+	task_count = DIV_ROUND_UP_SECTOR_T(sectors, dev_max_sectors);
 
-	task->task_sg = cmd_sg;
-	task->task_sg_nents = sgl_nents;
-	task->task_size = cmd->data_length;
+	/*
+	 * If we need just a single task reuse the SG list in the command
+	 * and avoid a lot of work.
+	 */
+	if (task_count == 1) {
+		struct se_task *task;
+		unsigned long flags;
 
-	task->task_lba = cmd->t_task_lba;
-	task->task_sectors = sectors;
+		task = transport_generic_get_task(cmd, data_direction);
+		if (!task)
+			return -ENOMEM;
 
-	spin_lock_irqsave(&cmd->t_state_lock, flags);
-	list_add_tail(&task->t_list, &cmd->t_task_list);
-	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+		task->task_sg = cmd_sg;
+		task->task_sg_nents = sgl_nents;
 
-	return 1;
+		task->task_lba = lba;
+		task->task_sectors = sectors;
+		task->task_size = task->task_sectors * sector_size;
+
+		spin_lock_irqsave(&cmd->t_state_lock, flags);
+		list_add_tail(&task->t_list, &cmd->t_task_list);
+		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+
+		return task_count;
+	}
+
+	for (i = 0; i < task_count; i++) {
+		struct se_task *task;
+		unsigned int task_size, task_sg_nents_padded;
+		struct scatterlist *sg;
+		unsigned long flags;
+		int count;
+
+		task = transport_generic_get_task(cmd, data_direction);
+		if (!task)
+			return -ENOMEM;
+
+		task->task_lba = lba;
+		task->task_sectors = min(sectors, dev_max_sectors);
+		task->task_size = task->task_sectors * sector_size;
+
+		/*
+		 * This now assumes that passed sg_ents are in PAGE_SIZE chunks
+		 * in order to calculate the number per task SGL entries
+		 */
+		task->task_sg_nents = DIV_ROUND_UP(task->task_size, PAGE_SIZE);
+		/*
+		 * Check if the fabric module driver is requesting that all
+		 * struct se_task->task_sg[] be chained together..  If so,
+		 * then allocate an extra padding SG entry for linking and
+		 * marking the end of the chained SGL for every task except
+		 * the last one for (task_count > 1) operation, or skipping
+		 * the extra padding for the (task_count == 1) case.
+		 */
+		if (cmd->se_tfo->task_sg_chaining && (i < (task_count - 1))) {
+			task_sg_nents_padded = (task->task_sg_nents + 1);
+		} else
+			task_sg_nents_padded = task->task_sg_nents;
+
+		task->task_sg = kmalloc(sizeof(struct scatterlist) *
+					task_sg_nents_padded, GFP_KERNEL);
+		if (!task->task_sg) {
+			cmd->se_dev->transport->free_task(task);
+			return -ENOMEM;
+		}
+
+		sg_init_table(task->task_sg, task_sg_nents_padded);
+
+		task_size = task->task_size;
+
+		/* Build new sgl, only up to task_size */
+		for_each_sg(task->task_sg, sg, task->task_sg_nents, count) {
+			if (cmd_sg->length > task_size)
+				break;
+
+			*sg = *cmd_sg;
+			task_size -= cmd_sg->length;
+			cmd_sg = sg_next(cmd_sg);
+		}
+
+		lba += task->task_sectors;
+		sectors -= task->task_sectors;
+
+		spin_lock_irqsave(&cmd->t_state_lock, flags);
+		list_add_tail(&task->t_list, &cmd->t_task_list);
+		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+	}
+
+	return task_count;
 }
 
 static int
@@ -3776,9 +3921,9 @@ transport_allocate_control_task(struct se_cmd *cmd)
 }
 
 /*
- * Allocate any required resources to execute the command.  For writes we
- * might not have the payload yet, so notify the fabric via a call to
- * ->write_pending instead. Otherwise place it on the execution queue.
+ * Allocate any required ressources to execute the command, and either place
+ * it on the execution queue if possible.  For writes we might not have the
+ * payload yet, thus notify the fabric via a call to ->write_pending instead.
  */
 int transport_generic_new_cmd(struct se_cmd *cmd)
 {
@@ -4582,12 +4727,12 @@ int transport_check_aborted_status(struct se_cmd *cmd, int send_status)
 		if (!send_status ||
 		     (cmd->se_cmd_flags & SCF_SENT_DELAYED_TAS))
 			return 1;
-
+#if 0
 		pr_debug("Sending delayed SAM_STAT_TASK_ABORTED"
 			" status for CDB: 0x%02x ITT: 0x%08x\n",
 			cmd->t_task_cdb[0],
 			cmd->se_tfo->get_task_tag(cmd));
-
+#endif
 		cmd->se_cmd_flags |= SCF_SENT_DELAYED_TAS;
 		cmd->se_tfo->queue_status(cmd);
 		ret = 1;
@@ -4620,11 +4765,11 @@ void transport_send_task_abort(struct se_cmd *cmd)
 		}
 	}
 	cmd->scsi_status = SAM_STAT_TASK_ABORTED;
-
+#if 0
 	pr_debug("Setting SAM_STAT_TASK_ABORTED status for CDB: 0x%02x,"
 		" ITT: 0x%08x\n", cmd->t_task_cdb[0],
 		cmd->se_tfo->get_task_tag(cmd));
-
+#endif
 	cmd->se_tfo->queue_status(cmd);
 }
 

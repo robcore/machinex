@@ -374,14 +374,13 @@ out:
  * \param adapter : i2c device adaptor
  * \return 1 on success
  */
-bool
+static bool
 drm_probe_ddc(struct i2c_adapter *adapter)
 {
 	unsigned char out;
 
 	return (drm_do_probe_ddc_edid(adapter, &out, 0, 1) == 0);
 }
-EXPORT_SYMBOL(drm_probe_ddc);
 
 /**
  * drm_get_edid - get EDID data, if available
