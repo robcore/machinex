@@ -251,23 +251,17 @@ static int proc_readfd(struct file *filp, void *dirent, filldir_t filldir)
 	return proc_readfd_common(filp, dirent, filldir, proc_fd_instantiate);
 }
 
-static const struct file_operations proc_fd_operations = {
+const struct file_operations proc_fd_operations = {
 	.read		= generic_read_dir,
 	.readdir	= proc_readfd,
 	.llseek		= default_llseek,
 };
 
-static struct dentry *proc_lookupfd(struct inode *dir, struct dentry *dentry,
-				    unsigned int flags)
-{
-	return proc_lookupfd_common(dir, dentry, proc_fd_instantiate);
-}
-
 /*
  * /proc/pid/fd needs a special permission handler so that a process can still
  * access /proc/self/fd after it has executed a setuid().
  */
-static int proc_fd_permission(struct inode *inode, int mask)
+int proc_fd_permission(struct inode *inode, int mask)
 {
 	struct task_struct *p;
 	int rv;
@@ -288,7 +282,7 @@ static int proc_fd_permission(struct inode *inode, int mask)
 /*
  * proc directories can do almost nothing..
  */
-static const struct inode_operations proc_fd_inode_operations = {
+const struct inode_operations proc_fd_inode_operations = {
 	.lookup		= proc_lookupfd,
 	.permission	= proc_fd_permission,
 	.setattr	= proc_setattr,
@@ -332,7 +326,7 @@ static int proc_readfdinfo(struct file *filp, void *dirent, filldir_t filldir)
 				  proc_fdinfo_instantiate);
 }
 
-static const struct file_operations proc_fdinfo_operations = {
+const struct file_operations proc_fdinfo_operations = {
 	.read		= generic_read_dir,
 	.readdir	= proc_readfdinfo,
 	.llseek		= default_llseek,
@@ -341,7 +335,7 @@ static const struct file_operations proc_fdinfo_operations = {
 /*
  * proc directories can do almost nothing..
  */
-static const struct inode_operations proc_fdinfo_inode_operations = {
+const struct inode_operations proc_fdinfo_inode_operations = {
 	.lookup		= proc_lookupfdinfo,
 	.setattr	= proc_setattr,
 };
