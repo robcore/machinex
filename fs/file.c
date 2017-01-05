@@ -203,17 +203,13 @@ static int expand_fdtable(struct files_struct *files, int nr)
 	new_fdt = alloc_fdtable(nr);
 	spin_lock(&files->file_lock);
 	if (!new_fdt)
-	{
-		printk("[expand_fdtable] ENOMEM: !new_fdt\n");
 		return -ENOMEM;
-	}
 	/*
 	 * extremely unlikely race - sysctl_nr_open decreased between the check in
 	 * caller and alloc_fdtable().  Cheaper to catch it here...
 	 */
 	if (unlikely(new_fdt->max_fds <= nr)) {
 		__free_fdtable(new_fdt);
-		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)");
 		return -EMFILE;
 	}
 	/*
@@ -543,9 +539,9 @@ struct files_struct init_files = {
 /*
  * allocate a file descriptor, mark it busy.
  */
-int __alloc_fd(struct files_struct *files,
-	       unsigned start, unsigned end, unsigned flags)
+int alloc_fd(unsigned start, unsigned flags)
 {
+	struct files_struct *files = current->files;
 	unsigned int fd;
 	int error;
 	struct fdtable *fdt;
@@ -580,8 +576,6 @@ repeat:
 	else
 		__clear_close_on_exec(fd, fdt);
 	error = fd;
-	if (error < 0)
-		printk("[alloc_fd] fd < 0\n");
 #if 1
 	/* Sanity check */
 	if (rcu_dereference_raw(fdt->fd[fd]) != NULL) {
@@ -595,10 +589,11 @@ out:
 	return error;
 }
 
-static int alloc_fd(unsigned start, unsigned flags)
+int get_unused_fd(void)
 {
-	return __alloc_fd(current->files, start, rlimit(RLIMIT_NOFILE), flags);
+	return alloc_fd(0, 0);
 }
+EXPORT_SYMBOL(get_unused_fd);
 
 int get_unused_fd_flags(unsigned flags)
 {
