@@ -1851,7 +1851,7 @@ int uvc_ctrl_init_device(struct uvc_device *dev)
 	/* Walk the entities list and instantiate controls */
 	list_for_each_entry(entity, &dev->entities, list) {
 		struct uvc_control *ctrl;
-		unsigned int bControlSize = 0, ncontrols;
+		unsigned int bControlSize = 0, ncontrols = 0;
 		__u8 *bmControls = NULL;
 
 		if (UVC_ENTITY_TYPE(entity) == UVC_VC_EXTENSION_UNIT) {
@@ -1869,7 +1869,8 @@ int uvc_ctrl_init_device(struct uvc_device *dev)
 		uvc_ctrl_prune_entity(dev, entity);
 
 		/* Count supported controls and allocate the controls array */
-		ncontrols = memweight(bmControls, bControlSize);
+		for (i = 0; i < bControlSize; ++i)
+			ncontrols += hweight8(bmControls[i]);
 		if (ncontrols == 0)
 			continue;
 
