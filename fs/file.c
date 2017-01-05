@@ -6,7 +6,6 @@
  *  Manage the dynamic fd arrays in the process files_struct.
  */
 
-#include <linux/syscalls.h>
 #include <linux/export.h>
 #include <linux/fs.h>
 #include <linux/mm.h>
@@ -203,13 +202,17 @@ static int expand_fdtable(struct files_struct *files, int nr)
 	new_fdt = alloc_fdtable(nr);
 	spin_lock(&files->file_lock);
 	if (!new_fdt)
+	{
+		printk("[expand_fdtable] ENOMEM: !new_fdt\n");
 		return -ENOMEM;
+	}
 	/*
 	 * extremely unlikely race - sysctl_nr_open decreased between the check in
 	 * caller and alloc_fdtable().  Cheaper to catch it here...
 	 */
 	if (unlikely(new_fdt->max_fds <= nr)) {
 		__free_fdtable(new_fdt);
+		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)");
 		return -EMFILE;
 	}
 	/*
@@ -248,8 +251,14 @@ int expand_files(struct files_struct *files, int nr)
 	 * N.B. For clone tasks sharing a files structure, this test
 	 * will limit the total number of files that can be opened.
 	 */
+
 	if (nr >= rlimit(RLIMIT_NOFILE))
+	{
+		pr_err("[expand_files] NR : %d, RLIMIT : %lu, PID : %d, Process Name : %s\n",
+				nr, rlimit(RLIMIT_NOFILE), current->pid, current->comm);
+
 		return -EMFILE;
+	}
 
 	/* Do we need to expand? */
 	if (nr < fdt->max_fds)
@@ -257,7 +266,10 @@ int expand_files(struct files_struct *files, int nr)
 
 	/* Can we expand? */
 	if (nr >= sysctl_nr_open)
+	{
+		printk("[expand_files] EMFILE : nr >= sysctl_nr_open\n");
 		return -EMFILE;
+	}
 
 	/* All good, so we try */
 	return expand_fdtable(files, nr);
@@ -464,6 +476,7 @@ void reset_files_struct(struct files_struct *files)
 	task_unlock(tsk);
 	put_files_struct(old);
 }
+EXPORT_SYMBOL(alloc_fd);
 
 void exit_files(struct task_struct *tsk)
 {
@@ -513,6 +526,7 @@ int alloc_fd(unsigned start, unsigned flags)
 {
 	struct files_struct *files = current->files;
 	unsigned int fd;
+	unsigned end = rlimit(RLIMIT_NOFILE);
 	int error;
 	struct fdtable *fdt;
 
@@ -546,6 +560,8 @@ repeat:
 	else
 		__clear_close_on_exec(fd, fdt);
 	error = fd;
+	if (error < 0)
+		printk("[alloc_fd] fd < 0\n");
 #if 1
 	/* Sanity check */
 	if (rcu_dereference_raw(fdt->fd[fd]) != NULL) {
@@ -559,9 +575,29 @@ out:
 	return error;
 }
 
-int get_unused_fd(void)
+int get_unused_fd_flags(unsigned flags)
 {
-	return alloc_fd(0, 0);
+	return alloc_fd(0, flags);
 }
-EXPORT_SYMBOL(get_unused_fd);
+EXPORT_SYMBOL(get_unused_fd_flags);
 
+int iterate_fd(struct files_struct *files, unsigned n,
+		int (*f)(const void *, struct file *, unsigned),
+		const void *p)
+{
+	struct fdtable *fdt;
+	struct file *file;
+	int res = 0;
+	if (!files)
+		return 0;
+	spin_lock(&files->file_lock);
+	fdt = files_fdtable(files);
+	while (!res && n < fdt->max_fds) {
+		file = rcu_dereference_check_fdtable(files, fdt->fd[n++]);
+		if (file)
+			res = f(p, file, n);
+	}
+	spin_unlock(&files->file_lock);
+	return res;
+}
+EXPORT_SYMBOL(iterate_fd);

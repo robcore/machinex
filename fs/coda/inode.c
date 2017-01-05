@@ -110,39 +110,41 @@ static int get_device_index(struct coda_mount_data *data)
 {
 	struct file *file;
 	struct inode *inode;
-	int idx, fput_needed;
+	int idx;
 
-	if (data == NULL) {
+	if(data == NULL) {
 		printk("coda_read_super: Bad mount data\n");
 		return -1;
 	}
 
-	if (data->version != CODA_MOUNT_VERSION) {
+	if(data->version != CODA_MOUNT_VERSION) {
 		printk("coda_read_super: Bad mount version\n");
 		return -1;
 	}
 
-	file = fget_light(data->fd, &fput_needed);
-	if (!file)
-		goto Ebadf;
-	inode = file->f_path.dentry->d_inode;
-	if (!S_ISCHR(inode->i_mode) || imajor(inode) != CODA_PSDEV_MAJOR) {
-		fput_light(file, fput_needed);
-		goto Ebadf;
+	file = fget(data->fd);
+	inode = NULL;
+	if(file)
+		inode = file->f_path.dentry->d_inode;
+	
+	if(!inode || !S_ISCHR(inode->i_mode) ||
+	   imajor(inode) != CODA_PSDEV_MAJOR) {
+		if(file)
+			fput(file);
+
+		printk("coda_read_super: Bad file\n");
+		return -1;
 	}
 
 	idx = iminor(inode);
-	fput_light(file, fput_needed);
+	fput(file);
 
-	if (idx < 0 || idx >= MAX_CODADEVS) {
+	if(idx < 0 || idx >= MAX_CODADEVS) {
 		printk("coda_read_super: Bad minor number\n");
 		return -1;
 	}
 
 	return idx;
-Ebadf:
-	printk("coda_read_super: Bad file\n");
-	return -1;
 }
 
 static int coda_fill_super(struct super_block *sb, void *data, int silent)

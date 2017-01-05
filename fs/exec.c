@@ -1013,6 +1013,40 @@ no_thread_group:
 	return 0;
 }
 
+/*
+ * These functions flushes out all traces of the currently running executable
+ * so that a new one can be started
+ */
+static void flush_old_files(struct files_struct * files)
+{
+	long j = -1;
+	struct fdtable *fdt;
+
+	spin_lock(&files->file_lock);
+	for (;;) {
+		unsigned long set, i;
+
+		j++;
+		i = j * BITS_PER_LONG;
+		fdt = files_fdtable(files);
+		if (i >= fdt->max_fds)
+			break;
+		set = fdt->close_on_exec[j];
+		if (!set)
+			continue;
+		fdt->close_on_exec[j] = 0;
+		spin_unlock(&files->file_lock);
+		for ( ; set ; i++,set >>= 1) {
+			if (set & 1) {
+				sys_close(i);
+			}
+		}
+		spin_lock(&files->file_lock);
+
+	}
+	spin_unlock(&files->file_lock);
+}
+
 char *get_task_comm(char *buf, struct task_struct *tsk)
 {
 	/* buf must be at least sizeof(tsk->comm) in size */
@@ -1022,11 +1056,6 @@ char *get_task_comm(char *buf, struct task_struct *tsk)
 	return buf;
 }
 EXPORT_SYMBOL_GPL(get_task_comm);
-
-/*
- * These functions flushes out all traces of the currently running executable
- * so that a new one can be started
- */
 
 void set_task_comm(struct task_struct *tsk, char *buf)
 {
@@ -1143,7 +1172,7 @@ void setup_new_exec(struct linux_binprm * bprm)
 	current->self_exec_id++;
 
 	flush_signal_handlers(current, 0);
-	do_close_on_exec(current->files);
+	flush_old_files(current->files);
 }
 EXPORT_SYMBOL(setup_new_exec);
 
@@ -2074,14 +2103,23 @@ static void wait_for_dump_helpers(struct file *file)
 static int umh_pipe_setup(struct subprocess_info *info, struct cred *new)
 {
 	struct file *files[2];
+	struct fdtable *fdt;
 	struct coredump_params *cp = (struct coredump_params *)info->data;
+	struct files_struct *cf = current->files;
 	int err = create_pipe_files(files, 0);
 	if (err)
 		return err;
 
 	cp->file = files[1];
 
-	replace_fd(0, files[0], 0);
+	sys_close(0);
+	fd_install(0, files[0]);
+	spin_lock(&cf->file_lock);
+	fdt = files_fdtable(cf);
+	__set_open_fd(0, fdt);
+	__clear_close_on_exec(0, fdt);
+	spin_unlock(&cf->file_lock);
+
 	/* and disallow core files too */
 	current->signal->rlim[RLIMIT_CORE] = (struct rlimit){1, 1};
 
@@ -2099,7 +2137,6 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 	int retval = 0;
 	int flag = 0;
 	int ispipe;
-	struct files_struct *displaced;
 	bool need_nonrelative = false;
 	static atomic_t core_dump_count = ATOMIC_INIT(0);
 	struct coredump_params cprm = {
@@ -2253,12 +2290,6 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 			goto close_fail;
 	}
 
-	/* get us an unshared descriptor table; almost always a no-op */
-	retval = unshare_files(&displaced);
-	if (retval)
-		goto close_fail;
-	if (displaced)
-		put_files_struct(displaced);
 	retval = binfmt->core_dump(&cprm);
 	if (retval)
 		current->signal->group_exit_code |= 0x80;

@@ -27,8 +27,7 @@
  */
 SYSCALL_DEFINE(fadvise64_64)(int fd, loff_t offset, loff_t len, int advice)
 {
-	int fput_needed;
-	struct file *file = fget_light(fd, &fput_needed);
+	struct file *file = fget(fd);
 	struct address_space *mapping;
 	struct backing_dev_info *bdi;
 	loff_t endbyte;			/* inclusive */
@@ -143,7 +142,7 @@ SYSCALL_DEFINE(fadvise64_64)(int fd, loff_t offset, loff_t len, int advice)
 		ret = -EINVAL;
 	}
 out:
-	fput_light(file, fput_needed);
+	fput(file);
 	return ret;
 }
 #ifdef CONFIG_HAVE_SYSCALL_WRAPPERS

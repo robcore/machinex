@@ -628,10 +628,9 @@ SYSCALL_DEFINE(readahead)(int fd, loff_t offset, size_t count)
 {
 	ssize_t ret;
 	struct file *file;
-	int fput_needed;
 
 	ret = -EBADF;
-	file = fget_light(fd, &fput_needed);
+	file = fget(fd);
 	if (file) {
 		if (file->f_mode & FMODE_READ) {
 			struct address_space *mapping = file->f_mapping;
@@ -640,7 +639,7 @@ SYSCALL_DEFINE(readahead)(int fd, loff_t offset, size_t count)
 			unsigned long len = end - start + 1;
 			ret = do_readahead(mapping, file, start, len);
 		}
-		fput_light(file, fput_needed);
+		fput(file);
 	}
 	return ret;
 }

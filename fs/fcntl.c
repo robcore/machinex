@@ -64,6 +64,9 @@ SYSCALL_DEFINE3(dup3, unsigned int, oldfd, unsigned int, newfd, int, flags)
 	if (unlikely(oldfd == newfd))
 		return -EINVAL;
 
+	if (newfd >= rlimit(RLIMIT_NOFILE))
+		return -EMFILE;
+
 	spin_lock(&files->file_lock);
 	err = expand_files(files, newfd);
 	file = fcheck(oldfd);
@@ -373,10 +376,14 @@ static long do_fcntl(int fd, unsigned int cmd, unsigned long arg,
 
 	switch (cmd) {
 	case F_DUPFD:
-		err = f_dupfd(arg, filp, 0);
-		break;
 	case F_DUPFD_CLOEXEC:
-		err = f_dupfd(arg, filp, O_CLOEXEC);
+		if (arg >= rlimit(RLIMIT_NOFILE))
+			break;
+		err = alloc_fd(arg, cmd == F_DUPFD_CLOEXEC ? O_CLOEXEC : 0);
+		if (err >= 0) {
+			get_file(filp);
+			fd_install(err, filp);
+		}
 		break;
 	case F_GETFD:
 		err = get_close_on_exec(fd) ? FD_CLOEXEC : 0;
