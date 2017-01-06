@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1262,7 +1262,7 @@ int sps_get_unused_desc_num(struct sps_pipe *h, u32 *desc_num);
  *
  */
 int sps_get_bam_debug_info(u32 dev, u32 option, u32 para,
-		u32 tb_sel, u8 desc_sel);
+		u32 tb_sel, u32 desc_sel);
 
 /**
  * Vote for or relinquish BAM DMA clock
@@ -1431,7 +1431,7 @@ static inline int sps_get_unused_desc_num(struct sps_pipe *h, u32 *desc_num)
 }
 
 static inline int sps_get_bam_debug_info(u32 dev, u32 option, u32 para,
-		u32 tb_sel, u8 pre_level)
+		u32 tb_sel, u32 desc_sel)
 {
 	return -EPERM;
 }
