@@ -92,8 +92,8 @@ static void msm_lpm_exit_sleep(void *limits, bool from_idle,
 
 void msm_lpm_show_resources(void)
 {
-	msm_lpmrs_exit_sleep((struct msm_rpmrs_limits *)limits,
-				from_idle, notify_rpm, collapsed);
+	/* TODO */
+	return;
 }
 
 s32 msm_cpuidle_get_deep_idle_latency(void)
