@@ -80,6 +80,7 @@ obj-$(CONFIG_QSEECOM) += qseecom.o
 obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
 obj-$(CONFIG_NFC_PN544)		+= pn544.o
 obj-$(CONFIG_NFC_PN547)		+= pn547.o
+obj-$(CONFIG_TZCOM) += tzcom.o
 obj-$(CONFIG_QSEECOM)  += tzic.o
 obj-y += tspdrv/
 obj-$(CONFIG_BCM2079X_NFC_I2C)	+= bcm2079x-i2c.o
