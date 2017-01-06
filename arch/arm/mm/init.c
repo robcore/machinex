@@ -270,11 +270,7 @@ static void __init arm_bootmem_free_hmnm(unsigned long max_low,
 		unsigned long start = memblock_region_memory_base_pfn(reg);
 		unsigned long end = memblock_region_memory_end_pfn(reg);
 
-#ifdef CONFIG_ARCH_POPULATES_NODE_MAP
-		add_active_range(0, start, end);
-#else
 		memblock_set_node(PFN_PHYS(start), PFN_PHYS(end - start), 0);
-#endif
 	}
 	free_area_init_nodes(max_zone_pfns);
 }
@@ -398,13 +394,6 @@ void __init find_membank0_hole(void)
 }
 #endif
 
-#ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-unsigned long membank0_size;
-EXPORT_SYMBOL(membank0_size);
-unsigned long membank1_start;
-EXPORT_SYMBOL(membank1_start);
-#endif
-
 void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 {
 	int i;
@@ -415,11 +404,6 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 
 	for (i = 0; i < mi->nr_banks; i++)
 		memblock_add(mi->bank[i].start, mi->bank[i].size);
-
-#ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-	membank0_size = meminfo.bank[0].size;
-	membank1_start = meminfo.bank[1].start;
-#endif
 
 	/* Register the kernel text, kernel data and initrd with memblock. */
 #ifdef CONFIG_XIP_KERNEL
@@ -512,8 +496,6 @@ void __init bootmem_init(void)
 
 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
 	arm_bootmem_free_hmnm(max_low, max_high);
-#else ifdef CONFIG_ARCH_POPULATES_NODE_MAP
-	arm_bootmem_free_apnm(max_low, max_high);
 #else
 	/*
 	 * Now free the memory - free_area_init_node needs
