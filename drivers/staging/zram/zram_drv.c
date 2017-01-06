@@ -410,7 +410,7 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 		goto memstore;
 	}
 
-	handle = (void *)zs_malloc(zram->mem_pool, clen + sizeof(*zheader));
+	handle = zs_malloc(zram->mem_pool, clen + sizeof(*zheader));
 	if (!handle) {
 		pr_info("Error allocating memory for compressed page: %u, size=%zu\n",
 			index, clen);
