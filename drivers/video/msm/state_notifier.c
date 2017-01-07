@@ -28,7 +28,7 @@ do {				\
 		pr_info(msg);	\
 } while (0)
 
-static bool enabled;
+static bool enabled = true;
 module_param_named(enabled, enabled, bool, 0664);
 static unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
 module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
@@ -99,9 +99,13 @@ void state_suspend(void)
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
+/* Rob Note: I am still adding the condition that the state should only be changed
+ * if the previous state wasn't already set to suspend, as my init and screen-on functions are still tied together.
+ * This ensures that the driver's functions are ONLY activated upon the initial suspend.
+ */
 void state_resume(void)
 {
-	if (!enabled)
+	if (!enabled || !state_suspended)
 		return;
 
 	dprintk("%s: resume called.\n", STATE_NOTIFIER);
