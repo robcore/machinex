@@ -13,8 +13,8 @@
 #include <linux/module.h>
 #include <linux/state_notifier.h>
 
-#define DEFAULT_SUSPEND_DEFER_TIME 	10
-#define STATE_NOTIFIER			"state_notifier"
+#define DEFAULT_SUSPEND_DEFER_TIME 10
+#define SN_DEBUG "STATE_NOTIFIER"
 
 /*
  * debug = 1 will print all
@@ -77,19 +77,19 @@ static void _suspend_work(struct work_struct *work)
 	state_suspended = true;
 	state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 	suspend_in_progress = false;
-	dprintk("%s: suspend completed.\n", STATE_NOTIFIER);
+	dprintk("%s: suspend completed.\n", SN_DEBUG);
 }
 
 static void _resume_work(struct work_struct *work)
 {
 	state_suspended = false;
 	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
-	dprintk("%s: resume completed.\n", STATE_NOTIFIER);
+	dprintk("%s: resume completed.\n", SN_DEBUG);
 }
 
 void state_suspend(void)
 {
-	dprintk("%s: suspend called.\n", STATE_NOTIFIER);
+	dprintk("%s: suspend called.\n", SN_DEBUG);
 	if (state_suspended || suspend_in_progress || !enabled)
 		return;
 
@@ -106,11 +106,11 @@ void state_suspend(void)
 void state_resume(void)
 {
 	if (!enabled || !state_suspended) {
-		dprintk("%s: State change requested but unchanged - Ignored\n", STATE_NOTIFIER);
+		dprintk("%s: State change requested but unchanged - Ignored\n", SN_DEBUG);
 		return;
 	}
 
-	dprintk("%s: resume called.\n", STATE_NOTIFIER);
+	dprintk("%s: resume called.\n", SN_DEBUG);
 	cancel_delayed_work_sync(&suspend_work);
 	suspend_in_progress = false;
 
