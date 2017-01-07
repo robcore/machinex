@@ -34,6 +34,7 @@ static int get_device_address(struct ion_client *clnt,
 	}
 	if (align < 4096)
 		align = 4096;
+	flags |= UNCACHED;
 	pr_debug("\n In %s  domain: %d, Partition: %d\n",
 		__func__, domain_num, partition_num);
 	rc = ion_map_iommu(clnt, hndl, domain_num, partition_num, align,
