@@ -19,7 +19,7 @@
 /*
  * debug = 1 will print all
  */
-static unsigned int debug;
+static unsigned int debug =1;
 module_param_named(debug_mask, debug, uint, 0644);
 
 #define dprintk(msg...)		\
@@ -105,8 +105,10 @@ void state_suspend(void)
  */
 void state_resume(void)
 {
-	if (!enabled || !state_suspended)
+	if (!enabled || !state_suspended) {
+		dprintk("%s: State change requested but unchanged - Ignored\n", STATE_NOTIFIER);
 		return;
+	}
 
 	dprintk("%s: resume called.\n", STATE_NOTIFIER);
 	cancel_delayed_work_sync(&suspend_work);
@@ -130,4 +132,3 @@ subsys_initcall(state_notifier_init);
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Notifier Driver");
 MODULE_LICENSE("GPLv2");
-

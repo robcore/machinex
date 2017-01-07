@@ -156,7 +156,7 @@ void set_power_suspend_state(int new_state)
 		}
 		spin_unlock_irqrestore(&state_lock, irqflags);
 	} else {
-		pr_info("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
+		pr_info("[POWERSUSPEND] State change requested but unchanged - Ignored\n");
 	}
 }
 
