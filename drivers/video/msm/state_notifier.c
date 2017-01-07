@@ -13,26 +13,9 @@
 #include <linux/module.h>
 #include <linux/state_notifier.h>
 
-#define DEFAULT_SUSPEND_DEFER_TIME 10
-#define SN_DEBUG "STATE_NOTIFIER"
-
-/*
- * debug = 1 will print all
- */
-static unsigned int debug =1;
-module_param_named(debug_mask, debug, uint, 0644);
-
-#define dprintk(msg...)		\
-do {				\
-	if (debug)		\
-		pr_info(msg);	\
-} while (0)
-
 static bool enabled = true;
 module_param_named(enabled, enabled, bool, 0664);
-static unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
-module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
-static struct delayed_work suspend_work;
+static struct work_struct suspend_work;
 struct work_struct resume_work;
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
@@ -77,26 +60,25 @@ static void _suspend_work(struct work_struct *work)
 	state_suspended = true;
 	state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 	suspend_in_progress = false;
-	dprintk("%s: suspend completed.\n", SN_DEBUG);
+	printk("[STATE_NOTIFIER]suspend completed\n");
 }
 
 static void _resume_work(struct work_struct *work)
 {
 	state_suspended = false;
 	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
-	dprintk("%s: resume completed.\n", SN_DEBUG);
+	printk("[STATE_NOTIFIER] resume completed\n");
 }
 
 void state_suspend(void)
 {
-	dprintk("%s: suspend called.\n", SN_DEBUG);
+	printk("[STATE_NOTIFIER] Suspend Called.\n");
 	if (state_suspended || suspend_in_progress || !enabled)
 		return;
 
 	suspend_in_progress = true;
 
-	schedule_delayed_work(&suspend_work,
-		msecs_to_jiffies(suspend_defer_time * 1000));
+	schedule_work_on(0, &suspend_work);
 }
 
 /* Rob Note: I am still adding the condition that the state should only be changed
@@ -105,23 +87,23 @@ void state_suspend(void)
  */
 void state_resume(void)
 {
-	if (!enabled || !state_suspended) {
-		dprintk("%s: State change requested but unchanged - Ignored\n", SN_DEBUG);
+	if (!enabled)
 		return;
-	}
 
-	dprintk("%s: resume called.\n", SN_DEBUG);
-	cancel_delayed_work_sync(&suspend_work);
+	printk("[STATE_NOTIFIER] Resume Called.\n");
+	cancel_work_sync(&suspend_work);
 	suspend_in_progress = false;
 
 	if (state_suspended)
-		schedule_work(&resume_work);
+		schedule_work_on(0, &resume_work);
+	else
+		printk("[STATE_NOTIFIER] State change requested but unchanged - Ignored\n");
 }
 
 static int __init state_notifier_init(void)
 {
 
-	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
+	INIT_WORK(&suspend_work, _suspend_work);
 	INIT_WORK(&resume_work, _resume_work);
 
 	return 0;
