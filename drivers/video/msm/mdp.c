@@ -2919,7 +2919,8 @@ static int mdp_probe(struct platform_device *pdev)
 		if (!(mdp_pdata->cont_splash_enabled))
 			mdp4_hw_init();
 #else
-		mdp_hw_init();
+		if (!(mdp_pdata->cont_splash_enabled))
+			mdp_hw_init();
 #endif
 
 #ifdef CONFIG_FB_MSM_OVERLAY
