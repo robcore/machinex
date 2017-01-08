@@ -13,9 +13,26 @@
 #include <linux/module.h>
 #include <linux/state_notifier.h>
 
-static bool enabled = true;
+#define DEFAULT_SUSPEND_DEFER_TIME 	10
+#define STATE_NOTIFIER			"state_notifier"
+
+/*
+ * debug = 1 will print all
+ */
+static unsigned int debug;
+module_param_named(debug_mask, debug, uint, 0644);
+
+#define dprintk(msg...)		\
+do {				\
+	if (debug)		\
+		pr_info(msg);	\
+} while (0)
+
+static bool enabled;
 module_param_named(enabled, enabled, bool, 0664);
-static struct work_struct suspend_work;
+static unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
+module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
+static struct delayed_work suspend_work;
 struct work_struct resume_work;
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
@@ -60,50 +77,45 @@ static void _suspend_work(struct work_struct *work)
 	state_suspended = true;
 	state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 	suspend_in_progress = false;
-	printk("[STATE_NOTIFIER]suspend completed\n");
+	dprintk("%s: suspend completed.\n", STATE_NOTIFIER);
 }
 
 static void _resume_work(struct work_struct *work)
 {
 	state_suspended = false;
 	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
-	printk("[STATE_NOTIFIER] resume completed\n");
+	dprintk("%s: resume completed.\n", STATE_NOTIFIER);
 }
 
 void state_suspend(void)
 {
-	printk("[STATE_NOTIFIER] Suspend Called.\n");
+	dprintk("%s: suspend called.\n", STATE_NOTIFIER);
 	if (state_suspended || suspend_in_progress || !enabled)
 		return;
 
 	suspend_in_progress = true;
 
-	schedule_work_on(0, &suspend_work);
+	schedule_delayed_work(&suspend_work,
+		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
-/* Rob Note: I am still adding the condition that the state should only be changed
- * if the previous state wasn't already set to suspend, as my init and screen-on functions are still tied together.
- * This ensures that the driver's functions are ONLY activated upon the initial suspend.
- */
 void state_resume(void)
 {
 	if (!enabled)
 		return;
 
-	printk("[STATE_NOTIFIER] Resume Called.\n");
-	cancel_work_sync(&suspend_work);
+	dprintk("%s: resume called.\n", STATE_NOTIFIER);
+	cancel_delayed_work_sync(&suspend_work);
 	suspend_in_progress = false;
 
 	if (state_suspended)
-		schedule_work_on(0, &resume_work);
-	else
-		printk("[STATE_NOTIFIER] State change requested but unchanged - Ignored\n");
+		schedule_work(&resume_work);
 }
 
 static int __init state_notifier_init(void)
 {
 
-	INIT_WORK(&suspend_work, _suspend_work);
+	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
 	INIT_WORK(&resume_work, _resume_work);
 
 	return 0;
@@ -114,3 +126,4 @@ subsys_initcall(state_notifier_init);
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Notifier Driver");
 MODULE_LICENSE("GPLv2");
+

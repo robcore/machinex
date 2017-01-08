@@ -33,209 +33,69 @@
 #define MAX_EVENTS 30
 #define SHARED_QSIZE 0x1000000
 
-static struct msm_bus_vectors enc_ocmem_init_vectors[]  = {
+
+static struct msm_bus_vectors ocmem_init_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
 		.ib = 0,
 	},
 };
 
-static struct msm_bus_vectors enc_ocmem_perf1_vectors[]  = {
+static struct msm_bus_vectors ocmem_perf0_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
 		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 414700000,
-		.ib = 1222000000,
+		.ab = 176900000,
+		.ib = 221125000,
 	},
 };
 
-static struct msm_bus_vectors enc_ocmem_perf2_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 940000000,
-		.ib = 1222000000,
-	},
-};
-
-static struct msm_bus_vectors enc_ocmem_perf3_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 1880000000,
-		.ib = 2444000000U,
-	},
-};
-
-static struct msm_bus_vectors enc_ocmem_perf4_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 1880000000,
-		.ib = 2444000000U,
-	},
-};
-
-static struct msm_bus_vectors enc_ocmem_perf5_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 3008000000U,
-		.ib = 3910400000U,
-	},
-};
-
-static struct msm_bus_vectors enc_ocmem_perf6_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 3760000000U,
-		.ib = 3910400000U,
-	},
-};
-
-
-static struct msm_bus_vectors dec_ocmem_init_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 0,
-		.ib = 0,
-	},
-};
-
-static struct msm_bus_vectors dec_ocmem_perf1_vectors[]  = {
+static struct msm_bus_vectors ocmem_perf1_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
 		.dst = MSM_BUS_SLAVE_OCMEM,
 		.ab = 456200000,
-		.ib = 1556640000,
+		.ib = 570250000,
 	},
 };
 
-static struct msm_bus_vectors dec_ocmem_perf2_vectors[]  = {
+static struct msm_bus_vectors ocmem_perf2_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
 		.dst = MSM_BUS_SLAVE_OCMEM,
 		.ab = 864800000,
-		.ib = 1556640000,
+		.ib = 1081000000,
 	},
 };
 
-static struct msm_bus_vectors dec_ocmem_perf3_vectors[]  = {
+static struct msm_bus_paths ocmem_perf_vectors[]  = {
 	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 1729600000,
-		.ib = 3113280000U,
+		ARRAY_SIZE(ocmem_init_vectors),
+		ocmem_init_vectors,
+	},
+	{
+		ARRAY_SIZE(ocmem_perf0_vectors),
+		ocmem_perf0_vectors,
+	},
+	{
+		ARRAY_SIZE(ocmem_perf1_vectors),
+		ocmem_perf1_vectors,
+	},
+	{
+		ARRAY_SIZE(ocmem_perf2_vectors),
+		ocmem_perf2_vectors,
 	},
 };
 
-static struct msm_bus_vectors dec_ocmem_perf4_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 1729600000,
-		.ib = 3113280000U,
-	},
+static struct msm_bus_scale_pdata ocmem_bus_data = {
+	.usecase = ocmem_perf_vectors,
+	.num_usecases = ARRAY_SIZE(ocmem_perf_vectors),
+	.name = "msm_vidc_ocmem",
 };
 
-static struct msm_bus_vectors dec_ocmem_perf5_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 2767360000U,
-		.ib = 3113280000U,
-	},
-};
-
-static struct msm_bus_vectors dec_ocmem_perf6_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0_OCMEM,
-		.dst = MSM_BUS_SLAVE_OCMEM,
-		.ab = 3459200000U,
-		.ib = 3459200000U,
-	},
-};
-
-static struct msm_bus_paths enc_ocmem_perf_vectors[]  = {
-	{
-		ARRAY_SIZE(enc_ocmem_init_vectors),
-		enc_ocmem_init_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ocmem_perf1_vectors),
-		enc_ocmem_perf1_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ocmem_perf2_vectors),
-		enc_ocmem_perf2_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ocmem_perf3_vectors),
-		enc_ocmem_perf3_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ocmem_perf4_vectors),
-		enc_ocmem_perf4_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ocmem_perf5_vectors),
-		enc_ocmem_perf5_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ocmem_perf6_vectors),
-		enc_ocmem_perf6_vectors,
-	},
-};
-
-static struct msm_bus_paths dec_ocmem_perf_vectors[]  = {
-	{
-		ARRAY_SIZE(dec_ocmem_init_vectors),
-		dec_ocmem_init_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ocmem_perf1_vectors),
-		dec_ocmem_perf1_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ocmem_perf2_vectors),
-		dec_ocmem_perf2_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ocmem_perf3_vectors),
-		dec_ocmem_perf3_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ocmem_perf4_vectors),
-		dec_ocmem_perf4_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ocmem_perf5_vectors),
-		dec_ocmem_perf5_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ocmem_perf6_vectors),
-		dec_ocmem_perf6_vectors,
-	},
-};
-
-
-static struct msm_bus_scale_pdata enc_ocmem_bus_data = {
-	.usecase = enc_ocmem_perf_vectors,
-	.num_usecases = ARRAY_SIZE(enc_ocmem_perf_vectors),
-	.name = "msm_vidc_enc_ocmem",
-};
-
-static struct msm_bus_scale_pdata dec_ocmem_bus_data = {
-	.usecase = dec_ocmem_perf_vectors,
-	.num_usecases = ARRAY_SIZE(dec_ocmem_perf_vectors),
-	.name = "msm_vidc_dec_ocmem",
-};
-
-static struct msm_bus_vectors enc_ddr_init_vectors[]  = {
+static struct msm_bus_vectors vcodec_init_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
@@ -244,196 +104,56 @@ static struct msm_bus_vectors enc_ddr_init_vectors[]  = {
 	},
 };
 
-
-static struct msm_bus_vectors enc_ddr_perf1_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 60000000,
-		.ib = 664950000,
-	},
-};
-
-static struct msm_bus_vectors enc_ddr_perf2_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 181000000,
-		.ib = 664950000,
-	},
-};
-
-static struct msm_bus_vectors enc_ddr_perf3_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 403000000,
-		.ib = 664950000,
-	},
-};
-
-static struct msm_bus_vectors enc_ddr_perf4_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 806000000,
-		.ib = 1329900000,
-	},
-};
-
-static struct msm_bus_vectors enc_ddr_perf5_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 1289600000,
-		.ib = 2127840000U,
-	},
-};
-
-static struct msm_bus_vectors enc_ddr_perf6_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 161200000,
-		.ib = 2659800000U,
-	},
-};
-
-static struct msm_bus_vectors dec_ddr_init_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 0,
-		.ib = 0,
-	},
-};
-
-static struct msm_bus_vectors dec_ddr_perf1_vectors[]  = {
+static struct msm_bus_vectors vcodec_perf0_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 110000000,
-		.ib = 909000000,
+		.ib = 137500000,
 	},
 };
 
-static struct msm_bus_vectors dec_ddr_perf2_vectors[]  = {
+static struct msm_bus_vectors vcodec_perf1_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 268000000,
-		.ib = 909000000,
+		.ib = 335000000,
 	},
 };
 
-static struct msm_bus_vectors dec_ddr_perf3_vectors[]  = {
+static struct msm_bus_vectors vcodec_perf2_vectors[]  = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_P0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 505000000,
-		.ib = 909000000,
+		.ib = 631250000,
 	},
 };
 
-static struct msm_bus_vectors dec_ddr_perf4_vectors[]  = {
+static struct msm_bus_paths vcodec_perf_vectors[]  = {
 	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 1010000000,
-		.ib = 1818000000,
+		ARRAY_SIZE(vcodec_init_vectors),
+		vcodec_init_vectors,
+	},
+	{
+		ARRAY_SIZE(vcodec_perf0_vectors),
+		vcodec_perf0_vectors,
+	},
+	{
+		ARRAY_SIZE(vcodec_perf1_vectors),
+		vcodec_perf1_vectors,
+	},
+	{
+		ARRAY_SIZE(vcodec_perf2_vectors),
+		vcodec_perf2_vectors,
 	},
 };
 
-static struct msm_bus_vectors dec_ddr_perf5_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 1616000000,
-		.ib = 2908800000U,
-	},
-};
-
-static struct msm_bus_vectors dec_ddr_perf6_vectors[]  = {
-	{
-		.src = MSM_BUS_MASTER_VIDEO_P0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 2020000000U,
-		.ib = 3636000000U,
-	},
-};
-
-static struct msm_bus_paths enc_ddr_perf_vectors[]  = {
-	{
-		ARRAY_SIZE(enc_ddr_init_vectors),
-		enc_ddr_init_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ddr_perf1_vectors),
-		enc_ddr_perf1_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ddr_perf2_vectors),
-		enc_ddr_perf2_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ddr_perf3_vectors),
-		enc_ddr_perf3_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ddr_perf4_vectors),
-		enc_ddr_perf4_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ddr_perf5_vectors),
-		enc_ddr_perf5_vectors,
-	},
-	{
-		ARRAY_SIZE(enc_ddr_perf6_vectors),
-		enc_ddr_perf6_vectors,
-	},
-};
-
-static struct msm_bus_paths dec_ddr_perf_vectors[]  = {
-	{
-		ARRAY_SIZE(dec_ddr_init_vectors),
-		dec_ddr_init_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ddr_perf1_vectors),
-		dec_ddr_perf1_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ddr_perf2_vectors),
-		dec_ddr_perf2_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ddr_perf3_vectors),
-		dec_ddr_perf3_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ddr_perf4_vectors),
-		dec_ddr_perf4_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ddr_perf5_vectors),
-		dec_ddr_perf5_vectors,
-	},
-	{
-		ARRAY_SIZE(dec_ddr_perf6_vectors),
-		dec_ddr_perf6_vectors,
-	},
-};
-
-static struct msm_bus_scale_pdata enc_ddr_bus_data = {
-	.usecase = enc_ddr_perf_vectors,
-	.num_usecases = ARRAY_SIZE(enc_ddr_perf_vectors),
-	.name = "msm_vidc_enc_ddr",
-};
-
-static struct msm_bus_scale_pdata dec_ddr_bus_data = {
-	.usecase = dec_ddr_perf_vectors,
-	.num_usecases = ARRAY_SIZE(dec_ddr_perf_vectors),
-	.name = "msm_vidc_dec_ddr",
+static struct msm_bus_scale_pdata vcodec_bus_data = {
+	.usecase = vcodec_perf_vectors,
+	.num_usecases = ARRAY_SIZE(vcodec_perf_vectors),
+	.name = "msm_vidc_vcodec",
 };
 
 struct msm_vidc_drv *vidc_driver;
@@ -1040,29 +760,17 @@ static int msm_vidc_initialize_core(struct platform_device *pdev,
 		rc = -ENODEV;
 		goto core_init_failed;
 	}
-	core->resources.bus_info.ddr_handle[MSM_VIDC_ENCODER] =
-		msm_bus_scale_register_client(&enc_ddr_bus_data);
-	if (!core->resources.bus_info.ddr_handle[MSM_VIDC_ENCODER]) {
+	core->resources.bus_info.vcodec_handle =
+		msm_bus_scale_register_client(&vcodec_bus_data);
+	if (!core->resources.bus_info.vcodec_handle) {
 		pr_err("Failed to register bus scale client\n");
-		goto fail_register_enc_ddr_bus;
+		goto fail_register_vcodec_bus;
 	}
-	core->resources.bus_info.ddr_handle[MSM_VIDC_DECODER] =
-		msm_bus_scale_register_client(&dec_ddr_bus_data);
-	if (!core->resources.bus_info.ddr_handle[MSM_VIDC_DECODER]) {
+	core->resources.bus_info.ocmem_handle =
+		msm_bus_scale_register_client(&ocmem_bus_data);
+	if (!core->resources.bus_info.ocmem_handle) {
 		pr_err("Failed to register bus scale client\n");
-		goto fail_register_dec_ddr_bus;
-	}
-	core->resources.bus_info.ocmem_handle[MSM_VIDC_ENCODER] =
-		msm_bus_scale_register_client(&enc_ocmem_bus_data);
-	if (!core->resources.bus_info.ocmem_handle[MSM_VIDC_ENCODER]) {
-		pr_err("Failed to register bus scale client\n");
-		goto fail_register_enc_ocmem;
-	}
-	core->resources.bus_info.ocmem_handle[MSM_VIDC_DECODER] =
-		msm_bus_scale_register_client(&dec_ocmem_bus_data);
-	if (!core->resources.bus_info.ocmem_handle[MSM_VIDC_DECODER]) {
-		pr_err("Failed to register bus scale client\n");
-		goto fail_register_dec_ocmem;
+		goto fail_register_ocmem;
 	}
 	rc = register_iommu_domains(pdev, core);
 	if (rc) {
@@ -1080,17 +788,11 @@ static int msm_vidc_initialize_core(struct platform_device *pdev,
 	return rc;
 fail_register_domains:
 	msm_bus_scale_unregister_client(
-		core->resources.bus_info.ocmem_handle[MSM_VIDC_DECODER]);
-fail_register_dec_ocmem:
+		core->resources.bus_info.ocmem_handle);
+fail_register_ocmem:
 	msm_bus_scale_unregister_client(
-		core->resources.bus_info.ocmem_handle[MSM_VIDC_ENCODER]);
-fail_register_enc_ocmem:
-	msm_bus_scale_unregister_client(
-		core->resources.bus_info.ddr_handle[MSM_VIDC_DECODER]);
-fail_register_dec_ddr_bus:
-	msm_bus_scale_unregister_client(
-		core->resources.bus_info.ddr_handle[MSM_VIDC_ENCODER]);
-fail_register_enc_ddr_bus:
+		core->resources.bus_info.vcodec_handle);
+fail_register_vcodec_bus:
 	msm_vidc_deinit_clocks(core);
 core_init_failed:
 	return rc;
@@ -1102,6 +804,7 @@ static int __devinit msm_vidc_probe(struct platform_device *pdev)
 	struct msm_vidc_core *core;
 	unsigned long flags;
 	char debugfs_name[MAX_DEBUGFS_NAME];
+
 	core = kzalloc(sizeof(*core), GFP_KERNEL);
 	if (!core || !vidc_driver) {
 		pr_err("Failed to allocate memory for device core\n");
@@ -1184,13 +887,8 @@ static int __devexit msm_vidc_remove(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct msm_vidc_core *core = pdev->dev.platform_data;
-	int i;
-	for (i = 0; i < MSM_VIDC_MAX_DEVICES; ++i) {
-		msm_bus_scale_unregister_client(
-			core->resources.bus_info.ddr_handle[i]);
-		msm_bus_scale_unregister_client(
-			core->resources.bus_info.ocmem_handle[i]);
-	}
+	msm_bus_scale_unregister_client(core->resources.bus_info.vcodec_handle);
+	msm_bus_scale_unregister_client(core->resources.bus_info.ocmem_handle);
 	vidc_hal_delete_device(core->device);
 	video_unregister_device(&core->vdev[MSM_VIDC_ENCODER].vdev);
 	video_unregister_device(&core->vdev[MSM_VIDC_DECODER].vdev);
