@@ -2302,6 +2302,8 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 		_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 					CRYPTO_RESULT_DUMP_SIZE,
 					&pce_dev->ce_sps.out_transfer);
+		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
+					SPS_IOVEC_FLAG_INT);
 	} else {
 		_qce_sps_add_sg_data(pce_dev, areq->assoc, areq->assoclen,
 					 &pce_dev->ce_sps.in_transfer);
@@ -2324,6 +2326,8 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 
 		_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 			CRYPTO_RESULT_DUMP_SIZE, &pce_dev->ce_sps.out_transfer);
+		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
+					SPS_IOVEC_FLAG_INT);
 	}
 	rc = _qce_sps_transfer(pce_dev);
 	if (rc)
@@ -2422,6 +2426,7 @@ int qce_ablk_cipher_req(void *handle, struct qce_req *c_req)
 	_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 					CRYPTO_RESULT_DUMP_SIZE,
 					  &pce_dev->ce_sps.out_transfer);
+	_qce_set_flag(&pce_dev->ce_sps.out_transfer, SPS_IOVEC_FLAG_INT);
 	rc = _qce_sps_transfer(pce_dev);
 	if (rc)
 		goto bad;
@@ -2490,6 +2495,7 @@ int qce_process_sha_req(void *handle, struct qce_sha_req *sreq)
 	_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 					CRYPTO_RESULT_DUMP_SIZE,
 					  &pce_dev->ce_sps.out_transfer);
+	_qce_set_flag(&pce_dev->ce_sps.out_transfer, SPS_IOVEC_FLAG_INT);
 	rc = _qce_sps_transfer(pce_dev);
 	if (rc)
 		goto bad;
