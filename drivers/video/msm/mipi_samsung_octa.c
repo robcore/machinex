@@ -698,7 +698,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 
 #ifdef CONFIG_POWERSUSPEND
-	 Yank555.lu : hook to handle powersuspend tasks (sleep)
+	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
 #endif
 
