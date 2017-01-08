@@ -1503,10 +1503,16 @@ static int _setup_cipher_aes_cmdlistptrs(struct qce_device *pdev,
 						0, &pcl_info->auth_seg_size);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
 						0, &pcl_info->auth_seg_size);
+	} else {
+		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_SIZE_REG,
+						0, &pcl_info->auth_seg_size);
+		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
+						0, &pcl_info->auth_seg_size);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_START_REG,
 						0, &pcl_info->auth_seg_size);
-
 	}
+	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
+				(crypto_cfg | CRYPTO_LITTLE_ENDIAN_MASK), NULL);
 
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_GOPROC_REG,
 			((1 << CRYPTO_GO) | (1 << CRYPTO_RESULTS_DUMP)),
@@ -1641,9 +1647,6 @@ static int _setup_cipher_des_cmdlistptrs(struct qce_device *pdev,
 						&pcl_info->encr_cntr_iv);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CNTR1_IV1_REG, 0,
 								NULL);
-		/* Add 2 dummy to  align size to burst-size multiple */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CNTR2_IV2_REG, 0,
-								NULL);
 	}
 	/* Add dummy to  align size to burst-size multiple */
 	if (!mode_cbc) {
@@ -1651,10 +1654,17 @@ static int _setup_cipher_des_cmdlistptrs(struct qce_device *pdev,
 						0, &pcl_info->auth_seg_size);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
 						0, &pcl_info->auth_seg_size);
+	} else {
+		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_SIZE_REG,
+						0, &pcl_info->auth_seg_size);
+		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
+						0, &pcl_info->auth_seg_size);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_START_REG,
 						0, &pcl_info->auth_seg_size);
-
 	}
+	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
+			(crypto_cfg | CRYPTO_LITTLE_ENDIAN_MASK),
+			NULL);
 
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_GOPROC_REG,
 			((1 << CRYPTO_GO) | (1 << CRYPTO_RESULTS_DUMP)),
@@ -1709,9 +1719,6 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 		iv_reg = 5;
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
 					crypto_cfg, &pcl_info->crypto_cfg);
-		/* 1 dummy write */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
-								0, NULL);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
 							0, NULL);
 
@@ -1727,9 +1734,7 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 		iv_reg = 8;
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
 					crypto_cfg, &pcl_info->crypto_cfg);
-		/* 2 dummy writes */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
-								0, NULL);
+		/* 1 dummy write */
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
 								0, NULL);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
@@ -1747,9 +1752,6 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 		iv_reg = 5;
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
 					crypto_cfg, &pcl_info->crypto_cfg);
-		/* 1 dummy write */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
-								0, NULL);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
 							0, NULL);
 	break;
@@ -1767,9 +1769,7 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 		iv_reg = 5;
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
 					crypto_cfg, &pcl_info->crypto_cfg);
-		/* 2 dummy writes */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
-								0, NULL);
+		/* 1 dummy write */
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
 								0, NULL);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
@@ -1788,9 +1788,7 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
 					crypto_cfg, &pcl_info->crypto_cfg);
-		/* 2 dummy writes */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
-								0, NULL);
+		/* 1 dummy write */
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
 								0, NULL);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
@@ -1828,9 +1826,7 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 		}
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
 					crypto_cfg, &pcl_info->crypto_cfg);
-		/* 2 dummy writes */
-		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
-								0, NULL);
+		/* 1 dummy write */
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_SIZE_REG,
 								0, NULL);
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG,
@@ -1885,6 +1881,10 @@ static int _setup_auth_cmdlistptrs(struct qce_device *pdev,
 				(CRYPTO_AUTH_KEY0_REG + i*sizeof(uint32_t)),
 				0, NULL);
 	}
+	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
+			(crypto_cfg | CRYPTO_LITTLE_ENDIAN_MASK),
+			NULL);
+
 	if (alg != QCE_AEAD_SHA1_HMAC)
 		qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_GOPROC_REG,
 			((1 << CRYPTO_GO) | (1 << CRYPTO_RESULTS_DUMP)),
@@ -1963,8 +1963,6 @@ static int _setup_aead_cmdlistptrs(struct qce_device *pdev,
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_CFG_REG, 0, NULL);
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_START_REG, 0,
 									NULL);
-	/* add 1 dummy */
-	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_AUTH_SEG_CFG_REG, 0, NULL);
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_SEG_SIZE_REG, 0,
 						&pcl_info->seg_size);
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_ENCR_SEG_CFG_REG,
@@ -2027,6 +2025,10 @@ static int _setup_aead_cmdlistptrs(struct qce_device *pdev,
 		qce_add_cmd_element(pdev, &ce_vaddr,
 			(CRYPTO_ENCR_CCM_INT_CNTR0_REG + i * sizeof(uint32_t)),
 			0, NULL);
+
+	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_CONFIG_REG,
+			(crypto_cfg | CRYPTO_LITTLE_ENDIAN_MASK),
+			NULL);
 
 	qce_add_cmd_element(pdev, &ce_vaddr, CRYPTO_GOPROC_REG,
 			((1 << CRYPTO_GO) | (1 << CRYPTO_RESULTS_DUMP)),
