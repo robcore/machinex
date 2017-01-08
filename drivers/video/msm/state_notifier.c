@@ -64,6 +64,7 @@ EXPORT_SYMBOL_GPL(state_notifier_call_chain);
 
 static void _suspend_work(struct work_struct *work)
 {
+	printk("STATE_NOTIFIER - SUSPENDING");
 	state_suspended = true;
 	state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 	suspend_in_progress = false;
@@ -71,6 +72,7 @@ static void _suspend_work(struct work_struct *work)
 
 static void _resume_work(struct work_struct *work)
 {
+	printk("STATE_NOTIFIER - RESUMING");
 	state_suspended = false;
 	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
 }
