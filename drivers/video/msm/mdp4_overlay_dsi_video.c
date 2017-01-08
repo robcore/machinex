@@ -525,8 +525,6 @@ void mdp4_dsi_video_free_base_pipe(struct msm_fb_data_type *mfd)
 {
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
-	unsigned long flags;
-	int need_wait = 0;
 
 	vctrl = &vsync_ctrl_db[0];
 	pipe = vctrl->base_pipe;
