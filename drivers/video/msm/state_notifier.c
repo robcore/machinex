@@ -15,8 +15,6 @@
 
 #define STATE_NOTIFIER			"state_notifier"
 
-module_param_named(debug_mask, debug, uint, 0644);
-
 static bool enabled = true;
 module_param_named(enabled, enabled, bool, 0664);
 static struct work_struct suspend_work;
@@ -89,7 +87,7 @@ void state_resume(void)
 		return;
 
 	if (state_suspended) {
-		cancel_delayed_work_sync(&suspend_work);
+		cancel_work_sync(&suspend_work);
 		suspend_in_progress = false;
 		schedule_work(&resume_work);
 	}
@@ -103,7 +101,14 @@ static int state_notifier_init(void)
 	return 0;
 }
 
+static void state_notifier_exit(void)
+{
+	flush_work(&resume_work);
+	flush_work(&suspend_work);
+}
+
 subsys_initcall(state_notifier_init);
+module_exit(state_notifier_exit);
 
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Notifier Driver");

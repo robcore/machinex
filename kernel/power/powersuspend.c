@@ -267,10 +267,10 @@ static int power_suspend_init(void)
 	return 0;
 }
 
-static void __exit power_suspend_exit(void)
+static void power_suspend_exit(void)
 {
-	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
+	flush_work(&power_suspend_work);
 
 	if (power_suspend_kobj != NULL)
 		kobject_put(power_suspend_kobj);
