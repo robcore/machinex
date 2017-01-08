@@ -4452,6 +4452,7 @@ out:
  *	Stops currently running request synchronously. All relevant request
  *	information is cleared.
  */
+#if 0
 int msmsdcc_stop_request(struct mmc_host *mmc)
 {
 	struct msmsdcc_host *host = mmc_priv(mmc);
@@ -4507,6 +4508,7 @@ unsigned int msmsdcc_get_xfer_remain(struct mmc_host *mmc)
 
 	return data_cnt;
 }
+#endif
 
 /*
  * Work around of the unavailability of a power_reset functionality in SD cards
@@ -4565,8 +4567,10 @@ static const struct mmc_host_ops msmsdcc_ops = {
 	.start_signal_voltage_switch = msmsdcc_switch_io_voltage,
 	.execute_tuning = msmsdcc_execute_tuning,
 	.hw_reset = msmsdcc_hw_reset,
+#if 0
 	.stop_request = msmsdcc_stop_request,
 	.get_xfer_remain = msmsdcc_get_xfer_remain,
+#endif
 	.notify_load = msmsdcc_notify_load,
 };
 
