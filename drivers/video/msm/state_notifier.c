@@ -25,8 +25,8 @@ module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
-static bool first_boot;
-module_param_named(first_boot, first_boot, bool, 0444);
+//static bool first_boot;
+//module_param_named(first_boot, first_boot, bool, 0444);
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
 
@@ -90,13 +90,13 @@ void state_suspend(void)
 
 void state_resume(void)
 {
-
+#if 0
 	if (!first_boot) {
 		first_boot = true;
 		printk("STATE_NOTIFIER - Skipping First Boot");
 		return;
 	}
-
+#endif
 	if (!enabled)
 		return;
 
@@ -109,7 +109,7 @@ void state_resume(void)
 
 static int state_notifier_init(void)
 {
-	first_boot = false;
+	//first_boot = false;
 
 	susp_wq = alloc_workqueue("state_susp_wq", 0, 0);
 	if (!susp_wq)
