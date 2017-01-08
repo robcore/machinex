@@ -37,9 +37,6 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 
 #include "smd_private.h"
 
@@ -61,18 +58,6 @@ struct restart_log {
 enum subsys_state {
 	SUBSYS_OFFLINE,
 	SUBSYS_ONLINE,
-	SUBSYS_CRASHED,
-};
-
-static const char * const subsys_states[] = {
-	[SUBSYS_OFFLINE] = "OFFLINE",
-	[SUBSYS_ONLINE] = "ONLINE",
-	[SUBSYS_CRASHED] = "CRASHED",
-};
-
-enum subsys_state {
-	SUBSYS_OFFLINE,
-	SUBSYS_ONLINE,
 };
 
 static const char * const subsys_states[] = {
@@ -86,8 +71,7 @@ struct subsys_device {
 	char wlname[64];
 	struct work_struct work;
 	spinlock_t restart_lock;
-	bool restarting;
-	enum subsys_state state;
+	int restart_count;
 
 	void *notify;
 	struct device dev;
@@ -166,22 +150,17 @@ DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 static const char * const _order_8x60_modems[] = {"external_modem", "modem"};
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_modems, _order_8x60_modems);
 
-#if 0
-static const char * const order_modem_8960[] = {"modem"};
-
-static struct subsys_soc_restart_order restart_orders_modem_8960 = {
-	.subsystem_list = order_modem_8960,
-	.count = ARRAY_SIZE(order_modem_8960),
-	.subsys_ptrs = {[ARRAY_SIZE(order_8960)] = NULL}
-	};
-
-static struct subsys_soc_restart_order *restart_orders_modem_8960[] = {
-	&restart_orders_modem_8960,
-};
-#endif
+/* MSM 8960 restart ordering info */
+static const char * const order_8960[] = {"modem", "lpass"};
 /*SGLTE restart ordering info*/
 static const char * const order_8960_sglte[] = {"external_modem",
 						"modem"};
+
+static struct subsys_soc_restart_order restart_orders_8960_one = {
+	.subsystem_list = order_8960,
+	.count = ARRAY_SIZE(order_8960),
+	.subsys_ptrs = {[ARRAY_SIZE(order_8960)] = NULL}
+	};
 
 static struct subsys_soc_restart_order restart_orders_8960_fusion_sglte = {
 	.subsystem_list = order_8960_sglte,
@@ -189,22 +168,12 @@ static struct subsys_soc_restart_order restart_orders_8960_fusion_sglte = {
 	.subsys_ptrs = {[ARRAY_SIZE(order_8960_sglte)] = NULL}
 	};
 
+static struct subsys_soc_restart_order *restart_orders_8960[] = {
+	&restart_orders_8960_one,
+	};
+
 static struct subsys_soc_restart_order *restart_orders_8960_sglte[] = {
 	&restart_orders_8960_fusion_sglte,
-	};
-
-/* SGLTE2 restart ordering info*/
-static const char * const order_8064_sglte2[] = {"external_modem",
-						"external_modem_mdm"};
-
-static struct subsys_soc_restart_order restart_orders_8064_fusion_sglte2 = {
-	.subsystem_list = order_8064_sglte2,
-	.count = ARRAY_SIZE(order_8064_sglte2),
-	.subsys_ptrs = {[ARRAY_SIZE(order_8064_sglte2)] = NULL}
-	};
-
-static struct subsys_soc_restart_order *restart_orders_8064_sglte2[] = {
-	&restart_orders_8064_fusion_sglte2,
 	};
 
 /* These will be assigned to one of the sets above after
@@ -388,8 +357,6 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 	if (dev->desc->shutdown(dev->desc) < 0) {
 		WARN_ONCE(1, "subsys-restart: [%p]: Failed to shutdown %s!",
 			current, name);
-	}
-	subsys_set_state(dev, SUBSYS_OFFLINE);
 }
 
 static void subsystem_ramdump(struct subsys_device *dev, void *data)
@@ -406,10 +373,8 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 	const char *name = dev->desc->name;
 
 	pr_info("[%p]: Powering up %s\n", current, name);
-	if (dev->desc->powerup(dev->desc) < 0) {
-		WARN_ONCE(1, "[%p]: Failed to powerup %s!", current, name);
-	}
-	subsys_set_state(dev, SUBSYS_ONLINE);
+	if (dev->desc->powerup(dev->desc) < 0)
+		WARN_ONCE("[%p]: Failed to powerup %s!", current, name);
 }
 
 static int __find_subsys(struct device *dev, void *data)
@@ -482,10 +447,9 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	 * who initiated the original restart but has crashed while the restart
 	 * order is being rebooted.
 	 */
-	if (!mutex_trylock(powerup_lock)) {
+	if (!mutex_trylock(powerup_lock))
 		WARN_ONCE(1, "%s[%p]: Subsystem died during powerup!",
 						__func__, current);
-	}
 
 	do_epoch_check(dev);
 
@@ -528,34 +492,32 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 out:
 	spin_lock_irqsave(&dev->restart_lock, flags);
-	dev->restarting = false;
-	wake_unlock(&dev->wake_lock);
+	dev->restart_count--;
+	if (!dev->restart_count)
+		wake_unlock(&dev->wake_lock);
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
 }
 
 static void __subsystem_restart_dev(struct subsys_device *dev)
 {
 	struct subsys_desc *desc = dev->desc;
-	const char *name = dev->desc->name;
 	unsigned long flags;
 
 	pr_debug("Restarting %s [level=%d]!\n", desc->name, restart_level);
 
-	/*
-	 * We want to allow drivers to call subsystem_restart{_dev}() as many
-	 * times as they want up until the point where the subsystem is
-	 * shutdown.
-	 */
 	spin_lock_irqsave(&dev->restart_lock, flags);
-	if (dev->state != SUBSYS_CRASHED) {
-		if (dev->state == SUBSYS_ONLINE && !dev->restarting) {
-			dev->restarting = true;
-			dev->state = SUBSYS_CRASHED;
-			wake_lock(&dev->wake_lock);
-			queue_work(ssr_wq, &dev->work);
-		}
-	}
+	if (!dev->restart_count)
+		wake_lock(&dev->wake_lock);
+	dev->restart_count++;
 	spin_unlock_irqrestore(&dev->restart_lock, flags);
+
+	if (!queue_work(ssr_wq, &dev->work)) {
+		spin_lock_irqsave(&dev->restart_lock, flags);
+		dev->restart_count--;
+		if (!dev->restart_count)
+			wake_unlock(&dev->wake_lock);
+		spin_unlock_irqrestore(&dev->restart_lock, flags);
+	}
 }
 
 int subsystem_restart_dev(struct subsys_device *dev)
@@ -854,8 +816,7 @@ static int __init subsys_restart_init(void)
 {
 	int ret;
 
-	restart_level = RESET_SUBSYS_INDEPENDENT;
-
+	ssr_wq = alloc_workqueue("ssr_wq", 0, 0);
 	BUG_ON(!ssr_wq);
 
 	ret = bus_register(&subsys_bus_type);
@@ -881,3 +842,4 @@ arch_initcall(subsys_restart_init);
 
 MODULE_DESCRIPTION("Subsystem Restart Driver");
 MODULE_LICENSE("GPL v2");
+
