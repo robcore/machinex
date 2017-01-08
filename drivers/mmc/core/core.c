@@ -3170,6 +3170,9 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 		return err;
 	timeout = card->ext_csd.generic_cmd6_time;
 
+	if (!mmc_try_claim_host(host))
+		return -EBUSY;
+
 	if (card && mmc_card_mmc(card) &&
 			(card->ext_csd.cache_size > 0)) {
 		enable = !!enable;
