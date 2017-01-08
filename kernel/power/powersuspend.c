@@ -245,6 +245,9 @@ static int __init power_suspend_init(void)
 
 	mode = POWER_SUSPEND_PANEL;	// Robcore: The only possible mode.  I believe in choice, but not in this case.
 
+	INIT_WORK(&power_suspend_work, power_suspend);
+	INIT_WORK(&power_resume_work, power_resume);
+
 	return 0;
 }
 
@@ -254,7 +257,7 @@ static void __exit power_suspend_exit(void)
 		kobject_put(power_suspend_kobj);
 }
 
-module_init(power_suspend_init);
+subsys_initcall(power_suspend_init);
 module_exit(power_suspend_exit);
 
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com> \
