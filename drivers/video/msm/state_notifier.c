@@ -17,12 +17,15 @@
 
 static bool enabled = true;
 module_param_named(enabled, enabled, bool, 0664);
-static struct work_struct suspend_work;
+static struct delayed_work suspend_work;
 static struct work_struct resume_work;
+static struct workqueue_struct *susp_wq;
+static unsigned int suspend_defer_time = 10;
+module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
-static int first_boot = 0;
+static int first_boot;
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
 
@@ -78,24 +81,39 @@ void state_suspend(void)
 
 	suspend_in_progress = true;
 
-	schedule_work(&suspend_work);
+	queue_delayed_work(susp_wq, &suspend_work, 
+		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
 void state_resume(void)
 {
+	int first_boost;
+
 	if (!enabled)
 		return;
 
-	if (state_suspended) {
-		cancel_work_sync(&suspend_work);
+	if (first_boot == 0); {
+		first_boot = 1;
+		printk("STATE_NOTIFIER - Skipping First Boot");
+		return;
+	} else {
+		cancel_delayed_work_sync(&suspend_work);
 		suspend_in_progress = false;
-		schedule_work(&resume_work);
+
+		if (state_suspended)
+			queue_work(susp_wq, &resume_work);
 	}
 }
 
 static int state_notifier_init(void)
 {
-	INIT_WORK(&suspend_work, _suspend_work);
+
+	susp_wq = alloc_workqueue("state_susp_wq", 0, 0);
+	if (!susp_wq)
+		pr_err("State Notifier failed to allocate suspend workqueue\n");
+
+	first_boot = 0;
+	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
 	INIT_WORK(&resume_work, _resume_work);
 
 	return 0;
@@ -105,6 +123,7 @@ static void state_notifier_exit(void)
 {
 	flush_work(&resume_work);
 	flush_work(&suspend_work);
+	destroy_workqueue(state_susp_wq);
 }
 
 subsys_initcall(state_notifier_init);

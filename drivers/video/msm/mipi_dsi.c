@@ -35,6 +35,9 @@
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
@@ -184,6 +187,10 @@ static int mipi_dsi_off(struct platform_device *pdev)
 #ifdef CONFIG_POWERSUSPEND
 	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
+
+#ifdef CONFIG_STATE_NOTIFIER
+	state_suspend();
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY
@@ -474,6 +481,10 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
+
+	#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+	#endif
 
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
