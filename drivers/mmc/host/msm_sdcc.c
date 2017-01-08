@@ -1940,9 +1940,7 @@ msmsdcc_irq(int irq, void *dev_id)
 			 * will take care of signaling sdio irq during
 			 * mmc_sdio_resume().
 			 */
-			if (host->sdcc_suspended &&
-					(host->plat->mpm_sdiowakeup_int ||
-					 host->plat->sdiowakeup_irq)) {
+			if (host->sdcc_suspended) {
 				/*
 				 * This is a wakeup interrupt so hold wakelock
 				 * until SDCC resume is handled.
@@ -2471,10 +2469,8 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 	struct device *dev = mmc_dev(host->mmc);
 
 	curr_slot = host->plat->vreg_data;
-	if (!curr_slot) {
-		rc = -EINVAL;
+	if (!curr_slot)
 		goto out;
-	}
 
 	curr_vdd_reg = curr_slot->vdd_data;
 	curr_vdd_io_reg = curr_slot->vdd_io_data;
@@ -4445,116 +4441,6 @@ out:
 	return err;
 }
 
-/**
- *	msmsdcc_stop_request - stops ongoing request
- *	@mmc: MMC host, running the request
- *
- *	Stops currently running request synchronously. All relevant request
- *	information is cleared.
- */
-#if 0
-int msmsdcc_stop_request(struct mmc_host *mmc)
-{
-	struct msmsdcc_host *host = mmc_priv(mmc);
-	struct mmc_request *mrq;
-	unsigned long flags;
-	int rc = 0;
-
-	spin_lock_irqsave(&host->lock, flags);
-	mrq = host->curr.mrq;
-	if (mrq) {
-		msmsdcc_reset_and_restore(host);
-		/*
-		 * Note: We are just taking care of SPS. We may also
-		 * need to think about ADM (and PIO?) later if required.
-		 */
-		if (host->sps.sg && is_sps_mode(host)) {
-			if (!mrq->data->host_cookie)
-				dma_unmap_sg(mmc_dev(host->mmc), host->sps.sg,
-					host->sps.num_ents, host->sps.dir);
-			host->sps.sg = NULL;
-			host->sps.busy = 0;
-		}
-
-		/*
-		 * Clear current request information as current
-		 * request has ended
-		 */
-		memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
-		del_timer(&host->req_tout_timer);
-	} else {
-		rc = -EINVAL;
-	}
-	spin_unlock_irqrestore(&host->lock, flags);
-
-	return rc;
-}
-
-/**
- *	msmsdcc_get_xfer_remain - returns number of bytes passed on bus
- *	@mmc: MMC host, running the request
- *
- *	Returns the number of bytes passed for SPS transfer. 0 - for non-SPS
- *	transfer.
- */
-unsigned int msmsdcc_get_xfer_remain(struct mmc_host *mmc)
-{
-	struct msmsdcc_host *host = mmc_priv(mmc);
-	u32 data_cnt = 0;
-
-	/* Currently, we don't support to stop the non-SPS transfer */
-	if (host->sps.busy && atomic_read(&host->clks_on))
-		data_cnt = readl_relaxed(host->base + MMCIDATACNT);
-
-	return data_cnt;
-}
-#endif
-
-/*
- * Work around of the unavailability of a power_reset functionality in SD cards
- * by turning the OFF & back ON the regulators supplying the SD card.
- */
-void msmsdcc_hw_reset(struct mmc_host *mmc)
-{
-	struct mmc_card *card = mmc->card;
-	struct msmsdcc_host *host = mmc_priv(mmc);
-	int rc;
-
-	/* Write-protection bits would be lost on a hardware reset in emmc */
-	if (!card || !mmc_card_sd(card))
-		return;
-
-	/*
-	 * Continuing on failing to disable regulator would lead to a panic
-	 * anyway, since the commands would fail and console would be flooded
-	 * with prints, eventually leading to a watchdog bark
-	 */
-	rc = msmsdcc_setup_vreg(host, false, false);
-	if (rc) {
-		pr_err("%s: %s disable regulator: failed: %d\n",
-		       mmc_hostname(mmc), __func__, rc);
-		BUG_ON(rc);
-	}
-
-	/* 10ms delay for the supply to reach the desired voltage level */
-	usleep_range(10000, 12000);
-
-	/*
-	 * Continuing on failing to enable regulator would lead to a panic
-	 * anyway, since the commands would fail and console would be flooded
-	 * with prints, eventually leading to a watchdog bark
-	 */
-	rc = msmsdcc_setup_vreg(host, true, false);
-	if (rc) {
-		pr_err("%s: %s enable regulator: failed: %d\n",
-		       mmc_hostname(mmc), __func__, rc);
-		BUG_ON(rc);
-	}
-
-	/* 10ms delay for the supply to reach the desired voltage level */
-	usleep_range(10000, 12000);
-}
-
 static const struct mmc_host_ops msmsdcc_ops = {
 	.enable		= msmsdcc_enable,
 	.disable	= msmsdcc_disable,
@@ -4566,11 +4452,6 @@ static const struct mmc_host_ops msmsdcc_ops = {
 	.enable_sdio_irq = msmsdcc_enable_sdio_irq,
 	.start_signal_voltage_switch = msmsdcc_switch_io_voltage,
 	.execute_tuning = msmsdcc_execute_tuning,
-	.hw_reset = msmsdcc_hw_reset,
-#if 0
-	.stop_request = msmsdcc_stop_request,
-	.get_xfer_remain = msmsdcc_get_xfer_remain,
-#endif
 	.notify_load = msmsdcc_notify_load,
 };
 
@@ -6304,9 +6185,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps |= plat->mmc_bus_width;
 	mmc->caps |= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED;
 	mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_ERASE;
-
-	mmc->caps |= MMC_CAP_HW_RESET;
-
 	/*
 	 * If we send the CMD23 before multi block write/read command
 	 * then we need not to send CMD12 at the end of the transfer.
@@ -6394,6 +6272,8 @@ msmsdcc_probe(struct platform_device *pdev)
 	host->sdcc_irq_disabled = 1;
 
 	if (plat->sdiowakeup_irq) {
+		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
+				mmc_hostname(mmc));
 		ret = request_irq(plat->sdiowakeup_irq,
 			msmsdcc_platform_sdiowakeup_irq,
 			IRQF_SHARED | IRQF_TRIGGER_LOW,
@@ -6412,7 +6292,7 @@ msmsdcc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int) {
+	if (host->plat->mpm_sdiowakeup_int) {
 		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
 				mmc_hostname(mmc));
 	}
@@ -6644,12 +6524,12 @@ msmsdcc_probe(struct platform_device *pdev)
 		free_irq(plat->status_irq, host);
 	msmsdcc_disable_status_gpio(host);
  sdiowakeup_irq_free:
-	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int)
-		wake_lock_destroy(&host->sdio_wlock);
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq)
 		free_irq(plat->sdiowakeup_irq, host);
  pio_irq_free:
+	if (plat->sdiowakeup_irq)
+		wake_lock_destroy(&host->sdio_wlock);
 	free_irq(core_irqres->start, host);
  irq_free:
 	free_irq(core_irqres->start, host);
@@ -6744,12 +6624,10 @@ static int msmsdcc_remove(struct platform_device *pdev)
 
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
+		wake_lock_destroy(&host->sdio_wlock);
 		irq_set_irq_wake(plat->sdiowakeup_irq, 0);
 		free_irq(plat->sdiowakeup_irq, host);
 	}
-
-	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int)
-		wake_lock_destroy(&host->sdio_wlock);
 
 	free_irq(host->core_irqres->start, host);
 	free_irq(host->core_irqres->start, host);
@@ -7128,9 +7006,8 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 */
 	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
+		host->pending_resume = false;
  out:
-	/* This flag must not be set if system is entering into suspend */
-	host->pending_resume = false;
 	msmsdcc_print_pm_stats(host, start, __func__);
 	return rc;
 }
