@@ -261,6 +261,9 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mdelay(500);
 #endif
 
+	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
+		mipi_dsi_pdata->dsi_power_save(1);
+
 	cont_splash_clk_ctrl(0);
 	mipi_dsi_prepare_ahb_clocks();
 
