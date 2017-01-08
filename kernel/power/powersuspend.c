@@ -49,16 +49,17 @@
 #include <linux/workqueue.h>
 
 #define MAJOR_VERSION	1
-#define MINOR_VERSION	8
-#define SUB_MINOR_VERSION 1
+#define MINOR_VERSION	9
+#define SUB_MINOR_VERSION 0
 
 static DEFINE_MUTEX(power_suspend_lock);
+static DEFINE_SPINLOCK(state_lock);
 static LIST_HEAD(power_suspend_handlers);
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
-static DECLARE_WORK(power_suspend_work, power_suspend);
-static DECLARE_WORK(power_resume_work, power_resume);
-static DEFINE_SPINLOCK(state_lock);
+struct work_struct power_suspend_work;
+struct work_struct power_resume_work;
+
 
 static int state; // Yank555.lu : Current powersuspend state (screen on / off)
 static int mode;  // robcore: Fixed powersuspend mode  (panel)

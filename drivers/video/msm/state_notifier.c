@@ -14,12 +14,12 @@
 #include <linux/state_notifier.h>
 
 #define DEFAULT_SUSPEND_DEFER_TIME 	10
-#define STATE_NOTIFIER			"state_notifier"
+#define STATE_NOTIFIER			"STATE_NOTIFIER"
 
 /*
  * debug = 1 will print all
  */
-static unsigned int debug;
+static unsigned int debug = 1;
 module_param_named(debug_mask, debug, uint, 0644);
 
 #define dprintk(msg...)		\
