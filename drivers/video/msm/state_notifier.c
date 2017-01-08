@@ -96,7 +96,7 @@ void state_suspend(void)
 
 	suspend_in_progress = true;
 
-	queue_delayed_work(susp_wq, &suspend_work, 
+	queue_delayed_work(susp_wq, &suspend_work,
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
@@ -125,7 +125,7 @@ static int __init state_notifier_init(void)
 	return 0;
 }
 
-subsys_initcall(state_notifier_init);
+module_init(state_notifier_init);
 
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Notifier Driver");

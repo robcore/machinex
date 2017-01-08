@@ -139,13 +139,13 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	ret = panel_next_off(pdev);
 
-	spin_lock_bh(&dsi_clk_lock);
-
-	mipi_dsi_clk_disable();
-
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
 #endif
+
+	spin_lock_bh(&dsi_clk_lock);
+
+	mipi_dsi_clk_disable();
 
 	/* disbale dsi engine */
 	dsi_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0000);
@@ -196,9 +196,6 @@ static int mipi_dsi_off(struct platform_device *pdev)
 #ifdef CONFIG_STATE_NOTIFIER
 	state_suspend();
 #endif
-
-	pr_debug("%s-:\n", __func__);
-
 	return ret;
 }
 
@@ -263,10 +260,6 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	if (system_rev == 6)
 		mdelay(500);
 #endif
-
-
-	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
-		mipi_dsi_pdata->dsi_power_save(1);
 
 	cont_splash_clk_ctrl(0);
 	mipi_dsi_prepare_ahb_clocks();
@@ -493,8 +486,6 @@ static int mipi_dsi_on(struct platform_device *pdev)
 #ifdef CONFIG_STATE_NOTIFIER
 		state_resume();
 #endif
-
-	pr_debug("%s-:\n", __func__);
 
 	return ret;
 }
