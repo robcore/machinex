@@ -359,15 +359,6 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 			current, name);
 }
 
-static void subsystem_ramdump(struct subsys_device *dev, void *data)
-{
-	const char *name = dev->desc->name;
-
-	if (dev->desc->ramdump)
-		if (dev->desc->ramdump(enable_ramdumps, dev->desc) < 0)
-			pr_warn("%s[%p]: Ramdump failed.\n", name, current);
-}
-
 static void subsystem_powerup(struct subsys_device *dev, void *data)
 {
 	const char *name = dev->desc->name;
@@ -549,8 +540,6 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = 0;
-		/* Fall through */
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
 		break;
