@@ -628,7 +628,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		msd.mpd->first_bl_hbm_psre = 1;
 
 	pr_info("[%s]\n", __func__);
-	printk("Rob's Panel Hook Msg.");
+	//printk("Rob's Panel Hook Msg.");
 /*#ifdef CONFIG_POWERSUSPEND
 		 Yank555.lu : hook to handle powersuspend tasks (wakeup)
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
