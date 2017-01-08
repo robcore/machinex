@@ -7006,8 +7006,9 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 */
 	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
-		host->pending_resume = false;
  out:
+	/* This flag must not be set if system is entering into suspend */
+	host->pending_resume = false;
 	msmsdcc_print_pm_stats(host, start, __func__);
 	return rc;
 }
