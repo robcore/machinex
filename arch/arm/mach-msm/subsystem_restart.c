@@ -120,9 +120,6 @@ static struct bus_type subsys_bus_type = {
 
 static DEFINE_IDA(subsys_ida);
 
-static int enable_ramdumps;
-module_param(enable_ramdumps, int, S_IRUGO | S_IWUSR);
-
 struct workqueue_struct *ssr_wq;
 
 static LIST_HEAD(restart_log_list);
@@ -464,9 +461,6 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	 * before the powerup lock is released, panic and bail out.
 	 */
 	mutex_unlock(shutdown_lock);
-
-	/* Collect ram dumps for all subsystems in order here */
-	for_each_subsys_device(list, count, NULL, subsystem_ramdump);
 
 	send_notification_to_order(list, count, SUBSYS_BEFORE_POWERUP);
 	for_each_subsys_device(list, count, NULL, subsystem_powerup);
