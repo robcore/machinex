@@ -25,7 +25,7 @@ module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
-static unsigned int first_boot;
+static unsigned int first_boot = 0;
 module_param_named(first_boot, first_boot, uint, 0444);
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
@@ -107,12 +107,10 @@ void state_resume(void)
 
 static int state_notifier_init(void)
 {
-
 	susp_wq = alloc_workqueue("state_susp_wq", 0, 0);
 	if (!susp_wq)
 		pr_err("State Notifier failed to allocate suspend workqueue\n");
 
-	first_boot = 0;
 	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
 	INIT_WORK(&resume_work, _resume_work);
 
