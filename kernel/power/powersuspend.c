@@ -61,8 +61,8 @@ static DEFINE_SPINLOCK(state_lock);
 static LIST_HEAD(power_suspend_handlers);
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
-void power_suspend(struct work_struct *work);
-void power_resume(struct work_struct *work);
+static void power_suspend(struct work_struct *work);
+static void power_resume(struct work_struct *work);
 
 static int state; // Yank555.lu : Current powersuspend state (screen on / off)
 static int mode;  // robcore: Fixed powersuspend mode  (panel)

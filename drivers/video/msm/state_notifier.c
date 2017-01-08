@@ -25,7 +25,8 @@ module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
-static int first_boot;
+static unsigned int first_boot;
+module_param_named(first_boot, first_boot, uint, 0444);
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
 
@@ -81,13 +82,13 @@ void state_suspend(void)
 
 	suspend_in_progress = true;
 
-	queue_delayed_work(susp_wq, &suspend_work, 
+	queue_delayed_work(susp_wq, &suspend_work,
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
 void state_resume(void)
 {
-	int first_boost;
+	int first_boot;
 
 	if (!enabled)
 		return;
@@ -96,13 +97,13 @@ void state_resume(void)
 		first_boot = 1;
 		printk("STATE_NOTIFIER - Skipping First Boot");
 		return;
-	} else {
+	}
+
 		cancel_delayed_work_sync(&suspend_work);
 		suspend_in_progress = false;
 
 		if (state_suspended)
 			queue_work(susp_wq, &resume_work);
-	}
 }
 
 static int state_notifier_init(void)
@@ -122,8 +123,8 @@ static int state_notifier_init(void)
 static void state_notifier_exit(void)
 {
 	flush_work(&resume_work);
-	flush_work(&suspend_work);
-	destroy_workqueue(state_susp_wq);
+	flush_delayed_work(&suspend_work);
+	destroy_workqueue(susp_wq);
 }
 
 subsys_initcall(state_notifier_init);
