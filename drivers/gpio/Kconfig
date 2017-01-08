@@ -576,7 +576,6 @@ config GPIO_QPNP_DEBUG
 	  QPNP gpio support
 
 config GPIO_QPNP_PIN
-	depends on ARCH_MSM8974
 	depends on SPMI
 	depends on OF_SPMI
 	depends on MSM_QPNP_INT
