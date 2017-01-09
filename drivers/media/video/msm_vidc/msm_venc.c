@@ -677,13 +677,13 @@ static int msm_venc_start_streaming(struct vb2_queue *q, unsigned int count)
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
 		if (msm_comm_scale_clocks(inst->core))
 			pr_err("Failed to scale clocks. Performance/power might be impacted\n");
-		if (inst->vb2_bufq[CAPTURE_PORT].streaming)
+		if (inst->bufq[CAPTURE_PORT].vb2_bufq.streaming)
 			rc = start_streaming(inst);
 		break;
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		if (msm_comm_scale_clocks(inst->core))
 			pr_err("Failed to scale clocks. Performance/power might be impacted\n");
-		if (inst->vb2_bufq[OUTPUT_PORT].streaming)
+		if (inst->bufq[OUTPUT_PORT].vb2_bufq.streaming)
 			rc = start_streaming(inst);
 		break;
 	default:
@@ -1378,7 +1378,7 @@ int msm_venc_g_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 
 int msm_venc_reqbufs(struct msm_vidc_inst *inst, struct v4l2_requestbuffers *b)
 {
-	struct vb2_queue *q = NULL;
+	struct buf_queue *q = NULL;
 	int rc = 0;
 	if (!inst || !b) {
 		pr_err("Invalid input, inst = %p, buffer = %p\n", inst, b);
@@ -1390,7 +1390,9 @@ int msm_venc_reqbufs(struct msm_vidc_inst *inst, struct v4l2_requestbuffers *b)
 		return -EINVAL;
 	}
 
-	rc = vb2_reqbufs(q, b);
+	mutex_lock(&q->lock);
+	rc = vb2_reqbufs(&q->vb2_bufq, b);
+	mutex_unlock(&q->lock);
 	if (rc)
 		pr_err("Failed to get reqbufs, %d\n", rc);
 	return rc;
@@ -1433,14 +1435,16 @@ int msm_venc_prepare_buf(struct msm_vidc_inst *inst,
 
 int msm_venc_qbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 {
-	struct vb2_queue *q = NULL;
+	struct buf_queue *q = NULL;
 	int rc = 0;
 	q = msm_comm_get_vb2q(inst, b->type);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", b->type);
 		return -EINVAL;
 	}
-	rc = vb2_qbuf(q, b);
+	mutex_lock(&q->lock);
+	rc = vb2_qbuf(&q->vb2_bufq, b);
+	mutex_unlock(&q->lock);
 	if (rc)
 		pr_err("Failed to qbuf, %d\n", rc);
 	return rc;
@@ -1448,14 +1452,16 @@ int msm_venc_qbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 
 int msm_venc_dqbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 {
-	struct vb2_queue *q = NULL;
+	struct buf_queue *q = NULL;
 	int rc = 0;
 	q = msm_comm_get_vb2q(inst, b->type);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", b->type);
 		return -EINVAL;
 	}
-	rc = vb2_dqbuf(q, b, true);
+	mutex_lock(&q->lock);
+	rc = vb2_dqbuf(&q->vb2_bufq, b, true);
+	mutex_unlock(&q->lock);
 	if (rc)
 		pr_err("Failed to dqbuf, %d\n", rc);
 	return rc;
@@ -1464,14 +1470,16 @@ int msm_venc_dqbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 int msm_venc_streamon(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 {
 	int rc = 0;
-	struct vb2_queue *q;
+	struct buf_queue *q;
 	q = msm_comm_get_vb2q(inst, i);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", i);
 		return -EINVAL;
 	}
 	pr_debug("Calling streamon\n");
-	rc = vb2_streamon(q, i);
+	mutex_lock(&q->lock);
+	rc = vb2_streamon(&q->vb2_bufq, i);
+	mutex_unlock(&q->lock);
 	if (rc)
 		pr_err("streamon failed on port: %d\n", i);
 	return rc;
@@ -1480,15 +1488,16 @@ int msm_venc_streamon(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 int msm_venc_streamoff(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 {
 	int rc = 0;
-	struct vb2_queue *q;
+	struct buf_queue *q;
 	q = msm_comm_get_vb2q(inst, i);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", i);
 		return -EINVAL;
 	}
 	pr_debug("Calling streamoff\n");
-	rc = vb2_streamoff(q, i);
-	if (rc)
+	mutex_lock(&q->lock);
+	rc = vb2_streamoff(&q->vb2_bufq, i);
+	mutex_unlock(&q->lock);	if (rc)
 		pr_err("streamoff failed on port: %d\n", i);
 	return rc;
 }

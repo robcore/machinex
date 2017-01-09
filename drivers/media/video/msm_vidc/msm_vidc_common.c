@@ -273,13 +273,13 @@ const struct msm_vidc_format *msm_comm_get_pixel_fmt_fourcc(
 	return &fmt[i];
 }
 
-struct vb2_queue *msm_comm_get_vb2q(
+struct buf_queue *msm_comm_get_vb2q(
 		struct msm_vidc_inst *inst,	enum v4l2_buf_type type)
 {
 	if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		return &inst->vb2_bufq[CAPTURE_PORT];
+		return &inst->bufq[CAPTURE_PORT];
 	if (type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		return &inst->vb2_bufq[OUTPUT_PORT];
+		return &inst->bufq[OUTPUT_PORT];
 	return NULL;
 }
 
@@ -524,17 +524,21 @@ static struct vb2_buffer *get_vb_from_device_addr(struct vb2_queue *q,
 		u32 dev_addr)
 {
 	struct vb2_buffer *vb = NULL;
+	struct vb2_queue *q = NULL;
 	int found = 0;
-	if (!q) {
+	if (!bufq) {
 		pr_err("Invalid parameter\n");
 		return NULL;
 	}
+	q = &bufq->vb2_bufq;
+	mutex_lock(&bufq->lock);
 	list_for_each_entry(vb, &q->queued_list, queued_entry) {
 		if (vb->v4l2_planes[0].m.userptr == dev_addr) {
 			found = 1;
 			break;
 		}
 	}
+	mutex_unlock(&bufq->lock);
 	if (!found) {
 		pr_err("Failed to find the buffer in queued list: %d, %d\n",
 			dev_addr, q->type);
@@ -553,7 +557,9 @@ static void handle_ebd(enum command_response cmd, void *data)
 	}
 	vb = response->clnt_data;
 	if (vb)
+		mutex_lock(&inst->bufq[OUTPUT_PORT].lock);
 		vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
+		mutex_unlock(&inst->bufq[OUTPUT_PORT].lock);
 }
 
 static void handle_fbd(enum command_response cmd, void *data)
@@ -568,14 +574,16 @@ static void handle_fbd(enum command_response cmd, void *data)
 	}
 	inst = (struct msm_vidc_inst *)response->session_id;
 	fill_buf_done = (struct vidc_hal_fbd *)&response->output_done;
-	vb = get_vb_from_device_addr(&inst->vb2_bufq[CAPTURE_PORT],
+	vb = get_vb_from_device_addr(&inst->bufq[CAPTURE_PORT],
 		(u32)fill_buf_done->packet_buffer1);
 	if (vb) {
 		vb->v4l2_planes[0].bytesused = fill_buf_done->filled_len1;
 		pr_debug("Filled length = %d\n", vb->v4l2_planes[0].bytesused);
 		if (fill_buf_done->flags1 & HAL_BUFFERFLAG_EOS)
 			vb->v4l2_buf.flags |= V4L2_BUF_FLAG_EOS;
+		mutex_lock(&inst->bufq[CAPTURE_PORT].lock);
 		vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
+		mutex_unlock(&inst->bufq[CAPTURE_PORT].lock);
 	} else {
 		/*
 		 * FIXME:
@@ -591,18 +599,19 @@ static void handle_fbd(enum command_response cmd, void *data)
 		 */
 		if (fill_buf_done->flags1 & HAL_BUFFERFLAG_EOS
 			&& fill_buf_done->filled_len1 == 0) {
-			struct vb2_queue *q = &inst->vb2_bufq[CAPTURE_PORT];
+			struct buf_queue *q = &inst->bufq[CAPTURE_PORT];
 
-			if (!list_empty(&q->queued_list)) {
-				vb = list_first_entry(&q->queued_list,
+			if (!list_empty(&q->vb2_bufq.queued_list)) {
+				vb = list_first_entry(&q->vb2_bufq.queued_list,
 					struct vb2_buffer, queued_entry);
 				vb->v4l2_planes[0].bytesused = 0;
 				vb->v4l2_buf.flags |= V4L2_BUF_FLAG_EOS;
+				mutex_lock(&q->lock);
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
+				mutex_unlock(&q->lock);
 			}
 
 		}
-
 	}
 }
 
