@@ -752,20 +752,20 @@ SYSCALL_DEFINE3(inotify_add_watch, int, fd, const char __user *, pathname,
 	struct fsnotify_group *group;
 	struct inode *inode;
 	struct path path;
-	struct file *filp;
-	int ret, fput_needed;
+	struct fd f;
+	int ret;
 	unsigned flags = 0;
 
 	/* don't allow invalid bits: we don't want flags set */
 	if (unlikely(!(mask & ALL_INOTIFY_BITS)))
 		return -EINVAL;
 
-	filp = fget_light(fd, &fput_needed);
-	if (unlikely(!filp))
+	f = fdget(fd);
+	if (unlikely(!f.file))
 		return -EBADF;
 
 	/* verify that this is indeed an inotify instance */
-	if (unlikely(filp->f_op != &inotify_fops)) {
+	if (unlikely(f.file->f_op != &inotify_fops)) {
 		ret = -EINVAL;
 		goto fput_and_out;
 	}
