@@ -907,7 +907,7 @@ static void p54u_stop(struct ieee80211_hw *dev)
 	p54u_free_urbs(dev);
 }
 
-static int __devinit p54u_probe(struct usb_interface *intf,
+static int p54u_probe(struct usb_interface *intf,
 				const struct usb_device_id *id)
 {
 	struct usb_device *udev = interface_to_usbdev(intf);
@@ -1004,7 +1004,7 @@ err_free_dev:
 	return err;
 }
 
-static void __devexit p54u_disconnect(struct usb_interface *intf)
+static void p54u_disconnect(struct usb_interface *intf)
 {
 	struct ieee80211_hw *dev = usb_get_intfdata(intf);
 	struct p54u_priv *priv;

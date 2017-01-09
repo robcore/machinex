@@ -2429,7 +2429,7 @@ static const struct ieee80211_iface_combination if_comb = {
 	.num_different_channels = 1,
 };
 
-int __devinit
+int
 ath5k_init_ah(struct ath5k_hw *ah, const struct ath_bus_ops *bus_ops)
 {
 	struct ieee80211_hw *hw = ah->hw;
@@ -2854,7 +2854,7 @@ static void ath5k_reset_work(struct work_struct *work)
 	mutex_unlock(&ah->lock);
 }
 
-static int __devinit
+static int
 ath5k_init(struct ieee80211_hw *hw)
 {
 
