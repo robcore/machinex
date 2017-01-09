@@ -300,6 +300,7 @@ static int timerfd_fget(int fd, struct fd *p)
 		fdput(f);
 		return -EINVAL;
 	}
+
 	*p = f;
 	return 0;
 }
@@ -346,13 +347,13 @@ SYSCALL_DEFINE2(timerfd_create, int, clockid, int, flags)
 	return ufd;
 }
 
-static int do_timerfd_settime(int ufd, int flags, 
+static int do_timerfd_settime(int ufd, int flags,
 		const struct itimerspec *new,
 		struct itimerspec *old)
 {
-	struct file *file;
+	struct fd f;
 	struct timerfd_ctx *ctx;
-	int ret, fput_needed;
+	int ret;
 
 	if ((flags & ~TFD_SETTIME_FLAGS) ||
 	    !timespec_valid(&new->it_value) ||
@@ -406,20 +407,19 @@ static int do_timerfd_settime(int ufd, int flags,
 	ret = timerfd_setup(ctx, flags, new);
 
 	spin_unlock_irq(&ctx->wqh.lock);
-	fput_light(file, fput_needed);
+	fdput(f);
 	return ret;
 }
 
 static int do_timerfd_gettime(int ufd, struct itimerspec *t)
 {
-	struct file *file;
+	struct fd f;
 	struct timerfd_ctx *ctx;
-	int fput_needed;
 
-	file = timerfd_fget(ufd, &fput_needed);
-	if (IS_ERR(file))
-		return PTR_ERR(file);
-	ctx = file->private_data;
+	int ret = timerfd_fget(ufd, &f);
+	if (ret)
+		return ret;
+	ctx = f.file->private_data;
 
 	spin_lock_irq(&ctx->wqh.lock);
 	if (ctx->expired && ctx->tintv.tv64) {
@@ -440,7 +440,7 @@ static int do_timerfd_gettime(int ufd, struct itimerspec *t)
 	t->it_value = ktime_to_timespec(timerfd_get_remaining(ctx));
 	t->it_interval = ktime_to_timespec(ctx->tintv);
 	spin_unlock_irq(&ctx->wqh.lock);
-	fput_light(file, fput_needed);
+	fdput(f);
 	return 0;
 }
 
