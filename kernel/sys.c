@@ -589,7 +589,7 @@ void ctrl_alt_del(void)
 	else
 		kill_cad_pid(SIGINT, 1);
 }
-	
+
 /*
  * Unprivileged users may change the real gid to the effective gid
  * or vice versa.  (BSD-style)
@@ -1762,15 +1762,15 @@ SYSCALL_DEFINE1(umask, int, mask)
 #ifdef CONFIG_CHECKPOINT_RESTORE
 static int prctl_set_mm_exe_file(struct mm_struct *mm, unsigned int fd)
 {
-	struct file *exe_file;
+	struct fd exe;
 	struct dentry *dentry;
 	int err;
 
-	exe_file = fget(fd);
-	if (!exe_file)
+	exe = fdget(fd);
+	if (!exe.file)
 		return -EBADF;
 
-	dentry = exe_file->f_path.dentry;
+	dentry = exe.file->f_path.dentry;
 
 	/*
 	 * Because the original mm->exe_file points to executable file, make
@@ -1813,12 +1813,12 @@ static int prctl_set_mm_exe_file(struct mm_struct *mm, unsigned int fd)
 		goto exit_unlock;
 
 	err = 0;
-	set_mm_exe_file(mm, exe_file);
+	set_mm_exe_file(mm, exe.file);
 exit_unlock:
 	up_write(&mm->mmap_sem);
 
 exit:
-	fput(exe_file);
+	fdput(exe);
 	return err;
 }
 
