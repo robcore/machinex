@@ -249,8 +249,8 @@ static int power_suspend_init(void)
 
 	mode = POWER_SUSPEND_PANEL;	// Robcore: The only possible mode.  I believe in choice, but not in this case.
 
-	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
+	INIT_WORK(&power_suspend_work, power_suspend);
 
 	return 0;
 }
