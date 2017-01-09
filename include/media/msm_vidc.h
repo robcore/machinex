@@ -48,4 +48,5 @@ int msm_vidc_decoder_cmd(void *instance, struct v4l2_decoder_cmd *dec);
 int msm_vidc_encoder_cmd(void *instance, struct v4l2_encoder_cmd *enc);
 int msm_vidc_poll(void *instance, struct file *filp,
 		struct poll_table_struct *pt);
+int msm_vidc_wait(void *instance);
 #endif

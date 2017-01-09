@@ -419,6 +419,7 @@ static void handle_event_change(enum command_response cmd, void *data)
 		inst->reconfig_width = event_notify->width;
 		inst->in_reconfig = true;
 		v4l2_event_queue_fh(&inst->event_handler, &dqevent);
+		wake_up(&inst->kernel_event_queue);
 		return;
 	} else {
 		pr_err("Failed to get valid response for event_change\n");
@@ -515,6 +516,7 @@ static void handle_session_close(enum command_response cmd, void *data)
 		dqevent.type = V4L2_EVENT_MSM_VIDC_CLOSE_DONE;
 		dqevent.id = 0;
 		v4l2_event_queue_fh(&inst->event_handler, &dqevent);
+		wake_up(&inst->kernel_event_queue);
 	} else {
 		pr_err("Failed to get valid response for session close\n");
 	}
@@ -551,15 +553,18 @@ static void handle_ebd(enum command_response cmd, void *data)
 {
 	struct msm_vidc_cb_data_done *response = data;
 	struct vb2_buffer *vb;
+	struct msm_vidc_inst *inst;
 	if (!response) {
 		pr_err("Invalid response from vidc_hal\n");
 		return;
 	}
 	vb = response->clnt_data;
-	if (vb)
+	inst = (struct msm_vidc_inst *)response->session_id;
+	if (vb) {
 		mutex_lock(&inst->bufq[OUTPUT_PORT].lock);
 		vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 		mutex_unlock(&inst->bufq[OUTPUT_PORT].lock);
+		wake_up(&inst->kernel_event_queue);
 }
 
 static void handle_fbd(enum command_response cmd, void *data)
@@ -584,6 +589,7 @@ static void handle_fbd(enum command_response cmd, void *data)
 		mutex_lock(&inst->bufq[CAPTURE_PORT].lock);
 		vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 		mutex_unlock(&inst->bufq[CAPTURE_PORT].lock);
+		wake_up(&inst->kernel_event_queue);
 	} else {
 		/*
 		 * FIXME:
