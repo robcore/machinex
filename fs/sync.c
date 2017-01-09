@@ -254,15 +254,12 @@ EXPORT_SYMBOL(vfs_fsync);
 
 static int do_fsync(unsigned int fd, int datasync)
 {
-	struct file *file;
+	struct fd f = fdget(fd);
 	int ret = -EBADF;
 
-	int fput_needed;
-
-	file = fget_light(fd, &fput_needed);
-	if (file) {
-		ret = vfs_fsync(file, datasync);
-		fput_light(file, fput_needed);
+	if (f.file) {
+		ret = vfs_fsync(f.file, datasync);
+		fdput(f);
 	}
 	return ret;
 }
