@@ -2288,7 +2288,7 @@ static noinline long btrfs_ioctl_clone(struct file *file, unsigned long srcfd,
 {
 	struct inode *inode = fdentry(file)->d_inode;
 	struct btrfs_root *root = BTRFS_I(inode)->root;
-	struct file *src_file;
+	struct fd src_file;
 	struct inode *src;
 	struct btrfs_trans_handle *trans;
 	struct btrfs_path *path;

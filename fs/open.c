@@ -413,16 +413,15 @@ out:
 
 SYSCALL_DEFINE1(fchdir, unsigned int, fd)
 {
-	struct file *file;
+	struct fd f = fdget_raw(fd);
 	struct inode *inode;
-	int error, fput_needed;
+	int error = -EBADF;
 
 	error = -EBADF;
-	file = fget_raw_light(fd, &fput_needed);
-	if (!file)
+	if (!f.file)
 		goto out;
 
-	inode = file->f_path.dentry->d_inode;
+	inode = f.file->f_path.dentry->d_inode;
 
 	error = -ENOTDIR;
 	if (!S_ISDIR(inode->i_mode))
@@ -430,9 +429,9 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
 
 	error = inode_permission(inode, MAY_EXEC | MAY_CHDIR);
 	if (!error)
-		set_fs_pwd(current->fs, &file->f_path);
+		set_fs_pwd(current->fs, &f.file->f_path);
 out_putf:
-	fput_light(file, fput_needed);
+	fdput(f);
 out:
 	return error;
 }

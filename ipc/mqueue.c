@@ -945,7 +945,7 @@ SYSCALL_DEFINE5(mq_timedsend, mqd_t, mqdes, const char __user *, u_msg_ptr,
 		size_t, msg_len, unsigned int, msg_prio,
 		const struct timespec __user *, u_abs_timeout)
 {
-	struct file *filp;
+	struct fd f;
 	struct inode *inode;
 	struct ext_wait_queue wait;
 	struct ext_wait_queue *receiver;
@@ -1024,7 +1024,7 @@ SYSCALL_DEFINE5(mq_timedsend, mqd_t, mqdes, const char __user *, u_msg_ptr,
 	}
 
 	if (info->attr.mq_curmsgs == info->attr.mq_maxmsg) {
-		if (filp->f_flags & O_NONBLOCK) {
+		if (f.file->f_flags & O_NONBLOCK) {
 			ret = -EAGAIN;
 		} else {
 			wait.task = current;
@@ -1131,7 +1131,7 @@ SYSCALL_DEFINE5(mq_timedreceive, mqd_t, mqdes, char __user *, u_msg_ptr,
 	}
 
 	if (info->attr.mq_curmsgs == 0) {
-		if (filp->f_flags & O_NONBLOCK) {
+		if (f.file->f_flags & O_NONBLOCK) {
 			spin_unlock(&info->lock);
 			ret = -EAGAIN;
 		} else {
@@ -1336,15 +1336,15 @@ SYSCALL_DEFINE3(mq_getsetattr, mqd_t, mqdes,
 	spin_lock(&info->lock);
 
 	omqstat = info->attr;
-	omqstat.mq_flags = filp->f_flags & O_NONBLOCK;
+	omqstat.mq_flags = f.file->f_flags & O_NONBLOCK;
 	if (u_mqstat) {
 		audit_mq_getsetattr(mqdes, &mqstat);
-		spin_lock(&filp->f_lock);
+		spin_lock(&f.file->f_lock);
 		if (mqstat.mq_flags & O_NONBLOCK)
-			filp->f_flags |= O_NONBLOCK;
+			f.file->f_flags |= O_NONBLOCK;
 		else
-			filp->f_flags &= ~O_NONBLOCK;
-		spin_unlock(&filp->f_lock);
+			f.file->f_flags &= ~O_NONBLOCK;
+		spin_unlock(&f.file->f_lock);
 
 		inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	}

@@ -291,19 +291,17 @@ static const struct file_operations timerfd_fops = {
 	.llseek		= noop_llseek,
 };
 
-static struct file *timerfd_fget(int fd, int *fput_needed)
+static int timerfd_fget(int fd, struct fd *p)
 {
-	struct file *file;
-
-	file = fget_light(fd, fput_needed);
-	if (!file)
-		return ERR_PTR(-EBADF);
-	if (file->f_op != &timerfd_fops) {
-		fput_light(file, *fput_needed);
-		return ERR_PTR(-EINVAL);
+	struct fd f = fdget(fd);
+	if (!f.file)
+		return -EBADF;
+	if (f.file->f_op != &timerfd_fops) {
+		fdput(f);
+		return -EINVAL;
 	}
-
-	return file;
+	*p = f;
+	return 0;
 }
 
 SYSCALL_DEFINE2(timerfd_create, int, clockid, int, flags)
@@ -361,10 +359,10 @@ static int do_timerfd_settime(int ufd, int flags,
 	    !timespec_valid(&new->it_interval))
 		return -EINVAL;
 
-	file = timerfd_fget(ufd, &fput_needed);
-	if (IS_ERR(file))
-		return PTR_ERR(file);
-	ctx = file->private_data;
+	ret = timerfd_fget(ufd, &f);
+	if (ret)
+		return ret;
+	ctx = f.file->private_data;
 
 	timerfd_setup_cancel(ctx, flags);
 
