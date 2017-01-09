@@ -19,7 +19,6 @@
 #include <linux/types.h>
 #include <linux/completion.h>
 #include <linux/clk.h>
-#include <linux/wait.h>
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
 #include <mach/ocmem.h>
@@ -176,11 +175,6 @@ struct session_prop {
 	u32 bitrate;
 };
 
-struct buf_queue {
-	struct vb2_queue vb2_bufq;
-	struct mutex lock;
-};
-
 struct msm_vidc_core {
 	struct list_head list;
 	struct mutex sync_lock;
@@ -209,7 +203,7 @@ struct msm_vidc_inst {
 	struct session_prop prop;
 	int state;
 	const struct msm_vidc_format *fmts[MAX_PORT_NUM];
-	struct buf_queue bufq[MAX_PORT_NUM];
+	struct vb2_queue vb2_bufq[MAX_PORT_NUM];
 	spinlock_t lock;
 	struct list_head pendingq;
 	struct list_head internalbufs;
@@ -220,7 +214,6 @@ struct msm_vidc_inst {
 	struct completion completions[SESSION_MSG_END - SESSION_MSG_START + 1];
 	struct v4l2_fh event_handler;
 	struct msm_smem *extradata_handle;
-	wait_queue_head_t kernel_event_queue;
 	bool in_reconfig;
 	u32 reconfig_width;
 	u32 reconfig_height;

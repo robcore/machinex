@@ -260,16 +260,14 @@ static const struct msm_vidc_format vdec_formats[] = {
 int msm_vdec_streamon(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 {
 	int rc = 0;
-	struct buf_queue *q;
+	struct vb2_queue *q;
 	q = msm_comm_get_vb2q(inst, i);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", i);
 		return -EINVAL;
 	}
 	pr_debug("Calling streamon\n");
-	mutex_lock(&q->lock);
-	rc = vb2_streamon(&q->vb2_bufq, i);
-	mutex_unlock(&q->lock);
+	rc = vb2_streamon(q, i);
 	if (rc)
 		pr_err("streamon failed on port: %d\n", i);
 	return rc;
@@ -278,7 +276,7 @@ int msm_vdec_streamon(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 int msm_vdec_streamoff(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 {
 	int rc = 0;
-	struct buf_queue *q;
+	struct vb2_queue *q;
 
 	q = msm_comm_get_vb2q(inst, i);
 	if (!q) {
@@ -286,9 +284,7 @@ int msm_vdec_streamoff(struct msm_vidc_inst *inst, enum v4l2_buf_type i)
 		return -EINVAL;
 	}
 	pr_debug("Calling streamoff\n");
-	mutex_lock(&q->lock);
-	rc = vb2_streamoff(&q->vb2_bufq, i);
-	mutex_unlock(&q->lock);
+	rc = vb2_streamoff(q, i);
 	if (rc)
 		pr_err("streamoff failed on port: %d\n", i);
 	return rc;
@@ -380,32 +376,28 @@ int msm_vdec_release_buf(struct msm_vidc_inst *inst,
 
 int msm_vdec_qbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 {
-	struct buf_queue *q = NULL;
+	struct vb2_queue *q = NULL;
 	int rc = 0;
 	q = msm_comm_get_vb2q(inst, b->type);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", b->type);
 		return -EINVAL;
 	}
-	mutex_lock(&q->lock);
-	rc = vb2_qbuf(&q->vb2_bufq, b);
-	mutex_unlock(&q->lock);
+	rc = vb2_qbuf(q, b);
 	if (rc)
 		pr_err("Failed to qbuf, %d\n", rc);
 	return rc;
 }
 int msm_vdec_dqbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 {
-	struct buf_queue *q = NULL;
+	struct vb2_queue *q = NULL;
 	int rc = 0;
 	q = msm_comm_get_vb2q(inst, b->type);
 	if (!q) {
 		pr_err("Failed to find buffer queue for type = %d\n", b->type);
 		return -EINVAL;
 	}
-	mutex_lock(&q->lock);
-	rc = vb2_dqbuf(&q->vb2_bufq, b, true);
-	mutex_unlock(&q->lock);
+	rc = vb2_dqbuf(q, b, true);
 	if (rc)
 		pr_err("Failed to dqbuf, %d\n", rc);
 	return rc;
@@ -413,7 +405,7 @@ int msm_vdec_dqbuf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 
 int msm_vdec_reqbufs(struct msm_vidc_inst *inst, struct v4l2_requestbuffers *b)
 {
-	struct buf_queue *q = NULL;
+	struct vb2_queue *q = NULL;
 	int rc = 0;
 	if (!inst || !b) {
 		pr_err("Invalid input, inst = %p, buffer = %p\n", inst, b);
@@ -425,9 +417,7 @@ int msm_vdec_reqbufs(struct msm_vidc_inst *inst, struct v4l2_requestbuffers *b)
 		return -EINVAL;
 	}
 
-	mutex_lock(&q->lock);
-	rc = vb2_reqbufs(&q->vb2_bufq, b);
-	mutex_unlock(&q->lock);
+	rc = vb2_reqbufs(q, b);
 	if (rc)
 		pr_err("Failed to get reqbufs, %d\n", rc);
 	return rc;
@@ -702,13 +692,13 @@ static int msm_vdec_start_streaming(struct vb2_queue *q, unsigned int count)
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
 		if (msm_comm_scale_clocks(inst->core))
 			pr_err("Failed to scale clocks. Performance/power might be impacted\n");
-		if (inst->bufq[CAPTURE_PORT].vb2_bufq.streaming)
+		if (inst->vb2_bufq[CAPTURE_PORT].streaming)
 			rc = start_streaming(inst);
 		break;
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		if (msm_comm_scale_clocks(inst->core))
 			pr_err("Failed to scale clocks. Performance/power might be impacted\n");
-		if (inst->bufq[OUTPUT_PORT].vb2_bufq.streaming)
+		if (inst->vb2_bufq[OUTPUT_PORT].streaming)
 			rc = start_streaming(inst);
 		break;
 	default:
@@ -731,12 +721,12 @@ static int msm_vdec_stop_streaming(struct vb2_queue *q)
 	pr_debug("Streamoff called on: %d capability\n", q->type);
 	switch (q->type) {
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-		if (!inst->bufq[CAPTURE_PORT].vb2_bufq.streaming)
+		if (!inst->vb2_bufq[CAPTURE_PORT].streaming)
 			rc = msm_comm_try_state(inst,
 				MSM_VIDC_RELEASE_RESOURCES_DONE);
 		break;
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
-		if (!inst->bufq[OUTPUT_PORT].vb2_bufq.streaming)
+		if (!inst->vb2_bufq[OUTPUT_PORT].streaming)
 			rc = msm_comm_try_state(inst,
 				MSM_VIDC_RELEASE_RESOURCES_DONE);
 		break;
