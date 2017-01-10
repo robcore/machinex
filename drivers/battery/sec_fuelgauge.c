@@ -527,16 +527,23 @@ static const struct i2c_device_id sec_fuelgauge_id[] = {
 	{}
 };
 
+static const struct dev_pm_ops sec_fuelgauge_pm_ops = {
+	.suspend = sec_fuelgauge_suspend,
+	.resume  = sec_fuelgauge_resume,
+};
+
 MODULE_DEVICE_TABLE(i2c, sec_fuelgauge_id);
 
 static struct i2c_driver sec_fuelgauge_driver = {
 	.driver = {
 		   .name = "sec-fuelgauge",
+		   .owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		   .pm = &sec_fuelgauge_pm_ops,
+#endif
 		   },
 	.probe	= sec_fuelgauge_probe,
 	.remove	= __devexit_p(sec_fuelgauge_remove),
-	.suspend    = sec_fuelgauge_suspend,
-	.resume		= sec_fuelgauge_resume,
 	.shutdown   = sec_fuelgauge_shutdown,
 	.id_table   = sec_fuelgauge_id,
 };

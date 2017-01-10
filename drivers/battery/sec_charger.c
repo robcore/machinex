@@ -351,7 +351,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit sec_charger_remove(
+static int sec_charger_remove(
 						struct i2c_client *client)
 {
 	return 0;
