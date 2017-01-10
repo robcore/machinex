@@ -495,23 +495,22 @@ static int sec_fuelgauge_remove(
 	return 0;
 }
 
-static int sec_fuelgauge_suspend(
-				struct i2c_client *client, pm_message_t state)
+static int sec_fuelgauge_suspend(struct device *dev)
 {
-	if (!sec_hal_fg_suspend(client))
-		dev_err(&client->dev,
-			"%s: Failed to Suspend Fuelgauge\n", __func__);
+	struct sec_fuelgauge_info *fuelgauge = dev_get_drvdata(dev);
+
+	if (!sec_hal_fg_suspend(fuelgauge->client))
+		pr_err("Failed to Suspend Fuelgauge\n");
 
 	return 0;
 }
 
-static int sec_fuelgauge_resume(struct i2c_client *client)
+static int sec_fuelgauge_resume(struct device *dev)
 {
-	struct sec_fuelgauge_info *fuelgauge = i2c_get_clientdata(client);
+	struct sec_fuelgauge_info *fuelgauge = dev_get_drvdata(dev);
 
-	if (!sec_hal_fg_resume(client))
-		dev_err(&client->dev,
-			"%s: Failed to Resume Fuelgauge\n", __func__);
+	if (!sec_hal_fg_resume(fuelgauge->client))
+		pr_err("Failed to Suspend Fuelgauge\n");
 
 	fuelgauge->initial_update_of_soc = true;
 
@@ -527,17 +526,23 @@ static const struct i2c_device_id sec_fuelgauge_id[] = {
 	{}
 };
 
+static const struct dev_pm_ops sec_fuelgauge_pm_ops = {
+	.suspend = sec_fuelgauge_suspend,
+	.resume  = sec_fuelgauge_resume,
+};
+
 MODULE_DEVICE_TABLE(i2c, sec_fuelgauge_id);
 
 static struct i2c_driver sec_fuelgauge_driver = {
 	.driver = {
 		   .name = "sec-fuelgauge",
 		   .owner = THIS_MODULE,
-		   },
+#ifdef CONFIG_PM
+		   .pm = &sec_fuelgauge_pm_ops,
+#endif
+	},
 	.probe	= sec_fuelgauge_probe,
 	.remove	= sec_fuelgauge_remove,
-	.suspend    = sec_fuelgauge_suspend,
-	.resume		= sec_fuelgauge_resume,
 	.shutdown   = sec_fuelgauge_shutdown,
 	.id_table   = sec_fuelgauge_id,
 };
