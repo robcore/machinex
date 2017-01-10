@@ -21,7 +21,7 @@
 #define __SEC_BATTERY_H __FILE__
 
 #include <linux/battery/sec_charging_common.h>
-#include <linux/hrtimer.h>
+#include <linux/android_alarm.h>
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
 #include <linux/proc_fs.h>
@@ -67,7 +67,7 @@ struct sec_battery_info {
 	/* keep awake until monitor is done */
 	struct wake_lock monitor_wake_lock;
 	struct workqueue_struct *monitor_wqueue;
-	struct work_struct monitor_work;
+	struct delayed_work monitor_work;
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	struct wake_lock lpm_wake_lock;
 #endif
@@ -77,13 +77,13 @@ struct sec_battery_info {
 	bool polling_short;
 
 	struct delayed_work polling_work;
-	struct hrtimer polling_hrtimer;
+	struct alarm polling_alarm;
 	ktime_t last_poll_time;
 
 	/* event set */
 	unsigned int event;
 	unsigned int event_wait;
-	struct hrtimer event_termination_hrtimer;
+	struct alarm event_termination_alarm;
 	ktime_t	last_event_time;
 
 	/* battery check */
@@ -120,7 +120,7 @@ struct sec_battery_info {
 	int cable_type;
 	int extended_cable_type;
 	struct wake_lock cable_wake_lock;
-	struct work_struct cable_work;
+	struct delayed_work cable_work;
 	struct wake_lock vbus_wake_lock;
 	unsigned int full_check_cnt;
 	unsigned int recharge_check_cnt;

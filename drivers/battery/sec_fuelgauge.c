@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_fuelgauge.h>
+#include <linux/android_alarm.h>
 static struct device_attribute sec_fg_attrs[] = {
 	SEC_FG_ATTR(reg),
 	SEC_FG_ATTR(data),
@@ -527,24 +528,18 @@ static const struct i2c_device_id sec_fuelgauge_id[] = {
 	{}
 };
 
-static const struct dev_pm_ops sec_fuelgauge_pm_ops = {
-	.suspend = sec_fuelgauge_suspend,
-	.resume  = sec_fuelgauge_resume,
-};
-
 MODULE_DEVICE_TABLE(i2c, sec_fuelgauge_id);
 
 static struct i2c_driver sec_fuelgauge_driver = {
 	.driver = {
 		   .name = "sec-fuelgauge",
 		   .owner = THIS_MODULE,
-#ifdef CONFIG_PM
-		   .pm = &sec_fuelgauge_pm_ops,
-#endif
 		   },
 	.probe	= sec_fuelgauge_probe,
 	.remove	= __devexit_p(sec_fuelgauge_remove),
 	.shutdown   = sec_fuelgauge_shutdown,
+	.suspend = sec_fuelgauge_suspend,
+	.resume  = sec_fuelgauge_resume,
 	.id_table   = sec_fuelgauge_id,
 };
 
