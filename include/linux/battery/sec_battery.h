@@ -67,7 +67,7 @@ struct sec_battery_info {
 	/* keep awake until monitor is done */
 	struct wake_lock monitor_wake_lock;
 	struct workqueue_struct *monitor_wqueue;
-	struct delayed_work monitor_work;
+	struct work_struct monitor_work;
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	struct wake_lock lpm_wake_lock;
 #endif
@@ -120,7 +120,7 @@ struct sec_battery_info {
 	int cable_type;
 	int extended_cable_type;
 	struct wake_lock cable_wake_lock;
-	struct delayed_work cable_work;
+	struct work_struct cable_work;
 	struct wake_lock vbus_wake_lock;
 	unsigned int full_check_cnt;
 	unsigned int recharge_check_cnt;

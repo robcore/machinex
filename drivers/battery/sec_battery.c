@@ -287,8 +287,7 @@ static int sec_bat_get_charger_type_adc
 	/* Do NOT check cable type when cable_switch_check() returns false
 	 * and keep current cable type
 	 */
-	if (battery->pdata->cable_switch_check &&
-	    !battery->pdata->cable_switch_check())
+	if (!battery->pdata->cable_switch_check())
 		return battery->cable_type;
 
 	adc = sec_bat_get_adc_value(battery,
@@ -297,8 +296,7 @@ static int sec_bat_get_charger_type_adc
 	/* Do NOT check cable type when cable_switch_normal() returns false
 	 * and keep current cable type
 	 */
-	if (battery->pdata->cable_switch_normal &&
-	    !battery->pdata->cable_switch_normal())
+	if (!battery->pdata->cable_switch_normal())
 		return battery->cable_type;
 
 	for (i = 0; i < SEC_SIZEOF_POWER_SUPPLY_TYPE; i++)
