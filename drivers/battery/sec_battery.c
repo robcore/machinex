@@ -973,7 +973,7 @@ static void  sec_bat_event_program_alarm(
 	* ULONG_MAX instead
 	*/
 	hrtimer_start_range_ns(&battery->event_termination_hrtimer,
-		next, ULONG_MAX, HRTIMER_MODE_ABS);
+		next, ULONG_MAX, HRTIMER_MODE_REL);
 }
 
 enum hrtimer_restart sec_bat_event_expired_timer_func(struct hrtimer *timer)
@@ -1659,7 +1659,7 @@ static void sec_bat_program_alarm(
 	* ULONG_MAX instead
 	*/
 	hrtimer_start_range_ns(&battery->polling_hrtimer,
-		next, ULONG_MAX, HRTIMER_MODE_ABS);
+		next, ULONG_MAX, HRTIMER_MODE_REL);
 }
 
 enum hrtimer_restart sec_bat_alarm(struct hrtimer *timer)
@@ -3138,7 +3138,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	hrtimer_init(&battery->event_termination_hrtimer,
 			CLOCK_BOOTTIME,
-			HRTIMER_MODE_ABS);
+			HRTIMER_MODE_REL);
 	battery->event_termination_hrtimer.function =
 			&sec_bat_event_expired_timer_func;
 
@@ -3208,7 +3208,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 		battery->last_poll_time = ktime_get_boottime();
 		hrtimer_init(&battery->polling_hrtimer,
 			CLOCK_BOOTTIME,
-			HRTIMER_MODE_ABS);
+			HRTIMER_MODE_REL);
 		battery->polling_hrtimer.function =
 			&sec_bat_alarm;
 		break;
