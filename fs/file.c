@@ -203,17 +203,13 @@ static int expand_fdtable(struct files_struct *files, int nr)
 	new_fdt = alloc_fdtable(nr);
 	spin_lock(&files->file_lock);
 	if (!new_fdt)
-	{
-		printk("[expand_fdtable] ENOMEM: !new_fdt\n");
 		return -ENOMEM;
-	}
 	/*
 	 * extremely unlikely race - sysctl_nr_open decreased between the check in
 	 * caller and alloc_fdtable().  Cheaper to catch it here...
 	 */
 	if (unlikely(new_fdt->max_fds <= nr)) {
 		__free_fdtable(new_fdt);
-		printk("[expand_fdtable] EMFILE : unlikely(new_fdt->max_fds <= nr\n)");
 		return -EMFILE;
 	}
 	/*
@@ -267,10 +263,7 @@ static int expand_files(struct files_struct *files, int nr)
 
 	/* Can we expand? */
 	if (nr >= sysctl_nr_open)
-	{
-		printk("[expand_files] EMFILE : nr >= sysctl_nr_open\n");
 		return -EMFILE;
-	}
 
 	/* All good, so we try */
 	return expand_fdtable(files, nr);
@@ -497,7 +490,6 @@ void reset_files_struct(struct files_struct *files)
 	task_unlock(tsk);
 	put_files_struct(old);
 }
-EXPORT_SYMBOL(alloc_fd);
 
 void exit_files(struct task_struct *tsk)
 {
