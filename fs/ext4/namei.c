@@ -78,6 +78,12 @@ static struct buffer_head *ext4_append(handle_t *handle,
 			bh = NULL;
 		}
 	}
+	if (!bh && !(*err)) {
+		*err = -EIO;
+		ext4_error(inode->i_sb,
+			   "Directory hole detected on inode %lu\n",
+			   inode->i_ino);
+	}
 	return bh;
 }
 
@@ -365,8 +371,11 @@ dx_probe(const struct qstr *d_name, struct inode *dir,
 	u32 hash;
 
 	frame->bh = NULL;
-	if (!(bh = ext4_bread (NULL,dir, 0, 0, err)))
+	if (!(bh = ext4_bread(NULL, dir, 0, 0, err))) {
+		if (*err == 0)
+			*err = ERR_BAD_DX_DIR;
 		goto fail;
+	}
 	root = (struct dx_root *) bh->b_data;
 	if (root->info.hash_version != DX_HASH_TEA &&
 	    root->info.hash_version != DX_HASH_HALF_MD4 &&
@@ -458,8 +467,11 @@ dx_probe(const struct qstr *d_name, struct inode *dir,
 		frame->entries = entries;
 		frame->at = at;
 		if (!indirect--) return frame;
-		if (!(bh = ext4_bread (NULL,dir, dx_get_block(at), 0, err)))
+		if (!(bh = ext4_bread(NULL, dir, dx_get_block(at), 0, err))) {
+			if (!(*err))
+				*err = ERR_BAD_DX_DIR;
 			goto fail2;
+		}
 		at = entries = ((struct dx_node *) bh->b_data)->entries;
 		if (dx_get_limit(entries) != dx_node_limit (dir)) {
 			ext4_warning(dir->i_sb,
@@ -558,8 +570,15 @@ static int ext4_htree_next_block(struct inode *dir, __u32 hash,
 	 */
 	while (num_frames--) {
 		if (!(bh = ext4_bread(NULL, dir, dx_get_block(p->at),
-				      0, &err)))
+				      0, &err))) {
+			if (!err) {
+				ext4_error(dir->i_sb,
+					   "Directory hole detected on inode %lu\n",
+					   dir->i_ino);
+				return -EIO;
+			}
 			return err; /* Failure */
+		}
 		p++;
 		brelse(p->bh);
 		p->bh = bh;
@@ -585,8 +604,15 @@ static int htree_dirblock_to_tree(struct file *dir_file,
 
 	dxtrace(printk(KERN_INFO "In htree dirblock_to_tree: block %lu\n",
 							(unsigned long)block));
-	if (!(bh = ext4_bread (NULL, dir, block, 0, &err)))
+	if (!(bh = ext4_bread(NULL, dir, block, 0, &err))) {
+		if (!err) {
+			err = -EIO;
+			ext4_error(dir->i_sb,
+				   "Directory hole detected on inode %lu\n",
+				   dir->i_ino);
+		}
 		return err;
+	}
 
 	de = (struct ext4_dir_entry_2 *) bh->b_data;
 	top = (struct ext4_dir_entry_2 *) ((char *) de +
@@ -1053,8 +1079,15 @@ static struct buffer_head * ext4_dx_find_entry(struct inode *dir, const struct q
 		return NULL;
 	do {
 		block = dx_get_block(frame->at);
-		if (!(bh = ext4_bread(NULL, dir, block, 0, err)))
+		if (!(bh = ext4_bread(NULL, dir, block, 0, err))) {
+			if (!(*err)) {
+				*err = -EIO;
+				ext4_error(dir->i_sb,
+					   "Directory hole detected on inode %lu\n",
+					   dir->i_ino);
+			}
 			goto errout;
+		}
 
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
 		retval = search_dirblock(bh, dir, d_name,
@@ -1591,9 +1624,15 @@ static int ext4_add_entry(handle_t *handle, struct dentry *dentry,
 	}
 	blocks = dir->i_size >> sb->s_blocksize_bits;
 	for (block = 0; block < blocks; block++) {
-		bh = ext4_bread(handle, dir, block, 0, &retval);
-		if(!bh)
+		if (!(bh = ext4_bread(handle, dir, block, 0, &retval))) {
+			if (!retval) {
+				retval = -EIO;
+				ext4_error(inode->i_sb,
+					   "Directory hole detected on inode %lu\n",
+					   inode->i_ino);
+			}
 			return retval;
+		}
 		retval = add_dirent_to_buf(handle, dentry, inode, NULL, bh);
 		if (retval != -ENOSPC)
 			goto out;
@@ -1641,8 +1680,15 @@ static int ext4_dx_add_entry(handle_t *handle, struct dentry *dentry,
 	entries = frame->entries;
 	at = frame->at;
 
-	if (!(bh = ext4_bread(handle,dir, dx_get_block(frame->at), 0, &err)))
+	if (!(bh = ext4_bread(handle, dir, dx_get_block(frame->at), 0, &err))) {
+		if (!err) {
+			err = -EIO;
+			ext4_error(dir->i_sb,
+				   "Directory hole detected on inode %lu\n",
+				   dir->i_ino);
+		}
 		goto cleanup;
+	}
 
 	BUFFER_TRACE(bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, bh);
@@ -1959,9 +2005,15 @@ retry:
 	inode->i_op = &ext4_dir_inode_operations;
 	inode->i_fop = &ext4_dir_operations;
 	inode->i_size = EXT4_I(inode)->i_disksize = inode->i_sb->s_blocksize;
-	dir_block = ext4_bread(handle, inode, 0, 1, &err);
-	if (!dir_block)
+	if (!(dir_block = ext4_bread(handle, inode, 0, 1, &err))) {
+		if (!err) {
+			err = -EIO;
+			ext4_error(inode->i_sb,
+				   "Directory hole detected on inode %lu\n",
+				   inode->i_ino);
+		}
 		goto out_clear_inode;
+	}
 	BUFFER_TRACE(dir_block, "get_write_access");
 	err = ext4_journal_get_write_access(handle, dir_block);
 	if (err)
@@ -2065,6 +2117,11 @@ static int empty_dir(struct inode *inode)
 					EXT4_ERROR_INODE(inode,
 						"error %d reading directory "
 						"lblock %u", err, lblock);
+				else
+					ext4_warning(inode->i_sb,
+						"bad directory (dir #%lu) - no data block",
+						inode->i_ino);
+
 				offset += sb->s_blocksize;
 				continue;
 			}
@@ -2601,9 +2658,15 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 				goto end_rename;
 		}
 		retval = -EIO;
-		dir_bh = ext4_bread(handle, old_inode, 0, 0, &retval);
-		if (!dir_bh)
+		if (!(dir_bh = ext4_bread(handle, old_inode, 0, 0, &retval))) {
+			if (!retval) {
+				retval = -EIO;
+				ext4_error(old_inode->i_sb,
+					   "Directory hole detected on inode %lu\n",
+					   old_inode->i_ino);
+			}
 			goto end_rename;
+		}
 		if (le32_to_cpu(PARENT_INO(dir_bh->b_data,
 				old_dir->i_sb->s_blocksize)) != old_dir->i_ino)
 			goto end_rename;
