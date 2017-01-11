@@ -3117,7 +3117,7 @@ static struct mdm_platform_data mdm_platform_data = {
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
 	//.no_a2m_errfatal_on_ssr = 1,
 	//.no_reset_on_first_powerup = 1,
-	.subsys_name = "external modem",
+	.subsys_name = "external_modem",
 };
 
 static struct mdm_platform_data amdm_platform_data = {
