@@ -2796,6 +2796,15 @@ void mmc_exit_clk_scaling(struct mmc_host *host)
 }
 EXPORT_SYMBOL_GPL(mmc_exit_clk_scaling);
 
+int mmc_emergency_shutdown(struct mmc_host *host)
+{
+	if (host && host->bus_ops->shutdown)
+		return host->bus_ops->shutdown(host);
+
+	return -EOPNOTSUPP;
+}
+EXPORT_SYMBOL(mmc_emergency_shutdown);
+
 static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 {
 	host->f_init = freq;
@@ -3204,28 +3213,6 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 	return err;
 }
 EXPORT_SYMBOL(mmc_cache_ctrl);
-
-int mmc_reboot_notify(struct notifier_block *notify_block,
-					unsigned long mode, void *unused)
-{
-	struct mmc_host *host = container_of(
-		notify_block, struct mmc_host, reboot_notify);
-
-	int i, err;
-
-	pr_warn("Reboot notification received.Suspend host %s.\n",
-		mmc_hostname(host));
-	for (i = 0 ; i < 5; i++) {
-		err = mmc_suspend_host(host);
-		if (!err)
-			break;
-		msleep(100);
-	}
-	if (err)
-		pr_warn("MMC host %s suspend error %d.\n",
-			mmc_hostname(host), err);
-	return NOTIFY_DONE;
-}
 
 #ifdef CONFIG_PM
 
