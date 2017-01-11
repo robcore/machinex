@@ -93,6 +93,7 @@ void state_resume(void)
 
 		cancel_delayed_work_sync(&suspend_work);
 		suspend_in_progress = false;
+		printk("[STATE NOTIFIER] - Suspend Work Cancelled by Resume\n");
 
 		if (state_suspended)
 			queue_work(susp_wq, &resume_work);
