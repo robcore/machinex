@@ -511,7 +511,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.raw_bkops_status =
 				ext_csd[EXT_CSD_BKOPS_STATUS];
 			if (!(card->host->caps2 & MMC_CAP2_INIT_BKOPS)) {
-				card->ext_csd.bkops_en = 0;
+				card->ext_csd.bkops_en = 0; 
 			} else if (!card->ext_csd.bkops_en) {
 				err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 					EXT_CSD_BKOPS_EN, 1, 0);
@@ -1618,7 +1618,7 @@ static int mmc_suspend(struct mmc_host *host)
 	if (mmc_can_poweroff_notify(host->card))
 		err = mmc_poweroff_notify(host->card, EXT_CSD_POWER_OFF_SHORT);
 	else if (mmc_card_can_sleep(host))
-	{
+	{       
 		if ((!strcmp(mmc_hostname(host), "mmc0")) && (host->card->cid.manfid == 0x45))
 			mmc_switch(host->card, EXT_CSD_CMD_SET_NORMAL,
 				EXT_CSD_BUS_WIDTH, EXT_CSD_BUS_WIDTH_1, 0);
@@ -1715,29 +1715,6 @@ static int mmc_awake(struct mmc_host *host)
 	return err;
 }
 
-static int mmc_shutdown(struct mmc_host *host)
-{
-	int err = 0;
-
-	BUG_ON(!host);
-	BUG_ON(!host->card);
-
-	mmc_claim_host(host);
-
-	/* Ignore errors */
-	mmc_cache_ctrl(host, 0);
-
-	if (mmc_can_poweroff_notify(host->card))
-		err = mmc_poweroff_notify(host->card, EXT_CSD_POWER_OFF_SHORT);
-	else if (mmc_card_can_sleep(host))
-		err = mmc_card_sleep(host);
-	else if (!mmc_host_is_spi(host))
-		mmc_deselect_cards(host);
-
-	mmc_release_host(host);
-	return err;
-}
-
 static const struct mmc_bus_ops mmc_ops = {
 	.awake = mmc_awake,
 	.sleep = mmc_sleep,
@@ -1747,7 +1724,6 @@ static const struct mmc_bus_ops mmc_ops = {
 	.resume = NULL,
 	.power_restore = mmc_power_restore,
 	.alive = mmc_alive,
-	.shutdown = mmc_shutdown,
 	.change_bus_speed = mmc_change_bus_speed,
 };
 
@@ -1760,7 +1736,6 @@ static const struct mmc_bus_ops mmc_ops_unsafe = {
 	.resume = mmc_resume,
 	.power_restore = mmc_power_restore,
 	.alive = mmc_alive,
-	.shutdown = mmc_shutdown,
 	.change_bus_speed = mmc_change_bus_speed,
 };
 

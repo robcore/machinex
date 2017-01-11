@@ -2796,15 +2796,6 @@ void mmc_exit_clk_scaling(struct mmc_host *host)
 }
 EXPORT_SYMBOL_GPL(mmc_exit_clk_scaling);
 
-int mmc_emergency_shutdown(struct mmc_host *host)
-{
-	if (host && host->bus_ops->shutdown)
-		return host->bus_ops->shutdown(host);
-
-	return -EOPNOTSUPP;
-}
-EXPORT_SYMBOL(mmc_emergency_shutdown);
-
 static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 {
 	host->f_init = freq;
