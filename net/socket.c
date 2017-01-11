@@ -395,9 +395,8 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags,
 	*f = file;
 	return fd;
 }
-EXPORT_SYMBOL(sock_alloc_file);
 
-static int sock_map_fd(struct socket *sock, int flags)
+int sock_map_fd(struct socket *sock, int flags)
 {
 	struct file *newfile;
 	int fd = sock_alloc_file(sock, &newfile, flags, NULL);
@@ -407,6 +406,7 @@ static int sock_map_fd(struct socket *sock, int flags)
 
 	return fd;
 }
+EXPORT_SYMBOL(sock_map_fd);
 
 struct socket *sock_from_file(struct file *file, int *err)
 {
