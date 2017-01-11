@@ -140,7 +140,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		* for the reset to fully take place. Sleep here to ensure the
 		* reset has occured before the function exits.
 		*/
-		mdelay(3600);
+		mdelay(4000);
 	}
 }
 
