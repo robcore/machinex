@@ -1941,9 +1941,7 @@ msmsdcc_irq(int irq, void *dev_id)
 			 * will take care of signaling sdio irq during
 			 * mmc_sdio_resume().
 			 */
-			if (host->sdcc_suspended &&
-					(host->plat->mpm_sdiowakeup_int ||
-					 host->plat->sdiowakeup_irq)) {
+			if (host->sdcc_suspended) {
 				/*
 				 * This is a wakeup interrupt so hold wakelock
 				 * until SDCC resume is handled.
@@ -6296,7 +6294,7 @@ msmsdcc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (host->plat->sdiowakeup_irq || host->plat->mpm_sdiowakeup_int) {
+	if (host->plat->mpm_sdiowakeup_int) {
 		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
 				mmc_hostname(mmc));
 	}
@@ -6528,12 +6526,12 @@ msmsdcc_probe(struct platform_device *pdev)
 		free_irq(plat->status_irq, host);
 	msmsdcc_disable_status_gpio(host);
  sdiowakeup_irq_free:
-	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int)
-		wake_lock_destroy(&host->sdio_wlock);
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq)
 		free_irq(plat->sdiowakeup_irq, host);
  pio_irq_free:
+	if (plat->sdiowakeup_irq)
+		wake_lock_destroy(&host->sdio_wlock);
 	free_irq(core_irqres->start, host);
  irq_free:
 	free_irq(core_irqres->start, host);
@@ -6586,7 +6584,7 @@ static void msmsdcc_remove_debugfs(struct msmsdcc_host *host)
 	host->debugfs_host_dir = NULL;
 }
 #else
-static void msmsdcc_remove_debugfs(struct msmsdcc_host *host) {}
+static void msmsdcc_remove_debugfs(msmsdcc_host *host) {}
 #endif
 
 static int msmsdcc_remove(struct platform_device *pdev)
@@ -6628,12 +6626,10 @@ static int msmsdcc_remove(struct platform_device *pdev)
 
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
+		wake_lock_destroy(&host->sdio_wlock);
 		irq_set_irq_wake(plat->sdiowakeup_irq, 0);
 		free_irq(plat->sdiowakeup_irq, host);
 	}
-
-	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int)
-		wake_lock_destroy(&host->sdio_wlock);
 
 	free_irq(host->core_irqres->start, host);
 	free_irq(host->core_irqres->start, host);

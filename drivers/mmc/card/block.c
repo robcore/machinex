@@ -2897,9 +2897,7 @@ static int mmc_blk_probe(struct mmc_card *card)
 	mmc_fixup_device(card, blk_fixups);
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	/*applying only MMC TYPE, need more time to verify SD TYPE*/
-	if (card && mmc_card_mmc(card))
-		mmc_set_bus_resume_policy(card->host, 1);
+	mmc_set_bus_resume_policy(card->host, 1);
 #endif
 	if (mmc_add_disk(md))
 		goto out;
