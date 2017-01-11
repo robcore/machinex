@@ -3123,7 +3123,7 @@ static struct gpiomux_setting mdm2ap_status_gpio_run_cfg = {
 
 static struct mdm_platform_data mdm_platform_data = {
 	.mdm_version = "3.0",
-	.ramdump_delay_ms = 2000,
+	.ramdump_delay_ms = 4000,
 	.early_power_on = 1,
 	.sfr_query = 1,
 	.send_shdn = 1,
@@ -3134,6 +3134,7 @@ static struct mdm_platform_data mdm_platform_data = {
 	.sysmon_subsys_id_valid = 1,
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
 	//.no_a2m_errfatal_on_ssr = 1,
+	.no_reset_on_first_powerup = 1,
 	.subsys_name = "modem",
 };
 

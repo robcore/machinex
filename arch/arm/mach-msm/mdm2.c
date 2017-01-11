@@ -140,7 +140,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		* for the reset to fully take place. Sleep here to ensure the
 		* reset has occured before the function exits.
 		*/
-		mdelay(4000);
+		mdelay(3600);
 	}
 }
 
@@ -161,7 +161,7 @@ static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 	 * instead of just de-asserting it. No harm done if the modem was
 	 * powered down.
 	 */
-	//if (!mdm_drv->pdata->no_reset_on_first_powerup)
+	if (!mdm_drv->pdata->no_reset_on_first_powerup)
 		mdm_toggle_soft_reset(mdm_drv);
 
 	/* If the device has a kpd pwr gpio then toggle it. */
