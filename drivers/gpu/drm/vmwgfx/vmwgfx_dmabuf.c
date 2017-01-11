@@ -25,9 +25,9 @@
  *
  **************************************************************************/
 
-#include <drm/ttm/ttm_placement.h>
+#include "ttm/ttm_placement.h"
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "vmwgfx_drv.h"
 
 

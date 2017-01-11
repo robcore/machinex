@@ -26,10 +26,10 @@
  **************************************************************************/
 
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "vmwgfx_drv.h"
 
-#include <drm/ttm/ttm_placement.h>
+#include "ttm/ttm_placement.h"
 
 #include "svga_overlay.h"
 #include "svga_escape.h"

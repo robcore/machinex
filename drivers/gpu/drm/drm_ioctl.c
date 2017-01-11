@@ -33,11 +33,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <drm/drmP.h>
-#include <drm/drm_core.h>
+#include "drmP.h"
+#include "drm_core.h"
 
-#include <linux/pci.h>
-#include <linux/export.h>
+#include "linux/pci.h"
+#include "linux/export.h"
 
 /**
  * Get the bus id.

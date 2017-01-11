@@ -1,4 +1,5 @@
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm_mode.h"
 #include "nouveau_reg.h"
 #include "nouveau_drv.h"
 #include "nouveau_crtc.h"

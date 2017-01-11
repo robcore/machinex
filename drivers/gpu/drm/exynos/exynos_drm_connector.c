@@ -25,8 +25,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <drm/drmP.h>
-#include <drm/drm_crtc_helper.h>
+#include "drmP.h"
+#include "drm_crtc_helper.h"
 
 #include <drm/exynos_drm.h>
 #include "exynos_drm_drv.h"

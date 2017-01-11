@@ -23,7 +23,7 @@
 #ifndef __NOUVEAU_HW_H__
 #define __NOUVEAU_HW_H__
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "nouveau_drv.h"
 
 #define MASK(field) ( \

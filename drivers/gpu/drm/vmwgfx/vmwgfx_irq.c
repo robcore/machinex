@@ -25,7 +25,7 @@
  *
  **************************************************************************/
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "vmwgfx_drv.h"
 
 #define VMW_FENCE_WRAP (1 << 24)

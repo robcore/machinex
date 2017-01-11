@@ -22,9 +22,10 @@
  * Authors: Ben Skeggs
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm.h"
 #include "nouveau_drv.h"
-#include <drm/nouveau_drm.h>
+#include "nouveau_drm.h"
 
 struct nvc0_fb_priv {
 	struct page *r100c10_page;

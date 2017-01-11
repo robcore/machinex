@@ -1,6 +1,7 @@
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm.h"
 #include "nouveau_drv.h"
-#include <drm/nouveau_drm.h>
+#include "nouveau_drm.h"
 
 void
 nv40_fb_set_tile_region(struct drm_device *dev, int i)

@@ -32,6 +32,7 @@
 #include <linux/compat.h>
 
 #include "drmP.h"
+#include "drm.h"
 #include "i915_drm.h"
 
 typedef struct _drm_i915_batchbuffer32 {

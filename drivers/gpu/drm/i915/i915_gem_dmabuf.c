@@ -23,7 +23,7 @@
  * Authors:
  *	Dave Airlie <airlied@redhat.com>
  */
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "i915_drv.h"
 #include <linux/dma-buf.h>
 

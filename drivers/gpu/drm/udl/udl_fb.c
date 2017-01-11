@@ -14,12 +14,13 @@
 #include <linux/slab.h>
 #include <linux/fb.h>
 
-#include <drm/drmP.h>
-#include <drm/drm_crtc.h>
-#include <drm/drm_crtc_helper.h>
+#include "drmP.h"
+#include "drm.h"
+#include "drm_crtc.h"
+#include "drm_crtc_helper.h"
 #include "udl_drv.h"
 
-#include <drm/drm_fb_helper.h>
+#include "drm_fb_helper.h"
 
 #define DL_DEFIO_WRITE_DELAY    (HZ/20) /* fb_deferred_io.delay in jiffies */
 

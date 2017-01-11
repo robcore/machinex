@@ -27,13 +27,14 @@
 #include <linux/slab.h>
 #include <linux/fb.h>
 
-#include <drm/drmP.h>
-#include <drm/drm_crtc.h>
-#include <drm/drm_crtc_helper.h>
-#include <drm/radeon_drm.h>
+#include "drmP.h"
+#include "drm.h"
+#include "drm_crtc.h"
+#include "drm_crtc_helper.h"
+#include "radeon_drm.h"
 #include "radeon.h"
 
-#include <drm/drm_fb_helper.h>
+#include "drm_fb_helper.h"
 
 #include <linux/vga_switcheroo.h>
 

@@ -33,7 +33,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
 
 /**
  * Find the file with the given magic number.

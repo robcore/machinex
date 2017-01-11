@@ -30,6 +30,7 @@
 #define _EXYNOS_DRM_DRV_H_
 
 #include <linux/module.h>
+#include "drm.h"
 
 #define MAX_CRTC	3
 #define MAX_PLANE	5

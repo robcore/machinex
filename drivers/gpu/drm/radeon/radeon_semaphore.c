@@ -27,7 +27,8 @@
  * Authors:
  *    Christian König <deathsimple@vodafone.de>
  */
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm.h"
 #include "radeon.h"
 
 static int radeon_semaphore_add_bo(struct radeon_device *rdev)

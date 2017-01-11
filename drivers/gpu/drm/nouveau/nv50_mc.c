@@ -24,7 +24,8 @@
  *
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm.h"
 #include "nouveau_drv.h"
 
 int

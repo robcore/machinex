@@ -34,7 +34,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include <linux/poll.h>
 #include <linux/slab.h>
 #include <linux/module.h>

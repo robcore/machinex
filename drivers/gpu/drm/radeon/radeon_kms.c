@@ -26,6 +26,7 @@
  *          Jerome Glisse
  */
 #include "drmP.h"
+#include "drm_sarea.h"
 #include "radeon.h"
 #include "radeon_drm.h"
 

@@ -38,7 +38,7 @@
 #include <linux/log2.h>
 #include <linux/export.h>
 #include <asm/shmparam.h>
-#include <drm/drmP.h>
+#include "drmP.h"
 
 static struct drm_map_list *drm_find_matching_map(struct drm_device *dev,
 						  struct drm_local_map *map)

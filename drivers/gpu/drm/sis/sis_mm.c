@@ -31,8 +31,8 @@
  *    Thomas Hellström <thomas-at-tungstengraphics-dot-com>
  */
 
-#include <drm/drmP.h>
-#include <drm/sis_drm.h>
+#include "drmP.h"
+#include "sis_drm.h"
 #include "sis_drv.h"
 
 #include <video/sisfb.h>

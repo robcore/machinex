@@ -11,7 +11,7 @@
  *
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
 
 #include <linux/kernel.h>
 #include <linux/i2c.h>

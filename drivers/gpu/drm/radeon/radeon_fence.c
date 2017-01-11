@@ -34,7 +34,8 @@
 #include <linux/list.h>
 #include <linux/kref.h>
 #include <linux/slab.h>
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm.h"
 #include "radeon_reg.h"
 #include "radeon.h"
 #include "radeon_trace.h"

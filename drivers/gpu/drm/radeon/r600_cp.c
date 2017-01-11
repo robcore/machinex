@@ -28,8 +28,9 @@
 
 #include <linux/module.h>
 
-#include <drm/drmP.h>
-#include <drm/radeon_drm.h>
+#include "drmP.h"
+#include "drm.h"
+#include "radeon_drm.h"
 #include "radeon_drv.h"
 
 #define PFP_UCODE_SIZE 576

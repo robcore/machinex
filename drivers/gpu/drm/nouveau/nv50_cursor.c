@@ -24,7 +24,8 @@
  *
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm_mode.h"
 
 #define NOUVEAU_DMA_DEBUG (nouveau_reg_debug & NOUVEAU_REG_DEBUG_EVO)
 #include "nouveau_reg.h"

@@ -33,9 +33,9 @@
 #include <linux/backlight.h>
 #include <linux/acpi.h>
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "nouveau_drv.h"
-#include <drm/nouveau_drm.h>
+#include "nouveau_drm.h"
 #include "nouveau_reg.h"
 #include "nouveau_encoder.h"
 

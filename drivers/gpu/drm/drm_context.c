@@ -40,7 +40,7 @@
  *		needed by SiS driver's memory management.
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
 
 /******************************************************************/
 /** \name Context bitmap support */

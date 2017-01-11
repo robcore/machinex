@@ -23,10 +23,11 @@
  *
  * Authors: Alex Deucher
  */
-#include <drm/drmP.h>
+#include "drmP.h"
+#include "drm.h"
 
 #include "radeon.h"
-#include <drm/radeon_drm.h>
+#include "radeon_drm.h"
 
 #include <linux/dma-buf.h>
 

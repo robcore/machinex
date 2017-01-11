@@ -30,7 +30,7 @@
 
 #include <linux/debugfs.h>
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "nouveau_drv.h"
 
 #include <ttm/ttm_page_alloc.h>

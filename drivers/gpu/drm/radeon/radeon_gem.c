@@ -25,8 +25,9 @@
  *          Alex Deucher
  *          Jerome Glisse
  */
-#include <drm/drmP.h>
-#include <drm/radeon_drm.h>
+#include "drmP.h"
+#include "drm.h"
+#include "radeon_drm.h"
 #include "radeon.h"
 
 int radeon_gem_object_init(struct drm_gem_object *obj)

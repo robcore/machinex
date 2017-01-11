@@ -23,8 +23,9 @@
  *
  */
 
-#include <drm/drmP.h>
-#include <drm/radeon_drm.h>
+#include "drmP.h"
+#include "drm.h"
+#include "radeon_drm.h"
 #include "radeon.h"
 
 #include "r600d.h"

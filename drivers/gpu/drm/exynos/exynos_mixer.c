@@ -14,7 +14,7 @@
  *
  */
 
-#include <drm/drmP.h>
+#include "drmP.h"
 
 #include "regs-mixer.h"
 #include "regs-vp.h"

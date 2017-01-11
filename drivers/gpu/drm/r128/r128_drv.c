@@ -31,11 +31,12 @@
 
 #include <linux/module.h>
 
-#include <drm/drmP.h>
-#include <drm/r128_drm.h>
+#include "drmP.h"
+#include "drm.h"
+#include "r128_drm.h"
 #include "r128_drv.h"
 
-#include <drm/drm_pciids.h>
+#include "drm_pciids.h"
 
 static struct pci_device_id pciidlist[] = {
 	r128_PCI_IDS

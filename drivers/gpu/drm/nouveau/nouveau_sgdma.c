@@ -1,4 +1,4 @@
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "nouveau_drv.h"
 #include <linux/pagemap.h>
 #include <linux/slab.h>

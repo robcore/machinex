@@ -32,11 +32,12 @@
 
 #include <linux/module.h>
 
-#include <drm/drmP.h>
-#include <drm/i810_drm.h>
+#include "drmP.h"
+#include "drm.h"
+#include "i810_drm.h"
 #include "i810_drv.h"
 
-#include <drm/drm_pciids.h>
+#include "drm_pciids.h"
 
 static struct pci_device_id pciidlist[] = {
 	i810_PCI_IDS

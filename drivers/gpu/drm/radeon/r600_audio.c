@@ -23,7 +23,7 @@
  *
  * Authors: Christian König
  */
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "radeon.h"
 #include "radeon_reg.h"
 #include "radeon_asic.h"
