@@ -2378,9 +2378,9 @@ static int mmc_blk_reboot_notify(struct notifier_block *notify_block,
 
 	pr_warn("%s: reboot notification received\n", mmc_hostname(card->host));
 	if (md) {
-		mmc_queue_suspend(&md->queue);
+		mmc_queue_suspend(&md->queue, 1);
 		list_for_each_entry(part_md, &md->part, part) {
-			mmc_queue_suspend(&part_md->queue);
+			mmc_queue_suspend(&part_md->queue, 1);
 		}
 	}
 
