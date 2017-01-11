@@ -46,6 +46,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/pm_qos.h>
+#include <linux/iopoll.h>
 #ifdef CONFIG_SEC_FPGA
 #include <linux/barcode_emul.h>
 #endif
@@ -1940,7 +1941,9 @@ msmsdcc_irq(int irq, void *dev_id)
 			 * will take care of signaling sdio irq during
 			 * mmc_sdio_resume().
 			 */
-			if (host->sdcc_suspended) {
+			if (host->sdcc_suspended &&
+					(host->plat->mpm_sdiowakeup_int ||
+					 host->plat->sdiowakeup_irq)) {
 				/*
 				 * This is a wakeup interrupt so hold wakelock
 				 * until SDCC resume is handled.
@@ -2293,18 +2296,19 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	}
 
 	/*
-	 * Check if DLL retuning is required? if yes, perform it here before
+	 * Check if DLL retuning is required? If yes, perform it here before
 	 * starting new request.
 	 */
 	if (host->tuning_needed && !host->tuning_in_progress &&
-		!host->tuning_done) {
+	    !host->tuning_done) {
 		pr_debug("%s: %s: execute_tuning for timing mode = %d\n",
-			mmc_hostname(mmc), __func__, host->mmc->ios.timing);
-
+			 mmc_hostname(mmc), __func__, host->mmc->ios.timing);
 		if (host->mmc->ios.timing == MMC_TIMING_UHS_SDR104)
-			msmsdcc_execute_tuning(mmc, MMC_SEND_TUNING_BLOCK);
+			msmsdcc_execute_tuning(mmc,
+					       MMC_SEND_TUNING_BLOCK);
 		else if (host->mmc->ios.timing == MMC_TIMING_MMC_HS200)
-			msmsdcc_execute_tuning(mmc, MMC_SEND_TUNING_BLOCK_HS200);
+			msmsdcc_execute_tuning(mmc,
+					       MMC_SEND_TUNING_BLOCK_HS200);
 	}
 
 	if (host->eject) {
@@ -3418,7 +3422,7 @@ msmsdcc_cfg_sdio_wakeup(struct msmsdcc_host *host, bool enable_wakeup_irq)
 			msmsdcc_sync_reg_wr(host);
 			msmsdcc_cfg_mpm_sdiowakeup(host, SDC_DAT1_DISWAKE);
 			msmsdcc_disable_irq_wake(host);
-	} else if (!host->sdio_wakeupirq_disabled) {
+		} else if (!host->sdio_wakeupirq_disabled) {
 			disable_irq_nosync(host->plat->sdiowakeup_irq);
 			msmsdcc_disable_irq_wake(host);
 			host->sdio_wakeupirq_disabled = 1;
@@ -5106,7 +5110,7 @@ store_polling(struct device *dev, struct device_attribute *attr,
 	} else {
 		mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 	}
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
 #endif
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -5228,7 +5232,7 @@ store_enable_auto_cmd21(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 static void msmsdcc_power_suspend(struct power_suspend *h)
 {
 	struct msmsdcc_host *host =
@@ -6213,10 +6217,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
-	/* Disable Sanitize & BKOPS
-	 * mmc->caps2 |= MMC_CAP2_SANITIZE;
-	 * mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
-	 */
+	mmc->caps2 |= MMC_CAP2_SANITIZE;
 	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
 	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
@@ -6292,7 +6293,7 @@ msmsdcc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (host->plat->mpm_sdiowakeup_int) {
+	if (host->plat->sdiowakeup_irq || host->plat->mpm_sdiowakeup_int) {
 		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
 				mmc_hostname(mmc));
 	}
@@ -6321,7 +6322,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags | IRQF_ONESHOT,
+				  plat->irq_flags,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
@@ -6400,7 +6401,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->clk_scaling.polling_delay_ms = 100;
 	mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 	host->power_suspend.suspend = msmsdcc_power_suspend;
 	host->power_suspend.resume  = msmsdcc_power_resume;
 //	host->power_suspend.level   = POWER_SUSPEND_LEVEL_DISABLE_FB;
@@ -6524,12 +6525,12 @@ msmsdcc_probe(struct platform_device *pdev)
 		free_irq(plat->status_irq, host);
 	msmsdcc_disable_status_gpio(host);
  sdiowakeup_irq_free:
+	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int)
+		wake_lock_destroy(&host->sdio_wlock);
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq)
 		free_irq(plat->sdiowakeup_irq, host);
  pio_irq_free:
-	if (plat->sdiowakeup_irq)
-		wake_lock_destroy(&host->sdio_wlock);
 	free_irq(core_irqres->start, host);
  irq_free:
 	free_irq(core_irqres->start, host);
@@ -6582,7 +6583,7 @@ static void msmsdcc_remove_debugfs(struct msmsdcc_host *host)
 	host->debugfs_host_dir = NULL;
 }
 #else
-static void msmsdcc_remove_debugfs(msmsdcc_host *host) {}
+static void msmsdcc_remove_debugfs(struct msmsdcc_host *host) {}
 #endif
 
 static int msmsdcc_remove(struct platform_device *pdev)
@@ -6624,10 +6625,12 @@ static int msmsdcc_remove(struct platform_device *pdev)
 
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
-		wake_lock_destroy(&host->sdio_wlock);
 		irq_set_irq_wake(plat->sdiowakeup_irq, 0);
 		free_irq(plat->sdiowakeup_irq, host);
 	}
+
+	if (plat->sdiowakeup_irq || plat->mpm_sdiowakeup_int)
+		wake_lock_destroy(&host->sdio_wlock);
 
 	free_irq(host->core_irqres->start, host);
 	free_irq(host->core_irqres->start, host);
@@ -6663,7 +6666,7 @@ static int msmsdcc_remove(struct platform_device *pdev)
 	iounmap(host->base);
 	mmc_free_host(mmc);
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 	unregister_power_suspend(&host->power_suspend);
 #endif
 	pm_runtime_disable(&(pdev)->dev);
@@ -6971,9 +6974,7 @@ static int msmsdcc_runtime_idle(struct device *dev)
 		return 0;
 
 	/* Idle timeout is not configurable for now */
-	/* Disable Runtime PM becasue of potential issues
-	 *pm_schedule_suspend(dev, host->idle_tout);
-	 */
+	pm_schedule_suspend(dev, host->idle_tout);
 
 	return -EAGAIN;
 }

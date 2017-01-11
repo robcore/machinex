@@ -71,7 +71,7 @@ static int cprm_ake_retry_flag;
 #define INAND_CMD38_ARG_SECTRIM2 0x88
 #define MMC_BLK_TIMEOUT_MS  (30 * 1000)        /* 30 sec timeout */
 
-#define MMC_SANITIZE_REQ_TIMEOUT (60*60*1000) /* 1 hour in msec */
+#define MMC_SANITIZE_REQ_TIMEOUT 240000 /* msec */
 
 #define mmc_req_rel_wr(req)	(((req->cmd_flags & REQ_FUA) || \
 			(req->cmd_flags & REQ_META)) && \
@@ -1541,6 +1541,7 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 	struct request *req = mqrq->req;
 	struct mmc_blk_data *md = mq->data;
 	bool do_data_tag;
+	unsigned long flags;
 
 	/*
 	 * Reliable writes are used to implement Forced Unit Access and
@@ -1553,6 +1554,8 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 			  (req->cmd_flags & REQ_META)) &&
 		(rq_data_dir(req) == WRITE) &&
 		(md->flags & MMC_BLK_REL_WR);
+
+	spin_lock_irqsave(&card->host->mrq_lock, flags);
 
 	memset(brq, 0, sizeof(struct mmc_blk_request));
 	brq->mrq.cmd = &brq->cmd;
@@ -1685,6 +1688,7 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 
 	mqrq->mmc_active.mrq = &brq->mrq;
 	mqrq->mmc_active.err_check = mmc_blk_err_check;
+	spin_unlock_irqrestore(&card->host->mrq_lock, flags);
 
 	mmc_queue_bounce_pre(mqrq);
 }
@@ -2772,6 +2776,8 @@ static const struct mmc_fixup blk_fixups[] =
 		  MMC_QUIRK_SEC_ERASE_TRIM_BROKEN),
 	MMC_FIXUP("VZL00M", CID_MANFID_SAMSUNG, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_SEC_ERASE_TRIM_BROKEN),
+	MMC_FIXUP(CID_NAME_ANY, CID_MANFID_HYNIX, CID_OEMID_ANY, add_quirk_mmc,
+		  MMC_QUIRK_BROKEN_DATA_TIMEOUT),
 
 	END_FIXUP
 };
@@ -2897,7 +2903,9 @@ static int mmc_blk_probe(struct mmc_card *card)
 	mmc_fixup_device(card, blk_fixups);
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	mmc_set_bus_resume_policy(card->host, 1);
+	/*applying only MMC TYPE, need more time to verify SD TYPE*/
+	if (card && mmc_card_mmc(card))
+		mmc_set_bus_resume_policy(card->host, 1);
 #endif
 	if (mmc_add_disk(md))
 		goto out;
