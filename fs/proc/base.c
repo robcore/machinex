@@ -90,6 +90,7 @@
 #endif
 #include <trace/events/oom.h>
 #include "internal.h"
+#include "fd.h"
 
 /* NOTE:
  *	Implementing inode permission operations in /proc is almost
@@ -1595,7 +1596,7 @@ out:
 	return error;
 }
 
-static const struct inode_operations proc_pid_link_inode_operations = {
+const struct inode_operations proc_pid_link_inode_operations = {
 	.readlink	= proc_pid_readlink,
 	.follow_link	= proc_pid_follow_link,
 	.setattr	= proc_setattr,
@@ -1603,21 +1604,6 @@ static const struct inode_operations proc_pid_link_inode_operations = {
 
 
 /* building an inode */
-
-static int task_dumpable(struct task_struct *task)
-{
-	int dumpable = 0;
-	struct mm_struct *mm;
-
-	task_lock(task);
-	mm = task->mm;
-	if (mm)
-		dumpable = get_dumpable(mm);
-	task_unlock(task);
-	if(dumpable == 1)
-		return 1;
-	return 0;
-}
 
 struct inode *proc_pid_make_inode(struct super_block * sb, struct task_struct *task)
 {
@@ -1742,15 +1728,6 @@ int pid_revalidate(struct dentry *dentry, unsigned int flags)
 	}
 	d_drop(dentry);
 	return 0;
-}
-
-static int pid_delete_dentry(const struct dentry * dentry)
-{
-	/* Is the task we represent dead?
-	 * If so, then don't put the dentry on the lru list,
-	 * kill it immediately.
-	 */
-	return !proc_pid(dentry->d_inode)->tasks[PIDTYPE_PID].first;
 }
 
 const struct dentry_operations pid_dentry_operations =
