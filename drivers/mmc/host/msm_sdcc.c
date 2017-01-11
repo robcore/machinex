@@ -5110,7 +5110,7 @@ store_polling(struct device *dev, struct device_attribute *attr,
 	} else {
 		mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 	}
-#if 0
+#ifdef CONFIG_POWERSUSPEND
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
 #endif
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -5232,7 +5232,7 @@ store_enable_auto_cmd21(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-#if 0
+#ifdef CONFIG_POWERSUSPEND
 static void msmsdcc_power_suspend(struct power_suspend *h)
 {
 	struct msmsdcc_host *host =
@@ -6217,7 +6217,10 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
-	mmc->caps2 |= MMC_CAP2_SANITIZE;
+	/* Disable Sanitize & BKOPS
+	 * mmc->caps2 |= MMC_CAP2_SANITIZE;
+	 * mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
+	 */
 	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
 	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
@@ -6401,7 +6404,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->clk_scaling.polling_delay_ms = 100;
 	mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 
-#if 0
+#ifdef CONFIG_POWERSUSPEND
 	host->power_suspend.suspend = msmsdcc_power_suspend;
 	host->power_suspend.resume  = msmsdcc_power_resume;
 //	host->power_suspend.level   = POWER_SUSPEND_LEVEL_DISABLE_FB;
@@ -6666,7 +6669,7 @@ static int msmsdcc_remove(struct platform_device *pdev)
 	iounmap(host->base);
 	mmc_free_host(mmc);
 
-#if 0
+#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&host->power_suspend);
 #endif
 	pm_runtime_disable(&(pdev)->dev);
@@ -6974,7 +6977,9 @@ static int msmsdcc_runtime_idle(struct device *dev)
 		return 0;
 
 	/* Idle timeout is not configurable for now */
-	pm_schedule_suspend(dev, host->idle_tout);
+	/* Disable Runtime PM becasue of potential issues
+	 *pm_schedule_suspend(dev, host->idle_tout);
+	 */
 
 	return -EAGAIN;
 }

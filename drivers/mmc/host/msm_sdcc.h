@@ -381,10 +381,10 @@ struct msmsdcc_host {
 	struct msmsdcc_sps_data sps;
 	struct msmsdcc_pio_data	pio;
 
-#if 0
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
-#endif
 	int polling_enabled;
+#endif
 
 	struct tasklet_struct 	dma_tlet;
 
