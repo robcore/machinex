@@ -1790,28 +1790,6 @@ end_instantiate:
 	return filldir(dirent, name, len, filp->f_pos, ino, type);
 }
 
-static unsigned name_to_int(struct dentry *dentry)
-{
-	const char *name = dentry->d_name.name;
-	int len = dentry->d_name.len;
-	unsigned n = 0;
-
-	if (len > 1 && *name == '0')
-		goto out;
-	while (len-- > 0) {
-		unsigned c = *name++ - '0';
-		if (c > 9)
-			goto out;
-		if (n >= (~0U-9)/10)
-			goto out;
-		n *= 10;
-		n += c;
-	}
-	return n;
-out:
-	return ~0U;
-}
-
 #define PROC_FDINFO_MAX 64
 
 static int proc_fd_info(struct inode *inode, struct path *path, char *info)
@@ -2060,18 +2038,6 @@ static ssize_t proc_fdinfo_read(struct file *file, char __user *buf,
 		err = simple_read_from_buffer(buf, len, ppos, tmp, strlen(tmp));
 	return err;
 }
-
-static const struct file_operations proc_fdinfo_file_operations = {
-	.open           = nonseekable_open,
-	.read		= proc_fdinfo_read,
-	.llseek		= no_llseek,
-};
-
-static const struct file_operations proc_fd_operations = {
-	.read		= generic_read_dir,
-	.readdir	= proc_readfd,
-	.llseek		= default_llseek,
-};
 
 #ifdef CONFIG_CHECKPOINT_RESTORE
 
@@ -2404,90 +2370,6 @@ static const struct file_operations proc_map_files_operations = {
 };
 
 #endif /* CONFIG_CHECKPOINT_RESTORE */
-
-/*
- * /proc/pid/fd needs a special permission handler so that a process can still
- * access /proc/self/fd after it has executed a setuid().
- */
-static int proc_fd_permission(struct inode *inode, int mask)
-{
-	struct task_struct *p;
-	int rv;
-
-	rv = generic_permission(inode, mask);
-	if (rv == 0)
-		return rv;
-
-	rcu_read_lock();
-	p = pid_task(proc_pid(inode), PIDTYPE_PID);
-	if (p && same_thread_group(p, current))
-		rv = 0;
-	rcu_read_unlock();
-
-	return rv;
-}
-
-/*
- * proc directories can do almost nothing..
- */
-static const struct inode_operations proc_fd_inode_operations = {
-	.lookup		= proc_lookupfd,
-	.permission	= proc_fd_permission,
-	.setattr	= proc_setattr,
-};
-
-static struct dentry *proc_fdinfo_instantiate(struct inode *dir,
-	struct dentry *dentry, struct task_struct *task, const void *ptr)
-{
-	unsigned fd = (unsigned long)ptr;
- 	struct inode *inode;
- 	struct proc_inode *ei;
-	struct dentry *error = ERR_PTR(-ENOENT);
-
-	inode = proc_pid_make_inode(dir->i_sb, task);
-	if (!inode)
-		goto out;
-	ei = PROC_I(inode);
-	ei->fd = fd;
-	inode->i_mode = S_IFREG | S_IRUSR;
-	inode->i_fop = &proc_fdinfo_file_operations;
-	d_set_d_op(dentry, &tid_fd_dentry_operations);
-	d_add(dentry, inode);
-	/* Close the race of the process dying before we return the dentry */
-	if (tid_fd_revalidate(dentry, 0))
-		error = NULL;
-
- out:
-	return error;
-}
-
-static struct dentry *proc_lookupfdinfo(struct inode *dir,
-					struct dentry *dentry,
-					unsigned int flags)
-{
-	return proc_lookupfd_common(dir, dentry, proc_fdinfo_instantiate);
-}
-
-static int proc_readfdinfo(struct file *filp, void *dirent, filldir_t filldir)
-{
-	return proc_readfd_common(filp, dirent, filldir,
-				  proc_fdinfo_instantiate);
-}
-
-static const struct file_operations proc_fdinfo_operations = {
-	.read		= generic_read_dir,
-	.readdir	= proc_readfdinfo,
-	.llseek		= default_llseek,
-};
-
-/*
- * proc directories can do almost nothing..
- */
-static const struct inode_operations proc_fdinfo_inode_operations = {
-	.lookup		= proc_lookupfdinfo,
-	.setattr	= proc_setattr,
-};
-
 
 static struct dentry *proc_pident_instantiate(struct inode *dir,
 	struct dentry *dentry, struct task_struct *task, const void *ptr)
