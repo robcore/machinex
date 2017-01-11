@@ -404,7 +404,6 @@ static int dpm_run_callback(pm_callback_t cb, struct device *dev,
 
 	initcall_debug_report(dev, calltime, error);
 
-	WARN_ON(error);
 	return error;
 }
 
@@ -504,6 +503,7 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
+	WARN_ON(error);
 
 	pm_runtime_enable(dev);
 	return error;
@@ -613,6 +613,8 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 
  Out:
 	TRACE_RESUME(error);
+	WARN_ON(error);
+
 	return error;
 }
 
@@ -971,6 +973,7 @@ static int device_suspend_noirq(struct device *dev, pm_message_t state)
 
 	error = dpm_run_callback(callback, dev, state, info);
 	if (error)
+		WARN_ON(error);
 		pm_runtime_enable(dev);
 
 	return error;
@@ -1069,6 +1072,7 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 		 * dpm_resume_early wouldn't be run for this failed device,
 		 * hence enable runtime_pm now
 		 */
+		WARN_ON(error);
 		pm_runtime_enable(dev);
 
 	return error;
@@ -1258,6 +1262,7 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
  Complete:
 	complete_all(&dev->power.completion);
 	if (error)
+		WARN_ON(error);
 		async_error = error;
 
 	return error;
