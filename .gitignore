@@ -41,6 +41,7 @@ modules.builtin
 *.S.rej
 boot.img-zImage
 m67xdaupdate.txt
+*.o.d
 
 #
 # Top-level generic files
