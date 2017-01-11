@@ -237,24 +237,38 @@ out_free_devname:
 	return ret;
 }
 
-static int update_netprio(const void *v, struct file *file, unsigned n)
-{
-	int err;
-	struct socket *sock = sock_from_file(file, &err);
-	if (sock)
-		sock->sk->sk_cgrp_prioidx = (u32)(unsigned long)v;
-	return 0;
-}
-
 void net_prio_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	struct task_struct *p;
-	void *v;
 
 	cgroup_taskset_for_each(p, cgrp, tset) {
+		unsigned int fd;
+		struct fdtable *fdt;
+		struct files_struct *files;
+
 		task_lock(p);
-		v = (void *)(unsigned long)task_netprioidx(p);
-		iterate_fd(p->files, 0, update_netprio, v);
+		files = p->files;
+		if (!files) {
+			task_unlock(p);
+			continue;
+		}
+
+		spin_lock(&files->file_lock);
+		fdt = files_fdtable(files);
+		for (fd = 0; fd < fdt->max_fds; fd++) {
+			struct file *file;
+			struct socket *sock;
+			int err;
+
+			file = fcheck_files(files, fd);
+			if (!file)
+				continue;
+
+			sock = sock_from_file(file, &err);
+			if (sock)
+				sock_update_netprioidx(sock->sk, p);
+		}
+		spin_unlock(&files->file_lock);
 		task_unlock(p);
 	}
 }
