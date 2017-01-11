@@ -354,8 +354,10 @@ static char *get_line(void)
 	end_reached = 0;
 	while (*page != '\n') {
 		if (*page == '\0') {
-			end_reached = 1;
-			break;
+			if (!end_reached) {
+				end_reached = 1;
+				break;
+			}
 		} else if (i < MAX_LEN)
 			line[i++] = *(page++);
 		else {
@@ -368,7 +370,7 @@ static char *get_line(void)
 	if (i <= MAX_LEN)
 		line[i] = '\0';
 	if (!end_reached)
-		page++;		/* move past '\n' */
+		page++;		/* move pass '\n' */
 
 	return line;
 }
