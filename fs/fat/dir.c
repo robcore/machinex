@@ -536,7 +536,6 @@ end_of_dir:
 
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(fat_search_long);
 
 struct fat_ioctl_filldir_callback {
@@ -900,7 +899,6 @@ int fat_get_dotdot_entry(struct inode *dir, struct buffer_head **bh,
 	}
 	return -ENOENT;
 }
-
 EXPORT_SYMBOL_GPL(fat_get_dotdot_entry);
 
 /* See if directory is empty */
@@ -923,7 +921,6 @@ int fat_dir_empty(struct inode *dir)
 	brelse(bh);
 	return result;
 }
-
 EXPORT_SYMBOL_GPL(fat_dir_empty);
 
 /*
@@ -969,7 +966,6 @@ int fat_scan(struct inode *dir, const unsigned char *name,
 	}
 	return -ENOENT;
 }
-
 EXPORT_SYMBOL_GPL(fat_scan);
 
 static int __fat_remove_entries(struct inode *dir, loff_t pos, int nr_slots)
@@ -1057,7 +1053,6 @@ int fat_remove_entries(struct inode *dir, struct fat_slot_info *sinfo)
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(fat_remove_entries);
 
 static int fat_zeroed_cluster(struct inode *dir, sector_t blknr, int nr_used,
@@ -1169,7 +1164,6 @@ error_free:
 error:
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(fat_alloc_new_dir);
 
 static int fat_add_new_entries(struct inode *dir, void *slots, int nr_slots,
@@ -1385,5 +1379,4 @@ error_remove:
 		__fat_remove_entries(dir, pos, free_slots);
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(fat_add_entries);
