@@ -270,7 +270,7 @@ pid_t f_getown(struct file *filp)
 
 static int f_setown_ex(struct file *filp, unsigned long arg)
 {
-	struct f_owner_ex * __user owner_p = (void * __user)arg;
+	struct f_owner_ex __user *owner_p = (void __user *)arg;
 	struct f_owner_ex owner;
 	struct pid *pid;
 	int type;
@@ -310,7 +310,7 @@ static int f_setown_ex(struct file *filp, unsigned long arg)
 
 static int f_getown_ex(struct file *filp, unsigned long arg)
 {
-	struct f_owner_ex * __user owner_p = (void * __user)arg;
+	struct f_owner_ex __user *owner_p = (void __user *)arg;
 	struct f_owner_ex owner;
 	int ret = 0;
 
@@ -348,7 +348,7 @@ static int f_getown_ex(struct file *filp, unsigned long arg)
 static int f_getowner_uids(struct file *filp, unsigned long arg)
 {
 	struct user_namespace *user_ns = current_user_ns();
-	uid_t * __user dst = (void * __user)arg;
+	uid_t __user *dst = (void __user *)arg;
 	uid_t src[2];
 	int err;
 
