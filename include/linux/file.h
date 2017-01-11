@@ -37,18 +37,12 @@ static inline void fdput(struct fd fd)
 		fput(fd.file);
 }
 
-extern struct file *fget(unsigned int fd);
-extern struct file *fget_light(unsigned int fd, int *fput_needed);
-
 static inline struct fd fdget(unsigned int fd)
 {
 	int b;
 	struct file *f = fget_light(fd, &b);
 	return (struct fd){f,b};
 }
-
-extern struct file *fget_raw(unsigned int fd);
-extern struct file *fget_raw_light(unsigned int fd, int *fput_needed);
 
 static inline struct fd fdget_raw(unsigned int fd)
 {
@@ -57,7 +51,13 @@ static inline struct fd fdget_raw(unsigned int fd)
 	return (struct fd){f,b};
 }
 
+extern struct file *fget(unsigned int fd);
+extern struct file *fget_light(unsigned int fd, int *fput_needed);
+extern struct file *fget_raw(unsigned int fd);
+extern struct file *fget_raw_light(unsigned int fd, int *fput_needed);
+extern int f_dupfd(unsigned int from, struct file *file, unsigned flags);
 extern void set_close_on_exec(unsigned int fd, int flag);
+extern bool get_close_on_exec(unsigned int fd);
 extern void put_filp(struct file *);
 extern int alloc_fd(unsigned start, unsigned flags);
 extern int get_unused_fd_flags(unsigned flags);
