@@ -55,11 +55,11 @@ static int ext4_release_file(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static void ext4_aiodio_wait(struct inode *inode)
+static void ext4_unwritten_wait(struct inode *inode)
 {
 	wait_queue_head_t *wq = ext4_ioend_wq(inode);
 
-	wait_event(*wq, (atomic_read(&EXT4_I(inode)->i_aiodio_unwritten) == 0));
+	wait_event(*wq, (atomic_read(&EXT4_I(inode)->i_unwritten) == 0));
 }
 
 /*
@@ -130,7 +130,7 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
 				 "performance will be poor.",
 				 inode->i_ino, current->comm);
 		mutex_lock(ext4_aio_mutex(inode));
-		ext4_aiodio_wait(inode);
+		ext4_unwritten_wait(inode);
 	}
 
 	ret = generic_file_write_iter(iocb, iter, pos);
