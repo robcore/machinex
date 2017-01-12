@@ -44,7 +44,9 @@ static void timekeeper_setup_internals(struct clocksource *clock)
 {
 	cycle_t interval;
 	u64 tmp, ntpinterval;
+	struct clocksource *old_clock;
 
+	old_clock = timekeeper.clock;
 	timekeeper.clock = clock;
 	clock->cycle_last = clock->read(clock);
 
@@ -66,7 +68,14 @@ static void timekeeper_setup_internals(struct clocksource *clock)
 	timekeeper.raw_interval =
 		((u64) interval * clock->mult) >> clock->shift;
 
-	timekeeper.xtime_nsec = 0;
+	 /* if changing clocks, convert xtime_nsec shift units */
+	if (old_clock) {
+		int shift_change = clock->shift - old_clock->shift;
+		if (shift_change < 0)
+			timekeeper.xtime_nsec >>= -shift_change;
+		else
+			timekeeper.xtime_nsec <<= shift_change;
+	}
 	timekeeper.shift = clock->shift;
 
 	timekeeper.ntp_error = 0;
@@ -85,6 +94,7 @@ static inline s64 timekeeping_get_ns(void)
 {
 	cycle_t cycle_now, cycle_delta;
 	struct clocksource *clock;
+	s64 nsec;
 
 	/* read clocksource: */
 	clock = timekeeper.clock;
@@ -93,9 +103,8 @@ static inline s64 timekeeping_get_ns(void)
 	/* calculate the delta since the last update_wall_time: */
 	cycle_delta = (cycle_now - clock->cycle_last) & clock->mask;
 
-	/* return delta convert to nanoseconds using ntp adjusted mult. */
-	return clocksource_cyc2ns(cycle_delta, timekeeper.mult,
-				  timekeeper.shift);
+	nsec = cycle_delta * timekeeper.mult + timekeeper.xtime_nsec;
+	return nsec >> timekeeper.shift;
 }
 
 static inline s64 timekeeping_get_ns_raw(void)
@@ -165,13 +174,12 @@ static void timekeeping_forward_now(void)
 	cycle_delta = (cycle_now - clock->cycle_last) & clock->mask;
 	clock->cycle_last = cycle_now;
 
-	nsec = clocksource_cyc2ns(cycle_delta, timekeeper.mult,
-				  timekeeper.shift);
+	timekeeper.xtime_nsec += cycle_delta * timekeeper.mult;
 
 	/* If arch requires, add in gettimeoffset() */
-	nsec += arch_gettimeoffset();
+	timekeeper.xtime_nsec += arch_gettimeoffset() << timekeeper.shift;
 
-	timespec_add_ns(&timekeeper.xtime, nsec);
+	tk_normalize_xtime(&timekeeper);
 
 	nsec = clocksource_cyc2ns(cycle_delta, clock->mult, clock->shift);
 	timespec_add_ns(&timekeeper.raw_time, nsec);
@@ -765,11 +773,10 @@ ktime_t ktime_get(void)
 
 	do {
 		seq = read_seqbegin(&timekeeper.lock);
-		secs = timekeeper.xtime.tv_sec +
+		secs = timekeeper.xtime_sec +
 				timekeeper.wall_to_monotonic.tv_sec;
-		nsecs = timekeeper.xtime.tv_nsec +
+		nsecs = timekeeping_get_ns() +
 				timekeeper.wall_to_monotonic.tv_nsec;
-		nsecs += timekeeping_get_ns();
 		/* If arch requires, add in gettimeoffset() */
 		nsecs += arch_gettimeoffset();
 
@@ -1017,9 +1024,9 @@ static cycle_t logarithmic_accumulation(cycle_t offset, int shift,
 	while (timekeeper.xtime_nsec >= nsecps) {
 		int leap;
 		timekeeper.xtime_nsec -= nsecps;
-		timekeeper.xtime.tv_sec++;
-		leap = second_overflow(timekeeper.xtime.tv_sec);
-		timekeeper.xtime.tv_sec += leap;
+		timekeeper.xtime_sec++;
+		leap = second_overflow(timekeeper.xtime_sec);
+		timekeeper.xtime_sec += leap;
 		timekeeper.wall_to_monotonic.tv_sec -= leap;
 		if (leap)
 			*clock_set = 1;
@@ -1056,6 +1063,7 @@ static void update_wall_time(void)
 	int shift = 0, maxshift;
 	unsigned int clock_set = 0;
 	unsigned long flags;
+	s64 remainder;
 
 	write_seqlock_irqsave(&timekeeper.lock, flags);
 
@@ -1222,13 +1230,13 @@ EXPORT_SYMBOL_GPL(monotonic_to_bootbased);
 
 unsigned long get_seconds(void)
 {
-	return timekeeper.xtime.tv_sec;
+	return timekeeper.xtime_sec;
 }
 EXPORT_SYMBOL(get_seconds);
 
 struct timespec __current_kernel_time(void)
 {
-	return timekeeper.xtime;
+	return tk_xtime(&timekeeper);
 }
 
 struct timespec current_kernel_time(void)
@@ -1239,7 +1247,7 @@ struct timespec current_kernel_time(void)
 	do {
 		seq = read_seqbegin(&timekeeper.lock);
 
-		now = timekeeper.xtime;
+		now = tk_xtime(&timekeeper);
 	} while (read_seqretry(&timekeeper.lock, seq));
 
 	return now;
@@ -1254,7 +1262,7 @@ struct timespec get_monotonic_coarse(void)
 	do {
 		seq = read_seqbegin(&timekeeper.lock);
 
-		now = timekeeper.xtime;
+		now = tk_xtime(&timekeeper);
 		mono = timekeeper.wall_to_monotonic;
 	} while (read_seqretry(&timekeeper.lock, seq));
 
@@ -1321,7 +1329,7 @@ void get_xtime_and_monotonic_and_sleep_offset(struct timespec *xtim,
 
 	do {
 		seq = read_seqbegin(&timekeeper.lock);
-		*xtim = timekeeper.xtime;
+		*xtim = tk_xtime(&timekeeper);
 		*wtom = timekeeper.wall_to_monotonic;
 		*sleep = timekeeper.total_sleep_time;
 	} while (read_seqretry(&timekeeper.lock, seq));
@@ -1345,9 +1353,8 @@ ktime_t ktime_get_update_offsets(ktime_t *offs_real, ktime_t *offs_boot)
 	do {
 		seq = read_seqbegin(&timekeeper.lock);
 
-		secs = timekeeper.xtime.tv_sec;
-		nsecs = timekeeper.xtime.tv_nsec;
-		nsecs += timekeeping_get_ns();
+		secs = timekeeper.xtime_sec;
+		nsecs = timekeeping_get_ns();
 		/* If arch requires, add in gettimeoffset() */
 		nsecs += arch_gettimeoffset();
 
