@@ -179,6 +179,11 @@ struct clk *clk_register_gate(struct device *dev, const char *name,
 		void __iomem *reg, u8 bit_idx,
 		u8 clk_gate_flags, spinlock_t *lock);
 
+struct clk_div_table {
+	unsigned int	val;
+	unsigned int	div;
+};
+
 /**
  * struct clk_divider - adjustable divider clock
  *
@@ -186,6 +191,7 @@ struct clk *clk_register_gate(struct device *dev, const char *name,
  * @reg:	register containing the divider
  * @shift:	shift to the divider bit field
  * @width:	width of the divider bit field
+ * @table:	array of value/divider pairs, last entry should have div = 0
  * @lock:	register lock
  *
  * Clock with an adjustable divider affecting its output frequency.  Implements
@@ -205,6 +211,7 @@ struct clk_divider {
 	u8		shift;
 	u8		width;
 	u8		flags;
+	const struct clk_div_table	*table;
 	spinlock_t	*lock;
 };
 
@@ -216,6 +223,11 @@ struct clk *clk_register_divider(struct device *dev, const char *name,
 		const char *parent_name, unsigned long flags,
 		void __iomem *reg, u8 shift, u8 width,
 		u8 clk_divider_flags, spinlock_t *lock);
+struct clk *clk_register_divider_table(struct device *dev, const char *name,
+		const char *parent_name, unsigned long flags,
+		void __iomem *reg, u8 shift, u8 width,
+		u8 clk_divider_flags, const struct clk_div_table *table,
+		spinlock_t *lock);
 
 /**
  * struct clk_mux - multiplexer clock
