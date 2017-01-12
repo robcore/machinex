@@ -27,10 +27,11 @@ static int lux_tbl[] = {
 	39, 41, 44, 47, 50,
 	53, 56, 60, 64, 68,
 	72, 77, 82, 87, 93,
-	98, 105, 111, 119, 126,
-	134, 143, 152, 162, 172,
-	183, 195, 207, 220, 234,
-	249, 265, 282, 300,
+	98, 105, 111, 119,
+	126, 134, 143, 152,
+	162, 172, 183, 195,
+	207, 220, 234, 249,
+	265, 282, 300,
 };
 
 static char samsung_nop[] = {
@@ -1619,8 +1620,8 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 10)
-		bl_level = 10;
+	if (bl_level < 1)
+		bl_level = 1;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
@@ -1660,17 +1661,17 @@ static int brightness_control(int bl_level)
 
 	elvss_value = get_elvss_value(candela, id3);
 
-	if (elvss_value >= 0x29)
-		elvss_value = 0x29;
+	if (elvss_value >= 0x2F)
+		elvss_value = 0x2F;
 
 	samsung_brightness_elvss_ref[2] = elvss_value;
 
 	if (mipi_pd.ldi_rev >= 'G')
-		samsung_brightness_elvss_ref[1] = 0x2C;
+			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 
 	if (mipi_pd.ldi_rev >= 'H') {
 		if (get_auto_brightness() == 6)
-			samsung_brightness_elvss_ref[2] = 0x01;
+			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 	} else {
 		if (get_auto_brightness() == 6)
 			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
