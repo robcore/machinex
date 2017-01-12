@@ -84,7 +84,10 @@ bool use_spi_crc = 1;
 #else
 bool use_spi_crc = 0;
 #endif
-module_param(use_spi_crc, bool, 0644);
+module_param_named(use_spi_crc, use_spi_crc, bool, 0644);
+MODULE_PARM_DESC(
+	use_spi_crc,
+	"Software CRC's are useful for stability, but bad for performance");
 
 /*
  * We normally treat cards as removed during suspend if they are not
