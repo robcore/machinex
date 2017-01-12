@@ -47,6 +47,7 @@
 #include <linux/wait.h>
 #include <linux/workqueue.h>
 #include <linux/export.h>
+#include <linux/timekeeper_internal.h>
 
 /*
  * Management arrays for POSIX timers.	 Timers are kept in slab memory
@@ -793,7 +794,7 @@ common_timer_set(struct k_itimer *timr, int flags,
 	if (hrtimer_try_to_cancel(timer) < 0)
 		return TIMER_RETRY;
 
-	timr->it_requeue_pending = (timr->it_requeue_pending + 2) & 
+	timr->it_requeue_pending = (timr->it_requeue_pending + 2) &
 		~REQUEUE_PENDING;
 	timr->it_overrun_last = 0;
 
