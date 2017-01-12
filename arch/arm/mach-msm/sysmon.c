@@ -293,7 +293,7 @@ static int sysmon_probe(struct platform_device *pdev)
 		ret = smd_named_open_on_edge("sys_mon", pdev->id, &ss->chan, ss,
 					     sysmon_smd_notify);
 		if (ret) {
-			pr_err("SMD open failed\n");
+			pr_debug("SMD open failed\n");
 			return ret;
 		}
 
@@ -307,7 +307,7 @@ static int sysmon_probe(struct platform_device *pdev)
 				(pdev->id - SYSMON_SS_EXT_MODEM);
 		ret = hsic_sysmon_open(ss->hsic_id);
 		if (ret) {
-			pr_err("HSIC open failed\n");
+			pr_debug("HSIC open failed\n");
 			return ret;
 		}
 		break;

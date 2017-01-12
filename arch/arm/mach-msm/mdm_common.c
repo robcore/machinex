@@ -113,7 +113,7 @@ struct mdm_device {
 
 static struct list_head	mdm_devices;
 static DEFINE_SPINLOCK(mdm_devices_lock);
-static int disable_boot_timeout = 1; //HACK: apparently worked for some Mako devices
+static int disable_boot_timeout = 0;
 
 static int ssr_count;
 static DEFINE_SPINLOCK(ssr_lock);
