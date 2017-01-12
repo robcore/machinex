@@ -47,6 +47,7 @@
 #include <linux/wait.h>
 #include <linux/workqueue.h>
 #include <linux/export.h>
+#include <linux/timex.h>
 #include <linux/timekeeper_internal.h>
 
 /*

@@ -1374,6 +1374,17 @@ ktime_t ktime_get_monotonic_offset(void)
 }
 EXPORT_SYMBOL_GPL(ktime_get_monotonic_offset);
 
+/*
+ * do_adjtimex() - Accessor function to NTP __do_adjtimex function
+ */
+int do_adjtimex(struct timex *txc)
+{
+	int ret;
+	ret = __do_adjtimex(txc);
+	tk_update_leap_state(&timekeeper);
+	return ret;
+}
+
 /**
  * xtime_update() - advances the timekeeping infrastructure
  * @ticks:	number of ticks, that have elapsed since the last call.
