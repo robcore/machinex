@@ -376,19 +376,20 @@ static int alarmtimer_suspend(struct device *dev)
 	rtc_read_time(rtc, &tm);
 	now = rtc_tm_to_ktime(tm);
 	now = ktime_add(now, min);
-
-	if (poweron_alarm) {
+#if 0
+	if (rtc_alarm_powerup) {
 		struct rtc_time tm_val;
 		unsigned long secs;
 		tm_val = rtc_ktime_to_tm(min);
 		rtc_tm_to_time(&tm_val, &secs);
 		lpm_suspend_wake_time(secs);
 	} else {
+#endif
 		/* Set alarm, if in the past reject suspend briefly to handle */
 		ret = rtc_timer_start(rtc, &rtctimer, now, ktime_set(0, 0));
 		if (ret < 0)
 			__pm_wakeup_event(ws, MSEC_PER_SEC);
-	}
+	//}
 	return ret;
 }
 #else

@@ -213,7 +213,7 @@ static int pm8xxx_rtc_set_time(struct device *dev, struct rtc_time *tm)
 			secs, tm->tm_hour, tm->tm_min, tm->tm_sec,
 			tm->tm_mday, tm->tm_mon, tm->tm_year);
 #endif
-			
+
 rtc_rw_fail:
 	if (alarm_enabled)
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
@@ -703,7 +703,7 @@ static irqreturn_t pm8xxx_alarm_trigger(int irq, void *dev_id)
 #ifdef CONFIG_RTC_AUTO_PWRON_PARAM
 	pr_info("%s [SAPA] : irq(%d), lpm_mode:(%d)\n", __func__, irq, poweroff_charging);
 
-	if ( poweroff_charging && sapa_saved_time.enabled) {
+	if (poweroff_charging && sapa_saved_time.enabled) {
 		struct rtc_time now;
 		struct rtc_wkalrm alarm;
 		unsigned long curr_time, alarm_time, pwron_time;
@@ -737,7 +737,7 @@ static irqreturn_t pm8xxx_alarm_trigger(int irq, void *dev_id)
 		}
 	}
 #else
-	if ( poweroff_charging ) {
+	if (poweroff_charging) {
 		dev_info(rtc_dd->rtc_dev, "%s: Restart since RTC \n", __func__);
 		//machine_restart(NULL);
 		kernel_restart(NULL);
