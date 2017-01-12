@@ -495,7 +495,7 @@ static ssize_t show_polling(struct device *dev,
 	if (!host)
 		return -EINVAL;
 
-	return snprintf(buf, PAGE_SIZE, "%lu milliseconds\n",
+	return snprintf(buf, PAGE_SIZE, "%lu\n",
 			host->clk_scaling.polling_delay_ms);
 }
 
