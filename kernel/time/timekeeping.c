@@ -189,6 +189,17 @@ static inline s64 timekeeping_get_ns_raw(struct timekeeper *tk)
 	return nsec + arch_gettimeoffset();
 }
 
+/*
+ *   tk_update_leap_state - helper to update the next_leap_ktime
+ */
+static inline void tk_update_leap_state(struct timekeeper *tk)
+{
+	tk->next_leap_ktime = ntp_get_next_leap();
+	if (tk->next_leap_ktime.tv64 != KTIME_MAX)
+		/* Convert to monotonic time */
+		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
+}
+
 /* must hold write on timekeeper.lock */
 static void timekeeping_update(struct timekeeper *tk, bool clearntp)
 {
