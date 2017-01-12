@@ -327,7 +327,7 @@ EXPORT_SYMBOL_GPL(alarm_expires_remaining);
  * set an rtc timer to fire that far into the future, which
  * will wake us from suspend.
  */
-#if defined(CONFIG_RTC_DRV_QPNP) && defined(CONFIG_MSM_PM)
+#if defined(CONFIG_MSM_PM8X60)
 extern void lpm_suspend_wake_time(uint64_t wakeup_time);
 static int alarmtimer_suspend(struct device *dev)
 {
