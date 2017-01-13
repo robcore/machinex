@@ -971,10 +971,10 @@ CONFIG_PM_WAKELOCKS_LIMIT=0
 CONFIG_PM_RUNTIME=y
 CONFIG_PM=y
 #Rob's temporary pm debugging setup
-CONFIG_PM_DEBUG=y
-CONFIG_PM_ADVANCED_DEBUG=y
+# CONFIG_PM_DEBUG is not set
+# CONFIG_PM_ADVANCED_DEBUG is not set
 # CONFIG_PM_TEST_SUSPEND is not set
-CONFIG_PM_SLEEP_DEBUG=y
+# CONFIG_PM_SLEEP_DEBUG is not set
 #end Rob's temporary pm debugging setup
 # CONFIG_APM_EMULATION is not set
 CONFIG_PM_CLK=y
