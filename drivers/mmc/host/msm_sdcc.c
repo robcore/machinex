@@ -3691,7 +3691,7 @@ static void msmsdcc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#if 0
 static void msmsdcc_print_rpm_info(struct msmsdcc_host *host)
 {
 	struct device *dev = mmc_dev(host->mmc);
@@ -3805,7 +3805,7 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 
 out:
 	if (rc < 0) {
-		pr_info("%s: %s: failed with error %d", mmc_hostname(mmc),
+		pr_err("%s: %s: failed with error %d", mmc_hostname(mmc),
 				__func__, rc);
 		msmsdcc_pm_qos_update_latency(host, 0);
 		return rc;
@@ -6382,14 +6382,14 @@ msmsdcc_probe(struct platform_device *pdev)
 	 * Hence, enable run-time PM only for slots for which bus
 	 * suspend/resume operations are defined.
 	 */
-#ifdef CONFIG_MMC_UNSAFE_RESUME
+#if 0
 	/*
 	 * If this capability is set, MMC core will enable/disable host
 	 * for every claim/release operation on a host. We use this
 	 * notification to increment/decrement runtime pm usage count.
 	 */
 	pm_runtime_enable(&(pdev)->dev);
-#else
+//#else
 	if (mmc->caps & MMC_CAP_NONREMOVABLE) {
 		pm_runtime_enable(&(pdev)->dev);
 	}
