@@ -61,11 +61,11 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
-#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+#if 0
 #define TIMA_PAC_CMD_ID 0x3f80d221
 #endif
 
-#ifdef TIMA_LKM_AUTH_ENABLED
+#if 0
 #include <linux/qseecom.h>
 #include <linux/kobject.h>
 
@@ -98,8 +98,8 @@ extern struct device *tima_uevent_dev;
 #define HASH_ALGO QSEE_HASH_SHA1
 #define HASH_SIZE QSEE_SHA1_HASH_SZ
 
-/** 
- * Commands for TZ LKMAUTH application. 
+/**
+ * Commands for TZ LKMAUTH application.
  * */
 typedef enum
 {
@@ -141,7 +141,7 @@ typedef struct lkmauth_rsp_s
  * to ensure complete separation of code and data, but
  * only when CONFIG_DEBUG_SET_MODULE_RONX=y
  */
-#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+#if 0
 # define debug_align(X) ALIGN(X, PAGE_SIZE)
 #else
 #ifdef CONFIG_DEBUG_SET_MODULE_RONX
@@ -176,7 +176,7 @@ static LIST_HEAD(modules);
 struct list_head *kdb_modules = &modules; /* kdb needs the list of modules */
 #endif /* CONFIG_KGDB_KDB */
 
-#ifdef TIMA_TEST_INFRA
+#if 0
 void tts_debug_func_mod(void)
 {
 	/*function is never called*/
@@ -2426,7 +2426,7 @@ static void add_kallsyms(struct module *mod, const struct load_info *info)
 }
 #endif /* CONFIG_KALLSYMS */
 
-#ifdef	TIMA_LKM_AUTH_ENABLED
+#if 0
 static int lkmauth(Elf_Ehdr *hdr, int len)
 {
 	int ret = 0; /* value to be returned for lkmauth */
@@ -2441,7 +2441,7 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
 	pr_warn("TIMA: lkmauth--launch the tzapp to check kernel module; module len is %d\n", len);
 
 	snprintf(app_name, MAX_APP_NAME_SIZE, "%s", "tima_lkm");
-    
+
 	if ( NULL == qhandle ) {
 		/* start the lkmauth tzapp only when it is not loaded. */
 		qsee_ret = qseecom_start_app(&qhandle, app_name, 1024);
@@ -2459,15 +2459,15 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
 		ret = -1; /* lkm authentication failed. */
 		goto lkmauth_ret; /* leave the function now. */
 	}
-	
-	/* Generate the request cmd to verify hash of ko. 
-	 * Note that we are reusing the same buffer for both request and response, 
-	 * and the buffer is allocated in qhandle. 
+
+	/* Generate the request cmd to verify hash of ko.
+	 * Note that we are reusing the same buffer for both request and response,
+	 * and the buffer is allocated in qhandle.
 	 */
 	kreq = (struct lkmauth_req_s *)qhandle->sbuf;
-	kreq->cmd_id = LKMAUTH_CMD_AUTH; 
+	kreq->cmd_id = LKMAUTH_CMD_AUTH;
 	pr_warn("TIMA: lkmauth -- hdr before kreq is : %x\n", (u32)hdr);
-	kreq->module_addr_start = (u32)hdr; 
+	kreq->module_addr_start = (u32)hdr;
 	kreq->module_len = len;
 
 	req_len = sizeof(lkmauth_req_t);
@@ -2494,8 +2494,8 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
 		pr_warn("TIMA: lkmauth--shutting down the tzapp.\n");
 		qsee_ret = qseecom_shutdown_app(&qhandle);
 		if ( qsee_ret ) {
-			/* Failed to shut down the lkmauth tzapp. What will happen to 
-			 * the qhandle in this case? Can it be used for the next lkmauth 
+			/* Failed to shut down the lkmauth tzapp. What will happen to
+			 * the qhandle in this case? Can it be used for the next lkmauth
 			 * invocation?
 			 */
 			pr_err("TIMA: lkmauth--failed to shut down the tzapp.\n");
@@ -2504,9 +2504,9 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
 			qhandle = NULL;
 
 		ret = -1;
-		goto lkmauth_ret; 
+		goto lkmauth_ret;
 	}
-	
+
 	/* parse result */
 	if (krsp->ret == 0) {
 		pr_warn("TIMA: lkmauth--verification succeeded.\n");
@@ -2516,8 +2516,8 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
 		pr_err("TIMA: lkmauth--verification failed %d\n", krsp->ret);
 		ret = -1;
 
-		/* Send a notification through uevent. Note that the lkmauth tzapp 
-		 * should have already raised an alert in TZ Security log. 
+		/* Send a notification through uevent. Note that the lkmauth tzapp
+		 * should have already raised an alert in TZ Security log.
 		 */
 		status = kzalloc(16, GFP_KERNEL);
 		if (!status) {
@@ -2650,10 +2650,10 @@ static int copy_and_check(struct load_info *info,
 		goto free_hdr;
 	}
 
-#ifdef TIMA_LKM_AUTH_ENABLED
+#if 0
 //	if (len > 500000) {
 //		pr_err("Skipped module greater than 50000 in size\n");
-//	}  else 
+//	}  else
 	if (lkmauth(hdr, len) != 0) {
 		err = -ENOEXEC;
 		goto free_hdr;
@@ -3261,7 +3261,7 @@ static void do_mod_ctors(struct module *mod)
 		mod->ctors[i]();
 #endif
 }
-#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+#if 0
 void tima_mod_send_smc_instruction(unsigned int    *vatext,unsigned int    *vadata,unsigned int text_count,unsigned int data_count)
 {
         unsigned long   cmd_id = TIMA_PAC_CMD_ID;
@@ -3287,17 +3287,17 @@ void tima_mod_send_smc_instruction(unsigned int    *vatext,unsigned int    *vada
 
 }
 /**
- *    tima_mod_page_change_access  - Wrapper function to change access control permissions of pages 
+ *    tima_mod_page_change_access  - Wrapper function to change access control permissions of pages
  *
  *     It sends code and data pages to secure side to  make code pages readonly and data pages non executable
- * 
+ *
  */
 
 void tima_mod_page_change_access(struct module *mod)
 {
         unsigned int    *vatext,*vadata;/* base virtual address of text and data regions*/
         unsigned int    text_count,data_count;/* Number of text and data pages present in core section */
-     
+
      /*Lets first pickup core section */
         vatext      = mod->module_core;
         vadata      = (int *)((char *)(mod->module_core) + mod->core_ro_size);
@@ -3311,10 +3311,10 @@ void tima_mod_page_change_access(struct module *mod)
                 text_count = 1;
         if(!data_count)
                 data_count = 1;
-        
+
         /* Change permissive bits for core section*/
         tima_mod_send_smc_instruction(vatext,vadata,text_count,data_count);
- 
+
      /*Lets pickup init section */
         vatext      = mod->module_init;
         vadata      = (int *)((char *)(mod->module_init) + mod->init_ro_size);
@@ -3348,7 +3348,7 @@ SYSCALL_DEFINE3(init_module, void __user *, umod,
 	blocking_notifier_call_chain(&module_notify_list,
 			MODULE_STATE_COMING, mod);
 
-#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
+#if 0
     tima_mod_page_change_access(mod);
 #endif
 
