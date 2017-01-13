@@ -157,7 +157,7 @@ static struct rtc_task alarmtimer_rtc_task = {
 struct rtc_device *alarmtimer_get_rtcdev(void)
 {
 	unsigned long flags;
-	struct rtc_device *ret = NULL;
+	struct rtc_device *ret;
 
 	spin_lock_irqsave(&rtcdev_lock, flags);
 	ret = rtcdev;
@@ -171,27 +171,24 @@ static int alarmtimer_rtc_add_device(struct device *dev,
 				struct class_interface *class_intf)
 {
 	unsigned long flags;
-	int err = 0;
 	struct rtc_device *rtc = to_rtc_device(dev);
+
 	if (rtcdev)
 		return -EBUSY;
+
 	if (!rtc->ops->set_alarm)
+		return -1;
+	if (!device_may_wakeup(rtc->dev.parent))
 		return -1;
 
 	spin_lock_irqsave(&rtcdev_lock, flags);
 	if (!rtcdev) {
-		err = rtc_irq_register(rtc, &alarmtimer_rtc_task);
-		if (err)
-			goto rtc_irq_reg_err;
 		rtcdev = rtc;
 		/* hold a reference so it doesn't go away */
 		get_device(dev);
 	}
-
-rtc_irq_reg_err:
 	spin_unlock_irqrestore(&rtcdev_lock, flags);
-	return err;
-
+	return 0;
 }
 
 static void alarmtimer_rtc_remove_device(struct device *dev,
