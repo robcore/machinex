@@ -2,7 +2,6 @@
 #define __NET_IPIP_H 1
 
 #include <linux/if_tunnel.h>
-#include <net/gro_cells.h>
 #include <net/ip.h>
 
 /* Keep error state on tunnel for 30 sec */
@@ -37,8 +36,6 @@ struct ip_tunnel {
 #endif
 	struct ip_tunnel_prl_entry __rcu *prl;		/* potential router list */
 	unsigned int			prl_count;	/* # of entries in PRL */
-
-	struct gro_cells		gro_cells;
 };
 
 struct ip_tunnel_prl_entry {
