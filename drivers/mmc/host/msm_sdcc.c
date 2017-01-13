@@ -1479,9 +1479,9 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 
 		/* In case of DATA CRC/timeout error, execute tuning again */
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if (host->tuning_needed&&!host->tuning_in_progress&&(host->pdev_id!=4))
+		if (host->tuning_needed&&!host->tuning_in_progress&&(host->pdev->id!=4))
 #elif defined (CONFIG_BCM4335)||defined (CONFIG_BCM4335_MODULE)
-		if (host->tuning_needed&&!host->tuning_in_progress&&(host->pdev_id!=3))
+		if (host->tuning_needed&&!host->tuning_in_progress&&(host->pdev->id!=3))
 #else
 		if (host->tuning_needed&&!host->tuning_in_progress)
 #endif
@@ -1843,11 +1843,11 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 			!host->tuning_in_progress) {
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if( host->pdev_id == 4){
+		if( host->pdev->id == 4){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 #elif defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-		if( host->pdev_id == 3){
+		if( host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 #else
@@ -2615,18 +2615,18 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
 	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		if (system_rev != BOARD_REV07) { /* TI Level Shifter */
-			if (system_rev < BOARD_REV08 && host->pdev_id == 4)
+			if (system_rev < BOARD_REV08 && host->pdev->id == 4)
 #else /* VZW/SPT/USCC */
 		if (system_rev != BOARD_REV08) { /* TI Level Shifter */
-			if (system_rev < BOARD_REV09 && host->pdev_id == 4)
+			if (system_rev < BOARD_REV09 && host->pdev->id == 4)
 #endif
 				/* Disable level shifter */
 				gpio_set_value(60, 0); /* TFLASH_LS_EN */
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
 	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-			else if (system_rev >= BOARD_REV08 && host->pdev_id == 2)
+			else if (system_rev >= BOARD_REV08 && host->pdev->id == 2)
 #else /* VZW/SPT/USCC/KOR */
-			else if (system_rev >= BOARD_REV09 && host->pdev_id == 2)
+			else if (system_rev >= BOARD_REV09 && host->pdev->id == 2)
 #endif
 #if defined(CONFIG_MACH_JF_DCM)
 				ice_gpiox_set(FPGA_GPIO_TFLASH_LS_EN, 0);
@@ -2662,17 +2662,17 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 		mdelay(1);
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
 	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-		if (system_rev < BOARD_REV08 && host->pdev_id == 4)
+		if (system_rev < BOARD_REV08 && host->pdev->id == 4)
 #else /* VZW/SPT/USCC */
-		if (system_rev < BOARD_REV09 && host->pdev_id == 4)
+		if (system_rev < BOARD_REV09 && host->pdev->id == 4)
 #endif
 			/* Enable level shifter */
 			gpio_set_value(60, 1); /* TFLASH_LS_EN */
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
 	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-		else if (system_rev >= BOARD_REV08 && host->pdev_id == 2)
+		else if (system_rev >= BOARD_REV08 && host->pdev->id == 2)
 #else /* VZW/SPT/USCC/KOR */
-		else if (system_rev >= BOARD_REV09 && host->pdev_id == 2)
+		else if (system_rev >= BOARD_REV09 && host->pdev->id == 2)
 #endif
 #if defined(CONFIG_MACH_JF_DCM)
 			ice_gpiox_set(FPGA_GPIO_TFLASH_LS_EN, 1);
@@ -2687,10 +2687,10 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
 	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		if (system_rev == BOARD_REV07) { /* Toshiba Level Shifter */
-			if (system_rev < BOARD_REV08 && host->pdev_id == 4)
+			if (system_rev < BOARD_REV08 && host->pdev->id == 4)
 #else /* VZW/SPT/USCC */
 		if (system_rev == BOARD_REV08) { /* Toshiba Level Shifter */
-			if (system_rev < BOARD_REV09 && host->pdev_id == 4)
+			if (system_rev < BOARD_REV09 && host->pdev->id == 4)
 #endif
 				/* Disable level shifter */
 				gpio_set_value(60, 0); /* TFLASH_LS_EN */
@@ -3269,7 +3269,7 @@ static int msmsdcc_msm_bus_register(struct msmsdcc_host *host)
 		host->msm_bus_vote.max_bw_vote =
 				msmsdcc_msm_bus_get_vote_for_bw(host, UINT_MAX);
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if (host->pdev_id == 4)
+		if (host->pdev->id == 4)
 			host->msm_bus_vote.is_max_bw_needed = 1;
 #endif
 	}
@@ -4444,7 +4444,7 @@ kfree:
 out:
 	spin_lock_irqsave(&host->lock, flags);
 	host->tuning_in_progress = 0;
-	if (!rc || (host->pdev_id == 3))
+	if (!rc || (host->pdev->id == 3))
 		host->tuning_done = true;
 	spin_unlock_irqrestore(&host->lock, flags);
 exit:
@@ -6466,7 +6466,7 @@ msmsdcc_probe(struct platform_device *pdev)
 
 /* SYSFS about SD Card Detection by soonil.lim */
 #if defined(CONFIG_MACH_SERRANO)
-	if (t_flash_detect_dev == NULL && (host->pdev_id == 3)) {
+	if (t_flash_detect_dev == NULL && (host->pdev->id == 3)) {
 #else
 	if (t_flash_detect_dev == NULL && gpio_is_valid(plat->status_gpio)) {
 #endif
@@ -6882,7 +6882,7 @@ static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
 	struct mmc_host *mmc = host->mmc;
 	unsigned long flags;
 
-	if (host->pdev_id == 3) {
+	if (host->pdev->id == 3) {
 		printk(KERN_INFO "%s: msmsdcc_gate_clock due to mmc_card_keep_power\n", __func__);
 	}
 
@@ -6955,12 +6955,12 @@ msmsdcc_runtime_suspend(struct device *dev)
 	}
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-	if (host->pdev_id == 4) {
+	if (host->pdev->id == 4) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
 		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
 #elif defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-	if (host->pdev_id == 3) {
+	if (host->pdev->id == 3) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
 		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
