@@ -372,7 +372,7 @@ static void qcrypto_ce_high_bw_req(struct crypto_priv *cp, bool high_bw_req)
 	mutex_unlock(&sent_bw_req);
 }
 
-static void _start_qcrypto_process(struct crypto_priv *cp);
+static int _start_qcrypto_process(struct crypto_priv *cp);
 
 static struct qcrypto_alg *_qcrypto_sha_alg_alloc(struct crypto_priv *cp,
 		struct ahash_alg *template)
@@ -1078,6 +1078,12 @@ static int _qcrypto_process_ablkcipher(struct crypto_priv *cp,
 		rctx->orig_src = req->src;
 		rctx->orig_dst = req->dst;
 		rctx->data = kzalloc((req->nbytes + 64), GFP_KERNEL);
+		if (rctx->data == NULL) {
+			pr_err("Mem Alloc fail rctx->data, err %ld for 0x%x\n",
+				PTR_ERR(rctx->data), (req->nbytes + 64));
+			return -ENOMEM;
+		}
+
 		for (sg = req->src; bytes != req->nbytes; sg++) {
 			memcpy(((char *)rctx->data + bytes),
 					sg_virt(sg), sg->length);
@@ -1286,13 +1292,13 @@ static int _qcrypto_process_aead(struct crypto_priv *cp,
 	return ret;
 }
 
-static void _start_qcrypto_process(struct crypto_priv *cp)
+static int _start_qcrypto_process(struct crypto_priv *cp)
 {
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
 	unsigned long flags;
 	u32 type;
-	int ret;
+	int ret = 0;
 	struct crypto_stat *pstat;
 
 	pstat = &_qcrypto_stat[cp->pdev->id];
@@ -1306,7 +1312,7 @@ again:
 	}
 	spin_unlock_irqrestore(&cp->lock, flags);
 	if (!async_req)
-		return;
+		return ret;
 	if (backlog)
 		backlog->complete(backlog, -EINPROGRESS);
 	type = crypto_tfm_alg_type(async_req->tfm);
@@ -1341,6 +1347,7 @@ again:
 		async_req->complete(async_req, ret);
 		goto again;
 	};
+	return ret;
 };
 
 static int _qcrypto_queue_req(struct crypto_priv *cp,
@@ -2285,7 +2292,7 @@ static int _sha256_import(struct ahash_request  *req, const void *in)
 	return 0;
 }
 
-static void _copy_source(struct ahash_request  *req)
+static int _copy_source(struct ahash_request  *req)
 {
 	struct qcrypto_sha_req_ctx *srctx = NULL;
 	uint32_t bytes = 0;
@@ -2294,6 +2301,12 @@ static void _copy_source(struct ahash_request  *req)
 	srctx = ahash_request_ctx(req);
 	srctx->orig_src = req->src;
 	srctx->data = kzalloc((req->nbytes + 64), GFP_KERNEL);
+	if (srctx->data == NULL) {
+		pr_err("Mem Alloc fail rctx->data, err %ld for 0x%x\n",
+				PTR_ERR(srctx->data), (req->nbytes + 64));
+		return -ENOMEM;
+	}
+
 	for (sg = req->src; bytes != req->nbytes;
 						sg++) {
 		memcpy(((char *)srctx->data + bytes),
@@ -2304,6 +2317,8 @@ static void _copy_source(struct ahash_request  *req)
 				req->nbytes);
 	sg_mark_end(&srctx->dsg);
 	req->src = &srctx->dsg;
+
+	return 0;
 }
 
 static int _sha_update(struct ahash_request  *req, uint32_t sha_block_size)
@@ -2442,9 +2457,10 @@ static int _sha1_update(struct ahash_request  *req)
 	struct qcrypto_sha_ctx *sha_ctx = crypto_tfm_ctx(req->base.tfm);
 	struct crypto_priv *cp = sha_ctx->cp;
 
-	if (cp->ce_support.aligned_only)
-		_copy_source(req);
-
+	if (cp->ce_support.aligned_only) {
+		if (_copy_source(req))
+			return -ENOMEM;
+	}
 	sha_state_ctx->count += req->nbytes;
 	return _sha_update(req, SHA1_BLOCK_SIZE);
 }
@@ -2456,8 +2472,10 @@ static int _sha256_update(struct ahash_request  *req)
 	struct qcrypto_sha_ctx *sha_ctx = crypto_tfm_ctx(req->base.tfm);
 	struct crypto_priv *cp = sha_ctx->cp;
 
-	if (cp->ce_support.aligned_only)
-		_copy_source(req);
+	if (cp->ce_support.aligned_only) {
+		if (_copy_source(req))
+			return -ENOMEM;
+	}
 
 	sha_state_ctx->count += req->nbytes;
 	return _sha_update(req, SHA256_BLOCK_SIZE);
@@ -2470,8 +2488,10 @@ static int _sha_final(struct ahash_request *req, uint32_t sha_block_size)
 	struct qcrypto_sha_req_ctx *rctx = ahash_request_ctx(req);
 	int ret = 0;
 
-	if (cp->ce_support.aligned_only)
-		_copy_source(req);
+	if (cp->ce_support.aligned_only) {
+		if (_copy_source(req))
+			return -ENOMEM;
+	}
 
 	sha_ctx->last_blk = 1;
 
@@ -2508,8 +2528,10 @@ static int _sha_digest(struct ahash_request *req)
 	struct crypto_priv *cp = sha_ctx->cp;
 	int ret = 0;
 
-	if (cp->ce_support.aligned_only)
-		_copy_source(req);
+	if (cp->ce_support.aligned_only) {
+		if (_copy_source(req))
+			return -ENOMEM;
+	}
 
 	/* save the original req structure fields*/
 	rctx->src = req->src;
