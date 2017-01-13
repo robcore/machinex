@@ -24,6 +24,8 @@ Optional Properties:
 	- qcom,sdcc-bus-speed-mode - specifies supported bus speed modes by host.
 	- qcom,sdcc-current-limit - specifies max. current the host can drive.
 	- qcom,sdcc-xpc - specifies if the host can supply more than 150mA for SDXC cards.
+	- qcom,dat1-mpm-int - specifies MPM interrupt number corresponding to DAT1 line of SDCC
+					(used only if slot has dedicated DAT1 MSM pin (not GPIO))
 
 In the following, <supply> can be vdd (flash core voltage) or vdd-io (I/O voltage).
 	- qcom,sdcc-<supply>-always_on - specifies whether supply should be kept "on" always.
