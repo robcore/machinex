@@ -162,10 +162,7 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 			if (ret)
 				goto out;
 
-			if (card->host->caps &
-				(MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
-				 MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
-				 MMC_CAP_UHS_DDR50)) {
+			if (mmc_host_uhs(card->host)) {
 				if (data & SDIO_UHS_DDR50)
 					card->sw_caps.sd3_bus_mode
 						|= SD_MODE_UHS_DDR50;
@@ -1088,6 +1085,10 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 		ret = -EINVAL;
 		goto out;
 	}
+
+	if (mmc_host_uhs(host))
+		/* to query card if 1.8V signalling is supported */
+		host->ocr |= R4_18V_PRESENT;
 
 	if (mmc_host_uhs(host))
 		/* to query card if 1.8V signalling is supported */
