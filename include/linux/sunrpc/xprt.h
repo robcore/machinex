@@ -92,7 +92,7 @@ struct rpc_rqst {
 						/* A cookie used to track the
 						   state of the transport
 						   connection */
-	
+
 	/*
 	 * Partial send handling
 	 */
@@ -173,8 +173,7 @@ struct rpc_xprt {
 	unsigned int		min_reqs;	/* min number of slots */
 	atomic_t		num_reqs;	/* total slots */
 	unsigned long		state;		/* transport state */
-	unsigned char		shutdown   : 1,	/* being shut down */
-				resvport   : 1; /* use a reserved port */
+	unsigned char		resvport   : 1; /* use a reserved port */
 	unsigned int		bind_index;	/* bind function index */
 
 	/*
