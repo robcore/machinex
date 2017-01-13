@@ -117,6 +117,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	zip -r -9 - * > $OUTFOLDER.zip
 	#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
@@ -139,6 +140,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		fi;
 	else
 		echo "ENABLE ADB WIRELESS"
+		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		sleep 10
 		adb connect 192.168.1.103
 		sleep 7
@@ -245,6 +247,7 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 		zip -r -9 - * > $OUTFOLDER.zip
 		#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
 		SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
+		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		if [[ $AUTO = "n" ]]; then
 			echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 			read repadb
@@ -266,6 +269,7 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 				echo "cleanup finished"
 			fi;
 		else
+			echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 			echo "ENABLE ADB WIRELESS"
 			sleep 10
 			adb connect 192.168.1.103
@@ -331,6 +335,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	zip -r -9 - * > $OUTFOLDER.zip
 	#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "ENABLE ADB WIRELESS"
 	sleep 10
 	adb connect 192.168.1.103
