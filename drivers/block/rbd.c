@@ -50,10 +50,6 @@
 #define	SECTOR_SHIFT	9
 #define	SECTOR_SIZE	(1ULL << SECTOR_SHIFT)
 
-/* It might be useful to have this defined elsewhere too */
-
-#define	U64_MAX	((u64) (~0ULL))
-
 #define RBD_DRV_NAME "rbd"
 #define RBD_DRV_NAME_LONG "rbd (rados block device)"
 
@@ -158,7 +154,6 @@ struct rbd_device {
 
 	int			major;		/* blkdev assigned major */
 	struct gendisk		*disk;		/* blkdev's gendisk and rq */
-	struct request_queue	*q;
 
 	struct rbd_client	*rbd_client;
 
@@ -663,17 +658,8 @@ static u64 rbd_get_segment(struct rbd_image_header *header,
 static int rbd_get_num_segments(struct rbd_image_header *header,
 				u64 ofs, u64 len)
 {
-	u64 start_seg;
-	u64 end_seg;
-
-	if (!len)
-		return 0;
-	if (len - 1 > U64_MAX - ofs)
-		return -ERANGE;
-
-	start_seg = ofs >> header->obj_order;
-	end_seg = (ofs + len - 1) >> header->obj_order;
-
+	u64 start_seg = ofs >> header->obj_order;
+	u64 end_seg = (ofs + len - 1) >> header->obj_order;
 	return end_seg - start_seg + 1;
 }
 
@@ -735,9 +721,7 @@ static struct bio *bio_chain_clone(struct bio **old, struct bio **next,
 				   struct bio_pair **bp,
 				   int len, gfp_t gfpmask)
 {
-	struct bio *old_chain = *old;
-	struct bio *new_chain = NULL;
-	struct bio *tail;
+	struct bio *tmp, *old_chain = *old, *new_chain = NULL, *tail = NULL;
 	int total = 0;
 
 	if (*bp) {
@@ -746,12 +730,9 @@ static struct bio *bio_chain_clone(struct bio **old, struct bio **next,
 	}
 
 	while (old_chain && (total < len)) {
-		struct bio *tmp;
-
 		tmp = bio_kmalloc(gfpmask, old_chain->bi_max_vecs);
 		if (!tmp)
 			goto err_out;
-		gfpmask &= ~__GFP_WAIT;	/* can't wait after the first */
 
 		if (total + old_chain->bi_size > len) {
 			struct bio_pair *bp;
@@ -780,18 +761,24 @@ static struct bio *bio_chain_clone(struct bio **old, struct bio **next,
 		}
 
 		tmp->bi_bdev = NULL;
+		gfpmask &= ~__GFP_WAIT;
 		tmp->bi_next = NULL;
-		if (new_chain)
+
+		if (!new_chain) {
+			new_chain = tail = tmp;
+		} else {
 			tail->bi_next = tmp;
-		else
-			new_chain = tmp;
-		tail = tmp;
+			tail = tmp;
+		}
 		old_chain = old_chain->bi_next;
 
 		total += tmp->bi_size;
 	}
 
 	BUG_ON(total < len);
+
+	if (tail)
+		tail->bi_next = NULL;
 
 	*old = old_chain;
 
@@ -1409,6 +1396,10 @@ static void rbd_rq_fn(struct request_queue *q)
 		struct rbd_req_coll *coll;
 		struct ceph_snap_context *snapc;
 
+		/* peek at request from block layer */
+		if (!rq)
+			break;
+
 		dout("fetched request\n");
 
 		/* filter out block requests we don't understand */
@@ -1449,12 +1440,6 @@ static void rbd_rq_fn(struct request_queue *q)
 		     size, blk_rq_pos(rq) * SECTOR_SIZE);
 
 		num_segs = rbd_get_num_segments(&rbd_dev->header, ofs, size);
-		if (num_segs <= 0) {
-			spin_lock_irq(q->queue_lock);
-			__blk_end_request_all(rq, num_segs);
-			ceph_put_snap_context(snapc);
-			continue;
-		}
 		coll = rbd_alloc_coll(num_segs);
 		if (!coll) {
 			spin_lock_irq(q->queue_lock);
@@ -1732,7 +1717,6 @@ static int rbd_init_disk(struct rbd_device *rbd_dev)
 	q->queuedata = rbd_dev;
 
 	rbd_dev->disk = disk;
-	rbd_dev->q = q;
 
 	/* finally, announce the disk to the world */
 	set_capacity(disk, total_size / SECTOR_SIZE);
