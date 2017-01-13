@@ -56,6 +56,7 @@
 #define RBD_MINORS_PER_MAJOR	256		/* max minors per blkdev */
 
 #define RBD_MAX_MD_NAME_LEN	(RBD_MAX_OBJ_NAME_LEN + sizeof(RBD_SUFFIX))
+#define RBD_MAX_POOL_NAME_LEN	64
 #define RBD_MAX_SNAP_NAME_LEN	32
 #define RBD_MAX_OPT_LEN		1024
 
@@ -77,7 +78,7 @@
  */
 struct rbd_image_header {
 	u64 image_size;
-	char object_prefix[32];
+	char block_name[32];
 	__u8 obj_order;
 	__u8 crypt_type;
 	__u8 comp_type;
@@ -164,8 +165,8 @@ struct rbd_device {
 	char			obj[RBD_MAX_OBJ_NAME_LEN]; /* rbd image name */
 	int			obj_len;
 	char			obj_md_name[RBD_MAX_MD_NAME_LEN]; /* hdr nm. */
-	char			*pool_name;
-	int			pool_id;
+	char			pool_name[RBD_MAX_POOL_NAME_LEN];
+	int			poolid;
 
 	struct ceph_osd_event   *watch_event;
 	struct ceph_osd_request *watch_request;
@@ -531,7 +532,7 @@ static int rbd_header_from_disk(struct rbd_image_header *header,
 		header->snap_names = NULL;
 		header->snap_sizes = NULL;
 	}
-	memcpy(header->object_prefix, ondisk->block_name,
+	memcpy(header->block_name, ondisk->block_name,
 	       sizeof(ondisk->block_name));
 
 	header->image_size = le64_to_cpu(ondisk->image_size);
@@ -635,7 +636,7 @@ static void rbd_header_free(struct rbd_image_header *header)
  * get the actual striped segment name, offset and length
  */
 static u64 rbd_get_segment(struct rbd_image_header *header,
-			   const char *object_prefix,
+			   const char *block_name,
 			   u64 ofs, u64 len,
 			   char *seg_name, u64 *segofs)
 {
@@ -643,7 +644,7 @@ static u64 rbd_get_segment(struct rbd_image_header *header,
 
 	if (seg_name)
 		snprintf(seg_name, RBD_MAX_SEG_NAME_LEN,
-			 "%s.%012llx", object_prefix, seg);
+			 "%s.%012llx", block_name, seg);
 
 	ofs = ofs & ((1 << header->obj_order) - 1);
 	len = min_t(u64, len, (1 << header->obj_order) - ofs);
@@ -933,7 +934,7 @@ static int rbd_do_request(struct request *rq,
 	layout->fl_stripe_count = cpu_to_le32(1);
 	layout->fl_object_size = cpu_to_le32(1 << RBD_MAX_OBJ_ORDER);
 	layout->fl_pg_preferred = cpu_to_le32(-1);
-	layout->fl_pg_pool = cpu_to_le32(dev->pool_id);
+	layout->fl_pg_pool = cpu_to_le32(dev->poolid);
 	ret = ceph_calc_raw_layout(osdc, layout, snapid, ofs, &len, &bno,
 				   req, ops);
 	BUG_ON(ret != 0);
@@ -1104,7 +1105,7 @@ static int rbd_do_op(struct request *rq,
 		return -ENOMEM;
 
 	seg_len = rbd_get_segment(&rbd_dev->header,
-				  rbd_dev->header.object_prefix,
+				  rbd_dev->header.block_name,
 				  ofs, len,
 				  seg_name, &seg_ofs);
 
@@ -1450,7 +1451,7 @@ static void rbd_rq_fn(struct request_queue *q)
 			/* a bio clone to be passed down to OSD req */
 			dout("rq->bio->bi_vcnt=%d\n", rq->bio->bi_vcnt);
 			op_size = rbd_get_segment(&rbd_dev->header,
-						  rbd_dev->header.object_prefix,
+						  rbd_dev->header.block_name,
 						  ofs, size,
 						  NULL, NULL);
 			kref_get(&coll->kref);
@@ -1538,7 +1539,7 @@ static void rbd_free_disk(struct rbd_device *rbd_dev)
 }
 
 /*
- * reload the ondisk the header
+ * reload the ondisk the header 
  */
 static int rbd_read_header(struct rbd_device *rbd_dev,
 			   struct rbd_image_header *header)
@@ -1777,14 +1778,6 @@ static ssize_t rbd_pool_show(struct device *dev,
 	return sprintf(buf, "%s\n", rbd_dev->pool_name);
 }
 
-static ssize_t rbd_pool_id_show(struct device *dev,
-			     struct device_attribute *attr, char *buf)
-{
-	struct rbd_device *rbd_dev = dev_to_rbd_dev(dev);
-
-	return sprintf(buf, "%d\n", rbd_dev->pool_id);
-}
-
 static ssize_t rbd_name_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
@@ -1825,7 +1818,6 @@ static DEVICE_ATTR(size, S_IRUGO, rbd_size_show, NULL);
 static DEVICE_ATTR(major, S_IRUGO, rbd_major_show, NULL);
 static DEVICE_ATTR(client_id, S_IRUGO, rbd_client_id_show, NULL);
 static DEVICE_ATTR(pool, S_IRUGO, rbd_pool_show, NULL);
-static DEVICE_ATTR(pool_id, S_IRUGO, rbd_pool_id_show, NULL);
 static DEVICE_ATTR(name, S_IRUGO, rbd_name_show, NULL);
 static DEVICE_ATTR(refresh, S_IWUSR, NULL, rbd_image_refresh);
 static DEVICE_ATTR(current_snap, S_IRUGO, rbd_snap_show, NULL);
@@ -1835,7 +1827,6 @@ static struct attribute *rbd_attrs[] = {
 	&dev_attr_major.attr,
 	&dev_attr_client_id.attr,
 	&dev_attr_pool.attr,
-	&dev_attr_pool_id.attr,
 	&dev_attr_name.attr,
 	&dev_attr_current_snap.attr,
 	&dev_attr_refresh.attr,
@@ -2262,48 +2253,10 @@ static inline char *dup_token(const char **buf, size_t *lenp)
 }
 
 /*
- * Finds the next token in *buf, dynamically allocates a buffer big
- * enough to hold a copy of it, and copies the token into the new
- * buffer.  The copy is guaranteed to be terminated with '\0'.  Note
- * that a duplicate buffer is created even for a zero-length token.
- *
- * Returns a pointer to the newly-allocated duplicate, or a null
- * pointer if memory for the duplicate was not available.  If
- * the lenp argument is a non-null pointer, the length of the token
- * (not including the '\0') is returned in *lenp.
- *
- * If successful, the *buf pointer will be updated to point beyond
- * the end of the found token.
- *
- * Note: uses GFP_KERNEL for allocation.
- */
-static inline char *dup_token(const char **buf, size_t *lenp)
-{
-	char *dup;
-	size_t len;
-
-	len = next_token(buf);
-	dup = kmalloc(len + 1, GFP_KERNEL);
-	if (!dup)
-		return NULL;
-
-	memcpy(dup, *buf, len);
-	*(dup + len) = '\0';
-	*buf += len;
-
-	if (lenp)
-		*lenp = len;
-
-	return dup;
-}
-
-/*
  * This fills in the pool_name, obj, obj_len, snap_name, obj_len,
  * rbd_dev, rbd_md_name, and name fields of the given rbd_dev, based
  * on the list of monitor addresses and other options provided via
  * /sys/bus/rbd/add.
- *
- * Note: rbd_dev is assumed to have been initially zero-filled.
  */
 static int rbd_add_parse_args(struct rbd_device *rbd_dev,
 			      const char *buf,
@@ -2312,8 +2265,7 @@ static int rbd_add_parse_args(struct rbd_device *rbd_dev,
 			      char *options,
 			      size_t options_size)
 {
-	size_t len;
-	int ret;
+	size_t	len;
 
 	/* The first four tokens are required */
 
@@ -2329,14 +2281,13 @@ static int rbd_add_parse_args(struct rbd_device *rbd_dev,
 	if (!len || len >= options_size)
 		return -EINVAL;
 
-	rbd_dev->pool_name = dup_token(&buf, NULL);
-	if (!rbd_dev->pool_name)
-		return -ENOMEM;
+	len = copy_token(&buf, rbd_dev->pool_name, sizeof (rbd_dev->pool_name));
+	if (!len || len >= sizeof (rbd_dev->pool_name))
+		return -EINVAL;
 
-	ret = -EINVAL;
 	len = copy_token(&buf, rbd_dev->obj, sizeof (rbd_dev->obj));
 	if (!len || len >= sizeof (rbd_dev->obj))
-		goto out_err;
+		return -EINVAL;
 
 	/* We have the object length in hand, save it. */
 
@@ -2355,15 +2306,9 @@ static int rbd_add_parse_args(struct rbd_device *rbd_dev,
 		memcpy(rbd_dev->snap_name, RBD_SNAP_HEAD_NAME,
 			sizeof (RBD_SNAP_HEAD_NAME));
 	else if (len >= sizeof (rbd_dev->snap_name))
-		goto out_err;
+		return -EINVAL;
 
 	return 0;
-
-out_err:
-	kfree(rbd_dev->pool_name);
-	rbd_dev->pool_name = NULL;
-
-	return ret;
 }
 
 static ssize_t rbd_add(struct bus_type *bus,
@@ -2421,7 +2366,7 @@ static ssize_t rbd_add(struct bus_type *bus,
 	rc = ceph_pg_poolid_by_name(osdc->osdmap, rbd_dev->pool_name);
 	if (rc < 0)
 		goto err_out_client;
-	rbd_dev->pool_id = rc;
+	rbd_dev->poolid = rc;
 
 	/* register our block device */
 	rc = register_blkdev(0, rbd_dev->name);
@@ -2461,7 +2406,6 @@ err_out_blkdev:
 err_out_client:
 	rbd_put_client(rbd_dev);
 err_put_id:
-	kfree(rbd_dev->pool_name);
 	rbd_id_put(rbd_dev);
 err_nomem:
 	kfree(options);
@@ -2510,7 +2454,6 @@ static void rbd_dev_release(struct device *dev)
 	unregister_blkdev(rbd_dev->major, rbd_dev->name);
 
 	/* done with the id, and with the rbd_dev */
-	kfree(rbd_dev->pool_name);
 	rbd_id_put(rbd_dev);
 	kfree(rbd_dev);
 
