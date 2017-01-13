@@ -1716,11 +1716,6 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 		return IRQ_NONE;
 	}
 
-	if (!atomic_read(&host->clks_on)) {
-		spin_unlock(&host->lock);
-		return IRQ_NONE;
-	}
-
 	status = readl_relaxed(base + MMCISTATUS);
 
 	if (((readl_relaxed(host->base + MMCIMASK0) & status) &
@@ -3735,7 +3730,7 @@ static void msmsdcc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#if 0
 static void msmsdcc_print_rpm_info(struct msmsdcc_host *host)
 {
 	struct device *dev = mmc_dev(host->mmc);
@@ -6334,7 +6329,7 @@ msmsdcc_probe(struct platform_device *pdev)
 
 
 	/* packed write */
-	//mmc->caps2 |= plat->packed_write;
+	mmc->caps2 |= plat->packed_write;
 
 	mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
@@ -6354,13 +6349,12 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (plat->is_sdio_al_client)
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
-#if 0
+
 	if (plat->built_in)
 	{
 		printk("Set MMC_PM_IGNORE_PM_NOTIFY|MMC_PM_KEEP_POWER\n");
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY | MMC_PM_KEEP_POWER;
 	}
-#endif
 
 	mmc->max_segs = msmsdcc_get_nr_sg(host);
 	mmc->max_blk_size = MMC_MAX_BLK_SIZE;
@@ -6512,14 +6506,14 @@ msmsdcc_probe(struct platform_device *pdev)
 	 * Hence, enable run-time PM only for slots for which bus
 	 * suspend/resume operations are defined.
 	 */
-#ifdef CONFIG_MMC_UNSAFE_RESUME
+#if 0
 	/*
 	 * If this capability is set, MMC core will enable/disable host
 	 * for every claim/release operation on a host. We use this
 	 * notification to increment/decrement runtime pm usage count.
 	 */
 	pm_runtime_enable(&(pdev)->dev);
-#else
+//#else
 	if (mmc->caps & MMC_CAP_NONREMOVABLE) {
 		pm_runtime_enable(&(pdev)->dev);
 	}
