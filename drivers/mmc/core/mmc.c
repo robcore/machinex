@@ -518,7 +518,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.raw_bkops_status =
 				ext_csd[EXT_CSD_BKOPS_STATUS];
 			if (!(card->host->caps2 & MMC_CAP2_INIT_BKOPS)) {
-				card->ext_csd.bkops_en = 0; 
+				card->ext_csd.bkops_en = 0;
 			} else if (!card->ext_csd.bkops_en) {
 				err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 					EXT_CSD_BKOPS_EN, 1, 0);
@@ -859,8 +859,7 @@ static int mmc_select_hs200(struct mmc_card *card)
 	if (card->ext_csd.card_type & EXT_CSD_CARD_TYPE_SDR_1_2V &&
 	    host->caps2 & MMC_CAP2_HS200_1_2V_SDR)
 		if (mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120, 0))
-			err = mmc_set_signal_voltage(host,
-						     MMC_SIGNAL_VOLTAGE_180, 0);
+			err = __mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120);
 
 	/* If fails try again during next card power cycle */
 	if (err)
@@ -1379,8 +1378,8 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			 * WARNING: eMMC rules are NOT the same as SD DDR
 			 */
 			if (ddr == MMC_1_2V_DDR_MODE) {
-				err = mmc_set_signal_voltage(host,
-					MMC_SIGNAL_VOLTAGE_120, 0);
+				err = __mmc_set_signal_voltage(host,
+					MMC_SIGNAL_VOLTAGE_120);
 				if (err)
 					goto err;
 			}
@@ -1621,7 +1620,7 @@ static int mmc_suspend(struct mmc_host *host)
 	if (mmc_can_poweroff_notify(host->card))
 		err = mmc_poweroff_notify(host->card, EXT_CSD_POWER_OFF_SHORT);
 	else if (mmc_card_can_sleep(host))
-	{       
+	{
 		if ((!strcmp(mmc_hostname(host), "mmc0")) && (host->card->cid.manfid == 0x45))
 			mmc_switch(host->card, EXT_CSD_CMD_SET_NORMAL,
 				EXT_CSD_BUS_WIDTH, EXT_CSD_BUS_WIDTH_1, 0);
