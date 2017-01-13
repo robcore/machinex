@@ -260,13 +260,6 @@ config ARCH_RANDOM
 
 	 If unsure, say N
 
-config GENERIC_TIME_VSYSCALL_OLD
-	bool "Enable Legacy gettimeofday updates"
-	depends on CPU_V7
-	help
-	  Enables updating the kernel user helper area with the xtime struct
-	  data for gettimeofday via Legacy kernel user helpers.
-
 config GENERIC_TIME_VSYSCALL
 	bool "Enable gettimeofday updates"
 	depends on CPU_V7
@@ -276,7 +269,7 @@ config GENERIC_TIME_VSYSCALL
 
 config ARM_USE_USER_ACCESSIBLE_TIMERS
 	bool "Enables mapping a timer counter page to user space"
-	depends on USE_USER_ACCESSIBLE_TIMERS && GENERIC_TIME_VSYSCALL_OLD
+	depends on USE_USER_ACCESSIBLE_TIMERS && GENERIC_TIME_VSYSCALL
 	help
 	 Enables ARM-specific user-accessible timers via a shared
 	 memory page containing the cycle counter.

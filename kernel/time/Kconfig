@@ -13,7 +13,7 @@ config ARCH_CLOCKSOURCE_DATA
 	bool
 
 # Timekeeping vsyscall support
-config GENERIC_TIME_VSYSCALL_OLD
+config GENERIC_TIME_VSYSCALL
 	bool
 
 # ktime_t scalar 64bit nsec representation
