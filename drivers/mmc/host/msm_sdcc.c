@@ -2369,7 +2369,6 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	}
 
 	msmsdcc_request_start(host, mrq);
-
 	spin_unlock_irqrestore(&host->lock, flags);
 	return;
 
