@@ -3691,7 +3691,7 @@ static void msmsdcc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
-#if 0
+#ifdef CONFIG_PM_RUNTIME
 static void msmsdcc_print_rpm_info(struct msmsdcc_host *host)
 {
 	struct device *dev = mmc_dev(host->mmc);
@@ -6145,6 +6145,10 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 
+	/* Disable SDHCi mode if supported */
+	if (is_sdhci_supported(host))
+		writel_relaxed(0, (host->base + MCI_CORE_HC_MODE));
+
 	/* Apply Hard reset to SDCC to put it in power on default state */
 	msmsdcc_hard_reset(host);
 
@@ -6213,7 +6217,7 @@ msmsdcc_probe(struct platform_device *pdev)
 
 
 	/* packed write */
-	mmc->caps2 |= plat->packed_write;
+	//mmc->caps2 |= plat->packed_write;
 
 	mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
@@ -6233,12 +6237,13 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (plat->is_sdio_al_client)
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
-
+#if 0
 	if (plat->built_in)
 	{
 		printk("Set MMC_PM_IGNORE_PM_NOTIFY|MMC_PM_KEEP_POWER\n");
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY | MMC_PM_KEEP_POWER;
 	}
+#endif
 
 	mmc->max_segs = msmsdcc_get_nr_sg(host);
 	mmc->max_blk_size = MMC_MAX_BLK_SIZE;
@@ -6326,7 +6331,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags,
+				  plat->irq_flags | IRQF_ONESHOT,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
@@ -6382,14 +6387,14 @@ msmsdcc_probe(struct platform_device *pdev)
 	 * Hence, enable run-time PM only for slots for which bus
 	 * suspend/resume operations are defined.
 	 */
-#if 0
+#ifdef CONFIG_MMC_UNSAFE_RESUME
 	/*
 	 * If this capability is set, MMC core will enable/disable host
 	 * for every claim/release operation on a host. We use this
 	 * notification to increment/decrement runtime pm usage count.
 	 */
 	pm_runtime_enable(&(pdev)->dev);
-//#else
+#else
 	if (mmc->caps & MMC_CAP_NONREMOVABLE) {
 		pm_runtime_enable(&(pdev)->dev);
 	}
