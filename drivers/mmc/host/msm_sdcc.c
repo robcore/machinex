@@ -6899,21 +6899,21 @@ static inline void msmsdcc_ungate_clock(struct msmsdcc_host *host)
 }
 #endif
 
-#if CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS
 static void msmsdcc_print_pm_stats(struct msmsdcc_host *host, ktime_t start,
-		const char *func)
+				   const char *func, int err)
 {
 	ktime_t diff;
 
-	if (host->print_pm_stats) {
+	if (host->print_pm_stats && !err) {
 		diff = ktime_sub(ktime_get(), start);
-		pr_info("%s: %s: Completed in %llu usec\n", func,
-		mmc_hostname(host->mmc), (u64)ktime_to_us(diff));
+		pr_info("%s: %s: Completed in %llu usec\n",
+			mmc_hostname(host->mmc), func, (u64)ktime_to_us(diff));
 	}
 }
 #else
 static void msmsdcc_print_pm_stats(struct msmsdcc_host *host, ktime_t start,
-		const char *func) {}
+				   const char *func, int err) {}
 #endif
 
 static int
@@ -6989,7 +6989,6 @@ msmsdcc_runtime_suspend(struct device *dev)
 	}
 	pr_debug("%s: %s: ends with err=%d\n", mmc_hostname(mmc), __func__, rc);
 out:
-	/* set bus bandwidth to 0 immediately */
 	/*
 	 * Remove the vote immediately only if clocks are off in which
 	 * case we might have queued work to remove vote but it may not
@@ -6997,6 +6996,7 @@ out:
 	 */
 	if (!atomic_read(&host->clks_on))
 		msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
+	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
 
@@ -7010,30 +7010,12 @@ msmsdcc_runtime_resume(struct device *dev)
 
 	if (host->plat->is_sdio_al_client)
 		goto out;
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-	if (host->pdev_id == 4) {
-		printk(KERN_INFO "%s: Enter WIFI resume\n", __func__);
-	}
-#elif defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-	if (host->pdev_id == 3) {
-		printk(KERN_INFO "%s: Enter WIFI resume\n", __func__);
-	}
-#endif
 
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
 		if (mmc->card && mmc_card_sdio(mmc->card) &&
 				mmc_card_keep_power(mmc)) {
 			msmsdcc_ungate_clock(host);
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-			if (host->pdev_id == 4) {
-				printk(KERN_INFO "%s: To check whether skip the WIFI resume in mmc_card_keep_power\n", __func__);
-			}
-#elif defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-			if (host->pdev_id == 3) {
-				printk(KERN_INFO "%s: To check whether skip the WIFI resume in mmc_card_keep_power\n", __func__);
-			}
-#endif
 		}
 
 		mmc_resume_host(mmc);
@@ -7063,7 +7045,7 @@ msmsdcc_runtime_resume(struct device *dev)
 	host->pending_resume = false;
 	pr_debug("%s: %s: end\n", mmc_hostname(mmc), __func__);
 out:
-	msmsdcc_print_pm_stats(host, start, __func__);
+	msmsdcc_print_pm_stats(host, start, __func__, 0);
 	return 0;
 }
 
@@ -7114,7 +7096,7 @@ static int msmsdcc_pm_suspend(struct device *dev)
  out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
-	msmsdcc_print_pm_stats(host, start, __func__);
+	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
 
@@ -7170,7 +7152,7 @@ static int msmsdcc_pm_resume(struct device *dev)
 		enable_irq(host->plat->status_irq);
 	}
 out:
-	msmsdcc_print_pm_stats(host, start, __func__);
+	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
 
