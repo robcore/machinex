@@ -20,7 +20,7 @@ module_param_named(enabled, enabled, bool, 0664);
 static struct delayed_work suspend_work;
 static struct work_struct resume_work;
 static struct workqueue_struct *susp_wq;
-static unsigned int suspend_defer_time = 10;
+static unsigned int suspend_defer_time = 5;
 module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 bool state_suspended;
 module_param_named(state_suspended, state_suspended, bool, 0444);
