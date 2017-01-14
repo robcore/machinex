@@ -3735,7 +3735,7 @@ static void msmsdcc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
-#if 0
+#ifdef CONFIG_PM_RUNTIME
 static void msmsdcc_print_rpm_info(struct msmsdcc_host *host)
 {
 	struct device *dev = mmc_dev(host->mmc);
@@ -3785,7 +3785,7 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 
 skip_get_sync:
 	if (rc < 0) {
-		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+		BUG_ON(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
@@ -3812,7 +3812,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	rc = pm_runtime_put_sync(mmc->parent);
 
 	if (rc < 0) {
-		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+		BUG_ON(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
@@ -5110,8 +5110,8 @@ static int msmsdcc_sps_init(struct msmsdcc_host *host)
 	bam.user = (void *)host;
 
 	/* bam reset messages will be limited to 5 times */
-	//bam.constrained_logging = true;
-	//bam.logging_number = 5;
+	bam.constrained_logging = true;
+	bam.logging_number = 1;
 
 	pr_info("%s: bam physical base=0x%x\n", mmc_hostname(host->mmc),
 			(u32)bam.phys_addr);
@@ -5360,15 +5360,16 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 #endif
 
 static void msmsdcc_print_regs(const char *name, void __iomem *base,
-			       u32 phys_base, unsigned int no_of_regs)
+				resource_size_t phys_base,
+				unsigned int no_of_regs)
 {
 	unsigned int i;
 
 	if (!base)
 		return;
 
-	pr_debug("===== %s: Register Dumps @phys_base=0x%x, @virt_base=0x%x"
-		" =====\n", name, phys_base, (u32)base);
+	pr_debug("===== %s: Register Dumps @phys_base=%pa, @virt_base=0x%x"\
+		" =====\n", name, &phys_base, (u32)base);
 	for (i = 0; i < no_of_regs; i = i + 4) {
 		pr_debug("Reg=0x%.2x: 0x%.8x, 0x%.8x, 0x%.8x, 0x%.8x\n", i*4,
 			(u32)readl_relaxed(base + i*4),
@@ -5471,8 +5472,8 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (host->dummy_52_sent) {
-		//pr_info("%s: %s: dummy CMD52 timeout\n",
-				//mmc_hostname(host->mmc), __func__);
+		pr_debug("%s: %s: dummy CMD52 timeout\n",
+				mmc_hostname(host->mmc), __func__);
 		host->dummy_52_sent = 0;
 	}
 
@@ -5480,8 +5481,8 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 
 	if (mrq && mrq->cmd) {
 		if (!mrq->cmd->ignore_timeout) {
-			//pr_info("%s: CMD%d: Request timeout\n",
-				//mmc_hostname(host->mmc), mrq->cmd->opcode);
+			pr_debug("%s: CMD%d: Request timeout\n",
+				mmc_hostname(host->mmc), mrq->cmd->opcode);
 			msmsdcc_dump_sdcc_state(host);
 		}
 
@@ -6529,14 +6530,14 @@ msmsdcc_probe(struct platform_device *pdev)
 	 * Hence, enable run-time PM only for slots for which bus
 	 * suspend/resume operations are defined.
 	 */
-#if 0
+#ifdef CONFIG_MMC_UNSAFE_RESUME
 	/*
 	 * If this capability is set, MMC core will enable/disable host
 	 * for every claim/release operation on a host. We use this
 	 * notification to increment/decrement runtime pm usage count.
 	 */
 	pm_runtime_enable(&(pdev)->dev);
-/#else
+#else
 	if (mmc->caps & MMC_CAP_NONREMOVABLE) {
 		pm_runtime_enable(&(pdev)->dev);
 	}
@@ -6584,11 +6585,11 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (is_dma_mode(host) && host->dma.channel != -1
 			&& host->dma.crci != -1) {
-		pr_info("%s: DM non-cached buffer at %p, dma_addr 0x%.8x\n",
-		       mmc_hostname(mmc), host->dma.nc, host->dma.nc_busaddr);
-		pr_info("%s: DM cmd busaddr 0x%.8x, cmdptr busaddr 0x%.8x\n",
-		       mmc_hostname(mmc), host->dma.cmd_busaddr,
-		       host->dma.cmdptr_busaddr);
+		pr_info("%s: DM non-cached buffer at %p, dma_addr: %pa\n",
+		       mmc_hostname(mmc), host->dma.nc, &host->dma.nc_busaddr);
+		pr_info("%s: DM cmd busaddr: %pa, cmdptr busaddr: %pa\n",
+		       mmc_hostname(mmc), &host->dma.cmd_busaddr,
+		       &host->dma.cmdptr_busaddr);
 	} else if (is_sps_mode(host)) {
 		pr_info("%s: SPS-BAM data transfer mode available\n",
 			mmc_hostname(mmc));
@@ -6734,7 +6735,7 @@ static void msmsdcc_remove_debugfs(struct msmsdcc_host *host)
 	host->debugfs_host_dir = NULL;
 }
 #else
-static void msmsdcc_remove_debugfs(msmsdcc_host *host) {}
+static void msmsdcc_remove_debugfs(struct msmsdcc_host *host) {}
 #endif
 
 static int msmsdcc_remove(struct platform_device *pdev)
