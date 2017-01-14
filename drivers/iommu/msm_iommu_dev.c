@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,7 +22,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 
-#include <mach/iommu_hw-v0.h>
+#include <mach/iommu_hw-8xxx.h>
 #include <mach/iommu.h>
 
 struct iommu_ctx_iter_data {
@@ -388,7 +388,7 @@ static int msm_iommu_ctx_remove(struct platform_device *pdev)
 
 static struct platform_driver msm_iommu_driver = {
 	.driver = {
-		name	= "msm_iommu-v0
+		.name	= "msm_iommu",
 	},
 	.probe		= msm_iommu_probe,
 	.remove		= msm_iommu_remove,
