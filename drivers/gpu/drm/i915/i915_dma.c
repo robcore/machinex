@@ -27,7 +27,6 @@
  */
 
 #include "drmP.h"
-#include "drm.h"
 #include "drm_crtc_helper.h"
 #include "drm_fb_helper.h"
 #include "intel_drv.h"
