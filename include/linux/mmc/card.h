@@ -203,7 +203,6 @@ struct sdio_cis {
 struct mmc_host;
 struct sdio_func;
 struct sdio_func_tuple;
-struct mmc_queue;
 
 #define SDIO_MAX_FUNCS		7
 
@@ -238,8 +237,6 @@ enum mmc_blk_status {
 	MMC_BLK_ECC_ERR,
 	MMC_BLK_NOMEDIUM,
 	MMC_BLK_NEW_REQUEST,
-	MMC_BLK_URGENT,
-	MMC_BLK_URGENT_DONE,
 };
 
 /* The number of MMC physical partitions.  These consist of:
@@ -401,16 +398,6 @@ static inline void mmc_part_add(struct mmc_card *card, unsigned int size,
 }
 
 static inline bool mmc_large_sec(struct mmc_card *card)
-{
-	return card->ext_csd.data_sector_size == 4096;
-}
-
-static inline bool mmc_large_sector(struct mmc_card *card)
-{
-	return card->ext_csd.data_sector_size == 4096;
-}
-
-static inline bool mmc_large_sector(struct mmc_card *card)
 {
 	return card->ext_csd.data_sector_size == 4096;
 }
@@ -627,5 +614,5 @@ extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
 extern struct mmc_wr_pack_stats *mmc_blk_get_packed_statistics(
 			struct mmc_card *card);
 extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
-extern void mmc_blk_disable_wr_packing(struct mmc_queue *mq);
+
 #endif /* LINUX_MMC_CARD_H */

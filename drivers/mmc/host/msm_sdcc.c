@@ -2707,20 +2707,6 @@ out:
 	return rc;
 }
 
-/* This function returns the max. current supported by VDD rail in mA */
-static unsigned int msmsdcc_get_vreg_vdd_max_current(struct msmsdcc_host *host)
-{
-	struct msm_mmc_slot_reg_data *curr_slot = host->plat->vreg_data;
-
-	if (!curr_slot)
-		return 0;
-
-	if (curr_slot->vdd_data)
-		return curr_slot->vdd_data->hpm_uA / 1000;
-	else
-		return 0;
-}
-
 /*
  * Reset vreg by ensuring it is off during probe. A call
  * to enable vreg is needed to balance disable vreg
@@ -3908,12 +3894,8 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 			msmsdcc_update_io_pad_pwr_switch(host);
 		goto out;
 	case MMC_SIGNAL_VOLTAGE_180:
-		vreg_level = msmsdcc_get_vdd_io_vol(host);
-		/* check if already have the vreg set to 1.8v range */
-		if (vreg_level < 1700000 || vreg_level > 1950000)
-			break; /* do voltage switch */
-		else
-			goto out; /* voltage switch not required */	case MMC_SIGNAL_VOLTAGE_120:
+		break;
+	case MMC_SIGNAL_VOLTAGE_120:
 		/*
 		 * For eMMC cards, VDD_IO voltage range must be changed
 		 * only if it operates in HS200 SDR 1.2V mode or in
@@ -6362,10 +6344,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	/* packed write */
 	mmc->caps2 |= plat->packed_write;
 
-	mmc->max_current_180 = msmsdcc_get_vreg_vdd_max_current(host);
-	mmc->max_current_300 = msmsdcc_get_vreg_vdd_max_current(host);
-	mmc->max_current_330 = msmsdcc_get_vreg_vdd_max_current(host);
-
 	mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
@@ -6841,7 +6819,6 @@ int msmsdcc_sdio_al_lpm(struct mmc_host *mmc, bool enable)
 {
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	unsigned long flags;
-	int vreg_level;
 	int rc = 0;
 
 	mutex_lock(&host->clk_mutex);

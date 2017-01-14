@@ -19,40 +19,6 @@ enum mmc_packed_cmd {
 	MMC_PACKED_WRITE,
 };
 
-enum mmc_packed_type {
-	MMC_PACKED_NONE = 0,
-	MMC_PACKED_WRITE,
-};
-
-#define mmc_packed_cmd(type)	((type) != MMC_PACKED_NONE)
-#define mmc_packed_wr(type)	((type) == MMC_PACKED_WRITE)
-
-struct mmc_packed {
-	struct list_head	list;
-	u32			cmd_hdr[1024];
-	unsigned int		blocks;
-	u8			nr_entries;
-	u8			retries;
-	s16			idx_failure;
-};
-
-enum mmc_packed_type {
-	MMC_PACKED_NONE = 0,
-	MMC_PACKED_WRITE,
-};
-
-#define mmc_packed_cmd(type)	((type) != MMC_PACKED_NONE)
-#define mmc_packed_wr(type)	((type) == MMC_PACKED_WRITE)
-
-struct mmc_packed {
-	struct list_head	list;
-	u32			cmd_hdr[1024];
-	unsigned int		blocks;
-	u8			nr_entries;
-	u8			retries;
-	s16			idx_failure;
-};
-
 struct mmc_queue_req {
 	struct request		*req;
 	struct mmc_blk_request	brq;
@@ -75,9 +41,8 @@ struct mmc_queue {
 	struct task_struct	*thread;
 	struct semaphore	thread_sem;
 	unsigned int		flags;
-#define MMC_QUEUE_SUSPENDED		(1 << 0)
-#define MMC_QUEUE_NEW_REQUEST		(1 << 1)
-#define MMC_QUEUE_URGENT_REQUEST	(1 << 2)
+#define MMC_QUEUE_SUSPENDED	(1 << 0)
+#define MMC_QUEUE_NEW_REQUEST	(1 << 1)
 
 	int			(*issue_fn)(struct mmc_queue *, struct request *);
 	void			*data;
@@ -116,11 +81,5 @@ static inline void mmc_set_nopacked_period(struct mmc_queue *mq, unsigned long n
 {
 	mq->nopacked_period = jiffies + nopacked_jiffies;
 }
-
-extern int mmc_packed_init(struct mmc_queue *, struct mmc_card *);
-extern void mmc_packed_clean(struct mmc_queue *);
-
-extern int mmc_packed_init(struct mmc_queue *, struct mmc_card *);
-extern void mmc_packed_clean(struct mmc_queue *);
 
 #endif
