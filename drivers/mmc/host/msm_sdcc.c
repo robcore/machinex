@@ -520,14 +520,9 @@ static void msmsdcc_reset_dpsm(struct msmsdcc_host *host)
 					& MCI_TXACTIVE ? "TX" : "RX");
 				msmsdcc_dump_sdcc_state(host);
 				msmsdcc_reset_and_restore(host);
-				host->pending_dpsm_reset = false;
 				goto out;
 			}
 		}
-		writel_relaxed(readl_relaxed(host->base + MMCICLOCK)
-				& ~(1 << 17), host->base + MMCICLOCK);
-		msmsdcc_sync_reg_wr(host);
-
 	}
 
 no_polling:
