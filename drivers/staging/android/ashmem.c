@@ -643,7 +643,7 @@ restart:
 		if (page_range_subsumed_by_range(range, pgstart, pgend))
 			return 0;
 		if (page_range_in_range(range, pgstart, pgend)) {
-			pgstart = min_t(size_t, range->pgstart, pgstart),
+			pgstart = min_t(size_t, range->pgstart, pgstart);
 			pgend = max_t(size_t, range->pgend, pgend);
 			purged |= range->purged;
 			range_del(range);
@@ -825,10 +825,10 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case ASHMEM_SET_NAME:
-		ret = set_name(asma, (void __user *) arg);
+		ret = set_name(asma, (void __user *)arg);
 		break;
 	case ASHMEM_GET_NAME:
-		ret = get_name(asma, (void __user *) arg);
+		ret = get_name(asma, (void __user *)arg);
 		break;
 	case ASHMEM_SET_SIZE:
 		ret = -EINVAL;
@@ -849,7 +849,7 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case ASHMEM_PIN:
 	case ASHMEM_UNPIN:
 	case ASHMEM_GET_PIN_STATUS:
-		ret = ashmem_pin_unpin(asma, cmd, (void __user *) arg);
+		ret = ashmem_pin_unpin(asma, cmd, (void __user *)arg);
 		break;
 	case ASHMEM_PURGE_ALL_CACHES:
 		ret = -EPERM;
