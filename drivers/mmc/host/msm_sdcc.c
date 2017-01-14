@@ -501,10 +501,6 @@ static void msmsdcc_reset_dpsm(struct msmsdcc_host *host)
 	if (is_wait_for_tx_rx_active(host)) {
 		ktime_t start = ktime_get();
 
-		writel_relaxed(readl_relaxed(host->base + MMCICLOCK)
-			| (1 << 17), host->base + MMCICLOCK);
-		msmsdcc_sync_reg_wr(host);
-
 		while (readl_relaxed(host->base + MMCISTATUS) &
 				(MCI_TXACTIVE | MCI_RXACTIVE)) {
 			/*
@@ -1254,8 +1250,8 @@ msmsdcc_start_command_deferred(struct msmsdcc_host *host,
 
 	/* Check if AUTO CMD19/CMD21 is required or not? */
 	if (host->tuning_needed && (cmd->mrq->data &&
-		(cmd->mrq->data->flags & MMC_DATA_READ)) &&
-		(host->en_auto_cmd19 || host->en_auto_cmd21)) {
+	    (cmd->mrq->data->flags & MMC_DATA_READ)) &&
+	    (host->en_auto_cmd19 || host->en_auto_cmd21)) {
 		/*
 		 * For open ended block read operation (without CMD23),
 		 * AUTO_CMD19/AUTO_CMD21 bit should be set while sending
