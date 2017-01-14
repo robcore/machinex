@@ -3771,7 +3771,8 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 
 skip_get_sync:
 	if (rc < 0) {
-		BUG_ON(rc);
+		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
 	}
@@ -3797,7 +3798,8 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	rc = pm_runtime_put_sync(mmc->parent);
 
 	if (rc < 0) {
-		BUG_ON(rc);
+		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
 	}
@@ -4616,7 +4618,7 @@ msmsdcc_platform_status_irq(int irq, void *dev_id)
 {
 	struct msmsdcc_host *host = dev_id;
 
-	//pr_debug("%s: %d\n", __func__, irq);
+	pr_debug("%s: %d\n", __func__, irq);
 	msmsdcc_check_status((unsigned long) host);
 	return IRQ_HANDLED;
 }
@@ -4653,8 +4655,8 @@ msmsdcc_status_notify_cb(int card_present, void *dev_id)
 {
 	struct msmsdcc_host *host = dev_id;
 
-	//pr_debug("%s: card_present %d\n", mmc_hostname(host->mmc),
-	       //card_present);
+	pr_debug("%s: card_present %d\n", mmc_hostname(host->mmc),
+	       card_present);
 	msmsdcc_check_status((unsigned long) host);
 }
 
@@ -7062,7 +7064,6 @@ msmsdcc_runtime_resume(struct device *dev)
 	}
 	host->pending_resume = false;
 	pr_debug("%s: %s: end\n", mmc_hostname(mmc), __func__);
-	return 0;
 out:
 	msmsdcc_print_pm_stats(host, start, __func__, 0);
 	return 0;
@@ -7112,7 +7113,6 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 */
 	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
-		goto out;
  out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
@@ -7171,8 +7171,6 @@ static int msmsdcc_pm_resume(struct device *dev)
 		msmsdcc_check_status((unsigned long)host);
 		enable_irq(host->plat->status_irq);
 	}
-
-	return rc;
 out:
 	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
@@ -7216,7 +7214,7 @@ static const struct dev_pm_ops msmsdcc_dev_pm_ops = {
 
 static const struct of_device_id msmsdcc_dt_match[] = {
 	{.compatible = "qcom,msm-sdcc"},
-
+	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, msmsdcc_dt_match);
 
