@@ -925,3 +925,5 @@ __SYSCALL(__NR_fork, sys_ni_syscall)
 #ifndef cond_syscall
 #define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall")
 #endif
+
+#endif /* __KERNEL__ */
