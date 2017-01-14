@@ -1477,14 +1477,11 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 			else
 				data->error = -ETIMEDOUT;
 		}
-
 		/* In case of DATA CRC/timeout error, execute tuning again */
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if (host->tuning_needed&&!host->tuning_in_progress&&(host->pdev->id!=4))
-#elif defined (CONFIG_BCM4335)||defined (CONFIG_BCM4335_MODULE)
-		if (host->tuning_needed&&!host->tuning_in_progress&&(host->pdev->id!=3))
+#if defined (CONFIG_BCM4335)||defined (CONFIG_BCM4335_MODULE)
+		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id!=3))
 #else
-		if (host->tuning_needed&&!host->tuning_in_progress)
+		if (host->tuning_needed && !host->tuning_in_progress)
 #endif
 			host->tuning_done = false;
 
@@ -1696,7 +1693,7 @@ static void msmsdcc_sg_stop(struct msmsdcc_host *host)
 static inline void msmsdcc_clear_pio_irq_mask(struct msmsdcc_host *host)
 {
 	writel_relaxed(readl_relaxed(host->base + MMCIMASK0) & ~MCI_IRQ_PIO,
-		host->base + MMCIMASK0);
+			host->base + MMCIMASK0);
 	mb();
 }
 
@@ -1770,8 +1767,8 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 
 	if (status & MCI_RXACTIVE && host->curr.xfer_remain < MCI_FIFOSIZE) {
 		writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				~MCI_IRQ_PIO) | MCI_RXDATAAVLBLMASK,
-				host->base + MMCIMASK0);
+					~MCI_IRQ_PIO) | MCI_RXDATAAVLBLMASK,
+					host->base + MMCIMASK0);
 		mb();
 	}
 
@@ -1842,11 +1839,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
 
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if( host->pdev->id == 4){
-			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
-		}
-#elif defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
+#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
 		if( host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
@@ -2029,14 +2022,13 @@ msmsdcc_irq(int irq, void *dev_id)
 		 * Check for proper command response
 		 */
 		cmd = host->curr.cmd;
-
 		if ((status & (MCI_CMDSENT | MCI_CMDRESPEND | MCI_CMDCRCFAIL |
 			MCI_CMDTIMEOUT | MCI_PROGDONE |
 			MCI_AUTOCMD19TIMEOUT)) && host->curr.cmd) {
 			msmsdcc_do_cmdirq(host, status);
 		}
 
-		if (host->curr.data) {
+		if (data) {
 			/* Check for data errors */
 			if (status & (MCI_DATACRCFAIL|MCI_DATATIMEOUT|
 				      MCI_TXUNDERRUN|MCI_RXOVERRUN)) {
@@ -3377,7 +3369,7 @@ static void msmsdcc_msm_bus_cancel_work_and_set_vote(
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
-/* This function queues a work which will set the bandwidth requiement to 0 */
+/* This function queues a work which will set the bandwidth requirement to 0 */
 static void msmsdcc_msm_bus_queue_work(struct msmsdcc_host *host)
 {
 	unsigned long flags;
@@ -3387,8 +3379,7 @@ static void msmsdcc_msm_bus_queue_work(struct msmsdcc_host *host)
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (host->msm_bus_vote.min_bw_vote != host->msm_bus_vote.curr_vote)
-		queue_delayed_work(system_wq,
-				   &host->msm_bus_vote.vote_work,
+		schedule_delayed_work(&host->msm_bus_vote.vote_work,
 				   msecs_to_jiffies(MSM_MMC_BUS_VOTING_DELAY));
 	spin_unlock_irqrestore(&host->lock, flags);
 }
