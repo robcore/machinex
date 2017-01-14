@@ -71,7 +71,11 @@ static int cprm_ake_retry_flag;
 #define INAND_CMD38_ARG_SECTRIM2 0x88
 #define MMC_BLK_TIMEOUT_MS  (30 * 1000)        /* 30 sec timeout */
 
-#define MMC_SANITIZE_REQ_TIMEOUT (60*60*1000) /* 1 hour in msec */
+#define mmc_req_rel_wr(req)	((req->cmd_flags & REQ_FUA) && \
+				  (rq_data_dir(req) == WRITE))
+#define PACKED_CMD_VER	0x01
+#define PACKED_CMD_WR	0x02
+#define PACKED_TRIGGER_MAX_ELEMENTS	5000
 
 #define mmc_req_rel_wr(req)	(((req->cmd_flags & REQ_FUA) || \
 			(req->cmd_flags & REQ_META)) && \
@@ -79,11 +83,19 @@ static int cprm_ake_retry_flag;
 #define PACKED_CMD_VER		0x01
 #define PACKED_CMD_WR		0x02
 #define MMC_BLK_MAX_RETRIES 5 /* max # of retries before aborting a command */
+#define MMC_SANITIZE_REQ_TIMEOUT 240000 /* msec */
+#define MMC_EXTRACT_INDEX_FROM_ARG(x) ((x & 0x00FF0000) >> 16)
 #define MMC_BLK_UPDATE_STOP_REASON(stats, reason)			\
 	do {								\
 		if (stats->enabled)					\
 			stats->pack_stop_reason[reason]++;		\
 	} while (0)
+
+#define PCKD_TRGR_INIT_MEAN_POTEN	17
+#define PCKD_TRGR_POTEN_LOWER_BOUND	5
+#define PCKD_TRGR_URGENT_PENALTY	2
+#define PCKD_TRGR_LOWER_BOUND		5
+#define PCKD_TRGR_PRECISION_MULTIPLIER	100
 
 static DEFINE_MUTEX(block_mutex);
 
@@ -115,6 +127,7 @@ struct mmc_blk_data {
 	unsigned int	flags;
 #define MMC_BLK_CMD23	(1 << 0)	/* Can do SET_BLOCK_COUNT for multiblock */
 #define MMC_BLK_REL_WR	(1 << 1)	/* MMC Reliable write support */
+#define MMC_BLK_PACKED_CMD	(1 << 2)	/* MMC packed command support */
 
 	unsigned int	usage;
 	unsigned int	read_only;
@@ -143,18 +156,26 @@ struct mmc_blk_data {
 static DEFINE_MUTEX(open_lock);
 
 enum {
-	MMC_PACKED_N_IDX = -1,
-	MMC_PACKED_N_ZERO,
-	MMC_PACKED_N_SINGLE,
+	MMC_PACKED_NR_IDX = -1,
+	MMC_PACKED_NR_ZERO,
+	MMC_PACKED_NR_SINGLE,
 };
 
 module_param(perdev_minors, int, 0444);
 MODULE_PARM_DESC(perdev_minors, "Minors numbers to allocate per device");
 
+
 static inline void mmc_blk_clear_packed(struct mmc_queue_req *mqrq)
 {
-	mqrq->packed_cmd = MMC_PACKED_NONE;
-	mqrq->packed_num = MMC_PACKED_N_ZERO;
+	struct mmc_packed *packed = mqrq->packed;
+
+	BUG_ON(!packed);
+
+	mqrq->cmd_type = MMC_PACKED_NONE;
+	packed->nr_entries = MMC_PACKED_NR_ZERO;
+	packed->idx_failure = MMC_PACKED_NR_IDX;
+	packed->retries = 0;
+	packed->blocks = 0;
 }
 
 static struct mmc_blk_data *mmc_blk_get(struct gendisk *disk)
@@ -2629,6 +2650,22 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 		blk_queue_flush(md->queue.queue, REQ_FLUSH | REQ_FUA);
 	}
 
+	if (mmc_card_mmc(card) &&
+	    (area_type == MMC_BLK_DATA_AREA_MAIN) &&
+	    (md->flags & MMC_BLK_CMD23) &&
+	    card->ext_csd.packed_event_en) {
+		if (!mmc_packed_init(&md->queue, card))
+			md->flags |= MMC_BLK_PACKED_CMD;
+	}
+
+	if (mmc_card_mmc(card) &&
+	    (area_type == MMC_BLK_DATA_AREA_MAIN) &&
+	    (md->flags & MMC_BLK_CMD23) &&
+	    card->ext_csd.packed_event_en) {
+		if (!mmc_packed_init(&md->queue, card))
+			md->flags |= MMC_BLK_PACKED_CMD;
+	}
+
 	return md;
 
  err_putdisk:
@@ -2742,6 +2779,8 @@ static void mmc_blk_remove_req(struct mmc_blk_data *md)
 
 		/* Then flush out any already in there */
 		mmc_cleanup_queue(&md->queue);
+		if (md->flags & MMC_BLK_PACKED_CMD)
+			mmc_packed_clean(&md->queue);
 		mmc_blk_put(md);
 	}
 }
