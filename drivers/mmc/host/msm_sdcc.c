@@ -7088,6 +7088,7 @@ msmsdcc_runtime_resume(struct device *dev)
 	}
 	host->pending_resume = false;
 	pr_debug("%s: %s: end\n", mmc_hostname(mmc), __func__);
+	return 0;
 out:
 	msmsdcc_print_pm_stats(host, start, __func__, 0);
 	return 0;
@@ -7137,6 +7138,7 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 */
 	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
+		goto out;
  out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
@@ -7181,6 +7183,7 @@ static int msmsdcc_pm_resume(struct device *dev)
 	}
 	if (mmc->card && mmc_card_sdio(mmc->card))
 		rc = msmsdcc_runtime_resume(dev);
+		goto out;
 	/*
 	 * As runtime PM is enabled before calling the device's platform resume
 	 * callback, we use the pm_runtime_suspended API to know if SDCC is
