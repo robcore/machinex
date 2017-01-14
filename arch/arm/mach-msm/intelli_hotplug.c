@@ -32,8 +32,8 @@
 #define START_DELAY_MS			HZ * 10
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define BOOST_LOCK_DUR			500 * 1000L
-#define DEFAULT_NR_CPUS_BOOSTED		2
-#define DEFAULT_MIN_CPUS_ONLINE		1
+#define DEFAULT_NR_CPUS_BOOSTED		4
+#define DEFAULT_MIN_CPUS_ONLINE		2
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
 #define DEFAULT_DOWN_LOCK_DUR		2000
@@ -71,7 +71,7 @@ static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
-static unsigned int full_mode_profile = 0; /* balance profile */
+static unsigned int full_mode_profile = 1; /* balance profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended = false;
