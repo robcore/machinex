@@ -577,7 +577,6 @@ static struct cpu_workqueue_struct *get_work_cwq(struct work_struct *work)
 		return (void *)(data & WORK_STRUCT_WQ_DATA_MASK);
 	else
 	{
-		WARN_ON_ONCE(1);
 		return NULL;
 	}
 }
