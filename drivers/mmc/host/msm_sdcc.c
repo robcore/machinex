@@ -3908,8 +3908,12 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 			msmsdcc_update_io_pad_pwr_switch(host);
 		goto out;
 	case MMC_SIGNAL_VOLTAGE_180:
-		break;
-	case MMC_SIGNAL_VOLTAGE_120:
+		vreg_level = msmsdcc_get_vdd_io_vol(host);
+		/* check if already have the vreg set to 1.8v range */
+		if (vreg_level < 1700000 || vreg_level > 1950000)
+			break; /* do voltage switch */
+		else
+			goto out; /* voltage switch not required */	case MMC_SIGNAL_VOLTAGE_120:
 		/*
 		 * For eMMC cards, VDD_IO voltage range must be changed
 		 * only if it operates in HS200 SDR 1.2V mode or in
@@ -6837,6 +6841,7 @@ int msmsdcc_sdio_al_lpm(struct mmc_host *mmc, bool enable)
 {
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	unsigned long flags;
+	int vreg_level;
 	int rc = 0;
 
 	mutex_lock(&host->clk_mutex);
