@@ -1,4 +1,4 @@
-/*
+zz/*
  *  linux/drivers/mmc/host/msm_sdcc.c - Qualcomm MSM 7X00A SDCC Driver
  *
  *  Copyright (C) 2007 Google Inc,
@@ -3771,8 +3771,7 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 
 skip_get_sync:
 	if (rc < 0) {
-		BUG_ON(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
-		     __func__, rc);
+		BUG_ON(rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
 	}
@@ -3798,8 +3797,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	rc = pm_runtime_put_sync(mmc->parent);
 
 	if (rc < 0) {
-		BUG_ON(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
-		     __func__, rc);
+		BUG_ON(rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
 	}
@@ -5342,16 +5340,15 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 #endif
 
 static void msmsdcc_print_regs(const char *name, void __iomem *base,
-				resource_size_t phys_base,
-				unsigned int no_of_regs)
+			       u32 phys_base, unsigned int no_of_regs)
 {
 	unsigned int i;
 
 	if (!base)
 		return;
 
-	pr_debug("===== %s: Register Dumps @phys_base=%pa, @virt_base=0x%x"\
-		" =====\n", name, &phys_base, (u32)base);
+	pr_debug("===== %s: Register Dumps @phys_base=0x%x, @virt_base=0x%x"
+		" =====\n", name, phys_base, (u32)base);
 	for (i = 0; i < no_of_regs; i = i + 4) {
 		pr_debug("Reg=0x%.2x: 0x%.8x, 0x%.8x, 0x%.8x, 0x%.8x\n", i*4,
 			(u32)readl_relaxed(base + i*4),
@@ -6563,11 +6560,11 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (is_dma_mode(host) && host->dma.channel != -1
 			&& host->dma.crci != -1) {
-		pr_info("%s: DM non-cached buffer at %p, dma_addr: %pa\n",
-		       mmc_hostname(mmc), host->dma.nc, &host->dma.nc_busaddr);
-		pr_info("%s: DM cmd busaddr: %pa, cmdptr busaddr: %pa\n",
-		       mmc_hostname(mmc), &host->dma.cmd_busaddr,
-		       &host->dma.cmdptr_busaddr);
+		pr_info("%s: DM non-cached buffer at %p, dma_addr 0x%.8x\n",
+		       mmc_hostname(mmc), host->dma.nc, host->dma.nc_busaddr);
+		pr_info("%s: DM cmd busaddr 0x%.8x, cmdptr busaddr 0x%.8x\n",
+		       mmc_hostname(mmc), host->dma.cmd_busaddr,
+		       host->dma.cmdptr_busaddr);
 	} else if (is_sps_mode(host)) {
 		pr_info("%s: SPS-BAM data transfer mode available\n",
 			mmc_hostname(mmc));
