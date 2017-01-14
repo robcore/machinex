@@ -15,8 +15,6 @@
 
 #define STATE_NOTIFIER			"state_notifier"
 
-static bool enabled = true;
-module_param_named(enabled, enabled, bool, 0664);
 static struct delayed_work suspend_work;
 static struct work_struct resume_work;
 static struct workqueue_struct *susp_wq;
@@ -77,9 +75,10 @@ static void _resume_work(struct work_struct *work)
 
 void state_suspend(void)
 {
-	if (!enabled || state_suspended || suspend_in_progress)
+	if (state_suspended || suspend_in_progress)
 		return;
 
+	printk("[STATE NOTIFIER] - Suspend Called\n");
 	suspend_in_progress = true;
 
 	queue_delayed_work(susp_wq, &suspend_work,
@@ -88,17 +87,18 @@ void state_suspend(void)
 
 void state_resume(void)
 {
-	if (!enabled)
-		return;
-
-		cancel_delayed_work_sync(&suspend_work);
-		suspend_in_progress = false;
+	if (suspend_in_progress)
 		printk("[STATE NOTIFIER] - Suspend Work Cancelled by Resume\n");
+	else
+		printk("[STATE NOTIFIER] - Resume Called\n");
 
-		if (state_suspended)
-			queue_work(susp_wq, &resume_work);
-		else
-			printk("[STATE_NOTIFIER] Skipping Resume\n");
+	cancel_delayed_work_sync(&suspend_work);
+	suspend_in_progress = false;
+
+	if (state_suspended)
+		queue_work(susp_wq, &resume_work);
+	else
+		printk("[STATE_NOTIFIER] Skipping Resume\n");
 }
 
 static int state_notifier_init(void)
