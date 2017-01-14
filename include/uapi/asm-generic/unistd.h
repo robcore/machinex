@@ -688,11 +688,11 @@ __SC_COMP(__NR_process_vm_readv, sys_process_vm_readv, \
 #define __NR_process_vm_writev 271
 __SC_COMP(__NR_process_vm_writev, sys_process_vm_writev, \
           compat_sys_process_vm_writev)
-#define __NR_seccomp 277
-__SYSCALL(__NR_seccomp, sys_seccomp)
+#define __NR_kcmp 272
+__SYSCALL(__NR_kcmp, sys_kcmp)
 
 #undef __NR_syscalls
-#define __NR_syscalls 278
+#define __NR_syscalls 273
 
 /*
  * All syscalls below here should go away really,
@@ -899,29 +899,4 @@ __SYSCALL(__NR_fork, sys_ni_syscall)
 #define __NR_stat64 __NR3264_stat
 #define __NR_lstat64 __NR3264_lstat
 #endif
-#endif
-
-#ifdef __KERNEL__
-
-/*
- * These are required system calls, we should
- * invert the logic eventually and let them
- * be selected by default.
- */
-#if __BITS_PER_LONG == 32
-#define __ARCH_WANT_STAT64
-#define __ARCH_WANT_SYS_LLSEEK
-#endif
-#define __ARCH_WANT_SYS_RT_SIGACTION
-#define __ARCH_WANT_SYS_RT_SIGSUSPEND
-#define __ARCH_WANT_COMPAT_SYS_RT_SIGSUSPEND
-
-/*
- * "Conditional" syscalls
- *
- * What we want is __attribute__((weak,alias("sys_ni_syscall"))),
- * but it doesn't work on all toolchains, so we just do it by hand
- */
-#ifndef cond_syscall
-#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall")
 #endif
