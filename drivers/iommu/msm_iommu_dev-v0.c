@@ -388,7 +388,7 @@ static int msm_iommu_ctx_remove(struct platform_device *pdev)
 
 static struct platform_driver msm_iommu_driver = {
 	.driver = {
-		.name	= "msm_iommu",
+		name	= "msm_iommu-v0
 	},
 	.probe		= msm_iommu_probe,
 	.remove		= msm_iommu_remove,

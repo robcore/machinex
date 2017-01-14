@@ -213,10 +213,16 @@ static inline int msm_soc_version_supports_iommu_v1(void)
 #ifdef CONFIG_OF
 	struct device_node *node;
 
-	node = of_find_compatible_node(NULL, NULL, "qcom,msm-smmu-v2");
+	node = of_find_compatible_node(NULL, NULL, "qcom,msm-smmu-v1");
 	if (node) {
 		of_node_put(node);
 		return 0;
+	}
+
+	node = of_find_compatible_node(NULL, NULL, "qcom,msm-smmu-v0");
+	if (node) {
+		of_node_put(node);
+		return 1;
 	}
 #endif
 	if (cpu_is_msm8960() &&
