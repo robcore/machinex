@@ -292,8 +292,10 @@ struct nvec_msg *nvec_write_sync(struct nvec_chip *nvec,
 
 	nvec->sync_write_pending = (data[1] << 8) + data[0];
 
-	if (nvec_write_async(nvec, data, size) < 0)
+	if (nvec_write_async(nvec, data, size) < 0) {
+		mutex_unlock(&nvec->sync_write_mutex);
 		return NULL;
+	}
 
 	dev_dbg(nvec->dev, "nvec_sync_write: 0x%04x\n",
 					nvec->sync_write_pending);
@@ -773,7 +775,7 @@ static int __devinit tegra_nvec_probe(struct platform_device *pdev)
 		goto err_iounmap;
 	}
 
-	i2c_clk = clk_get_sys("tegra-i2c.2", NULL);
+	i2c_clk = clk_get_sys("tegra-i2c.2", "div-clk");
 	if (IS_ERR(i2c_clk)) {
 		dev_err(nvec->dev, "failed to get controller clock\n");
 		goto err_iounmap;
