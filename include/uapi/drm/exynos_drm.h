@@ -26,8 +26,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _EXYNOS_DRM_H_
-#define _EXYNOS_DRM_H_
+#ifndef _UAPI_EXYNOS_DRM_H_
+#define _UAPI_EXYNOS_DRM_H_
 
 #include <drm/drm.h>
 
@@ -64,6 +64,7 @@ struct drm_exynos_gem_map_off {
  * A structure for mapping buffer.
  *
  * @handle: a handle to gem object created.
+ * @pad: just padding to be 64-bit aligned.
  * @size: memory size to be mapped.
  * @mapped: having user virtual address mmaped.
  *	- this variable would be filled by exynos gem module
@@ -72,8 +73,24 @@ struct drm_exynos_gem_map_off {
  */
 struct drm_exynos_gem_mmap {
 	unsigned int handle;
-	unsigned int size;
+	unsigned int pad;
+	uint64_t size;
 	uint64_t mapped;
+};
+
+/**
+ * A structure to gem information.
+ *
+ * @handle: a handle to gem object created.
+ * @flags: flag value including memory type and cache attribute and
+ *	this value would be set by driver.
+ * @size: size to memory region allocated by gem and this size would
+ *	be set by driver.
+ */
+struct drm_exynos_gem_info {
+	unsigned int handle;
+	unsigned int flags;
+	uint64_t size;
 };
 
 /**
@@ -90,16 +107,20 @@ struct drm_exynos_vidi_connection {
 	uint64_t edid;
 };
 
-struct drm_exynos_plane_set_zpos {
-	__u32 plane_id;
-	__s32 zpos;
-};
-
 /* memory type definitions. */
 enum e_drm_exynos_gem_mem_type {
+	/* Physically Continuous memory and used as default. */
+	EXYNOS_BO_CONTIG	= 0 << 0,
 	/* Physically Non-Continuous memory. */
 	EXYNOS_BO_NONCONTIG	= 1 << 0,
-	EXYNOS_BO_MASK		= EXYNOS_BO_NONCONTIG
+	/* non-cachable mapping and used as default. */
+	EXYNOS_BO_NONCACHABLE	= 0 << 1,
+	/* cachable mapping. */
+	EXYNOS_BO_CACHABLE	= 1 << 1,
+	/* write-combine mapping. */
+	EXYNOS_BO_WC		= 1 << 2,
+	EXYNOS_BO_MASK		= EXYNOS_BO_NONCONTIG | EXYNOS_BO_CACHABLE |
+					EXYNOS_BO_WC
 };
 
 struct drm_exynos_g2d_get_ver {
@@ -137,7 +158,7 @@ struct drm_exynos_g2d_exec {
 #define DRM_EXYNOS_GEM_MAP_OFFSET	0x01
 #define DRM_EXYNOS_GEM_MMAP		0x02
 /* Reserved 0x03 ~ 0x05 for exynos specific gem ioctl */
-#define DRM_EXYNOS_PLANE_SET_ZPOS	0x06
+#define DRM_EXYNOS_GEM_GET		0x04
 #define DRM_EXYNOS_VIDI_CONNECTION	0x07
 
 /* G2D */
@@ -154,8 +175,8 @@ struct drm_exynos_g2d_exec {
 #define DRM_IOCTL_EXYNOS_GEM_MMAP	DRM_IOWR(DRM_COMMAND_BASE + \
 		DRM_EXYNOS_GEM_MMAP, struct drm_exynos_gem_mmap)
 
-#define DRM_IOCTL_EXYNOS_PLANE_SET_ZPOS	DRM_IOWR(DRM_COMMAND_BASE + \
-		DRM_EXYNOS_PLANE_SET_ZPOS, struct drm_exynos_plane_set_zpos)
+#define DRM_IOCTL_EXYNOS_GEM_GET	DRM_IOWR(DRM_COMMAND_BASE + \
+		DRM_EXYNOS_GEM_GET,	struct drm_exynos_gem_info)
 
 #define DRM_IOCTL_EXYNOS_VIDI_CONNECTION	DRM_IOWR(DRM_COMMAND_BASE + \
 		DRM_EXYNOS_VIDI_CONNECTION, struct drm_exynos_vidi_connection)
@@ -179,63 +200,4 @@ struct drm_exynos_g2d_event {
 	__u32			reserved;
 };
 
-#ifdef __KERNEL__
-
-/**
- * A structure for lcd panel information.
- *
- * @timing: default video mode for initializing
- * @width_mm: physical size of lcd width.
- * @height_mm: physical size of lcd height.
- */
-struct exynos_drm_panel_info {
-	struct fb_videomode timing;
-	u32 width_mm;
-	u32 height_mm;
-};
-
-/**
- * Platform Specific Structure for DRM based FIMD.
- *
- * @panel: default panel info for initializing
- * @default_win: default window layer number to be used for UI.
- * @bpp: default bit per pixel.
- */
-struct exynos_drm_fimd_pdata {
-	struct exynos_drm_panel_info panel;
-	u32				vidcon0;
-	u32				vidcon1;
-	unsigned int			default_win;
-	unsigned int			bpp;
-};
-
-/**
- * Platform Specific Structure for DRM based HDMI.
- *
- * @hdmi_dev: device point to specific hdmi driver.
- * @mixer_dev: device point to specific mixer driver.
- *
- * this structure is used for common hdmi driver and each device object
- * would be used to access specific device driver(hdmi or mixer driver)
- */
-struct exynos_drm_common_hdmi_pd {
-	struct device *hdmi_dev;
-	struct device *mixer_dev;
-};
-
-/**
- * Platform Specific Structure for DRM based HDMI core.
- *
- * @timing: default video mode for initializing
- * @default_win: default window layer number to be used for UI.
- * @bpp: default bit per pixel.
- * @is_v13: set if hdmi version 13 is.
- */
-struct exynos_drm_hdmi_pdata {
-	struct fb_videomode		timing;
-	unsigned int			default_win;
-	unsigned int			bpp;
-	unsigned int			is_v13:1;
-};
-
-#endif	/* _EXYNOS_DRM_H_ */
+#endif /* _UAPI_EXYNOS_DRM_H_ */
