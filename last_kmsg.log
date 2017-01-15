@@ -1,0 +1,194 @@
+Truncating memory at 0xc0000000 to fit in 32-bit physical address space
+sec_tsp_mode: LCD_ID = 0x428047, val: 0X428047, ret1: 0x8
+MSM_DCVS: msm_dcvs_early_init: Unable to initialize DCVS err=4
+msm_rpm_get_status(): Status id 433 not defined for target
+msm_rpm_get_status(): Status id 433 not defined for target
+sensor_power_on_vdd: done
+i2c i2c-4: Failed to register i2c client imx135 at 0x10 (-16)
+i2c i2c-4: Can't create device at 0x10
+i2c i2c-4: Failed to register i2c client s5k3l1yx at 0x34 (-16)
+i2c i2c-4: Can't create device at 0x34
+AXI: msm_bus_fabric_init_driver(): msm_bus_fabric_init_driver
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+Error-Bad Function Input
+Error-Bad Function Input
+smd_channel_probe_worker: allocation table not initialized
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 319
+mdm_modem_probe: registered mdm id 0
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[mdnie lite] start!
+[mdnie lite] end!
+hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddb4ce08
+Inside writeback_driver_init
+Inside writeback_probe
+Unknown PM state 0
+Unknown PM state 3
+wcd9xxx_slim_probe: failed to get slimbus tabla-slim logical address: -6
+msm_otg msm_otg: failed to get phy_clk
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
+couldn't get usb power supply
+[jc_spi_init:336] Entered
+[jc_spi_probe:301] Entered
+[jc_spi_probe:311] jc_spi successfully probed
+jc_config_isp_irq~~~~~~~~~~
+msm_eeprom_probe probe_fail
+msm_sensor_i2c_probe s5k6b2yx probe succeeded
+msm_eeprom_probe probe_fail
+mmc0: No card detect facilities available
+mmc0: RX still active
+mmc0: SDCC PWR is ON
+mmc0: SDCC clks are ON, MCLK rate=400000
+mmc0: SDCC irq is enabled
+mmc0: MCI_TEST_INPUT = 0x000003fe
+mmc0: got_dataend=0, prog_enable=0, wait_for_auto_prog_done=0, got_auto_prog_done=0, req_tout_ms=10000
+power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 573
+max77693_get_health_state: Fail to get psy (battery)
+power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+max77693_get_health_state: Fail to get psy (battery)
+power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 651
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 662
+cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+Unable to register core for 0
+sec-battery sec-battery: sec_battery_probe: Failed to Enable Wakeup Source(-6)
+barcode_emul_ice4: probe complete barcode_emul_probe
+Warning: unable to open an initial console.
+init: /init.rc: 226: invalid command 'load_system_props'
+init: /init.qcom.rc: 647: invalid command '/system/bin/log'
+init: /init.qcom.rc: 775: invalid command 'Limit'
+init: /init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+init: /init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+init: /init.carrier.rc: 195: invalid option 'write'
+init: /init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'fm_radio'
+power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
+power_supply sec-charger: driver failed to report `power_now' property: 4294967274
+init: Running /dev/block/platform/msm_sdcc.1/by-name/cache on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/efs on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+init: do_restorecon: Could not access /carrier
+init: failed to open '/sys/devices/soc0/soc_id'
+init: failed to open '/sys/devices/soc0/platform_version'
+init: failed to open '/sys/devices/soc0/hw_platform'
+init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+init: Warning!  Service lmkd needs a SELinux domain defined; please fix!
+init: Warning!  Service modem-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-c_core-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service config_bluetooth needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-usb-sh needs a SELinux domain defined; please fix!
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+init: service 'console' requires console
+init: service 'console' requires console
+init: Warning!  Service scs needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/debuggerd64', disabling 'debuggerd64'
+init: Warning!  Service DR-daemon needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-c_main-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service macloader needs a SELinux domain defined; please fix!
+init: Warning!  Service sec-sh needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/rf4ce', disabling 'rf4ce'
+init: cannot find '/system/bin/imsqmidaemon', disabling 'imsqmidaemon'
+init: Warning!  Service zygote needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/dpmd', disabling 'dpmd'
+init: cannot find '/system/bin/loc_launcher', disabling 'loc_launcher'
+init: Warning!  Service qcom-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service ppd needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/vcsFPService', disabling 'vcsFPService'
+init: cannot setexeccon('u:r:sudaemon:s0'): Invalid argument
+init: untracked pid 295 exited with status 0
+init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+init: no such service 'quipc_igsn'
+init: no such service 'quipc_main'
+init: untracked pid 508 exited with status 0
+[mdnie lite] is negative Mode On = 0
+[mdnie lite]  = UI MODE =
+[mdnie lite]  = DYNAMIC MODE =
+[mdnie lite]  send tuning cmd!!
+init: untracked pid 335 exited with status 1
+init: untracked pid 387 exited with status 1
+init: untracked pid 790 exited with status 1
+init: untracked pid 831 exited with status 1
+init: untracked pid 698 exited with status 1
+init: untracked pid 1112 exited with status 1
+[SSP]: mag_store_hwoffset - get_hw_offset failed
+genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
+mdm_driver_queue_notification: Couldn't find notif for dev EXTERNAL_MODEM
+init: untracked pid 2186 exited with status 0
+init: untracked pid 2191 exited with status 1
+init: untracked pid 2219 exited with status 1
+init: Warning!  Service usf-post-boot needs a SELinux domain defined; please fix!
+q6asm_get_audio_client: invalid session: -1
+q6asm_get_audio_client: invalid session: -1
+[mdnie lite]  = UI MODE =
+[mdnie lite]  = DYNAMIC MODE =
+[mdnie lite]  send tuning cmd!!
+[mdnie lite]  = UI MODE =
+[mdnie lite]  = DYNAMIC MODE =
+[mdnie lite]  send tuning cmd!!
+hostwake line change [BT]
+Securing...
+Unsecuring....
+WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for CA as US rev 0
+[BT] Bluetooth Power Off.
+[BT] Bluetooth Power On.
+hostwake line change [BT]
+Unknown PM state 0
+[mdnie lite] is negative Mode On = 0
+[mdnie lite]  = UI MODE =
+[mdnie lite]  = DYNAMIC MODE =
+[mdnie lite]  send tuning cmd!!
+(bluesleep_write_proc_lpm) Reg HCI notifier. [BT]
+hostwake line change [BT]
+Tx data during last period [BT]
+init: untracked pid 4774 killed by signal 9
+Tx has been idle [BT]
+going to sleep... [BT]
+hsuart_power off [BT]
+init: untracked pid 7460 exited with status 255
+tx was sleeping [BT]
+hsuart_power on [BT]
+(wq)waking up... [BT]
+hostwake line change [BT]
+waking up... [BT]
+hsuart_power on [BT]
+hostwake line change [BT]
+Tx data during last period [BT]
+Tx has been idle [BT]
+going to sleep... [BT]
+hsuart_power off [BT]
+Unknown PM state 3
+(bluesleep_write_proc_lpm) don`t control ext_wake & uart clk [BT]
+bluesleep_abnormal_stop_wq [BT]
+BUG: scheduling while atomic: kworker/0:2/147/0x00000002
+BUG: scheduling while atomic: kworker/0:2/147/0x00000002
+[BT] Bluetooth Power Off.
+[BT] Bluetooth Power On.
+Unknown PM state 0
+hostwake line change [BT]
+BLUETOOTH_SET_TERMIOS_IS_FUCKED
+msm_hs_set_termios(): timeout for rx discard flush
+BLUETOOTH_START_RX_LOCKED_IS_FUCKED
+
+No errors detected
