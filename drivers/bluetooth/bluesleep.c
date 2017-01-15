@@ -76,9 +76,9 @@
 #define POLARITY_HIGH 1
 
 /* enable/disable wake-on-bluetooth */
-#define BT_ENABLE_IRQ_WAKE 0
+#define BT_ENABLE_IRQ_WAKE 1
 
-#define BT_BLUEDROID_SUPPORT 0
+#define BT_BLUEDROID_SUPPORT 1
 
 struct bluesleep_info {
 	unsigned host_wake;
