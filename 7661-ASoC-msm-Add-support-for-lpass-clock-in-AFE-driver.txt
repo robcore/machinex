@@ -1,0 +1,441 @@
+From 5b9565881f55a68c6b7a15a4ecd852906d240387 Mon Sep 17 00:00:00 2001
+From: Venkat Sudhir <vsudhir@codeaurora.org>
+Date: Thu, 13 Dec 2012 16:16:05 -0800
+Subject: [PATCH 07661/24000] ASoC: msm: Add support for lpass clock in AFE
+ driver
+
+MI2S,I2S and PCM clocks are controlled by AFE module
+in ADSP. Application processor will configure and enable
+OSR clock, bit clock before using the interface. Previously
+these clocks were controlled by clock drivers, now LPASS
+clocks are moved to AFE in ADSP. AFE driver in kernel
+provides API to configure these clocks in ADSP.
+
+Change-Id: I75f03b43e16a904a18477468d8ada88b63619aac
+Signed-off-by: Venkat Sudhir <vsudhir@codeaurora.org>
+---
+ include/sound/apr_audio-v2.h       | 133 ++++++++++++++++++++++++++++-
+ include/sound/q6afe-v2.h           |   7 +-
+ include/sound/q6audio-v2.h         |   4 +-
+ sound/soc/msm/qdsp6v2/q6afe.c      | 170 ++++++++++++++++++++++++++++++++++++-
+ sound/soc/msm/qdsp6v2/q6audio-v2.c |  27 +++++-
+ 5 files changed, 336 insertions(+), 5 deletions(-)
+
+diff --git a/include/sound/apr_audio-v2.h b/include/sound/apr_audio-v2.h
+index 8c9d460c8e6..3571fad3a36 100644
+--- a/include/sound/apr_audio-v2.h
++++ b/include/sound/apr_audio-v2.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+@@ -6369,4 +6369,135 @@ struct srs_trumedia_params {
+ 
+ /*bharath, adsp_error_codes.h */
+ 
++/* LPASS clock for I2S Interface */
++
++/* Supported OSR clock values */
++#define Q6AFE_LPASS_OSR_CLK_12_P288_MHZ		0xBB8000
++#define Q6AFE_LPASS_OSR_CLK_8_P192_MHZ		0x7D0000
++#define Q6AFE_LPASS_OSR_CLK_6_P144_MHZ		0x5DC000
++#define Q6AFE_LPASS_OSR_CLK_4_P096_MHZ		0x3E8000
++#define Q6AFE_LPASS_OSR_CLK_3_P072_MHZ		0x2EE000
++#define Q6AFE_LPASS_OSR_CLK_2_P048_MHZ		0x1F4000
++#define Q6AFE_LPASS_OSR_CLK_1_P536_MHZ		0x177000
++#define Q6AFE_LPASS_OSR_CLK_1_P024_MHZ		 0xFA000
++#define Q6AFE_LPASS_OSR_CLK_768_kHZ		 0xBB800
++#define Q6AFE_LPASS_OSR_CLK_512_kHZ		 0x7D000
++#define Q6AFE_LPASS_OSR_CLK_DISABLE		     0x0
++
++/* Supported Bit clock values */
++#define Q6AFE_LPASS_IBIT_CLK_8_P192_MHZ		0x7D0000
++#define Q6AFE_LPASS_IBIT_CLK_6_P144_MHZ		0x5DC000
++#define Q6AFE_LPASS_IBIT_CLK_4_P096_MHZ		0x3E8000
++#define Q6AFE_LPASS_IBIT_CLK_3_P072_MHZ		0x2EE000
++#define Q6AFE_LPASS_IBIT_CLK_2_P048_MHZ		0x1F4000
++#define Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ		0x177000
++#define Q6AFE_LPASS_IBIT_CLK_1_P024_MHZ		 0xFA000
++#define Q6AFE_LPASS_IBIT_CLK_768_KHZ		 0xBB800
++#define Q6AFE_LPASS_IBIT_CLK_512_KHZ		 0x7D000
++#define Q6AFE_LPASS_IBIT_CLK_DISABLE		     0x0
++
++/* Supported LPASS CLK sources */
++#define Q6AFE_LPASS_CLK_SRC_EXTERNAL 0
++#define Q6AFE_LPASS_CLK_SRC_INTERNAL 1
++
++/* Supported LPASS CLK root*/
++#define Q6AFE_LPASS_CLK_ROOT_DEFAULT 0
++
++enum afe_lpass_clk_mode {
++	Q6AFE_LPASS_MODE_BOTH_INVALID,
++	Q6AFE_LPASS_MODE_CLK1_VALID,
++	Q6AFE_LPASS_MODE_CLK2_VALID,
++	Q6AFE_LPASS_MODE_BOTH_VALID,
++} __packed;
++
++struct afe_clk_cfg {
++/* Minor version used for tracking the version of the I2S
++ * configuration interface.
++ * Supported values: #AFE_API_VERSION_I2S_CONFIG
++ */
++	u32                  i2s_cfg_minor_version;
++
++/* clk value 1 in MHz. */
++	u32                  clk_val1;
++
++/* clk value 2 in MHz. */
++	u32                  clk_val2;
++
++/* clk_src
++ * #Q6AFE_LPASS_CLK_SRC_EXTERNAL
++ * #Q6AFE_LPASS_CLK_SRC_INTERNAL
++ */
++
++	u16                  clk_src;
++
++/* clk_root -0 for default */
++	u16                  clk_root;
++
++/* clk_set_mode
++ * #Q6AFE_LPASS_MODE_BOTH_INVALID
++ * #Q6AFE_LPASS_MODE_CLK1_VALID
++ * #Q6AFE_LPASS_MODE_CLK2_VALID
++ * #Q6AFE_LPASS_MODE_BOTH_VALID
++ */
++	u16                  clk_set_mode;
++
++/* This param id is used to configure I2S clk */
++	u16                  reserved;
++} __packed;
++
++/* This param id is used to configure I2S clk */
++#define AFE_PARAM_ID_LPAIF_CLK_CONFIG	0x00010238
++
++
++struct afe_lpass_clk_config_command {
++	struct apr_hdr			 hdr;
++	struct afe_port_cmd_set_param_v2 param;
++	struct afe_port_param_data_v2    pdata;
++	struct afe_clk_cfg clk_cfg;
++} __packed;
++
++enum afe_lpass_digital_clk_src {
++	Q6AFE_LPASS_DIGITAL_ROOT_INVALID,
++	Q6AFE_LPASS_DIGITAL_ROOT_PRI_MI2S_OSR,
++	Q6AFE_LPASS_DIGITAL_ROOT_SEC_MI2S_OSR,
++	Q6AFE_LPASS_DIGITAL_ROOT_TER_MI2S_OSR,
++	Q6AFE_LPASS_DIGITAL_ROOT_QUAD_MI2S_OSR,
++	Q6AFE_LPASS_DIGITAL_ROOT_CDC_ROOT_CLK,
++} __packed;
++
++/* This param id is used to configure internal clk */
++#define AFE_PARAM_ID_INTERNAL_DIGIATL_CDC_CLK_CONFIG	0x00010239
++
++struct afe_digital_clk_cfg {
++/* Minor version used for tracking the version of the I2S
++ * configuration interface.
++ * Supported values: #AFE_API_VERSION_I2S_CONFIG
++ */
++	u32                  i2s_cfg_minor_version;
++
++/* clk value in MHz. */
++	u32                  clk_val;
++
++/*	INVALID
++ *	PRI_MI2S_OSR
++ *	SEC_MI2S_OSR
++ *	TER_MI2S_OSR
++ *	QUAD_MI2S_OSR
++ *	DIGT_CDC_ROOT
++ */
++	u16                  clk_root;
++
++/* This field must be set to zero. */
++	u16                  reserved;
++} __packed;
++
++
++struct afe_lpass_digital_clk_config_command {
++	struct apr_hdr			 hdr;
++	struct afe_port_cmd_set_param_v2 param;
++	struct afe_port_param_data_v2    pdata;
++	struct afe_digital_clk_cfg clk_cfg;
++} __packed;
++
++
+ #endif /*_APR_AUDIO_V2_H_ */
+diff --git a/include/sound/q6afe-v2.h b/include/sound/q6afe-v2.h
+index 2c03ec3523f..e39d45cd656 100644
+--- a/include/sound/q6afe-v2.h
++++ b/include/sound/q6afe-v2.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -155,4 +155,9 @@ int afe_convert_virtual_to_portid(u16 port_id);
+ 
+ int afe_pseudo_port_start_nowait(u16 port_id);
+ int afe_pseudo_port_stop_nowait(u16 port_id);
++int afe_set_lpass_clock(u16 port_id, struct afe_clk_cfg *cfg);
++int afe_set_lpass_internal_digital_codec_clock(u16 port_id,
++				struct afe_digital_clk_cfg *cfg);
++int q6afe_check_osr_clk_freq(u32 freq);
++
+ #endif /* __Q6AFE_V2_H__ */
+diff --git a/include/sound/q6audio-v2.h b/include/sound/q6audio-v2.h
+index 38c3ab28a73..fd6a490cbe4 100644
+--- a/include/sound/q6audio-v2.h
++++ b/include/sound/q6audio-v2.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -21,6 +21,8 @@ int q6audio_convert_virtual_to_portid(u16 port_id);
+ 
+ int q6audio_validate_port(u16 port_id);
+ 
++int q6audio_is_digital_pcm_interface(u16 port_id);
++
+ int q6audio_get_port_id(u16 port_id);
+ 
+ #endif
+diff --git a/sound/soc/msm/qdsp6v2/q6afe.c b/sound/soc/msm/qdsp6v2/q6afe.c
+index 70339d1992c..846c80e10fc 100644
+--- a/sound/soc/msm/qdsp6v2/q6afe.c
++++ b/sound/soc/msm/qdsp6v2/q6afe.c
+@@ -21,7 +21,6 @@
+ #include <linux/msm_ion.h>
+ #include <sound/apr_audio-v2.h>
+ #include <sound/q6afe-v2.h>
+-
+ #include <sound/q6audio-v2.h>
+ 
+ #include "audio_acdb.h"
+@@ -2020,6 +2019,175 @@ fail_cmd:
+ 	return ret;
+ }
+ 
++int afe_set_lpass_clock(u16 port_id, struct afe_clk_cfg *cfg)
++{
++	struct afe_lpass_clk_config_command clk_cfg;
++	int index = 0;
++	int ret = 0;
++
++	if (!cfg) {
++		pr_err("%s: clock cfg is NULL\n", __func__);
++		ret = -EINVAL;
++		return ret;
++	}
++	index = q6audio_get_port_index(port_id);
++	if (q6audio_is_digital_pcm_interface(port_id) < 0)
++		return -EINVAL;
++
++	ret = afe_q6_interface_prepare();
++	if (ret != 0)
++		return ret;
++
++	clk_cfg.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
++				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
++	clk_cfg.hdr.pkt_size = sizeof(clk_cfg);
++	clk_cfg.hdr.src_port = 0;
++	clk_cfg.hdr.dest_port = 0;
++	clk_cfg.hdr.token = index;
++
++	clk_cfg.hdr.opcode = AFE_PORT_CMD_SET_PARAM_V2;
++	clk_cfg.param.port_id = q6audio_get_port_id(port_id);
++	clk_cfg.param.payload_size = sizeof(clk_cfg) - sizeof(struct apr_hdr)
++						- sizeof(clk_cfg.param);
++	clk_cfg.param.payload_address_lsw = 0x00;
++	clk_cfg.param.payload_address_msw = 0x00;
++	clk_cfg.param.mem_map_handle = 0x00;
++	clk_cfg.pdata.module_id = AFE_MODULE_AUDIO_DEV_INTERFACE;
++	clk_cfg.pdata.param_id = AFE_PARAM_ID_LPAIF_CLK_CONFIG;
++	clk_cfg.pdata.param_size =  sizeof(clk_cfg.clk_cfg);
++	clk_cfg.clk_cfg = *cfg;
++
++	pr_debug("%s: Minor version =%x clk val1 = %d\n"
++		 "clk val2 = %d, clk src = %x\n"
++		 "clk root = %x clk mode = %x resrv = %x\n"
++		 "port id = %x\n",
++		 __func__, cfg->i2s_cfg_minor_version,
++		 cfg->clk_val1, cfg->clk_val2, cfg->clk_src,
++		 cfg->clk_root, cfg->clk_set_mode,
++		 cfg->reserved, q6audio_get_port_id(port_id));
++
++	atomic_set(&this_afe.state, 1);
++	atomic_set(&this_afe.status, 0);
++	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &clk_cfg);
++	if (ret < 0) {
++		pr_err("%s: AFE enable for port %d\n",
++		       __func__, port_id);
++		ret = -EINVAL;
++		goto fail_cmd;
++	}
++
++	ret = wait_event_timeout(this_afe.wait[index],
++			(atomic_read(&this_afe.state) == 0),
++			msecs_to_jiffies(TIMEOUT_MS));
++	if (!ret) {
++		pr_err("%s: wait_event timeout\n", __func__);
++		ret = -EINVAL;
++		goto fail_cmd;
++	}
++	if (atomic_read(&this_afe.status) != 0) {
++		pr_err("%s: config cmd failed\n", __func__);
++		ret = -EINVAL;
++		goto fail_cmd;
++	}
++
++fail_cmd:
++	return ret;
++}
++
++int afe_set_lpass_internal_digital_codec_clock(u16 port_id,
++			struct afe_digital_clk_cfg *cfg)
++{
++	struct afe_lpass_digital_clk_config_command clk_cfg;
++	int index = 0;
++	int ret = 0;
++
++	if (!cfg) {
++		pr_err("%s: clock cfg is NULL\n", __func__);
++		ret = -EINVAL;
++		return ret;
++	}
++	index = q6audio_get_port_index(port_id);
++	if (q6audio_is_digital_pcm_interface(port_id) < 0)
++		return -EINVAL;
++
++	ret = afe_q6_interface_prepare();
++	if (ret != 0)
++		return ret;
++
++	clk_cfg.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
++				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
++	clk_cfg.hdr.pkt_size = sizeof(clk_cfg);
++	clk_cfg.hdr.src_port = 0;
++	clk_cfg.hdr.dest_port = 0;
++	clk_cfg.hdr.token = index;
++
++	clk_cfg.hdr.opcode = AFE_PORT_CMD_SET_PARAM_V2;
++	clk_cfg.param.port_id = q6audio_get_port_id(port_id);
++	clk_cfg.param.payload_size = sizeof(clk_cfg) - sizeof(struct apr_hdr)
++						- sizeof(clk_cfg.param);
++	clk_cfg.param.payload_address_lsw = 0x00;
++	clk_cfg.param.payload_address_msw = 0x00;
++	clk_cfg.param.mem_map_handle = 0x00;
++	clk_cfg.pdata.module_id = AFE_MODULE_AUDIO_DEV_INTERFACE;
++	clk_cfg.pdata.param_id = AFE_PARAM_ID_INTERNAL_DIGIATL_CDC_CLK_CONFIG;
++	clk_cfg.pdata.param_size =  sizeof(clk_cfg.clk_cfg);
++	clk_cfg.clk_cfg = *cfg;
++
++	pr_debug("%s: Minor version =%x clk val = %d\n"
++		 "clk root = %x resrv = %x port id = %x\n",
++		 __func__, cfg->i2s_cfg_minor_version,
++		 cfg->clk_val, cfg->clk_root, cfg->reserved,
++		 q6audio_get_port_id(port_id));
++
++	atomic_set(&this_afe.state, 1);
++	atomic_set(&this_afe.status, 0);
++	ret = apr_send_pkt(this_afe.apr, (uint32_t *) &clk_cfg);
++	if (ret < 0) {
++		pr_err("%s: AFE enable for port %d\n",
++		       __func__, port_id);
++		ret = -EINVAL;
++		goto fail_cmd;
++	}
++
++	ret = wait_event_timeout(this_afe.wait[index],
++			(atomic_read(&this_afe.state) == 0),
++			msecs_to_jiffies(TIMEOUT_MS));
++	if (!ret) {
++		pr_err("%s: wait_event timeout\n", __func__);
++		ret = -EINVAL;
++		goto fail_cmd;
++	}
++	if (atomic_read(&this_afe.status) != 0) {
++		pr_err("%s: config cmd failed\n", __func__);
++		ret = -EINVAL;
++		goto fail_cmd;
++	}
++
++fail_cmd:
++	return ret;
++}
++
++int q6afe_check_osr_clk_freq(u32 freq)
++{
++	int ret = 0;
++	switch (freq) {
++	case Q6AFE_LPASS_OSR_CLK_12_P288_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_8_P192_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_6_P144_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_4_P096_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_3_P072_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_2_P048_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_1_P536_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_1_P024_MHZ:
++	case Q6AFE_LPASS_OSR_CLK_768_kHZ:
++	case Q6AFE_LPASS_OSR_CLK_512_kHZ:
++		break;
++	default:
++		ret = -EINVAL;
++	}
++	return ret;
++}
++
+ static int __init afe_init(void)
+ {
+ 	int i = 0;
+diff --git a/sound/soc/msm/qdsp6v2/q6audio-v2.c b/sound/soc/msm/qdsp6v2/q6audio-v2.c
+index 2041e26f29e..985a33dcf54 100644
+--- a/sound/soc/msm/qdsp6v2/q6audio-v2.c
++++ b/sound/soc/msm/qdsp6v2/q6audio-v2.c
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -123,6 +123,31 @@ int q6audio_convert_virtual_to_portid(u16 port_id)
+ 	return ret;
+ }
+ 
++int q6audio_is_digital_pcm_interface(u16 port_id)
++{
++	int ret = 0;
++
++	switch (port_id) {
++	case PRIMARY_I2S_RX:
++	case PRIMARY_I2S_TX:
++	case PCM_RX:
++	case PCM_TX:
++	case SECONDARY_I2S_RX:
++	case SECONDARY_I2S_TX:
++	case MI2S_RX:
++	case MI2S_TX:
++	case AFE_PORT_ID_TERTIARY_MI2S_TX:
++	case AFE_PORT_ID_TERTIARY_MI2S_RX:
++	case AFE_PORT_ID_QUATERNARY_MI2S_RX:
++	case AFE_PORT_ID_QUATERNARY_MI2S_TX:
++		break;
++	default:
++		ret = -EINVAL;
++	}
++
++	return ret;
++}
++
+ int q6audio_validate_port(u16 port_id)
+ {
+ 	int ret;
+-- 
+2.11.0
+
