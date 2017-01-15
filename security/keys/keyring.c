@@ -278,7 +278,6 @@ struct key *keyring_alloc(const char *description, uid_t uid, gid_t gid,
 
 	return keyring;
 }
-EXPORT_SYMBOL(keyring_alloc);
 
 /**
  * keyring_search_aux - Search a keyring tree for a key matching some criteria
