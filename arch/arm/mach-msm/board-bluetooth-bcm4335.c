@@ -114,20 +114,20 @@ static unsigned bt_uart_off_table[] = {
 static struct resource bluesleep_resources[] = {
 	{
 		.name	= "gpio_host_wake",
-		.start	= -1,
-		.end	= -1,
+		.start	= -1, //GPIO_BT_HOST_WAKE,
+		.end	= -1, //GPIO_BT_HOST_WAKE,
 		.flags	= IORESOURCE_IO,
 	},
 	{
 		.name	= "gpio_ext_wake",
-		.start	= -1,
-		.end	= -1,
+		.start	= -1, //FPGA_GPIO_BT_WAKE,
+		.end	= -1, //FPGA_GPIO_BT_WAKE,
 		.flags	= IORESOURCE_IO,
 	},
 	{
 		.name	= "host_wake",
-		.start	= -1,
-		.end	= -1,
+		.start	= -1, //58 or 63,
+		.end	= -1, //58 or 63,
 		.flags	= IORESOURCE_IRQ,
 	},
 };
@@ -199,6 +199,10 @@ static int bcm4335_bt_rfkill_set_power(void *data, bool blocked)
 		ret = ice_gpiox_set(FPGA_GPIO_BT_EN, 0);
 		if (ret)
 			pr_err("[BT] failed to set BT_EN.\n");
+
+		ret = ice_gpiox_set(FPGA_GPIO_BT_WAKE, 0);	//tseop.kim
+		if (ret)
+			pr_err("[BT] failed to set ext_wake to low.\n");
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
 		else
 			bt_is_running = 0;
