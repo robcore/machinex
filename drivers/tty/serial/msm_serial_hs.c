@@ -2412,7 +2412,7 @@ free_tx_command_ptr:
 	return ret;
 }
 
-static int msm_hs_probe(struct platform_device *pdev)
+static int __devinit msm_hs_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct uart_port *uport;
