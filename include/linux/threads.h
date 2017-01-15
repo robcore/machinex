@@ -13,7 +13,7 @@
  */
 #ifndef CONFIG_NR_CPUS
 /* FIXME: This should be fixed in the arch's Kconfig */
-#define CONFIG_NR_CPUS	1
+#define CONFIG_NR_CPUS	4
 #endif
 
 /* Places which use this should consider cpumask_var_t. */

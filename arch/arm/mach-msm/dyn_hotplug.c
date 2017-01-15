@@ -23,6 +23,7 @@
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/machinex_defines.h>
 
 #define INIT_DELAY		(60 * HZ) /* Initial delay to 60 sec */
 #define DELAY			(HZ / 2)

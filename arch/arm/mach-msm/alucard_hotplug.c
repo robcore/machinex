@@ -22,6 +22,7 @@
 #include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/machinex_defines.h>
 #include "acpuclock.h"
 
 #if defined(CONFIG_POWERSUSPEND)
@@ -67,8 +68,8 @@ static struct hotplug_tuners {
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
 	.hotplug_enable = 0,
-	.min_cpus_online = 2,
-	.max_cpus_online = NR_CPUS,
+	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
+	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
 	.max_cpus_online_susp = 1,
 	.hp_io_is_busy = 0,
 #if defined(CONFIG_POWERSUSPEND)

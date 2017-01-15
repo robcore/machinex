@@ -27,12 +27,11 @@
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
+#include <linux/machinex_defines.h>
 
 #define INIT_DELAY		20000
 #define DELAY			100
 #define UP_THRESHOLD		80
-#define MIN_CPUS_ONLINE		2
-#define MAX_CPUS_ONLINE		4
 #define DEF_DOWN_TIMER_CNT	6
 #define DEF_UP_TIMER_CNT	2
 #define MAX_CPUS_ONLINE_SUSP     1
@@ -43,8 +42,8 @@ static unsigned int blu_plug_enabled = BLU_PLUG_ENABLED;
 
 static unsigned int up_threshold = UP_THRESHOLD;
 static unsigned int delay = DELAY;
-static unsigned int min_cpus_online = MIN_CPUS_ONLINE;
-static unsigned int max_cpus_online = MAX_CPUS_ONLINE;
+static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
+static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int down_timer;
 static unsigned int up_timer;
 static unsigned int down_timer_cnt = DEF_DOWN_TIMER_CNT;

@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <linux/device.h>
 #include <linux/state_notifier.h>
+#include <linux/machinex_defines.h>
 
 #define DEBUG 0
 
@@ -30,8 +31,6 @@
 #define HOTPLUG_ENABLED			0
 #define MSM_MPDEC_STARTDELAY		20000
 #define MSM_MPDEC_DELAY			130
-#define DEFAULT_MIN_CPUS_ONLINE		2
-#define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_DOWN_LOCK_DUR		500
