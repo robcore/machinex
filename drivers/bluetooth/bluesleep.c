@@ -78,7 +78,7 @@
 /* enable/disable wake-on-bluetooth */
 #define BT_ENABLE_IRQ_WAKE 0
 
-#define BT_BLUEDROID_SUPPORT 1
+#define BT_BLUEDROID_SUPPORT 0
 
 struct bluesleep_info {
 	unsigned host_wake;
@@ -92,6 +92,7 @@ struct bluesleep_info {
 
 /* work function */
 static void bluesleep_sleep_work(struct work_struct *work);
+static void bluesleep_uart_awake_work(struct work_struct *work);
 static void bluesleep_ext_wake_set_wq(struct work_struct *work);
 static void bluesleep_sleep_wakeup_wq(struct work_struct *work);
 static void bluesleep_start_wq(struct work_struct *work);
@@ -101,6 +102,7 @@ static void bluesleep_abnormal_stop_wq(struct work_struct *work);
 
 /* work queue */
 DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
+DECLARE_DELAYED_WORK(uart_awake_workqueue, bluesleep_uart_awake_work);
 DECLARE_DELAYED_WORK(tx_timer_expired_workqueue, bluesleep_ext_wake_set_wq);
 DECLARE_DELAYED_WORK(tx_data_wakeup_workqueue, bluesleep_sleep_wakeup_wq);
 DECLARE_DELAYED_WORK(bluesleep_start_workqueue, bluesleep_start_wq);
@@ -113,6 +115,7 @@ DECLARE_DELAYED_WORK(bluesleep_abnormal_stop_workqueue, bluesleep_abnormal_stop_
 #define bluesleep_tx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
 #define bluesleep_rx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
 #define bluesleep_tx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
+#define bluesleep_uart_work()     schedule_delayed_work(&uart_awake_workqueue, 0)
 
 #define bluesleep_tx_timer_expired()     schedule_delayed_work(&tx_timer_expired_workqueue, 0)
 #define bluesleep_tx_data_wakeup()     schedule_delayed_work(&tx_data_wakeup_workqueue, 0)
@@ -138,6 +141,8 @@ static bool has_lpm_enabled;
 /* global pointer to a single hci device. */
 static struct hci_dev *bluesleep_hdev;
 #endif
+
+static bool bt_enabled;
 
 static struct platform_device *bluesleep_uart_dev;
 static struct bluesleep_info *bsi;
@@ -232,7 +237,10 @@ void bluesleep_sleep_wakeup(void)
 		}
 		set_bit(BT_EXT_WAKE, &flags);
 		clear_bit(BT_ASLEEP, &flags);
-		/*Activating UART */
+	}
+	else {
+		BT_DBG("bluesleep_sleep_wakeup : already wake up, so start timer...");
+		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 	}
 }
 
