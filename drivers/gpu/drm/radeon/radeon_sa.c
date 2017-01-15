@@ -27,7 +27,7 @@
  * Authors:
  *    Jerome Glisse <glisse@freedesktop.org>
  */
-#include "drmP.h"
+#include <drm/drmP.h>
 #include "radeon.h"
 
 int radeon_sa_bo_manager_init(struct radeon_device *rdev,
