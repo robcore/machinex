@@ -340,31 +340,6 @@ static inline void msm_hs_write(struct uart_port *uport, unsigned int offset,
 	writel_relaxed(value, uport->membase + offset);
 }
 
-/*
- * This API read and provides UART Core registers information.
- */
-static void print_uart_registers(struct msm_hs_port *msm_uport)
-{
-	struct uart_port *uport = &(msm_uport->uport);
-
-	pr_info("============= UART Registers ================\n");
-
-	pr_info("UART_DM_MR1:%x\n", msm_hs_read(uport, UARTDM_MR1_ADDR));
-	pr_info("UART_DM_MR2:%x\n", msm_hs_read(uport, UARTDM_MR2_ADDR));
-	pr_info("UART_DM_IPR:%x\n", msm_hs_read(uport, UARTDM_IPR_ADDR));
-	pr_info("UART_DM_TFWR:%x\n", msm_hs_read(uport, UARTDM_TFWR_ADDR));
-	pr_info("UART_DM_RFWR:%x\n", msm_hs_read(uport, UARTDM_RFWR_ADDR));
-	pr_info("UART_DM_DMEN:%x\n", msm_hs_read(uport, UARTDM_DMEN_ADDR));
-	pr_info("UART_DM_SR:%x\n", msm_hs_read(uport, UARTDM_SR_ADDR));
-	pr_info("UART_DM_ISR:%x\n", msm_hs_read(uport, UARTDM_ISR_ADDR));
-	pr_info("UART_DM_TXFS:%x\n", msm_hs_read(uport, UARTDM_TXFS_ADDR));
-	pr_info("UART_DM_RXFS:%x\n", msm_hs_read(uport, UARTDM_RXFS_ADDR));
-	pr_info("UART_DM_IMR:%x\n", msm_uport->imr_reg);
-
-	pr_info("=============================================\n");
-
-}
-
 static void msm_hs_release_port(struct uart_port *port)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(port);
@@ -916,14 +891,8 @@ static void msm_hs_set_termios(struct uart_port *uport,
 		ret = wait_event_timeout(msm_uport->rx.wait,
 			msm_uport->rx.flush == FLUSH_NONE,
 			RX_FLUSH_COMPLETE_TIMEOUT);
-		if (!ret) {
-			pr_err("%s(): timeout for Rx cmd completion\n",
-							__func__);
-			spin_lock_irqsave(&uport->lock, flags);
-			print_uart_registers(msm_uport);
-			spin_unlock_irqrestore(&uport->lock, flags);
-			BUG_ON(1);
-		}
+		if (!ret)
+			pr_err("BLUETOOTH_SET_TERMIOS_IS_FUCKED\n");
 
 		spin_lock_irqsave(&uport->lock, flags);
 	}
@@ -1058,7 +1027,6 @@ static void msm_hs_set_termios(struct uart_port *uport,
 				pr_err("%s(): timeout for rx discard flush\n",
 								__func__);
 				spin_lock_irqsave(&uport->lock, flags);
-				print_uart_registers(msm_uport);
 				error_case = true;
 			}
 		if (!error_case)
@@ -1067,7 +1035,6 @@ static void msm_hs_set_termios(struct uart_port *uport,
 		spin_unlock_irqrestore(&uport->lock, flags);
 		pr_err("%s(): called with rx.dma_in_flight:%d\n",
 				__func__, msm_uport->rx.dma_in_flight);
-		print_uart_registers(msm_uport);
 		spin_lock_irqsave(&uport->lock, flags);
 	}
 
@@ -1234,9 +1201,7 @@ static void msm_hs_start_rx_locked(struct uart_port *uport)
 	unsigned int data;
 
 	if (msm_uport->rx.dma_in_flight) {
-		pr_err("%s(): RX CMD is already queued.\n", __func__);
-		print_uart_registers(msm_uport);
-		BUG_ON(1);
+		pr_err("BLUETOOTH_START_RX_LOCKED_IS_FUCKED\n");
 	}
 
 	msm_uport->rx.buffer_pending = 0;
@@ -2659,10 +2624,8 @@ static void msm_hs_shutdown(struct uart_port *uport)
 		spin_unlock_irqrestore(&uport->lock, flags);
 		ret = wait_event_timeout(msm_uport->tx.wait,
 			msm_uport->tx.flush == FLUSH_SHUTDOWN, 100);
-		if (!ret) {
+		if (!ret)
 			pr_err("%s():HSUART TX Stalls.\n", __func__);
-			print_uart_registers(msm_uport);
-	}
 	} else {
 		spin_unlock_irqrestore(&uport->lock, flags);
 	}
@@ -2672,19 +2635,14 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	if (msm_uport->rx.dma_in_flight) {
 
 		if (msm_uport->rx.flush < FLUSH_STOP) {
-			pr_err("%s(): rx.flush is not correct.\n",
-							__func__);
-			print_uart_registers(msm_uport);
-			BUG_ON(1);
+			pr_err("BLUETOOTH_SHUTDOWN_IS_FUCKED.\n");
 		}
 
 		ret = wait_event_timeout(msm_uport->rx.wait,
 			msm_uport->rx.flush == FLUSH_SHUTDOWN,
 			RX_FLUSH_COMPLETE_TIMEOUT);
-		if (!ret) {
+		if (!ret)
 			pr_err("%s(): Rx completion failed.\n", __func__);
-			print_uart_registers(msm_uport);
-		}
 	}
 
 	tasklet_kill(&msm_uport->rx.tlet);
