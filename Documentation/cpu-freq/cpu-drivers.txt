@@ -207,10 +207,4 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 is the corresponding frequency table helper for the ->target
 stage. Just pass the values to this function, and the unsigned int
 index returns the number of the frequency table entry which contains
-the frequency the CPU shall be set to. PLEASE NOTE: This is not the
-"index" which is in this cpufreq_table_entry.index, but instead
-cpufreq_table[index]. So, the new frequency is
-cpufreq_table[index].frequency, and the value you stored into the
-frequency table "index" field is
-cpufreq_table[index].index.
-
+the frequency the CPU shall be set to.

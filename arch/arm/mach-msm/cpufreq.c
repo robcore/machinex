@@ -258,7 +258,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
 	cpu_work->policy = policy;
 	cpu_work->frequency = table[index].frequency;
-	cpu_work->index = table[index].index;
+	cpu_work->index = table[index].driver_data;
 	cpu_work->status = -ENODEV;
 
 	cancel_work_sync(&cpu_work->work);
@@ -409,7 +409,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(policy, table[index].frequency, table[index].index);
+	ret = set_cpu_freq(policy, table[index].frequency,
+			   table[index].driver_data);
 	if (ret)
 		return ret;
 	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
@@ -655,7 +656,7 @@ static int cpufreq_parse_dt(struct device *dev)
 		if (i > 0 && f <= freq_table[i-1].frequency)
 			break;
 
-		freq_table[i].index = i;
+		freq_table[i].driver_data = i;
 		freq_table[i].frequency = f;
 
 		if (l2_clk) {
@@ -684,7 +685,7 @@ static int cpufreq_parse_dt(struct device *dev)
 	}
 
 	bus_bw.num_usecases = i;
-	freq_table[i].index = i;
+	freq_table[i].driver_data = i;
 	freq_table[i].frequency = CPUFREQ_TABLE_END;
 
 	if (ports)
