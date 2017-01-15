@@ -37,7 +37,7 @@ setup-y		+= video-bios.o
 targets		+= $(setup-y)
 hostprogs-y	:= mkcpustr tools/build
 
-HOST_EXTRACFLAGS += -I$(srctree)/tools/include $(LINUXINCLUDE) \
+HOST_EXTRACFLAGS += -I$(srctree)/tools/include $(USERINCLUDE) \
 	            -D__EXPORTED_HEADERS__
 
 $(obj)/cpu.o: $(obj)/cpustr.h
