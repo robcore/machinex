@@ -55,6 +55,9 @@
 #include <linux/device.h>
 #include <linux/wakelock.h>
 #include <linux/debugfs.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/gpio.h>
 #include <asm/atomic.h>
 #include <asm/irq.h>
@@ -2313,6 +2316,24 @@ static int uartdm_init_port(struct uart_port *uport)
 						sizeof(u32), DMA_TO_DEVICE);
 	tx->xfer.cmdptr = DMOV_CMD_ADDR(tx->mapped_cmd_ptr_ptr);
 
+	/* Allocate the command pointer. Needs to be 64 bit aligned */
+	tx->command_ptr = kmalloc(sizeof(dmov_box), GFP_KERNEL | __GFP_DMA);
+	if (!tx->command_ptr)
+		return -ENOMEM;
+
+	tx->command_ptr_ptr = kmalloc(sizeof(u32), GFP_KERNEL | __GFP_DMA);
+	if (!tx->command_ptr_ptr) {
+		ret = -ENOMEM;
+		goto free_tx_command_ptr;
+	}
+
+	tx->mapped_cmd_ptr = dma_map_single(uport->dev, tx->command_ptr,
+					    sizeof(dmov_box), DMA_TO_DEVICE);
+	tx->mapped_cmd_ptr_ptr = dma_map_single(uport->dev,
+						tx->command_ptr_ptr,
+						sizeof(u32), DMA_TO_DEVICE);
+	tx->xfer.cmdptr = DMOV_CMD_ADDR(tx->mapped_cmd_ptr_ptr);
+
 	init_waitqueue_head(&rx->wait);
 	init_waitqueue_head(&tx->wait);
 	wake_lock_init(&rx->wake_lock, WAKE_LOCK_SUSPEND, "msm_serial_hs_rx");
@@ -2358,6 +2379,9 @@ static int uartdm_init_port(struct uart_port *uport)
 					 (msm_uport->rx_buf_size >> 4);
 
 	rx->command_ptr->dst_row_addr = rx->rbuffer;
+
+	/* Set up Uart Receive */
+	msm_hs_write(uport, UARTDM_RFWR_ADDR, 0);
 
 	/* Set up Uart Receive */
 	msm_hs_write(uport, UARTDM_RFWR_ADDR, 0);
