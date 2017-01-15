@@ -99,7 +99,7 @@ static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 /*
  * The sample rate of the timer used to increase frequency
  */
-#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_RATE (10 * USEC_PER_MSEC)
 static unsigned long timer_rate = DEFAULT_TIMER_RATE;
 
 /*
@@ -114,7 +114,7 @@ static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 
 /* 1000000us - 1s */
-#define DEFAULT_BOOSTPULSE_DURATION 500000 /*half a second*/
+#define DEFAULT_BOOSTPULSE_DURATION 100000 /*One Tenth of a second*/
 static int boostpulse_duration_val = DEFAULT_BOOSTPULSE_DURATION;
 /*#define DEFAULT_INPUT_BOOST_FREQ 1242000
 int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
@@ -146,7 +146,7 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 static bool align_windows = true;
 
 /* Improves frequency selection for more energy */
-static bool closest_freq_selection = true;
+static bool closest_freq_selection = false;
 
 /*
  * Stay at max freq for at least max_freq_hysteresis before dropping
@@ -429,7 +429,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	if (cpu_load >= go_hispeed_load) {
+	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->policy->cur < hispeed_freq) {
 			nr_cpus = num_online_cpus();
 
@@ -459,6 +459,12 @@ static void cpufreq_interactive_timer(unsigned long data)
 			else
 				new_freq = choose_freq(pcpu, loadadjfreq);
 	}
+/*
+	if (boosted) {
+		if (new_freq < mx_boost_freq)
+			new_freq = mx_boost_freq;
+ 	}
+*/
 
 	if (counter > 0) {
 		counter--;

@@ -75,7 +75,7 @@ static unsigned int full_mode_profile = 1; /* balance profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended = false;
-static unsigned int min_cpus_online_res = DEFAULT_MIN_CPUS_ONLINE;
+static unsigned int min_cpus_online_res = 2;
 static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
 /*
  * suspend mode, if set = 1 hotplug will sleep,
