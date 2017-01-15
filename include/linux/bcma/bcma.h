@@ -9,7 +9,7 @@
 #include <linux/bcma/bcma_driver_mips.h>
 #include <linux/ssb/ssb.h> /* SPROM sharing */
 
-#include "bcma_regs.h"
+#include <linux/bcma/bcma_regs.h>
 
 struct bcma_device;
 struct bcma_bus;
