@@ -1546,7 +1546,7 @@ static void sii8240_hw_reset(void)
 			pr_err("%s error in making GPIO_MHL_RST HIGH\n",
 			__func__);
 	}
-	msleep(30);
+	mdelay(30);
 }
 struct sii8240_platform_data sii8240_pdata = {
 	.get_irq = get_mhl_int_irq,

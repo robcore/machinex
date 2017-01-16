@@ -109,7 +109,7 @@ static int gpiox_state;
 static bool fw_dl_complete;
 static int enable_count;
 
-#if defined(CONFIG_MACH_JF_DCM)
+#if 0
 static void fpga_enable(int enable, int bdelay)
 {
 	static int Is_clk_enabled;
