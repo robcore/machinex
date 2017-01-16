@@ -410,7 +410,6 @@ static void bluesleep_outgoing_data(void)
 	bluesleep_tx_data_wakeup();
 	
 	mutex_unlock(&bluesleep_mutex);
-	}
 }
 
 #if BT_BLUEDROID_SUPPORT
