@@ -42,6 +42,8 @@ modules.builtin
 boot.img-zImage
 m67xdaupdate.txt
 *.o.d
+*.d
+*.log
 
 #
 # Top-level generic files

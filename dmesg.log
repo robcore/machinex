@@ -1,6 +1,6 @@
 <6>Booting Linux on physical CPU 0x0
 <6>Initializing cgroup subsys cpu
-<5>Linux version 3.4.113-machinex-Mark78 (robcore)(gcc version 5.3.1 20160412 (crosstool-NG crosstool-ng-1.22.0-209-g986dd1e) ) #04 SMP PREEMPT Mon Jan 16 08:48:21 MST 2017
+<5>Linux version 3.4.113-machinex-Mark79 (robcore)(gcc version 5.3.1 20160412 (crosstool-NG crosstool-ng-1.22.0-209-g986dd1e) ) #04 SMP PREEMPT Mon Jan 16 14:42:10 MST 2017
 <4>CPU: ARMv7 Processor [511f06f0] revision 0 (ARMv7), cr=10c5387d
 <4>CPU: PIPT / VIPT nonaliasing data cache, PIPT instruction cache
 <4>Machine: SAMSUNG JF
@@ -40,7 +40,7 @@
 <5>    lowmem  : 0xc0000000 - 0xe2e00000   ( 558 MB)
 <5>    pkmap   : 0xbfe00000 - 0xc0000000   (   2 MB)
 <5>    modules : 0xbf000000 - 0xbfe00000   (  14 MB)
-<5>      .text : 0xc0008000 - 0xc129d55c   (19030 kB)
+<5>      .text : 0xc0008000 - 0xc129d554   (19030 kB)
 <5>      .init : 0xc1300000 - 0xc1406000   (1048 kB)
 <5>      .data : 0xc1406000 - 0xc1542338   (1265 kB)
 <5>       .bss : 0xc1542338 - 0xc172eee8   (1971 kB)
@@ -65,7 +65,7 @@
 <6>CPU: Testing write buffer coherency: ok
 <6>CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
 <6>hw perfevents: enabled with ARMv7 Krait PMU driver, 5 counters available
-<6>Setting up static identity map for 0xc0d273d0 - 0xc0d2744c
+<6>Setting up static identity map for 0xc0d27450 - 0xc0d274cc
 <6>tvec base lock initialized for cpu1
 <6>hrtimer base lock initialized for cpu1
 <6>CPU1: thread -1, cpu 1, socket 0, mpidr 80000001
@@ -113,7 +113,7 @@
 <6>saw_probe: id=1, name=8921_s6
 <6>saw_probe: id=2, name=8821_s0
 <6>saw_probe: id=3, name=8821_s1
-<6>persistent_ram: found existing buffer, size 8307, start 8307
+<6>persistent_ram: found existing buffer, size 8180, start 8180
 <6>console [ram-1] enabled
 <6>apq8064_init_mmc: SDC4 is for Externel SD in system_rev 10
 <7>[slimbus] starting init set up : 10 0
@@ -266,12 +266,10 @@
 <3>genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 337
 <3>genirq: Threaded irq requested with handler=NULL and !ONESHOT for irq 319
 <3>mdm_modem_probe: registered mdm id 0
-<6>mdm_pblrdy_change: mdm id 0: pbl ready:1
+<6>mdm_status_change: status = 1: mdm id 0 is now ready
 <6>mdm_status_change: status = 1: mdm id 0 is now ready
 <3>msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
 <3>msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
-<3>msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
-<3>msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:a
 <6>usbcore: registered new interface driver hsic_sysmon
 <6>sec-thermistor sec-thermistor: sec_therm_probe: SEC Thermistor Driver Loading
 <6>futex hash table entries: 1024 (order: 4, 65536 bytes)
@@ -327,7 +325,7 @@
 <6>get_ldi_chip : 1 LSI
 <6>FrameBuffer[1] 1920x1080 size=0 bytes is registered successfully!
 <6>mdp4_dtv_vsync_init: ndx=0
-<3>hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddb44e08
+<3>hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddb21408
 <6>hdmi_msm hdmi_msm.1: hdmi_msm_config_hdcp_feature: HDCP Feature: Disabled
 <3>Inside writeback_driver_init
 <3>Inside writeback_probe
@@ -427,7 +425,7 @@
 <6>usb usb1: New USB device found, idVendor=1d6b, idProduct=0002
 <6>usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
 <6>usb usb1: Product: Qualcomm EHCI Host Controller using HSIC
-<6>usb usb1: Manufacturer: Linux 3.4.113-machinex-Mark78 ehci_hcd
+<6>usb usb1: Manufacturer: Linux 3.4.113-machinex-Mark79 ehci_hcd
 <6>usb usb1: SerialNumber: msm_hsic_host
 <6>hub 1-0:1.0: USB hub found
 <6>hub 1-0:1.0: 1 port detected
@@ -526,7 +524,7 @@
 <6>mmc0: bam physical base=0x12402000
 <6>mmc0: bam virtual base=0xe3394000
 <6>sps:BAM 0x12402000 is registered.
-<6>mmc0: BAM device registered. bam_handle=0xdde1e400
+<6>mmc0: BAM device registered. bam_handle=0xdddfa800
 <6>sps:BAM 0x12402000 (va:0xe3394000) enabled: ver:0x5, number of pipes:6
 <6>mmc0: Qualcomm MSM SDCC-BAM at 0x0000000012402000 irq 130
 <6>mmc0: Qualcomm MSM SDCC-DML at 0x0000000012400800
@@ -539,7 +537,6 @@
 <3>mmc0: SDCC irq is enabled
 <3>mmc0: MCI_TEST_INPUT = 0x000003fe
 <3>mmc0: got_dataend=0, prog_enable=0, wait_for_auto_prog_done=0, got_auto_prog_done=0, req_tout_ms=10000
-<6>sps:BAM 0x12402000 (va:0xe3394000) enabled: ver:0x5, number of pipes:6
 <6>sps:BAM 0x12402000 (va:0xe3394000) enabled: ver:0x5, number of pipes:6
 <6>mmc0: new HS200 MMC card at address 0001
 <6>mmcblk0: mmc0:0001 016GE4 14.6 GiB 
@@ -557,13 +554,13 @@
 <6>mmc1: bam physical base=0x12182000
 <6>mmc1: bam virtual base=0xe33fc000
 <6>sps:BAM 0x12182000 is registered.
-<6>mmc1: BAM device registered. bam_handle=0xdde5e800
+<6>mmc1: BAM device registered. bam_handle=0xdde7ac00
 <6>sps:BAM 0x12182000 (va:0xe33fc000) enabled: ver:0x5, number of pipes:6
 <6>mmc1: Qualcomm MSM SDCC-BAM at 0x0000000012182000 irq 128
 <6>mmc1: Qualcomm MSM SDCC-DML at 0x0000000012180800
 <4>Set MMC_PM_IGNORE_PM_NOTIFY|MMC_PM_KEEP_POWER
 <4>brcm_wifi_status:301 status 0
-<6>brcm_wifi_status_register: callback is c09a25b4, devid is de1d5440
+<6>brcm_wifi_status_register: callback is c09a25fc, devid is ddb94440
 <6>usb 1-1: new high-speed USB device number 2 using msm_hsic_host
 <6>mmc1: Qualcomm MSM SDCC-core at 0x0000000012180000 irq 134,0 dma -1 dmacrcri -1
 <6>mmc1: Controller capabilities: 0x0000079a
@@ -576,10 +573,10 @@
 <6>mmc1: SPS-BAM data transfer mode available
 <6>mmc2: SDCC Version: 0x06000018
 <6>mmc2: bam physical base=0x12142000
-<6>mmc2: bam virtual base=0xe35c0000
+<6>mmc2: bam virtual base=0xe358c000
 <6>sps:BAM 0x12142000 is registered.
-<6>mmc2: BAM device registered. bam_handle=0xdde5f200
-<6>sps:BAM 0x12142000 (va:0xe35c0000) enabled: ver:0x5, number of pipes:6
+<6>mmc2: BAM device registered. bam_handle=0xdde7b600
+<6>sps:BAM 0x12142000 (va:0xe358c000) enabled: ver:0x5, number of pipes:6
 <6>mmc2: Qualcomm MSM SDCC-BAM at 0x0000000012142000 irq 129
 <6>mmc2: Qualcomm MSM SDCC-DML at 0x0000000012140800
 <7>msmsdcc_probe : Change sysfs Card Detect
@@ -620,8 +617,8 @@
 <6>MobiCore mcd: MobiCore Driver, Build: Sun Dec 25 19:42:41 2016
 <6>MobiCore mcd: MobiCore mcDrvModuleApi version is 1.1
 <6>MobiCore mcd: MobiCore *** t-base-202-APQ8064-Android-V003 ###
-<6>sec-fuelgauge 11-0036: 0x02(0xc2), 0x03(0x60), 0x04(0xa9), 0x05(0xb5), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x76), 0x0d(0x1c), 
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x01), 0x17(0xa5), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: 0x02(0xbb), 0x03(0xb0), 0x04(0xa5), 0x05(0x12), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x76), 0x0d(0x1c), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0xcb), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
 <6>sec-fuelgauge 11-0036: MAX17048 Fuel-Gauge Ver 0x0012
 <3>power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
 <3>power_supply sec-fuelgauge: driver failed to report `status' property: 4294967274
@@ -652,9 +649,9 @@
 <6>es325_init(): slim_driver_register()
 <6>es325_slim_probe: system_rev=10, firmware=audience-es325-fw-eur.bin
 <6>es325-codec es325-codec-gen0: es325_slim_device_up: name=es325-codec-gen0
-<6>es325_init(): exit
 <6>es325-codec es325-codec-gen0: es325_slim_device_up: laddr=3
-<6>es325-codec es325-codec-gen0: es325_slim_device_up: priv=c172308c
+<6>es325_init(): exit
+<6>es325-codec es325-codec-gen0: es325_slim_device_up: priv=c17230a4
 <6>fw_download(): called
 <6>fw_download(): es325 gen0 LA=3
 <6>es325_bootup(): entry
@@ -679,12 +676,12 @@
 <6>asoc: msm-stub-tx <-> msm-dai-q6.240 mapping ok
 <6>asoc: snd-soc-dummy-dai <-> MultiMedia4 mapping ok
 <6>asoc: snd-soc-dummy-dai <-> AUXPCM_HOSTLESS mapping ok
-<6>asoc: snd-soc-dummy-dai <-> HDMI_HOSTLESS mapping ok
 <6>es325_bootup(): write ES325_BOOT_CMD
 <6>es325_bootup(): msg[0] = 0x01
 <6>es325_bootup(): msg[1] = 0x00
 <6>es325_bootup(): msg[2] = 0x00
 <6>es325_bootup(): msg[3] = 0x00
+<6>asoc: snd-soc-dummy-dai <-> HDMI_HOSTLESS mapping ok
 <6>asoc: snd-soc-dummy-dai <-> VOICE_STUB mapping ok
 <6>asoc: snd-soc-dummy-dai <-> VOLTE_STUB mapping ok
 <6>asoc: snd-soc-dummy-dai <-> MultiMedia5 mapping ok
@@ -789,7 +786,7 @@
 <6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
 <6>cypress_touchkey 16-0020: [Touchkey] Register TA Callback
 <6>[Touchkey] DONE(cypress_touchkey_probe)!
-<6>rtc-pm8xxx rtc-pm8xxx: setting system clock to 2014-01-16 15:54:03 UTC (1389887643)
+<6>rtc-pm8xxx rtc-pm8xxx: setting system clock to 2014-01-16 21:56:25 UTC (1389909385)
 <6>pm8921_charger_probe: pm8921-charger driver Loading SKIP!!!
 <4>pm8921-charger: probe of pm8921-charger failed with error -22
 <3>Unable to register core for 0
@@ -810,14 +807,14 @@
 <6>ALSA device list:
 <6>  #0: apq8064-tabla-snd-card
 <3>Warning: unable to open an initial console.
+<6>sec-fuelgauge 11-0036: 0x02(0xc5), 0x03(0x50), 0x04(0xa5), 0x05(0x12), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x76), 0x0d(0x1e), 
 <6>Freeing unused kernel memory: 1048K (c1300000 - c1406000)
 <4>!@Boot: start init process
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0xcb), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
 <7>SELinux: 2048 avtab hash slots, 16070 rules.
-<6>sec-fuelgauge 11-0036: 0x02(0xc9), 0x03(0x10), 0x04(0xa9), 0x05(0xb5), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x76), 0x0d(0x1e), 
 <7>SELinux: 2048 avtab hash slots, 16070 rules.
 <7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
 <7>SELinux:  86 classes, 16070 rules
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x01), 0x17(0xa5), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
 <7>SELinux:  Completing initialization.
 <7>SELinux:  Setting up existing superblocks.
 <7>SELinux: initialized (dev sysfs, type sysfs), uses genfs_contexts
@@ -828,17 +825,17 @@
 <7>SELinux: initialized (dev pipefs, type pipefs), uses task SIDs
 <7>SELinux: initialized (dev sockfs, type sockfs), uses task SIDs
 <7>SELinux: initialized (dev debugfs, type debugfs), uses genfs_contexts
-<7>SELinux: initialized (dev devtmpfs, type devtmpfs), uses transition SIDs
 <6>barcode_emul_ice4: barcode_fpga_fimrware_update_start
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3946mV),Inow(460mA),SOC(82%),Tbat(315)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:20
+<7>SELinux: initialized (dev devtmpfs, type devtmpfs), uses transition SIDs
 <7>SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
 <7>SELinux: initialized (dev proc, type proc), uses genfs_contexts
 <7>SELinux: initialized (dev bdev, type bdev), not configured for labeling
 <7>SELinux: initialized (dev rootfs, type rootfs), uses genfs_contexts
 <7>SELinux: initialized (dev sysfs, type sysfs), uses genfs_contexts
-<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(4021mV),Inow(460mA),SOC(84%),Tbat(350)
-<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:20
-<5>random: nonblocking pool is initialized
 <7>[keys] flip_cover_work : 1
+<5>random: nonblocking pool is initialized
 <3>init: /init.rc: 226: invalid command 'load_system_props'
 <3>init: /init.qcom.rc: 647: invalid command '/system/bin/log'
 <3>init: /init.qcom.rc: 775: invalid command 'Limit'
@@ -856,10 +853,10 @@
 <3>init: invalid uid 'mfc'
 <3>init: invalid uid 'mfc'
 <3>init: invalid uid 'fm_radio'
-<6>sec-fuelgauge 11-0036: 0x02(0xc5), 0x03(0x50), 0x04(0xa9), 0x05(0x77), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6c), 0x0d(0x1e), 
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x01), 0x17(0x1d), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
-<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 84, current : 84
-<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3946mV),Inow(460mA),SOC(84%),Tbat(350)
+<6>sec-fuelgauge 11-0036: 0x02(0xc0), 0x03(0x70), 0x04(0xa5), 0x05(0x12), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0xcb), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 82, current : 82
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3848mV),Inow(460mA),SOC(82%),Tbat(315)
 <6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:20
 <6>max77693-muic max77693-muic: func:max77693_muic_init_detect
 <6>max77693-muic max77693-muic: func:max77693_muic_detect_dev CONTROL1:0
@@ -879,6 +876,11 @@
 <6>cypress_touchkey 16-0020: TA disconnect!!!
 <6>cypress_touchkey 16-0020: TA Disabled
 <6>max77693_muic_charger_cb: SKIP cable setting
+<6>sec-fuelgauge 11-0036: 0x02(0xbf), 0x03(0x50), 0x04(0xa4), 0x05(0xd3), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0xab), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 82, current : 82
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3826mV),Inow(460mA),SOC(82%),Tbat(315)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
 <6>es325_bootup(): write ES325_SYNC_CMD
 <6>es325_bootup(): msg[0] = 0x80
 <6>es325_bootup(): msg[1] = 0x00
@@ -896,12 +898,7 @@
 <6>fw_download(): registering sound soc
 <6>fw_download(): register_snd_soc rc=0
 <6>GAC:es325_fixed_config(): msg = 08003190
-<6>sec-fuelgauge 11-0036: 0x02(0xc5), 0x03(0x30), 0x04(0xa9), 0x05(0x77), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6c), 0x0d(0x1e), 
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x01), 0x17(0x1d), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
-<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 84, current : 84
 <6>GAC:es325_fixed_config(): msg = 50003190
-<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3943mV),Inow(460mA),SOC(84%),Tbat(350)
-<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
 <6>fw_download(): release module
 <6>fw_download(): exiting fw_download
 <6>es325-codec es325-codec-gen0: wrapper es325_slim_device_up(): es325-codec-gen0
@@ -919,14 +916,14 @@
 <7>SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
 <7>SELinux: initialized (dev cgroup, type cgroup), uses genfs_contexts
 <6>FAT-fs (mmcblk0p1[179:1]): trying to mount...
+<6>sec-fuelgauge 11-0036: 0x02(0xc1), 0x03(0x00), 0x04(0xa4), 0x05(0xd3), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0xab), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 82, current : 82
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3860mV),Inow(460mA),SOC(82%),Tbat(315)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
 <6>FAT-fs (mmcblk0p1[179:1]): mounted successfully!
 <7>SELinux: initialized (dev mmcblk0p1, type vfat), uses mountpoint labeling
 <6>FAT-fs (mmcblk0p2[179:2]): trying to mount...
-<6>sec-fuelgauge 11-0036: 0x02(0xc7), 0x03(0x60), 0x04(0xa9), 0x05(0x77), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6c), 0x0d(0x1e), 
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x01), 0x17(0x1d), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
-<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 84, current : 84
-<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3987mV),Inow(460mA),SOC(84%),Tbat(350)
-<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
 <6>FAT-fs (mmcblk0p2[179:2]): mounted successfully!
 <7>SELinux: initialized (dev mmcblk0p2, type vfat), uses mountpoint labeling
 <6>frandom: Seeded global generator now (used by erandom)
@@ -938,21 +935,27 @@
 <6>e2fsck: e2fsck 1.42.9 (28-Dec-2013)
 <6>e2fsck: skipping journal recoverybecause INCOMPAT_RECOVER was clear.
 <6>e2fsck: check whether gdt & bitmap free count is vaild
-<6>e2fsck: Superblock last mount time (__bionic_open_tzdata_path: ANDROID_DATA not set!
-<6>e2fsck: __bionic_open_tzdata_path: ANDROID_ROOT not set!
-<6>e2fsck: __bionic_open_tzdata_path: ANDROID_DATA not set!
-<6>e2fsck: __bionic_open_tzdata_path: ANDROID_ROOT not set!
-<6>e2fsck: __bionic_open_tzdata_path: ANDROID_DATA not set!
-<6>e2fsck: __bionic_open_tzdata_path: ANDROID_ROOT not set!
-<6>e2fsck: Mon Jan 16 15:53:28 2017,
-<6>e2fsck: 	now = Thu Jan 16 15:54:06 2014) is in the future.
-<6>e2fsck: Fix? yes
-<6>e2fsck: 
-<6>e2fsck: Superblock last write time (Mon Jan 16 15:53:28 2017,
-<6>e2fsck: 	now = Thu Jan 16 15:54:06 2014) is in the future.
-<6>e2fsck: Fix? yes
-<6>e2fsck: 
-<6>e2fsck: /dev/block/platform/msm_sdcc.1/by-name/userdata: clean, 26271/638976 files, 1605182/2554876 blocks
+<6>e2fsck: superblock fsync before orphan cleanup!
+<6>e2fsck: Clearing orphaned inode 263125 (uid=1023, gid=1023, mode=040775, size=4096)
+<6>e2fsck: Clearing orphaned inode 263367 (uid=1023, gid=1023, mode=040775, size=4096)
+<6>e2fsck: Clearing orphaned inode 263213 (uid=1023, gid=1023, mode=040775, size=4096)
+<6>e2fsck: Clearing orphaned inode 132094 (uid=10165, gid=10165, mode=0140666, size=0)
+<6>e2fsck: Clearing orphaned inode 131528 (uid=10165, gid=10165, mode=0140666, size=0)
+<6>e2fsck: Clearing orphaned inode 131500 (uid=10165, gid=10165, mode=0140666, size=0)
+<6>e2fsck: Clearing orphaned inode 131494 (uid=10165, gid=10165, mode=0140666, size=0)
+<6>e2fsck: Clearing orphaned inode 132085 (uid=10165, gid=10165, mode=0140666, size=0)
+<6>e2fsck: Clearing orphaned inode 263371 (uid=1023, gid=1023, mode=0100664, size=0)
+<6>e2fsck: Clearing orphaned inode 132082 (uid=10148, gid=10148, mode=0100600, size=45488)
+<6>e2fsck: Clearing orphaned inode 263365 (uid=1023, gid=1023, mode=0100664, size=0)
+<6>e2fsck: Clearing orphaned inode 1328 (uid=10014, gid=10014, mode=040771, size=4096)
+<6>e2fsck: Clearing orphaned inode 1774 (uid=10014, gid=10014, mode=0100600, size=41392)
+<6>e2fsck: Clearing orphaned inode 393689 (uid=1012, gid=1012, mode=0100600, size=0)
+<6>e2fsck: Clearing orphaned inode 393688 (uid=1012, gid=1012, mode=0100600, size=0)
+<6>e2fsck: flush all filesystem after orphan cleanup!
+<6>e2fsck: ext2fs_write_bitmaps : do_inode = 1, do_block = 1
+<6>e2fsck: superblock fsync after orphan cleanup!
+<6>e2fsck: check whether gdt & bitmap free count is vaild after release orphan inode
+<6>e2fsck: /dev/block/platform/msm_sdcc.1/by-name/userdata: clean, 27348/638976 files, 1618754/2554876 blocks
 <6>e2fsck: ext2fs_close2 : normal operation, return 0
 <6>EXT4-fs (mmcblk0p29): mounted filesystem with ordered data mode. Opts: noauto_da_alloc,discard,journal_async_commit,errors=panic
 <7>SELinux: initialized (dev mmcblk0p29, type ext4), uses xattr
@@ -961,21 +964,7 @@
 <4>e2fsck 1.42.9 (28-Dec-2013)
 <4>skipping journal recoverybecause INCOMPAT_RECOVER was clear.
 <4>check whether gdt & bitmap free count is vaild
-<4>Superblock last mount time (__bionic_open_tzdata_path: ANDROID_DATA not set!
-<4>__bionic_open_tzdata_path: ANDROID_ROOT not set!
-<4>__bionic_open_tzdata_path: ANDROID_DATA not set!
-<4>__bionic_open_tzdata_path: ANDROID_ROOT not set!
-<4>__bionic_open_tzdata_path: ANDROID_DATA not set!
-<4>__bionic_open_tzdata_path: ANDROID_ROOT not set!
-<4>Mon Jan 16 15:53:50 2017,
-<4>	now = Thu Jan 16 15:54:06 2014) is in the future.
-<4>Fix? yes
-<4>
-<4>Superblock last write time (Mon Jan 16 15:53:50 2017,
-<4>	now = Thu Jan 16 15:54:06 2014) is in the future.
-<4>Fix? yes
-<4>
-<4>/dev/block/platform/msm_sdcc.1/by-name/cache: clean, 23/132736 files, 17457/529920 blocks
+<4>/dev/block/platform/msm_sdcc.1/by-name/cache: clean, 18/132736 files, 17447/529920 blocks
 <4>ext2fs_close2 : normal operation, return 0
 <6>EXT4-fs (mmcblk0p18): mounted filesystem with ordered data mode. Opts: noauto_da_alloc,discard,journal_async_commit,errors=panic
 <7>SELinux: initialized (dev mmcblk0p18, type ext4), uses xattr
@@ -983,20 +972,6 @@
 <4>e2fsck 1.42.9 (28-Dec-2013)
 <4>skipping journal recoverybecause INCOMPAT_RECOVER was clear.
 <4>check whether gdt & bitmap free count is vaild
-<4>Superblock last mount time (__bionic_open_tzdata_path: ANDROID_DATA not set!
-<4>__bionic_open_tzdata_path: ANDROID_ROOT not set!
-<4>__bionic_open_tzdata_path: ANDROID_DATA not set!
-<4>__bionic_open_tzdata_path: ANDROID_ROOT not set!
-<4>__bionic_open_tzdata_path: ANDROID_DATA not set!
-<4>__bionic_open_tzdata_path: ANDROID_ROOT not set!
-<4>Mon Jan 16 15:53:49 2017,
-<4>	now = Thu Jan 16 15:54:07 2014) is in the future.
-<4>Fix? yes
-<4>
-<4>Superblock last write time (Mon Jan 16 15:53:49 2017,
-<4>	now = Thu Jan 16 15:54:07 2014) is in the future.
-<4>Fix? yes
-<4>
 <4>/dev/block/platform/msm_sdcc.1/by-name/efs: clean, 58/880 files, 1139/3488 blocks
 <4>ext2fs_close2 : normal operation, return 0
 <6>EXT4-fs (mmcblk0p10): mounted filesystem with ordered data mode. Opts: noauto_da_alloc,discard,journal_async_commit,errors=panic
@@ -1009,6 +984,8 @@
 <4>check whether gdt & bitmap free count is vaild
 <4>/dev/block/platform/msm_sdcc.1/by-name/persdata: clean, 21/576 files, 1133/2304 blocks
 <4>ext2fs_close2 : normal operation, return 0
+<6>barcode_emul_ice4: FPGA firmware update success
+<6>barcode_emul_ice4: ice_gpiox_get : num = 1 , val = 0
 <6>EXT4-fs (mmcblk0p26): mounted filesystem with ordered data mode. Opts: barrier=1
 <7>SELinux: initialized (dev mmcblk0p26, type ext4), uses xattr
 <4>SELinux:  Could not stat /data/system/container: No such file or directory.
@@ -1022,8 +999,6 @@
 <3>init: failed to open '/sys/devices/soc0/platform_version'
 <3>init: failed to open '/sys/devices/soc0/hw_platform'
 <3>init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
-<6>barcode_emul_ice4: FPGA firmware update success
-<6>barcode_emul_ice4: ice_gpiox_get : num = 1 , val = 0
 <3>Unknown PM state 0
 <6>(msm_serial_hs) msm_hs_startup - dma wake lock
 <6>(msm_serial_hs) msm_hs_shutdown - dma wake unlock
@@ -1049,10 +1024,10 @@
 <3>Unknown PM state 3
 <3>Unknown PM state 0
 <6>(msm_serial_hs) msm_hs_startup - dma wake lock
-<4>msm_serial_hs: Rx break
 <6>(msm_serial_hs) msm_hs_shutdown - dma wake unlock
 <3>Unknown PM state 3
 <6>Adding 1048572k swap on /dev/block/vnswap0.  Priority:-1 extents:1 across:1048572k SSFS
+<3>init: service 'console' requires console
 <6>volume_up_key wakeup status 0
 <6>volume_down_key wakeup status 0
 <6>home_key wakeup status 1
@@ -1061,28 +1036,31 @@
 <3>init: cannot find '/system/bin/debuggerd64', disabling 'debuggerd64'
 <3>init: Warning!  Service DR-daemon needs a SELinux domain defined; please fix!
 <6>warning: `qcks' uses 32-bit capabilities (legacy support in use)
-<6>max77693-muic max77693-muic: func:max77693_muic_show_manualsw ap(0),cp(1),vps(2)sw_path:0
 <3>init: Warning!  Service qcom-c_main-sh needs a SELinux domain defined; please fix!
 <3>init: Warning!  Service macloader needs a SELinux domain defined; please fix!
 <3>init: Warning!  Service sec-sh needs a SELinux domain defined; please fix!
 <3>init: cannot find '/system/bin/rf4ce', disabling 'rf4ce'
 <3>init: cannot find '/system/bin/imsqmidaemon', disabling 'imsqmidaemon'
 <3>init: Warning!  Service zygote needs a SELinux domain defined; please fix!
+<6>max77693-muic max77693-muic: func:max77693_muic_show_manualsw ap(0),cp(1),vps(2)sw_path:0
 <3>init: cannot setexeccon('u:r:sudaemon:s0'): Invalid argument
 <3>init: cannot find '/system/bin/dpmd', disabling 'dpmd'
 <3>init: cannot find '/system/bin/loc_launcher', disabling 'loc_launcher'
 <3>init: Warning!  Service qcom-sh needs a SELinux domain defined; please fix!
 <3>init: Warning!  Service ppd needs a SELinux domain defined; please fix!
 <3>init: cannot find '/system/bin/vcsFPService', disabling 'vcsFPService'
-<3>init: service 'console' requires console
+<6>rmnet usb ctrl Initialized.
+<6>usbcore: registered new interface driver rmnet_usb
 <4>init.sec.boot.sh: start
-<7>usb: enable_store enabled=0, !dev->enabled=1
+<3>init: untracked pid 293 exited with status 0
 <6>sdcardfs: version 2.1.1
 <6>sdcardfs: dev_name -> /data/privatemode
 <6>sdcardfs: options -> uid=1000,gid=1000,wgid=1015
 <6>sdcardfs: mounted on top of /data/privatemode type ext4
 <7>SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
-<3>init: untracked pid 316 exited with status 0
+<6>EXT4-fs (mmcblk0p16): re-mounted. Opts: (null)
+<3>init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+<7>usb: enable_store enabled=0, !dev->enabled=1
 <7>usb: functions_store buff=mtp,acm,adb
 <7>usb: android_enable_function name=mtp
 <7>usb: android_enable_function name=acm
@@ -1095,42 +1073,38 @@
 <7>usb: enable_store vendor=4e8,product=6860,bcdDevice=400
 <7>,Class=0,SubClass=0,Protocol=0
 <7>usb: enable_store next cmd : usb_add_config
-<3>init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+<6>sdcardfs: version 2.1.1
+<6>sdcardfs: dev_name -> /data/media
+<6>sdcardfs: options -> uid=1023,gid=1023,wgid=1015,derive=legacy,reserved_mb=20
+<6>sdcardfs: created packagelist pkgld/370
+<6>sdcardfs: mounted on top of /data/media type ext4
+<7>SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
 <6>adb_open
 <7>usb: android_bind_enabled_functions f:mtp
 <7>[mtpg_function_bind]	line = [1232]
 <7>usb: android_bind_enabled_functions f:acm
+<6>sdcardfs: read_package_list
 <6>DUN is registerd
 <7>usb: android_bind_enabled_functions f:adb
-<6>sdcardfs: version 2.1.1
-<6>sdcardfs: dev_name -> /data/media
-<6>sdcardfs: options -> uid=1023,gid=1023,wgid=1015,derive=legacy,reserved_mb=20
-<6>sdcardfs: created packagelist pkgld/358
-<6>sdcardfs: mounted on top of /data/media type ext4
-<7>SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
-<6>rmnet usb ctrl Initialized.
-<6>usbcore: registered new interface driver rmnet_usb
-<6>sdcardfs: read_package_list
-<6>EXT4-fs (mmcblk0p16): re-mounted. Opts: (null)
 <3>init: no such service 'quipc_igsn'
 <3>init: no such service 'quipc_main'
 <6>MobiCore mcd: *** <t MTK, Build: Nov  5 2014, 18:40:38 ***
 <6>MobiCore mcd: *** jenkins-Generic_integration_build-1111 ###
 <4>QSEECOM: qseecom_load_app: App (skmm_ta) does'nt exist, loading apps for first time
 <4>QSEECOM: qseecom_load_app: App with id 1 (skmm_ta) now loaded
-<4>healthd: batteryPogoOnlnePath not found
-<4>healthd: BatteryHighVoltageChargerPath not found
-<4>healthd: batteryCapacitymaxPath not found
-<6>healthd: battery l=84 v=3987 t=35.0 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
-<6>healthd-android: healthd_mode_android_battery_update
-<6>BatteryPropertiesRegistrar: notifyListeners : start
-<6>BatteryPropertiesRegistrar: notifyListeners : done
+<3>init: untracked pid 472 exited with status 0
 <6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
 <6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
 <6>mipi_dsi_controller_cfg: DSI status=8 failed
 <6>[lcd] DSI REGULATOR SET ...
 <6>[lcd] PANEL REGULATOR SET ...
-<3>init: untracked pid 530 exited with status 0
+<4>healthd: batteryPogoOnlnePath not found
+<4>healthd: BatteryHighVoltageChargerPath not found
+<4>healthd: batteryCapacitymaxPath not found
+<6>healthd: battery l=82 v=3860 t=31.5 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>BatteryPropertiesRegistrar: notifyListeners : done
 <6>[lcd] PANEL ON
 <6>[lcd] DSI ON
 <6>mipi_samsung_manufacture_id id0:  0x42, id1: 0x80, id2: 0x47
@@ -1159,6 +1133,7 @@
 <7>SELinux: 2048 avtab hash slots, 16070 rules.
 <7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
 <7>SELinux:  86 classes, 16070 rules
+<6>=[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
 <7>SELinux: 2048 avtab hash slots, 23719 rules.
 <7>SELinux: 2048 avtab hash slots, 23719 rules.
 <7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
@@ -1167,37 +1142,55 @@
 <4>mdp4_overlay_borderfill_stage_up mixer(0) end
 <6>LED Powering Pattern on
 <7>led pattern : 6 is activated
-<6>=[ES325]=es325_wrapper_wakeup(dai->id = 1) es325 not activated 0 0 0
 <7>SELinux: 2048 avtab hash slots, 23719 rules.
-<3>init: untracked pid 380 exited with status 1
+<3>init: untracked pid 323 exited with status 1
 <7>SELinux: 2048 avtab hash slots, 23719 rules.
 <7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
 <7>SELinux:  86 classes, 23719 rules
-<3>init: untracked pid 764 exited with status 1
-<3>init: untracked pid 318 exited with status 1
-<6>touch_tout1_on
+<3>init: untracked pid 604 exited with status 1
+<3>init: untracked pid 371 exited with status 1
 <6>pil pil0: q6: Brought out of reset
-<3>init: untracked pid 850 exited with status 1
 <6>apr_tal:Q6 Is Up
 <6>apr_tal: SMD_EVENT_OPEN
-<7>SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<6>touch_tout1_on
+<3>init: untracked pid 640 exited with status 1
 <6>=[ES325]=es325_wrapper_wakeup(dai->id = 2) es325 not activated 0 0 0
 <6>apr_tal: SMD_EVENT_OPEN
 <4>[134]
+<7>SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs
+<6>adb_release
+<7>usb: usb_remove_config cdev->config=  (null), config=dd64e180
+<7>[mtpg_function_unbind]	line = [1207]
+<6>DUN is unregisterd
 <7>SELinux: 2048 avtab hash slots, 23719 rules.
 <7>SELinux: 2048 avtab hash slots, 23719 rules.
 <7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
 <7>SELinux:  86 classes, 23719 rules
-<3>init: untracked pid 713 exited with status 1
-<3>init: untracked pid 1159 exited with status 1
+<7>usb: android_bind_enabled_functions f:mtp
+<7>[mtpg_function_bind]	line = [1232]
+<7>usb: android_bind_enabled_functions f:acm
+<6>DUN is registerd
+<7>usb: android_bind_enabled_functions f:adb
+<3>init: untracked pid 746 exited with status 0
+<7>SELinux: 2048 avtab hash slots, 23719 rules.
+<7>SELinux: 2048 avtab hash slots, 23719 rules.
+<7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
+<7>SELinux:  86 classes, 23719 rules
+<3>init: untracked pid 586 exited with status 1
+<3>init: untracked pid 782 exited with status 1
 <6>max77693-muic max77693-muic: func:max77693_muic_usb_detect info->muic_data->sw_path:0
-<6>SELinux:  Context u:object_r:ping_exec:s0 is not valid (left wildcarded).
-<6>[SSP] : set_hw_offset, skip DL state = 3
+<7>SELinux: 2048 avtab hash slots, 23719 rules.
+<7>SELinux: 2048 avtab hash slots, 23719 rules.
+<7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
+<7>SELinux:  86 classes, 23719 rules
+<3>init: untracked pid 750 exited with status 1
+<3>init: untracked pid 901 exited with status 1
+<6>[SSP]: set_hw_offset: x: -3, y: 3, z: 1
 <6>proximity_open_calibration: proximity ps_canc = 0, ps_thresh hi - 60 lo - 45
 <6>proximity_open_calibration: proximity ps_canc = 0, ps_thresh hi - 60 lo - 45
 <6>[SSP] engine_version2_store - engine_ver2 = SHTC1_v2.1.10.23_140103, SHTC1_v2.1.10.23_140103
 <6>[SSP] engine_version_store - engine_ver = SHTC1_v2.1.10.0_140103, SHTC1_v2.1.10.0_140103
-<3>[SSP]: mag_store_hwoffset - get_hw_offset failed
+<6>[SSP]: get_hw_offset: x: -1, y: 1, z: 1
 <6>mdm_status_change: status = 1: mdm id 0 is now ready
 <6>msm_hsic_host msm_hsic_host: remove, state 1
 <6>usb usb1: USB disconnect, device number 1
@@ -1210,7 +1203,7 @@
 <6>usb usb1: New USB device found, idVendor=1d6b, idProduct=0002
 <6>usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
 <6>usb usb1: Product: Qualcomm EHCI Host Controller using HSIC
-<6>usb usb1: Manufacturer: Linux 3.4.113-machinex-Mark78 ehci_hcd
+<6>usb usb1: Manufacturer: Linux 3.4.113-machinex-Mark79 ehci_hcd
 <6>usb usb1: SerialNumber: msm_hsic_host
 <6>hub 1-0:1.0: USB hub found
 <6>hub 1-0:1.0: 1 port detected
@@ -1223,47 +1216,23 @@
 <6>usb 1-1: Manufacturer: Qualcomm, Incorporated
 <6>qc_csvt 1-1:1.4: qc_csvt converter detected
 <6>usb 1-1: qc_csvt converter now attached to ttyUSB0
-<6>rmnet_usb 1-1:1.6: rmnet_usb0: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, 22:bf:27:1b:b6:45
-<6>rmnet_usb 1-1:1.7: rmnet_usb1: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, 22:bf:27:1b:b6:45
-<6>rmnet_usb 1-1:1.8: rmnet_usb2: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, 22:bf:27:1b:b6:45
-<6>proximity_open_calibration: proximity ps_canc = 0, ps_thresh hi - 60 lo - 45
-<6>[SSP]: set_hw_offset: x: -1, y: 1, z: 1
-<6>ssp_sensorhub_report_notice: reset
-<7>TX UART: 0d 0a 2b 55 41 52 54 20 52 45 41 44 59 0d 0a     ..+UART READY..
-<6>adb_release
-<7>usb: usb_remove_config cdev->config=  (null), config=dd475d80
-<7>[mtpg_function_unbind]	line = [1207]
-<6>DUN is unregisterd
-<7>SELinux: 2048 avtab hash slots, 23719 rules.
-<7>SELinux: 2048 avtab hash slots, 23719 rules.
-<7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
-<7>SELinux:  86 classes, 23719 rules
-<6>adb_open
-<7>usb: android_bind_enabled_functions f:mtp
-<7>[mtpg_function_bind]	line = [1232]
-<7>usb: android_bind_enabled_functions f:acm
-<6>DUN is registerd
-<7>usb: android_bind_enabled_functions f:adb
-<3>init: untracked pid 2190 exited with status 0
-<7>SELinux: 2048 avtab hash slots, 23719 rules.
-<7>SELinux: 2048 avtab hash slots, 23719 rules.
-<7>SELinux:  1 users, 2 roles, 1343 types, 0 bools, 1 sens, 1024 cats
-<7>SELinux:  86 classes, 23719 rules
-<3>init: untracked pid 2192 exited with status 1
-<3>init: untracked pid 2220 exited with status 1
-<6>max77693-muic max77693-muic: func:max77693_muic_dock_usb_detect info->muic_data->sw_path:0
-<6>max77693-muic max77693-muic: func:max77693_muic_mhl_detect cable_type:0
+<6>rmnet_usb 1-1:1.6: rmnet_usb0: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, b6:13:69:78:15:83
+<6>rmnet_usb 1-1:1.7: rmnet_usb1: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, b6:13:69:78:15:83
+<6>rmnet_usb 1-1:1.8: rmnet_usb2: register 'rmnet_usb' at usb-msm_hsic_host-1, RmNET net device, b6:13:69:78:15:83
 <6>gamma_cell_determine ldi_revision: 0x428047
 <6>generate_gray_scale end
 <4>[machinex] HW QRNGD ACTIVATED
 <6>EXT4-fs (mmcblk0p16): re-mounted. Opts: (null)
 <4>[machinex] Early Init Complete
-<6>sec-fuelgauge 11-0036: 0x02(0xc6), 0x03(0x20), 0x04(0xa8), 0x05(0xfa), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6c), 0x0d(0x1e), 
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0xdf), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
-<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 84, current : 84
-<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3962mV),Inow(460mA),SOC(84%),Tbat(347)
+<7>TX UART: 0d 0a 2b 55 41 52 54 20 52 45 41 44 59 0d 0a     ..+UART READY..
+<6>max77693-muic max77693-muic: func:max77693_muic_dock_usb_detect info->muic_data->sw_path:0
+<6>max77693-muic max77693-muic: func:max77693_muic_mhl_detect cable_type:0
+<6>sec-fuelgauge 11-0036: 0x02(0xc5), 0x03(0x20), 0x04(0xa4), 0x05(0x18), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x4e), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 82, current : 82
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3942mV),Inow(460mA),SOC(82%),Tbat(317)
 <6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
-<6>healthd: battery l=84 v=3962 t=34.7 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd: battery l=82 v=3942 t=31.7 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
 <6>healthd-android: healthd_mode_android_battery_update
 <6>BatteryPropertiesRegistrar: notifyListeners : start
 <6>BatteryPropertiesRegistrar: notifyListeners : done
@@ -1272,7 +1241,7 @@
 <6>sdcardfs: read_package_list
 <6>binder: 228:228 BC_REQUEST_DEATH_NOTIFICATION death notification already set
 <6>BatteryPropertiesRegistrar: registerListener : start
-<6>healthd: battery l=84 v=3962 t=34.7 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd: battery l=82 v=3942 t=31.7 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
 <6>healthd-android: healthd_mode_android_battery_update
 <6>BatteryPropertiesRegistrar: notifyListeners : start
 <6>IBatteryPropertiesListener : batteryPropertiesChanged!
@@ -1291,8 +1260,6 @@
 <4>oom_adj 9 => oom_score_adj 529
 <4>oom_adj 15 => oom_score_adj 1000
 <7>[TouchKey] normal_mode Enabled
-<7>led pattern : 0 is activated
-<3>init: Warning!  Service usf-post-boot needs a SELinux domain defined; please fix!
 <6>sdcardfs: inotify event: 00000400
 <6>sdcardfs: inotify event: 00008000
 <6>sdcardfs: read_package_list
@@ -1324,7 +1291,7 @@
 <6>barcode_emul_ice4: ice_gpiox_get : num = 4 , val = 0
 <6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 1
 <3>hostwake line change [BT]
-<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>bluesleep_sleep_work - uport is null [BT]
 <4>[brcm_wlan_power] Bluetooth Power On.
 <6>barcode_emul_ice4: ice_gpiox_set : num = 3 , val = 1
 <6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 0
@@ -1335,13 +1302,7 @@
 <4>mmc1: queuing unknown CIS tuple 0x80 (2 bytes)
 <4>mmc1: queuing unknown CIS tuple 0x80 (7 bytes)
 <4>mmc1: queuing unknown CIS tuple 0x80 (3 bytes)
-<6>msm_vidc_venc: Inside vid_enc_open()
-<6>
-<6> msm_vidc_enc: Inside vid_enc_open_client()
-<4>
-<4>res_trk_download_firmware(): Request firmware download
 <4>mmc1: remove initialize and start re-tuning timerto prevent CMD53 request timeout 
-<6>sps:BAM 0x12182000 (va:0xe33fc000) enabled: ver:0x5, number of pipes:6
 <6>sps:BAM 0x12182000 (va:0xe33fc000) enabled: ver:0x5, number of pipes:6
 <4>mmc1: queuing unknown CIS tuple 0x91 (3 bytes)
 <6>mmc1: new ultra high speed SDR104 SDIO card at address 0001
@@ -1352,25 +1313,21 @@
 <4>alloc static buf at c7e80000!
 <4>F1 signature OK, socitype:0x1 chip:0x4335 rev:0x1 pkg:0x0
 <4>DHD: dongle ram size is set to 786432(orig 786432) at 0x180000
-<6>fw_version 9:23:2014
-<6>CFG80211-INFO2) wl_event_handler : tsk Enter, tsk = 0xdc632620
-<4>wl_create_event_handler(): thread:wl_event_handler:a22 started
-<6>
-<6> msm_vidc_enc: Inside vid_enc_release()
-<6>
-<6> msm_vidc_enc: Inside vid_enc_close_client()p2p0: P2P Interface Registered
-<4>dhd_attach(): thread:dhd_watchdog_thread:a26 started
-<4>dhd_attach(): thread:dhd_dpc:a27 started
-<4>dhd_attach(): thread:dhd_rxf:a28 started
+<6>CFG80211-INFO2) wl_event_handler : tsk Enter, tsk = 0xdc4ab620
+<4>wl_create_event_handler(): thread:wl_event_handler:54f started
+<4>p2p0: P2P Interface Registered
+<4>dhd_attach(): thread:dhd_watchdog_thread:550 started
+<4>dhd_attach(): thread:dhd_dpc:551 started
+<4>dhd_attach(): thread:dhd_rxf:552 started
 <4>dhd_deferred_work_init: work queue initialized 
 <4>CHIP VER = [0x1]
 <4>----- CHIP bcm4335_B0 -----
 <4>dhdsdio_download_firmware: firmware path=/system/etc/wifi/bcmdhd_sta.bin, nvram path=/system/etc/wifi/nvram_net.txt_semcosh
-<6>
-<6> msm_vidc_enc: Return from vid_enc_release()
 <6>msm_vidc_venc: Inside vid_enc_open()
 <6>
 <6> msm_vidc_enc: Inside vid_enc_open_client()
+<4>
+<4>res_trk_download_firmware(): Request firmware download
 <6>fw_version 9:23:2014
 <6>
 <6> msm_vidc_enc: Inside vid_enc_release()
@@ -1388,16 +1345,24 @@
 <6> msm_vidc_enc: Inside vid_enc_close_client()
 <6>
 <6> msm_vidc_enc: Return from vid_enc_release()dhdsdio_write_vars: Download, Upload and compare of NVRAM succeeded.
-<6>msm_vidc_dec: Inside vid_dec_open()dhd_bus_init: enable 0x06, ready 0x06 (waited 0us)
+<6>msm_vidc_venc: Inside vid_enc_open()
+<6>
+<6> msm_vidc_enc: Inside vid_enc_open_client()
+<6>fw_version 9:23:2014
+<6>
+<6> msm_vidc_enc: Inside vid_enc_release()
+<6>
+<6> msm_vidc_enc: Inside vid_enc_close_client()
+<6>
+<6> msm_vidc_enc: Return from vid_enc_release()dhd_bus_init: enable 0x06, ready 0x06 (waited 0us)
 <4>dhd_wl_ioctl: WLC_GET_VAR: cisdump, ret = -23
 <4>[WIFI_SEC] dhd_check_module_cid: CIS reading failed, ret=-23
-<6>fw_version 9:23:2014
-<6>msm_vidc_dec: Inside vid_dec_release()Firmware up: op_mode=0x0015, MAC=c0:f3:2c
+<4>Firmware up: op_mode=0x0015, MAC=c0:f3:2c
 <4>[WIFI_SEC] sec_control_pm: POWER_VAL = 1 
 <4>dhdcdc_set_ioctl: SET PM to 2
 <4>dhd_wl_ioctl: WLC_SET_VAR: aibss_bcn_force_config, ret = -23
 <4>dhd_preinit_ioctls Set aibss_bcn_force_config to 500, 5000, 5000 failed -23
-<6>msm_vidc_dec: Return from vid_dec_release()Firmware version = wl0: Mar  5 2015 16:46:55 version 6.30.171.24.64 (B0 Station/P2P)
+<4>Firmware version = wl0: Mar  5 2015 16:46:55 version 6.30.171.24.64 (B0 Station/P2P)
 <4>[WIFI_SEC] .wifiver.info already saved.
 <4>dhd_wl_ioctl: WLC_SET_VAR: ampdu_hostreorder, ret = -23
 <4>dhd_preinit_ioctls wl ampdu_hostreorder failed -23
@@ -1406,39 +1371,43 @@
 <4>[WIFI_SEC] dhd_check_module_mac: Check module mac by legacy FW : c0:f3:2c
 <4>[WIFI_SEC] Check Mac address in .mac.info 
 <4>Dongle Host Driver, version 1.141.64.13 (r)
-<4>Compiled in drivers/net/wireless/bcmdhd on Jan 16 2017 at 08:49:05
+<4>Compiled in drivers/net/wireless/bcmdhd on Jan 16 2017 at 14:42:52
 <4>Register interface [wlan0]  MAC: c0:f3:2c
 <4>
 <4>####btlock released, cookie: WiFi
 <4>wl_android_post_init: btlock released
-<6>pil pil1: vidc: Brought out of reset
-<6>fw_version 7:31:2012
-<3>Securing...
-<6>msm_vidc_dec: Inside vid_dec_release_secure()
-<6>CFG80211-INFO2) wl_cfg80211_attach_post : p2p0: p2p_dev_addr=c2:f3:2c
-<3>Unsecuring....
-<6>msm_vidc_dec: Return from vid_dec_release_secure()
 <6>msm_vidc_dec: Inside vid_dec_open()
-<7>qtaguid-I was designed to piss you off
+<6>CFG80211-INFO2) wl_cfg80211_attach_post : p2p0: p2p_dev_addr=c2:f3:2c
 <6>fw_version 9:23:2014
 <6>msm_vidc_dec: Inside vid_dec_release()
 <6>msm_vidc_dec: Return from vid_dec_release()
 <7>qtaguid-I was designed to piss you off
+<6>pil pil1: vidc: Brought out of reset
+<6>fw_version 7:31:2012
+<3>Securing...
+<7>qtaguid-I was designed to piss you off
+<6>msm_vidc_dec: Inside vid_dec_release_secure()
+<3>Unsecuring....
+<6>msm_vidc_dec: Return from vid_dec_release_secure()
+<6>msm_vidc_dec: Inside vid_dec_open()
+<6>fw_version 9:23:2014
+<6>msm_vidc_dec: Inside vid_dec_release()
+<6>msm_vidc_dec: Return from vid_dec_release()
+<6>msm_vidc_dec: Inside vid_dec_open()
+<6>fw_version 9:23:2014
+<6>msm_vidc_dec: Inside vid_dec_release()
+<6>msm_vidc_dec: Return from vid_dec_release()
+<6>msm_vidc_dec: Inside vid_dec_open()
+<6>fw_version 9:23:2014
+<6>msm_vidc_dec: Inside vid_dec_release()
+<6>msm_vidc_dec: Return from vid_dec_release()
 <6>msm_vidc_dec: Inside vid_dec_open()
 <6>fw_version 9:23:2014
 <6>msm_vidc_dec: Inside vid_dec_release()
 <6>msm_vidc_dec: Return from vid_dec_release()
 <6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
-<6>msm_vidc_dec: Inside vid_dec_open()
-<6>fw_version 9:23:2014
-<6>msm_vidc_dec: Inside vid_dec_release()
-<6>msm_vidc_dec: Return from vid_dec_release()
-<6>msm_vidc_dec: Inside vid_dec_open()
 <3>WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for CA as US rev 0
-<6>fw_version 9:23:2014
-<6>msm_vidc_dec: Inside vid_dec_release()
-<6>msm_vidc_dec: Return from vid_dec_release()
-<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=4
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=11
 <4>dhd_wl_ioctl: WLC_IOCTL: cmd: 23, ret = -17
 <6>CFG80211-INFO2) wl_cfg80211_connect : Connectting withc8:26:15 channel (11) ssid "something", len (9)
 <4>
@@ -1449,10 +1418,7 @@
 <4>ETHER_TYPE_802_1X: ver 2, type 3, replay 1
 <4>ETHER_TYPE_802_1X [TX]: ver 1, type 3, replay 1
 <6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
-<3>Tx has been idle [BT]
 <4>wl_bss_connect_done succeeded with c8:26:15
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
 <6>bcm2079x-i2c 17-0077: dev node major=10, minor=34
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
@@ -1464,7 +1430,7 @@
 <6>sdcardfs: version 2.1.1
 <6>sdcardfs: dev_name -> /mnt/media_rw/extSdCard
 <6>sdcardfs: options -> uid=1023,gid=1023,wgid=1023,derive=unified,lower_fs=fat
-<6>sdcardfs: created packagelist pkgld/3236
+<6>sdcardfs: created packagelist pkgld/1991
 <6>sdcardfs: mounted on top of /mnt/media_rw/extSdCard type vfat
 <7>SELinux: initialized (dev sdcardfs, type sdcardfs), uses xattr
 <6>sdcardfs: read_package_list
@@ -1472,69 +1438,58 @@
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 0):
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 1):
-<6>sdcardfs: inotify event: 00000400
-<6>sdcardfs: inotify event: 00000400
-<6>sdcardfs: inotify event: 00008000
-<6>sdcardfs: read_package_list
-<6>sdcardfs: inotify event: 00008000
-<6>sdcardfs: read_package_list
-<6>msm_thermal: Limiting cpu0 max frequency to 1674000
-<6>msm_thermal: Limiting cpu1 max frequency to 1674000
-<6>msm_thermal: Limiting cpu2 max frequency to 1674000
-<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>[Touchkey] IC id 20065
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: got wake lock
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 0):
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_WAKE_CTL (fa05, 1):
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl: release wake lock, count_irq = 0
-<6>msm_thermal: Limiting cpu0 max frequency to 1458000
-<6>msm_thermal: Limiting cpu1 max frequency to 1458000
-<6>msm_thermal: Limiting cpu2 max frequency to 1458000
-<6>msm_thermal: Limiting cpu3 max frequency to 1458000
-<6>msm_thermal: already running...
-<6>msm_thermal: enabled = 1
-<6>msm_thermal: Limiting cpu0 max frequency to 1242000
-<6>msm_thermal: Limiting cpu1 max frequency to 1242000
-<6>msm_thermal: Limiting cpu2 max frequency to 1242000
-<6>msm_thermal: Limiting cpu3 max frequency to 1242000
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<6>[Touchkey] IC id 20065
-<6>msm_thermal: Limiting cpu0 max frequency to 1026000
-<6>msm_thermal: Limiting cpu1 max frequency to 1026000
-<6>msm_thermal: Limiting cpu2 max frequency to 1026000
-<6>msm_thermal: Limiting cpu3 max frequency to 1026000
-<4>[machinex] Machinex Post-Init Finishing Up
-<4>[mxpower] LATE RPM LPM WORKAOUND COMPLETE
-<4>[machinex] Post-Init COMPLETE
-<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
-<6>[Touchkey] IC id 20065
-<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
-<7>[TouchKey] normal_mode Enabled
-<6>msm_thermal: Limiting cpu0 max frequency to 810000
-<6>msm_thermal: Limiting cpu1 max frequency to 810000
-<6>msm_thermal: Limiting cpu2 max frequency to 810000
-<6>msm_thermal: Limiting cpu3 max frequency to 810000
-<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=7
+<6>sdcardfs: inotify event: 00000400
+<6>sdcardfs: inotify event: 00000400
+<6>sdcardfs: inotify event: 00008000
+<6>sdcardfs: inotify event: 00008000
+<6>sdcardfs: read_package_list
+<6>sdcardfs: read_package_list
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=9
 <6>bcm2079x-i2c 17-0077: bcm2079x_dev_unlocked_ioctl, BCMNFC_POWER_CTL (fa01, 0):
 <6>sec-battery sec-battery: sec_bat_event_set: ignore duplicated deactivation of same event
 <7>qtaguid-I was designed to piss you off
 <7>qtaguid-I was designed to piss you off
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<7>led_lowpower mode set to 1
 <7>led pattern : 0 is activated
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>init: Warning!  Service usf-post-boot needs a SELinux domain defined; please fix!
+<6>msm_thermal: already running...
+<6>msm_thermal: enabled = 1
+<4>[machinex] Machinex Post-Init Finishing Up
+<4>[mxpower] LATE RPM LPM WORKAOUND COMPLETE
+<4>[machinex] Post-Init COMPLETE
 <7>p2p0: no IPv6 routers present
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
 <6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
 <4>dhdcdc_set_ioctl: SET PM to 2
+<6>msm_thermal: Limiting cpu0 max frequency to 810000
+<6>msm_thermal: Limiting cpu1 max frequency to 810000
+<6>msm_thermal: Limiting cpu2 max frequency to 810000
+<6>msm_thermal: Limiting cpu3 max frequency to 810000
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
 <6>msm_thermal: Limiting cpu1 max frequency to 1026000
 <6>msm_thermal: Limiting cpu2 max frequency to 1026000
 <6>msm_thermal: Limiting cpu3 max frequency to 1026000
@@ -1554,128 +1509,246 @@
 <6>msm_thermal: Max frequency reset for cpu1
 <6>msm_thermal: Max frequency reset for cpu2
 <6>msm_thermal: Max frequency reset for cpu3
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
-<6>sec-fuelgauge 11-0036: 0x02(0xbe), 0x03(0x60), 0x04(0xa8), 0x05(0x00), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6d), 0x0d(0x1e), 
-<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0x00), 0x17(0x3a), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
-<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 84, current : 84
-<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3807mV),Inow(460mA),SOC(84%),Tbat(344)
+<6>mipi_samsung_disp_backlight 0
+<7>led_lowpower mode set to 1
+<7>led pattern : 0 is activated
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[lcd] mipi_samsung_disp_off
+<6>[lcd] PANEL OFF
+<6>[lcd] DSI OFF
+<4>Rob's DSI OFF HOOK
+<6>[POWERSUSPEND] panel resquests sleep.
+<6>[POWERSUSPEND] state activated.
+<6>[POWERSUSPEND] entering suspend...
+<6>[POWERSUSPEND] suspending...
+<4>[STATE NOTIFIER] - Suspend Called
+<4>[STATE_NOTIFIER] SUSPENDING
+<7>cypress_power_off is finished.
+<7>cypress_int_gpio_setting in suspend 
+<7>cypress_gpio_setting in suspend 
+<4>dhd_power_suspend: enter
+<4>dhd_set_suspend: force extra Suspend setting 
+<4>dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[POWERSUSPEND] suspend completed.
+<6>sec-fuelgauge 11-0036: 0x02(0xc0), 0x03(0x40), 0x04(0xa3), 0x05(0x5c), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x5c), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 82, current : 81
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3845mV),Inow(460mA),SOC(81%),Tbat(318)
 <6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
-<6>healthd: battery l=84 v=3807 t=34.4 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd: battery l=81 v=3845 t=31.8 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
 <6>healthd-android: healthd_mode_android_battery_update
 <6>BatteryPropertiesRegistrar: notifyListeners : start
 <6>IBatteryPropertiesListener : batteryPropertiesChanged!
 <6>: 
 <6>BatteryPropertiesRegistrar: notifyListeners : done
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
-<6>msm_thermal: Limiting cpu0 max frequency to 1674000
-<6>msm_thermal: Limiting cpu1 max frequency to 1674000
-<6>msm_thermal: Limiting cpu2 max frequency to 1674000
-<6>msm_thermal: Limiting cpu3 max frequency to 1674000
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
-<6>msm_thermal: Limiting cpu0 max frequency to 1458000
-<6>msm_thermal: Limiting cpu1 max frequency to 1458000
-<6>msm_thermal: Limiting cpu2 max frequency to 1458000
-<6>msm_thermal: Limiting cpu3 max frequency to 1458000
-<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
-<6>msm_thermal: Limiting cpu0 max frequency to 1242000
-<6>msm_thermal: Limiting cpu1 max frequency to 1242000
-<6>msm_thermal: Limiting cpu2 max frequency to 1242000
-<6>msm_thermal: Limiting cpu3 max frequency to 1242000
-<6>msm_thermal: Limiting cpu0 max frequency to 1026000
-<6>msm_thermal: Limiting cpu1 max frequency to 1026000
-<6>msm_thermal: Limiting cpu2 max frequency to 1026000
-<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=8
+<6>PM: suspend entry 2017-01-16 21:56:08.559098041 UTC
+<4>Freezing user space processes ... (elapsed 0.011 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.005 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>msmsdcc_runtime_suspend: Enter WIFI suspend
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>PM: suspend of devices complete after 75.531 msecs
+<6>PM: late suspend of devices complete after 2.288 msecs
+<6>PM: noirq suspend of devices complete after 1.342 msecs
+<4>PM_GPIOS:02[oh],04[ol],05[in],06[ol],09[oh],10[oh],11[ol],13[ol],14[ol],15[ol],16[oh],17[ol],18[ol],27[oh],36[ol],38[oh],
+<4>PM_MPPS:02[ol],04[no],
+<6>[secgpio_dvs][msm8x30_check_gpio_status] state : sleep
+<6>[secgpio_dvs][msm8x30_check_gpio_status]-
+<4>Disabling non-boot CPUs ...
+<6>msm_pm_enter
+<6>msm_pm_enter: power collapse
+<6>Enabled clocks:
+<6>	pxo_a_clk::1:1 [27000000]
+<6>	afab_a_clk::1:1 [533000000]
+<6>	cfpb_a_clk::1:1 [32000000]
+<6>	ebi1_a_clk::1:1 [533000000]
+<6>	mmfpb_a_clk::1:1 [38400000]
+<6>	sfab_a_clk::1:1 [54000000]
+<6>	afab_msmbus_a_clk:msm_apps_fab:1:1 [533000000] -> afab_a_clk:1:1 [533000000]
+<6>	cfpb_a_clk:msm_cpss_fpb:1:1 [32000000]
+<6>	ebi1_msmbus_a_clk:msm_bus:1:1 [533000000] -> ebi1_a_clk:1:1 [533000000]
+<6>	mmfpb_a_clk:clock-8960:1:1 [38400000]
+<6>	cfpb_a_clk:clock-8960:1:1 [32000000]
+<6>	pmem_clk:msm_sps:1:1 [0]
+<6>Enabled clock count: 12
+<6>msm_mpm_irqs_detectable: cannot monitor 000000,00000000,00000000,00000000,00000000,00000020,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+<6>msm_rpmrs_aggregate_pxo: 0 (0x0)
+<6>msm_rpmrs_aggregate_vdd_mem: vdd 1050000 (0x100590)
+<6>msm_rpmrs_aggregate_vdd_dig: vdd 950000 (0xe7ef0)
+<6>msm_pm_enter: return
+<6>Resume caused by IRQ 353, bcmsdh_sdmmc
+<6>Resume caused by IRQ 48, msmgpio
+<6>Resume caused by IRQ 52, mpm_drv
+<6>Enabling non-boot CPUs ...
+<6>CPU1 is up
+<6>CPU2 is up
+<6>CPU3 is up
+<6>PM: noirq resume of devices complete after 0.854 msecs
+<6>PM: early resume of devices complete after 2.441 msecs
+<4>bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 12.602 msecs
+<6>Skip monitor_work(7)
+<4>Restarting tasks ... 
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>done.
+<6>PM: suspend exit 2017-01-16 21:56:15.218574839 UTC
+<6>PM: suspend entry 2017-01-16 21:56:15.708545521 UTC
+<4>Freezing user space processes ... (elapsed 0.009 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.003 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>msmsdcc_runtime_suspend: Enter WIFI suspend
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>PM: suspend of devices complete after 73.565 msecs
+<6>PM: late suspend of devices complete after 2.318 msecs
+<6>PM: noirq suspend of devices complete after 1.373 msecs
+<4>PM_GPIOS:02[oh],04[ol],05[in],06[ol],09[oh],10[oh],11[ol],13[ol],14[ol],15[ol],16[oh],17[ol],18[ol],27[oh],36[ol],38[oh],
+<4>PM_MPPS:02[ol],04[no],
+<4>Disabling non-boot CPUs ...
+<6>msm_pm_enter
+<6>msm_pm_enter: power collapse
+<6>Enabled clocks:
+<6>	pxo_a_clk::1:1 [27000000]
+<6>	afab_a_clk::1:1 [533000000]
+<6>	cfpb_a_clk::1:1 [32000000]
+<6>	ebi1_a_clk::1:1 [533000000]
+<6>	mmfpb_a_clk::1:1 [38400000]
+<6>	sfab_a_clk::1:1 [54000000]
+<6>	afab_msmbus_a_clk:msm_apps_fab:1:1 [533000000] -> afab_a_clk:1:1 [533000000]
+<6>	cfpb_a_clk:msm_cpss_fpb:1:1 [32000000]
+<6>	ebi1_msmbus_a_clk:msm_bus:1:1 [533000000] -> ebi1_a_clk:1:1 [533000000]
+<6>	mmfpb_a_clk:clock-8960:1:1 [38400000]
+<6>	cfpb_a_clk:clock-8960:1:1 [32000000]
+<6>	pmem_clk:msm_sps:1:1 [0]
+<6>Enabled clock count: 12
+<6>msm_mpm_irqs_detectable: cannot monitor 000000,00000000,00000000,00000000,00000000,00000020,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+<6>msm_rpmrs_aggregate_pxo: 0 (0x0)
+<6>msm_rpmrs_aggregate_vdd_mem: vdd 1050000 (0x100590)
+<6>msm_rpmrs_aggregate_vdd_dig: vdd 950000 (0xe7ef0)
+<6>msm_pm_enter: return
+<6>Resume caused by IRQ 335, msm_hsic_wakeup
+<6>Resume caused by IRQ 48, msmgpio
+<6>Resume caused by IRQ 52, mpm_drv
+<6>Enabling non-boot CPUs ...
+<6>CPU1 is up
+<6>CPU2 is up
+<6>CPU3 is up
+<6>PM: noirq resume of devices complete after 0.854 msecs
+<6>PM: early resume of devices complete after 2.409 msecs
+<4>bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 12.443 msecs
+<6>Skip monitor_work(13)
+<4>Restarting tasks ... 
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>done.
+<6>PM: suspend exit 2017-01-16 21:56:21.506253159 UTC
 <6>sdcardfs: the sbi->obbpath is found
-<6>msm_thermal: Limiting cpu0 max frequency to 810000
-<6>msm_thermal: Limiting cpu1 max frequency to 810000
-<6>msm_thermal: Limiting cpu2 max frequency to 810000
-<6>msm_thermal: Limiting cpu3 max frequency to 810000
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<3>[BT] Bluetooth Power Off.
-<6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 0
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<4>####btlock acquired cookie: BT35
-<3>[BT] Bluetooth Power On.
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 1
-<3>hostwake line change [BT]
-<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
-<3>Unknown PM state 0
-<6>(msm_serial_hs) msm_hs_startup - dma wake lock
-<6>msm_thermal: Limiting cpu0 max frequency to 1026000
-<6>msm_thermal: Limiting cpu1 max frequency to 1026000
-<6>msm_thermal: Limiting cpu2 max frequency to 1026000
-<6>msm_thermal: Limiting cpu3 max frequency to 1026000
-<4>####btlock released, cookie: BT35
-<6>msm_thermal: Limiting cpu0 max frequency to 1242000
-<6>msm_thermal: Limiting cpu1 max frequency to 1242000
-<6>msm_thermal: Limiting cpu2 max frequency to 1242000
-<6>msm_thermal: Limiting cpu3 max frequency to 1242000
-<6>msm_thermal: Limiting cpu0 max frequency to 1458000
-<6>msm_thermal: Limiting cpu1 max frequency to 1458000
-<6>msm_thermal: Limiting cpu2 max frequency to 1458000
-<6>msm_thermal: Limiting cpu3 max frequency to 1458000
-<6>msm_thermal: Limiting cpu0 max frequency to 1674000
-<6>msm_thermal: Limiting cpu1 max frequency to 1674000
-<6>msm_thermal: Limiting cpu2 max frequency to 1674000
-<6>msm_thermal: Limiting cpu3 max frequency to 1674000
-<3>(bluesleep_write_proc_lpm) Reg HCI notifier. [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<3>hostwake line change [BT]
-<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
-<6>msm_thermal: Max frequency reset for cpu0
-<6>msm_thermal: Max frequency reset for cpu1
-<6>msm_thermal: Max frequency reset for cpu2
-<6>msm_thermal: Max frequency reset for cpu3
-<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xd5859b00
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xcac89680
 <4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
 <4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
 <4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
 <6>QSEECOM: qseecom_unload_app: ref_count set to 0
-<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xc8880300
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xd83e0d00
+<4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
+<4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
+<4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
+<6>QSEECOM: qseecom_unload_app: ref_count set to 0
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xcac89900
 <4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
 <4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
 <4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
 <6>QSEECOM: qseecom_unload_app: ref_count set to 0
 <6>max77693-muic max77693-muic: func:max77693_muic_show_adc ret:0 val:3f
-<3>Tx data during last period [BT]
+<3>[BT] Bluetooth Power Off.
+<6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 0
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<4>####btlock acquired cookie: BT35
+<3>[BT] Bluetooth Power On.
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 1
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_work - uport is null [BT]
+<3>Unknown PM state 0
+<6>(msm_serial_hs) msm_hs_startup - dma wake lock
+<6>mipi_samsung_disp_acl_store : panel is off state. updating state value.
+<6>mipi_samsung_disp_acl_store : acl_status (0) siop_status (0)
+<3>[mdnie lite] is negative Mode On = 0
+<6>accessibility_store cmd_value : 0 size : 1
+<6>mipi_samsung_temperature_show msd.mpd->temperature : 0 msd.mpd->temperature_value : 0x19
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 70
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 100
+<4>####btlock released, cookie: BT35
+<3>(bluesleep_write_proc_lpm) Reg HCI notifier. [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_ASLEEP freed [BT]
+<3>hsuart_power on [BT]
+<3>bluesleep_tx_data_wakeup : already wake up, so start timer... [BT]
 <3>hostwake line change [BT]
 <3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
-<6>mipi_samsung_disp_acl_store : acl_status (0) siop_status (0)
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[lcd] PANEL ON
+<6>[lcd] DSI ON
+<6>[mipi_samsung_disp_on]
+<4>Rob's DSI ON HOOK
+<6>[POWERSUSPEND] panel resquests wakeup.
+<6>[POWERSUSPEND] state deactivated.
+<6>[POWERSUSPEND] entering resume...
+<6>[POWERSUSPEND] resuming...
+<4>dhd_power_resume: enter
+<4>dhd_set_suspend: Remove extra suspend setting 
+<4>[STATE NOTIFIER] - Resume Called
+<4>[STATE_NOTIFIER] RESUMING
+<7>cypress_power_on is finished.
+<7>cypress_int_gpio_setting in resume 
+<7>cypress_gpio_setting in resume 
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<3>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
 <3>[mdnie lite] is negative Mode On = 0
 <3>[mdnie lite]  = UI MODE =
 <3>[mdnie lite]  = DYNAMIC MODE =
 <3>[mdnie lite]  send tuning cmd!!
-<6>accessibility_store cmd_value : 0 size : 1
-<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xdb7fb280
-<4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
-<4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
-<6>mipi_samsung_temperature_show msd.mpd->temperature : 0 msd.mpd->temperature_value : 0x19
+<6>mipi_samsung_disp_backlight 300
+<6>touch_tout1_on
+<6>[POWERSUSPEND] resume completed.
+<6>[Touchkey] IC id 20065
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 50
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
+<6>[SSP] temphumidity_send_accuracy - accuracy = 3
 <6>msm_thermal: Limiting cpu0 max frequency to 1674000
 <6>msm_thermal: Limiting cpu1 max frequency to 1674000
 <6>msm_thermal: Limiting cpu2 max frequency to 1674000
 <6>msm_thermal: Limiting cpu3 max frequency to 1674000
-<4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
-<6>QSEECOM: qseecom_unload_app: ref_count set to 0
-<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 50
 <6>msm_thermal: Limiting cpu0 max frequency to 1458000
 <6>msm_thermal: Limiting cpu1 max frequency to 1458000
 <6>msm_thermal: Limiting cpu2 max frequency to 1458000
@@ -1692,18 +1765,16 @@
 <6>msm_thermal: Limiting cpu1 max frequency to 810000
 <6>msm_thermal: Limiting cpu2 max frequency to 810000
 <6>msm_thermal: Limiting cpu3 max frequency to 810000
-<6>mipi_samsung_temperature_store 300
-<6>mipi_samsung_temperature_store msd.mpd->temperature : 30 msd.mpd->temperature_value : 0x1e
-<3>Tx data during last period [BT]
-<6>(msm_serial_hs) msm_hs_shutdown - dma wake unlock
-<3>Unknown PM state 3
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=13
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
 <6>msm_thermal: Limiting cpu0 max frequency to 1026000
 <6>msm_thermal: Limiting cpu1 max frequency to 1026000
 <6>msm_thermal: Limiting cpu2 max frequency to 1026000
 <6>msm_thermal: Limiting cpu3 max frequency to 1026000
-<3>Tx has been idle [BT]
-<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<3>msm_hs_tx_empty: Failing GSBI clocks are OFF
 <6>msm_thermal: Limiting cpu0 max frequency to 1242000
 <6>msm_thermal: Limiting cpu1 max frequency to 1242000
 <6>msm_thermal: Limiting cpu2 max frequency to 1242000
@@ -1720,41 +1791,1016 @@
 <6>msm_thermal: Max frequency reset for cpu1
 <6>msm_thermal: Max frequency reset for cpu2
 <6>msm_thermal: Max frequency reset for cpu3
-<3>(bluesleep_write_proc_lpm) don`t control ext_wake & uart clk [BT]
-<3>bluesleep_abnormal_stop_wq [BT]
+<6>SELinux:  Context u:object_r:ping_exec:s0 is not valid (left wildcarded).
+<6>sec-fuelgauge 11-0036: 0x02(0xb8), 0x03(0x10), 0x04(0xa2), 0x05(0x24), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x31), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3681mV),Inow(460mA),SOC(81%),Tbat(320)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=81 v=3681 t=32.0 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>binder: undelivered transaction 80347
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>binder: undelivered transaction 81139
+<6>binder: undelivered transaction 80955
+<6>binder: undelivered transaction 80931
+<6>binder: undelivered transaction 81138
+<6>binder: undelivered transaction 81162
+<3>init: untracked pid 5765 killed by signal 9
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>msm_thermal: Limiting cpu0 max frequency to 810000
+<6>msm_thermal: Limiting cpu1 max frequency to 810000
+<6>msm_thermal: Limiting cpu2 max frequency to 810000
+<6>msm_thermal: Limiting cpu3 max frequency to 810000
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
 <6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<3>BUG: scheduling while atomic: kworker/3:0/22/0x00000002
-<4>Modules linked in: dhd
-<4>[<c001c5a8>] (unwind_backtrace+0x0/0xfc) from [<c010b7c4>] (__schedule_bug+0x54/0x6c)
-<4>[<c010b7c4>] (__schedule_bug+0x54/0x6c) from [<c0d25270>] (__schedule+0x658/0x79c)
-<4>[<c0d25270>] (__schedule+0x658/0x79c) from [<c0d2365c>] (schedule_hrtimeout_range_clock.part.3+0xcc/0x2a0)
-<4>[<c0d2365c>] (schedule_hrtimeout_range_clock.part.3+0xcc/0x2a0) from [<c00dbb08>] (usleep_range+0x48/0x58)
-<4>[<c00dbb08>] (usleep_range+0x48/0x58) from [<c0a5dee0>] (ice_gpiox_set+0x1f0/0x320)
-<4>[<c0a5dee0>] (ice_gpiox_set+0x1f0/0x320) from [<c094821c>] (bluesleep_abnormal_stop_wq+0x130/0x174)
-<4>[<c094821c>] (bluesleep_abnormal_stop_wq+0x130/0x174) from [<c00ed544>] (process_one_work+0x158/0x6d0)
-<4>[<c00ed544>] (process_one_work+0x158/0x6d0) from [<c00eef18>] (worker_thread+0x348/0x694)
-<4>[<c00eef18>] (worker_thread+0x348/0x694) from [<c00f952c>] (kthread+0x140/0x158)
-<4>[<c00f952c>] (kthread+0x140/0x158) from [<c0014e70>] (ret_from_kernel_thread+0x10/0x18)
-<3>BUG: scheduling while atomic: kworker/3:0/22/0x00000002
-<4>Modules linked in: dhd
-<4>[<c001c5a8>] (unwind_backtrace+0x0/0xfc) from [<c010b7c4>] (__schedule_bug+0x54/0x6c)
-<4>[<c010b7c4>] (__schedule_bug+0x54/0x6c) from [<c0d25270>] (__schedule+0x658/0x79c)
-<4>[<c0d25270>] (__schedule+0x658/0x79c) from [<c0d2365c>] (schedule_hrtimeout_range_clock.part.3+0xcc/0x2a0)
-<4>[<c0d2365c>] (schedule_hrtimeout_range_clock.part.3+0xcc/0x2a0) from [<c00dbb08>] (usleep_range+0x48/0x58)
-<4>[<c00dbb08>] (usleep_range+0x48/0x58) from [<c0a5def8>] (ice_gpiox_set+0x208/0x320)
-<4>[<c0a5def8>] (ice_gpiox_set+0x208/0x320) from [<c094821c>] (bluesleep_abnormal_stop_wq+0x130/0x174)
-<4>[<c094821c>] (bluesleep_abnormal_stop_wq+0x130/0x174) from [<c00ed544>] (process_one_work+0x158/0x6d0)
-<4>[<c00ed544>] (process_one_work+0x158/0x6d0) from [<c00eef18>] (worker_thread+0x348/0x694)
-<4>[<c00eef18>] (worker_thread+0x348/0x694) from [<c00f952c>] (kthread+0x140/0x158)
-<4>[<c00f952c>] (kthread+0x140/0x158) from [<c0014e70>] (ret_from_kernel_thread+0x10/0x18)
-<3>[BT] Bluetooth Power Off.
-<6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 0
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
 <6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
-<4>####btlock acquired cookie: BT35
-<3>[BT] Bluetooth Power On.
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=11
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>mipi_samsung_disp_backlight 258
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>msm_thermal: Max frequency reset for cpu0
+<6>msm_thermal: Max frequency reset for cpu1
+<6>msm_thermal: Max frequency reset for cpu2
+<6>msm_thermal: Max frequency reset for cpu3
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>binder: undelivered transaction 89904
+<6>binder: undelivered transaction 89880
+<3>init: untracked pid 6241 killed by signal 9
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>msm_thermal: Limiting cpu0 max frequency to 810000
+<6>msm_thermal: Limiting cpu1 max frequency to 810000
+<6>msm_thermal: Limiting cpu2 max frequency to 810000
+<6>msm_thermal: Limiting cpu3 max frequency to 810000
+<6>binder: undelivered transaction 97578
+<6>binder: undelivered transaction 97545
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 30
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>binder: undelivered transaction 98487
+<6>binder: undelivered transaction 98224
+<6>binder: undelivered transaction 98195
+<6>binder: undelivered transaction 98486
+<6>binder: undelivered transaction 98495
+<3>init: untracked pid 6746 killed by signal 9
+<6>mipi_samsung_disp_backlight 0
+<6>binder: undelivered transaction 99883
+<6>[lcd] mipi_samsung_disp_off
+<6>[lcd] PANEL OFF
+<6>[lcd] DSI OFF
+<4>Rob's DSI OFF HOOK
+<6>[POWERSUSPEND] panel resquests sleep.
+<6>[POWERSUSPEND] state activated.
+<6>[POWERSUSPEND] entering suspend...
+<6>[POWERSUSPEND] suspending...
+<4>[STATE NOTIFIER] - Suspend Called
+<4>[STATE_NOTIFIER] SUSPENDING
+<7>cypress_power_off is finished.
+<7>cypress_int_gpio_setting in suspend 
+<7>cypress_gpio_setting in suspend 
+<4>dhd_power_suspend: enter
+<4>dhd_set_suspend: force extra Suspend setting 
+<4>dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[POWERSUSPEND] suspend completed.
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 50
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 100
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>msm_thermal: Max frequency reset for cpu0
+<6>msm_thermal: Max frequency reset for cpu1
+<6>msm_thermal: Max frequency reset for cpu2
+<6>msm_thermal: Max frequency reset for cpu3
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[lcd] PANEL ON
+<6>[lcd] DSI ON
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[mipi_samsung_disp_on]
+<4>Rob's DSI ON HOOK
+<6>[POWERSUSPEND] panel resquests wakeup.
+<6>[POWERSUSPEND] state deactivated.
+<6>[POWERSUSPEND] entering resume...
+<6>[POWERSUSPEND] resuming...
+<4>dhd_power_resume: enter
+<4>dhd_set_suspend: Remove extra suspend setting 
+<4>[STATE NOTIFIER] - Resume Called
+<4>[STATE_NOTIFIER] RESUMING
+<7>cypress_power_on is finished.
+<7>cypress_int_gpio_setting in resume 
+<7>cypress_gpio_setting in resume 
+<3>init: untracked pid 5934 exited with status 255
+<3>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[mdnie lite] is negative Mode On = 0
+<3>[mdnie lite]  = UI MODE =
+<3>[mdnie lite]  = DYNAMIC MODE =
+<3>[mdnie lite]  send tuning cmd!!
+<6>mipi_samsung_disp_backlight 258
+<6>[Touchkey] IC id 20065
+<6>touch_tout1_on
+<6>[POWERSUSPEND] resume completed.
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 50
+<6>sdcardfs: the sbi->obbpath is found
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>msm_thermal: Limiting cpu0 max frequency to 810000
+<6>msm_thermal: Limiting cpu1 max frequency to 810000
+<6>msm_thermal: Limiting cpu2 max frequency to 810000
+<6>msm_thermal: Limiting cpu3 max frequency to 810000
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=8
+<6>sec-fuelgauge 11-0036: 0x02(0xc2), 0x03(0x00), 0x04(0xa1), 0x05(0x2a), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6e), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x38), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 81, current : 80
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3880mV),Inow(460mA),SOC(80%),Tbat(323)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=80 v=3880 t=32.3 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
 <6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
-<6>barcode_emul_ice4: ice_gpiox_set : num = 4 , val = 1
-<3>Unknown PM state 0
-<6>(msm_serial_hs) msm_hs_startup - dma wake lock
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>Tx data during last period [BT]
+<6>msm_thermal: Limiting cpu0 max frequency to 1026000
+<6>msm_thermal: Limiting cpu1 max frequency to 1026000
+<6>msm_thermal: Limiting cpu2 max frequency to 1026000
+<6>msm_thermal: Limiting cpu3 max frequency to 1026000
+<6>msm_thermal: Limiting cpu0 max frequency to 1242000
+<6>msm_thermal: Limiting cpu1 max frequency to 1242000
+<6>msm_thermal: Limiting cpu2 max frequency to 1242000
+<6>msm_thermal: Limiting cpu3 max frequency to 1242000
+<6>msm_thermal: Limiting cpu0 max frequency to 1458000
+<6>msm_thermal: Limiting cpu1 max frequency to 1458000
+<6>msm_thermal: Limiting cpu2 max frequency to 1458000
+<6>msm_thermal: Limiting cpu3 max frequency to 1458000
+<6>[Touchkey] IC id 20065
+<3>Tx has been idle [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<6>cypress_touchkey 16-0020: [Touchkey] flip_mode Enabled
+<6>cypress_touchkey 16-0020: [Touchkey] Enabled flip cover mode.
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,2
+<6>msm_thermal: Limiting cpu0 max frequency to 1674000
+<6>msm_thermal: Limiting cpu1 max frequency to 1674000
+<6>msm_thermal: Limiting cpu2 max frequency to 1674000
+<6>msm_thermal: Limiting cpu3 max frequency to 1674000
+<6>[Touchkey] IC id 20065
+<6>msm_thermal: Max frequency reset for cpu0
+<6>msm_thermal: Max frequency reset for cpu1
+<6>msm_thermal: Max frequency reset for cpu2
+<6>msm_thermal: Max frequency reset for cpu3
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_ASLEEP freed [BT]
+<3>hsuart_power on [BT]
+<3>bluesleep_tx_data_wakeup : already wake up, so start timer... [BT]
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 70
+<6>mipi_samsung_disp_backlight 0
+<6>[lcd] mipi_samsung_disp_off
+<6>[lcd] PANEL OFF
+<6>[lcd] DSI OFF
+<4>Rob's DSI OFF HOOK
+<6>[POWERSUSPEND] panel resquests sleep.
+<6>[POWERSUSPEND] state activated.
+<6>[POWERSUSPEND] entering suspend...
+<6>[POWERSUSPEND] suspending...
+<4>[STATE NOTIFIER] - Suspend Called
+<4>[STATE_NOTIFIER] SUSPENDING
+<7>cypress_power_off is finished.
+<7>cypress_int_gpio_setting in suspend 
+<7>cypress_gpio_setting in suspend 
+<4>dhd_power_suspend: enter
+<4>dhd_set_suspend: force extra Suspend setting 
+<4>dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[POWERSUSPEND] suspend completed.
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 100
+<6>sec-fuelgauge 11-0036: 0x02(0xc2), 0x03(0x30), 0x04(0xa0), 0x05(0x6e), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6e), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfd), 0x17(0xda), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 80
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3883mV),Inow(460mA),SOC(80%),Tbat(325)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=80 v=3883 t=32.5 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<6>sdcardfs_lookup: need to check the caller's gid in packages.list
+<6>	dentry: .android_secure, task:MediaScannerSer
+<6>sdcardfs_lookup: need to check the caller's gid in packages.list
+<6>	dentry: .android_secure, task:MediaScannerSer
+<6>sdcardfs_lookup: need to check the caller's gid in packages.list
+<6>	dentry: .android_secure, task:MediaScannerSer
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[lcd] PANEL ON
+<6>[lcd] DSI ON
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[mipi_samsung_disp_on]
+<4>Rob's DSI ON HOOK
+<6>[POWERSUSPEND] panel resquests wakeup.
+<6>[POWERSUSPEND] state deactivated.
+<6>[POWERSUSPEND] entering resume...
+<6>[POWERSUSPEND] resuming...
+<4>dhd_power_resume: enter
+<4>dhd_set_suspend: Remove extra suspend setting 
+<4>[STATE NOTIFIER] - Resume Called
+<4>[STATE_NOTIFIER] RESUMING
+<7>cypress_power_on is finished.
+<7>cypress_int_gpio_setting in resume 
+<7>cypress_gpio_setting in resume 
+<3>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[mdnie lite] is negative Mode On = 0
+<3>[mdnie lite]  = UI MODE =
+<3>[mdnie lite]  = DYNAMIC MODE =
+<3>[mdnie lite]  send tuning cmd!!
+<6>sdcardfs: the sbi->obbpath is found
+<6>mipi_samsung_disp_backlight 300
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 70
+<6>[Touchkey] IC id 20065
+<6>touch_tout1_on
+<6>[POWERSUSPEND] resume completed.
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
 <3>hostwake line change [BT]
 <3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_ASLEEP freed [BT]
+<3>hsuart_power on [BT]
+<3>bluesleep_tx_data_wakeup : already wake up, so start timer... [BT]
+<6>mipi_samsung_disp_backlight 0
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=5
+<6>[lcd] mipi_samsung_disp_off
+<6>[lcd] PANEL OFF
+<6>[lcd] DSI OFF
+<4>Rob's DSI OFF HOOK
+<6>[POWERSUSPEND] panel resquests sleep.
+<6>[POWERSUSPEND] state activated.
+<6>[POWERSUSPEND] entering suspend...
+<6>[POWERSUSPEND] suspending...
+<4>[STATE NOTIFIER] - Suspend Called
+<4>[STATE_NOTIFIER] SUSPENDING
+<7>cypress_power_off is finished.
+<7>cypress_int_gpio_setting in suspend 
+<7>cypress_gpio_setting in suspend 
+<4>dhd_power_suspend: enter
+<4>dhd_set_suspend: force extra Suspend setting 
+<4>dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[POWERSUSPEND] suspend completed.
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 100
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>sec-fuelgauge 11-0036: 0x02(0xbe), 0x03(0x00), 0x04(0x9f), 0x05(0xf1), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6e), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x24), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 80, current : 79
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3800mV),Inow(460mA),SOC(79%),Tbat(326)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=79 v=3800 t=32.6 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xd6c06100
+<4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
+<4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
+<4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
+<6>QSEECOM: qseecom_unload_app: ref_count set to 0
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xdc3bd380
+<4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
+<4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
+<4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
+<6>QSEECOM: qseecom_unload_app: ref_count set to 0
+<6>sdcardfs: the sbi->obbpath is found
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=7
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[lcd] PANEL ON
+<6>[lcd] DSI ON
+<6>[mipi_samsung_disp_on]
+<4>Rob's DSI ON HOOK
+<6>[POWERSUSPEND] panel resquests wakeup.
+<6>[POWERSUSPEND] state deactivated.
+<6>[POWERSUSPEND] entering resume...
+<6>[POWERSUSPEND] resuming...
+<4>dhd_power_resume: enter
+<4>dhd_set_suspend: Remove extra suspend setting 
+<4>[STATE NOTIFIER] - Resume Called
+<4>[STATE_NOTIFIER] RESUMING
+<7>cypress_power_on is finished.
+<7>cypress_int_gpio_setting in resume 
+<7>cypress_gpio_setting in resume 
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<3>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[mdnie lite] is negative Mode On = 0
+<3>[mdnie lite]  = UI MODE =
+<3>[mdnie lite]  = DYNAMIC MODE =
+<3>[mdnie lite]  send tuning cmd!!
+<6>mipi_samsung_disp_backlight 258
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 70
+<6>[Touchkey] IC id 20065
+<6>touch_tout1_on
+<6>[POWERSUSPEND] resume completed.
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
+<6>sec-fuelgauge 11-0036: 0x02(0xb9), 0x03(0xf0), 0x04(0x9f), 0x05(0x36), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6e), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x4e), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3718mV),Inow(460mA),SOC(79%),Tbat(320)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=79 v=3718 t=32.0 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<3>Tx data during last period [BT]
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_ASLEEP freed [BT]
+<3>hsuart_power on [BT]
+<3>bluesleep_tx_data_wakeup : already wake up, so start timer... [BT]
+<6>mipi_samsung_disp_backlight 0
+<3>Tx data during last period [BT]
+<6>[lcd] mipi_samsung_disp_off
+<6>[lcd] PANEL OFF
+<6>[lcd] DSI OFF
+<4>Rob's DSI OFF HOOK
+<6>[POWERSUSPEND] panel resquests sleep.
+<6>[POWERSUSPEND] state activated.
+<6>[POWERSUSPEND] entering suspend...
+<6>[POWERSUSPEND] suspending...
+<4>[STATE NOTIFIER] - Suspend Called
+<4>[STATE_NOTIFIER] SUSPENDING
+<7>cypress_power_off is finished.
+<7>cypress_int_gpio_setting in suspend 
+<7>cypress_gpio_setting in suspend 
+<4>dhd_power_suspend: enter
+<4>dhd_set_suspend: force extra Suspend setting 
+<4>dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[POWERSUSPEND] suspend completed.
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 100
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=11
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>sdcardfs_lookup: need to check the caller's gid in packages.list
+<6>	dentry: .android_secure, task:MediaScannerSer
+<6>sdcardfs_lookup: need to check the caller's gid in packages.list
+<6>	dentry: .android_secure, task:MediaScannerSer
+<6>sdcardfs_lookup: need to check the caller's gid in packages.list
+<6>	dentry: .android_secure, task:MediaScannerSer
+<4>[Before]
+<4>MemFree :    60988 kB
+<4>Cached :   570120 kB
+<4>
+<7>TX UART: 42 4f 4f 54 49 4e 47 20 43 4f 4d 50 4c 45 54 45  BOOTING COMPLETE
+<4>[After]
+<4>MemFree :   396900 kB
+<4>Cached :   267328 kB
+<4>
+<4>Cached Drop done!
+<6>sec-fuelgauge 11-0036: 0x02(0xc5), 0x03(0xf0), 0x04(0x9e), 0x05(0x7a), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6e), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfd), 0x17(0xf0), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-fuelgauge 11-0036: sec_fg_get_atomic_capacity: old : 79, current : 79
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3958mV),Inow(460mA),SOC(79%),Tbat(313)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=79 v=3958 t=31.3 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xdc994200
+<4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
+<4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
+<4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
+<6>QSEECOM: qseecom_unload_app: ref_count set to 0
+<4>QSEECOM: qseecom_release: data: released = false, type = 1, data = 0xcbb1f080
+<4>QSEECOM: qseecom_load_app: App (tzapps) does'nt exist, loading apps for first time
+<4>QSEECOM: qseecom_load_app: App with id 2 (tzapps) now loaded
+<4>QSEECOM: qseecom_unload_app: App id 2 now unloaded
+<6>QSEECOM: qseecom_unload_app: ref_count set to 0
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[lcd] PANEL ON
+<6>[lcd] DSI ON
+<6>[mipi_samsung_disp_on]
+<4>Rob's DSI ON HOOK
+<6>[POWERSUSPEND] panel resquests wakeup.
+<6>[POWERSUSPEND] state deactivated.
+<6>[POWERSUSPEND] entering resume...
+<6>[POWERSUSPEND] resuming...
+<4>dhd_power_resume: enter
+<4>dhd_set_suspend: Remove extra suspend setting 
+<4>[STATE NOTIFIER] - Resume Called
+<4>[STATE_NOTIFIER] RESUMING
+<7>cypress_power_on is finished.
+<7>cypress_int_gpio_setting in resume 
+<7>cypress_gpio_setting in resume 
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<3>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[mdnie lite] is negative Mode On = 0
+<3>[mdnie lite]  = UI MODE =
+<3>[mdnie lite]  = DYNAMIC MODE =
+<3>[mdnie lite]  send tuning cmd!!
+<6>mipi_samsung_disp_backlight 300
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 70
+<6>[Touchkey] IC id 20065
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<6>touch_tout1_on
+<6>[POWERSUSPEND] resume completed.
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>Tx data during last period [BT]
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_ASLEEP freed [BT]
+<3>hsuart_power on [BT]
+<3>bluesleep_tx_data_wakeup : already wake up, so start timer... [BT]
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=10
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>binder: undelivered transaction 156733
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>binder: undelivered transaction 157133
+<6>binder: undelivered transaction 157106
+<3>init: untracked pid 10095 killed by signal 9
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>mipi_samsung_disp_backlight 0
+<6>[lcd] mipi_samsung_disp_off
+<6>[lcd] PANEL OFF
+<6>[lcd] DSI OFF
+<4>Rob's DSI OFF HOOK
+<6>[POWERSUSPEND] panel resquests sleep.
+<6>[POWERSUSPEND] state activated.
+<6>[POWERSUSPEND] entering suspend...
+<6>[POWERSUSPEND] suspending...
+<4>[STATE NOTIFIER] - Suspend Called
+<4>[STATE_NOTIFIER] SUSPENDING
+<7>cypress_power_off is finished.
+<7>cypress_int_gpio_setting in suspend 
+<7>cypress_gpio_setting in suspend 
+<4>dhd_power_suspend: enter
+<4>dhd_set_suspend: force extra Suspend setting 
+<4>dhd_get_suspend_bcn_li_dtim beacon=100 bcn_li_dtim=0 DTIM=1 Listen=10
+<6>[POWERSUSPEND] suspend completed.
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 100
+<6>PM: suspend entry 2017-01-16 21:59:52.736324635 UTC
+<4>Freezing user space processes ... (elapsed 0.010 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.002 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>msmsdcc_runtime_suspend: Enter WIFI suspend
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>PM: suspend of devices complete after 95.184 msecs
+<6>PM: late suspend of devices complete after 2.929 msecs
+<6>PM: noirq suspend of devices complete after 2.502 msecs
+<4>PM_GPIOS:02[oh],04[ol],05[in],06[ol],09[oh],10[oh],11[ol],13[ol],14[ol],15[ol],16[oh],17[ol],18[ol],27[oh],36[ol],38[oh],
+<4>PM_MPPS:02[ol],04[no],
+<4>Disabling non-boot CPUs ...
+<6>msm_pm_enter
+<6>msm_pm_enter: power collapse
+<6>Enabled clocks:
+<6>	pxo_a_clk::1:1 [27000000]
+<6>	afab_a_clk::1:1 [133000000]
+<6>	cfpb_a_clk::1:1 [32000000]
+<6>	ebi1_a_clk::1:1 [133000000]
+<6>	mmfpb_a_clk::1:1 [38400000]
+<6>	sfab_a_clk::1:1 [54000000]
+<6>	afab_msmbus_a_clk:msm_apps_fab:1:1 [133000000] -> afab_a_clk:1:1 [133000000]
+<6>	cfpb_a_clk:msm_cpss_fpb:1:1 [32000000]
+<6>	ebi1_msmbus_a_clk:msm_bus:1:1 [133000000] -> ebi1_a_clk:1:1 [133000000]
+<6>	mmfpb_a_clk:clock-8960:1:1 [38400000]
+<6>	cfpb_a_clk:clock-8960:1:1 [32000000]
+<6>	pmem_clk:msm_sps:1:1 [0]
+<6>Enabled clock count: 12
+<6>msm_mpm_irqs_detectable: cannot monitor 000000,00000000,00000000,00000000,00000000,00000020,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+<6>msm_rpmrs_aggregate_pxo: 0 (0x0)
+<6>msm_rpmrs_aggregate_vdd_mem: vdd 1050000 (0x100590)
+<6>msm_rpmrs_aggregate_vdd_dig: vdd 950000 (0xe7ef0)
+<6>msm_pm_enter: return
+<6>Resume caused by IRQ 362, pm8xxx_usr_irq
+<6>Resume caused by IRQ 48, msmgpio
+<6>Resume caused by IRQ 52, mpm_drv
+<6>Enabling non-boot CPUs ...
+<6>CPU2 is up
+<6>CPU3 is up
+<6>PM: noirq resume of devices complete after 1.647 msecs
+<6>PM: early resume of devices complete after 2.745 msecs
+<4>bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 17.047 msecs
+<6>Skip monitor_work(37)
+<4>Restarting tasks ... 
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>done.
+<6>PM: suspend exit 2017-01-16 22:00:01.273389766 UTC
+<6>PM: suspend entry 2017-01-16 22:00:01.987273493 UTC
+<4>Freezing user space processes ... (elapsed 0.007 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.002 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>msmsdcc_runtime_suspend: Enter WIFI suspend
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>PM: suspend of devices complete after 72.509 msecs
+<6>PM: late suspend of devices complete after 2.287 msecs
+<6>PM: noirq suspend of devices complete after 1.372 msecs
+<4>PM_GPIOS:02[oh],04[ol],05[in],06[ol],09[oh],10[oh],11[ol],13[ol],14[ol],15[ol],16[oh],17[ol],18[ol],27[oh],36[ol],38[oh],
+<4>PM_MPPS:02[ol],04[no],
+<4>Disabling non-boot CPUs ...
+<6>msm_pm_enter
+<6>msm_pm_enter: power collapse
+<6>Enabled clocks:
+<6>	pxo_a_clk::1:1 [27000000]
+<6>	afab_a_clk::1:1 [533000000]
+<6>	cfpb_a_clk::1:1 [32000000]
+<6>	ebi1_a_clk::1:1 [533000000]
+<6>	mmfpb_a_clk::1:1 [38400000]
+<6>	sfab_a_clk::1:1 [54000000]
+<6>	afab_msmbus_a_clk:msm_apps_fab:1:1 [533000000] -> afab_a_clk:1:1 [533000000]
+<6>	cfpb_a_clk:msm_cpss_fpb:1:1 [32000000]
+<6>	ebi1_msmbus_a_clk:msm_bus:1:1 [533000000] -> ebi1_a_clk:1:1 [533000000]
+<6>	mmfpb_a_clk:clock-8960:1:1 [38400000]
+<6>	cfpb_a_clk:clock-8960:1:1 [32000000]
+<6>	pmem_clk:msm_sps:1:1 [0]
+<6>Enabled clock count: 12
+<6>msm_mpm_irqs_detectable: cannot monitor 000000,00000000,00000000,00000000,00000000,00000020,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+<6>msm_rpmrs_aggregate_pxo: 0 (0x0)
+<6>msm_rpmrs_aggregate_vdd_mem: vdd 1050000 (0x100590)
+<6>msm_rpmrs_aggregate_vdd_dig: vdd 950000 (0xe7ef0)
+<6>msm_pm_enter: return
+<6>Resume caused by IRQ 362, pm8xxx_usr_irq
+<6>Resume caused by IRQ 48, msmgpio
+<6>Resume caused by IRQ 52, mpm_drv
+<6>Enabling non-boot CPUs ...
+<6>CPU1 is up
+<6>CPU2 is up
+<6>CPU3 is up
+<6>PM: noirq resume of devices complete after 0.823 msecs
+<6>PM: early resume of devices complete after 2.410 msecs
+<4>bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 12.049 msecs
+<6>Skip monitor_work(55)
+<4>Restarting tasks ... 
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>done.
+<6>PM: suspend exit 2017-01-16 22:00:19.242253139 UTC
+<6>PM: suspend entry 2017-01-16 22:00:19.342980875 UTC
+<4>Freezing user space processes ... (elapsed 0.012 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.003 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>active wakeup source: wlan_wd_wake
+<6>active wakeup source: wlan_wake
+<3>PM: Some devices failed to suspend, or early wake event detected
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 2.501 msecs
+<6>Skip monitor_work(55)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>Restarting tasks ... done.
+<6>PM: suspend exit 2017-01-16 22:00:19.451891921 UTC
+<6>PM: suspend entry 2017-01-16 22:00:19.953866960 UTC
+<4>Freezing user space processes ... (elapsed 0.010 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.002 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>msmsdcc_runtime_suspend: Enter WIFI suspend
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>PM: suspend of devices complete after 72.080 msecs
+<6>PM: late suspend of devices complete after 2.196 msecs
+<6>PM: noirq suspend of devices complete after 1.342 msecs
+<4>PM_GPIOS:02[oh],04[ol],05[in],06[ol],09[oh],10[oh],11[ol],13[ol],14[ol],15[ol],16[oh],17[ol],18[ol],27[oh],36[ol],38[oh],
+<4>PM_MPPS:02[ol],04[no],
+<4>Disabling non-boot CPUs ...
+<6>msm_pm_enter
+<6>msm_pm_enter: power collapse
+<6>Enabled clocks:
+<6>	pxo_a_clk::1:1 [27000000]
+<6>	afab_a_clk::1:1 [533000000]
+<6>	cfpb_a_clk::1:1 [32000000]
+<6>	ebi1_a_clk::1:1 [533000000]
+<6>	mmfpb_a_clk::1:1 [38400000]
+<6>	sfab_a_clk::1:1 [54000000]
+<6>	afab_msmbus_a_clk:msm_apps_fab:1:1 [533000000] -> afab_a_clk:1:1 [533000000]
+<6>	cfpb_a_clk:msm_cpss_fpb:1:1 [32000000]
+<6>	ebi1_msmbus_a_clk:msm_bus:1:1 [533000000] -> ebi1_a_clk:1:1 [533000000]
+<6>	mmfpb_a_clk:clock-8960:1:1 [38400000]
+<6>	cfpb_a_clk:clock-8960:1:1 [32000000]
+<6>	pmem_clk:msm_sps:1:1 [0]
+<6>Enabled clock count: 12
+<6>msm_mpm_irqs_detectable: cannot monitor 000000,00000000,00000000,00000000,00000000,00000020,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+<6>msm_rpmrs_aggregate_pxo: 0 (0x0)
+<6>msm_rpmrs_aggregate_vdd_mem: vdd 1050000 (0x100590)
+<6>msm_rpmrs_aggregate_vdd_dig: vdd 950000 (0xe7ef0)
+<6>msm_pm_enter: return
+<6>Resume caused by IRQ 353, bcmsdh_sdmmc
+<6>Resume caused by IRQ 48, msmgpio
+<6>Resume caused by IRQ 52, mpm_drv
+<6>Enabling non-boot CPUs ...
+<6>CPU1 is up
+<6>CPU2 is up
+<6>CPU3 is up
+<6>PM: noirq resume of devices complete after 0.854 msecs
+<6>PM: early resume of devices complete after 2.410 msecs
+<4>bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 11.957 msecs
+<6>Skip monitor_work(66)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>Restarting tasks ... done.
+<6>PM: suspend exit 2017-01-16 22:00:29.568791043 UTC
+<6>PM: suspend entry 2017-01-16 22:00:30.071149431 UTC
+<4>Freezing user space processes ... (elapsed 0.021 seconds) done.
+<4>Freezing remaining freezable tasks ... (elapsed 0.005 seconds) done.
+<4>Suspending console(s) (use no_console_suspend to debug)
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>msmsdcc_runtime_suspend: Enter WIFI suspend
+<4>bcmsdh_sdmmc_suspend Enter
+<4>bcmsdh_sdmmc_suspend Enter
+<6>PM: suspend of devices complete after 113.958 msecs
+<6>PM: late suspend of devices complete after 3.355 msecs
+<6>PM: noirq suspend of devices complete after 3.751 msecs
+<4>PM_GPIOS:02[oh],04[ol],05[in],06[ol],09[oh],10[oh],11[ol],13[ol],14[ol],15[ol],16[oh],17[ol],18[ol],27[oh],36[ol],38[oh],
+<4>PM_MPPS:02[ol],04[no],
+<4>Disabling non-boot CPUs ...
+<6>msm_pm_enter
+<6>msm_pm_enter: power collapse
+<6>Enabled clocks:
+<6>	pxo_a_clk::1:1 [27000000]
+<6>	afab_a_clk::1:1 [133000000]
+<6>	cfpb_a_clk::1:1 [32000000]
+<6>	ebi1_a_clk::1:1 [133000000]
+<6>	mmfpb_a_clk::1:1 [38400000]
+<6>	sfab_a_clk::1:1 [54000000]
+<6>	afab_msmbus_a_clk:msm_apps_fab:1:1 [133000000] -> afab_a_clk:1:1 [133000000]
+<6>	cfpb_a_clk:msm_cpss_fpb:1:1 [32000000]
+<6>	ebi1_msmbus_a_clk:msm_bus:1:1 [133000000] -> ebi1_a_clk:1:1 [133000000]
+<6>	mmfpb_a_clk:clock-8960:1:1 [38400000]
+<6>	cfpb_a_clk:clock-8960:1:1 [32000000]
+<6>	pmem_clk:msm_sps:1:1 [0]
+<6>Enabled clock count: 12
+<6>msm_mpm_irqs_detectable: cannot monitor 000000,00000000,00000000,00000000,00000000,00000020,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+<6>msm_rpmrs_aggregate_pxo: 0 (0x0)
+<6>msm_rpmrs_aggregate_vdd_mem: vdd 1050000 (0x100590)
+<6>msm_rpmrs_aggregate_vdd_dig: vdd 950000 (0xe7ef0)
+<6>msm_pm_enter: return
+<6>Resume caused by IRQ 362, pm8xxx_usr_irq
+<6>Resume caused by IRQ 48, msmgpio
+<6>Resume caused by IRQ 52, mpm_drv
+<6>Enabling non-boot CPUs ...
+<6>CPU1 is up
+<6>CPU2 is up
+<6>CPU3 is up
+<6>PM: noirq resume of devices complete after 2.318 msecs
+<6>PM: early resume of devices complete after 2.989 msecs
+<4>bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>max77693_irq_thread: interrupt source(0x00)
+<6>max77693 12-0066: max77693_irq_resume: irq_resume ret=1bcmsdh_sdmmc_resume Enter
+<4>bcmsdh_sdmmc_resume Enter
+<6>PM: resume of devices complete after 21.835 msecs
+<6>Skip monitor_work(75)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<4>Restarting tasks ... done.
+<6>PM: suspend exit 2017-01-16 22:00:39.056710856 UTC
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>mdp_bus_scale_restore_request: ab=3080000000 ib=3080000000
+<6>[lcd] PANEL ON
+<6>[lcd] DSI ON
+<6>CFG80211-TRACE) __wl_cfg80211_scan : START SCAN
+<6>[mipi_samsung_disp_on]
+<4>Rob's DSI ON HOOK
+<6>[POWERSUSPEND] panel resquests wakeup.
+<6>[POWERSUSPEND] state deactivated.
+<6>[POWERSUSPEND] entering resume...
+<6>[POWERSUSPEND] resuming...
+<4>dhd_power_resume: enter
+<4>dhd_set_suspend: Remove extra suspend setting 
+<4>[STATE NOTIFIER] - Resume Called
+<4>[STATE_NOTIFIER] RESUMING
+<7>cypress_power_on is finished.
+<7>cypress_int_gpio_setting in resume 
+<7>cypress_gpio_setting in resume 
+<3>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: This module support dual, 5
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt_set_dual: interrupt set: 0x1
+<6>[mipi_samsung_disp_on_in_video_engine] ID : 0x428047 LDI : LDI_LSI
+<3>[mdnie lite] is negative Mode On = 0
+<3>[mdnie lite]  = UI MODE =
+<3>[mdnie lite]  = DYNAMIC MODE =
+<3>[mdnie lite]  send tuning cmd!!
+<6>mipi_samsung_disp_backlight 300
+<6>sec-battery sec-battery: sec_bat_store_attrs: siop level: 70
+<6>[Touchkey] IC id 20065
+<6>touch_tout1_on
+<6>[POWERSUSPEND] resume completed.
+<6>cypress_touchkey 16-0020: [Touchkey] normal_mode Enabled from flipmode
+<6>[Touchkey] IC id 20065
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = clear_cover_mode,0
+<7>[TouchKey] normal_mode Enabled
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<6>synaptics_rmi4_i2c 3-0020: cmd_store: Command = report_rate,0
+<6>synaptics_rmi4_i2c 3-0020: cmd_status_show: Command status = 4
+<6>synaptics_rmi4_i2c 3-0020: cmd_result_show: Command result = report_rate,0:NA
+<3>Tx data during last period [BT]
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>hostwake line change [BT]
+<3>bluesleep_sleep_wakeup : already wake up, so start timer... [BT]
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_ASLEEP freed [BT]
+<3>hsuart_power on [BT]
+<3>bluesleep_tx_data_wakeup : already wake up, so start timer... [BT]
+<6>CFG80211-TRACE) wl_escan_handler : SCAN COMPLETED: scanned AP count=12
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<3>init: untracked pid 7162 exited with status 0
+<6>sec-fuelgauge 11-0036: 0x02(0xc0), 0x03(0xc0), 0x04(0x9d), 0x05(0x0c), 0x06(0x00), 0x07(0x00), 0x08(0x00), 0x09(0x12), 0x0a(0x00), 0x0b(0x00), 0x0c(0x6f), 0x0d(0x1e), 
+<6>sec-fuelgauge 11-0036: 0x14(0x00), 0x15(0xff), 0x16(0xfe), 0x17(0x92), 0x18(0x7d), 0x19(0x00), 0x1a(0x01), 0x1b(0xff), 
+<6>sec-battery sec-battery: sec_bat_get_battery_info:Vnow(3855mV),Inow(460mA),SOC(78%),Tbat(290)
+<6>max77693-muic max77693-muic: func:max77693_muic_monitor_status, ST1:0x3f, ST2:0x0 CABLE:0
+<6>healthd: battery l=78 v=3855 t=29.0 h=2 st=3 c=0 o=1 ca=460 ct=0 ps=0 chg=
+<6>healthd-android: healthd_mode_android_battery_update
+<6>BatteryPropertiesRegistrar: notifyListeners : start
+<6>IBatteryPropertiesListener : batteryPropertiesChanged!
+<6>: 
+<6>BatteryPropertiesRegistrar: notifyListeners : done
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back P 4, ver: 0x1c
+<6>cypress_touchkey 16-0020: cypress_touchkey_interrupt: back R 8, ver: 0x1c
+<3>bluesleep_outgoing_data. [BT]
+<3>BT_EXT_WAKE freed [BT]
+<3>hsuart_power on [BT]
+<6>(msm_serial_hs) msm_hs_check_clock_on - dma wake lock
+<3>(wq)waking up... [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>hostwake line change [BT]
+<3>waking up... [BT]
+<3>hsuart_power on [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 1
+<3>Tx data during last period [BT]
+<3>Tx has been idle [BT]
+<3>going to sleep... [BT]
+<3>hsuart_power off [BT]
+<6>barcode_emul_ice4: ice_gpiox_set : num = 5 , val = 0
+<6>(msm_serial_hs) msm_hs_check_clock_off - dma wake unlock
+<6>(msm_serial_hs) hsuart_clock_off_work WORKQUEUE - Maybe, clock is off-ed.
