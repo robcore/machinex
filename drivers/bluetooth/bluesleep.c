@@ -32,6 +32,7 @@
 #include <linux/kernel.h>
 #include <linux/notifier.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/spinlock.h>
 #include <linux/timer.h>
 #include <linux/uaccess.h>
@@ -45,6 +46,7 @@
 #include <linux/bitops.h>
 #include <linux/termios.h>
 #include <linux/wakelock.h>
+#include <linux/gpio.h>
 #include <mach/gpio.h>
 #include <linux/serial_core.h>
 #include <mach/msm_serial_hs.h>
@@ -126,7 +128,7 @@ DECLARE_DELAYED_WORK(bluesleep_abnormal_stop_workqueue, bluesleep_abnormal_stop_
 
 
 /* 10 second timeout */
-#define TX_TIMER_INTERVAL  3
+#define TX_TIMER_INTERVAL  1
 
 /* state variable names and bit positions */
 #define BT_PROTO	 0x01
@@ -172,7 +174,7 @@ static void bluesleep_tx_timer_expire(unsigned long data);
 static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire, 0, 0);
 
 /** Lock for state transitions */
-static spinlock_t rw_lock;
+static struct mutex bluesleep_mutex;
 
 #if !BT_BLUEDROID_SUPPORT
 /** Notifier block for HCI events */
@@ -231,9 +233,7 @@ void bluesleep_sleep_wakeup(void)
 		/* Start the timer */
 		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 		if (bsi->has_ext_wake == 1) {
-			ret = ice_gpiox_set(bsi->ext_wake, 1);
-			if (ret)
-				BT_ERR("(bluesleep_sleep_wakeup) failed to set ext_wake 1.");
+			ice_gpiox_set(bsi->ext_wake, 1);
 		}
 		set_bit(BT_EXT_WAKE, &flags);
 		clear_bit(BT_ASLEEP, &flags);
@@ -246,10 +246,7 @@ void bluesleep_sleep_wakeup(void)
 
 static void bluesleep_ext_wake_set_wq(struct work_struct *work)
 {
-	int ret;
-	ret = ice_gpiox_set(bsi->ext_wake, 0);
-	if (ret)
-		BT_ERR("(bluesleep_ext_wake_set_wq) failed to set ext_wake 0.");
+	ice_gpiox_set(bsi->ext_wake, 0);
 }
 
 static void bluesleep_sleep_wakeup_wq(struct work_struct *work)
@@ -263,12 +260,14 @@ static void bluesleep_sleep_wakeup_wq(struct work_struct *work)
 		/* Start the timer */
 		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 		if (bsi->has_ext_wake == 1) {
-			ret = ice_gpiox_set(bsi->ext_wake, 1);
-			if (ret)
-				BT_ERR("(bluesleep_sleep_wakeup_wq) failed to set ext_wake 1.");
+			ice_gpiox_set(bsi->ext_wake, 1);
 		}
 		set_bit(BT_EXT_WAKE, &flags);
 		clear_bit(BT_ASLEEP, &flags);
+	}
+	else {
+		BT_DBG("bluesleep_tx_data_wakeup : already wake up, so start timer...");
+		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 	}
 }
 
@@ -281,20 +280,67 @@ static void bluesleep_sleep_wakeup_wq(struct work_struct *work)
  */
 static void bluesleep_sleep_work(struct work_struct *work)
 {
-	int ret;
+
+	if (mutex_is_locked(&bluesleep_mutex))
+		BT_DBG("Wait for mutex unlock in bluesleep_sleep_work");
+
+	if (bsi->uport == NULL) {
+		BT_DBG("bluesleep_sleep_work - uport is null");
+		return;
+	}
+
+	if (bsi->uport->state == NULL) {
+		BT_DBG("bluesleep_sleep_work - bsi->uport->state is null");
+		return;
+	}
+
+	if (bsi->uport->state->port.tty == NULL) {
+		BT_DBG("bluesleep_sleep_work - bsi->uport->state->port.tty is null");
+		return;
+	}
+
+	mutex_lock(&bluesleep_mutex);
 
 	if (bluesleep_can_sleep()) {
 		/* already asleep, this is an error case */
 		if (test_bit(BT_ASLEEP, &flags)) {
 			BT_DBG("already asleep");
+			mutex_unlock(&bluesleep_mutex);
 			return;
 		}
 
 		if (msm_hs_tx_empty(bsi->uport)) {
+			if (test_bit(BT_TXDATA, &flags)) {
+				BT_DBG("TXDATA remained. Wait until timer expires.");
+
+				mod_timer(&tx_timer, jiffies + TX_TIMER_INTERVAL * HZ);
+				mutex_unlock(&bluesleep_mutex);
+				return;
+			}
+
+#if 0 //For debug : defined(CONFIG_SEC_MIF_UART_SWITCH)
+			if(system_rev <= 6 /*board rev 06*/) {
+				uart_sel = gpio_get_value(GPIO_UART_SEL);
+			}
+			else{
+				uart_sel = gpio_get_value(GPIO_UART_SEL_REV07);
+			}
+
+			if (uart_sel ==1) {
+				BT_DBG("bluesleep_sleep_work GPIO_UART_SEL (%d)", uart_sel);
+				return;
+			}
+#endif
 			BT_DBG("going to sleep...");
+
 			set_bit(BT_ASLEEP, &flags);
 			/*Deactivating UART */
 			hsuart_power(0);
+
+			/* Moved from Timer expired */
+			if (bsi->has_ext_wake == 1)
+				ice_gpiox_set(bsi->ext_wake, 0);
+			clear_bit(BT_EXT_WAKE, &flags);
 
 			/*Deactivating UART */
 			/* UART clk is not turned off immediately. Release
@@ -303,20 +349,20 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			wake_lock_timeout(&bsi->wake_lock, HZ / 2);
 		} else {
 			mod_timer(&tx_timer, jiffies + TX_TIMER_INTERVAL * HZ);
+			mutex_unlock(&bluesleep_mutex);
 			return;
 		}
 	} else if (!test_bit(BT_EXT_WAKE, &flags)
 			&& !test_bit(BT_ASLEEP, &flags)) {
 		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 		if (bsi->has_ext_wake == 1) {
-			ret = ice_gpiox_set(bsi->ext_wake, 1);
-			if (ret)
-				BT_ERR("(bluesleep_sleep_work) failed to set ext_wake 1.");
+			ice_gpiox_set(bsi->ext_wake, 1);
 		}
 		set_bit(BT_EXT_WAKE, &flags);
 	} else {
 		bluesleep_sleep_wakeup();
 	}
+	mutex_unlock(&bluesleep_mutex);
 }
 
 /**
@@ -328,13 +374,10 @@ static void bluesleep_hostwake_task(unsigned long data)
 {
 	BT_DBG("hostwake line change");
 
-	spin_lock(&rw_lock);
 	if ((gpio_get_value(bsi->host_wake) == bsi->irq_polarity))
 		bluesleep_rx_busy();
 	else
 		bluesleep_rx_idle();
-	spin_unlock(&rw_lock);
-
 }
 
 /**
@@ -343,28 +386,30 @@ static void bluesleep_hostwake_task(unsigned long data)
  */
 static void bluesleep_outgoing_data(void)
 {
-	unsigned long irq_flags;
+	if (mutex_is_locked(&bluesleep_mutex))
+		BT_DBG("Wait for mutex unlock in bluesleep_outgoing_data");
 
-	spin_lock_irqsave(&rw_lock, irq_flags);
-
+	mutex_lock(&bluesleep_mutex);
 	/* log data passing by */
 	set_bit(BT_TXDATA, &flags);
 
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
+	BT_DBG("bluesleep_outgoing_data.");
 
-	/* if the tx side is sleeping... */
-	if (!test_bit(BT_EXT_WAKE, &flags)) {
-		BT_DBG("tx was sleeping");
+	if (!test_bit(BT_EXT_WAKE, &flags))
+		BT_DBG("BT_EXT_WAKE freed");
 
-		/*
-		** Uart Clk should be enabled promptly
-		** before bluedroid write TX data.
-		*/
-		if (test_bit(BT_ASLEEP, &flags)) {
-			hsuart_power(1);
-		}
+	if (!test_bit(BT_ASLEEP, &flags))
+		BT_DBG("BT_ASLEEP freed");
 
-		bluesleep_tx_data_wakeup();
+	/*
+	** Uart Clk should be enabled promptly
+	** before bluedroid write TX data.
+	*/
+	hsuart_power(1);
+
+	bluesleep_tx_data_wakeup();
+	
+	mutex_unlock(&bluesleep_mutex);
 	}
 }
 
@@ -496,18 +541,10 @@ static int bluesleep_hci_event(struct notifier_block *this,
  */
 static void bluesleep_tx_timer_expire(unsigned long data)
 {
-	unsigned long irq_flags;
-
-	spin_lock_irqsave(&rw_lock, irq_flags);
-
 	/* were we silent during the last timeout? */
 	if (!test_bit(BT_TXDATA, &flags)) {
 		BT_DBG("Tx has been idle");
-		if (bsi->has_ext_wake == 1)
-		{
-			bluesleep_tx_timer_expired();
-		}
-		clear_bit(BT_EXT_WAKE, &flags);
+
 		bluesleep_tx_idle();
 	} else {
 		BT_DBG("Tx data during last period");
@@ -516,8 +553,6 @@ static void bluesleep_tx_timer_expire(unsigned long data)
 
 	/* clear the incoming data flag */
 	clear_bit(BT_TXDATA, &flags);
-
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
 }
 
 /**
@@ -542,13 +577,9 @@ static void bluesleep_start_wq(struct work_struct *work)
 	int ret;
 	unsigned long irq_flags;
 
-	spin_lock_irqsave(&rw_lock, irq_flags);
-
 	if (test_bit(BT_PROTO, &flags)) {
 		return;
 	}
-
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
 	if (!atomic_dec_and_test(&open_count)) {
 		atomic_inc(&open_count);
@@ -562,9 +593,7 @@ static void bluesleep_start_wq(struct work_struct *work)
 
 	/* assert BT_WAKE */
 	if (bsi->has_ext_wake == 1) {
-		ret = ice_gpiox_set(bsi->ext_wake, 1);
-		if (ret)
-			BT_ERR("(bluesleep_start_wq) failed to set ext_wake 1.");
+		ice_gpiox_set(bsi->ext_wake, 1);
 	}
 	set_bit(BT_EXT_WAKE, &flags);
 #if BT_ENABLE_IRQ_WAKE
@@ -589,22 +618,14 @@ fail:
  */
 static void bluesleep_stop_wq(struct work_struct *work)
 {
-	int ret;
-	unsigned long irq_flags;
-
-	spin_lock_irqsave(&rw_lock, irq_flags);
-
 	if (!test_bit(BT_PROTO, &flags)) {
 		BT_ERR("(bluesleep_stop_wq) proto is not set. Failed to stop bluesleep");
 		bsi->uport = NULL;
-		spin_unlock_irqrestore(&rw_lock, irq_flags);
 		return;
 	}
 	/* assert BT_WAKE */
 	if (bsi->has_ext_wake == 1) {
-		ret = ice_gpiox_set(bsi->ext_wake, 1);
-		if (ret)
-			BT_ERR("(bluesleep_stop_wq) failed to set ext_wake 1.");
+		ice_gpiox_set(bsi->ext_wake, 1);
 	}
 	set_bit(BT_EXT_WAKE, &flags);
 	del_timer(&tx_timer);
@@ -616,7 +637,6 @@ static void bluesleep_stop_wq(struct work_struct *work)
 	}
 
 	atomic_inc(&open_count);
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
 #if BT_ENABLE_IRQ_WAKE
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
@@ -631,18 +651,11 @@ static void bluesleep_stop_wq(struct work_struct *work)
  */
 static void bluesleep_abnormal_stop_wq(struct work_struct *work)
 {
-	int ret;
-	unsigned long irq_flags;
-
-	spin_lock_irqsave(&rw_lock, irq_flags);
-
 	BT_ERR("bluesleep_abnormal_stop_wq");
 
 	/* assert BT_WAKE */
 	if (bsi->has_ext_wake == 1) {
-		ret = ice_gpiox_set(bsi->ext_wake, 1);
-		if (ret)
-			BT_ERR("(bluesleep_abnormal_stop_wq) failed to set ext_wake 1.");
+		ice_gpiox_set(bsi->ext_wake, 1);
 	}
 	set_bit(BT_EXT_WAKE, &flags);
 	del_timer(&tx_timer);
@@ -654,8 +667,6 @@ static void bluesleep_abnormal_stop_wq(struct work_struct *work)
 	}
 
 	atomic_inc(&open_count);
-
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
 #if BT_ENABLE_IRQ_WAKE
 	if (disable_irq_wake(bsi->host_wake_irq))
@@ -699,7 +710,6 @@ static int bluepower_write_proc_btwake(struct file *file, const char *buffer,
 					unsigned long count, void *data)
 {
 	char *buf;
-	int ret;
 
 	if (count < 1)
 		return -EINVAL;
@@ -714,16 +724,12 @@ static int bluepower_write_proc_btwake(struct file *file, const char *buffer,
 	}
 	if (buf[0] == '0') {
 		if (bsi->has_ext_wake == 1) {
-			ret = ice_gpiox_set(bsi->ext_wake, 0);
-			if (ret)
-				BT_ERR("(bluepower_write_proc_btwake) failed to set ext_wake 0.");
+			ice_gpiox_set(bsi->ext_wake, 0);
 		}
 		clear_bit(BT_EXT_WAKE, &flags);
 	} else if (buf[0] == '1') {
 		if (bsi->has_ext_wake == 1) {
-			ret = ice_gpiox_set(bsi->ext_wake, 1);
-			if (ret)
-				BT_ERR("(bluepower_write_proc_btwake) failed to set ext_wake 1.");
+			ice_gpiox_set(bsi->ext_wake, 1);
 		}
 		set_bit(BT_EXT_WAKE, &flags);
 	} else {
@@ -961,12 +967,12 @@ static int bluesleep_resume(struct platform_device *pdev)
 						GPIO_CFG_NO_PULL, GPIO_CFG_16MA), GPIO_CFG_ENABLE);
 		}
 
+		clear_bit(BT_SUSPEND, &flags);
 		if ((bsi->uport != NULL) &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 				BT_DBG("bluesleep resume form BT event...");
 				hsuart_power(1);
 		}
-		clear_bit(BT_SUSPEND, &flags);
 	}
 	return 0;
 }
@@ -1096,7 +1102,7 @@ static int __init bluesleep_init(void)
 	flags = 0; /* clear all status bits */
 
 	/* Initialize spinlock. */
-	spin_lock_init(&rw_lock);
+	mutex_init(&bluesleep_mutex);
 
 	/* Initialize timer */
 	init_timer(&tx_timer);
@@ -1147,9 +1153,7 @@ static void __exit bluesleep_exit(void)
 
 	/* assert bt wake */
 	if (bsi->has_ext_wake == 1) {
-		ret = ice_gpiox_set(bsi->ext_wake, 1);
-		if (ret)
-			BT_ERR("(bluesleep_exit) failed to set ext_wake 1.");
+		ice_gpiox_set(bsi->ext_wake, 1);
 	}
 	set_bit(BT_EXT_WAKE, &flags);
 	if (test_bit(BT_PROTO, &flags)) {
@@ -1176,6 +1180,8 @@ static void __exit bluesleep_exit(void)
 	remove_proc_entry("btwake", sleep_dir);
 	remove_proc_entry("sleep", bluetooth_dir);
 	remove_proc_entry("bluetooth", 0);
+
+	mutex_destroy(&bluesleep_mutex);
 }
 
 module_init(bluesleep_init);
