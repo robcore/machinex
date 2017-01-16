@@ -73,6 +73,7 @@ struct idletimer_tg {
 	unsigned int refcnt;
 	bool send_nl_msg;
 	bool active;
+	bool suspend_time_valid;
 	uid_t uid;
 };
 
@@ -237,10 +238,14 @@ static int idletimer_resume(struct notifier_block *notifier,
 	case PM_SUSPEND_PREPARE:
 		if (timer)
 			get_monotonic_boottime(&timer->last_suspend_time);
+			timer->suspend_time_valid = true;
 		break;
 	case PM_POST_SUSPEND:
 		if (!timer || !timer->active)
 			break;
+		if (!timer->suspend_time_valid)
+			break;
+		timer->suspend_time_valid = false;
 		/* since jiffies are not updated when suspended now represents
 		 * the time it would have suspended */
 		if (time_after(timer->timer.expires, now)) {
@@ -268,7 +273,7 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
 {
 	int ret;
 
-	info->timer = kmalloc(sizeof(*info->timer), GFP_KERNEL);
+	info->timer = kzalloc(sizeof(*info->timer), GFP_KERNEL);
 	if (!info->timer) {
 		ret = -ENOMEM;
 		goto out;
