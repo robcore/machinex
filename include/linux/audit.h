@@ -48,7 +48,7 @@
  * 2500 - 2999 future user space (maybe integrity labels and related events)
  *
  * Messages from 1000-1199 are bi-directional. 1200-1299 & 2100 - 2999 are
- * exclusively user space. 1300-2099 is kernel --> user space 
+ * exclusively user space. 1300-2099 is kernel --> user space
  * communication.
  */
 #define AUDIT_GET		1000	/* Get status */
@@ -76,7 +76,7 @@
 #define AUDIT_LAST_USER_MSG	1199
 #define AUDIT_FIRST_USER_MSG2	2100	/* More user space messages */
 #define AUDIT_LAST_USER_MSG2	2999
- 
+
 #define AUDIT_DAEMON_START      1200    /* Daemon startup record */
 #define AUDIT_DAEMON_END        1201    /* Daemon normal stop record */
 #define AUDIT_DAEMON_ABORT      1202    /* Daemon error stop record */
@@ -463,8 +463,8 @@ extern void __audit_syscall_exit(int ret_success, long ret_value);
 extern void __audit_getname(const char *name);
 extern void audit_putname(const char *name);
 extern void __audit_inode(const char *name, const struct dentry *dentry);
-extern void __audit_inode_child(const struct dentry *dentry,
-				const struct inode *parent);
+extern void __audit_inode_child(const struct inode *parent,
+				const struct dentry *dentry);
 extern void __audit_seccomp(unsigned long syscall, long signr, int code);
 extern void __audit_ptrace(struct task_struct *t);
 
@@ -503,10 +503,10 @@ static inline void audit_inode(const char *name, const struct dentry *dentry) {
 	if (unlikely(!audit_dummy_context()))
 		__audit_inode(name, dentry);
 }
-static inline void audit_inode_child(const struct dentry *dentry,
-				     const struct inode *parent) {
+static inline void audit_inode_child(const struct inode *parent,
+				     const struct dentry *dentry) {
 	if (unlikely(!audit_dummy_context()))
-		__audit_inode_child(dentry, parent);
+		__audit_inode_child(parent, dentry);
 }
 void audit_core_dumps(long signr);
 
