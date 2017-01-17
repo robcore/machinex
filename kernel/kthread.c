@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/freezer.h>
 #include <linux/uaccess.h>
+#include <linux/ptrace.h>
 #include <trace/events/sched.h>
 
 static DEFINE_SPINLOCK(kthread_create_lock);

@@ -70,6 +70,7 @@
 #include <linux/shmem_fs.h>
 #include <linux/slab.h>
 #include <linux/perf_event.h>
+#include <linux/ptrace.h>
 #include <linux/random.h>
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
@@ -881,10 +882,10 @@ void __init load_default_modules(void)
 	load_default_elevator_module();
 }
 
-static void run_init_process(const char *init_filename)
+static int run_init_process(const char *init_filename)
 {
 	argv_init[0] = init_filename;
-	kernel_execve(init_filename, argv_init, envp_init);
+	return kernel_execve(init_filename, argv_init, envp_init);
 }
 
 static noinline void __init kernel_init_freeable(void);
@@ -912,7 +913,8 @@ static int __ref kernel_init(void *unused)
 	current->signal->flags |= SIGNAL_UNKILLABLE;
 
 	if (ramdisk_execute_command) {
-		run_init_process(ramdisk_execute_command);
+		if (!run_init_process(ramdisk_execute_command))
+			return 0;
 		pr_err("Failed to execute %s\n", ramdisk_execute_command);
 	}
 
@@ -923,14 +925,16 @@ static int __ref kernel_init(void *unused)
 	 * trying to recover a really broken machine.
 	 */
 	if (execute_command) {
-		run_init_process(execute_command);
+		if (!run_init_process(execute_command))
+			return 0;
 		pr_err("Failed to execute %s.  Attempting defaults...\n",
 			execute_command);
 	}
-	run_init_process("/sbin/init");
-	run_init_process("/etc/init");
-	run_init_process("/bin/init");
-	run_init_process("/bin/sh");
+	if (!run_init_process("/sbin/init") ||
+	    !run_init_process("/etc/init") ||
+	    !run_init_process("/bin/init") ||
+	    !run_init_process("/bin/sh"))
+		return 0;
 
 	panic("No init found.  Try passing init= option to kernel. "
 	      "See Linux Documentation/init.txt for guidance.");
