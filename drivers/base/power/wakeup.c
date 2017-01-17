@@ -18,14 +18,8 @@
 #include <trace/events/power.h>
 #include <linux/moduleparam.h>
 
-static bool enable_wlan_wd_wake_ws = true;
-module_param(enable_wlan_wd_wake_ws, bool, 0644);
-static bool enable_wlan_rx_wake_ws = true;
-module_param(enable_wlan_rx_wake_ws, bool, 0644);
-static bool enable_wlan_ctrl_wake_ws = true;
-module_param(enable_wlan_ctrl_wake_ws, bool, 0644);
-static bool enable_wlan_wake_ws = true;
-module_param(enable_wlan_wake_ws, bool, 0644);
+static bool enable_gps_ws = true;
+module_param(enable_gps_ws, bool, 0644);
 static bool enable_bluesleep_ws = true;
 module_param(enable_bluesleep_ws, bool, 0644);
 
@@ -502,14 +496,8 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
 
-	if (((!enable_wlan_rx_wake_ws &&
-			!strncmp(ws->name, "wlan_rx_wake", 12)) ||
-		(!enable_wlan_ctrl_wake_ws &&
-			!strncmp(ws->name, "wlan_ctrl_wake", 14)) ||
-		(!enable_wlan_wake_ws &&
-			!strncmp(ws->name, "wlan_wake", 9)) ||
-		(!enable_wlan_wd_wake_ws &&
-			!strncmp(ws->name, "wlan_wd_wake", 12)) ||
+	if (((!enable_gps_ws &&
+			!strncmp(ws->name, "ipc0000000a_Loc_hal_worker", 26)) ||
 		(!enable_bluesleep_ws &&
 			!strncmp(ws->name, "bluesleep", 9)))) {
 		/*
@@ -997,4 +985,3 @@ static int __init wakeup_sources_debugfs_init(void)
 }
 
 postcore_initcall(wakeup_sources_debugfs_init);
-
