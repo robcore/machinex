@@ -408,7 +408,7 @@ SYSCALL_DEFINE5(fsetxattr, int, fd, const char __user *, name,
 	if (!f.file)
 		return error;
 	dentry = f.file->f_path.dentry;
-	audit_inode(NULL, dentry);
+	audit_inode(NULL, dentry, 0);
 	error = mnt_want_write_file(f.file);
 	if (!error) {
 		error = setxattr(dentry, name, value, size, flags);
@@ -500,7 +500,7 @@ SYSCALL_DEFINE4(fgetxattr, int, fd, const char __user *, name,
 
 	if (!f.file)
 		return error;
-	audit_inode(NULL, f.file->f_path.dentry);
+	audit_inode(NULL, f.file->f_path.dentry, 0);
 	error = getxattr(f.file->f_path.dentry, name, value, size);
 	fdput(f);
 	return error;
@@ -579,7 +579,7 @@ SYSCALL_DEFINE3(flistxattr, int, fd, char __user *, list, size_t, size)
 
 	if (!f.file)
 		return error;
-	audit_inode(NULL, f.file->f_path.dentry);
+	audit_inode(NULL, f.file->f_path.dentry, 0);
 	error = listxattr(f.file->f_path.dentry, list, size);
 	fdput(f);
 	return error;
@@ -648,7 +648,7 @@ SYSCALL_DEFINE2(fremovexattr, int, fd, const char __user *, name)
 	if (!f.file)
 		return error;
 	dentry = f.file->f_path.dentry;
-	audit_inode(NULL, dentry);
+	audit_inode(NULL, dentry, 0);
 	error = mnt_want_write_file(f.file);
 	if (!error) {
 		error = removexattr(dentry, name);
