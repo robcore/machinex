@@ -174,7 +174,6 @@ void putname(const char *name)
 	else
 		__putname(name);
 }
-EXPORT_SYMBOL(putname);
 #endif
 
 static int check_acl(struct inode *inode, int mask)
@@ -3988,7 +3987,6 @@ EXPORT_SYMBOL(follow_down_one);
 EXPORT_SYMBOL(follow_down);
 EXPORT_SYMBOL(follow_up);
 EXPORT_SYMBOL(get_write_access); /* binfmt_aout */
-EXPORT_SYMBOL(getname);
 EXPORT_SYMBOL(lock_rename);
 EXPORT_SYMBOL(lookup_one_len);
 EXPORT_SYMBOL(page_follow_link_light);
