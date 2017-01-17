@@ -92,12 +92,12 @@ static struct dbs_tuners {
 	unsigned int ignore_nice;
 	unsigned int freq_step;
 } dbs_tuners_ins = {
+	.sampling_rate = 60000,
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.down_threshold = DEF_FREQUENCY_DOWN_THRESHOLD,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.ignore_nice = 0,
-	.freq_step = 10,
-	.sampling_rate = 60000,
+	.freq_step = 5,
 };
 
 static bool io_is_busy = 0;
