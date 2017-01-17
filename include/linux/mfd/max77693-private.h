@@ -376,6 +376,19 @@ struct max77693_dev {
 	/* pmic revision */
 	u8 pmic_rev;	/* REV */
 	u8 pmic_ver;	/* VERSION */
+
+/*	struct regmap *regmap;
+	struct regmap *regmap_chg;
+	struct regmap *regmap_fuel;
+	struct regmap *regmap_muic;
+
+	struct regmap_irq_chip_data *irq_data;
+	struct regmap_irq_chip_data *irq_data_chg;
+	struct regmap_irq_chip_data *irq_data_fuel;
+	struct regmap_irq_chip_data *irq_data_muic;
+
+	int irq;
+*/
 };
 
 enum max77693_types {
