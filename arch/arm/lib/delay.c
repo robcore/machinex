@@ -53,7 +53,6 @@ static inline u64 cyc_to_ns(u64 cyc, u32 mult, u32 shift)
 {
 	return (cyc * mult) >> shift;
 }
-EXPORT_SYMBOL_GPL(read_current_timer);
 
 static void __timer_delay(unsigned long cycles)
 {
