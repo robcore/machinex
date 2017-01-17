@@ -46,9 +46,8 @@ enum max77693_haptic_pwm_divisor {
 };
 
 struct max77693_haptic {
-	struct i2c_client *i2c;
-	struct i2c_client *pmic_i2c;
-	struct max77693_haptic_platform_data *pdata;
+	struct regmap *regmap_pmic;
+	struct regmap *regmap_haptic;
 	struct device *dev;
 	struct input_dev *input_dev;
 	struct pwm_device *pwm_dev;
