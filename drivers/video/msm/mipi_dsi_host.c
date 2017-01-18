@@ -1045,7 +1045,7 @@ void mipi_dsi_controller_cfg(int enable)
 			   status,
 			   ((status & 0x08) == 0),
 			       sleep_us, timeout_us))
-		pr_info("%s: DSI status=%x failed\n", __func__, status);
+		pr_debug("%s: DSI status=%x failed\n", __func__, status);
 
 	dsi_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0000);
 	if (enable)
