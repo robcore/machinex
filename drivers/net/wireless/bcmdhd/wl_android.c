@@ -2783,18 +2783,19 @@ wl_android_set_miracast(struct net_device *dev, char *command, int total_len)
 		}
 		/* turn off pm */
 		ret = wldev_ioctl(dev, WLC_GET_PM, &val, sizeof(val), false);
-		if(ret) {
+		if (ret) {
 			goto resume;
 		}
+
 		if (val != PM_OFF) {
 			val = PM_OFF;
-		config.iovar = NULL;
-		config.ioctl = WLC_GET_PM;
-		config.arg = &val;
-		config.len = sizeof(int);
-		ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
+			config.iovar = NULL;
+			config.ioctl = WLC_GET_PM;
+			config.arg = &val;
+			config.len = sizeof(int);
+			ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
 			if (ret) {
-			goto resume;
+				goto resume;
 			}
 		}
 
