@@ -44,6 +44,7 @@
 #include <linux/dqblk_v2.h>
 
 #include <linux/atomic.h>
+#include <uapi/linux/quota.h>
 
 typedef __kernel_uid32_t qid_t; /* Type in which we store ids in memory */
 typedef long long qsize_t;	/* Type in which we store sizes */
