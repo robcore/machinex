@@ -1,8 +1,10 @@
 #ifndef _LINUX_IRQNR_H
 #define _LINUX_IRQNR_H
 
-#include <uapi/linux/irqnr.h>
-
+/*
+ * Generic irq_desc iterators:
+ */
+#ifdef __KERNEL__
 
 #ifndef CONFIG_GENERIC_HARDIRQS
 #include <asm/irq.h>
@@ -54,5 +56,7 @@ unsigned int irq_get_next_irq(unsigned int offset);
 
 #define for_each_irq_nr(irq)                   \
        for (irq = 0; irq < nr_irqs; irq++)
+
+#endif /* __KERNEL__ */
 
 #endif

@@ -98,4 +98,6 @@ struct kern_ipc_perm
 	void		*security;
 };
 
+#endif /* __KERNEL__ */
+
 #endif /* _LINUX_IPC_H */

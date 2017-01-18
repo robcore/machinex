@@ -1124,4 +1124,6 @@ static inline void setup_sysctl_set(struct ctl_table_set *p,
 
 #endif /* CONFIG_SYSCTL */
 
+#endif /* __KERNEL__ */
+
 #endif /* _LINUX_SYSCTL_H */

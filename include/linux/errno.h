@@ -1,8 +1,9 @@
 #ifndef _LINUX_ERRNO_H
 #define _LINUX_ERRNO_H
 
-#include <uapi/linux/errno.h>
+#include <asm/errno.h>
 
+#ifdef __KERNEL__
 
 /*
  * These should never be seen by user programs.  To return one of ERESTART*
@@ -29,5 +30,7 @@
 #define EJUKEBOX	528	/* Request initiated, but will not complete before timeout */
 #define EIOCBQUEUED	529	/* iocb queued, will get completion event */
 #define EIOCBRETRY	530	/* iocb queued, will trigger a retry */
+
+#endif
 
 #endif
