@@ -23,18 +23,16 @@
 
 /* With some changes from Kyösti Mälkki <kmalkki@cc.hut.fi> and
    Frodo Looijaard <frodol@dds.nl> */
-
 #ifndef _LINUX_I2C_H
 #define _LINUX_I2C_H
 
-#include <linux/types.h>
-#ifdef __KERNEL__
 #include <linux/mod_devicetable.h>
 #include <linux/device.h>	/* for struct device */
 #include <linux/sched.h>	/* for completion */
 #include <linux/mutex.h>
 #include <linux/of.h>		/* for struct device_node */
 #include <linux/swab.h>		/* for swab16 */
+#include <uapi/linux/i2c.h>
 
 extern struct bus_type i2c_bus_type;
 extern struct device_type i2c_adapter_type;

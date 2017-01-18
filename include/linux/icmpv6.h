@@ -194,5 +194,3 @@ extern void				icmpv6_flow_init(struct sock *sk,
 							 const struct in6_addr *daddr,
 							 int oif);
 #endif
-
-#endif

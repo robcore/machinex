@@ -144,6 +144,4 @@ ssize_t simple_xattr_list(struct simple_xattrs *xattrs, char *buffer,
 void simple_xattr_list_add(struct simple_xattrs *xattrs,
 			   struct simple_xattr *new_xattr);
 
-#endif  /*  __KERNEL__  */
-
 #endif	/* _LINUX_XATTR_H */
