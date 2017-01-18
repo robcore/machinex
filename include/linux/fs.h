@@ -8,7 +8,6 @@
 
 #include <linux/limits.h>
 #include <linux/ioctl.h>
-#include <linux/blk_types.h>
 #include <linux/types.h>
 
 /*
@@ -413,6 +412,7 @@ struct inodes_stat_t {
 #include <linux/shrinker.h>
 #include <linux/migrate_mode.h>
 #include <linux/percpu-rwsem.h>
+#include <linux/blk_types.h>
 
 #include <asm/byteorder.h>
 
