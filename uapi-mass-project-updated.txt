@@ -5,11 +5,6 @@ REFERENCE PATCH: /media/root/robcore/android/emotion-cm-trlte/patches/8patches/1
 
 pp '/media/root/robcore/android/emotion-cm-trlte/patches/8patches/1558-UAPI-Scripted-Disintegrate-include-linux.patch'
 
-patching file include/linux/usbdevice_fs.h
-Hunk #1 FAILED at 25.
-Hunk #2 FAILED at 192.
-2 out of 2 hunks FAILED -- saving rejects to file include/linux/usbdevice_fs.h.rej
-
 patching file include/linux/uuid.h
 Hunk #1 FAILED at 17.
 Hunk #2 FAILED at 69.
