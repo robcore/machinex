@@ -53,6 +53,10 @@
  *    - 403 : USA VZW
  *    - 404 : USA SPR
  *    - 405 : USA USC
+ *    - 406 : CAN OPEN
+ *    - 407 : USA MPCS
+ *    - 408 : USA ACG
+ *    - 409 : USA LRA
  *    You can refer how to using it below this file.
  *    And, you can add more region code, too.
  */
@@ -130,7 +134,7 @@
 
 #ifdef CONFIG_ARCH_MSM8960
 #undef WIFI_TURNOFF_DELAY
-#define WIFI_TURNOFF_DELAY	200
+#define WIFI_TURNOFF_DELAY	10
 #endif /* CONFIG_ARCH_MSM8960 */
 
 /* PROJECTS END */
