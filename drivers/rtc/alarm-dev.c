@@ -70,7 +70,7 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	uint32_t alarm_type_mask = 1U << alarm_type;
 
 #ifdef CONFIG_RTC_AUTO_PWRON
-	char bootalarm_data[14]; 
+	char bootalarm_data[14];
 #endif
 
 #ifdef CONFIG_RTC_AUTO_PWRON
@@ -197,7 +197,7 @@ from_old_alarm_set:
 			goto err1;
 		}
 		rv = alarm_set_alarm(bootalarm_data);
-		break; 
+		break;
 #endif
 
 	case ANDROID_ALARM_GET_TIME(0):
@@ -279,7 +279,7 @@ static void alarm_triggered(struct alarm *alarm)
 	pr_alarm(INT, "alarm_triggered type %d\n", alarm->type);
 	spin_lock_irqsave(&alarm_slock, flags);
 	if (alarm_enabled & alarm_type_mask) {
-		wake_lock_timeout(&alarm_wake_lock, 5 * HZ);
+		wake_lock_timeout(&alarm_wake_lock, 5000;
 		alarm_enabled &= ~alarm_type_mask;
 		alarm_pending |= alarm_type_mask;
 		wake_up(&alarm_wait_queue);

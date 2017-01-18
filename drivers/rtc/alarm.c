@@ -124,7 +124,7 @@ static void update_timer_locked(struct alarm_queue *base, bool head_removed)
 
 	if (is_wakeup && suspended) {
 		pr_alarm(FLOW, "changed alarm while suspened\n");
-		wake_lock_timeout(&alarm_rtc_wake_lock, 1 * HZ);
+		wake_lock_timeout(&alarm_rtc_wake_lock, 1000);
 		return;
 	}
 
@@ -444,7 +444,7 @@ int alarm_set_alarm(char* alarm_data)
 			"Failed to set ALARM, time will be lost on reboot\n");
 		return -2;
 	}
-	return 0; 
+	return 0;
 }
 #endif
 
@@ -537,7 +537,7 @@ static void alarm_triggered_func(void *p)
 	if (!(rtc->irq_data & RTC_AF))
 		return;
 	pr_alarm(INT, "rtc alarm triggered\n");
-	wake_lock_timeout(&alarm_rtc_wake_lock, 1 * HZ);
+	wake_lock_timeout(&alarm_rtc_wake_lock, 1000);
 }
 
 static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
@@ -610,7 +610,7 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 
 			spin_lock_irqsave(&alarm_slock, flags);
 			suspended = false;
-			wake_lock_timeout(&alarm_rtc_wake_lock, 2 * HZ);
+			wake_lock_timeout(&alarm_rtc_wake_lock, 2000);
 			update_timer_locked(&alarms[ANDROID_ALARM_RTC_WAKEUP],
 									false);
 			update_timer_locked(&alarms[
@@ -618,6 +618,7 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 			update_timer_locked(&alarms[
 					ANDROID_ALARM_RTC_POWEROFF_WAKEUP], false);
 			err = -EBUSY;
+			pr_err("alarm busy and a bitch\n");
 			spin_unlock_irqrestore(&alarm_slock, flags);
 		}
 	}
