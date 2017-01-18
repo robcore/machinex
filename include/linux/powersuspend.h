@@ -49,12 +49,13 @@
 #define _LINUX_POWERSUSPEND_H
 
 #include <linux/list.h>
+#include <linux/types.h>
+#include <linux/module.h>
+#include <linux/mutex.h>
+#include <linux/workqueue.h>
 
 #define POWER_SUSPEND_INACTIVE	0
 #define POWER_SUSPEND_ACTIVE	1
-
-#define POWER_SUSPEND_DISABLED 1 // Dummy setting that will not be used at all.
-#define POWER_SUSPEND_PANEL	2	 //  Use display panel state only for hook.
 
 struct power_suspend {
 	struct list_head link;

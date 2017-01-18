@@ -36,6 +36,11 @@
  *		  the two work structs.  Also actually INITialized the work on init, and
  *        flushed it on exit.
  *
+ * v1.9.2 Remove unneccessary "MODE" variable as we only have one mechanism of
+ *		  action remaining. Also removed the useless state sysfs entry.  Like
+ *		  state notifier, we can only see "state" when the screen is on, so
+ *		  it is pointless to expose to userspace. Topped off with some cleanup.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -48,13 +53,10 @@
  */
 
 #include <linux/powersuspend.h>
-#include <linux/module.h>
-#include <linux/mutex.h>
-#include <linux/workqueue.h>
 
 #define MAJOR_VERSION	1
 #define MINOR_VERSION	9
-#define SUB_MINOR_VERSION 1
+#define SUB_MINOR_VERSION 2
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(state_lock);
@@ -65,7 +67,6 @@ static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 
 static int state; // Yank555.lu : Current powersuspend state (screen on / off)
-static int mode;  // robcore: Fixed powersuspend mode  (panel)
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -95,7 +96,7 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
-	pr_info("[POWERSUSPEND] entering suspend...\n");
+	pr_info("[POWERSUSPEND] Entering Suspend...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == POWER_SUSPEND_INACTIVE)
@@ -105,13 +106,13 @@ static void power_suspend(struct work_struct *work)
 	if (abort)
 		goto abort_suspend;
 
-	pr_info("[POWERSUSPEND] suspending...\n");
+	pr_info("[POWERSUSPEND] Suspending...\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			pos->suspend(pos);
 		}
 	}
-	pr_info("[POWERSUSPEND] suspend completed.\n");
+	pr_info("[POWERSUSPEND] Suspend Completed.\n");
 abort_suspend:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -122,7 +123,7 @@ static void power_resume(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
-	pr_info("[POWERSUSPEND] entering resume...\n");
+	pr_info("[POWERSUSPEND] Entering Resume...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == POWER_SUSPEND_ACTIVE)
@@ -132,13 +133,13 @@ static void power_resume(struct work_struct *work)
 	if (abort)
 		goto abort_resume;
 
-	pr_info("[POWERSUSPEND] resuming...\n");
+	pr_info("[POWERSUSPEND] Resuming...\n");
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
 		}
 	}
-	pr_info("[POWERSUSPEND] resume completed.\n");
+	pr_info("[POWERSUSPEND] Resume Completed.\n");
 abort_resume:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -150,11 +151,11 @@ void set_power_suspend_state(int new_state)
 	if (state != new_state) {
 		spin_lock_irqsave(&state_lock, irqflags);
 		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
-			pr_info("[POWERSUSPEND] state activated.\n");
+			pr_info("[POWERSUSPEND] Suspend State Activated.\n");
 			state = new_state;
 			schedule_work(&power_suspend_work);
 		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
-			pr_info("[POWERSUSPEND] state deactivated.\n");
+			pr_info("[POWERSUSPEND] Resume State Activated.\n");
 			state = new_state;
 			schedule_work(&power_resume_work);
 		}
@@ -166,43 +167,19 @@ void set_power_suspend_state(int new_state)
 
 void set_power_suspend_state_panel_hook(int new_state)
 {
-	pr_info("[POWERSUSPEND] panel resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
-	// Yank555.lu : Only allow panel hook changes in panel mode
-	if (mode == POWER_SUSPEND_PANEL)
-		set_power_suspend_state(new_state);
+	pr_info("[POWERSUSPEND] panel requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
+	set_power_suspend_state(new_state);
 }
 
 EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
 
 // ------------------------------------------ sysfs interface ------------------------------------------
 
-static ssize_t power_suspend_state_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", state);
-}
-
-static ssize_t power_suspend_mode_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", mode);
-}
-
 static ssize_t power_suspend_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "version: %d.%d.%d\n", MAJOR_VERSION, MINOR_VERSION, SUB_MINOR_VERSION);
 }
-
-static struct kobj_attribute power_suspend_state_attribute =
-	__ATTR(power_suspend_state, 0444,
-		power_suspend_state_show,
-		NULL);
-
-static struct kobj_attribute power_suspend_mode_attribute =
-	__ATTR(power_suspend_mode, 0444,
-		power_suspend_mode_show,
-		NULL);
 
 static struct kobj_attribute power_suspend_version_attribute =
 	__ATTR(power_suspend_version, 0444,
@@ -211,8 +188,6 @@ static struct kobj_attribute power_suspend_version_attribute =
 
 static struct attribute *power_suspend_attrs[] =
 {
-	&power_suspend_state_attribute.attr,
-	&power_suspend_mode_attribute.attr,
 	&power_suspend_version_attribute.attr,
 	NULL,
 };
@@ -247,10 +222,8 @@ static int power_suspend_init(void)
 	return -ENOMEM;
 	}
 
-	mode = POWER_SUSPEND_PANEL;	// Robcore: The only possible mode.  I believe in choice, but not in this case.
-
-	INIT_WORK(&power_resume_work, power_resume);
 	INIT_WORK(&power_suspend_work, power_suspend);
+	INIT_WORK(&power_resume_work, power_resume);
 
 	return 0;
 }
