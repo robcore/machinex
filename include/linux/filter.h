@@ -242,6 +242,4 @@ enum {
 	BPF_S_ANC_SECCOMP_LD_W,
 };
 
-#endif /* __KERNEL__ */
-
 #endif /* __LINUX_FILTER_H__ */

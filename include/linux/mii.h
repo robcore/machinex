@@ -478,5 +478,4 @@ static inline u8 mii_resolve_flowctrl_fdx(u16 lcladv, u16 rmtadv)
 	return cap;
 }
 
-#endif /* __KERNEL__ */
 #endif /* __LINUX_MII_H__ */

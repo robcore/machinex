@@ -64,10 +64,9 @@ enum {
 	PER_MASK =		0x00ff,
 };
 
-#ifdef __KERNEL__
+#include <uapi/linux/personality.h>
+
 
 #define set_personality(pers)	(current->personality = (pers))
-
-#endif /* __KERNEL__ */
 
 #endif /* _LINUX_PERSONALITY_H */
