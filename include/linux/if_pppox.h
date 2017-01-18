@@ -248,6 +248,4 @@ enum {
     PPPOX_DEAD		= 16  /* dead, useless, please clean me up!*/
 };
 
-#endif /* __KERNEL__ */
-
 #endif /* !(__LINUX_IF_PPPOX_H) */

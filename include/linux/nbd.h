@@ -73,32 +73,3 @@ struct nbd_device {
 };
 
 #endif
-
-/* These are sent over the network in the request/reply magic fields */
-
-#define NBD_REQUEST_MAGIC 0x25609513
-#define NBD_REPLY_MAGIC 0x67446698
-/* Do *not* use magics: 0x12560953 0x96744668. */
-
-/*
- * This is the packet used for communication between client and
- * server. All data are in network byte order.
- */
-struct nbd_request {
-	__be32 magic;
-	__be32 type;	/* == READ || == WRITE 	*/
-	char handle[8];
-	__be64 from;
-	__be32 len;
-} __attribute__((packed));
-
-/*
- * This is the reply packet that nbd-server sends back to the client after
- * it has completed an I/O request (or an error occurs).
- */
-struct nbd_reply {
-	__be32 magic;
-	__be32 error;		/* 0 = ok, else error	*/
-	char handle[8];		/* handle you got from request	*/
-};
-#endif

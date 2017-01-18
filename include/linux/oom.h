@@ -12,18 +12,11 @@
 #define OOM_ADJUST_MIN (-16)
 #define OOM_ADJUST_MAX 15
 
-/*
- * /proc/<pid>/oom_score_adj set to OOM_SCORE_ADJ_MIN disables oom killing for
- * pid.
- */
-#define OOM_SCORE_ADJ_MIN	(-1000)
-#define OOM_SCORE_ADJ_MAX	1000
-
-#ifdef __KERNEL__
 
 #include <linux/sched.h>
 #include <linux/types.h>
 #include <linux/nodemask.h>
+#include <uapi/linux/oom.h>
 
 struct zonelist;
 struct notifier_block;
@@ -100,5 +93,4 @@ extern void dump_tasks(const struct mem_cgroup *memcg,
 extern int sysctl_oom_dump_tasks;
 extern int sysctl_oom_kill_allocating_task;
 extern int sysctl_panic_on_oom;
-#endif /* __KERNEL__*/
 #endif /* _INCLUDE_LINUX_OOM_H */

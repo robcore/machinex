@@ -300,6 +300,4 @@ static inline void __swahb32s(__u32 *p)
 # define swab64s __swab64s
 # define swahw32s __swahw32s
 # define swahb32s __swahb32s
-#endif /* __KERNEL__ */
-
 #endif /* _LINUX_SWAB_H */

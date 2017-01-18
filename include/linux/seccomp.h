@@ -139,5 +139,4 @@ static inline void get_seccomp_filter(struct task_struct *tsk)
 	return;
 }
 #endif /* CONFIG_SECCOMP_FILTER */
-#endif /* __KERNEL__ */
 #endif /* _LINUX_SECCOMP_H */

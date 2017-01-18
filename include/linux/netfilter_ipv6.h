@@ -88,6 +88,4 @@ static inline int ipv6_netfilter_init(void) { return 0; }
 static inline void ipv6_netfilter_fini(void) { return; }
 #endif /* CONFIG_NETFILTER */
 
-#endif /* __KERNEL__ */
-
 #endif /*__LINUX_IP6_NETFILTER_H*/
