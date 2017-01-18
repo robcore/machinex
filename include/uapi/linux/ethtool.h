@@ -42,10 +42,8 @@ struct ethtool_cmd {
 				 * bits) in Mbps. Please use
 				 * ethtool_cmd_speed()/_set() to
 				 * access it */
-	__u8	eth_tp_mdix;	/* twisted pair MDI-X status */
-	__u8    eth_tp_mdix_ctrl; /* twisted pair MDI-X control, when set,
-				   * link should be renegotiated if necessary
-				   */
+	__u8	eth_tp_mdix;
+	__u8	reserved2;
 	__u32	lp_advertising;	/* Features the link partner advertises */
 	__u32	reserved[2];
 };
