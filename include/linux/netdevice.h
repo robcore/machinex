@@ -48,6 +48,7 @@
 #include <net/netprio_cgroup.h>
 
 #include <linux/netdev_features.h>
+#include <uapi/linux/netdevice.h>
 
 struct netpoll_info;
 struct device;
