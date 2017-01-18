@@ -5,11 +5,6 @@ REFERENCE PATCH: /media/root/robcore/android/emotion-cm-trlte/patches/8patches/1
 
 pp '/media/root/robcore/android/emotion-cm-trlte/patches/8patches/1558-UAPI-Scripted-Disintegrate-include-linux.patch'
 
-patching file include/linux/ipc.h
-Hunk #1 FAILED at 1.
-Hunk #2 succeeded at 98 (offset -1 lines).
-1 out of 2 hunks FAILED -- saving rejects to file include/linux/ipc.h.rej
-
 patching file include/linux/ipv6.h
 Hunk #2 FAILED at 55.
 Hunk #3 succeeded at 422 (offset 6 lines).
