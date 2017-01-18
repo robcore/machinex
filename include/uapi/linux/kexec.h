@@ -11,6 +11,9 @@
 /* kexec flags for different usage scenarios */
 #define KEXEC_ON_CRASH		0x00000001
 #define KEXEC_PRESERVE_CONTEXT	0x00000002
+#ifdef CONFIG_KEXEC_HARDBOOT
+#define KEXEC_HARDBOOT		0x00000004
+#endif
 #define KEXEC_ARCH_MASK		0xffff0000
 
 /* These values match the ELF architecture values.
@@ -37,9 +40,9 @@
  * loading  kernel binaries.
  */
 struct kexec_segment {
-	const void *buf;
+	void __user *buf;
 	size_t bufsz;
-	const void *mem;
+	unsigned long mem;
 	size_t memsz;
 };
 
