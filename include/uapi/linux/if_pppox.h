@@ -56,7 +56,9 @@ struct pptp_addr {
 #define PX_PROTO_OE    0 /* Currently just PPPoE */
 #define PX_PROTO_OL2TP 1 /* Now L2TP also */
 #define PX_PROTO_PPTP  2
-#define PX_MAX_PROTO   3
+#define PX_PROTO_OLAC  3
+#define PX_PROTO_OPNS  4
+#define PX_MAX_PROTO   5
 
 struct sockaddr_pppox {
 	__kernel_sa_family_t sa_family;       /* address family, AF_PPPOX */
@@ -65,7 +67,7 @@ struct sockaddr_pppox {
 		struct pppoe_addr  pppoe;
 		struct pptp_addr   pptp;
 	} sa_addr;
-} __packed;
+} __attribute__((packed));
 
 /* The use of the above union isn't viable because the size of this
  * struct must stay fixed over time -- applications use sizeof(struct
@@ -76,7 +78,7 @@ struct sockaddr_pppol2tp {
 	__kernel_sa_family_t sa_family; /* address family, AF_PPPOX */
 	unsigned int    sa_protocol;    /* protocol identifier */
 	struct pppol2tp_addr pppol2tp;
-} __packed;
+} __attribute__((packed));
 
 struct sockaddr_pppol2tpin6 {
 	__kernel_sa_family_t sa_family; /* address family, AF_PPPOX */
@@ -91,7 +93,7 @@ struct sockaddr_pppol2tpv3 {
 	__kernel_sa_family_t sa_family; /* address family, AF_PPPOX */
 	unsigned int    sa_protocol;    /* protocol identifier */
 	struct pppol2tpv3_addr pppol2tp;
-} __packed;
+} __attribute__((packed));
 
 struct sockaddr_pppol2tpv3in6 {
 	__kernel_sa_family_t sa_family; /* address family, AF_PPPOX */
@@ -135,11 +137,11 @@ struct pppoe_tag {
 
 struct pppoe_hdr {
 #if defined(__LITTLE_ENDIAN_BITFIELD)
-	__u8 ver : 4;
 	__u8 type : 4;
+	__u8 ver : 4;
 #elif defined(__BIG_ENDIAN_BITFIELD)
-	__u8 type : 4;
 	__u8 ver : 4;
+	__u8 type : 4;
 #else
 #error	"Please fix <asm/byteorder.h>"
 #endif
@@ -147,7 +149,7 @@ struct pppoe_hdr {
 	__be16 sid;
 	__be16 length;
 	struct pppoe_tag tag[0];
-} __packed;
+} __attribute__((packed));
 
 /* Length of entire PPPoE + PPP header */
 #define PPPOE_SES_HLEN	8
