@@ -2130,9 +2130,11 @@ static inline int break_lease(struct inode *inode, unsigned int mode)
 #endif /* CONFIG_FILE_LOCKING */
 
 /* fs/open.c */
+struct audit_names;
 struct filename {
-	const char *name;		/* pointer to actual string */
-	const __user char *uptr;	/* original userland pointer */
+	const char		*name;	/* pointer to actual string */
+	const __user char	*uptr;	/* original userland pointer */
+	struct audit_names	*aname;
 };
 
 extern long vfs_truncate(struct path *, loff_t);
