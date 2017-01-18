@@ -5,669 +5,227 @@ REFERENCE PATCH: /media/root/robcore/android/emotion-cm-trlte/patches/8patches/1
 
 pp '/media/root/robcore/android/emotion-cm-trlte/patches/8patches/1558-UAPI-Scripted-Disintegrate-include-linux.patch'
 
-patching file include/linux/if_ltalk.h
-patching file include/linux/if_phonet.h
+
 patching file include/linux/if_pppol2tp.h
 Hunk #1 FAILED at 11.
 1 out of 1 hunk FAILED -- saving rejects to file include/linux/if_pppol2tp.h.rej
+
 patching file include/linux/if_pppox.h
 Hunk #1 FAILED at 12.
 Hunk #2 succeeded at 248 (offset 16 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/if_pppox.h.rej
+
 patching file include/linux/if_team.h
 Hunk #1 FAILED at 7.
 Hunk #2 FAILED at 251.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/if_team.h.rej
+
 patching file include/linux/if_tun.h
 Hunk #1 FAILED at 12.
 Hunk #2 succeeded at 113 (offset 9 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/if_tun.h.rej
+
 patching file include/linux/if_tunnel.h
 Hunk #1 FAILED at 1.
 1 out of 1 hunk FAILED -- saving rejects to file include/linux/if_tunnel.h.rej
-patching file include/linux/if_vlan.h
-Hunk #2 succeeded at 355 (offset -5 lines).
-patching file include/linux/igmp.h
-patching file include/linux/in.h
-patching file include/linux/in6.h
-patching file include/linux/inet_diag.h
-Hunk #2 succeeded at 42 (offset -1 lines).
-patching file include/linux/inotify.h
+
 patching file include/linux/input.h
 Hunk #2 FAILED at 5.
 Hunk #3 succeeded at 1716 (offset 51 lines).
 1 out of 3 hunks FAILED -- saving rejects to file include/linux/input.h.rej
-patching file include/linux/ip.h
+
 patching file include/linux/ipc.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 98 (offset -1 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/ipc.h.rej
-patching file include/linux/ipmi.h
+
 patching file include/linux/ipv6.h
 Hunk #2 FAILED at 55.
 Hunk #3 succeeded at 422 (offset 6 lines).
 1 out of 3 hunks FAILED -- saving rejects to file include/linux/ipv6.h.rej
-patching file include/linux/ipv6_route.h
-patching file include/linux/irqnr.h
+
 patching file include/linux/isdn.h
 Hunk #1 FAILED at 10.
 Hunk #2 succeeded at 162 (offset -1 lines).
 Hunk #3 succeeded at 618 (offset 22 lines).
 1 out of 3 hunks FAILED -- saving rejects to file include/linux/isdn.h.rej
-patching file include/linux/isdn_divertif.h
-patching file include/linux/isdn_ppp.h
-patching file include/linux/isdnif.h
-patching file include/linux/joystick.h
-patching file include/linux/kd.h
-patching file include/linux/kdev_t.h
+
 patching file include/linux/kernel-page-flags.h
 Hunk #1 FAILED at 1.
 Hunk #2 FAILED at 46.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/kernel-page-flags.h.rej
+
 patching file include/linux/kernel.h
 Hunk #3 FAILED at 708.
 1 out of 3 hunks FAILED -- saving rejects to file include/linux/kernel.h.rej
-patching file include/linux/kernelcapi.h
+
 patching file include/linux/kexec.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 269 (offset 11 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/kexec.h.rej
-patching file include/linux/keyboard.h
-patching file include/linux/kvm_para.h
+
 patching file include/linux/l2tp.h
 Hunk #1 FAILED at 3.
 1 out of 1 hunk FAILED -- saving rejects to file include/linux/l2tp.h.rej
-patching file include/linux/llc.h
+
 patching file include/linux/loop.h
 Hunk #3 FAILED at 62.
 Hunk #4 succeeded at 144 (offset 1 line).
 1 out of 4 hunks FAILED -- saving rejects to file include/linux/loop.h.rej
-patching file include/linux/lp.h
+
 patching file include/linux/mdio.h
 Hunk #1 FAILED at 6.
 Hunk #2 succeeded at 357 with fuzz 2 (offset -103 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/mdio.h.rej
-patching file include/linux/mempolicy.h
-Hunk #3 succeeded at 308 (offset -16 lines).
+
 patching file include/linux/mii.h
 Hunk #1 FAILED at 4.
 Hunk #2 succeeded at 478 (offset -9 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/mii.h.rej
-patching file include/linux/mman.h
-patching file include/linux/mroute.h
-patching file include/linux/mroute6.h
+
 patching file include/linux/msdos_fs.h
 Hunk #1 FAILED at 1.
 1 out of 1 hunk FAILED -- saving rejects to file include/linux/msdos_fs.h.rej
-patching file include/linux/msg.h
-patching file include/linux/n_r3964.h
+
 patching file include/linux/nbd.h
 Hunk #1 FAILED at 11.
 Hunk #2 succeeded at 73 (offset -3 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/nbd.h.rej
-patching file include/linux/net.h
-Hunk #2 succeeded at 313 (offset 30 lines).
+
+
 patching file include/linux/netdevice.h
 Hunk #2 FAILED at 49.
 Hunk #3 succeeded at 126 (offset -1 lines).
 Hunk #4 succeeded at 181 (offset -1 lines).
 Hunk #5 succeeded at 2782 (offset -33 lines).
 1 out of 5 hunks FAILED -- saving rejects to file include/linux/netdevice.h.rej
-patching file include/linux/netfilter.h
-Hunk #3 succeeded at 324 (offset -18 lines).
-patching file include/linux/netfilter_bridge.h
+
 patching file include/linux/netfilter_ipv4.h
 Hunk #1 FAILED at 1.
 1 out of 1 hunk FAILED -- saving rejects to file include/linux/netfilter_ipv4.h.rej
+
 patching file include/linux/netfilter_ipv6.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 88 (offset -1 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/netfilter_ipv6.h.rej
+
 patching file include/linux/netlink.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 279 with fuzz 2 (offset -4 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/netlink.h.rej
-patching file include/linux/nfs.h
-patching file include/linux/nfs3.h
-patching file include/linux/nfs4.h
-patching file include/linux/nfs_fs.h
-Hunk #2 succeeded at 598 (offset 12 lines).
-Hunk #3 succeeded at 607 (offset 12 lines).
-patching file include/linux/nfs_idmap.h
-patching file include/linux/nfsacl.h
-patching file include/linux/nubus.h
-patching file include/linux/nvram.h
-patching file include/linux/omapfb.h
-Hunk #1 succeeded at 20 with fuzz 2.
-Hunk #2 succeeded at 34 (offset -5 lines).
-patching file include/linux/oom.h
-Hunk #1 succeeded at 12 with fuzz 2 (offset 11 lines).
-Hunk #2 succeeded at 93 (offset 18 lines).
-patching file include/linux/parport.h
-patching file include/linux/patchkey.h
-patching file include/linux/pci.h
-Hunk #3 succeeded at 1700 (offset -109 lines).
+
+
 patching file include/linux/perf_event.h
 Hunk #1 FAILED at 14.
 Hunk #2 succeeded at 1371 (offset -51 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/perf_event.h.rej
+
 patching file include/linux/personality.h
 Hunk #1 succeeded at 64 with fuzz 2 (offset 63 lines).
 Hunk #2 FAILED at 15.
 Hunk #3 succeeded at 69 with fuzz 2 (offset -48 lines).
 1 out of 3 hunks FAILED -- saving rejects to file include/linux/personality.h.rej
-patching file include/linux/phonet.h
-patching file include/linux/pktcdvd.h
-patching file include/linux/pmu.h
-patching file include/linux/poll.h
-patching file include/linux/ppp-comp.h
-patching file include/linux/ppp_defs.h
-patching file include/linux/ptrace.h
-Hunk #3 succeeded at 343 (offset 3 lines).
+
 patching file include/linux/quota.h
 Hunk #2 FAILED at 46.
 Hunk #3 succeeded at 283 with fuzz 1 (offset -123 lines).
 1 out of 3 hunks FAILED -- saving rejects to file include/linux/quota.h.rej
+
 patching file include/linux/random.h
 Hunk #1 FAILED at 3.
 Hunk #2 succeeded at 132 with fuzz 2 (offset 28 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/random.h.rej
-patching file include/linux/reboot.h
+
 patching file include/linux/resource.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 90 (offset 6 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/resource.h.rej
+
 patching file include/linux/rfkill.h
 Hunk #3 succeeded at 304 (offset 3 lines).
-patching file include/linux/rtc.h
-Hunk #2 succeeded at 195 (offset 5 lines).
+
 patching file include/linux/rtnetlink.h
 Hunk #1 FAILED at 1.
 Hunk #2 FAILED at 675.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/rtnetlink.h.rej
-patching file include/linux/scc.h
-patching file include/linux/sched.h
-Hunk #2 succeeded at 2903 with fuzz 2 (offset 115 lines).
+
 patching file include/linux/screen_info.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 79 (offset -2 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/screen_info.h.rej
-patching file include/linux/sdla.h
+
 patching file include/linux/seccomp.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 139 (offset 10 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/seccomp.h.rej
-patching file include/linux/securebits.h
-patching file include/linux/sem.h
+
 patching file include/linux/serial.h
 Hunk #1 FAILED at 6.
 Hunk #2 FAILED at 33.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/serial.h.rej
-patching file include/linux/serial_core.h
-Reversed (or previously applied) patch detected!  Assume -R? [n]
-Apply anyway? [n]
-Skipping patch.
-3 out of 3 hunks ignored -- saving rejects to file include/linux/serial_core.h.rej
-patching file include/linux/serio.h
-Hunk #4 succeeded at 134 (offset -13 lines).
-patching file include/linux/shm.h
-patching file include/linux/signal.h
-patching file include/linux/signalfd.h
+
 patching file include/linux/sock_diag.h
 Hunk #1 FAILED at 1.
 Hunk #2 FAILED at 44.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/sock_diag.h.rej
-patching file include/linux/socket.h
-Hunk #2 succeeded at 326 (offset 3 lines).
-patching file include/linux/sonet.h
-patching file include/linux/sonypi.h
-patching file include/linux/sound.h
-patching file include/linux/soundcard.h
-patching file include/linux/stat.h
-Hunk #2 succeeded at 34 (offset -1 lines).
-patching file include/linux/stddef.h
+
 patching file include/linux/string.h
 Hunk #2 FAILED at 143.
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/string.h.rej
+
 patching file include/linux/swab.h
 Hunk #1 FAILED at 1.
 Hunk #2 succeeded at 300 (offset 6 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/swab.h.rej
-patching file include/linux/synclink.h
+
 patching file include/linux/sysctl.h
 Hunk #1 FAILED at 18.
 Hunk #2 succeeded at 1124 (offset 2 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/sysctl.h.rej
+
 patching file include/linux/tcp.h
 Hunk #1 FAILED at 17.
 Hunk #2 succeeded at 501 with fuzz 1 (offset -94 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/tcp.h.rej
-patching file include/linux/time.h
-Hunk #2 succeeded at 278 (offset 21 lines).
-patching file include/linux/timex.h
-Hunk #2 succeeded at 166 (offset 14 lines).
-patching file include/linux/toshiba.h
+
 patching file include/linux/tty.h
 Hunk #1 FAILED at 1.
 Hunk #2 FAILED at 44.
 Hunk #3 succeeded at 676 (offset -18 lines).
 2 out of 3 hunks FAILED -- saving rejects to file include/linux/tty.h.rej
-patching file include/linux/types.h
-patching file include/linux/udp.h
+
 patching file include/linux/uinput.h
 Hunk #2 FAILED at 29.
 Hunk #3 FAILED at 73.
 2 out of 3 hunks FAILED -- saving rejects to file include/linux/uinput.h.rej
-patching file include/linux/uio.h
+
 patching file include/linux/usbdevice_fs.h
 Hunk #1 FAILED at 25.
 Hunk #2 FAILED at 192.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/usbdevice_fs.h.rej
-patching file include/linux/utsname.h
-Hunk #2 succeeded at 80 (offset 1 line).
+
 patching file include/linux/uuid.h
 Hunk #1 FAILED at 17.
 Hunk #2 FAILED at 69.
 2 out of 2 hunks FAILED -- saving rejects to file include/linux/uuid.h.rej
-patching file include/linux/vfio.h
+
 patching file include/linux/videodev2.h
 Hunk #1 FAILED at 56.
 1 out of 1 hunk FAILED -- saving rejects to file include/linux/videodev2.h.rej
-patching file include/linux/virtio_config.h
-Hunk #2 succeeded at 140 with fuzz 2 (offset -23 lines).
+
 patching file include/linux/virtio_console.h
 Hunk #2 FAILED at 29.
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/virtio_console.h.rej
-patching file include/linux/virtio_ring.h
-Hunk #2 succeeded at 20 (offset -1 lines).
-patching file include/linux/vt.h
-patching file include/linux/wait.h
-Hunk #2 succeeded at 797 (offset 150 lines).
-patching file include/linux/wanrouter.h
-patching file include/linux/watchdog.h
-patching file include/linux/wireless.h
+
 patching file include/linux/xattr.h
 Hunk #1 FAILED at 10.
 Hunk #2 succeeded at 144 (offset -3 lines).
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/xattr.h.rej
-patching file include/uapi/linux/Kbuild
-patching file include/uapi/linux/a.out.h
-patching file include/uapi/linux/acct.h
-patching file include/uapi/linux/adb.h
-patching file include/uapi/linux/adfs_fs.h
-patching file include/uapi/linux/affs_hardblocks.h (renamed from include/linux/affs_hardblocks.h)
-patching file include/uapi/linux/agpgart.h
-patching file include/uapi/linux/aio_abi.h (renamed from include/linux/aio_abi.h)
-patching file include/uapi/linux/apm_bios.h
-patching file include/uapi/linux/arcfb.h (renamed from include/linux/arcfb.h)
-patching file include/uapi/linux/atalk.h
-patching file include/uapi/linux/atm.h
-patching file include/uapi/linux/atm_eni.h (renamed from include/linux/atm_eni.h)
-patching file include/uapi/linux/atm_he.h (renamed from include/linux/atm_he.h)
-patching file include/uapi/linux/atm_idt77105.h (renamed from include/linux/atm_idt77105.h)
-patching file include/uapi/linux/atm_nicstar.h (renamed from include/linux/atm_nicstar.h)
-patching file include/uapi/linux/atm_tcp.h
-patching file include/uapi/linux/atm_zatm.h (renamed from include/linux/atm_zatm.h)
-patching file include/uapi/linux/atmapi.h (renamed from include/linux/atmapi.h)
-patching file include/uapi/linux/atmarp.h (renamed from include/linux/atmarp.h)
-patching file include/uapi/linux/atmbr2684.h (renamed from include/linux/atmbr2684.h)
-patching file include/uapi/linux/atmclip.h (renamed from include/linux/atmclip.h)
-patching file include/uapi/linux/atmdev.h
-patching file include/uapi/linux/atmioc.h (renamed from include/linux/atmioc.h)
-patching file include/uapi/linux/atmlec.h (renamed from include/linux/atmlec.h)
-patching file include/uapi/linux/atmmpc.h (renamed from include/linux/atmmpc.h)
-patching file include/uapi/linux/atmppp.h (renamed from include/linux/atmppp.h)
-patching file include/uapi/linux/atmsap.h (renamed from include/linux/atmsap.h)
-patching file include/uapi/linux/atmsvc.h (renamed from include/linux/atmsvc.h)
-patching file include/uapi/linux/audit.h
-patching file include/uapi/linux/auto_fs.h
-patching file include/uapi/linux/auto_fs4.h (renamed from include/linux/auto_fs4.h)
-patching file include/uapi/linux/auxvec.h
-patching file include/uapi/linux/ax25.h (renamed from include/linux/ax25.h)
-patching file include/uapi/linux/b1lli.h (renamed from include/linux/b1lli.h)
-patching file include/uapi/linux/baycom.h (renamed from include/linux/baycom.h)
-patching file include/uapi/linux/bfs_fs.h (renamed from include/linux/bfs_fs.h)
-patching file include/uapi/linux/binfmts.h
-patching file include/uapi/linux/blkpg.h (renamed from include/linux/blkpg.h)
-patching file include/uapi/linux/blktrace_api.h
-patching file include/uapi/linux/bpqether.h (renamed from include/linux/bpqether.h)
-patching file include/uapi/linux/bsg.h
-patching file include/uapi/linux/can.h (renamed from include/linux/can.h)
-patching file include/uapi/linux/capability.h
-patching file include/uapi/linux/capi.h (renamed from include/linux/capi.h)
-patching file include/uapi/linux/cciss_defs.h (renamed from include/linux/cciss_defs.h)
-patching file include/uapi/linux/cciss_ioctl.h
-patching file include/uapi/linux/cdrom.h
-patching file include/uapi/linux/cgroupstats.h (renamed from include/linux/cgroupstats.h)
-patching file include/uapi/linux/chio.h (renamed from include/linux/chio.h)
-patching file include/uapi/linux/cm4000_cs.h
-patching file include/uapi/linux/cn_proc.h
-patching file include/uapi/linux/coda.h
-patching file include/uapi/linux/coda_psdev.h
-patching file include/uapi/linux/coff.h (renamed from include/linux/coff.h)
-patching file include/uapi/linux/connector.h
-patching file include/uapi/linux/const.h (renamed from include/linux/const.h)
-patching file include/uapi/linux/cramfs_fs.h
-patching file include/uapi/linux/cuda.h
-patching file include/uapi/linux/cyclades.h
-patching file include/uapi/linux/cycx_cfm.h (renamed from include/linux/cycx_cfm.h)
-patching file include/uapi/linux/dcbnl.h (renamed from include/linux/dcbnl.h)
-patching file include/uapi/linux/dccp.h
-patching file include/uapi/linux/dlm.h
-patching file include/uapi/linux/dlm_device.h (renamed from include/linux/dlm_device.h)
-patching file include/uapi/linux/dlm_netlink.h (renamed from include/linux/dlm_netlink.h)
-patching file include/uapi/linux/dlm_plock.h
-patching file include/uapi/linux/dlmconstants.h (renamed from include/linux/dlmconstants.h)
-patching file include/uapi/linux/dm-ioctl.h (renamed from include/linux/dm-ioctl.h)
-patching file include/uapi/linux/dm-log-userspace.h (renamed from include/linux/dm-log-userspace.h)
-patching file include/uapi/linux/dn.h (renamed from include/linux/dn.h)
-patching file include/uapi/linux/dqblk_xfs.h (renamed from include/linux/dqblk_xfs.h)
-patching file include/uapi/linux/edd.h
-patching file include/uapi/linux/efs_fs_sb.h (renamed from include/linux/efs_fs_sb.h)
-patching file include/uapi/linux/elf-em.h (renamed from include/linux/elf-em.h)
-patching file include/uapi/linux/elf-fdpic.h (renamed from include/linux/elf-fdpic.h)
-patching file include/uapi/linux/elf.h
-patching file include/uapi/linux/elfcore.h
-patching file include/uapi/linux/errno.h
-patching file include/uapi/linux/errqueue.h
-patching file include/uapi/linux/ethtool.h
-patching file include/uapi/linux/eventpoll.h
-patching file include/uapi/linux/fadvise.h (renamed from include/linux/fadvise.h)
-patching file include/uapi/linux/falloc.h
-patching file include/uapi/linux/fanotify.h
-patching file include/uapi/linux/fb.h
-patching file include/uapi/linux/fcntl.h
-patching file include/uapi/linux/fd.h
-patching file include/uapi/linux/fdreg.h (renamed from include/linux/fdreg.h)
-patching file include/uapi/linux/fib_rules.h (renamed from include/linux/fib_rules.h)
-patching file include/uapi/linux/fiemap.h (renamed from include/linux/fiemap.h)
-patching file include/uapi/linux/filter.h
-patching file include/uapi/linux/firewire-cdev.h (renamed from include/linux/firewire-cdev.h)
-patching file include/uapi/linux/firewire-constants.h (renamed from include/linux/firewire-constants.h)
-patching file include/uapi/linux/flat.h
-patching file include/uapi/linux/fs.h
-patching file include/uapi/linux/fsl_hypervisor.h
-patching file include/uapi/linux/fuse.h (renamed from include/linux/fuse.h)
-patching file include/uapi/linux/futex.h
-patching file include/uapi/linux/gameport.h
-patching file include/uapi/linux/gen_stats.h (renamed from include/linux/gen_stats.h)
-patching file include/uapi/linux/genetlink.h
-patching file include/uapi/linux/gfs2_ondisk.h (renamed from include/linux/gfs2_ondisk.h)
-patching file include/uapi/linux/gigaset_dev.h (renamed from include/linux/gigaset_dev.h)
-patching file include/uapi/linux/hdlc.h
-patching file include/uapi/linux/hdlcdrv.h
-patching file include/uapi/linux/hdreg.h (renamed from include/linux/hdreg.h)
-patching file include/uapi/linux/hid.h
-patching file include/uapi/linux/hiddev.h
-patching file include/uapi/linux/hidraw.h
-patching file include/uapi/linux/hpet.h
-patching file include/uapi/linux/hysdn_if.h (renamed from include/linux/hysdn_if.h)
-patching file include/uapi/linux/i2c-dev.h
-patching file include/uapi/linux/i2c.h
-patching file include/uapi/linux/i2o-dev.h (renamed from include/linux/i2o-dev.h)
-patching file include/uapi/linux/i8k.h (renamed from include/linux/i8k.h)
-patching file include/uapi/linux/icmp.h
-patching file include/uapi/linux/icmpv6.h
-patching file include/uapi/linux/if.h (renamed from include/linux/if.h)
-patching file include/uapi/linux/if_addr.h (renamed from include/linux/if_addr.h)
-patching file include/uapi/linux/if_addrlabel.h (renamed from include/linux/if_addrlabel.h)
-patching file include/uapi/linux/if_alg.h (renamed from include/linux/if_alg.h)
-patching file include/uapi/linux/if_arcnet.h (renamed from include/linux/if_arcnet.h)
-patching file include/uapi/linux/if_arp.h
-patching file include/uapi/linux/if_bonding.h (renamed from include/linux/if_bonding.h)
-patching file include/uapi/linux/if_bridge.h
-patching file include/uapi/linux/if_cablemodem.h (renamed from include/linux/if_cablemodem.h)
-patching file include/uapi/linux/if_eql.h
-patching file include/uapi/linux/if_ether.h
-patching file include/uapi/linux/if_fc.h (renamed from include/linux/if_fc.h)
-patching file include/uapi/linux/if_fddi.h
-patching file include/uapi/linux/if_frad.h
-patching file include/uapi/linux/if_hippi.h (renamed from include/linux/if_hippi.h)
-patching file include/uapi/linux/if_infiniband.h (renamed from include/linux/if_infiniband.h)
-patching file include/uapi/linux/if_link.h
-patching file include/uapi/linux/if_ltalk.h
-patching file include/uapi/linux/if_packet.h (renamed from include/linux/if_packet.h)
-patching file include/uapi/linux/if_phonet.h
-patching file include/uapi/linux/if_plip.h (renamed from include/linux/if_plip.h)
-patching file include/uapi/linux/if_ppp.h (renamed from include/linux/if_ppp.h)
-patching file include/uapi/linux/if_pppol2tp.h
-patching file include/uapi/linux/if_pppox.h
-patching file include/uapi/linux/if_slip.h (renamed from include/linux/if_slip.h)
-patching file include/uapi/linux/if_team.h
-patching file include/uapi/linux/if_tun.h
-patching file include/uapi/linux/if_tunnel.h
-patching file include/uapi/linux/if_vlan.h
-patching file include/uapi/linux/if_x25.h (renamed from include/linux/if_x25.h)
-patching file include/uapi/linux/igmp.h
-patching file include/uapi/linux/in.h
-patching file include/uapi/linux/in6.h
-patching file include/uapi/linux/in_route.h (renamed from include/linux/in_route.h)
-patching file include/uapi/linux/inet_diag.h
-patching file include/uapi/linux/inotify.h
-patching file include/uapi/linux/input.h
-patching file include/uapi/linux/ioctl.h (renamed from include/linux/ioctl.h)
-patching file include/uapi/linux/ip.h
-patching file include/uapi/linux/ip6_tunnel.h (renamed from include/linux/ip6_tunnel.h)
-patching file include/uapi/linux/ip_vs.h (renamed from include/linux/ip_vs.h)
-patching file include/uapi/linux/ipc.h
-patching file include/uapi/linux/ipmi.h
-patching file include/uapi/linux/ipmi_msgdefs.h (renamed from include/linux/ipmi_msgdefs.h)
-patching file include/uapi/linux/ipsec.h (renamed from include/linux/ipsec.h)
-patching file include/uapi/linux/ipv6.h
-patching file include/uapi/linux/ipv6_route.h
-patching file include/uapi/linux/ipx.h (renamed from include/linux/ipx.h)
-patching file include/uapi/linux/irda.h (renamed from include/linux/irda.h)
-patching file include/uapi/linux/irqnr.h
-patching file include/uapi/linux/isdn.h
-patching file include/uapi/linux/isdn_divertif.h
-patching file include/uapi/linux/isdn_ppp.h
-patching file include/uapi/linux/isdnif.h
-patching file include/uapi/linux/iso_fs.h (renamed from include/linux/iso_fs.h)
-patching file include/uapi/linux/ivtv.h (renamed from include/linux/ivtv.h)
-patching file include/uapi/linux/ivtvfb.h (renamed from include/linux/ivtvfb.h)
-patching file include/uapi/linux/ixjuser.h (renamed from include/linux/ixjuser.h)
-patching file include/uapi/linux/jffs2.h (renamed from include/linux/jffs2.h)
-patching file include/uapi/linux/joystick.h
-patching file include/uapi/linux/kd.h
-patching file include/uapi/linux/kdev_t.h
-patching file include/uapi/linux/kernel-page-flags.h
-patching file include/uapi/linux/kernel.h
-patching file include/uapi/linux/kernelcapi.h
-patching file include/uapi/linux/kexec.h
-patching file include/uapi/linux/keyboard.h
-patching file include/uapi/linux/keyctl.h (renamed from include/linux/keyctl.h)
-patching file include/uapi/linux/kvm.h (renamed from include/linux/kvm.h)
-patching file include/uapi/linux/kvm_para.h
-patching file include/uapi/linux/l2tp.h
-patching file include/uapi/linux/limits.h (renamed from include/linux/limits.h)
-patching file include/uapi/linux/llc.h
-patching file include/uapi/linux/loop.h
-patching file include/uapi/linux/lp.h
-patching file include/uapi/linux/magic.h (renamed from include/linux/magic.h)
-patching file include/uapi/linux/major.h (renamed from include/linux/major.h)
-patching file include/uapi/linux/map_to_7segment.h (renamed from include/linux/map_to_7segment.h)
-patching file include/uapi/linux/matroxfb.h (renamed from include/linux/matroxfb.h)
-patching file include/uapi/linux/mdio.h
+
 patching file include/uapi/linux/media.h (renamed from include/linux/media.h)
 Cannot rename file without two valid file names
-patching file include/uapi/linux/mempolicy.h
-patching file include/uapi/linux/meye.h (renamed from include/linux/meye.h)
-patching file include/uapi/linux/mii.h
-patching file include/uapi/linux/minix_fs.h (renamed from include/linux/minix_fs.h)
-patching file include/uapi/linux/mman.h
-patching file include/uapi/linux/mmtimer.h (renamed from include/linux/mmtimer.h)
-patching file include/uapi/linux/mqueue.h (renamed from include/linux/mqueue.h)
-patching file include/uapi/linux/mroute.h
-patching file include/uapi/linux/mroute6.h
-patching file include/uapi/linux/msdos_fs.h
-patching file include/uapi/linux/msg.h
-patching file include/uapi/linux/mtio.h (renamed from include/linux/mtio.h)
-patching file include/uapi/linux/n_r3964.h
-patching file include/uapi/linux/nbd.h
-patching file include/uapi/linux/ncp.h (renamed from include/linux/ncp.h)
-patching file include/uapi/linux/ncp_fs.h (renamed from include/linux/ncp_fs.h)
-patching file include/uapi/linux/ncp_mount.h (renamed from include/linux/ncp_mount.h)
-patching file include/uapi/linux/ncp_no.h (renamed from include/linux/ncp_no.h)
-patching file include/uapi/linux/neighbour.h (renamed from include/linux/neighbour.h)
-patching file include/uapi/linux/net.h
-patching file include/uapi/linux/net_dropmon.h (renamed from include/linux/net_dropmon.h)
-patching file include/uapi/linux/net_tstamp.h (renamed from include/linux/net_tstamp.h)
-patching file include/uapi/linux/netdevice.h
-patching file include/uapi/linux/netfilter.h
-patching file include/uapi/linux/netfilter_arp.h (renamed from include/linux/netfilter_arp.h)
-patching file include/uapi/linux/netfilter_bridge.h
-patching file include/uapi/linux/netfilter_decnet.h (renamed from include/linux/netfilter_decnet.h)
-patching file include/uapi/linux/netfilter_ipv4.h
-patching file include/uapi/linux/netfilter_ipv6.h
-patching file include/uapi/linux/netlink.h
-patching file include/uapi/linux/netrom.h (renamed from include/linux/netrom.h)
-patching file include/uapi/linux/nfc.h (renamed from include/linux/nfc.h)
-patching file include/uapi/linux/nfs.h
-patching file include/uapi/linux/nfs2.h (renamed from include/linux/nfs2.h)
-patching file include/uapi/linux/nfs3.h
-patching file include/uapi/linux/nfs4.h
-patching file include/uapi/linux/nfs4_mount.h (renamed from include/linux/nfs4_mount.h)
-patching file include/uapi/linux/nfs_fs.h
-patching file include/uapi/linux/nfs_idmap.h
-patching file include/uapi/linux/nfs_mount.h (renamed from include/linux/nfs_mount.h)
-patching file include/uapi/linux/nfsacl.h
-patching file include/uapi/linux/nl80211.h (renamed from include/linux/nl80211.h)
-patching file include/uapi/linux/nubus.h
-patching file include/uapi/linux/nvram.h
-patching file include/uapi/linux/omap3isp.h (renamed from include/linux/omap3isp.h)
-patching file include/uapi/linux/omapfb.h
-patching file include/uapi/linux/oom.h
-Cannot rename file without two valid file names
-patching file include/uapi/linux/param.h (renamed from include/linux/param.h)
-patching file include/uapi/linux/parport.h
-patching file include/uapi/linux/patchkey.h
-patching file include/uapi/linux/pci.h
-patching file include/uapi/linux/pci_regs.h (renamed from include/linux/pci_regs.h)
-patching file include/uapi/linux/perf_event.h
-patching file include/uapi/linux/personality.h
-patching file include/uapi/linux/pfkeyv2.h (renamed from include/linux/pfkeyv2.h)
-patching file include/uapi/linux/pg.h (renamed from include/linux/pg.h)
-patching file include/uapi/linux/phantom.h (renamed from include/linux/phantom.h)
-patching file include/uapi/linux/phonet.h
-patching file include/uapi/linux/pkt_cls.h (renamed from include/linux/pkt_cls.h)
-patching file include/uapi/linux/pkt_sched.h (renamed from include/linux/pkt_sched.h)
-patching file include/uapi/linux/pktcdvd.h
-patching file include/uapi/linux/pmu.h
-patching file include/uapi/linux/poll.h
-patching file include/uapi/linux/posix_types.h (renamed from include/linux/posix_types.h)
-patching file include/uapi/linux/ppdev.h (renamed from include/linux/ppdev.h)
-patching file include/uapi/linux/ppp-comp.h
-patching file include/uapi/linux/ppp-ioctl.h (renamed from include/linux/ppp-ioctl.h)
-patching file include/uapi/linux/ppp_defs.h
-patching file include/uapi/linux/pps.h (renamed from include/linux/pps.h)
-patching file include/uapi/linux/prctl.h (renamed from include/linux/prctl.h)
-patching file include/uapi/linux/ptp_clock.h (renamed from include/linux/ptp_clock.h)
-patching file include/uapi/linux/ptrace.h
-patching file include/uapi/linux/qnx4_fs.h (renamed from include/linux/qnx4_fs.h)
-patching file include/uapi/linux/qnxtypes.h (renamed from include/linux/qnxtypes.h)
-patching file include/uapi/linux/quota.h
-patching file include/uapi/linux/radeonfb.h (renamed from include/linux/radeonfb.h)
-patching file include/uapi/linux/random.h
-patching file include/uapi/linux/raw.h (renamed from include/linux/raw.h)
-patching file include/uapi/linux/rds.h (renamed from include/linux/rds.h)
-patching file include/uapi/linux/reboot.h
-patching file include/uapi/linux/reiserfs_fs.h (renamed from include/linux/reiserfs_fs.h)
-patching file include/uapi/linux/reiserfs_xattr.h (renamed from include/linux/reiserfs_xattr.h)
-patching file include/uapi/linux/resource.h
-patching file include/uapi/linux/rfkill.h
-patching file include/uapi/linux/romfs_fs.h (renamed from include/linux/romfs_fs.h)
-patching file include/uapi/linux/rose.h (renamed from include/linux/rose.h)
-patching file include/uapi/linux/route.h (renamed from include/linux/route.h)
-patching file include/uapi/linux/rtc.h
-patching file include/uapi/linux/rtnetlink.h
-patching file include/uapi/linux/scc.h
-patching file include/uapi/linux/sched.h
-patching file include/uapi/linux/screen_info.h
-patching file include/uapi/linux/sdla.h
-patching file include/uapi/linux/seccomp.h
-patching file include/uapi/linux/securebits.h
-patching file include/uapi/linux/selinux_netlink.h (renamed from include/linux/selinux_netlink.h)
-patching file include/uapi/linux/sem.h
-patching file include/uapi/linux/serial.h
-patching file include/uapi/linux/serial_core.h
-patching file include/uapi/linux/serial_reg.h (renamed from include/linux/serial_reg.h)
-patching file include/uapi/linux/serio.h
-patching file include/uapi/linux/shm.h
-patching file include/uapi/linux/signal.h
-patching file include/uapi/linux/signalfd.h
-patching file include/uapi/linux/snmp.h (renamed from include/linux/snmp.h)
-patching file include/uapi/linux/sock_diag.h
-patching file include/uapi/linux/socket.h
-patching file include/uapi/linux/sockios.h (renamed from include/linux/sockios.h)
-patching file include/uapi/linux/som.h (renamed from include/linux/som.h)
-patching file include/uapi/linux/sonet.h
-patching file include/uapi/linux/sonypi.h
-patching file include/uapi/linux/sound.h
-patching file include/uapi/linux/soundcard.h
-patching file include/uapi/linux/stat.h
-patching file include/uapi/linux/stddef.h
-patching file include/uapi/linux/string.h
-patching file include/uapi/linux/suspend_ioctls.h (renamed from include/linux/suspend_ioctls.h)
-patching file include/uapi/linux/swab.h
-patching file include/uapi/linux/synclink.h
-patching file include/uapi/linux/sysctl.h
-patching file include/uapi/linux/sysinfo.h (renamed from include/linux/sysinfo.h)
-patching file include/uapi/linux/taskstats.h (renamed from include/linux/taskstats.h)
-patching file include/uapi/linux/tcp.h
-Cannot rename file without two valid file names
-patching file include/uapi/linux/telephony.h (renamed from include/linux/telephony.h)
-patching file include/uapi/linux/termios.h (renamed from include/linux/termios.h)
-patching file include/uapi/linux/time.h
-patching file include/uapi/linux/times.h (renamed from include/linux/times.h)
-patching file include/uapi/linux/timex.h
-patching file include/uapi/linux/tiocl.h (renamed from include/linux/tiocl.h)
-patching file include/uapi/linux/tipc.h (renamed from include/linux/tipc.h)
-patching file include/uapi/linux/tipc_config.h (renamed from include/linux/tipc_config.h)
-patching file include/uapi/linux/toshiba.h
-patching file include/uapi/linux/tty.h
-Cannot rename file without two valid file names
-patching file include/uapi/linux/types.h
-patching file include/uapi/linux/udf_fs_i.h (renamed from include/linux/udf_fs_i.h)
-patching file include/uapi/linux/udp.h
-patching file include/uapi/linux/uhid.h (renamed from include/linux/uhid.h)
-patching file include/uapi/linux/uinput.h
-patching file include/uapi/linux/uio.h
-patching file include/uapi/linux/ultrasound.h (renamed from include/linux/ultrasound.h)
-patching file include/uapi/linux/un.h (renamed from include/linux/un.h)
-patching file include/uapi/linux/unistd.h (renamed from include/linux/unistd.h)
-patching file include/uapi/linux/unix_diag.h (renamed from include/linux/unix_diag.h)
-patching file include/uapi/linux/usbdevice_fs.h
-patching file include/uapi/linux/utime.h (renamed from include/linux/utime.h)
-patching file include/uapi/linux/utsname.h
-patching file include/uapi/linux/uuid.h
+
 patching file include/uapi/linux/uvcvideo.h (renamed from include/linux/uvcvideo.h)
 Cannot rename file without two valid file names
 Cannot rename file without two valid file names
 Cannot rename file without two valid file names
-patching file include/uapi/linux/v4l2-mediabus.h (renamed from include/linux/v4l2-mediabus.h)
-patching file include/uapi/linux/v4l2-subdev.h (renamed from include/linux/v4l2-subdev.h)
-patching file include/uapi/linux/veth.h (renamed from include/linux/veth.h)
-patching file include/uapi/linux/vfio.h
-patching file include/uapi/linux/vhost.h (renamed from include/linux/vhost.h)
-patching file include/uapi/linux/videodev2.h
-patching file include/uapi/linux/virtio_9p.h (renamed from include/linux/virtio_9p.h)
-patching file include/uapi/linux/virtio_balloon.h (renamed from include/linux/virtio_balloon.h)
-patching file include/uapi/linux/virtio_blk.h (renamed from include/linux/virtio_blk.h)
-patching file include/uapi/linux/virtio_config.h
-patching file include/uapi/linux/virtio_console.h
-patching file include/uapi/linux/virtio_ids.h (renamed from include/linux/virtio_ids.h)
-patching file include/uapi/linux/virtio_net.h (renamed from include/linux/virtio_net.h)
-patching file include/uapi/linux/virtio_pci.h (renamed from include/linux/virtio_pci.h)
-patching file include/uapi/linux/virtio_ring.h
-patching file include/uapi/linux/virtio_rng.h (renamed from include/linux/virtio_rng.h)
-patching file include/uapi/linux/vt.h
-patching file include/uapi/linux/wait.h
-patching file include/uapi/linux/wanrouter.h
-patching file include/uapi/linux/watchdog.h
-patching file include/uapi/linux/wimax.h (renamed from include/linux/wimax.h)
-patching file include/uapi/linux/wireless.h
-patching file include/uapi/linux/x25.h (renamed from include/linux/x25.h)
-patching file include/uapi/linux/xattr.h
-patching file include/uapi/linux/xfrm.h (renamed from include/linux/xfrm.h)
-patching file tools/vm/page-types.c
-root@machina:~/machinex#
