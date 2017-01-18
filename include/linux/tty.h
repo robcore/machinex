@@ -676,4 +676,5 @@ do {									\
 } while (0)
 
 
+#endif /* __KERNEL__ */
 #endif

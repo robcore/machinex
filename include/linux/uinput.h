@@ -1,3 +1,5 @@
+#ifndef __UINPUT_H_
+#define __UINPUT_H_
 /*
  *  User level driver support for input subsystem
  *

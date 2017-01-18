@@ -357,4 +357,5 @@ static inline void mdio45_ethtool_gset(const struct mdio_if_info *mdio,
 extern int mdio_mii_ioctl(const struct mdio_if_info *mdio,
 			  struct mii_ioctl_data *mii_data, int cmd);
 
+#endif /* __KERNEL__ */
 #endif /* __LINUX_MDIO_H__ */

@@ -1,3 +1,6 @@
+#ifndef _INPUT_H
+#define _INPUT_H
+
 /*
  * Copyright (c) 1999-2002 Vojtech Pavlik
  *
@@ -1715,4 +1718,5 @@ int input_ff_erase(struct input_dev *dev, int effect_id, struct file *file);
 int input_ff_create_memless(struct input_dev *dev, void *data,
 		int (*play_effect)(struct input_dev *, void *, struct ff_effect *));
 
+#endif
 #endif

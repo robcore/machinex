@@ -162,7 +162,6 @@ typedef struct {
 #include <linux/skbuff.h>
 #include <linux/tcp.h>
 #include <linux/mutex.h>
-#include <uapi/linux/isdn.h>
 
 #define ISDN_TTY_MAJOR    43
 #define ISDN_TTYAUX_MAJOR 44
@@ -617,5 +616,7 @@ typedef struct isdn_devt {
 
 extern isdn_dev *dev;
 
+
+#endif /* __KERNEL__ */
 
 #endif /* __ISDN_H__ */
