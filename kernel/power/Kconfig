@@ -33,13 +33,6 @@ config POWERSUSPEND
 	  Call early suspend handlers when the user requested sleep state
 	  changes.
 
-config POWERSUSPEND_BETA_VERSION
-	bool "Powersuspend Beta"
-	depends on POWERSUSPEND
-	default n
-	---help---
-	  Indicate if this is a WIP version of the driver or not.
-
 config HIBERNATE_CALLBACKS
 	bool
 

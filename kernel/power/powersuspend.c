@@ -41,11 +41,6 @@
  *		  state notifier, we can only see "state" when the screen is on, so
  *		  it is pointless to expose to userspace. Topped off with some cleanup.
  *
- * v2.0   Final cleanup to functionality.  For faster response to screen on/off events,
- *		  ensure that the previous work is cancelled upon a valid requested state change.
- *		  Switched back to a single thread workqueue but allocated properly. Topped off
- *		  with some driver cleanup and a config option for using the SUB_MINOR_VERISON.
- *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -59,16 +54,13 @@
 
 #include <linux/powersuspend.h>
 
-#define MAJOR_VERSION	2
-#define MINOR_VERSION	0
-#ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
-#define SUB_MINOR_VERSION
-#endif
+#define MAJOR_VERSION	1
+#define MINOR_VERSION	9
+#define SUB_MINOR_VERSION 2
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(state_lock);
 static LIST_HEAD(power_suspend_handlers);
-static struct workqueue_struct *pwrsup_wq;
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
 static void power_suspend(struct work_struct *work);
@@ -160,24 +152,22 @@ void set_power_suspend_state(int new_state)
 		spin_lock_irqsave(&state_lock, irqflags);
 		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			pr_info("[POWERSUSPEND] Suspend State Activated.\n");
-			cancel_work_sync(&power_resume_work);
 			state = new_state;
-			queue_work(pwrsup_wq, &power_suspend_work);
+			schedule_work(&power_suspend_work);
 		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			pr_info("[POWERSUSPEND] Resume State Activated.\n");
-			cancel_work_sync(&power_suspend_work);
 			state = new_state;
-			queue_work(pwrsup_wq, &power_resume_work);
+			schedule_work(&power_resume_work);
 		}
 		spin_unlock_irqrestore(&state_lock, irqflags);
 	} else {
-		pr_info("[POWERSUSPEND] Ignoring State Request.\n");
+		pr_info("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
 	}
 }
 
 void set_power_suspend_state_panel_hook(int new_state)
 {
-	pr_info("[POWERSUSPEND] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
+	pr_info("[POWERSUSPEND] panel requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
 	set_power_suspend_state(new_state);
 }
 
@@ -188,11 +178,7 @@ EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
 static ssize_t power_suspend_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-#ifdef CONFIG_POWERSUSPEND_BETA_VERSION
-	return sprintf(buf, "Powersuspend Version: %d.%d.%d\n", MAJOR_VERSION, MINOR_VERSION, SUB_MINOR_VERSION);
-#else
-	return sprintf(buf, "Powersuspend Version: %d.%d\n", MAJOR_VERSION, MINOR_VERSION);
-#endif
+	return sprintf(buf, "version: %d.%d.%d\n", MAJOR_VERSION, MINOR_VERSION, SUB_MINOR_VERSION);
 }
 
 static struct kobj_attribute power_suspend_version_attribute =
@@ -236,10 +222,6 @@ static int power_suspend_init(void)
 	return -ENOMEM;
 	}
 
-	pwrsup_wq = alloc_workqueue("ps_pwrsup_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
-	if (!pwrsup_wq)
-		pr_err("[POWERSUSPEND] Failed to allocate workqueue\n");
-
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
@@ -248,8 +230,8 @@ static int power_suspend_init(void)
 
 static void power_suspend_exit(void)
 {
-	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
+	flush_work(&power_suspend_work);
 
 	if (power_suspend_kobj != NULL)
 		kobject_put(power_suspend_kobj);
