@@ -39,16 +39,16 @@
 
 
 struct uinput_ff_upload {
-	__u32			request_id;
-	__s32			retval;
+	int			request_id;
+	int			retval;
 	struct ff_effect	effect;
 	struct ff_effect	old;
 };
 
 struct uinput_ff_erase {
-	__u32			request_id;
-	__s32			retval;
-	__u32			effect_id;
+	int			request_id;
+	int			retval;
+	int			effect_id;
 };
 
 /* ioctl */
@@ -128,10 +128,10 @@ struct uinput_ff_erase {
 struct uinput_user_dev {
 	char name[UINPUT_MAX_NAME_SIZE];
 	struct input_id id;
-	__u32 ff_effects_max;
-	__s32 absmax[ABS_CNT];
-	__s32 absmin[ABS_CNT];
-	__s32 absfuzz[ABS_CNT];
-	__s32 absflat[ABS_CNT];
+	int ff_effects_max;
+	int absmax[ABS_CNT];
+	int absmin[ABS_CNT];
+	int absfuzz[ABS_CNT];
+	int absflat[ABS_CNT];
 };
 #endif /* _UAPI__UINPUT_H_ */
