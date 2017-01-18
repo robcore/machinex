@@ -105,7 +105,7 @@ void state_resume(void)
 	//resume_in_progress = true;
 
 	if (state_suspended)
-		queue_delayed_work(susp_wq, &resume_work
+		queue_delayed_work(susp_wq, &resume_work,
 			msecs_to_jiffies(resume_defer_time * 1000));
 	else
 		printk("[STATE_NOTIFIER] Skipping Resume\n");
