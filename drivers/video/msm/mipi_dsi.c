@@ -183,7 +183,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("Rob's DSI OFF HOOK");
+	printk("Rob's DSI OFF HOOK\n");
 
 #ifdef CONFIG_STATE_NOTIFIER
 	state_suspend();
@@ -466,7 +466,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("Rob's DSI ON HOOK");
+	printk("Rob's DSI ON HOOK\n");
 
 #ifdef CONFIG_STATE_NOTIFIER
 		state_resume();

@@ -13,16 +13,18 @@
 #include <linux/module.h>
 #include <linux/state_notifier.h>
 
-#define STATE_NOTIFIER			"state_notifier"
+#define STATE_NOTIFIER "state_notifier"
 
 static struct delayed_work suspend_work;
-static struct work_struct resume_work;
+static struct delayed_work resume_work;
 static struct workqueue_struct *susp_wq;
 static unsigned int suspend_defer_time = 0;
 module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
+static unsigned int resume_defer_time = 0;
+module_param_named(resume_defer_time, resume_defer_time, uint, 0664);
 bool state_suspended;
-module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
+//static bool resume_in_progress;
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
 
@@ -71,6 +73,7 @@ static void _resume_work(struct work_struct *work)
 	printk("[STATE_NOTIFIER] RESUMING\n");
 	state_suspended = false;
 	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
+	//resume_in_progress = false;
 }
 
 void state_suspend(void)
@@ -79,6 +82,8 @@ void state_suspend(void)
 		return;
 
 	printk("[STATE NOTIFIER] - Suspend Called\n");
+	cancel_delayed_work_sync(&resume_work);
+	//resume_in_progress = false;
 	suspend_in_progress = true;
 
 	queue_delayed_work(susp_wq, &suspend_work,
@@ -87,6 +92,9 @@ void state_suspend(void)
 
 void state_resume(void)
 {
+//	if (resume_in_progress)
+//		return;
+
 	if (suspend_in_progress)
 		printk("[STATE NOTIFIER] - Suspend Work Cancelled by Resume\n");
 	else
@@ -94,9 +102,11 @@ void state_resume(void)
 
 	cancel_delayed_work_sync(&suspend_work);
 	suspend_in_progress = false;
+	//resume_in_progress = true;
 
 	if (state_suspended)
-		queue_work(susp_wq, &resume_work);
+		queue_delayed_work(susp_wq, &resume_work
+			msecs_to_jiffies(resume_defer_time * 1000));
 	else
 		printk("[STATE_NOTIFIER] Skipping Resume\n");
 }
@@ -108,15 +118,15 @@ static int state_notifier_init(void)
 		pr_err("[State_Notifier] failed to allocate suspend workqueue\n");
 
 	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
-	INIT_WORK(&resume_work, _resume_work);
+	INIT_DELAYED_WORK(&resume_work, _resume_work);
 
 	return 0;
 }
 
 static void state_notifier_exit(void)
 {
-	flush_work(&resume_work);
 	flush_delayed_work(&suspend_work);
+	flush_delayed_work(&resume_work);
 	destroy_workqueue(susp_wq);
 }
 
