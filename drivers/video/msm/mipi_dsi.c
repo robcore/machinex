@@ -184,18 +184,20 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		up(&mfd->dma->mutex);
 
 	printk("Rob's DSI OFF HOOK");
-#ifdef CONFIG_POWERSUSPEND
-	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
-#endif
 
 #ifdef CONFIG_STATE_NOTIFIER
 	state_suspend();
 #endif
 
+#ifdef CONFIG_POWERSUSPEND
+	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
+
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
+
 	return ret;
 }
 
@@ -236,19 +238,8 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
 #if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
-	if( is_booting == 1 )
-	{
+	if( is_booting == 1 ) {
 		is_booting = 0;
-#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-		usleep(5000);
-		if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
-				mipi_dsi_pdata->active_reset(0); /* low */
-		usleep(2000);
-
-		if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
-			mipi_dsi_pdata->panel_power_save(0);
-		msleep(10);
-#endif
 	}
 #endif
 
@@ -477,14 +468,14 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 	printk("Rob's DSI ON HOOK");
 
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+#endif
+
 #ifdef CONFIG_POWERSUSPEND
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
 		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
-
-	#ifdef CONFIG_STATE_NOTIFIER
-		state_resume();
-	#endif
 
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
