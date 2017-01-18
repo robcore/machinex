@@ -5,16 +5,6 @@ REFERENCE PATCH: /media/root/robcore/android/emotion-cm-trlte/patches/8patches/1
 
 pp '/media/root/robcore/android/emotion-cm-trlte/patches/8patches/1558-UAPI-Scripted-Disintegrate-include-linux.patch'
 
-patching file include/linux/swab.h
-Hunk #1 FAILED at 1.
-Hunk #2 succeeded at 300 (offset 6 lines).
-1 out of 2 hunks FAILED -- saving rejects to file include/linux/swab.h.rej
-
-patching file include/linux/sysctl.h
-Hunk #1 FAILED at 18.
-Hunk #2 succeeded at 1124 (offset 2 lines).
-1 out of 2 hunks FAILED -- saving rejects to file include/linux/sysctl.h.rej
-
 patching file include/linux/tcp.h
 Hunk #1 FAILED at 17.
 Hunk #2 succeeded at 501 with fuzz 1 (offset -94 lines).
