@@ -118,16 +118,12 @@ sdioh_sdmmc_card_enablefuncs(sdioh_info_t *sd)
 	sd_info(("%s: Card's Common CIS Ptr = 0x%x\n", __FUNCTION__, sd->com_cis_ptr));
 
 	/* Enable Function 1 */
-	if (sd->func[1]) {
-		sdio_claim_host(sd->func[1]);
-		err_ret = sdio_enable_func(sd->func[1]);
-		sdio_release_host(sd->func[1]);
-		if (err_ret) {
-			sd_err(("bcmsdh_sdmmc: Failed to enable F1 Err: 0x%08x", err_ret));
-		}
+	sdio_claim_host(sd->func[1]);
+	err_ret = sdio_enable_func(sd->func[1]);
+	sdio_release_host(sd->func[1]);
+	if (err_ret) {
+		sd_err(("bcmsdh_sdmmc: Failed to enable F1 Err: 0x%08x", err_ret));
 	}
-	else
-		sd_err(("%s:gInstance->func[1] is null\n", __FUNCTION__));
 
 	return FALSE;
 }
@@ -153,8 +149,6 @@ sdioh_attach(osl_t *osh, struct sdio_func *func)
 		return NULL;
 	}
 	bzero((char *)sd, sizeof(sdioh_info_t));
-	/* Initialize the scatter gather table entries */
-	sg_init_table(&sd->sg_list[0], SDIOH_SDMMC_MAX_SG_ENTRIES);
 	sd->osh = osh;
 	sd->fake_func0.num = 0;
 	sd->fake_func0.card = func->card;
@@ -1244,18 +1238,17 @@ sdioh_sdmmc_devintr_on(sdioh_info_t *sd)
 int
 sdioh_sdmmc_card_regread(sdioh_info_t *sd, int func, uint32 regaddr, int regsize, uint32 *data)
 {
-	int ret = SUCCESS;
 
 	if ((func == 0) || (regsize == 1)) {
 		uint8 temp = 0;
 
-		ret = sdioh_request_byte(sd, SDIOH_READ, func, regaddr, &temp);
+		sdioh_request_byte(sd, SDIOH_READ, func, regaddr, &temp);
 		*data = temp;
 		*data &= 0xff;
 		sd_data(("%s: byte read data=0x%02x\n",
 		         __FUNCTION__, *data));
 	} else {
-		ret = sdioh_request_word(sd, 0, SDIOH_READ, func, regaddr, data, regsize);
+		sdioh_request_word(sd, 0, SDIOH_READ, func, regaddr, data, regsize);
 		if (regsize == 2)
 			*data &= 0xffff;
 
@@ -1263,7 +1256,7 @@ sdioh_sdmmc_card_regread(sdioh_info_t *sd, int func, uint32 regaddr, int regsize
 		         __FUNCTION__, *data));
 	}
 
-	return ret;
+	return SUCCESS;
 }
 
 #if !defined(OOB_INTR_ONLY)
