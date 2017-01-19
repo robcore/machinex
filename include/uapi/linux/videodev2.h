@@ -62,8 +62,6 @@
 #include <linux/compiler.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
-#include <linux/v4l2-common.h>
-#include <linux/v4l2-controls.h>
 
 /*
  * Common stuff for both V4L1 and V4L2
