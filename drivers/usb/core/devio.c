@@ -248,6 +248,7 @@ static ssize_t usbdev_read(struct file *file, char __user *buf, size_t nbytes,
 					ret = -EFAULT;
 					goto err;
 				}
+				uurb->buffer += u;
 			}
 
 			*ppos += len;
