@@ -1,7 +1,11 @@
 #ifndef _LINUX_ELF_H
 #define _LINUX_ELF_H
 
-#include <uapi/linux/elfcore.h>
+#include <linux/types.h>
+#include <linux/elf-em.h>
+#include <asm/elf.h>
+
+#include <uapi/linux/elf.h>
 
 
 #ifndef elf_read_implies_exec
