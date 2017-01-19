@@ -134,10 +134,6 @@ struct inodes_stat_t {
  */
 #define CHECK_IOVEC_ONLY -1
 
-#define SEL_IN		1
-#define SEL_OUT		2
-#define SEL_EX		4
-
 /*
  * flags in file.f_mode.  Note that FMODE_READ and FMODE_WRITE must correspond
  * to O_WRONLY and O_RDWR via the strange trick in __dentry_open()
