@@ -719,8 +719,10 @@ static int platform_legacy_suspend(struct device *dev, pm_message_t mesg)
 	struct platform_device *pdev = to_platform_device(dev);
 	int ret = 0;
 
-	if (dev->driver && pdrv->suspend)
+	if (dev->driver && pdrv->suspend) {
 		ret = pdrv->suspend(pdev, mesg);
+		suspend_report_result(pdrv->suspend, ret);
+	}
 
 	return ret;
 }
@@ -750,10 +752,13 @@ int platform_pm_suspend(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->suspend)
+		if (drv->pm->suspend) {
 			ret = drv->pm->suspend(dev);
+			suspend_report_result(drv->pm->suspend, ret);
+		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_SUSPEND);
+		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -790,10 +795,13 @@ int platform_pm_freeze(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->freeze)
+		if (drv->pm->freeze) {
 			ret = drv->pm->freeze(dev);
+			suspend_report_result(drv->pm->freeze, ret);
+		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_FREEZE);
+		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -826,10 +834,13 @@ int platform_pm_poweroff(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->poweroff)
+		if (drv->pm->poweroff) {
 			ret = drv->pm->poweroff(dev);
+			suspend_report_result(drv->pm->poweroff, ret);
+		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_HIBERNATE);
+		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
