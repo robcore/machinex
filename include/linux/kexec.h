@@ -68,6 +68,13 @@ typedef unsigned long kimage_entry_t;
 #define IND_DONE         0x4
 #define IND_SOURCE       0x8
 
+struct kexec_segment {
+	void __user *buf;
+	size_t bufsz;
+	unsigned long mem;
+	size_t memsz;
+};
+
 #ifdef CONFIG_COMPAT
 struct compat_kexec_segment {
 	compat_uptr_t buf;
