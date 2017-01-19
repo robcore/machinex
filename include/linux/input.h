@@ -5,6 +5,8 @@
  * under the terms of the GNU General Public License version 2 as published by
  * the Free Software Foundation.
  */
+#ifndef _INPUT_H
+#define _INPUT_H
 
 #include <uapi/linux/input.h>
 

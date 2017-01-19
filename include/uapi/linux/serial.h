@@ -2,8 +2,8 @@
  * include/linux/serial.h
  *
  * Copyright (C) 1992 by Theodore Ts'o.
- * 
- * Redistribution of this file is permitted under the terms of the GNU 
+ *
+ * Redistribution of this file is permitted under the terms of the GNU
  * Public License (GPL)
  */
 
@@ -11,9 +11,6 @@
 #define _UAPI_LINUX_SERIAL_H
 
 #include <linux/types.h>
-
-#include <linux/tty_flags.h>
-
 
 struct serial_struct {
 	int	type;
