@@ -775,6 +775,9 @@ int parse_events_modifier(struct list_head *list, char *str)
 			eH = 0;
 		} else if (*str == 'p') {
 			precise++;
+			/* use of precise requires exclude_guest */
+			if (!exclude_GH)
+				eG = 1;
 		} else
 			break;
 
