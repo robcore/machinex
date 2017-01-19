@@ -5,10 +5,6 @@ REFERENCE PATCH: /media/root/robcore/android/emotion-cm-trlte/patches/8patches/1
 
 pp '/media/root/robcore/android/emotion-cm-trlte/patches/8patches/1558-UAPI-Scripted-Disintegrate-include-linux.patch'
 
-patching file include/linux/videodev2.h
-Hunk #1 FAILED at 56.
-1 out of 1 hunk FAILED -- saving rejects to file include/linux/videodev2.h.rej
-
 patching file include/linux/virtio_console.h
 Hunk #2 FAILED at 29.
 1 out of 2 hunks FAILED -- saving rejects to file include/linux/virtio_console.h.rej
