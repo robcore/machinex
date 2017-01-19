@@ -14,7 +14,7 @@
 #include "util.h"
 #include "cpumap.h"
 #include "thread_map.h"
-#include "../../include/linux/perf_event.h"
+#include "../../../include/uapi/linux/perf_event.h"
 
 #define FD(e, x, y) (*(int *)xyarray__entry(e->fd, x, y))
 #define GROUP_FD(group_fd, cpu) (*(int *)xyarray__entry(group_fd, cpu, 0))
