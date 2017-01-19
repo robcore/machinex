@@ -4,20 +4,3 @@ REFERENCE PATCH: /media/root/robcore/android/emotion-cm-trlte/patches/8patches/1
 
 
 pp '/media/root/robcore/android/emotion-cm-trlte/patches/8patches/1558-UAPI-Scripted-Disintegrate-include-linux.patch'
-
-patching file include/linux/virtio_console.h
-Hunk #2 FAILED at 29.
-1 out of 2 hunks FAILED -- saving rejects to file include/linux/virtio_console.h.rej
-
-patching file include/linux/xattr.h
-Hunk #1 FAILED at 10.
-Hunk #2 succeeded at 144 (offset -3 lines).
-1 out of 2 hunks FAILED -- saving rejects to file include/linux/xattr.h.rej
-
-patching file include/uapi/linux/media.h (renamed from include/linux/media.h)
-Cannot rename file without two valid file names
-
-patching file include/uapi/linux/uvcvideo.h (renamed from include/linux/uvcvideo.h)
-Cannot rename file without two valid file names
-Cannot rename file without two valid file names
-Cannot rename file without two valid file names
