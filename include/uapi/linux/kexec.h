@@ -40,9 +40,9 @@
  * loading  kernel binaries.
  */
 struct kexec_segment {
-	void __user *buf;
+	const void *buf;
 	size_t bufsz;
-	unsigned long mem;
+	const void *mem;
 	size_t memsz;
 };
 
