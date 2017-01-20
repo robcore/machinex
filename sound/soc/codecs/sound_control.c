@@ -370,9 +370,6 @@ static int sound_control_init(void)
 {
 	int sysfs_result;
 
-	snd_ctrl_enabled = 1;
-	snd_ctrl_locked = 2;
-
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
 
@@ -388,9 +385,13 @@ static int sound_control_init(void)
 	if (sysfs_result) {
 		pr_info("%s sysfs create failed!\n", __FUNCTION__);
 		kobject_put(sound_control_kobj);
+		return -ENOMEM;
 	}
 
-	return sysfs_result;
+	snd_ctrl_enabled = 1;
+	snd_ctrl_locked = 2;
+
+	return 0;
 }
 
 static void sound_control_exit(void)
