@@ -210,7 +210,7 @@ static ssize_t power_suspend_sync_store(struct kobject *kobj,
 	sscanf(buf, "%d\n", &val);
 
 	if (val < 0 || val > 1)
-		return -EINVAL
+		return -EINVAL;
 
 	sync_on_powersuspend = val;
 	return count;
