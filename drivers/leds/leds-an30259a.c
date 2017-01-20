@@ -479,9 +479,9 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_R, true, true, LED_R_CURRENT);
 		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
-		leds_set_slope_mode(client, LED_R, 0, 0, 0, (15 / led_speed), 1, (10 / led_speed), 0, 0, 0, 0);
-		leds_set_slope_mode(client, LED_G, 0, 0, (15 / led_speed), 0, 1, (10 / led_speed), 0, 0, 0, 0);
-		leds_set_slope_mode(client, LED_B, 0, (15 / led_speed), 0, 0, 1, (10 / led_speed), 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_R, 0, 5, 5, 0, 2, 1, 4, 3, 3, 2);
+		leds_set_slope_mode(client, LED_G, 0, 15, 10, 15, 2, 1, 4, 3, 3, 2);
+		leds_set_slope_mode(client, LED_B, 0, 15, 10, 15, 1, 1, 4, 3, 3, 2);
 
 		break;
 
@@ -1113,10 +1113,9 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 
 #ifdef SEC_LED_SPECIFIC
 	led_enable_fade = 0;  /* default to stock behaviour = blink */
-/*	led_intensity =  0; default to CM behaviour = brighter blink intensity allowed */
+//	led_intensity =  0;   /* default to CM behaviour = brighter blink intensity allowed */
 	led_intensity = 40;   /* default to Samsung behaviour = normal intensity */
-/* 	led_speed = 1; default to stock behaviour = normal blinking/fading speed */
-	led_speed = 13;        /* default to faster blinking/fading speed */
+	led_speed = 1;        /* default to stock behaviour = normal blinking/fading speed */
 	led_slope_up_1 = 1;   /* default slope durations for fading */
 	led_slope_up_2 = 1;
 	led_slope_down_1 = 1;
