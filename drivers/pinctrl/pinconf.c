@@ -503,8 +503,6 @@ static int pinconf_groups_show(struct seq_file *s, void *what)
 	seq_puts(s, "Pin config settings per pin group\n");
 	seq_puts(s, "Format: group (name): pinmux setting array\n");
 
-	mutex_lock(&pinctrl_mutex);
-
 	while (pctlops->list_groups(pctldev, selector) >= 0) {
 		const char *gname = pctlops->get_group_name(pctldev, selector);
 
@@ -514,8 +512,6 @@ static int pinconf_groups_show(struct seq_file *s, void *what)
 
 		selector++;
 	}
-
-	mutex_unlock(&pinctrl_mutex);
 
 	return 0;
 }
