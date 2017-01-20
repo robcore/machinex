@@ -6382,7 +6382,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	ret = start_isolate_page_range(pfn_max_align_down(start),
 				       pfn_max_align_up(end), migratetype);
 	if (ret)
-		goto done;
+		return ret;
 
 	zone->cma_alloc = 1;
 
