@@ -923,12 +923,12 @@ static int bluesleep_probe(struct platform_device *pdev)
 
 	if (bsi->irq_polarity == POLARITY_LOW) {
 		ret = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_FALLING
+				IRQF_DISABLED | IRQF_TRIGGER_FALLING |
 						IRQF_ONESHOT,
 				"bluetooth hostwake", NULL);
 	} else {
 		ret = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_RISING
+				IRQF_DISABLED | IRQF_TRIGGER_RISING |
 						IRQF_ONESHOT,
 				"bluetooth hostwake", NULL);
 	}
