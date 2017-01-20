@@ -46,6 +46,8 @@
  *		  Switched back to a single thread workqueue but allocated properly. Topped off
  *		  with some driver cleanup and a config option for using the SUB_MINOR_VERISON.
  *
+ * v2.1   Provide a user-configurable option to sync the system on powersuspend.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -60,7 +62,7 @@
 #include <linux/powersuspend.h>
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	0
+#define MINOR_VERSION	1
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
@@ -73,8 +75,10 @@ struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
-
-static int state; // Yank555.lu : Current powersuspend state (screen on / off)
+/* Yank555.lu : Current powersuspend state (screen on / off) */
+static int state;
+/* Robcore: Provide an option to sync the system on powersuspend */
+static int sync_on_powersuspend;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -121,6 +125,13 @@ static void power_suspend(struct work_struct *work)
 		}
 	}
 	pr_info("[POWERSUSPEND] Suspend Completed.\n");
+
+	if (sync_on_powersuspend) {
+		mutex_unlock(&power_suspend_lock);
+		pr_info("[POWERSUSPEND] Syncing\n");
+		sys_sync();
+	}
+
 abort_suspend:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -185,6 +196,31 @@ EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
 
 // ------------------------------------------ sysfs interface ------------------------------------------
 
+static ssize_t power_suspend_sync_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", sync_on_powersuspend);
+}
+
+static ssize_t power_suspend_sync_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	if (val < 0 || val > 1)
+		return -EINVAL
+
+	sync_on_powersuspend = val;
+	return count;
+}
+
+static struct kobj_attribute power_suspend_mode_attribute =
+	__ATTR(power_suspend_sync, 0666,
+		power_suspend_sync_show,
+		power_suspend_sync_store);
+
 static ssize_t power_suspend_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -202,6 +238,7 @@ static struct kobj_attribute power_suspend_version_attribute =
 
 static struct attribute *power_suspend_attrs[] =
 {
+	&power_suspend_sync_attribute.attr,
 	&power_suspend_version_attribute.attr,
 	NULL,
 };
@@ -213,7 +250,6 @@ static struct attribute_group power_suspend_attr_group =
 
 static struct kobject *power_suspend_kobj;
 
-// ------------------ sysfs interface -----------------------
 static int power_suspend_init(void)
 {
 
@@ -224,7 +260,7 @@ static int power_suspend_init(void)
 
 	if (!power_suspend_kobj) {
 		pr_err("%s kobject create failed!\n", __FUNCTION__);
-	return -ENOMEM;
+		return -ENOMEM;
 	}
 
 	sysfs_result = sysfs_create_group(power_suspend_kobj,
@@ -233,7 +269,7 @@ static int power_suspend_init(void)
 	if (sysfs_result) {
 		pr_info("%s group create failed!\n", __FUNCTION__);
 		kobject_put(power_suspend_kobj);
-	return -ENOMEM;
+		return -ENOMEM;
 	}
 
 	pwrsup_wq = alloc_workqueue("ps_pwrsup_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
@@ -243,16 +279,20 @@ static int power_suspend_init(void)
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
+	sync_on_powersuspend = 0; //Robcore: Preserve original functionality by default.
+
 	return 0;
 }
 
+/* This should never have to be used except on shutdown */
 static void power_suspend_exit(void)
 {
-	flush_work(&power_suspend_work);
-	flush_work(&power_resume_work);
-
-	if (power_suspend_kobj != NULL)
+	if (power_suspend_kobj != NULL) {
 		kobject_put(power_suspend_kobj);
+		flush_work(&power_suspend_work);
+		flush_work(&power_resume_work);
+		destroy_workqueue(suspend_work_queue);
+	}
 }
 
 subsys_initcall(power_suspend_init);

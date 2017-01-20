@@ -49,6 +49,8 @@
  *		  Switched back to a single thread workqueue but allocated properly. Topped off
  *		  with some driver cleanup and a config option for using the SUB_MINOR_VERISON.
  *
+ * v2.1   Provide a user-configurable option to sync the system on powersuspend.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -68,6 +70,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
+#include <linux/syscalls.h> /* sys_sync */
 
 #define POWER_SUSPEND_INACTIVE	0
 #define POWER_SUSPEND_ACTIVE	1
