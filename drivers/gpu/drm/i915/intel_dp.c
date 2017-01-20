@@ -36,7 +36,6 @@
 #include "i915_drv.h"
 #include "drm_dp_helper.h"
 
-#define DP_RECEIVER_CAP_SIZE	0xf
 #define DP_LINK_CHECK_TIMEOUT	(10 * 1000)
 
 #define DP_LINK_CONFIGURATION_SIZE	9
