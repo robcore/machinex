@@ -291,7 +291,7 @@ static void power_suspend_exit(void)
 		kobject_put(power_suspend_kobj);
 		flush_work(&power_suspend_work);
 		flush_work(&power_resume_work);
-		destroy_workqueue(suspend_work_queue);
+		destroy_workqueue(pwrsup_wq);
 	}
 }
 
