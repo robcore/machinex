@@ -79,7 +79,7 @@
 #define POLARITY_HIGH 1
 
 /* enable/disable wake-on-bluetooth */
-#define BT_ENABLE_IRQ_WAKE 1
+#define BT_ENABLE_IRQ_WAKE 0
 
 #define BT_BLUEDROID_SUPPORT 1
 
@@ -345,9 +345,9 @@ static void bluesleep_sleep_work(struct work_struct *work)
 
 			/*Deactivating UART */
 			/* UART clk is not turned off immediately. Release
-			 * wakelock after 500 ms.
+			 * wakelock after 125 ms.
 			 */
-			wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(500));
+			wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(125));
 		} else {
 			BT_DBG("host can enter sleep but some tx remained.");
 
@@ -414,7 +414,7 @@ static void bluesleep_outgoing_data(void)
 	hsuart_power(1);
 
 	bluesleep_tx_data_wakeup();
-
+	
 	mutex_unlock(&bluesleep_mutex);
 }
 
@@ -447,16 +447,26 @@ static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
 		return -EFAULT;
 
 	if (b == '0') {
+		BT_ERR("(bluesleep_write_proc_lpm) Unreg HCI notifier.");
 		/* HCI_DEV_UNREG */
 		bluesleep_stop();
 		has_lpm_enabled = false;
 		//bsi->uport = NULL;
 	} else if (b == '1') {
+		BT_ERR("(bluesleep_write_proc_lpm) Reg HCI notifier.");
 		/* HCI_DEV_REG */
+		if (!has_lpm_enabled) {
 			has_lpm_enabled = true;
 			bsi->uport = bluesleep_get_uart_port();
 			/* if bluetooth started, start bluesleep*/
 			bluesleep_start();
+		}
+	} else if (b == '2') {
+		BT_ERR("(bluesleep_write_proc_lpm) don`t control ext_wake & uart clk");
+		if(has_lpm_enabled) {
+			has_lpm_enabled = false;
+			bluesleep_abnormal_stop();
+		}
 	}
 
 	return count;
@@ -539,11 +549,7 @@ static void bluesleep_tx_timer_expire(unsigned long data)
 	/* were we silent during the last timeout? */
 	if (!test_bit(BT_TXDATA, &flags)) {
 		BT_DBG("Tx has been idle");
-		if (bsi->has_ext_wake == 1)
-		{
-			bluesleep_tx_timer_expired();
-		}
-		clear_bit(BT_EXT_WAKE, &flags);
+
 		bluesleep_tx_idle();
 	} else {
 		BT_DBG("Tx data during last period");
@@ -638,7 +644,7 @@ static void bluesleep_stop_wq(struct work_struct *work)
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
 #endif
-	wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(500));
+	wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(125));
 
 	bsi->uport = NULL;
 }
@@ -669,7 +675,7 @@ static void bluesleep_abnormal_stop_wq(struct work_struct *work)
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
 #endif
-	wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(500));
+	wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(125));
 
 	bsi->uport = NULL;
 }
@@ -923,13 +929,11 @@ static int bluesleep_probe(struct platform_device *pdev)
 
 	if (bsi->irq_polarity == POLARITY_LOW) {
 		ret = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_FALLING |
-						IRQF_ONESHOT,
+				IRQF_DISABLED | IRQF_TRIGGER_FALLING,
 				"bluetooth hostwake", NULL);
 	} else {
 		ret = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_RISING |
-						IRQF_ONESHOT,
+				IRQF_DISABLED | IRQF_TRIGGER_RISING,
 				"bluetooth hostwake", NULL);
 	}
 	if (ret  < 0) {
@@ -968,13 +972,11 @@ static int bluesleep_resume(struct platform_device *pdev)
 		}
 
 		clear_bit(BT_SUSPEND, &flags);
-#if 0
 		if ((bsi->uport != NULL) &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 				BT_DBG("bluesleep resume form BT event...");
 				hsuart_power(1);
 		}
-#endif
 	}
 	return 0;
 }
