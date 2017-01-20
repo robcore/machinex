@@ -216,7 +216,7 @@ static ssize_t power_suspend_sync_store(struct kobject *kobj,
 	return count;
 }
 
-static struct kobj_attribute power_suspend_mode_attribute =
+static struct kobj_attribute power_suspend_sync_attribute =
 	__ATTR(power_suspend_sync, 0666,
 		power_suspend_sync_show,
 		power_suspend_sync_store);
