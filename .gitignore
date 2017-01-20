@@ -78,6 +78,8 @@ arch/*/include/generated
 build/
 mx.ramdisk/
 mx.zip/
+include/linux/sandman.h
+kernel/power/sandman.c
 
 # stgit generated dirs
 patches-*
