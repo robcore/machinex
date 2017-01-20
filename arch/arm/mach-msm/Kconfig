@@ -173,7 +173,6 @@ config ARCH_MSM8960
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
-	select MSM_LPM_TEST
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -491,6 +490,7 @@ config MSM_LPM_TEST
 	bool "Low Power Mode test framework"
 	depends on MSM_RPM
 	depends on MSM_PM8X60
+	default n
 	help
 	  LPM_TEST is a test framework that assists in exercising the low
 	  power mode algorithm on MSM targets. This test framework tracks
