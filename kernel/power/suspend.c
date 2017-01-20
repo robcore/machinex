@@ -28,14 +28,11 @@
 #include <linux/rtc.h>
 #include <linux/ftrace.h>
 #include <trace/events/power.h>
+#include <linux/module.h>
 
 #include "power.h"
-
-#ifdef CONFIG_PM_SYNC_BEFORE_SUSPEND
-static int suspendsync = 1;
-#else
 static int suspendsync;
-#endif
+
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },
@@ -483,10 +480,80 @@ int pm_suspend(suspend_state_t state)
 }
 EXPORT_SYMBOL(pm_suspend);
 
-static int __init suspendsync_setup(char *str)
+static ssize_t suspendsync_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
-	suspendsync = simple_strtoul(str, NULL, 0);
-	return 1;
+        return sprintf(buf, "%u\n", suspendsync);
 }
-__setup("suspendsync=", suspendsync_setup);
 
+static ssize_t suspendsync_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	if (val < 0 || val > 1)
+		return -EINVAL;
+
+	suspendsync = val;
+	return count;
+}
+
+static struct kobj_attribute suspendsync_attribute =
+	__ATTR(suspendsync, 0666,
+		suspendsync_show,
+		suspendsync_store);
+
+static struct attribute *suspend_attrs[] =
+{
+	&suspendsync_attribute.attr,
+	NULL,
+};
+
+static struct attribute_group suspend_attr_group =
+{
+	.attrs = suspend_attrs,
+};
+
+static struct kobject *suspend_kobj;
+
+static int suspend_init(void)
+{
+
+	int sysfs_result;
+
+	suspend_kobj = kobject_create_and_add("suspend",
+		kernel_kobj);
+
+	if (!suspend_kobj) {
+		pr_err("%s kobject create failed!\n", __FUNCTION__);
+		return -ENOMEM;
+	}
+
+	sysfs_result = sysfs_create_group(suspend_kobj,
+		&suspend_attr_group);
+
+	if (sysfs_result) {
+		pr_info("%s group create failed!\n", __FUNCTION__);
+		kobject_put(suspend_kobj);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+/* This should never have to be used except on shutdown */
+static void suspend_exit(void)
+{
+	if (suspend_kobj != NULL) {
+		kobject_put(suspend_kobj);
+	}
+}
+
+subsys_initcall(suspend_init);
+module_exit(suspend_exit);
+
+MODULE_AUTHOR("Smart People");
+MODULE_DESCRIPTION("suspend");
+MODULE_LICENSE("GPL v2");

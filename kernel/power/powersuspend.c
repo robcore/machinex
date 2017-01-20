@@ -48,6 +48,8 @@
  *
  * v2.1   Provide a user-configurable option to sync the system on powersuspend.
  *
+ * v2.2   Remove the mutex unlock mistakingly added during system sync setup.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -62,7 +64,7 @@
 #include <linux/powersuspend.h>
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	1
+#define MINOR_VERSION	2
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
@@ -127,7 +129,6 @@ static void power_suspend(struct work_struct *work)
 	pr_info("[POWERSUSPEND] Suspend Completed.\n");
 
 	if (sync_on_powersuspend) {
-		mutex_unlock(&power_suspend_lock);
 		pr_info("[POWERSUSPEND] Syncing\n");
 		sys_sync();
 	}
