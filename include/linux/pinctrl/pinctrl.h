@@ -123,6 +123,7 @@ extern const char *pinctrl_dev_get_name(struct pinctrl_dev *pctldev);
 extern void *pinctrl_dev_get_drvdata(struct pinctrl_dev *pctldev);
 #else
 
+struct device;
 struct pinctrl_dev;
 
 /* Sufficiently stupid default functions when pinctrl is not in use */
