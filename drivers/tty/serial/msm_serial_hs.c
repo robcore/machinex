@@ -432,6 +432,20 @@ static int msm_serial_loopback_enable_get(void *data, u64 *val)
 	ret = msm_hs_read(&msm_uport->uport, UARTDM_MR2_ADDR);
 	spin_unlock_irqrestore(&uport->lock, flags);
 
+struct uart_port * msm_hs_get_port_by_id(int num)
+{
+	struct uart_port *uport;
+	struct msm_hs_port *msm_uport;
+
+	if (num < 0 || num >= UARTDM_NR)
+		return NULL;
+
+	msm_uport = &q_uart_port[num];
+
+	uport = &(msm_uport->uport);
+
+	return uport;
+}
 
 	msm_hs_clock_unvote(msm_uport);
 
@@ -2034,6 +2048,15 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	mutex_unlock(&msm_uport->clk_mutex);
 }
 EXPORT_SYMBOL(msm_hs_request_clock_on);
+
+int msm_hs_get_clock_state(struct uart_port *uport)
+{
+	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+
+	return (int)msm_uport->clk_state;
+}
+EXPORT_SYMBOL(msm_hs_get_clock_state);
+
 
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
