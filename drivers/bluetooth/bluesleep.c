@@ -51,6 +51,7 @@
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h> /* event notifications */
+#include <linux/platform_data/msm_serial_hs.h>
 #include "hci_uart.h"
 
 #include <linux/barcode_emul.h>
