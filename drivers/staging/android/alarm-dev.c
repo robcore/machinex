@@ -42,6 +42,16 @@ do {									\
 	ANDROID_ALARM_RTC_WAKEUP_MASK | \
 	ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP_MASK)
 
+#ifdef CONFIG_COMPAT
+/* Compat only on 64bit! */
+#define ANDROID_ALARM_SET_OLD               _IOW('a', 2, compat_time_t)
+#define ANDROID_ALARM_SET_AND_WAIT_OLD      _IOW('a', 3, compat_time_t)
+#else
+/* support old userspace code */
+#define ANDROID_ALARM_SET_OLD               _IOW('a', 2, time_t) /* set alarm */
+#define ANDROID_ALARM_SET_AND_WAIT_OLD      _IOW('a', 3, time_t)
+#endif
+
 static int alarm_opened;
 static DEFINE_SPINLOCK(alarm_slock);
 static struct wakeup_source alarm_wake_lock;
@@ -298,8 +308,47 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	return 0;
 }
-
 #ifdef CONFIG_COMPAT
+static long alarm_compat_ioctl(struct file *file, unsigned int cmd,
+							unsigned long arg)
+{
+
+	struct timespec ts;
+	int rv;
+
+	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
+	case ANDROID_ALARM_SET_OLD:
+	case ANDROID_ALARM_SET_AND_WAIT_OLD:
+		if (get_user(ts.tv_sec, (int __user *)arg))
+			return -EFAULT;
+
+		ts.tv_nsec = 0;
+		break;
+	case ANDROID_ALARM_SET_AND_WAIT_COMPAT(0):
+	case ANDROID_ALARM_SET_COMPAT(0):
+	case ANDROID_ALARM_SET_RTC_COMPAT:
+		if (compat_get_timespec(&ts, (void __user *)arg))
+			return -EFAULT;
+		/* fall through */
+	case ANDROID_ALARM_GET_TIME_COMPAT(0):
+		cmd = ANDROID_ALARM_COMPAT_TO_NORM(cmd);
+		break;
+	}
+
+	rv = alarm_do_ioctl(file, cmd, &ts);
+
+	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
+	case ANDROID_ALARM_GET_TIME(0): /* NOTE: we modified cmd above */
+		if (compat_put_timespec(&ts, (void __user *)arg))
+			return -EFAULT;
+		break;
+	}
+
+	return rv;
+}
+#endif
+
+#if 0
 static long alarm_compat_ioctl(struct file *file, unsigned int cmd,
 							unsigned long arg)
 {
