@@ -23,7 +23,6 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/alarmtimer.h>
-#include <linux/wakelock.h>
 #include "android_alarm.h"
 
 #define ANDROID_ALARM_PRINT_INFO (1U << 0)
@@ -49,7 +48,7 @@ do {									\
 
 static int alarm_opened;
 static DEFINE_SPINLOCK(alarm_slock);
-static struct wake_lock alarm_wake_lock;
+static struct wakeup_source alarm_wake_lock;
 static DECLARE_WAIT_QUEUE_HEAD(alarm_wait_queue);
 static uint32_t alarm_pending;
 static uint32_t alarm_enabled;
@@ -74,7 +73,6 @@ static int is_wakeup(enum android_alarm_type type)
 	return 0;
 }
 
-
 static void devalarm_start(struct devalarm *alrm, ktime_t exp)
 {
 	if (is_wakeup(alrm->type))
@@ -82,7 +80,6 @@ static void devalarm_start(struct devalarm *alrm, ktime_t exp)
 	else
 		hrtimer_start(&alrm->u.hrt, exp, HRTIMER_MODE_ABS);
 }
-
 
 static int devalarm_try_to_cancel(struct devalarm *alrm)
 {
@@ -142,7 +139,7 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (alarm_pending) {
 			alarm_pending &= ~alarm_type_mask;
 			if (!alarm_pending && !wait_pending)
-				wake_unlock(&alarm_wake_lock);
+				__pm_relax(&alarm_wake_lock);
 		}
 		alarm_enabled &= ~alarm_type_mask;
 		spin_unlock_irqrestore(&alarm_slock, flags);
@@ -181,7 +178,7 @@ from_old_alarm_set:
 		spin_lock_irqsave(&alarm_slock, flags);
 		alarm_dbg(IO, "alarm wait\n");
 		if (!alarm_pending && wait_pending) {
-			wake_unlock(&alarm_wake_lock);
+			__pm_relax(&alarm_wake_lock);
 			wait_pending = 0;
 		}
 		spin_unlock_irqrestore(&alarm_slock, flags);
@@ -275,7 +272,7 @@ static int alarm_release(struct inode *inode, struct file *file)
 			if (alarm_pending)
 				alarm_dbg(INFO, "%s: clear pending alarms %x\n",
 					  __func__, alarm_pending);
-			wake_unlock(&alarm_wake_lock);
+			__pm_relax(&alarm_wake_lock);
 			wait_pending = 0;
 			alarm_pending = 0;
 		}
@@ -293,14 +290,13 @@ static void devalarm_triggered(struct devalarm *alarm)
 	alarm_dbg(INT, "%s: type %d\n", __func__, alarm->type);
 	spin_lock_irqsave(&alarm_slock, flags);
 	if (alarm_enabled & alarm_type_mask) {
-		wake_lock_timeout(&alarm_wake_lock, 5 * HZ);
+		__pm_wakeup_event(&alarm_wake_lock, 5000); /* 5secs */
 		alarm_enabled &= ~alarm_type_mask;
 		alarm_pending |= alarm_type_mask;
 		wake_up(&alarm_wait_queue);
 	}
 	spin_unlock_irqrestore(&alarm_slock, flags);
 }
-
 
 static enum hrtimer_restart devalarm_hrthandler(struct hrtimer *hrt)
 {
@@ -359,7 +355,7 @@ static int __init alarm_dev_init(void)
 			alarms[i].u.hrt.function = devalarm_hrthandler;
 	}
 
-	wake_lock_init(&alarm_wake_lock, WAKE_LOCK_SUSPEND, "alarm");
+	wakeup_source_init(&alarm_wake_lock, "alarm");
 
 	power_on_alarm_init();
 
@@ -369,7 +365,7 @@ static int __init alarm_dev_init(void)
 static void  __exit alarm_dev_exit(void)
 {
 	misc_deregister(&alarm_device);
-	wake_lock_destroy(&alarm_wake_lock);
+	wakeup_source_trash(&alarm_wake_lock);
 }
 
 module_init(alarm_dev_init);
