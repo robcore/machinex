@@ -226,114 +226,88 @@ static long alarm_do_ioctl(struct file *file, unsigned int cmd,
 
 	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
 	case ANDROID_ALARM_CLEAR(0):
-		spin_lock_irqsave(&alarm_slock, flags);
-		alarm_dbg(IO, "alarm %d clear\n", alarm_type);
-		devalarm_try_to_cancel(&alarms[alarm_type]);
-		if (alarm_pending) {
-			alarm_pending &= ~alarm_type_mask;
-			if (!alarm_pending && !wait_pending)
-				__pm_relax(&alarm_wake_lock);
-		}
-		alarm_enabled &= ~alarm_type_mask;
-		spin_unlock_irqrestore(&alarm_slock, flags);
+		alarm_clear(alarm_type);
 		break;
-
-	case ANDROID_ALARM_SET_OLD:
-	case ANDROID_ALARM_SET_AND_WAIT_OLD:
-		if (get_user(new_alarm_time.tv_sec, (int __user *)arg)) {
-			rv = -EFAULT;
-			goto err1;
-		}
-		new_alarm_time.tv_nsec = 0;
-		goto from_old_alarm_set;
-
-	case ANDROID_ALARM_SET_AND_WAIT(0):
 	case ANDROID_ALARM_SET(0):
-		if (copy_from_user(&new_alarm_time, (void __user *)arg,
-		    sizeof(new_alarm_time))) {
-			rv = -EFAULT;
-			goto err1;
-		}
-from_old_alarm_set:
-		spin_lock_irqsave(&alarm_slock, flags);
-		alarm_dbg(IO, "alarm %d set %ld.%09ld\n",
-			  alarm_type,
-			  new_alarm_time.tv_sec, new_alarm_time.tv_nsec);
-		alarm_enabled |= alarm_type_mask;
-		devalarm_start(&alarms[alarm_type],
-			timespec_to_ktime(new_alarm_time));
-		spin_unlock_irqrestore(&alarm_slock, flags);
-		if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT(0)
-		    && cmd != ANDROID_ALARM_SET_AND_WAIT_OLD)
-			break;
+		alarm_set(alarm_type, ts);
+		break;
+	case ANDROID_ALARM_SET_AND_WAIT(0):
+		alarm_set(alarm_type, ts);
 		/* fall though */
 	case ANDROID_ALARM_WAIT:
-		spin_lock_irqsave(&alarm_slock, flags);
-		alarm_dbg(IO, "alarm wait\n");
-		if (!alarm_pending && wait_pending) {
-			__pm_relax(&alarm_wake_lock);
-			wait_pending = 0;
-		}
-		spin_unlock_irqrestore(&alarm_slock, flags);
-		rv = wait_event_interruptible(alarm_wait_queue, alarm_pending);
-		if (rv)
-			goto err1;
-		spin_lock_irqsave(&alarm_slock, flags);
-		rv = alarm_pending;
-		wait_pending = 1;
-		alarm_pending = 0;
-		spin_unlock_irqrestore(&alarm_slock, flags);
+		rv = alarm_wait();
 		break;
 	case ANDROID_ALARM_SET_RTC:
-		if (copy_from_user(&new_rtc_time, (void __user *)arg,
-		    sizeof(new_rtc_time))) {
-			rv = -EFAULT;
-			goto err1;
-		}
-		rtc_time_to_tm(new_rtc_time.tv_sec, &new_rtc_tm);
-		rtc_dev = alarmtimer_get_rtcdev();
-		rv = do_settimeofday(&new_rtc_time);
-		if (rv < 0)
-			goto err1;
-		if (rtc_dev)
-			rv = rtc_set_time(rtc_dev, &new_rtc_tm);
-		spin_lock_irqsave(&alarm_slock, flags);
-		alarm_pending |= ANDROID_ALARM_TIME_CHANGE_MASK;
-		wake_up(&alarm_wait_queue);
-		spin_unlock_irqrestore(&alarm_slock, flags);
-		if (rv < 0)
-			goto err1;
+		rv = alarm_set_rtc(ts);
 		break;
 	case ANDROID_ALARM_GET_TIME(0):
-		switch (alarm_type) {
-		case ANDROID_ALARM_RTC_WAKEUP:
-		case ANDROID_ALARM_RTC:
-			getnstimeofday(&tmp_time);
-			break;
-		case ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP:
-		case ANDROID_ALARM_ELAPSED_REALTIME:
-			get_monotonic_boottime(&tmp_time);
-			break;
-		case ANDROID_ALARM_SYSTEMTIME:
-			ktime_get_ts(&tmp_time);
-			break;
-		default:
-			rv = -EINVAL;
-			goto err1;
-		}
-		if (copy_to_user((void __user *)arg, &tmp_time,
-		    sizeof(tmp_time))) {
-			rv = -EFAULT;
-			goto err1;
-		}
+		rv = alarm_get_time(alarm_type, ts);
 		break;
 
 	default:
 		rv = -EINVAL;
 	}
-err1:
 	return rv;
 }
+
+static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+
+	struct timespec ts;
+	int rv;
+
+	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
+	case ANDROID_ALARM_SET_AND_WAIT(0):
+	case ANDROID_ALARM_SET(0):
+	case ANDROID_ALARM_SET_RTC:
+		if (copy_from_user(&ts, (void __user *)arg, sizeof(ts)))
+			return -EFAULT;
+		break;
+	}
+
+	rv = alarm_do_ioctl(file, cmd, &ts);
+
+	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
+	case ANDROID_ALARM_GET_TIME(0):
+		if (copy_to_user((void __user *)arg, &ts, sizeof(ts)))
+			return -EFAULT;
+		break;
+	}
+
+	return rv;
+}
+#ifdef CONFIG_COMPAT
+static long alarm_compat_ioctl(struct file *file, unsigned int cmd,
+							unsigned long arg)
+{
+
+	struct timespec ts;
+	int rv;
+
+	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
+	case ANDROID_ALARM_SET_AND_WAIT_COMPAT(0):
+	case ANDROID_ALARM_SET_COMPAT(0):
+	case ANDROID_ALARM_SET_RTC_COMPAT:
+		if (compat_get_timespec(&ts, (void __user *)arg))
+			return -EFAULT;
+		/* fall through */
+	case ANDROID_ALARM_GET_TIME_COMPAT(0):
+		cmd = ANDROID_ALARM_COMPAT_TO_NORM(cmd);
+		break;
+	}
+
+	rv = alarm_do_ioctl(file, cmd, &ts);
+
+	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
+	case ANDROID_ALARM_GET_TIME(0): /* NOTE: we modified cmd above */
+		if (compat_put_timespec(&ts, (void __user *)arg))
+			return -EFAULT;
+		break;
+	}
+
+	return rv;
+}
+#endif
 
 static int alarm_open(struct inode *inode, struct file *file)
 {
@@ -414,6 +388,9 @@ static const struct file_operations alarm_fops = {
 	.unlocked_ioctl = alarm_ioctl,
 	.open = alarm_open,
 	.release = alarm_release,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = alarm_compat_ioctl,
+#endif
 };
 
 static struct miscdevice alarm_device = {
