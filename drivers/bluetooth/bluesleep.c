@@ -379,8 +379,6 @@ static void bluesleep_sleep_work(struct work_struct *work)
  */
 static void bluesleep_hostwake_task(unsigned long data)
 {
-	BT_DBG("hostwake line change");
-
 	if ((gpio_get_value(bsi->host_wake) == bsi->irq_polarity))
 		bluesleep_rx_busy();
 	else
