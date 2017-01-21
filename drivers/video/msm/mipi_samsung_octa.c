@@ -1733,6 +1733,8 @@ static int __init mipi_samsung_disp_init(void)
 	mipi_dsi_buf_alloc(&msd.samsung_tx_buf, DSI_BUF_SIZE);
 	mipi_dsi_buf_alloc(&msd.samsung_rx_buf, DSI_BUF_SIZE);
 
+	Lpanel_colors = 2;
+
 	return platform_driver_register(&this_driver);
 }
 module_init(mipi_samsung_disp_init);

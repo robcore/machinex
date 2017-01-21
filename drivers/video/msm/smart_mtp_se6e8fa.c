@@ -89,14 +89,14 @@ static char VT_300CD_R;
 static char VT_300CD_G;
 static char VT_300CD_B;
 
-static long long color_mods[5][9] = {
+static int color_mods[5][9] = {
 	{  0,  0,  5, -18, -16, -10, -5, 0,  0 },
 	{  0,  0,  2,  -9,  -8,  -5, -2, 0,  0 },
 	{  0,  0,  0,   0,   0,   0,  0, 0,  0 },
 	{  0,  0, -2,   9,   8,   5,  2, 0,  0 },
 	{  0,  0, -5,  18,  16,  10,  5, 0,  0 }
 };
-unsigned int panelval = 2;
+unsigned int panelval;
 struct SMART_DIM *gpsmart;
 
 static int char_to_int(char data1)

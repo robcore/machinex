@@ -623,7 +623,7 @@ static char samsung_brightness_acl_cont_ref[] = {
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x03, 0x99, 0x35,
+	0x03, 0x99, 0x00,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1289,7 +1289,7 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		backlightlevel = GAMMA_152CD;
+		backlightlevel = GAMMA_300CD;
 		break;
 	}
 
@@ -1744,11 +1744,6 @@ static int brightness_control(int bl_level)
 
 	if (get_auto_brightness() == 6) {
 		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else {
-		if (mipi_pd.acl_status || mipi_pd.siop_status)
-			samsung_brightness_acl_ref[1] = 0x01; /*ACL on 40p*/
-		else
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
@@ -2024,7 +2019,7 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	pinfo.lcdc.underflow_clr = 0x0;	/* black */
 	pinfo.lcdc.hsync_skew = 0;
 
-	pinfo.bl_max = 255;
+	pinfo.bl_max = 300;
 	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 
