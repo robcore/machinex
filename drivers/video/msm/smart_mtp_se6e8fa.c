@@ -89,7 +89,7 @@ static char VT_300CD_R;
 static char VT_300CD_G;
 static char VT_300CD_B;
 
-static int color_mods[5][9] = {
+static long color_mods[5][9] = {
 	{  0,  0,  5, -18, -16, -10, -5, 0,  0 },
 	{  0,  0,  2,  -9,  -8,  -5, -2, 0,  0 },
 	{  0,  0,  0,   0,   0,   0,  0, 0,  0 },
@@ -220,8 +220,8 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 	int LSB;
 
 	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
-	add_mtp = LSB + VT_300CD_R;
-	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+	add_mtp	 = LSB + VT_300CD_R;
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][0]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -229,7 +229,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_G;
-	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][1]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -237,7 +237,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_B;
-	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][2]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -3873,7 +3873,6 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	char log_buf[GAMMA_SET_MAX];
 	memset(pBuffer, 0x00, 256);
 #endif
-	gpsmart = psmart;
 	id1 = (psmart->ldi_revision & 0x00FF0000) >> 16;
 	id2 = (psmart->ldi_revision & 0x0000FF00) >> 8;
 	id3 = psmart->ldi_revision & 0xFF;
@@ -3881,7 +3880,7 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	mtp_sorting(psmart);
 	gamma_cell_determine(psmart->ldi_revision);
 	set_max_lux_table();
-
+	gpsmart = psmart;
 #ifdef SMART_DIMMING_DEBUG
 	print_RGB_offset(psmart);
 #endif
