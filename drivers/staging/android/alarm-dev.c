@@ -42,10 +42,6 @@ do {									\
 	ANDROID_ALARM_RTC_WAKEUP_MASK | \
 	ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP_MASK)
 
-/* support old usespace code */
-#define ANDROID_ALARM_SET_OLD               _IOW('a', 2, time_t) /* set alarm */
-#define ANDROID_ALARM_SET_AND_WAIT_OLD      _IOW('a', 3, time_t)
-
 static int alarm_opened;
 static DEFINE_SPINLOCK(alarm_slock);
 static struct wakeup_source alarm_wake_lock;
@@ -114,7 +110,6 @@ static void alarm_clear(enum android_alarm_type alarm_type)
 	}
 	alarm_enabled &= ~alarm_type_mask;
 	spin_unlock_irqrestore(&alarm_slock, flags);
-
 }
 
 static void alarm_set(enum android_alarm_type alarm_type,
@@ -283,6 +278,7 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	return 0;
 }
+
 #ifdef CONFIG_COMPAT
 static long alarm_compat_ioctl(struct file *file, unsigned int cmd,
 							unsigned long arg)
