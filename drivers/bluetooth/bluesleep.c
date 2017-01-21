@@ -287,7 +287,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 				mutex_unlock(&bluesleep_mutex);
 				return;
 			}
-			
+
 			BT_DBG("going to sleep...");
 
 			set_bit(BT_ASLEEP, &flags);
@@ -428,7 +428,7 @@ static void bluesleep_abnormal_stop(void)
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
 #endif
-	wake_lock_timeout(&bsi->wake_lock, 125;
+	wake_lock_timeout(&bsi->wake_lock, 125);
 
 	clear_bit(BT_TXDATA, &flags);
 	bsi->uport = NULL;
