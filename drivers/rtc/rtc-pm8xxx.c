@@ -839,7 +839,7 @@ static int __devinit pm8xxx_rtc_probe(struct platform_device *pdev)
 
 	/* Request the alarm IRQ */
 	rc = request_any_context_irq(rtc_dd->rtc_alarm_irq,
-				 pm8xxx_alarm_trigger, IRQF_TRIGGER_RISING,
+				 pm8xxx_alarm_trigger, IRQF_TRIGGER_RISING | IRQF_ONESHOT,
 				 "pm8xxx_rtc_alarm", rtc_dd);
 	if (rc < 0) {
 		dev_dbg(&pdev->dev, "Request IRQ failed (%d)\n", rc);
