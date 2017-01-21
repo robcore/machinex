@@ -205,6 +205,14 @@ static long alarm_do_ioctl(struct file *file, unsigned int cmd,
 	unsigned long flags;
 	enum android_alarm_type alarm_type = ANDROID_ALARM_IOCTL_TO_TYPE(cmd);
 
+#ifdef CONFIG_RTC_AUTO_PWRON
+	char bootalarm_data[14];
+#endif
+
+#ifdef CONFIG_RTC_AUTO_PWRON
+	char bootalarm_data[14];
+#endif
+
 	if (alarm_type >= ANDROID_ALARM_TYPE_COUNT)
 		return -EINVAL;
 
@@ -240,6 +248,18 @@ static long alarm_do_ioctl(struct file *file, unsigned int cmd,
 	case ANDROID_ALARM_SET_RTC:
 		rv = alarm_set_rtc(ts);
 		break;
+
+#ifdef CONFIG_RTC_AUTO_PWRON
+	case ANDROID_ALARM_SET_ALARM:
+		printk("%s [RTC] \n",__func__);
+		if (copy_from_user(bootalarm_data, (void __user *)arg, 14)) {
+			rv = -EFAULT;
+			goto err1;
+		}
+		rv = alarm_set_alarm(bootalarm_data);
+		break;
+#endif
+
 	case ANDROID_ALARM_GET_TIME(0):
 		rv = alarm_get_time(alarm_type, ts);
 		break;
