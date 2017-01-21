@@ -3876,11 +3876,10 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	id1 = (psmart->ldi_revision & 0x00FF0000) >> 16;
 	id2 = (psmart->ldi_revision & 0x0000FF00) >> 8;
 	id3 = psmart->ldi_revision & 0xFF;
-
+	gpsmart = psmart;
 	mtp_sorting(psmart);
 	gamma_cell_determine(psmart->ldi_revision);
 	set_max_lux_table();
-	gpsmart = psmart;
 #ifdef SMART_DIMMING_DEBUG
 	print_RGB_offset(psmart);
 #endif
@@ -3986,10 +3985,6 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 		memset(pBuffer, 0x00, 256);
 	}
 #endif
-
-		/*re-initialize panel value*/
-	panelval = 2;
-
 	return 0;
 }
 

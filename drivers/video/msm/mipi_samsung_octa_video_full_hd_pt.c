@@ -623,7 +623,7 @@ static char samsung_brightness_acl_cont_ref[] = {
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x03, 0x99, 0x00,
+	0x03, 0x99, 0x35,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1289,7 +1289,8 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		backlightlevel = GAMMA_300CD;
+		pr_info("%s lcd error bl_level : %d", __func__, bl_level);
+		backlightlevel = GAMMA_152CD;
 		break;
 	}
 
@@ -1744,6 +1745,11 @@ static int brightness_control(int bl_level)
 
 	if (get_auto_brightness() == 6) {
 		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	} else {
+		if (mipi_pd.acl_status || mipi_pd.siop_status)
+			samsung_brightness_acl_ref[1] = 0x01; /*ACL on 40p*/
+		else
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
