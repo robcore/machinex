@@ -94,18 +94,116 @@ static void devalarm_cancel(struct devalarm *alrm)
 		hrtimer_cancel(&alrm->u.hrt);
 }
 
+static void alarm_clear(enum android_alarm_type alarm_type)
+{
+	uint32_t alarm_type_mask = 1U << alarm_type;
+	unsigned long flags;
 
-static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+	spin_lock_irqsave(&alarm_slock, flags);
+	alarm_dbg(IO, "alarm %d clear\n", alarm_type);
+	devalarm_try_to_cancel(&alarms[alarm_type]);
+	if (alarm_pending) {
+		alarm_pending &= ~alarm_type_mask;
+		if (!alarm_pending && !wait_pending)
+			__pm_relax(&alarm_wake_lock);
+	}
+	alarm_enabled &= ~alarm_type_mask;
+	spin_unlock_irqrestore(&alarm_slock, flags);
+
+}
+
+static void alarm_set(enum android_alarm_type alarm_type,
+							struct timespec *ts)
+{
+	uint32_t alarm_type_mask = 1U << alarm_type;
+	unsigned long flags;
+
+	spin_lock_irqsave(&alarm_slock, flags);
+	alarm_dbg(IO, "alarm %d set %ld.%09ld\n",
+			alarm_type, ts->tv_sec, ts->tv_nsec);
+	alarm_enabled |= alarm_type_mask;
+	devalarm_start(&alarms[alarm_type], timespec_to_ktime(*ts));
+	spin_unlock_irqrestore(&alarm_slock, flags);
+}
+
+static int alarm_wait(void)
+{
+	unsigned long flags;
+	int rv = 0;
+
+	spin_lock_irqsave(&alarm_slock, flags);
+	alarm_dbg(IO, "alarm wait\n");
+	if (!alarm_pending && wait_pending) {
+		__pm_relax(&alarm_wake_lock);
+		wait_pending = 0;
+	}
+	spin_unlock_irqrestore(&alarm_slock, flags);
+
+	rv = wait_event_interruptible(alarm_wait_queue, alarm_pending);
+	if (rv)
+		return rv;
+
+	spin_lock_irqsave(&alarm_slock, flags);
+	rv = alarm_pending;
+	wait_pending = 1;
+	alarm_pending = 0;
+	spin_unlock_irqrestore(&alarm_slock, flags);
+
+	return rv;
+}
+
+static int alarm_set_rtc(struct timespec *ts)
+{
+	struct rtc_time new_rtc_tm;
+	struct rtc_device *rtc_dev;
+	unsigned long flags;
+	int rv = 0;
+
+	rtc_time_to_tm(ts->tv_sec, &new_rtc_tm);
+	rtc_dev = alarmtimer_get_rtcdev();
+	rv = do_settimeofday(ts);
+	if (rv < 0)
+		return rv;
+	if (rtc_dev)
+		rv = rtc_set_time(rtc_dev, &new_rtc_tm);
+
+	spin_lock_irqsave(&alarm_slock, flags);
+	alarm_pending |= ANDROID_ALARM_TIME_CHANGE_MASK;
+	wake_up(&alarm_wait_queue);
+	spin_unlock_irqrestore(&alarm_slock, flags);
+
+	return rv;
+}
+
+static int alarm_get_time(enum android_alarm_type alarm_type,
+							struct timespec *ts)
+{
+	int rv = 0;
+
+	switch (alarm_type) {
+	case ANDROID_ALARM_RTC_WAKEUP:
+	case ANDROID_ALARM_RTC:
+		getnstimeofday(ts);
+		break;
+	case ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP:
+	case ANDROID_ALARM_ELAPSED_REALTIME:
+		get_monotonic_boottime(ts);
+		break;
+	case ANDROID_ALARM_SYSTEMTIME:
+		ktime_get_ts(ts);
+		break;
+	default:
+		rv = -EINVAL;
+	}
+	return rv;
+}
+
+static long alarm_do_ioctl(struct file *file, unsigned int cmd,
+							struct timespec *ts)
 {
 	int rv = 0;
 	unsigned long flags;
-	struct timespec new_alarm_time;
-	struct timespec new_rtc_time;
-	struct timespec tmp_time;
-	struct rtc_time new_rtc_tm;
-	struct rtc_device *rtc_dev;
 	enum android_alarm_type alarm_type = ANDROID_ALARM_IOCTL_TO_TYPE(cmd);
-	uint32_t alarm_type_mask = 1U << alarm_type;
 
 	if (alarm_type >= ANDROID_ALARM_TYPE_COUNT)
 		return -EINVAL;
