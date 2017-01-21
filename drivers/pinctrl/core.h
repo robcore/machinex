@@ -9,6 +9,7 @@
  * License terms: GNU General Public License (GPL) version 2
  */
 
+#include <linux/kref.h>
 #include <linux/mutex.h>
 #include <linux/radix-tree.h>
 #include <linux/pinctrl/pinconf.h>
@@ -31,6 +32,7 @@ struct pinctrl_gpio_range;
  *	subsystem
  * @p: result of pinctrl_get() for this device
  * @device_root: debugfs root for this device
+ * @users: reference count
  */
 struct pinctrl_dev {
 	struct list_head node;
@@ -44,6 +46,7 @@ struct pinctrl_dev {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *device_root;
 #endif
+	struct kref users;
 };
 
 /**
