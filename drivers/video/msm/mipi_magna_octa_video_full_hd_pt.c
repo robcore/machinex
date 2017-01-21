@@ -1435,65 +1435,65 @@ static int get_elvss_value(int candela, int id2, int id3)
 			break;
 		}
 	} else {
-	switch (candela) {
-	case 0 ... 105:
-		elvss_value = DEFAULT_ELVSS + (0x0F << ELVSS_LSL);
-		break;
-	case 106 ... 111:
-		elvss_value = DEFAULT_ELVSS + (0x0B << ELVSS_LSL);
-		break;
-	case 112 ... 119:
-		elvss_value = DEFAULT_ELVSS + (0x0A << ELVSS_LSL);
-		break;
-	case 120 ... 126:
-		elvss_value = DEFAULT_ELVSS + (0x09 << ELVSS_LSL);
-		break;
-	case 127 ... 134:
-		elvss_value = DEFAULT_ELVSS + (0x08 << ELVSS_LSL);
-		break;
-	case 135 ... 143:
-		elvss_value = DEFAULT_ELVSS + (0x07 << ELVSS_LSL);
-		break;
-	case 144 ... 152:
-		elvss_value = DEFAULT_ELVSS + (0x06 << ELVSS_LSL);
-		break;
-	case 153 ... 162:
-		elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
-		break;
-	case 163 ... 172:
-		elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
-		break;
-	case 173 ... 183:
-		elvss_value = DEFAULT_ELVSS + (0x09 << ELVSS_LSL);
-		break;
-	case 184 ... 195:
-		elvss_value = DEFAULT_ELVSS + (0x08 << ELVSS_LSL);
-		break;
-	case 196 ... 207:
-		elvss_value = DEFAULT_ELVSS + (0x07 << ELVSS_LSL);
-		break;
-	case 208 ... 220:
-		elvss_value = DEFAULT_ELVSS + (0x06 << ELVSS_LSL);
-		break;
-	case 221 ... 234:
-		elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
-		break;
-	case 235 ... 249:
-		elvss_value = DEFAULT_ELVSS + (0x04 << ELVSS_LSL);
-		break;
-	case 250 ... 265:
-		elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
-		break;
-	case 266 ... 282:
-		elvss_value = DEFAULT_ELVSS + (0x01 << ELVSS_LSL);
-		break;
-	case 283 ... 300:
-		elvss_value = DEFAULT_ELVSS + 0x0;
-		break;
-	default :
-		elvss_value = DEFAULT_ELVSS + 0x0;
-		break;
-	}
+		switch (candela) {
+		case 0 ... 105:
+			elvss_value = DEFAULT_ELVSS + (0x0F << ELVSS_LSL);
+			break;
+		case 106 ... 111:
+			elvss_value = DEFAULT_ELVSS + (0x0B << ELVSS_LSL);
+			break;
+		case 112 ... 119:
+			elvss_value = DEFAULT_ELVSS + (0x0A << ELVSS_LSL);
+			break;
+		case 120 ... 126:
+			elvss_value = DEFAULT_ELVSS + (0x09 << ELVSS_LSL);
+			break;
+		case 127 ... 134:
+			elvss_value = DEFAULT_ELVSS + (0x08 << ELVSS_LSL);
+			break;
+		case 135 ... 143:
+			elvss_value = DEFAULT_ELVSS + (0x07 << ELVSS_LSL);
+			break;
+		case 144 ... 152:
+			elvss_value = DEFAULT_ELVSS + (0x06 << ELVSS_LSL);
+			break;
+		case 153 ... 162:
+			elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
+			break;
+		case 163 ... 172:
+			elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
+			break;
+		case 173 ... 183:
+			elvss_value = DEFAULT_ELVSS + (0x09 << ELVSS_LSL);
+			break;
+		case 184 ... 195:
+			elvss_value = DEFAULT_ELVSS + (0x08 << ELVSS_LSL);
+			break;
+		case 196 ... 207:
+			elvss_value = DEFAULT_ELVSS + (0x07 << ELVSS_LSL);
+			break;
+		case 208 ... 220:
+			elvss_value = DEFAULT_ELVSS + (0x06 << ELVSS_LSL);
+			break;
+		case 221 ... 234:
+			elvss_value = DEFAULT_ELVSS + (0x05 << ELVSS_LSL);
+			break;
+		case 235 ... 249:
+			elvss_value = DEFAULT_ELVSS + (0x04 << ELVSS_LSL);
+			break;
+		case 250 ... 265:
+			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
+			break;
+		case 266 ... 282:
+			elvss_value = DEFAULT_ELVSS + (0x01 << ELVSS_LSL);
+			break;
+		case 283 ... 300:
+			elvss_value = DEFAULT_ELVSS + 0x0;
+			break;
+		default :
+			elvss_value = DEFAULT_ELVSS + 0x0;
+			break;
+		}
 	}
 	return elvss_value;
 }
@@ -2162,7 +2162,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.underflow_clr = 0xff;	/* blue */
 	pinfo.lcdc.hsync_skew = 0;
 
-	pinfo.bl_max = 300;
+	pinfo.bl_max = 255;
 	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 

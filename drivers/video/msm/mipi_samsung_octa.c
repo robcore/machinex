@@ -583,7 +583,6 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	}
 
-
 	pr_info("[%s] ID : 0x%x LDI : %s", __func__, msd.mpd->manufacture_id,
 		ldi_manupacture == LDI_MAGNA ? "LDI_MAGNA" : "LDI_LSI");
 
@@ -752,7 +751,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 	mutex_unlock(&brightness_mutex);
 }
 
-/*#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static void mipi_samsung_disp_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd;
@@ -785,7 +784,7 @@ static void mipi_samsung_disp_power_resume(struct power_suspend *h)
 
 	pr_info("[lcd] %s\n", __func__);
 }
-#endif */
+#endif
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 static ssize_t mipi_samsung_disp_get_power(struct device *dev,
@@ -1466,9 +1465,9 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 	mutex_init(&dsi_tx_mutex);
 
-//#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_LCD_CLASS_DEVICE)
 	msd.msm_pdev = msm_fb_added_dev;
-//#endif
+#endif
 
 	pm_gpio8 = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_ERR_FG);
 
@@ -1486,12 +1485,11 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-/*#if defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	msd.power_suspend.suspend = mipi_samsung_disp_power_suspend;
 	msd.power_suspend.resume = mipi_samsung_disp_power_resume;
-//	msd.power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_power_suspend(&msd.power_suspend);
-#endif */
+#endif
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 	printk(KERN_INFO "[lcd] lcd_device_register for panel start\n");
