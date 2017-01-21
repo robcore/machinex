@@ -162,7 +162,7 @@ static const struct rtc_class_ops m41t93_rtc_ops = {
 
 static struct spi_driver m41t93_driver;
 
-static int __devinit m41t93_probe(struct spi_device *spi)
+static int m41t93_probe(struct spi_device *spi)
 {
 	struct rtc_device *rtc;
 	int res;
@@ -187,7 +187,7 @@ static int __devinit m41t93_probe(struct spi_device *spi)
 }
 
 
-static int __devexit m41t93_remove(struct spi_device *spi)
+static int m41t93_remove(struct spi_device *spi)
 {
 	struct rtc_device *rtc = spi_get_drvdata(spi);
 
@@ -203,7 +203,7 @@ static struct spi_driver m41t93_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe	= m41t93_probe,
-	.remove = __devexit_p(m41t93_remove),
+	.remove = m41t93_remove,
 };
 
 module_spi_driver(m41t93_driver);

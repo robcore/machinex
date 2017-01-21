@@ -205,7 +205,7 @@ static const struct rtc_class_ops vt8500_rtc_ops = {
 	.alarm_irq_enable = vt8500_alarm_irq_enable,
 };
 
-static int __devinit vt8500_rtc_probe(struct platform_device *pdev)
+static int vt8500_rtc_probe(struct platform_device *pdev)
 {
 	struct vt8500_rtc *vt8500_rtc;
 	int ret;
@@ -283,7 +283,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit vt8500_rtc_remove(struct platform_device *pdev)
+static int vt8500_rtc_remove(struct platform_device *pdev)
 {
 	struct vt8500_rtc *vt8500_rtc = platform_get_drvdata(pdev);
 
@@ -305,7 +305,7 @@ static int __devexit vt8500_rtc_remove(struct platform_device *pdev)
 
 static struct platform_driver vt8500_rtc_driver = {
 	.probe		= vt8500_rtc_probe,
-	.remove		= __devexit_p(vt8500_rtc_remove),
+	.remove		= vt8500_rtc_remove,
 	.driver		= {
 		.name	= "vt8500-rtc",
 		.owner	= THIS_MODULE,

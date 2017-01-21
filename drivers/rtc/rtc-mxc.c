@@ -343,7 +343,7 @@ static struct rtc_class_ops mxc_rtc_ops = {
 	.alarm_irq_enable	= mxc_rtc_alarm_irq_enable,
 };
 
-static int __devinit mxc_rtc_probe(struct platform_device *pdev)
+static int mxc_rtc_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct rtc_device *rtc;
@@ -433,7 +433,7 @@ exit_free_pdata:
 	return ret;
 }
 
-static int __devexit mxc_rtc_remove(struct platform_device *pdev)
+static int mxc_rtc_remove(struct platform_device *pdev)
 {
 	struct rtc_plat_data *pdata = platform_get_drvdata(pdev);
 
@@ -481,7 +481,7 @@ static struct platform_driver mxc_rtc_driver = {
 		   .owner	= THIS_MODULE,
 	},
 	.probe = mxc_rtc_probe,
-	.remove = __devexit_p(mxc_rtc_remove),
+	.remove = mxc_rtc_remove,
 };
 
 module_platform_driver(mxc_rtc_driver)

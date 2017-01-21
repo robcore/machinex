@@ -228,7 +228,7 @@ static const struct rtc_class_ops da9052_rtc_ops = {
 	.alarm_irq_enable = da9052_rtc_alarm_irq_enable,
 };
 
-static int __devinit da9052_rtc_probe(struct platform_device *pdev)
+static int da9052_rtc_probe(struct platform_device *pdev)
 {
 	struct da9052_rtc *rtc;
 	int ret;
@@ -264,7 +264,7 @@ err_mem:
 	return ret;
 }
 
-static int __devexit da9052_rtc_remove(struct platform_device *pdev)
+static int da9052_rtc_remove(struct platform_device *pdev)
 {
 	struct da9052_rtc *rtc = pdev->dev.platform_data;
 
@@ -278,7 +278,7 @@ static int __devexit da9052_rtc_remove(struct platform_device *pdev)
 
 static struct platform_driver da9052_rtc_driver = {
 	.probe	= da9052_rtc_probe,
-	.remove	= __devexit_p(da9052_rtc_remove),
+	.remove	= da9052_rtc_remove,
 	.driver = {
 		.name	= "da9052-rtc",
 		.owner	= THIS_MODULE,
