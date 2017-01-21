@@ -193,6 +193,8 @@ static inline int suspend_devices_and_enter(suspend_state_t state)
 }
 #endif /* !CONFIG_SUSPEND */
 
+extern unsigned int suspendsync;
+
 #ifdef CONFIG_PM_TEST_SUSPEND
 /* kernel/power/suspend_test.c */
 extern void suspend_test_start(void);

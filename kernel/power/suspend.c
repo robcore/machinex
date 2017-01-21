@@ -28,10 +28,9 @@
 #include <linux/rtc.h>
 #include <linux/ftrace.h>
 #include <trace/events/power.h>
+#include <linux/machinex_defines.h>
 
 #include "power.h"
-
-int suspendsync;
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },

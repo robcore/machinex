@@ -16,13 +16,10 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/hrtimer.h>
-#include <linux/suspend.h>
 
 #include "power.h"
-#ifdef CONFIG_SEC_DVFS
-#include <linux/cpufreq.h>
-#endif
 
+#include <mach/sec_debug.h>
 #include <linux/mfd/pm8xxx/misc.h>
 #include <mach/restart.h>
 
@@ -669,28 +666,31 @@ static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
 power_attr(pm_freeze_timeout);
 
 #endif	/* CONFIG_FREEZER*/
+/* If set, devices may be suspended and resumed asynchronously. */
+unsigned int suspendsync = 0;
 
-static ssize_t suspendsync_show(struct kobject *kobj,
+static ssize_t suspend_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", suspendsync);
+	return sprintf(buf, "%u\n", suspendsync);
 }
 
-static ssize_t suspendsync_store(struct kobject *kobj,
+static ssize_t suspend_sync_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t n)
 {
-	int val;
+	unsigned long val;
 
-	sscanf(buf, "%d\n", &val);
+	if (strict_strtoul(buf, 10, &val))
+		return -EINVAL;
 
-	if (val < 0 || val > 1)
+	if (val > 1)
 		return -EINVAL;
 
 	suspendsync = val;
 	return n;
 }
 
-power_attr(suspendsync);
+power_attr(suspend_sync);
 
 static ssize_t hard_reset_ctl_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -753,12 +753,7 @@ static struct attribute * g[] = {
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
 #endif
-	&suspendsync_attr.attr,
-#ifdef CONFIG_SEC_DVFS
-	&cpufreq_min_limit_attr.attr,
-	&cpufreq_max_limit_attr.attr,
-	&cpufreq_table_attr.attr,
-#endif
+	&suspend_sync_attr.attr,
 	&hard_reset_ctl_attr.attr,
 	NULL,
 };
@@ -797,12 +792,6 @@ static int __init pm_init(void)
 	power_kobj = kobject_create_and_add("power", NULL);
 	if (!power_kobj)
 		return -ENOMEM;
-
-#ifdef CONFIG_SEC_DVFS
-	apps_min_freq = MIN_FREQ_LIMIT;
-	apps_max_freq = MAX_FREQ_LIMIT;
-	thermald_max_freq = MAX_FREQ_LIMIT;
-#endif
 
 	error = sysfs_create_group(power_kobj, &attr_group);
 	if (error)

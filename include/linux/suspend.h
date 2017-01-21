@@ -31,7 +31,6 @@ static inline void pm_restore_console(void)
 }
 #endif
 
-extern int suspendsync;
 typedef int __bitwise suspend_state_t;
 
 #define PM_SUSPEND_ON		((__force suspend_state_t) 0)
