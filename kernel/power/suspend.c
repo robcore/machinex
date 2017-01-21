@@ -28,7 +28,6 @@
 #include <linux/rtc.h>
 #include <linux/ftrace.h>
 #include <trace/events/power.h>
-#include <linux/machinex_defines.h>
 
 #include "power.h"
 
