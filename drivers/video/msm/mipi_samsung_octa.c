@@ -57,7 +57,7 @@ struct pm_gpio gpio_get_param = {
 	.inv_int_pol	= 0,
 };
 
-unsigned int Lpanel_colors = 2;
+unsigned int Lpanel_colors;
 extern void panel_load_colors(unsigned int val);
 static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
@@ -626,6 +626,10 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 	if (get_auto_brightness() >= 6)
 		msd.mpd->first_bl_hbm_psre = 1;
 
+#ifdef CONFIG_SEC_DEBUG_MDP
+	sec_debug_mdp_reset_value();
+#endif
+
 	pr_info("[%s]\n", __func__);
 	//printk("Rob's Panel Hook Msg.");
 /*#ifdef CONFIG_POWERSUSPEND
@@ -902,7 +906,6 @@ char* get_b6_reg_magna(void)
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
-	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
@@ -1065,9 +1068,8 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 		goal_fps = 42;
 	else if (level == 2)
 		goal_fps = 51;
-	else {
+	else
 		return size;
-	}
 
 	if (current_fps != goal_fps)
 		current_fps = goal_fps;
@@ -1454,6 +1456,9 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 
 		printk(KERN_INFO
 		"[lcd] pdev->id =%d,  pdev-name = %s\n", pdev->id, pdev->name);
+#ifdef CONFIG_SEC_DEBUG_MDP
+		sec_debug_mdp_init();
+#endif
 		printk(KERN_INFO "[lcd] mipi_samsung_disp_probe end since pdev-id is 0\n");
 
 		return 0;

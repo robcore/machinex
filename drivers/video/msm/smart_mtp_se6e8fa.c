@@ -89,7 +89,7 @@ static char VT_300CD_R;
 static char VT_300CD_G;
 static char VT_300CD_B;
 
-static long color_mods[5][9] = {
+static long long color_mods[5][9] = {
 	{  0,  0,  5, -18, -16, -10, -5, 0,  0 },
 	{  0,  0,  2,  -9,  -8,  -5, -2, 0,  0 },
 	{  0,  0,  0,   0,   0,   0,  0, 0,  0 },
@@ -221,7 +221,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
 	add_mtp	 = LSB + VT_300CD_R;
-	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][0]) << BIT_SHIFT;
+	result_1 = result_2 = (vt_coefficient[LSB] + add_mtp + color_mods[panelval][0]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -229,7 +229,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_G;
-	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][1]) << BIT_SHIFT;
+	result_1 = result_2 = (vt_coefficient[LSB] + add_mtp + color_mods[panelval][1]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -237,7 +237,7 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_B;
-	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][2]) << BIT_SHIFT;
+	result_1 = result_2 = (vt_coefficient[LSB] + add_mtp + color_mods[panelval][2]) << BIT_SHIFT;
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
