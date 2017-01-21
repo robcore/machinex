@@ -746,7 +746,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
-		msd.mpd->first_bl_hbm_psre = 1;
+		msd.mpd->first_bl_hbm_psre = 0;
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
 		pr_info("%s : panel is off state!!\n", __func__);
@@ -1423,6 +1423,7 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 {
 	int ret;
 	unsigned int value;
+	struct msm_fb_data_type *mfd;
 
 	ret = sscanf(buf, "%d\n", &value);
 	if (ret != 1)
@@ -1436,6 +1437,10 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 	Lpanel_colors = value;
 
 	panel_load_colors(Lpanel_colors);
+
+	mutex_lock(&brightness_mutex);
+	mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
+	mutex_unlock(&brightness_mutex);
 
 	return size;
 }
