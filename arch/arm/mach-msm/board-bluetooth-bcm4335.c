@@ -69,6 +69,9 @@ int bt_is_running=0;
 
 EXPORT_SYMBOL(bt_is_running);
 
+#define FPGA_GPIO_BT_EN 4
+#define FPGA_GPIO_BT_WAKE 5
+
 static struct rfkill *bt_rfkill;
 
 int get_gpio_hwrev(int gpio)
@@ -147,10 +150,9 @@ static void gpio_rev_init(void)
 	bluesleep_resources[0].end = get_gpio_hwrev(GPIO_BT_HOST_WAKE);
 	bluesleep_resources[1].start = FPGA_GPIO_BT_WAKE;
 	bluesleep_resources[1].end = FPGA_GPIO_BT_WAKE;
-	bluesleep_resources[2].start = \
-		MSM_GPIO_TO_INT(get_gpio_hwrev(GPIO_BT_HOST_WAKE));
-	bluesleep_resources[2].end = \
-		MSM_GPIO_TO_INT(get_gpio_hwrev(GPIO_BT_HOST_WAKE));
+	bluesleep_resources[2].start = gpio_to_irq(GPIO_BT_HOST_WAKE);
+	bluesleep_resources[2].end = gpio_to_irq(GPIO_BT_HOST_WAKE);
+
 }
 #endif
 
@@ -167,8 +169,14 @@ static int bcm4335_bt_rfkill_set_power(void *data, bool blocked)
 		pr_err("[BT] Bluetooth Power On.\n");
 
 		ret = ice_gpiox_set(FPGA_GPIO_BT_WAKE, 1);
+
 		if (ret)
 			pr_err("[BT] failed to set ext_wake to high.\n");
+
+		if (gpio_get_value(get_gpio_hwrev(GPIO_BT_HOST_WAKE)))
+			pr_err("[BT] host_wake is high.\n");
+		else
+			pr_err("[BT] host_wake is low.\n");
 
 #ifdef BT_UART_CFG
 	for (pin = 0; pin < ARRAY_SIZE(bt_uart_on_table); pin++) {
@@ -179,7 +187,9 @@ static int bcm4335_bt_rfkill_set_power(void *data, bool blocked)
 			       __func__, bt_uart_on_table[pin], rc);
 	}
 #endif
+
 		ret = ice_gpiox_set(FPGA_GPIO_BT_EN, 1);
+
 		if (ret)
 			pr_err("[BT] failed to set BT_EN.\n");
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
