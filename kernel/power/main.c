@@ -677,7 +677,7 @@ static ssize_t suspendsync_show(struct kobject *kobj,
 }
 
 static ssize_t suspendsync_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
+		struct kobj_attribute *attr, const char *buf, size_t n)
 {
 	int val;
 
@@ -687,14 +687,10 @@ static ssize_t suspendsync_store(struct kobject *kobj,
 		return -EINVAL;
 
 	suspendsync = val;
-	return count;
+	return n;
 }
-power_attr(suspendsync);
 
-static struct kobj_attribute suspendsync_attribute =
-	__ATTR(suspendsync, 0666,
-		suspendsync_show,
-		suspendsync_store);
+power_attr(suspendsync);
 
 static ssize_t hard_reset_ctl_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
