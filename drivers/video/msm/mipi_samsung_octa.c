@@ -542,8 +542,8 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 	coordinate_tunning(msd.mpd->coordinate[0], msd.mpd->coordinate[1]);
 #endif
 
-	/* TO set default temperature value 30 degree*/
-	msd.mpd->temperature_value = 30;
+	/* TO set default temperature value 25 degree*/
+	msd.mpd->temperature_value = 25;
 
 	mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_DISABLE, false);
 	smart_dimming_init(&(msd.mpd->smart_se6e8fa));
@@ -746,7 +746,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
-		msd.mpd->first_bl_hbm_psre = 0;
+		msd.mpd->first_bl_hbm_psre = 1;
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
 		pr_info("%s : panel is off state!!\n", __func__);
