@@ -1289,7 +1289,6 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		pr_info("%s lcd error bl_level : %d", __func__, bl_level);
 		backlightlevel = GAMMA_152CD;
 		break;
 	}

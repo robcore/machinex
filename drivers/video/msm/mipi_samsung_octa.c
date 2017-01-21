@@ -542,8 +542,8 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 	coordinate_tunning(msd.mpd->coordinate[0], msd.mpd->coordinate[1]);
 #endif
 
-	/* TO set default temperature value 25 degree*/
-	msd.mpd->temperature_value = 25;
+	/* TO set default temperature value 30 degree*/
+	msd.mpd->temperature_value = 30;
 
 	mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_DISABLE, false);
 	smart_dimming_init(&(msd.mpd->smart_se6e8fa));
@@ -1423,7 +1423,6 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 {
 	int ret;
 	unsigned int value;
-	struct msm_fb_data_type *mfd;
 
 	ret = sscanf(buf, "%d\n", &value);
 	if (ret != 1)
@@ -1437,10 +1436,6 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 	Lpanel_colors = value;
 
 	panel_load_colors(Lpanel_colors);
-
-	mutex_lock(&brightness_mutex);
-	mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
-	mutex_unlock(&brightness_mutex);
 
 	return size;
 }
