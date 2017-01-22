@@ -25,7 +25,7 @@
  *
  * Not recommended for use with OMAP4460 due to the potential for lockups
  * whilst hotplugging.
- * 
+ *
  * Thanks to Thalamus for the inspiration!
  */
 
@@ -36,13 +36,14 @@
 #include <linux/workqueue.h>
 #include <linux/sched.h>
 #include <linux/mutex.h>
-#include <linux/platform_device.h>
 #include <linux/cpufreq.h>
-//#include <linux/rq_stats.h>
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#include <linux/kobject.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
 #endif
+#include <linux/machinex_defines.h>
+
+#include <linux/powersuspend.h>
 
 #define IX_HOTPLUG "ix_hotplug"
 
@@ -59,6 +60,9 @@ static struct delayed_work hotplug_decision_work;
 static struct work_struct suspend;
 static struct work_struct resume;
 static struct workqueue_struct *ixwq;
+static bool hotplug_suspended = false;
+static unsigned int hotplug_suspend = 0
+static atomic_t ix_hotplug_active = ATOMIC_INIT(0);
 
 static unsigned int enable_all_load = 800;
 static unsigned int enable_load[5] = {0, 120, 220, 340, 0};
@@ -67,11 +71,13 @@ static unsigned int sample_rate[5] = {0, 25, 50, 100, 50};
 static unsigned int online_sampling_periods[5] = {0, 3, 3, 5, 0};
 static unsigned int offline_sampling_periods[5] = {0, 0, 8, 3, 4};
 static unsigned int online_cpus;
-static unsigned int min_cpus_online = 1;
+static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
+static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int sampling_rate;
 static unsigned int available_cpus;
 static unsigned int online_sample;
 static unsigned int offline_sample;
+
 
 static void hotplug_online_single_work(void)
 {
@@ -104,10 +110,13 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 {
 	unsigned int avg_running, io_wait;
 	//unsigned int rq_depth;
-	
+
+	if (hotplug_suspended)
+		return;
+
 	sched_get_nr_running_avg(&avg_running, &io_wait);
 	//rq_depth = rq_info.rq_avg;
-	
+
 	if ((avg_running <= disable_load[online_cpus]) &&
 			(online_cpus > min_cpus_online)) {
 		//pr_info("ix_hotplug: Disable Exit - %d %d %d %d %d\n", online_cpus, offline_sample, offline_sampling_periods[online_cpus], disable_load[online_cpus], avg_running);
@@ -136,32 +145,92 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 			}
 			online_cpus = num_online_cpus();
 			online_sample = 0;
-		}		
+		}
 		online_sample++;
 		offline_sample = 1;
 		goto exit;
 	}
-	
+
 	//pr_info("ix_hotplug: Idle, CPUs: %d %d\n", online_cpus, num_online_cpus());
-	
+
 exit:
 
 	sampling_rate = sample_rate[online_cpus];
-	
+
 	//pr_info("ix_hotplug: CPUs: %d Load: %d Sampling: %d\n", online_cpus, avg_running, sampling_rate);
-	
+
 	queue_delayed_work_on(0, ixwq, &hotplug_decision_work, msecs_to_jiffies(sampling_rate));
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void ix_hotplug_suspend(struct work_struct *work)
+static ssize_t show_enable_all_load(struct kobject *kobj,
+				     struct attribute *attr, char *buf)
 {
+	return sprintf(buf, "%d\n", enable_all_load);
+}
+
+static ssize_t store_enable_all_load(struct kobject *kobj,
+				  struct attribute *attr, const char *buf,
+				  size_t count)
+{
+	int ret;
+	long unsigned int val;
+
+	ret = strict_strtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	enable_all_load = val;
+	return count;
+}
+
+static struct global_attr enable_all_load_attr = __ATTR(enable_all_load, 0666,
+		show_enable_all_load, store_enable_all_load);
+
+
+static ssize_t show_disable_load(struct kobject *kobj,
+				     struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", disable_load);
+}
+
+static ssize_t store_disable_load(struct kobject *kobj,
+				  struct attribute *attr, const char *buf,
+				  size_t count)
+{
+	int ret;
+	long unsigned int val;
+
+	ret = strict_strtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	disable_load = val;
+	return count;
+}
+
+static struct global_attr disable_load_attr = __ATTR(disable_load, 0666,
+		show_disable_load, store_disable_load);
+
+static struct attribute *ix_hotplug_attributes[] = {
+	&enable_all_load_attr.attr,
+	&disable_load_attr.attr,
+	NULL,
+};
+
+static struct attribute_group ix_hotplug_attr_group = {
+	.attrs = ix_hotplug_attributes,
+	.name = "ix_hotplug",
+};
+
+static void __ref ix_hotplug_suspend(struct work_struct *work)
+{
+	if (!hotplug_suspend)
+		return;
+
 	cancel_delayed_work_sync(&hotplug_decision_work);
 	drain_workqueue(ixwq);
 	cpu_down(1);
 	cpu_down(2);
 	cpu_down(3);
-	pr_info("ix_hotplug: Early Suspend\n");
+	pr_info("ix_hotplug: Power Suspend\n");
 }
 
 static void __ref ix_hotplug_resume(struct work_struct *work)
@@ -171,40 +240,71 @@ static void __ref ix_hotplug_resume(struct work_struct *work)
 	cpu_up(1);
 	online_cpus = num_online_cpus();
 	queue_delayed_work_on(0,  ixwq, &hotplug_decision_work, msecs_to_jiffies(2500));
-	pr_info("ix_hotplug: Late Resume\n");
+	pr_info("ix_hotplug: Power Resume\n");
 }
 
-static void ix_hotplug_early_suspend(struct early_suspend *handler)
+#ifdef CONFIG_STATE_NOTIFIER
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
 {
-	schedule_work(&suspend);
-}
+	if ((atomic_read(&ix_hotplug_active) == 0) ||
+			hotplug_suspended)
+		return NOTIFY_OK;
 
-static void ix_hotplug_late_resume(struct early_suspend *handler)
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
+			ix_hotplug_resume();
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			ix_hotplug_suspend();
+			break;
+		default:
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif
+
+static int __ref ix_hotplug_start(void)
 {
-	schedule_work(&resume);
-}
+	int sysfs_result;
 
-static struct early_suspend early_suspend = {
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-	.suspend = ix_hotplug_early_suspend,
-	.resume = ix_hotplug_late_resume,
-};
-#endif /* CONFIG_HAS_EARLYSUSPEND */
-
-static int __devinit ix_hotplug_probe(struct platform_device *pdev)
-{	
 	online_cpus = num_online_cpus();
 	available_cpus = num_possible_cpus();
-	
-	ixwq = alloc_workqueue("ix_hotplug_workqueue", WQ_HIGHPRI, 1);
-    
+
+	ix_hotplug_kobj = kobject_create_and_add("ix_hotplug",
+		kernel_kobj);
+
+	if (!ix_hotplug_kobj) {
+		pr_err("%s kobject create failed!\n", __FUNCTION__);
+		return -ENOMEM;
+	}
+
+	sysfs_result = sysfs_create_group(ix_hotplug_kobj,
+		&ix_hotplug_attr_group);
+
+	if (sysfs_result) {
+		pr_info("%s group create failed!\n", __FUNCTION__);
+		kobject_put(ix_hotplug_kobj);
+		return -ENOMEM;
+
+	ixwq = alloc_workqueue("ix_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
+
     if (!ixwq)
         return -ENOMEM;
-        
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&early_suspend);
+
+#ifdef CONFIG_STATE_NOTIFIER
+	notif.notifier_call = state_notifier_callback;
+	if (state_register_client(&notif)) {
+		pr_err("%s: Failed to register State notifier callback\n",
+			IX_HOTPLUG);
+		goto err_dev;
+	}
 #endif
-	
+
+	mutex_init(&ix_hotplug_mutex);
+
 	INIT_WORK(&suspend, ix_hotplug_suspend);
 	INIT_WORK(&resume, ix_hotplug_resume);
 	INIT_DELAYED_WORK(&hotplug_decision_work, hotplug_decision_work_fn);
@@ -215,63 +315,35 @@ static int __devinit ix_hotplug_probe(struct platform_device *pdev)
 
 	queue_delayed_work_on(0, ixwq, &hotplug_decision_work, msecs_to_jiffies(10000));
 
-	pr_info("ix_hotplug: v2.0 - InstigatorX\n");
-	pr_info("ix_hotplug: based on v0.220 by _thalamus\n");
-	
 	return 0;
-}
-
-static struct platform_device ix_hotplug_device = {
-	.name = IX_HOTPLUG,
-	.id = -1,
-};
-
-static int ix_hotplug_remove(struct platform_device *pdev)
-{
-
-	cancel_delayed_work_sync(&hotplug_decision_work);
-	drain_workqueue(ixwq);
-	
-	return 0;
-}
-
-static struct platform_driver ix_hotplug_driver = {
-	.probe = ix_hotplug_probe,
-	.remove = ix_hotplug_remove,
-	.driver = {
-		.name = IX_HOTPLUG,
-		.owner = THIS_MODULE,
-	},
-};
-
-static int __init ix_hotplug_init(void)
-{
-	int ret;
-
-	ret = platform_driver_register(&ix_hotplug_driver);
-
-	if (ret)
-	{
-		return ret;
-	}
-
-	ret = platform_device_register(&ix_hotplug_device);
-
-	if (ret)
-	{
-		return ret;
-	}
-
-	pr_info("%s: init\n", IX_HOTPLUG);
-
+err_dev:
+	destroy_workqueue(ix_hotplug_workqueue);
+err_out:
+	atomic_set(&ix_hotplug_active, 0);
 	return ret;
 }
 
-static void __exit ix_hotplug_exit(void)
+static void ix_hotplug_stop(void)
 {
-	platform_device_unregister(&ix_hotplug_device);
-	platform_driver_unregister(&ix_hotplug_driver);
+
+	cancel_delayed_work_sync(&hotplug_decision_work);
+	flush_work(&suspend_work);
+	flush_work(&resume_work);
+	mutex_destroy(&ix_hotplug_mutex);
+
+#ifdef CONFIG_STATE_NOTIFIER
+	state_unregister_client(&notif);
+#endif
+	notif.notifier_call = NULL;
+
+	destroy_workqueue(ixwq);
 }
 
 late_initcall(ix_hotplug_init);
 module_exit(ix_hotplug_exit);
+
+MODULE_AUTHOR("InstigatorX, \
+		Rob Patershuk <robpatershuk@gmail.com>");
+MODULE_DESCRIPTION("'ix_hotplug' - A simple hotplug driver "
+	"with full automation as a replacement for mpdecision");
+MODULE_LICENSE("GPLv2");

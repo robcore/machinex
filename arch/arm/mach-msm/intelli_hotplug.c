@@ -755,7 +755,7 @@ static struct attribute_group intelli_plug_attr_group = {
 	.name = "intelli_plug",
 };
 
-static int __init intelli_plug_init(void)
+static int intelli_plug_init(void)
 {
 	int rc;
 
@@ -771,7 +771,7 @@ static int __init intelli_plug_init(void)
 	return 0;
 }
 
-static void __exit intelli_plug_exit(void)
+static void intelli_plug_exit(void)
 {
 	if (atomic_read(&intelli_plug_active) == 1)
 		intelli_plug_stop();

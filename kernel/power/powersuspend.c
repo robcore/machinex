@@ -288,11 +288,12 @@ static int power_suspend_init(void)
 /* This should never have to be used except on shutdown */
 static void power_suspend_exit(void)
 {
-	if (power_suspend_kobj != NULL) {
-		kobject_put(power_suspend_kobj);
 		flush_work(&power_suspend_work);
 		flush_work(&power_resume_work);
 		destroy_workqueue(pwrsup_wq);
+
+	if (power_suspend_kobj != NULL) {
+		kobject_put(power_suspend_kobj);
 	}
 }
 
