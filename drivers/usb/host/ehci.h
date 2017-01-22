@@ -769,6 +769,21 @@ static inline void ehci_sync_mem(void)
 
 /*-------------------------------------------------------------------------*/
 
+#define ehci_dbg(ehci, fmt, args...) \
+	dev_dbg(ehci_to_hcd(ehci)->self.controller , fmt , ## args)
+#define ehci_err(ehci, fmt, args...) \
+	dev_err(ehci_to_hcd(ehci)->self.controller , fmt , ## args)
+#define ehci_info(ehci, fmt, args...) \
+	dev_info(ehci_to_hcd(ehci)->self.controller , fmt , ## args)
+#define ehci_warn(ehci, fmt, args...) \
+	dev_warn(ehci_to_hcd(ehci)->self.controller , fmt , ## args)
+
+#ifdef VERBOSE_DEBUG
+#	define ehci_vdbg ehci_dbg
+#else
+	static inline void ehci_vdbg(struct ehci_hcd *ehci, ...) {}
+#endif
+
 #ifdef CONFIG_PCI
 
 /* For working around the MosChip frame-index-register bug */
