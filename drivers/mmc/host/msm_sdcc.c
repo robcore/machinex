@@ -66,25 +66,7 @@
 #include "msm_sdcc.h"
 #include "msm_sdcc_dml.h"
 
-#if defined(CONFIG_MACH_M2_SPR) || defined(CONFIG_MACH_M2_VZW) || defined(CONFIG_MACH_M2_ATT)
-#include <mach/msm8960-gpio.h>
-#else
 #include <mach/apq8064-gpio.h>
-#endif
-#if defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
-#include <linux/mfd/pm8xxx/mpp.h>
-#include <../board-8064.h>
- struct pm8xxx_mpp_config_data tflash_ls_en_mpp_high = {
-  .type = PM8XXX_MPP_TYPE_D_OUTPUT,
-  .level = PM8921_MPP_DIG_LEVEL_S4,
-  .control = PM8XXX_MPP_DOUT_CTRL_HIGH,
- };
- struct pm8xxx_mpp_config_data tflash_ls_en_mpp_low = {
-  .type = PM8XXX_MPP_TYPE_D_OUTPUT,
-  .level = PM8921_MPP_DIG_LEVEL_S4,
-  .control = PM8XXX_MPP_DOUT_CTRL_LOW,
- };
-#endif
 
 #define DRIVER_NAME "msm-sdcc"
 
@@ -1469,11 +1451,7 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 				data->error = -ETIMEDOUT;
 		}
 		/* In case of DATA CRC/timeout error, execute tuning again */
-#if defined (CONFIG_BCM4335)||defined (CONFIG_BCM4335_MODULE)
 		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id!=3))
-#else
-		if (host->tuning_needed && !host->tuning_in_progress)
-#endif
 			host->tuning_done = false;
 
 	} else if (status & MCI_RXOVERRUN) {
@@ -1829,17 +1807,9 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
-
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-		if( host->pdev->id == 3){
+		if( host->pdev->id == 3)
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
-		}
-#else
-		/* Execute full tuning in case of CRC errors */
-		host->saved_tuning_phase = INVALID_TUNING_PHASE;
-		if (host->tuning_needed)
-			host->tuning_done = false;
-#endif
+
 		cmd->error = -EILSEQ;
 	}
 
@@ -2587,41 +2557,21 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 
 	curr_slot = host->plat->vreg_data;
 	if (!curr_slot) {
-		pr_debug("%s: vreg info unavailable, assuming the slot is powered by always on domain\n",
-			 mmc_hostname(host->mmc));
+		rc = -EINVAL;
 		goto out;
 	}
 
-#if !defined(CONFIG_MACH_JFVE_EUR)
 #ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
 	if (!enable) {
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		if (system_rev != BOARD_REV07) { /* TI Level Shifter */
 			if (system_rev < BOARD_REV08 && host->pdev->id == 4)
-#else /* VZW/SPT/USCC */
-		if (system_rev != BOARD_REV08) { /* TI Level Shifter */
-			if (system_rev < BOARD_REV09 && host->pdev->id == 4)
-#endif
 				/* Disable level shifter */
 				gpio_set_value(60, 0); /* TFLASH_LS_EN */
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 			else if (system_rev >= BOARD_REV08 && host->pdev->id == 2)
-#else /* VZW/SPT/USCC/KOR */
-			else if (system_rev >= BOARD_REV09 && host->pdev->id == 2)
-#endif
-#if defined(CONFIG_MACH_JF_DCM)
-				ice_gpiox_set(FPGA_GPIO_TFLASH_LS_EN, 0);
-#elif defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
-				pm8xxx_mpp_config(GPIO_TFLASH_LS_EN, &tflash_ls_en_mpp_low);
-#else
 				gpio_set_value(64, 0); /* TFLASH_LS_EN */
-#endif
 			mdelay(1);
 		}
 	}
-#endif
 #endif
 
 	vreg_table[0] = curr_slot->vdd_data;
@@ -2639,48 +2589,24 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 		}
 	}
 
-#if !defined(CONFIG_MACH_JFVE_EUR)
 #ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
 	if (enable) {
 		mdelay(1);
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		if (system_rev < BOARD_REV08 && host->pdev->id == 4)
-#else /* VZW/SPT/USCC */
-		if (system_rev < BOARD_REV09 && host->pdev->id == 4)
-#endif
 			/* Enable level shifter */
 			gpio_set_value(60, 1); /* TFLASH_LS_EN */
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		else if (system_rev >= BOARD_REV08 && host->pdev->id == 2)
-#else /* VZW/SPT/USCC/KOR */
-		else if (system_rev >= BOARD_REV09 && host->pdev->id == 2)
-#endif
-#if defined(CONFIG_MACH_JF_DCM)
-			ice_gpiox_set(FPGA_GPIO_TFLASH_LS_EN, 1);
-#elif defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
-			pm8xxx_mpp_config(GPIO_TFLASH_LS_EN, &tflash_ls_en_mpp_high);
-#else
 			gpio_set_value(64, 1); /* TFLASH_LS_EN */
-#endif
 		mdelay(1);
 	} else {
 		mdelay(1);
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		if (system_rev == BOARD_REV07) { /* Toshiba Level Shifter */
 			if (system_rev < BOARD_REV08 && host->pdev->id == 4)
-#else /* VZW/SPT/USCC */
-		if (system_rev == BOARD_REV08) { /* Toshiba Level Shifter */
-			if (system_rev < BOARD_REV09 && host->pdev->id == 4)
-#endif
 				/* Disable level shifter */
 				gpio_set_value(60, 0); /* TFLASH_LS_EN */
 			mdelay(1);
 		}
 	}
-#endif
 #endif
 
 out:
@@ -3209,27 +3135,6 @@ static int msmsdcc_msm_bus_register(struct msmsdcc_host *host)
 	int rc = 0;
 	struct msm_bus_scale_pdata *use_cases;
 
-	if (host->pdev->dev.of_node) {
-		struct msm_mmc_bus_voting_data *data;
-		struct device *dev = &host->pdev->dev;
-
-		data = devm_kzalloc(dev,
-			sizeof(struct msm_mmc_bus_voting_data), GFP_KERNEL);
-		if (!data) {
-			dev_err(&host->pdev->dev,
-				"%s: failed to allocate memory\n", __func__);
-			rc = -ENOMEM;
-			goto out;
-		}
-
-		rc = msmsdcc_dt_get_array(dev, "qcom,bus-bw-vectors-bps",
-				&data->bw_vecs, &data->bw_vecs_size, 0);
-		if (!rc) {
-			data->use_cases = msm_bus_cl_get_pdata(host->pdev);
-			host->plat->msm_bus_voting_data = data;
-		}
-	}
-
 	if (host->plat->msm_bus_voting_data &&
 	    host->plat->msm_bus_voting_data->use_cases &&
 	    host->plat->msm_bus_voting_data->bw_vecs &&
@@ -3251,12 +3156,8 @@ static int msmsdcc_msm_bus_register(struct msmsdcc_host *host)
 				msmsdcc_msm_bus_get_vote_for_bw(host, 0);
 		host->msm_bus_vote.max_bw_vote =
 				msmsdcc_msm_bus_get_vote_for_bw(host, UINT_MAX);
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if (host->pdev->id == 4)
-			host->msm_bus_vote.is_max_bw_needed = 1;
-#endif
 	}
-out:
+
 	return rc;
 }
 
@@ -3763,12 +3664,13 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 
 skip_get_sync:
 	if (rc < 0) {
-		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+		BUG(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
 	}
 out:
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3790,13 +3692,14 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	rc = pm_runtime_put_sync(mmc->parent);
 
 	if (rc < 0) {
-		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+		BUG(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		return rc;
 	}
 
 out:
+	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #else
@@ -3832,6 +3735,7 @@ out:
 		msmsdcc_pm_qos_update_latency(host, 0);
 		return rc;
 	}
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3854,6 +3758,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		return rc;
 	}
 out:
+	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #endif
@@ -5400,7 +5305,6 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 		pr_err("%s: MCI_TEST_INPUT = 0x%.8x\n",
 			mmc_hostname(host->mmc),
 			readl_relaxed(host->base + MCI_TEST_INPUT));
-		msmsdcc_print_testbus_info(host);
 	}
 
 	if (host->curr.data) {
