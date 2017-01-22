@@ -237,7 +237,7 @@ out_free_devname:
 	return ret;
 }
 
-void net_prio_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+static void net_prio_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	struct task_struct *p;
 
