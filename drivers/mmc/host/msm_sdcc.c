@@ -3717,7 +3717,6 @@ skip_get_sync:
 		return rc;
 	}
 out:
-	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3746,7 +3745,6 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	}
 
 out:
-	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #else
