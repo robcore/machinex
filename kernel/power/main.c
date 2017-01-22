@@ -682,7 +682,7 @@ static ssize_t suspend_sync_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (val < 0 || > 1)
+	if (val < 0 || val > 1)
 		return -EINVAL;
 
 	suspendsync = val;
