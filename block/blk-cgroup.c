@@ -195,13 +195,6 @@ static void blkio_check_and_dec_stat(uint64_t *stat, bool direction, bool sync)
 		BUG_ON(stat[BLKIO_STAT_ASYNC] == 0);
 		stat[BLKIO_STAT_ASYNC]--;
 	}
-
-	/*
-	 * root blkg is destroyed.  Just clear the pointer since
-	 * root_rl does not take reference on root blkg.
-	 */
-	q->root_blkg = NULL;
-	q->root_rl.blkg = NULL;
 }
 
 #ifdef CONFIG_DEBUG_BLK_CGROUP
