@@ -200,7 +200,7 @@ EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
 static ssize_t power_suspend_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", sync_on_powersuspend);
+        return sprintf(buf, "%d\n", sync_on_powersuspend);
 }
 
 static ssize_t power_suspend_sync_store(struct kobject *kobj,
