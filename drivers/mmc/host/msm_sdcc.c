@@ -65,29 +65,10 @@
 
 #include "msm_sdcc.h"
 #include "msm_sdcc_dml.h"
-
-#if defined(CONFIG_MACH_M2_SPR) || defined(CONFIG_MACH_M2_VZW) || defined(CONFIG_MACH_M2_ATT)
-#include <mach/msm8960-gpio.h>
-#else
 #include <mach/apq8064-gpio.h>
-#endif
-#if defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
-#include <linux/mfd/pm8xxx/mpp.h>
-#include <../board-8064.h>
+
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
-#endif
-
- struct pm8xxx_mpp_config_data tflash_ls_en_mpp_high = {
-  .type = PM8XXX_MPP_TYPE_D_OUTPUT,
-  .level = PM8921_MPP_DIG_LEVEL_S4,
-  .control = PM8XXX_MPP_DOUT_CTRL_HIGH,
- };
- struct pm8xxx_mpp_config_data tflash_ls_en_mpp_low = {
-  .type = PM8XXX_MPP_TYPE_D_OUTPUT,
-  .level = PM8921_MPP_DIG_LEVEL_S4,
-  .control = PM8XXX_MPP_DOUT_CTRL_LOW,
- };
 #endif
 
 #define DRIVER_NAME "msm-sdcc"
@@ -1474,7 +1455,7 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 		}
 		/* In case of DATA CRC/timeout error, execute tuning again */
 #if defined (CONFIG_BCM4335)||defined (CONFIG_BCM4335_MODULE)
-		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id!=3))
+		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id != 3))
 #else
 		if (host->tuning_needed && !host->tuning_in_progress)
 #endif
@@ -1835,7 +1816,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 			!host->tuning_in_progress) {
 
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-		if( host->pdev->id == 3){
+		if(host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 #else
@@ -1934,7 +1915,9 @@ msmsdcc_irq(int irq, void *dev_id)
 			 * will take care of signaling sdio irq during
 			 * mmc_sdio_resume().
 			 */
-			if (host->sdcc_suspended) {
+			if (host->sdcc_suspended &&
+					(host->plat->mpm_sdiowakeup_int ||
+					 host->plat->sdiowakeup_irq)) {
 				/*
 				 * This is a wakeup interrupt so hold wakelock
 				 * until SDCC resume is handled.
@@ -2596,36 +2579,17 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 		goto out;
 	}
 
-#if !defined(CONFIG_MACH_JFVE_EUR)
 #ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
 	if (!enable) {
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		if (system_rev != BOARD_REV07) { /* TI Level Shifter */
 			if (system_rev < BOARD_REV08 && host->pdev->id == 4)
-#else /* VZW/SPT/USCC */
-		if (system_rev != BOARD_REV08) { /* TI Level Shifter */
-			if (system_rev < BOARD_REV09 && host->pdev->id == 4)
-#endif
 				/* Disable level shifter */
 				gpio_set_value(60, 0); /* TFLASH_LS_EN */
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 			else if (system_rev >= BOARD_REV08 && host->pdev->id == 2)
-#else /* VZW/SPT/USCC/KOR */
-			else if (system_rev >= BOARD_REV09 && host->pdev->id == 2)
-#endif
-#if defined(CONFIG_MACH_JF_DCM)
-				ice_gpiox_set(FPGA_GPIO_TFLASH_LS_EN, 0);
-#elif defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
-				pm8xxx_mpp_config(GPIO_TFLASH_LS_EN, &tflash_ls_en_mpp_low);
-#else
 				gpio_set_value(64, 0); /* TFLASH_LS_EN */
-#endif
 			mdelay(1);
 		}
 	}
-#endif
 #endif
 
 	vreg_table[0] = curr_slot->vdd_data;
@@ -5312,10 +5276,7 @@ store_enable_auto_cmd21(struct device *dev, struct device_attribute *attr,
 
 #ifdef CONFIG_STATE_NOTIFIER
 static void __ref msmsdcc_suspend(void)
-static void msmsdcc_power_suspend(struct power_suspend *h)
 {
-	struct msmsdcc_host *host =
-		container_of(h, struct msmsdcc_host, power_suspend);
 	unsigned long flags;
 
 	spin_lock_irqsave(&host->lock, flags);
@@ -5323,10 +5284,9 @@ static void msmsdcc_power_suspend(struct power_suspend *h)
 	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 	spin_unlock_irqrestore(&host->lock, flags);
 };
-static void msmsdcc_power_resume(struct power_suspend *h)
+
+static void __ref msmsdcc_resume(void)
 {
-	struct msmsdcc_host *host =
-		container_of(h, struct msmsdcc_host, power_suspend);
 	unsigned long flags;
 
 	if (host->polling_enabled) {
