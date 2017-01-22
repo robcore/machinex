@@ -268,7 +268,7 @@ INT CopyBufferToControlPacket(PMINI_ADAPTER Adapter, PVOID ioBuffer)
 			return STATUS_FAILURE;
 		}
 
-		if (TRUE == Adapter->bShutStatus) {
+		if (Adapter->bShutStatus == TRUE) {
 			BCM_DEBUG_PRINT(Adapter, DBG_TYPE_TX, TX_CONTROL, DBG_LVL_ALL, "SYNC UP IN SHUTDOWN..Device WakeUp\n");
 			if (Adapter->bTriedToWakeUpFromlowPowerMode == FALSE) {
 				BCM_DEBUG_PRINT(Adapter, DBG_TYPE_TX, TX_CONTROL, DBG_LVL_ALL, "Waking up for the First Time..\n");
@@ -290,7 +290,7 @@ INT CopyBufferToControlPacket(PMINI_ADAPTER Adapter, PVOID ioBuffer)
 		}
 	}
 
-	if (TRUE == Adapter->IdleMode) {
+	if (Adapter->IdleMode == TRUE) {
 		/* BCM_DEBUG_PRINT(Adapter,DBG_TYPE_PRINTK, 0, 0,"Device is in Idle mode ... hence\n"); */
 		if (pLeader->Status == LINK_UP_CONTROL_REQ || pLeader->Status == 0x80 ||
 			pLeader->Status == CM_CONTROL_NEWDSX_MULTICLASSIFIER_REQ) {
