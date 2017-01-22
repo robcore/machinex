@@ -667,7 +667,7 @@ power_attr(pm_freeze_timeout);
 
 #endif	/* CONFIG_FREEZER*/
 /* If set, devices may be suspended and resumed asynchronously. */
-unsigned int suspendsync = 0;
+int suspendsync = 0;
 
 static ssize_t suspend_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -678,12 +678,11 @@ static ssize_t suspend_sync_show(struct kobject *kobj,
 static ssize_t suspend_sync_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t n)
 {
-	unsigned long val;
+	int val;
 
-	if (strict_strtoul(buf, 10, &val))
-		return -EINVAL;
+	sscanf(buf, "%d", &val);
 
-	if (val > 1)
+	if (val < 0 || > 1)
 		return -EINVAL;
 
 	suspendsync = val;
