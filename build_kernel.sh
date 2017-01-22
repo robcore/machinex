@@ -355,10 +355,8 @@ fi;
 }
 
 function CHKVERS() {
-if [ -e /media/root/robcore/AIK/previous.txt ]; then
-	PREV=`cat /media/root/robcore/AIK/previous.txt`
-	echo "your previous version was $PREV"
-fi;
+	PERV=`cat /media/root/robcore/AIK/previous.txt`
+	echo "your previous version was $PERV"
 }
 
 if [ $# = 0 ] ; then
