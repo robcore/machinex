@@ -18,8 +18,10 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/nwpserial.h>
+#include <linux/clk.h>
 
 struct of_serial_info {
+	struct clk *clk;
 	int type;
 	int line;
 };
@@ -28,7 +30,8 @@ struct of_serial_info {
  * Fill a struct uart_port for a given device node
  */
 static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
-					int type, struct uart_port *port)
+			int type, struct uart_port *port,
+			struct of_serial_info *info)
 {
 	struct resource resource;
 	struct device_node *np = ofdev->dev.of_node;
@@ -37,8 +40,17 @@ static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
 
 	memset(port, 0, sizeof *port);
 	if (of_property_read_u32(np, "clock-frequency", &clk)) {
-		dev_warn(&ofdev->dev, "no clock-frequency property set\n");
-		return -ENODEV;
+
+		/* Get clk rate through clk driver if present */
+		info->clk = clk_get(&ofdev->dev, NULL);
+		if (info->clk == NULL) {
+			dev_warn(&ofdev->dev,
+				"clk or clock-frequency not defined\n");
+			return -ENODEV;
+		}
+
+		clk_prepare_enable(info->clk);
+		clk = clk_get_rate(info->clk);
 	}
 	/* If current-speed was set, then try not to change it. */
 	if (of_property_read_u32(np, "current-speed", &spd) == 0)
@@ -47,7 +59,7 @@ static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
 	ret = of_address_to_resource(np, 0, &resource);
 	if (ret) {
 		dev_warn(&ofdev->dev, "invalid address\n");
-		return ret;
+		goto out;
 	}
 
 	spin_lock_init(&port->lock);
@@ -74,7 +86,8 @@ static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
 		default:
 			dev_warn(&ofdev->dev, "unsupported reg-io-width (%d)\n",
 				 prop);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out;
 		}
 	}
 
@@ -85,6 +98,10 @@ static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
 	port->dev = &ofdev->dev;
 
 	return 0;
+out:
+	if (info->clk)
+		clk_disable_unprepare(info->clk);
+	return ret;
 }
 
 /*
@@ -111,7 +128,7 @@ static int __devinit of_platform_serial_probe(struct platform_device *ofdev)
 		return -ENOMEM;
 
 	port_type = (unsigned long)match->data;
-	ret = of_platform_serial_setup(ofdev, port_type, &port);
+	ret = of_platform_serial_setup(ofdev, port_type, &port, info);
 	if (ret)
 		goto out;
 
@@ -167,6 +184,9 @@ static int of_platform_serial_remove(struct platform_device *ofdev)
 		/* need to add code for these */
 		break;
 	}
+
+	if (info->clk)
+		clk_disable_unprepare(info->clk);
 	kfree(info);
 	return 0;
 }
