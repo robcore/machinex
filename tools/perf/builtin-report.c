@@ -33,6 +33,7 @@
 #include "util/thread.h"
 #include "util/sort.h"
 #include "util/hist.h"
+#include "arch/common.h"
 
 #include <linux/bitmap.h>
 
@@ -664,6 +665,12 @@ int cmd_report(int argc, const char **argv, const char *prefix __used)
 
 	has_br_stack = perf_header__has_feat(&session->header,
 					     HEADER_BRANCH_STACK);
+
+	if (!objdump_path) {
+		ret = perf_session_env__lookup_objdump(&session->header.env);
+		if (ret)
+			goto error;
+	}
 
 	if (sort__branch_mode == -1 && has_br_stack)
 		sort__branch_mode = 1;
