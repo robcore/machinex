@@ -66,25 +66,7 @@
 #include "msm_sdcc.h"
 #include "msm_sdcc_dml.h"
 
-#if defined(CONFIG_MACH_M2_SPR) || defined(CONFIG_MACH_M2_VZW) || defined(CONFIG_MACH_M2_ATT)
-#include <mach/msm8960-gpio.h>
-#else
-#include <mach/apq8064-gpio.h>
-#endif
-#if defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
-#include <linux/mfd/pm8xxx/mpp.h>
-#include <../board-8064.h>
- struct pm8xxx_mpp_config_data tflash_ls_en_mpp_high = {
-  .type = PM8XXX_MPP_TYPE_D_OUTPUT,
-  .level = PM8921_MPP_DIG_LEVEL_S4,
-  .control = PM8XXX_MPP_DOUT_CTRL_HIGH,
- };
- struct pm8xxx_mpp_config_data tflash_ls_en_mpp_low = {
-  .type = PM8XXX_MPP_TYPE_D_OUTPUT,
-  .level = PM8921_MPP_DIG_LEVEL_S4,
-  .control = PM8XXX_MPP_DOUT_CTRL_LOW,
- };
-#endif
+#include <mach/jf_eur-gpio.h>
 
 #define DRIVER_NAME "msm-sdcc"
 
@@ -1469,11 +1451,7 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 				data->error = -ETIMEDOUT;
 		}
 		/* In case of DATA CRC/timeout error, execute tuning again */
-#if defined (CONFIG_BCM4335)||defined (CONFIG_BCM4335_MODULE)
 		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id!=3))
-#else
-		if (host->tuning_needed && !host->tuning_in_progress)
-#endif
 			host->tuning_done = false;
 
 	} else if (status & MCI_RXOVERRUN) {
@@ -1824,22 +1802,17 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 	}
 
 	if (status & (MCI_CMDTIMEOUT | MCI_AUTOCMD19TIMEOUT)) {
-		//pr_err("%s: CMD%d: Command timeout\n",
-				//mmc_hostname(host->mmc), cmd->opcode);
+		pr_debug("%s: CMD%d: Command timeout\n",
+				mmc_hostname(host->mmc), cmd->opcode);
 		cmd->error = -ETIMEDOUT;
 	} else if ((status & MCI_CMDCRCFAIL && cmd->flags & MMC_RSP_CRC) &&
 			!host->tuning_in_progress) {
-
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
+		pr_debug("%s: CMD%d: Command CRC error\n",
+			mmc_hostname(host->mmc), cmd->opcode);
+		msmsdcc_dump_sdcc_state(host);
 		if( host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
-#else
-		/* Execute full tuning in case of CRC errors */
-		host->saved_tuning_phase = INVALID_TUNING_PHASE;
-		if (host->tuning_needed)
-			host->tuning_done = false;
-#endif
 		cmd->error = -EILSEQ;
 	}
 
@@ -3209,27 +3182,6 @@ static int msmsdcc_msm_bus_register(struct msmsdcc_host *host)
 	int rc = 0;
 	struct msm_bus_scale_pdata *use_cases;
 
-	if (host->pdev->dev.of_node) {
-		struct msm_mmc_bus_voting_data *data;
-		struct device *dev = &host->pdev->dev;
-
-		data = devm_kzalloc(dev,
-			sizeof(struct msm_mmc_bus_voting_data), GFP_KERNEL);
-		if (!data) {
-			dev_err(&host->pdev->dev,
-				"%s: failed to allocate memory\n", __func__);
-			rc = -ENOMEM;
-			goto out;
-		}
-
-		rc = msmsdcc_dt_get_array(dev, "qcom,bus-bw-vectors-bps",
-				&data->bw_vecs, &data->bw_vecs_size, 0);
-		if (!rc) {
-			data->use_cases = msm_bus_cl_get_pdata(host->pdev);
-			host->plat->msm_bus_voting_data = data;
-		}
-	}
-
 	if (host->plat->msm_bus_voting_data &&
 	    host->plat->msm_bus_voting_data->use_cases &&
 	    host->plat->msm_bus_voting_data->bw_vecs &&
@@ -3251,12 +3203,8 @@ static int msmsdcc_msm_bus_register(struct msmsdcc_host *host)
 				msmsdcc_msm_bus_get_vote_for_bw(host, 0);
 		host->msm_bus_vote.max_bw_vote =
 				msmsdcc_msm_bus_get_vote_for_bw(host, UINT_MAX);
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if (host->pdev->id == 4)
-			host->msm_bus_vote.is_max_bw_needed = 1;
-#endif
 	}
-out:
+
 	return rc;
 }
 
@@ -3769,6 +3717,7 @@ skip_get_sync:
 		return rc;
 	}
 out:
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3797,6 +3746,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	}
 
 out:
+	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #else
@@ -3832,6 +3782,7 @@ out:
 		msmsdcc_pm_qos_update_latency(host, 0);
 		return rc;
 	}
+	msmsdcc_msm_bus_cancel_work_and_set_vote(host, &mmc->ios);
 	return 0;
 }
 
@@ -3854,6 +3805,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		return rc;
 	}
 out:
+	msmsdcc_msm_bus_queue_work(host);
 	return rc;
 }
 #endif
@@ -5400,7 +5352,6 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 		pr_err("%s: MCI_TEST_INPUT = 0x%.8x\n",
 			mmc_hostname(host->mmc),
 			readl_relaxed(host->base + MCI_TEST_INPUT));
-		msmsdcc_print_testbus_info(host);
 	}
 
 	if (host->curr.data) {
@@ -6385,14 +6336,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	disable_irq(core_irqres->start);
 	host->sdcc_irq_disabled = 1;
 
-	if (!plat->sdiowakeup_irq) {
-		/* Check if registered as IORESOURCE_IRQ */
-		plat->sdiowakeup_irq =
-			platform_get_irq_byname(pdev, "sdiowakeup_irq");
-		if (plat->sdiowakeup_irq < 0)
-			plat->sdiowakeup_irq = 0;
-	}
-
 	if (plat->sdiowakeup_irq) {
 		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
 				mmc_hostname(mmc));
@@ -6443,7 +6386,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags | IRQF_ONESHOT,
+				  plat->irq_flags,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
@@ -6458,11 +6401,8 @@ msmsdcc_probe(struct platform_device *pdev)
 		       mmc_hostname(mmc));
 
 /* SYSFS about SD Card Detection by soonil.lim */
-#if defined(CONFIG_MACH_SERRANO)
-	if (t_flash_detect_dev == NULL && (host->pdev->id == 3)) {
-#else
+/* Dear soonil.lim.  You fucking suck at future-proofing your code */
 	if (t_flash_detect_dev == NULL && gpio_is_valid(plat->status_gpio)) {
-#endif
 		printk(KERN_DEBUG "%s : Change sysfs Card Detect\n", __func__);
 
 		t_flash_detect_dev = device_create(sec_class,
@@ -6947,12 +6887,10 @@ msmsdcc_runtime_suspend(struct device *dev)
 		goto out;
 	}
 
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
 	if (host->pdev->id == 3) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
 		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
-#endif
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
 		host->sdcc_suspending = 1;
@@ -7057,7 +6995,6 @@ msmsdcc_runtime_resume(struct device *dev)
 	host->pending_resume = false;
 	pr_debug("%s: %s: end\n", mmc_hostname(mmc), __func__);
 out:
-	msmsdcc_print_pm_stats(host, start, __func__, 0);
 	return 0;
 }
 
@@ -7107,7 +7044,7 @@ static int msmsdcc_pm_suspend(struct device *dev)
 		rc = msmsdcc_runtime_suspend(dev);
  out:
 	/* This flag must not be set if system is entering into suspend */
-	host->pending_resume = false;
+	//host->pending_resume = false;
 	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
@@ -7164,7 +7101,6 @@ static int msmsdcc_pm_resume(struct device *dev)
 		enable_irq(host->plat->status_irq);
 	}
 out:
-	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
 
