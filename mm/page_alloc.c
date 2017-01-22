@@ -6388,7 +6388,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	ret = __alloc_contig_migrate_range(&cc, start, end);
 	if (ret)
-		goto done;
+		return ret;
 
 	/*
 	 * Pages from [start, end) are within a MAX_ORDER_NR_PAGES
