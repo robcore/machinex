@@ -1,12 +1,12 @@
 #include "headers.h"
 
-INT InterfaceRDM(PS_INTERFACE_ADAPTER psIntfAdapter,
-		UINT addr,
-		PVOID buff,
-		INT len)
+int InterfaceRDM(PS_INTERFACE_ADAPTER psIntfAdapter,
+		unsigned int addr,
+		void buff,
+		int len)
 {
 	int bytes;
-	USHORT usRetries = 0;
+	unsigned short usRetries = 0;
 
 	if (!psIntfAdapter) {
 		BCM_DEBUG_PRINT(psIntfAdapter->psAdapter, DBG_TYPE_PRINTK, 0, 0, "Interface Adapter is NULL");
@@ -57,13 +57,13 @@ INT InterfaceRDM(PS_INTERFACE_ADAPTER psIntfAdapter,
 	return bytes;
 }
 
-INT InterfaceWRM(PS_INTERFACE_ADAPTER psIntfAdapter,
-		UINT addr,
-		PVOID buff,
-		INT len)
+int InterfaceWRM(PS_INTERFACE_ADAPTER psIntfAdapter,
+		unsigned int addr,
+		void buff,
+		int len)
 {
 	int retval = 0;
-	USHORT usRetries = 0;
+	unsigned short usRetries = 0;
 
 	if (!psIntfAdapter) {
 		BCM_DEBUG_PRINT(psIntfAdapter->psAdapter, DBG_TYPE_PRINTK, 0, 0, "Interface Adapter  is NULL");
@@ -117,26 +117,26 @@ INT InterfaceWRM(PS_INTERFACE_ADAPTER psIntfAdapter,
 	}
 }
 
-INT BcmRDM(PVOID arg,
-	UINT addr,
-	PVOID buff,
-	INT len)
+int BcmRDM(void arg,
+	unsigned int addr,
+	void buff,
+	int len)
 {
 	return InterfaceRDM((PS_INTERFACE_ADAPTER)arg, addr, buff, len);
 }
 
-INT BcmWRM(PVOID arg,
-	UINT addr,
-	PVOID buff,
-	INT len)
+int BcmWRM(void arg,
+	unsigned int addr,
+	void buff,
+	int len)
 {
 	return InterfaceWRM((PS_INTERFACE_ADAPTER)arg, addr, buff, len);
 }
 
-INT Bcm_clear_halt_of_endpoints(PMINI_ADAPTER Adapter)
+int Bcm_clear_halt_of_endpoints(PMINI_ADAPTER Adapter)
 {
 	PS_INTERFACE_ADAPTER psIntfAdapter = (PS_INTERFACE_ADAPTER)(Adapter->pvInterfaceAdapter);
-	INT status = STATUS_SUCCESS;
+	int status = STATUS_SUCCESS;
 
 	/*
 	 * usb_clear_halt - tells device to clear endpoint halt/stall condition
@@ -172,10 +172,10 @@ INT Bcm_clear_halt_of_endpoints(PMINI_ADAPTER Adapter)
 	return status;
 }
 
-VOID Bcm_kill_all_URBs(PS_INTERFACE_ADAPTER psIntfAdapter)
+void Bcm_kill_all_URBs(PS_INTERFACE_ADAPTER psIntfAdapter)
 {
 	struct urb *tempUrb = NULL;
-	UINT i;
+	unsigned int i;
 
 	/*
 	 * usb_kill_urb - cancel a transfer request and wait for it to finish
@@ -222,7 +222,7 @@ VOID Bcm_kill_all_URBs(PS_INTERFACE_ADAPTER psIntfAdapter)
 	atomic_set(&psIntfAdapter->uCurrRcb, 0);
 }
 
-VOID putUsbSuspend(struct work_struct *work)
+void putUsbSuspend(struct work_struct *work)
 {
 	PS_INTERFACE_ADAPTER psIntfAdapter = NULL;
 	struct usb_interface *intf = NULL;
