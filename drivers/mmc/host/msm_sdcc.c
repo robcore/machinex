@@ -74,6 +74,10 @@
 #if defined(CONFIG_MACH_JF_SKT) || defined(CONFIG_MACH_JF_KTT) || defined(CONFIG_MACH_JF_LGT)
 #include <linux/mfd/pm8xxx/mpp.h>
 #include <../board-8064.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
+
  struct pm8xxx_mpp_config_data tflash_ls_en_mpp_high = {
   .type = PM8XXX_MPP_TYPE_D_OUTPUT,
   .level = PM8921_MPP_DIG_LEVEL_S4,
@@ -5184,7 +5188,7 @@ store_polling(struct device *dev, struct device_attribute *attr,
 	} else {
 		mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 	}
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_STATE_NOTIFIER
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
 #endif
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -5306,7 +5310,8 @@ store_enable_auto_cmd21(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_STATE_NOTIFIER
+static void __ref msmsdcc_suspend(void)
 static void msmsdcc_power_suspend(struct power_suspend *h)
 {
 	struct msmsdcc_host *host =

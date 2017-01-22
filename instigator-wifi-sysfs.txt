@@ -1,0 +1,41 @@
+From c8db67fa398c43f052cc9b46992ef464e7a2e214 Mon Sep 17 00:00:00 2001
+From: franciscofranco <franciscofranco.1990@gmail.com>
+Date: Thu, 14 Jun 2012 17:36:30 +0100
+Subject: [PATCH] dhd_linux.c: add my wifi power management module feature from
+ my other device's kernels. Y to enable it and N to disable it
+
+---
+ drivers/net/wireless/bcmdhd/src/dhd/sys/dhd_linux.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/bcmdhd/src/dhd/sys/dhd_linux.c b/drivers/net/wireless/bcmdhd/src/dhd/sys/dhd_linux.c
+index aef77a9..f3ad2b2 100755
+--- a/drivers/net/wireless/bcmdhd/src/dhd/sys/dhd_linux.c
++++ b/drivers/net/wireless/bcmdhd/src/dhd/sys/dhd_linux.c
+@@ -605,10 +605,18 @@ static void dhd_set_packet_filter(int value, dhd_pub_t *dhd)
+ }
+ 
+ #if defined(CONFIG_HAS_EARLYSUSPEND)
++
++bool wifi_pm = false;
++module_param(wifi_pm, bool, 0755);
++
+ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
+ {
+ #ifndef CUSTOMER_HW_SAMSUNG
+ 	int power_mode = PM_MAX;
++	
++	if (wifi_pm)
++		power_mode = PM_FAST;
++		
+ 	/* wl_pkt_filter_enable_t	enable_parm; */
+ 	char iovbuf[32];
+ 	int bcn_li_dtim = 3;
+@@ -661,7 +669,6 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
+ 			DHD_ERROR(("%s: Remove extra suspend setting \n", __FUNCTION__));
+ 
+ #ifndef CUSTOMER_HW_SAMSUNG
+-			power_mode = PM_FAST;
+ 			dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)&power_mode,
+ 				sizeof(power_mode), TRUE, 0);
+ #endif

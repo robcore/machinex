@@ -389,7 +389,7 @@ struct msmsdcc_host {
 	struct msmsdcc_pio_data	pio;
 
 #ifdef CONFIG_POWERSUSPEND
-	struct power_suspend power_suspend;
+	struct msmsdcc_suspend state_notifier;
 	int polling_enabled;
 #endif
 
