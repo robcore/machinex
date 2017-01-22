@@ -155,13 +155,6 @@ static inline void blkio_update_group_iops(struct blkio_group *blkg,
 			blkiop->ops.blkio_update_group_write_iops_fn(blkg->key,
 								blkg,iops);
 	}
-
-	/*
-	 * root blkg is destroyed.  Just clear the pointer since
-	 * root_rl does not take reference on root blkg.
-	 */
-	q->root_blkg = NULL;
-	q->root_rl.blkg = NULL;
 }
 
 /*
