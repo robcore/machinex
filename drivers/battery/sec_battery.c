@@ -3189,7 +3189,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	/* create work queue */
 	battery->monitor_wqueue =
-		alloc_workqueue(dev_name(&pdev->dev), WQ_FREEZABLE | WQ_UNBOUND | WQ_MEM_RECLAIM, 1)
+		alloc_workqueue(dev_name(&pdev->dev), WQ_FREEZABLE | WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!battery->monitor_wqueue) {
 		dev_err(battery->dev,
 			"%s: Fail to Create Workqueue\n", __func__);
