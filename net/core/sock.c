@@ -1174,11 +1174,11 @@ static void sk_prot_free(struct proto *prot, struct sock *sk)
 
 #ifdef CONFIG_CGROUPS
 #if IS_ENABLED(CONFIG_NET_CLS_CGROUP)
-void sock_update_classid(struct sock *sk)
+void sock_update_classid(struct sock *sk, struct task_struct *task)
 {
 	u32 classid;
 
-	classid = task_cls_classid(current);
+	classid = task_cls_classid(task);
 	if (classid && classid != sk->sk_classid)
 		sk->sk_classid = classid;
 }
