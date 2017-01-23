@@ -10,7 +10,7 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/syscore_ops.h>
-#include <linux/wakeup_reason.h>
+
 #include "internals.h"
 
 static void suspend_irq(struct irq_desc *desc, int irq)
@@ -178,16 +178,11 @@ EXPORT_SYMBOL_GPL(resume_device_irqs);
 int check_wakeup_irqs(void)
 {
 	struct irq_desc *desc;
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int irq;
 
 	for_each_irq_desc(irq, desc) {
 		if (irqd_is_wakeup_set(&desc->irq_data)) {
 			if (desc->istate & IRQS_PENDING) {
-				log_suspend_abort_reason("Wakeup IRQ %d %s pending",
-					irq,
-					desc->action && desc->action->name ?
-					desc->action->name : "");
 				pr_info("Wakeup IRQ %d %s pending, suspend aborted\n",
 					irq,
 					desc->action && desc->action->name ?
