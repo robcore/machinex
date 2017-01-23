@@ -105,11 +105,9 @@ config SEC_OOM_KILLER
 	  linux kernel is totally different from android policy.
 	  Hence, it makes more sense that we select the oom victim
 	  as android does when LMK is invoked.
-
 config ENHANCED_LMK_ROUTINE
 	bool "Enhanced LMK Routine
-	default y
-	---help---
+	help
 	  Samsung shit.
 
 config ANDROID_LMK_ADJ_RBTREE
