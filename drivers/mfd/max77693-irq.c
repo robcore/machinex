@@ -18,7 +18,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * This driver is based on max77693-irq.c
+ * This driver is based on max8997-irq.c
  */
 
 #include <linux/err.h>
@@ -246,19 +246,10 @@ clear_retry:
 		for (i = MUIC_INT1; i < MAX77693_IRQ_GROUP_NR; i++)
 			irq_reg[i] |= tmp_irq_reg[i];
 #endif
-
-		pr_info("%s: muic interrupt(0x%02x, 0x%02x, 0x%02x)\n",
-			__func__, irq_reg[MUIC_INT1],
-			irq_reg[MUIC_INT2], irq_reg[MUIC_INT3]);
 	}
 
-	pr_debug("%s: irq gpio post-state(0x%02x)\n", __func__,
-		gpio_get_value(max77693->irq_gpio));
-
-	if (gpio_get_value(max77693->irq_gpio) == 0) {
-		pr_warn("%s: irq_gpio is not High!\n", __func__);
+	if (gpio_get_value(max77693->irq_gpio) == 0)
 		goto clear_retry;
-	}
 
 	/* Apply masking */
 	for (i = 0; i < MAX77693_IRQ_GROUP_NR; i++) {
@@ -283,7 +274,6 @@ int max77693_irq_resume(struct max77693_dev *max77693)
 	if (max77693->irq && max77693->irq_base)
 		ret = max77693_irq_thread(max77693->irq_base, max77693);
 
-	dev_info(max77693->dev, "%s: irq_resume ret=%d", __func__, ret);
 
 	return ret >= 0 ? 0 : ret;
 }
@@ -313,7 +303,7 @@ int max77693_irq_init(struct max77693_dev *max77693)
 	if (ret) {
 		dev_err(max77693->dev, "%s: failed requesting gpio %d\n",
 			__func__, max77693->irq_gpio);
-		return ret;
+		goto err_irq;
 	}
 	gpio_direction_input(max77693->irq_gpio);
 	gpio_free(max77693->irq_gpio);
@@ -359,27 +349,26 @@ int max77693_irq_init(struct max77693_dev *max77693)
 	/* Unmask max77693 interrupt */
 	ret = max77693_read_reg(max77693->i2c, MAX77693_PMIC_REG_INTSRC_MASK,
 			  &i2c_data);
-	if (ret) {
-		dev_err(max77693->dev, "%s: fail to read muic reg\n", __func__);
-		return ret;
-	}
+	if (ret < 0)
+		goto err_irq;
 
 	i2c_data &= ~(MAX77693_IRQSRC_CHG);	/* Unmask charger interrupt */
 	i2c_data &= ~(MAX77693_IRQSRC_MUIC);	/* Unmask muic interrupt */
-	max77693_write_reg(max77693->i2c, MAX77693_PMIC_REG_INTSRC_MASK,
+	ret = max77693_write_reg(max77693->i2c, MAX77693_PMIC_REG_INTSRC_MASK,
 			   i2c_data);
+	if (ret < 0)
+		goto err_irq;
 
 	ret = request_threaded_irq(max77693->irq, NULL, max77693_irq_thread,
 				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 				   "max77693-irq", max77693);
 
-	if (ret) {
+	if (ret)
 		dev_err(max77693->dev, "Failed to request IRQ %d: %d\n",
 			max77693->irq, ret);
-		return ret;
-	}
 
-	return 0;
+err_irq:
+	return ret;
 }
 
 void max77693_irq_exit(struct max77693_dev *max77693)
