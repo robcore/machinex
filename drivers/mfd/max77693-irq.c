@@ -200,8 +200,6 @@ clear_retry:
 		/* CHG_INT */
 		ret = max77693_read_reg(max77693->i2c, MAX77693_CHG_REG_CHG_INT,
 				&irq_reg[CHG_INT]);
-		pr_info("%s: charger interrupt(0x%02x)\n",
-			__func__, irq_reg[CHG_INT]);
 #if defined(CONFIG_WIRELESSCHG_SUPPORT)
 #if defined(CONFIG_CHARGER_MAX77803)
 		/* mask chgin to prevent wcin infinite interrupt
