@@ -44,7 +44,6 @@
 #ifdef CONFIG_VFP
 #include <asm/vfp.h>
 #endif
-#include <linux/sched.h>
 
 #include "acpuclock.h"
 #include "clock.h"
@@ -890,10 +889,9 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		if (sleep_delay == 0) /* 0 would mean infinite time */
 			sleep_delay = 1;
 
-#ifdef CONFIG_HW_PERF_EVENTS
 		if (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask)
 			clock_debug_print_enabled();
-#endif
+
 		if (pm_sleep_ops.enter_sleep)
 			ret = pm_sleep_ops.enter_sleep(sleep_delay,
 					msm_pm_idle_rs_limits,
@@ -1055,12 +1053,10 @@ static int msm_pm_enter(suspend_state_t state)
 		uint32_t msm_pm_max_sleep_time = 0;
 		int collapsed = 0;
 
-#ifdef CONFIG_HW_PERF_EVENTS
 		if (MSM_PM_DEBUG_SUSPEND & msm_pm_debug_mask)
 			pr_info("%s: power collapse\n", __func__);
 
 		clock_debug_print_enabled();
-#endif
 
 #ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
 		if (msm_pm_sleep_time_override > 0) {
@@ -1388,5 +1384,4 @@ static int __init msm_pm_init(void)
 	return 0;
 }
 
-late_initcall_sync(msm_pm_init);
-
+late_initcall(msm_pm_init);

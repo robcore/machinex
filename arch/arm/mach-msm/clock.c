@@ -608,9 +608,7 @@ int msm_clock_register(struct clk_lookup *table, size_t size)
 
 	init_sibling_lists(table, size);
 	clkdev_add_table(table, size);
-#ifdef CONFIG_HW_PERF_EVENTS
 	clock_debug_register(table, size);
-#endif
 
 	return 0;
 }
@@ -775,9 +773,7 @@ int __init msm_clock_init(struct clock_init_data *data)
 		clk_init_data->post_init();
 
 	clock_debug_init();
-#ifdef CONFIG_HW_PERF_EVENTS
 	clock_debug_register(clock_tbl, num_clocks);
-#endif
 
 	return 0;
 }
