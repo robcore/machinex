@@ -326,10 +326,16 @@ static int pm8xxx_rtc_alarm_irq_enable(struct device *dev, unsigned int enable)
 
 	/* Clear Alarm register */
 	if (!enable) {
-		rc = pm8xxx_write_wrapper(rtc_dd, value,
-			rtc_dd->alarm_rw_base, NUM_8_BIT_RTC_REGS);
-		if (rc < 0)
+		ctrl_reg &= ~PM8xxx_RTC_ALARM_CLEAR;
+		rc = pm8xxx_write_wrapper(rtc_dd, &ctrl_reg, rtc_dd->rtc_base +
+							PM8XXX_ALARM_CTRL_OFFSET, 1);
+		if (rc < 0) {
 			dev_dbg(dev, "Clear ALARM value reg failed\n");
+			goto rtc_rw_fail;
+		}
+
+	rtc_dd->ctrl_reg = ctrl_reg;
+
 	}
 
 rtc_rw_fail:
