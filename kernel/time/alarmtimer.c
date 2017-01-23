@@ -27,8 +27,6 @@
 #include <linux/freezer.h>
 #include <linux/export.h>
 
-#define ALARM_DELTA 120
-
 /**
  * struct alarm_base - Alarm timer bases
  * @lock:		Lock for syncrhonized access to the base
@@ -283,6 +281,7 @@ good:
 	__pm_relax(wakeup_source *ws);
 	return 0;
 }
+
 #else
 static int alarmtimer_suspend(struct device *dev)
 {
