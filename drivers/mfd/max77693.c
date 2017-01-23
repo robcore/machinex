@@ -167,32 +167,8 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 		//pr_info("%s: device found: rev.0x%x, ver.0x%x\n", __func__,
 				//max77693->pmic_rev, max77693->pmic_ver);
 	}
-#if defined(CONFIG_MACH_JF)
-#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_JF_LGT)
-#ifdef CONFIG_SEC_DEBUG
-	if (kernel_sec_get_debug_level() == KERNEL_SEC_DEBUG_LEVEL_LOW) {
-#endif
-		pm8xxx_hard_reset_config(PM8XXX_DISABLE_HARD_RESET);
-		max77693_write_reg(i2c, MAX77693_PMIC_REG_MAINCTRL1, 0x04);
-#ifdef CONFIG_SEC_DEBUG
-	} else {
-		pm8xxx_hard_reset_config(PM8XXX_DISABLE_HARD_RESET);
-		max77693_write_reg(i2c, MAX77693_PMIC_REG_MAINCTRL1, 0x0c);
-	}
-#endif
-#else
-#ifdef CONFIG_SEC_DEBUG
-	if (kernel_sec_get_debug_level() == KERNEL_SEC_DEBUG_LEVEL_LOW) {
-#endif
-		max77693_write_reg(i2c, MAX77693_PMIC_REG_MAINCTRL1, 0x04);
-#ifdef CONFIG_SEC_DEBUG
-	} else {
-		pm8xxx_hard_reset_config(PM8XXX_DISABLE_HARD_RESET);
-		max77693_write_reg(i2c, MAX77693_PMIC_REG_MAINCTRL1, 0x0c);
-	}
-#endif
-#endif
-#endif
+	max77693_write_reg(i2c, MAX77693_PMIC_REG_MAINCTRL1, 0x04);
+
 	max77693_update_reg(i2c, MAX77693_CHG_REG_SAFEOUT_CTRL, 0x00, 0x30);
 
 	max77693->muic = i2c_new_dummy(i2c->adapter, I2C_ADDR_MUIC);
@@ -217,6 +193,7 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 err_mfd:
 	mfd_remove_devices(max77693->dev);
 err_irq_init:
+	max77693_irq_exit(max77693);
 	i2c_unregister_device(max77693->muic);
 	i2c_unregister_device(max77693->haptic);
 err:
