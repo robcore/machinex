@@ -1760,7 +1760,7 @@ static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
 		goto deinit_vddcx;
 	}
 
-	ehci_wq = create_singlethread_workqueue("ehci_wq");
+	ehci_wq = alloc_workqueue("ehci_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!ehci_wq) {
 		dev_err(&pdev->dev, "unable to create workqueue\n");
 		ret = -ENOMEM;
