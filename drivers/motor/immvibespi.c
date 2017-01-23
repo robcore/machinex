@@ -43,7 +43,7 @@
 ** This SPI supports only one actuator.
 */
 #define NUM_ACTUATORS 1
-#define PWM_DUTY_MAX    213 /* 13MHz / (579 + 1) = 22.4kHz */
+#define PWM_DUTY_MAX    254 /* 13MHz / (579 + 1) = 22.4kHz */
 #define PWM_DEVICE	1
 
 static bool g_bampenabled;
