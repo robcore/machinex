@@ -2151,7 +2151,6 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 static irqreturn_t max77693_muic_irq(int irq, void *data)
 {
 	struct max77693_muic_info *info = data;
-	dev_info(info->dev, "%s: irq:%d\n", __func__, irq);
 
 	mutex_lock(&info->mutex);
 	max77693_muic_detect_dev(info, irq);
@@ -2174,8 +2173,6 @@ static int max77693_muic_irq_init(struct max77693_muic_info *info)
 	int ret;
 	u8 val;
 
-	dev_info(info->dev, "func:%s\n", __func__);
-	/* dev_info(info->dev, "%s: system_rev=%x\n", __func__, system_rev); */
 
 	/* INTMASK1  3:ADC1K 2:ADCErr 1:ADCLow 0:ADC */
 	/* INTMASK2  0:Chgtype */

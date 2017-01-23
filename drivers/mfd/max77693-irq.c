@@ -224,8 +224,6 @@ clear_retry:
 		ret = max77693_read_reg(max77693->i2c,
 				MAX77693_PMIC_REG_TOPSYS_INT,
 				&irq_reg[TOPSYS_INT]);
-		pr_info("%s: topsys interrupt(0x%02x)\n",
-			__func__, irq_reg[TOPSYS_INT]);
 	}
 
 	if (irq_src & MAX77693_IRQSRC_FLASH) {
@@ -233,8 +231,6 @@ clear_retry:
 		ret = max77693_read_reg(max77693->i2c,
 				MAX77693_LED_REG_FLASH_INT,
 				&irq_reg[LED_INT]);
-		pr_info("%s: led interrupt(0x%02x)\n",
-			__func__, irq_reg[LED_INT]);
 	}
 
 	if (irq_src & MAX77693_IRQSRC_MUIC) {
