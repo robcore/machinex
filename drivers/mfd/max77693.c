@@ -225,8 +225,7 @@ static int max77693_suspend(struct device *dev)
 	struct max77693_dev *max77693 = i2c_get_clientdata(i2c);
 
 	if (device_may_wakeup(dev))
-		enable_irq_wake(max77693->irq);
-
+		irq_set_irq_wake(max77693->irq, 1);
 	return 0;
 }
 
@@ -236,8 +235,7 @@ static int max77693_resume(struct device *dev)
 	struct max77693_dev *max77693 = i2c_get_clientdata(i2c);
 
 	if (device_may_wakeup(dev))
-		disable_irq_wake(max77693->irq);
-
+		irq_set_irq_wake(max77693->irq, 0);
 	return max77693_irq_resume(max77693);
 }
 #else
