@@ -184,14 +184,14 @@ static void enable_vibetonz_from_user(struct timed_output_dev *dev, int value)
 	vibrator_work = value;
 	schedule_work(&vibetonz_work);
 
-	if (value > 0 && (value != TEST_MODE_TIME)) {
+	if (value > 0){
 		if (value > max_timeout)
 			value = max_timeout;
 
 		hrtimer_start(&timer,
 			ktime_set(value / 1000, (value % 1000) * 1000000),
 			HRTIMER_MODE_REL);
-		vibrator_value = 0;
+		vibrator_value = value;
 	}
 }
 

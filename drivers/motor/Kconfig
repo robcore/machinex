@@ -3,7 +3,7 @@
 #
 menuconfig VIBETONZ
 	tristate "Vibetonz"
-	default n
+	default y
 	help
 	Say Y to enable Vibetonz support.
 
