@@ -424,8 +424,6 @@ static int __init alarm_dev_init(void)
 			CLOCK_BOOTTIME, HRTIMER_MODE_ABS);
 	hrtimer_init(&alarms[ANDROID_ALARM_SYSTEMTIME].u.hrt,
 			CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
-	alarm_init(&alarms[ANDROID_ALARM_RTC_POWEROFF_WAKEUP].u.alrm,
-			ALARM_REALTIME, devalarm_alarmhandler);
 
 	for (i = 0; i < ANDROID_ALARM_TYPE_COUNT; i++) {
 		alarms[i].type = i;
