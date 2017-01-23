@@ -256,32 +256,22 @@ static int alarmtimer_suspend(struct device *dev)
 		return 0;
 
 	if (ktime_to_ns(min) < 1 * NSEC_PER_SEC) {
-		__pm_stay_awake(struct wakeup_source *ws);
-		/* Setup an rtc timer to fire */
-		rtc_timer_cancel(rtc, &rtctimer);
-		rtc_read_time(rtc, &tm);
-		now = rtc_tm_to_ktime(tm);
-		now = ktime_add(now, min);
-		/* Set alarm, if in the past reject suspend briefly to handle */
-		ret = rtc_timer_start(rtc, &rtctimer, now, ktime_set(0, 0));
-			if (ret < 0) {
-				__pm_wakeup_event(ws, 2 * MSEC_PER_SEC);
-				goto bad;
-			} else {
-				goto good;
-			}
-	} else {
-		__pm_relax(wakeup_source *ws);
-		return 0;
+		__pm_wakeup_event(ws, 5000);
+		return -EBUSY;
 	}
-bad:
-	pr_err("Rob fucking sucks at programming\n");
-	return ret;
-good:
-	__pm_relax(wakeup_source *ws);
-	return 0;
-}
 
+	/* Setup an rtc timer to fire that far in the future */
+	rtc_timer_cancel(rtc, &rtctimer);
+	rtc_read_time(rtc, &tm);
+	now = rtc_tm_to_ktime(tm);
+	now = ktime_add(now, min);
+
+	/* Set alarm, if in the past reject suspend briefly to handle */
+	ret = rtc_timer_start(rtc, &rtctimer, now, ktime_set(0, 0));
+	if (ret < 0)
+		__pm_wakeup_event(ws, 2000);
+	return ret;
+}
 #else
 static int alarmtimer_suspend(struct device *dev)
 {
