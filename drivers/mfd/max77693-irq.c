@@ -189,19 +189,13 @@ static irqreturn_t max77693_irq_thread(int irq, void *data)
 clear_retry:
 	ret = max77693_read_reg(max77693->i2c,
 		MAX77693_PMIC_REG_INTSRC, &irq_src);
-	if (ret < 0) {
-		dev_err(max77693->dev, "Failed to read interrupt source: %d\n",
-				ret);
+	if (ret < 0)
 		return IRQ_NONE;
-	}
-	pr_info("%s: interrupt source(0x%02x)\n", __func__, irq_src);
 
 	if (irq_src & MAX77693_IRQSRC_CHG) {
 		/* CHG_INT */
 		ret = max77693_read_reg(max77693->i2c, MAX77693_CHG_REG_CHG_INT,
 				&irq_reg[CHG_INT]);
-		pr_info("%s: charger interrupt(0x%02x)\n",
-			__func__, irq_reg[CHG_INT]);
 #if defined(CONFIG_WIRELESSCHG_SUPPORT)
 #if defined(CONFIG_CHARGER_MAX77803)
 		/* mask chgin to prevent wcin infinite interrupt

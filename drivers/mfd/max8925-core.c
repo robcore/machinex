@@ -616,7 +616,7 @@ int __devinit max8925_device_init(struct max8925_chip *chip,
 
 	ret = mfd_add_devices(chip->dev, 0, &onkey_devs[0],
 			      ARRAY_SIZE(onkey_devs),
-			      &onkey_resources[0], 0);
+			      &onkey_resources[0], 0, NULL);
 	if (ret < 0) {
 		dev_err(chip->dev, "Failed to add onkey subdev\n");
 		goto out_dev;
@@ -625,7 +625,7 @@ int __devinit max8925_device_init(struct max8925_chip *chip,
 	if (pdata) {
 		ret = mfd_add_devices(chip->dev, 0, &regulator_devs[0],
 				      ARRAY_SIZE(regulator_devs),
-				      &regulator_resources[0], 0);
+				      &regulator_resources[0], 0, NULL);
 		if (ret < 0) {
 			dev_err(chip->dev, "Failed to add regulator subdev\n");
 			goto out_dev;
@@ -635,7 +635,7 @@ int __devinit max8925_device_init(struct max8925_chip *chip,
 	if (pdata && pdata->backlight) {
 		ret = mfd_add_devices(chip->dev, 0, &backlight_devs[0],
 				      ARRAY_SIZE(backlight_devs),
-				      &backlight_resources[0], 0);
+				      &backlight_resources[0], 0, NULL);
 		if (ret < 0) {
 			dev_err(chip->dev, "Failed to add backlight subdev\n");
 			goto out_dev;
@@ -645,7 +645,7 @@ int __devinit max8925_device_init(struct max8925_chip *chip,
 	if (pdata && pdata->power) {
 		ret = mfd_add_devices(chip->dev, 0, &power_devs[0],
 					ARRAY_SIZE(power_devs),
-					&power_supply_resources[0], 0);
+				      &power_supply_resources[0], 0, NULL);
 		if (ret < 0) {
 			dev_err(chip->dev, "Failed to add power supply "
 				"subdev\n");
@@ -656,7 +656,7 @@ int __devinit max8925_device_init(struct max8925_chip *chip,
 	if (pdata && pdata->touch) {
 		ret = mfd_add_devices(chip->dev, 0, &touch_devs[0],
 				      ARRAY_SIZE(touch_devs),
-				      &touch_resources[0], 0);
+				      &touch_resources[0], 0, NULL);
 		if (ret < 0) {
 			dev_err(chip->dev, "Failed to add touch subdev\n");
 			goto out_dev;

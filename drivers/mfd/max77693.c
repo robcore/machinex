@@ -182,7 +182,7 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 		goto err_irq_init;
 
 	ret = mfd_add_devices(max77693->dev, -1, max77693_devs,
-			ARRAY_SIZE(max77693_devs), NULL, 0);
+			      ARRAY_SIZE(max77693_devs), NULL, 0, NULL);
 	if (ret < 0)
 		goto err_mfd;
 
