@@ -88,7 +88,7 @@ CONFIG_HIGH_RES_TIMERS=y
 #
 # CPU/Task time and stats accounting
 #
-CONFIG_TICK_CPU_ACCOUNTING=y
+# CONFIG_TICK_CPU_ACCOUNTING is not set
 # CONFIG_BSD_PROCESS_ACCT is not set
 # CONFIG_TASKSTATS is not set
 
