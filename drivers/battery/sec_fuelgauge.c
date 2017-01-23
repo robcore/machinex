@@ -350,7 +350,6 @@ static int __devinit sec_fuelgauge_probe(struct i2c_client *client,
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct sec_fuelgauge_info *fuelgauge;
-	fuelgauge->pdata = client->dev.platform_data;
 	int ret = 0;
 	union power_supply_propval raw_soc_val;
 
@@ -367,6 +366,7 @@ static int __devinit sec_fuelgauge_probe(struct i2c_client *client,
 	mutex_init(&fuelgauge->fg_lock);
 
 	fuelgauge->client = client;
+	fuelgauge->pdata = client->dev.platform_data;
 
 
 	i2c_set_clientdata(client, fuelgauge);
