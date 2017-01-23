@@ -130,7 +130,6 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	struct resource				*res;
 	struct usb_hcd				*hcd;
 	void __iomem				*regs;
-	struct ehci_hcd				*omap_ehci;
 	int					ret = -ENODEV;
 	int					irq;
 	int					i;
@@ -190,19 +189,6 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 		} else {
 			regulator_enable(pdata->regulator[i]);
 		}
-	}
-
-	if (pdata->phy_reset) {
-		if (gpio_is_valid(pdata->reset_gpio_port[0]))
-			gpio_request_one(pdata->reset_gpio_port[0],
-					 GPIOF_OUT_INIT_LOW, "USB1 PHY reset");
-
-		if (gpio_is_valid(pdata->reset_gpio_port[1]))
-			gpio_request_one(pdata->reset_gpio_port[1],
-					 GPIOF_OUT_INIT_LOW, "USB2 PHY reset");
-
-		/* Hold the PHY in RESET for enough time till DIR is high */
-		udelay(10);
 	}
 
 	pm_runtime_enable(dev);
@@ -342,7 +328,7 @@ static const struct hc_driver ehci_omap_hc_driver = {
 	/*
 	 * basic lifecycle operations
 	 */
-	.reset			= ehci_init,
+	.reset			= omap_ehci_init,
 	.start			= ehci_run,
 	.stop			= ehci_stop,
 	.shutdown		= ehci_shutdown,

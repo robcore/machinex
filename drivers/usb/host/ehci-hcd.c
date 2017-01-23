@@ -828,7 +828,7 @@ static int __maybe_unused ehci_run (struct usb_hcd *hcd)
 	return 0;
 }
 
-static int __maybe_unused ehci_setup (struct usb_hcd *hcd)
+static int ehci_setup(struct usb_hcd *hcd)
 {
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int retval;
@@ -851,6 +851,9 @@ static int __maybe_unused ehci_setup (struct usb_hcd *hcd)
 	retval = ehci_halt(ehci);
 	if (retval)
 		return retval;
+
+	if (ehci_is_TDI(ehci))
+		tdi_reset(ehci);
 
 	ehci_reset(ehci);
 
