@@ -29,8 +29,8 @@
 #define PWM_THRESH 75
 #define PWM_MAX 100
 
-static unsigned long machinex_pwm_val = PWM_DEFAULT; /* duty in percent */
-static int machinex_pwm_duty = 37050; /* duty value, 37050=100%, 27787=50%, 18525=0% */
+static unsigned long machinex_pwm_val = 50; /* duty in percent */
+static int machinex_pwm_duty = 27787; /* duty value, 37050=100%, 27787=50%, 18525=0% */
 
 struct max77693_haptic_data {
 	struct max77693_dev *max77693;
