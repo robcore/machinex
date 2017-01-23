@@ -193,7 +193,6 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 err_mfd:
 	mfd_remove_devices(max77693->dev);
 err_irq_init:
-	max77693_irq_exit(max77693);
 	i2c_unregister_device(max77693->muic);
 	i2c_unregister_device(max77693->haptic);
 err:
