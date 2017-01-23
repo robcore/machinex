@@ -20,20 +20,6 @@
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/mfd/pm8xxx/rtc.h>
 
-#ifdef CONFIG_RTC_AUTO_PWRON
-#include <linux/reboot.h>
-extern int poweroff_charging;
-#ifdef CONFIG_RTC_AUTO_PWRON_PARAM
-#include <linux/sec_param.h>
-#include <linux/param.h>
-#include <linux/wakelock.h>
-
-/* for alarm mode */
-#define ALARM_MODE_NOMAL			(0x6A)
-#define ALARM_MODE_BOOT_RTC			(0x7B)
-#endif
-#endif
-
 /* RTC Register offsets from RTC CTRL REG */
 #define PM8XXX_ALARM_CTRL_OFFSET	0x01
 #define PM8XXX_RTC_WRITE_OFFSET		0x02
