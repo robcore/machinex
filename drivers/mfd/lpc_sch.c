@@ -121,8 +121,7 @@ static int __devinit lpc_sch_probe(struct pci_dev *dev,
 		lpc_sch_cells[i].id = id->device;
 
 	ret = mfd_add_devices(&dev->dev, 0,
-			      lpc_sch_cells, ARRAY_SIZE(lpc_sch_cells), NULL,
-			      0, NULL);
+			lpc_sch_cells, ARRAY_SIZE(lpc_sch_cells), NULL, 0);
 	if (ret)
 		goto out_dev;
 
@@ -147,8 +146,7 @@ static int __devinit lpc_sch_probe(struct pci_dev *dev,
 			tunnelcreek_cells[i].id = id->device;
 
 		ret = mfd_add_devices(&dev->dev, 0, tunnelcreek_cells,
-				      ARRAY_SIZE(tunnelcreek_cells), NULL,
-				      0, NULL);
+			ARRAY_SIZE(tunnelcreek_cells), NULL, 0);
 	}
 
 	return ret;

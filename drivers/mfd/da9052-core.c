@@ -666,7 +666,7 @@ int __devinit da9052_device_init(struct da9052 *da9052, u8 chip_id)
 	da9052->irq_base = regmap_irq_chip_get_base(da9052->irq_data);
 
 	ret = mfd_add_devices(da9052->dev, -1, da9052_subdev_info,
-			      ARRAY_SIZE(da9052_subdev_info), NULL, 0, NULL);
+			      ARRAY_SIZE(da9052_subdev_info), NULL, 0);
 	if (ret)
 		goto err;
 

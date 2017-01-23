@@ -388,7 +388,7 @@ static int t7l66xb_probe(struct platform_device *dev)
 
 	ret = mfd_add_devices(&dev->dev, dev->id,
 			      t7l66xb_cells, ARRAY_SIZE(t7l66xb_cells),
-			      iomem, t7l66xb->irq_base, NULL);
+			      iomem, t7l66xb->irq_base);
 
 	if (!ret)
 		return 0;

@@ -914,7 +914,7 @@ static int __init asic3_mfd_probe(struct platform_device *pdev,
 			asic3_cell_leds[i].pdata_size = sizeof(pdata->leds[i]);
 		}
 		ret = mfd_add_devices(&pdev->dev, 0,
-			asic3_cell_leds, ASIC3_NUM_LEDS, NULL, 0, NULL);
+			asic3_cell_leds, ASIC3_NUM_LEDS, NULL, 0);
 	}
 
  out:

@@ -146,7 +146,7 @@ int tps65912_device_init(struct tps65912 *tps65912)
 
 	ret = mfd_add_devices(tps65912->dev, -1,
 			      tps65912s, ARRAY_SIZE(tps65912s),
-			      NULL, 0, NULL);
+			      NULL, 0);
 	if (ret < 0)
 		goto err;
 
