@@ -10,6 +10,10 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_fuelgauge.h>
+#include <linux/battery/sec_charger.h>
+#include <linux/battery/sec_battery.h>
+#include <linux/gpio.h>
+
 static struct device_attribute sec_fg_attrs[] = {
 	SEC_FG_ATTR(reg),
 	SEC_FG_ATTR(data),
@@ -187,6 +191,9 @@ static int sec_fg_calculate_dynamic_scale(
 	fuelgauge->capacity_max =
 		(fuelgauge->capacity_max * 99 / 100);
 
+	/* update capacity_old for sec_fg_get_atomic_capacity algorithm */
+	fuelgauge->capacity_old = 100;
+
 	dev_info(&fuelgauge->client->dev, "%s: %d is used for capacity_max\n",
 		__func__, fuelgauge->capacity_max);
 
@@ -199,6 +206,7 @@ static int sec_fg_set_property(struct power_supply *psy,
 {
 	struct sec_fuelgauge_info *fuelgauge =
 		container_of(psy, struct sec_fuelgauge_info, psy_fg);
+	sec_battery_platform_data_t *pdata = fuelgauge->pdata;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:

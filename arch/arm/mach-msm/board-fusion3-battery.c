@@ -681,6 +681,7 @@ static struct battery_data_t fusion3_battery_data[] = {
 
 sec_battery_platform_data_t sec_battery_pdata = {
 	/* NO NEED TO BE CHANGED */
+	/* Says you, asshole */
 	.initial_check = sec_bat_initial_check,
 	.bat_gpio_init = sec_bat_gpio_init,
 	.fg_gpio_init = sec_fg_gpio_init,
