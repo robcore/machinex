@@ -37,7 +37,7 @@ early_param("threadirqs", setup_forced_irqthreads);
  *
  *	This function waits for any pending IRQ handlers for this interrupt
  *	to complete before returning. If you use this function while
- *	holding a resource the IRQ handler may need you will deadlock.
+ *	holding a resource, the IRQ handler you need may deadlock.
  *
  *	This function may be called - with care - from IRQ context.
  */
