@@ -87,8 +87,6 @@ static int msm_global_timer;
 static struct timespec persistent_ts;
 static u64 persistent_ns;
 static u64 last_persistent_ns;
-static struct timespec suspend_ts;
-static u64 cyc_offset;
 
 #define NR_TIMERS ARRAY_SIZE(msm_clocks)
 
@@ -944,14 +942,15 @@ static u32 notrace msm_read_sched_clock(void)
 {
 	struct msm_clock *clock = &msm_clocks[msm_global_timer];
 	struct clocksource *cs = &clock->clocksource;
-	return cs->read(NULL) + cyc_offset;
+	return cs->read(NULL);
 }
 
-int read_current_timer(unsigned long *timer_val)
+static struct delay_timer msm_delay_timer;
+
+static unsigned long msm_read_current_timer(void)
 {
 	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
-	*timer_val = msm_read_timer_count(dgt, GLOBAL_TIMER);
-	return 0;
+	return msm_read_timer_count(dgt, GLOBAL_TIMER);
 }
 
 static void __init msm_sched_clock_init(void)
@@ -1222,7 +1221,6 @@ static void __init msm_timer_init(void)
 		}
 	}
 
-#ifdef ARCH_HAS_READ_CURRENT_TIMER
 	if (is_smp()) {
 		__raw_writel(1,
 			msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
@@ -1230,7 +1228,6 @@ static void __init msm_timer_init(void)
 		msm_delay_timer.read_current_timer = &msm_read_current_timer;
 		register_current_timer_delay(&msm_delay_timer);
 	}
-#endif
 
 #ifdef CONFIG_LOCAL_TIMERS
 	local_timer_register(&msm_lt_ops);
