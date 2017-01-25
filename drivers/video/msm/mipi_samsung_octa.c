@@ -623,6 +623,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
+	if (hbm_
 	if (get_auto_brightness() >= 6)
 		msd.mpd->first_bl_hbm_psre = 1;
 
@@ -863,17 +864,6 @@ static ssize_t mipi_samsung_disp_windowtype_show(struct device *dev,
 	return strnlen(buf, 15);
 }
 
-static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	int rc;
-
-	rc = snprintf((char *)buf, sizeof(*buf), "%d\n",
-			msd.dstat.auto_brightness);
-
-	return rc;
-}
-
 unsigned char get_auto_brightness(void)
 {
 	return  msd.dstat.auto_brightness;
@@ -901,6 +891,17 @@ char* get_b1_reg(void)
 char* get_b6_reg_magna(void)
 {
 	return msd.mpd->smart_se6e8fa.hbm_reg.b6_reg_magna;
+}
+
+static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int rc;
+
+	rc = snprintf((char *)buf, sizeof(*buf), "%d\n",
+			msd.dstat.auto_brightness);
+
+	return rc;
 }
 
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
