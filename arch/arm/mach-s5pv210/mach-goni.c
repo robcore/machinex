@@ -967,7 +967,7 @@ MACHINE_START(GONI, "GONI")
 	.handle_irq	= vic_handle_irq,
 	.map_io		= goni_map_io,
 	.init_machine	= goni_machine_init,
-	.init_time	= s5p_timer_init,
+	.timer		= &s5p_timer,
 	.reserve	= &goni_reserve,
 	.restart	= s5pv210_restart,
 MACHINE_END

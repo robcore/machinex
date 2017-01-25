@@ -182,7 +182,8 @@ extern void s3c24xx_init_uartdevs(char *name,
 
 /* timer for 2410/2440 */
 
-extern void s3c24xx_timer_init(void);
+struct sys_timer;
+extern struct sys_timer s3c24xx_timer;
 
 extern struct syscore_ops s3c2410_pm_syscore_ops;
 extern struct syscore_ops s3c2412_pm_syscore_ops;

@@ -107,7 +107,7 @@ static struct irqaction netx_timer_irq = {
 /*
  * Set up timer interrupt
  */
-void __init netx_timer_init(void)
+static void __init netx_timer_init(void)
 {
 	/* disable timer initially */
 	writel(0, NETX_GPIO_COUNTER_CTRL(0));
@@ -151,3 +151,7 @@ void __init netx_timer_init(void)
 	netx_clockevent.cpumask = cpumask_of(0);
 	clockevents_register_device(&netx_clockevent);
 }
+
+struct sys_timer netx_timer = {
+	.init		= netx_timer_init,
+};

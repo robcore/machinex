@@ -71,7 +71,7 @@ static void __init mahimahi_map_io(void)
 	msm_clock_init();
 }
 
-void msm_timer_init(void);
+extern struct sys_timer msm_timer;
 
 MACHINE_START(MAHIMAHI, "mahimahi")
 	.atag_offset	= 0x100,

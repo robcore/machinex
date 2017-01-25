@@ -332,13 +332,17 @@ static int __init kirkwood_find_tclk(void)
 	return 166666667;
 }
 
-void __init kirkwood_timer_init(void)
+static void __init kirkwood_timer_init(void)
 {
 	kirkwood_tclk = kirkwood_find_tclk();
 
 	orion_time_init(BRIDGE_VIRT_BASE, BRIDGE_INT_TIMER1_CLR,
 			IRQ_KIRKWOOD_BRIDGE, kirkwood_tclk);
 }
+
+struct sys_timer kirkwood_timer = {
+	.init = kirkwood_timer_init,
+};
 
 /*****************************************************************************
  * Audio

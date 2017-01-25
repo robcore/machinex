@@ -265,7 +265,7 @@ static void __init foxg20_board_init(void)
 
 MACHINE_START(ACMENETUSFOXG20, "Acme Systems srl FOX Board G20")
 	/* Maintainer: Sergio Tanzilli */
-	.init_time	= at91sam926x_pit_init,
+	.timer		= &at91sam926x_timer,
 	.map_io		= at91_map_io,
 	.init_early	= foxg20_init_early,
 	.init_irq	= at91_init_irq_default,

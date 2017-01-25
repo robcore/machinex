@@ -251,6 +251,6 @@ MACHINE_START(SMDK2416, "SMDK2416")
 	.init_irq	= s3c24xx_init_irq,
 	.map_io		= smdk2416_map_io,
 	.init_machine	= smdk2416_machine_init,
-	.init_time	= s3c24xx_timer_init,
+	.timer		= &s3c24xx_timer,
 	.restart	= s3c2416_restart,
 MACHINE_END

@@ -167,8 +167,12 @@ static void __init nuc900_clocksource_init(void)
 		TDR_SHIFT, clocksource_mmio_readl_down);
 }
 
-void __init nuc900_timer_init(void)
+static void __init nuc900_timer_init(void)
 {
 	nuc900_clocksource_init();
 	nuc900_clockevents_init();
 }
+
+struct sys_timer nuc900_timer = {
+	.init		= nuc900_timer_init,
+};

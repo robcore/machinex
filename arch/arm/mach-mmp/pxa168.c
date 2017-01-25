@@ -113,7 +113,7 @@ postcore_initcall(pxa168_init);
 /* system timer - clock enabled, 3.25MHz */
 #define TIMER_CLK_RST	(APBC_APBCLK | APBC_FNCLK | APBC_FNCLKSEL(3))
 
-void __init pxa168_timer_init(void)
+static void __init pxa168_timer_init(void)
 {
 	/* this is early, we have to initialize the CCU registers by
 	 * ourselves instead of using clk_* API. Clock rate is defined
@@ -126,6 +126,10 @@ void __init pxa168_timer_init(void)
 
 	timer_init(IRQ_PXA168_TIMER1);
 }
+
+struct sys_timer pxa168_timer = {
+	.init	= pxa168_timer_init,
+};
 
 void pxa168_clear_keypad_wakeup(void)
 {

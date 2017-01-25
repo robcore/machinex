@@ -261,6 +261,10 @@ static void __init mxt_td60_timer_init(void)
 	mx27_clocks_init(26000000);
 }
 
+static struct sys_timer mxt_td60_timer = {
+	.init	= mxt_td60_timer_init,
+};
+
 MACHINE_START(MXT_TD60, "Maxtrack i-MXT TD60")
 	/* maintainer: Maxtrack Industrial */
 	.atag_offset = 0x100,
@@ -268,7 +272,7 @@ MACHINE_START(MXT_TD60, "Maxtrack i-MXT TD60")
 	.init_early = imx27_init_early,
 	.init_irq = mx27_init_irq,
 	.handle_irq = imx27_handle_irq,
-	.init_time	= mxt_td60_timer_init,
+	.timer = &mxt_td60_timer,
 	.init_machine = mxt_td60_board_init,
 	.restart	= mxc_restart,
 MACHINE_END

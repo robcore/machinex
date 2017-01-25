@@ -201,7 +201,7 @@ static int __init of_at91sam926x_pit_init(void)
 /*
  * Set up both clocksource and clockevent support.
  */
-void __init at91sam926x_pit_init(void)
+static void __init at91sam926x_pit_init(void)
 {
 	unsigned long	pit_rate;
 	unsigned	bits;

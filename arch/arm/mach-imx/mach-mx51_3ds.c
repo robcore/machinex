@@ -162,6 +162,10 @@ static void __init mx51_3ds_timer_init(void)
 	mx51_clocks_init(32768, 24000000, 22579200, 0);
 }
 
+static struct sys_timer mx51_3ds_timer = {
+	.init = mx51_3ds_timer_init,
+};
+
 MACHINE_START(MX51_3DS, "Freescale MX51 3-Stack Board")
 	/* Maintainer: Freescale Semiconductor, Inc. */
 	.atag_offset = 0x100,
@@ -169,7 +173,7 @@ MACHINE_START(MX51_3DS, "Freescale MX51 3-Stack Board")
 	.init_early = imx51_init_early,
 	.init_irq = mx51_init_irq,
 	.handle_irq = imx51_handle_irq,
-	.init_time	= mx51_3ds_timer_init,
+	.timer = &mx51_3ds_timer,
 	.init_machine = mx51_3ds_init,
 	.restart	= mxc_restart,
 MACHINE_END

@@ -1075,7 +1075,7 @@ void __init sh7372_add_standard_devices(void)
 	sh7372_add_device_to_domain(&sh7372_a4r, &tmu01_device);
 }
 
-void __init sh7372_earlytimer_init(void)
+static void __init sh7372_earlytimer_init(void)
 {
 	sh7372_clock_init();
 	shmobile_earlytimer_init();
@@ -1088,4 +1088,7 @@ void __init sh7372_add_early_devices(void)
 
 	/* setup early console here as well */
 	shmobile_setup_console();
+
+	/* override timer setup with soc-specific code */
+	shmobile_timer.init = sh7372_earlytimer_init;
 }

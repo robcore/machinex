@@ -82,9 +82,14 @@ static struct irqaction ioc_timer_irq = {
 /*
  * Set up timer interrupt.
  */
-void __init ioc_timer_init(void)
+static void __init ioc_timer_init(void)
 {
 	arch_gettimeoffset = ioc_timer_gettimeoffset;
 	ioctime_init();
 	setup_irq(IRQ_TIMER0, &ioc_timer_irq);
 }
+
+struct sys_timer ioc_timer = {
+	.init		= ioc_timer_init,
+};
+

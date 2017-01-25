@@ -685,6 +685,6 @@ MACHINE_START(AQUILA, "Aquila")
 	.handle_irq	= vic_handle_irq,
 	.map_io		= aquila_map_io,
 	.init_machine	= aquila_machine_init,
-	.init_time	= s5p_timer_init,
+	.timer		= &s5p_timer,
 	.restart	= s5pv210_restart,
 MACHINE_END

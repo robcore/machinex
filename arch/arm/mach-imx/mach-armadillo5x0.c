@@ -557,6 +557,10 @@ static void __init armadillo5x0_timer_init(void)
 	mx31_clocks_init(26000000);
 }
 
+static struct sys_timer armadillo5x0_timer = {
+	.init	= armadillo5x0_timer_init,
+};
+
 MACHINE_START(ARMADILLO5X0, "Armadillo-500")
 	/* Maintainer: Alberto Panizzo  */
 	.atag_offset = 0x100,
@@ -564,7 +568,7 @@ MACHINE_START(ARMADILLO5X0, "Armadillo-500")
 	.init_early = imx31_init_early,
 	.init_irq = mx31_init_irq,
 	.handle_irq = imx31_handle_irq,
-	.init_time	= armadillo5x0_timer_init,
+	.timer = &armadillo5x0_timer,
 	.init_machine = armadillo5x0_init,
 	.restart	= mxc_restart,
 MACHINE_END

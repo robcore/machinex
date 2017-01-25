@@ -291,6 +291,6 @@ MACHINE_START(SMDK6450, "SMDK6450")
 	.handle_irq	= vic_handle_irq,
 	.map_io		= smdk6450_map_io,
 	.init_machine	= smdk6450_machine_init,
-	.init_time	= s5p_timer_init,
+	.timer		= &s5p_timer,
 	.restart	= s5p64x0_restart,
 MACHINE_END
