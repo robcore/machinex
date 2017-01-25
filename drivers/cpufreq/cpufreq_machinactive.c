@@ -137,8 +137,8 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
  * minimum before wakeup to reduce speed, or -1 if unnecessary.
  */
 
-//(4 * DEFAULT_TIMER_RATE)
-#define DEFAULT_TIMER_SLACK 0 //disabled
+//(2 * DEFAULT_TIMER_RATE)
+#define DEFAULT_TIMER_SLACK (20 * USEC_PER_MSEC)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 /*
