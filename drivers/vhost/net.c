@@ -238,7 +238,8 @@ static void handle_tx(struct vhost_net *net)
 				struct ubuf_info *ubuf;
 				ubuf = vq->ubuf_info + vq->upend_idx;
 
-				vq->heads[vq->upend_idx].len = len;
+				vq->heads[vq->upend_idx].len =
+					VHOST_DMA_IN_PROGRESS;
 				ubuf->callback = vhost_zerocopy_callback;
 				ubuf->ctx = vq->ubufs;
 				ubuf->desc = vq->upend_idx;
