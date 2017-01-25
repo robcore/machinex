@@ -131,12 +131,21 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			adb push $OUTFOLDER.zip /storage/extSdCard
 			echo "push complete"
 		fi;
+		echo -n "Save Object Files?  y/n [ENTER]: "
+		read objsave
+		if [[ $objsave = "y" ]]; then
+			cd ~/machinex
+			rm -rf object-files.txt
+			touch object-files.txt
+			find -iname '*.o*' | sort -d > object-files.txt
+			echo "Object Files Saved"
+		fi;
 		echo -n "Cleanup?  y/n [ENTER]: "
 		read repcln
 		if [[ $repcln = "y" ]]; then
 			cd ~/machinex
 			WASHME
-			echo "cleanup finished"
+			echo "Cleanup Finished"
 		fi;
 	else
 		echo "ENABLE ADB WIRELESS"
@@ -149,7 +158,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		cd ~/machinex
 		WASHME
-		echo "push and cleanup finished"
+		echo "Push and Cleanup finished"
 	fi;
 
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
