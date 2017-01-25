@@ -404,7 +404,9 @@ static struct svc_xprt *svc_xprt_dequeue(struct svc_pool *pool)
  */
 void svc_xprt_received(struct svc_xprt *xprt)
 {
-	BUG_ON(!test_bit(XPT_BUSY, &xprt->xpt_flags));
+	WARN_ON_ONCE(!test_bit(XPT_BUSY, &xprt->xpt_flags));
+	if (!test_bit(XPT_BUSY, &xprt->xpt_flags))
+		return;
 	/* As soon as we clear busy, the xprt could be closed and
 	 * 'put', so we need a reference to call svc_xprt_enqueue with:
 	 */
@@ -612,7 +614,10 @@ int svc_recv(struct svc_rqst *rqstp, long timeout)
 			rqstp->rq_pages[i] = p;
 		}
 	rqstp->rq_pages[i++] = NULL; /* this might be seen in nfs_read_actor */
-	BUG_ON(pages >= RPCSVC_MAXPAGES);
+	WARN_ON_ONCE(pages >= RPCSVC_MAXPAGES);
+	if (pages >= RPCSVC_MAXPAGES)
+		/* use as many pages as possible */
+		pages = RPCSVC_MAXPAGES - 1;
 
 	/* Make arg->head point to first page and arg->pages point to rest */
 	arg = &rqstp->rq_arg;
@@ -881,7 +886,7 @@ static void svc_delete_xprt(struct svc_xprt *xprt)
 	spin_lock_bh(&serv->sv_lock);
 	if (!test_and_set_bit(XPT_DETACHED, &xprt->xpt_flags))
 		list_del_init(&xprt->xpt_list);
-	BUG_ON(!list_empty(&xprt->xpt_ready));
+	WARN_ON_ONCE(!list_empty(&xprt->xpt_ready));
 	if (test_bit(XPT_TEMP, &xprt->xpt_flags))
 		serv->sv_tmpcnt--;
 	spin_unlock_bh(&serv->sv_lock);

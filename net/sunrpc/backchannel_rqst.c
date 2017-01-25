@@ -59,7 +59,7 @@ static void xprt_free_allocation(struct rpc_rqst *req)
 	struct xdr_buf *xbufp;
 
 	dprintk("RPC:        free allocations for req= %p\n", req);
-	BUG_ON(test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
+	WARN_ON_ONCE(test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
 	xbufp = &req->rq_rcv_buf;
 	free_page((unsigned long)xbufp->head[0].iov_base);
 	xbufp = &req->rq_snd_buf;
@@ -190,7 +190,9 @@ void xprt_destroy_backchannel(struct rpc_xprt *xprt, unsigned int max_reqs)
 
 	dprintk("RPC:        destroy backchannel transport\n");
 
-	BUG_ON(max_reqs == 0);
+	if (max_reqs == 0)
+		goto out;
+
 	spin_lock_bh(&xprt->bc_pa_lock);
 	xprt_dec_alloc_count(xprt, max_reqs);
 	list_for_each_entry_safe(req, tmp, &xprt->bc_pa_list, rq_bc_pa_list) {
@@ -201,6 +203,7 @@ void xprt_destroy_backchannel(struct rpc_xprt *xprt, unsigned int max_reqs)
 	}
 	spin_unlock_bh(&xprt->bc_pa_lock);
 
+out:
 	dprintk("RPC:        backchannel list empty= %s\n",
 		list_empty(&xprt->bc_pa_list) ? "true" : "false");
 }
@@ -254,7 +257,7 @@ void xprt_free_bc_request(struct rpc_rqst *req)
 	dprintk("RPC:       free backchannel req=%p\n", req);
 
 	smp_mb__before_clear_bit();
-	BUG_ON(!test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
+	WARN_ON_ONCE(!test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
 	clear_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state);
 	smp_mb__after_clear_bit();
 
