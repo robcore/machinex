@@ -1084,7 +1084,7 @@ static int msm_hsic_resume_thread(void *data)
 
 	/* keep delay between bus states */
 	if (time_before_eq(jiffies, ehci->next_statechange))
-		usleep_range(10000, 10000);
+		mdelay(10);
 
 	spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
@@ -1166,7 +1166,7 @@ resume_again:
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
 			/* do the resume in a tight loop */
-			msleep(22);
+			mdelay(20);
 			writel_relaxed(readl_relaxed(&ehci->regs->command) |
 					CMD_RUN, &ehci->regs->command);
 			if (ktime_us_delta(ktime_get(), mehci->resume_start_t) >
@@ -1203,7 +1203,7 @@ resume_again:
 			/* Keep the bus idle for 5ms so that peripheral
 			 * can detect and initiate suspend
 			 */
-			usleep_range(5000, 5000);
+			mdelay(5);
 			dbg_log_event(NULL,
 				"FPR: RResume",
 				ehci_readl(ehci, &ehci->regs->port_status[0]));
