@@ -23,7 +23,6 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/percpu.h>
-#include <linux/syscore_ops.h>
 #include <linux/mm.h>
 
 #include <asm/localtimer.h>
@@ -38,6 +37,7 @@
 
 #if defined(CONFIG_MSM_SMD)
 #include "smd_private.h"
+#include <mach/msm_smsm.h>
 #endif
 #include "timer.h"
 
