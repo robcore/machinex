@@ -408,11 +408,13 @@ void cpuidle_remove_state_sysfs(struct cpuidle_device *device)
  * cpuidle_add_sysfs - creates a sysfs instance for the target device
  * @dev: the target device
  */
-int cpuidle_add_sysfs(struct cpuidle_device *dev)
+int cpuidle_add_sysfs(struct device *cpu_dev)
 {
-	struct device *cpu_dev = get_cpu_device((unsigned long)dev->cpu);
+	int cpu = cpu_dev->id;
+	struct cpuidle_device *dev;
 	int error;
 
+	dev = per_cpu(cpuidle_devices, cpu);
 	error = kobject_init_and_add(&dev->kobj, &ktype_cpuidle, &cpu_dev->kobj,
 				     "cpuidle");
 	if (!error)
@@ -424,7 +426,11 @@ int cpuidle_add_sysfs(struct cpuidle_device *dev)
  * cpuidle_remove_sysfs - deletes a sysfs instance on the target device
  * @dev: the target device
  */
-void cpuidle_remove_sysfs(struct cpuidle_device *dev)
+void cpuidle_remove_sysfs(struct device *cpu_dev)
 {
+	int cpu = cpu_dev->id;
+	struct cpuidle_device *dev;
+
+	dev = per_cpu(cpuidle_devices, cpu);
 	kobject_put(&dev->kobj);
 }
