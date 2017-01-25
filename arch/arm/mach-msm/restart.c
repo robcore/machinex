@@ -60,9 +60,7 @@ static int ssr_magic_number = 0;
 #endif
 
 static int restart_mode;
-#ifndef CONFIG_SEC_DEBUG
 void *restart_reason;
-#endif
 int kernel_sec_get_debug_level(void);
 #define KERNEL_SEC_DEBUG_LEVEL_LOW      (0x574F4C44)
 int pmic_reset_irq;

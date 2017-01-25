@@ -962,7 +962,7 @@ static void __init msm_sched_clock_init(void)
 }
 
 #ifdef CONFIG_LOCAL_TIMERS
-int __cpuinit local_timer_setup(struct clock_event_device *evt)
+int local_timer_setup(struct clock_event_device *evt)
 {
 	static DEFINE_PER_CPU(bool, first_boot) = true;
 	struct msm_clock *clock = &msm_clocks[msm_global_timer];
@@ -1226,7 +1226,9 @@ static void __init msm_timer_init(void)
 	if (is_smp()) {
 		__raw_writel(1,
 			msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
-		set_delay_fn(read_current_timer_delay_loop);
+		msm_delay_timer.freq = dgt->freq;
+		msm_delay_timer.read_current_timer = &msm_read_current_timer;
+		register_current_timer_delay(&msm_delay_timer);
 	}
 #endif
 
