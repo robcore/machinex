@@ -115,10 +115,6 @@ static void __init highbank_timer_init(void)
 	twd_local_timer_of_register();
 }
 
-static struct sys_timer highbank_timer = {
-	.init = highbank_timer_init,
-};
-
 static void highbank_power_off(void)
 {
 	hignbank_set_pwr_shutdown();
@@ -143,7 +139,7 @@ static const char *highbank_match[] __initconst = {
 DT_MACHINE_START(HIGHBANK, "Highbank")
 	.map_io		= highbank_map_io,
 	.init_irq	= highbank_init_irq,
-	.timer		= &highbank_timer,
+	.init_time	= highbank_timer_init,
 	.handle_irq	= gic_handle_irq,
 	.init_machine	= highbank_init,
 	.dt_compat	= highbank_match,

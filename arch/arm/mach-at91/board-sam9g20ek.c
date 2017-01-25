@@ -410,7 +410,7 @@ MACHINE_END
 
 MACHINE_START(AT91SAM9G20EK_2MMC, "Atmel AT91SAM9G20-EK 2 MMC Slot Mod")
 	/* Maintainer: Atmel */
-	.timer		= &at91sam926x_timer,
+	.init_time	= at91sam926x_pit_init,
 	.map_io		= at91_map_io,
 	.init_early	= ek_init_early,
 	.init_irq	= at91_init_irq_default,

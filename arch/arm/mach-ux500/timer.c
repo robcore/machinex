@@ -43,7 +43,7 @@ static void __init ux500_twd_init(void)
 #define ux500_twd_init()	do { } while(0)
 #endif
 
-static void __init ux500_timer_init(void)
+void __init ux500_timer_init(void)
 {
 	void __iomem *mtu_timer_base;
 	void __iomem *prcmu_timer_base;

@@ -69,7 +69,7 @@ DT_MACHINE_START(OMAP242X_DT, "Generic OMAP2420 (Flattened Device Tree)")
 	.init_irq	= omap_init_irq,
 	.handle_irq	= omap2_intc_handle_irq,
 	.init_machine	= omap_generic_init,
-	.timer		= &omap2_timer,
+	.init_time	= omap2_sync32k_timer_init,
 	.dt_compat	= omap242x_boards_compat,
 	.restart	= omap_prcm_restart,
 MACHINE_END
@@ -88,7 +88,7 @@ DT_MACHINE_START(OMAP243X_DT, "Generic OMAP2430 (Flattened Device Tree)")
 	.init_irq	= omap_init_irq,
 	.handle_irq	= omap2_intc_handle_irq,
 	.init_machine	= omap_generic_init,
-	.timer		= &omap2_timer,
+	.init_time	= omap2_sync32k_timer_init,
 	.dt_compat	= omap243x_boards_compat,
 	.restart	= omap_prcm_restart,
 MACHINE_END

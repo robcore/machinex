@@ -214,10 +214,6 @@ static void orion5x_timer_init(void)
 			IRQ_ORION5X_BRIDGE, orion5x_tclk);
 }
 
-struct sys_timer orion5x_timer = {
-	.init = orion5x_timer_init,
-};
-
 
 /*****************************************************************************
  * General

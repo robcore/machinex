@@ -39,7 +39,7 @@ MACHINE_START(ADSSPHERE, "ADS Sphere board")
 	.map_io		= ep93xx_map_io,
 	.init_irq	= ep93xx_init_irq,
 	.handle_irq	= vic_handle_irq,
-	.timer		= &ep93xx_timer,
+	.init_time	= ep93xx_timer_init,
 	.init_machine	= adssphere_init_machine,
 	.restart	= ep93xx_restart,
 MACHINE_END

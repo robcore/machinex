@@ -445,7 +445,7 @@ static void __init intcp_init(void)
 #define TIMER1_VA_BASE __io_address(INTEGRATOR_TIMER1_BASE)
 #define TIMER2_VA_BASE __io_address(INTEGRATOR_TIMER2_BASE)
 
-static void __init intcp_timer_init(void)
+static void __init cp_timer_init(void)
 {
 	writel(0, TIMER0_VA_BASE + TIMER_CTRL);
 	writel(0, TIMER1_VA_BASE + TIMER_CTRL);

@@ -489,9 +489,6 @@ static void __init bonito_earlytimer_init(void)
 void __init bonito_add_early_devices(void)
 {
 	r8a7740_add_early_devices();
-
-	/* override timer setup with board-specific code */
-	shmobile_timer.init = bonito_earlytimer_init;
 }
 
 MACHINE_START(BONITO, "bonito")

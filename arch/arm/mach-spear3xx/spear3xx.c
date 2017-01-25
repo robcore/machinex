@@ -506,7 +506,7 @@ struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 };
 #endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
 
-static void __init spear3xx_timer_init(void)
+void __init spear3xx_timer_init(void)
 {
 	char pclk_name[] = "pll3_48m_clk";
 	struct clk *gpt_clk, *pclk;

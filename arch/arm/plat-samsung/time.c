@@ -272,7 +272,7 @@ static void __init s3c2410_timer_resources(void)
 	clk_enable(tin);
 }
 
-static void __init s3c2410_timer_init(void)
+void __init s3c24xx_timer_init(void)
 {
 	arch_gettimeoffset = s3c2410_gettimeoffset;
 

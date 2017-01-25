@@ -97,7 +97,7 @@ static void ks8695_timer_setup(void)
 	__raw_writel(tmcon | TMCON_T1EN, KS8695_TMR_VA + KS8695_TMCON);
 }
 
-static void __init ks8695_timer_init (void)
+void __init ks8695_timer_init(void)
 {
 	ks8695_timer_setup();
 

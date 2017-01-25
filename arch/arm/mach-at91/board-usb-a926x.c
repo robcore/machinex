@@ -356,7 +356,7 @@ static void __init ek_board_init(void)
 
 MACHINE_START(USB_A9263, "CALAO USB_A9263")
 	/* Maintainer: calao-systems */
-	.timer		= &at91sam926x_timer,
+	.init_time	= at91sam926x_pit_init,
 	.map_io		= at91_map_io,
 	.init_early	= ek_init_early,
 	.init_irq	= at91_init_irq_default,
@@ -365,7 +365,7 @@ MACHINE_END
 
 MACHINE_START(USB_A9260, "CALAO USB_A9260")
 	/* Maintainer: calao-systems */
-	.timer		= &at91sam926x_timer,
+	.init_time	= at91sam926x_pit_init,
 	.map_io		= at91_map_io,
 	.init_early	= ek_init_early,
 	.init_irq	= at91_init_irq_default,
@@ -374,7 +374,7 @@ MACHINE_END
 
 MACHINE_START(USB_A9G20, "CALAO USB_A92G0")
 	/* Maintainer: Jean-Christophe PLAGNIOL-VILLARD */
-	.timer		= &at91sam926x_timer,
+	.init_time	= at91sam926x_pit_init,
 	.map_io		= at91_map_io,
 	.init_early	= ek_init_early,
 	.init_irq	= at91_init_irq_default,

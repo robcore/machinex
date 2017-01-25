@@ -13,7 +13,7 @@ void orion5x_init_early(void);
 void orion5x_init_irq(void);
 void orion5x_init(void);
 extern int orion5x_tclk;
-extern struct sys_timer orion5x_timer;
+extern void orion5x_timer_init(void);
 
 /*
  * Enumerations and functions for Orion windows mapping. Used by Orion core

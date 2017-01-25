@@ -120,7 +120,7 @@ static void __init eb9200_board_init(void)
 }
 
 MACHINE_START(ATEB9200, "Embest ATEB9200")
-	.timer		= &at91rm9200_timer,
+	.init_time	= at91rm9200_timer_init,
 	.map_io		= at91_map_io,
 	.init_early	= eb9200_init_early,
 	.init_irq	= at91_init_irq_default,

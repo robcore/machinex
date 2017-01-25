@@ -61,7 +61,7 @@ void __init spear6xx_map_io(void)
 	spear6xx_clk_init();
 }
 
-static void __init spear6xx_timer_init(void)
+void __init spear6xx_timer_init(void)
 {
 	char pclk_name[] = "pll3_48m_clk";
 	struct clk *gpt_clk, *pclk;
@@ -116,7 +116,7 @@ DT_MACHINE_START(SPEAR600_DT, "ST SPEAr600 (Flattened Device Tree)")
 	.map_io		=	spear6xx_map_io,
 	.init_irq	=	spear6xx_dt_init_irq,
 	.handle_irq	=	vic_handle_irq,
-	.timer		=	&spear6xx_timer,
+	.init_time	=	spear6xx_timer_init,
 	.init_machine	=	spear600_dt_init,
 	.restart	=	spear_restart,
 	.dt_compat	=	spear600_dt_board_compat,
