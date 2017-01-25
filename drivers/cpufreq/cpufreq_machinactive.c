@@ -76,7 +76,7 @@ static struct mutex gov_lock;
 static unsigned int hispeed_freq = 1890000;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 90
+#define DEFAULT_GO_HISPEED_LOAD 85
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Target load.  Lower values result in higher CPU speeds. */
