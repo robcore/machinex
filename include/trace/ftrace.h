@@ -549,7 +549,7 @@ ftrace_raw_event_##call(void *__data, proto)				\
 	if (!filter_current_check_discard(buffer, event_call, entry, event)) { \
 		stm_log(OST_ENTITY_FTRACE_EVENTS, entry,		\
 			sizeof(*entry) + __data_size);			\
-		trace_nowake_buffer_unlock_commit(buffer,		\
+		trace_buffer_unlock_commit(buffer,		\
 						  event, irq_flags, pc); \
 	}								\
 }
