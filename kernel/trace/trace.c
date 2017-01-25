@@ -79,6 +79,13 @@ static int dummy_set_flag(u32 old_flags, u32 bit, int set)
 }
 
 /*
+ * To prevent the comm cache from being overwritten when no
+ * tracing is active, only save the comm when a trace event
+ * occurred.
+ */
+static DEFINE_PER_CPU(bool, trace_cmdline_save);
+
+/*
  * Kill all tracing for good (never come back).
  * It is initialized to 1 but will turn to zero if the initialization
  * of the tracer is successful. But that is the only place that sets
@@ -1147,6 +1154,11 @@ void tracing_record_cmdline(struct task_struct *tsk)
 	    !tracing_is_on())
 		return;
 
+	if (!__this_cpu_read(trace_cmdline_save))
+		return;
+
+	__this_cpu_write(trace_cmdline_save, false);
+
 	trace_save_cmdline(tsk);
 }
 
@@ -1189,13 +1201,20 @@ trace_buffer_lock_reserve(struct ring_buffer *buffer,
 	return event;
 }
 
+void
+__buffer_unlock_commit(struct ring_buffer *buffer, struct ring_buffer_event *event)
+{
+	__this_cpu_write(trace_cmdline_save, true);
+	ring_buffer_unlock_commit(buffer, event);
+}
+
 static inline void
 __trace_buffer_unlock_commit(struct ring_buffer *buffer,
 			     struct ring_buffer_event *event,
 			     unsigned long flags, int pc,
 			     int wake)
 {
-	ring_buffer_unlock_commit(buffer, event);
+	__buffer_unlock_commit(buffer, event);
 
 	ftrace_trace_stack(buffer, flags, 6, pc);
 	ftrace_trace_userstack(buffer, flags, pc);
@@ -1243,7 +1262,7 @@ void trace_nowake_buffer_unlock_commit_regs(struct ring_buffer *buffer,
 					    unsigned long flags, int pc,
 					    struct pt_regs *regs)
 {
-	ring_buffer_unlock_commit(buffer, event);
+	__buffer_unlock_commit(buffer, event);
 
 	ftrace_trace_stack_regs(buffer, flags, 0, pc, regs);
 	ftrace_trace_userstack(buffer, flags, pc);
@@ -1280,7 +1299,7 @@ trace_function(struct trace_array *tr,
 	entry->parent_ip		= parent_ip;
 
 	if (!filter_check_discard(call, entry, buffer, event))
-		ring_buffer_unlock_commit(buffer, event);
+		__buffer_unlock_commit(buffer, event);
 }
 
 void
@@ -1373,7 +1392,7 @@ static void __ftrace_trace_stack(struct ring_buffer *buffer,
 	entry->size = trace.nr_entries;
 
 	if (!filter_check_discard(call, entry, buffer, event))
-		ring_buffer_unlock_commit(buffer, event);
+		__buffer_unlock_commit(buffer, event);
 
  out:
 	/* Again, don't let gcc optimize things here */
@@ -1469,7 +1488,7 @@ ftrace_trace_userstack(struct ring_buffer *buffer, unsigned long flags, int pc)
 
 	save_stack_trace_user(&trace);
 	if (!filter_check_discard(call, entry, buffer, event))
-		ring_buffer_unlock_commit(buffer, event);
+		__buffer_unlock_commit(buffer, event);
 
  out_drop_count:
 	__this_cpu_dec(user_stack_count);
@@ -1541,7 +1560,7 @@ int trace_vbprintk(unsigned long ip, const char *fmt, va_list args)
 
 	memcpy(entry->buf, trace_buf, sizeof(u32) * len);
 	if (!filter_check_discard(call, entry, buffer, event)) {
-		ring_buffer_unlock_commit(buffer, event);
+		__buffer_unlock_commit(buffer, event);
 		ftrace_trace_stack(buffer, flags, 6, pc);
 	}
 
@@ -1618,7 +1637,7 @@ int trace_array_vprintk(struct trace_array *tr,
 	entry->buf[len] = '\0';
 	if (!filter_check_discard(call, entry, buffer, event)) {
 		stm_log(OST_ENTITY_TRACE_PRINTK, entry->buf, len + 1);
-		ring_buffer_unlock_commit(buffer, event);
+		__buffer_unlock_commit(buffer, event);
 		ftrace_trace_stack(buffer, irq_flags, 6, pc);
 	}
 
@@ -3813,7 +3832,7 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 		entry->buf[cnt] = '\0';
 		stm_log(OST_ENTITY_TRACE_MARKER, entry->buf, cnt + 1);
 	}
-	ring_buffer_unlock_commit(buffer, event);
+	__buffer_unlock_commit(buffer, event);
 
 	written = cnt;
 
