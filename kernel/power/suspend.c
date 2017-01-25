@@ -300,6 +300,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			error = -EBUSY;
 		}
 		syscore_resume();
+#ifdef CONFIG_QUICK_WAKEUP
+		quickwakeup_check();
+#endif
 	}
 
 	arch_suspend_enable_irqs();
@@ -376,7 +379,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	return error;
 
  Recover_platform:
-	if (need_suspend_ops(state) && suspend_ops->recover)
+	if (need_suspend_ops(state) && suspend_ops->recover && (!quickwakeup_execute))
 		suspend_ops->recover();
 	goto Resume_devices;
 }
