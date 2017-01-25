@@ -896,12 +896,7 @@ char* get_b6_reg_magna(void)
 static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	int rc;
-
-	rc = snprintf((char *)buf, sizeof(*buf), "%d\n",
-			msd.dstat.auto_brightness);
-
-	return rc;
+	return sprintf(buf, "%d\n", msd.dstat.auto_brightness);
 }
 
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
@@ -1120,11 +1115,8 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 
 	mfd->bl_level = level;
 
-	if (mfd->resume_state == MIPI_RESUME_STATE) {
+	if (mfd->resume_state == MIPI_RESUME_STATE)
 		mipi_samsung_disp_backlight(mfd);
-	} else {
-		pr_debug("I am a useless debug message");
-	}
 
 	return size;
 }
@@ -1189,7 +1181,7 @@ static DEVICE_ATTR(lcd_type, S_IRUGO, mipi_samsung_disp_lcdtype_show, NULL);
 static DEVICE_ATTR(window_type, S_IRUGO,
 			mipi_samsung_disp_windowtype_show, NULL);
 
-static DEVICE_ATTR(auto_brightness, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(auto_brightness, 0644,
 		mipi_samsung_auto_brightness_show,
 		mipi_samsung_auto_brightness_store);
 static DEVICE_ATTR(power_reduce, S_IRUGO | S_IWUSR | S_IWGRP,
