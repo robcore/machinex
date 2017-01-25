@@ -2929,7 +2929,7 @@ static int __init ftrace_mod_cmd_init(void)
 {
 	return register_ftrace_command(&ftrace_mod_cmd);
 }
-device_initcall(ftrace_mod_cmd_init);
+core_initcall(ftrace_mod_cmd_init);
 
 static void
 function_trace_probe_call(unsigned long ip, unsigned long parent_ip)
@@ -4039,7 +4039,7 @@ static int __init ftrace_nodyn_init(void)
 	ftrace_enabled = 1;
 	return 0;
 }
-device_initcall(ftrace_nodyn_init);
+core_initcall(ftrace_nodyn_init);
 
 static inline int ftrace_init_dyn_debugfs(struct dentry *d_tracer) { return 0; }
 static inline void ftrace_startup_enable(int command) { }
