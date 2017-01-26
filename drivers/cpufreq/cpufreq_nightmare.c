@@ -470,8 +470,8 @@ static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare
 		u64 cur_wall_time, cur_idle_time;
 		unsigned int idle_time, wall_time;
 		unsigned int cur_load;
-		
-		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
+
+		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
 
 		wall_time = (unsigned int)
 			(cur_wall_time - j_nightmare_cpuinfo->prev_cpu_wall);
@@ -613,7 +613,7 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 			unsigned int prev_load;
 
 			j_nightmare_cpuinfo->prev_cpu_idle = get_cpu_idle_time(j,
-				&j_nightmare_cpuinfo->prev_cpu_wall, 0);
+				&j_nightmare_cpuinfo->prev_cpu_wall);
 
 			prev_load = (unsigned int)
 				(j_nightmare_cpuinfo->prev_cpu_wall -

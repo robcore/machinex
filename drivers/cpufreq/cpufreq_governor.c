@@ -136,8 +136,6 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 			 * not that the system is actually idle. So subtract the
 			 * iowait time from the cpu idle time.
 			 */
-			if (od_tuners->io_is_busy && idle_time >= iowait_time)
-				idle_time -= iowait_time;
 		}
 
 		if (unlikely(!wall_time || wall_time < idle_time))

@@ -500,8 +500,6 @@ static void inline cpufreq_smartmax_eps_calc_load(int j)
 	 * the system is actually idle. So subtract the iowait time
 	 * from the cpu idle time.
 	 */
-	if (io_is_busy && idle_time >= iowait_time)
-		idle_time -= iowait_time;
 
 	if (unlikely(!wall_time || wall_time < idle_time))
 		return;
