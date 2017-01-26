@@ -76,7 +76,7 @@ struct pti_dev {
  */
 static DEFINE_MUTEX(alloclock);
 
-static const struct pci_device_id pci_ids[] __devinitconst = {
+static const struct pci_device_id pci_ids[] = {
 		{PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x82B)},
 		{0}
 };
@@ -796,7 +796,7 @@ static const struct tty_port_operations tty_port_ops = {
  *	0 for success
  *	otherwise, error
  */
-static int __devinit pti_pci_probe(struct pci_dev *pdev,
+static int pti_pci_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent)
 {
 	unsigned int a;
@@ -879,7 +879,7 @@ err:
  *		   PCI bus.
  * @pdev: variable containing pci info of PTI.
  */
-static void __devexit pti_pci_remove(struct pci_dev *pdev)
+static void pti_pci_remove(struct pci_dev *pdev)
 {
 	struct pti_dev *drv_data = pci_get_drvdata(pdev);
 

@@ -58,7 +58,7 @@ static int lis3_spi_init(struct lis3lv02d *lis3)
 static union axis_conversion lis3lv02d_axis_normal =
 	{ .as_array = { 1, 2, 3 } };
 
-static int __devinit lis302dl_spi_probe(struct spi_device *spi)
+static int lis302dl_spi_probe(struct spi_device *spi)
 {
 	int ret;
 
@@ -80,7 +80,7 @@ static int __devinit lis302dl_spi_probe(struct spi_device *spi)
 	return lis3lv02d_init_device(&lis3_dev);
 }
 
-static int __devexit lis302dl_spi_remove(struct spi_device *spi)
+static int lis302dl_spi_remove(struct spi_device *spi)
 {
 	struct lis3lv02d *lis3 = spi_get_drvdata(spi);
 	lis3lv02d_joystick_disable(lis3);
@@ -123,7 +123,7 @@ static struct spi_driver lis302dl_spi_driver = {
 		.pm	= &lis3lv02d_spi_pm,
 	},
 	.probe	= lis302dl_spi_probe,
-	.remove	= __devexit_p(lis302dl_spi_remove),
+	.remove	= lis302dl_spi_remove,
 };
 
 module_spi_driver(lis302dl_spi_driver);

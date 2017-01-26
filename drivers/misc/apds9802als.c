@@ -254,7 +254,7 @@ als_error1:
 	return res;
 }
 
-static int __devexit apds9802als_remove(struct i2c_client *client)
+static int apds9802als_remove(struct i2c_client *client)
 {
 	struct als_data *data = i2c_get_clientdata(client);
 
@@ -326,7 +326,7 @@ static struct i2c_driver apds9802als_driver = {
 		.pm = APDS9802ALS_PM_OPS,
 	},
 	.probe = apds9802als_probe,
-	.remove = __devexit_p(apds9802als_remove),
+	.remove = apds9802als_remove,
 	.suspend = apds9802als_suspend,
 	.resume = apds9802als_resume,
 	.id_table = apds9802als_id,

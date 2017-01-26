@@ -98,7 +98,7 @@ static int lis3_i2c_init(struct lis3lv02d *lis3)
 static union axis_conversion lis3lv02d_axis_map =
 	{ .as_array = { LIS3_DEV_X, LIS3_DEV_Y, LIS3_DEV_Z } };
 
-static int __devinit lis3lv02d_i2c_probe(struct i2c_client *client,
+static int lis3lv02d_i2c_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 	int ret = 0;
@@ -165,7 +165,7 @@ fail:
 	return ret;
 }
 
-static int __devexit lis3lv02d_i2c_remove(struct i2c_client *client)
+static int lis3lv02d_i2c_remove(struct i2c_client *client)
 {
 	struct lis3lv02d *lis3 = i2c_get_clientdata(client);
 	struct lis3lv02d_platform_data *pdata = client->dev.platform_data;
@@ -252,7 +252,7 @@ static struct i2c_driver lis3lv02d_i2c_driver = {
 		.pm     = &lis3_pm_ops,
 	},
 	.probe	= lis3lv02d_i2c_probe,
-	.remove	= __devexit_p(lis3lv02d_i2c_remove),
+	.remove	= lis3lv02d_i2c_remove,
 	.id_table = lis3lv02d_id,
 };
 
