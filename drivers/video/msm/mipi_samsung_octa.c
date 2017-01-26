@@ -1137,7 +1137,7 @@ static ssize_t mipi_samsung_disp_machinex_backlight_store(struct device *dev,
 
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	sscanff(buf, "%d\n", &mx_level);
+	sscanf(buf, "%d\n", &mx_level);
 
 	mfd->bl_level = mx_level;
 
