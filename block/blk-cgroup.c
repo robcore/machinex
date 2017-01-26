@@ -598,7 +598,6 @@ blkiocg_reset_stats(struct cgroup *cgroup, struct cftype *cftype, u64 val)
 	}
 
 	spin_unlock_irq(&blkcg->lock);
-	return 0;
 }
 
 static void blkio_get_key_name(enum stat_sub_type type, dev_t dev, char *str,
