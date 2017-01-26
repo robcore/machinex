@@ -599,8 +599,6 @@ static void bds_check_cpu(struct cpu_bds_info_s *this_bds_info)
 		 * from the cpu idle time.
 		 */
 
-		if (bds_tuners_ins.io_is_busy && idle_time >= iowait_time)
-			idle_time -= iowait_time;
 
 		if (unlikely(!wall_time || wall_time < idle_time))
 			continue;

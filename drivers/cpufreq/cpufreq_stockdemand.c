@@ -28,6 +28,8 @@
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 
+#include "cpufreq_governor.h"
+
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -912,8 +914,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		 * from the cpu idle time.
 		 */
 
-		if (dbs_tuners_ins.io_is_busy && idle_time >= iowait_time)
-			idle_time -= iowait_time;
 
 		if (unlikely(!wall_time || wall_time < idle_time))
 			continue;

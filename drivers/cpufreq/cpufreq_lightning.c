@@ -562,8 +562,6 @@ static void lightning_check_cpu(struct cpu_lightning_info_s *this_lightning_info
 		 * from the cpu idle time.
 		 */
 
-		if (lightning_tuners_ins.io_is_busy && idle_time >= iowait_time)
-			idle_time -= iowait_time;
 
 		if (unlikely(!wall_time || wall_time < idle_time))
 			continue;

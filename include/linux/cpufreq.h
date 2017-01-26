@@ -366,7 +366,6 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 /*********************************************************************
  *                        CPUFREQ 2.6. INTERFACE                     *
  *********************************************************************/
-extern u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
 bool have_governor_per_policy(void);
@@ -490,12 +489,18 @@ extern struct cpufreq_governor cpufreq_gov_userspace;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND)
 extern struct cpufreq_governor cpufreq_gov_ondemand;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_ondemand)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMANDMX)
+extern struct cpufreq_governor cpufreq_gov_ondemandMX;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_ondemandMX)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_STOCKDEMAND)
 extern struct cpufreq_governor cpufreq_gov_stockdemand;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_stockdemand)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE)
 extern struct cpufreq_governor cpufreq_gov_conservative;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservative)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVEMX)
+extern struct cpufreq_governor cpufreq_gov_conservativeMX;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservativeMX)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE)
 extern struct cpufreq_governor cpufreq_gov_interactive;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_interactive)

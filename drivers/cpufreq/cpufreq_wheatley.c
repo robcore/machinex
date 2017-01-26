@@ -516,8 +516,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	 * from the cpu idle time.
 	 */
 
-	if (dbs_tuners_ins.io_is_busy && idle_time >= iowait_time)
-	    idle_time -= iowait_time;
 
 	if (unlikely(!wall_time || wall_time < idle_time))
 	    continue;

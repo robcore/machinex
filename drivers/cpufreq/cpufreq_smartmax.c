@@ -509,11 +509,7 @@ static void cpufreq_smartmax_timer(struct smartmax_info_s *this_smartmax) {
 		 * from the cpu idle time.
 		 */
 
-		if (io_is_busy && idle_time >= iowait_time)
-			idle_time -= iowait_time;
 
-		if (idle_time >= iowait_time)
-			idle_time -= iowait_time;
 
 		if (unlikely(!wall_time || wall_time < idle_time))
 			continue;

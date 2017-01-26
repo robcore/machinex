@@ -130,6 +130,18 @@ config CPU_FREQ_DEFAULT_GOV_ONDEMAND
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
+config CPU_FREQ_DEFAULT_GOV_ONDEMANDMX
+	bool "ondemandMX"
+	select CPU_FREQ_GOV_ONDEMANDMX
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'ondemandMX' as default. This allows
+	  you to get a full dynamic frequency capable system by simply
+	  loading your cpufreq low-level hardware driver.
+	  Be aware that not all cpufreq drivers support the ondemandMX
+	  governor. If unsure have a look at the help section of the
+	  driver. Fallback governor will be the performance governor.
+
 config CPU_FREQ_DEFAULT_GOV_STOCKDEMAND
 	bool "stockdemand"
 	select CPU_FREQ_GOV_STOCKDEMAND
@@ -157,15 +169,15 @@ config CPU_FREQ_DEFAULT_GOV_ELECTRODEMAND
 	help
 	  Use the CPUFreq governor 'elementalx' as default.
 
-config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
-	bool "conservative"
-	select CPU_FREQ_GOV_CONSERVATIVE
+config CPU_FREQ_DEFAULT_GOV_CONSERVATIVEMX
+	bool "conservativeMX"
+	select CPU_FREQ_GOV_CONSERVATIVEMX
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
-	  Use the CPUFreq governor 'conservative' as default. This allows
+	  Use the CPUFreq governor 'conservativeMX' as default. This allows
 	  you to get a full dynamic frequency capable system by simply
 	  loading your cpufreq low-level hardware driver.
-	  Be aware that not all cpufreq drivers support the conservative
+	  Be aware that not all cpufreq drivers support the conservativeMX
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
@@ -604,6 +616,24 @@ config CPU_FREQ_GOV_ONDEMAND
 
 	  If in doubt, say N.
 
+config CPU_FREQ_GOV_ONDEMANDMX
+	tristate "'ondemandMX' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'ondemandMX' - This driver adds a dynamic cpufreq policy governor.
+	  The governor does a periodic polling and
+	  changes frequency based on the CPU utilization.
+	  The support for this governor depends on CPU capability to
+	  do fast frequency switching (i.e, very low latency frequency
+	  transitions).
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_ondemandMX.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
 config CPU_FREQ_GOV_STOCKDEMAND
 	tristate "'stockdemand' cpufreq policy governor"
 	select CPU_FREQ_TABLE
@@ -670,6 +700,29 @@ config CPU_FREQ_GOV_CONSERVATIVE
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_conservative.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_CONSERVATIVEMX
+	tristate "'conservativeMX' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'conservativeMX' - this driver is rather similar to the 'ondemandMX'
+	  governor both in its source code and its purpose, the difference is
+	  its optimisation for better suitability in a battery powered
+	  environment.  The frequency is gracefully increased and decreased
+	  rather than jumping to 100% when speed is required.
+
+	  If you have a desktop machine then you should really be considering
+	  the 'ondemandMX' governor instead, however if you are using a laptop,
+	  PDA or even an AMD64 based computer (due to the unacceptable
+	  step-by-step latency issues between the minimum and maximum frequency
+	  transitions in the CPU) you will probably want to use this governor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_conservativeMX.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 
