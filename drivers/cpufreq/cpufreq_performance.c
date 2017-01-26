@@ -16,7 +16,6 @@
 #include <linux/module.h>
 #include <linux/cpufreq.h>
 #include <linux/init.h>
-#include "cpufreq_governor.h"
 
 
 static int cpufreq_governor_performance(struct cpufreq_policy *policy,

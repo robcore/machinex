@@ -38,8 +38,6 @@
 #endif
 #include <asm/cputime.h>
 
-#include "cpufreq_governor.h"
-
 struct cpufreq_ironactive_policyinfo {
 	struct timer_list policy_timer;
 	struct timer_list policy_slack_timer;
