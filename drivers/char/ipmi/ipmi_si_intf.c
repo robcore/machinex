@@ -1846,7 +1846,7 @@ static int hotmod_handler(const char *val, struct kernel_param *kp)
 	return rv;
 }
 
-static int __devinit hardcode_find_bmc(void)
+static int hardcode_find_bmc(void)
 {
 	int ret = -ENODEV;
 	int             i;
@@ -2033,7 +2033,7 @@ struct SPMITable {
 	s8      spmi_id[1]; /* A '\0' terminated array starts here. */
 };
 
-static int __devinit try_init_spmi(struct SPMITable *spmi)
+static int try_init_spmi(struct SPMITable *spmi)
 {
 	struct smi_info  *info;
 
@@ -2116,7 +2116,7 @@ static int __devinit try_init_spmi(struct SPMITable *spmi)
 	return 0;
 }
 
-static void __devinit spmi_find_bmc(void)
+static void spmi_find_bmc(void)
 {
 	acpi_status      status;
 	struct SPMITable *spmi;
@@ -2138,7 +2138,7 @@ static void __devinit spmi_find_bmc(void)
 	}
 }
 
-static int __devinit ipmi_pnp_probe(struct pnp_dev *dev,
+static int ipmi_pnp_probe(struct pnp_dev *dev,
 				    const struct pnp_device_id *dev_id)
 {
 	struct acpi_device *acpi_dev;
@@ -2238,7 +2238,7 @@ err_free:
 	return -EINVAL;
 }
 
-static void __devexit ipmi_pnp_remove(struct pnp_dev *dev)
+static void ipmi_pnp_remove(struct pnp_dev *dev)
 {
 	struct smi_info *info = pnp_get_drvdata(dev);
 
@@ -2268,7 +2268,7 @@ struct dmi_ipmi_data {
 	u8              slave_addr;
 };
 
-static int __devinit decode_dmi(const struct dmi_header *dm,
+static int decode_dmi(const struct dmi_header *dm,
 				struct dmi_ipmi_data *dmi)
 {
 	const u8	*data = (const u8 *)dm;
@@ -2330,7 +2330,7 @@ static int __devinit decode_dmi(const struct dmi_header *dm,
 	return 0;
 }
 
-static void __devinit try_init_dmi(struct dmi_ipmi_data *ipmi_data)
+static void try_init_dmi(struct dmi_ipmi_data *ipmi_data)
 {
 	struct smi_info *info;
 
@@ -2398,7 +2398,7 @@ static void __devinit try_init_dmi(struct dmi_ipmi_data *ipmi_data)
 		kfree(info);
 }
 
-static void __devinit dmi_find_bmc(void)
+static void dmi_find_bmc(void)
 {
 	const struct dmi_device *dev = NULL;
 	struct dmi_ipmi_data data;
@@ -2434,7 +2434,7 @@ static void ipmi_pci_cleanup(struct smi_info *info)
 	pci_disable_device(pdev);
 }
 
-static int __devinit ipmi_pci_probe(struct pci_dev *pdev,
+static int ipmi_pci_probe(struct pci_dev *pdev,
 				    const struct pci_device_id *ent)
 {
 	int rv;
@@ -2507,7 +2507,7 @@ static int __devinit ipmi_pci_probe(struct pci_dev *pdev,
 	return 0;
 }
 
-static void __devexit ipmi_pci_remove(struct pci_dev *pdev)
+static void ipmi_pci_remove(struct pci_dev *pdev)
 {
 	struct smi_info *info = pci_get_drvdata(pdev);
 	cleanup_one_si(info);
@@ -2545,7 +2545,7 @@ static struct pci_driver ipmi_pci_driver = {
 #endif /* CONFIG_PCI */
 
 static struct of_device_id ipmi_match[];
-static int __devinit ipmi_probe(struct platform_device *dev)
+static int ipmi_probe(struct platform_device *dev)
 {
 #ifdef CONFIG_OF
 	const struct of_device_id *match;
@@ -2629,7 +2629,7 @@ static int __devinit ipmi_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __devexit ipmi_remove(struct platform_device *dev)
+static int ipmi_remove(struct platform_device *dev)
 {
 #ifdef CONFIG_OF
 	cleanup_one_si(dev_get_drvdata(&dev->dev));
@@ -3041,7 +3041,7 @@ static inline void wait_for_timer_and_thread(struct smi_info *smi_info)
 	}
 }
 
-static __devinitdata struct ipmi_default_vals
+static struct ipmi_default_vals
 {
 	int type;
 	int port;
@@ -3053,7 +3053,7 @@ static __devinitdata struct ipmi_default_vals
 	{ .port = 0 }
 };
 
-static void __devinit default_find_bmc(void)
+static void default_find_bmc(void)
 {
 	struct smi_info *info;
 	int             i;
@@ -3353,7 +3353,7 @@ static int try_smi_init(struct smi_info *new_smi)
 	return rv;
 }
 
-static int __devinit init_ipmi_si(void)
+static int init_ipmi_si(void)
 {
 	int  i;
 	char *str;
