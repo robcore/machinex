@@ -130,6 +130,18 @@ config CPU_FREQ_DEFAULT_GOV_ONDEMAND
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
+config CPU_FREQ_DEFAULT_GOV_ONDEMANDMX
+	bool "ondemandMX"
+	select CPU_FREQ_GOV_ONDEMANDMX
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'ondemandMX' as default. This allows
+	  you to get a full dynamic frequency capable system by simply
+	  loading your cpufreq low-level hardware driver.
+	  Be aware that not all cpufreq drivers support the ondemandMX
+	  governor. If unsure have a look at the help section of the
+	  driver. Fallback governor will be the performance governor.
+
 config CPU_FREQ_DEFAULT_GOV_STOCKDEMAND
 	bool "stockdemand"
 	select CPU_FREQ_GOV_STOCKDEMAND
@@ -157,15 +169,15 @@ config CPU_FREQ_DEFAULT_GOV_ELECTRODEMAND
 	help
 	  Use the CPUFreq governor 'elementalx' as default.
 
-config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
-	bool "conservative"
-	select CPU_FREQ_GOV_CONSERVATIVE
+config CPU_FREQ_DEFAULT_GOV_CONSERVATIVEMX
+	bool "conservativeMX"
+	select CPU_FREQ_GOV_CONSERVATIVEMX
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
-	  Use the CPUFreq governor 'conservative' as default. This allows
+	  Use the CPUFreq governor 'conservativeMX' as default. This allows
 	  you to get a full dynamic frequency capable system by simply
 	  loading your cpufreq low-level hardware driver.
-	  Be aware that not all cpufreq drivers support the conservative
+	  Be aware that not all cpufreq drivers support the conservativeMX
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
