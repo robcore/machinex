@@ -322,7 +322,7 @@ static struct regulator_desc regulators[] = {
 	TPS65217_REGULATOR("LDO4", TPS65217_LDO_4, tps65217_pmic_ops, 32),
 };
 
-static int __devinit tps65217_regulator_probe(struct platform_device *pdev)
+static int tps65217_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev;
 	struct tps65217 *tps;

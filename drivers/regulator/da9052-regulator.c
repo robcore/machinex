@@ -531,7 +531,7 @@ static inline struct da9052_regulator_info *find_regulator_info(u8 chip_id,
 	return NULL;
 }
 
-static int __devinit da9052_regulator_probe(struct platform_device *pdev)
+static int da9052_regulator_probe(struct platform_device *pdev)
 {
 	struct da9052_regulator *regulator;
 	struct da9052 *da9052;

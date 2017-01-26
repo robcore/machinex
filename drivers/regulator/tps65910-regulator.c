@@ -1094,7 +1094,7 @@ static int tps65910_set_ext_sleep_config(struct tps65910_reg *pmic,
 	return ret;
 }
 
-static __devinit int tps65910_probe(struct platform_device *pdev)
+static int tps65910_probe(struct platform_device *pdev)
 {
 	struct tps65910 *tps65910 = dev_get_drvdata(pdev->dev.parent);
 	struct tps_info *info;

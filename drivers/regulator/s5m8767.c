@@ -525,7 +525,7 @@ static struct regulator_desc regulators[] = {
 	regulator_desc_buck(9),
 };
 
-static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
+static int s5m8767_pmic_probe(struct platform_device *pdev)
 {
 	struct s5m87xx_dev *iodev = dev_get_drvdata(pdev->dev.parent);
 	struct s5m_platform_data *pdata = dev_get_platdata(iodev->dev);
