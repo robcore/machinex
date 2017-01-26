@@ -2042,6 +2042,8 @@ static inline int effective_sc_prio(struct task_struct *p)
 			return -20;
 		return task_nice(p);
 	}
+
+	current->reclaim_state = NULL;
 	return 0;
 }
 
