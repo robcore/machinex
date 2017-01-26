@@ -575,7 +575,6 @@ static int hidp_session(void *arg)
 		product = session->hid->product;
 	}
 
-	daemonize("khidpd_%04x%04x", vendor, product);
 	set_user_nice(current, -15);
 
 	init_waitqueue_entry(&ctrl_wait, current);
