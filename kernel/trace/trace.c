@@ -484,7 +484,7 @@ static const char *trace_options[] = {
 static struct {
 	u64 (*func)(void);
 	const char *name;
-+	int in_ns;		/* is this clock in nanoseconds? */
+	int in_ns;		/* is this clock in nanoseconds? */
  } trace_clocks[] = {
 	{ trace_clock_local,	"local",	1 },
 	{ trace_clock_global,	"global",	1 },
