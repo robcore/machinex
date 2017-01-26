@@ -835,6 +835,7 @@ config MFD_RDC321X
 	tristate "Support for RDC-R321x southbridge"
 	select MFD_CORE
 	depends on PCI
+	select MFD_CORE
 	help
 	  Say yes here if you want to have support for the RDC R-321x SoC
 	  southbridge which provides access to GPIOs and Watchdog using the
