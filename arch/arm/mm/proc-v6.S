@@ -87,7 +87,7 @@ ENTRY(cpu_v6_dcache_clean_area)
 	ret	lr
 
 /*
- *	cpu_arm926_switch_mm(pgd_phys, tsk)
+ *	cpu_v6_switch_mm(pgd_phys, tsk)
  *
  *	Set the translation table base pointer to be pgd_phys
  *
