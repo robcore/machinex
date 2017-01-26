@@ -30,6 +30,8 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 
+#include "cpufreq_governor.h"
+
 #define MIN_SAMPLING_RATE	10000
 
 /*

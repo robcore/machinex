@@ -27,6 +27,8 @@
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 
+#include "cpufreq_governor.h"
+
 #define INTELLIDEMAND_MAJOR_VERSION    5
 #define INTELLIDEMAND_MINOR_VERSION    5
 

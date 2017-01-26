@@ -32,6 +32,8 @@
 #include <linux/slab.h>
 #include <linux/touchboost.h>
 
+#include "cpufreq_governor.h"
+
 struct cpufreq_interactive_cpuinfo {
 	struct timer_list cpu_timer;
 	struct timer_list cpu_slack_timer;

@@ -28,6 +28,8 @@
 #include <linux/input.h>
 #include <linux/slab.h>
 
+#include "cpufreq_governor.h"
+
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler

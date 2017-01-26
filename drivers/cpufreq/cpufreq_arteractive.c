@@ -56,6 +56,8 @@
 #include <linux/powersuspend.h>
 #include <asm/cputime.h>
 
+#include "cpufreq_governor.h"
+
 #define CONFIG_MODE_AUTO_CHANGE
 
 /*

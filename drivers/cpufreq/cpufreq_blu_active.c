@@ -34,6 +34,8 @@
 #include <asm/cputime.h>
 #include <linux/input.h>
 
+#include "cpufreq_governor.h"
+
 static int active_count;
 
 struct cpufreq_interactive_cpuinfo {

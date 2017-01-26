@@ -28,6 +28,8 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 
+#include "cpufreq_governor.h"
+
 #include <mach/kgsl.h>
 static int orig_up_threshold = 90;
 static int g_count = 0;

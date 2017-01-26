@@ -512,12 +512,12 @@ static int __init cpufreq_gov_dbs_init(void)
 			jiffies_to_usecs(10);
 	}
 
-	return cpufreq_register_governor(&cpufreq_gov_ondemand);
+	return cpufreq_register_governor(&cpufreq_gov_ondemandMX);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_ondemand);
+	cpufreq_unregister_governor(&cpufreq_gov_ondemandMX);
 }
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");

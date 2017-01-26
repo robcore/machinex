@@ -38,6 +38,8 @@
 #include <trace/events/cpufreq_yankactive.h>
 #endif
 
+#include "cpufreq_governor.h"
+
 #define DEFAULT_HISPEED_FREQ	1674000
 
 static int active_count;

@@ -341,12 +341,12 @@ struct cpufreq_governor cpufreq_gov_conservativeMX = {
 static int __init cpufreq_gov_dbs_init(void)
 {
 	mutex_init(&cs_dbs_data.mutex);
-	return cpufreq_register_governor(&cpufreq_gov_conservative);
+	return cpufreq_register_governor(&cpufreq_gov_conservativeMX);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_conservative);
+	cpufreq_unregister_governor(&cpufreq_gov_conservativeMX);
 }
 
 MODULE_AUTHOR("Alexander Clouter <alex@digriz.org.uk>");

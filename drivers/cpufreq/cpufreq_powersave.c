@@ -17,6 +17,8 @@
 #include <linux/cpufreq.h>
 #include <linux/init.h>
 
+#include "cpufreq_governor.h"
+
 static int cpufreq_governor_powersave(struct cpufreq_policy *policy,
 					unsigned int event)
 {

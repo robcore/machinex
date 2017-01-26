@@ -36,6 +36,8 @@
 #include <asm/cputime.h>
 #include <linux/touchboost.h>
 
+#include "cpufreq_governor.h"
+
 static int active_count;
 
 struct cpufreq_interactive_cpuinfo {
