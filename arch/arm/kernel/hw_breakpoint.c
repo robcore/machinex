@@ -376,8 +376,10 @@ int arch_install_hw_breakpoint(struct perf_event *bp)
 		}
 	}
 
-	if (WARN_ONCE(i == max_slots, "Can't find any breakpoint slot\n"))
+	if (i == max_slots) {
+		pr_warning("Can't find any breakpoint slot\n");
 		return -EBUSY;
+	}
 
 	/* Override the breakpoint data with the step data. */
 	if (info->step_ctrl.enabled) {
@@ -426,8 +428,10 @@ void arch_uninstall_hw_breakpoint(struct perf_event *bp)
 		}
 	}
 
-	if (WARN_ONCE(i == max_slots, "Can't find any breakpoint slot\n"))
+	if (i == max_slots) {
+		pr_warning("Can't find any breakpoint slot\n");
 		return;
+	}
 
 	/* Ensure that we disable the mismatch breakpoint. */
 	if (info->ctrl.type != ARM_BREAKPOINT_EXECUTE &&
