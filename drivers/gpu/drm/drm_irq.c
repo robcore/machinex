@@ -106,7 +106,6 @@ static void vblank_disable_and_save(struct drm_device *dev, int crtc)
 	s64 diff_ns;
 	int vblrc;
 	struct timeval tvblank;
-	int count = DRM_TIMESTAMP_MAXRETRIES;
 
 	/* Prevent vblank irq processing while disabling vblank irqs,
 	 * so no updates of timestamps or count can happen after we've
@@ -132,10 +131,7 @@ static void vblank_disable_and_save(struct drm_device *dev, int crtc)
 	do {
 		dev->last_vblank[crtc] = dev->driver->get_vblank_counter(dev, crtc);
 		vblrc = drm_get_last_vbltimestamp(dev, crtc, &tvblank, 0);
-	} while (dev->last_vblank[crtc] != dev->driver->get_vblank_counter(dev, crtc) && (--count) && vblrc);
-
-	if (!count)
-		vblrc = 0;
+	} while (dev->last_vblank[crtc] != dev->driver->get_vblank_counter(dev, crtc));
 
 	/* Compute time difference to stored timestamp of last vblank
 	 * as updated by last invocation of drm_handle_vblank() in vblank irq.
@@ -580,8 +576,7 @@ int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev, int crtc,
 					  unsigned flags,
 					  struct drm_crtc *refcrtc)
 {
-	ktime_t stime, etime, mono_time_offset;
-	struct timeval tv_etime;
+	struct timeval stime, raw_time;
 	struct drm_display_mode *mode;
 	int vbl_status, vtotal, vdisplay;
 	int vpos, hpos, i;
@@ -630,15 +625,13 @@ int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev, int crtc,
 		preempt_disable();
 
 		/* Get system timestamp before query. */
-		stime = ktime_get();
+		do_gettimeofday(&stime);
 
 		/* Get vertical and horizontal scanout pos. vpos, hpos. */
 		vbl_status = dev->driver->get_scanout_position(dev, crtc, &vpos, &hpos);
 
 		/* Get system timestamp after query. */
-		etime = ktime_get();
-		if (!drm_timestamp_monotonic)
-			mono_time_offset = ktime_get_monotonic_offset();
+		do_gettimeofday(&raw_time);
 
 		preempt_enable();
 
@@ -649,7 +642,7 @@ int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev, int crtc,
 			return -EIO;
 		}
 
-		duration_ns = ktime_to_ns(etime) - ktime_to_ns(stime);
+		duration_ns = timeval_to_ns(&raw_time) - timeval_to_ns(&stime);
 
 		/* Accept result with <  max_error nsecs timing uncertainty. */
 		if (duration_ns <= (s64) *max_error)
@@ -696,20 +689,14 @@ int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev, int crtc,
 		vbl_status |= 0x8;
 	}
 
-	if (!drm_timestamp_monotonic)
-		etime = ktime_sub(etime, mono_time_offset);
-
-	/* save this only for debugging purposes */
-	tv_etime = ktime_to_timeval(etime);
 	/* Subtract time delta from raw timestamp to get final
 	 * vblank_time timestamp for end of vblank.
 	 */
-	etime = ktime_sub_ns(etime, delta_ns);
-	*vblank_time = ktime_to_timeval(etime);
+	*vblank_time = ns_to_timeval(timeval_to_ns(&raw_time) - delta_ns);
 
 	DRM_DEBUG("crtc %d : v %d p(%d,%d)@ %ld.%ld -> %ld.%ld [e %d us, %d rep]\n",
 		  crtc, (int)vbl_status, hpos, vpos,
-		  (long)tv_etime.tv_sec, (long)tv_etime.tv_usec,
+		  (long)raw_time.tv_sec, (long)raw_time.tv_usec,
 		  (long)vblank_time->tv_sec, (long)vblank_time->tv_usec,
 		  (int)duration_ns/1000, i);
 
@@ -720,17 +707,6 @@ int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev, int crtc,
 	return vbl_status;
 }
 EXPORT_SYMBOL(drm_calc_vbltimestamp_from_scanoutpos);
-
-static struct timeval get_drm_timestamp(void)
-{
-	ktime_t now;
-
-	now = ktime_get();
-	if (!drm_timestamp_monotonic)
-		now = ktime_sub(now, ktime_get_monotonic_offset());
-
-	return ktime_to_timeval(now);
-}
 
 /**
  * drm_get_last_vbltimestamp - retrieve raw timestamp for the most recent
@@ -769,9 +745,9 @@ u32 drm_get_last_vbltimestamp(struct drm_device *dev, int crtc,
 	}
 
 	/* GPU high precision timestamp query unsupported or failed.
-	 * Return current monotonic/gettimeofday timestamp as best estimate.
+	 * Return gettimeofday timestamp as best estimate.
 	 */
-	*tvblank = get_drm_timestamp();
+	do_gettimeofday(tvblank);
 
 	return 0;
 }
@@ -825,47 +801,6 @@ u32 drm_vblank_count_and_time(struct drm_device *dev, int crtc,
 	return cur_vblank;
 }
 EXPORT_SYMBOL(drm_vblank_count_and_time);
-
-static void send_vblank_event(struct drm_device *dev,
-		struct drm_pending_vblank_event *e,
-		unsigned long seq, struct timeval *now)
-{
-	WARN_ON_SMP(!spin_is_locked(&dev->event_lock));
-	e->event.sequence = seq;
-	e->event.tv_sec = now->tv_sec;
-	e->event.tv_usec = now->tv_usec;
-
-	list_add_tail(&e->base.link,
-		      &e->base.file_priv->event_list);
-	wake_up_interruptible(&e->base.file_priv->event_wait);
-	trace_drm_vblank_event_delivered(e->base.pid, e->pipe,
-					 e->event.sequence);
-}
-
-/**
- * drm_send_vblank_event - helper to send vblank event after pageflip
- * @dev: DRM device
- * @crtc: CRTC in question
- * @e: the event to send
- *
- * Updates sequence # and timestamp on event, and sends it to userspace.
- * Caller must hold event lock.
- */
-void drm_send_vblank_event(struct drm_device *dev, int crtc,
-		struct drm_pending_vblank_event *e)
-{
-	struct timeval now;
-	unsigned int seq;
-	if (crtc >= 0) {
-		seq = drm_vblank_count_and_time(dev, crtc, &now);
-	} else {
-		seq = 0;
-
-		now = get_drm_timestamp();
-	}
-	send_vblank_event(dev, e, seq, &now);
-}
-EXPORT_SYMBOL(drm_send_vblank_event);
 
 /**
  * drm_update_vblank_count - update the master vblank counter
@@ -1001,13 +936,6 @@ void drm_vblank_put(struct drm_device *dev, int crtc)
 }
 EXPORT_SYMBOL(drm_vblank_put);
 
-/**
- * drm_vblank_off - disable vblank events on a CRTC
- * @dev: DRM device
- * @crtc: CRTC in question
- *
- * Caller must hold event lock.
- */
 void drm_vblank_off(struct drm_device *dev, int crtc)
 {
 	struct drm_pending_vblank_event *e, *t;
@@ -1027,9 +955,15 @@ void drm_vblank_off(struct drm_device *dev, int crtc)
 		DRM_DEBUG("Sending premature vblank event on disable: \
 			  wanted %d, current %d\n",
 			  e->event.sequence, seq);
-		list_del(&e->base.link);
+
+		e->event.sequence = seq;
+		e->event.tv_sec = now.tv_sec;
+		e->event.tv_usec = now.tv_usec;
 		drm_vblank_put(dev, e->pipe);
-		send_vblank_event(dev, e, seq, &now);
+		list_move_tail(&e->base.link, &e->base.file_priv->event_list);
+		wake_up_interruptible(&e->base.file_priv->event_wait);
+		trace_drm_vblank_event_delivered(e->base.pid, e->pipe,
+						 e->event.sequence);
 	}
 
 	spin_unlock_irqrestore(&dev->vbl_lock, irqflags);
@@ -1174,9 +1108,15 @@ static int drm_queue_vblank_event(struct drm_device *dev, int pipe,
 
 	e->event.sequence = vblwait->request.sequence;
 	if ((seq - vblwait->request.sequence) <= (1 << 23)) {
+		e->event.sequence = seq;
+		e->event.tv_sec = now.tv_sec;
+		e->event.tv_usec = now.tv_usec;
 		drm_vblank_put(dev, pipe);
-		send_vblank_event(dev, e, seq, &now);
+		list_add_tail(&e->base.link, &e->base.file_priv->event_list);
+		wake_up_interruptible(&e->base.file_priv->event_wait);
 		vblwait->reply.sequence = seq;
+		trace_drm_vblank_event_delivered(current->pid, pipe,
+						 vblwait->request.sequence);
 	} else {
 		/* drm_handle_vblank_events will call drm_vblank_put */
 		list_add_tail(&e->base.link, &dev->vblank_event_list);
@@ -1317,9 +1257,14 @@ static void drm_handle_vblank_events(struct drm_device *dev, int crtc)
 		DRM_DEBUG("vblank event on %d, current %d\n",
 			  e->event.sequence, seq);
 
-		list_del(&e->base.link);
+		e->event.sequence = seq;
+		e->event.tv_sec = now.tv_sec;
+		e->event.tv_usec = now.tv_usec;
 		drm_vblank_put(dev, e->pipe);
-		send_vblank_event(dev, e, seq, &now);
+		list_move_tail(&e->base.link, &e->base.file_priv->event_list);
+		wake_up_interruptible(&e->base.file_priv->event_wait);
+		trace_drm_vblank_event_delivered(e->base.pid, e->pipe,
+						 e->event.sequence);
 	}
 
 	spin_unlock_irqrestore(&dev->event_lock, flags);

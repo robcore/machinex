@@ -71,6 +71,7 @@ static void vmw_resource_to_validate_list(struct vmw_sw_context *sw_context,
  */
 static int vmw_bo_to_validate_list(struct vmw_sw_context *sw_context,
 				   struct ttm_buffer_object *bo,
+				   uint32_t fence_flags,
 				   uint32_t *p_val_node)
 {
 	uint32_t val_node;
@@ -86,12 +87,15 @@ static int vmw_bo_to_validate_list(struct vmw_sw_context *sw_context,
 
 	val_buf = &sw_context->val_bufs[val_node];
 	if (unlikely(val_node == sw_context->cur_val_buf)) {
+		val_buf->new_sync_obj_arg = NULL;
 		val_buf->bo = ttm_bo_reference(bo);
 		list_add_tail(&val_buf->head, &sw_context->validate_nodes);
 		++sw_context->cur_val_buf;
 	}
 
-	sw_context->fence_flags |= DRM_VMW_FENCE_FLAG_EXEC;
+	val_buf->new_sync_obj_arg = (void *)
+		((unsigned long) val_buf->new_sync_obj_arg | fence_flags);
+	sw_context->fence_flags |= fence_flags;
 
 	if (p_val_node)
 		*p_val_node = val_node;
@@ -309,6 +313,7 @@ static int vmw_query_bo_switch_prepare(struct vmw_private *dev_priv,
 			cid_to_add = sw_context->cur_query_cid;
 			ret = vmw_bo_to_validate_list(sw_context,
 						      sw_context->cur_query_bo,
+						      DRM_VMW_FENCE_FLAG_EXEC,
 						      NULL);
 			if (unlikely(ret != 0))
 				return ret;
@@ -317,6 +322,7 @@ static int vmw_query_bo_switch_prepare(struct vmw_private *dev_priv,
 
 		ret = vmw_bo_to_validate_list(sw_context,
 					      dev_priv->dummy_query_bo,
+					      DRM_VMW_FENCE_FLAG_EXEC,
 					      NULL);
 		if (unlikely(ret != 0))
 			return ret;
@@ -340,6 +346,7 @@ static int vmw_query_bo_switch_prepare(struct vmw_private *dev_priv,
 				      &sw_context->query_list);
 		ret = vmw_bo_to_validate_list(sw_context,
 					      dev_priv->dummy_query_bo,
+					      DRM_VMW_FENCE_FLAG_EXEC,
 					      NULL);
 		if (unlikely(ret != 0))
 			return ret;
@@ -458,7 +465,8 @@ static int vmw_translate_guest_ptr(struct vmw_private *dev_priv,
 	reloc = &sw_context->relocs[sw_context->cur_reloc++];
 	reloc->location = ptr;
 
-	ret = vmw_bo_to_validate_list(sw_context, bo, &reloc->index);
+	ret = vmw_bo_to_validate_list(sw_context, bo, DRM_VMW_FENCE_FLAG_EXEC,
+				      &reloc->index);
 	if (unlikely(ret != 0))
 		goto out_no_reloc;
 
@@ -1282,9 +1290,12 @@ void vmw_execbuf_release_pinned_bo(struct vmw_private *dev_priv,
 
 	INIT_LIST_HEAD(&validate_list);
 
+	pinned_val.new_sync_obj_arg = (void *)(unsigned long)
+		DRM_VMW_FENCE_FLAG_EXEC;
 	pinned_val.bo = ttm_bo_reference(dev_priv->pinned_bo);
 	list_add_tail(&pinned_val.head, &validate_list);
 
+	query_val.new_sync_obj_arg = pinned_val.new_sync_obj_arg;
 	query_val.bo = ttm_bo_reference(dev_priv->dummy_query_bo);
 	list_add_tail(&query_val.head, &validate_list);
 

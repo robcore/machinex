@@ -468,8 +468,10 @@ void drm_crtc_cleanup(struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
 
-	kfree(crtc->gamma_store);
-	crtc->gamma_store = NULL;
+	if (crtc->gamma_store) {
+		kfree(crtc->gamma_store);
+		crtc->gamma_store = NULL;
+	}
 
 	drm_mode_object_put(dev, &crtc->base);
 	list_del(&crtc->head);
@@ -551,7 +553,6 @@ int drm_connector_init(struct drm_device *dev,
 	INIT_LIST_HEAD(&connector->probed_modes);
 	INIT_LIST_HEAD(&connector->modes);
 	connector->edid_blob_ptr = NULL;
-	connector->status = connector_status_unknown;
 
 	list_add_tail(&connector->head, &dev->mode_config.connector_list);
 	dev->mode_config.num_connector++;
@@ -2280,11 +2281,6 @@ int drm_mode_addfb2(struct drm_device *dev,
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
 		return -EINVAL;
 
-	if (r->flags & ~DRM_MODE_FB_INTERLACED) {
-		DRM_DEBUG_KMS("bad framebuffer flags 0x%08x\n", r->flags);
-		return -EINVAL;
-	}
-
 	if ((config->min_width > r->width) || (r->width > config->max_width)) {
 		DRM_ERROR("bad framebuffer width %d, should be >= %d && <= %d\n",
 			  r->width, config->min_width, config->max_width);
@@ -3144,8 +3140,6 @@ int drm_mode_connector_update_edid_property(struct drm_connector *connector,
 	size = EDID_LENGTH * (1 + edid->extensions);
 	connector->edid_blob_ptr = drm_property_create_blob(connector->dev,
 							    size, edid);
-	if (!connector->edid_blob_ptr)
-		return -EINVAL;
 
 	ret = drm_connector_property_set_value(connector,
 					       dev->mode_config.edid_property,
@@ -3622,12 +3616,9 @@ void drm_mode_config_reset(struct drm_device *dev)
 		if (encoder->funcs->reset)
 			encoder->funcs->reset(encoder);
 
-	list_for_each_entry(connector, &dev->mode_config.connector_list, head) {
-		connector->status = connector_status_unknown;
-
+	list_for_each_entry(connector, &dev->mode_config.connector_list, head)
 		if (connector->funcs->reset)
 			connector->funcs->reset(connector);
-	}
 }
 EXPORT_SYMBOL(drm_mode_config_reset);
 
