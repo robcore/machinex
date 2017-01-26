@@ -555,7 +555,7 @@ __hw_perf_event_init(struct perf_event *event)
 
 	if (perf_guest_cbs && perf_guest_cbs->is_in_guest()) {
 		/* We don't support guest os callchain now */
-		return -ENOSUPPORT;
+		return -EINVAL;
 	}
 
 	/*
