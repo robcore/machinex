@@ -1528,7 +1528,7 @@ static int __isolate_free_page(struct page *page, unsigned int order)
 		}
 	}
 
-	return 1UL << alloc_order;
+	return 1UL << order;
 }
 
 /*
