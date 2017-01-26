@@ -618,7 +618,7 @@ static int core_scsi3_pr_reservation_check(
 	}
 	if (!dev->dev_pr_res_holder->isid_present_at_reg) {
 		spin_unlock(&dev->dev_reservation_lock);
-		return 0;
+		goto out_put_pr_reg;
 	}
 	ret = (dev->dev_pr_res_holder->pr_reg_bin_isid ==
 	       sess->sess_bin_isid) ? 0 : -EINVAL;
