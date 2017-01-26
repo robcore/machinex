@@ -328,11 +328,11 @@ static int cs_cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return cpufreq_governor_dbs(&cs_dbs_data, policy, event);
 }
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVEMX
 static
 #endif
-struct cpufreq_governor cpufreq_gov_conservative = {
-	.name			= "conservative",
+struct cpufreq_governor cpufreq_gov_conservativeMX = {
+	.name			= "conservativeMX",
 	.governor		= cs_cpufreq_governor_dbs,
 	.max_transition_latency	= TRANSITION_LATENCY_LIMIT,
 	.owner			= THIS_MODULE,

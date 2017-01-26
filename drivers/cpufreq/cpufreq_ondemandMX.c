@@ -478,7 +478,7 @@ static int od_cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return cpufreq_governor_dbs(&od_dbs_data, policy, event);
 }
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMANDMX
 static
 #endif
 struct cpufreq_governor cpufreq_gov_ondemandMX = {
