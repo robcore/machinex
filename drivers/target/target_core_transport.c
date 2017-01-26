@@ -142,7 +142,7 @@ int init_se_kmem_caches(void)
 	if (!target_completion_wq)
 		goto out_free_tg_pt_gp_mem_cache;
 
-	return 0;
+	return (!ret) ? 0 : TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
 
 out_free_tg_pt_gp_mem_cache:
 	kmem_cache_destroy(t10_alua_tg_pt_gp_mem_cache);
