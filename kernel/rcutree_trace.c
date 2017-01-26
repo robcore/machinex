@@ -216,6 +216,32 @@ static const struct file_operations rcudata_fops = {
 	.release = single_release,
 };
 
+static int new_show_rcudata(struct seq_file *m, void *v)
+{
+	print_one_rcu_data(m, (struct rcu_data *)v);
+	return 0;
+}
+
+static const struct seq_operations new_rcudate_op = {
+	.start = r_start,
+	.next  = r_next,
+	.stop  = r_stop,
+	.show  = new_show_rcudata,
+};
+
+static int new_rcudata_open(struct inode *inode, struct file *file)
+{
+	return r_open(inode, file, &new_rcudate_op);
+}
+
+static const struct file_operations new_rcudata_fops = {
+	.owner = THIS_MODULE,
+	.open = new_rcudata_open,
+	.read = seq_read,
+	.llseek = no_llseek,
+	.release = seq_release,
+};
+
 static void print_one_rcu_data_csv(struct seq_file *m, struct rcu_data *rdp)
 {
 	if (!rdp->beenonline)
@@ -281,6 +307,43 @@ static const struct file_operations rcudata_csv_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
+};
+
+static int new_show_rcudata_csv(struct seq_file *m, void *v)
+{
+	struct rcu_data *rdp = (struct rcu_data *)v;
+	if (cpumask_first(cpu_possible_mask) == rdp->cpu) {
+		seq_puts(m, "\"CPU\",\"Online?\",\"c\",\"g\",\"pq\",\"pq\",");
+		seq_puts(m, "\"dt\",\"dt nesting\",\"dt NMI nesting\",\"df\",");
+		seq_puts(m, "\"of\",\"qll\",\"ql\",\"qs\"");
+#ifdef CONFIG_RCU_BOOST
+		seq_puts(m, "\"kt\",\"ktl\"");
+#endif /* #ifdef CONFIG_RCU_BOOST */
+		seq_puts(m, ",\"b\",\"ci\",\"co\",\"ca\"\n");
+	}
+
+	print_one_rcu_data_csv(m, rdp);
+	return 0;
+}
+
+static const struct seq_operations new_rcudate_csv_op = {
+	.start = r_start,
+	.next  = r_next,
+	.stop  = r_stop,
+	.show  = new_show_rcudata_csv,
+};
+
+static int new_rcudata_csv_open(struct inode *inode, struct file *file)
+{
+	return r_open(inode, file, &new_rcudate_csv_op);
+}
+
+static const struct file_operations new_rcudata_csv_fops = {
+	.owner = THIS_MODULE,
+	.open = new_rcudata_csv_open,
+	.read = seq_read,
+	.llseek = no_llseek,
+	.release = seq_release,
 };
 
 #ifdef CONFIG_RCU_BOOST
@@ -447,6 +510,8 @@ static const struct file_operations rcugp_fops = {
 
 static void print_one_rcu_pending(struct seq_file *m, struct rcu_data *rdp)
 {
+	if (!rdp->beenonline)
+		return;
 	seq_printf(m, "%3d%cnp=%ld ",
 		   rdp->cpu,
 		   cpu_is_offline(rdp->cpu) ? '!' : ' ',
@@ -465,16 +530,12 @@ static void print_one_rcu_pending(struct seq_file *m, struct rcu_data *rdp)
 static int show_rcu_pending(struct seq_file *m, void *unused)
 {
 	int cpu;
-	struct rcu_data *rdp;
 	struct rcu_state *rsp;
 
 	for_each_rcu_flavor(rsp) {
 		seq_printf(m, "%s:\n", rsp->name);
-		for_each_possible_cpu(cpu) {
-			rdp = per_cpu_ptr(rsp->rda, cpu);
-			if (rdp->beenonline)
-				print_one_rcu_pending(m, rdp);
-		}
+		for_each_possible_cpu(cpu)
+			print_one_rcu_pending(m, per_cpu_ptr(rsp->rda, cpu));
 	}
 	return 0;
 }
@@ -490,6 +551,32 @@ static const struct file_operations rcu_pending_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
+};
+
+static int new_show_rcu_pending(struct seq_file *m, void *v)
+{
+	print_one_rcu_pending(m, (struct rcu_data *)v);
+	return 0;
+}
+
+static const struct seq_operations new_rcu_pending_op = {
+	.start = r_start,
+	.next  = r_next,
+	.stop  = r_stop,
+	.show  = new_show_rcu_pending,
+};
+
+static int new_rcu_pending_open(struct inode *inode, struct file *file)
+{
+	return r_open(inode, file, &new_rcu_pending_op);
+}
+
+static const struct file_operations new_rcu_pending_fops = {
+	.owner = THIS_MODULE,
+	.open = new_rcu_pending_open,
+	.read = seq_read,
+	.llseek = no_llseek,
+	.release = seq_release,
 };
 
 static int show_rcutorture(struct seq_file *m, void *unused)
@@ -531,6 +618,21 @@ static int __init rcutree_trace_init(void)
 		rspdir = debugfs_create_dir(rsp->name, rcudir);
 		if (!rspdir)
 			goto free_out;
+
+			retval = debugfs_create_file("rcudata", 0444,
+					rspdir, rsp, &new_rcudata_fops);
+			if (!retval)
+				goto free_out;
+
+			retval = debugfs_create_file("rcudata.csv", 0444,
+					rspdir, rsp, &new_rcudata_csv_fops);
+			if (!retval)
+				goto free_out;
+
+			retval = debugfs_create_file("rcu_pending", 0444,
+					rspdir, rsp, &new_rcu_pending_fops);
+			if (!retval)
+				goto free_out;
 	}
 
 	retval = debugfs_create_file("rcubarrier", 0444, rcudir,
