@@ -1078,7 +1078,6 @@ static int rebind_subsystems(struct cgroupfs_root *root,
 		}
 	}
 	root->subsys_mask = root->actual_subsys_mask = final_subsys_mask;
-	synchronize_rcu();
 
 	return 0;
 }
@@ -1983,7 +1982,6 @@ int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk)
 	/* put_css_set will not destroy cg until after an RCU grace period */
 	put_css_set(cg);
 
-	synchronize_rcu();
 out:
 	if (retval) {
 		for_each_subsys(root, ss) {
@@ -2152,7 +2150,6 @@ static int cgroup_attach_proc(struct cgroup *cgrp, struct task_struct *leader)
 	/*
 	 * step 5: success! and cleanup
 	 */
-	synchronize_rcu();
 	retval = 0;
 out_put_css_set_refs:
 	if (retval) {
