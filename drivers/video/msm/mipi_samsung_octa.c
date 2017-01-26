@@ -1121,6 +1121,32 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 	return size;
 }
 
+static ssize_t mipi_samsung_disp_machinex_backlight_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct msm_fb_data_type *mfd;
+	mfd = platform_get_drvdata(msd.msm_pdev);
+
+	return sprintf(buf, "%d\n", mfd->bl_level);
+}
+static ssize_t mipi_samsung_disp_machinex_backlight_store(struct device *dev,
+			struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct msm_fb_data_type *mfd;
+	int mx_level;
+
+	mfd = platform_get_drvdata(msd.msm_pdev);
+
+	sscanff(buf, "%d\n", &mx_level);
+
+	mfd->bl_level = mx_level;
+
+	if (mfd->resume_state == MIPI_RESUME_STATE)
+		mipi_samsung_disp_backlight(mfd);
+
+	return size;
+}
+
 static ssize_t mipi_samsung_temperature_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1195,6 +1221,10 @@ static DEVICE_ATTR(siop_enable, S_IRUGO | S_IWUSR | S_IWGRP,
 static DEVICE_ATTR(backlight, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_disp_backlight_show,
 			mipi_samsung_disp_backlight_store);
+
+static DEVICE_ATTR(machinex_backlight, 0644,
+			mipi_samsung_disp_machinex_backlight_show,
+			mipi_samsung_disp_machinex_backlight_store);
 
 #if defined(RUNTIME_MIPI_CLK_CHANGE)
 static DEVICE_ATTR(fps_change, S_IRUGO | S_IWUSR | S_IWGRP,
@@ -1544,6 +1574,13 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_info("sysfs create fail-%s\n",
 				dev_attr_backlight.attr.name);
+	}
+
+	ret = sysfs_create_file(&lcd_device->dev.kobj,
+					&dev_attr_machinex_backlight.attr);
+	if (ret) {
+		pr_info("sysfs create fail-%s\n",
+				dev_attr_machinex_backlight.attr.name);
 	}
 
 #if defined(RUNTIME_MIPI_CLK_CHANGE)
