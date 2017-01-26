@@ -1296,6 +1296,8 @@ mv_xor_conf_mbus_windows(struct mv_xor_shared_private *msp,
 
 	writel(win_enable, base + WINDOW_BAR_ENABLE(0));
 	writel(win_enable, base + WINDOW_BAR_ENABLE(1));
+	writel(0, base + WINDOW_OVERRIDE_CTRL(0));
+	writel(0, base + WINDOW_OVERRIDE_CTRL(1));
 }
 
 static struct platform_driver mv_xor_driver = {
