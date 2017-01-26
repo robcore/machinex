@@ -491,7 +491,7 @@ extern struct cpufreq_governor cpufreq_gov_ondemand;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_ondemand)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMANDMX)
 extern struct cpufreq_governor cpufreq_gov_ondemandMX;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_ondemand)
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_ondemandMX)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_STOCKDEMAND)
 extern struct cpufreq_governor cpufreq_gov_stockdemand;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_stockdemand)
@@ -500,7 +500,7 @@ extern struct cpufreq_governor cpufreq_gov_conservative;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservative)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVEMX)
 extern struct cpufreq_governor cpufreq_gov_conservativeMX;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservative)
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservativeMX)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE)
 extern struct cpufreq_governor cpufreq_gov_interactive;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_interactive)
