@@ -450,7 +450,7 @@ static struct i2c_driver tps62360_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = tps62360_probe,
-	.remove = __devexit_p(tps62360_remove),
+	.remove = tps62360_remove,
 	.shutdown = tps62360_shutdown,
 	.id_table = tps62360_id,
 };

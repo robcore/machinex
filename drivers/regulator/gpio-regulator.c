@@ -333,7 +333,7 @@ static int __devexit gpio_regulator_remove(struct platform_device *pdev)
 
 static struct platform_driver gpio_regulator_driver = {
 	.probe		= gpio_regulator_probe,
-	.remove		= __devexit_p(gpio_regulator_remove),
+	.remove		= gpio_regulator_remove,
 	.driver		= {
 		.name		= "gpio-regulator",
 		.owner		= THIS_MODULE,
