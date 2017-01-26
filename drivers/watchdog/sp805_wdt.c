@@ -282,8 +282,7 @@ static int __devexit sp805_wdt_remove(struct amba_device *adev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int sp805_wdt_suspend(struct device *dev)
+static int __maybe_unused sp805_wdt_suspend(struct device *dev)
 {
 	struct sp805_wdt *wdt = dev_get_drvdata(dev);
 
@@ -293,7 +292,7 @@ static int sp805_wdt_suspend(struct device *dev)
 	return 0;
 }
 
-static int sp805_wdt_resume(struct device *dev)
+static int __maybe_unused sp805_wdt_resume(struct device *dev)
 {
 	struct sp805_wdt *wdt = dev_get_drvdata(dev);
 
@@ -302,7 +301,6 @@ static int sp805_wdt_resume(struct device *dev)
 
 	return 0;
 }
-#endif /* CONFIG_PM */
 
 static SIMPLE_DEV_PM_OPS(sp805_wdt_dev_pm_ops, sp805_wdt_suspend,
 		sp805_wdt_resume);
