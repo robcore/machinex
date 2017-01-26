@@ -90,7 +90,7 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
  * Frequency calculation threshold. Avoid freq oscillations up to this
  * threshold and allow for dynamic changes above (default policy->min).
  */
-static unsigned long freq_calc_thresh = 1350000;
+static unsigned long freq_calc_thresh;
 
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
@@ -927,6 +927,7 @@ static struct global_attr target_loads_attr =
 	__ATTR(target_loads, S_IRUGO | S_IWUSR,
 		show_target_loads, store_target_loads);
 
+#if 0
 static ssize_t show_freq_calc_thresh(struct kobject *kobj,
 				struct attribute *attr, char *buf)
 {
@@ -948,6 +949,8 @@ static ssize_t store_freq_calc_thresh(struct kobject *kobj,
 
 static struct global_attr freq_calc_thresh_attr = __ATTR(freq_calc_thresh, 0644,
 		show_freq_calc_thresh, store_freq_calc_thresh);
+
+#endif
 
 static ssize_t show_above_hispeed_delay(
 	struct kobject *kobj, struct attribute *attr, char *buf)
@@ -1272,7 +1275,7 @@ static struct global_attr closest_freq_selection_attr = __ATTR(closest_freq_sele
 
 static struct attribute *interactive_attributes[] = {
 	&target_loads_attr.attr,
-	&freq_calc_thresh_attr.attr,
+	//&freq_calc_thresh_attr.attr,
 	&above_hispeed_delay_attr.attr,
 	&hispeed_freq_attr.attr,
 	&go_hispeed_load_attr.attr,

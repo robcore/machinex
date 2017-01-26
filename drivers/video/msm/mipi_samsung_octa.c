@@ -1092,7 +1092,7 @@ static ssize_t mipi_samsung_fps_store(struct device *dev,
 }
 
 #endif
-
+#if 0
 static int machinex_bl_lock = 0;
 
 static ssize_t mipi_samsung_disp_machinex_bl_lock_show(struct device *dev,
@@ -1111,7 +1111,7 @@ static ssize_t mipi_samsung_disp_machinex_bl_lock_store(struct device *dev,
 
 	return size;
 }
-
+#endif
 static ssize_t mipi_samsung_disp_backlight_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -1132,15 +1132,17 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	if (!machinex_bl_lock) {
-		mfd->bl_level = level;
-		if (mfd->resume_state == MIPI_RESUME_STATE)
-			mipi_samsung_disp_backlight(mfd);
-	} else {
+	//if (!machinex_bl_lock) { BROKEN, need to override in the respective panel drivers
+	mfd->bl_level = level;
+
+	if (mfd->resume_state == MIPI_RESUME_STATE)
+		mipi_samsung_disp_backlight(mfd);
+
+/*	} else {
 		pr_debug("Machinex Override in Progress\n");
 		return -EINVAL;
 	}
-
+*/
 	return size;
 }
 
@@ -1241,10 +1243,11 @@ static DEVICE_ATTR(siop_enable, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_disp_siop_show,
 			mipi_samsung_disp_siop_store);
 
-
+#if 0
 static DEVICE_ATTR(machinex_bl_lock, 0644,
 			mipi_samsung_disp_machinex_bl_lock_show,
 			mipi_samsung_disp_machinex_bl_lock_store);
+#endif
 
 static DEVICE_ATTR(backlight, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_disp_backlight_show,
@@ -1597,12 +1600,14 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_siop_enable.attr.name);
 	}
 
+#if 0
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 					&dev_attr_machinex_bl_lock.attr);
 	if (ret) {
 		pr_info("sysfs create fail-%s\n",
 				dev_attr_machinex_bl_lock.attr.name);
 	}
+#endif
 
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 					&dev_attr_backlight.attr);
