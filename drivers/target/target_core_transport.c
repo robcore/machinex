@@ -3530,9 +3530,10 @@ static void transport_put_cmd(struct se_cmd *cmd)
 	int free_tasks = 0;
 
 	spin_lock_irqsave(&cmd->t_state_lock, flags);
-	if (atomic_read(&cmd->t_fe_count)) {
-		if (!atomic_dec_and_test(&cmd->t_fe_count))
-			goto out_busy;
+	if (atomic_read(&cmd->t_fe_count) &&
+	    !atomic_dec_and_test(&cmd->t_fe_count)) {
+		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+		return;
 	}
 
 	if (atomic_read(&cmd->t_se_count)) {
@@ -3553,8 +3554,6 @@ static void transport_put_cmd(struct se_cmd *cmd)
 	transport_free_pages(cmd);
 	transport_release_cmd(cmd);
 	return;
-out_busy:
-	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
 }
 
 /*
