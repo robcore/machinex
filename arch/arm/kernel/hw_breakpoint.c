@@ -52,14 +52,14 @@ static u8 debug_arch;
 /* Maximum supported watchpoint length. */
 static u8 max_watchpoint_len;
 
-#define READ_WB_REG_CASE(OP2, M, VAL)			\
-	case ((OP2 << 4) + M):				\
-		ARM_DBG_READ(c0, c ## M, OP2, VAL);	\
+#define READ_WB_REG_CASE(OP2, M, VAL)		\
+	case ((OP2 << 4) + M):			\
+		ARM_DBG_READ(c ## M, OP2, VAL); \
 		break
 
-#define WRITE_WB_REG_CASE(OP2, M, VAL)			\
-	case ((OP2 << 4) + M):				\
-		ARM_DBG_WRITE(c0, c ## M, OP2, VAL);	\
+#define WRITE_WB_REG_CASE(OP2, M, VAL)		\
+	case ((OP2 << 4) + M):			\
+		ARM_DBG_WRITE(c ## M, OP2, VAL);\
 		break
 
 #define GEN_READ_WB_REG_CASES(OP2, VAL)		\
@@ -141,7 +141,7 @@ static u8 get_debug_arch(void)
 		return ARM_DEBUG_ARCH_V6;
 	}
 
-	ARM_DBG_READ(c0, c0, 0, didr);
+	ARM_DBG_READ(c0, 0, didr);
 	return (didr >> 16) & 0xf;
 }
 
@@ -169,7 +169,7 @@ static int debug_exception_updates_fsr(void)
 static int get_num_wrp_resources(void)
 {
 	u32 didr;
-	ARM_DBG_READ(c0, c0, 0, didr);
+	ARM_DBG_READ(c0, 0, didr);
 	return ((didr >> 28) & 0xf) + 1;
 }
 
@@ -177,7 +177,7 @@ static int get_num_wrp_resources(void)
 static int get_num_brp_resources(void)
 {
 	u32 didr;
-	ARM_DBG_READ(c0, c0, 0, didr);
+	ARM_DBG_READ(c0, 0, didr);
 	return ((didr >> 24) & 0xf) + 1;
 }
 
@@ -227,7 +227,7 @@ static int halting_mode_enabled(void)
 {
 	u32 dscr;
 
-	ARM_DBG_READ(c0, c1, 0, dscr);
+	ARM_DBG_READ(c1, 0, dscr);
 
 	if (WARN_ONCE(dscr & ARM_DSCR_HDBGEN,
 		      "halting debug mode enabled. "
@@ -245,7 +245,7 @@ static int halting_mode_enabled(void)
 static int monitor_mode_enabled(void)
 {
 	u32 dscr;
-	ARM_DBG_READ(c0, c1, 0, dscr);
+	ARM_DBG_READ(c1, 0, dscr);
 	return !!(dscr & ARM_DSCR_MDBGEN);
 }
 
@@ -254,7 +254,7 @@ static int enable_monitor_mode(void)
 	u32 dscr;
 	int ret;
 
-	ARM_DBG_READ(c0, c1, 0, dscr);
+	ARM_DBG_READ(c1, 0, dscr);
 
 	/* Ensure that halting mode is disabled. */
 	ret = halting_mode_enabled();
@@ -269,11 +269,11 @@ static int enable_monitor_mode(void)
 	switch (get_debug_arch()) {
 	case ARM_DEBUG_ARCH_V6:
 	case ARM_DEBUG_ARCH_V6_1:
-		ARM_DBG_WRITE(c0, c1, 0, (dscr | ARM_DSCR_MDBGEN));
+		ARM_DBG_WRITE(c1, 0, (dscr | ARM_DSCR_MDBGEN));
 		break;
 	case ARM_DEBUG_ARCH_V7_ECP14:
 	case ARM_DEBUG_ARCH_V7_1:
-		ARM_DBG_WRITE(c0, c2, 2, (dscr | ARM_DSCR_MDBGEN));
+		ARM_DBG_WRITE(c2, 2, (dscr | ARM_DSCR_MDBGEN));
 		break;
 	default:
 		ret = -ENODEV;
@@ -281,7 +281,7 @@ static int enable_monitor_mode(void)
 	}
 
 	/* Check that the write made it through. */
-	ARM_DBG_READ(c0, c1, 0, dscr);
+	ARM_DBG_READ(c1, 0, dscr);
 	if (!(dscr & ARM_DSCR_MDBGEN))
 		ret = -EPERM;
 
@@ -876,7 +876,7 @@ static int hw_breakpoint_pending(unsigned long addr, unsigned int fsr,
 		local_irq_enable();
 
 	/* We only handle watchpoints and hardware breakpoints. */
-	ARM_DBG_READ(c0, c1, 0, dscr);
+	ARM_DBG_READ(c1, 0, dscr);
 
 	/* Perform perf callbacks. */
 	switch (ARM_DSCR_MOE(dscr)) {
@@ -944,14 +944,14 @@ static void reset_ctrl_regs(void *unused)
 		 * Ensure sticky power-down is clear (i.e. debug logic is
 		 * powered up).
 		 */
-		ARM_DBG_READ(c1, c5, 4, val);
+		asm volatile("mrc p14, 0, %0, c1, c5, 4" : "=r" (val));
 		if ((val & 0x1) == 0)
 			err = -EPERM;
 
 		/*
 		 * Check whether we implement OS save and restore.
 		 */
-		ARM_DBG_READ(c1, c1, 4, val);
+		asm volatile("mrc p14, 0, %0, c1, c1, 4" : "=r" (val));
 		if ((val & 0x9) == 0)
 			goto clear_vcr;
 		break;
@@ -959,7 +959,7 @@ static void reset_ctrl_regs(void *unused)
 		/*
 		 * Ensure the OS double lock is clear.
 		 */
-		ARM_DBG_READ(c1, c3, 4, val);
+		asm volatile("mrc p14, 0, %0, c1, c3, 4" : "=r" (val));
 		if ((val & 0x1) == 1)
 			err = -EPERM;
 		break;
@@ -975,7 +975,7 @@ static void reset_ctrl_regs(void *unused)
 	 * Unconditionally clear the OS lock by writing a value
 	 * other than 0xC5ACCE55 to the access register.
 	 */
-	ARM_DBG_WRITE(c1, c0, 4, 0);
+	asm volatile("mcr p14, 0, %0, c1, c0, 4" : : "r" (0));
 	isb();
 
 	/*
@@ -983,7 +983,7 @@ static void reset_ctrl_regs(void *unused)
 	 * enabling monitor mode.
 	 */
 clear_vcr:
-	ARM_DBG_WRITE(c0, c7, 0, 0);
+	asm volatile("mcr p14, 0, %0, c0, c7, 0" : : "r" (0));
 	isb();
 
 reset_regs:
