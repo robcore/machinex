@@ -7,7 +7,7 @@ typedef struct {
 #ifdef CONFIG_CPU_HAS_ASID
 	u64 id;
 #endif
-	unsigned int kvm_seq;
+	unsigned int vmalloc_seq;
 	unsigned long	sigpage;
 } mm_context_t;
 
