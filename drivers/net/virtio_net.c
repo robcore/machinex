@@ -202,8 +202,7 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
 	 * the case of a broken device.
 	 */
 	if (unlikely(len > MAX_SKB_FRAGS * PAGE_SIZE)) {
-		if (net_ratelimit())
-			pr_debug("%s: too much data\n", skb->dev->name);
+		net_dbg_ratelimited("%s: too much data\n", skb->dev->name);
 		dev_kfree_skb(skb);
 		return NULL;
 	}
@@ -323,9 +322,8 @@ static void receive_buf(struct net_device *dev, void *buf, unsigned int len)
 			skb_shinfo(skb)->gso_type = SKB_GSO_TCPV6;
 			break;
 		default:
-			if (net_ratelimit())
-				printk(KERN_WARNING "%s: bad gso type %u.\n",
-				       dev->name, hdr->hdr.gso_type);
+			net_warn_ratelimited("%s: bad gso type %u.\n",
+					     dev->name, hdr->hdr.gso_type);
 			goto frame_err;
 		}
 
@@ -334,9 +332,7 @@ static void receive_buf(struct net_device *dev, void *buf, unsigned int len)
 
 		skb_shinfo(skb)->gso_size = hdr->hdr.gso_size;
 		if (skb_shinfo(skb)->gso_size == 0) {
-			if (net_ratelimit())
-				printk(KERN_WARNING "%s: zero gso size.\n",
-				       dev->name);
+			net_warn_ratelimited("%s: zero gso size.\n", dev->name);
 			goto frame_err;
 		}
 
