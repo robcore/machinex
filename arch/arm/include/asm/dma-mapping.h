@@ -296,13 +296,6 @@ static inline int dma_mmap_nonconsistent(struct device *dev,
 
 
 /*
- * This can be called during boot to increase the size of the consistent
- * DMA region above it's default value of 2MB. It must be called before the
- * memory allocator is initialised, i.e. before any core_initcall.
- */
-static inline void init_consistent_dma_size(unsigned long size) { }
-
-/*
  * For SA-1111, IXP425, and ADI systems  the dma-mapping functions are "magic"
  * and utilize bounce buffers as needed to work around limited DMA windows.
  *
