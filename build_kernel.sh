@@ -83,6 +83,9 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
+sed -i '/CONFIG_LOCALVERSION/d' arch/arm/configs/canadefconfig
+echo CONFIG_LOCALVERSION='"'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
+
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
