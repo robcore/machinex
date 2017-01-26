@@ -1758,8 +1758,8 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 5)
-		bl_level = 5;
+	if (bl_level < 1)
+		bl_level = 1;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
