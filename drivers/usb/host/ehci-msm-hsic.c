@@ -113,14 +113,14 @@ struct msm_hsic_hcd *__mehci;
 static bool debug_bus_voting_enabled = false;
 
 static unsigned int enable_payload_log = 0;
-module_param(enable_payload_log, uint, S_IRUGO | S_IWUSR);
+module_param(enable_payload_log, uint, 0644);
 static unsigned int enable_dbg_log = 0;
-module_param(enable_dbg_log, uint, S_IRUGO | S_IWUSR);
+module_param(enable_dbg_log, uint, 0644);
 /*by default log ep0 and efs sync ep*/
-static unsigned int ep_addr_rxdbg_mask = 9;
-module_param(ep_addr_rxdbg_mask, uint, S_IRUGO | S_IWUSR);
-static unsigned int ep_addr_txdbg_mask = 9;
-module_param(ep_addr_txdbg_mask, uint, S_IRUGO | S_IWUSR);
+static unsigned int ep_addr_rxdbg_mask = 0;
+module_param(ep_addr_rxdbg_mask, uint, 0644);
+static unsigned int ep_addr_txdbg_mask = 0;
+module_param(ep_addr_txdbg_mask, uint, 0644);
 
 /* Maximum debug message length */
 #define DBG_MSG_LEN   128UL
