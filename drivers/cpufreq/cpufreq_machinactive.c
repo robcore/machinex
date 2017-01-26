@@ -90,7 +90,7 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
  * Frequency calculation threshold. Avoid freq oscillations up to this
  * threshold and allow for dynamic changes above (default policy->min).
  */
-static unsigned long freq_calc_thresh;
+static unsigned long freq_calc_thresh = 1350000;
 
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.

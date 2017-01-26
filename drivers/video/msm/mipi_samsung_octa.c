@@ -1138,6 +1138,7 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 			mipi_samsung_disp_backlight(mfd);
 	} else {
 		pr_debug("Machinex Override in Progress\n");
+	}
 
 	return size;
 }
@@ -1240,7 +1241,7 @@ static DEVICE_ATTR(siop_enable, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi_samsung_disp_siop_store);
 
 
-static DEVICE_ATTR(machinex_bl_lock, 0644
+static DEVICE_ATTR(machinex_bl_lock, 0644,
 			mipi_samsung_disp_machinex_bl_lock_show,
 			mipi_samsung_disp_machinex_bl_lock_store);
 
