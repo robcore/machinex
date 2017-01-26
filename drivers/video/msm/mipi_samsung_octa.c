@@ -1138,6 +1138,7 @@ static ssize_t mipi_samsung_disp_backlight_store(struct device *dev,
 			mipi_samsung_disp_backlight(mfd);
 	} else {
 		pr_debug("Machinex Override in Progress\n");
+		return -EINVAL;
 	}
 
 	return size;
