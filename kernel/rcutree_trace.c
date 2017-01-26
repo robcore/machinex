@@ -281,7 +281,7 @@ static const struct file_operations rcu_node_boost_fops = {
 	.owner = THIS_MODULE,
 	.open = rcu_node_boost_open,
 	.read = seq_read,
-	.llseek = seq_lseek,
+	.llseek = no_llseek,
 	.release = single_release,
 };
 
@@ -356,6 +356,26 @@ static const struct file_operations rcuhier_fops = {
 	.release = single_release,
 };
 
+static int new_show_rcuhier(struct seq_file *m, void *v)
+{
+	struct rcu_state *rsp = (struct rcu_state *)m->private;
+	print_one_rcu_state(m, rsp);
+	return 0;
+}
+
+static int new_rcuhier_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, new_show_rcuhier, inode->i_private);
+}
+
+static const struct file_operations new_rcuhier_fops = {
+	.owner = THIS_MODULE,
+	.open = new_rcuhier_open,
+	.read = seq_read,
+	.llseek = no_llseek,
+	.release = seq_release,
+};
+
 static void show_one_rcugp(struct seq_file *m, struct rcu_state *rsp)
 {
 	unsigned long flags;
@@ -398,6 +418,26 @@ static const struct file_operations rcugp_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
+};
+
+static int new_show_rcugp(struct seq_file *m, void *v)
+{
+	struct rcu_state *rsp = (struct rcu_state *)m->private;
+	show_one_rcugp(m, rsp);
+	return 0;
+}
+
+static int new_rcugp_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, new_show_rcugp, inode->i_private);
+}
+
+static const struct file_operations new_rcugp_fops = {
+	.owner = THIS_MODULE,
+	.open = new_rcugp_open,
+	.read = seq_read,
+	.llseek = no_llseek,
+	.release = seq_release,
 };
 
 static void print_one_rcu_pending(struct seq_file *m, struct rcu_data *rdp)
@@ -497,6 +537,25 @@ static int __init rcutree_trace_init(void)
 
 			retval = debugfs_create_file("rcubarrier", 0444,
 					rspdir, rsp, &new_rcubarrier_fops);
+			if (!retval)
+				goto free_out;
+
+#ifdef CONFIG_RCU_BOOST
+			if (rsp == &rcu_preempt_state) {
+				retval = debugfs_create_file("rcuboost", 0444,
+					rspdir, NULL, &rcu_node_boost_fops);
+				if (!retval)
+					goto free_out;
+			}
+#endif
+
+			retval = debugfs_create_file("rcugp", 0444,
+					rspdir, rsp, &new_rcugp_fops);
+			if (!retval)
+				goto free_out;
+
+			retval = debugfs_create_file("rcuhier", 0444,
+					rspdir, rsp, &new_rcuhier_fops);
 			if (!retval)
 				goto free_out;
 	}
