@@ -573,7 +573,7 @@ err:
 	return ret;
 }
 
-static int __devexit da9052_regulator_remove(struct platform_device *pdev)
+static int da9052_regulator_remove(struct platform_device *pdev)
 {
 	struct da9052_regulator *regulator = platform_get_drvdata(pdev);
 

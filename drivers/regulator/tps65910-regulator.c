@@ -1234,7 +1234,7 @@ err_free_pmic:
 	return err;
 }
 
-static int __devexit tps65910_remove(struct platform_device *pdev)
+static int tps65910_remove(struct platform_device *pdev)
 {
 	struct tps65910_reg *pmic = platform_get_drvdata(pdev);
 	int i;

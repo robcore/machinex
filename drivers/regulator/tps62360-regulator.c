@@ -406,7 +406,7 @@ err_gpio0:
  *
  * Unregister TPS driver as an i2c client device driver
  */
-static int __devexit tps62360_remove(struct i2c_client *client)
+static int tps62360_remove(struct i2c_client *client)
 {
 	struct tps62360_chip *tps = i2c_get_clientdata(client);
 

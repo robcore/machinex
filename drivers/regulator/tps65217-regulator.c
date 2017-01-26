@@ -342,7 +342,7 @@ static int tps65217_regulator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit tps65217_regulator_remove(struct platform_device *pdev)
+static int tps65217_regulator_remove(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev = platform_get_drvdata(pdev);
 
