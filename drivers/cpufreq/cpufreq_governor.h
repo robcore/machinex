@@ -14,8 +14,8 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef _CPUFREQ_GOVERNER_H
-#define _CPUFREQ_GOVERNER_H
+#ifndef _CPUFREQ_GOVERNOR_H
+#define _CPUFREQ_GOVERNOR_H
 
 #include <linux/cpufreq.h>
 #include <linux/kobject.h>
@@ -110,7 +110,6 @@ struct od_dbs_tuners {
 	unsigned int up_threshold;
 	unsigned int down_differential;
 	unsigned int powersave_bias;
-	unsigned int io_is_busy;
 };
 
 struct cs_dbs_tuners {
@@ -127,6 +126,8 @@ struct dbs_data {
 	/* Common across governors */
 	#define GOV_ONDEMAND		0
 	#define GOV_CONSERVATIVE	1
+	#define GOV_ONDEMANDMX		2
+	#define GOV_CONSERVATIVEMX	3
 	int governor;
 	unsigned int min_sampling_rate;
 	unsigned int enable; /* number of CPUs using this policy */
@@ -147,7 +148,6 @@ struct dbs_data {
 
 /* Governor specific ops, will be passed to dbs_data->gov_ops */
 struct od_ops {
-	int (*io_busy)(void);
 	void (*powersave_bias_init_cpu)(int cpu);
 	unsigned int (*powersave_bias_target)(struct cpufreq_policy *policy,
 			unsigned int freq_next, unsigned int relation);
@@ -173,4 +173,4 @@ u64 get_cpu_idle_time(unsigned int cpu, u64 *wall);
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 int cpufreq_governor_dbs(struct dbs_data *dbs_data,
 		struct cpufreq_policy *policy, unsigned int event);
-#endif /* _CPUFREQ_GOVERNER_H */
+#endif /* _CPUFREQ_GOVERNOR_H */

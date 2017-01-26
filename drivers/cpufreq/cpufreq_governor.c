@@ -25,6 +25,7 @@
 #include <linux/tick.h>
 #include <linux/types.h>
 #include <linux/workqueue.h>
+#include <linux/slab.h>
 
 #include "cpufreq_governor.h"
 
