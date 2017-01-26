@@ -83,8 +83,9 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
-sed -i '/CONFIG_LOCALVERSION/d' arch/arm/configs/canadefconfig
+sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 echo CONFIG_LOCALVERSION='"'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
+#echo '# CONFIG_LOCALVERSION_AUTO is not set' >> arch/arm/configs/canadefconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
