@@ -500,7 +500,16 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 	up_read((&EXT4_I(inode)->i_data_sem));
 
 	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED) {
-		int ret = check_block_validity(inode, map);
+		int ret;
+		if (flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE) {
+			/* delayed alloc may be allocated by fallocate and
+			 * coverted to initialized by directIO.
+			 * we need to handle delayed extent here.
+			 */
+			down_write((&EXT4_I(inode)->i_data_sem));
+			goto delayed_mapped;
+		}
+		ret = check_block_validity(inode, map);
 		if (ret != 0)
 			return ret;
 	}
@@ -582,8 +591,16 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 		 * set the BH_Da_Mapped bit on them. Its important to do this
 		 * under the protection of i_data_sem.
 		 */
-		if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED)
+		if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED) {
+			int ret;
 			set_buffers_da_mapped(inode, map);
+delayed_mapped:
+			/* delayed allocation blocks has been allocated */
+			ret = ext4_es_remove_extent(inode, map->m_lblk,
+						    map->m_len);
+			if (ret < 0)
+				retval = ret;
+		}
 	}
 
 	up_write((&EXT4_I(inode)->i_data_sem));
@@ -1239,6 +1256,7 @@ static void ext4_da_page_release_reservation(struct page *page,
 	struct inode *inode = page->mapping->host;
 	struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
 	int num_clusters;
+	ext4_fsblk_t lblk;
 
 	head = page_buffers(page);
 	bh = head;
@@ -1253,11 +1271,15 @@ static void ext4_da_page_release_reservation(struct page *page,
 		curr_off = next_off;
 	} while ((bh = bh->b_this_page) != head);
 
+	if (to_release) {
+		lblk = page->index << (PAGE_CACHE_SHIFT - inode->i_blkbits);
+		ext4_es_remove_extent(inode, lblk, to_release);
+	}
+
 	/* If we have released all the blocks belonging to a cluster, then we
 	 * need to release the reserved space for that cluster. */
 	num_clusters = EXT4_NUM_B2C(sbi, to_release);
 	while (num_clusters > 0) {
-		ext4_fsblk_t lblk;
 		lblk = (page->index << (PAGE_CACHE_SHIFT - inode->i_blkbits)) +
 			((num_clusters - 1) << sbi->s_cluster_bits);
 		if (sbi->s_cluster_ratio == 1 ||
@@ -1438,9 +1460,14 @@ static void ext4_da_block_invalidatepages(struct mpage_da_data *mpd)
 	struct pagevec pvec;
 	struct inode *inode = mpd->inode;
 	struct address_space *mapping = inode->i_mapping;
+	ext4_lblk_t start, last;
 
 	index = mpd->first_page;
 	end   = mpd->next_page - 1;
+
+	start = index << (PAGE_CACHE_SHIFT - inode->i_blkbits);
+	last = end << (PAGE_CACHE_SHIFT - inode->i_blkbits);
+	ext4_es_remove_extent(inode, start, last - start + 1);
 
 	pagevec_init(&pvec, 0);
 	while (index <= end) {
@@ -1754,6 +1781,10 @@ static int ext4_da_map_blocks(struct inode *inode, sector_t iblock,
 				/* not enough space to reserve */
 				goto out_unlock;
 		}
+
+		retval = ext4_es_insert_extent(inode, map->m_lblk, map->m_len);
+		if (retval)
+			goto out_unlock;
 
 		/* Clear EXT4_MAP_FROM_CLUSTER flag since its purpose is served
 		 * and it should not appear on the bh->b_state.
@@ -2597,7 +2628,7 @@ static int ext4_da_write_end(struct file *file,
 		if (ext4_da_should_update_i_disksize(page, end)) {
 			down_write(&EXT4_I(inode)->i_data_sem);
 			if (new_i_size > EXT4_I(inode)->i_disksize) {
-#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK 
+#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK
 /*++++ Effective Write Back patch added for fsync latency control ++++*/
 				/*
 				 * Updating i_disksize when extending file
