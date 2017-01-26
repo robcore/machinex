@@ -609,7 +609,7 @@ static int _ext4_get_block(struct inode *inode, sector_t iblock,
 	map.m_lblk = iblock;
 	map.m_len = bh->b_size >> inode->i_blkbits;
 
-	if (flags && !(flags & EXT4_GET_BLOCKS_NO_LOCK) && !handle) {
+	if (flags && !handle) {
 		/* Direct IO write... */
 		if (map.m_len > DIO_MAX_BLOCKS)
 			map.m_len = DIO_MAX_BLOCKS;
@@ -806,9 +806,6 @@ static int do_journal_get_write_access(handle_t *handle,
 
 static int ext4_get_block_write(struct inode *inode, sector_t iblock,
 		   struct buffer_head *bh_result, int create);
-static int ext4_get_block_write_nolock(struct inode *inode, sector_t iblock,
-		   struct buffer_head *bh_result, int create);
-
 static int ext4_write_begin(struct file *file, struct address_space *mapping,
 			    loff_t pos, unsigned len, unsigned flags,
 			    struct page **pagep, void **fsdata)
@@ -2600,7 +2597,7 @@ static int ext4_da_write_end(struct file *file,
 		if (ext4_da_should_update_i_disksize(page, end)) {
 			down_write(&EXT4_I(inode)->i_data_sem);
 			if (new_i_size > EXT4_I(inode)->i_disksize) {
-#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK
+#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK 
 /*++++ Effective Write Back patch added for fsync latency control ++++*/
 				/*
 				 * Updating i_disksize when extending file
@@ -2843,15 +2840,6 @@ static int ext4_get_block_write(struct inode *inode, sector_t iblock,
 			       EXT4_GET_BLOCKS_IO_CREATE_EXT);
 }
 
- static int ext4_get_block_write_nolock(struct inode *inode, sector_t iblock,
-		   struct buffer_head *bh_result, int create)
-{
-	ext4_debug("ext4_get_block_write_nolock: inode %lu, create flag %d\n",
-		   inode->i_ino, create);
-	return _ext4_get_block(inode, iblock, bh_result,
-			       EXT4_GET_BLOCKS_NO_LOCK);
-}
-
 static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
 			    ssize_t size, void *private, int ret,
 			    bool is_async)
@@ -2978,8 +2966,6 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 
 	loff_t final_size = offset + count;
 	if (rw == WRITE && final_size <= inode->i_size) {
-		get_block_t *get_block_func = NULL;
-		int dio_flags = 0;
 		/*
  		 * We could direct write to holes and fallocate.
 		 *
