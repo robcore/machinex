@@ -289,6 +289,11 @@ int bcma_bus_resume(struct bcma_bus *bus)
 	return 0;
 }
 #endif
+	err = bcma_gpio_init(&bus->drv_cc);
+	if (err == -ENOTSUPP)
+		bcma_debug(bus, "GPIO driver not activated\n");
+	else if (err)
+		bcma_err(bus, "Error registering GPIO driver: %i\n", err);
 
 int __bcma_driver_register(struct bcma_driver *drv, struct module *owner)
 {
