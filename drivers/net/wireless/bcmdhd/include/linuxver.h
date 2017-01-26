@@ -3,13 +3,13 @@
  * Pave over some 2.2 versus 2.4 versus 2.6 kernel differences.
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -17,7 +17,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -103,24 +103,25 @@
 #endif
 #endif	/* LINUX_VERSION_CODE > KERNEL_VERSION(2, 5, 41) */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+//#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 #define DAEMONIZE(a)	do { \
 		allow_signal(SIGKILL);	\
 		allow_signal(SIGTERM);	\
 	} while (0)
+/*
 #elif ((LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)) && \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)))
 #define DAEMONIZE(a) daemonize(a); \
 	allow_signal(SIGKILL); \
 	allow_signal(SIGTERM);
-#else /* Linux 2.4 (w/o preemption patch) */
+#else Linux 2.4 (w/o preemption patch)
 #define RAISE_RX_SOFTIRQ() \
 	cpu_raise_softirq(smp_processor_id(), NET_RX_SOFTIRQ)
 #define DAEMONIZE(a) daemonize(); \
 	do { if (a) \
 		strncpy(current->comm, a, MIN(sizeof(current->comm), (strlen(a)))); \
 	} while (0);
-#endif /* LINUX_VERSION_CODE  */
+#endif LINUX_VERSION_CODE  */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func)
