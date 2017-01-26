@@ -13,8 +13,6 @@ obj-$(CONFIG_CPU_FREQ_GOV_PERFORMANCE)	+= cpufreq_performance.o
 obj-$(CONFIG_CPU_FREQ_GOV_POWERSAVE)	+= cpufreq_powersave.o
 obj-$(CONFIG_CPU_FREQ_GOV_USERSPACE)	+= cpufreq_userspace.o
 obj-$(CONFIG_CPU_FREQ_GOV_ONDEMAND)	+= cpufreq_ondemand.o
-obj-$(CONFIG_CPU_FREQ_GOV_ONDEMANDMX)	+= cpufreq_ondemandMX.o
-obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVEMX)	+= cpufreq_conservativeMX.o
 obj-$(CONFIG_CPU_FREQ_GOV_STOCKDEMAND)	+= cpufreq_stockdemand.o
 obj-$(CONFIG_CPU_FREQ_GOV_UBERDEMAND)	+= cpufreq_uberdemand.o
 obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVE)	+= cpufreq_conservative.o
@@ -77,7 +75,6 @@ obj-$(CONFIG_CPU_FREQ_GOV_RAGINGMOLASSES)  += cpufreq_ragingmolasses.o
 obj-$(CONFIG_CPU_FREQ_GOV_HYPERX)	   += cpufreq_hyperx.o
 obj-$(CONFIG_CPU_FREQ_GOV_XPERIENCE)	+= cpufreq_xperience.o
 obj-$(CONFIG_CPU_FREQ_GOV_WHISKYACTIVE)	+= cpufreq_whiskyactive.o
-
 
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o

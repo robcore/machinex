@@ -30,8 +30,6 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 
-#include "cpufreq_governor.h"
-
 #define MIN_SAMPLING_RATE	10000
 
 /*
@@ -72,8 +70,10 @@ static DEFINE_MUTEX(darkness_mutex);
 /* darkness tuners */
 static struct darkness_tuners {
 	unsigned int sampling_rate;
+	unsigned int io_is_busy;
 } darkness_tuners_ins = {
 	.sampling_rate = 60000,
+	.io_is_busy = 0,
 };
 
 /************************** sysfs interface ************************/
@@ -86,6 +86,7 @@ static ssize_t show_##file_name						\
 	return sprintf(buf, "%d\n", darkness_tuners_ins.object);		\
 }
 show_one(sampling_rate, sampling_rate);
+show_one(io_is_busy, io_is_busy);
 
 /* sampling_rate */
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
@@ -108,10 +109,43 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+/* io_is_busy */
+static ssize_t store_io_is_busy(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input, j;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input > 1)
+		input = 1;
+
+	if (input == darkness_tuners_ins.io_is_busy)
+		return count;
+
+	darkness_tuners_ins.io_is_busy = !!input;
+
+	/* we need to re-evaluate prev_cpu_idle */
+	for_each_online_cpu(j) {
+		struct cpufreq_darkness_cpuinfo *j_darkness_cpuinfo;
+
+		j_darkness_cpuinfo = &per_cpu(od_darkness_cpuinfo, j);
+
+		j_darkness_cpuinfo->prev_cpu_idle = get_cpu_idle_time(j,
+			&j_darkness_cpuinfo->prev_cpu_wall, darkness_tuners_ins.io_is_busy);
+	}
+	return count;
+}
+
 define_one_global_rw(sampling_rate);
+define_one_global_rw(io_is_busy);
 
 static struct attribute *darkness_attributes[] = {
 	&sampling_rate.attr,
+	&io_is_busy.attr,
 	NULL
 };
 
@@ -133,13 +167,14 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 	unsigned int next_freq = 0;
 	int cur_load = -1;
 	unsigned int cpu;
+	int io_busy = darkness_tuners_ins.io_is_busy;
 
 	cpu = this_darkness_cpuinfo->cpu;
 	cpu_policy = this_darkness_cpuinfo->cur_policy;
 	if (cpu_policy == NULL)
 		return;
 
-	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time);
+	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, io_busy);
 
 	wall_time = (unsigned int)
 			(cur_wall_time - this_darkness_cpuinfo->prev_cpu_wall);
@@ -215,8 +250,10 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 	unsigned int cpu;
 	struct cpufreq_darkness_cpuinfo *this_darkness_cpuinfo;
 	int rc, delay;
+	int io_busy;
 
 	cpu = policy->cpu;
+	io_busy = darkness_tuners_ins.io_is_busy;
 	this_darkness_cpuinfo = &per_cpu(od_darkness_cpuinfo, cpu);
 
 	switch (event) {
@@ -232,7 +269,7 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 
 		this_darkness_cpuinfo->cur_policy = policy;
 
-		this_darkness_cpuinfo->prev_cpu_idle = get_cpu_idle_time(cpu, &this_darkness_cpuinfo->prev_cpu_wall);
+		this_darkness_cpuinfo->prev_cpu_idle = get_cpu_idle_time(cpu, &this_darkness_cpuinfo->prev_cpu_wall, io_busy);
 
 		darkness_enable++;
 		/*

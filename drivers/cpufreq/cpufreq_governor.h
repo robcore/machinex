@@ -17,6 +17,7 @@
 #ifndef _CPUFREQ_GOVERNOR_H
 #define _CPUFREQ_GOVERNOR_H
 
+#include <asm/cputime.h>
 #include <linux/cpufreq.h>
 #include <linux/kobject.h>
 #include <linux/mutex.h>
@@ -71,9 +72,9 @@ static void *get_cpu_dbs_info_s(int cpu)				\
 /* Per cpu structures */
 struct cpu_dbs_common_info {
 	int cpu;
-	u64 prev_cpu_idle;
-	u64 prev_cpu_wall;
-	u64 prev_cpu_nice;
+	cputime64_t prev_cpu_idle;
+	cputime64_t prev_cpu_wall;
+	cputime64_t prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	/*
@@ -86,7 +87,7 @@ struct cpu_dbs_common_info {
 
 struct od_cpu_dbs_info_s {
 	struct cpu_dbs_common_info cdbs;
-	u64 prev_cpu_iowait;
+	cputime64_t prev_cpu_iowait;
 	struct cpufreq_frequency_table *freq_table;
 	unsigned int freq_lo;
 	unsigned int freq_lo_jiffies;
@@ -169,7 +170,7 @@ static inline int delay_for_sampling_rate(unsigned int sampling_rate)
 	return delay;
 }
 
-u64 get_cpu_idle_time(unsigned int cpu, u64 *wall);
+cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall);
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 int cpufreq_governor_dbs(struct dbs_data *dbs_data,
 		struct cpufreq_policy *policy, unsigned int event);
