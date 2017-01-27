@@ -144,16 +144,14 @@ static struct attribute_group tz_attr_group = {
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
-
-	if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
 		if (device->state != KGSL_STATE_NAP &&
 			(priv->governor == TZ_GOVERNOR_ONDEMAND ||
-			 priv->governor == TZ_GOVERNOR_SIMPLE))
+			 priv->governor == TZ_GOVERNOR_SIMPLE ||
+			 priv->governor == TZ_GOVERNOR_INTERACTIVE))
 			kgsl_pwrctrl_pwrlevel_change(device,
 						device->pwrctrl.default_pwrlevel);
-	} else
-		return;
 }
+
 /* KGSL Simple GPU Governor */
 /* Copyright (c) 2011-2013, Paul Reioux (Faux123). All rights reserved. */
 static int default_laziness = 5;
@@ -213,9 +211,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	priv->bin.busy_time += stats.busy_time;
 
 	if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
-		if (stats.total_time == 0 || priv->bin.busy_time < FLOOR)
-			return;
-
 		if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24) {
 			stats.busy_time >>= 7;
 			stats.total_time >>= 7;
@@ -227,8 +222,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run.
 	 */
-	if ((stats.total_time == 0) ||
-		(priv->bin.total_time < FLOOR))
+	if ((stats.total_time == 0) || (priv->bin.total_time < FLOOR))
 		return;
 	}
 
@@ -284,7 +278,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     pwr->active_pwrlevel + 1);
 			}
-		} else
+		}
 			val = -1;
 	} else {
 		if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
