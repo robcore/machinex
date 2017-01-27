@@ -219,7 +219,7 @@ const struct option longopts[] = {
 	}
 };
 
-static void help()
+static void help(void)
 {
 	fprintf(stderr, "Usage: virtio_test [--help]"
 		" [--no-indirect]"
