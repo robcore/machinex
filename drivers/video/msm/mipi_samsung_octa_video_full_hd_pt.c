@@ -1666,19 +1666,11 @@ static int brightness_control(int bl_level)
 
 	samsung_brightness_elvss_ref[2] = elvss_value;
 
-	if (mipi_pd.ldi_rev >= 'G')
-			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-
-	if (mipi_pd.ldi_rev >= 'H') {
-		if (get_auto_brightness() == 6)
-			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
-	} else {
 		if (get_auto_brightness() == 6)
 			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
 			samsung_brightness_elvss_ref[16] = get_elvss_offset();
-	}
 	//pr_debug("%s: 0xb6_17th(%x)!!\n", __func__, samsung_brightness_elvss_ref[16]);
 
 	// ELVSS lOW TEMPERATURE
