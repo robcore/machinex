@@ -215,16 +215,17 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			stats.busy_time >>= 7;
 			stats.total_time >>= 7;
 		}
-	} else {
+	}
+	
+	if (priv->governor != TZ_GOVERNOR_INTERACTIVE)
+		idle = priv->bin.total_time - priv->bin.busy_time;
 
-	idle = priv->bin.total_time - priv->bin.busy_time;
 	/* Do not waste CPU cycles running this algorithm if
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run.
 	 */
 	if ((stats.total_time == 0) || (priv->bin.total_time < FLOOR))
 		return;
-	}
 
         /* If the GPU has stayed in turbo mode for a while, *
 	 * stop writing out values. */
@@ -245,11 +246,11 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	/* If there is an extended block of busy processing,
 	 * increase frequency.  Otherwise run the normal algorithm.
 	 */
-	if (priv->bin.busy_time > CEILING) {
-		if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
-			{
+	if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
+		if (priv->bin.busy_time > CEILING) {
 				kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
-				goto clear;
+				priv->bin.total_time = 0;
+				priv->bin.busy_time = 0;
 			}
 
 			gpu_stats.load = (100 * priv->bin.busy_time);
@@ -279,28 +280,27 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     pwr->active_pwrlevel + 1);
 			}
 		}
-			val = -1;
-	} else {
+		
 		if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
 			idle = priv->bin.total_time - priv->bin.busy_time;
 			idle = (idle > 0) ? idle : 0;
 		}
+
+	val = -1;
+
 	if (priv->governor == TZ_GOVERNOR_SIMPLE)
 		val = simple_governor(device, idle);
 	else
-		if (priv->governor != TZ_GOVERNOR_INTERACTIVE)
 		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
-	}
+
 
 	if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
-		if (val)
-			kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel + val);
 	}
-clear:
-	priv->bin.total_time = 0;
-	priv->bin.busy_time = 0;
+	
+	if (val)
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel + val);
 }
 
 static void tz_busy(struct kgsl_device *device,
@@ -313,21 +313,15 @@ static void tz_sleep(struct kgsl_device *device,
 	struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
-	if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
-		struct kgsl_pwrctrl *pwr = &device->pwrctrl;
+	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 
-		gpu_pref_counter = 0;
-		priv->no_switch_cnt = 0;
-		priv->bin.total_time = 0;
-		priv->bin.busy_time = 0;
-	} else {
 		__secure_tz_entry(TZ_RESET_ID, 0, device->id);
 		priv->no_switch_cnt = 0;
+		gpu_pref_counter = 0;
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
-	}
 }
 #ifdef CONFIG_MSM_SCM
 static int tz_init(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
