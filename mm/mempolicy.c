@@ -2410,12 +2410,12 @@ int mpol_parse_str(char *str, struct mempolicy **mpol, int unused)
 	if (flags)
 		*flags++ = '\0';	/* terminate mode string */
 
-	for (mode = 0; mode < MPOL_MAX; mode++) {
+	for (mode = 0; mode <= MPOL_LOCAL; mode++) {
 		if (!strcmp(str, policy_modes[mode])) {
 			break;
 		}
 	}
-	if (mode >= MPOL_MAX)
+	if (mode > MPOL_LOCAL)
 		goto out;
 
 	switch (mode) {

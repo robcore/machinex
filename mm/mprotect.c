@@ -135,30 +135,10 @@ static void change_protection(struct vm_area_struct *vma,
 		next = pgd_addr_end(addr, end);
 		if (pgd_none_or_clear_bad(pgd))
 			continue;
-		pages += change_pud_range(vma, pgd, addr, next, newprot,
+		change_pud_range(vma, pgd, addr, next, newprot,
 				 dirty_accountable);
 	} while (pgd++, addr = next, addr != end);
-
 	flush_tlb_range(vma, start, end);
-
-	return pages;
-}
-
-unsigned long change_protection(struct vm_area_struct *vma, unsigned long start,
-		       unsigned long end, pgprot_t newprot,
-		       int dirty_accountable)
-{
-	struct mm_struct *mm = vma->vm_mm;
-	unsigned long pages;
-
-	mmu_notifier_invalidate_range_start(mm, start, end);
-	if (is_vm_hugetlb_page(vma))
-		pages = hugetlb_change_protection(vma, start, end, newprot);
-	else
-		pages = change_protection_range(vma, start, end, newprot, dirty_accountable);
-	mmu_notifier_invalidate_range_end(mm, start, end);
-
-	return pages;
 }
 
 int
