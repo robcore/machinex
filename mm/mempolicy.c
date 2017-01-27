@@ -251,10 +251,10 @@ static struct mempolicy *mpol_new(unsigned short mode, unsigned short flags,
 	pr_debug("setting mode %d flags %d nodes[0] %lx\n",
 		 mode, flags, nodes ? nodes_addr(*nodes)[0] : -1);
 
-	if (mode == MPOL_DEFAULT || mode == MPOL_NOOP) {
+	if (mode == MPOL_DEFAULT) {
 		if (nodes && !nodes_empty(*nodes))
 			return ERR_PTR(-EINVAL);
-		return NULL;
+		return NULL;	/* simply delete any existing policy */
 	}
 	VM_BUG_ON(!nodes);
 
@@ -269,10 +269,6 @@ static struct mempolicy *mpol_new(unsigned short mode, unsigned short flags,
 			     (flags & MPOL_F_RELATIVE_NODES)))
 				return ERR_PTR(-EINVAL);
 		}
-	} else if (mode == MPOL_LOCAL) {
-		if (!nodes_empty(*nodes))
-			return ERR_PTR(-EINVAL);
-		mode = MPOL_PREFERRED;
 	} else if (nodes_empty(*nodes))
 		return ERR_PTR(-EINVAL);
 	policy = kmem_cache_alloc(policy_cache, GFP_KERNEL);
@@ -1140,7 +1136,7 @@ static long do_mbind(unsigned long start, unsigned long len,
 	if (start & ~PAGE_MASK)
 		return -EINVAL;
 
-	if (mode == MPOL_DEFAULT || mode == MPOL_NOOP)
+	if (mode == MPOL_DEFAULT)
 		flags &= ~MPOL_MF_STRICT;
 
 	len = (len + PAGE_SIZE - 1) & PAGE_MASK;
@@ -2368,14 +2364,14 @@ void numa_default_policy(void)
 /*
  * "local" is implemented internally by MPOL_PREFERRED with MPOL_F_LOCAL flag.
  */
+#define MPOL_LOCAL MPOL_MAX
 static const char * const policy_modes[] =
 {
 	[MPOL_DEFAULT]    = "default",
 	[MPOL_PREFERRED]  = "prefer",
 	[MPOL_BIND]       = "bind",
 	[MPOL_INTERLEAVE] = "interleave",
-	[MPOL_LOCAL]      = "local",
-	[MPOL_NOOP]	  = "noop",	/* should not actually be used */
+	[MPOL_LOCAL]      = "local"
 };
 
 
@@ -2419,7 +2415,7 @@ int mpol_parse_str(char *str, struct mempolicy **mpol, int unused)
 			break;
 		}
 	}
-	if (mode >= MPOL_MAX || mode == MPOL_NOOP)
+	if (mode >= MPOL_MAX)
 		goto out;
 
 	switch (mode) {
