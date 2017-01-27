@@ -511,7 +511,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.raw_bkops_status =
 				ext_csd[EXT_CSD_BKOPS_STATUS];
 			if (!(card->host->caps2 & MMC_CAP2_INIT_BKOPS)) {
-				card->ext_csd.bkops_en = 0; 
+				card->ext_csd.bkops_en = 0;
 			} else if (!card->ext_csd.bkops_en) {
 				err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 					EXT_CSD_BKOPS_EN, 1, 0);
@@ -711,6 +711,8 @@ MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
 MMC_DEV_ATTR(enhanced_area_offset, "%llu\n",
 		card->ext_csd.enhanced_area_offset);
 MMC_DEV_ATTR(enhanced_area_size, "%u\n", card->ext_csd.enhanced_area_size);
+MMC_DEV_ATTR(raw_rpmb_size_mult, "%#x\n", card->ext_csd.raw_rpmb_size_mult);
+MMC_DEV_ATTR(rel_sectors, "%#x\n", card->ext_csd.rel_sectors);
 MMC_DEV_ATTR(smart, "0x%016llx\n", card->ext_csd.smart_info);
 MMC_DEV_ATTR(fwdate, "0x%016llx\n", card->ext_csd.fwdate);
 MMC_DEV_ATTR(caps, "0x%08x\n", (unsigned int)(card->host->caps));
@@ -737,6 +739,8 @@ static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_serial.attr,
 	&dev_attr_enhanced_area_offset.attr,
 	&dev_attr_enhanced_area_size.attr,
+	&dev_attr_raw_rpmb_size_mult.attr,
+	&dev_attr_rel_sectors.attr,
 	&dev_attr_smart.attr,
 	&dev_attr_fwdate.attr,
 	&dev_attr_caps.attr,
@@ -1629,7 +1633,7 @@ static int mmc_suspend(struct mmc_host *host)
 	if (mmc_can_poweroff_notify(host->card))
 		err = mmc_poweroff_notify(host->card, EXT_CSD_POWER_OFF_SHORT);
 	else if (mmc_card_can_sleep(host))
-	{       
+	{
 		if ((!strcmp(mmc_hostname(host), "mmc0")) && (host->card->cid.manfid == 0x45))
 			mmc_switch(host->card, EXT_CSD_CMD_SET_NORMAL,
 				EXT_CSD_BUS_WIDTH, EXT_CSD_BUS_WIDTH_1, 0);
