@@ -4738,6 +4738,8 @@ md_attr_store(struct kobject *kobj, struct attribute *attr,
 	}
 	mddev_get(mddev);
 	spin_unlock(&all_mddevs_lock);
+	if (entry->store == new_dev_store)
+		flush_workqueue(md_misc_wq);
 	rv = mddev_lock(mddev);
 	if (!rv) {
 		rv = entry->store(mddev, page, length);
@@ -6356,6 +6358,10 @@ static int md_ioctl(struct block_device *bdev, fmode_t mode,
 		BUG();
 		goto abort;
 	}
+
+	if (cmd == ADD_NEW_DISK)
+		/* need to ensure md_delayed_delete() has completed */
+		flush_workqueue(md_misc_wq);
 
 	err = mddev_lock(mddev);
 	if (err) {
