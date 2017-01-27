@@ -1877,8 +1877,6 @@ static int cmd_set_change(int cmd_set, int panel_id)
 		;
 	}
 
-	pr_info("%s : ldi_rev : %c \n", __func__, mipi_pd.ldi_rev);
-
 	return 0;
 }
 
@@ -1976,14 +1974,6 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 
 	printk(KERN_DEBUG "[lcd] mipi_video_samsung_octa_full_hd_pt_init start\n");
 
-#ifdef CONFIG_SUPPORT_DISPLAY_OCTA_TFT
-	if (check_display_type() != SAMSUNG_OCTA_FULL_HD) {
-		pr_err("[lcd] error : this rev(%d) is not for OCTA, return!!\n",
-			system_rev);
-		return 1;
-	}
-#endif
-
 	/*
 	* LSI 1, MAGNA 0
 	*/
@@ -2066,3 +2056,4 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	return ret;
 }
 module_init(mipi_video_samsung_octa_full_hd_pt_init);
+

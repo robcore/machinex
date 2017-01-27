@@ -29,10 +29,11 @@ static int lux_tbl[] = {
 	39, 41, 44, 47, 50,
 	53, 56, 60, 64, 68,
 	72, 77, 82, 87, 93,
-	98, 105, 111, 119, 126,
-	134, 143, 152, 162, 172,
-	183, 195, 207, 220, 234,
-	249, 265, 282, 300,
+	98, 105, 111, 119,
+	126, 134, 143, 152,
+	162, 172, 183, 195,
+	207, 220, 234, 249,
+	265, 282, 300,
 };
 
 static char magna_nop[] = {
@@ -2002,7 +2003,6 @@ static void reset_bl_level(void)
 					magna_brightness_elvss_ref,
 					sizeof(magna_elvss_condition));
 	}
-
 
 	/* reset brightness change value */
 	memcpy(magna_brightness_aor_ref, magna_brightness_aor_default,
