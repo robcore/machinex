@@ -75,7 +75,7 @@ static uint32_t oom_count = 0;
 #endif
 
 static uint32_t lowmem_debug_level = 1;
-static short lowmem_adj[6] = {
+static int lowmem_adj[6] = {
 	0,
 	1,
 	6,
@@ -188,15 +188,15 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int rem = 0;
 	int tasksize;
 	int i;
-	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
+	int min_score_adj = OOM_SCORE_ADJ_MAX + 1;
 #ifdef ENHANCED_LMK_ROUTINE
 	int selected_tasksize[LOWMEM_DEATHPENDING_DEPTH] = {0,};
-	short selected_oom_score_adj[LOWMEM_DEATHPENDING_DEPTH] = {OOM_ADJUST_MAX,};
+	int selected_oom_score_adj[LOWMEM_DEATHPENDING_DEPTH] = {OOM_ADJUST_MAX,};
 	int all_selected_oom = 0;
 	int max_selected_oom_idx = 0;
 #else
 	int selected_tasksize = 0;
-	short selected_oom_score_adj;
+	int selected_oom_score_adj;
 #endif
 #ifdef CONFIG_SAMP_HOTNESS
 	int selected_hotness_adj = 0;
@@ -226,7 +226,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 	}
 	if (nr_to_scan > 0)
-		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %hd\n",
+		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %d\n",
 				nr_to_scan, sc->gfp_mask, other_free,
 				other_file, min_score_adj);
 	rem = global_page_state(NR_ACTIVE_ANON) +
@@ -259,7 +259,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	for_each_process(tsk) {
 #endif
 		struct task_struct *p;
-		short oom_score_adj;
+		int oom_score_adj;
 #ifdef ENHANCED_LMK_ROUTINE
 		int is_exist_oom_task = 0;
 #endif
@@ -367,7 +367,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_SAMP_HOTNESS
 		selected_hotness_adj = hotness_adj;
 #endif
-		lowmem_print(2, "select %d (%s), adj %d, size %hd, to kill\n",
+		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
 			     p->pid, p->comm, oom_score_adj, tasksize);
 #endif
 	}
@@ -375,7 +375,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
 		if (selected[i]) {
 #ifdef CONFIG_SAMP_HOTNESS
-			lowmem_print(1, "send sigkill to %d (%s), adj %hd,\
+			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
 				     size %d, free memory = %d, reclaimable memory = %d ,hotness %d\n",
 				     selected[i]->pid, selected[i]->comm,
 				     selected_oom_score_adj[i],
@@ -383,7 +383,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 					 other_free, other_file,
 					 selected_hotness_adj);
 #else
-			lowmem_print(1, "send sigkill to %d (%s), adj %hd,\
+			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
 				     size %d, free memory = %d, reclaimable memory = %d\n",
 				     selected[i]->pid, selected[i]->comm,
 				     selected_oom_score_adj[i],
@@ -404,11 +404,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #else
 	if (selected) {
 #ifdef CONFIG_SAMP_HOTNESS
-		lowmem_print(1, "send sigkill to %d (%s), adj %hd, size %d ,hotness %d\n",
+		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d ,hotness %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize,selected_hotness_adj);
 #else
-		lowmem_print(1, "send sigkill to %d (%s), adj %hd, size %d\n",
+		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize);
 #endif
@@ -455,15 +455,15 @@ static int android_oom_handler(struct notifier_block *nb,
 	int rem = 0;
 	int tasksize;
 	int i;
-	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
+	int min_score_adj = OOM_SCORE_ADJ_MAX + 1;
 #ifdef MULTIPLE_OOM_KILLER
 	int selected_tasksize[OOM_DEPTH] = {0,};
-	short selected_oom_score_adj[OOM_DEPTH] = {OOM_ADJUST_MAX,};
+	int selected_oom_score_adj[OOM_DEPTH] = {OOM_ADJUST_MAX,};
 	int all_selected_oom = 0;
 	int max_selected_oom_idx = 0;
 #else
 	int selected_tasksize = 0;
-	short selected_oom_score_adj;
+	int selected_oom_score_adj;
 #endif
 #ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE
 	static DEFINE_RATELIMIT_STATE(oom_rs, DEFAULT_RATELIMIT_INTERVAL/5, 1);
@@ -494,7 +494,7 @@ static int android_oom_handler(struct notifier_block *nb,
 	read_lock(&tasklist_lock);
 	for_each_process(tsk) {
 		struct task_struct *p;
-		short oom_score_adj;
+		int oom_score_adj;
 #ifdef MULTIPLE_OOM_KILLER
 		int is_exist_oom_task = 0;
 #endif
@@ -653,7 +653,7 @@ static void lowmem_autodetect_oom_adj_values(void)
 {
 	int i;
 	int oom_adj;
-	short oom_score_adj;
+	int oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 
 	if (lowmem_adj_size < array_size)
@@ -804,7 +804,7 @@ __module_param_call(MODULE_PARAM_PREFIX, adj,
 		    S_IRUGO | S_IWUSR, -1);
 __MODULE_PARM_TYPE(adj, "array of int");
 #else
-module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size,
+module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 			 S_IRUGO | S_IWUSR);
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
