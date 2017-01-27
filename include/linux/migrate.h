@@ -64,22 +64,4 @@ static inline int migrate_huge_page_move_mapping(struct address_space *mapping,
 #define fail_migrate_page NULL
 
 #endif /* CONFIG_MIGRATION */
-
-#ifdef CONFIG_NUMA_BALANCING
-enum migrate_reason { /*this is completely fake*/
-	MR_MEMORY_HOTPLUG,
-	MR_SYSCALL,		/* also applies to cpusets */
-	MR_MEMPOLICY_MBIND,
-	MR_NUMA_MISPLACED,
- 	MR_CMA
-};
-
-extern int migrate_misplaced_page(struct page *page, int node);
-#else
-static inline int migrate_misplaced_page(struct page *page, int node)
-{
-	return -EAGAIN; /* can't migrate now */
-}
-#endif /* CONFIG_NUMA_BALANCING */
-
 #endif /* _LINUX_MIGRATE_H */
