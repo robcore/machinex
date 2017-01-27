@@ -1055,6 +1055,7 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	 */
 	split_huge_page(page);
 	put_page(page);
+
 	return 0;
 
 clear_pmdnuma:
@@ -1069,8 +1070,10 @@ clear_pmdnuma:
 
 out_unlock:
 	spin_unlock(&mm->page_table_lock);
-	if (page)
+	if (page) {
 		put_page(page);
+		task_numa_fault(numa_node_id(), HPAGE_PMD_NR);
+	}
 	return 0;
 }
 
