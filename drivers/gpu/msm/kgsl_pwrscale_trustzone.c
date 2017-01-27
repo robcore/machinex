@@ -143,7 +143,7 @@ static struct attribute_group tz_attr_group = {
 
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
-	if priv->governor != TZ_GOVERNOR_INTERACTIVE {
+	if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
 		struct tz_priv *priv = pwrscale->priv;
 		if (device->state != KGSL_STATE_NAP &&
 			(priv->governor == TZ_GOVERNOR_ONDEMAND ||
@@ -200,7 +200,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
 
-	if priv->governor != TZ_GOVERNOR_INTERACTIVE
+	if (priv->governor != TZ_GOVERNOR_INTERACTIVE)
 		int val, idle;
 
 	/* In "performance" mode the clock speed always stays
@@ -213,7 +213,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
 
-	if priv->governor == TZ_GOVERNOR_INTERACTIVE {
+	if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
 		if (stats.total_time == 0 || priv->bin.busy_time < FLOOR)
 			return;
 
@@ -253,7 +253,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * increase frequency.  Otherwise run the normal algorithm.
 	 */
 	if (priv->bin.busy_time > CEILING) {
-		if priv->governor == TZ_GOVERNOR_INTERACTIVE {
+		if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
 			{
 				kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 				goto clear;
@@ -288,18 +288,18 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		} else
 			val = -1;
 	} else {
-		if priv->governor != TZ_GOVERNOR_INTERACTIVE {
+		if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
 			idle = priv->bin.total_time - priv->bin.busy_time;
 			idle = (idle > 0) ? idle : 0;
 		}
 	if (priv->governor == TZ_GOVERNOR_SIMPLE)
 		val = simple_governor(device, idle);
 	else
-		if priv->governor != TZ_GOVERNOR_INTERACTIVE
+		if (priv->governor != TZ_GOVERNOR_INTERACTIVE)
 		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
 	}
 
-	if priv->governor != TZ_GOVERNOR_INTERACTIVE {
+	if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
 		if (val) {
@@ -322,7 +322,7 @@ static void tz_sleep(struct kgsl_device *device,
 	struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
-	if priv->governor == TZ_GOVERNOR_INTERACTIVE {
+	if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
 		struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
