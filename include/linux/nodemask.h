@@ -402,6 +402,7 @@ enum node_states {
 #else
 	N_MEMORY = N_HIGH_MEMORY,
 #endif
+	N_MEMORY = N_HIGH_MEMORY,
 	N_CPU,		/* The node has one or more cpus */
 	NR_NODE_STATES
 };
