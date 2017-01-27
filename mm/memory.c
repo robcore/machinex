@@ -3828,10 +3828,6 @@ retry:
 
 		barrier();
 		if (pmd_trans_huge(orig_pmd)) {
-			if (pmd_numa(*pmd))
-				return do_huge_pmd_numa_page(mm, vma, address,
-							     orig_pmd, pmd);
-
 			unsigned int dirty = flags & FAULT_FLAG_WRITE;
 
 			if (dirty && !pmd_write(orig_pmd) &&
@@ -3850,13 +3846,9 @@ retry:
 				huge_pmd_set_accessed(mm, vma, address, pmd,
 						      orig_pmd, dirty);
 			}
-
 			return 0;
 		}
 	}
-
-	if (pmd_numa(*pmd))
-		return do_pmd_numa_page(mm, vma, address, pmd);
 
 	/*
 	 * Use __pte_alloc instead of pte_alloc_map, because we can't
