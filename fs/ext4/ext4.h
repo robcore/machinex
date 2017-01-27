@@ -390,7 +390,6 @@ struct flex_groups {
 #define EXT4_EXTENTS_FL			0x00080000 /* Inode uses extents */
 #define EXT4_EA_INODE_FL	        0x00200000 /* Inode used for large EA */
 #define EXT4_EOFBLOCKS_FL		0x00400000 /* Blocks allocated beyond EOF */
-#define EXT4_INLINE_DATA_FL		0x10000000 /* Inode has inline data. */
 #define EXT4_RESERVED_FL		0x80000000 /* reserved for ext4 lib */
 
 #define EXT4_FL_USER_VISIBLE		0x004BDFFF /* User visible flags */
@@ -447,7 +446,6 @@ enum {
 	EXT4_INODE_EXTENTS	= 19,	/* Inode uses extents */
 	EXT4_INODE_EA_INODE	= 21,	/* Inode used for large EA */
 	EXT4_INODE_EOFBLOCKS	= 22,	/* Blocks allocated beyond EOF */
-	EXT4_INODE_INLINE_DATA	= 28,	/* Data in inode. */
 	EXT4_INODE_RESERVED	= 31,	/* reserved for ext4 lib */
 };
 
@@ -494,7 +492,6 @@ static inline void ext4_check_flag_values(void)
 	CHECK_FLAG_VALUE(EXTENTS);
 	CHECK_FLAG_VALUE(EA_INODE);
 	CHECK_FLAG_VALUE(EOFBLOCKS);
-	CHECK_FLAG_VALUE(INLINE_DATA);
 	CHECK_FLAG_VALUE(RESERVED);
 }
 
@@ -944,10 +941,6 @@ struct ext4_inode_info {
 	/* on-disk additional length */
 	__u16 i_extra_isize;
 
-	/* Indicate the inline data space. */
-	u16 i_inline_off;
-	u16 i_inline_size;
-
 #ifdef CONFIG_QUOTA
 	/* quota space reservation, managed internally by quota code */
 	qsize_t i_reserved_quota;
@@ -1393,7 +1386,6 @@ enum {
 	EXT4_STATE_DELALLOC_RESERVED,	/* blks already reserved for delalloc */
 	EXT4_STATE_DIOREAD_LOCK,	/* Disable support for dio read
 					   nolocking */
-	EXT4_STATE_MAY_INLINE_DATA,	/* may have in-inode data */
 };
 
 #define EXT4_INODE_BIT_FNS(name, field, offset)				\
@@ -1509,7 +1501,7 @@ static inline void ext4_clear_state_flags(struct ext4_inode_info *ei)
 #define EXT4_FEATURE_INCOMPAT_DIRDATA		0x1000 /* data in dirent */
 #define EXT4_FEATURE_INCOMPAT_BG_USE_META_CSUM	0x2000 /* use crc32c for bg */
 #define EXT4_FEATURE_INCOMPAT_LARGEDIR		0x4000 /* >2GB or 3-lvl htree */
-#define EXT4_FEATURE_INCOMPAT_INLINE_DATA	0x8000 /* data in inode */
+#define EXT4_FEATURE_INCOMPAT_INLINEDATA	0x8000 /* data in inode */
 
 #define EXT2_FEATURE_COMPAT_SUPP	EXT4_FEATURE_COMPAT_EXT_ATTR
 #define EXT2_FEATURE_INCOMPAT_SUPP	(EXT4_FEATURE_INCOMPAT_FILETYPE| \
@@ -1976,19 +1968,8 @@ struct buffer_head *ext4_getblk(handle_t *, struct inode *,
 						ext4_lblk_t, int, int *);
 struct buffer_head *ext4_bread(handle_t *, struct inode *,
 						ext4_lblk_t, int, int *);
-int ext4_get_block_write(struct inode *inode, sector_t iblock,
-			 struct buffer_head *bh_result, int create);
 int ext4_get_block(struct inode *inode, sector_t iblock,
 				struct buffer_head *bh_result, int create);
-int ext4_walk_page_buffers(handle_t *handle,
-			   struct buffer_head *head,
-			   unsigned from,
-			   unsigned to,
-			   int *partial,
-			   int (*fn)(handle_t *handle,
-				     struct buffer_head *bh));
-int do_journal_get_write_access(handle_t *handle,
-				struct buffer_head *bh);
 
 extern struct inode *ext4_iget(struct super_block *, unsigned long);
 extern struct inode *ext4_iget_normal(struct super_block *, unsigned long);
