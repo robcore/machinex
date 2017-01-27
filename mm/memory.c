@@ -3832,6 +3832,8 @@ retry:
 				return do_huge_pmd_numa_page(mm, vma, address,
 							     orig_pmd, pmd);
 
+			unsigned int dirty = flags & FAULT_FLAG_WRITE;
+
 			if (dirty && !pmd_write(orig_pmd) &&
 			    !pmd_trans_splitting(orig_pmd)) {
 				ret = do_huge_pmd_wp_page(mm, vma, address, pmd,
