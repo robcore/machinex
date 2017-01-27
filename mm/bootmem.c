@@ -147,21 +147,21 @@ unsigned long __init init_bootmem(unsigned long start, unsigned long pages)
 
 /*
  * free_bootmem_late - free bootmem pages directly to page allocator
- * @addr: starting physical address of the range
+ * @addr: starting address of the range
  * @size: size of the range in bytes
  *
  * This is only useful when the bootmem allocator has already been torn
  * down, but we are still initializing the system.  Pages are given directly
  * to the page allocator, no bootmem metadata is updated because it is gone.
  */
-void free_bootmem_late(unsigned long physaddr, unsigned long size)
+void free_bootmem_late(unsigned long addr, unsigned long size)
 {
 	unsigned long cursor, end;
 
-	kmemleak_free_part(__va(physaddr), size);
+	kmemleak_free_part(__va(addr), size);
 
-	cursor = PFN_UP(physaddr);
-	end = PFN_DOWN(physaddr + size);
+	cursor = PFN_UP(addr);
+	end = PFN_DOWN(addr + size);
 
 	for (; cursor < end; cursor++) {
 		__free_pages_bootmem(pfn_to_page(cursor), 0);
@@ -398,21 +398,21 @@ void __init free_bootmem_node(pg_data_t *pgdat, unsigned long physaddr,
 
 /**
  * free_bootmem - mark a page range as usable
- * @addr: starting physical address of the range
+ * @addr: starting address of the range
  * @size: size of the range in bytes
  *
  * Partial pages will be considered reserved and left as they are.
  *
  * The range must be contiguous but may span node boundaries.
  */
-void __init free_bootmem(unsigned long physaddr, unsigned long size)
+void __init free_bootmem(unsigned long addr, unsigned long size)
 {
 	unsigned long start, end;
 
-	kmemleak_free_part(__va(physaddr), size);
+	kmemleak_free_part(__va(addr), size);
 
-	start = PFN_UP(physaddr);
-	end = PFN_DOWN(physaddr + size);
+	start = PFN_UP(addr);
+	end = PFN_DOWN(addr + size);
 
 	mark_bootmem(start, end, 0, 0);
 }
@@ -596,6 +596,27 @@ find_block:
 	return NULL;
 }
 
+static void * __init alloc_arch_preferred_bootmem(bootmem_data_t *bdata,
+					unsigned long size, unsigned long align,
+					unsigned long goal, unsigned long limit)
+{
+	if (WARN_ON_ONCE(slab_is_available()))
+		return kzalloc(size, GFP_NOWAIT);
+
+#ifdef CONFIG_HAVE_ARCH_BOOTMEM
+	{
+		bootmem_data_t *p_bdata;
+
+		p_bdata = bootmem_arch_preferred_node(bdata, size, align,
+							goal, limit);
+		if (p_bdata)
+			return alloc_bootmem_bdata(p_bdata, size, align,
+							goal, limit);
+	}
+#endif
+	return NULL;
+}
+
 static void * __init alloc_bootmem_core(unsigned long size,
 					unsigned long align,
 					unsigned long goal,
@@ -604,8 +625,9 @@ static void * __init alloc_bootmem_core(unsigned long size,
 	bootmem_data_t *bdata;
 	void *region;
 
-	if (WARN_ON_ONCE(slab_is_available()))
-		return kzalloc(size, GFP_NOWAIT);
+	region = alloc_arch_preferred_bootmem(NULL, size, align, goal, limit);
+	if (region)
+		return region;
 
 	list_for_each_entry(bdata, &bdata_list, list) {
 		if (goal && bdata->node_low_pfn <= PFN_DOWN(goal))
@@ -703,9 +725,11 @@ void * __init ___alloc_bootmem_node_nopanic(pg_data_t *pgdat,
 {
 	void *ptr;
 
-	if (WARN_ON_ONCE(slab_is_available()))
-		return kzalloc(size, GFP_NOWAIT);
 again:
+	ptr = alloc_arch_preferred_bootmem(pgdat->bdata, size,
+					   align, goal, limit);
+	if (ptr)
+		return ptr;
 
 	/* do not panic in alloc_bootmem_bdata() */
 	if (limit && goal + size > limit)
