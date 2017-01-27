@@ -5635,9 +5635,6 @@ static inline void nohz_balance_exit_idle(int cpu)
 		atomic_dec(&nohz.nr_cpus);
 		clear_bit(NOHZ_TICK_STOPPED, nohz_flags(cpu));
 	}
-
-	if (sched_feat_numa(NUMA))
-		task_tick_numa(rq, curr);
 }
 
 static inline void set_cpu_sd_state_busy(void)
