@@ -92,9 +92,6 @@ void * high_memory;
 EXPORT_SYMBOL(num_physpages);
 EXPORT_SYMBOL(high_memory);
 
-int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
-			unsigned long address, unsigned int flags);
-
 /*
  * Randomize the address space (stacks, mmaps, brk, etc.).
  *
@@ -3834,8 +3831,6 @@ retry:
 			if (pmd_numa(*pmd))
 				return do_huge_pmd_numa_page(mm, vma, address,
 							     orig_pmd, pmd);
-
-			unsigned int dirty = flags & FAULT_FLAG_WRITE;
 
 			if (dirty && !pmd_write(orig_pmd) &&
 			    !pmd_trans_splitting(orig_pmd)) {
