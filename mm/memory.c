@@ -92,6 +92,9 @@ void * high_memory;
 EXPORT_SYMBOL(num_physpages);
 EXPORT_SYMBOL(high_memory);
 
+int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+			unsigned long address, unsigned int flags);
+
 /*
  * Randomize the address space (stacks, mmaps, brk, etc.).
  *
@@ -3256,6 +3259,10 @@ static int do_anonymous_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	if (vma->vm_flags & VM_SHARED)
 		return VM_FAULT_SIGBUS;
 
+	/* File mapping without ->vm_ops ? */
+	if (vma->vm_flags & VM_SHARED)
+		return VM_FAULT_SIGBUS;
+
 	/* Check if we need to add a guard page to the stack */
 	if (check_stack_guard_page(vma, address) < 0)
 		return VM_FAULT_SIGSEGV;
@@ -3846,6 +3853,7 @@ retry:
 				huge_pmd_set_accessed(mm, vma, address, pmd,
 						      orig_pmd, dirty);
 			}
+
 			return 0;
 		}
 	}

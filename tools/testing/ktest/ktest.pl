@@ -1656,11 +1656,21 @@ sub do_post_install {
 	dodie "Failed to run post install";
 }
 
+# Sometimes the reboot fails, and will hang. We try to ssh to the box
+# and if we fail, we force another reboot, that should powercycle it.
+sub test_booted {
+    if (!run_ssh "echo testing connection") {
+	reboot $sleep_time;
+    }
+}
+
 sub install {
 
     return if ($no_install);
 
     my $cp_target = eval_kernel_version $target_image;
+
+    test_booted;
 
     run_scp_install "$outputdir/$build_target", "$cp_target" or
 	dodie "failed to copy image";
@@ -1807,10 +1817,14 @@ sub make_oldconfig {
 
     if (!run_command "$make olddefconfig") {
 	# Perhaps olddefconfig doesn't exist in this version of the kernel
-	# try a yes '' | oldconfig
-	doprint "olddefconfig failed, trying yes '' | make oldconfig\n";
-	run_command "yes '' | $make oldconfig" or
-	    dodie "failed make config oldconfig";
+	# try oldnoconfig
+	doprint "olddefconfig failed, trying make oldnoconfig\n";
+	if (!run_command "$make oldnoconfig") {
+	    doprint "oldnoconfig failed, trying yes '' | make oldconfig\n";
+	    # try a yes '' | oldconfig
+	    run_command "yes '' | $make oldconfig" or
+		dodie "failed make config oldconfig";
+	}
     }
 }
 
