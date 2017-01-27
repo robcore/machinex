@@ -366,7 +366,8 @@ extern struct fsnotify_group *fsnotify_alloc_group(const struct fsnotify_ops *op
 extern void fsnotify_get_group(struct fsnotify_group *group);
 /* drop reference on a group from fsnotify_alloc_group */
 extern void fsnotify_put_group(struct fsnotify_group *group);
-
+/* destroy group */
+extern void fsnotify_destroy_group(struct fsnotify_group *group);
 /* take a reference to an event */
 extern void fsnotify_get_event(struct fsnotify_event *event);
 extern void fsnotify_put_event(struct fsnotify_event *event);

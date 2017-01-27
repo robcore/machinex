@@ -45,7 +45,7 @@ void fsnotify_final_destroy_group(struct fsnotify_group *group)
  * Note that another thread calling fsnotify_clear_marks_by_group() may still
  * hold a ref to the group.
  */
-static void fsnotify_destroy_group(struct fsnotify_group *group)
+void fsnotify_destroy_group(struct fsnotify_group *group)
 {
 	/* clear all inode marks for this group */
 	fsnotify_clear_marks_by_group(group);
