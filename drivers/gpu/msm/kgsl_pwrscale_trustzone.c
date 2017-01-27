@@ -32,8 +32,6 @@
 
 struct tz_priv {
 	int governor;
-	unsigned int no_switch_cnt;
-	unsigned int skip_cnt;
 	struct kgsl_power_stats bin;
 };
 spinlock_t tz_lock;
@@ -48,12 +46,11 @@ spinlock_t tz_lock;
 #define CEILING			50000
 #define SWITCH_OFF		200
 #define SWITCH_OFF_RESET_TH	40
-#define SKIP_COUNTER		500
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
 
-unsigned int up_threshold = 50;
-unsigned int down_threshold = 25;
+unsigned int up_threshold = 40;
+unsigned int down_threshold = 15;
 unsigned int up_differential = 10;
 unsigned long gpu_pref_counter;
 
@@ -229,26 +226,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		if ((stats.total_time == 0) || (priv->bin.total_time < FLOOR))
 			return;
 
-		if (priv->governor != TZ_GOVERNOR_SIMPLE) {
+		//if (priv->governor != TZ_GOVERNOR_SIMPLE)
 			kgsl_trace_kgsl_tz_params(device, priv->bin.total_time, priv->bin.busy_time,
 				idle, 10);
-
-	        /* If the GPU has stayed in turbo mode for a while, *
-		 * stop writing out values. */
-		if (pwr->active_pwrlevel == 0) {
-			if (priv->no_switch_cnt > SWITCH_OFF) {
-				priv->skip_cnt++;
-				if (priv->skip_cnt > SKIP_COUNTER) {
-					priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
-					priv->skip_cnt = 0;
-				}
-				return;
-			}
-			priv->no_switch_cnt++;
-		} else {
-			priv->no_switch_cnt = 0;
-		}
-		}
 	}
 
 	/* If there is an extended block of busy processing,
@@ -301,7 +281,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		else
 			val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
 
-		if (priv->governor != TZ_GOVERNOR_SIMPLE)
+		//if (priv->governor != TZ_GOVERNOR_SIMPLE)
 			kgsl_trace_kgsl_tz_params(device, priv->bin.total_time, priv->bin.busy_time,
 					idle, val);
 
@@ -330,13 +310,8 @@ static void tz_sleep(struct kgsl_device *device,
 		gpu_pref_counter = 0;
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
-	} else if (priv->governor == TZ_GOVERNOR_SIMPLE) {
-		__secure_tz_entry(TZ_RESET_ID, 0, device->id);
-		priv->bin.total_time = 0;
-		priv->bin.busy_time = 0;
 	} else {
 		__secure_tz_entry(TZ_RESET_ID, 0, device->id);
-		priv->no_switch_cnt = 0;
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
 	}
