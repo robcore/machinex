@@ -143,8 +143,9 @@ static struct attribute_group tz_attr_group = {
 
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
+	struct tz_priv *priv = pwrscale->priv;
+
 	if (priv->governor != TZ_GOVERNOR_INTERACTIVE) {
-		struct tz_priv *priv = pwrscale->priv;
 		if (device->state != KGSL_STATE_NAP &&
 			(priv->governor == TZ_GOVERNOR_ONDEMAND ||
 			 priv->governor == TZ_GOVERNOR_SIMPLE))
@@ -199,9 +200,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
-
-	if (priv->governor != TZ_GOVERNOR_INTERACTIVE)
-		int val, idle;
+	int val, idle;
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
