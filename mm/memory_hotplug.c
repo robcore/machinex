@@ -222,7 +222,7 @@ static void grow_zone_span(struct zone *zone, unsigned long start_pfn,
 	zone_span_writelock(zone);
 
 	old_zone_end_pfn = zone->zone_start_pfn + zone->spanned_pages;
-	if (start_pfn < zone->zone_start_pfn)
+	if (!zone->spanned_pages || start_pfn < zone->zone_start_pfn)
 		zone->zone_start_pfn = start_pfn;
 
 	zone->spanned_pages = max(old_zone_end_pfn, end_pfn) -
@@ -237,7 +237,7 @@ static void grow_pgdat_span(struct pglist_data *pgdat, unsigned long start_pfn,
 	unsigned long old_pgdat_end_pfn =
 		pgdat->node_start_pfn + pgdat->node_spanned_pages;
 
-	if (start_pfn < pgdat->node_start_pfn)
+	if (!pgdat->node_spanned_pages || start_pfn < pgdat->node_start_pfn)
 		pgdat->node_start_pfn = start_pfn;
 
 	pgdat->node_spanned_pages = max(old_pgdat_end_pfn, end_pfn) -
@@ -482,6 +482,53 @@ static int online_pages_range(unsigned long start_pfn, unsigned long nr_pages,
 	return 0;
 }
 
+/* check which state of node_states will be changed when online memory */
+static void node_states_check_changes_online(unsigned long nr_pages,
+	struct zone *zone, struct memory_notify *arg)
+{
+	int nid = zone_to_nid(zone);
+	enum zone_type zone_last = ZONE_NORMAL;
+
+	/*
+	 * If we have HIGHMEM, node_states[N_NORMAL_MEMORY] contains nodes
+	 * which have 0...ZONE_NORMAL, set zone_last to ZONE_NORMAL.
+	 *
+	 * If we don't have HIGHMEM, node_states[N_NORMAL_MEMORY] contains nodes
+	 * which have 0...ZONE_MOVABLE, set zone_last to ZONE_MOVABLE.
+	 */
+	if (N_HIGH_MEMORY == N_NORMAL_MEMORY)
+		zone_last = ZONE_MOVABLE;
+
+	/*
+	 * if the memory to be online is in a zone of 0...zone_last, and
+	 * the zones of 0...zone_last don't have memory before online, we will
+	 * need to set the node to node_states[N_NORMAL_MEMORY] after
+	 * the memory is online.
+	 */
+	if (zone_idx(zone) <= zone_last && !node_state(nid, N_NORMAL_MEMORY))
+		arg->status_change_nid_normal = nid;
+	else
+		arg->status_change_nid_normal = -1;
+
+	/*
+	 * if the node don't have memory befor online, we will need to
+	 * set the node to node_states[N_HIGH_MEMORY] after the memory
+	 * is online.
+	 */
+	if (!node_state(nid, N_HIGH_MEMORY))
+		arg->status_change_nid = nid;
+	else
+		arg->status_change_nid = -1;
+}
+
+static void node_states_set_node(int node, struct memory_notify *arg)
+{
+	if (arg->status_change_nid_normal >= 0)
+		node_set_state(node, N_NORMAL_MEMORY);
+
+	node_set_state(node, N_HIGH_MEMORY);
+}
+
 
 int __ref online_pages(unsigned long pfn, unsigned long nr_pages)
 {
@@ -493,13 +540,18 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages)
 	struct memory_notify arg;
 
 	lock_memory_hotplug();
+	/*
+	 * This doesn't need a lock to do pfn_to_page().
+	 * The section can't be removed here because of the
+	 * memory_block->state_mutex.
+	 */
+	zone = page_zone(pfn_to_page(pfn));
+
 	arg.start_pfn = pfn;
 	arg.nr_pages = nr_pages;
-	arg.status_change_nid = -1;
+	node_states_check_changes_online(nr_pages, zone, &arg);
 
 	nid = page_to_nid(pfn_to_page(pfn));
-	if (node_present_pages(nid) == 0)
-		arg.status_change_nid = nid;
 
 	ret = memory_notify(MEM_GOING_ONLINE, &arg);
 	ret = notifier_to_errno(ret);
@@ -509,23 +561,21 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages)
 		return ret;
 	}
 	/*
-	 * This doesn't need a lock to do pfn_to_page().
-	 * The section can't be removed here because of the
-	 * memory_block->state_mutex.
-	 */
-	zone = page_zone(pfn_to_page(pfn));
-	/*
 	 * If this zone is not populated, then it is not in zonelist.
 	 * This means the page allocator ignores this zone.
 	 * So, zonelist must be updated after online.
 	 */
 	mutex_lock(&zonelists_mutex);
-	if (!populated_zone(zone))
+	if (!populated_zone(zone)) {
 		need_zonelists_rebuild = 1;
+		build_all_zonelists(NULL, zone);
+	}
 
 	ret = walk_system_ram_range(pfn, nr_pages, &onlined_pages,
 		online_pages_range);
 	if (ret) {
+		if (need_zonelists_rebuild)
+			zone_pcp_reset(zone);
 		mutex_unlock(&zonelists_mutex);
 		printk(KERN_DEBUG "online_pages [mem %#010llx-%#010llx] failed\n",
 		       (unsigned long long) pfn << PAGE_SHIFT,
@@ -541,9 +591,9 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages)
 	zone->zone_pgdat->node_present_pages += onlined_pages;
 	drain_all_pages();
 	if (onlined_pages) {
-		node_set_state(zone_to_nid(zone), N_HIGH_MEMORY);
+		node_states_set_node(zone_to_nid(zone), &arg);
 		if (need_zonelists_rebuild)
-			build_all_zonelists(NULL, zone);
+			build_all_zonelists(NULL, NULL);
 		else
 			zone_pcp_update(zone);
 	}
@@ -895,7 +945,8 @@ do_migrate_range(unsigned long start_pfn, unsigned long end_pfn)
 		}
 		/* this function returns # of failed pages */
 		ret = migrate_pages(&source, hotremove_migrate_alloc, 0,
-							true, MIGRATE_SYNC);
+							true, MIGRATE_SYNC,
+							MR_MEMORY_HOTPLUG);
 		if (ret)
 			putback_lru_pages(&source);
 	}
@@ -930,7 +981,7 @@ check_pages_isolated_cb(unsigned long start_pfn, unsigned long nr_pages,
 {
 	int ret;
 	long offlined = *(long *)data;
-	ret = test_pages_isolated(start_pfn, start_pfn + nr_pages);
+	ret = test_pages_isolated(start_pfn, start_pfn + nr_pages, true);
 	offlined = nr_pages;
 	if (!ret)
 		*(long *)data += offlined;
@@ -948,6 +999,67 @@ check_pages_isolated(unsigned long start_pfn, unsigned long end_pfn)
 	if (ret < 0)
 		offlined = (long)ret;
 	return offlined;
+}
+
+/* check which state of node_states will be changed when offline memory */
+static void node_states_check_changes_offline(unsigned long nr_pages,
+		struct zone *zone, struct memory_notify *arg)
+{
+	struct pglist_data *pgdat = zone->zone_pgdat;
+	unsigned long present_pages = 0;
+	enum zone_type zt, zone_last = ZONE_NORMAL;
+
+	/*
+	 * If we have HIGHMEM, node_states[N_NORMAL_MEMORY] contains nodes
+	 * which have 0...ZONE_NORMAL, set zone_last to ZONE_NORMAL.
+	 *
+	 * If we don't have HIGHMEM, node_states[N_NORMAL_MEMORY] contains nodes
+	 * which have 0...ZONE_MOVABLE, set zone_last to ZONE_MOVABLE.
+	 */
+	if (N_HIGH_MEMORY == N_NORMAL_MEMORY)
+		zone_last = ZONE_MOVABLE;
+
+	/*
+	 * check whether node_states[N_NORMAL_MEMORY] will be changed.
+	 * If the memory to be offline is in a zone of 0...zone_last,
+	 * and it is the last present memory, 0...zone_last will
+	 * become empty after offline , thus we can determind we will
+	 * need to clear the node from node_states[N_NORMAL_MEMORY].
+	 */
+	for (zt = 0; zt <= zone_last; zt++)
+		present_pages += pgdat->node_zones[zt].present_pages;
+	if (zone_idx(zone) <= zone_last && nr_pages >= present_pages)
+		arg->status_change_nid_normal = zone_to_nid(zone);
+	else
+		arg->status_change_nid_normal = -1;
+
+	/*
+	 * node_states[N_HIGH_MEMORY] contains nodes which have 0...ZONE_MOVABLE
+	 */
+	zone_last = ZONE_MOVABLE;
+
+	/*
+	 * check whether node_states[N_HIGH_MEMORY] will be changed
+	 * If we try to offline the last present @nr_pages from the node,
+	 * we can determind we will need to clear the node from
+	 * node_states[N_HIGH_MEMORY].
+	 */
+	for (; zt <= zone_last; zt++)
+		present_pages += pgdat->node_zones[zt].present_pages;
+	if (nr_pages >= present_pages)
+		arg->status_change_nid = zone_to_nid(zone);
+	else
+		arg->status_change_nid = -1;
+}
+
+static void node_states_clear_node(int node, struct memory_notify *arg)
+{
+	if (arg->status_change_nid_normal >= 0)
+		node_clear_state(node, N_NORMAL_MEMORY);
+
+	if ((N_HIGH_MEMORY != N_NORMAL_MEMORY) &&
+	    (arg->status_change_nid >= 0))
+		node_clear_state(node, N_HIGH_MEMORY);
 }
 
 static int __ref offline_pages(unsigned long start_pfn,
@@ -977,15 +1089,14 @@ static int __ref offline_pages(unsigned long start_pfn,
 	nr_pages = end_pfn - start_pfn;
 
 	/* set above range as isolated */
-	ret = start_isolate_page_range(start_pfn, end_pfn, MIGRATE_MOVABLE);
+	ret = start_isolate_page_range(start_pfn, end_pfn,
+				       MIGRATE_MOVABLE, true);
 	if (ret)
 		goto out;
 
 	arg.start_pfn = start_pfn;
 	arg.nr_pages = nr_pages;
-	arg.status_change_nid = -1;
-	if (nr_pages >= node_present_pages(node))
-		arg.status_change_nid = node;
+	node_states_check_changes_offline(nr_pages, zone, &arg);
 
 	ret = memory_notify(MEM_GOING_OFFLINE, &arg);
 	ret = notifier_to_errno(ret);
@@ -1060,10 +1171,9 @@ repeat:
 	if (!populated_zone(zone))
 		zone_pcp_reset(zone);
 
-	if (!node_present_pages(node)) {
-		node_clear_state(node, N_HIGH_MEMORY);
+	node_states_clear_node(node, &arg);
+	if (arg.status_change_nid >= 0)
 		kswapd_stop(node);
-	}
 
 	vm_total_pages = nr_free_pagecache_pages();
 	writeback_set_ratelimit();
