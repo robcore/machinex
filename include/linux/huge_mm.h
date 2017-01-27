@@ -160,10 +160,6 @@ static inline struct page *compound_trans_head(struct page *page)
 	}
 	return page;
 }
-
-extern int do_huge_pmd_numa_page(struct mm_struct *mm, unsigned long addr,
-				  pmd_t pmd, pmd_t *pmdp);
-
 #else /* CONFIG_TRANSPARENT_HUGEPAGE */
 #define HPAGE_PMD_SHIFT ({ BUILD_BUG(); 0; })
 #define HPAGE_PMD_MASK ({ BUILD_BUG(); 0; })
@@ -200,12 +196,6 @@ static inline int pmd_trans_huge_lock(pmd_t *pmd,
 {
 	return 0;
 }
-
-static inline int do_huge_pmd_numa_page(struct mm_struct *mm, unsigned long addr,
-					pmd_t pmd, pmd_t *pmdp)
-{
-}
-
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
 
 #endif /* _LINUX_HUGE_MM_H */
