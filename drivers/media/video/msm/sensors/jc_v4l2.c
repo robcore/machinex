@@ -3156,7 +3156,7 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 			jc_sensor_power_down(&jc_s_ctrl);
 			return -ENOSYS;
 		}
-#if 0
+#if 1
 		if (isp_ret == 0 && jc_ctrl->samsung_app == false && jc_ctrl->factory_bin == false) {
 		    pr_debug("3rd party app. skip ISP FW update\n");
 		    goto start;
@@ -3241,13 +3241,14 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 		}
 	}
 
-//start:
+start:
 	err = jc_writeb(JC_CATEGORY_CAPCTRL,
 			0x0, 0x0f);
 
-//suckit
-//	if (jc_ctrl->samsung_app != 1)
-//		jc_set_different_ratio_capture(1);
+	if (jc_ctrl->samsung_app != 1) {
+		pr_debug("Set different ratio capture mode\n");
+		jc_set_different_ratio_capture(1);
+	}
 
 	err = jc_readb(0x01, 0x3F, &isp_revision);
 
@@ -3277,7 +3278,7 @@ static int jc_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 	/* AF off */
 	data->sensor_platform_info->sensor_af_power_off();
 
-	mdelay(1); /* Add 1ms delay for off timing --ROB NOTE - SO USE FUCKING MSLEEP OR DELAY DUMBASS */
+	msleep(1); /* Add 1ms delay for off timing --ROB NOTE - SO USE FUCKING MSLEEP OR DELAY DUMBASS */
 
 	/* MCLK */
 	rc = msm_cam_clk_enable(&s_ctrl->sensor_i2c_client->client->dev,
