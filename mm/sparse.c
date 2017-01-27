@@ -640,7 +640,6 @@ static struct page *__kmalloc_section_memmap(unsigned long nr_pages)
 got_map_page:
 	ret = (struct page *)pfn_to_kaddr(page_to_pfn(page));
 got_map_ptr:
-	memset(ret, 0, memmap_size);
 
 	return ret;
 }
@@ -759,6 +758,8 @@ int __meminit sparse_add_one_section(struct zone *zone, unsigned long start_pfn,
 		ret = -EEXIST;
 		goto out;
 	}
+
+	memset(memmap, 0, sizeof(struct page) * nr_pages);
 
 	ms->section_mem_map |= SECTION_MARKED_PRESENT;
 
