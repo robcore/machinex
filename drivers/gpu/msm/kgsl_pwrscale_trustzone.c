@@ -325,6 +325,7 @@ static void tz_sleep(struct kgsl_device *device,
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 
 		gpu_pref_counter = 0;
+		priv->no_switch_cnt = 0;
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
 	} else {
