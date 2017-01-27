@@ -254,9 +254,10 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			}
 
 			gpu_stats.load = (100 * priv->bin.busy_time);
-			do_div(gpu_stats.load, priv->bin.total_time);
-
-			gpu_stats.threshold = up_threshold;
+			if (priv->bin.total_time > 0) {
+				do_div(gpu_stats.load, priv->bin.total_time);
+				gpu_stats.threshold = up_threshold;
+			}
 
 			if (pwr->active_pwrlevel == pwr->min_pwrlevel)
 				gpu_stats.threshold = up_threshold / pwr->active_pwrlevel;
