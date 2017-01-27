@@ -201,9 +201,10 @@ static inline int pmd_trans_huge_lock(pmd_t *pmd,
 	return 0;
 }
 
-static inline int do_huge_pmd_numa_page(struct mm_struct *mm, unsigned long addr,
-					pmd_t pmd, pmd_t *pmdp)
+static inline int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
+					unsigned long addr, pmd_t pmd, pmd_t *pmdp)
 {
+	return 0;
 }
 
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
