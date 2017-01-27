@@ -81,7 +81,7 @@ static struct page_info *alloc_largest_available(unsigned long size,
 
 		if (orders[i]) {
 			gfp |= __GFP_COMP | __GFP_NORETRY |
-			       __GFP_NOWARN; //__GFP_NO_KSWAPD |
+			       __GFP_NO_KSWAPD | __GFP_NOWARN;
 		} else {
 			gfp |= GFP_KERNEL;
 		}
@@ -147,7 +147,7 @@ static int ion_iommu_heap_allocate(struct ion_heap *heap,
 			 */
 			data->pages = kmalloc(page_tbl_size,
 					      __GFP_COMP | __GFP_NORETRY |
-					      __GFP_NOWARN); //__GFP_NO_KSWAPD |
+					      __GFP_NO_KSWAPD | __GFP_NOWARN);
 			if (!data->pages) {
 				data->pages = vmalloc(page_tbl_size);
 				data->pages_uses_vmalloc = 1;
