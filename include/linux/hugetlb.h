@@ -210,7 +210,7 @@ static inline int is_file_hugepages(struct file *file)
 #define is_file_hugepages(file)			0
 static inline struct file *
 hugetlb_file_setup(const char *name, size_t size, vm_flags_t acctflag,
-		struct user_struct **user, int creat_flags
+		struct user_struct **user, int creat_flags,
 		int page_size_log)
 {
 	return ERR_PTR(-ENOSYS);
