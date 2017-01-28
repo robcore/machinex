@@ -248,5 +248,4 @@ struct cper_sec_mem_err;
 extern void apei_mce_report_mem_error(int corrected,
 				      struct cper_sec_mem_err *mem_err);
 
-#endif /* __KERNEL__ */
 #endif /* _ASM_X86_MCE_H */

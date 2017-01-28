@@ -2,14 +2,6 @@
 #define _ASM_X86_SIGNAL_H
 
 #ifndef __ASSEMBLY__
-#include <linux/types.h>
-#include <linux/time.h>
-#include <linux/compiler.h>
-
-/* Avoid too many header ordering problems.  */
-struct siginfo;
-
-#ifdef __KERNEL__
 #include <linux/linkage.h>
 
 /* Most things should be clean enough to redefine this at will, if care
@@ -147,45 +139,8 @@ struct k_sigaction {
 	struct sigaction sa;
 };
 
-# else /* __KERNEL__ */
-/* Here we must cater to libcs that poke about in kernel headers.  */
-
-struct sigaction {
-	union {
-	  __sighandler_t _sa_handler;
-	  void (*_sa_sigaction)(int, struct siginfo *, void *);
-	} _u;
-	sigset_t sa_mask;
-	unsigned long sa_flags;
-	void (*sa_restorer)(void);
-};
-
-#define sa_handler	_u._sa_handler
-#define sa_sigaction	_u._sa_sigaction
-
-# endif /* ! __KERNEL__ */
 #else /* __i386__ */
-
-struct sigaction {
-	__sighandler_t sa_handler;
-	unsigned long sa_flags;
-	__sigrestore_t sa_restorer;
-	sigset_t sa_mask;		/* mask last for extensibility */
-};
-
-struct k_sigaction {
-	struct sigaction sa;
-};
-
 #endif /* !__i386__ */
-
-typedef struct sigaltstack {
-	void __user *ss_sp;
-	int ss_flags;
-	size_t ss_size;
-} stack_t;
-
-#ifdef __KERNEL__
 #include <asm/sigcontext.h>
 
 #ifdef __i386__
@@ -258,7 +213,5 @@ struct pt_regs;
 
 #endif /* !__i386__ */
 
-#endif /* __KERNEL__ */
 #endif /* __ASSEMBLY__ */
-
 #endif /* _ASM_X86_SIGNAL_H */

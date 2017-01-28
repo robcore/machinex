@@ -1,6 +1,3 @@
-#ifndef VMX_H
-#define VMX_H
-
 /*
  * vmx.h: VMX Architecture related definitions
  * Copyright (c) 2004, Intel Corporation.
