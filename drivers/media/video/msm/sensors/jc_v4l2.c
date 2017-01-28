@@ -75,7 +75,7 @@
 //static char FW_buf[2197152] = {0}; /*static QCTK 2MB*/
 #endif
 #define CHECK_ERR(x)	if ((x) < 0) { \
-				cam_err("i2c failed, err %d\n", x); \
+				pr_debug("i2c failed, err %d\n", x); \
 				return x; \
 			}
 
@@ -227,7 +227,7 @@ static int jc_read(int _line, u8 len,
 	}
 
 	if (recv_data[0] != sizeof(recv_data))
-		cam_i2c_dbg("expected length %d, but return length %d\n",
+		pr_debug("expected length %d, but return length %d\n",
 				 sizeof(recv_data), recv_data[0]);
 
 	if (len == 0x01)
@@ -239,7 +239,7 @@ static int jc_read(int _line, u8 len,
 				recv_data[3] << 8 | recv_data[4];
 
 	if (log)
-		cam_i2c_dbg("[ %4d ] Read %s %#02x, byte %#x, value %#x\n",
+		pr_debug("[ %4d ] Read %s %#02x, byte %#x, value %#x\n",
 			_line, (len == 4 ? "L" : (len == 2 ? "W" : "B")),
 			category, byte, *val);
 
@@ -281,7 +281,7 @@ static int jc_write(int _line, u8 len,
 	}
 
 	if (log)
-		cam_i2c_dbg("[ %4d ] Write %s %#x, byte %#x, value %#x\n",
+		pr_debug("[ %4d ] Write %s %#x, byte %#x, value %#x\n",
 			_line, (len == 4 ? "L" : (len == 2 ? "W" : "B")),
 			category, byte, val);
 
@@ -335,7 +335,7 @@ static int jc_mem_dump(u16 len, u32 addr, u8 *val)
 		if (err == 1)
 			break;
 		else
-			cam_i2c_dbg("i2c write error\n");
+			pr_debug("i2c write error\n");
 
 		msleep(20);
 	}
@@ -351,7 +351,7 @@ static int jc_mem_dump(u16 len, u32 addr, u8 *val)
 		if (err == 1)
 			break;
 		else
-			cam_i2c_dbg("i2c read error\n");
+			pr_debug("i2c read error\n");
 
 		msleep(20);
 	}
@@ -360,12 +360,12 @@ static int jc_mem_dump(u16 len, u32 addr, u8 *val)
 		return err;
 
 	if (len != (recv_data[1] << 8 | recv_data[2]))
-		cam_i2c_dbg("expected length %d, but return length %d\n",
+		pr_debug("expected length %d, but return length %d\n",
 			len, recv_data[1] << 8 | recv_data[2]);
 
 	memcpy(val, recv_data + 3, len);
 
-	/*cam_i2c_dbg("address %#x, length %d\n", addr, len);*/	/*for debug*/
+	/*pr_debug("address %#x, length %d\n", addr, len);*/	/*for debug*/
 	return err;
 }
 #endif
@@ -423,12 +423,12 @@ static int jc_mem_read(u16 len, u32 addr, u8 *val)
 		return err;
 
 	if (len != (recv_data[1] << 8 | recv_data[2]))
-		cam_i2c_dbg("expected length %d, but return length %d\n",
+		pr_debug("expected length %d, but return length %d\n",
 			len, recv_data[1] << 8 | recv_data[2]);
 
 	memcpy(val, recv_data + 3, len);
 
-	cam_i2c_dbg("address %#x, length %d\n", addr, len);
+	pr_debug("address %#x, length %d\n", addr, len);
 	return err;
 }
 #endif
@@ -460,7 +460,7 @@ static int jc_mem_write(u8 cmd,
 	data[7] = (len & 0xFF);
 	memcpy(data + 2 + sizeof(addr) + sizeof(len), val, len);
 
-	cam_i2c_dbg("address %#x, length %d\n", addr, len);
+	pr_debug("address %#x, length %d\n", addr, len);
 	for (i = JC_I2C_RETRY; i; i--) {
 		err = i2c_transfer(jc_client->adapter, &msg, 1);
 		if (err == 1)
@@ -591,7 +591,7 @@ static int jc_dump_fw(void)
 			err = jc_mem_dump(unit, addr + (i * unit), buf);
 			/*pr_debug("dump ~~ count : %d\n", i);*/
 			if (err < 0) {
-				cam_i2c_dbg("dump i2c error\n");
+				pr_debug("dump i2c error\n");
 				pr_debug("i2c falied, err %d\n", err);
 				goto out;
 			}
@@ -630,8 +630,6 @@ static int jc_load_fw_main(void)
 	long fsize, nread;
 	u8 *buf_m10mo = NULL;
 	int i;
-
-	CAM_DEBUG("E");
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
@@ -747,8 +745,6 @@ out:
 		filp_close(fp, current->files);
 
 	set_fs(old_fs);
-
-	CAM_DEBUG("X");
 #else
 
       txSize = FW_WRITE_SIZE;
@@ -987,8 +983,6 @@ static int jc_load_SIO_fw(void)
 
 	err = jc_mem_write(0x08, SZ_64,
 			0x90001100 , buf_port_seting2_m10mo);
-
-	CAM_DEBUG("E");
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
@@ -1418,7 +1412,6 @@ static int jc_isp_boot(void)
 void jc_isp_reset(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	struct msm_camera_sensor_info *data = s_ctrl->sensordata;
-	CAM_DEBUG("E");
 
 	/* ISP_RESET */
 	data->sensor_platform_info->
@@ -1619,11 +1612,9 @@ static int jc_verify_writedata(unsigned char category,
 
 	for (i = 0; i < JC_I2C_VERIFY; i++) {
 		jc_readb(category, byte, &val);
-		if (val == value) {
-			CAM_DEBUG("### Read %#x, byte %#x, value %#x "\
-				"(try = %d)\n", category, byte, value, i);
+		if (val == value)
 			return 0;
-		}
+
 		msleep(20);/*20ms*/
 	}
 
@@ -1645,8 +1636,6 @@ static int jc_set_mode(u32 mode)
 		pr_debug("Same mode : %d\n", mode);
 		return old_mode;
 	}
-
-	CAM_DEBUG("E: ### %#x -> %#x", old_mode, mode);
 
 	switch (mode) {
 	case JC_SYSINIT_MODE:
@@ -1730,13 +1719,11 @@ static int jc_set_mode(u32 mode)
 		msleep(20);/*20ms*/
 	}
 
-	CAM_DEBUG("X");
 	return mode;
 }
 
 static irqreturn_t jc_isp_isr(int irq, void *dev_id)
 {
-	CAM_DEBUG("E");
 	jc_ctrl->isp.issued = 1;
 	wake_up_interruptible(&jc_ctrl->isp.wait);
 
@@ -1746,8 +1733,6 @@ static irqreturn_t jc_isp_isr(int irq, void *dev_id)
 static u32 jc_wait_interrupt(unsigned int timeout)
 {
 	int i = 0;
-
-	CAM_DEBUG("E");
 
 	if (wait_event_interruptible_timeout(jc_ctrl->isp.wait,
 		jc_ctrl->isp.issued == 1,
@@ -1775,31 +1760,23 @@ static u32 jc_wait_interrupt(unsigned int timeout)
 			break;
 		}
 	}
-
-	CAM_DEBUG("X");
 	return jc_ctrl->isp.int_factor;
 }
 
 void jc_set_preview(void)
 {
-	CAM_DEBUG("E");
-
-	CAM_DEBUG("X");
+	pr_debug("Today I pooped\n");
 }
 
 void jc_set_capture(void)
 {
-	CAM_DEBUG("E");
-
-	CAM_DEBUG("X");
+	pr_debug("Today I pooped\n");
 }
 
 static int jc_set_capture_size(int width, int height)
 {
 	u32 isp_mode;
 	int err;
-
-	CAM_DEBUG("Entered, width %d, height %d\n", width, height);
 
 	if (width == 4128 && height == 3096)
 		jc_ctrl->capture_size = 0x2C;
@@ -1830,20 +1807,16 @@ static int jc_set_capture_size(int width, int height)
 
 	err = jc_readb(JC_CATEGORY_SYS, JC_SYS_MODE, &isp_mode);
 
-	if (err < 0) {
-		CAM_DEBUG("isp mode check error : %d", err);
+	if (err < 0)
 		return err;
-	}
 
 	if( isp_mode == JC_MONITOR_MODE ) {
 		jc_set_sizes();
 
 		err = jc_readb(JC_CATEGORY_SYS, JC_SYS_MODE, &isp_mode);
 
-		if (err < 0) {
-			CAM_DEBUG("isp mode check error : %d", err);
+		if (err < 0)
 			return err;
-		}
 
 		if( isp_mode == JC_PARMSET_MODE ) {
 			jc_set_mode(JC_MONITOR_MODE);
@@ -1854,8 +1827,6 @@ static int jc_set_capture_size(int width, int height)
 
 static int jc_set_preview_size(int32_t width, int32_t height)
 {
-	CAM_DEBUG("Entered, width %d, height %d\n", width, height);
-
 	if (width == 1728 && height == 1296)
 		jc_ctrl->preview_size = 0x40;
 	else if (width == 384 && height == 288)
@@ -1905,7 +1876,6 @@ static int jc_set_preview_size(int32_t width, int32_t height)
 static int jc_set_sizes(void)
 {
 	int prev_preview_size, prev_capture_size;
-	CAM_DEBUG("Entered");
 
 	jc_readb(JC_CATEGORY_PARM,
 			JC_PARM_MON_SIZE, &prev_preview_size);
@@ -1914,8 +1884,6 @@ static int jc_set_sizes(void)
 
 	/* set monitor(preview) size */
 	if (jc_ctrl->preview_size != prev_preview_size) {
-		pr_debug("### set monitor(preview) size : 0x%x\n",
-				 jc_ctrl->preview_size);
 
 		/* change to parameter mode */
 		jc_set_mode(JC_PARMSET_MODE);
@@ -1937,9 +1905,7 @@ static int jc_set_sizes(void)
 		jc_verify_writedata(JC_CATEGORY_PARM,
 				JC_PARM_MON_SIZE,
 				jc_ctrl->preview_size);
-	} else
-		pr_debug("### preview size same as previous size : " \
-					"0x%x\n", prev_preview_size);
+	}
 
 	/* set capture size */
 	if (jc_ctrl->capture_size != prev_capture_size) {
@@ -2987,15 +2953,12 @@ static int32_t jc_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 	int32_t rc = 0;
 	int temp = 0;
 	uint32_t op_pixel_clk = 320000000;
-	CAM_DEBUG(" %d", update_type);
 
 	switch (update_type) {
 	case MSM_SENSOR_REG_INIT:
-		CAM_DEBUG("Register INIT\n");
 		break;
 
 	case MSM_SENSOR_UPDATE_PERIODIC:
-		CAM_DEBUG("MSM_SENSOR_UPDATE_PERIODIC\n");
 
 		v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
 			NOTIFY_PCLK_CHANGE, &op_pixel_clk);
@@ -3030,7 +2993,6 @@ int32_t jc_set_sensor_mode_init(struct msm_sensor_ctrl_t *s_ctrl,
 	int mode, int res)
 {
 	int32_t rc = 0;
-	CAM_DEBUG(" %d", mode);
 
 	version_checked = false;
 
@@ -3049,7 +3011,6 @@ int32_t jc_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl,
 	int mode, int res)
 {
 	int32_t rc = 0;
-	CAM_DEBUG(" %d", mode);
 
 	rc = jc_sensor_setting(s_ctrl,
 		MSM_SENSOR_UPDATE_PERIODIC, res);
@@ -3095,7 +3056,6 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	int isp_ret;
 
 	struct msm_camera_sensor_info *data = s_ctrl->sensordata;
-	CAM_DEBUG("E");
 	firmware_update_sdcard = false;
 	jc_ctrl->burst_mode = false;
 	jc_ctrl->stream_on = false;
@@ -3304,7 +3264,6 @@ static int jc_sensor_power_reset(struct msm_sensor_ctrl_t *s_ctrl)
 	int rc = 0;
 
 	struct msm_camera_sensor_info *data = s_ctrl->sensordata;
-	CAM_DEBUG("E");
 
 	s_ctrl->func_tbl->sensor_power_down(s_ctrl);
 	rc = msm_camera_request_gpio_table(data, 1);
@@ -3419,14 +3378,12 @@ static int jc_sensor_start_stream_internal(struct msm_sensor_ctrl_t *s_ctrl)
 					0x02, 0x01);
 		}
 	}
-	CAM_DEBUG("X");
 
 	return rc;
 }
 
 void jc_sensor_stop_stream(struct msm_sensor_ctrl_t *s_ctrl)
 {
-	CAM_DEBUG("E");
 	if (jc_ctrl->anti_stream_off == false) {
 		/* change to parameter mode */
 		jc_set_mode(JC_PARMSET_MODE);
@@ -3678,8 +3635,6 @@ static int jc_i2c_probe(struct i2c_client *client,
 	int rc = 0;
 	int err;
 	struct msm_sensor_ctrl_t *s_ctrl;
-
-	CAM_DEBUG("E");
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		rc = -ENOTSUPP;
