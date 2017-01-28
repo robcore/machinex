@@ -15,12 +15,12 @@
 
 /*
  * Brief description:
- * The conservative kgsl policy acts exactly like it's cpufreq scaling driver
+ * The machinactive kgsl policy acts exactly like it's cpufreq scaling driver
  * counterpart. It attemps to scale frequency in small steps depending on the
  * current GPU load (calculated using statistics) every sampling interval.
- * On idle conservative scales GPU frequency all the way down to reduce power
+ * On idle machinactive scales GPU frequency all the way down to reduce power
  * consumption. Compared to qualcomms's trustzone algorithm which tends to
- * inefficiently scale frequencies conservative offers power savings and heat
+ * inefficiently scale frequencies machinactive offers power savings and heat
  * reduction without sacraficing performance.
  */
 
@@ -38,11 +38,11 @@
 #include "kgsl_pwrscale.h"
 
 /*
- * Without locking i discovered that conservative switches frequencies
+ * Without locking i discovered that machinactive switches frequencies
  * randomly at times, meaning that it up/downscales even if the load
  * does not reach/cross the corresponding threshold.
  */
-static DEFINE_SPINLOCK(conservative_lock);
+static DEFINE_SPINLOCK(machinactive_lock);
 
 /*
  * KGSL policy scaling mode.
@@ -52,7 +52,7 @@ static DEFINE_SPINLOCK(conservative_lock);
 static unsigned int mode[] = {
 	0,	/* Conservative (default)*/
 	1,	/* Energy save */
-	2	/* Performance */
+	2	/* Machinactive */
 };
 
 static unsigned int scale_mode;
@@ -83,14 +83,14 @@ struct load_thresholds {
 };
 
 static struct load_thresholds thresholds[] = {
-	{UINT_MAX,	70},	/* 400 MHz @pwrlevel 0 */
-	{80,		50},	/* 320 MHz @pwrlevel 1 */
-	{60,		30},	/* 200 MHz @pwrlevel 2 */
+	{UINT_MAX,	65},	/* 400 MHz @pwrlevel 0 */
+	{75,		50},	/* 320 MHz @pwrlevel 1 */
+	{55,		30},	/* 200 MHz @pwrlevel 2 */
 	{40,		 0},	/* 128 MHz @pwrlevel 3 */
 	{ 0,	 	 0}	/*  27 MHz @pwrlevel 4 */
 };
 
-static void conservative_wake(struct kgsl_device *device,
+static void machinactive_wake(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_power_stats stats;
@@ -103,7 +103,7 @@ static void conservative_wake(struct kgsl_device *device,
 	}
 }
 
-static void conservative_idle(struct kgsl_device *device,
+static void machinactive_idle(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
@@ -115,7 +115,7 @@ static void conservative_idle(struct kgsl_device *device,
 	device->ftbl->power_stats(device, &stats);
 
 	/*
-	 * Break out early if conservative is running in energy saving
+	 * Break out early if machinactive is running in energy saving
 	 * or performance mode.
 	 */
 	if (!stats.total_time ||
@@ -135,7 +135,7 @@ static void conservative_idle(struct kgsl_device *device,
 		 * needs locking. Leave it to that to keep overhead
 		 * as low as possible.
 		 */
-		spin_lock_irqsave(&conservative_lock, flags);
+		spin_lock_irqsave(&machinactive_lock, flags);
 
 		if (load_hist < thresholds[pwr->active_pwrlevel].down_threshold)
 			val = 1;
@@ -143,7 +143,7 @@ static void conservative_idle(struct kgsl_device *device,
 			thresholds[pwr->active_pwrlevel].up_threshold)
 			val = -1;
 
-		spin_unlock_irqrestore(&conservative_lock, flags);
+		spin_unlock_irqrestore(&machinactive_lock, flags);
 
 		if (val)
 			kgsl_pwrctrl_pwrlevel_change(device,
@@ -151,13 +151,13 @@ static void conservative_idle(struct kgsl_device *device,
 	}
 }
 
-static void conservative_busy(struct kgsl_device *device,
+static void machinactive_busy(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	device->on_time = ktime_to_us(ktime_get());
 }
 
-static void conservative_sleep(struct kgsl_device *device,
+static void machinactive_sleep(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
@@ -167,14 +167,14 @@ static void conservative_sleep(struct kgsl_device *device,
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 }
 
-static ssize_t conservative_polling_interval_show(struct kgsl_device *device,
+static ssize_t machinactive_polling_interval_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%lu\n", polling_interval);
 }
 
-static ssize_t conservative_polling_interval_store(struct kgsl_device *device,
+static ssize_t machinactive_polling_interval_store(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				const char *buf, size_t count)
 {
@@ -198,8 +198,8 @@ static ssize_t conservative_polling_interval_store(struct kgsl_device *device,
 }
 
 PWRSCALE_POLICY_ATTR(polling_interval, 0644,
-					conservative_polling_interval_show,
-					conservative_polling_interval_store);
+					machinactive_polling_interval_show,
+					machinactive_polling_interval_store);
 
 static ssize_t thresholds_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
@@ -289,7 +289,7 @@ static ssize_t scale_mode_store(struct kgsl_device *device,
 	} else if (val >= 2) {
 		scale_mode = mode[2] = val;
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
-		pr_info("[POLGOV] 2-Performance Mode\n");
+		pr_info("[POLGOV] 2-Machinactive Mode\n");
 	} else
 		scale_mode = mode[0];
 
@@ -302,45 +302,45 @@ PWRSCALE_POLICY_ATTR(policy_scale_mode, 0644,
 							scale_mode_show,
 							scale_mode_store);
 
-static struct attribute *conservative_attrs[] = {
+static struct attribute *machinactive_attrs[] = {
 	&policy_attr_polling_interval.attr,
 	&policy_attr_pwrlevel_thresholds.attr,
 	&policy_attr_policy_scale_mode.attr,
 	NULL
 };
 
-static struct attribute_group conservative_attr_group = {
-	.attrs = conservative_attrs,
-	.name = "conservative",
+static struct attribute_group machinactive_attr_group = {
+	.attrs = machinactive_attrs,
+	.name = "machinactive",
 };
 
-static int conservative_init(struct kgsl_device *device,
+static int machinactive_init(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	scale_mode = mode[2];
 
-	spin_lock_init(&conservative_lock);
+	spin_lock_init(&machinactive_lock);
 
 	kgsl_pwrscale_policy_add_files(device, pwrscale,
-						&conservative_attr_group);
+						&machinactive_attr_group);
 
 	return 0;
 }
 
-static void conservative_close(struct kgsl_device *device,
+static void machinactive_close(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	kgsl_pwrscale_policy_remove_files(device, pwrscale,
-						&conservative_attr_group);
+						&machinactive_attr_group);
 }
 
-struct kgsl_pwrscale_policy kgsl_pwrscale_policy_conservative = {
-	.name = "conservative",
-	.init = conservative_init,
-	.busy = conservative_busy,
-	.idle = conservative_idle,
-	.sleep = conservative_sleep,
-	.wake = conservative_wake,
-	.close = conservative_close
+struct kgsl_pwrscale_policy kgsl_pwrscale_policy_machinactive = {
+	.name = "machinactive",
+	.init = machinactive_init,
+	.busy = machinactive_busy,
+	.idle = machinactive_idle,
+	.sleep = machinactive_sleep,
+	.wake = machinactive_wake,
+	.close = machinactive_close
 };
-EXPORT_SYMBOL(kgsl_pwrscale_policy_conservative);
+EXPORT_SYMBOL(kgsl_pwrscale_policy_machinactive);

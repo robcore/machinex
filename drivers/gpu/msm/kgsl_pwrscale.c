@@ -51,7 +51,7 @@ static struct kgsl_pwrscale_policy *kgsl_pwrscale_policies[] = {
 #if 0
 	&kgsl_pwrscale_policy_msm,
 #endif
-	&kgsl_pwrscale_policy_conservative,
+	&kgsl_pwrscale_policy_machinactive,
 	NULL
 };
 
