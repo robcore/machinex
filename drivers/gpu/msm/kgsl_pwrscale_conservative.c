@@ -277,7 +277,7 @@ static ssize_t scale_mode_store(struct kgsl_device *device,
 
 	mutex_lock(&device->mutex);
 
-	sscanf(buf, "%lu", &val);
+	sscanf(buf, "%u", &val);
 
 	if (val <= 0) {
 		scale_mode = mode[0] = val;
