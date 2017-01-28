@@ -65,17 +65,16 @@ module_param(min_input_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	int i, ntokens = 0;
+	int i;
 	unsigned int val, cpu;
 	const char *cp = buf;
 
 	/* single number: apply to all CPUs */
-	if (!ntokens) {
 		if (sscanf(buf, "%u\n", &val) != 1)
 			return -EINVAL;
+
 		for_each_possible_cpu(i)
 			per_cpu(sync_info, i).input_boost_freq = val;
-		}
 	return 0;
 }
 

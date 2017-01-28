@@ -34,7 +34,7 @@ struct tz_priv {
 	struct kgsl_power_stats bin;
 };
 
-module_param_named(trustzone_governor, governor, int, 0664);
+module_param_named(tz_gov, tz_priv->governor, int, 0664);
 
 spinlock_t tz_lock;
 
