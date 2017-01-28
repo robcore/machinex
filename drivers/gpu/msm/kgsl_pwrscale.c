@@ -351,7 +351,7 @@ int kgsl_pwrscale_init(struct kgsl_device *device)
 	if (ret)
 		return ret;
 
-        ret = kobject_init_and_add(&device->pwrscale.kobj, &ktype_pwrscale_policy,
+	ret = kobject_init_and_add(&device->pwrscale.kobj, &ktype_pwrscale_policy,
 		&device->pwrscale_kobj, "policy_config");
 	if (ret)
 		return ret;
