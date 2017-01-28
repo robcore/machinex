@@ -1,5 +1,5 @@
-#ifndef _ALPHA_UNISTD_H
-#define _ALPHA_UNISTD_H
+#ifndef _UAPI_ALPHA_UNISTD_H
+#define _UAPI_ALPHA_UNISTD_H
 
 #define __NR_osf_syscall	  0	/* not implemented */
 #define __NR_exit		  1
@@ -202,6 +202,12 @@
 
 #define __NR_osf_security	222	/* not implemented */
 #define __NR_osf_kloadcall	223	/* not implemented */
+
+#define __NR_osf_stat		224
+#define __NR_osf_lstat		225
+#define __NR_osf_fstat		226
+#define __NR_osf_statfs64	227
+#define __NR_osf_fstatfs64	228
 
 #define __NR_getpgid		233
 #define __NR_getsid		234
@@ -459,31 +465,7 @@
 #define __NR_setns			501
 #define __NR_accept4			502
 #define __NR_sendmmsg			503
+#define __NR_process_vm_readv		504
+#define __NR_process_vm_writev		505
 
-#ifdef __KERNEL__
-
-#define NR_SYSCALLS			504
-
-#define __ARCH_WANT_OLD_READDIR
-#define __ARCH_WANT_STAT64
-#define __ARCH_WANT_SYS_GETHOSTNAME
-#define __ARCH_WANT_SYS_FADVISE64
-#define __ARCH_WANT_SYS_GETPGRP
-#define __ARCH_WANT_SYS_OLD_GETRLIMIT
-#define __ARCH_WANT_SYS_OLDUMOUNT
-#define __ARCH_WANT_SYS_SIGPENDING
-#define __ARCH_WANT_SYS_RT_SIGSUSPEND
-
-/* "Conditional" syscalls.  What we want is
-
-	__attribute__((weak,alias("sys_ni_syscall")))
-
-   but that raises the problem of what type to give the symbol.  If we use
-   a prototype, it'll conflict with the definition given in this file and
-   others.  If we use __typeof, we discover that not all symbols actually
-   have declarations.  If we use no prototype, then we get warnings from
-   -Wstrict-prototypes.  Ho hum.  */
-
-#define cond_syscall(x)  asm(".weak\t" #x "\n" #x " = sys_ni_syscall")
-
-#endif /* _ALPHA_UNISTD_H */
+#endif /* _UAPI_ALPHA_UNISTD_H */
