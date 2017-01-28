@@ -189,8 +189,8 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 };
 
 #define NR_RUN_ECO_MODE_PROFILE	3
-#define NR_RUN_HYSTERESIS_QUAD	4
-#define NR_RUN_HYSTERESIS_DUAL	2
+#define NR_RUN_HYSTERESIS_QUAD	8
+#define NR_RUN_HYSTERESIS_DUAL	4
 
 #define CPU_NR_THRESHOLD	((THREAD_CAPACITY << 1) + (THREAD_CAPACITY / 2))
 
