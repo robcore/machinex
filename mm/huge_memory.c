@@ -1463,9 +1463,10 @@ int change_huge_pmd(struct vm_area_struct *vma, pmd_t *pmd,
 	if (__pmd_trans_huge_lock(pmd, vma) == 1) {
 		pmd_t entry;
 		entry = pmdp_get_and_clear(mm, addr, pmd);
-		if (!prot_numa)
+		if (!prot_numa) {
 			entry = pmd_modify(entry, newprot);
-		else {
+			BUG_ON(pmd_write(entry));
+		} else {
 			struct page *page = pmd_page(*pmd);
 
 			/* only check non-shared pages */
