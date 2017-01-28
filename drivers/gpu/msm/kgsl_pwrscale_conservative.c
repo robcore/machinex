@@ -26,8 +26,12 @@
 
 #include <linux/export.h>
 #include <linux/kernel.h>
-#include <linux/spinlock.h>
 #include <linux/stat.h>
+#include "a2xx_reg.h"
+#include <linux/slab.h>
+#include <linux/io.h>
+#include <linux/spinlock.h>
+#include <mach/socinfo.h>
 
 #include "kgsl.h"
 #include "kgsl_device.h"
@@ -79,10 +83,10 @@ struct load_thresholds {
 };
 
 static struct load_thresholds thresholds[] = {
-	{UINT_MAX,	60},	/* 400 MHz @pwrlevel 0 */
-	{98,		45},	/* 320 MHz @pwrlevel 1 */
-	{90,		20},	/* 200 MHz @pwrlevel 2 */
-	{45,		 0},	/* 128 MHz @pwrlevel 3 */
+	{98,		70},	/* 400 MHz @pwrlevel 0 */
+	{80,		50},	/* 320 MHz @pwrlevel 1 */
+	{60,		30},	/* 200 MHz @pwrlevel 2 */
+	{40,		 0},	/* 128 MHz @pwrlevel 3 */
 	{ 0,	 	 0}	/*  27 MHz @pwrlevel 4 */
 };
 
@@ -222,6 +226,7 @@ static ssize_t thresholds_store(struct kgsl_device *device,
 	unsigned int uval[5], dval[5];
 	int i, ret;
 
+	mutex_lock(&device->mutex);
 	ret = sscanf(buf, "%u %u %u %u %u %u %u %u %u %u",
 					&uval[0],
 					&dval[0],
@@ -242,13 +247,13 @@ static ssize_t thresholds_store(struct kgsl_device *device,
 	 	 * Limit up_threshold to 98.
 		 * Anything higher will prevent downscaling a pwrlevel.
 	 	 */
-		if (uval[i] > MAX_LOAD)
+		if (uval[i] >= MAX_LOAD)
 			uval[i] = MAX_LOAD;
 
 		thresholds[i].up_threshold = uval[i];
 		thresholds[i].down_threshold = dval[i];
 	}
-
+	mutex_ulock(&device->mutex);
 	return count;
 }
 
@@ -268,7 +273,7 @@ static ssize_t scale_mode_store(struct kgsl_device *device,
 				const char *buf, size_t count)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
-
+	mutex_lock(&device->mutex);
 	if (sysfs_streq(buf, "C"))
 		scale_mode = mode[0];
 	else if (sysfs_streq(buf, "E")) {
@@ -279,7 +284,7 @@ static ssize_t scale_mode_store(struct kgsl_device *device,
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 	} else
 		return -EINVAL;
-
+	mutex_ulock(&device->mutex);
 	return count;
 }
 
@@ -302,10 +307,12 @@ static struct attribute_group conservative_attr_group = {
 static int conservative_init(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
+	scale_mode = mode[2];
+
+	spin_lock_init(&conservative_lock);
+
 	kgsl_pwrscale_policy_add_files(device, pwrscale,
 						&conservative_attr_group);
-
-	scale_mode = mode[0];
 
 	return 0;
 }
