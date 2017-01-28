@@ -253,7 +253,7 @@ static ssize_t thresholds_store(struct kgsl_device *device,
 		thresholds[i].up_threshold = uval[i];
 		thresholds[i].down_threshold = dval[i];
 	}
-	mutex_ulock(&device->mutex);
+	mutex_unlock(&device->mutex);
 	return count;
 }
 
