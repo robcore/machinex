@@ -494,7 +494,9 @@ static ssize_t store_##file_name					\
 	int ret = -EINVAL;						\
 	struct cpufreq_policy new_policy;				\
 									\
-	memcpy(&new_policy, policy, sizeof(*policy));			\
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
+	if (ret)							\
+		return -EINVAL;						\
 									\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
@@ -657,7 +659,9 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
-	memcpy(&new_policy, policy, sizeof(*policy));
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return ret;
 
 	ret = sscanf(buf, "%15s", str_governor);
 	if (ret != 1)
