@@ -83,7 +83,7 @@ struct load_thresholds {
 };
 
 static struct load_thresholds thresholds[] = {
-	{98,		70},	/* 400 MHz @pwrlevel 0 */
+	{UINT_MAX,	70},	/* 400 MHz @pwrlevel 0 */
 	{80,		50},	/* 320 MHz @pwrlevel 1 */
 	{60,		30},	/* 200 MHz @pwrlevel 2 */
 	{40,		 0},	/* 128 MHz @pwrlevel 3 */
