@@ -22,7 +22,10 @@
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
 #include "kgsl_device.h"
+
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 #include <linux/module.h>
+#endif
 
 #define TZ_GOVERNOR_PERFORMANCE 0
 #define TZ_GOVERNOR_ONDEMAND    1
@@ -34,8 +37,6 @@ struct tz_priv {
 	struct kgsl_power_stats bin;
 };
 spinlock_t tz_lock;
-
-static int machinex_trustzone;
 
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
@@ -69,57 +70,6 @@ static int __secure_tz_entry(u32 cmd, u32 val, u32 id)
 }
 #endif /* CONFIG_MSM_SCM */
 
-static int set_tz_gov(const char *buf, const struct kernel_param *kp)
-{
-	struct kgsl_pwrscale *pwrscale;
-	struct tz_priv *priv = pwrscale->priv;
-	struct kgsl_device *device;
-	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
-	int val;
-
-	mutex_lock(&device->mutex);
-
-	sscanf(buf, "%d\n", &val);
-	
-	if (val <= 0) {
-		machinex_trustzone = val = 0;
-		priv->governor = TZ_GOVERNOR_PERFORMANCE;
-	} else if (val >= 1) {
-		machinex_trustzone = val = 1;
-		priv->governor = TZ_GOVERNOR_ONDEMAND;
-	}
-
-	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
-
-	mutex_unlock(&device->mutex);
-
-	return 0;
-}
-
-static int get_tz_gov(char *buf, const struct kernel_param *kp)
-{
-	struct tz_priv *priv;
-	struct kgsl_pwrscale *pwrscale;
-	struct kgsl_device *device;
-	int ret;
-
-	if (priv->governor == TZ_GOVERNOR_ONDEMAND) {
-		machinex_trustzone = 0;
-		ret = sprintf(buf, "%d", machinex_trustzone);
-	} else if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
-		machinex_trustzone = 1;
-		ret = sprintf(buf, "%d", machinex_trustzone);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_machinex_trustzone = {
-	.set = set_tz_gov,
-	.get = get_tz_gov,
-};
-module_param_cb(machinex_trustzone, &param_ops_machinex_trustzone, NULL, 0644);
-
 static ssize_t tz_governor_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				char *buf)
@@ -135,7 +85,28 @@ static ssize_t tz_governor_show(struct kgsl_device *device,
 	return ret;
 }
 
-PWRSCALE_POLICY_ATTR(governor, 0644, tz_governor_show, NULL);
+static ssize_t tz_governor_store(struct kgsl_device *device,
+				struct kgsl_pwrscale *pwrscale,
+				 const char *buf, size_t count)
+{
+	struct tz_priv *priv = pwrscale->priv;
+	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
+
+	mutex_lock(&device->mutex);
+
+	if (!strncmp(buf, "ondemand", 8))
+		priv->governor = TZ_GOVERNOR_ONDEMAND;
+	else if (!strncmp(buf, "performance", 11))
+		priv->governor = TZ_GOVERNOR_PERFORMANCE;
+
+	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+
+	mutex_unlock(&device->mutex);
+	return count;
+}
+
+PWRSCALE_POLICY_ATTR(governor, 0644, tz_governor_show, tz_governor_store);
 
 static struct attribute *tz_attrs[] = {
 	&policy_attr_governor.attr,
@@ -146,8 +117,6 @@ static struct attribute_group tz_attr_group = {
 	.attrs = tz_attrs,
 	.name = "trustzone",
 };
-
-
 
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
@@ -272,3 +241,4 @@ struct kgsl_pwrscale_policy kgsl_pwrscale_policy_tz = {
 	.close = tz_close
 };
 EXPORT_SYMBOL(kgsl_pwrscale_policy_tz);
+
