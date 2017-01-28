@@ -27,7 +27,7 @@ static int show_fdinfo(struct seq_file *m, struct file *f,
 	struct fsnotify_mark *mark;
 	int ret = 0;
 
-	mutex_lock(&group->mark_mutex)
+	mutex_lock(&group->mark_mutex);
 	list_for_each_entry(mark, &group->marks_list, g_list) {
 		ret = show(m, mark);
 		if (ret)
