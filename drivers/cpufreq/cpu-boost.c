@@ -67,7 +67,6 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i;
 	unsigned int val, cpu;
-	const char *cp = buf;
 
 	/* single number: apply to all CPUs */
 		if (sscanf(buf, "%u\n", &val) != 1)
