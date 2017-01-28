@@ -49,13 +49,13 @@ static DEFINE_SPINLOCK(conservative_lock);
  * Energy save locks the active pwrlevel to the highest present.
  * Performance locks the active pwrlevel to the lowest present.
  */
-static unsigned char mode[] = {
-	'C',	/* Conservative (default)*/
-	'E',	/* Energy save */
-	'P'	/* Performance */
+static unsigned int mode[] = {
+	0,	/* Conservative (default)*/
+	1,	/* Energy save */
+	2	/* Performance */
 };
 
-static unsigned char scale_mode;
+static unsigned int scale_mode;
 
 /*
  * Polling interval in us.
@@ -197,7 +197,7 @@ static ssize_t conservative_polling_interval_store(struct kgsl_device *device,
 	return count;
 }
 
-PWRSCALE_POLICY_ATTR(polling_interval, S_IRUGO | S_IWUSR,
+PWRSCALE_POLICY_ATTR(polling_interval, 0644,
 					conservative_polling_interval_show,
 					conservative_polling_interval_store);
 
@@ -205,7 +205,7 @@ static ssize_t thresholds_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				char *buf)
 {
-	return snprintf(buf, PAGE_SIZE,
+	return sprintf(buf,
 				"%u %u \t%u %u \t%u %u \t%u %u \t%u %u\n",
 					thresholds[0].up_threshold,
 					thresholds[0].down_threshold,
@@ -226,7 +226,6 @@ static ssize_t thresholds_store(struct kgsl_device *device,
 	unsigned int uval[5], dval[5];
 	int i, ret;
 
-	mutex_lock(&device->mutex);
 	ret = sscanf(buf, "%u %u %u %u %u %u %u %u %u %u",
 					&uval[0],
 					&dval[0],
@@ -239,8 +238,10 @@ static ssize_t thresholds_store(struct kgsl_device *device,
 					&uval[4],
 					&dval[4]);
 
-	if (ret < 1 || ret > 10)
-		return -EINVAL;
+	if (ret < 1)
+		ret = 1;
+	if (ret > 10)
+		ret = 10;
 
 	for (i = 0; i < 5; i++) {
 		/*
@@ -253,11 +254,10 @@ static ssize_t thresholds_store(struct kgsl_device *device,
 		thresholds[i].up_threshold = uval[i];
 		thresholds[i].down_threshold = dval[i];
 	}
-	mutex_unlock(&device->mutex);
 	return count;
 }
 
-PWRSCALE_POLICY_ATTR(pwrlevel_thresholds, S_IRUGO | S_IWUSR,
+PWRSCALE_POLICY_ATTR(pwrlevel_thresholds, 0644,
 							thresholds_show,
 							thresholds_store);
 
@@ -265,7 +265,7 @@ static ssize_t scale_mode_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
 				char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%c\n", scale_mode);
+	return sprintf(buf, "%u\n", scale_mode);
 }
 
 static ssize_t scale_mode_store(struct kgsl_device *device,
@@ -273,22 +273,32 @@ static ssize_t scale_mode_store(struct kgsl_device *device,
 				const char *buf, size_t count)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
+	unsigned int val;
+
 	mutex_lock(&device->mutex);
-	if (sysfs_streq(buf, "C"))
-		scale_mode = mode[0];
-	else if (sysfs_streq(buf, "E")) {
-		scale_mode = mode[1];
+
+	sscanf(buf, "%lu", &val);
+
+	if (val <= 0) {
+		scale_mode = mode[0] = val;
+		pr_info("[POLGOV] 0-Conservative Mode\n");
+	} else if (val == 1) {
+		scale_mode = mode[1] = val;
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
-	} else if (sysfs_streq(buf, "P")) {
-		scale_mode = mode[2];
+		pr_info("[POLGOV] 1-Energy Saving Mode\n");
+	} else if (val >= 2) {
+		scale_mode = mode[2] = val;
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+		pr_info("[POLGOV] 2-Performance Mode\n");
 	} else
-		return -EINVAL;
+		scale_mode = mode[0];
+
 	mutex_unlock(&device->mutex);
+
 	return count;
 }
 
-PWRSCALE_POLICY_ATTR(policy_scale_mode, S_IRUGO | S_IWUSR,
+PWRSCALE_POLICY_ATTR(policy_scale_mode, 0644,
 							scale_mode_show,
 							scale_mode_store);
 
