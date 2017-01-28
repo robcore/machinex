@@ -19,6 +19,8 @@
 #include "msm_vidc_common.h"
 #include "msm_smem.h"
 
+extern void lazyplug_enter_lazy(bool enter);
+
 int msm_vidc_poll(void *instance, struct file *filp,
 		struct poll_table_struct *wait)
 {
@@ -293,6 +295,9 @@ int msm_vidc_open(void *vidc_inst, int core_id, int session_type)
 	spin_lock_irqsave(&core->lock, flags);
 	list_add_tail(&inst->list, &core->instances);
 	spin_unlock_irqrestore(&core->lock, flags);
+
+	lazyplug_enter_lazy(true);
+
 	return rc;
 fail_init:
 	msm_smem_delete_client(inst->mem_client);
@@ -371,5 +376,6 @@ int msm_vidc_close(void *instance)
 		pr_err("Failed to move video instance to uninit state\n");
 	cleanup_instance(inst);
 	pr_debug("Closed the instance\n");
+	lazyplug_enter_lazy(false);
 	return 0;
 }

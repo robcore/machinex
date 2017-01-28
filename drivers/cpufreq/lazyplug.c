@@ -114,7 +114,7 @@ static unsigned int __read_mostly sampling_time = DEF_SAMPLING_MS;
 
 static int persist_count = 0;
 
-static bool __read_mostly suspended = true;
+static bool __read_mostly suspended = false;
 
 struct ip_cpu_info {
 	unsigned int sys_max;
@@ -189,8 +189,8 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 };
 
 #define NR_RUN_ECO_MODE_PROFILE	3
-#define NR_RUN_HYSTERESIS_QUAD	8
-#define NR_RUN_HYSTERESIS_DUAL	4
+#define NR_RUN_HYSTERESIS_QUAD	4
+#define NR_RUN_HYSTERESIS_DUAL	2
 
 #define CPU_NR_THRESHOLD	((THREAD_CAPACITY << 1) + (THREAD_CAPACITY / 2))
 
@@ -331,9 +331,6 @@ static void lazyplug_work_fn(struct work_struct *work)
 	if (lazyplug_active) {
 		nr_run_stat = calculate_thread_stats();
 		update_per_cpu_stat();
-#ifdef DEBUG_LAZYPLUG
-		pr_info("nr_run_stat: %u\n", nr_run_stat);
-#endif
 		cpu_count = nr_run_stat;
 		nr_cpus = num_online_cpus();
 
@@ -476,9 +473,6 @@ void lazyplug_enter_lazy(bool enter)
 static void lazyplug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-#ifdef DEBUG_LAZYPLUG
-	pr_info("lazyplug touched!\n");
-#endif
 
 	if (lazyplug_active && touch_boost_active && !suspended) {
 		idle_count = 0;
