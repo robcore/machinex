@@ -284,7 +284,7 @@ static ssize_t scale_mode_store(struct kgsl_device *device,
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 	} else
 		return -EINVAL;
-	mutex_ulock(&device->mutex);
+	mutex_unlock(&device->mutex);
 	return count;
 }
 
