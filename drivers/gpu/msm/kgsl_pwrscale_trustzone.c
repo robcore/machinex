@@ -22,10 +22,7 @@
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
 #include "kgsl_device.h"
-
-#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 #include <linux/module.h>
-#endif
 
 #define TZ_GOVERNOR_PERFORMANCE 0
 #define TZ_GOVERNOR_ONDEMAND    1
@@ -36,6 +33,9 @@ struct tz_priv {
 	unsigned int skip_cnt;
 	struct kgsl_power_stats bin;
 };
+
+module_param_named(trustzone_governor, governor, int, 0664);
+
 spinlock_t tz_lock;
 
 /* FLOOR is 5msec to capture up to 3 re-draws
@@ -85,28 +85,7 @@ static ssize_t tz_governor_show(struct kgsl_device *device,
 	return ret;
 }
 
-static ssize_t tz_governor_store(struct kgsl_device *device,
-				struct kgsl_pwrscale *pwrscale,
-				 const char *buf, size_t count)
-{
-	struct tz_priv *priv = pwrscale->priv;
-	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
-
-	mutex_lock(&device->mutex);
-
-	if (!strncmp(buf, "ondemand", 8))
-		priv->governor = TZ_GOVERNOR_ONDEMAND;
-	else if (!strncmp(buf, "performance", 11))
-		priv->governor = TZ_GOVERNOR_PERFORMANCE;
-
-	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
-
-	mutex_unlock(&device->mutex);
-	return count;
-}
-
-PWRSCALE_POLICY_ATTR(governor, 0644, tz_governor_show, tz_governor_store);
+PWRSCALE_POLICY_ATTR(governor, 0444, tz_governor_show, NULL);
 
 static struct attribute *tz_attrs[] = {
 	&policy_attr_governor.attr,
