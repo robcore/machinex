@@ -44,31 +44,11 @@
 		if (unlikely(qtaguid_debug_mask & (mask)))  \
 			pr_debug(__VA_ARGS__);              \
 	} while (0)
-#ifdef IDEBUG
-#define IF_DEBUG(...) MSK_DEBUG(IDEBUG_MASK, __VA_ARGS__)
-#else
 #define IF_DEBUG(...) no_printk(__VA_ARGS__)
-#endif
-#ifdef MDEBUG
-#define MT_DEBUG(...) MSK_DEBUG(MDEBUG_MASK, __VA_ARGS__)
-#else
 #define MT_DEBUG(...) no_printk(__VA_ARGS__)
-#endif
-#ifdef RDEBUG
-#define RB_DEBUG(...) MSK_DEBUG(RDEBUG_MASK, __VA_ARGS__)
-#else
 #define RB_DEBUG(...) no_printk(__VA_ARGS__)
-#endif
-#ifdef CDEBUG
-#define CT_DEBUG(...) MSK_DEBUG(CDEBUG_MASK, __VA_ARGS__)
-#else
 #define CT_DEBUG(...) no_printk(__VA_ARGS__)
-#endif
-#ifdef DDEBUG
-#define DR_DEBUG(...) MSK_DEBUG(DDEBUG_MASK, __VA_ARGS__)
-#else
 #define DR_DEBUG(...) no_printk(__VA_ARGS__)
-#endif
 
 extern uint qtaguid_debug_mask;
 
