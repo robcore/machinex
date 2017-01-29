@@ -50,7 +50,7 @@ static secno hpfs_bmap(struct inode *inode, unsigned file_secno)
 	return disk_secno;
 }
 
-static void hpfs_truncate(struct inode *i)
+void hpfs_truncate(struct inode *i)
 {
 	if (IS_IMMUTABLE(i)) return /*-EPERM*/;
 	hpfs_lock_assert(i->i_sb);
@@ -103,6 +103,16 @@ static int hpfs_writepage(struct page *page, struct writeback_control *wbc)
 static int hpfs_readpage(struct file *file, struct page *page)
 {
 	return block_read_full_page(page,hpfs_get_block);
+}
+
+static void hpfs_write_failed(struct address_space *mapping, loff_t to)
+{
+	struct inode *inode = mapping->host;
+
+	if (to > inode->i_size) {
+		truncate_pagecache(inode, to, inode->i_size);
+		hpfs_truncate(inode);
+	}
 }
 
 static int hpfs_write_begin(struct file *file, struct address_space *mapping,
@@ -169,6 +179,5 @@ const struct file_operations hpfs_file_ops =
 
 const struct inode_operations hpfs_file_iops =
 {
-	.truncate	= hpfs_truncate,
 	.setattr	= hpfs_setattr,
 };
