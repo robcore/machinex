@@ -2313,7 +2313,6 @@ int dump_seek(struct file *file, loff_t off)
 }
 EXPORT_SYMBOL(dump_seek);
 
-#ifdef __ARCH_WANT_SYS_EXECVE
 SYSCALL_DEFINE3(execve,
 		const char __user *, filename,
 		const char __user *const __user *, argv,
@@ -2339,25 +2338,5 @@ asmlinkage long compat_sys_execve(const char __user * filename,
 		putname(path);
 	}
 	return error;
-}
-#endif
-#endif
-
-#ifdef __ARCH_WANT_KERNEL_EXECVE
-int kernel_execve(const char *filename,
-		  const char *const argv[],
-		  const char *const envp[])
-{
-	int ret = do_execve(filename,
-			(const char __user *const __user *)argv,
-			(const char __user *const __user *)envp);
-	if (ret < 0)
-		return ret;
-
-	/*
-	 * We were successful.  We won't be returning to our caller, but
-	 * instead to user space by manipulating the kernel stack.
-	 */
-	ret_from_kernel_execve(current_pt_regs());
 }
 #endif
