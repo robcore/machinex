@@ -69,7 +69,8 @@ struct usbnet {
 #		define EVENT_DEV_WAKING 6
 #		define EVENT_DEV_ASLEEP 7
 #		define EVENT_DEV_OPEN	8
-#		define EVENT_NO_RUNTIME_PM	9
+#		define EVENT_DEVICE_REPORT_IDLE	9
+#		define EVENT_NO_RUNTIME_PM	10
 };
 
 static inline struct usb_driver *driver_of(struct usb_interface *intf)
@@ -165,6 +166,7 @@ extern int usbnet_probe(struct usb_interface *, const struct usb_device_id *);
 extern int usbnet_suspend(struct usb_interface *, pm_message_t);
 extern int usbnet_resume(struct usb_interface *);
 extern void usbnet_disconnect(struct usb_interface *);
+extern void usbnet_device_suggests_idle(struct usbnet *dev);
 
 extern int usbnet_read_cmd(struct usbnet *dev, u8 cmd, u8 reqtype,
 		    u16 value, u16 index, void *data, u16 size);
