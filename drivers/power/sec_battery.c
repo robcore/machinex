@@ -782,14 +782,14 @@ static int sec_bat_set_property(struct power_supply *ps,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
-		dev_info(info->dev, "%s: lowbatt intr\n", __func__);
+		dev_dbg(info->dev, "%s: lowbatt intr\n", __func__);
 		if (val->intval != POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL)
 			return -EINVAL;
 		queue_work(info->monitor_wqueue, &info->monitor_work);
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		/* cable is attached or detached. called by usb switch ic */
-		dev_info(info->dev, "%s: cable was changed(%d), prev(%d)\n",
+		dev_dbg(info->dev, "%s: cable was changed(%d), prev(%d)\n",
 			__func__, val->intval, info->prev_cable);
 		switch (val->intval) {
 		case POWER_SUPPLY_TYPE_BATTERY:
@@ -2030,7 +2030,7 @@ static void sec_bat_monitor_work(struct work_struct *work)
 			sec_bat_enable_charging(info, true);
 			info->is_rechg_triggered = false;
 
-			dev_info(info->dev,
+			dev_dbg(info->dev,
 				 "%s: Start Recharging, Vcell = %d\n", __func__,
 				 info->batt_vcell);
 		}
@@ -2069,7 +2069,7 @@ static void sec_bat_monitor_work(struct work_struct *work)
 		break;
 	case POWER_SUPPLY_STATUS_NOT_CHARGING:
 		if (info->batt_health == POWER_SUPPLY_HEALTH_GOOD) {
-			dev_info(info->dev, "%s: recover health state\n",
+			dev_dbg(info->dev, "%s: recover health state\n",
 				 __func__);
 			if (info->cable_type != CABLE_TYPE_NONE) {
 				sec_bat_enable_charging(info, true);
