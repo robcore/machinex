@@ -3108,26 +3108,12 @@ do_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, unsigned long s
 out:
 	return error;
 }
-#ifdef CONFIG_GENERIC_SIGALTSTACK
-SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
-{
-	return do_sigaltstack(uss, uoss, current_user_stack_pointer());
-}
-#endif
 
 int restore_altstack(const stack_t __user *uss)
 {
 	int err = do_sigaltstack(uss, NULL, current_user_stack_pointer());
 	/* squash all but EFAULT for now */
 	return err == -EFAULT ? err : 0;
-}
-
-int __save_altstack(stack_t __user *uss, unsigned long sp)
-{
-	struct task_struct *t = current;
-	return  __put_user((void __user *)t->sas_ss_sp, &uss->ss_sp) |
-		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
-		__put_user(t->sas_ss_size, &uss->ss_size);
 }
 
 #ifdef CONFIG_COMPAT
@@ -3170,14 +3156,6 @@ int compat_restore_altstack(const compat_stack_t __user *uss)
 	int err = compat_sys_sigaltstack(uss, NULL);
 	/* squash all but -EFAULT for now */
 	return err == -EFAULT ? err : 0;
-}
-
-int __compat_save_altstack(compat_stack_t __user *uss, unsigned long sp)
-{
-	struct task_struct *t = current;
-	return  __put_user(ptr_to_compat((void __user *)t->sas_ss_sp), &uss->ss_sp) |
-		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
-		__put_user(t->sas_ss_size, &uss->ss_size);
 }
 #endif
 #endif

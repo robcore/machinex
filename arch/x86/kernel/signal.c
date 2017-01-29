@@ -409,6 +409,7 @@ static int __setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 	struct rt_sigframe __user *frame;
 	void __user *fp = NULL;
 	int err = 0;
+	struct task_struct *me = current;
 
 	frame = get_sigframe(ka, regs, sizeof(struct rt_sigframe), &fp);
 
@@ -526,6 +527,13 @@ sys_sigaction(int sig, const struct old_sigaction __user *act,
 	return ret;
 }
 #endif /* CONFIG_X86_32 */
+
+long
+sys_sigaltstack(const stack_t __user *uss, stack_t __user *uoss,
+		struct pt_regs *regs)
+{
+	return do_sigaltstack(uss, uoss, regs->sp);
+}
 
 /*
  * Do a signal return; undo the signal stack.
@@ -842,7 +850,10 @@ static int x32_setup_rt_frame(int sig, struct k_sigaction *ka,
 		else
 			put_user_ex(0, &frame->uc.uc_flags);
 		put_user_ex(0, &frame->uc.uc_link);
-		err |= __compat_save_altstack(&frame->uc.uc_stack, regs->sp);
+		put_user_ex(current->sas_ss_sp, &frame->uc.uc_stack.ss_sp);
+		put_user_ex(sas_ss_flags(regs->sp),
+			    &frame->uc.uc_stack.ss_flags);
+		put_user_ex(current->sas_ss_size, &frame->uc.uc_stack.ss_size);
 		put_user_ex(0, &frame->uc.uc__pad0);
 		err |= setup_sigcontext(&frame->uc.uc_mcontext, fpstate,
 					regs, set->sig[0]);

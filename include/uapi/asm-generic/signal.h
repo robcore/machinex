@@ -80,6 +80,12 @@
  *	SA_RESTORER	0x04000000
  */
 
+/*
+ * sigaltstack controls
+ */
+#define SS_ONSTACK	1
+#define SS_DISABLE	2
+
 #define MINSIGSTKSZ	2048
 #define SIGSTKSZ	8192
 
