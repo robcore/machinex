@@ -143,6 +143,20 @@ static void tk_setup_internals(struct timekeeper *tk, struct clocksource *clock)
 }
 
 /* Timekeeper helper functions. */
+
+#ifdef CONFIG_ARCH_USES_GETTIMEOFFSET
+u32 (*arch_gettimeoffset)(void);
+
+u32 get_arch_timeoffset(void)
+{
+	if (likely(arch_gettimeoffset))
+		return arch_gettimeoffset();
+	return 0;
+}
+#else
+static inline u32 get_arch_timeoffset(void) { return 0; }
+#endif
+
 static inline s64 timekeeping_get_ns(struct timekeeper *tk)
 {
 	cycle_t cycle_now, cycle_delta;
@@ -159,8 +173,8 @@ static inline s64 timekeeping_get_ns(struct timekeeper *tk)
 	nsec = cycle_delta * tk->mult + tk->xtime_nsec;
 	nsec >>= tk->shift;
 
-	/* If arch requires, add in gettimeoffset() */
-	return nsec + arch_gettimeoffset();
+	/* If arch requires, add in get_arch_timeoffset() */
+	return nsec + get_arch_timeoffset();
 }
 
 static inline s64 timekeeping_get_ns_raw(struct timekeeper *tk)
@@ -179,8 +193,8 @@ static inline s64 timekeeping_get_ns_raw(struct timekeeper *tk)
 	/* convert delta to nanoseconds. */
 	nsec = clocksource_cyc2ns(cycle_delta, clock->mult, clock->shift);
 
-	/* If arch requires, add in gettimeoffset() */
-	return nsec + arch_gettimeoffset();
+	/* If arch requires, add in get_arch_timeoffset() */
+	return nsec + get_arch_timeoffset();
 }
 
 /*
@@ -227,8 +241,8 @@ static void timekeeping_forward_now(struct timekeeper *tk)
 
 	tk->xtime_nsec += cycle_delta * tk->mult;
 
-	/* If arch requires, add in gettimeoffset() */
-	tk->xtime_nsec += (u64)arch_gettimeoffset() << tk->shift;
+	/* If arch requires, add in get_arch_timeoffset() */
+	tk->xtime_nsec += (u64)get_arch_timeoffset() << tk->shift;
 
 	tk_normalize_xtime(tk);
 
