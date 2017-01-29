@@ -732,7 +732,8 @@ int usbnet_stop (struct net_device *net)
 	dev->flags = 0;
 	del_timer_sync (&dev->delay);
 	cancel_work_sync(&dev->bh_w);
-	if (info->manage_power)
+	if (info->manage_power &&
+	    !test_and_clear_bit(EVENT_NO_RUNTIME_PM, &dev->flags))
 		info->manage_power(dev, 0);
 	else
 		usb_autopm_put_interface(dev->intf);
@@ -807,9 +808,12 @@ int usbnet_open (struct net_device *net)
 	queue_work(usbnet_wq, &dev->bh_w);
 	if (info->manage_power) {
 		retval = info->manage_power(dev, 1);
-		if (retval < 0)
-			goto done;
-		usb_autopm_put_interface(dev->intf);
+		if (retval < 0) {
+			retval = 0;
+			set_bit(EVENT_NO_RUNTIME_PM, &dev->flags);
+		} else {
+			usb_autopm_put_interface(dev->intf);
+		}
 	}
 	return retval;
 
