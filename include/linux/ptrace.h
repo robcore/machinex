@@ -306,6 +306,9 @@ static inline void user_single_step_siginfo(struct task_struct *tsk,
  * calling arch_ptrace_stop() when it would be superfluous.  For example,
  * if the thread has not been back to user mode since the last stop, the
  * thread state might indicate that nothing needs to be done.
+ *
+ * This is guaranteed to be invoked once before a task stops for ptrace and
+ * may include arch-specific operations necessary prior to a ptrace stop.
  */
 #define arch_ptrace_stop_needed(code, info)	(0)
 #endif
@@ -344,6 +347,10 @@ static inline void user_single_step_siginfo(struct task_struct *tsk,
 #define signal_pt_regs() task_pt_regs(current)
 #endif
 
+#ifndef current_user_stack_pointer
+#define current_user_stack_pointer() user_stack_pointer(current_pt_regs())
+#endif
+
 extern int task_current_syscall(struct task_struct *target, long *callno,
 				unsigned long args[6], unsigned int maxargs,
 				unsigned long *sp, unsigned long *pc);
@@ -356,4 +363,3 @@ static inline void ptrace_put_breakpoints(struct task_struct *tsk) { }
 #endif /* CONFIG_HAVE_HW_BREAKPOINT */
 
 #endif
-
