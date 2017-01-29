@@ -37,9 +37,9 @@
 
 
 
-#define DBG(x...) pr_debug(x)
-#define INFO(x...) pr_info(x)
-#define ERR(x...) pr_err(x)
+#define DBG(x...)
+#define INFO(x...)
+#define ERR(x...)
 
 #define VID_DEC_NAME "msm_vidc_dec"
 
@@ -390,7 +390,7 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 		  if (ion_flag & ION_FLAG_CACHED && buff_handle)
 		#else
 		  if (ion_flag == ION_FLAG_CACHED && buff_handle)
-        #endif         
+        #endif
 		{
 			DBG("%s: Cache invalidate: size %u", __func__,
 				vcd_frame_data->alloc_len);
@@ -1724,7 +1724,7 @@ static u32 vid_dec_decode_frame(struct video_client_ctx *client_ctx,
 						&buff_handle);
 		   #if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
             if (ion_flag & ION_FLAG_CACHED && buff_handle)
-           #else			
+           #else
 			if (ion_flag == ION_FLAG_CACHED && buff_handle)
            #endif
 			{

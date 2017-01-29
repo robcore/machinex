@@ -36,15 +36,11 @@
 #include "vidc_init_internal.h"
 #include "vcd_res_tracker_api.h"
 
-#if DEBUG
-#define DBG(x...) printk(KERN_DEBUG x)
-#else
 #define DBG(x...)
-#endif
 
 #define VIDC_NAME "msm_vidc_reg"
 
-#define ERR(x...) printk(KERN_ERR x)
+#define ERR(x...)
 
 static struct vidc_dev *vidc_device_p;
 static dev_t vidc_dev_num;
