@@ -31,6 +31,20 @@ rm -rf $(pwd)/include/generated >> /dev/null;
 rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
 }
 
+function countdown()
+{
+	echo "5"
+	sleep 1
+	echo "4"
+	sleep 1
+	echo "3"
+	sleep 1
+	echo "2"
+	sleep 1
+	echo "1"
+	sleep 1
+}
+
 function NORMAL()
 {
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
@@ -87,6 +101,20 @@ sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 #echo '# CONFIG_LOCALVERSION_AUTO is not set' >> arch/arm/configs/canadefconfig
 
+function ADBRETRY()
+{
+ONLINE=`adb get-state 2> /dev/null`
+if [[ $ONLINE == device ]]; then
+	echo "connected"
+	adb push $OUTFOLDER.zip /storage/extSdCard
+	echo "push complete"
+else
+	echo "disconnected, retrying"
+	adb connect 192.168.1.103
+	countdown
+fi
+}
+
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -127,13 +155,10 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		read repadb
 		if [[ $repadb = "y" ]]; then
 			echo "ENABLE ADB WIRELESS"
-			sleep 10
+			countdown
 			adb connect 192.168.1.103
-			sleep 7
-			adb connect 192.168.1.103
-			sleep 5
-			adb push $OUTFOLDER.zip /storage/extSdCard
-			echo "push complete"
+			countdown
+			ADBRETRY
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
 		read objsave
@@ -154,12 +179,10 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	else
 		echo "ENABLE ADB WIRELESS"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		sleep 10
+		countdown
 		adb connect 192.168.1.103
-		sleep 7
-		adb connect 192.168.1.103
-		sleep 5
-		adb push $OUTFOLDER.zip /storage/extSdCard
+		countdown
+		ADBRETRY
 		cd ~/machinex
 		WASHME
 		echo "Push and Cleanup finished"
@@ -266,13 +289,10 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 			read repadb
 			if [[ $repadb = "y" ]]; then
 				echo "ENABLE ADB WIRELESS"
-				sleep 10
+				countdown
 				adb connect 192.168.1.103
-				sleep 7
-				adb connect 192.168.1.103
-				sleep 5
-				adb push $OUTFOLDER.zip /storage/extSdCard
-				echo "push complete"
+				countdown
+				ADBRETRY
 			fi;
 			echo -n "Cleanup?  y/n [ENTER]: "
 			read repcln
@@ -284,12 +304,10 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 		else
 			echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 			echo "ENABLE ADB WIRELESS"
-			sleep 10
+			countdown
 			adb connect 192.168.1.103
-			sleep 7
-			adb connect 192.168.1.103
-			sleep 5
-			adb push $OUTFOLDER.zip /storage/extSdCard
+			countdown
+			ADBRETRY
 			cd ~/machinex
 			WASHME
 			echo "push and cleanup finished"
@@ -350,12 +368,10 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "ENABLE ADB WIRELESS"
-	sleep 10
+	countdown
 	adb connect 192.168.1.103
-	sleep 7
-	adb connect 192.168.1.103
-	sleep 5
-	adb push $OUTFOLDER.zip /storage/extSdCard
+	countdown
+	ADBRETRY
 	cd ~/machinex
 	WASHME
 	echo "push and cleanup finished"
