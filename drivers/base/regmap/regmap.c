@@ -287,12 +287,6 @@ struct regmap *regmap_init(struct device *dev,
 		map->format.format_reg = regmap_format_16;
 		break;
 
-	case 24:
-		if (reg_endian != REGMAP_ENDIAN_BIG)
-			goto err_map;
-		map->format.format_reg = regmap_format_24;
-		break;
-
 	case 32:
 		map->format.format_reg = regmap_format_32;
 		break;
