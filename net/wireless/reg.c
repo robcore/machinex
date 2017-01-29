@@ -313,9 +313,8 @@ static int reg_copy_regd(const struct ieee80211_regdomain **dst_regd,
 	int size_of_regd = 0;
 	unsigned int i;
 
-	size_of_regd =
-		sizeof(struct ieee80211_regdomain) +
-		src_regd->n_reg_rules * sizeof(struct ieee80211_reg_rule);
+	size_of_regd = sizeof(struct ieee80211_regdomain) +
+	  ((src_regd->n_reg_rules + 1) * sizeof(struct ieee80211_reg_rule));
 
 	regd = kzalloc(size_of_regd, GFP_KERNEL);
 	if (!regd)
@@ -623,15 +622,15 @@ static struct ieee80211_regdomain *regdom_intersect(
 		return NULL;
 
 	size_of_regd = sizeof(struct ieee80211_regdomain) +
-		       num_rules * sizeof(struct ieee80211_reg_rule);
+		((num_rules + 1) * sizeof(struct ieee80211_reg_rule));
 
 	rd = kzalloc(size_of_regd, GFP_KERNEL);
 	if (!rd)
 		return NULL;
 
-	for (x = 0; x < rd1->n_reg_rules && rule_idx < num_rules; x++) {
+	for (x = 0; x < rd1->n_reg_rules; x++) {
 		rule1 = &rd1->reg_rules[x];
-		for (y = 0; y < rd2->n_reg_rules && rule_idx < num_rules; y++) {
+		for (y = 0; y < rd2->n_reg_rules; y++) {
 			rule2 = &rd2->reg_rules[y];
 			/*
 			 * This time around instead of using the stack lets
