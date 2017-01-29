@@ -306,11 +306,11 @@ static bool is_cfg80211_regdom_intersected(void)
 	return is_intersected_alpha2(cfg80211_regdomain->alpha2);
 }
 
-static int reg_copy_regd(const struct ieee80211_regdomain **dst_regd,
-			 const struct ieee80211_regdomain *src_regd)
+static const struct ieee80211_regdomain *
+reg_copy_regd(const struct ieee80211_regdomain *src_regd)
 {
 	struct ieee80211_regdomain *regd;
-	int size_of_regd = 0;
+	int size_of_regd;
 	unsigned int i;
 
 	size_of_regd =
@@ -319,16 +319,15 @@ static int reg_copy_regd(const struct ieee80211_regdomain **dst_regd,
 
 	regd = kzalloc(size_of_regd, GFP_KERNEL);
 	if (!regd)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
 	memcpy(regd, src_regd, sizeof(struct ieee80211_regdomain));
 
 	for (i = 0; i < src_regd->n_reg_rules; i++)
 		memcpy(&regd->reg_rules[i], &src_regd->reg_rules[i],
-			sizeof(struct ieee80211_reg_rule));
+		       sizeof(struct ieee80211_reg_rule));
 
-	*dst_regd = regd;
-	return 0;
+	return regd;
 }
 
 #ifdef CONFIG_CFG80211_INTERNAL_REGDB
@@ -343,8 +342,8 @@ static DEFINE_MUTEX(reg_regdb_search_mutex);
 static void reg_regdb_search(struct work_struct *work)
 {
 	struct reg_regdb_search_request *request;
-	const struct ieee80211_regdomain *curdom, *regdom;
-	int i, r;
+	const struct ieee80211_regdomain *curdom, *regdom = NULL;
+	int i;
 
 	mutex_lock(&reg_regdb_search_mutex);
 	while (!list_empty(&reg_regdb_search_list)) {
@@ -357,9 +356,7 @@ static void reg_regdb_search(struct work_struct *work)
 			curdom = reg_regdb[i];
 
 			if (!memcmp(request->alpha2, curdom->alpha2, 2)) {
-				r = reg_copy_regd(&regdom, curdom);
-				if (r)
-					break;
+				regdom = reg_copy_regd(curdom);
 				mutex_lock(&cfg80211_mutex);
 				set_regdom(regdom);
 				mutex_unlock(&cfg80211_mutex);
@@ -1429,6 +1426,7 @@ static void reg_set_request_processed(void)
 static int __regulatory_hint(struct wiphy *wiphy,
 			     struct regulatory_request *pending_request)
 {
+	const struct ieee80211_regdomain *regd;
 	bool intersect = false;
 	int r = 0;
 
@@ -1439,11 +1437,12 @@ static int __regulatory_hint(struct wiphy *wiphy,
 	if (r == REG_INTERSECT) {
 		if (pending_request->initiator ==
 		    NL80211_REGDOM_SET_BY_DRIVER) {
-			r = reg_copy_regd(&wiphy->regd, cfg80211_regdomain);
-			if (r) {
+			regd = reg_copy_regd(cfg80211_regdomain);
+			if (IS_ERR(regd)) {
 				kfree(pending_request);
-				return r;
+				return PTR_ERR(regd);
 			}
+			wiphy->regd = regd;
 		}
 		intersect = true;
 	} else if (r) {
@@ -1455,12 +1454,13 @@ static int __regulatory_hint(struct wiphy *wiphy,
 		if (r == -EALREADY &&
 		    pending_request->initiator ==
 		    NL80211_REGDOM_SET_BY_DRIVER) {
-			r = reg_copy_regd(&wiphy->regd, cfg80211_regdomain);
-			if (r) {
+			regd = reg_copy_regd(cfg80211_regdomain);
+			if (IS_ERR(regd)) {
 				kfree(pending_request);
-				return r;
+				return PTR_ERR(regd);
 			}
 			r = -EALREADY;
+			wiphy->regd = regd;
 			goto new_request;
 		}
 		kfree(pending_request);
@@ -2149,6 +2149,7 @@ static void print_regdomain_info(const struct ieee80211_regdomain *rd)
 /* Takes ownership of rd only if it doesn't fail */
 static int __set_regdom(const struct ieee80211_regdomain *rd)
 {
+	const struct ieee80211_regdomain *regd;
 	const struct ieee80211_regdomain *intersected_rd = NULL;
 	struct cfg80211_registered_device *rdev = NULL;
 	struct wiphy *request_wiphy;
@@ -2207,8 +2208,6 @@ static int __set_regdom(const struct ieee80211_regdomain *rd)
 	}
 
 	if (!last_request->intersect) {
-		int r;
-
 		if (last_request->initiator != NL80211_REGDOM_SET_BY_DRIVER) {
 			reset_regdomains(false);
 			cfg80211_regdomain = rd;
@@ -2227,10 +2226,11 @@ static int __set_regdom(const struct ieee80211_regdomain *rd)
 		if (request_wiphy->regd)
 			return -EALREADY;
 
-		r = reg_copy_regd(&request_wiphy->regd, rd);
-		if (r)
-			return r;
+		regd = reg_copy_regd(rd);
+		if (IS_ERR(regd))
+			return PTR_ERR(regd);
 
+		request_wiphy->regd = regd;
 		reset_regdomains(false);
 		cfg80211_regdomain = rd;
 		return 0;
