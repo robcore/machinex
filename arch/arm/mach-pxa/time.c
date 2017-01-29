@@ -104,7 +104,7 @@ static struct irqaction pxa_ost0_irq = {
 	.dev_id		= &ckevt_pxa_osmr0,
 };
 
-static void __init pxa_timer_init(void)
+void __init pxa_timer_init(void)
 {
 	unsigned long clock_tick_rate = get_clock_tick_rate();
 

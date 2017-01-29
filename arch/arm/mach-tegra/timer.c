@@ -176,7 +176,7 @@ static void __init tegra_twd_init(void)
 #define tegra_twd_init()	do {} while(0)
 #endif
 
-static void __init tegra_init_timer(void)
+void __init tegra_init_timer(void)
 {
 	struct clk *clk;
 	unsigned long rate;

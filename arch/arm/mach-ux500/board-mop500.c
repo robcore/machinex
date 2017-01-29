@@ -719,7 +719,7 @@ MACHINE_START(U8500, "ST-Ericsson MOP500 platform")
 	.map_io		= u8500_map_io,
 	.init_irq	= ux500_init_irq,
 	/* we re-use nomadik timer here */
-	.timer		= &ux500_timer,
+	.init_time	= ux500_timer_init,
 	.handle_irq	= gic_handle_irq,
 	.init_machine	= mop500_init_machine,
 MACHINE_END
@@ -728,7 +728,7 @@ MACHINE_START(HREFV60, "ST-Ericsson U8500 Platform HREFv60+")
 	.atag_offset	= 0x100,
 	.map_io		= u8500_map_io,
 	.init_irq	= ux500_init_irq,
-	.timer		= &ux500_timer,
+	.init_time	= ux500_timer_init,
 	.handle_irq	= gic_handle_irq,
 	.init_machine	= hrefv60_init_machine,
 MACHINE_END
@@ -738,7 +738,7 @@ MACHINE_START(SNOWBALL, "Calao Systems Snowball platform")
 	.map_io		= u8500_map_io,
 	.init_irq	= ux500_init_irq,
 	/* we re-use nomadik timer here */
-	.timer		= &ux500_timer,
+	.init_time	= ux500_timer_init,
 	.handle_irq	= gic_handle_irq,
 	.init_machine	= snowball_init_machine,
 MACHINE_END

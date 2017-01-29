@@ -84,7 +84,7 @@ static struct irqaction sa1100_timer_irq = {
 	.dev_id		= &ckevt_sa1100_osmr0,
 };
 
-static void __init sa1100_timer_init(void)
+void __init sa1100_timer_init(void)
 {
 	OIER = 0;
 	OSSR = OSSR_M0 | OSSR_M1 | OSSR_M2 | OSSR_M3;

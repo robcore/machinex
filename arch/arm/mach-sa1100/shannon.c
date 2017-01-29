@@ -102,7 +102,7 @@ MACHINE_START(SHANNON, "Shannon (AKA: Tuxscreen)")
 	.map_io		= shannon_map_io,
 	.nr_irqs	= SA1100_NR_IRQS,
 	.init_irq	= sa1100_init_irq,
-	.timer		= &sa1100_timer,
+	.init_time	= sa1100_timer_init,
 	.init_machine	= shannon_init,
 	.restart	= sa11x0_restart,
 MACHINE_END

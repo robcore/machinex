@@ -539,7 +539,7 @@ MACHINE_START(ASSABET, "Intel-Assabet")
 	.map_io		= assabet_map_io,
 	.nr_irqs	= SA1100_NR_IRQS,
 	.init_irq	= sa1100_init_irq,
-	.timer		= &sa1100_timer,
+	.init_time	= sa1100_timer_init,
 	.init_machine	= assabet_init,
 #ifdef CONFIG_SA1111
 	.dma_zone_size	= SZ_1M,

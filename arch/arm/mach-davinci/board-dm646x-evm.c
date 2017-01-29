@@ -796,7 +796,7 @@ MACHINE_START(DAVINCI_DM6467TEVM, "DaVinci DM6467T EVM")
 	.atag_offset  = 0x100,
 	.map_io       = davinci_map_io,
 	.init_irq     = davinci_irq_init,
-	.timer        = &davinci_timer,
+	.init_time	= davinci_timer_init,
 	.init_machine = evm_init,
 	.dma_zone_size	= SZ_128M,
 	.restart	= davinci_restart,

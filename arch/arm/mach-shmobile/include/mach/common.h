@@ -35,6 +35,7 @@ extern struct clk sh7377_extal2_clk;
 
 extern void sh7372_init_irq(void);
 extern void sh7372_map_io(void);
+extern void sh7372_earlytimer_init(void);
 extern void sh7372_add_early_devices(void);
 extern void sh7372_add_standard_devices(void);
 extern void sh7372_clock_init(void);
@@ -47,6 +48,7 @@ extern struct clk sh7372_extal2_clk;
 
 extern void sh73a0_init_irq(void);
 extern void sh73a0_map_io(void);
+extern void sh73a0_earlytimer_init(void);
 extern void sh73a0_add_early_devices(void);
 extern void sh73a0_add_standard_devices(void);
 extern void sh73a0_clock_init(void);
@@ -70,6 +72,7 @@ extern void r8a7740_pinmux_init(void);
 
 extern void r8a7779_init_irq(void);
 extern void r8a7779_map_io(void);
+extern void r8a7779_earlytimer_init(void);
 extern void r8a7779_add_early_devices(void);
 extern void r8a7779_add_standard_devices(void);
 extern void r8a7779_clock_init(void);

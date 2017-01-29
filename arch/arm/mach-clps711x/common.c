@@ -199,7 +199,7 @@ static struct irqaction clps711x_timer_irq = {
 	.handler	= p720t_timer_interrupt,
 };
 
-static void __init clps711x_timer_init(void)
+void __init clps711x_timer_init(void)
 {
 	struct timespec tv;
 	unsigned int syscon;

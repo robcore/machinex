@@ -50,7 +50,7 @@ MACHINE_START(TI8168EVM, "ti8168evm")
 	.map_io		= ti81xx_map_io,
 	.init_early	= ti81xx_init_early,
 	.init_irq	= ti81xx_init_irq,
-	.timer		= &omap3_timer,
+	.init_time	= omap3_sync32k_timer_init,
 	.init_machine	= ti81xx_evm_init,
 	.restart	= omap_prcm_restart,
 MACHINE_END
@@ -61,7 +61,7 @@ MACHINE_START(TI8148EVM, "ti8148evm")
 	.map_io		= ti81xx_map_io,
 	.init_early	= ti81xx_init_early,
 	.init_irq	= ti81xx_init_irq,
-	.timer		= &omap3_timer,
+	.init_time	= omap3_sync32k_timer_init,
 	.init_machine	= ti81xx_evm_init,
 	.restart	= omap_prcm_restart,
 MACHINE_END

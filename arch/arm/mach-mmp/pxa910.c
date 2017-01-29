@@ -129,7 +129,7 @@ postcore_initcall(pxa910_init);
 /* system timer - clock enabled, 3.25MHz */
 #define TIMER_CLK_RST	(APBC_APBCLK | APBC_FNCLK | APBC_FNCLKSEL(3))
 
-static void __init pxa910_timer_init(void)
+void __init pxa910_timer_init(void)
 {
 	/* reset and configure */
 	__raw_writel(APBC_APBCLK | APBC_RST, APBC_PXA910_TIMERS);
@@ -137,10 +137,6 @@ static void __init pxa910_timer_init(void)
 
 	timer_init(IRQ_PXA910_AP1_TIMER1);
 }
-
-struct sys_timer pxa910_timer = {
-	.init	= pxa910_timer_init,
-};
 
 /* on-chip devices */
 

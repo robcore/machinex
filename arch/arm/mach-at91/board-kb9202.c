@@ -135,7 +135,7 @@ static void __init kb9202_board_init(void)
 
 MACHINE_START(KB9200, "KB920x")
 	/* Maintainer: KwikByte, Inc. */
-	.timer		= &at91rm9200_timer,
+	.init_time	= at91rm9200_timer_init,
 	.map_io		= at91_map_io,
 	.init_early	= kb9202_init_early,
 	.init_irq	= at91_init_irq_default,

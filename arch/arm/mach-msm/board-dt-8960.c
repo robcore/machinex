@@ -42,7 +42,7 @@ static const char * const msm8960_dt_match[] __initconst = {
 DT_MACHINE_START(MSM8960_DT, "Qualcomm MSM (Flattened Device Tree)")
 	.map_io = msm_map_msm8960_io,
 	.init_irq = msm_dt_init_irq,
-	.timer = &msm_dt_timer,
+	.init_time	= msm_dt_timer_init,
 	.init_machine = msm_dt_init,
 	.dt_compat = msm8960_dt_match,
 	.handle_irq = gic_handle_irq,

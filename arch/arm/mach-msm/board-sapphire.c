@@ -54,7 +54,7 @@ static struct platform_device *devices[] __initdata = {
 	&msm_device_uart3,
 };
 
-extern struct sys_timer msm_timer;
+void msm_timer_init(void);
 
 static void __init sapphire_init_irq(void)
 {

@@ -175,7 +175,7 @@ static int __init mmp2_init(void)
 }
 postcore_initcall(mmp2_init);
 
-static void __init mmp2_timer_init(void)
+void __init mmp2_timer_init(void)
 {
 	unsigned long clk_rst;
 
@@ -190,10 +190,6 @@ static void __init mmp2_timer_init(void)
 
 	timer_init(IRQ_MMP2_TIMER1);
 }
-
-struct sys_timer mmp2_timer = {
-	.init	= mmp2_timer_init,
-};
 
 /* on-chip devices */
 MMP2_DEVICE(uart1, "pxa2xx-uart", 0, UART1, 0xd4030000, 0x30, 4, 5);
