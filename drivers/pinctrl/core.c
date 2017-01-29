@@ -598,7 +598,7 @@ static struct pinctrl *create_pinctrl(struct device *dev)
 
 	kref_init(&p->users);
 
-	/* Add the pinmux to the global list */
+	/* Add the pinctrl handle to the global list */
 	list_add_tail(&p->node, &pinctrl_list);
 
 	return p;
