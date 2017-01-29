@@ -578,6 +578,16 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	}
 }
 
+/* Added for led common class */
+static ssize_t show_an30259a_led_lowpower(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct an30259a_data *data = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n", LED_LOWPOWER_MODE);
+}
+
+
 static ssize_t store_an30259a_led_lowpower(struct device *dev,
 					struct device_attribute *devattr,
 					const char *buf, size_t count)
@@ -593,8 +603,6 @@ static ssize_t store_an30259a_led_lowpower(struct device *dev,
 	}
 
 	LED_LOWPOWER_MODE = led_lowpower;
-
-	printk(KERN_DEBUG "led_lowpower mode set to %i\n", led_lowpower);
 
 	return count;
 }
@@ -994,7 +1002,7 @@ static DEVICE_ATTR(led_slope, 0664, show_an30259a_led_slope, \
 					store_an30259a_led_slope);
 static DEVICE_ATTR(led_br_lev, 0664, NULL, \
 					store_an30259a_led_br_lev);
-static DEVICE_ATTR(led_lowpower, 0664, NULL, \
+static DEVICE_ATTR(led_lowpower, 0664, show_an30259a_led_lowpower, \
 					store_an30259a_led_lowpower);
 
 
