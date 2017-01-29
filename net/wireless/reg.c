@@ -2406,10 +2406,6 @@ int __init regulatory_init(void)
 		 * errors as non-fatal.
 		 */
 		pr_err("kobject_uevent_env() was unable to call CRDA during init\n");
-#ifdef CONFIG_CFG80211_REG_DEBUG
-		/* We want to find out exactly why when debugging */
-		WARN_ON(err);
-#endif
 	}
 
 	/*
