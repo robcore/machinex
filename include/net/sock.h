@@ -350,7 +350,7 @@ struct sock {
 	unsigned short		sk_ack_backlog;
 	unsigned short		sk_max_ack_backlog;
 	__u32			sk_priority;
-#if IS_ENABLED(CONFIG_NETPRIO_CGROUP)
+#ifdef CONFIG_CGROUPS
 	__u32			sk_cgrp_prioidx;
 #endif
 	struct pid		*sk_peer_pid;
