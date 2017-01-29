@@ -693,7 +693,7 @@ static void cam_ldo_power_on(int mode)
 	{"cam_vana", REG_LDO, 2800000, 2850000, 85600},
 	{"cam_vaf", REG_LDO, 2800000, 2800000, 300000},
 };*/
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 		__func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*Reset Main clock*/
@@ -705,7 +705,7 @@ static void cam_ldo_power_on(int mode)
 	l29 = regulator_get(NULL, "8921_lvs5");
 	ret = regulator_enable(l29);
 	if (ret)
-		printk("error enabling regulator 8921_lvs5\n");
+		pr_debug("error enabling regulator 8921_lvs5\n");
 #if defined (CONFIG_MACH_ESPRESSO10_SPR)
 static struct camera_vreg_t msm_8960_mt9m114_vreg[] = {
 	{"cam_vio", REG_VS, 0, 0, 0},
@@ -721,10 +721,10 @@ static struct camera_vreg_t msm_8960_mt9m114_vreg[] = {
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage l18\n");
+		pr_debug("error setting voltage l18\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator l18\n");
+		pr_debug("error enabling regulator l18\n");
 
 	usleep(10);
 
@@ -737,10 +737,10 @@ static struct camera_vreg_t msm_8960_mt9m114_vreg[] = {
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 
 }
@@ -753,7 +753,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	}
 /*static struct camera_vreg_t msm_8960_s5k3l1yx_vreg[] = {
@@ -767,14 +767,14 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
@@ -789,32 +789,32 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*3M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 	usleep(10);
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 	usleep(20);
 
 /*VT core 1.8V - VTCAM_CORE_1.8V*/
 	gpio_set_value_cansleep(GPIO_CAM_VTCORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_VTCORE_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_VTCORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_VTCORE_EN : %d\n", ret);
 	usleep(15);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 		l29 = regulator_get(NULL, "8921_lvs5");
 		ret = regulator_enable(l29);
 		if (ret)
-			printk("error enabling regulator 8921_lvs6\n");
+			pr_debug("error enabling regulator 8921_lvs6\n");
 
 }
 
@@ -822,7 +822,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 
@@ -831,7 +831,7 @@ static void cam_ldo_power_off(int mode)
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*VT core 1.8V - VTCAM_CORE_1.8V*/
@@ -849,36 +849,36 @@ static void cam_ldo_power_on(int mode)
 	{
 		int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s KONA CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s KONA CAMERA POWER ON!!\n",
 			   __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	l29 = regulator_get(NULL, "8921_lvs5");
 	ret = regulator_enable(l29);
 	if (ret)
-		printk("error enabling regulator 8921_lvs5\n");
-	
-	printk(KERN_DEBUG "check CAM_SENSOR_IO_1P8 : %d\n", ret);
+		pr_debug("error enabling regulator 8921_lvs5\n");
+
+	pr_debug(KERN_DEBUG "check CAM_SENSOR_IO_1P8 : %d\n", ret);
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	l16 = regulator_get(NULL, "8921_l16");
 	ret = regulator_set_voltage(l16, 2800000, 2800000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l16);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /*VT core 1.5V - CAM_DVDD_1P5V*/
 	l30 = regulator_get(NULL, "8921_lvs6");
 	ret = regulator_enable(l30);
 	if (ret)
-		printk("error enabling regulator 8921_lv6\n");
+		pr_debug("error enabling regulator 8921_lv6\n");
 	usleep(20);
 
 #if 1
@@ -887,20 +887,20 @@ static void cam_ldo_power_on(int mode)
 		l8 = regulator_get(NULL, "8921_l8");
 		ret = regulator_set_voltage(l8, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l8);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
-	printk(KERN_DEBUG "check CAM_AF_2P8 : %d\n", ret);
-#endif	
+	pr_debug(KERN_DEBUG "check CAM_AF_2P8 : %d\n", ret);
+#endif
 }
 
 static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s KONA CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s KONA CAMERA POWER OFF!!\n",
 		   __func__, __LINE__, mode ? "FRONT" : "REAR");
 #if 1
 /*Sensor AF 2.8V -CAM_AF_2P8  */
@@ -908,7 +908,7 @@ static void cam_ldo_power_off(int mode)
 		if (l8) {
 			ret = regulator_disable(l8);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	}
 #endif
@@ -916,26 +916,26 @@ static void cam_ldo_power_off(int mode)
 	if (l30) {
 		ret = regulator_disable(l30);
 		if (ret)
-			printk(" l30 error disabling regulator\n");
+			pr_debug(" l30 error disabling regulator\n");
 	}
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	if (l16) {
 		ret = regulator_disable(l16);
 		if (ret)
-			printk(" l16 error disabling regulator\n");
+			pr_debug(" l16 error disabling regulator\n");
 	}
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk(" l29 error disabling regulator\n");
+			pr_debug(" l29 error disabling regulator\n");
 	}
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 0);
-    printk(KERN_DEBUG "OFF CAM_CORE_EN \n");
+    pr_debug(KERN_DEBUG "OFF CAM_CORE_EN \n");
 
 }
 #elif defined(CONFIG_ISX012) && defined(CONFIG_S5K8AAY) /* JAGUAR */
@@ -943,7 +943,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*Reset Main clock*/
@@ -964,10 +964,10 @@ static void cam_ldo_power_on(int mode)
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1200000, 1200000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 	usleep(500);
 
@@ -975,12 +975,12 @@ static void cam_ldo_power_on(int mode)
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
-	printk(KERN_DEBUG "CAM_SENSOR_IO_1P8 in system_rev = %d\n", system_rev);
+	pr_debug(KERN_DEBUG "CAM_SENSOR_IO_1P8 in system_rev = %d\n", system_rev);
 	if (system_rev >= BOARD_REV10) { /* HW rev0.9 */
 		l29 = regulator_get(NULL, "8921_lvs5");
 		ret = regulator_enable(l29);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	} else {
 		if (system_rev >= BOARD_REV04)
 			gpio_set_value_cansleep(GPIO_CAM_SENSOR_IO_EN, 1);
@@ -989,15 +989,15 @@ static void cam_ldo_power_on(int mode)
 			l29 = regulator_get(NULL, "8921_lvs5");
 			ret = regulator_enable(l29);
 			if (ret)
-				printk("error enabling regulator\n");
+				pr_debug("error enabling regulator\n");
 		} else {
 			l29 = regulator_get(NULL, "cam_vio");
 			ret = regulator_set_voltage(l29, 1800000, 1800000);
 			if (ret)
-				printk("error setting voltage\n");
+				pr_debug("error setting voltage\n");
 			ret = regulator_enable(l29);
 			if (ret)
-				printk("error enabling regulator\n");
+				pr_debug("error enabling regulator\n");
 		}
 	}
 
@@ -1006,10 +1006,10 @@ static void cam_ldo_power_on(int mode)
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 
 /*standy VT */
@@ -1031,7 +1031,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*Flash Lock*/
@@ -1047,7 +1047,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		mdelay(1);
 	}
@@ -1058,7 +1058,7 @@ static void cam_ldo_power_off(int mode)
 		if (l29) {
 			ret = regulator_disable(l29);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	} else {
 		if (system_rev >= BOARD_REV04) {
@@ -1070,7 +1070,7 @@ static void cam_ldo_power_off(int mode)
 			if (l29) {
 				ret = regulator_disable(l29);
 				if (ret)
-					printk("error disabling regulator\n");
+					pr_debug("error disabling regulator\n");
 			}
 		}
 	}
@@ -1078,7 +1078,7 @@ static void cam_ldo_power_off(int mode)
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 #endif
 	mdelay(1);
@@ -1091,7 +1091,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 	mdelay(1);
 
@@ -1099,7 +1099,7 @@ static void cam_ldo_power_off(int mode)
 		if (l12) {
 			ret = regulator_disable(l12);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		mdelay(1);
 	}
@@ -1114,50 +1114,50 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
-	printk(KERN_DEBUG "CAM_SENSOR_IO_1P8 in system_rev = %d\n", system_rev);
+	pr_debug(KERN_DEBUG "CAM_SENSOR_IO_1P8 in system_rev = %d\n", system_rev);
 	gpio_set_value_cansleep(GPIO_CAM_SENSOR_IO_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_SENSOR_IO_EN);
-	printk(KERN_DEBUG "check CAM_SENSOR_IO_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_SENSOR_IO_EN : %d\n", ret);
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 
 /*VT core 1.2V - CAM_DVDD_1P2V*/
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 
 	if (mode) {
 		/* front power up seq -5M Core 1.2V = 0 */
 		usleep(1000);
 		gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 0);
 		ret = gpio_get_value(GPIO_CAM_CORE_EN);
-		printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+		pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 	}
 /*Sensor AF 2.8V -CAM_AF_2P8  */
 	if (!mode) {
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 }
 
@@ -1165,7 +1165,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 
@@ -1174,7 +1174,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 }
 
@@ -1182,7 +1182,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
@@ -1203,7 +1203,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 	isSensorPowered = true;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_UNLOCK*/
@@ -1213,7 +1213,7 @@ static void cam_ldo_power_on(int mode)
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		ret = gpio_get_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK));
-		printk(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
+		pr_debug(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
 	}
 #else
 	if (!mode && torchonoff == 0) {
@@ -1221,37 +1221,37 @@ static void cam_ldo_power_on(int mode)
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		ret = gpio_get_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK));
-		printk(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
+		pr_debug(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
 	}
 #endif
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 	usleep(1000);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	l29 = regulator_get(NULL, "8921_lvs5");
 	ret = regulator_enable(l29);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 	usleep(1000);
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 	usleep(1000);
 
 /*VT core 1.2V - CAM_DVDD_1P2V*/
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 
 /*Sensor AF 2.8V -CAM_AF_2P8  */
@@ -1259,10 +1259,10 @@ static void cam_ldo_power_on(int mode)
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 }
 
@@ -1270,7 +1270,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 	isSensorPowered = false;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_LOCK*/
@@ -1291,7 +1291,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		usleep(1000);
 	}
@@ -1300,7 +1300,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 	usleep(1000);
 
@@ -1312,7 +1312,7 @@ static void cam_ldo_power_off(int mode)
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 	usleep(1000);
 
@@ -1325,7 +1325,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 	isSensorPowered = true;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_UNLOCK*/
@@ -1334,35 +1334,35 @@ static void cam_ldo_power_on(int mode)
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		ret = gpio_get_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK));
-		printk(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
+		pr_debug(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
 	}
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 	usleep(1000);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	gpio_set_value_cansleep(GPIO_CAM_SENSOR_IO_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_SENSOR_IO_EN);
-	printk(KERN_DEBUG "check CAM_SENSOR_IO_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_SENSOR_IO_EN : %d\n", ret);
 	usleep(1000);
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 	usleep(1000);
 
 /*VT core 1.2V - CAM_DVDD_1P2V*/
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 	usleep(1000);
 
 
@@ -1371,10 +1371,10 @@ static void cam_ldo_power_on(int mode)
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 }
 
@@ -1382,7 +1382,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 	isSensorPowered = false;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_LOCK*/
@@ -1397,7 +1397,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	}
 
@@ -1405,7 +1405,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
@@ -1423,7 +1423,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 	isSensorPowered = true;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_UNLOCK*/
@@ -1432,44 +1432,44 @@ static void cam_ldo_power_on(int mode)
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		ret = gpio_get_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK));
-		printk(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
+		pr_debug(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
 	}
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	/* >= HW rev01 */
 	l29 = regulator_get(NULL, "8921_lvs5");
 	ret = regulator_enable(l29);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 
 /*VT core 1.2V - CAM_DVDD_1P2V*/
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /*Sensor AF 2.8V -CAM_AF_2P8  */
 	if (!mode) {
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 }
 
@@ -1477,7 +1477,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 	isSensorPowered = false;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_LOCK*/
@@ -1492,7 +1492,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	}
 
@@ -1500,7 +1500,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
@@ -1511,7 +1511,7 @@ static void cam_ldo_power_off(int mode)
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
@@ -1523,7 +1523,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 	isSensorPowered = true;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_UNLOCK*/
@@ -1532,42 +1532,42 @@ static void cam_ldo_power_on(int mode)
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		ret = gpio_get_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK));
-		printk(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
+		pr_debug(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
 	}
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 	usleep(1000);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	if (system_rev >= BOARD_REV02) {
 		gpio_set_value_cansleep(GPIO_CAM_SENSOR_IO_EN, 1);
 		ret = gpio_get_value(GPIO_CAM_SENSOR_IO_EN);
-		printk(KERN_DEBUG "check CAM_SENSOR_IO_EN : %d\n", ret);
+		pr_debug(KERN_DEBUG "check CAM_SENSOR_IO_EN : %d\n", ret);
 	} else {
 		l29 = regulator_get(NULL, "8921_lvs5");
 		ret = regulator_enable(l29);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 	usleep(1000);
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 	usleep(1000);
 
 /*VT core 1.2V - CAM_DVDD_1P2V*/
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 
 /*Sensor AF 2.8V -CAM_AF_2P8  */
@@ -1575,10 +1575,10 @@ static void cam_ldo_power_on(int mode)
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 }
 
@@ -1586,7 +1586,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 	isSensorPowered = false;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_LOCK*/
@@ -1600,7 +1600,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		usleep(1000);
 	}
@@ -1609,7 +1609,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 	usleep(1000);
 
@@ -1624,7 +1624,7 @@ static void cam_ldo_power_off(int mode)
 		if (l29) {
 			ret = regulator_disable(l29);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	}
 	usleep(1000);
@@ -1638,7 +1638,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 	isSensorPowered = true;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_UNLOCK*/
@@ -1647,42 +1647,42 @@ static void cam_ldo_power_on(int mode)
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		ret = gpio_get_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK));
-		printk(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
+		pr_debug(KERN_DEBUG "check FLASH_LED_UNLOCK : %d\n", ret);
 	}
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
 	gpio_set_value_cansleep(GPIO_CAM_CORE_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_CORE_EN);
-	printk(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check CAM_CORE_EN : %d\n", ret);
 
 /*Sensor IO 1.8V -CAM_SENSOR_IO_1P8  */
 	l29 = regulator_get(NULL, "8921_lvs5");
 	ret = regulator_enable(l29);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
 	gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 	ret = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
+	pr_debug(KERN_DEBUG "check GPIO_CAM_A_EN : %d\n", ret);
 
 /*VT core 1.2V - CAM_DVDD_1P2V*/
 	l18 = regulator_get(NULL, "8921_l18");
 	ret = regulator_set_voltage(l18, 1500000, 1500000);
 	if (ret)
-		printk("error setting voltage\n");
+		pr_debug("error setting voltage\n");
 	ret = regulator_enable(l18);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /*Sensor AF 2.8V -CAM_AF_2P8  */
 	if (!mode) {
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 }
 
@@ -1690,7 +1690,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 	isSensorPowered = false;
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* FLASH_LED_LOCK*/
@@ -1704,7 +1704,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 	}
 
@@ -1712,7 +1712,7 @@ static void cam_ldo_power_off(int mode)
 	if (l18) {
 		ret = regulator_disable(l18);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*Sensor AVDD 2.8V - CAM_SENSOR_A2P8 */
@@ -1722,7 +1722,7 @@ static void cam_ldo_power_off(int mode)
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 
 /*5M Core 1.2V - CAM_ISP_CORE_1P2*/
@@ -1733,12 +1733,12 @@ static void cam_ldo_power_off(int mode)
 #else
 static void cam_ldo_power_on(int mode)
 {
-	printk(KERN_DEBUG "default cam_ldo_power_on");
+	pr_debug(KERN_DEBUG "default cam_ldo_power_on");
 }
 
 static void cam_ldo_power_off(int mode)
 {
-	printk(KERN_DEBUG "default cam_ldo_power_off");
+	pr_debug(KERN_DEBUG "default cam_ldo_power_off");
 }
 #endif
 #elif defined(CONFIG_ISX012) && defined(CONFIG_S5K6A3YX) /* stretto */
@@ -1746,7 +1746,7 @@ static void cam_ldo_power_on(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /*Reset Main clock*/
@@ -1766,7 +1766,7 @@ static void cam_ldo_power_on(int mode)
 	l29 = regulator_get(NULL, "8921_lvs5");
 	ret = regulator_enable(l29);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 
 /* VT XSHUTDOWN */
 	if (mode)
@@ -1782,10 +1782,10 @@ static void cam_ldo_power_on(int mode)
 		l11 = regulator_get(NULL, "8921_l11");
 		ret = regulator_set_voltage(l11, 2800000, 2800000);
 		if (ret)
-			printk("error setting voltage\n");
+			pr_debug("error setting voltage\n");
 		ret = regulator_enable(l11);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 	}
 
 /*Set Main clock */
@@ -1805,7 +1805,7 @@ static void cam_ldo_power_off(int mode)
 {
 	int ret = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 /* VT XSHUTDOWN */
@@ -1817,7 +1817,7 @@ static void cam_ldo_power_off(int mode)
 		if (l11) {
 			ret = regulator_disable(l11);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		mdelay(1);
 	}
@@ -1830,7 +1830,7 @@ static void cam_ldo_power_off(int mode)
 	if (l29) {
 		ret = regulator_disable(l29);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 	mdelay(1);
 
@@ -1855,28 +1855,28 @@ static void cam_set_isp_core(int level)
 
 #if defined(CONFIG_MACH_M2_DCM)
 	if (level == 1000000) {
-		pr_err("Change core voltage\n");
+		pr_debug("Change core voltage\n");
 		vddCore = 1060000;
 	} else if (level == 1050000) {
-		pr_err("Change core voltage\n");
+		pr_debug("Change core voltage\n");
 		vddCore = 1110000;
 	} else if (level == 1100000) {
-		pr_err("Change core voltage\n");
+		pr_debug("Change core voltage\n");
 		vddCore = 1170000;
 	} else if (level == 1150000) {
-		pr_err("Change core voltage\n");
+		pr_debug("Change core voltage\n");
 		vddCore = 1230000;
 	} else
 		vddCore = level;
 #else
 	if (level == 1050000) {
-		pr_err("Change core voltage\n");
+		pr_debug("Change core voltage\n");
 		vddCore = 1100000;
 	} else
 		vddCore = level;
 #endif
 	isVddCoreSet = true;
-	pr_err("ISP CORE = %d\n", vddCore);
+	pr_debug("ISP CORE = %d\n", vddCore);
 }
 
 static bool cam_is_vdd_core_set(void)
@@ -1889,16 +1889,16 @@ void power_on_flash(void)
 	int temp = 0;
 	int ret = 0;
 	if(!isFlashCntlEn)
-	{			
-		temp = gpio_get_value(GPIO_MSM_FLASH_NOW);		
-		if (isFlashCntlEn == 0 && temp == 0) {		
+	{
+		temp = gpio_get_value(GPIO_MSM_FLASH_NOW);
+		if (isFlashCntlEn == 0 && temp == 0) {
 		/* FLASH_LED_UNLOCK*/
 		gpio_set_value_cansleep(PM8921_MPP_PM_TO_SYS
 			(PMIC_MPP_FLASH_LED_UNLOCK), 1);
 		/* GPIO_CAM_FLASH_SW : tourch */
 		gpio_set_value_cansleep(gpio_cam_flash_sw, 1);
 		temp = gpio_get_value(gpio_cam_flash_sw);
-		printk("[s5c73m3] check GPIO_CAM_FLASH_SW : %d\n", temp);
+		pr_debug("[s5c73m3] check GPIO_CAM_FLASH_SW : %d\n", temp);
 		usleep(1*1000);
 		}
 
@@ -1906,18 +1906,18 @@ void power_on_flash(void)
 		l28 = regulator_get(NULL, "8921_lvs4");
 		ret = regulator_enable(l28);
 		if (ret)
-			printk("error enabling regulator\n");
+			pr_debug("error enabling regulator\n");
 		usleep(1*1000);
 		isFlashCntlEn = true;
 	}
 }
-	
+
 static void cam_ldo_power_on(int mode, int num)
 {
 	int ret = 0;
 	int temp = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER ON!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 	if (mode) {		/* front camera */
@@ -1927,7 +1927,7 @@ static void cam_ldo_power_on(int mode, int num)
 			/* 8M AVDD 2.8V */
 			gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 			temp = gpio_get_value(GPIO_CAM_A_EN);
-			printk(KERN_DEBUG "[s5k6a3yx] check GPIO_CAM_A_EN : %d\n",
+			pr_debug(KERN_DEBUG "[s5k6a3yx] check GPIO_CAM_A_EN : %d\n",
 				temp);
 			usleep(1*1000);
 		}	else	{
@@ -1939,7 +1939,7 @@ static void cam_ldo_power_on(int mode, int num)
 			gpio_set_value_cansleep(CAM2_RST_N, 1);
 			temp = gpio_get_value(CAM2_RST_N);
 		#endif
-			printk(KERN_DEBUG "[s5k6a3yx] check CAM2_RST_N : %d\n",
+			pr_debug(KERN_DEBUG "[s5k6a3yx] check CAM2_RST_N : %d\n",
 				temp);
 			usleep(1*1000);
 
@@ -1947,7 +1947,7 @@ static void cam_ldo_power_on(int mode, int num)
 			l29 = regulator_get(NULL, "8921_lvs5");
 			ret = regulator_enable(l29);
 			if (ret)
-				printk("error enabling regulator\n");
+				pr_debug("error enabling regulator\n");
 			usleep(1*1000);
 
 			/* ISP 8M MIPI 1.2V */
@@ -1955,7 +1955,7 @@ static void cam_ldo_power_on(int mode, int num)
 		}
 	} else {		/* rear camera */
 		if (num == 0) {
-			printk(KERN_DEBUG "[s5c73m3] rear camera on 1\n");
+			pr_debug(KERN_DEBUG "[s5c73m3] rear camera on 1\n");
 
 			temp = gpio_get_value(GPIO_MSM_FLASH_NOW);
 
@@ -1966,7 +1966,7 @@ static void cam_ldo_power_on(int mode, int num)
 				/* GPIO_CAM_FLASH_SW : tourch */
 				gpio_set_value_cansleep(gpio_cam_flash_sw, 1);
 				temp = gpio_get_value(gpio_cam_flash_sw);
-				printk(KERN_DEBUG "[s5c73m3] check"
+				pr_debug(KERN_DEBUG "[s5c73m3] check"
 					" GPIO_CAM_FLASH_SW : %d\n", temp);
 				usleep(1*1000);
 			}
@@ -1975,71 +1975,71 @@ static void cam_ldo_power_on(int mode, int num)
 			l28 = regulator_get(NULL, "8921_lvs4");
 			ret = regulator_enable(l28);
 			if (ret)
-				printk("error enabling regulator\n");
+				pr_debug("error enabling regulator\n");
 			usleep(1*1000);
 
 			/* ISP CORE 1.2V */
 #ifdef CONFIG_MACH_M2_ATT
 			if (system_rev >= BOARD_REV03) {
-				printk(KERN_DEBUG "[s5c73m3] check vddCore : %d\n",
+				pr_debug(KERN_DEBUG "[s5c73m3] check vddCore : %d\n",
 					vddCore);
 
 				isp_core = regulator_get(NULL, "cam_isp_core");
 				ret = regulator_set_voltage(isp_core,
 					vddCore, vddCore);
 				if (ret)
-					printk("error setting voltage\n");
+					pr_debug("error setting voltage\n");
 
 				ret = regulator_enable(isp_core);
 				if (ret)
-					printk("error enabling regulator.");
+					pr_debug("error enabling regulator.");
 			}
 #elif defined(CONFIG_MACH_M2_VZW)
 			if (system_rev >= BOARD_REV08) {
-				printk(KERN_DEBUG "[s5c73m3] vzw check vddCore : %d\n",
+				pr_debug(KERN_DEBUG "[s5c73m3] vzw check vddCore : %d\n",
 					vddCore);
 
 				isp_core = regulator_get(NULL, "cam_isp_core");
 				ret = regulator_set_voltage(isp_core,
 					vddCore, vddCore);
 				if (ret)
-					printk("error setting voltage\n");
+					pr_debug("error setting voltage\n");
 
 				ret = regulator_enable(isp_core);
 				if (ret)
-					printk("error enabling regulator.");
+					pr_debug("error enabling regulator.");
 			} else
 				gpio_set_value_cansleep(CAM_CORE_EN, 1);
 #elif defined(CONFIG_MACH_M2_SPR)
 			if (system_rev >= BOARD_REV03) {
-				printk(KERN_DEBUG "[s5c73m3] spr check vddCore : %d\n",
+				pr_debug(KERN_DEBUG "[s5c73m3] spr check vddCore : %d\n",
 					vddCore);
 
 				isp_core = regulator_get(NULL, "cam_isp_core");
 				ret = regulator_set_voltage(isp_core,
 					vddCore, vddCore);
 				if (ret)
-					printk("error setting voltage\n");
+					pr_debug("error setting voltage\n");
 
 				ret = regulator_enable(isp_core);
 				if (ret)
-					printk("error enabling regulator.");
+					pr_debug("error enabling regulator.");
 			} else
 				gpio_set_value_cansleep(CAM_CORE_EN, 1);
 #elif defined(CONFIG_MACH_M2_DCM)
 			if (system_rev >= BOARD_REV03) {
-				printk(KERN_DEBUG "[s5c73m3] dcm check vddCore : %d\n",
+				pr_debug(KERN_DEBUG "[s5c73m3] dcm check vddCore : %d\n",
 					vddCore);
 
 				isp_core = regulator_get(NULL, "cam_isp_core");
 				ret = regulator_set_voltage(isp_core,
 					vddCore, vddCore);
 				if (ret)
-					printk("error setting voltage\n");
+					pr_debug("error setting voltage\n");
 
 				ret = regulator_enable(isp_core);
 				if (ret)
-					printk("error enabling regulator.");
+					pr_debug("error enabling regulator.");
 			} else
 				gpio_set_value_cansleep(gpio_rev(CAM_CORE_EN), 1);
 #elif defined(CONFIG_MACH_K2_KDI)
@@ -2052,22 +2052,22 @@ static void cam_ldo_power_on(int mode, int num)
 			/* 8M AVDD 2.8V */
 			gpio_set_value_cansleep(GPIO_CAM_A_EN, 1);
 			temp = gpio_get_value(GPIO_CAM_A_EN);
-			printk(KERN_DEBUG "[s5c73m3] check GPIO_CAM_A_EN : %d\n",
+			pr_debug(KERN_DEBUG "[s5c73m3] check GPIO_CAM_A_EN : %d\n",
 				temp);
 			usleep(1*1000);
 
 			/* 8M DVDD 1.2V */
 			gpio_set_value_cansleep(GPIO_CAM_SENSOR_EN, 1);
 			temp = gpio_get_value(GPIO_CAM_SENSOR_EN);
-			printk(KERN_DEBUG "[s5c73m3] check GPIO_CAM_SENSOR_EN : %d\n",
+			pr_debug(KERN_DEBUG "[s5c73m3] check GPIO_CAM_SENSOR_EN : %d\n",
 			       temp);
 			usleep(1*1000);
 		} else {
-			printk(KERN_DEBUG "[s5c73m3] rear camera on 2\n");
+			pr_debug(KERN_DEBUG "[s5c73m3] rear camera on 2\n");
 			/* AF 2.8V */
 			gpio_set_value_cansleep(gpio_rev(CAM_AF_EN), 1);
 			temp = gpio_get_value(gpio_rev(CAM_AF_EN));
-			printk(KERN_DEBUG "[s5c73m3] check CAM_AF_EN : %d\n",
+			pr_debug(KERN_DEBUG "[s5c73m3] check CAM_AF_EN : %d\n",
 			       temp);
 			usleep(3*1000);
 
@@ -2075,12 +2075,12 @@ static void cam_ldo_power_on(int mode, int num)
 			l29 = regulator_get(NULL, "8921_lvs5");
 			ret = regulator_enable(l29);
 			if (ret)
-				printk("error enabling regulator\n");
+				pr_debug("error enabling regulator\n");
 
 			/* ISP 8M MIPI 1.2V */
 			gpio_set_value_cansleep(CAM_MIPI_EN, 1);
 			temp = gpio_get_value(CAM_MIPI_EN);
-			printk(KERN_DEBUG "[s5c73m3] check CAM_MIPI_EN : %d\n",
+			pr_debug(KERN_DEBUG "[s5c73m3] check CAM_MIPI_EN : %d\n",
 				temp);
 			usleep(1*1000);
 
@@ -2091,7 +2091,7 @@ static void cam_ldo_power_on(int mode, int num)
 			/* ISP_RESET */
 			gpio_set_value_cansleep(ISP_RESET, 1);
 			temp = gpio_get_value(ISP_RESET);
-			printk(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n",
+			pr_debug(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n",
 				temp);
 			usleep(1*1000);
 		}
@@ -2104,7 +2104,7 @@ static void cam_ldo_power_off(int mode)
 	int ret = 0;
 	int temp = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s CAMERA POWER OFF!!\n",
 	       __func__, __LINE__, mode ? "FRONT" : "REAR");
 
 	if (mode) {		/* front camera */
@@ -2124,7 +2124,7 @@ static void cam_ldo_power_off(int mode)
 		if (l29) {
 			ret = regulator_disable(l29);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		usleep(1*1000);
 
@@ -2156,7 +2156,7 @@ static void cam_ldo_power_off(int mode)
 		if (l29) {
 			ret = regulator_disable(l29);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		usleep(1*1000);
 
@@ -2173,25 +2173,25 @@ static void cam_ldo_power_off(int mode)
 		if (system_rev >= BOARD_REV03)
 			ret = regulator_disable(isp_core);
 		if (ret)
-			printk("error disabling regulator");
+			pr_debug("error disabling regulator");
 		regulator_put(isp_core);
 #elif defined(CONFIG_MACH_M2_VZW)
 		if (system_rev >= BOARD_REV08)
 			ret = regulator_disable(isp_core);
 		if (ret)
-			printk("error disabling regulator");
+			pr_debug("error disabling regulator");
 		regulator_put(isp_core);
 #elif defined(CONFIG_MACH_M2_SPR)
 		if (system_rev >= BOARD_REV03)
 			ret = regulator_disable(isp_core);
 		if (ret)
-			printk("error disabling regulator");
+			pr_debug("error disabling regulator");
 		regulator_put(isp_core);
 #elif defined(CONFIG_MACH_M2_DCM)
 		if (system_rev >= BOARD_REV03){
 			ret = regulator_disable(isp_core);
 			if (ret)
-				printk("error disabling regulator");
+				pr_debug("error disabling regulator");
 			regulator_put(isp_core);
 		}
 		else
@@ -2207,7 +2207,7 @@ static void cam_ldo_power_off(int mode)
 		if (l28) {
 			ret = regulator_disable(l28);
 			if (ret)
-				printk("error disabling regulator\n");
+				pr_debug("error disabling regulator\n");
 		}
 		usleep(1*1000);
 
@@ -2218,7 +2218,7 @@ static void cam_ldo_power_off(int mode)
 			/* GPIO_CAM_FLASH_SW : tourch */
 			gpio_set_value_cansleep(gpio_cam_flash_sw, 0);
 			temp = gpio_get_value(gpio_cam_flash_sw);
-			printk(KERN_DEBUG "[s5c73m3] check"
+			pr_debug(KERN_DEBUG "[s5c73m3] check"
 				" GPIO_CAM_FLASH_SW : %d\n", temp);
 			/* FLASH_LED_LOCK*/
 			gpio_set_value_cansleep(PM8921_MPP_PM_TO_SYS
@@ -2235,12 +2235,12 @@ static void cam_isp_reset(void)
 	/* ISP_RESET */
 	gpio_set_value_cansleep(ISP_RESET, 0);
 	temp = gpio_get_value(ISP_RESET);
-	printk(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n", temp);
 	usleep(1*1000);
 	/* ISP_RESET */
 	gpio_set_value_cansleep(ISP_RESET, 1);
 	temp = gpio_get_value(ISP_RESET);
-	printk(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n", temp);
 	usleep(1*1000);
 }
 
@@ -2263,33 +2263,33 @@ void print_ldos(void)
 #else
 	temp = gpio_get_value(CAM_CORE_EN);
 #endif
-	printk(KERN_DEBUG "[s5c73m3] check CAM_CORE_EN : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check CAM_CORE_EN : %d\n", temp);
 
 	temp = gpio_get_value(GPIO_CAM_A_EN);
-	printk(KERN_DEBUG "[s5c73m3] check GPIO_CAM_A_EN : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check GPIO_CAM_A_EN : %d\n", temp);
 
 	temp = gpio_get_value(GPIO_CAM_SENSOR_EN);
-	printk(KERN_DEBUG "[s5c73m3] check GPIO_CAM_SENSOR_EN : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check GPIO_CAM_SENSOR_EN : %d\n", temp);
 
 	temp = gpio_get_value(CAM_MIPI_EN);
-	printk(KERN_DEBUG "[s5c73m3] check CAM_MIPI_EN : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check CAM_MIPI_EN : %d\n", temp);
 
 	temp = gpio_get_value(PM8921_GPIO_PM_TO_SYS(24));/*SPI_TEMP*/
-	printk(KERN_DEBUG "[s5c73m3] check ISP_STANDBY : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check ISP_STANDBY : %d\n", temp);
 
 	temp = gpio_get_value(ISP_RESET);
-	printk(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check ISP_RESET : %d\n", temp);
 
 }
 #else
 static void cam_ldo_power_on(int mode)
 {
-	printk(KERN_DEBUG "default cam_ldo_power_on");
+	pr_debug(KERN_DEBUG "default cam_ldo_power_on");
 }
 
 static void cam_ldo_power_off(int mode)
 {
-	printk(KERN_DEBUG "default cam_ldo_power_off");
+	pr_debug(KERN_DEBUG "default cam_ldo_power_off");
 }
 #endif
 
@@ -2490,7 +2490,7 @@ static struct msm_camera_sensor_flash_data flash_s5k5ccgx = {
 
 static struct msm_camera_sensor_platform_info sensor_board_info_s5k5ccgx = {
 	.sensor_reset	= GPIO_CAM1_RST_N,
-#if defined(CONFIG_MACH_JASPER) 
+#if defined(CONFIG_MACH_JASPER)
 	.mount_angle	= 90,
 	.sensor_stby	= PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_CAM_STBY),
 #elif defined(CONFIG_MACH_ESPRESSO_VZW)
@@ -2605,7 +2605,7 @@ static int aat1290a_setGpio(void)
 	int ret;
 	int temp = 0;
 
-	printk(KERN_DEBUG "[%s : %d]!!\n", __func__, __LINE__);
+	pr_debug(KERN_DEBUG "[%s : %d]!!\n", __func__, __LINE__);
 
 #if defined(CONFIG_S5C73M3) && defined(CONFIG_S5K6A3YX) /* D2 */
 	/* FLASH_LED_UNLOCK*/
@@ -2616,14 +2616,14 @@ static int aat1290a_setGpio(void)
 	/* GPIO_CAM_FLASH_SW : tourch */
 	gpio_set_value_cansleep(gpio_cam_flash_sw, 0);
 	temp = gpio_get_value(gpio_cam_flash_sw);
-	printk(KERN_DEBUG "[s5c73m3] check GPIO_CAM_FLASH_SW : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check GPIO_CAM_FLASH_SW : %d\n", temp);
 	usleep(1*1000);
 
 	/* flash power 1.8V */
 	l28 = regulator_get(NULL, "8921_lvs4");
 	ret = regulator_enable(l28);
 	if (ret)
-		printk("error enabling regulator\n");
+		pr_debug("error enabling regulator\n");
 	usleep(1*1000);
 
 	if (pmic_gpio_msm_flash_cntl_en) {
@@ -2631,7 +2631,7 @@ static int aat1290a_setGpio(void)
 	} else {
 		gpio_set_value_cansleep(GPIO_MSM_FLASH_CNTL_EN, 1);
 		temp = gpio_get_value(GPIO_MSM_FLASH_CNTL_EN);
-		printk(KERN_DEBUG "[s5c73m3] check Flash set GPIO : %d\n",
+		pr_debug(KERN_DEBUG "[s5c73m3] check Flash set GPIO : %d\n",
 			temp);
 	}
 	isFlashCntlEn = true;
@@ -2639,7 +2639,7 @@ static int aat1290a_setGpio(void)
 
 	gpio_set_value_cansleep(GPIO_MSM_FLASH_NOW, 1);
 	temp = gpio_get_value(GPIO_MSM_FLASH_NOW);
-	printk(KERN_DEBUG "[s5c73m3] check Flash enable GPIO : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check Flash enable GPIO : %d\n", temp);
 	usleep(1*1000);
 
 	return 0;
@@ -2649,7 +2649,7 @@ static int aat1290a_freeGpio(void)
 {
 	int ret;
 
-	printk(KERN_DEBUG "[%s : %d]!!\n", __func__, __LINE__);
+	pr_debug(KERN_DEBUG "[%s : %d]!!\n", __func__, __LINE__);
 
 	if (pmic_gpio_msm_flash_cntl_en)
 		gpio_set_value_cansleep(pmic_gpio_msm_flash_cntl_en, 0);
@@ -2664,7 +2664,7 @@ static int aat1290a_freeGpio(void)
 	if (l28) {
 		ret = regulator_disable(l28);
 		if (ret)
-			printk("error disabling regulator\n");
+			pr_debug("error disabling regulator\n");
 	}
 	usleep(1*1000);
 
@@ -2684,12 +2684,12 @@ static void aat1290a_torch_en(int onoff)
 {
 	int temp = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s!!\n",
 	       __func__, __LINE__, onoff ? "enabled" : "disabled");
 
 	gpio_set_value_cansleep(GPIO_MSM_FLASH_NOW, onoff);
 	temp = gpio_get_value(GPIO_MSM_FLASH_NOW);
-	printk(KERN_DEBUG "[s5c73m3] check Flash enable GPIO : %d\n", temp);
+	pr_debug(KERN_DEBUG "[s5c73m3] check Flash enable GPIO : %d\n", temp);
 	usleep(1*1000);
 }
 
@@ -2697,7 +2697,7 @@ static void aat1290a_torch_set(int onoff)
 {
 	int temp = 0;
 
-	printk(KERN_DEBUG "[%s : %d] %s!!\n",
+	pr_debug(KERN_DEBUG "[%s : %d] %s!!\n",
 	       __func__, __LINE__, onoff ? "enabled" : "disabled");
 
 	if (pmic_gpio_msm_flash_cntl_en) {
@@ -2705,7 +2705,7 @@ static void aat1290a_torch_set(int onoff)
 	} else {
 		gpio_set_value_cansleep(GPIO_MSM_FLASH_CNTL_EN, onoff);
 		temp = gpio_get_value(GPIO_MSM_FLASH_CNTL_EN);
-		printk(KERN_DEBUG "[s5c73m3] check Flash set GPIO : %d\n",
+		pr_debug(KERN_DEBUG "[s5c73m3] check Flash set GPIO : %d\n",
 			temp);
 	}
 	usleep(1*1000);
@@ -2885,7 +2885,7 @@ static ssize_t cameraflash_file_cmd_store(struct device *dev,
 	if (isdigit(*buf)) {
 		err = kstrtoint(buf, 10, &value);
 		if (err < 0)
-			pr_err("%s, kstrtoint failed.", __func__);
+			pr_debug("%s, kstrtoint failed.", __func__);
 	} else
 		return -err;
 
@@ -2893,7 +2893,7 @@ static ssize_t cameraflash_file_cmd_store(struct device *dev,
 #ifdef CONFIG_LEDS_AAT1290A
 	err = aat1290a_flash_power(value);
 	if (err < 0)
-		printk(KERN_DEBUG "[%s : %d]aat1290a_flash_power"
+		pr_debug(KERN_DEBUG "[%s : %d]aat1290a_flash_power"
 			" contorl fail!!\n", __func__, __LINE__);
 #endif
 #elif defined(CONFIG_ISX012) || defined(CONFIG_S5K8AAY)\
@@ -2919,7 +2919,7 @@ static ssize_t cameraflash_file_cmd_store(struct device *dev,
 #if defined(CONFIG_MACH_EXPRESS)
 		if (system_rev >= BOARD_REV05) {
 			if (value == 0) {
-				pr_err("[Torch flash]OFF\n");
+				pr_debug("[Torch flash]OFF\n");
 
 				gpio_set_value_cansleep(gpio_flash_en, 0);
 
@@ -2931,7 +2931,7 @@ static ssize_t cameraflash_file_cmd_store(struct device *dev,
 				torchonoff = 0;
 
 			} else {
-				pr_err("[Torch flash]ON\n");
+				pr_debug("[Torch flash]ON\n");
 				for (i = 1; i > 0; i--) {
 					gpio_set_value_cansleep(
 						gpio_flash_en, 0);
@@ -2944,12 +2944,12 @@ static ssize_t cameraflash_file_cmd_store(struct device *dev,
 			}
 		} else {
 			if (value == 0) {
-				pr_err("[Torch flash]OFF\n");
+				pr_debug("[Torch flash]OFF\n");
 				gpio_set_value_cansleep(gpio_flash_en, 0);
 				gpio_set_value_cansleep(gpio_flash_set, 0);
 				torchonoff = 0;
 			} else {
-				pr_err("[Torch flash]ON\n");
+				pr_debug("[Torch flash]ON\n");
 				gpio_set_value_cansleep(
 					gpio_flash_en, 0);
 				for (i = 5; i > 1; i--) {
@@ -2967,12 +2967,12 @@ static ssize_t cameraflash_file_cmd_store(struct device *dev,
 		}
 #else
 	if (value == 0) {
-		pr_err("[Torch flash]OFF\n");
+		pr_debug("[Torch flash]OFF\n");
 		gpio_set_value_cansleep(gpio_flash_en, 0);
 		gpio_set_value_cansleep(gpio_flash_set, 0);
 		torchonoff = 0;
 	} else {
-		pr_err("[Torch flash]ON\n");
+		pr_debug("[Torch flash]ON\n");
 #if defined(CONFIG_MACH_INFINITE)
 		mdelay(5);
 #endif
@@ -3007,31 +3007,31 @@ void msm8960_cam_create_node(void)
 	camera_class = class_create(THIS_MODULE, "camera");
 
 	if (IS_ERR(camera_class)) {
-		pr_err("Failed to create class(camera)!\n");
+		pr_debug("Failed to create class(camera)!\n");
 		return;
 	}
 	cam_dev_back = device_create(camera_class, NULL,
 		0, NULL, "rear");
 
 	if (IS_ERR(cam_dev_back)) {
-		pr_err("Failed to create cam_dev_back device!\n");
+		pr_debug("Failed to create cam_dev_back device!\n");
 		goto OUT7;
 	}
 
 	if (device_create_file(cam_dev_back, &dev_attr_rear_flash) < 0) {
-		pr_err("Failed to create device file!(%s)!\n",
+		pr_debug("Failed to create device file!(%s)!\n",
 			dev_attr_rear_flash.attr.name);
 		goto OUT6;
 	}
 
 	if (device_create_file(cam_dev_back, &dev_attr_rear_camtype) < 0) {
-		pr_err("Failed to create device file!(%s)!\n",
+		pr_debug("Failed to create device file!(%s)!\n",
 			dev_attr_rear_camtype.attr.name);
 		goto OUT5;
 	}
 
 	if (device_create_file(cam_dev_back, &dev_attr_rear_camfw) < 0) {
-		pr_err("Failed to create device file!(%s)!\n",
+		pr_debug("Failed to create device file!(%s)!\n",
 			dev_attr_rear_camfw.attr.name);
 		goto OUT4;
 	}
@@ -3040,18 +3040,18 @@ void msm8960_cam_create_node(void)
 		1, NULL, "front");
 
 	if (IS_ERR(cam_dev_front)) {
-		pr_err("Failed to create cam_dev_front device!");
+		pr_debug("Failed to create cam_dev_front device!");
 		goto OUT3;
 	}
 
 	if (device_create_file(cam_dev_front, &dev_attr_front_camtype) < 0) {
-		pr_err("Failed to create device file!(%s)!\n",
+		pr_debug("Failed to create device file!(%s)!\n",
 			dev_attr_front_camtype.attr.name);
 		goto OUT2;
 	}
 
 	if (device_create_file(cam_dev_front, &dev_attr_front_camfw) < 0) {
-		pr_err("Failed to create device file!(%s)!\n",
+		pr_debug("Failed to create device file!(%s)!\n",
 			dev_attr_front_camfw.attr.name);
 		goto OUT1;
 	}
@@ -3176,7 +3176,7 @@ void __init msm8960_init_cam(void)
 			(PMIC_MSM_FLASH_CNTL_EN), &param_flash);
 
 		if (rc) {
-			pr_err("%s pmic gpio config failed	rc= %d \n", __func__, rc);
+			pr_debug("%s pmic gpio config failed	rc= %d \n", __func__, rc);
 		}
 		pmic_gpio_msm_flash_cntl_en =
 			PM8921_GPIO_PM_TO_SYS(PMIC_MSM_FLASH_CNTL_EN);
@@ -3460,7 +3460,7 @@ void __init msm8960_init_cam(void)
 	if (spi_register_board_info(
 				    s5c73m3_spi_info,
 				    ARRAY_SIZE(s5c73m3_spi_info)) != 0)
-		pr_err("%s: spi_register_board_info returned error\n",
+		pr_debug("%s: spi_register_board_info returned error\n",
 			__func__);
 
 #endif
@@ -3481,7 +3481,7 @@ void __init msm8960_init_cam(void)
 #endif
 #endif
 
-	pr_err("[%s:%d]setting done!!\n", __func__, __LINE__);
+	pr_debug("[%s:%d]setting done!!\n", __func__, __LINE__);
 
 	platform_device_register(&msm8960_device_csiphy0);
 	platform_device_register(&msm8960_device_csiphy1);
