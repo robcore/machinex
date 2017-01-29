@@ -1983,10 +1983,10 @@ S:	Maintained
 F:	tools/power/cpupower
 
 CPUSETS
-M:	Li Zefan <lizefan@huawei.com>
+M:	Paul Menage <paul@paulmenage.org>
 W:	http://www.bullopensource.org/cpuset/
 W:	http://oss.sgi.com/projects/cpusets/
-S:	Maintained
+S:	Supported
 F:	Documentation/cgroups/cpusets.txt
 F:	include/linux/cpuset.h
 F:	kernel/cpuset.c

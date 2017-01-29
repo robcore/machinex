@@ -44,7 +44,6 @@ u64 notrace trace_clock_local(void)
 
 	return clock;
 }
-EXPORT_SYMBOL_GPL(trace_clock_local);
 
 /*
  * trace_clock(): 'between' trace clock. Not completely serialized,

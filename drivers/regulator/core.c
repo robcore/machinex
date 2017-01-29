@@ -3296,8 +3296,7 @@ static inline void rdev_init_debugfs(struct regulator_dev *rdev)
  *           NULL).
  *
  * Called by regulator drivers to register a regulator.
- * Returns a valid pointer to struct regulator_dev on success
- * or an ERR_PTR() on error.
+ * Returns 0 on success.
  */
 struct regulator_dev *regulator_register(struct regulator_desc *regulator_desc,
 	struct device *dev, const struct regulator_init_data *init_data,

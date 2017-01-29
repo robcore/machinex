@@ -44,6 +44,7 @@ static void ipu_write_reg(struct ipu *ipu, u32 value, unsigned long reg)
 struct ipu_irq_bank {
 	unsigned int	control;
 	unsigned int	status;
+	spinlock_t	lock;
 	struct ipu	*ipu;
 };
 

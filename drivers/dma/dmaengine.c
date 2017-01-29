@@ -60,7 +60,6 @@
 #include <linux/rculist.h>
 #include <linux/idr.h>
 #include <linux/slab.h>
-#include <linux/of_dma.h>
 
 static DEFINE_MUTEX(dma_list_mutex);
 static DEFINE_IDR(dma_idr);
@@ -265,10 +264,7 @@ enum dma_status dma_sync_wait(struct dma_chan *chan, dma_cookie_t cookie)
 			printk(KERN_ERR "dma_sync_wait_timeout!\n");
 			return DMA_ERROR;
 		}
-		if (status != DMA_IN_PROGRESS)
-			break;
-		cpu_relax();
-	} while (1);
+	} while (status == DMA_IN_PROGRESS);
 
 	return status;
 }
@@ -545,21 +541,6 @@ struct dma_chan *__dma_request_channel(dma_cap_mask_t *mask, dma_filter_fn fn, v
 	return chan;
 }
 EXPORT_SYMBOL_GPL(__dma_request_channel);
-
-/**
- * dma_request_slave_channel - try to allocate an exclusive slave channel
- * @dev:	pointer to client device structure
- * @name:	slave channel name
- */
-struct dma_chan *dma_request_slave_channel(struct device *dev, char *name)
-{
-	/* If device-tree is present get slave info from here */
-	if (dev->of_node)
-		return of_dma_request_slave_channel(dev->of_node, name);
-
-	return NULL;
-}
-EXPORT_SYMBOL_GPL(dma_request_slave_channel);
 
 void dma_release_channel(struct dma_chan *chan)
 {

@@ -2538,8 +2538,11 @@ static void __set_task_blocked(struct task_struct *tsk, const sigset_t *newset)
  */
 void set_current_blocked(sigset_t *newset)
 {
+	struct task_struct *tsk = current;
 	sigdelsetmask(newset, sigmask(SIGKILL) | sigmask(SIGSTOP));
-	__set_current_blocked(newset);
+	spin_lock_irq(&tsk->sighand->siglock);
+	__set_task_blocked(tsk, newset);
+	spin_unlock_irq(&tsk->sighand->siglock);
 }
 
 void __set_current_blocked(const sigset_t *newset)
@@ -3140,6 +3143,7 @@ SYSCALL_DEFINE3(sigprocmask, int, how, old_sigset_t __user *, nset,
 	if (nset) {
 		if (copy_from_user(&new_set, nset, sizeof(*nset)))
 			return -EFAULT;
+		new_set &= ~(sigmask(SIGKILL) | sigmask(SIGSTOP));
 
 		new_blocked = current->blocked;
 
@@ -3157,7 +3161,7 @@ SYSCALL_DEFINE3(sigprocmask, int, how, old_sigset_t __user *, nset,
 			return -EINVAL;
 		}
 
-		set_current_blocked(&new_blocked);
+		__set_current_blocked(&new_blocked);
 	}
 
 	if (oset) {
@@ -3221,7 +3225,6 @@ SYSCALL_DEFINE1(ssetmask, int, newmask)
 	int old = current->blocked.sig[0];
 	sigset_t newset;
 
-	siginitset(&newset, newmask);
 	set_current_blocked(&newset);
 
 	return old;

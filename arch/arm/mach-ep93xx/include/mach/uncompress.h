@@ -90,3 +90,5 @@ static void arch_decomp_setup(void)
 {
 	ethernet_reset();
 }
+
+#define arch_decomp_wdog()

@@ -51,7 +51,7 @@ config ASYNC_TX_ENABLE_CHANNEL_SWITCH
 
 config AMBA_PL08X
 	bool "ARM PrimeCell PL080 or PL081 support"
-	depends on ARM_AMBA
+	depends on ARM_AMBA && EXPERIMENTAL
 	select DMA_ENGINE
 	help
 	  Platform has a PL08x DMAC device

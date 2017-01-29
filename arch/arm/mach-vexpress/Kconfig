@@ -4,6 +4,7 @@ menu "Versatile Express platform type"
 config ARCH_VEXPRESS_CORTEX_A5_A9_ERRATA
 	bool
 	select ARM_ERRATA_720789
+	select ARM_ERRATA_751472
 	select PL310_ERRATA_753970 if CACHE_PL310
 	help
 	  Provides common dependencies for Versatile Express platforms

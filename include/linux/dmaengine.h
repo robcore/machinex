@@ -608,10 +608,7 @@ static inline int dmaengine_device_control(struct dma_chan *chan,
 					   enum dma_ctrl_cmd cmd,
 					   unsigned long arg)
 {
-	if (chan->device->device_control)
-		return chan->device->device_control(chan, cmd, arg);
-	else
-		return -ENOSYS;
+	return chan->device->device_control(chan, cmd, arg);
 }
 
 static inline int dmaengine_slave_config(struct dma_chan *chan,
@@ -658,13 +655,6 @@ static inline struct dma_async_tx_descriptor *dmaengine_prep_dma_cyclic(
 {
 	return chan->device->device_prep_dma_cyclic(chan, buf_addr, buf_len,
 						period_len, dir, NULL);
-}
-
-static inline struct dma_async_tx_descriptor *dmaengine_prep_interleaved_dma(
-		struct dma_chan *chan, struct dma_interleaved_template *xt,
-		unsigned long flags)
-{
-	return chan->device->device_prep_interleaved_dma(chan, xt, flags);
 }
 
 static inline int dmaengine_terminate_all(struct dma_chan *chan)
@@ -908,6 +898,8 @@ static inline void dma_async_issue_pending(struct dma_chan *chan)
 	chan->device->device_issue_pending(chan);
 }
 
+#define dma_async_memcpy_issue_pending(chan) dma_async_issue_pending(chan)
+
 /**
  * dma_async_is_tx_complete - poll for transaction completion
  * @chan: DMA channel
@@ -933,13 +925,16 @@ static inline enum dma_status dma_async_is_tx_complete(struct dma_chan *chan,
 	return status;
 }
 
+#define dma_async_memcpy_complete(chan, cookie, last, used)\
+	dma_async_is_tx_complete(chan, cookie, last, used)
+
 /**
  * dma_async_is_complete - test a cookie against chan state
  * @cookie: transaction identifier to test status of
  * @last_complete: last know completed transaction
  * @last_used: last cookie value handed out
  *
- * dma_async_is_complete() is used in dma_async_is_tx_complete()
+ * dma_async_is_complete() is used in dma_async_memcpy_complete()
  * the test logic is separated for lightweight testing of multiple cookies
  */
 static inline enum dma_status dma_async_is_complete(dma_cookie_t cookie,
@@ -970,7 +965,6 @@ enum dma_status dma_sync_wait(struct dma_chan *chan, dma_cookie_t cookie);
 enum dma_status dma_wait_for_async_tx(struct dma_async_tx_descriptor *tx);
 void dma_issue_pending_all(void);
 struct dma_chan *__dma_request_channel(dma_cap_mask_t *mask, dma_filter_fn fn, void *fn_param);
-struct dma_chan *dma_request_slave_channel(struct device *dev, char *name);
 void dma_release_channel(struct dma_chan *chan);
 #else
 static inline enum dma_status dma_wait_for_async_tx(struct dma_async_tx_descriptor *tx)
@@ -982,11 +976,6 @@ static inline void dma_issue_pending_all(void)
 }
 static inline struct dma_chan *__dma_request_channel(dma_cap_mask_t *mask,
 					      dma_filter_fn fn, void *fn_param)
-{
-	return NULL;
-}
-static inline struct dma_chan *dma_request_slave_channel(struct device *dev,
-							 char *name)
 {
 	return NULL;
 }

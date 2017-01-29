@@ -58,4 +58,6 @@ static inline void arch_decomp_setup(void)
 {
 }
 
+#define arch_decomp_wdog() /* nothing to do here */
+
 #endif /* __ASM_ARCH_UNCOMPRESS_H */

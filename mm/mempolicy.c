@@ -2123,7 +2123,7 @@ bool __mpol_equal(struct mempolicy *a, struct mempolicy *b)
  */
 
 /* lookup first element intersecting start-end */
-/* Caller holds sp->lock */
+/* Caller holds sp->mutex */
 static struct sp_node *
 sp_lookup(struct shared_policy *sp, unsigned long start, unsigned long end)
 {
@@ -2187,13 +2187,13 @@ mpol_shared_policy_lookup(struct shared_policy *sp, unsigned long idx)
 
 	if (!sp->root.rb_node)
 		return NULL;
-	spin_lock(&sp->lock);
+	mutex_lock(&sp->mutex);
 	sn = sp_lookup(sp, idx, idx+1);
 	if (sn) {
 		mpol_get(sn->policy);
 		pol = sn->policy;
 	}
-	spin_unlock(&sp->lock);
+	mutex_unlock(&sp->mutex);
 	return pol;
 }
 
@@ -2319,14 +2319,6 @@ static void sp_delete(struct shared_policy *sp, struct sp_node *n)
 	sp_free(n);
 }
 
-static void sp_node_init(struct sp_node *node, unsigned long start,
-			unsigned long end, struct mempolicy *pol)
-{
-	node->start = start;
-	node->end = end;
-	node->policy = pol;
-}
-
 static struct sp_node *sp_alloc(unsigned long start, unsigned long end,
 				struct mempolicy *pol)
 {
@@ -2343,7 +2335,10 @@ static struct sp_node *sp_alloc(unsigned long start, unsigned long end,
 		return NULL;
 	}
 	newpol->flags |= MPOL_F_SHARED;
-	sp_node_init(n, start, end, newpol);
+
+	n->start = start;
+	n->end = end;
+	n->policy = newpol;
 
 	return n;
 }
@@ -2353,12 +2348,9 @@ static int shared_policy_replace(struct shared_policy *sp, unsigned long start,
 				 unsigned long end, struct sp_node *new)
 {
 	struct sp_node *n;
-	struct sp_node *n_new = NULL;
-	struct mempolicy *mpol_new = NULL;
 	int ret = 0;
 
-restart:
-	spin_lock(&sp->lock);
+	mutex_lock(&sp->mutex);
 	n = sp_lookup(sp, start, end);
 	/* Take care of old policies in the same range. */
 	while (n && n->start < end) {
@@ -2371,16 +2363,14 @@ restart:
 		} else {
 			/* Old policy spanning whole new range. */
 			if (n->end > end) {
-				if (!n_new)
-					goto alloc_new;
-
-				*mpol_new = *n->policy;
-				atomic_set(&mpol_new->refcnt, 1);
-				sp_node_init(n_new, n->end, end, mpol_new);
-				sp_insert(sp, n_new);
+				struct sp_node *new2;
+				new2 = sp_alloc(end, n->end, n->policy);
+				if (!new2) {
+					ret = -ENOMEM;
+					goto out;
+				}
 				n->end = start;
-				n_new = NULL;
-				mpol_new = NULL;
+				sp_insert(sp, new2);
 				break;
 			} else
 				n->end = start;
@@ -2391,27 +2381,9 @@ restart:
 	}
 	if (new)
 		sp_insert(sp, new);
-	spin_unlock(&sp->lock);
-	ret = 0;
-
-err_out:
-	if (mpol_new)
-		mpol_put(mpol_new);
-	if (n_new)
-		kmem_cache_free(sn_cache, n_new);
-
+out:
+	mutex_unlock(&sp->mutex);
 	return ret;
-
-alloc_new:
-	spin_unlock(&sp->lock);
-	ret = -ENOMEM;
-	n_new = kmem_cache_alloc(sn_cache, GFP_KERNEL);
-	if (!n_new)
-		goto err_out;
-	mpol_new = kmem_cache_alloc(policy_cache, GFP_KERNEL);
-	if (!mpol_new)
-		goto err_out;
-	goto restart;
 }
 
 /**
@@ -2429,7 +2401,7 @@ void mpol_shared_policy_init(struct shared_policy *sp, struct mempolicy *mpol)
 	int ret;
 
 	sp->root = RB_ROOT;		/* empty tree == default mempolicy */
-	spin_lock_init(&sp->lock);
+	mutex_init(&sp->mutex);
 
 	if (mpol) {
 		struct vm_area_struct pvma;
@@ -2495,14 +2467,14 @@ void mpol_free_shared_policy(struct shared_policy *p)
 
 	if (!p->root.rb_node)
 		return;
-	spin_lock(&p->lock);
+	mutex_lock(&p->mutex);
 	next = rb_first(&p->root);
 	while (next) {
 		n = rb_entry(next, struct sp_node, nd);
 		next = rb_next(&n->nd);
 		sp_delete(p, n);
 	}
-	spin_unlock(&p->lock);
+	mutex_unlock(&p->mutex);
 }
 
 #ifdef CONFIG_NUMA_BALANCING
@@ -2631,13 +2603,14 @@ static const char * const policy_modes[] =
  * mpol_parse_str - parse string to mempolicy, for tmpfs mpol mount option.
  * @str:  string containing mempolicy to parse
  * @mpol:  pointer to struct mempolicy pointer, returned on success.
+ * @unused:  redundant argument, to be removed later.
  *
  * Format of input:
  *	<mode>[=<flags>][:<nodelist>]
  *
  * On success, returns 0, else 1
  */
-int mpol_parse_str(char *str, struct mempolicy **mpol)
+int mpol_parse_str(char *str, struct mempolicy **mpol, int unused)
 {
 	struct mempolicy *new = NULL;
 	unsigned short mode;
@@ -2765,12 +2738,13 @@ out:
  * @buffer:  to contain formatted mempolicy string
  * @maxlen:  length of @buffer
  * @pol:  pointer to mempolicy to be formatted
+ * @unused:  redundant argument, to be removed later.
  *
  * Convert a mempolicy into a string.
  * Returns the number of characters in buffer (if positive)
  * or an error (negative)
  */
-int mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
+int mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol, int unused)
 {
 	char *p = buffer;
 	int l;

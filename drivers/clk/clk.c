@@ -33,137 +33,6 @@ static struct dentry *rootdir;
 static struct dentry *orphandir;
 static int inited = 0;
 
-static void clk_summary_show_one(struct seq_file *s, struct clk *c, int level)
-{
-	if (!c)
-		return;
-
-	seq_printf(s, "%*s%-*s %-11d %-12d %-10lu",
-		   level * 3 + 1, "",
-		   30 - level * 3, c->name,
-		   c->enable_count, c->prepare_count, c->rate);
-	seq_printf(s, "\n");
-}
-
-static void clk_summary_show_subtree(struct seq_file *s, struct clk *c,
-				     int level)
-{
-	struct clk *child;
-	struct hlist_node *tmp;
-
-	if (!c)
-		return;
-
-	clk_summary_show_one(s, c, level);
-
-	hlist_for_each_entry(child, tmp, &c->children, child_node)
-		clk_summary_show_subtree(s, child, level + 1);
-}
-
-static int clk_summary_show(struct seq_file *s, void *data)
-{
-	struct clk *c;
-	struct hlist_node *tmp;
-
-	seq_printf(s, "   clock                        enable_cnt  prepare_cnt  rate\n");
-	seq_printf(s, "---------------------------------------------------------------------\n");
-
-	mutex_lock(&prepare_lock);
-
-	hlist_for_each_entry(c, tmp, &clk_root_list, child_node)
-		clk_summary_show_subtree(s, c, 0);
-
-	hlist_for_each_entry(c, tmp, &clk_orphan_list, child_node)
-		clk_summary_show_subtree(s, c, 0);
-
-	mutex_unlock(&prepare_lock);
-
-	return 0;
-}
-
-
-static int clk_summary_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, clk_summary_show, inode->i_private);
-}
-
-static const struct file_operations clk_summary_fops = {
-	.open		= clk_summary_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static void clk_dump_one(struct seq_file *s, struct clk *c, int level)
-{
-	if (!c)
-		return;
-
-	seq_printf(s, "\"%s\": { ", c->name);
-	seq_printf(s, "\"enable_count\": %d,", c->enable_count);
-	seq_printf(s, "\"prepare_count\": %d,", c->prepare_count);
-	seq_printf(s, "\"rate\": %lu", c->rate);
-}
-
-static void clk_dump_subtree(struct seq_file *s, struct clk *c, int level)
-{
-	struct clk *child;
-	struct hlist_node *tmp;
-
-	if (!c)
-		return;
-
-	clk_dump_one(s, c, level);
-
-	hlist_for_each_entry(child, tmp, &c->children, child_node) {
-		seq_printf(s, ",");
-		clk_dump_subtree(s, child, level + 1);
-	}
-
-	seq_printf(s, "}");
-}
-
-static int clk_dump(struct seq_file *s, void *data)
-{
-	struct clk *c;
-	struct hlist_node *tmp;
-	bool first_node = true;
-
-	seq_printf(s, "{");
-
-	mutex_lock(&prepare_lock);
-
-	hlist_for_each_entry(c, tmp, &clk_root_list, child_node) {
-		if (!first_node)
-			seq_printf(s, ",");
-		first_node = false;
-		clk_dump_subtree(s, c, 0);
-	}
-
-	hlist_for_each_entry(c, tmp, &clk_orphan_list, child_node) {
-		seq_printf(s, ",");
-		clk_dump_subtree(s, c, 0);
-	}
-
-	mutex_unlock(&prepare_lock);
-
-	seq_printf(s, "}");
-	return 0;
-}
-
-
-static int clk_dump_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, clk_dump, inode->i_private);
-}
-
-static const struct file_operations clk_dump_fops = {
-	.open		= clk_dump_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
 /* caller must hold prepare_lock */
 static int clk_debug_create_one(struct clk *clk, struct dentry *pdentry)
 {
@@ -297,21 +166,10 @@ static int __init clk_debug_init(void)
 {
 	struct clk *clk;
 	struct hlist_node *tmp;
-	struct dentry *d;
 
 	rootdir = debugfs_create_dir("clk", NULL);
 
 	if (!rootdir)
-		return -ENOMEM;
-
-	d = debugfs_create_file("clk_summary", S_IRUGO, rootdir, NULL,
-				&clk_summary_fops);
-	if (!d)
-		return -ENOMEM;
-
-	d = debugfs_create_file("clk_dump", S_IRUGO, rootdir, NULL,
-				&clk_dump_fops);
-	if (!d)
 		return -ENOMEM;
 
 	orphandir = debugfs_create_dir("orphans", rootdir);
@@ -399,33 +257,32 @@ late_initcall(clk_disable_unused);
 
 /***    helper functions   ***/
 
-const char *__clk_get_name(struct clk *clk)
+inline const char *__clk_get_name(struct clk *clk)
 {
 	return !clk ? NULL : clk->name;
 }
-EXPORT_SYMBOL_GPL(__clk_get_name);
 
-struct clk_hw *__clk_get_hw(struct clk *clk)
+inline struct clk_hw *__clk_get_hw(struct clk *clk)
 {
 	return !clk ? NULL : clk->hw;
 }
 
-u8 __clk_get_num_parents(struct clk *clk)
+inline u8 __clk_get_num_parents(struct clk *clk)
 {
 	return !clk ? 0 : clk->num_parents;
 }
 
-struct clk *__clk_get_parent(struct clk *clk)
+inline struct clk *__clk_get_parent(struct clk *clk)
 {
 	return !clk ? NULL : clk->parent;
 }
 
-unsigned int __clk_get_enable_count(struct clk *clk)
+inline unsigned int __clk_get_enable_count(struct clk *clk)
 {
 	return !clk ? 0 : clk->enable_count;
 }
 
-unsigned int __clk_get_prepare_count(struct clk *clk)
+inline unsigned int __clk_get_prepare_count(struct clk *clk)
 {
 	return !clk ? 0 : clk->prepare_count;
 }
@@ -451,7 +308,7 @@ out:
 	return ret;
 }
 
-unsigned long __clk_get_flags(struct clk *clk)
+inline unsigned long __clk_get_flags(struct clk *clk)
 {
 	return !clk ? 0 : clk->flags;
 }

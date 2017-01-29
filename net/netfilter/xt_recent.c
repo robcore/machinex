@@ -29,7 +29,6 @@
 #include <linux/skbuff.h>
 #include <linux/inet.h>
 #include <linux/slab.h>
-#include <linux/vmalloc.h>
 #include <net/net_namespace.h>
 #include <net/netns/generic.h>
 
@@ -307,14 +306,6 @@ out:
 	return ret;
 }
 
-static void recent_table_free(void *addr)
-{
-	if (is_vmalloc_addr(addr))
-		vfree(addr);
-	else
-		kfree(addr);
-}
-
 static int recent_mt_check(const struct xt_mtchk_param *par)
 {
 	struct recent_net *recent_net = recent_pernet(par->net);
@@ -325,7 +316,6 @@ static int recent_mt_check(const struct xt_mtchk_param *par)
 #endif
 	unsigned int i;
 	int ret = -EINVAL;
-	size_t sz;
 
 	if (unlikely(!hash_rnd_inited)) {
 		get_random_bytes(&hash_rnd, sizeof(hash_rnd));
@@ -364,11 +354,8 @@ static int recent_mt_check(const struct xt_mtchk_param *par)
 		goto out;
 	}
 
-	sz = sizeof(*t) + sizeof(t->iphash[0]) * ip_list_hash_size;
-	if (sz <= PAGE_SIZE)
-		t = kzalloc(sz, GFP_KERNEL);
-	else
-		t = vzalloc(sz);
+	t = kzalloc(sizeof(*t) + sizeof(t->iphash[0]) * ip_list_hash_size,
+		    GFP_KERNEL);
 	if (t == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -382,7 +369,7 @@ static int recent_mt_check(const struct xt_mtchk_param *par)
 	pde = proc_create_data(t->name, ip_list_perms, recent_net->xt_recent,
 		  &recent_mt_fops, t);
 	if (pde == NULL) {
-		recent_table_free(t);
+		kfree(t);
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -413,7 +400,7 @@ static void recent_mt_destroy(const struct xt_mtdtor_param *par)
 		remove_proc_entry(t->name, recent_net->xt_recent);
 #endif
 		recent_table_flush(t);
-		recent_table_free(t);
+		kfree(t);
 	}
 	mutex_unlock(&recent_mutex);
 }

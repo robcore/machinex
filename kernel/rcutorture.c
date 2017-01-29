@@ -46,7 +46,6 @@
 #include <linux/stat.h>
 #include <linux/srcu.h>
 #include <linux/slab.h>
-#include <linux/trace_clock.h>
 #include <asm/byteorder.h>
 
 MODULE_LICENSE("GPL");
@@ -1029,6 +1028,7 @@ void rcutorture_trace_dump(void)
 		return;
 	if (atomic_xchg(&beenhere, 1) != 0)
 		return;
+	do_trace_rcu_torture_read(cur_ops->name, (struct rcu_head *)~0UL);
 	ftrace_dump(DUMP_ALL);
 }
 
@@ -1042,16 +1042,13 @@ static void rcu_torture_timer(unsigned long unused)
 {
 	int idx;
 	int completed;
-	int completed_end;
 	static DEFINE_RCU_RANDOM(rand);
 	static DEFINE_SPINLOCK(rand_lock);
 	struct rcu_torture *p;
 	int pipe_count;
-	unsigned long long ts;
 
 	idx = cur_ops->readlock();
 	completed = cur_ops->completed();
-	ts = trace_clock_local();
 	p = rcu_dereference_check(rcu_torture_current,
 				  rcu_read_lock_bh_held() ||
 				  rcu_read_lock_sched_held() ||
@@ -1061,6 +1058,7 @@ static void rcu_torture_timer(unsigned long unused)
 		cur_ops->readunlock(idx);
 		return;
 	}
+	do_trace_rcu_torture_read(cur_ops->name, &p->rtort_rcu);
 	if (p->rtort_mbtest == 0)
 		atomic_inc(&n_rcu_torture_mberror);
 	spin_lock(&rand_lock);
@@ -1073,16 +1071,10 @@ static void rcu_torture_timer(unsigned long unused)
 		/* Should not happen, but... */
 		pipe_count = RCU_TORTURE_PIPE_LEN;
 	}
-	completed_end = cur_ops->completed();
-	if (pipe_count > 1) {
-		unsigned long __maybe_unused ts_rem = do_div(ts, NSEC_PER_USEC);
-
-		do_trace_rcu_torture_read(cur_ops->name, &p->rtort_rcu, ts,
-					  completed, completed_end);
+	if (pipe_count > 1)
 		rcutorture_trace_dump();
-	}
 	__this_cpu_inc(rcu_torture_count[pipe_count]);
-	completed = completed_end - completed;
+	completed = cur_ops->completed() - completed;
 	if (completed > RCU_TORTURE_PIPE_LEN) {
 		/* Should not happen, but... */
 		completed = RCU_TORTURE_PIPE_LEN;
@@ -1102,13 +1094,11 @@ static int
 rcu_torture_reader(void *arg)
 {
 	int completed;
-	int completed_end;
 	int idx;
 	DEFINE_RCU_RANDOM(rand);
 	struct rcu_torture *p;
 	int pipe_count;
 	struct timer_list t;
-	unsigned long long ts;
 
 	VERBOSE_PRINTK_STRING("rcu_torture_reader task started");
 	set_user_nice(current, 19);
@@ -1122,7 +1112,6 @@ rcu_torture_reader(void *arg)
 		}
 		idx = cur_ops->readlock();
 		completed = cur_ops->completed();
-		ts = trace_clock_local();
 		p = rcu_dereference_check(rcu_torture_current,
 					  rcu_read_lock_bh_held() ||
 					  rcu_read_lock_sched_held() ||
@@ -1133,6 +1122,7 @@ rcu_torture_reader(void *arg)
 			schedule_timeout_interruptible(HZ);
 			continue;
 		}
+		do_trace_rcu_torture_read(cur_ops->name, &p->rtort_rcu);
 		if (p->rtort_mbtest == 0)
 			atomic_inc(&n_rcu_torture_mberror);
 		cur_ops->read_delay(&rand);
@@ -1142,17 +1132,10 @@ rcu_torture_reader(void *arg)
 			/* Should not happen, but... */
 			pipe_count = RCU_TORTURE_PIPE_LEN;
 		}
-		completed_end = cur_ops->completed();
-		if (pipe_count > 1) {
-			unsigned long __maybe_unused ts_rem =
-					do_div(ts, NSEC_PER_USEC);
-
-			do_trace_rcu_torture_read(cur_ops->name, &p->rtort_rcu,
-						  ts, completed, completed_end);
+		if (pipe_count > 1)
 			rcutorture_trace_dump();
-		}
 		__this_cpu_inc(rcu_torture_count[pipe_count]);
-		completed = completed_end - completed;
+		completed = cur_ops->completed() - completed;
 		if (completed > RCU_TORTURE_PIPE_LEN) {
 			/* Should not happen, but... */
 			completed = RCU_TORTURE_PIPE_LEN;
@@ -1766,7 +1749,7 @@ static int rcu_torture_barrier_init(void)
 	barrier_cbs_wq =
 		kzalloc(n_barrier_cbs * sizeof(barrier_cbs_wq[0]),
 			GFP_KERNEL);
-	if (barrier_cbs_tasks == NULL || !barrier_cbs_wq)
+	if (barrier_cbs_tasks == NULL || barrier_cbs_wq == 0)
 		return -ENOMEM;
 	for (i = 0; i < n_barrier_cbs; i++) {
 		init_waitqueue_head(&barrier_cbs_wq[i]);
