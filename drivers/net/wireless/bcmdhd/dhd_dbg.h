@@ -2,13 +2,13 @@
  * Debug/trace/assert driver definitions for Dongle Host Driver.
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -36,22 +36,22 @@
 #if defined(DHD_DEBUG)
 
 #define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && USE_NET_RATELIMIT) \
-								printf args;} while (0)
-#define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) printf args;} while (0)
-#define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) printf args;} while (0)
-#define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) printf args;} while (0)
-#define DHD_CTL(args)		do {if (dhd_msg_level & DHD_CTL_VAL) printf args;} while (0)
-#define DHD_TIMER(args)		do {if (dhd_msg_level & DHD_TIMER_VAL) printf args;} while (0)
-#define DHD_HDRS(args)		do {if (dhd_msg_level & DHD_HDRS_VAL) printf args;} while (0)
-#define DHD_BYTES(args)		do {if (dhd_msg_level & DHD_BYTES_VAL) printf args;} while (0)
-#define DHD_INTR(args)		do {if (dhd_msg_level & DHD_INTR_VAL) printf args;} while (0)
-#define DHD_GLOM(args)		do {if (dhd_msg_level & DHD_GLOM_VAL) printf args;} while (0)
-#define DHD_EVENT(args)		do {if (dhd_msg_level & DHD_EVENT_VAL) printf args;} while (0)
-#define DHD_BTA(args)		do {if (dhd_msg_level & DHD_BTA_VAL) printf args;} while (0)
-#define DHD_ISCAN(args)		do {if (dhd_msg_level & DHD_ISCAN_VAL) printf args;} while (0)
-#define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) printf args;} while (0)
-#define DHD_REORDER(args)	do {if (dhd_msg_level & DHD_REORDER_VAL) printf args;} while (0)
-#define DHD_PNO(args)		do {if (dhd_msg_level & DHD_PNO_VAL) printf args;} while (0)
+								pr_debug args;} while (0)
+#define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) pr_debug args;} while (0)
+#define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) pr_debug args;} while (0)
+#define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) pr_debug args;} while (0)
+#define DHD_CTL(args)		do {if (dhd_msg_level & DHD_CTL_VAL) pr_debug args;} while (0)
+#define DHD_TIMER(args)		do {if (dhd_msg_level & DHD_TIMER_VAL) pr_debug args;} while (0)
+#define DHD_HDRS(args)		do {if (dhd_msg_level & DHD_HDRS_VAL) pr_debug args;} while (0)
+#define DHD_BYTES(args)		do {if (dhd_msg_level & DHD_BYTES_VAL) pr_debug args;} while (0)
+#define DHD_INTR(args)		do {if (dhd_msg_level & DHD_INTR_VAL) pr_debug args;} while (0)
+#define DHD_GLOM(args)		do {if (dhd_msg_level & DHD_GLOM_VAL) pr_debug args;} while (0)
+#define DHD_EVENT(args)		do {if (dhd_msg_level & DHD_EVENT_VAL) pr_debug args;} while (0)
+#define DHD_BTA(args)		do {if (dhd_msg_level & DHD_BTA_VAL) pr_debug args;} while (0)
+#define DHD_ISCAN(args)		do {if (dhd_msg_level & DHD_ISCAN_VAL) pr_debug args;} while (0)
+#define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) pr_debug args;} while (0)
+#define DHD_REORDER(args)	do {if (dhd_msg_level & DHD_REORDER_VAL) pr_debug args;} while (0)
+#define DHD_PNO(args)		do {if (dhd_msg_level & DHD_PNO_VAL) pr_debug args;} while (0)
 
 #ifdef CUSTOMER_HW4
 #define DHD_TRACE_HW4	DHD_ERROR
@@ -79,7 +79,7 @@
 
 #else /* defined(BCMDBG) || defined(DHD_DEBUG) */
 
-#define DHD_ERROR(args)		do {if (USE_NET_RATELIMIT) printf args;} while (0)
+#define DHD_ERROR(args)		do {if (USE_NET_RATELIMIT) pr_debug args;} while (0)
 #define DHD_TRACE(args)
 #define DHD_INFO(args)
 #define DHD_DATA(args)
@@ -120,7 +120,7 @@
 #define DHD_NOCHECKDIED_ON()	0
 #define DHD_PNO_ON()		0
 
-#endif 
+#endif
 
 #define DHD_LOG(args)
 
