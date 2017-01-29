@@ -480,11 +480,11 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
 		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
 		leds_set_slope_mode(client, LED_R,
-				0, 0, 0, 4, 4, 2, 5, 5, 5, 5);
+				0, 0, 0, 5, 6, 4, 5, 5, 5, 5);
 		leds_set_slope_mode(client, LED_G,
-				0, 15, 15, 8, 4, 2, 5, 5, 5, 5);
+				0, 15, 15, 10, 6, 4, 5, 5, 5, 5);
 		leds_set_slope_mode(client, LED_B,
-				0, 15, 0, 0, 4, 2, 5, 5, 5, 5);
+				0, 15, 0, 0, 6, 4, 5, 5, 5, 5);
 		break;
 
 /* For later
@@ -502,9 +502,9 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_R, true, true, LED_R_CURRENT);
 		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
-		leds_set_slope_mode(client, LED_R, 0, 0, 0, 4, 1, 1, 10, 10, 10, 10);
-		leds_set_slope_mode(client, LED_G, 0, 15, 15, 8, 1, 1, 10, 10, 10, 10);
-		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 10, 10, 10, 10);
+		leds_set_slope_mode(client, LED_R, 0, 0, 0, 5, 1, 1, 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_G, 0, 15, 15, 5, 1, 1, 0, 0, 0, 0);
+		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 
 		break;
 

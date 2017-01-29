@@ -1,5 +1,6 @@
 ./arch/alpha/include/asm/a.out-core.h
 ./arch/alpha/include/asm/a.out.h
+./arch/alpha/include/uapi/asm/a.out.h
 ./arch/arm/include/asm/a.out-core.h
 ./arch/arm/include/uapi/asm/a.out.h
 ./arch/m68k/include/asm/a.out-core.h
@@ -8,7 +9,7 @@
 ./arch/openrisc/TODO.openrisc
 ./arch/um/include/asm/a.out-core.h
 ./arch/x86/include/asm/a.out-core.h
-./arch/x86/include/asm/a.out.h
+./arch/x86/include/uapi/asm/a.out.h
 ./Documentation/sound/oss/README.OSS
 ./fs/exofs/Kconfig.ore
 ./include/linux/a.out.h
@@ -567,6 +568,8 @@
 ./out/arch/arm/mach-msm/.subsystem_restart.o.cmd
 ./out/arch/arm/mach-msm/sysmon.o
 ./out/arch/arm/mach-msm/.sysmon.o.cmd
+./out/arch/arm/mach-msm/test-lpm.o
+./out/arch/arm/mach-msm/.test-lpm.o.cmd
 ./out/arch/arm/mach-msm/timer.o
 ./out/arch/arm/mach-msm/.timer.o.cmd
 ./out/arch/arm/mach-msm/timer_page.o
@@ -1026,6 +1029,8 @@
 ./out/drivers/cpufreq/.cpufreq_electrodemand.o.cmd
 ./out/drivers/cpufreq/cpufreq_elementalx.o
 ./out/drivers/cpufreq/.cpufreq_elementalx.o.cmd
+./out/drivers/cpufreq/cpufreq_governor.o
+./out/drivers/cpufreq/.cpufreq_governor.o.cmd
 ./out/drivers/cpufreq/cpufreq_gov_msm.o
 ./out/drivers/cpufreq/.cpufreq_gov_msm.o.cmd
 ./out/drivers/cpufreq/cpufreq_hardlimit.o
@@ -1194,6 +1199,8 @@
 ./out/drivers/gpu/msm/.kgsl.o.cmd
 ./out/drivers/gpu/msm/kgsl_pwrctrl.o
 ./out/drivers/gpu/msm/.kgsl_pwrctrl.o.cmd
+./out/drivers/gpu/msm/kgsl_pwrscale_machinactive.o
+./out/drivers/gpu/msm/.kgsl_pwrscale_machinactive.o.cmd
 ./out/drivers/gpu/msm/kgsl_pwrscale_msm.o
 ./out/drivers/gpu/msm/.kgsl_pwrscale_msm.o.cmd
 ./out/drivers/gpu/msm/kgsl_pwrscale.o
@@ -3322,6 +3329,8 @@
 ./out/fs/ext4/.ext4.o.cmd
 ./out/fs/ext4/extents.o
 ./out/fs/ext4/.extents.o.cmd
+./out/fs/ext4/extents_status.o
+./out/fs/ext4/.extents_status.o.cmd
 ./out/fs/ext4/file.o
 ./out/fs/ext4/.file.o.cmd
 ./out/fs/ext4/fsync.o
@@ -3495,6 +3504,8 @@
 ./out/fs/notify/fanotify/built-in.o
 ./out/fs/notify/fanotify/.built-in.o.cmd
 ./out/fs/notify/fanotify/modules.order
+./out/fs/notify/fdinfo.o
+./out/fs/notify/.fdinfo.o.cmd
 ./out/fs/notify/fsnotify.o
 ./out/fs/notify/.fsnotify.o.cmd
 ./out/fs/notify/group.o
@@ -4144,6 +4155,8 @@
 ./out/lib/.percpu_counter.o.cmd
 ./out/lib/percpu-refcount.o
 ./out/lib/.percpu-refcount.o.cmd
+./out/lib/percpu-rwsem.o
+./out/lib/.percpu-rwsem.o.cmd
 ./out/lib/plist.o
 ./out/lib/.plist.o.cmd
 ./out/lib/prio_heap.o
@@ -4240,6 +4253,8 @@
 ./out/lib/zlib_inflate/.zlib_inflate.o.cmd
 ./out/mm/backing-dev.o
 ./out/mm/.backing-dev.o.cmd
+./out/mm/balloon_compaction.o
+./out/mm/.balloon_compaction.o.cmd
 ./out/mm/bootmem.o
 ./out/mm/.bootmem.o.cmd
 ./out/mm/bounce.o
@@ -4997,6 +5012,8 @@
 ./out/net/netfilter/.xt_CONNSECMARK.o.cmd
 ./out/net/netfilter/xt_conntrack.o
 ./out/net/netfilter/.xt_conntrack.o.cmd
+./out/net/netfilter/xt_CT.o
+./out/net/netfilter/.xt_CT.o.cmd
 ./out/net/netfilter/xt_dscp.o
 ./out/net/netfilter/.xt_dscp.o.cmd
 ./out/net/netfilter/xt_ecn.o
@@ -5201,6 +5218,13 @@
 ./out/net/xfrm/xfrm_user.o
 ./out/net/xfrm/.xfrm_user.o.cmd
 ./out/scripts/basic/modules.order
+./out/scripts/genksyms/genksyms.o
+./out/scripts/genksyms/.genksyms.o.cmd
+./out/scripts/genksyms/lex.lex.o
+./out/scripts/genksyms/.lex.lex.o.cmd
+./out/scripts/genksyms/modules.order
+./out/scripts/genksyms/parse.tab.o
+./out/scripts/genksyms/.parse.tab.o.cmd
 ./out/scripts/kconfig/conf.o
 ./out/scripts/kconfig/.conf.o.cmd
 ./out/scripts/kconfig/zconf.tab.o
@@ -5747,11 +5771,4 @@
 ./out/usr/modules.order
 ./out/vmlinux.o
 ./out/.vmlinux.o.cmd
-./patches/0331-REVERT-fib-stuff-I-think-it-is-breaking-dhd.or-it-is.patch
-./patches/0910-Apply-CFLAGS-Os-to-decompress.o-to-improve-decompres.patch
-./patches-all/12469-nfs-don-t-use-nd-intent.open.flags.patch
-./patches-all/13111-zram_drv-sync-with-kernel.org.patch
-./patches-all/13814-REVERT-fib-stuff-I-think-it-is-breaking-dhd.or-it-i.patch
-./patches-all/7335-this-could-be-some-good-cleanup.-.or-break-multicore.patch
-./patches-all/8592-init-disable-sparse-checking-of-the-mount.o-source.patch
-./patches-all/8943-fuck-the-swap-patches.ours-was-already-working.patch
+./patches0-8000/7335-this-could-be-some-good-cleanup.-.or-break-multicore.patch
