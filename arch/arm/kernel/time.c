@@ -70,16 +70,6 @@ unsigned long profile_pc(struct pt_regs *regs)
 EXPORT_SYMBOL(profile_pc);
 #endif
 
-#ifdef CONFIG_ARCH_USES_GETTIMEOFFSET
-static u32 arm_gettimeoffset(void)
-{
-	if (system_timer->offset != NULL)
-		return system_timer->offset() * 1000;
-
-	return 0;
-}
-#endif /* CONFIG_ARCH_USES_GETTIMEOFFSET */
-
 #ifdef CONFIG_LEDS_TIMER
 static inline void do_leds(void)
 {
@@ -145,10 +135,6 @@ device_initcall(timer_init_syscore_ops);
 
 void __init time_init(void)
 {
-#ifdef CONFIG_ARCH_USES_GETTIMEOFFSET
-	arch_gettimeoffset = arm_gettimeoffset;
-#endif
-
 	system_timer = machine_desc->timer;
 	system_timer->init();
 	sched_clock_postinit();
