@@ -327,10 +327,10 @@ int sdmx_open_session(int *session_handle)
 	/* Get and print the app version */
 	version_ret = sdmx_get_version(*session_handle, &version);
 	if (SDMX_SUCCESS == version_ret)
-		pr_info("TZ SDMX version is %x.%x\n", version >> 8,
+		pr_debug("TZ SDMX version is %x.%x\n", version >> 8,
 			version & 0xFF);
 	else
-		pr_err("Error reading TZ SDMX version\n");
+		pr_debug("Error reading TZ SDMX version\n");
 
 	return ret;
 }
