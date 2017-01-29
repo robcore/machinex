@@ -3640,7 +3640,7 @@ static int nl80211_set_reg(struct sk_buff *skb, struct genl_info *info)
 		dfs_region = nla_get_u8(info->attrs[NL80211_ATTR_DFS_REGION]);
 
 	nla_for_each_nested(nl_reg_rule, info->attrs[NL80211_ATTR_REG_RULES],
-			rem_reg_rules) {
+			    rem_reg_rules) {
 		num_rules++;
 		if (num_rules > NL80211_MAX_SUPP_REG_RULES)
 			return -EINVAL;
@@ -3654,7 +3654,7 @@ static int nl80211_set_reg(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	size_of_regd = sizeof(struct ieee80211_regdomain) +
-		(num_rules * sizeof(struct ieee80211_reg_rule));
+		       num_rules * sizeof(struct ieee80211_reg_rule);
 
 	rd = kzalloc(size_of_regd, GFP_KERNEL);
 	if (!rd) {
@@ -3674,10 +3674,10 @@ static int nl80211_set_reg(struct sk_buff *skb, struct genl_info *info)
 		rd->dfs_region = dfs_region;
 
 	nla_for_each_nested(nl_reg_rule, info->attrs[NL80211_ATTR_REG_RULES],
-			rem_reg_rules) {
+			    rem_reg_rules) {
 		nla_parse(tb, NL80211_REG_RULE_ATTR_MAX,
-			nla_data(nl_reg_rule), nla_len(nl_reg_rule),
-			reg_rule_policy);
+			  nla_data(nl_reg_rule), nla_len(nl_reg_rule),
+			  reg_rule_policy);
 		r = parse_reg_rule(tb, &rd->reg_rules[rule_idx]);
 		if (r)
 			goto bad_reg;
@@ -3693,10 +3693,7 @@ static int nl80211_set_reg(struct sk_buff *skb, struct genl_info *info)
 	BUG_ON(rule_idx != num_rules);
 
 	r = set_regdom(rd);
-
-	mutex_unlock(&cfg80211_mutex);
-
-	return r;
+	rd = NULL;
 
  bad_reg:
 	mutex_unlock(&cfg80211_mutex);
