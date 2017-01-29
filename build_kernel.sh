@@ -97,10 +97,6 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
-sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
-echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
-#echo '# CONFIG_LOCALVERSION_AUTO is not set' >> arch/arm/configs/canadefconfig
-
 function ADBRETRY()
 {
 ONLINE=`adb get-state 2> /dev/null`
@@ -114,8 +110,11 @@ else
 	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "pushed"
-fi
+fi;
 }
+
+sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
@@ -253,6 +252,25 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 
 	echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 	read AUTO
+
+function ADBRETRY()
+{
+ONLINE=`adb get-state 2> /dev/null`
+if [[ $ONLINE == device ]]; then
+	echo "connected"
+	adb push $OUTFOLDER.zip /storage/extSdCard
+	echo "push complete"
+else
+	echo "disconnected, retrying"
+	adb connect 192.168.1.103
+	countdown
+	adb push $OUTFOLDER.zip /storage/extSdCard
+	echo "pushed"
+fi;
+}
+
+sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export ARCH=arm
@@ -336,6 +354,26 @@ if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	rm -rf /media/root/robcore/AIK/$PRVS
 fi;
 OUTFOLDER=$PRVS
+
+function ADBRETRY()
+{
+ONLINE=`adb get-state 2> /dev/null`
+if [[ $ONLINE == device ]]; then
+	echo "connected"
+	adb push $OUTFOLDER.zip /storage/extSdCard
+	echo "push complete"
+else
+	echo "disconnected, retrying"
+	adb connect 192.168.1.103
+	countdown
+	adb push $OUTFOLDER.zip /storage/extSdCard
+	echo "pushed"
+fi;
+}
+
+sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
+
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
