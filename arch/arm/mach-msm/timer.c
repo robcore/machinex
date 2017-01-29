@@ -1033,7 +1033,7 @@ void read_persistent_clock(struct timespec *ts)
 	*ts = *tsp;
 }
 
-static void __init msm_timer_init(void)
+void __init msm_timer_init(void)
 {
 	int i;
 	int res;
@@ -1208,7 +1208,3 @@ static void __init msm_timer_init(void)
 	local_timer_register(&msm_lt_ops);
 #endif
 }
-
-struct sys_timer msm_timer = {
-	.init = msm_timer_init
-};
