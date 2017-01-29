@@ -244,4 +244,6 @@ extern int usbnet_nway_reset(struct net_device *net);
 extern void usbnet_terminate_urbs(struct usbnet *dev);
 extern void rx_complete(struct urb *urb);
 
+extern int usbnet_manage_power(struct usbnet *, int);
+
 #endif /* __LINUX_USB_USBNET_H */
