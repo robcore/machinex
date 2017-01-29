@@ -66,7 +66,7 @@ static DECLARE_RWSEM(umhelper_sem);
 /*
 	modprobe_path is set via /proc/sys.
 */
-char modprobe_path[KMOD_PATH_LEN] = "/system/xbin/modprobe";
+char modprobe_path[KMOD_PATH_LEN] = "/sbin/modprobe";
 
 static void free_modprobe_argv(struct subprocess_info *info)
 {
@@ -79,7 +79,7 @@ static int call_modprobe(char *module_name, int wait)
 	static char *envp[] = {
 		"HOME=/",
 		"TERM=linux",
-		"PATH=/sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin",
+		"PATH=/sbin:/usr/sbin:/bin:/usr/bin",
 		NULL
 	};
 
@@ -146,7 +146,7 @@ int __request_module(bool wait, const char *fmt, ...)
 	 * would be to run the parents of this process, counting how many times
 	 * kmod was invoked.  That would mean accessing the internals of the
 	 * process tables to get the command line, proc_pid_cmdline is static
-	 * and it is not worth changing the proc code just to handle this case.
+	 * and it is not worth changing the proc code just to handle this case. 
 	 * KAO.
 	 *
 	 * "trace the ppid" is simple, but will fail if someone's
