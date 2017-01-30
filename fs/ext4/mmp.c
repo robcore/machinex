@@ -6,45 +6,12 @@
 
 #include "ext4.h"
 
-/* Checksumming functions */
-static __u32 ext4_mmp_csum(struct super_block *sb, struct mmp_struct *mmp)
-{
-	struct ext4_sb_info *sbi = EXT4_SB(sb);
-	int offset = offsetof(struct mmp_struct, mmp_checksum);
-	__u32 csum;
-
-	csum = ext4_chksum(sbi, sbi->s_csum_seed, (char *)mmp, offset);
-
-	return cpu_to_le32(csum);
-}
-
-int ext4_mmp_csum_verify(struct super_block *sb, struct mmp_struct *mmp)
-{
-	if (!EXT4_HAS_RO_COMPAT_FEATURE(sb,
-				       EXT4_FEATURE_RO_COMPAT_METADATA_CSUM))
-		return 1;
-
-	return mmp->mmp_checksum == ext4_mmp_csum(sb, mmp);
-}
-
-void ext4_mmp_csum_set(struct super_block *sb, struct mmp_struct *mmp)
-{
-	if (!EXT4_HAS_RO_COMPAT_FEATURE(sb,
-				       EXT4_FEATURE_RO_COMPAT_METADATA_CSUM))
-		return;
-
-	mmp->mmp_checksum = ext4_mmp_csum(sb, mmp);
-}
-
 /*
  * Write the MMP block using WRITE_SYNC to try to get the block on-disk
  * faster.
  */
-static int write_mmp_block(struct super_block *sb, struct buffer_head *bh)
+static int write_mmp_block(struct buffer_head *bh)
 {
-	struct mmp_struct *mmp = (struct mmp_struct *)(bh->b_data);
-
-	ext4_mmp_csum_set(sb, mmp);
 	mark_buffer_dirty(bh);
 	lock_buffer(bh);
 	bh->b_end_io = end_buffer_write_sync;
@@ -94,8 +61,7 @@ static int read_mmp_block(struct super_block *sb, struct buffer_head **bh,
 	}
 
 	mmp = (struct mmp_struct *)((*bh)->b_data);
-	if (le32_to_cpu(mmp->mmp_magic) != EXT4_MMP_MAGIC ||
-	    !ext4_mmp_csum_verify(sb, mmp))
+	if (le32_to_cpu(mmp->mmp_magic) != EXT4_MMP_MAGIC)
 		return -EINVAL;
 
 	return 0;
@@ -156,7 +122,7 @@ static int kmmpd(void *data)
 		mmp->mmp_time = cpu_to_le64(get_seconds());
 		last_update_time = jiffies;
 
-		retval = write_mmp_block(sb, bh);
+		retval = write_mmp_block(bh);
 		/*
 		 * Don't spew too many error messages. Print one every
 		 * (s_mmp_update_interval * 60) seconds.
@@ -236,7 +202,7 @@ static int kmmpd(void *data)
 	mmp->mmp_seq = cpu_to_le32(EXT4_MMP_SEQ_CLEAN);
 	mmp->mmp_time = cpu_to_le64(get_seconds());
 
-	retval = write_mmp_block(sb, bh);
+	retval = write_mmp_block(bh);
 
 failed:
 	kfree(data);
@@ -335,7 +301,7 @@ skip:
 	seq = mmp_new_seq();
 	mmp->mmp_seq = cpu_to_le32(seq);
 
-	retval = write_mmp_block(sb, bh);
+	retval = write_mmp_block(bh);
 	if (retval)
 		goto failed;
 
