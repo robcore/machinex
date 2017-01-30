@@ -1345,6 +1345,9 @@ struct ext4_sb_info {
 
 	/* Reference to checksum algorithm driver via cryptoapi */
 	struct crypto_shash *s_chksum_driver;
+
+	/* Precomputed FS UUID checksum for seeding other checksums */
+	__u32 s_csum_seed;
 };
 
 static inline struct ext4_sb_info *EXT4_SB(struct super_block *sb)
@@ -2111,6 +2114,10 @@ extern int ext4_group_extend(struct super_block *sb,
 extern int ext4_resize_fs(struct super_block *sb, ext4_fsblk_t n_blocks_count);
 
 /* super.c */
+extern int ext4_superblock_csum_verify(struct super_block *sb,
+				       struct ext4_super_block *es);
+extern void ext4_superblock_csum_set(struct super_block *sb,
+				     struct ext4_super_block *es);
 extern int ext4_calculate_overhead(struct super_block *sb);
 extern void *ext4_kvmalloc(size_t size, gfp_t flags);
 extern void *ext4_kvzalloc(size_t size, gfp_t flags);

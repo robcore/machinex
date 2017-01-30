@@ -840,7 +840,7 @@ static int add_new_gdb(handle_t *handle, struct inode *inode,
 	ext4_kvfree(o_group_desc);
 
 	le16_add_cpu(&es->s_reserved_gdt_blocks, -1);
-	err = ext4_handle_dirty_metadata(handle, NULL, EXT4_SB(sb)->s_sbh);
+	err = ext4_handle_dirty_super_now(handle, sb);
 	if (err)
 		ext4_std_error(sb, err);
 
@@ -1047,6 +1047,8 @@ static void update_backups(struct super_block *sb, int blk_off, char *data,
 		group = ext4_meta_bg_first_group(sb, group) + 1;
 		last = (ext4_group_t)(group + EXT4_DESC_PER_BLOCK(sb) - 2);
 	}
+
+	ext4_superblock_csum_set(sb, (struct ext4_super_block *)data);
 
 	while (group < sbi->s_groups_count) {
 		struct buffer_head *bh;
