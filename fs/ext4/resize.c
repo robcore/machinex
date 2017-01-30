@@ -1549,7 +1549,7 @@ int ext4_group_add(struct super_block *sb, struct ext4_new_group_data *input)
 
 	err = ext4_alloc_flex_bg_array(sb, input->group + 1);
 	if (err)
-		return err;
+		goto out;
 
 	err = ext4_mb_alloc_groupinfo(sb, input->group + 1);
 	if (err)
