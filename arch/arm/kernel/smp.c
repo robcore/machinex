@@ -113,7 +113,6 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 	return ret;
 }
 
-#ifdef CONFIG_HOTPLUG_CPU
 static void percpu_timer_stop(void);
 
 /*
@@ -234,7 +233,8 @@ void __ref cpu_die(void)
 	 * The return path should not be used for platforms which can
 	 * power off the CPU.
 	 */
-	platform_cpu_die(cpu);
+	if (smp_ops.cpu_die)
+		smp_ops.cpu_die(cpu);
 
 	/*
 	 * Do not return to the idle loop - jump back to the secondary
@@ -247,7 +247,6 @@ void __ref cpu_die(void)
 		:
 		: "r" (task_stack_page(current) + THREAD_SIZE - 8));
 }
-#endif /* CONFIG_HOTPLUG_CPU */
 
 /*
  * Called by both boot and secondaries to move global data into
@@ -299,7 +298,8 @@ asmlinkage void secondary_start_kernel(void)
 	/*
 	 * Give the platform a chance to do its own initialisation.
 	 */
-	platform_secondary_init(cpu);
+	if (smp_ops.smp_secondary_init)
+		smp_ops.smp_secondary_init(cpu);
 
         smp_store_cpu_info(cpu);
 
@@ -374,8 +374,8 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		/*
 		 * Initialise the present map, which describes the set of CPUs
 		 * actually populated at the present time. A platform should
-		 * re-initialize the map in platform_smp_prepare_cpus() if
-		 * present != possible (e.g. physical hotplug).
+		 * re-initialize the map in the platforms smp_prepare_cpus()
+		 * if present != possible (e.g. physical hotplug).
 		 */
 		init_cpu_present(cpu_possible_mask);
 
@@ -383,7 +383,8 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		 * Initialise the SCU if there are more than one CPU
 		 * and let them know where to start.
 		 */
-		platform_smp_prepare_cpus(max_cpus);
+		if (smp_ops.smp_prepare_cpus)
+			smp_ops.smp_prepare_cpus(max_cpus);
 	}
 }
 
