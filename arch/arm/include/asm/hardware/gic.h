@@ -10,8 +10,6 @@
 #ifndef __ASM_ARM_HARDWARE_GIC_H
 #define __ASM_ARM_HARDWARE_GIC_H
 
-#include <linux/compiler.h>
-
 #define GIC_CPU_CTRL			0x00
 #define GIC_CPU_PRIMASK			0x04
 #define GIC_CPU_BINPOINT		0x08
@@ -33,8 +31,6 @@
 #define GIC_DIST_CONFIG			0xc00
 #define GIC_DIST_SOFTINT		0xf00
 
-#ifndef __ASSEMBLY__
-#include <linux/irqdomain.h>
 struct device_node;
 
 extern struct irq_chip gic_arch_extn;
@@ -62,6 +58,4 @@ void gic_set_irq_secure(unsigned int irq);
 void msm_gic_save(void);
 void msm_gic_restore(void);
 void gic_configure_and_raise(unsigned int irq, unsigned int cpu);
-#endif
-
 #endif
