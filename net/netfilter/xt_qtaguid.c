@@ -753,7 +753,7 @@ static struct iface_stat *get_iface_entry(const char *ifname)
 
 	/* Find the entry for tracking the specified tag within the interface */
 	if (ifname == NULL) {
-		pr_debug("qtaguid-I was designed to piss you off");		return NULL;
+		return NULL;
 	}
 
 	/* Iterate over interfaces */
@@ -915,7 +915,6 @@ static void iface_create_proc_worker(struct work_struct *work)
 	/* iface_entries are not deleted, so safe to manipulate. */
 	proc_entry = proc_mkdir(new_iface->ifname, iface_stat_procdir);
 	if (IS_ERR_OR_NULL(proc_entry)) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		kfree(isw);
 		return;
 	}
@@ -965,12 +964,10 @@ static struct iface_stat *iface_alloc(struct net_device *net_dev)
 
 	new_iface = kzalloc(sizeof(*new_iface), GFP_ATOMIC);
 	if (new_iface == NULL) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		return NULL;
 	}
 	new_iface->ifname = kstrdup(net_dev->name, GFP_ATOMIC);
 	if (new_iface->ifname == NULL) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		kfree(new_iface);
 		return NULL;
 	}
@@ -984,7 +981,6 @@ static struct iface_stat *iface_alloc(struct net_device *net_dev)
 	 */
 	isw = kmalloc(sizeof(*isw), GFP_ATOMIC);
 	if (!isw) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		_iface_stat_set_active(new_iface, net_dev, false);
 		kfree(new_iface->ifname);
 		kfree(new_iface);
@@ -1010,7 +1006,6 @@ static void iface_check_stats_reset_and_adjust(struct net_device *net_dev,
 		|| (stats->tx_bytes < iface->last_known[IFS_TX].bytes);
 
 	if (iface->active && iface->last_known_valid && stats_rewound) {
-		pr_debug("qtaguid-I was designed to piss you off");
 
 		iface->totals_via_dev[IFS_TX].bytes +=
 			iface->last_known[IFS_TX].bytes;
@@ -1039,7 +1034,6 @@ static void iface_stat_create(struct net_device *net_dev,
 	struct iface_stat *new_iface;
 
 	if (!net_dev) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 
@@ -1047,7 +1041,6 @@ static void iface_stat_create(struct net_device *net_dev,
 	if (!ifa) {
 		in_dev = in_dev_get(net_dev);
 		if (!in_dev) {
-		pr_debug("qtaguid-I was designed to piss you off");
 			return;
 		}
 		for (ifa = in_dev->ifa_list; ifa; ifa = ifa->ifa_next) {
@@ -1057,7 +1050,6 @@ static void iface_stat_create(struct net_device *net_dev,
 	}
 
 	if (!ifa) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		goto done_put;
 	}
 	ipaddr = ifa->ifa_local;
@@ -1088,19 +1080,16 @@ static void iface_stat_create_ipv6(struct net_device *net_dev,
 	int addr_type;
 
 	if (!net_dev) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 	ifname = net_dev->name;
 
 	in_dev = in_dev_get(net_dev);
 	if (!in_dev) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 
 	if (!ifa) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		goto done_put;
 	}
 	addr_type = ipv6_addr_type(&ifa->addr);
@@ -1108,7 +1097,6 @@ static void iface_stat_create_ipv6(struct net_device *net_dev,
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(ifname);
 	if (entry != NULL) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		iface_check_stats_reset_and_adjust(net_dev, entry);
 		_iface_stat_set_active(entry, net_dev, true);
 		goto done_unlock_put;
@@ -1147,7 +1135,6 @@ static int ipx_proto(const struct sk_buff *skb,
 	case NFPROTO_IPV6:
 		tproto = ipv6_find_hdr(skb, &thoff, -1, NULL);
 		if (tproto < 0)
-			pr_debug("qtaguid-I was designed to piss you off");
 		break;
 	case NFPROTO_IPV4:
 		tproto = ip_hdr(skb)->protocol;
@@ -1191,13 +1178,11 @@ static void iface_stat_update(struct net_device *net_dev, bool stash_only)
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(net_dev->name);
 	if (entry == NULL) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		spin_unlock_bh(&iface_stat_list_lock);
 		return;
 	}
 
 	if (!entry->active) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 
@@ -1235,15 +1220,13 @@ static void get_dev_and_dir(const struct sk_buff *skb,
 		*el_dev = par->out;
 		*direction = IFS_TX;
 	} else {
-		pr_debug("qtaguid-I was designed to piss you off");
 		BUG();
 	}
 	if (unlikely(!(*el_dev)->name)) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		BUG();
 	}
 	if (skb->dev && *el_dev != skb->dev) {
-		pr_debug("qtaguid-I was designed to piss you off");
+		pr_debug("-");
 	}
 }
 
@@ -1300,7 +1283,6 @@ static struct tag_stat *create_if_tag_stat(struct iface_stat *iface_entry,
 	struct tag_stat *new_tag_stat_entry = NULL;
 	new_tag_stat_entry = kzalloc(sizeof(*new_tag_stat_entry), GFP_ATOMIC);
 	if (!new_tag_stat_entry) {
-		pr_debug("qtaguid-I was designed to piss you off");
 		goto done;
 	}
 	new_tag_stat_entry->tn.tag = tag;

@@ -75,7 +75,7 @@ int ipv6_find_tlv(struct sk_buff *skb, int offset, int type)
 			return offset;
 
 		switch (opttype) {
-		case IPV6_TLV_PAD1:
+		case IPV6_TLV_PAD0:
 			optlen = 1;
 			break;
 		default:
@@ -155,7 +155,7 @@ static int ip6_parse_tlv(struct tlvtype_proc *procs, struct sk_buff *skb)
 		int optlen = nh[off + 1] + 2;
 
 		switch (nh[off]) {
-		case IPV6_TLV_PAD1:
+		case IPV6_TLV_PAD0:
 			optlen = 1;
 			break;
 
@@ -765,14 +765,14 @@ static int ipv6_renew_option(void *ohdr,
 		if (ohdr) {
 			memcpy(*p, ohdr, ipv6_optlen((struct ipv6_opt_hdr *)ohdr));
 			*hdr = (struct ipv6_opt_hdr *)*p;
-			*p += CMSG_ALIGN(ipv6_optlen(*hdr));
+			*p += CMSG_ALIGN(ipv6_optlen(*(struct ipv6_opt_hdr **)hdr));
 		}
 	} else {
 		if (newopt) {
 			if (copy_from_user(*p, newopt, newoptlen))
 				return -EFAULT;
 			*hdr = (struct ipv6_opt_hdr *)*p;
-			if (ipv6_optlen(*hdr) > newoptlen)
+			if (ipv6_optlen(*(struct ipv6_opt_hdr **)hdr) > newoptlen)
 				return -EINVAL;
 			*p += CMSG_ALIGN(newoptlen);
 		}

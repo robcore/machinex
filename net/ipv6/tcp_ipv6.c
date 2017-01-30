@@ -1978,6 +1978,9 @@ static void get_timewait6_sock(struct seq_file *seq,
 	const struct inet6_timewait_sock *tw6 = inet6_twsk((struct sock *)tw);
 	long delta = tw->tw_ttd - jiffies;
 
+	if (delta < 0)
+		delta = 0;
+
 	dest = &tw6->tw_v6_daddr;
 	src  = &tw6->tw_v6_rcv_saddr;
 	destp = ntohs(tw->tw_dport);
