@@ -2286,7 +2286,7 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	 * Set timeout value to 10 secs (or more in case of buggy cards)
 	 */
 	if ((mmc->card) && (mmc->card->quirks & MMC_QUIRK_INAND_DATA_TIMEOUT))
-		host->curr.req_tout_ms = 20000;
+		host->curr.req_tout_ms = 10000;
 	else
 		host->curr.req_tout_ms = MSM_MMC_REQ_TIMEOUT;
 	/*
@@ -5170,35 +5170,6 @@ store_sdcc_to_mem_max_bus_bw(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-static ssize_t
-show_idle_timeout(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	struct mmc_host *mmc = dev_get_drvdata(dev);
-	struct msmsdcc_host *host = mmc_priv(mmc);
-
-	return snprintf(buf, PAGE_SIZE, "%u (Min 5 sec)\n",
-		host->idle_tout / 1000);
-}
-
-static ssize_t
-store_idle_timeout(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	struct mmc_host *mmc = dev_get_drvdata(dev);
-	struct msmsdcc_host *host = mmc_priv(mmc);
-	unsigned int long flags;
-	int timeout; /* in secs */
-
-	if (!kstrtou32(buf, 0, &timeout)
-			&& (timeout > MSM_MMC_DEFAULT_IDLE_TIMEOUT / 1000)) {
-		spin_lock_irqsave(&host->lock, flags);
-		host->idle_tout = timeout * 1000;
-		spin_unlock_irqrestore(&host->lock, flags);
-	}
-	return count;
-}
-
 static inline void set_auto_cmd_setting(struct device *dev,
 					 const char *buf,
 					 bool is_cmd19)
@@ -5379,7 +5350,7 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 
 	pr_err("%s: got_dataend=%d, prog_enable=%d,"
 		" wait_for_auto_prog_done=%d, got_auto_prog_done=%d,"
-		" req_tout_ms=%d\n", mmc_hostname(host->mmc),
+		mmc_hostname(host->mmc),
 		host->curr.got_dataend, host->prog_enable,
 		host->curr.wait_for_auto_prog_done,
 		host->curr.got_auto_prog_done, host->curr.req_tout_ms);
@@ -6449,7 +6420,6 @@ msmsdcc_probe(struct platform_device *pdev)
 		pm_runtime_enable(&(pdev)->dev);
 	}
 #endif
-	host->idle_tout = MSM_MMC_DEFAULT_IDLE_TIMEOUT;
 	setup_timer(&host->req_tout_timer, msmsdcc_req_tout_timer_hdlr,
 			(unsigned long)host);
 
@@ -7183,31 +7153,6 @@ MODULE_DESCRIPTION("Qualcomm Multimedia Card Interface driver");
 MODULE_LICENSE("GPL");
 
 #if defined(CONFIG_DEBUG_FS)
-static int msmsdcc_dbg_idle_tout_get(void *data, u64 *val)
-{
-	struct msmsdcc_host *host = data;
-
-	*val = host->idle_tout / 1000L;
-	return 0;
-}
-
-static int msmsdcc_dbg_idle_tout_set(void *data, u64 val)
-{
-	struct msmsdcc_host *host = data;
-	unsigned long flags;
-
-	spin_lock_irqsave(&host->lock, flags);
-	host->idle_tout = (u32)val * 1000;
-	spin_unlock_irqrestore(&host->lock, flags);
-
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(msmsdcc_dbg_idle_tout_ops,
-			msmsdcc_dbg_idle_tout_get,
-			msmsdcc_dbg_idle_tout_set,
-			"%llu\n");
-
 static int msmsdcc_dbg_pio_mode_get(void *data, u64 *val)
 {
 	struct msmsdcc_host *host = data;
@@ -7273,17 +7218,6 @@ static void msmsdcc_dbg_createhost(struct msmsdcc_host *host)
 		pr_err("%s: Failed to create debugfs dir for host with err=%d\n",
 			mmc_hostname(host->mmc), err);
 		return;
-	}
-
-	host->debugfs_idle_tout = debugfs_create_file("idle_tout",
-		S_IRUSR | S_IWUSR, host->debugfs_host_dir, host,
-		&msmsdcc_dbg_idle_tout_ops);
-
-	if (IS_ERR(host->debugfs_idle_tout)) {
-		err = PTR_ERR(host->debugfs_idle_tout);
-		host->debugfs_idle_tout = NULL;
-		pr_err("%s: Failed to create idle_tout debugfs entry with err=%d\n",
-			mmc_hostname(host->mmc), err);
 	}
 
 	host->debugfs_pio_mode = debugfs_create_file("pio_mode",
