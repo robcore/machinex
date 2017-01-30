@@ -578,7 +578,6 @@ MACHINE_START(AG5EVM, "ag5evm")
 	.init_early	= sh73a0_add_early_devices,
 	.nr_irqs	= NR_IRQS_LEGACY,
 	.init_irq	= sh73a0_init_irq,
-	.handle_irq	= gic_handle_irq,
 	.init_machine	= ag5evm_init,
 	.timer		= &shmobile_timer,
 MACHINE_END

@@ -34,7 +34,6 @@
 #include <mach/irqs.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
-#include <asm/hardware/gic.h>
 #include <asm/traps.h>
 
 /* SMSC LAN89218 */
@@ -96,7 +95,6 @@ MACHINE_START(MARZEN, "marzen")
 	.init_early	= r8a7779_add_early_devices,
 	.nr_irqs	= NR_IRQS_LEGACY,
 	.init_irq	= r8a7779_init_irq,
-	.handle_irq	= gic_handle_irq,
 	.init_machine	= marzen_init,
 	.timer		= &shmobile_timer,
 MACHINE_END

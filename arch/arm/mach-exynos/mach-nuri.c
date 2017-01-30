@@ -33,7 +33,6 @@
 #include <media/v4l2-mediabus.h>
 
 #include <asm/mach/arch.h>
-#include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
 
 #include <plat/adc.h>
@@ -1349,7 +1348,6 @@ MACHINE_START(NURI, "NURI")
 	.atag_offset	= 0x100,
 	.init_irq	= exynos4_init_irq,
 	.map_io		= nuri_map_io,
-	.handle_irq	= gic_handle_irq,
 	.init_machine	= nuri_machine_init,
 	.timer		= &exynos4_timer,
 	.reserve        = &nuri_reserve,

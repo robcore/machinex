@@ -36,7 +36,6 @@
 #include <linux/leds.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
-#include <asm/hardware/gic.h>
 
 #include <plat/i2c.h>
 #include <plat/ste_dma40.h>
