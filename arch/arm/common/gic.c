@@ -51,8 +51,6 @@
 
 #include <mach/socinfo.h>
 
-#include "irqchip.h"
-
 union gic_base {
 	void __iomem *common_base;
 	void __percpu __iomem **percpu_base;
@@ -872,11 +870,6 @@ static void gic_dist_restore(unsigned int gic_nr)
 static void gic_dist_save(unsigned int gic_nr)
 {
 }
-IRQCHIP_DECLARE(cortex_a15_gic, "arm,cortex-a15-gic", gic_of_init);
-IRQCHIP_DECLARE(cortex_a9_gic, "arm,cortex-a9-gic", gic_of_init);
-IRQCHIP_DECLARE(msm_8660_qgic, "qcom,msm-8660-qgic", gic_of_init);
-IRQCHIP_DECLARE(msm_qgic2, "qcom,msm-qgic2", gic_of_init);
-
 #endif
 
 #ifdef CONFIG_SMP
