@@ -2793,7 +2793,7 @@ static int ext4_run_li_request(struct ext4_li_request *elr)
 			break;
 	}
 
-	if (group >= ngroups)
+	if (group == ngroups)
 		ret = 1;
 
 	if (!ret) {
@@ -3032,34 +3032,33 @@ static struct ext4_li_request *ext4_li_request_new(struct super_block *sb,
 	return elr;
 }
 
-int ext4_register_li_request(struct super_block *sb,
-			     ext4_group_t first_not_zeroed)
+static int ext4_register_li_request(struct super_block *sb,
+				    ext4_group_t first_not_zeroed)
 {
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
-	struct ext4_li_request *elr = NULL;
+	struct ext4_li_request *elr;
 	ext4_group_t ngroups = EXT4_SB(sb)->s_groups_count;
 	int ret = 0;
 
-	mutex_lock(&ext4_li_mtx);
 	if (sbi->s_li_request != NULL) {
 		/*
 		 * Reset timeout so it can be computed again, because
 		 * s_li_wait_mult might have changed.
 		 */
 		sbi->s_li_request->lr_timeout = 0;
-		goto out;
+		return 0;
 	}
 
 	if (first_not_zeroed == ngroups ||
 	    (sb->s_flags & MS_RDONLY) ||
 	    !test_opt(sb, INIT_INODE_TABLE))
-		goto out;
+		return 0;
 
 	elr = ext4_li_request_new(sb, first_not_zeroed);
-	if (!elr) {
-		ret = -ENOMEM;
-		goto out;
-	}
+	if (!elr)
+		return -ENOMEM;
+
+	mutex_lock(&ext4_li_mtx);
 
 	if (NULL == ext4_li_info) {
 		ret = ext4_li_info_new();
