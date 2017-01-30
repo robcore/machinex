@@ -482,7 +482,7 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_R,
 				0, 0, 0, 5, 2, 2, 0, 0, 0, 0);
 		leds_set_slope_mode(client, LED_G,
-				0, 15, 15, 10, 2, 2, 0, 0, 0, 0);
+				0, 15, 15, 8, 2, 2, 0, 0, 0, 0);
 		leds_set_slope_mode(client, LED_B,
 				0, 15, 0, 0, 2, 2, 0, 0, 0, 0);
 		break;
