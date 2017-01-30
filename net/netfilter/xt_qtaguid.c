@@ -1205,31 +1205,6 @@ static void iface_stat_update(struct net_device *net_dev, bool stash_only)
 	spin_unlock_bh(&iface_stat_list_lock);
 }
 
-/* Guarantied to return a net_device that has a name */
-static void get_dev_and_dir(const struct sk_buff *skb,
-			    struct xt_action_param *par,
-			    enum ifs_tx_rx *direction,
-			    const struct net_device **el_dev)
-{
-	BUG_ON(!direction || !el_dev);
-
-	if (par->in) {
-		*el_dev = par->in;
-		*direction = IFS_RX;
-	} else if (par->out) {
-		*el_dev = par->out;
-		*direction = IFS_TX;
-	} else {
-		BUG();
-	}
-	if (unlikely(!(*el_dev)->name)) {
-		BUG();
-	}
-	if (skb->dev && *el_dev != skb->dev) {
-		pr_debug("-");
-	}
-}
-
 /*
  * Update stats for the specified interface from the skb.
  * Do nothing if the entry
@@ -1241,12 +1216,25 @@ static void iface_stat_update_from_skb(const struct sk_buff *skb,
 {
 	struct iface_stat *entry;
 	const struct net_device *el_dev;
-	enum ifs_tx_rx direction;
+	enum ifs_tx_rx direction = par->in ? IFS_RX : IFS_TX;
 	int bytes = skb->len;
 	int proto;
 
-	get_dev_and_dir(skb, par, &direction, &el_dev);
-	proto = ipx_proto(skb, par);
+	if (!skb->dev) {
+		el_dev = par->in ? : par->out;
+	} else {
+		const struct net_device *other_dev;
+		el_dev = skb->dev;
+		other_dev = par->in ? : par->out;
+	}
+
+	if (unlikely(!el_dev)) {
+		BUG();
+	} else if (unlikely(!el_dev->name)) {
+		BUG();
+	} else {
+		proto = ipx_proto(skb, par);
+	}
 
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(el_dev->name);
@@ -1544,9 +1532,6 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 	struct sock *sk;
 	unsigned int hook_mask = (1 << par->hooknum);
 
-	MT_DEBUG("qtaguid[%d]: find_sk(skb=%p) family=%d\n",
-		 par->hooknum, skb, par->family);
-
 	/*
 	 * Let's not abuse the the xt_socket_get*_sk(), or else it will
 	 * return garbage SKs.
@@ -1571,8 +1556,6 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 	 * Not fixed in 3.0-r3 :(
 	 */
 	if (sk) {
-		MT_DEBUG("qtaguid[%d]: %p->sk_proto=%u->sk_state=%d\n",
-			 par->hooknum, sk, sk->sk_protocol, sk->sk_state);
 		if (sk->sk_state  == TCP_TIME_WAIT) {
 			xt_socket_put_sk(sk);
 			sk = NULL;
@@ -1586,19 +1569,27 @@ static void account_for_uid(const struct sk_buff *skb,
 			    struct xt_action_param *par)
 {
 	const struct net_device *el_dev;
-	enum ifs_tx_rx direction;
-	int proto;
 
-	get_dev_and_dir(skb, par, &direction, &el_dev);
-	proto = ipx_proto(skb, par);
-	MT_DEBUG("qtaguid[%d]: dev name=%s type=%d fam=%d proto=%d dir=%d\n",
-		 par->hooknum, el_dev->name, el_dev->type,
-		 par->family, proto, direction);
+	if (!skb->dev) {
+		el_dev = par->in ? : par->out;
+	} else {
+		const struct net_device *other_dev;
+		el_dev = skb->dev;
+		other_dev = par->in ? : par->out;
+	}
 
-	if_tag_stat_update(el_dev->name, uid,
-			   skb->sk ? skb->sk : alternate_sk,
-			   direction,
-			   proto, skb->len);
+	if (unlikely(!el_dev)) {
+		pr_debug("-\n");
+	} else if (unlikely(!el_dev->name)) {
+		pr_debug("-\n");
+	} else {
+		int proto = ipx_proto(skb, par);
+
+		if_tag_stat_update(el_dev->name, uid,
+				skb->sk ? skb->sk : alternate_sk,
+				par->in ? IFS_RX : IFS_TX,
+				proto, skb->len);
+	}
 }
 
 static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
@@ -1609,11 +1600,6 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	struct sock *sk;
 	uid_t sock_uid;
 	bool res;
-	/*
-	 * TODO: unhack how to force just accounting.
-	 * For now we only do tag stats when the uid-owner is not requested
-	 */
-	bool do_tag_stat = !(info->match & XT_QTAGUID_UID);
 
 	if (unlikely(module_passive))
 		return (info->match ^ info->invert) == 0;
@@ -1680,7 +1666,12 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 		 * couldn't find the owner, so for now we just count them
 		 * against the system.
 		 */
-		if (do_tag_stat)
+		/*
+		 * TODO: unhack how to force just accounting.
+		 * For now we only do iface stats when the uid-owner is not
+		 * requested.
+		 */
+		if (!(info->match & XT_QTAGUID_UID))
 			account_for_uid(skb, sk, 0, par);
 		MT_DEBUG("qtaguid[%d]: leaving (sk?sk->sk_socket)=%p\n",
 			par->hooknum,
@@ -1695,15 +1686,18 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	filp = sk->sk_socket->file;
 	if (filp == NULL) {
 		MT_DEBUG("qtaguid[%d]: leaving filp=NULL\n", par->hooknum);
-		if (do_tag_stat)
-			account_for_uid(skb, sk, 0, par);
+		account_for_uid(skb, sk, 0, par);
 		res = ((info->match ^ info->invert) &
 			(XT_QTAGUID_UID | XT_QTAGUID_GID)) == 0;
 		atomic64_inc(&qtu_events.match_no_sk_file);
 		goto put_sock_ret_res;
 	}
 	sock_uid = filp->f_cred->fsuid;
-	if (do_tag_stat)
+	/*
+	 * TODO: unhack how to force just accounting.
+	 * For now we only do iface stats when the uid-owner is not requested
+	 */
+	if (!(info->match & XT_QTAGUID_UID))
 		account_for_uid(skb, sk, sock_uid, par);
 
 	/*
