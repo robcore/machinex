@@ -288,7 +288,6 @@ static struct mmc_platform_data msm8960_sdc3_data = {
 */
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC3_DAT1,
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
-	.uhs_caps2	= MMC_CAP2_HS200_1_8V_SDR,
 };
 #endif
 

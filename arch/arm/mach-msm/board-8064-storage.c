@@ -460,7 +460,7 @@ static struct mmc_platform_data *apq8064_sdc1_pdata;
 
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 static unsigned int sdc2_sup_clk_rates[] = {
-	400000, 24000000, 48000000
+	400000, 24000000, 40000000
 };
 
 static struct mmc_platform_data sdc2_data = {
@@ -474,7 +474,7 @@ static struct mmc_platform_data sdc2_data = {
 	.is_wpswitch_active_low = false,
 	.status_gpio	= 26,
 	.status_irq = MSM_GPIO_TO_INT(26),
-	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.is_status_gpio_active_low = 1,
 	.xpc_cap = 1,
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC2_DAT1,
@@ -516,7 +516,7 @@ static struct mmc_platform_data sdc3_data = {
 	.is_wpswitch_active_low = true,
 	.status_gpio	= 26,
 	.status_irq	= MSM_GPIO_TO_INT(26),
-	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.is_status_gpio_active_low = 1,
 	.xpc_cap	= 1,
 	.uhs_caps	= (MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
@@ -548,7 +548,7 @@ static struct mmc_platform_data sdc4_data = {
 	.is_wpswitch_active_low = false,
 	.status_gpio	= 26,
 	.status_irq = MSM_GPIO_TO_INT(26),
-	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.is_status_gpio_active_low = 1,
 	.xpc_cap = 1,
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC4_DAT1,

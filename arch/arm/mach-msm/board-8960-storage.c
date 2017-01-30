@@ -351,7 +351,6 @@ static struct mmc_platform_data msm8960_sdc1_data = {
 	.vreg_data	= &mmc_slot_vreg_data[SDCC1],
 	.pin_data	= &mmc_slot_pin_data[SDCC1],
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
-	.uhs_caps2	= MMC_CAP2_HS200_1_8V_SDR,
 };
 #endif
 

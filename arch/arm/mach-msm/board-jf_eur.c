@@ -248,7 +248,7 @@ static int __init sec_tsp_mode(char *mode)
 	if (ret == 0)
 		sec_tsp_synaptics_mode = 1;
 
-	if (ret1 == 0x00 && system_rev >= BOARD_REV10)
+	if (ret1 == 0x00 && system_rev >= BOARD_REV11)
 		sec_tsp_synaptics_mode = 1;
 
 	pr_info("%s : %s", __func__, sec_tsp_synaptics_mode ?
@@ -293,7 +293,6 @@ static void max77693_haptic_power_onoff(int onoff)
 			printk(KERN_ERR"enable l8 failed, rc=%d\n", ret);
 			return;
 		}
-		//printk(KERN_DEBUG"haptic power_on is finished.\n");
 	} else {
 		if (regulator_is_enabled(reg_l8)) {
 			ret = regulator_disable(reg_l8);
@@ -303,7 +302,6 @@ static void max77693_haptic_power_onoff(int onoff)
 				return;
 			}
 		}
-		//printk(KERN_DEBUG"haptic power_off is finished.\n");
 	}
 }
 #endif
