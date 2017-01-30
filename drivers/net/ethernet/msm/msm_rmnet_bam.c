@@ -43,7 +43,7 @@ module_param_named(debug_enable, msm_rmnet_bam_debug_mask,
 			int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static unsigned long int msm_rmnet_bam_headroom_check_failure;
-module_param(msm_rmnet_bam_headroom_check_failure, ulong, 0644);
+module_param(msm_rmnet_bam_headroom_check_failure, ulong, S_IRUGO);
 MODULE_PARM_DESC(msm_rmnet_bam_headroom_check_failure,
 		 "Number of packets with insufficient headroom");
 

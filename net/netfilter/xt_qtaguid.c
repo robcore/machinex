@@ -753,7 +753,7 @@ static struct iface_stat *get_iface_entry(const char *ifname)
 
 	/* Find the entry for tracking the specified tag within the interface */
 	if (ifname == NULL) {
-		return NULL;
+		pr_debug("qtaguid-I was designed to piss you off");		return NULL;
 	}
 
 	/* Iterate over interfaces */
@@ -915,6 +915,7 @@ static void iface_create_proc_worker(struct work_struct *work)
 	/* iface_entries are not deleted, so safe to manipulate. */
 	proc_entry = proc_mkdir(new_iface->ifname, iface_stat_procdir);
 	if (IS_ERR_OR_NULL(proc_entry)) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		kfree(isw);
 		return;
 	}
@@ -964,10 +965,12 @@ static struct iface_stat *iface_alloc(struct net_device *net_dev)
 
 	new_iface = kzalloc(sizeof(*new_iface), GFP_ATOMIC);
 	if (new_iface == NULL) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		return NULL;
 	}
 	new_iface->ifname = kstrdup(net_dev->name, GFP_ATOMIC);
 	if (new_iface->ifname == NULL) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		kfree(new_iface);
 		return NULL;
 	}
@@ -981,6 +984,7 @@ static struct iface_stat *iface_alloc(struct net_device *net_dev)
 	 */
 	isw = kmalloc(sizeof(*isw), GFP_ATOMIC);
 	if (!isw) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		_iface_stat_set_active(new_iface, net_dev, false);
 		kfree(new_iface->ifname);
 		kfree(new_iface);
@@ -1006,6 +1010,7 @@ static void iface_check_stats_reset_and_adjust(struct net_device *net_dev,
 		|| (stats->tx_bytes < iface->last_known[IFS_TX].bytes);
 
 	if (iface->active && iface->last_known_valid && stats_rewound) {
+		pr_debug("qtaguid-I was designed to piss you off");
 
 		iface->totals_via_dev[IFS_TX].bytes +=
 			iface->last_known[IFS_TX].bytes;
@@ -1034,6 +1039,7 @@ static void iface_stat_create(struct net_device *net_dev,
 	struct iface_stat *new_iface;
 
 	if (!net_dev) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 
@@ -1041,6 +1047,7 @@ static void iface_stat_create(struct net_device *net_dev,
 	if (!ifa) {
 		in_dev = in_dev_get(net_dev);
 		if (!in_dev) {
+		pr_debug("qtaguid-I was designed to piss you off");
 			return;
 		}
 		for (ifa = in_dev->ifa_list; ifa; ifa = ifa->ifa_next) {
@@ -1050,6 +1057,7 @@ static void iface_stat_create(struct net_device *net_dev,
 	}
 
 	if (!ifa) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		goto done_put;
 	}
 	ipaddr = ifa->ifa_local;
@@ -1080,16 +1088,19 @@ static void iface_stat_create_ipv6(struct net_device *net_dev,
 	int addr_type;
 
 	if (!net_dev) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 	ifname = net_dev->name;
 
 	in_dev = in_dev_get(net_dev);
 	if (!in_dev) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 
 	if (!ifa) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		goto done_put;
 	}
 	addr_type = ipv6_addr_type(&ifa->addr);
@@ -1097,6 +1108,7 @@ static void iface_stat_create_ipv6(struct net_device *net_dev,
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(ifname);
 	if (entry != NULL) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		iface_check_stats_reset_and_adjust(net_dev, entry);
 		_iface_stat_set_active(entry, net_dev, true);
 		goto done_unlock_put;
@@ -1135,6 +1147,7 @@ static int ipx_proto(const struct sk_buff *skb,
 	case NFPROTO_IPV6:
 		tproto = ipv6_find_hdr(skb, &thoff, -1, NULL);
 		if (tproto < 0)
+			pr_debug("qtaguid-I was designed to piss you off");
 		break;
 	case NFPROTO_IPV4:
 		tproto = ip_hdr(skb)->protocol;
@@ -1178,11 +1191,13 @@ static void iface_stat_update(struct net_device *net_dev, bool stash_only)
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(net_dev->name);
 	if (entry == NULL) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		spin_unlock_bh(&iface_stat_list_lock);
 		return;
 	}
 
 	if (!entry->active) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		return;
 	}
 
@@ -1205,6 +1220,33 @@ static void iface_stat_update(struct net_device *net_dev, bool stash_only)
 	spin_unlock_bh(&iface_stat_list_lock);
 }
 
+/* Guarantied to return a net_device that has a name */
+static void get_dev_and_dir(const struct sk_buff *skb,
+			    struct xt_action_param *par,
+			    enum ifs_tx_rx *direction,
+			    const struct net_device **el_dev)
+{
+	BUG_ON(!direction || !el_dev);
+
+	if (par->in) {
+		*el_dev = par->in;
+		*direction = IFS_RX;
+	} else if (par->out) {
+		*el_dev = par->out;
+		*direction = IFS_TX;
+	} else {
+		pr_debug("qtaguid-I was designed to piss you off");
+		BUG();
+	}
+	if (unlikely(!(*el_dev)->name)) {
+		pr_debug("qtaguid-I was designed to piss you off");
+		BUG();
+	}
+	if (skb->dev && *el_dev != skb->dev) {
+		pr_debug("qtaguid-I was designed to piss you off");
+	}
+}
+
 /*
  * Update stats for the specified interface from the skb.
  * Do nothing if the entry
@@ -1216,25 +1258,12 @@ static void iface_stat_update_from_skb(const struct sk_buff *skb,
 {
 	struct iface_stat *entry;
 	const struct net_device *el_dev;
-	enum ifs_tx_rx direction = par->in ? IFS_RX : IFS_TX;
+	enum ifs_tx_rx direction;
 	int bytes = skb->len;
 	int proto;
 
-	if (!skb->dev) {
-		el_dev = par->in ? : par->out;
-	} else {
-		const struct net_device *other_dev;
-		el_dev = skb->dev;
-		other_dev = par->in ? : par->out;
-	}
-
-	if (unlikely(!el_dev)) {
-		BUG();
-	} else if (unlikely(!el_dev->name)) {
-		BUG();
-	} else {
-		proto = ipx_proto(skb, par);
-	}
+	get_dev_and_dir(skb, par, &direction, &el_dev);
+	proto = ipx_proto(skb, par);
 
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(el_dev->name);
@@ -1271,6 +1300,7 @@ static struct tag_stat *create_if_tag_stat(struct iface_stat *iface_entry,
 	struct tag_stat *new_tag_stat_entry = NULL;
 	new_tag_stat_entry = kzalloc(sizeof(*new_tag_stat_entry), GFP_ATOMIC);
 	if (!new_tag_stat_entry) {
+		pr_debug("qtaguid-I was designed to piss you off");
 		goto done;
 	}
 	new_tag_stat_entry->tn.tag = tag;
@@ -1532,6 +1562,9 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 	struct sock *sk;
 	unsigned int hook_mask = (1 << par->hooknum);
 
+	MT_DEBUG("qtaguid[%d]: find_sk(skb=%p) family=%d\n",
+		 par->hooknum, skb, par->family);
+
 	/*
 	 * Let's not abuse the the xt_socket_get*_sk(), or else it will
 	 * return garbage SKs.
@@ -1556,6 +1589,8 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 	 * Not fixed in 3.0-r3 :(
 	 */
 	if (sk) {
+		MT_DEBUG("qtaguid[%d]: %p->sk_proto=%u->sk_state=%d\n",
+			 par->hooknum, sk, sk->sk_protocol, sk->sk_state);
 		if (sk->sk_state  == TCP_TIME_WAIT) {
 			xt_socket_put_sk(sk);
 			sk = NULL;
@@ -1569,27 +1604,19 @@ static void account_for_uid(const struct sk_buff *skb,
 			    struct xt_action_param *par)
 {
 	const struct net_device *el_dev;
+	enum ifs_tx_rx direction;
+	int proto;
 
-	if (!skb->dev) {
-		el_dev = par->in ? : par->out;
-	} else {
-		const struct net_device *other_dev;
-		el_dev = skb->dev;
-		other_dev = par->in ? : par->out;
-	}
+	get_dev_and_dir(skb, par, &direction, &el_dev);
+	proto = ipx_proto(skb, par);
+	MT_DEBUG("qtaguid[%d]: dev name=%s type=%d fam=%d proto=%d dir=%d\n",
+		 par->hooknum, el_dev->name, el_dev->type,
+		 par->family, proto, direction);
 
-	if (unlikely(!el_dev)) {
-		pr_debug("-\n");
-	} else if (unlikely(!el_dev->name)) {
-		pr_debug("-\n");
-	} else {
-		int proto = ipx_proto(skb, par);
-
-		if_tag_stat_update(el_dev->name, uid,
-				skb->sk ? skb->sk : alternate_sk,
-				par->in ? IFS_RX : IFS_TX,
-				proto, skb->len);
-	}
+	if_tag_stat_update(el_dev->name, uid,
+			   skb->sk ? skb->sk : alternate_sk,
+			   direction,
+			   proto, skb->len);
 }
 
 static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
@@ -1600,6 +1627,11 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	struct sock *sk;
 	uid_t sock_uid;
 	bool res;
+	/*
+	 * TODO: unhack how to force just accounting.
+	 * For now we only do tag stats when the uid-owner is not requested
+	 */
+	bool do_tag_stat = !(info->match & XT_QTAGUID_UID);
 
 	if (unlikely(module_passive))
 		return (info->match ^ info->invert) == 0;
@@ -1666,12 +1698,7 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 		 * couldn't find the owner, so for now we just count them
 		 * against the system.
 		 */
-		/*
-		 * TODO: unhack how to force just accounting.
-		 * For now we only do iface stats when the uid-owner is not
-		 * requested.
-		 */
-		if (!(info->match & XT_QTAGUID_UID))
+		if (do_tag_stat)
 			account_for_uid(skb, sk, 0, par);
 		MT_DEBUG("qtaguid[%d]: leaving (sk?sk->sk_socket)=%p\n",
 			par->hooknum,
@@ -1686,18 +1713,15 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	filp = sk->sk_socket->file;
 	if (filp == NULL) {
 		MT_DEBUG("qtaguid[%d]: leaving filp=NULL\n", par->hooknum);
-		account_for_uid(skb, sk, 0, par);
+		if (do_tag_stat)
+			account_for_uid(skb, sk, 0, par);
 		res = ((info->match ^ info->invert) &
 			(XT_QTAGUID_UID | XT_QTAGUID_GID)) == 0;
 		atomic64_inc(&qtu_events.match_no_sk_file);
 		goto put_sock_ret_res;
 	}
 	sock_uid = filp->f_cred->fsuid;
-	/*
-	 * TODO: unhack how to force just accounting.
-	 * For now we only do iface stats when the uid-owner is not requested
-	 */
-	if (!(info->match & XT_QTAGUID_UID))
+	if (do_tag_stat)
 		account_for_uid(skb, sk, sock_uid, par);
 
 	/*
