@@ -19,6 +19,7 @@
 #include <linux/gfp.h>
 #include <linux/bsg.h>
 #include <linux/smp.h>
+#include <linux/rcupdate.h>
 
 #include <asm/scatterlist.h>
 
@@ -409,6 +410,7 @@ struct request_queue {
 	/* Throttle data */
 	struct throtl_data *td;
 #endif
+	struct rcu_head		rcu_head;
 };
 
 #define QUEUE_FLAG_QUEUED	1	/* uses generic tag queueing */
