@@ -988,9 +988,15 @@ int local_timer_setup(struct clock_event_device *evt)
 	evt->rating = clock->clockevent.rating;
 	evt->set_mode = msm_timer_set_mode;
 	evt->set_next_event = msm_timer_set_next_event;
+	evt->shift = clock->clockevent.shift;
+	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
+	evt->max_delta_ns =
+		clockevent_delta2ns(0xf0000000 >> clock->shift, evt);
+	evt->min_delta_ns = clockevent_delta2ns(4, evt);
 
 	*__this_cpu_ptr(clock->percpu_evt) = evt;
-	clockevents_config_and_register(evt, GPT_HZ, 4, 0xf0000000);
+
+	clockevents_register_device(evt);
 	enable_percpu_irq(evt->irq, IRQ_TYPE_EDGE_RISING);
 
 	return 0;
