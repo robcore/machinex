@@ -1766,6 +1766,10 @@ sub check_buildlog {
 
     my @files = `git show $patch | diffstat -l`;
 
+    foreach my $file (@files) {
+	chomp $file;
+    }
+
     open(IN, "git show $patch |") or
 	dodie "failed to show $patch";
     while (<IN>) {
