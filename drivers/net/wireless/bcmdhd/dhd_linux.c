@@ -2328,7 +2328,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 }
 
 void
-dhd_event(struct dhd_info *dhd, char *evpkt, int evlen, int ifidx)
+dhd_event(struct dhd_info *dhd, char *evpkt, uint evlen, int ifidx)
 {
 	/* Linux version has nothing to do */
 	return;

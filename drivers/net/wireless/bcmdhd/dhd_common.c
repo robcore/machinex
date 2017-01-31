@@ -1212,7 +1212,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 	uint8 *event_data;
 	uint32 type, status, datalen;
 	uint16 flags;
-	int evlen;
+	uint evlen;
 
 	if (bcmp(BRCM_OUI, &pvt_data->bcm_hdr.oui[0], DOT11_OUI_LEN)) {
 		DHD_ERROR(("%s: mismatched OUI, bailing\n", __FUNCTION__));

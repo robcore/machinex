@@ -151,11 +151,11 @@ bool  check_bcm4335_rev(void)
         printk("check BCM4335, check_bcm4335_rev \n");
         fp = filp_open(filepath, O_RDONLY, 0);
         if (IS_ERR(fp)) {
-                pr_debug("/data/.rev file open error\n");
+                pr_err("/data/.rev file open error\n");
                 is_revb0 = true;
 
         } else {
-                pr_debug("/data/.rev file Found\n");
+                pr_err("/data/.rev file Found\n");
                 ret = kernel_read(fp, 0, (char *)chip_rev, 9);
                 if(ret != -1 && NULL != strstr(chip_rev,"BCM4335B0")) {
                         printk("Found BCM4335B0\n");

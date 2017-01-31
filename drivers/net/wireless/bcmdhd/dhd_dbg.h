@@ -36,22 +36,22 @@
 #if defined(DHD_DEBUG)
 
 #define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && USE_NET_RATELIMIT) \
-								pr_debug args;} while (0)
-#define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) pr_debug args;} while (0)
-#define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) pr_debug args;} while (0)
-#define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) pr_debug args;} while (0)
-#define DHD_CTL(args)		do {if (dhd_msg_level & DHD_CTL_VAL) pr_debug args;} while (0)
-#define DHD_TIMER(args)		do {if (dhd_msg_level & DHD_TIMER_VAL) pr_debug args;} while (0)
-#define DHD_HDRS(args)		do {if (dhd_msg_level & DHD_HDRS_VAL) pr_debug args;} while (0)
-#define DHD_BYTES(args)		do {if (dhd_msg_level & DHD_BYTES_VAL) pr_debug args;} while (0)
-#define DHD_INTR(args)		do {if (dhd_msg_level & DHD_INTR_VAL) pr_debug args;} while (0)
-#define DHD_GLOM(args)		do {if (dhd_msg_level & DHD_GLOM_VAL) pr_debug args;} while (0)
-#define DHD_EVENT(args)		do {if (dhd_msg_level & DHD_EVENT_VAL) pr_debug args;} while (0)
-#define DHD_BTA(args)		do {if (dhd_msg_level & DHD_BTA_VAL) pr_debug args;} while (0)
-#define DHD_ISCAN(args)		do {if (dhd_msg_level & DHD_ISCAN_VAL) pr_debug args;} while (0)
-#define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) pr_debug args;} while (0)
-#define DHD_REORDER(args)	do {if (dhd_msg_level & DHD_REORDER_VAL) pr_debug args;} while (0)
-#define DHD_PNO(args)		do {if (dhd_msg_level & DHD_PNO_VAL) pr_debug args;} while (0)
+								pr_info args;} while (0)
+#define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) pr_info args;} while (0)
+#define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) pr_info args;} while (0)
+#define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) pr_info args;} while (0)
+#define DHD_CTL(args)		do {if (dhd_msg_level & DHD_CTL_VAL) pr_info args;} while (0)
+#define DHD_TIMER(args)		do {if (dhd_msg_level & DHD_TIMER_VAL) pr_info args;} while (0)
+#define DHD_HDRS(args)		do {if (dhd_msg_level & DHD_HDRS_VAL) pr_info args;} while (0)
+#define DHD_BYTES(args)		do {if (dhd_msg_level & DHD_BYTES_VAL) pr_info args;} while (0)
+#define DHD_INTR(args)		do {if (dhd_msg_level & DHD_INTR_VAL) pr_info args;} while (0)
+#define DHD_GLOM(args)		do {if (dhd_msg_level & DHD_GLOM_VAL) pr_info args;} while (0)
+#define DHD_EVENT(args)		do {if (dhd_msg_level & DHD_EVENT_VAL) pr_info args;} while (0)
+#define DHD_BTA(args)		do {if (dhd_msg_level & DHD_BTA_VAL) pr_info args;} while (0)
+#define DHD_ISCAN(args)		do {if (dhd_msg_level & DHD_ISCAN_VAL) pr_info args;} while (0)
+#define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) pr_info args;} while (0)
+#define DHD_REORDER(args)	do {if (dhd_msg_level & DHD_REORDER_VAL) pr_info args;} while (0)
+#define DHD_PNO(args)		do {if (dhd_msg_level & DHD_PNO_VAL) pr_info args;} while (0)
 
 #ifdef CUSTOMER_HW4
 #define DHD_TRACE_HW4	DHD_ERROR
@@ -79,7 +79,7 @@
 
 #else /* defined(BCMDBG) || defined(DHD_DEBUG) */
 
-#define DHD_ERROR(args)		do {if (USE_NET_RATELIMIT) pr_debug args;} while (0)
+#define DHD_ERROR(args)		do {if (USE_NET_RATELIMIT) pr_info args;} while (0)
 #define DHD_TRACE(args)
 #define DHD_INFO(args)
 #define DHD_DATA(args)
