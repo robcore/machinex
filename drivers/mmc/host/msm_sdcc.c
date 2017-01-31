@@ -7000,6 +7000,7 @@ static int msmsdcc_runtime_idle(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
 	struct msmsdcc_host *host = mmc_priv(mmc);
+	int ret;
 
 	if (host->plat->is_sdio_al_client)
 		return 0;
@@ -7008,7 +7009,8 @@ static int msmsdcc_runtime_idle(struct device *dev)
 	/* Disable Runtime PM becasue of potential issues
 	 *pm_schedule_suspend(dev, host->idle_tout);
 	 */
-	pm_schedule_suspend(dev, host->idle_tout);
+	ret = pm_schedule_suspend(dev, host->idle_tout);
+	return ret;
 
 	//return -EAGAIN;
 //fuck it, lets see if our pm runtime can solve this
