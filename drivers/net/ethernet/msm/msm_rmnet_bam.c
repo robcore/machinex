@@ -43,7 +43,7 @@ module_param_named(debug_enable, msm_rmnet_bam_debug_mask,
 			int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static unsigned long int msm_rmnet_bam_headroom_check_failure;
-module_param(msm_rmnet_bam_headroom_check_failure, ulong, S_IRUGO);
+module_param(msm_rmnet_bam_headroom_check_failure, ulong, 0644);
 MODULE_PARM_DESC(msm_rmnet_bam_headroom_check_failure,
 		 "Number of packets with insufficient headroom");
 
@@ -720,7 +720,7 @@ static void __init rmnet_setup(struct net_device *dev)
 	dev->needed_tailroom = TAILROOM;
 	random_ether_addr(dev->dev_addr);
 
-	dev->watchdog_timeo = 0; /* 10 seconds? No. Disabled bitch. */
+	dev->watchdog_timeo = 1000; /* 10 seconds? No. Disabled bitch. */
 }
 
 static struct net_device *netdevs[RMNET_DEVICE_COUNT];
