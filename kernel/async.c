@@ -86,8 +86,6 @@ static atomic_t entry_count;
  */
 static async_cookie_t  __lowest_in_progress(struct async_domain *running)
 {
-	async_cookie_t first_running = next_cookie;	/* infinity value */
-	async_cookie_t first_pending = next_cookie;	/* ditto */
 	struct async_entry *entry;
 
 	if (!running) { /* just check the entry count */
@@ -97,23 +95,16 @@ static async_cookie_t  __lowest_in_progress(struct async_domain *running)
 			return next_cookie;
 	}
 
-	/*
-	 * Both running and pending lists are sorted but not disjoint.
-	 * Take the first cookies from both and return the min.
-	 */
 	if (!list_empty(&running->domain)) {
 		entry = list_first_entry(&running->domain, typeof(*entry), list);
-		first_running = entry->cookie;
+		return entry->cookie;
 	}
 
-	list_for_each_entry(entry, &async_pending, list) {
-		if (entry->running == running) {
-			first_pending = entry->cookie;
-			break;
-		}
-	}
+	list_for_each_entry(entry, &async_pending, list)
+		if (entry->running == running)
+			return entry->cookie;
 
-	return min(first_running, first_pending);
+	return next_cookie;	/* "infinity" value */
 }
 
 static async_cookie_t  lowest_in_progress(struct async_domain *running)
@@ -134,17 +125,13 @@ static void async_run_entry_fn(struct work_struct *work)
 {
 	struct async_entry *entry =
 		container_of(work, struct async_entry, work);
-	struct async_entry *pos;
 	unsigned long flags;
 	ktime_t uninitialized_var(calltime), delta, rettime;
 	struct async_domain *running = entry->running;
 
-	/* 1) move self to the running queue, make sure it stays sorted */
+	/* 1) move self to the running queue */
 	spin_lock_irqsave(&async_lock, flags);
-	list_for_each_entry_reverse(pos, &running->domain, list)
-		if (entry->cookie < pos->cookie)
-			break;
-	list_move_tail(&entry->list, &pos->list);
+	list_move_tail(&entry->list, &running->domain);
 	spin_unlock_irqrestore(&async_lock, flags);
 
 	/* 2) run (and print duration) */
