@@ -128,25 +128,10 @@ extern int dhd_wait_pend8021x(struct net_device *dev);
 #define IW_EVENT_IDX(cmd)	((cmd) - IWEVFIRST)
 #endif /* WIRELESS_EXT < 19 */
 
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 #define DAEMONIZE(a)	do { \
 		allow_signal(SIGKILL);	\
 		allow_signal(SIGTERM);	\
-	} while (0)
-#elif ((LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)) && \
-	(LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)))
-#define DAEMONIZE(a) daemonize(a); \
-	allow_signal(SIGKILL); \
-	allow_signal(SIGTERM);
-#else /* Linux 2.4 (w/o preemption patch) */
-#define RAISE_RX_SOFTIRQ() \
-	cpu_raise_softirq(smp_processor_id(), NET_RX_SOFTIRQ)
-#define DAEMONIZE(a) daemonize(); \
-	do { if (a) \
-		strncpy(current->comm, a, MIN(sizeof(current->comm), (strlen(a) + 1))); \
 	} while (0);
-#endif /* LINUX_VERSION_CODE  */
 
 #define ISCAN_STATE_IDLE   0
 #define ISCAN_STATE_SCANING 1
@@ -168,9 +153,7 @@ typedef struct iscan_info {
 	iscan_buf_t * list_cur;
 
 	/* Thread to work on iscan */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
 	struct task_struct *kthread;
-#endif
 	long sysioc_pid;
 	struct semaphore sysioc_sem;
 	struct completion sysioc_exited;
@@ -3794,9 +3777,7 @@ wl_iw_attach(struct net_device *dev, void * dhdp)
 	if (!iscan)
 		return -ENOMEM;
 	memset(iscan, 0, sizeof(iscan_info_t));
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
 	iscan->kthread = NULL;
-#endif
 	iscan->sysioc_pid = -1;
 	/* we only care about main interface so save a global here */
 	g_iscan = iscan;
@@ -3812,12 +3793,8 @@ wl_iw_attach(struct net_device *dev, void * dhdp)
 
 	sema_init(&iscan->sysioc_sem, 0);
 	init_completion(&iscan->sysioc_exited);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
 	iscan->kthread = kthread_run(_iscan_sysioc_thread, iscan, "iscan_sysioc");
 	iscan->sysioc_pid = iscan->kthread->pid;
-#else
-	iscan->sysioc_pid = kernel_thread(_iscan_sysioc_thread, iscan, 0);
-#endif
 	if (iscan->sysioc_pid < 0)
 		return -ENOMEM;
 	return 0;
