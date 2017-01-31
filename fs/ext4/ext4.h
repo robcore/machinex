@@ -2200,6 +2200,8 @@ extern int ext4_group_desc_csum_verify(struct super_block *sb, __u32 group,
 				       struct ext4_group_desc *gdp);
 extern void ext4_group_desc_csum_set(struct super_block *sb, __u32 group,
 				     struct ext4_group_desc *gdp);
+extern int ext4_register_li_request(struct super_block *sb,
+				    ext4_group_t first_not_zeroed);
 extern void print_iloc_info(struct super_block *sb,
 				struct ext4_iloc iloc);
 extern void print_bh(struct super_block *sb,
