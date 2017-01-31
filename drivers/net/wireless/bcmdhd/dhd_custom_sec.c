@@ -335,7 +335,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 	return;
 }
 
-#if 0
+#ifdef PLATFORM_SLP
 #define CIDINFO "/opt/etc/.cid.info"
 #define PSMINFO "/opt/etc/.psm.info"
 #define MACINFO "/opt/etc/.mac.info"
@@ -344,7 +344,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define WIFIVERINFO "/opt/etc/.wifiver.info"
 #define ANTINFO "/opt/etc/.ant.info"
 #define WRMAC_BUF_SIZE 19
-#endif
+#else
 #define MACINFO "/data/.mac.info"
 #define MACINFO_EFS "/efs/wifi/.mac.info"
 #define NVMACINFO "/data/.nvmac.info"
@@ -354,6 +354,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define WIFIVERINFO "/data/.wifiver.info"
 #define ANTINFO "/data/.ant.info"
 #define WRMAC_BUF_SIZE 18
+#endif /* PLATFORM_SLP */
 
 #ifdef BCM4330_CHIP
 #define CIS_BUF_SIZE            128
