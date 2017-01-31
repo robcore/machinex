@@ -2,13 +2,13 @@
  * Customer HW 4 dependant file
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -335,7 +335,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 	return;
 }
 
-#ifdef PLATFORM_SLP
+#if 0
 #define CIDINFO "/opt/etc/.cid.info"
 #define PSMINFO "/opt/etc/.psm.info"
 #define MACINFO "/opt/etc/.mac.info"
@@ -344,7 +344,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define WIFIVERINFO "/opt/etc/.wifiver.info"
 #define ANTINFO "/opt/etc/.ant.info"
 #define WRMAC_BUF_SIZE 19
-#else
+#endif
 #define MACINFO "/data/.mac.info"
 #define MACINFO_EFS "/efs/wifi/.mac.info"
 #define NVMACINFO "/data/.nvmac.info"
@@ -354,7 +354,6 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define WIFIVERINFO "/data/.wifiver.info"
 #define ANTINFO "/data/.ant.info"
 #define WRMAC_BUF_SIZE 18
-#endif /* PLATFORM_SLP */
 
 #ifdef BCM4330_CHIP
 #define CIS_BUF_SIZE            128
