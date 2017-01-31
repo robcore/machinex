@@ -15,10 +15,11 @@
  */
 
 #include <linux/context_tracking.h>
+#include <linux/kvm_host.h>
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
 #include <linux/hardirq.h>
-
+#include <linux/export.h>
 
 DEFINE_PER_CPU(struct context_tracking, context_tracking) = {
 #ifdef CONFIG_CONTEXT_TRACKING_FORCE
@@ -91,20 +92,24 @@ void user_exit(void)
 	local_irq_restore(flags);
 }
 
+void guest_enter(void)
+{
+	if (vtime_accounting_enabled())
+		vtime_guest_enter(current);
+	else
+		__guest_enter();
+}
+EXPORT_SYMBOL_GPL(guest_enter);
 
-/**
- * context_tracking_task_switch - context switch the syscall callbacks
- * @prev: the task that is being switched out
- * @next: the task that is being switched in
- *
- * The context tracking uses the syscall slow path to implement its user-kernel
- * boundaries probes on syscalls. This way it doesn't impact the syscall fast
- * path on CPUs that don't do context tracking.
- *
- * But we need to clear the flag on the previous task because it may later
- * migrate to some CPU that doesn't do the context tracking. As such the TIF
- * flag may not be desired there.
- */
+void guest_exit(void)
+{
+	if (vtime_accounting_enabled())
+		vtime_guest_exit(current);
+	else
+		__guest_exit();
+}
+EXPORT_SYMBOL_GPL(guest_exit);
+
 void context_tracking_task_switch(struct task_struct *prev,
 			     struct task_struct *next)
 {
