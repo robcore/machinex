@@ -2045,7 +2045,7 @@ static int __devinit smc911x_drv_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	struct resource *res;
 	struct smc911x_local *lp;
-	void __iomem *addr;
+	unsigned int *addr;
 	int ret;
 
 	DBG(SMC_DEBUG_FUNC, "--> %s\n",  __func__);
