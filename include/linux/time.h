@@ -115,10 +115,6 @@ static inline bool timespec_valid_strict(const struct timespec *ts)
 	return true;
 }
 
-{
-	return persistent_clock_exist;
-}
-
 extern bool persistent_clock_exist;
 
 #ifdef CONFIG_HAS_PERSISTENT_CLOCK
