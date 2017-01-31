@@ -195,7 +195,8 @@ struct mpage_da_data {
  */
 #define	EXT4_IO_END_UNWRITTEN	0x0001
 #define EXT4_IO_END_ERROR	0x0002
-#define EXT4_IO_END_DIRECT	0x0004
+#define EXT4_IO_END_QUEUED	0x0004
+#define EXT4_IO_END_DIRECT	0x0008
 
 struct ext4_io_page {
 	struct page	*p_page;
@@ -215,8 +216,10 @@ typedef struct ext4_io_end {
 	struct list_head	list;		/* per-file finished IO list */
 	struct inode		*inode;		/* file being written to */
 	unsigned int		flag;		/* unwritten or not */
+	struct page		*page;		/* for writepage() path */
 	loff_t			offset;		/* offset in the file */
 	ssize_t			size;		/* size of the extent */
+	struct work_struct	work;		/* data work queue */
 	struct kiocb		*iocb;		/* iocb struct for AIO */
 	int			result;		/* error value for AIO */
 	int			num_io_pages;   /* for writepages() */
@@ -959,7 +962,6 @@ struct ext4_inode_info {
 	spinlock_t i_completed_io_lock;
 	atomic_t i_ioend_count;	/* Number of outstanding io_end structs */
 	atomic_t i_unwritten; /* Nr. of inflight conversions pending */
-	struct work_struct i_unwritten_work;	/* deferred extent conversion */
 
 	spinlock_t i_block_reservation_lock;
 
@@ -1015,6 +1017,7 @@ struct ext4_inode_info {
 #define EXT4_MOUNT_DIOREAD_NOLOCK	0x400000 /* Enable support for dio read nolocking */
 #define EXT4_MOUNT_JOURNAL_CHECKSUM	0x800000 /* Journal checksums */
 #define EXT4_MOUNT_JOURNAL_ASYNC_COMMIT	0x1000000 /* Journal Async Commit */
+#define EXT4_MOUNT_MBLK_IO_SUBMIT	0x4000000 /* multi-block io submits */
 #define EXT4_MOUNT_DELALLOC		0x8000000 /* Delalloc support */
 #define EXT4_MOUNT_DATA_ERR_ABORT	0x10000000 /* Abort on file data write */
 #define EXT4_MOUNT_BLOCK_VALIDITY	0x20000000 /* Block validity checking */
@@ -2086,7 +2089,6 @@ extern ssize_t ext4_ind_direct_IO(int rw, struct kiocb *iocb,
 extern int ext4_ind_calc_metadata_amount(struct inode *inode, sector_t lblock);
 extern int ext4_ind_trans_blocks(struct inode *inode, int nrblocks, int chunk);
 extern void ext4_ind_truncate(struct inode *inode);
-extern int ext4_ind_punch_hole(struct file *file, loff_t offset, loff_t length);
 
 /* ioctl.c */
 extern long ext4_ioctl(struct file *, unsigned int, unsigned long);
@@ -2508,7 +2510,6 @@ extern void ext4_exit_pageio(void);
 extern void ext4_ioend_wait(struct inode *);
 extern void ext4_free_io_end(ext4_io_end_t *io);
 extern ext4_io_end_t *ext4_init_io_end(struct inode *inode, gfp_t flags);
-extern void ext4_end_io_work(struct work_struct *work);
 extern void ext4_io_submit(struct ext4_io_submit *io);
 extern int ext4_bio_write_page(struct ext4_io_submit *io,
 			       struct page *page,

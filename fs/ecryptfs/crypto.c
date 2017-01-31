@@ -466,14 +466,17 @@ int virt_to_scatterlist(const void *addr, int size, struct scatterlist *sg,
 	while (size > 0 && i < sg_size) {
 		pg = virt_to_page(addr);
 		offset = offset_in_page(addr);
-		sg_set_page(&sg[i], pg, 0, offset);
+		if (sg)
+			sg_set_page(&sg[i], pg, 0, offset);
 		remainder_of_page = PAGE_CACHE_SIZE - offset;
 		if (size >= remainder_of_page) {
-			sg[i].length = remainder_of_page;
+			if (sg)
+				sg[i].length = remainder_of_page;
 			addr += remainder_of_page;
 			size -= remainder_of_page;
 		} else {
-			sg[i].length = size;
+			if (sg)
+				sg[i].length = size;
 			addr += size;
 			size = 0;
 		}

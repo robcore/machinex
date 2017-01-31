@@ -290,8 +290,6 @@ static int arch_timer_available(void)
 			freq / 1000000, (freq / 10000) % 100);
 	}
 
-	arch_counter_set_user_access();
-
 	return 0;
 }
 

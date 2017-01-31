@@ -553,18 +553,6 @@ sub set_value {
 	# Note if a test is something other than build, then we
 	# will need other manditory options.
 	if ($prvalue ne "install") {
-	    # for bisect, we need to check BISECT_TYPE
-	    if ($prvalue ne "bisect") {
-		$buildonly = 0;
-	    }
-	} else {
-	    # install still limits some manditory options.
-	    $buildonly = 2;
-	}
-    }
-
-    if ($buildonly && $lvalue =~ /^BISECT_TYPE(\[.*\])?$/ && $prvalue ne "build") {
-	if ($prvalue ne "install") {
 	    $buildonly = 0;
 	} else {
 	    # install still limits some manditory options.
@@ -1217,7 +1205,6 @@ sub start_monitor {
 }
 
 sub end_monitor {
-    return if (!defined $console);
     if (--$monitor_cnt) {
 	return;
     }
@@ -1451,7 +1438,7 @@ sub wait_for_input
 
     $rin = '';
     vec($rin, fileno($fp), 1) = 1;
-    ($ready, $time) = select($rin, undef, undef, $time);
+    $ready = select($rin, undef, undef, $time);
 
     $line = "";
 
@@ -1745,19 +1732,15 @@ sub get_version {
 
 sub start_monitor_and_boot {
     # Make sure the stable kernel has finished booting
-
-    # Install bisects, don't need console
-    if (defined $console) {
-	start_monitor;
-	wait_for_monitor 5;
-	end_monitor;
-    }
+    start_monitor;
+    wait_for_monitor 5;
+    end_monitor;
 
     get_grub_index;
     get_version;
     install;
 
-    start_monitor if (defined $console);
+    start_monitor;
     return monitor;
 }
 
@@ -1765,10 +1748,6 @@ sub check_buildlog {
     my ($patch) = @_;
 
     my @files = `git show $patch | diffstat -l`;
-
-    foreach my $file (@files) {
-	chomp $file;
-    }
 
     open(IN, "git show $patch |") or
 	dodie "failed to show $patch";

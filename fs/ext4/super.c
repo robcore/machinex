@@ -1048,7 +1048,6 @@ static struct inode *ext4_alloc_inode(struct super_block *sb)
 	ei->i_datasync_tid = 0;
 	atomic_set(&ei->i_ioend_count, 0);
 	atomic_set(&ei->i_unwritten, 0);
-	INIT_WORK(&ei->i_unwritten_work, ext4_end_io_work);
 
 	return &ei->vfs_inode;
 }
@@ -1371,8 +1370,8 @@ static const match_table_t tokens = {
 	{Opt_stripe, "stripe=%u"},
 	{Opt_delalloc, "delalloc"},
 	{Opt_nodelalloc, "nodelalloc"},
-	{Opt_removed, "mblk_io_submit"},
-	{Opt_removed, "nomblk_io_submit"},
+	{Opt_mblk_io_submit, "mblk_io_submit"},
+	{Opt_nomblk_io_submit, "nomblk_io_submit"},
 	{Opt_block_validity, "block_validity"},
 	{Opt_noblock_validity, "noblock_validity"},
 	{Opt_inode_readahead_blks, "inode_readahead_blks=%u"},
@@ -1428,7 +1427,6 @@ static int set_qf_name(struct super_block *sb, int qtype, substring_t *args)
 {
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	char *qname;
-	int ret = -1;
 
 	if (sb_any_quota_loaded(sb) &&
 		!sbi->s_qf_names[qtype]) {
@@ -1443,26 +1441,23 @@ static int set_qf_name(struct super_block *sb, int qtype, substring_t *args)
 			"Not enough memory for storing quotafile name");
 		return -1;
 	}
-	if (sbi->s_qf_names[qtype]) {
-		if (strcmp(sbi->s_qf_names[qtype], qname) == 0)
-			ret = 1;
-		else
-			ext4_msg(sb, KERN_ERR,
-				 "%s quota file already specified",
-				 QTYPE2NAME(qtype));
-		goto errout;
-	}
-	if (strchr(qname, '/')) {
+	if (sbi->s_qf_names[qtype] &&
+		strcmp(sbi->s_qf_names[qtype], qname)) {
 		ext4_msg(sb, KERN_ERR,
-			"quotafile must be on filesystem root");
-		goto errout;
+			"%s quota file already specified", QTYPE2NAME(qtype));
+		kfree(qname);
+		return -1;
 	}
 	sbi->s_qf_names[qtype] = qname;
+	if (strchr(sbi->s_qf_names[qtype], '/')) {
+		ext4_msg(sb, KERN_ERR,
+			"quotafile must be on filesystem root");
+		kfree(sbi->s_qf_names[qtype]);
+		sbi->s_qf_names[qtype] = NULL;
+		return -1;
+	}
 	set_opt(sb, QUOTA);
 	return 1;
-errout:
-	kfree(qname);
-	return ret;
 }
 
 static int clear_qf_name(struct super_block *sb, int qtype)
@@ -1476,7 +1471,10 @@ static int clear_qf_name(struct super_block *sb, int qtype)
 			" when quota turned on");
 		return -1;
 	}
-	kfree(sbi->s_qf_names[qtype]);
+	/*
+	 * The space will be released later when all options are confirmed
+	 * to be correct
+	 */
 	sbi->s_qf_names[qtype] = NULL;
 	return 1;
 }
@@ -1506,6 +1504,8 @@ static const struct mount_opts {
 	{Opt_bsd_df, EXT4_MOUNT_MINIX_DF, MOPT_CLEAR},
 	{Opt_grpid, EXT4_MOUNT_GRPID, MOPT_SET},
 	{Opt_nogrpid, EXT4_MOUNT_GRPID, MOPT_CLEAR},
+	{Opt_mblk_io_submit, EXT4_MOUNT_MBLK_IO_SUBMIT, MOPT_SET},
+	{Opt_nomblk_io_submit, EXT4_MOUNT_MBLK_IO_SUBMIT, MOPT_CLEAR},
 	{Opt_block_validity, EXT4_MOUNT_BLOCK_VALIDITY, MOPT_SET},
 	{Opt_noblock_validity, EXT4_MOUNT_BLOCK_VALIDITY, MOPT_CLEAR},
 	{Opt_dioread_nolock, EXT4_MOUNT_DIOREAD_NOLOCK, MOPT_SET},
@@ -3467,6 +3467,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 #ifdef CONFIG_EXT4_FS_POSIX_ACL
 	set_opt(sb, POSIX_ACL);
 #endif
+	set_opt(sb, MBLK_IO_SUBMIT);
 	if ((def_mount_opts & EXT4_DEFM_JMODE) == EXT4_DEFM_JMODE_DATA)
 		set_opt(sb, JOURNAL_DATA);
 	else if ((def_mount_opts & EXT4_DEFM_JMODE) == EXT4_DEFM_JMODE_ORDERED)
@@ -4104,7 +4105,7 @@ no_journal:
 	    !(sb->s_flags & MS_RDONLY)) {
 		err = ext4_enable_quotas(sb);
 		if (err)
-			goto failed_mount8;
+			goto failed_mount7;
 	}
 #endif  /* CONFIG_QUOTA */
 
@@ -4138,10 +4139,6 @@ cantfind_ext4:
 
 	goto failed_mount;
 
-#ifdef CONFIG_QUOTA
-failed_mount8:
-	kobject_del(&sbi->s_kobj);
-#endif
 failed_mount7:
 	ext4_unregister_li_request(sb);
 failed_mount6:
@@ -4583,15 +4580,18 @@ static void ext4_clear_journal_err(struct super_block *sb,
 int ext4_force_commit(struct super_block *sb)
 {
 	journal_t *journal;
+	int ret = 0;
 
 	if (sb->s_flags & MS_RDONLY)
 		return 0;
 
 	journal = EXT4_SB(sb)->s_journal;
+	if (journal) {
+		vfs_check_frozen(sb, SB_FREEZE_TRANS);
+		ret = ext4_journal_force_commit(journal);
+	}
 
-	vfs_check_frozen(sb, SB_FREEZE_TRANS);
-
-	return ext4_journal_force_commit(journal);
+	return ret;
 }
 
 static int ext4_sync_fs(struct super_block *sb, int wait)
@@ -4695,7 +4695,7 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 	unsigned int journal_ioprio = DEFAULT_JOURNAL_IOPRIO;
 	int err = 0;
 #ifdef CONFIG_QUOTA
-	int i, j;
+	int i;
 #endif
 	char *orig_data = kstrdup(data, GFP_KERNEL);
 
@@ -4713,16 +4713,7 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 #ifdef CONFIG_QUOTA
 	old_opts.s_jquota_fmt = sbi->s_jquota_fmt;
 	for (i = 0; i < MAXQUOTAS; i++)
-		if (sbi->s_qf_names[i]) {
-			old_opts.s_qf_names[i] = kstrdup(sbi->s_qf_names[i],
-							 GFP_KERNEL);
-			if (!old_opts.s_qf_names[i]) {
-				for (j = 0; j < i; j++)
-					kfree(old_opts.s_qf_names[j]);
-				return -ENOMEM;
-			}
-		} else
-			old_opts.s_qf_names[i] = NULL;
+		old_opts.s_qf_names[i] = sbi->s_qf_names[i];
 #endif
 	if (sbi->s_journal && sbi->s_journal->j_task->io_context)
 		journal_ioprio = sbi->s_journal->j_task->io_context->ioprio;
@@ -4870,7 +4861,9 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 #ifdef CONFIG_QUOTA
 	/* Release old quota file names */
 	for (i = 0; i < MAXQUOTAS; i++)
-		kfree(old_opts.s_qf_names[i]);
+		if (old_opts.s_qf_names[i] &&
+		    old_opts.s_qf_names[i] != sbi->s_qf_names[i])
+			kfree(old_opts.s_qf_names[i]);
 	if (enable_quota) {
 		if (sb_any_quota_suspended(sb))
 			dquot_resume(sb, -1);
@@ -4899,7 +4892,9 @@ restore_opts:
 #ifdef CONFIG_QUOTA
 	sbi->s_jquota_fmt = old_opts.s_jquota_fmt;
 	for (i = 0; i < MAXQUOTAS; i++) {
-		kfree(sbi->s_qf_names[i]);
+		if (sbi->s_qf_names[i] &&
+		    old_opts.s_qf_names[i] != sbi->s_qf_names[i])
+			kfree(sbi->s_qf_names[i]);
 		sbi->s_qf_names[i] = old_opts.s_qf_names[i];
 	}
 #endif
@@ -5134,9 +5129,9 @@ static int ext4_enable_quotas(struct super_block *sb)
 						DQUOT_USAGE_ENABLED);
 			if (err) {
 				ext4_warning(sb,
-					"Failed to enable quota tracking "
-					"(type=%d, err=%d). Please run "
-					"e2fsck to fix.", type, err);
+					"Failed to enable quota (type=%d) "
+					"tracking. Please run e2fsck to fix.",
+					type);
 				return err;
 			}
 		}

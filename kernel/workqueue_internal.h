@@ -10,6 +10,7 @@
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 
+struct global_cwq;
 struct worker_pool;
 
 /*

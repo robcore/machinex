@@ -164,14 +164,16 @@ void of_node_put(struct device_node *node)
 EXPORT_SYMBOL(of_node_put);
 #endif /* CONFIG_OF_DYNAMIC */
 
-static struct property *__of_find_property(const struct device_node *np,
-					   const char *name, int *lenp)
+struct property *of_find_property(const struct device_node *np,
+				  const char *name,
+				  int *lenp)
 {
 	struct property *pp;
 
 	if (!np)
 		return NULL;
 
+	read_lock(&devtree_lock);
 	for (pp = np->properties; pp; pp = pp->next) {
 		if (of_prop_cmp(pp->name, name) == 0) {
 			if (lenp)
@@ -179,18 +181,6 @@ static struct property *__of_find_property(const struct device_node *np,
 			break;
 		}
 	}
-
-	return pp;
-}
-
-struct property *of_find_property(const struct device_node *np,
-				  const char *name,
-				  int *lenp)
-{
-	struct property *pp;
-
-	read_lock(&devtree_lock);
-	pp = __of_find_property(np, name, lenp);
 	read_unlock(&devtree_lock);
 
 	return pp;
@@ -224,20 +214,8 @@ EXPORT_SYMBOL(of_find_all_nodes);
  * Find a property with a given name for a given node
  * and return the value.
  */
-static const void *__of_get_property(const struct device_node *np,
-				     const char *name, int *lenp)
-{
-	struct property *pp = __of_find_property(np, name, lenp);
-
-	return pp ? pp->value : NULL;
-}
-
-/*
- * Find a property with a given name for a given node
- * and return the value.
- */
 const void *of_get_property(const struct device_node *np, const char *name,
-			    int *lenp)
+			 int *lenp)
 {
 	struct property *pp = of_find_property(np, name, lenp);
 
@@ -342,13 +320,13 @@ EXPORT_SYMBOL(of_get_cpu_node);
 /** Checks if the given "compat" string matches one of the strings in
  * the device's "compatible" property
  */
-static int __of_device_is_compatible(const struct device_node *device,
-				     const char *compat)
+int of_device_is_compatible(const struct device_node *device,
+		const char *compat)
 {
 	const char* cp;
 	int cplen, l;
 
-	cp = __of_get_property(device, "compatible", &cplen);
+	cp = of_get_property(device, "compatible", &cplen);
 	if (cp == NULL)
 		return 0;
 	while (cplen > 0) {
@@ -360,20 +338,6 @@ static int __of_device_is_compatible(const struct device_node *device,
 	}
 
 	return 0;
-}
-
-/** Checks if the given "compat" string matches one of the strings in
- * the device's "compatible" property
- */
-int of_device_is_compatible(const struct device_node *device,
-		const char *compat)
-{
-	int res;
-
-	read_lock(&devtree_lock);
-	res = __of_device_is_compatible(device, compat);
-	read_unlock(&devtree_lock);
-	return res;
 }
 EXPORT_SYMBOL(of_device_is_compatible);
 
@@ -625,8 +589,7 @@ struct device_node *of_find_compatible_node(struct device_node *from,
 		if (type
 		    && !(np->type && (of_node_cmp(np->type, type) == 0)))
 			continue;
-		if (__of_device_is_compatible(np, compatible) &&
-		    of_node_get(np))
+		if (of_device_is_compatible(np, compatible) && of_node_get(np))
 			break;
 	}
 	of_node_put(from);
@@ -670,9 +633,15 @@ out:
 }
 EXPORT_SYMBOL(of_find_node_with_property);
 
-static
-const struct of_device_id *__of_match_node(const struct of_device_id *matches,
-					   const struct device_node *node)
+/**
+ * of_match_node - Tell if an device_node has a matching of_match structure
+ *	@matches:	array of of device match structures to search in
+ *	@node:		the of device structure to match against
+ *
+ *	Low level utility function used by device matching.
+ */
+const struct of_device_id *of_match_node(const struct of_device_id *matches,
+					 const struct device_node *node)
 {
 	if (!matches)
 		return NULL;
@@ -686,31 +655,13 @@ const struct of_device_id *__of_match_node(const struct of_device_id *matches,
 			match &= node->type
 				&& !strcmp(matches->type, node->type);
 		if (matches->compatible[0])
-			match &= __of_device_is_compatible(node,
-							   matches->compatible);
+			match &= of_device_is_compatible(node,
+						matches->compatible);
 		if (match)
 			return matches;
 		matches++;
 	}
 	return NULL;
-}
-
-/**
- * of_match_node - Tell if an device_node has a matching of_match structure
- *	@matches:	array of of device match structures to search in
- *	@node:		the of device structure to match against
- *
- *	Low level utility function used by device matching.
- */
-const struct of_device_id *of_match_node(const struct of_device_id *matches,
-					 const struct device_node *node)
-{
-	const struct of_device_id *match;
-
-	read_lock(&devtree_lock);
-	match = __of_match_node(matches, node);
-	read_unlock(&devtree_lock);
-	return match;
 }
 EXPORT_SYMBOL(of_match_node);
 
