@@ -606,9 +606,7 @@ static struct cpu_workqueue_struct *get_work_cwq(struct work_struct *work)
 	if (data & WORK_STRUCT_CWQ)
 		return (void *)(data & WORK_STRUCT_WQ_DATA_MASK);
 	else
-	{
 		return NULL;
-	}
 }
 
 /**
@@ -1557,10 +1555,15 @@ static void worker_enter_idle(struct worker *worker)
 	if (too_many_workers(pool) && !timer_pending(&pool->idle_timer))
 		mod_timer(&pool->idle_timer, jiffies + IDLE_WORKER_TIMEOUT);
 
-	/* sanity check nr_running */
+	/*
+	 * Sanity check nr_running.  Because gcwq_unbind_fn() releases
+	 * pool->lock between setting %WORKER_UNBOUND and zapping
+	 * nr_running, the warning may trigger spuriously.  Check iff
+	 * unbind is not in progress.
+	 */
 	WARN_ON_ONCE(!(pool->flags & POOL_DISASSOCIATED) &&
-			(pool->nr_workers == pool->nr_idle &&
-		     atomic_read(get_pool_nr_running(pool))));
+		     pool->nr_workers == pool->nr_idle &&
+		     atomic_read(get_pool_nr_running(pool)));
 }
 
 /**
@@ -1891,22 +1894,21 @@ static void destroy_worker(struct worker *worker)
 	list_del_init(&worker->entry);
 	worker->flags |= WORKER_DIE;
 
-	spin_unlock_irq(&gcwq->lock);
+	spin_unlock_irq(&pool->lock);
 
 	kthread_stop(worker->task);
 	put_task_struct(worker->task);
 	kfree(worker);
 
-	spin_lock_irq(&gcwq->lock);
+	spin_lock_irq(&pool->lock);
 	ida_remove(&pool->worker_ida, id);
 }
 
 static void idle_worker_timeout(unsigned long __pool)
 {
 	struct worker_pool *pool = (void *)__pool;
-	struct global_cwq *gcwq = pool->gcwq;
 
-	spin_lock_irq(&gcwq->lock);
+	spin_lock_irq(&pool->lock);
 
 	if (too_many_workers(pool)) {
 		struct worker *worker;
@@ -3717,29 +3719,26 @@ void freeze_workqueues_begin(void)
 		struct worker_pool *pool;
 		struct workqueue_struct *wq;
 
-		local_irq_disable();
-
 		for_each_worker_pool(pool, gcwq) {
-			spin_lock_nested(&pool->lock, pool - gcwq->pools);
+			spin_lock_irq(&pool->lock);
 
 			WARN_ON_ONCE(pool->flags & POOL_FREEZING);
 			pool->flags |= POOL_FREEZING;
-		}
 
-		list_for_each_entry(wq, &workqueues, list) {
-			struct cpu_workqueue_struct *cwq;
+			list_for_each_entry(wq, &workqueues, list) {
+				struct cpu_workqueue_struct *cwq = get_cwq(cpu, wq);
 			if (cpu < CONFIG_NR_CPUS)
 				cwq = get_cwq(cpu, wq);
 			else
 				continue;
 
-			if (cwq && wq->flags & WQ_FREEZABLE)
-				cwq->max_active = 0;
-		}
+				if (cwq && cwq->pool == pool &&
+				    (wq->flags & WQ_FREEZABLE))
+					cwq->max_active = 0;
+			}
 
-		for_each_worker_pool(pool, gcwq)
-			spin_unlock(&pool->lock);
-		local_irq_enable();
+			spin_unlock_irq(&pool->lock);
+		}
 	}
 
 	spin_unlock(&workqueue_lock);
@@ -3818,30 +3817,27 @@ void thaw_workqueues(void)
 		struct worker_pool *pool;
 		struct workqueue_struct *wq;
 
-		local_irq_disable();
-
 		for_each_worker_pool(pool, gcwq) {
-			spin_lock_nested(&pool->lock, pool - gcwq->pools);
+			spin_lock_irq(&pool->lock);
 
 			WARN_ON_ONCE(!(pool->flags & POOL_FREEZING));
 			pool->flags &= ~POOL_FREEZING;
-		}
 
-		list_for_each_entry(wq, &workqueues, list) {
-			struct cpu_workqueue_struct *cwq = get_cwq(cpu, wq);
+			list_for_each_entry(wq, &workqueues, list) {
+				struct cpu_workqueue_struct *cwq = get_cwq(cpu, wq);
 
-			if (!cwq || !(wq->flags & WQ_FREEZABLE))
-				continue;
+				if (!cwq || cwq->pool != pool ||
+				    !(wq->flags & WQ_FREEZABLE))
+					continue;
 
-			/* restore max_active and repopulate worklist */
-			cwq_set_max_active(cwq, wq->saved_max_active);
-		}
+				/* restore max_active and repopulate worklist */
+				cwq_set_max_active(cwq, wq->saved_max_active);
+			}
 
-		for_each_worker_pool(pool, gcwq) {
 			wake_up_worker(pool);
-			spin_unlock(&pool->lock);
+
+			spin_unlock_irq(&pool->lock);
 		}
-		local_irq_enable();
 	}
 
 	workqueue_freezing = false;
