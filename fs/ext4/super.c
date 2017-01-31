@@ -1427,6 +1427,7 @@ static int set_qf_name(struct super_block *sb, int qtype, substring_t *args)
 {
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	char *qname;
+	int ret = -1;
 
 	if (sb_any_quota_loaded(sb) &&
 		!sbi->s_qf_names[qtype]) {
@@ -1441,23 +1442,26 @@ static int set_qf_name(struct super_block *sb, int qtype, substring_t *args)
 			"Not enough memory for storing quotafile name");
 		return -1;
 	}
-	if (sbi->s_qf_names[qtype] &&
-		strcmp(sbi->s_qf_names[qtype], qname)) {
-		ext4_msg(sb, KERN_ERR,
-			"%s quota file already specified", QTYPE2NAME(qtype));
-		kfree(qname);
-		return -1;
+	if (sbi->s_qf_names[qtype]) {
+		if (strcmp(sbi->s_qf_names[qtype], qname) == 0)
+			ret = 1;
+		else
+			ext4_msg(sb, KERN_ERR,
+				 "%s quota file already specified",
+				 QTYPE2NAME(qtype));
+		goto errout;
 	}
-	sbi->s_qf_names[qtype] = qname;
-	if (strchr(sbi->s_qf_names[qtype], '/')) {
+	if (strchr(qname, '/')) {
 		ext4_msg(sb, KERN_ERR,
 			"quotafile must be on filesystem root");
-		kfree(sbi->s_qf_names[qtype]);
-		sbi->s_qf_names[qtype] = NULL;
-		return -1;
+		goto errout;
 	}
+	sbi->s_qf_names[qtype] = qname;
 	set_opt(sb, QUOTA);
 	return 1;
+errout:
+	kfree(qname);
+	return ret;
 }
 
 static int clear_qf_name(struct super_block *sb, int qtype)
@@ -1471,10 +1475,7 @@ static int clear_qf_name(struct super_block *sb, int qtype)
 			" when quota turned on");
 		return -1;
 	}
-	/*
-	 * The space will be released later when all options are confirmed
-	 * to be correct
-	 */
+	kfree(sbi->s_qf_names[qtype]);
 	sbi->s_qf_names[qtype] = NULL;
 	return 1;
 }
@@ -4699,7 +4700,7 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 	unsigned int journal_ioprio = DEFAULT_JOURNAL_IOPRIO;
 	int err = 0;
 #ifdef CONFIG_QUOTA
-	int i;
+	int i, j;
 #endif
 	char *orig_data = kstrdup(data, GFP_KERNEL);
 
@@ -4717,7 +4718,16 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 #ifdef CONFIG_QUOTA
 	old_opts.s_jquota_fmt = sbi->s_jquota_fmt;
 	for (i = 0; i < MAXQUOTAS; i++)
-		old_opts.s_qf_names[i] = sbi->s_qf_names[i];
+		if (sbi->s_qf_names[i]) {
+			old_opts.s_qf_names[i] = kstrdup(sbi->s_qf_names[i],
+							 GFP_KERNEL);
+			if (!old_opts.s_qf_names[i]) {
+				for (j = 0; j < i; j++)
+					kfree(old_opts.s_qf_names[j]);
+				return -ENOMEM;
+			}
+		} else
+			old_opts.s_qf_names[i] = NULL;
 #endif
 	if (sbi->s_journal && sbi->s_journal->j_task->io_context)
 		journal_ioprio = sbi->s_journal->j_task->io_context->ioprio;
@@ -4865,9 +4875,7 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 #ifdef CONFIG_QUOTA
 	/* Release old quota file names */
 	for (i = 0; i < MAXQUOTAS; i++)
-		if (old_opts.s_qf_names[i] &&
-		    old_opts.s_qf_names[i] != sbi->s_qf_names[i])
-			kfree(old_opts.s_qf_names[i]);
+		kfree(old_opts.s_qf_names[i]);
 	if (enable_quota) {
 		if (sb_any_quota_suspended(sb))
 			dquot_resume(sb, -1);
@@ -4896,9 +4904,7 @@ restore_opts:
 #ifdef CONFIG_QUOTA
 	sbi->s_jquota_fmt = old_opts.s_jquota_fmt;
 	for (i = 0; i < MAXQUOTAS; i++) {
-		if (sbi->s_qf_names[i] &&
-		    old_opts.s_qf_names[i] != sbi->s_qf_names[i])
-			kfree(sbi->s_qf_names[i]);
+		kfree(sbi->s_qf_names[i]);
 		sbi->s_qf_names[i] = old_opts.s_qf_names[i];
 	}
 #endif
