@@ -90,7 +90,7 @@ static async_cookie_t __lowest_in_progress(struct async_domain *domain)
 	async_cookie_t first_pending = next_cookie;	/* ditto */
 	struct async_entry *entry;
 
-	if (!running) { /* just check the entry count */
+	if (!domain) { /* just check the entry count */
 		if (atomic_read(&entry_count))
 			return 0; /* smaller than any cookie */
 		else
