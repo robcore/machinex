@@ -2159,10 +2159,11 @@ static irqreturn_t max77693_muic_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+/* TODO - Research IRQF_NO_SUSPEND for this -- Rob */
 #define REQUEST_IRQ(_irq, _name)					\
 do {									\
 	ret = request_threaded_irq(_irq, NULL, max77693_muic_irq,	\
-				    IRQF_NO_SUSPEND, _name, info);			\
+				    IRQF_ONESHOT, _name, info);			\
 	if (ret < 0)							\
 		dev_err(info->dev, "Failed to request IRQ #%d: %d\n",	\
 			_irq, ret);					\
