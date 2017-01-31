@@ -61,8 +61,7 @@ asynchronous and synchronous parts of the kernel.
 
 static async_cookie_t next_cookie = 1;
 
-#define MAX_WORK		32768
-#define ASYNC_COOKIE_MAX	ULLONG_MAX	/* infinity cookie */
+#define MAX_WORK	32768
 
 static LIST_HEAD(async_pending);
 static ASYNC_DOMAIN(async_dfl_domain);
@@ -87,8 +86,8 @@ static atomic_t entry_count;
  */
 static async_cookie_t __lowest_in_progress(struct async_domain *domain)
 {
-	async_cookie_t first_running = ASYNC_COOKIE_MAX;
-	async_cookie_t first_pending = ASYNC_COOKIE_MAX;
+	async_cookie_t first_running = next_cookie;	/* infinity value */
+	async_cookie_t first_pending = next_cookie;	/* ditto */
 	struct async_entry *entry;
 
 	if (!domain) { /* just check the entry count */
@@ -275,7 +274,7 @@ EXPORT_SYMBOL_GPL(async_synchronize_full);
  */
 void async_synchronize_full_domain(struct async_domain *domain)
 {
-	async_synchronize_cookie_domain(ASYNC_COOKIE_MAX, domain);
+	async_synchronize_cookie_domain(next_cookie, domain);
 }
 EXPORT_SYMBOL_GPL(async_synchronize_full_domain);
 
