@@ -1,157 +1,150 @@
-#!/bin/bash
-
-patch -p1 -R < "/root/machinex/patches/0600-REVERT-regmap-24-bit.patch"
-patch -p1 -R < "/root/machinex/patches/0599-REVERT-remove-__dev-from-init.patch"
-patch -p1 -R < "/root/machinex/patches/0598-clk.patch"
-patch -p1 -R < "/root/machinex/patches/0597-clk.patch"
-patch -p1 -R < "/root/machinex/patches/0596-vfs-re-implement-writeback_inodes_sb-_nr-_if_idle.patch"
-patch -p1 -R < "/root/machinex/patches/0595-clk-fixes.patch"
-patch -p1 -R < "/root/machinex/patches/0594-clk-Don-t-mark-shared-helper-functions-as-inline.patch"
-patch -p1 -R < "/root/machinex/patches/0593-regmap-Add-support-for-24-bit-wide-register-addr.patch"
-patch -p1 -R < "/root/machinex/patches/0592-mm-thp-acquire-the-anon_vma-rwsem-for-write.patch"
-patch -p1 -R < "/root/machinex/patches/0591-mm-mmap-annotate-vm_lock_anon_vma-locking-properly.patch"
-patch -p1 -R < "/root/machinex/patches/0590-mm-bootmem-fix-free_all_bootmem_core-with-odd-bitmap.patch"
-patch -p1 -R < "/root/machinex/patches/0589-fs-exec.c-work-around-icc-miscompilation.patch"
-patch -p1 -R < "/root/machinex/patches/0588-mm-migrate-check-page_count-of-THP-before-migrating.patch"
-patch -p1 -R < "/root/machinex/patches/0587-racing-Fix-regression-with-irqsoff-trace.patch"
-patch -p1 -R < "/root/machinex/patches/0586-pstore-Avoid-deadlock-in-panic-and-emergency-restart.patch"
-patch -p1 -R < "/root/machinex/patches/0585-block-Remove-should_sort-judgement-when-flush-blk_pl.patch"
-patch -p1 -R < "/root/machinex/patches/0584-more.patch"
-patch -p1 -R < "/root/machinex/patches/0583-arm-decompress-remove-unused-tag.patch"
-patch -p1 -R < "/root/machinex/patches/0582-net_sched-more-precise-pkt_len-computation.patch"
-patch -p1 -R < "/root/machinex/patches/0581-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0580-remove-__dev-from-init.patch"
-patch -p1 -R < "/root/machinex/patches/0579-iommu-arch-initcall-from-subsys.patch"
-patch -p1 -R < "/root/machinex/patches/0578-mm-reinstate-dropped-pmd_trans_splitting-check.patch"
-patch -p1 -R < "/root/machinex/patches/0577-REVERT-binder-commits.patch"
-patch -p1 -R < "/root/machinex/patches/0576-REVERT-recent-drm-bullshit.patch"
-patch -p1 -R < "/root/machinex/patches/0575-update-bullshit.patch"
-patch -p1 -R < "/root/machinex/patches/0574-REVERT-kmod-hack.patch"
-patch -p1 -R < "/root/machinex/patches/0573-REVERT-suck-it-qtag.patch"
-patch -p1 -R < "/root/machinex/patches/0572-get-rid-of-some-bullshit.patch"
-patch -p1 -R < "/root/machinex/patches/0571-REVERT-regulatory-shit.patch"
-patch -p1 -R < "/root/machinex/patches/0570-REVERT-hw-sim-tix-tsf.patch"
-patch -p1 -R < "/root/machinex/patches/0569-REVERT-hrtimer-for-hwsim.patch"
-patch -p1 -R < "/root/machinex/patches/0568-the-FUCK.patch"
-patch -p1 -R < "/root/machinex/patches/0567-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0566-bs.patch"
-patch -p1 -R < "/root/machinex/patches/0565-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0564-rcu-Trace-callback-acceleration.patch"
-patch -p1 -R < "/root/machinex/patches/0563-rcu-Tag-callback-lists-with-corresponding-grace-peri.patch"
-patch -p1 -R < "/root/machinex/patches/0562-rcutorture-Don-t-compare-ptr-with-0.patch"
-patch -p1 -R < "/root/machinex/patches/0561-rcu-Use-new-nesting-value-for-rcu_dyntick-trace.patch"
-patch -p1 -R < "/root/machinex/patches/0560-rcu-Make-rcu_is_cpu_rrupt_from_idle-helper-functions.patch"
-patch -p1 -R < "/root/machinex/patches/0559-rcu-Fix-blimit-type-for-trace_rcu_batch_start.patch"
-patch -p1 -R < "/root/machinex/patches/0558-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0557-rcu-Reduce-rcutorture-tracing.patch"
-patch -p1 -R < "/root/machinex/patches/0556-tracing-Export-trace_clock_local.patch"
-patch -p1 -R < "/root/machinex/patches/0555-rcu-Make-rcu_nocb_poll-an-early_param-instead-of-mod.patch"
-patch -p1 -R < "/root/machinex/patches/0554-rcu-Prevent-soft-lockup-complaints-about-no-CBs-CPUs.patch"
-patch -p1 -R < "/root/machinex/patches/0553-DANGER-but-potentially-lucrative-ARM-7618-1-mmc-mmci.patch"
-patch -p1 -R < "/root/machinex/patches/0552-drm-Only-evict-the-blocks-required-to-create-the-req.patch"
-patch -p1 -R < "/root/machinex/patches/0551-drm-ttm-fix-fence-locking-in-ttm_buffer_object_trans.patch"
-patch -p1 -R < "/root/machinex/patches/0550-dma-ipu-Drop-unused-spinlock.patch"
-patch -p1 -R < "/root/machinex/patches/0549-async_tx-fix-checking-of-dma_wait_for_async_tx-retur.patch"
-patch -p1 -R < "/root/machinex/patches/0548-dmaengine-add-cpu_relax-to-busy-loop-in-dma_sync_wai.patch"
-patch -p1 -R < "/root/machinex/patches/0547-dmaengine-remove-dma_async_memcpy_complete-macro.patch"
-patch -p1 -R < "/root/machinex/patches/0546-dmaengine-remove-dma_async_memcpy_pending-macro.patch"
-patch -p1 -R < "/root/machinex/patches/0545-bs.patch"
-patch -p1 -R < "/root/machinex/patches/0544-async_tx-fix-build-for-async_memset.patch"
-patch -p1 -R < "/root/machinex/patches/0543-dmaengine-dmatest-terminate-transfers.patch"
-patch -p1 -R < "/root/machinex/patches/0542-npd.patch"
-patch -p1 -R < "/root/machinex/patches/0541-DMAEngine-add-dmaengine_prep_interleaved_dma-wrapper.patch"
-patch -p1 -R < "/root/machinex/patches/0540-dmaengine-fix-of_dma-compilation-warning.patch"
-patch -p1 -R < "/root/machinex/patches/0539-of-dma-fix-protection-of-DMA-controller-data-stored.patch"
-patch -p1 -R < "/root/machinex/patches/0538-of-dma-fix-potential-deadlock-when-requesting-a-slav.patch"
-patch -p1 -R < "/root/machinex/patches/0537-mtd-fsmc_nand-add-missing-DMA-unmap-to-dma_xfer.patch"
-patch -p1 -R < "/root/machinex/patches/0536-ioat-add-missing-DMA-unmap-to-ioat_dma_self_test.patch"
-patch -p1 -R < "/root/machinex/patches/0535-async_tx-add-missing-DMA-unmap-to-async_memcpy.patch"
-patch -p1 -R < "/root/machinex/patches/0534-async_tx-use-memchr_inv.patch"
-patch -p1 -R < "/root/machinex/patches/0533-dmatest-adjust-invalid-module-parameters.patch"
-patch -p1 -R < "/root/machinex/patches/0532-staging-android-Fix-two-checkpatch-issues-in-binder.patch"
-patch -p1 -R < "/root/machinex/patches/0531-UAPI-Scripted-Disintegrate-include-scsi-fc.patch"
-patch -p1 -R < "/root/machinex/patches/0530-staging-android-Avoid-using-camelcase-in-binder.h.patch"
-patch -p1 -R < "/root/machinex/patches/0529-seriously-shut-the-fuck-up.patch"
-patch -p1 -R < "/root/machinex/patches/0528-leds.patch"
-patch -p1 -R < "/root/machinex/patches/0527-fix-whitespace.patch"
-patch -p1 -R < "/root/machinex/patches/0526-qseecom-shut-the-FUCK-up.patch"
-patch -p1 -R < "/root/machinex/patches/0525-hack-make-sure-kmod-knows-our-modprobe-is-in-xbin.patch"
-patch -p1 -R < "/root/machinex/patches/0524-fix-whitespace.patch"
-patch -p1 -R < "/root/machinex/patches/0523-cpuset-remove-cpuset-parent.patch"
-patch -p1 -R < "/root/machinex/patches/0522-cpuset-replace-cpuset-stack_list-with-cpuset_for_eac.patch"
-patch -p1 -R < "/root/machinex/patches/0521-cpuset-replace-cgroup_mutex-locking-with-internal-lo.patch"
-patch -p1 -R < "/root/machinex/patches/0520-cpuset-schedule-hotplug-propagation-from-cpuset_atta.patch"
-patch -p1 -R < "/root/machinex/patches/0519-cpuset-pin-down-cpus-and-mems-while-a-task-is-being-.patch"
-patch -p1 -R < "/root/machinex/patches/0518-cpuset-make-CPU-memory-hotplug-propagation-asynchron.patch"
-patch -p1 -R < "/root/machinex/patches/0517-cpuset-drop-async_rebuild_sched_domains.patch"
-patch -p1 -R < "/root/machinex/patches/0516-cpuset-don-t-nest-cgroup_mutex-inside-get_online_cpu.patch"
-patch -p1 -R < "/root/machinex/patches/0515-cpuset-reorganize-CPU-memory-hotplug-handling.patch"
-patch -p1 -R < "/root/machinex/patches/0514-REVERT-for-now-to-test-cpuidle-Fix-finding-state-wit.patch"
-patch -p1 -R < "/root/machinex/patches/0513-saving-the-world-from-more-logspam.-just-doing-my-jo.patch"
-patch -p1 -R < "/root/machinex/patches/0512-logspam-removal.patch"
-patch -p1 -R < "/root/machinex/patches/0511-update-config.patch"
-patch -p1 -R < "/root/machinex/patches/0510-cpuset-cleanup-cpuset-_can-_attach.patch"
-patch -p1 -R < "/root/machinex/patches/0509-cpuset-introduce-cpuset_for_each_child.patch"
-patch -p1 -R < "/root/machinex/patches/0508-cpuset-introduce-CS_ONLINE.patch"
-patch -p1 -R < "/root/machinex/patches/0507-cpuset-introduce-css_on-offline.patch"
-patch -p1 -R < "/root/machinex/patches/0506-cpuset-remove-fast-exit-path-from-remove_tasks.patch"
-patch -p1 -R < "/root/machinex/patches/0505-cpuset-remove-unused-cpuset_unlock.patch"
-patch -p1 -R < "/root/machinex/patches/0504-jfs-avoid-undefined-behavior-from-left-shifting-by-3.patch"
-patch -p1 -R < "/root/machinex/patches/0503-remove-experimental-dep.patch"
-patch -p1 -R < "/root/machinex/patches/0502-missing-semicolon.patch"
-patch -p1 -R < "/root/machinex/patches/0501-typos.patch"
-patch -p1 -R < "/root/machinex/patches/0500-fix-config-of.patch"
-patch -p1 -R < "/root/machinex/patches/0499-dmaengine-add-helper-function-to-request-a-slave-DMA.patch"
-patch -p1 -R < "/root/machinex/patches/0498-of-Add-generic-device-tree-DMA-helper.patch"
-patch -p1 -R < "/root/machinex/patches/0497-HUGE-GPIO-Fix-gpio_is_valid.patch"
-patch -p1 -R < "/root/machinex/patches/0496-rtc-add-rtc-driver-for-HID-sensors-of-type-time.patch"
-patch -p1 -R < "/root/machinex/patches/0495-signals-set_current_blocked-can-use-__set_current_bl.patch"
-patch -p1 -R < "/root/machinex/patches/0494-fix-signals-sys_ssetmask-uses-uninitialized-newmask.patch"
-patch -p1 -R < "/root/machinex/patches/0493-PM-QoS-Cosmetic-Rename-local-variable-in-dev_pm_qos_.patch"
-patch -p1 -R < "/root/machinex/patches/0492-block-delete-super-ancient-PC-XT-driver-from-1980.patch"
-patch -p1 -R < "/root/machinex/patches/0491-mm-fix-zone_watermark_ok_safe-accounting-of-isolated.patch"
-patch -p1 -R < "/root/machinex/patches/0490-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0489-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0488-ipc-simplify-message-copying.patch"
-patch -p1 -R < "/root/machinex/patches/0487-ipc-convert-prepare_copy-from-macro-to-function.patch"
-patch -p1 -R < "/root/machinex/patches/0486-ipc-simplify-free_copy-call.patch"
-patch -p1 -R < "/root/machinex/patches/0485-selftests-IPC-message-queue-copy-feature-test.patch"
-patch -p1 -R < "/root/machinex/patches/0484-ipc-introduce-message-queue-copy-feature.patch"
-patch -p1 -R < "/root/machinex/patches/0483-ipc-message-queue-receive-cleanup.patch"
-patch -p1 -R < "/root/machinex/patches/0482-ipc-add-sysctl-to-specify-desired-next-object-id.patch"
-patch -p1 -R < "/root/machinex/patches/0481-ipc-remove-forced-assignment-of-selected-message.patch"
-patch -p1 -R < "/root/machinex/patches/0480-netfilter-xt_recent-avoid-high-order-page-allocation.patch"
-patch -p1 -R < "/root/machinex/patches/0479-netfilter-fix-missing-dependencies-for-NOTRACK.patch"
-patch -p1 -R < "/root/machinex/patches/0478-hwsim-add-and-fix-beacon-hrtimer.patch"
-patch -p1 -R < "/root/machinex/patches/0477-mac80211_hwsim-fix-tsf-adjustment.patch"
-patch -p1 -R < "/root/machinex/patches/0476-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0475-and-more.patch"
-patch -p1 -R < "/root/machinex/patches/0474-remove-some-more-dev-attrs.patch"
-patch -p1 -R < "/root/machinex/patches/0473-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0472-cpuidle-coupled-fix-ready-counter-decrement.patch"
-patch -p1 -R < "/root/machinex/patches/0471-DANGER-cpuidle-Fix-finding-state-with-min-power_usag.patch"
-patch -p1 -R < "/root/machinex/patches/0470-still-remove-some-useless-shit.patch"
-patch -p1 -R < "/root/machinex/patches/0469-reverted-a-ton-of-that-shit-too-much-effort.patch"
-patch -p1 -R < "/root/machinex/patches/0468-regdom-remove-handling-of-bandwidth-you-stupid-usele.patch"
-patch -p1 -R < "/root/machinex/patches/0467-regulatory-simplify-freq_reg_info_regd.patch"
-patch -p1 -R < "/root/machinex/patches/0466-reg-remove-useless-warning.patch"
-patch -p1 -R < "/root/machinex/patches/0465-regulatory-simplify-restore_regulatory_settings.patch"
-patch -p1 -R < "/root/machinex/patches/0464-regulatory-remove-BUG_ON.patch"
-patch -p1 -R < "/root/machinex/patches/0463-regulatory-remove-useless-locking-on-exit.patch"
-patch -p1 -R < "/root/machinex/patches/0462-regulatory-code-cleanup.patch"
-patch -p1 -R < "/root/machinex/patches/0461-regulatory-simplify-regulatory_hint_11d.patch"
-patch -p1 -R < "/root/machinex/patches/0460-regulatory-don-t-test-list-before-iterating.patch"
-patch -p1 -R < "/root/machinex/patches/0459-reg-cleanup-reg_copy_regd.patch"
-patch -p1 -R < "/root/machinex/patches/0458-reg-cleanup-regdom_intersect.patch"
-patch -p1 -R < "/root/machinex/patches/0457-regulatory-don-t-allocate-too-much-memory.patch"
-patch -p1 -R < "/root/machinex/patches/0456-regulatory-don-t-write-past-array-when-intersecting.patch"
-patch -p1 -R < "/root/machinex/patches/0455-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0454-UAPI-Strip-_UAPI-prefix-on-header-install-no-matter-.patch"
-patch -p1 -R < "/root/machinex/patches/0453-mm-mempolicy-Convert-shared_policy-mutex-to-spinlock.patch"
-patch -p1 -R < "/root/machinex/patches/0452-ssb-SSB_DRIVER_GPIO-should-depend-on-GPIOLIB-instead.patch"
-patch -p1 -R < "/root/machinex/patches/0451-mempolicy-remove-arg-from-mpol_parse_str-and-mpol_to.patch"
-patch -p1 -R < "/root/machinex/patches/0450-regmap-flat-Add-flat-cache-type.patch"
-patch -p1 -R < "/root/machinex/patches/0449-bs.patch"
-patch -p1 -R < "/root/machinex/patches/0448-ARM-7609-1-disable-errata-workarounds-which-access-s.patch"
-patch -p1 -R < "/root/machinex/patches/0447-keys-sorted-out-for-good.patch"
-patch -p1 -R < "/root/machinex/patches/0446-suck-it-qtag.patch"
+/root/machinex/patches/0150-REVERT-module-unformed-and-arm-remove-gic-handle.patch
+/root/machinex/patches/0149-nope-no-pm-runtime-for-you-trying-to-corrupt-my-emmc.patch
+/root/machinex/patches/0148-revert-ext4-use-unlikeley.patch
+/root/machinex/patches/0147-this-is-dangerous-but-so-am-I.patch
+/root/machinex/patches/0146-making-idle-timeout-match-request-timeout.patch
+/root/machinex/patches/0145-more-sdcc-fixin.patch
+/root/machinex/patches/0144-one-more-little-syntax-derp-i-guess.patch
+/root/machinex/patches/0143-that-should-fix-my-derp.patch
+/root/machinex/patches/0142-mmc-queue-rename-mmc_request-function-as-its-name-is.patch
+/root/machinex/patches/0141-REVERT-ALL-EXT4-forward-ports-for-a-sec-while-I-test.patch
+/root/machinex/patches/0140-now-i-gotta-fix-this-shit-up-in-fs.patch
+/root/machinex/patches/0139-some-arch-msm-cleanup-and-hacking.patch
+/root/machinex/patches/0138-sdcc-idle-timeout-isnt-being-used-so-defining-it-and.patch
+/root/machinex/patches/0137-mmc-queue-we-dont-use-bkops.patch
+/root/machinex/patches/0136-ext4-calculate-and-verify-superblock-checksum.patch
+/root/machinex/patches/0135-ext4-remove-unnecessary-check-in-add_dirent_to_buf.patch
+/root/machinex/patches/0134-ext4-add-checksums-to-the-MMP-block.patch
+/root/machinex/patches/0133-ext4-make-block-group-checksums-use-metadata_csum.patch
+/root/machinex/patches/0132-xattrs-csum-ext4-Calculate-and-verify-checksums-of-e.patch
+/root/machinex/patches/0131-ext4-calculate-and-verify-checksums-of-directory-lea.patch
+/root/machinex/patches/0130-htree-nodes.patch
+/root/machinex/patches/0129-extent-tree.patch
+/root/machinex/patches/0128-block-bitmap.patch
+/root/machinex/patches/0127-inode-checksums.patch
+/root/machinex/patches/0126-ext4-load-the-crc32c-driver-if-necessary.patch
+/root/machinex/patches/0125-ext4-record-the-checksum-algorithm.patch
+/root/machinex/patches/0124-ext4-change-on-disk-layout-to-support-extended-metad.patch
+/root/machinex/patches/0123-ext4-create-a-new-BH_verified-flag.patch
+/root/machinex/patches/0122-ext4-calculate-and-verify-checksums-for-inode-bitmap.patch
+/root/machinex/patches/0121-ext4-use-unlikeley-to-improve-the-efficiency-of-the-.patch
+/root/machinex/patches/0120-REVERT-clk-events-and-smp-changes-knew-i-was-pushing.patch
+/root/machinex/patches/0119-REVERTED-ext4-csum-stuff-will-hack-in-some-of-the-3..patch
+/root/machinex/patches/0118-now-lets-see-what-we-have-to-fix.patch
+/root/machinex/patches/0117-hmm.patch
+/root/machinex/patches/0116-ext4-load-the-crc32c-driver-if-necessary.patch
+/root/machinex/patches/0115-ext4-record-the-checksum-algorithm-in-use-in-the-sb.patch
+/root/machinex/patches/0114-ext4-change-on-disk-layout-to-support-extended-metad.patch
+/root/machinex/patches/0113-forward-port-some-missing-ext4-csum-requirements-our.patch
+/root/machinex/patches/0112-jbd-don-t-wake-kjournald-unnecessarily.patch
+/root/machinex/patches/0111-vfs-add-missing-virtual-cache-flush-after-editing-pa.patch
+/root/machinex/patches/0110-clocksource-use-clockevents_config_and_register.patch
+/root/machinex/patches/0109-ARM-MSM-TIMER-user-clockevents_config_and-register-w.patch
+/root/machinex/patches/0108-ARM-smp-remove-wrapper-functions.patch
+/root/machinex/patches/0107-writeback-add-more-tracepoints.patch
+/root/machinex/patches/0106-block-add-block_-touch-dirty-_buffer-tracepoint.patch
+/root/machinex/patches/0105-block-add-req-to-bio_-front-back-_merge-tracepoints.patch
+/root/machinex/patches/0104-block-add-missing-block_bio_complete-tracepoint.patch
+/root/machinex/patches/0103-reverted.patch
+/root/machinex/patches/0102-whoa-there-cowboy.patch
+/root/machinex/patches/0101-reverted.patch
+/root/machinex/patches/0100-this-will-not-work-for-us.patch
+/root/machinex/patches/0099-ARM-remove-mach-.handle_irq-for-GIC-users.patch
+/root/machinex/patches/0098-clk-json-readable-summary.patch
+/root/machinex/patches/0097-clk-human-readable-summary.patch
+/root/machinex/patches/0096-module-add-new-state-MODULE_STATE_UNFORMED.patch
+/root/machinex/patches/0095-vfs-re-implement-writeback_inodes_sb-_nr-_if_idle.patch
+/root/machinex/patches/0094-clk-fixed-factor-round_rate-should-use-do_div.patch
+/root/machinex/patches/0093-clk-export-__clk_get_name.patch
+/root/machinex/patches/0092-clk-Don-t-mark-shared-helper-functions-as-inline.patch
+/root/machinex/patches/0091-tools-usb-remove-unneeded-continue.patch
+/root/machinex/patches/0090-linux-audit.h-move-ptrace.h-include-to-kernel-header.patch
+/root/machinex/patches/0089-audit-catch-possible-NULL-audit-buffers.patch
+/root/machinex/patches/0088-audit-create-explicit-AUDIT_SECCOMP-event-type.patch
+/root/machinex/patches/0087-mm-thp-acquire-the-anon_vma-rwsem.patch
+/root/machinex/patches/0086-mm-mmap-annotate-vm_lock_anon_vma-locking-properly.patch
+/root/machinex/patches/0085-mm-bootmem-fix-free_all_bootmem_core-with-odd-bitmap.patch
+/root/machinex/patches/0084-fs-exec.c-work-around-icc-miscompilation.patch
+/root/machinex/patches/0083-mm-migrate-check-page_count-of-THP-before-migrating.patch
+/root/machinex/patches/0082-tracing-Fix-regression-with-irqsoff-tracer.patch
+/root/machinex/patches/0081-remove-a-shit-ton-of-config-experimental.patch
+/root/machinex/patches/0080-debugfs-convert-gid-argument-from-decimal-not-octal.patch
+/root/machinex/patches/0079-block-Remove-should_sort-judgement-when-flush-blk_pl.patch
+/root/machinex/patches/0078-make-CONFIG_EXPERIMENTAL-invisible-and-default.patch
+/root/machinex/patches/0077-oh-shit.patch
+/root/machinex/patches/0076-TODO-write-a-platform-data-init-structure-for-ARM-ps.patch
+/root/machinex/patches/0075-ARM-opcodes-add-opcodes-definitions-for-ARM-security.patch
+/root/machinex/patches/0074-6patches-0212.patch
+/root/machinex/patches/0073-arm-pcsi.patch
+/root/machinex/patches/0072-ARM-GIC-set-handle_arch_irq-in-GIC-initialization.patch
+/root/machinex/patches/0071-ARM-GIC-remove-direct-use-of-gic_raise_softirq.patch
+/root/machinex/patches/0070-ARM-GIC-remove-assembly-ifdefs-from-gic.h.patch
+/root/machinex/patches/0069-fmt.patch
+/root/machinex/patches/0068-msleep-timeouts.patch
+/root/machinex/patches/0067-dox.patch
+/root/machinex/patches/0066-dox.patch
+/root/machinex/patches/0065-mm-reinstante-dropped-pmd_trans_splitting-check.patch
+/root/machinex/patches/0064-cred-Remove-tgcred-pointer-from-struct-cred.patch
+/root/machinex/patches/0063-block-RCU-free-request_queue.patch
+/root/machinex/patches/0062-cfq-iosched-Get-rid-of-unnecessary-local-variable.patch
+/root/machinex/patches/0061-cfq-iosched-Rename-few-functions-related-to-selectin.patch
+/root/machinex/patches/0060-cfq-iosched-Rename-service_tree-to-st-at-some-places.patch
+/root/machinex/patches/0059-cfq-iosched-More-renaming-to-better-represent-wl_cla.patch
+/root/machinex/patches/0058-cfq-iosched-Properly-name-all-references-to-IO-class.patch
+/root/machinex/patches/0057-UAPI-Scripted-Disintegrate-include-scsi-fc.patch
+/root/machinex/patches/0056-jfs-avoid-undefined-behavior-from-left-shifting-by-3.patch
+/root/machinex/patches/0055-ipv4-fix-NULL-checking-in-devinet_ioctl.patch
+/root/machinex/patches/0054-of-dma-updates.patch
+/root/machinex/patches/0053-of-Add-generic-device-tree-DMA-helpers.patch
+/root/machinex/patches/0052-remove-old-1980s-hardware-driver-again.patch
+/root/machinex/patches/0051-mm-mempolicy-Convert-shared_policy-mutex-to-spinlock.patch
+/root/machinex/patches/0050-mempol-remove-arg-from-mpol-again.patch
+/root/machinex/patches/0049-dang.patch
+/root/machinex/patches/0048-net-use-per-task-frag-allocator.patch
+/root/machinex/patches/0047-actual-keys-fix.patch
+/root/machinex/patches/0046-leds.patch
+/root/machinex/patches/0045-dyn.patch
+/root/machinex/patches/0044-config-crypto-changes.patch
+/root/machinex/patches/0043-revert-those.patch
+/root/machinex/patches/0042-fixes-and-hacks.patch
+/root/machinex/patches/0041-NET-Fixup-some-bs-IPV6-shit-make-rmnetbam-headroom-c.patch
+/root/machinex/patches/0040-REVERT-ip6tnl-advertise-tunnel-param-via-rtnl.patch
+/root/machinex/patches/0039-config-updates.patch
+/root/machinex/patches/0038-that-should-fix-my-build-script.patch
+/root/machinex/patches/0037-leds.patch
+/root/machinex/patches/0036-gonna-want-to-actually-retry-the-push.patch
+/root/machinex/patches/0035-fancy-build-script-shit.patch
+/root/machinex/patches/0034-adb-testing-is-a-go.patch
+/root/machinex/patches/0033-leds.patch
+/root/machinex/patches/0032-leds.patch
+/root/machinex/patches/0031-REVERT-EVERYTHING-back-to-P19.patch
+/root/machinex/patches/0030-REVERT-regmap-24-bit.patch
+/root/machinex/patches/0029-REVERT-remove-__dev-from-init.patch
+/root/machinex/patches/0028-clk.patch
+/root/machinex/patches/0027-clk.patch
+/root/machinex/patches/0026-vfs-re-implement-writeback_inodes_sb-_nr-_if_idle.patch
+/root/machinex/patches/0025-clk-fixes.patch
+/root/machinex/patches/0024-clk-Don-t-mark-shared-helper-functions-as-inline.patch
+/root/machinex/patches/0023-regmap-Add-support-for-24-bit-wide-register-addr.patch
+/root/machinex/patches/0022-mm-thp-acquire-the-anon_vma-rwsem-for-write.patch
+/root/machinex/patches/0021-mm-mmap-annotate-vm_lock_anon_vma-locking-properly.patch
+/root/machinex/patches/0020-mm-bootmem-fix-free_all_bootmem_core-with-odd-bitmap.patch
+/root/machinex/patches/0019-fs-exec.c-work-around-icc-miscompilation.patch
+/root/machinex/patches/0018-mm-migrate-check-page_count-of-THP-before-migrating.patch
+/root/machinex/patches/0017-racing-Fix-regression-with-irqsoff-trace.patch
+/root/machinex/patches/0016-pstore-Avoid-deadlock-in-panic-and-emergency-restart.patch
+/root/machinex/patches/0015-block-Remove-should_sort-judgement-when-flush-blk_pl.patch
+/root/machinex/patches/0014-more.patch
+/root/machinex/patches/0013-arm-decompress-remove-unused-tag.patch
+/root/machinex/patches/0012-net_sched-more-precise-pkt_len-computation.patch
+/root/machinex/patches/0011-dox.patch
+/root/machinex/patches/0010-remove-__dev-from-init.patch
+/root/machinex/patches/0009-iommu-arch-initcall-from-subsys.patch
+/root/machinex/patches/0008-mm-reinstate-dropped-pmd_trans_splitting-check.patch
+/root/machinex/patches/0007-REVERT-binder-commits.patch
+/root/machinex/patches/0006-REVERT-recent-drm-bullshit.patch
+/root/machinex/patches/0005-update-bullshit.patch
+/root/machinex/patches/0004-REVERT-kmod-hack.patch
+/root/machinex/patches/0003-REVERT-suck-it-qtag.patch
+/root/machinex/patches/0002-get-rid-of-some-bullshit.patch
+/root/machinex/patches/0001-REVERT-regulatory-shit.patch
