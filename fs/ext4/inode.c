@@ -3476,6 +3476,8 @@ int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
 		return -EOPNOTSUPP;
 	}
 
+	trace_ext4_punch_hole(inode, offset, length);
+
 	return ext4_ext_punch_hole(file, offset, length);
 }
 
