@@ -36,7 +36,7 @@
 
 #ifdef CUSTOMER_HW4
 #undef sd_err
-#define sd_err(x) do {printf x;} while (0)
+#define sd_err(x) do {pr_info x;} while (0)
 #endif
 
 #define sd_sync_dma(sd, read, nbytes)
