@@ -13,6 +13,7 @@
 #include <linux/serial_core.h>
 
 #include <asm/mach/arch.h>
+#include <asm/hardware/gic.h>
 #include <mach/map.h>
 
 #include <plat/cpu.h>
