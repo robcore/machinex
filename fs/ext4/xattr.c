@@ -834,7 +834,7 @@ inserted:
 				  (unsigned long long)block);
 
 			new_bh = sb_getblk(sb, block);
-			if (unlikely(!new_bh)) {
+			if (!new_bh) {
 				error = -ENOMEM;
 getblk_failed:
 				ext4_free_blocks(handle, inode, NULL, block, 1,
