@@ -1,7 +1,7 @@
 /*
  * r2net.c
  *
- * Copyright (c) 2011, Dan Magenheimer, Oracle Corp.
+ * Copyright (c) 2011-2012, Dan Magenheimer, Oracle Corp.
  *
  * Ramster_r2net provides an interface between zcache and r2net.
  *
@@ -9,10 +9,10 @@
  */
 
 #include <linux/list.h>
-#include "cluster/tcp.h"
-#include "cluster/nodemanager.h"
-#include "tmem.h"
-#include "zcache.h"
+#include "tcp.h"
+#include "nodemanager.h"
+#include "../tmem.h"
+#include "../zcache.h"
 #include "ramster.h"
 
 #define RAMSTER_TESTING
@@ -33,7 +33,7 @@ enum {
 #define RMSTR_R2NET_MAX_LEN \
 		(R2NET_MAX_PAYLOAD_BYTES - sizeof(struct tmem_xhandle))
 
-#include "cluster/tcp_internal.h"
+#include "tcp_internal.h"
 
 static struct r2nm_node *r2net_target_node;
 static int r2net_target_nodenum;
@@ -72,8 +72,8 @@ static int ramster_remote_async_get_request_handler(struct r2net_msg *msg,
 	*(struct tmem_xhandle *)pdata = xh;
 	pdata += sizeof(struct tmem_xhandle);
 	local_irq_save(flags);
-	found = zcache_get(xh.client_id, xh.pool_id, &xh.oid, xh.index,
-				pdata, &size, 1, get_and_free ? 1 : -1);
+	found = zcache_get_page(xh.client_id, xh.pool_id, &xh.oid, xh.index,
+				pdata, &size, true, get_and_free ? 1 : -1);
 	local_irq_restore(flags);
 	if (found < 0) {
 		/* a zero size indicates the get failed */
@@ -98,7 +98,7 @@ static int ramster_remote_async_get_reply_handler(struct r2net_msg *msg,
 	in += sizeof(struct tmem_xhandle);
 	datalen -= sizeof(struct tmem_xhandle);
 	BUG_ON(datalen < 0 || datalen > PAGE_SIZE);
-	ret = zcache_localify(xh->pool_id, &xh->oid, xh->index,
+	ret = ramster_localify(xh->pool_id, &xh->oid, xh->index,
 				in, datalen, xh->extra);
 #ifdef RAMSTER_TESTING
 	if (ret == -EEXIST)
@@ -123,8 +123,8 @@ int ramster_remote_put_handler(struct r2net_msg *msg,
 	p += sizeof(struct tmem_xhandle);
 	zcache_autocreate_pool(xh->client_id, xh->pool_id, ephemeral);
 	local_irq_save(flags);
-	ret = zcache_put(xh->client_id, xh->pool_id, &xh->oid, xh->index,
-				p, datalen, 1, ephemeral ? 1 : -1);
+	ret = zcache_put_page(xh->client_id, xh->pool_id, &xh->oid, xh->index,
+				p, datalen, true, ephemeral);
 	local_irq_restore(flags);
 	return ret;
 }
@@ -137,7 +137,8 @@ int ramster_remote_flush_handler(struct r2net_msg *msg,
 
 	xh = (struct tmem_xhandle *)p;
 	p += sizeof(struct tmem_xhandle);
-	(void)zcache_flush(xh->client_id, xh->pool_id, &xh->oid, xh->index);
+	(void)zcache_flush_page(xh->client_id, xh->pool_id,
+					&xh->oid, xh->index);
 	return 0;
 }
 
@@ -153,15 +154,16 @@ int ramster_remote_flobj_handler(struct r2net_msg *msg,
 	return 0;
 }
 
-int ramster_remote_async_get(struct tmem_xhandle *xh, bool free, int remotenode,
+int r2net_remote_async_get(struct tmem_xhandle *xh, bool free, int remotenode,
 				size_t expect_size, uint8_t expect_cksum,
 				void *extra)
 {
-	int ret = -1, status;
+	int nodenum, ret = -1, status;
 	struct r2nm_node *node = NULL;
 	struct kvec vec[1];
 	size_t veclen = 1;
 	u32 msg_type;
+	struct r2net_node *nn;
 
 	node = r2nm_get_node_by_num(remotenode);
 	if (node == NULL)
@@ -172,6 +174,21 @@ int ramster_remote_async_get(struct tmem_xhandle *xh, bool free, int remotenode,
 	xh->extra = extra;
 	vec[0].iov_len = sizeof(*xh);
 	vec[0].iov_base = xh;
+
+	node = r2net_target_node;
+	if (!node)
+		goto out;
+
+	nodenum = r2net_target_nodenum;
+
+	r2nm_node_get(node);
+	nn = r2net_nn_from_num(nodenum);
+	if (nn->nn_persistent_error || !nn->nn_sc_valid) {
+		ret = -ENOTCONN;
+		r2nm_node_put(node);
+		goto out;
+	}
+
 	if (free)
 		msg_type = RMSTR_TMEM_ASYNC_GET_AND_FREE_REQUEST;
 	else
@@ -180,8 +197,13 @@ int ramster_remote_async_get(struct tmem_xhandle *xh, bool free, int remotenode,
 					vec, veclen, remotenode, &status);
 	r2nm_node_put(node);
 	if (ret < 0) {
+		if (ret == -ENOTCONN || ret == -EHOSTDOWN)
+			goto out;
+		if (ret == -EAGAIN)
+			goto out;
 		/* FIXME handle bad message possibilities here? */
-		pr_err("UNTESTED ret<0 in ramster_remote_async_get\n");
+		pr_err("UNTESTED ret<0 in ramster_remote_async_get: ret=%d\n",
+				ret);
 	}
 	ret = status;
 out:
@@ -219,7 +241,7 @@ static void ramster_check_irq_counts(void)
 }
 #endif
 
-int ramster_remote_put(struct tmem_xhandle *xh, char *data, size_t size,
+int r2net_remote_put(struct tmem_xhandle *xh, char *data, size_t size,
 				bool ephemeral, int *remotenode)
 {
 	int nodenum, ret = -1, status;
@@ -227,9 +249,7 @@ int ramster_remote_put(struct tmem_xhandle *xh, char *data, size_t size,
 	struct kvec vec[2];
 	size_t veclen = 2;
 	u32 msg_type;
-#ifdef RAMSTER_TESTING
 	struct r2net_node *nn;
-#endif
 
 	BUG_ON(size > RMSTR_R2NET_MAX_LEN);
 	xh->client_id = r2nm_this_node(); /* which node is putting */
@@ -237,6 +257,7 @@ int ramster_remote_put(struct tmem_xhandle *xh, char *data, size_t size,
 	vec[0].iov_base = xh;
 	vec[1].iov_len = size;
 	vec[1].iov_base = data;
+
 	node = r2net_target_node;
 	if (!node)
 		goto out;
@@ -245,10 +266,12 @@ int ramster_remote_put(struct tmem_xhandle *xh, char *data, size_t size,
 
 	r2nm_node_get(node);
 
-#ifdef RAMSTER_TESTING
 	nn = r2net_nn_from_num(nodenum);
-	WARN_ON_ONCE(nn->nn_persistent_error || !nn->nn_sc_valid);
-#endif
+	if (nn->nn_persistent_error || !nn->nn_sc_valid) {
+		ret = -ENOTCONN;
+		r2nm_node_put(node);
+		goto out;
+	}
 
 	if (ephemeral)
 		msg_type = RMSTR_TMEM_PUT_EPH;
@@ -261,16 +284,6 @@ int ramster_remote_put(struct tmem_xhandle *xh, char *data, size_t size,
 
 	ret = r2net_send_message_vec(msg_type, RMSTR_KEY, vec, veclen,
 						nodenum, &status);
-#ifdef RAMSTER_TESTING
-	if (ret != 0) {
-		static unsigned long cnt;
-		cnt++;
-		if (!(cnt&(cnt-1)))
-			pr_err("ramster_remote_put: message failed, "
-				"ret=%d, cnt=%lu\n", ret, cnt);
-		ret = -1;
-	}
-#endif
 	if (ret < 0)
 		ret = -1;
 	else {
@@ -283,7 +296,7 @@ out:
 	return ret;
 }
 
-int ramster_remote_flush(struct tmem_xhandle *xh, int remotenode)
+int r2net_remote_flush(struct tmem_xhandle *xh, int remotenode)
 {
 	int ret = -1, status;
 	struct r2nm_node *node = NULL;
@@ -303,7 +316,7 @@ int ramster_remote_flush(struct tmem_xhandle *xh, int remotenode)
 	return ret;
 }
 
-int ramster_remote_flush_object(struct tmem_xhandle *xh, int remotenode)
+int r2net_remote_flush_object(struct tmem_xhandle *xh, int remotenode)
 {
 	int ret = -1, status;
 	struct r2nm_node *node = NULL;

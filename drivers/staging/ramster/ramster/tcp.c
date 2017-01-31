@@ -111,7 +111,7 @@ static struct socket *r2net_listen_sock;
  * r2net_wq.  teardown detaches the callbacks before destroying the workqueue.
  * quorum work is queued as sock containers are shutdown.. stop_listening
  * tears down all the node's sock containers, preventing future shutdowns
- * and queued quroum work, before canceling delayed quorum work and
+ * and queued quorum work, before canceling delayed quorum work and
  * destroying the work queue.
  */
 static struct workqueue_struct *r2net_wq;
@@ -541,8 +541,7 @@ static void r2net_set_nn_state(struct r2net_node *nn,
 	}
 
 	if (was_valid && !valid) {
-		printk(KERN_NOTICE "ramster: No longer connected to "
-		       SC_NODEF_FMT "\n",
+		pr_notice("ramster: No longer connected to " SC_NODEF_FMT "\n",
 			old_sc->sc_node->nd_name, old_sc->sc_node->nd_num,
 			&old_sc->sc_node->nd_ipv4_address,
 			ntohs(old_sc->sc_node->nd_ipv4_port));
@@ -551,7 +550,7 @@ static void r2net_set_nn_state(struct r2net_node *nn,
 
 	if (!was_valid && valid) {
 		cancel_delayed_work(&nn->nn_connect_expired);
-		printk(KERN_NOTICE "ramster: %s " SC_NODEF_FMT "\n",
+		pr_notice("ramster: %s " SC_NODEF_FMT "\n",
 		       r2nm_this_node() > sc->sc_node->nd_num ?
 		       "Connected to" : "Accepted connection from",
 		       sc->sc_node->nd_name, sc->sc_node->nd_num,
@@ -644,7 +643,7 @@ static void r2net_state_change(struct sock *sk)
 		r2net_sc_queue_work(sc, &sc->sc_connect_work);
 		break;
 	default:
-		printk(KERN_INFO "ramster: Connection to "
+		pr_info("ramster: Connection to "
 			SC_NODEF_FMT " shutdown, state %d\n",
 			sc->sc_node->nd_name, sc->sc_node->nd_num,
 			&sc->sc_node->nd_ipv4_address,
@@ -660,7 +659,7 @@ out:
 
 /*
  * we register callbacks so we can queue work on events before calling
- * the original callbacks.  our callbacks our careful to test user_data
+ * the original callbacks.  our callbacks are careful to test user_data
  * to discover when they've reaced with r2net_unregister_callbacks().
  */
 static void r2net_register_callbacks(struct sock *sk,
@@ -1160,7 +1159,8 @@ int r2net_send_message_vec(u32 msg_type, u32 key, struct kvec *caller_vec,
 
 	/* wait on other node's handler */
 	r2net_set_nst_status_time(&nst);
-	wait_event(nsw.ns_wq, r2net_nsw_completed(nn, &nsw));
+	wait_event(nsw.ns_wq, r2net_nsw_completed(nn, &nsw) ||
+			nn->nn_persistent_error || !nn->nn_sc_valid);
 
 	r2net_update_send_stats(&nst, sc);
 
@@ -1325,8 +1325,10 @@ static int r2net_process_message(struct r2net_sock_container *sc,
 	if (be16_to_cpu(hdr->data_len) > nmh->nh_max_len)
 		syserr = R2NET_ERR_OVERFLOW;
 
-	if (syserr != R2NET_ERR_NONE)
+	if (syserr != R2NET_ERR_NONE) {
+		pr_err("ramster_r2net, message length problem\n");
 		goto out_respond;
+	}
 
 	r2net_set_func_start_time(sc);
 	sc->sc_msg_key = be32_to_cpu(hdr->key);
@@ -1393,7 +1395,7 @@ static int r2net_check_handshake(struct r2net_sock_container *sc)
 	struct r2net_node *nn = r2net_nn_from_num(sc->sc_node->nd_num);
 
 	if (hand->protocol_version != cpu_to_be64(R2NET_PROTOCOL_VERSION)) {
-		printk(KERN_NOTICE "ramster: " SC_NODEF_FMT " Advertised net "
+		pr_notice("ramster: " SC_NODEF_FMT " Advertised net "
 		       "protocol version %llu but %llu is required. "
 		       "Disconnecting.\n", sc->sc_node->nd_name,
 			sc->sc_node->nd_num, &sc->sc_node->nd_ipv4_address,
@@ -1413,7 +1415,7 @@ static int r2net_check_handshake(struct r2net_sock_container *sc)
 	 */
 	if (be32_to_cpu(hand->r2net_idle_timeout_ms) !=
 				r2net_idle_timeout()) {
-		printk(KERN_NOTICE "ramster: " SC_NODEF_FMT " uses a network "
+		pr_notice("ramster: " SC_NODEF_FMT " uses a network "
 		       "idle timeout of %u ms, but we use %u ms locally. "
 		       "Disconnecting.\n", sc->sc_node->nd_name,
 			sc->sc_node->nd_num, &sc->sc_node->nd_ipv4_address,
@@ -1426,7 +1428,7 @@ static int r2net_check_handshake(struct r2net_sock_container *sc)
 
 	if (be32_to_cpu(hand->r2net_keepalive_delay_ms) !=
 			r2net_keepalive_delay()) {
-		printk(KERN_NOTICE "ramster: " SC_NODEF_FMT " uses a keepalive "
+		pr_notice("ramster: " SC_NODEF_FMT " uses a keepalive "
 		       "delay of %u ms, but we use %u ms locally. "
 		       "Disconnecting.\n", sc->sc_node->nd_name,
 			sc->sc_node->nd_num, &sc->sc_node->nd_ipv4_address,
@@ -1439,7 +1441,7 @@ static int r2net_check_handshake(struct r2net_sock_container *sc)
 
 	if (be32_to_cpu(hand->r2hb_heartbeat_timeout_ms) !=
 			R2HB_MAX_WRITE_TIMEOUT_MS) {
-		printk(KERN_NOTICE "ramster: " SC_NODEF_FMT " uses a heartbeat "
+		pr_notice("ramster: " SC_NODEF_FMT " uses a heartbeat "
 		       "timeout of %u ms, but we use %u ms locally. "
 		       "Disconnecting.\n", sc->sc_node->nd_name,
 			sc->sc_node->nd_num, &sc->sc_node->nd_ipv4_address,
@@ -1516,6 +1518,7 @@ static int r2net_advance_rx(struct r2net_sock_container *sc)
 				if (be16_to_cpu(hdr->data_len) >
 				    R2NET_MAX_PAYLOAD_BYTES)
 					ret = -EOVERFLOW;
+				WARN_ON_ONCE(ret == -EOVERFLOW);
 			}
 		}
 		if (ret <= 0)
@@ -1583,7 +1586,6 @@ static void r2net_rx_until_empty(struct work_struct *work)
 		/* not permanent so read failed handshake can retry */
 		r2net_ensure_shutdown(nn, sc, 0);
 	}
-
 	sc_put(sc);
 }
 
@@ -1659,6 +1661,7 @@ static void r2net_sc_send_keep_req(struct work_struct *work)
 static void r2net_idle_timer(unsigned long data)
 {
 	struct r2net_sock_container *sc = (struct r2net_sock_container *)data;
+	struct r2net_node *nn = r2net_nn_from_num(sc->sc_node->nd_num);
 #ifdef CONFIG_DEBUG_FS
 	unsigned long msecs = ktime_to_ms(ktime_get()) -
 		ktime_to_ms(sc->sc_tv_timer);
@@ -1666,7 +1669,7 @@ static void r2net_idle_timer(unsigned long data)
 	unsigned long msecs = r2net_idle_timeout();
 #endif
 
-	printk(KERN_NOTICE "ramster: Connection to " SC_NODEF_FMT " has been "
+	pr_notice("ramster: Connection to " SC_NODEF_FMT " has been "
 	       "idle for %lu.%lu secs, shutting it down.\n",
 		sc->sc_node->nd_name, sc->sc_node->nd_num,
 		&sc->sc_node->nd_ipv4_address, ntohs(sc->sc_node->nd_ipv4_port),
@@ -1676,13 +1679,8 @@ static void r2net_idle_timer(unsigned long data)
 	 * Initialize the nn_timeout so that the next connection attempt
 	 * will continue in r2net_start_connect.
 	 */
-	/* Avoid spurious shutdowns... not sure if this is still necessary */
-	pr_err("ramster_idle_timer, skipping shutdown work\n");
-#if 0
-	/* old code used to do these two lines */
 	atomic_set(&nn->nn_timeout, 1);
 	r2net_sc_queue_work(sc, &sc->sc_shutdown_work);
-#endif
 }
 
 static void r2net_sc_reset_idle_timer(struct r2net_sock_container *sc)
@@ -1807,7 +1805,7 @@ static void r2net_start_connect(struct work_struct *work)
 
 out:
 	if (ret) {
-		printk(KERN_NOTICE "ramster: Connect attempt to " SC_NODEF_FMT
+		pr_notice("ramster: Connect attempt to " SC_NODEF_FMT
 		       " failed with errno %d\n", sc->sc_node->nd_name,
 			sc->sc_node->nd_num, &sc->sc_node->nd_ipv4_address,
 			ntohs(sc->sc_node->nd_ipv4_port), ret);
@@ -1833,7 +1831,7 @@ static void r2net_connect_expired(struct work_struct *work)
 
 	spin_lock(&nn->nn_lock);
 	if (!nn->nn_sc_valid) {
-		printk(KERN_NOTICE "ramster: No connection established with "
+		pr_notice("ramster: No connection established with "
 		       "node %u after %u.%u seconds, giving up.\n",
 		     r2net_num_from_nn(nn),
 		     r2net_idle_timeout() / 1000,
@@ -1969,7 +1967,7 @@ static int r2net_accept_one(struct socket *sock)
 
 	node = r2nm_get_node_by_ip(sin.sin_addr.s_addr);
 	if (node == NULL) {
-		printk(KERN_NOTICE "ramster: Attempt to connect from unknown "
+		pr_notice("ramster: Attempt to connect from unknown "
 		       "node at %pI4:%d\n", &sin.sin_addr.s_addr,
 		       ntohs(sin.sin_port));
 		ret = -EINVAL;
@@ -1978,7 +1976,7 @@ static int r2net_accept_one(struct socket *sock)
 
 	if (r2nm_this_node() >= node->nd_num) {
 		local_node = r2nm_get_node_by_num(r2nm_this_node());
-		printk(KERN_NOTICE "ramster: Unexpected connect attempt seen "
+		pr_notice("ramster: Unexpected connect attempt seen "
 		       "at node '%s' (%u, %pI4:%d) from node '%s' (%u, "
 		       "%pI4:%d)\n", local_node->nd_name, local_node->nd_num,
 		       &(local_node->nd_ipv4_address),
@@ -2008,7 +2006,7 @@ static int r2net_accept_one(struct socket *sock)
 		ret = 0;
 	spin_unlock(&nn->nn_lock);
 	if (ret) {
-		printk(KERN_NOTICE "ramster: Attempt to connect from node '%s' "
+		pr_notice("ramster: Attempt to connect from node '%s' "
 		       "at %pI4:%d but it already has an open connection\n",
 		       node->nd_name, &sin.sin_addr.s_addr,
 		       ntohs(sin.sin_port));
@@ -2091,8 +2089,7 @@ static int r2net_open_listening_sock(__be32 addr, __be16 port)
 
 	ret = sock_create(PF_INET, SOCK_STREAM, IPPROTO_TCP, &sock);
 	if (ret < 0) {
-		printk(KERN_ERR "ramster: Error %d while creating socket\n",
-			ret);
+		pr_err("ramster: Error %d while creating socket\n", ret);
 		goto out;
 	}
 
@@ -2106,17 +2103,17 @@ static int r2net_open_listening_sock(__be32 addr, __be16 port)
 	r2net_listen_sock = sock;
 	INIT_WORK(&r2net_listen_work, r2net_accept_many);
 
-	sock->sk->sk_reuse = 1;
+	sock->sk->sk_reuse = /* SK_CAN_REUSE FIXME FOR 3.4 */ 1;
 	ret = sock->ops->bind(sock, (struct sockaddr *)&sin, sizeof(sin));
 	if (ret < 0) {
-		printk(KERN_ERR "ramster: Error %d while binding socket at "
-			"%pI4:%u\n", ret, &addr, ntohs(port));
+		pr_err("ramster: Error %d while binding socket at %pI4:%u\n",
+			ret, &addr, ntohs(port));
 		goto out;
 	}
 
 	ret = sock->ops->listen(sock, 64);
 	if (ret < 0)
-		printk(KERN_ERR "ramster: Error %d while listening on %pI4:%u\n",
+		pr_err("ramster: Error %d while listening on %pI4:%u\n",
 		       ret, &addr, ntohs(port));
 
 out:
