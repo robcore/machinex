@@ -5349,7 +5349,7 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 			mmc_hostname(host->mmc), host->sps.reset_bam);
 
 	pr_err("%s: got_dataend=%d, prog_enable=%d,"
-		" wait_for_auto_prog_done=%d, got_auto_prog_done=%d\n,
+		" wait_for_auto_prog_done=%d, got_auto_prog_done=%d\n",
 		mmc_hostname(host->mmc),
 		host->curr.got_dataend, host->prog_enable,
 		host->curr.wait_for_auto_prog_done,
