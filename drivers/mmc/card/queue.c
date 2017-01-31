@@ -58,7 +58,6 @@ static int mmc_queue_thread(void *d)
 	struct mmc_queue *mq = d;
 	struct request_queue *q = mq->queue;
 	struct request *req;
-	struct mmc_card *card = mq->card;
 	unsigned int cmd_flags = 0;
 
 	struct sched_param scheduler_params = {0};

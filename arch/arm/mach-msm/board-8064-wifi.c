@@ -127,7 +127,7 @@ static int brcm_init_wlan_mem(void)
 	if (!wlan_static_dhd_info_buf)
 		goto err_mem_alloc;
 
-	pr_debug(KERN_INFO"%s: WIFI MEM Allocated\n", __func__);
+	printk(KERN_INFO"%s: WIFI MEM Allocated\n", __func__);
 	return 0;
 
  err_mem_alloc:
@@ -155,10 +155,9 @@ static unsigned config_gpio_wl_reg_on[] = {
 		GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA) };
 #endif
 
-static unsigned int get_gpio_wl_host_wake(void)
+static unsigned get_gpio_wl_host_wake(void)
 {
-	unsigned int gpio_wl_host_wake;
-	unsigned int ret;
+	unsigned gpio_wl_host_wake;
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO)
 	if (system_rev < BOARD_REV08) {
 		gpio_wl_host_wake = GPIO_WL_HOST_WAKE;
@@ -174,8 +173,8 @@ static unsigned int get_gpio_wl_host_wake(void)
 		gpio_wl_host_wake = GPIO_WL_HOST_WAKE_REV08;
 	}
 #endif
-	ret = gpio_wl_host_wake;
-	return ret;
+
+	return gpio_wl_host_wake;
 }
 
 int __init brcm_wifi_init_gpio(void)
@@ -194,7 +193,7 @@ int __init brcm_wifi_init_gpio(void)
 			"failed to pull down\n", __func__);
 #endif
 
-	unsigned int gpio_cfg = GPIO_CFG(get_gpio_wl_host_wake(), 0, GPIO_CFG_INPUT,
+	unsigned gpio_cfg = GPIO_CFG(get_gpio_wl_host_wake(), 0, GPIO_CFG_INPUT,
 		GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA);
 
 	if (gpio_tlmm_config(gpio_cfg, GPIO_CFG_ENABLE))
@@ -216,9 +215,9 @@ static int brcm_wlan_power(int onoff)
 #endif
 {
 	int ret = 0;
-	pr_debug(KERN_INFO"------------------------------------------------");
-	pr_debug(KERN_INFO"------------------------------------------------\n");
-	pr_debug(KERN_INFO"%s Enter: power %s\n", __func__, onoff ? "on" : "off");
+	printk(KERN_INFO"------------------------------------------------");
+	printk(KERN_INFO"------------------------------------------------\n");
+	printk(KERN_INFO"%s Enter: power %s\n", __func__, onoff ? "on" : "off");
 
 	if (onoff) {
 #ifdef ENABLE_4335BT_WAR
@@ -226,8 +225,8 @@ static int brcm_wlan_power(int onoff)
 		{
 			bt_off = 1;
 			ice_gpiox_set(FPGA_GPIO_BT_EN, 1);
-			pr_debug("[brcm_wlan_power] Bluetooth Power On.\n");
-			mdelay(50);
+			printk("[brcm_wlan_power] Bluetooth Power On.\n");
+			msleep(50);
 		}
 		else {
 			bt_off = 0;
@@ -241,7 +240,7 @@ static int brcm_wlan_power(int onoff)
 		}*/
 		/* if (gpio_direction_output(GPIO_WL_REG_ON, 1)) { */
 		if (ice_gpiox_set(FPGA_GPIO_WLAN_EN, 1)) {		// yhcha-patch
-			pr_debug(KERN_ERR "%s: WL_REG_ON  failed to pull up\n",
+			printk(KERN_ERR "%s: WL_REG_ON  failed to pull up\n",
 				__func__);
 			ret =  -EIO;
 		}
@@ -254,16 +253,16 @@ static int brcm_wlan_power(int onoff)
 		*/
 		/* if (gpio_direction_output(GPIO_WL_REG_ON, 0)) { */
 		if (ice_gpiox_set(FPGA_GPIO_WLAN_EN, 0)) {		// yhcha-patch
-			pr_debug(KERN_ERR "%s: WL_REG_ON  failed to pull down\n",
+			printk(KERN_ERR "%s: WL_REG_ON  failed to pull down\n",
 				__func__);
 			ret = -EIO;
 		}
 	}
 #ifdef ENABLE_4335BT_WAR
 	if(onoff && (bt_off == 1) && (bt_is_running == 0)) {
-		mdelay(100);
+		msleep(100);
 		ice_gpiox_set(FPGA_GPIO_BT_EN, 0);
-		pr_debug("[brcm_wlan_power] BT_REG_OFF.\n");
+		printk("[brcm_wlan_power] BT_REG_OFF.\n");
 	}
 #endif
 	return ret;
@@ -291,7 +290,7 @@ int brcm_wifi_status_register(
 		return -EAGAIN;
 	wifi_status_cb = callback;
 	wifi_status_cb_devid = dev_id;
-	pr_debug(KERN_INFO "%s: callback is %p, devid is %p\n",
+	printk(KERN_INFO "%s: callback is %p, devid is %p\n",
 		__func__, wifi_status_cb, dev_id);
 	return 0;
 }
@@ -299,7 +298,7 @@ int brcm_wifi_status_register(
 #if 1
 unsigned int brcm_wifi_status(struct device *dev)
 {
-	pr_debug("%s:%d status %d\n",__func__,__LINE__,brcm_wifi_cd);
+	printk("%s:%d status %d\n",__func__,__LINE__,brcm_wifi_cd);
 	return brcm_wifi_cd;
 }
 #endif

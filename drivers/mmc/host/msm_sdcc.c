@@ -7009,11 +7009,8 @@ static int msmsdcc_runtime_idle(struct device *dev)
 	/* Disable Runtime PM becasue of potential issues
 	 *pm_schedule_suspend(dev, host->idle_tout);
 	 */
-	ret = pm_schedule_suspend(dev, host->idle_tout);
-	return ret;
 
-	//return -EAGAIN;
-//fuck it, lets see if our pm runtime can solve this
+	return -EAGAIN;
 }
 
 static int msmsdcc_pm_suspend(struct device *dev)
