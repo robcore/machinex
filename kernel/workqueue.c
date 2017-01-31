@@ -463,6 +463,7 @@ static atomic_t unbound_pool_nr_running[NR_WORKER_POOLS] = {
 };
 
 static int worker_thread(void *__worker);
+static unsigned int work_cpu(struct work_struct *work);
 
 static int worker_pool_pri(struct worker_pool *pool)
 {
@@ -3447,13 +3448,12 @@ EXPORT_SYMBOL(workqueue_congested);
  * RETURNS:
  * CPU number if @work was ever queued.  WORK_CPU_NONE otherwise.
  */
-unsigned int work_cpu(struct work_struct *work)
+static unsigned int work_cpu(struct work_struct *work)
 {
 	struct global_cwq *gcwq = get_work_gcwq(work);
 
 	return gcwq ? gcwq->cpu : WORK_CPU_NONE;
 }
-EXPORT_SYMBOL(work_cpu);
 
 /**
  * work_busy - test whether a work is currently pending or running
