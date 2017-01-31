@@ -228,9 +228,20 @@ static inline int arch_spin_trylock(arch_spinlock_t *lock)
 
 static inline void arch_spin_unlock(arch_spinlock_t *lock)
 {
+	unsigned long ticket, tmp;
+
 	smp_mb();
 
-	lock->tickets.owner++;
+	/* Bump now_serving by 1 */
+	__asm__ __volatile__(
+"1:	ldrex	%[ticket], [%[lockaddr]]\n"
+"	uadd16	%[ticket], %[ticket], %[serving1]\n"
+"	strex	%[tmp], %[ticket], [%[lockaddr]]\n"
+"	teq	%[tmp], #0\n"
+"	bne	1b"
+	: [ticket]"=&r" (ticket), [tmp]"=&r" (tmp)
+	: [lockaddr]"r" (&lock->lock), [serving1]"r" (0x00010000)
+	: "cc");
 	dsb_sev();
 }
 
