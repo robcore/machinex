@@ -822,49 +822,6 @@ static struct mfc_cache *ipmr_cache_find(struct mr_table *mrt,
 	return NULL;
 }
 
-/* Look for a (*,*,oif) entry */
-static struct mfc_cache *ipmr_cache_find_any_parent(struct mr_table *mrt,
-						    int vifi)
-{
-	int line = MFC_HASH(INADDR_ANY, INADDR_ANY);
-	struct mfc_cache *c;
-
-	list_for_each_entry_rcu(c, &mrt->mfc_cache_array[line], list)
-		if (c->mfc_origin == INADDR_ANY &&
-		    c->mfc_mcastgrp == INADDR_ANY &&
-		    c->mfc_un.res.ttls[vifi] < 255)
-			return c;
-
-	return NULL;
-}
-
-/* Look for a (*,G) entry */
-static struct mfc_cache *ipmr_cache_find_any(struct mr_table *mrt,
-					     __be32 mcastgrp, int vifi)
-{
-	int line = MFC_HASH(mcastgrp, INADDR_ANY);
-	struct mfc_cache *c, *proxy;
-
-	if (mcastgrp == INADDR_ANY)
-		goto skip;
-
-	list_for_each_entry_rcu(c, &mrt->mfc_cache_array[line], list)
-		if (c->mfc_origin == INADDR_ANY &&
-		    c->mfc_mcastgrp == mcastgrp) {
-			if (c->mfc_un.res.ttls[vifi] < 255)
-				return c;
-
-			/* It's ok if the vifi is part of the static tree */
-			proxy = ipmr_cache_find_any_parent(mrt,
-							   c->mfc_parent);
-			if (proxy && proxy->mfc_un.res.ttls[vifi] < 255)
-				return c;
-		}
-
-skip:
-	return ipmr_cache_find_any_parent(mrt, vifi);
-}
-
 /*
  *	Allocate a multicast cache entry
  */
@@ -1090,7 +1047,7 @@ ipmr_cache_unresolved(struct mr_table *mrt, vifi_t vifi, struct sk_buff *skb)
  *	MFC cache manipulation by user space mroute daemon
  */
 
-static int ipmr_mfc_delete(struct mr_table *mrt, struct mfcctl *mfc, int parent)
+static int ipmr_mfc_delete(struct mr_table *mrt, struct mfcctl *mfc)
 {
 	int line;
 	struct mfc_cache *c, *next;
@@ -1099,8 +1056,7 @@ static int ipmr_mfc_delete(struct mr_table *mrt, struct mfcctl *mfc, int parent)
 
 	list_for_each_entry_safe(c, next, &mrt->mfc_cache_array[line], list) {
 		if (c->mfc_origin == mfc->mfcc_origin.s_addr &&
-		    c->mfc_mcastgrp == mfc->mfcc_mcastgrp.s_addr &&
-		    (parent == -1 || parent == c->mfc_parent)) {
+		    c->mfc_mcastgrp == mfc->mfcc_mcastgrp.s_addr) {
 			list_del_rcu(&c->list);
 
 			ipmr_cache_free(c);
@@ -1111,7 +1067,7 @@ static int ipmr_mfc_delete(struct mr_table *mrt, struct mfcctl *mfc, int parent)
 }
 
 static int ipmr_mfc_add(struct net *net, struct mr_table *mrt,
-			struct mfcctl *mfc, int mrtsock, int parent)
+			struct mfcctl *mfc, int mrtsock)
 {
 	bool found = false;
 	int line;
@@ -1124,8 +1080,7 @@ static int ipmr_mfc_add(struct net *net, struct mr_table *mrt,
 
 	list_for_each_entry(c, &mrt->mfc_cache_array[line], list) {
 		if (c->mfc_origin == mfc->mfcc_origin.s_addr &&
-		    c->mfc_mcastgrp == mfc->mfcc_mcastgrp.s_addr &&
-		    (parent == -1 || parent == c->mfc_parent)) {
+		    c->mfc_mcastgrp == mfc->mfcc_mcastgrp.s_addr) {
 			found = true;
 			break;
 		}
@@ -1141,8 +1096,7 @@ static int ipmr_mfc_add(struct net *net, struct mr_table *mrt,
 		return 0;
 	}
 
-	if (mfc->mfcc_mcastgrp.s_addr != INADDR_ANY &&
-	    !ipv4_is_multicast(mfc->mfcc_mcastgrp.s_addr))
+	if (!ipv4_is_multicast(mfc->mfcc_mcastgrp.s_addr))
 		return -EINVAL;
 
 	c = ipmr_cache_alloc();
@@ -1251,7 +1205,7 @@ static void mrtsock_destruct(struct sock *sk)
 
 int ip_mroute_setsockopt(struct sock *sk, int optname, char __user *optval, unsigned int optlen)
 {
-	int ret, parent = 0;
+	int ret;
 	struct vifctl vif;
 	struct mfcctl mfc;
 	struct net *net = sock_net(sk);
@@ -1316,22 +1270,16 @@ int ip_mroute_setsockopt(struct sock *sk, int optname, char __user *optval, unsi
 		 */
 	case MRT_ADD_MFC:
 	case MRT_DEL_MFC:
-		parent = -1;
-	case MRT_ADD_MFC_PROXY:
-	case MRT_DEL_MFC_PROXY:
 		if (optlen != sizeof(mfc))
 			return -EINVAL;
 		if (copy_from_user(&mfc, optval, sizeof(mfc)))
 			return -EFAULT;
-		if (parent == 0)
-			parent = mfc.mfcc_parent;
 		rtnl_lock();
-		if (optname == MRT_DEL_MFC || optname == MRT_DEL_MFC_PROXY)
-			ret = ipmr_mfc_delete(mrt, &mfc, parent);
+		if (optname == MRT_DEL_MFC)
+			ret = ipmr_mfc_delete(mrt, &mfc);
 		else
 			ret = ipmr_mfc_add(net, mrt, &mfc,
-					   sk == rtnl_dereference(mrt->mroute_sk),
-					   parent);
+					   sk == rtnl_dereference(mrt->mroute_sk));
 		rtnl_unlock();
 		return ret;
 		/*
@@ -1770,28 +1718,17 @@ static int ip_mr_forward(struct net *net, struct mr_table *mrt,
 {
 	int psend = -1;
 	int vif, ct;
-	int true_vifi = ipmr_find_vif(mrt, skb->dev);
 
 	vif = cache->mfc_parent;
 	cache->mfc_un.res.pkt++;
 	cache->mfc_un.res.bytes += skb->len;
 
-	if (cache->mfc_origin == INADDR_ANY && true_vifi >= 0) {
-		struct mfc_cache *cache_proxy;
-
-		/* For an (*,G) entry, we only check that the incomming
-		 * interface is part of the static tree.
-		 */
-		cache_proxy = ipmr_cache_find_any_parent(mrt, vif);
-		if (cache_proxy &&
-		    cache_proxy->mfc_un.res.ttls[true_vifi] < 255)
-			goto forward;
-	}
-
 	/*
 	 * Wrong interface: drop packet and (maybe) send PIM assert.
 	 */
 	if (mrt->vif_table[vif].dev != skb->dev) {
+		int true_vifi;
+
 		if (rt_is_output_route(skb_rtable(skb))) {
 			/* It is our own packet, looped back.
 			 * Very complicated situation...
@@ -1808,6 +1745,7 @@ static int ip_mr_forward(struct net *net, struct mr_table *mrt,
 		}
 
 		cache->mfc_un.res.wrong_if++;
+		true_vifi = ipmr_find_vif(mrt, skb->dev);
 
 		if (true_vifi >= 0 && mrt->mroute_do_assert &&
 		    /* pimsm uses asserts, when switching from RPT to SPT,
@@ -1825,33 +1763,15 @@ static int ip_mr_forward(struct net *net, struct mr_table *mrt,
 		goto dont_forward;
 	}
 
-forward:
 	mrt->vif_table[vif].pkt_in++;
 	mrt->vif_table[vif].bytes_in += skb->len;
 
 	/*
 	 *	Forward the frame
 	 */
-	if (cache->mfc_origin == INADDR_ANY &&
-	    cache->mfc_mcastgrp == INADDR_ANY) {
-		if (true_vifi >= 0 &&
-		    true_vifi != cache->mfc_parent &&
-		    ip_hdr(skb)->ttl >
-				cache->mfc_un.res.ttls[cache->mfc_parent]) {
-			/* It's an (*,*) entry and the packet is not coming from
-			 * the upstream: forward the packet to the upstream
-			 * only.
-			 */
-			psend = cache->mfc_parent;
-			goto last_forward;
-		}
-		goto dont_forward;
-	}
 	for (ct = cache->mfc_un.res.maxvif - 1;
 	     ct >= cache->mfc_un.res.minvif; ct--) {
-		/* For (*,G) entry, don't forward to the incoming interface */
-		if ((cache->mfc_origin != INADDR_ANY || ct != true_vifi) &&
-		    ip_hdr(skb)->ttl > cache->mfc_un.res.ttls[ct]) {
+		if (ip_hdr(skb)->ttl > cache->mfc_un.res.ttls[ct]) {
 			if (psend != -1) {
 				struct sk_buff *skb2 = skb_clone(skb, GFP_ATOMIC);
 
@@ -1862,7 +1782,6 @@ forward:
 			psend = ct;
 		}
 	}
-last_forward:
 	if (psend != -1) {
 		if (local) {
 			struct sk_buff *skb2 = skb_clone(skb, GFP_ATOMIC);
@@ -1949,13 +1868,6 @@ int ip_mr_input(struct sk_buff *skb)
 
 	/* already under rcu_read_lock() */
 	cache = ipmr_cache_find(mrt, ip_hdr(skb)->saddr, ip_hdr(skb)->daddr);
-	if (cache == NULL) {
-		int vif = ipmr_find_vif(mrt, skb->dev);
-
-		if (vif >= 0)
-			cache = ipmr_cache_find_any(mrt, ip_hdr(skb)->daddr,
-						    vif);
-	}
 
 	/*
 	 *	No usable cache entry
@@ -2154,12 +2066,7 @@ int ipmr_get_route(struct net *net, struct sk_buff *skb,
 
 	rcu_read_lock();
 	cache = ipmr_cache_find(mrt, saddr, daddr);
-	if (cache == NULL && skb->dev) {
-		int vif = ipmr_find_vif(mrt, skb->dev);
 
-		if (vif >= 0)
-			cache = ipmr_cache_find_any(mrt, daddr, vif);
-	}
 	if (cache == NULL) {
 		struct sk_buff *skb2;
 		struct iphdr *iph;
