@@ -120,6 +120,9 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 		break;
 	}
 
+	if (!cpu_online(policy->cpu))
+		return -EINVAL;
+
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		unsigned int freq = table[i].frequency;
 		if (freq == CPUFREQ_ENTRY_INVALID)
