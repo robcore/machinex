@@ -1099,10 +1099,8 @@ mwifiex_cfg80211_scan(struct wiphy *wiphy, struct net_device *dev,
 
 	priv->user_scan_cfg = kzalloc(sizeof(struct mwifiex_user_scan_cfg),
 				      GFP_KERNEL);
-	if (!priv->user_scan_cfg) {
-		dev_err(priv->adapter->dev, "failed to alloc scan_req\n");
+	if (!priv->user_scan_cfg)
 		return -ENOMEM;
-	}
 
 	priv->user_scan_cfg->num_ssids = request->n_ssids;
 	priv->user_scan_cfg->ssid_list = request->ssids;

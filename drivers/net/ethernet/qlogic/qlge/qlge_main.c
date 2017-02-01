@@ -4556,7 +4556,6 @@ static int __devinit ql_init_device(struct pci_dev *pdev,
 		qdev->mpi_coredump =
 			vmalloc(sizeof(struct ql_mpi_coredump));
 		if (qdev->mpi_coredump == NULL) {
-			dev_err(&pdev->dev, "Coredump alloc failed.\n");
 			err = -ENOMEM;
 			goto err_out2;
 		}

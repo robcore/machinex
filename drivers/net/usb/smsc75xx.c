@@ -1037,7 +1037,6 @@ static int smsc75xx_bind(struct usbnet *dev, struct usb_interface *intf)
 
 	pdata = (struct smsc75xx_priv *)(dev->data[0]);
 	if (!pdata) {
-		netdev_warn(dev->net, "Unable to allocate smsc75xx_priv");
 		return -ENOMEM;
 	}
 
