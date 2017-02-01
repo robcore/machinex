@@ -10,12 +10,12 @@
  *     parameter to reflect time remaining.
  *
  *  24 January 2000
- *     Changed sys_poll()/do_poll() to use PAGE_SIZE chunk-based allocation 
+ *     Changed sys_poll()/do_poll() to use PAGE_SIZE chunk-based allocation
  *     of fds to overcome nfds < 16390 descriptors limit (Tigran Aivazian).
  */
 
 #include <linux/kernel.h>
-#include <linux/sched.h>
+#include <linux/sched/rt.h.h>
 #include <linux/syscalls.h>
 #include <linux/export.h>
 #include <linux/slab.h>
@@ -537,7 +537,7 @@ int core_sys_select(int n, fd_set __user *inp, fd_set __user *outp,
 	/*
 	 * We need 6 bitmaps (in/out/ex for both incoming and outgoing),
 	 * since we used fdset we need to allocate memory in units of
-	 * long-words. 
+	 * long-words.
 	 */
 	size = FDS_BYTES(n);
 	bits = stack_fds;
