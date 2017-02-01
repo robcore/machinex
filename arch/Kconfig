@@ -332,6 +332,9 @@ config GENERIC_COMPAT_RT_SIGQUEUEINFO
 config GENERIC_COMPAT_RT_SIGACTION
 	bool
 
+config GENERIC_SIGALTSTACK
+	bool
+
 #
 # ABI hall of shame
 #
