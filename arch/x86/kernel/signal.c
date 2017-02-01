@@ -409,7 +409,6 @@ static int __setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 	struct rt_sigframe __user *frame;
 	void __user *fp = NULL;
 	int err = 0;
-	struct task_struct *me = current;
 
 	frame = get_sigframe(ka, regs, sizeof(struct rt_sigframe), &fp);
 
@@ -843,10 +842,7 @@ static int x32_setup_rt_frame(int sig, struct k_sigaction *ka,
 		else
 			put_user_ex(0, &frame->uc.uc_flags);
 		put_user_ex(0, &frame->uc.uc_link);
-		put_user_ex(current->sas_ss_sp, &frame->uc.uc_stack.ss_sp);
-		put_user_ex(sas_ss_flags(regs->sp),
-			    &frame->uc.uc_stack.ss_flags);
-		put_user_ex(current->sas_ss_size, &frame->uc.uc_stack.ss_size);
+		err |= __compat_save_altstack(&frame->uc.uc_stack, regs->sp);
 		put_user_ex(0, &frame->uc.uc__pad0);
 		err |= setup_sigcontext(&frame->uc.uc_mcontext, fpstate,
 					regs, set->sig[0]);
@@ -888,7 +884,6 @@ asmlinkage long sys32_x32_rt_sigreturn(struct pt_regs *regs)
 	struct rt_sigframe_x32 __user *frame;
 	sigset_t set;
 	unsigned long ax;
-	struct pt_regs tregs;
 
 	frame = (struct rt_sigframe_x32 __user *)(regs->sp - 8);
 
@@ -902,8 +897,7 @@ asmlinkage long sys32_x32_rt_sigreturn(struct pt_regs *regs)
 	if (restore_sigcontext(regs, &frame->uc.uc_mcontext, &ax))
 		goto badframe;
 
-	tregs = *regs;
-	if (sys32_sigaltstack(&frame->uc.uc_stack, NULL, &tregs) == -EFAULT)
+	if (compat_restore_altstack(&frame->uc.uc_stack))
 		goto badframe;
 
 	return ax;
