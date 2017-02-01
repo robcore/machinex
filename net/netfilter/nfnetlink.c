@@ -36,30 +36,37 @@ MODULE_ALIAS_NET_PF_PROTO(PF_NETLINK, NETLINK_NETFILTER);
 
 static char __initdata nfversion[] = "0.30";
 
-static const struct nfnetlink_subsystem __rcu *subsys_table[NFNL_SUBSYS_COUNT];
-static DEFINE_MUTEX(nfnl_mutex);
+static struct {
+	struct mutex				mutex;
+	const struct nfnetlink_subsystem __rcu	*subsys;
+} table[NFNL_SUBSYS_COUNT];
 
-void nfnl_lock(void)
+void nfnl_lock(__u8 subsys_id)
 {
-	mutex_lock(&nfnl_mutex);
+	mutex_lock(&table[subsys_id].mutex);
 }
 EXPORT_SYMBOL_GPL(nfnl_lock);
 
-void nfnl_unlock(void)
+void nfnl_unlock(__u8 subsys_id)
 {
-	mutex_unlock(&nfnl_mutex);
+	mutex_unlock(&table[subsys_id].mutex);
 }
 EXPORT_SYMBOL_GPL(nfnl_unlock);
 
+static struct mutex *nfnl_get_lock(__u8 subsys_id)
+{
+	return &table[subsys_id].mutex;
+}
+
 int nfnetlink_subsys_register(const struct nfnetlink_subsystem *n)
 {
-	nfnl_lock();
-	if (subsys_table[n->subsys_id]) {
-		nfnl_unlock();
+	nfnl_lock(n->subsys_id);
+	if (table[n->subsys_id].subsys) {
+		nfnl_unlock(n->subsys_id);
 		return -EBUSY;
 	}
-	rcu_assign_pointer(subsys_table[n->subsys_id], n);
-	nfnl_unlock();
+	rcu_assign_pointer(table[n->subsys_id].subsys, n);
+	nfnl_unlock(n->subsys_id);
 
 	return 0;
 }
@@ -67,9 +74,9 @@ EXPORT_SYMBOL_GPL(nfnetlink_subsys_register);
 
 int nfnetlink_subsys_unregister(const struct nfnetlink_subsystem *n)
 {
-	nfnl_lock();
-	subsys_table[n->subsys_id] = NULL;
-	nfnl_unlock();
+	nfnl_lock(n->subsys_id);
+	table[n->subsys_id].subsys = NULL;
+	nfnl_unlock(n->subsys_id);
 	synchronize_rcu();
 	return 0;
 }
@@ -82,7 +89,7 @@ static inline const struct nfnetlink_subsystem *nfnetlink_get_subsys(u_int16_t t
 	if (subsys_id >= NFNL_SUBSYS_COUNT)
 		return NULL;
 
-	return rcu_dereference(subsys_table[subsys_id]);
+	return rcu_dereference(table[subsys_id].subsys);
 }
 
 static inline const struct nfnl_callback *
@@ -166,6 +173,7 @@ replay:
 		struct nlattr *cda[ss->cb[cb_id].attr_count + 1];
 		struct nlattr *attr = (void *)nlh + min_len;
 		int attrlen = nlh->nlmsg_len - min_len;
+		__u8 subsys_id = NFNL_SUBSYS_ID(type);
 
 		err = nla_parse(cda, ss->cb[cb_id].attr_count,
 				attr, attrlen, ss->cb[cb_id].policy);
@@ -178,16 +186,15 @@ replay:
 			rcu_read_unlock();
 		} else {
 			rcu_read_unlock();
-			nfnl_lock();
-			if (rcu_dereference_protected(
-					subsys_table[NFNL_SUBSYS_ID(type)],
-					lockdep_is_held(&nfnl_mutex)) != ss ||
+			nfnl_lock(subsys_id);
+			if (rcu_dereference_protected(table[subsys_id].subsys,
+				lockdep_is_held(nfnl_get_lock(subsys_id))) != ss ||
 			    nfnetlink_find_client(type, ss) != nc)
 				err = -EAGAIN;
 			else
 				err = nc->call(net->nfnl, skb, nlh,
 						   (const struct nlattr **)cda);
-			nfnl_unlock();
+			nfnl_unlock(subsys_id);
 		}
 		if (err == -EAGAIN)
 			goto replay;
@@ -231,6 +238,11 @@ static struct pernet_operations nfnetlink_net_ops = {
 
 static int __init nfnetlink_init(void)
 {
+	int i;
+
+	for (i=0; i<NFNL_SUBSYS_COUNT; i++)
+		mutex_init(&table[i].mutex);
+
 	pr_info("Netfilter messages via NETLINK v%s.\n", nfversion);
 	return register_pernet_subsys(&nfnetlink_net_ops);
 }
