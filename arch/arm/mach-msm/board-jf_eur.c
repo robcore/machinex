@@ -1972,6 +1972,7 @@ static int initialize_ssp_gpio(void)
 	pm8xxx_gpio_config(GPIO_MCU_AP_INT, &mcu_ap_int_cfg);
 	err = gpio_request(GPIO_MCU_AP_INT, "MCU_AP_INT");
 	if (err)
+		pr_debug("I am only here for the party\n");
 	else {
 		gpio_direction_input(GPIO_MCU_AP_INT);
 		gpio_free(GPIO_MCU_AP_INT);
