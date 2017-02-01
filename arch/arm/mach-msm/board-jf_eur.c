@@ -173,7 +173,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x7200000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -293,7 +293,6 @@ static void max77693_haptic_power_onoff(int onoff)
 			printk(KERN_ERR"enable l8 failed, rc=%d\n", ret);
 			return;
 		}
-		//printk(KERN_DEBUG"haptic power_on is finished.\n");
 	} else {
 		if (regulator_is_enabled(reg_l8)) {
 			ret = regulator_disable(reg_l8);
@@ -303,7 +302,6 @@ static void max77693_haptic_power_onoff(int onoff)
 				return;
 			}
 		}
-		//printk(KERN_DEBUG"haptic power_off is finished.\n");
 	}
 }
 #endif
@@ -393,7 +391,6 @@ static void irda_device_init(void)
 		.output_buffer		= PM_GPIO_OUT_BUF_CMOS,
 		.output_value		= 0,
 	};
-	//printk(KERN_ERR "%s called!\n", __func__);
 	gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), "irda_wake");
 	gpio_direction_output(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), 0);
 	pm8xxx_gpio_config(PM8921_GPIO_PM_TO_SYS(	\
@@ -1931,7 +1928,6 @@ static void clear_ssp_gpio(void)
 		pm8xxx_gpio_config(GPIO_MCU_NRST, &ap_mcu_nrst_cfg);
 	gpio_set_value_cansleep(GPIO_MCU_NRST, 0);
 	mdelay(1);
-	//pr_info("[SSP] %s,%d done\n", __func__,system_rev);
 }
 
 static int initialize_ssp_gpio(void)
@@ -1968,17 +1964,14 @@ static int initialize_ssp_gpio(void)
 		.out_strength = PM_GPIO_STRENGTH_HIGH,
 	};
 
-	//pr_info("[SSP]%s\n", __func__);
 	pm8xxx_gpio_config(GPIO_AP_MCU_INT, &ap_mcu_int_cfg);
 	err = gpio_request(GPIO_AP_MCU_INT, "AP_MCU_INT");
 	if (err)
-		pr_debug(KERN_ERR "failed to request AP_MCU_INT for SSP\n");
 	gpio_set_value_cansleep(GPIO_AP_MCU_INT, 1);
 
 	pm8xxx_gpio_config(GPIO_MCU_AP_INT, &mcu_ap_int_cfg);
 	err = gpio_request(GPIO_MCU_AP_INT, "MCU_AP_INT");
 	if (err)
-		pr_debug(KERN_ERR "failed to request MCU_AP_INT for SSP\n");
 	else {
 		gpio_direction_input(GPIO_MCU_AP_INT);
 		gpio_free(GPIO_MCU_AP_INT);
@@ -1993,15 +1986,11 @@ static int initialize_ssp_gpio(void)
 		pm8xxx_gpio_config(GPIO_MCU_NRST, &ap_mcu_nrst_cfg);
 		err = gpio_request(GPIO_MCU_NRST, "MCU_NRST");
 		if (err)
-			pr_debug(KERN_ERR
-				"failed to request MCU_NRST for SSP\n");
 		gpio_set_value_cansleep(GPIO_MCU_NRST, 1);
 	} else {
 		pm8xxx_mpp_config(MPP_MCU_NRST, &mpp4_cfg);
 		err = gpio_request(MPP_MCU_NRST, "MCU_NRST");
 		if (err)
-			pr_debug(KERN_ERR
-				"failed to request MCU_NRST for SSP\n");
 		gpio_set_value_cansleep(MPP_MCU_NRST, 1);
 	}
 

@@ -150,9 +150,10 @@ static void gpio_rev_init(void)
 	bluesleep_resources[0].end = get_gpio_hwrev(GPIO_BT_HOST_WAKE);
 	bluesleep_resources[1].start = FPGA_GPIO_BT_WAKE;
 	bluesleep_resources[1].end = FPGA_GPIO_BT_WAKE;
-	bluesleep_resources[2].start = gpio_to_irq(GPIO_BT_HOST_WAKE);
-	bluesleep_resources[2].end = gpio_to_irq(GPIO_BT_HOST_WAKE);
-
+	bluesleep_resources[2].start = \
+		MSM_GPIO_TO_INT(get_gpio_hwrev(GPIO_BT_HOST_WAKE));
+	bluesleep_resources[2].end = \
+		MSM_GPIO_TO_INT(get_gpio_hwrev(GPIO_BT_HOST_WAKE));
 }
 #endif
 
@@ -187,9 +188,7 @@ static int bcm4335_bt_rfkill_set_power(void *data, bool blocked)
 			       __func__, bt_uart_on_table[pin], rc);
 	}
 #endif
-
 		ret = ice_gpiox_set(FPGA_GPIO_BT_EN, 1);
-
 		if (ret)
 			pr_err("[BT] failed to set BT_EN.\n");
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)

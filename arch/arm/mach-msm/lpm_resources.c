@@ -131,7 +131,7 @@ static struct msm_lpm_resource msm_lpm_l2 = {
 	.aggregate = msm_lpm_aggregate_l2,
 	.flush = msm_lpm_flush_l2,
 	.notify = NULL,
-	.valid = false,
+	.valid = true,
 	.rs_data = {
 		.value = MSM_LPM_L2_CACHE_ACTIVE,
 		.default_value = MSM_LPM_L2_CACHE_ACTIVE,
@@ -711,7 +711,7 @@ static int msm_lpm_cpu_callback(struct notifier_block *cpu_nb,
 	case CPU_DEAD_FROZEN:
 	case CPU_DEAD:
 		if (num_online_cpus() == 1)
-			rs->rs_data.value = MSM_LPM_L2_CACHE_GDHS;
+			rs->rs_data.value = MSM_LPM_L2_CACHE_HSFS_OPEN;
 		break;
 	}
 	return NOTIFY_OK;

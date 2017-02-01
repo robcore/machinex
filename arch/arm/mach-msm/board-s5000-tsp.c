@@ -52,8 +52,6 @@ static int __init sec_tsp_reboot_mode(char *mode)
 	else
 		recovery_mode_enter = false;
 
-	pr_debug("tsp-doing a thing\n");
-
 	return 1;
 }
 __setup("androidboot.check_recovery_condition=0x", sec_tsp_reboot_mode);
@@ -83,15 +81,12 @@ void synaptics_power_onoff(bool enable)
 
 	if (!reg_l17) {
 		reg_l17 = regulator_get(NULL, "8921_l17");
-		if (IS_ERR(reg_l17)) {
-			pr_debug("could not get 8921_l17\n");
+		if (IS_ERR(reg_l17))
 			return;
-		}
+
 		ret = regulator_set_voltage(reg_l17, 3300000, 3300000);
-		if (ret) {
-			pr_debug("unable to set ldo17 voltage to 3.3V\n");
+		if (ret)
 			return;
-		}
 	}
 
 	if (!reg_l22) {
