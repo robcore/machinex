@@ -448,10 +448,9 @@ void sctp_icmp_proto_unreachable(struct sock *sk,
 						jiffies + (HZ/20)))
 				sctp_association_hold(asoc);
 		}
-			
+
 	} else {
-		if (timer_pending(&t->proto_unreach_timer) &&
-		    del_timer(&t->proto_unreach_timer))
+		if (del_timer(&t->proto_unreach_timer))
 			sctp_association_put(asoc);
 
 		sctp_do_sm(SCTP_EVENT_T_OTHER,

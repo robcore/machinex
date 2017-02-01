@@ -666,10 +666,8 @@ static void sctp_cmd_t3_rtx_timers_stop(sctp_cmd_seq_t *cmds,
 
 	list_for_each_entry(t, &asoc->peer.transport_addr_list,
 			transports) {
-		if (timer_pending(&t->T3_rtx_timer) &&
-		    del_timer(&t->T3_rtx_timer)) {
+		if (del_timer(&t->T3_rtx_timer))
 			sctp_transport_put(t);
-		}
 	}
 }
 
@@ -1506,7 +1504,7 @@ static int sctp_cmd_interpreter(sctp_event_t event_type,
 
 		case SCTP_CMD_TIMER_STOP:
 			timer = &asoc->timers[cmd->obj.to];
-			if (timer_pending(timer) && del_timer(timer))
+			if (del_timer(timer))
 				sctp_association_put(asoc);
 			break;
 

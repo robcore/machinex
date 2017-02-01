@@ -2568,8 +2568,7 @@ bed:
 						   err);
 
 			/* If watchdog is still activated, kill it! */
-			if(timer_pending(&(self->watchdog)))
-				del_timer(&(self->watchdog));
+			del_timer(&(self->watchdog));
 
 			IRDA_DEBUG(1, "%s(), ...waking up !\n", __func__);
 
