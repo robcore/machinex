@@ -1,32 +1,33 @@
-/root/machinex/robscript/0700-OKAY-FUCK-THIS.patch
-/root/machinex/robscript/0699-wtf.patch
-/root/machinex/robscript/0698-wtf.patch
-/root/machinex/robscript/0697-now-surely-everything-is-doubled.patch
-/root/machinex/robscript/0696-missing-include.patch
-/root/machinex/robscript/0695-switch-compat_sys_wait4-and-compat_sys_waitid.patch
-/root/machinex/robscript/0694-switch-compat_sys_sigaltstack-to-COMPAT_SYSCALL_DEF.patch
-/root/machinex/robscript/0693-add-generic-signal-stack-to-kconfig-again.patch
-/root/machinex/robscript/0692-more.patch
-/root/machinex/robscript/0691-bring-up-for-signalstack.patch
-/root/machinex/robscript/0690-compat-user-stack-pointer.patch
-/root/machinex/robscript/0689-oops-new-helper-altstack.patch
-/root/machinex/robscript/0683-fix-up-old-tupid-sigaction.patch
-/root/machinex/robscript/0666-arm-switch-to-generic-old-sigaction.patch
-/root/machinex/robscript/0665-arm-switch-to-generic-old-sigsuspend.patch
-/root/machinex/robscript/0664-arm-switch-to-generic-sigaltstack.patch
-/root/machinex/robscript/0663-take-sys_rt_sigsuspend-prototype-to-linux-syscalls.h.patch
-/root/machinex/robscript/0661-new-helper-sigsp.patch
-/root/machinex/robscript/0660-new-helper-signal_setup_done.patch
-/root/machinex/robscript/0659-new-helper-get_signal.patch
-/root/machinex/robscript/0658-convert-futex-compat-syscalls-to-COMPAT_SYSCALL.patch
-/root/machinex/robscript/0657-switch-compat_sys_open-to-COMPAT_SYSCALL_DEFINE.patch
-/root/machinex/robscript/0656-generic-sys_sigaction-and-compat_sys_sigaction.patch
-/root/machinex/robscript/0655-generic-sys_compat_rt_sigaction.patch
-/root/machinex/robscript/0654-consolidate-kernel-side-struct-sigaction-declaration.patch
-/root/machinex/robscript/0653-switch-compat_sys_rt_sigtimedwait-to-COMPAT_SYSCALL.patch
-/root/machinex/robscript/0652-old-sigsuspend-variants-in-kernel-signal.c.patch
-/root/machinex/robscript/0651-generic-compat_sys_rt_sigqueueinfo.patch
-/root/machinex/robscript/0650-generic-compat_sys_rt_sigpending.patch
-/root/machinex/robscript/0649-generic-compat_sys_rt_sigprocmask.patch
-/root/machinex/robscript/0648-consolidate-rt_sigsuspend.patch
-/root/machinex/robscript/0647-sanitize-rt-sigaction.patch
+#!/bin/bash
+patch -p1 -R < "/root/machinex/robscript/0700-OKAY-FUCK-THIS.patch"
+patch -p1 -R < "/root/machinex/robscript/0699-wtf.patch"
+patch -p1 -R < "/root/machinex/robscript/0698-wtf.patch"
+patch -p1 -R < "/root/machinex/robscript/0697-now-surely-everything-is-doubled.patch"
+patch -p1 -R < "/root/machinex/robscript/0696-missing-include.patch"
+patch -p1 -R < "/root/machinex/robscript/0695-switch-compat_sys_wait4-and-compat_sys_waitid.patch"
+patch -p1 -R < "/root/machinex/robscript/0694-switch-compat_sys_sigaltstack-to-COMPAT_SYSCALL_DEF.patch"
+patch -p1 -R < "/root/machinex/robscript/0693-add-generic-signal-stack-to-kconfig-again.patch"
+patch -p1 -R < "/root/machinex/robscript/0692-more.patch"
+patch -p1 -R < "/root/machinex/robscript/0691-bring-up-for-signalstack.patch"
+patch -p1 -R < "/root/machinex/robscript/0690-compat-user-stack-pointer.patch"
+patch -p1 -R < "/root/machinex/robscript/0689-oops-new-helper-altstack.patch"
+patch -p1 -R < "/root/machinex/robscript/0683-fix-up-old-tupid-sigaction.patch"
+patch -p1 -R < "/root/machinex/robscript/0666-arm-switch-to-generic-old-sigaction.patch"
+patch -p1 -R < "/root/machinex/robscript/0665-arm-switch-to-generic-old-sigsuspend.patch"
+patch -p1 -R < "/root/machinex/robscript/0664-arm-switch-to-generic-sigaltstack.patch"
+patch -p1 -R < "/root/machinex/robscript/0663-take-sys_rt_sigsuspend-prototype-to-linux-syscalls.h.patch"
+patch -p1 -R < "/root/machinex/robscript/0661-new-helper-sigsp.patch"
+patch -p1 -R < "/root/machinex/robscript/0660-new-helper-signal_setup_done.patch"
+patch -p1 -R < "/root/machinex/robscript/0659-new-helper-get_signal.patch"
+patch -p1 -R < "/root/machinex/robscript/0658-convert-futex-compat-syscalls-to-COMPAT_SYSCALL.patch"
+patch -p1 -R < "/root/machinex/robscript/0657-switch-compat_sys_open-to-COMPAT_SYSCALL_DEFINE.patch"
+patch -p1 -R < "/root/machinex/robscript/0656-generic-sys_sigaction-and-compat_sys_sigaction.patch"
+patch -p1 -R < "/root/machinex/robscript/0655-generic-sys_compat_rt_sigaction.patch"
+patch -p1 -R < "/root/machinex/robscript/0654-consolidate-kernel-side-struct-sigaction-declaration.patch"
+patch -p1 -R < "/root/machinex/robscript/0653-switch-compat_sys_rt_sigtimedwait-to-COMPAT_SYSCALL.patch"
+patch -p1 -R < "/root/machinex/robscript/0652-old-sigsuspend-variants-in-kernel-signal.c.patch"
+patch -p1 -R < "/root/machinex/robscript/0651-generic-compat_sys_rt_sigqueueinfo.patch"
+patch -p1 -R < "/root/machinex/robscript/0650-generic-compat_sys_rt_sigpending.patch"
+patch -p1 -R < "/root/machinex/robscript/0649-generic-compat_sys_rt_sigprocmask.patch"
+patch -p1 -R < "/root/machinex/robscript/0648-consolidate-rt_sigsuspend.patch"
+patch -p1 -R < "/root/machinex/robscript/0647-sanitize-rt-sigaction.patch"
