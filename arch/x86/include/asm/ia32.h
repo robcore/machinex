@@ -29,10 +29,16 @@ struct old_sigaction32 {
 	unsigned int sa_restorer;	/* Another 32 bit pointer */
 };
 
+typedef struct sigaltstack_ia32 {
+	unsigned int	ss_sp;
+	int		ss_flags;
+	unsigned int	ss_size;
+} stack_ia32_t;
+
 struct ucontext_ia32 {
 	unsigned int	  uc_flags;
 	unsigned int 	  uc_link;
-	compat_stack_t	  uc_stack;
+	stack_ia32_t	  uc_stack;
 	struct sigcontext_ia32 uc_mcontext;
 	compat_sigset_t	  uc_sigmask;	/* mask last for extensibility */
 };
@@ -40,7 +46,7 @@ struct ucontext_ia32 {
 struct ucontext_x32 {
 	unsigned int	  uc_flags;
 	unsigned int 	  uc_link;
-	compat_stack_t	  uc_stack;
+	stack_ia32_t	  uc_stack;
 	unsigned int	  uc__pad0;     /* needed for alignment */
 	struct sigcontext uc_mcontext;  /* the 64-bit sigcontext type */
 	compat_sigset_t	  uc_sigmask;	/* mask last for extensibility */

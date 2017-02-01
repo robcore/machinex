@@ -134,6 +134,12 @@ SYSCALL_DEFINE1(sigsuspend, old_sigset_t, mask)
 	return -ERESTARTNOHAND;
 }
 
+asmlinkage int
+sys_sigaltstack(const stack_t __user *uss, stack_t __user *uoss)
+{
+	return do_sigaltstack(uss, uoss, rdusp());
+}
+
 /*
  * Do a signal return; undo the signal stack.
  */
