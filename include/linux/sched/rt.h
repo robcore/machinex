@@ -1,6 +1,7 @@
 #ifndef _SCHED_RT_H
 #define _SCHED_RT_H
 
+#include <linux/sched.h>
 /*
  * Priority of a process goes from 0..MAX_PRIO-1, valid RT
  * priority is 0..MAX_RT_PRIO-1, and SCHED_NORMAL/SCHED_BATCH

@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
+#include <linux/sched/rt.h>
 
 static int active_count;
 
