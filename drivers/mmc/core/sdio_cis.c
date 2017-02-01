@@ -55,7 +55,7 @@ static int cistpl_vers_1(struct mmc_card *card, struct sdio_func *func,
 
 	for (i = 0; i < nr_strings; i++) {
 		buffer[i] = string;
-		strcpy(string, buf);
+		strlcpy(string, buf, strlen(buf) + 1);
 		string += strlen(string) + 1;
 		buf += strlen(buf) + 1;
 	}
@@ -271,8 +271,16 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 			break;
 
 		/* null entries have no link field or data */
-		if (tpl_code == 0x00)
-			continue;
+		if (tpl_code == 0x00) {
+			if (card->cis.vendor == 0x70 &&
+				(card->cis.device == 0x2460 ||
+				 card->cis.device == 0x0460 ||
+				 card->cis.device == 0x23F1 ||
+				 card->cis.device == 0x23F0))
+				break;
+			else
+				continue;
+		}
 
 		ret = mmc_io_rw_direct(card, 0, 0, ptr++, 0, &tpl_link);
 		if (ret)
@@ -314,7 +322,7 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 
 			if (ret == -ENOENT) {
 				/* warn about unknown tuples */
-				pr_warn_ratelimited("%s: queuing unknown"
+				pr_warning("%s: queuing unknown"
 				       " CIS tuple 0x%02x (%u bytes)\n",
 				       mmc_hostname(card->host),
 				       tpl_code, tpl_link);

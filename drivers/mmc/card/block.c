@@ -36,7 +36,7 @@
 #include <linux/compat.h>
 #include <linux/sysfs.h>
 
-#include <linux/mmc/ioctl.h>
+#include <uapi/linux/mmc/ioctl.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
