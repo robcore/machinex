@@ -55,7 +55,7 @@ static int cistpl_vers_1(struct mmc_card *card, struct sdio_func *func,
 
 	for (i = 0; i < nr_strings; i++) {
 		buffer[i] = string;
-		strcpy(string, buf);
+		strlcpy(string, buf, sizeof(string));
 		string += strlen(string) + 1;
 		buf += strlen(buf) + 1;
 	}
@@ -177,13 +177,8 @@ static int cistpl_funce_func(struct mmc_card *card, struct sdio_func *func,
 	vsn = func->card->cccr.sdio_vsn;
 	min_size = (vsn == SDIO_SDIO_REV_1_00) ? 28 : 42;
 
-	if (size == 28 && vsn == SDIO_SDIO_REV_1_10) {
-		pr_warn("%s: card has broken SDIO 1.1 CIS, forcing SDIO 1.0\n",
-			mmc_hostname(card->host));
-		vsn = SDIO_SDIO_REV_1_00;
-	} else if (size < min_size) {
+	if (size < min_size)
 		return -EINVAL;
-	}
 
 	/* TPLFE_MAX_BLK_SIZE */
 	func->max_blksize = buf[12] | (buf[13] << 8);
@@ -318,13 +313,15 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 			*prev = this;
 			prev = &this->next;
 
+				/*
 			if (ret == -ENOENT) {
-				/* warn about unknown tuples */
+ warn about unknown tuples  NO DO NOT
 				pr_warn_ratelimited("%s: queuing unknown"
 				       " CIS tuple 0x%02x (%u bytes)\n",
 				       mmc_hostname(card->host),
 				       tpl_code, tpl_link);
 			}
+ */
 
 			/* keep on analyzing tuples */
 			ret = 0;
