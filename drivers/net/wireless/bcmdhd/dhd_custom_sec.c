@@ -853,7 +853,7 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 		set_fs(get_ds());
 
 		if (fp->f_mode & FMODE_WRITE) {
-			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
+			ret = fp->f_op->write(fp, sizeof(buf), buf_len, &fp->f_pos);
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS[%s]"
 					" into '%s'\n", buf, filepath_cid));
@@ -1071,7 +1071,7 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 		set_fs(get_ds());
 
 		if (fp->f_mode & FMODE_WRITE) {
-			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
+			ret = fp->f_op->write(fp, sizeof(buf), buf_len, &fp->f_pos);
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS. \n"));
 			else
