@@ -528,11 +528,28 @@ static void cam_ldo_power_off(void)
 static void cam_ldo_power_on_sub(void)
 {
 	int ret = 0;
+	int cam_type = 0;
 	pr_debug(KERN_DEBUG "[FORTIUS] %s: Sub On\n", __func__);
 	pr_debug(KERN_DEBUG "[FORTIUS] %s: system_rev=%d\n", __func__, system_rev);
 
 	pmic_gpio_ctrl(GPIO_CAM_A_EN2, 1);
 	usleep(1*1000);
+
+	cam_type = gpio_get_value(GPIO_CAM_SENSOR_DET);
+
+	pr_debug(KERN_DEBUG "[JC] %s: SENSOR TYPE = %d\n", __func__, cam_type);
+
+	/* CAM_DVDD1.1V_1.2V*/
+	l28 = regulator_get(NULL, "8921_l28");
+
+	if (cam_type == 1) {
+		pr_debug(KERN_DEBUG "[JC] %s: Sony Sensor 1.1V", __func__);
+		regulator_set_voltage(l28, 1100000, 1100000);
+	}
+	else {
+		pr_debug(KERN_DEBUG "[JC] %s: LSI Sensor 1.2V", __func__);
+		regulator_set_voltage(l28, 1200000, 1200000);
+	}
 
 	l28 = regulator_get(NULL, "8921_l28");
 	regulator_set_voltage(l28, 1100000, 1100000);
