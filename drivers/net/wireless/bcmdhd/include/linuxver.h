@@ -193,6 +193,7 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #endif
 /* All devices are hotpluggable since linux 3.8.0 */
 #define __devinit
+#endif
 
 
 #ifndef __devinitdata
