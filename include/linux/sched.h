@@ -52,8 +52,6 @@ struct sched_param {
 #include <linux/llist.h>
 #include <linux/uidgid.h>
 #include <linux/gfp.h>
-/* TEMPORARY */
-#include <linux/sched/rt.h>
 
 #include <asm/processor.h>
 
