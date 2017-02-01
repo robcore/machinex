@@ -18,9 +18,5 @@ typedef struct {
 
 #define __ARCH_HAS_SA_RESTORER
 
-struct k_sigaction {
-	struct sigaction sa;
-};
-
 #include <asm/sigcontext.h>
 #endif
