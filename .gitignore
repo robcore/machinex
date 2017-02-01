@@ -122,3 +122,4 @@ out_tmo/
 Logs/
 kernel/timeconst.h
 pos.sh
+logs/
