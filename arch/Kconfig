@@ -335,12 +335,6 @@ config GENERIC_COMPAT_RT_SIGACTION
 config GENERIC_SIGALTSTACK
 	bool
 
-config GENERIC_SIGALTSTACK
-	bool
-
-config GENERIC_SIGALTSTACK
-	bool
-
 #
 # ABI hall of shame
 #
