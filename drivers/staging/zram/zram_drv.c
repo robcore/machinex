@@ -61,22 +61,22 @@ static void zram_stat64_inc(struct zram *zram, u64 *v)
 	zram_stat64_add(zram, v, 1);
 }
 
-static int zram_test_flag(struct zram *zram, u32 index,
+static int zram_test_flag(struct zram_meta *meta, u32 index,
 			enum zram_pageflags flag)
 {
-	return zram->table[index].flags & BIT(flag);
+	return meta->table[index].flags & BIT(flag);
 }
 
-static void zram_set_flag(struct zram *zram, u32 index,
+static void zram_set_flag(struct zram_meta *meta, u32 index,
 			enum zram_pageflags flag)
 {
-	zram->table[index].flags |= BIT(flag);
+	meta->table[index].flags |= BIT(flag);
 }
 
-static void zram_clear_flag(struct zram *zram, u32 index,
+static void zram_clear_flag(struct zram_meta *meta, u32 index,
 			enum zram_pageflags flag)
 {
-	zram->table[index].flags &= ~BIT(flag);
+	meta->table[index].flags &= ~BIT(flag);
 }
 
 static int page_zero_filled(void *ptr)
@@ -129,16 +129,17 @@ static void zram_set_disksize(struct zram *zram)
 
 static void zram_free_page(struct zram *zram, size_t index)
 {
-	unsigned long handle = zram->table[index].handle;
-	u16 size = zram->table[index].size;
+	struct zram_meta *meta = zram->meta;
+	unsigned long handle = meta->table[index].handle;
+	u16 size = meta->table[index].size;
 
 	if (unlikely(!handle)) {
 		/*
 		 * No memory is allocated for zero filled pages.
 		 * Simply clear zero page flag.
 		 */
-		if (zram_test_flag(zram, index, ZRAM_ZERO)) {
-			zram_clear_flag(zram, index, ZRAM_ZERO);
+		if (zram_test_flag(meta, index, ZRAM_ZERO)) {
+			zram_clear_flag(meta, index, ZRAM_ZERO);
 			zram->stats.pages_zero--;
 		}
 		return;
@@ -147,17 +148,17 @@ static void zram_free_page(struct zram *zram, size_t index)
 	if (unlikely(size > max_zpage_size))
 		zram->stats.bad_compress--;
 
-	zs_free(zram->mem_pool, handle);
+	zs_free(meta->mem_pool, handle);
 
 	if (size <= PAGE_SIZE / 2)
 		zram->stats.good_compress--;
 
 	zram_stat64_sub(zram, &zram->stats.compr_size,
-			zram->table[index].size);
+			meta->table[index].size);
 	zram->stats.pages_stored--;
 
-	zram->table[index].handle = 0;
-	zram->table[index].size = 0;
+	meta->table[index].handle = 0;
+	meta->table[index].size = 0;
 }
 
 static void handle_zero_page(struct bio_vec *bvec)
@@ -182,20 +183,21 @@ static int zram_decompress_page(struct zram *zram, char *mem, u32 index)
 	int ret = LZO_E_OK;
 	size_t clen = PAGE_SIZE;
 	unsigned char *cmem;
-	unsigned long handle = zram->table[index].handle;
+	struct zram_meta *meta = zram->meta;
+	unsigned long handle = meta->table[index].handle;
 
-	if (!handle || zram_test_flag(zram, index, ZRAM_ZERO)) {
+	if (!handle || zram_test_flag(meta, index, ZRAM_ZERO)) {
 		memset(mem, 0, PAGE_SIZE);
 		return 0;
 	}
 
-	cmem = zs_map_object(zram->mem_pool, handle, ZS_MM_RO);
-	if (zram->table[index].size == PAGE_SIZE)
+	cmem = zs_map_object(meta->mem_pool, handle, ZS_MM_RO);
+	if (meta->table[index].size == PAGE_SIZE)
 		memcpy(mem, cmem, PAGE_SIZE);
 	else
-		ret = lzo1x_decompress_safe(cmem, zram->table[index].size,
+		ret = lzo1x_decompress_safe(cmem, meta->table[index].size,
 						mem, &clen);
-	zs_unmap_object(zram->mem_pool, handle);
+	zs_unmap_object(meta->mem_pool, handle);
 
 	/* Should NEVER happen. Return bio error if it does. */
 	if (unlikely(ret != LZO_E_OK)) {
@@ -213,11 +215,11 @@ static int zram_bvec_read(struct zram *zram, struct bio_vec *bvec,
 	int ret;
 	struct page *page;
 	unsigned char *user_mem, *uncmem = NULL;
-
+	struct zram_meta *meta = zram->meta;
 	page = bvec->bv_page;
 
-	if (unlikely(!zram->table[index].handle) ||
-			zram_test_flag(zram, index, ZRAM_ZERO)) {
+	if (unlikely(!meta->table[index].handle) ||
+			zram_test_flag(meta, index, ZRAM_ZERO)) {
 		handle_zero_page(bvec);
 		return 0;
 	}
@@ -264,9 +266,10 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 	unsigned long handle;
 	struct page *page;
 	unsigned char *user_mem, *cmem, *src, *uncmem = NULL;
+	struct zram_meta *meta = zram->meta;
 
 	page = bvec->bv_page;
-	src = zram->compress_buffer;
+	src = meta->compress_buffer;
 
 	if (is_partial_io(bvec)) {
 		/*
@@ -288,8 +291,8 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 	 * System overwrites unused sectors. Free memory associated
 	 * with this sector now.
 	 */
-	if (zram->table[index].handle ||
-	    zram_test_flag(zram, index, ZRAM_ZERO))
+	if (meta->table[index].handle ||
+	    zram_test_flag(meta, index, ZRAM_ZERO))
 		zram_free_page(zram, index);
 
 	user_mem = kmap_atomic(page);
@@ -306,13 +309,13 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 	if (page_zero_filled(uncmem)) {
 		kunmap_atomic(user_mem);
 		zram->stats.pages_zero++;
-		zram_set_flag(zram, index, ZRAM_ZERO);
+		zram_set_flag(meta, index, ZRAM_ZERO);
 		ret = 0;
 		goto out;
 	}
 
 	ret = lzo1x_1_compress(uncmem, PAGE_SIZE, src, &clen,
-			       zram->compress_workmem);
+			       meta->compress_workmem);
 
 	if (!is_partial_io(bvec)) {
 		kunmap_atomic(user_mem);
@@ -348,10 +351,10 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 	if ((clen == PAGE_SIZE) && !is_partial_io(bvec))
 		kunmap_atomic(src);
 
-	zs_unmap_object(zram->mem_pool, handle);
+	zs_unmap_object(meta->mem_pool, handle);
 
-	zram->table[index].handle = handle;
-	zram->table[index].size = clen;
+	meta->table[index].handle = handle;
+	meta->table[index].size = clen;
 
 	/* Update stats */
 	zram_stat64_add(zram, &zram->stats.compr_size, clen);

@@ -86,11 +86,15 @@ struct zram_stats {
 	u32 bad_compress;	/* % of pages with compression ratio>=75% */
 };
 
-struct zram {
-	struct zs_pool *mem_pool;
+struct zram_meta {
 	void *compress_workmem;
 	void *compress_buffer;
 	struct table *table;
+	struct zs_pool *mem_pool;
+};
+
+struct zram {
+	struct zram_meta *meta;
 	spinlock_t stat64_lock;	/* protect 64-bit stats */
 	struct rw_semaphore lock; /* protect compression buffers, table,
 				   * 32bit stat counters against concurrent
