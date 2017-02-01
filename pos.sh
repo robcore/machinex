@@ -1,101 +1,32 @@
-#!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0398-REVERT-ext4-remove-unused-variable-in-add_dirent_to_.patch"
-patch -p1 -R < "/root/machinex/patches/0397-fix-a-stray-plus-sign.patch"
-patch -p1 -R < "/root/machinex/patches/0396-REVERT-ARM-7632-1-spinlock-avoid-exclusive-accesses-.patch"
-patch -p1 -R < "/root/machinex/patches/0395-REVERT-file2alias-apparently-make-modalias-generatio.patch"
-patch -p1 -R < "/root/machinex/patches/0394-slab-Common-definition-for-kmem_cache_node.patch"
-patch -p1 -R < "/root/machinex/patches/0393-slab-Rename-list3-l3-to-node.patch"
-patch -p1 -R < "/root/machinex/patches/0392-slab-Common-Kmalloc-cache-determination.patch"
-patch -p1 -R < "/root/machinex/patches/0391-stat-Use-size_t-for-sizes-instead-of-unsigned.patch"
-patch -p1 -R < "/root/machinex/patches/0390-slab-Common-function-to-create-the-kmalloc-array.patch"
-patch -p1 -R < "/root/machinex/patches/0389-slab-Common-definition-for-the-array-of-kmalloc-cach.patch"
-patch -p1 -R < "/root/machinex/patches/0388-slab-Common-constants-for-kmalloc-boundaries.patch"
-patch -p1 -R < "/root/machinex/patches/0387-slab-Rename-nodelists-to-node.patch"
-patch -p1 -R < "/root/machinex/patches/0386-slab-Common-name-for-the-per-node-structures.patch"
-patch -p1 -R < "/root/machinex/patches/0385-slab-Use-common-kmalloc_index-kmalloc_size-functions.patch"
-patch -p1 -R < "/root/machinex/patches/0384-slab-Common-kmalloc-slab-index-determination.patch"
-patch -p1 -R < "/root/machinex/patches/0383-slab-Move-kmalloc-related-function-defs.patch"
-patch -p1 -R < "/root/machinex/patches/0382-slab-Use-proper-formatting-specs-for-unsigned-size.patch"
-patch -p1 -R < "/root/machinex/patches/0381-target-Fix-regression-allowing-unconfigured-devices-.patch"
-patch -p1 -R < "/root/machinex/patches/0380-arm-arch_timer-add-arch_counter_set_user_access.patch"
-patch -p1 -R < "/root/machinex/patches/0379-pwm_backlight-Validate-dft_brightness-in-main-probe.patch"
-patch -p1 -R < "/root/machinex/patches/0378-Revert-console-implement-lockdep-support-for-console.patch"
-patch -p1 -R < "/root/machinex/patches/0377-ktest-Strip-off-n-when-reading-which-files-were-modi.patch"
-patch -p1 -R < "/root/machinex/patches/0376-ktest-Do-not-require-CONSOLE-for-build.patch"
-patch -p1 -R < "/root/machinex/patches/0375-staging-zsmalloc-remove-unused-pool-name.patch"
-patch -p1 -R < "/root/machinex/patches/0374-tracing-Use-sched_clock_cpu-for-trace_clock_global.patch"
-patch -p1 -R < "/root/machinex/patches/0373-fix-compilation-with-xconfig.patch"
-patch -p1 -R < "/root/machinex/patches/0372-pwm-backlight-handle-BL_CORE_FBBLANK-state.patch"
-patch -p1 -R < "/root/machinex/patches/0371-jbd2-don-t-wake-kjournald-unnecessarily.patch"
-patch -p1 -R < "/root/machinex/patches/0370-timekeeping-Switch-HAS_PERSISTENT_CLOCK-to-ALWAYS_US.patch"
-patch -p1 -R < "/root/machinex/patches/0369-rcu-Make-rcutorture-s-shuffler-task-shuffle-recently.patch"
-patch -p1 -R < "/root/machinex/patches/0368-rcu-Allow-TREE_PREEMPT_RCU-on-UP-systems.patch"
-patch -p1 -R < "/root/machinex/patches/0367-rcu-Provide-RCU-CPU-stall-warnings-for-tiny-RCU.patch"
-patch -p1 -R < "/root/machinex/patches/0366-ext4-remove-unnecessary-NULL-pointer-check.patch"
-patch -p1 -R < "/root/machinex/patches/0365-ext4-remove-useless-assignment-in-dx_probe.patch"
-patch -p1 -R < "/root/machinex/patches/0364-ext4-remove-unused-variable-in-add_dirent_to_buf.patch"
-patch -p1 -R < "/root/machinex/patches/0363-ext4-release-buffer-when-checksum-failed.patch"
-patch -p1 -R < "/root/machinex/patches/0362-ext4-remove-explicit-WARN_ON-when-ext4_map_blocks.patch"
-patch -p1 -R < "/root/machinex/patches/0361-ext4-remove-unused-variable-flags.patch"
-patch -p1 -R < "/root/machinex/patches/0360-ext4-fix-ext4_writepage-to-achieve-data-ordered-guar.patch"
-patch -p1 -R < "/root/machinex/patches/0359-ext4-Make-ext4_bio_writepage-handle-unprepared-buf.patch"
-patch -p1 -R < "/root/machinex/patches/0358-eCryptfs-remove-unneeded-checks-in-virt_to_scatterli.patch"
-patch -p1 -R < "/root/machinex/patches/0357-ext4-simplify-mpage_add_bh_to_extent.patch"
-patch -p1 -R < "/root/machinex/patches/0356-ext4-dirty-page-has-always-buffers-attached.patch"
-patch -p1 -R < "/root/machinex/patches/0355-ext4-simplify-list-handling-in-ext4_do_flush_complet.patch"
-patch -p1 -R < "/root/machinex/patches/0354-ext4-move-work-from-io_end-to-inode.patch"
-patch -p1 -R < "/root/machinex/patches/0353-ext4-remove-__ext4_journalled_writepage-from-mpage_d.patch"
-patch -p1 -R < "/root/machinex/patches/0352-ext4-use-rdirty_page-for-writepage-in-ext4-bio-write.patch"
-patch -p1 -R < "/root/machinex/patches/0351-ext4-Always-use-ext4_bio_write_page-for-writeout.patch"
-patch -p1 -R < "/root/machinex/patches/0350-ext4-add-punching-hole-support-for-non-extent-mapped.patch"
-patch -p1 -R < "/root/machinex/patches/0349-ARM-7632-1-spinlock-avoid-exclusive-accesses-on-unlo.patch"
-patch -p1 -R < "/root/machinex/patches/0348-bs.patch"
-patch -p1 -R < "/root/machinex/patches/0347-cputime-Safely-read-cputime-of-full-dynticks-CPUs-an.patch"
-patch -p1 -R < "/root/machinex/patches/0346-.cpu-accessors-read-task-cputime-stats.patch"
-patch -p1 -R < "/root/machinex/patches/0345-cputime-Allow-dynamic-switch-between-tick-virtual.patch"
-patch -p1 -R < "/root/machinex/patches/0344-cputime-Generic-on-demand-virtual-cputime-accounting.patch"
-patch -p1 -R < "/root/machinex/patches/0343-cputime-Move-default-nsecs_to_cputime-to-jiffies-bas.patch"
-patch -p1 -R < "/root/machinex/patches/0342-cputime-Librarize-per-nsecs-resolution-cputime-defin.patch"
-patch -p1 -R < "/root/machinex/patches/0341-cputime-Avoid-multiplication-overflow-on-utime-scali.patch"
-patch -p1 -R < "/root/machinex/patches/0340-context_tracking-Export-context-state-for-generic-vt.patch"
-patch -p1 -R < "/root/machinex/patches/0339-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0338-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0337-rcu-Consolidate-debugging-Kconfig-options.patch"
-patch -p1 -R < "/root/machinex/patches/0336-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0335-PM-Runtime-Add-new-helper-function-pm_runtime_active.patch"
-patch -p1 -R < "/root/machinex/patches/0334-sysfs-Functions-for-adding-removing-symlinksto-from-.patch"
-patch -p1 -R < "/root/machinex/patches/0333-staging-zcache-fix-ppc64-and-other-arches.patch"
-patch -p1 -R < "/root/machinex/patches/0332-PM-Qos-Expose-dev_pm_qos_flags-symbol.patch"
-patch -p1 -R < "/root/machinex/patches/0331-ext4-fix-memory-leak-when-quota-options-are-specifie.patch"
-patch -p1 -R < "/root/machinex/patches/0330-ext4-release-sysfs-kobject-when-failing-to-enable-qu.patch"
-patch -p1 -R < "/root/machinex/patches/0329-tracing-Mark-tracing_dentry_percpu-static.patch"
-patch -p1 -R < "/root/machinex/patches/0328-file2alias-apparently-make-modalias-generation-safe-.patch"
-patch -p1 -R < "/root/machinex/patches/0327-cgroup-remove-bogus-comments-in-cgroup_diput.patch"
-patch -p1 -R < "/root/machinex/patches/0326-cgroup-remove-synchronize_rcu-from-cgroup_diput.patch"
-patch -p1 -R < "/root/machinex/patches/0325-cgroup-remove-duplicate-RCU-free-on-struct-cgroup.patch"
-patch -p1 -R < "/root/machinex/patches/0324-sched-split-out-css_online-css_offline-from-tg-creat.patch"
-patch -p1 -R < "/root/machinex/patches/0323-cgroup-initialize-cgrp-dentry-before-css_alloc.patch"
-patch -p1 -R < "/root/machinex/patches/0322-workqueue-cosmetic-update-in-try_to_grab_pending.patch"
-patch -p1 -R < "/root/machinex/patches/0321-workqueue-simplify-is-work-item-queued-here-test.patch"
-patch -p1 -R < "/root/machinex/patches/0320-workqueue-make-work-data-point-to-pool.patch"
-patch -p1 -R < "/root/machinex/patches/0319-workqueue-add-delayed_work-wq-to-simplify-reentrancy.patch"
-patch -p1 -R < "/root/machinex/patches/0318-workqueue-make-work_busy-test-WORK_STRUCT_PENDING.patch"
-patch -p1 -R < "/root/machinex/patches/0317-workqueue-replace-WORK_CPU_NONE-LAST-with-WORK_CPU_E.patch"
-patch -p1 -R < "/root/machinex/patches/0316-workqueue-post-global_cwq-removal-cleanups-Remove-re.patch"
-patch -p1 -R < "/root/machinex/patches/0315-workqueue-rename-nr_running-variables.patch"
-patch -p1 -R < "/root/machinex/patches/0314-workqueue-remove-global_cwq.patch"
-patch -p1 -R < "/root/machinex/patches/0313-workqueue-remove-worker_pool-gcwq.patch"
-patch -p1 -R < "/root/machinex/patches/0312-workqueue-replace-for_each_worker_pool-with-for_each.patch"
-patch -p1 -R < "/root/machinex/patches/0311-workqueue-make-freezing-thawing-per-pool-and-touchup.patch"
-patch -p1 -R < "/root/machinex/patches/0310-workqueue-make-hotplug-processing-per-pool.patch"
-patch -p1 -R < "/root/machinex/patches/0309-workqueue-move-global_cwq-lock-to-worker_pool.patch"
-patch -p1 -R < "/root/machinex/patches/0308-workqueue-move-global_cwq-cpu-to-worker_pool.patch"
-patch -p1 -R < "/root/machinex/patches/0307-workqueue-move-busy_hash-from-global_cwq-to-worker_p.patch"
-patch -p1 -R < "/root/machinex/patches/0306-workqueue-record-pool-ID-instead-of-CPU-in-work-data.patch"
-patch -p1 -R < "/root/machinex/patches/0305-workqueue-add-worker_pool-id.patch"
-patch -p1 -R < "/root/machinex/patches/0304-workqueue-introduce-WORK_OFFQ_CPU_NONE.patch"
-patch -p1 -R < "/root/machinex/patches/0303-workqueue-make-GCWQ_FREEZING-a-pool-flag.patch"
-patch -p1 -R < "/root/machinex/patches/0302-workqueue-make-GCWQ_DISASSOCIATED-a-pool-flag.patch"
-patch -p1 -R < "/root/machinex/patches/0301-workqueue-use-std_-prefix-for-the-standard-per-cpu.patch"
-patch -p1 -R < "/root/machinex/patches/0300-workqueue-unexport-work_cpu.patch"
-patch -p1 -R < "/root/machinex/patches/0299-workqueue-set-PF_WQ_WORKER-on-rescuers.patch"
+/root/machinex/robscript/0700-OKAY-FUCK-THIS.patch
+/root/machinex/robscript/0699-wtf.patch
+/root/machinex/robscript/0698-wtf.patch
+/root/machinex/robscript/0697-now-surely-everything-is-doubled.patch
+/root/machinex/robscript/0696-missing-include.patch
+/root/machinex/robscript/0695-switch-compat_sys_wait4-and-compat_sys_waitid.patch
+/root/machinex/robscript/0694-switch-compat_sys_sigaltstack-to-COMPAT_SYSCALL_DEF.patch
+/root/machinex/robscript/0693-add-generic-signal-stack-to-kconfig-again.patch
+/root/machinex/robscript/0692-more.patch
+/root/machinex/robscript/0691-bring-up-for-signalstack.patch
+/root/machinex/robscript/0690-compat-user-stack-pointer.patch
+/root/machinex/robscript/0689-oops-new-helper-altstack.patch
+/root/machinex/robscript/0683-fix-up-old-tupid-sigaction.patch
+/root/machinex/robscript/0666-arm-switch-to-generic-old-sigaction.patch
+/root/machinex/robscript/0665-arm-switch-to-generic-old-sigsuspend.patch
+/root/machinex/robscript/0664-arm-switch-to-generic-sigaltstack.patch
+/root/machinex/robscript/0663-take-sys_rt_sigsuspend-prototype-to-linux-syscalls.h.patch
+/root/machinex/robscript/0661-new-helper-sigsp.patch
+/root/machinex/robscript/0660-new-helper-signal_setup_done.patch
+/root/machinex/robscript/0659-new-helper-get_signal.patch
+/root/machinex/robscript/0658-convert-futex-compat-syscalls-to-COMPAT_SYSCALL.patch
+/root/machinex/robscript/0657-switch-compat_sys_open-to-COMPAT_SYSCALL_DEFINE.patch
+/root/machinex/robscript/0656-generic-sys_sigaction-and-compat_sys_sigaction.patch
+/root/machinex/robscript/0655-generic-sys_compat_rt_sigaction.patch
+/root/machinex/robscript/0654-consolidate-kernel-side-struct-sigaction-declaration.patch
+/root/machinex/robscript/0653-switch-compat_sys_rt_sigtimedwait-to-COMPAT_SYSCALL.patch
+/root/machinex/robscript/0652-old-sigsuspend-variants-in-kernel-signal.c.patch
+/root/machinex/robscript/0651-generic-compat_sys_rt_sigqueueinfo.patch
+/root/machinex/robscript/0650-generic-compat_sys_rt_sigpending.patch
+/root/machinex/robscript/0649-generic-compat_sys_rt_sigprocmask.patch
+/root/machinex/robscript/0648-consolidate-rt_sigsuspend.patch
+/root/machinex/robscript/0647-sanitize-rt-sigaction.patch
