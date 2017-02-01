@@ -320,6 +320,9 @@ config MODULES_USE_ELF_REL
 	  Modules only use ELF REL relocations.  Modules with ELF RELA
 	  relocations will give an error.
 
+config GENERIC_COMPAT_RT_SIGPROCMASK
+	bool
+
 #
 # ABI hall of shame
 #
