@@ -3327,7 +3327,7 @@ void destroy_workqueue(struct workqueue_struct *wq)
 	kfree(wq);
 }
 EXPORT_SYMBOL(destroy_workqueue);
-
+/*
  * pwq_set_max_active - adjust max_active of a pwq
  * @pwq: target pool_workqueue
  * @max_active: new max_active value.
@@ -3347,7 +3347,7 @@ static void pwq_set_max_active(struct pool_workqueue *pwq, int max_active)
 		pwq_activate_first_delayed(pwq);
 }
 
-/**
+/*
  * workqueue_set_max_active - adjust max_active of a workqueue
  * @wq: target workqueue
  * @max_active: new max_active value.
