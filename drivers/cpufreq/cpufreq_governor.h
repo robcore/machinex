@@ -72,9 +72,9 @@ static void *get_cpu_dbs_info_s(int cpu)				\
 /* Per cpu structures */
 struct cpu_dbs_common_info {
 	int cpu;
-	u64 prev_cpu_idle;
-	u64 prev_cpu_wall;
-	u64 prev_cpu_nice;
+	cputime64_t prev_cpu_idle;
+	cputime64_t prev_cpu_wall;
+	cputime64_t prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	/*
@@ -87,7 +87,7 @@ struct cpu_dbs_common_info {
 
 struct od_cpu_dbs_info_s {
 	struct cpu_dbs_common_info cdbs;
-	u64 prev_cpu_iowait;
+	cputime64_t prev_cpu_iowait;
 	struct cpufreq_frequency_table *freq_table;
 	unsigned int freq_lo;
 	unsigned int freq_lo_jiffies;
@@ -111,7 +111,6 @@ struct od_dbs_tuners {
 	unsigned int up_threshold;
 	unsigned int down_differential;
 	unsigned int powersave_bias;
-	unsigned int io_is_busy = 0;
 };
 
 struct cs_dbs_tuners {
@@ -128,7 +127,8 @@ struct dbs_data {
 	/* Common across governors */
 	#define GOV_ONDEMAND		0
 	#define GOV_CONSERVATIVE	1
-
+	#define GOV_ONDEMANDMX		2
+	#define GOV_CONSERVATIVEMX	3
 	int governor;
 	unsigned int min_sampling_rate;
 	unsigned int enable; /* number of CPUs using this policy */
@@ -149,7 +149,6 @@ struct dbs_data {
 
 /* Governor specific ops, will be passed to dbs_data->gov_ops */
 struct od_ops {
-	int (*io_busy)(void);
 	void (*powersave_bias_init_cpu)(int cpu);
 	unsigned int (*powersave_bias_target)(struct cpufreq_policy *policy,
 			unsigned int freq_next, unsigned int relation);
@@ -171,8 +170,7 @@ static inline int delay_for_sampling_rate(unsigned int sampling_rate)
 	return delay;
 }
 
-get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
-u64 get_cpu_idle_time(unsigned int cpu, cputime64_t *wall, 0);
+cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall);
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 int cpufreq_governor_dbs(struct dbs_data *dbs_data,
 		struct cpufreq_policy *policy, unsigned int event);
