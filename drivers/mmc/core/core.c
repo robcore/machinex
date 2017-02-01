@@ -349,7 +349,7 @@ void mmc_start_delayed_bkops(struct mmc_card *card)
 	 * it was removed from the queue work but not started yet
 	 */
 	card->bkops_info.cancel_delayed_work = false;
-	queue_delayed_work(system_freezable_wq, &card->bkops_info.dw,
+	queue_delayed_work(system_wq, &card->bkops_info.dw,
 			   msecs_to_jiffies(
 				   card->bkops_info.delay_ms));
 }
