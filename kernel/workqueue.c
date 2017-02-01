@@ -3357,6 +3357,7 @@ static void pwq_set_max_active(struct pool_workqueue *pwq, int max_active)
  * CONTEXT:
  * Don't call from IRQ context.
  */
+
 void workqueue_set_max_active(struct workqueue_struct *wq, int max_active)
 {
 	unsigned int cpu;
@@ -3589,7 +3590,7 @@ static void work_for_cpu_fn(struct work_struct *work)
 	wfc->ret = wfc->fn(wfc->arg);
 }
 
-/**
+/*
  * work_on_cpu - run a function in user context on a particular cpu
  * @cpu: the cpu to run on
  * @fn: the function to run
@@ -3613,7 +3614,7 @@ EXPORT_SYMBOL(work_on_cpu);
 
 #ifdef CONFIG_FREEZER
 
-/**
+/*
  * freeze_workqueues_begin - begin freezing workqueues
  *
  * Start freezing workqueues.  After this function returns, all freezable
@@ -3649,7 +3650,6 @@ void freeze_workqueues_begin(void)
 				pwq = get_pwq(cpu, wq);
 			else
 				continue;
-				if (pwq && pwq->pool == pool &&
 				if (pwq && pwq->pool == pool &&
 				    (wq->flags & WQ_FREEZABLE))
 					pwq->max_active = 0;
