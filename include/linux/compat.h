@@ -123,6 +123,16 @@ typedef struct compat_sigaltstack {
 #ifndef compat_user_stack_pointer
 #define compat_user_stack_pointer() current_user_stack_pointer()
 #endif
+#ifdef CONFIG_GENERIC_SIGALTSTACK
+#ifndef compat_sigaltstack	/* we'll need that for MIPS */
+typedef struct compat_sigaltstack {
+	compat_uptr_t			ss_sp;
+	int				ss_flags;
+	compat_size_t			ss_size;
+} compat_stack_t;
+#endif
+#endif
+
 #define compat_jiffies_to_clock_t(x)	\
 		(((unsigned long)(x) * COMPAT_USER_HZ) / HZ)
 

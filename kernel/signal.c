@@ -2641,6 +2641,7 @@ SYSCALL_DEFINE4(rt_sigprocmask, int, how, sigset_t __user *, nset,
 }
 
 #ifdef CONFIG_COMPAT
+#ifdef CONFIG_GENERIC_COMPAT_RT_SIGPROCMASK
 COMPAT_SYSCALL_DEFINE4(rt_sigprocmask, int, how, compat_sigset_t __user *, nset,
 		compat_sigset_t __user *, oset, compat_size_t, sigsetsize)
 {
@@ -2678,6 +2679,7 @@ COMPAT_SYSCALL_DEFINE4(rt_sigprocmask, int, how, compat_sigset_t __user *, nset,
 #endif
 }
 #endif
+#endif
 
 static int do_sigpending(void *set, unsigned long sigsetsize)
 {
@@ -2697,7 +2699,7 @@ static int do_sigpending(void *set, unsigned long sigsetsize)
 /**
  *  sys_rt_sigpending - examine a pending signal that has been raised
  *			while blocked
- *  @uset: stores pending signals
+ *  @set: stores pending signals
  *  @sigsetsize: size of sigset_t type or larger
  */
 SYSCALL_DEFINE2(rt_sigpending, sigset_t __user *, uset, size_t, sigsetsize)
@@ -2710,6 +2712,7 @@ SYSCALL_DEFINE2(rt_sigpending, sigset_t __user *, uset, size_t, sigsetsize)
 }
 
 #ifdef CONFIG_COMPAT
+#ifdef CONFIG_GENERIC_COMPAT_RT_SIGPENDING
 COMPAT_SYSCALL_DEFINE2(rt_sigpending, compat_sigset_t __user *, uset,
 		compat_size_t, sigsetsize)
 {
@@ -2728,6 +2731,7 @@ COMPAT_SYSCALL_DEFINE2(rt_sigpending, compat_sigset_t __user *, uset,
 	return sys_rt_sigpending((sigset_t __user *)uset, sigsetsize);
 #endif
 }
+#endif
 #endif
 
 #ifndef HAVE_ARCH_COPY_SIGINFO_TO_USER
@@ -3032,12 +3036,15 @@ SYSCALL_DEFINE3(rt_sigqueueinfo, pid_t, pid, int, sig,
 		siginfo_t __user *, uinfo)
 {
 	siginfo_t info;
+
 	if (copy_from_user(&info, uinfo, sizeof(siginfo_t)))
 		return -EFAULT;
+
 	return do_rt_sigqueueinfo(pid, sig, &info);
 }
 
 #ifdef CONFIG_COMPAT
+#ifdef CONFIG_GENERIC_COMPAT_RT_SIGQUEUEINFO
 COMPAT_SYSCALL_DEFINE3(rt_sigqueueinfo,
 			compat_pid_t, pid,
 			int, sig,
@@ -3050,6 +3057,7 @@ COMPAT_SYSCALL_DEFINE3(rt_sigqueueinfo,
 	return do_rt_sigqueueinfo(pid, sig, &info);
 }
 #endif
+#endif
 
 static int do_rt_tgsigqueueinfo(pid_t tgid, pid_t pid, int sig, siginfo_t *info)
 {
@@ -3060,7 +3068,7 @@ static int do_rt_tgsigqueueinfo(pid_t tgid, pid_t pid, int sig, siginfo_t *info)
 	/* Not even root can pretend to send signals from the kernel.
 	 * Nor can they impersonate a kill()/tgkill(), which adds source info.
 	 */
-	if (((info->si_code >= 0 || info->si_code == SI_TKILL)) &&
+	if ((info->si_code >= 0 || info->si_code == SI_TKILL) &&
 	    (task_pid_vnr(current) != pid)) {
 		/* We used to allow any < 0 si_code */
 		WARN_ON_ONCE(info->si_code < 0);
@@ -3081,6 +3089,79 @@ SYSCALL_DEFINE4(rt_tgsigqueueinfo, pid_t, tgid, pid_t, pid, int, sig,
 
 	return do_rt_tgsigqueueinfo(tgid, pid, sig, &info);
 }
+#ifdef CONFIG_GENERIC_SIGALTSTACK
+SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
+{
+	return do_sigaltstack(uss, uoss, current_user_stack_pointer());
+}
+#endif
+
+int restore_altstack(const stack_t __user *uss)
+{
+	int err = do_sigaltstack(uss, NULL, current_user_stack_pointer());
+	/* squash all but EFAULT for now */
+	return err == -EFAULT ? err : 0;
+}
+
+int __save_altstack(stack_t __user *uss, unsigned long sp)
+{
+	struct task_struct *t = current;
+	return  __put_user((void __user *)t->sas_ss_sp, &uss->ss_sp) |
+		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
+		__put_user(t->sas_ss_size, &uss->ss_size);
+}
+
+#ifdef CONFIG_COMPAT
+#ifdef CONFIG_GENERIC_SIGALTSTACK
+asmlinkage long compat_sys_sigaltstack(const compat_stack_t __user *uss_ptr,
+				       compat_stack_t __user *uoss_ptr)
+{
+	stack_t uss, uoss;
+	int ret;
+	mm_segment_t seg;
+
+	if (uss_ptr) {
+		compat_stack_t uss32;
+
+		memset(&uss, 0, sizeof(stack_t));
+		if (copy_from_user(&uss32, uss_ptr, sizeof(compat_stack_t)))
+			return -EFAULT;
+		uss.ss_sp = compat_ptr(uss32.ss_sp);
+		uss.ss_flags = uss32.ss_flags;
+		uss.ss_size = uss32.ss_size;
+	}
+	seg = get_fs();
+	set_fs(KERNEL_DS);
+	ret = do_sigaltstack((stack_t __force __user *) (uss_ptr ? &uss : NULL),
+			     (stack_t __force __user *) &uoss,
+			     compat_user_stack_pointer());
+	set_fs(seg);
+	if (ret >= 0 && uoss_ptr)  {
+		if (!access_ok(VERIFY_WRITE, uoss_ptr, sizeof(compat_stack_t)) ||
+		    __put_user(ptr_to_compat(uoss.ss_sp), &uoss_ptr->ss_sp) ||
+		    __put_user(uoss.ss_flags, &uoss_ptr->ss_flags) ||
+		    __put_user(uoss.ss_size, &uoss_ptr->ss_size))
+			ret = -EFAULT;
+	}
+	return ret;
+}
+
+int compat_restore_altstack(const compat_stack_t __user *uss)
+{
+	int err = compat_sys_sigaltstack(uss, NULL);
+	/* squash all but -EFAULT for now */
+	return err == -EFAULT ? err : 0;
+}
+
+int __compat_save_altstack(compat_stack_t __user *uss, unsigned long sp)
+{
+	struct task_struct *t = current;
+	return  __put_user(ptr_to_compat((void __user *)t->sas_ss_sp), &uss->ss_sp) |
+		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
+		__put_user(t->sas_ss_size, &uss->ss_size);
+}
+#endif
+#endif
 
 #ifdef CONFIG_COMPAT
 COMPAT_SYSCALL_DEFINE4(rt_tgsigqueueinfo,
@@ -3142,7 +3223,7 @@ int do_sigaction(int sig, struct k_sigaction *act, struct k_sigaction *oact)
 	return 0;
 }
 
-static int 
+int
 do_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, unsigned long sp)
 {
 	stack_t oss;
@@ -3207,10 +3288,12 @@ do_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, unsigned long s
 out:
 	return error;
 }
+#ifdef CONFIG_GENERIC_SIGALTSTACK
 SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
 {
 	return do_sigaltstack(uss, uoss, current_user_stack_pointer());
 }
+#endif
 
 int restore_altstack(const stack_t __user *uss)
 {
@@ -3227,7 +3310,16 @@ int __save_altstack(stack_t __user *uss, unsigned long sp)
 		__put_user(t->sas_ss_size, &uss->ss_size);
 }
 
+int __save_altstack(stack_t __user *uss, unsigned long sp)
+{
+	struct task_struct *t = current;
+	return  __put_user((void __user *)t->sas_ss_sp, &uss->ss_sp) |
+		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
+		__put_user(t->sas_ss_size, &uss->ss_size);
+}
+
 #ifdef CONFIG_COMPAT
+#ifdef CONFIG_GENERIC_SIGALTSTACK
 COMPAT_SYSCALL_DEFINE2(sigaltstack,
 			const compat_stack_t __user *, uss_ptr,
 			compat_stack_t __user *, uoss_ptr)
@@ -3276,7 +3368,23 @@ int __compat_save_altstack(compat_stack_t __user *uss, unsigned long sp)
 		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
 		__put_user(t->sas_ss_size, &uss->ss_size);
 }
+
+int __compat_save_altstack(compat_stack_t __user *uss, unsigned long sp)
+{
+	struct task_struct *t = current;
+	return  __put_user(ptr_to_compat((void __user *)t->sas_ss_sp), &uss->ss_sp) |
+		__put_user(sas_ss_flags(sp), &uss->ss_flags) |
+		__put_user(t->sas_ss_size, &uss->ss_size);
+}
 #endif
+#endif
+
+int restore_altstack(const stack_t __user *uss)
+{
+	int err = do_sigaltstack(uss, NULL, current_user_stack_pointer());
+	/* squash all but EFAULT for now */
+	return err == -EFAULT ? err : 0;
+}
 
 #ifdef __ARCH_WANT_SYS_SIGPENDING
 
@@ -3286,7 +3394,7 @@ int __compat_save_altstack(compat_stack_t __user *uss, unsigned long sp)
  */
 SYSCALL_DEFINE1(sigpending, old_sigset_t __user *, set)
 {
-	return sys_rt_sigpending((sigset_t __user *)set, sizeof(old_sigset_t)); 
+	return sys_rt_sigpending((sigset_t __user *)set, sizeof(old_sigset_t));
 }
 
 #endif
@@ -3378,6 +3486,7 @@ out:
 	return ret;
 }
 #ifdef CONFIG_COMPAT
+#ifdef CONFIG_GENERIC_COMPAT_RT_SIGACTION
 COMPAT_SYSCALL_DEFINE4(rt_sigaction, int, sig,
 		const struct compat_sigaction __user *, act,
 		struct compat_sigaction __user *, oact,
@@ -3423,6 +3532,7 @@ COMPAT_SYSCALL_DEFINE4(rt_sigaction, int, sig,
 	}
 	return ret;
 }
+#endif
 #endif
 #endif /* !CONFIG_ODD_RT_SIGACTION */
 
@@ -3569,6 +3679,7 @@ int sigsuspend(sigset_t *set)
 	return -ERESTARTNOHAND;
 }
 
+#ifdef __ARCH_WANT_SYS_RT_SIGSUSPEND
 /**
  *  sys_rt_sigsuspend - replace the signal mask for a value with the
  *	@unewset value until a signal is received
@@ -3608,6 +3719,7 @@ COMPAT_SYSCALL_DEFINE2(rt_sigsuspend, compat_sigset_t __user *, unewset, compat_
 	return sys_rt_sigsuspend((sigset_t __user *)unewset, sigsetsize);
 #endif
 }
+#endif
 #endif
 
 #ifdef CONFIG_OLD_SIGSUSPEND

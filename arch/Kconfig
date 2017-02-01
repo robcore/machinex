@@ -338,6 +338,9 @@ config GENERIC_SIGALTSTACK
 config GENERIC_SIGALTSTACK
 	bool
 
+config GENERIC_SIGALTSTACK
+	bool
+
 #
 # ABI hall of shame
 #
