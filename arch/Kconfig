@@ -323,6 +323,9 @@ config MODULES_USE_ELF_REL
 config GENERIC_COMPAT_RT_SIGPROCMASK
 	bool
 
+config GENERIC_COMPAT_RT_SIGPENDING
+	bool
+
 #
 # ABI hall of shame
 #
