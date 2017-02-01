@@ -730,7 +730,6 @@ config RTC_DRV_SPEAR
 	tristate "SPEAR ST RTC"
 	depends on PLAT_SPEAR
 	default y
-	depends on !HAS_PERSISTENT_CLOCK
 	help
 	 If you say Y here you will get support for the RTC found on
 	 spear
@@ -770,7 +769,6 @@ config RTC_DRV_MSM
 	tristate "RTC on Qualcomm Chipsets"
 	depends on ARCH_MSM
 	default y
-	depends on !HAS_PERSISTENT_CLOCK
 	help
 	  RTC driver for Qualcomm chipsets
 
