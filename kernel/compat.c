@@ -381,9 +381,9 @@ static inline void compat_sig_setmask(sigset_t *blocked, compat_sigset_word set)
 	memcpy(blocked->sig, &set, sizeof(set));
 }
 
-asmlinkage long compat_sys_sigprocmask(int how,
-				       compat_old_sigset_t __user *nset,
-				       compat_old_sigset_t __user *oset)
+COMPAT_SYSCALL_DEFINE3(sigprocmask, int, how,
+		       compat_old_sigset_t __user *, nset,
+		       compat_old_sigset_t __user *, oset)
 {
 	old_sigset_t old_set, new_set;
 	sigset_t new_blocked;
@@ -1018,17 +1018,6 @@ COMPAT_SYSCALL_DEFINE4(rt_sigtimedwait, compat_sigset_t __user *, uthese,
 	return ret;
 }
 
-asmlinkage long
-compat_sys_rt_tgsigqueueinfo(compat_pid_t tgid, compat_pid_t pid, int sig,
-			     struct compat_siginfo __user *uinfo)
-{
-	siginfo_t info;
-
-	if (copy_siginfo_from_user32(&info, uinfo))
-		return -EFAULT;
-	return do_rt_tgsigqueueinfo(tgid, pid, sig, &info);
-}
-
 #ifdef __ARCH_WANT_COMPAT_SYS_TIME
 
 /* compat_time_t is a 32 bit "long" and needs to get converted. */
@@ -1207,9 +1196,9 @@ compat_sys_sysinfo(struct compat_sysinfo __user *info)
 	return 0;
 }
 
-#ifdef __ARCH_WANT_COMPAT_SYS_SCHED_RR_GET_INTERVAL
-asmlinkage long compat_sys_sched_rr_get_interval(compat_pid_t pid,
-						 struct compat_timespec __user *interval)
+COMPAT_SYSCALL_DEFINE2(sched_rr_get_interval,
+		       compat_pid_t, pid,
+		       struct compat_timespec __user *, interval)
 {
 	struct timespec t;
 	int ret;
@@ -1222,7 +1211,6 @@ asmlinkage long compat_sys_sched_rr_get_interval(compat_pid_t pid,
 		return -EFAULT;
 	return ret;
 }
-#endif /* __ARCH_WANT_COMPAT_SYS_SCHED_RR_GET_INTERVAL */
 
 /*
  * Allocate user-space memory for the duration of a single system call,

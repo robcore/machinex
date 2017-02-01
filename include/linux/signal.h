@@ -241,8 +241,6 @@ extern int do_send_sig_info(int sig, struct siginfo *info,
 				struct task_struct *p, bool group);
 extern int group_send_sig_info(int sig, struct siginfo *info, struct task_struct *p);
 extern int __group_send_sig_info(int, struct siginfo *, struct task_struct *);
-extern long do_rt_tgsigqueueinfo(pid_t tgid, pid_t pid, int sig,
-				 siginfo_t *info);
 extern int do_sigtimedwait(const sigset_t *, siginfo_t *,
 				const struct timespec *);
 extern int sigprocmask(int, sigset_t *, sigset_t *);
@@ -250,6 +248,27 @@ extern void set_current_blocked(sigset_t *);
 extern void __set_current_blocked(const sigset_t *);
 extern int show_unhandled_signals;
 extern int sigsuspend(sigset_t *);
+
+struct sigaction {
+#ifndef __ARCH_HAS_ODD_SIGACTION
+	__sighandler_t	sa_handler;
+	unsigned long	sa_flags;
+#else
+	unsigned long	sa_flags;
+	__sighandler_t	sa_handler;
+#endif
+#ifdef __ARCH_HAS_SA_RESTORER
+	__sigrestore_t sa_restorer;
+#endif
+	sigset_t	sa_mask;	/* mask last for extensibility */
+};
+
+struct k_sigaction {
+	struct sigaction sa;
+#ifdef __ARCH_HAS_KA_RESTORER
+	__sigrestore_t ka_restorer;
+#endif
+};
 
 extern int get_signal_to_deliver(siginfo_t *info, struct k_sigaction *return_ka, struct pt_regs *regs, void *cookie);
 extern void signal_delivered(int sig, siginfo_t *info, struct k_sigaction *ka, struct pt_regs *regs, int stepping);
