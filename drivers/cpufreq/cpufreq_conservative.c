@@ -102,60 +102,120 @@ static struct dbs_tuners {
 
 static bool io_is_busy = 0;
 
-/* keep track of frequency transitions */
-static int
-dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
-		     void *data)
+/*
+ * Every sampling_rate, we check, if current idle time is less than 20%
+ * (default), then we try to increase frequency Every sampling_rate *
+ * sampling_down_factor, we check, if current idle time is more than 80%, then
+ * we try to decrease frequency
+ *
+ * Any frequency increase takes it to the maximum frequency. Frequency reduction
+ * happens at minimum steps of 5% (default) of maximum frequency
+ */
+static void cs_check_cpu(int cpu, unsigned int load)
 {
-	struct cpufreq_freqs *freq = data;
-	struct cpu_dbs_info_s *this_dbs_info = &per_cpu(cs_cpu_dbs_info,
-							freq->cpu);
-
-	struct cpufreq_policy *policy;
-
-	if (!this_dbs_info->enable)
-		return 0;
-
-	policy = this_dbs_info->cur_policy;
+	struct cs_cpu_dbs_info_s *dbs_info = &per_cpu(cs_cpu_dbs_info, cpu);
+	struct cpufreq_policy *policy = dbs_info->cdbs.cur_policy;
+	unsigned int freq_target;
 
 	/*
-	 * we only care if our internally tracked freq moves outside
-	 * the 'valid' ranges of freqency available to us otherwise
-	 * we do not change it
+	 * break out if we 'cannot' reduce the speed as the user might
+	 * want freq_step to be zero
+	 */
+	if (cs_tuners.freq_step == 0)
+		return;
+
+	/* Check for frequency increase */
+	if (load > cs_tuners.up_threshold) {
+		dbs_info->down_skip = 0;
+
+		/* if we are already at full speed then break out early */
+		if (dbs_info->requested_freq == policy->max)
+			return;
+
+		freq_target = (cs_tuners.freq_step * policy->max) / 100;
+
+		/* max freq cannot be less than 100. But who knows.... */
+		if (unlikely(freq_target == 0))
+			freq_target = 5;
+
+		dbs_info->requested_freq += freq_target;
+		if (dbs_info->requested_freq > policy->max)
+			dbs_info->requested_freq = policy->max;
+
+		__cpufreq_driver_target(policy, dbs_info->requested_freq,
+			CPUFREQ_RELATION_H);
+		return;
+	}
+
+	/*
+	 * The optimal frequency is the frequency that is the lowest that can
+	 * support the current CPU usage without triggering the up policy. To be
+	 * safe, we focus 10 points under the threshold.
+	 */
+	if (load < (cs_tuners.down_threshold - 10)) {
+		freq_target = (cs_tuners.freq_step * policy->max) / 100;
+
+		dbs_info->requested_freq -= freq_target;
+		if (dbs_info->requested_freq < policy->min)
+			dbs_info->requested_freq = policy->min;
+
+		/*
+		 * if we cannot reduce the frequency anymore, break out early
+		 */
+		if (policy->cur == policy->min)
+			return;
+
+		__cpufreq_driver_target(policy, dbs_info->requested_freq,
+				CPUFREQ_RELATION_H);
+		return;
+	}
+}
+
+static void cs_dbs_timer(struct work_struct *work)
+{
+	struct cs_cpu_dbs_info_s *dbs_info = container_of(work,
+			struct cs_cpu_dbs_info_s, cdbs.work.work);
+	unsigned int cpu = dbs_info->cdbs.cpu;
+	int delay = delay_for_sampling_rate(cs_tuners.sampling_rate);
+
+	mutex_lock(&dbs_info->cdbs.timer_mutex);
+
+	dbs_check_cpu(&cs_dbs_data, cpu);
+
+	schedule_delayed_work_on(cpu, &dbs_info->cdbs.work, delay);
+	mutex_unlock(&dbs_info->cdbs.timer_mutex);
+}
+
+static int dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
+		void *data)
+{
+	struct cpufreq_freqs *freq = data;
+	struct cs_cpu_dbs_info_s *dbs_info =
+					&per_cpu(cs_cpu_dbs_info, freq->cpu);
+	struct cpufreq_policy *policy;
+
+	if (!dbs_info->enable)
+		return 0;
+
+	policy = dbs_info->cdbs.cur_policy;
+
+	/*
+	 * we only care if our internally tracked freq moves outside the 'valid'
+	 * ranges of freqency available to us otherwise we do not change it
 	*/
-	if (this_dbs_info->requested_freq > policy->max
-			|| this_dbs_info->requested_freq < policy->min)
-		this_dbs_info->requested_freq = freq->new;
+	if (dbs_info->requested_freq > policy->max
+			|| dbs_info->requested_freq < policy->min)
+		dbs_info->requested_freq = freq->new;
 
 	return 0;
 }
-
-static struct notifier_block dbs_cpufreq_notifier_block = {
-	.notifier_call = dbs_cpufreq_notifier
-};
 
 /************************** sysfs interface ************************/
 static ssize_t show_sampling_rate_min(struct kobject *kobj,
 				      struct attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u\n", min_sampling_rate);
+	return sprintf(buf, "%u\n", cs_dbs_data.min_sampling_rate);
 }
-
-define_one_global_ro(sampling_rate_min);
-
-/* cpufreq_conservative Governor Tunables */
-#define show_one(file_name, object)					\
-static ssize_t show_##file_name						\
-(struct kobject *kobj, struct attribute *attr, char *buf)		\
-{									\
-	return sprintf(buf, "%u\n", dbs_tuners_ins.object);		\
-}
-show_one(sampling_rate, sampling_rate);
-show_one(sampling_down_factor, sampling_down_factor);
-show_one(up_threshold, up_threshold);
-show_one(down_threshold, down_threshold);
-show_one(ignore_nice_load, ignore_nice);
-show_one(freq_step, freq_step);
 
 static ssize_t store_sampling_down_factor(struct kobject *a,
 					  struct attribute *b,
@@ -268,11 +328,20 @@ static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 	if (input > 100)
 		input = 100;
 
-	/* no need to test here if freq_step is zero as the user might actually
-	 * want this, they would be crazy though :) */
-	dbs_tuners_ins.freq_step = input;
+	/*
+	 * no need to test here if freq_step is zero as the user might actually
+	 * want this, they would be crazy though :)
+	 */
+	cs_tuners.freq_step = input;
 	return count;
 }
+
+show_one(cs, sampling_rate, sampling_rate);
+show_one(cs, sampling_down_factor, sampling_down_factor);
+show_one(cs, up_threshold, up_threshold);
+show_one(cs, down_threshold, down_threshold);
+show_one(cs, ignore_nice_load, ignore_nice);
+show_one(cs, freq_step, freq_step);
 
 define_one_global_rw(sampling_rate);
 define_one_global_rw(sampling_down_factor);
@@ -280,6 +349,7 @@ define_one_global_rw(up_threshold);
 define_one_global_rw(down_threshold);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(freq_step);
+define_one_global_ro(sampling_rate_min);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
