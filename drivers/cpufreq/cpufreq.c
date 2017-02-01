@@ -491,7 +491,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 static ssize_t store_##file_name					\
 (struct cpufreq_policy *policy, const char *buf, size_t count)		\
 {									\
-	int ret = -EINVAL;						\
+	int ret;						\
 	struct cpufreq_policy new_policy;				\
 									\
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
@@ -524,7 +524,7 @@ static ssize_t store_##file_name					\
 static ssize_t store_scaling_min_freq
 (struct cpufreq_policy *policy, const char *buf, size_t count)
 {
-	unsigned int ret = -EINVAL;
+	unsigned int ret;
 	struct cpufreq_policy new_policy;
 
 	// Yank555.lu - Enforce userspace dvfs lock
@@ -568,7 +568,7 @@ store_one(scaling_min_freq, min);
 static ssize_t store_scaling_max_freq
 (struct cpufreq_policy *policy, const char *buf, size_t count)
 {
-	unsigned int ret = -EINVAL;
+	unsigned int ret;
 	struct cpufreq_policy new_policy;
 
 
@@ -655,7 +655,7 @@ static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 					const char *buf, size_t count)
 {
-	int ret = -EINVAL;
+	int ret;
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
