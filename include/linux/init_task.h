@@ -13,6 +13,7 @@
 #include <linux/seqlock.h>
 #include <net/net_namespace.h>
 #include <linux/sched/sysctl.h>
+#include <linux/sched/rt.h>
 
 #ifdef CONFIG_SMP
 # define INIT_PUSHABLE_TASKS(tsk)					\
