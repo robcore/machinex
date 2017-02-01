@@ -27,7 +27,6 @@
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/sched/rt.h>
 
 #include <mach/kgsl.h>
 static int orig_up_threshold = 90;

@@ -55,7 +55,6 @@
 #include <linux/kernel_stat.h>
 #include <linux/powersuspend.h>
 #include <asm/cputime.h>
-#include <linux/sched/rt.h>
 
 #define CONFIG_MODE_AUTO_CHANGE
 

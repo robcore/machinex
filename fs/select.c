@@ -15,7 +15,7 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/sched/rt.h>
+#include <linux/sched/rt.h.h>
 #include <linux/syscalls.h>
 #include <linux/export.h>
 #include <linux/slab.h>

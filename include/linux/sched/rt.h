@@ -1,7 +1,6 @@
 #ifndef _SCHED_RT_H
 #define _SCHED_RT_H
 
-#include <linux/sched.h>
 /*
  * Priority of a process goes from 0..MAX_PRIO-1, valid RT
  * priority is 0..MAX_RT_PRIO-1, and SCHED_NORMAL/SCHED_BATCH
@@ -55,11 +54,5 @@ static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 
 extern void normalize_rt_tasks(void);
 
-
-/*
- * default timeslice is 100 msecs (used only for SCHED_RR tasks).
- * Timeslices get refilled after they expire.
- */
-#define RR_TIMESLICE		(100 * HZ / 1000)
 
 #endif /* _SCHED_RT_H */

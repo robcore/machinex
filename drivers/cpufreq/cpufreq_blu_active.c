@@ -33,7 +33,6 @@
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
 #include <linux/input.h>
-#include <linux/sched/rt.h>
 
 static int active_count;
 
@@ -393,9 +392,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	cpu_load = loadadjfreq / pcpu->policy->cur;
 	boosted = now < boostpulse_endtime;
 	this_hispeed_freq = max(hispeed_freq, pcpu->policy->min);
-
+	
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
-
+	
 	if (cpu_load >= go_hispeed_load) {
 		if (pcpu->policy->cur < this_hispeed_freq) {
 				new_freq = this_hispeed_freq;
@@ -415,15 +414,15 @@ static void cpufreq_interactive_timer(unsigned long data)
 			new_freq = pcpu->policy->min + cpu_load * (pcpu->policy->max - pcpu->policy->min) / 100;
 		else
 			new_freq = choose_freq(pcpu, loadadjfreq);
-
+		
 		if (new_freq > this_hispeed_freq &&
 				pcpu->target_freq < this_hispeed_freq)
 			new_freq = this_hispeed_freq;
 	}
-
+	
 	if (boosted && new_freq < input_boost_freq)
 		new_freq = input_boost_freq;
-
+	
 	if (pcpu->policy->cur >= this_hispeed_freq &&
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->hispeed_validate_time <
@@ -1060,7 +1059,7 @@ static ssize_t store_low_load_down_threshold(struct kobject *kobj, struct attrib
 		low_load_down_threshold = low_load_down_threshold;
 	else
 		low_load_down_threshold = val;
-
+	
 	return count;
 }
 
@@ -1397,7 +1396,7 @@ module_init(cpufreq_blu_active_init);
 static void __exit cpufreq_interactive_exit(void)
 {
 	unsigned int cpu;
-
+	
 	cpufreq_unregister_governor(&cpufreq_gov_blu_active);
 	for_each_possible_cpu(cpu) {
 		if(!cpu)

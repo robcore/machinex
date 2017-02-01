@@ -33,7 +33,6 @@
 #include <trace/events/power.h>
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
-#include <linux/sched/rt.h>
 
 #include "acpuclock.h"
 
