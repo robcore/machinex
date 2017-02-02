@@ -393,7 +393,7 @@ static int __devinit ramoops_probe(struct platform_device *pdev)
 		goto fail_init_cprz;
 
 	if (!cxt->przs && !cxt->cprz) {
-		pr_err("memory size too small, minimum is %lu\n",
+		pr_err("memory size too small, minimum is %zu\n",
 			cxt->console_size + cxt->record_size);
 		goto fail_cnt;
 	}
