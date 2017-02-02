@@ -940,7 +940,6 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	vid_info_t *cur_info;
 	unsigned char *vid_start;
 	unsigned char vid_length;
-	bool found = false;
 	const char *revfilepath = REVINFO;
 #ifdef BCM4334_CHIP
 	int flag_b3;
@@ -967,23 +966,23 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 #ifdef DUMP_CIS
 	dhd_dump_cis(cis_buf, 48);
 #endif
-	/* 4 byte : [TAG_START] [VID_LENGTH] [TAG_VENDOR] [VID_START] */
+
 	max = sizeof(cis_buf) - 4;
 	for (idx = 0; idx < max; idx++) {
-		if (cis_buf[idx] == CIS_TUPLE_TAG_START && cis_buf[idx + 2]
-			 == CIS_TUPLE_TAG_VENDOR) {
-			vid_length = cis_buf[idx + 1];
-			vid_start = &cis_buf[idx + 3];
-			/* Check buffer overflow */
-			if (&cis_buf[idx + 1] + vid_length <= &cis_buf[CIS_BUF_SIZE - 1]) {
+		if (cis_buf[idx] == CIS_TUPLE_TAG_START) {
+			if (cis_buf[idx + 2] == CIS_TUPLE_TAG_VENDOR) {
+				vid_length = cis_buf[idx + 1];
+				vid_start = &cis_buf[idx + 3];
 				/* found CIS tuple */
-				found = true;
 				break;
+			} else {
+				/* Go to next tuple if tuple value is not vendor type */
+				idx += (cis_buf[idx + 1] + 1);
 			}
 		}
 	}
 
-	if (found) {
+	if (idx < max) {
 		max = sizeof(vid_info) / sizeof(vid_info_t);
 		for (idx = 0; idx < max; idx++) {
 			cur_info = &vid_info[idx];
@@ -1113,28 +1112,53 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 		DHD_ERROR(("[WIFI_SEC] %s: Check module mac by legacy FW : " MACDBG "\n",
 			__FUNCTION__, MAC2STRDBG(mac->octet)));
 	} else {
-		int max, idx, macaddr_idx;
+		bcm_tlv_t *elt = NULL;
+		int remained_len = sizeof(cis_buf);
+		int index = 0;
+		uint8 *mac_addr = NULL;
 #ifdef DUMP_CIS
 		dhd_dump_cis(cis_buf, 48);
 #endif
 
 		/* Find a new tuple tag */
-		max = sizeof(cis_buf) - 8;
-		for (idx = 0; idx < max; idx++) {
-			if (cis_buf[idx] == CIS_TUPLE_TAG_START) {
-				if (cis_buf[idx + 2] == CIS_TUPLE_TAG_MACADDR &&
-					cis_buf[idx + 1] == 7) {
-					macaddr_idx = idx + 3;
-					/* found MAC Address tuple */
-					break;
+		while (index < remained_len) {
+			if (cis_buf[index] == CIS_TUPLE_TAG_START) {
+				remained_len -= index;
+				if (remained_len >= sizeof(bcm_tlv_t)) {
+					elt = (bcm_tlv_t *)&cis_buf[index];
 				}
+				break;
+			} else {
+				index++;
 			}
+
 		}
-		if (idx < max) {
+
+		/* Find a MAC address tuple */
+		while (elt && remained_len >= TLV_HDR_LEN) {
+			int body_len = (int)elt->len;
+
+			if ((elt->id == CIS_TUPLE_TAG_START) &&
+				(remained_len >= (body_len + TLV_HDR_LEN)) &&
+				(*elt->data == CIS_TUPLE_TAG_MACADDR)) {
+				/* found MAC Address tuple and
+				 * get the MAC Address data
+				 */
+				mac_addr = (uint8 *)elt + CIS_TUPLE_TAG_MACADDR_OFF;
+				break;
+			}
+
+			/* Go to next tuple if tuple value
+			 * is not MAC address type
+			 */
+			elt = (bcm_tlv_t *)((uint8 *)elt + (body_len + TLV_HDR_LEN));
+			remained_len -= (body_len + TLV_HDR_LEN);
+		}
+
+		if (mac_addr) {
 			sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
-				cis_buf[macaddr_idx], cis_buf[macaddr_idx + 1],
-				cis_buf[macaddr_idx + 2], cis_buf[macaddr_idx + 3],
-				cis_buf[macaddr_idx + 4], cis_buf[macaddr_idx + 5]);
+				mac_addr[0], mac_addr[1], mac_addr[2],
+				mac_addr[3], mac_addr[4], mac_addr[5]);
 			DHD_ERROR(("[WIFI_SEC] MAC address is taken from OTP\n"));
 		} else {
 			sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -1446,12 +1470,9 @@ int sec_get_param(dhd_pub_t *dhd, int mode)
 	if (IS_ERR(fp) || (fp == NULL)) {
 		ret = -EIO;
 	} else {
-		if (kernel_read(fp, fp->f_pos, (char *)&val, 4) < 0) {
-			filp_close(fp, NULL);
-			pr_debug("rob fucked wifi\n");
-			ret = -EIO
-		}
-	filp_close(fp, NULL);
+		ret = kernel_read(fp, fp->f_pos, (char *)&val, 4);
+		filp_close(fp, NULL);
+	}
 
 	if (ret < 0) {
 		/* File operation is failed so we will return default value */
