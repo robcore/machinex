@@ -384,7 +384,7 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags,
 		ihold(path.dentry->d_inode);
 		path_put(&path);
 		put_unused_fd(fd);
-		return file;
+		return -ENFILE;
 	}
 
 	sock->file = file;
