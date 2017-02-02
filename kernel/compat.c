@@ -586,7 +586,7 @@ asmlinkage long compat_sys_waitid(int which, compat_pid_t pid,
 	if (uru) {
 		ret = put_compat_rusage(&ru, uru);
 		if (ret)
-			return ret;
+			return -EFAULT;
 	}
 
 	BUG_ON(info.si_code & __SI_MASK);
