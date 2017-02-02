@@ -150,11 +150,7 @@ enum dhd_prealloc_index {
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
 #ifndef DHD_SDALIGN
-#ifdef CUSTOM_SDIO_F2_BLKSIZE
-#define DHD_SDALIGN	CUSTOM_SDIO_F2_BLKSIZE
-#else
 #define DHD_SDALIGN	32
-#endif
 #endif
 
 /* host reordering packts logic */
