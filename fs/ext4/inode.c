@@ -3781,7 +3781,17 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	}
 	raw_inode = ext4_raw_inode(&iloc);
 
-	if (!(EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE))
+	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
+		ei->i_extra_isize = le16_to_cpu(raw_inode->i_extra_isize);
+		if (EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize >
+		    EXT4_INODE_SIZE(inode->i_sb)) {
+			EXT4_ERROR_INODE(inode, "bad extra_isize (%u != %u)",
+				EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize,
+				EXT4_INODE_SIZE(inode->i_sb));
+			ret = -EIO;
+			goto bad_inode;
+		}
+	} else
 		ei->i_extra_isize = 0;
 
 	/* Precompute checksum seed for inode metadata */
@@ -3881,16 +3891,6 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	}
 
 	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
-		ei->i_extra_isize = le16_to_cpu(raw_inode->i_extra_isize);
-		if (EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize >
-		    EXT4_INODE_SIZE(inode->i_sb)) {
-			print_iloc_info(sb,iloc);
-			EXT4_ERROR_INODE(inode, "bad extra_isize (%u != %u)",
-				EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize,
-				EXT4_INODE_SIZE(inode->i_sb));
-			ret = -EIO;
-			goto bad_inode;
-		}
 		if (ei->i_extra_isize == 0) {
 			/* The extra space is currently unused. Use it. */
 			ei->i_extra_isize = sizeof(struct ext4_inode) -
