@@ -387,9 +387,6 @@ static ssize_t firmware_data_write(struct file *filp, struct kobject *kobj,
 	struct firmware *fw;
 	ssize_t retval;
 
-	if (!capable(CAP_SYS_RAWIO))
-		return -EPERM;
-
 	mutex_lock(&fw_lock);
 	fw = fw_priv->fw;
 	if (!fw || test_bit(FW_STATUS_DONE, &fw_priv->status)) {
