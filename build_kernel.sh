@@ -498,11 +498,13 @@ function REBUILD()
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
+	sleep 2
 fi;
 
 PRVS=`cat /media/root/robcore/AIK/previous.txt`
 if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	echo "removing previously compiled folder and zip of the same name"
+	sleep 1
 	rm -rf /media/root/robcore/AIK/$PRVS
 fi;
 OUTFOLDER=$PRVS
