@@ -25,6 +25,8 @@
 #include <linux/termios.h>
 #include <asm/unaligned.h>
 #include <mach/usb_bridge.h>
+#include <mach/subsystem_notif.h>
+#include <mach/subsystem_restart.h>
 
 #define ACM_CTRL_DTR		(1 << 0)
 #define DEFAULT_READ_URB_LENGTH	4096
@@ -469,6 +471,7 @@ deferred:
 
 unanchor_urb:
 	usb_unanchor_urb(writeurb);
+	subsystem_restart(EXTERNAL_MODEM);
 free_ctrlreq:
 	kfree(out_ctlreq);
 free_urb:

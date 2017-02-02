@@ -20,6 +20,8 @@
 #include <linux/uaccess.h>
 #include <linux/ratelimit.h>
 #include <mach/usb_bridge.h>
+#include <mach/subsystem_notif.h>
+#include <mach/subsystem_restart.h>
 
 #define MAX_RX_URBS			100
 #define RMNET_RX_BUFSIZE		2048
@@ -641,6 +643,7 @@ int data_bridge_write(unsigned int id, struct sk_buff *skb)
 
 free_urb:
 	usb_free_urb(txurb);
+	subsystem_restart(EXTERNAL_MODEM);
 error:
 	dev->txurb_drp_cnt++;
 	usb_autopm_put_interface(dev->intf);
@@ -972,7 +975,7 @@ static unsigned int get_timestamp(void)
 
 #endif
 
-static int 
+static int
 bridge_probe(struct usb_interface *iface, const struct usb_device_id *id)
 {
 	struct usb_host_endpoint	*endpoint = NULL;
