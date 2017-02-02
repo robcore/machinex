@@ -338,8 +338,8 @@ static int queue_userspace_packet(int dp_ifindex, struct sk_buff *skb,
 	len = sizeof(struct ovs_header);
 	len += nla_total_size(skb->len);
 	len += nla_total_size(FLOW_BUFSIZE);
-	if (upcall_info->cmd == OVS_PACKET_CMD_ACTION)
-		len += nla_total_size(8);
+	if (upcall_info->userdata)
+		len += NLA_ALIGN(upcall_info->userdata->nla_len);
 
 	user_skb = genlmsg_new(len, GFP_ATOMIC);
 	if (!user_skb) {
@@ -356,8 +356,9 @@ static int queue_userspace_packet(int dp_ifindex, struct sk_buff *skb,
 	nla_nest_end(user_skb, nla);
 
 	if (upcall_info->userdata)
-		nla_put_u64(user_skb, OVS_PACKET_ATTR_USERDATA,
-			    nla_get_u64(upcall_info->userdata));
+		__nla_put(user_skb, OVS_PACKET_ATTR_USERDATA,
+			  nla_len(upcall_info->userdata),
+			  nla_data(upcall_info->userdata));
 
 	nla = __nla_reserve(user_skb, OVS_PACKET_ATTR_PACKET, skb->len);
 
@@ -496,7 +497,7 @@ static int validate_userspace(const struct nlattr *attr)
 {
 	static const struct nla_policy userspace_policy[OVS_USERSPACE_ATTR_MAX + 1] =	{
 		[OVS_USERSPACE_ATTR_PID] = {.type = NLA_U32 },
-		[OVS_USERSPACE_ATTR_USERDATA] = {.type = NLA_U64 },
+		[OVS_USERSPACE_ATTR_USERDATA] = {.type = NLA_UNSPEC },
 	};
 	struct nlattr *a[OVS_USERSPACE_ATTR_MAX + 1];
 	int error;
