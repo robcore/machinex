@@ -143,13 +143,13 @@ int wifi_platform_get_irq_number(wifi_adapter_info_t *adapter, unsigned long *ir
 bool  check_bcm4335_rev(void)
 {
         int ret = -1;
-        struct file *fp = NULL;
+        struct file *fp = filp_open(filepath, O_RDONLY, 0);
         char *filepath = "/data/.rev";
         char chip_rev[10]={0,};
         bool is_revb0 = true;
 
         printk("check BCM4335, check_bcm4335_rev \n");
-        fp = filp_open(filepath, O_RDONLY, 0);
+        filp_open(filepath, O_RDONLY, 0);
         if (IS_ERR(fp)) {
                 pr_err("/data/.rev file open error\n");
                 is_revb0 = true;
