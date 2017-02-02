@@ -1468,11 +1468,13 @@ int sec_get_param(dhd_pub_t *dhd, int mode)
 
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp) || (fp == NULL)) {
+		pr_debug("blablblb\n");
 		ret = -EIO;
 	} else {
+		pr_debug("blablblb\n");
 		ret = kernel_read(fp, fp->f_pos, (char *)&val, 4);
-		filp_close(fp, NULL);
 	}
+	filp_close(fp, NULL);
 
 	if (ret < 0) {
 		/* File operation is failed so we will return default value */
