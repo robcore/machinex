@@ -25,6 +25,9 @@
 #include <linux/termios.h>
 #include <asm/unaligned.h>
 #include <mach/usb_bridge.h>
+#include <linux/msm_charm.h>
+#include <mach/mdm2.h>
+#include <mach/restart.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
 

@@ -22,6 +22,7 @@
 #include <mach/usb_bridge.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
+#include <linux/machinex_defines.h>
 
 #define MAX_RX_URBS			100
 #define RMNET_RX_BUFSIZE		2048

@@ -46,6 +46,7 @@
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
+#include <linux/machinex_defines.h>
 
 #define MDM_MODEM_TIMEOUT	6000
 #define MDM_MODEM_DELTA	100
@@ -55,7 +56,6 @@
 
 /* Allow a maximum device id of this many digits */
 #define MAX_DEVICE_DIGITS  10
-#define EXTERNAL_MODEM "external_modem"
 #define SUBSYS_NAME_LENGTH \
 	(sizeof(EXTERNAL_MODEM) + MAX_DEVICE_DIGITS)
 
