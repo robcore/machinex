@@ -762,10 +762,10 @@ kgsl_mmu_map(struct kgsl_pagetable *pagetable,
 
 	/* Keep track of the statistics for the sysfs files */
 
-	KGSL_STATS_ADD(1, pagetable->stats.entries,
+	KGSL_STATS_ADD(size, pagetable->stats.entries,
 		       pagetable->stats.max_entries);
 
-	KGSL_STATS_ADD(size, pagetable->stats.mapped,
+	KGSL_STATS_ADD(1, pagetable->stats.mapped,
 		       pagetable->stats.max_mapped);
 
 	spin_unlock(&pagetable->lock);
