@@ -110,7 +110,7 @@ static DEFINE_MUTEX(restart_log_mutex);
 
 /* MSM 8x60 restart ordering info */
 static const char * const _order_8x60_all[] = {
-	"external_modem",  "modem", //"lpass"
+	"external_modem",  "modem", "lpass"
 };
 DEFINE_SINGLE_RESTART_ORDER(orders_8x60_all, _order_8x60_all);
 

@@ -35,6 +35,8 @@
 #define BRIDGE_DATA_IDX		0
 #define BRIDGE_CTRL_IDX		1
 
+int subsystem_restart(const char *name);
+
 /*for xport : HSIC*/
 static const char * const serial_hsic_bridge_names[] = {
 	"serial_hsic_data",
@@ -644,7 +646,7 @@ int data_bridge_write(unsigned int id, struct sk_buff *skb)
 
 free_urb:
 	usb_free_urb(txurb);
-	subsystem_restart(EXTERNAL_MODEM);
+	subsystem_restart("external_modem");
 error:
 	dev->txurb_drp_cnt++;
 	usb_autopm_put_interface(dev->intf);

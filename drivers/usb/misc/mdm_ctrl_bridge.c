@@ -36,6 +36,8 @@
 
 #define SUSPENDED		BIT(0)
 
+int subsystem_restart(const char *name);
+
 enum ctrl_bridge_rx_state {
 	RX_IDLE, /* inturb is not queued */
 	RX_WAIT, /* inturb is queued and waiting for data */
@@ -474,7 +476,7 @@ deferred:
 
 unanchor_urb:
 	usb_unanchor_urb(writeurb);
-	subsystem_restart(EXTERNAL_MODEM);
+	subsystem_restart("external_modem");
 free_ctrlreq:
 	kfree(out_ctlreq);
 free_urb:

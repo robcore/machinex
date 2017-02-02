@@ -47,9 +47,9 @@
 #include <mach/rpm.h>
 #include <mach/gpiomux.h>
 #include <linux/notifier.h>
+#include <linux/platform_device.h>
 
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
-#define EXTERNAL_MODEM "external_modem"
 
 #endif
