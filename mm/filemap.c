@@ -1826,6 +1826,7 @@ int filemap_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 		ret = VM_FAULT_NOPAGE;
 		goto out;
 	}
+	wait_for_stable_page(page);
 out:
 	return ret;
 }
@@ -2254,7 +2255,7 @@ retry:
 		return NULL;
 	}
 found:
-	wait_on_page_writeback(page);
+	wait_for_stable_page(page);
 	return page;
 }
 EXPORT_SYMBOL(grab_cache_page_write_begin);
