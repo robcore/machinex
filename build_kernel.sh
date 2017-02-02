@@ -498,7 +498,7 @@ function REBUILD()
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
-	sleep 2
+	sleep 1
 fi;
 
 PRVS=`cat /media/root/robcore/AIK/previous.txt`
