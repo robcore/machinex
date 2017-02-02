@@ -134,10 +134,8 @@ static struct dentry *rpc_setup_pipedir_sb(struct super_block *sb,
 	int error;
 
 	dir = rpc_d_lookup_sb(sb, dir_name);
-	if (dir == NULL) {
-		pr_info("RPC: pipefs directory doesn't exist: %s\n", dir_name);
+	if (dir == NULL)
 		return dir;
-	}
 	for (;;) {
 		q.len = snprintf(name, sizeof(name), "clnt%x", (unsigned int)clntid++);
 		name[sizeof(name) - 1] = '\0';
@@ -196,8 +194,7 @@ static int __rpc_clnt_handle_event(struct rpc_clnt *clnt, unsigned long event,
 	case RPC_PIPEFS_MOUNT:
 		dentry = rpc_setup_pipedir_sb(sb, clnt,
 					      clnt->cl_program->pipe_dir_name);
-		if (!dentry)
-			return -ENOENT;
+		BUG_ON(dentry == NULL);
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 		clnt->cl_dentry = dentry;
@@ -680,19 +677,21 @@ struct rpc_clnt *rpc_bind_new_program(struct rpc_clnt *old,
 				      const struct rpc_program *program,
 				      u32 vers)
 {
-	struct rpc_create_args args = {
-		.program	= program,
-		.prognumber	= program->number,
-		.version	= vers,
-		.authflavor	= old->cl_auth->au_flavor,
-		.client_name	= old->cl_principal,
-	};
 	struct rpc_clnt *clnt;
+	const struct rpc_version *version;
 	int err;
 
-	clnt = __rpc_clone_client(&args, old);
+	BUG_ON(vers >= program->nrvers || !program->version[vers]);
+	version = program->version[vers];
+	clnt = rpc_clone_client(old);
 	if (IS_ERR(clnt))
 		goto out;
+	clnt->cl_procinfo = version->procs;
+	clnt->cl_maxproc  = version->nrprocs;
+	clnt->cl_protname = program->name;
+	clnt->cl_prog     = program->number;
+	clnt->cl_vers     = version->number;
+	clnt->cl_stats    = program->stats;
 	err = rpc_ping(clnt);
 	if (err != 0) {
 		rpc_shutdown_client(clnt);
@@ -808,12 +807,7 @@ int rpc_call_sync(struct rpc_clnt *clnt, const struct rpc_message *msg, int flag
 	};
 	int status;
 
-	WARN_ON_ONCE(flags & RPC_TASK_ASYNC);
-	if (flags & RPC_TASK_ASYNC) {
-		rpc_release_calldata(task_setup_data.callback_ops,
-			task_setup_data.callback_data);
-		return -EINVAL;
-	}
+	BUG_ON(flags & RPC_TASK_ASYNC);
 
 	task = rpc_run_task(&task_setup_data);
 	if (IS_ERR(task))
@@ -889,7 +883,7 @@ struct rpc_task *rpc_run_bc_task(struct rpc_rqst *req,
 
 	task->tk_action = call_bc_transmit;
 	atomic_inc(&task->tk_count);
-	WARN_ON_ONCE(atomic_read(&task->tk_count) != 2);
+	BUG_ON(atomic_read(&task->tk_count) != 2);
 	rpc_execute(task);
 
 out:
@@ -1640,6 +1634,7 @@ call_transmit(struct rpc_task *task)
 	task->tk_action = call_transmit_status;
 	/* Encode here so that rpcsec_gss can use correct sequence number. */
 	if (rpc_task_need_encode(task)) {
+		BUG_ON(task->tk_rqstp->rq_bytes_sent != 0);
 		rpc_xdr_encode(task);
 		/* Did the encode result in an error condition? */
 		if (task->tk_status != 0) {
@@ -1723,6 +1718,7 @@ call_bc_transmit(struct rpc_task *task)
 {
 	struct rpc_rqst *req = task->tk_rqstp;
 
+	BUG_ON(task->tk_status != 0);
 	task->tk_status = xprt_prepare_transmit(task);
 	if (task->tk_status == -EAGAIN) {
 		/*
@@ -1769,7 +1765,7 @@ call_bc_transmit(struct rpc_task *task)
 		 * We were unable to reply and will have to drop the
 		 * request.  The server should reconnect and retransmit.
 		 */
-		WARN_ON_ONCE(task->tk_status == -EAGAIN);
+		BUG_ON(task->tk_status == -EAGAIN);
 		printk(KERN_NOTICE "RPC: Could not send backchannel reply "
 			"error: %d\n", task->tk_status);
 		break;
