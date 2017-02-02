@@ -1386,7 +1386,7 @@ static int lookup_fast(struct nameidata *nd,
 	if (nd->flags & LOOKUP_RCU) {
 		unsigned seq;
 		*inode = nd->inode;
-		dentry = __d_lookup_rcu(parent, &nd->last, &seq, nd->inode);
+		dentry = __d_lookup_rcu(parent, &nd->last, &seq, inode);
 		if (!dentry)
 			goto unlazy;
 
