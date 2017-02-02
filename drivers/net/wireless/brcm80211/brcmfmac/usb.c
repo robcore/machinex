@@ -1240,7 +1240,7 @@ static int brcmf_usb_get_fw(struct brcmf_usbdev_info *devinfo)
 		return -EINVAL;
 	}
 
-	devinfo->image = vmalloc(fw->size); /* plus nvram */
+	devinfo->image = kzalloc(fw->size, GFP_ATOMIC); /* plus nvram */
 	if (!devinfo->image)
 		return -ENOMEM;
 
@@ -1612,7 +1612,7 @@ static struct usb_driver brcmf_usbdrvr = {
 void brcmf_usb_exit(void)
 {
 	usb_deregister(&brcmf_usbdrvr);
-	vfree(g_image.data);
+	kfree(g_image.data);
 	g_image.data = NULL;
 	g_image.len = 0;
 }
