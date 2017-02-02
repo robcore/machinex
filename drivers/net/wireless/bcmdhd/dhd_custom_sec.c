@@ -1036,7 +1036,8 @@ write_cid:
 #endif /* BCM4334_CHIP */
 #if defined(BCM4335_CHIP)
 	DHD_TRACE(("[WIFI_SEC] %s: BCM4335 Multiple Revision Check\n", __FUNCTION__));
-	if (concate_revision(dhd->bus, rev_str, rev_str) < 0) {
+	if (concate_revision(dhd->bus, rev_str, sizeof(rev_str),
+		rev_str, sizeof(rev_str)) < 0) {
 		DHD_ERROR(("[WIFI_SEC] %s: fail to concate revision\n", __FUNCTION__));
 		ret = -1;
 	} else {
