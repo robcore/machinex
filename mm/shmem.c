@@ -1241,7 +1241,7 @@ unlock:
 
 static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
-	struct inode *inode = vma->vm_file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(vma->vm_file);
 	int error;
 	int ret = VM_FAULT_LOCKED;
 
@@ -1357,14 +1357,14 @@ int vmtruncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 #ifdef CONFIG_NUMA
 static int shmem_set_policy(struct vm_area_struct *vma, struct mempolicy *mpol)
 {
-	struct inode *inode = vma->vm_file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(vma->vm_file);
 	return mpol_set_shared_policy(&SHMEM_I(inode)->policy, vma, mpol);
 }
 
 static struct mempolicy *shmem_get_policy(struct vm_area_struct *vma,
 					  unsigned long addr)
 {
-	struct inode *inode = vma->vm_file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(vma->vm_file);
 	pgoff_t index;
 
 	index = ((addr - vma->vm_start) >> PAGE_SHIFT) + vma->vm_pgoff;
@@ -1374,7 +1374,7 @@ static struct mempolicy *shmem_get_policy(struct vm_area_struct *vma,
 
 int shmem_lock(struct file *file, int lock, struct user_struct *user)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(file);
 	struct shmem_inode_info *info = SHMEM_I(inode);
 	int retval = -ENOMEM;
 
@@ -1513,7 +1513,7 @@ static ssize_t shmem_file_read_iter(struct kiocb *iocb,
 	read_descriptor_t desc;
 	loff_t *ppos = &iocb->ki_pos;
 	struct file *filp = iocb->ki_filp;
-	struct inode *inode = filp->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(filp);
 	struct address_space *mapping = inode->i_mapping;
 	pgoff_t index;
 	unsigned long offset;
@@ -1829,7 +1829,7 @@ static loff_t shmem_file_llseek(struct file *file, loff_t offset, int whence)
 static long shmem_fallocate(struct file *file, int mode, loff_t offset,
 							 loff_t len)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(file);
 	struct shmem_sb_info *sbinfo = SHMEM_SB(inode->i_sb);
 	pgoff_t start, index, end;
 	int error;

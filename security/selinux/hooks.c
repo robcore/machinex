@@ -1584,7 +1584,7 @@ static int file_has_perm(const struct cred *cred,
 			 u32 av)
 {
 	struct file_security_struct *fsec = file->f_security;
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(file);
 	struct common_audit_data ad;
 	struct selinux_audit_data sad = {0,};
 	u32 sid = cred_sid(cred);
@@ -3044,7 +3044,7 @@ static void selinux_inode_getsecid(const struct inode *inode, u32 *secid)
 static int selinux_revalidate_file_permission(struct file *file, int mask)
 {
 	const struct cred *cred = current_cred();
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(file);
 
 	/* file_mask_to_av won't add FILE__WRITE if MAY_APPEND is set */
 	if ((file->f_flags & O_APPEND) && (mask & MAY_WRITE))
@@ -3056,7 +3056,7 @@ static int selinux_revalidate_file_permission(struct file *file, int mask)
 
 static int selinux_file_permission(struct file *file, int mask)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(file);
 	struct file_security_struct *fsec = file->f_security;
 	struct inode_security_struct *isec = inode->i_security;
 	u32 sid = current_sid();

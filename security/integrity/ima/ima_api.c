@@ -163,7 +163,7 @@ void ima_store_measurement(struct integrity_iint_cache *iint,
 	const char *op = "add_template_measure";
 	const char *audit_cause = "ENOMEM";
 	int result = -ENOMEM;
-	struct inode *inode = file->f_dentry->d_inode;
+	struct inode *inode = file_inode(file);
 	struct ima_template_entry *entry;
 	int violation = 0;
 

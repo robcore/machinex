@@ -268,7 +268,7 @@ static int
 nfs_file_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	int ret;
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(file);
 
 	ret = filemap_write_and_wait_range(inode->i_mapping, start, end);
 	mutex_lock(&inode->i_mutex);

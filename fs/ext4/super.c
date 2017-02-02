@@ -610,7 +610,7 @@ void ext4_error_file(struct file *file, const char *function,
 	va_list args;
 	struct va_format vaf;
 	struct ext4_super_block *es;
-	struct inode *inode = file->f_dentry->d_inode;
+	struct inode *inode = file_inode(file);
 	char pathname[80], *path;
 	char *page_buf;
 

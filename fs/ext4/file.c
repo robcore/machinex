@@ -92,7 +92,7 @@ ext4_unaligned_aio(struct inode *inode, struct iov_iter *iter, loff_t pos)
 static ssize_t
 ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
 {
-	struct inode *inode = iocb->ki_filp->f_path.dentry->d_inode;
+	struct inode *inode = file_inode(iocb->ki_filp);
 	int unaligned_aio = 0;
 	ssize_t ret;
 
