@@ -269,7 +269,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (!r_log)
 		goto out;
 	r_log->dev = dev;
-	get_monotonic_boottime(&r_log->time);
+	do_gettimeofday(&r_log->time);
 	curr_time = &r_log->time;
 	INIT_LIST_HEAD(&r_log->list);
 
