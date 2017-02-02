@@ -950,11 +950,11 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	/* Try reading out from CIS */
 	cish->source = 0;
 	cish->byteoff = 0;
-	cish->nbytes = sizeof(*cis_buf);
+	cish->nbytes = sizeof(cis_buf);
 
 	strcpy(cis_buf, "cisdump");
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
-		sizeof(*cis_buf), 0, 0);
+		sizeof(cis_buf), 0, 0);
 	if (ret < 0) {
 		DHD_ERROR(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n",
 			__FUNCTION__, ret));
@@ -967,7 +967,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	dhd_dump_cis(cis_buf, 48);
 #endif
 
-	max = sizeof(*cis_buf) - 4;
+	max = sizeof(cis_buf) - 4;
 	for (idx = 0; idx < max; idx++) {
 		if (cis_buf[idx] == CIS_TUPLE_TAG_START) {
 			if (cis_buf[idx + 2] == CIS_TUPLE_TAG_VENDOR) {
@@ -1035,8 +1035,8 @@ write_cid:
 #endif /* BCM4334_CHIP */
 #if defined(BCM4335_CHIP)
 	DHD_TRACE(("[WIFI_SEC] %s: BCM4335 Multiple Revision Check\n", __FUNCTION__));
-	if (concate_revision(dhd->bus, rev_str, sizeof(*rev_str),
-		rev_str, sizeof(*rev_str)) < 0) {
+	if (concate_revision(dhd->bus, rev_str, sizeof(rev_str),
+		rev_str, sizeof(rev_str)) < 0) {
 		DHD_ERROR(("[WIFI_SEC] %s: fail to concate revision\n", __FUNCTION__));
 		ret = -1;
 	} else {
