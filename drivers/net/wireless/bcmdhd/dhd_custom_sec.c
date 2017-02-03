@@ -335,6 +335,16 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 	return;
 }
 
+#ifdef PLATFORM_SLP
+#define CIDINFO "/opt/etc/.cid.info"
+#define PSMINFO "/opt/etc/.psm.info"
+#define MACINFO "/opt/etc/.mac.info"
+#define MACINFO_EFS NULL
+#define REVINFO "/opt/etc/.rev"
+#define WIFIVERINFO "/opt/etc/.wifiver.info"
+#define ANTINFO "/opt/etc/.ant.info"
+#define WRMAC_BUF_SIZE 19
+#else
 #define MACINFO "/data/.mac.info"
 #define MACINFO_EFS "/efs/wifi/.mac.info"
 #define NVMACINFO "/data/.nvmac.info"
@@ -344,6 +354,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define WIFIVERINFO "/data/.wifiver.info"
 #define ANTINFO "/data/.ant.info"
 #define WRMAC_BUF_SIZE 18
+#endif /* PLATFORM_SLP */
 
 #ifdef BCM4330_CHIP
 #define CIS_BUF_SIZE            128
@@ -1071,7 +1082,82 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 	const char *macfilepath = MACINFO_EFS;
 
 	/* Try reading out from CIS */
+	cis_rw_t *cish = (cis_rw_t *)&cis_buf[8];
 	struct file *fp_mac = NULL;
+
+	cish->source = 0;
+	cish->byteoff = 0;
+	cish->nbytes = sizeof(cis_buf);
+
+	strcpy(cis_buf, "cisdump");
+	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
+		sizeof(cis_buf), 0, 0);
+	if (ret < 0) {
+		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
+			ret));
+		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
+			mac->octet[0], mac->octet[1], mac->octet[2],
+			mac->octet[3], mac->octet[4], mac->octet[5]);
+		DHD_ERROR(("[WIFI_SEC] %s: Check module mac by legacy FW : " MACDBG "\n",
+			__FUNCTION__, MAC2STRDBG(mac->octet)));
+	} else {
+		bcm_tlv_t *elt = NULL;
+		int remained_len = sizeof(cis_buf);
+		int index = 0;
+		uint8 *mac_addr = NULL;
+#ifdef DUMP_CIS
+		dhd_dump_cis(cis_buf, 48);
+#endif
+
+		/* Find a new tuple tag */
+		while (index < remained_len) {
+			if (cis_buf[index] == CIS_TUPLE_TAG_START) {
+				remained_len -= index;
+				if (remained_len >= sizeof(bcm_tlv_t)) {
+					elt = (bcm_tlv_t *)&cis_buf[index];
+				}
+				break;
+			} else {
+				index++;
+			}
+
+		}
+
+		/* Find a MAC address tuple */
+		while (elt && remained_len >= TLV_HDR_LEN) {
+			int body_len = (int)elt->len;
+
+			if ((elt->id == CIS_TUPLE_TAG_START) &&
+				(remained_len >= (body_len + TLV_HDR_LEN)) &&
+				(*elt->data == CIS_TUPLE_TAG_MACADDR)) {
+				/* found MAC Address tuple and
+				 * get the MAC Address data
+				 */
+				mac_addr = (uint8 *)elt + CIS_TUPLE_TAG_MACADDR_OFF;
+				break;
+			}
+
+			/* Go to next tuple if tuple value
+			 * is not MAC address type
+			 */
+			elt = (bcm_tlv_t *)((uint8 *)elt + (body_len + TLV_HDR_LEN));
+			remained_len -= (body_len + TLV_HDR_LEN);
+		}
+
+		if (mac_addr) {
+			sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
+				mac_addr[0], mac_addr[1], mac_addr[2],
+				mac_addr[3], mac_addr[4], mac_addr[5]);
+			DHD_ERROR(("[WIFI_SEC] MAC address is taken from OTP\n"));
+		} else {
+			sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
+				mac->octet[0], mac->octet[1], mac->octet[2],
+				mac->octet[3], mac->octet[4], mac->octet[5]);
+			DHD_ERROR(("[WIFI_SEC] %s: Cannot find MAC address info from OTP,"
+				" Check module mac by initial value: " MACDBG "\n",
+				__FUNCTION__, MAC2STRDBG(mac->octet)));
+		}
+	}
 
 	fp_mac = filp_open(macfilepath, O_RDONLY, 0);
 	if (!IS_ERR(fp_mac)) {

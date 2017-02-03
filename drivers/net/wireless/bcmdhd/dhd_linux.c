@@ -4661,9 +4661,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #if defined(CUSTOMER_HW4) && defined(CUSTOMER_BCN_TIMEOUT)
 	uint bcn_timeout = CUSTOMER_BCN_TIMEOUT_VALUE;
 #elif defined(CUSTOMER_HW4) && (defined(VSDB) || defined(ROAM_ENABLE))
-	uint bcn_timeout = 5;
+	uint bcn_timeout = 8;
 #else
-	uint bcn_timeout = 5;
+	uint bcn_timeout = 4;
 #endif /* CUSTOMER_HW4 && (VSDB || ROAM_ENABLE) */
 #if defined(CUSTOMER_HW4) && defined(ENABLE_BCN_LI_BCN_WAKEUP)
 	uint32 bcn_li_bcn = 1;

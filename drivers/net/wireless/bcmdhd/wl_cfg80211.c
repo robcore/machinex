@@ -3846,7 +3846,6 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 				WL_ERR((" failed to restore roam_trigger for auto env"
 					" detection\n"));
 		}
-		wl_clr_drv_status(cfg, DISCONNECTING, dev);
 	}
 	}
 #endif /* ROAM_ENABLE && ROAM_AP_ENV_DETECTION */
@@ -7014,25 +7013,21 @@ wl_cfg80211_change_station(
 	struct station_parameters *params)
 {
 	int err;
-
-	WL_DBG(("SCB_AUTHORIZE mac_addr:"MACDBG" sta_flags_mask:0x%x "
-				"sta_flags_set:0x%x iface:%s \n", MAC2STRDBG(mac),
-				params->sta_flags_mask, params->sta_flags_set, dev->name));
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	struct net_device *primary_ndev = bcmcfg_to_prmry_ndev(cfg);
 
 	/* Processing only authorize/de-authorize flag for now */
-	if (!(params->sta_flags_mask & BIT(NL80211_STA_FLAG_AUTHORIZED))) {
-		WL_ERR(("WLC_SCB_AUTHORIZE sta_flags_mask not set \n"));
+	if (!(params->sta_flags_mask & BIT(NL80211_STA_FLAG_AUTHORIZED)))
 		return -ENOTSUPP;
-	}
 
 	if (!(params->sta_flags_set & BIT(NL80211_STA_FLAG_AUTHORIZED))) {
-		err = wldev_ioctl(dev, WLC_SCB_DEAUTHORIZE, mac, ETH_ALEN, true);
+		err = wldev_ioctl(primary_ndev, WLC_SCB_DEAUTHORIZE, mac, ETH_ALEN, true);
 		if (err)
 			WL_ERR(("WLC_SCB_DEAUTHORIZE error (%d)\n", err));
 		return err;
 	}
 
-	err = wldev_ioctl(dev, WLC_SCB_AUTHORIZE, mac, ETH_ALEN, true);
+	err = wldev_ioctl(primary_ndev, WLC_SCB_AUTHORIZE, mac, ETH_ALEN, true);
 	if (err)
 		WL_ERR(("WLC_SCB_AUTHORIZE error (%d)\n", err));
 	return err;
@@ -10393,15 +10388,20 @@ static s32 wl_notifier_change_state(struct bcm_cfg80211 *cfg, struct net_info *_
 						WL_DBG(("%s:netdev not ready\n", iter->ndev->name));
 					else
 						WL_ERR(("%s:error (%d)\n", iter->ndev->name, err));
-				} else {
 					wl_cfg80211_update_power_mode(iter->ndev);
 				}
 			}
 		} else {
-			/*
-			 * Re-enable PM2 mode for static IP and roaming event
+			/* add PM Enable timer to go to power save mode
+			 * if supplicant control pm mode, it will be cleared or
+			 * updated by wl_cfg80211_set_power_mgmt() if not - for static IP & HW4 P2P,
+			 * PM will be configured when timer expired
 			 */
-			pm = PM_FAST;
+
+			/*
+			 * before calling pm_enable_timer, we need to set PM -1 for all ndev
+			 */
+			pm = PM_OFF;
 
 			for_each_ndev(cfg, iter, next) {
 				if ((err = wldev_ioctl(iter->ndev, WLC_SET_PM, &pm,
@@ -10416,6 +10416,9 @@ static s32 wl_notifier_change_state(struct bcm_cfg80211 *cfg, struct net_info *_
 			if (cfg->pm_enable_work_on) {
 				wl_add_remove_pm_enable_work(cfg, FALSE, WL_HANDLER_DEL);
 			}
+
+			cfg->pm_enable_work_on = true;
+			wl_add_remove_pm_enable_work(cfg, TRUE, WL_HANDLER_NOTUSE);
 		}
 #if defined(WLTDLS)
 #if defined(DISABLE_TDLS_IN_P2P)
