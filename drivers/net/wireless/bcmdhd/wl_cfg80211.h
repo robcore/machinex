@@ -68,8 +68,6 @@ struct wl_ibss;
 #define CFG80211_ERROR_TEXT		"CFG80211-ERROR) "
 #endif
 
-struct notifier_block netdev_notifier;
-
 #if defined(DHD_DEBUG)
 #define	WL_ERR(args)									\
 do {										\
