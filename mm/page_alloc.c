@@ -6518,8 +6518,7 @@ static int __alloc_contig_migrate_range(struct compact_control *cc,
 
 		ret = migrate_pages(&cc->migratepages,
 				    __alloc_contig_migrate_alloc,
-				    0, false, MIGRATE_SYNC,
-				    MR_CMA);
+				    0, MIGRATE_SYNC, MR_CMA);
 	}
 	if (ret < 0) {
 		putback_movable_pages(&cc->migratepages);
