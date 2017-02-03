@@ -2,13 +2,13 @@
  * Linux OS Independent Layer
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -58,7 +58,7 @@
 #define STATIC_BUF_TOTAL_LEN	(STATIC_BUF_MAX_NUM * STATIC_BUF_SIZE)
 
 typedef struct bcm_static_buf {
-	spinlock_t static_lock;
+	struct semaphore static_sem;
 	unsigned char *buf_ptr;
 	unsigned char buf_use[STATIC_BUF_MAX_NUM];
 } bcm_static_buf_t;
@@ -297,11 +297,12 @@ int osl_static_mem_init(osl_t *osh, void *adapter)
 				ASSERT(osh->magic == OS_HANDLE_MAGIC);
 				kfree(osh);
 				return -ENOMEM;
-			} else
+			}
+			else
 				printk("alloc static buf at %x!\n", (unsigned int)bcm_static_buf);
 
 
-			spin_lock_init(&bcm_static_buf->static_lock);
+			sema_init(&bcm_static_buf->static_sem, 1);
 
 			bcm_static_buf->buf_ptr = (unsigned char *)bcm_static_buf + STATIC_BUF_SIZE;
 		}
@@ -971,11 +972,10 @@ osl_malloc(osl_t *osh, uint size)
 #ifdef CONFIG_DHD_USE_STATIC_BUF
 	if (bcm_static_buf)
 	{
-		unsigned long irq_flags;
 		int i = 0;
 		if ((size >= PAGE_SIZE)&&(size <= STATIC_BUF_SIZE))
 		{
-			spin_lock_irqsave(&bcm_static_buf->static_lock, irq_flags);
+			down(&bcm_static_buf->static_sem);
 
 			for (i = 0; i < STATIC_BUF_MAX_NUM; i++)
 			{
@@ -985,13 +985,13 @@ osl_malloc(osl_t *osh, uint size)
 
 			if (i == STATIC_BUF_MAX_NUM)
 			{
-				spin_unlock_irqrestore(&bcm_static_buf->static_lock, irq_flags);
+				up(&bcm_static_buf->static_sem);
 				printk("all static buff in use!\n");
 				goto original;
 			}
 
 			bcm_static_buf->buf_use[i] = 1;
-			spin_unlock_irqrestore(&bcm_static_buf->static_lock, irq_flags);
+			up(&bcm_static_buf->static_sem);
 
 			bzero(bcm_static_buf->buf_ptr+STATIC_BUF_SIZE*i, size);
 			if (osh)
@@ -1033,8 +1033,6 @@ void
 osl_mfree(osl_t *osh, void *addr, uint size)
 {
 #ifdef CONFIG_DHD_USE_STATIC_BUF
-	unsigned long flags;
-
 	if (bcm_static_buf)
 	{
 		if ((addr > (void *)bcm_static_buf) && ((unsigned char *)addr
@@ -1044,9 +1042,9 @@ osl_mfree(osl_t *osh, void *addr, uint size)
 
 			buf_idx = ((unsigned char *)addr - bcm_static_buf->buf_ptr)/STATIC_BUF_SIZE;
 
-			spin_lock_irqsave(&bcm_static_buf->static_lock, flags);
+			down(&bcm_static_buf->static_sem);
 			bcm_static_buf->buf_use[buf_idx] = 0;
-			spin_unlock_irqrestore(&bcm_static_buf->static_lock, flags);
+			up(&bcm_static_buf->static_sem);
 
 			if (osh && osh->cmn) {
 				ASSERT(osh->magic == OS_HANDLE_MAGIC);
@@ -1170,7 +1168,7 @@ osl_assert(const char *exp, const char *file, int line)
 
 
 }
-#endif
+#endif 
 
 void
 osl_delay(uint usec)
