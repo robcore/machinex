@@ -37,17 +37,17 @@ void generic_fillattr(struct inode *inode, struct kstat *stat)
 
 EXPORT_SYMBOL(generic_fillattr);
 
-int vfs_getattr(struct path *path, struct kstat *stat)
+int vfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
 {
-	struct inode *inode = path->dentry->d_inode;
+	struct inode *inode = dentry->d_inode;
 	int retval;
 
-	retval = security_inode_getattr(path->mnt, path->dentry);
+	retval = security_inode_getattr(mnt, dentry);
 	if (retval)
 		return retval;
 
 	if (inode->i_op->getattr)
-		return inode->i_op->getattr(path->mnt, path->dentry, stat);
+		return inode->i_op->getattr(mnt, dentry, stat);
 
 	generic_fillattr(inode, stat);
 	return 0;
@@ -61,7 +61,8 @@ int vfs_fstat(unsigned int fd, struct kstat *stat)
 	int error = -EBADF;
 
 	if (f.file) {
-		error = vfs_getattr(&f.file->f_path, stat);
+		error = vfs_getattr(f.file->f_path.mnt, f.file->f_path.dentry,
+				    stat);
 		fdput(f);
 	}
 	return error;
@@ -88,7 +89,7 @@ retry:
 	if (error)
 		goto out;
 
-	error = vfs_getattr(&path, stat);
+	error = vfs_getattr(path.mnt, path.dentry, stat);
 	path_put(&path);
 	if (retry_estale(error, lookup_flags)) {
 		lookup_flags |= LOOKUP_REVAL;

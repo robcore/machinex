@@ -202,10 +202,10 @@ encode_post_op_attr(struct svc_rqst *rqstp, __be32 *p, struct svc_fh *fhp)
 {
 	struct dentry *dentry = fhp->fh_dentry;
 	if (dentry && dentry->d_inode) {
-	        __be32 err;
+	        int err;
 		struct kstat stat;
 
-		err = fh_getattr(fhp, &stat);
+		err = vfs_getattr(fhp->fh_export->ex_path.mnt, dentry, &stat);
 		if (!err) {
 			*p++ = xdr_one;		/* attributes follow */
 			lease_get_mtime(dentry->d_inode, &stat.mtime);
@@ -252,12 +252,13 @@ encode_wcc_data(struct svc_rqst *rqstp, __be32 *p, struct svc_fh *fhp)
  */
 void fill_post_wcc(struct svc_fh *fhp)
 {
-	__be32 err;
+	int err;
 
 	if (fhp->fh_post_saved)
 		printk("nfsd: inode locked twice during operation.\n");
 
-	err = fh_getattr(fhp, &fhp->fh_post_attr);
+	err = vfs_getattr(fhp->fh_export->ex_path.mnt, fhp->fh_dentry,
+			&fhp->fh_post_attr);
 	fhp->fh_post_change = fhp->fh_dentry->d_inode->i_version;
 	if (err) {
 		fhp->fh_post_saved = 0;

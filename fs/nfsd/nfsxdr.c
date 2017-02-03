@@ -4,7 +4,6 @@
  * Copyright (C) 1995, 1996 Olaf Kirch <okir@monad.swb.de>
  */
 
-#include "vfs.h"
 #include "xdr.h"
 #include "auth.h"
 
@@ -198,7 +197,7 @@ encode_fattr(struct svc_rqst *rqstp, __be32 *p, struct svc_fh *fhp,
 __be32 *nfs2svc_encode_fattr(struct svc_rqst *rqstp, __be32 *p, struct svc_fh *fhp)
 {
 	struct kstat stat;
-	fh_getattr(fhp, &stat);	/* BUG */
+	vfs_getattr(fhp->fh_export->ex_path.mnt, fhp->fh_dentry, &stat);
 	return encode_fattr(rqstp, p, fhp, &stat);
 }
 
