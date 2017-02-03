@@ -403,7 +403,6 @@ endif
 # dhd_sec_feature.h
 DHDCFLAGS += -include "dhd_sec_feature.h"
 DHDCFLAGS += -DCUSTOM_BCN_TIMEOUT_SETTING=5
-DHDCFLAGS += -DWLFC_STATE_PREALLOC
 ##############################################################
 
 #########
