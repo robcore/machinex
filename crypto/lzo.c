@@ -45,7 +45,10 @@ static void lzo_exit(struct crypto_tfm *tfm)
 {
 	struct lzo_ctx *ctx = crypto_tfm_ctx(tfm);
 
-	kvfree(ctx->lzo_comp_mem);
+	if (ctx->lzo_comp_mem == vmalloc(LZO1X_MEM_COMPRESS))
+		vfree(ctx->lzo_comp_mem);
+	else
+		kfree(ctx->lzo_comp_mem);
 }
 
 static int lzo_compress(struct crypto_tfm *tfm, const u8 *src,
