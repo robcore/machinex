@@ -1311,6 +1311,7 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	int target_nid;
 	int current_nid = -1;
 	bool migrated;
+	bool page_locked = false;
 
 	spin_lock(&mm->page_table_lock);
 	if (unlikely(!pmd_same(pmd, *pmdp)))
@@ -1332,6 +1333,7 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	/* Acquire the page lock to serialise THP migrations */
 	spin_unlock(&mm->page_table_lock);
 	lock_page(page);
+	page_locked = true;
 
 	/* Confirm the PTE did not while locked */
 	spin_lock(&mm->page_table_lock);
@@ -1344,26 +1346,34 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 
 	/* Migrate the THP to the requested node */
 	migrated = migrate_misplaced_transhuge_page(mm, vma,
-				pmdp, pmd, addr, page, target_nid);
-	if (!migrated)
-		goto check_same;
+				pmdp, pmd, addr,
+				page, target_nid);
+	if (migrated)
+		current_nid = target_nid;
+	else {
+		spin_lock(&mm->page_table_lock);
+		if (unlikely(!pmd_same(pmd, *pmdp))) {
+			unlock_page(page);
+			goto out_unlock;
+		}
+		goto clear_pmdnuma;
+	}
 
-	task_numa_fault(target_nid, HPAGE_PMD_NR, true);
+	task_numa_fault(current_nid, HPAGE_PMD_NR, migrated);
 	return 0;
 
-check_same:
-	spin_lock(&mm->page_table_lock);
-	if (unlikely(!pmd_same(pmd, *pmdp)))
-		goto out_unlock;
 clear_pmdnuma:
 	pmd = pmd_mknonnuma(pmd);
 	set_pmd_at(mm, haddr, pmdp, pmd);
 	VM_BUG_ON(pmd_numa(*pmdp));
 	update_mmu_cache_pmd(vma, addr, pmdp);
+	if (page_locked)
+		unlock_page(page);
+
 out_unlock:
 	spin_unlock(&mm->page_table_lock);
 	if (current_nid != -1)
-		task_numa_fault(current_nid, HPAGE_PMD_NR, false);
+		task_numa_fault(current_nid, HPAGE_PMD_NR, migrated);
 	return 0;
 }
 
@@ -1644,7 +1654,7 @@ static void __split_huge_page_refcount(struct page *page)
 		page_tail->mapping = page->mapping;
 
 		page_tail->index = page->index + i;
-		page_nid_xchg_last(page_tail, page_nid_last(page));
+		page_xchg_last_nid(page_tail, page_last_nid(page));
 
 		BUG_ON(!PageAnon(page_tail));
 		BUG_ON(!PageUptodate(page_tail));
@@ -1838,7 +1848,7 @@ int split_huge_page(struct page *page)
 
 	BUG_ON(PageCompound(page));
 out_unlock:
-	anon_vma_unlock_write(anon_vma);
+	anon_vma_unlock(anon_vma);
 	put_anon_vma(anon_vma);
 out:
 	return ret;
@@ -2259,7 +2269,7 @@ static void collapse_huge_page(struct mm_struct *mm,
 		 */
 		pmd_populate(mm, pmd, pmd_pgtable(_pmd));
 		spin_unlock(&mm->page_table_lock);
-		anon_vma_unlock_write(vma->anon_vma);
+		anon_vma_unlock(vma->anon_vma);
 		goto out;
 	}
 
@@ -2267,7 +2277,7 @@ static void collapse_huge_page(struct mm_struct *mm,
 	 * All pages are isolated and locked so anon_vma rmap
 	 * can't run anymore.
 	 */
-	anon_vma_unlock_write(vma->anon_vma);
+	anon_vma_unlock(vma->anon_vma);
 
 	__collapse_huge_page_copy(pte, new_page, vma, address, ptl);
 	pte_unmap(pte);
@@ -2320,7 +2330,7 @@ static int khugepaged_scan_pmd(struct mm_struct *mm,
 	struct page *page;
 	unsigned long _address;
 	spinlock_t *ptl;
-	int node = NUMA_NO_NODE;
+	int node = -1;
 
 	VM_BUG_ON(address & ~HPAGE_PMD_MASK);
 
@@ -2350,7 +2360,7 @@ static int khugepaged_scan_pmd(struct mm_struct *mm,
 		 * be more sophisticated and look at more pages,
 		 * but isn't for now.
 		 */
-		if (node == NUMA_NO_NODE)
+		if (node == -1)
 			node = page_to_nid(page);
 		VM_BUG_ON(PageCompound(page));
 		if (!PageLRU(page) || PageLocked(page) || !PageAnon(page))

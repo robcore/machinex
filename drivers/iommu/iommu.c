@@ -931,4 +931,4 @@ static int __init iommu_init(void)
 
 	return 0;
 }
-arch_initcall(iommu_init);
+subsys_initcall(iommu_init);

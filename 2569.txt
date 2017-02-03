@@ -1,0 +1,1 @@
+/media/root/robcore/android/emotion-cm-trlte/patches/8patches/2569-EHCI-improved-logic-for-isochronous-scheduling.patch

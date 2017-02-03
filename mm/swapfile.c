@@ -81,7 +81,7 @@ __try_to_reclaim_swap(struct swap_info_struct *si, unsigned long offset)
 	struct page *page;
 	int ret = 0;
 
-	page = find_get_page(swap_address_space(entry), entry.val);
+	page = find_get_page(&swapper_space, entry.val);
 	if (!page)
 		return 0;
 	/*
@@ -749,8 +749,7 @@ int free_swap_and_cache(swp_entry_t entry)
 	p = swap_info_get(entry);
 	if (p) {
 		if (swap_entry_free(p, entry, 1) == SWAP_HAS_CACHE) {
-			page = find_get_page(swap_address_space(entry),
-						entry.val);
+			page = find_get_page(&swapper_space, entry.val);
 			if (page && !trylock_page(page)) {
 				page_cache_release(page);
 				page = NULL;
@@ -906,16 +905,10 @@ unsigned int count_swap_pages(int type, int free)
 static int unuse_pte(struct vm_area_struct *vma, pmd_t *pmd,
 		unsigned long addr, swp_entry_t entry, struct page *page)
 {
-	struct page *swapcache;
 	struct mem_cgroup *memcg;
 	spinlock_t *ptl;
 	pte_t *pte;
 	int ret = 1;
-
-	swapcache = page;
-	page = ksm_might_need_to_copy(page, vma, addr);
-	if (unlikely(!page))
-		return -ENOMEM;
 
 	if (mem_cgroup_try_charge_swapin(vma->vm_mm, page,
 					 GFP_KERNEL, &memcg)) {
@@ -935,10 +928,7 @@ static int unuse_pte(struct vm_area_struct *vma, pmd_t *pmd,
 	get_page(page);
 	set_pte_at(vma->vm_mm, addr, pte,
 		   pte_mkold(mk_pte(page, vma->vm_page_prot)));
-	if (page == swapcache)
-		page_add_anon_rmap(page, vma, addr);
-	else /* ksm created a completely new copy */
-		page_add_new_anon_rmap(page, vma, addr);
+	page_add_anon_rmap(page, vma, addr);
 	mem_cgroup_commit_charge_swapin(page, memcg);
 	swap_free(entry);
 	/*
@@ -949,10 +939,6 @@ static int unuse_pte(struct vm_area_struct *vma, pmd_t *pmd,
 out:
 	pte_unmap_unlock(pte, ptl);
 out_nolock:
-	if (page != swapcache) {
-		unlock_page(page);
-		put_page(page);
-	}
 	return ret;
 }
 

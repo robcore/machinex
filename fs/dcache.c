@@ -1650,6 +1650,7 @@ EXPORT_SYMBOL(d_splice_alias);
 struct dentry *d_add_ci(struct dentry *dentry, struct inode *inode,
 			struct qstr *name)
 {
+	int error;
 	struct dentry *found;
 	struct dentry *new;
 
@@ -1658,12 +1659,10 @@ struct dentry *d_add_ci(struct dentry *dentry, struct inode *inode,
 	 * if not go ahead and create it now.
 	 */
 	found = d_hash_and_lookup(dentry->d_parent, name);
-	if (unlikely(IS_ERR(found)))
-		goto err_out;
 	if (!found) {
 		new = d_alloc(dentry->d_parent, name);
 		if (!new) {
-			found = ERR_PTR(-ENOMEM);
+			error = -ENOMEM;
 			goto err_out;
 		}
 
@@ -1704,7 +1703,7 @@ struct dentry *d_add_ci(struct dentry *dentry, struct inode *inode,
 
 err_out:
 	iput(inode);
-	return found;
+	return ERR_PTR(error);
 }
 EXPORT_SYMBOL(d_add_ci);
 
@@ -1934,10 +1933,12 @@ next:
  * @dir: Directory to search in
  * @name: qstr of name we wish to find
  *
- * On lookup failure NULL is returned; on bad name - ERR_PTR(-error)
+ * On hash failure or on lookup failure NULL is returned.
  */
 struct dentry *d_hash_and_lookup(struct dentry *dir, struct qstr *name)
 {
+	struct dentry *dentry = NULL;
+
 	/*
 	 * Check for a fs-specific hash function. Note that we must
 	 * calculate the standard hash first, as the d_op->d_hash()
@@ -1945,13 +1946,13 @@ struct dentry *d_hash_and_lookup(struct dentry *dir, struct qstr *name)
 	 */
 	name->hash = full_name_hash(name->name, name->len);
 	if (dir->d_flags & DCACHE_OP_HASH) {
-		int err = dir->d_op->d_hash(dir, dir->d_inode, name);
-		if (unlikely(err < 0))
-			return ERR_PTR(err);
+		if (dir->d_op->d_hash(dir, dir->d_inode, name) < 0)
+			goto out;
 	}
-	return d_lookup(dir, name);
+	dentry = d_lookup(dir, name);
+out:
+	return dentry;
 }
-EXPORT_SYMBOL(d_hash_and_lookup);
 
 /**
  * d_validate - verify dentry provided from insecure source (deprecated)
@@ -2972,7 +2973,7 @@ ino_t find_inode_number(struct dentry *dir, struct qstr *name)
 	ino_t ino = 0;
 
 	dentry = d_hash_and_lookup(dir, name);
-	if (!IS_ERR_OR_NULL(dentry)) {
+	if (dentry) {
 		if (dentry->d_inode)
 			ino = dentry->d_inode->i_ino;
 		dput(dentry);

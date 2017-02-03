@@ -752,7 +752,16 @@ EXPORT_SYMBOL(lirc_dev_fop_read);
 
 void *lirc_get_pdata(struct file *file)
 {
-	return irctls[iminor(file_inode(file))]->d.data;
+	void *data = NULL;
+
+	if (file && file->f_dentry && file_inode(file) &&
+	    file_inode(file)->i_rdev) {
+		struct irctl *ir;
+		ir = irctls[iminor(file_inode(file))];
+		data = ir->d.data;
+	}
+
+	return data;
 }
 EXPORT_SYMBOL(lirc_get_pdata);
 

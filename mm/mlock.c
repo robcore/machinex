@@ -157,12 +157,13 @@ void munlock_vma_page(struct page *page)
  *
  * vma->vm_mm->mmap_sem must be held for at least read.
  */
-long __mlock_vma_pages_range(struct vm_area_struct *vma,
-		unsigned long start, unsigned long end, int *nonblocking)
+static long __mlock_vma_pages_range(struct vm_area_struct *vma,
+				    unsigned long start, unsigned long end,
+				    int *nonblocking)
 {
 	struct mm_struct *mm = vma->vm_mm;
 	unsigned long addr = start;
-	unsigned long nr_pages = (end - start) / PAGE_SIZE;
+	int nr_pages = (end - start) / PAGE_SIZE;
 	int gup_flags;
 
 	VM_BUG_ON(start & ~PAGE_MASK);
@@ -187,10 +188,6 @@ long __mlock_vma_pages_range(struct vm_area_struct *vma,
 	if (vma->vm_flags & (VM_READ | VM_WRITE | VM_EXEC))
 		gup_flags |= FOLL_FORCE;
 
-	/*
-	 * We made sure addr is within a VMA, so the following will
-	 * not result in a stack expansion that recurses back here.
-	 */
 	return __get_user_pages(current, mm, addr, nr_pages, gup_flags,
 				NULL, NULL, nonblocking);
 }
@@ -205,6 +202,58 @@ static int __mlock_posix_error_return(long retval)
 	else if (retval == -ENOMEM)
 		retval = -EAGAIN;
 	return retval;
+}
+
+/**
+ * mlock_vma_pages_range() - mlock pages in specified vma range.
+ * @vma - the vma containing the specfied address range
+ * @start - starting address in @vma to mlock
+ * @end   - end address [+1] in @vma to mlock
+ *
+ * For mmap()/mremap()/expansion of mlocked vma.
+ *
+ * return 0 on success for "normal" vmas.
+ *
+ * return number of pages [> 0] to be removed from locked_vm on success
+ * of "special" vmas.
+ */
+long mlock_vma_pages_range(struct vm_area_struct *vma,
+			unsigned long start, unsigned long end)
+{
+	int nr_pages = (end - start) / PAGE_SIZE;
+	BUG_ON(!(vma->vm_flags & VM_LOCKED));
+
+	/*
+	 * filter unlockable vmas
+	 */
+	if (vma->vm_flags & (VM_IO | VM_PFNMAP))
+		goto no_mlock;
+
+	if (!((vma->vm_flags & VM_DONTEXPAND) ||
+			is_vm_hugetlb_page(vma) ||
+			vma == get_gate_vma(current->mm) ||
+			((use_user_accessible_timers() &&
+				(vma == get_user_timers_vma(current->mm)))))) {
+
+		__mlock_vma_pages_range(vma, start, end, NULL);
+
+		/* Hide errors from mmap() and other callers */
+		return 0;
+	}
+
+	/*
+	 * User mapped kernel pages or huge pages:
+	 * make these pages present to populate the ptes, but
+	 * fall thru' to reset VM_LOCKED--no need to unlock, and
+	 * return nr_pages so these don't get counted against task's
+	 * locked limit.  huge pages are already counted against
+	 * locked vm limit.
+	 */
+	make_pages_present(start, end);
+
+no_mlock:
+	vma->vm_flags &= ~VM_LOCKED;	/* and don't come back! */
+	return nr_pages;		/* error or pages NOT mlocked */
 }
 
 /*
@@ -265,7 +314,7 @@ void munlock_vma_pages_range(struct vm_area_struct *vma,
  *
  * Filters out "special" vmas -- VM_LOCKED never gets set for these, and
  * munlock is a no-op.  However, for some special vmas, we go ahead and
- * populate the ptes.
+ * populate the ptes via make_pages_present().
  *
  * For vmas that pass the filters, merge/split as appropriate.
  */
@@ -356,9 +405,9 @@ static int do_mlock(unsigned long start, size_t len, int on)
 
 		/* Here we know that  vma->vm_start <= nstart < vma->vm_end. */
 
-		newflags = vma->vm_flags & ~VM_LOCKED;
-		if (on)
-			newflags |= VM_LOCKED | VM_POPULATE;
+		newflags = vma->vm_flags | VM_LOCKED;
+		if (!on)
+			newflags &= ~VM_LOCKED;
 
 		tmp = vma->vm_end;
 		if (tmp > end)
@@ -381,20 +430,13 @@ static int do_mlock(unsigned long start, size_t len, int on)
 	return error;
 }
 
-/*
- * __mm_populate - populate and/or mlock pages within a range of address space.
- *
- * This is used to implement mlock() and the MAP_POPULATE / MAP_LOCKED mmap
- * flags. VMAs must be already marked with the desired vm_flags, and
- * mmap_sem must not be held.
- */
-int __mm_populate(unsigned long start, unsigned long len, int ignore_errors)
+static int do_mlock_pages(unsigned long start, size_t len, int ignore_errors)
 {
 	struct mm_struct *mm = current->mm;
 	unsigned long end, nstart, nend;
 	struct vm_area_struct *vma = NULL;
 	int locked = 0;
-	long ret = 0;
+	int ret = 0;
 
 	VM_BUG_ON(start & ~PAGE_MASK);
 	VM_BUG_ON(len != PAGE_ALIGN(len));
@@ -418,8 +460,7 @@ int __mm_populate(unsigned long start, unsigned long len, int ignore_errors)
 		 * range with the first VMA. Also, skip undesirable VMA types.
 		 */
 		nend = min(end, vma->vm_end);
-		if ((vma->vm_flags & (VM_IO | VM_PFNMAP | VM_POPULATE)) !=
-		    VM_POPULATE)
+		if (vma->vm_flags & (VM_IO | VM_PFNMAP))
 			continue;
 		if (nstart < vma->vm_start)
 			nstart = vma->vm_start;
@@ -471,7 +512,7 @@ SYSCALL_DEFINE2(mlock, unsigned long, start, size_t, len)
 		error = do_mlock(start, len, 1);
 	up_write(&current->mm->mmap_sem);
 	if (!error)
-		error = __mm_populate(start, len, 0);
+		error = do_mlock_pages(start, len, 0);
 	return error;
 }
 
@@ -492,18 +533,18 @@ static int do_mlockall(int flags)
 	struct vm_area_struct * vma, * prev = NULL;
 
 	if (flags & MCL_FUTURE)
-		current->mm->def_flags |= VM_LOCKED | VM_POPULATE;
+		current->mm->def_flags |= VM_LOCKED;
 	else
-		current->mm->def_flags &= ~(VM_LOCKED | VM_POPULATE);
+		current->mm->def_flags &= ~VM_LOCKED;
 	if (flags == MCL_FUTURE)
 		goto out;
 
 	for (vma = current->mm->mmap; vma ; vma = prev->vm_next) {
 		vm_flags_t newflags;
 
-		newflags = vma->vm_flags & ~VM_LOCKED;
-		if (flags & MCL_CURRENT)
-			newflags |= VM_LOCKED | VM_POPULATE;
+		newflags = vma->vm_flags | VM_LOCKED;
+		if (!(flags & MCL_CURRENT))
+			newflags &= ~VM_LOCKED;
 
 		/* Ignore errors */
 		mlock_fixup(vma, &prev, vma->vm_start, vma->vm_end, newflags);
@@ -537,8 +578,10 @@ SYSCALL_DEFINE1(mlockall, int, flags)
 	    capable(CAP_IPC_LOCK))
 		ret = do_mlockall(flags);
 	up_write(&current->mm->mmap_sem);
-	if (!ret && (flags & MCL_CURRENT))
-		mm_populate(0, TASK_SIZE);
+	if (!ret && (flags & MCL_CURRENT)) {
+		/* Ignore errors */
+		do_mlock_pages(0, TASK_SIZE, 1);
+	}
 out:
 	return ret;
 }

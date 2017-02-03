@@ -152,7 +152,7 @@ get_nfs4_file(struct nfs4_file *fi)
 }
 
 static int num_delegations;
-unsigned long max_delegations;
+unsigned int max_delegations;
 
 /*
  * Open owner state (share locks)
@@ -695,8 +695,8 @@ static int nfsd4_get_drc_mem(int slotsize, u32 num)
 	num = min_t(u32, num, NFSD_MAX_SLOTS_PER_SESSION);
 
 	spin_lock(&nfsd_drc_lock);
-	avail = min((unsigned long)NFSD_MAX_MEM_PER_SESSION,
-		    nfsd_drc_max_mem - nfsd_drc_mem_used);
+	avail = min_t(int, NFSD_MAX_MEM_PER_SESSION,
+			nfsd_drc_max_mem - nfsd_drc_mem_used);
 	num = min_t(int, num, avail / slotsize);
 	nfsd_drc_mem_used += num * slotsize;
 	spin_unlock(&nfsd_drc_lock);

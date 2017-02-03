@@ -344,19 +344,19 @@ static unsigned shmem_find_get_pages_and_swap(struct address_space *mapping,
 					pgoff_t start, unsigned int nr_pages,
 					struct page **pages, pgoff_t *indices)
 {
-	void **slot;
-	unsigned int ret = 0;
-	struct radix_tree_iter iter;
-
-	if (!nr_pages)
-		return 0;
+	unsigned int i;
+	unsigned int ret;
+	unsigned int nr_found;
 
 	rcu_read_lock();
 restart:
-	radix_tree_for_each_slot(slot, &mapping->page_tree, &iter, start) {
+	nr_found = radix_tree_gang_lookup_slot(&mapping->page_tree,
+				(void ***)pages, indices, start, nr_pages);
+	ret = 0;
+	for (i = 0; i < nr_found; i++) {
 		struct page *page;
 repeat:
-		page = radix_tree_deref_slot(slot);
+		page = radix_tree_deref_slot((void **)pages[i]);
 		if (unlikely(!page))
 			continue;
 		if (radix_tree_exception(page)) {
@@ -373,16 +373,17 @@ repeat:
 			goto repeat;
 
 		/* Has the page moved? */
-		if (unlikely(page != *slot)) {
+		if (unlikely(page != *((void **)pages[i]))) {
 			page_cache_release(page);
 			goto repeat;
 		}
 export:
-		indices[ret] = iter.index;
+		indices[ret] = indices[i];
 		pages[ret] = page;
-		if (++ret == nr_pages)
-			break;
+		ret++;
 	}
+	if (unlikely(!ret && nr_found))
+		goto restart;
 	rcu_read_unlock();
 	return ret;
 }
@@ -2881,16 +2882,6 @@ int vmtruncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 
 /* common code */
 
-static char *shmem_dname(struct dentry *dentry, char *buffer, int buflen)
-{
-	return dynamic_dname(dentry, buffer, buflen, "/%s (deleted)",
-				dentry->d_name.name);
-}
-
-static struct dentry_operations anon_ops = {
-	.d_dname = shmem_dname
-};
-
 /**
  * shmem_file_setup - get an unlinked file living in tmpfs
  * @name: name for dentry (to be seen in /proc/<pid>/maps
@@ -2902,7 +2893,7 @@ struct file *shmem_file_setup(const char *name, loff_t size, unsigned long flags
 	struct file *res;
 	struct inode *inode;
 	struct path path;
-	struct super_block *sb;
+	struct dentry *root;
 	struct qstr this;
 
 	if (IS_ERR(shm_mnt))
@@ -2918,15 +2909,14 @@ struct file *shmem_file_setup(const char *name, loff_t size, unsigned long flags
 	this.name = name;
 	this.len = strlen(name);
 	this.hash = 0; /* will go */
-	sb = shm_mnt->mnt_sb;
-	path.dentry = d_alloc_pseudo(sb, &this);
+	root = shm_mnt->mnt_root;
+	path.dentry = d_alloc(root, &this);
 	if (!path.dentry)
 		goto put_memory;
-	d_set_d_op(path.dentry, &anon_ops);
 	path.mnt = mntget(shm_mnt);
 
 	res = ERR_PTR(-ENOSPC);
-	inode = shmem_get_inode(sb, NULL, S_IFREG | S_IRWXUGO, 0, flags);
+	inode = shmem_get_inode(root->d_sb, NULL, S_IFREG | S_IRWXUGO, 0, flags);
 	if (!inode)
 		goto put_dentry;
 

@@ -1054,9 +1054,6 @@ static inline dma_addr_t __alloc_iova(struct dma_iommu_mapping *mapping,
 	dma_addr_t iova;
 	int i;
 
-	if (order > CONFIG_ARM_DMA_IOMMU_ALIGNMENT)
-		order = CONFIG_ARM_DMA_IOMMU_ALIGNMENT;
-
 	count = PAGE_ALIGN(size) >> PAGE_SHIFT;
 	align = (1 << order) - 1;
 
@@ -1167,17 +1164,12 @@ static struct page **__iommu_alloc_buffer(struct device *dev, size_t size,
 		return pages;
 	}
 
-	/*
-	 * IOMMU can map any pages, so himem can also be used here
-	 */
-	gfp |= __GFP_NOWARN | __GFP_HIGHMEM;
-
 	while (count) {
 		int j, order = __fls(count);
 
-		pages[i] = alloc_pages(gfp, order);
+		pages[i] = alloc_pages(gfp | __GFP_NOWARN, order);
 		while (!pages[i] && order)
-			pages[i] = alloc_pages(gfp, --order);
+			pages[i] = alloc_pages(gfp | __GFP_NOWARN, --order);
 		if (!pages[i])
 			goto error;
 
@@ -1787,8 +1779,6 @@ struct dma_map_ops iommu_ops = {
 	.unmap_sg		= arm_iommu_unmap_sg,
 	.sync_sg_for_cpu	= arm_iommu_sync_sg_for_cpu,
 	.sync_sg_for_device	= arm_iommu_sync_sg_for_device,
-
-	.set_dma_mask		= arm_dma_set_mask,
 };
 
 struct dma_map_ops iommu_coherent_ops = {
@@ -1802,8 +1792,6 @@ struct dma_map_ops iommu_coherent_ops = {
 
 	.map_sg		= arm_coherent_iommu_map_sg,
 	.unmap_sg	= arm_coherent_iommu_unmap_sg,
-
-	.set_dma_mask	= arm_dma_set_mask,
 };
 
 /**
@@ -1873,7 +1861,6 @@ err2:
 err:
 	return ERR_PTR(err);
 }
-EXPORT_SYMBOL_GPL(arm_iommu_create_mapping);
 
 static void release_iommu_mapping(struct kref *kref)
 {
@@ -1911,7 +1898,6 @@ void arm_iommu_release_mapping(struct dma_iommu_mapping *mapping)
 	if (mapping)
 		kref_put(&mapping->kref, release_iommu_mapping);
 }
-EXPORT_SYMBOL_GPL(arm_iommu_release_mapping);
 
 /**
  * arm_iommu_attach_device
@@ -1940,32 +1926,5 @@ int arm_iommu_attach_device(struct device *dev,
 	pr_debug("Attached IOMMU controller to %s device.\n", dev_name(dev));
 	return 0;
 }
-EXPORT_SYMBOL_GPL(arm_iommu_attach_device);
-
-/**
- * arm_iommu_detach_device
- * @dev: valid struct device pointer
- *
- * Detaches the provided device from a previously attached map.
- * This voids the dma operations (dma_map_ops pointer)
- */
-void arm_iommu_detach_device(struct device *dev)
-{
-	struct dma_iommu_mapping *mapping;
-
-	mapping = to_dma_iommu_mapping(dev);
-	if (!mapping) {
-		dev_warn(dev, "Not attached\n");
-		return;
-	}
-
-	iommu_detach_device(mapping->domain, dev);
-	kref_put(&mapping->kref, release_iommu_mapping);
-	mapping = NULL;
-	set_dma_ops(dev, NULL);
-
-	pr_debug("Detached IOMMU controller from %s device.\n", dev_name(dev));
-}
-EXPORT_SYMBOL_GPL(arm_iommu_detach_device);
 
 #endif

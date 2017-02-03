@@ -141,10 +141,10 @@ unsigned int kobjsize(const void *objp)
 	return PAGE_SIZE << compound_order(page);
 }
 
-long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
-		      unsigned long start, unsigned long nr_pages,
-		      unsigned int foll_flags, struct page **pages,
-		      struct vm_area_struct **vmas, int *nonblocking)
+int __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+		     unsigned long start, int nr_pages, unsigned int foll_flags,
+		     struct page **pages, struct vm_area_struct **vmas,
+		     int *retry)
 {
 	struct vm_area_struct *vma;
 	unsigned long vm_flags;
@@ -191,10 +191,9 @@ finish_or_fault:
  *   slab page or a secondary page from a compound page
  * - don't permit access to VMAs that don't support it, such as I/O mappings
  */
-long get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
-		    unsigned long start, unsigned long nr_pages,
-		    int write, int force, struct page **pages,
-		    struct vm_area_struct **vmas)
+int get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+	unsigned long start, int nr_pages, int write, int force,
+	struct page **pages, struct vm_area_struct **vmas)
 {
 	int flags = 0;
 
@@ -1259,8 +1258,7 @@ unsigned long do_mmap_pgoff(struct file *file,
 			    unsigned long len,
 			    unsigned long prot,
 			    unsigned long flags,
-			    unsigned long pgoff,
-			    unsigned long *populate)
+			    unsigned long pgoff)
 {
 	struct vm_area_struct *vma;
 	struct vm_region *region;
@@ -1269,8 +1267,6 @@ unsigned long do_mmap_pgoff(struct file *file,
 	int ret;
 
 	kenter(",%lx,%lx,%lx,%lx,%lx", addr, len, prot, flags, pgoff);
-
-	*populate = 0;
 
 	/* decide whether we should attempt the mapping, and if so what sort of
 	 * mapping */
@@ -1487,6 +1483,28 @@ error_getting_region:
 	return -ENOMEM;
 }
 
+unsigned long vm_mmap(struct file *file, unsigned long addr,
+	unsigned long len, unsigned long prot,
+	unsigned long flag, unsigned long offset)
+{
+	unsigned long ret;
+	struct mm_struct *mm = current->mm;
+
+	if (unlikely(offset + PAGE_ALIGN(len) < offset))
+		return -EINVAL;
+	if (unlikely(offset & ~PAGE_MASK))
+		return -EINVAL;
+
+	ret = security_mmap_file(file, prot, flag);
+	if (!ret) {
+		down_write(&mm->mmap_sem);
+		ret = do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
+		up_write(&mm->mmap_sem);
+	}
+	return ret;
+}
+EXPORT_SYMBOL(vm_mmap);
+
 SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 		unsigned long, prot, unsigned long, flags,
 		unsigned long, fd, unsigned long, pgoff)
@@ -1503,7 +1521,12 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
-	ret = vm_mmap_pgoff(file, addr, len, prot, flags, pgoff);
+	ret = security_mmap_file(file, prot, flags);
+	if (!ret) {
+		down_write(&current->mm->mmap_sem);
+		retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff);
+		up_write(&current->mm->mmap_sem);
+	}
 
 	if (file)
 		fput(file);
@@ -1827,11 +1850,9 @@ SYSCALL_DEFINE5(mremap, unsigned long, addr, unsigned long, old_len,
 	return ret;
 }
 
-struct page *follow_page_mask(struct vm_area_struct *vma,
-			      unsigned long address, unsigned int flags,
-			      unsigned int *page_mask)
+struct page *follow_page(struct vm_area_struct *vma, unsigned long address,
+			unsigned int foll_flags)
 {
-	*page_mask = 0;
 	return NULL;
 }
 

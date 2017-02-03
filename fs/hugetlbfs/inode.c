@@ -939,16 +939,6 @@ static int get_hstate_idx(int page_size_log)
 	return h - hstates;
 }
 
-static char *hugetlb_dname(struct dentry *dentry, char *buffer, int buflen)
-{
-	return dynamic_dname(dentry, buffer, buflen, "/%s (deleted)",
-				dentry->d_name.name);
-}
-
-static struct dentry_operations anon_ops = {
-	.d_dname = hugetlb_dname
-};
-
 /*
  * Note that size should be aligned to proper hugepage size in caller side,
  * otherwise hugetlb_reserve_pages reserves one less hugepages than intended.
@@ -960,7 +950,7 @@ struct file *hugetlb_file_setup(const char *name, size_t size,
 	struct file *file = ERR_PTR(-ENOMEM);
 	struct inode *inode;
 	struct path path;
-	struct super_block *sb;
+	struct dentry *root;
 	struct qstr quick_string;
 	int hstate_idx;
 
@@ -986,18 +976,17 @@ struct file *hugetlb_file_setup(const char *name, size_t size,
 		}
 	}
 
-	sb = hugetlbfs_vfsmount[hstate_idx]->mnt_sb;
+	root = hugetlbfs_vfsmount[hstate_idx]->mnt_root;
 	quick_string.name = name;
 	quick_string.len = strlen(quick_string.name);
 	quick_string.hash = 0;
-	path.dentry = d_alloc_pseudo(sb, &quick_string);
+	path.dentry = d_alloc(root, &quick_string);
 	if (!path.dentry)
 		goto out_shm_unlock;
 
-	d_set_d_op(path.dentry, &anon_ops);
 	path.mnt = mntget(hugetlbfs_vfsmount[hstate_idx]);
 	file = ERR_PTR(-ENOSPC);
-	inode = hugetlbfs_get_inode(sb, NULL, S_IFREG | S_IRWXUGO, 0);
+	inode = hugetlbfs_get_inode(root->d_sb, NULL, S_IFREG | S_IRWXUGO, 0);
 	if (!inode)
 		goto out_dentry;
 

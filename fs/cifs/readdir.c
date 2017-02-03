@@ -79,10 +79,12 @@ cifs_readdir_lookup(struct dentry *parent, struct qstr *name,
 
 	cFYI(1, "For %s", name->name);
 
-	dentry = d_hash_and_lookup(parent, name);
-	if (unlikely(IS_ERR(dentry)))
-		return NULL;
+	if (parent->d_op && parent->d_op->d_hash)
+		parent->d_op->d_hash(parent, parent->d_inode, name);
+	else
+		name->hash = full_name_hash(name->name, name->len);
 
+	dentry = d_lookup(parent, name);
 	if (dentry) {
 		int err;
 		inode = dentry->d_inode;

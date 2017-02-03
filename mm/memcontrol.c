@@ -185,7 +185,7 @@ struct mem_cgroup_per_node {
 };
 
 struct mem_cgroup_lru_info {
-	struct mem_cgroup_per_node *nodeinfo[0];
+	struct mem_cgroup_per_node *nodeinfo[MAX_NUMNODES];
 };
 
 /*
@@ -292,6 +292,17 @@ struct mem_cgroup {
 	 */
 	struct res_counter kmem;
 	/*
+	 * Per cgroup active and inactive list, similar to the
+	 * per zone LRU lists.
+	 */
+	struct mem_cgroup_lru_info info;
+	int last_scanned_node;
+#if MAX_NUMNODES > 1
+	nodemask_t	scan_nodes;
+	atomic_t	numainfo_events;
+	atomic_t	numainfo_updating;
+#endif
+	/*
 	 * Should the accounting and control be hierarchical, per subtree?
 	 */
 	bool use_hierarchy;
@@ -355,28 +366,7 @@ struct mem_cgroup {
         /* Index in the kmem_cache->memcg_params->memcg_caches array */
 	int kmemcg_id;
 #endif
-
-	int last_scanned_node;
-#if MAX_NUMNODES > 1
-	nodemask_t	scan_nodes;
-	atomic_t	numainfo_events;
-	atomic_t	numainfo_updating;
-#endif
-	/*
-	 * Per cgroup active and inactive list, similar to the
-	 * per zone LRU lists.
-	 *
-	 * WARNING: This has to be the last element of the struct. Don't
-	 * add new fields after this point.
-	 */
-	struct mem_cgroup_lru_info info;
 };
-
-static size_t memcg_size(void)
-{
-	return sizeof(struct mem_cgroup) +
-		nr_node_ids * sizeof(struct mem_cgroup_per_node);
-}
 
 /* internal only representation about the status of kmem accounting. */
 enum {
@@ -496,13 +486,6 @@ enum res_type {
 #define MEM_CGROUP_RECLAIM_NOSWAP	(1 << MEM_CGROUP_RECLAIM_NOSWAP_BIT)
 #define MEM_CGROUP_RECLAIM_SHRINK_BIT	0x1
 #define MEM_CGROUP_RECLAIM_SHRINK	(1 << MEM_CGROUP_RECLAIM_SHRINK_BIT)
-
-/*
- * The memcg_create_mutex will be held whenever a new cgroup is created.
- * As a consequence, any change that needs to protect against new child cgroups
- * appearing has to hold it as well.
- */
-static DEFINE_MUTEX(memcg_create_mutex);
 
 static void mem_cgroup_get(struct mem_cgroup *memcg);
 static void mem_cgroup_put(struct mem_cgroup *memcg);
@@ -685,7 +668,6 @@ static void drain_all_stock_async(struct mem_cgroup *memcg);
 static struct mem_cgroup_per_zone *
 mem_cgroup_zoneinfo(struct mem_cgroup *memcg, int nid, int zid)
 {
-	VM_BUG_ON((unsigned)nid >= nr_node_ids);
 	return &memcg->info.nodeinfo[nid]->zoneinfo[zid];
 }
 
@@ -1467,6 +1449,17 @@ int mem_cgroup_inactive_anon_is_low(struct lruvec *lruvec)
 		inactive_ratio = 1;
 
 	return inactive * inactive_ratio < active;
+}
+
+int mem_cgroup_inactive_file_is_low(struct lruvec *lruvec)
+{
+	unsigned long active;
+	unsigned long inactive;
+
+	inactive = mem_cgroup_get_lru_size(lruvec, LRU_INACTIVE_FILE);
+	active = mem_cgroup_get_lru_size(lruvec, LRU_ACTIVE_FILE);
+
+	return (active > inactive);
 }
 
 #define mem_cgroup_from_res_counter(counter, member)	\
@@ -2372,17 +2365,6 @@ static void drain_local_stock(struct work_struct *dummy)
 	struct memcg_stock_pcp *stock = &__get_cpu_var(memcg_stock);
 	drain_stock(stock);
 	clear_bit(FLUSHING_CACHED_CHARGE, &stock->flags);
-}
-
-static void __init memcg_stock_init(void)
-{
-	int cpu;
-
-	for_each_possible_cpu(cpu) {
-		struct memcg_stock_pcp *stock =
-					&per_cpu(memcg_stock, cpu);
-		INIT_WORK(&stock->work, drain_local_stock);
-	}
 }
 
 /*
@@ -4279,8 +4261,6 @@ void mem_cgroup_uncharge_swap(swp_entry_t ent)
 			res_counter_uncharge(&memcg->memsw, PAGE_SIZE);
 		mem_cgroup_swap_statistics(memcg, false);
 		mem_cgroup_put(memcg);
-		if (parent->use_hierarchy)
-			mem_cgroup_put(parent);
 	}
 	rcu_read_unlock();
 }
@@ -4858,33 +4838,6 @@ static void mem_cgroup_reparent_charges(struct mem_cgroup *memcg)
 }
 
 /*
- * This mainly exists for tests during the setting of set of use_hierarchy.
- * Since this is the very setting we are changing, the current hierarchy value
- * is meaningless
- */
-static inline bool __memcg_has_children(struct mem_cgroup *memcg)
-{
-	struct cgroup *pos;
-
-	/* bounce at first found */
-	cgroup_for_each_child(pos, memcg->css.cgroup)
-		return true;
-	return false;
-}
-
-/*
- * Must be called with memcg_create_mutex held, unless the cgroup is guaranteed
- * to be already dead (as in mem_cgroup_force_empty, for instance).  This is
- * from mem_cgroup_count_children(), in the sense that we don't really care how
- * many children we have; we only need to know if we have any.  It also counts
- * any memcg without hierarchy as infertile.
- */
-static inline bool memcg_has_children(struct mem_cgroup *memcg)
-{
-	return memcg->use_hierarchy && __memcg_has_children(memcg);
-}
-
-/*
  * Reclaims as many pages from the given memcg as possible and moves
  * the rest to the parent.
  *
@@ -4954,7 +4907,7 @@ static int mem_cgroup_hierarchy_write(struct cgroup *cont, struct cftype *cft,
 	if (parent)
 		parent_memcg = mem_cgroup_from_cont(parent);
 
-	mutex_lock(&memcg_create_mutex);
+	cgroup_lock();
 
 	if (memcg->use_hierarchy == val)
 		goto out;
@@ -4969,7 +4922,7 @@ static int mem_cgroup_hierarchy_write(struct cgroup *cont, struct cftype *cft,
 	 */
 	if ((!parent_memcg || !parent_memcg->use_hierarchy) &&
 				(val == 1 || val == 0)) {
-		if (!__memcg_has_children(memcg))
+		if (list_empty(&cont->children))
 			memcg->use_hierarchy = val;
 		else
 			retval = -EBUSY;
@@ -4977,7 +4930,7 @@ static int mem_cgroup_hierarchy_write(struct cgroup *cont, struct cftype *cft,
 		retval = -EINVAL;
 
 out:
-	mutex_unlock(&memcg_create_mutex);
+	cgroup_unlock();
 
 	return retval;
 }
@@ -5063,6 +5016,8 @@ static int memcg_update_kmem_limit(struct cgroup *cont, u64 val)
 {
 	int ret = -EINVAL;
 #ifdef CONFIG_MEMCG_KMEM
+	bool must_inc_static_branch = false;
+
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	/*
 	 * For simplicity, we won't allow this to be disabled.  It also can't
@@ -5075,11 +5030,18 @@ static int memcg_update_kmem_limit(struct cgroup *cont, u64 val)
 	 *
 	 * After it first became limited, changes in the value of the limit are
 	 * of course permitted.
+	 *
+	 * Taking the cgroup_lock is really offensive, but it is so far the only
+	 * way to guarantee that no children will appear. There are plenty of
+	 * other offenders, and they should all go away. Fine grained locking
+	 * is probably the way to go here. When we are fully hierarchical, we
+	 * can also get rid of the use_hierarchy check.
 	 */
-	mutex_lock(&memcg_create_mutex);
+	cgroup_lock();
 	mutex_lock(&set_limit_mutex);
 	if (!memcg->kmem_account_flags && val != RESOURCE_MAX) {
-		if (cgroup_task_count(cont) || memcg_has_children(memcg)) {
+		if (cgroup_task_count(cont) || (memcg->use_hierarchy &&
+						!list_empty(&cont->children))) {
 			ret = -EBUSY;
 			goto out;
 		}
@@ -5091,13 +5053,7 @@ static int memcg_update_kmem_limit(struct cgroup *cont, u64 val)
 			res_counter_set_limit(&memcg->kmem, RESOURCE_MAX);
 			goto out;
 		}
-		static_key_slow_inc(&memcg_kmem_enabled_key);
-		/*
-		 * setting the active bit after the inc will guarantee no one
-		 * starts accounting before all call sites are patched
-		 */
-		memcg_kmem_set_active(memcg);
-
+		must_inc_static_branch = true;
 		/*
 		 * kmem charges can outlive the cgroup. In the case of slab
 		 * pages, for instance, a page contain objects from various
@@ -5109,12 +5065,32 @@ static int memcg_update_kmem_limit(struct cgroup *cont, u64 val)
 		ret = res_counter_set_limit(&memcg->kmem, val);
 out:
 	mutex_unlock(&set_limit_mutex);
-	mutex_unlock(&memcg_create_mutex);
+	cgroup_unlock();
+
+	/*
+	 * We are by now familiar with the fact that we can't inc the static
+	 * branch inside cgroup_lock. See disarm functions for details. A
+	 * worker here is overkill, but also wrong: After the limit is set, we
+	 * must start accounting right away. Since this operation can't fail,
+	 * we can safely defer it to here - no rollback will be needed.
+	 *
+	 * The boolean used to control this is also safe, because
+	 * KMEM_ACCOUNTED_ACTIVATED guarantees that only one process will be
+	 * able to set it to true;
+	 */
+	if (must_inc_static_branch) {
+		static_key_slow_inc(&memcg_kmem_enabled_key);
+		/*
+		 * setting the active bit after the inc will guarantee no one
+		 * starts accounting before all call sites are patched
+		 */
+		memcg_kmem_set_active(memcg);
+	}
+
 #endif
 	return ret;
 }
 
-#ifdef CONFIG_MEMCG_KMEM
 static int memcg_propagate_kmem(struct mem_cgroup *memcg)
 {
 	int ret = 0;
@@ -5123,6 +5099,7 @@ static int memcg_propagate_kmem(struct mem_cgroup *memcg)
 		goto out;
 
 	memcg->kmem_account_flags = parent->kmem_account_flags;
+#ifdef CONFIG_MEMCG_KMEM
 	/*
 	 * When that happen, we need to disable the static branch only on those
 	 * memcgs that enabled it. To achieve this, we would be forced to
@@ -5148,10 +5125,10 @@ static int memcg_propagate_kmem(struct mem_cgroup *memcg)
 	mutex_lock(&set_limit_mutex);
 	ret = memcg_update_cache_sizes(memcg);
 	mutex_unlock(&set_limit_mutex);
+#endif
 out:
 	return ret;
 }
-#endif /* CONFIG_MEMCG_KMEM */
 
 /*
  * The user of this function is...
@@ -5470,17 +5447,18 @@ static int mem_cgroup_swappiness_write(struct cgroup *cgrp, struct cftype *cft,
 
 	parent = mem_cgroup_from_cont(cgrp->parent);
 
-	mutex_lock(&memcg_create_mutex);
+	cgroup_lock();
 
 	/* If under hierarchy, only empty-root can set this value */
-	if ((parent->use_hierarchy) || memcg_has_children(memcg)) {
-		mutex_unlock(&memcg_create_mutex);
+	if ((parent->use_hierarchy) ||
+	    (memcg->use_hierarchy && !list_empty(&cgrp->children))) {
+		cgroup_unlock();
 		return -EINVAL;
 	}
 
 	memcg->swappiness = val;
 
-	mutex_unlock(&memcg_create_mutex);
+	cgroup_unlock();
 
 	return 0;
 }
@@ -5813,16 +5791,17 @@ static int mem_cgroup_oom_control_write(struct cgroup *cgrp,
 
 	parent = mem_cgroup_from_cont(cgrp->parent);
 
-	mutex_lock(&memcg_create_mutex);
+	cgroup_lock();
 	/* oom-kill-disable is a flag for subhierarchy. */
-	if ((parent->use_hierarchy) || memcg_has_children(memcg)) {
-		mutex_unlock(&memcg_create_mutex);
+	if ((parent->use_hierarchy) ||
+	    (memcg->use_hierarchy && !list_empty(&cgrp->children))) {
+		cgroup_unlock();
 		return -EINVAL;
 	}
 	memcg->oom_kill_disable = val;
 	if (!val)
 		memcg_oom_recover(memcg);
-	mutex_unlock(&memcg_create_mutex);
+	cgroup_unlock();
 	return 0;
 }
 
@@ -5942,6 +5921,33 @@ static struct cftype mem_cgroup_files[] = {
 		.read_seq_string = memcg_numa_stat_show,
 	},
 #endif
+#ifdef CONFIG_MEMCG_SWAP
+	{
+		.name = "memsw.usage_in_bytes",
+		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_USAGE),
+		.read = mem_cgroup_read,
+		.register_event = mem_cgroup_usage_register_event,
+		.unregister_event = mem_cgroup_usage_unregister_event,
+	},
+	{
+		.name = "memsw.max_usage_in_bytes",
+		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_MAX_USAGE),
+		.trigger = mem_cgroup_reset,
+		.read = mem_cgroup_read,
+	},
+	{
+		.name = "memsw.limit_in_bytes",
+		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_LIMIT),
+		.write_string = mem_cgroup_write,
+		.read = mem_cgroup_read,
+	},
+	{
+		.name = "memsw.failcnt",
+		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_FAILCNT),
+		.trigger = mem_cgroup_reset,
+		.read = mem_cgroup_read,
+	},
+#endif
 #ifdef CONFIG_MEMCG_KMEM
 	{
 		.name = "kmem.limit_in_bytes",
@@ -5976,36 +5982,6 @@ static struct cftype mem_cgroup_files[] = {
 	{ },	/* terminate */
 };
 
-#ifdef CONFIG_MEMCG_SWAP
-static struct cftype memsw_cgroup_files[] = {
-	{
-		.name = "memsw.usage_in_bytes",
-		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_USAGE),
-		.read = mem_cgroup_read,
-		.register_event = mem_cgroup_usage_register_event,
-		.unregister_event = mem_cgroup_usage_unregister_event,
-	},
-	{
-		.name = "memsw.max_usage_in_bytes",
-		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_MAX_USAGE),
-		.trigger = mem_cgroup_reset,
-		.read = mem_cgroup_read,
-	},
-	{
-		.name = "memsw.limit_in_bytes",
-		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_LIMIT),
-		.write_string = mem_cgroup_write,
-		.read = mem_cgroup_read,
-	},
-	{
-		.name = "memsw.failcnt",
-		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_FAILCNT),
-		.trigger = mem_cgroup_reset,
-		.read = mem_cgroup_read,
-	},
-	{ },	/* terminate */
-};
-#endif
 static int alloc_mem_cgroup_per_zone_info(struct mem_cgroup *memcg, int node)
 {
 	struct mem_cgroup_per_node *pn;
@@ -6044,9 +6020,9 @@ static void free_mem_cgroup_per_zone_info(struct mem_cgroup *memcg, int node)
 static struct mem_cgroup *mem_cgroup_alloc(void)
 {
 	struct mem_cgroup *memcg;
-	size_t size = memcg_size();
+	int size = sizeof(struct mem_cgroup);
 
-	/* Can be very big if nr_node_ids is very big */
+	/* Can be very big if MAX_NUMNODES is very big */
 	if (size < PAGE_SIZE)
 		memcg = kzalloc(size, GFP_KERNEL);
 	else
@@ -6083,7 +6059,7 @@ out_free:
 static void __mem_cgroup_free(struct mem_cgroup *memcg)
 {
 	int node;
-	size_t size = memcg_size();
+	int size = sizeof(struct mem_cgroup);
 
 	mem_cgroup_remove_from_trees(memcg);
 	free_css_id(&mem_cgroup_subsys, &memcg->css);
@@ -6165,7 +6141,19 @@ struct mem_cgroup *parent_mem_cgroup(struct mem_cgroup *memcg)
 }
 EXPORT_SYMBOL(parent_mem_cgroup);
 
-static void __init mem_cgroup_soft_limit_tree_init(void)
+#ifdef CONFIG_MEMCG_SWAP
+static void __init enable_swap_cgroup(void)
+{
+	if (!mem_cgroup_disabled() && really_do_swap_account)
+		do_swap_account = 1;
+}
+#else
+static void __init enable_swap_cgroup(void)
+{
+}
+#endif
+
+static int mem_cgroup_soft_limit_tree_init(void)
 {
 	struct mem_cgroup_tree_per_node *rtpn;
 	struct mem_cgroup_tree_per_zone *rtpz;
@@ -6176,7 +6164,8 @@ static void __init mem_cgroup_soft_limit_tree_init(void)
 		if (!node_state(node, N_NORMAL_MEMORY))
 			tmp = -1;
 		rtpn = kzalloc_node(sizeof(*rtpn), GFP_KERNEL, tmp);
-		BUG_ON(!rtpn);
+		if (!rtpn)
+			goto err_cleanup;
 
 		soft_limit_tree.rb_tree_per_node[node] = rtpn;
 
@@ -6186,12 +6175,23 @@ static void __init mem_cgroup_soft_limit_tree_init(void)
 			spin_lock_init(&rtpz->lock);
 		}
 	}
+	return 0;
+
+err_cleanup:
+	for_each_node(node) {
+		if (!soft_limit_tree.rb_tree_per_node[node])
+			break;
+		kfree(soft_limit_tree.rb_tree_per_node[node]);
+		soft_limit_tree.rb_tree_per_node[node] = NULL;
+	}
+	return 1;
+
 }
 
 static struct cgroup_subsys_state * __ref
 mem_cgroup_css_alloc(struct cgroup *cont)
 {
-	struct mem_cgroup *memcg;
+	struct mem_cgroup *memcg, *parent;
 	long error = -ENOMEM;
 	int node;
 
@@ -6205,40 +6205,24 @@ mem_cgroup_css_alloc(struct cgroup *cont)
 
 	/* root ? */
 	if (cont->parent == NULL) {
+		int cpu;
+		enable_swap_cgroup();
+		parent = NULL;
+		if (mem_cgroup_soft_limit_tree_init())
+			goto free_out;
 		root_mem_cgroup = memcg;
-		res_counter_init(&memcg->res, NULL);
-		res_counter_init(&memcg->memsw, NULL);
-		res_counter_init(&memcg->kmem, NULL);
+		for_each_possible_cpu(cpu) {
+			struct memcg_stock_pcp *stock =
+						&per_cpu(memcg_stock, cpu);
+			INIT_WORK(&stock->work, drain_local_stock);
+		}
+	} else {
+		parent = mem_cgroup_from_cont(cont->parent);
+		memcg->use_hierarchy = parent->use_hierarchy;
+		memcg->oom_kill_disable = parent->oom_kill_disable;
 	}
 
-	memcg->last_scanned_node = MAX_NUMNODES;
-	INIT_LIST_HEAD(&memcg->oom_notify);
-	atomic_set(&memcg->refcnt, 1);
-	memcg->move_charge_at_immigrate = 0;
-	mutex_init(&memcg->thresholds_lock);
-	spin_lock_init(&memcg->move_lock);
-
-	return error;
-}
-
-static int
-mem_cgroup_css_online(struct cgroup *cont)
-{
-	struct mem_cgroup *memcg, *parent;
-	int error = 0;
-
-	if (!cont->parent)
-		return 0;
-
-	mutex_lock(&memcg_create_mutex);
-	memcg = mem_cgroup_from_cont(cont);
-	parent = mem_cgroup_from_cont(cont->parent);
-
-	memcg->use_hierarchy = parent->use_hierarchy;
-	memcg->oom_kill_disable = parent->oom_kill_disable;
-	memcg->swappiness = mem_cgroup_swappiness(parent);
-
-	if (parent->use_hierarchy) {
+	if (parent && parent->use_hierarchy) {
 		res_counter_init(&memcg->res, &parent->res);
 		res_counter_init(&memcg->memsw, &parent->memsw);
 		res_counter_init(&memcg->kmem, &parent->kmem);
@@ -6259,12 +6243,20 @@ mem_cgroup_css_online(struct cgroup *cont)
 		 * much sense so let cgroup subsystem know about this
 		 * unfortunate state in our controller.
 		 */
-		if (parent != root_mem_cgroup)
+		if (parent && parent != root_mem_cgroup)
 			mem_cgroup_subsys.broken_hierarchy = true;
 	}
+	memcg->last_scanned_node = MAX_NUMNODES;
+	INIT_LIST_HEAD(&memcg->oom_notify);
+
+	if (parent)
+		memcg->swappiness = mem_cgroup_swappiness(parent);
+	atomic_set(&memcg->refcnt, 1);
+	memcg->move_charge_at_immigrate = 0;
+	mutex_init(&memcg->thresholds_lock);
+	spin_lock_init(&memcg->move_lock);
 
 	error = memcg_init_kmem(memcg, &mem_cgroup_subsys);
-	mutex_unlock(&memcg_create_mutex);
 	if (error) {
 		/*
 		 * We call put now because our (and parent's) refcnts
@@ -6418,8 +6410,6 @@ static struct page *mc_handle_swap_pte(struct vm_area_struct *vma,
 			put_page(page);
 		return NULL;
 	}
-
-	page = find_get_page(swap_address_space(ent), ent.val);
 	if (do_swap_account)
 		entry->val = ent.val;
 
@@ -6453,7 +6443,7 @@ static struct page *mc_handle_file_pte(struct vm_area_struct *vma,
 		swp_entry_t swap = radix_to_swp_entry(page);
 		if (do_swap_account)
 			*entry = swap;
-		page = find_get_page(swap_address_space(swap), swap.val);
+		page = find_get_page(&swapper_space, swap.val);
 	}
 #endif
 	return page;
@@ -6887,7 +6877,6 @@ struct cgroup_subsys mem_cgroup_subsys = {
 	.name = "memory",
 	.subsys_id = mem_cgroup_subsys_id,
 	.css_alloc = mem_cgroup_css_alloc,
-	.css_online = mem_cgroup_css_online,
 	.css_offline = mem_cgroup_css_offline,
 	.css_free = mem_cgroup_css_free,
 	.can_attach = mem_cgroup_can_attach,
@@ -6897,6 +6886,19 @@ struct cgroup_subsys mem_cgroup_subsys = {
 	.early_init = 0,
 	.use_id = 1,
 };
+
+/*
+ * The rest of init is performed during ->css_alloc() for root css which
+ * happens before initcalls.  hotcpu_notifier() can't be done together as
+ * it would introduce circular locking by adding cgroup_lock -> cpu hotplug
+ * dependency.  Do it from a subsys_initcall().
+ */
+static int __init mem_cgroup_init(void)
+{
+	hotcpu_notifier(memcg_cpu_hotplug_callback, 0);
+	return 0;
+}
+subsys_initcall(mem_cgroup_init);
 
 #ifdef CONFIG_MEMCG_SWAP
 static int __init enable_swap_account(char *s)
@@ -6910,39 +6912,4 @@ static int __init enable_swap_account(char *s)
 }
 __setup("swapaccount=", enable_swap_account);
 
-static void __init memsw_file_init(void)
-{
-	WARN_ON(cgroup_add_cftypes(&mem_cgroup_subsys, memsw_cgroup_files));
-}
-
-static void __init enable_swap_cgroup(void)
-{
-	if (!mem_cgroup_disabled() && really_do_swap_account) {
-		do_swap_account = 1;
-		memsw_file_init();
-	}
-}
-
-#else
-static void __init enable_swap_cgroup(void)
-{
-}
 #endif
-
-/*
- * subsys_initcall() for memory controller.
- *
- * Some parts like hotcpu_notifier() have to be initialized from this context
- * because of lock dependencies (cgroup_lock -> cpu hotplug) but basically
- * everything that doesn't depend on a specific mem_cgroup structure should
- * be initialized from here.
- */
-static int __init mem_cgroup_init(void)
-{
-	hotcpu_notifier(memcg_cpu_hotplug_callback, 0);
-	enable_swap_cgroup();
-	mem_cgroup_soft_limit_tree_init();
-	memcg_stock_init();
-	return 0;
-}
-subsys_initcall(mem_cgroup_init);

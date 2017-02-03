@@ -70,10 +70,6 @@
 
 #include "internal.h"
 
-#ifdef LAST_NID_NOT_IN_PAGE_FLAGS
-#warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_nid.
-#endif
-
 #ifndef CONFIG_NEED_MULTIPLE_NODES
 /* use the per-pgdat data instead for discontigmem - mbligh */
 unsigned long max_mapnr;
@@ -1475,11 +1471,10 @@ static inline bool can_follow_write_pte(pte_t pte, struct page *page,
 }
 
 /**
- * follow_page_mask - look up a page descriptor from a user-virtual address
+ * follow_page - look up a page descriptor from a user-virtual address
  * @vma: vm_area_struct mapping @address
  * @address: virtual address to look up
  * @flags: flags modifying lookup behaviour
- * @page_mask: on output, *page_mask is set according to the size of the page
  *
  * @flags can have FOLL_ flags set, defined in <linux/mm.h>
  *
@@ -1487,9 +1482,8 @@ static inline bool can_follow_write_pte(pte_t pte, struct page *page,
  * an error pointer if there is a mapping to something not represented
  * by a page descriptor (see also vm_normal_page()).
  */
-struct page *follow_page_mask(struct vm_area_struct *vma,
-			      unsigned long address, unsigned int flags,
-			      unsigned int *page_mask)
+struct page *follow_page(struct vm_area_struct *vma, unsigned long address,
+			unsigned int flags)
 {
 	pgd_t *pgd;
 	pud_t *pud;
@@ -1503,8 +1497,6 @@ struct page *follow_page_mask(struct vm_area_struct *vma,
 		return NULL;
 
 	mm = vma->vm_mm;
-
-	*page_mask = 0;
 
 	page = follow_huge_addr(mm, address, flags & FOLL_WRITE);
 	if (!IS_ERR(page)) {
@@ -1552,7 +1544,6 @@ struct page *follow_page_mask(struct vm_area_struct *vma,
 				page = follow_trans_huge_pmd(mm, address,
 							     pmd, flags);
 				spin_unlock(&mm->page_table_lock);
-				*page_mask = HPAGE_PMD_NR - 1;
 				goto out;
 			}
 		} else
@@ -1566,24 +1557,8 @@ split_fallthrough:
 	ptep = pte_offset_map_lock(mm, pmd, address, &ptl);
 
 	pte = *ptep;
-	if (!pte_present(pte)) {
-		swp_entry_t entry;
-		/*
-		 * KSM's break_ksm() relies upon recognizing a ksm page
-		 * even while it is being migrated, so for that case we
-		 * need migration_entry_wait().
-		 */
-		if (likely(!(flags & FOLL_MIGRATION)))
-			goto no_page;
-		if (pte_none(pte) || pte_file(pte))
-			goto no_page;
-		entry = pte_to_swp_entry(pte);
-		if (!is_migration_entry(entry))
-			goto no_page;
-		pte_unmap_unlock(ptep, ptl);
-		migration_entry_wait(mm, pmd, address);
-		goto split_fallthrough;
-	}
+	if (!pte_present(pte))
+		goto no_page;
 	if ((flags & FOLL_NUMA) && pte_numa(pte))
 		goto no_page;
 
@@ -1719,16 +1694,15 @@ static inline int stack_guard_page(struct vm_area_struct *vma, unsigned long add
  * instead of __get_user_pages. __get_user_pages should be used only if
  * you need some special @gup_flags.
  */
-long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
-		unsigned long start, unsigned long nr_pages,
-		unsigned int gup_flags, struct page **pages,
-		struct vm_area_struct **vmas, int *nonblocking)
+int __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+		     unsigned long start, int nr_pages, unsigned int gup_flags,
+		     struct page **pages, struct vm_area_struct **vmas,
+		     int *nonblocking)
 {
-	long i;
+	int i;
 	unsigned long vm_flags;
-	unsigned int page_mask;
 
-	if (!nr_pages)
+	if (nr_pages <= 0)
 		return 0;
 
 	VM_BUG_ON(!!pages != !!(gup_flags & FOLL_GET));
@@ -1804,7 +1778,6 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 				get_page(page);
 			}
 			pte_unmap(pte);
-			page_mask = 0;
 			goto next_page;
 		}
 
@@ -1835,7 +1808,6 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 		do {
 			struct page *page;
 			unsigned int foll_flags = gup_flags;
-			unsigned int page_increm;
 
 			/*
 			 * If we have a pending SIGKILL, don't keep faulting
@@ -1845,8 +1817,7 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 				return i ? i : -ERESTARTSYS;
 
 			cond_resched();
-			while (!(page = follow_page_mask(vma, start,
-						foll_flags, &page_mask))) {
+			while (!(page = follow_page(vma, start, foll_flags))) {
 				int ret;
 				unsigned int fault_flags = 0;
 
@@ -1916,19 +1887,13 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 
 				flush_anon_page(vma, page, start);
 				flush_dcache_page(page);
-				page_mask = 0;
 			}
 next_page:
-			if (vmas) {
+			if (vmas)
 				vmas[i] = vma;
-				page_mask = 0;
-			}
-			page_increm = 1 + (~(start >> PAGE_SHIFT) & page_mask);
-			if (page_increm > nr_pages)
-				page_increm = nr_pages;
-			i += page_increm;
-			start += page_increm * PAGE_SIZE;
-			nr_pages -= page_increm;
+			i++;
+			start += PAGE_SIZE;
+			nr_pages--;
 		} while (nr_pages && start < vma->vm_end);
 	} while (nr_pages);
 	return i;
@@ -2047,9 +2012,9 @@ int fixup_user_fault(struct task_struct *tsk, struct mm_struct *mm,
  *
  * See also get_user_pages_fast, for performance critical applications.
  */
-long get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
-		unsigned long start, unsigned long nr_pages, int write,
-		int force, struct page **pages, struct vm_area_struct **vmas)
+int get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+		unsigned long start, int nr_pages, int write, int force,
+		struct page **pages, struct vm_area_struct **vmas)
 {
 	int flags = FOLL_TOUCH;
 
@@ -3036,7 +3001,7 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		unsigned int flags, pte_t orig_pte)
 {
 	spinlock_t *ptl;
-	struct page *page, *swapcache;
+	struct page *page, *swapcache = NULL;
 	swp_entry_t entry;
 	pte_t pte;
 	int locked;
@@ -3097,11 +3062,9 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		 */
 		ret = VM_FAULT_HWPOISON;
 		delayacct_clear_flag(DELAYACCT_PF_SWAPIN);
-		swapcache = page;
 		goto out_release;
 	}
 
-	swapcache = page;
 	locked = lock_page_or_retry(page, mm, flags);
 
 	delayacct_clear_flag(DELAYACCT_PF_SWAPIN);
@@ -3119,11 +3082,16 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	if (unlikely(!PageSwapCache(page) || page_private(page) != entry.val))
 		goto out_page;
 
-	page = ksm_might_need_to_copy(page, vma, address);
-	if (unlikely(!page)) {
-		ret = VM_FAULT_OOM;
-		page = swapcache;
-		goto out_page;
+	if (ksm_might_need_to_copy(page, vma, address)) {
+		swapcache = page;
+		page = ksm_does_need_to_copy(page, vma, address);
+
+		if (unlikely(!page)) {
+			ret = VM_FAULT_OOM;
+			page = swapcache;
+			swapcache = NULL;
+			goto out_page;
+		}
 	}
 
 	if (mem_cgroup_try_charge_swapin(mm, page, GFP_KERNEL, &ptr)) {
@@ -3168,10 +3136,10 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	}
 	flush_icache_page(vma, page);
 	set_pte_at(mm, address, page_table, pte);
-	if (page == swapcache)
-		do_page_add_anon_rmap(page, vma, address, exclusive);
-	else /* ksm created a completely new copy */
+	if (swapcache) /* ksm created a completely new copy */
 		page_add_new_anon_rmap(page, vma, address);
+	else
+		do_page_add_anon_rmap(page, vma, address, exclusive);
 	/* It's better to call commit-charge after rmap is established */
 	mem_cgroup_commit_charge_swapin(page, ptr);
 
@@ -3179,7 +3147,7 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	if (vm_swap_full() || (vma->vm_flags & VM_LOCKED) || PageMlocked(page))
 		try_to_free_swap(page);
 	unlock_page(page);
-	if (page != swapcache) {
+	if (swapcache) {
 		/*
 		 * Hold the lock to avoid the swap entry to be reused
 		 * until we take the PT lock for the pte_same() check
@@ -3212,7 +3180,7 @@ out_page:
 	unlock_page(page);
 out_release:
 	page_cache_release(page);
-	if (page != swapcache) {
+	if (swapcache) {
 		unlock_page(swapcache);
 		page_cache_release(swapcache);
 	}
@@ -3239,7 +3207,7 @@ static inline int check_stack_guard_page(struct vm_area_struct *vma, unsigned lo
 		if (prev && prev->vm_end == address)
 			return prev->vm_flags & VM_GROWSDOWN ? 0 : -ENOMEM;
 
-		expand_downwards(vma, address - PAGE_SIZE);
+		return expand_downwards(vma, address - PAGE_SIZE);
 	}
 	if ((vma->vm_flags & VM_GROWSUP) && address + PAGE_SIZE == vma->vm_end) {
 		struct vm_area_struct *next = vma->vm_next;
@@ -3248,7 +3216,7 @@ static inline int check_stack_guard_page(struct vm_area_struct *vma, unsigned lo
 		if (next && next->vm_start == address + PAGE_SIZE)
 			return next->vm_flags & VM_GROWSUP ? 0 : -ENOMEM;
 
-		expand_upwards(vma, address + PAGE_SIZE);
+		return expand_upwards(vma, address + PAGE_SIZE);
 	}
 	return 0;
 }
@@ -3949,6 +3917,30 @@ int __pmd_alloc(struct mm_struct *mm, pud_t *pud, unsigned long address)
 	return 0;
 }
 #endif /* __PAGETABLE_PMD_FOLDED */
+
+int make_pages_present(unsigned long addr, unsigned long end)
+{
+	int ret, len, write;
+	struct vm_area_struct * vma;
+
+	vma = find_vma(current->mm, addr);
+	if (!vma)
+		return -ENOMEM;
+	/*
+	 * We want to touch writable mappings with a write fault in order
+	 * to break COW, except for shared mappings because these don't COW
+	 * and we would not want to dirty them for nothing.
+	 */
+	write = (vma->vm_flags & (VM_WRITE | VM_SHARED)) == VM_WRITE;
+	BUG_ON(addr >= end);
+	BUG_ON(end > vma->vm_end);
+	len = DIV_ROUND_UP(end, PAGE_SIZE) - addr/PAGE_SIZE;
+	ret = get_user_pages(current, current->mm, addr,
+			len, write, 0, NULL, NULL);
+	if (ret < 0)
+		return ret;
+	return ret == len ? 0 : -EFAULT;
+}
 
 #if !defined(__HAVE_ARCH_GATE_AREA)
 

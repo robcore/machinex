@@ -133,7 +133,7 @@ struct scan_control {
  * From 0 .. whatever.  Higher means more swappy.
  */
 int vm_swappiness = 130;
-unsigned long vm_total_pages;	/* The total number of pages which the VM controls */
+long vm_total_pages;	/* The total number of pages which the VM controls */
 
 static LIST_HEAD(shrinker_list);
 static DECLARE_RWSEM(shrinker_rwsem);
@@ -1614,6 +1614,16 @@ static inline int inactive_anon_is_low(struct lruvec *lruvec)
 }
 #endif
 
+static int inactive_file_is_low_global(struct zone *zone)
+{
+	unsigned long active, inactive;
+
+	active = zone_page_state(zone, NR_ACTIVE_FILE);
+	inactive = zone_page_state(zone, NR_INACTIVE_FILE);
+
+	return (active > inactive);
+}
+
 /**
  * inactive_file_is_low - check if file pages need to be deactivated
  * @lruvec: LRU vector to check
@@ -1630,13 +1640,10 @@ static inline int inactive_anon_is_low(struct lruvec *lruvec)
  */
 static int inactive_file_is_low(struct lruvec *lruvec)
 {
-	unsigned long inactive;
-	unsigned long active;
+	if (!mem_cgroup_disabled())
+		return mem_cgroup_inactive_file_is_low(lruvec);
 
-	inactive = get_lru_size(lruvec, LRU_INACTIVE_FILE);
-	active = get_lru_size(lruvec, LRU_ACTIVE_FILE);
-
-	return active > inactive;
+	return inactive_file_is_low_global(lruvec_zone(lruvec));
 }
 
 static int inactive_list_is_low(struct lruvec *lruvec, enum lru_list lru)
@@ -2256,13 +2263,6 @@ static unsigned long do_try_to_free_pages(struct zonelist *zonelist,
 			goto out;
 
 		/*
-		 * If we're getting trouble reclaiming, start doing
-		 * writepage even in laptop mode.
-		 */
-		if (sc->priority < DEF_PRIORITY - 2)
-			sc->may_writepage = 1;
-
-		/*
 		 * Try to write back as many pages as we just scanned.  This
 		 * tends to cause slow streaming writers to write data to the
 		 * disk smoothly, at the dirtying rate, which is nice.   But
@@ -2851,10 +2851,12 @@ loop_again:
 			}
 
 			/*
-			 * If we're getting trouble reclaiming, start doing
-			 * writepage even in laptop mode.
+			 * If we've done a decent amount of scanning and
+			 * the reclaim ratio is low, start doing writepage
+			 * even in laptop mode
 			 */
-			if (sc.priority < DEF_PRIORITY - 2)
+			if (total_scanned > SWAP_CLUSTER_MAX * 2 &&
+			    total_scanned > sc.nr_reclaimed + sc.nr_reclaimed / 2)
 				sc.may_writepage = 1;
 
 			if (!zone_reclaimable(zone)) {
