@@ -336,10 +336,10 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 }
 
 #define MACINFO "/data/.mac.info"
-#define MACINFO_EFS /efs/wifi/.mac.info
+#define MACINFO_EFS "/efs/wifi/.mac.info"
 #define NVMACINFO "/data/.nvmac.info"
 #define	REVINFO "/data/.rev"
-#define CIDINFO /data/.cid.info
+#define CIDINFO "/data/.cid.info"
 #define PSMINFO "/data/.psm.info"
 #define WIFIVERINFO "/data/.wifiver.info"
 #define ANTINFO "/data/.ant.info"
