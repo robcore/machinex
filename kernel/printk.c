@@ -1717,12 +1717,13 @@ asmlinkage int vprintk_emit(int facility, int level,
 	static size_t buflen;
 	static int buflevel;
 	static char textbuf[LOG_LINE_MAX];
+	static struct task_struct *cont;
 	char *text = textbuf;
 	size_t textlen;
 	unsigned long flags;
 	int this_cpu;
 	bool newline = false;
-	bool cont = false;
+	bool prefix = false;
 	int printed_len = 0;
 	boot_delay_msec();
 	printk_delay();
@@ -1786,6 +1787,10 @@ asmlinkage int vprintk_emit(int facility, int level,
 				new_text_line = 1;
 			}
 		}
+		cont = NULL;
+	} else {
+		/* remember thread which filled the buffer */
+		cont = current;
 	}
 
 	/*
