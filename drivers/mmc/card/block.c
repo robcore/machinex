@@ -2286,20 +2286,15 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 
  start_new_req:
 	if (rqc) {
-		if (mmc_card_removed(card)) {
-			rqc->cmd_flags |= REQ_QUIET;
-			blk_end_request_all(rqc, -EIO);
-		} else {
 		/*
 		 * If current request is packed, it needs to put back.
 		 */
 		if (mq->mqrq_cur->packed_cmd != MMC_PACKED_NONE)
 			mmc_blk_revert_packed_req(mq, mq->mqrq_cur);
 
-			mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
-			mmc_start_req(card->host,
-				      &mq->mqrq_cur->mmc_active, NULL);
-		}
+		mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
+		mmc_start_req(card->host, &mq->mqrq_cur->mmc_active, NULL);
+	}
 
 	return 0;
 }
