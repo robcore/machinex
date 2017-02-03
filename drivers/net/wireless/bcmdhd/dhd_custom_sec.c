@@ -839,7 +839,6 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 #ifdef USE_CID_CHECK
 static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf_len)
 {
-	mm_segment_t oldfs = {0};
 	int ret = 0;
 	struct file *fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 
@@ -848,23 +847,14 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
 		ret = -ENFILE;
 	} else {
-		oldfs = get_fs();
-		set_fs(get_ds());
-
-		if (fp->f_mode & FMODE_WRITE) {
-			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
+		ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS[%s]"
 					" into '%s'\n", buf, filepath_cid));
-			else
-				DHD_ERROR(("[WIFI_SEC] CID [%s] written into"
-					" '%s'\n", buf, filepath_cid));
-		}
-		set_fs(oldfs);
 	}
 	filp_close(fp, NULL);
 
-	return 0;
+	return ret;
 }
 
 #ifdef DUMP_CIS
