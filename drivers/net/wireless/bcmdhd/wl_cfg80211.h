@@ -60,7 +60,7 @@ struct wl_ibss;
 #define WL_DBG_ERR	(1 << 0)
 
 /* 0 invalidates all debug messages.  default is 1 */
-#define WL_DBG_LEVEL 0
+#define WL_DBG_LEVEL 0xFF
 
 #ifdef CUSTOMER_HW4
 #define CFG80211_ERROR_TEXT		"CFG80211-INFO2) "

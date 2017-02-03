@@ -53,10 +53,6 @@
  *    - 403 : USA VZW
  *    - 404 : USA SPR
  *    - 405 : USA USC
- *    - 406 : CAN OPEN
- *    - 407 : USA MPCS
- *    - 408 : USA ACG
- *    - 409 : USA LRA
  *    You can refer how to using it below this file.
  *    And, you can add more region code, too.
  */
