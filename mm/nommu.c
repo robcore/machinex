@@ -1258,7 +1258,8 @@ unsigned long do_mmap_pgoff(struct file *file,
 			    unsigned long len,
 			    unsigned long prot,
 			    unsigned long flags,
-			    unsigned long pgoff)
+			    unsigned long pgoff,
+			    bool *populate)
 {
 	struct vm_area_struct *vma;
 	struct vm_region *region;
@@ -1267,6 +1268,8 @@ unsigned long do_mmap_pgoff(struct file *file,
 	int ret;
 
 	kenter(",%lx,%lx,%lx,%lx,%lx", addr, len, prot, flags, pgoff);
+
+	*populate = false;
 
 	/* decide whether we should attempt the mapping, and if so what sort of
 	 * mapping */
@@ -1483,28 +1486,6 @@ error_getting_region:
 	return -ENOMEM;
 }
 
-unsigned long vm_mmap(struct file *file, unsigned long addr,
-	unsigned long len, unsigned long prot,
-	unsigned long flag, unsigned long offset)
-{
-	unsigned long ret;
-	struct mm_struct *mm = current->mm;
-
-	if (unlikely(offset + PAGE_ALIGN(len) < offset))
-		return -EINVAL;
-	if (unlikely(offset & ~PAGE_MASK))
-		return -EINVAL;
-
-	ret = security_mmap_file(file, prot, flag);
-	if (!ret) {
-		down_write(&mm->mmap_sem);
-		ret = do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
-		up_write(&mm->mmap_sem);
-	}
-	return ret;
-}
-EXPORT_SYMBOL(vm_mmap);
-
 SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 		unsigned long, prot, unsigned long, flags,
 		unsigned long, fd, unsigned long, pgoff)
@@ -1521,12 +1502,7 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
-	ret = security_mmap_file(file, prot, flags);
-	if (!ret) {
-		down_write(&current->mm->mmap_sem);
-		retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff);
-		up_write(&current->mm->mmap_sem);
-	}
+	ret = vm_mmap_pgoff(file, addr, len, prot, flags, pgoff);
 
 	if (file)
 		fput(file);
