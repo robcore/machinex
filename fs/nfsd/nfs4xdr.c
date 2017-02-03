@@ -2052,7 +2052,7 @@ nfsd4_encode_fattr(struct svc_fh *fhp, struct svc_export *exp,
 			goto out;
 	}
 
-	err = vfs_getattr(exp->ex_path.mnt, dentry, &stat);
+	err = vfs_getattr(&path, &stat);
 	if (err)
 		goto out_nfserr;
 	if ((bmval0 & (FATTR4_WORD0_FILES_AVAIL | FATTR4_WORD0_FILES_FREE |
