@@ -58,7 +58,6 @@ asmlinkage long sys32_execve(const char __user *, compat_uptr_t __user *,
 			     compat_uptr_t __user *, struct pt_regs *);
 asmlinkage long sys32_clone(unsigned int, unsigned int, struct pt_regs *);
 
-long sys32_lseek(unsigned int, int, unsigned int);
 long sys32_kill(int, int);
 long sys32_fadvise64_64(int, __u32, __u32, __u32, __u32, int);
 long sys32_vm86_warning(void);
