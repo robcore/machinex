@@ -3846,6 +3846,7 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 				WL_ERR((" failed to restore roam_trigger for auto env"
 					" detection\n"));
 		}
+		wl_clr_drv_status(cfg, DISCONNECTING, dev);
 	}
 	}
 #endif /* ROAM_ENABLE && ROAM_AP_ENV_DETECTION */
