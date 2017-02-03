@@ -394,7 +394,7 @@ static void msm_pm_config_hw_before_retention(void)
 #ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
 static int msm_pm_sleep_time_override;
 module_param_named(sleep_time_override,
-	msm_pm_sleep_time_override, int, S_IRUGO | S_IWUSR | S_IWGRP);
+	msm_pm_sleep_time_override, int, 0664);
 #endif
 
 #define SCLK_HZ (32768)
