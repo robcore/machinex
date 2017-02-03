@@ -828,7 +828,6 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 #ifdef USE_CID_CHECK
 static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf_len)
 {
-	char *filepath_cid = CIDINFO;
 	int ret = 0;
 	struct file *fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 
