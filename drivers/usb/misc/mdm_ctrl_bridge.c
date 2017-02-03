@@ -468,13 +468,14 @@ int ctrl_bridge_write(unsigned int id, char *data, size_t size)
 	if (result < 0) {
 		dev_err(&dev->intf->dev, "%s: submit URB error %d\n",
 			__func__, result);
-		usb_autopm_put_interface(dev->intf);
+		usb_autopm_put_interface_async(dev->intf);
 		goto unanchor_urb;
 	}
 deferred:
 	return size;
 
 unanchor_urb:
+	spin_unlock_irqrestore(&dev->lock, flags);
 	usb_unanchor_urb(writeurb);
 	subsystem_restart("external_modem");
 free_ctrlreq:
