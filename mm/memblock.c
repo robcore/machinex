@@ -150,7 +150,6 @@ phys_addr_t __init_memblock memblock_find_in_range_node(phys_addr_t start,
 {
 	phys_addr_t this_start, this_end, cand;
 	u64 i;
-	int curr = movablemem_map.nr_map - 1;
 
 	/* pump up @end */
 	if (end == MEMBLOCK_ALLOC_ACCESSIBLE)
@@ -164,28 +163,13 @@ phys_addr_t __init_memblock memblock_find_in_range_node(phys_addr_t start,
 		this_start = clamp(this_start, start, end);
 		this_end = clamp(this_end, start, end);
 
-restart:
-		if (this_end <= this_start || this_end < size)
+		if (this_end < size)
 			continue;
 
-		for (; curr >= 0; curr--) {
-			if ((movablemem_map.map[curr].start_pfn << PAGE_SHIFT)
-			    < this_end)
-				break;
-		}
-
 		cand = round_down(this_end - size, align);
-		if (curr >= 0 &&
-		    cand < movablemem_map.map[curr].end_pfn << PAGE_SHIFT) {
-			this_end = movablemem_map.map[curr].start_pfn
-				   << PAGE_SHIFT;
-			goto restart;
-		}
-
 		if (cand >= this_start)
 			return cand;
 	}
-
 	return 0;
 }
 #endif /* CONFIG_HAVE_MEMBLOCK_NODE_MAP */
@@ -388,11 +372,10 @@ static void __init_memblock memblock_merge_regions(struct memblock_type *type)
 
 /**
  * memblock_insert_region - insert new memblock region
- * @type:	memblock type to insert into
- * @idx:	index for the insertion point
- * @base:	base address of the new region
- * @size:	size of the new region
- * @nid:	node id of the new region
+ * @type: memblock type to insert into
+ * @idx: index for the insertion point
+ * @base: base address of the new region
+ * @size: size of the new region
  *
  * Insert new memblock region [@base,@base+@size) into @type at @idx.
  * @type must already have extra room to accomodate the new region.
