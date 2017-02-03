@@ -1440,6 +1440,8 @@ void netdev_unregister_kobject(struct net_device * net)
 
 	pm_runtime_set_memalloc_noio(dev, false);
 
+	pm_runtime_set_memalloc_noio(dev, false);
+
 	device_del(dev);
 }
 
@@ -1482,6 +1484,8 @@ int netdev_register_kobject(struct net_device *net)
 		device_del(dev);
 		return error;
 	}
+
+	pm_runtime_set_memalloc_noio(dev, true);
 
 	pm_runtime_set_memalloc_noio(dev, true);
 
