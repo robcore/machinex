@@ -839,15 +839,14 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 #ifdef USE_CID_CHECK
 static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf_len)
 {
-	struct file *fp = NULL;
 	mm_segment_t oldfs = {0};
 	int ret = 0;
+	struct file *fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
-		return -1;
+		ret = -ENFILE;
 	} else {
 		oldfs = get_fs();
 		set_fs(get_ds());
