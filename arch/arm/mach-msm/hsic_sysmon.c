@@ -143,7 +143,12 @@ static int hsic_sysmon_readwrite(enum hsic_sysmon_device_id id, void *data,
 		return -ENODEV;
 	}
 
-	usb_autopm_get_interface_async(hs->ifc);
+	ret = usb_autopm_get_interface(hs->ifc);
+	if (ret < 0) {
+		dev_err(&hs->ifc->dev, "can't %s, autopm_get failed:%d\n",
+			opstr, ret);
+		return ret;
+	}
 
 	atomic_inc(&hs->dbg_pending[op]);
 
@@ -158,7 +163,7 @@ static int hsic_sysmon_readwrite(enum hsic_sysmon_device_id id, void *data,
 	else
 		atomic_add(*actual_len, &hs->dbg_bytecnt[op]);
 
-	usb_autopm_put_interface_async(hs->ifc);
+	usb_autopm_put_interface(hs->ifc);
 	return ret;
 }
 
