@@ -468,7 +468,7 @@ int ctrl_bridge_write(unsigned int id, char *data, size_t size)
 	if (result < 0) {
 		dev_err(&dev->intf->dev, "%s: submit URB error %d\n",
 			__func__, result);
-		usb_autopm_put_interface_async(dev->intf);
+		usb_autopm_put_interface(dev->intf);
 		goto unanchor_urb;
 	}
 deferred:
