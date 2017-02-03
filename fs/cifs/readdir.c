@@ -81,7 +81,7 @@ cifs_readdir_lookup(struct dentry *parent, struct qstr *name,
 
 	dentry = d_hash_and_lookup(parent, name);
 	if (unlikely(IS_ERR(dentry)))
-		return;
+		return NULL;
 
 	if (dentry) {
 		int err;
