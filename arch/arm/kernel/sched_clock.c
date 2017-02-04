@@ -44,12 +44,12 @@ static u32 notrace jiffy_sched_clock_read(void)
 
 static u32 __read_mostly (*read_sched_clock)(void) = jiffy_sched_clock_read;
 
-static inline u64 cyc_to_ns(u64 cyc, u32 mult, u32 shift)
+static inline u64 notrace cyc_to_ns(u64 cyc, u32 mult, u32 shift)
 {
 	return (cyc * mult) >> shift;
 }
 
-static unsigned long long cyc_to_sched_clock(u32 cyc, u32 mask)
+static unsigned long long notrace cyc_to_sched_clock(u32 cyc, u32 mask)
 {
 	u64 epoch_ns;
 	u32 epoch_cyc;
@@ -116,7 +116,6 @@ void __init setup_sched_clock(u32 (*read)(void), int bits, unsigned long rate)
 
 	BUG_ON(bits > 32);
 	WARN_ON(!irqs_disabled());
-	WARN_ON(read_sched_clock != jiffy_sched_clock_read);
 	read_sched_clock = read;
 	sched_clock_mask = (1 << bits) - 1;
 
