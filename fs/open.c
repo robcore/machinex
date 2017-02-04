@@ -702,7 +702,6 @@ static int do_dentry_open(struct file *f,
 	}
 
 	f->f_mapping = inode->i_mapping;
-	f->f_pos = 0;
 
 	if (unlikely(f->f_mode & FMODE_PATH)) {
 		f->f_op = &empty_fops;
