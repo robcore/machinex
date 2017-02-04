@@ -1,3 +1,6 @@
+#ifndef S_FUNCS_H
+#define S_FUNCS_H
+
 #include <linux/string.h>
 
 void replace_str(char *str, char *orig, char *rep)
@@ -15,3 +18,4 @@ void replace_str(char *str, char *orig, char *rep)
 
   strncpy(str, buffer, strlen(buffer));
 }
+#endif

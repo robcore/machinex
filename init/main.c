@@ -74,7 +74,7 @@
 #include <linux/random.h>
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
-#include <s_funcs.h>
+#include <linux/s_funcs.h>
 
 #include <asm/io.h>
 #include <asm/bugs.h>
