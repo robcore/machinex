@@ -1,6 +1,7 @@
 #!/bin/bash
 
-function WASHME() {
+function WASHME()
+{
 if [ -d $(pwd)/out ]; then
 	rm -rf $(pwd)/out;
 fi;
@@ -30,7 +31,8 @@ rm -rf $(pwd)/include/generated >> /dev/null;
 rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
 }
 
-function countdown() {
+function countdown()
+{
 	echo "3"
 	sleep 1
 	echo "2"
@@ -39,7 +41,8 @@ function countdown() {
 	sleep 1
 }
 
-function NORMAL() {
+function NORMAL()
+{
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
@@ -90,7 +93,8 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
-function ADBRETRY() {
+function ADBRETRY()
+{
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -189,7 +193,8 @@ else
 fi;
 }
 
-function SPARSE() {
+function SPARSE()
+{
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
@@ -240,7 +245,8 @@ else
 	OUTFOLDER=$PRVS
 fi;
 
-function ADBRETRY() {
+function ADBRETRY()
+{
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -339,7 +345,8 @@ else
 fi;
 }
 
-function MISMATCH() {
+function MISMATCH()
+{
 echo "Building CONFIG_SECTION_MISMATCH kernel"
 	if [ -e /media/root/robcore/AIK/previous.txt ]; then
 		PREV=`cat /media/root/robcore/AIK/previous.txt`
@@ -394,7 +401,8 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 	echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 	read AUTO
 
-function ADBRETRY() {
+function ADBRETRY()
+{
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -481,7 +489,8 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	fi;
 }
 
-function REBUILD() {
+function REBUILD()
+{
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 	echo "your previous version was $PREV"
@@ -496,7 +505,8 @@ if [ -d /media/root/robcore/AIK/$PRVS ]; then
 fi;
 OUTFOLDER=$PRVS
 
-function ADBRETRY() {
+function ADBRETRY()
+{
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
