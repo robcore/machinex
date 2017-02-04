@@ -9,8 +9,8 @@
  * 2 of the License, or (at your option) any later version.
  */
 
-#ifndef _LINUX_ELF_FDPIC_H
-#define _LINUX_ELF_FDPIC_H
+#ifndef __UAPI_LINUX_ELF_FDPIC_H
+#define __UAPI_LINUX_ELF_FDPIC_H
 
 #include <linux/elf.h>
 
@@ -31,7 +31,6 @@ struct elf32_fdpic_loadmap {
 
 #define ELF32_FDPIC_LOADMAP_VERSION	0x0000
 
-#ifndef __KERNEL__
 /*
  * binfmt binary parameters structure
  */
@@ -59,12 +58,4 @@ struct elf_fdpic_params {
 #define ELF_FDPIC_FLAG_PRESENT		0x80000000	/* T if this object is present */
 };
 
-#ifdef CONFIG_MMU
-extern void elf_fdpic_arch_lay_out_mm(struct elf_fdpic_params *exec_params,
-				      struct elf_fdpic_params *interp_params,
-				      unsigned long *start_stack,
-				      unsigned long *start_brk);
-#endif
-#endif /* __KERNEL__ */
-
-#endif /* _LINUX_ELF_FDPIC_H */
+#endif /* __UAPI_LINUX_ELF_FDPIC_H */

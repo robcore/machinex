@@ -552,11 +552,6 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		echo "ENABLE ADB WIRELESS"
-		countdown
-		adb connect 192.168.1.103
-		countdown
-		ADBRETRY
-		cd ~/machinex
 		echo "push finished"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		echo "MD5 is $SUMMY"

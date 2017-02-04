@@ -17,7 +17,6 @@
 #endif
 
 #include <linux/time.h>
-#include <linux/list.h>
 
 /*
  * The event structure itself
