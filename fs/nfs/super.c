@@ -296,7 +296,7 @@ static struct file_system_type nfs_fs_type = {
 	.name		= "nfs",
 	.mount		= nfs_fs_mount,
 	.kill_sb	= nfs_kill_super,
-	.fs_flags	= FS_RENAME_DOES_D_MOVE|FS_REVAL_DOT|FS_BINARY_MOUNTDATA,
+	.fs_flags	= FS_RENAME_DOES_D_MOVE|FS_BINARY_MOUNTDATA,
 };
 
 struct file_system_type nfs_xdev_fs_type = {
@@ -304,7 +304,7 @@ struct file_system_type nfs_xdev_fs_type = {
 	.name		= "nfs",
 	.mount		= nfs_xdev_mount,
 	.kill_sb	= nfs_kill_super,
-	.fs_flags	= FS_RENAME_DOES_D_MOVE|FS_REVAL_DOT|FS_BINARY_MOUNTDATA,
+	.fs_flags	= FS_RENAME_DOES_D_MOVE|FS_BINARY_MOUNTDATA,
 };
 
 static const struct super_operations nfs_sops = {
@@ -343,7 +343,7 @@ static struct file_system_type nfs4_fs_type = {
 	.name		= "nfs4",
 	.mount		= nfs4_mount,
 	.kill_sb	= nfs_kill_super,
-	.fs_flags	= FS_RENAME_DOES_D_MOVE|FS_REVAL_DOT|FS_BINARY_MOUNTDATA,
+	.fs_flags	= FS_RENAME_DOES_D_MOVE|FS_BINARY_MOUNTDATA,
 };
 
 static struct file_system_type nfs4_remote_fs_type = {
