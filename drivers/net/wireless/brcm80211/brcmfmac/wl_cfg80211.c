@@ -2970,7 +2970,7 @@ brcmf_bss_roaming_done(struct brcmf_cfg80211_priv *cfg_priv,
 	WL_TRACE("Enter\n");
 
 	brcmf_get_assoc_ies(cfg_priv);
-	brcmf_update_prof(cfg_priv, NULL, &e->addr, WL_PROF_BSSID);
+	brcmf_update_prof(cfg_priv, NULL, (char*) &e->addr, WL_PROF_BSSID);
 	brcmf_update_bss_info(cfg_priv);
 
 	brcmf_exec_dcmd(ndev, BRCMF_C_GET_CHANNEL, &channel_le,
@@ -3011,7 +3011,7 @@ brcmf_bss_connect_done(struct brcmf_cfg80211_priv *cfg_priv,
 	if (test_and_clear_bit(WL_STATUS_CONNECTING, &cfg_priv->status)) {
 		if (completed) {
 			brcmf_get_assoc_ies(cfg_priv);
-			brcmf_update_prof(cfg_priv, NULL, &e->addr,
+			brcmf_update_prof(cfg_priv, NULL, (char*) &e->addr,
 					  WL_PROF_BSSID);
 			brcmf_update_bss_info(cfg_priv);
 		}
