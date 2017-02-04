@@ -888,7 +888,7 @@ static void memset32_io(u32 __iomem *_ptr, u32 val, size_t count)
 }
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 static void msmfb_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
