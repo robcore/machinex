@@ -20,6 +20,8 @@ header-y += netfilter_ipv4/
 header-y += netfilter_ipv6/
 header-y += usb/
 header-y += wimax/
+header-y += ashmem.h
+header-y += mfd/
 
 genhdr-y += version.h
 
@@ -36,6 +38,7 @@ header-y += agpgart.h
 header-y += aio_abi.h
 header-y += apm_bios.h
 header-y += arcfb.h
+header-y += ashmem.h
 header-y += atalk.h
 header-y += atm.h
 header-y += atm_eni.h
