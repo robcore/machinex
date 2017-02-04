@@ -3534,11 +3534,11 @@ typedef struct dot11_gtk_ie dot11_gtk_ie_t;
 
 /* Management MIC ie */
 BWL_PRE_PACKED_STRUCT struct mmic_ie {
-	uint8   id;					/* IE ID: DOT11_MNG_MMIE_ID */
+	uint8   id;					/* IE ID: DOT11_MNG_MMIE_ID 0xDD */
 	uint8   len;				/* IE length */
 	uint16  key_id;				/* key id */
 	uint8   ipn[6];				/* ipn */
-	uint8   mic[16];			/* mic */
+	uint8   mic[BIP_MIC_SIZE];	/* mic */
 } BWL_POST_PACKED_STRUCT;
 typedef struct mmic_ie mmic_ie_t;
 
