@@ -117,6 +117,7 @@ read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
+export SUBARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 export KBUILD_LOCALVERSION=-$OUTFOLDER
@@ -130,8 +131,8 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-make ARCH=arm -S -s -j6 O=$(pwd)/out;
+make ARCH=arm SUBARCH=arm -j6 O=$(pwd)/out oldconfig;
+make ARCH=arm SUBARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
@@ -269,6 +270,7 @@ read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
+export SUBARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 export KBUILD_LOCALVERSION=-$OUTFOLDER
@@ -282,8 +284,8 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-make C=1 ARCH=arm -S -s -j6 O=$(pwd)/out;
+make ARCH=arm SUBARCH=arm -j6 O=$(pwd)/out oldconfig;
+make C=1 ARCH=arm SUBARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
@@ -422,6 +424,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export ARCH=arm
+	export SUBARCH=arm
 	#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 	export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 	export KBUILD_LOCALVERSION=-$OUTFOLDER
@@ -435,8 +438,8 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	make mrproper;
 	mkdir $(pwd)/out;
 	cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-	make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-	make CONFIG_DEBUG_SECTION_MISMATCH=y ARCH=arm -S -s -j6 O=$(pwd)/out;
+	make ARCH=arm SUBARCH=arm -j6 O=$(pwd)/out oldconfig;
+	make CONFIG_DEBUG_SECTION_MISMATCH=y ARCH=arm SUBARCH=arm -S -s -j6 O=$(pwd)/out;
 	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		cd /media/root/robcore/AIK;
 		cp -R -p machina-new $OUTFOLDER;
@@ -524,6 +527,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export ARCH=arm
+	export SUBARCH=arm
 	#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 	export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 	export KBUILD_LOCALVERSION=-$OUTFOLDER
@@ -533,8 +537,8 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	env KCONFIG_NOTIMESTAMP=true
 	mkdir $(pwd)/out;
 	cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-	make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-	make ARCH=arm -S -s -j6 O=$(pwd)/out;
+	make ARCH=arm SUBARCH=arm -j6 O=$(pwd)/out oldconfig;
+	make ARCH=arm SUBARCH=arm -S -s -j6 O=$(pwd)/out;
 	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		cd /media/root/robcore/AIK;
 		cp -R -p machina-new $OUTFOLDER;
@@ -598,6 +602,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
+export SUBARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 export KBUILD_LOCALVERSION=-$OUTFOLDER
@@ -611,8 +616,8 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-make ARCH=arm -j6 O=$(pwd)/out oldconfig;
-make ARCH=arm -S -s -j6 O=$(pwd)/out;
+make ARCH=arm SUBARCH=arm -j6 O=$(pwd)/out oldconfig;
+make ARCH=arm SUBARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
