@@ -1,5 +1,5 @@
-#ifndef LINUX_KEXEC_H
-#define LINUX_KEXEC_H
+#ifndef __LINUX_KEXEC_H
+#define __LINUX_KEXEC_H
 
 #include <uapi/linux/kexec.h>
 
@@ -8,9 +8,8 @@
 #include <linux/linkage.h>
 #include <linux/compat.h>
 #include <linux/ioport.h>
-#include <linux/elfcore.h>
-#include <linux/elf.h>
 #include <asm/kexec.h>
+
 
 /* Verify architecture specific macros are defined */
 
@@ -216,5 +215,12 @@ struct pt_regs;
 struct task_struct;
 static inline void crash_kexec(struct pt_regs *regs) { }
 static inline int kexec_should_crash(struct task_struct *p) { return 0; }
+
+/* Load a new kernel image as described by the kexec_segment array
+ * consisting of passed number of segments at the entry-point address.
+ * The flags allow different useage types.
+ */
+extern int kexec_load(void *, size_t, struct kexec_segment *,
+		unsigned long int);
 #endif /* CONFIG_KEXEC */
 #endif /* LINUX_KEXEC_H */

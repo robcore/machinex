@@ -1,5 +1,5 @@
-#ifndef _UAPILINUX_KEXEC_H
-#define _UAPILINUX_KEXEC_H
+#ifndef _UAPI_LINUX_KEXEC_H
+#define _UAPI_LINUX_KEXEC_H
 
 /* kexec system call -  It loads the new kernel to boot into.
  * kexec does not sync, or unmount filesystems so if you need
@@ -7,6 +7,9 @@
  */
 
 #include <linux/types.h>
+#include <linux/elfcore.h>
+#include <linux/elf.h>
+
 
 /* kexec flags for different usage scenarios */
 #define KEXEC_ON_CRASH		0x00000001
@@ -33,25 +36,5 @@
 
 /* The artificial cap on the number of segments passed to kexec_load. */
 #define KEXEC_SEGMENT_MAX 16
-
-#ifndef __KERNEL__
-/*
- * This structure is used to hold the arguments that are used when
- * loading  kernel binaries.
- */
-struct kexec_segment {
-	const void *buf;
-	size_t bufsz;
-	const void *mem;
-	size_t memsz;
-};
-
-/* Load a new kernel image as described by the kexec_segment array
- * consisting of passed number of segments at the entry-point address.
- * The flags allow different useage types.
- */
-extern int kexec_load(void *, size_t, struct kexec_segment *,
-		unsigned long int);
-#endif /* __KERNEL__ */
 
 #endif /* _UAPILINUX_KEXEC_H */

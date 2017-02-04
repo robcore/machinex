@@ -21,11 +21,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef SOUNDCARD_H
-#define SOUNDCARD_H
+#ifndef __LINUX_SOUNDCARD_H
+#define __LINUX_SOUNDCARD_H
 
-#  include <asm/byteorder.h>
 #include <uapi/linux/soundcard.h>
+#include <asm/byteorder.h>
+#include <uapi/linux/soundcard.h>
+void seqbuf_dump(void);	/* This function must be provided by programs */
 
 #  if defined(__BIG_ENDIAN)
 #    define AFMT_S16_NE AFMT_S16_BE
