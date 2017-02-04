@@ -1,5 +1,5 @@
-#ifndef _XT_TIME_H
-#define _XT_TIME_H 1
+#ifndef __UAPI_LINUX_NETFILTER_XT_TIME_H
+#define __UAPI_LINUX_NETFILTER_XT_TIME_H
 
 #include <linux/types.h>
 

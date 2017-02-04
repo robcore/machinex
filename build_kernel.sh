@@ -499,28 +499,7 @@ PRVS=`cat /media/root/robcore/AIK/previous.txt`
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	echo "your previous version was $PREV"
 fi;
-if [ -d /media/root/robcore/AIK/$PRVS ]; then
-	echo "removing previously compiled folder and zip of the same name"
-	rm -rf /media/root/robcore/AIK/$PRVS
-fi;
-
 	OUTFOLDER=$PRVS
-
-function ADBRETRY()
-{
-ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
-	echo "connected"
-	adb push $OUTFOLDER.zip /storage/extSdCard
-	echo "push complete"
-else
-	echo "disconnected, retrying"
-	adb connect 192.168.1.103
-	countdown
-	adb push $OUTFOLDER.zip /storage/extSdCard
-	echo "pushed"
-fi;
-}
 
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
@@ -540,25 +519,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	make ARCH=arm SUBARCH=arm -j6 O=$(pwd)/out oldconfig;
 	make ARCH=arm SUBARCH=arm -S -s -j6 O=$(pwd)/out;
 	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-		cd /media/root/robcore/AIK;
-		cp -R -p machina-new $OUTFOLDER;
-		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
-		rm $(pwd)/split_img/boot.img-zImage;
-		cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
-		rm image-new.img;
-		sh repackimg.sh --sudo;
-		cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
-		cd $OUTFOLDER
-		zip -r -9 - * > $OUTFOLDER.zip
-		#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
-		SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
-		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		echo "ENABLE ADB WIRELESS"
-		echo "push finished"
-		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		echo "MD5 is $SUMMY"
+		echo "Success!"
 	else
 		echo "Build failed, Skipped Ramdisk Creation"
 	fi;
