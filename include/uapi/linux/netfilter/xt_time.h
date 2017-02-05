@@ -1,5 +1,5 @@
-#ifndef _XT_TIME_H
-#define _XT_TIME_H 1
+#ifndef __UAPI_LINUX_NETFILTER_XT_TIME_H
+#define __UAPI_LINUX_NETFILTER_XT_TIME_H
 
 #include <linux/types.h>
 
@@ -24,4 +24,4 @@ enum {
 	XT_TIME_MAX_DAYTIME   = 24 * 60 * 60 - 1,
 };
 
-#endif /* _XT_TIME_H */
+#endif /* __UAPI_LINUX_NETFILTER_XT_TIME_H */
