@@ -1153,6 +1153,7 @@ unsigned long vm_mmap(struct file *file, unsigned long addr,
 {
 	unsigned long ret;
 	struct mm_struct *mm = current->mm;
+	bool populate;
 
 	if (unlikely(offset + PAGE_ALIGN(len) < offset))
 		return -EINVAL;
@@ -1160,8 +1161,11 @@ unsigned long vm_mmap(struct file *file, unsigned long addr,
 		return -EINVAL;
 
 	down_write(&mm->mmap_sem);
-	ret = do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
+	ret = do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT,
+					&populate);
 	up_write(&mm->mmap_sem);
+	if (!IS_ERR_VALUE(ret) && populate)
+		mm_populate(ret, len);
 	return ret;
 }
 EXPORT_SYMBOL(vm_mmap);
