@@ -347,10 +347,8 @@ KALLSYMS	= scripts/kallsyms
 PERL		= perl
 CHECK		= sparse
 
-ifeq ($(CONFIG_CRYPTO_FIPS),)
- READELF	= $(CROSS_COMPILE)readelf
- export READELF
-endif
+READELF	= $(CROSS_COMPILE)readelf
+
 
 # Use the wrapper for the compiler.  This wrapper scans for new
 # warnings and causes the build to stop upon encountering them.
@@ -397,9 +395,10 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-variable -Wno-maybe-uninitialized \
 		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -std=gnu89 \
-		   -Wno-format-security -Wno-unused-function -Wno-unused-label -Wno-array-bounds -Wno-logical-not-parentheses \
-		   -fno-delete-null-pointer-checks -Wno-cpp -Wno-declaration-after-statement -fno-var-tracking-assignments \
-		   -Wno-sizeof-pointer-memaccess -fno-aggressive-loop-optimizations -Wno-sequence-point
+		   -Wno-format-security -Wno-unused-function -Wno-unused-label  -Wno-logical-not-parentheses \
+		   -fno-delete-null-pointer-checks -Wno-cpp -fno-var-tracking-assignments \
+		   -fno-aggressive-loop-optimizations -Wno-sequence-point
+#-Wno-array-bounds -Wno-declaration-after-statement -Wno-sizeof-pointer-memaccess
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
