@@ -412,10 +412,10 @@ static void *brcm_wlan_get_country_code(char *ccode)
 static struct resource brcm_wlan_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
-#if !defined(CONFIG_SPARSE_IRQ)
+//#if !defined(CONFIG_SPARSE_IRQ)
 		.start	= MSM_GPIO_TO_INT(GPIO_WL_HOST_WAKE),
 		.end	= MSM_GPIO_TO_INT(GPIO_WL_HOST_WAKE),
-#endif /* !defined(CONFIG_SPARSE_IRQ) */
+//#endif /* !defined(CONFIG_SPARSE_IRQ) */
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_SHAREABLE
 			| IORESOURCE_IRQ_HIGHLEVEL,
 	},
@@ -445,13 +445,13 @@ int __init brcm_wlan_init(void)
 {
 	printk(KERN_INFO"%s: start\n", __func__);
 
-#if defined(CONFIG_SPARSE_IRQ)
+#if 0
 	brcm_wlan_resources[0].start = gpio_to_irq(GPIO_WL_HOST_WAKE);
 	brcm_wlan_resources[0].end = gpio_to_irq(GPIO_WL_HOST_WAKE);
 #else
 	brcm_wlan_resources[0].start = MSM_GPIO_TO_INT(get_gpio_wl_host_wake());
 	brcm_wlan_resources[0].end = MSM_GPIO_TO_INT(get_gpio_wl_host_wake());
-#endif /* defined(CONFIG_SPARSE_IRQ) */
+//#endif /* defined(CONFIG_SPARSE_IRQ) */
 
 	brcm_wifi_init_gpio();
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM

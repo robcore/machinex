@@ -5940,7 +5940,6 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		pdata->disable_cmd23 = true;
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
-
 	return pdata;
 err:
 	return NULL;
