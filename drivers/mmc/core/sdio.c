@@ -943,7 +943,6 @@ static void mmc_sdio_detect(struct mmc_host *host)
 out:
 	if (err) {
 		mmc_sdio_remove(host);
-
 		mmc_claim_host(host);
 		mmc_detach_bus(host);
 		mmc_power_off(host);
@@ -1097,6 +1096,7 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 				mmc_card_keep_power(host));
 	if (!ret && host->sdio_irqs)
 		mmc_signal_sdio_irq(host);
+		mmc_release_host(host);
 
 out:
 	mmc_release_host(host);
