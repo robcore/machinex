@@ -1810,7 +1810,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		pr_debug("%s: CMD%d: Command CRC error\n",
 			mmc_hostname(host->mmc), cmd->opcode);
 		msmsdcc_dump_sdcc_state(host);
-		if( host->pdev->id == 3){
+		if (host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 		cmd->error = -EILSEQ;
@@ -1903,7 +1903,8 @@ msmsdcc_irq(int irq, void *dev_id)
 			 * will take care of signaling sdio irq during
 			 * mmc_sdio_resume().
 			 */
-			if (host->sdcc_suspended) {
+			if (host->sdcc_suspended) ||
+					 host->plat->sdiowakeup_irq)) {
 				/*
 				 * This is a wakeup interrupt so hold wakelock
 				 * until SDCC resume is handled.
@@ -6987,7 +6988,7 @@ msmsdcc_runtime_resume(struct device *dev)
 			if ((host->plat->mpm_sdiowakeup_int ||
 					host->plat->sdiowakeup_irq) &&
 					wake_lock_active(&host->sdio_wlock))
-				wake_lock_timeout(&host->sdio_wlock, 3);
+				wake_lock_timeout(&host->sdio_wlock, 1);
 		}
 
 		wake_unlock(&host->sdio_suspend_wlock);
@@ -7002,7 +7003,6 @@ static int msmsdcc_runtime_idle(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
 	struct msmsdcc_host *host = mmc_priv(mmc);
-	int ret;
 
 	if (host->plat->is_sdio_al_client)
 		return 0;
@@ -7041,11 +7041,13 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 * pending_resume flag is cleared before calling the
 	 * msmsdcc_runtime_suspend().
 	 */
-	if (!pm_runtime_suspended(dev) && !host->pending_resume)
+	if (!pm_runtime_suspended(dev) && !host->pending_resume) {
+		host->pending_resume = false;
 		rc = msmsdcc_runtime_suspend(dev);
+		return rc;
+	}
  out:
 	/* This flag must not be set if system is entering into suspend */
-	//host->pending_resume = false;
 	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }

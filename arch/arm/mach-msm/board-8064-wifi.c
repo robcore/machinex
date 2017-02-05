@@ -5,6 +5,7 @@
 #include <linux/err.h>
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
+#include <linux/mmc/host.h>
 #include <mach/gpio.h>
 #include <mach/apq8064-gpio.h>
 #include <linux/barcode_emul.h>		// yhcha-patch
@@ -155,6 +156,12 @@ static unsigned config_gpio_wl_reg_on[] = {
 		GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA) };
 #endif
 
+static int brcm_wifi_cd; /* WIFI virtual 'card detect' status */
+static void (*wifi_status_cb)(int card_present, void *dev_id);
+static void *wifi_status_cb_devid;
+static void *wifi_mmc_host;
+extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
+
 static unsigned get_gpio_wl_host_wake(void)
 {
 	unsigned gpio_wl_host_wake;
@@ -244,7 +251,11 @@ static int brcm_wlan_power(int onoff)
 				__func__);
 			ret =  -EIO;
 		}
+	/* Power on/off SDIO host */
+	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, onoff);
 	} else {
+	/* Power on/off SDIO host */
+	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, onoff);
 		/*
 		if (gpio_request(GPIO_WL_REG_ON, "WL_REG_ON"))
 		{
@@ -283,13 +294,14 @@ static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 
 int brcm_wifi_status_register(
-		void (*callback)(int card_present, void *dev_id),
-		void *dev_id)
+	void (*callback)(int card_present, void *dev_id),
+	void *dev_id, void *mmc_host)
 {
 	if (wifi_status_cb)
 		return -EAGAIN;
 	wifi_status_cb = callback;
 	wifi_status_cb_devid = dev_id;
+	wifi_mmc_host = mmc_host;
 	printk(KERN_INFO "%s: callback is %p, devid is %p\n",
 		__func__, wifi_status_cb, dev_id);
 	return 0;
@@ -400,8 +412,10 @@ static void *brcm_wlan_get_country_code(char *ccode)
 static struct resource brcm_wlan_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
+#if !defined(CONFIG_SPARSE_IRQ)
 		.start	= MSM_GPIO_TO_INT(GPIO_WL_HOST_WAKE),
 		.end	= MSM_GPIO_TO_INT(GPIO_WL_HOST_WAKE),
+#endif /* !defined(CONFIG_SPARSE_IRQ) */
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_SHAREABLE
 			| IORESOURCE_IRQ_HIGHLEVEL,
 	},
@@ -431,8 +445,13 @@ int __init brcm_wlan_init(void)
 {
 	printk(KERN_INFO"%s: start\n", __func__);
 
+#if defined(CONFIG_SPARSE_IRQ)
+	brcm_wlan_resources[0].start = gpio_to_irq(GPIO_WL_HOST_WAKE);
+	brcm_wlan_resources[0].end = gpio_to_irq(GPIO_WL_HOST_WAKE);
+#else
 	brcm_wlan_resources[0].start = MSM_GPIO_TO_INT(get_gpio_wl_host_wake());
 	brcm_wlan_resources[0].end = MSM_GPIO_TO_INT(get_gpio_wl_host_wake());
+#endif /* defined(CONFIG_SPARSE_IRQ) */
 
 	brcm_wifi_init_gpio();
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM

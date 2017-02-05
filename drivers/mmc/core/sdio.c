@@ -585,7 +585,8 @@ static int mmc_sdio_init_uhs_card(struct mmc_card *card)
 	if (err)
 		goto out;
 
-#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE) || defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
+// #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)
+#if 0
 	/*
 	* Prevent tuning operation when init a card
 	* for WiFi operation with sdmmc.
@@ -620,7 +621,9 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
+#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || \
+    defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE) || \
+    defined(CONFIG_BCM4354) || defined(CONFIG_BCM4354_MODULE)
 	/* If host that supports UHS-I sets S18R to 1 in arg of CMD5 to request
 	 * change of signaling level to 1.8V
 	 */
@@ -911,10 +914,8 @@ static void mmc_sdio_detect(struct mmc_host *host)
 	/* Make sure card is powered before detecting it */
 	if (host->caps & MMC_CAP_POWER_OFF_CARD) {
 		err = pm_runtime_get_sync(&host->card->dev);
-		if (err < 0) {
-			pm_runtime_put_noidle(&host->card->dev);
+		if (err < 0)
 			goto out;
-		}
 	}
 
 	mmc_claim_host(host);
@@ -943,6 +944,7 @@ static void mmc_sdio_detect(struct mmc_host *host)
 out:
 	if (err) {
 		mmc_sdio_remove(host);
+
 		mmc_claim_host(host);
 		mmc_detach_bus(host);
 		mmc_power_off(host);
@@ -1094,9 +1096,10 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 
 	ret = mmc_sdio_init_card(host, host->ocr, host->card,
 				mmc_card_keep_power(host));
-	if (!ret && host->sdio_irqs)
+	if (!ret && host->sdio_irqs) {
 		mmc_signal_sdio_irq(host);
 		mmc_release_host(host);
+	}
 
 out:
 	mmc_release_host(host);
@@ -1317,3 +1320,18 @@ err:
 #endif /* CONFIG_BCM4335 || CONFIG_BCM4335_MODULE */
 }
 EXPORT_SYMBOL(sdio_reset_comm);
+
+#if defined(CONFIG_BCM4339) || defined(CONFIG_BCM4335) || defined(CONFIG_BCM4354)
+void sdio_ctrl_power(struct mmc_host *host, bool onoff)
+{
+		mmc_claim_host(host);
+		if (onoff)
+			mmc_power_up(host);
+        else
+			mmc_power_off(host);
+		/* Wait at least 1 ms according to SD spec */
+		mmc_delay(1);
+		mmc_release_host(host);
+}
+EXPORT_SYMBOL(sdio_ctrl_power);
+#endif /* CONFIG_BCM4339 || CONFIG_BCM4335  || CONFIG_BCM4354 */
