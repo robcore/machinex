@@ -1155,36 +1155,12 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 	return addr;
 }
 
-unsigned long vm_mmap(struct file *file, unsigned long addr,
-	unsigned long len, unsigned long prot,
-	unsigned long flag, unsigned long offset)
-{
-	unsigned long ret;
-	struct mm_struct *mm = current->mm;
-	bool populate;
-
-	if (unlikely(offset + PAGE_ALIGN(len) < offset))
-		return -EINVAL;
-	if (unlikely(offset & ~PAGE_MASK))
-		return -EINVAL;
-
-	down_write(&mm->mmap_sem);
-	ret = do_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT,
-					&populate);
-	up_write(&mm->mmap_sem);
-	if (!IS_ERR_VALUE(ret) && populate)
-		mm_populate(ret, len);
-	return ret;
-}
-EXPORT_SYMBOL(vm_mmap);
-
 SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 		unsigned long, prot, unsigned long, flags,
 		unsigned long, fd, unsigned long, pgoff)
 {
 	struct file *file = NULL;
 	unsigned long retval = -EBADF;
-	bool populate;
 
 	if (!(flags & MAP_ANONYMOUS)) {
 		audit_mmap_fd(fd, flags);
@@ -1215,13 +1191,8 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
-	down_write(&current->mm->mmap_sem);
 	retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff,
 						&populate);
-	up_write(&current->mm->mmap_sem);
-		if (!IS_ERR_VALUE(retval) && populate)
-			mm_populate(retval, len);
-
 	if (file)
 		fput(file);
 out:
