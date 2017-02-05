@@ -3714,6 +3714,7 @@ skip_get_sync:
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
+		rc = pm_runtime_force_resume(dev);
 		return rc;
 	}
 out:
@@ -3741,6 +3742,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
+		rc = pm_runtime_force_suspend(mmc->parent);
 		return rc;
 	}
 
