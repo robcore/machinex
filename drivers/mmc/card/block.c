@@ -35,6 +35,7 @@
 #include <linux/capability.h>
 #include <linux/compat.h>
 #include <linux/sysfs.h>
+#include <linux/pm_runtime.h>
 
 #include <linux/mmc/ioctl.h>
 #include <linux/mmc/card.h>
@@ -71,7 +72,7 @@ static int cprm_ake_retry_flag;
 #define INAND_CMD38_ARG_SECTRIM2 0x88
 #define MMC_BLK_TIMEOUT_MS  (30 * 1000)        /* 30 sec timeout */
 
-#define MMC_SANITIZE_REQ_TIMEOUT (60*60*1000) /* 1 hour in msec */
+#define MMC_SANITIZE_REQ_TIMEOUT 240000 /* 1 hour in msec */
 
 #define mmc_req_rel_wr(req)	(((req->cmd_flags & REQ_FUA) || \
 			(req->cmd_flags & REQ_META)) && \
@@ -1206,6 +1207,7 @@ static int mmc_blk_issue_secdiscard_rq(struct mmc_queue *mq,
 		arg = MMC_SECURE_TRIM1_ARG;
 	else
 		arg = MMC_SECURE_ERASE_ARG;
+
 retry:
 	if (card->quirks & MMC_QUIRK_INAND_CMD38) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
@@ -1298,18 +1300,27 @@ out:
 static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 {
 	struct mmc_blk_data *md = mq->data;
+	struct request_queue *q = mq->queue;
 	struct mmc_card *card = md->queue.card;
 	int ret = 0;
 
 	ret = mmc_flush_cache(card);
-	if (ret) {
+	if (ret == -ETIMEDOUT) {
+		pr_info("%s: %s: requeue flush request after timeout",
+				req->rq_disk->disk_name, __func__);
+		spin_lock_irq(q->queue_lock);
+		blk_requeue_request(q, req);
+		spin_unlock_irq(q->queue_lock);
+		ret = 0;
+		goto exit;
+	} else if (ret) {
 		pr_err("%s: %s: notify flush error to upper layers",
 				req->rq_disk->disk_name, __func__);
 		ret = -EIO;
 	}
 
 	blk_end_request_all(req, ret);
-
+exit:
 	return ret ? 0 : 1;
 }
 
@@ -1452,7 +1463,7 @@ static int mmc_blk_err_check(struct mmc_card *card,
 
 	/* if general error occurs, retry the write operation. */
 	if (gen_err) {
-		pr_warning("%s: retrying write for general error\n",
+		pr_warn("%s: retrying write for general error\n",
 				req->rq_disk->disk_name);
 		return MMC_BLK_RETRY;
 	}
@@ -1496,7 +1507,7 @@ static int mmc_blk_packed_err_check(struct mmc_card *card,
 			mmc_active);
 	struct request *req = mq_rq->req;
 	int err, check, status;
-	u8 ext_csd[512];
+	u8 *ext_csd;
 
 	mq_rq->packed_retries--;
 	check = mmc_blk_err_check(card, areq);
@@ -1508,11 +1519,19 @@ static int mmc_blk_packed_err_check(struct mmc_card *card,
 	}
 
 	if (status & R1_EXCEPTION_EVENT) {
+		ext_csd = kzalloc(512, GFP_KERNEL);
+		if (!ext_csd) {
+			pr_err("%s: unable to allocate buffer for ext_csd\n",
+			       req->rq_disk->disk_name);
+			return -ENOMEM;
+		}
+
 		err = mmc_send_ext_csd(card, ext_csd);
 		if (err) {
 			pr_err("%s: error %d sending ext_csd\n",
 					req->rq_disk->disk_name, err);
-			return MMC_BLK_ABORT;
+			check = MMC_BLK_ABORT;
+			goto free;
 		}
 
 		if ((ext_csd[EXT_CSD_EXP_EVENTS_STATUS] &
@@ -1523,11 +1542,12 @@ static int mmc_blk_packed_err_check(struct mmc_card *card,
 					EXT_CSD_PACKED_INDEXED_ERROR) {
 				mq_rq->packed_fail_idx =
 				  ext_csd[EXT_CSD_PACKED_FAILURE_INDEX] - 1;
-				return MMC_BLK_PARTIAL;
+				check = MMC_BLK_PARTIAL;
 			}
 		}
 	}
-
+free:
+		kfree(ext_csd);
 	return check;
 }
 
@@ -1710,6 +1730,10 @@ static void mmc_blk_write_packing_control(struct mmc_queue *mq,
 	int data_dir;
 
 	if (!(host->caps2 & MMC_CAP2_PACKED_WR))
+		return;
+
+	/* Support for the write packing on eMMC 4.5 or later */
+	if (mq->card->ext_csd.rev <= 5)
 		return;
 
 	/*
@@ -2200,9 +2224,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			break;
 		case MMC_BLK_CMD_ERR:
 			ret = mmc_blk_cmd_err(md, card, brq, req, ret);
-			if (!mmc_blk_reset(md, card->host, type))
-				break;
-			goto cmd_abort;
+			if (mmc_blk_reset(md, card->host, type))
+				goto cmd_abort;
 			if (!ret)
 				goto start_new_req;
 			break;
@@ -2309,13 +2332,13 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	unsigned long flags;
 
 	if (req && !mq->mqrq_prev->req) {
+		/* claim host only for the first request */
+		mmc_claim_host(card->host);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (mmc_bus_needs_resume(card->host)) {
 		mmc_resume_bus(card->host);
 	}
 #endif
-		/* claim host only for the first request */
-		mmc_claim_host(card->host);
 		if (card->ext_csd.bkops_en)
 			mmc_stop_bkops(card);
 	}
@@ -2850,7 +2873,11 @@ static inline void mmc_blk_bkops_sysfs_init(struct mmc_card *card)
 	card->bkops_attr.store = bkops_mode_store;
 	sysfs_attr_init(&card->bkops_attr.attr);
 	card->bkops_attr.attr.name = "bkops_en";
+#if defined(CONFIG_MMC_BKOPS_NODE_UID) || defined(CONFIG_MMC_BKOPS_NODE_GID)
 	card->bkops_attr.attr.mode = S_IRUGO | S_IWUSR | S_IWGRP;
+#else
+	card->bkops_attr.attr.mode = S_IRUGO | S_IWUSR;
+#endif
 
 	if (device_create_file((disk_to_dev(md->disk)), &card->bkops_attr)) {
 		pr_err("%s: Failed to create bkops_en sysfs entry\n",
@@ -2904,7 +2931,9 @@ static int mmc_blk_probe(struct mmc_card *card)
 	mmc_fixup_device(card, blk_fixups);
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	mmc_set_bus_resume_policy(card->host, 1);
+	/* applying only MMC TYPE */
+	if (card && mmc_card_mmc(card))
+		mmc_set_bus_resume_policy(card->host, 1);
 #endif
 	if (mmc_add_disk(md))
 		goto out;
@@ -2944,7 +2973,7 @@ static void mmc_blk_remove(struct mmc_card *card)
 }
 
 #ifdef CONFIG_PM
-static int mmc_blk_suspend(struct mmc_card *card, pm_message_t state)
+static int mmc_blk_suspend(struct mmc_card *card)
 {
 	struct mmc_blk_data *part_md;
 	struct mmc_blk_data *md = mmc_get_drvdata(card);
