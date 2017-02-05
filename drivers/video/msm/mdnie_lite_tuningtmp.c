@@ -308,9 +308,6 @@ void sending_tuning_cmd(void)
 			return;
 #endif
 
-	if (mdnie_lock)
-		return;
-
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
 	if (mfd->panel.type == MIPI_VIDEO_PANEL)
@@ -349,6 +346,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	struct msm_fb_data_type *mfd;
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
+
 	if (!mfd) {
 		DPRINT("[ERROR] mfd is null!\n");
 		return;
@@ -358,7 +356,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		return;
 	}
 
-	if (!mdnie_tun_state.mdnie_enable || !mdnie_lock) {
+	if (!mdnie_tun_state.mdnie_enable) {
 		return;
 	}
 
