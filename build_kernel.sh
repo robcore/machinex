@@ -124,7 +124,7 @@ export KBUILD_LOCALVERSION=-$OUTFOLDER
 export KBUILD_BUILD_VERSION=04
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
-env KCONFIG_NOTIMESTAMP=true
+#env KCONFIG_NOTIMESTAMP=true
 WASHME
 make clean;
 make distclean;
@@ -277,7 +277,7 @@ export KBUILD_LOCALVERSION=-$OUTFOLDER
 export KBUILD_BUILD_VERSION=04
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
-env KCONFIG_NOTIMESTAMP=true
+#env KCONFIG_NOTIMESTAMP=true
 WASHME
 make clean;
 make distclean;
@@ -431,7 +431,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	export KBUILD_BUILD_VERSION=007
 	export USE_CCACHE=1
 	export CCACHE_DIR=~/.ccache
-	env KCONFIG_NOTIMESTAMP=true
+	#env KCONFIG_NOTIMESTAMP=true
 	WASHME
 	make clean;
 	make distclean;
@@ -513,7 +513,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	export KBUILD_BUILD_VERSION=4
 	export USE_CCACHE=1
 	export CCACHE_DIR=~/.ccache
-	env KCONFIG_NOTIMESTAMP=true
+	#env KCONFIG_NOTIMESTAMP=true
 	mkdir $(pwd)/out;
 	cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
@@ -570,7 +570,7 @@ export KBUILD_LOCALVERSION=-$OUTFOLDER
 export KBUILD_BUILD_VERSION=04
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
-env KCONFIG_NOTIMESTAMP=true
+#env KCONFIG_NOTIMESTAMP=true
 WASHME
 make clean;
 make distclean;

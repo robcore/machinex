@@ -837,9 +837,9 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 #endif /* RDWR_KORICS_MACADDR */
 
 #ifdef USE_CID_CHECK
-static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf_len)
+static unsigned int dhd_write_cid_file(const char *filepath_cid, const unsigned char *buf, unsigned int buf_len)
 {
-	int ret = 0;
+	unsigned int ret = 0;
 	struct file *fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 
 	/* File is always created. */
@@ -848,9 +848,6 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 		ret = -ENFILE;
 	} else {
 		ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
-			if (ret < 0)
-				DHD_ERROR(("[WIFI_SEC] Failed to write CIS[%s]"
-					" into '%s'\n", buf, filepath_cid));
 	}
 	filp_close(fp, NULL);
 
@@ -919,7 +916,7 @@ vid_info_t vid_info[] = {
 };
 #endif /* BCM_CHIP_ID */
 
-int dhd_check_module_cid(dhd_pub_t *dhd)
+unsigned int dhd_check_module_cid(dhd_pub_t *dhd)
 {
 	int ret = -1;
 	unsigned char cis_buf[CIS_BUF_SIZE] = {0};
@@ -964,10 +961,9 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 				vid_start = &cis_buf[idx + 3];
 				/* found CIS tuple */
 				break;
-			} else {
+			} else
 				/* Go to next tuple if tuple value is not vendor type */
 				idx += (cis_buf[idx + 1] + 1);
-			}
 		}
 	}
 
@@ -995,7 +991,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 
 write_cid:
 	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
-	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen(cur_info->vname)+1);
+	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen((cur_info->vname) + 1));
 #if defined(BCM4334_CHIP)
 	/* Try reading out from OTP to distinguish B2 or B3 */
 	memset(cis_buf, 0, sizeof(cis_buf));
@@ -1024,10 +1020,10 @@ write_cid:
 #endif /* BCM4334_CHIP */
 #if defined(BCM4335_CHIP)
 	DHD_TRACE(("[WIFI_SEC] %s: BCM4335 Multiple Revision Check\n", __FUNCTION__));
-	if (concate_revision(dhd->bus, rev_str, sizeof(rev_str),
-		rev_str, sizeof(rev_str)) < 0) {
+	ret = concate_revision(dhd->bus, rev_str, sizeof(rev_str), rev_str, sizeof(rev_str));
+	if (!ret) {
 		DHD_ERROR(("[WIFI_SEC] %s: fail to concate revision\n", __FUNCTION__));
-		ret = -1;
+		return -EBADFD;
 	} else {
 		if (strstr(rev_str, "_a0")) {
 			DHD_ERROR(("[WIFI_SEC] REV MATCH FOUND : 4335A0\n"));

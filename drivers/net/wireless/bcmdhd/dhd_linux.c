@@ -268,7 +268,7 @@ extern int dhd_write_rdwr_macaddr(struct ether_addr *mac);
 extern int dhd_write_macaddr(struct ether_addr *mac);
 #endif
 #ifdef USE_CID_CHECK
-extern int dhd_check_module_cid(dhd_pub_t *dhd);
+extern unsigned int dhd_check_module_cid(dhd_pub_t *dhd);
 #endif
 #ifdef GET_MAC_FROM_OTP
 extern int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac);
