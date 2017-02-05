@@ -5819,13 +5819,18 @@ static int msmsdcc_dt_parse_vreg_info(struct device *dev,
 err:
 	return ret;
 }
-#ifdef CONFIG_BROKEN_SDIO_HACK
+
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)
+#ifdef CONFIG_BROKEN_SDIO_HACK
 int brcm_wifi_status_register(
 	void (*callback)(int card_present, void *dev_id), void *dev_id, void *mmc_host);
 unsigned int brcm_wifi_status(struct device *dev);
+#else
+int brcm_wifi_status_register(
+	void (*callback)(int card_present, void *dev_id), void *dev_id);
+unsigned int brcm_wifi_status(struct device *dev);
+#endif /* Shitty broken hack */
 #endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)*/
-#endif
 
 static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 {
