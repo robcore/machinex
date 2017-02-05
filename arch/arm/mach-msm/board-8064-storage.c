@@ -22,6 +22,7 @@
 #include <mach/board.h>
 #include <mach/gpiomux.h>
 #include <mach/socinfo.h>
+#include <mach/board.h>
 #include <mach/apq8064-gpio.h>
 #include "devices.h"
 #include "board-8064.h"
@@ -474,7 +475,7 @@ static struct mmc_platform_data sdc2_data = {
 	.is_wpswitch_active_low = false,
 	.status_gpio	= 26,
 	.status_irq = MSM_GPIO_TO_INT(26),
-	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.is_status_gpio_active_low = 1,
 	.xpc_cap = 1,
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC2_DAT1,
@@ -503,7 +504,7 @@ static struct mmc_platform_data sdc3_data = {
 	.uhs_caps	= (MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
 			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_DDR50 |
 			MMC_CAP_UHS_SDR104 | MMC_CAP_MAX_CURRENT_800),
-	.register_status_notify	= &brcm_wifi_status_register,
+	.register_status_notify	= brcm_wifi_status_register,
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 #else
 	.ocr_mask       = MMC_VDD_27_28 | MMC_VDD_28_29,
@@ -516,7 +517,7 @@ static struct mmc_platform_data sdc3_data = {
 	.is_wpswitch_active_low = true,
 	.status_gpio	= 26,
 	.status_irq	= MSM_GPIO_TO_INT(26),
-	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.is_status_gpio_active_low = 1,
 	.xpc_cap	= 1,
 	.uhs_caps	= (MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
@@ -548,7 +549,7 @@ static struct mmc_platform_data sdc4_data = {
 	.is_wpswitch_active_low = false,
 	.status_gpio	= 26,
 	.status_irq = MSM_GPIO_TO_INT(26),
-	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+	.irq_flags	= IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.is_status_gpio_active_low = 1,
 	.xpc_cap = 1,
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC4_DAT1,

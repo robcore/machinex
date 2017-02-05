@@ -5819,12 +5819,13 @@ static int msmsdcc_dt_parse_vreg_info(struct device *dev,
 err:
 	return ret;
 }
-
+#ifdef CONFIG_BROKEN_SDIO_HACK
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)
 int brcm_wifi_status_register(
 	void (*callback)(int card_present, void *dev_id), void *dev_id, void *mmc_host);
 unsigned int brcm_wifi_status(struct device *dev);
 #endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)*/
+#endif
 
 static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 {
@@ -5834,6 +5835,11 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 	u32 bus_width = 0, current_limit = 0;
 	u32 *clk_table = NULL, *sup_voltages = NULL;
 	int clk_table_len, sup_volt_len, len;
+#ifdef CONFIG_BROKEN_SDIO_HACK
+#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE) || defined(CONFIG_BCM4354)
+	int vendor_type = 0;
+#endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)*/
+#endif
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
@@ -5878,6 +5884,11 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		dev_err(dev, "could not allocate memory for vreg_data\n");
 		goto err;
 	}
+#ifdef CONFIG_BROKEN_SDIO_HACK
+	pdata->status = brcm_wifi_status;
+	pdata->register_status_notify = brcm_wifi_status_register;
+	pdata->built_in = 1;
+#endif
 
 	/*
 	 * Some devices might not use vdd. if qcom,not-use-vdd exists
@@ -5946,6 +5957,19 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		pdata->disable_cmd23 = true;
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
+#ifdef CONFIG_BROKEN_SDIO_HACK
+#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)
+	printk(KERN_INFO"%s: before parsing vendor_type\n", __func__);
+	if (of_get_property(np, "status-cb", &vendor_type)) {
+		printk(KERN_INFO"%s: vendor_type=%d \n", __func__, vendor_type);
+		//if(1 == vendor_type) {
+			pdata->status = brcm_wifi_status;
+			pdata->register_status_notify = brcm_wifi_status_register;
+			pdata->built_in = 1;
+		//}
+	}
+#endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354) */
+#endif
 	return pdata;
 err:
 	return NULL;
@@ -6399,7 +6423,11 @@ msmsdcc_probe(struct platform_device *pdev)
 			goto sdiowakeup_irq_free;
 		}
 	} else if (plat->register_status_notify) {
+#ifdef CONFIG_BROKEN_SDIO_HACK
 		plat->register_status_notify(msmsdcc_status_notify_cb, host, host->mmc);
+#else
+		plat->register_status_notify(msmsdcc_status_notify_cb, host);
+#endif
 	} else if (!plat->status)
 		pr_err("%s: No card detect facilities available\n",
 		       mmc_hostname(mmc));

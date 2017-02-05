@@ -43,7 +43,9 @@
 #include <mach/msm_ipc_logging.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
-
+#ifdef CONFIG_BROKEN_SDIO_HACK
+#include <mach/board.h>
+#endif
 #define BT_UART_CFG
 #define BT_LPM_ENABLE
 

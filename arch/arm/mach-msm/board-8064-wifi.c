@@ -5,7 +5,11 @@
 #include <linux/err.h>
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
+#ifdef CONFIG_BROKEN_SDIO_HACK
 #include <linux/mmc/host.h>
+#include <mach/board.h>
+#include <linux/irq.h>
+#endif
 #include <mach/gpio.h>
 #include <mach/apq8064-gpio.h>
 #include <linux/barcode_emul.h>		// yhcha-patch
@@ -155,12 +159,10 @@ static unsigned config_gpio_wl_reg_on[] = {
 	GPIO_CFG(GPIO_WL_REG_ON, 0, GPIO_CFG_OUTPUT,
 		GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA) };
 #endif
-
-static int brcm_wifi_cd; /* WIFI virtual 'card detect' status */
-static void (*wifi_status_cb)(int card_present, void *dev_id);
-static void *wifi_status_cb_devid;
+#ifdef CONFIG_BROKEN_SDIO_HACK
 static void *wifi_mmc_host;
-extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
+extern void sdio_ctrl_power(struct mmc_host *host, int onoff);
+#endif
 
 static unsigned get_gpio_wl_host_wake(void)
 {
@@ -251,11 +253,15 @@ static int brcm_wlan_power(int onoff)
 				__func__);
 			ret =  -EIO;
 		}
+#ifdef CONFIG_BROKEN_SDIO_HACK
 	/* Power on/off SDIO host */
 	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, onoff);
 	} else {
 	/* Power on/off SDIO host */
 	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, onoff);
+#else
+	} else {
+#endif
 		/*
 		if (gpio_request(GPIO_WL_REG_ON, "WL_REG_ON"))
 		{
@@ -292,16 +298,23 @@ static int brcm_wlan_reset(int onoff)
 static int brcm_wifi_cd; /* WIFI virtual 'card detect' status */
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
-
+#ifdef CONFIG_BROKEN_SDIO_HACK
 int brcm_wifi_status_register(
 	void (*callback)(int card_present, void *dev_id),
 	void *dev_id, void *mmc_host)
+#else
+int brcm_wifi_status_register(
+	void (*callback)(int card_present, void *dev_id),
+	void *dev_id)
+#endif
 {
 	if (wifi_status_cb)
 		return -EAGAIN;
 	wifi_status_cb = callback;
 	wifi_status_cb_devid = dev_id;
+#ifdef CONFIG_BROKEN_SDIO_HACK
 	wifi_mmc_host = mmc_host;
+#endif
 	printk(KERN_INFO "%s: callback is %p, devid is %p\n",
 		__func__, wifi_status_cb, dev_id);
 	return 0;

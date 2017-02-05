@@ -808,7 +808,19 @@ void msm_snddev_tx_route_deconfig(void);
 extern void msm8930_enable_ear_micbias(bool state);
 #endif
 
-extern unsigned int msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
+extern phys_addr_t msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
+#ifdef CONFIG_BROKEN_SDIO_HACK
+void apq8064_bt_init(void);
 
+#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || \
+    defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE) || \
+    defined(CONFIG_BCM4354) || defined(CONFIG_BCM4354_MODULE)
+int brcm_wlan_init(void);
+int brcm_wifi_status_register(
+	void (*callback)(int card_present, void *dev_id),
+	void *dev_id, void *mmc_host);
+unsigned int brcm_wifi_status(struct device *dev);
+#endif
+#endif
 
 #endif
