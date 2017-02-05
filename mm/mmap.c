@@ -1014,13 +1014,13 @@ static inline unsigned long round_hint_to_min(unsigned long hint)
 unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 			unsigned long len, unsigned long prot,
 			unsigned long flags, unsigned long pgoff,
-			bool *populate)
+			unsigned long *populate)
 {
 	struct mm_struct * mm = current->mm;
 	struct inode *inode;
 	vm_flags_t vm_flags;
 
-	*populate = false;
+	*populate = 0;
 
 #ifdef CONFIG_SDCARD_FS
 	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
@@ -1163,7 +1163,7 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 
 	addr = mmap_region(file, addr, len, vm_flags, pgoff);
 	if (!IS_ERR_VALUE(addr) && (vm_flags & VM_POPULATE))
-		*populate = true;
+		*populate = len;
 	return addr;
 }
 
