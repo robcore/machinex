@@ -3712,9 +3712,8 @@ skip_get_sync:
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
-		rc = pm_runtime_force_resume(dev);
+		return rc;
 	}
-	return rc;
 out:
 	return 0;
 }
@@ -3726,18 +3725,24 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	msmsdcc_pm_qos_update_latency(host, 0);
 
-	if (mmc->card && mmc_card_sdio(mmc->card))
-		return 0;
+	if (mmc->card && mmc_card_sdio(mmc->card)) {
+		rc = 0;
+		goto out;
+	}
 
 	if (host->plat->disable_runtime_pm)
 		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
+
 	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
+		return rc;
 	}
+
+out:
 	return rc;
 }
 #else
@@ -6965,7 +6970,6 @@ out:
 	 */
 	if (!atomic_read(&host->clks_on))
 		msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
-	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
 
@@ -7006,13 +7010,12 @@ msmsdcc_runtime_resume(struct device *dev)
 			if ((host->plat->mpm_sdiowakeup_int ||
 					host->plat->sdiowakeup_irq) &&
 					wake_lock_active(&host->sdio_wlock))
-				wake_lock_timeout(&host->sdio_wlock, 4);
+				wake_lock_timeout(&host->sdio_wlock, 1);
 		}
 
 		wake_unlock(&host->sdio_suspend_wlock);
 	}
 	host->pending_resume = false;
-	pr_debug("%s: %s: end\n", mmc_hostname(mmc), __func__);
 out:
 	return 0;
 }
