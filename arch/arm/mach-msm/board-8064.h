@@ -193,7 +193,7 @@ extern int current_cable_type;
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
 int brcm_wlan_init(void);
 int brcm_wifi_status_register(
-		    void (*callback)(int card_present, void *dev_id), void *dev_id);
+		    void (*callback)(int card_present, void *dev_id), void *dev_id, void *mmc_host)
 unsigned int brcm_wifi_status(struct device *dev);
 #endif
 #endif
