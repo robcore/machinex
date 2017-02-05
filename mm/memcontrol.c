@@ -4279,6 +4279,8 @@ void mem_cgroup_uncharge_swap(swp_entry_t ent)
 			res_counter_uncharge(&memcg->memsw, PAGE_SIZE);
 		mem_cgroup_swap_statistics(memcg, false);
 		mem_cgroup_put(memcg);
+		if (parent->use_hierarchy)
+			mem_cgroup_put(parent);
 	}
 	rcu_read_unlock();
 }
