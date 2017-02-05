@@ -1903,8 +1903,7 @@ msmsdcc_irq(int irq, void *dev_id)
 			 * will take care of signaling sdio irq during
 			 * mmc_sdio_resume().
 			 */
-			if (host->sdcc_suspended) ||
-					 host->plat->sdiowakeup_irq)) {
+			if (host->sdcc_suspended) {
 				/*
 				 * This is a wakeup interrupt so hold wakelock
 				 * until SDCC resume is handled.
@@ -3743,7 +3742,6 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
-		rc = pm_runtime_force_suspend(mmc->parent);
 		return rc;
 	}
 
