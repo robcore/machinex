@@ -1451,7 +1451,7 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 				data->error = -ETIMEDOUT;
 		}
 		/* In case of DATA CRC/timeout error, execute tuning again */
-		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id!=3))
+		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id != 3))
 			host->tuning_done = false;
 
 	} else if (status & MCI_RXOVERRUN) {
@@ -2286,7 +2286,7 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	 * Set timeout value to 10 secs (or more in case of buggy cards)
 	 */
 	if ((mmc->card) && (mmc->card->quirks & MMC_QUIRK_INAND_DATA_TIMEOUT))
-		host->curr.req_tout_ms = 10000;
+		host->curr.req_tout_ms = 20000;
 	else
 		host->curr.req_tout_ms = MSM_MMC_REQ_TIMEOUT;
 	/*
@@ -2433,10 +2433,8 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 	struct device *dev = mmc_dev(host->mmc);
 
 	curr_slot = host->plat->vreg_data;
-	if (!curr_slot) {
-		rc = -EINVAL;
+	if (!curr_slot)
 		goto out;
-	}
 
 	curr_vdd_reg = curr_slot->vdd_data;
 	curr_vdd_io_reg = curr_slot->vdd_io_data;
@@ -3493,7 +3491,7 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
-	if (msmsdcc_is_pwrsave(host))
+	if (msmsdcc_is_pwrsave(host) && (host->pdev->id == 3))
 		clk |= MCI_CLK_PWRSAVE;
 
 	clk |= MCI_CLK_FLOWENA;
@@ -6996,8 +6994,8 @@ msmsdcc_runtime_resume(struct device *dev)
 		 * resume handler.
 		 */
 		spin_lock_irqsave(&host->lock, flags);
-		host->sdcc_suspended = false;
 		mmc->pm_flags = 0;
+		host->sdcc_suspended = false;
 		spin_unlock_irqrestore(&host->lock, flags);
 
 		/*
@@ -7008,7 +7006,7 @@ msmsdcc_runtime_resume(struct device *dev)
 			if ((host->plat->mpm_sdiowakeup_int ||
 					host->plat->sdiowakeup_irq) &&
 					wake_lock_active(&host->sdio_wlock))
-				wake_lock_timeout(&host->sdio_wlock, 2);
+				wake_lock_timeout(&host->sdio_wlock, 4);
 		}
 
 		wake_unlock(&host->sdio_suspend_wlock);
@@ -7061,13 +7059,11 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 * pending_resume flag is cleared before calling the
 	 * msmsdcc_runtime_suspend().
 	 */
-	if (!pm_runtime_suspended(dev) && !host->pending_resume) {
-		host->pending_resume = false;
+	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
-		return rc;
-	}
  out:
 	/* This flag must not be set if system is entering into suspend */
+	host->pending_resume = false;
 	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }

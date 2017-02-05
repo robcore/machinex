@@ -912,7 +912,7 @@ static void mmc_sdio_detect(struct mmc_host *host)
 	if (host->caps & MMC_CAP_POWER_OFF_CARD) {
 		err = pm_runtime_get_sync(&host->card->dev);
 		if (err < 0) {
-			pm_runtime_get_noresume(&host->card->dev);
+			pm_runtime_put_noidle(&host->card->dev);
 			goto out;
 		}
 	}
@@ -1097,7 +1097,6 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 				mmc_card_keep_power(host));
 	if (!ret && host->sdio_irqs)
 		mmc_signal_sdio_irq(host);
-		mmc_release_host(host);
 
 out:
 	mmc_release_host(host);
@@ -1306,6 +1305,7 @@ int sdio_reset_comm(struct mmc_card *card)
 	if (err)
 		goto err;
 
+	mmc_delay(1);
 	mmc_release_host(host);
 	return 0;
 err:
