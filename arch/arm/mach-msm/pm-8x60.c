@@ -26,6 +26,8 @@
 #include <linux/smp.h>
 #include <linux/suspend.h>
 #include <linux/tick.h>
+#include <linux/uaccess.h>
+#include <linux/wakelock.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
@@ -58,9 +60,6 @@
 #include "pm-boot.h"
 #include <mach/event_timer.h>
 #include <linux/cpu_pm.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 #include <linux/regulator/consumer.h>
 #include <mach/gpiomux.h>
 #include <linux/mfd/pm8xxx/pm8921.h>
