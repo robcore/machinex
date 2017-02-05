@@ -3,4 +3,4 @@
 
 #include <uapi/linux/netfilter/xt_time.h>
 
-#endif /* _XT_TIME_H */
+#endif /* __LINUX_NETFILTER_XT_TIME_H */
