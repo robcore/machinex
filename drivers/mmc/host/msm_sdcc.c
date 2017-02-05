@@ -3715,8 +3715,8 @@ skip_get_sync:
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
 		rc = pm_runtime_force_resume(dev);
-		return rc;
 	}
+	return rc;
 out:
 	return 0;
 }
@@ -3728,24 +3728,18 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	msmsdcc_pm_qos_update_latency(host, 0);
 
-	if (mmc->card && mmc_card_sdio(mmc->card)) {
-		rc = 0;
-		goto out;
-	}
+	if (mmc->card && mmc_card_sdio(mmc->card))
+		return 0;
 
 	if (host->plat->disable_runtime_pm)
 		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
-
 	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
 		msmsdcc_print_rpm_info(host);
-		return rc;
 	}
-
-out:
 	return rc;
 }
 #else
