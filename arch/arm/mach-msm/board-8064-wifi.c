@@ -425,10 +425,8 @@ static void *brcm_wlan_get_country_code(char *ccode)
 static struct resource brcm_wlan_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
-//#if !defined(CONFIG_SPARSE_IRQ)
 		.start	= MSM_GPIO_TO_INT(GPIO_WL_HOST_WAKE),
 		.end	= MSM_GPIO_TO_INT(GPIO_WL_HOST_WAKE),
-//#endif /* !defined(CONFIG_SPARSE_IRQ) */
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_SHAREABLE
 			| IORESOURCE_IRQ_HIGHLEVEL,
 	},

@@ -1810,7 +1810,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		pr_debug("%s: CMD%d: Command CRC error\n",
 			mmc_hostname(host->mmc), cmd->opcode);
 		msmsdcc_dump_sdcc_state(host);
-		if (host->pdev->id == 3){
+		if( host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
 		cmd->error = -EILSEQ;
@@ -5820,17 +5820,11 @@ err:
 	return ret;
 }
 
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)
 #ifdef CONFIG_BROKEN_SDIO_HACK
 int brcm_wifi_status_register(
 	void (*callback)(int card_present, void *dev_id), void *dev_id, void *mmc_host);
 unsigned int brcm_wifi_status(struct device *dev);
-#else
-int brcm_wifi_status_register(
-	void (*callback)(int card_present, void *dev_id), void *dev_id);
-unsigned int brcm_wifi_status(struct device *dev);
 #endif /* Shitty broken hack */
-#endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)*/
 
 static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 {
@@ -5841,9 +5835,7 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 	u32 *clk_table = NULL, *sup_voltages = NULL;
 	int clk_table_len, sup_volt_len, len;
 #ifdef CONFIG_BROKEN_SDIO_HACK
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE) || defined(CONFIG_BCM4354)
 	int vendor_type = 0;
-#endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)*/
 #endif
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
@@ -5963,7 +5955,6 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
 #ifdef CONFIG_BROKEN_SDIO_HACK
-#if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354)
 	printk(KERN_INFO"%s: before parsing vendor_type\n", __func__);
 	if (of_get_property(np, "status-cb", &vendor_type)) {
 		printk(KERN_INFO"%s: vendor_type=%d \n", __func__, vendor_type);
@@ -5973,7 +5964,6 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 			pdata->built_in = 1;
 		//}
 	}
-#endif /* defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE) || defined(CONFIG_BCM4339) || defined(CONFIG_BCM4339_MODULE)  || defined(CONFIG_BCM4354) */
 #endif
 	return pdata;
 err:
@@ -7024,7 +7014,7 @@ msmsdcc_runtime_resume(struct device *dev)
 			if ((host->plat->mpm_sdiowakeup_int ||
 					host->plat->sdiowakeup_irq) &&
 					wake_lock_active(&host->sdio_wlock))
-				wake_lock_timeout(&host->sdio_wlock, 1);
+				wake_lock_timeout(&host->sdio_wlock, 2);
 		}
 
 		wake_unlock(&host->sdio_suspend_wlock);

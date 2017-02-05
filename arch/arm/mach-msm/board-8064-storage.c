@@ -22,7 +22,9 @@
 #include <mach/board.h>
 #include <mach/gpiomux.h>
 #include <mach/socinfo.h>
+#ifdef CONFIG_BROKEN_SDIO_HACK
 #include <mach/board.h>
+#endif
 #include <mach/apq8064-gpio.h>
 #include "devices.h"
 #include "board-8064.h"
