@@ -1176,6 +1176,7 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 {
 	struct file *file = NULL;
 	unsigned long retval = -EBADF;
+	bool populate;
 
 	if (!(flags & MAP_ANONYMOUS)) {
 		audit_mmap_fd(fd, flags);
@@ -1207,8 +1208,11 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
 	down_write(&current->mm->mmap_sem);
-	retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff);
+	retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff,
+						&populate);
 	up_write(&current->mm->mmap_sem);
+		if (!IS_ERR_VALUE(ret) && populate)
+			mm_populate(ret, len);
 
 	if (file)
 		fput(file);
