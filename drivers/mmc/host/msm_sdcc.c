@@ -3694,7 +3694,7 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 		host->pending_resume = false;
 		pm_runtime_get_noresume(dev);
 		rc = msmsdcc_runtime_resume(dev);
-		goto skip_get_sync;
+		goto out_recover;
 	}
 
 	if (dev->power.runtime_status == RPM_SUSPENDING) {
@@ -3709,11 +3709,11 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 
 	rc = pm_runtime_get_sync(dev);
 
-skip_get_sync:
+out_recover:
 	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
-		msmsdcc_print_rpm_info(host);
+		rc = __pm_runtime_set_status(mmc->parent, RPM_ACTIVE);
 		return rc;
 	}
 out:
