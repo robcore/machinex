@@ -67,7 +67,7 @@ static struct mipi_samsung_driver_data *mdnie_msd;
 #endif
 
 /*robs master switch hook*/
-static unsigned int mdnie_lock = 1;
+static unsigned int mdnie_lock;
 #define MDNIE_LITE_TUN_DEBUG
 
 #ifdef MDNIE_LITE_TUN_DEBUG
@@ -354,21 +354,20 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		return;
 	}
 
-	if (mfd->resume_state == MIPI_SUSPEND_STATE) {
+	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
-	}
 
-	if (!mdnie_tun_state.mdnie_enable || !mdnie_lock) {
+	if (mdnie_lock)
 		return;
-	}
 
-	if (mode < mDNIe_UI_MODE || mode >= MAX_mDNIe_MODE) {
+	if (!mdnie_tun_state.mdnie_enable)
 		return;
-	}
 
-	if (mdnie_tun_state.negative) {
+	if (mode < mDNIe_UI_MODE || mode >= MAX_mDNIe_MODE)
 		return;
-	}
+
+	if (mdnie_tun_state.negative)
+		return;
 
 	play_speed_1_5 = 0;
 	/*
@@ -790,6 +789,9 @@ void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 {
 	DPRINT("mDNIe_Set_Negative START\n");
 
+	if (mdnie_lock)
+		return;
+
 	if (negative == 0) {
 		DPRINT("Negative mode(%d) -> reset mode(%d)\n",
 			mdnie_tun_state.negative, mdnie_tun_state.scenario);
@@ -1073,6 +1075,9 @@ static ssize_t negative_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
+	if (mdnie_lock)
+		return;
+
 	mdnie_tun_state.negative = value;
 
 	mDNIe_set_negative(mdnie_tun_state.negative);
@@ -1083,6 +1088,9 @@ static ssize_t negative_store(struct device *dev,
 void is_negative_on(void)
 {
 	DPRINT("is negative Mode On = %d\n", mdnie_tun_state.negative);
+
+	if (mdnie_lock)
+		return;
 
 	if (mdnie_tun_state.negative) {
 		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
