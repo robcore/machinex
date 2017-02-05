@@ -1211,8 +1211,8 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 	retval = do_mmap_pgoff(file, addr, len, prot, flags, pgoff,
 						&populate);
 	up_write(&current->mm->mmap_sem);
-		if (!IS_ERR_VALUE(ret) && populate)
-			mm_populate(ret, len);
+		if (!IS_ERR_VALUE(retval) && populate)
+			mm_populate(retval, len);
 
 	if (file)
 		fput(file);
