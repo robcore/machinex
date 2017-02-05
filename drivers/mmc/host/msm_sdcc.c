@@ -3736,14 +3736,14 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
-
 	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
-		msmsdcc_print_rpm_info(host);
-		return rc;
+		goto out_recover;
 	}
-
+out_recover:
+	rc = __pm_runtime_set_status(mmc->parent, RPM_SUSPENDED);
+	return rc;
 out:
 	return rc;
 }
