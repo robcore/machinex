@@ -1076,7 +1076,7 @@ static ssize_t negative_store(struct device *dev,
 	sscanf(buf, "%d", &value);
 
 	if (mdnie_lock)
-		return;
+		return size;
 
 	mdnie_tun_state.negative = value;
 
