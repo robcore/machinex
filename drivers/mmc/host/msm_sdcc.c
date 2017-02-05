@@ -2433,8 +2433,10 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 	struct device *dev = mmc_dev(host->mmc);
 
 	curr_slot = host->plat->vreg_data;
-	if (!curr_slot)
+	if (!curr_slot) {
+		rc = -EINVAL;
 		goto out;
+	}
 
 	curr_vdd_reg = curr_slot->vdd_data;
 	curr_vdd_io_reg = curr_slot->vdd_io_data;

@@ -1305,7 +1305,6 @@ int sdio_reset_comm(struct mmc_card *card)
 	if (err)
 		goto err;
 
-	mmc_delay(1);
 	mmc_release_host(host);
 	return 0;
 err:
