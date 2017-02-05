@@ -30,8 +30,6 @@
 #include "msm_ispif.h"
 
 #ifdef CONFIG_MSM_CAMERA_DEBUG
-#define D(fmt, args...) pr_debug("msm_mctl_buf: " fmt, ##args)
-#else
 #define D(fmt, args...) do {} while (0)
 #endif
 

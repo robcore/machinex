@@ -28,8 +28,6 @@
 #define MSM_MAX_CAMERA_SENSORS 5
 
 #ifdef CONFIG_MSM_CAMERA_DEBUG
-#define D(fmt, args...) pr_debug("msm: " fmt, ##args)
-#else
 #define D(fmt, args...) do {} while (0)
 #endif
 
@@ -850,7 +848,6 @@ static long msm_camera_v4l2_private_ioctl(struct file *file, void *fh,
 		break;
 	}
 	default:
-		pr_err("%s Unsupported ioctl cmd %d ", __func__, cmd);
 		break;
 	}
 	return rc;
