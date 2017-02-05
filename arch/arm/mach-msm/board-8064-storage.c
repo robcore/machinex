@@ -503,7 +503,7 @@ static struct mmc_platform_data sdc3_data = {
 	.uhs_caps	= (MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
 			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_DDR50 |
 			MMC_CAP_UHS_SDR104 | MMC_CAP_MAX_CURRENT_800),
-	.register_status_notify	= brcm_wifi_status_register,
+	.register_status_notify	= &brcm_wifi_status_register,
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 #else
 	.ocr_mask       = MMC_VDD_27_28 | MMC_VDD_28_29,

@@ -295,7 +295,7 @@ static void *wifi_status_cb_devid;
 
 int brcm_wifi_status_register(
 	void (*callback)(int card_present, void *dev_id),
-	void *dev_id, void *mmc_host);
+	void *dev_id, void *mmc_host)
 {
 	if (wifi_status_cb)
 		return -EAGAIN;
@@ -445,13 +445,8 @@ int __init brcm_wlan_init(void)
 {
 	printk(KERN_INFO"%s: start\n", __func__);
 
-#if 0
-	brcm_wlan_resources[0].start = gpio_to_irq(GPIO_WL_HOST_WAKE);
-	brcm_wlan_resources[0].end = gpio_to_irq(GPIO_WL_HOST_WAKE);
-#else
 	brcm_wlan_resources[0].start = MSM_GPIO_TO_INT(get_gpio_wl_host_wake());
 	brcm_wlan_resources[0].end = MSM_GPIO_TO_INT(get_gpio_wl_host_wake());
-//#endif /* defined(CONFIG_SPARSE_IRQ) */
 
 	brcm_wifi_init_gpio();
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
