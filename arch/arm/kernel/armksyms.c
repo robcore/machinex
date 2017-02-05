@@ -54,6 +54,10 @@ EXPORT_SYMBOL(arm_delay_ops);
 void mmioset(void *, unsigned int, size_t);
 void mmiocpy(void *, const void *, size_t);
 
+#ifdef CONFIG_ARM_PATCH_PHYS_VIRT
+extern unsigned long __pv_phys_offset;
+#endif
+
 	/* networking */
 EXPORT_SYMBOL(csum_partial);
 EXPORT_SYMBOL(csum_partial_copy_from_user);
