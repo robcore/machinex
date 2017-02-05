@@ -3713,7 +3713,7 @@ out_recover:
 	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
-		rc = __pm_runtime_set_status(mmc->parent, RPM_ACTIVE);
+		rc = __pm_runtime_set_status(dev, RPM_ACTIVE);
 		return rc;
 	}
 out:
