@@ -1513,7 +1513,7 @@ static struct page *alloc_misplaced_dst_page(struct page *page,
 					  __GFP_NOWARN) &
 					 ~GFP_IOFS, 0);
 	if (newpage)
-		page_nid_xchg_last(newpage, page_nid_last(page));
+		page_xchg_last_nid(newpage, page_last_nid(page));
 
 	return newpage;
 }
@@ -1573,40 +1573,41 @@ bool numamigrate_update_ratelimit(pg_data_t *pgdat, unsigned long nr_pages)
 
 int numamigrate_isolate_page(pg_data_t *pgdat, struct page *page)
 {
-	int page_lru;
+	int ret = 0;
 
 	VM_BUG_ON(compound_order(page) && !PageTransHuge(page));
 
 	/* Avoid migrating to a node that is nearly full */
-	if (!migrate_balanced_pgdat(pgdat, 1UL << compound_order(page)))
-		return 0;
+	if (migrate_balanced_pgdat(pgdat, 1UL << compound_order(page))) {
+		int page_lru;
 
-	if (isolate_lru_page(page))
-		return 0;
+		if (isolate_lru_page(page)) {
+			put_page(page);
+			return 0;
+		}
 
-	/*
-	 * migrate_misplaced_transhuge_page() skips page migration's usual
-	 * check on page_count(), so we must do it here, now that the page
-	 * has been isolated: a GUP pin, or any other pin, prevents migration.
-	 * The expected page count is 3: 1 for page's mapcount and 1 for the
-	 * caller's pin and 1 for the reference taken by isolate_lru_page().
-	 */
-	if (PageTransHuge(page) && page_count(page) != 3) {
-		putback_lru_page(page);
-		return 0;
+		/* Page is isolated */
+		ret = 1;
+		page_lru = page_is_file_cache(page);
+		if (!PageTransHuge(page))
+			inc_zone_page_state(page, NR_ISOLATED_ANON + page_lru);
+		else
+			mod_zone_page_state(page_zone(page),
+					NR_ISOLATED_ANON + page_lru,
+					HPAGE_PMD_NR);
 	}
 
-	page_lru = page_is_file_cache(page);
-	mod_zone_page_state(page_zone(page), NR_ISOLATED_ANON + page_lru,
-				hpage_nr_pages(page));
-
 	/*
-	 * Isolating the page has taken another reference, so the
-	 * caller's reference can be safely dropped without the page
-	 * disappearing underneath us during migration.
+	 * Page is either isolated or there is not enough space on the target
+	 * node. If isolated, then it has taken a reference count and the
+	 * callers reference can be safely dropped without the page
+	 * disappearing underneath us during migration. Otherwise the page is
+	 * not to be migrated but the callers reference should still be
+	 * dropped so it does not leak.
 	 */
 	put_page(page);
-	return 1;
+
+	return ret;
 }
 
 /*
@@ -1617,7 +1618,7 @@ int numamigrate_isolate_page(pg_data_t *pgdat, struct page *page)
 int migrate_misplaced_page(struct page *page, int node)
 {
 	pg_data_t *pgdat = NODE_DATA(node);
-	int isolated;
+	int isolated = 0;
 	int nr_remaining;
 	LIST_HEAD(migratepages);
 
@@ -1625,16 +1626,20 @@ int migrate_misplaced_page(struct page *page, int node)
 	 * Don't migrate pages that are mapped in multiple processes.
 	 * TODO: Handle false sharing detection instead of this hammer
 	 */
-	if (page_mapcount(page) != 1)
+	if (page_mapcount(page) != 1) {
+		put_page(page);
 		goto out;
+	}
 
 	/*
 	 * Rate-limit the amount of data that is being migrated to a node.
 	 * Optimal placement is no good if the memory bus is saturated and
 	 * all the time is being spent migrating!
 	 */
-	if (numamigrate_update_ratelimit(pgdat, 1))
+	if (numamigrate_update_ratelimit(pgdat, 1)) {
+		put_page(page);
 		goto out;
+	}
 
 	isolated = numamigrate_isolate_page(pgdat, page);
 	if (!isolated)
@@ -1651,19 +1656,12 @@ int migrate_misplaced_page(struct page *page, int node)
 	} else
 		count_vm_numa_event(NUMA_PAGE_MIGRATE);
 	BUG_ON(!list_empty(&migratepages));
-	return isolated;
-
 out:
-	put_page(page);
-	return 0;
+	return isolated;
 }
 #endif /* CONFIG_NUMA_BALANCING */
 
 #if defined(CONFIG_NUMA_BALANCING) && defined(CONFIG_TRANSPARENT_HUGEPAGE)
-/*
- * Migrates a THP to a given target node. page must be locked and is unlocked
- * before returning.
- */
 int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 				struct vm_area_struct *vma,
 				pmd_t *pmd, pmd_t entry,
@@ -1694,15 +1692,29 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 
 	new_page = alloc_pages_node(node,
 		(GFP_TRANSHUGE | GFP_THISNODE) & ~__GFP_WAIT, HPAGE_PMD_ORDER);
-	if (!new_page)
-		goto out_fail;
-
-	page_nid_xchg_last(new_page, page_nid_last(page));
+	if (!new_page) {
+		count_vm_events(PGMIGRATE_FAIL, HPAGE_PMD_NR);
+		goto out_dropref;
+	}
+	page_xchg_last_nid(new_page, page_last_nid(page));
 
 	isolated = numamigrate_isolate_page(pgdat, page);
-	if (!isolated) {
+
+	/*
+	 * Failing to isolate or a GUP pin prevents migration. The expected
+	 * page count is 2. 1 for anonymous pages without a mapping and 1
+	 * for the callers pin. If the page was isolated, the page will
+	 * need to be put back on the LRU.
+	 */
+	if (!isolated || page_count(page) != 2) {
+		count_vm_events(PGMIGRATE_FAIL, HPAGE_PMD_NR);
 		put_page(new_page);
-		goto out_fail;
+		if (isolated) {
+			putback_lru_page(page);
+			isolated = 0;
+			goto out;
+		}
+		goto out_keep_locked;
 	}
 
 	/* Prepare a page as a migration target */
@@ -1734,7 +1746,6 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 		putback_lru_page(page);
 
 		count_vm_events(PGMIGRATE_FAIL, HPAGE_PMD_NR);
-		isolated = 0;
 		goto out;
 	}
 
@@ -1779,11 +1790,9 @@ out:
 			-HPAGE_PMD_NR);
 	return isolated;
 
-out_fail:
-	count_vm_events(PGMIGRATE_FAIL, HPAGE_PMD_NR);
 out_dropref:
-	unlock_page(page);
 	put_page(page);
+out_keep_locked:
 	return 0;
 }
 #endif /* CONFIG_NUMA_BALANCING */

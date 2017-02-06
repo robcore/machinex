@@ -668,7 +668,7 @@ again:			remove_next = 1 + (end > next->vm_end);
 	}
 
 	if (anon_vma)
-		anon_vma_unlock_write(anon_vma);
+		anon_vma_unlock(anon_vma);
 	if (mapping)
 		mutex_unlock(&mapping->i_mmap_mutex);
 
@@ -2738,7 +2738,7 @@ static void vm_unlock_anon_vma(struct anon_vma *anon_vma)
 		if (!__test_and_clear_bit(0, (unsigned long *)
 					  &anon_vma->root->head.next))
 			BUG();
-		anon_vma_unlock_write(anon_vma);
+		anon_vma_unlock(anon_vma);
 	}
 }
 
