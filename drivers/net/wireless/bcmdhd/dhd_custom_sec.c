@@ -23,7 +23,7 @@
  *
  * $Id: dhd_custom_sec.c 334946 2012-05-24 20:38:00Z $
  */
-#ifdef CUSTOMER_HW4
+#if defined(CUSTOMER_HW4) || defined(CUSTOMER_HW40)
 #include <typedefs.h>
 #include <linuxver.h>
 #include <osl.h>
@@ -1449,8 +1449,10 @@ int sec_get_param(dhd_pub_t *dhd, int mode)
 		ret = -EIO;
 	} else {
 		ret = kernel_read(fp, fp->f_pos, (char *)&val, 4);
+		if (ret < 0)
 		filp_close(fp, NULL);
 	}
+	filp_close(fp, NULL);
 
 	if (ret < 0) {
 		/* File operation is failed so we will return default value */
