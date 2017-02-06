@@ -940,6 +940,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	vid_info_t *cur_info;
 	unsigned char *vid_start;
 	unsigned char vid_length;
+	bool found = false;
 #if defined(BCM4334_CHIP) || defined(BCM4335_CHIP)
 	const char *revfilepath = REVINFO;
 #ifdef BCM4334_CHIP
@@ -968,23 +969,23 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 #ifdef DUMP_CIS
 	dhd_dump_cis(cis_buf, 48);
 #endif
-
+	/* 4 byte : [TAG_START] [VID_LENGTH] [TAG_VENDOR] [VID_START] */
 	max = sizeof(cis_buf) - 4;
 	for (idx = 0; idx < max; idx++) {
-		if (cis_buf[idx] == CIS_TUPLE_TAG_START) {
-			if (cis_buf[idx + 2] == CIS_TUPLE_TAG_VENDOR) {
-				vid_length = cis_buf[idx + 1];
-				vid_start = &cis_buf[idx + 3];
+		if (cis_buf[idx] == CIS_TUPLE_TAG_START && cis_buf[idx + 2]
+			 == CIS_TUPLE_TAG_VENDOR) {
+			vid_length = cis_buf[idx + 1];
+			vid_start = &cis_buf[idx + 3];
+			/* Check buffer overflow */
+			if (&cis_buf[idx + 1] + vid_length <= &cis_buf[CIS_BUF_SIZE - 1]) {
 				/* found CIS tuple */
+				found = true;
 				break;
-			} else {
-				/* Go to next tuple if tuple value is not vendor type */
-				idx += (cis_buf[idx + 1] + 1);
 			}
 		}
 	}
 
-	if (idx < max) {
+	if (found) {
 		max = sizeof(vid_info) / sizeof(vid_info_t);
 		for (idx = 0; idx < max; idx++) {
 			cur_info = &vid_info[idx];
@@ -1037,8 +1038,7 @@ write_cid:
 #endif /* BCM4334_CHIP */
 #if defined(BCM4335_CHIP)
 	DHD_TRACE(("[WIFI_SEC] %s: BCM4335 Multiple Revision Check\n", __FUNCTION__));
-	if (concate_revision(dhd->bus, rev_str, sizeof(rev_str),
-		rev_str, sizeof(rev_str)) < 0) {
+	if (concate_revision(dhd->bus, rev_str, rev_str) < 0) {
 		DHD_ERROR(("[WIFI_SEC] %s: fail to concate revision\n", __FUNCTION__));
 		ret = -1;
 	} else {
@@ -1106,61 +1106,37 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
 		sizeof(cis_buf), 0, 0);
 	if (ret < 0) {
-		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
-			ret));
+		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n",
+			__FUNCTION__, ret));
+
 		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			mac->octet[0], mac->octet[1], mac->octet[2],
 			mac->octet[3], mac->octet[4], mac->octet[5]);
 		DHD_ERROR(("[WIFI_SEC] %s: Check module mac by legacy FW : " MACDBG "\n",
 			__FUNCTION__, MAC2STRDBG(mac->octet)));
 	} else {
-		bcm_tlv_t *elt = NULL;
-		int remained_len = sizeof(cis_buf);
-		int index = 0;
-		uint8 *mac_addr = NULL;
+		int max, idx, macaddr_idx;
 #ifdef DUMP_CIS
 		dhd_dump_cis(cis_buf, 48);
 #endif
 
 		/* Find a new tuple tag */
-		while (index < remained_len) {
-			if (cis_buf[index] == CIS_TUPLE_TAG_START) {
-				remained_len -= index;
-				if (remained_len >= sizeof(bcm_tlv_t)) {
-					elt = (bcm_tlv_t *)&cis_buf[index];
+		max = sizeof(cis_buf) - 8;
+		for (idx = 0; idx < max; idx++) {
+			if (cis_buf[idx] == CIS_TUPLE_TAG_START) {
+				if (cis_buf[idx + 2] == CIS_TUPLE_TAG_MACADDR &&
+					cis_buf[idx + 1] == 7) {
+					macaddr_idx = idx + 3;
+					/* found MAC Address tuple */
+					break;
 				}
-				break;
-			} else {
-				index++;
 			}
-
 		}
-
-		/* Find a MAC address tuple */
-		while (elt && remained_len >= TLV_HDR_LEN) {
-			int body_len = (int)elt->len;
-
-			if ((elt->id == CIS_TUPLE_TAG_START) &&
-				(remained_len >= (body_len + TLV_HDR_LEN)) &&
-				(*elt->data == CIS_TUPLE_TAG_MACADDR)) {
-				/* found MAC Address tuple and
-				 * get the MAC Address data
-				 */
-				mac_addr = (uint8 *)elt + CIS_TUPLE_TAG_MACADDR_OFF;
-				break;
-			}
-
-			/* Go to next tuple if tuple value
-			 * is not MAC address type
-			 */
-			elt = (bcm_tlv_t *)((uint8 *)elt + (body_len + TLV_HDR_LEN));
-			remained_len -= (body_len + TLV_HDR_LEN);
-		}
-
-		if (mac_addr) {
+		if (idx < max) {
 			sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
-				mac_addr[0], mac_addr[1], mac_addr[2],
-				mac_addr[3], mac_addr[4], mac_addr[5]);
+				cis_buf[macaddr_idx], cis_buf[macaddr_idx + 1],
+				cis_buf[macaddr_idx + 2], cis_buf[macaddr_idx + 3],
+				cis_buf[macaddr_idx + 4], cis_buf[macaddr_idx + 5]);
 			DHD_ERROR(("[WIFI_SEC] MAC address is taken from OTP\n"));
 		} else {
 			sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -1305,7 +1281,7 @@ void sec_control_pm(dhd_pub_t *dhd, uint *power_mode)
 		/* Enable PowerSave Mode */
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)power_mode,
 			sizeof(uint), TRUE, 0);
-		DHD_ERROR(("[WIFI_SEC] %s: /data/.psm.info open failed,"
+		DHD_ERROR(("[WIFI_SEC] %s: /data/.psm.info doesn't exist"
 			" so set PM to %d\n",
 			__FUNCTION__, *power_mode));
 		return;
