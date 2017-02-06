@@ -1,0 +1,127 @@
+From 4d95e5c3fd36867873b203d667a9f667bff41ed5 Mon Sep 17 00:00:00 2001
+From: Jack Pham <jackp@codeaurora.org>
+Date: Thu, 17 Oct 2013 12:50:10 -0700
+Subject: [PATCH 0329/8000] usb: phy-msm: Don't allow multiple set_suspend()
+ calls
+
+During USB controller initialization usb_phy_set_suspend(0) is
+called to place the PHYs in active mode even though they might
+already be after probing. This results in regulator_enable()
+being called multiple times. Since the regulator framework
+uses reference-counting semantics, a later regulator_disable()
+won't fully decrement the ref count, thereby leaving the regulators
+still enabled when entering low-power mode. Similarly in the resume
+case the regulators could be left disabled if suspend was called
+multiple times but resume was called only once.
+
+Fix this by adding a variable to keep track of the PHY suspended
+state, so that the operation can be no-op'ed if previously called.
+
+Change-Id: I510d4a7383c919e9b44ea1fb58dcb937047c5c44
+Signed-off-by: Jack Pham <jackp@codeaurora.org>
+---
+ drivers/usb/phy/phy-msm-hsusb.c | 10 +++++++++-
+ drivers/usb/phy/phy-msm-ssusb.c | 10 +++++++++-
+ 2 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/phy/phy-msm-hsusb.c b/drivers/usb/phy/phy-msm-hsusb.c
+index 3868ad477b0..76bdd916609 100644
+--- a/drivers/usb/phy/phy-msm-hsusb.c
++++ b/drivers/usb/phy/phy-msm-hsusb.c
+@@ -106,6 +106,7 @@ struct msm_hsphy {
+ 	struct regulator	*vdda33;
+ 	struct regulator	*vdda18;
+ 	int			vdd_levels[3]; /* none, low, high */
++	bool			suspended;
+ 
+ 	/* Using external VBUS/ID notification */
+ 	bool			ext_vbus_id;
+@@ -285,6 +286,12 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
+ 	bool host = uphy->flags & PHY_HOST_MODE;
+ 	bool chg_connected = uphy->flags & PHY_CHARGER_CONNECTED;
+ 
++	if (!!suspend == phy->suspended) {
++		dev_dbg(uphy->dev, "%s\n", suspend ? "already suspended"
++						   : "already resumed");
++		return 0;
++	}
++
+ 	if (suspend) {
+ 		/* Clear interrupt latch register */
+ 		writel_relaxed(ALT_INTERRUPT_MASK,
+@@ -360,6 +367,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
+ 		}
+ 	}
+ 
++	phy->suspended = !!suspend; /* double-NOT coerces to bool value */
+ 	return 0;
+ }
+ 
+@@ -477,6 +485,7 @@ static int msm_hsphy_probe(struct platform_device *pdev)
+ 
+ 	phy->ext_vbus_id = of_property_read_bool(dev->of_node,
+ 						"qcom,ext-vbus-id");
++	phy->phy.dev = dev;
+ 
+ 	phy->vdd = devm_regulator_get(dev, "vdd");
+ 	if (IS_ERR(phy->vdd)) {
+@@ -528,7 +537,6 @@ static int msm_hsphy_probe(struct platform_device *pdev)
+ 	if (of_property_read_bool(dev->of_node, "qcom,vbus-valid-override"))
+ 		phy->phy.flags |= PHY_VBUS_VALID_OVERRIDE;
+ 
+-	phy->phy.dev			= dev;
+ 	phy->phy.init			= msm_hsphy_init;
+ 	phy->phy.set_suspend		= msm_hsphy_set_suspend;
+ 	phy->phy.notify_connect		= msm_hsphy_notify_connect;
+diff --git a/drivers/usb/phy/phy-msm-ssusb.c b/drivers/usb/phy/phy-msm-ssusb.c
+index ea8315dfb8b..7aca10b256c 100644
+--- a/drivers/usb/phy/phy-msm-ssusb.c
++++ b/drivers/usb/phy/phy-msm-ssusb.c
+@@ -55,6 +55,7 @@ struct msm_ssphy {
+ 	void __iomem		*base;
+ 	struct regulator	*vdd;
+ 	struct regulator	*vdda18;
++	bool			suspended;
+ 	int			vdd_levels[3]; /* none, low, high */
+ 	int			deemphasis_val;
+ };
+@@ -304,6 +305,12 @@ static int msm_ssphy_set_suspend(struct usb_phy *uphy, int suspend)
+ 	void __iomem *base = phy->base;
+ 	int ret = 0;
+ 
++	if (!!suspend == phy->suspended) {
++		dev_dbg(uphy->dev, "%s\n", suspend ? "already suspended"
++						   : "already resumed");
++		return 0;
++	}
++
+ 	if (suspend) {
+ 		/* Clear REF_SS_PHY_EN */
+ 		msm_usb_write_readback(base, SS_PHY_CTRL_REG, REF_SS_PHY_EN, 0);
+@@ -341,6 +348,7 @@ static int msm_ssphy_set_suspend(struct usb_phy *uphy, int suspend)
+ 		msm_ssphy_set_params(uphy);
+ 	}
+ 
++	phy->suspended = !!suspend; /* double-NOT coerces to bool value */
+ 	return ret;
+ }
+ 
+@@ -407,6 +415,7 @@ static int msm_ssphy_probe(struct platform_device *pdev)
+ 		return ret;
+ 	}
+ 
++	phy->phy.dev = dev;
+ 	phy->vdd = devm_regulator_get(dev, "vdd");
+ 	if (IS_ERR(phy->vdd)) {
+ 		dev_err(dev, "unable to get vdd supply\n");
+@@ -446,7 +455,6 @@ static int msm_ssphy_probe(struct platform_device *pdev)
+ 						&phy->deemphasis_val))
+ 		dev_dbg(dev, "unable to read ssphy deemphasis value\n");
+ 
+-	phy->phy.dev			= dev;
+ 	phy->phy.init			= msm_ssphy_init;
+ 	phy->phy.set_suspend		= msm_ssphy_set_suspend;
+ 	phy->phy.set_params		= msm_ssphy_set_params;
+-- 
+2.11.0
+
