@@ -1008,8 +1008,7 @@ static int migrate_to_node(struct mm_struct *mm, int source, int dest,
 
 	if (!list_empty(&pagelist)) {
 		err = migrate_pages(&pagelist, new_node_page, dest,
-							false, MIGRATE_SYNC,
-							MR_SYSCALL);
+					MIGRATE_SYNC, MR_SYSCALL);
 		if (err)
 			putback_lru_pages(&pagelist);
 	}
@@ -1253,8 +1252,7 @@ static long do_mbind(unsigned long start, unsigned long len,
 		if (!list_empty(&pagelist)) {
 			WARN_ON_ONCE(flags & MPOL_MF_LAZY);
 			nr_failed = migrate_pages(&pagelist, new_page, start,
-							false, MIGRATE_SYNC,
-							MR_SYSCALL);
+							MIGRATE_SYNC, MR_SYSCALL);
 			if (nr_failed)
 				putback_lru_pages(&pagelist);
 		}
