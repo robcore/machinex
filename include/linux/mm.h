@@ -357,7 +357,7 @@ static inline struct page *compound_head(struct page *page)
  * both from it and to it can be tracked, using atomic_inc_and_test
  * and atomic_add_negative(-1).
  */
-static inline void reset_page_mapcount(struct page *page)
+static inline void page_mapcount_reset(struct page *page)
 {
 	atomic_set(&(page)->_mapcount, -1);
 }
@@ -698,17 +698,17 @@ static inline void reset_page_last_nid(struct page *page)
 	page->_last_nid = -1;
 }
 #else
-static inline int page_xchg_last_nid(struct page *page, int nid)
+static inline int page_nid_xchg_last(struct page *page, int nid)
 {
 	return page_to_nid(page);
 }
 
-static inline int page_last_nid(struct page *page)
+static inline int page_nid_last(struct page *page)
 {
 	return page_to_nid(page);
 }
 
-static inline void reset_page_last_nid(struct page *page)
+static inline void page_nid_reset_last(struct page *page)
 {
 }
 #endif
