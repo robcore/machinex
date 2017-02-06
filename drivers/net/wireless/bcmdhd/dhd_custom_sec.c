@@ -944,7 +944,7 @@ unsigned int dhd_check_module_cid(dhd_pub_t *dhd)
 	if (ret < 0) {
 		DHD_ERROR(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n",
 			__FUNCTION__, ret));
-		WARN_ON(1);
+		WARN_ONCE(1);
 		return ret;
 	}
 
@@ -1060,7 +1060,7 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS. \n"));
-				WARN_ON(1);
+				WARN_ONCE(1);
 			} else {
 				DHD_INFO(("[WIFI_SEC] MAC written. \n"));
 		}
@@ -1093,7 +1093,7 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 	if (ret < 0) {
 		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
 			ret));
-		WARN_ON(1);
+		WARN_ONCE(1);
 		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			mac->octet[0], mac->octet[1], mac->octet[2],
 			mac->octet[3], mac->octet[4], mac->octet[5]);
@@ -1365,7 +1365,7 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File [%s] open error\n", __FUNCTION__, filepath));
-		WARN_ON(1);
+		WARN_ONCE(1);
 		return ret;
 	} else {
 		ret = kernel_read(fp, 0, (char *)&ant_val, 4);
@@ -1396,7 +1396,7 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 			DHD_ERROR(("[WIFI_SEC] %s: Fail to execute dhd_wl_ioctl_cmd(): "
 				"btc_mode, ret=%d\n",
 				__FUNCTION__, ret));
-			WARN_ON(1);
+			WARN_ONCE(1);
 			return ret;
 		}
 	}
@@ -1538,7 +1538,7 @@ int write_filesystem(struct file *file, unsigned long long offset,
 
 	ret = vfs_write(file, data, size, &offset);
 	if (ret < 0)
-	WARN_ON(1);
+	WARN_ONCE(1);
 
 	set_fs(oldfs);
 	return ret;
