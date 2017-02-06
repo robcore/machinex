@@ -42,6 +42,9 @@
 #include <linux/writeback.h>
 #include <linux/pagemap.h>
 
+/* Debugging code for zswap kernel panic */
+#include <linux/mm.h>
+
 /*********************************
 * statistics
 **********************************/
@@ -75,8 +78,9 @@ static u64 zswap_duplicate_entry;
 * tunables
 **********************************/
 /* Enable/disable zswap (enabled by default, fixed at boot for now) */
+/*suck it samsung*/
 static bool zswap_enabled = 1;
-module_param_named(enabled, zswap_enabled, bool, 0444);
+module_param_named(enabled, zswap_enabled, bool, 0644);
 
 /* Compressor to be used by zswap (fixed at boot for now) */
 #ifdef CONFIG_CRYPTO_LZ4
@@ -85,7 +89,7 @@ module_param_named(enabled, zswap_enabled, bool, 0444);
 #define ZSWAP_COMPRESSOR_DEFAULT "lzo"
 #endif
 static char *zswap_compressor = ZSWAP_COMPRESSOR_DEFAULT;
-module_param_named(compressor, zswap_compressor, charp, 0444);
+module_param_named(compressor, zswap_compressor, charp, 0644);
 
 /* The maximum percentage of memory that the compressed pool can occupy */
 static unsigned int zswap_max_pool_percent = 20;
@@ -372,18 +376,18 @@ static int zswap_cpu_init(void)
 {
 	unsigned long cpu;
 
-	get_online_cpus();
+	cpu_notifier_register_begin();
 	for_each_online_cpu(cpu)
 		if (__zswap_cpu_notifier(CPU_UP_PREPARE, cpu) != NOTIFY_OK)
 			goto cleanup;
-	register_cpu_notifier(&zswap_cpu_notifier_block);
-	put_online_cpus();
+	__register_cpu_notifier(&zswap_cpu_notifier_block);
+	cpu_notifier_register_done();
 	return 0;
 
 cleanup:
 	for_each_online_cpu(cpu)
 		__zswap_cpu_notifier(CPU_UP_CANCELED, cpu);
-	put_online_cpus();
+	cpu_notifier_register_done();
 	return -ENOMEM;
 }
 
@@ -618,6 +622,9 @@ static int zswap_writeback_entry(struct zswap_tree *tree,
 		SetPageUptodate(page);
 	}
 
+	/* move it to the tail of the inactive list after end_writeback */
+	SetPageReclaim(page);
+
 	/* start writeback */
 	SetPageReclaim(page);
 	if (!__swap_writepage(page, &wbc, zswap_end_swap_write))
@@ -781,6 +788,9 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 #ifdef CONFIG_ZSWAP_ENABLE_WRITEBACK
 	u8 *tmpdst;
 #endif
+	
+	if (!zswap_enabled)
+		return -EPERM;
 
 	if (!tree) {
 		ret = -ENODEV;
@@ -1034,7 +1044,7 @@ static void zswap_frontswap_init(unsigned type)
 	tree = kzalloc(sizeof(struct zswap_tree), GFP_ATOMIC);
 	if (!tree)
 		goto err;
-	tree->pool = zs_create_pool(GFP_NOWAIT, &zswap_zs_ops);
+	tree->pool = zs_create_pool(GFP_NOWAIT | __GFP_HIGHMEM, &zswap_zs_ops);
 	if (!tree->pool)
 		goto freetree;
 	tree->rbroot = RB_ROOT;
