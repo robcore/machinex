@@ -1061,8 +1061,8 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS. \n"));
 				WARN_ON(1);
-			else
-				DHD_ERROR(("[WIFI_SEC] MAC written. \n"));
+			} else {
+				DHD_INFO(("[WIFI_SEC] MAC written. \n"));
 		}
 		set_fs(oldfs);
 	}
