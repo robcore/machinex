@@ -942,7 +942,8 @@ unsigned int dhd_check_module_cid(dhd_pub_t *dhd)
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
 		sizeof(cis_buf), 0, 0);
 	if (ret < 0) {
-		WARN_ONCE(1, "[WIFI_SEC] %d: CIS reading failed\n", ret);
+		DHD_ERROR(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n",
+			__FUNCTION__, ret));
 		return ret;
 	}
 
@@ -1046,15 +1047,15 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 
 	/* File is always created. */
 	if (IS_ERR(fp)) {
-		WARN_ONCE(1, "[WIFI_SEC] File open error\n");
+		DHD_ERROR(("[WIFI_SEC] File open error\n"));
 		return -1;
 	} else {
 		if (fp->f_mode & FMODE_WRITE) {
 			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
 			if (ret < 0)
-				WARN_ONCE(ret, "[WIFI_SEC] Failed to write CIS. \n");
-			} else {
-				DHD_INFO(("[WIFI_SEC] MAC written. \n"));
+				DHD_ERROR(("[WIFI_SEC] Failed to write CIS. \n"));
+			else
+				DHD_ERROR(("[WIFI_SEC] MAC written. \n"));
 		}
 	}
 	filp_close(fp, NULL);
@@ -1082,8 +1083,8 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
 		sizeof(cis_buf), 0, 0);
 	if (ret < 0) {
-		WARN_ONCE(1, "[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
-			ret);
+		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
+			ret));
 		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			mac->octet[0], mac->octet[1], mac->octet[2],
 			mac->octet[3], mac->octet[4], mac->octet[5]);
@@ -1354,12 +1355,12 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 	/* Read antenna settings from the file */
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		WARN_ONCE(1, "[WIFI_SEC] %s: File [%s] open error\n", filepath);
+		DHD_ERROR(("[WIFI_SEC] %s: File [%s] open error\n", __FUNCTION__, filepath));
 		return ret;
 	} else {
 		ret = kernel_read(fp, 0, (char *)&ant_val, 4);
 		if (ret < 0) {
-			WARN_ONCE(1, "[WIFI_SEC] %s: File read error, ret=%d\n", __FUNCTION__, ret);
+			DHD_ERROR(("[WIFI_SEC] %s: File read error, ret=%d\n", __FUNCTION__, ret));
 			filp_close(fp, NULL);
 			return ret;
 		}
@@ -1382,8 +1383,9 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 		bcm_mkiovar("btc_mode", (char *)&btc_mode, 4, iovbuf, sizeof(iovbuf));
 		ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 		if (ret) {
-			WARN_ONCE(1, "[WIFI_SEC] %s: Fail to execute dhd_wl_ioctl_cmd():btc_mode, ret=%d\n",
-				__FUNCTION__, ret);
+			DHD_ERROR(("[WIFI_SEC] %s: Fail to execute dhd_wl_ioctl_cmd(): "
+				"btc_mode, ret=%d\n",
+				__FUNCTION__, ret));
 			return ret;
 		}
 	}
@@ -1520,9 +1522,6 @@ int write_filesystem(struct file *file, unsigned long long offset,
 	int ret;
 
 	ret = vfs_write(file, data, size, &offset);
-
-	if (ret < 0)
-		WARN_ONCE(ret, "Fucked up writing fs\n");
 
 	return ret;
 }
