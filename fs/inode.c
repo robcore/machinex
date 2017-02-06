@@ -251,16 +251,17 @@ EXPORT_SYMBOL(__destroy_inode);
 static void i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
+	__destroy_inode(inode);
 	kmem_cache_free(inode_cachep, inode);
 }
 
 static void destroy_inode(struct inode *inode)
 {
 	BUG_ON(!list_empty(&inode->i_lru));
-	__destroy_inode(inode);
-	if (inode->i_sb->s_op->destroy_inode)
+	if (inode->i_sb->s_op->destroy_inode) {
+		__destroy_inode(inode);
 		inode->i_sb->s_op->destroy_inode(inode);
-	else
+	} else
 		call_rcu(&inode->i_rcu, i_callback);
 }
 
