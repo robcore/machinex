@@ -598,6 +598,7 @@ blkiocg_reset_stats(struct cgroup *cgroup, struct cftype *cftype, u64 val)
 	}
 
 	spin_unlock_irq(&blkcg->lock);
+	return 0;
 }
 
 static void blkio_get_key_name(enum stat_sub_type type, dev_t dev, char *str,
@@ -1517,7 +1518,7 @@ struct cftype blkio_files[] = {
 	{ }	/* terminate */
 };
 
-static void blkiocg_destroy(struct cgroup *cgroup)
+static void blkcg_css_free(struct cgroup *cgroup)
 {
 	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgroup);
 	unsigned long flags;
@@ -1567,7 +1568,7 @@ static void blkiocg_destroy(struct cgroup *cgroup)
 		kfree(blkcg);
 }
 
-static struct cgroup_subsys_state *blkiocg_create(struct cgroup *cgroup)
+static struct cgroup_subsys_state *blkcg_css_alloc(struct cgroup *cgroup)
 {
 	struct blkio_cgroup *blkcg;
 	struct cgroup *parent = cgroup->parent;
@@ -1632,10 +1633,11 @@ static void blkiocg_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 
 struct cgroup_subsys blkio_subsys = {
 	.name = "blkio",
-	.create = blkiocg_create,
+	.css_alloc = blkcg_css_alloc,
+	//.css_offline = blkcg_css_offline,
+	.css_free = blkcg_css_free,
 	.can_attach = blkiocg_can_attach,
 	.attach = blkiocg_attach,
-	.destroy = blkiocg_destroy,
 #ifdef CONFIG_BLK_CGROUP
 	/* note: blkio_subsys_id is otherwise defined in blk-cgroup.h */
 	.subsys_id = blkio_subsys_id,
