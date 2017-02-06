@@ -9049,8 +9049,7 @@ static int concate_revision_bcm4356(dhd_bus_t *bus, char *fw_path, char *nv_path
 	return 0;
 }
 
-static int concate_revision_bcm43341(dhd_bus_t *bus,
-        char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+static int concate_revision_bcm43341(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 	uint chipver;
 #if defined(SUPPORT_MULTIPLE_CHIPS)
