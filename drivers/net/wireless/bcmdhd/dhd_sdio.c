@@ -72,10 +72,9 @@
 #ifdef PROP_TXSTATUS
 #include <dhd_wlfc.h>
 #endif
-
 #ifdef DHDTCPACK_SUPPRESS
 #include <dhd_ip.h>
-#endif
+#endif /* DHDTCPACK_SUPPRESS */
 
 bool dhd_mp_halting(dhd_pub_t *dhdp);
 extern void bcmsdh_waitfor_iodrain(void *sdh);
@@ -2540,11 +2539,9 @@ dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 
 	} else {
 		DHD_CTL(("%s: resumed for unknown reason?\n", __FUNCTION__));
-#ifdef DHD_DEBUG
 		dhd_os_sdlock(bus->dhd);
 		dhdsdio_checkdied(bus, NULL, 0);
 		dhd_os_sdunlock(bus->dhd);
-#endif /* DHD_DEBUG */
 	}
 	if (timeleft == 0) {
 		if (rxlen == 0)
@@ -3667,7 +3664,7 @@ dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const ch
 
 		sd_ptr = (sdreg_t *)params;
 
-		addr = (ulong)bus->regs + sd_ptr->offset;
+		addr = (uint32)((ulong)bus->regs + sd_ptr->offset);
 		size = sd_ptr->func;
 		int_val = (int32)bcmsdh_reg_read(bus->sdh, addr, size);
 		if (bcmsdh_regfail(bus->sdh))
@@ -3683,7 +3680,7 @@ dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const ch
 
 		sd_ptr = (sdreg_t *)params;
 
-		addr = (ulong)bus->regs + sd_ptr->offset;
+		addr = (uint32)((ulong)bus->regs + sd_ptr->offset);
 		size = sd_ptr->func;
 		bcmsdh_reg_write(bus->sdh, addr, size, sd_ptr->value);
 		if (bcmsdh_regfail(bus->sdh))
@@ -3972,10 +3969,8 @@ dhdsdio_write_vars(dhd_bus_t *bus)
 		/* Verify NVRAM bytes */
 		DHD_INFO(("Compare NVRAM dl & ul; varsize=%d\n", varsize));
 		nvram_ularray = (uint8*)MALLOC(bus->dhd->osh, varsize);
-		if (!nvram_ularray) {
-			MFREE(bus->dhd->osh, vbuffer, varsize);
+		if (!nvram_ularray)
 			return BCME_NOMEM;
-		}
 
 		/* Upload image to verify downloaded contents. */
 		memset(nvram_ularray, 0xaa, varsize);
@@ -4335,9 +4330,6 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 
 		BUS_WAKE(bus);
 
-		/* Change our idea of bus state */
-		bus->dhd->busstate = DHD_BUS_DOWN;
-
 		if (KSO_ENAB(bus)) {
 
 		/* Enable clock for device interrupts */
@@ -4347,6 +4339,9 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 		W_SDREG(0, &bus->regs->hostintmask, retries);
 		local_hostintmask = bus->hostintmask;
 		bus->hostintmask = 0;
+
+		/* Change our idea of bus state */
+		bus->dhd->busstate = DHD_BUS_DOWN;
 
 		/* Force clocks on backplane to be sure F2 interrupt propagates */
 		saveclk = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_CHIPCLKCSR, &err);
@@ -6347,10 +6342,11 @@ clkwait:
 exit:
 
 	if (!resched && dhd_dpcpoll) {
-		if (dhdsdio_readframes(bus, dhd_rxbound, &rxdone) != 0)
+		if (dhdsdio_readframes(bus, dhd_rxbound, &rxdone) != 0) {
 			resched = TRUE;
 #if defined(CUSTOMER_HW4)
 			is_resched_by_readframe = TRUE;
+		}
 #endif
 	}
 
@@ -7108,7 +7104,7 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	dhd_readahead = TRUE;
 	retrydata = FALSE;
 
-#if defined(DISABLE_FLOW_CONTROL)
+#ifdef DISABLE_FLOW_CONTROL
 	dhd_doflow = FALSE;
 #else
 #if !defined(PLATFORM_MPS) && !defined(CUSTOMER_HW4)
@@ -7955,8 +7951,7 @@ dhdsdio_download_firmware(struct dhd_bus *bus, osl_t *osh, void *sdh)
 	int ret;
 
 #if defined(SUPPORT_MULTIPLE_REVISION)
-	if (concate_revision(bus, bus->fw_path, strlen(bus->fw_path) + 1,
-		bus->nv_path, strlen(bus->nv_path)+ 1) != 0) {
+	if (concate_revision(bus, bus->fw_path, bus->nv_path) != 0) {
 		DHD_ERROR(("%s: fail to concatnate revison \n",
 			__FUNCTION__));
 		return BCME_BADARG;
@@ -8793,8 +8788,7 @@ concate_revision_bcm4330(dhd_bus_t *bus)
 }
 
 static int
-concate_revision_bcm4334(dhd_bus_t *bus,
-	char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+concate_revision_bcm4334(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 #define	REV_ID_ADDR	0x1E008F90
 #define BCM4334_B1_UNIQUE	0x30312E36
@@ -8847,8 +8841,7 @@ concate_revision_bcm4334(dhd_bus_t *bus,
 }
 
 static int
-concate_revision_bcm4335
-	(dhd_bus_t *bus, char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+concate_revision_bcm4335(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 
 	uint chipver;
@@ -8881,8 +8874,7 @@ concate_revision_bcm4335
 }
 
 static int
-concate_revision_bcm4339
-	(dhd_bus_t *bus, char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+concate_revision_bcm4339(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 
 	uint chipver;
@@ -8913,8 +8905,7 @@ concate_revision_bcm4339
 }
 
 static int
-concate_revision_bcm43349
-	(dhd_bus_t *bus, char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+concate_revision_bcm43349(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 
 	uint chipver;
@@ -8944,8 +8935,7 @@ concate_revision_bcm43349
 	return 0;
 }
 
-static int concate_revision_bcm43241(dhd_bus_t *bus,
-	char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+static int concate_revision_bcm43241(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 	uint32 chip_id, chip_ver;
 #if defined(SUPPORT_MULTIPLE_CHIPS)
@@ -8975,8 +8965,7 @@ static int concate_revision_bcm43241(dhd_bus_t *bus,
 	return 0;
 }
 
-static int concate_revision_bcm4350(dhd_bus_t *bus,
-        char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+static int concate_revision_bcm4350(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 	uint32 chip_id, chip_ver;
 #if defined(SUPPORT_MULTIPLE_CHIPS)
@@ -9006,8 +8995,7 @@ static int concate_revision_bcm4350(dhd_bus_t *bus,
 	return 0;
 }
 
-static int concate_revision_bcm4354(dhd_bus_t *bus,
-        char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+static int concate_revision_bcm4354(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 	uint32 chip_id, chip_ver;
 #if defined(SUPPORT_MULTIPLE_CHIPS)
@@ -9037,8 +9025,7 @@ static int concate_revision_bcm4354(dhd_bus_t *bus,
 	return 0;
 }
 
-static int concate_revision_bcm4356(dhd_bus_t *bus,
-        char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+static int concate_revision_bcm4356(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 	uint32 chip_id, chip_ver;
 #if defined(SUPPORT_MULTIPLE_CHIPS)
@@ -9096,7 +9083,7 @@ static int concate_revision_bcm43341(dhd_bus_t *bus,
 }
 
 int
-concate_revision(dhd_bus_t *bus, char *fw_path, int fw_path_len, char *nv_path, int nv_path_len)
+concate_revision(dhd_bus_t *bus, char *fw_path, char *nv_path)
 {
 	int res = 0;
 
@@ -9115,35 +9102,32 @@ concate_revision(dhd_bus_t *bus, char *fw_path, int fw_path_len, char *nv_path, 
 		res = concate_revision_bcm4330(bus);
 		break;
 	case BCM4334_CHIP_ID:
-		res =  concate_revision_bcm4334(bus, fw_path, fw_path_len,
-			nv_path, nv_path_len);
+		res = concate_revision_bcm4334(bus, fw_path, nv_path);
 		break;
 	case BCM4335_CHIP_ID:
-		res = concate_revision_bcm4335(bus, fw_path, fw_path_len,
-			nv_path, nv_path_len);
+		res = concate_revision_bcm4335(bus, fw_path, nv_path);
+
 		break;
 	case BCM4339_CHIP_ID:
-		res = concate_revision_bcm4339(bus, fw_path, fw_path_len,
-			nv_path, nv_path_len);
+		res = concate_revision_bcm4339(bus, fw_path, nv_path);
 		break;
 	case BCM43349_CHIP_ID:
-		res = concate_revision_bcm43349(bus, fw_path, fw_path_len,
-			nv_path, nv_path_len);
+		res = concate_revision_bcm43349(bus, fw_path, nv_path);
 		break;
 	case BCM4324_CHIP_ID:
-		res = concate_revision_bcm43241(bus, fw_path, fw_path_len, nv_path, nv_path_len);
+		res = concate_revision_bcm43241(bus, fw_path, nv_path);
 		break;
 	case BCM4350_CHIP_ID:
-		res = concate_revision_bcm4350(bus, fw_path, fw_path_len, nv_path, nv_path_len);
+		res = concate_revision_bcm4350(bus, fw_path, nv_path);
 		break;
 	case BCM4354_CHIP_ID:
-		res = concate_revision_bcm4354(bus, fw_path, fw_path_len, nv_path, nv_path_len);
+		res = concate_revision_bcm4354(bus, fw_path, nv_path);
 		break;
 	case BCM4356_CHIP_ID:
-		res = concate_revision_bcm4356(bus, fw_path, fw_path_len, nv_path, nv_path_len);
+		res = concate_revision_bcm4356(bus, fw_path, nv_path);
 		break;
 	case BCM43341_CHIP_ID:
-		res = concate_revision_bcm43341(bus, fw_path, fw_path_len, nv_path, nv_path_len);
+		res = concate_revision_bcm43341(bus, fw_path, nv_path);
 		break;
 
 
