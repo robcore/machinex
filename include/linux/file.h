@@ -41,14 +41,12 @@ static inline void fput_light(struct file *file, int fput_needed)
 
 struct fd {
 	struct file *file;
-	unsigned int flags;
+	int need_put;
 };
-#define FDPUT_FPUT       1
-#define FDPUT_POS_UNLOCK 2
 
 static inline void fdput(struct fd fd)
 {
-	if (fd.flags & FDPUT_FPUT)
+	if (fd.need_put)
 		fput(fd.file);
 }
 
