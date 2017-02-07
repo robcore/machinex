@@ -102,7 +102,7 @@ struct cpufreq_policy {
 	cpumask_var_t		cpus;	/* Online CPUs only */
 	cpumask_var_t		related_cpus; /* Online + Offline CPUs */
 
-	unsigned int		shared_type; /* ANY or ALL affected CPUs
+	unsigned int		shared_type; /* ACPI: ANY or ALL affected CPUs
 						should set cpufreq */
 	unsigned int		cpu;    /* cpu nr of CPU managing this policy */
 	unsigned int		last_cpu; /* cpu nr of previous CPU that managed
@@ -147,6 +147,7 @@ struct cpufreq_cpu_sysinfo {
 /* Govinfo Notifiers */
 #define CPUFREQ_LOAD_CHANGE	(0)
 
+/* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */
 #define CPUFREQ_SHARED_TYPE_ALL	 (2) /* All dependent CPUs should set freq */
