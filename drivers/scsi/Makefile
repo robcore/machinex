@@ -85,7 +85,7 @@ obj-$(CONFIG_SCSI_NCR_Q720)	+= NCR_Q720_mod.o
 obj-$(CONFIG_SCSI_SYM53C416)	+= sym53c416.o
 obj-$(CONFIG_SCSI_QLOGIC_FAS)	+= qlogicfas408.o	qlogicfas.o
 obj-$(CONFIG_PCMCIA_QLOGIC)	+= qlogicfas408.o
-obj-$(CONFIG_SCSI_QLOGIC_1280)	+= qla1280.o 
+obj-$(CONFIG_SCSI_QLOGIC_1280)	+= qla1280.o
 obj-$(CONFIG_SCSI_QLA_FC)	+= qla2xxx/
 obj-$(CONFIG_SCSI_QLA_ISCSI)	+= libiscsi.o qla4xxx/
 obj-$(CONFIG_SCSI_LPFC)		+= lpfc/
@@ -159,7 +159,7 @@ obj-$(CONFIG_SCSI_OSD_INITIATOR) += osd/
 # This goes last, so that "real" scsi devices probe earlier
 obj-$(CONFIG_SCSI_DEBUG)	+= scsi_debug.o
 
-obj-$(CONFIG_SCSI_WAIT_SCAN)	+= scsi_wait_scan.o
+#obj-$(CONFIG_SCSI_WAIT_SCAN)	+= scsi_wait_scan.o
 
 scsi_mod-y			+= scsi.o hosts.o scsi_ioctl.o constants.o \
 				   scsicam.o scsi_error.o scsi_lib.o
