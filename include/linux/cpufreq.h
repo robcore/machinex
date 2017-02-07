@@ -19,6 +19,7 @@
 #include <linux/completion.h>
 #include <linux/workqueue.h>
 #include <linux/cpumask.h>
+#include <linux/sched/rt.h>
 #include <asm/div64.h>
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 #include <linux/cpufreq_hardlimit.h>
