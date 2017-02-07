@@ -91,4 +91,4 @@ obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
 obj-$(CONFIG_ARM_VIRT_EXT)	+= hyp-stub.o
 obj-$(CONFIG_ARM_PSCI)		+= psci.o
 
-extra-y := $(head-y) init_task.o vmlinux.lds
+extra-y := $(head-y) vmlinux.lds
