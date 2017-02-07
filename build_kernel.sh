@@ -136,8 +136,12 @@ make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
-	cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-	cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
+		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
+	fi
+	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
+		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
@@ -289,8 +293,12 @@ make C=1 SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
-	cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-	cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
+		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
+	fi
+	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
+		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
@@ -440,11 +448,15 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 	make CONFIG_DEBUG_SECTION_MISMATCH=y SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
-	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-		cd /media/root/robcore/AIK;
-		cp -R -p machina-new $OUTFOLDER;
-		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+		if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
+			cd /media/root/robcore/AIK;
+			cp -R -p machina-new $OUTFOLDER;
+		if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
+			cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
+		fi
+		if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
+			cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+		fi
 		rm $(pwd)/split_img/boot.img-zImage;
 		cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 		rm image-new.img;
@@ -582,8 +594,12 @@ make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
-	cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-	cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
+		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
+	fi
+	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
+		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
+	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
