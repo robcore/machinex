@@ -12,9 +12,8 @@
  */
 extern int dump_write(struct file *file, const void *addr, int nr);
 extern int dump_seek(struct file *file, loff_t off);
-#ifdef CONFIG_COREDUMP
 extern void do_coredump(siginfo_t *siginfo, struct pt_regs *regs);
-#else
+#if 0
 static inline void do_coredump(siginfo_t *siginfo, struct pt_regs *regs) {}
 #endif
 
