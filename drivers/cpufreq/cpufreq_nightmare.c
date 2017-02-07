@@ -25,6 +25,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
 #include <linux/hrtimer.h>
+#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
@@ -470,7 +471,7 @@ static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare
 		u64 cur_wall_time, cur_idle_time;
 		unsigned int idle_time, wall_time;
 		unsigned int cur_load;
-		
+
 		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
 
 		wall_time = (unsigned int)

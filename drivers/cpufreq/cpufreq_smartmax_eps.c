@@ -31,6 +31,7 @@
 #include <linux/sched.h>
 #include <linux/tick.h>
 #include <linux/timer.h>
+#include <linux/sched/rt.h>
 #include <linux/workqueue.h>
 #include <linux/moduleparam.h>
 #include <linux/jiffies.h>

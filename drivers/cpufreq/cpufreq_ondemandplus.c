@@ -49,6 +49,7 @@
 #include <linux/time.h>
 #include <linux/timer.h>
 #include <linux/workqueue.h>
+#include <linux/sched/rt.h>
 #include <linux/kthread.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>

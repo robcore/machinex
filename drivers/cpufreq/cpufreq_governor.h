@@ -23,6 +23,7 @@
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/sysfs.h>
+#include <linux/sched/rt.h>
 
 /*
  * The polling frequency depends on the capability of the processor. Default

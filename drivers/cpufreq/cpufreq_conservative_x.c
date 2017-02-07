@@ -13,6 +13,7 @@
 
 #include <linux/slab.h>
 #include "cpufreq_governor.h"
+#include <linux/sched/rt.h>
 #include <linux/touchboost.h>
 
 /* Conservative governor macros */

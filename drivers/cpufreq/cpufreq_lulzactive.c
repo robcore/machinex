@@ -30,6 +30,7 @@
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/powersuspend.h>
+#include <linux/sched/rt.h>
 #include <asm/cputime.h>
 #include <linux/suspend.h>
 

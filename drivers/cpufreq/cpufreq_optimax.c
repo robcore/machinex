@@ -19,6 +19,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
 #include <linux/hrtimer.h>
+#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/kthread.h>

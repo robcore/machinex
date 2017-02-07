@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <linux/cpufreq.h>
+#include <linux/sched/rt.h>
 
 /* Lionfish governor tunable defaults */
 #define DEF_FREQUENCY_JUMP_THRESHOLD	(95)

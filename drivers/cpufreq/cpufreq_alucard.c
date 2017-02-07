@@ -28,6 +28,7 @@
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/slab.h>
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -602,8 +603,8 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
-		if ((!cpu_online(cpu)) || 
-			(!policy->cur) || 
+		if ((!cpu_online(cpu)) ||
+			(!policy->cur) ||
 			(cpu != this_alucard_cpuinfo->cpu))
 			return -EINVAL;
 

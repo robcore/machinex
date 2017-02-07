@@ -20,6 +20,7 @@
 #include <linux/opp.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <linux/sched/rt.h>
 
 static unsigned int transition_latency;
 static unsigned int voltage_tolerance; /* in percentage */

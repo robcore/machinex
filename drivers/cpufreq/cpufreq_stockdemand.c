@@ -20,6 +20,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
 #include <linux/hrtimer.h>
+#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/kthread.h>
@@ -332,7 +333,7 @@ static ssize_t show_powersave_bias
  * If new rate is smaller than the old, simply updaing
  * dbs_tuners_int.sampling_rate might not be appropriate. For example,
  * if the original sampling_rate was 1 second and the requested new sampling
- * rate is 10 ms because the user needs immediate reaction from stockdemand 
+ * rate is 10 ms because the user needs immediate reaction from stockdemand
  * governor, but not sure if higher frequency will be required or not,
  * then, the governor may change the sampling rate too late; up to 1 second
  * later. Thus, if we are reducing the sampling rate, we need to make the

@@ -18,6 +18,7 @@
 #include <linux/mutex.h>
 #include <linux/tick.h>
 #include <linux/types.h>
+#include <linux/sched/rt.h>
 /*
  * Code picked from earlier governer implementations
  */

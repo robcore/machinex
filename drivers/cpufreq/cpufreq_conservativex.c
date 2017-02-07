@@ -5,7 +5,7 @@
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
  *                      Jun Nakajima <jun.nakajima@intel.com>
  *            (C)  2009 Alexander Clouter <alex@digriz.org.uk>
- *            (C)  2013 Florent Guichard <http://broodplank.net> 
+ *            (C)  2013 Florent Guichard <http://broodplank.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,6 +24,7 @@
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
