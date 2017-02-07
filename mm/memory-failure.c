@@ -1423,17 +1423,16 @@ static int soft_offline_huge_page(struct page *page, int flags)
 	unsigned long pfn = page_to_pfn(page);
 	struct page *hpage = compound_head(page);
 
+	if (PageHWPoison(hpage)) {
+		pr_info("soft offline: %#lx hugepage already poisoned\n", pfn);
+		return -EBUSY;
+	}
+
 	ret = get_any_page(page, pfn, flags);
 	if (ret < 0)
 		return ret;
 	if (ret == 0)
 		goto done;
-
-	if (PageHWPoison(hpage)) {
-		put_page(hpage);
-		pr_info("soft offline: %#lx hugepage already poisoned\n", pfn);
-		return -EBUSY;
-	}
 
 	/* Keep page count to indicate a given hugepage is isolated. */
 
@@ -1448,9 +1447,7 @@ static int soft_offline_huge_page(struct page *page, int flags)
 done:
 	/* overcommit hugetlb page will be freed to buddy */
 	if (PageHuge(hpage)) {
-		if (!PageHWPoison(hpage))
-		atomic_long_add(1 << compound_trans_order(hpage),
-				&mce_bad_pages);
+		atomic_long_add(1 << compound_trans_order(hpage), &mce_bad_pages);
 		set_page_hwpoison_huge_page(hpage);
 		dequeue_hwpoisoned_huge_page(hpage);
 	} else {
@@ -1500,6 +1497,11 @@ int soft_offline_page(struct page *page, int flags)
 		}
 	}
 
+	if (PageHWPoison(page)) {
+		pr_info("soft offline: %#lx page already poisoned\n", pfn);
+		return -EBUSY;
+	}
+
 	ret = get_any_page(page, pfn, flags);
 	if (ret < 0)
 		return ret;
@@ -1531,19 +1533,11 @@ int soft_offline_page(struct page *page, int flags)
 		return -EIO;
 	}
 
-	lock_page(page);
-	wait_on_page_writeback(page);
-
 	/*
 	 * Synchronized using the page lock with memory_failure()
 	 */
-	if (PageHWPoison(page)) {
-		unlock_page(page);
-		put_page(page);
-		pr_info("soft offline: %#lx page already poisoned\n", pfn);
-		return -EBUSY;
-	}
-
+	lock_page(page);
+	wait_on_page_writeback(page);
 	/*
 	 * Try to invalidate first. This should work for
 	 * non dirty unmapped page cache pages.
@@ -1594,8 +1588,9 @@ int soft_offline_page(struct page *page, int flags)
 		return ret;
 
 done:
+	/* keep elevated page count for bad page */
 	atomic_long_add(1, &mce_bad_pages);
 	SetPageHWPoison(page);
-	/* keep elevated page count for bad page */
+
 	return ret;
 }
