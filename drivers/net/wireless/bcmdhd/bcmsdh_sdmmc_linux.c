@@ -2,7 +2,7 @@
  * BCMSDH Function Driver for the native SDIO/MMC driver in the Linux Kernel
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -31,6 +31,7 @@
 #include <sdiovar.h>	/* to get msglevel bit values */
 
 #include <linux/sched.h>	/* request_irq() */
+#include <linux/sched/rt.h>
 
 #include <linux/mmc/core.h>
 #include <linux/mmc/card.h>
