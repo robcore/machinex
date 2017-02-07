@@ -3501,6 +3501,7 @@ int ext4_can_truncate(struct inode *inode)
 
 int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
 {
+#if 0
 	struct inode *inode = file_inode(file);
 	if (!S_ISREG(inode->i_mode))
 		return -EOPNOTSUPP;
@@ -3518,6 +3519,12 @@ int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
 	trace_ext4_punch_hole(inode, offset, length);
 
 	return ext4_ext_punch_hole(file, offset, length);
+#else
+	/*
+	 * Disabled as per b/28760453
+	 */
+	return -EOPNOTSUPP;
+#endif
 }
 
 /*
