@@ -374,10 +374,9 @@ EXPORT_SYMBOL(blk_put_queue);
  */
 void blk_drain_queue(struct request_queue *q, bool drain_all)
 {
-	int i;
-
 	while (true) {
 		bool drain = false;
+		int i;
 
 		spin_lock_irq(q->queue_lock);
 
@@ -394,7 +393,7 @@ void blk_drain_queue(struct request_queue *q, bool drain_all)
 		if (!list_empty(&q->queue_head))
 			__blk_run_queue(q);
 
-		drain |= q->nr_rqs_elvpriv;
+		drain |= q->rq.elvpriv;
 
 		/*
 		 * Unfortunately, requests are queued at and tracked from
@@ -404,7 +403,7 @@ void blk_drain_queue(struct request_queue *q, bool drain_all)
 		if (drain_all) {
 			drain |= !list_empty(&q->queue_head);
 			for (i = 0; i < 2; i++) {
-				drain |= q->nr_rqs[i];
+				drain |= q->rq.count[i];
 				drain |= q->in_flight[i];
 				drain |= !list_empty(&q->flush_queue[i]);
 			}
@@ -482,6 +481,7 @@ static int blk_init_free_list(struct request_queue *q)
 
 	rl->count[BLK_RW_SYNC] = rl->count[BLK_RW_ASYNC] = 0;
 	rl->starved[BLK_RW_SYNC] = rl->starved[BLK_RW_ASYNC] = 0;
+	rl->elvpriv = 0;
 	init_waitqueue_head(&rl->wait[BLK_RW_SYNC]);
 	init_waitqueue_head(&rl->wait[BLK_RW_ASYNC]);
 
@@ -761,10 +761,9 @@ static void freed_request(struct request_queue *q, unsigned int flags)
 	struct request_list *rl = &q->rq;
 	int sync = rw_is_sync(flags);
 
-	q->nr_rqs[sync]--;
 	rl->count[sync]--;
 	if (flags & REQ_ELVPRIV)
-		q->nr_rqs_elvpriv--;
+		rl->elvpriv--;
 
 	__freed_request(q, sync);
 
@@ -792,7 +791,7 @@ static bool blk_rq_should_init_elevator(struct bio *bio)
 }
 
 /**
- * __get_request - get a free request
+ * get_request - get a free request
  * @q: request_queue to allocate request from
  * @rw_flags: RW and SYNC flags
  * @bio: bio to allocate request for (can be %NULL)
@@ -805,8 +804,8 @@ static bool blk_rq_should_init_elevator(struct bio *bio)
  * Returns %NULL on failure, with @q->queue_lock held.
  * Returns !%NULL on success, with @q->queue_lock *not held*.
  */
-static struct request *__get_request(struct request_queue *q, int rw_flags,
-				     struct bio *bio, gfp_t gfp_mask)
+static struct request *get_request(struct request_queue *q, int rw_flags,
+				   struct bio *bio, gfp_t gfp_mask)
 {
 	struct request *rq = NULL;
 	struct request_list *rl = &q->rq;
@@ -875,7 +874,6 @@ retry:
 	if (rl->count[is_sync] >= (3 * q->nr_requests / 2))
 		goto out;
 
-	q->nr_rqs[is_sync]++;
 	rl->count[is_sync]++;
 	rl->starved[is_sync] = 0;
 
@@ -892,7 +890,7 @@ retry:
 	if (blk_rq_should_init_elevator(bio) &&
 	    !test_bit(QUEUE_FLAG_ELVSWITCH, &q->queue_flags)) {
 		rw_flags |= REQ_ELVPRIV;
-		q->nr_rqs_elvpriv++;
+		rl->elvpriv++;
 		if (et->icq_cache && ioc)
 			icq = ioc_lookup_icq(ioc, q);
 	}
@@ -951,55 +949,56 @@ out:
 }
 
 /**
- * get_request - get a free request
+ * get_request_wait - get a free request with retry
  * @q: request_queue to allocate request from
  * @rw_flags: RW and SYNC flags
  * @bio: bio to allocate request for (can be %NULL)
- * @gfp_mask: allocation mask
  *
- * Get a free request from @q.  If %__GFP_WAIT is set in @gfp_mask, this
- * function keeps retrying under memory pressure and fails iff @q is dead.
+ * Get a free request from @q.  This function keeps retrying under memory
+ * pressure and fails iff @q is dying.
  *
  * Must be callled with @q->queue_lock held and,
  * Returns %NULL on failure, with @q->queue_lock held.
  * Returns !%NULL on success, with @q->queue_lock *not held*.
  */
-static struct request *get_request(struct request_queue *q, int rw_flags,
-				   struct bio *bio, gfp_t gfp_mask)
+static struct request *get_request_wait(struct request_queue *q, int rw_flags,
+					struct bio *bio)
 {
 	const bool is_sync = rw_is_sync(rw_flags) != 0;
-	DEFINE_WAIT(wait);
-	struct request_list *rl = &q->rq;
 	struct request *rq;
-retry:
-	rq = __get_request(q, rw_flags, bio, gfp_mask);
-	if (rq)
-		return rq;
 
-	if (!(gfp_mask & __GFP_WAIT) || unlikely(blk_queue_dying(q)))
-		return NULL;
+	rq = get_request(q, rw_flags, bio, GFP_NOIO);
+	while (!rq) {
+		DEFINE_WAIT(wait);
+		struct request_list *rl = &q->rq;
 
-	/* wait on @rl and retry */
-	prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
-				  TASK_UNINTERRUPTIBLE);
+		if (unlikely(blk_queue_dying(q)))
+			return NULL;
 
-	trace_block_sleeprq(q, bio, rw_flags & 1);
+		prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
+				TASK_UNINTERRUPTIBLE);
 
-	spin_unlock_irq(q->queue_lock);
-	io_schedule();
+		trace_block_sleeprq(q, bio, rw_flags & 1);
 
-	/*
-	 * After sleeping, we become a "batching" process and will be able
-	 * to allocate at least one request, and up to a big batch of them
-	 * for a small period time.  See ioc_batching, ioc_set_batching
-	 */
-	create_io_context(GFP_NOIO, q->node);
-	ioc_set_batching(q, current->io_context);
+		spin_unlock_irq(q->queue_lock);
+		io_schedule();
 
-	spin_lock_irq(q->queue_lock);
-	finish_wait(&rl->wait[is_sync], &wait);
+		/*
+		 * After sleeping, we become a "batching" process and
+		 * will be able to allocate at least one request, and
+		 * up to a big batch of them for a small period time.
+		 * See ioc_batching, ioc_set_batching
+		 */
+		create_io_context(current, GFP_NOIO, q->node);
+		ioc_set_batching(q, current->io_context);
 
-	goto retry;
+		spin_lock_irq(q->queue_lock);
+		finish_wait(&rl->wait[is_sync], &wait);
+
+		rq = get_request(q, rw_flags, bio, GFP_NOIO);
+	};
+
+	return rq;
 }
 
 struct request *blk_get_request(struct request_queue *q, int rw, gfp_t gfp_mask)
@@ -1007,7 +1006,10 @@ struct request *blk_get_request(struct request_queue *q, int rw, gfp_t gfp_mask)
 	struct request *rq;
 
 	spin_lock_irq(q->queue_lock);
-	rq = get_request(q, rw, NULL, gfp_mask);
+	if (gfp_mask & __GFP_WAIT)
+		rq = get_request_wait(q, rw, NULL);
+	else
+		rq = get_request(q, rw, NULL, gfp_mask);
 	if (!rq)
 		spin_unlock_irq(q->queue_lock);
 	/* q->queue_lock is unlocked at this point */
@@ -1454,7 +1456,7 @@ get_rq:
 	 * Grab a free request. This is might sleep but can not fail.
 	 * Returns with the queue unlocked.
 	 */
-	req = get_request(q, rw_flags, bio, GFP_NOIO);
+	req = get_request_wait(q, rw_flags, bio);
 	if (unlikely(!req)) {
 		bio_endio(bio, -ENODEV);	/* @q is dying */
 		goto out_unlock;
