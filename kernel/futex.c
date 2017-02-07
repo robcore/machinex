@@ -60,6 +60,7 @@
 #include <linux/pid.h>
 #include <linux/nsproxy.h>
 #include <linux/ptrace.h>
+#include <linux/sched/rt.h>
 #include <linux/freezer.h>
 #include <linux/bootmem.h>
 #include <linux/hugetlb.h>
