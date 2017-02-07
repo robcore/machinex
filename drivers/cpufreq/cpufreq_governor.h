@@ -84,6 +84,7 @@ struct cpu_dbs_common_info {
 	 * the governor or limits.
 	 */
 	struct mutex timer_mutex;
+	ktime_t time_stamp;
 };
 
 struct od_cpu_dbs_info_s {
