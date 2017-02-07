@@ -42,9 +42,6 @@
 #include <linux/writeback.h>
 #include <linux/pagemap.h>
 
-/* Debugging code for zswap kernel panic */
-#include <linux/mm.h>
-
 /*********************************
 * statistics
 **********************************/
@@ -78,7 +75,6 @@ static u64 zswap_duplicate_entry;
 * tunables
 **********************************/
 /* Enable/disable zswap (enabled by default, fixed at boot for now) */
-/*suck it samsung*/
 static bool zswap_enabled = 1;
 module_param_named(enabled, zswap_enabled, bool, 0644);
 
@@ -1038,7 +1034,7 @@ static void zswap_frontswap_init(unsigned type)
 	tree = kzalloc(sizeof(struct zswap_tree), GFP_ATOMIC);
 	if (!tree)
 		goto err;
-	tree->pool = zs_create_pool(GFP_NOWAIT | __GFP_HIGHMEM, &zswap_zs_ops);
+	tree->pool = zs_create_pool(GFP_NOWAIT, &zswap_zs_ops);
 	if (!tree->pool)
 		goto freetree;
 	tree->rbroot = RB_ROOT;
