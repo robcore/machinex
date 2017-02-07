@@ -837,35 +837,21 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 #endif /* RDWR_KORICS_MACADDR */
 
 #ifdef USE_CID_CHECK
-static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf_len)
+static unsigned int dhd_write_cid_file(const char *filepath_cid, const unsigned char *buf, unsigned int buf_len)
 {
-	struct file *fp = NULL;
-	mm_segment_t oldfs = {0};
-	int ret = 0;
+	unsigned int ret = 0;
+	struct file *fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
-		return -1;
+		ret = -ENFILE;
 	} else {
-		oldfs = get_fs();
-		set_fs(get_ds());
-
-		if (fp->f_mode & FMODE_WRITE) {
-			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
-			if (ret < 0)
-				DHD_ERROR(("[WIFI_SEC] Failed to write CIS[%s]"
-					" into '%s'\n", buf, filepath_cid));
-			else
-				DHD_ERROR(("[WIFI_SEC] CID [%s] written into"
-					" '%s'\n", buf, filepath_cid));
-		}
-		set_fs(oldfs);
+		ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
 	}
 	filp_close(fp, NULL);
 
-	return 0;
+	return ret;
 }
 
 #ifdef DUMP_CIS
@@ -930,7 +916,7 @@ vid_info_t vid_info[] = {
 };
 #endif /* BCM_CHIP_ID */
 
-int dhd_check_module_cid(dhd_pub_t *dhd)
+unsigned int dhd_check_module_cid(dhd_pub_t *dhd)
 {
 	int ret = -1;
 	unsigned char cis_buf[CIS_BUF_SIZE] = {0};
@@ -940,14 +926,12 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	vid_info_t *cur_info;
 	unsigned char *vid_start;
 	unsigned char vid_length;
-#if defined(BCM4334_CHIP) || defined(BCM4335_CHIP)
 	const char *revfilepath = REVINFO;
 #ifdef BCM4334_CHIP
 	int flag_b3;
 #else
 	char rev_str[10] = {0};
 #endif /* BCM4334_CHIP */
-#endif /* BCM4334_CHIP || BCM4335_CHIP */
 
 	/* Try reading out from CIS */
 	cish->source = 0;
@@ -960,6 +944,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	if (ret < 0) {
 		DHD_ERROR(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n",
 			__FUNCTION__, ret));
+		WARN_ON(1);
 		return ret;
 	}
 
@@ -977,10 +962,9 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 				vid_start = &cis_buf[idx + 3];
 				/* found CIS tuple */
 				break;
-			} else {
+			} else
 				/* Go to next tuple if tuple value is not vendor type */
 				idx += (cis_buf[idx + 1] + 1);
-			}
 		}
 	}
 
@@ -1008,7 +992,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 
 write_cid:
 	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
-	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen(cur_info->vname)+1);
+	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen((cur_info->vname) + 1));
 #if defined(BCM4334_CHIP)
 	/* Try reading out from OTP to distinguish B2 or B3 */
 	memset(cis_buf, 0, sizeof(cis_buf));
@@ -1037,10 +1021,10 @@ write_cid:
 #endif /* BCM4334_CHIP */
 #if defined(BCM4335_CHIP)
 	DHD_TRACE(("[WIFI_SEC] %s: BCM4335 Multiple Revision Check\n", __FUNCTION__));
-	if (concate_revision(dhd->bus, rev_str, sizeof(rev_str),
-		rev_str, sizeof(rev_str)) < 0) {
+	ret = concate_revision(dhd->bus, rev_str, sizeof(rev_str), rev_str, sizeof(rev_str));
+	if (!ret) {
 		DHD_ERROR(("[WIFI_SEC] %s: fail to concate revision\n", __FUNCTION__));
-		ret = -1;
+		return -EBADFD;
 	} else {
 		if (strstr(rev_str, "_a0")) {
 			DHD_ERROR(("[WIFI_SEC] REV MATCH FOUND : 4335A0\n"));
@@ -1076,8 +1060,9 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS. \n"));
-			else
-				DHD_ERROR(("[WIFI_SEC] MAC written. \n"));
+				WARN_ON(1);
+			} else {
+				DHD_INFO(("[WIFI_SEC] MAC written. \n"));
 		}
 		set_fs(oldfs);
 	}
@@ -1108,6 +1093,7 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 	if (ret < 0) {
 		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
 			ret));
+		WARN_ON(1);
 		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			mac->octet[0], mac->octet[1], mac->octet[2],
 			mac->octet[3], mac->octet[4], mac->octet[5]);
@@ -1379,6 +1365,7 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File [%s] open error\n", __FUNCTION__, filepath));
+		WARN_ON(1);
 		return ret;
 	} else {
 		ret = kernel_read(fp, 0, (char *)&ant_val, 4);
@@ -1409,6 +1396,7 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 			DHD_ERROR(("[WIFI_SEC] %s: Fail to execute dhd_wl_ioctl_cmd(): "
 				"btc_mode, ret=%d\n",
 				__FUNCTION__, ret));
+			WARN_ON(1);
 			return ret;
 		}
 	}
@@ -1470,11 +1458,13 @@ int sec_get_param(dhd_pub_t *dhd, int mode)
 
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp) || (fp == NULL)) {
+		pr_debug("blablblb\n");
 		ret = -EIO;
 	} else {
+		pr_debug("blablblb\n");
 		ret = kernel_read(fp, fp->f_pos, (char *)&val, 4);
-		filp_close(fp, NULL);
 	}
+	filp_close(fp, NULL);
 
 	if (ret < 0) {
 		/* File operation is failed so we will return default value */
@@ -1547,6 +1537,8 @@ int write_filesystem(struct file *file, unsigned long long offset,
 	set_fs(get_ds());
 
 	ret = vfs_write(file, data, size, &offset);
+	if (ret < 0)
+	WARN_ON(1);
 
 	set_fs(oldfs);
 	return ret;
