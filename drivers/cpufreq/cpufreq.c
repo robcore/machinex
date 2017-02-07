@@ -153,6 +153,11 @@ void disable_cpufreq(void)
 static LIST_HEAD(cpufreq_governor_list);
 static DEFINE_MUTEX(cpufreq_governor_mutex);
 
+bool have_governor_per_policy(void)
+{
+	return cpufreq_driver->have_governor_per_policy;
+}
+
 static struct cpufreq_policy *__cpufreq_cpu_get(unsigned int cpu, bool sysfs)
 {
 	struct cpufreq_policy *data;
@@ -1989,10 +1994,12 @@ mutex_unlock(&cpufreq_governor_lock);
                 mutex_unlock(&cpufreq_governor_lock);
         }
 
-	if (event == CPUFREQ_GOV_START)
-		policy->governor->initialized++;
-	else if (event == CPUFREQ_GOV_STOP)
-		policy->governor->initialized--;
+	if (!ret) {
+		if (event == CPUFREQ_GOV_POLICY_INIT)
+			policy->governor->initialized++;
+		else if (event == CPUFREQ_GOV_POLICY_EXIT)
+			policy->governor->initialized--;
+	}
 
 	/* we keep one module reference alive for
 			each CPU governed by this CPU */
