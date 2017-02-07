@@ -688,10 +688,7 @@ static inline int page_to_nid(const struct page *page)
 #endif
 
 #ifdef CONFIG_NUMA_BALANCING
-static inline int page_xchg_last_nid(struct page *page, int nid)
-{
-	return xchg(&page->_last_nid, nid);
-}
+extern int page_xchg_last_nid(struct page *page, int nid);
 
 static inline int page_last_nid(struct page *page)
 {
@@ -699,7 +696,10 @@ static inline int page_last_nid(struct page *page)
 }
 static inline void reset_page_last_nid(struct page *page)
 {
-	page->_last_nid = -1;
+	int nid = (1 << LAST_NID_SHIFT) - 1;
+
+	page->flags &= ~(LAST_NID_MASK << LAST_NID_PGSHIFT);
+	page->flags |= (nid & LAST_NID_MASK) << LAST_NID_PGSHIFT;
 }
 #else
 static inline int page_nid_xchg_last(struct page *page, int nid)

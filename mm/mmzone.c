@@ -1,7 +1,7 @@
 /*
  * linux/mm/mmzone.c
  *
- * management codes for pgdats and zones.
+ * management codes for pgdats, zones and page flags
  */
 
 
@@ -98,3 +98,21 @@ void lruvec_init(struct lruvec *lruvec, struct zone *zone)
 	lruvec->zone = zone;
 #endif
 }
+
+#if defined(CONFIG_NUMA_BALANCING) && !defined(LAST_NID_NOT_IN_PAGE_FLAGS)
+int page_xchg_last_nid(struct page *page, int nid)
+{
+	unsigned long old_flags, flags;
+	int last_nid;
+
+	do {
+		old_flags = flags = page->flags;
+		last_nid = page_last_nid(page);
+
+		flags &= ~(LAST_NID_MASK << LAST_NID_PGSHIFT);
+		flags |= (nid & LAST_NID_MASK) << LAST_NID_PGSHIFT;
+	} while (unlikely(cmpxchg(&page->flags, old_flags, flags) != old_flags));
+
+	return last_nid;
+}
+#endif
