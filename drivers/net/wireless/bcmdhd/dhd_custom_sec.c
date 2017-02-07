@@ -1545,7 +1545,7 @@ int write_filesystem(struct file *file, unsigned long long offset,
 	oldfs = get_fs();
 	set_fs(get_ds());
 
-	ret = vfs_write(file, (__force const char __user *)data, size, &offset);
+	ret = vfs_write(file, data, size, &offset);
 
 	set_fs(oldfs);
 	return ret;
