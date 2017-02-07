@@ -1,8 +1,8 @@
 /*
- *  linux/include/linux/cpufreq.h
+ * linux/include/linux/cpufreq.h
  *
- *  Copyright (C) 2001 Russell King
- *            (C) 2002 - 2003 Dominik Brodowski <linux@brodo.de>
+ * Copyright (C) 2001 Russell King
+ *           (C) 2002 - 2003 Dominik Brodowski <linux@brodo.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -683,7 +683,6 @@ extern struct cpufreq_governor cpufreq_gov_xperience;
 extern struct cpufreq_governor cpufreq_gov_whiskeyactive;
 #define CPUFREQ_DEFAULT_GOVERNOR 	(&cpufreq_gov_whiskyactive)
 #endif
-
 
 /*********************************************************************
  *                     FREQUENCY TABLE HELPERS                       *

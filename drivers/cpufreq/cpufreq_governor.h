@@ -83,7 +83,7 @@ static ssize_t show_##file_name##_gov_sys				\
 	return sprintf(buf, "%u\n", tuners->file_name);			\
 }									\
 									\
-static ssize_t show_##file_name##_gov_pol					\
+static ssize_t show_##file_name##_gov_pol				\
 (struct cpufreq_policy *policy, char *buf)				\
 {									\
 	struct dbs_data *dbs_data = policy->governor_data;		\
@@ -93,7 +93,7 @@ static ssize_t show_##file_name##_gov_pol					\
 
 #define store_one(_gov, file_name)					\
 static ssize_t store_##file_name##_gov_sys				\
-(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)	\
+(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count) \
 {									\
 	struct dbs_data *dbs_data = _gov##_dbs_cdata.gdbs_data;		\
 	return store_##file_name(dbs_data, buf, count);			\
