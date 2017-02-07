@@ -150,7 +150,6 @@ struct cpu_dbs_common_info {
 
 struct od_cpu_dbs_info_s {
 	struct cpu_dbs_common_info cdbs;
-	cputime64_t prev_cpu_iowait;
 	struct cpufreq_frequency_table *freq_table;
 	unsigned int freq_lo;
 	unsigned int freq_lo_jiffies;
