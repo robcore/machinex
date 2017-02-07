@@ -237,15 +237,14 @@ extern wl_iw_extra_params_t  g_wl_iw_params;
 #if defined(CUSTOMER_HW4) && defined(CONFIG_PARTIALSUSPEND_SLP)
 #include <linux/partialsuspend_slp.h>
 #define CONFIG_POWERSUSPEND
-#define DHD_USE_POWERSUSPEND
+#define DHD_USE_EARLYSUSPEND
 #define register_power_suspend		register_pre_suspend
 #define unregister_power_suspend	unregister_pre_suspend
 #define power_suspend				pre_suspend
-//#define POWER_SUSPEND_LEVEL_BLANK_SCREEN		50
 #else
-#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 #include <linux/powersuspend.h>
-#endif /* defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND) */
+#endif /* defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND) */
 #endif /* CUSTOMER_HW4 && CONFIG_PARTIALSUSPEND_SLP */
 
 extern int dhd_get_suspend_bcn_li_dtim(dhd_pub_t *dhd);
@@ -268,7 +267,7 @@ extern int dhd_write_rdwr_macaddr(struct ether_addr *mac);
 extern int dhd_write_macaddr(struct ether_addr *mac);
 #endif
 #ifdef USE_CID_CHECK
-extern unsigned int dhd_check_module_cid(dhd_pub_t *dhd);
+extern int dhd_check_module_cid(dhd_pub_t *dhd);
 #endif
 #ifdef GET_MAC_FROM_OTP
 extern int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac);
@@ -442,9 +441,9 @@ typedef struct dhd_info {
 	atomic_t pend_8021x_cnt;
 	dhd_attach_states_t dhd_state;
 
-#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 	struct power_suspend power_suspend;
-#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
 
 #ifdef ARP_OFFLOAD_SUPPORT
 	u32 pend_ipaddr;
@@ -981,7 +980,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 	if (dhd->up) {
 		if (value && dhd->in_suspend) {
 #ifdef PKT_FILTER_SUPPORT
-				dhd->power_suspended = 1;
+				dhd->early_suspended = 1;
 #endif
 				/* Kernel suspended */
 				DHD_ERROR(("%s: force extra Suspend setting \n", __FUNCTION__));
@@ -1048,7 +1047,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 #endif /* DYNAMIC_SWOOB_DURATION */
 			} else {
 #ifdef PKT_FILTER_SUPPORT
-				dhd->power_suspended = 0;
+				dhd->early_suspended = 0;
 #endif
 				/* Kernel resumed  */
 				DHD_ERROR(("%s: Remove extra suspend setting \n", __FUNCTION__));
@@ -1121,7 +1120,7 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	int ret = 0;
 
 	DHD_OS_WAKE_LOCK(dhdp);
-	/* Set flag when power suspend was called */
+	/* Set flag when early suspend was called */
 	dhdp->in_suspend = val;
 	if ((force || !dhdp->suspend_disable_flag) &&
 		dhd_support_sta_mode(dhdp))
@@ -1133,8 +1132,8 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	return ret;
 }
 
-#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
-static void dhd_power_suspend(struct power_suspend *h)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
+static void dhd_early_suspend(struct power_suspend *h)
 {
 	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
 	DHD_TRACE_HW4(("%s: enter\n", __FUNCTION__));
@@ -1143,7 +1142,7 @@ static void dhd_power_suspend(struct power_suspend *h)
 		dhd_suspend_resume_helper(dhd, 1, 0);
 }
 
-static void dhd_power_resume(struct power_suspend *h)
+static void dhd_late_resume(struct power_suspend *h)
 {
 	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
 	DHD_TRACE_HW4(("%s: enter\n", __FUNCTION__));
@@ -1151,7 +1150,7 @@ static void dhd_power_resume(struct power_suspend *h)
 	if (dhd)
 		dhd_suspend_resume_helper(dhd, 0, 0);
 }
-#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
 
 /*
  * Generalized timeout mechanism.  Uses spin sleep with exponential back-off until
@@ -1358,7 +1357,7 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 #endif /* MCAST_LIST_ACCUMULATION */
 #if defined(PASS_ALL_MCAST_PKTS) && defined(CUSTOMER_HW4)
 #ifdef PKT_FILTER_SUPPORT
-	if (!dhd->pub.power_suspended)
+	if (!dhd->pub.early_suspended)
 #endif /* PKT_FILTER_SUPPORT */
 		allmulti = TRUE;
 #endif /* PASS_ALL_MCAST_PKTS && CUSTOMER_HW4 */
@@ -4176,12 +4175,12 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	}
 #endif /* CONFIG_PM_SLEEP */
 
-#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
-	dhd->power_suspend.suspend = dhd_power_suspend;
-	dhd->power_suspend.resume = dhd_power_resume;
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
+	dhd->power_suspend.suspend = dhd_early_suspend;
+	dhd->power_suspend.resume = dhd_late_resume;
 	register_power_suspend(&dhd->power_suspend);
-	dhd_state |= DHD_ATTACH_STATE_POWERSUSPEND_DONE;
-#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
+	dhd_state |= DHD_ATTACH_STATE_EARLYSUSPEND_DONE;
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
 
 #ifdef ARP_OFFLOAD_SUPPORT
 	dhd->pend_ipaddr = 0;
@@ -5986,12 +5985,12 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd_inet6addr_notifier_registered = FALSE;
 		unregister_inet6addr_notifier(&dhd_inet6addr_notifier);
 	}
-#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
-	if (dhd->dhd_state & DHD_ATTACH_STATE_POWERSUSPEND_DONE) {
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
+	if (dhd->dhd_state & DHD_ATTACH_STATE_EARLYSUSPEND_DONE) {
 		if (dhd->power_suspend.suspend)
 			unregister_power_suspend(&dhd->power_suspend);
 	}
-#endif /* CONFIG_POWERSUSPEND && DHD_USE_POWERSUSPEND */
+#endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
 
 #if defined(WL_WIRELESS_EXT)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_WL_ATTACH) {
@@ -6776,7 +6775,7 @@ int net_os_set_suspend(struct net_device *dev, int val, int force)
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	if (dhd) {
-#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_POWERSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 		ret = dhd_set_suspend(val, &dhd->pub);
 #else
 		ret = dhd_suspend_resume_helper(dhd, val, force);
@@ -6854,9 +6853,9 @@ int dhd_os_enable_packet_filter(dhd_pub_t *dhdp, int val)
 {
 	int ret = 0;
 
-	/* Packet filtering is set only if we still in power-suspend and
+	/* Packet filtering is set only if we still in early-suspend and
 	 * we need either to turn it ON or turn it OFF
-	 * We can always turn it OFF in case of power-suspend, but we turn it
+	 * We can always turn it OFF in case of early-suspend, but we turn it
 	 * back ON only if suspend_disable_flag was not set
 	*/
 	if (dhdp && dhdp->up) {

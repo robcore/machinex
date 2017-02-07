@@ -63,7 +63,7 @@ wifi_adapter_info_t* dhd_wifi_platform_get_adapter(uint32 bus_type, uint32 bus_n
 int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long msec);
 int wifi_platform_bus_enumerate(wifi_adapter_info_t *adapter, bool device_present);
 int wifi_platform_get_irq_number(wifi_adapter_info_t *adapter, unsigned long *irq_flags_ptr);
-unsigned int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf);
+int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf);
 void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode);
 void* wifi_platform_prealloc(wifi_adapter_info_t *adapter, int section, unsigned long size);
 void* wifi_platform_get_prealloc_func_ptr(wifi_adapter_info_t *adapter);

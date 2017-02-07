@@ -235,7 +235,7 @@ typedef struct dhd_pub {
 
 	/* Suspend disable flag and "in suspend" flag */
 	int suspend_disable_flag; /* "1" to disable all extra powersaving during suspend */
-	int in_suspend;			/* flag set to 1 when power suspend called */
+	int in_suspend;			/* flag set to 1 when early suspend called */
 #ifdef PNO_SUPPORT
 	int pno_enable;			/* pno status : "1" is pno enable */
 	int pno_suspend;		/* pno suspend status : "1" is pno suspended */
@@ -245,7 +245,7 @@ typedef struct dhd_pub {
 	 */
 	int suspend_bcn_li_dtim;         /* bcn_li_dtim value in suspend mode */
 #ifdef PKT_FILTER_SUPPORT
-	int power_suspended;	/* Early suspend status */
+	int early_suspended;	/* Early suspend status */
 	int dhcp_in_progress;	/* DHCP period */
 #endif
 
@@ -532,7 +532,7 @@ typedef enum dhd_attach_states
 	DHD_ATTACH_STATE_THREADS_CREATED = 0x20,
 	DHD_ATTACH_STATE_WAKELOCKS_INIT = 0x40,
 	DHD_ATTACH_STATE_CFG80211 = 0x80,
-	DHD_ATTACH_STATE_POWERSUSPEND_DONE = 0x100,
+	DHD_ATTACH_STATE_EARLYSUSPEND_DONE = 0x100,
 	DHD_ATTACH_STATE_DONE = 0x200
 } dhd_attach_states_t;
 

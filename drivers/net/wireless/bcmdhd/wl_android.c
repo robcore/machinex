@@ -507,7 +507,7 @@ static int wl_android_set_suspendmode(struct net_device *dev, char *command, int
 {
 	int ret = 0;
 
-#if !defined(CONFIG_POWERSUSPEND) || !defined(DHD_USE_POWERSUSPEND)
+#if !defined(CONFIG_POWERSUSPEND) || !defined(DHD_USE_EARLYSUSPEND)
 	int suspend_flag;
 
 	suspend_flag = *(command + strlen(CMD_SETSUSPENDMODE) + 1) - '0';
@@ -3269,11 +3269,6 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	android_wifi_priv_cmd priv_cmd;
 
 	net_os_wake_lock(net);
-
-	if (!capable(CAP_NET_ADMIN)) {
-		ret = -EPERM;
-		goto exit;
-	}
 
 	if (!ifr->ifr_data) {
 		ret = -EINVAL;

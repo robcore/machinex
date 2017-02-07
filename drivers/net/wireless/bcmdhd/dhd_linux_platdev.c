@@ -233,7 +233,7 @@ int wifi_platform_bus_enumerate(wifi_adapter_info_t *adapter, bool device_presen
 
 }
 
-unsigned int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
+int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
 {
 	struct wifi_platform_data *plat_data;
 
