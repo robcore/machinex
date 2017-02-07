@@ -30,11 +30,9 @@
 #include "cpufreq_governor.h"
 
 /* On-demand governor macros */
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define DEF_FREQUENCY_UP_THRESHOLD		(80)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
-#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
@@ -179,29 +177,17 @@ static void od_check_cpu(int cpu, unsigned int load_freq)
 	dbs_info->freq_lo = 0;
 
 	/* Check for frequency increase */
-	if (load_freq > od_tuners->up_threshold * policy->cur) {
+	if (load > od_tuners->up_threshold) {
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
 			dbs_info->rate_mult =
 				od_tuners->sampling_down_factor;
 		dbs_freq_increase(policy, policy->max);
 		return;
-	}
-
-	/* Check for frequency decrease */
-	/* if we cannot reduce the frequency anymore, break out early */
-	if (policy->cur == policy->min)
-		return;
-
-	/*
-	 * The optimal frequency is the frequency that is the lowest that can
-	 * support the current CPU usage without triggering the up policy. To be
-	 * safe, we focus 10 points under the threshold.
-	 */
-	if (load_freq < od_tuners->adj_up_threshold
-			* policy->cur) {
+	} else {
+		/* Calculate the next frequency proportional to load */
 		unsigned int freq_next;
-		freq_next = load_freq / od_tuners->adj_up_threshold;
+		freq_next = load * policy->cpuinfo.max_freq / 100;
 
 		/* No longer fully busy, reset rate_mult */
 		dbs_info->rate_mult = 1;
@@ -375,9 +361,6 @@ static ssize_t store_up_threshold(struct dbs_data *dbs_data, const char *buf,
 			input < MIN_FREQUENCY_UP_THRESHOLD) {
 		return -EINVAL;
 	}
-	/* Calculate the new adj_up_threshold */
-	od_tuners->adj_up_threshold += input;
-	od_tuners->adj_up_threshold -= od_tuners->up_threshold;
 
 	od_tuners->up_threshold = input;
 	return count;
@@ -526,8 +509,6 @@ static int od_init(struct dbs_data *dbs_data)
 	if (idle_time != -1ULL) {
 		/* Idle micro accounting is supported. Use finer thresholds */
 		tuners->up_threshold = MICRO_FREQUENCY_UP_THRESHOLD;
-		tuners->adj_up_threshold = MICRO_FREQUENCY_UP_THRESHOLD -
-			MICRO_FREQUENCY_DOWN_DIFFERENTIAL;
 		/*
 		 * In nohz/micro accounting case we set the minimum frequency
 		 * not depending on HZ, but fixed (very low). The deferred
@@ -536,8 +517,6 @@ static int od_init(struct dbs_data *dbs_data)
 		dbs_data->min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
 	} else {
 		tuners->up_threshold = DEF_FREQUENCY_UP_THRESHOLD;
-		tuners->adj_up_threshold = DEF_FREQUENCY_UP_THRESHOLD -
-			DEF_FREQUENCY_DOWN_DIFFERENTIAL;
 
 		/* For correct statistics, we need 10 ticks for each measure */
 		dbs_data->min_sampling_rate = MIN_SAMPLING_RATE_RATIO *
