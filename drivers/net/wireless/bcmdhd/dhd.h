@@ -930,7 +930,7 @@ int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, struct dhd_ioctl *ioc, void *da
 
 #if defined(SUPPORT_MULTIPLE_REVISION)
 extern int
-concate_revision(struct dhd_bus *bus, char *fwpath, char *nvpath);
+concate_revision(struct dhd_bus *bus, char *fwpath, int fw_path_len, char *nvpath, int nv_path_len);
 #if defined(PLATFORM_MPS)
 extern int wifi_get_fw_nv_path(char *fw, char *nv);
 #endif
