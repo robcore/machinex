@@ -261,8 +261,8 @@ static ssize_t show_sampling_rate_min_gov_pol				\
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 bool need_load_eval(struct cpu_dbs_common_info *cdbs,
 		unsigned int sampling_rate);
-int cpufreq_governor_dbs(struct dbs_data *dbs_data,
-		struct cpufreq_policy *policy, unsigned int event);
 int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		struct common_dbs_data *cdata, unsigned int event);
+void gov_queue_work(struct dbs_data *dbs_data, struct cpufreq_policy *policy,
+		unsigned int delay, bool all_cpus);
 #endif /* _CPUFREQ_GOVERNOR_H */
