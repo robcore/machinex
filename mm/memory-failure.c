@@ -61,7 +61,7 @@ int sysctl_memory_failure_early_kill __read_mostly = 0;
 
 int sysctl_memory_failure_recovery __read_mostly = 1;
 
-atomic_long_t mce_bad_pages __read_mostly = ATOMIC_LONG_INIT(0);
+atomic_long_t num_poisoned_pages __read_mostly = ATOMIC_LONG_INIT(0);
 
 #if defined(CONFIG_HWPOISON_INJECT) || defined(CONFIG_HWPOISON_INJECT_MODULE)
 
@@ -1041,7 +1041,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	}
 
 	nr_pages = 1 << compound_trans_order(hpage);
-	atomic_long_add(nr_pages, &mce_bad_pages);
+	atomic_long_add(nr_pages, &num_poisoned_pages);
 
 	/*
 	 * We need/can do nothing about count=0 pages.
@@ -1132,7 +1132,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	}
 	if (hwpoison_filter(p)) {
 		if (TestClearPageHWPoison(p))
-			atomic_long_sub(nr_pages, &mce_bad_pages);
+			atomic_long_sub(nr_pages, &num_poisoned_pages);
 		unlock_page(hpage);
 		put_page(hpage);
 		return 0;
@@ -1327,7 +1327,7 @@ int unpoison_memory(unsigned long pfn)
 			return 0;
 		}
 		if (TestClearPageHWPoison(p))
-			atomic_long_sub(nr_pages, &mce_bad_pages);
+			atomic_long_sub(nr_pages, &num_poisoned_pages);
 		pr_info("MCE: Software-unpoisoned free page %#lx\n", pfn);
 		return 0;
 	}
@@ -1341,7 +1341,7 @@ int unpoison_memory(unsigned long pfn)
 	 */
 	if (TestClearPageHWPoison(page)) {
 		pr_info("MCE: Software-unpoisoned page %#lx\n", pfn);
-		atomic_long_sub(nr_pages, &mce_bad_pages);
+		atomic_long_sub(nr_pages, &num_poisoned_pages);
 		freeit = 1;
 		if (PageHuge(page))
 			clear_page_hwpoison_huge_page(page);
@@ -1448,7 +1448,7 @@ static int soft_offline_huge_page(struct page *page, int flags)
 done:
 	/* keep elevated page count for bad page */
 	if (PageHuge(hpage)) {
-		atomic_long_add(1 << compound_trans_order(hpage), &mce_bad_pages);
+		atomic_long_add(1 << compound_trans_order(hpage), &num_poisoned_pages);
 		set_page_hwpoison_huge_page(hpage);
 		dequeue_hwpoisoned_huge_page(hpage);
 	} else {
@@ -1595,7 +1595,7 @@ int soft_offline_page(struct page *page, int flags)
 
 done:
 	/* keep elevated page count for bad page */
-	atomic_long_inc(&mce_bad_pages);
+	atomic_long_inc(&num_poisoned_pages);
 	SetPageHWPoison(page);
 out:
 	return ret;
