@@ -376,18 +376,18 @@ static int zswap_cpu_init(void)
 {
 	unsigned long cpu;
 
-	cpu_notifier_register_begin();
+	get_online_cpus();
 	for_each_online_cpu(cpu)
 		if (__zswap_cpu_notifier(CPU_UP_PREPARE, cpu) != NOTIFY_OK)
 			goto cleanup;
-	__register_cpu_notifier(&zswap_cpu_notifier_block);
-	cpu_notifier_register_done();
+	register_cpu_notifier(&zswap_cpu_notifier_block);
+	put_online_cpus();
 	return 0;
 
 cleanup:
 	for_each_online_cpu(cpu)
 		__zswap_cpu_notifier(CPU_UP_CANCELED, cpu);
-	cpu_notifier_register_done();
+	put_online_cpus();
 	return -ENOMEM;
 }
 
@@ -622,9 +622,6 @@ static int zswap_writeback_entry(struct zswap_tree *tree,
 		SetPageUptodate(page);
 	}
 
-	/* move it to the tail of the inactive list after end_writeback */
-	SetPageReclaim(page);
-
 	/* start writeback */
 	SetPageReclaim(page);
 	if (!__swap_writepage(page, &wbc, zswap_end_swap_write))
@@ -788,9 +785,6 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 #ifdef CONFIG_ZSWAP_ENABLE_WRITEBACK
 	u8 *tmpdst;
 #endif
-	
-	if (!zswap_enabled)
-		return -EPERM;
 
 	if (!tree) {
 		ret = -ENODEV;
