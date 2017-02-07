@@ -513,9 +513,13 @@ static ssize_t store_##file_name					\
 									\
 	policy->user_policy.min = new_policy.min;			\
 	policy->user_policy.max = new_policy.max;			\
+														\
+	ret = cpufreq_driver->verify(&new_policy);			\
+	if (ret)							\
+		pr_err("cpufreq: Frequency verification failed\n");	\
 									\
-	ret = __cpufreq_set_policy(policy, &new_policy);		\
 	policy->user_policy.object = new_policy.object;			\
+	ret = __cpufreq_set_policy(policy, &new_policy);		\
 									\
 	return ret ? ret : count;					\
 }
