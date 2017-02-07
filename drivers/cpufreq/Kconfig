@@ -18,6 +18,13 @@ config CPU_FREQ
 
 if CPU_FREQ
 
+config CPU_GOVERNOR_COMMON
+	bool "Do the thing"
+	depends on CPU_FREQ
+	default y
+	help
+	  This does the thing. Say yes.
+
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
 	depends on CPU_FREQ
@@ -42,9 +49,6 @@ config SCHED_FREQ_INPUT
 	  scheduler keeps track of "recent" cpu demand of tasks, which can
 	  help determine need for changing frequency well in advance of what
 	  a governor would have been able to detect on its own.
-
-config CPU_FREQ_GOV_COMMON
-	bool
 
 config CPU_FREQ_STAT
 	tristate "CPU frequency translation statistics"
@@ -592,7 +596,6 @@ config CPU_FREQ_GOV_USERSPACE
 config CPU_FREQ_GOV_ONDEMAND
 	tristate "'ondemand' cpufreq policy governor"
 	select CPU_FREQ_TABLE
-	select CPU_FREQ_GOV_COMMON
 	help
 	  'ondemand' - This driver adds a dynamic cpufreq policy governor.
 	  The governor does a periodic polling and
@@ -659,7 +662,6 @@ config CPU_FREQ_GOV_INTERACTIVE
 config CPU_FREQ_GOV_CONSERVATIVE
 	tristate "'conservative' cpufreq governor"
 	depends on CPU_FREQ
-	select CPU_FREQ_GOV_COMMON
 	help
 	  'conservative' - this driver is rather similar to the 'ondemand'
 	  governor both in its source code and its purpose, the difference is
@@ -1209,7 +1211,7 @@ config CPUFREQ_HARDLIMIT_DEBUG
 	  Output debugging info in dmesg [HARDLIMIT] (Yank555.lu)
 
 config GENERIC_CPUFREQ_CPU0
-	tristate "Generic CPU0 cpufreq driver"
+	bool "Generic CPU0 cpufreq driver"
 	depends on HAVE_CLK && REGULATOR && PM_OPP && OF
 	select CPU_FREQ_TABLE
 	help
