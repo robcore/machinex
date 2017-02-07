@@ -22,6 +22,11 @@ config LOW_ORDER_SEQ_MALLOC
 	 This will cause system performance degradation.
 	 When high-order allocation is requested, change it to vmalloc.
 
+config COREDUMP
+	bool "Coredump"
+	help
+	  You know, dumps.
+
 if BLOCK
 
 source "fs/ext2/Kconfig"
