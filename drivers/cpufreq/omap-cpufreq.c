@@ -106,16 +106,12 @@ static int omap_target(struct cpufreq_policy *policy,
 	}
 
 	freqs.old = omap_getspeed(policy->cpu);
-	freqs.cpu = policy->cpu;
 
 	if (freqs.old == freqs.new && policy->cur == freqs.new)
 		return ret;
 
 	/* notifiers */
-	for_each_cpu(i, policy->cpus) {
-		freqs.cpu = i;
-		cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
-	}
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 
 	freq = freqs.new * 1000;
 
@@ -189,10 +185,7 @@ static int omap_target(struct cpufreq_policy *policy,
 
 done:
 	/* notifiers */
-	for_each_cpu(i, policy->cpus) {
-		freqs.cpu = i;
-		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
-	}
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -216,7 +209,7 @@ static int omap_cpu_init(struct cpufreq_policy *policy)
 		goto fail_ck;
 	}
 
-	policy->cur = policy->min = policy->max = omap_getspeed(policy->cpu);
+	policy->cur = omap_getspeed(policy->cpu);
 
 	if (atomic_inc_return(&freq_table_users) == 1)
 		result = opp_init_cpufreq_table(mpu_dev, &freq_table);
@@ -233,8 +226,6 @@ static int omap_cpu_init(struct cpufreq_policy *policy)
 
 	cpufreq_frequency_table_get_attr(freq_table, policy->cpu);
 
-	policy->min = policy->cpuinfo.min_freq;
-	policy->max = policy->cpuinfo.max_freq;
 	policy->cur = omap_getspeed(policy->cpu);
 
 	/*
@@ -244,10 +235,8 @@ static int omap_cpu_init(struct cpufreq_policy *policy)
 	 * interface to handle this scenario. Additional is_smp() check
 	 * is to keep SMP_ON_UP build working.
 	 */
-	if (is_smp()) {
-		policy->shared_type = CPUFREQ_SHARED_TYPE_ANY;
+	if (is_smp())
 		cpumask_setall(policy->cpus);
-	}
 
 	/* FIXME: what's the actual transition time? */
 	policy->cpuinfo.transition_latency = 300 * 1000;
