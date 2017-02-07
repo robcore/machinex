@@ -1,8 +1,8 @@
 /*
- * linux/include/linux/cpufreq.h
+ *  linux/include/linux/cpufreq.h
  *
- * Copyright (C) 2001 Russell King
- *           (C) 2002 - 2003 Dominik Brodowski <linux@brodo.de>
+ *  Copyright (C) 2001 Russell King
+ *            (C) 2002 - 2003 Dominik Brodowski <linux@brodo.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -11,14 +11,19 @@
 #ifndef _LINUX_CPUFREQ_H
 #define _LINUX_CPUFREQ_H
 
-#include <linux/cpumask.h>
-#include <linux/completion.h>
-#include <linux/kobject.h>
+#include <linux/mutex.h>
 #include <linux/notifier.h>
+#include <linux/threads.h>
+#include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/completion.h>
+#include <linux/workqueue.h>
+#include <linux/cpumask.h>
+#include <asm/div64.h>
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 #include <linux/cpufreq_hardlimit.h>
 #endif
+#include <asm/cputime.h>
 
 #define CPUFREQ_NAME_LEN 16
 /* Print length for names. Extra 1 space for accomodating '\n' in prints */
@@ -74,10 +79,6 @@ struct cpufreq_governor;
 
 /* /sys/devices/system/cpu/cpufreq: entry point for global variables */
 extern struct kobject *cpufreq_global_kobject;
-int cpufreq_get_global_kobject(void);
-void cpufreq_put_global_kobject(void);
-int cpufreq_sysfs_create_file(const struct attribute *attr);
-void cpufreq_sysfs_remove_file(const struct attribute *attr);
 
 #define CPUFREQ_ETERNAL			(-1)
 struct cpufreq_cpuinfo {
@@ -101,11 +102,9 @@ struct cpufreq_policy {
 	cpumask_var_t		cpus;	/* Online CPUs only */
 	cpumask_var_t		related_cpus; /* Online + Offline CPUs */
 
-	unsigned int		shared_type; /* ACPI: ANY or ALL affected CPUs
+	unsigned int		shared_type; /* ANY or ALL affected CPUs
 						should set cpufreq */
-	unsigned int		cpu;    /* cpu nr of CPU managing this policy */
-	unsigned int		last_cpu; /* cpu nr of previous CPU that managed
-					   * this policy */
+	unsigned int		cpu;    /* cpu nr of registered CPU */
 	struct cpufreq_cpuinfo	cpuinfo;/* see above */
 
 	unsigned int		min;    /* in kHz */
@@ -126,7 +125,6 @@ struct cpufreq_policy {
 
 	struct kobject		*kobj;
 	struct completion	kobj_unregister;
-	int			transition_ongoing; /* Tracks transition status */
 };
 
 /* contains per cpu sysfs info ./sys/devices/ssytem/cpu/cpu#/cpufreq */
@@ -135,11 +133,10 @@ struct cpufreq_cpu_sysinfo {
 	struct kobject cpu_kobj; /* per cpu kobject */
 };
 
-#define CPUFREQ_ADJUST			(0)
-#define CPUFREQ_INCOMPATIBLE		(1)
-#define CPUFREQ_NOTIFY			(2)
-#define CPUFREQ_START			(3)
-#define CPUFREQ_UPDATE_POLICY_CPU	(4)
+#define CPUFREQ_ADJUST		(0)
+#define CPUFREQ_INCOMPATIBLE	(1)
+#define CPUFREQ_NOTIFY		(2)
+#define CPUFREQ_START		(3)
 
 #define CPUFREQ_CREATE_POLICY	(5)
 #define CPUFREQ_REMOVE_POLICY	(6)
@@ -147,16 +144,10 @@ struct cpufreq_cpu_sysinfo {
 /* Govinfo Notifiers */
 #define CPUFREQ_LOAD_CHANGE	(0)
 
-/* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */
 #define CPUFREQ_SHARED_TYPE_ALL	 (2) /* All dependent CPUs should set freq */
 #define CPUFREQ_SHARED_TYPE_ANY	 (3) /* Freq can be set from any dependent CPU*/
-
-static inline bool policy_is_shared(struct cpufreq_policy *policy)
-{
-	return cpumask_weight(policy->cpus) > 1;
-}
 
 /******************** cpufreq transition notifiers *******************/
 
@@ -259,13 +250,6 @@ struct cpufreq_driver {
 	struct module           *owner;
 	char			name[CPUFREQ_NAME_LEN];
 	u8			flags;
-	/*
-	 * This should be set by platforms having multiple clock-domains, i.e.
-	 * supporting multiple policies. With this sysfs directories of governor
-	 * would be created in cpu/cpu<num>/cpufreq/ directory and so they can
-	 * use the same governor with different tunables for different clusters.
-	 */
-	bool			have_governor_per_policy;
 
 	/* needed by all drivers */
 	int	(*init)		(struct cpufreq_policy *policy);
@@ -391,7 +375,6 @@ extern u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 int cpufreq_update_policy(unsigned int cpu);
 bool have_governor_per_policy(void);
-struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy);
 int cpufreq_set_gov(char *target_gov, unsigned int cpu);
 #if 0
 char *cpufreq_get_gov(unsigned int cpu);
@@ -679,6 +662,7 @@ extern struct cpufreq_governor cpufreq_gov_whiskeyactive;
 #define CPUFREQ_DEFAULT_GOVERNOR 	(&cpufreq_gov_whiskyactive)
 #endif
 
+
 /*********************************************************************
  *                     FREQUENCY TABLE HELPERS                       *
  *********************************************************************/
@@ -712,7 +696,6 @@ extern struct freq_attr cpufreq_freq_attr_scaling_available_freqs;
 
 void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
 				      unsigned int cpu);
-void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy);
 
 void cpufreq_frequency_table_put_attr(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */
