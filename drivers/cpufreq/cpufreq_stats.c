@@ -274,7 +274,7 @@ static void cpufreq_stats_free_sysfs(unsigned int cpu)
 	if (!cpufreq_frequency_get_table(cpu))
 		return;
 
-	if (policy && (cpumask_weight(policy->cpus) == 1)) {
+	if (policy && !policy_is_shared(policy)) {
 		pr_debug("%s: Free sysfs stat\n", __func__);
 		sysfs_remove_group(policy->kobj, &stats_attr_group);
 	}
