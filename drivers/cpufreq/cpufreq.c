@@ -1288,7 +1288,7 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy,
 	if (has_target)
 		__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
 
-	lock_policy_rwsem_write(policy->cpu);
+	down_write(&policy->rwsem);
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 
@@ -1296,7 +1296,7 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy,
 	per_cpu(cpufreq_cpu_data, cpu) = policy;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
-	unlock_policy_rwsem_write(policy->cpu);
+	up_write(&policy->rwsem);
 
 	if (has_target) {
 		__cpufreq_governor(policy, CPUFREQ_GOV_START);
@@ -1361,19 +1361,12 @@ static void update_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
 	if (WARN_ON(cpu == policy->cpu))
 		return;
 
-	/*
-	 * Take direct locks as lock_policy_rwsem_write wouldn't work here.
-	 * Also lock for last cpu is enough here as contention will happen only
-	 * after policy->cpu is changed and after it is changed, other threads
-	 * will try to acquire lock for new cpu. And policy is already updated
-	 * by then.
-	 */
-	down_write(&per_cpu(cpu_policy_rwsem, policy->cpu));
+	down_write(&policy->rwsem);
 
 	policy->last_cpu = policy->cpu;
 	policy->cpu = cpu;
 
-	up_write(&per_cpu(cpu_policy_rwsem, policy->last_cpu));
+	up_write(&policy->rwsem);
 
 #ifdef CONFIG_CPU_FREQ_TABLE
 	cpufreq_frequency_table_update_policy_cpu(policy);
@@ -1622,9 +1615,9 @@ static int __cpufreq_remove_dev_prepare(struct device *dev,
 		strncpy(per_cpu(cpufreq_cpu_governor, cpu),
 			data->governor->name, CPUFREQ_NAME_LEN);
 
-	lock_policy_rwsem_read(cpu);
+	down_read(&policy->rwsem);
 	cpus = cpumask_weight(policy->cpus);
-	unlock_policy_rwsem_read(cpu);
+	up_read(&policy->rwsem);
 
 	if (cpu != policy->cpu) {
 		if (!frozen)
@@ -1665,12 +1658,12 @@ static int __cpufreq_remove_dev_finish(struct device *dev,
 		return -EINVAL;
 	}
 
-	lock_policy_rwsem_write(cpu);
+	down_write(&policy->rwsem);
 	cpus = cpumask_weight(policy->cpus);
 
 	if (cpus > 1)
 		cpumask_clear_cpu(cpu, policy->cpus);
-	unlock_policy_rwsem_write(cpu);
+	up_write(&policy->rwsem);
 
 	/* If cpu is last user of policy, free policy */
 	if (cpus == 1) {
@@ -2181,11 +2174,11 @@ int cpufreq_driver_target(struct cpufreq_policy *policy,
 {
 	int ret = -EINVAL;
 
-	lock_policy_rwsem_write(policy->cpu);
+	down_write(&policy->rwsem);
 
 	ret = __cpufreq_driver_target(policy, target_freq, relation);
 
-	unlock_policy_rwsem_write(policy->cpu);
+	up_write(&policy->rwsem);
 
 	return ret;
 }
@@ -2551,7 +2544,7 @@ int cpufreq_update_policy(unsigned int cpu)
 
 	ret = cpufreq_set_policy(data, &policy);
 
-	unlock_policy_rwsem_write(cpu);
+	up_write(&policy->rwsem);
 
 fail:
 	cpufreq_cpu_put(data);
