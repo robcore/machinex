@@ -202,25 +202,30 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_hotness_adj = 0;
 #endif
 	int array_size = ARRAY_SIZE(lowmem_adj);
+	int other_free;
+	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
 	struct reclaim_state *reclaim_state = current->reclaim_state;
 #ifndef CONFIG_CMA
-	int other_free = global_page_state(NR_FREE_PAGES);
+	other_free = global_page_state(NR_FREE_PAGES);
 #else
-	int other_free = global_page_state(NR_FREE_PAGES) -
+	other_free = global_page_state(NR_FREE_PAGES) -
 				global_page_state(NR_FREE_CMA_PAGES);
 #endif
-	long unsigned int other_file(void) = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
-#if defined(CONFIG_ZSWAP)
-	other_file -= total_swapcache_pages;
-#endif /* CONFIG_ZSWAP */
+	other_file = global_page_state(NR_FILE_PAGES);
+
+	if ( global_page_state(NR_SHMEM) + total_swapcache_pages() < other_file)
+		other_file = other_file - ( global_page_state(NR_SHMEM) + total_swapcache_pages());
+	else
+		other_file = 0;
+
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
 	for (i = 0; i < array_size; i++) {
-		if (other_free < lowmem_minfree[i] &&
-		    other_file < lowmem_minfree[i]) {
+		minfree = lowmem_minfree[i];
+		if (other_free < minfree && other_file < minfree) {
 			min_score_adj = lowmem_adj[i];
 			break;
 		}
@@ -641,7 +646,7 @@ static void __exit lowmem_exit(void)
 }
 
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
-static int lowmem_oom_adj_to_oom_score_adj(int oom_adj)
+static short lowmem_oom_adj_to_oom_score_adj(short oom_adj)
 {
 	if (oom_adj == OOM_ADJUST_MAX)
 		return OOM_SCORE_ADJ_MAX;
@@ -652,7 +657,7 @@ static int lowmem_oom_adj_to_oom_score_adj(int oom_adj)
 static void lowmem_autodetect_oom_adj_values(void)
 {
 	int i;
-	int oom_adj;
+	short oom_adj;
 	short oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 
@@ -711,7 +716,7 @@ static struct kernel_param_ops lowmem_adj_array_ops = {
 static const struct kparam_array __param_arr_adj = {
 	.max = ARRAY_SIZE(lowmem_adj),
 	.num = &lowmem_adj_size,
-	.ops = &param_ops_int,
+	.ops = &param_ops_short,
 	.elemsize = sizeof(lowmem_adj[0]),
 	.elem = lowmem_adj,
 };
@@ -802,7 +807,7 @@ __module_param_call(MODULE_PARAM_PREFIX, adj,
 		    &lowmem_adj_array_ops,
 		    .arr = &__param_arr_adj,
 		    S_IRUGO | S_IWUSR, -1);
-__MODULE_PARM_TYPE(adj, "array of int");
+__MODULE_PARM_TYPE(adj, "array of short");
 #else
 module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size,
 			 S_IRUGO | S_IWUSR);
@@ -813,8 +818,6 @@ module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 #ifdef LMK_COUNT_READ
 module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #endif
-
-
 #ifdef OOM_COUNT_READ
 module_param_named(oomcount, oom_count, uint, S_IRUGO);
 #endif
