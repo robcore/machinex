@@ -94,10 +94,11 @@ static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
 }
 
 /* This function can be called from atomic context. */
-static void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv)
+void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv)
 {
 	mdm_toggle_soft_reset(mdm_drv);
 }
+EXPORT_SYMBOL(mdm_atomic_soft_reset);
 
 static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 {
@@ -115,9 +116,10 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 			break;
 		mdelay(100);
 	}
-/*
+
 	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
 		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
+/*
 	if (mdm_drv->ap2mdm_status_gpio > 0)
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 0);
 	if (mdm_drv->ap2mdm_wakeup_gpio > 0)
