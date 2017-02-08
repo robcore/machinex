@@ -1199,7 +1199,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 		goto errfatal_err;
 	}
 	ret = request_irq(irq, mdm_errfatal,
-			IRQF_TRIGGER_RISING , "mdm errfatal", mdev);
+			IRQF_TRIGGER_RISING, "mdm errfatal", mdev);
 
 	if (ret < 0) {
 		pr_err("%s: MDM2AP_ERRFATAL IRQ#%d request failed, err=%d\n",
