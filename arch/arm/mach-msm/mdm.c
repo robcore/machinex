@@ -53,6 +53,7 @@ static int charm_ready;
 static enum charm_boot_type boot_type = CHARM_NORMAL_BOOT;
 static int charm_boot_status;
 static int charm_ram_dump_status;
+static struct workqueue_struct *charm_queue;
 
 #define CHARM_DBG(...)	do { if (charm_debug_on) \
 					pr_info(__VA_ARGS__); \
@@ -248,7 +249,7 @@ static irqreturn_t charm_errfatal(int irq, void *dev_id)
 	CHARM_DBG("%s: charm got errfatal interrupt\n", __func__);
 	if (charm_ready && (gpio_get_value(MDM2AP_STATUS) == 1)) {
 		CHARM_DBG("%s: scheduling work now\n", __func__);
-		schedule_work(system_wq, &charm_fatal_work);
+		queue_work(charm_queue, &charm_fatal_work);
 	}
 	return IRQ_HANDLED;
 }
@@ -258,7 +259,7 @@ static irqreturn_t charm_status_change(int irq, void *dev_id)
 	CHARM_DBG("%s: charm sent status change interrupt\n", __func__);
 	if ((gpio_get_value(MDM2AP_STATUS) == 0) && charm_ready) {
 		CHARM_DBG("%s: scheduling work now\n", __func__);
-		schedule_work(system_wq, &charm_status_work);
+		queue_work(charm_queue, &charm_status_work);
 	} else if (gpio_get_value(MDM2AP_STATUS) == 1) {
 		CHARM_DBG("%s: charm is now ready\n", __func__);
 	}
@@ -335,6 +336,15 @@ static int __init charm_modem_probe(struct platform_device *pdev)
 
 	power_on_charm = d->charm_modem_on;
 	power_down_charm = d->charm_modem_off;
+
+	charm_queue = create_singlethread_workqueue("charm_queue");
+	if (!charm_queue) {
+		pr_err("%s: could not create workqueue. All charm \
+				functionality will be disabled\n",
+			__func__);
+		ret = -ENOMEM;
+		goto fatal_err;
+	}
 
 	atomic_notifier_chain_register(&panic_notifier_list, &charm_panic_blk);
 	charm_debugfs_init();
