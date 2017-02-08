@@ -115,9 +115,11 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 			break;
 		mdelay(100);
 	}
-/*
+
 	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
 		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
+
+/*
 	if (mdm_drv->ap2mdm_status_gpio > 0)
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 0);
 	if (mdm_drv->ap2mdm_wakeup_gpio > 0)

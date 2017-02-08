@@ -1812,7 +1812,7 @@ static struct mdm_platform_data mdm_platform_data = {
 	.mdm2ap_status_gpio_run_cfg = &mdm2ap_status_gpio_run_cfg,
 	.sysmon_subsys_id_valid = 1,
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
-	//.no_a2m_errfatal_on_ssr = 1,
+	.no_a2m_errfatal_on_ssr = 1,
 	.subsys_name = "modem",
 };
 

@@ -3106,6 +3106,7 @@ static struct mdm_platform_data mdm_platform_data = {
 	.sysmon_subsys_id_valid = 1,
 	.sysmon_subsys_id = SYSMON_SS_EXT_MODEM,
 	.subsys_name = "external_modem",
+	.no_a2m_errfatal_on_ssr = 1,
 };
 
 static struct mdm_platform_data amdm_platform_data = {
