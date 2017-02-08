@@ -309,7 +309,8 @@ static void resp_avail_cb(struct urb *urb)
 	struct ctrl_pkt_list_elem	*list_elem = NULL;
 	struct rmnet_ctrl_dev		*rx_dev, *dev = urb->context;
 	void				*cpkt;
-	int				ch_id, status = 0;
+	int					status = 0;
+	int					ch_id = -EINVAL;
 	size_t				cpkt_size = 0;
 
 	udev = interface_to_usbdev(dev->intf);
@@ -654,8 +655,10 @@ static unsigned int rmnet_ctl_poll(struct file *file, poll_table *wait)
 		return POLLERR;
 	}
 
+	spin_lock_irqsave(&dev->rx_lock, flags);
 	if (!list_empty(&dev->rx_list))
 		mask |= POLLIN | POLLRDNORM;
+	spin_unlock_irqrestore(&dev->rx_lock, flags);
 
 	return mask;
 }
