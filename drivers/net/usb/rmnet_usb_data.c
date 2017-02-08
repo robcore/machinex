@@ -41,7 +41,7 @@ module_param(no_rmnet_insts_per_dev, uint, S_IRUGO | S_IWUSR);
  * e.g. bit 0: mdm over HSIC, bit1: mdm over hsusb
  */
 static unsigned long mux_enabled;
-module_param(mux_enabled, ulong, S_IRUGO | S_IWUSR);
+module_param(mux_enabled, ulong, 0444);
 
 static unsigned int no_fwd_rmnet_links;
 module_param(no_fwd_rmnet_links, uint, S_IRUGO | S_IWUSR);
