@@ -519,7 +519,7 @@ static ssize_t show_scaling_cur_freq(
 	return ret;
 }
 
-static int __cpufreq_set_policy(struct cpufreq_policy *data,
+static int cpufreq_set_policy(struct cpufreq_policy *data,
 				struct cpufreq_policy *policy);
 
 /**
@@ -555,7 +555,7 @@ static ssize_t store_##file_name					\
 		pr_err("cpufreq: Frequency verification failed\n");	\
 									\
 	policy->user_policy.object = new_policy.object;			\
-	ret = __cpufreq_set_policy(policy, &new_policy);		\
+	ret = cpufreq_set_policy(policy, &new_policy);		\
 									\
 	return ret ? ret : count;					\
 }
@@ -595,7 +595,7 @@ static ssize_t store_scaling_min_freq
 	policy->user_policy.min = new_policy.min;
 	policy->user_policy.max = new_policy.max;
 
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 
 	return ret ? ret : count;
 }
@@ -640,7 +640,7 @@ static ssize_t store_scaling_max_freq
 	policy->user_policy.min = new_policy.min;
 	policy->user_policy.max = new_policy.max;
 
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 
 	return ret ? ret : count;
 }
@@ -715,7 +715,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 
 	/* Do not use cpufreq_set_policy here or the user_policy.max
 	   will be wrongly overridden */
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
@@ -831,7 +831,7 @@ static ssize_t store_util_threshold(struct cpufreq_policy *policy,
 		return -EINVAL;
 
 	policy->user_policy.util_thres = new_policy.util_thres;
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 
 	return ret ? ret : count;
 }
@@ -1220,12 +1220,12 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 		goto err_out_kobj_put;
 
 	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
-	/* assure that the starting sequence is run in __cpufreq_set_policy */
+	/* assure that the starting sequence is run in cpufreq_set_policy */
 	if (policy)
 		policy->governor = NULL;
 
 	/* set default policy */
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
 
@@ -2293,7 +2293,7 @@ EXPORT_SYMBOL(cpufreq_get_policy);
  * data   : current policy.
  * policy : policy to be set.
  */
-static int __cpufreq_set_policy(struct cpufreq_policy *data,
+static int cpufreq_set_policy(struct cpufreq_policy *data,
 				struct cpufreq_policy *policy)
 {
 	int ret = 0;
@@ -2473,7 +2473,7 @@ int cpufreq_update_policy(unsigned int cpu)
 		}
 	}
 
-	ret = __cpufreq_set_policy(data, &policy);
+	ret = cpufreq_set_policy(data, &policy);
 
 	unlock_policy_rwsem_write(cpu);
 
@@ -2535,7 +2535,7 @@ int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 			goto err_out;
 		}
 
-		ret = __cpufreq_set_policy(cur_policy, &new_policy);
+		ret = cpufreq_set_policy(cur_policy, &new_policy);
 
 		cur_policy->user_policy.policy = cur_policy->policy;
 		cur_policy->user_policy.governor = cur_policy->governor;
