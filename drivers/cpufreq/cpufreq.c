@@ -1038,6 +1038,11 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	struct freq_attr *fattr = to_attr(attr);
 	ssize_t ret = -EINVAL;
 
+	get_online_cpus();
+
+	if (!cpu_online(policy->cpu))
+		goto unlock;
+
 	freqobj = to_cpu_kobj(kobj);
 	if (!freqobj->cpu_policy)
 		goto no_policy;
@@ -1047,8 +1052,11 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	if (!policy)
 		goto no_policy;
 
+	if (!down_read_trylock(&cpufreq_rwsem))
+		goto unlock;
+
 	if (lock_policy_rwsem_write(policy->cpu) < 0)
-		goto fail;
+		goto up_read;
 
 	if (fattr->store)
 		ret = fattr->store(policy, buf, count);
@@ -1056,9 +1064,11 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 		ret = -EIO;
 
 	unlock_policy_rwsem_write(policy->cpu);
-fail:
-	cpufreq_cpu_put_sysfs(policy);
-no_policy:
+up_read:
+	up_read(&cpufreq_rwsem);
+unlock:
+	put_online_cpus();
+
 	return ret;
 }
 
