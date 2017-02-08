@@ -1602,7 +1602,7 @@ static int __cpufreq_remove_dev(struct device *dev,
 						__func__);
 				return ret;
 			}
-	}
+		}
 
 		if (!frozen) {
 			lock_policy_rwsem_read(cpu);
