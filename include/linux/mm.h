@@ -665,6 +665,7 @@ static inline void reset_page_last_nid(struct page *page)
 	page->flags &= ~(LAST_NID_MASK << LAST_NID_PGSHIFT);
 	page->flags |= (nid & LAST_NID_MASK) << LAST_NID_PGSHIFT;
 }
+#endif /* LAST_NID_NOT_IN_PAGE_FLAGS */
 #else
 static inline int page_nid_xchg_last(struct page *page, int nid)
 {
@@ -1530,7 +1531,7 @@ void task_dirty_inc(struct task_struct *tsk);
 
 /* readahead.c */
 #define VM_MAX_READAHEAD   128 /* kbytes */
-#define VM_MIN_READAHEAD     16 /* kbytes (includes current page) */
+#define VM_MIN_READAHEAD     32 /* kbytes (includes current page) */
 
 extern unsigned long max_readahead_pages;
 
@@ -1564,7 +1565,7 @@ extern int expand_downwards(struct vm_area_struct *vma,
 #if VM_GROWSUP
 extern int expand_upwards(struct vm_area_struct *vma, unsigned long address);
 #else
-  #define expand_upwards(vma, address) (0)
+#define expand_upwards(vma, address) (0)
 #endif
 
 /* Look up the first VMA which satisfies  addr < vm_end,  NULL if none. */
