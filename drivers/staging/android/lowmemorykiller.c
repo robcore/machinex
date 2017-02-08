@@ -195,6 +195,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int all_selected_oom = 0;
 	int max_selected_oom_idx = 0;
 #else
+	int minfree = 0;
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
 #endif
