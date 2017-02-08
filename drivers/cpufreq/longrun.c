@@ -129,7 +129,9 @@ static int longrun_verify_policy(struct cpufreq_policy *policy)
 		return -EINVAL;
 
 	policy->cpu = 0;
-	cpufreq_verify_within_cpu_limits(policy);
+	cpufreq_verify_within_limits(policy,
+		policy->cpuinfo.min_freq,
+		policy->cpuinfo.max_freq);
 
 	if ((policy->policy != CPUFREQ_POLICY_POWERSAVE) &&
 	    (policy->policy != CPUFREQ_POLICY_PERFORMANCE))

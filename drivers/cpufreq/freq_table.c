@@ -11,8 +11,10 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/cpufreq.h>
+#include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/init.h>
+#include <linux/cpufreq.h>
 
 /*********************************************************************
  *                     FREQUENCY TABLE HELPERS                       *
@@ -50,20 +52,6 @@ int cpufreq_frequency_table_cpuinfo(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_cpuinfo);
 
-/*
- * Generic routine to verify policy & frequency table, requires driver to call
- * cpufreq_frequency_table_get_attr() prior to it.
- */
-int cpufreq_generic_frequency_table_verify(struct cpufreq_policy *policy)
-{
-	struct cpufreq_frequency_table *table =
-		cpufreq_frequency_get_table(policy->cpu);
-	if (!table)
-		return -ENODEV;
-
-	return cpufreq_frequency_table_verify(policy, table);
-}
-EXPORT_SYMBOL_GPL(cpufreq_generic_frequency_table_verify);
 
 int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 				   struct cpufreq_frequency_table *table)
@@ -73,6 +61,9 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 
 	pr_debug("request for verification of policy (%u - %u kHz) for cpu %u\n",
 					policy->min, policy->max, policy->cpu);
+
+	if (!cpu_online(policy->cpu))
+		return -EINVAL;
 
 	cpufreq_verify_within_cpu_limits(policy);
 
@@ -128,6 +119,9 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 		optimal.frequency = ~0;
 		break;
 	}
+
+	if (!cpu_online(policy->cpu))
+		return -EINVAL;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		unsigned int freq = table[i].frequency;
@@ -226,12 +220,6 @@ struct freq_attr cpufreq_freq_attr_scaling_available_freqs = {
 };
 EXPORT_SYMBOL_GPL(cpufreq_freq_attr_scaling_available_freqs);
 
-struct freq_attr *cpufreq_generic_attr[] = {
-	&cpufreq_freq_attr_scaling_available_freqs,
-	NULL,
-};
-EXPORT_SYMBOL_GPL(cpufreq_generic_attr);
-
 /*
  * if you use these, you must assure that the frequency table is valid
  * all the time between get_attr and put_attr!
@@ -250,27 +238,6 @@ void cpufreq_frequency_table_put_attr(unsigned int cpu)
 	per_cpu(cpufreq_show_table, cpu) = NULL;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_put_attr);
-
-int cpufreq_table_validate_and_show(struct cpufreq_policy *policy,
-				      struct cpufreq_frequency_table *table)
-{
-	int ret = cpufreq_frequency_table_cpuinfo(policy, table);
-
-	if (!ret)
-		cpufreq_frequency_table_get_attr(table, policy->cpu);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(cpufreq_table_validate_and_show);
-
-void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy)
-{
-	pr_debug("Updating show_table for new_cpu %u from last_cpu %u\n",
-			policy->cpu, policy->last_cpu);
-	per_cpu(cpufreq_show_table, policy->cpu) = per_cpu(cpufreq_show_table,
-			policy->last_cpu);
-	per_cpu(cpufreq_show_table, policy->last_cpu) = NULL;
-}
 
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {

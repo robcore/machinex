@@ -263,6 +263,7 @@ static int nforce2_target(struct cpufreq_policy *policy,
 
 	freqs.old = nforce2_get(policy->cpu);
 	freqs.new = target_fsb * fid * 100;
+	freqs.cpu = 0;		/* Only one CPU on nForce2 platforms */
 
 	if (freqs.old == freqs.new)
 		return 0;
@@ -270,7 +271,7 @@ static int nforce2_target(struct cpufreq_policy *policy,
 	pr_debug("Old CPU frequency %d kHz, new %d kHz\n",
 	       freqs.old, freqs.new);
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	/* Disable IRQs */
 	/* local_irq_save(flags); */
@@ -285,7 +286,7 @@ static int nforce2_target(struct cpufreq_policy *policy,
 	/* Enable IRQs */
 	/* local_irq_restore(flags); */
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	return 0;
 }
@@ -357,10 +358,12 @@ static int nforce2_cpu_init(struct cpufreq_policy *policy)
 		min_fsb = NFORCE2_MIN_FSB;
 
 	/* cpuinfo and default policy values */
-	policy->min = policy->cpuinfo.min_freq = min_fsb * fid * 100;
-	policy->max = policy->cpuinfo.max_freq = max_fsb * fid * 100;
+	policy->cpuinfo.min_freq = min_fsb * fid * 100;
+	policy->cpuinfo.max_freq = max_fsb * fid * 100;
 	policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
 	policy->cur = nforce2_get(policy->cpu);
+	policy->min = policy->cpuinfo.min_freq;
+	policy->max = policy->cpuinfo.max_freq;
 
 	return 0;
 }

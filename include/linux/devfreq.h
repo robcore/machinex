@@ -15,7 +15,7 @@
 
 #include <linux/device.h>
 #include <linux/notifier.h>
-#include <linux/pm_opp.h>
+#include <linux/opp.h>
 
 #define DEVFREQ_NAME_LEN 16
 

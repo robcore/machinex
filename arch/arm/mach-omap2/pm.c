@@ -13,7 +13,7 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/err.h>
-#include <linux/pm_opp.h>
+#include <linux/opp.h>
 #include <linux/export.h>
 #include <linux/suspend.h>
 
@@ -192,7 +192,7 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 	clk_put(clk);
 
 	rcu_read_lock();
-	opp = dev_pm_opp_find_freq_ceil(dev, &freq);
+	opp = opp_find_freq_ceil(dev, &freq);
 	if (IS_ERR(opp)) {
 		rcu_read_unlock();
 		pr_err("%s: unable to find boot up OPP for vdd_%s\n",
@@ -200,7 +200,7 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 		goto exit;
 	}
 
-	bootup_volt = dev_pm_opp_get_voltage(opp);
+	bootup_volt = opp_get_voltage(opp);
 	rcu_read_unlock();
 	if (!bootup_volt) {
 		pr_err("%s: unable to find voltage corresponding "
