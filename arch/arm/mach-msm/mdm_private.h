@@ -65,7 +65,5 @@ struct mdm_modem_drv {
 };
 int mdm_get_ops(struct mdm_ops **mdm_ops);
 
-extern void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv);
-
 #endif
 
