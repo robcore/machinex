@@ -111,7 +111,7 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 	/* Wait for the modem to complete its power down actions. */
 	for (i = 20; i > 0; i--) {
 		modem_holder = gpio_get_value(mdm_drv->mdm2ap_status_gpio);
-		if modem_holder == 0)
+		if (modem_holder == 0)
 			break;
 		mdelay(100);
 	}
