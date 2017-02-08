@@ -606,7 +606,7 @@ static int rmnet_ctl_release(struct inode *inode, struct file *file)
 {
 	struct ctrl_pkt_list_elem	*list_elem = NULL;
 	struct rmnet_ctrl_dev		*dev;
-	unsigned long			flag;
+	unsigned long			flags;
 	int				time;
 
 	dev = file->private_data;
@@ -615,7 +615,7 @@ static int rmnet_ctl_release(struct inode *inode, struct file *file)
 
 	DBG("%s Called on %s device\n", __func__, dev->name);
 
-	spin_lock_irqsave(&dev->rx_lock, flag);
+	spin_lock_irqsave(&dev->rx_lock, flags);
 	while (!list_empty(&dev->rx_list)) {
 		list_elem = list_first_entry(
 				&dev->rx_list,
@@ -625,7 +625,7 @@ static int rmnet_ctl_release(struct inode *inode, struct file *file)
 		kfree(list_elem->cpkt.data);
 		kfree(list_elem);
 	}
-	spin_unlock_irqrestore(&dev->rx_lock, flag);
+	spin_unlock_irqrestore(&dev->rx_lock, flags);
 
 	clear_bit(RMNET_CTRL_DEV_OPEN, &dev->status);
 
@@ -643,6 +643,7 @@ static unsigned int rmnet_ctl_poll(struct file *file, poll_table *wait)
 {
 	unsigned int		mask = 0;
 	struct rmnet_ctrl_dev	*dev;
+	unsigned long		flags;
 
 	dev = file->private_data;
 	if (!dev)
