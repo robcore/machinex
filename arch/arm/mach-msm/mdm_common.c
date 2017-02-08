@@ -1199,7 +1199,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 		goto errfatal_err;
 	}
 	ret = request_irq(irq, mdm_errfatal,
-			IRQF_TRIGGER_RISING , "mdm errfatal", mdev);
+			IRQF_TRIGGER_RISING, "mdm errfatal", mdev);
 
 	if (ret < 0) {
 		pr_err("%s: MDM2AP_ERRFATAL IRQ#%d request failed, err=%d\n",
@@ -1219,7 +1219,7 @@ errfatal_err:
 	}
 
 	ret = request_threaded_irq(irq, NULL, mdm_status_change,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_SHARED | IRQF_ONESHOT,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_SHARED,
 		"mdm status", mdev);
 
 	if (ret < 0) {
@@ -1240,7 +1240,7 @@ status_err:
 
 		ret = request_threaded_irq(irq, NULL, mdm_pblrdy_change,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				IRQF_SHARED | IRQF_ONESHOT,
+				IRQF_SHARED,
 				"mdm pbl ready", mdev);
 
 		if (ret < 0) {
