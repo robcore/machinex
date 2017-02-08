@@ -477,7 +477,7 @@ deferred:
 unanchor_urb:
 	usb_unanchor_urb(writeurb);
 	usb_kill_urb(writeurb);
-	usb_free_urb(writeurb)
+	usb_free_urb(writeurb);
 	subsystem_restart("external_modem");
 free_ctrlreq:
 	kfree(out_ctlreq);

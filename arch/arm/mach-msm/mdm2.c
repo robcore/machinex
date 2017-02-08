@@ -94,11 +94,10 @@ static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
 }
 
 /* This function can be called from atomic context. */
-void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv)
+static void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv)
 {
 	mdm_toggle_soft_reset(mdm_drv);
 }
-EXPORT_SYMBOL(mdm_atomic_soft_reset);
 
 static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 {
