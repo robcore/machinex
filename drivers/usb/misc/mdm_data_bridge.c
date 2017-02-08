@@ -20,9 +20,8 @@
 #include <linux/uaccess.h>
 #include <linux/ratelimit.h>
 #include <mach/usb_bridge.h>
-#include <mach/subsystem_notif.h>
-#include <mach/subsystem_restart.h>
-#include <linux/machinex_defines.h>
+#include <mach/mdm2.h>
+#include "../../../arch/arm/mach-msm/mdm_private.h"
 
 #define MAX_RX_URBS			100
 #define RMNET_RX_BUFSIZE		2048
@@ -35,7 +34,7 @@
 #define BRIDGE_DATA_IDX		0
 #define BRIDGE_CTRL_IDX		1
 
-int subsystem_restart(const char *name);
+void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv);
 
 /*for xport : HSIC*/
 static const char * const serial_hsic_bridge_names[] = {

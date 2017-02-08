@@ -25,18 +25,15 @@
 #include <linux/termios.h>
 #include <asm/unaligned.h>
 #include <mach/usb_bridge.h>
-#include <linux/msm_charm.h>
 #include <mach/mdm2.h>
-#include <mach/restart.h>
-#include <mach/subsystem_notif.h>
-#include <mach/subsystem_restart.h>
+#include "../../../arch/arm/mach-msm/mdm_private.h"
 
 #define ACM_CTRL_DTR		(1 << 0)
 #define DEFAULT_READ_URB_LENGTH	4096
 
 #define SUSPENDED		BIT(0)
 
-int subsystem_restart(const char *name);
+void mdm_atomic_soft_reset(struct mdm_modem_drv *mdm_drv);
 
 enum ctrl_bridge_rx_state {
 	RX_IDLE, /* inturb is not queued */
@@ -476,7 +473,7 @@ deferred:
 
 unanchor_urb:
 	usb_unanchor_urb(writeurb);
-	usb_kill_urb(dev->writeurb);
+	usb_kill_urb(writeurb);
 	usb_free_urb(writeurb);
 	mdm_atomic_soft_reset;
 free_ctrlreq:

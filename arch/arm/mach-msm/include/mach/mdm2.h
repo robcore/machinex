@@ -53,5 +53,6 @@ struct mdm_driver_notif_info {
 
 struct mdm_driver_notif_info *mdm_driver_register_notifier(
 			const char *name, struct notifier_block *nb);
+
 #endif
 
