@@ -475,9 +475,10 @@ deferred:
 	return size;
 
 unanchor_urb:
-	spin_unlock_irqrestore(&dev->lock, flags);
 	usb_unanchor_urb(writeurb);
-	subsystem_restart("external_modem");
+	usb_kill_urb(dev->writeurb);
+	usb_free_urb(writeurb);
+	mdm_atomic_soft_reset;
 free_ctrlreq:
 	kfree(out_ctlreq);
 free_urb:

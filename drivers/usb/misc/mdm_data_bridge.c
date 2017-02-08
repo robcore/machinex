@@ -645,8 +645,9 @@ int data_bridge_write(unsigned int id, struct sk_buff *skb)
 	return size;
 
 free_urb:
+	usb_kill_urb(txurb);
 	usb_free_urb(txurb);
-	subsystem_restart("external_modem");
+	mdm_atomic_soft_reset;
 error:
 	dev->txurb_drp_cnt++;
 	usb_autopm_put_interface(dev->intf);
