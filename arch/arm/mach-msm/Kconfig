@@ -1843,6 +1843,11 @@ config MSM_RESET_MODEM
 	help
 	  Allows the user to reset the modem through a device node.
 
+config MODEM_RESTART_MONITOR
+	bool "Monitor"
+	help
+	  Your guess is as good as mine if it's useful.
+
 config MSM_SMD_LOGGING
 	depends on MSM_SMD
 	default y

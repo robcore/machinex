@@ -510,6 +510,7 @@ endif
 
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
 obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o
+obj-$(CONFIG_MODEM_RESTART_MONITOR) += modem_restart_monitor.o
 
 #obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
 #obj-$(CONFIG_DYN_HOTPLUG) += dyn_hotplug.o
