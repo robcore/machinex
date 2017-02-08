@@ -1039,6 +1039,9 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	if (!policy)
 		goto no_policy;
 
+	if (cpufreq_disabled() || !cpufreq_driver)
+		return -ENOENT;
+
 	if (!down_read_trylock(&cpufreq_rwsem))
 		goto unlock;
 
