@@ -23,6 +23,7 @@
 
 #ifndef LINUX_MMC_MMC_H
 #define LINUX_MMC_MMC_H
+#include <uapi/linux/mmc/mmc.h>
 
 static inline bool mmc_op_multi(u32 opcode)
 {
