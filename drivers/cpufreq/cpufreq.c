@@ -1222,7 +1222,7 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 	if (ret)
 		goto err_out_kobj_put;
 
-	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
+	memcpy(&new_policy, policy, sizeof(*policy));
 	/* assure that the starting sequence is run in __cpufreq_set_policy */
 	if (policy)
 		policy->governor = NULL;
@@ -2246,7 +2246,7 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu)
 	if (!cpu_policy)
 		return -EINVAL;
 
-	memcpy(policy, cpu_policy, sizeof(struct cpufreq_policy));
+	memcpy(policy, cpu_policy, sizeof(*policy));
 
 	cpufreq_cpu_put(cpu_policy);
 	return 0;
@@ -2266,8 +2266,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n", policy->cpu,
 		policy->min, policy->max);
 
-	memcpy(&new_policy->cpuinfo, &policy->cpuinfo,
-				sizeof(struct cpufreq_cpuinfo));
+	memcpy(&new_policy->cpuinfo, &policy->cpuinfo, sizeof(policy->cpuinfo));
 
 	if (new_policy->min > policy->max || new_policy->max < policy->min) {
 		ret = -EINVAL;
@@ -2396,7 +2395,7 @@ int cpufreq_update_policy(unsigned int cpu)
 	}
 
 	pr_debug("updating policy for CPU %u\n", cpu);
-	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
+	memcpy(&new_policy, policy, sizeof(*policy));
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 	/* Yank555.lu - Enforce hardlimit */
 	new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);

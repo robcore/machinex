@@ -306,7 +306,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	if (per_cpu(cpufreq_stats_table, cpu))
 		return 0;
 
-	stat = kzalloc(sizeof(struct cpufreq_stats), GFP_KERNEL);
+	stat = kzalloc(sizeof(*stat), GFP_KERNEL);
 	if ((stat) == NULL)
 		return -ENOMEM;
 
@@ -427,7 +427,7 @@ static void cpufreq_allstats_create(unsigned int cpu)
 		count++;
 	}
 
-	all_stat = kzalloc(sizeof(struct all_cpufreq_stats),
+	stat = kzalloc(sizeof(*all_stat), GFP_KERNEL);
 			GFP_KERNEL);
 	if (!all_stat) {
 		pr_warn("Cannot allocate memory for cpufreq stats\n");
