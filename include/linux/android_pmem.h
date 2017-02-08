@@ -18,6 +18,27 @@
 
 #include <uapi/linux/android_pmem.h>
 
+struct pmem_region {
+	unsigned long offset;
+	unsigned long len;
+};
+
+struct pmem_addr {
+	unsigned long vaddr;
+	unsigned long offset;
+	unsigned long length;
+};
+
+struct pmem_freespace {
+	unsigned long total;
+	unsigned long largest;
+};
+
+struct pmem_allocation {
+	unsigned long size;
+	unsigned int align;
+};
+
 int get_pmem_file(unsigned int fd, unsigned long *start, unsigned long *vstart,
 		  unsigned long *end, struct file **filp);
 int get_pmem_fd(int fd, unsigned long *start, unsigned long *end);
