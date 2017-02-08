@@ -123,7 +123,7 @@ struct cpufreq_policy {
 					 * called, but you're in IRQ context */
 
 	struct cpufreq_real_policy	user_policy;
-
+	struct list_head        policy_list;
 	struct kobject		*kobj;
 	struct completion	kobj_unregister;
 	int			transition_ongoing; /* Tracks transition status */
