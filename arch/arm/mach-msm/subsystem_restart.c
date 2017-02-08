@@ -661,7 +661,7 @@ static int __init subsys_restart_init(void)
 
 	return ssr_init_soc_restart_orders();
 }
-arch_initcall(subsys_restart_init);
+subsys_initcall(subsys_restart_init);
 
 MODULE_DESCRIPTION("Subsystem Restart Driver");
 MODULE_LICENSE("GPL v2");

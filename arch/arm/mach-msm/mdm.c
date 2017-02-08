@@ -478,7 +478,7 @@ static void __exit charm_modem_exit(void)
 	platform_driver_unregister(&charm_modem_driver);
 }
 
-module_init(charm_modem_init);
+subsys_initcall(charm_modem_init);
 module_exit(charm_modem_exit);
 
 MODULE_LICENSE("GPL v2");
