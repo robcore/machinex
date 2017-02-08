@@ -423,6 +423,7 @@ static int acpi_cpufreq_target(struct cpufreq_policy *policy,
 	struct drv_cmd cmd;
 	unsigned int next_state = 0; /* Index into freq_table */
 	unsigned int next_perf_state = 0; /* Index into perf table */
+	unsigned int i;
 	int result = 0;
 
 	pr_debug("acpi_cpufreq_target %d (%d)\n", target_freq, policy->cpu);
@@ -485,7 +486,10 @@ static int acpi_cpufreq_target(struct cpufreq_policy *policy,
 
 	freqs.old = perf->states[perf->state].core_frequency * 1000;
 	freqs.new = data->freq_table[next_state].frequency;
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	for_each_cpu(i, policy->cpus) {
+		freqs.cpu = i;
+		cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+	}
 
 	drv_write(&cmd);
 
@@ -498,7 +502,10 @@ static int acpi_cpufreq_target(struct cpufreq_policy *policy,
 		}
 	}
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	for_each_cpu(i, policy->cpus) {
+		freqs.cpu = i;
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+	}
 	perf->state = next_perf_state;
 
 out:
@@ -698,7 +705,7 @@ static int acpi_cpufreq_cpu_init(struct cpufreq_policy *policy)
 		return blacklisted;
 #endif
 
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	data = kzalloc(sizeof(struct acpi_cpufreq_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
@@ -727,7 +734,7 @@ static int acpi_cpufreq_cpu_init(struct cpufreq_policy *policy)
 
 #ifdef CONFIG_SMP
 	dmi_check_system(sw_any_bug_dmi_table);
-	if (bios_with_sw_any_bug && !policy_is_shared(policy)) {
+	if (bios_with_sw_any_bug && cpumask_weight(policy->cpus) == 1) {
 		policy->shared_type = CPUFREQ_SHARED_TYPE_ALL;
 		cpumask_copy(policy->cpus, cpu_core_mask(cpu));
 	}
@@ -777,7 +784,7 @@ static int acpi_cpufreq_cpu_init(struct cpufreq_policy *policy)
 		goto err_unreg;
 	}
 
-	data->freq_table = kmalloc(sizeof(*data->freq_table) *
+	data->freq_table = kmalloc(sizeof(struct cpufreq_frequency_table) *
 		    (perf->state_count+1), GFP_KERNEL);
 	if (!data->freq_table) {
 		result = -ENOMEM;
@@ -943,7 +950,7 @@ static void __init acpi_cpufreq_boost_init(void)
 	/* We create the boost file in any case, though for systems without
 	 * hardware support it will be read-only and hardwired to return 0.
 	 */
-	if (cpufreq_sysfs_create_file(&(global_boost.attr)))
+	if (sysfs_create_file(cpufreq_global_kobject, &(global_boost.attr)))
 		pr_warn(PFX "could not register global boost sysfs file\n");
 	else
 		pr_debug("registered global boost sysfs file\n");
@@ -951,7 +958,7 @@ static void __init acpi_cpufreq_boost_init(void)
 
 static void __exit acpi_cpufreq_boost_exit(void)
 {
-	cpufreq_sysfs_remove_file(&(global_boost.attr));
+	sysfs_remove_file(cpufreq_global_kobject, &(global_boost.attr));
 
 	if (msrs) {
 		unregister_cpu_notifier(&boost_nb);

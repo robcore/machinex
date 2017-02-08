@@ -90,6 +90,7 @@ static int davinci_target(struct cpufreq_policy *policy,
 
 	freqs.old = davinci_getspeed(0);
 	freqs.new = clk_round_rate(armclk, target_freq * 1000) / 1000;
+	freqs.cpu = 0;
 
 	if (freqs.old == freqs.new)
 		return ret;
@@ -101,7 +102,7 @@ static int davinci_target(struct cpufreq_policy *policy,
 	if (ret)
 		return -EINVAL;
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	/* if moving to higher frequency, up the voltage beforehand */
 	if (pdata->set_voltage && freqs.new > freqs.old) {
@@ -125,7 +126,7 @@ static int davinci_target(struct cpufreq_policy *policy,
 		pdata->set_voltage(idx);
 
 out:
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -146,16 +147,21 @@ static int davinci_cpu_init(struct cpufreq_policy *policy)
 			return result;
 	}
 
-	policy->cur = davinci_getspeed(0);
+	policy->cur = policy->min = policy->max = davinci_getspeed(0);
 
-	result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
-	if (result) {
-		pr_err("%s: cpufreq_frequency_table_cpuinfo() failed",
-				__func__);
-		return result;
+	if (freq_table) {
+		result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
+		if (!result)
+			cpufreq_frequency_table_get_attr(freq_table,
+							policy->cpu);
+	} else {
+		policy->cpuinfo.min_freq = policy->min;
+		policy->cpuinfo.max_freq = policy->max;
 	}
 
-	cpufreq_frequency_table_get_attr(freq_table, policy->cpu);
+	policy->min = policy->cpuinfo.min_freq;
+	policy->max = policy->cpuinfo.max_freq;
+	policy->cur = davinci_getspeed(0);
 
 	/*
 	 * Time measurement across the target() function yields ~1500-1800us

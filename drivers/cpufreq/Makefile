@@ -108,11 +108,6 @@ obj-$(CONFIG_X86_CPUFREQ_NFORCE2)	+= cpufreq-nforce2.o
 
 ##################################################################################
 # ARM SoC drivers
-obj-$(CONFIG_ARM_BIG_LITTLE_CPUFREQ)	+= arm_big_little.o
-# big LITTLE per platform glues. Keep DT_BL_CPUFREQ as the last entry in all big
-# LITTLE drivers, so that it is probed last.
-obj-$(CONFIG_ARM_DT_BL_CPUFREQ)		+= arm_big_little_dt.o
-
 obj-$(CONFIG_UX500_SOC_DB8500)		+= db8500-cpufreq.o
 obj-$(CONFIG_ARM_S3C2416_CPUFREQ)	+= s3c2416-cpufreq.o
 obj-$(CONFIG_ARM_S3C64XX_CPUFREQ)	+= s3c64xx-cpufreq.o

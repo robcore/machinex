@@ -177,7 +177,7 @@ static int get_ranges(unsigned char *pst)
 	unsigned int speed;
 	u8 fid, vid;
 
-	powernow_table = kzalloc((sizeof(*powernow_table) *
+	powernow_table = kzalloc((sizeof(struct cpufreq_frequency_table) *
 				(number_scales + 1)), GFP_KERNEL);
 	if (!powernow_table)
 		return -ENOMEM;
@@ -248,7 +248,7 @@ static void change_VID(int vid)
 }
 
 
-static void change_speed(struct cpufreq_policy *policy, unsigned int index)
+static void change_speed(unsigned int index)
 {
 	u8 fid, vid;
 	struct cpufreq_freqs freqs;
@@ -263,13 +263,15 @@ static void change_speed(struct cpufreq_policy *policy, unsigned int index)
 	fid = powernow_table[index].driver_data & 0xFF;
 	vid = (powernow_table[index].driver_data & 0xFF00) >> 8;
 
+	freqs.cpu = 0;
+
 	rdmsrl(MSR_K7_FID_VID_STATUS, fidvidstatus.val);
 	cfid = fidvidstatus.bits.CFID;
 	freqs.old = fsb * fid_codes[cfid] / 10;
 
 	freqs.new = powernow_table[index].frequency;
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	/* Now do the magic poking into the MSRs.  */
 
@@ -290,7 +292,7 @@ static void change_speed(struct cpufreq_policy *policy, unsigned int index)
 	if (have_a0 == 1)
 		local_irq_enable();
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 }
 
 
@@ -309,7 +311,8 @@ static int powernow_acpi_init(void)
 		goto err0;
 	}
 
-	acpi_processor_perf = kzalloc(sizeof(*acpi_processor_perf), GFP_KERNEL);
+	acpi_processor_perf = kzalloc(sizeof(struct acpi_processor_performance),
+				      GFP_KERNEL);
 	if (!acpi_processor_perf) {
 		retval = -ENOMEM;
 		goto err0;
@@ -345,7 +348,7 @@ static int powernow_acpi_init(void)
 		goto err2;
 	}
 
-	powernow_table = kzalloc((sizeof(*powernow_table) *
+	powernow_table = kzalloc((sizeof(struct cpufreq_frequency_table) *
 				(number_scales + 1)), GFP_KERNEL);
 	if (!powernow_table) {
 		retval = -ENOMEM;
@@ -496,7 +499,7 @@ static int powernow_decode_bios(int maxfid, int startvid)
 					"relevant to this CPU).\n",
 					psb->numpst);
 
-			p += sizeof(*psb);
+			p += sizeof(struct psb_s);
 
 			pst = (struct pst_s *) p;
 
@@ -509,12 +512,12 @@ static int powernow_decode_bios(int maxfid, int startvid)
 				    (maxfid == pst->maxfid) &&
 				    (startvid == pst->startvid)) {
 					print_pst_entry(pst, j);
-					p = (char *)pst + sizeof(*pst);
+					p = (char *)pst + sizeof(struct pst_s);
 					ret = get_ranges(p);
 					return ret;
 				} else {
 					unsigned int k;
-					p = (char *)pst + sizeof(*pst);
+					p = (char *)pst + sizeof(struct pst_s);
 					for (k = 0; k < number_scales; k++)
 						p += 2;
 				}
@@ -543,7 +546,7 @@ static int powernow_target(struct cpufreq_policy *policy,
 				relation, &newstate))
 		return -EINVAL;
 
-	change_speed(policy, newstate);
+	change_speed(newstate);
 
 	return 0;
 }

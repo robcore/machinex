@@ -187,7 +187,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 		sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
 	}
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -202,7 +202,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-		cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	/* Restore priority after clock ramp-up */
 	if (freqs.new > freqs.old && saved_sched_policy >= 0) {
