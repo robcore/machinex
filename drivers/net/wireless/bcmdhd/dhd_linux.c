@@ -5892,9 +5892,8 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 		wl_iw_iscan_set_scan_broadcast_prep(net, 1);
 #endif
 
-#if defined(BCMLXSDMMC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
+#if defined(BCMLXSDMMC)
 	if (ifidx == 0) {
-#ifdef BCMLXSDMMC
 		up(&dhd_registration_sem);
 #endif
 		if (!dhd_download_fw_on_driverload) {
@@ -5903,7 +5902,7 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 			wifi_platform_set_power(dhdp->info->adapter, FALSE, WIFI_TURNOFF_DELAY);
 		}
 	}
-#endif /* OEM_ANDROID && BCMLXSDMMC && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
+#endif /* OEM_ANDROID && BCMLXSDMMC
 	return 0;
 
 fail:
