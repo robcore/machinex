@@ -2113,20 +2113,22 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 	pr_debug("__cpufreq_governor for CPU %u, event %u\n",
 						policy->cpu, event);
 
-mutex_lock(&cpufreq_governor_lock);
-	if ((policy->governor_enabled && event == CPUFREQ_GOV_START)
+	mutex_lock(&cpufreq_governor_lock);
+	if (policy->governor_busy
+	    || (policy->governor_enabled && event == CPUFREQ_GOV_START)
 	    || (!policy->governor_enabled
 	    && (event == CPUFREQ_GOV_LIMITS || event == CPUFREQ_GOV_STOP))) {
-mutex_unlock(&cpufreq_governor_lock);
-return -EBUSY;
+	mutex_unlock(&cpufreq_governor_lock);
+	return -EBUSY;
 }
 
-if (event == CPUFREQ_GOV_STOP)
-policy->governor_enabled = false;
-else if (event == CPUFREQ_GOV_START)
-policy->governor_enabled = true;
+	policy->governor_busy = true;
+	if (event == CPUFREQ_GOV_STOP)
+		policy->governor_enabled = false;
+	else if (event == CPUFREQ_GOV_START)
+		policy->governor_enabled = true;
 
-mutex_unlock(&cpufreq_governor_lock);
+	mutex_unlock(&cpufreq_governor_lock);
 
 	ret = policy->governor->governor(policy, event);
 
@@ -2159,6 +2161,9 @@ mutex_unlock(&cpufreq_governor_lock);
 	if ((event == CPUFREQ_GOV_STOP) && !ret)
 		module_put(policy->governor->owner);
 
+	mutex_lock(&cpufreq_governor_lock);
+	policy->governor_busy = false;
+	mutex_unlock(&cpufreq_governor_lock);
 	return ret;
 }
 
