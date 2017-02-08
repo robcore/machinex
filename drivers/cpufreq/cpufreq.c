@@ -920,6 +920,7 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 		else
 			break;
 	}
+#endif
 
 	if (sign != 0) {
 		if (pair[0] > 0) {
@@ -1357,7 +1358,6 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
 			return ret;
 		}
 	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
-#endif
 #endif
 
 	if (!try_module_get(cpufreq_driver->owner)) {
