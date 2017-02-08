@@ -16,6 +16,7 @@
 #ifndef _ANDROID_PMEM_H_
 #define _ANDROID_PMEM_H_
 
+#include <linux/fs.h>
 #include <uapi/linux/android_pmem.h>
 
 struct pmem_region {
