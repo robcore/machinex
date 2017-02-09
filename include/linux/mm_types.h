@@ -251,6 +251,7 @@ struct vm_area_struct {
 			unsigned long rb_subtree_last;
 		} linear;
 		struct list_head nonlinear;
+		const char __user *anon_name;
 	} shared;
 	/*
 	 * A file's MAP_PRIVATE vma can be in both i_mmap tree and anon_vma
