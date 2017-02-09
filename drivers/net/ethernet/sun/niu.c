@@ -9784,6 +9784,7 @@ static int __devinit niu_pci_init_one(struct pci_dev *pdev,
 	pos = pci_pcie_cap(pdev);
 	if (pos <= 0) {
 		dev_err(&pdev->dev, "Cannot find PCI Express capability, aborting\n");
+		err = -ENODEV;
 		goto err_out_free_res;
 	}
 
