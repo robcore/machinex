@@ -34,9 +34,11 @@ enum arm_perf_pmu_ids {
 extern enum arm_perf_pmu_ids
 armpmu_get_pmu_id(void);
 
+#ifdef CONFIG_HW_PERF_EVENTS
 struct pt_regs;
 extern unsigned long perf_instruction_pointer(struct pt_regs *regs);
 extern unsigned long perf_misc_flags(struct pt_regs *regs);
 #define perf_misc_flags(regs)	perf_misc_flags(regs)
+#endif
 
 #endif /* __ARM_PERF_EVENT_H__ */
