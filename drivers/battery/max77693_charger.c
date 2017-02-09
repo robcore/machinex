@@ -801,14 +801,15 @@ static int sec_chg_set_property(struct power_supply *psy,
 				POWER_SUPPLY_TYPE_USB].input_current_limit;
 
 			if (charger->wc_w_state) {
-				cancel_work_sync(&charger->wpc_work);
+				cancel_delayed_work_sync(&charger->wpc_work);
 				/* recheck after cancel_delayed_work_sync */
 				if (charger->wc_w_state) {
 					union power_supply_propval cable_type;
 					psy_do_property("battery", get,
 						POWER_SUPPLY_PROP_ONLINE, cable_type);
 					wake_lock(&charger->wpc_wake_lock);
-					queue_work(charger->wqueue, &charger->wpc_work);
+					queue_delayed_work(charger->wqueue, &charger->wpc_work,
+							msecs_to_jiffies(500));
 					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
 						charger->wc_w_state = 0;
 						pr_err("%s:cable removed,wireless connected\n", __func__);
@@ -1145,7 +1146,8 @@ static void wpc_detect_work(struct work_struct *work)
 		if (reg_data != 0x08) {
 			pr_debug("%s: wpc uvlo, but charging\n",	__func__);
 			wake_lock(&chg_data->wpc_wake_lock);
-			queue_work(chg_data->wqueue, &chg_data->wpc_work);
+			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+					msecs_to_jiffies(500));
 			return;
 		} else {
 			value.intval =
@@ -1167,9 +1169,8 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	struct max77693_charger_data *chg_data = data;
 	unsigned long delay;
 
-	cancel_work_sync(&chg_data->wpc_work);
+	cancel_delayed_work_sync(&chg_data->wpc_work);
 	wake_lock(&chg_data->wpc_wake_lock);
-/*
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	delay = msecs_to_jiffies(0);
 #else
@@ -1178,8 +1179,8 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	else
 		delay = msecs_to_jiffies(200);
 #endif
-*/
-	queue_work(chg_data->wqueue, &chg_data->wpc_work);
+	queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+			delay);
 	return IRQ_HANDLED;
 }
 #elif defined(CONFIG_WIRELESS_CHARGING)
@@ -1440,7 +1441,7 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 #if defined(CONFIG_CHARGER_MAX77803) || defined(CONFIG_MACH_JF)
 	wake_lock_init(&charger->wpc_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-wpc");
-	INIT_WORK(&charger->wpc_work, wpc_detect_work);
+	INIT_DELAYED_WORK(&charger->wpc_work, wpc_detect_work);
 #endif
 
 	ret = power_supply_register(&pdev->dev, &charger->psy_chg);
@@ -1466,7 +1467,7 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	ret = request_threaded_irq(charger->wc_w_irq,
 			NULL, wpc_charger_irq,
 #if defined(CONFIG_MACH_JF)
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,"wpc-int", charger);
+			IRQF_TRIGGER_FALLING,"wpc-int", charger);
 #else
 			0, "wpc-int", charger);
 #endif
@@ -1504,7 +1505,7 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 
 	charger->irq_chgin = pdata->irq_base + MAX77693_CHG_IRQ_CHGIN_I;
 	/* enable chgin irq after sec_battery_probe */
-	queue_work(charger->wqueue, &charger->chgin_init_work,
+	queue_delayed_work(charger->wqueue, &charger->chgin_init_work,
 			msecs_to_jiffies(3000));
 
 	charger->irq_bypass = pdata->irq_base + MAX77693_CHG_IRQ_BYP_I;
