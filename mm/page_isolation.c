@@ -77,8 +77,13 @@ int set_migratetype_isolate(struct page *page, bool skip_hwpoisoned_pages)
 
 out:
 	if (!ret) {
-		set_pageblock_isolate(page);
-		move_freepages_block(zone, page, MIGRATE_ISOLATE);
+		unsigned long nr_pages;
+		int migratetype = get_pageblock_migratetype(page);
+
+		set_pageblock_migratetype(page, MIGRATE_ISOLATE);
+		nr_pages = move_freepages_block(zone, page, MIGRATE_ISOLATE);
+
+		__mod_zone_freepage_state(zone, -nr_pages, migratetype);
 	}
 
 	spin_unlock_irqrestore(&zone->lock, flags);
@@ -90,13 +95,15 @@ out:
 void unset_migratetype_isolate(struct page *page, unsigned migratetype)
 {
 	struct zone *zone;
-	unsigned long flags;
+	unsigned long flags, nr_pages;
+
 	zone = page_zone(page);
 	spin_lock_irqsave(&zone->lock, flags);
 	if (get_pageblock_migratetype(page) != MIGRATE_ISOLATE)
 		goto out;
-	move_freepages_block(zone, page, migratetype);
-	restore_pageblock_isolate(page, migratetype);
+	nr_pages = move_freepages_block(zone, page, migratetype);
+	__mod_zone_freepage_state(zone, nr_pages, migratetype);
+	set_pageblock_migratetype(page, migratetype);
 out:
 	spin_unlock_irqrestore(&zone->lock, flags);
 }
