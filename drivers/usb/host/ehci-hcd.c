@@ -936,7 +936,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 	/* remote wakeup [4.3.1] */
 	if (status & STS_PCD) {
 		unsigned	i = HCS_N_PORTS (ehci->hcs_params);
-		u32		ppcd = ~0;
+		u32		ppcd = 0;
 
 		/* kick root hub later */
 		pcd_status = status;
@@ -953,7 +953,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 			int pstatus;
 
 			/* leverage per-port change bits feature */
-			if (!(ppcd & (1 << i)))
+			if (ehci->has_ppcd && !(ppcd & (1 << i)))
 				continue;
 			pstatus = ehci_readl(ehci,
 					 &ehci->regs->port_status[i]);

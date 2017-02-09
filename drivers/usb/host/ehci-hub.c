@@ -580,7 +580,7 @@ ehci_hub_status_data (struct usb_hcd *hcd, char *buf)
 	u32		mask;
 	int		ports, i, retval = 1;
 	unsigned long	flags;
-	u32		ppcd = ~0;
+	u32		ppcd = 0;
 
 	/* if !USB_SUSPEND, root hub timers won't get shut down ... */
 	if (ehci->rh_state != EHCI_RH_RUNNING)
@@ -622,10 +622,9 @@ ehci_hub_status_data (struct usb_hcd *hcd, char *buf)
 
 	for (i = 0; i < ports; i++) {
 		/* leverage per-port change bits feature */
-		if (ppcd & (1 << i))
-			temp = ehci_readl(ehci, &ehci->regs->port_status[i]);
-		else
-			temp = 0;
+		if (ehci->has_ppcd && !(ppcd & (1 << i)))
+			continue;
+		temp = ehci_readl(ehci, &ehci->regs->port_status [i]);
 
 		/*
 		 * Return status information even for ports with OWNER set.
