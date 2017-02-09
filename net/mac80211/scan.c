@@ -187,7 +187,6 @@ ieee80211_scan_rx(struct ieee80211_sub_if_data *sdata, struct sk_buff *skb)
 	u8 *elements;
 	struct ieee80211_channel *channel;
 	size_t baselen;
-	int freq;
 	__le16 fc;
 	bool presp, beacon = false;
 	struct ieee802_11_elems elems;
@@ -227,13 +226,7 @@ ieee80211_scan_rx(struct ieee80211_sub_if_data *sdata, struct sk_buff *skb)
 
 	ieee802_11_parse_elems(elements, skb->len - baselen, &elems);
 
-	if (elems.ds_params && elems.ds_params_len == 1)
-		freq = ieee80211_channel_to_frequency(elems.ds_params[0],
-						      rx_status->band);
-	else
-		freq = rx_status->freq;
-
-	channel = ieee80211_get_channel(sdata->local->hw.wiphy, freq);
+	channel = ieee80211_get_channel(local->hw.wiphy, rx_status->freq);
 
 	if (!channel || channel->flags & IEEE80211_CHAN_DISABLED)
 		return RX_DROP_MONITOR;
