@@ -807,9 +807,9 @@ static int sec_chg_set_property(struct power_supply *psy,
 					union power_supply_propval cable_type;
 					psy_do_property("battery", get,
 						POWER_SUPPLY_PROP_ONLINE, cable_type);
-					wake_lock(&charger->wpc_wake_lock);
+					wake_lock_timeout(&charger->wpc_wake_lock, 500);
 					queue_delayed_work(charger->wqueue, &charger->wpc_work,
-							msecs_to_jiffies(500));
+							msecs_to_jiffies(250));
 					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
 						charger->wc_w_state = 0;
 						pr_err("%s:cable removed,wireless connected\n", __func__);
@@ -824,9 +824,21 @@ static int sec_chg_set_property(struct power_supply *psy,
 			if (set_charging_current > 0 &&
 					set_charging_current < usb_charging_current)
 				set_charging_current = usb_charging_current;
-			if (val->intval == POWER_SUPPLY_TYPE_WIRELESS)
+			if (val->intval == POWER_SUPPLY_TYPE_WIRELESS) {
+#ifdef CONFIG_FORCE_FAST_CHARGE
+				/* Yank555 : Use Fast charge currents accroding to user settings */
+				if (force_fast_charge == FAST_CHARGE_FORCE_AC) {
+					/* We are in basic Fast Charge mode, so we substitute AC to WIRELESS levels */
+					charger->charging_current_max = WIRELESS_CHARGE_1000;
+					charger->charging_current = WIRELESS_CHARGE_1000 + 100;
+				} else if (force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) {
+					/* We are in custom current Fast Charge mode for WIRELESS */
+					charger->charging_current_max = wireless_charge_level;
+					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
+				} else
+#endif
 				set_charging_current_max = wpc_charging_current;
-			else
+			} else
 				set_charging_current_max =
 					charger->charging_current_max;
 #ifdef CONFIG_FORCE_FAST_CHARGE
@@ -911,10 +923,11 @@ static int sec_chg_set_property(struct power_supply *psy,
 		max77693_set_input_current(charger,
 				val->intval);
 		break;
+#if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		if(val->intval == POWER_SUPPLY_TYPE_WIRELESS) {
 			u8 reg_data;
-#ifdef CONFIG_FORCE_FAST_CHARGE
+#if 0
 				/* Yank555 : Use Fast charge currents accroding to user settings */
 				if (force_fast_charge == FAST_CHARGE_FORCE_AC) {
 					/* We are in basic Fast Charge mode, so we substitute AC to WIRELESS levels */
@@ -945,6 +958,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 
 		}
 		break;
+#endif
 	default:
 		return -EINVAL;
 	}
@@ -1169,17 +1183,16 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	struct max77693_charger_data *chg_data = data;
 	unsigned long delay;
 
-	cancel_delayed_work_sync(&chg_data->wpc_work);
-	wake_lock(&chg_data->wpc_wake_lock);
+	wake_lock_timeout(&chg_data->wpc_wake_lock, 500);
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	delay = msecs_to_jiffies(0);
 #else
 	if (chg_data->wc_w_state)
-		delay = msecs_to_jiffies(500);
+		delay = msecs_to_jiffies(300);
 	else
-		delay = msecs_to_jiffies(200);
+		delay = msecs_to_jiffies(150);
 #endif
-	queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+	mod_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 			delay);
 	return IRQ_HANDLED;
 }
