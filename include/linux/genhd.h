@@ -88,14 +88,10 @@ struct disk_stats {
 };
 
 #define PARTITION_META_INFO_VOLNAMELTH	64
-/*
- * Enough for the string representation of any kind of UUID plus NULL.
- * EFI UUID is 36 characters. MSDOS UUID is 11 characters.
- */
-#define PARTITION_META_INFO_UUIDLTH	37
+#define PARTITION_META_INFO_UUIDLTH	16
 
 struct partition_meta_info {
-	char uuid[PARTITION_META_INFO_UUIDLTH];
+	u8 uuid[PARTITION_META_INFO_UUIDLTH];	/* always big endian */
 	u8 volname[PARTITION_META_INFO_VOLNAMELTH];
 };
 

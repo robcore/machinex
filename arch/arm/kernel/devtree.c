@@ -151,14 +151,10 @@ void __init arm_dt_init_cpu_maps(void)
 			i = cpuidx++;
 		}
 
-		if (WARN(cpuidx > nr_cpu_ids, "DT /cpu %u nodes greater than "
-					       "max cores %u, capping them\n",
-					       cpuidx, nr_cpu_ids)) {
-			cpuidx = nr_cpu_ids;
-			break;
-		}
-
 		tmp_map[i] = hwid;
+
+		if (cpuidx > nr_cpu_ids)
+			break;
 	}
 
 	if (WARN(!bootcpu_valid, "DT missing boot CPU MPIDR[23:0], "
