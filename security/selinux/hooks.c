@@ -427,7 +427,7 @@ static int sb_finish_set_opts(struct super_block *sb)
 		sbsec->flags &= ~SE_SBLABELSUPP;
 
 	/* Special handling. Is genfs but also has in-core setxattr handler*/
-	if (strcmp(sb->s_type->name, "sysfs", sizeof("sysfs")) == 0)
+	if (strcmp(sb->s_type->name, "sysfs") == 0)
 		sbsec->flags |= SE_SBLABELSUPP;
 
 	/* Initialize the root inode. */
