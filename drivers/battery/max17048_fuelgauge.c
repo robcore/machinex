@@ -68,11 +68,11 @@ static void max17048_reset(struct i2c_client *client)
 {
 	u16 reset_cmd;
 
-		reset_cmd = swab16(0x4000);
+	reset_cmd = swab16(0x4000);
 
-		i2c_smbus_write_word_data(client, MAX17048_MODE_MSB, reset_cmd);
+	i2c_smbus_write_word_data(client, MAX17048_MODE_MSB, reset_cmd);
 
-		msleep(300);
+	msleep(300);
 }
 
 static int max17048_get_vcell(struct i2c_client *client)

@@ -1732,8 +1732,12 @@ static unsigned int sec_bat_get_polling_time(
 	if (battery->polling_short)
 		return battery->pdata->polling_time[
 			SEC_BATTERY_POLLING_TIME_BASIC];
-	else
-		return battery->polling_time;
+	/* set polling time to 46s to reduce current noise on wc */
+	else if (battery->cable_type == POWER_SUPPLY_TYPE_WIRELESS &&
+			battery->status == POWER_SUPPLY_STATUS_CHARGING)
+		battery->polling_time = 46;
+
+	return battery->polling_time;
 }
 
 static bool sec_bat_is_short_polling(
