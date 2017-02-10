@@ -34,7 +34,7 @@
 #include <linux/mmc/sdio_ids.h>
 #include <linux/gpio.h>
 #include <linux/dma-mapping.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/syscalls.h>
