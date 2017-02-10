@@ -81,7 +81,7 @@ struct workqueue_struct *hdmi_work_queue;
 struct hdmi_msm_state_type *hdmi_msm_state;
 
 /* Disable HDCP by default - suck it */
-static bool hdcp_feature_on = false;
+static bool hdcp_feature_on = true;
 
 DEFINE_MUTEX(hdmi_msm_state_mutex);
 EXPORT_SYMBOL(hdmi_msm_state_mutex);
@@ -5120,7 +5120,7 @@ static struct kernel_param_ops hdcp_feature_on_param_ops = {
 };
 
 module_param_cb(hdcp, &hdcp_feature_on_param_ops, &hdcp_feature_on,
-			S_IRUGO | S_IWUSR);
+			0644);
 MODULE_PARM_DESC(hdcp, "Enable or Disable HDCP");
 
 module_init(hdmi_msm_init);
