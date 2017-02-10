@@ -59,6 +59,7 @@ obj-$(CONFIG_USB_SWITCH_FSA9485) +=fsa9485_lt02.o
 endif
 obj-$(CONFIG_ALTERA_STAPL)	+=altera-stapl/
 obj-$(CONFIG_MAX8997_MUIC)	+= max8997-muic.o
+obj-$(CONFIG_VMWARE_VMCI)	+= vmw_vmci/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
