@@ -33,7 +33,7 @@ static long compat_keyctl_instantiate_key_iov(
 	struct iovec iovstack[UIO_FASTIOV], *iov = iovstack;
 	long ret;
 
-	if (!payload_iov || !ioc)
+	if (!_payload_iov || !ioc)
 		goto no_payload;
 
 	ret = compat_rw_copy_check_uvector(WRITE, _payload_iov, ioc,
