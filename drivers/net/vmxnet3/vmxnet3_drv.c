@@ -1371,8 +1371,8 @@ vmxnet3_rq_cleanup_all(struct vmxnet3_adapter *adapter)
 }
 
 
-void vmxnet3_rq_destroy(struct vmxnet3_rx_queue *rq,
-			struct vmxnet3_adapter *adapter)
+static void vmxnet3_rq_destroy(struct vmxnet3_rx_queue *rq,
+			       struct vmxnet3_adapter *adapter)
 {
 	int i;
 	int j;
