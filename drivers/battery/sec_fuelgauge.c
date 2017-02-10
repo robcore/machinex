@@ -419,7 +419,7 @@ static int __devinit sec_fuelgauge_probe(struct i2c_client *client,
 			&fuelgauge->isr_work, sec_fg_isr_work);
 
 		ret = request_threaded_irq(fuelgauge->pdata->fg_irq,
-				0, sec_fg_irq_thread,
+				NULL, sec_fg_irq_thread,
 				fuelgauge->pdata->fg_irq_attr,
 				"fuelgauge-irq", fuelgauge);
 		if (ret) {
