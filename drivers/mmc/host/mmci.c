@@ -188,6 +188,9 @@ static void mmci_set_clkreg(struct mmci_host *host, unsigned int desired)
 	if (host->mmc->ios.bus_width == MMC_BUS_WIDTH_8)
 		clk |= MCI_ST_8BIT_BUS;
 
+	if (host->mmc->ios.timing == MMC_TIMING_UHS_DDR50)
+		clk |= MCI_ST_UX500_NEG_EDGE;
+
 	mmci_write_clkreg(host, clk);
 }
 
@@ -643,6 +646,9 @@ static void mmci_start_data(struct mmci_host *host, struct mmc_data *data)
 	if (variant->sdio && host->mmc->card)
 		if (mmc_card_sdio(host->mmc->card))
 			datactrl |= MCI_ST_DPSM_SDIOEN;
+
+	if (host->mmc->ios.timing == MMC_TIMING_UHS_DDR50)
+		datactrl |= MCI_ST_DPSM_DDRMODE;
 
 	/*
 	 * Attempt to use DMA operation mode, if this
