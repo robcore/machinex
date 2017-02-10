@@ -809,9 +809,10 @@ static int sec_chg_set_property(struct power_supply *psy,
 						POWER_SUPPLY_PROP_ONLINE, cable_type);
 					wake_lock_timeout(&charger->wpc_wake_lock, 500);
 					queue_delayed_work(charger->wqueue, &charger->wpc_work,
-							msecs_to_jiffies(250));
+							msecs_to_jiffies(500));
 					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
 						charger->wc_w_state = 0;
+						wake_unlock(&charger->wpc_wake_lock);
 						pr_err("%s:cable removed,wireless connected\n", __func__);
 					}
 				}
@@ -925,20 +926,8 @@ static int sec_chg_set_property(struct power_supply *psy,
 		break;
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
+		u8 reg_data;
 		if(val->intval == POWER_SUPPLY_TYPE_WIRELESS) {
-			u8 reg_data;
-#if 0
-				/* Yank555 : Use Fast charge currents accroding to user settings */
-				if (force_fast_charge == FAST_CHARGE_FORCE_AC) {
-					/* We are in basic Fast Charge mode, so we substitute AC to WIRELESS levels */
-					charger->charging_current_max = WIRELESS_CHARGE_1000;
-					charger->charging_current = WIRELESS_CHARGE_1000 + 100;
-				} else if (force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) {
-					/* We are in custom current Fast Charge mode for WIRELESS */
-					charger->charging_current_max = wireless_charge_level;
-					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
-				}
-#endif
 			max77693_read_reg(charger->max77693->i2c,
 				MAX77693_CHG_REG_CHG_CNFG_12, &reg_data);
 			reg_data &= ~(1 << 5);
@@ -1137,10 +1126,15 @@ static void wpc_detect_work(struct work_struct *work)
 	/* check and unlock */
 	check_charger_unlock_state(chg_data);
 
-	max77693_read_reg(chg_data->max77693->i2c,
-			MAX77693_CHG_REG_CHG_INT_OK, &reg_data);
-	wc_w_state = (reg_data & MAX77693_WCIN_OK)
-				>> MAX77693_WCIN_OK_SHIFT;
+	retry_cnt = 0;
+	do {
+		max77693_read_reg(chg_data->max77693->i2c,
+				MAX77693_CHG_REG_CHG_INT_OK, &reg_data);
+		wc_w_state = (reg_data & MAX77693_WCIN_OK)
+					>> MAX77693_WCIN_OK_SHIFT;
+		msleep(50);
+	} while((retry_cnt++ < 2) && (wc_w_state == 0));
+
 	if ((chg_data->wc_w_state == 0) && (wc_w_state == 1)) {
 		value.intval = POWER_SUPPLY_TYPE_WIRELESS
 					<<ONLINE_TYPE_MAIN_SHIFT;
@@ -1151,15 +1145,23 @@ static void wpc_detect_work(struct work_struct *work)
 	} else if ((chg_data->wc_w_state == 1) && (wc_w_state == 0)) {
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, true);
-		max77693_read_reg(chg_data->max77693->i2c,
-				MAX77693_CHG_REG_CHG_DTLS_01, &reg_data);
-		reg_data = ((reg_data & MAX77693_CHG_DTLS) >> MAX77693_CHG_DTLS_SHIFT);
-		pr_debug("%s: reg_data: 0x%x, charging: %d\n", __func__, reg_data, chg_data->is_charging);
+
+		retry_cnt = 0;
+		do {
+			max77803_read_reg(chg_data->max77693->i2c,
+					MAX77693_CHG_REG_CHG_DTLS_01, &reg_data);
+			reg_data = ((reg_data & MAX77693_CHG_DTLS)
+					>> MAX77693_CHG_DTLS_SHIFT);
+			msleep(50);
+		} while((retry_cnt++ < 2) && (reg_data == 0x8));
+		pr_debug("%s: reg_data: 0x%x, charging: %d\n", __func__,
+					reg_data, chg_data->is_charging);
+
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, false);
-		if (reg_data != 0x08) {
+		if ((reg_data != 0x08)
+				&& (chg_data->cable_type == POWER_SUPPLY_TYPE_WIRELESS)) {
 			pr_debug("%s: wpc uvlo, but charging\n",	__func__);
-			wake_lock(&chg_data->wpc_wake_lock);
 			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 					msecs_to_jiffies(500));
 			return;
@@ -1176,6 +1178,8 @@ static void wpc_detect_work(struct work_struct *work)
 			chg_data->wc_w_state, wc_w_state);
 
 	chg_data->wc_w_state = wc_w_state;
+
+	wake_unlock(&chg_data->wpc_wake_lock);
 }
 
 static irqreturn_t wpc_charger_irq(int irq, void *data)
@@ -1183,16 +1187,16 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	struct max77693_charger_data *chg_data = data;
 	unsigned long delay;
 
-	wake_lock_timeout(&chg_data->wpc_wake_lock, 500);
+	wake_lock(&chg_data->wpc_wake_lock);
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	delay = msecs_to_jiffies(0);
 #else
 	if (chg_data->wc_w_state)
-		delay = msecs_to_jiffies(300);
+		delay = msecs_to_jiffies(500);
 	else
-		delay = msecs_to_jiffies(150);
+		delay = msecs_to_jiffies(0);
 #endif
-	mod_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+	queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 			delay);
 	return IRQ_HANDLED;
 }

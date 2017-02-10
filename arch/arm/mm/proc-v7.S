@@ -16,6 +16,9 @@
 #include <asm/hwcap.h>
 #include <asm/pgtable-hwdef.h>
 #include <asm/pgtable.h>
+#ifdef TIMA_EMUL_ENABLED
+#include <asm/entry-macro-tima.S>
+#endif
 
 #include "proc-macros.S"
 
@@ -125,17 +128,37 @@ ENTRY(cpu_v7_do_resume)
 	ldmia	r0, {r5 - r11}
 #ifdef CONFIG_MMU
 	mcr	p15, 0, ip, c8, c7, 0	@ invalidate TLBs
+#ifndef TIMA_EMUL_ENABLED
 	mcr	p15, 0, r6, c3, c0, 0	@ Domain ID
+#else
+	tima_macro_emul_crit_instn r6, 0x3f806221
+
+#endif
 #ifdef CONFIG_ARM_LPAE
 	mcrr	p15, 0, r1, ip, c2	@ TTB 0
 	mcrr	p15, 1, r5, r7, c2	@ TTB 1
 #else
 	ALT_SMP(orr	r1, r1, #TTB_FLAGS_SMP)
 	ALT_UP(orr	r1, r1, #TTB_FLAGS_UP)
+#ifndef TIMA_EMUL_ENABLED
 	mcr	p15, 0, r1, c2, c0, 0	@ TTB 0
-	mcr	p15, 0, r7, c2, c0, 1	@ TTB 1
+#else
+	tima_macro_emul_crit_instn r7, 0x3f803221
+
 #endif
+#ifndef TIMA_EMUL_ENABLED
+	mcr	p15, 0, r7, c2, c0, 1	@ TTB 1
+#else
+	tima_macro_emul_crit_instn r8, 0x3f804221
+
+#endif
+#endif
+#ifndef TIMA_EMUL_ENABLED
 	mcr	p15, 0, r11, c2, c0, 2	@ TTB control register
+#else
+	tima_macro_emul_crit_instn ip, 0x3f805221
+
+#endif
 	ldr	r4, =PRRR		@ PRRR
 	ldr	r5, =NMRR		@ NMRR
 	mcr	p15, 0, r4, c10, c2, 0	@ write PRRR
