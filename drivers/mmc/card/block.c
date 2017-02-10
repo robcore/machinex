@@ -609,9 +609,8 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	struct mmc_data data = {0};
 	struct mmc_request mrq = {NULL};
 	struct scatterlist *sg = 0;
-	int err= 0;
-	bool is_rpmb = false;
-	u32 status = 0;
+	int err=0;
+	int is_rpmb = false;
 
 	/*
 	 * The caller must have CAP_SYS_RAWIO, and must be calling this on the
@@ -629,9 +628,6 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 		err = -EINVAL;
 		goto blk_err;
 	}
-
-	if (md->area_type & MMC_BLK_DATA_AREA_RPMB)
-		is_rpmb = true;
 
 	card = md->queue.card;
 	if (IS_ERR_OR_NULL(card)) {
@@ -741,11 +737,11 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 		 * Ensure RPMB command has completed by polling CMD13
 		 * "Send Status".
 		 */
-		err = ioctl_rpmb_card_status_poll(card, &cmd, 5);
+		err = ioctl_rpmb_card_status_poll(card, &status, 5);
 		if (err)
 			dev_err(mmc_dev(card->host),
 					"%s: Card Status=0x%08X, error %d\n",
-					__func__, cmd, err);
+					__func__, status, err);
 	}
 
 cmd_rel_host:
