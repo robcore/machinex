@@ -1075,11 +1075,11 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 	addr = do_mmap_pgoff(file, addr, size, prot, flags, 0, &populate);
 	*raddr = addr;
 	err = 0;
-	if (IS_ERR_VALUE(user_addr))
-		err = (long)user_addr;
+	if (IS_ERR_VALUE(addr))
+		err = (long)addr;
 invalid:
 	up_write(&current->mm->mmap_sem);
- 	if (populate)
+	if (populate)
 		mm_populate(addr, populate);
 
 out_fput:
