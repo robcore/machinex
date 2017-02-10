@@ -205,13 +205,6 @@ enum i2c_msm_ctrl_ver_num {
 	I2C_MSM_CTRL_VER_B_MAX   = 0X30000000,
 };
 
-/* Controller's power state */
-enum msm_i2c_power_state {
-	MSM_I2C_PM_ACTIVE,
-	MSM_I2C_PM_SUSPENDED,
-	MSM_I2C_PM_SYS_SUSPENDED
-};
-
 /*
  * The max buffer size required for tags is for holding the following sequence:
  * [start | hs-addr] + [start | slv-addr] + [ rd/wr | len]
@@ -248,7 +241,7 @@ enum msm_spi_clk_path_vec_idx {
 	I2C_MSM_CLK_PATH_RESUME_VEC,
 };
 #define I2C_MSM_CLK_PATH_AVRG_BW(ctrl) (0)
-#define I2C_MSM_CLK_PATH_BRST_BW(ctrl) (ctrl->rsrcs.clk_freq_in * 8)
+#define I2C_MSM_CLK_PATH_BRST_BW(ctrl) (ctrl->pdata->clk_freq_in * 8)
 
 static char const * const i2c_msm_gpio_names[] = {"i2c_clk", "i2c_sda"};
 
@@ -378,7 +371,7 @@ struct i2c_msm_xfer_mode_bam {
 
 	struct resource         *mem;
 	void __iomem            *base;
-	ulong                    handle;
+	u32                      handle;
 	u32                      irq;
 	struct i2c_msm_bam_pipe  pipe[2];
 };
@@ -482,24 +475,17 @@ struct i2c_msm_dbgfs {
 /*
  * qup_i2c_clk_path_vote: data to use bus scaling driver for clock path vote
  *
- * @mstr_id master id number of the i2c core or its wrapper (BLSP/GSBI).
- *       When zero, clock path voting is disabled.
  * @client_hdl when zero, client is not registered with the bus scaling driver,
  *      and bus scaling functionality should not be used. When non zero, it
  *      is a bus scaling client id and may be used to vote for clock path.
  * @reg_err when true, registration error was detected and an error message was
  *      logged. i2c will attempt to re-register but will log error only once.
  *      once registration succeed, the flag is set to false.
- * @actv_only when set, votes when system active and removes the vote when
- *       system goes idle (optimises for performance). When unset, voting using
- *       runtime pm (optimizes for power).
  */
 struct qup_i2c_clk_path_vote {
-	u32                         mstr_id;
 	u32                         client_hdl;
 	struct msm_bus_scale_pdata *pdata;
 	bool                        reg_err;
-	bool                        actv_only;
 };
 
 /*
@@ -507,27 +493,17 @@ struct qup_i2c_clk_path_vote {
  *
  * @mem  I2C controller memory resource from platform data.
  * @base I2C controller virtual base address
- * @clk_freq_in core clock frequency in Hz
- * @clk_freq_out bus clock frequency in Hz
- * @bam_pipe_idx_cons index of BAM's consumer pipe
- * @bam_pipe_idx_prod index of BAM's producer pipe
  */
 struct i2c_msm_resources {
-	struct resource             *mem;
-	void __iomem                *base; /* virtual */
-	struct clk                  *core_clk;
-	struct clk                  *iface_clk;
-	int                          clk_freq_in;
-	int                          clk_freq_out;
+	struct resource			*mem;
+	void __iomem			*base; /* virtual */
+	struct clk			*core_clk;
+	struct clk			*iface_clk;
 	struct qup_i2c_clk_path_vote clk_path_vote;
-	int                          irq;
-	bool                         disable_dma;
-	u32                          bam_pipe_idx_cons;
-	u32                          bam_pipe_idx_prod;
-	bool                         clk_ctl_xfer;
-	struct pinctrl              *pinctrl;
-	struct pinctrl_state        *gpio_state_active;
-	struct pinctrl_state        *gpio_state_suspend;
+	int				irq;
+	struct pinctrl			*pinctrl;
+	struct pinctrl_state		*gpio_state_active;
+	struct pinctrl_state		*gpio_state_suspend;
 };
 
 /*
@@ -576,9 +552,7 @@ typedef void (*i2c_msm_prof_dump_func_func_t)(struct i2c_msm_ctrl *,
 struct i2c_msm_prof_event {
 	i2c_msm_prof_dump_func_func_t dump_func;
 	struct timespec time;
-	u64             data0;
-	u32             data1;
-	u32             data2;
+	u32             data[3];
 	u8              type;
 };
 
@@ -647,8 +621,6 @@ struct i2c_msm_ctrl {
 	int                        noise_rjct_scl;
 	int                        noise_rjct_sda;
 	struct i2c_msm_v2_platform_data *pdata;
-	enum msm_i2c_power_state    pwr_state;
-	struct mutex                 mlock;
 };
 
 #endif  /* _I2C_MSM_V2_H */
