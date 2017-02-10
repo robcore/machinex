@@ -1108,6 +1108,7 @@ static void wpc_detect_work(struct work_struct *work)
 						wpc_work.work);
 	int wc_w_state;
 	union power_supply_propval value;
+	unsigned int retry_count;
 	u8 reg_data;
 	pr_debug("%s\n", __func__);
 	wake_unlock(&chg_data->wpc_wake_lock);
@@ -1148,7 +1149,7 @@ static void wpc_detect_work(struct work_struct *work)
 
 		retry_cnt = 0;
 		do {
-			max77803_read_reg(chg_data->max77693->i2c,
+			max77693_read_reg(chg_data->max77693->i2c,
 					MAX77693_CHG_REG_CHG_DTLS_01, &reg_data);
 			reg_data = ((reg_data & MAX77693_CHG_DTLS)
 					>> MAX77693_CHG_DTLS_SHIFT);
