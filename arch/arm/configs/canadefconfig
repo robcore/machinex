@@ -1392,7 +1392,7 @@ CONFIG_BPF_JIT=y
 #
 # Network testing
 #
-# CONFIG_NET_PKTGEN is not set
+CONFIG_NET_PKTGEN=y
 # CONFIG_NET_DROP_MONITOR is not set
 # CONFIG_HAMRADIO is not set
 # CONFIG_CAN is not set
