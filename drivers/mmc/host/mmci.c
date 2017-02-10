@@ -1073,7 +1073,6 @@ static void mmci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct variant_data *variant = host->variant;
 	u32 pwr = 0;
 	unsigned long flags;
-	int ret;
 
 	pm_runtime_get_sync(mmc_dev(mmc));
 
@@ -1083,23 +1082,13 @@ static void mmci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	switch (ios->power_mode) {
 	case MMC_POWER_OFF:
-		if (host->vcc)
-			ret = mmc_regulator_set_ocr(mmc, host->vcc, 0);
+		if (!IS_ERR(mmc->supply.vmmc))
+			mmc_regulator_set_ocr(mmc, mmc->supply.vmmc, 0);
 		break;
 	case MMC_POWER_UP:
-		if (host->vcc) {
-			ret = mmc_regulator_set_ocr(mmc, host->vcc, ios->vdd);
-			if (ret) {
-				dev_err(mmc_dev(mmc), "unable to set OCR\n");
-				/*
-				 * The .set_ios() function in the mmc_host_ops
-				 * struct return void, and failing to set the
-				 * power should be rare so we print an error
-				 * and return here.
-				 */
-				goto out;
-			}
-		}
+		if (!IS_ERR(mmc->supply.vmmc))
+			mmc_regulator_set_ocr(mmc, mmc->supply.vmmc, ios->vdd);
+
 		/*
 		 * The ST Micro variant doesn't have the PL180s MCI_PWR_UP
 		 * and instead uses MCI_PWR_ON so apply whatever value is
@@ -1148,7 +1137,6 @@ static void mmci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
- out:
 	pm_runtime_mark_last_busy(mmc_dev(mmc));
 	pm_runtime_put_autosuspend(mmc_dev(mmc));
 }
@@ -1300,29 +1288,13 @@ static int __devinit mmci_probe(struct amba_device *dev,
 		mmc->f_max = min(host->mclk, fmax);
 	dev_dbg(mmc_dev(mmc), "clocking block at %u Hz\n", mmc->f_max);
 
-#ifdef CONFIG_REGULATOR
-	/* If we're using the regulator framework, try to fetch a regulator */
-	host->vcc = regulator_get(&dev->dev, "vmmc");
-	if (IS_ERR(host->vcc))
-		host->vcc = NULL;
-	else {
-		int mask = mmc_regulator_get_ocrmask(host->vcc);
-
-		if (mask < 0)
-			dev_err(&dev->dev, "error getting OCR mask (%d)\n",
-				mask);
-		else {
-			host->mmc->ocr_avail = (u32) mask;
-			if (plat->ocr_mask)
-				dev_warn(&dev->dev,
-				 "Provided ocr_mask/setpower will not be used "
-				 "(using regulator instead)\n");
-		}
-	}
-#endif
-	/* Fall back to platform data if no regulator is found */
-	if (host->vcc == NULL)
+	/* Get regulators and the supported OCR mask */
+	mmc_regulator_get_supply(mmc);
+	if (!mmc->ocr_avail)
 		mmc->ocr_avail = plat->ocr_mask;
+	else if (plat->ocr_mask)
+		dev_warn(mmc_dev(mmc), "Platform OCR mask is ignored\n");
+
 	mmc->caps = plat->capabilities;
 	mmc->caps2 = plat->capabilities2;
 
@@ -1503,10 +1475,6 @@ static int __devexit mmci_remove(struct amba_device *dev)
 		iounmap(host->base);
 		clk_disable_unprepare(host->clk);
 		clk_put(host->clk);
-
-		if (host->vcc)
-			mmc_regulator_set_ocr(mmc, host->vcc, 0);
-		regulator_put(host->vcc);
 
 		mmc_free_host(mmc);
 
