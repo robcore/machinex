@@ -1107,8 +1107,8 @@ static void wpc_detect_work(struct work_struct *work)
 						struct max77693_charger_data,
 						wpc_work.work);
 	int wc_w_state;
+	int retry_cnt;
 	union power_supply_propval value;
-	unsigned int retry_count;
 	u8 reg_data;
 	pr_debug("%s\n", __func__);
 	wake_unlock(&chg_data->wpc_wake_lock);
