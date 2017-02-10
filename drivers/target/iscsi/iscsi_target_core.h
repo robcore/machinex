@@ -360,7 +360,7 @@ struct iscsi_cmd {
 	/* Command flags */
 	enum cmd_flags_table	cmd_flags;
 	/* Initiator Task Tag assigned from Initiator */
-	u32			init_task_tag;
+	itt_t			init_task_tag;
 	/* Target Transfer Tag assigned from Target */
 	u32			targ_xfer_tag;
 	/* CmdSN assigned from Initiator */
@@ -505,7 +505,7 @@ struct iscsi_conn {
 	u32			auth_id;
 	u32			conn_flags;
 	/* Used for iscsi_tx_login_rsp() */
-	u32			login_itt;
+	itt_t			login_itt;
 	u32			exp_statsn;
 	/* Per connection status sequence number */
 	u32			stat_sn;
@@ -597,7 +597,7 @@ struct iscsi_session {
 	/* state session is currently in */
 	u32			session_state;
 	/* session wide counter: initiator assigned task tag */
-	u32			init_task_tag;
+	itt_t			init_task_tag;
 	/* session wide counter: target assigned task tag */
 	u32			targ_xfer_tag;
 	u32			cmdsn_window;
@@ -663,7 +663,7 @@ struct iscsi_login {
 	u8 version_max;
 	char isid[6];
 	u32 cmd_sn;
-	u32 init_task_tag;
+	itt_t init_task_tag;
 	u32 initial_exp_statsn;
 	u32 rsp_length;
 	u16 cid;
