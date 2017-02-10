@@ -61,11 +61,11 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
-#if 0
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
 #define TIMA_PAC_CMD_ID 0x3f80d221
 #endif
 
-#if 0
+#ifdef TIMA_LKM_AUTH_ENABLED
 #include <linux/qseecom.h>
 #include <linux/kobject.h>
 
@@ -141,7 +141,7 @@ typedef struct lkmauth_rsp_s
  * to ensure complete separation of code and data, but
  * only when CONFIG_DEBUG_SET_MODULE_RONX=y
  */
-#if 0
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
 # define debug_align(X) ALIGN(X, PAGE_SIZE)
 #else
 #ifdef CONFIG_DEBUG_SET_MODULE_RONX
@@ -176,7 +176,7 @@ static LIST_HEAD(modules);
 struct list_head *kdb_modules = &modules; /* kdb needs the list of modules */
 #endif /* CONFIG_KGDB_KDB */
 
-#if 0
+#ifdef TIMA_TEST_INFRA
 void tts_debug_func_mod(void)
 {
 	/*function is never called*/
@@ -1194,8 +1194,6 @@ static int check_version(Elf_Shdr *sechdrs,
 	struct modversion_info *versions;
 
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
-	if(!strncmp("moc_", mod->name, 4)) return 1;
-
 	if (!crc)
 		return 1;
 
@@ -2326,7 +2324,7 @@ static void layout_symtab(struct module *mod, struct load_info *info)
 	Elf_Shdr *symsect = info->sechdrs + info->index.sym;
 	Elf_Shdr *strsect = info->sechdrs + info->index.str;
 	const Elf_Sym *src;
-	unsigned int i, nsrc, ndst, strtab_size = 0;
+	unsigned int i, nsrc, ndst, strtab_size;
 
 	/* Put symbol section at end of init part of module. */
 	symsect->sh_flags |= SHF_ALLOC;
@@ -2399,7 +2397,7 @@ static void add_kallsyms(struct module *mod, const struct load_info *info)
 }
 #endif /* CONFIG_KALLSYMS */
 
-#if 0
+#ifdef	TIMA_LKM_AUTH_ENABLED
 static int lkmauth(Elf_Ehdr *hdr, int len)
 {
 	int ret = 0; /* value to be returned for lkmauth */
@@ -2623,10 +2621,10 @@ static int copy_and_check(struct load_info *info,
 		goto free_hdr;
 	}
 
-#if 0
+#ifdef TIMA_LKM_AUTH_ENABLED
 //	if (len > 500000) {
 //		pr_err("Skipped module greater than 50000 in size\n");
-//	}  else
+//	}  else 
 	if (lkmauth(hdr, len) != 0) {
 		err = -ENOEXEC;
 		goto free_hdr;
@@ -2931,10 +2929,6 @@ static int check_module_license_and_versions(struct module *mod)
 	if (strcmp(mod->name, "driverloader") == 0)
 		add_taint_module(mod, TAINT_PROPRIETARY_MODULE);
 
-	/* lve claims to be GPL but upstream won't provide source */
-	if (strcmp(mod->name, "lve") == 0)
-		add_taint_module(mod, TAINT_PROPRIETARY_MODULE);
-
 #ifdef CONFIG_MODVERSIONS
 	if ((mod->num_syms && !mod->crcs)
 	    || (mod->num_gpl_syms && !mod->gpl_crcs)
@@ -3237,7 +3231,7 @@ static void do_mod_ctors(struct module *mod)
 		mod->ctors[i]();
 #endif
 }
-#if 0
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
 void tima_mod_send_smc_instruction(unsigned int    *vatext,unsigned int    *vadata,unsigned int text_count,unsigned int data_count)
 {
         unsigned long   cmd_id = TIMA_PAC_CMD_ID;
@@ -3330,7 +3324,7 @@ SYSCALL_DEFINE3(init_module, void __user *, umod,
 	blocking_notifier_call_chain(&module_notify_list,
 			MODULE_STATE_COMING, mod);
 
-#if 0
+#ifdef	TIMA_LKM_SET_PAGE_ATTRIB
     tima_mod_page_change_access(mod);
 #endif
 
