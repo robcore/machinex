@@ -741,11 +741,11 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 		 * Ensure RPMB command has completed by polling CMD13
 		 * "Send Status".
 		 */
-		err = ioctl_rpmb_card_status_poll(card, status, 5);
+		err = ioctl_rpmb_card_status_poll(card, &cmd, 5);
 		if (err)
 			dev_err(mmc_dev(card->host),
 					"%s: Card Status=0x%08X, error %d\n",
-					__func__, status, err);
+					__func__, cmd, err);
 	}
 
 cmd_rel_host:
