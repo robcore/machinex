@@ -1007,7 +1007,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 
 write_cid:
 	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
-	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen(cur_info->vname) + 1);
+	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen((cur_info->vname) + 1));
 #if defined(BCM4334_CHIP)
 	/* Try reading out from OTP to distinguish B2 or B3 */
 	memset(cis_buf, 0, sizeof(cis_buf));
