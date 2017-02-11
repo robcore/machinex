@@ -361,7 +361,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #elif defined(BCM4334_CHIP)
 #define CIS_BUF_SIZE            256
 #else
-#define CIS_BUF_SIZE            256
+#define CIS_BUF_SIZE            512
 #endif /* BCM4330_CHIP */
 
 #define CIS_TUPLE_TAG_START		0x80
@@ -1007,7 +1007,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 
 write_cid:
 	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
-	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen((cur_info->vname) + 1));
+	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen(cur_info->vname) + 1);
 #if defined(BCM4334_CHIP)
 	/* Try reading out from OTP to distinguish B2 or B3 */
 	memset(cis_buf, 0, sizeof(cis_buf));
