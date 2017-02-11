@@ -109,9 +109,6 @@ else
 fi;
 }
 
-sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
-echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
-
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -131,6 +128,8 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+sed -i '/CONFIG_LOCALVERSION=/d' $(pwd)/out/.config;
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> $(pwd)/out/.config;
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
@@ -266,9 +265,6 @@ else
 fi;
 }
 
-sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
-echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
-
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -288,6 +284,8 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+sed -i '/CONFIG_LOCALVERSION=/d' $(pwd)/out/.config;
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> $(pwd)/out/.config;
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make C=1 SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
@@ -427,8 +425,6 @@ else
 fi;
 }
 
-sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
-echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export SUBARCH=arm
@@ -446,6 +442,8 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	make mrproper;
 	mkdir $(pwd)/out;
 	cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+	sed -i '/CONFIG_LOCALVERSION=/d' $(pwd)/out/.config;
+	echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> $(pwd)/out/.config;
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 	make CONFIG_DEBUG_SECTION_MISMATCH=y SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 		if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
@@ -513,8 +511,6 @@ if [ -e /media/root/robcore/AIK/previous.txt ]; then
 fi;
 	OUTFOLDER=$PRVS
 
-sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
-echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export SUBARCH=arm
@@ -528,6 +524,8 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	#env KCONFIG_NOTIMESTAMP=true
 	mkdir $(pwd)/out;
 	cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+	sed -i '/CONFIG_LOCALVERSION=/d' $(pwd)/out/.config;
+	echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> $(pwd)/out/.config;
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 	make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
@@ -569,9 +567,6 @@ else
 fi;
 }
 
-sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
-echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
-
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
 export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export SUBARCH=arm
@@ -589,6 +584,8 @@ make distclean;
 make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
+sed -i '/CONFIG_LOCALVERSION=/d' $(pwd)/out/.config;
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> $(pwd)/out/.config;
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
