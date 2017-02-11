@@ -958,7 +958,8 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
 		sizeof(cis_buf), 0, 0);
 	if (ret < 0) {
-		WARN_ON_ONCE("[WIFI_SEC] %s: CIS reading failed, ret=%d\n");
+		DHD_ERROR(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n",
+			__FUNCTION__, ret));
 		return ret;
 	}
 
@@ -1001,26 +1002,54 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 		if (cur_info->vid_length == 0)
 			goto write_cid;
 	}
-	WARN_ON_ONCE("[WIFI_SEC] %s: cannot find default CID\n");
+	DHD_ERROR(("[WIFI_SEC] %s: cannot find default CID\n", __FUNCTION__));
 	return -1;
 
 write_cid:
 	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
 	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen(cur_info->vname) + 1);
+#if defined(BCM4334_CHIP)
+	/* Try reading out from OTP to distinguish B2 or B3 */
+	memset(cis_buf, 0, sizeof(cis_buf));
+	cish = (cis_rw_t *)&cis_buf[8];
+
+	cish->source = 0;
+	cish->byteoff = 0;
+	cish->nbytes = sizeof(cis_buf);
+
+	strcpy(cis_buf, "otpdump");
+	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
+		sizeof(cis_buf), 0, 0);
+	if (ret < 0) {
+		DHD_ERROR(("[WIFI_SEC] %s: OTP reading failed, err=%d\n",
+			__FUNCTION__, ret));
+		return ret;
+	}
+
+	/* otp 33th character is identifier for 4334B3 */
+	cis_buf[34] = '\0';
+	flag_b3 = bcm_atoi(&cis_buf[33]);
+	if (flag_b3 & 0x1) {
+		DHD_ERROR(("[WIFI_SEC] REV MATCH FOUND : 4334B3, %c\n", cis_buf[33]));
+		dhd_write_cid_file(revfilepath, "4334B3", 6);
+	}
+#endif /* BCM4334_CHIP */
+#if defined(BCM4335_CHIP)
 	DHD_TRACE(("[WIFI_SEC] %s: BCM4335 Multiple Revision Check\n", __FUNCTION__));
 	if (concate_revision(dhd->bus, rev_str, sizeof(rev_str),
 		rev_str, sizeof(rev_str)) < 0) {
-		WARN_ON_ONCE("[WIFI_SEC] %s: fail to concate revision\n");
+		DHD_ERROR(("[WIFI_SEC] %s: fail to concate revision\n", __FUNCTION__));
 		ret = -1;
 	} else {
 		if (strstr(rev_str, "_a0")) {
+			DHD_ERROR(("[WIFI_SEC] REV MATCH FOUND : 4335A0\n"));
 			dhd_write_cid_file(revfilepath, "BCM4335A0", 9);
-			WARN_ON_ONCE("[WIFI_SEC] REV MATCH FOUND : 4335A0\n");
 		} else {
+			DHD_ERROR(("[WIFI_SEC] REV MATCH FOUND : 4335B0\n"));
 			dhd_write_cid_file(revfilepath, "BCM4335B0", 9);
-			WARN_ON_ONCE("[WIFI_SEC] REV MATCH FOUND : 4335B0\n");
 		}
 	}
+#endif /* BCM4335_CHIP */
 
 	return ret;
 }
@@ -1076,11 +1105,13 @@ int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
 		sizeof(cis_buf), 0, 0);
 	if (ret < 0) {
-		WARN_ON_ONCE("[WIFI_SEC] %s: CIS reading failed, ret=%d\n");
+		DHD_TRACE(("[WIFI_SEC] %s: CIS reading failed, ret=%d\n", __func__,
+			ret));
 		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			mac->octet[0], mac->octet[1], mac->octet[2],
 			mac->octet[3], mac->octet[4], mac->octet[5]);
-		WARN_ON_ONCE("[WIFI_SEC] %s: Check module mac by legacy FW : " MACDBG "\n");
+		DHD_ERROR(("[WIFI_SEC] %s: Check module mac by legacy FW : " MACDBG "\n",
+			__FUNCTION__, MAC2STRDBG(mac->octet)));
 	} else {
 		bcm_tlv_t *elt = NULL;
 		int remained_len = sizeof(cis_buf);
@@ -1514,7 +1545,7 @@ int write_filesystem(struct file *file, unsigned long long offset,
 	oldfs = get_fs();
 	set_fs(get_ds());
 
-	ret = do_sync_write(file, data, size, &offset);
+	ret = vfs_write(file, data, size, &offset);
 
 	set_fs(oldfs);
 	return ret;
@@ -1598,7 +1629,7 @@ uint32 sec_save_wlinfo(char *firm_ver, char *dhd_ver, char *nvram_p)
 
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp) || (fp == NULL)) {
-		WARN_ON_ONCE("[WIFI_SEC] %s: .wifiver.info File open failed.\n");
+		DHD_ERROR(("[WIFI_SEC] %s: .wifiver.info File open failed.\n", __FUNCTION__));
 	} else {
 		memset(version_old_info, 0, sizeof(version_old_info));
 		ret = kernel_read(fp, fp->f_pos, version_old_info, sizeof(version_info));

@@ -402,9 +402,6 @@ static ssize_t regulator_status_show(struct device *dev,
 	case REGULATOR_STATUS_STANDBY:
 		label = "standby";
 		break;
-	case REGULATOR_STATUS_UNDEFINED:
-		label = "undefined";
-		break;
 	default:
 		return -ERANGE;
 	}
@@ -2759,7 +2756,7 @@ int regulator_mode_to_status(unsigned int mode)
 	case REGULATOR_MODE_STANDBY:
 		return REGULATOR_STATUS_STANDBY;
 	default:
-		return REGULATOR_STATUS_UNDEFINED;
+		return 0;
 	}
 }
 EXPORT_SYMBOL_GPL(regulator_mode_to_status);

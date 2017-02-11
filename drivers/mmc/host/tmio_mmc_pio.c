@@ -752,34 +752,6 @@ fail:
 	mmc_request_done(mmc, mrq);
 }
 
-static int tmio_mmc_clk_update(struct mmc_host *mmc)
-{
-	struct tmio_mmc_host *host = mmc_priv(mmc);
-	struct tmio_mmc_data *pdata = host->pdata;
-	int ret;
-
-	if (!pdata->clk_enable)
-		return -ENOTSUPP;
-
-	ret = pdata->clk_enable(host->pdev, &mmc->f_max);
-	if (!ret)
-		mmc->f_min = mmc->f_max / 512;
-
-	return ret;
-}
-
-static void tmio_mmc_set_power(struct tmio_mmc_host *host, struct mmc_ios *ios)
-{
-	struct mmc_host *mmc = host->mmc;
-
-	if (host->set_pwr)
-		host->set_pwr(host->pdev, ios->power_mode != MMC_POWER_OFF);
-	if (!IS_ERR(mmc->supply.vmmc))
-		/* Errors ignored... */
-		mmc_regulator_set_ocr(mmc, mmc->supply.vmmc,
-				      ios->power_mode ? ios->vdd : 0);
-}
-
 /* Set MMC clock / power.
  * Note: This controller uses a simple divider scheme therefore it cannot
  * run a MMC card at full speed (20MHz). The max clock is 24MHz on SD, but as
@@ -826,37 +798,32 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	 */
 	if (ios->power_mode == MMC_POWER_ON && ios->clock) {
 		if (!host->power) {
-			tmio_mmc_clk_update(mmc);
 			pm_runtime_get_sync(dev);
 			host->power = true;
 		}
 		tmio_mmc_set_clock(host, ios->clock);
 		/* power up SD bus */
-		tmio_mmc_set_power(host, ios);
+		if (host->set_pwr)
+			host->set_pwr(host->pdev, 1);
 		/* start bus clock */
 		tmio_mmc_clk_start(host);
 	} else if (ios->power_mode != MMC_POWER_UP) {
-		if (ios->power_mode == MMC_POWER_OFF)
-			tmio_mmc_set_power(host, ios);
+		if (host->set_pwr && ios->power_mode == MMC_POWER_OFF)
+			host->set_pwr(host->pdev, 0);
 		if (host->power) {
-			struct tmio_mmc_data *pdata = host->pdata;
-			tmio_mmc_clk_stop(host);
 			host->power = false;
 			pm_runtime_put(dev);
-			if (pdata->clk_disable)
-				pdata->clk_disable(host->pdev);
 		}
+		tmio_mmc_clk_stop(host);
 	}
 
-	if (host->power) {
-		switch (ios->bus_width) {
-		case MMC_BUS_WIDTH_1:
-			sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x80e0);
-		break;
-		case MMC_BUS_WIDTH_4:
-			sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x00e0);
-		break;
-		}
+	switch (ios->bus_width) {
+	case MMC_BUS_WIDTH_1:
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x80e0);
+	break;
+	case MMC_BUS_WIDTH_4:
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x00e0);
+	break;
 	}
 
 	/* Let things settle. delay taken from winCE driver */
@@ -875,9 +842,6 @@ static int tmio_mmc_get_ro(struct mmc_host *mmc)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct tmio_mmc_data *pdata = host->pdata;
-	int ret = mmc_gpio_get_ro(mmc);
-	if (ret >= 0)
-		return ret;
 
 	return !((pdata->flags & TMIO_MMC_WRPROTECT_DISABLE) ||
 		 (sd_ctrl_read32(host, CTL_STATUS) & TMIO_STAT_WRPROTECT));
@@ -887,9 +851,6 @@ static int tmio_mmc_get_cd(struct mmc_host *mmc)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct tmio_mmc_data *pdata = host->pdata;
-	int ret = mmc_gpio_get_cd(mmc);
-	if (ret >= 0)
-		return ret;
 
 	if (!pdata->get_cd)
 		return -ENOSYS;
@@ -904,19 +865,6 @@ static const struct mmc_host_ops tmio_mmc_ops = {
 	.get_cd		= tmio_mmc_get_cd,
 	.enable_sdio_irq = tmio_mmc_enable_sdio_irq,
 };
-
-static void tmio_mmc_init_ocr(struct tmio_mmc_host *host)
-{
-	struct tmio_mmc_data *pdata = host->pdata;
-	struct mmc_host *mmc = host->mmc;
-
-	mmc_regulator_get_supply(mmc);
-
-	if (!mmc->ocr_avail)
-		mmc->ocr_avail = pdata->ocr_mask ? : MMC_VDD_32_33 | MMC_VDD_33_34;
-	else if (pdata->ocr_mask)
-		dev_warn(mmc_dev(mmc), "Platform OCR mask is ignored\n");
-}
 
 int __devinit tmio_mmc_host_probe(struct tmio_mmc_host **host,
 				  struct platform_device *pdev,
@@ -957,14 +905,18 @@ int __devinit tmio_mmc_host_probe(struct tmio_mmc_host **host,
 
 	mmc->ops = &tmio_mmc_ops;
 	mmc->caps = MMC_CAP_4_BIT_DATA | pdata->capabilities;
-	mmc->caps2 = pdata->capabilities2;
+	mmc->f_max = pdata->hclk;
+	mmc->f_min = mmc->f_max / 512;
 	mmc->max_segs = 32;
 	mmc->max_blk_size = 512;
 	mmc->max_blk_count = (PAGE_CACHE_SIZE / mmc->max_blk_size) *
 		mmc->max_segs;
 	mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
 	mmc->max_seg_size = mmc->max_req_size;
-	tmio_mmc_init_ocr(_host);
+	if (pdata->ocr_mask)
+		mmc->ocr_avail = pdata->ocr_mask;
+	else
+		mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 
 	_host->native_hotplug = !(pdata->flags & TMIO_MMC_USE_GPIO_CD ||
 				  mmc->caps & MMC_CAP_NEEDS_POLL ||
@@ -976,11 +928,6 @@ int __devinit tmio_mmc_host_probe(struct tmio_mmc_host **host,
 	if (ret < 0)
 		goto pm_disable;
 
-	if (tmio_mmc_clk_update(mmc) < 0) {
-		mmc->f_max = pdata->hclk;
-		mmc->f_min = mmc->f_max / 512;
-	}
-
 	/*
 	 * There are 4 different scenarios for the card detection:
 	 *  1) an external gpio irq handles the cd (best for power savings)
@@ -991,6 +938,7 @@ int __devinit tmio_mmc_host_probe(struct tmio_mmc_host **host,
 	 *  While we increment the runtime PM counter for all scenarios when
 	 *  the mmc core activates us by calling an appropriate set_ios(), we
 	 *  must additionally ensure that in case 2) the tmio mmc hardware stays
+	 *  additionally ensure that in case 2) the tmio mmc hardware stays
 	 *  powered on during runtime for the card detection to work.
 	 */
 	if (_host->native_hotplug)
@@ -1001,17 +949,6 @@ int __devinit tmio_mmc_host_probe(struct tmio_mmc_host **host,
 
 	_host->sdcard_irq_mask = sd_ctrl_read32(_host, CTL_IRQ_MASK);
 	tmio_mmc_disable_mmc_irqs(_host, TMIO_MASK_ALL);
-
-	/* Unmask the IRQs we want to know about */
-	if (!_host->chan_rx)
-		irq_mask |= TMIO_MASK_READOP;
-	if (!_host->chan_tx)
-		irq_mask |= TMIO_MASK_WRITEOP;
-	if (!_host->native_hotplug)
-		irq_mask &= ~(TMIO_STAT_CARD_REMOVE | TMIO_STAT_CARD_INSERT);
-
-	_host->sdcard_irq_mask &= ~irq_mask;
-
 	if (pdata->flags & TMIO_MMC_SDIO_IRQ)
 		tmio_mmc_enable_sdio_irq(mmc, 0);
 
@@ -1025,15 +962,19 @@ int __devinit tmio_mmc_host_probe(struct tmio_mmc_host **host,
 	/* See if we also get DMA */
 	tmio_mmc_request_dma(_host, pdata);
 
-	ret = mmc_add_host(mmc);
-	if (pdata->clk_disable)
-		pdata->clk_disable(pdev);
-	if (ret < 0) {
-		tmio_mmc_host_remove(_host);
-		return ret;
-	}
+	mmc_add_host(mmc);
 
 	dev_pm_qos_expose_latency_limit(&pdev->dev, 100);
+
+	/* Unmask the IRQs we want to know about */
+	if (!_host->chan_rx)
+		irq_mask |= TMIO_MASK_READOP;
+	if (!_host->chan_tx)
+		irq_mask |= TMIO_MASK_WRITEOP;
+	if (!_host->native_hotplug)
+		irq_mask &= ~(TMIO_STAT_CARD_REMOVE | TMIO_STAT_CARD_INSERT);
+
+	tmio_mmc_enable_mmc_irqs(_host, irq_mask);
 
 	if (pdata->flags & TMIO_MMC_USE_GPIO_CD) {
 		ret = mmc_gpio_request_cd(mmc, pdata->cd_gpio);

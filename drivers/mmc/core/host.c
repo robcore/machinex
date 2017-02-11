@@ -33,7 +33,6 @@
 static void mmc_host_classdev_release(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
-	mutex_destroy(&host->slot.lock);
 	kfree(host->wlock_name);
 	kfree(host);
 }
@@ -344,9 +343,6 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	device_initialize(&host->class_dev);
 
 	mmc_host_clk_init(host);
-
-	mutex_init(&host->slot.lock);
-	host->slot.cd_irq = -EINVAL;
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
