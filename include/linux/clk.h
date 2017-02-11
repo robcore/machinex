@@ -324,6 +324,25 @@ static inline struct clk *clk_get_parent(struct clk *clk)
 	return NULL;
 }
 
+struct device_node;
+struct of_phandle_args;
+
+#ifdef CONFIG_OF
+struct clk *of_clk_get(struct device_node *np, int index);
+struct clk *of_clk_get_by_name(struct device_node *np, const char *name);
+struct clk *of_clk_get_from_provider(struct of_phandle_args *clkspec);
+#else
+static inline struct clk *of_clk_get(struct device_node *np, int index)
+{
+	return NULL;
+}
+static inline struct clk *of_clk_get_by_name(struct device_node *np,
+					     const char *name)
+{
+	return NULL;
+}
+#endif
+
 #endif
 
 /* clk_prepare_enable helps cases using clk_enable in non-atomic context. */
