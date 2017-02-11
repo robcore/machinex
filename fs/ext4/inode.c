@@ -354,15 +354,6 @@ void ext4_da_update_reserve_space(struct inode *inode,
 		ei->i_allocated_meta_blocks = ei->i_reserved_meta_blocks;
 	}
 
-	if (unlikely(ei->i_allocated_meta_blocks > ei->i_reserved_meta_blocks)) {
-		ext4_msg(inode->i_sb, KERN_NOTICE, "%s: ino %lu, allocated %d "
-			 "with only %d reserved metadata blocks\n", __func__,
-			 inode->i_ino, ei->i_allocated_meta_blocks,
-			 ei->i_reserved_meta_blocks);
-		WARN_ON(1);
-		ei->i_allocated_meta_blocks = ei->i_reserved_meta_blocks;
-	}
-
 	/* Update per-inode reservations */
 	ei->i_reserved_data_blocks -= used;
 	ei->i_reserved_meta_blocks -= ei->i_allocated_meta_blocks;
@@ -522,8 +513,7 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 	 * Try to see if we can get the block without requesting a new
 	 * file system block.
 	 */
-	if (!(flags & EXT4_GET_BLOCKS_NO_LOCK))
-		down_read((&EXT4_I(inode)->i_data_sem));
+	down_read((&EXT4_I(inode)->i_data_sem));
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
 		retval = ext4_ext_map_blocks(handle, inode, map, flags &
 					     EXT4_GET_BLOCKS_KEEP_SIZE);
@@ -531,8 +521,7 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 		retval = ext4_ind_map_blocks(handle, inode, map, flags &
 					     EXT4_GET_BLOCKS_KEEP_SIZE);
 	}
-	if (!(flags & EXT4_GET_BLOCKS_NO_LOCK))
-		up_read((&EXT4_I(inode)->i_data_sem));
+	up_read((&EXT4_I(inode)->i_data_sem));
 
 	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED) {
 		int ret;
@@ -652,9 +641,6 @@ static int _ext4_get_block(struct inode *inode, sector_t iblock,
 	struct ext4_map_blocks map;
 	int ret = 0, started = 0;
 	int dio_credits;
-
-	if (ext4_has_inline_data(inode))
-		return -ERANGE;
 
 	map.m_lblk = iblock;
 	map.m_len = bh->b_size >> inode->i_blkbits;
@@ -2769,12 +2755,6 @@ static sector_t ext4_bmap(struct address_space *mapping, sector_t block)
 	journal_t *journal;
 	int err;
 
-	/*
-	 * We can get here for an inline file via the FIBMAP ioctl
-	 */
-	if (ext4_has_inline_data(inode))
-		return 0;
-
 	if (mapping_tagged(mapping, PAGECACHE_TAG_DIRTY) &&
 			test_opt(inode->i_sb, DELALLOC)) {
 		/*
@@ -2820,30 +2800,14 @@ static sector_t ext4_bmap(struct address_space *mapping, sector_t block)
 
 static int ext4_readpage(struct file *file, struct page *page)
 {
-	int ret = -EAGAIN;
-	struct inode *inode = page->mapping->host;
-
 	trace_ext4_readpage(page);
-
-	if (ext4_has_inline_data(inode))
-		ret = ext4_readpage_inline(inode, page);
-
-	if (ret == -EAGAIN)
-		return mpage_readpage(page, ext4_get_block);
-
-	return ret;
+	return mpage_readpage(page, ext4_get_block);
 }
 
 static int
 ext4_readpages(struct file *file, struct address_space *mapping,
 		struct list_head *pages, unsigned nr_pages)
 {
-	struct inode *inode = mapping->host;
-
-	/* If the file has inline data, no need to do readpages. */
-	if (ext4_has_inline_data(inode))
-		return 0;
-
 	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
 }
 
@@ -2933,32 +2897,6 @@ static int ext4_get_block_write(struct inode *inode, sector_t iblock,
 		   inode->i_ino, create);
 	return _ext4_get_block(inode, iblock, bh_result,
 			       EXT4_GET_BLOCKS_IO_CREATE_EXT);
-}
-
-static int ext4_get_block_write_nolock(struct inode *inode, sector_t iblock,
-		   struct buffer_head *bh_result, int flags)
-{
-	handle_t *handle = ext4_journal_current_handle();
-	struct ext4_map_blocks map;
-	int ret = 0;
-
-	ext4_debug("ext4_get_block_write_nolock: inode %lu, flag %d\n",
-		   inode->i_ino, flags);
-
-	flags = EXT4_GET_BLOCKS_NO_LOCK;
-
-	map.m_lblk = iblock;
-	map.m_len = bh_result->b_size >> inode->i_blkbits;
-
-	ret = ext4_map_blocks(handle, inode, &map, flags);
-	if (ret > 0) {
-		map_bh(bh_result, inode->i_sb, map.m_pblk);
-		bh_result->b_state = (bh_result->b_state & ~EXT4_MAP_FLAGS) |
-					map.m_flags;
-		bh_result->b_size = inode->i_sb->s_blocksize * map.m_len;
-		ret = 0;
-	}
-	return ret;
 }
 
 static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
@@ -3087,8 +3025,6 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 
 	loff_t final_size = offset + count;
 	if (rw == WRITE && final_size <= inode->i_size) {
-		int overwrite = 0;
-
 		/*
  		 * We could direct write to holes and fallocate.
 		 *
@@ -3128,22 +3064,13 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 			ext4_inode_aio_set(inode, io_end);
 		}
 
-		if (overwrite)
-			ret = __blockdev_direct_IO(rw, iocb, inode,
-						 inode->i_sb->s_bdev, iter,
-						 offset,
-						 ext4_get_block_write_nolock,
-						 ext4_end_io_dio,
-						 NULL,
-						 0);
-		else
-			ret = __blockdev_direct_IO(rw, iocb, inode,
-						 inode->i_sb->s_bdev, iter,
-						 offset,
-						 ext4_get_block_write,
-						 ext4_end_io_dio,
-						 NULL,
-						 DIO_LOCKING);
+		ret = __blockdev_direct_IO(rw, iocb, inode,
+					 inode->i_sb->s_bdev, iter,
+					 offset,
+					 ext4_get_block_write,
+					 ext4_end_io_dio,
+					 NULL,
+					 DIO_LOCKING);
 		if (iocb->private)
 			ext4_inode_aio_set(inode, NULL);
 		/*
@@ -3163,7 +3090,7 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 		if (ret != -EIOCBQUEUED && ret <= 0 && iocb->private) {
 			ext4_free_io_end(iocb->private);
 			iocb->private = NULL;
-		} else if (ret > 0 && !overwrite && ext4_test_inode_state(inode,
+		} else if (ret > 0 && ext4_test_inode_state(inode,
 						EXT4_STATE_DIO_UNWRITTEN)) {
 			int err;
 			/*
@@ -3194,10 +3121,6 @@ static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
 	 * If we are doing data journalling we don't support O_DIRECT
 	 */
 	if (ext4_should_journal_data(inode))
-		return 0;
-
-	/* Let buffer I/O handle the inline data case. */
-	if (ext4_has_inline_data(inode))
 		return 0;
 
 	trace_ext4_direct_IO_enter(inode, offset, iov_iter_count(iter), rw);
@@ -3835,10 +3758,8 @@ static inline void ext4_iget_extra_inode(struct inode *inode,
 {
 	__le32 *magic = (void *)raw_inode +
 			EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize;
-	if (*magic == cpu_to_le32(EXT4_XATTR_MAGIC)) {
+	if (*magic == cpu_to_le32(EXT4_XATTR_MAGIC))
 		ext4_set_inode_state(inode, EXT4_STATE_XATTR);
-		ext4_find_inline_data_nolock(inode);
-	}
 }
 
 struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
@@ -3909,7 +3830,6 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	set_nlink(inode, le16_to_cpu(raw_inode->i_links_count));
 
 	ext4_clear_state_flags(ei);	/* Only relevant on 32-bit archs */
-	ei->i_inline_off = 0;
 	ei->i_dir_start_lookup = 0;
 	ei->i_dtime = le32_to_cpu(raw_inode->i_dtime);
 	/* We now have enough fields to check if the inode was active or not.

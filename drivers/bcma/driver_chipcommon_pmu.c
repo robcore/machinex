@@ -95,9 +95,6 @@ static void bcma_pmu_resources_init(struct bcma_drv_cc *cc)
 		bcma_cc_write32(cc, BCMA_CC_PMU_MINRES_MSK, min_msk);
 	if (max_msk)
 		bcma_cc_write32(cc, BCMA_CC_PMU_MAXRES_MSK, max_msk);
-
-	/* Add some delay; allow resources to come up and settle. */
-	mdelay(2);
 }
 
 void bcma_pmu_swreg_init(struct bcma_drv_cc *cc)
@@ -127,11 +124,8 @@ void bcma_chipco_bcm4331_ext_pa_lines_ctl(struct bcma_drv_cc *cc, bool enable)
 		val |= BCMA_CHIPCTL_4331_EXTPA_EN;
 		if (bus->chipinfo.pkg == 9 || bus->chipinfo.pkg == 11)
 			val |= BCMA_CHIPCTL_4331_EXTPA_ON_GPIO2_5;
-		else if (bus->chipinfo.rev > 0)
-			val |= BCMA_CHIPCTL_4331_EXTPA_EN2;
 	} else {
 		val &= ~BCMA_CHIPCTL_4331_EXTPA_EN;
-		val &= ~BCMA_CHIPCTL_4331_EXTPA_EN2;
 		val &= ~BCMA_CHIPCTL_4331_EXTPA_ON_GPIO2_5;
 	}
 	bcma_cc_write32(cc, BCMA_CC_CHIPCTL, val);

@@ -47,9 +47,6 @@
 #include "gianfar.h"
 #include "fsl_pq_mdio.h"
 
-/* Number of microseconds to wait for an MII register to respond */
-#define MII_TIMEOUT	1000
-
 struct fsl_pq_mdio_priv {
 	void __iomem *map;
 	struct fsl_pq_mdio __iomem *regs;
@@ -67,8 +64,6 @@ struct fsl_pq_mdio_priv {
 int fsl_pq_local_mdio_write(struct fsl_pq_mdio __iomem *regs, int mii_id,
 		int regnum, u16 value)
 {
-	u32 status;
-
 	/* Set the PHY address and the register address we want to write */
 	out_be32(&regs->miimadd, (mii_id << 8) | regnum);
 
@@ -76,10 +71,10 @@ int fsl_pq_local_mdio_write(struct fsl_pq_mdio __iomem *regs, int mii_id,
 	out_be32(&regs->miimcon, value);
 
 	/* Wait for the transaction to finish */
-	status = spin_event_timeout(!(in_be32(&regs->miimind) &	MIIMIND_BUSY),
-				    MII_TIMEOUT, 0);
+	while (in_be32(&regs->miimind) & MIIMIND_BUSY)
+		cpu_relax();
 
-	return status ? 0 : -ETIMEDOUT;
+	return 0;
 }
 
 /*
@@ -96,7 +91,6 @@ int fsl_pq_local_mdio_read(struct fsl_pq_mdio __iomem *regs,
 		int mii_id, int regnum)
 {
 	u16 value;
-	u32 status;
 
 	/* Set the PHY address and the register address we want to read */
 	out_be32(&regs->miimadd, (mii_id << 8) | regnum);
@@ -105,12 +99,9 @@ int fsl_pq_local_mdio_read(struct fsl_pq_mdio __iomem *regs,
 	out_be32(&regs->miimcom, 0);
 	out_be32(&regs->miimcom, MII_READ_COMMAND);
 
-	/* Wait for the transaction to finish, normally less than 100us */
-	status = spin_event_timeout(!(in_be32(&regs->miimind) &
-				    (MIIMIND_NOTVALID | MIIMIND_BUSY)),
-				    MII_TIMEOUT, 0);
-	if (!status)
-		return -ETIMEDOUT;
+	/* Wait for the transaction to finish */
+	while (in_be32(&regs->miimind) & (MIIMIND_NOTVALID | MIIMIND_BUSY))
+		cpu_relax();
 
 	/* Grab the value of the register from miimstat */
 	value = in_be32(&regs->miimstat);
@@ -153,7 +144,7 @@ int fsl_pq_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 static int fsl_pq_mdio_reset(struct mii_bus *bus)
 {
 	struct fsl_pq_mdio __iomem *regs = fsl_pq_mdio_get_regs(bus);
-	u32 status;
+	int timeout = PHY_INIT_TIMEOUT;
 
 	mutex_lock(&bus->mdio_lock);
 
@@ -164,12 +155,12 @@ static int fsl_pq_mdio_reset(struct mii_bus *bus)
 	out_be32(&regs->miimcfg, MIIMCFG_INIT_VALUE);
 
 	/* Wait until the bus is free */
-	status = spin_event_timeout(!(in_be32(&regs->miimind) &	MIIMIND_BUSY),
-				    MII_TIMEOUT, 0);
+	while ((in_be32(&regs->miimind) & MIIMIND_BUSY) && timeout--)
+		cpu_relax();
 
 	mutex_unlock(&bus->mdio_lock);
 
-	if (!status) {
+	if (timeout < 0) {
 		printk(KERN_ERR "%s: The MII Bus is stuck!\n",
 				bus->name);
 		return -EBUSY;

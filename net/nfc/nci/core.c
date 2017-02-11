@@ -27,7 +27,6 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": %s: " fmt, __func__
 
-#include <linux/module.h>
 #include <linux/types.h>
 #include <linux/workqueue.h>
 #include <linux/completion.h>
@@ -878,5 +877,3 @@ static void nci_cmd_work(struct work_struct *work)
 			  jiffies + msecs_to_jiffies(NCI_CMD_TIMEOUT));
 	}
 }
-
-MODULE_LICENSE("GPL");
