@@ -1564,9 +1564,9 @@ static void ioc3_get_drvinfo (struct net_device *dev,
 {
 	struct ioc3_private *ip = netdev_priv(dev);
 
-	strlcpy(info->driver, IOC3_NAME, sizeof(info->driver));
-	strlcpy(info->version, IOC3_VERSION, sizeof(info->version));
-	strlcpy(info->bus_info, pci_name(ip->pdev), sizeof(info->bus_info));
+	strncpy(info->driver, IOC3_NAME, sizeof(info->driver));
+	strncpy(info->version, IOC3_VERSION, sizeof(info->version));
+	strncpy(info->bus_info, pci_name(ip->pdev), sizeof(info->bus_info));
 }
 
 static int ioc3_get_settings(struct net_device *dev, struct ethtool_cmd *cmd)
