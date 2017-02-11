@@ -361,7 +361,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #elif defined(BCM4334_CHIP)
 #define CIS_BUF_SIZE            256
 #else
-#define CIS_BUF_SIZE            512
+#define CIS_BUF_SIZE            256
 #endif /* BCM4330_CHIP */
 
 #define CIS_TUPLE_TAG_START		0x80
