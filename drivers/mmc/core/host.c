@@ -344,6 +344,8 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	mmc_host_clk_init(host);
 
+	host->slot.cd_irq = -EINVAL;
+
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
 	host->wlock_name = kasprintf(GFP_KERNEL,
