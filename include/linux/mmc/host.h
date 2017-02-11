@@ -11,6 +11,7 @@
 #define LINUX_MMC_HOST_H
 
 #include <linux/leds.h>
+#include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/device.h>
 #include <linux/fault-inject.h>
@@ -171,6 +172,7 @@ struct mmc_async_req {
  * struct mmc_slot - MMC slot functions
  *
  * @cd_irq:		MMC/SD-card slot hotplug detection IRQ or -EINVAL
+ * @lock:		protect the @handler_priv pointer
  * @handler_priv:	MMC/SD-card slot context
  *
  * Some MMC/SD host controllers implement slot-functions like card and
@@ -180,6 +182,7 @@ struct mmc_async_req {
  */
 struct mmc_slot {
 	int cd_irq;
+	struct mutex lock;
 	void *handler_priv;
 };
 
