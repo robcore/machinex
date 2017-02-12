@@ -997,7 +997,7 @@ int bsg_register_queue(struct request_queue *q, struct device *parent,
 {
 	struct bsg_class_device *bcd;
 	dev_t dev;
-	int ret, minor;
+	int ret;
 	struct device *class_dev = NULL;
 	const char *devname;
 
@@ -1023,10 +1023,10 @@ int bsg_register_queue(struct request_queue *q, struct device *parent,
 			printk(KERN_ERR "bsg: too many bsg devices\n");
 			ret = -EINVAL;
 		}
+		goto unlock;
+	}
 
 	bcd->minor = ret;
-
-	bcd->minor = minor;
 	bcd->queue = q;
 	bcd->parent = get_device(parent);
 	bcd->release = release;
@@ -1116,3 +1116,4 @@ MODULE_DESCRIPTION(BSG_DESCRIPTION);
 MODULE_LICENSE("GPL");
 
 device_initcall(bsg_init);
+
