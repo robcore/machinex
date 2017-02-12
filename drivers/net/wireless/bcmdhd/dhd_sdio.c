@@ -452,7 +452,6 @@ static uint watermark = 8;
 static uint mesbusyctrl = 0;
 #endif /* BCMSPI */
 
-#endif
 static const uint firstread = DHD_FIRSTREAD;
 
 /* Retry count for register access failures */
