@@ -34,10 +34,10 @@ struct kobject *block_depr;
 /* for extended dynamic devt allocation, currently only one major is used */
 #define NR_EXT_DEVT		(1 << MINORBITS)
 
-/* For extended devt allocation.  ext_devt_lock prevents look up
+/* For extended devt allocation.  ext_devt_mutex prevents look up
  * results from going away underneath its user.
  */
-static DEFINE_MUTEX(ext_devt_lock);
+static DEFINE_MUTEX(ext_devt_mutex);
 static DEFINE_IDR(ext_devt_idr);
 
 static struct device_type disk_type;
@@ -450,9 +450,9 @@ void blk_free_devt(dev_t devt)
 		return;
 
 	if (MAJOR(devt) == BLOCK_EXT_MAJOR) {
-		mutex_lock(&ext_devt_lock);
+		mutex_lock(&ext_devt_mutex);
 		idr_remove(&ext_devt_idr, blk_mangle_minor(MINOR(devt)));
-		mutex_unlock(&ext_devt_lock);
+		mutex_unlock(&ext_devt_mutex);
 	}
 }
 
@@ -749,9 +749,9 @@ struct gendisk *get_gendisk(dev_t devt, int *partno)
 	} else {
 		struct hd_struct *part;
 
-		mutex_lock(&ext_devt_lock);
+		mutex_lock(&ext_devt_mutex);
 		part = idr_find(&ext_devt_idr, blk_mangle_minor(MINOR(devt)));
-		mutex_unlock(&ext_devt_lock);
+		mutex_unlock(&ext_devt_mutex);
 		if (part && get_disk(part_to_disk(part))) {
 			*partno = part->partno;
 			disk = part_to_disk(part);
