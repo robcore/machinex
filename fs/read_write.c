@@ -4,7 +4,7 @@
  *  Copyright (C) 1991, 1992  Linus Torvalds
  */
 
-#include <linux/slab.h> 
+#include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/fcntl.h>
 #include <linux/file.h>
@@ -538,7 +538,7 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_read(f.file, buf, count, &pos);
 		file_pos_write(f.file, pos);
-		fdput(f);
+		fdput_pos(f);
 	}
 	return ret;
 }
@@ -553,7 +553,7 @@ SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_write(f.file, buf, count, &pos);
 		file_pos_write(f.file, pos);
-		fdput(f);
+		fdput_pos(f);
 	}
 
 	return ret;
@@ -599,7 +599,7 @@ SYSCALL_DEFINE(pwrite64)(unsigned int fd, const char __user *buf,
 	f = fdget(fd);
 	if (f.file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PWRITE)  
+		if (f.file->f_mode & FMODE_PWRITE)
 			ret = vfs_write(f.file, buf, count, &pos);
 		fdput(f);
 	}
@@ -861,7 +861,7 @@ SYSCALL_DEFINE3(readv, unsigned long, fd, const struct iovec __user *, vec,
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_readv(f.file, vec, vlen, &pos);
 		file_pos_write(f.file, pos);
-		fdput(f);
+		fdput_pos(f);
 	}
 
 	if (ret > 0)
@@ -880,7 +880,7 @@ SYSCALL_DEFINE3(writev, unsigned long, fd, const struct iovec __user *, vec,
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_writev(f.file, vec, vlen, &pos);
 		file_pos_write(f.file, pos);
-		fdput(f);
+		fdput_pos(f);
 	}
 
 	if (ret > 0)
