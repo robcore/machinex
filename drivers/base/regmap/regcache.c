@@ -57,8 +57,7 @@ static int regcache_hw_init(struct regmap *map)
 
 	/* calculate the size of reg_defaults */
 	for (count = 0, i = 0; i < map->num_reg_defaults_raw; i++) {
-		val = regcache_get_val(map->reg_defaults_raw,
-				       i, map->cache_word_size);
+		val = regcache_get_val(map, map->reg_defaults_raw, i);
 		if (regmap_volatile(map, i))
 			continue;
 		count++;
@@ -74,8 +73,7 @@ static int regcache_hw_init(struct regmap *map)
 	/* fill the reg_defaults */
 	map->num_reg_defaults = count;
 	for (i = 0, j = 0; i < map->num_reg_defaults_raw; i++) {
-		val = regcache_get_val(map->reg_defaults_raw,
-				       i, map->cache_word_size);
+		val = regcache_get_val(map, map->reg_defaults_raw, i);
 		if (regmap_volatile(map, i))
 			continue;
 		map->reg_defaults[j].reg = i;
@@ -408,10 +406,10 @@ void regcache_cache_bypass(struct regmap *map, bool enable)
 }
 EXPORT_SYMBOL_GPL(regcache_cache_bypass);
 
-bool regcache_set_val(void *base, unsigned int idx,
-		      unsigned int val, unsigned int word_size)
+bool regcache_set_val(struct regmap *map, void *base, unsigned int idx,
+		      unsigned int val)
 {
-	switch (word_size) {
+	switch (map->cache_word_size) {
 	case 1: {
 		u8 *cache = base;
 		if (cache[idx] == val)
@@ -439,13 +437,13 @@ bool regcache_set_val(void *base, unsigned int idx,
 	return false;
 }
 
-unsigned int regcache_get_val(const void *base, unsigned int idx,
-			      unsigned int word_size)
+unsigned int regcache_get_val(struct regmap *map, const void *base,
+			      unsigned int idx)
 {
 	if (!base)
 		return -EINVAL;
 
-	switch (word_size) {
+	switch (map->cache_word_size) {
 	case 1: {
 		const u8 *cache = base;
 		return cache[idx];
