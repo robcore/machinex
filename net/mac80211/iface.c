@@ -271,6 +271,9 @@ static int ieee80211_do_open(struct net_device *dev, bool coming_up)
 
 		ieee80211_adjust_monitor_flags(sdata, 1);
 		ieee80211_configure_filter(local);
+		mutex_lock(&local->mtx);
+		ieee80211_recalc_idle(local);
+		mutex_unlock(&local->mtx);
 
 		netif_carrier_on(dev);
 		break;
@@ -514,6 +517,9 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 
 		ieee80211_adjust_monitor_flags(sdata, -1);
 		ieee80211_configure_filter(local);
+		mutex_lock(&local->mtx);
+		ieee80211_recalc_idle(local);
+		mutex_unlock(&local->mtx);
 		break;
 	default:
 		mutex_lock(&local->mtx);
