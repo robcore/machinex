@@ -1801,7 +1801,19 @@ static int ext4_da_map_blocks(struct inode *inode, sector_t iblock,
 	 * file system block.
 	 */
 	down_read((&EXT4_I(inode)->i_data_sem));
-	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+	if (ext4_has_inline_data(inode)) {
+		/*
+		 * We will soon create blocks for this page, and let
+		 * us pretend as if the blocks aren't allocated yet.
+		 * In case of clusters, we have to handle the work
+		 * of mapping from cluster so that the reserved space
+		 * is calculated properly.
+		 */
+		if ((EXT4_SB(inode->i_sb)->s_cluster_ratio > 1) &&
+		    ext4_find_delalloc_cluster(inode, map->m_lblk))
+			map->m_flags |= EXT4_MAP_FROM_CLUSTER;
+		retval = 0;
+	} else if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
 		retval = ext4_ext_map_blocks(NULL, inode, map, 0);
 	else
 		retval = ext4_ind_map_blocks(NULL, inode, map, 0);
@@ -1852,8 +1864,8 @@ out_unlock:
  * We also have b_blocknr = physicalblock mapping unwritten extent and b_bdev
  * initialized properly.
  */
-static int ext4_da_get_block_prep(struct inode *inode, sector_t iblock,
-				  struct buffer_head *bh, int create)
+int ext4_da_get_block_prep(struct inode *inode, sector_t iblock,
+			   struct buffer_head *bh, int create)
 {
 	struct ext4_map_blocks map;
 	int ret = 0;
@@ -2146,7 +2158,8 @@ static int ext4_da_writepages_trans_blocks(struct inode *inode)
  * mpage_da_map_and_submit to map a single contiguous memory region
  * and then write them.
  */
-static int write_cache_pages_da(struct address_space *mapping,
+static int write_cache_pages_da(handle_t *handle,
+				struct address_space *mapping,
 				struct writeback_control *wbc,
 				struct mpage_da_data *mpd,
 				pgoff_t *done_index)
@@ -2224,6 +2237,17 @@ static int write_cache_pages_da(struct address_space *mapping,
 
 			wait_on_page_writeback(page);
 			BUG_ON(PageWriteback(page));
+
+			/*
+			 * If we have inline data and arrive here, it means that
+			 * we will soon create the block for the 1st page, so
+			 * we'd better clear the inline data here.
+			 */
+			if (ext4_has_inline_data(inode)) {
+				BUG_ON(ext4_test_inode_state(inode,
+						EXT4_STATE_MAY_INLINE_DATA));
+				ext4_destroy_inline_data(handle, inode);
+			}
 
 			if (mpd->next_page != page->index)
 				mpd->first_page = page->index;
@@ -2442,7 +2466,8 @@ retry:
 		 * contiguous region of logical blocks that need
 		 * blocks to be allocated by ext4 and submit them.
 		 */
-		ret = write_cache_pages_da(mapping, wbc, &mpd, &done_index);
+		ret = write_cache_pages_da(handle, mapping,
+					   wbc, &mpd, &done_index);
 		/*
 		 * If we have a contiguous extent of pages and we
 		 * haven't done the I/O yet, map the blocks and submit
@@ -2506,7 +2531,6 @@ out_writepages:
 	return ret;
 }
 
-#define FALL_BACK_TO_NONDELALLOC 1
 static int ext4_nonda_switch(struct super_block *sb)
 {
 	s64 free_blocks, dirty_blocks;
@@ -2573,6 +2597,19 @@ static int ext4_da_write_begin(struct file *file, struct address_space *mapping,
 	}
 	*fsdata = (void *)0;
 	trace_ext4_da_write_begin(inode, pos, len, flags);
+
+	if (ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+		ret = ext4_da_write_inline_data_begin(mapping, inode,
+						      pos, len, flags,
+						      pagep, fsdata);
+		if (ret < 0)
+			goto out;
+		if (ret == 1) {
+			ret = 0;
+			goto out;
+		}
+	}
+
 	/*
 	 * grab_cache_page_write_begin() can take a long time if the
 	 * system is thrashing due to memory pressure, or if the page
@@ -2691,10 +2728,10 @@ static int ext4_da_write_end(struct file *file,
 	 * changes.  So let's piggyback the i_disksize mark_inode_dirty
 	 * into that.
 	 */
-
 	new_i_size = pos + copied;
 	if (copied && new_i_size > EXT4_I(inode)->i_disksize) {
-		if (ext4_da_should_update_i_disksize(page, end)) {
+		if (ext4_has_inline_data(inode) ||
+		    ext4_da_should_update_i_disksize(page, end)) {
 			down_write(&EXT4_I(inode)->i_data_sem);
 			if (new_i_size > EXT4_I(inode)->i_disksize) {
 #ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK
@@ -2718,8 +2755,16 @@ static int ext4_da_write_end(struct file *file,
 			ext4_mark_inode_dirty(handle, inode);
 		}
 	}
-	ret2 = generic_write_end(file, mapping, pos, len, copied,
+
+	if (write_mode != CONVERT_INLINE_DATA &&
+	    ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA) &&
+	    ext4_has_inline_data(inode))
+		ret2 = ext4_da_write_inline_data_end(inode, pos, len, copied,
+						     page);
+	else
+		ret2 = generic_write_end(file, mapping, pos, len, copied,
 							page, fsdata);
+
 	copied = ret2;
 	if (ret2 < 0)
 		ret = ret2;
