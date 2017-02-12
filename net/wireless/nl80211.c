@@ -1064,7 +1064,7 @@ static int nl80211_dump_wiphy(struct sk_buff *skb, struct netlink_callback *cb)
 			continue;
 		ret = nl80211_send_wiphy(skb, NETLINK_CB(cb->skb).pid,
 				       cb->nlh->nlmsg_seq, NLM_F_MULTI,
-				       dev)
+				       dev);
 		if (ret < 0) {
 			/*
 			 * If sending the wiphy data didn't fit (ENOBUFS or
