@@ -577,7 +577,7 @@ __hw_perf_event_init(struct perf_event *event)
 
 	err = 0;
 	if (event->group_leader != event) {
-		err = validate_group(event);
+		err = validate_group(event)
 		if (err)
 			return -EINVAL;
 	}
