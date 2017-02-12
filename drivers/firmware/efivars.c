@@ -1149,6 +1149,7 @@ static struct attribute *efi_subsys_attrs[] = {
 static struct attribute_group efi_subsys_attr_group = {
 	.attrs = efi_subsys_attrs,
 };
+MODULE_ALIAS_FS("efivarfs");
 
 static struct kobject *efi_kobj;
 
