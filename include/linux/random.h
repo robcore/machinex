@@ -16,6 +16,7 @@ extern void add_interrupt_randomness(int irq, int irq_flags);
 
 extern void get_random_bytes(void *buf, int nbytes);
 extern void get_random_bytes_arch(void *buf, int nbytes);
+void erandom_get_random_bytes(char *buf, size_t count);
 void generate_random_uuid(unsigned char uuid_out[16]);
 extern int random_int_secret_init(void);
 
@@ -94,5 +95,3 @@ static inline int arch_has_random_seed(void)
 #endif
 
 #endif /* _LINUX_RANDOM_H */
-
-void erandom_get_random_bytes(char *buf, size_t count);

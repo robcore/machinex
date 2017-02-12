@@ -393,7 +393,7 @@ start_readmac:
 		set_fs(get_ds());
 
 		/* Generating the Random Bytes for 3 last octects of the MAC address */
-		get_random_bytes(randommac, 3);
+		erandom_get_random_bytes(randommac, 3);
 
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x00, 0x12, 0x34, randommac[0], randommac[1], randommac[2]);
@@ -710,7 +710,7 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 
 	if ((g_imac_flag == MACADDR_COB_RANDOM) ||
 	    (g_imac_flag == MACADDR_MOD_RANDOM)) {
-		get_random_bytes(randommac, 3);
+		erandom_get_random_bytes(randommac, 3);
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x60, 0xd0, 0xa9, randommac[0], randommac[1],
 			randommac[2]);
@@ -765,7 +765,7 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 		/* Generating the Random Bytes for
 		 * 3 last octects of the MAC address
 		 */
-		get_random_bytes(randommac, 3);
+		erandom_get_random_bytes(randommac, 3);
 
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x60, 0xd0, 0xa9, randommac[0],
