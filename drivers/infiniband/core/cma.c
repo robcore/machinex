@@ -2114,23 +2114,33 @@ static int cma_alloc_port(struct idr *ps, struct rdma_id_private *id_priv,
 			  unsigned short snum)
 {
 	struct rdma_bind_list *bind_list;
-	int ret;
+	int port, ret;
 
 	bind_list = kzalloc(sizeof *bind_list, GFP_KERNEL);
 	if (!bind_list)
 		return -ENOMEM;
 
-	ret = idr_alloc(ps, bind_list, snum, snum + 1, GFP_KERNEL);
-	if (ret < 0)
-		goto err;
+	do {
+		ret = idr_get_new_above(ps, bind_list, snum, &port);
+	} while ((ret == -EAGAIN) && idr_pre_get(ps, GFP_KERNEL));
+
+	if (ret)
+		goto err1;
+
+	if (port != snum) {
+		ret = -EADDRNOTAVAIL;
+		goto err2;
+	}
 
 	bind_list->ps = ps;
-	bind_list->port = (unsigned short)ret;
+	bind_list->port = (unsigned short) port;
 	cma_bind_port(bind_list, id_priv);
 	return 0;
-err:
+err2:
+	idr_remove(ps, port);
+err1:
 	kfree(bind_list);
-	return ret == -ENOSPC ? -EADDRNOTAVAIL : ret;
+	return ret;
 }
 
 static int cma_alloc_any_port(struct idr *ps, struct rdma_id_private *id_priv)

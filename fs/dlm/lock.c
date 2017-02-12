@@ -677,7 +677,7 @@ static void detach_lkb(struct dlm_lkb *lkb)
 static int create_lkb(struct dlm_ls *ls, struct dlm_lkb **lkb_ret)
 {
 	struct dlm_lkb *lkb;
-	int rv;
+	int rv, id;
 
 	lkb = dlm_allocate_lkb(ls);
 	if (!lkb)
@@ -693,13 +693,19 @@ static int create_lkb(struct dlm_ls *ls, struct dlm_lkb **lkb_ret)
 	mutex_init(&lkb->lkb_cb_mutex);
 	INIT_WORK(&lkb->lkb_cb_work, dlm_callback_work);
 
-	idr_preload(GFP_NOFS);
+ retry:
+	rv = idr_pre_get(&ls->ls_lkbidr, GFP_NOFS);
+	if (!rv)
+		return -ENOMEM;
+
 	spin_lock(&ls->ls_lkbidr_spin);
-	rv = idr_alloc(&ls->ls_lkbidr, lkb, 1, 0, GFP_NOWAIT);
-	if (rv >= 0)
-		lkb->lkb_id = rv;
+	rv = idr_get_new_above(&ls->ls_lkbidr, lkb, 1, &id);
+	if (!rv)
+		lkb->lkb_id = id;
 	spin_unlock(&ls->ls_lkbidr_spin);
-	idr_preload_end();
+
+	if (rv == -EAGAIN)
+		goto retry;
 
 	if (rv < 0) {
 		log_error(ls, "create_lkb idr error %d", rv);
