@@ -41,13 +41,13 @@ MODULE_LICENSE("GPL");
 
 void phy_device_free(struct phy_device *phydev)
 {
-	kfree(phydev);
+	put_device(&phydev->dev);
 }
 EXPORT_SYMBOL(phy_device_free);
 
 static void phy_device_release(struct device *dev)
 {
-	phy_device_free(to_phy_device(dev));
+	kfree(to_phy_device(dev));
 }
 
 static struct phy_driver genphy_driver;
@@ -195,6 +195,8 @@ static struct phy_device* phy_device_create(struct mii_bus *bus,
 	   there's no driver _already_ loaded. */
 	request_module(MDIO_MODULE_PREFIX MDIO_ID_FMT, MDIO_ID_ARGS(phy_id));
 
+	device_initialize(&dev->dev);
+
 	return dev;
 }
 
@@ -277,9 +279,9 @@ int phy_device_register(struct phy_device *phydev)
 	/* Run all of the fixups for this PHY */
 	phy_scan_fixups(phydev);
 
-	err = device_register(&phydev->dev);
+	err = device_add(&phydev->dev);
 	if (err) {
-		pr_err("phy %d failed to register\n", phydev->addr);
+		pr_err("PHY %d failed to add\n", phydev->addr);
 		goto out;
 	}
 
