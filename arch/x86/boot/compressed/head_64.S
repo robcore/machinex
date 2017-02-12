@@ -46,7 +46,7 @@ ENTRY(startup_32)
 	jnz 1f
 
 	cli
-	movl	$(__KERNEL_DS), %eax
+	movl	$(__BOOT_DS), %eax
 	movl	%eax, %ds
 	movl	%eax, %es
 	movl	%eax, %ss
