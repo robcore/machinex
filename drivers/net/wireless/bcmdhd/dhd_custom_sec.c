@@ -842,6 +842,7 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 	struct file *fp = NULL;
 	mm_segment_t oldfs = {0};
 	int ret = 0;
+	char *filepath_cid = CIDINFO;
 
 	/* File is always created. */
 	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0660);
