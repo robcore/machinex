@@ -440,19 +440,18 @@ static bool sd1idle;
 static bool retrydata;
 #define RETRYCHAN(chan) (((chan) == SDPCM_EVENT_CHANNEL) || retrydata)
 
-#ifndef(SDIO_CRC_ERROR_FIX)
 #ifdef BCMSPI
 /* At a watermark around 8 the spid hits underflow error. */
 static uint watermark = 32;
 static uint mesbusyctrl = 0;
+#elif defined(SDIO_CRC_ERROR_FIX)
+static uint watermark = 48;
+static uint mesbusyctrl = 80;
 #else
 static uint watermark = 8;
 static uint mesbusyctrl = 0;
 #endif /* BCMSPI */
-#endif /*CRC*/
-#if defined(SDIO_CRC_ERROR_FIX)
-static uint watermark = 48;
-static uint mesbusyctrl = 80;
+
 #endif
 static const uint firstread = DHD_FIRSTREAD;
 
