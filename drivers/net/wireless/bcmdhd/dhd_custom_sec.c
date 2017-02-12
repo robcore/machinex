@@ -38,7 +38,6 @@
 
 #include <linux/fcntl.h>
 #include <linux/fs.h>
-#include <linux/file.h>
 
 struct dhd_info;
 extern int _dhd_set_mac_address(struct dhd_info *dhd,
@@ -843,9 +842,10 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 	struct file *fp = NULL;
 	mm_segment_t oldfs = {0};
 	int ret;
+	filepath_cid = "/data/.cid.info";
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT | O_SYNC, 0664);
+	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0660);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
 		return -1;
@@ -1546,7 +1546,7 @@ int write_filesystem(struct file *file, unsigned long long offset,
 	oldfs = get_fs();
 	set_fs(get_ds());
 
-	ret = do_sync_write(file, data, size, &offset);
+	ret = vfs_write(file, data, size, &offset);
 
 	set_fs(oldfs);
 	return ret;
