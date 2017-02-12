@@ -134,7 +134,6 @@ cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-	sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
@@ -292,7 +291,6 @@ cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make C=1 SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-	sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
@@ -451,7 +449,6 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 	make CONFIG_DEBUG_SECTION_MISMATCH=y SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 		if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-			sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 			cd /media/root/robcore/AIK;
 			cp -R -p machina-new $OUTFOLDER;
 		if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
@@ -595,7 +592,6 @@ cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-	sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/canadefconfig
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
