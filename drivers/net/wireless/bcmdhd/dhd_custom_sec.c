@@ -361,7 +361,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #elif defined(BCM4334_CHIP)
 #define CIS_BUF_SIZE            256
 #else
-#define CIS_BUF_SIZE            512
+#define CIS_BUF_SIZE            128
 #endif /* BCM4330_CHIP */
 
 #define CIS_TUPLE_TAG_START		0x80
@@ -844,7 +844,7 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 	int ret = 0;
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
+	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0660);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
 		return -1;
