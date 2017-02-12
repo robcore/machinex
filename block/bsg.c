@@ -997,7 +997,7 @@ int bsg_register_queue(struct request_queue *q, struct device *parent,
 {
 	struct bsg_class_device *bcd;
 	dev_t dev;
-	int ret;
+	int ret, minor;
 	struct device *class_dev = NULL;
 	const char *devname;
 
