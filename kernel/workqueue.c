@@ -304,8 +304,8 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	     (pool) < &per_cpu(cpu_worker_pools, cpu)[NR_STD_WORKER_POOLS]; \
 	     (pool)++)
 
-#define for_each_busy_worker(worker, i, pool)				\
-	hash_for_each(pool->busy_hash, i, worker, hentry)
+#define for_each_busy_worker(worker, i, pos, pool)			\
+	hash_for_each(pool->busy_hash, i, pos, worker, hentry)
 
 /**
  * for_each_pool - iterate through all worker_pools in the system
@@ -913,8 +913,9 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
 						 struct work_struct *work)
 {
 	struct worker *worker;
+	struct hlist_node *tmp;
 
-	hash_for_each_possible(pool->busy_hash, worker, hentry,
+	hash_for_each_possible(pool->busy_hash, worker, tmp, hentry,
 			       (unsigned long)work)
 		if (worker->current_work == work &&
 		    worker->current_func == work->func)
@@ -1640,6 +1641,7 @@ static void busy_worker_rebind_fn(struct work_struct *work)
 static void rebind_workers(struct worker_pool *pool)
 {
 	struct worker *worker, *n;
+	struct hlist_node *pos;
 	int i;
 
 	lockdep_assert_held(&pool->manager_mutex);
@@ -1661,7 +1663,7 @@ static void rebind_workers(struct worker_pool *pool)
 	}
 
 	/* rebind busy workers */
-	for_each_busy_worker(worker, i, pool) {
+	for_each_busy_worker(worker, i, pos, pool) {
 		struct work_struct *rebind_work = &worker->rebind_work;
 		struct workqueue_struct *wq;
 
@@ -4112,6 +4114,7 @@ static void wq_unbind_fn(struct work_struct *work)
 	int cpu = smp_processor_id();
 	struct worker_pool *pool;
 	struct worker *worker;
+	struct hlist_node *pos;
 	int i;
 
 	for_each_cpu_worker_pool(pool, cpu) {
@@ -4130,7 +4133,7 @@ static void wq_unbind_fn(struct work_struct *work)
 		list_for_each_entry(worker, &pool->idle_list, entry)
 			worker->flags |= WORKER_UNBOUND;
 
-		for_each_busy_worker(worker, i, pool)
+		for_each_busy_worker(worker, i, pos, pool)
 			worker->flags |= WORKER_UNBOUND;
 
 		pool->flags |= POOL_DISASSOCIATED;
