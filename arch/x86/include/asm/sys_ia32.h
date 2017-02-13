@@ -75,9 +75,6 @@ asmlinkage long sys32_sigaltstack(const stack_ia32_t __user *,
 asmlinkage long sys32_sigreturn(struct pt_regs *);
 asmlinkage long sys32_rt_sigreturn(struct pt_regs *);
 
-/* ia32/ipc32.c */
-asmlinkage long sys32_ipc(u32, int, int, int, compat_uptr_t, u32);
-
 asmlinkage long sys32_fanotify_mark(int, unsigned int, u32, u32, int,
 				    const char __user *);
 
