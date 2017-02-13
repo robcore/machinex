@@ -488,7 +488,7 @@ static int __devinit twl6030_usb_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __exit twl6030_usb_remove(struct platform_device *pdev)
+static int twl6030_usb_remove(struct platform_device *pdev)
 {
 	struct twl6030_usb *twl = platform_get_drvdata(pdev);
 
@@ -514,7 +514,7 @@ static int __exit twl6030_usb_remove(struct platform_device *pdev)
 
 static struct platform_driver twl6030_usb_driver = {
 	.probe		= twl6030_usb_probe,
-	.remove		= __exit_p(twl6030_usb_remove),
+	.remove		= twl6030_usb_remove,
 	.driver		= {
 		.name	= "twl6030_usb",
 		.owner	= THIS_MODULE,

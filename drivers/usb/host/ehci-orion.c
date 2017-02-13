@@ -283,7 +283,7 @@ err1:
 	return err;
 }
 
-static int __exit ehci_orion_drv_remove(struct platform_device *pdev)
+static int ehci_orion_drv_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 
@@ -299,7 +299,7 @@ MODULE_ALIAS("platform:orion-ehci");
 
 static struct platform_driver ehci_orion_driver = {
 	.probe		= ehci_orion_drv_probe,
-	.remove		= __exit_p(ehci_orion_drv_remove),
+	.remove		= ehci_orion_drv_remove,
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver.name	= "orion-ehci",
 };

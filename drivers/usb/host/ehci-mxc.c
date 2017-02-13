@@ -274,7 +274,7 @@ err_alloc:
 	return ret;
 }
 
-static int __exit ehci_mxc_drv_remove(struct platform_device *pdev)
+static int ehci_mxc_drv_remove(struct platform_device *pdev)
 {
 	struct mxc_usbh_platform_data *pdata = pdev->dev.platform_data;
 	struct ehci_mxc_priv *priv = platform_get_drvdata(pdev);
