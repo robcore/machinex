@@ -654,7 +654,7 @@ static void qfq_make_eligible(struct qfq_sched *q, u64 old_V)
 	unsigned long old_vslot = old_V >> QFQ_MIN_SLOT_SHIFT;
 
 	if (vslot != old_vslot) {
-		unsigned long mask = (1UL << fls(vslot ^ old_vslot)) - 1;
+		unsigned long mask = (1ULL << fls(vslot ^ old_vslot)) - 1;
 		qfq_move_groups(q, mask, IR, ER);
 		qfq_move_groups(q, mask, IB, EB);
 	}
