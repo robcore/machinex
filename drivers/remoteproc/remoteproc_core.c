@@ -308,6 +308,11 @@ __rproc_handle_vring(struct rproc_vdev *rvdev, struct fw_rsc_vdev *rsc, int i)
 	/* actual size of vring (in bytes) */
 	size = PAGE_ALIGN(vring_size(vring->num, vring->align));
 
+	if (!idr_pre_get(&rproc->notifyids, GFP_KERNEL)) {
+		dev_err(dev, "idr_pre_get failed\n");
+		return -ENOMEM;
+	}
+
 	/*
 	 * Allocate non-cacheable memory for the vring. In the future
 	 * this call will also configure the IOMMU for us
@@ -320,13 +325,12 @@ __rproc_handle_vring(struct rproc_vdev *rvdev, struct fw_rsc_vdev *rsc, int i)
 
 	/* assign an rproc-wide unique index for this vring */
 	/* TODO: assign a notifyid for rvdev updates as well */
-	ret = idr_alloc(&rproc->notifyids, &rvdev->vring[i], 0, 0, GFP_KERNEL);
+	ret = idr_get_new(&rproc->notifyids, &rvdev->vring[i], &notifyid);
 	if (ret) {
-		dev_err(dev, "idr_alloc failed: %d\n", ret);
+		dev_err(dev, "idr_get_new failed: %d\n", ret);
 		dma_free_coherent(dev, size, va, dma);
 		return ret;
 	}
-	notifyid = ret;
 
 	/* let the rproc know the da and notifyid of this vring */
 	/* TODO: expose this to remote processor */
@@ -1516,6 +1520,7 @@ EXPORT_SYMBOL(rproc_alloc);
  */
 void rproc_free(struct rproc *rproc)
 {
+	idr_remove_all(&rproc->notifyids);
 	idr_destroy(&rproc->notifyids);
 
 	kfree(rproc);
