@@ -103,6 +103,8 @@ static int nfs4_map_errors(int err)
 		return -EINVAL;
 	case -NFS4ERR_SHARE_DENIED:
 		return -EACCES;
+	case -NFS4ERR_FILE_OPEN:
+		return -EBUSY;
 	default:
 		dprintk("%s could not handle NFSv4 error %d\n",
 				__func__, -err);
