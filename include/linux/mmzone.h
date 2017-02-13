@@ -553,7 +553,7 @@ unsigned long zone_nr_free_pages(struct zone *zone);
 #define zone_nr_free_pages(zone) zone_page_state(zone, NR_FREE_PAGES)
 #endif /* CONFIG_SMP */
 
-static inline unsigned zone_end_pfn(const struct zone *zone)
+static inline unsigned long zone_end_pfn(const struct zone *zone)
 {
 	return zone->zone_start_pfn + zone->spanned_pages;
 }
