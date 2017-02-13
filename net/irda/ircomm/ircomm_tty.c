@@ -303,7 +303,7 @@ static int ircomm_tty_block_til_ready(struct ircomm_tty_cb *self,
 			ircomm_param_request(self, IRCOMM_DTE, TRUE);
 		}
 
-		current->state = TASK_INTERRUPTIBLE;
+		set_current_state(TASK_INTERRUPTIBLE);
 
 		if (tty_hung_up_p(filp) ||
 		    !test_bit(ASYNC_B_INITIALIZED, &self->flags)) {
