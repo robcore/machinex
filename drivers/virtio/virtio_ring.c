@@ -24,27 +24,6 @@
 #include <linux/module.h>
 #include <linux/hrtimer.h>
 
-/* virtio guest is communicating with a virtual "device" that actually runs on
- * a host processor.  Memory barriers are used to control SMP effects. */
-#ifdef CONFIG_SMP
-/* Where possible, use SMP barriers which are more lightweight than mandatory
- * barriers, because mandatory barriers control MMIO effects on accesses
- * through relaxed memory I/O windows (which virtio-pci does not use). */
-#define virtio_mb(vq) \
-	do { if ((vq)->weak_barriers) smp_mb(); else mb(); } while(0)
-#define virtio_rmb(vq) \
-	do { if ((vq)->weak_barriers) smp_rmb(); else rmb(); } while(0)
-#define virtio_wmb(vq) \
-	do { if ((vq)->weak_barriers) smp_wmb(); else wmb(); } while(0)
-#else
-/* We must force memory ordering even if guest is UP since host could be
- * running on another CPU, but SMP barriers are defined to barrier() in that
- * configuration. So fall back to mandatory barriers instead. */
-#define virtio_mb(vq) mb()
-#define virtio_rmb(vq) rmb()
-#define virtio_wmb(vq) wmb()
-#endif
-
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
 #define BAD_RING(_vq, fmt, args...)				\
@@ -281,7 +260,7 @@ add_head:
 
 	/* Descriptors and available array need to be set before we expose the
 	 * new available array entries. */
-	virtio_wmb(vq);
+	virtio_wmb(vq->weak_barriers);
 	vq->vring.avail->idx++;
 	vq->num_added++;
 
@@ -316,7 +295,7 @@ static bool vring_kick_prepare(struct virtqueue *_vq)
 	START_USE(vq);
 	/* We need to expose available array entries before checking avail
 	 * event. */
-	virtio_mb(vq);
+	virtio_mb(vq->weak_barriers);
 
 	old = vq->vring.avail->idx - vq->num_added;
 	new = vq->vring.avail->idx;
@@ -437,7 +416,7 @@ static void *vring_get_buf(struct virtqueue *_vq, unsigned int *len)
 	}
 
 	/* Only get used array entries after they have been exposed by host. */
-	virtio_rmb(vq);
+	virtio_rmb(vq->weak_barriers);
 
 	last_used = (vq->last_used_idx & (vq->vring.num - 1));
 	i = vq->vring.used->ring[last_used].id;
@@ -461,7 +440,7 @@ static void *vring_get_buf(struct virtqueue *_vq, unsigned int *len)
 	 * the read in the next get_buf call. */
 	if (!(vq->vring.avail->flags & VRING_AVAIL_F_NO_INTERRUPT)) {
 		vring_used_event(&vq->vring) = vq->last_used_idx;
-		virtio_mb(vq);
+		virtio_mb(vq->weak_barriers);
 	}
 
 #ifdef DEBUG
@@ -532,7 +511,7 @@ bool virtqueue_poll(struct virtqueue *_vq, unsigned last_used_idx)
 {
 	struct vring_virtqueue *vq = to_vvq(_vq);
 
-	virtio_mb(vq);
+	virtio_mb(vq->weak_barriers);
 	return (u16)last_used_idx != vq->vring.used->idx;
 }
 EXPORT_SYMBOL_GPL(virtqueue_poll);
@@ -583,7 +562,7 @@ static bool vring_enable_cb_delayed(struct virtqueue *_vq)
 	/* TODO: tune this threshold */
 	bufs = (u16)(vq->vring.avail->idx - vq->last_used_idx) * 3 / 4;
 	vring_used_event(&vq->vring) = vq->last_used_idx + bufs;
-	virtio_mb(vq);
+	virtio_mb(vq->weak_barriers);
 	if (unlikely((u16)(vq->vring.used->idx - vq->last_used_idx) > bufs)) {
 		END_USE(vq);
 		return false;
