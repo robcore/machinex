@@ -34,7 +34,7 @@ struct vb2_dc_buf {
 
 static void vb2_dma_contig_put(void *buf_priv);
 
-static void *vb2_dma_contig_alloc(void *alloc_ctx, unsigned long size)
+static void *vb2_dma_contig_alloc(void *alloc_ctx, unsigned long size, gfp_t gfp_flags)
 {
 	struct vb2_dc_conf *conf = alloc_ctx;
 	struct vb2_dc_buf *buf;
@@ -44,7 +44,7 @@ static void *vb2_dma_contig_alloc(void *alloc_ctx, unsigned long size)
 		return ERR_PTR(-ENOMEM);
 
 	buf->vaddr = dma_alloc_coherent(conf->dev, size, &buf->dma_addr,
-					GFP_KERNEL);
+					GFP_KERNEL | gfp_flags);
 	if (!buf->vaddr) {
 		dev_err(conf->dev, "dma_alloc_coherent of size %ld failed\n",
 			size);
