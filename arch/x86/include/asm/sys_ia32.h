@@ -52,7 +52,6 @@ asmlinkage long sys32_pread(unsigned int, char __user *, u32, u32, u32);
 asmlinkage long sys32_pwrite(unsigned int, const char __user *, u32, u32, u32);
 
 asmlinkage long sys32_personality(unsigned long);
-asmlinkage long sys32_sendfile(int, int, compat_off_t __user *, s32);
 
 asmlinkage long sys32_execve(const char __user *, compat_uptr_t __user *,
 			     compat_uptr_t __user *, struct pt_regs *);

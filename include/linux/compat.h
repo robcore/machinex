@@ -616,7 +616,8 @@ asmlinkage ssize_t compat_sys_process_vm_writev(compat_pid_t pid,
 
 asmlinkage long compat_sys_sendfile(int out_fd, int in_fd,
 				    compat_off_t __user *offset, compat_size_t count);
-
+asmlinkage long compat_sys_sendfile64(int out_fd, int in_fd,
+				    compat_loff_t __user *offset, compat_size_t count);
 asmlinkage long compat_sys_sched_rr_get_interval(compat_pid_t pid,
 						 struct compat_timespec __user *interval);
 
