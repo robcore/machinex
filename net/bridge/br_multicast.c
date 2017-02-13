@@ -138,7 +138,7 @@ static struct net_bridge_mdb_entry *br_mdb_ip6_get(
 #endif
 
 struct net_bridge_mdb_entry *br_mdb_get(struct net_bridge *br,
-					struct sk_buff *skb, u16 vid)
+					struct sk_buff *skb)
 {
 	struct net_bridge_mdb_htable *mdb = rcu_dereference(br->mdb);
 	struct br_ip ip;
@@ -150,7 +150,6 @@ struct net_bridge_mdb_entry *br_mdb_get(struct net_bridge *br,
 		return NULL;
 
 	ip.proto = skb->protocol;
-	ip.vid = vid;
 
 	switch (skb->protocol) {
 	case htons(ETH_P_IP):
