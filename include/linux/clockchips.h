@@ -197,6 +197,7 @@ extern void clockevents_resume(void);
 extern int clockevents_notify(unsigned long reason, void *arg);
 #else
 static inline int clockevents_notify(unsigned long reason, void *arg) { return 0; }
+static inline int tick_check_broadcast_expired(void) { return 0; }
 #endif
 
 #else /* CONFIG_GENERIC_CLOCKEVENTS_BUILD */
