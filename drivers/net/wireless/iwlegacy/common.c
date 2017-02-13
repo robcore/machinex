@@ -4851,7 +4851,7 @@ il_add_beacon_time(struct il_priv *il, u32 base, u32 addon,
 }
 EXPORT_SYMBOL(il_add_beacon_time);
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 
 int
 il_pci_suspend(struct device *device)
@@ -4911,7 +4911,7 @@ const struct dev_pm_ops il_pm_ops = {
 };
 EXPORT_SYMBOL(il_pm_ops);
 
-#endif /* CONFIG_PM */
+#endif /* CONFIG_PM_SLEEP */
 
 static void
 il_update_qos(struct il_priv *il)
