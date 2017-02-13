@@ -875,6 +875,7 @@ struct netns_ipvs {
 	int			sysctl_expire_quiescent_template;
 	int			sysctl_sync_threshold[2];
 	int			sysctl_nat_icmp_send;
+	int			sysctl_backup_only;
 
 	/* ip_vs_lblc */
 	int			sysctl_lblc_expiration;
@@ -930,6 +931,12 @@ static inline int sysctl_sync_ver(struct netns_ipvs *ipvs)
 	return ipvs->sysctl_sync_ver;
 }
 
+static inline int sysctl_backup_only(struct netns_ipvs *ipvs)
+{
+	return ipvs->sync_state & IP_VS_STATE_BACKUP &&
+	       ipvs->sysctl_backup_only;
+}
+
 #else
 
 static inline int sysctl_sync_threshold(struct netns_ipvs *ipvs)
@@ -945,6 +952,11 @@ static inline int sysctl_sync_period(struct netns_ipvs *ipvs)
 static inline int sysctl_sync_ver(struct netns_ipvs *ipvs)
 {
 	return DEFAULT_SYNC_VER;
+}
+
+static inline int sysctl_backup_only(struct netns_ipvs *ipvs)
+{
+	return 0;
 }
 
 #endif

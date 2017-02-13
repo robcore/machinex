@@ -1517,7 +1517,8 @@ ip_vs_in(unsigned int hooknum, struct sk_buff *skb, int af)
 	}
 	/* ipvs enabled in this netns ? */
 	net = skb_net(skb);
-	if (!net_ipvs(net)->enable)
+	ipvs = net_ipvs(net);
+	if (unlikely(sysctl_backup_only(ipvs) || !ipvs->enable))
 		return NF_ACCEPT;
 
 	ip_vs_fill_iphdr(af, skb_network_header(skb), &iph);
@@ -1578,7 +1579,6 @@ ip_vs_in(unsigned int hooknum, struct sk_buff *skb, int af)
 	}
 
 	IP_VS_DBG_PKT(11, af, pp, skb, 0, "Incoming packet");
-	ipvs = net_ipvs(net);
 	/* Check the server status */
 	if (cp->dest && !(cp->dest->flags & IP_VS_DEST_F_AVAILABLE)) {
 		/* the destination server is not available */
@@ -1733,13 +1733,15 @@ ip_vs_forward_icmp(unsigned int hooknum, struct sk_buff *skb,
 {
 	int r;
 	struct net *net;
+	struct netns_ipvs *ipvs;
 
 	if (ip_hdr(skb)->protocol != IPPROTO_ICMP)
 		return NF_ACCEPT;
 
 	/* ipvs enabled in this netns ? */
 	net = skb_net(skb);
-	if (!net_ipvs(net)->enable)
+	ipvs = net_ipvs(net);
+	if (unlikely(sysctl_backup_only(ipvs) || !ipvs->enable))
 		return NF_ACCEPT;
 
 	return ip_vs_in_icmp(skb, &r, hooknum);
@@ -1753,13 +1755,15 @@ ip_vs_forward_icmp_v6(unsigned int hooknum, struct sk_buff *skb,
 {
 	int r;
 	struct net *net;
+	struct netns_ipvs *ipvs;
 
 	if (ipv6_hdr(skb)->nexthdr != IPPROTO_ICMPV6)
 		return NF_ACCEPT;
 
 	/* ipvs enabled in this netns ? */
 	net = skb_net(skb);
-	if (!net_ipvs(net)->enable)
+	ipvs = net_ipvs(net);
+	if (unlikely(sysctl_backup_only(ipvs) || !ipvs->enable))
 		return NF_ACCEPT;
 
 	return ip_vs_in_icmp_v6(skb, &r, hooknum);

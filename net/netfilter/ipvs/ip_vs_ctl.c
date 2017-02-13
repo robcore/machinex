@@ -1750,6 +1750,12 @@ static struct ctl_table vs_vars[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
 	},
+	{
+		.procname	= "backup_only",
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
 #ifdef CONFIG_IP_VS_DEBUG
 	{
 		.procname	= "debug_level",
@@ -3665,6 +3671,7 @@ int __net_init ip_vs_control_net_init_sysctl(struct net *net)
 	tbl[idx].data = &ipvs->sysctl_sync_threshold;
 	tbl[idx++].maxlen = sizeof(ipvs->sysctl_sync_threshold);
 	tbl[idx++].data = &ipvs->sysctl_nat_icmp_send;
+	tbl[idx++].data = &ipvs->sysctl_backup_only;
 
 
 	ipvs->sysctl_hdr = register_net_sysctl_table(net, net_vs_ctl_path,
