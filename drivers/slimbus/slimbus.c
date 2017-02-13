@@ -561,14 +561,13 @@ int slim_add_numbered_controller(struct slim_controller *ctrl)
 	int	id;
 
 retry:
-	idr_preload(GFP_KERNEL)
+	idr_preload(GFP_KERNEL);
 
 	mutex_lock(&slim_lock);
 	id = idr_alloc(&ctrl_idr, ctrl, ctrl->nr, ctrl->nr, GFP_KERNEL);
 	mutex_unlock(&slim_lock);
+	if (id != -ENOSPC)
 	idr_preload_end();
-	
-	if (id < 0)
 		goto retry;
 
 	ctrl->nr = id;
