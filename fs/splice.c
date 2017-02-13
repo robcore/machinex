@@ -33,6 +33,8 @@
 #include <linux/socket.h>
 #include <linux/compat.h>
 
+#include "internal.h"
+
 /*
  * Attempt to steal a page from a pipe buffer. This should perhaps go into
  * a vm helper function, it's already simplified quite a bit by the
@@ -1076,9 +1078,10 @@ static int write_pipe_buf(struct pipe_inode_info *pipe, struct pipe_buffer *buf,
 {
 	int ret;
 	void *data;
+	loff_t tmp = sd->pos;
 
 	data = buf->ops->map(pipe, buf, 0);
-	ret = kernel_write(sd->u.file, data + buf->offset, sd->len, sd->pos);
+	ret = __kernel_write(sd->u.file, data + buf->offset, sd->len, &tmp);
 	buf->ops->unmap(pipe, buf, data);
 
 	return ret;
