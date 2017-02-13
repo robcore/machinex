@@ -101,7 +101,7 @@ enum {
 	Opt_user, Opt_pass, Opt_ip,
 	Opt_unc, Opt_domain,
 	Opt_srcaddr, Opt_prefixpath,
-	Opt_iocharset, Opt_sockopt,
+	Opt_iocharset,
 	Opt_netbiosname, Opt_servern,
 	Opt_ver, Opt_sec,
 
@@ -209,7 +209,6 @@ static const match_table_t cifs_mount_option_tokens = {
 	{ Opt_srcaddr, "srcaddr=%s" },
 	{ Opt_prefixpath, "prefixpath=%s" },
 	{ Opt_iocharset, "iocharset=%s" },
-	{ Opt_sockopt, "sockopt=%s" },
 	{ Opt_netbiosname, "netbiosname=%s" },
 	{ Opt_servern, "servern=%s" },
 	{ Opt_ver, "ver=%s" },
@@ -1779,14 +1778,6 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 			 * is used by caller
 			 */
 			cFYI(1, "iocharset set to %s", string);
-			break;
-		case Opt_sockopt:
-			string = match_strdup(args);
-			if (string == NULL)
-				goto out_nomem;
-
-			if (strnicmp(string, "TCP_NODELAY", 11) == 0)
-				vol->sockopt_tcp_nodelay = 1;
 			break;
 		case Opt_netbiosname:
 			string = match_strdup(args);
