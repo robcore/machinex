@@ -1231,7 +1231,7 @@ int cmd_top(int argc, const char **argv, const char *prefix __used)
 	OPT_END()
 	};
 
-	top.evlist = perf_evlist__new(NULL, NULL);
+	top.evlist = perf_evlist__new();
 	if (top.evlist == NULL)
 		return -ENOMEM;
 

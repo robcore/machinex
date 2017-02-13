@@ -836,7 +836,7 @@ int cmd_record(int argc, const char **argv, const char *prefix __used)
 
 	perf_header__set_cmdline(argc, argv);
 
-	evsel_list = perf_evlist__new(NULL, NULL);
+	evsel_list = perf_evlist__new();
 	if (evsel_list == NULL)
 		return -ENOMEM;
 

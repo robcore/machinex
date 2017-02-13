@@ -1165,7 +1165,7 @@ int cmd_stat(int argc, const char **argv, const char *prefix __used)
 
 	setlocale(LC_ALL, "");
 
-	evsel_list = perf_evlist__new(NULL, NULL);
+	evsel_list = perf_evlist__new();
 	if (evsel_list == NULL)
 		return -ENOMEM;
 
