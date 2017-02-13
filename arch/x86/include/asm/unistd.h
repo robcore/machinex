@@ -49,12 +49,4 @@
 # define __ARCH_WANT_SYS_UTIME
 # define __ARCH_WANT_SYS_WAITPID
 
-/*
- * "Conditional" syscalls
- *
- * What we want is __attribute__((weak,alias("sys_ni_syscall"))),
- * but it doesn't work on all toolchains, so we just do it by hand
- */
-# define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall")
-
 #endif /* _ASM_X86_UNISTD_H */
