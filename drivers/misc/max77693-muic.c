@@ -2142,7 +2142,7 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 	if (intr == INT_ATTACH) {
 		dev_info(info->dev, "%s: ATTACHED\n", __func__);
 		max77693_muic_handle_attach(info, status[0], status[1], irq);
-	} else {
+	} else if (intr == INT_DETACH) {
 		dev_info(info->dev, "%s: DETACHED\n", __func__);
 		max77693_muic_handle_detach(info, irq);
 	}
@@ -2322,6 +2322,7 @@ static void max77693_muic_usb_detect(struct work_struct *work)
 
 		if (mdata->usb_cb) {
 			switch (info->cable_type) {
+			case CABLE_TYPE_CDP_MUIC:
 			case CABLE_TYPE_USB_MUIC:
 			case CABLE_TYPE_JIG_USB_OFF_MUIC:
 			case CABLE_TYPE_JIG_USB_ON_MUIC:
@@ -2526,6 +2527,7 @@ static int __devinit max77693_muic_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_kfree;
 	}
+
 	info->dev = &pdev->dev;
 	info->max77693 = max77693;
 	info->muic = max77693->muic;

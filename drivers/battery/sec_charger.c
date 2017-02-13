@@ -188,6 +188,22 @@ static void sec_chg_isr_work(struct work_struct *work)
 			break;
 		}
 	}
+
+	if (charger->pdata->cable_check_type & SEC_BATTERY_CABLE_CHECK_CHGINT) {
+		if (!sec_hal_chg_get_property(charger->client,
+			POWER_SUPPLY_PROP_ONLINE, &val))
+			return;
+
+		/* use SEC_BATTERY_CABLE_SOURCE_EXTERNAL for cable_source_type
+		 * charger would call battery driver to set ONLINE property
+		 * check battery driver loaded or not
+		 */
+		if (get_power_supply_by_name("battery")) {
+			psy_do_property("battery", set,
+				POWER_SUPPLY_PROP_ONLINE, val);
+		} else
+			charger->pdata->check_cable_result_callback(val.intval);
+	}
 }
 
 static irqreturn_t sec_chg_irq_thread(int irq, void *irq_data)

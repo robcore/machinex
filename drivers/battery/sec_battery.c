@@ -287,7 +287,8 @@ static int sec_bat_get_charger_type_adc
 	/* Do NOT check cable type when cable_switch_check() returns false
 	 * and keep current cable type
 	 */
-	if (!battery->pdata->cable_switch_check())
+	if (battery->pdata->cable_switch_check &&
+	    !battery->pdata->cable_switch_check())
 		return battery->cable_type;
 
 	adc = sec_bat_get_adc_value(battery,
@@ -296,7 +297,8 @@ static int sec_bat_get_charger_type_adc
 	/* Do NOT check cable type when cable_switch_normal() returns false
 	 * and keep current cable type
 	 */
-	if (!battery->pdata->cable_switch_normal())
+	if (battery->pdata->cable_switch_normal &&
+	    !battery->pdata->cable_switch_normal())
 		return battery->cable_type;
 
 	for (i = 0; i < SEC_SIZEOF_POWER_SUPPLY_TYPE; i++)
@@ -389,10 +391,13 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 
 	switch (battery->pdata->battery_check_type) {
 	case SEC_BATTERY_CHECK_ADC:
-		ret = sec_bat_check_vf_adc(battery);
+		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
+			ret = battery->present;
+		else
+			ret = sec_bat_check_vf_adc(battery);
 		break;
-	case SEC_BATTERY_CHECK_CALLBACK:
 	case SEC_BATTERY_CHECK_INT:
+	case SEC_BATTERY_CHECK_CALLBACK:
 		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
 			ret = battery->present;
 		else
@@ -476,8 +481,9 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 					POWER_SUPPLY_STATUS_NOT_CHARGING;
 				sec_bat_set_charge(battery, false);
 			}
-
-			battery->pdata->check_battery_result_callback();
+			if (battery->pdata->check_battery_result_callback)
+				battery->pdata->
+					check_battery_result_callback();
 			return false;
 		}
 	} else
@@ -575,6 +581,11 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 {
 	int health;
 
+	if ((battery->status == POWER_SUPPLY_STATUS_FULL) &&
+	   (battery->charging_mode == SEC_BATTERY_CHARGING_NONE)) {
+		dev_dbg(battery->dev, "%s: No need to check in Full status", __func__);
+		return false;
+	}
 	if (battery->health != POWER_SUPPLY_HEALTH_GOOD &&
 		battery->health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
 		battery->health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE) {
@@ -586,7 +597,8 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 
 	switch (battery->pdata->ovp_uvlo_check_type) {
 	case SEC_BATTERY_OVP_UVLO_CALLBACK:
-		health = battery->pdata->ovp_uvlo_callback();
+		if (battery->pdata->ovp_uvlo_callback)
+			health = battery->pdata->ovp_uvlo_callback();
 		break;
 	case SEC_BATTERY_OVP_UVLO_PMICPOLLING:
 	case SEC_BATTERY_OVP_UVLO_CHGPOLLING:
@@ -676,11 +688,14 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 
 	/* OVP/UVLO check */
 	if (sec_bat_ovp_uvlo(battery)) {
-		battery->pdata->ovp_uvlo_result_callback(battery->health);
+		if (battery->pdata->ovp_uvlo_result_callback)
+			battery->pdata->
+				ovp_uvlo_result_callback(battery->health);
 		return false;
 	}
-	if ((battery->status == POWER_SUPPLY_STATUS_FULL) && \
+	if ((battery->status == POWER_SUPPLY_STATUS_FULL) &&
 		battery->is_recharging) {
+		value.intval = 0;
 		psy_do_property(battery->pdata->fuelgauge_name, get,
 			POWER_SUPPLY_PROP_CAPACITY, value);
 		if (value.intval <
@@ -1041,11 +1056,8 @@ static bool sec_bat_check_fullcharged_condition(
 		full_check_type = battery->pdata->full_check_type_2nd;
 
 	switch (full_check_type) {
-		case SEC_BATTERY_FULLCHARGED_CHGINT:
-			return false;
 		case SEC_BATTERY_FULLCHARGED_ADC:
 		case SEC_BATTERY_FULLCHARGED_FG_CURRENT:
-		case SEC_BATTERY_FULLCHARGED_TIME:
 		case SEC_BATTERY_FULLCHARGED_SOC:
 		case SEC_BATTERY_FULLCHARGED_CHGGPIO:
 		case SEC_BATTERY_FULLCHARGED_CHGPSY:
@@ -1054,6 +1066,8 @@ static bool sec_bat_check_fullcharged_condition(
 			/* If these is NOT full check type or NONE full check type,
 			 * it is full-charged
 			 */
+		case SEC_BATTERY_FULLCHARGED_CHGINT:
+		case SEC_BATTERY_FULLCHARGED_TIME:
 		case SEC_BATTERY_FULLCHARGED_NONE:
 		default:
 			return true;
@@ -1381,6 +1395,7 @@ static bool sec_bat_check_fullcharged(
 		gpio_free(battery->pdata->chg_gpio_full_check);
 		break;
 
+	case SEC_BATTERY_FULLCHARGED_CHGINT:
 	case SEC_BATTERY_FULLCHARGED_CHGPSY:
 		psy_do_property("sec-charger", get,
 			POWER_SUPPLY_PROP_STATUS, value);
@@ -1852,7 +1867,7 @@ static void sec_bat_monitor_work(
 		battery->polling_in_sleep = false;
 		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
 				(battery->ps_enable != true)) {
-			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 10 * 60) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 5 * 60) {
 				pr_info("Skip monitor_work(%ld)\n",
 						c_ts.tv_sec - old_ts.tv_sec);
 				goto skip_monitor;
@@ -1950,6 +1965,13 @@ static void sec_bat_cable_work(struct work_struct *work)
 			val.intval = POWER_SUPPLY_TYPE_BATTERY;
 			psy_do_property("sec-fuelgauge", set,
 					POWER_SUPPLY_PROP_CHARGE_FULL, val);
+			/* To get SOC value (NOT raw SOC), need to reset value */
+			val.intval = 0;
+			psy_do_property("sec-fuelgauge", get,
+					POWER_SUPPLY_PROP_CAPACITY, val);
+
+
+			battery->capacity = val.intval;
 		}
 		battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 		battery->is_recharging = false;
@@ -2731,7 +2753,7 @@ static int sec_bat_set_property(struct power_supply *psy,
 		 * (0 is POWER_SUPPLY_TYPE_UNKNOWN)
 		 */
 		if ((current_cable_type >= 0) &&
-			(current_cable_type <= SEC_SIZEOF_POWER_SUPPLY_TYPE) &&
+			(current_cable_type < SEC_SIZEOF_POWER_SUPPLY_TYPE) &&
 			(battery->pdata->cable_source_type &
 			SEC_BATTERY_CABLE_SOURCE_EXTERNAL ||
 			battery->pdata->cable_source_type &
@@ -2741,16 +2763,11 @@ static int sec_bat_set_property(struct power_supply *psy,
 				battery->cable_type = current_cable_type;
 				battery->pdata->check_cable_result_callback(
 					battery->cable_type);
-
-				wake_lock(&battery->cable_wake_lock);
-				queue_work(battery->monitor_wqueue,
-					&battery->cable_work);
-			} else {
-				dev_dbg(battery->dev,
-					"%s: Cable is NOT Changed(%d)\n",
-					__func__, battery->cable_type);
-				/* Do NOT activate cable work for NOT changed */
 			}
+
+			wake_lock(&battery->cable_wake_lock);
+			queue_work(battery->monitor_wqueue,
+					&battery->cable_work);
 		} else {
 			if (sec_bat_get_cable_type(battery,
 				battery->pdata->cable_source_type)) {
@@ -2803,15 +2820,20 @@ static int sec_bat_get_property(struct power_supply *psy,
 		}
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
-		psy_do_property("sec-charger", get,
-			POWER_SUPPLY_PROP_CHARGE_TYPE, value);
-		if (value.intval == POWER_SUPPLY_CHARGE_TYPE_UNKNOWN)
-			/* if error in CHARGE_TYPE of charger
-			 * set CHARGE_TYPE as NONE
-			 */
+		if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY &&
+			battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
-		else
-			val->intval = value.intval;
+		} else {
+			psy_do_property("sec-charger", get,
+			POWER_SUPPLY_PROP_CHARGE_TYPE, value);
+			if (value.intval == POWER_SUPPLY_CHARGE_TYPE_UNKNOWN)
+				/* if error in CHARGE_TYPE of charger
+				 * set CHARGE_TYPE as NONE
+			 	*/
+				val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
+			else
+				val->intval = value.intval;
+		}
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = battery->health;
@@ -2924,7 +2946,7 @@ static int sec_ac_get_property(struct power_supply *psy,
 		return -EINVAL;
 
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
-			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+		(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
 		val->intval = 0;
 		return 0;
 	}
@@ -3101,6 +3123,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	mutex_init(&battery->adclock);
 	dev_dbg(battery->dev, "%s: ADC init\n", __func__);
+
 	for (i = 0; i < SEC_BAT_ADC_CHANNEL_FULL_CHECK; i++)
 		adc_init(pdev, pdata, i);
 
@@ -3218,6 +3241,8 @@ static int sec_battery_probe(struct platform_device *pdev)
 	default:
 		break;
 	}
+
+	sec_bat_get_battery_info(battery);
 
 	/* init power supplier framework */
 	ret = power_supply_register(&pdev->dev, &battery->psy_ps);
