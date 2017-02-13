@@ -14,6 +14,8 @@
  */
 
 #include <linux/spinlock.h>
+#include <linux/cgroup.h>
+#include <linux/errno.h>
 
 /*
  * The core object. the cgroup that wishes to account for some
