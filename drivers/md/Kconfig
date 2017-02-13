@@ -188,6 +188,8 @@ config MD_FAULTY
 config BLK_DEV_DM_BUILTIN
 	boolean
 
+source "drivers/md/bcache/Kconfig"
+
 config BLK_DEV_DM
 	tristate "Device mapper support"
 	select BLK_DEV_DM_BUILTIN
