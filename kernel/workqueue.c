@@ -309,6 +309,14 @@ static inline int __next_wq_cpu(int cpu, const struct cpumask *mask,
 	     (cpu) = __next_wq_cpu((cpu), cpu_online_mask, 3))
 
 /**
+ * for_each_pool - iterate through all worker_pools in the system
+ * @pool: iteration cursor
+ * @id: integer used for iteration
+ */
+#define for_each_pool(pool, id)						\
+	idr_for_each_entry(&worker_pool_idr, pool, id)
+
+/**
  * for_each_pwq - iterate through all pool_workqueues of the specified workqueue
  * @pwq: iteration cursor
  * @wq: the target workqueue
@@ -926,8 +934,9 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
 	struct hlist_node *tmp;
 
 	hash_for_each_possible(pool->busy_hash, worker, tmp, hentry,
-					(unsigned long)work)
-		if (worker->current_work == work)
+			       (unsigned long)work)
+		if (worker->current_work == work &&
+		    worker->current_func == work->func)
 			return worker;
 
 	return NULL;
@@ -2197,15 +2206,6 @@ __acquires(&pool->lock)
 		dump_stack();
 	}
 
-	/*
-	 * The following prevents a kworker from hogging CPU on !PREEMPT
-	 * kernels, where a requeueing work item waiting for something to
-	 * happen could deadlock with stop_machine as such work item could
-	 * indefinitely requeue itself while all other CPUs are trapped in
-	 * stop_machine.
-	 */
-	cond_resched();
-
 	spin_lock_irq(&pool->lock);
 
 	/* clear cpu intensive status */
@@ -3354,7 +3354,6 @@ static void pwq_set_max_active(struct pool_workqueue *pwq, int max_active)
  * CONTEXT:
  * Don't call from IRQ context.
  */
-
 void workqueue_set_max_active(struct workqueue_struct *wq, int max_active)
 {
 	struct pool_workqueue *pwq;
@@ -3478,23 +3477,27 @@ static void wq_unbind_fn(struct work_struct *work)
 
 		spin_unlock_irq(&pool->lock);
 		mutex_unlock(&pool->assoc_mutex);
+	}
 
-		/*
-		 * Call schedule() so that we cross rq->lock and thus can
-		 * guarantee sched callbacks see the %WORKER_UNBOUND flag.
-		 * This is necessary as scheduler callbacks may be invoked
-		 * from other cpus.
-		 */
-		schedule();
+	/*
+	 * Call schedule() so that we cross rq->lock and thus can guarantee
+	 * sched callbacks see the %WORKER_UNBOUND flag.  This is necessary
+	 * as scheduler callbacks may be invoked from other cpus.
+	 */
+	schedule();
 
-		/*
-		 * Sched callbacks are disabled now.  Zap nr_running.
-		 * After this, nr_running stays zero and need_more_worker()
-		 * and keep_working() are always true as long as the
-		 * worklist is not empty.  This pool now behaves as an
-		 * unbound (in terms of concurrency management) pool which
-		 * are served by workers tied to the pool.
-		 */
+	/*
+	 * Sched callbacks are disabled now.  Zap nr_running.  After this,
+	 * nr_running stays zero and need_more_worker() and keep_working()
+	 * are always true as long as the worklist is not empty.  Pools on
+	 * @cpu now behave as unbound (in terms of concurrency management)
+	 * pools which are served by workers tied to the CPU.
+	 *
+	 * On return from this function, the current worker would trigger
+	 * unbound chain execution of pending work items if other workers
+	 * didn't already.
+	 */
+	for_each_std_worker_pool(pool, cpu)
 		atomic_set(&pool->nr_running, 0);
 
 		/*
@@ -3628,37 +3631,31 @@ EXPORT_SYMBOL(work_on_cpu);
  */
 void freeze_workqueues_begin(void)
 {
-	unsigned int cpu;
+	struct worker_pool *pool;
+	int id;
 
 	spin_lock_irq(&workqueue_lock);
 
 	WARN_ON_ONCE(workqueue_freezing);
 	workqueue_freezing = true;
 
-	for_each_wq_cpu(cpu) {
-		struct worker_pool *pool;
+	for_each_pool(pool, id) {
 		struct workqueue_struct *wq;
 
-		for_each_std_worker_pool(pool, cpu) {
-			spin_lock(&pool->lock);
+		spin_lock(&pool->lock);
 
-			WARN_ON_ONCE(pool->flags & POOL_FREEZING);
-			pool->flags |= POOL_FREEZING;
+		WARN_ON_ONCE(pool->flags & POOL_FREEZING);
+		pool->flags |= POOL_FREEZING;
 
-			list_for_each_entry(wq, &workqueues, list) {
-				struct pool_workqueue *pwq = get_pwq(cpu, wq);
+		list_for_each_entry(wq, &workqueues, list) {
+			struct pool_workqueue *pwq = get_pwq(pool->cpu, wq);
 
-			if (cpu < CONFIG_NR_CPUS)
-				pwq = get_pwq(cpu, wq);
-			else
-				continue;
-				if (pwq && pwq->pool == pool &&
-				    (wq->flags & WQ_FREEZABLE))
-					pwq->max_active = 0;
-			}
-
-			spin_unlock(&pool->lock);
+			if (pwq && pwq->pool == pool &&
+			    (wq->flags & WQ_FREEZABLE))
+				pwq->max_active = 0;
 		}
+
+		spin_unlock(&pool->lock);
 	}
 
 	spin_unlock_irq(&workqueue_lock);
@@ -3694,10 +3691,6 @@ bool freeze_workqueues_busy(void)
 		 */
 		list_for_each_entry(wq, &workqueues, list) {
 			struct pool_workqueue *pwq = get_pwq(cpu, wq);
-			if (cpu < CONFIG_NR_CPUS)
-				pwq = get_pwq(cpu, wq);
-			else
-				continue;
 
 			if (!pwq || !(wq->flags & WQ_FREEZABLE))
 				continue;
@@ -3843,3 +3836,4 @@ static int __init init_workqueues(void)
 	return 0;
 }
 early_initcall(init_workqueues);
+
