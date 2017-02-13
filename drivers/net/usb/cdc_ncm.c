@@ -464,8 +464,8 @@ static int cdc_ncm_bind(struct usbnet *dev, struct usb_interface *intf)
 	u8 iface_no;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
-		return -ENOMEM;
+	if (ctx == NULL)
+		return -ENODEV;
 
 	hrtimer_init(&ctx->tx_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	ctx->tx_timer.function = &cdc_ncm_tx_timer_cb;
