@@ -526,7 +526,7 @@ static irqreturn_t phy_interrupt(int irq, void *phy_dat)
 	disable_irq_nosync(irq);
 	atomic_inc(&phydev->irq_disable);
 
-	queue_work(system_power_efficient_wq, &phydev->phy_queue);
+	queue_work(system_wq, &phydev->phy_queue);
 
 	return IRQ_HANDLED;
 }
