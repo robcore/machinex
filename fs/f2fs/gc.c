@@ -246,7 +246,7 @@ static inline unsigned int get_gc_cost(struct f2fs_sb_info *sbi,
 }
 
 /*
- * This function is called from two pathes.
+ * This function is called from two paths.
  * One is garbage collection and the other is SSR segment selection.
  * When it is called during GC, it just gets a victim segment
  * and it does not remove it from dirty seglist.
