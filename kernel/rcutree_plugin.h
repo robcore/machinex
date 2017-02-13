@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/gfp.h>
 #include <linux/oom.h>
+#include <linux/smpboot.h>
 
 #define RCU_KTHREAD_PRIO 1
 
@@ -813,7 +814,6 @@ sync_rcu_preempt_exp_init(struct rcu_state *rsp, struct rcu_node *rnp)
 		rcu_report_exp_rnp(rsp, rnp, false); /* Don't wake self. */
 }
 
-
 /**
  * synchronize_rcu_expedited - Brute-force RCU grace period
  *
@@ -1255,9 +1255,9 @@ static int rcu_boost_kthread(void *arg)
  * kthread to start boosting them.  If there is an expedited grace
  * period in progress, it is always time to boost.
  *
- * The caller must hold rnp->lock, which this function releases,
- * but irqs remain disabled.  The ->boost_kthread_task is immortal,
- * so we don't need to worry about it going away.
+ * The caller must hold rnp->lock, which this function releases.
+ * The ->boost_kthread_task is immortal, so we don't need to worry
+ * about it going away.
  */
 static void rcu_initiate_boost(struct rcu_node *rnp, unsigned long flags)
 {
@@ -1540,16 +1540,10 @@ static void rcu_prepare_kthreads(int cpu)
  * Because we not have RCU_FAST_NO_HZ, just check whether this CPU needs
  * any flavor of RCU.
  */
-int rcu_needs_cpu(int cpu)
+int rcu_needs_cpu(int cpu, unsigned long *delta_jiffies)
 {
-	return rcu_cpu_has_callbacks(cpu);
-}
-
-/*
- * Because we do not have RCU_FAST_NO_HZ, don't bother initializing for it.
- */
-static void rcu_prepare_for_idle_init(int cpu)
-{
+	*delta_jiffies = ULONG_MAX;
+	return rcu_cpu_has_callbacks(cpu, NULL);
 }
 
 /*
@@ -1565,6 +1559,14 @@ static void rcu_cleanup_after_idle(int cpu)
  * is nothing.
  */
 static void rcu_prepare_for_idle(int cpu)
+{
+}
+
+/*
+ * Don't bother keeping a running count of the number of RCU callbacks
+ * posted because CONFIG_RCU_FAST_NO_HZ=n.
+ */
+static void rcu_idle_count_callbacks_posted(void)
 {
 }
 
@@ -1593,244 +1595,165 @@ static void rcu_prepare_for_idle(int cpu)
  * adjustment, they can be converted into kernel config parameters, though
  * making the state machine smarter might be a better option.
  */
-#define RCU_IDLE_FLUSHES 5		/* Number of dyntick-idle tries. */
-#define RCU_IDLE_OPT_FLUSHES 3		/* Optional dyntick-idle tries. */
-#define RCU_IDLE_GP_DELAY 6		/* Roughly one grace period. */
+#define RCU_IDLE_GP_DELAY 4		/* Roughly one grace period. */
 #define RCU_IDLE_LAZY_GP_DELAY (6 * HZ)	/* Roughly six seconds. */
 
-static DEFINE_PER_CPU(int, rcu_dyntick_drain);
-static DEFINE_PER_CPU(unsigned long, rcu_dyntick_holdoff);
-static DEFINE_PER_CPU(struct timer_list, rcu_idle_gp_timer);
+static int rcu_idle_gp_delay = RCU_IDLE_GP_DELAY;
+module_param(rcu_idle_gp_delay, int, 0644);
+static int rcu_idle_lazy_gp_delay = RCU_IDLE_LAZY_GP_DELAY;
+module_param(rcu_idle_lazy_gp_delay, int, 0644);
+
+extern int tick_nohz_enabled;
 
 /*
- * Allow the CPU to enter dyntick-idle mode if either: (1) There are no
- * callbacks on this CPU, (2) this CPU has not yet attempted to enter
- * dyntick-idle mode, or (3) this CPU is in the process of attempting to
- * enter dyntick-idle mode.  Otherwise, if we have recently tried and failed
- * to enter dyntick-idle mode, we refuse to try to enter it.  After all,
- * it is better to incur scheduling-clock interrupts than to spin
- * continuously for the same time duration!
+ * Try to advance callbacks for all flavors of RCU on the current CPU.
+ * Afterwards, if there are any callbacks ready for immediate invocation,
+ * return true.
  */
-int rcu_needs_cpu(int cpu)
+static bool rcu_try_advance_all_cbs(void)
 {
+	bool cbs_ready = false;
+	struct rcu_data *rdp;
+	struct rcu_node *rnp;
+	struct rcu_state *rsp;
+
+	for_each_rcu_flavor(rsp) {
+		rdp = this_cpu_ptr(rsp->rda);
+		rnp = rdp->mynode;
+
+		/*
+		 * Don't bother checking unless a grace period has
+		 * completed since we last checked and there are
+		 * callbacks not yet ready to invoke.
+		 */
+		if (rdp->completed != rnp->completed &&
+		    rdp->nxttail[RCU_DONE_TAIL] != rdp->nxttail[RCU_NEXT_TAIL])
+			rcu_process_gp_end(rsp, rdp);
+
+		if (cpu_has_callbacks_ready_to_invoke(rdp))
+			cbs_ready = true;
+	}
+	return cbs_ready;
+}
+
+/*
+ * Allow the CPU to enter dyntick-idle mode unless it has callbacks ready
+ * to invoke.  If the CPU has callbacks, try to advance them.  Tell the
+ * caller to set the timeout based on whether or not there are non-lazy
+ * callbacks.
+ *
+ * The caller must have disabled interrupts.
+ */
+int rcu_needs_cpu(int cpu, unsigned long *dj)
+{
+	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
+
+	/* Snapshot to detect later posting of non-lazy callback. */
+	rdtp->nonlazy_posted_snap = rdtp->nonlazy_posted;
+
 	/* If no callbacks, RCU doesn't need the CPU. */
-	if (!rcu_cpu_has_callbacks(cpu))
+	if (!rcu_cpu_has_callbacks(cpu, &rdtp->all_lazy)) {
+		*dj = ULONG_MAX;
 		return 0;
-	/* Otherwise, RCU needs the CPU only if it recently tried and failed. */
-	return per_cpu(rcu_dyntick_holdoff, cpu) == jiffies;
-}
+	}
 
-/*
- * Does the specified flavor of RCU have non-lazy callbacks pending on
- * the specified CPU?  Both RCU flavor and CPU are specified by the
- * rcu_data structure.
- */
-static bool __rcu_cpu_has_nonlazy_callbacks(struct rcu_data *rdp)
-{
-	return rdp->qlen != rdp->qlen_lazy;
-}
+	/* Attempt to advance callbacks. */
+	if (rcu_try_advance_all_cbs()) {
+		/* Some ready to invoke, so initiate later invocation. */
+		invoke_rcu_core();
+		return 1;
+	}
+	rdtp->last_accelerate = jiffies;
 
-#ifdef CONFIG_TREE_PREEMPT_RCU
-
-/*
- * Are there non-lazy RCU-preempt callbacks?  (There cannot be if there
- * is no RCU-preempt in the kernel.)
- */
-static bool rcu_preempt_cpu_has_nonlazy_callbacks(int cpu)
-{
-	struct rcu_data *rdp = &per_cpu(rcu_preempt_data, cpu);
-
-	return __rcu_cpu_has_nonlazy_callbacks(rdp);
-}
-
-#else /* #ifdef CONFIG_TREE_PREEMPT_RCU */
-
-static bool rcu_preempt_cpu_has_nonlazy_callbacks(int cpu)
-{
+	/* Request timer delay depending on laziness, and round. */
+	if (rdtp->all_lazy) {
+		*dj = round_up(rcu_idle_gp_delay + jiffies,
+			       rcu_idle_gp_delay) - jiffies;
+	} else {
+		*dj = round_jiffies(rcu_idle_lazy_gp_delay + jiffies) - jiffies;
+	}
 	return 0;
 }
 
-#endif /* else #ifdef CONFIG_TREE_PREEMPT_RCU */
-
 /*
- * Does any flavor of RCU have non-lazy callbacks on the specified CPU?
- */
-static bool rcu_cpu_has_nonlazy_callbacks(int cpu)
-{
-	return __rcu_cpu_has_nonlazy_callbacks(&per_cpu(rcu_sched_data, cpu)) ||
-	       __rcu_cpu_has_nonlazy_callbacks(&per_cpu(rcu_bh_data, cpu)) ||
-	       rcu_preempt_cpu_has_nonlazy_callbacks(cpu);
-}
-
-/*
- * Timer handler used to force CPU to start pushing its remaining RCU
- * callbacks in the case where it entered dyntick-idle mode with callbacks
- * pending.  The hander doesn't really need to do anything because the
- * real work is done upon re-entry to idle, or by the next scheduling-clock
- * interrupt should idle not be re-entered.
- */
-static void rcu_idle_gp_timer_func(unsigned long unused)
-{
-	trace_rcu_prep_idle("Timer");
-}
-
-/*
- * Initialize the timer used to pull CPUs out of dyntick-idle mode.
- */
-static void rcu_prepare_for_idle_init(int cpu)
-{
-	setup_timer(&per_cpu(rcu_idle_gp_timer, cpu),
-		    rcu_idle_gp_timer_func, 0);
-}
-
-/*
- * Clean up for exit from idle.  Because we are exiting from idle, there
- * is no longer any point to rcu_idle_gp_timer, so cancel it.  This will
- * do nothing if this timer is not active, so just cancel it unconditionally.
- */
-static void rcu_cleanup_after_idle(int cpu)
-{
-	del_timer(&per_cpu(rcu_idle_gp_timer, cpu));
-	trace_rcu_prep_idle("Cleanup after idle");
-}
-
-/*
- * Check to see if any RCU-related work can be done by the current CPU,
- * and if so, schedule a softirq to get it done.  This function is part
- * of the RCU implementation; it is -not- an exported member of the RCU API.
- *
- * The idea is for the current CPU to clear out all work required by the
- * RCU core for the current grace period, so that this CPU can be permitted
- * to enter dyntick-idle mode.  In some cases, it will need to be awakened
- * at the end of the grace period by whatever CPU ends the grace period.
- * This allows CPUs to go dyntick-idle more quickly, and to reduce the
- * number of wakeups by a modest integer factor.
- *
- * Because it is not legal to invoke rcu_process_callbacks() with irqs
- * disabled, we do one pass of force_quiescent_state(), then do a
- * invoke_rcu_core() to cause rcu_process_callbacks() to be invoked
- * later.  The per-cpu rcu_dyntick_drain variable controls the sequencing.
+ * Prepare a CPU for idle from an RCU perspective.  The first major task
+ * is to sense whether nohz mode has been enabled or disabled via sysfs.
+ * The second major task is to check to see if a non-lazy callback has
+ * arrived at a CPU that previously had only lazy callbacks.  The third
+ * major task is to accelerate (that is, assign grace-period numbers to)
+ * any recently arrived callbacks.
  *
  * The caller must have disabled interrupts.
  */
 static void rcu_prepare_for_idle(int cpu)
 {
-	struct timer_list *tp;
+	struct rcu_data *rdp;
 	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
+	struct rcu_node *rnp;
+	struct rcu_state *rsp;
+	int tne;
 
-	/*
-	 * If this is an idle re-entry, for example, due to use of
-	 * RCU_NONIDLE() or the new idle-loop tracing API within the idle
-	 * loop, then don't take any state-machine actions, unless the
-	 * momentary exit from idle queued additional non-lazy callbacks.
-	 * Instead, repost the rcu_idle_gp_timer if this CPU has callbacks
-	 * pending.
-	 */
-	if (!rdtp->idle_first_pass &&
-	    (rdtp->nonlazy_posted == rdtp->nonlazy_posted_snap)) {
-		if (rcu_cpu_has_callbacks(cpu)) {
-			tp = &rdtp->idle_gp_timer;
-			mod_timer_pinned(tp, rdtp->idle_gp_timer_expires);
-		}
+	/* Handle nohz enablement switches conservatively. */
+	tne = ACCESS_ONCE(tick_nohz_enabled);
+	if (tne != rdtp->tick_nohz_enabled_snap) {
+		if (rcu_cpu_has_callbacks(cpu, NULL))
+			invoke_rcu_core(); /* force nohz to see update. */
+		rdtp->tick_nohz_enabled_snap = tne;
 		return;
 	}
-	rdtp->idle_first_pass = 0;
-	rdtp->nonlazy_posted_snap = rdtp->nonlazy_posted - 1;
+	if (!tne)
+		return;
+
+	/* If this is a no-CBs CPU, no callbacks, just return. */
+	if (is_nocb_cpu(cpu))
+		return;
 
 	/*
-	 * If there are no callbacks on this CPU, enter dyntick-idle mode.
-	 * Also reset state to avoid prejudicing later attempts.
+	 * If a non-lazy callback arrived at a CPU having only lazy
+	 * callbacks, invoke RCU core for the side-effect of recalculating
+	 * idle duration on re-entry to idle.
 	 */
-	if (!rcu_cpu_has_callbacks(cpu)) {
-		per_cpu(rcu_dyntick_holdoff, cpu) = jiffies - 1;
-		per_cpu(rcu_dyntick_drain, cpu) = 0;
-		trace_rcu_prep_idle("No callbacks");
-		return;
-	}
-
-	/* Adaptive-tick mode, where usermode execution is idle to RCU. */
-	if (!is_idle_task(current)) {
-		rdtp->dyntick_holdoff = jiffies - 1;
-		if (rcu_cpu_has_nonlazy_callbacks(cpu)) {
-			trace_rcu_prep_idle("User dyntick with callbacks");
-			rdtp->idle_gp_timer_expires =
-				round_up(jiffies + RCU_IDLE_GP_DELAY,
-					 RCU_IDLE_GP_DELAY);
-		} else if (rcu_cpu_has_callbacks(cpu)) {
-			rdtp->idle_gp_timer_expires =
-				round_jiffies(jiffies + RCU_IDLE_LAZY_GP_DELAY);
-			trace_rcu_prep_idle("User dyntick with lazy callbacks");
-		} else {
-			return;
-		}
-		tp = &rdtp->idle_gp_timer;
-		mod_timer_pinned(tp, rdtp->idle_gp_timer_expires);
-		return;
-	}
-
-	/*
-	 * If in holdoff mode, just return.  We will presumably have
-	 * refrained from disabling the scheduling-clock tick.
-	 */
-	if (per_cpu(rcu_dyntick_holdoff, cpu) == jiffies) {
-		trace_rcu_prep_idle("In holdoff");
-		return;
-	}
-
-	/* Check and update the rcu_dyntick_drain sequencing. */
-	if (per_cpu(rcu_dyntick_drain, cpu) <= 0) {
-		/* First time through, initialize the counter. */
-		per_cpu(rcu_dyntick_drain, cpu) = RCU_IDLE_FLUSHES;
-	} else if (per_cpu(rcu_dyntick_drain, cpu) <= RCU_IDLE_OPT_FLUSHES &&
-		   !rcu_pending(cpu) &&
-		   !local_softirq_pending()) {
-		/* Can we go dyntick-idle despite still having callbacks? */
-		trace_rcu_prep_idle("Dyntick with callbacks");
-		per_cpu(rcu_dyntick_drain, cpu) = 0;
-		per_cpu(rcu_dyntick_holdoff, cpu) = jiffies;
-		if (rcu_cpu_has_nonlazy_callbacks(cpu))
-			mod_timer(&per_cpu(rcu_idle_gp_timer, cpu),
-					   jiffies + RCU_IDLE_GP_DELAY);
-		else
-			mod_timer(&per_cpu(rcu_idle_gp_timer, cpu),
-					   jiffies + RCU_IDLE_LAZY_GP_DELAY);
-		return; /* Nothing more to do immediately. */
-	} else if (--per_cpu(rcu_dyntick_drain, cpu) <= 0) {
-		/* We have hit the limit, so time to give up. */
-		per_cpu(rcu_dyntick_holdoff, cpu) = jiffies;
-		trace_rcu_prep_idle("Begin holdoff");
-		invoke_rcu_core();  /* Force the CPU out of dyntick-idle. */
-		return;
-	}
-
-	/*
-	 * Do one step of pushing the remaining RCU callbacks through
-	 * the RCU core state machine.
-	 */
-#ifdef CONFIG_TREE_PREEMPT_RCU
-	if (per_cpu(rcu_preempt_data, cpu).nxtlist) {
-		rcu_preempt_qs(cpu);
-		force_quiescent_state(&rcu_preempt_state);
-	}
-#endif /* #ifdef CONFIG_TREE_PREEMPT_RCU */
-	if (per_cpu(rcu_sched_data, cpu).nxtlist) {
-		rcu_sched_qs(cpu);
-		force_quiescent_state(&rcu_sched_state);
-	}
-	if (per_cpu(rcu_bh_data, cpu).nxtlist) {
-		rcu_bh_qs(cpu);
-		force_quiescent_state(&rcu_bh_state);
-	}
-
-	/*
-	 * If RCU callbacks are still pending, RCU still needs this CPU.
-	 * So try forcing the callbacks through the grace period.
-	 */
-	if (rcu_cpu_has_callbacks(cpu)) {
-		trace_rcu_prep_idle("More callbacks");
+	if (rdtp->all_lazy &&
+	    rdtp->nonlazy_posted != rdtp->nonlazy_posted_snap) {
 		invoke_rcu_core();
-	} else {
-		trace_rcu_prep_idle("Callbacks drained");
+		return;
+	}
+
+	/*
+	 * If we have not yet accelerated this jiffy, accelerate all
+	 * callbacks on this CPU.
+	 */
+	if (rdtp->last_accelerate == jiffies)
+		return;
+	rdtp->last_accelerate = jiffies;
+	for_each_rcu_flavor(rsp) {
+		rdp = per_cpu_ptr(rsp->rda, cpu);
+		if (!*rdp->nxttail[RCU_DONE_TAIL])
+			continue;
+		rnp = rdp->mynode;
+		raw_spin_lock(&rnp->lock); /* irqs already disabled. */
+		rcu_accelerate_cbs(rsp, rnp, rdp);
+		raw_spin_unlock(&rnp->lock); /* irqs remain disabled. */
+	}
+}
+
+/*
+ * Clean up for exit from idle.  Attempt to advance callbacks based on
+ * any grace periods that elapsed while the CPU was idle, and if any
+ * callbacks are now ready to invoke, initiate invocation.
+ */
+static void rcu_cleanup_after_idle(int cpu)
+{
+	struct rcu_data *rdp;
+	struct rcu_state *rsp;
+
+	if (is_nocb_cpu(cpu))
+		return;
+	rcu_try_advance_all_cbs();
+	for_each_rcu_flavor(rsp) {
+		rdp = per_cpu_ptr(rsp->rda, cpu);
+		if (cpu_has_callbacks_ready_to_invoke(rdp))
+			invoke_rcu_core();
 	}
 }
 
@@ -1905,10 +1828,12 @@ static int rcu_oom_notify(struct notifier_block *self,
 	 */
 	atomic_set(&oom_callback_count, 1);
 
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		smp_call_function_single(cpu, rcu_oom_notify_cpu, NULL, 1);
 		cond_resched();
 	}
+	put_online_cpus();
 
 	/* Unconditionally decrement: no need to wake ourselves up. */
 	atomic_dec(&oom_callback_count);
@@ -1935,12 +1860,14 @@ early_initcall(rcu_register_oom_notifier);
 
 static void print_cpu_stall_fast_no_hz(char *cp, int cpu)
 {
-	struct timer_list *tltp = &per_cpu(rcu_idle_gp_timer, cpu);
+	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
+	unsigned long nlpd = rdtp->nonlazy_posted - rdtp->nonlazy_posted_snap;
 
-	sprintf(cp, "drain=%d %c timer=%lu",
-		per_cpu(rcu_dyntick_drain, cpu),
-		per_cpu(rcu_dyntick_holdoff, cpu) == jiffies ? 'H' : '.',
-		timer_pending(tltp) ? tltp->expires - jiffies : -1);
+	sprintf(cp, "last_accelerate: %04lx/%04lx, nonlazy_posted: %ld, %c%c",
+		rdtp->last_accelerate & 0xffff, jiffies & 0xffff,
+		ulong2long(nlpd),
+		rdtp->all_lazy ? 'L' : '.',
+		rdtp->tick_nohz_enabled_snap ? '.' : 'D');
 }
 
 #else /* #ifdef CONFIG_RCU_FAST_NO_HZ */
@@ -1986,11 +1913,10 @@ static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
 		ticks_value = rsp->gpnum - rdp->gpnum;
 	}
 	print_cpu_stall_fast_no_hz(fast_no_hz, cpu);
-	printk(KERN_ERR "\t%d: (%lu %s) idle=%03x/%llx/%d softirq=%u/%u %s\n",
+	printk(KERN_ERR "\t%d: (%lu %s) idle=%03x/%llx/%d %s\n",
 	       cpu, ticks_value, ticks_title,
 	       atomic_read(&rdtp->dynticks) & 0xfff,
 	       rdtp->dynticks_nesting, rdtp->dynticks_nmi_nesting,
-	       rdp->softirq_snap, kstat_softirqs_cpu(RCU_SOFTIRQ, cpu),
 	       fast_no_hz);
 }
 
@@ -2004,7 +1930,6 @@ static void print_cpu_stall_info_end(void)
 static void zero_cpu_stall_ticks(struct rcu_data *rdp)
 {
 	rdp->ticks_this_gp = 0;
-	rdp->softirq_snap = kstat_softirqs_cpu(RCU_SOFTIRQ, smp_processor_id());
 }
 
 /* Increment ->ticks_this_gp for all flavors of RCU. */
@@ -2410,3 +2335,4 @@ static bool init_nocb_callback_list(struct rcu_data *rdp)
 }
 
 #endif /* #else #ifdef CONFIG_RCU_NOCB_CPU */
+

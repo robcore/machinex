@@ -88,18 +88,14 @@ struct rcu_dynticks {
 	int dynticks_nmi_nesting;   /* Track NMI nesting level. */
 	atomic_t dynticks;	    /* Even value for idle, else odd. */
 #ifdef CONFIG_RCU_FAST_NO_HZ
-	int dyntick_drain;	    /* Prepare-for-idle state variable. */
-	unsigned long dyntick_holdoff;
-				    /* No retries for the jiffy of failure. */
-	struct timer_list idle_gp_timer;
-				    /* Wake up CPU sleeping with callbacks. */
-	unsigned long idle_gp_timer_expires;
-				    /* When to wake up CPU (for repost). */
-	bool idle_first_pass;	    /* First pass of attempt to go idle? */
+	bool all_lazy;		    /* Are all CPU's CBs lazy? */
 	unsigned long nonlazy_posted;
 				    /* # times non-lazy CBs posted to CPU. */
 	unsigned long nonlazy_posted_snap;
 				    /* idle-period nonlazy_posted snapshot. */
+	unsigned long last_accelerate;
+				    /* Last jiffy CBs were accelerated. */
+	int tick_nohz_enabled_snap; /* Previously seen value from sysfs. */
 #endif /* #ifdef CONFIG_RCU_FAST_NO_HZ */
 };
 
@@ -133,6 +129,9 @@ struct rcu_node {
 				/*  elements that need to drain to allow the */
 				/*  current expedited grace period to */
 				/*  complete (only for TREE_PREEMPT_RCU). */
+	atomic_t wakemask;	/* CPUs whose kthread needs to be awakened. */
+				/*  Since this has meaning only for leaf */
+				/*  rcu_node structures, 32 bits suffices. */
 	unsigned long qsmaskinit;
 				/* Per-GP initial value for qsmask & expmask. */
 	unsigned long grpmask;	/* Mask to apply to parent qsmask. */
@@ -329,11 +328,6 @@ struct rcu_data {
 	wait_queue_head_t nocb_wq;	/* For nocb kthreads to sleep on. */
 	struct task_struct *nocb_kthread;
 #endif /* #ifdef CONFIG_RCU_NOCB_CPU */
-
-	/* 8) RCU CPU stall data. */
-#ifdef CONFIG_RCU_CPU_STALL_INFO
-	unsigned int softirq_snap;	/* Snapshot of softirq activity. */
-#endif /* #ifdef CONFIG_RCU_CPU_STALL_INFO */
 
 	int cpu;
 	struct rcu_state *rsp;
@@ -561,3 +555,4 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 }
 #endif /* #else #ifdef CONFIG_RCU_NOCB_CPU */
 #endif /* #ifdef CONFIG_RCU_TRACE */
+
