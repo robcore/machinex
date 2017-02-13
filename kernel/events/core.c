@@ -5650,6 +5650,7 @@ static void perf_swevent_init_hrtimer(struct perf_event *event)
 		event->attr.sample_period = NSEC_PER_SEC / freq;
 		hwc->sample_period = event->attr.sample_period;
 		local64_set(&hwc->period_left, hwc->sample_period);
+		hwc->last_period = hwc->sample_period;
 		event->attr.freq = 0;
 	}
 }
