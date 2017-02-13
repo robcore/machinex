@@ -44,7 +44,6 @@
 #include <linux/jhash.h>
 #include <linux/hashtable.h>
 #include <linux/rculist.h>
-#include <linux/moduleparam.h>
 
 #include "workqueue_internal.h"
 
@@ -240,15 +239,6 @@ struct workqueue_struct {
 	char			name[];		/* I: workqueue name */
 };
 
-/* see the comment above the definition of WQ_POWER_EFFICIENT */
-#ifdef CONFIG_WQ_POWER_EFFICIENT_DEFAULT
-static bool wq_power_efficient = true;
-#else
-static bool wq_power_efficient;
-#endif
-
-module_param_named(power_efficient, wq_power_efficient, bool, 0444);
-
 static struct kmem_cache *pwq_cache;
 
 /* hash of all unbound pools keyed by pool->attrs */
@@ -257,19 +247,15 @@ static DEFINE_HASHTABLE(unbound_pool_hash, UNBOUND_POOL_HASH_ORDER);
 static struct workqueue_attrs *unbound_std_wq_attrs[NR_STD_WORKER_POOLS];
 
 struct workqueue_struct *system_wq __read_mostly;
-EXPORT_SYMBOL(system_wq);
+EXPORT_SYMBOL_GPL(system_wq);
 struct workqueue_struct *system_highpri_wq __read_mostly;
-EXPORT_SYMBOL(system_highpri_wq);
+EXPORT_SYMBOL_GPL(system_highpri_wq);
 struct workqueue_struct *system_long_wq __read_mostly;
-EXPORT_SYMBOL(system_long_wq);
+EXPORT_SYMBOL_GPL(system_long_wq);
 struct workqueue_struct *system_unbound_wq __read_mostly;
-EXPORT_SYMBOL(system_unbound_wq);
+EXPORT_SYMBOL_GPL(system_unbound_wq);
 struct workqueue_struct *system_freezable_wq __read_mostly;
-EXPORT_SYMBOL(system_freezable_wq);
-struct workqueue_struct *system_power_efficient_wq __read_mostly;
-EXPORT_SYMBOL(system_power_efficient_wq);
-struct workqueue_struct *system_freezable_power_efficient_wq __read_mostly;
-EXPORT_SYMBOL(system_freezable_power_efficient_wq);
+EXPORT_SYMBOL_GPL(system_freezable_wq);
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/workqueue.h>
@@ -284,8 +270,8 @@ EXPORT_SYMBOL(system_freezable_power_efficient_wq);
 	     (pool) < &per_cpu(cpu_worker_pools, cpu)[NR_STD_WORKER_POOLS]; \
 	     (pool)++)
 
-#define for_each_busy_worker(worker, i, pos, pool)			\
-	hash_for_each(pool->busy_hash, i, pos, worker, hentry)
+#define for_each_busy_worker(worker, i, pool)				\
+	hash_for_each(pool->busy_hash, i, worker, hentry)
 
 /**
  * for_each_pool - iterate through all worker_pools in the system
@@ -424,13 +410,13 @@ void __init_work(struct work_struct *work, int onstack)
 	else
 		debug_object_init(work, &work_debug_descr);
 }
-EXPORT_SYMBOL(__init_work);
+EXPORT_SYMBOL_GPL(__init_work);
 
 void destroy_work_on_stack(struct work_struct *work)
 {
 	debug_object_free(work, &work_debug_descr);
 }
-EXPORT_SYMBOL(destroy_work_on_stack);
+EXPORT_SYMBOL_GPL(destroy_work_on_stack);
 
 #else
 static inline void debug_work_activate(struct work_struct *work) { }
@@ -915,9 +901,8 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
 						 struct work_struct *work)
 {
 	struct worker *worker;
-	struct hlist_node *tmp;
 
-	hash_for_each_possible(pool->busy_hash, worker, tmp, hentry,
+	hash_for_each_possible(pool->busy_hash, worker, hentry,
 			       (unsigned long)work)
 		if (worker->current_work == work &&
 		    worker->current_func == work->func)
@@ -1240,7 +1225,7 @@ static void __queue_work(int cpu, struct workqueue_struct *wq,
 	debug_work_activate(work);
 
 	/* if dying, only works from the same workqueue are allowed */
-	if (unlikely(wq->flags & WQ_DRAINING) &&
+	if (unlikely(wq->flags & __WQ_DRAINING) &&
 	    WARN_ON_ONCE(!is_chained_work(wq)))
 		return;
 retry:
@@ -1348,7 +1333,7 @@ bool queue_work_on(int cpu, struct workqueue_struct *wq,
 	local_irq_restore(flags);
 	return ret;
 }
-EXPORT_SYMBOL(queue_work_on);
+EXPORT_SYMBOL_GPL(queue_work_on);
 
 /**
  * queue_work - queue work on a workqueue
@@ -1364,7 +1349,7 @@ bool queue_work(struct workqueue_struct *wq, struct work_struct *work)
 {
 	return queue_work_on(WORK_CPU_UNBOUND, wq, work);
 }
-EXPORT_SYMBOL(queue_work);
+EXPORT_SYMBOL_GPL(queue_work);
 
 void delayed_work_timer_fn(unsigned long __data)
 {
@@ -1438,7 +1423,7 @@ bool queue_delayed_work_on(int cpu, struct workqueue_struct *wq,
 	local_irq_restore(flags);
 	return ret;
 }
-EXPORT_SYMBOL(queue_delayed_work_on);
+EXPORT_SYMBOL_GPL(queue_delayed_work_on);
 
 /**
  * queue_delayed_work - queue work on a workqueue after delay
@@ -1453,7 +1438,7 @@ bool queue_delayed_work(struct workqueue_struct *wq,
 {
 	return queue_delayed_work_on(WORK_CPU_UNBOUND, wq, dwork, delay);
 }
-EXPORT_SYMBOL(queue_delayed_work);
+EXPORT_SYMBOL_GPL(queue_delayed_work);
 
 /**
  * mod_delayed_work_on - modify delay of or queue a delayed work on specific CPU
@@ -1491,7 +1476,7 @@ bool mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
 	/* -ENOENT from try_to_grab_pending() becomes %true */
 	return ret;
 }
-EXPORT_SYMBOL(mod_delayed_work_on);
+EXPORT_SYMBOL_GPL(mod_delayed_work_on);
 
 /**
  * mod_delayed_work - modify delay of or queue a delayed work
@@ -1506,7 +1491,7 @@ bool mod_delayed_work(struct workqueue_struct *wq, struct delayed_work *dwork,
 {
 	return mod_delayed_work_on(WORK_CPU_UNBOUND, wq, dwork, delay);
 }
-EXPORT_SYMBOL(mod_delayed_work);
+EXPORT_SYMBOL_GPL(mod_delayed_work);
 
 /**
  * worker_enter_idle - enter idle state
@@ -1689,7 +1674,6 @@ static void busy_worker_rebind_fn(struct work_struct *work)
 static void rebind_workers(struct worker_pool *pool)
 {
 	struct worker *worker, *n;
-	struct hlist_node *pos;
 	int i;
 
 	lockdep_assert_held(&pool->assoc_mutex);
@@ -1711,7 +1695,7 @@ static void rebind_workers(struct worker_pool *pool)
 	}
 
 	/* rebind busy workers */
-	for_each_busy_worker(worker, i, pos, pool) {
+	for_each_busy_worker(worker, i, pool) {
 		struct work_struct *rebind_work = &worker->rebind_work;
 		struct workqueue_struct *wq;
 
@@ -1868,19 +1852,12 @@ static void destroy_worker(struct worker *worker)
 	if (worker->flags & WORKER_IDLE)
 		pool->nr_idle--;
 
-	/*
-	 * Once WORKER_DIE is set, the kworker may destroy itself at any
-	 * point.  Pin to ensure the task stays until we're done with it.
-	 */
-	get_task_struct(worker->task);
-
 	list_del_init(&worker->entry);
 	worker->flags |= WORKER_DIE;
 
 	spin_unlock_irq(&pool->lock);
 
 	kthread_stop(worker->task);
-	put_task_struct(worker->task);
 	kfree(worker);
 
 	spin_lock_irq(&pool->lock);
@@ -2765,7 +2742,7 @@ void flush_workqueue(struct workqueue_struct *wq)
 out_unlock:
 	mutex_unlock(&wq->flush_mutex);
 }
-EXPORT_SYMBOL(flush_workqueue);
+EXPORT_SYMBOL_GPL(flush_workqueue);
 
 /**
  * drain_workqueue - drain a workqueue
@@ -2786,11 +2763,11 @@ void drain_workqueue(struct workqueue_struct *wq)
 	/*
 	 * __queue_work() needs to test whether there are drainers, is much
 	 * hotter than drain_workqueue() and already looks at @wq->flags.
-	 * Use WQ_DRAINING so that queue doesn't have to check nr_drainers.
+	 * Use __WQ_DRAINING so that queue doesn't have to check nr_drainers.
 	 */
 	spin_lock_irq(&workqueue_lock);
 	if (!wq->nr_drainers++)
-		wq->flags |= WQ_DRAINING;
+		wq->flags |= __WQ_DRAINING;
 	spin_unlock_irq(&workqueue_lock);
 reflush:
 	flush_workqueue(wq);
@@ -2818,12 +2795,12 @@ reflush:
 
 	spin_lock(&workqueue_lock);
 	if (!--wq->nr_drainers)
-		wq->flags &= ~WQ_DRAINING;
+		wq->flags &= ~__WQ_DRAINING;
 	spin_unlock(&workqueue_lock);
 
 	local_irq_enable();
 }
-EXPORT_SYMBOL(drain_workqueue);
+EXPORT_SYMBOL_GPL(drain_workqueue);
 
 static bool start_flush_work(struct work_struct *work, struct wq_barrier *barr)
 {
@@ -2900,7 +2877,7 @@ bool flush_work(struct work_struct *work)
 		return false;
 	}
 }
-EXPORT_SYMBOL(flush_work);
+EXPORT_SYMBOL_GPL(flush_work);
 
 static bool __cancel_work_timer(struct work_struct *work, bool is_dwork)
 {
@@ -2948,7 +2925,7 @@ bool cancel_work_sync(struct work_struct *work)
 {
 	return __cancel_work_timer(work, false);
 }
-EXPORT_SYMBOL(cancel_work_sync);
+EXPORT_SYMBOL_GPL(cancel_work_sync);
 
 /**
  * flush_delayed_work - wait for a dwork to finish executing the last queueing
@@ -3169,7 +3146,7 @@ int execute_in_process_context(work_func_t fn, struct execute_work *ew)
 
 	return 1;
 }
-EXPORT_SYMBOL(execute_in_process_context);
+EXPORT_SYMBOL_GPL(execute_in_process_context);
 
 int keventd_up(void)
 {
@@ -3587,10 +3564,6 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 	struct pool_workqueue *pwq;
 	size_t namelen;
 
-	/* see the comment above the definition of WQ_POWER_EFFICIENT */
-	if ((flags & WQ_POWER_EFFICIENT) && wq_power_efficient)
-		flags |= WQ_UNBOUND;
-
 	/* determine namelen, allocate wq and format name */
 	va_start(args, lock_name);
 	va_copy(args1, args);
@@ -3671,7 +3644,7 @@ err_destroy:
 	destroy_workqueue(wq);
 	return NULL;
 }
-EXPORT_SYMBOL(__alloc_workqueue_key);
+EXPORT_SYMBOL_GPL(__alloc_workqueue_key);
 
 /**
  * destroy_workqueue - safely terminate a workqueue
@@ -3743,8 +3716,9 @@ void destroy_workqueue(struct workqueue_struct *wq)
 		spin_unlock_irq(&pwq->pool->lock);
 	}
 }
-EXPORT_SYMBOL(destroy_workqueue);
-/*
+EXPORT_SYMBOL_GPL(destroy_workqueue);
+
+/**
  * pwq_set_max_active - adjust max_active of a pwq
  * @pwq: target pool_workqueue
  * @max_active: new max_active value.
@@ -3764,7 +3738,7 @@ static void pwq_set_max_active(struct pool_workqueue *pwq, int max_active)
 		pwq_activate_first_delayed(pwq);
 }
 
-/*
+/**
  * workqueue_set_max_active - adjust max_active of a workqueue
  * @wq: target workqueue
  * @max_active: new max_active value.
@@ -3798,7 +3772,7 @@ void workqueue_set_max_active(struct workqueue_struct *wq, int max_active)
 
 	spin_unlock_irq(&workqueue_lock);
 }
-EXPORT_SYMBOL(workqueue_set_max_active);
+EXPORT_SYMBOL_GPL(workqueue_set_max_active);
 
 /**
  * workqueue_congested - test whether a workqueue is congested
@@ -3829,7 +3803,7 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
 
 	return ret;
 }
-EXPORT_SYMBOL(workqueue_congested);
+EXPORT_SYMBOL_GPL(workqueue_congested);
 
 /**
  * work_busy - test whether a work is currently pending or running
@@ -3863,7 +3837,7 @@ unsigned int work_busy(struct work_struct *work)
 
 	return ret;
 }
-EXPORT_SYMBOL(work_busy);
+EXPORT_SYMBOL_GPL(work_busy);
 
 /*
  * CPU hotplug.
@@ -3885,7 +3859,6 @@ static void wq_unbind_fn(struct work_struct *work)
 	int cpu = smp_processor_id();
 	struct worker_pool *pool;
 	struct worker *worker;
-	struct hlist_node *pos;
 	int i;
 
 	for_each_cpu_worker_pool(pool, cpu) {
@@ -3904,7 +3877,7 @@ static void wq_unbind_fn(struct work_struct *work)
 		list_for_each_entry(worker, &pool->idle_list, entry)
 			worker->flags |= WORKER_UNBOUND;
 
-		for_each_busy_worker(worker, i, pos, pool)
+		for_each_busy_worker(worker, i, pool)
 			worker->flags |= WORKER_UNBOUND;
 
 		pool->flags |= POOL_DISASSOCIATED;
@@ -3933,23 +3906,13 @@ static void wq_unbind_fn(struct work_struct *work)
 	 */
 	for_each_cpu_worker_pool(pool, cpu)
 		atomic_set(&pool->nr_running, 0);
-
-		/*
-		 * With concurrency management just turned off, a busy
-		 * worker blocking could lead to lengthy stalls.  Kick off
-		 * unbound chain execution of currently pending work items.
-		 */
-		spin_lock_irq(&pool->lock);
-		wake_up_worker(pool);
-		spin_unlock_irq(&pool->lock);
-	}
 }
 
 /*
  * Workqueues should be brought up before normal priority CPU notifiers.
  * This will be registered high priority CPU notifier.
  */
-static int workqueue_cpu_up_callback(struct notifier_block *nfb,
+static int __cpuinit workqueue_cpu_up_callback(struct notifier_block *nfb,
 					       unsigned long action,
 					       void *hcpu)
 {
@@ -3995,7 +3958,7 @@ static int workqueue_cpu_up_callback(struct notifier_block *nfb,
  * Workqueues should be brought down after normal priority CPU notifiers.
  * This will be registered as low priority CPU notifier.
  */
-static int workqueue_cpu_down_callback(struct notifier_block *nfb,
+static int __cpuinit workqueue_cpu_down_callback(struct notifier_block *nfb,
 						 unsigned long action,
 						 void *hcpu)
 {
@@ -4029,7 +3992,7 @@ static void work_for_cpu_fn(struct work_struct *work)
 	wfc->ret = wfc->fn(wfc->arg);
 }
 
-/*
+/**
  * work_on_cpu - run a function in user context on a particular cpu
  * @cpu: the cpu to run on
  * @fn: the function to run
@@ -4048,12 +4011,12 @@ long work_on_cpu(int cpu, long (*fn)(void *), void *arg)
 	flush_work(&wfc.work);
 	return wfc.ret;
 }
-EXPORT_SYMBOL(work_on_cpu);
+EXPORT_SYMBOL_GPL(work_on_cpu);
 #endif /* CONFIG_SMP */
 
 #ifdef CONFIG_FREEZER
 
-/*
+/**
  * freeze_workqueues_begin - begin freezing workqueues
  *
  * Start freezing workqueues.  After this function returns, all freezable
@@ -4263,14 +4226,8 @@ static int __init init_workqueues(void)
 					    WQ_UNBOUND_MAX_ACTIVE);
 	system_freezable_wq = alloc_workqueue("events_freezable",
 					      WQ_FREEZABLE, 0);
-	system_power_efficient_wq = alloc_workqueue("events_power_efficient",
-					      WQ_POWER_EFFICIENT, 0);
-	system_freezable_power_efficient_wq = alloc_workqueue("events_freezable_power_efficient",
-					      WQ_FREEZABLE | WQ_POWER_EFFICIENT,
-					      0);
 	BUG_ON(!system_wq || !system_highpri_wq || !system_long_wq ||
-	       !system_unbound_wq || !system_freezable_wq ||
-	       !system_power_efficient_wq || !system_freezable_power_efficient_wq);
+	       !system_unbound_wq || !system_freezable_wq);
 	return 0;
 }
 early_initcall(init_workqueues);
