@@ -894,10 +894,8 @@ static void at91ether_rx(struct net_device *dev)
 			skb->protocol = eth_type_trans(skb, dev);
 			dev->stats.rx_bytes += pktlen;
 			netif_rx(skb);
-		}
-		else {
+		} else {
 			dev->stats.rx_dropped += 1;
-			printk(KERN_NOTICE "%s: Memory squeeze, dropping packet.\n", dev->name);
 		}
 
 		if (dlist->descriptors[lp->rxBuffIndex].size & EMAC_MULTICAST)

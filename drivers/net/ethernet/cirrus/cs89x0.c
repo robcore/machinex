@@ -913,9 +913,8 @@ dma_rx(struct net_device *dev)
 	/* Malloc up new buffer. */
 	skb = netdev_alloc_skb(dev, length + 2);
 	if (skb == NULL) {
-		if (net_debug)	/* I don't think we want to do this to a stressed system */
-			printk("%s: Memory squeeze, dropping packet.\n", dev->name);
-		dev->stats.rx_dropped++;
+		if (net_debug)
+			dev->stats.rx_dropped++;
 
 		/* AKPM: advance bp to the next frame */
 skip_this_frame:

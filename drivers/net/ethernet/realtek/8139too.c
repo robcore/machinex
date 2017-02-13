@@ -2069,8 +2069,6 @@ keep_pkt:
 
 			netif_receive_skb (skb);
 		} else {
-			if (net_ratelimit())
-				netdev_warn(dev, "Memory squeeze, dropping packet\n");
 			dev->stats.rx_dropped++;
 		}
 		received++;
