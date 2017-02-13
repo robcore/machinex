@@ -415,7 +415,7 @@ bool regcache_set_val(struct regmap *map, void *base, unsigned int idx,
 	/* Use device native format if possible */
 	if (map->format.format_val) {
 		map->format.format_val(base + (map->cache_word_size * idx),
-				       val, 0);
+				       val);
 		return false;
 	}
 
