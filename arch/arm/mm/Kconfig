@@ -8,7 +8,6 @@ comment "Processor Type"
 config CPU_ARM610
 	bool "Support ARM610 processor" if ARCH_RPC
 	select CPU_32v3
-	select CPU_CACHE_V3
 	select CPU_CACHE_VIVT
 	select CPU_CP15_MMU
 	select CPU_COPY_V3 if MMU
@@ -40,7 +39,6 @@ config CPU_ARM7TDMI
 config CPU_ARM710
 	bool "Support ARM710 processor" if ARCH_RPC
 	select CPU_32v3
-	select CPU_CACHE_V3
 	select CPU_CACHE_VIVT
 	select CPU_CP15_MMU
 	select CPU_COPY_V3 if MMU
@@ -80,7 +78,6 @@ config CPU_ARM740T
 	select CPU_32v4T
 	select CPU_ABRT_LV4T
 	select CPU_PABRT_LEGACY
-	select CPU_CACHE_V3	# although the core is v4t
 	select CPU_CP15_MPU
 	help
 	  A 32-bit RISC processor with 8KB cache or 4KB variants,
@@ -505,9 +502,6 @@ config CPU_PABRT_V7
 	bool
 
 # The cache model
-config CPU_CACHE_V3
-	bool
-
 config CPU_CACHE_V4
 	bool
 
