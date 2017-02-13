@@ -22,6 +22,7 @@
 #include <linux/tick.h>
 #include <linux/stop_machine.h>
 
+#include "tick-internal.h"
 
 static struct timekeeper timekeeper;
 
