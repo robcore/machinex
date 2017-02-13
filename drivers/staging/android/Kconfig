@@ -134,6 +134,16 @@ config SAMP_HOTNESS
 	default n
 	help
 	  This option change kill hidden process policy in LMK
+
+config SYNC
+	bool "Synchronization framework"
+	default n
+	select ANON_INODES
+	help
+	  This option enables the framework for synchronization between multiple
+	  drivers.  Sync implementations can take advantage of hardware
+	  synchronization built into devices like GPUs.
+
 endif # if ANDROID
 
 endmenu
