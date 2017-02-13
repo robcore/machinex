@@ -243,7 +243,7 @@ struct workqueue_struct {
 	struct worker		*rescuer;	/* I: rescue worker */
 
 	int			nr_drainers;	/* WQ: drain in progress */
-	int			saved_max_active; /* PW: saved pwq max_active */
+	int			saved_max_active; /* WQ: saved pwq max_active */
 
 #ifdef CONFIG_SYSFS
 	struct wq_device	*wq_dev;	/* I: for sysfs interface */
@@ -3576,13 +3576,13 @@ static void pwq_adjust_max_active(struct pool_workqueue *pwq)
 	bool freezable = wq->flags & WQ_FREEZABLE;
 
 	/* for @wq->saved_max_active */
-	lockdep_assert_held(&pwq_lock);
+	lockdep_assert_held(&wq->mutex);
 
 	/* fast exit for non-freezable wqs */
 	if (!freezable && pwq->max_active == wq->saved_max_active)
 		return;
 
-	spin_lock(&pwq->pool->lock);
+	spin_lock_irq(&pwq->pool->lock);
 
 	if (!freezable || !(pwq->pool->flags & POOL_FREEZING)) {
 		pwq->max_active = wq->saved_max_active;
@@ -3600,7 +3600,7 @@ static void pwq_adjust_max_active(struct pool_workqueue *pwq)
 		pwq->max_active = 0;
 	}
 
-	spin_unlock(&pwq->pool->lock);
+	spin_unlock_irq(&pwq->pool->lock);
 }
 
 static void init_and_link_pwq(struct pool_workqueue *pwq,
@@ -3619,7 +3619,6 @@ static void init_and_link_pwq(struct pool_workqueue *pwq,
 	INIT_WORK(&pwq->unbound_release_work, pwq_unbound_release_workfn);
 
 	mutex_lock(&wq->mutex);
-	spin_lock_irq(&pwq_lock);
 
 	/*
 	 * Set the matching work_color.  This is synchronized with
@@ -3633,9 +3632,10 @@ static void init_and_link_pwq(struct pool_workqueue *pwq,
 	pwq_adjust_max_active(pwq);
 
 	/* link in @pwq */
+	spin_lock_irq(&pwq_lock);
 	list_add_rcu(&pwq->pwqs_node, &wq->pwqs);
-
 	spin_unlock_irq(&pwq_lock);
+
 	mutex_unlock(&wq->mutex);
 }
 
@@ -3800,10 +3800,10 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 	 */
 	mutex_lock(&wq_pool_mutex);
 
-	spin_lock_irq(&pwq_lock);
+	mutex_lock(&wq->mutex);
 	for_each_pwq(pwq, wq)
 		pwq_adjust_max_active(pwq);
-	spin_unlock_irq(&pwq_lock);
+	mutex_unlock(&wq->mutex);
 
 	list_add(&wq->list, &workqueues);
 
@@ -3914,14 +3914,14 @@ void workqueue_set_max_active(struct workqueue_struct *wq, int max_active)
 
 	max_active = wq_clamp_max_active(max_active, wq->flags, wq->name);
 
-	spin_lock_irq(&pwq_lock);
+	mutex_lock(&wq->mutex);
 
 	wq->saved_max_active = max_active;
 
 	for_each_pwq(pwq, wq)
 		pwq_adjust_max_active(pwq);
 
-	spin_unlock_irq(&pwq_lock);
+	mutex_unlock(&wq->mutex);
 }
 EXPORT_SYMBOL(workqueue_set_max_active);
 
@@ -4284,7 +4284,7 @@ EXPORT_SYMBOL(work_on_cpu);
  * pool->worklist.
  *
  * CONTEXT:
- * Grabs and releases wq_pool_mutex, pwq_lock and pool->lock's.
+ * Grabs and releases wq_pool_mutex, wq->mutex and pool->lock's.
  */
 void freeze_workqueues_begin(void)
 {
@@ -4306,13 +4306,12 @@ void freeze_workqueues_begin(void)
 		spin_unlock_irq(&pool->lock);
 	}
 
-	/* suppress further executions by setting max_active to zero */
-	spin_lock_irq(&pwq_lock);
 	list_for_each_entry(wq, &workqueues, list) {
+		mutex_lock(&wq->mutex);
 		for_each_pwq(pwq, wq)
 			pwq_adjust_max_active(pwq);
+		mutex_unlock(&wq->mutex);
 	}
-	spin_unlock_irq(&pwq_lock);
 
 	mutex_unlock(&wq_pool_mutex);
 }
@@ -4370,7 +4369,7 @@ out_unlock:
  * frozen works are transferred to their respective pool worklists.
  *
  * CONTEXT:
- * Grabs and releases wq_pool_mutex, pwq_lock and pool->lock's.
+ * Grabs and releases wq_pool_mutex, wq->mutex and pool->lock's.
  */
 void thaw_workqueues(void)
 {
@@ -4393,12 +4392,12 @@ void thaw_workqueues(void)
 	}
 
 	/* restore max_active and repopulate worklist */
-	spin_lock_irq(&pwq_lock);
 	list_for_each_entry(wq, &workqueues, list) {
+		mutex_lock(&wq->mutex);
 		for_each_pwq(pwq, wq)
 			pwq_adjust_max_active(pwq);
+		mutex_unlock(&wq->mutex);
 	}
-	spin_unlock_irq(&pwq_lock);
 
 	workqueue_freezing = false;
 out_unlock:
