@@ -3,7 +3,6 @@ config SUNRPC
 
 config SUNRPC_GSS
 	tristate
-	select OID_REGISTRY
 
 config SUNRPC_BACKCHANNEL
 	bool

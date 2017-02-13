@@ -36,7 +36,6 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/module.h>
-#include <linux/oid_registry.h>
 #include <linux/sunrpc/msg_prot.h>
 #include <linux/sunrpc/gss_asn1.h>
 #include <linux/sunrpc/auth_gss.h>
@@ -176,12 +175,6 @@ struct gss_api_mech *
 gss_mech_get_by_OID(struct xdr_netobj *obj)
 {
 	struct gss_api_mech	*pos, *gm = NULL;
-	char buf[32];
-
-	if (sprint_oid(obj->data, obj->len, buf, sizeof(buf)) < 0)
-		return NULL;
-	dprintk("RPC:       %s(%s)\n", __func__, buf);
-	request_module("rpc-auth-gss-%s", buf);
 
 	spin_lock(&registered_mechs_lock);
 	list_for_each_entry(pos, &registered_mechs, gm_list) {
