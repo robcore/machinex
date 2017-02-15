@@ -82,12 +82,12 @@ static void notrace persistent_ram_encode_rs8(struct persistent_ram_zone *prz,
 	uint8_t *data, size_t len, uint8_t *ecc)
 {
 	int i;
-	uint16_t par[prz->ecc_size];
+	uint16_t par[prz->ecc_info.ecc_size];
 
 	/* Initialize the parity buffer */
 	memset(par, 0, sizeof(par));
 	encode_rs8(prz->rs_decoder, data, len, par, 0);
-	for (i = 0; i < prz->ecc_size; i++)
+	for (i = 0; i < prz->ecc_info.ecc_size; i++)
 		ecc[i] = par[i];
 }
 
@@ -95,9 +95,9 @@ static int persistent_ram_decode_rs8(struct persistent_ram_zone *prz,
 	void *data, size_t len, uint8_t *ecc)
 {
 	int i;
-	uint16_t par[prz->ecc_size];
+	uint16_t par[prz->ecc_info.ecc_size];
 
-	for (i = 0; i < prz->ecc_size; i++)
+	for (i = 0; i < prz->ecc_info.ecc_size; i++)
 		par[i] = ecc[i];
 	return decode_rs8(prz->rs_decoder, data, par, len,
 				NULL, 0, NULL, 0, NULL);
@@ -186,7 +186,8 @@ static int persistent_ram_init_ecc(struct persistent_ram_zone *prz)
 	prz->ecc_symsize = 8;
 	prz->ecc_poly = 0x11d;
 
-	ecc_blocks = DIV_ROUND_UP(prz->buffer_size, prz->ecc_block_size);
+	ecc_blocks = DIV_ROUND_UP(prz->buffer_size - prz->ecc_size,
+				  prz->ecc_block_size + prz->ecc_size);
 	ecc_total = (ecc_blocks + 1) * prz->ecc_size;
 	if (ecc_total >= prz->buffer_size) {
 		pr_err("%s: invalid ecc_size %u (total %zu, buffer size %zu)\n",
@@ -229,6 +230,9 @@ ssize_t persistent_ram_ecc_string(struct persistent_ram_zone *prz,
 	char *str, size_t len)
 {
 	ssize_t ret;
+
+	if (!prz->ecc_info.ecc_size)
+		return 0;
 
 	if (prz->corrected_bytes || prz->bad_blocks)
 		ret = snprintf(str, len, ""
