@@ -35,12 +35,8 @@
 #include <linux/string.h>
 #include <linux/idr.h>
 #include <linux/spinlock.h>
-#include <linux/percpu.h>
-#include <linux/hardirq.h>
 
 static struct kmem_cache *idr_layer_cache;
-static DEFINE_PER_CPU(struct idr_layer *, idr_preload_head);
-static DEFINE_PER_CPU(int, idr_preload_cnt);
 static DEFINE_SPINLOCK(simple_ida_lock);
 
 static struct idr_layer *get_from_free_list(struct idr *idp)
@@ -56,50 +52,6 @@ static struct idr_layer *get_from_free_list(struct idr *idp)
 	}
 	spin_unlock_irqrestore(&idp->lock, flags);
 	return(p);
-}
-
-/**
- * idr_layer_alloc - allocate a new idr_layer
- * @gfp_mask: allocation mask
- * @layer_idr: optional idr to allocate from
- *
- * If @layer_idr is %NULL, directly allocate one using @gfp_mask or fetch
- * one from the per-cpu preload buffer.  If @layer_idr is not %NULL, fetch
- * an idr_layer from @idr->id_free.
- *
- * @layer_idr is to maintain backward compatibility with the old alloc
- * interface - idr_pre_get() and idr_get_new*() - and will be removed
- * together with per-pool preload buffer.
- */
-static struct idr_layer *idr_layer_alloc(gfp_t gfp_mask, struct idr *layer_idr)
-{
-	struct idr_layer *new;
-
-	/* this is the old path, bypass to get_from_free_list() */
-	if (layer_idr)
-		return get_from_free_list(layer_idr);
-
-	/* try to allocate directly from kmem_cache */
-	new = kmem_cache_zalloc(idr_layer_cache, gfp_mask);
-	if (new)
-		return new;
-
-	/*
-	 * Try to fetch one from the per-cpu preload buffer if in process
-	 * context.  See idr_preload() for details.
-	 */
-	if (in_interrupt())
-		return NULL;
-
-	preempt_disable();
-	new = __this_cpu_read(idr_preload_head);
-	if (new) {
-		__this_cpu_write(idr_preload_head, new->ary[0]);
-		__this_cpu_dec(idr_preload_cnt);
-		new->ary[0] = NULL;
-	}
-	preempt_enable();
-	return new;
 }
 
 static void idr_layer_rcu_free(struct rcu_head *head)
@@ -159,7 +111,6 @@ static void idr_mark_full(struct idr_layer **pa, int id)
  * idr_pre_get - reserve resources for idr allocation
  * @idp:	idr handle
  * @gfp_mask:	memory allocation flags
- * @layer_idr: optional idr passed to idr_layer_alloc()
  *
  * This function should be called prior to calling the idr_get_new* functions.
  * It preallocates enough memory to satisfy the worst possible allocation. The
@@ -365,80 +316,6 @@ int idr_get_new_above(struct idr *idp, void *ptr, int starting_id, int *id)
 	return 0;
 }
 EXPORT_SYMBOL(idr_get_new_above);
-
-/**
- * idr_preload - preload for idr_alloc()
- * @gfp_mask: allocation mask to use for preloading
- *
- * Preload per-cpu layer buffer for idr_alloc().  Can only be used from
- * process context and each idr_preload() invocation should be matched with
- * idr_preload_end().  Note that preemption is disabled while preloaded.
- *
- * The first idr_alloc() in the preloaded section can be treated as if it
- * were invoked with @gfp_mask used for preloading.  This allows using more
- * permissive allocation masks for idrs protected by spinlocks.
- *
- * For example, if idr_alloc() below fails, the failure can be treated as
- * if idr_alloc() were called with GFP_KERNEL rather than GFP_NOWAIT.
- *
- *	idr_preload(GFP_KERNEL);
- *	spin_lock(lock);
- *
- *	id = idr_alloc(idr, ptr, start, end, GFP_NOWAIT);
- *
- *	spin_unlock(lock);
- *	idr_preload_end();
- *	if (id < 0)
- *		error;
- */
-int idr_preload(struct idr *idp, gfp_t gfp_mask)
-{
-	while (idp->id_free_cnt < MAX_IDR_FREE) {
-		struct idr_layer *new;
-		new = kmem_cache_zalloc(idr_layer_cache, gfp_mask);
-		if (new == NULL)
-			return (0);
-		move_to_free_list(idp, new);
-	}
-	return 1;
-}
-EXPORT_SYMBOL(idr_preload);
-
-/**
- * idr_alloc - allocate new idr entry
- * @idr: the (initialized) idr
- * @ptr: pointer to be associated with the new id
- * @start: the minimum id (inclusive)
- * @end: the maximum id (exclusive, <= 0 for max)
- * @gfp_mask: memory allocation flags
- *
- * Allocate an id in [start, end) and associate it with @ptr.  If no ID is
- * available in the specified range, returns -ENOSPC.  On memory allocation
- * failure, returns -ENOMEM.
- *
- * Note that @end is treated as max when <= 0.  This is to always allow
- * using @start + N as @end as long as N is inside integer range.
- *
- * The user is responsible for exclusively synchronizing all operations
- * which may modify @idr.  However, read-only accesses such as idr_find()
- * or iteration can be performed under RCU read lock provided the user
- * destroys @ptr in RCU-safe way after removal from idr.
- */
-int idr_alloc(struct idr *idp, void *ptr, int *id)
-{
-	int rv;
-
-	rv = idr_get_new_above_int(idp, ptr, 0);
-	/*
-	 * This is a cheap hack until the IDR code can be fixed to
-	 * return proper error values.
-	 */
-	if (rv < 0)
-		return _idr_rc_to_errno(rv);
-	*id = rv;
-	return 0;
-}
-EXPORT_SYMBOL_GPL(idr_alloc);
 
 /**
  * idr_get_new - allocate new idr entry
