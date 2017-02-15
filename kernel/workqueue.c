@@ -157,7 +157,8 @@ struct worker_pool {
 	/* see manage_workers() for details on the two manager mutexes */
 	struct mutex		manager_arb;	/* manager arbitration */
 	struct mutex		manager_mutex;	/* manager exclusion */
-	struct idr		worker_idr;	/* MG: worker IDs and iteration */
+	struct idr		worker_idr;	/* M: worker IDs */
+	struct list_head	workers;	/* M: attached workers */
 
 	struct workqueue_attrs	*attrs;		/* I: worker attributes */
 	struct hlist_node	hash_node;	/* PL: unbound_pool_hash node */
@@ -337,7 +338,6 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 /**
  * for_each_pool_worker - iterate through all workers of a worker_pool
  * @worker: iteration cursor
- * @wi: integer used for iteration
  * @pool: worker_pool to iterate workers of
  *
  * This must be called with either @pool->manager_mutex or ->lock held.
@@ -345,8 +345,8 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
  * The if/else clause exists only for the lockdep assertion and can be
  * ignored.
  */
-#define for_each_pool_worker(worker, wi, pool)				\
-	idr_for_each_entry(&(pool)->worker_idr, (worker), (wi))		\
+#define for_each_pool_worker(worker, pool)				\
+	list_for_each_entry((worker), &(pool)->workers, node)		\
 		if (({ assert_manager_or_pool_lock((pool)); false; })) { } \
 		else
 
@@ -1619,6 +1619,7 @@ static struct worker *alloc_worker(void)
 	if (worker) {
 		INIT_LIST_HEAD(&worker->entry);
 		INIT_LIST_HEAD(&worker->scheduled);
+		INIT_LIST_HEAD(&worker->node);
 		/* on creation a worker is in !idle && prep state */
 		worker->flags = WORKER_PREP;
 	}
@@ -1700,6 +1701,8 @@ static struct worker *create_worker(struct worker_pool *pool)
 	spin_lock_irq(&pool->lock);
 	idr_replace(&pool->worker_idr, worker, worker->id);
 	spin_unlock_irq(&pool->lock);
+	/* successful, attach the worker to the pool */
+	list_add_tail(&worker->node, &pool->workers);
 
 	return worker;
 
@@ -1707,6 +1710,8 @@ fail:
 	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
 		idr_remove(&pool->worker_idr, id);
+	list_del(&worker->node);
+	if (list_empty(&pool->workers))
 		spin_unlock_irq(&pool->lock);
 	}
 	kfree(worker);
@@ -3371,6 +3376,7 @@ static int init_worker_pool(struct worker_pool *pool)
 	mutex_init(&pool->manager_arb);
 	mutex_init(&pool->manager_mutex);
 	idr_init(&pool->worker_idr);
+	INIT_LIST_HEAD(&pool->workers);
 
 	INIT_HLIST_NODE(&pool->hash_node);
 	pool->refcnt = 1;
