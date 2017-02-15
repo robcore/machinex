@@ -133,7 +133,7 @@ static void orig_node_free_rcu(struct rcu_head *rcu)
 	}
 
 	/* for all neighbors towards this originator ... */
-	hlist_for_each_entry_safe(neigh_node, node, node_tmp,
+	hlist_for_each_entry_safe(neigh_node, node_tmp,
 				  &orig_node->neigh_list, list) {
 		hlist_del_rcu(&neigh_node->list);
 		neigh_node_free_ref(neigh_node);
@@ -279,7 +279,7 @@ static bool purge_orig_neighbors(struct bat_priv *bat_priv,
 	spin_lock_bh(&orig_node->neigh_list_lock);
 
 	/* for all neighbors towards this originator ... */
-	hlist_for_each_entry_safe(neigh_node, node, node_tmp,
+	hlist_for_each_entry_safe(neigh_node, node_tmp,
 				  &orig_node->neigh_list, list) {
 
 		if ((has_timed_out(neigh_node->last_valid, PURGE_TIMEOUT)) ||
@@ -457,7 +457,7 @@ int orig_seq_print_text(struct seq_file *seq, void *offset)
 				   neigh_node->addr,
 				   neigh_node->if_incoming->net_dev->name);
 
-			hlist_for_each_entry_rcu(neigh_node_tmp, node_tmp,
+			hlist_for_each_entry_rcu(neigh_node_tmp,
 						 &orig_node->neigh_list, list) {
 				seq_printf(seq, " %pM (%3i)",
 					   neigh_node_tmp->addr,
@@ -524,7 +524,7 @@ int orig_hash_add_if(struct hard_iface *hard_iface, int max_if_num)
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(orig_node, node, head, hash_entry) {
+		hlist_for_each_entry_rcu(orig_node, head, hash_entry) {
 			spin_lock_bh(&orig_node->ogm_cnt_lock);
 			ret = orig_node_add_if(orig_node, max_if_num);
 			spin_unlock_bh(&orig_node->ogm_cnt_lock);
@@ -607,7 +607,7 @@ int orig_hash_del_if(struct hard_iface *hard_iface, int max_if_num)
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(orig_node, node, head, hash_entry) {
+		hlist_for_each_entry_rcu(orig_node, head, hash_entry) {
 			spin_lock_bh(&orig_node->ogm_cnt_lock);
 			ret = orig_node_del_if(orig_node, max_if_num,
 					hard_iface->if_num);

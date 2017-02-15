@@ -672,7 +672,7 @@ next:
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(tt_common_entry, node, head,
+		hlist_for_each_entry_rcu(tt_common_entry, head,
 					 hash_entry) {
 			entry = (struct vis_info_entry *)
 					skb_put(info->skb_packet,
@@ -745,7 +745,7 @@ static void broadcast_vis_packet(struct bat_priv *bat_priv,
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(orig_node, node, head, hash_entry) {
+		hlist_for_each_entry_rcu(orig_node, head, hash_entry) {
 			/* if it's a vis server and reachable, send it. */
 			if (!(orig_node->flags & VIS_SERVER))
 				continue;
