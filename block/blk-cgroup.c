@@ -511,10 +511,9 @@ EXPORT_SYMBOL_GPL(blkiocg_del_blkio_group);
 struct blkio_group *blkiocg_lookup_group(struct blkio_cgroup *blkcg, void *key)
 {
 	struct blkio_group *blkg;
-	struct hlist_node *n;
 	void *__key;
 
-	hlist_for_each_entry_rcu(blkg, n, &blkcg->blkg_list, blkcg_node) {
+	hlist_for_each_entry_rcu(blkg, &blkcg->blkg_list, blkcg_node) {
 		__key = blkg->key;
 		if (__key == key)
 			return blkg;
@@ -554,7 +553,6 @@ blkiocg_reset_stats(struct cgroup *cgroup, struct cftype *cftype, u64 val)
 	struct blkio_cgroup *blkcg;
 	struct blkio_group *blkg;
 	struct blkio_group_stats *stats;
-	struct hlist_node *n;
 	uint64_t queued[BLKIO_STAT_TOTAL];
 	int i;
 #ifdef CONFIG_DEBUG_BLK_CGROUP
@@ -564,7 +562,7 @@ blkiocg_reset_stats(struct cgroup *cgroup, struct cftype *cftype, u64 val)
 
 	blkcg = cgroup_to_blkio_cgroup(cgroup);
 	spin_lock_irq(&blkcg->lock);
-	hlist_for_each_entry(blkg, n, &blkcg->blkg_list, blkcg_node) {
+	hlist_for_each_entry(blkg, &blkcg->blkg_list, blkcg_node) {
 		spin_lock(&blkg->stats_lock);
 		stats = &blkg->stats;
 #ifdef CONFIG_DEBUG_BLK_CGROUP

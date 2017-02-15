@@ -35,6 +35,7 @@
 #include <linux/slab.h>
 #include <linux/mlx4/qp.h>
 #include <linux/skbuff.h>
+#include <linux/rculist.h>
 #include <linux/if_ether.h>
 #include <linux/if_vlan.h>
 #include <linux/vmalloc.h>
