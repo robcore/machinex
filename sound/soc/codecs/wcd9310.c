@@ -40,6 +40,7 @@
 #include <linux/export.h>
 #ifdef CONFIG_SND_SOC_ES325
 #include "es325-export.h"
+#include <sound/es325-export.h>
 #endif
 
 static int cfilt_adjust_ms = 10;
