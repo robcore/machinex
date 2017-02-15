@@ -3467,7 +3467,7 @@ static void rcu_free_pool(struct rcu_head *rcu)
 {
 	struct worker_pool *pool = container_of(rcu, struct worker_pool, rcu);
 
-	idr_destroy(&pool->worker_idr);
+	compat_idr_destroy(&pool->worker_idr);
 	free_workqueue_attrs(pool->attrs);
 	kfree(pool);
 }
