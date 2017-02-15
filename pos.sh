@@ -1,54 +1,300 @@
-#!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0150-nope-this-is-garbage.patch"
-patch -p1 -R < "/root/machinex/patches/0149-SUCK-IT-3.15.patch"
-patch -p1 -R < "/root/machinex/patches/0148-workqueues-3.14.patch"
-patch -p1 -R < "/root/machinex/patches/0147-workqueues-are-now-at-3.10.patch"
-patch -p1 -R < "/root/machinex/patches/0146-and-that.patch"
-patch -p1 -R < "/root/machinex/patches/0145-k-brought-those-back.patch"
-patch -p1 -R < "/root/machinex/patches/0144-workqueue-workqueue_congested-shouldnt-translate-WOR.patch"
-patch -p1 -R < "/root/machinex/patches/0143-workqueue-avoid-false-negative-WARN_ON.patch"
-patch -p1 -R < "/root/machinex/patches/0142-revert-those-for-a-sec-my-computer-is-grepping-VERY-.patch"
-patch -p1 -R < "/root/machinex/patches/0140-and-more-doing-this-till-FUCKING-3.15.patch"
-patch -p1 -R < "/root/machinex/patches/0139-there-now-REALLY-brought-up-workqueues.patch"
-patch -p1 -R < "/root/machinex/patches/0138-brought-workqueues-back-up-going-all-the-way-to-3.15.patch"
-patch -p1 -R < "/root/machinex/patches/0137-workqueue-move-struct-worker-definition-to-workqueue.patch"
-patch -p1 -R < "/root/machinex/patches/0136-REVERTED-back-to-idr-conversion-because-i-am-going-t.patch"
-patch -p1 -R < "/root/machinex/patches/0134-Reverted-some-rcu-shit-i-will-do-it-when-im-not-exha.patch"
-patch -p1 -R < "/root/machinex/patches/0133-k-i-cheated-a-bit.patch"
-patch -p1 -R < "/root/machinex/patches/0130-synced-my-rcu-headers.patch"
-
-patch -p1 -R < "/root/machinex/patches/0081-rcu-Make-rcu_accelerate_cbs-note-need-for-future.patch"
-patch -p1 -R < "/root/machinex/patches/0080-rcu-Abstract-rcu_start_future_gp-from-rcu_nocb_wait.patch"
-patch -p1 -R < "/root/machinex/patches/0079-rcu-Rename-n_nocb_gp_requests-to-need_future_gp.patch"
-patch -p1 -R < "/root/machinex/patches/0078-rcu-Push-lock-release-to-rcu_start_gp-s-callers.patch"
-patch -p1 -R < "/root/machinex/patches/0077-rcu-Repurpose-no-CBs-event-tracing-to-future-GP-even.patch"
-patch -p1 -R < "/root/machinex/patches/0076-trying.also-rcu-Rearrange-locking-in-rcu_start_gp.patch"
-patch -p1 -R < "/root/machinex/patches/0075-less-fuck-but-still-fuck.patch"
-patch -p1 -R < "/root/machinex/patches/0074-fuck.patch"
-patch -p1 -R < "/root/machinex/patches/0073-rcu-Accelerate-RCU-callbacks-at-grace-period-end.patch"
-patch -p1 -R < "/root/machinex/patches/0072-rcu-Distinguish-rcuo-kthreads-by-RCU-flavor.patch"
-patch -p1 -R < "/root/machinex/patches/0071-rcu-Add-event-tracing-for-no-CBs-CPUs-grace-periods.patch"
-patch -p1 -R < "/root/machinex/patches/0070-rcu-Add-event-tracing-for-no-CBs-CPUs-callbacks.patch"
-patch -p1 -R < "/root/machinex/patches/0069-rcu-Introduce-proper-blocking-to-no-CBs-kthreads-GP.patch"
-patch -p1 -R < "/root/machinex/patches/0068-rcu-Provide-compile-time-control-for-no-CBs-CPUs.patch"
-
-patch -p1 -R < "/root/machinex/patches/0060-workqueue-remove-pwq_lock-which-is-no-longer-used.patch"
-patch -p1 -R < "/root/machinex/patches/0059-workqueue-protect-wq-saved_max_active-with-wq-mutex.patch"
-patch -p1 -R < "/root/machinex/patches/0058-workqueue-protect-wq-pwqs-and-iteration-with-wq-mute.patch"
-patch -p1 -R < "/root/machinex/patches/0057-workqueue-protect-wq-nr_drainers-and-flags-with-wq-m.patch"
-patch -p1 -R < "/root/machinex/patches/0056-workqueue-rename-wq-flush_mutex-to-wq-mutex.patch"
-patch -p1 -R < "/root/machinex/patches/0055-workqueue-rename-wq_mutex-to-wq_pool_mutex.patch"
-
-patch -p1 -R < "/root/machinex/patches/0141-workqueue-avoid-false-negative-in-assert_manager.patch"
-patch -p1 -R < "/root/machinex/patches/0140-workqueue-kick-a-worker-in-pwq_adjust_max_active.patch"
-patch -p1 -R < "/root/machinex/patches/0139-workqueue-simplify-current_is_workqueue_rescuer.patch"
-
-patch -p1 -R < "/root/machinex/patches/0135-orkqueue-add-missing-POOL_FREEZING.patch"
-
-patch -p1 -R < "/root/machinex/patches/0123-workqueue-restore-CPU-affinity-of-unbound-workers.patch"
-patch -p1 -R < "/root/machinex/patches/0122-workqueue-directly-restore-CPU-affinity-of-workers-f.patch"
-patch -p1 -R < "/root/machinex/patches/0121-workqueue-relocate-rebind_workers.patch"
-patch -p1 -R < "/root/machinex/patches/0120-attempting-to-hack-in-the-old-idr-allocation-routine.patch"
-patch -p1 -R < "/root/machinex/patches/0119-nevermind.patch"
-patch -p1 -R < "/root/machinex/patches/0118-workqueue-the-two-commits-that-came-after-the-idr-on.patch"
-
+/root/machinex/patches/0300-nope-this-is-garbage.patch
+/root/machinex/patches/0299-SUCK-IT-3.15.patch
+/root/machinex/patches/0298-workqueues-3.14.patch
+/root/machinex/patches/0297-workqueues-are-now-at-3.10.patch
+/root/machinex/patches/0296-and-that.patch
+/root/machinex/patches/0295-k-brought-those-back.patch
+/root/machinex/patches/0294-workqueue-workqueue_congested-shouldnt-translate-WOR.patch
+/root/machinex/patches/0293-workqueue-avoid-false-negative-WARN_ON.patch
+/root/machinex/patches/0292-revert-those-for-a-sec-my-computer-is-grepping-VERY-.patch
+/root/machinex/patches/0291-time-Revert-ALWAYS_USE_PERSISTENT_CLOCK-compile-tim.patch
+/root/machinex/patches/0290-and-more-doing-this-till-FUCKING-3.15.patch
+/root/machinex/patches/0289-there-now-REALLY-brought-up-workqueues.patch
+/root/machinex/patches/0288-brought-workqueues-back-up-going-all-the-way-to-3.15.patch
+/root/machinex/patches/0287-workqueue-move-struct-worker-definition-to-workqueue.patch
+/root/machinex/patches/0286-REVERTED-back-to-idr-conversion-because-i-am-going-t.patch
+/root/machinex/patches/0285-7254-give-or-take-like-three-rcu-commits.patch
+/root/machinex/patches/0284-Reverted-some-rcu-shit-i-will-do-it-when-im-not-exha.patch
+/root/machinex/patches/0283-k-i-cheated-a-bit.patch
+/root/machinex/patches/0282-so-annoying.patch
+/root/machinex/patches/0281-REVERT-bpf-shit.patch
+/root/machinex/patches/0280-synced-my-rcu-headers.patch
+/root/machinex/patches/0279-updated-config.patch
+/root/machinex/patches/0278-cfg80211-sched_scan_mtx-lock-in-cfg80211_conn_work.patch
+/root/machinex/patches/0277-macvlan-use-the-right-RCU-api.patch
+/root/machinex/patches/0276-cdc_ncm-return-ENOMEM-if-kzalloc-fails.patch
+/root/machinex/patches/0275-openvswitch-Use-nla_memcpy-to-memcpy-data-from-attr.patch
+/root/machinex/patches/0274-openvswitch-Specify-the-minimal-length-of-OVS_PACKET.patch
+/root/machinex/patches/0273-REVERT-sun-commits.patch
+/root/machinex/patches/0272-SUNRPC-Missing-module-alias-for-auth_rpcgss.ko.patch
+/root/machinex/patches/0271-SUNRPC-Load-GSS-kernel-module-by-OID.patch
+/root/machinex/patches/0270-NFS-Remove-unneeded-forward-declaration.patch
+/root/machinex/patches/0269-rtmutex-tester-fix-mode-of-sysfs-files.patch
+/root/machinex/patches/0268-sysfs-Add-crash_notes_size-to-export-percpu-note.patch
+/root/machinex/patches/0267-driver-core-platform_device.h-fix-checkpatch-errors.patch
+/root/machinex/patches/0266-driver-core-warn-that-platform_driver_probe-can-not-.patch
+/root/machinex/patches/0265-mm-export-split_page.patch
+/root/machinex/patches/0264-Revert-mm-introduce-VM_POPULATE-flag.patch
+/root/machinex/patches/0263-NFSv4-Fix-Oopses-in-the-fs_locations-code.patch
+/root/machinex/patches/0262-bcache-Don-t-export-utility-code-prefix-with-bch.patch
+/root/machinex/patches/0261-net-macb-make-clk_enable-atomic.patch
+/root/machinex/patches/0260-mg_disk-fix-error-return-code-in-mg_probe.patch
+/root/machinex/patches/0259-rtnetlink-fix-error-return-code-in-rtnl_link_fill.patch
+/root/machinex/patches/0258-bs.patch
+/root/machinex/patches/0257-bs.patch
+/root/machinex/patches/0256-ppp-reuse-print_hex_dump_bytes.patch
+/root/machinex/patches/0255-NFSv4-Add-a-mapping-for-NFS4ERR_FILE_OPEN.patch
+/root/machinex/patches/0254-jbd-don-t-wait-forever-for-stale-tid.patch
+/root/machinex/patches/0253-vfs-splice-Fix-missed-checks-in-new-__kernel_write.patch
+/root/machinex/patches/0252-openvswitch-correct-an-invalid-BUG_ON.patch
+/root/machinex/patches/0251-dox.patch
+/root/machinex/patches/0250-bs.patch
+/root/machinex/patches/0249-userns-Restrict-when-proc-and-sysfs-can-be-mounted.patch
+/root/machinex/patches/0248-ipc-Restrict-mounting-the-mqueue-filesystem.patch
+/root/machinex/patches/0247-vfs-Carefully-propogate-mounts-across-user-namespace.patch
+/root/machinex/patches/0246-vfs-Add-a-mount-flag-to-lock-read-only-bind-mounts.patch
+/root/machinex/patches/0245-userns-Don-t-allow-creation-if-the-user-is-chrooted.patch
+/root/machinex/patches/0244-bs.patch
+/root/machinex/patches/0243-dox.patch
+/root/machinex/patches/0242-dox.patch
+/root/machinex/patches/0241-remove-stupid-Hs.patch
+/root/machinex/patches/0240-bs.patch
+/root/machinex/patches/0239-bs.patch
+/root/machinex/patches/0238-zcache.patch
+/root/machinex/patches/0237-bs.patch
+/root/machinex/patches/0236-clk-Add-composite-clock-type.patch
+/root/machinex/patches/0235-dox.patch
+/root/machinex/patches/0234-et-wireless-iwlegacy-add-CONFIG_PM_SLEEP-to-suspend.patch
+/root/machinex/patches/0233-netlink-remove-duplicated-NLMSG_ALIGN.patch
+/root/machinex/patches/0232-iommu-vt-d-dmar_fault-should-only-clear-PPF-PFO.patch
+/root/machinex/patches/0231-rcu-Make-rcu_accelerate_cbs-note-need-for-future.patch
+/root/machinex/patches/0230-rcu-Abstract-rcu_start_future_gp-from-rcu_nocb_wait.patch
+/root/machinex/patches/0229-rcu-Rename-n_nocb_gp_requests-to-need_future_gp.patch
+/root/machinex/patches/0228-rcu-Push-lock-release-to-rcu_start_gp-s-callers.patch
+/root/machinex/patches/0227-rcu-Repurpose-no-CBs-event-tracing-to-future-GP-even.patch
+/root/machinex/patches/0226-trying.also-rcu-Rearrange-locking-in-rcu_start_gp.patch
+/root/machinex/patches/0225-less-fuck-but-still-fuck.patch
+/root/machinex/patches/0224-fuck.patch
+/root/machinex/patches/0223-rcu-Accelerate-RCU-callbacks-at-grace-period-end.patch
+/root/machinex/patches/0222-rcu-Distinguish-rcuo-kthreads-by-RCU-flavor.patch
+/root/machinex/patches/0221-rcu-Add-event-tracing-for-no-CBs-CPUs-grace-periods.patch
+/root/machinex/patches/0220-rcu-Add-event-tracing-for-no-CBs-CPUs-callbacks.patch
+/root/machinex/patches/0219-rcu-Introduce-proper-blocking-to-no-CBs-kthreads-GP.patch
+/root/machinex/patches/0218-rcu-Provide-compile-time-control-for-no-CBs-CPUs.patch
+/root/machinex/patches/0217-NFC-llcp-Keep-the-connected-socket-parent-pointer-al.patch
+/root/machinex/patches/0216-bs.patch
+/root/machinex/patches/0215-ARM-modules-dont-export-cpu_set_pte_ext-when-MMU.patch
+/root/machinex/patches/0214-ARM-mm-fix-numerous-hideous-errors-in-proc-arm740.S.patch
+/root/machinex/patches/0213-ARM-cache-remove-ARMv3-support-code.patch
+/root/machinex/patches/0212-bcache-Fix-for-the-build-fixes.patch
+/root/machinex/patches/0211-seccomp-allow-BPF_XOR-based-ALU-instructions.patch
+/root/machinex/patches/0210-workqueue-remove-pwq_lock-which-is-no-longer-used.patch
+/root/machinex/patches/0209-workqueue-protect-wq-saved_max_active-with-wq-mutex.patch
+/root/machinex/patches/0208-workqueue-protect-wq-pwqs-and-iteration-with-wq-mute.patch
+/root/machinex/patches/0207-workqueue-protect-wq-nr_drainers-and-flags-with-wq-m.patch
+/root/machinex/patches/0206-workqueue-rename-wq-flush_mutex-to-wq-mutex.patch
+/root/machinex/patches/0205-workqueue-rename-wq_mutex-to-wq_pool_mutex.patch
+/root/machinex/patches/0204-libfcoe-Fix-fcoe_sysfs-VN2VN-mode.patch
+/root/machinex/patches/0203-libfc-fcoe-bnx2fc-Split-fc_disc_init-into-fc_disc.patch
+/root/machinex/patches/0202-libfc-fcoe-bnx2fc-Always-use-fcoe_disc_init-for-disc.patch
+/root/machinex/patches/0201-fcoe-Fix-deadlock-between-create-and-destroy-paths.patch
+/root/machinex/patches/0200-drivers-net-Clean-up-orphaned-probes-in-Space.c.patch
+/root/machinex/patches/0199-nope.patch
+/root/machinex/patches/0198-ssb-define-more-board-types.patch
+/root/machinex/patches/0197-bcma-extract-board_type-from-SPROM.patch
+/root/machinex/patches/0196-dummy-irq-introduce-a-dummy-IRQ-handler-driver.patch
+/root/machinex/patches/0195-bs.patch
+/root/machinex/patches/0194-imekeeping-__timekeeping_set_tai_offset-can-be-stati.patch
+/root/machinex/patches/0193-bcache-Style-checkpatch-fixes.patch
+/root/machinex/patches/0192-bcache-Build-fixes-from-test-robot.patch
+/root/machinex/patches/0191-dox.patch
+/root/machinex/patches/0190-dox.patch
+/root/machinex/patches/0189-sysfs-use-atomic_inc_unless_negative-in-sysfs_get_ac.patch
+/root/machinex/patches/0188-ARM-tlbflush-remove-ARMv3-support.patch
+/root/machinex/patches/0187-netfilter-nfnetlink_acct-return-EINVAL.patch
+/root/machinex/patches/0186-hrtimer-trivial-Fix-comment-text-in-hrtimer.c.patch
+/root/machinex/patches/0185-bridge-fix-crash-when-set-mac-address-of-br-interfac.patch
+/root/machinex/patches/0184-i2c-Add-bus-recovery-infrastructure.patch
+/root/machinex/patches/0183-bcache-A-block-layer-cache.patch
+/root/machinex/patches/0182-Export-__lockdep_no_validate__.patch
+/root/machinex/patches/0181-Export-blk_fill_rwbs.patch
+/root/machinex/patches/0180-block-Fix-a-buffer-overrun-in-bio_integrity_split.patch
+/root/machinex/patches/0179-REVERT-fbcon-clear-the-logo-bitmap-from-the-margin-a.patch
+/root/machinex/patches/0178-bs.patch
+/root/machinex/patches/0177-mqueue-sys_mq_open-do-not-call-mnt_drop_write-if-ro.patch
+/root/machinex/patches/0176-mm-hotplug-only-free-wait_table-if-its-allocated-by-.patch
+/root/machinex/patches/0175-dma-debug-update-DMA-debug-API.patch
+/root/machinex/patches/0174-dma-debug-fix-locking-bug-in-check_unmap.patch
+/root/machinex/patches/0173-mm-zone_end_pfn-is-too-small.patch
+/root/machinex/patches/0172-poweroff-change-orderly_poweroff-to-use-schedule_wor.patch
+/root/machinex/patches/0171-irq_work.h-fix-warning-when-CONFIG_IRQ_WORK.patch
+/root/machinex/patches/0170-timekeeping-Split-timekeeper_lock-into-lock-and-seq.patch
+/root/machinex/patches/0169-timekeeping-Move-lock-out-of-timekeeper-struct.patch
+/root/machinex/patches/0168-timekeeping-Make-jiffies_lock-internal.patch
+/root/machinex/patches/0167-timekeeping-calculate-stuff-only-once.patch
+/root/machinex/patches/0166-before-i-forget-export-all-the-workqueues-again-to-e.patch
+/root/machinex/patches/0165-hrtimer-Add-hrtimer-support-for-CLOCK_TAI.patch
+/root/machinex/patches/0164-timekeeping-Add-CLOCK_TAI-clockid.patch
+/root/machinex/patches/0163-timekeeping-Move-TAI-managment-into-timekeeping-core.patch
+/root/machinex/patches/0162-nfsd-fix-bad-offset-use.patch
+/root/machinex/patches/0161-mmc-core-Add-in-support-to-expose-PRV-for-v4-MMCs.patch
+/root/machinex/patches/0160-loop-fix-error-return-code-in-loop_add.patch
+/root/machinex/patches/0159-fbcon-clear-the-logo-bitmap-from-the-margin-area.patch
+/root/machinex/patches/0158-I-think-including-remove_all-is-the-best-choice-here.patch
+/root/machinex/patches/0157-clockevents-Add-missing-tick_check_broadcast_expired.patch
+/root/machinex/patches/0156-fixed-my-flags-pointer-issue.patch
+/root/machinex/patches/0155-Dont-bother-with-redoing-rw_verify_area-from-default.patch
+/root/machinex/patches/0154-media-videobuf2-add-gfp_flags.patch
+/root/machinex/patches/0153-gonna-try-this-without-remove-all.patch
+/root/machinex/patches/0152-REVERT-cgroup-consolidate-cgroup_attach_task-and-cgr.patch
+/root/machinex/patches/0151-REVERT-ext4-fix-ext4_evict_inode.patch
+/root/machinex/patches/0150-nohz-Wake-up-full-dynticks-CPUs-when-a-timer-gets-en.patch
+/root/machinex/patches/0149-nohz-Assign-timekeeping-duty-to-a-CPU-outside-the-fu.patch
+/root/machinex/patches/0148-nohz-Basic-full-dynticks-interface.patch
+/root/machinex/patches/0147-NFSv4.1-Add-a-helper-pnfs_commit_and_return_layout.patch
+/root/machinex/patches/0146-efivars-Handle-duplicate-names-from-get_next_var.patch
+/root/machinex/patches/0145-efivars-explicitly-calculate-length-of-VariableName.patch
+/root/machinex/patches/0144-crypto-sahara-Add-driver-for-SAHARA2-accelerator.patch
+/root/machinex/patches/0143-dox.patch
+/root/machinex/patches/0142-chelsio-use-netdev_alloc_skb_ip_align.patch
+/root/machinex/patches/0141-workqueue-avoid-false-negative-in-assert_manager.patch
+/root/machinex/patches/0140-workqueue-kick-a-worker-in-pwq_adjust_max_active.patch
+/root/machinex/patches/0139-workqueue-simplify-current_is_workqueue_rescuer.patch
+/root/machinex/patches/0138-chelsio-add-headroom-in-RX-path.patch
+/root/machinex/patches/0137-dynticks-avoid-flow_cache_flush-interrupting.patch
+/root/machinex/patches/0136-connector-Added-coredumping-event-to-the-process.patch
+/root/machinex/patches/0135-orkqueue-add-missing-POOL_FREEZING.patch
+/root/machinex/patches/0134-flow_keys-include-thoff-into-flow_keys-for-later-use.patch
+/root/machinex/patches/0133-gennetlink-hacked-out-a-couple-of-bugs.lets-see-what.patch
+/root/machinex/patches/0132-usb-ulpi-define-a-no-op.patch
+/root/machinex/patches/0131-cgroup-consolidate-cgroup_attach_task-and-cgroup_att.patch
+/root/machinex/patches/0130-devcg-propagate-local-changes-down-the-hierarchy.patch
+/root/machinex/patches/0129-devcg-use-css_online-and-css_offline.patch
+/root/machinex/patches/0128-devcg-prepare-may_access-for-hierarchy-support.patch
+/root/machinex/patches/0127-devcg-expand-may_access-logic.patch
+/root/machinex/patches/0126-ext4-fix-ext4_evict_inode-racing-against-workqueue.patch
+/root/machinex/patches/0125-cfg80211-fix-error-return-code-in-cfg80211_init.patch
+/root/machinex/patches/0124-cfg80211-fix-potential-connection-work-crash.patch
+/root/machinex/patches/0123-workqueue-restore-CPU-affinity-of-unbound-workers.patch
+/root/machinex/patches/0122-workqueue-directly-restore-CPU-affinity-of-workers-f.patch
+/root/machinex/patches/0121-workqueue-relocate-rebind_workers.patch
+/root/machinex/patches/0120-attempting-to-hack-in-the-old-idr-allocation-routine.patch
+/root/machinex/patches/0119-nevermind.patch
+/root/machinex/patches/0118-workqueue-the-two-commits-that-came-after-the-idr-on.patch
+/root/machinex/patches/0117-battery-hacking-to-try-and-ensure-that-booting-with-.patch
+/root/machinex/patches/0116-did-some-stuff.patch
+/root/machinex/patches/0115-pos.sh-idr-alloc-is-just-NEVER-going-to-work-for-us-.patch
+/root/machinex/patches/0114-prepped-my-pos.sh.patch
+/root/machinex/patches/0113-updated-pos.patch
+/root/machinex/patches/0112-REVERT-USB-EHCI-commits.patch
+/root/machinex/patches/0111-my-own-little-slimbus-hack-to-see-if-we-can-work-aro.patch
+/root/machinex/patches/0110-idr-fix-top-layer-handling.patch
+/root/machinex/patches/0109-mac80211.patch
+/root/machinex/patches/0108-net-9p-convert-to-idr_alloc.patch
+/root/machinex/patches/0107-posix-timers.patch
+/root/machinex/patches/0106-events.patch
+/root/machinex/patches/0105-cgroup.patch
+/root/machinex/patches/0104-uio.patch
+/root/machinex/patches/0103-thermal.patch
+/root/machinex/patches/0102-scsi-conversion.patch
+/root/machinex/patches/0101-rpmsg-convert-to-idr_alloc.patch
+/root/machinex/patches/0100-remoteproc-convert-to-idr_alloc.patch
+/root/machinex/patches/0099-mmc-convert-to-idr_alloc.patch
+/root/machinex/patches/0098-mtd-convert-to-idr_alloc.patch
+/root/machinex/patches/0097-misc-c2port-convert-to-idr_alloc.patch
+/root/machinex/patches/0096-i2c-convert-to-idr_alloc.patch
+/root/machinex/patches/0095-gpio-convert-to-idr_alloc.patch
+/root/machinex/patches/0094-N8.patch
+/root/machinex/patches/0093-idr-implement-idr_preload-_end-and-idr_alloc.patch
+/root/machinex/patches/0092-idr-refactor-idr_get_new_above.patch
+/root/machinex/patches/0091-idr-remove-_idr_rc_to_errno-hack.patch
+/root/machinex/patches/0090-idr-relocate-idr_for_each_entry-and-reorganize-id.patch
+/root/machinex/patches/0089-idr-deprecate-idr_remove_all.patch
+/root/machinex/patches/0088-idr-cosmetic-updates-to-struct-initializer-def.patch
+/root/machinex/patches/0087-gitignore-something.patch
+/root/machinex/patches/0086-another-idr-remove-all-removal.patch
+/root/machinex/patches/0085-mass-removal-of-idr-remove_all-build-time.patch
+/root/machinex/patches/0084-idr-make-idr_destroy-imply-idr_remove_all.patch
+/root/machinex/patches/0083-ATTEMPT-idr-fix-a-subtle-bug-in-idr_get_next.patch
+/root/machinex/patches/0082-k-reverted-those-three.patch
+/root/machinex/patches/0081-fucked-that-up.patch
+/root/machinex/patches/0080-had-to-revert-worker-pool-from-idr-back-to-ida-and-i.patch
+/root/machinex/patches/0079-N6.patch
+/root/machinex/patches/0078-tools-virtio-separate-headers-more.patch
+/root/machinex/patches/0077-scatterlist-introduce-sg_unmark_end.patch
+/root/machinex/patches/0076-virtio_ring-expose-virtio-barriers-for-use-in-vringh.patch
+/root/machinex/patches/0075-tools-virtio-fix-build-for-3.8.patch
+/root/machinex/patches/0074-target-pscsi-Reject-cross-page-boundary-case-in-pscs.patch
+/root/machinex/patches/0073-target-file-Bump-FD_MAX_SECTORS-to-2048-to-handle-1M.patch
+/root/machinex/patches/0072-workqueue-restore-CPU-affinity-of-unbound-workers.patch
+/root/machinex/patches/0071-workqueue-directly-restore-CPU-affinity-of-workers-s.patch
+/root/machinex/patches/0070-workqueue-convert-worker_pool-worker_ida-to-idr.patch
+/root/machinex/patches/0069-sched-replace-PF_THREAD_BOUND-with-PF_NO_SETAFFINITY.patch
+/root/machinex/patches/0068-add-missing-include.patch
+/root/machinex/patches/0067-ipvs-add-backup_only-flag-to-avoid-loops.patch
+/root/machinex/patches/0066-ipvs-fix-some-sparse-warnings.patch
+/root/machinex/patches/0065-ipvs-fix-hashing-in-ip_vs_svc_hashkey.patch
+/root/machinex/patches/0064-regmap-irq-Clarify-error-message-when-we-fail.patch
+/root/machinex/patches/0063-f2fs-typo.patch
+/root/machinex/patches/0062-test_power-Fix-a-bug-in-setting-module-parameter.patch
+/root/machinex/patches/0061-FIX-softingcs-conversion-to-module_pcmcia_driver.patch
+/root/machinex/patches/0060-zram-bs.patch
+/root/machinex/patches/0059-ipvs-fix-sctp-chunk-length-order.patch
+/root/machinex/patches/0058-zcache-bs.patch
+/root/machinex/patches/0057-DANGER-USB-EHCI-don-t-turn-on-PORT_SUSPEND-during-po.patch
+/root/machinex/patches/0056-DANGER-USB-EHCI-improve-use-of-per-port-status-chang.patch
+/root/machinex/patches/0055-target-fix-possible-memory-leak-in-core_tpg_register.patch
+/root/machinex/patches/0054-88-N5.patch
+/root/machinex/patches/0053-ext4-fix-memory-leakage-in-mext_check_coverage.patch
+/root/machinex/patches/0052-drivers-isdn-delete-break-after-return.patch
+/root/machinex/patches/0051-net-sctp-remove-cast-for-kmalloc-kzalloc-return-val.patch
+/root/machinex/patches/0050-driver-tty-serial-remove-cast-for-kzalloc-return.patch
+/root/machinex/patches/0049-fs-befs-remove-cast-for-kmalloc-return-value.patch
+/root/machinex/patches/0048-driver-tty-vt-remove-cast-for-kmalloc-return-value.patch
+/root/machinex/patches/0047-fs-ufs-remove-cast-for-kmalloc-return-value.patch
+/root/machinex/patches/0046-kprobes-Make-hash_64-as-always-inlined.patch
+/root/machinex/patches/0045-4437-important-one-to-remember-the-initial-creation-.patch
+/root/machinex/patches/0044-Revert-virtio_console-Initialize-guest_connected.patch
+/root/machinex/patches/0043-perf-Generate-EXIT-event-only-once-per-task-context.patch
+/root/machinex/patches/0042-perf-Reset-hwc-last_period-on-sw-clock-events.patch
+/root/machinex/patches/0041-drivers-net-irda-use-resource_size-in-au1k_ir.c.patch
+/root/machinex/patches/0040-caif-remove-caif_shm.patch
+/root/machinex/patches/0039-ethernet-tulip-DE4x5-needs-VIRT_TO_BUS.patch
+/root/machinex/patches/0038-timekeeping-utilize-the-suspend-nonstop-clocksource.patch
+/root/machinex/patches/0037-clocksource-Add-new-feature-flag-CLOCK_SOURCE_SUSPEN.patch
+/root/machinex/patches/0036-timekeeping-Use-inject_offset-in-warp_clock.patch
+/root/machinex/patches/0035-timekeeping-Avoid-adjust-kernel-time-once-hwclock-ke.patch
+/root/machinex/patches/0034-sysrq-fix-inconstistent-help-message-of-sysrq-key.patch
+/root/machinex/patches/0033-tty-ipwireless-Remove-redundant-NULL-check-before-kf.patch
+/root/machinex/patches/0032-some-conversions-to-using-the-module_pcmia_driver-ro.patch
+/root/machinex/patches/0031-pcmcia-ds.h-introduce-helper-for-pcmcia_driver-modul.patch
+/root/machinex/patches/0030-applicom-use-correct-array-offset.patch
+/root/machinex/patches/0029-VMCI-Fix-process-to-process-DRGAMs.patch
+/root/machinex/patches/0028-vfio-include-linux-slab.h-for-kmalloc.patch
+/root/machinex/patches/0027-driver-usb-storage-remove-cast-for-kmalloc-return.patch
+/root/machinex/patches/0026-bs.patch
+/root/machinex/patches/0025-USB-cdc-acm-Remove-obsolete-predefined-speeds-array.patch
+/root/machinex/patches/0024-bs.patch
+/root/machinex/patches/0023-dox.patch
+/root/machinex/patches/0022-usb-storage-onetouch-tighten-a-range-check.patch
+/root/machinex/patches/0021-USB-remove-incorrect-__exit-markupss.patch
+/root/machinex/patches/0020-usb-serial-Remove-unnecessary-check-for-console.-The.patch
+/root/machinex/patches/0019-misc-arm-charlcd-use-module_platform_driver_probe.patch
+/root/machinex/patches/0018-perf-evlist-Use-cpu_map__nr-helper.patch
+/root/machinex/patches/0017-perf-evlist-remove-cpus-and-threads-arguements.patch
+/root/machinex/patches/0016-tools-vm-Switch-to-liblk-library.patch
+/root/machinex/patches/0015-perf-tools-Remove-a-write-only-variable-in-the-debug.patch
+/root/machinex/patches/0014-dox.patch
+/root/machinex/patches/0013-netfilter-ebt_ulog-remove-unnecessary-spin-lock.patch
+/root/machinex/patches/0012-bridge-netfilter-use-PTR_RET-instead-of-IS_ERR-PTR.patch
+/root/machinex/patches/0011-ipv4-netfilter-use-PTR_RET-instead-of-IS_ERR-PTR_ERR.patch
+/root/machinex/patches/0010-bs.patch
+/root/machinex/patches/0009-staging-android-remove-dependency-on-TINY_SHMEM.patch
+/root/machinex/patches/0008-ARM-DMA-mapping-add-missing-GFP_DMA-flag-for-atomic-.patch
+/root/machinex/patches/0007-REVERT-new-div64-helper-we-already-have.patch
+/root/machinex/patches/0006-obliterate-the-remaining-stupid-power-efficient-piec.patch
+/root/machinex/patches/0005-FUCK-i-thought-i-got-rid-of-all-of-these-useless-wor.patch
+/root/machinex/patches/0004-REVERT-tick-provide-a-check-for-a-forced-broadcast-p.patch
+/root/machinex/patches/0003-there-that-should-do-it.patch
+/root/machinex/patches/0002-workqueue-fix-up-my-hlist.patch
+/root/machinex/patches/0001-mm-fremap.c-fix-possible-oops-on-error-path.patch
