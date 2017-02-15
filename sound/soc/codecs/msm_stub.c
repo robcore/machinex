@@ -34,10 +34,9 @@ static struct snd_soc_dai_driver msm_stub_dais[] = {
 		.capture = { /* Support maximum range */
 			.stream_name = "Record",
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 4,
 			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
-				    SNDRV_PCM_FMTBIT_S24_LE),
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		},
 	},
 };
