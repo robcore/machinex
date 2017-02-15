@@ -63,3 +63,4 @@ void wq_worker_waking_up(struct task_struct *task, int cpu);
 struct task_struct *wq_worker_sleeping(struct task_struct *task, int cpu);
 
 #endif /* _KERNEL_WORKQUEUE_INTERNAL_H */
+
