@@ -818,8 +818,9 @@ static u8 lm93_read_byte(struct i2c_client *client, u8 reg)
 		if (value >= 0) {
 			return value;
 		} else {
-			dev_warn(&client->dev, "lm93: read byte data failed, "
-				"address 0x%02x.\n", reg);
+			dev_warn(&client->dev,
+				 "lm93: read byte data failed, address 0x%02x.\n",
+				 reg);
 			mdelay(i + 3);
 		}
 
@@ -838,8 +839,9 @@ static int lm93_write_byte(struct i2c_client *client, u8 reg, u8 value)
 	result = i2c_smbus_write_byte_data(client, reg, value);
 
 	if (result < 0)
-		dev_warn(&client->dev, "lm93: write byte data failed, "
-			 "0x%02x at address 0x%02x.\n", value, reg);
+		dev_warn(&client->dev,
+			 "lm93: write byte data failed, 0x%02x at address 0x%02x.\n",
+			 value, reg);
 
 	return result;
 }
@@ -854,8 +856,9 @@ static u16 lm93_read_word(struct i2c_client *client, u8 reg)
 		if (value >= 0) {
 			return value;
 		} else {
-			dev_warn(&client->dev, "lm93: read word data failed, "
-				 "address 0x%02x.\n", reg);
+			dev_warn(&client->dev,
+				 "lm93: read word data failed, address 0x%02x.\n",
+				 reg);
 			mdelay(i + 3);
 		}
 
@@ -874,8 +877,9 @@ static int lm93_write_word(struct i2c_client *client, u8 reg, u16 value)
 	result = i2c_smbus_write_word_data(client, reg, value);
 
 	if (result < 0)
-		dev_warn(&client->dev, "lm93: write word data failed, "
-			 "0x%04x at address 0x%02x.\n", value, reg);
+		dev_warn(&client->dev,
+			 "lm93: write word data failed, 0x%04x at address 0x%02x.\n",
+			 value, reg);
 
 	return result;
 }
@@ -898,8 +902,8 @@ static void lm93_read_block(struct i2c_client *client, u8 fbn, u8 *values)
 		if (result == lm93_block_read_cmds[fbn].len) {
 			break;
 		} else {
-			dev_warn(&client->dev, "lm93: block read data failed, "
-				 "command 0x%02x.\n",
+			dev_warn(&client->dev,
+				 "lm93: block read data failed, command 0x%02x.\n",
 				 lm93_block_read_cmds[fbn].cmd);
 			mdelay(i + 3);
 		}
@@ -2672,8 +2676,8 @@ static void lm93_init_client(struct i2c_client *client)
 			return;
 	}
 
-	dev_warn(&client->dev, "timed out waiting for sensor "
-		 "chip to signal ready!\n");
+	dev_warn(&client->dev,
+		 "timed out waiting for sensor chip to signal ready!\n");
 }
 
 /* Return 0 if detection is successful, -ENODEV otherwise */

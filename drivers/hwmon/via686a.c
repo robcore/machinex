@@ -901,8 +901,8 @@ static int __devinit via686a_pci_probe(struct pci_dev *dev,
 
 	address = val & ~(VIA686A_EXTENT - 1);
 	if (address == 0) {
-		dev_err(&dev->dev, "base address not set - upgrade BIOS "
-			"or use force_addr=0xaddr\n");
+		dev_err(&dev->dev,
+			"base address not set - upgrade BIOS or use force_addr=0xaddr\n");
 		return -ENODEV;
 	}
 
@@ -911,8 +911,9 @@ static int __devinit via686a_pci_probe(struct pci_dev *dev,
 		return -ENODEV;
 	if (!(val & 0x0001)) {
 		if (!force_addr) {
-			dev_warn(&dev->dev, "Sensors disabled, enable "
-				 "with force_addr=0x%x\n", address);
+			dev_warn(&dev->dev,
+				 "Sensors disabled, enable with force_addr=0x%x\n",
+				 address);
 			return -ENODEV;
 		}
 
