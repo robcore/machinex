@@ -3809,6 +3809,7 @@ nfsd4_close(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 
 	nfsd4_close_open_stateid(stp);
 	release_last_closed_stateid(oo);
+	oo->oo_flags &= ~NFS4_OO_PURGE_CLOSE;
 	oo->oo_last_closed_stid = stp;
 
 	/* place unused nfs4_stateowners on so_close_lru list to be
