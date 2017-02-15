@@ -157,8 +157,7 @@ struct worker_pool {
 	/* see manage_workers() for details on the two manager mutexes */
 	struct mutex		manager_arb;	/* manager arbitration */
 	struct mutex		manager_mutex;	/* manager exclusion */
-	struct idr		worker_idr;	/* M: worker IDs */
-	struct list_head	workers;	/* M: attached workers */
+	struct idr		worker_idr;	/* MG: worker IDs and iteration */
 
 	struct workqueue_attrs	*attrs;		/* I: worker attributes */
 	struct hlist_node	hash_node;	/* PL: unbound_pool_hash node */
@@ -315,9 +314,6 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	     (pool) < &per_cpu(cpu_worker_pools, cpu)[NR_STD_WORKER_POOLS]; \
 	     (pool)++)
 
-#define for_each_busy_worker(worker, i, pos, pool)			\
-	hash_for_each(pool->busy_hash, i, pos, worker, hentry)
-
 /**
  * for_each_pool - iterate through all worker_pools in the system
  * @pool: iteration cursor
@@ -334,10 +330,10 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	idr_for_each_entry(&worker_pool_idr, pool, pi)			\
 		if (({ assert_rcu_or_pool_mutex(); false; })) { }	\
 		else
-
 /**
  * for_each_pool_worker - iterate through all workers of a worker_pool
  * @worker: iteration cursor
+ * @wi: integer used for iteration
  * @pool: worker_pool to iterate workers of
  *
  * This must be called with either @pool->manager_mutex or ->lock held.
@@ -345,8 +341,8 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
  * The if/else clause exists only for the lockdep assertion and can be
  * ignored.
  */
-#define for_each_pool_worker(worker, pool)				\
-	list_for_each_entry((worker), &(pool)->workers, node)		\
+#define for_each_pool_worker(worker, wi, pool)				\
+	idr_for_each_entry(&(pool)->worker_idr, (worker), (wi))		\
 		if (({ assert_manager_or_pool_lock((pool)); false; })) { } \
 		else
 
@@ -1619,7 +1615,6 @@ static struct worker *alloc_worker(void)
 	if (worker) {
 		INIT_LIST_HEAD(&worker->entry);
 		INIT_LIST_HEAD(&worker->scheduled);
-		INIT_LIST_HEAD(&worker->node);
 		/* on creation a worker is in !idle && prep state */
 		worker->flags = WORKER_PREP;
 	}
@@ -1649,17 +1644,13 @@ static struct worker *create_worker(struct worker_pool *pool)
 	lockdep_assert_held(&pool->manager_mutex);
 
 	spin_lock_irq(&pool->lock);
-
-	do {
+	while (idr_get_new(&pool->worker_idr, worker, &id)) {
+		spin_unlock_irq(&pool->lock);
 		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
 			goto fail;
-		idr_get_new(&pool->worker_idr, worker, &id);
-	} while (id == -EAGAIN);
-
+		spin_lock_irq(&pool->lock);
+	}
 	spin_unlock_irq(&pool->lock);
-
-	if (!id)
-		goto fail;
 
 	worker = alloc_worker();
 	if (!worker)
@@ -1701,17 +1692,12 @@ static struct worker *create_worker(struct worker_pool *pool)
 	spin_lock_irq(&pool->lock);
 	idr_replace(&pool->worker_idr, worker, worker->id);
 	spin_unlock_irq(&pool->lock);
-	/* successful, attach the worker to the pool */
-	list_add_tail(&worker->node, &pool->workers);
 
 	return worker;
-
 fail:
 	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
 		idr_remove(&pool->worker_idr, id);
-	list_del(&worker->node);
-	if (list_empty(&pool->workers))
 		spin_unlock_irq(&pool->lock);
 	}
 	kfree(worker);
@@ -3311,7 +3297,7 @@ struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask)
 	if (!alloc_cpumask_var(&attrs->cpumask, gfp_mask))
 		goto fail;
 
-	cpumask_copy(attrs->cpumask, cpu_possible_mask);
+	cpumask_setall(attrs->cpumask);
 	return attrs;
 fail:
 	free_workqueue_attrs(attrs);
@@ -3325,14 +3311,33 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	cpumask_copy(to->cpumask, from->cpumask);
 }
 
+/*
+ * Hacky implementation of jhash of bitmaps which only considers the
+ * specified number of bits.  We probably want a proper implementation in
+ * include/linux/jhash.h.
+ */
+static u32 jhash_bitmap(const unsigned long *bitmap, int bits, u32 hash)
+{
+	int nr_longs = bits / BITS_PER_LONG;
+	int nr_leftover = bits % BITS_PER_LONG;
+	unsigned long leftover = 0;
+
+	if (nr_longs)
+		hash = jhash(bitmap, nr_longs * sizeof(long), hash);
+	if (nr_leftover) {
+		bitmap_copy(&leftover, bitmap + nr_longs, nr_leftover);
+		hash = jhash(&leftover, sizeof(long), hash);
+	}
+	return hash;
+}
+
 /* hash value of the content of @attr */
 static u32 wqattrs_hash(const struct workqueue_attrs *attrs)
 {
 	u32 hash = 0;
 
 	hash = jhash_1word(attrs->nice, hash);
-	hash = jhash(cpumask_bits(attrs->cpumask),
-		     BITS_TO_LONGS(nr_cpumask_bits) * sizeof(long), hash);
+	hash = jhash_bitmap(cpumask_bits(attrs->cpumask), nr_cpu_ids, hash);
 	return hash;
 }
 
@@ -3376,7 +3381,6 @@ static int init_worker_pool(struct worker_pool *pool)
 	mutex_init(&pool->manager_arb);
 	mutex_init(&pool->manager_mutex);
 	idr_init(&pool->worker_idr);
-	INIT_LIST_HEAD(&pool->workers);
 
 	INIT_HLIST_NODE(&pool->hash_node);
 	pool->refcnt = 1;
@@ -3406,27 +3410,30 @@ static void rcu_free_pool(struct rcu_head *rcu)
  * safe manner.  get_unbound_pool() calls this function on its failure path
  * and this function should be able to release pools which went through,
  * successfully or not, init_worker_pool().
- *
- * Should be called with wq_pool_mutex held.
  */
 static void put_unbound_pool(struct worker_pool *pool)
 {
 	struct worker *worker;
 
-	lockdep_assert_held(&wq_pool_mutex);
-
-	if (--pool->refcnt)
+	mutex_lock(&wq_pool_mutex);
+	if (--pool->refcnt) {
+		mutex_unlock(&wq_pool_mutex);
 		return;
+	}
 
 	/* sanity checks */
 	if (WARN_ON(!(pool->flags & POOL_DISASSOCIATED)) ||
-	    WARN_ON(!list_empty(&pool->worklist)))
+	    WARN_ON(!list_empty(&pool->worklist))) {
+		mutex_unlock(&wq_pool_mutex);
 		return;
+	}
 
 	/* release id and unhash */
 	if (pool->id >= 0)
 		idr_remove(&worker_pool_idr, pool->id);
 	hash_del(&pool->hash_node);
+
+	mutex_unlock(&wq_pool_mutex);
 
 	/*
 	 * Become the manager and destroy all workers.  Grabbing
@@ -3461,8 +3468,6 @@ static void put_unbound_pool(struct worker_pool *pool)
  * reference count and return it.  If there already is a matching
  * worker_pool, it will be used; otherwise, this function attempts to
  * create a new one.  On failure, returns NULL.
- *
- * Should be called with wq_pool_mutex held.
  */
 static struct worker_pool *get_unbound_pool(const struct workqueue_attrs *attrs)
 {
@@ -3501,8 +3506,10 @@ static struct worker_pool *get_unbound_pool(const struct workqueue_attrs *attrs)
 	/* install */
 	hash_add(unbound_pool_hash, &pool->hash_node, hash);
 out_unlock:
+	mutex_unlock(&wq_pool_mutex);
 	return pool;
 fail:
+	mutex_unlock(&wq_pool_mutex);
 	if (pool)
 		put_unbound_pool(pool);
 	return NULL;
@@ -3524,7 +3531,6 @@ static void pwq_unbound_release_workfn(struct work_struct *work)
 						  unbound_release_work);
 	struct workqueue_struct *wq = pwq->wq;
 	struct worker_pool *pool = pwq->pool;
-	bool is_last;
 
 	if (WARN_ON_ONCE(!(wq->flags & WQ_UNBOUND)))
 		return;
@@ -3536,20 +3542,16 @@ static void pwq_unbound_release_workfn(struct work_struct *work)
 	 */
 	mutex_lock(&wq->mutex);
 	list_del_rcu(&pwq->pwqs_node);
-	is_last = list_empty(&wq->pwqs);
 	mutex_unlock(&wq->mutex);
 
-	mutex_lock(&wq_pool_mutex);
 	put_unbound_pool(pool);
-	mutex_unlock(&wq_pool_mutex);
-
 	call_rcu_sched(&pwq->rcu, rcu_free_pwq);
 
 	/*
 	 * If we're the last pwq going away, @wq is already dead and no one
 	 * is gonna access it anymore.  Free it.
 	 */
-	if (is_last)
+	if (list_empty(&wq->pwqs))
 		kfree(wq);
 }
 
@@ -3645,10 +3647,8 @@ static void init_and_link_pwq(struct pool_workqueue *pwq,
 int apply_workqueue_attrs(struct workqueue_struct *wq,
 			  const struct workqueue_attrs *attrs)
 {
-	struct workqueue_attrs *new_attrs;
-	struct pool_workqueue *pwq = NULL, *last_pwq;
+	struct pool_workqueue *pwq, *last_pwq;
 	struct worker_pool *pool;
-	int ret;
 
 	/* only unbound workqueues can change attributes */
 	if (WARN_ON(!(wq->flags & WQ_UNBOUND)))
@@ -3658,29 +3658,15 @@ int apply_workqueue_attrs(struct workqueue_struct *wq,
 	if (WARN_ON((wq->flags & __WQ_ORDERED) && !list_empty(&wq->pwqs)))
 		return -EINVAL;
 
-	/* make a copy of @attrs and sanitize it */
-	new_attrs = alloc_workqueue_attrs(GFP_KERNEL);
-	if (!new_attrs)
-		goto enomem;
-
-	copy_workqueue_attrs(new_attrs, attrs);
-	cpumask_and(new_attrs->cpumask, new_attrs->cpumask, cpu_possible_mask);
-
-	mutex_lock(&wq_pool_mutex);
-
 	pwq = kmem_cache_zalloc(pwq_cache, GFP_KERNEL);
-	if (!pwq) {
-		mutex_unlock(&wq_pool_mutex);
-		goto enomem;
-	}
+	if (!pwq)
+		return -ENOMEM;
 
-	pool = get_unbound_pool(new_attrs);
+	pool = get_unbound_pool(attrs);
 	if (!pool) {
-		mutex_unlock(&wq_pool_mutex);
-		goto enomem;
+		kmem_cache_free(pwq_cache, pwq);
+		return -ENOMEM;
 	}
-
-	mutex_unlock(&wq_pool_mutex);
 
 	init_and_link_pwq(pwq, wq, pool, &last_pwq);
 	if (last_pwq) {
@@ -3689,16 +3675,7 @@ int apply_workqueue_attrs(struct workqueue_struct *wq,
 		spin_unlock_irq(&last_pwq->pool->lock);
 	}
 
-	ret = 0;
-	/* fall through */
-out_free:
-	free_workqueue_attrs(new_attrs);
-	return ret;
-
-enomem:
-	kmem_cache_free(pwq_cache, pwq);
-	ret = -ENOMEM;
-	goto out_free;
+	return 0;
 }
 
 static int alloc_and_link_pwqs(struct workqueue_struct *wq)
@@ -3969,7 +3946,7 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
 	struct pool_workqueue *pwq;
 	bool ret;
 
-	rcu_read_lock_sched();
+	preempt_disable();
 
 	if (!(wq->flags & WQ_UNBOUND))
 		pwq = per_cpu_ptr(wq->cpu_pwqs, cpu);
@@ -3977,7 +3954,7 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
 		pwq = first_pwq(wq);
 
 	ret = !list_empty(&pwq->delayed_works);
-	rcu_read_unlock_sched();
+	preempt_enable();
 
 	return ret;
 }
@@ -4037,6 +4014,7 @@ static void wq_unbind_fn(struct work_struct *work)
 	int cpu = smp_processor_id();
 	struct worker_pool *pool;
 	struct worker *worker;
+	struct hlist_node *pos;
 	int wi;
 
 	for_each_cpu_worker_pool(pool, cpu) {
@@ -4095,7 +4073,6 @@ static void rebind_workers(struct worker_pool *pool)
 	int wi;
 
 	lockdep_assert_held(&pool->manager_mutex);
-
 	/*
 	 * Restore CPU affinity of all workers.  As all idle workers should
 	 * be on the run-queue of the associated CPU before any local
@@ -4360,16 +4337,16 @@ bool freeze_workqueues_busy(void)
 		 * nr_active is monotonically decreasing.  It's safe
 		 * to peek without lock.
 		 */
-		rcu_read_lock_sched();
+		preempt_disable();
 		for_each_pwq(pwq, wq) {
 			WARN_ON_ONCE(pwq->nr_active < 0);
 			if (pwq->nr_active) {
 				busy = true;
-				rcu_read_unlock_sched();
+				preempt_enable();
 				goto out_unlock;
 			}
 		}
-		rcu_read_unlock_sched();
+		preempt_enable();
 	}
 out_unlock:
 	mutex_unlock(&wq_pool_mutex);
@@ -4468,7 +4445,10 @@ static int __init init_workqueues(void)
 		struct workqueue_attrs *attrs;
 
 		BUG_ON(!(attrs = alloc_workqueue_attrs(GFP_KERNEL)));
+
 		attrs->nice = std_nice[i];
+		cpumask_setall(attrs->cpumask);
+
 		unbound_std_wq_attrs[i] = attrs;
 	}
 
