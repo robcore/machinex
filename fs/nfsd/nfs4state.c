@@ -1863,7 +1863,6 @@ nfsd4_destroy_session(struct svc_rqst *r,
 	spin_unlock(&client_lock);
 	status = nfs_ok;
 out:
-	dprintk("%s returns %d\n", __func__, ntohl(status));
 	return status;
 }
 
@@ -2059,7 +2058,6 @@ nfsd4_destroy_clientid(struct svc_rqst *rqstp, struct nfsd4_compound_state *csta
 	expire_client(clp);
 out:
 	nfs4_unlock_state();
-	dprintk("%s return %d\n", __func__, ntohl(status));
 	return status;
 }
 
@@ -2536,8 +2534,6 @@ nfs4_share_conflict(struct svc_fh *current_fh, unsigned int deny_type)
 	struct nfs4_file *fp;
 	struct nfs4_ol_stateid *stp;
 	__be32 ret;
-
-	dprintk("NFSD: nfs4_share_conflict\n");
 
 	fp = find_file(ino);
 	if (!fp)
