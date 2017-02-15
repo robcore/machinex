@@ -1681,19 +1681,15 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	lockdep_assert_held(&pool->manager_mutex);
 
-	/*
-	 * ID is needed to determine kthread name.  Allocate ID first
-	 * without installing the pointer.
-	 */
-	idr_preload(GFP_KERNEL);
 	spin_lock_irq(&pool->lock);
 
-	id = idr_alloc(&pool->worker_idr, NULL, 0, 0, GFP_NOWAIT);
+	do {
+		if (!idr_pre_get(&worker_idr, GFP_KERNEL))
+			return -ENOMEM;
+		id = idr_get_new(&worker_idr, worker, &worker->id);
+	} while (id == -EAGAIN);
 
 	spin_unlock_irq(&pool->lock);
-	idr_preload_end();
-	if (id < 0)
-		goto fail;
 
 	worker = alloc_worker();
 	if (!worker)
@@ -1737,7 +1733,6 @@ static struct worker *create_worker(struct worker_pool *pool)
 	spin_unlock_irq(&pool->lock);
 
 	return worker;
-
 fail:
 	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
@@ -1801,6 +1796,7 @@ static int create_and_start_worker(struct worker_pool *pool)
 static void destroy_worker(struct worker *worker)
 {
 	struct worker_pool *pool = worker->pool;
+	int id = worker->id;
 
 	lockdep_assert_held(&pool->manager_mutex);
 	lockdep_assert_held(&pool->lock);
@@ -3467,6 +3463,7 @@ static void rcu_free_pool(struct rcu_head *rcu)
 {
 	struct worker_pool *pool = container_of(rcu, struct worker_pool, rcu);
 
+	idr_remove(&worker_idr, worker->id);
 	idr_destroy(&pool->worker_idr);
 	free_workqueue_attrs(pool->attrs);
 	kfree(pool);
