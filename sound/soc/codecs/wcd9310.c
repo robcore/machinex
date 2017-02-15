@@ -38,10 +38,13 @@
 #include <linux/suspend.h>
 #include "wcd9310.h"
 #include <linux/export.h>
-#ifdef CONFIG_SND_SOC_ES325
-#include "es325-export.h"
-#endif
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+#include <sound/es325-export.h>
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 
+#include <linux/regulator/consumer.h> //[AUDIO_BSP], 20120730, sehwan.lee@lge.com PMIC L29 Control(because headset noise)
 static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
 MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
@@ -481,6 +484,7 @@ static unsigned short tx_digital_gain_reg[] = {
 	TABLA_A_CDC_TX10_VOL_CTL_GAIN,
 };
 
+struct snd_soc_codec *snd_codec = NULL;
 static int tabla_codec_enable_charge_pump(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
@@ -4258,7 +4262,6 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 	    (tabla_core->dev != NULL) &&
 	    (tabla_core->dev->parent != NULL)) {
 		pm_runtime_get_sync(tabla_core->dev->parent);
-		es325_wrapper_wakeup(dai);
 	}
 
 	return 0;
@@ -4276,9 +4279,18 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	if (tabla->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS)
 		return;
 
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+	pr_debug("%s(): id = %d ch_mask = %d name = %s\n" , __func__,
+		 dai->id, tabla->dai[dai->id-1].ch_mask, tabla->codec->name);
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+
 	if (dai->id <= NUM_CODEC_DAIS) {
 		if (tabla->dai[dai->id-1].ch_mask) {
 			active = 1;
+			pr_debug("%s(): Codec DAI: chmask[%d] = 0x%x\n",
+			__func__, dai->id-1, tabla->dai[dai->id-1].ch_mask);
 		}
 	}
 
@@ -4286,7 +4298,6 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	    (tabla_core->dev != NULL) &&
 	    (tabla_core->dev->parent != NULL) &&
 	    (active == 0)) {
-		es325_wrapper_sleep(dai->id);
 		pm_runtime_mark_last_busy(tabla_core->dev->parent);
 		pm_runtime_put(tabla_core->dev->parent);
 	}
@@ -4405,17 +4416,21 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		pr_err("%s: Invalid\n", __func__);
 		return -EINVAL;
 	}
+	pr_debug("%s(): dai_name = %s DAI-ID %x tx_ch %d rx_ch %d\n",
+			__func__, dai->name, dai->id, tx_num, rx_num);
 
 	if (dai->id == AIF1_PB || dai->id == AIF2_PB || dai->id == AIF3_PB) {
 		for (i = 0; i < rx_num; i++) {
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+			pr_debug("%s(): rx ch_num[%d]\n",
+					__func__, rx_slot[i]);
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 			tabla->dai[dai->id - 1].ch_num[i]  = rx_slot[i];
 			tabla->dai[dai->id - 1].ch_act = 0;
 			tabla->dai[dai->id - 1].ch_tot = rx_num;
 		}
-
-		for(i = 0; i < rx_num ; i++)
-			pr_debug("[%d]",tabla->dai[dai->id - 1].ch_num[i]);
-		pr_debug(" WCD channel mapping\n");
 	} else if (dai->id == AIF1_CAP || dai->id == AIF2_CAP ||
 		   dai->id == AIF3_CAP) {
 		tabla->dai[dai->id - 1].ch_tot = tx_num;
@@ -4424,17 +4439,25 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		 */
 		if ((tabla->dai[dai->id - 1].ch_tot != 0)
 			&& (tabla->dai[dai->id - 1].ch_act ==
-			tabla->dai[dai->id - 1].ch_tot))
-			return 1;
+			tabla->dai[dai->id - 1].ch_tot)) {
+			pr_info("%s: ch_act = %d, ch_tot = %d\n", __func__,
+				tabla->dai[dai->id - 1].ch_act,
+				tabla->dai[dai->id - 1].ch_tot);
+			return 0;
+		}
 
 		tabla->dai[dai->id - 1].ch_act = 0;
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+		for (i = 0; i < tx_num; i++) {
+			tabla->dai[dai->id - 1].ch_num[i]  = tx_slot[i];
+			pr_debug("%s(): tx ch_num[%d]\n", __func__, tx_slot[i]);
+		}
+#else /* CONFIG_SND_SOC_ES325_SLIM */
 		for (i = 0; i < tx_num; i++)
 			tabla->dai[dai->id - 1].ch_num[i]  = tx_slot[i];
-
-		pr_debug("=[WCD]=%s: APQ<-", __func__);
-		for(i = 0; i < tx_num ; i++)
-			printk("[%d]",tabla->dai[dai->id - 1].ch_num[i]);
-		pr_debug(" WCD channel mapping\n");
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 	}
 	return 0;
 }
@@ -4854,13 +4877,14 @@ static int tabla_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-#ifdef CONFIG_SND_SOC_ES325
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
 static int tabla_es325_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
 		struct snd_soc_dai *dai)
 {
 	int rc = 0;
-	dev_dbg(dai->dev,"%s: dai_name = %s DAI-ID %x rate %d num_ch %d\n", __func__,
+	pr_info("%s: dai_name = %s DAI-ID %x rate %d num_ch %d\n", __func__,
 			dai->name, dai->id, params_rate(params),
 			params_channels(params));
 
@@ -4872,42 +4896,28 @@ static int tabla_es325_hw_params(struct snd_pcm_substream *substream,
 	return rc;
 }
 
-#define SLIM_BUGFIX
 static int tabla_es325_set_channel_map(struct snd_soc_dai *dai,
 				unsigned int tx_num, unsigned int *tx_slot,
 				unsigned int rx_num, unsigned int *rx_slot)
 
 {
-#if !defined(SLIM_BUGFIX)
 	unsigned int tabla_tx_num = 0;
-#endif
 	unsigned int tabla_tx_slot[6];
-#if !defined(SLIM_BUGFIX)
 	unsigned int tabla_rx_num = 0;
-#endif
 	unsigned int tabla_rx_slot[6];
-#if defined(SLIM_BUGFIX)
-	unsigned int temp_tx_num = 0;
-	unsigned int temp_rx_num = 0;
-#endif
 	int rc = 0;
+	pr_info("%s(): dai_name = %s DAI-ID %x tx_ch %d rx_ch %d\n",
+			__func__, dai->name, dai->id, tx_num, rx_num);
 
 	if (es325_remote_route_enable(dai)) {
-#if defined(SLIM_BUGFIX)
-		rc = tabla_get_channel_map(dai, &temp_tx_num, tabla_tx_slot,
-					&temp_rx_num, tabla_rx_slot);
-#else
 		rc = tabla_get_channel_map(dai, &tabla_tx_num, tabla_tx_slot,
 					&tabla_rx_num, tabla_rx_slot);
-#endif
 
 		rc = tabla_set_channel_map(dai, tx_num, tabla_tx_slot, rx_num, tabla_rx_slot);
 
-        if(rc == 1) /* when codec do not set channel map, es325 also do not set */
-			return 0;
-
 		rc = es325_slim_set_channel_map(dai, tx_num, tx_slot, rx_num, rx_slot);
-	} else
+	}
+	else
 		rc = tabla_set_channel_map(dai, tx_num, tx_slot, rx_num, rx_slot);
 
 	return rc;
@@ -4920,6 +4930,9 @@ static int tabla_es325_get_channel_map(struct snd_soc_dai *dai,
 {
 	int rc = 0;
 
+	pr_info("%s(): dai_name = %s DAI-ID %d tx_ch %d rx_ch %d\n",
+			__func__, dai->name, dai->id, *tx_num, *rx_num);
+
 	if (es325_remote_route_enable(dai))
 		rc = es325_slim_get_channel_map(dai, tx_num, tx_slot, rx_num, rx_slot);
 	else
@@ -4927,9 +4940,6 @@ static int tabla_es325_get_channel_map(struct snd_soc_dai *dai,
 
 	return rc;
 }
-#endif
-
-#ifdef CONFIG_SND_SOC_ES325
 static struct snd_soc_dai_ops tabla_dai_ops = {
 	.startup = tabla_startup,
 	.shutdown = tabla_shutdown,
@@ -4939,7 +4949,7 @@ static struct snd_soc_dai_ops tabla_dai_ops = {
 	.set_channel_map = tabla_es325_set_channel_map, /* tabla_set_channel_map, */
 	.get_channel_map = tabla_es325_get_channel_map, /* tabla_get_channel_map, */
 };
-#else
+#else  /* CONFIG_SND_SOC_ES325_SLIM */
 static struct snd_soc_dai_ops tabla_dai_ops = {
 	.startup = tabla_startup,
 	.shutdown = tabla_shutdown,
@@ -4949,16 +4959,9 @@ static struct snd_soc_dai_ops tabla_dai_ops = {
 	.set_channel_map = tabla_set_channel_map,
 	.get_channel_map = tabla_get_channel_map,
 };
-#endif
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 
-#ifdef CONFIG_SND_SOC_ES325
-static struct snd_soc_dai_ops tabla_es325_dai_ops = {
-	.startup = tabla_startup,
-	.hw_params = tabla_es325_hw_params,
-	.set_channel_map = tabla_es325_set_channel_map,
-	.get_channel_map = tabla_es325_get_channel_map,
-};
-#endif
 static struct snd_soc_dai_driver tabla_dai[] = {
 	{
 		.name = "tabla_rx1",
@@ -5044,50 +5047,6 @@ static struct snd_soc_dai_driver tabla_dai[] = {
 		},
 		.ops = &tabla_dai_ops,
 	},
-#ifdef CONFIG_SND_SOC_ES325
-	{
-		.name = "tabla_es325_rx1",
-		.id = AIF1_PB + ES325_DAI_ID_OFFSET,
-		.playback = {
-			.stream_name = "AIF1 Playback",
-			.rates = WCD9310_RATES,
-			.formats = TABLA_FORMATS,
-			.rate_max = 192000,
-			.rate_min = 8000,
-			.channels_min = 1,
-			.channels_max = 2,
-		},
-		.ops = &tabla_es325_dai_ops,
-	},
-	{
-		.name = "tabla_es325_tx1",
-		.id = AIF1_CAP + ES325_DAI_ID_OFFSET,
-		.capture = {
-			.stream_name = "AIF1 Capture",
-			.rates = WCD9310_RATES,
-			.formats = TABLA_FORMATS,
-			.rate_max = 192000,
-			.rate_min = 8000,
-			.channels_min = 1,
-			.channels_max = 2,
-		},
-		.ops = &tabla_es325_dai_ops,
-	},
-	{
-		.name = "tabla_es325_rx2",
-		.id = AIF2_PB + ES325_DAI_ID_OFFSET,
-		.playback = {
-			.stream_name = "AIF2 Playback",
-			.rates = WCD9310_RATES,
-			.formats = TABLA_FORMATS,
-			.rate_max = 192000,
-			.rate_min = 8000,
-			.channels_min = 1,
-			.channels_max = 2,
-		},
-		.ops = &tabla_es325_dai_ops,
-	},
-#endif
 };
 
 static struct snd_soc_dai_driver tabla_i2s_dai[] = {
@@ -5193,21 +5152,25 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 				break;
 			}
 		}
-		if (j == ARRAY_SIZE(tabla_dai)) {
-			pr_err("%s: PMU: Invalid tabla_dai index\n", __func__);
-			return ret;
-		}
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+		pr_info("%s: act=%d tot=%d\n", __func__, tabla_p->dai[j].ch_act, tabla_p->dai[j].ch_tot);
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 		if (tabla_p->dai[j].ch_act == tabla_p->dai[j].ch_tot) {
 			ret = tabla_codec_enable_chmask(tabla_p,
 							SND_SOC_DAPM_POST_PMU,
 							j);
-#ifdef CONFIG_SND_SOC_ES325
-			ret = es325_remote_cfg_slim_rx(tabla_dai[j].id);
-#endif
 			ret = wcd9xxx_cfg_slim_sch_rx(tabla,
 					tabla_p->dai[j].ch_num,
 					tabla_p->dai[j].ch_tot,
 					tabla_p->dai[j].rate);
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+			ret = es325_remote_cfg_slim_rx(tabla_dai[j].id);
+			pr_info("%s: ret=%d, ch_num=%d, rate=%d \n", __func__, ret, *(tabla_p->dai[j].ch_num), tabla_p->dai[j].rate);
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -5223,14 +5186,12 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 				break;
 			}
 		}
-		if (j == ARRAY_SIZE(tabla_dai)) {
-			pr_err("%s: PMD: Invalid tabla_dai index\n", __func__);
-			return ret;
-		}
 		if (!tabla_p->dai[j].ch_act) {
-#ifdef CONFIG_SND_SOC_ES325
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_close_slim_rx(tabla_dai[j].id);
-#endif
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 			ret = wcd9xxx_close_slim_sch_rx(tabla,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot);
@@ -5253,9 +5214,6 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 			if ((tabla != NULL) &&
 			    (tabla->dev != NULL) &&
 			    (tabla->dev->parent != NULL)) {
-#ifdef CONFIG_SND_SOC_ES325
-				es325_wrapper_sleep(j+1);
-#endif
 				pm_runtime_mark_last_busy(tabla->dev->parent);
 				pm_runtime_put(tabla->dev->parent);
 			}
@@ -5303,10 +5261,6 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 				break;
 			}
 		}
-		if (j == ARRAY_SIZE(tabla_dai)) {
-			pr_err("%s: PMU: Invalid tabla_dai index\n", __func__);
-			return ret;
-		}
 		if (tabla_p->dai[j].ch_act == tabla_p->dai[j].ch_tot) {
 			ret = tabla_codec_enable_chmask(tabla_p,
 							SND_SOC_DAPM_POST_PMU,
@@ -5315,9 +5269,11 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot,
 						tabla_p->dai[j].rate);
-#ifdef CONFIG_SND_SOC_ES325
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_cfg_slim_tx(tabla_dai[j].id);
-#endif
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -5332,14 +5288,12 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 				break;
 			}
 		}
-		if (j == ARRAY_SIZE(tabla_dai)) {
-			pr_err("%s: PMD: Invalid tabla_dai index\n", __func__);
-			return ret;
-		}
 		if (!tabla_p->dai[j].ch_act) {
-#ifdef CONFIG_SND_SOC_ES325
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_close_slim_tx(tabla_dai[j].id);
-#endif
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 			ret = wcd9xxx_close_slim_sch_tx(tabla,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot);
@@ -5361,9 +5315,6 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 			if ((tabla != NULL) &&
 			    (tabla->dev != NULL) &&
 			    (tabla->dev->parent != NULL)) {
-#ifdef CONFIG_SND_SOC_ES325
-				es325_wrapper_sleep(j+1);
-#endif
 				pm_runtime_mark_last_busy(tabla->dev->parent);
 				pm_runtime_put(tabla->dev->parent);
 			}
@@ -8787,114 +8738,6 @@ static const struct file_operations codec_mbhc_debug_ops = {
 	.open = codec_debug_open,
 	.read = codec_mbhc_debug_read,
 };
-
-static unsigned char read_data;
-static ssize_t peek_reg_read_file(struct file *file, char __user *ubuf,
-				size_t count, loff_t *ppos)
-{
-	char lbuf[8];
-
-	snprintf(lbuf, sizeof(lbuf), "0x%x\n", read_data);
-	return simple_read_from_buffer(ubuf, count, ppos, lbuf, strlen(lbuf));
-}
-
-static int get_parameters(char *buf, long int *param1, int num_of_par)
-{
-	char *token;
-	int base, cnt;
-
-	token = strsep(&buf, " ");
-
-	for (cnt = 0; cnt < num_of_par; cnt++) {
-		if (token != NULL) {
-			if ((token[1] == 'x') || (token[1] == 'X'))
-				base = 16;
-			else
-				base = 10;
-
-			if (strict_strtoul(token, base, &param1[cnt]) != 0)
-				return -EINVAL;
-
-			token = strsep(&buf, " ");
-			}
-		else
-			return -EINVAL;
-	}
-	return 0;
-}
-
-static ssize_t poke_reg_write_file(struct file *filp,
-        const char __user *ubuf, size_t cnt, loff_t *ppos)
-{
-    struct snd_soc_codec *codec = filp->private_data;
-    char lbuf[32];
-    int rc;
-    long int param[5];
-
-    if (cnt > sizeof(lbuf) - 1)
-            return -EINVAL;
-
-    rc = copy_from_user(lbuf, ubuf, cnt);
-    if (rc)
-            return -EFAULT;
-
-    lbuf[cnt] = '\0';
-   /* write */
-   rc = get_parameters(lbuf, param, 2);
-   if ((param[0] <= TABLA_MAX_REGISTER) && (param[1] <= TABLA_MAX_REGISTER) &&
-           (rc == 0))
-           wcd9xxx_reg_write(codec->control_data, param[0], param[1]);
-   else
-           rc = -EINVAL;
-    if (rc == 0)
-            rc = cnt;
-    else
-            pr_err("%s: rc = %d\n", __func__, rc);
-
-    return rc;
-}
-
-static ssize_t peek_reg_write_file(struct file *filp,
-	const char __user *ubuf, size_t cnt, loff_t *ppos)
-{
-	struct snd_soc_codec *codec = filp->private_data;
-	char lbuf[32];
-	int rc;
-	long int param[5];
-
-	if (cnt > sizeof(lbuf) - 1)
-		return -EINVAL;
-
-	rc = copy_from_user(lbuf, ubuf, cnt);
-	if (rc)
-		return -EFAULT;
-
-	lbuf[cnt] = '\0';
-	/* read */
-	rc = get_parameters(lbuf, param, 1);
-	if ((param[0] <= TABLA_MAX_REGISTER) && (rc == 0))
-		read_data = wcd9xxx_reg_read(codec->control_data, param[0]);
-	else
-		rc = -EINVAL;
-
-	if (rc == 0)
-		rc = cnt;
-	else
-		pr_err("%s: rc = %d\n", __func__, rc);
-
-	return rc;
-}
-
-static const struct file_operations peek_reg_fops = {
-	.open = codec_debug_open,
-	.read = peek_reg_read_file,
-	.write = peek_reg_write_file,
-};
-
-static const struct file_operations poke_reg_fops = {
-	.open = codec_debug_open,
-	.write = poke_reg_write_file,
-};
 #endif
 
 #ifdef CONFIG_SOUND_CONTROL
@@ -8976,9 +8819,6 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 		goto err_pdata;
 	}
 
-#ifdef CONFIG_SND_SOC_ES325
-	es325_remote_add_codec_controls(codec);
-#endif
 //	snd_soc_add_codec_controls(codec, tabla_snd_controls,
 //			     ARRAY_SIZE(tabla_snd_controls));
 	if (TABLA_IS_1_X(control->version))
@@ -8990,6 +8830,12 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 
 //	snd_soc_dapm_new_controls(dapm, tabla_dapm_widgets,
 //				  ARRAY_SIZE(tabla_dapm_widgets));
+
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+	es325_remote_add_codec_controls(codec);
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 
 	snd_soc_dapm_new_controls(dapm, tabla_dapm_aif_in_widgets,
 				  ARRAY_SIZE(tabla_dapm_aif_in_widgets));
@@ -9155,6 +9001,7 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 					NULL, tabla, &codec_mbhc_debug_ops);
 	}
 #endif
+		snd_codec = codec;
 	codec->ignore_pmdown_time = 1;
 	return ret;
 
