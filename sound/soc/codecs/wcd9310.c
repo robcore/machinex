@@ -39,7 +39,6 @@
 #include "wcd9310.h"
 #include <linux/export.h>
 #ifdef CONFIG_SND_SOC_ES325
-#include "es325-export.h"
 #include <sound/es325-export.h>
 #endif
 
