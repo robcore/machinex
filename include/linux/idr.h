@@ -116,7 +116,7 @@ void idr_init(struct idr *idp);
 
 /**
  * backport of idr idr_alloc() usage
- * 
+ *
  * This backports a patch series send by Tejun Heo:
  * https://lkml.org/lkml/2013/2/2/159
  */
@@ -125,7 +125,7 @@ static inline void compat_idr_destroy(struct idr *idp)
 	idr_remove_all(idp);
 	idr_destroy(idp);
 }
-#define idr_destroy(idp) compat_idr_destroy(idp)
+//#define idr_destroy(idp) compat_idr_destroy(idp)
 
 static inline int idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
