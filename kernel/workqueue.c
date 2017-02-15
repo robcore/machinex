@@ -4023,8 +4023,7 @@ static void wq_unbind_fn(struct work_struct *work)
 	int cpu = smp_processor_id();
 	struct worker_pool *pool;
 	struct worker *worker;
-	struct hlist_node *pos;
-	int i;
+	int wi;
 
 	for_each_cpu_worker_pool(pool, cpu) {
 		WARN_ON_ONCE(cpu != smp_processor_id());
@@ -4039,10 +4038,7 @@ static void wq_unbind_fn(struct work_struct *work)
 		 * before the last CPU down must be on the cpu.  After
 		 * this, they may become diasporas.
 		 */
-		list_for_each_entry(worker, &pool->idle_list, entry)
-			worker->flags |= WORKER_UNBOUND;
-
-		for_each_busy_worker(worker, i, pos, pool)
+		for_each_pool_worker(worker, wi, pool)
 			worker->flags |= WORKER_UNBOUND;
 
 		pool->flags |= POOL_DISASSOCIATED;
@@ -4077,72 +4073,64 @@ static void wq_unbind_fn(struct work_struct *work)
  * rebind_workers - rebind all workers of a pool to the associated CPU
  * @pool: pool of interest
  *
- * @pool->cpu is coming online.  Rebind all workers to the CPU.  Rebinding
- * is different for idle and busy ones.
- *
- * Idle ones will be removed from the idle_list and woken up.  They will
- * add themselves back after completing rebind.  This ensures that the
- * idle_list doesn't contain any unbound workers when re-bound busy workers
- * try to perform local wake-ups for concurrency management.
- *
- * Busy workers can rebind after they finish their current work items.
- * Queueing the rebind work item at the head of the scheduled list is
- * enough.  Note that nr_running will be properly bumped as busy workers
- * rebind.
- *
- * On return, all non-manager workers are scheduled for rebind - see
- * manage_workers() for the manager special case.  Any idle worker
- * including the manager will not appear on @idle_list until rebind is
- * complete, making local wake-ups safe.
+ * @pool->cpu is coming online.  Rebind all workers to the CPU.
  */
 static void rebind_workers(struct worker_pool *pool)
 {
-	struct worker *worker, *n;
-	struct hlist_node *pos;
-	int i;
+	struct worker *worker;
+	int wi;
 
 	lockdep_assert_held(&pool->manager_mutex);
-	lockdep_assert_held(&pool->lock);
 
-	/* dequeue and kick idle ones */
-	list_for_each_entry_safe(worker, n, &pool->idle_list, entry) {
-		/*
-		 * idle workers should be off @pool->idle_list until rebind
-		 * is complete to avoid receiving premature local wake-ups.
-		 */
-		list_del_init(&worker->entry);
+	/*
+	 * Restore CPU affinity of all workers.  As all idle workers should
+	 * be on the run-queue of the associated CPU before any local
+	 * wake-ups for concurrency management happen, restore CPU affinty
+	 * of all workers first and then clear UNBOUND.  As we're called
+	 * from CPU_ONLINE, the following shouldn't fail.
+	 */
+	for_each_pool_worker(worker, wi, pool)
+		WARN_ON_ONCE(set_cpus_allowed_ptr(worker->task,
+						  pool->attrs->cpumask) < 0);
+
+	spin_lock_irq(&pool->lock);
+
+	for_each_pool_worker(worker, wi, pool) {
+		unsigned int worker_flags = worker->flags;
 
 		/*
-		 * worker_thread() will see the above dequeuing and call
-		 * idle_worker_rebind().
+		 * A bound idle worker should actually be on the runqueue
+		 * of the associated CPU for local wake-ups targeting it to
+		 * work.  Kick all idle workers so that they migrate to the
+		 * associated CPU.  Doing this in the same loop as
+		 * replacing UNBOUND with REBOUND is safe as no worker will
+		 * be bound before @pool->lock is released.
 		 */
-		wake_up_process(worker->task);
+		if (worker_flags & WORKER_IDLE)
+			wake_up_process(worker->task);
+
+		/*
+		 * We want to clear UNBOUND but can't directly call
+		 * worker_clr_flags() or adjust nr_running.  Atomically
+		 * replace UNBOUND with another NOT_RUNNING flag REBOUND.
+		 * @worker will clear REBOUND using worker_clr_flags() when
+		 * it initiates the next execution cycle thus restoring
+		 * concurrency management.  Note that when or whether
+		 * @worker clears REBOUND doesn't affect correctness.
+		 *
+		 * ACCESS_ONCE() is necessary because @worker->flags may be
+		 * tested without holding any lock in
+		 * wq_worker_waking_up().  Without it, NOT_RUNNING test may
+		 * fail incorrectly leading to premature concurrency
+		 * management operations.
+		 */
+		WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
+		worker_flags |= WORKER_REBOUND;
+		worker_flags &= ~WORKER_UNBOUND;
+		ACCESS_ONCE(worker->flags) = worker_flags;
 	}
 
-	/* rebind busy workers */
-	for_each_busy_worker(worker, i, pos, pool) {
-		struct work_struct *rebind_work = &worker->rebind_work;
-		struct workqueue_struct *wq;
-
-		if (test_and_set_bit(WORK_STRUCT_PENDING_BIT,
-				     work_data_bits(rebind_work)))
-			continue;
-
-		debug_work_activate(rebind_work);
-
-		/*
-		 * wq doesn't really matter but let's keep @worker->pool
-		 * and @pwq->pool consistent for sanity.
-		 */
-		if (worker->pool->attrs->nice < 0)
-			wq = system_highpri_wq;
-		else
-			wq = system_wq;
-
-		insert_work(per_cpu_ptr(wq->cpu_pwqs, pool->cpu), rebind_work,
-			    worker->scheduled.next,
-			    work_color_to_flags(WORK_NO_COLOR));
-	}
+	spin_unlock_irq(&pool->lock);
 }
 
 /**
