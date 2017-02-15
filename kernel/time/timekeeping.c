@@ -1591,9 +1591,10 @@ int do_adjtimex(struct timex *txc)
  */
 int do_adjtimex(struct timex *txc)
 {
+	struct timekeeper *tk = &timekeeper;
 	unsigned long flags;
 	struct timespec ts;
-	s32 tai, orig_tai;
+	s32 tai;
 	int ret;
 
 	/* Validate the data before disabling interrupts */
@@ -1613,18 +1614,16 @@ int do_adjtimex(struct timex *txc)
 	}
 
 	getnstimeofday(&ts);
-	orig_tai = tai = timekeeping_get_tai_offset();
 
 	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 	write_seqcount_begin(&timekeeper_seq);
 
+	tai = tk->tai_offset;
 	ret = __do_adjtimex(txc, &ts, &tai);
 
+	__timekeeping_set_tai_offset(tk, tai);
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
-
-	if (tai != orig_tai)
-		timekeeping_set_tai_offset(tai);
 
 	return ret;
 }
