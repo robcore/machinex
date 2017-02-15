@@ -49,10 +49,9 @@
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <generated/utsrelease.h>
-#include <sound/esxxx.h>
-#include <sound/es325.h>
-#include <sound/es325-export.h>
-#include <sound/es325-access.h>
+#include <linux/i2c/esxxx.h> /* TODO: common location for i2c and slimbus */
+#include "es325.h"
+#include "es325-export.h"
 
 #define ES325_CMD_ACCESS_WR_MAX 4
 #define ES325_CMD_ACCESS_RD_MAX 4

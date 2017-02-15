@@ -53,7 +53,7 @@
 
 #include <linux/power_supply.h>
 #ifdef CONFIG_SND_SOC_ES325
-#include <sound/esxxx.h>
+#include <linux/i2c/esxxx.h>
 #endif
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
