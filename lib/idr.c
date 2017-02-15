@@ -391,7 +391,7 @@ EXPORT_SYMBOL(idr_get_new_above);
  *	if (id < 0)
  *		error;
  */
-void idr_preload(gfp_t gfp_mask)
+int idr_preload(struct idr *idp, gfp_t gfp_mask)
 {
 	while (idp->id_free_cnt < MAX_IDR_FREE) {
 		struct idr_layer *new;

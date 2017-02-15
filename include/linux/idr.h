@@ -105,8 +105,8 @@ void *idr_find(struct idr *idp, int id);
 int idr_pre_get(struct idr *idp, gfp_t gfp_mask);
 int idr_get_new(struct idr *idp, void *ptr, int *id);
 int idr_get_new_above(struct idr *idp, void *ptr, int starting_id, int *id);
-void idr_preload(struct idr *idp, gfp_t gfp_mask);
-int idr_alloc(struct idr *idp, void *ptr, int id);
+int idr_preload(struct idr *idp, gfp_t gfp_mask);
+int idr_alloc(struct idr *idp, void *ptr, int *id);
 int idr_for_each(struct idr *idp,
 		 int (*fn)(int id, void *p, void *data), void *data);
 void *idr_get_next(struct idr *idp, int *nextid);
@@ -129,7 +129,6 @@ static inline void idr_preload_end(void)
 }
 
 /**
-/*
  * IDA - IDR based id allocator, use when translation from id to
  * pointer isn't necessary.
  *
