@@ -277,9 +277,31 @@ typedef struct {
 } atomic64_t;
 
 #define ATOMIC64_INIT(i) { (i) }
-//
+
+#ifdef CONFIG_ARM_LPAE
+static inline u64 atomic64_read(const atomic64_t *v)
+{
+	u64 result;
+
+	__asm__ __volatile__("@ atomic64_read\n"
+"	ldrd	%0, %H0, [%1]"
+	: "=&r" (result)
+	: "r" (&v->counter), "Qo" (v->counter)
+	);
+
+	return result;
+}
+
+static inline void atomic64_set(atomic64_t *v, u64 i)
+{
+	__asm__ __volatile__("@ atomic64_set\n"
+"	strd	%2, %H2, [%1]"
+	: "=Qo" (v->counter)
+	: "r" (&v->counter), "r" (i)
+	);
+}
+#else
 static inline long long atomic64_read(const atomic64_t *v)
-//
 {
 	long long result;
 
@@ -291,6 +313,7 @@ static inline long long atomic64_read(const atomic64_t *v)
 
 	return result;
 }
+#endif
 
 static inline void atomic64_set(atomic64_t *v, long long i)
 {
