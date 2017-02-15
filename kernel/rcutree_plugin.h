@@ -1578,16 +1578,6 @@ static void rcu_prepare_for_idle(int cpu)
  *
  * The following three proprocessor symbols control this state machine:
  *
- * RCU_IDLE_FLUSHES gives the maximum number of times that we will attempt
- *	to satisfy RCU.  Beyond this point, it is better to incur a periodic
- *	scheduling-clock interrupt than to loop through the state machine
- *	at full power.
- * RCU_IDLE_OPT_FLUSHES gives the number of RCU_IDLE_FLUSHES that are
- *	optional if RCU does not need anything immediately from this
- *	CPU, even if this CPU still has RCU callbacks queued.  The first
- *	times through the state machine are mandatory: we need to give
- *	the state machine a chance to communicate a quiescent state
- *	to the RCU core.
  * RCU_IDLE_GP_DELAY gives the number of jiffies that a CPU is permitted
  *	to sleep in dyntick-idle mode with RCU callbacks pending.  This
  *	is sized to be roughly one RCU grace period.  Those energy-efficiency
@@ -1603,15 +1593,9 @@ static void rcu_prepare_for_idle(int cpu)
  * adjustment, they can be converted into kernel config parameters, though
  * making the state machine smarter might be a better option.
  */
-#define RCU_IDLE_FLUSHES 5		/* Number of dyntick-idle tries. */
-#define RCU_IDLE_OPT_FLUSHES 3		/* Optional dyntick-idle tries. */
 #define RCU_IDLE_GP_DELAY 4		/* Roughly one grace period. */
 #define RCU_IDLE_LAZY_GP_DELAY (6 * HZ)	/* Roughly six seconds. */
 
-static int rcu_idle_flushes = RCU_IDLE_FLUSHES;
-module_param(rcu_idle_flushes, int, 0644);
-static int rcu_idle_opt_flushes = RCU_IDLE_OPT_FLUSHES;
-module_param(rcu_idle_opt_flushes, int, 0644);
 static int rcu_idle_gp_delay = RCU_IDLE_GP_DELAY;
 module_param(rcu_idle_gp_delay, int, 0644);
 static int rcu_idle_lazy_gp_delay = RCU_IDLE_LAZY_GP_DELAY;
@@ -2127,30 +2111,20 @@ static int rcu_nocb_needs_gp(struct rcu_state *rsp)
 {
 	struct rcu_node *rnp = rcu_get_root(rsp);
 
-	return rnp->n_nocb_gp_requests[(ACCESS_ONCE(rnp->completed) + 1) & 0x1];
+	return rnp->need_future_gp[(ACCESS_ONCE(rnp->completed) + 1) & 0x1];
 }
 
 /*
- * Clean up this rcu_node structure's no-CBs state at the end of
- * a grace period, and also return whether any no-CBs CPU associated
- * with this rcu_node structure needs another grace period.
+ * Wake up any no-CBs CPUs' kthreads that were waiting on the just-ended
+ * grace period.
  */
-static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
+static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
 {
-	int c = rnp->completed;
-	int needmore;
-
-	wake_up_all(&rnp->nocb_gp_wq[c & 0x1]);
-	rnp->n_nocb_gp_requests[c & 0x1] = 0;
-	needmore = rnp->n_nocb_gp_requests[(c + 1) & 0x1];
-	trace_rcu_nocb_grace_period(rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    needmore ? "CleanupMore" : "Cleanup");
-	return needmore;
+	wake_up_all(&rnp->nocb_gp_wq[rnp->completed & 0x1]);
 }
 
 /*
- * Set the root rcu_node structure's ->n_nocb_gp_requests field
+ * Set the root rcu_node structure's ->need_future_gp field
  * based on the sum of those of all rcu_node structures.  This does
  * double-count the root rcu_node structure's requests, but this
  * is necessary to handle the possibility of a rcu_nocb_kthread()
@@ -2159,7 +2133,7 @@ static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
  */
 static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
 {
-	rnp->n_nocb_gp_requests[(rnp->completed + 1) & 0x1] += nrq;
+	rnp->need_future_gp[(rnp->completed + 1) & 0x1] += nrq;
 }
 
 static void rcu_init_one_nocb(struct rcu_node *rnp)
@@ -2283,84 +2257,17 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 	unsigned long c;
 	bool d;
 	unsigned long flags;
-	unsigned long flags1;
 	struct rcu_node *rnp = rdp->mynode;
-	struct rcu_node *rnp_root = rcu_get_root(rdp->rsp);
 
 	raw_spin_lock_irqsave(&rnp->lock, flags);
-	c = rnp->completed + 2;
-
-	/* Count our request for a grace period. */
-	rnp->n_nocb_gp_requests[c & 0x1]++;
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "Startleaf");
-
-	if (rnp->gpnum != rnp->completed) {
-
-		/*
-		 * This rcu_node structure believes that a grace period
-		 * is in progress, so we are done.  When this grace
-		 * period ends, our request will be acted upon.
-		 */
-		trace_rcu_nocb_grace_period(rdp->rsp->name,
-					    rnp->gpnum, rnp->completed, c,
-					    rnp->level, rnp->grplo, rnp->grphi,
-					    "Startedleaf");
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
-
-	} else {
-
-		/*
-		 * Might not be a grace period, check root rcu_node
-		 * structure to see if we must start one.
-		 */
-		if (rnp != rnp_root)
-			raw_spin_lock(&rnp_root->lock); /* irqs disabled. */
-		if (rnp_root->gpnum != rnp_root->completed) {
-			trace_rcu_nocb_grace_period(rdp->rsp->name,
-						    rnp->gpnum, rnp->completed,
-						    c, rnp->level,
-						    rnp->grplo, rnp->grphi,
-						    "Startedleafroot");
-			raw_spin_unlock(&rnp_root->lock); /* irqs disabled. */
-		} else {
-
-			/*
-			 * No grace period, so we need to start one.
-			 * The good news is that we can wait for exactly
-			 * one grace period instead of part of the current
-			 * grace period and all of the next grace period.
-			 * Adjust counters accordingly and start the
-			 * needed grace period.
-			 */
-			rnp->n_nocb_gp_requests[c & 0x1]--;
-			c = rnp_root->completed + 1;
-			rnp->n_nocb_gp_requests[c & 0x1]++;
-			rnp_root->n_nocb_gp_requests[c & 0x1]++;
-			trace_rcu_nocb_grace_period(rdp->rsp->name,
-						    rnp->gpnum, rnp->completed,
-						    c, rnp->level,
-						    rnp->grplo, rnp->grphi,
-						    "Startedroot");
-			local_save_flags(flags1);
-			rcu_start_gp(rdp->rsp, flags1); /* Rlses ->lock. */
-		}
-
-		/* Clean up locking and irq state. */
-		if (rnp != rnp_root)
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
-		else
-			local_irq_restore(flags);
-	}
+	c = rcu_start_future_gp(rnp, rdp);
+	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 
 	/*
 	 * Wait for the grace period.  Do so interruptibly to avoid messing
 	 * up the load average.
 	 */
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "StartWait");
+	trace_rcu_future_gp(rnp, rdp, c, "StartWait");
 	for (;;) {
 		wait_event_interruptible(
 			rnp->nocb_gp_wq[c & 0x1],
@@ -2368,14 +2275,9 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		if (likely(d))
 			break;
 		flush_signals(current);
-		trace_rcu_nocb_grace_period(rdp->rsp->name,
-					    rnp->gpnum, rnp->completed, c,
-					    rnp->level, rnp->grplo, rnp->grphi,
-					    "ResumeWait");
+		trace_rcu_future_gp(rnp, rdp, c, "ResumeWait");
 	}
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "EndWait");
+	trace_rcu_future_gp(rnp, rdp, c, "EndWait");
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
 }
 
@@ -2483,9 +2385,8 @@ static int rcu_nocb_needs_gp(struct rcu_state *rsp)
 	return 0;
 }
 
-static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
+static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
 {
-	return 0;
 }
 
 static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
