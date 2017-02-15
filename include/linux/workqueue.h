@@ -71,8 +71,7 @@ enum {
 	/* data contains off-queue information when !WORK_STRUCT_PWQ */
 	WORK_OFFQ_FLAG_BASE	= WORK_STRUCT_COLOR_SHIFT,
 
-	__WORK_OFFQ_CANCELING	= WORK_OFFQ_FLAG_BASE,
-	WORK_OFFQ_CANCELING	= (1 << __WORK_OFFQ_CANCELING),
+	WORK_OFFQ_CANCELING	= (1 << WORK_OFFQ_FLAG_BASE),
 
 	/*
 	 * When a work item is off queue, its high bits point to the last
@@ -120,15 +119,10 @@ struct delayed_work {
 /*
  * A struct for workqueue attributes.  This can be used to change
  * attributes of an unbound workqueue.
- *
- * Unlike other fields, ->no_numa isn't a property of a worker_pool.  It
- * only modifies how apply_workqueue_attrs() select pools and thus doesn't
- * participate in pool hash calculations or equality comparisons.
  */
 struct workqueue_attrs {
 	int			nice;		/* nice level */
 	cpumask_var_t		cpumask;	/* allowed CPUs */
-	bool			no_numa;	/* disable NUMA affinity */
 };
 
 static inline struct delayed_work *to_delayed_work(struct work_struct *work)

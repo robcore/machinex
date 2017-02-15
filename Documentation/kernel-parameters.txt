@@ -2410,12 +2410,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			In kernels built with CONFIG_RCU_NOCB_CPU=y, set
 			the specified list of CPUs to be no-callback CPUs.
 			Invocation of these CPUs' RCU callbacks will
-			be offloaded to "rcuox/N" kthreads created for
-			that purpose, where "x" is "b" for RCU-bh, "p"
-			for RCU-preempt, and "s" for RCU-sched, and "N"
-			is the CPU number.  This reduces OS jitter on the
+			be offloaded to "rcuoN" kthreads created for
+			that purpose.  This reduces OS jitter on the
 			offloaded CPUs, which can be useful for HPC and
-
 			real-time workloads.  It can also improve energy
 			efficiency for asymmetric multiprocessors.
 
@@ -3181,15 +3178,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 			The default value of this parameter is determined by
 			the config option CONFIG_WQ_POWER_EFFICIENT_DEFAULT.
-
-	workqueue.disable_numa
-			By default, all work items queued to unbound
-			workqueues are affine to the NUMA nodes they're
-			issued on, which results in better behavior in
-			general.  If NUMA affinity needs to be disabled for
-			whatever reason, this option can be used.  Note
-			that this also can be controlled per-workqueue for
-			workqueues visible under /sys/bus/workqueue/.
 
 	x2apic_phys	[X86-64,APIC] Use x2apic physical mode instead of
 			default x2apic cluster mode on platforms

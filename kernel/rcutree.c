@@ -64,7 +64,7 @@
 static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
 static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
 
-#define RCU_STATE_INITIALIZER(sname, sabbr, cr) { \
+#define RCU_STATE_INITIALIZER(sname, cr) { \
 	.level = { &sname##_state.node[0] }, \
 	.call = cr, \
 	.fqs_state = RCU_GP_IDLE, \
@@ -76,14 +76,13 @@ static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
 	.barrier_mutex = __MUTEX_INITIALIZER(sname##_state.barrier_mutex), \
 	.onoff_mutex = __MUTEX_INITIALIZER(sname##_state.onoff_mutex), \
 	.name = #sname, \
-	.abbr = sabbr, \
 }
 
 struct rcu_state rcu_sched_state =
-	RCU_STATE_INITIALIZER(rcu_sched, 's', call_rcu_sched);
+	RCU_STATE_INITIALIZER(rcu_sched, call_rcu_sched);
 DEFINE_PER_CPU(struct rcu_data, rcu_sched_data);
 
-struct rcu_state rcu_bh_state = RCU_STATE_INITIALIZER(rcu_bh, 'b', call_rcu_bh);
+struct rcu_state rcu_bh_state = RCU_STATE_INITIALIZER(rcu_bh, call_rcu_bh);
 DEFINE_PER_CPU(struct rcu_data, rcu_bh_data);
 
 static struct rcu_state *rcu_state;
@@ -311,7 +310,7 @@ cpu_needs_another_gp(struct rcu_state *rsp, struct rcu_data *rdp)
 
 	if (rcu_gp_in_progress(rsp))
 		return 0;  /* No, a grace period is already in progress. */
-	if (rcu_nocb_needs_gp(rsp))
+	if (rcu_nocb_needs_gp(rdp))
 		return 1;  /* Yes, a no-CBs CPU needs one. */
 	if (!rdp->nxttail[RCU_NEXT_TAIL])
 		return 0;  /* No, this is a no-CBs (or offline) CPU. */
@@ -1381,7 +1380,6 @@ int rcu_gp_fqs(struct rcu_state *rsp, int fqs_state_in)
 static void rcu_gp_cleanup(struct rcu_state *rsp)
 {
 	unsigned long gp_duration;
-	int nocb = 0;
 	struct rcu_data *rdp;
 	struct rcu_node *rnp = rcu_get_root(rsp);
 
@@ -1412,22 +1410,16 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
 	rcu_for_each_node_breadth_first(rsp, rnp) {
 		raw_spin_lock_irq(&rnp->lock);
 		rnp->completed = rsp->gpnum;
-		rdp = this_cpu_ptr(rsp->rda);
-		if (rnp == rdp->mynode)
-			__rcu_process_gp_end(rsp, rnp, rdp);
-		nocb += rcu_nocb_gp_cleanup(rsp, rnp);
 		raw_spin_unlock_irq(&rnp->lock);
 		cond_resched();
 	}
 	rnp = rcu_get_root(rsp);
 	raw_spin_lock_irq(&rnp->lock);
-	rcu_nocb_gp_set(rnp, nocb);
 
 	rsp->completed = rsp->gpnum; /* Declare grace period done. */
 	trace_rcu_grace_period(rsp->name, rsp->completed, "end");
 	rsp->fqs_state = RCU_GP_IDLE;
 	rdp = this_cpu_ptr(rsp->rda);
-	rcu_advance_cbs(rsp, rnp, rdp);  /* Reduce false positives below. */
 	if (cpu_needs_another_gp(rsp, rdp))
 		rsp->gp_flags = 1;
 	raw_spin_unlock_irq(&rnp->lock);
@@ -1517,15 +1509,6 @@ rcu_start_gp(struct rcu_state *rsp, unsigned long flags)
 	struct rcu_data *rdp = this_cpu_ptr(rsp->rda);
 	struct rcu_node *rnp = rcu_get_root(rsp);
 
-	/*
-	 * If there is no grace period in progress right now, any
-	 * callbacks we have up to this point will be satisfied by the
-	 * next grace period.  Also, advancing the callbacks reduces the
-	 * probability of false positives from cpu_needs_another_gp()
-	 * resulting in pointless grace periods.  So, advance callbacks!
-	 */
-	rcu_advance_cbs(rsp, rnp, rdp);
-
 	if (!rsp->gp_kthread ||
 	    !cpu_needs_another_gp(rsp, rdp)) {
 		/*
@@ -1537,6 +1520,14 @@ rcu_start_gp(struct rcu_state *rsp, unsigned long flags)
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 		return;
 	}
+
+	/*
+	 * Because there is no grace period in progress right now,
+	 * any callbacks we have up to this point will be satisfied
+	 * by the next grace period.  So this is a good place to
+	 * assign a grace period number to recently posted callbacks.
+	 */
+	rcu_accelerate_cbs(rsp, rnp, rdp);
 
 	rsp->gp_flags = RCU_GP_FLAG_INIT;
 	raw_spin_unlock(&rnp->lock); /* Interrupts remain disabled. */
@@ -3105,7 +3096,6 @@ static void __init rcu_init_one(struct rcu_state *rsp,
 			}
 			rnp->level = i;
 			INIT_LIST_HEAD(&rnp->blkd_tasks);
-			rcu_init_one_nocb(rnp);
 		}
 	}
 

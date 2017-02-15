@@ -84,20 +84,6 @@ static void __init rcu_bootup_announce_oddness(void)
 	if (nr_cpu_ids != NR_CPUS)
 		printk(KERN_INFO "\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%d.\n", NR_CPUS, nr_cpu_ids);
 #ifdef CONFIG_RCU_NOCB_CPU
-#ifndef CONFIG_RCU_NOCB_CPU_NONE
-	if (!have_rcu_nocb_mask) {
-		alloc_bootmem_cpumask_var(&rcu_nocb_mask);
-		have_rcu_nocb_mask = true;
-	}
-#ifdef CONFIG_RCU_NOCB_CPU_ZERO
-	pr_info("\tExperimental no-CBs CPU 0\n");
-	cpumask_set_cpu(0, rcu_nocb_mask);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ZERO */
-#ifdef CONFIG_RCU_NOCB_CPU_ALL
-	pr_info("\tExperimental no-CBs for all CPUs\n");
-	cpumask_setall(rcu_nocb_mask);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ALL */
-#endif /* #ifndef CONFIG_RCU_NOCB_CPU_NONE */
 	if (have_rcu_nocb_mask) {
 		cpulist_scnprintf(nocb_buf, sizeof(nocb_buf), rcu_nocb_mask);
 		pr_info("\tExperimental no-CBs CPUs: %s.\n", nocb_buf);
@@ -110,7 +96,7 @@ static void __init rcu_bootup_announce_oddness(void)
 #ifdef CONFIG_TREE_PREEMPT_RCU
 
 struct rcu_state rcu_preempt_state =
-	RCU_STATE_INITIALIZER(rcu_preempt, 'p', call_rcu);
+	RCU_STATE_INITIALIZER(rcu_preempt, call_rcu);
 DEFINE_PER_CPU(struct rcu_data, rcu_preempt_data);
 static struct rcu_state *rcu_state = &rcu_preempt_state;
 
@@ -2094,54 +2080,11 @@ static int __init parse_rcu_nocb_poll(char *arg)
 early_param("rcu_nocb_poll", parse_rcu_nocb_poll);
 
 /*
- * Do any no-CBs CPUs need another grace period?
- *
- * Interrupts must be disabled.  If the caller does not hold the root
- * rnp_node structure's ->lock, the results are advisory only.
+ * Does this CPU needs a grace period due to offloaded callbacks?
  */
-static int rcu_nocb_needs_gp(struct rcu_state *rsp)
+static int rcu_nocb_needs_gp(struct rcu_data *rdp)
 {
-	struct rcu_node *rnp = rcu_get_root(rsp);
-
-	return rnp->n_nocb_gp_requests[(ACCESS_ONCE(rnp->completed) + 1) & 0x1];
-}
-
-/*
- * Clean up this rcu_node structure's no-CBs state at the end of
- * a grace period, and also return whether any no-CBs CPU associated
- * with this rcu_node structure needs another grace period.
- */
-static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
-{
-	int c = rnp->completed;
-	int needmore;
-
-	wake_up_all(&rnp->nocb_gp_wq[c & 0x1]);
-	rnp->n_nocb_gp_requests[c & 0x1] = 0;
-	needmore = rnp->n_nocb_gp_requests[(c + 1) & 0x1];
-	trace_rcu_nocb_grace_period(rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    needmore ? "CleanupMore" : "Cleanup");
-	return needmore;
-}
-
-/*
- * Set the root rcu_node structure's ->n_nocb_gp_requests field
- * based on the sum of those of all rcu_node structures.  This does
- * double-count the root rcu_node structure's requests, but this
- * is necessary to handle the possibility of a rcu_nocb_kthread()
- * having awakened during the time that the rcu_node structures
- * were being updated for the end of the previous grace period.
- */
-static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
-{
-	rnp->n_nocb_gp_requests[(rnp->completed + 1) & 0x1] += nrq;
-}
-
-static void rcu_init_one_nocb(struct rcu_node *rnp)
-{
-	init_waitqueue_head(&rnp->nocb_gp_wq[0]);
-	init_waitqueue_head(&rnp->nocb_gp_wq[1]);
+	return rdp->nocb_needs_gp;
 }
 
 /* Is the specified CPU a no-CPUs CPU? */
@@ -2206,13 +2149,6 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 	if (!is_nocb_cpu(rdp->cpu))
 		return 0;
 	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy);
-	if (__is_kfree_rcu_offset((unsigned long)rhp->func))
-		trace_rcu_kfree_callback(rdp->rsp->name, rhp,
-					 (unsigned long)rhp->func,
-					 rdp->qlen_lazy, rdp->qlen);
-	else
-		trace_rcu_callback(rdp->rsp->name, rhp,
-				   rdp->qlen_lazy, rdp->qlen);
 	return 1;
 }
 
@@ -2257,101 +2193,32 @@ static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 {
 	unsigned long c;
-	bool d;
 	unsigned long flags;
-	unsigned long flags1;
+	unsigned long j;
 	struct rcu_node *rnp = rdp->mynode;
-	struct rcu_node *rnp_root = rcu_get_root(rdp->rsp);
 
 	raw_spin_lock_irqsave(&rnp->lock, flags);
 	c = rnp->completed + 2;
-
-	/* Count our request for a grace period. */
-	rnp->n_nocb_gp_requests[c & 0x1]++;
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "Startleaf");
-
-	if (rnp->gpnum != rnp->completed) {
-
-		/*
-		 * This rcu_node structure believes that a grace period
-		 * is in progress, so we are done.  When this grace
-		 * period ends, our request will be acted upon.
-		 */
-		trace_rcu_nocb_grace_period(rdp->rsp->name,
-					    rnp->gpnum, rnp->completed, c,
-					    rnp->level, rnp->grplo, rnp->grphi,
-					    "Startedleaf");
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
-
-	} else {
-
-		/*
-		 * Might not be a grace period, check root rcu_node
-		 * structure to see if we must start one.
-		 */
-		if (rnp != rnp_root)
-			raw_spin_lock(&rnp_root->lock); /* irqs disabled. */
-		if (rnp_root->gpnum != rnp_root->completed) {
-			trace_rcu_nocb_grace_period(rdp->rsp->name,
-						    rnp->gpnum, rnp->completed,
-						    c, rnp->level,
-						    rnp->grplo, rnp->grphi,
-						    "Startedleafroot");
-			raw_spin_unlock(&rnp_root->lock); /* irqs disabled. */
-		} else {
-
-			/*
-			 * No grace period, so we need to start one.
-			 * The good news is that we can wait for exactly
-			 * one grace period instead of part of the current
-			 * grace period and all of the next grace period.
-			 * Adjust counters accordingly and start the
-			 * needed grace period.
-			 */
-			rnp->n_nocb_gp_requests[c & 0x1]--;
-			c = rnp_root->completed + 1;
-			rnp->n_nocb_gp_requests[c & 0x1]++;
-			rnp_root->n_nocb_gp_requests[c & 0x1]++;
-			trace_rcu_nocb_grace_period(rdp->rsp->name,
-						    rnp->gpnum, rnp->completed,
-						    c, rnp->level,
-						    rnp->grplo, rnp->grphi,
-						    "Startedroot");
-			local_save_flags(flags1);
-			rcu_start_gp(rdp->rsp, flags1); /* Rlses ->lock. */
-		}
-
-		/* Clean up locking and irq state. */
-		if (rnp != rnp_root)
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
-		else
-			local_irq_restore(flags);
-	}
+	rdp->nocb_needs_gp = true;
+	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 
 	/*
 	 * Wait for the grace period.  Do so interruptibly to avoid messing
 	 * up the load average.
 	 */
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "StartWait");
 	for (;;) {
-		wait_event_interruptible(
-			rnp->nocb_gp_wq[c & 0x1],
-			(d = ULONG_CMP_GE(ACCESS_ONCE(rnp->completed), c)));
-		if (likely(d))
+		j = jiffies;
+		schedule_timeout_interruptible(2);
+		raw_spin_lock_irqsave(&rnp->lock, flags);
+		if (ULONG_CMP_GE(rnp->completed, c)) {
+			rdp->nocb_needs_gp = false;
+			raw_spin_unlock_irqrestore(&rnp->lock, flags);
 			break;
-		flush_signals(current);
-		trace_rcu_nocb_grace_period(rdp->rsp->name,
-					    rnp->gpnum, rnp->completed, c,
-					    rnp->level, rnp->grplo, rnp->grphi,
-					    "ResumeWait");
+		}
+		if (j == jiffies)
+			flush_signals(current);
+		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	}
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "EndWait");
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
 }
 
@@ -2435,8 +2302,7 @@ static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 		return;
 	for_each_cpu(cpu, rcu_nocb_mask) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
-		t = kthread_run(rcu_nocb_kthread, rdp,
-				"rcuo%c/%d", rsp->abbr, cpu);
+		t = kthread_run(rcu_nocb_kthread, rdp, "rcuo%d", cpu);
 		BUG_ON(IS_ERR(t));
 		ACCESS_ONCE(rdp->nocb_kthread) = t;
 	}
@@ -2454,22 +2320,9 @@ static bool init_nocb_callback_list(struct rcu_data *rdp)
 
 #else /* #ifdef CONFIG_RCU_NOCB_CPU */
 
-static int rcu_nocb_needs_gp(struct rcu_state *rsp)
+static int rcu_nocb_needs_gp(struct rcu_data *rdp)
 {
 	return 0;
-}
-
-static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
-{
-	return 0;
-}
-
-static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
-{
-}
-
-static void rcu_init_one_nocb(struct rcu_node *rnp)
-{
 }
 
 static bool is_nocb_cpu(int cpu)
