@@ -46,6 +46,7 @@ ret_fast_syscall:
 
 	/* perform architecture specific actions before user return */
 	arch_ret_to_user r1, lr
+	ct_user_enter
 
 	restore_user_regs fast = 1, offset = S_OFF
  UNWIND(.fnend		)
@@ -80,6 +81,7 @@ no_work_pending:
 
 	/* perform architecture specific actions before user return */
 	arch_ret_to_user r1, lr
+	ct_user_enter save = 0
 
 	restore_user_regs fast = 0, offset = 0
 ENDPROC(ret_to_user_from_irq)
@@ -434,6 +436,7 @@ ENTRY(vector_swi)
 #endif
 #endif
 	enable_irq
+	ct_user_exit
 
 	get_thread_info tsk
 	adr	tbl, sys_call_table		@ load syscall table pointer
