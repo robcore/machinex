@@ -149,9 +149,9 @@ void br_fdb_cleanup(unsigned long _data)
 	spin_lock(&br->hash_lock);
 	for (i = 0; i < BR_HASH_SIZE; i++) {
 		struct net_bridge_fdb_entry *f;
-		struct hlist_node *n;
+		struct hlist_node *h, *n;
 
-		hlist_for_each_entry_safe(f, n, &br->hash[i], hlist) {
+		hlist_for_each_entry_safe(f, h, n, &br->hash[i], hlist) {
 			unsigned long this_timer;
 			if (f->is_static)
 				continue;
@@ -175,8 +175,8 @@ void br_fdb_flush(struct net_bridge *br)
 	spin_lock_bh(&br->hash_lock);
 	for (i = 0; i < BR_HASH_SIZE; i++) {
 		struct net_bridge_fdb_entry *f;
-		struct hlist_node *n;
-		hlist_for_each_entry_safe(f, n, &br->hash[i], hlist) {
+		struct hlist_node *h, *n;
+		hlist_for_each_entry_safe(f, h, n, &br->hash[i], hlist) {
 			if (!f->is_static)
 				fdb_delete(br, f);
 		}
@@ -280,13 +280,14 @@ int br_fdb_fillbuf(struct net_bridge *br, void *buf,
 {
 	struct __fdb_entry *fe = buf;
 	int i, num = 0;
+	struct hlist_node *h;
 	struct net_bridge_fdb_entry *f;
 
 	memset(buf, 0, maxnum*sizeof(struct __fdb_entry));
 
 	rcu_read_lock();
 	for (i = 0; i < BR_HASH_SIZE; i++) {
-		hlist_for_each_entry_rcu(f, &br->hash[i], hlist) {
+		hlist_for_each_entry_rcu(f, h, &br->hash[i], hlist) {
 			if (num >= maxnum)
 				goto out;
 

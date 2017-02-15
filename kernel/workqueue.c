@@ -44,7 +44,6 @@
 #include <linux/jhash.h>
 #include <linux/hashtable.h>
 #include <linux/rculist.h>
-#include <linux/nodemask.h>
 
 #include "workqueue_internal.h"
 
@@ -158,7 +157,8 @@ struct worker_pool {
 	/* see manage_workers() for details on the two manager mutexes */
 	struct mutex		manager_arb;	/* manager arbitration */
 	struct mutex		manager_mutex;	/* manager exclusion */
-	struct idr		worker_idr;	/* MG: worker IDs and iteration */
+	struct idr		worker_idr;	/* M: worker IDs */
+	struct list_head	workers;	/* M: attached workers */
 
 	struct workqueue_attrs	*attrs;		/* I: worker attributes */
 	struct hlist_node	hash_node;	/* PL: unbound_pool_hash node */
@@ -254,12 +254,6 @@ struct workqueue_struct {
 
 static struct kmem_cache *pwq_cache;
 
-static int wq_numa_tbl_len;		/* highest possible NUMA node id + 1 */
-static cpumask_var_t *wq_numa_possible_cpumask;
-					/* possible CPUs of each node */
-
-static bool wq_numa_enabled;		/* unbound NUMA affinity enabled */
-
 static DEFINE_MUTEX(wq_pool_mutex);	/* protects pools and workqueues list */
 static DEFINE_SPINLOCK(wq_mayday_lock);	/* protects wq->maydays list */
 
@@ -321,8 +315,8 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	     (pool) < &per_cpu(cpu_worker_pools, cpu)[NR_STD_WORKER_POOLS]; \
 	     (pool)++)
 
-#define for_each_busy_worker(worker, i, pool)				\
-	hash_for_each(pool->busy_hash, i, worker, hentry)
+#define for_each_busy_worker(worker, i, pos, pool)			\
+	hash_for_each(pool->busy_hash, i, pos, worker, hentry)
 
 /**
  * for_each_pool - iterate through all worker_pools in the system
@@ -344,7 +338,6 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 /**
  * for_each_pool_worker - iterate through all workers of a worker_pool
  * @worker: iteration cursor
- * @wi: integer used for iteration
  * @pool: worker_pool to iterate workers of
  *
  * This must be called with either @pool->manager_mutex or ->lock held.
@@ -352,8 +345,8 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
  * The if/else clause exists only for the lockdep assertion and can be
  * ignored.
  */
-#define for_each_pool_worker(worker, wi, pool)				\
-	idr_for_each_entry(&(pool)->worker_idr, (worker), (wi))		\
+#define for_each_pool_worker(worker, pool)				\
+	list_for_each_entry((worker), &(pool)->workers, node)		\
 		if (({ assert_manager_or_pool_lock((pool)); false; })) { } \
 		else
 
@@ -946,8 +939,9 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
 						 struct work_struct *work)
 {
 	struct worker *worker;
+	struct hlist_node *tmp;
 
-	hash_for_each_possible(pool->busy_hash, worker, hentry,
+	hash_for_each_possible(pool->busy_hash, worker, tmp, hentry,
 			       (unsigned long)work)
 		if (worker->current_work == work &&
 		    worker->current_func == work->func)
@@ -1625,6 +1619,7 @@ static struct worker *alloc_worker(void)
 	if (worker) {
 		INIT_LIST_HEAD(&worker->entry);
 		INIT_LIST_HEAD(&worker->scheduled);
+		INIT_LIST_HEAD(&worker->node);
 		/* on creation a worker is in !idle && prep state */
 		worker->flags = WORKER_PREP;
 	}
@@ -1647,25 +1642,23 @@ static struct worker *alloc_worker(void)
  */
 static struct worker *create_worker(struct worker_pool *pool)
 {
+	const char *pri = pool->attrs->nice < 0  ? "H" : "";
 	struct worker *worker = NULL;
-	int node = pool->cpu >= 0 ? cpu_to_node(pool->cpu) : NUMA_NO_NODE;
 	int id = -1;
-	char id_buf[16];
 
 	lockdep_assert_held(&pool->manager_mutex);
 
-	/*
-	 * ID is needed to determine kthread name.  Allocate ID first
-	 * without installing the pointer.
-	 */
-	idr_preload(GFP_KERNEL);
 	spin_lock_irq(&pool->lock);
 
-	id = idr_alloc(&pool->worker_idr, NULL, 0, 0, GFP_NOWAIT);
+	do {
+		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
+			goto fail;
+		idr_get_new(&pool->worker_idr, worker, &id);
+	} while (id == -EAGAIN);
 
 	spin_unlock_irq(&pool->lock);
-	idr_preload_end();
-	if (id < 0)
+
+	if (!id)
 		goto fail;
 
 	worker = alloc_worker();
@@ -1676,13 +1669,13 @@ static struct worker *create_worker(struct worker_pool *pool)
 	worker->id = id;
 
 	if (pool->cpu >= 0)
-		snprintf(id_buf, sizeof(id_buf), "%d:%d%s", pool->cpu, id,
-			 pool->attrs->nice < 0  ? "H" : "");
+		worker->task = kthread_create_on_node(worker_thread,
+					worker, cpu_to_node(pool->cpu),
+					"kworker/%d:%d%s", pool->cpu, id, pri);
 	else
-		snprintf(id_buf, sizeof(id_buf), "u%d:%d", pool->id, id);
-
-	worker->task = kthread_create_on_node(worker_thread, worker, node,
-					      "kworker/%s", id_buf);
+		worker->task = kthread_create(worker_thread, worker,
+					      "kworker/u%d:%d%s",
+					      pool->id, id, pri);
 	if (IS_ERR(worker->task))
 		goto fail;
 
@@ -1708,6 +1701,8 @@ static struct worker *create_worker(struct worker_pool *pool)
 	spin_lock_irq(&pool->lock);
 	idr_replace(&pool->worker_idr, worker, worker->id);
 	spin_unlock_irq(&pool->lock);
+	/* successful, attach the worker to the pool */
+	list_add_tail(&worker->node, &pool->workers);
 
 	return worker;
 
@@ -1715,6 +1710,8 @@ fail:
 	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
 		idr_remove(&pool->worker_idr, id);
+	list_del(&worker->node);
+	if (list_empty(&pool->workers))
 		spin_unlock_irq(&pool->lock);
 	}
 	kfree(worker);
@@ -3379,6 +3376,7 @@ static int init_worker_pool(struct worker_pool *pool)
 	mutex_init(&pool->manager_arb);
 	mutex_init(&pool->manager_mutex);
 	idr_init(&pool->worker_idr);
+	INIT_LIST_HEAD(&pool->workers);
 
 	INIT_HLIST_NODE(&pool->hash_node);
 	pool->refcnt = 1;
@@ -3394,6 +3392,7 @@ static void rcu_free_pool(struct rcu_head *rcu)
 {
 	struct worker_pool *pool = container_of(rcu, struct worker_pool, rcu);
 
+	idr_remove_all(&pool->worker_idr);
 	idr_destroy(&pool->worker_idr);
 	free_workqueue_attrs(pool->attrs);
 	kfree(pool);
@@ -3462,12 +3461,13 @@ static void put_unbound_pool(struct worker_pool *pool)
  * reference count and return it.  If there already is a matching
  * worker_pool, it will be used; otherwise, this function attempts to
  * create a new one.  On failure, returns NULL.
+ *
+ * Should be called with wq_pool_mutex held.
  */
 static struct worker_pool *get_unbound_pool(const struct workqueue_attrs *attrs)
 {
 	u32 hash = wqattrs_hash(attrs);
 	struct worker_pool *pool;
-	int node;
 	struct hlist_node *tmp;
 
 	mutex_lock(&wq_pool_mutex);
@@ -4419,43 +4419,6 @@ out_unlock:
 }
 #endif /* CONFIG_FREEZER */
 
-static void __init wq_numa_init(void)
-{
-	cpumask_var_t *tbl;
-	int node, cpu;
-
-	/* determine NUMA pwq table len - highest node id + 1 */
-	for_each_node(node)
-		wq_numa_tbl_len = max(wq_numa_tbl_len, node + 1);
-
-	if (num_possible_nodes() <= 1)
-		return;
-
-	/*
-	 * We want masks of possible CPUs of each node which isn't readily
-	 * available.  Build one from cpu_to_node() which should have been
-	 * fully initialized by now.
-	 */
-	tbl = kzalloc(wq_numa_tbl_len * sizeof(tbl[0]), GFP_KERNEL);
-	BUG_ON(!tbl);
-
-	for_each_node(node)
-		BUG_ON(!alloc_cpumask_var_node(&tbl[node], GFP_KERNEL, node));
-
-	for_each_possible_cpu(cpu) {
-		node = cpu_to_node(cpu);
-		if (WARN_ON(node == NUMA_NO_NODE)) {
-			pr_warn("workqueue: NUMA node mapping not available for cpu%d, disabling NUMA support\n", cpu);
-			/* happens iff arch is bonkers, let's just proceed */
-			return;
-		}
-		cpumask_set_cpu(cpu, tbl[node]);
-	}
-
-	wq_numa_possible_cpumask = tbl;
-	wq_numa_enabled = true;
-}
-
 static int __init init_workqueues(void)
 {
 	int std_nice[NR_STD_WORKER_POOLS] = { 0, HIGHPRI_NICE_LEVEL };
@@ -4471,8 +4434,6 @@ static int __init init_workqueues(void)
 
 	cpu_notifier(workqueue_cpu_up_callback, CPU_PRI_WORKQUEUE_UP);
 	hotcpu_notifier(workqueue_cpu_down_callback, CPU_PRI_WORKQUEUE_DOWN);
-
-	wq_numa_init();
 
 	/* initialize CPU pools */
 	for_each_possible_cpu(cpu) {

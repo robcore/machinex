@@ -799,10 +799,11 @@ static struct inode *find_inode(struct super_block *sb,
 				int (*test)(struct inode *, void *),
 				void *data)
 {
+	struct hlist_node *node;
 	struct inode *inode = NULL;
 
 repeat:
-	hlist_for_each_entry(inode, head, i_hash) {
+	hlist_for_each_entry(inode, node, head, i_hash) {
 		spin_lock(&inode->i_lock);
 		if (inode->i_sb != sb) {
 			spin_unlock(&inode->i_lock);
@@ -830,10 +831,11 @@ repeat:
 static struct inode *find_inode_fast(struct super_block *sb,
 				struct hlist_head *head, unsigned long ino)
 {
+	struct hlist_node *node;
 	struct inode *inode = NULL;
 
 repeat:
-	hlist_for_each_entry(inode, head, i_hash) {
+	hlist_for_each_entry(inode, node, head, i_hash) {
 		spin_lock(&inode->i_lock);
 		if (inode->i_ino != ino) {
 			spin_unlock(&inode->i_lock);
@@ -1131,10 +1133,11 @@ EXPORT_SYMBOL(iget_locked);
 static int test_inode_iunique(struct super_block *sb, unsigned long ino)
 {
 	struct hlist_head *b = inode_hashtable + hash(sb, ino);
+	struct hlist_node *node;
 	struct inode *inode;
 
 	spin_lock(&inode_hash_lock);
-	hlist_for_each_entry(inode, b, i_hash) {
+	hlist_for_each_entry(inode, node, b, i_hash) {
 		if (inode->i_ino == ino && inode->i_sb == sb) {
 			spin_unlock(&inode_hash_lock);
 			return 0;
@@ -1289,9 +1292,10 @@ int insert_inode_locked(struct inode *inode)
 	struct hlist_head *head = inode_hashtable + hash(sb, ino);
 
 	while (1) {
+		struct hlist_node *node;
 		struct inode *old = NULL;
 		spin_lock(&inode_hash_lock);
-		hlist_for_each_entry(old, head, i_hash) {
+		hlist_for_each_entry(old, node, head, i_hash) {
 			if (old->i_ino != ino)
 				continue;
 			if (old->i_sb != sb)
@@ -1303,7 +1307,7 @@ int insert_inode_locked(struct inode *inode)
 			}
 			break;
 		}
-		if (likely(!old)) {
+		if (likely(!node)) {
 			spin_lock(&inode->i_lock);
 			inode->i_state |= I_NEW;
 			hlist_add_head(&inode->i_hash, head);
@@ -1331,10 +1335,11 @@ int insert_inode_locked4(struct inode *inode, unsigned long hashval,
 	struct hlist_head *head = inode_hashtable + hash(sb, hashval);
 
 	while (1) {
+		struct hlist_node *node;
 		struct inode *old = NULL;
 
 		spin_lock(&inode_hash_lock);
-		hlist_for_each_entry(old, head, i_hash) {
+		hlist_for_each_entry(old, node, head, i_hash) {
 			if (old->i_sb != sb)
 				continue;
 			if (!test(old, data))
@@ -1346,7 +1351,7 @@ int insert_inode_locked4(struct inode *inode, unsigned long hashval,
 			}
 			break;
 		}
-		if (likely(!old)) {
+		if (likely(!node)) {
 			spin_lock(&inode->i_lock);
 			inode->i_state |= I_NEW;
 			hlist_add_head(&inode->i_hash, head);

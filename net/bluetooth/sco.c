@@ -321,10 +321,11 @@ found:
 static struct sock *sco_get_sock_listen(bdaddr_t *src)
 {
 	struct sock *sk = NULL, *sk1 = NULL;
+	struct hlist_node *node;
 
 	read_lock(&sco_sk_list.lock);
 
-	sk_for_each(sk, &sco_sk_list.head) {
+	sk_for_each(sk, node, &sco_sk_list.head) {
 		if (sk->sk_state != BT_LISTEN)
 			continue;
 
@@ -339,7 +340,7 @@ static struct sock *sco_get_sock_listen(bdaddr_t *src)
 
 	read_unlock(&sco_sk_list.lock);
 
-	return sk ? sk : sk1;
+	return node ? sk : sk1;
 }
 
 static void sco_sock_destruct(struct sock *sk)

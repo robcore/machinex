@@ -141,6 +141,7 @@ static void macvlan_broadcast(struct sk_buff *skb,
 {
 	const struct ethhdr *eth = eth_hdr(skb);
 	const struct macvlan_dev *vlan;
+	struct hlist_node *n;
 	struct sk_buff *nskb;
 	unsigned int i;
 	int err;
@@ -149,7 +150,7 @@ static void macvlan_broadcast(struct sk_buff *skb,
 		return;
 
 	for (i = 0; i < MACVLAN_HASH_SIZE; i++) {
-		hlist_for_each_entry_rcu(vlan, &port->vlan_hash[i], hlist) {
+		hlist_for_each_entry_rcu(vlan, n, &port->vlan_hash[i], hlist) {
 			if (vlan->dev == src || !(vlan->mode & mode))
 				continue;
 
