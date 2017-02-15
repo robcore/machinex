@@ -22,9 +22,9 @@
 
 /*
  * NTP timekeeping variables:
+ *
+ * Note: All of the NTP state is protected by the timekeeping locks.
  */
-
-DEFINE_RAW_SPINLOCK(ntp_lock);
 
 
 /* USER_HZ period (usecs): */
@@ -136,8 +136,6 @@ static inline void pps_reset_freq_interval(void)
 
 /**
  * pps_clear - Clears the PPS state variables
- *
- * Must be called while holding a write on the ntp_lock
  */
 static inline void pps_clear(void)
 {
@@ -152,8 +150,6 @@ static inline void pps_clear(void)
 /* Decrease pps_valid to indicate that another second has passed since
  * the last PPS signal. When it reaches 0, indicate that PPS signal is
  * missing.
- *
- * Must be called while holding a write on the ntp_lock
  */
 static inline void pps_dec_valid(void)
 {
@@ -348,10 +344,6 @@ static void ntp_update_offset(long offset)
  */
 void ntp_clear(void)
 {
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&ntp_lock, flags);
-
 	time_adjust	= 0;		/* stop active adjtime() */
 	time_status	|= STA_UNSYNC;
 	time_maxerror	= NTP_PHASE_LIMIT;
@@ -366,20 +358,12 @@ void ntp_clear(void)
 
 	/* Clear PPS state variables */
 	pps_clear();
-	raw_spin_unlock_irqrestore(&ntp_lock, flags);
-
 }
 
 
 u64 ntp_tick_length(void)
 {
-	unsigned long flags;
-	s64 ret;
-
-	raw_spin_lock_irqsave(&ntp_lock, flags);
-	ret = tick_length;
-	raw_spin_unlock_irqrestore(&ntp_lock, flags);
-	return ret;
+	return tick_length;
 }
 
 /**
@@ -412,9 +396,6 @@ int second_overflow(unsigned long secs)
 {
 	s64 delta;
 	int leap = 0;
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&ntp_lock, flags);
 
 	/*
 	 * Leap second processing. If in leap-insert state at the end of the
@@ -505,8 +486,6 @@ int second_overflow(unsigned long secs)
 	time_adjust = 0;
 
 out:
-	raw_spin_unlock_irqrestore(&ntp_lock, flags);
-
 	return leap;
 }
 
@@ -602,10 +581,7 @@ static inline void process_adj_status(struct timex *txc, struct timespec *ts)
 	time_status |= txc->status & ~STA_RONLY;
 }
 
-/*
- * Called with ntp_lock held, so we can access and modify
- * all the global NTP state:
- */
+
 static inline void process_adjtimex_modes(struct timex *txc,
 						struct timespec *ts,
 						s32 *time_tai)
@@ -719,8 +695,6 @@ int __do_adjtimex(struct timex *txc, struct timespec *ts, s32 *time_tai)
 			return -EINVAL;
 	}
 
-	raw_spin_lock_irq(&ntp_lock);
-
 	if (txc->modes & ADJ_ADJTIME) {
 		long save_adjust = time_adjust;
 
@@ -760,8 +734,6 @@ int __do_adjtimex(struct timex *txc, struct timespec *ts, s32 *time_tai)
 
 	/* fill PPS status fields */
 	pps_fill_timex(txc);
-
-	raw_spin_unlock_irq(&ntp_lock);
 
 	txc->time.tv_sec = ts->tv_sec;
 	txc->time.tv_usec = ts->tv_nsec;
@@ -959,8 +931,6 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 
 	pts_norm = pps_normalize_ts(*phase_ts);
 
-	raw_spin_lock_irqsave(&ntp_lock, flags);
-
 	/* clear the error bits, they will be set again if needed */
 	time_status &= ~(STA_PPSJITTER | STA_PPSWANDER | STA_PPSERROR);
 
@@ -972,7 +942,6 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 	 * just start the frequency interval */
 	if (unlikely(pps_fbase.tv_sec == 0)) {
 		pps_fbase = *raw_ts;
-		raw_spin_unlock_irqrestore(&ntp_lock, flags);
 		return;
 	}
 
@@ -987,7 +956,6 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 		time_status |= STA_PPSJITTER;
 		/* restart the frequency calibration interval */
 		pps_fbase = *raw_ts;
-		raw_spin_unlock_irqrestore(&ntp_lock, flags);
 		pr_err("hardpps: PPSJITTER: bad pulse\n");
 		return;
 	}
@@ -1004,7 +972,6 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 
 	hardpps_update_phase(pts_norm.nsec);
 
-	raw_spin_unlock_irqrestore(&ntp_lock, flags);
 }
 #endif	/* CONFIG_NTP_PPS */
 
