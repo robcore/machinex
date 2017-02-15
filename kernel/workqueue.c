@@ -1650,12 +1650,15 @@ static struct worker *create_worker(struct worker_pool *pool)
 	spin_lock_irq(&pool->lock);
 
 	do {
-		if (!idr_pre_get(&worker_idr, GFP_KERNEL))
-			return -ENOMEM;
-		id = idr_get_new(&worker_idr, worker, &worker->id);
+		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
+			goto fail;
+		idr_get_new(&pool->worker_idr, worker, &id);
 	} while (id == -EAGAIN);
 
 	spin_unlock_irq(&pool->lock);
+
+	if (!id)
+		goto fail;
 
 	worker = alloc_worker();
 	if (!worker)
@@ -1699,6 +1702,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 	spin_unlock_irq(&pool->lock);
 
 	return worker;
+
 fail:
 	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
@@ -3382,7 +3386,7 @@ static void rcu_free_pool(struct rcu_head *rcu)
 {
 	struct worker_pool *pool = container_of(rcu, struct worker_pool, rcu);
 
-	idr_remove(&worker_idr, worker->id);
+	idr_remove_all(&pool->worker_idr);
 	idr_destroy(&pool->worker_idr);
 	free_workqueue_attrs(pool->attrs);
 	kfree(pool);
