@@ -3468,6 +3468,8 @@ static void put_unbound_pool(struct worker_pool *pool)
  * reference count and return it.  If there already is a matching
  * worker_pool, it will be used; otherwise, this function attempts to
  * create a new one.  On failure, returns NULL.
+ *
+ * Should be called with wq_pool_mutex held.
  */
 static struct worker_pool *get_unbound_pool(const struct workqueue_attrs *attrs)
 {
