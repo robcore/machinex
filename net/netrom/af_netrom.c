@@ -104,9 +104,10 @@ static void nr_remove_socket(struct sock *sk)
 static void nr_kill_by_device(struct net_device *dev)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
 	spin_lock_bh(&nr_list_lock);
-	sk_for_each(s, &nr_list)
+	sk_for_each(s, node, &nr_list)
 		if (nr_sk(s)->device == dev)
 			nr_disconnect(s, ENETUNREACH);
 	spin_unlock_bh(&nr_list_lock);
@@ -148,9 +149,10 @@ static void nr_insert_socket(struct sock *sk)
 static struct sock *nr_find_listener(ax25_address *addr)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
 	spin_lock_bh(&nr_list_lock);
-	sk_for_each(s, &nr_list)
+	sk_for_each(s, node, &nr_list)
 		if (!ax25cmp(&nr_sk(s)->source_addr, addr) &&
 		    s->sk_state == TCP_LISTEN) {
 			bh_lock_sock(s);
@@ -168,9 +170,10 @@ found:
 static struct sock *nr_find_socket(unsigned char index, unsigned char id)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
 	spin_lock_bh(&nr_list_lock);
-	sk_for_each(s, &nr_list) {
+	sk_for_each(s, node, &nr_list) {
 		struct nr_sock *nr = nr_sk(s);
 
 		if (nr->my_index == index && nr->my_id == id) {
@@ -191,9 +194,10 @@ static struct sock *nr_find_peer(unsigned char index, unsigned char id,
 	ax25_address *dest)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
 	spin_lock_bh(&nr_list_lock);
-	sk_for_each(s, &nr_list) {
+	sk_for_each(s, node, &nr_list) {
 		struct nr_sock *nr = nr_sk(s);
 
 		if (nr->your_index == index && nr->your_id == id &&

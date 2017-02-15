@@ -598,7 +598,7 @@ int tt_global_seq_print_text(struct seq_file *seq, void *offset)
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(tt_common_entry,
+		hlist_for_each_entry_rcu(tt_common_entry, node,
 					 head, hash_entry) {
 			tt_global_entry = container_of(tt_common_entry,
 						       struct tt_global_entry,
@@ -904,7 +904,7 @@ uint16_t tt_local_crc(struct bat_priv *bat_priv)
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(tt_common_entry,
+		hlist_for_each_entry_rcu(tt_common_entry, node,
 					 head, hash_entry) {
 			/* not yet committed clients have not to be taken into
 			 * account while computing the CRC */
@@ -1062,7 +1062,7 @@ static struct sk_buff *tt_response_fill_table(uint16_t tt_len, uint8_t ttvn,
 	for (i = 0; i < hash->size; i++) {
 		head = &hash->table[i];
 
-		hlist_for_each_entry_rcu(tt_common_entry,
+		hlist_for_each_entry_rcu(tt_common_entry, node,
 					 head, hash_entry) {
 			if (tt_count == tt_tot)
 				break;
@@ -1726,7 +1726,7 @@ static uint16_t tt_set_flags(struct hashtable_t *hash, uint16_t flags,
 		head = &hash->table[i];
 
 		rcu_read_lock();
-		hlist_for_each_entry_rcu(tt_common_entry,
+		hlist_for_each_entry_rcu(tt_common_entry, node,
 					 head, hash_entry) {
 			if (enable) {
 				if ((tt_common_entry->flags & flags) == flags)

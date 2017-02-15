@@ -2093,6 +2093,7 @@ static unsigned char eni_phy_get(struct atm_dev *dev,unsigned long addr)
 
 static int eni_proc_read(struct atm_dev *dev,loff_t *pos,char *page)
 {
+	struct hlist_node *node;
 	struct sock *s;
 	static const char *signal[] = { "LOST","unknown","okay" };
 	struct eni_dev *eni_dev = ENI_DEV(dev);
@@ -2170,7 +2171,7 @@ static int eni_proc_read(struct atm_dev *dev,loff_t *pos,char *page)
 	for(i = 0; i < VCC_HTABLE_SIZE; ++i) {
 		struct hlist_head *head = &vcc_hash[i];
 
-		sk_for_each(s, head) {
+		sk_for_each(s, node, head) {
 			struct eni_vcc *eni_vcc;
 			int length;
 

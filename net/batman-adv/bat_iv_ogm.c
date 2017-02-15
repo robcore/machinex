@@ -420,7 +420,7 @@ static void bat_iv_ogm_queue_add(struct bat_priv *bat_priv,
 	spin_lock_bh(&bat_priv->forw_bat_list_lock);
 	/* own packets are not to be aggregated */
 	if ((atomic_read(&bat_priv->aggregated_ogms)) && (!own_packet)) {
-		hlist_for_each_entry(forw_packet_pos,
+		hlist_for_each_entry(forw_packet_pos, tmp_node,
 				     &bat_priv->forw_bat_list, list) {
 			if (bat_iv_ogm_can_aggregate(batman_ogm_packet,
 						     bat_priv, packet_len,
@@ -589,7 +589,7 @@ static void bat_iv_ogm_orig_update(struct bat_priv *bat_priv,
 		"update_originator(): Searching and updating originator entry of received packet\n");
 
 	rcu_read_lock();
-	hlist_for_each_entry_rcu(tmp_neigh_node,
+	hlist_for_each_entry_rcu(tmp_neigh_node, node,
 				 &orig_node->neigh_list, list) {
 		if (compare_eth(tmp_neigh_node->addr, ethhdr->h_source) &&
 		    (tmp_neigh_node->if_incoming == if_incoming) &&
@@ -726,7 +726,7 @@ static int bat_iv_ogm_calc_tq(struct orig_node *orig_node,
 
 	/* find corresponding one hop neighbor */
 	rcu_read_lock();
-	hlist_for_each_entry_rcu(tmp_neigh_node,
+	hlist_for_each_entry_rcu(tmp_neigh_node, node,
 				 &orig_neigh_node->neigh_list, list) {
 
 		if (!compare_eth(tmp_neigh_node->addr, orig_neigh_node->orig))
@@ -847,7 +847,7 @@ static int bat_iv_ogm_update_seqnos(const struct ethhdr *ethhdr,
 		goto out;
 
 	rcu_read_lock();
-	hlist_for_each_entry_rcu(tmp_neigh_node,
+	hlist_for_each_entry_rcu(tmp_neigh_node, node,
 				 &orig_node->neigh_list, list) {
 
 		is_duplicate |= get_bit_status(tmp_neigh_node->real_bits,
