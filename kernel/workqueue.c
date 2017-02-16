@@ -160,6 +160,7 @@ struct worker_pool {
 	struct idr		worker_idr;	/* MG: worker IDs and iteration */
 
 	struct workqueue_attrs	*attrs;		/* I: worker attributes */
+	struct hlist_node	hash_node;	/* PL: unbound_pool_hash node */
 	int			refcnt;		/* PL: refcnt for unbound pools */
 
 	/*
@@ -3380,6 +3381,7 @@ static int init_worker_pool(struct worker_pool *pool)
 	mutex_init(&pool->manager_mutex);
 	idr_init(&pool->worker_idr);
 
+	INIT_HLIST_NODE(&pool->hash_node);
 	pool->refcnt = 1;
 
 	/* shouldn't fail above this point */
@@ -4012,6 +4014,7 @@ static void wq_unbind_fn(struct work_struct *work)
 	int cpu = smp_processor_id();
 	struct worker_pool *pool;
 	struct worker *worker;
+	struct hlist_node *pos;
 	int wi;
 
 	for_each_cpu_worker_pool(pool, cpu) {
