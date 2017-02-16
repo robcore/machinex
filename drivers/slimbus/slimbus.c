@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,7 +26,6 @@
 #define SLIM_HDL_TO_PORT(hdl)	((u32)(hdl) & 0xFF)
 
 #define SLIM_HDL_TO_CHIDX(hdl)	((u16)(hdl) & 0xFF)
-#define SLIM_GRP_TO_NCHAN(hdl)	((u16)(hdl >> 8) & 0xFF)
 
 #define SLIM_SLAVE_PORT(p, la)	(((la)<<16) | (p))
 #define SLIM_MGR_PORT(p)	((0xFF << 16) | (p))
@@ -374,6 +373,24 @@ int slim_register_board_info(struct slim_boardinfo const *info, unsigned n)
 EXPORT_SYMBOL_GPL(slim_register_board_info);
 
 /*
+ * slim_ctrl_add_boarddevs: Add devices registered by board-info
+ * @ctrl: Controller to which these devices are to be added to.
+ * This API is called by controller when it is up and running.
+ * If devices on a controller were registered before controller,
+ * this will make sure that they get probed when controller is up.
+ */
+void slim_ctrl_add_boarddevs(struct slim_controller *ctrl)
+{
+	struct sbi_boardinfo *bi;
+	mutex_lock(&board_lock);
+	list_add_tail(&ctrl->list, &slim_ctrl_list);
+	list_for_each_entry(bi, &board_list, list)
+		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
+	mutex_unlock(&board_lock);
+}
+EXPORT_SYMBOL_GPL(slim_ctrl_add_boarddevs);
+
+/*
  * slim_busnum_to_ctrl: Map bus number to controller
  * @busnum: Bus number
  * Returns controller representing this bus number
@@ -395,7 +412,6 @@ EXPORT_SYMBOL_GPL(slim_busnum_to_ctrl);
 static int slim_register_controller(struct slim_controller *ctrl)
 {
 	int ret = 0;
-	struct sbi_boardinfo *bi;
 
 	/* Can't register until after driver model init */
 	if (WARN_ON(!slimbus_type.p)) {
@@ -463,15 +479,6 @@ static int slim_register_controller(struct slim_controller *ctrl)
 	ctrl->wq = create_singlethread_workqueue(dev_name(&ctrl->dev));
 	if (!ctrl->wq)
 		goto err_workq_failed;
-	/*
-	 * If devices on a controller were registered before controller,
-	 * this will make sure that they get probed now that controller is up
-	 */
-	mutex_lock(&board_lock);
-	list_add_tail(&ctrl->list, &slim_ctrl_list);
-	list_for_each_entry(bi, &board_list, list)
-		slim_match_ctrl_to_boardinfo(ctrl, &bi->board_info);
-	mutex_unlock(&board_lock);
 
 	return 0;
 
@@ -674,13 +681,13 @@ static int slim_processtxn(struct slim_controller *ctrl, u8 dt, u16 mc, u16 ec,
 }
 
 static int ctrl_getlogical_addr(struct slim_controller *ctrl, const u8 *eaddr,
-				u8 e_len, u8 *entry)
+				u8 e_len, u8 *laddr)
 {
 	u8 i;
 	for (i = 0; i < ctrl->num_dev; i++) {
 		if (ctrl->addrt[i].valid &&
 			memcmp(ctrl->addrt[i].eaddr, eaddr, e_len) == 0) {
-			*entry = i;
+			*laddr = i;
 			return 0;
 		}
 	}
@@ -692,28 +699,23 @@ static int ctrl_getlogical_addr(struct slim_controller *ctrl, const u8 *eaddr,
  * @ctrl: Controller with which device is enumerated.
  * @e_addr: 6-byte elemental address of the device.
  * @e_len: buffer length for e_addr
-  * @laddr: Return logical address (if valid flag is false)
-  * @valid: true if laddr holds a valid address that controller wants to
-  *	set for this enumeration address. Otherwise framework sets index into
-  *	address table as logical address.
+ * @laddr: Return logical address.
  * Called by controller in response to REPORT_PRESENT. Framework will assign
  * a logical address to this enumeration address.
  * Function returns -EXFULL to indicate that all logical addresses are already
  * taken.
  */
 int slim_assign_laddr(struct slim_controller *ctrl, const u8 *e_addr,
-				u8 e_len, u8 *laddr, bool valid)
+				u8 e_len, u8 *laddr)
 {
 	int ret;
 	u8 i = 0;
-	bool exists = false;
 	struct slim_device *sbdev;
 	mutex_lock(&ctrl->m_ctrl);
 	/* already assigned */
-	if (ctrl_getlogical_addr(ctrl, e_addr, e_len, &i) == 0) {
-		*laddr = ctrl->addrt[i].laddr;
-		exists = true;
-	} else {
+	if (ctrl_getlogical_addr(ctrl, e_addr, e_len, laddr) == 0)
+		i = *laddr;
+	else {
 		if (ctrl->num_dev >= 254) {
 			ret = -EXFULL;
 			goto ret_assigned_laddr;
@@ -735,32 +737,32 @@ int slim_assign_laddr(struct slim_controller *ctrl, const u8 *e_addr,
 		}
 		memcpy(ctrl->addrt[i].eaddr, e_addr, e_len);
 		ctrl->addrt[i].valid = true;
-		/* Preferred address is index into table */
-		if (!valid)
-			*laddr = i;
 	}
 
-	ret = ctrl->set_laddr(ctrl, (const u8 *)&ctrl->addrt[i].eaddr, 6,
-				*laddr);
+	ret = ctrl->set_laddr(ctrl, ctrl->addrt[i].eaddr, 6, i);
 	if (ret) {
 		ctrl->addrt[i].valid = false;
 		goto ret_assigned_laddr;
 	}
-	ctrl->addrt[i].laddr = *laddr;
+	*laddr = i;
 
-	dev_dbg(&ctrl->dev, "setting slimbus l-addr:%x\n", *laddr);
+	dev_dbg(&ctrl->dev, "setting slimbus l-addr:%x\n", i);
 ret_assigned_laddr:
 	mutex_unlock(&ctrl->m_ctrl);
-	if (exists || ret)
+	if (ret)
 		return ret;
 
-	pr_info("slimbus:%d laddr:0x%x, EAPC:0x%x:0x%x", ctrl->nr, *laddr,
+	pr_info("slimbus laddr:0x%x, EAPC:0x%x:0x%x", i,
 				e_addr[1], e_addr[2]);
 	mutex_lock(&ctrl->m_ctrl);
 	list_for_each_entry(sbdev, &ctrl->devs, dev_list) {
 		if (memcmp(sbdev->e_addr, e_addr, 6) == 0) {
 			struct slim_driver *sbdrv;
-			sbdev->laddr = *laddr;
+// [[LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+#if defined(CONFIG_SND_SOC_ES325_SLIM)
+			sbdev->laddr = i;
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
+// ]]LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
 			if (sbdev->dev.driver) {
 				sbdrv = to_slim_driver(sbdev->dev.driver);
 				if (sbdrv->device_up)
@@ -788,21 +790,12 @@ int slim_get_logical_addr(struct slim_device *sb, const u8 *e_addr,
 				u8 e_len, u8 *laddr)
 {
 	int ret = 0;
-	u8 entry;
 	struct slim_controller *ctrl = sb->ctrl;
 	if (!ctrl || !laddr || !e_addr || e_len != 6)
 		return -EINVAL;
 	mutex_lock(&ctrl->m_ctrl);
-	ret = ctrl_getlogical_addr(ctrl, e_addr, e_len, &entry);
-	if (!ret)
-		*laddr = ctrl->addrt[entry].laddr;
+	ret = ctrl_getlogical_addr(ctrl, e_addr, e_len, laddr);
 	mutex_unlock(&ctrl->m_ctrl);
-	if (ret == -ENXIO && ctrl->get_laddr) {
-		ret = ctrl->get_laddr(ctrl, e_addr, e_len, laddr);
-		if (!ret)
-			ret = slim_assign_laddr(ctrl, e_addr, e_len, laddr,
-						true);
-	}
 	return ret;
 }
 EXPORT_SYMBOL_GPL(slim_get_logical_addr);
@@ -955,6 +948,8 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 	u16 ec;
 	u8 tid, mlen = 6;
 
+	if (sbdev->laddr != SLIM_LA_MANAGER && sbdev->laddr >= ctrl->num_dev)
+		return -ENXIO;
 	ret = slim_ele_access_sanity(msg, mc, rbuf, wbuf, len);
 	if (ret)
 		goto xfer_err;
@@ -983,8 +978,8 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 			ret = wait_for_completion_timeout(&complete, HZ);
 			if (!ret) {
 				struct slim_msg_txn *txn;
-				mutex_lock(&ctrl->m_ctrl);
 				dev_err(&ctrl->dev, "slimbus Read timed out");
+				mutex_lock(&ctrl->m_ctrl);
 				txn = ctrl->txnt[tid];
 				/* Invalidate the transaction */
 				ctrl->txnt[tid] = NULL;
@@ -995,8 +990,8 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 				ret = 0;
 		} else if (ret < 0 && !msg->comp) {
 			struct slim_msg_txn *txn;
-			mutex_lock(&ctrl->m_ctrl);
 			dev_err(&ctrl->dev, "slimbus Read error");
+			mutex_lock(&ctrl->m_ctrl);
 			txn = ctrl->txnt[tid];
 			/* Invalidate the transaction */
 			ctrl->txnt[tid] = NULL;
@@ -1161,7 +1156,6 @@ static int connect_port_ch(struct slim_controller *ctrl, u8 ch, u32 ph,
 	buf[1] = ctrl->chans[ch].chan;
 	if (la == SLIM_LA_MANAGER)
 		ctrl->ports[pn].flow = flow;
-	pr_info("-slimdebug-CODEC connect MC:0x %x, port:%x", mc, pn); /* slimbus debug patch */
 	ret = slim_processtxn(ctrl, SLIM_MSG_DEST_LOGICALADDR, mc, 0,
 				SLIM_MSG_MT_CORE, NULL, buf, 2, 6, NULL, la,
 				NULL);
@@ -1178,7 +1172,6 @@ static int disconnect_port_ch(struct slim_controller *ctrl, u32 ph)
 	u8 pn = (u8)SLIM_HDL_TO_PORT(ph);
 
 	mc = SLIM_MSG_MC_DISCONNECT_PORT;
-	pr_info("-slimdebug-CODEC disconnect port:%x", pn); /* slimbus debug patch */
 	ret = slim_processtxn(ctrl, SLIM_MSG_DEST_LOGICALADDR, mc, 0,
 				SLIM_MSG_MT_CORE, NULL, &pn, 1, 5,
 				NULL, la, NULL);
@@ -1820,18 +1813,10 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 			if (prop->ratem != slc->prop.ratem ||
 			prop->sampleszbits != slc->prop.sampleszbits ||
 			prop->baser != slc->prop.baser) {
-                printk("=[slim]=%s=[slc->state=%d][slc->ref=%d] \
-                        [ratem=%d][samplezbis=%d][baser=%d]\n",
-                        __func__, slc->state, slc->ref, slc->prop.ratem, \
-                        slc->prop.sampleszbits, slc->prop.baser);
 				ret = -EISCONN;
 				goto err_define_ch;
 			}
 		} else if (slc->state > SLIM_CH_DEFINED) {
-            printk("=[slim]=%s=[slc->state=%d][slc->ref=%d] \
-                    [ratem=%d][samplezbis=%d][baser=%d]\n",
-                    __func__, slc->state, slc->ref, slc->prop.ratem, \
-                    slc->prop.sampleszbits, slc->prop.baser);
 			ret = -EISCONN;
 			goto err_define_ch;
 		} else {
@@ -1849,7 +1834,7 @@ int slim_define_ch(struct slim_device *sb, struct slim_ch *prop, u16 *chanh,
 	}
 
 	if (grp)
-		*grph = ((nchan << 8) | SLIM_HDL_TO_CHIDX(chanh[0]));
+		*grph = chanh[0];
 	for (i = 0; i < nchan; i++) {
 		u8 chan = SLIM_HDL_TO_CHIDX(chanh[i]);
 		struct slim_ich *slc = &ctrl->chans[chan];
@@ -2661,15 +2646,7 @@ int slim_reconfigure_now(struct slim_device *sb)
 		slc->state = SLIM_CH_SUSPENDED;
 	}
 
-	/*
-	 * Controller can override default channel scheduling algorithm.
-	 * (e.g. if controller needs to use fixed channel scheduling based
-	 * on number of channels)
-	 */
-	if (ctrl->allocbw)
-		ret = ctrl->allocbw(sb, &subframe, &clkgear);
-	else
-		ret = slim_allocbw(sb, &subframe, &clkgear);
+	ret = slim_allocbw(sb, &subframe, &clkgear);
 
 	if (!ret) {
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
@@ -2683,14 +2660,16 @@ int slim_reconfigure_now(struct slim_device *sb)
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
 			SLIM_MSG_MC_NEXT_SUBFRAME_MODE, 0, SLIM_MSG_MT_CORE,
 			NULL, (u8 *)&subframe, 1, 4, NULL, 0, NULL);
-		pr_info("-slimdebug-sending subframe:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
+		dev_dbg(&ctrl->dev, "sending subframe:%d,ret:%d\n",
+				(int)wbuf[0], ret);
 	}
 	if (!ret && clkgear != ctrl->clkgear) {
 		wbuf[0] = (u8)(clkgear & 0xFF);
 		ret = slim_processtxn(ctrl, SLIM_MSG_DEST_BROADCAST,
 			SLIM_MSG_MC_NEXT_CLOCK_GEAR, 0, SLIM_MSG_MT_CORE,
 			NULL, wbuf, 1, 4, NULL, 0, NULL);
-		pr_info("-slimdebug-sending clkgear:%x,ret:%d\n", wbuf[0], ret); /* slimbus debug patch */
+		dev_dbg(&ctrl->dev, "sending clkgear:%d,ret:%d\n",
+				(int)wbuf[0], ret);
 	}
 	if (ret)
 		goto revert_reconfig;
@@ -2822,7 +2801,6 @@ int slim_reconfigure_now(struct slim_device *sb)
 		slim_chan_changes(sb, false);
 		mutex_unlock(&ctrl->m_ctrl);
 		mutex_unlock(&ctrl->sched.m_reconf);
-		pr_info("-slimdebug-slim reconfig done!"); /* slimbus debug patch */
 		return 0;
 	}
 
@@ -2871,12 +2849,9 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 	int ret = 0;
 	/* Get rid of the group flag in MSB if any */
 	u8 chan = SLIM_HDL_TO_CHIDX(chanh);
-	u8 nchan = 0;
 	struct slim_ich *slc = &ctrl->chans[chan];
-	if (!(slc->nextgrp & SLIM_START_GRP)) {
-		printk("=[slim]=%s=slc->nextgrp=0x%08x==\n",__func__, slc->nextgrp);
+	if (!(slc->nextgrp & SLIM_START_GRP))
 		return -EINVAL;
-	}
 
 	mutex_lock(&sb->sldev_reconf);
 	mutex_lock(&ctrl->m_ctrl);
@@ -2885,8 +2860,8 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		u8 add_mark_removal  = true;
 
 		slc = &ctrl->chans[chan];
-		pr_info("-slimdebug-chan:%d,ctrl:%d,def:%d, ref:%d", slc->chan,
-			chctrl, slc->def, slc->ref); /* slimbus debug patch */
+		dev_dbg(&ctrl->dev, "chan:%d,ctrl:%d,def:%d", chan, chctrl,
+					slc->def);
 		if (slc->state < SLIM_CH_DEFINED) {
 			ret = -ENOTCONN;
 			break;
@@ -2934,10 +2909,9 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 			}
 		}
 
-		nchan++;
-		if (nchan < SLIM_GRP_TO_NCHAN(chanh))
+		if (!(slc->nextgrp & SLIM_END_GRP))
 			chan = SLIM_HDL_TO_CHIDX(slc->nextgrp);
-	} while (nchan < SLIM_GRP_TO_NCHAN(chanh));
+	} while (!(slc->nextgrp & SLIM_END_GRP));
 	mutex_unlock(&ctrl->m_ctrl);
 	if (!ret && commit == true)
 		ret = slim_reconfigure_now(sb);
