@@ -2106,7 +2106,7 @@ static int rcu_nocb_needs_gp(struct rcu_data *rdp)
 }
 
 /* Is the specified CPU a no-CPUs CPU? */
-static bool is_nocb_cpu(int cpu)
+bool rcu_is_nocb_cpu(int cpu)
 {
 	if (have_rcu_nocb_mask)
 		return cpumask_test_cpu(cpu, rcu_nocb_mask);
@@ -2164,7 +2164,7 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 			    bool lazy)
 {
 
-	if (!is_nocb_cpu(rdp->cpu))
+	if (!rcu_is_nocb_cpu(rdp->cpu))
 		return 0;
 	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy);
 	return 1;
@@ -2181,7 +2181,7 @@ static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 	long qll = rsp->qlen_lazy;
 
 	/* If this is not a no-CBs CPU, tell the caller to do it the old way. */
-	if (!is_nocb_cpu(smp_processor_id()))
+	if (!rcu_is_nocb_cpu(smp_processor_id()))
 		return 0;
 	rsp->qlen = 0;
 	rsp->qlen_lazy = 0;
@@ -2238,6 +2238,98 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	}
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
+}
+
+/*
+ * There must be at least one non-no-CBs CPU in operation at any given
+ * time, because no-CBs CPUs are not capable of initiating grace periods
+ * independently.  This function therefore complains if the specified
+ * CPU is the last non-no-CBs CPU, allowing the CPU-hotplug system to
+ * avoid offlining the last such CPU.  (Recursion is a wonderful thing,
+ * but you have to have a base case!)
+ */
+static bool nocb_cpu_expendable(int cpu)
+{
+	cpumask_var_t non_nocb_cpus;
+	int ret;
+
+	/*
+	 * If there are no no-CB CPUs or if this CPU is not a no-CB CPU,
+	 * then offlining this CPU is harmless.  Let it happen.
+	 */
+	if (!have_rcu_nocb_mask || rcu_is_nocb_cpu(cpu))
+		return 1;
+
+	/* If no memory, play it safe and keep the CPU around. */
+	if (!alloc_cpumask_var(&non_nocb_cpus, GFP_NOIO))
+		return 0;
+	cpumask_andnot(non_nocb_cpus, cpu_online_mask, rcu_nocb_mask);
+	cpumask_clear_cpu(cpu, non_nocb_cpus);
+	ret = !cpumask_empty(non_nocb_cpus);
+	free_cpumask_var(non_nocb_cpus);
+	return ret;
+}
+
+/*
+ * Helper structure for remote registry of RCU callbacks.
+ * This is needed for when a no-CBs CPU needs to start a grace period.
+ * If it just invokes call_rcu(), the resulting callback will be queued,
+ * which can result in deadlock.
+ */
+struct rcu_head_remote {
+	struct rcu_head *rhp;
+	call_rcu_func_t *crf;
+	void (*func)(struct rcu_head *rhp);
+};
+
+/*
+ * Register a callback as specified by the rcu_head_remote struct.
+ * This function is intended to be invoked via smp_call_function_single().
+ */
+static void call_rcu_local(void *arg)
+{
+	struct rcu_head_remote *rhrp =
+		container_of(arg, struct rcu_head_remote, rhp);
+
+	rhrp->crf(rhrp->rhp, rhrp->func);
+}
+
+/*
+ * Set up an rcu_head_remote structure and the invoke call_rcu_local()
+ * on CPU 0 (which is guaranteed to be a non-no-CBs CPU) via
+ * smp_call_function_single().
+ */
+static void invoke_crf_remote(struct rcu_head *rhp,
+			      void (*func)(struct rcu_head *rhp),
+			      call_rcu_func_t crf)
+{
+	struct rcu_head_remote rhr;
+
+	rhr.rhp = rhp;
+	rhr.crf = crf;
+	rhr.func = func;
+	smp_call_function_single(0, call_rcu_local, &rhr, 1);
+}
+
+/*
+ * Helper functions to be passed to wait_rcu_gp(), each of which
+ * invokes invoke_crf_remote() to register a callback appropriately.
+ */
+static void __maybe_unused
+call_rcu_preempt_remote(struct rcu_head *rhp,
+			void (*func)(struct rcu_head *rhp))
+{
+	invoke_crf_remote(rhp, func, call_rcu);
+}
+static void call_rcu_bh_remote(struct rcu_head *rhp,
+			       void (*func)(struct rcu_head *rhp))
+{
+	invoke_crf_remote(rhp, func, call_rcu_bh);
+}
+static void call_rcu_sched_remote(struct rcu_head *rhp,
+				  void (*func)(struct rcu_head *rhp))
+{
+	invoke_crf_remote(rhp, func, call_rcu_sched);
 }
 
 /*
@@ -2341,11 +2433,6 @@ static bool init_nocb_callback_list(struct rcu_data *rdp)
 static int rcu_nocb_needs_gp(struct rcu_data *rdp)
 {
 	return 0;
-}
-
-static bool is_nocb_cpu(int cpu)
-{
-	return false;
 }
 
 static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
