@@ -21,6 +21,7 @@
 
 #include <linux/types.h>
 #include <linux/errno.h>
+#include <linux/err.h>
 #include <linux/types.h>
 #include <linux/scatterlist.h>
 #include <linux/err.h>
