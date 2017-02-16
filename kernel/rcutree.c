@@ -683,21 +683,6 @@ int rcu_is_cpu_idle(void)
 }
 EXPORT_SYMBOL(rcu_is_cpu_idle);
 
-#ifdef CONFIG_RCU_USER_QS
-void rcu_user_hooks_switch(struct task_struct *prev,
-			   struct task_struct *next)
-{
-	struct rcu_dynticks *rdtp;
-
-	/* Interrupts are disabled in context switch */
-	rdtp = &__get_cpu_var(rcu_dynticks);
-	if (!rdtp->ignore_user_qs) {
-		clear_tsk_thread_flag(prev, TIF_NOHZ);
-		set_tsk_thread_flag(next, TIF_NOHZ);
-	}
-}
-#endif /* #ifdef CONFIG_RCU_USER_QS */
-
 #if defined(CONFIG_PROVE_RCU) && defined(CONFIG_HOTPLUG_CPU)
 
 /*
@@ -811,16 +796,6 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp)
 		rdp->offline_fqs++;
 		return 1;
 	}
-
-	/*
-	 * There is a possibility that a CPU in adaptive-ticks state
-	 * might run in the kernel with the scheduling-clock tick disabled
-	 * for an extended time period.  Invoke rcu_kick_nohz_cpu() to
-	 * force the CPU to restart the scheduling-clock tick in this
-	 * CPU is in this state.
-	 */
-	rcu_kick_nohz_cpu(rdp->cpu);
-
 	return 0;
 }
 

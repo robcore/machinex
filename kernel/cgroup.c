@@ -281,23 +281,6 @@ static bool cgroup_lock_live_group(struct cgroup *cgrp)
 	return true;
 }
 
-/**
- * cgroup_lock_live_group - take cgroup_mutex and check that cgrp is alive.
- * @cgrp: the cgroup to be checked for liveness
- *
- * On success, returns true; the mutex should be later unlocked.  On
- * failure returns false with no lock held.
- */
-static bool cgroup_lock_live_group(struct cgroup *cgrp)
-{
-	mutex_lock(&cgroup_mutex);
-	if (cgroup_is_removed(cgrp)) {
-		mutex_unlock(&cgroup_mutex);
-		return false;
-	}
-	return true;
-}
-
 /* the list of cgroups eligible for automatic release. Protected by
  * release_list_lock */
 static LIST_HEAD(release_list);
@@ -1892,7 +1875,7 @@ EXPORT_SYMBOL_GPL(cgroup_taskset_size);
  *
  * Must be called with cgroup_mutex and threadgroup locked.
  */
-static void cgroup_task_migrate(struct cgroup *oldcgrp,
+static void cgroup_task_migrate(struct cgroup *cgrp, struct cgroup *oldcgrp,
 				struct task_struct *tsk, struct css_set *newcg)
 {
 	struct css_set *oldcg;
@@ -2120,7 +2103,7 @@ static int cgroup_attach_proc(struct cgroup *cgrp, struct task_struct *leader)
 	 */
 	for (i = 0; i < group_size; i++) {
 		tc = flex_array_get(group, i);
-		cgroup_task_migrate(tc->cgrp, tc->task, tc->cg);
+		cgroup_task_migrate(cgrp, tc->cgrp, tc->task, tc->cg);
 	}
 	/* nothing is sensitive to fork() after this point. */
 
@@ -2177,6 +2160,7 @@ static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	return 0;
 }
 
+/*
 int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	const struct cred *cred = current_cred(), *tcred;
@@ -2195,6 +2179,7 @@ int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 
 	return 0;
 }
+*/
 
 /*
  * Find the task_struct of the task to attach by vpid and pass it along to the
@@ -2300,30 +2285,6 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
 		struct cgroup *from_cg = task_cgroup_from_root(from, root);
 
 		retval = cgroup_attach_task(from_cg, tsk);
-		if (retval)
-			break;
-	}
-	mutex_unlock(&cgroup_mutex);
-
-	return retval;
-}
-EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
-
-/**
- * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
- * @from: attach to all cgroups of a given task
- * @tsk: the task to be attached
- */
-int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
-{
-	struct cgroupfs_root *root;
-	int retval = 0;
-
-	mutex_lock(&cgroup_mutex);
-	for_each_active_root(root) {
-		struct cgroup *from_cg = task_cgroup_from_root(from, root);
-
-		retval = cgroup_attach_task(from_cg, tsk, false);
 		if (retval)
 			break;
 	}
@@ -3388,34 +3349,6 @@ int cgroup_scan_tasks(struct cgroup_scanner *scan)
 	if (heap == &tmp_heap)
 		heap_free(&tmp_heap);
 	return 0;
-}
-
-static void cgroup_transfer_one_task(struct task_struct *task,
-				     struct cgroup_scanner *scan)
-{
-	struct cgroup *new_cgroup = scan->data;
-
-	mutex_lock(&cgroup_mutex);
-	cgroup_attach_task(new_cgroup, task, false);
-	mutex_unlock(&cgroup_mutex);
-}
-
-/**
- * cgroup_trasnsfer_tasks - move tasks from one cgroup to another
- * @to: cgroup to which the tasks will be moved
- * @from: cgroup in which the tasks currently reside
- */
-int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
-{
-	struct cgroup_scanner scan;
-
-	scan.cg = from;
-	scan.test_task = NULL; /* select all tasks in cgroup */
-	scan.process_task = cgroup_transfer_one_task;
-	scan.heap = NULL;
-	scan.data = to;
-
-	return cgroup_scan_tasks(&scan);
 }
 
 /*

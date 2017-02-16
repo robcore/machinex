@@ -1611,11 +1611,11 @@ static DEFINE_PER_CPU(struct timer_list, rcu_idle_gp_timer);
  */
 static void rcu_kick_nohz_cpu(int cpu)
 {
-#ifdef CONFIG_NO_HZ_FULL
 	if (tick_nohz_full_cpu(cpu))
 		smp_send_reschedule(cpu);
-#endif /* #ifdef CONFIG_NO_HZ_FULL */
 }
+
+#endif /* #ifdef CONFIG_NO_HZ_FULL */
 
 /*
  * Allow the CPU to enter dyntick-idle mode if either: (1) There are no
