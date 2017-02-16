@@ -82,11 +82,10 @@ static struct nfqnl_instance *
 instance_lookup(u_int16_t queue_num)
 {
 	struct hlist_head *head;
-	struct hlist_node *pos;
 	struct nfqnl_instance *inst;
 
 	head = &instance_table[instance_hashfn(queue_num)];
-	hlist_for_each_entry_rcu(inst, pos, head, hlist) {
+	hlist_for_each_entry_rcu(pos, head, hlist) {
 		if (inst->queue_num == queue_num)
 			return inst;
 	}
@@ -562,11 +561,10 @@ nfqnl_dev_drop(int ifindex)
 	rcu_read_lock();
 
 	for (i = 0; i < INSTANCE_BUCKETS; i++) {
-		struct hlist_node *tmp;
 		struct nfqnl_instance *inst;
 		struct hlist_head *head = &instance_table[i];
 
-		hlist_for_each_entry_rcu(inst, tmp, head, hlist)
+		hlist_for_each_entry_rcu(inst, head, hlist)
 			nfqnl_flush(inst, dev_cmp, ifindex);
 	}
 
