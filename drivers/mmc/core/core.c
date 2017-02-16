@@ -3004,7 +3004,6 @@ void mmc_start_host(struct mmc_host *host)
 	mmc_power_off(host);
 	mmc_release_host(host);
 	mmc_detect_change(host, 0);
-	mmc_flush_scheduled_work();
 }
 
 void mmc_stop_host(struct mmc_host *host)
