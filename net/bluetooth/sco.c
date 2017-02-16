@@ -305,9 +305,8 @@ drop:
 static struct sock *__sco_get_sock_by_addr(bdaddr_t *ba)
 {
 	struct sock *sk;
-	struct hlist_node *node;
 
-	sk_for_each(sk, node, &sco_sk_list.head)
+	sk_for_each(sk, &sco_sk_list.head)
 		if (!bacmp(&bt_sk(sk)->src, ba))
 			goto found;
 	sk = NULL;
@@ -944,7 +943,6 @@ done:
 static int sco_connect_ind(struct hci_dev *hdev, bdaddr_t *bdaddr, __u8 type)
 {
 	register struct sock *sk;
-	struct hlist_node *node;
 	int lm = 0;
 
 	if (type != SCO_LINK && type != ESCO_LINK)
@@ -954,7 +952,7 @@ static int sco_connect_ind(struct hci_dev *hdev, bdaddr_t *bdaddr, __u8 type)
 
 	/* Find listening sockets */
 	read_lock(&sco_sk_list.lock);
-	sk_for_each(sk, node, &sco_sk_list.head) {
+	sk_for_each(sk, &sco_sk_list.head) {
 		if (sk->sk_state != BT_LISTEN)
 			continue;
 
@@ -1022,11 +1020,10 @@ drop:
 static int sco_debugfs_show(struct seq_file *f, void *p)
 {
 	struct sock *sk;
-	struct hlist_node *node;
 
 	read_lock_bh(&sco_sk_list.lock);
 
-	sk_for_each(sk, node, &sco_sk_list.head) {
+	sk_for_each(sk, &sco_sk_list.head) {
 		seq_printf(f, "%s %s %d\n", batostr(&bt_sk(sk)->src),
 			   batostr(&bt_sk(sk)->dst), sk->sk_state);
 	}
