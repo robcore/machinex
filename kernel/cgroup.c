@@ -83,13 +83,7 @@
  * B happens only through cgroup_show_options() and using cgroup_root_mutex
  * breaks it.
  */
-#ifdef CONFIG_PROVE_RCU
-DEFINE_MUTEX(cgroup_mutex);
-EXPORT_SYMBOL_GPL(cgroup_mutex);	/* only for task_subsys_state_check() */
-#else
 static DEFINE_MUTEX(cgroup_mutex);
-#endif
-
 static DEFINE_MUTEX(cgroup_root_mutex);
 
 /*
@@ -257,6 +251,20 @@ static int cgroup_destroy_locked(struct cgroup *cgrp);
 static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
 			      struct cftype cfts[], bool is_add);
 
+#ifdef CONFIG_PROVE_LOCKING
+int cgroup_lock_is_held(void)
+{
+	return lockdep_is_held(&cgroup_mutex);
+}
+#else /* #ifdef CONFIG_PROVE_LOCKING */
+int cgroup_lock_is_held(void)
+{
+	return mutex_is_locked(&cgroup_mutex);
+}
+#endif /* #else #ifdef CONFIG_PROVE_LOCKING */
+
+EXPORT_SYMBOL_GPL(cgroup_lock_is_held);
+
 static int css_unbias_refcnt(int refcnt)
 {
 	return refcnt >= 0 ? refcnt : refcnt - CSS_DEACT_BIAS;
@@ -319,23 +327,6 @@ static inline struct cfent *__d_cfe(struct dentry *dentry)
 static inline struct cftype *__d_cft(struct dentry *dentry)
 {
 	return __d_cfe(dentry)->type;
-}
-
-/**
- * cgroup_lock_live_group - take cgroup_mutex and check that cgrp is alive.
- * @cgrp: the cgroup to be checked for liveness
- *
- * On success, returns true; the mutex should be later unlocked.  On
- * failure returns false with no lock held.
- */
-static bool cgroup_lock_live_group(struct cgroup *cgrp)
-{
-	mutex_lock(&cgroup_mutex);
-	if (cgroup_is_removed(cgrp)) {
-		mutex_unlock(&cgroup_mutex);
-		return false;
-	}
-	return true;
 }
 
 /* the list of cgroups eligible for automatic release. Protected by
@@ -801,6 +792,27 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * P.S.  One more locking exception.  RCU is used to guard the
  * update of a tasks cgroup pointer by cgroup_attach_task()
  */
+
+/**
+ * cgroup_lock - lock out any changes to cgroup structures
+ *
+ */
+void cgroup_lock(void)
+{
+	mutex_lock(&cgroup_mutex);
+}
+EXPORT_SYMBOL_GPL(cgroup_lock);
+
+/**
+ * cgroup_unlock - release lock on cgroup changes
+ *
+ * Undo the lock taken in a previous cgroup_lock() call.
+ */
+void cgroup_unlock(void)
+{
+	mutex_unlock(&cgroup_mutex);
+}
+EXPORT_SYMBOL_GPL(cgroup_unlock);
 
 /*
  * A couple of forward declarations required, due to cyclic reference loop:
@@ -1891,7 +1903,7 @@ EXPORT_SYMBOL_GPL(cgroup_taskset_size);
  *
  * Must be called with cgroup_mutex and threadgroup locked.
  */
-static void cgroup_task_migrate(struct cgroup *oldcgrp,
+static void cgroup_task_migrate(struct cgroup *cgrp, struct cgroup *oldcgrp,
 				struct task_struct *tsk, struct css_set *newcg)
 {
 	struct css_set *oldcg;
@@ -1931,7 +1943,7 @@ static void cgroup_task_migrate(struct cgroup *oldcgrp,
  * Call with cgroup_mutex and threadgroup locked. May take task_lock of
  * @tsk during call.
  */
-static int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk)
+int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk)
 {
 	int retval = 0;
 	struct cgroup_subsys *ss, *failed_ss = NULL;
@@ -2007,6 +2019,30 @@ out:
 	}
 	return retval;
 }
+
+/**
+ * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
+ * @from: attach to all cgroups of a given task
+ * @tsk: the task to be attached
+ */
+int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
+{
+	struct cgroupfs_root *root;
+	int retval = 0;
+
+	cgroup_lock();
+	for_each_active_root(root) {
+		struct cgroup *from_cg = task_cgroup_from_root(from, root);
+
+		retval = cgroup_attach_task(from_cg, tsk);
+		if (retval)
+			break;
+	}
+	cgroup_unlock();
+
+	return retval;
+}
+EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
 
 /**
  * cgroup_attach_proc - attach all threads in a threadgroup to a cgroup
@@ -2119,7 +2155,7 @@ static int cgroup_attach_proc(struct cgroup *cgrp, struct task_struct *leader)
 	 */
 	for (i = 0; i < group_size; i++) {
 		tc = flex_array_get(group, i);
-		cgroup_task_migrate(tc->cgrp, tc->task, tc->cg);
+		cgroup_task_migrate(cgrp, tc->cgrp, tc->task, tc->cg);
 	}
 	/* nothing is sensitive to fork() after this point. */
 
@@ -2280,33 +2316,9 @@ retry_find_task:
 
 	put_task_struct(tsk);
 out_unlock_cgroup:
-	mutex_unlock(&cgroup_mutex);
+	cgroup_unlock();
 	return ret;
 }
-
-/**
- * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
- * @from: attach to all cgroups of a given task
- * @tsk: the task to be attached
- */
-int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
-{
-	struct cgroupfs_root *root;
-	int retval = 0;
-
-	mutex_lock(&cgroup_mutex);
-	for_each_active_root(root) {
-		struct cgroup *from_cg = task_cgroup_from_root(from, root);
-
-		retval = cgroup_attach_task(from_cg, tsk);
-		if (retval)
-			break;
-	}
-	mutex_unlock(&cgroup_mutex);
-
-	return retval;
-}
-EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
 
 static int cgroup_tasks_write(struct cgroup *cgrp, struct cftype *cft, u64 pid)
 {
@@ -2317,6 +2329,24 @@ static int cgroup_procs_write(struct cgroup *cgrp, struct cftype *cft, u64 tgid)
 {
 	return attach_task_by_pid(cgrp, tgid, true);
 }
+
+/**
+ * cgroup_lock_live_group - take cgroup_mutex and check that cgrp is alive.
+ * @cgrp: the cgroup to be checked for liveness
+ *
+ * On success, returns true; the lock should be later released with
+ * cgroup_unlock(). On failure returns false with no lock held.
+ */
+bool cgroup_lock_live_group(struct cgroup *cgrp)
+{
+	mutex_lock(&cgroup_mutex);
+	if (cgroup_is_removed(cgrp)) {
+		mutex_unlock(&cgroup_mutex);
+		return false;
+	}
+	return true;
+}
+EXPORT_SYMBOL_GPL(cgroup_lock_live_group);
 
 static int cgroup_release_agent_write(struct cgroup *cgrp, struct cftype *cft,
 				      const char *buffer)
@@ -2329,7 +2359,7 @@ static int cgroup_release_agent_write(struct cgroup *cgrp, struct cftype *cft,
 	mutex_lock(&cgroup_root_mutex);
 	strcpy(cgrp->root->release_agent_path, buffer);
 	mutex_unlock(&cgroup_root_mutex);
-	mutex_unlock(&cgroup_mutex);
+	cgroup_unlock();
 	return 0;
 }
 
@@ -2340,7 +2370,7 @@ static int cgroup_release_agent_show(struct cgroup *cgrp, struct cftype *cft,
 		return -ENODEV;
 	seq_puts(seq, cgrp->root->release_agent_path);
 	seq_putc(seq, '\n');
-	mutex_unlock(&cgroup_mutex);
+	cgroup_unlock();
 	return 0;
 }
 
