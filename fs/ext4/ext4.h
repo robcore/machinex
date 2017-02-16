@@ -407,7 +407,7 @@ struct flex_groups {
 #define EXT4_RESERVED_FL		0x80000000 /* reserved for ext4 lib */
 
 #define EXT4_FL_USER_VISIBLE		0x004BDFFF /* User visible flags */
-#define EXT4_FL_USER_MODIFIABLE		0x004380FF /* User modifiable flags */
+#define EXT4_FL_USER_MODIFIABLE		0x004B80FF /* User modifiable flags */
 
 /* Flags that should be inherited by new inodes from their parent. */
 #define EXT4_FL_INHERITED (EXT4_SECRM_FL | EXT4_UNRM_FL | EXT4_COMPR_FL |\
@@ -1000,7 +1000,7 @@ struct ext4_inode_info {
 #define EXT2_FLAGS_TEST_FILESYS		0x0004	/* to test development code */
 
 /*
- * Mount flags set via mount options or defaults
+ * Mount flags
  */
 #define EXT4_MOUNT_GRPID		0x00004	/* Create files with directory's group */
 #define EXT4_MOUNT_DEBUG		0x00008	/* Some debugging messages */
@@ -1033,16 +1033,8 @@ struct ext4_inode_info {
 #define EXT4_MOUNT_DISCARD		0x40000000 /* Issue DISCARD requests */
 #define EXT4_MOUNT_INIT_INODE_TABLE	0x80000000 /* Initialize uninitialized itables */
 
-/*
- * Mount flags set either automatically (could not be set by mount option)
- * based on per file system feature or property or in special cases such as
- * distinguishing between explicit mount option definition and default.
- */
 #define EXT4_MOUNT2_EXPLICIT_DELALLOC	0x00000001 /* User explicitly
 						      specified delalloc */
-#define EXT4_MOUNT2_STD_GROUP_SIZE	0x00000002 /* We have standard group
-						      size of blocksize * 8
-						      blocks */
 
 #define clear_opt(sb, opt)		EXT4_SB(sb)->s_mount_opt &= \
 						~EXT4_MOUNT_##opt
@@ -1831,6 +1823,9 @@ ext4_group_first_block_no(struct super_block *sb, ext4_group_t group_no)
  */
 #define ERR_BAD_DX_DIR	(-(MAX_ERRNO - 1))
 
+void ext4_get_group_no_and_offset(struct super_block *sb, ext4_fsblk_t blocknr,
+			ext4_group_t *blockgrpp, ext4_grpblk_t *offsetp);
+
 /*
  * Timeout and state flag for lazy initialization inode thread.
  */
@@ -1952,13 +1947,6 @@ int ext4_block_bitmap_csum_verify(struct super_block *sb, ext4_group_t group,
 				  struct buffer_head *bh, int sz);
 
 /* balloc.c */
-extern void ext4_get_group_no_and_offset(struct super_block *sb,
-					 ext4_fsblk_t blocknr,
-					 ext4_group_t *blockgrpp,
-					 ext4_grpblk_t *offsetp);
-extern ext4_group_t ext4_get_group_number(struct super_block *sb,
-					  ext4_fsblk_t block);
-
 extern void ext4_validate_block_bitmap(struct super_block *sb,
 				       struct ext4_group_desc *desc,
 				       unsigned int block_group,
@@ -2534,7 +2522,6 @@ extern int ext4_ext_check_inode(struct inode *inode);
 extern int ext4_find_delalloc_cluster(struct inode *inode, ext4_lblk_t lblk);
 extern int ext4_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
 			__u64 start, __u64 len);
-extern int ext4_ind_migrate(struct inode *inode);
 
 
 /* move_extent.c */

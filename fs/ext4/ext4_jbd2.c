@@ -11,8 +11,6 @@ int __ext4_journal_get_write_access(const char *where, unsigned int line,
 {
 	int err = 0;
 
-	might_sleep();
-
 	if (ext4_handle_valid(handle)) {
 		err = jbd2_journal_get_write_access(handle, bh);
 		if (err)
@@ -108,8 +106,6 @@ int __ext4_handle_dirty_metadata(const char *where, unsigned int line,
 				 struct buffer_head *bh)
 {
 	int err = 0;
-
-	might_sleep();
 
 	if (ext4_handle_valid(handle)) {
 		err = jbd2_journal_dirty_metadata(handle, bh);
