@@ -42,6 +42,7 @@
 #include "ramster.h"
 #include "ramster_nodemanager.h"
 #include "tcp.h"
+#include "debug.h"
 
 #define RAMSTER_TESTING
 
@@ -256,9 +257,9 @@ int ramster_localify(int pool_id, struct tmem_oid *oidp, uint32_t index,
 		pr_err("UNTESTED pampd==NULL in ramster_localify\n");
 #endif
 		if (eph)
-			ramster_remote_eph_pages_unsucc_get++;
+			inc_ramster_remote_eph_pages_unsucc_get();
 		else
-			ramster_remote_pers_pages_unsucc_get++;
+			inc_ramster_remote_pers_pages_unsucc_get();
 		obj = NULL;
 		goto finish;
 	} else if (unlikely(!pampd_is_remote(pampd))) {
@@ -267,9 +268,9 @@ int ramster_localify(int pool_id, struct tmem_oid *oidp, uint32_t index,
 		pr_err("UNTESTED dup while waiting in ramster_localify\n");
 #endif
 		if (eph)
-			ramster_remote_eph_pages_unsucc_get++;
+			inc_ramster_remote_eph_pages_unsucc_get();
 		else
-			ramster_remote_pers_pages_unsucc_get++;
+			inc_ramster_remote_pers_pages_unsucc_get();
 		obj = NULL;
 		pampd = NULL;
 		ret = -EEXIST;
@@ -278,7 +279,7 @@ int ramster_localify(int pool_id, struct tmem_oid *oidp, uint32_t index,
 		/* no remote data, delete the local is_remote pampd */
 		pampd = NULL;
 		if (eph)
-			ramster_remote_eph_pages_unsucc_get++;
+			inc_ramster_remote_eph_pages_unsucc_get();
 		else
 			BUG();
 		delete = true;
@@ -309,9 +310,9 @@ int ramster_localify(int pool_id, struct tmem_oid *oidp, uint32_t index,
 	BUG_ON(extra == NULL);
 	zcache_decompress_to_page(data, size, (struct page *)extra);
 	if (eph)
-		ramster_remote_eph_pages_succ_get++;
+		inc_ramster_remote_eph_pages_succ_get();
 	else
-		ramster_remote_pers_pages_succ_get++;
+		inc_ramster_remote_pers_pages_succ_get();
 	ret = 0;
 finish:
 	tmem_localify_finish(obj, index, pampd, saved_hb, delete);
@@ -396,7 +397,7 @@ void *ramster_pampd_repatriate_preload(void *pampd, struct tmem_pool *pool,
 		c = atomic_dec_return(&ramster_remote_pers_pages);
 		WARN_ON_ONCE(c < 0);
 	} else {
-		ramster_pers_pages_remote_nomem++;
+		inc_ramster_pers_pages_remote_nomem();
 	}
 	local_irq_restore(flags);
 out:
@@ -535,9 +536,9 @@ static void ramster_remote_flush_page(struct flushlist_node *flnode)
 	remotenode = flnode->xh.client_id;
 	ret = r2net_remote_flush(xh, remotenode);
 	if (ret >= 0)
-		ramster_remote_pages_flushed++;
+		inc_ramster_remote_pages_flushed();
 	else
-		ramster_remote_page_flushes_failed++;
+		inc_ramster_remote_page_flushes_failed();
 	preempt_enable_no_resched();
 	ramster_flnode_free(flnode, NULL);
 }
@@ -552,9 +553,9 @@ static void ramster_remote_flush_object(struct flushlist_node *flnode)
 	remotenode = flnode->xh.client_id;
 	ret = r2net_remote_flush_object(xh, remotenode);
 	if (ret >= 0)
-		ramster_remote_objects_flushed++;
+		inc_ramster_remote_objects_flushed();
 	else
-		ramster_remote_object_flushes_failed++;
+		inc_ramster_remote_object_flushes_failed();
 	preempt_enable_no_resched();
 	ramster_flnode_free(flnode, NULL);
 }
@@ -605,18 +606,18 @@ int ramster_remotify_pageframe(bool eph)
 		 * But count them so we know if it becomes a problem.
 		 */
 			if (eph)
-				ramster_eph_pages_remote_failed++;
+				inc_ramster_eph_pages_remote_failed();
 			else
-				ramster_pers_pages_remote_failed++;
+				inc_ramster_pers_pages_remote_failed();
 			break;
 		} else {
 			if (!eph)
 				atomic_inc(&ramster_remote_pers_pages);
 		}
 		if (eph)
-			ramster_eph_pages_remoted++;
+			inc_ramster_eph_pages_remoted();
 		else
-			ramster_pers_pages_remoted++;
+			inc_ramster_pers_pages_remoted();
 		/*
 		 * data was successfully remoted so change the local version to
 		 * point to the remote node where it landed
