@@ -259,7 +259,7 @@ int system_shutdown_notifier(struct notifier_block *this,
 		unsigned long code, void *x)
 {
 	sysmon_send_event(SYSMON_SS_MODEM,
-			"ext_modem1",
+			"external_modem",
 			SUBSYS_BEFORE_SHUTDOWN);
 	return NOTIFY_DONE;
 }
@@ -276,7 +276,7 @@ int qsc_powerup_notifier_fn(struct notifier_block *this,
 	int rcode = 0;
 	do {
 		rcode = sysmon_send_event(SYSMON_SS_MODEM,
-				"ext_modem1",
+				"external_modem",
 				SUBSYS_AFTER_POWERUP);
 		if (rcode) {
 			pr_err("%s: sysmon_send_event returned error %d\n",
