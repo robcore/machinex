@@ -2422,7 +2422,7 @@ int max77693_muic_get_status1_adc1k_value(void)
 	if (ret) {
 		dev_err(gInfo->dev, "%s: fail to read muic reg(%d)\n",
 					__func__, ret);
-		return -EINVAL;
+		return ret;
 	}
 	adc1k = adc1k & STATUS1_ADC1K_MASK ? 1 : 0;
 
@@ -2441,7 +2441,7 @@ int max77693_muic_get_status1_adc_value(void)
 	if (ret) {
 		dev_err(gInfo->dev, "%s: fail to read muic reg(%d)\n",
 			__func__, ret);
-		return -EINVAL;
+		return ret;
 	}
 
 	return adc & STATUS1_ADC_MASK;
