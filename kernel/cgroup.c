@@ -284,26 +284,6 @@ inline int cgroup_is_removed(const struct cgroup *cgrp)
 	return test_bit(CGRP_REMOVED, &cgrp->flags);
 }
 
-/**
- * cgroup_is_descendant - test ancestry
- * @cgrp: the cgroup to be tested
- * @ancestor: possible ancestor of @cgrp
- *
- * Test whether @cgrp is a descendant of @ancestor.  It also returns %true
- * if @cgrp == @ancestor.  This function is safe to call as long as @cgrp
- * and @ancestor are accessible.
- */
-bool cgroup_is_descendant(struct cgroup *cgrp, struct cgroup *ancestor)
-{
-	while (cgrp) {
-		if (cgrp == ancestor)
-			return true;
-		cgrp = cgrp->parent;
-	}
-	return false;
-}
-EXPORT_SYMBOL_GPL(cgroup_is_descendant);
-
 /* bits in struct cgroupfs_root flags field */
 enum {
 	ROOT_NOPREFIX,	/* mounted subsystems have no named prefix */
@@ -897,13 +877,6 @@ static void cgroup_free_fn(struct work_struct *work)
 
 	cgrp->root->number_of_cgroups--;
 	mutex_unlock(&cgroup_mutex);
-
-	/*
-	 * We get a ref to the parent's dentry, and put the ref when
-	 * this cgroup is being freed, so it's guaranteed that the
-	 * parent won't be destroyed before its children.
-	 */
-	dput(cgrp->parent->dentry);
 
 	/*
 	 * Drop the active superblock reference that we took when we
@@ -1815,17 +1788,11 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 	int ret = -ENAMETOOLONG;
 	char *start;
 
-	if (!cgrp->parent) {
-		if (strlcpy(buf, "/", buflen) >= buflen)
-			return -ENAMETOOLONG;
-		return 0;
-	}
-
 	start = buf + buflen - 1;
 	*start = '\0';
 
 	rcu_read_lock();
-	do {
+	while (cgrp) {
 		const char *name = cgroup_name(cgrp);
 		int len;
 
@@ -1834,12 +1801,15 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 			goto out;
 		memcpy(start, name, len);
 
+		if (!cgrp->parent)
+			break;
+
 		if (--start < buf)
 			goto out;
 		*start = '/';
 
 		cgrp = cgrp->parent;
-	} while (cgrp->parent);
+	}
 	ret = 0;
 	memmove(buf, start, buf + buflen - start);
 out:
@@ -4318,9 +4288,6 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	for_each_subsys(root, ss)
 		dget(dentry);
 
-	/* hold a ref to the parent's dentry */
-	dget(parent->dentry);
-
 	/* creation succeeded, notify subsystems */
 	for_each_subsys(root, ss) {
 		err = online_css(ss, cgrp);
@@ -4512,6 +4479,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	 * need to invoke fork callbacks here. */
 	BUG_ON(!list_empty(&init_task.tasks));
 
+	ss->active = 1;
 	BUG_ON(online_css(ss, dummytop));
 
 	mutex_unlock(&cgroup_mutex);
@@ -4616,6 +4584,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	}
 	write_unlock(&css_set_lock);
 
+	ss->active = 1;
 	ret = online_css(ss, dummytop);
 	if (ret)
 		goto err_unload;
@@ -4656,6 +4625,7 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	mutex_lock(&cgroup_mutex);
 
 	offline_css(ss, dummytop);
+	ss->active = 0;
 
 	if (ss->use_id) {
 		idr_remove_all(&ss->idr);
