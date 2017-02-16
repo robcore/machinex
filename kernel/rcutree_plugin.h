@@ -59,6 +59,7 @@ static void rcu_kick_nohz_cpu(int cpu)
 	if (tick_nohz_full_cpu(cpu))
 		smp_send_reschedule(cpu);
 #endif /* #ifdef CONFIG_NO_HZ_FULL */
+}
 
 /*
  * Check the RCU kernel configuration parameters and print informative
