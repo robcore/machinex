@@ -233,10 +233,9 @@ void br_fdb_delete_by_port(struct net_bridge *br,
 struct net_bridge_fdb_entry *__br_fdb_get(struct net_bridge *br,
 					  const unsigned char *addr)
 {
-	struct hlist_node *h;
 	struct net_bridge_fdb_entry *fdb;
 
-	hlist_for_each_entry_rcu(fdb, h, &br->hash[br_mac_hash(addr)], hlist) {
+	hlist_for_each_entry_rcu(fdb, &br->hash[br_mac_hash(addr)], hlist) {
 		if (!compare_ether_addr(fdb->addr.addr, addr)) {
 			if (unlikely(has_expired(br, fdb)))
 				break;
@@ -326,10 +325,9 @@ int br_fdb_fillbuf(struct net_bridge *br, void *buf,
 static struct net_bridge_fdb_entry *fdb_find(struct hlist_head *head,
 					     const unsigned char *addr)
 {
-	struct hlist_node *h;
 	struct net_bridge_fdb_entry *fdb;
 
-	hlist_for_each_entry(fdb, h, head, hlist) {
+	hlist_for_each_entry(fdb, head, hlist) {
 		if (!compare_ether_addr(fdb->addr.addr, addr))
 			return fdb;
 	}
@@ -339,10 +337,9 @@ static struct net_bridge_fdb_entry *fdb_find(struct hlist_head *head,
 static struct net_bridge_fdb_entry *fdb_find_rcu(struct hlist_head *head,
 						 const unsigned char *addr)
 {
-	struct hlist_node *h;
 	struct net_bridge_fdb_entry *fdb;
 
-	hlist_for_each_entry_rcu(fdb, h, head, hlist) {
+	hlist_for_each_entry_rcu(fdb, head, hlist) {
 		if (!compare_ether_addr(fdb->addr.addr, addr))
 			return fdb;
 	}
@@ -549,10 +546,9 @@ int br_fdb_dump(struct sk_buff *skb, struct netlink_callback *cb)
 			continue;
 
 		for (i = 0; i < BR_HASH_SIZE; i++) {
-			struct hlist_node *h;
 			struct net_bridge_fdb_entry *f;
 
-			hlist_for_each_entry_rcu(f, h, &br->hash[i], hlist) {
+			hlist_for_each_entry_rcu(f, &br->hash[i], hlist) {
 				if (idx < cb->args[0])
 					goto skip;
 
