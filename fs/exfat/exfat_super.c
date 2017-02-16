@@ -1608,7 +1608,7 @@ static struct inode *exfat_iget(struct super_block *sb, loff_t i_pos)
 	struct exfat_inode_info *info;
 	struct hlist_head *head = sbi->inode_hashtable + exfat_hash(i_pos);
 	struct inode *inode = NULL;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if 0
 	struct hlist_node *node;
 
 	spin_lock(&sbi->inode_hash_lock);
