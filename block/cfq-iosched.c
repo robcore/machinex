@@ -1231,7 +1231,7 @@ static void cfq_release_cfq_groups(struct cfq_data *cfqd)
 	struct hlist_node *pos, *n;
 	struct cfq_group *cfqg;
 
-	hlist_for_each_entry_safe(cfqg, pos, n, &cfqd->cfqg_list, cfqd_node) {
+	hlist_for_each_entry_safe(pos, n, &cfqd->cfqg_list, cfqd_node) {
 		/*
 		 * If cgroup removal path got to blk_group first and removed
 		 * it from cgroup list, then it will take care of destroying
