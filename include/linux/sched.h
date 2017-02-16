@@ -524,8 +524,7 @@ struct signal_struct {
 	unsigned int		has_child_subreaper:1;
 
 	/* POSIX.1b Interval Timers */
-	int			posix_timer_id;
-	struct list_head	posix_timers;
+	struct list_head posix_timers;
 
 	/* ITIMER_REAL timer for the process */
 	struct hrtimer real_timer;
