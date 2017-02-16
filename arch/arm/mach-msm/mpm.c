@@ -491,7 +491,7 @@ void __init msm_mpm_irq_extn_init(struct msm_mpm_device_data *mpm_data)
 	bitmap_set(msm_mpm_gpio_irqs_mask, NR_MSM_IRQS, NR_GPIO_IRQS);
 
 	if (!mpm_data) {
-#ifdef CONFIG_MSM_MPM
+#if 0
 		BUG();
 #endif
 		return;
@@ -520,7 +520,8 @@ static int __init msm_mpm_init(void)
 	int rc;
 
 	rc = request_irq(irq, msm_mpm_irq,
-			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, "mpm_drv", msm_mpm_irq);
+			IRQF_TRIGGER_RISING, "mpm_drv", msm_mpm_irq);
+//			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, "mpm_drv", msm_mpm_irq);
 
 	if (rc) {
 		pr_err("%s: failed to request irq %u: %d\n",
