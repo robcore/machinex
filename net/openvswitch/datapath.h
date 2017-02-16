@@ -56,7 +56,6 @@ struct dp_stats_percpu {
  * struct datapath - datapath for flow-based packet switching
  * @rcu: RCU callback head for deferred destruction.
  * @list_node: Element in global 'dps' list.
- * @n_flows: Number of flows currently in flow table.
  * @table: Current flow table.  Protected by genl_lock and RCU.
  * @ports: Map from port number to &struct vport.  %OVSP_LOCAL port
  * always exists, other ports may be %NULL.  Protected by RTNL and RCU.
