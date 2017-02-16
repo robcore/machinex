@@ -1820,6 +1820,12 @@ static void destroy_worker(struct worker *worker)
 	if (worker->flags & WORKER_IDLE)
 		pool->nr_idle--;
 
+	/*
+	 * Once WORKER_DIE is set, the kworker may destroy itself at any
+	 * point.  Pin to ensure the task stays until we're done with it.
+	 */
+	get_task_struct(worker->task);
+
 	list_del_init(&worker->entry);
 	worker->flags |= WORKER_DIE;
 
@@ -1828,6 +1834,7 @@ static void destroy_worker(struct worker *worker)
 	spin_unlock_irq(&pool->lock);
 
 	kthread_stop(worker->task);
+	put_task_struct(worker->task);
 	kfree(worker);
 
 	spin_lock_irq(&pool->lock);
@@ -4726,6 +4733,7 @@ static int __cpuinit workqueue_cpu_down_callback(struct notifier_block *nfb,
 
 		/* wait for per-cpu unbinding to finish */
 		flush_work(&unbind_work);
+		destroy_work_on_stack(&unbind_work);
 		break;
 	}
 	return NOTIFY_OK;
@@ -4764,6 +4772,8 @@ long work_on_cpu(int cpu, long (*fn)(void *), void *arg)
 	INIT_WORK_ONSTACK(&wfc.work, work_for_cpu_fn);
 	schedule_work_on(cpu, &wfc.work);
 	flush_work(&wfc.work);
+
+	destroy_work_on_stack(&wfc.work);
 	return wfc.ret;
 }
 EXPORT_SYMBOL(work_on_cpu);
