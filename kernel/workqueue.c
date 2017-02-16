@@ -1705,8 +1705,6 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	/* ID is needed to determine kthread name */
 	id = ida_simple_get(&pool->worker_ida, 0, 0, GFP_KERNEL);
-	if (id < 0)
-		goto fail;
 
 	worker = alloc_worker();
 	if (!worker)
