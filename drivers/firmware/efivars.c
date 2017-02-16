@@ -162,6 +162,23 @@ static void efivar_update_sysfs_entries(struct work_struct *);
 static DECLARE_WORK(efivar_work, efivar_update_sysfs_entries);
 static bool efivar_wq_enabled = true;
 
+/* Return the number of unicode characters in data */
+static unsigned long
+utf16_strnlen(efi_char16_t *s, size_t maxlength)
+{
+	unsigned long length = 0;
+
+	while (*s++ != 0 && length < maxlength)
+		length++;
+	return length;
+}
+
+static inline unsigned long
+utf16_strlen(efi_char16_t *s)
+{
+	return utf16_strnlen(s, ~0UL);
+}
+
 /*
  * Return the number of bytes is the length of this string
  * Note: this is NOT the same as the number of unicode characters
@@ -443,7 +460,7 @@ efivar_attr_read(struct efivar_entry *entry, char *buf)
 	if (!entry || !buf)
 		return -EINVAL;
 
-	status = get_var_data(__efivars, var);
+	status = get_var_data(entry->efivars, var);
 	if (status != EFI_SUCCESS)
 		return -EIO;
 
@@ -509,7 +526,7 @@ static ssize_t
 efivar_store_raw(struct efivar_entry *entry, const char *buf, size_t count)
 {
 	struct efi_variable *new_var, *var = &entry->var;
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = entry->efivars;
 	efi_status_t status = EFI_NOT_FOUND;
 
 	if (count != sizeof(struct efi_variable))
@@ -686,7 +703,7 @@ static int efi_status_to_err(efi_status_t status)
 
 static int efi_pstore_open(struct pstore_info *psi)
 {
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = psi->data;
 
 	spin_lock_irq(&efivars->lock);
 	efivars->walk_entry = list_first_entry(&efivars->list,
@@ -696,7 +713,7 @@ static int efi_pstore_open(struct pstore_info *psi)
 
 static int efi_pstore_close(struct pstore_info *psi)
 {
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = psi->data;
 
 	spin_unlock_irq(&efivars->lock);
 	return 0;
@@ -707,7 +724,7 @@ static ssize_t efi_pstore_read(u64 *id, enum pstore_type_id *type,
 			       char **buf, struct pstore_info *psi)
 {
 	efi_guid_t vendor = LINUX_EFI_CRASH_GUID;
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = psi->data;
 	char name[DUMP_NAME_LEN];
 	int i;
 	unsigned int part, size;
@@ -749,7 +766,7 @@ static int efi_pstore_write(enum pstore_type_id type,
 	char stub_name[DUMP_NAME_LEN];
 	efi_char16_t efi_name[DUMP_NAME_LEN];
 	efi_guid_t vendor = LINUX_EFI_CRASH_GUID;
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = psi->data;
 	struct efivar_entry *entry, *found = NULL;
 	int i, ret = 0;
 	efi_status_t status = EFI_NOT_FOUND;
@@ -779,8 +796,6 @@ static int efi_pstore_write(enum pstore_type_id type,
 
 	for (i = 0; i < DUMP_NAME_LEN; i++)
 		efi_name[i] = stub_name[i];
-
-	efivars = var->efivars;
 
 	/*
 	 * Clean up any entries with the same name
