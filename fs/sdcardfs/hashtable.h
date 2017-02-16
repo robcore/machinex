@@ -118,10 +118,10 @@ static inline void hash_del_rcu(struct hlist_node *node)
  * @obj: the type * to use as a loop cursor for each entry
  * @member: the name of the hlist_node within the struct
  */
-#define hash_for_each(name, bkt, obj, member, pos)                           \
+#define hash_for_each(name, bkt, member, pos)                           \
         for ((bkt) = 0, obj = NULL; obj == NULL && (bkt) < HASH_SIZE(name);\
                         (bkt)++)\
-                hlist_for_each_entry(obj, pos, &name[bkt], member)
+                hlist_for_each_entry(pos, &name[bkt], member)
 
 /**
  * hash_for_each_rcu - iterate over a rcu enabled hashtable
@@ -144,10 +144,10 @@ static inline void hash_del_rcu(struct hlist_node *node)
  * @obj: the type * to use as a loop cursor for each entry
  * @member: the name of the hlist_node within the struct
  */
-#define hash_for_each_safe(name, bkt, tmp, obj, member, pos)                 \
+#define hash_for_each_safe(bkt, tmp, member, pos)                 \
         for ((bkt) = 0, obj = NULL; (bkt) < HASH_SIZE(name);\
                         (bkt)++)\
-                hlist_for_each_entry_safe(obj, pos, tmp, &name[bkt], member)
+                hlist_for_each_entry_safe(pos, tmp, &name[bkt], member)
 
 /**
  * hash_for_each_possible - iterate over all possible objects hashing to the
@@ -157,8 +157,8 @@ static inline void hash_del_rcu(struct hlist_node *node)
  * @member: the name of the hlist_node within the struct
  * @key: the key of the objects to iterate over
  */
-#define hash_for_each_possible(name, obj, member, key, pos)                  \
-        hlist_for_each_entry(obj, pos, &name[hash_min(key, HASH_BITS(name))], member)
+#define hash_for_each_possible(name, member, key, pos)                  \
+        hlist_for_each_entry(pos, &name[hash_min(key, HASH_BITS(name))], member)
 
 /**
  * hash_for_each_possible_rcu - iterate over all possible objects hashing to the
@@ -182,8 +182,8 @@ static inline void hash_del_rcu(struct hlist_node *node)
  * @member: the name of the hlist_node within the struct
  * @key: the key of the objects to iterate over
  */
-#define hash_for_each_possible_safe(name, obj, tmp, member, key)        \
-        hlist_for_each_entry_safe(obj, tmp,\
+#define hash_for_each_possible_safe(obj, tmp, member, key)        \
+        hlist_for_each_entry_safe(obj,\
                 &name[hash_min(key, HASH_BITS(name))], member)
 
 
