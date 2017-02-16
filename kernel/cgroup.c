@@ -30,6 +30,7 @@
 #include <linux/cred.h>
 #include <linux/ctype.h>
 #include <linux/errno.h>
+#include <linux/fs.h>
 #include <linux/init_task.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
@@ -82,13 +83,7 @@
  * B happens only through cgroup_show_options() and using cgroup_root_mutex
  * breaks it.
  */
-#ifdef CONFIG_PROVE_RCU
-DEFINE_MUTEX(cgroup_mutex);
-EXPORT_SYMBOL_GPL(cgroup_mutex);	/* only for task_subsys_state_check() */
-#else
 static DEFINE_MUTEX(cgroup_mutex);
-#endif
-
 static DEFINE_MUTEX(cgroup_root_mutex);
 
 /*
@@ -101,6 +96,56 @@ static DEFINE_MUTEX(cgroup_root_mutex);
 #define IS_SUBSYS_ENABLED(option) IS_BUILTIN(option)
 static struct cgroup_subsys *subsys[CGROUP_SUBSYS_COUNT] = {
 #include <linux/cgroup_subsys.h>
+};
+
+#define MAX_CGROUP_ROOT_NAMELEN 64
+
+/*
+ * A cgroupfs_root represents the root of a cgroup hierarchy,
+ * and may be associated with a superblock to form an active
+ * hierarchy
+ */
+struct cgroupfs_root {
+	struct super_block *sb;
+
+	/*
+	 * The bitmask of subsystems intended to be attached to this
+	 * hierarchy
+	 */
+	unsigned long subsys_mask;
+
+	/* Unique id for this hierarchy. */
+	int hierarchy_id;
+
+	/* The bitmask of subsystems currently attached to this hierarchy */
+	unsigned long actual_subsys_mask;
+
+	/* A list running through the attached subsystems */
+	struct list_head subsys_list;
+
+	/* The root cgroup for this hierarchy */
+	struct cgroup top_cgroup;
+
+	/* Tracks how many cgroups are currently defined in hierarchy.*/
+	int number_of_cgroups;
+
+	/* A list running through the active hierarchies */
+	struct list_head root_list;
+
+	/* All cgroups on this root, cgroup_mutex protected */
+	struct list_head allcg_list;
+
+	/* Hierarchy-specific flags */
+	unsigned long flags;
+
+	/* IDs for cgroups in this hierarchy */
+	struct ida cgroup_ida;
+
+	/* The path to use for release notifications. */
+	char release_agent_path[PATH_MAX];
+
+	/* The name for this hierarchy - may be empty */
+	char name[MAX_CGROUP_ROOT_NAMELEN];
 };
 
 /*
@@ -206,6 +251,20 @@ static int cgroup_destroy_locked(struct cgroup *cgrp);
 static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
 			      struct cftype cfts[], bool is_add);
 
+#ifdef CONFIG_PROVE_LOCKING
+int cgroup_lock_is_held(void)
+{
+	return lockdep_is_held(&cgroup_mutex);
+}
+#else /* #ifdef CONFIG_PROVE_LOCKING */
+int cgroup_lock_is_held(void)
+{
+	return mutex_is_locked(&cgroup_mutex);
+}
+#endif /* #else #ifdef CONFIG_PROVE_LOCKING */
+
+EXPORT_SYMBOL_GPL(cgroup_lock_is_held);
+
 static int css_unbias_refcnt(int refcnt)
 {
 	return refcnt >= 0 ? refcnt : refcnt - CSS_DEACT_BIAS;
@@ -224,6 +283,12 @@ inline int cgroup_is_removed(const struct cgroup *cgrp)
 {
 	return test_bit(CGRP_REMOVED, &cgrp->flags);
 }
+
+/* bits in struct cgroupfs_root flags field */
+enum {
+	ROOT_NOPREFIX,	/* mounted subsystems have no named prefix */
+	ROOT_XATTR,	/* supports extended attributes */
+};
 
 static int cgroup_is_releasable(const struct cgroup *cgrp)
 {
@@ -262,40 +327,6 @@ static inline struct cfent *__d_cfe(struct dentry *dentry)
 static inline struct cftype *__d_cft(struct dentry *dentry)
 {
 	return __d_cfe(dentry)->type;
-}
-
-/**
- * cgroup_lock_live_group - take cgroup_mutex and check that cgrp is alive.
- * @cgrp: the cgroup to be checked for liveness
- *
- * On success, returns true; the mutex should be later unlocked.  On
- * failure returns false with no lock held.
- */
-static bool cgroup_lock_live_group(struct cgroup *cgrp)
-{
-	mutex_lock(&cgroup_mutex);
-	if (cgroup_is_removed(cgrp)) {
-		mutex_unlock(&cgroup_mutex);
-		return false;
-	}
-	return true;
-}
-
-/**
- * cgroup_lock_live_group - take cgroup_mutex and check that cgrp is alive.
- * @cgrp: the cgroup to be checked for liveness
- *
- * On success, returns true; the mutex should be later unlocked.  On
- * failure returns false with no lock held.
- */
-static bool cgroup_lock_live_group(struct cgroup *cgrp)
-{
-	mutex_lock(&cgroup_mutex);
-	if (cgroup_is_removed(cgrp)) {
-		mutex_unlock(&cgroup_mutex);
-		return false;
-	}
-	return true;
 }
 
 /* the list of cgroups eligible for automatic release. Protected by
@@ -763,6 +794,27 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * update of a tasks cgroup pointer by cgroup_attach_task()
  */
 
+/**
+ * cgroup_lock - lock out any changes to cgroup structures
+ *
+ */
+void cgroup_lock(void)
+{
+	mutex_lock(&cgroup_mutex);
+}
+EXPORT_SYMBOL_GPL(cgroup_lock);
+
+/**
+ * cgroup_unlock - release lock on cgroup changes
+ *
+ * Undo the lock taken in a previous cgroup_lock() call.
+ */
+void cgroup_unlock(void)
+{
+	mutex_unlock(&cgroup_mutex);
+}
+EXPORT_SYMBOL_GPL(cgroup_unlock);
+
 /*
  * A couple of forward declarations required, due to cyclic reference loop:
  * cgroup_mkdir -> cgroup_create -> cgroup_populate_dir ->
@@ -826,13 +878,6 @@ static void cgroup_free_fn(struct work_struct *work)
 
 	cgrp->root->number_of_cgroups--;
 	mutex_unlock(&cgroup_mutex);
-
-	/*
-	 * We get a ref to the parent's dentry, and put the ref when
-	 * this cgroup is being freed, so it's guaranteed that the
-	 * parent won't be destroyed before its children.
-	 */
-	dput(cgrp->parent->dentry);
 
 	/*
 	 * Drop the active superblock reference that we took when we
@@ -1069,9 +1114,9 @@ static int cgroup_show_options(struct seq_file *seq, struct dentry *dentry)
 	mutex_lock(&cgroup_root_mutex);
 	for_each_subsys(root, ss)
 		seq_show_option(seq, ss->name, NULL);
-	if (root->flags & CGRP_ROOT_NOPREFIX)
+	if (test_bit(ROOT_NOPREFIX, &root->flags))
 		seq_puts(seq, ",noprefix");
-	if (root->flags & CGRP_ROOT_XATTR)
+	if (test_bit(ROOT_XATTR, &root->flags))
 		seq_puts(seq, ",xattr");
 	if (strlen(root->release_agent_path))
 		seq_show_option(seq, "release_agent",
@@ -1134,12 +1179,8 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 			all_ss = true;
 			continue;
 		}
-		if (!strcmp(token, "__DEVEL__sane_behavior")) {
-			opts->flags |= CGRP_ROOT_SANE_BEHAVIOR;
-			continue;
-		}
 		if (!strcmp(token, "noprefix")) {
-			opts->flags |= CGRP_ROOT_NOPREFIX;
+			set_bit(ROOT_NOPREFIX, &opts->flags);
 			continue;
 		}
 		if (!strcmp(token, "clone_children")) {
@@ -1147,7 +1188,7 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 			continue;
 		}
 		if (!strcmp(token, "xattr")) {
-			opts->flags |= CGRP_ROOT_XATTR;
+			set_bit(ROOT_XATTR, &opts->flags);
 			continue;
 		}
 		if (!strncmp(token, "release_agent=", 14)) {
@@ -1225,26 +1266,13 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 
 	/* Consistency checks */
 
-	if (opts->flags & CGRP_ROOT_SANE_BEHAVIOR) {
-		pr_warning("cgroup: sane_behavior: this is still under development and its behaviors will change, proceed at your own risk\n");
-
-		if (opts->flags & CGRP_ROOT_NOPREFIX) {
-			pr_err("cgroup: sane_behavior: noprefix is not allowed\n");
-			return -EINVAL;
-		}
-
-		if (opts->cpuset_clone_children) {
-			pr_err("cgroup: sane_behavior: clone_children is not allowed\n");
-			return -EINVAL;
-		}
-	}
-
 	/*
 	 * Option noprefix was introduced just for backward compatibility
 	 * with the old cpuset, so we allow noprefix only if mounting just
 	 * the cpuset subsystem.
 	 */
-	if ((opts->flags & CGRP_ROOT_NOPREFIX) && (opts->subsys_mask & mask))
+	if (test_bit(ROOT_NOPREFIX, &opts->flags) &&
+	    (opts->subsys_mask & mask))
 		return -EINVAL;
 
 
@@ -1314,11 +1342,6 @@ static int cgroup_remount(struct super_block *sb, int *flags, char *data)
 	struct cgroup *cgrp = &root->top_cgroup;
 	struct cgroup_sb_opts opts;
 	unsigned long added_mask, removed_mask;
-
-	if (root->flags & CGRP_ROOT_SANE_BEHAVIOR) {
-		pr_err("cgroup: sane_behavior: remount is not allowed\n");
-		return -EINVAL;
-	}
 
 	mutex_lock(&cgrp->dentry->d_inode->i_mutex);
 	mutex_lock(&cgroup_mutex);
@@ -1406,6 +1429,7 @@ static void init_cgroup_root(struct cgroupfs_root *root)
 	root->number_of_cgroups = 1;
 	cgrp->root = root;
 	cgrp->name = &root_cgroup_name;
+	cgrp->top_cgroup = cgrp;
 	init_cgroup_housekeeping(cgrp);
 	list_add_tail(&cgrp->allcg_node, &root->allcg_list);
 }
@@ -1670,14 +1694,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		 * any) is not needed
 		 */
 		cgroup_drop_root(opts.new_root);
-
-		if (((root->flags | opts.flags) & CGRP_ROOT_SANE_BEHAVIOR) &&
-		    root->flags != opts.flags) {
-			pr_err("cgroup: sane_behavior: new mount options should match the existing superblock\n");
-			ret = -EINVAL;
-			goto drop_new_super;
-		}
-
 		/* no subsys rebinding, so refcounts don't change */
 		drop_parsed_module_refcounts(opts.subsys_mask);
 	}
@@ -1774,17 +1790,11 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 	int ret = -ENAMETOOLONG;
 	char *start;
 
-	if (!cgrp->parent) {
-		if (strlcpy(buf, "/", buflen) >= buflen)
-			return -ENAMETOOLONG;
-		return 0;
-	}
-
 	start = buf + buflen - 1;
 	*start = '\0';
 
 	rcu_read_lock();
-	do {
+	while (cgrp) {
 		const char *name = cgroup_name(cgrp);
 		int len;
 
@@ -1793,12 +1803,15 @@ int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen)
 			goto out;
 		memcpy(start, name, len);
 
+		if (!cgrp->parent)
+			break;
+
 		if (--start < buf)
 			goto out;
 		*start = '/';
 
 		cgrp = cgrp->parent;
-	} while (cgrp->parent);
+	}
 	ret = 0;
 	memmove(buf, start, buf + buflen - start);
 out:
@@ -1892,7 +1905,7 @@ EXPORT_SYMBOL_GPL(cgroup_taskset_size);
  *
  * Must be called with cgroup_mutex and threadgroup locked.
  */
-static void cgroup_task_migrate(struct cgroup *oldcgrp,
+static void cgroup_task_migrate(struct cgroup *cgrp, struct cgroup *oldcgrp,
 				struct task_struct *tsk, struct css_set *newcg)
 {
 	struct css_set *oldcg;
@@ -2010,6 +2023,30 @@ out:
 }
 
 /**
+ * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
+ * @from: attach to all cgroups of a given task
+ * @tsk: the task to be attached
+ */
+int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
+{
+	struct cgroupfs_root *root;
+	int retval = 0;
+
+	cgroup_lock();
+	for_each_active_root(root) {
+		struct cgroup *from_cg = task_cgroup_from_root(from, root);
+
+		retval = cgroup_attach_task(from_cg, tsk);
+		if (retval)
+			break;
+	}
+	cgroup_unlock();
+
+	return retval;
+}
+EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
+
+/**
  * cgroup_attach_proc - attach all threads in a threadgroup to a cgroup
  * @cgrp: the cgroup to attach to
  * @leader: the threadgroup leader task_struct of the group to be attached
@@ -2120,7 +2157,7 @@ static int cgroup_attach_proc(struct cgroup *cgrp, struct task_struct *leader)
 	 */
 	for (i = 0; i < group_size; i++) {
 		tc = flex_array_get(group, i);
-		cgroup_task_migrate(tc->cgrp, tc->task, tc->cg);
+		cgroup_task_migrate(cgrp, tc->cgrp, tc->task, tc->cg);
 	}
 	/* nothing is sensitive to fork() after this point. */
 
@@ -2281,57 +2318,9 @@ retry_find_task:
 
 	put_task_struct(tsk);
 out_unlock_cgroup:
-	mutex_unlock(&cgroup_mutex);
+	cgroup_unlock();
 	return ret;
 }
-
-/**
- * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
- * @from: attach to all cgroups of a given task
- * @tsk: the task to be attached
- */
-int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
-{
-	struct cgroupfs_root *root;
-	int retval = 0;
-
-	mutex_lock(&cgroup_mutex);
-	for_each_active_root(root) {
-		struct cgroup *from_cg = task_cgroup_from_root(from, root);
-
-		retval = cgroup_attach_task(from_cg, tsk);
-		if (retval)
-			break;
-	}
-	mutex_unlock(&cgroup_mutex);
-
-	return retval;
-}
-EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
-
-/**
- * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
- * @from: attach to all cgroups of a given task
- * @tsk: the task to be attached
- */
-int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
-{
-	struct cgroupfs_root *root;
-	int retval = 0;
-
-	mutex_lock(&cgroup_mutex);
-	for_each_active_root(root) {
-		struct cgroup *from_cg = task_cgroup_from_root(from, root);
-
-		retval = cgroup_attach_task(from_cg, tsk, false);
-		if (retval)
-			break;
-	}
-	mutex_unlock(&cgroup_mutex);
-
-	return retval;
-}
-EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
 
 static int cgroup_tasks_write(struct cgroup *cgrp, struct cftype *cft, u64 pid)
 {
@@ -2342,6 +2331,24 @@ static int cgroup_procs_write(struct cgroup *cgrp, struct cftype *cft, u64 tgid)
 {
 	return attach_task_by_pid(cgrp, tgid, true);
 }
+
+/**
+ * cgroup_lock_live_group - take cgroup_mutex and check that cgrp is alive.
+ * @cgrp: the cgroup to be checked for liveness
+ *
+ * On success, returns true; the lock should be later released with
+ * cgroup_unlock(). On failure returns false with no lock held.
+ */
+bool cgroup_lock_live_group(struct cgroup *cgrp)
+{
+	mutex_lock(&cgroup_mutex);
+	if (cgroup_is_removed(cgrp)) {
+		mutex_unlock(&cgroup_mutex);
+		return false;
+	}
+	return true;
+}
+EXPORT_SYMBOL_GPL(cgroup_lock_live_group);
 
 static int cgroup_release_agent_write(struct cgroup *cgrp, struct cftype *cft,
 				      const char *buffer)
@@ -2354,7 +2361,7 @@ static int cgroup_release_agent_write(struct cgroup *cgrp, struct cftype *cft,
 	mutex_lock(&cgroup_root_mutex);
 	strcpy(cgrp->root->release_agent_path, buffer);
 	mutex_unlock(&cgroup_root_mutex);
-	mutex_unlock(&cgroup_mutex);
+	cgroup_unlock();
 	return 0;
 }
 
@@ -2365,14 +2372,7 @@ static int cgroup_release_agent_show(struct cgroup *cgrp, struct cftype *cft,
 		return -ENODEV;
 	seq_puts(seq, cgrp->root->release_agent_path);
 	seq_putc(seq, '\n');
-	mutex_unlock(&cgroup_mutex);
-	return 0;
-}
-
-static int cgroup_sane_behavior_show(struct cgroup *cgrp, struct cftype *cft,
-				     struct seq_file *seq)
-{
-	seq_printf(seq, "%d\n", cgroup_sane_behavior(cgrp));
+	cgroup_unlock();
 	return 0;
 }
 
@@ -2644,7 +2644,7 @@ static struct simple_xattrs *__d_xattrs(struct dentry *dentry)
 static inline int xattr_enabled(struct dentry *dentry)
 {
 	struct cgroupfs_root *root = dentry->d_sb->s_fs_info;
-	return root->flags & CGRP_ROOT_XATTR;
+	return test_bit(ROOT_XATTR, &root->flags);
 }
 
 static bool is_valid_xattr(const char *name)
@@ -2816,7 +2816,7 @@ static int cgroup_add_file(struct cgroup *cgrp, struct cgroup_subsys *subsys,
 
 	simple_xattrs_init(&cft->xattrs);
 
-	if (subsys && !(cgrp->root->flags & CGRP_ROOT_NOPREFIX)) {
+	if (subsys && !test_bit(ROOT_NOPREFIX, &cgrp->root->flags)) {
 		strcpy(name, subsys->name);
 		strcat(name, ".");
 	}
@@ -2857,8 +2857,6 @@ static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
 
 	for (cft = cfts; cft->name[0] != '\0'; cft++) {
 		/* does cft->flags tell us to skip this file on @cgrp? */
-		if ((cft->flags & CFTYPE_INSANE) && cgroup_sane_behavior(cgrp))
-			continue;
 		if ((cft->flags & CFTYPE_NOT_ON_ROOT) && !cgrp->parent)
 			continue;
 		if ((cft->flags & CFTYPE_ONLY_ON_ROOT) && cgrp->parent)
@@ -3390,34 +3388,6 @@ int cgroup_scan_tasks(struct cgroup_scanner *scan)
 	return 0;
 }
 
-static void cgroup_transfer_one_task(struct task_struct *task,
-				     struct cgroup_scanner *scan)
-{
-	struct cgroup *new_cgroup = scan->data;
-
-	mutex_lock(&cgroup_mutex);
-	cgroup_attach_task(new_cgroup, task, false);
-	mutex_unlock(&cgroup_mutex);
-}
-
-/**
- * cgroup_trasnsfer_tasks - move tasks from one cgroup to another
- * @to: cgroup to which the tasks will be moved
- * @from: cgroup in which the tasks currently reside
- */
-int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
-{
-	struct cgroup_scanner scan;
-
-	scan.cg = from;
-	scan.test_task = NULL; /* select all tasks in cgroup */
-	scan.process_task = cgroup_transfer_one_task;
-	scan.heap = NULL;
-	scan.data = to;
-
-	return cgroup_scan_tasks(&scan);
-}
-
 /*
  * Stuff for reading the 'tasks'/'procs' files.
  *
@@ -3862,23 +3832,6 @@ static int cgroup_write_notify_on_release(struct cgroup *cgrp,
 }
 
 /*
- * When dput() is called asynchronously, if umount has been done and
- * then deactivate_super() in cgroup_free_fn() kills the superblock,
- * there's a small window that vfs will see the root dentry with non-zero
- * refcnt and trigger BUG().
- *
- * That's why we hold a reference before dput() and drop it right after.
- */
-static void cgroup_dput(struct cgroup *cgrp)
-{
-	struct super_block *sb = cgrp->root->sb;
-
-	atomic_inc(&sb->s_active);
-	dput(cgrp->dentry);
-	deactivate_super(sb);
-}
-
-/*
  * Unregister event and free resources.
  *
  * Gets called from workqueue.
@@ -3898,7 +3851,7 @@ static void cgroup_event_remove(struct work_struct *work)
 
 	eventfd_ctx_put(event->eventfd);
 	kfree(event);
-	cgroup_dput(cgrp);
+	dput(cgrp->dentry);
 }
 
 /*
@@ -4115,14 +4068,8 @@ static struct cftype files[] = {
 	},
 	{
 		.name = "cgroup.clone_children",
-		.flags = CFTYPE_INSANE,
 		.read_u64 = cgroup_clone_children_read,
 		.write_u64 = cgroup_clone_children_write,
-	},
-	{
-		.name = "cgroup.sane_behavior",
-		.flags = CFTYPE_ONLY_ON_ROOT,
-		.read_seq_string = cgroup_sane_behavior_show,
 	},
 	{
 		.name = "release_agent",
@@ -4181,8 +4128,12 @@ static void css_dput_fn(struct work_struct *work)
 {
 	struct cgroup_subsys_state *css =
 		container_of(work, struct cgroup_subsys_state, dput_work);
+	struct dentry *dentry = css->cgroup->dentry;
+	struct super_block *sb = dentry->d_sb;
 
-	cgroup_dput(css->cgroup);
+	atomic_inc(&sb->s_active);
+	dput(dentry);
+	deactivate_super(sb);
 }
 
 static void init_cgroup_css(struct cgroup_subsys_state *css,
@@ -4296,6 +4247,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 	cgrp->parent = parent;
 	cgrp->root = parent->root;
+	cgrp->top_cgroup = parent->top_cgroup;
 
 	if (notify_on_release(parent))
 		set_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
@@ -4337,9 +4289,6 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	/* each css holds a ref to the cgroup's dentry */
 	for_each_subsys(root, ss)
 		dget(dentry);
-
-	/* hold a ref to the parent's dentry */
-	dget(parent->dentry);
 
 	/* creation succeeded, notify subsystems */
 	for_each_subsys(root, ss) {
@@ -4532,6 +4481,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	 * need to invoke fork callbacks here. */
 	BUG_ON(!list_empty(&init_task.tasks));
 
+	ss->active = 1;
 	BUG_ON(online_css(ss, dummytop));
 
 	mutex_unlock(&cgroup_mutex);
@@ -4636,6 +4586,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	}
 	write_unlock(&css_set_lock);
 
+	ss->active = 1;
 	ret = online_css(ss, dummytop);
 	if (ret)
 		goto err_unload;
@@ -4676,6 +4627,7 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	mutex_lock(&cgroup_mutex);
 
 	offline_css(ss, dummytop);
+	ss->active = 0;
 
 	if (ss->use_id) {
 		idr_remove_all(&ss->idr);
