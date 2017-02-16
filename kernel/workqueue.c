@@ -257,6 +257,7 @@ static struct kmem_cache *pwq_cache;
 
 static DEFINE_MUTEX(wq_pool_mutex);	/* protects pools and workqueues list */
 static DEFINE_SPINLOCK(wq_mayday_lock);	/* protects wq->maydays list */
+static DEFINE_MUTEX(haxorz_mutex); /* protects my list hack */
 
 static LIST_HEAD(workqueues);		/* PL: list of all workqueues */
 static bool workqueue_freezing;		/* PL: have wqs started freezing? */
@@ -1689,16 +1690,18 @@ static struct worker *create_worker(struct worker_pool *pool)
 	if (pool->flags & POOL_DISASSOCIATED)
 		worker->flags |= WORKER_UNBOUND;
 
-	spin_lock_irq(&pool->lock);
+	mutex_lock(haxorz_mutex);
 	/* successful, attach the worker to the pool */
 	list_add_tail(&worker->node, &pool->workers);
-	spin_unlock_irq(&pool->lock);
+	mutex_unlock(haxorz_mutex);
 
 	return worker;
 fail:
 	if (id >= 0) {
-		spin_lock_irq(&pool->lock);
+		mutex_lock(haxorz_mutex);
 		list_del(&worker->node);
+		mutex_unlock(haxorz_mutex);
+		spin_lock_irq(&pool->lock);
 		ida_remove(&pool->worker_ida, id);
 		spin_unlock_irq(&pool->lock);
 	}
@@ -1774,8 +1777,11 @@ static void destroy_worker(struct worker *worker)
 	if (worker->flags & WORKER_IDLE)
 		pool->nr_idle--;
 
-	list_del_init(&worker->entry);
 	worker->flags |= WORKER_DIE;
+
+	spin_unlock_irq(&pool->lock);
+	list_del_init(&worker->entry);
+	spin_lock_irq(&pool->lock);
 
 	ida_remove(&pool->worker_ida, id);
 
@@ -3363,6 +3369,7 @@ static int init_worker_pool(struct worker_pool *pool)
 
 	mutex_init(&pool->manager_arb);
 	mutex_init(&pool->manager_mutex);
+	mutex_init(haxors_mutex);
 	INIT_LIST_HEAD(&pool->workers);
 
 	ida_init(&pool->worker_ida);
