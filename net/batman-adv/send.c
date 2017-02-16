@@ -352,7 +352,7 @@ void purge_outstanding_packets(struct bat_priv *bat_priv,
 
 	/* free bcast list */
 	spin_lock_bh(&bat_priv->forw_bcast_list_lock);
-	hlist_for_each_entry_safe(forw_packet, tmp_node, safe_tmp_node,
+	hlist_for_each_entry_safe(forw_packet, safe_tmp_node,
 				  &bat_priv->forw_bcast_list, list) {
 
 		/**
@@ -381,7 +381,7 @@ void purge_outstanding_packets(struct bat_priv *bat_priv,
 
 	/* free batman packet list */
 	spin_lock_bh(&bat_priv->forw_bat_list_lock);
-	hlist_for_each_entry_safe(forw_packet, tmp_node, safe_tmp_node,
+	hlist_for_each_entry_safe(forw_packet, safe_tmp_node,
 				  &bat_priv->forw_bat_list, list) {
 
 		/**

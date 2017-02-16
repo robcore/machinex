@@ -518,7 +518,7 @@ void qlcnic_prune_lb_filters(struct qlcnic_adapter *adapter)
 void qlcnic_delete_lb_filters(struct qlcnic_adapter *adapter)
 {
 	struct qlcnic_filter *tmp_fil;
-	struct hlist_node *tmp_hnode, *n;
+	struct hlist_node *n;
 	struct hlist_head *head;
 	int i;
 
