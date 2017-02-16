@@ -97,9 +97,8 @@ static int check_overlap(struct hlist_head *ptype,
 {
 	struct msm_pmem_region *region;
 	struct msm_pmem_region t = { .paddr = paddr, .len = len };
-	struct hlist_node *node;
 
-	hlist_for_each_entry(region, node, ptype, list) {
+	hlist_for_each_entry(region, ptype, list) {
 		if (CONTAINS(region, &t, paddr) ||
 			CONTAINS(&t, region, paddr) ||
 			OVERLAPS(region, &t, paddr)) {
@@ -229,7 +228,7 @@ static int __msm_pmem_table_del(struct hlist_head *ptype,
 {
 	int rc = 0;
 	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
+	struct hlist_node *n;
 
 	switch (pinfo->type) {
 	case MSM_PMEM_AF:
@@ -243,13 +242,13 @@ static int __msm_pmem_table_del(struct hlist_head *ptype,
 	case MSM_PMEM_BAYER_GRID:
 	case MSM_PMEM_BAYER_FOCUS:
 	case MSM_PMEM_BAYER_HIST:
-		hlist_for_each_entry_safe(region, node, n,
+		hlist_for_each_entry_safe(region, n,
 				ptype, list) {
 
 			if (pinfo->type == region->info.type &&
 				pinfo->vaddr == region->info.vaddr &&
 				pinfo->fd == region->info.fd) {
-				hlist_del(node);
+				hlist_del(n);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_unmap_iommu(client, region->handle,
 					domain_num, 0);
@@ -276,13 +275,13 @@ uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
 {
 	struct msm_pmem_region *region;
 	struct msm_pmem_region *regptr;
-	struct hlist_node *node, *n;
+	struct hlist_node *n;
 
 	uint8_t rc = 0;
 	D("%s\n", __func__);
 	regptr = reg;
 	mutex_lock(&hlist_mut);
-	hlist_for_each_entry_safe(region, node, n, ptype, list) {
+	hlist_for_each_entry_safe(region, n, ptype, list) {
 		if (region->info.type == pmem_type && region->info.active) {
 			*regptr = *region;
 			rc += 1;
@@ -300,14 +299,14 @@ int msm_pmem_region_get_phy_addr(struct hlist_head *ptype,
 	struct msm_mem_map_info *mem_map, int32_t *phyaddr)
 {
 	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
+	struct hlist_node *n;
 	int pmem_type = mem_map->mem_type;
 	int rc = -EFAULT;
 
 	D("%s\n", __func__);
 	*phyaddr = 0;
 	mutex_lock(&hlist_mut);
-	hlist_for_each_entry_safe(region, node, n, ptype, list) {
+	hlist_for_each_entry_safe(region, n, ptype, list) {
 		if (region->info.type == pmem_type &&
 			(uint32_t)region->info.vaddr == mem_map->cookie) {
 			*phyaddr = (int32_t)region->paddr;
@@ -327,11 +326,11 @@ uint8_t msm_pmem_region_lookup_2(struct hlist_head *ptype,
 {
 	struct msm_pmem_region *region;
 	struct msm_pmem_region *regptr;
-	struct hlist_node *node, *n;
+	struct hlist_node *n;
 	uint8_t rc = 0;
 	regptr = reg;
 	mutex_lock(&hlist_mut);
-	hlist_for_each_entry_safe(region, node, n, ptype, list) {
+	hlist_for_each_entry_safe(region, n, ptype, list) {
 		D("Mio: info.type=%d, pmem_type = %d,"
 						"info.active = %d\n",
 		region->info.type, pmem_type, region->info.active);
@@ -359,9 +358,9 @@ unsigned long msm_pmem_stats_vtop_lookup(
 				int fd)
 {
 	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
+	struct hlist_node *n;
 
-	hlist_for_each_entry_safe(region, node, n,
+	hlist_for_each_entry_safe(region, n,
 	&mctl->stats_info.pmem_stats_list, list) {
 		if (((unsigned long)(region->info.vaddr) == buffer) &&
 						(region->info.fd == fd) &&
@@ -379,9 +378,9 @@ unsigned long msm_pmem_stats_ptov_lookup(
 		unsigned long addr, int *fd)
 {
 	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
+	struct hlist_node *n;
 
-	hlist_for_each_entry_safe(region, node, n,
+	hlist_for_each_entry_safe(region, n,
 	&mctl->stats_info.pmem_stats_list, list) {
 		if (addr == region->paddr && region->info.active) {
 			/* offset since we could pass vaddr inside a
