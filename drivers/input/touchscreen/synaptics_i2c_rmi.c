@@ -26,7 +26,6 @@
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
-#include <linux/sec_battery.h>
 #include "synaptics_i2c_rmi.h"
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
@@ -132,9 +131,6 @@
 #define CHARGER_CONNECTED (1 << 5)
 #define CHARGER_DISCONNECTED	0xDF
 #define CONFIGURED (1 << 7)
-
-extern int poweroff_charging;
-module_param(poweroff_charging, int, 0444);
 
 static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr, unsigned char *data,
