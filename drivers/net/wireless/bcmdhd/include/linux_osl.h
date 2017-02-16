@@ -28,6 +28,7 @@
 #define _linux_osl_h_
 
 #include <typedefs.h>
+#define DECLSPEC_ALIGN(x)	__attribute__ ((aligned(x)))
 
 /* Linux Kernel: File Operations: start */
 extern void * osl_os_open_image(char * filename);

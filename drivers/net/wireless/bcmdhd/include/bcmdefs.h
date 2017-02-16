@@ -340,9 +340,7 @@ typedef struct {
 #define NVRAM_ARRAY_MAXSIZE	MAXSZ_NVRAM_VARS
 #endif /* DL_NVRAM */
 
-#ifdef BCMUSBDEV_ENABLED
 extern uint32 gFWID;
-#endif
 
 
 #endif /* _bcmdefs_h_ */
