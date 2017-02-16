@@ -142,12 +142,19 @@ static int __cpuinit tick_nohz_cpu_down_callback(struct notifier_block *nfb,
 		 * If we handle the timekeeping duty for full dynticks CPUs,
 		 * we can't safely shutdown that CPU.
 		 */
-		if (have_nohz_extended_mask && tick_do_timer_cpu == cpu)
+		if (have_nohz_full_mask && tick_do_timer_cpu == cpu)
 			return -EINVAL;
 		break;
 	}
 	return NOTIFY_OK;
 }
+
+/*
+ * Worst case string length in chunks of CPU range seems 2 steps
+ * separations: 0,2,4,6,...
+ * This is NR_CPUS + sizeof('\0')
+ */
+static char __initdata nohz_full_buf[NR_CPUS + 1];
 
 static int __init init_tick_nohz_full(void)
 {
@@ -187,6 +194,9 @@ static int __init init_tick_nohz_full(void)
 	}
 	put_online_cpus();
 	free_cpumask_var(online_nohz);
+
+	cpulist_scnprintf(nohz_full_buf, sizeof(nohz_full_buf), nohz_full_mask);
+	pr_info("NO_HZ: Full dynticks CPUs: %s.\n", nohz_full_buf);
 
 	return 0;
 }
