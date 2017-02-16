@@ -1307,31 +1307,71 @@ static int __clk_set_parent(struct clk *clk, struct clk *parent, u8 p_index)
 	unsigned long flags;
 	int ret = 0;
 	struct clk *old_parent = clk->parent;
+	bool migrated_enable = false;
 
-	/* migrate prepare and enable */
+	/* migrate prepare */
 	if (clk->prepare_count)
 		__clk_prepare(parent);
 
-	/* FIXME replace with clk_is_enabled(clk) someday */
-	spin_lock_irqsave(&enable_lock, flags);
-	if (clk->enable_count)
+	flags = clk_enable_lock();
+
+	/* migrate enable */
+	if (clk->enable_count) {
 		__clk_enable(parent);
-	spin_unlock_irqrestore(&enable_lock, flags);
+		migrated_enable = true;
+	}
+
+	/* update the clk tree topology */
+	clk_reparent(clk, parent);
+
+	clk_enable_unlock(flags);
 
 	/* change clock input source */
 	if (parent && clk->ops->set_parent)
 		ret = clk->ops->set_parent(clk->hw, p_index);
 
-	/* clean up old prepare and enable */
-	spin_lock_irqsave(&enable_lock, flags);
-	if (clk->enable_count)
-		__clk_disable(old_parent);
-	spin_unlock_irqrestore(&enable_lock, flags);
+	if (ret) {
+		/*
+		 * The error handling is tricky due to that we need to release
+		 * the spinlock while issuing the .set_parent callback. This
+		 * means the new parent might have been enabled/disabled in
+		 * between, which must be considered when doing rollback.
+		 */
+		flags = clk_enable_lock();
 
+		clk_reparent(clk, old_parent);
+
+		if (migrated_enable && clk->enable_count) {
+			__clk_disable(parent);
+		} else if (migrated_enable && (clk->enable_count == 0)) {
+			__clk_disable(old_parent);
+		} else if (!migrated_enable && clk->enable_count) {
+			__clk_disable(parent);
+			__clk_enable(old_parent);
+		}
+
+		clk_enable_unlock(flags);
+
+		if (clk->prepare_count)
+			__clk_unprepare(parent);
+
+		return ret;
+	}
+
+	/* clean up enable for old parent if migration was done */
+	if (migrated_enable) {
+		flags = clk_enable_lock();
+		__clk_disable(old_parent);
+		clk_enable_unlock(flags);
+	}
+
+	/* clean up prepare for old parent if migration was done */
 	if (clk->prepare_count)
 		__clk_unprepare(old_parent);
 
-	return ret;
+	/* update debugfs with new clk tree topology */
+	clk_debug_reparent(clk, parent);
+	return 0;
 }
 
 /**
@@ -1394,14 +1434,11 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	/* do the re-parent */
 	ret = __clk_set_parent(clk, parent, p_index);
 
-	/* propagate ABORT_RATE_CHANGE if .set_parent failed */
-	if (ret) {
+	/* propagate rate recalculation accordingly */
+	if (ret)
 		__clk_recalc_rates(clk, ABORT_RATE_CHANGE);
-		goto out;
-	}
-
-	/* propagate rate recalculation downstream */
-	__clk_reparent(clk, parent);
+	else
+		__clk_recalc_rates(clk, POST_RATE_CHANGE);
 
 out:
 	mutex_unlock(&prepare_lock);
