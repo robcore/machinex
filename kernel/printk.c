@@ -1345,6 +1345,22 @@ static void call_console_drivers(unsigned start, unsigned end)
 {
 }
 
+/**
+ * show_regs_print_info - print generic debug info for show_regs()
+ * @log_lvl: log level
+ *
+ * show_regs() implementations can use this function to print out generic
+ * debug information.
+ */
+void show_regs_print_info(const char *log_lvl)
+{
+	dump_stack_print_info(log_lvl);
+
+	printk("%stask: %p ti: %p task.ti: %p\n",
+	       log_lvl, current, current_thread_info(),
+	       task_thread_info(current));
+}
+
 #endif
 
 static int __add_preferred_console(char *name, int idx, char *options,
