@@ -604,11 +604,11 @@ nfqnl_rcv_nl_event(struct notifier_block *this,
 		/* destroy all instances for this pid */
 		spin_lock(&instances_lock);
 		for (i = 0; i < INSTANCE_BUCKETS; i++) {
-			struct hlist_node *tmp, *t2;
+			struct hlist_node *tmp;
 			struct nfqnl_instance *inst;
 			struct hlist_head *head = &instance_table[i];
 
-			hlist_for_each_entry_safe(inst, tmp, t2, head, hlist) {
+			hlist_for_each_entry_safe(inst, tmp, head, hlist) {
 				if ((n->net == &init_net) &&
 				    (n->pid == inst->peer_pid))
 					__instance_destroy(inst);
