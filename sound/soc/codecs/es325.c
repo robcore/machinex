@@ -5387,7 +5387,7 @@ static __init int es325_init(void)
 	pr_info("%s(): exit\n", __func__);
 	return ret;
 }
-module_init_sync(es325_init);
+module_init(es325_init);
 
 static __exit void es325_exit(void)
 {
