@@ -103,6 +103,8 @@ struct nfc_dev {
 	int tx_headroom;
 	int tx_tailroom;
 
+	struct rfkill *rfkill;
+
 	struct nfc_ops *ops;
 };
 #define to_nfc_dev(_dev) container_of(_dev, struct nfc_dev, dev)
