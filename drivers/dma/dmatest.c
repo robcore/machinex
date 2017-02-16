@@ -270,7 +270,7 @@ static int dmatest_func(void *data)
 	dma_cookie_t		cookie;
 	enum dma_status		status;
 	enum dma_ctrl_flags 	flags;
-	u8			pq_coefs[pq_sources + 1];
+	u8			*pq_coefs = NULL;
 	int			ret;
 	int			src_cnt;
 	int			dst_cnt;
@@ -291,10 +291,15 @@ static int dmatest_func(void *data)
 	} else if (thread->type == DMA_PQ) {
 		src_cnt = pq_sources | 1; /* force odd to ensure dst = src */
 		dst_cnt = 2;
+
+		pq_coefs = kmalloc(pq_sources+1, GFP_KERNEL);
+		if (!pq_coefs)
+			goto err_thread_type;
+
 		for (i = 0; i < src_cnt; i++)
 			pq_coefs[i] = 1;
 	} else
-		goto err_srcs;
+		goto err_thread_type;
 
 	thread->srcs = kcalloc(src_cnt+1, sizeof(u8 *), GFP_KERNEL);
 	if (!thread->srcs)
@@ -523,6 +528,8 @@ err_dsts:
 err_srcbuf:
 	kfree(thread->srcs);
 err_srcs:
+	kfree(pq_coefs);
+err_thread_type:
 	pr_notice("%s: terminating after %u tests, %u failures (status %d)\n",
 			thread_name, total_tests, failed_tests, ret);
 
