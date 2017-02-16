@@ -23,7 +23,6 @@
 #include <linux/stop_machine.h>
 
 #include "tick-internal.h"
-#include "ntp_internal.h"
 
 static struct timekeeper timekeeper;
 static DEFINE_RAW_SPINLOCK(timekeeper_lock);
@@ -1594,81 +1593,6 @@ ktime_t ktime_get_monotonic_offset(void)
 }
 EXPORT_SYMBOL_GPL(ktime_get_monotonic_offset);
 
-/*
- * do_adjtimex() - Accessor function to NTP __do_adjtimex function
- */
-int do_adjtimex(struct timex *txc)
-{
-	int ret;
-	ret = __do_adjtimex(txc);
-	tk_update_leap_state(&timekeeper);
-	return ret;
-}
-
-/**
- * do_adjtimex() - Accessor function to NTP __do_adjtimex function
- */
-int do_adjtimex(struct timex *txc)
-{
-	struct timekeeper *tk = &timekeeper;
-	unsigned long flags;
-	struct timespec ts;
-	s32 orig_tai, tai;
-	int ret;
-
-	/* Validate the data before disabling interrupts */
-	ret = ntp_validate_timex(txc);
-	if (ret)
-		return ret;
-
-	if (txc->modes & ADJ_SETOFFSET) {
-		struct timespec delta;
-		delta.tv_sec  = txc->time.tv_sec;
-		delta.tv_nsec = txc->time.tv_usec;
-		if (!(txc->modes & ADJ_NANO))
-			delta.tv_nsec *= 1000;
-		ret = timekeeping_inject_offset(&delta);
-		if (ret)
-			return ret;
-	}
-
-	getnstimeofday(&ts);
-
-	raw_spin_lock_irqsave(&timekeeper_lock, flags);
-	write_seqcount_begin(&timekeeper_seq);
-
-	orig_tai = tai = tk->tai_offset;
-	ret = __do_adjtimex(txc, &ts, &tai);
-
-	if (tai != orig_tai) {
-		__timekeeping_set_tai_offset(tk, tai);
-		clock_was_set_delayed();
-	}
-	write_seqcount_end(&timekeeper_seq);
-	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
-
-	return ret;
-}
-
-#ifdef CONFIG_NTP_PPS
-/**
- * hardpps() - Accessor function to NTP __hardpps function
- */
-void hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
-{
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&timekeeper_lock, flags);
-	write_seqcount_begin(&timekeeper_seq);
-
-	__hardpps(phase_ts, raw_ts);
-
-	write_seqcount_end(&timekeeper_seq);
-	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
-}
-EXPORT_SYMBOL(hardpps);
-#endif
-
 /**
  * xtime_update() - advances the timekeeping infrastructure
  * @ticks:	number of ticks, that have elapsed since the last call.
@@ -1681,4 +1605,3 @@ void xtime_update(unsigned long ticks)
 	do_timer(ticks);
 	write_sequnlock(&jiffies_lock);
 }
-
