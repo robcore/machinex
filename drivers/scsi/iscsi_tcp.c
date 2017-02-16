@@ -370,24 +370,17 @@ static inline int iscsi_sw_tcp_xmit_qlen(struct iscsi_conn *conn)
 static int iscsi_sw_tcp_pdu_xmit(struct iscsi_task *task)
 {
 	struct iscsi_conn *conn = task->conn;
-	unsigned long pflags = current->flags;
-	int rc = 0;
-
-	current->flags |= PF_MEMALLOC;
+	int rc;
 
 	while (iscsi_sw_tcp_xmit_qlen(conn)) {
 		rc = iscsi_sw_tcp_xmit(conn);
-		if (rc == 0) {
-			rc = -EAGAIN;
-			break;
-		}
+		if (rc == 0)
+			return -EAGAIN;
 		if (rc < 0)
-			break;
-		rc = 0;
+			return rc;
 	}
 
-	tsk_restore_flags(current, pflags, PF_MEMALLOC);
-	return rc;
+	return 0;
 }
 
 /*
@@ -672,7 +665,6 @@ iscsi_sw_tcp_conn_bind(struct iscsi_cls_session *cls_session,
 	sk->sk_reuse = 1;
 	sk->sk_sndtimeo = 15 * HZ; /* FIXME: make it configurable */
 	sk->sk_allocation = GFP_ATOMIC;
-	sk_set_memalloc(sk);
 
 	iscsi_sw_tcp_conn_set_callbacks(conn);
 	tcp_sw_conn->sendpage = tcp_sw_conn->sock->ops->sendpage;

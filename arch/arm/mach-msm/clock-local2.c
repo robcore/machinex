@@ -26,7 +26,7 @@
 #include <mach/clk.h>
 #include <mach/clk-provider.h>
 
-#include "clock-local.h"
+#include "clock-local2.h"
 
 /*
  * When enabling/disabling a clock, check the halt bit up to this number
@@ -164,7 +164,6 @@ static int rcg_clk_set_rate(struct clk *c, unsigned long rate)
 	struct clk_freq_tbl *cf, *nf;
 	struct rcg_clk *rcg = to_rcg_clk(c);
 	int rc = 0;
-	unsigned long flags;
 
 	for (nf = rcg->freq_tbl; nf->freq_hz != FREQ_END
 			&& nf->freq_hz != rate; nf++)

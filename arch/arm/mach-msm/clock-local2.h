@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef __ARCH_ARM_MACH_MSM_CLOCK_LOCAL_H
-#define __ARCH_ARM_MACH_MSM_CLOCK_LOCAL_H
+#ifndef __ARCH_ARM_MACH_MSM_CLOCK_LOCAL_2_H
+#define __ARCH_ARM_MACH_MSM_CLOCK_LOCAL_2_H
 
 #include <linux/spinlock.h>
 #include <mach/clk-provider.h>

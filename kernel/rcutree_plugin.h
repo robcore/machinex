@@ -1616,24 +1616,6 @@ static DEFINE_PER_CPU(int, rcu_dyntick_drain);
 static DEFINE_PER_CPU(unsigned long, rcu_dyntick_holdoff);
 static DEFINE_PER_CPU(struct timer_list, rcu_idle_gp_timer);
 
-#ifdef CONFIG_NO_HZ_FULL
-/*
- * An adaptive-ticks CPU can potentially execute in kernel mode for an
- * arbitrarily long period of time with the scheduling-clock tick turned
- * off.  RCU will be paying attention to this CPU because it is in the
- * kernel, but the CPU cannot be guaranteed to be executing the RCU state
- * machine because the scheduling-clock tick has been disabled.  Therefore,
- * if an adaptive-ticks CPU is failing to respond to the current grace
- * period and has not be idle from an RCU perspective, kick it.
- */
-static void rcu_kick_nohz_cpu(int cpu)
-{
-	if (tick_nohz_full_cpu(cpu))
-		smp_send_reschedule(cpu);
-}
-
-#endif /* #ifdef CONFIG_NO_HZ_FULL */
-
 /*
  * Allow the CPU to enter dyntick-idle mode if either: (1) There are no
  * callbacks on this CPU, (2) this CPU has not yet attempted to enter
