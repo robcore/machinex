@@ -11,7 +11,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/moduleparam.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -35,7 +34,6 @@
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
 
 extern int poweroff_charging;
-module_param(poweroff_charging, int, 0444);
 
 /**
  * struct pmic8xxx_pwrkey - pmic8xxx pwrkey information
