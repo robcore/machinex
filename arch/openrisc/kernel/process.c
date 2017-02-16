@@ -90,7 +90,6 @@ void show_regs(struct pt_regs *regs)
 {
 	extern void show_registers(struct pt_regs *regs);
 
-	show_regs_print_info(KERN_DEFAULT);
 	/* __PHX__ cleanup this mess */
 	show_registers(regs);
 }

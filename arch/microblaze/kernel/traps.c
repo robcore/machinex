@@ -77,3 +77,9 @@ void show_stack(struct task_struct *task, unsigned long *sp)
 
 	debug_show_held_locks(task);
 }
+
+void dump_stack(void)
+{
+	show_stack(NULL, NULL);
+}
+EXPORT_SYMBOL(dump_stack);
