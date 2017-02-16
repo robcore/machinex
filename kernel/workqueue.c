@@ -1690,17 +1690,17 @@ static struct worker *create_worker(struct worker_pool *pool)
 	if (pool->flags & POOL_DISASSOCIATED)
 		worker->flags |= WORKER_UNBOUND;
 
-	mutex_lock(haxorz_mutex);
+	mutex_lock(&haxorz_mutex);
 	/* successful, attach the worker to the pool */
 	list_add_tail(&worker->node, &pool->workers);
-	mutex_unlock(haxorz_mutex);
+	mutex_unlock(&haxorz_mutex);
 
 	return worker;
 fail:
 	if (id >= 0) {
-		mutex_lock(haxorz_mutex);
+		mutex_lock(&haxorz_mutex);
 		list_del(&worker->node);
-		mutex_unlock(haxorz_mutex);
+		mutex_unlock(&haxorz_mutex);
 		spin_lock_irq(&pool->lock);
 		ida_remove(&pool->worker_ida, id);
 		spin_unlock_irq(&pool->lock);
@@ -3369,7 +3369,7 @@ static int init_worker_pool(struct worker_pool *pool)
 
 	mutex_init(&pool->manager_arb);
 	mutex_init(&pool->manager_mutex);
-	mutex_init(haxors_mutex);
+	mutex_init(&haxorz_mutex);
 	INIT_LIST_HEAD(&pool->workers);
 
 	ida_init(&pool->worker_ida);
