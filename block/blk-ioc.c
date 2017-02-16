@@ -160,6 +160,7 @@ void exit_io_context(struct task_struct *task)
 {
 	struct io_context *ioc;
 	struct io_cq *icq;
+	struct hlist_node *n;
 	unsigned long flags;
 
 	task_lock(task);
@@ -179,7 +180,7 @@ void exit_io_context(struct task_struct *task)
 	 */
 retry:
 	spin_lock_irqsave_nested(&ioc->lock, flags, 1);
-	hlist_for_each_entry(icq, &ioc->icq_list, ioc_node) {
+	hlist_for_each_entry(icq, n, &ioc->icq_list, ioc_node) {
 		if (icq->flags & ICQ_EXITED)
 			continue;
 		if (spin_trylock(icq->q->queue_lock)) {
@@ -386,7 +387,7 @@ void ioc_set_icq_flags(struct io_context *ioc, unsigned int flags)
 	struct io_cq *icq;
 	struct hlist_node *n;
 
-	hlist_for_each_entry(icq, &ioc->icq_list, ioc_node)
+	hlist_for_each_entry(icq, n, &ioc->icq_list, ioc_node)
 		icq->flags |= flags;
 }
 
