@@ -181,14 +181,6 @@ do { \
 	((uint16 *)(d))[0] = ((uint16 *)(s))[0]; \
 } while (0)
 
-/* Copy 14B ethernet header: 32bit aligned source and destination. */
-#define ehcopy32(s, d) \
-do { \
-	((uint32 *)(d))[0] = ((const uint32 *)(s))[0]; \
-	((uint32 *)(d))[1] = ((const uint32 *)(s))[1]; \
-	((uint32 *)(d))[2] = ((const uint32 *)(s))[2]; \
-	((uint16 *)(d))[6] = ((const uint16 *)(s))[6]; \
-} while (0)
 
 
 static const struct ether_addr ether_bcast = {{255, 255, 255, 255, 255, 255}};

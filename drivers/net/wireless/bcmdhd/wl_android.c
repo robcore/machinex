@@ -1026,6 +1026,16 @@ int wl_android_send_action_frame(struct net_device *dev, char *command, int tota
 	int tmp_channel = 0;
 
 	params = (android_wifi_af_params_t *)(command + strlen(CMD_SENDACTIONFRAME) + 1);
+	if (params == NULL) {
+		DHD_ERROR(("%s: Invalid params \n", __FUNCTION__));
+		goto send_action_frame_out;
+	}
+
+	if (params->len > ANDROID_WIFI_ACTION_FRAME_SIZE) {
+		DHD_ERROR(("%s: Requested action frame len was out of range(%d)\n",
+			__FUNCTION__, params->len));
+		goto send_action_frame_out;
+	}
 
 	smbuf = kmalloc(WLC_IOCTL_MAXLEN, GFP_KERNEL);
 	if (smbuf == NULL) {
@@ -1106,6 +1116,10 @@ int wl_android_reassoc(struct net_device *dev, char *command, int total_len)
 	wl_reassoc_params_t reassoc_params;
 
 	params = (android_wifi_reassoc_params_t *)(command + strlen(CMD_REASSOC) + 1);
+	if (params == NULL) {
+		DHD_ERROR(("%s: Invalid params \n", __FUNCTION__));
+		return -1;
+	}
 
 	memset(&reassoc_params, 0, WL_REASSOC_PARAMS_FIXED_SIZE);
 
@@ -1615,28 +1629,19 @@ wl_android_set_mac_address_filter(struct net_device *dev, const char* str)
 	int macmode = MACLIST_MODE_DISABLED;
 	struct maclist *list;
 	char eabuf[ETHER_ADDR_STR_LEN];
-	char *token;
 
 	/* string should look like below (macmode/macnum/maclist) */
 	/*   1 2 00:11:22:33:44:55 00:11:22:33:44:ff  */
 
 	/* get the MAC filter mode */
-	token = strsep((char**)&str, " ");
-	if (!token) {
-		return -1;
-	}
-	macmode = bcm_atoi(token);
+	macmode = bcm_atoi(strsep((char**)&str, " "));
 
 	if (macmode < MACLIST_MODE_DISABLED || macmode > MACLIST_MODE_ALLOW) {
 		DHD_ERROR(("%s : invalid macmode %d\n", __FUNCTION__, macmode));
 		return -1;
 	}
 
-	token = strsep((char**)&str, " ");
-	if (!token) {
-		return -1;
-	}
-	macnum = bcm_atoi(token);
+	macnum = bcm_atoi(strsep((char**)&str, " "));
 	if (macnum < 0 || macnum > MAX_NUM_MAC_FILT) {
 		DHD_ERROR(("%s : invalid number of MAC address entries %d\n",
 			__FUNCTION__, macnum));
@@ -3960,7 +3965,7 @@ wl_genl_send_msg(
 	u16 subhdr_len)
 {
 	int ret = 0;
-	struct sk_buff *skb = NULL;
+	struct sk_buff *skb;
 	void *msg;
 	u32 attr_type = 0;
 	bcm_event_hdr_t *hdr = NULL;
