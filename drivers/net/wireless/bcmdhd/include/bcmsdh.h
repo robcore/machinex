@@ -40,7 +40,8 @@ extern const uint bcmsdh_msglevel;
 #define BCMSDH_ERROR(x)
 #define BCMSDH_INFO(x)
 
-#if (defined(BCMSDIOH_STD) || defined(BCMSDIOH_BCM) || defined(BCMSDIOH_SPI))
+#if defined(BCMSDIO) && (defined(BCMSDIOH_STD) || defined(BCMSDIOH_BCM) || \
+	defined(BCMSDIOH_SPI))
 #define BCMSDH_ADAPTER
 #endif /* BCMSDIO && (BCMSDIOH_STD || BCMSDIOH_BCM || BCMSDIOH_SPI) */
 
