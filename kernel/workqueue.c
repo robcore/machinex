@@ -1689,16 +1689,13 @@ static struct worker *create_worker(struct worker_pool *pool)
 	if (pool->flags & POOL_DISASSOCIATED)
 		worker->flags |= WORKER_UNBOUND;
 
-	spin_lock_irq(&pool->lock);
-	/* successful, attach the worker to the pool */
 	list_add_tail(&worker->node, &pool->workers);
-	spin_unlock_irq(&pool->lock);
 
 	return worker;
 fail:
 	if (id >= 0) {
-		spin_lock_irq(&pool->lock);
 		list_del(&worker->node);
+		spin_lock_irq(&pool->lock);
 		ida_remove(&pool->worker_ida, id);
 		spin_unlock_irq(&pool->lock);
 	}
