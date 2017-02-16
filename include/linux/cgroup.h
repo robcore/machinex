@@ -665,7 +665,6 @@ extern struct mutex cgroup_mutex;
 	rcu_dereference_check((task)->cgroups,				\
 		lockdep_is_held(&(task)->alloc_lock) ||			\
 		lockdep_is_held(&cgroup_mutex) || (__c))
-#else
 #define task_css_set_check(task, __c)					\
 	rcu_dereference_check((task)->cgroups,
 #endif
@@ -678,6 +677,7 @@ extern struct mutex cgroup_mutex;
  * Return the cgroup_subsys_state for the (@task, @subsys_id) pair.  The
  * synchronization rules are the same as task_css_set_check().
  */
+#ifdef CONFIG_PROVE_RCU
 #define task_subsys_state_check(task, subsys_id, __c)			\
 	task_css_set_check((task), (__c))->subsys[(subsys_id)]
 
@@ -710,7 +710,7 @@ static inline struct cgroup* task_cgroup(struct task_struct *task,
 {
 	return task_subsys_state(task, subsys_id)->cgroup;
 }
-
+#endif
 /**
  * cgroup_for_each_child - iterate through children of a cgroup
  * @pos: the cgroup * to use as the loop cursor
