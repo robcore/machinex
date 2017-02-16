@@ -115,6 +115,7 @@ struct efi_variable {
 
 
 struct efivar_entry {
+	struct efivars *efivars;
 	struct efi_variable var;
 	struct list_head list;
 	struct kobject kobj;
@@ -126,8 +127,8 @@ struct efivar_attribute {
 	ssize_t (*store)(struct efivar_entry *entry, const char *buf, size_t count);
 };
 
-/* Private pointer to registered efivars */
-static struct efivars *__efivars;
+static struct efivars __efivars;
+static struct efivar_operations ops;
 
 #define PSTORE_EFI_ATTRIBUTES \
 	(EFI_VARIABLE_NON_VOLATILE | \
@@ -476,7 +477,7 @@ efivar_size_read(struct efivar_entry *entry, char *buf)
 	if (!entry || !buf)
 		return -EINVAL;
 
-	status = get_var_data(__efivars, var);
+	status = get_var_data(entry->efivars, var);
 	if (status != EFI_SUCCESS)
 		return -EIO;
 
@@ -493,7 +494,7 @@ efivar_data_read(struct efivar_entry *entry, char *buf)
 	if (!entry || !buf)
 		return -EINVAL;
 
-	status = get_var_data(__efivars, var);
+	status = get_var_data(entry->efivars, var);
 	if (status != EFI_SUCCESS)
 		return -EIO;
 
@@ -569,7 +570,7 @@ efivar_show_raw(struct efivar_entry *entry, char *buf)
 	if (!entry || !buf)
 		return 0;
 
-	status = get_var_data(__efivars, var);
+	status = get_var_data(entry->efivars, var);
 	if (status != EFI_SUCCESS)
 		return -EIO;
 
@@ -779,6 +780,8 @@ static int efi_pstore_write(enum pstore_type_id type,
 	for (i = 0; i < DUMP_NAME_LEN; i++)
 		efi_name[i] = stub_name[i];
 
+	efivars = var->efivars;
+
 	/*
 	 * Clean up any entries with the same name
 	 */
@@ -865,7 +868,7 @@ static ssize_t efivar_create(struct file *filp, struct kobject *kobj,
 			     char *buf, loff_t pos, size_t count)
 {
 	struct efi_variable *new_var = (struct efi_variable *)buf;
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = bin_attr->private;
 	struct efivar_entry *search_efivar, *n;
 	unsigned long strsize1, strsize2;
 	efi_status_t status = EFI_NOT_FOUND;
@@ -942,7 +945,7 @@ static ssize_t efivar_delete(struct file *filp, struct kobject *kobj,
 			     char *buf, loff_t pos, size_t count)
 {
 	struct efi_variable *del_var = (struct efi_variable *)buf;
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = bin_attr->private;
 	struct efivar_entry *search_efivar, *n;
 	unsigned long strsize1, strsize2;
 	efi_status_t status = EFI_NOT_FOUND;
@@ -1000,7 +1003,7 @@ static ssize_t efivar_delete(struct file *filp, struct kobject *kobj,
 static bool variable_is_present(efi_char16_t *variable_name, efi_guid_t *vendor)
 {
 	struct efivar_entry *entry, *n;
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = &__efivars;
 	unsigned long strsize1, strsize2;
 	bool found = false;
 
@@ -1046,7 +1049,7 @@ static unsigned long var_name_strnsize(efi_char16_t *variable_name,
 
 static void efivar_update_sysfs_entries(struct work_struct *work)
 {
-	struct efivars *efivars = __efivars;
+	struct efivars *efivars = &__efivars;
 	efi_guid_t vendor;
 	efi_char16_t *variable_name;
 	unsigned long variable_name_size = 1024;
@@ -1192,6 +1195,7 @@ efivar_create_sysfs_entry(struct efivars *efivars,
 		return 1;
 	}
 
+	new_efivar->efivars = efivars;
 	memcpy(new_efivar->var.VariableName, variable_name,
 		variable_name_size);
 	memcpy(&(new_efivar->var.VendorGuid), vendor_guid, sizeof(efi_guid_t));
@@ -1290,8 +1294,6 @@ void unregister_efivars(struct efivars *efivars)
 {
 	struct efivar_entry *entry, *n;
 
-	__efivars = NULL;
-
 	list_for_each_entry_safe(entry, n, &efivars->list, list) {
 		spin_lock_irq(&efivars->lock);
 		list_del(&entry->list);
@@ -1368,8 +1370,6 @@ int register_efivars(struct efivars *efivars,
 	efi_char16_t *variable_name;
 	unsigned long variable_name_size = 1024;
 	int error = 0;
-
-	__efivars = efivars;
 
 	variable_name = kzalloc(variable_name_size, GFP_KERNEL);
 	if (!variable_name) {
@@ -1448,24 +1448,6 @@ out:
 }
 EXPORT_SYMBOL_GPL(register_efivars);
 
-static struct efivars generic_efivars;
-static struct efivar_operations generic_ops;
-
-static int generic_ops_register(void)
-{
-	generic_ops.get_variable = efi.get_variable;
-	generic_ops.set_variable = efi.set_variable;
-	generic_ops.get_next_variable = efi.get_next_variable;
-	generic_ops.query_variable_info = efi.query_variable_info;
-
-	return register_efivars(&generic_efivars, &generic_ops, efi_kobj);
-}
-
-static void generic_ops_unregister(void)
-{
-	unregister_efivars(&generic_efivars);
-}
-
 /*
  * For now we register the efi subsystem with the firmware subsystem
  * and the vars subsystem with the efi subsystem.  In the future, it
@@ -1512,7 +1494,7 @@ efivars_init(void)
 	return 0;
 
 err_unregister:
-	generic_ops_unregister();
+	unregister_efivars(&__efivars);
 err_put:
 	kobject_put(efi_kobj);
 	return error;
@@ -1522,7 +1504,7 @@ static void __exit
 efivars_exit(void)
 {
 	if (efi_enabled(EFI_RUNTIME_SERVICES)) {
-		generic_ops_unregister();
+		unregister_efivars(&__efivars);
 		kobject_put(efi_kobj);
 	}
 }
