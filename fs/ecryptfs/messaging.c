@@ -118,10 +118,9 @@ void ecryptfs_msg_ctx_alloc_to_free(struct ecryptfs_msg_ctx *msg_ctx)
 int ecryptfs_find_daemon_by_euid(struct ecryptfs_daemon **daemon, uid_t euid,
 				 struct user_namespace *user_ns)
 {
-	struct hlist_node *elem;
 	int rc;
 
-	hlist_for_each_entry(*daemon, elem,
+	hlist_for_each_entry(*daemon,
 			     &ecryptfs_daemon_hash[ecryptfs_uid_hash(euid)],
 			     euid_chain) {
 		if ((*daemon)->euid == euid && (*daemon)->user_ns == user_ns) {
