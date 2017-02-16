@@ -10,7 +10,6 @@
 #include <linux/list.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
-#include <linux/bug.h>
 
 /*
  * Insert a new entry between two known consecutive entries.
@@ -32,9 +31,6 @@ void __list_add(struct list_head *new,
 #if 0
 	BUG_ON(((prev->next != next) || (next->prev != prev)) &&
 		PANIC_CORRUPTION);
-
-	BUG_ON((prev->next != next || next->prev != prev ||
-		 new == prev || new == next) && PANIC_CORRUPTION);
 #endif
 	if ((prev->next != next) || (next->prev != prev))
 	{

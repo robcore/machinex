@@ -46,10 +46,15 @@ static void callback(void *param)
 
 static void makedata(int disks)
 {
-	int i;
+	int i, j;
 
 	for (i = 0; i < disks; i++) {
-		prandom_bytes(page_address(data[i]), PAGE_SIZE);
+		for (j = 0; j < PAGE_SIZE/sizeof(u32); j += sizeof(u32)) {
+			u32 *p = page_address(data[i]) + j;
+
+			*p = random32();
+		}
+
 		dataptrs[i] = data[i];
 	}
 }

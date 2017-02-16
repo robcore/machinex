@@ -119,15 +119,10 @@ struct delayed_work {
 /*
  * A struct for workqueue attributes.  This can be used to change
  * attributes of an unbound workqueue.
- *
- * Unlike other fields, ->no_numa isn't a property of a worker_pool.  It
- * only modifies how apply_workqueue_attrs() select pools and thus doesn't
- * participate in pool hash calculations or equality comparisons.
  */
 struct workqueue_attrs {
 	int			nice;		/* nice level */
 	cpumask_var_t		cpumask;	/* allowed CPUs */
-	bool			no_numa;	/* disable NUMA affinity */
 };
 
 static inline struct delayed_work *to_delayed_work(struct work_struct *work)
@@ -188,7 +183,6 @@ struct execute_work {
 #ifdef CONFIG_DEBUG_OBJECTS_WORK
 extern void __init_work(struct work_struct *work, int onstack);
 extern void destroy_work_on_stack(struct work_struct *work);
-extern void destroy_delayed_work_on_stack(struct delayed_work *work);
 static inline unsigned int work_static(struct work_struct *work)
 {
 	return *work_data_bits(work) & WORK_STRUCT_STATIC;
@@ -196,7 +190,6 @@ static inline unsigned int work_static(struct work_struct *work)
 #else
 static inline void __init_work(struct work_struct *work, int onstack) { }
 static inline void destroy_work_on_stack(struct work_struct *work) { }
-static inline void destroy_delayed_work_on_stack(struct delayed_work *work) { }
 static inline unsigned int work_static(struct work_struct *work) { return 0; }
 #endif
 
