@@ -126,8 +126,6 @@ struct cpuidle_driver {
 	struct module 		*owner;
 
 	unsigned int		power_specified:1;
-	/* set to 1 to use the core cpuidle time keeping (for all states). */
-	unsigned int		en_core_tk_irqen:1;
 	struct cpuidle_state	states[CPUIDLE_STATE_MAX];
 	int			state_count;
 	int			safe_state_index;
@@ -152,10 +150,6 @@ extern void cpuidle_pause(void);
 extern void cpuidle_resume(void);
 extern int cpuidle_enable_device(struct cpuidle_device *dev);
 extern void cpuidle_disable_device(struct cpuidle_device *dev);
-extern int cpuidle_wrap_enter(struct cpuidle_device *dev,
-				struct cpuidle_driver *drv, int index,
-				int (*enter)(struct cpuidle_device *dev,
-					struct cpuidle_driver *drv, int index));
 extern int cpuidle_play_dead(void);
 
 #else
@@ -181,11 +175,6 @@ static inline void cpuidle_resume(void) { }
 static inline int cpuidle_enable_device(struct cpuidle_device *dev)
 {return -ENODEV; }
 static inline void cpuidle_disable_device(struct cpuidle_device *dev) { }
-static inline int cpuidle_wrap_enter(struct cpuidle_device *dev,
-				struct cpuidle_driver *drv, int index,
-				int (*enter)(struct cpuidle_device *dev,
-					struct cpuidle_driver *drv, int index))
-{ return -ENODEV; }
 static inline int cpuidle_play_dead(void) {return -ENODEV; }
 
 #endif
