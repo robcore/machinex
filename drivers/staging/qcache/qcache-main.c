@@ -1280,9 +1280,9 @@ static struct cleancache_ops zcache_cleancache_ops = {
 	.init_fs = zcache_cleancache_init_fs
 };
 
-struct cleancache_ops zcache_cleancache_register_ops(void)
+struct cleancache_ops *zcache_cleancache_register_ops(void)
 {
-	struct cleancache_ops old_ops =
+	struct cleancache_ops *old_ops =
 		cleancache_register_ops(&zcache_cleancache_ops);
 
 	return old_ops;
@@ -1295,7 +1295,7 @@ static int __init qcache_init(void)
 	struct fmem_data *fdp;
 	int bitmap_size;
 	unsigned int cpu;
-	struct cleancache_ops old_ops;
+	struct cleancache_ops *old_ops;
 
 #ifdef CONFIG_SYSFS
 	ret = sysfs_create_group(mm_kobj, &qcache_attr_group);
@@ -1335,7 +1335,7 @@ static int __init qcache_init(void)
 	old_ops = zcache_cleancache_register_ops();
 	pr_info("qcache: cleancache enabled using kernel "
 		"transcendent memory and compression buddies\n");
-	if (old_ops.init_fs != NULL)
+	if (old_ops)
 		pr_warning("qcache: cleancache_ops overridden");
 
 
