@@ -38,6 +38,7 @@ static struct cpuidle_device shmobile_cpuidle_dev;
 static struct cpuidle_driver shmobile_cpuidle_driver = {
 	.name			= "shmobile_cpuidle",
 	.owner			= THIS_MODULE,
+	.en_core_tk_irqen	= 1,
 	.states[0]		= ARM_CPUIDLE_WFI_STATE,
 	.safe_state_index	= 0, /* C1 */
 	.state_count		= 1,
