@@ -520,7 +520,7 @@ void do_coredump(siginfo_t *siginfo, struct pt_regs *regs)
 
 	ispipe = format_corename(&cn, &cprm);
 
- 	if (ispipe) {
+	if (ispipe) {
 		int dump_count;
 		char **helper_argv;
 
@@ -574,10 +574,10 @@ void do_coredump(siginfo_t *siginfo, struct pt_regs *regs)
 					NULL, &cprm);
 		argv_free(helper_argv);
 		if (retval) {
- 			printk(KERN_INFO "Core dump to %s pipe failed\n",
+			printk(KERN_INFO "Core dump to %s pipe failed\n",
 			       cn.corename);
 			goto close_fail;
- 		}
+		}
 	} else {
 		struct inode *inode;
 
