@@ -31,7 +31,7 @@ struct inet_frag_queue {
 #define INET_FRAG_LAST_IN	1
 };
 
-#define INETFRAGS_HASHSZ		64
+#define INETFRAGS_HASHSZ	1024
 
 /* averaged:
  * max_depth = default ipfrag_high_thresh / INETFRAGS_HASHSZ /
