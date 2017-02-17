@@ -201,6 +201,8 @@ enum atc_status {
  * @device: parent device
  * @ch_regs: memory mapped register base
  * @mask: channel index in a mask
+ * @per_if: peripheral interface
+ * @mem_if: memory interface
  * @status: transmit status information from irq/prep* functions
  *                to tasklet (use atomic operations)
  * @tasklet: bottom half to finish transaction work
@@ -219,6 +221,8 @@ struct at_dma_chan {
 	struct at_dma		*device;
 	void __iomem		*ch_regs;
 	u8			mask;
+	u8			per_if;
+	u8			mem_if;
 	unsigned long		status;
 	struct tasklet_struct	tasklet;
 	u32			save_cfg;
