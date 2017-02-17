@@ -369,8 +369,7 @@ struct audit_status {
 };
 
 struct audit_tty_status {
-	__u32		enabled;	/* 1 = enabled, 0 = disabled */
-	__u32		log_passwd;	/* 1 = enabled, 0 = disabled */
+	__u32		enabled; /* 1 = enabled, 0 = disabled */
 };
 
 /* audit_rule_data supports filter rules with both integer and string

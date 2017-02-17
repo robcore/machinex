@@ -49,7 +49,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/kthread.h>
-#include <linux/kernel.h>
 
 #include <linux/audit.h>
 
