@@ -296,7 +296,7 @@ void tty_audit_add_data(struct tty_struct *tty, unsigned char *data,
 	spin_lock_irqsave(&current->sighand->siglock, flags);
 	audit_log_tty_passwd = current->signal->audit_tty_log_passwd;
 	spin_unlock_irqrestore(&current->sighand->siglock, flags);
-	if (!audit_log_tty_passwd && icanon && !L_ECHO(tty))
+	if (!audit_log_tty_passwd && tty->icanon && !L_ECHO(tty))
 		return;
 
 	if (tty->driver->type == TTY_DRIVER_TYPE_PTY
