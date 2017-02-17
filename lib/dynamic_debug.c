@@ -306,12 +306,12 @@ static int ddebug_parse_query(char *words[], int nwords,
 			rc = check_set(&query->filename, words[i+1], "file");
 		else if (!strcmp(words[i], "module"))
 			rc = check_set(&query->module, words[i+1], "module");
-		else if (!strcmp(words[i], "format"))
+		else if (!strcmp(words[i], "format")) {
 			string_unescape_inplace(words[i+1], UNESCAPE_SPACE |
 							    UNESCAPE_OCTAL |
 							    UNESCAPE_SPECIAL);
 			rc = check_set(&query->format, words[i+1], "format");
-		else if (!strcmp(words[i], "line")) {
+		} else if (!strcmp(words[i], "line")) {
 			char *first = words[i+1];
 			char *last = strchr(first, '-');
 			if (query->first_lineno || query->last_lineno) {
