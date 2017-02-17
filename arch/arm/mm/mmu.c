@@ -985,22 +985,6 @@ static void __init fill_pmd_gaps(void)
 #define fill_pmd_gaps() do { } while (0)
 #endif
 
-#ifdef CONFIG_DEBUG_LL
-void __init debug_ll_io_init(void)
-{
-	struct map_desc map;
-
-	debug_ll_addr(&map.pfn, &map.virtual);
-	if (!map.pfn || !map.virtual)
-		return;
-	map.pfn = __phys_to_pfn(map.pfn);
-	map.virtual &= PAGE_MASK;
-	map.length = PAGE_SIZE;
-	map.type = MT_DEVICE;
-	create_mapping(&map);
-}
-#endif
-
 #if defined(CONFIG_PCI) && !defined(CONFIG_NEED_MACH_IO_H)
 static void __init pci_reserve_io(void)
 {
@@ -1021,6 +1005,22 @@ static void __init pci_reserve_io(void)
 }
 #else
 #define pci_reserve_io() do { } while (0)
+#endif
+
+#ifdef CONFIG_DEBUG_LL
+void __init debug_ll_io_init(void)
+{
+	struct map_desc map;
+
+	debug_ll_addr(&map.pfn, &map.virtual);
+	if (!map.pfn || !map.virtual)
+		return;
+	map.pfn = __phys_to_pfn(map.pfn);
+	map.virtual &= PAGE_MASK;
+	map.length = PAGE_SIZE;
+	map.type = MT_DEVICE;
+	create_mapping(&map);
+}
 #endif
 
 static void * __initdata vmalloc_min =
