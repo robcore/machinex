@@ -19,3 +19,5 @@ obj-$(CONFIG_FIQ_GLUE)		+= fiq_glue.o fiq_glue_setup.o
 obj-$(CONFIG_FIQ_DEBUGGER)	+= fiq_debugger.o
 obj-$(CONFIG_CP_ACCESS)         += cpaccess.o
 obj-$(CONFIG_MCPM)		+= mcpm_head.o mcpm_entry.o mcpm_platsmp.o vlock.o
+AFLAGS_mcpm_head.o		:= -march=armv7-a
+AFLAGS_vlock.o			:= -march=armv7-a
