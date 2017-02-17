@@ -767,8 +767,11 @@ int __init_or_module do_one_initcall(initcall_t fn)
 
 	msgbuf[0] = 0;
 
+	if (ret && ret != -ENODEV && initcall_debug)
+		sprintf(msgbuf, "error code %d ", ret);
+
 	if (preempt_count() != count) {
-		sprintf(msgbuf, "preemption imbalance ");
+		strlcat(msgbuf, "preemption imbalance ", sizeof(msgbuf));
 		preempt_count_set(count);
 	}
 	if (irqs_disabled()) {
