@@ -3256,7 +3256,7 @@ ftrace_regex_write(struct file *file, const char __user *ubuf,
 		ret = ftrace_process_regex(iter->hash, parser->buffer,
 					   parser->idx, enable);
 		trace_parser_clear(parser);
-		if (ret < 0)
+		if (ret)
 			goto out_unlock;
 	}
 
