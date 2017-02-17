@@ -1288,7 +1288,7 @@ struct cleancache_ops *zcache_cleancache_register_ops(void)
 	return old_ops;
 }
 
-static int __init qcache_init(void)
+static int qcache_init(void)
 {
 	int ret = 0;
 	struct qcache_info *qc = &qcache_info;
