@@ -648,6 +648,7 @@ out:
 		spin_unlock(&hb->lock);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(tmem_localify_get_pampd);
 
 /*
  * If a page in tmem matches the handle, "flush" this page from tmem such
@@ -681,6 +682,7 @@ out:
 	spin_unlock(&hb->lock);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(tmem_localify_finish);
 
 /*
  * If a page in tmem matches the handle, replace the page so that any

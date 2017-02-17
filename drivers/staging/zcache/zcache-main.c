@@ -1935,6 +1935,7 @@ struct frontswap_ops *zcache_frontswap_register_ops(void)
 
 static int zcache_enabled;
 
+#ifndef CONFIG_ZCACHE_MODULE
 static int __init enable_zcache(char *s)
 {
 	zcache_enabled = 1;
@@ -1971,18 +1972,27 @@ static int __init enable_zcache_compressor(char *s)
 	return 1;
 }
 __setup("zcache=", enable_zcache_compressor);
+#endif
 
 
-static int __init zcache_comp_init(void)
+static int zcache_comp_init(void)
 {
 	int ret = 0;
 
 	/* check crypto algorithm */
+#ifdef CONFIG_ZCACHE_MODULE
+	ret = crypto_has_comp(zcache_comp_name, 0, 0);
+	if (!ret) {
+		ret = -1;
+		goto out;
+	}
+#else
 	if (*zcache_comp_name != '\0') {
 		ret = crypto_has_comp(zcache_comp_name, 0, 0);
 		if (!ret)
 			pr_info("zcache: %s not supported\n",
 					zcache_comp_name);
+		goto out;
 	}
 	if (!ret)
 		strcpy(zcache_comp_name, "lzo");
@@ -1991,6 +2001,7 @@ static int __init zcache_comp_init(void)
 		ret = 1;
 		goto out;
 	}
+#endif
 	pr_info("zcache: using %s compressor\n", zcache_comp_name);
 
 	/* alloc percpu transforms */
