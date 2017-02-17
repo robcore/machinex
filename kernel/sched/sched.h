@@ -418,6 +418,9 @@ struct rq {
 	u64 nohz_stamp;
 	unsigned long nohz_flags;
 #endif
+#ifdef CONFIG_NO_HZ_FULL
+	unsigned long last_sched_tick;
+#endif
 	int skip_clock_update;
 
 	/* time-based average load */
@@ -1159,6 +1162,13 @@ static inline void dec_nr_running(struct rq *rq)
 	rq->nr_running--;
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
+#endif
+}
+
+static inline void rq_last_tick_reset(struct rq *rq)
+{
+#ifdef CONFIG_NO_HZ_FULL
+	rq->last_sched_tick = jiffies;
 #endif
 }
 
