@@ -625,16 +625,11 @@ static inline void process_adjtimex_modes(struct timex *txc, struct timespec *ts
 		ntp_update_frequency();
 }
 
-/*
- * adjtimex mainly allows reading (and writing, if superuser) of
- * kernel time-keeping variables. used by xntpd.
+/**
+ * ntp_validate_timex - Ensures the timex is ok for use in do_adjtimex
  */
-int do_adjtimex(struct timex *txc)
+int ntp_validate_timex(struct timex *txc)
 {
-	struct timespec ts;
-	int result;
-
-	/* Validate the data before disabling interrupts */
 	if (txc->modes & ADJ_ADJTIME) {
 		/* singleshot must not be used with any other mode bits */
 		if (!(txc->modes & ADJ_OFFSET_SINGLESHOT))
@@ -667,8 +662,13 @@ int do_adjtimex(struct timex *txc)
  * adjtimex mainly allows reading (and writing, if superuser) of
  * kernel time-keeping variables. used by xntpd.
  */
-int ntp_validate_timex(struct timex *txc)
+int do_adjtimex(struct timex *txc)
 {
+	struct timespec ts;
+	u32 time_tai, orig_tai;
+	int result;
+
+	/* Validate the data before disabling interrupts */
 	result = ntp_validate_timex(txc);
 	if (result)
 		return result;
