@@ -61,7 +61,7 @@ unsigned long pipe_user_pages_soft = PIPE_DEF_BUFFERS * INR_OPEN_CUR;
 
 static void pipe_lock_nested(struct pipe_inode_info *pipe, int subclass)
 {
-	if (pipe->inode)
+	if (pipe->files)
 		mutex_lock_nested(&pipe->mutex, subclass);
 }
 
@@ -76,7 +76,7 @@ EXPORT_SYMBOL(pipe_lock);
 
 void pipe_unlock(struct pipe_inode_info *pipe)
 {
-	if (pipe->inode)
+	if (pipe->files)
 		mutex_unlock(&pipe->mutex);
 }
 EXPORT_SYMBOL(pipe_unlock);
@@ -829,7 +829,6 @@ struct pipe_inode_info * alloc_pipe_info(struct inode *inode)
 		if (pipe->bufs) {
 			init_waitqueue_head(&pipe->wait);
 			pipe->r_counter = pipe->w_counter = 1;
-			pipe->inode = inode;
 			pipe->buffers = pipe_bufs;
 			pipe->user = user;
 			account_pipe_buffers(pipe, 0, pipe_bufs);
