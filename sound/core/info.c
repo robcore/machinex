@@ -891,7 +891,7 @@ static int snd_info_dev_register_entry(struct snd_device *device)
  * The parent is assumed as card->proc_root.
  *
  * For releasing this entry, use snd_device_free() instead of
- * snd_info_free_entry(). 
+ * snd_info_free_entry().
  *
  * Returns zero if successful, or a negative error code on failure.
  */
@@ -959,15 +959,21 @@ int snd_info_register(struct snd_info_entry * entry)
 		return -ENXIO;
 	root = entry->parent == NULL ? snd_proc_root : entry->parent->p;
 	mutex_lock(&info_mutex);
-	p = create_proc_entry(entry->name, entry->mode, root);
-	if (!p) {
-		mutex_unlock(&info_mutex);
-		return -ENOMEM;
+	if (S_ISDIR(entry->mode)) {
+		p = proc_mkdir_mode(entry->name, entry->mode, root);
+		if (!p) {
+			mutex_unlock(&info_mutex);
+			return -ENOMEM;
+		}
+	} else {
+		p = proc_create_data(entry->name, entry->mode, root,
+					&snd_info_entry_operations, entry);
+		if (!p) {
+			mutex_unlock(&info_mutex);
+			return -ENOMEM;
+		}
+		p->size = entry->size;
 	}
-	if (!S_ISDIR(entry->mode))
-		p->proc_fops = &snd_info_entry_operations;
-	proc_set_size(p, entry->size);
-	p->data = entry;
 	entry->p = p;
 	if (entry->parent)
 		list_add_tail(&entry->list, &entry->parent->children);
