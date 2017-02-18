@@ -19,7 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
-#include <linux/socket.h>
+#include <linux/uio.h>
 #include <linux/wait.h>
 
 #include "vmci_handle_array.h"
