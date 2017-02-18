@@ -16,7 +16,7 @@ DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER             \
 # Common feature
 #################
 
-DHDCFLAGS += -DCUSTOMER_HW4
+DHDCFLAGS += -DCUSTOMER_HW4 -DCUSTOMER_HW4_DEBUG -DCUSTOMER_HW4_PRIVATE_CMD
 DHDCFLAGS += -DWL_CFG80211
 
 # Debug
