@@ -1599,8 +1599,9 @@ EXPORT_SYMBOL_GPL(ktime_get_monotonic_offset);
  */
 int do_adjtimex(struct timex *txc)
 {
+	struct timekeeper *tk = &timekeeper;
 	struct timespec ts;
-	s32 tai, orig_tai;
+	s32 tai;
 	int ret;
 
 	/* Validate the data before disabling interrupts */
@@ -1620,13 +1621,11 @@ int do_adjtimex(struct timex *txc)
 	}
 
 	getnstimeofday(&ts);
-	orig_tai = tai = timekeeping_get_tai_offset();
 
+	tai = tk->tai_offset;
 	ret = __do_adjtimex(txc, &ts, &tai);
 
-	if (tai != orig_tai)
-		timekeeping_set_tai_offset(tai);
-
+	__timekeeping_set_tai_offset(tk, tai);
 	return ret;
 }
 
