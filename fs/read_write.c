@@ -650,7 +650,7 @@ unsigned long iov_shorten(struct iovec *iov, unsigned long nr_segs, size_t to)
 }
 EXPORT_SYMBOL(iov_shorten);
 
-ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
+static ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
 		unsigned long nr_segs, size_t len, loff_t *ppos, iov_fn_t fn)
 {
 	struct kiocb kiocb;
@@ -675,7 +675,7 @@ ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
 }
 
 /* Do it by hand, with file-ops */
-ssize_t do_loop_readv_writev(struct file *filp, struct iovec *iov,
+static ssize_t do_loop_readv_writev(struct file *filp, struct iovec *iov,
 		unsigned long nr_segs, loff_t *ppos, io_fn_t fn)
 {
 	struct iovec *vector = iov;
