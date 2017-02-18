@@ -18,13 +18,12 @@
 #include <linux/rtc.h>
 
 #include "tick-internal.h"
-#include "ntp_internal.h"
 
 /*
  * NTP timekeeping variables:
- *
- * Note: All of the NTP state is protected by the timekeeping locks.
  */
+
+DEFINE_RAW_SPINLOCK(ntp_lock);
 
 
 /* USER_HZ period (usecs): */
@@ -135,6 +134,8 @@ static inline void pps_reset_freq_interval(void)
 
 /**
  * pps_clear - Clears the PPS state variables
+ *
+ * Must be called while holding a write on the ntp_lock
  */
 static inline void pps_clear(void)
 {
@@ -149,6 +150,8 @@ static inline void pps_clear(void)
 /* Decrease pps_valid to indicate that another second has passed since
  * the last PPS signal. When it reaches 0, indicate that PPS signal is
  * missing.
+ *
+ * Must be called while holding a write on the ntp_lock
  */
 static inline void pps_dec_valid(void)
 {
@@ -343,6 +346,10 @@ static void ntp_update_offset(long offset)
  */
 void ntp_clear(void)
 {
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&ntp_lock, flags);
+
 	time_adjust	= 0;		/* stop active adjtime() */
 	time_status	|= STA_UNSYNC;
 	time_maxerror	= NTP_PHASE_LIMIT;
@@ -355,12 +362,20 @@ void ntp_clear(void)
 
 	/* Clear PPS state variables */
 	pps_clear();
+	raw_spin_unlock_irqrestore(&ntp_lock, flags);
+
 }
 
 
 u64 ntp_tick_length(void)
 {
-	return tick_length;
+	unsigned long flags;
+	s64 ret;
+
+	raw_spin_lock_irqsave(&ntp_lock, flags);
+	ret = tick_length;
+	raw_spin_unlock_irqrestore(&ntp_lock, flags);
+	return ret;
 }
 
 
@@ -378,6 +393,9 @@ int second_overflow(unsigned long secs)
 {
 	s64 delta;
 	int leap = 0;
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&ntp_lock, flags);
 
 	/*
 	 * Leap second processing. If in leap-insert state at the end of the
@@ -461,6 +479,8 @@ int second_overflow(unsigned long secs)
 	time_adjust = 0;
 
 out:
+	raw_spin_unlock_irqrestore(&ntp_lock, flags);
+
 	return leap;
 }
 
@@ -555,6 +575,10 @@ static inline void process_adj_status(struct timex *txc, struct timespec *ts)
 	time_status |= txc->status & ~STA_RONLY;
 }
 
+/*
+ * Called with ntp_lock held, so we can access and modify
+ * all the global NTP state:
+ */
 static inline void process_adjtimex_modes(struct timex *txc, struct timespec *ts)
 {
 	if (txc->modes & ADJ_STATUS)
@@ -601,11 +625,16 @@ static inline void process_adjtimex_modes(struct timex *txc, struct timespec *ts
 		ntp_update_frequency();
 }
 
-/**
- * ntp_validate_timex - Ensures the timex is ok for use in do_adjtimex
+/*
+ * adjtimex mainly allows reading (and writing, if superuser) of
+ * kernel time-keeping variables. used by xntpd.
  */
-int ntp_validate_timex(struct timex *txc)
+int do_adjtimex(struct timex *txc)
 {
+	struct timespec ts;
+	int result;
+
+	/* Validate the data before disabling interrupts */
 	if (txc->modes & ADJ_ADJTIME) {
 		/* singleshot must not be used with any other mode bits */
 		if (!(txc->modes & ADJ_OFFSET_SINGLESHOT))
@@ -617,6 +646,7 @@ int ntp_validate_timex(struct timex *txc)
 		/* In order to modify anything, you gotta be super-user! */
 		 if (txc->modes && !capable(CAP_SYS_TIME))
 			return -EPERM;
+
 		/*
 		 * if the quartz is off by more than 10% then
 		 * something is VERY wrong!
@@ -627,20 +657,22 @@ int ntp_validate_timex(struct timex *txc)
 			return -EINVAL;
 	}
 
-	if ((txc->modes & ADJ_SETOFFSET) && (!capable(CAP_SYS_TIME)))
-		return -EPERM;
+	if (txc->modes & ADJ_SETOFFSET) {
+		struct timespec delta;
+		delta.tv_sec  = txc->time.tv_sec;
+		delta.tv_nsec = txc->time.tv_usec;
+		if (!capable(CAP_SYS_TIME))
+			return -EPERM;
+		if (!(txc->modes & ADJ_NANO))
+			delta.tv_nsec *= 1000;
+		result = timekeeping_inject_offset(&delta);
+		if (result)
+			return result;
+	}
 
-	return 0;
-}
+	getnstimeofday(&ts);
 
-
-/*
- * adjtimex mainly allows reading (and writing, if superuser) of
- * kernel time-keeping variables. used by xntpd.
- */
-int __do_adjtimex(struct timex *txc, struct timespec *ts, s32 *time_tai)
-{
-	int result;
+	raw_spin_lock_irq(&ntp_lock);
 
 	if (txc->modes & ADJ_ADJTIME) {
 		long save_adjust = time_adjust;
@@ -655,7 +687,7 @@ int __do_adjtimex(struct timex *txc, struct timespec *ts, s32 *time_tai)
 
 		/* If there are input parameters, then process them: */
 		if (txc->modes)
-			process_adjtimex_modes(txc, ts, time_tai);
+			process_adjtimex_modes(txc, &ts);
 
 		txc->offset = shift_right(time_offset * NTP_INTERVAL_FREQ,
 				  NTP_SCALE_SHIFT);
@@ -677,13 +709,15 @@ int __do_adjtimex(struct timex *txc, struct timespec *ts, s32 *time_tai)
 	txc->precision	   = 1;
 	txc->tolerance	   = MAXFREQ_SCALED / PPM_SCALE;
 	txc->tick	   = tick_usec;
-	txc->tai	   = *time_tai;
+	txc->tai	   = time_tai;
 
 	/* fill PPS status fields */
 	pps_fill_timex(txc);
 
-	txc->time.tv_sec = ts->tv_sec;
-	txc->time.tv_usec = ts->tv_nsec;
+	raw_spin_unlock_irq(&ntp_lock);
+
+	txc->time.tv_sec = ts.tv_sec;
+	txc->time.tv_usec = ts.tv_nsec;
 	if (!(time_status & STA_NANO))
 		txc->time.tv_usec /= NSEC_PER_USEC;
 
@@ -860,7 +894,7 @@ static void hardpps_update_phase(long error)
 }
 
 /*
- * __hardpps() - discipline CPU clock oscillator to external PPS signal
+ * hardpps() - discipline CPU clock oscillator to external PPS signal
  *
  * This routine is called at each PPS signal arrival in order to
  * discipline the CPU clock oscillator to the PPS signal. It takes two
@@ -871,11 +905,13 @@ static void hardpps_update_phase(long error)
  * This code is based on David Mills's reference nanokernel
  * implementation. It was mostly rewritten but keeps the same idea.
  */
-void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
+void hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 {
 	struct pps_normtime pts_norm, freq_norm;
 
 	pts_norm = pps_normalize_ts(*phase_ts);
+
+	raw_spin_lock_irqsave(&ntp_lock, flags);
 
 	/* clear the error bits, they will be set again if needed */
 	time_status &= ~(STA_PPSJITTER | STA_PPSWANDER | STA_PPSERROR);
@@ -888,6 +924,7 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 	 * just start the frequency interval */
 	if (unlikely(pps_fbase.tv_sec == 0)) {
 		pps_fbase = *raw_ts;
+		raw_spin_unlock_irqrestore(&ntp_lock, flags);
 		return;
 	}
 
@@ -902,6 +939,7 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 		time_status |= STA_PPSJITTER;
 		/* restart the frequency calibration interval */
 		pps_fbase = *raw_ts;
+		raw_spin_unlock_irqrestore(&ntp_lock, flags);
 		pr_err("hardpps: PPSJITTER: bad pulse\n");
 		return;
 	}
@@ -918,7 +956,10 @@ void __hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
 
 	hardpps_update_phase(pts_norm.nsec);
 
+	raw_spin_unlock_irqrestore(&ntp_lock, flags);
 }
+EXPORT_SYMBOL(hardpps);
+
 #endif	/* CONFIG_NTP_PPS */
 
 static int __init ntp_tick_adj_setup(char *str)

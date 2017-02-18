@@ -23,7 +23,6 @@
 #include <linux/stop_machine.h>
 
 #include "tick-internal.h"
-#include "ntp_internal.h"
 
 static struct timekeeper timekeeper;
 static DEFINE_RAW_SPINLOCK(timekeeper_lock);
@@ -1601,52 +1600,6 @@ ktime_t ktime_get_monotonic_offset(void)
 	return timespec_to_ktime(wtom);
 }
 EXPORT_SYMBOL_GPL(ktime_get_monotonic_offset);
-
-/**
- * do_adjtimex() - Accessor function to NTP __do_adjtimex function
- */
-int do_adjtimex(struct timex *txc)
-{
-	struct timekeeper *tk = &timekeeper;
-	struct timespec ts;
-	s32 tai;
-	int ret;
-
-	/* Validate the data before disabling interrupts */
-	ret = ntp_validate_timex(txc);
-	if (ret)
-		return ret;
-
-	if (txc->modes & ADJ_SETOFFSET) {
-		struct timespec delta;
-		delta.tv_sec  = txc->time.tv_sec;
-		delta.tv_nsec = txc->time.tv_usec;
-		if (!(txc->modes & ADJ_NANO))
-			delta.tv_nsec *= 1000;
-		ret = timekeeping_inject_offset(&delta);
-		if (ret)
-			return ret;
-	}
-
-	getnstimeofday(&ts);
-
-	tai = tk->tai_offset;
-	ret = __do_adjtimex(txc, &ts, &tai);
-
-	__timekeeping_set_tai_offset(tk, tai);
-	return ret;
-}
-
-#ifdef CONFIG_NTP_PPS
-/**
- * hardpps() - Accessor function to NTP __hardpps function
- */
-void hardpps(const struct timespec *phase_ts, const struct timespec *raw_ts)
-{
-	__hardpps(phase_ts, raw_ts);
-}
-EXPORT_SYMBOL(hardpps);
-#endif
 
 /**
  * xtime_update() - advances the timekeeping infrastructure
