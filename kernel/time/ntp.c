@@ -646,7 +646,6 @@ int do_adjtimex(struct timex *txc)
 		/* In order to modify anything, you gotta be super-user! */
 		 if (txc->modes && !capable(CAP_SYS_TIME))
 			return -EPERM;
-
 		/*
 		 * if the quartz is off by more than 10% then
 		 * something is VERY wrong!
@@ -657,12 +656,27 @@ int do_adjtimex(struct timex *txc)
 			return -EINVAL;
 	}
 
+	if ((txc->modes & ADJ_SETOFFSET) && (!capable(CAP_SYS_TIME)))
+		return -EPERM;
+
+	return 0;
+}
+
+
+/*
+ * adjtimex mainly allows reading (and writing, if superuser) of
+ * kernel time-keeping variables. used by xntpd.
+ */
+int ntp_validate_timex(struct timex *txc)
+{
+	result = ntp_validate_timex(txc);
+	if (result)
+		return result;
+
 	if (txc->modes & ADJ_SETOFFSET) {
 		struct timespec delta;
 		delta.tv_sec  = txc->time.tv_sec;
 		delta.tv_nsec = txc->time.tv_usec;
-		if (!capable(CAP_SYS_TIME))
-			return -EPERM;
 		if (!(txc->modes & ADJ_NANO))
 			delta.tv_nsec *= 1000;
 		result = timekeeping_inject_offset(&delta);
