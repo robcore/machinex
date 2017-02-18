@@ -507,5 +507,5 @@ int proc_fill_super(struct super_block *s)
 		return -ENOMEM;
 	}
 
-	return 0;
+	return proc_setup_self(s);
 }
