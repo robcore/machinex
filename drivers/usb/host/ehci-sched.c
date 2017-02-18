@@ -698,6 +698,10 @@ static void intr_deschedule (struct ehci_hcd *ehci, struct ehci_qh *qh)
 	if (!list_empty(&qh->qtd_list) &&
 			ehci->rh_state == EHCI_RH_RUNNING) {
 		rc = qh_schedule(ehci, qh);
+		if (rc == 0) {
+			qh_refresh(ehci, qh);
+			qh_link_periodic(ehci, qh);
+		}
 
 		/* An error here likely indicates handshake failure
 		 * or no space left in the schedule.  Neither fault
@@ -705,9 +709,10 @@ static void intr_deschedule (struct ehci_hcd *ehci, struct ehci_qh *qh)
 		 *
 		 * FIXME kill the now-dysfunctional queued urbs
 		 */
-		if (rc != 0)
+		else {
 			ehci_err(ehci, "can't reschedule qh %p, err %d\n",
 					qh, rc);
+		}
 	}
 }
 
