@@ -549,6 +549,7 @@ static void do_acct_process(struct bsd_acct_struct *acct,
 	 * Kernel segment override to datasegment and write it
 	 * to the accounting file.
 	 */
+	file_start_write(file);
 	fs = get_fs();
 	set_fs(KERNEL_DS);
 	/*

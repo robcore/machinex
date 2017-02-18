@@ -1093,9 +1093,7 @@ static ssize_t default_file_splice_write(struct pipe_inode_info *pipe,
 {
 	ssize_t ret;
 
-	file_start_write(out);
 	ret = splice_from_pipe(pipe, out, ppos, len, flags, write_pipe_buf);
-	file_end_write(out);
 	if (ret > 0)
 		*ppos += ret;
 
@@ -1148,7 +1146,10 @@ static long do_splice_from(struct pipe_inode_info *pipe, struct file *out,
 	else
 		splice_write = default_file_splice_write;
 
-	return splice_write(pipe, out, ppos, len, flags);
+	file_start_write(out);
+	ret = splice_write(pipe, out, ppos, len, flags);
+	file_end_write(out);
+	return ret;
 }
 
 /*

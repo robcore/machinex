@@ -1000,10 +1000,12 @@ static ssize_t compat_do_readv_writev(int type, struct file *file,
 		file_start_write(file);
 	}
 
-	if (fnv)
+	if (fnv) {
+		file_start_write(file);
 		ret = do_sync_readv_writev(file, iov, nr_segs, tot_len,
 						pos, fnv);
-	else
+		file_end_write(file);
+	} else
 		ret = do_loop_readv_writev(file, iov, nr_segs, pos, fn);
 
 	if (type != READ)

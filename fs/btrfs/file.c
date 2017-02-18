@@ -1362,8 +1362,6 @@ static ssize_t btrfs_file_aio_write(struct kiocb *iocb,
 	ssize_t err = 0;
 	size_t count, ocount;
 
-	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
-
 	mutex_lock(&inode->i_mutex);
 
 	err = generic_segment_checks(iov, &nr_segs, &ocount, VERIFY_READ);
