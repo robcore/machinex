@@ -87,8 +87,6 @@ extern void proc_root_init(void);
 
 void proc_flush_task(struct task_struct *task);
 
-extern struct proc_dir_entry *create_proc_entry(const char *name, umode_t mode,
-						struct proc_dir_entry *parent);
 struct proc_dir_entry *proc_create_data(const char *name, umode_t mode,
 				struct proc_dir_entry *parent,
 				const struct file_operations *proc_fops,
@@ -137,18 +135,10 @@ static inline struct proc_dir_entry *proc_create(const char *name, umode_t mode,
 	return proc_create_data(name, mode, parent, proc_fops, NULL);
 }
 
-static inline struct proc_dir_entry *create_proc_read_entry(const char *name,
-	umode_t mode, struct proc_dir_entry *base, 
-	read_proc_t *read_proc, void * data)
-{
-	struct proc_dir_entry *res=create_proc_entry(name,mode,base);
-	if (res) {
-		res->read_proc=read_proc;
-		res->data=data;
-	}
-	return res;
-}
- 
+extern struct proc_dir_entry *create_proc_read_entry(const char *name,
+	umode_t mode, struct proc_dir_entry *base,
+	read_proc_t *read_proc, void *data);
+
 extern struct proc_dir_entry *proc_net_fops_create(struct net *net,
 	const char *name, umode_t mode, const struct file_operations *fops);
 extern void proc_net_remove(struct net *net, const char *name);
@@ -172,8 +162,6 @@ static inline void proc_flush_task(struct task_struct *task)
 {
 }
 
-static inline struct proc_dir_entry *create_proc_entry(const char *name,
-	umode_t mode, struct proc_dir_entry *parent) { return NULL; }
 static inline struct proc_dir_entry *proc_create(const char *name,
 	umode_t mode, struct proc_dir_entry *parent,
 	const struct file_operations *proc_fops)
@@ -199,7 +187,7 @@ static inline void proc_set_size(struct proc_dir_entry *de, loff_t size) {}
 static inline void proc_set_user(struct proc_dir_entry *de, uid_t uid, gid_t gid) {}
 
 static inline struct proc_dir_entry *create_proc_read_entry(const char *name,
-	umode_t mode, struct proc_dir_entry *base, 
+	umode_t mode, struct proc_dir_entry *base,
 	read_proc_t *read_proc, void * data) { return NULL; }
 
 struct tty_driver;
