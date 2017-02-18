@@ -36,6 +36,8 @@
 #include <dhd_bus.h>
 #include <dhd_linux.h>
 #include <wl_android.h>
+#include <linux/mutex.h>
+#include <linux/spinlock.h>
 #if defined(CONFIG_WIFI_CONTROL_FUNC)
 #include <linux/wlan_plat.h>
 #endif
@@ -156,7 +158,7 @@ bool  check_bcm4335_rev(void)
 
 	printk("check BCM4335, check_bcm4335_rev \n");
 
-	spin_lock_irqsave(mxwifi_lock, irqflags);
+	spin_lock_irqsave(&mxwifi_lock, irqflags);
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		pr_err("/data/.rev file open error\n");
@@ -172,7 +174,7 @@ bool  check_bcm4335_rev(void)
 		}
 		filp_close(fp, NULL);
 	}
-	spin_lock_irqrestore(mxwifi_lock, irqflags);
+	spin_unlock_irqrestore(&mxwifi_lock, irqflags);
 	return is_revb0;
 }
 #endif
