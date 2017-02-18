@@ -2190,20 +2190,6 @@ static inline void file_end_write(struct file *file)
 	__sb_end_write(file_inode(file)->i_sb, SB_FREEZE_WRITE);
 }
 
-static inline void file_start_write(struct file *file)
-{
-	if (!S_ISREG(file_inode(file)->i_mode))
-		return;
-	__sb_start_write(file_inode(file)->i_sb, SB_FREEZE_WRITE, true);
-}
-
-static inline void file_end_write(struct file *file)
-{
-	if (!S_ISREG(file_inode(file)->i_mode))
-		return;
-	__sb_end_write(file_inode(file)->i_sb, SB_FREEZE_WRITE);
-}
-
 /*
  * get_write_access() gets write permission for a file.
  * put_write_access() releases this write permission.
