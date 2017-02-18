@@ -301,11 +301,10 @@ do_resize:
 				}
 		}
 
-		if (item_count() != 0 &&
-		    (i < max_choice ||
-		     key == KEY_UP || key == KEY_DOWN ||
-		     key == '-' || key == '+' ||
-		     key == KEY_PPAGE || key == KEY_NPAGE)) {
+		if (i < max_choice ||
+		    key == KEY_UP || key == KEY_DOWN ||
+		    key == '-' || key == '+' ||
+		    key == KEY_PPAGE || key == KEY_NPAGE) {
 			/* Remove highligt of current item */
 			print_item(scroll + choice, choice, FALSE);
 

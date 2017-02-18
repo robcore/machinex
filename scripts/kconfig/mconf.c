@@ -543,12 +543,11 @@ static void conf(struct menu *menu)
 				  active_menu, &s_scroll);
 		if (res == 1 || res == KEY_ESC || res == -ERRDISPLAYTOOSMALL)
 			break;
-		if (item_count() != 0) {
-			if (!item_activate_selected())
-				continue;
-			if (!item_tag())
-				continue;
-		}
+		if (!item_activate_selected())
+			continue;
+		if (!item_tag())
+			continue;
+
 		submenu = item_data();
 		active_menu = item_data();
 		if (submenu)

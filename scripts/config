@@ -99,7 +99,7 @@ while [ "$1" != "" ] ; do
 		;;
 	--refresh)
 		;;
-	--*-after|-E|-D|-M)
+	--*-after)
 		checkarg "$1"
 		A=$ARG
 		checkarg "$2"
