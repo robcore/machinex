@@ -36,8 +36,6 @@
 #include <dhd_bus.h>
 #include <dhd_linux.h>
 #include <wl_android.h>
-#include <linux/mutex.h>
-#include <linux/spinlock.h>
 #if defined(CONFIG_WIFI_CONTROL_FUNC)
 #include <linux/wlan_plat.h>
 #endif
@@ -56,8 +54,6 @@ struct wifi_platform_data {
 #define WIFI_PLAT_NAME		"bcmdhd_wlan"
 #define WIFI_PLAT_NAME2		"bcm4329_wlan"
 #define WIFI_PLAT_EXT		"bcmdhd_wifi_platform"
-
-static DEFINE_SPINLOCK(mxwifi_lock);
 
 bool cfg_multichip = FALSE;
 bcmdhd_wifi_platdata_t *dhd_wifi_platdata = NULL;
@@ -148,34 +144,31 @@ int wifi_platform_get_irq_number(wifi_adapter_info_t *adapter, unsigned long *ir
 #ifdef ENABLE_4335BT_WAR
 bool  check_bcm4335_rev(void)
 {
-	unsigned long irqflags;
+        int ret = -1;
+        struct file *fp = NULL;
+        char *filepath = "/data/.rev";
+        char chip_rev[10]={0,};
+        bool is_revb0 = true;
 
-	int ret = -1;
-	struct file *fp = NULL;
-	char *filepath = "/data/.rev";
-	char chip_rev[10]={0,};
-	bool is_revb0 = true;
+        printk("check BCM4335, check_bcm4335_rev \n");
+        fp = filp_open(filepath, O_RDONLY, 0);
+        if (IS_ERR(fp)) {
+                pr_err("/data/.rev file open error\n");
+                is_revb0 = true;
 
-	printk("check BCM4335, check_bcm4335_rev \n");
+        } else {
+                pr_err("/data/.rev file Found\n");
+                ret = kernel_read(fp, 0, (char *)chip_rev, 9);
+                if(ret != -1 && NULL != strstr(chip_rev,"BCM4335B0")) {
+                        printk("Found BCM4335B0\n");
+                        is_revb0 = true;
+                } else {
+                        is_revb0 = false;
+                }
+                filp_close(fp, NULL);
+        }
 
-	spin_lock_irqsave(&mxwifi_lock, irqflags);
-	fp = filp_open(filepath, O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		pr_err("/data/.rev file open error\n");
-		is_revb0 = true;
-	} else {
-		pr_err("/data/.rev file Found\n");
-		ret = kernel_read(fp, 0, (char *)chip_rev, 9);
-		if(ret != -1 && NULL != strstr(chip_rev,"BCM4335B0")) {
-			printk("Found BCM4335B0\n");
-			is_revb0 = true;
-		} else {
-			is_revb0 = false;
-		}
-		filp_close(fp, NULL);
-	}
-	spin_unlock_irqrestore(&mxwifi_lock, irqflags);
-	return is_revb0;
+        return is_revb0;
 }
 #endif
 
