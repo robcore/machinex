@@ -1636,6 +1636,11 @@ dhd_set_mac_addr_handler(void *handle, void *event_info, u8 event)
 	dhd_info_t *dhd = handle;
 	dhd_if_t *ifp = event_info;
 
+#ifdef SOFTAP
+	unsigned long flags;
+	bool in_ap = FALSE;
+#endif
+
 	if (event != DHD_WQ_WORK_SET_MAC) {
 		DHD_ERROR(("%s: unexpected event \n", __FUNCTION__));
 	}
@@ -1645,12 +1650,7 @@ dhd_set_mac_addr_handler(void *handle, void *event_info, u8 event)
 		return;
 	}
 
-	dhd_net_if_lock_local(dhd);
-	DHD_OS_WAKE_LOCK(&dhd->pub);
-
 #ifdef SOFTAP
-	unsigned long flags;
-	bool in_ap = FALSE;
 	flags = dhd_os_spin_lock(&dhd->pub);
 	in_ap = (ap_net_dev != NULL);
 	dhd_os_spin_unlock(&dhd->pub, flags);
@@ -1658,9 +1658,11 @@ dhd_set_mac_addr_handler(void *handle, void *event_info, u8 event)
 	if (in_ap)  {
 		DHD_ERROR(("attempt to set MAC for %s in AP Mode, blocked. \n",
 			ifp->net->name));
-		goto done;
+		return;
 	}
 #endif
+	dhd_net_if_lock_local(dhd);
+	DHD_OS_WAKE_LOCK(&dhd->pub);
 
 	if (ifp == NULL || !dhd->pub.up) {
 		DHD_ERROR(("%s: interface info not available/down \n", __FUNCTION__));
@@ -1686,6 +1688,11 @@ dhd_set_mcast_list_handler(void *handle, void *event_info, u8 event)
 	dhd_if_t *ifp = event_info;
 	int ifidx;
 
+#ifdef SOFTAP
+	bool in_ap = FALSE;
+	unsigned long flags;
+#endif
+
 	if (event != DHD_WQ_WORK_SET_MCAST_LIST) {
 		DHD_ERROR(("%s: unexpected event \n", __FUNCTION__));
 		return;
@@ -1696,12 +1703,7 @@ dhd_set_mcast_list_handler(void *handle, void *event_info, u8 event)
 		return;
 	}
 
-	dhd_net_if_lock_local(dhd);
-	DHD_OS_WAKE_LOCK(&dhd->pub);
-
 #ifdef SOFTAP
-	bool in_ap = FALSE;
-	unsigned long flags;
 	flags = dhd_os_spin_lock(&dhd->pub);
 	in_ap = (ap_net_dev != NULL);
 	dhd_os_spin_unlock(&dhd->pub, flags);
@@ -1710,9 +1712,12 @@ dhd_set_mcast_list_handler(void *handle, void *event_info, u8 event)
 		DHD_ERROR(("set MULTICAST list for %s in AP Mode, blocked. \n",
 		ifp->net->name));
 		ifp->set_multicast = FALSE;
-		goto done;
+		return;
 	}
 #endif
+
+	dhd_net_if_lock_local(dhd);
+	DHD_OS_WAKE_LOCK(&dhd->pub);
 
 	if (ifp == NULL || !dhd->pub.up) {
 		DHD_ERROR(("%s: interface info not available/down \n", __FUNCTION__));
@@ -2423,13 +2428,12 @@ dhd_watchdog_thread(void *data)
 		setScheduler(current, SCHED_FIFO, &param);
 	}
 
-	while (1) {
+	while (1)
 		if (down_interruptible (&tsk->sema) == 0) {
 			unsigned long flags;
 			unsigned long jiffies_at_start = jiffies;
 			unsigned long time_lapse;
 
-			DHD_OS_WD_WAKE_LOCK(&dhd->pub);
 			SMP_RD_BARRIER_DEPENDS();
 			if (tsk->terminated) {
 				break;
@@ -2456,10 +2460,8 @@ dhd_watchdog_thread(void *data)
 				dhd_os_spin_unlock(&dhd->pub, flags);
 			}
 			dhd_os_sdunlock(&dhd->pub);
-			DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
 		} else {
 			break;
-		}
 	}
 
 	complete_and_exit(&tsk->completed, 0);
@@ -2479,7 +2481,6 @@ static void dhd_watchdog(ulong data)
 		return;
 	}
 
-	DHD_OS_WD_WAKE_LOCK(&dhd->pub);
 	dhd_os_sdlock(&dhd->pub);
 	/* Call the bus module watchdog */
 	dhd_bus_watchdog(&dhd->pub);
@@ -2493,7 +2494,6 @@ static void dhd_watchdog(ulong data)
 		mod_timer(&dhd->timer, jiffies + msecs_to_jiffies(dhd_watchdog_ms));
 	dhd_os_spin_unlock(&dhd->pub, flags);
 	dhd_os_sdunlock(&dhd->pub);
-	DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
 }
 
 #ifdef ENABLE_ADAPTIVE_SCHED
@@ -2509,7 +2509,7 @@ dhd_sched_policy(int prio)
 	} else {
 		if (get_scheduler_policy(current) != SCHED_FIFO) {
 			param.sched_priority = (prio < MAX_RT_PRIO)? prio : (MAX_RT_PRIO-1);
-			setScheduler(current, SCHED_FIFO, &param);
+			setScheduler(current, dhd_dpc_poli, &param);
 		}
 	}
 }
@@ -2775,8 +2775,12 @@ dhd_dpc(ulong data)
 	if (dhd->pub.busstate != DHD_BUS_DOWN) {
 		if (dhd_bus_dpc(dhd->pub.bus))
 			tasklet_schedule(&dhd->tasklet);
-	} else
+		else
+			DHD_OS_WAKE_UNLOCK(&dhd->pub);
+	} else {
 		dhd_bus_stop(dhd->pub.bus, TRUE);
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+	}
 }
 
 void
@@ -2784,8 +2788,8 @@ dhd_sched_dpc(dhd_pub_t *dhdp)
 {
 	dhd_info_t *dhd = (dhd_info_t *)dhdp->info;
 
+	DHD_OS_WAKE_LOCK(dhdp);
 	if (dhd->thr_dpc_ctl.thr_pid >= 0) {
-		DHD_OS_WAKE_LOCK(dhdp);
 		/* If the semaphore does not get up,
 		* wake unlock should be done here
 		*/
@@ -3184,8 +3188,8 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	if (dhd->pub.hang_was_sent) {
 		DHD_ERROR(("%s: HANG was sent up earlier\n", __FUNCTION__));
 		DHD_OS_WAKE_LOCK_CTRL_TIMEOUT_ENABLE(&dhd->pub, DHD_EVENT_TIMEOUT_MS);
-		ret = BCME_DONGLE_DOWN;
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return OSL_ERROR(BCME_DONGLE_DOWN);
 	}
 
 	ifidx = dhd_net2idx(dhd, net);
@@ -3193,8 +3197,8 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 
 	if (ifidx == DHD_BAD_IF) {
 		DHD_ERROR(("%s: BAD IF\n", __FUNCTION__));
-		ret = -1;
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return -1;
 	}
 
 #if defined(WL_WIRELESS_EXT)
@@ -3202,26 +3206,29 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	if ((cmd >= SIOCIWFIRST) && (cmd <= SIOCIWLAST)) {
 		/* may recurse, do NOT lock */
 		ret = wl_iw_ioctl(net, ifr, cmd);
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return ret;
 	}
 #endif /* defined(WL_WIRELESS_EXT) */
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 4, 2)
 	if (cmd == SIOCETHTOOL) {
 		ret = dhd_ethtool(dhd, (void*)ifr->ifr_data);
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return ret;
 	}
 #endif /* LINUX_VERSION_CODE > KERNEL_VERSION(2, 4, 2) */
 
 	if (cmd == SIOCDEVPRIVATE+1) {
 		ret = wl_android_priv_cmd(net, ifr, cmd);
 		dhd_check_hang(net, &dhd->pub, ret);
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return ret;
 	}
 
 	if (cmd != SIOCDEVPRIVATE) {
-		ret = -EOPNOTSUPP;
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return -EOPNOTSUPP;
 	}
 
 	memset(&ioc, 0, sizeof(ioc));
@@ -3230,7 +3237,7 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	if (is_compat_task()) {
 		compat_wl_ioctl_t compat_ioc;
 		if (copy_from_user(&compat_ioc, ifr->ifr_data, sizeof(compat_wl_ioctl_t))) {
-			ret = BCME_BADADDR;
+			bcmerror = BCME_BADADDR;
 			goto done;
 		}
 		ioc.cmd = compat_ioc.cmd;
@@ -3242,7 +3249,7 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 		/* To differentiate between wl and dhd read 4 more byes */
 		if ((copy_from_user(&ioc.driver, (char *)ifr->ifr_data + sizeof(compat_wl_ioctl_t),
 			sizeof(uint)) != 0)) {
-			ret = BCME_BADADDR;
+			bcmerror = BCME_BADADDR;
 			goto done;
 		}
 	} else
@@ -3250,51 +3257,50 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	{
 		/* Copy the ioc control structure part of ioctl request */
 		if (copy_from_user(&ioc, ifr->ifr_data, sizeof(wl_ioctl_t))) {
-			ret = BCME_BADADDR;
+			bcmerror = BCME_BADADDR;
 			goto done;
 		}
 
 		/* To differentiate between wl and dhd read 4 more byes */
 		if ((copy_from_user(&ioc.driver, (char *)ifr->ifr_data + sizeof(wl_ioctl_t),
 			sizeof(uint)) != 0)) {
-			ret = BCME_BADADDR;
+			bcmerror = BCME_BADADDR;
 			goto done;
 		}
 	}
 
 	if (!capable(CAP_NET_ADMIN)) {
-		ret = BCME_EPERM;
+		bcmerror = BCME_EPERM;
 		goto done;
 	}
 
 	if (ioc.len > 0) {
 		buflen = MIN(ioc.len, DHD_IOCTL_MAXLEN);
 		if (!(local_buf = MALLOC(dhd->pub.osh, buflen+1))) {
-			ret = BCME_NOMEM;
+			bcmerror = BCME_NOMEM;
 			goto done;
 		}
 		if (copy_from_user(local_buf, ioc.buf, buflen)) {
-			ret = BCME_BADADDR;
+			bcmerror = BCME_BADADDR;
 			goto done;
 		}
 		*(char *)(local_buf + buflen) = '\0';
 	}
 
-	ret = dhd_ioctl_process(&dhd->pub, ifidx, &ioc, local_buf);
+	bcmerror = dhd_ioctl_process(&dhd->pub, ifidx, &ioc, local_buf);
 
-	if (!ret && buflen && local_buf && ioc.buf) {
+	if (!bcmerror && buflen && local_buf && ioc.buf) {
 		if (copy_to_user(ioc.buf, local_buf, buflen))
-			ret = -EFAULT;
+			bcmerror = -EFAULT;
 	}
 
 done:
 	if (local_buf)
 		MFREE(dhd->pub.osh, local_buf, buflen+1);
 
-exit:
 	DHD_OS_WAKE_UNLOCK(&dhd->pub);
 
-	return OSL_ERROR(ret);
+	return OSL_ERROR(bcmerror);
 }
 
 #if defined(WL_CFG80211) && defined(SUPPORT_DEEP_SLEEP)
@@ -6259,7 +6265,6 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		return;
 	}
 
-	DHD_OS_WD_WAKE_LOCK(pub);
 	flags = dhd_os_spin_lock(pub);
 
 	/* don't start the wd until fw is loaded */
@@ -6287,7 +6292,6 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		dhd->wd_timer_valid = TRUE;
 	}
 	dhd_os_spin_unlock(pub, flags);
-	DHD_OS_WD_WAKE_UNLOCK(pub);
 }
 
 void *
