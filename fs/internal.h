@@ -61,6 +61,10 @@ extern void __init mnt_init(void);
 
 extern struct lglock vfsmount_lock;
 
+extern int __mnt_want_write(struct vfsmount *);
+extern int __mnt_want_write_file(struct file *);
+extern void __mnt_drop_write(struct vfsmount *);
+extern void __mnt_drop_write_file(struct file *);
 
 /*
  * fs_struct.c
@@ -123,3 +127,8 @@ extern struct dentry *__d_alloc(struct super_block *, const struct qstr *);
  * read_write.c
  */
 extern ssize_t __kernel_write(struct file *, const char *, size_t, loff_t *);
+
+/*
+ * pipe.c
+ */
+extern const struct file_operations pipefifo_fops;

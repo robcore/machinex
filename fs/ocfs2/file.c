@@ -1953,6 +1953,7 @@ int ocfs2_change_file_space(struct file *file, unsigned int cmd,
 {
 	struct inode *inode = file_inode(file);
 	struct ocfs2_super *osb = OCFS2_SB(inode->i_sb);
+	int ret;
 
 	if ((cmd == OCFS2_IOC_RESVSP || cmd == OCFS2_IOC_RESVSP64) &&
 	    !ocfs2_writes_unwritten_extents(osb))
@@ -1967,7 +1968,12 @@ int ocfs2_change_file_space(struct file *file, unsigned int cmd,
 	if (!(file->f_mode & FMODE_WRITE))
 		return -EBADF;
 
-	return __ocfs2_change_file_space(file, inode, file->f_pos, cmd, sr, 0);
+	ret = mnt_want_write_file(file);
+	if (ret)
+		return ret;
+	ret = __ocfs2_change_file_space(file, inode, file->f_pos, cmd, sr, 0);
+	mnt_drop_write_file(file);
+	return ret;
 }
 
 static long ocfs2_fallocate(struct file *file, int mode, loff_t offset,
@@ -2243,8 +2249,6 @@ static ssize_t ocfs2_file_aio_write(struct kiocb *iocb,
 	if (iocb->ki_left == 0)
 		return 0;
 
-	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
-
 	appending = file->f_flags & O_APPEND ? 1 : 0;
 	direct_io = file->f_flags & O_DIRECT ? 1 : 0;
 
@@ -2472,8 +2476,7 @@ static ssize_t ocfs2_file_splice_write(struct pipe_inode_info *pipe,
 	sd.total_len = len;
 	sd.pos = *ppos;
 
-	if (pipe->inode)
-		mutex_lock_nested(&pipe->inode->i_mutex, I_MUTEX_PARENT);
+	pipe_lock(pipe);
 
 	splice_from_pipe_begin(&sd);
 	do {
@@ -2493,8 +2496,7 @@ static ssize_t ocfs2_file_splice_write(struct pipe_inode_info *pipe,
 	} while (ret > 0);
 	splice_from_pipe_end(pipe, &sd);
 
-	if (pipe->inode)
-		mutex_unlock(&pipe->inode->i_mutex);
+	pipe_unlock(pipe);
 
 	if (sd.num_spliced)
 		ret = sd.num_spliced;

@@ -25,6 +25,8 @@
 #include <asm/uaccess.h>
 #include <asm/ioctls.h>
 
+#include "internal.h"
+
 /*
  * The max size that a non-root user is allowed to grow the pipe. Can
  * be set by root in /proc/sys/fs/pipe-max-size
@@ -43,10 +45,10 @@ unsigned long pipe_user_pages_hard;
 unsigned long pipe_user_pages_soft = PIPE_DEF_BUFFERS * INR_OPEN_CUR;
 
 /*
- * We use a start+len construction, which provides full use of the 
+ * We use a start+len construction, which provides full use of the
  * allocated memory.
  * -- Florian Coosmann (FGC)
- * 
+ *
  * Reads with count = 0 should always return 0.
  * -- Julian Bradfield 1999-06-07.
  *
@@ -59,8 +61,8 @@ unsigned long pipe_user_pages_soft = PIPE_DEF_BUFFERS * INR_OPEN_CUR;
 
 static void pipe_lock_nested(struct pipe_inode_info *pipe, int subclass)
 {
-	if (pipe->inode)
-		mutex_lock_nested(&pipe->inode->i_mutex, subclass);
+	if (pipe->files)
+		mutex_lock_nested(&pipe->mutex, subclass);
 }
 
 void pipe_lock(struct pipe_inode_info *pipe)
@@ -74,10 +76,20 @@ EXPORT_SYMBOL(pipe_lock);
 
 void pipe_unlock(struct pipe_inode_info *pipe)
 {
-	if (pipe->inode)
-		mutex_unlock(&pipe->inode->i_mutex);
+	if (pipe->files)
+		mutex_unlock(&pipe->mutex);
 }
 EXPORT_SYMBOL(pipe_unlock);
+
+static inline void __pipe_lock(struct pipe_inode_info *pipe)
+{
+	mutex_lock_nested(&pipe->mutex, I_MUTEX_PARENT);
+}
+
+static inline void __pipe_unlock(struct pipe_inode_info *pipe)
+{
+	mutex_unlock(&pipe->mutex);
+}
 
 void pipe_double_lock(struct pipe_inode_info *pipe1,
 		      struct pipe_inode_info *pipe2)
@@ -371,8 +383,7 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 	   unsigned long nr_segs, loff_t pos)
 {
 	struct file *filp = iocb->ki_filp;
-	struct inode *inode = file_inode(filp);
-	struct pipe_inode_info *pipe;
+	struct pipe_inode_info *pipe = filp->private_data;
 	int do_wakeup;
 	ssize_t ret;
 	struct iovec *iov = (struct iovec *)_iov;
@@ -385,8 +396,7 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 
 	do_wakeup = 0;
 	ret = 0;
-	mutex_lock(&inode->i_mutex);
-	pipe = inode->i_pipe;
+	__pipe_lock(pipe);
 	for (;;) {
 		int bufs = pipe->nrbufs;
 		if (bufs) {
@@ -478,7 +488,7 @@ redo:
 		}
 		pipe_wait(pipe);
 	}
-	mutex_unlock(&inode->i_mutex);
+	__pipe_unlock(pipe);
 
 	/* Signal writers asynchronously that there is more room. */
 	if (do_wakeup) {
@@ -500,8 +510,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 	    unsigned long nr_segs, loff_t ppos)
 {
 	struct file *filp = iocb->ki_filp;
-	struct inode *inode = file_inode(filp);
-	struct pipe_inode_info *pipe;
+	struct pipe_inode_info *pipe = filp->private_data;
 	ssize_t ret;
 	int do_wakeup;
 	struct iovec *iov = (struct iovec *)_iov;
@@ -515,8 +524,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 
 	do_wakeup = 0;
 	ret = 0;
-	mutex_lock(&inode->i_mutex);
-	pipe = inode->i_pipe;
+	__pipe_lock(pipe);
 
 	if (!pipe->readers) {
 		send_sig(SIGPIPE, current, 0);
@@ -667,7 +675,7 @@ redo2:
 		pipe->waiting_writers--;
 	}
 out:
-	mutex_unlock(&inode->i_mutex);
+	__pipe_unlock(pipe);
 	if (do_wakeup) {
 		wake_up_interruptible_sync_poll(&pipe->wait, POLLIN | POLLRDNORM);
 		kill_fasync(&pipe->fasync_readers, SIGIO, POLL_IN);
@@ -680,29 +688,14 @@ out:
 	return ret;
 }
 
-static ssize_t
-bad_pipe_r(struct file *filp, char __user *buf, size_t count, loff_t *ppos)
-{
-	return -EBADF;
-}
-
-static ssize_t
-bad_pipe_w(struct file *filp, const char __user *buf, size_t count,
-	   loff_t *ppos)
-{
-	return -EBADF;
-}
-
 static long pipe_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	struct inode *inode = file_inode(filp);
-	struct pipe_inode_info *pipe;
+	struct pipe_inode_info *pipe = filp->private_data;
 	int count, buf, nrbufs;
 
 	switch (cmd) {
 		case FIONREAD:
-			mutex_lock(&inode->i_mutex);
-			pipe = inode->i_pipe;
+			__pipe_lock(pipe);
 			count = 0;
 			buf = pipe->curbuf;
 			nrbufs = pipe->nrbufs;
@@ -710,7 +703,7 @@ static long pipe_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				count += pipe->bufs[buf].len;
 				buf = (buf+1) & (pipe->buffers - 1);
 			}
-			mutex_unlock(&inode->i_mutex);
+			__pipe_unlock(pipe);
 
 			return put_user(count, (int __user *)arg);
 		default:
@@ -723,8 +716,7 @@ static unsigned int
 pipe_poll(struct file *filp, poll_table *wait)
 {
 	unsigned int mask;
-	struct inode *inode = file_inode(filp);
-	struct pipe_inode_info *pipe = inode->i_pipe;
+	struct pipe_inode_info *pipe = filp->private_data;
 	int nrbufs;
 
 	poll_wait(filp, &pipe->wait, wait);
@@ -752,201 +744,54 @@ pipe_poll(struct file *filp, poll_table *wait)
 }
 
 static int
-pipe_release(struct inode *inode, int decr, int decw)
+pipe_release(struct inode *inode, struct file *file)
 {
-	struct pipe_inode_info *pipe;
+	struct pipe_inode_info *pipe = inode->i_pipe;
+	int kill = 0;
 
-	mutex_lock(&inode->i_mutex);
-	pipe = inode->i_pipe;
-	pipe->readers -= decr;
-	pipe->writers -= decw;
+	__pipe_lock(pipe);
+	if (file->f_mode & FMODE_READ)
+		pipe->readers--;
+	if (file->f_mode & FMODE_WRITE)
+		pipe->writers--;
 
-	if (!pipe->readers && !pipe->writers) {
-		free_pipe_info(inode);
-	} else {
+	if (pipe->readers || pipe->writers) {
 		wake_up_interruptible_sync_poll(&pipe->wait, POLLIN | POLLOUT | POLLRDNORM | POLLWRNORM | POLLERR | POLLHUP);
 		kill_fasync(&pipe->fasync_readers, SIGIO, POLL_IN);
 		kill_fasync(&pipe->fasync_writers, SIGIO, POLL_OUT);
 	}
-	mutex_unlock(&inode->i_mutex);
+	spin_lock(&inode->i_lock);
+	if (!--pipe->files) {
+		inode->i_pipe = NULL;
+		kill = 1;
+	}
+	spin_unlock(&inode->i_lock);
+	__pipe_unlock(pipe);
+
+	if (kill)
+		free_pipe_info(pipe);
 
 	return 0;
 }
 
 static int
-pipe_read_fasync(int fd, struct file *filp, int on)
+pipe_fasync(int fd, struct file *filp, int on)
 {
-	struct inode *inode = file_inode(filp);
-	int retval;
+	struct pipe_inode_info *pipe = filp->private_data;
+	int retval = 0;
 
-	mutex_lock(&inode->i_mutex);
-	retval = fasync_helper(fd, filp, on, &inode->i_pipe->fasync_readers);
-	mutex_unlock(&inode->i_mutex);
-
-	return retval;
-}
-
-
-static int
-pipe_write_fasync(int fd, struct file *filp, int on)
-{
-	struct inode *inode = file_inode(filp);
-	int retval;
-
-	mutex_lock(&inode->i_mutex);
-	retval = fasync_helper(fd, filp, on, &inode->i_pipe->fasync_writers);
-	mutex_unlock(&inode->i_mutex);
-
-	return retval;
-}
-
-
-static int
-pipe_rdwr_fasync(int fd, struct file *filp, int on)
-{
-	struct inode *inode = file_inode(filp);
-	struct pipe_inode_info *pipe = inode->i_pipe;
-	int retval;
-
-	mutex_lock(&inode->i_mutex);
-	retval = fasync_helper(fd, filp, on, &pipe->fasync_readers);
-	if (retval >= 0) {
+	__pipe_lock(pipe);
+	if (filp->f_mode & FMODE_READ)
+		retval = fasync_helper(fd, filp, on, &pipe->fasync_readers);
+	if ((filp->f_mode & FMODE_WRITE) && retval >= 0) {
 		retval = fasync_helper(fd, filp, on, &pipe->fasync_writers);
-		if (retval < 0) /* this can happen only if on == T */
+		if (retval < 0 && (filp->f_mode & FMODE_READ))
+			/* this can happen only if on == T */
 			fasync_helper(-1, filp, 0, &pipe->fasync_readers);
 	}
-	mutex_unlock(&inode->i_mutex);
+	__pipe_unlock(pipe);
 	return retval;
 }
-
-
-static int
-pipe_read_release(struct inode *inode, struct file *filp)
-{
-	return pipe_release(inode, 1, 0);
-}
-
-static int
-pipe_write_release(struct inode *inode, struct file *filp)
-{
-	return pipe_release(inode, 0, 1);
-}
-
-static int
-pipe_rdwr_release(struct inode *inode, struct file *filp)
-{
-	int decr, decw;
-
-	decr = (filp->f_mode & FMODE_READ) != 0;
-	decw = (filp->f_mode & FMODE_WRITE) != 0;
-	return pipe_release(inode, decr, decw);
-}
-
-static int
-pipe_read_open(struct inode *inode, struct file *filp)
-{
-	int ret = -ENOENT;
-
-	if (!(filp->f_mode & (FMODE_READ|FMODE_WRITE)))
-		return -EINVAL;
-
-	mutex_lock(&inode->i_mutex);
-
-	if (inode->i_pipe) {
-		ret = 0;
-		inode->i_pipe->readers++;
-	}
-
-	mutex_unlock(&inode->i_mutex);
-
-	return ret;
-}
-
-static int
-pipe_write_open(struct inode *inode, struct file *filp)
-{
-	int ret = -ENOENT;
-
-	if (!(filp->f_mode & (FMODE_READ|FMODE_WRITE)))
-		return -EINVAL;
-
-	mutex_lock(&inode->i_mutex);
-
-	if (inode->i_pipe) {
-		ret = 0;
-		inode->i_pipe->writers++;
-	}
-
-	mutex_unlock(&inode->i_mutex);
-
-	return ret;
-}
-
-static int
-pipe_rdwr_open(struct inode *inode, struct file *filp)
-{
-	int ret = -ENOENT;
-
-	if (!(filp->f_mode & (FMODE_READ|FMODE_WRITE)))
-		return -EINVAL;
-
-	mutex_lock(&inode->i_mutex);
-
-	if (inode->i_pipe) {
-		ret = 0;
-		if (filp->f_mode & FMODE_READ)
-			inode->i_pipe->readers++;
-		if (filp->f_mode & FMODE_WRITE)
-			inode->i_pipe->writers++;
-	}
-
-	mutex_unlock(&inode->i_mutex);
-
-	return ret;
-}
-
-/*
- * The file_operations structs are not static because they
- * are also used in linux/fs/fifo.c to do operations on FIFOs.
- *
- * Pipes reuse fifos' file_operations structs.
- */
-const struct file_operations read_pipefifo_fops = {
-	.llseek		= no_llseek,
-	.read		= do_sync_read,
-	.aio_read	= pipe_read,
-	.write		= bad_pipe_w,
-	.poll		= pipe_poll,
-	.unlocked_ioctl	= pipe_ioctl,
-	.open		= pipe_read_open,
-	.release	= pipe_read_release,
-	.fasync		= pipe_read_fasync,
-};
-
-const struct file_operations write_pipefifo_fops = {
-	.llseek		= no_llseek,
-	.read		= bad_pipe_r,
-	.write		= do_sync_write,
-	.aio_write	= pipe_write,
-	.poll		= pipe_poll,
-	.unlocked_ioctl	= pipe_ioctl,
-	.open		= pipe_write_open,
-	.release	= pipe_write_release,
-	.fasync		= pipe_write_fasync,
-};
-
-const struct file_operations rdwr_pipefifo_fops = {
-	.llseek		= no_llseek,
-	.read		= do_sync_read,
-	.aio_read	= pipe_read,
-	.write		= do_sync_write,
-	.aio_write	= pipe_write,
-	.poll		= pipe_poll,
-	.unlocked_ioctl	= pipe_ioctl,
-	.open		= pipe_rdwr_open,
-	.release	= pipe_rdwr_release,
-	.fasync		= pipe_rdwr_fasync,
-};
 
 static void account_pipe_buffers(struct pipe_inode_info *pipe,
                                  unsigned long old, unsigned long new)
@@ -966,7 +811,7 @@ static bool too_many_pipe_buffers_hard(struct user_struct *user)
 	       atomic_long_read(&user->pipe_bufs) >= pipe_user_pages_hard;
 }
 
-struct pipe_inode_info * alloc_pipe_info(struct inode *inode)
+struct pipe_inode_info *alloc_pipe_info(void)
 {
 	struct pipe_inode_info *pipe;
 
@@ -984,10 +829,10 @@ struct pipe_inode_info * alloc_pipe_info(struct inode *inode)
 		if (pipe->bufs) {
 			init_waitqueue_head(&pipe->wait);
 			pipe->r_counter = pipe->w_counter = 1;
-			pipe->inode = inode;
 			pipe->buffers = pipe_bufs;
 			pipe->user = user;
 			account_pipe_buffers(pipe, 0, pipe_bufs);
+			mutex_init(&pipe->mutex);
 			return pipe;
 		}
 		free_uid(user);
@@ -997,7 +842,7 @@ struct pipe_inode_info * alloc_pipe_info(struct inode *inode)
 	return NULL;
 }
 
-void __free_pipe_info(struct pipe_inode_info *pipe)
+void free_pipe_info(struct pipe_inode_info *pipe)
 {
 	int i;
 
@@ -1012,12 +857,6 @@ void __free_pipe_info(struct pipe_inode_info *pipe)
 		__free_page(pipe->tmp_page);
 	kfree(pipe->bufs);
 	kfree(pipe);
-}
-
-void free_pipe_info(struct inode *inode)
-{
-	__free_pipe_info(inode->i_pipe);
-	inode->i_pipe = NULL;
 }
 
 static struct vfsmount *pipe_mnt __read_mostly;
@@ -1045,13 +884,14 @@ static struct inode * get_pipe_inode(void)
 
 	inode->i_ino = get_next_ino();
 
-	pipe = alloc_pipe_info(inode);
+	pipe = alloc_pipe_info();
 	if (!pipe)
 		goto fail_iput;
-	inode->i_pipe = pipe;
 
+	inode->i_pipe = pipe;
+	pipe->files = 2;
 	pipe->readers = pipe->writers = 1;
-	inode->i_fop = &rdwr_pipefifo_fops;
+	inode->i_fop = &pipefifo_fops;
 
 	/*
 	 * Mark the inode dirty from the very beginning,
@@ -1094,17 +934,19 @@ int create_pipe_files(struct file **res, int flags)
 	d_instantiate(path.dentry, inode);
 
 	err = -ENFILE;
-	f = alloc_file(&path, FMODE_WRITE, &write_pipefifo_fops);
+	f = alloc_file(&path, FMODE_WRITE, &pipefifo_fops);
 	if (IS_ERR(f))
 		goto err_dentry;
 
 	f->f_flags = O_WRONLY | (flags & (O_NONBLOCK | O_DIRECT));
+	f->private_data = inode->i_pipe;
 
-	res[0] = alloc_file(&path, FMODE_READ, &read_pipefifo_fops);
+	res[0] = alloc_file(&path, FMODE_READ, &pipefifo_fops);
 	if (IS_ERR(res[0]))
 		goto err_file;
 
 	path_get(&path);
+	res[0]->private_data = inode->i_pipe;
 	res[0]->f_flags = O_RDONLY | (flags & O_NONBLOCK);
 	res[1] = f;
 	return 0;
@@ -1112,12 +954,12 @@ int create_pipe_files(struct file **res, int flags)
 err_file:
 	put_filp(f);
 err_dentry:
-	free_pipe_info(inode);
+	free_pipe_info(inode->i_pipe);
 	path_put(&path);
 	return err;
 
 err_inode:
-	free_pipe_info(inode);
+	free_pipe_info(inode->i_pipe);
 	iput(inode);
 	return err;
 }
@@ -1198,6 +1040,306 @@ SYSCALL_DEFINE1(pipe, int __user *, fildes)
 {
 	return sys_pipe2(fildes, 0);
 }
+
+static int wait_for_partner(struct pipe_inode_info *pipe, unsigned int *cnt)
+{
+	int cur = *cnt;
+
+	while (cur == *cnt) {
+		pipe_wait(pipe);
+		if (signal_pending(current))
+			break;
+	}
+	return cur == *cnt ? -ERESTARTSYS : 0;
+}
+
+static void wake_up_partner(struct pipe_inode_info *pipe)
+{
+	wake_up_interruptible(&pipe->wait);
+}
+
+static int fifo_open(struct inode *inode, struct file *filp)
+{
+	struct pipe_inode_info *pipe;
+	bool is_pipe = inode->i_sb->s_magic == PIPEFS_MAGIC;
+	int kill = 0;
+	int ret;
+
+	filp->f_version = 0;
+
+	spin_lock(&inode->i_lock);
+	if (inode->i_pipe) {
+		pipe = inode->i_pipe;
+		pipe->files++;
+		spin_unlock(&inode->i_lock);
+	} else {
+		spin_unlock(&inode->i_lock);
+		pipe = alloc_pipe_info();
+		if (!pipe)
+			return -ENOMEM;
+		pipe->files = 1;
+		spin_lock(&inode->i_lock);
+		if (unlikely(inode->i_pipe)) {
+			inode->i_pipe->files++;
+			spin_unlock(&inode->i_lock);
+			free_pipe_info(pipe);
+			pipe = inode->i_pipe;
+		} else {
+			inode->i_pipe = pipe;
+			spin_unlock(&inode->i_lock);
+		}
+	}
+	filp->private_data = pipe;
+	/* OK, we have a pipe and it's pinned down */
+
+	__pipe_lock(pipe);
+
+	/* We can only do regular read/write on fifos */
+	filp->f_mode &= (FMODE_READ | FMODE_WRITE);
+
+	switch (filp->f_mode) {
+	case FMODE_READ:
+	/*
+	 *  O_RDONLY
+	 *  POSIX.1 says that O_NONBLOCK means return with the FIFO
+	 *  opened, even when there is no process writing the FIFO.
+	 */
+		pipe->r_counter++;
+		if (pipe->readers++ == 0)
+			wake_up_partner(pipe);
+
+		if (!is_pipe && !pipe->writers) {
+			if ((filp->f_flags & O_NONBLOCK)) {
+				/* suppress POLLHUP until we have
+				 * seen a writer */
+				filp->f_version = pipe->w_counter;
+			} else {
+				if (wait_for_partner(pipe, &pipe->w_counter))
+					goto err_rd;
+			}
+		}
+		break;
+
+	case FMODE_WRITE:
+	/*
+	 *  O_WRONLY
+	 *  POSIX.1 says that O_NONBLOCK means return -1 with
+	 *  errno=ENXIO when there is no process reading the FIFO.
+	 */
+		ret = -ENXIO;
+		if (!is_pipe && (filp->f_flags & O_NONBLOCK) && !pipe->readers)
+			goto err;
+
+		pipe->w_counter++;
+		if (!pipe->writers++)
+			wake_up_partner(pipe);
+
+		if (!is_pipe && !pipe->readers) {
+			if (wait_for_partner(pipe, &pipe->r_counter))
+				goto err_wr;
+		}
+		break;
+
+	case FMODE_READ | FMODE_WRITE:
+	/*
+	 *  O_RDWR
+	 *  POSIX.1 leaves this case "undefined" when O_NONBLOCK is set.
+	 *  This implementation will NEVER block on a O_RDWR open, since
+	 *  the process can at least talk to itself.
+	 */
+
+		pipe->readers++;
+		pipe->writers++;
+		pipe->r_counter++;
+		pipe->w_counter++;
+		if (pipe->readers == 1 || pipe->writers == 1)
+			wake_up_partner(pipe);
+		break;
+
+	default:
+		ret = -EINVAL;
+		goto err;
+	}
+
+	/* Ok! */
+	__pipe_unlock(pipe);
+	return 0;
+
+err_rd:
+	if (!--pipe->readers)
+		wake_up_interruptible(&pipe->wait);
+	ret = -ERESTARTSYS;
+	goto err;
+
+err_wr:
+	if (!--pipe->writers)
+		wake_up_interruptible(&pipe->wait);
+	ret = -ERESTARTSYS;
+	goto err;
+
+err:
+	spin_lock(&inode->i_lock);
+	if (!--pipe->files) {
+		inode->i_pipe = NULL;
+		kill = 1;
+	}
+	spin_unlock(&inode->i_lock);
+	__pipe_unlock(pipe);
+	if (kill)
+		free_pipe_info(pipe);
+	return ret;
+}
+
+const struct file_operations pipefifo_fops = {
+	.open		= fifo_open,
+	.llseek		= no_llseek,
+	.read		= do_sync_read,
+	.aio_read	= pipe_read,
+	.write		= do_sync_write,
+	.aio_write	= pipe_write,
+	.poll		= pipe_poll,
+	.unlocked_ioctl	= pipe_ioctl,
+	.release	= pipe_release,
+	.fasync		= pipe_fasync,
+};
+
+static int wait_for_partner(struct pipe_inode_info *pipe, unsigned int *cnt)
+{
+	int cur = *cnt;	
+
+	while (cur == *cnt) {
+		pipe_wait(pipe);
+		if (signal_pending(current))
+			break;
+	}
+	return cur == *cnt ? -ERESTARTSYS : 0;
+}
+
+static void wake_up_partner(struct pipe_inode_info *pipe)
+{
+	wake_up_interruptible(&pipe->wait);
+}
+
+static int fifo_open(struct inode *inode, struct file *filp)
+{
+	struct pipe_inode_info *pipe;
+	int ret;
+
+	mutex_lock(&inode->i_mutex);
+	pipe = inode->i_pipe;
+	if (!pipe) {
+		ret = -ENOMEM;
+		pipe = alloc_pipe_info(inode);
+		if (!pipe)
+			goto err_nocleanup;
+		inode->i_pipe = pipe;
+	}
+	filp->f_version = 0;
+
+	/* We can only do regular read/write on fifos */
+	filp->f_mode &= (FMODE_READ | FMODE_WRITE);
+
+	switch (filp->f_mode) {
+	case FMODE_READ:
+	/*
+	 *  O_RDONLY
+	 *  POSIX.1 says that O_NONBLOCK means return with the FIFO
+	 *  opened, even when there is no process writing the FIFO.
+	 */
+		filp->f_op = &read_pipefifo_fops;
+		pipe->r_counter++;
+		if (pipe->readers++ == 0)
+			wake_up_partner(pipe);
+
+		if (!pipe->writers) {
+			if ((filp->f_flags & O_NONBLOCK)) {
+				/* suppress POLLHUP until we have
+				 * seen a writer */
+				filp->f_version = pipe->w_counter;
+			} else {
+				if (wait_for_partner(pipe, &pipe->w_counter))
+					goto err_rd;
+			}
+		}
+		break;
+	
+	case FMODE_WRITE:
+	/*
+	 *  O_WRONLY
+	 *  POSIX.1 says that O_NONBLOCK means return -1 with
+	 *  errno=ENXIO when there is no process reading the FIFO.
+	 */
+		ret = -ENXIO;
+		if ((filp->f_flags & O_NONBLOCK) && !pipe->readers)
+			goto err;
+
+		filp->f_op = &write_pipefifo_fops;
+		pipe->w_counter++;
+		if (!pipe->writers++)
+			wake_up_partner(inode);
+
+		if (!pipe->readers) {
+			if (wait_for_partner(inode, &pipe->r_counter))
+				goto err_wr;
+		}
+		break;
+	
+	case FMODE_READ | FMODE_WRITE:
+	/*
+	 *  O_RDWR
+	 *  POSIX.1 leaves this case "undefined" when O_NONBLOCK is set.
+	 *  This implementation will NEVER block on a O_RDWR open, since
+	 *  the process can at least talk to itself.
+	 */
+		filp->f_op = &rdwr_pipefifo_fops;
+
+		pipe->readers++;
+		pipe->writers++;
+		pipe->r_counter++;
+		pipe->w_counter++;
+		if (pipe->readers == 1 || pipe->writers == 1)
+			wake_up_partner(pipe);
+		break;
+
+	default:
+		ret = -EINVAL;
+		goto err;
+	}
+
+	/* Ok! */
+	mutex_unlock(&inode->i_mutex);
+	return 0;
+
+err_rd:
+	if (!--pipe->readers)
+		wake_up_interruptible(&pipe->wait);
+	ret = -ERESTARTSYS;
+	goto err;
+
+err_wr:
+	if (!--pipe->writers)
+		wake_up_interruptible(&pipe->wait);
+	ret = -ERESTARTSYS;
+	goto err;
+
+err:
+	if (!pipe->readers && !pipe->writers)
+		free_pipe_info(inode);
+
+err_nocleanup:
+	mutex_unlock(&inode->i_mutex);
+	return ret;
+}
+
+/*
+ * Dummy default file-operations: the only thing this does
+ * is contain the open that then fills in the correct operations
+ * depending on the access mode of the file...
+ */
+const struct file_operations def_fifo_fops = {
+	.open		= fifo_open,	/* will set read_ or write_pipefifo_fops */
+	.llseek		= noop_llseek,
+};
 
 /*
  * Allocate a new array of pipe buffers and copy the info over. Returns the
@@ -1285,9 +1427,7 @@ int pipe_proc_fn(struct ctl_table *table, int write, void __user *buf,
  */
 struct pipe_inode_info *get_pipe_info(struct file *file)
 {
-	struct inode *i = file_inode(file);
-
-	return S_ISFIFO(i->i_mode) ? i->i_pipe : NULL;
+	return file->f_op == &pipefifo_fops ? file->private_data : NULL;
 }
 
 long pipe_fcntl(struct file *file, unsigned int cmd, unsigned long arg)
@@ -1299,7 +1439,7 @@ long pipe_fcntl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (!pipe)
 		return -EBADF;
 
-	mutex_lock(&pipe->inode->i_mutex);
+	__pipe_lock(pipe);
 
 	switch (cmd) {
 	case F_SETPIPE_SZ: {
@@ -1333,7 +1473,7 @@ long pipe_fcntl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 
 out:
-	mutex_unlock(&pipe->inode->i_mutex);
+	__pipe_unlock(pipe);
 	return ret;
 }
 

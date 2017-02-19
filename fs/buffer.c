@@ -2428,8 +2428,8 @@ EXPORT_SYMBOL(block_commit_write);
  * beyond EOF, then the page is guaranteed safe against truncation until we
  * unlock the page.
  *
- * Direct callers of this function should call vfs_check_frozen() so that page
- * fault does not busyloop until the fs is thawed.
+ * Direct callers of this function should protect against filesystem freezing
+ * using sb_start_write() - sb_end_write() functions.
  */
 int __block_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf,
 			 get_block_t get_block)
@@ -2493,12 +2493,9 @@ int block_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf,
 	int ret;
 	struct super_block *sb = file_inode(vma->vm_file)->i_sb;
 
-	/*
-	 * This check is racy but catches the common case. The check in
-	 * __block_page_mkwrite() is reliable.
-	 */
-	vfs_check_frozen(sb, SB_FREEZE_WRITE);
+	sb_start_pagefault(sb);
 	ret = __block_page_mkwrite(vma, vmf, get_block);
+	sb_end_pagefault(sb);
 	return block_page_mkwrite_return(ret);
 }
 EXPORT_SYMBOL(block_page_mkwrite);

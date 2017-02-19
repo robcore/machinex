@@ -220,7 +220,7 @@ ssize_t splice_to_pipe(struct pipe_inode_info *pipe,
 			page_nr++;
 			ret += buf->len;
 
-			if (pipe->inode)
+			if (pipe->files)
 				do_wakeup = 1;
 
 			if (!--spd->nr_pages)
@@ -848,7 +848,7 @@ int splice_from_pipe_feed(struct pipe_inode_info *pipe, struct splice_desc *sd,
 			ops->release(pipe, buf);
 			pipe->curbuf = (pipe->curbuf + 1) & (pipe->buffers - 1);
 			pipe->nrbufs--;
-			if (pipe->inode)
+			if (pipe->files)
 				sd->need_wakeup = true;
 		}
 
@@ -1146,7 +1146,10 @@ static long do_splice_from(struct pipe_inode_info *pipe, struct file *out,
 	else
 		splice_write = default_file_splice_write;
 
-	return splice_write(pipe, out, ppos, len, flags);
+	file_start_write(out);
+	ret = splice_write(pipe, out, ppos, len, flags);
+	file_end_write(out);
+	return ret;
 }
 
 /*
@@ -1212,7 +1215,7 @@ ssize_t splice_direct_to_actor(struct file *in, struct splice_desc *sd,
 	 */
 	pipe = current->splice_pipe;
 	if (unlikely(!pipe)) {
-		pipe = alloc_pipe_info(NULL);
+		pipe = alloc_pipe_info();
 		if (!pipe)
 			return -ENOMEM;
 

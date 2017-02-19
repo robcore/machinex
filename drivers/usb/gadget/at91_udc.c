@@ -51,7 +51,7 @@
  * full speed USB controllers, including the at91rm9200 (arm920T, with MMU),
  * at91sam926x (arm926ejs, with MMU), and several no-mmu versions.
  *
- * This driver expects the board has been wired with two GPIOs suppporting
+ * This driver expects the board has been wired with two GPIOs supporting
  * a VBUS sensing IRQ, and a D+ pullup.  (They may be omitted, but the
  * testing hasn't covered such cases.)
  *
@@ -221,7 +221,7 @@ static int proc_udc_show(struct seq_file *s, void *unused)
 
 static int proc_udc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, proc_udc_show, PDE(inode)->data);
+	return single_open(file, proc_udc_show, PDE_DATA(inode));
 }
 
 static const struct file_operations proc_ops = {
