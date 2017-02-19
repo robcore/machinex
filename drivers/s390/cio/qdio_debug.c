@@ -226,7 +226,7 @@ static int qperf_seq_open(struct inode *inode, struct file *filp)
 			   file_inode(filp)->i_private);
 }
 
-static const struct file_operations debugfs_perf_fops = {
+static struct file_operations debugfs_perf_fops = {
 	.owner	 = THIS_MODULE,
 	.open	 = qperf_seq_open,
 	.read	 = seq_read,

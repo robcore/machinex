@@ -2048,16 +2048,18 @@ int slave_configure(struct scsi_device *sdev)
 
 /* we use this macro to help us write into the buffer */
 #undef SPRINTF
-#define SPRINTF(args...) seq_printf(m, ##args)
+#define SPRINTF(args...) \
+	do { if (pos < buffer+length) pos += sprintf(pos, ## args); } while (0)
 
-static int write_info(struct Scsi_Host *host, char *buffer, int length)
+int proc_info(struct Scsi_Host *host, char *buffer,
+	      char **start, off_t offset, int length, int inout)
 {
+	char *pos = buffer;
+
 	/* if someone is sending us data, just throw it away */
-	return length;
-}
+	if (inout)
+		return length;
 
-static int show_info(struct seq_file *m, struct Scsi_Host *host)
-{
 	/* print the controller name */
 	SPRINTF("   Host scsi%d: %s\n", host->host_no, RTS51X_NAME);
 
@@ -2066,7 +2068,18 @@ static int show_info(struct seq_file *m, struct Scsi_Host *host)
 	SPRINTF("      Product: RTS51xx USB Card Reader\n");
 	SPRINTF("      Version: %s\n", DRIVER_VERSION);
 	SPRINTF("        Build: %s\n", __TIME__);
-	return 0;
+
+	/*
+	 * Calculate start of next buffer, and return value.
+	 */
+	*start = buffer + offset;
+
+	if ((pos - buffer) < offset)
+		return 0;
+	else if ((pos - buffer - offset) < length)
+		return pos - buffer - offset;
+	else
+		return length;
 }
 
 /* queue a command */
@@ -2174,8 +2187,7 @@ struct scsi_host_template rts51x_host_template = {
 	/* basic userland interface stuff */
 	.name = RTS51X_NAME,
 	.proc_name = RTS51X_NAME,
-	.show_info = show_info,
-	.write_info = write_info,
+	.proc_info = proc_info,
 	.info = rts5139_info,
 
 	/* command interface -- queued only */

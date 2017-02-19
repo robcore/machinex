@@ -1102,7 +1102,7 @@ static int rndis_proc_show(struct seq_file *m, void *v)
 static ssize_t rndis_proc_write(struct file *file, const char __user *buffer,
 				size_t count, loff_t *ppos)
 {
-	rndis_params *p = PDE_DATA(file_inode(file));
+	rndis_params *p = PDE(file_inode(file))->data;
 	u32 speed = 0;
 	int i, fl_speed = 0;
 
@@ -1146,7 +1146,7 @@ static ssize_t rndis_proc_write(struct file *file, const char __user *buffer,
 
 static int rndis_proc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, rndis_proc_show, PDE_DATA(inode));
+	return single_open(file, rndis_proc_show, PDE(inode)->data);
 }
 
 static const struct file_operations rndis_proc_fops = {

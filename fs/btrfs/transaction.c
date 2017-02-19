@@ -309,8 +309,6 @@ again:
 	if (!h)
 		return ERR_PTR(-ENOMEM);
 
-	sb_start_intwrite(root->fs_info->sb);
-
 	if (may_wait_transaction(root, type))
 		wait_current_trans(root);
 
@@ -321,7 +319,6 @@ again:
 	} while (ret == -EBUSY);
 
 	if (ret < 0) {
-		sb_end_intwrite(root->fs_info->sb);
 		kmem_cache_free(btrfs_trans_handle_cachep, h);
 		return ERR_PTR(ret);
 	}
@@ -510,8 +507,6 @@ static int __btrfs_end_transaction(struct btrfs_trans_handle *trans,
 		}
 		count++;
 	}
-
-	sb_end_intwrite(root->fs_info->sb);
 
 	if (lock && !atomic_read(&root->fs_info->open_ioctl_trans) &&
 	    should_end_transaction(trans, root)) {
@@ -1498,8 +1493,6 @@ int btrfs_commit_transaction(struct btrfs_trans_handle *trans,
 
 	put_transaction(cur_trans);
 	put_transaction(cur_trans);
-
-	sb_end_intwrite(root->fs_info->sb);
 
 	trace_btrfs_transaction_commit(root);
 

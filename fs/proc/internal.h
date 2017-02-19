@@ -16,7 +16,6 @@ struct  ctl_table_header;
 struct  mempolicy;
 
 extern struct proc_dir_entry proc_root;
-extern void proc_self_init(void);
 #ifdef CONFIG_PROC_SYSCTL
 extern int proc_sys_init(void);
 extern void sysctl_head_put(struct ctl_table_header *head);
@@ -133,15 +132,12 @@ int proc_readdir_de(struct proc_dir_entry *de, struct file *filp, void *dirent,
 		filldir_t filldir);
 
 struct pde_opener {
+	struct inode *inode;
 	struct file *file;
+	int (*release)(struct inode *, struct file *);
 	struct list_head lh;
-	int closing;
-	struct completion *c;
 };
-
-ssize_t __proc_file_read(struct file *, char __user *, size_t, loff_t *);
-extern const struct file_operations proc_file_operations;
-void proc_entry_rundown(struct proc_dir_entry *);
+void pde_users_dec(struct proc_dir_entry *pde);
 
 extern spinlock_t proc_subdir_lock;
 
@@ -190,4 +186,3 @@ int proc_setattr(struct dentry *dentry, struct iattr *attr);
 extern const struct inode_operations proc_ns_dir_inode_operations;
 extern const struct file_operations proc_ns_dir_operations;
 
-extern int proc_setup_self(struct super_block *);

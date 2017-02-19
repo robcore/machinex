@@ -370,7 +370,11 @@ static int gfs2_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 	loff_t size;
 	int ret;
 
-	sb_start_pagefault(inode->i_sb);
+	/* Wait if fs is frozen. This is racy so we check again later on
+	 * and retry if the fs has been frozen after the page lock has
+	 * been acquired
+	 */
+	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
 
 	gfs2_holder_init(ip->i_gl, LM_ST_EXCLUSIVE, 0, &gh);
 	ret = gfs2_glock_nq(&gh);
@@ -451,9 +455,14 @@ out:
 	gfs2_holder_uninit(&gh);
 	if (ret == 0) {
 		set_page_dirty(page);
-		wait_on_page_writeback(page);
+		/* This check must be post dropping of transaction lock */
+		if (inode->i_sb->s_frozen == SB_UNFROZEN) {
+			wait_on_page_writeback(page);
+		} else {
+			ret = -EAGAIN;
+			unlock_page(page);
+		}
 	}
-	sb_end_pagefault(inode->i_sb);
 	return block_page_mkwrite_return(ret);
 }
 

@@ -150,7 +150,7 @@ COMPAT_SYSCALL_DEFINE2(truncate, const char __user *, path, compat_off_t, length
 
 static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 {
-	struct inode *inode;
+	struct inode * inode;
 	struct dentry *dentry;
 	struct fd f;
 	int error;
@@ -289,10 +289,7 @@ int do_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 	if (!file->f_op->fallocate)
 		return -EOPNOTSUPP;
 
-	sb_start_write(inode->i_sb);
-	ret = file->f_op->fallocate(file, mode, offset, len);
-	sb_end_write(inode->i_sb);
-	return ret;
+	return file->f_op->fallocate(file, mode, offset, len);
 }
 
 SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
@@ -650,7 +647,7 @@ static inline int __get_file_write_access(struct inode *inode,
 		/*
 		 * Balanced in __fput()
 		 */
-		error = __mnt_want_write(mnt);
+		error = mnt_want_write(mnt);
 		if (error)
 			put_write_access(inode);
 	}

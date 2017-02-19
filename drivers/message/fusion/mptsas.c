@@ -1977,7 +1977,7 @@ done:
 static struct scsi_host_template mptsas_driver_template = {
 	.module				= THIS_MODULE,
 	.proc_name			= "mptsas",
-	.show_info			= mptscsih_show_info,
+	.proc_info			= mptscsih_proc_info,
 	.name				= "MPT SAS Host",
 	.info				= mptscsih_info,
 	.queuecommand			= mptsas_qcmd,

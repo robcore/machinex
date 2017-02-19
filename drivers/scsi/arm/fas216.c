@@ -2958,9 +2958,9 @@ void fas216_release(struct Scsi_Host *host)
 	queue_free(&info->queues.issue);
 }
 
-void fas216_print_host(FAS216_Info *info, struct seq_file *m)
+int fas216_print_host(FAS216_Info *info, char *buffer)
 {
-	seq_printf(m,
+	return sprintf(buffer,
 			"\n"
 			"Chip    : %s\n"
 			" Address: 0x%p\n"
@@ -2970,9 +2970,11 @@ void fas216_print_host(FAS216_Info *info, struct seq_file *m)
 			info->scsi.irq, info->scsi.dma);
 }
 
-void fas216_print_stats(FAS216_Info *info, struct seq_file *m)
+int fas216_print_stats(FAS216_Info *info, char *buffer)
 {
-	seq_printf(m, "\n"
+	char *p = buffer;
+
+	p += sprintf(p, "\n"
 			"Command Statistics:\n"
 			" Queued     : %u\n"
 			" Issued     : %u\n"
@@ -2989,33 +2991,38 @@ void fas216_print_stats(FAS216_Info *info, struct seq_file *m)
 			info->stats.writes,	 info->stats.miscs,
 			info->stats.disconnects, info->stats.aborts,
 			info->stats.bus_resets,	 info->stats.host_resets);
+
+	return p - buffer;
 }
 
-void fas216_print_devices(FAS216_Info *info, struct seq_file *m)
+int fas216_print_devices(FAS216_Info *info, char *buffer)
 {
 	struct fas216_device *dev;
 	struct scsi_device *scd;
+	char *p = buffer;
 
-	seq_printf(m, "Device/Lun TaggedQ       Parity   Sync\n");
+	p += sprintf(p, "Device/Lun TaggedQ       Parity   Sync\n");
 
 	shost_for_each_device(scd, info->host) {
 		dev = &info->device[scd->id];
-		seq_printf(m, "     %d/%d   ", scd->id, scd->lun);
+		p += sprintf(p, "     %d/%d   ", scd->id, scd->lun);
 		if (scd->tagged_supported)
-			seq_printf(m, "%3sabled(%3d) ",
+			p += sprintf(p, "%3sabled(%3d) ",
 				     scd->simple_tags ? "en" : "dis",
 				     scd->current_tag);
 		else
-			seq_printf(m, "unsupported   ");
+			p += sprintf(p, "unsupported   ");
 
-		seq_printf(m, "%3sabled ", dev->parity_enabled ? "en" : "dis");
+		p += sprintf(p, "%3sabled ", dev->parity_enabled ? "en" : "dis");
 
 		if (dev->sof)
-			seq_printf(m, "offset %d, %d ns\n",
+			p += sprintf(p, "offset %d, %d ns\n",
 				     dev->sof, dev->period * 4);
 		else
-			seq_printf(m, "async\n");
+			p += sprintf(p, "async\n");
 	}
+
+	return p - buffer;
 }
 
 EXPORT_SYMBOL(fas216_init);

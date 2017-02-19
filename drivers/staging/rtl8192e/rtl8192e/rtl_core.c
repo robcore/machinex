@@ -2960,6 +2960,8 @@ static int __devinit rtl8192_pci_probe(struct pci_dev *pdev,
 	register_netdev(dev);
 	RT_TRACE(COMP_INIT, "dev name: %s\n", dev->name);
 
+	rtl8192_proc_init_one(dev);
+
 	if (priv->polling_timer_on == 0)
 		check_rfctrl_gpio_timer((unsigned long)dev);
 
@@ -2995,6 +2997,7 @@ static void __devexit rtl8192_pci_disconnect(struct pci_dev *pdev)
 		del_timer_sync(&priv->gpio_polling_timer);
 		cancel_delayed_work(&priv->gpio_change_rf_wq);
 		priv->polling_timer_on = 0;
+		rtl8192_proc_remove_one(dev);
 		rtl8192_down(dev, true);
 		deinit_hal_dm(dev);
 		if (priv->pFirmware) {
@@ -3084,6 +3087,7 @@ static int __init rtl8192_pci_module_init(void)
 	printk(KERN_INFO "\nLinux kernel driver for RTL8192E WLAN cards\n");
 	printk(KERN_INFO "Copyright (c) 2007-2008, Realsil Wlan Driver\n");
 
+	rtl8192_proc_module_init();
 	if (0 != pci_register_driver(&rtl8192_pci_driver)) {
 		DMESG("No device found");
 		/*pci_unregister_driver (&rtl8192_pci_driver);*/
@@ -3097,6 +3101,7 @@ static void __exit rtl8192_pci_module_exit(void)
 	pci_unregister_driver(&rtl8192_pci_driver);
 
 	RT_TRACE(COMP_DOWN, "Exiting");
+	rtl8192_proc_module_remove();
 }
 
 void check_rfctrl_gpio_timer(unsigned long data)

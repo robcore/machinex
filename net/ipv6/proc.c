@@ -247,7 +247,7 @@ static int snmp6_dev_seq_show(struct seq_file *seq, void *v)
 
 static int snmp6_dev_seq_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, snmp6_dev_seq_show, PDE_DATA(inode));
+	return single_open(file, snmp6_dev_seq_show, PDE(inode)->data);
 }
 
 static const struct file_operations snmp6_dev_seq_fops = {

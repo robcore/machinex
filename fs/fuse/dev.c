@@ -1253,7 +1253,7 @@ static ssize_t fuse_dev_splice_read(struct file *in, loff_t *ppos,
 		page_nr++;
 		ret += buf->len;
 
-		if (pipe->files)
+		if (pipe->inode)
 			do_wakeup = 1;
 	}
 
