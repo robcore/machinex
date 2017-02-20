@@ -830,9 +830,8 @@ static ssize_t penable_store(struct device *dev, struct device_attribute *attr,
 	unsigned long val;
 	int ret;
 
-	ret = kstrtoul(buf, 0, &val);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &val))
+		return -EINVAL;
 
 	if (val) {
 		ret = fpga_enable_power_supplies(priv);
@@ -860,9 +859,8 @@ static ssize_t program_store(struct device *dev, struct device_attribute *attr,
 	unsigned long val;
 	int ret;
 
-	ret = kstrtoul(buf, 0, &val);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &val))
+		return -EINVAL;
 
 	/* We can't have an image writer and be programming simultaneously */
 	if (mutex_lock_interruptible(&priv->lock))

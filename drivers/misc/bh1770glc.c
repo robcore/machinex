@@ -651,9 +651,8 @@ static ssize_t bh1770_power_state_store(struct device *dev,
 	unsigned long value;
 	ssize_t ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	mutex_lock(&chip->mutex);
 	if (value) {
@@ -727,11 +726,9 @@ static ssize_t bh1770_prox_enable_store(struct device *dev,
 {
 	struct bh1770_chip *chip =  dev_get_drvdata(dev);
 	unsigned long value;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	mutex_lock(&chip->mutex);
 	/* Assume no proximity. Sensor will tell real state soon */
@@ -827,11 +824,9 @@ static ssize_t bh1770_set_prox_rate_above(struct device *dev,
 {
 	struct bh1770_chip *chip =  dev_get_drvdata(dev);
 	unsigned long value;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	mutex_lock(&chip->mutex);
 	chip->prox_rate_threshold = bh1770_prox_rate_validate(value);
@@ -845,11 +840,9 @@ static ssize_t bh1770_set_prox_rate_below(struct device *dev,
 {
 	struct bh1770_chip *chip =  dev_get_drvdata(dev);
 	unsigned long value;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	mutex_lock(&chip->mutex);
 	chip->prox_rate = bh1770_prox_rate_validate(value);
@@ -872,10 +865,8 @@ static ssize_t bh1770_set_prox_thres(struct device *dev,
 	unsigned long value;
 	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
-
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 	if (value > BH1770_PROX_RANGE)
 		return -EINVAL;
 
@@ -902,11 +893,9 @@ static ssize_t bh1770_prox_persistence_store(struct device *dev,
 {
 	struct bh1770_chip *chip = dev_get_drvdata(dev);
 	unsigned long value;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	if (value > BH1770_PROX_MAX_PERSISTENCE)
 		return -EINVAL;
@@ -929,11 +918,9 @@ static ssize_t bh1770_prox_abs_thres_store(struct device *dev,
 {
 	struct bh1770_chip *chip = dev_get_drvdata(dev);
 	unsigned long value;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	if (value > BH1770_PROX_RANGE)
 		return -EINVAL;
@@ -976,11 +963,9 @@ static ssize_t bh1770_lux_calib_store(struct device *dev,
 	unsigned long value;
 	u32 old_calib;
 	u32 new_corr;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &value);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
 
 	mutex_lock(&chip->mutex);
 	old_calib = chip->lux_calib;
@@ -1027,9 +1012,8 @@ static ssize_t bh1770_set_lux_rate(struct device *dev,
 	unsigned long rate_hz;
 	int ret, i;
 
-	ret = kstrtoul(buf, 0, &rate_hz);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &rate_hz))
+		return -EINVAL;
 
 	for (i = 0; i < ARRAY_SIZE(lux_rates_hz) - 1; i++)
 		if (rate_hz >= lux_rates_hz[i])
@@ -1063,12 +1047,11 @@ static ssize_t bh1770_get_lux_thresh_below(struct device *dev,
 static ssize_t bh1770_set_lux_thresh(struct bh1770_chip *chip, u16 *target,
 				const char *buf)
 {
+	int ret = 0;
 	unsigned long thresh;
-	int ret;
 
-	ret = kstrtoul(buf, 0, &thresh);
-	if (ret)
-		return ret;
+	if (strict_strtoul(buf, 0, &thresh))
+		return -EINVAL;
 
 	if (thresh > BH1770_LUX_RANGE)
 		return -EINVAL;

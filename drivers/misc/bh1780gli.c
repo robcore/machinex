@@ -107,7 +107,7 @@ static ssize_t bh1780_store_power_state(struct device *dev,
 	unsigned long val;
 	int error;
 
-	error = kstrtoul(buf, 0, &val);
+	error = strict_strtoul(buf, 0, &val);
 	if (error)
 		return error;
 

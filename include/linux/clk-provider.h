@@ -207,10 +207,6 @@ struct clk *clk_register_fixed_rate(struct device *dev, const char *name,
  * CLK_GATE_SET_TO_DISABLE - by default this clock sets the bit at bit_idx to
  * 	enable the clock.  Setting this flag does the opposite: setting the bit
  * 	disable the clock and clearing it enables the clock
- * CLK_GATE_HIWORD_MASK - The gate settings are only in lower 16-bit
- *   of this register, and mask of gate bits are in higher 16-bit of this
- *   register.  While setting the gate bits, higher 16-bit should also be
- *   updated to indicate changing gate bits.
  */
 struct clk_gate {
 	struct clk_hw hw;
@@ -221,7 +217,6 @@ struct clk_gate {
 };
 
 #define CLK_GATE_SET_TO_DISABLE		BIT(0)
-#define CLK_GATE_HIWORD_MASK		BIT(1)
 
 extern const struct clk_ops clk_gate_ops;
 struct clk *clk_register_gate(struct device *dev, const char *name,
@@ -259,10 +254,6 @@ struct clk_div_table {
  *	Some hardware implementations gracefully handle this case and allow a
  *	zero divisor by not modifying their input clock
  *	(divide by one / bypass).
- * CLK_DIVIDER_HIWORD_MASK - The divider settings are only in lower 16-bit
- *   of this register, and mask of divider bits are in higher 16-bit of this
- *   register.  While setting the divider bits, higher 16-bit should also be
- *   updated to indicate changing divider bits.
  */
 struct clk_divider {
 	struct clk_hw	hw;
@@ -277,7 +268,6 @@ struct clk_divider {
 #define CLK_DIVIDER_ONE_BASED		BIT(0)
 #define CLK_DIVIDER_POWER_OF_TWO	BIT(1)
 #define CLK_DIVIDER_ALLOW_ZERO		BIT(2)
-#define CLK_DIVIDER_HIWORD_MASK		BIT(3)
 
 extern const struct clk_ops clk_divider_ops;
 struct clk *clk_register_divider(struct device *dev, const char *name,
@@ -306,10 +296,6 @@ struct clk *clk_register_divider_table(struct device *dev, const char *name,
  * Flags:
  * CLK_MUX_INDEX_ONE - register index starts at 1, not 0
  * CLK_MUX_INDEX_BIT - register index is a single bit (power of two)
- * CLK_MUX_HIWORD_MASK - The mux settings are only in lower 16-bit of this
- *   register, and mask of mux bits are in higher 16-bit of this register.
- *   While setting the mux bits, higher 16-bit should also be updated to
- *   indicate changing mux bits.
  */
 struct clk_mux {
 	struct clk_hw	hw;
@@ -323,7 +309,6 @@ struct clk_mux {
 
 #define CLK_MUX_INDEX_ONE		BIT(0)
 #define CLK_MUX_INDEX_BIT		BIT(1)
-#define CLK_MUX_HIWORD_MASK		BIT(2)
 
 extern const struct clk_ops clk_mux_ops;
 

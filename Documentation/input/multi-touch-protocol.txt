@@ -84,8 +84,6 @@ Velocity tracking and temporal precision can be improved if device provides
 exact timestamp for touches reported through SYN_TIME_SEC and SYN_TIME_NSEC.
 The timestamp should be reported ahead of everything else in the packet.
 
-The minimum value of the ABS_MT_SLOT axis must be 0.
-
 Protocol Example A
 ------------------
 

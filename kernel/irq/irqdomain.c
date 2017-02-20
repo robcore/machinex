@@ -657,6 +657,18 @@ unsigned int irq_create_of_mapping(struct device_node *controller,
 
 	domain = controller ? irq_find_host(controller) : irq_default_domain;
 	if (!domain) {
+#ifdef CONFIG_MIPS
+		/*
+		 * Workaround to avoid breaking interrupt controller drivers
+		 * that don't yet register an irq_domain.  This is temporary
+		 * code. ~~~gcl, Feb 24, 2012
+		 *
+		 * Scheduled for removal in Linux v3.6.  That should be enough
+		 * time.
+		 */
+		if (intsize > 0)
+			return intspec[0];
+#endif
 		pr_warning("no irq domain found for %s !\n",
 			   of_node_full_name(controller));
 		return 0;
@@ -678,7 +690,7 @@ unsigned int irq_create_of_mapping(struct device_node *controller,
 
 	/* Set type if specified and different than the current one */
 	if (type != IRQ_TYPE_NONE &&
-	    type != irq_get_trigger_type(virq))
+	    type != (irqd_get_trigger_type(irq_get_irq_data(virq))))
 		irq_set_irq_type(virq, type);
 	return virq;
 }
@@ -907,3 +919,18 @@ const struct irq_domain_ops irq_domain_simple_ops = {
 	.xlate = irq_domain_xlate_onetwocell,
 };
 EXPORT_SYMBOL_GPL(irq_domain_simple_ops);
+
+#ifdef CONFIG_OF_IRQ
+void irq_domain_generate_simple(const struct of_device_id *match,
+				u64 phys_base, unsigned int irq_start)
+{
+	struct device_node *node;
+	pr_debug("looking for phys_base=%llx, irq_start=%i\n",
+		(unsigned long long) phys_base, (int) irq_start);
+	node = of_find_matching_node_by_address(NULL, match, phys_base);
+	if (node)
+		irq_domain_add_legacy(node, 32, irq_start, 0,
+				      &irq_domain_simple_ops, NULL);
+}
+EXPORT_SYMBOL_GPL(irq_domain_generate_simple);
+#endif

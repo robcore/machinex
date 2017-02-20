@@ -63,30 +63,11 @@ struct percpu_ref {
 	 */
 	unsigned __percpu	*pcpu_count;
 	percpu_ref_func_t	*release;
-	percpu_ref_func_t	*confirm_kill;
 	struct rcu_head		rcu;
 };
 
-int __must_check percpu_ref_init(struct percpu_ref *ref,
-				 percpu_ref_func_t *release);
-void percpu_ref_cancel_init(struct percpu_ref *ref);
-void percpu_ref_kill_and_confirm(struct percpu_ref *ref,
-				 percpu_ref_func_t *confirm_kill);
-
-/**
- * percpu_ref_kill - drop the initial ref
- * @ref: percpu_ref to kill
- *
- * Must be used to drop the initial ref on a percpu refcount; must be called
- * precisely once before shutdown.
- *
- * Puts @ref in non percpu mode, then does a call_rcu() before gathering up the
- * percpu counters and dropping the initial ref.
- */
-static inline void percpu_ref_kill(struct percpu_ref *ref)
-{
-	return percpu_ref_kill_and_confirm(ref, NULL);
-}
+int percpu_ref_init(struct percpu_ref *ref, percpu_ref_func_t *release);
+void percpu_ref_kill(struct percpu_ref *ref);
 
 #define PCPU_STATUS_BITS	2
 #define PCPU_STATUS_MASK	((1 << PCPU_STATUS_BITS) - 1)
@@ -105,7 +86,7 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 {
 	unsigned __percpu *pcpu_count;
 
-	rcu_read_lock_sched();
+	rcu_read_lock();
 
 	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
 
@@ -114,38 +95,7 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 	else
 		atomic_inc(&ref->count);
 
-	rcu_read_unlock_sched();
-}
-
-/**
- * percpu_ref_tryget - try to increment a percpu refcount
- * @ref: percpu_ref to try-get
- *
- * Increment a percpu refcount unless it has already been killed.  Returns
- * %true on success; %false on failure.
- *
- * Completion of percpu_ref_kill() in itself doesn't guarantee that tryget
- * will fail.  For such guarantee, percpu_ref_kill_and_confirm() should be
- * used.  After the confirm_kill callback is invoked, it's guaranteed that
- * no new reference will be given out by percpu_ref_tryget().
- */
-static inline bool percpu_ref_tryget(struct percpu_ref *ref)
-{
-	unsigned __percpu *pcpu_count;
-	int ret = false;
-
-	rcu_read_lock_sched();
-
-	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
-
-	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR)) {
-		__this_cpu_inc(*pcpu_count);
-		ret = true;
-	}
-
-	rcu_read_unlock_sched();
-
-	return ret;
+	rcu_read_unlock();
 }
 
 /**
@@ -159,7 +109,7 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
 {
 	unsigned __percpu *pcpu_count;
 
-	rcu_read_lock_sched();
+	rcu_read_lock();
 
 	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
 
@@ -168,7 +118,7 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
 	else if (unlikely(atomic_dec_and_test(&ref->count)))
 		ref->release(ref);
 
-	rcu_read_unlock_sched();
+	rcu_read_unlock();
 }
 
 #endif

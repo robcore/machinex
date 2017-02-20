@@ -1000,10 +1000,10 @@ static ssize_t data_en_set(struct device *dev, struct device_attribute *attr,
 	unsigned long enable;
 	int ret;
 
-	ret = kstrtoul(buf, 0, &enable);
+	ret = strict_strtoul(buf, 0, &enable);
 	if (ret) {
 		dev_err(priv->dev, "unable to parse enable input\n");
-		return ret;
+		return -EINVAL;
 	}
 
 	/* protect against concurrent enable/disable */
