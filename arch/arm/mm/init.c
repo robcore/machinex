@@ -270,7 +270,7 @@ static void __init arm_bootmem_free_hmnm(unsigned long max_low,
 		unsigned long start = memblock_region_memory_base_pfn(reg);
 		unsigned long end = memblock_region_memory_end_pfn(reg);
 
-		add_active_range(0, start, end);
+		memblock_set_node(PFN_PHYS(start), PFN_PHYS(end - start), 0);
 	}
 	free_area_init_nodes(max_zone_pfns);
 }
@@ -394,13 +394,6 @@ void __init find_membank0_hole(void)
 }
 #endif
 
-#ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-unsigned long membank0_size;
-EXPORT_SYMBOL(membank0_size);
-unsigned long membank1_start;
-EXPORT_SYMBOL(membank1_start);
-#endif
-
 void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 {
 	int i;
@@ -411,11 +404,6 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 
 	for (i = 0; i < mi->nr_banks; i++)
 		memblock_add(mi->bank[i].start, mi->bank[i].size);
-
-#ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-	membank0_size = meminfo.bank[0].size;
-	membank1_start = meminfo.bank[1].start;
-#endif
 
 	/* Register the kernel text, kernel data and initrd with memblock. */
 #ifdef CONFIG_XIP_KERNEL
@@ -506,8 +494,8 @@ void __init bootmem_init(void)
 	 */
 	sparse_init();
 
-#ifdef CONFIG_ARCH_POPULATES_NODE_MAP
-	arm_bootmem_free_apnm(max_low, max_high);
+#ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
+	arm_bootmem_free_hmnm(max_low, max_high);
 #else
 	/*
 	 * Now free the memory - free_area_init_node needs
@@ -702,7 +690,7 @@ void __init mem_init(void)
 
 #ifdef CONFIG_SA1111
 	/* now that our DMA memory is actually so designated, we can free it */
-	free_reserved_area(__va(PHYS_OFFSET), swapper_pg_dir, 0, NULL);
+	free_reserved_area(__va(PHYS_PFN_OFFSET), swapper_pg_dir, 0, NULL);
 #endif
 
 	free_highpages();
@@ -853,33 +841,6 @@ void free_initmem(void)
 		free_initmem_default(0);
 	}
 }
-
-#ifdef CONFIG_MEMORY_HOTPLUG
-int arch_add_memory(int nid, u64 start, u64 size)
-{
-	struct pglist_data *pgdata = NODE_DATA(nid);
-	struct zone *zone = pgdata->node_zones + ZONE_MOVABLE;
-	unsigned long start_pfn = start >> PAGE_SHIFT;
-	unsigned long nr_pages = size >> PAGE_SHIFT;
-
-	return __add_pages(nid, zone, start_pfn, nr_pages);
-}
-
-int arch_physical_active_memory(u64 start, u64 size)
-{
-	return platform_physical_active_pages(start, size);
-}
-
-int arch_physical_remove_memory(u64 start, u64 size)
-{
-	return platform_physical_remove_pages(start, size);
-}
-
-int arch_physical_low_power_memory(u64 start, u64 size)
-{
-	return platform_physical_low_power_pages(start, size);
-}
-#endif
 
 #ifdef CONFIG_MEMORY_HOTPLUG
 int arch_add_memory(int nid, u64 start, u64 size)
