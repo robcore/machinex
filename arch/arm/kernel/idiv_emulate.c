@@ -65,9 +65,20 @@ static int proc_status_show(struct seq_file *m, void *v)
 	seq_printf(m, "Emulated SDIV:\t\t%lu\n", sdivcounter);
 	if (previous_pid != 0)
 		seq_printf(m, "Last process:\t\t%d\n", previous_pid);
-
-	return 0
+	return 0;
 }
+
+static int proc_status_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, proc_status_show, PDE_DATA(inode));
+}
+
+static const struct file_operations proc_status_fops = {
+	.open		= proc_status_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 #endif
 
 static u32 emulate_udiv(u32 n, u32 base)
