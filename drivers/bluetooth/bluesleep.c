@@ -1106,6 +1106,7 @@ static int __init bluesleep_init(void)
 	}
 	//ent->read_proc = bluesleep_read_proc_btwrite;
 	//ent->write_proc = bluesleep_write_proc_btwrite;
+#endif
 
 	flags = 0; /* clear all status bits */
 
