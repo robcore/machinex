@@ -867,7 +867,6 @@ out:
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(regmap_async_complete_cb);
 
 /**
  * regmap_update_bits: Perform a read/modify/write cycle on the register map
