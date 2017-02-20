@@ -182,11 +182,13 @@ static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 	if (IS_APPEND(inode))
 		goto out_putf;
 
+	sb_start_write(inode->i_sb);
 	error = locks_verify_truncate(inode, f.file, length);
 	if (!error)
 		error = security_path_truncate(&f.file->f_path);
 	if (!error)
 		error = do_truncate(dentry, length, ATTR_MTIME|ATTR_CTIME, f.file);
+	sb_end_write(inode->i_sb);
 out_putf:
 	fdput(f);
 out:
@@ -695,6 +697,7 @@ static int do_dentry_open(struct file *f,
 	}
 
 	f->f_mapping = inode->i_mapping;
+	file_sb_list_add(f, inode->i_sb);
 
 	if (unlikely(f->f_mode & FMODE_PATH)) {
 		f->f_op = &empty_fops;
@@ -733,6 +736,7 @@ static int do_dentry_open(struct file *f,
 
 cleanup_all:
 	fops_put(f->f_op);
+	file_sb_list_del(f);
 	if (f->f_mode & FMODE_WRITE) {
 		put_write_access(inode);
 		if (!special_file(inode->i_mode)) {
@@ -743,10 +747,9 @@ cleanup_all:
 			 * here, so just reset the state.
 			 */
 			file_reset_write(f);
-			mnt_drop_write(f->f_path.mnt);
+			__mnt_drop_write(f->f_path.mnt);
 		}
 	}
-
 cleanup_file:
 	path_put(&f->f_path);
 	f->f_path.mnt = NULL;
@@ -1002,12 +1005,9 @@ SYSCALL_DEFINE2(creat, const char __user *, pathname, umode_t, mode)
 int filp_close(struct file *filp, fl_owner_t id)
 {
 	int retval = 0;
-	long ret;
 
-	ret = file_count(filp);
-	if (ret <= 0) {
-		printk(KERN_ERR "VFS: Close: file count is %ld\n", ret);
-		WARN_ON(ret < 0);
+	if (!file_count(filp)) {
+		printk(KERN_ERR "VFS: Close: file count is 0\n");
 		return 0;
 	}
 
