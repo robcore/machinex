@@ -156,7 +156,7 @@ static int rt6_bind_neighbour(struct rt6_info *rt, struct net_device *dev)
 		if (IS_ERR(n))
 			return PTR_ERR(n);
 	}
-	dst_set_neighbour(&rt->dst, n);
+	rt->n = n;
 
 	return 0;
 }
@@ -284,6 +284,9 @@ static void ip6_dst_destroy(struct dst_entry *dst)
 	struct inet6_dev *idev = rt->rt6i_idev;
 	struct inet_peer *peer = rt->rt6i_peer;
 
+	if (rt->n)
+		neigh_release(rt->n);
+
 	if (!(rt->dst.flags & DST_HOST))
 		dst_destroy_metrics_generic(dst);
 
@@ -327,12 +330,19 @@ static void ip6_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
 	struct net_device *loopback_dev =
 		dev_net(dev)->loopback_dev;
 
-	if (dev != loopback_dev && idev && idev->dev == dev) {
-		struct inet6_dev *loopback_idev =
-			in6_dev_get(loopback_dev);
-		if (loopback_idev) {
-			rt->rt6i_idev = loopback_idev;
-			in6_dev_put(idev);
+	if (dev != loopback_dev) {
+		if (idev && idev->dev == dev) {
+			struct inet6_dev *loopback_idev =
+				in6_dev_get(loopback_dev);
+			if (loopback_idev) {
+				rt->rt6i_idev = loopback_idev;
+				in6_dev_put(idev);
+			}
+		}
+		if (rt->n && rt->n->dev == dev) {
+			rt->n->dev = loopback_dev;
+			dev_hold(loopback_dev);
+			dev_put(dev);
 		}
 	}
 }
@@ -440,7 +450,7 @@ static void rt6_probe(struct rt6_info *rt)
 	 * to no more than one per minute.
 	 */
 	rcu_read_lock();
-	neigh = rt ? dst_get_neighbour_noref(&rt->dst) : NULL;
+	neigh = rt ? rt->n : NULL;
 	if (!neigh || (neigh->nud_state & NUD_VALID))
 		goto out;
 	read_lock_bh(&neigh->lock);
@@ -494,7 +504,7 @@ static inline int rt6_check_neigh(struct rt6_info *rt)
 	int m;
 
 	rcu_read_lock();
-	neigh = dst_get_neighbour_noref(&rt->dst);
+	neigh = rt->n;
 	if (rt->rt6i_flags & RTF_NONEXTHOP ||
 	    !(rt->rt6i_flags & RTF_GATEWAY))
 		m = 1;
@@ -844,7 +854,7 @@ static struct rt6_info *rt6_alloc_clone(struct rt6_info *ort,
 
 	if (rt) {
 		rt->rt6i_flags |= RTF_CACHE;
-		dst_set_neighbour(&rt->dst, neigh_clone(dst_get_neighbour_noref_raw(&ort->dst)));
+		rt->n = neigh_clone(ort->n);
 	}
 	return rt;
 }
@@ -1170,7 +1180,7 @@ struct dst_entry *icmp6_dst_alloc(struct net_device *dev,
 
 	rt->dst.flags |= DST_HOST;
 	rt->dst.output  = ip6_output;
-	dst_set_neighbour(&rt->dst, neigh);
+	rt->n = neigh;
 	atomic_set(&rt->dst.__refcnt, 1);
 	rt->rt6i_dst.addr = fl6->daddr;
 	rt->rt6i_dst.plen = 128;
@@ -1688,6 +1698,7 @@ void rt6_redirect(const struct in6_addr *dest, const struct in6_addr *src,
 	struct rt6_info *rt, *nrt = NULL;
 	struct netevent_redirect netevent;
 	struct net *net = dev_net(neigh->dev);
+	struct neighbour *old_neigh;
 
 	rt = ip6_route_redirect(dest, src, saddr, neigh->dev);
 
@@ -1728,7 +1739,8 @@ void rt6_redirect(const struct in6_addr *dest, const struct in6_addr *src,
 	dst_confirm(&rt->dst);
 
 	/* Duplicate redirect: silently ignore. */
-	if (neigh == dst_get_neighbour_noref_raw(&rt->dst))
+	old_neigh = rt->n;
+	if (neigh == old_neigh)
 		goto out;
 
 	nrt = ip6_rt_copy(rt, dest);
@@ -1740,13 +1752,16 @@ void rt6_redirect(const struct in6_addr *dest, const struct in6_addr *src,
 		nrt->rt6i_flags &= ~RTF_GATEWAY;
 
 	nrt->rt6i_gateway = *(struct in6_addr *)neigh->primary_key;
-	dst_set_neighbour(&nrt->dst, neigh_clone(neigh));
+	nrt->n = neigh_clone(neigh);
 
 	if (ip6_ins_rt(nrt))
 		goto out;
 
 	netevent.old = &rt->dst;
+	netevent.old_neigh = old_neigh;
 	netevent.new = &nrt->dst;
+	netevent.new_neigh = neigh;
+	netevent.daddr = dest;
 	call_netevent_notifiers(NETEVENT_REDIRECT, &netevent);
 
 	if (rt->rt6i_flags & RTF_CACHE) {
@@ -2559,7 +2574,7 @@ static int rt6_fill_node(struct net *net,
 		goto nla_put_failure;
 
 	rcu_read_lock();
-	n = dst_get_neighbour_noref(&rt->dst);
+	n = rt->n;
 	if (n) {
 		if (nla_put(skb, RTA_GATEWAY, 16, &n->primary_key) < 0) {
 			rcu_read_unlock();
@@ -2785,7 +2800,7 @@ static int rt6_info_route(struct rt6_info *rt, void *p_arg)
 	seq_puts(m, "00000000000000000000000000000000 00 ");
 #endif
 	rcu_read_lock();
-	n = dst_get_neighbour_noref(&rt->dst);
+	n = rt->n;
 	if (n) {
 		seq_printf(m, "%pi6", n->primary_key);
 	} else {
