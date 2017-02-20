@@ -25,6 +25,7 @@
 #include <linux/kernel.h>
 #include <linux/err.h>
 #include <linux/module.h>
+#include <linux/version.h>
 #include <linux/pstore.h>
 #include <linux/time.h>
 #include <linux/io.h>
@@ -330,7 +331,7 @@ static int ramoops_init_przs(struct device *dev, struct ramoops_context *cxt,
 	for (i = 0; i < cxt->max_dump_cnt; i++) {
 		size_t sz = cxt->record_size;
 
-		cxt->przs[i] = persistent_ram_new(*paddr, sz, cxt->ecc_size);
+		cxt->przs[i] = persistent_ram_new(*paddr, sz, 0, cxt->ecc_size);
 		if (IS_ERR(cxt->przs[i])) {
 			err = PTR_ERR(cxt->przs[i]);
 			dev_err(dev, "failed to request mem region (0x%zx@0x%llx): %d\n",
@@ -348,7 +349,7 @@ fail_prz:
 
 static int ramoops_init_prz(struct device *dev, struct ramoops_context *cxt,
 			    struct persistent_ram_zone **prz,
-			    phys_addr_t *paddr, size_t sz)
+			    phys_addr_t *paddr, size_t sz, u32 sig)
 {
 	if (!sz)
 		return 0;
@@ -360,7 +361,7 @@ static int ramoops_init_prz(struct device *dev, struct ramoops_context *cxt,
 		return -ENOMEM;
 	}
 
-	*prz = persistent_ram_new(*paddr, sz, cxt->ecc_size);
+	*prz = persistent_ram_new(*paddr, sz, sig, cxt->ecc_size);
 	if (IS_ERR(*prz)) {
 		int err = PTR_ERR(*prz);
 
