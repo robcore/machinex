@@ -267,6 +267,9 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 				gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 			}
 		}
+		mdelay(100);
+		if (mdm_drv->ap2mdm_errfatal_gpio > 0)
+			gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 	}
 }
 
