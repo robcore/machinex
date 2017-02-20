@@ -182,11 +182,13 @@ static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 	if (IS_APPEND(inode))
 		goto out_putf;
 
+	sb_start_write(inode->i_sb);
 	error = locks_verify_truncate(inode, f.file, length);
 	if (!error)
 		error = security_path_truncate(&f.file->f_path);
 	if (!error)
 		error = do_truncate(dentry, length, ATTR_MTIME|ATTR_CTIME, f.file);
+	sb_end_write(inode->i_sb);
 out_putf:
 	fdput(f);
 out:
@@ -289,7 +291,10 @@ int do_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 	if (!file->f_op->fallocate)
 		return -EOPNOTSUPP;
 
-	return file->f_op->fallocate(file, mode, offset, len);
+	sb_start_write(inode->i_sb);
+	ret = file->f_op->fallocate(file, mode, offset, len);
+	sb_end_write(inode->i_sb);
+	return ret;
 }
 
 SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
