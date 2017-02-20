@@ -61,12 +61,10 @@ static pid_t         previous_pid;
 #ifdef CONFIG_PROC_FS
 static int proc_status_show(struct seq_file *m, void *v)
 {
-	char *p = page;
-
-	seq_printf(p, "Emulated UDIV:\t\t%lu\n", udivcounter);
-	seq_printf(p, "Emulated SDIV:\t\t%lu\n", sdivcounter);
+	seq_printf(m, "Emulated UDIV:\t\t%lu\n", udivcounter);
+	seq_printf(m, "Emulated SDIV:\t\t%lu\n", sdivcounter);
 	if (previous_pid != 0)
-		seq_printf(p, "Last process:\t\t%d\n", previous_pid);
+		seq_printf(m, "Last process:\t\t%d\n", previous_pid);
 
 	return 0
 }
