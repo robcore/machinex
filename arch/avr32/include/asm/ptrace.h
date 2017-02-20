@@ -131,6 +131,7 @@ struct pt_regs {
 #define user_mode(regs)                 (((regs)->sr & MODE_MASK) == MODE_USER)
 #define instruction_pointer(regs)       ((regs)->pc)
 #define profile_pc(regs)                instruction_pointer(regs)
+#define user_stack_pointer(regs)	((regs)->sp)
 
 static __inline__ int valid_user_regs(struct pt_regs *regs)
 {

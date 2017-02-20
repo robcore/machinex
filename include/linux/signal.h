@@ -434,4 +434,6 @@ void signals_init(void);
 int restore_altstack(const stack_t __user *);
 int __save_altstack(stack_t __user *, unsigned long);
 
+int restore_altstack(const stack_t __user *);
+
 #endif /* _LINUX_SIGNAL_H */
