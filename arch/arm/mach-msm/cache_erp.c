@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -201,26 +201,41 @@ static int cache_erp_show(struct seq_file *m, void *v)
 	return 0;
 }
 
-#ifdef CONFIG_MSM_L1_ERR_LOG
-static int proc_read_log(char *page, char **start, off_t off, int count,
-	int *eof, void *data)
+static int cache_erp_open(struct inode *inode, struct file *file)
 {
-	char *p = page;
-	int len, log_value;
-	log_value = __raw_readl(MSM_IMEM_BASE + ERP_LOG_MAGIC_ADDR) ==
-			ERP_LOG_MAGIC ? 1 : 0;
-
-	p += snprintf(p, PAGE_SIZE, "%d\n", log_value);
-
-	len = (p - page) - off;
-	if (len < 0)
-		len = 0;
-
-	*eof = (len <= count) ? 1 : 0;
-	*start = page + off;
-
-	return len;
+	return single_open(file, cache_erp_show, NULL);
 }
+
+static const struct file_operations cache_erp_fops = {
+	.open		= cache_erp_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+#ifdef CONFIG_MSM_L1_ERR_LOG
+static int cache_erp_log_show(struct seq_file *m, void *v)
+{
+	int log_value;
+
+	log_value = __raw_readl(msm_erp_log_base) == ERP_LOG_MAGIC ? 1 : 0;
+
+	seq_printf(m, "%d\n", log_value);
+
+	return 0;
+}
+
+static int cache_erp_log_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, cache_erp_log_show, NULL);
+}
+
+static const struct file_operations cache_erp_log_fops = {
+	.open		= cache_erp_log_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static void log_cpu_event(void)
 {
