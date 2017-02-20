@@ -450,13 +450,6 @@ void exit_files(struct task_struct *tsk)
 	}
 }
 
-static void __devinit fdtable_defer_list_init(int cpu)
-{
-	spin_lock_init(&fddef->lock);
-	INIT_WORK(&fddef->wq, free_fdtable_work);
-	fddef->next = NULL;
-}
-
 void __init files_defer_init(void)
 {
 	sysctl_nr_open_max = min((size_t)INT_MAX, ~(size_t)0/sizeof(void *)) &
