@@ -91,11 +91,6 @@ struct irq_domain {
 	union {
 		struct {
 			unsigned int size;
-			unsigned int first_irq;
-			irq_hw_number_t first_hwirq;
-		} legacy;
-		struct {
-			unsigned int size;
 			unsigned int *revmap;
 		} linear;
 		struct {
