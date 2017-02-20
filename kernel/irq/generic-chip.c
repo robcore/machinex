@@ -328,7 +328,6 @@ static int irq_gc_suspend(void)
 		if (ct->chip.irq_suspend)
 			ct->chip.irq_suspend(irq_get_irq_data(gc->irq_base));
 	}
-	d->name = name;
 	return 0;
 }
 

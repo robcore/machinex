@@ -88,6 +88,13 @@ void irq_domain_remove(struct irq_domain *domain)
 	mutex_lock(&irq_domain_mutex);
 
 	switch (domain->revmap_type) {
+	case IRQ_DOMAIN_MAP_LEGACY:
+		/*
+		 * Legacy domains don't manage their own irq_desc
+		 * allocations, we expect the caller to handle irq_desc
+		 * freeing on their own.
+		 */
+		break;
 	case IRQ_DOMAIN_MAP_TREE:
 		/*
 		 * radix_tree_delete() takes care of destroying the root
@@ -120,6 +127,17 @@ void irq_domain_remove(struct irq_domain *domain)
 	irq_domain_free(domain);
 }
 EXPORT_SYMBOL_GPL(irq_domain_remove);
+
+static unsigned int irq_domain_legacy_revmap(struct irq_domain *domain,
+					     irq_hw_number_t hwirq)
+{
+	irq_hw_number_t first_hwirq = domain->revmap_data.legacy.first_hwirq;
+	int size = domain->revmap_data.legacy.size;
+
+	if (WARN_ON(hwirq < first_hwirq || hwirq >= first_hwirq + size))
+		return 0;
+	return hwirq - first_hwirq + domain->revmap_data.legacy.first_irq;
+}
 
 /**
  * irq_domain_add_simple() - Allocate and register a simple irq_domain.
@@ -201,17 +219,57 @@ struct irq_domain *irq_domain_add_legacy(struct device_node *of_node,
 					 void *host_data)
 {
 	struct irq_domain *domain;
+	unsigned int i;
 
-	pr_debug("Setting up legacy domain virq[%i:%i] ==> hwirq[%i:%i]\n",
-		 first_irq, first_irq + size - 1,
-		 (int)first_hwirq, (int)first_hwirq + size -1);
-
-	domain = irq_domain_add_linear(of_node, first_hwirq + size, ops, host_data);
+	domain = irq_domain_alloc(of_node, IRQ_DOMAIN_MAP_LEGACY, ops, host_data);
 	if (!domain)
 		return NULL;
 
-	WARN_ON(irq_domain_associate_many(domain, first_irq, first_hwirq, size));
+	domain->revmap_data.legacy.first_irq = first_irq;
+	domain->revmap_data.legacy.first_hwirq = first_hwirq;
+	domain->revmap_data.legacy.size = size;
 
+	mutex_lock(&irq_domain_mutex);
+	/* Verify that all the irqs are available */
+	for (i = 0; i < size; i++) {
+		int irq = first_irq + i;
+		struct irq_data *irq_data = irq_get_irq_data(irq);
+
+		if (WARN_ON(!irq_data || irq_data->domain)) {
+			mutex_unlock(&irq_domain_mutex);
+			irq_domain_free(domain);
+			return NULL;
+		}
+	}
+
+	/* Claim all of the irqs before registering a legacy domain */
+	for (i = 0; i < size; i++) {
+		struct irq_data *irq_data = irq_get_irq_data(first_irq + i);
+		irq_data->hwirq = first_hwirq + i;
+		irq_data->domain = domain;
+	}
+	mutex_unlock(&irq_domain_mutex);
+
+	for (i = 0; i < size; i++) {
+		int irq = first_irq + i;
+		int hwirq = first_hwirq + i;
+
+		/* IRQ0 gets ignored */
+		if (!irq)
+			continue;
+
+		/* Legacy flags are left to default at this point,
+		 * one can then use irq_create_mapping() to
+		 * explicitly change them
+		 */
+		if (ops->map)
+			ops->map(domain, irq, hwirq);
+
+		/* Clear norequest flags */
+		irq_clear_status_flags(irq, IRQ_NOREQUEST);
+	}
+
+	irq_domain_add(domain);
 	return domain;
 }
 EXPORT_SYMBOL_GPL(irq_domain_add_legacy);
@@ -416,15 +474,12 @@ int irq_domain_associate_many(struct irq_domain *domain, unsigned int irq_base,
 				 */
 				if (ret != -EPERM) {
 					pr_info("%s didn't like hwirq-0x%lx to VIRQ%i mapping (rc=%d)\n",
-					       domain->name, hwirq, virq, ret);
+					       of_node_full_name(domain->of_node), hwirq, virq, ret);
 				}
 				irq_data->domain = NULL;
 				irq_data->hwirq = 0;
 				continue;
 			}
-			/* If not already assigned, give the domain the chip's name */
-			if (!domain->name && irq_data->chip)
-				domain->name = irq_data->chip->name;
 		}
 
 		switch (domain->revmap_type) {
@@ -443,6 +498,10 @@ int irq_domain_associate_many(struct irq_domain *domain, unsigned int irq_base,
 	}
 
 	return 0;
+
+ err_unmap:
+	irq_domain_disassociate_many(domain, irq_base, i);
+	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(irq_domain_associate_many);
 
@@ -521,6 +580,10 @@ unsigned int irq_create_mapping(struct irq_domain *domain,
 		pr_debug("-> existing mapping on virq %d\n", virq);
 		return virq;
 	}
+
+	/* Get a virtual interrupt number */
+	if (domain->revmap_type == IRQ_DOMAIN_MAP_LEGACY)
+		return irq_domain_legacy_revmap(domain, hwirq);
 
 	/* Allocate a virtual interrupt number */
 	hint = hwirq % nr_irqs;
@@ -649,6 +712,10 @@ void irq_dispose_mapping(unsigned int virq)
 	if (WARN_ON(domain == NULL))
 		return;
 
+	/* Never unmap legacy interrupts */
+	if (domain->revmap_type == IRQ_DOMAIN_MAP_LEGACY)
+		return;
+
 	irq_domain_disassociate_many(domain, virq, 1);
 	irq_free_desc(virq);
 }
@@ -671,6 +738,8 @@ unsigned int irq_find_mapping(struct irq_domain *domain,
 		return 0;
 
 	switch (domain->revmap_type) {
+	case IRQ_DOMAIN_MAP_LEGACY:
+		return irq_domain_legacy_revmap(domain, hwirq);
 	case IRQ_DOMAIN_MAP_LINEAR:
 		return irq_linear_revmap(domain, hwirq);
 	case IRQ_DOMAIN_MAP_TREE:
@@ -717,6 +786,8 @@ static int virq_debug_show(struct seq_file *m, void *private)
 {
 	unsigned long flags;
 	struct irq_desc *desc;
+	const char *p;
+	static const char none[] = "none";
 	void *data;
 	int i;
 
@@ -738,12 +809,20 @@ static int virq_debug_show(struct seq_file *m, void *private)
 			seq_printf(m, "0x%05lx  ", desc->irq_data.hwirq);
 
 			chip = irq_desc_get_chip(desc);
-			seq_printf(m, "%-15s  ", (chip && chip->name) ? chip->name : "none");
+			if (chip && chip->name)
+				p = chip->name;
+			else
+				p = none;
+			seq_printf(m, "%-15s  ", p);
 
 			data = irq_desc_get_chip_data(desc);
 			seq_printf(m, data ? "0x%p  " : "  %p  ", data);
 
-			seq_printf(m, "%s\n", desc->irq_data.domain->name);
+			if (desc->irq_data.domain)
+				p = of_node_full_name(desc->irq_data.domain->of_node);
+			else
+				p = none;
+			seq_printf(m, "%s\n", p);
 		}
 
 		raw_spin_unlock_irqrestore(&desc->lock, flags);

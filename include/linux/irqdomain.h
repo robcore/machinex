@@ -85,11 +85,15 @@ struct irq_domain_ops {
  */
 struct irq_domain {
 	struct list_head link;
-	const char *name;
 
 	/* type of reverse mapping_technique */
 	unsigned int revmap_type;
 	union {
+		struct {
+			unsigned int size;
+			unsigned int first_irq;
+			irq_hw_number_t first_hwirq;
+		} legacy;
 		struct {
 			unsigned int size;
 			unsigned int *revmap;
