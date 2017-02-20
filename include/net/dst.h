@@ -51,7 +51,7 @@ struct dst_entry {
 	int			(*input)(struct sk_buff*);
 	int			(*output)(struct sk_buff*);
 
-	unsigned short		flags;
+	int			flags;
 #define DST_HOST		0x0001
 #define DST_NOXFRM		0x0002
 #define DST_NOPOLICY		0x0004
@@ -61,8 +61,6 @@ struct dst_entry {
 #define DST_NOPEER		0x0040
 #define DST_FAKE_RTABLE		0x0080
 #define DST_XFRM_TUNNEL		0x0100
-
-	unsigned short		pending_confirm;
 
 	short			error;
 	short			obsolete;
@@ -374,8 +372,7 @@ static inline struct dst_entry *skb_dst_pop(struct sk_buff *skb)
 
 extern int dst_discard(struct sk_buff *skb);
 extern void *dst_alloc(struct dst_ops * ops, struct net_device *dev,
-		       int initial_ref, int initial_obsolete,
-		       unsigned short flags);
+		       int initial_ref, int initial_obsolete, int flags);
 extern void __dst_free(struct dst_entry * dst);
 extern struct dst_entry *dst_destroy(struct dst_entry * dst);
 
@@ -399,35 +396,19 @@ static inline void dst_rcu_free(struct rcu_head *head)
 
 static inline void dst_confirm(struct dst_entry *dst)
 {
-	dst->pending_confirm = 1;
-}
+	if (dst) {
+		struct neighbour *n;
 
-static inline int dst_neigh_output(struct dst_entry *dst, struct neighbour *n,
-				   struct sk_buff *skb)
-{
-	struct hh_cache *hh;
-
-	if (unlikely(dst->pending_confirm)) {
-		n->confirmed = jiffies;
-		dst->pending_confirm = 0;
+		rcu_read_lock();
+		n = dst_get_neighbour_noref(dst);
+		neigh_confirm(n);
+		rcu_read_unlock();
 	}
-
-	hh = &n->hh;
-	if ((n->nud_state & NUD_CONNECTED) && hh->hh_len)
-		return neigh_hh_output(hh, skb);
-	else
-		return n->output(n, skb);
 }
 
 static inline struct neighbour *dst_neigh_lookup(const struct dst_entry *dst, const void *daddr)
 {
-	return dst->ops->neigh_lookup(dst, NULL, daddr);
-}
-
-static inline struct neighbour *dst_neigh_lookup_skb(const struct dst_entry *dst,
-						     struct sk_buff *skb)
-{
-	return dst->ops->neigh_lookup(dst, skb, NULL);
+	return dst->ops->neigh_lookup(dst, daddr);
 }
 
 static inline void dst_link_failure(struct sk_buff *skb)
@@ -482,7 +463,7 @@ static inline struct dst_entry *xfrm_lookup(struct net *net,
 					    int flags)
 {
 	return dst_orig;
-}
+} 
 
 static inline struct xfrm_state *dst_xfrm(const struct dst_entry *dst)
 {

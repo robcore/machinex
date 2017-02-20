@@ -15,34 +15,24 @@ static inline u32 arp_hashfn(u32 key, const struct net_device *dev, u32 hash_rnd
 	return val * hash_rnd;
 }
 
-static inline struct neighbour *__ipv4_neigh_lookup_noref(struct net_device *dev, u32 key)
+static inline struct neighbour *__ipv4_neigh_lookup(struct net_device *dev, u32 key)
 {
-	struct neigh_hash_table *nht = rcu_dereference_bh(arp_tbl.nht);
+	struct neigh_hash_table *nht;
 	struct neighbour *n;
 	u32 hash_val;
 
-	if (dev->flags & (IFF_LOOPBACK | IFF_POINTOPOINT))
-		key = 0;
-
+	rcu_read_lock_bh();
+	nht = rcu_dereference_bh(arp_tbl.nht);
 	hash_val = arp_hashfn(key, dev, nht->hash_rnd[0]) >> (32 - nht->hash_shift);
 	for (n = rcu_dereference_bh(nht->hash_buckets[hash_val]);
 	     n != NULL;
 	     n = rcu_dereference_bh(n->next)) {
-		if (n->dev == dev && *(u32 *)n->primary_key == key)
-			return n;
+		if (n->dev == dev && *(u32 *)n->primary_key == key) {
+			if (!atomic_inc_not_zero(&n->refcnt))
+				n = NULL;
+			break;
+		}
 	}
-
-	return NULL;
-}
-
-static inline struct neighbour *__ipv4_neigh_lookup(struct net_device *dev, u32 key)
-{
-	struct neighbour *n;
-
-	rcu_read_lock_bh();
-	n = __ipv4_neigh_lookup_noref(dev, key);
-	if (n && !atomic_inc_not_zero(&n->refcnt))
-		n = NULL;
 	rcu_read_unlock_bh();
 
 	return n;

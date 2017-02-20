@@ -71,6 +71,7 @@
 #include <linux/oom.h>
 #include <linux/khugepaged.h>
 #include <linux/signalfd.h>
+#include <linux/aio.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -1076,8 +1077,6 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
 	tsk->thread_node = (struct list_head)LIST_HEAD_INIT(sig->thread_head);
 
 	init_waitqueue_head(&sig->wait_chldexit);
-	if (clone_flags & CLONE_NEWPID)
-		sig->flags |= SIGNAL_UNKILLABLE;
 	sig->curr_target = tsk;
 	init_sigpending(&sig->shared_pending);
 	INIT_LIST_HEAD(&sig->posix_timers);
@@ -1128,7 +1127,7 @@ static void copy_seccomp(struct task_struct *p)
 	 * needed because this new task is not yet running and cannot
 	 * be racing exec.
 	 */
-	BUG_ON(!spin_is_locked(&current->sighand->siglock));
+	assert_spin_locked(&current->sighand->siglock);
 
 	/* Ref-count the new filter user, and assign it. */
 	get_seccomp_filter(current);
@@ -1539,7 +1538,6 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	spin_unlock(&current->sighand->siglock);
 	syscall_tracepoint_update(p);
 	write_unlock_irq(&tasklist_lock);
-
 	proc_fork_connector(p);
 	cgroup_post_fork(p);
 	if (clone_flags & CLONE_THREAD)
@@ -1557,8 +1555,6 @@ bad_fork_cleanup_io:
 	if (p->io_context)
 		exit_io_context(p);
 bad_fork_cleanup_namespaces:
-	if (unlikely(clone_flags & CLONE_NEWPID))
-		pid_ns_release_proc(p->nsproxy->pid_ns);
 	exit_task_namespaces(p);
 bad_fork_cleanup_mm:
 	if (p->mm)
@@ -1647,12 +1643,6 @@ long do_fork(unsigned long clone_flags,
 	if (clone_flags & CLONE_NEWUSER) {
 		if (clone_flags & CLONE_THREAD)
 			return -EINVAL;
-		/* hopefully this check will go away when userns support is
-		 * complete
-		 */
-		if (!capable(CAP_SYS_ADMIN) || !capable(CAP_SETUID) ||
-				!capable(CAP_SETGID))
-			return -EPERM;
 	}
 
 	/*
