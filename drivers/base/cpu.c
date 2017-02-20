@@ -67,8 +67,6 @@ void unregister_cpu(struct cpu *cpu)
 
 	unregister_cpu_under_node(logical_cpu, cpu_to_node(logical_cpu));
 
-	device_remove_file(&cpu->dev, &dev_attr_online);
-
 	device_unregister(&cpu->dev);
 	per_cpu(cpu_sys_devices, logical_cpu) = NULL;
 	return;
