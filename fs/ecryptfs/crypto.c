@@ -45,14 +45,9 @@
 #define DECRYPT		0
 #define ENCRYPT		1
 
-static int
-ecryptfs_decrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
+static int crypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
 			     struct page *dst_page, struct page *src_page,
-			     int offset, int size, unsigned char *iv);
-static int
-ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct page *dst_page, struct page *src_page,
-			     int offset, int size, unsigned char *iv);
+			     int offset, int size, unsigned char *iv, int op);
 
 #if defined(CONFIG_CRYPTO_FIPS) && !defined(CONFIG_FORCE_DISABLE_FIPS)
 static int crypto_cc_reset_rng(struct crypto_rng *tfm)
@@ -620,9 +615,9 @@ static int ecryptfs_encrypt_extent(struct page *enc_extent_page,
 			(unsigned long long)(extent_base + extent_offset), rc);
 		goto out;
 	}
-	rc = ecryptfs_encrypt_page_offset(crypt_stat, enc_extent_page, page,
-					extent_offset * crypt_stat->extent_size,
-					crypt_stat->extent_size, extent_iv);
+	rc = crypt_page_offset(crypt_stat, enc_extent_page, page,
+			       (extent_offset * crypt_stat->extent_size),
+			       crypt_stat->extent_size, extent_iv, ENCRYPT);
 	if (rc < 0) {
 		printk(KERN_ERR "%s: Error attempting to encrypt page with "
 		       "page->index = [%ld], extent_offset = [%ld]; "
@@ -723,9 +718,9 @@ static int ecryptfs_decrypt_extent(struct page *page,
 			(unsigned long long)(extent_base + extent_offset), rc);
 		goto out;
 	}
-	rc = ecryptfs_decrypt_page_offset(crypt_stat, page, enc_extent_page,
-					extent_offset * crypt_stat->extent_size,
-					crypt_stat->extent_size, extent_iv);
+	rc = crypt_page_offset(crypt_stat, page, enc_extent_page,
+			       (extent_offset * crypt_stat->extent_size),
+			       crypt_stat->extent_size, extent_iv, DECRYPT);
 	if (rc < 0) {
 		printk(KERN_ERR "%s: Error attempting to decrypt to page with "
 		       "page->index = [%ld], extent_offset = [%ld]; "
@@ -796,20 +791,20 @@ out:
 }
 
 /**
- * ecryptfs_encrypt_page_offset
+ * crypt_page_offset
  * @crypt_stat: The cryptographic context
- * @dst_page: The page to encrypt into
- * @src_page: The page to encrypt from
+ * @dst_page: The page to write the result into
+ * @src_page: The page to read from
  * @offset: The byte offset into the dst_page and src_page
- * @size: The number of bytes to encrypt
- * @iv: The initialization vector to use for the encryption
+ * @size: The number of bytes of data
+ * @iv: The initialization vector to use for the crypto operation
+ * @op: ENCRYPT or DECRYPT to indicate the desired operation
  *
- * Returns the number of bytes encrypted
+ * Returns the number of bytes encrypted or decrypted
  */
-static int
-ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
+static int crypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
 			     struct page *dst_page, struct page *src_page,
-			     int offset, int size, unsigned char *iv)
+			     int offset, int size, unsigned char *iv, int op)
 {
 	struct scatterlist src_sg, dst_sg;
 
@@ -818,36 +813,8 @@ ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
 
 	sg_set_page(&src_sg, src_page, size, offset);
 	sg_set_page(&dst_sg, dst_page, size, offset);
-	return crypt_scatterlist(crypt_stat, &dst_sg, &src_sg,
-				 size, iv, ENCRYPT);
-}
 
-/**
- * ecryptfs_decrypt_page_offset
- * @crypt_stat: The cryptographic context
- * @dst_page: The page to decrypt into
- * @src_page: The page to decrypt from
- * @offset: The byte offset into the dst_page and src_page
- * @size: The number of bytes to decrypt
- * @iv: The initialization vector to use for the decryption
- *
- * Returns the number of bytes decrypted
- */
-static int
-ecryptfs_decrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct page *dst_page, struct page *src_page,
-			     int offset, int size, unsigned char *iv)
-{
-	struct scatterlist src_sg, dst_sg;
-
-	sg_init_table(&src_sg, 1);
-	sg_set_page(&src_sg, src_page, size, offset);
-
-	sg_init_table(&dst_sg, 1);
-	sg_set_page(&dst_sg, dst_page, size, offset);
-
-	return crypt_scatterlist(crypt_stat, &dst_sg, &src_sg,
-				 size, iv, DECRYPT);
+	return crypt_scatterlist(crypt_stat, &dst_sg, &src_sg, size, iv, op);
 }
 
 #define ECRYPTFS_MAX_SCATTERLIST_LEN 4
