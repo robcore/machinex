@@ -553,18 +553,6 @@ sub set_value {
 	# Note if a test is something other than build, then we
 	# will need other manditory options.
 	if ($prvalue ne "install") {
-	    # for bisect, we need to check BISECT_TYPE
-	    if ($prvalue ne "bisect") {
-		$buildonly = 0;
-	    }
-	} else {
-	    # install still limits some manditory options.
-	    $buildonly = 2;
-	}
-    }
-
-    if ($buildonly && $lvalue =~ /^BISECT_TYPE(\[.*\])?$/ && $prvalue ne "build") {
-	if ($prvalue ne "install") {
 	    $buildonly = 0;
 	} else {
 	    # install still limits some manditory options.
@@ -1004,7 +992,7 @@ sub read_config {
 }
 
 sub __eval_option {
-    my ($name, $option, $i) = @_;
+    my ($option, $i) = @_;
 
     # Add space to evaluate the character before $
     $option = " $option";
@@ -1036,11 +1024,7 @@ sub __eval_option {
 	my $o = "$var\[$i\]";
 	my $parento = "$var\[$parent\]";
 
-	# If a variable contains itself, use the default var
-	if (($var eq $name) && defined($opt{$var})) {
-	    $o = $opt{$var};
-	    $retval = "$retval$o";
-	} elsif (defined($opt{$o})) {
+	if (defined($opt{$o})) {
 	    $o = $opt{$o};
 	    $retval = "$retval$o";
 	} elsif ($repeated && defined($opt{$parento})) {
@@ -1064,7 +1048,7 @@ sub __eval_option {
 }
 
 sub eval_option {
-    my ($name, $option, $i) = @_;
+    my ($option, $i) = @_;
 
     my $prev = "";
 
@@ -1080,7 +1064,7 @@ sub eval_option {
 		"Check for recursive variables\n";
 	}
 	$prev = $option;
-	$option = __eval_option($name, $option, $i);
+	$option = __eval_option($option, $i);
     }
 
     return $option;
@@ -1221,7 +1205,6 @@ sub start_monitor {
 }
 
 sub end_monitor {
-    return if (!defined $console);
     if (--$monitor_cnt) {
 	return;
     }
@@ -1455,7 +1438,7 @@ sub wait_for_input
 
     $rin = '';
     vec($rin, fileno($fp), 1) = 1;
-    ($ready, $time) = select($rin, undef, undef, $time);
+    $ready = select($rin, undef, undef, $time);
 
     $line = "";
 
@@ -1749,19 +1732,15 @@ sub get_version {
 
 sub start_monitor_and_boot {
     # Make sure the stable kernel has finished booting
-
-    # Install bisects, don't need console
-    if (defined $console) {
-	start_monitor;
-	wait_for_monitor 5;
-	end_monitor;
-    }
+    start_monitor;
+    wait_for_monitor 5;
+    end_monitor;
 
     get_grub_index;
     get_version;
     install;
 
-    start_monitor if (defined $console);
+    start_monitor;
     return monitor;
 }
 
@@ -1769,10 +1748,6 @@ sub check_buildlog {
     my ($patch) = @_;
 
     my @files = `git show $patch | diffstat -l`;
-
-    foreach my $file (@files) {
-	chomp $file;
-    }
 
     open(IN, "git show $patch |") or
 	dodie "failed to show $patch";
@@ -3456,7 +3431,7 @@ EOF
 read_config $ktest_config;
 
 if (defined($opt{"LOG_FILE"})) {
-    $opt{"LOG_FILE"} = eval_option("LOG_FILE", $opt{"LOG_FILE"}, -1);
+    $opt{"LOG_FILE"} = eval_option($opt{"LOG_FILE"}, -1);
 }
 
 # Append any configs entered in manually to the config file.
@@ -3533,7 +3508,7 @@ sub set_test_option {
     my $option = __set_test_option($name, $i);
     return $option if (!defined($option));
 
-    return eval_option($name, $option, $i);
+    return eval_option($option, $i);
 }
 
 # First we need to do is the builds
