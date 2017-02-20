@@ -45,9 +45,8 @@ enum tpm_duration {
 };
 
 #define TPM_MAX_ORDINAL 243
-#define TSC_MAX_ORDINAL 12
-#define TPM_PROTECTED_COMMAND 0x00
-#define TPM_CONNECTION_COMMAND 0x40
+#define TPM_MAX_PROTECTED_ORDINAL 12
+#define TPM_PROTECTED_ORDINAL_MASK 0xFF
 
 /*
  * Bug workaround - some TPM's don't flush the most
@@ -71,6 +70,21 @@ static DECLARE_BITMAP(dev_mask, TPM_NUM_DEVICES);
  * values of the SHORT, MEDIUM, and LONG durations are retrieved
  * from the chip during initialization with a call to tpm_get_timeouts.
  */
+static const u8 tpm_protected_ordinal_duration[TPM_MAX_PROTECTED_ORDINAL] = {
+	TPM_UNDEFINED,		/* 0 */
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,		/* 5 */
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,
+	TPM_UNDEFINED,
+	TPM_SHORT,		/* 10 */
+	TPM_SHORT,
+};
+
 static const u8 tpm_ordinal_duration[TPM_MAX_ORDINAL] = {
 	TPM_UNDEFINED,		/* 0 */
 	TPM_UNDEFINED,
@@ -342,11 +356,14 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
 {
 	int duration_idx = TPM_UNDEFINED;
 	int duration = 0;
-	u8 category = (ordinal >> 24) & 0xFF;
 
-	if ((category == TPM_PROTECTED_COMMAND && ordinal < TPM_MAX_ORDINAL) ||
-	    (category == TPM_CONNECTION_COMMAND && ordinal < TSC_MAX_ORDINAL))
+	if (ordinal < TPM_MAX_ORDINAL)
 		duration_idx = tpm_ordinal_duration[ordinal];
+	else if ((ordinal & TPM_PROTECTED_ORDINAL_MASK) <
+		 TPM_MAX_PROTECTED_ORDINAL)
+		duration_idx =
+		    tpm_protected_ordinal_duration[ordinal &
+						   TPM_PROTECTED_ORDINAL_MASK];
 
 	if (duration_idx != TPM_UNDEFINED)
 		duration = chip->vendor.duration[duration_idx];

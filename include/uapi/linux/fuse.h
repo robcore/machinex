@@ -60,10 +60,6 @@
  *
  * 7.20
  *  - add FUSE_AUTO_INVAL_DATA
- *
- * 7.21
- *  - add FUSE_READDIRPLUS
- *  - send the requested events in POLL request
  */
 
 #ifndef _LINUX_FUSE_H
@@ -95,7 +91,7 @@
 #define FUSE_KERNEL_VERSION 7
 
 /** Minor version number of this interface */
-#define FUSE_KERNEL_MINOR_VERSION 21
+#define FUSE_KERNEL_MINOR_VERSION 20
 
 /** The node ID of the root inode */
 #define FUSE_ROOT_ID 1
@@ -583,7 +579,7 @@ struct fuse_poll_in {
 	uint64_t	fh;
 	uint64_t	kh;
 	uint32_t	flags;
-	uint32_t   events;
+	uint32_t   padding;
 };
 
 struct fuse_poll_out {
