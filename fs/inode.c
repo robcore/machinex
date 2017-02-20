@@ -1668,11 +1668,11 @@ int file_update_time(struct file *file)
 		return 0;
 
 	/* Finally allowed to write? Takes lock. */
-	if (__mnt_want_write_file(file))
+	if (mnt_want_write_file(file))
 		return 0;
 
 	ret = update_time(inode, &now, sync_it);
-	__mnt_drop_write_file(file);
+	mnt_drop_write_file(file);
 
 	return ret;
 }
