@@ -211,6 +211,10 @@ static inline void b43_pci_ssb_bridge_exit(void)
 extern u32 ssb_pmu_get_cpu_clock(struct ssb_chipcommon *cc);
 extern u32 ssb_pmu_get_controlclock(struct ssb_chipcommon *cc);
 
+#ifdef CONFIG_SSB_DRIVER_MIPS
+extern struct platform_device ssb_pflash_dev;
+#endif
+
 #ifdef CONFIG_SSB_DRIVER_EXTIF
 extern void ssb_extif_init(struct ssb_extif *extif);
 #else
