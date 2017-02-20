@@ -479,27 +479,72 @@ static int tt_no_collision (
 
 /*-------------------------------------------------------------------------*/
 
-static void enable_periodic(struct ehci_hcd *ehci)
+static int enable_periodic (struct ehci_hcd *ehci)
 {
-	if (ehci->periodic_count++)
-		return;
+	u32	cmd;
+	int	status;
 
-	/* Stop waiting to turn off the periodic schedule */
-	ehci->enabled_hrtimer_events &= ~BIT(EHCI_HRTIMER_DISABLE_PERIODIC);
+	if (ehci->periodic_sched++)
+		return 0;
 
-	/* Don't start the schedule until PSS is 0 */
-	ehci_poll_PSS(ehci);
+	/* did clearing PSE did take effect yet?
+	 * takes effect only at frame boundaries...
+	 */
+	status = handshake_on_error_set_halt(ehci, &ehci->regs->status,
+					     STS_PSS, 0, 9 * 125);
+	if (status) {
+		usb_hc_died(ehci_to_hcd(ehci));
+		return status;
+	}
+
+	cmd = ehci_readl(ehci, &ehci->regs->command) | CMD_PSE;
+	ehci_writel(ehci, cmd, &ehci->regs->command);
+	/* posted write ... PSS happens later */
+
+	/* make sure ehci_work scans these */
+	ehci->next_uframe = ehci_read_frame_index(ehci)
+		% (ehci->periodic_size << 3);
+	if (unlikely(ehci->broken_periodic))
+		ehci->last_periodic_enable = ktime_get_real();
+	return 0;
 }
 
-static void disable_periodic(struct ehci_hcd *ehci)
+static int disable_periodic (struct ehci_hcd *ehci)
 {
-	if (--ehci->periodic_count)
-		return;
+	u32	cmd;
+	int	status;
 
-	ehci->next_uframe = -1;		/* the periodic schedule is empty */
+	if (--ehci->periodic_sched)
+		return 0;
 
-	/* Don't turn off the schedule until PSS is 1 */
-	ehci_poll_PSS(ehci);
+	if (unlikely(ehci->broken_periodic)) {
+		/* delay experimentally determined */
+		ktime_t safe = ktime_add_us(ehci->last_periodic_enable, 1000);
+		ktime_t now = ktime_get_real();
+		s64 delay = ktime_us_delta(safe, now);
+
+		if (unlikely(delay > 0))
+			udelay(delay);
+	}
+
+	/* did setting PSE not take effect yet?
+	 * takes effect only at frame boundaries...
+	 */
+	status = handshake_on_error_set_halt(ehci, &ehci->regs->status,
+					     STS_PSS, STS_PSS, 9 * 125);
+	if (status) {
+		usb_hc_died(ehci_to_hcd(ehci));
+		return status;
+	}
+
+	cmd = ehci_readl(ehci, &ehci->regs->command) & ~CMD_PSE;
+	ehci_writel(ehci, cmd, &ehci->regs->command);
+	/* posted write ... */
+
+	free_cached_lists(ehci);
+
+	ehci->next_uframe = -1;
+	return 0;
 }
 
 /*-------------------------------------------------------------------------*/
@@ -510,7 +555,7 @@ static void disable_periodic(struct ehci_hcd *ehci)
  * this just links in a qh; caller guarantees uframe masks are set right.
  * no FSTN support (yet; ehci 0.96+)
  */
-static void qh_link_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
+static int qh_link_periodic (struct ehci_hcd *ehci, struct ehci_qh *qh)
 {
 	unsigned	i;
 	unsigned	period = qh->period;
@@ -571,10 +616,10 @@ static void qh_link_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 		: (qh->usecs * 8);
 
 	/* maybe enable periodic schedule processing */
-	enable_periodic(ehci);
+	return enable_periodic(ehci);
 }
 
-static void qh_unlink_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
+static int qh_unlink_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 {
 	unsigned	i;
 	unsigned	period;
@@ -607,6 +652,9 @@ static void qh_unlink_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 	/* qh->qh_next still "live" to HC */
 	qh->qh_state = QH_STATE_UNLINK;
 	qh->qh_next.ptr = NULL;
+
+	/* maybe turn off periodic schedule */
+	return disable_periodic(ehci);
 }
 
 static void intr_deschedule (struct ehci_hcd *ehci, struct ehci_qh *qh)
@@ -666,9 +714,6 @@ static void intr_deschedule (struct ehci_hcd *ehci, struct ehci_qh *qh)
 					qh, rc);
 		}
 	}
-
-	/* maybe turn off periodic schedule */
-	disable_periodic(ehci);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -848,7 +893,7 @@ static int qh_schedule(struct ehci_hcd *ehci, struct ehci_qh *qh)
 	}
 
 	/* stuff into the periodic schedule */
-	qh_link_periodic(ehci, qh);
+	status = qh_link_periodic (ehci, qh);
 done:
 	return status;
 }
@@ -1577,7 +1622,8 @@ itd_link (struct ehci_hcd *ehci, unsigned frame, struct ehci_itd *itd)
 }
 
 /* fit urb's itds into the selected schedule slot; activate as needed */
-static void itd_link_urb(
+static int
+itd_link_urb (
 	struct ehci_hcd		*ehci,
 	struct urb		*urb,
 	unsigned		mod,
@@ -1648,7 +1694,7 @@ static void itd_link_urb(
 	urb->hcpriv = stream;
 
 	timer_action (ehci, TIMER_IO_WATCHDOG);
-	enable_periodic(ehci);
+	return enable_periodic(ehci);
 }
 
 #define	ISO_ERRS (EHCI_ISOC_BUF_ERR | EHCI_ISOC_BABBLE | EHCI_ISOC_XACTERR)
@@ -1728,7 +1774,7 @@ itd_complete (
 	ehci_urb_done(ehci, urb, 0);
 	retval = true;
 	urb = NULL;
-	disable_periodic(ehci);
+	(void) disable_periodic(ehci);
 	ehci_to_hcd(ehci)->self.bandwidth_isoc_reqs--;
 
 	if (ehci_to_hcd(ehci)->self.bandwidth_isoc_reqs == 0) {
@@ -1995,7 +2041,8 @@ sitd_link (struct ehci_hcd *ehci, unsigned frame, struct ehci_sitd *sitd)
 }
 
 /* fit urb's sitds into the selected schedule slot; activate as needed */
-static void sitd_link_urb(
+static int
+sitd_link_urb (
 	struct ehci_hcd		*ehci,
 	struct urb		*urb,
 	unsigned		mod,
@@ -2057,7 +2104,7 @@ static void sitd_link_urb(
 	urb->hcpriv = stream;
 
 	timer_action (ehci, TIMER_IO_WATCHDOG);
-	enable_periodic(ehci);
+	return enable_periodic(ehci);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -2123,7 +2170,7 @@ sitd_complete (
 	ehci_urb_done(ehci, urb, 0);
 	retval = true;
 	urb = NULL;
-	disable_periodic(ehci);
+	(void) disable_periodic(ehci);
 	ehci_to_hcd(ehci)->self.bandwidth_isoc_reqs--;
 
 	if (ehci_to_hcd(ehci)->self.bandwidth_isoc_reqs == 0) {
@@ -2408,7 +2455,7 @@ restart:
 
 			/* assume completion callbacks modify the queue */
 			if (unlikely (modified)) {
-				if (likely(ehci->periodic_count > 0))
+				if (likely(ehci->periodic_sched > 0))
 					goto restart;
 				/* short-circuit this scan */
 				now_uframe = clock;
@@ -2437,7 +2484,7 @@ restart:
 			unsigned	now;
 
 			if (ehci->rh_state != EHCI_RH_RUNNING
-					|| ehci->periodic_count == 0)
+					|| ehci->periodic_sched == 0)
 				break;
 			ehci->next_uframe = now_uframe;
 			now = ehci_read_frame_index(ehci) & (mod - 1);
