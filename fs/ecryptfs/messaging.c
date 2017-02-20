@@ -349,14 +349,13 @@ int ecryptfs_process_response(struct ecryptfs_message *msg, uid_t euid,
 		goto unlock;
 	}
 	msg_size = (sizeof(*msg) + msg->data_len);
-	msg_ctx->msg = kmalloc(msg_size, GFP_KERNEL);
+	msg_ctx->msg = kmemdup(msg, msg_size, GFP_KERNEL);
 	if (!msg_ctx->msg) {
 		rc = -ENOMEM;
 		printk(KERN_ERR "%s: Failed to allocate [%zd] bytes of "
 		       "GFP_KERNEL memory\n", __func__, msg_size);
 		goto unlock;
 	}
-	memcpy(msg_ctx->msg, msg, msg_size);
 	msg_ctx->state = ECRYPTFS_MSG_CTX_STATE_DONE;
 	rc = 0;
 wake_up:
