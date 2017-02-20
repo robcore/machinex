@@ -241,7 +241,8 @@ static int cache_erp_log_show(struct seq_file *m, void *v)
 {
 	int log_value;
 
-	log_value = __raw_readl(msm_erp_log_base) == ERP_LOG_MAGIC ? 1 : 0;
+	log_value = __raw_readl(MSM_IMEM_BASE + ERP_LOG_MAGIC_ADDR) ==
+			ERP_LOG_MAGIC ? 1 : 0;
 
 	seq_printf(m, "%d\n", log_value);
 
