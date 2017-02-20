@@ -956,6 +956,37 @@ static struct platform_driver bluesleep_driver = {
 		.owner = THIS_MODULE,
 	},
 };
+
+static const struct file_operations proc_fops_btwake = {
+	.owner = THIS_MODULE,
+	.read = bluepower_read_proc_btwake,
+	.write = bluepower_write_proc_btwake,
+};
+static const struct file_operations proc_fops_hostwake = {
+	.owner = THIS_MODULE,
+	.read = bluepower_read_proc_hostwake,
+};
+static const struct file_operations proc_fops_proto = {
+	.owner = THIS_MODULE,
+	.read = bluesleep_read_proc_proto,
+	.write = bluesleep_write_proc_proto,
+};
+static const struct file_operations proc_fops_asleep = {
+	.owner = THIS_MODULE,
+	.read = bluesleep_read_proc_asleep,
+};
+static const struct file_operations proc_fops_lpm = {
+	.owner = THIS_MODULE,
+	.read = bluesleep_read_proc_lpm,
+	.write = bluesleep_write_proc_lpm,
+};
+static const struct file_operations proc_fops_btwrite = {
+	.owner = THIS_MODULE,
+	.read = bluesleep_read_proc_btwrite,
+	.write = bluesleep_write_proc_btwrite,
+};
+
+
 /**
  * Initializes the module.
  * @return On success, 0. On error, -1, and <code>errno</code> is set
@@ -1000,62 +1031,59 @@ static int __init bluesleep_init(void)
 	}
 
 	/* Creating read/write "btwake" entry */
-	ent = create_proc_entry("btwake", 0, sleep_dir);
+	ent = proc_create("btwake", 0, sleep_dir, &proc_fops_btwake);
 	if (ent == NULL) {
-		pr_debug("Unable to create /proc/%s/btwake entry", PROC_DIR);
+		BT_ERR("Unable to create /proc/%s/btwake entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	ent->read_proc = bluepower_read_proc_btwake;
-	ent->write_proc = bluepower_write_proc_btwake;
+	//ent->read_proc = bluepower_read_proc_btwake;
+	//ent->write_proc = bluepower_write_proc_btwake;
 
 	/* read only proc entries */
-	if (create_proc_read_entry("hostwake", 0, sleep_dir,
-				bluepower_read_proc_hostwake, NULL) == NULL) {
-		pr_debug("Unable to create /proc/%s/hostwake entry", PROC_DIR);
+	if (proc_create("hostwake", 0, sleep_dir, &proc_fops_hostwake) == NULL) {
+		BT_ERR("Unable to create /proc/%s/hostwake entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
 
 	/* read/write proc entries */
-	ent = create_proc_entry("proto", 0, sleep_dir);
+	ent = proc_create("proto", 0, sleep_dir, &proc_fops_proto);
 	if (ent == NULL) {
-		pr_debug("Unable to create /proc/%s/proto entry", PROC_DIR);
+		BT_ERR("Unable to create /proc/%s/proto entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	ent->read_proc = bluesleep_read_proc_proto;
-	ent->write_proc = bluesleep_write_proc_proto;
+	//ent->read_proc = bluesleep_read_proc_proto;
+	//ent->write_proc = bluesleep_write_proc_proto;
 
 	/* read only proc entries */
-	if (create_proc_read_entry("asleep", 0,
-			sleep_dir, bluesleep_read_proc_asleep, NULL) == NULL) {
-		pr_debug("Unable to create /proc/%s/asleep entry", PROC_DIR);
+	if (proc_create("asleep", 0, sleep_dir, &proc_fops_asleep) == NULL) {
+		BT_ERR("Unable to create /proc/%s/asleep entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
 
 #if BT_BLUEDROID_SUPPORT
 	/* read/write proc entries */
-	ent = create_proc_entry("lpm", 0, sleep_dir);
+	ent = proc_create("lpm", 0, sleep_dir, &proc_fops_lpm);
 	if (ent == NULL) {
-		pr_debug("Unable to create /proc/%s/lpm entry", PROC_DIR);
+		BT_ERR("Unable to create /proc/%s/lpm entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	ent->read_proc = bluesleep_read_proc_lpm;
-	ent->write_proc = bluesleep_write_proc_lpm;
+	//ent->read_proc = bluesleep_read_proc_lpm;
+	//ent->write_proc = bluesleep_write_proc_lpm;
 
 	/* read/write proc entries */
-	ent = create_proc_entry("btwrite", 0, sleep_dir);
+	ent = proc_create("btwrite", 0, sleep_dir, &proc_fops_btwrite);
 	if (ent == NULL) {
-		pr_debug("Unable to create /proc/%s/btwrite entry", PROC_DIR);
+		BT_ERR("Unable to create /proc/%s/btwrite entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	ent->read_proc = bluesleep_read_proc_btwrite;
-	ent->write_proc = bluesleep_write_proc_btwrite;
-#endif
+	//ent->read_proc = bluesleep_read_proc_btwrite;
+	//ent->write_proc = bluesleep_write_proc_btwrite;
 
 	flags = 0; /* clear all status bits */
 
