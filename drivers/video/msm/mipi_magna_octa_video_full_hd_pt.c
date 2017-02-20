@@ -1345,7 +1345,7 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		backlightlevel = GAMMA_300CD;
+		backlightlevel = GAMMA_152CD;
 		break;
 	}
 
@@ -2162,7 +2162,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.underflow_clr = 0xff;	/* blue */
 	pinfo.lcdc.hsync_skew = 0;
 
-	pinfo.bl_max = 300;
+	pinfo.bl_max = 255;
 	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 

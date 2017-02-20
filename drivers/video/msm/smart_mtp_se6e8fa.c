@@ -221,7 +221,11 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.R_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_R;
+#ifdef CONFIG_EXPERIMENTAL_COLOR_MODS
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][0]) << BIT_SHIFT;
+#else
 	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+#endif
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -229,7 +233,11 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.G_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_G;
+#ifdef CONFIG_EXPERIMENTAL_COLOR_MODS
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][1]) << BIT_SHIFT;
+#else
 	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+#endif
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
@@ -237,7 +245,11 @@ static int vt_adjustment(struct SMART_DIM *pSmart)
 
 	LSB = char_to_int(pSmart->MTP.B_OFFSET.OFFSET_1);
 	add_mtp = LSB + VT_300CD_B;
+#ifdef CONFIG_EXPERIMENTAL_COLOR_MODS
+	result_1 = result_2 = (vt_coefficient[LSB] + color_mods[panelval][2]) << BIT_SHIFT;
+#else
 	result_1 = result_2 = vt_coefficient[LSB] << BIT_SHIFT;
+#endif
 	do_div(result_2, vt_denominator);
 	result_3 = (S6E8FA_VREG0_REF * result_2) >> BIT_SHIFT;
 	result_4 = S6E8FA_VREG0_REF - result_3;
