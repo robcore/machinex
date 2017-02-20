@@ -154,10 +154,6 @@ extern int iommu_group_unregister_notifier(struct iommu_group *group,
 					   struct notifier_block *nb);
 extern int iommu_group_id(struct iommu_group *group);
 
-/* Window handling function prototypes */
-extern int iommu_domain_window_enable(struct iommu_domain *domain, u32 wnd_nr,
-				      phys_addr_t offset, u64 size);
-extern void iommu_domain_window_disable(struct iommu_domain *domain, u32 wnd_nr);
 /**
  * report_iommu_fault() - report about an IOMMU fault to the IOMMU framework
  * @domain: the iommu domain where the fault has happened
@@ -251,18 +247,6 @@ static inline int iommu_unmap_range(struct iommu_domain *domain,
 				    unsigned int iova, unsigned int len)
 {
 	return -ENODEV;
-}
-
-static inline int iommu_domain_window_enable(struct iommu_domain *domain,
-					     u32 wnd_nr, phys_addr_t paddr,
-					     u64 size)
-{
-	return -ENODEV;
-}
-
-static inline void iommu_domain_window_disable(struct iommu_domain *domain,
-					       u32 wnd_nr)
-{
 }
 
 static inline phys_addr_t iommu_iova_to_phys(struct iommu_domain *domain,

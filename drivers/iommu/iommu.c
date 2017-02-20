@@ -803,8 +803,7 @@ int iommu_map(struct iommu_domain *domain, unsigned long iova,
 	size_t orig_size = size;
 	int ret = 0;
 
-	if (unlikely(domain->ops->unmap == NULL ||
-		     domain->ops->pgsize_bitmap == 0UL))
+	if (unlikely(domain->ops->map == NULL))
 		return -ENODEV;
 
 	/* find out the minimum page size supported */
@@ -851,8 +850,7 @@ size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova, size_t size)
 	size_t unmapped_page, unmapped = 0;
 	unsigned int min_pagesz;
 
-	if (unlikely(domain->ops->unmap == NULL ||
-		     domain->ops->pgsize_bitmap == 0UL))
+	if (unlikely(domain->ops->unmap == NULL))
 		return -ENODEV;
 
 	/* find out the minimum page size supported */
@@ -926,26 +924,6 @@ phys_addr_t iommu_get_pt_base_addr(struct iommu_domain *domain)
 	return domain->ops->get_pt_base_addr(domain);
 }
 EXPORT_SYMBOL_GPL(iommu_get_pt_base_addr);
-
-
-int iommu_domain_window_enable(struct iommu_domain *domain, u32 wnd_nr,
-			       phys_addr_t paddr, u64 size)
-{
-	if (unlikely(domain->ops->domain_window_enable == NULL))
-		return -ENODEV;
-
-	return domain->ops->domain_window_enable(domain, wnd_nr, paddr, size);
-}
-EXPORT_SYMBOL_GPL(iommu_domain_window_enable);
-
-void iommu_domain_window_disable(struct iommu_domain *domain, u32 wnd_nr)
-{
-	if (unlikely(domain->ops->domain_window_disable == NULL))
-		return;
-
-	return domain->ops->domain_window_disable(domain, wnd_nr);
-}
-EXPORT_SYMBOL_GPL(iommu_domain_window_disable);
 
 static int __init iommu_init(void)
 {
