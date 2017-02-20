@@ -27,7 +27,6 @@
 #include <linux/uaccess.h>
 #include <linux/io.h>
 #include <linux/reboot.h>
-#include <linux/slab.h>
 
 #include <asm/setup.h>
 #include <asm/page.h>

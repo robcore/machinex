@@ -32,7 +32,6 @@
 #include <linux/init.h>
 #include <linux/irqnr.h>
 #include <linux/time.h>
-#include <linux/slab.h>
 #include <linux/parport.h>
 #include <linux/pps_kernel.h>
 

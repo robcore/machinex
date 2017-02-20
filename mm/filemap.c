@@ -1836,7 +1836,6 @@ int filemap_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 	struct inode *inode = file_inode(vma->vm_file);
 	int ret = VM_FAULT_LOCKED;
 
-	sb_start_pagefault(inode->i_sb);
 	file_update_time(vma->vm_file);
 	lock_page(page);
 	if (page->mapping != inode->i_mapping) {
@@ -2443,6 +2442,8 @@ ssize_t __generic_file_write_iter(struct kiocb *iocb, struct iov_iter *iter,
 	count = iov_iter_count(iter);
 	pos = *ppos;
 
+	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
+
 	/* We can write back this queue in page reclaim */
 	current->backing_dev_info = mapping->backing_dev_info;
 	written = 0;
@@ -2598,7 +2599,6 @@ ssize_t generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 			ret = err;
 	}
 	blk_finish_plug(&plug);
-	sb_end_write(inode->i_sb);
 	return ret;
 }
 EXPORT_SYMBOL(generic_file_aio_write);

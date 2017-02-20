@@ -1296,9 +1296,9 @@ static void wd7000_revision(Adapter * host)
 
 
 #undef SPRINTF
-#define SPRINTF(args...) { seq_printf(m, ## args); }
+#define SPRINTF(args...) { if (pos < (buffer + length)) pos += sprintf (pos, ## args); }
 
-static int wd7000_set_info(struct Scsi_Host *host, char *buffer, int length)
+static int wd7000_set_info(char *buffer, int length, struct Scsi_Host *host)
 {
 	dprintk("Buffer = <%.*s>, length = %d\n", length, buffer, length);
 
@@ -1310,14 +1310,21 @@ static int wd7000_set_info(struct Scsi_Host *host, char *buffer, int length)
 }
 
 
-static int wd7000_show_info(struct seq_file *m, struct Scsi_Host *host)
+static int wd7000_proc_info(struct Scsi_Host *host, char *buffer, char **start, off_t offset, int length,  int inout)
 {
 	Adapter *adapter = (Adapter *)host->hostdata;
 	unsigned long flags;
+	char *pos = buffer;
 #ifdef WD7000_DEBUG
 	Mailbox *ogmbs, *icmbs;
 	short count;
 #endif
+
+	/*
+	 * Has data been written to the file ?
+	 */
+	if (inout)
+		return (wd7000_set_info(buffer, length, host));
 
 	spin_lock_irqsave(host->host_lock, flags);
 	SPRINTF("Host scsi%d: Western Digital WD-7000 (rev %d.%d)\n", host->host_no, adapter->rev1, adapter->rev2);
@@ -1361,7 +1368,17 @@ static int wd7000_show_info(struct seq_file *m, struct Scsi_Host *host)
 
 	spin_unlock_irqrestore(host->host_lock, flags);
 
-	return 0;
+	/*
+	 * Calculate start of next buffer, and return value.
+	 */
+	*start = buffer + offset;
+
+	if ((pos - buffer) < offset)
+		return (0);
+	else if ((pos - buffer - offset) < length)
+		return (pos - buffer - offset);
+	else
+		return (length);
 }
 
 
@@ -1396,8 +1413,7 @@ static __init int wd7000_detect(struct scsi_host_template *tpnt)
 	for (i = 0; i < NUM_CONFIGS; biosptr[i++] = -1);
 
 	tpnt->proc_name = "wd7000";
-	tpnt->show_info = &wd7000_show_info;
-	tpnt->write_info = wd7000_set_info;
+	tpnt->proc_info = &wd7000_proc_info;
 
 	/*
 	 * Set up SCB free list, which is shared by all adapters
@@ -1642,8 +1658,7 @@ MODULE_LICENSE("GPL");
 
 static struct scsi_host_template driver_template = {
 	.proc_name		= "wd7000",
-	.show_info		= wd7000_show_info,
-	.write_info		= wd7000_set_info,
+	.proc_info		= wd7000_proc_info,
 	.name			= "Western Digital WD-7000",
 	.detect			= wd7000_detect,
 	.release		= wd7000_release,

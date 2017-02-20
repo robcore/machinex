@@ -1104,12 +1104,10 @@ static ssize_t compat_do_readv_writev(int type, struct file *file,
 			fnv = do_aio_write;
 	}
 
-	if (fnv) {
-		file_start_write(file);
+	if (fnv)
 		ret = do_sync_readv_writev(file, iov, nr_segs, tot_len,
 						pos, fnv);
-		file_end_write(file);
-	} else
+	else
 		ret = do_loop_readv_writev(file, iov, nr_segs, pos, fn);
 
 out:

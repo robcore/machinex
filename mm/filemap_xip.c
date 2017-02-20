@@ -412,6 +412,8 @@ xip_file_write(struct file *filp, const char __user *buf, size_t len,
 	pos = *ppos;
 	count = len;
 
+	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
+
 	/* We can write back this queue in page reclaim */
 	current->backing_dev_info = mapping->backing_dev_info;
 

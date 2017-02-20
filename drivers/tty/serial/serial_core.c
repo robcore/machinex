@@ -1655,7 +1655,7 @@ static int uart_proc_show(struct seq_file *m, void *v)
 
 static int uart_proc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, uart_proc_show, PDE_DATA(inode));
+	return single_open(file, uart_proc_show, PDE(inode)->data);
 }
 
 static const struct file_operations uart_proc_fops = {

@@ -470,22 +470,15 @@ struct uart_port *bluesleep_get_uart_port(void)
 	return uport;
 }
 
-static ssize_t bluesleep_read_proc_lpm(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
+static int bluesleep_read_proc_lpm(char *page, char **start, off_t offset,
+					int count, int *eof, void *data)
 {
-	int ret;
-
-	ret = copy_to_user(userbuf,has_lpm_enabled?"lpm: 1 \n":"lpm: 0 \n",bytes);
-	if(ret)
-	{
-		BT_ERR("Failed to bluesleep_read_proc_lpm : %d",ret);
-		return ret;
-	}
-
-	return bytes;
+	*eof = 1;
+	return snprintf(page, count, "lpm: %u\n", has_lpm_enabled?1:0 );
 }
 
-static ssize_t bluesleep_write_proc_lpm(struct file *file, const char __user *buffer,
-				 size_t count, loff_t *pos)
+static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
+					unsigned long count, void *data)
 {
 	char b;
 
@@ -521,18 +514,15 @@ static ssize_t bluesleep_write_proc_lpm(struct file *file, const char __user *bu
 	return count;
 }
 
-static ssize_t bluesleep_read_proc_btwrite(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
+static int bluesleep_read_proc_btwrite(char *page, char **start, off_t offset,
+					int count, int *eof, void *data)
 {
-#if 0
 	*eof = 1;
 	return snprintf(page, count, "unsupported to read\n");
-	#else
-	return 0;
-	#endif
 }
 
-static ssize_t bluesleep_write_proc_btwrite(struct file *file, const char __user *buffer,
-				 size_t count, loff_t *pos)
+static int bluesleep_write_proc_btwrite(struct file *file, const char *buffer,
+					unsigned long count, void *data)
 {
 	char b;
 
@@ -641,15 +631,12 @@ static irqreturn_t bluesleep_hostwake_isr(int irq, void *dev_id)
  * @param data Not used.
  * @return The number of bytes written.
  */
-static ssize_t bluepower_read_proc_btwake(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
+static int bluepower_read_proc_btwake(char *page, char **start, off_t offset,
+					int count, int *eof, void *data)
 {
-#if 0
 	*eof = 1;
 	return snprintf(page, count, "btwake:%u\n", \
 				test_bit(BT_EXT_WAKE, &flags));
-#else
-	return 0;
-#endif
 }
 
 /**
@@ -661,8 +648,8 @@ static ssize_t bluepower_read_proc_btwake(struct file *file, char __user *userbu
  * @return On success, the number of bytes written. On error, -1, and
  * <code>errno</code> is set appropriately.
  */
-static ssize_t bluepower_write_proc_btwake(struct file *file, const char __user *buffer,
-				 size_t count, loff_t *pos)
+static int bluepower_write_proc_btwake(struct file *file, const char *buffer,
+					unsigned long count, void *data)
 {
 	char *buf;
 
@@ -714,15 +701,12 @@ static ssize_t bluepower_write_proc_btwake(struct file *file, const char __user 
  * @param data Not used.
  * @return The number of bytes written.
  */
-static ssize_t bluepower_read_proc_hostwake(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
+static int bluepower_read_proc_hostwake(char *page, char **start, off_t offset,
+					int count, int *eof, void *data)
 {
-#if 0
 	*eof = 1;
 	return snprintf(page, count, "hostwake: %u\n", \
 				gpio_get_value(bsi->host_wake));
-	#else
-	return 0;
-	#endif
 }
 
 
@@ -738,17 +722,14 @@ static ssize_t bluepower_read_proc_hostwake(struct file *file, char __user *user
  * @param data Not used.
  * @return The number of bytes written.
  */
-static ssize_t bluesleep_read_proc_asleep(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
+static int bluesleep_read_proc_asleep(char *page, char **start, off_t offset,
+					int count, int *eof, void *data)
 {
-#if 0
 	unsigned int asleep;
 
 	asleep = test_bit(BT_ASLEEP, &flags) ? 1 : 0;
 	*eof = 1;
 	return snprintf(page, count, "asleep: %u\n", asleep);
-	#else
-	return 0;
-	#endif
 }
 
 /**
@@ -763,17 +744,14 @@ static ssize_t bluesleep_read_proc_asleep(struct file *file, char __user *userbu
  * @param data Not used.
  * @return The number of bytes written.
  */
-static ssize_t bluesleep_read_proc_proto(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
+static int bluesleep_read_proc_proto(char *page, char **start, off_t offset,
+					int count, int *eof, void *data)
 {
-#if 0
 	unsigned int proto;
 
 	proto = test_bit(BT_PROTO, &flags) ? 1 : 0;
 	*eof = 1;
 	return snprintf(page, count, "proto: %u\n", proto);
-	#else
-	return 0;
-	#endif
 }
 
 /**
@@ -785,8 +763,8 @@ static ssize_t bluesleep_read_proc_proto(struct file *file, char __user *userbuf
  * @return On success, the number of bytes written. On error, -1, and
  * <code>errno</code> is set appropriately.
  */
-static ssize_t bluesleep_write_proc_proto(struct file *file, const char __user *buffer,
-				 size_t count, loff_t *pos)
+static int bluesleep_write_proc_proto(struct file *file, const char *buffer,
+					unsigned long count, void *data)
 {
 	char proto;
 
@@ -978,37 +956,6 @@ static struct platform_driver bluesleep_driver = {
 		.owner = THIS_MODULE,
 	},
 };
-
-static const struct file_operations proc_fops_btwake = {
-	.owner = THIS_MODULE,
-	.read = bluepower_read_proc_btwake,
-	.write = bluepower_write_proc_btwake,
-};
-static const struct file_operations proc_fops_hostwake = {
-	.owner = THIS_MODULE,
-	.read = bluepower_read_proc_hostwake,
-};
-static const struct file_operations proc_fops_proto = {
-	.owner = THIS_MODULE,
-	.read = bluesleep_read_proc_proto,
-	.write = bluesleep_write_proc_proto,
-};
-static const struct file_operations proc_fops_asleep = {
-	.owner = THIS_MODULE,
-	.read = bluesleep_read_proc_asleep,
-};
-static const struct file_operations proc_fops_lpm = {
-	.owner = THIS_MODULE,
-	.read = bluesleep_read_proc_lpm,
-	.write = bluesleep_write_proc_lpm,
-};
-static const struct file_operations proc_fops_btwrite = {
-	.owner = THIS_MODULE,
-	.read = bluesleep_read_proc_btwrite,
-	.write = bluesleep_write_proc_btwrite,
-};
-
-
 /**
  * Initializes the module.
  * @return On success, 0. On error, -1, and <code>errno</code> is set
@@ -1053,59 +1000,61 @@ static int __init bluesleep_init(void)
 	}
 
 	/* Creating read/write "btwake" entry */
-	ent = proc_create("btwake", 0, sleep_dir, &proc_fops_btwake);
+	ent = create_proc_entry("btwake", 0, sleep_dir);
 	if (ent == NULL) {
-		BT_ERR("Unable to create /proc/%s/btwake entry", PROC_DIR);
+		pr_debug("Unable to create /proc/%s/btwake entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	//ent->read_proc = bluepower_read_proc_btwake;
-	//ent->write_proc = bluepower_write_proc_btwake;
+	ent->read_proc = bluepower_read_proc_btwake;
+	ent->write_proc = bluepower_write_proc_btwake;
 
 	/* read only proc entries */
-	if (proc_create("hostwake", 0, sleep_dir, &proc_fops_hostwake) == NULL) {
-		BT_ERR("Unable to create /proc/%s/hostwake entry", PROC_DIR);
+	if (create_proc_read_entry("hostwake", 0, sleep_dir,
+				bluepower_read_proc_hostwake, NULL) == NULL) {
+		pr_debug("Unable to create /proc/%s/hostwake entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
 
 	/* read/write proc entries */
-	ent = proc_create("proto", 0, sleep_dir, &proc_fops_proto);
+	ent = create_proc_entry("proto", 0, sleep_dir);
 	if (ent == NULL) {
-		BT_ERR("Unable to create /proc/%s/proto entry", PROC_DIR);
+		pr_debug("Unable to create /proc/%s/proto entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	//ent->read_proc = bluesleep_read_proc_proto;
-	//ent->write_proc = bluesleep_write_proc_proto;
+	ent->read_proc = bluesleep_read_proc_proto;
+	ent->write_proc = bluesleep_write_proc_proto;
 
 	/* read only proc entries */
-	if (proc_create("asleep", 0, sleep_dir, &proc_fops_asleep) == NULL) {
-		BT_ERR("Unable to create /proc/%s/asleep entry", PROC_DIR);
+	if (create_proc_read_entry("asleep", 0,
+			sleep_dir, bluesleep_read_proc_asleep, NULL) == NULL) {
+		pr_debug("Unable to create /proc/%s/asleep entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
 
 #if BT_BLUEDROID_SUPPORT
 	/* read/write proc entries */
-	ent = proc_create("lpm", 0, sleep_dir, &proc_fops_lpm);
+	ent = create_proc_entry("lpm", 0, sleep_dir);
 	if (ent == NULL) {
-		BT_ERR("Unable to create /proc/%s/lpm entry", PROC_DIR);
+		pr_debug("Unable to create /proc/%s/lpm entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	//ent->read_proc = bluesleep_read_proc_lpm;
-	//ent->write_proc = bluesleep_write_proc_lpm;
+	ent->read_proc = bluesleep_read_proc_lpm;
+	ent->write_proc = bluesleep_write_proc_lpm;
 
 	/* read/write proc entries */
-	ent = proc_create("btwrite", 0, sleep_dir, &proc_fops_btwrite);
+	ent = create_proc_entry("btwrite", 0, sleep_dir);
 	if (ent == NULL) {
-		BT_ERR("Unable to create /proc/%s/btwrite entry", PROC_DIR);
+		pr_debug("Unable to create /proc/%s/btwrite entry", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	//ent->read_proc = bluesleep_read_proc_btwrite;
-	//ent->write_proc = bluesleep_write_proc_btwrite;
+	ent->read_proc = bluesleep_read_proc_btwrite;
+	ent->write_proc = bluesleep_write_proc_btwrite;
 #endif
 
 	flags = 0; /* clear all status bits */

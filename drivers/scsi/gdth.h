@@ -1016,7 +1016,6 @@ typedef struct {
 
 /* function prototyping */
 
-int gdth_show_info(struct seq_file *, struct Scsi_Host *);
-int gdth_set_info(struct Scsi_Host *, char *, int);
+int gdth_proc_info(struct Scsi_Host *, char *,char **,off_t,int,int);
 
 #endif

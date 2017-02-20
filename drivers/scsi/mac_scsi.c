@@ -561,8 +561,7 @@ static int macscsi_pwrite (struct Scsi_Host *instance,
 
 static struct scsi_host_template driver_template = {
 	.proc_name			= "Mac5380",
-	.show_info			= macscsi_show_info,
-	.write_info			= macscsi_write_info,
+	.proc_info			= macscsi_proc_info,
 	.name				= "Macintosh NCR5380 SCSI",
 	.detect				= macscsi_detect,
 	.release			= macscsi_release,

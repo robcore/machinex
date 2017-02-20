@@ -23,8 +23,6 @@
 #include <linux/lglock.h>
 #include <linux/percpu_counter.h>
 #include <linux/percpu.h>
-#include <linux/hardirq.h>
-#include <linux/task_work.h>
 #include <linux/ima.h>
 
 #include <linux/atomic.h>
@@ -79,14 +77,14 @@ EXPORT_SYMBOL_GPL(get_max_files);
  * Handle nr_files sysctl
  */
 #if defined(CONFIG_SYSCTL) && defined(CONFIG_PROC_FS)
-int proc_nr_files(ctl_table *table, int write,
+int proc_nr_files(struct ctl_table *table, int write,
                      void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	files_stat.nr_files = get_nr_files();
 	return proc_doulongvec_minmax(table, write, buffer, lenp, ppos);
 }
 #else
-int proc_nr_files(ctl_table *table, int write,
+int proc_nr_files(struct ctl_table *table, int write,
                      void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	return -ENOSYS;
@@ -134,10 +132,10 @@ struct file *get_empty_filp(void)
 		return ERR_PTR(error);
 	}
 
-	INIT_LIST_HEAD(&f->f_u.fu_list);
 	atomic_long_set(&f->f_count, 1);
 	rwlock_init(&f->f_owner.lock);
 	spin_lock_init(&f->f_lock);
+	mutex_init(&f->f_pos_lock);
 	eventpoll_init_file(f);
 	/* f->f_version: 0 */
 	return f;
@@ -217,7 +215,7 @@ static void drop_file_write_access(struct file *file)
 		return;
 	if (file_check_writeable(file) != 0)
 		return;
-	__mnt_drop_write(mnt);
+	mnt_drop_write(mnt);
 	file_release_write(file);
 }
 
@@ -265,78 +263,10 @@ static void __fput(struct file *file)
 	mntput(mnt);
 }
 
-static DEFINE_SPINLOCK(delayed_fput_lock);
-static LIST_HEAD(delayed_fput_list);
-static void delayed_fput(struct work_struct *unused)
-{
-	LIST_HEAD(head);
-	spin_lock_irq(&delayed_fput_lock);
-	list_splice_init(&delayed_fput_list, &head);
-	spin_unlock_irq(&delayed_fput_lock);
-	while (!list_empty(&head)) {
-		struct file *f = list_first_entry(&head, struct file, f_u.fu_list);
-		list_del_init(&f->f_u.fu_list);
-		__fput(f);
-	}
-}
-
-static void ____fput(struct callback_head *work)
-{
-	__fput(container_of(work, struct file, f_u.fu_rcuhead));
-}
-
-/*
- * If kernel thread really needs to have the final fput() it has done
- * to complete, call this.  The only user right now is the boot - we
- * *do* need to make sure our writes to binaries on initramfs has
- * not left us with opened struct file waiting for __fput() - execve()
- * won't work without that.  Please, don't add more callers without
- * very good reasons; in particular, never call that with locks
- * held and never call that from a thread that might need to do
- * some work on any kind of umount.
- */
-void flush_delayed_fput(void)
-{
-	delayed_fput(NULL);
-}
-
-static DECLARE_WORK(delayed_fput_work, delayed_fput);
-
 void fput(struct file *file)
 {
-	if (atomic_long_dec_and_test(&file->f_count)) {
-		struct task_struct *task = current;
-		unsigned long flags;
-
-		file_sb_list_del(file);
-		if (likely(!in_interrupt() && !(task->flags & PF_KTHREAD))) {
-			init_task_work(&file->f_u.fu_rcuhead, ____fput);
-			if (!task_work_add(task, &file->f_u.fu_rcuhead, true))
-				return;
-		}
-		spin_lock_irqsave(&delayed_fput_lock, flags);
-		list_add(&file->f_u.fu_list, &delayed_fput_list);
-		schedule_work(&delayed_fput_work);
-		spin_unlock_irqrestore(&delayed_fput_lock, flags);
-	}
-}
-
-/*
- * synchronous analog of fput(); for kernel threads that might be needed
- * in some umount() (and thus can't use flush_delayed_fput() without
- * risking deadlocks), need to wait for completion of __fput() and know
- * for this specific struct file it won't involve anything that would
- * need them.  Use only if you really need it - at the very least,
- * don't blindly convert fput() by kernel thread to that.
- */
-void __fput_sync(struct file *file)
-{
-	if (atomic_long_dec_and_test(&file->f_count)) {
-		struct task_struct *task = current;
-		file_sb_list_del(file);
-		BUG_ON(!(task->flags & PF_KTHREAD));
+	if (atomic_long_dec_and_test(&file->f_count))
 		__fput(file);
-	}
 }
 
 EXPORT_SYMBOL(fput);
@@ -345,129 +275,12 @@ void put_filp(struct file *file)
 {
 	if (atomic_long_dec_and_test(&file->f_count)) {
 		security_file_free(file);
-		file_sb_list_del(file);
 		file_free(file);
 	}
 }
 
-static inline int file_list_cpu(struct file *file)
-{
-#ifdef CONFIG_SMP
-	return file->f_sb_list_cpu;
-#else
-	return smp_processor_id();
-#endif
-}
-
-/* helper for file_sb_list_add to reduce ifdefs */
-static inline void __file_sb_list_add(struct file *file, struct super_block *sb)
-{
-	struct list_head *list;
-#ifdef CONFIG_SMP
-	int cpu;
-	cpu = smp_processor_id();
-	file->f_sb_list_cpu = cpu;
-	list = per_cpu_ptr(sb->s_files, cpu);
-#else
-	list = &sb->s_files;
-#endif
-	list_add(&file->f_u.fu_list, list);
-}
-
-/**
- * file_sb_list_add - add a file to the sb's file list
- * @file: file to add
- * @sb: sb to add it to
- *
- * Use this function to associate a file with the superblock of the inode it
- * refers to.
- */
-void file_sb_list_add(struct file *file, struct super_block *sb)
-{
-	lg_local_lock(&files_lglock);
-	__file_sb_list_add(file, sb);
-	lg_local_unlock(&files_lglock);
-}
-
-/**
- * file_sb_list_del - remove a file from the sb's file list
- * @file: file to remove
- * @sb: sb to remove it from
- *
- * Use this function to remove a file from its superblock.
- */
-void file_sb_list_del(struct file *file)
-{
-	if (!list_empty(&file->f_u.fu_list)) {
-		lg_local_lock_cpu(&files_lglock, file_list_cpu(file));
-		list_del_init(&file->f_u.fu_list);
-		lg_local_unlock_cpu(&files_lglock, file_list_cpu(file));
-	}
-}
-
-#ifdef CONFIG_SMP
-
-/*
- * These macros iterate all files on all CPUs for a given superblock.
- * files_lglock must be held globally.
- */
-#define do_file_list_for_each_entry(__sb, __file)		\
-{								\
-	int i;							\
-	for_each_possible_cpu(i) {				\
-		struct list_head *list;				\
-		list = per_cpu_ptr((__sb)->s_files, i);		\
-		list_for_each_entry((__file), list, f_u.fu_list)
-
-#define while_file_list_for_each_entry				\
-	}							\
-}
-
-#else
-
-#define do_file_list_for_each_entry(__sb, __file)		\
-{								\
-	struct list_head *list;					\
-	list = &(sb)->s_files;					\
-	list_for_each_entry((__file), list, f_u.fu_list)
-
-#define while_file_list_for_each_entry				\
-}
-
-#endif
-
-/**
- *	mark_files_ro - mark all files read-only
- *	@sb: superblock in question
- *
- *	All files are marked read-only.  We don't care about pending
- *	delete files so this should be used in 'force' mode only.
- */
-void mark_files_ro(struct super_block *sb)
-{
-	struct file *f;
-
-	lg_global_lock(&files_lglock);
-	do_file_list_for_each_entry(sb, f) {
-		if (!S_ISREG(file_inode(f)->i_mode))
-		       continue;
-		if (!file_count(f))
-			continue;
-		if (!(f->f_mode & FMODE_WRITE))
-			continue;
-		spin_lock(&f->f_lock);
-		f->f_mode &= ~FMODE_WRITE;
-		spin_unlock(&f->f_lock);
-		if (file_check_writeable(f) != 0)
-			continue;
-		__mnt_drop_write(f->f_path.mnt);
-		file_release_write(f);
-	} while_file_list_for_each_entry;
-	lg_global_unlock(&files_lglock);
-}
-
 void __init files_init(unsigned long mempages)
-{ 
+{
 	unsigned long n;
 
 	filp_cachep = kmem_cache_create("filp", sizeof(struct file), 0,
@@ -475,12 +288,11 @@ void __init files_init(unsigned long mempages)
 
 	/*
 	 * One file with associated inode and dcache is very roughly 1K.
-	 * Per default don't use more than 10% of our memory for files. 
-	 */ 
+	 * Per default don't use more than 10% of our memory for files.
+	 */
 
 	n = (mempages * (PAGE_SIZE / 1024)) / 10;
 	files_stat.max_files = max_t(unsigned long, n, NR_FILE);
 	files_defer_init();
-	lg_lock_init(&files_lglock, "files_lglock");
 	percpu_counter_init(&nr_files, 0);
-} 
+}

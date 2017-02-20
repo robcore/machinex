@@ -23,7 +23,6 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
-#include <linux/seq_file.h>
 #include <linux/sched.h>
 #include <linux/syscalls.h>
 #include <linux/perf_event.h>
@@ -59,26 +58,26 @@ static unsigned long udivcounter;
 static pid_t         previous_pid;
 
 #ifdef CONFIG_PROC_FS
-static int proc_status_show(struct seq_file *m, void *v)
+static int proc_read_status(char *page, char **start, off_t off, int count,
+			    int *eof, void *data)
 {
-	seq_printf(m, "Emulated UDIV:\t\t%lu\n", udivcounter);
-	seq_printf(m, "Emulated SDIV:\t\t%lu\n", sdivcounter);
+	char *p = page;
+	int len;
+
+	p += sprintf(p, "Emulated UDIV:\t\t%lu\n", udivcounter);
+	p += sprintf(p, "Emulated SDIV:\t\t%lu\n", sdivcounter);
 	if (previous_pid != 0)
-		seq_printf(m, "Last process:\t\t%d\n", previous_pid);
-	return 0;
-}
+		p += sprintf(p, "Last process:\t\t%d\n", previous_pid);
 
-static int proc_status_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, proc_status_show, PDE_DATA(inode));
-}
+	len = (p - page) - off;
+	if (len < 0)
+		len = 0;
 
-static const struct file_operations proc_status_fops = {
-	.open		= proc_status_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
+	*eof = (len <= count) ? 1 : 0;
+	*start = page + off;
+
+	return len;
+}
 #endif
 
 static u32 emulate_udiv(u32 n, u32 base)
@@ -176,11 +175,17 @@ static struct undef_hook idiv_hook = {
 static int __init idiv_emulation_init(void)
 {
 #ifdef CONFIG_PROC_FS
-	if (!proc_create("cpu/swp_emulation", S_IRUGO, NULL, &proc_status_fops))
+	struct proc_dir_entry *res;
+
+	res = create_proc_entry("cpu/idiv_emulation", S_IRUGO, NULL);
+
+	if (!res)
 		return -ENOMEM;
+
+	res->read_proc = proc_read_status;
 #endif /* CONFIG_PROC_FS */
 
-	printk("Registering SDIV/UDIV emulation handler\n");
+	pr_notice("Registering SDIV/UDIV emulation handler\n");
 
 	register_undef_hook(&idiv_hook);
 

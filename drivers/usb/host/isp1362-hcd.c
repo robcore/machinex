@@ -2175,7 +2175,7 @@ static int proc_isp1362_show(struct seq_file *s, void *unused)
 
 static int proc_isp1362_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, proc_isp1362_show, PDE_DATA(inode));
+	return single_open(file, proc_isp1362_show, PDE(inode)->data);
 }
 
 static const struct file_operations proc_ops = {
@@ -2192,11 +2192,14 @@ static void create_debug_file(struct isp1362_hcd *isp1362_hcd)
 {
 	struct proc_dir_entry *pde;
 
-	pde = proc_create_data(proc_filename, 0, NULL, &proc_ops, isp1362_hcd);
+	pde = create_proc_entry(proc_filename, 0, NULL);
 	if (pde == NULL) {
 		pr_warning("%s: Failed to create debug file '%s'\n", __func__, proc_filename);
 		return;
 	}
+
+	pde->proc_fops = &proc_ops;
+	pde->data = isp1362_hcd;
 	isp1362_hcd->pde = pde;
 }
 

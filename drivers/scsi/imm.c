@@ -121,26 +121,45 @@ static inline void imm_pb_release(imm_struct *dev)
  * testing...
  * Also gives a method to use a script to obtain optimum timings (TODO)
  */
-static int imm_write_info(struct Scsi_Host *host, char *buffer, int length)
+static inline int imm_proc_write(imm_struct *dev, char *buffer, int length)
 {
-	imm_struct *dev = imm_dev(host);
+	unsigned long x;
 
 	if ((length > 5) && (strncmp(buffer, "mode=", 5) == 0)) {
-		dev->mode = simple_strtoul(buffer + 5, NULL, 0);
+		x = simple_strtoul(buffer + 5, NULL, 0);
+		dev->mode = x;
 		return length;
 	}
 	printk("imm /proc: invalid variable\n");
-	return -EINVAL;
+	return (-EINVAL);
 }
 
-static int imm_show_info(struct seq_file *m, struct Scsi_Host *host)
+static int imm_proc_info(struct Scsi_Host *host, char *buffer, char **start,
+			off_t offset, int length, int inout)
 {
 	imm_struct *dev = imm_dev(host);
+	int len = 0;
 
-	seq_printf(m, "Version : %s\n", IMM_VERSION);
-	seq_printf(m, "Parport : %s\n", dev->dev->port->name);
-	seq_printf(m, "Mode    : %s\n", IMM_MODE_STRING[dev->mode]);
-	return 0;
+	if (inout)
+		return imm_proc_write(dev, buffer, length);
+
+	len += sprintf(buffer + len, "Version : %s\n", IMM_VERSION);
+	len +=
+	    sprintf(buffer + len, "Parport : %s\n",
+		    dev->dev->port->name);
+	len +=
+	    sprintf(buffer + len, "Mode    : %s\n",
+		    IMM_MODE_STRING[dev->mode]);
+
+	/* Request for beyond end of buffer */
+	if (offset > len)
+		return 0;
+
+	*start = buffer + offset;
+	len -= offset;
+	if (len > length)
+		len = length;
+	return len;
 }
 
 #if IMM_DEBUG > 0
@@ -1099,8 +1118,7 @@ static int imm_adjust_queue(struct scsi_device *device)
 static struct scsi_host_template imm_template = {
 	.module			= THIS_MODULE,
 	.proc_name		= "imm",
-	.show_info		= imm_show_info,
-	.write_info		= imm_write_info,
+	.proc_info		= imm_proc_info,
 	.name			= "Iomega VPI2 (imm) interface",
 	.queuecommand		= imm_queuecommand,
 	.eh_abort_handler	= imm_abort,

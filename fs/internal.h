@@ -61,10 +61,6 @@ extern void __init mnt_init(void);
 
 extern struct lglock vfsmount_lock;
 
-extern int __mnt_want_write(struct vfsmount *);
-extern int __mnt_want_write_file(struct file *);
-extern void __mnt_drop_write(struct vfsmount *);
-extern void __mnt_drop_write_file(struct file *);
 
 /*
  * fs_struct.c
@@ -74,9 +70,6 @@ extern void chroot_fs_refs(const struct path *, const struct path *);
 /*
  * file_table.c
  */
-extern void file_sb_list_add(struct file *f, struct super_block *sb);
-extern void file_sb_list_del(struct file *f);
-extern void mark_files_ro(struct super_block *);
 extern struct file *get_empty_filp(void);
 
 /*
@@ -130,8 +123,3 @@ extern struct dentry *__d_alloc(struct super_block *, const struct qstr *);
  * read_write.c
  */
 extern ssize_t __kernel_write(struct file *, const char *, size_t, loff_t *);
-
-/*
- * pipe.c
- */
-extern const struct file_operations pipefifo_fops;
