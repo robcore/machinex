@@ -631,12 +631,15 @@ static irqreturn_t bluesleep_hostwake_isr(int irq, void *dev_id)
  * @param data Not used.
  * @return The number of bytes written.
  */
-static int bluepower_read_proc_btwake(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bluepower_read_proc_btwake(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
 {
+#if 0
 	*eof = 1;
 	return snprintf(page, count, "btwake:%u\n", \
 				test_bit(BT_EXT_WAKE, &flags));
+#else
+	return 0;
+#endif
 }
 
 /**
@@ -648,8 +651,8 @@ static int bluepower_read_proc_btwake(char *page, char **start, off_t offset,
  * @return On success, the number of bytes written. On error, -1, and
  * <code>errno</code> is set appropriately.
  */
-static int bluepower_write_proc_btwake(struct file *file, const char *buffer,
-					unsigned long count, void *data)
+static ssize_t bluepower_write_proc_btwake(struct file *file, const char __user *buffer,
+				 size_t count, loff_t *pos)
 {
 	char *buf;
 
@@ -701,12 +704,15 @@ static int bluepower_write_proc_btwake(struct file *file, const char *buffer,
  * @param data Not used.
  * @return The number of bytes written.
  */
-static int bluepower_read_proc_hostwake(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bluepower_read_proc_hostwake(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
 {
+#if 0
 	*eof = 1;
 	return snprintf(page, count, "hostwake: %u\n", \
 				gpio_get_value(bsi->host_wake));
+	#else
+	return 0;
+	#endif
 }
 
 
@@ -722,14 +728,17 @@ static int bluepower_read_proc_hostwake(char *page, char **start, off_t offset,
  * @param data Not used.
  * @return The number of bytes written.
  */
-static int bluesleep_read_proc_asleep(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bluesleep_read_proc_asleep(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
 {
+#if 0
 	unsigned int asleep;
 
 	asleep = test_bit(BT_ASLEEP, &flags) ? 1 : 0;
 	*eof = 1;
 	return snprintf(page, count, "asleep: %u\n", asleep);
+	#else
+	return 0;
+	#endif
 }
 
 /**
@@ -744,14 +753,17 @@ static int bluesleep_read_proc_asleep(char *page, char **start, off_t offset,
  * @param data Not used.
  * @return The number of bytes written.
  */
-static int bluesleep_read_proc_proto(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bluesleep_read_proc_proto(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
 {
+#if 0
 	unsigned int proto;
 
 	proto = test_bit(BT_PROTO, &flags) ? 1 : 0;
 	*eof = 1;
 	return snprintf(page, count, "proto: %u\n", proto);
+	#else
+	return 0;
+	#endif
 }
 
 /**
@@ -763,8 +775,8 @@ static int bluesleep_read_proc_proto(char *page, char **start, off_t offset,
  * @return On success, the number of bytes written. On error, -1, and
  * <code>errno</code> is set appropriately.
  */
-static int bluesleep_write_proc_proto(struct file *file, const char *buffer,
-					unsigned long count, void *data)
+static ssize_t bluesleep_write_proc_proto(struct file *file, const char __user *buffer,
+				 size_t count, loff_t *pos)
 {
 	char proto;
 
