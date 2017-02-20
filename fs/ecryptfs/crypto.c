@@ -502,7 +502,7 @@ static void extent_crypt_complete(struct crypto_async_request *req, int rc)
 /**
  * crypt_scatterlist
  * @crypt_stat: Pointer to the crypt_stat struct to initialize.
- * @dest_sg: Destination of the data after performing the crypto operation
+ * @dst_sg: Destination of the data after performing the crypto operation
  * @src_sg: Data to be encrypted or decrypted
  * @size: Length of data
  * @iv: IV to use
@@ -511,7 +511,7 @@ static void extent_crypt_complete(struct crypto_async_request *req, int rc)
  * Returns the number of bytes encrypted or decrypted; negative value on error
  */
 static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct scatterlist *dest_sg,
+			     struct scatterlist *dst_sg,
 			     struct scatterlist *src_sg, int size,
 			     unsigned char *iv, int op)
 {
@@ -556,7 +556,7 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 		crypt_stat->flags |= ECRYPTFS_KEY_SET;
 	}
 	mutex_unlock(&crypt_stat->cs_tfm_mutex);
-	ablkcipher_request_set_crypt(req, src_sg, dest_sg, size, iv);
+	ablkcipher_request_set_crypt(req, src_sg, dst_sg, size, iv);
 	rc = op == ENCRYPT ? crypto_ablkcipher_encrypt(req) :
 			     crypto_ablkcipher_decrypt(req);
 	if (rc == -EINPROGRESS || rc == -EBUSY) {
@@ -585,9 +585,9 @@ static loff_t lower_offset_for_page(struct ecryptfs_crypt_stat *crypt_stat,
 
 /**
  * crypt_extent
- * @dst_page: The page to write the result into
  * @crypt_stat: crypt_stat containing cryptographic context for the
  *              encryption operation
+ * @dst_page: The page to write the result into
  * @src_page: The page to read from
  * @extent_offset: Page extent offset for use in generating IV
  * @op: ENCRYPT or DECRYPT to indicate the desired operation
@@ -596,8 +596,8 @@ static loff_t lower_offset_for_page(struct ecryptfs_crypt_stat *crypt_stat,
  *
  * Return zero on success; non-zero otherwise
  */
-static int crypt_extent(struct page *dst_page,
-			struct ecryptfs_crypt_stat *crypt_stat,
+static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
+			struct page *dst_page,
 			struct page *src_page,
 			unsigned long extent_offset, int op)
 {
@@ -671,7 +671,7 @@ int ecryptfs_encrypt_page(struct page *page)
 	for (extent_offset = 0;
 	     extent_offset < (PAGE_CACHE_SIZE / crypt_stat->extent_size);
 	     extent_offset++) {
-		rc = crypt_extent(enc_extent_page, crypt_stat, page,
+		rc = crypt_extent(crypt_stat, enc_extent_page, page,
 				  extent_offset, ENCRYPT);
 		if (rc) {
 			printk(KERN_ERR "%s: Error encrypting extent; "
@@ -744,7 +744,7 @@ int ecryptfs_decrypt_page(struct page *page)
 	for (extent_offset = 0;
 	     extent_offset < (PAGE_CACHE_SIZE / crypt_stat->extent_size);
 	     extent_offset++) {
-		rc = crypt_extent(page, crypt_stat, page,
+		rc = crypt_extent(crypt_stat, page, page,
 				  extent_offset, DECRYPT);
 		if (rc) {
 			printk(KERN_ERR "%s: Error encrypting extent; "
