@@ -92,20 +92,16 @@ static void jfs_handle_error(struct super_block *sb)
 	/* nothing is done for continue beyond marking the superblock dirty */
 }
 
-void jfs_error(struct super_block *sb, const char *fmt, ...)
+void jfs_error(struct super_block *sb, const char * function, ...)
 {
-	struct va_format vaf;
+	static char error_buf[256];
 	va_list args;
 
-	va_start(args, fmt);
-
-	vaf.fmt = fmt;
-	vaf.va = &args;
-
-	pr_err("ERROR: (device %s): %pf: %pV\n",
-	       sb->s_id, __builtin_return_address(0), &vaf);
-
+	va_start(args, function);
+	vsnprintf(error_buf, sizeof(error_buf), function, args);
 	va_end(args);
+
+	pr_err("ERROR: (device %s): %s\n", sb->s_id, error_buf);
 
 	jfs_handle_error(sb);
 }
@@ -614,7 +610,7 @@ static int jfs_freeze(struct super_block *sb)
 		txQuiesce(sb);
 		rc = lmLogShutdown(log);
 		if (rc) {
-			jfs_error(sb, "lmLogShutdown failed\n");
+			jfs_error(sb, "jfs_freeze: lmLogShutdown failed");
 
 			/* let operations fail rather than hang */
 			txResume(sb);
@@ -643,12 +639,12 @@ static int jfs_unfreeze(struct super_block *sb)
 	if (!(sb->s_flags & MS_RDONLY)) {
 		rc = updateSuper(sb, FM_MOUNT);
 		if (rc) {
-			jfs_error(sb, "updateSuper failed\n");
+			jfs_error(sb, "jfs_unfreeze: updateSuper failed");
 			goto out;
 		}
 		rc = lmLogInit(log);
 		if (rc)
-			jfs_error(sb, "lmLogInit failed\n");
+			jfs_error(sb, "jfs_unfreeze: lmLogInit failed");
 out:
 		txResume(sb);
 	}

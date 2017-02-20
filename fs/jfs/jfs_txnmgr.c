@@ -2684,7 +2684,7 @@ void txAbort(tid_t tid, int dirty)
 	 * mark filesystem dirty
 	 */
 	if (dirty)
-		jfs_error(tblk->sb, "\n");
+		jfs_error(tblk->sb, "txAbort");
 
 	return;
 }

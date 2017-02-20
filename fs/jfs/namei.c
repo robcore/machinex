@@ -1176,7 +1176,7 @@ static int jfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 				if (!S_ISDIR(old_ip->i_mode) && new_ip)
 					IWRITE_UNLOCK(new_ip);
 				jfs_error(new_ip->i_sb,
-					  "new_ip->i_nlink != 0\n");
+					  "jfs_rename: new_ip->i_nlink != 0");
 				return -EIO;
 			}
 			tblk = tid_to_tblock(tid);

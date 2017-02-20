@@ -646,7 +646,7 @@ struct metapage *__get_metapage(struct inode *inode, unsigned long lblock,
 	if (mp) {
 		if (mp->logical_size != size) {
 			jfs_error(inode->i_sb,
-				  "get_mp->logical_size != size\n");
+				  "__get_metapage: mp->logical_size != size");
 			jfs_err("logical_size = %d, size = %d",
 				mp->logical_size, size);
 			dump_stack();
@@ -657,7 +657,8 @@ struct metapage *__get_metapage(struct inode *inode, unsigned long lblock,
 		if (test_bit(META_discard, &mp->flag)) {
 			if (!new) {
 				jfs_error(inode->i_sb,
-					  "using a discarded metapage\n");
+					  "__get_metapage: using a "
+					  "discarded metapage");
 				discard_metapage(mp);
 				goto unlock;
 			}
