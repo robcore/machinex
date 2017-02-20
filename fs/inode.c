@@ -1550,11 +1550,9 @@ void touch_atime(struct path *path)
 	if (timespec_equal(&inode->i_atime, &now))
 		return;
 
-	if (!sb_start_write_trylock(inode->i_sb))
+	if (mnt_want_write(mnt))
 		return;
 
-	if (__mnt_want_write(mnt))
-		goto skip_update;
 	/*
 	 * File systems can error out when updating inodes if they need to
 	 * allocate new space to modify an inode (such is the case for
@@ -1563,9 +1561,7 @@ void touch_atime(struct path *path)
 	 * so just ignore the return value.
 	 */
 	update_time(inode, &now, S_ATIME);
-	__mnt_drop_write(mnt);
-skip_update:
-	sb_end_write(inode->i_sb);
+	mnt_drop_write(mnt);
 }
 EXPORT_SYMBOL(touch_atime);
 
@@ -1672,11 +1668,11 @@ int file_update_time(struct file *file)
 		return 0;
 
 	/* Finally allowed to write? Takes lock. */
-	if (__mnt_want_write_file(file))
+	if (mnt_want_write_file(file))
 		return 0;
 
 	ret = update_time(inode, &now, sync_it);
-	__mnt_drop_write_file(file);
+	mnt_drop_write_file(file);
 
 	return ret;
 }
@@ -1802,7 +1798,7 @@ void init_special_inode(struct inode *inode, umode_t mode, dev_t rdev)
 		inode->i_fop = &def_blk_fops;
 		inode->i_rdev = rdev;
 	} else if (S_ISFIFO(mode))
-		inode->i_fop = &pipefifo_fops;
+		inode->i_fop = &def_fifo_fops;
 	else if (S_ISSOCK(mode))
 		inode->i_fop = &bad_sock_fops;
 	else

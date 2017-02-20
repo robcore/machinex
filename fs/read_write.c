@@ -391,7 +391,6 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 	struct kiocb kiocb;
 	ssize_t ret;
 
-	file_start_write(filp);
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
 	kiocb.ki_left = len;
@@ -407,7 +406,6 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;
-	file_end_write(filp);
 	return ret;
 }
 
@@ -821,12 +819,10 @@ static ssize_t do_readv_writev(int type, struct file *file,
 			fnv = do_aio_write;
 	}
 
-	if (fnv) {
-		file_start_write(file);
+	if (fnv)
 		ret = do_sync_readv_writev(file, iov, nr_segs, tot_len,
 						pos, fnv);
-		file_end_write(file);
-	} else
+	else
 		ret = do_loop_readv_writev(file, iov, nr_segs, pos, fn);
 
 out:
