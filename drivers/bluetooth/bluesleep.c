@@ -470,15 +470,22 @@ struct uart_port *bluesleep_get_uart_port(void)
 	return uport;
 }
 
-static int bluesleep_read_proc_lpm(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bluesleep_read_proc_lpm(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
 {
-	*eof = 1;
-	return snprintf(page, count, "lpm: %u\n", has_lpm_enabled?1:0 );
+	int ret;
+
+	ret = copy_to_user(userbuf,has_lpm_enabled?"lpm: 1 \n":"lpm: 0 \n",bytes);
+	if(ret)
+	{
+		BT_ERR("Failed to bluesleep_read_proc_lpm : %d",ret);
+		return ret;
+	}
+
+	return bytes;
 }
 
-static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
-					unsigned long count, void *data)
+static ssize_t bluesleep_write_proc_lpm(struct file *file, const char __user *buffer,
+				 size_t count, loff_t *pos)
 {
 	char b;
 
@@ -514,15 +521,18 @@ static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
 	return count;
 }
 
-static int bluesleep_read_proc_btwrite(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bluesleep_read_proc_btwrite(struct file *file, char __user *userbuf, size_t bytes, loff_t *off)
 {
+#if 0
 	*eof = 1;
 	return snprintf(page, count, "unsupported to read\n");
+	#else
+	return 0;
+	#endif
 }
 
-static int bluesleep_write_proc_btwrite(struct file *file, const char *buffer,
-					unsigned long count, void *data)
+static ssize_t bluesleep_write_proc_btwrite(struct file *file, const char __user *buffer,
+				 size_t count, loff_t *pos)
 {
 	char b;
 
