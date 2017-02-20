@@ -30,8 +30,7 @@
 #include <linux/vmalloc.h>
 #include <linux/errno.h>
 #include <linux/init.h>
-#include <linux/timer.h>
-#include <linux/ktime.h>
+#include <linux/hrtimer.h>
 #include <linux/list.h>
 #include <linux/interrupt.h>
 #include <linux/usb.h>
@@ -384,6 +383,7 @@ static void ehci_quiesce (struct ehci_hcd *ehci)
 static void end_unlink_async(struct ehci_hcd *ehci);
 static void ehci_work(struct ehci_hcd *ehci);
 
+#include "ehci-timer.c"
 #include "ehci-hub.c"
 #include "ehci-lpm.c"
 #include "ehci-mem.c"
@@ -500,7 +500,10 @@ static void ehci_shutdown(struct usb_hcd *hcd)
 
 	spin_lock_irq(&ehci->lock);
 	ehci_silence_controller(ehci);
+	ehci->enabled_hrtimer_events = 0;
 	spin_unlock_irq(&ehci->lock);
+
+	hrtimer_cancel(&ehci->hrtimer);
 }
 
 static void __maybe_unused ehci_port_power (struct ehci_hcd *ehci, int is_on)
@@ -567,6 +570,7 @@ static void ehci_stop (struct usb_hcd *hcd)
 	del_timer_sync(&ehci->iaa_watchdog);
 
 	spin_lock_irq(&ehci->lock);
+	ehci->enabled_hrtimer_events = 0;
 	if (ehci->rh_state == EHCI_RH_RUNNING)
 		ehci_quiesce (ehci);
 
@@ -574,6 +578,7 @@ static void ehci_stop (struct usb_hcd *hcd)
 	ehci_reset (ehci);
 	spin_unlock_irq(&ehci->lock);
 
+	hrtimer_cancel(&ehci->hrtimer);
 	remove_sysfs_files(ehci);
 	remove_debug_files (ehci);
 
@@ -634,6 +639,10 @@ static int ehci_init(struct usb_hcd *hcd)
 	init_timer(&ehci->iaa_watchdog);
 	ehci->iaa_watchdog.function = ehci_iaa_watchdog;
 	ehci->iaa_watchdog.data = (unsigned long) ehci;
+
+	hrtimer_init(&ehci->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
+	ehci->hrtimer.function = ehci_hrtimer_func;
+	ehci->next_hrtimer_event = EHCI_HRTIMER_NO_EVENT;
 
 	hcc_params = ehci_readl(ehci, &ehci->caps->hcc_params);
 
@@ -995,6 +1004,8 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		dbg_status(ehci, "fatal", status);
 		ehci_halt(ehci);
 dead:
+		ehci->enabled_hrtimer_events = 0;
+		hrtimer_try_to_cancel(&ehci->hrtimer);
 		ehci_reset(ehci);
 		ehci_writel(ehci, 0, &ehci->regs->configured_flag);
 		usb_hc_died(hcd);
