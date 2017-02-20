@@ -23,6 +23,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/sched.h>
 #include <linux/syscalls.h>
 #include <linux/perf_event.h>
@@ -58,25 +59,16 @@ static unsigned long udivcounter;
 static pid_t         previous_pid;
 
 #ifdef CONFIG_PROC_FS
-static int proc_read_status(char *page, char **start, off_t off, int count,
-			    int *eof, void *data)
+static int proc_status_show(struct seq_file *m, void *v)
 {
 	char *p = page;
-	int len;
 
-	p += sprintf(p, "Emulated UDIV:\t\t%lu\n", udivcounter);
-	p += sprintf(p, "Emulated SDIV:\t\t%lu\n", sdivcounter);
+	seq_printf(p, "Emulated UDIV:\t\t%lu\n", udivcounter);
+	seq_printf(p, "Emulated SDIV:\t\t%lu\n", sdivcounter);
 	if (previous_pid != 0)
-		p += sprintf(p, "Last process:\t\t%d\n", previous_pid);
+		seq_printf(p, "Last process:\t\t%d\n", previous_pid);
 
-	len = (p - page) - off;
-	if (len < 0)
-		len = 0;
-
-	*eof = (len <= count) ? 1 : 0;
-	*start = page + off;
-
-	return len;
+	return 0
 }
 #endif
 
@@ -175,17 +167,11 @@ static struct undef_hook idiv_hook = {
 static int __init idiv_emulation_init(void)
 {
 #ifdef CONFIG_PROC_FS
-	struct proc_dir_entry *res;
-
-	res = create_proc_entry("cpu/idiv_emulation", S_IRUGO, NULL);
-
-	if (!res)
+	if (!proc_create("cpu/swp_emulation", S_IRUGO, NULL, &proc_status_fops))
 		return -ENOMEM;
-
-	res->read_proc = proc_read_status;
 #endif /* CONFIG_PROC_FS */
 
-	pr_notice("Registering SDIV/UDIV emulation handler\n");
+	printk("Registering SDIV/UDIV emulation handler\n");
 
 	register_undef_hook(&idiv_hook);
 
