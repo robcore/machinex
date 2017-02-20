@@ -2,6 +2,7 @@
 #define _LINUX_PROC_FS_H
 
 #include <linux/slab.h>
+#include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/spinlock.h>
 #include <linux/magic.h>
