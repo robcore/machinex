@@ -552,6 +552,14 @@ repeat:
 	if (fd < fdt->max_fds)
 		fd = find_next_zero_bit(fdt->open_fds, fdt->max_fds, fd);
 
+	/*
+	 * N.B. For clone tasks sharing a files structure, this test
+	 * will limit the total number of files that can be opened.
+	 */
+	error = -EMFILE;
+	if (fd >= end)
+		goto out;
+
 	error = expand_files(files, fd);
 	if (error < 0)
 		goto out;
@@ -572,8 +580,6 @@ repeat:
 	else
 		__clear_close_on_exec(fd, fdt);
 	error = fd;
-	if (error < 0)
-		printk("[alloc_fd] fd < 0\n");
 #if 1
 	/* Sanity check */
 	if (rcu_dereference_raw(fdt->fd[fd]) != NULL) {
@@ -591,6 +597,7 @@ static int alloc_fd(unsigned start, unsigned flags)
 {
 	return __alloc_fd(current->files, start, rlimit(RLIMIT_NOFILE), flags);
 }
+EXPORT_SYMBOL(alloc_fd);
 
 int get_unused_fd_flags(unsigned flags)
 {
