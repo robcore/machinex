@@ -1132,7 +1132,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	mutex_lock(&prepare_lock);
 
 	/* bail early if nothing to do */
-	if (rate == clk->rate)
+	if (rate == clk_get_rate(clk))
 		goto out;
 
 	if ((clk->flags & CLK_SET_RATE_GATE) && __clk_is_enabled(clk)) {
