@@ -1022,7 +1022,6 @@ config PLAT_SPEAR
 	select CLKSRC_MMIO
 	select GENERIC_CLOCKEVENTS
 	select HAVE_CLK
-	select HAVE_CLK_PREPARE
 	help
 	  Support for ST's SPEAr platform (SPEAr3xx, SPEAr6xx and SPEAr13xx).
 
@@ -1900,35 +1899,8 @@ config ARCH_MEMORY_PROBE
 config ARCH_MEMORY_REMOVE
 	def_bool n
 
-config ARCH_POPULATES_NODE_MAP
-	def_bool n
-
 config ENABLE_DMM
 	def_bool n
-
-config DONT_MAP_HOLE_AFTER_MEMBANK0
-	def_bool n
-	depends on SPARSEMEM
-
-config HOLES_IN_ZONE
-	def_bool n
-	depends on SPARSEMEM
-
-config ARCH_MEMORY_PROBE
-	def_bool y
-	depends on MEMORY_HOTPLUG
-
-config ARCH_MEMORY_REMOVE
-	def_bool y
-	depends on MEMORY_HOTPLUG
-
-config ENABLE_DMM
-	def_bool n
-	depends on MEMORY_HOTPLUG
-
-config FIX_MOVABLE_ZONE
-	def_bool n
-	depends on MEMORY_HOTPLUG
 
 config DONT_MAP_HOLE_AFTER_MEMBANK0
 	def_bool n

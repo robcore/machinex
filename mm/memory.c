@@ -223,6 +223,7 @@ void tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm, bool fullmm)
 	tlb->start	= -1UL;
 	tlb->end	= 0;
 	tlb->need_flush = 0;
+	tlb->fast_mode  = (num_possible_cpus() == 1);
 	tlb->local.next = NULL;
 	tlb->local.nr   = 0;
 	tlb->local.max  = ARRAY_SIZE(tlb->__pages);
@@ -245,6 +246,9 @@ void tlb_flush_mmu(struct mmu_gather *tlb)
 #ifdef CONFIG_HAVE_RCU_TABLE_FREE
 	tlb_table_flush(tlb);
 #endif
+
+	if (tlb_fast_mode(tlb))
+		return;
 
 	for (batch = &tlb->local; batch; batch = batch->next) {
 		free_pages_and_swap_cache(batch->pages, batch->nr);
@@ -286,6 +290,11 @@ int __tlb_remove_page(struct mmu_gather *tlb, struct page *page)
 	struct mmu_gather_batch *batch;
 
 	VM_BUG_ON(!tlb->need_flush);
+
+	if (tlb_fast_mode(tlb)) {
+		free_page_and_swap_cache(page);
+		return 1; /* avoid calling tlb_flush_mmu() */
+	}
 
 	batch = tlb->active;
 	batch->pages[batch->nr++] = page;
@@ -1098,7 +1107,6 @@ static unsigned long zap_pte_range(struct mmu_gather *tlb,
 	spinlock_t *ptl;
 	pte_t *start_pte;
 	pte_t *pte;
-	unsigned long range_start = addr;
 
 again:
 	init_rss_vec(rss);
@@ -1206,14 +1214,12 @@ again:
 		force_flush = 0;
 
 #ifdef HAVE_GENERIC_MMU_GATHER
-		tlb->start = range_start;
-		tlb->end = addr;
+		tlb->start = addr;
+		tlb->end = end;
 #endif
 		tlb_flush_mmu(tlb);
-		if (addr != end) {
-			range_start = addr;
+		if (addr != end)
 			goto again;
-		}
 	}
 
 	return addr;

@@ -64,7 +64,7 @@ static inline bool try_to_freeze_nowarn(void)
  */
 static inline bool try_to_freeze_unsafe(void)
 {
-	//might_sleep();
+	might_sleep();
 	if (likely(!freezing(current)))
 		return false;
 	return __refrigerator(false);

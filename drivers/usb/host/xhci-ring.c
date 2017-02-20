@@ -1605,7 +1605,7 @@ static void handle_device_notification(struct xhci_hcd *xhci,
 static void handle_port_status(struct xhci_hcd *xhci,
 		union xhci_trb *event)
 {
-	struct usb_hcd *hcd = NULL;
+	struct usb_hcd *hcd;
 	u32 port_id;
 	u32 temp, temp1;
 	int max_ports;

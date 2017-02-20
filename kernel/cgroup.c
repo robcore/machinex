@@ -2899,17 +2899,13 @@ static void cgroup_cfts_commit(struct cgroup_subsys *ss,
 {
 	LIST_HEAD(pending);
 	struct cgroup *cgrp, *n;
-	struct super_block *sb = ss->root->sb;
 
 	/* %NULL @cfts indicates abort and don't bother if @ss isn't attached */
-	if (cfts && ss->root != &rootnode &&
-	    atomic_inc_not_zero(&sb->s_active)) {
+	if (cfts && ss->root != &rootnode) {
 		list_for_each_entry(cgrp, &ss->root->allcg_list, allcg_node) {
 			dget(cgrp->dentry);
 			list_add_tail(&cgrp->cft_q_node, &pending);
 		}
-	} else {
-		sb = NULL;
 	}
 
 	mutex_unlock(&cgroup_mutex);
@@ -2931,9 +2927,6 @@ static void cgroup_cfts_commit(struct cgroup_subsys *ss,
 		list_del_init(&cgrp->cft_q_node);
 		dput(cgrp->dentry);
 	}
-
-	if (sb)
-		deactivate_super(sb);
 
 	mutex_unlock(&cgroup_cft_mutex);
 }
@@ -3841,23 +3834,6 @@ static int cgroup_write_notify_on_release(struct cgroup *cgrp,
 }
 
 /*
- * When dput() is called asynchronously, if umount has been done and
- * then deactivate_super() in cgroup_free_fn() kills the superblock,
- * there's a small window that vfs will see the root dentry with non-zero
- * refcnt and trigger BUG().
- *
- * That's why we hold a reference before dput() and drop it right after.
- */
-static void cgroup_dput(struct cgroup *cgrp)
-{
-	struct super_block *sb = cgrp->root->sb;
-
-	atomic_inc(&sb->s_active);
-	dput(cgrp->dentry);
-	deactivate_super(sb);
-}
-
-/*
  * Unregister event and free resources.
  *
  * Gets called from workqueue.
@@ -3877,7 +3853,7 @@ static void cgroup_event_remove(struct work_struct *work)
 
 	eventfd_ctx_put(event->eventfd);
 	kfree(event);
-	cgroup_dput(cgrp);
+	dput(cgrp->dentry);
 }
 
 /*
@@ -4156,8 +4132,12 @@ static void css_dput_fn(struct work_struct *work)
 {
 	struct cgroup_subsys_state *css =
 		container_of(work, struct cgroup_subsys_state, dput_work);
+	struct dentry *dentry = css->cgroup->dentry;
+	struct super_block *sb = dentry->d_sb;
 
-	cgroup_dput(css->cgroup);
+	atomic_inc(&sb->s_active);
+	dput(dentry);
+	deactivate_super(sb);
 }
 
 static void init_cgroup_css(struct cgroup_subsys_state *css,
