@@ -26,7 +26,7 @@
 
 #include <asm/leds.h>
 #include <asm/thread_info.h>
-#include <asm/sched_clock.h>
+#include <linux/sched_clock.h>
 #include <asm/stacktrace.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
@@ -97,5 +97,4 @@ void timer_tick(void)
 void __init time_init(void)
 {
 	machine_desc->init_time();
-	sched_clock_postinit();
 }

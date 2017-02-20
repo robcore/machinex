@@ -25,6 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
+#include <linux/sched_clock.h>
 
 #include <asm/sched_clock.h>
 #include <asm/hardware/arm_timer.h>
