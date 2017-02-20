@@ -344,24 +344,14 @@ static void ext4_put_nojournal(handle_t *handle)
 handle_t *ext4_journal_start_sb(struct super_block *sb, int nblocks)
 {
 	journal_t *journal;
-	handle_t  *handle;
 
 	trace_ext4_journal_start(sb, nblocks, _RET_IP_);
 	if (sb->s_flags & MS_RDONLY && !journal_current_handle())
 		return ERR_PTR(-EROFS);
 
-	journal = EXT4_SB(sb)->s_journal;
-	handle = ext4_journal_current_handle();
+	WARN_ON(sb->s_writers.frozen == SB_FREEZE_COMPLETE);
 
-	/*
-	 * If a handle has been started, it should be allowed to
-	 * finish, otherwise deadlock could happen between freeze
-	 * and others(e.g. truncate) due to the restart of the
-	 * journal handle if the filesystem is forzen and active
-	 * handles are not stopped.
-	 */
-	if (!handle)
-		vfs_check_frozen(sb, SB_FREEZE_TRANS);
+	journal = EXT4_SB(sb)->s_journal;
 
 	if (!journal)
 		return ext4_get_nojournal();
