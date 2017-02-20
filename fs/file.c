@@ -452,7 +452,6 @@ void exit_files(struct task_struct *tsk)
 
 static void __devinit fdtable_defer_list_init(int cpu)
 {
-	struct fdtable_defer *fddef = &per_cpu(fdtable_defer_list, cpu);
 	spin_lock_init(&fddef->lock);
 	INIT_WORK(&fddef->wq, free_fdtable_work);
 	fddef->next = NULL;
