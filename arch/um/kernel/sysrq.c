@@ -51,7 +51,7 @@ EXPORT_SYMBOL(dump_stack);
 static const int kstack_depth_to_print = 24;
 
 /* This recently started being used in arch-independent code too, as in
- * kernel/sched.c.*/
+ * kernel/sched/core.c.*/
 void show_stack(struct task_struct *task, unsigned long *esp)
 {
 	unsigned long *stack;
