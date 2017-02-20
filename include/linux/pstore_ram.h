@@ -40,7 +40,6 @@ struct persistent_ram_zone {
 	size_t buffer_size;
 
 	/* ECC correction */
-	bool ecc;
 	char *par_buffer;
 	char *par_header;
 	struct rs_control *rs_decoder;
@@ -48,8 +47,6 @@ struct persistent_ram_zone {
 	int bad_blocks;
 	int ecc_block_size;
 	int ecc_size;
-	int ecc_symsize;
-	int ecc_poly;
 
 	char *old_log;
 	size_t old_log_size;
@@ -57,7 +54,7 @@ struct persistent_ram_zone {
 
 struct persistent_ram_zone * __devinit persistent_ram_new(phys_addr_t start,
 							  size_t size,
-							  bool ecc);
+							  int ecc_size);
 void persistent_ram_free(struct persistent_ram_zone *prz);
 void persistent_ram_zap(struct persistent_ram_zone *prz);
 
@@ -82,8 +79,9 @@ struct ramoops_platform_data {
 	unsigned long	mem_address;
 	unsigned long	record_size;
 	unsigned long	console_size;
+	unsigned long	ftrace_size;
 	int		dump_oops;
-	bool		ecc;
+	int		ecc_size;
 };
 
 #endif
