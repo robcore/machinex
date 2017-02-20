@@ -44,14 +44,12 @@
 
 static int
 ecryptfs_decrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct page *dst_page, int dst_offset,
-			     struct page *src_page, int src_offset, int size,
-			     unsigned char *iv);
+			     struct page *dst_page, struct page *src_page,
+			     int offset, int size, unsigned char *iv);
 static int
 ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct page *dst_page, int dst_offset,
-			     struct page *src_page, int src_offset, int size,
-			     unsigned char *iv);
+			     struct page *dst_page, struct page *src_page,
+			     int offset, int size, unsigned char *iv);
 
 #if defined(CONFIG_CRYPTO_FIPS) && !defined(CONFIG_FORCE_DISABLE_FIPS)
 static int crypto_cc_reset_rng(struct crypto_rng *tfm)
@@ -618,9 +616,7 @@ static int ecryptfs_encrypt_extent(struct page *enc_extent_page,
 			(unsigned long long)(extent_base + extent_offset), rc);
 		goto out;
 	}
-	rc = ecryptfs_encrypt_page_offset(crypt_stat, enc_extent_page,
-					extent_offset * crypt_stat->extent_size,
-					page,
+	rc = ecryptfs_encrypt_page_offset(crypt_stat, enc_extent_page, page,
 					extent_offset * crypt_stat->extent_size,
 					crypt_stat->extent_size, extent_iv);
 	if (rc < 0) {
@@ -723,9 +719,7 @@ static int ecryptfs_decrypt_extent(struct page *page,
 			(unsigned long long)(extent_base + extent_offset), rc);
 		goto out;
 	}
-	rc = ecryptfs_decrypt_page_offset(crypt_stat, page,
-					extent_offset * crypt_stat->extent_size,
-					enc_extent_page,
+	rc = ecryptfs_decrypt_page_offset(crypt_stat, page, enc_extent_page,
 					extent_offset * crypt_stat->extent_size,
 					crypt_stat->extent_size, extent_iv);
 	if (rc < 0) {
@@ -884,9 +878,8 @@ out:
  * ecryptfs_encrypt_page_offset
  * @crypt_stat: The cryptographic context
  * @dst_page: The page to encrypt into
- * @dst_offset: The offset in the page to encrypt into
  * @src_page: The page to encrypt from
- * @src_offset: The offset in the page to encrypt from
+ * @offset: The byte offset into the dst_page and src_page
  * @size: The number of bytes to encrypt
  * @iv: The initialization vector to use for the encryption
  *
@@ -894,17 +887,16 @@ out:
  */
 static int
 ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct page *dst_page, int dst_offset,
-			     struct page *src_page, int src_offset, int size,
-			     unsigned char *iv)
+			     struct page *dst_page, struct page *src_page,
+			     int offset, int size, unsigned char *iv)
 {
 	struct scatterlist src_sg, dst_sg;
 
 	sg_init_table(&src_sg, 1);
 	sg_init_table(&dst_sg, 1);
 
-	sg_set_page(&src_sg, src_page, size, src_offset);
-	sg_set_page(&dst_sg, dst_page, size, dst_offset);
+	sg_set_page(&src_sg, src_page, size, offset);
+	sg_set_page(&dst_sg, dst_page, size, offset);
 	return encrypt_scatterlist(crypt_stat, &dst_sg, &src_sg, size, iv);
 }
 
@@ -912,9 +904,8 @@ ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
  * ecryptfs_decrypt_page_offset
  * @crypt_stat: The cryptographic context
  * @dst_page: The page to decrypt into
- * @dst_offset: The offset in the page to decrypt into
  * @src_page: The page to decrypt from
- * @src_offset: The offset in the page to decrypt from
+ * @offset: The byte offset into the dst_page and src_page
  * @size: The number of bytes to decrypt
  * @iv: The initialization vector to use for the decryption
  *
@@ -922,17 +913,16 @@ ecryptfs_encrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
  */
 static int
 ecryptfs_decrypt_page_offset(struct ecryptfs_crypt_stat *crypt_stat,
-			     struct page *dst_page, int dst_offset,
-			     struct page *src_page, int src_offset, int size,
-			     unsigned char *iv)
+			     struct page *dst_page, struct page *src_page,
+			     int offset, int size, unsigned char *iv)
 {
 	struct scatterlist src_sg, dst_sg;
 
 	sg_init_table(&src_sg, 1);
-	sg_set_page(&src_sg, src_page, size, src_offset);
+	sg_set_page(&src_sg, src_page, size, offset);
 
 	sg_init_table(&dst_sg, 1);
-	sg_set_page(&dst_sg, dst_page, size, dst_offset);
+	sg_set_page(&dst_sg, dst_page, size, offset);
 
 	return decrypt_scatterlist(crypt_stat, &dst_sg, &src_sg, size, iv);
 }
