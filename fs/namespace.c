@@ -378,6 +378,23 @@ int mnt_clone_write(struct vfsmount *mnt)
 EXPORT_SYMBOL_GPL(mnt_clone_write);
 
 /**
+ * __mnt_want_write_file - get write access to a file's mount
+ * @file: the file who's mount on which to take a write
+ *
+ * This is like __mnt_want_write, but it takes a file and can
+ * do some optimisations if the file is open for write already
+ */
+int __mnt_want_write_file(struct file *file)
+{
+	struct inode *inode = file_inode(file);
+
+	if (!(file->f_mode & FMODE_WRITE) || special_file(inode->i_mode))
+		return __mnt_want_write(file->f_path.mnt);
+	else
+		return mnt_clone_write(file->f_path.mnt);
+}
+
+/**
  * mnt_want_write_file - get write access to a file's mount
  * @file: the file who's mount on which to take a write
  *
@@ -386,29 +403,50 @@ EXPORT_SYMBOL_GPL(mnt_clone_write);
  */
 int mnt_want_write_file(struct file *file)
 {
-	struct inode *inode =  file_inode(file);
-	if (!(file->f_mode & FMODE_WRITE) || special_file(inode->i_mode))
-		return mnt_want_write(file->f_path.mnt);
-	else
-		return mnt_clone_write(file->f_path.mnt);
+	int ret;
+
+	sb_start_write(file->f_path.mnt->mnt_sb);
+	ret = __mnt_want_write_file(file);
+	if (ret)
+		sb_end_write(file->f_path.mnt->mnt_sb);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(mnt_want_write_file);
 
 /**
- * mnt_drop_write - give up write access to a mount
+ * __mnt_drop_write - give up write access to a mount
  * @mnt: the mount on which to give up write access
  *
  * Tells the low-level filesystem that we are done
  * performing writes to it.  Must be matched with
- * mnt_want_write() call above.
+ * __mnt_want_write() call above.
  */
-void mnt_drop_write(struct vfsmount *mnt)
+void __mnt_drop_write(struct vfsmount *mnt)
 {
 	preempt_disable();
 	mnt_dec_writers(real_mount(mnt));
 	preempt_enable();
 }
+
+/**
+ * mnt_drop_write - give up write access to a mount
+ * @mnt: the mount on which to give up write access
+ *
+ * Tells the low-level filesystem that we are done performing writes to it and
+ * also allows filesystem to be frozen again.  Must be matched with
+ * mnt_want_write() call above.
+ */
+void mnt_drop_write(struct vfsmount *mnt)
+{
+	__mnt_drop_write(mnt);
+	sb_end_write(mnt->mnt_sb);
+}
 EXPORT_SYMBOL_GPL(mnt_drop_write);
+
+void __mnt_drop_write_file(struct file *file)
+{
+	__mnt_drop_write(file->f_path.mnt);
+}
 
 void mnt_drop_write_file(struct file *file)
 {
@@ -1150,6 +1188,7 @@ void umount_tree(struct mount *mnt, int propagate)
 		list_del_init(&p->mnt_list);
 		__touch_mnt_namespace(p->mnt_ns);
 		p->mnt_ns = NULL;
+		list_del_init(&p->mnt_child);
 		if (mnt_has_parent(p)) {
 			p->mnt_parent->mnt_ghosts++;
 			put_mountpoint(p->mnt_mp);
@@ -1225,8 +1264,6 @@ static int do_umount(struct mount *mnt, int flags)
 		 * Special case for "unmounting" root ...
 		 * we just try to remount it readonly.
 		 */
-		if (!capable(CAP_SYS_ADMIN))
-			return -EPERM;
 		down_write(&sb->s_umount);
 		if (!(sb->s_flags & MS_RDONLY))
 			retval = do_remount_sb(sb, MS_RDONLY, NULL, 0);
@@ -2618,10 +2655,10 @@ SYSCALL_DEFINE2(pivot_root, const char __user *, new_root,
 	/* make sure we can reach put_old from new_root */
 	if (!is_path_reachable(old_mnt, old.dentry, &new))
 		goto out4;
-	root_mp->m_count++; /* pin it so it won't go away */
 	/* make certain new is below the root */
 	if (!is_path_reachable(new_mnt, new.dentry, &root))
 		goto out4;
+	root_mp->m_count++; /* pin it so it won't go away */
 	br_write_lock(&vfsmount_lock);
 	detach_mnt(new_mnt, &parent_path);
 	detach_mnt(root_mnt, &root_parent);
@@ -2833,7 +2870,7 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 
 	if (!ns_capable(mnt_ns->user_ns, CAP_SYS_ADMIN) ||
 	    !nsown_capable(CAP_SYS_CHROOT))
-		return -EINVAL;
+		return -EPERM;
 
 	if (fs->users != 1)
 		return -EINVAL;
