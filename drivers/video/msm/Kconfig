@@ -1276,6 +1276,7 @@ config MIPI_MDP_REGISTER_DUMP
 	bool "MIPI MDP REGISTER DUMP"
 	help
 	  Support for MIPI MDP REGISTER DUMP
+
 config NOVATEK_VIDEO_HD_CLK_MIPICLK_432
 	bool "mipi clk 432Mhz on novatek  tft video hd panel"
 	default n
@@ -1295,10 +1296,10 @@ config STATE_NOTIFIER
 	default y
 
 config EXPERIMENTAL_COLOR_MODS
-	bool
+	bool "Rob shenanigans"
 	default n
 	help
-	  The usual Rob-hackery that usually ends up in disaster 
+	  The usual Rob-hackery that usually ends up in disaster
 	  or success. Nothing in between.
 
 if FB_MSM_MDSS
