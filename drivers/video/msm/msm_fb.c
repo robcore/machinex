@@ -199,16 +199,15 @@ static void msm_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	   and maps backlight level 0 to 0. */
 	if (value <= 0)
 		bl_lvl = 0;
+	else if (value == 1)
+		bl_lvl = 1;
 	else if (value >= MAX_BACKLIGHT_BRIGHTNESS)
 		bl_lvl = mfd->panel_info.bl_max;
-		if (value == 1)
-			bl_lvl = 1;
-		else
-			bl_lvl = (mfd->panel_info.bl_min + ((value - 1) * 2 *
-				(mfd->panel_info.bl_max - mfd->panel_info.bl_min) +
-				MAX_BACKLIGHT_BRIGHTNESS - 1) /
-				(MAX_BACKLIGHT_BRIGHTNESS - 1) / 2) - backlight_dimmer;
-	}
+	else
+		bl_lvl = (mfd->panel_info.bl_min + ((value - 1) * 2 *
+			(mfd->panel_info.bl_max - mfd->panel_info.bl_min) +
+			MAX_BACKLIGHT_BRIGHTNESS - 1) /
+			(MAX_BACKLIGHT_BRIGHTNESS - 1) / 2) - backlight_dimmer;
 
 	down(&mfd->sem);
 	msm_fb_set_backlight(mfd, bl_lvl);
