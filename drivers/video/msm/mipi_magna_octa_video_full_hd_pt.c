@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  *
  */
-
+#include <linux/module.h>
 #include "msm_fb.h"
 #include "msm_fb_panel.h"
 #include "mipi_dsi.h"

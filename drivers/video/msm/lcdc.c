@@ -302,3 +302,4 @@ static int __init lcdc_driver_init(void)
 }
 
 module_init(lcdc_driver_init);
+MODULE_LICENSE("GPL v2");

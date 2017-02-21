@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  *
  */
-
+#include <linux/module.h>
 #include "msm_fb.h"
 #include "msm_fb_panel.h"
 #include "mipi_dsi.h"
@@ -2118,4 +2118,5 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	return ret;
 }
 module_init(mipi_video_samsung_octa_full_hd_pt_init);
+MODULE_LICENSE("GPL v2");
 

@@ -1755,3 +1755,5 @@ void coordinate_tunning(int x, int y)
 
 	memcpy(&CAMERA_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 }
+
+MODULE_LICENSE("GPL v2");

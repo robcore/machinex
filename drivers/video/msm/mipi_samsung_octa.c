@@ -11,6 +11,7 @@
  */
 
 #include <linux/lcd.h>
+#include <linux/module.h>
 
 #include "msm_fb.h"
 #include "msm_fb_panel.h"
@@ -1853,3 +1854,4 @@ static int __init mipi_samsung_disp_init(void)
 	return platform_driver_register(&this_driver);
 }
 module_init(mipi_samsung_disp_init);
+MODULE_LICENSE("GPL v2");

@@ -11,6 +11,7 @@
  *
  */
 
+#include <linux/module.h>
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/ioctl.h>
@@ -82,3 +83,4 @@ fail_driver_registration:
 }
 
 module_init(writeback_panel_init);
+MODULE_LICENSE("GPL v2");

@@ -3567,3 +3567,4 @@ static int __init mdp_driver_init(void)
 }
 
 module_init(mdp_driver_init);
+MODULE_LICENSE("GPL v2");

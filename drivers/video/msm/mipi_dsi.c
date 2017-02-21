@@ -857,3 +857,4 @@ static int __init mipi_dsi_driver_init(void)
 }
 
 module_init(mipi_dsi_driver_init);
+MODULE_LICENSE("GPL v2");

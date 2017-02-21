@@ -2378,3 +2378,5 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 
 	return IRQ_HANDLED;
 }
+
+MODULE_LICENSE("GPL v2");

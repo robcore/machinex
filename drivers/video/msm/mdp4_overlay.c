@@ -4563,3 +4563,5 @@ int mdp4_overlay_reset()
 #endif
 	return 0;
 }
+
+MODULE_LICENSE("GPL v2");

@@ -11,6 +11,7 @@
  *
  */
 
+#include <linux/module.h>
 #include "msm_fb.h"
 
 static int lcdc_panel_on(struct platform_device *pdev)
@@ -82,3 +83,4 @@ static int __init lcdc_panel_init(void)
 }
 
 module_init(lcdc_panel_init);
+MODULE_LICENSE("GPL v2");
