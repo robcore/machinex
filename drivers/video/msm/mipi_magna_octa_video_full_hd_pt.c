@@ -1346,7 +1346,10 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		backlightlevel = GAMMA_152CD;
+		if (!acl_override)
+			backlightlevel = GAMMA_152CD;
+		else if (acl_override == 1)
+			backlightlevel = GAMMA_300CD;
 		break;
 	}
 

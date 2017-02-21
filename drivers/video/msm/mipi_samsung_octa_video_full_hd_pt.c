@@ -618,13 +618,13 @@ static char samsung_brightness_acl_cont_pre[] = {
  */
 static char samsung_brightness_acl_cont_ref[] = {
 	0xB5,
-	0x01, 0x99, 0x00,
+	0x00, 0x99, 0x35,
 };
 
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x03, 0x99, 0x00,
+	0x03, 0x99, 0x35,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1290,7 +1290,10 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		backlightlevel = GAMMA_152CD;
+		if (!acl_override)
+			backlightlevel = GAMMA_152CD;
+		else if (acl_override == 1)
+			backlightlevel = GAMMA_300CD;
 		break;
 	}
 
