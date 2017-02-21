@@ -13,6 +13,8 @@
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/gpio.h>
+#include <mach/socinfo.h>
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/io.h>
@@ -405,9 +407,8 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 
 	pdata = mdev->mdm_data.pdata;
 
-	do {
-		if (pdata->sysmon_subsys_id_valid); {
-			msleep(SFR_RETRY_INTERVAL);
+	if (pdata->sysmon_subsys_id_valid) {
+		do {
 			ret = sysmon_get_reason(pdata->sysmon_subsys_id,
 					sfr_buf, sizeof(sfr_buf));
 			if (ret) {
@@ -423,6 +424,7 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 			}
 		}
 	}
+	  msleep(SFR_RETRY_INTERVAL);
 	while (++ntries < SFR_MAX_RETRIES);
 }
 
@@ -709,6 +711,8 @@ static irqreturn_t mdm_errfatal(int irq, void *dev_id)
 	if (!mdev)
 		return IRQ_HANDLED;
 
+	mdelay(2); //ADD THIS LINE <-- Who am I to argue?
+
 	pr_debug("%s: mdm id %d sent errfatal interrupt\n",
 			 __func__, mdev->mdm_data.device_id);
 	mdm_drv = &mdev->mdm_data;
@@ -788,6 +792,9 @@ static irqreturn_t mdm_status_change(int irq, void *dev_id)
 	unsigned int mdm2ap_pblrdy_irq;
 	if (!mdev)
 		return IRQ_HANDLED;
+
+	/*delay to ensure the status gpio value is correct (i.e not caused by some noise) */
+	mdelay(2);
 
 	mdm_drv = &mdev->mdm_data;
 	value = gpio_get_value(mdm_drv->mdm2ap_status_gpio);
@@ -1219,7 +1226,7 @@ errfatal_err:
 	}
 
 	ret = request_threaded_irq(irq, NULL, mdm_status_change,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_SHARED | IRQF_ONESHOT,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT, //IRQF_SHARED 
 		"mdm status", mdev);
 
 	if (ret < 0) {
@@ -1240,7 +1247,7 @@ status_err:
 
 		ret = request_threaded_irq(irq, NULL, mdm_pblrdy_change,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				IRQF_SHARED | IRQF_ONESHOT,
+				IRQF_ONESHOT, //IRQF_SHARED
 				"mdm pbl ready", mdev);
 
 		if (ret < 0) {

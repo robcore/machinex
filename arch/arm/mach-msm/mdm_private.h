@@ -15,8 +15,11 @@
 
 #define MDM_DEBUG_MASK_VDDMIN_SETUP (0x00000002)
 #define MDM_DEBUG_MASK_SHDN_LOG     (0x00000004)
+/*#define GPIO_IS_VALID(gpio) \
+	(gpio != -1) */
+#define INVALID_GPIO (-1)
 #define GPIO_IS_VALID(gpio) \
-	(gpio != -1)
+	(gpio != INVALID_GPIO)
 
 #ifdef CONFIG_SAMSUNG_LPM_MODE
 extern int poweroff_charging;

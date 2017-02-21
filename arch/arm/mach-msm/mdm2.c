@@ -44,6 +44,7 @@
 #define MDM_PBLRDY_CNT		20
 
 static int mdm_debug_mask;
+extern int poweroff_charging;
 
 static void mdm_peripheral_connect(struct mdm_modem_drv *mdm_drv)
 {
@@ -73,6 +74,59 @@ out:
 	mutex_unlock(&mdm_drv->peripheral_status_lock);
 }
 
+static void mdm_do_clean_reset(struct mdm_modem_drv *mdm_drv)
+{
+	/* mdm clean reset 
+	 *
+	 * Shutdown PMIC and up if needed
+	 */
+
+#if 0  // no need workardoun code.
+	if (mdm_drv->need_clean_reset)	{
+		gpio_direction_output(MDM_GPIO(AP2MDM_PMIC_PWR_EN), 0);
+		mdelay(10);
+		gpio_direction_output(MDM_GPIO(AP2MDM_PMIC_PWR_EN), 1);
+		mdelay(10);
+
+		mdm_drv->need_clean_reset = false;
+	}
+#endif
+}
+#if 0
+static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
+{
+	int soft_reset_direction_assert = 0,
+	    soft_reset_direction_de_assert = 1;
+
+	if (mdm_drv->pdata->soft_reset_inverted) {
+		soft_reset_direction_assert = 1;
+		soft_reset_direction_de_assert = 0;
+	}
+
+	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
+			soft_reset_direction_assert);
+	/* Use mdelay because this function can be called from atomic
+	 * context.
+	 */
+	mdelay(10);
+	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
+			soft_reset_direction_de_assert);
+
+	gpio_direction_output(MDM_GPIO(AP2MDM_SOFT_RESET), 
+			soft_reset_direction_assert);
+	mdelay(10);
+	
+	mdm_do_clean_reset(mdm_drv);
+
+	gpio_direction_output(MDM_GPIO(AP2MDM_SOFT_RESET), 
+			soft_reset_direction_de_assert);
+
+	gpio_direction_output(MDM_GPIO(AP2MDM_KPDPWR), 1);
+	mdelay(1000);
+	gpio_direction_output(MDM_GPIO(AP2MDM_KPDPWR), 0);
+
+}
+#endif
 /* This function can be called from atomic context. */
 static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
 {
@@ -239,6 +293,11 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 			(mdm_drv->power_on_count == 2))
 		return;
 
+	if(poweroff_charging){
+		pr_debug("%s: do not power on in lpm\n", __func__);
+		return;
+	}
+
 	if (mdm_drv->power_on_count == 1)
 		mdm_do_first_power_on(mdm_drv);
 	else
@@ -272,6 +331,8 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 			gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 	}
 }
+
+/*ap2mdm_pmic_pwr_en_gpio <-- disable/re-enable directly using the pmic perhaps? */
 
 static void mdm_image_upgrade(struct mdm_modem_drv *mdm_drv, int type)
 {
