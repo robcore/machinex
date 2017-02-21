@@ -98,11 +98,6 @@ static int bcma_register_cores(struct bcma_bus *bus)
 			continue;
 		}
 
-		/* Only first GMAC core on BCM4706 is connected and working */
-		if (core->id.id == BCMA_CORE_4706_MAC_GBIT &&
-		    core->core_unit > 0)
-			continue;
-
 		core->dev.release = bcma_release_core_dev;
 		core->dev.bus = &bcma_bus_type;
 		dev_set_name(&core->dev, "bcma%d:%d", bus->num, dev_id);
@@ -136,10 +131,9 @@ static int bcma_register_cores(struct bcma_bus *bus)
 
 static void bcma_unregister_cores(struct bcma_bus *bus)
 {
-	struct bcma_device *core, *tmp;
+	struct bcma_device *core;
 
-	list_for_each_entry_safe(core, tmp, &bus->cores, list) {
-		list_del(&core->list);
+	list_for_each_entry(core, &bus->cores, list) {
 		if (core->dev_registered)
 			device_unregister(&core->dev);
 	}
@@ -294,11 +288,6 @@ int bcma_bus_resume(struct bcma_bus *bus)
 	return 0;
 }
 #endif
-	err = bcma_gpio_init(&bus->drv_cc);
-	if (err == -ENOTSUPP)
-		bcma_debug(bus, "GPIO driver not activated\n");
-	else if (err)
-		bcma_err(bus, "Error registering GPIO driver: %i\n", err);
 
 int __bcma_driver_register(struct bcma_driver *drv, struct module *owner)
 {

@@ -399,8 +399,6 @@ void __devinit bcma_core_pci_hostmode_init(struct bcma_drv_pci *pc)
 		return;
 	}
 
-	spin_lock_init(&pc_host->cfgspace_lock);
-
 	pc->host_controller = pc_host;
 	pc_host->pci_controller.io_resource = &pc_host->io_resource;
 	pc_host->pci_controller.mem_resource = &pc_host->mem_resource;
@@ -424,9 +422,9 @@ void __devinit bcma_core_pci_hostmode_init(struct bcma_drv_pci *pc)
 	pc_host->io_resource.flags = IORESOURCE_IO | IORESOURCE_PCI_FIXED;
 
 	/* Reset RC */
-	usleep_range(3000, 5000);
+	udelay(3000);
 	pcicore_write32(pc, BCMA_CORE_PCI_CTL, BCMA_CORE_PCI_CTL_RST_OE);
-	usleep_range(1000, 2000);
+	udelay(1000);
 	pcicore_write32(pc, BCMA_CORE_PCI_CTL, BCMA_CORE_PCI_CTL_RST |
 			BCMA_CORE_PCI_CTL_RST_OE);
 
@@ -479,7 +477,7 @@ void __devinit bcma_core_pci_hostmode_init(struct bcma_drv_pci *pc)
 	 * before issuing configuration requests to PCI Express
 	 * devices.
 	 */
-	msleep(100);
+	mdelay(100);
 
 	bcma_core_pci_enable_crs(pc);
 
@@ -499,7 +497,7 @@ void __devinit bcma_core_pci_hostmode_init(struct bcma_drv_pci *pc)
 	set_io_port_base(pc_host->pci_controller.io_map_base);
 	/* Give some time to the PCI controller to configure itself with the new
 	 * values. Not waiting at this point causes crashes of the machine. */
-	usleep_range(10000, 15000);
+	mdelay(10);
 	register_pci_controller(&pc_host->pci_controller);
 	return;
 }
@@ -532,7 +530,7 @@ DECLARE_PCI_FIXUP_EARLY(PCI_ANY_ID, PCI_ANY_ID, bcma_core_pci_fixup_pcibridge);
 static void bcma_core_pci_fixup_addresses(struct pci_dev *dev)
 {
 	struct resource *res;
-	int pos, err;
+	int pos;
 
 	if (dev->bus->ops->read != bcma_core_pci_hostmode_read_config) {
 		/* This is not a device on the PCI-core bridge. */
@@ -545,12 +543,8 @@ static void bcma_core_pci_fixup_addresses(struct pci_dev *dev)
 
 	for (pos = 0; pos < 6; pos++) {
 		res = &dev->resource[pos];
-		if (res->flags & (IORESOURCE_IO | IORESOURCE_MEM)) {
-			err = pci_assign_resource(dev, pos);
-			if (err)
-				pr_err("PCI: Problem fixing up the addresses on %s\n",
-				       pci_name(dev));
-		}
+		if (res->flags & (IORESOURCE_IO | IORESOURCE_MEM))
+			pci_assign_resource(dev, pos);
 	}
 }
 DECLARE_PCI_FIXUP_HEADER(PCI_ANY_ID, PCI_ANY_ID, bcma_core_pci_fixup_addresses);

@@ -64,7 +64,7 @@ void bcma_core_set_clockmode(struct bcma_device *core,
 	switch (clkmode) {
 	case BCMA_CLKMODE_FAST:
 		bcma_set32(core, BCMA_CLKCTLST, BCMA_CLKCTLST_FORCEHT);
-		usleep_range(64, 300);
+		udelay(64);
 		for (i = 0; i < 1500; i++) {
 			if (bcma_read32(core, BCMA_CLKCTLST) &
 			    BCMA_CLKCTLST_HAVEHT) {

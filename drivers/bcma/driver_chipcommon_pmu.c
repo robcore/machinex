@@ -12,13 +12,12 @@
 #include <linux/export.h>
 #include <linux/bcma/bcma.h>
 
-u32 bcma_chipco_pll_read(struct bcma_drv_cc *cc, u32 offset)
+static u32 bcma_chipco_pll_read(struct bcma_drv_cc *cc, u32 offset)
 {
 	bcma_cc_write32(cc, BCMA_CC_PLLCTL_ADDR, offset);
 	bcma_cc_read32(cc, BCMA_CC_PLLCTL_ADDR);
 	return bcma_cc_read32(cc, BCMA_CC_PLLCTL_DATA);
 }
-EXPORT_SYMBOL_GPL(bcma_chipco_pll_read);
 
 void bcma_chipco_pll_write(struct bcma_drv_cc *cc, u32 offset, u32 value)
 {
