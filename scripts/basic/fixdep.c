@@ -409,10 +409,10 @@ static void print_deps(void)
 		exit(2);
 	}
 	if (fstat(fd, &st) < 0) {
-                fprintf(stderr, "fixdep: error fstat'ing depfile: ");
-                perror(depfile);
-                exit(2);
-        }
+		fprintf(stderr, "fixdep: error fstat'ing depfile: ");
+		perror(depfile);
+		exit(2);
+	}
 	if (st.st_size == 0) {
 		fprintf(stderr,"fixdep: %s is empty\n",depfile);
 		close(fd);
@@ -438,7 +438,7 @@ static void traps(void)
 	int *p = (int *)test;
 
 	if (*p != INT_CONF) {
-		fprintf(stderr, "fixdep: sizeof(int) != 4 or wrong endianess? %#x\n",
+		fprintf(stderr, "fixdep: sizeof(int) != 4 or wrong endianness? %#x\n",
 			*p);
 		exit(2);
 	}
