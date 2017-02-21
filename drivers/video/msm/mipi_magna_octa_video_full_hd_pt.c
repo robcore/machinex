@@ -1345,12 +1345,6 @@ static int get_candela_index(int bl_level)
 	case 254 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
-	default:
-		if (!acl_override)
-			backlightlevel = GAMMA_152CD;
-		else if (acl_override == 1)
-			backlightlevel = GAMMA_300CD;
-		break;
 	}
 
 	return backlightlevel;
@@ -1882,18 +1876,17 @@ static int brightness_control(int bl_level)
 					sizeof(magna_brightness_acl_ref));
 
 	if (!acl_override) {
-		if (get_auto_brightness() == 6) {
+		if (get_auto_brightness() == 6)
 			magna_brightness_acl_ref[1] = 0x42; /*RE low, ACL 40%*/
-		} else {
-			if (mipi_pd.acl_status) 
-				magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
-			else
-				magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		}
-	} else if (acl_override == 1) {
-		if (get_auto_brightness() == 6) {
+		else if (mipi_pd.acl_status) 
+			magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
+		else
 			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		}
+	} else if (acl_override == 1) {
+		if (get_auto_brightness() == 6)
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		else
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 	if (memcmp(magna_brightness_acl_pre, magna_brightness_acl_ref,
 				sizeof(magna_brightness_acl_ref))) {
@@ -1977,14 +1970,12 @@ static int brightness_control(int bl_level)
 static int acl_control(int bl_level)
 {
 	if (!acl_override) {
-		if (get_auto_brightness() == 6) {
+		if (get_auto_brightness() == 6)
 			magna_brightness_acl_ref[1] = 0x42; /*RE low, ACL 40%*/
-		} else {
-			if (mipi_pd.acl_status) 
-				magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
-			else
-				magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		}
+		else if (mipi_pd.acl_status) 
+			magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
+		else
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	} else if (acl_override == 1) {
 		if (get_auto_brightness() == 6)
 			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
@@ -2244,4 +2235,5 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	return ret;
 }
 module_init(mipi_video_magna_octa_full_hd_pt_init);
+MODULE_LICENSE("GPL v2");
 

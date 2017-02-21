@@ -1289,12 +1289,6 @@ static int get_candela_index(int bl_level)
 	case 254 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
-	default:
-		if (!acl_override)
-			backlightlevel = GAMMA_152CD;
-		else if (acl_override == 1)
-			backlightlevel = GAMMA_300CD;
-		break;
 	}
 
 	return backlightlevel;
@@ -1779,7 +1773,9 @@ static int brightness_control(int bl_level)
 	} else if (acl_override == 1) {
 		if (get_auto_brightness() == 6)
 			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		}
+		else
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	}
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
 				sizeof(samsung_brightness_acl_ref))) {
 		brightness_packet[cmd_size].payload =
@@ -1874,12 +1870,11 @@ static int acl_control(int bl_level)
 				samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 		}
 	} else if (acl_override == 1) {
-		if (get_auto_brightness() == 6)
-			samsung_brightness_acl_cont_default[1] = 0x00;
-
-		/* fuck power saving */
-		/* 0x00 */
 		if (get_auto_brightness() == 6) {
+			samsung_brightness_acl_cont_default[1] = 0x00;
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		} else {
+			samsung_brightness_acl_cont_default[1] = 0x00;
 			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 		}
 	}

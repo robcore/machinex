@@ -60,7 +60,7 @@ struct pm_gpio gpio_get_param = {
 
 unsigned int Lpanel_colors;
 extern void panel_load_colors(unsigned int val);
-unsigned int acl_override;
+unsigned int acl_override = 0;
 static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;
@@ -1532,7 +1532,7 @@ static ssize_t acl_override_store(struct device *dev, struct device_attribute *a
 	return size;
 }
 
-static DEVICE_ATTR(acl_override, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(acl_override, 0644,
 			acl_override_show, acl_override_store);
 
 static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
