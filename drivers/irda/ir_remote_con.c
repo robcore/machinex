@@ -231,7 +231,8 @@ static void ir_remocon_work(struct ir_remocon_data *ir_data, int count)
 			dev_err(&client->dev, "%s: err2 %d\n", __func__, ret);
 			data->pdata->ir_vdd_onoff(0);
 			data->pdata->ir_vdd_onoff(1);
-			msleep(60);
+			/* FUCK YOU FOR SLEEPING WITH LOCKS HELD!!!! msleep(60); */
+			mdelay(60); //not great, but better
 			data->on_off = 1;
 		}
 	}

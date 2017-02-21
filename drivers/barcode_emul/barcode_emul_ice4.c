@@ -42,7 +42,6 @@
 #include <linux/firmware.h>
 #include <linux/barcode_emul.h>
 #include <linux/regulator/consumer.h>
-#include <linux/of_gpio.h>
 #if defined(CONFIG_IR_REMOCON_FPGA)
 #include <linux/ir_remote_con.h>
 #endif
@@ -151,13 +150,13 @@ static void fpga_enable(int enable)
 			if (g_pdata->clock_en)
 				g_pdata->clock_en(1);
 			gpio_set_value(g_pdata->rst_n, GPIO_LEVEL_HIGH);
-			usleep_range(1000, 2000);
+			mdelay(1);
 			Is_clk_enabled = 1;
 		}
 		enable_count++;
 	} else {
 		if (Is_clk_enabled && !Is_beaming && (enable_count == 1)) {
-			usleep_range(20000, 25000);
+			mdelay(20);
 			gpio_set_value(g_pdata->rst_n, GPIO_LEVEL_LOW);
 			if (g_pdata->clock_en)
 				g_pdata->clock_en(0);
@@ -223,16 +222,16 @@ static int barcode_fpga_fimrware_update_start(const u8 *data, int len)
 	do {
 		gpio_set_value(g_pdata->rst_n, GPIO_LEVEL_LOW);
 		gpio_set_value(g_pdata->cresetb, GPIO_LEVEL_LOW);
-		usleep_range(30, 50);
+		mdelay(3);
 
 		gpio_set_value(g_pdata->cresetb, GPIO_LEVEL_HIGH);
-		usleep_range(1000, 1300);
+		mdelay(1);
 
 		if (gpio_get_value(g_pdata->cdone))
 			pr_err("%s cdone HIGH before firmware download",
 				__func__);
 		barcode_send_firmware_data(data, len);
-		usleep_range(50, 70);
+		mdelay(6);
 
 		if (gpio_get_value(g_pdata->cdone)) {
 			udelay(5);
@@ -688,7 +687,7 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 								__func__, ret);
 		}
 	}
-	usleep_range(10000, 12000);
+	mdelay(10);
 
 	ack_pin_onoff = 0;
 /* Unavailable in Lattice */
@@ -715,7 +714,7 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 	emission_time = \
 		(1000 * (data->ir_sum) / (data->ir_freq));
 	if (emission_time > 0)
-		msleep(emission_time);
+		mdelay(emission_time);
 
 		pr_barcode("%s: emission_time = %d\n",
 					__func__, emission_time);
@@ -828,8 +827,6 @@ static int irda_read_device_info(struct barcode_emul_data *ir_data)
 	int ret;
 
 	pr_barcode("%s called\n", __func__);
-
-	msleep(60);
 
 	fpga_enable(1);
 

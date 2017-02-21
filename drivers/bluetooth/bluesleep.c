@@ -192,6 +192,8 @@ int bluesleep_can_sleep(void)
 
 void bluesleep_sleep_wakeup(void)
 {
+	int ret;
+
 	if (test_bit(BT_ASLEEP, &flags)) {
 		/*Activating UART */
 		hsuart_power(1);
@@ -199,15 +201,13 @@ void bluesleep_sleep_wakeup(void)
 		/* Start the timer */
 		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 		if (bsi->has_ext_wake == 1) {
-			int ret;
 			ret = ice_gpiox_set(bsi->ext_wake, 1);
 			if (ret)
-			{
-				ret = ice_gpiox_set(bsi->ext_wake, 1);
-			}
+				pr_debug("(bluesleep_sleep_wakeup) failed to set ext_wake 1.");
 		}
 		set_bit(BT_EXT_WAKE, &flags);
 		clear_bit(BT_ASLEEP, &flags);
+		/*Activating UART */
 	}
 }
 
@@ -235,7 +235,6 @@ static void bluesleep_tx_data_wakeup(void)
                 int retry_cnt;
                 pr_debug("(bluesleep_tx_data_wakeup) failed to set ext_wake 1.");
                 for(retry_cnt=0 ; retry_cnt < 5 ; retry_cnt ++){
-                    usleep(5000);
                     ret = ice_gpiox_set(bsi->ext_wake, 1);
                     pr_debug("retry_cnt = %d", retry_cnt);
                     if(ret == 0)
@@ -340,7 +339,7 @@ static void bluesleep_outgoing_data(void)
 				&& !test_bit(BT_EXT_WAKE, &flags)
 				&& !test_bit(BT_ASLEEP, &flags); i++) {
 		pr_debug("bluesleep_tx_timer_expire routine has not yet finished. 1ms sleep");
-		usleep(1000);
+		mdelay(1);
 	}
 
 	if (mutex_is_locked(&bluesleep_mutex))
