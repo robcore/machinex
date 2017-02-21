@@ -59,6 +59,7 @@ struct pm_gpio gpio_get_param = {
 
 unsigned int Lpanel_colors;
 extern void panel_load_colors(unsigned int val);
+unsigned int acl_override;
 static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;
@@ -625,7 +626,8 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	if (get_auto_brightness() >= 6) {
 		msd.mpd->first_bl_hbm_psre = 1;
-		msd.dstat.auto_brightness = 6;
+		if (acl_override == 1)
+			msd.dstat.auto_brightness = 6;
 		}
 #ifdef CONFIG_SEC_DEBUG_MDP
 	sec_debug_mdp_reset_value();
@@ -902,6 +904,7 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
+	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
@@ -922,8 +925,15 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "7")) // HBM mode (HBM + PSRE)
 		msd.dstat.auto_brightness = 7;
 	else {
-		return size;
+		if (!acl_override) {
+			if (!first_auto_br) {
+				first_auto_br++;
+				return size;
+			}
+		} else if (acl_override == 1)
+			return size;
 	}
+
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		msd.mpd->first_bl_hbm_psre = 1;
@@ -984,7 +994,7 @@ static ssize_t mipi_samsung_disp_siop_show(struct device *dev,
 {
 	int rc;
 
-	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", msd.mpd->siop_status);
+	rc = sprintf(buf, "%d\n", msd.mpd->siop_status);
 
 	return rc;
 }
@@ -1497,6 +1507,33 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 static DEVICE_ATTR(panel_colors, S_IRUGO | S_IWUSR | S_IWGRP,
 			panel_colors_show, panel_colors_store);
 
+static ssize_t acl_override_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", acl_override);
+}
+
+static ssize_t acl_override_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	int ret;
+	unsigned int value;
+
+	ret = sscanf(buf, "%d\n", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (value == 0)
+		value = 0;
+	else if (value >= 1)
+		value = 1;
+
+	acl_override = value;
+
+	return size;
+}
+
+static DEVICE_ATTR(acl_override, S_IRUGO | S_IWUSR | S_IWGRP,
+			acl_override_show, acl_override_store);
+
 static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 {
 	int ret, rc;
@@ -1679,6 +1716,13 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_panel_colors.attr.name);
 	}
 
+	ret = sysfs_create_file(&lcd_device->dev.kobj,
+			&dev_attr_acl_override.attr);
+	if (ret) {
+		pr_info("sysfs create fail-%s\n",
+				dev_attr_acl_override.attr.name);
+	}
+
 	printk(KERN_INFO "[lcd] mipi_samsung_disp_probe end\n");
 
 	return 0;
@@ -1804,6 +1848,7 @@ static int __init mipi_samsung_disp_init(void)
 	mipi_dsi_buf_alloc(&msd.samsung_rx_buf, DSI_BUF_SIZE);
 
 	Lpanel_colors = 2;
+	acl_override = 0;
 
 	return platform_driver_register(&this_driver);
 }

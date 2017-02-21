@@ -20,6 +20,7 @@
 
 static struct msm_panel_info pinfo;
 static struct mipi_panel_data mipi_pd;
+extern unsigned int acl_override;
 
 static int lux_tbl[] = {
 	10, 11, 12, 13, 14,
@@ -1824,12 +1825,22 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (get_auto_brightness() >= 6) {
-		brightness_packet[cmd_size].payload =
-				magna_brightness_write_als;
-		brightness_packet[cmd_size].dlen =
-				sizeof(magna_brightness_write_als);
-		cmd_size++;
+	if (!acl_override) {
+		if (mipi_pd.first_bl_hbm_psre  && (get_auto_brightness() >= 6)) {
+			brightness_packet[cmd_size].payload =
+					magna_brightness_write_als;
+			brightness_packet[cmd_size].dlen =
+					sizeof(magna_brightness_write_als);
+			cmd_size++;
+		}
+	} else if (acl_override == 1) {
+		if (get_auto_brightness() >= 6) {
+			brightness_packet[cmd_size].payload =
+					magna_brightness_write_als;
+			brightness_packet[cmd_size].dlen =
+					sizeof(magna_brightness_write_als);
+			cmd_size++;
+		}
 	}
 
 	/* PSRE MTP *************************************************************************/
@@ -1867,10 +1878,20 @@ static int brightness_control(int bl_level)
 	memcpy(magna_brightness_acl_pre, magna_brightness_acl_ref,
 					sizeof(magna_brightness_acl_ref));
 
-	if (get_auto_brightness() == 6) {
-		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	if (!acl_override) {
+		if (get_auto_brightness() == 6) {
+			magna_brightness_acl_ref[1] = 0x42; /*RE low, ACL 40%*/
+		} else {
+			if (mipi_pd.acl_status) 
+				magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
+			else
+				magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		}
+	} else if (acl_override == 1) {
+		if (get_auto_brightness() == 6) {
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		}
 	}
-
 	if (memcmp(magna_brightness_acl_pre, magna_brightness_acl_ref,
 				sizeof(magna_brightness_acl_ref))) {
 		brightness_packet[cmd_size].payload =
@@ -1952,11 +1973,21 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-
-	if (get_auto_brightness() == 6)
-		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	else if (get_auto_brightness() == 0)
-		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	if (!acl_override) {
+		if (get_auto_brightness() == 6) {
+			magna_brightness_acl_ref[1] = 0x42; /*RE low, ACL 40%*/
+		} else {
+			if (mipi_pd.acl_status) 
+				magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
+			else
+				magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		}
+	} else if (acl_override == 1) {
+		if (get_auto_brightness() == 6)
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+		else if (get_auto_brightness() == 0)
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	}
 
 	return 1;
 }
