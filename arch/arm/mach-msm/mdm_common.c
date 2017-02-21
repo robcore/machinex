@@ -1226,7 +1226,7 @@ errfatal_err:
 	}
 
 	ret = request_threaded_irq(irq, NULL, mdm_status_change,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT, //IRQF_SHARED
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_SHARED | IRQF_ONESHOT,
 		"mdm status", mdev);
 
 	if (ret < 0) {
@@ -1247,7 +1247,7 @@ status_err:
 
 		ret = request_threaded_irq(irq, NULL, mdm_pblrdy_change,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				IRQF_ONESHOT, //IRQF_SHARED
+				IRQF_SHARED | IRQF_ONESHOT,
 				"mdm pbl ready", mdev);
 
 		if (ret < 0) {

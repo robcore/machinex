@@ -293,10 +293,8 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 			(mdm_drv->power_on_count == 2))
 		return;
 
-	if(poweroff_charging){
-		pr_debug("%s: do not power on in lpm\n", __func__);
+	if (poweroff_charging)
 		return;
-	}
 
 	if (mdm_drv->power_on_count == 1)
 		mdm_do_first_power_on(mdm_drv);
