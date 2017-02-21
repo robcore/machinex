@@ -422,10 +422,10 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 				printk("Restart Reason Override");
 				break;
 			}
-		}
-	}
 	  msleep(SFR_RETRY_INTERVAL);
+		}
 	while (++ntries < SFR_MAX_RETRIES);
+	}
 }
 
 static void mdm2ap_status_check(struct work_struct *work)
@@ -1226,7 +1226,7 @@ errfatal_err:
 	}
 
 	ret = request_threaded_irq(irq, NULL, mdm_status_change,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT, //IRQF_SHARED 
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT, //IRQF_SHARED
 		"mdm status", mdev);
 
 	if (ret < 0) {

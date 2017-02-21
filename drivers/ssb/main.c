@@ -796,14 +796,7 @@ static int __devinit ssb_bus_register(struct ssb_bus *bus,
 	if (err)
 		goto err_pcmcia_exit;
 	ssb_chipcommon_init(&bus->chipco);
-	ssb_extif_init(&bus->extif);
 	ssb_mipscore_init(&bus->mipscore);
-	err = ssb_gpio_init(bus);
-	if (err == -ENOTSUPP)
-		ssb_dprintk(KERN_DEBUG PFX "GPIO driver not activated\n");
-	else if (err)
-		ssb_dprintk(KERN_ERR PFX
-			   "Error registering GPIO driver: %i\n", err);
 	err = ssb_fetch_invariants(bus, get_invariants);
 	if (err) {
 		ssb_bus_may_powerdown(bus);
@@ -1125,7 +1118,8 @@ static u32 ssb_tmslow_reject_bitmask(struct ssb_device *dev)
 	case SSB_IDLOW_SSBREV_27:     /* same here */
 		return SSB_TMSLOW_REJECT;	/* this is a guess */
 	default:
-		WARN(1, KERN_INFO "ssb: Backplane Revision 0x%.8X\n", rev);
+		printk(KERN_INFO "ssb: Backplane Revision 0x%.8X\n", rev);
+		WARN_ON(1);
 	}
 	return (SSB_TMSLOW_REJECT | SSB_TMSLOW_REJECT_23);
 }
