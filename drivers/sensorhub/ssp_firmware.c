@@ -15,7 +15,7 @@
 #include "ssp.h"
 
 #define SSP_FIRMWARE_REVISION		101901
-#define SSP_FIRMWARE_REVISION_03	15102300 /*MCU L5, 6500*/
+#define SSP_FIRMWARE_REVISION_03	14122200 /*MCU L5, 6500*/
 
 /* Bootload mode cmd */
 #define BL_FW_NAME			"ssp.fw"
@@ -54,9 +54,8 @@ static int ssp_wait_for_chg(struct ssp_data *data)
 	while ((timeout_counter++ <= count) && data->read_chg())
 		udelay(20);
 
-	if (timeout_counter > count) {
+	if (timeout_counter > count)
 		return -EIO;
-	}
 
 	return 0;
 }

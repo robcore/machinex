@@ -40,7 +40,6 @@ static int ssp_sensorhub_print_data(const char *func_name,
 		strlcat(log_str, buf, log_size);
 	}
 
-	//pr_info("%s", log_str);
 	kfree(log_str);
 	return log_size;
 }
