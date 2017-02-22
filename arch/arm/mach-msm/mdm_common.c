@@ -229,6 +229,7 @@ static void mdm_ssr_completed(struct mdm_device *mdev)
 		mdev->ssr_started_internally = 0;
 		ssr_count--;
 	}
+	atomic_set(&mdm_drv->ap2mdm_errfatal_gpio, 0);
 
 	if (ssr_count < 0) {
 		pr_err("%s: ssr_count = %d\n",
@@ -744,6 +745,8 @@ static int ssr_notifier_cb(struct notifier_block *this,
 		container_of(this, struct mdm_device, ssr_notifier_blk);
 
 	switch (code) {
+	case SUBSYS_BEFORE_SHUTDOWN;
+		mdm_start_ssr(mdev);
 	case SUBSYS_AFTER_POWERUP:
 		mdm_ssr_completed(mdev);
 		break;

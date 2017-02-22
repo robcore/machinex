@@ -444,7 +444,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	mutex_unlock(shutdown_lock);
 
 	/* Collect ram dumps for all subsystems in order here */
-	for_each_subsys_device(list, count, NULL, subsystem_ramdump);
+	//for_each_subsys_device(list, count, NULL, subsystem_ramdump);
 
 	send_notification_to_order(list, count, SUBSYS_BEFORE_POWERUP);
 	for_each_subsys_device(list, count, NULL, subsystem_powerup);
@@ -456,6 +456,8 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	mutex_unlock(powerup_lock);
 
 	mutex_unlock(&soc_order_reg_lock);
+
+
 
 	pr_debug("[%p]: Released powerup lock!\n", current);
 
@@ -523,7 +525,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 			name);
 		break;
 	default:
-		pr_err("subsys-restart: Unknown restart level!\n");
+		pr_debug("subsys-restart: Unknown restart level!\n");
 		break;
 	}
 

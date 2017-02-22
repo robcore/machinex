@@ -76,7 +76,7 @@ out:
 
 static void mdm_do_clean_reset(struct mdm_modem_drv *mdm_drv)
 {
-	/* mdm clean reset 
+	/* mdm clean reset
 	 *
 	 * Shutdown PMIC and up if needed
 	 */
@@ -112,13 +112,13 @@ static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
 			soft_reset_direction_de_assert);
 
-	gpio_direction_output(MDM_GPIO(AP2MDM_SOFT_RESET), 
+	gpio_direction_output(MDM_GPIO(AP2MDM_SOFT_RESET),
 			soft_reset_direction_assert);
 	mdelay(10);
-	
+
 	mdm_do_clean_reset(mdm_drv);
 
-	gpio_direction_output(MDM_GPIO(AP2MDM_SOFT_RESET), 
+	gpio_direction_output(MDM_GPIO(AP2MDM_SOFT_RESET),
 			soft_reset_direction_de_assert);
 
 	gpio_direction_output(MDM_GPIO(AP2MDM_KPDPWR), 1);
@@ -145,6 +145,10 @@ static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
 	mdelay(10);
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
 			soft_reset_direction_de_assert);
+
+	/* Evil? Yes. */
+	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
+		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 }
 
 /* This function can be called from atomic context. */
@@ -170,8 +174,6 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		mdelay(100);
 	}
 
-	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
-		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 /*
 	if (mdm_drv->ap2mdm_status_gpio > 0)
 		gpio_direction_output(mdm_drv->ap2mdm_status_gpio, 0);
@@ -324,9 +326,6 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 				gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 			}
 		}
-		mdelay(100);
-		if (mdm_drv->ap2mdm_errfatal_gpio > 0)
-			gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 	}
 }
 
