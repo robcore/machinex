@@ -172,6 +172,9 @@ static struct kernel_param_ops disable_boot_timeout_ops = {
 module_param_cb(disable_boot_timeout, &disable_boot_timeout_ops,
 		&disable_boot_timeout, 0644);
 MODULE_PARM_DESC(disable_boot_timeout, "Disable panic on mdm bootup timeout");
+
+module_param(poweroff_charging, int, 0444);
+
 /* If the platform's cascading_ssr flag is set, the subsystem
  * restart module will restart the other modems so stop
  * monitoring them as well.
@@ -221,7 +224,11 @@ static void mdm_ssr_started(struct mdm_device *mdev)
  */
 static void mdm_ssr_completed(struct mdm_device *mdev)
 {
+	struct mdm_modem_drv *mdm_drv = &mdev->mdm_data;
 	unsigned long flags;
+
+	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
+		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 
 	spin_lock_irqsave(&ssr_lock, flags);
 	ssr_count--;
@@ -229,7 +236,6 @@ static void mdm_ssr_completed(struct mdm_device *mdev)
 		mdev->ssr_started_internally = 0;
 		ssr_count--;
 	}
-	atomic_set(&mdm_drv->ap2mdm_errfatal_gpio, 0);
 
 	if (ssr_count < 0) {
 		pr_err("%s: ssr_count = %d\n",
@@ -407,25 +413,21 @@ static void mdm_restart_reason_fn(struct work_struct *work)
 			struct mdm_device, sfr_reason_work);
 
 	pdata = mdev->mdm_data.pdata;
-
 	if (pdata->sysmon_subsys_id_valid) {
 		do {
 			ret = sysmon_get_reason(pdata->sysmon_subsys_id,
 					sfr_buf, sizeof(sfr_buf));
-			if (ret) {
-				/*
-				 * The sysmon device may not have been probed as
-				 * yet after the restart.
-				 */
-				printk("Restart Reason Override");
-				break;
-			} else {
-				printk("Restart Reason Override");
-				break;
+			if (!ret) {
+				pr_err("mdm restart reason: %s\n", sfr_buf);
+				return;
 			}
-	  msleep(SFR_RETRY_INTERVAL);
-		}
-	while (++ntries < SFR_MAX_RETRIES);
+			/* Wait for the modem to be fully booted after a
+			 * subsystem restart. This may take several seconds.
+			 */
+			msleep(SFR_RETRY_INTERVAL);
+		} while (++ntries < SFR_MAX_RETRIES);
+		pr_debug("%s: Error retrieving restart reason: %d\n",
+				__func__, ret);
 	}
 }
 
@@ -655,7 +657,7 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 		atomic_set(&mdm_drv->mdm_ready, 0);
 		if (mdm_debug_mask & MDM_DEBUG_MASK_SHDN_LOG)
 			pr_debug("Sending shutdown request to mdm\n");
-		ret = sysmon_send_shutdown(mdm_drv->pdata->sysmon_subsys_id);
+		ret = sysmon_send_shutdown(SYSMON_SS_EXT_MODEM);
 		if (ret)
 			pr_err("%s:Graceful shutdown of mdm failed, ret = %d\n",
 			   __func__, ret);
@@ -745,8 +747,12 @@ static int ssr_notifier_cb(struct notifier_block *this,
 		container_of(this, struct mdm_device, ssr_notifier_blk);
 
 	switch (code) {
-	case SUBSYS_BEFORE_SHUTDOWN;
+	case SUBSYS_BEFORE_SHUTDOWN:
 		mdm_start_ssr(mdev);
+		break;
+	case SUBSYS_BEFORE_POWERUP:
+		mdm_ssr_started(mdev);
+		break;
 	case SUBSYS_AFTER_POWERUP:
 		mdm_ssr_completed(mdev);
 		break;
@@ -889,6 +895,7 @@ static int mdm_subsys_powerup(const struct subsys_desc *crashed_subsys)
 
 	mdm_ops->power_on_mdm_cb(mdm_drv);
 	mdm_drv->boot_type = CHARM_NORMAL_BOOT;
+	mdm_ssr_completed(mdev);
 	complete(&mdev->mdm_needs_reload);
 	if (!wait_for_completion_timeout(&mdev->mdm_boot,
 			msecs_to_jiffies(MDM_BOOT_TIMEOUT))) {
@@ -925,6 +932,7 @@ static int mdm_subsys_ramdumps(int want_dumps,
 		if (!wait_for_completion_timeout(&mdev->mdm_ram_dumps,
 				msecs_to_jiffies(mdev->dump_timeout_ms))) {
 			mdm_drv->mdm_ram_dump_status = -ETIMEDOUT;
+			mdm_ssr_completed(mdev);
 			pr_err("%s: mdm modem ramdumps timed out.\n",
 					__func__);
 		} else
@@ -1209,7 +1217,7 @@ static int mdm_configure_ipc(struct mdm_device *mdev)
 		goto errfatal_err;
 	}
 	ret = request_irq(irq, mdm_errfatal,
-			IRQF_TRIGGER_RISING, "mdm errfatal", mdev);
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT, "mdm errfatal", mdev);
 
 	if (ret < 0) {
 		pr_err("%s: MDM2AP_ERRFATAL IRQ#%d request failed, err=%d\n",

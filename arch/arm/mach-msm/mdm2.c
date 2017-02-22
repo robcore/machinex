@@ -145,10 +145,6 @@ static void mdm_toggle_soft_reset(struct mdm_modem_drv *mdm_drv)
 	mdelay(10);
 	gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
 			soft_reset_direction_de_assert);
-
-	/* Evil? Yes. */
-	if (mdm_drv->ap2mdm_errfatal_gpio > 0)
-		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 0);
 }
 
 /* This function can be called from atomic context. */
