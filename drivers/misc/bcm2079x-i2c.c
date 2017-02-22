@@ -59,7 +59,6 @@
 #define PACKET_TYPE_HCIEV	(4)
 #define MAX_PACKET_SIZE		(PACKET_HEADER_SIZE_NCI + 255)
 
-#define ALIAS_ADDRESS	  0x79
 
 struct bcm2079x_dev {
 	wait_queue_head_t read_wq;
@@ -87,7 +86,7 @@ static void bcm2079x_init_stat(struct bcm2079x_dev *bcm2079x_dev)
 	bcm2079x_dev->count_irq = 0;
 }
 
-static void bcm2079x_disable_irq(struct bcm2079x_dev *bcm2079x_dev)
+/*static void bcm2079x_disable_irq(struct bcm2079x_dev *bcm2079x_dev)
 {
 	unsigned long flags;
 	spin_lock_irqsave(&bcm2079x_dev->irq_enabled_lock, flags);
@@ -97,7 +96,7 @@ static void bcm2079x_disable_irq(struct bcm2079x_dev *bcm2079x_dev)
 		bcm2079x_dev->irq_enabled = false;
 	}
 	spin_unlock_irqrestore(&bcm2079x_dev->irq_enabled_lock, flags);
-}
+}*/
 
 static void bcm2079x_enable_irq(struct bcm2079x_dev *bcm2079x_dev)
 {
@@ -121,7 +120,7 @@ static void bcm2079x_enable_irq(struct bcm2079x_dev *bcm2079x_dev)
  the new address can be changed by changing the CLIENT_ADDRESS below if 0x38
  conflicts with other device on the same i2c bus.
  */
-
+#define ALIAS_ADDRESS	  0x79
 #if 0
 static void set_client_addr(struct bcm2079x_dev *bcm2079x_dev, int addr)
 {
@@ -465,6 +464,11 @@ static int bcm2079x_probe(struct i2c_client *client,
 		goto err_misc_register;
 	}
 
+	wake_lock_init(&bcm2079x_dev->bcm_wake_lock, WAKE_LOCK_SUSPEND,
+				  "bcm2079x_wake_lock");
+	wake_lock_init(&bcm2079x_dev->bcm_wake_lock_2nd, WAKE_LOCK_SUSPEND,
+				  "bcm2079x_wake_lock_2nd");
+
 	/* request irq.  the irq is set whenever the chip has data available
 	 * for reading.  it is cleared when all data has been read.
 	 */
@@ -472,10 +476,7 @@ static int bcm2079x_probe(struct i2c_client *client,
 	client->irq = iIrq;
 	dev_info(&client->dev, "requesting IRQ %d with IRQF_NO_SUSPEND\n",
 		iIrq);
-	wake_lock_init(&bcm2079x_dev->bcm_wake_lock, WAKE_LOCK_SUSPEND,
-				  "bcm2079x_wake_lock");
-	wake_lock_init(&bcm2079x_dev->bcm_wake_lock_2nd, WAKE_LOCK_SUSPEND,
-				  "bcm2079x_wake_lock_2nd");
+
 	ret = request_irq(iIrq, bcm2079x_dev_irq_handler,
 		IRQF_TRIGGER_RISING|IRQF_NO_SUSPEND, client->name,
 		bcm2079x_dev);
@@ -503,9 +504,9 @@ static int bcm2079x_probe(struct i2c_client *client,
 	return 0;
 
 err_request_irq_failed:
-	misc_deregister(&bcm2079x_dev->bcm2079x_device);
 	wake_lock_destroy(&bcm2079x_dev->bcm_wake_lock);
 	wake_lock_destroy(&bcm2079x_dev->bcm_wake_lock_2nd);
+	misc_deregister(&bcm2079x_dev->bcm2079x_device);
 err_misc_register:
 	mutex_destroy(&bcm2079x_dev->read_mutex);
 	kfree(bcm2079x_dev);
@@ -523,10 +524,9 @@ static int bcm2079x_remove(struct i2c_client *client)
 	struct bcm2079x_dev *bcm2079x_dev;
 
 	bcm2079x_dev = i2c_get_clientdata(client);
-	bcm2079x_disable_irq(bcm2079x_dev);
-	free_irq(client->irq, bcm2079x_dev);
 	wake_lock_destroy(&bcm2079x_dev->bcm_wake_lock);
 	wake_lock_destroy(&bcm2079x_dev->bcm_wake_lock_2nd);
+	free_irq(client->irq, bcm2079x_dev);
 	misc_deregister(&bcm2079x_dev->bcm2079x_device);
 	mutex_destroy(&bcm2079x_dev->read_mutex);
 	gpio_free(bcm2079x_dev->irq_gpio);
