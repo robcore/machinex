@@ -299,6 +299,7 @@ enum fuse_opcode {
 	FUSE_POLL          = 40,
 	FUSE_NOTIFY_REPLY  = 41,
 	FUSE_BATCH_FORGET  = 42,
+	FUSE_FALLOCATE     = 43,
 	FUSE_READDIRPLUS   = 44,
 
 	/* CUSE specific operations */
