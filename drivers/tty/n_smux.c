@@ -3278,7 +3278,7 @@ int msm_smux_close(uint8_t lcid)
 int msm_smux_write(uint8_t lcid, void *pkt_priv, const void *data, int len)
 {
 	struct smux_lch_t *ch;
-	struct smux_pkt_t *pkt = NULL;
+	struct smux_pkt_t *pkt;
 	int tx_ready = 0;
 	unsigned long flags;
 	int ret;
@@ -3906,9 +3906,8 @@ static int __init smux_init(void)
 	}
 
 	log_ctx = ipc_log_context_create(1, "smux");
-	if (!log_ctx) {
+	if (!log_ctx)
 		disable_ipc_logging = 1;
-	}
 
 	return 0;
 }
