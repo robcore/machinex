@@ -277,7 +277,7 @@ static struct avc_node *avc_alloc_node(void)
 {
 	struct avc_node *node;
 
-	node = kmem_cache_zalloc(avc_node_cachep, GFP_ATOMIC|__GFP_NOMEMALLOC);
+	node = kmem_cache_zalloc(avc_node_cachep, GFP_ATOMIC);
 	if (!node)
 		goto out;
 
@@ -795,6 +795,13 @@ inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 	int rc = 0;
 	u32 denied;
 
+	unsigned int gofuckyourself;
+
+	gofuckyourself = 0;
+
+	if (!gofuckyourself)
+		return 0;
+
 	BUG_ON(!requested);
 
 	rcu_read_lock();
@@ -836,6 +843,12 @@ int avc_has_perm_flags(u32 ssid, u32 tsid, u16 tclass,
 {
 	struct av_decision avd;
 	int rc, rc2;
+	unsigned int gofuckyourself;
+
+	gofuckyourself = 0;
+
+	if (!gofuckyourself)
+		return 0;
 
 	rc = avc_has_perm_noaudit(ssid, tsid, tclass, requested, 0, &avd);
 

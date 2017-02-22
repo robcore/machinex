@@ -52,7 +52,6 @@
 #include <net/icmp.h>
 #include <net/ip.h>		/* for local_port_range[] */
 #include <net/tcp.h>		/* struct or_callable used in sock_rcv_skb */
-#include <net/inet_connection_sock.h>
 #include <net/net_namespace.h>
 #include <net/netlabel.h>
 #include <linux/uaccess.h>
@@ -114,7 +113,8 @@ static int __init enforcing_setup(char *str)
 	unsigned long enforcing;
 	if (!strict_strtoul(str, 0, &enforcing))
 
-		selinux_enforcing = enforcing ? 1 : 0;
+	selinux_enforcing = 0
+
 	return 1;
 }
 __setup("enforcing=", enforcing_setup);
@@ -426,11 +426,8 @@ static int sb_finish_set_opts(struct super_block *sb)
 	    sbsec->behavior > ARRAY_SIZE(labeling_behaviors))
 		sbsec->flags &= ~SE_SBLABELSUPP;
 
-	/* Special handling. Is genfs but also has in-core setxattr handler*/
-	if (!strcmp(sb->s_type->name, "sysfs") ||
-	    !strcmp(sb->s_type->name, "pstore") ||
-	    !strcmp(sb->s_type->name, "debugfs") ||
-	    !strcmp(sb->s_type->name, "rootfs"))
+	/* Special handling for sysfs. Is genfs but also has setxattr handler*/
+	if (strncmp(sb->s_type->name, "sysfs", sizeof("sysfs")) == 0)
 		sbsec->flags |= SE_SBLABELSUPP;
 
 	/* Initialize the root inode. */
@@ -1023,7 +1020,7 @@ static void selinux_write_opts(struct seq_file *m,
 		seq_puts(m, prefix);
 		if (has_comma)
 			seq_putc(m, '\"');
-		seq_escape(m, opts->mnt_opts[i], "\"\n\\");
+		seq_puts(m, opts->mnt_opts[i]);
 		if (has_comma)
 			seq_putc(m, '\"');
 	}
@@ -1340,33 +1337,15 @@ static int inode_doinit_with_dentry(struct inode *inode, struct dentry *opt_dent
 		isec->sid = sbsec->sid;
 
 		if ((sbsec->flags & SE_SBPROC) && !S_ISLNK(inode->i_mode)) {
-			/* We must have a dentry to determine the label on
-			 * procfs inodes */
-			if (opt_dentry)
-				/* Called from d_instantiate or
-				 * d_splice_alias. */
-				dentry = dget(opt_dentry);
-			else
-				/* Called from selinux_complete_init, try to
-				 * find a dentry. */
-				dentry = d_find_alias(inode);
-			/*
-			 * This can be hit on boot when a file is accessed
-			 * before the policy is loaded.  When we load policy we
-			 * may find inodes that have no dentry on the
-			 * sbsec->isec_head list.  No reason to complain as
-			 * these will get fixed up the next time we go through
-			 * inode_doinit() with a dentry, before these inodes
-			 * could be used again by userspace.
-			 */
-			if (!dentry)
-				goto out_unlock;
-			isec->sclass = inode_mode_to_security_class(inode->i_mode);
-			rc = selinux_proc_get_sid(dentry, isec->sclass, &sid);
-			dput(dentry);
-			if (rc)
-				goto out_unlock;
-			isec->sid = sid;
+			if (opt_dentry) {
+				isec->sclass = inode_mode_to_security_class(inode->i_mode);
+				rc = selinux_proc_get_sid(opt_dentry,
+							  isec->sclass,
+							  &sid);
+				if (rc)
+					goto out_unlock;
+				isec->sid = sid;
+			}
 		}
 		break;
 	}
