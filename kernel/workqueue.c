@@ -3952,7 +3952,7 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
 	struct pool_workqueue *pwq;
 	bool ret;
 
-	rcu_read_lock_sched();
+	preempt_disable();
 
 	if (!(wq->flags & WQ_UNBOUND))
 		pwq = per_cpu_ptr(wq->cpu_pwqs, cpu);
@@ -3960,7 +3960,7 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
 		pwq = first_pwq(wq);
 
 	ret = !list_empty(&pwq->delayed_works);
-	rcu_read_unlock_sched();
+	preempt_enable();
 
 	return ret;
 }
@@ -4350,16 +4350,16 @@ bool freeze_workqueues_busy(void)
 		 * nr_active is monotonically decreasing.  It's safe
 		 * to peek without lock.
 		 */
-		rcu_read_lock_sched();
+		preempt_disable();
 		for_each_pwq(pwq, wq) {
 			WARN_ON_ONCE(pwq->nr_active < 0);
 			if (pwq->nr_active) {
 				busy = true;
-				rcu_read_unlock_sched();
+				preempt_enable();
 				goto out_unlock;
 			}
 		}
-		rcu_read_unlock_sched();
+		preempt_enable();
 	}
 out_unlock:
 	mutex_unlock(&wq_pool_mutex);
