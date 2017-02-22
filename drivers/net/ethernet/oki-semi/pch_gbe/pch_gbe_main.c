@@ -1511,12 +1511,11 @@ pch_gbe_alloc_rx_buffers_pool(struct pch_gbe_adapter *adapter,
 
 	size = rx_ring->count * bufsz + PCH_GBE_RESERVE_MEMORY;
 	rx_ring->rx_buff_pool = dma_alloc_coherent(&pdev->dev, size,
-						&rx_ring->rx_buff_pool_logic,
-						GFP_KERNEL);
-	if (!rx_ring->rx_buff_pool) {
-		pr_err("Unable to allocate memory for the receive pool buffer\n");
+						   &rx_ring->rx_buff_pool_logic,
+						   GFP_KERNEL);
+	if (!rx_ring->rx_buff_pool)
 		return -ENOMEM;
-	}
+
 	memset(rx_ring->rx_buff_pool, 0, size);
 	rx_ring->rx_buff_pool_size = size;
 	for (i = 0; i < rx_ring->count; i++) {
@@ -1791,7 +1790,6 @@ int pch_gbe_setup_tx_resources(struct pch_gbe_adapter *adapter,
 					   &tx_ring->dma, GFP_KERNEL);
 	if (!tx_ring->desc) {
 		vfree(tx_ring->buffer_info);
-		pr_err("Unable to allocate memory for the transmit descriptor ring\n");
 		return -ENOMEM;
 	}
 	memset(tx_ring->desc, 0, tx_ring->size);
@@ -1835,9 +1833,7 @@ int pch_gbe_setup_rx_resources(struct pch_gbe_adapter *adapter,
 	rx_ring->size = rx_ring->count * (int)sizeof(struct pch_gbe_rx_desc);
 	rx_ring->desc =	dma_alloc_coherent(&pdev->dev, rx_ring->size,
 					   &rx_ring->dma, GFP_KERNEL);
-
 	if (!rx_ring->desc) {
-		pr_err("Unable to allocate memory for the receive descriptor ring\n");
 		vfree(rx_ring->buffer_info);
 		return -ENOMEM;
 	}

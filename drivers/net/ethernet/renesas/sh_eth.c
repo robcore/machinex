@@ -753,11 +753,8 @@ static int sh_eth_ring_init(struct net_device *ndev)
 	/* Allocate all Rx descriptors. */
 	rx_ringsize = sizeof(struct sh_eth_rxdesc) * RX_RING_SIZE;
 	mdp->rx_ring = dma_alloc_coherent(NULL, rx_ringsize, &mdp->rx_desc_dma,
-			GFP_KERNEL);
-
+					  GFP_KERNEL);
 	if (!mdp->rx_ring) {
-		dev_err(&ndev->dev, "Cannot allocate Rx Ring (size %d bytes)\n",
-			rx_ringsize);
 		ret = -ENOMEM;
 		goto desc_ring_free;
 	}
@@ -767,10 +764,8 @@ static int sh_eth_ring_init(struct net_device *ndev)
 	/* Allocate all Tx descriptors. */
 	tx_ringsize = sizeof(struct sh_eth_txdesc) * TX_RING_SIZE;
 	mdp->tx_ring = dma_alloc_coherent(NULL, tx_ringsize, &mdp->tx_desc_dma,
-			GFP_KERNEL);
+					  GFP_KERNEL);
 	if (!mdp->tx_ring) {
-		dev_err(&ndev->dev, "Cannot allocate Tx Ring (size %d bytes)\n",
-			tx_ringsize);
 		ret = -ENOMEM;
 		goto desc_ring_free;
 	}
