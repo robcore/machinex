@@ -136,6 +136,13 @@ static int brcm_init_wlan_mem(void)
 	return 0;
 
  err_mem_alloc:
+	if (wlan_static_scan_buf0)
+		kfree(wlan_static_scan_buf0);
+	if (wlan_static_scan_buf1)
+		kfree(wlan_static_scan_buf1);
+	if (wlan_static_dhd_info_buf)
+		kfree(wlan_static_dhd_info_buf);
+
 	pr_err("Failed to mem_alloc for WLAN\n");
 	for (j = 0 ; j < i ; j++)
 		kfree(wlan_mem_array[j].mem_ptr);
