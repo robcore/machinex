@@ -29,27 +29,6 @@ static struct kfifo smux_loop_pkt_fifo;
 static DEFINE_SPINLOCK(hw_fn_lock);
 
 /**
- * Initialize loopback framework (called by n_smux.c).
- */
-int smux_loopback_init(void)
-{
-	int ret = 0;
-
-	spin_lock_init(&hw_fn_lock);
-	smux_loopback_wq = create_singlethread_workqueue("smux_loopback_wq");
-	if (IS_ERR(smux_loopback_wq)) {
-		pr_err("%s: failed to create workqueue\n", __func__);
-		return -ENOMEM;
-	}
-
-	ret |= kfifo_alloc(&smux_loop_pkt_fifo,
-			SMUX_LOOP_FIFO_SIZE * sizeof(struct smux_pkt_t *),
-			GFP_KERNEL);
-
-	return ret;
-}
-
-/**
  * Simulate a write to the TTY hardware by duplicating
  * the TX packet and putting it into the RX queue.
  *
@@ -307,3 +286,25 @@ static void smux_loopback_rx_worker(struct work_struct *work)
 	spin_unlock_irqrestore(&hw_fn_lock, flags);
 	kfree(data);
 }
+
+/**
+ * Initialize loopback framework (called by n_smux.c).
+ */
+int smux_loopback_init(void)
+{
+	int ret = 0;
+
+	spin_lock_init(&hw_fn_lock);
+	smux_loopback_wq = create_singlethread_workqueue("smux_loopback_wq");
+	if (IS_ERR(smux_loopback_wq)) {
+		pr_err("%s: failed to create workqueue\n", __func__);
+		return -ENOMEM;
+	}
+
+	ret |= kfifo_alloc(&smux_loop_pkt_fifo,
+			SMUX_LOOP_FIFO_SIZE * sizeof(struct smux_pkt_t *),
+			GFP_KERNEL);
+
+	return ret;
+}
+
