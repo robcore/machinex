@@ -1,12 +1,6 @@
 #ifndef _LINUX_FS_H
 #define _LINUX_FS_H
 
-/*
- * This file has definitions for some important file table
- * structures etc.
- */
-
-#include <uapi/linux/fs.h>
 
 #include <linux/linkage.h>
 #include <linux/wait.h>
@@ -33,6 +27,7 @@
 #include <linux/blk_types.h>
 
 #include <asm/byteorder.h>
+#include <uapi/linux/fs.h>
 
 struct export_operations;
 struct hd_geometry;

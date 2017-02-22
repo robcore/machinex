@@ -1,3 +1,15 @@
 #!/bin/bash
-
-patch -p1 < "/root/machinex/patches/0316-nother-hack.patch"
+patch -p1 -R < "/root/machinex/patches/0050-SHIT-we-are-stuck-with-it-now.-goddamn-3.11-fucking-.patch"
+patch -p1 -R < "/root/machinex/patches/0049-might-as-well-comment-out-the-bvec-code-in-the-heade.patch"
+patch -p1 -R < "/root/machinex/patches/0048-great.-my-codebase-revolves-around-some-obscure-brok.patch"
+patch -p1 -R < "/root/machinex/patches/0047-bcm2079x-i2c-reorder-wakelocks-and-irq-setup-also-ke.patch"
+patch -p1 -R < "/root/machinex/patches/0046-last-one-dont-think-this-was-ever-upstream-anywhere-.patch"
+patch -p1 -R < "/root/machinex/patches/0045-6.patch"
+patch -p1 -R < "/root/machinex/patches/0044-5.patch"
+patch -p1 -R < "/root/machinex/patches/0043-4.patch"
+patch -p1 -R < "/root/machinex/patches/0042-3.patch"
+patch -p1 -R < "/root/machinex/patches/0041-2.patch"
+patch -p1 -R < "/root/machinex/patches/0040-iov-reversal-1-out-of-7.patch"
+patch -p1 -R < "/root/machinex/patches/0039-k-one-more-time-now.patch"
+patch -p1 -R < "/root/machinex/patches/0038-um.maybe-one-at-a-time-will-do.patch"
+patch -p1 -R < "/root/machinex/patches/0037-this-is-my-littler-iov-tester-script.patch"
