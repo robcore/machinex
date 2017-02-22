@@ -1760,12 +1760,9 @@ static inline u32 reg_poll(struct bnx2x *bp, u32 reg, u32 expected, int ms,
 	return val;
 }
 
-#define BNX2X_ILT_ZALLOC(x, y, size) \
-	do { \
-		x = dma_alloc_coherent(&bp->pdev->dev, size, y, GFP_KERNEL); \
-		if (x) \
-			memset(x, 0, size); \
-	} while (0)
+#define BNX2X_ILT_ZALLOC(x, y, size)				\
+	x = dma_alloc_coherent(&bp->pdev->dev, size, y,		\
+			       GFP_KERNEL | __GFP_ZERO)
 
 #define BNX2X_ILT_FREE(x, y, size) \
 	do { \
