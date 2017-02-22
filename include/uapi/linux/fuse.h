@@ -593,6 +593,14 @@ struct fuse_notify_poll_wakeup_out {
 	uint64_t	kh;
 };
 
+struct fuse_fallocate_in {
+	__u64	fh;
+	__u64	offset;
+	__u64	length;
+	__u32	mode;
+	__u32	padding;
+};
+
 struct fuse_in_header {
 	uint32_t	len;
 	uint32_t	opcode;
