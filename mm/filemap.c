@@ -35,7 +35,7 @@
 #include <linux/memcontrol.h>
 #include <linux/cleancache.h>
 #include "internal.h"
-#if 0
+#ifdef CONFIG_BLOCK
 #include <linux/bio.h>
 #endif
 
@@ -2120,7 +2120,7 @@ static size_t ii_iovec_copy_to_user(struct page *page,
 	return copied;
 }
 
-#if 0
+#ifdef CONFIG_BLOCK
 /*
  * As an easily verifiable first pass, we implement all the methods that
  * copy data to and from bvec pages with one function.  We implement it

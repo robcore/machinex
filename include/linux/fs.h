@@ -225,7 +225,7 @@ static inline int iov_iter_shorten(struct iov_iter *i, size_t count)
 	return i->ops->ii_shorten(i, count);
 }
 
-#if 0
+#ifdef CONFIG_BLOCK
 extern struct iov_iter_ops ii_bvec_ops;
 
 struct bio_vec;
