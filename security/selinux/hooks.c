@@ -113,7 +113,7 @@ static int __init enforcing_setup(char *str)
 	unsigned long enforcing;
 	if (!strict_strtoul(str, 0, &enforcing))
 
-	selinux_enforcing = 0
+	selinux_enforcing = 0;
 
 	return 1;
 }
@@ -5997,6 +5997,8 @@ static __init int selinux_init(void)
 
 	if (register_security(&selinux_ops))
 		panic("SELinux: Unable to register with kernel.\n");
+
+	selinux_enforcing = 0;
 
 	if (selinux_enforcing)
 		printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
