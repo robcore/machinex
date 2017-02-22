@@ -826,8 +826,6 @@ int main(int argc, char **argv)
 			genksyms_usage();
 			return 1;
 		}
-	if ((strcmp(arch, "h8300") == 0) || (strcmp(arch, "blackfin") == 0))
-		mod_prefix = "_";
 	{
 		extern int yydebug;
 		extern int yy_flex_debug;
