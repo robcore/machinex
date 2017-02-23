@@ -207,12 +207,6 @@ ktime_t alarm_expires_remaining(const struct alarm *alarm)
 }
 EXPORT_SYMBOL_GPL(alarm_expires_remaining);
 
-ktime_t alarm_expires_remaining(const struct alarm *alarm)
-{
-	struct alarm_base *base = &alarm_bases[alarm->type];
-	return ktime_sub(alarm->node.expires, base->gettime());
-}
-
 #ifdef CONFIG_RTC_CLASS
 /**
  * alarmtimer_suspend - Suspend time callback
@@ -372,31 +366,6 @@ void alarm_restart(struct alarm *alarm)
 EXPORT_SYMBOL_GPL(alarm_restart);
 
 /**
- * alarm_start_relative - Sets a relative alarm to fire
- * @alarm: ptr to alarm to set
- * @start: time relative to now to run the alarm
- */
-int alarm_start_relative(struct alarm *alarm, ktime_t start)
-{
-	struct alarm_base *base = &alarm_bases[alarm->type];
-
-	start = ktime_add(start, base->gettime());
-	return alarm_start(alarm, start);
-}
-
-void alarm_restart(struct alarm *alarm)
-{
-	struct alarm_base *base = &alarm_bases[alarm->type];
-	unsigned long flags;
-
-	spin_lock_irqsave(&base->lock, flags);
-	hrtimer_set_expires(&alarm->timer, alarm->node.expires);
-	hrtimer_restart(&alarm->timer);
-	alarmtimer_enqueue(base, alarm);
-	spin_unlock_irqrestore(&base->lock, flags);
-}
-
-/**
  * alarm_try_to_cancel - Tries to cancel an alarm timer
  * @alarm: ptr to alarm to be canceled
  *
@@ -482,12 +451,6 @@ u64 alarm_forward_now(struct alarm *alarm, ktime_t interval)
 }
 EXPORT_SYMBOL_GPL(alarm_forward_now);
 
-u64 alarm_forward_now(struct alarm *alarm, ktime_t interval)
-{
-	struct alarm_base *base = &alarm_bases[alarm->type];
-
-	return alarm_forward(alarm, base->gettime(), interval);
-}
 
 /**
  * clock2alarm - helper that converts from clockid to alarmtypes
