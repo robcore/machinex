@@ -175,10 +175,11 @@ static int scsi_runtime_idle(struct device *dev)
 	/* Insert hooks here for targets, hosts, and transport classes */
 
 	if (scsi_is_sdev_device(dev))
-		err = pm_schedule_suspend(dev, 100);
+		pm_schedule_suspend(dev, 500);
 	else
-		err = pm_runtime_suspend(dev);
-	return err;
+		pm_runtime_suspend(dev);
+
+	return -EBUSY;
 }
 
 int scsi_autopm_get_device(struct scsi_device *sdev)
