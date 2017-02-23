@@ -276,7 +276,11 @@ static int lnw_gpio_runtime_suspend(struct device *dev)
 
 static int lnw_gpio_runtime_idle(struct device *dev)
 {
-	pm_schedule_suspend(dev, 500);
+	int err = pm_schedule_suspend(dev, 500);
+
+	if (!err)
+		return 0;
+
 	return -EBUSY;
 }
 
