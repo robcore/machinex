@@ -361,6 +361,9 @@ struct wiphy *wiphy_new(const struct cfg80211_ops *ops, int sizeof_priv)
 
 	mutex_unlock(&cfg80211_mutex);
 
+	/* atomic_inc_return makes it start at 1, make it start at 0 */
+	rdev->wiphy_idx--;
+
 	/* give it a proper name */
 	dev_set_name(&rdev->wiphy.dev, PHY_NAME "%d", rdev->wiphy_idx);
 
