@@ -1,4 +1,4 @@
-36/*
+/*
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2007-2012, The Linux Foundation. All rights reserved.
  *
@@ -32,10 +32,9 @@ static int clock_debug_rate_set(void *data, u64 val)
 
 	/* Only increases to max rate will succeed, but that's actually good
 	 * for debugging purposes so we don't check for error. */
-	if (clock->flags & CLK_MAX)
+	if (clock->flags & CLKFLAG_MAX)
 		clk_set_max_rate(clock, val);
-	if (clock->flags & CLK_MIN)
-		ret = clk_set_min_rate(clock, val);
+	ret = clk_set_rate(clock, val);
 	if (ret)
 		pr_err("clk_set_rate(%s, %lu) failed (%d)\n", clock->dbg_name,
 				(unsigned long)val, ret);
