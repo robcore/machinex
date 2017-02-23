@@ -868,7 +868,7 @@ static int mdm_subsys_shutdown(const struct subsys_desc *crashed_subsys)
 		mdelay(mdm_drv->pdata->ramdump_delay_ms);
 	}
 	if (!mdm_drv->mdm_unexpected_reset_occurred) {
-		mdm_ops->power_down_mdm_cb
+		mdm_ops->power_down_mdm_cb(mdm_drv);
 		mdm_ops->atomic_reset_mdm_cb(mdm_drv);
 		/* Update gpio configuration to "booting" config. */
 		mdm_update_gpio_configs(mdev, GPIO_UPDATE_BOOTING_CONFIG);
