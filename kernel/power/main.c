@@ -16,6 +16,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/hrtimer.h>
+#include <linux/suspend.h>
 
 #include "power.h"
 

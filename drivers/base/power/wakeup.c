@@ -16,6 +16,7 @@
 #include <linux/debugfs.h>
 #include <linux/types.h>
 #include <trace/events/power.h>
+#include <linux/resume-trace.h>
 #include <linux/moduleparam.h>
 
 static bool enable_gps_ws = true;
