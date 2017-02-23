@@ -46,7 +46,7 @@ static int pdev_list_cnt;
 static int mddi_ext_suspend(struct platform_device *pdev, pm_message_t state);
 static int mddi_ext_resume(struct platform_device *pdev);
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 static void mddi_ext_power_suspend(struct power_suspend *h);
 static void mddi_ext_power_resume(struct power_suspend *h);
 #endif
@@ -255,7 +255,7 @@ static int mddi_ext_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 	mfd->mddi_ext_power_suspend.suspend = mddi_ext_power_suspend;
 	mfd->mddi_ext_power_suspend.resume = mddi_ext_power_resume;
 	register_power_suspend(&mfd->mddi_ext_power_suspend);
@@ -305,7 +305,7 @@ static int mddi_ext_resume(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 static void mddi_ext_power_suspend(struct power_suspend *h)
 {
 	pm_message_t state;
