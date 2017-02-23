@@ -390,7 +390,7 @@ static void put_css_set(struct css_set *cset)
 		list_del(&link->cgrp_link);
 
 		/* @cgrp can't go away while we're holding css_set_lock */
-+		if (list_empty(&cgrp->cset_links)) {
+		if (list_empty(&cgrp->cset_links)) {
 			check_for_release(cgrp);
 		}
 
