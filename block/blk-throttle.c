@@ -77,9 +77,6 @@ struct throtl_grp {
 	unsigned long slice_start[2];
 	unsigned long slice_end[2];
 
-	/* Some throttle limits got updated for the group */
-	int limits_changed;
-
 	struct rcu_head rcu_head;
 };
 
@@ -104,8 +101,6 @@ struct throtl_data
 
 	/* Work for dispatching throttled bios */
 	struct delayed_work throtl_work;
-
-	int limits_changed;
 };
 
 enum tg_state_flags {
@@ -187,7 +182,6 @@ static void throtl_init_group(struct throtl_grp *tg)
 	RB_CLEAR_NODE(&tg->rb_node);
 	bio_list_init(&tg->bio_lists[0]);
 	bio_list_init(&tg->bio_lists[1]);
-	tg->limits_changed = false;
 
 	/* Practically unlimited BW */
 	tg->bps[0] = tg->bps[1] = -1;
@@ -861,43 +855,6 @@ static int throtl_select_dispatch(struct throtl_data *td, struct bio_list *bl)
 	return nr_disp;
 }
 
-static void throtl_process_limit_change(struct throtl_data *td)
-{
-	struct throtl_grp *tg;
-	struct hlist_node *pos, *n;
-
-	if (!td->limits_changed)
-		return;
-
-	xchg(&td->limits_changed, false);
-
-	throtl_log(td, "limits changed");
-
-	hlist_for_each_entry_safe(tg, pos, n, &td->tg_list, tg_node) {
-		if (!tg->limits_changed)
-			continue;
-
-		if (!xchg(&tg->limits_changed, false))
-			continue;
-
-		throtl_log_tg(td, tg, "limit change rbps=%llu wbps=%llu"
-			" riops=%u wiops=%u", tg->bps[READ], tg->bps[WRITE],
-			tg->iops[READ], tg->iops[WRITE]);
-
-		/*
-		 * Restart the slices for both READ and WRITES. It
-		 * might happen that a group's limit are dropped
-		 * suddenly and we don't want to account recently
-		 * dispatched IO with new low rate
-		 */
-		throtl_start_new_slice(td, tg, 0);
-		throtl_start_new_slice(td, tg, 1);
-
-		if (throtl_tg_on_rr(tg))
-			tg_update_disptime(td, tg);
-	}
-}
-
 /* Dispatch throttled bios. Should be called without queue lock held. */
 static int throtl_dispatch(struct request_queue *q)
 {
@@ -908,8 +865,6 @@ static int throtl_dispatch(struct request_queue *q)
 	struct blk_plug plug;
 
 	spin_lock_irq(q->queue_lock);
-
-	throtl_process_limit_change(td);
 
 	if (!total_nr_queued(td))
 		goto out;
@@ -958,8 +913,7 @@ throtl_schedule_delayed_work(struct throtl_data *td, unsigned long delay)
 
 	struct delayed_work *dwork = &td->throtl_work;
 
-	/* schedule work if limits changed even if no bio is queued */
-	if (total_nr_queued(td) || td->limits_changed) {
+	if (total_nr_queued(td)) {
 		mod_delayed_work(kthrotld_workqueue, dwork, delay);
 		throtl_log(td, "schedule work. delay=%lu jiffies=%lu",
 				delay, jiffies);
@@ -1242,7 +1196,6 @@ int blk_throtl_init(struct request_queue *q)
 
 	INIT_HLIST_HEAD(&td->tg_list);
 	td->tg_service_tree = THROTL_RB_ROOT;
-	td->limits_changed = false;
 	INIT_DELAYED_WORK(&td->throtl_work, blk_throtl_work);
 
 	/* alloc and Init root group. */
