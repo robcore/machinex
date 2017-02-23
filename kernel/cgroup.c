@@ -240,16 +240,13 @@ static int notify_on_release(const struct cgroup *cgrp)
 	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
 }
 
-/*
- * for_each_subsys() allows you to iterate on each subsystem attached to
- * an active hierarchy
- */
-#define for_each_subsys(_root, _ss) \
-list_for_each_entry(_ss, &_root->subsys_list, sibling)
+/* iterate each subsystem attached to a hierarchy */
+#define for_each_root_subsys(root, ss)					\
+	list_for_each_entry((ss), &(root)->subsys_list, sibling)
 
-/* for_each_active_root() allows you to iterate across the active hierarchies */
-#define for_each_active_root(_root) \
-list_for_each_entry(_root, &cgroup_roots, root_list)
+/* iterate across the active hierarchies */
+#define for_each_active_root(root)					\
+	list_for_each_entry((root), &cgroup_roots, root_list)
 
 static inline struct cgroup *__d_cgrp(struct dentry *dentry)
 {
@@ -794,7 +791,7 @@ static void cgroup_free_fn(struct work_struct *work)
 	/*
 	 * Release the subsystem state objects.
 	 */
-	for_each_subsys(cgrp->root, ss)
+	for_each_root_subsys(cgrp->root, ss)
 		ss->css_free(cgrp);
 
 	cgrp->root->number_of_cgroups--;
@@ -903,7 +900,7 @@ static void cgroup_clear_directory(struct dentry *dir, bool base_files,
 	struct cgroup *cgrp = __d_cgrp(dir);
 	struct cgroup_subsys *ss;
 
-	for_each_subsys(cgrp->root, ss) {
+	for_each_root_subsys(cgrp->root, ss) {
 		struct cftype_set *set;
 		if (!test_bit(ss->subsys_id, &subsys_mask))
 			continue;
@@ -1037,7 +1034,7 @@ static int cgroup_show_options(struct seq_file *seq, struct dentry *dentry)
 	struct cgroup_subsys *ss;
 
 	mutex_lock(&cgroup_root_mutex);
-	for_each_subsys(root, ss)
+	for_each_root_subsys(root, ss)
 		seq_show_option(seq, ss->name, NULL);
 	if (root->flags & CGRP_ROOT_SANE_BEHAVIOR)
 		seq_puts(seq, ",sane_behavior");
@@ -2025,7 +2022,7 @@ static int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk,
 	/*
 	 * step 1: check that we can legitimately attach to the cgroup.
 	 */
-	for_each_subsys(root, ss) {
+	for_each_root_subsys(root, ss) {
 		if (ss->can_attach) {
 			retval = ss->can_attach(cgrp, &tset);
 			if (retval) {
@@ -2062,7 +2059,7 @@ static int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk,
 	/*
 	 * step 4: do subsystem attach callbacks.
 	 */
-	for_each_subsys(root, ss) {
+	for_each_root_subsys(root, ss) {
 		if (ss->attach)
 			ss->attach(cgrp, &tset);
 	}
@@ -2082,7 +2079,7 @@ out_put_css_set_refs:
 	}
 out_cancel_attach:
 	if (retval) {
-		for_each_subsys(root, ss) {
+		for_each_root_subsys(root, ss) {
 			if (ss == failed_ss)
 				break;
 			if (ss->cancel_attach)
@@ -2099,7 +2096,7 @@ static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	struct cgroup_subsys *ss;
 	int ret;
 
-	for_each_subsys(cgrp->root, ss) {
+	for_each_root_subsys(cgrp->root, ss) {
 		if (ss->allow_attach) {
 			ret = ss->allow_attach(cgrp, tset);
 			if (ret)
@@ -4156,7 +4153,7 @@ static int cgroup_populate_dir(struct cgroup *cgrp, bool base_files,
 	}
 
 	/* process cftsets of each subsystem */
-	for_each_subsys(cgrp->root, ss) {
+	for_each_root_subsys(cgrp->root, ss) {
 		struct cftype_set *set;
 		if (!test_bit(ss->subsys_id, &subsys_mask))
 			continue;
@@ -4166,7 +4163,7 @@ static int cgroup_populate_dir(struct cgroup *cgrp, bool base_files,
 	}
 
 	/* This cgroup is ready now */
-	for_each_subsys(cgrp->root, ss) {
+	for_each_root_subsys(cgrp->root, ss) {
 		struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
 		/*
 		 * Update id->css pointer and make this css visible from
@@ -4313,7 +4310,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	if (test_bit(CGRP_CPUSET_CLONE_CHILDREN, &parent->flags))
 		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 
-	for_each_subsys(root, ss) {
+	for_each_root_subsys(root, ss) {
 		struct cgroup_subsys_state *css;
 
 		css = ss->css_alloc(cgrp);
@@ -4352,11 +4349,11 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	root->number_of_cgroups++;
 
 	/* each css holds a ref to the cgroup's dentry */
-	for_each_subsys(root, ss)
+	for_each_root_subsys(root, ss)
 		dget(dentry);
 
 	/* creation succeeded, notify subsystems */
-	for_each_subsys(root, ss) {
+	for_each_root_subsys(root, ss) {
 		err = online_css(ss, cgrp);
 		if (err)
 			goto err_destroy;
@@ -4381,7 +4378,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	return 0;
 
 err_free_all:
-	for_each_subsys(root, ss) {
+	for_each_root_subsys(root, ss) {
 		struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
 
 		if (css) {
@@ -4499,7 +4496,7 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	 * be killed.
 	 */
 	atomic_set(&cgrp->css_kill_cnt, 1);
-	for_each_subsys(cgrp->root, ss) {
+	for_each_root_subsys(cgrp->root, ss) {
 		struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
 
 		/*
@@ -4573,7 +4570,7 @@ static void cgroup_offline_fn(struct work_struct *work)
 	 * css_tryget() is guaranteed to fail now.  Tell subsystems to
 	 * initate destruction.
 	 */
-	for_each_subsys(cgrp->root, ss)
+	for_each_root_subsys(cgrp->root, ss)
 		offline_css(ss, cgrp);
 
 	/*
@@ -4583,7 +4580,7 @@ static void cgroup_offline_fn(struct work_struct *work)
 	 * whenever that may be, the extra dentry ref is put so that dentry
 	 * destruction happens only after all css's are released.
 	 */
-	for_each_subsys(cgrp->root, ss)
+	for_each_root_subsys(cgrp->root, ss)
 		css_put(cgrp->subsys[ss->subsys_id]);
 
 	/* delete this cgroup from parent->children */
@@ -4993,7 +4990,7 @@ int proc_cgroup_show(struct seq_file *m, void *v)
 		int count = 0;
 
 		seq_printf(m, "%d:", root->hierarchy_id);
-		for_each_subsys(root, ss)
+		for_each_root_subsys(root, ss)
 			seq_printf(m, "%s%s", count++ ? "," : "", ss->name);
 		if (strlen(root->name))
 			seq_printf(m, "%sname=%s", count ? "," : "",
