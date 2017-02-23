@@ -25,6 +25,9 @@
 #include "tick-internal.h"
 #include "timekeeping_internal.h"
 
+#define TK_CLEAR_NTP		(1 << 0)
+#define TK_MIRROR		(1 << 1)
+
 static struct timekeeper timekeeper;
 static DEFINE_RAW_SPINLOCK(timekeeper_lock);
 static seqcount_t timekeeper_seq;
@@ -217,19 +220,19 @@ static inline void tk_update_leap_state(struct timekeeper *tk)
 		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
 }
 
-/* must hold write on timekeeper.lock */
-static void timekeeping_update(struct timekeeper *tk, bool clearntp, bool mirror)
+/* must hold timekeeper_lock */
+static void timekeeping_update(struct timekeeper *tk, unsigned int action)
 {
 	struct timespec xt;
 
-	if (clearntp) {
+	if (action & TK_CLEAR_NTP) {
 		tk->ntp_error = 0;
 		ntp_clear();
 	}
 	xt = tk_xtime(tk);
 	update_vsyscall(&xt, &tk->wall_to_monotonic, tk->clock, tk->mult);
 
-	if (mirror)
+	if (action & TK_MIRROR)
 		memcpy(&shadow_timekeeper, &timekeeper, sizeof(timekeeper));
 }
 
@@ -487,7 +490,7 @@ int do_settimeofday(const struct timespec *tv)
 
 	tk_set_xtime(tk, tv);
 
-	timekeeping_update(tk, true, true);
+	timekeeping_update(tk, TK_CLEAR_NTP | TK_MIRROR);
 
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
@@ -531,7 +534,7 @@ int timekeeping_inject_offset(struct timespec *ts)
 	tk_set_wall_to_mono(tk, timespec_sub(tk->wall_to_monotonic, *ts));
 
 error: /* even if we error out, we forwarded the time, so call update */
-	timekeeping_update(tk, true, true);
+	timekeeping_update(tk, TK_CLEAR_NTP | TK_MIRROR);
 
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
@@ -621,7 +624,7 @@ static int change_clocksource(void *data)
 			module_put(new->owner);
 		}
 	}
-	timekeeping_update(tk, true, true);
+	timekeeping_update(tk, TK_CLEAR_NTP | TK_MIRROR);
 
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
@@ -862,7 +865,7 @@ void timekeeping_inject_sleeptime(struct timespec *delta)
 
 	__timekeeping_inject_sleeptime(tk, delta);
 
-	timekeeping_update(tk, true, true);
+	timekeeping_update(tk, TK_CLEAR_NTP | TK_MIRROR);
 
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
@@ -944,7 +947,7 @@ static void timekeeping_resume(void)
 	tk->cycle_last = clock->cycle_last = cycle_now;
 	tk->ntp_error = 0;
 	timekeeping_suspended = 0;
-	timekeeping_update(tk, false, true);
+	timekeeping_update(tk, TK_MIRROR);
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 
@@ -1388,7 +1391,7 @@ static void update_wall_time(void)
 	 * updating.
 	 */
 	memcpy(real_tk, tk, sizeof(*tk));
-	timekeeping_update(real_tk, false, false);
+	timekeeping_update(real_tk, 0);
 	write_seqcount_end(&timekeeper_seq);
 out:
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
