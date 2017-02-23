@@ -841,11 +841,10 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 {
 	struct file *fp = NULL;
 	mm_segment_t oldfs = {0};
-	int ret;
-	filepath_cid = "/data/.cid.info";
+	int ret = 0;
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0660);
+	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
 		return -1;

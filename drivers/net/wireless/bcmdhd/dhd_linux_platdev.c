@@ -186,8 +186,6 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 
 	DHD_ERROR(("%s = %d\n", __FUNCTION__, on));
 	if (plat_data->set_power) {
-		is4335_revb0 = check_bcm4335_rev();
-		err = plat_data->set_power(on,is4335_revb0);
 #ifdef ENABLE_4335BT_WAR
 		if (on) {
 			printk("WiFi: trying to acquire BT lock\n");
@@ -200,6 +198,13 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 			bcm_bt_unlock(lock_cookie_wifi);
 		}
 #endif /* ENABLE_4335BT_WAR */
+
+#ifdef ENABLE_4335BT_WAR
+		is4335_revb0 = check_bcm4335_rev();
+		err = plat_data->set_power(on,is4335_revb0);
+#else
+		err = plat_data->set_power(on);
+#endif
 	}
 
 	if (msec && !err)
