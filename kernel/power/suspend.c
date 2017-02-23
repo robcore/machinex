@@ -254,6 +254,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		printk(KERN_ERR "PM: Some devices failed to power down\n");
 		log_suspend_abort_reason("%s device failed to power down",
 			suspend_stats.failed_devs[last_dev]);
+		panic("MX PM_SUSPEND Panic 2\n");
 		goto Platform_finish;
 	}
 
@@ -350,6 +351,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	if (error) {
 		pr_err("PM: Some devices failed to suspend, or early wake event detected\n");
 		log_suspend_abort_reason("Some devices failed to suspend, or early wake event detected");
+		panic("MX PM_SUSPEND Panic 1\n");
 		goto Recover_platform;
 	}
 	suspend_test_finish("suspend devices");
