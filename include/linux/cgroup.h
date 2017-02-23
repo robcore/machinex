@@ -536,6 +536,8 @@ int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
 int cgroup_is_removed(const struct cgroup *cgrp);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
+int task_cgroup_path_from_hierarchy(struct task_struct *task, int hierarchy_id,
+				    char *buf, size_t buflen);
 
 int cgroup_task_count(const struct cgroup *cgrp);
 
