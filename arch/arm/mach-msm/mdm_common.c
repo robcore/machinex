@@ -859,17 +859,16 @@ static int mdm_subsys_shutdown(const struct subsys_desc *crashed_subsys)
 	if (!mdm_drv->pdata->no_a2m_errfatal_on_ssr)
 		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 1);
 
-//	enable_irq(mdm2ap_pblrdy_irq);
+	enable_irq(mdm2ap_pblrdy_irq);
 
 	if (mdm_drv->pdata->ramdump_delay_ms > 0) {
 		/* Wait for the external modem to complete
 		 * its preparation for ramdumps.
 		 */
-		mdelay(mdm_drv->pdata->ramdump_delay_ms);
+		msleep(mdm_drv->pdata->ramdump_delay_ms);
 	}
 	if (!mdm_drv->mdm_unexpected_reset_occurred) {
-		mdm_ops->power_down_mdm_cb(mdm_drv);
-		mdm_ops->atomic_reset_mdm_cb(mdm_drv);
+		mdm_ops->reset_mdm_cb(mdm_drv);
 		/* Update gpio configuration to "booting" config. */
 		mdm_update_gpio_configs(mdev, GPIO_UPDATE_BOOTING_CONFIG);
 	} else {
@@ -933,6 +932,7 @@ static int mdm_subsys_ramdumps(int want_dumps,
 		if (!wait_for_completion_timeout(&mdev->mdm_ram_dumps,
 				msecs_to_jiffies(mdev->dump_timeout_ms))) {
 			mdm_drv->mdm_ram_dump_status = -ETIMEDOUT;
+			mdm_ssr_completed(mdev);
 			pr_err("%s: mdm modem ramdumps timed out.\n",
 					__func__);
 		} else

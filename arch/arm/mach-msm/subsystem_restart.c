@@ -457,6 +457,8 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 
 	mutex_unlock(&soc_order_reg_lock);
 
+
+
 	pr_debug("[%p]: Released powerup lock!\n", current);
 
 out:
