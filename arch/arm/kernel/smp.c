@@ -502,7 +502,6 @@ void percpu_timer_setup(void)
 		broadcast_timer_setup(evt);
 }
 
-#ifdef CONFIG_HOTPLUG_CPU
 /*
  * The generic clock events code purposely does not stop the local timer
  * on CPU_DEAD/CPU_DEAD_FROZEN hotplug events, so we have to do it
@@ -516,7 +515,6 @@ static void percpu_timer_stop(void)
 	if (lt_ops)
 		lt_ops->stop(evt);
 }
-#endif
 
 static DEFINE_RAW_SPINLOCK(stop_lock);
 
@@ -532,9 +530,6 @@ static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 		raw_spin_lock(&stop_lock);
 		printk(KERN_CRIT "CPU%u: stopping\n", cpu);
 		dump_stack();
-#if defined(CONFIG_SEC_DEBUG)
-		sec_debug_dump_stack();
-#endif
 		raw_spin_unlock(&stop_lock);
 	}
 
