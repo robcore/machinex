@@ -128,12 +128,14 @@ static inline bool css_tryget(struct cgroup_subsys_state *css)
 	return __css_tryget(css);
 }
 
-/*
- * css_put() should be called to release a reference taken by
- * css_get() or css_tryget()
- */
-
 extern void __css_put(struct cgroup_subsys_state *css);
+
+/**
+ * css_put - put a css reference
+ * @css: target css
+ *
+ * Put a reference obtained via css_get() and css_tryget().
+ */
 static inline void css_put(struct cgroup_subsys_state *css)
 {
 	if (!(css->flags & CSS_ROOT))
