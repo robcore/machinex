@@ -127,3 +127,4 @@ robscript/
 pos.sh
 NEWSUSPEND.txt
 idr-patchlist.txt
+kernel/hz.bc
