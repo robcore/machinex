@@ -1634,7 +1634,6 @@ static struct worker *create_worker(struct worker_pool *pool)
 {
 	const char *pri = pool->attrs->nice < 0  ? "H" : "";
 	struct worker *worker = NULL;
-	int id = -1;
 
 	lockdep_assert_held(&pool->manager_mutex);
 
@@ -1656,11 +1655,11 @@ static struct worker *create_worker(struct worker_pool *pool)
 	if (pool->cpu >= 0)
 		worker->task = kthread_create_on_node(worker_thread,
 					worker, cpu_to_node(pool->cpu),
-					"kworker/%d:%d%s", pool->cpu, id, pri);
+					"kworker/%d:%d%s", pool->cpu, worker->id, pri);
 	else
 		worker->task = kthread_create(worker_thread, worker,
 					      "kworker/u%d:%d%s",
-					      pool->id, id, pri);
+					      pool->id, worker->id, pri);
 	if (IS_ERR(worker->task))
 		goto fail;
 
@@ -1689,7 +1688,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	return worker;
 fail:
-	if (id >= 0) {
+	if (worker->id >= 0) {
 		spin_lock_irq(&pool->lock);
 		idr_remove(&pool->worker_idr, worker->id);
 		spin_unlock_irq(&pool->lock);
