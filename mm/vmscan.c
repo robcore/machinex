@@ -2891,6 +2891,11 @@ loop_again:
 		 */
 		if (sc.nr_reclaimed >= SWAP_CLUSTER_MAX)
 			break;
+
+		/* Check if kswapd should be suspending */
+		if (try_to_freeze() || kthread_should_stop())
+			break;
+
 	} while (--sc.priority >= 0);
 out:
 
@@ -2901,10 +2906,6 @@ out:
 	 */
 	if (!order || !pgdat_is_balanced) {
 		cond_resched();
-
-		/* Check if kswapd should be suspending */
-		if (try_to_freeze() || kthread_should_stop())
-			break;
 
 		/*
 		 * Fragmentation may mean that the system cannot be
