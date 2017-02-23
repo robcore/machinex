@@ -260,7 +260,7 @@ static void mdm_do_soft_power_on(struct mdm_modem_drv *mdm_drv)
 		pblrdy = gpio_get_value(mdm_drv->mdm2ap_pblrdy);
 		if (pblrdy)
 			break;
-		usleep_range(5000, 5000);
+		mdelay(5);
 	}
 
 	pr_debug("%s: id %d: pblrdy i:%d\n", __func__,
@@ -273,6 +273,9 @@ start_mdm_peripheral:
 
 static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 {
+	if (poweroff_charging)
+		return;
+
 	mdm_drv->power_on_count++;
 
 	/* this gpio will be used to indicate apq readiness,
@@ -291,9 +294,6 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 			(mdm_drv->power_on_count == 2))
 		return;
 
-	if (poweroff_charging)
-		return;
-
 	if (mdm_drv->power_on_count == 1)
 		mdm_do_first_power_on(mdm_drv);
 	else
@@ -310,16 +310,13 @@ static void mdm_status_changed(struct mdm_modem_drv *mdm_drv, int value)
 	int mdm_hax;
 
 	if (value) {
-		mdm_peripheral_disconnect(mdm_drv);
-		mdm_peripheral_connect(mdm_drv);
-		mdelay(100);
 		if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio)) {
 			gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
 		} else {
 			mdm_hax = gpio_get_value(mdm_drv->ap2mdm_status_gpio);
 			if (mdm_hax < 1) {
-				mdm_atomic_soft_reset(mdm_drv);
 				gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 1);
+				mdm_atomic_soft_reset(mdm_drv);
 			}
 		}
 	}
