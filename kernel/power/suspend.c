@@ -254,7 +254,6 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		printk(KERN_ERR "PM: Some devices failed to power down\n");
 		log_suspend_abort_reason("%s device failed to power down",
 			suspend_stats.failed_devs[last_dev]);
-		panic("MX PM_SUSPEND Panic 2\n");
 		goto Platform_finish;
 	}
 
