@@ -965,15 +965,16 @@ static ssize_t mipi_samsung_disp_acl_store(struct device *dev,
 		msd.mpd->acl_status = true;
 	else if (sysfs_streq(buf, "0"))
 		msd.mpd->acl_status = false;
-	else {
+	else
 		return size;
-	}
+
 
 	if (mfd->panel_power_on) {
 		if (msd.mpd->acl_control(mfd->bl_level)) {
 			if (!acl_override)
 				mipi_samsung_disp_send_cmd(mfd,
 							PANEL_ACL_CONTROL, true);
+		}
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
 
@@ -1015,7 +1016,7 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 				mipi_samsung_disp_send_cmd(mfd,
 							PANEL_ACL_CONTROL, true);
 			else
-				pr_debug("ACL Hijacked.\n");	
+				pr_debug("ACL Hijacked.\n");
 		}
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
