@@ -165,9 +165,9 @@ bool  check_bcm4335_rev(void)
                 } else {
                         is_revb0 = false;
                 }
-                filp_close(fp, NULL);
         }
-
+		
+		filp_close(fp, NULL);
         return is_revb0;
 }
 #endif
@@ -597,9 +597,13 @@ static int dhd_wifi_platform_load_sdio(void)
 			}
 			err = wifi_platform_set_power(adapter, TRUE, WIFI_TURNON_DELAY);
 			if (err) {
+#if 0
 				/* WL_REG_ON state unknown, Power off forcely */
 				wifi_platform_set_power(adapter, FALSE, WIFI_TURNOFF_DELAY);
 				continue;
+#else
+					DHD_ERROR(("failed to set WIFI_REG_ON\n"));
+#endif
 			} else {
 				wifi_platform_bus_enumerate(adapter, TRUE);
 				err = 0;
