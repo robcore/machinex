@@ -44,6 +44,9 @@
 #include <linux/jhash.h>
 #include <linux/hashtable.h>
 #include <linux/rculist.h>
+#include <linux/nodemask.h>
+#include <linux/moduleparam.h>
+#include <linux/uaccess.h>
 
 #include "workqueue_internal.h"
 
