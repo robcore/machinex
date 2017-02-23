@@ -121,7 +121,7 @@ int	transport_generic_new_cmd(struct se_cmd *);
 
 void	transport_generic_process_write(struct se_cmd *);
 
-int	transport_generic_free_cmd(struct se_cmd *, int);
+void	transport_generic_free_cmd(struct se_cmd *, int);
 
 bool	transport_wait_for_tasks(struct se_cmd *);
 int	transport_check_aborted_status(struct se_cmd *, int);
