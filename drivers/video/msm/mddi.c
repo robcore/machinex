@@ -50,10 +50,10 @@ static int mddi_suspend(struct platform_device *pdev, pm_message_t state);
 static int mddi_resume(struct platform_device *pdev);
 #endif
 
-//#ifdef CONFIG_HAS_POWER_SUSPEND
-//static void mddi_power_suspend(struct power_suspend *h);
-//static void mddi_power_resume(struct power_suspend *h);
-//#endif
+#ifdef CONFIG_POWERSUSPEND
+static void mddi_power_suspend(struct power_suspend *h);
+static void mddi_power_resume(struct power_suspend *h);
+#endif
 
 static void pmdh_clk_disable(void);
 static void pmdh_clk_enable(void);
@@ -96,12 +96,12 @@ unsigned char mddi_timer_shutdown_flag;
 static struct platform_driver mddi_driver = {
 	.probe = mddi_probe,
 	.remove = mddi_remove,
-//#ifndef CONFIG_HAS_POWER_SUSPEND
+#ifndef CONFIG_POWERSUSPEND
 #ifdef CONFIG_PM
 	.suspend = mddi_suspend,
 	.resume = mddi_resume,
 #endif
-//#endif
+#endif
 	.shutdown = NULL,
 	.driver = {
 		.name = "mddi",
@@ -432,12 +432,11 @@ static int mddi_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 
-/*#ifdef CONFIG_HAS_POWER_SUSPEND
-//	mfd->mddi_power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
+#ifdef CONFIG_POWERSUSPEND
 	mfd->mddi_power_suspend.suspend = mddi_power_suspend;
 	mfd->mddi_power_suspend.resume = mddi_power_resume;
 	register_power_suspend(&mfd->mddi_power_suspend);
-#endif */
+#endif
 
 	return 0;
 
@@ -522,7 +521,7 @@ static int mddi_resume(struct platform_device *pdev)
 }
 #endif
 
-/*#ifdef CONFIG_HAS_POWER_SUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void mddi_power_suspend(struct power_suspend *h)
 {
 	pm_message_t state;
@@ -539,7 +538,7 @@ static void mddi_power_resume(struct power_suspend *h)
 							mddi_power_suspend);
 	mddi_resume(mfd->pdev);
 }
-#endif */
+#endif
 
 static int mddi_remove(struct platform_device *pdev)
 {

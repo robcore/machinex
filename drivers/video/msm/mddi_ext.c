@@ -46,10 +46,10 @@ static int pdev_list_cnt;
 static int mddi_ext_suspend(struct platform_device *pdev, pm_message_t state);
 static int mddi_ext_resume(struct platform_device *pdev);
 
-/*#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void mddi_ext_power_suspend(struct power_suspend *h);
 static void mddi_ext_power_resume(struct power_suspend *h);
-#endif */
+#endif
 
 static int mddi_ext_runtime_suspend(struct device *dev)
 {
@@ -77,12 +77,12 @@ static struct dev_pm_ops mddi_ext_dev_pm_ops = {
 static struct platform_driver mddi_ext_driver = {
 	.probe = mddi_ext_probe,
 	.remove = mddi_ext_remove,
-//#ifndef CONFIG_POWERSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 #ifdef CONFIG_PM
 	.suspend = mddi_ext_suspend,
 	.resume = mddi_ext_resume,
 #endif
-//#endif
+#endif
 	.resume_early = NULL,
 	.resume = NULL,
 	.shutdown = NULL,
@@ -255,12 +255,11 @@ static int mddi_ext_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 
-/*#ifdef CONFIG_POWERSUSPEND
-//	mfd->mddi_ext_power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
+#ifdef CONFIG_POWERSUSPEND
 	mfd->mddi_ext_power_suspend.suspend = mddi_ext_power_suspend;
 	mfd->mddi_ext_power_suspend.resume = mddi_ext_power_resume;
 	register_power_suspend(&mfd->mddi_ext_power_suspend);
-#endif */
+#endif
 
 	return 0;
 
@@ -306,7 +305,7 @@ static int mddi_ext_resume(struct platform_device *pdev)
 	return 0;
 }
 
-/*#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void mddi_ext_power_suspend(struct power_suspend *h)
 {
 	pm_message_t state;
@@ -323,7 +322,7 @@ static void mddi_ext_power_resume(struct power_suspend *h)
 							mddi_ext_power_suspend);
 	mddi_ext_resume(mfd->pdev);
 }
-#endif*/
+#endif
 
 static int mddi_ext_remove(struct platform_device *pdev)
 {
