@@ -248,14 +248,14 @@ static inline int suspend_freeze_processes(void)
 	 */
 	if (error)
 		return error;
-
+#if 0
 	error = pm_notifier_call_chain(PM_USERSPACE_FROZEN);
 	if (error) {
 		printk(KERN_INFO "Userspace frozen workqueue canceled suspend\n");
 		thaw_processes();
 		return error;
 	}
-
+#endif
 	error = freeze_kernel_threads();
 	/*
 	 * freeze_kernel_threads() thaws only kernel threads upon freezing
