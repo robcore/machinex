@@ -760,6 +760,27 @@ unsigned int irq_find_mapping(struct irq_domain *domain,
 }
 EXPORT_SYMBOL_GPL(irq_find_mapping);
 
+/**
+ * irq_linear_revmap() - Find a linux irq from a hw irq number.
+ * @domain: domain owning this hardware interrupt
+ * @hwirq: hardware irq number in that domain space
+ *
+ * This is a fast path that can be called directly by irq controller code to
+ * save a handful of instructions.
+ */
+unsigned int irq_linear_revmap(struct irq_domain *domain,
+			       irq_hw_number_t hwirq)
+{
+	BUG_ON(domain->revmap_type != IRQ_DOMAIN_MAP_LINEAR);
+
+	/* Check revmap bounds; complain if exceeded */
+	if (WARN_ON(hwirq >= domain->revmap_data.linear.size))
+		return 0;
+
+	return domain->revmap_data.linear.revmap[hwirq];
+}
+EXPORT_SYMBOL_GPL(irq_linear_revmap);
+
 #ifdef CONFIG_IRQ_DOMAIN_DEBUG
 static int virq_debug_show(struct seq_file *m, void *private)
 {
