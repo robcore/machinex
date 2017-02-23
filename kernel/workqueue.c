@@ -1634,11 +1634,12 @@ static struct worker *create_worker(struct worker_pool *pool)
 {
 	const char *pri = pool->attrs->nice < 0  ? "H" : "";
 	struct worker *worker = NULL;
+	int id = -1;
 
 	lockdep_assert_held(&pool->manager_mutex);
 
 	spin_lock_irq(&pool->lock);
-	while (idr_get_new(&pool->worker_idr, worker, &worker->id)) {
+	while (idr_get_new(&pool->worker_idr, worker, &id)) {
 		spin_unlock_irq(&pool->lock);
 		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
 			goto fail;
@@ -1651,15 +1652,16 @@ static struct worker *create_worker(struct worker_pool *pool)
 		goto fail;
 
 	worker->pool = pool;
+	worker->id = id;
 
 	if (pool->cpu >= 0)
 		worker->task = kthread_create_on_node(worker_thread,
 					worker, cpu_to_node(pool->cpu),
-					"kworker/%d:%d%s", pool->cpu, worker->id, pri);
+					"kworker/%d:%d%s", pool->cpu, id, pri);
 	else
 		worker->task = kthread_create(worker_thread, worker,
 					      "kworker/u%d:%d%s",
-					      pool->id, worker->id, pri);
+					      pool->id, id, pri);
 	if (IS_ERR(worker->task))
 		goto fail;
 
@@ -1688,9 +1690,9 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	return worker;
 fail:
-	if (worker->id >= 0) {
+	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
-		idr_remove(&pool->worker_idr, worker->id);
+		idr_remove(&pool->worker_idr, id);
 		spin_unlock_irq(&pool->lock);
 	}
 	kfree(worker);
@@ -1750,6 +1752,7 @@ static int create_and_start_worker(struct worker_pool *pool)
 static void destroy_worker(struct worker *worker)
 {
 	struct worker_pool *pool = worker->pool;
+	int id = worker->id;
 
 	lockdep_assert_held(&pool->manager_mutex);
 	lockdep_assert_held(&pool->lock);
