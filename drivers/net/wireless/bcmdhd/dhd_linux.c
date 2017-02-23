@@ -6156,7 +6156,7 @@ dhd_module_init(void)
 	return err;
 }
 
-
+#if 0
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 #if defined(CONFIG_DEFERRED_INITCALLS)
 deferred_module_init(dhd_module_init);
@@ -6168,6 +6168,8 @@ late_initcall(dhd_module_init);
 #else
 module_init(dhd_module_init);
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0) */
+#endif
+late_initcall(dhd_module_init);
 
 module_exit(dhd_module_cleanup);
 
