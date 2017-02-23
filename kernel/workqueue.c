@@ -1634,12 +1634,13 @@ static struct worker *create_worker(struct worker_pool *pool)
 {
 	const char *pri = pool->attrs->nice < 0  ? "H" : "";
 	struct worker *worker = NULL;
-	int id = -1;
+	int ret;
 
 	lockdep_assert_held(&pool->manager_mutex);
 
 	spin_lock_irq(&pool->lock);
-	while (idr_get_new(&pool->worker_idr, worker, &worker->id)) {
+	id = (idr_get_new(&pool->worker_idr, worker, &worker->id))
+	while (id) {
 		spin_unlock_irq(&pool->lock);
 		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
 			goto fail;
