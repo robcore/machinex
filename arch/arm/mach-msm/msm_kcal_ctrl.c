@@ -450,7 +450,6 @@ static void msm_kcal_power_resume(struct power_suspend *handler)
 }
 
 static struct power_suspend msm_kcal_power_suspend_struct_driver = {
-        //.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN - 20,
         .suspend = msm_kcal_power_suspend,
         .resume = msm_kcal_power_resume,
 };
