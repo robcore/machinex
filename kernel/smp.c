@@ -355,7 +355,7 @@ call:
 	put_cpu();
 	return ret;
 }
-EXPORT_SYMBOL_GPL(smp_call_function_any);
+EXPORT_SYMBOL(smp_call_function_any);
 
 /**
  * __smp_call_function_single(): Run a function on a specific CPU
@@ -727,4 +727,4 @@ void kick_all_cpus_sync(void)
 	smp_mb();
 	smp_call_function(do_nothing, NULL, 1);
 }
-EXPORT_SYMBOL_GPL(kick_all_cpus_sync);
+EXPORT_SYMBOL(kick_all_cpus_sync);
