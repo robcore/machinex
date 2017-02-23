@@ -283,7 +283,7 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 		if (tpl_link == 0xff)
 			break;
 
-		this = kmalloc(sizeof(*this) + tpl_link, GFP_KERNEL);
+		this = kzalloc(sizeof(*this) + tpl_link, GFP_KERNEL);
 		if (!this)
 			return -ENOMEM;
 
