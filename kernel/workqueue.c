@@ -245,7 +245,7 @@ struct workqueue_struct {
 	int			nr_drainers;	/* WQ: drain in progress */
 	int			saved_max_active; /* WQ: saved pwq max_active */
 
-#ifdef CONFIG_SYSFS
+#if 0
 	struct wq_device	*wq_dev;	/* I: for sysfs interface */
 #endif
 #ifdef CONFIG_LOCKDEP
@@ -2999,7 +2999,7 @@ int execute_in_process_context(work_func_t fn, struct execute_work *ew)
 }
 EXPORT_SYMBOL(execute_in_process_context);
 
-#ifdef CONFIG_SYSFS
+#if 0
 /*
  * Workqueues with WQ_SYSFS flag set is visible to userland via
  * /sys/bus/workqueue/devices/WQ_NAME.  All visible workqueues have the
