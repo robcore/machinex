@@ -350,7 +350,6 @@ int suspend_devices_and_enter(suspend_state_t state)
 	if (error) {
 		pr_err("PM: Some devices failed to suspend, or early wake event detected\n");
 		log_suspend_abort_reason("Some devices failed to suspend, or early wake event detected");
-		panic("MX PM_SUSPEND Panic 1\n");
 		goto Recover_platform;
 	}
 	suspend_test_finish("suspend devices");
