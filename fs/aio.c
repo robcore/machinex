@@ -445,7 +445,6 @@ static struct kiocb *__aio_get_req(struct kioctx *ctx)
 	req->ki_ctx = ctx;
 	req->ki_cancel = NULL;
 	req->ki_retry = NULL;
-	req->ki_dtor = NULL;
 	req->private = NULL;
 	req->ki_iovec = NULL;
 	INIT_LIST_HEAD(&req->ki_run_list);
@@ -559,8 +558,6 @@ static inline void really_put_req(struct kioctx *ctx, struct kiocb *req)
 
 	if (req->ki_eventfd != NULL)
 		eventfd_ctx_put(req->ki_eventfd);
-	if (req->ki_dtor)
-		req->ki_dtor(req);
 	if (req->ki_iovec != &req->ki_inline_vec)
 		kfree(req->ki_iovec);
 	kmem_cache_free(kiocb_cachep, req);
