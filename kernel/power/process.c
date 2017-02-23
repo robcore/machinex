@@ -93,12 +93,14 @@ static int try_to_freeze_tasks(bool user_only)
 		printk("\n");
 		printk(KERN_ERR "Freezing of tasks aborted after %d.%03d seconds",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000);
+		panic("MX Freezer Wakeup Panic\n");
 	} else if (todo) {
 		printk("\n");
 		printk(KERN_ERR "Freezing of tasks failed after %d.%03d seconds"
 		       "(%d tasks refusing to freeze, wq_busy=%d):\n",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000,
 		       todo - wq_busy, wq_busy);
+		panic("MX Freezer ToDo Panic\n");
 
 		read_lock(&tasklist_lock);
 		do_each_thread(g, p) {
