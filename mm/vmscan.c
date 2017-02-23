@@ -2907,6 +2907,8 @@ out:
 	if (!order || !pgdat_is_balanced) {
 		cond_resched();
 
+		try_to_freeze();
+
 		/*
 		 * Fragmentation may mean that the system cannot be
 		 * rebalanced for high-order allocations in all zones.
