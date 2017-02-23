@@ -1289,6 +1289,12 @@ static int get_candela_index(int bl_level)
 	case 254 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
+	default:
+		if (!acl_override)
+			backlightlevel = GAMMA_152CD;
+		else
+			backlightlevel = GAMMA_300CD;
+		break;
 	}
 
 	return backlightlevel;
@@ -1618,8 +1624,8 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 1)
-		bl_level = 1;
+	if (bl_level < 10)
+		bl_level = 10;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
@@ -1662,7 +1668,7 @@ static int brightness_control(int bl_level)
 	if (!acl_override) {
 		if (elvss_value >= 0x29)
 			elvss_value = 0x29;
-	} else if (acl_override == 1) {
+	} else {
 		if (elvss_value >= 0x2F)
 			elvss_value = 0x2F;
 	}
@@ -1672,7 +1678,7 @@ static int brightness_control(int bl_level)
 	if (!acl_override) {
 		if (mipi_pd.ldi_rev >= 'G')
 			samsung_brightness_elvss_ref[1] = 0x2C;
-	} else if (acl_override == 1) {
+	} else {
 		if (mipi_pd.ldi_rev >= 'G')
 				samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 	}
@@ -1681,7 +1687,7 @@ static int brightness_control(int bl_level)
 		if (get_auto_brightness() == 6) {
 				if (!acl_override)
 					samsung_brightness_elvss_ref[2] = 0x01;
-				else if (acl_override == 1)
+				else
 					samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 		}
 	} else {
@@ -1749,7 +1755,7 @@ static int brightness_control(int bl_level)
 					sizeof(samsung_brightness_write_als);
 			cmd_size++;
 		}
-	} else if (acl_override == 1) {
+	} else {
 		if (get_auto_brightness() == 6) {
 			brightness_packet[cmd_size].payload =
 					samsung_brightness_write_als;
@@ -1770,12 +1776,9 @@ static int brightness_control(int bl_level)
 			samsung_brightness_acl_ref[1] = 0x01; /*ACL on 40p*/
 		else
 			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else if (acl_override == 1) {
-		if (get_auto_brightness() == 6)
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		else
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	}
+	} else
+		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
 				sizeof(samsung_brightness_acl_ref))) {
 		brightness_packet[cmd_size].payload =
@@ -1797,7 +1800,7 @@ static int brightness_control(int bl_level)
 						sizeof(samsung_brightness_psre_cont);
 			cmd_size++;
 		}
-	} else if (acl_override == 1) {
+	} else {
 		if (get_auto_brightness() == 6) {
 			brightness_packet[cmd_size].payload =
 						samsung_brightness_psre_cont;
@@ -1869,14 +1872,9 @@ static int acl_control(int bl_level)
 			else
 				samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 		}
-	} else if (acl_override == 1) {
-		if (get_auto_brightness() == 6) {
-			samsung_brightness_acl_cont_default[1] = 0x00;
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		} else {
-			samsung_brightness_acl_cont_default[1] = 0x00;
-			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		}
+	} else {
+		samsung_brightness_acl_cont_default[1] = 0x00;
+		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 	}
 
 	return 1;
@@ -2067,7 +2065,7 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 255;
-	pinfo.bl_min = 1;
+	pinfo.bl_min = 10;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;

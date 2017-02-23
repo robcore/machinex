@@ -905,7 +905,6 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
-	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
@@ -926,15 +925,8 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "7")) // HBM mode (HBM + PSRE)
 		msd.dstat.auto_brightness = 7;
 	else {
-		if (!acl_override) {
-			if (!first_auto_br) {
-				first_auto_br++;
-				return size;
-			}
-		} else if (acl_override == 1)
-			return size;
+		return size;
 	}
-
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		msd.mpd->first_bl_hbm_psre = 1;
@@ -978,9 +970,10 @@ static ssize_t mipi_samsung_disp_acl_store(struct device *dev,
 	}
 
 	if (mfd->panel_power_on) {
-		if (msd.mpd->acl_control(mfd->bl_level))
-			mipi_samsung_disp_send_cmd(mfd,
-						PANEL_ACL_CONTROL, true);
+		if (msd.mpd->acl_control(mfd->bl_level)) {
+			if (!acl_override)
+				mipi_samsung_disp_send_cmd(mfd,
+							PANEL_ACL_CONTROL, true);
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
 
@@ -1017,9 +1010,13 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 	}
 
 	if (mfd->panel_power_on) {
-		if (msd.mpd->acl_control(mfd->bl_level))
-			mipi_samsung_disp_send_cmd(mfd,
-						PANEL_ACL_CONTROL, true);
+		if (msd.mpd->acl_control(mfd->bl_level)) {
+			if (!acl_override)
+				mipi_samsung_disp_send_cmd(mfd,
+							PANEL_ACL_CONTROL, true);
+			else
+				pr_debug("ACL Hijacked.\n");	
+		}
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
 
@@ -1529,6 +1526,8 @@ static ssize_t acl_override_store(struct device *dev, struct device_attribute *a
 
 	acl_override = value;
 
+	msd.mpd->reset_bl_level();
+
 	return size;
 }
 
@@ -1849,7 +1848,6 @@ static int __init mipi_samsung_disp_init(void)
 	mipi_dsi_buf_alloc(&msd.samsung_rx_buf, DSI_BUF_SIZE);
 
 	Lpanel_colors = 2;
-	acl_override = 0;
 
 	return platform_driver_register(&this_driver);
 }

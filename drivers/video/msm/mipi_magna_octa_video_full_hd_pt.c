@@ -1345,6 +1345,12 @@ static int get_candela_index(int bl_level)
 	case 254 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
+	default:
+		if (!acl_override)
+			backlightlevel = GAMMA_152CD;
+		else
+			backlightlevel = GAMMA_300CD;
+		break;
 	}
 
 	return backlightlevel;
@@ -1757,8 +1763,8 @@ static int brightness_control(int bl_level)
 	id2 = (mipi_pd.manufacture_id & 0x0000FF00) >> 8;
 	id3 = mipi_pd.manufacture_id & 0xFF;
 
-	if (bl_level < 1)
-		bl_level = 1;
+	if (bl_level < 10)
+		bl_level = 10;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
@@ -1830,7 +1836,7 @@ static int brightness_control(int bl_level)
 					sizeof(magna_brightness_write_als);
 			cmd_size++;
 		}
-	} else if (acl_override == 1) {
+	} else {
 		if (get_auto_brightness() >= 6) {
 			brightness_packet[cmd_size].payload =
 					magna_brightness_write_als;
@@ -1882,12 +1888,9 @@ static int brightness_control(int bl_level)
 			magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
 		else
 			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else if (acl_override == 1) {
-		if (get_auto_brightness() == 6)
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		else
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	}
+	} else
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+
 	if (memcmp(magna_brightness_acl_pre, magna_brightness_acl_ref,
 				sizeof(magna_brightness_acl_ref))) {
 		brightness_packet[cmd_size].payload =
@@ -1976,12 +1979,8 @@ static int acl_control(int bl_level)
 			magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
 		else
 			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else if (acl_override == 1) {
-		if (get_auto_brightness() == 6)
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-		else if (get_auto_brightness() == 0)
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	}
+	} else
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 
 	return 1;
 }
@@ -2188,7 +2187,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 255;
-	pinfo.bl_min = 1;
+	pinfo.bl_min = 10;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;
