@@ -103,7 +103,7 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 {
 	unsigned __percpu *pcpu_count;
 
-	rcu_read_lock();
+	rcu_read_lock_sched();
 
 	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
 
@@ -112,7 +112,7 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 	else
 		atomic_inc(&ref->count);
 
-	rcu_read_unlock();
+	rcu_read_unlock_sched();
 }
 
 /**
@@ -132,7 +132,7 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 	unsigned __percpu *pcpu_count;
 	int ret = false;
 
-	rcu_read_lock();
+	rcu_read_lock_sched();
 
 	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
 
@@ -141,7 +141,7 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 		ret = true;
 	}
 
-	rcu_read_unlock();
+	rcu_read_unlock_sched();
 
 	return ret;
 }
@@ -157,7 +157,7 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
 {
 	unsigned __percpu *pcpu_count;
 
-	rcu_read_lock();
+	rcu_read_lock_sched();
 
 	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
 
@@ -166,7 +166,7 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
 	else if (unlikely(atomic_dec_and_test(&ref->count)))
 		ref->release(ref);
 
-	rcu_read_unlock();
+	rcu_read_unlock_sched();
 }
 
 #endif
