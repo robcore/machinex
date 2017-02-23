@@ -1237,6 +1237,9 @@ static int legacy_suspend(struct device *dev, pm_message_t state,
 
 	initcall_debug_report(dev, calltime, error);
 
+	if (error)
+		pm_runtime_put(dev);
+
 	return error;
 }
 
