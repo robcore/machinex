@@ -469,6 +469,7 @@ static int cmp_hidden_bss(struct cfg80211_bss *a,
 	return 0;
 }
 
+/* Returned bss is reference counted and must be cleaned up appropriately. */
 struct cfg80211_bss *cfg80211_get_bss(struct wiphy *wiphy,
 				      struct ieee80211_channel *channel,
 				      const u8 *bssid,
@@ -626,6 +627,7 @@ copy_hidden_ies(struct cfg80211_internal_bss *res,
 			res->pub.len_beacon_ies);
 }
 
+/* Returned bss is reference counted and must be cleaned up appropriately. */
 static struct cfg80211_internal_bss *
 cfg80211_bss_update(struct cfg80211_registered_device *dev,
 		    struct cfg80211_internal_bss *res)
@@ -757,6 +759,7 @@ cfg80211_bss_update(struct cfg80211_registered_device *dev,
 	return found;
 }
 
+/* Returned bss is reference counted and must be cleaned up appropriately. */
 struct cfg80211_bss*
 cfg80211_inform_bss(struct wiphy *wiphy,
 		    struct ieee80211_channel *channel,
@@ -817,6 +820,7 @@ cfg80211_inform_bss(struct wiphy *wiphy,
 }
 EXPORT_SYMBOL(cfg80211_inform_bss);
 
+/* Returned bss is reference counted and must be cleaned up appropriately. */
 struct cfg80211_bss *
 cfg80211_inform_bss_frame(struct wiphy *wiphy,
 			  struct ieee80211_channel *channel,
