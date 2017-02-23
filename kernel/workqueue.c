@@ -1639,7 +1639,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 	lockdep_assert_held(&pool->manager_mutex);
 
 	spin_lock_irq(&pool->lock);
-	while (idr_get_new(&pool->worker_idr, worker, &id)) {
+	while (idr_get_new(&pool->worker_idr, worker, &worker->id)) {
 		spin_unlock_irq(&pool->lock);
 		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
 			goto fail;
@@ -1652,7 +1652,6 @@ static struct worker *create_worker(struct worker_pool *pool)
 		goto fail;
 
 	worker->pool = pool;
-	worker->id = id;
 
 	if (pool->cpu >= 0)
 		worker->task = kthread_create_on_node(worker_thread,
@@ -1692,7 +1691,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 fail:
 	if (id >= 0) {
 		spin_lock_irq(&pool->lock);
-		idr_remove(&pool->worker_idr, id);
+		idr_remove(&pool->worker_idr, worker->id);
 		spin_unlock_irq(&pool->lock);
 	}
 	kfree(worker);
@@ -1752,7 +1751,6 @@ static int create_and_start_worker(struct worker_pool *pool)
 static void destroy_worker(struct worker *worker)
 {
 	struct worker_pool *pool = worker->pool;
-	int id = worker->id;
 
 	lockdep_assert_held(&pool->manager_mutex);
 	lockdep_assert_held(&pool->lock);
