@@ -108,6 +108,7 @@ static int try_to_freeze_tasks(bool user_only)
 					sched_show_task(p);
 			}
 			read_unlock(&tasklist_lock);
+		}
 		} else {
 			printk("(elapsed %d.%03d seconds) ", elapsed_msecs / 1000,
 				elapsed_msecs % 1000);
