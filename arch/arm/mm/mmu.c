@@ -1059,7 +1059,6 @@ phys_addr_t arm_lowmem_limit __initdata = 0;
 void __init sanity_check_meminfo(void)
 {
 	int i, j, highmem = 0;
-	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;
 
 #ifdef CONFIG_ENABLE_VMALLOC_SAVING
 	unsigned long hole_start;
@@ -1084,24 +1083,24 @@ void __init sanity_check_meminfo(void)
 
 	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {
 		struct membank *bank = &meminfo.bank[j];
-		phys_addr_t size_limit;
-
 		*bank = meminfo.bank[i];
-		size_limit = bank->size;
 
-		if (bank->start >= vmalloc_limit)
+		if (bank->start > ULONG_MAX)
 			highmem = 1;
-		else
-			size_limit = vmalloc_limit - bank->start;
+
+#ifdef CONFIG_HIGHMEM
+		if (__va(bank->start) >= vmalloc_min ||
+		    __va(bank->start) < (void *)PAGE_OFFSET)
+			highmem = 1;
 
 		bank->highmem = highmem;
 
-#ifdef CONFIG_HIGHMEM
 		/*
 		 * Split those memory banks which are partially overlapping
 		 * the vmalloc area greatly simplifying things later.
 		 */
-		if (!highmem && bank->size > size_limit) {
+		if (!highmem && __va(bank->start) < vmalloc_min &&
+		    bank->size > vmalloc_min - __va(bank->start)) {
 			if (meminfo.nr_banks >= NR_BANKS) {
 				printk(KERN_CRIT "NR_BANKS too low, "
 						 "ignoring high memory\n");
@@ -1110,14 +1109,16 @@ void __init sanity_check_meminfo(void)
 					(meminfo.nr_banks - i) * sizeof(*bank));
 				meminfo.nr_banks++;
 				i++;
-				bank[1].size -= size_limit;
-				bank[1].start = vmalloc_limit;
+				bank[1].size -= vmalloc_min - __va(bank->start);
+				bank[1].start = __pa(vmalloc_min - 1) + 1;
 				bank[1].highmem = highmem = 1;
 				j++;
 			}
-			bank->size = size_limit;
+			bank->size = vmalloc_min - __va(bank->start);
 		}
 #else
+		bank->highmem = highmem;
+
 		/*
 		 * Highmem banks not allowed with !CONFIG_HIGHMEM.
 		 */
@@ -1130,16 +1131,31 @@ void __init sanity_check_meminfo(void)
 		}
 
 		/*
+		 * Check whether this memory bank would entirely overlap
+		 * the vmalloc area.
+		 */
+		if (__va(bank->start) >= vmalloc_min ||
+		    __va(bank->start) < (void *)PAGE_OFFSET) {
+			printk(KERN_NOTICE "Ignoring RAM at %.8llx-%.8llx "
+			       "(vmalloc region overlap).\n",
+			       (unsigned long long)bank->start,
+			       (unsigned long long)bank->start + bank->size - 1);
+			continue;
+		}
+
+		/*
 		 * Check whether this memory bank would partially overlap
 		 * the vmalloc area.
 		 */
-		if (bank->size > size_limit) {
+		if (__va(bank->start + bank->size - 1) >= vmalloc_min ||
+		    __va(bank->start + bank->size - 1) <= __va(bank->start)) {
+			unsigned long newsize = vmalloc_min - __va(bank->start);
 			printk(KERN_NOTICE "Truncating RAM at %.8llx-%.8llx "
 			       "to -%.8llx (vmalloc region overlap).\n",
 			       (unsigned long long)bank->start,
 			       (unsigned long long)bank->start + bank->size - 1,
-			       (unsigned long long)bank->start + size_limit - 1);
-			bank->size = size_limit;
+			       (unsigned long long)bank->start + newsize - 1);
+			bank->size = newsize;
 		}
 #endif
 		if (!bank->highmem && bank->start + bank->size > arm_lowmem_limit)

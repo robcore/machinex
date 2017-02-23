@@ -19,7 +19,6 @@
 #include <asm/smp_plat.h>
 #include <asm/thread_notify.h>
 #include <asm/tlbflush.h>
-#include <asm/proc-fns.h>
 
 #include <mach/msm_rtb.h>
 
@@ -53,14 +52,15 @@ DEFINE_PER_CPU(struct mm_struct *, current_mm);
 #endif
 
 #ifdef CONFIG_ARM_LPAE
-static void cpu_set_reserved_ttbr0(void)
-{
-	/*
-	 * Set TTBR0 to swapper_pg_dir which contains only global entries. The
-	 * ASID is set to 0.
-	 */
-	cpu_set_ttbr(0, __pa(swapper_pg_dir));
-	isb();
+#define cpu_set_asid(asid) {						\
+	unsigned long ttbl, ttbh;					\
+	asm volatile(							\
+	"	mrrc	p15, 0, %0, %1, c2		@ read TTBR0\n"	\
+	"	mov	%1, %2, lsl #(48 - 32)		@ set ASID\n"	\
+	"	mcrr	p15, 0, %0, %1, c2		@ set TTBR0\n"	\
+	: "=&r" (ttbl), "=&r" (ttbh)					\
+	: "r" (asid & ~ASID_MASK));					\
+}
 #else
 #define cpu_set_asid(asid) \
 	asm("	mcr	p15, 0, %0, c13, c0, 1\n" : : "r" (asid))
