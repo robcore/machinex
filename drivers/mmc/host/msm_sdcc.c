@@ -7029,9 +7029,6 @@ static int msmsdcc_runtime_idle(struct device *dev)
 
 	if (host->plat->is_sdio_al_client)
 		return 0;
-	else
-		pm_schedule_suspend(dev, host->idle_tout);
-
 
 	/* Idle timeout is not configurable for now */
 	/* Disable Runtime PM becasue of potential issues
