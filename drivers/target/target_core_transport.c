@@ -69,7 +69,7 @@ static void transport_handle_queue_full(struct se_cmd *cmd,
 		struct se_device *dev);
 static void transport_free_dev_tasks(struct se_cmd *cmd);
 static int transport_generic_get_mem(struct se_cmd *cmd);
-static void transport_put_cmd(struct se_cmd *cmd);
+static int transport_put_cmd(struct se_cmd *cmd);
 static void transport_remove_cmd_from_queue(struct se_cmd *cmd);
 static int transport_set_sense_codes(struct se_cmd *cmd, u8 asc, u8 ascq);
 static void target_complete_ok_work(struct work_struct *work);
@@ -3499,7 +3499,7 @@ static inline void transport_free_pages(struct se_cmd *cmd)
  * This routine unconditionally frees a command, and reference counting
  * or list removal must be done in the caller.
  */
-static void transport_release_cmd(struct se_cmd *cmd)
+static int transport_release_cmd(struct se_cmd *cmd)
 {
 	BUG_ON(!cmd->se_tfo);
 
@@ -3511,11 +3511,11 @@ static void transport_release_cmd(struct se_cmd *cmd)
 	 * If this cmd has been setup with target_get_sess_cmd(), drop
 	 * the kref and call ->release_cmd() in kref callback.
 	 */
-	 if (cmd->check_release != 0) {
-		target_put_sess_cmd(cmd->se_sess, cmd);
-		return;
-	}
+	 if (cmd->check_release != 0)
+		return target_put_sess_cmd(cmd->se_sess, cmd);
+
 	cmd->se_tfo->release_cmd(cmd);
+	return 1;
 }
 
 /**
@@ -3524,7 +3524,7 @@ static void transport_release_cmd(struct se_cmd *cmd)
  *
  * This routine releases our reference to the command and frees it if possible.
  */
-static void transport_put_cmd(struct se_cmd *cmd)
+static int transport_put_cmd(struct se_cmd *cmd)
 {
 	unsigned long flags;
 	int free_tasks = 0;
@@ -3533,7 +3533,7 @@ static void transport_put_cmd(struct se_cmd *cmd)
 	if (atomic_read(&cmd->t_fe_count) &&
 	    !atomic_dec_and_test(&cmd->t_fe_count)) {
 		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
-		return;
+		return 0;
 	}
 
 	if (atomic_read(&cmd->t_se_count)) {
@@ -3552,8 +3552,7 @@ static void transport_put_cmd(struct se_cmd *cmd)
 		transport_free_dev_tasks(cmd);
 
 	transport_free_pages(cmd);
-	transport_release_cmd(cmd);
-	return;
+	return transport_release_cmd(cmd);
 }
 
 /*
@@ -3943,13 +3942,15 @@ queue_full:
 	return 0;
 }
 
-void transport_generic_free_cmd(struct se_cmd *cmd, int wait_for_tasks)
+int transport_generic_free_cmd(struct se_cmd *cmd, int wait_for_tasks)
 {
+	int ret = 0;
+
 	if (!(cmd->se_cmd_flags & SCF_SE_LUN_CMD)) {
 		if (wait_for_tasks && (cmd->se_cmd_flags & SCF_SCSI_TMR_CDB))
 			 transport_wait_for_tasks(cmd);
 
-		transport_release_cmd(cmd);
+		ret = transport_release_cmd(cmd);
 	} else {
 		if (wait_for_tasks)
 			transport_wait_for_tasks(cmd);
@@ -3961,8 +3962,9 @@ void transport_generic_free_cmd(struct se_cmd *cmd, int wait_for_tasks)
 
 		transport_free_dev_tasks(cmd);
 
-		transport_put_cmd(cmd);
+		ret = transport_put_cmd(cmd);
 	}
+	return ret;
 }
 EXPORT_SYMBOL(transport_generic_free_cmd);
 
