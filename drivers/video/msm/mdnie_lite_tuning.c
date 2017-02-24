@@ -349,14 +349,12 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
 
-	if (!mdnie_tun_state.mdnie_enable)
+	if ((!mdnie_tun_state.mdnie_enable) || (mdnie_lock) ||
+		(mdnie_tun_state.negative) ||
+		(mfd->resume_state == MIPI_SUSPEND_STATE) || 
+		((mode < mDNIe_UI_MODE) || (mode >= MAX_mDNIe_MODE)))
 		return;
 
-	if (mode < mDNIe_UI_MODE || mode >= MAX_mDNIe_MODE)
-		return;
-
-	if (mdnie_tun_state.negative)
-		return;
 
 	play_speed_1_5 = 0;
 	/*
@@ -768,13 +766,9 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		DPRINT("[%s] no option (%d)\n", __func__, mode);
 		return;
 	}
-	if (!mdnie_lock) {
-		sending_tuning_cmd();
-		free_tun_cmd();
-	} else {
-		pr_debug("hijacked\n");
-		free_tun_cmd();
-	}
+
+	sending_tuning_cmd();
+	free_tun_cmd();
 }
 
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
@@ -884,12 +878,8 @@ static ssize_t scenario_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-	if (mdnie_lock)
+	if ((value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE) || (mdnie_lock))
 		return size;
-
-	if (value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE) {
-		return size;
-	}
 
 	switch (value) {
 	case SIG_MDNIE_UI_MODE:
