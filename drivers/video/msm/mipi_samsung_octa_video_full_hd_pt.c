@@ -623,7 +623,7 @@ static char samsung_brightness_acl_cont_ref[] = {
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x03, 0x99, 0x00,
+	0x01, 0x99, 0x00,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1742,9 +1742,7 @@ static int brightness_control(int bl_level)
 	memcpy(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
 					sizeof(samsung_brightness_acl_ref));
 
-	if (get_auto_brightness() == 6) {
 		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	}
 
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
 				sizeof(samsung_brightness_acl_ref))) {
@@ -1811,16 +1809,8 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-	/* acl control *************************************************************************/
-	/* 0xB5 setting */
-	if (get_auto_brightness() == 6)
-		samsung_brightness_acl_cont_default[1] = 0x00;
-
-	/* write power saving *****************************************************************/
-	/* 0x55 setting */
-	if (get_auto_brightness() == 0) {
-		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	}
+	samsung_brightness_acl_cont_default[1] = 0x00;
+	samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
 
 	return 1;
 }

@@ -299,24 +299,14 @@ void free_tun_cmd(void)
 	memset(tune_data2, 0, MDNIE_TUNE_SECOND_SIZE);
 }
 
-static int first_bootA;
-
 void sending_tuning_cmd(void)
 {
 	struct msm_fb_data_type *mfd;
 	struct dcs_cmd_req cmdreq;
-	static int first_bootA = 0;
 #if defined (CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT)
 		if(get_lcd_attached() == 0)
 			return;
 #endif
-	if (first_bootA) {
-		if (mdnie_lock)
-			return;
-	} else {
-		pr_info("MX - MDNIE - Lock disabled for initial bootup\n");
-		first_bootA = 1;
-	}
 
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
@@ -331,11 +321,6 @@ void sending_tuning_cmd(void)
 		else
 			mutex_unlock(&mfd->dma->ov_mutex);
 	} else {
-#ifdef MDNIE_LITE_TUN_DATA_DEBUG
-		print_tun_data();
-#else
-		DPRINT(" send tuning cmd!!\n");
-#endif
 		cmdreq.cmds = mdni_tune_cmd;
 		cmdreq.cmds_cnt = ARRAY_SIZE(mdni_tune_cmd);
 		cmdreq.flags = CMD_REQ_COMMIT;
@@ -351,7 +336,6 @@ void sending_tuning_cmd(void)
 	}
 }
 
-static int first_bootB = 0;
 void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 {
 	struct msm_fb_data_type *mfd;
@@ -364,14 +348,6 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
-
-	if (first_bootB) {
-		if (mdnie_lock)
-			return;
-	} else {
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-		first_bootB = 1;
-	}
 
 	if (!mdnie_tun_state.mdnie_enable)
 		return;
@@ -792,25 +768,19 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		DPRINT("[%s] no option (%d)\n", __func__, mode);
 		return;
 	}
-
-	sending_tuning_cmd();
-	free_tun_cmd();
-
+	if (!mdnie_lock) {
+		sending_tuning_cmd();
+		free_tun_cmd();
+	} else {
+		pr_debug("hijacked\n");
+		free_tun_cmd();
+	}
 }
 
-static int first_bootC;
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 {
-	static int first_bootC = 0;
 	DPRINT("mDNIe_Set_Negative START\n");
 
-	if (first_bootC) {
-		if (mdnie_lock)
-			return;
-	} else {
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-		first_bootC = 1;
-	}
 
 	if (negative == 0) {
 		DPRINT("Negative mode(%d) -> reset mode(%d)\n",
@@ -994,9 +964,7 @@ static ssize_t mdnieset_user_select_file_cmd_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-	if (mdnie_lock)
-		return -EINVAL;
-	else
+
 	return size;
 }
 
@@ -1020,9 +988,6 @@ static ssize_t mdnieset_init_file_cmd_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-
-	if (mdnie_lock)
-		return size;
 
 	switch (value) {
 	case 0:
@@ -1055,10 +1020,6 @@ static ssize_t outdoor_store(struct device *dev,
 	int value;
 
 	sscanf(buf, "%d", &value);
-
-	if (mdnie_lock)
-		return size;
-
 
 	if (value < OUTDOOR_OFF_MODE || value >= MAX_OUTDOOR_MODE) {
 		pr_debug("[ERROR] : wrong outdoor mode value");
@@ -1095,9 +1056,6 @@ static ssize_t negative_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-	if (mdnie_lock)
-		return size;
-
 	mdnie_tun_state.negative = value;
 
 	mDNIe_set_negative(mdnie_tun_state.negative);
@@ -1105,19 +1063,9 @@ static ssize_t negative_store(struct device *dev,
 	return size;
 }
 
-static int first_bootD;
 void is_negative_on(void)
 {
-	static int first_bootD;
 	DPRINT("is negative Mode On = %d\n", mdnie_tun_state.negative);
-
-	if (first_bootD) {
-		if (mdnie_lock)
-			return;
-	} else {
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-		first_bootD = 1;
-	}
 
 	if (mdnie_tun_state.negative) {
 		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
