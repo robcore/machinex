@@ -182,7 +182,7 @@ static inline int wiimote_cmd_acquire(struct wiimote_data *wdata)
 static inline void wiimote_cmd_set(struct wiimote_data *wdata, int cmd,
 								__u32 opt)
 {
-	INIT_COMPLETION(wdata->state.ready);
+	reinit_completion(&wdata->state.ready);
 	wdata->state.cmd = cmd;
 	wdata->state.opt = opt;
 }

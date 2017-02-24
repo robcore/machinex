@@ -68,7 +68,7 @@ static int timeriomem_rng_data_read(struct hwrng *rng, u32 *data)
 		timeriomem_rng_timer.expires = cur + delay;
 		timeriomem_rng_data->present = 0;
 
-		init_completion(&timeriomem_rng_data->completion);
+		reinit_completion(&timeriomem_rng_data->completion);
 		add_timer(&timeriomem_rng_timer);
 	}
 
