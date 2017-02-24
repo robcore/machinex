@@ -38,7 +38,7 @@ enum pm_qos_flags_status {
 #define PM_QOS_NETWORK_THROUGHPUT_DEFAULT_VALUE	0
 #define PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE	0
 #define PM_QOS_DVFS_LAT_DEFAULT_VALUE	(2000 * USEC_PER_SEC)
-#define PM_QOS_DEV_LAT_DEFAULT_VALUE		0
+#define PM_QOS_RESUME_LATENCY_DEFAULT_VALUE	0
 
 enum pm_qos_req_type {
 	PM_QOS_REQ_ALL_CORES = 0,
@@ -70,7 +70,7 @@ struct pm_qos_flags_request {
 };
 
 enum dev_pm_qos_req_type {
-	DEV_PM_QOS_LATENCY = 1,
+	DEV_PM_QOS_RESUME_LATENCY = 1,
 	DEV_PM_QOS_FLAGS,
 };
 
@@ -109,9 +109,9 @@ struct pm_qos_flags {
 };
 
 struct dev_pm_qos {
-	struct pm_qos_constraints latency;
+	struct pm_qos_constraints resume_latency;
 	struct pm_qos_flags flags;
-	struct dev_pm_qos_request *latency_req;
+	struct dev_pm_qos_request *resume_latency_req;
 	struct dev_pm_qos_request *flags_req;
 };
 
@@ -220,9 +220,9 @@ int dev_pm_qos_expose_flags(struct device *dev, s32 value);
 void dev_pm_qos_hide_flags(struct device *dev);
 int dev_pm_qos_update_flags(struct device *dev, s32 mask, bool set);
 
-static inline s32 dev_pm_qos_requested_latency(struct device *dev)
+static inline s32 dev_pm_qos_requested_resume_latency(struct device *dev)
 {
-	return dev->power.qos->latency_req->data.pnode.prio;
+	return dev->power.qos->resume_latency_req->data.pnode.prio;
 }
 
 static inline s32 dev_pm_qos_requested_flags(struct device *dev)
@@ -239,7 +239,7 @@ static inline void dev_pm_qos_hide_flags(struct device *dev) {}
 static inline int dev_pm_qos_update_flags(struct device *dev, s32 m, bool set)
 			{ return 0; }
 
-static inline s32 dev_pm_qos_requested_latency(struct device *dev) { return 0; }
+static inline s32 dev_pm_qos_requested_resume_latency(struct device *dev) { return 0; }
 static inline s32 dev_pm_qos_requested_flags(struct device *dev) { return 0; }
 #endif
 

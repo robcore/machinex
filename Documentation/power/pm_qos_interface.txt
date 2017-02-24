@@ -145,7 +145,7 @@ a per-device notification tree and a global notification tree.
 int dev_pm_qos_add_notifier(device, notifier):
 Adds a notification callback function for the device.
 The callback is called when the aggregated value of the device constraints list
-is changed.
+is changed (for resume latency device PM QoS only).
 
 int dev_pm_qos_remove_notifier(device, notifier):
 Removes the notification callback function for the device.
@@ -153,14 +153,9 @@ Removes the notification callback function for the device.
 int dev_pm_qos_add_global_notifier(notifier):
 Adds a notification callback function in the global notification tree of the
 framework.
-The callback is called when the aggregated value for any device is changed.
+The callback is called when the aggregated value for any device is changed
+(for resume latency device PM QoS only).
 
 int dev_pm_qos_remove_global_notifier(notifier):
 Removes the notification callback function from the global notification tree
 of the framework.
-
-
-From user mode:
-No API for user space access to the per-device latency constraints is provided
-yet - still under discussion.
-
