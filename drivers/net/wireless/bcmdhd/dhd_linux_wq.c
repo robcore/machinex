@@ -90,10 +90,6 @@ static inline void
 dhd_kfifo_free(struct kfifo *fifo)
 {
 	kfifo_free(fifo);
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 31))
-	/* FC11 releases the fifo memory */
-	kfree(fifo);
-#endif
 }
 
 /* deferred work functions */

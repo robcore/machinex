@@ -43,13 +43,9 @@
 #include <linux/fcntl.h>
 #include <linux/fs.h>
 #include <linux/ip.h>
-#include <linux/reboot.h>
-#include <linux/notifier.h>
 #include <net/addrconf.h>
-#ifdef ENABLE_ADAPTIVE_SCHED
 #include <linux/cpufreq.h>
 #include <linux/sched/rt.h>
-#endif /* ENABLE_ADAPTIVE_SCHED */
 
 #include <asm/uaccess.h>
 #include <asm/unaligned.h>
@@ -530,21 +526,21 @@ uint dhd_arp_mode = ARP_OL_AGENT | ARP_OL_PEER_AUTO_REPLY | ARP_OL_SNOOP;
 uint dhd_arp_mode = ARP_OL_AGENT | ARP_OL_PEER_AUTO_REPLY;
 #endif
 
-module_param(dhd_arp_mode, uint, 0644);
+module_param(dhd_arp_mode, uint, 0);
 #endif /* ARP_OFFLOAD_SUPPORT */
 
 /* Disable Prop tx */
 module_param(disable_proptx, int, 0644);
 /* load firmware and/or nvram values from the filesystem */
-module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0664);
-module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0664);
+module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
+module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0660);
 
 /* Watchdog interval */
 
 /* extend watchdog expiration to 2 seconds when DPC is running */
 #define WATCHDOG_EXTEND_INTERVAL (2000)
 
-uint dhd_watchdog_ms = 5;
+uint dhd_watchdog_ms = 10;
 module_param(dhd_watchdog_ms, uint, 0644);
 
 #if defined(DHD_DEBUG)
@@ -924,12 +920,7 @@ void dhd_enable_packet_filter(int value, dhd_pub_t *dhd)
 #ifdef PKT_FILTER_SUPPORT
 	int i;
 
-	DHD_ERROR(("%s: enter, value = %d\n", __FUNCTION__, value));
-
-	if ((dhd->op_mode & DHD_FLAG_HOSTAP_MODE) && value) {
-		DHD_ERROR(("%s: DHD_FLAG_HOSTAP_MODE\n", __FUNCTION__));
-		return;
-	}
+	DHD_TRACE(("%s: enter, value = %d\n", __FUNCTION__, value));
 	/* 1 - Enable packet filter, only allow unicast packet to send up */
 	/* 0 - Disable packet filter */
 	if (dhd_pkt_filter_enable && (!value ||
@@ -1001,19 +992,6 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 				/* Kernel suspended */
 				DHD_ERROR(("%s: force extra Suspend setting \n", __FUNCTION__));
 
-#ifdef SUPPORT_SENSORHUB
-			shub_msreq = 1;
-			if (dhd->info->shub_enable == 1) {
-				bcm_mkiovar("shub_msreq", (char *)&shub_msreq, 4,
-					iovbuf, sizeof(iovbuf));
-				if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR,
-					iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
-					DHD_ERROR(("%s Sensor Hub move/stop start: failed %d\n",
-						__FUNCTION__, ret));
-				}
-			}
-#endif /* SUPPORT_SENSORHUB */
-
 #ifndef SUPPORT_PM2_ONLY
 				dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)&power_mode,
 				                 sizeof(power_mode), TRUE, 0);
@@ -1080,21 +1058,6 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 #endif
 				/* Kernel resumed  */
 				DHD_ERROR(("%s: Remove extra suspend setting \n", __FUNCTION__));
-
-#ifdef SUPPORT_SENSORHUB
-				shub_msreq = 0;
-				if (dhd->info->shub_enable == 1) {
-					bcm_mkiovar("shub_msreq", (char *)&shub_msreq,
-						4, iovbuf, sizeof(iovbuf));
-					if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR,
-						iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
-							DHD_ERROR(("%s Sensor Hub move/stop stop:"
-								"failed %d\n", __FUNCTION__, ret));
-		}
-	}
-#endif /* SUPPORT_SENSORHUB */
-
-
 #ifdef DYNAMIC_SWOOB_DURATION
 				intr_width = 0;
 				bcm_mkiovar("bus:intr_width", (char *)&intr_width, 4,
@@ -1243,7 +1206,7 @@ dhd_timeout_expired(dhd_timeout_t *tmo)
 		init_waitqueue_head(&delay_wait);
 		add_wait_queue(&delay_wait, &wait);
 		set_current_state(TASK_INTERRUPTIBLE);
-		(void)schedule_timeout(1);
+		schedule_timeout(1);
 		remove_wait_queue(&delay_wait, &wait);
 		set_current_state(TASK_RUNNING);
 	}
@@ -1256,11 +1219,7 @@ dhd_net2idx(dhd_info_t *dhd, struct net_device *net)
 {
 	int i = 0;
 
-	if (!dhd) {
-		DHD_ERROR(("%s : DHD_BAD_IF return\n", __FUNCTION__));
-		return DHD_BAD_IF;
-	}
-
+	ASSERT(dhd);
 	while (i < DHD_MAX_IFS) {
 		if (dhd->iflist[i] && dhd->iflist[i]->net && (dhd->iflist[i]->net == net))
 			return i;
@@ -2468,16 +2427,14 @@ dhd_watchdog_thread(void *data)
 	/* This thread doesn't need any user-level access,
 	 * so get rid of all our resources
 	 */
-#ifdef ENABLE_ADAPTIVE_SCHED
 	if (dhd_watchdog_prio > 0) {
 		struct sched_param param;
 		param.sched_priority = (dhd_watchdog_prio < MAX_RT_PRIO)?
 			dhd_watchdog_prio:(MAX_RT_PRIO-1);
 		setScheduler(current, SCHED_FIFO, &param);
 	}
-#endif
 
-	while (1) {
+	while (1)
 		if (down_interruptible (&tsk->sema) == 0) {
 			unsigned long flags;
 			unsigned long jiffies_at_start = jiffies;
@@ -2511,7 +2468,6 @@ dhd_watchdog_thread(void *data)
 			dhd_os_sdunlock(&dhd->pub);
 		} else {
 			break;
-		}
 	}
 
 	complete_and_exit(&tsk->completed, 0);
@@ -2838,8 +2794,8 @@ dhd_sched_dpc(dhd_pub_t *dhdp)
 {
 	dhd_info_t *dhd = (dhd_info_t *)dhdp->info;
 
+	DHD_OS_WAKE_LOCK(dhdp);
 	if (dhd->thr_dpc_ctl.thr_pid >= 0) {
-		DHD_OS_WAKE_LOCK(dhdp);
 		/* If the semaphore does not get up,
 		* wake unlock should be done here
 		*/
@@ -3238,8 +3194,8 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	if (dhd->pub.hang_was_sent) {
 		DHD_ERROR(("%s: HANG was sent up earlier\n", __FUNCTION__));
 		DHD_OS_WAKE_LOCK_CTRL_TIMEOUT_ENABLE(&dhd->pub, DHD_EVENT_TIMEOUT_MS);
-		bcmerror = OSL_ERROR(BCME_DONGLE_DOWN);
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return OSL_ERROR(BCME_DONGLE_DOWN);
 	}
 
 	ifidx = dhd_net2idx(dhd, net);
@@ -3247,35 +3203,38 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 
 	if (ifidx == DHD_BAD_IF) {
 		DHD_ERROR(("%s: BAD IF\n", __FUNCTION__));
-		bcmerror = -1;
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return -1;
 	}
 
 #if defined(WL_WIRELESS_EXT)
 	/* linux wireless extensions */
 	if ((cmd >= SIOCIWFIRST) && (cmd <= SIOCIWLAST)) {
 		/* may recurse, do NOT lock */
-		bcmerror = wl_iw_ioctl(net, ifr, cmd);
-		goto exit;
+		ret = wl_iw_ioctl(net, ifr, cmd);
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return ret;
 	}
 #endif /* defined(WL_WIRELESS_EXT) */
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 4, 2)
 	if (cmd == SIOCETHTOOL) {
-		bcmerror = dhd_ethtool(dhd, (void*)ifr->ifr_data);
-		goto exit;
+		ret = dhd_ethtool(dhd, (void*)ifr->ifr_data);
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return ret;
 	}
 #endif /* LINUX_VERSION_CODE > KERNEL_VERSION(2, 4, 2) */
 
 	if (cmd == SIOCDEVPRIVATE+1) {
-		bcmerror = wl_android_priv_cmd(net, ifr, cmd);
+		ret = wl_android_priv_cmd(net, ifr, cmd);
 		dhd_check_hang(net, &dhd->pub, ret);
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return ret;
 	}
 
 	if (cmd != SIOCDEVPRIVATE) {
-		bcmerror = -EOPNOTSUPP;
-		goto exit;
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return -EOPNOTSUPP;
 	}
 
 	memset(&ioc, 0, sizeof(ioc));
@@ -3345,7 +3304,6 @@ done:
 	if (local_buf)
 		MFREE(dhd->pub.osh, local_buf, buflen+1);
 
-exit:
 	DHD_OS_WAKE_UNLOCK(&dhd->pub);
 
 	return OSL_ERROR(bcmerror);
@@ -3520,8 +3478,7 @@ static int dhd_interworking_enable(dhd_pub_t *dhd)
 	int ret = BCME_OK;
 
 	bcm_mkiovar("interworking", (char *)&enable, sizeof(enable), iovbuf, sizeof(iovbuf));
-	ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-	if (ret < 0) {
+	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
 		DHD_ERROR(("%s: enableing interworking failed, ret=%d\n", __FUNCTION__, ret));
 	}
 
@@ -3530,8 +3487,8 @@ static int dhd_interworking_enable(dhd_pub_t *dhd)
 
 		/* set WNM capabilities */
 		bcm_mkiovar("wnm", (char *)&cap, sizeof(cap), iovbuf, sizeof(iovbuf));
-		ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-		if (ret < 0) {
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR,
+			iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
 			DHD_ERROR(("%s: failed to set WNM capabilities, ret=%d\n",
 				__FUNCTION__, ret));
 		}
@@ -3729,8 +3686,7 @@ dhd_open(struct net_device *net)
 		if (dhd->pub.busstate != DHD_BUS_DATA) {
 
 			/* try to bring up bus */
-			ret = dhd_bus_start(&dhd->pub);
-			if (ret) {
+			if ((ret = dhd_bus_start(&dhd->pub)) != 0) {
 				DHD_ERROR(("%s: failed with code %d\n", __FUNCTION__, ret));
 				ret = -1;
 				goto exit;
@@ -3762,12 +3718,11 @@ dhd_open(struct net_device *net)
 	netif_start_queue(net);
 	dhd->pub.up = 1;
 
-	OLD_MOD_INC_USE_COUNT;
-
 #ifdef BCMDBGFS
 	dhd_dbg_init(&dhd->pub);
 #endif
 
+	OLD_MOD_INC_USE_COUNT;
 exit:
 	if (ret)
 		dhd_stop(net);
@@ -4219,13 +4174,12 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	memcpy(netdev_priv(net), &dhd, sizeof(dhd));
 
 #if defined(CONFIG_PM_SLEEP)
+	dhd->pm_notifier.notifier_call = dhd_pm_callback;
+	dhd->pm_notifier.priority = 10;
 	if (!dhd_pm_notifier_registered) {
 		dhd_pm_notifier_registered = TRUE;
-		dhd->pm_notifier.notifier_call = dhd_pm_callback;
-		dhd->pm_notifier.priority = 10;
 		register_pm_notifier(&dhd->pm_notifier);
 	}
-
 #endif /* CONFIG_PM_SLEEP */
 
 #if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
@@ -4413,7 +4367,7 @@ bool dhd_validate_chipid(dhd_pub_t *dhdp)
 	else
 #endif /* SUPPORT_MULTIPLE_REVISION */
 
-	return true; //MACHINEX override. Our chipid is ALWAYS true.
+	return config_chipid ? (config_chipid == chipid) : FALSE;
 }
 #endif /* CUSTOMER_HW4 */
 
@@ -4456,10 +4410,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		dhd_os_sdunlock(dhdp);
 		return ret;
 	}
-#if defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) || defined(BCMPCIE_OOB_HOST_WAKE)
-#if defined(BCMPCIE_OOB_HOST_WAKE)
-	dhd_os_sdunlock(dhdp);
-#endif /* BCMPCIE_OOB_HOST_WAKE */
+#if defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID)
 	/* Host registration for OOB interrupt */
 	if (dhd_bus_oob_intr_register(dhdp)) {
 		/* deactivate timer and wait for the handler to finish */
@@ -4475,15 +4426,9 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		return -ENODEV;
 	}
 
-#if defined(BCMPCIE_OOB_HOST_WAKE)
-	dhd_os_sdlock(dhdp);
-	dhd_bus_oob_intr_set(dhdp, TRUE);
-#else
 	/* Enable oob at firmware */
 	dhd_enable_oob_intr(dhd->pub.bus, TRUE);
-#endif /* BCMPCIE_OOB_HOST_WAKE */
-#endif /* OOB_INTR_ONLY || BCMSPI_ANDROID || BCMPCIE_OOB_HOST_WAKE */
-
+#endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
 
 	/* If bus is not ready, can't come up */
 	if (dhd->pub.busstate != DHD_BUS_DATA) {
@@ -4701,9 +4646,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #if defined(CUSTOM_AMPDU_MPDU)
 	uint32 ampdu_mpdu = 0;
 #endif
-#ifdef SUPPORT_SENSORHUB
-	int32 shub_enable = 0;
-#endif /* SUPPORT_SENSORHUB */
+
 #ifdef PROP_TXSTATUS
 	int wlfc_enable = TRUE;
 #ifndef DISABLE_11N
@@ -6331,7 +6274,7 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 	flags = dhd_os_spin_lock(pub);
 
 	DHD_OS_WD_WAKE_LOCK(pub);
-	dhd_os_spin_unlock(pub, flags);
+	dhd_os_spin_lock(pub, flags);
 
 	/* don't start the wd until fw is loaded */
 	if (pub->busstate == DHD_BUS_DOWN) {
@@ -6494,14 +6437,8 @@ dhd_os_tcpacklock(dhd_pub_t *pub)
 	dhd_info_t *dhd;
 
 	dhd = (dhd_info_t *)(pub->info);
+	spin_lock_bh(&dhd->tcpack_lock);
 
-	if (dhd) {
-#ifdef BCMSDIO
-		spin_lock_bh(&dhd->tcpack_lock);
-#else
-		spin_lock_irqsave(&dhd->tcpack_lock, flags);
-#endif /* BCMSDIO */
-	}
 }
 
 void
@@ -6510,14 +6447,7 @@ dhd_os_tcpackunlock(dhd_pub_t *pub)
 	dhd_info_t *dhd;
 
 	dhd = (dhd_info_t *)(pub->info);
-
-	if (dhd) {
-#ifdef BCMSDIO
-		spin_lock_bh(&dhd->tcpack_lock);
-#else
-		spin_unlock_irqrestore(&dhd->tcpack_lock, flags);
-#endif /* BCMSDIO */
-	}
+	spin_unlock_bh(&dhd->tcpack_lock);
 }
 #endif /* DHDTCPACK_SUPPRESS */
 
@@ -7222,7 +7152,7 @@ dhd_get_pend_8021x_cnt(dhd_info_t *dhd)
 	return (atomic_read(&dhd->pend_8021x_cnt));
 }
 
-#define MAX_WAIT_FOR_8021X_TX	100
+#define MAX_WAIT_FOR_8021X_TX	50
 
 int
 dhd_wait_pend8021x(struct net_device *dev)
@@ -7254,7 +7184,7 @@ int
 write_to_file(dhd_pub_t *dhd, uint8 *buf, int size)
 {
 	int ret = 0;
-	struct file *fp = NULL;
+	struct file *fp;
 	mm_segment_t old_fs;
 	loff_t pos = 0;
 
@@ -7263,9 +7193,10 @@ write_to_file(dhd_pub_t *dhd, uint8 *buf, int size)
 	set_fs(KERNEL_DS);
 
 	/* open file to write */
-	fp = filp_open("/tmp/mem_dump", O_WRONLY|O_CREAT, 0644);
-	if (IS_ERR(fp)) {
-		ret = PTR_ERR(fp);
+	fp = filp_open("/tmp/mem_dump", O_WRONLY|O_CREAT, 0640);
+	if (!fp) {
+		printf("%s: open file error\n", __FUNCTION__);
+		ret = -1;
 		goto exit;
 	}
 
@@ -7273,15 +7204,13 @@ write_to_file(dhd_pub_t *dhd, uint8 *buf, int size)
 	fp->f_op->write(fp, buf, size, &pos);
 
 exit:
-
+	/* free buf before return */
+	MFREE(dhd->osh, buf, size);
 	/* close file before return */
-	if (!ret)
+	if (fp)
 		filp_close(fp, current->files);
 	/* restore previous address limit */
 	set_fs(old_fs);
-
-	/* free buf before return */
-	MFREE(dhd->osh, buf, size);
 
 	return ret;
 }
@@ -7504,7 +7433,7 @@ int dhd_os_wd_wake_unlock(dhd_pub_t *pub)
 
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
-		if (dhd->wakelock_wd_counter) {
+		if (dhd->wakelock_wd_counter > 0) {
 			dhd->wakelock_wd_counter = 0;
 			if (!dhd->waive_wakelock) {
 #ifdef CONFIG_HAS_WAKELOCK

@@ -845,8 +845,8 @@ bcmstrstr(const char *haystack, const char *needle)
 	if ((haystack == NULL) || (needle == NULL))
 		return DISCARD_QUAL(haystack, char);
 
-	nlen = (int)strlen(needle);
-	len = (int)strlen(haystack) - nlen + 1;
+	nlen = strlen(needle);
+	len = strlen(haystack) - nlen + 1;
 
 	for (i = 0; i < len; i++)
 		if (memcmp(needle, &haystack[i], nlen) == 0)
@@ -1323,7 +1323,6 @@ bcmerrorstr(int bcmerror)
 
 
 /* iovar table lookup */
-/* could mandate sorted tables and do a binary search */
 const bcm_iovar_t*
 bcm_iovar_lookup(const bcm_iovar_t *table, const char *name)
 {
@@ -1805,9 +1804,7 @@ bcm_parse_tlvs(void *buf, int buflen, uint key)
 	bcm_tlv_t *elt;
 	int totlen;
 
-	if ((elt = (bcm_tlv_t*)buf) == NULL) {
-		return NULL;
-	}
+	elt = (bcm_tlv_t*)buf;
 	totlen = buflen;
 
 	/* find tagged parameter */
@@ -1974,7 +1971,7 @@ prhex(const char *msg, uchar *buf, uint nbytes)
 	p = line;
 	for (i = 0; i < nbytes; i++) {
 		if (i % 16 == 0) {
-			nchar = snprintf(p, len, "  %04x: ", i);	/* line prefix */
+			nchar = snprintf(p, len, "  %04d: ", i);	/* line prefix */
 			p += nchar;
 			len -= nchar;
 		}
@@ -2065,7 +2062,7 @@ printbig(char *buf)
 	uint len, max_len;
 	char c;
 
-	len = (uint)strlen(buf);
+	len = strlen(buf);
 
 	max_len = BUFSIZE_TODUMP_ATONCE;
 
@@ -2116,7 +2113,7 @@ bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint buflen)
 {
 	uint len;
 
-	len = (uint)strlen(name) + 1;
+	len = strlen(name) + 1;
 
 	if ((len + datalen) > buflen)
 		return 0;
@@ -3004,7 +3001,7 @@ bcm_mwbmap_audit(struct bcm_mwbmap * mwbmap_hdl)
 		}
 	}
 
-	ASSERT((int)free_cnt == mwbmap_p->ifree);
+	ASSERT(free_cnt == mwbmap_p->ifree);
 }
 /* END : Multiword bitmap based 64bit to Unique 32bit Id allocator. */
 
