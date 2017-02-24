@@ -1821,7 +1821,7 @@ static int acl_control(int bl_level)
 		samsung_brightness_acl_ref[1] = 0x02; /*ACL off*/
 	}
 
-	return 0;
+	return 1;
 }
 
 static int cmd_set_change(int cmd_set, int panel_id)

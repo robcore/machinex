@@ -60,7 +60,7 @@ struct pm_gpio gpio_get_param = {
 
 unsigned int Lpanel_colors;
 extern void panel_load_colors(unsigned int val);
-int acl_status;
+int acl_override;
 static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;

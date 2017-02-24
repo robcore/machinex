@@ -1956,11 +1956,11 @@ static int brightness_control(int bl_level)
 static int acl_control(int bl_level)
 {
 	if (acl_override == 0)
-		magna_brightness_acl_ref[1] = 0x00; /*RE low, ACL 40%*/
+		magna_brightness_acl_ref[1] = 0x00;
 	else if (acl_override == 1)
 		magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
 
-	return 0;
+	return 1;
 }
 
 static int cmd_set_change(int cmd_set, int panel_id)
