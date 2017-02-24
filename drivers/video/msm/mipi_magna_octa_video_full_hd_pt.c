@@ -15,13 +15,11 @@
 #include "msm_fb_panel.h"
 #include "mipi_dsi.h"
 #include "mipi_samsung_octa.h"
-#include "mdp4.h"
 
 #define MAGNA_MANUAL_OTP_LOADING
 
 static struct msm_panel_info pinfo;
 static struct mipi_panel_data mipi_pd;
-extern int acl_override;
 
 static int lux_tbl[] = {
 	10, 11, 12, 13, 14,
@@ -1869,10 +1867,9 @@ static int brightness_control(int bl_level)
 	memcpy(magna_brightness_acl_pre, magna_brightness_acl_ref,
 					sizeof(magna_brightness_acl_ref));
 
-	if (acl_override == 0)
+	if (get_auto_brightness() == 6) {
 		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	else if (acl_override == 1)
-		magna_brightness_acl_ref[1] = 0x02;
+	}
 
 	if (memcmp(magna_brightness_acl_pre, magna_brightness_acl_ref,
 				sizeof(magna_brightness_acl_ref))) {
@@ -1955,10 +1952,11 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-	if (acl_override == 0)
-		magna_brightness_acl_ref[1] = 0x00;
-	else if (acl_override == 1)
-		magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
+
+	if (get_auto_brightness() == 6)
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	else if (get_auto_brightness() == 0)
+		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
 
 	return 1;
 }

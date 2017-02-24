@@ -137,8 +137,6 @@ struct mipi_panel_data {
 
 };
 
-extern int acl_override;
-
 int get_lcd_attached(void);
 
 unsigned char get_auto_brightness(void);

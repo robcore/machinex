@@ -15,11 +15,9 @@
 #include "msm_fb_panel.h"
 #include "mipi_dsi.h"
 #include "mipi_samsung_octa.h"
-#include "mdp4.h"
 
 static struct msm_panel_info pinfo;
 static struct mipi_panel_data mipi_pd;
-extern int acl_override;
 
 static int lux_tbl[] = {
 	10, 11, 12, 13, 14,
@@ -1813,12 +1811,15 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-	if (acl_override == 0) {
+	/* acl control *************************************************************************/
+	/* 0xB5 setting */
+	if (get_auto_brightness() == 6)
 		samsung_brightness_acl_cont_default[1] = 0x00;
+
+	/* write power saving *****************************************************************/
+	/* 0x55 setting */
+	if (get_auto_brightness() == 0) {
 		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else if (acl_override == 1) {
-		samsung_brightness_acl_cont_default[1] = 0x02;
-		samsung_brightness_acl_ref[1] = 0x02; /*ACL off*/
 	}
 
 	return 1;
