@@ -220,6 +220,8 @@ dhd_dump(dhd_pub_t *dhdp, char *buf, int buflen)
 
 	struct bcmstrbuf b;
 	struct bcmstrbuf *strbuf = &b;
+	if (!dhdp || !dhdp->prot || !buf)
+		return BCME_ERROR;
 
 	bcm_binit(strbuf, buf, buflen);
 

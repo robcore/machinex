@@ -101,19 +101,11 @@ dhdcdc_cmplt(dhd_pub_t *dhd, uint32 id, uint32 len)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
-#if defined(CUSTOMER_HW4)
-	DHD_OS_WAKE_LOCK(dhd);
-#endif /* OEM_ANDROID && CUSTOMER_HW4 */
-
 	do {
 		ret = dhd_bus_rxctl(dhd->bus, (uchar*)&prot->msg, cdc_len);
 		if (ret < 0)
 			break;
 	} while (CDC_IOC_ID(ltoh32(prot->msg.flags)) != id);
-
-#if defined(CUSTOMER_HW4)
-	DHD_OS_WAKE_UNLOCK(dhd);
-#endif /* OEM_ANDROID && CUSTOMER_HW4 */
 
 	return ret;
 }
@@ -248,6 +240,13 @@ dhdcdc_set_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uint8
 			goto done;
 		}
 #endif /* CONFIG_CONTROL_PM */
+#if defined(WLAIBSS)
+		if (dhd->op_mode == DHD_FLAG_IBSS_MODE) {
+			DHD_ERROR(("%s: SET PM ignored for IBSS!(Requested:%d)\n",
+				__FUNCTION__, *(char *)buf));
+			goto done;
+		}
+#endif /* WLAIBSS */
 		DHD_ERROR(("%s: SET PM to %d\n", __FUNCTION__, *(char *)buf));
 	}
 #endif /* CUSTOMER_HW4 */
@@ -371,6 +370,8 @@ dhd_prot_iovar_op(dhd_pub_t *dhdp, const char *name,
 void
 dhd_prot_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 {
+	if (!dhdp || !dhdp->prot)
+		return;
 	bcm_bprintf(strbuf, "Protocol CDC: reqid %d\n", dhdp->prot->reqid);
 #ifdef PROP_TXSTATUS
 	dhd_wlfc_dump(dhdp, strbuf);
