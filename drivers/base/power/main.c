@@ -589,7 +589,7 @@ static void async_resume_noirq(void *data, async_cookie_t cookie)
 	struct device *dev = (struct device *)data;
 	int error;
 
-	error = device_resume_noirq(dev, pm_transition);
+	error = device_resume_noirq(dev, pm_transition, true);
 	if (error)
 		pm_dev_err(dev, pm_transition, " noirq", error);
 	put_device(dev);
@@ -625,7 +625,7 @@ static void dpm_resume_noirq(pm_message_t state)
 
 		if (!is_async(dev)) {
 			int error;
-			error = device_resume_noirq(dev, state);
+			error = device_resume_noirq(dev, state, false);
 			if (error) {
 				suspend_stats.failed_resume_noirq++;
 				dpm_save_failed_step(SUSPEND_RESUME_NOIRQ);
