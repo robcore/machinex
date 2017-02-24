@@ -82,7 +82,7 @@ static int omap_target(struct cpufreq_policy *policy,
 	unsigned int i;
 	int r, ret = 0;
 	struct cpufreq_freqs freqs;
-	struct opp *opp;
+	struct dev_pm_opp *opp;
 	unsigned long freq, volt = 0, volt_old = 0, tol = 0;
 
 	if (!freq_table) {
