@@ -612,7 +612,7 @@ EXPORT_SYMBOL_GPL(dev_pm_qos_expose_latency_limit);
 
 static void __dev_pm_qos_hide_latency_limit(struct device *dev)
 {
-	if (!IS_ERR_OR_NULL(dev->power.qos) && dev->power.qos->latency_req) {
+	if (!IS_ERR_OR_NULL(dev->power.qos) && dev->power.qos->resume_latency_req) {
 		pm_qos_sysfs_remove_resume_latency(dev);
 		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_RESUME_LATENCY);
 	}
