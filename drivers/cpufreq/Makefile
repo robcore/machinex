@@ -81,6 +81,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_WHISKYACTIVE)	+= cpufreq_whiskyactive.o
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 
 obj-$(CONFIG_GENERIC_CPUFREQ_CPU0)	+= cpufreq-cpu0.o
+obj-$(CONFIG_PM_OPP)			+= cpufreq_opp.o
 
 ##################################################################################
 # x86 drivers.
