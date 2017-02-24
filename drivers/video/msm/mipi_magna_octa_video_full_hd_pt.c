@@ -15,12 +15,13 @@
 #include "msm_fb_panel.h"
 #include "mipi_dsi.h"
 #include "mipi_samsung_octa.h"
+#include "mdp4.h"
 
 #define MAGNA_MANUAL_OTP_LOADING
 
 static struct msm_panel_info pinfo;
 static struct mipi_panel_data mipi_pd;
-extern unsigned int acl_override;
+extern int acl_override;
 
 static int lux_tbl[] = {
 	10, 11, 12, 13, 14,
@@ -1346,10 +1347,7 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
-		if (!acl_override)
-			backlightlevel = GAMMA_152CD;
-		else
-			backlightlevel = GAMMA_300CD;
+		backlightlevel = GAMMA_300CD;
 		break;
 	}
 
@@ -1828,22 +1826,12 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (!acl_override) {
-		if (mipi_pd.first_bl_hbm_psre  && (get_auto_brightness() >= 6)) {
-			brightness_packet[cmd_size].payload =
-					magna_brightness_write_als;
-			brightness_packet[cmd_size].dlen =
-					sizeof(magna_brightness_write_als);
-			cmd_size++;
-		}
-	} else {
-		if (get_auto_brightness() >= 6) {
-			brightness_packet[cmd_size].payload =
-					magna_brightness_write_als;
-			brightness_packet[cmd_size].dlen =
-					sizeof(magna_brightness_write_als);
-			cmd_size++;
-		}
+	if (get_auto_brightness() >= 6) {
+		brightness_packet[cmd_size].payload =
+				magna_brightness_write_als;
+		brightness_packet[cmd_size].dlen =
+				sizeof(magna_brightness_write_als);
+		cmd_size++;
 	}
 
 	/* PSRE MTP *************************************************************************/
@@ -1881,15 +1869,10 @@ static int brightness_control(int bl_level)
 	memcpy(magna_brightness_acl_pre, magna_brightness_acl_ref,
 					sizeof(magna_brightness_acl_ref));
 
-	if (!acl_override) {
-		if (get_auto_brightness() == 6)
-			magna_brightness_acl_ref[1] = 0x42; /*RE low, ACL 40%*/
-		else if (mipi_pd.acl_status) 
-			magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
-		else
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else
+	if (acl_override == 0)
 		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	else if (acl_override == 1)
+		magna_brightness_acl_ref[1] = 0x02;
 
 	if (memcmp(magna_brightness_acl_pre, magna_brightness_acl_ref,
 				sizeof(magna_brightness_acl_ref))) {
@@ -1972,17 +1955,12 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-	if (!acl_override) {
-		if (get_auto_brightness() == 6)
-			magna_brightness_acl_ref[1] = 0x42; /*RE low, ACL 40%*/
-		else if (mipi_pd.acl_status) 
-			magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
-		else
-			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	} else
-		magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	if (acl_override == 0)
+		magna_brightness_acl_ref[1] = 0x00; /*RE low, ACL 40%*/
+	else if (acl_override == 1)
+		magna_brightness_acl_ref[1] = 0x02; /*ACL 40%*/
 
-	return 1;
+	return 0;
 }
 
 static int cmd_set_change(int cmd_set, int panel_id)

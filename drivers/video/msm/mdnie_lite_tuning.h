@@ -130,5 +130,6 @@ int is_cabc_on ( void );
 #endif
 
 void coordinate_tunning(int x, int y);
+extern unsigned int mdnie_lock;
 
 #endif /*_MDNIE_LITE_TUNING_H_*/

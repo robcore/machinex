@@ -137,7 +137,7 @@ struct mipi_panel_data {
 
 };
 
-extern unsigned int acl_override;
+extern int acl_override;
 
 int get_lcd_attached(void);
 

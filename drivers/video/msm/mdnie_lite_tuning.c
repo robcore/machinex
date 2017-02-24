@@ -67,7 +67,7 @@ static struct mipi_samsung_driver_data *mdnie_msd;
 #endif
 
 /*robs master switch hook*/
-static unsigned int mdnie_lock;
+unsigned int mdnie_lock;
 #define MDNIE_LITE_TUN_DEBUG
 
 #ifdef MDNIE_LITE_TUN_DEBUG

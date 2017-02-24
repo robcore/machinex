@@ -60,7 +60,7 @@ struct pm_gpio gpio_get_param = {
 
 unsigned int Lpanel_colors;
 extern void panel_load_colors(unsigned int val);
-unsigned int acl_override = 0;
+int acl_status;
 static struct mipi_samsung_driver_data msd;
 static int lcd_attached = 1;
 struct mutex dsi_tx_mutex;
@@ -546,7 +546,8 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 
 	/* TO set default temperature value 25 degree*/
 	msd.mpd->temperature_value = 25;
-
+	msd.mpd->acl_status = 0;
+	Lpanel_colors = 2;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_DISABLE, false);
 	smart_dimming_init(&(msd.mpd->smart_se6e8fa));
 
@@ -627,8 +628,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	if (get_auto_brightness() >= 6) {
 		msd.mpd->first_bl_hbm_psre = 1;
-		if (acl_override == 1)
-			msd.dstat.auto_brightness = 6;
+		msd.dstat.auto_brightness = 6;
 		}
 #ifdef CONFIG_SEC_DEBUG_MDP
 	sec_debug_mdp_reset_value();
@@ -949,7 +949,7 @@ static ssize_t mipi_samsung_disp_acl_show(struct device *dev,
 {
 	int rc;
 
-	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", msd.mpd->acl_status);
+	rc = sprintf(buf, "%d\n", msd.mpd->acl_status);
 
 	return rc;
 }
@@ -962,24 +962,55 @@ static ssize_t mipi_samsung_disp_acl_store(struct device *dev,
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
 	if (sysfs_streq(buf, "1"))
-		msd.mpd->acl_status = true;
+		msd.mpd->acl_status = 1;
 	else if (sysfs_streq(buf, "0"))
-		msd.mpd->acl_status = false;
-	else
+		msd.mpd->acl_status = 0;
+	else {
 		return size;
+	}
 
-
-	if (mfd->panel_power_on) {
-		if (msd.mpd->acl_control(mfd->bl_level)) {
-			if (!acl_override)
-				mipi_samsung_disp_send_cmd(mfd,
-							PANEL_ACL_CONTROL, true);
-		}
+	if ((mfd->panel_power_on) && (msd.mpd->acl_status == 1)) {
+		if (msd.mpd->acl_control(mfd->bl_level))
+			mipi_samsung_disp_send_cmd(mfd,
+						PANEL_ACL_CONTROL, true);
+	} else if ((mfd->panel_power_on) && (msd.mpd->acl_status == 0)) {
+		if (msd.mpd->acl_control(mfd->bl_level))
+			mipi_samsung_disp_send_cmd(mfd,
+						PANEL_ACL_CONTROL, false);
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
 
 	pr_info("%s : acl_status (%d) siop_status (%d)",
 			__func__, msd.mpd->acl_status, msd.mpd->siop_status);
+
+	return size;
+}
+
+unsigned int dummy_acl;
+
+static ssize_t mipi_samsung_disp_fake_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	int rc;
+
+	rc = sprintf(buf, "%d\n", dummy_acl);
+
+	return rc;
+}
+static ssize_t mipi_samsung_disp_fake_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	int dummy;
+
+	if (sysfs_streq(buf, "1"))
+		dummy = 1;
+	else if (sysfs_streq(buf, "0"))
+		dummy = 0;
+	else {
+		return size;
+	}
+	
+	dummy_acl = dummy;
 
 	return size;
 }
@@ -1010,14 +1041,14 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 		return size;
 	}
 
-	if (mfd->panel_power_on) {
-		if (msd.mpd->acl_control(mfd->bl_level)) {
-			if (!acl_override)
-				mipi_samsung_disp_send_cmd(mfd,
-							PANEL_ACL_CONTROL, true);
-			else
-				pr_debug("ACL Hijacked.\n");
-		}
+	if ((mfd->panel_power_on) && (msd.mpd->acl_status == 1)) {
+		if (msd.mpd->acl_control(mfd->bl_level))
+			mipi_samsung_disp_send_cmd(mfd,
+						PANEL_ACL_CONTROL, true);
+	} else if ((mfd->panel_power_on) && (msd.mpd->acl_status == 0)) {
+		if (msd.mpd->acl_control(mfd->bl_level))
+			mipi_samsung_disp_send_cmd(mfd,
+						PANEL_ACL_CONTROL, false);
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
 
@@ -1238,17 +1269,23 @@ static DEVICE_ATTR(lcd_power, S_IRUGO | S_IWUSR,
 		mipi_samsung_disp_get_power,
 		mipi_samsung_disp_set_power);
 static DEVICE_ATTR(lcd_type, S_IRUGO, mipi_samsung_disp_lcdtype_show, NULL);
+
 static DEVICE_ATTR(window_type, S_IRUGO,
 			mipi_samsung_disp_windowtype_show, NULL);
 
 static DEVICE_ATTR(auto_brightness, 0644,
 		mipi_samsung_auto_brightness_show,
 		mipi_samsung_auto_brightness_store);
-static DEVICE_ATTR(power_reduce, S_IRUGO | S_IWUSR | S_IWGRP,
+
+static DEVICE_ATTR(acl_status, 0644,
 			mipi_samsung_disp_acl_show,
 			mipi_samsung_disp_acl_store);
 
-static DEVICE_ATTR(siop_enable, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(power_reduce, 0644,
+			mipi_samsung_disp_fake_show,
+			mipi_samsung_disp_fake_store);
+
+static DEVICE_ATTR(siop_enable, 0644,
 			mipi_samsung_disp_siop_show,
 			mipi_samsung_disp_siop_store);
 
@@ -1258,7 +1295,7 @@ static DEVICE_ATTR(machinex_bl_lock, 0644,
 			mipi_samsung_disp_machinex_bl_lock_store);
 #endif
 
-static DEVICE_ATTR(backlight, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(backlight, 0644,
 			mipi_samsung_disp_backlight_show,
 			mipi_samsung_disp_backlight_store);
 
@@ -1503,37 +1540,8 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 	return size;
 }
 
-static DEVICE_ATTR(panel_colors, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(panel_colors, 0644,
 			panel_colors_show, panel_colors_store);
-
-static ssize_t acl_override_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", acl_override);
-}
-
-static ssize_t acl_override_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
-{
-	int ret;
-	unsigned int value;
-
-	ret = sscanf(buf, "%d\n", &value);
-	if (ret != 1)
-		return -EINVAL;
-
-	if (value == 0)
-		value = 0;
-	else if (value >= 1)
-		value = 1;
-
-	acl_override = value;
-
-	msd.mpd->reset_bl_level();
-
-	return size;
-}
-
-static DEVICE_ATTR(acl_override, 0644,
-			acl_override_show, acl_override_store);
 
 static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 {
@@ -1632,6 +1640,13 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 	}
 
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
+					&dev_attr_acl_status.attr);
+	if (ret) {
+		pr_info("sysfs create fail-%s\n",
+				dev_attr_acl_status.attr.name);
+	}
+
+	ret = sysfs_create_file(&lcd_device->dev.kobj,
 					&dev_attr_siop_enable.attr);
 	if (ret) {
 		pr_info("sysfs create fail-%s\n",
@@ -1717,13 +1732,6 @@ static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_panel_colors.attr.name);
 	}
 
-	ret = sysfs_create_file(&lcd_device->dev.kobj,
-			&dev_attr_acl_override.attr);
-	if (ret) {
-		pr_info("sysfs create fail-%s\n",
-				dev_attr_acl_override.attr.name);
-	}
-
 	printk(KERN_INFO "[lcd] mipi_samsung_disp_probe end\n");
 
 	return 0;
@@ -1752,6 +1760,7 @@ int mipi_samsung_octa_device_register(struct msm_panel_info *pinfo,
 {
 	struct platform_device *pdev = NULL;
 	int ret = 0;
+	int acl_override;
 
 	printk(KERN_INFO "[lcd] mipi_samsung_device_register start\n");
 
@@ -1789,6 +1798,7 @@ int mipi_samsung_octa_device_register(struct msm_panel_info *pinfo,
 		goto err_device_put;
 	}
 
+	acl_override = msd.mpd->acl_status;
 	printk(KERN_INFO "[lcd] mipi_samsung_device_register end\n");
 
 	return ret;
@@ -1847,8 +1857,6 @@ static int __init mipi_samsung_disp_init(void)
 
 	mipi_dsi_buf_alloc(&msd.samsung_tx_buf, DSI_BUF_SIZE);
 	mipi_dsi_buf_alloc(&msd.samsung_rx_buf, DSI_BUF_SIZE);
-
-	Lpanel_colors = 2;
 
 	return platform_driver_register(&this_driver);
 }
