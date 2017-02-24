@@ -299,23 +299,24 @@ void free_tun_cmd(void)
 	memset(tune_data2, 0, MDNIE_TUNE_SECOND_SIZE);
 }
 
+static int first_bootA;
+
 void sending_tuning_cmd(void)
 {
 	struct msm_fb_data_type *mfd;
 	struct dcs_cmd_req cmdreq;
-	int first_boot = 0;
+	static int first_bootA = 0;
 #if defined (CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT)
 		if(get_lcd_attached() == 0)
 			return;
 #endif
-	if (!first_boot)
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-	else {
+	if (first_bootA) {
 		if (mdnie_lock)
 			return;
+	} else {
+		pr_info("MX - MDNIE - Lock disabled for initial bootup\n");
+		first_bootA = 1;
 	}
-
-	first_boot = 1;
 
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
@@ -350,11 +351,11 @@ void sending_tuning_cmd(void)
 	}
 }
 
+static int first_bootB = 0;
 void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 {
 	struct msm_fb_data_type *mfd;
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
-	int first_boot = 0;
 
 	if (!mfd) {
 		DPRINT("[ERROR] mfd is null!\n");
@@ -364,14 +365,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
 
-	if (!first_boot)
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-	else {
+	if (first_bootB) {
 		if (mdnie_lock)
 			return;
+	} else {
+		pr_info("MX - MDNIE - Lock disabled for initial bootup");
+		first_bootB = 1;
 	}
-
-	first_boot = 1;
 
 	if (!mdnie_tun_state.mdnie_enable)
 		return;
@@ -798,19 +798,19 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 }
 
+static int first_bootC;
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 {
-	int first_boot = 0;
+	static int first_bootC = 0;
 	DPRINT("mDNIe_Set_Negative START\n");
 
-	if (!first_boot)
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-	else {
+	if (first_bootC) {
 		if (mdnie_lock)
 			return;
+	} else {
+		pr_info("MX - MDNIE - Lock disabled for initial bootup");
+		first_bootC = 1;
 	}
-
-	first_boot = 1;
 
 	if (negative == 0) {
 		DPRINT("Negative mode(%d) -> reset mode(%d)\n",
@@ -1105,19 +1105,19 @@ static ssize_t negative_store(struct device *dev,
 	return size;
 }
 
+static int first_bootD;
 void is_negative_on(void)
 {
-	int first_boot;
+	static int first_bootD;
 	DPRINT("is negative Mode On = %d\n", mdnie_tun_state.negative);
 
-	if (!first_boot)
-		pr_info("MX - MDNIE - Lock disabled for initial bootup");
-	else {
+	if (first_bootD) {
 		if (mdnie_lock)
 			return;
+	} else {
+		pr_info("MX - MDNIE - Lock disabled for initial bootup");
+		first_bootD = 1;
 	}
-
-	first_boot = 1;
 
 	if (mdnie_tun_state.negative) {
 		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
