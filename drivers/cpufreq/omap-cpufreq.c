@@ -200,7 +200,7 @@ done:
 static inline void freq_table_free(void)
 {
 	if (atomic_dec_and_test(&freq_table_users))
-		opp_free_cpufreq_table(mpu_dev, &freq_table);
+		dev_pm_opp_free_cpufreq_table(mpu_dev, &freq_table);
 }
 
 static int omap_cpu_init(struct cpufreq_policy *policy)
