@@ -7339,7 +7339,7 @@ static void __exit msm_vfe32_exit_module(void)
 	platform_driver_unregister(&vfe32_driver);
 }
 
-module_init(msm_vfe32_init_module);
+late_initcall(msm_vfe32_init_module);
 module_exit(msm_vfe32_exit_module);
 MODULE_DESCRIPTION("VFE 3.2 driver");
 MODULE_LICENSE("GPL v2");
