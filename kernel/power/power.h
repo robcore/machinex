@@ -2,7 +2,6 @@
 #include <linux/suspend_ioctls.h>
 #include <linux/utsname.h>
 #include <linux/freezer.h>
-#include <linux/compiler.h>
 
 struct swsusp_info {
 	struct new_utsname	uts;
@@ -12,7 +11,7 @@ struct swsusp_info {
 	unsigned long		image_pages;
 	unsigned long		pages;
 	unsigned long		size;
-} __aligned(PAGE_SIZE);
+} __attribute__((aligned(PAGE_SIZE)));
 
 #ifdef CONFIG_HIBERNATION
 /* kernel/power/snapshot.c */
