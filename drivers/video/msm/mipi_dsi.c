@@ -163,14 +163,14 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	mipi_dsi_unprepare_clocks();
 	mipi_dsi_unprepare_ahb_clocks();
 
-	usleep(5000);
+	mdelay(5);
 #if defined (CONFIG_MIPI_DSI_RESET_LP11)
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 		mipi_dsi_pdata->active_reset(0); /* low */
 #endif
 
-	usleep(2000); /*1ms delay(minimum) required between reset low and AVDD off*/
+	mdelay(2); /*1ms delay(minimum) required between reset low and AVDD off*/
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
 	if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
 		mipi_dsi_pdata->panel_power_save(0);
@@ -244,7 +244,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 #endif
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
-		mipi_dsi_pdata->panel_power_save(1);
+		mipi_dsi_pdata->panel_power_save(0);
 #endif
 
 #if !defined(CONFIG_SEC_PRODUCT_8930) && !defined(CONFIG_SEC_PRODUCT_8960)
@@ -365,7 +365,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		wmb();
 	}
 #else
-	msleep(10);
+	mdelay(10);
 #if defined (CONFIG_MIPI_DSI_RESET_LP11)
 
 	/* LP11 */
@@ -375,10 +375,10 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	wmb();
 	/* LP11 */
 
-	usleep(5000);
+	mdelay(5);
 	if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 			mipi_dsi_pdata->active_reset(1); /* high */
-	usleep(10000);
+	mdelay(10);
 #endif
 #if defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
 	if(system_rev)
@@ -509,10 +509,10 @@ void esd_recovery(void)
 			if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
 				mipi_dsi_pdata->panel_power_save(0);
 #endif
-			msleep(10);
+			mdelay(10);
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
 			if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
-				mipi_dsi_pdata->panel_power_save(1);
+				mipi_dsi_pdata->panel_power_save(0);
 #endif
 			/* LP11 */
 			tmp2 = tmp = MIPI_INP(MIPI_DSI_BASE + 0xA8);
@@ -521,16 +521,16 @@ void esd_recovery(void)
 			wmb();
 			/* LP11 */
 
-			usleep(5000);
+			mdelay(5);
 			if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 				mipi_dsi_pdata->active_reset(1); /* high */
-			msleep(10);
+			mdelay(10);
 			if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 				mipi_dsi_pdata->active_reset(0); /* low */
-			msleep(10);
+			mdelay(10);
 			if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 				mipi_dsi_pdata->active_reset(1); /* high */
-			msleep(10);
+			mdelay(10);
 
 			MIPI_OUTP(MIPI_DSI_BASE + 0xA8, tmp2);
 			wmb();
