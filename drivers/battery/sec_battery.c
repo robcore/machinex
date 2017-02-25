@@ -2437,7 +2437,7 @@ ssize_t sec_bat_store_attrs(
 				"%s: siop level: %d\n", __func__, x);
 			if (battery->capacity <= 5)
 				battery->siop_level = 100;
-			else if (x >= 6 && x <= 100)
+			else if (x >= 0 && x <= 100)
 				battery->siop_level = x;
 			else
 				battery->siop_level = 100;
