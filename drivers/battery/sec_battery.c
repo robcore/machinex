@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_battery.h>
+#include <linux/sec_param.h>
 
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
@@ -130,15 +131,14 @@ static int sec_bat_set_charge(
 				bool enable)
 {
 	union power_supply_propval val;
-	// ktime_t current_time;
+	ktime_t current_time;
 	struct timespec ts;
 
 	val.intval = battery->status;
 	psy_do_property("sec-charger", set,
 		POWER_SUPPLY_PROP_STATUS, val);
-
-	// current_time = alarm_get_elapsed_realtime();
-	get_monotonic_boottime(&ts);
+	current_time = ktime_get_boottime();
+	ts = ktime_to_timespec(current_time);
 
 	if (enable) {
 		val.intval = battery->cable_type;
@@ -398,10 +398,12 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 		break;
 	case SEC_BATTERY_CHECK_INT:
 	case SEC_BATTERY_CHECK_CALLBACK:
-		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
+		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY) {
 			ret = battery->present;
-		else
-			ret = battery->pdata->check_battery_callback();
+		} else {
+			if (battery->pdata->check_battery_callback)
+				ret = battery->pdata->check_battery_callback();
+		}
 		break;
 	case SEC_BATTERY_CHECK_PMIC:
 	case SEC_BATTERY_CHECK_FUELGAUGE:
@@ -427,9 +429,11 @@ static bool sec_bat_get_cable_type(
 	ret = false;
 	cable_type = battery->cable_type;
 
-	if (cable_source_type & SEC_BATTERY_CABLE_SOURCE_CALLBACK)
-		cable_type =
-			battery->pdata->check_cable_callback();
+	if (cable_source_type & SEC_BATTERY_CABLE_SOURCE_CALLBACK) {
+		if (battery->pdata->check_cable_callback)
+			cable_type =
+				battery->pdata->check_cable_callback();
+	}
 
 	if (cable_source_type & SEC_BATTERY_CABLE_SOURCE_ADC) {
 		if (gpio_get_value_cansleep(
@@ -451,8 +455,9 @@ static bool sec_bat_get_cable_type(
 				"%s: Invalid cable type\n", __func__);
 		} else {
 			battery->cable_type = cable_type;
-			battery->pdata->check_cable_result_callback(
-				battery->cable_type);
+			if (battery->pdata->check_cable_result_callback)
+				battery->pdata->check_cable_result_callback(
+						battery->cable_type);
 
 			ret = true;
 
@@ -508,7 +513,7 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 		if (sec_bat_get_cable_type(battery,
 			battery->pdata->cable_source_type)) {
 			wake_lock(&battery->cable_wake_lock);
-			queue_work(battery->monitor_wqueue,
+			queue_work_on(0, battery->monitor_wqueue,
 				&battery->cable_work);
 		}
 	}
@@ -978,29 +983,22 @@ static bool sec_bat_temperature_check(
 static void  sec_bat_event_program_alarm(
 	struct sec_battery_info *battery, int seconds)
 {
-	ktime_t low_interval = ktime_set(seconds - 10, 0);
-	// ktime_t slack = ktime_set(20, 0);
-	ktime_t next;
-
-	next = ktime_add(battery->last_event_time, low_interval);
-	/* The original slack time called for, 20 seconds, exceeds
-	* the length allowed for an unsigned long in nanoseconds. Use
-	* ULONG_MAX instead
-	*/
-	hrtimer_start_range_ns(&battery->event_termination_hrtimer,
-		next, ULONG_MAX, HRTIMER_MODE_ABS);
+	alarm_start(&battery->event_termination_alarm,
+		ktime_add(battery->last_event_time, ktime_set(seconds - 10, 0)));
 }
 
-enum hrtimer_restart sec_bat_event_expired_timer_func(struct hrtimer *timer)
+static enum alarmtimer_restart sec_bat_event_expired_timer_func(
+	struct alarm *alarm, ktime_t now)
 {
 	struct sec_battery_info *battery =
-		container_of(timer, struct sec_battery_info,
-			event_termination_hrtimer);
+		container_of(alarm, struct sec_battery_info,
+			event_termination_alarm);
 
 	battery->event &= (~battery->event_wait);
 	dev_info(battery->dev,
 		"%s: event expired (0x%x)\n", __func__, battery->event);
-	return HRTIMER_NORESTART;
+
+	return ALARMTIMER_NORESTART;
 }
 
 static void sec_bat_event_set(
@@ -1019,7 +1017,7 @@ static void sec_bat_event_set(
 		return;
 	}
 
-	hrtimer_cancel(&battery->event_termination_hrtimer);
+	alarm_cancel(&battery->event_termination_alarm);
 	battery->event &= (~battery->event_wait);
 
 	if (enable) {
@@ -1035,8 +1033,11 @@ static void sec_bat_event_set(
 			return;	/* nothing to clear */
 		}
 		battery->event_wait = event;
+#if defined(ANDROID_ALARM_ACTIVATED)
+		battery->last_event_time = alarm_get_elapsed_realtime();
+#else
 		battery->last_event_time = ktime_get_boottime();
-
+#endif
 		sec_bat_event_program_alarm(battery,
 			battery->pdata->event_waiting_time);
 		dev_info(battery->dev,
@@ -1164,11 +1165,15 @@ static bool sec_bat_time_management(
 				struct sec_battery_info *battery)
 {
 	unsigned long charging_time;
-	// ktime_t current_time;
 	struct timespec ts;
+#if defined(ANDROID_ALARM_ACTIVATED)
+	ktime_t current_time;
 
-	// current_time = alarm_get_elapsed_realtime();
+	current_time = alarm_get_elapsed_realtime();
+	ts = ktime_to_timespec(current_time);
+#else
 	get_monotonic_boottime(&ts);
+#endif
 
 	if (battery->charging_start_time == 0) {
 		dev_dbg(battery->dev,
@@ -1562,6 +1567,15 @@ static void sec_bat_get_battery_info(
 		struct sec_battery_info *battery)
 {
 	union power_supply_propval value;
+#if defined(CONFIG_AFC_CHARGER_MODE)
+	static struct timespec old_ts;
+	struct timespec c_ts;
+#if defined(ANDROID_ALARM_ACTIVATED)
+	c_ts = ktime_to_timespec(alarm_get_elapsed_realtime());
+#else
+	c_ts = ktime_to_timespec(ktime_get_boottime());
+#endif
+#endif
 
 	psy_do_property("sec-fuelgauge", get,
 			POWER_SUPPLY_PROP_VOLTAGE_NOW, value);
@@ -1657,43 +1671,26 @@ static void sec_bat_polling_work(struct work_struct *work)
 		work, struct sec_battery_info, polling_work.work);
 
 	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 	dev_dbg(battery->dev, "%s: Activated\n", __func__);
 }
 
 static void sec_bat_program_alarm(
 				struct sec_battery_info *battery, int seconds)
 {
+#if defined(ANDROID_ALARM_ACTIVATED)
 	ktime_t low_interval = ktime_set(seconds, 0);
-	// ktime_t slack = ktime_set(10, 0);
+	ktime_t slack = ktime_set(10, 0);
 	ktime_t next;
 
 	next = ktime_add(battery->last_poll_time, low_interval);
-	/* The original slack time called for, 10 seconds, exceeds
-	* the length allowed for an unsigned long in nanoseconds. Use
-	* ULONG_MAX instead
-	*/
-	hrtimer_start_range_ns(&battery->polling_hrtimer,
-		next, ULONG_MAX, HRTIMER_MODE_ABS);
+	alarm_start_range(&battery->polling_alarm,
+		next, ktime_add(next, slack));
+#else
+	alarm_start(&battery->polling_alarm,
+		    ktime_add(battery->last_poll_time, ktime_set(seconds, 0)));
+#endif
 }
-
-enum hrtimer_restart sec_bat_alarm(struct hrtimer *timer)
-{
-	struct sec_battery_info *battery = container_of(timer,
-				struct sec_battery_info, polling_hrtimer);
-
-	/* In wake up, monitor work will be queued in complete function
-	 * To avoid duplicated queuing of monitor work,
-	 * do NOT queue monitor work in wake up by polling alarm
-	 */
-	if (!battery->polling_in_sleep) {
-		wake_lock(&battery->monitor_wake_lock);
-		queue_work(battery->monitor_wqueue, &battery->monitor_work);
-		dev_dbg(battery->dev, "%s: Activated\n", __func__);
-	}
-	return HRTIMER_NORESTART;
-}
-
 
 static unsigned int sec_bat_get_polling_time(
 	struct sec_battery_info *battery)
@@ -1832,7 +1829,12 @@ static void sec_bat_set_polling(
 				polling_time_temp * HZ);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
+#if defined(ANDROID_ALARM_ACTIVATED)
+		battery->last_poll_time = alarm_get_elapsed_realtime();
+#else
 		battery->last_poll_time = ktime_get_boottime();
+#endif
+
 		if (battery->pdata->monitor_initial_count) {
 			battery->pdata->monitor_initial_count--;
 			sec_bat_program_alarm(battery, 1);
@@ -1858,16 +1860,18 @@ static void sec_bat_monitor_work(
 	struct timespec c_ts;
 
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
-
-	//c_ts = ktime_to_timespec(alarm_get_elapsed_realtime());
-	get_monotonic_boottime(&c_ts);
+#if defined(ANDROID_ALARM_ACTIVATED)
+	c_ts = ktime_to_timespec(alarm_get_elapsed_realtime());
+#else
+	c_ts = ktime_to_timespec(ktime_get_boottime());
+#endif
 
 	/* monitor once after wakeup */
 	if (battery->polling_in_sleep) {
 		battery->polling_in_sleep = false;
 		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
-				(battery->ps_enable != true)) {
-			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 5 * 60) {
+			(battery->ps_enable != true)) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 10 * 60) {
 				pr_info("Skip monitor_work(%ld)\n",
 						c_ts.tv_sec - old_ts.tv_sec);
 				goto skip_monitor;
@@ -1930,17 +1934,47 @@ continue_monitor:
 skip_monitor:
 	sec_bat_set_polling(battery);
 
+	if (battery->capacity <= 0)
+		wake_lock_timeout(&battery->monitor_wake_lock, HZ * 5);
+	else
+		wake_unlock(&battery->monitor_wake_lock);
 	/* check muic cable status */
 #if defined(CONFIG_MACH_JF)
 	max77693_muic_monitor_status();
 #endif
-
-	wake_unlock(&battery->monitor_wake_lock);
-
 	dev_dbg(battery->dev, "%s: End\n", __func__);
 
 	return;
 }
+
+#if defined(ANDROID_ALARM_ACTIVATED)
+static void sec_bat_alarm(struct alarm *alarm)
+#else
+static enum alarmtimer_restart sec_bat_alarm(
+	struct alarm *alarm, ktime_t now)
+
+#endif
+{
+	struct sec_battery_info *battery = container_of(alarm,
+				struct sec_battery_info, polling_alarm);
+
+	dev_dbg(battery->dev,
+			"%s\n", __func__);
+
+	/* In wake up, monitor work will be queued in complete function
+	 * To avoid duplicated queuing of monitor work,
+	 * do NOT queue monitor work in wake up by polling alarm
+	 */
+	if (!battery->polling_in_sleep) {
+		wake_lock(&battery->monitor_wake_lock);
+		queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
+		dev_dbg(battery->dev, "%s: Activated\n", __func__);
+	}
+#if !defined(ANDROID_ALARM_ACTIVATED)
+	return ALARMTIMER_NORESTART;
+#endif
+}
+
 
 static void sec_bat_cable_work(struct work_struct *work)
 {
@@ -1955,7 +1989,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 * if cable is connected and disconnected,
 	 * activated wake lock in a few seconds
 	 */
-	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 5);
+	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &
@@ -1993,7 +2027,11 @@ static void sec_bat_cable_work(struct work_struct *work)
 			else
 				battery->charging_mode =
 					SEC_BATTERY_CHARGING_2ND;
-			battery->status = POWER_SUPPLY_STATUS_CHARGING;
+
+			if (battery->status == POWER_SUPPLY_STATUS_FULL)
+				battery->status = POWER_SUPPLY_STATUS_FULL;
+			else
+				battery->status = POWER_SUPPLY_STATUS_CHARGING;
 		}
 
 		if (sec_bat_set_charge(battery, true))
@@ -2003,6 +2041,15 @@ static void sec_bat_cable_work(struct work_struct *work)
 		if (battery->pdata->polling_type != SEC_BATTERY_MONITOR_ALARM)
 			wake_lock(&battery->vbus_wake_lock);
 	}
+
+	/* set online(cable type) */
+	val.intval = battery->cable_type;
+	psy_do_property(battery->pdata->charger_name, set,
+		POWER_SUPPLY_PROP_ONLINE, val);
+	psy_do_property(battery->pdata->fuelgauge_name, set,
+		POWER_SUPPLY_PROP_ONLINE, val);
+	/* set charging current */
+	sec_bat_set_charge(battery, true);
 
 	/* polling time should be reset when cable is changed
 	 * polling_in_sleep should be reset also
@@ -2027,7 +2074,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	battery->polling_count = 1;	/* initial value = 1 */
 
 	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 end_of_cable_work:
 #if defined(CONFIG_MACH_JACTIVE_ATT)
 	if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
@@ -2312,8 +2359,7 @@ ssize_t sec_bat_store_attrs(
 	switch (offset) {
 	case BATT_RESET_SOC:
 		/* Do NOT reset fuel gauge in charging mode */
-		if (battery->pdata->check_cable_callback() ==
-			POWER_SUPPLY_TYPE_BATTERY) {
+		if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY) {
 			union power_supply_propval value;
 
 			value.intval =
@@ -2373,6 +2419,9 @@ ssize_t sec_bat_store_attrs(
 				psy_do_property("sec-charger", set,
 					POWER_SUPPLY_PROP_POWER_NOW, value);
 			}
+			wake_lock(&battery->cable_wake_lock);
+			queue_work_on(0, battery->monitor_wqueue,
+					   &battery->cable_work);
 			ret = count;
 		}
 		break;
@@ -2466,8 +2515,8 @@ ssize_t sec_bat_store_attrs(
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			battery->test_activated = x; // ? true : false;
 			wake_lock(&battery->monitor_wake_lock);
-			queue_work(battery->monitor_wqueue,
-					&battery->monitor_work);
+			queue_work_on(0, battery->monitor_wqueue,
+				&battery->monitor_work);
 			ret = count;
 		}
 		break;
@@ -2646,7 +2695,8 @@ ssize_t sec_bat_store_attrs(
 
 static int sec_bat_create_attrs(struct device *dev)
 {
-	int i, rc;
+	unsigned long i;
+	int rc;
 
 	for (i = 0; i < ARRAY_SIZE(sec_battery_attrs); i++) {
 		rc = device_create_file(dev, &sec_battery_attrs[i]);
@@ -2766,20 +2816,31 @@ static int sec_bat_set_property(struct power_supply *psy,
 			}
 
 			wake_lock(&battery->cable_wake_lock);
-			queue_work(battery->monitor_wqueue,
+				queue_work_on(0, battery->monitor_wqueue,
 					&battery->cable_work);
 		} else {
 			if (sec_bat_get_cable_type(battery,
 				battery->pdata->cable_source_type)) {
 				wake_lock(&battery->cable_wake_lock);
-				queue_work(battery->monitor_wqueue,
-					&battery->cable_work);
+					queue_work_on(0, battery->monitor_wqueue,
+						&battery->cable_work);
 			}
 		}
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		battery->capacity = val->intval;
 		power_supply_changed(&battery->psy_bat);
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_TYPE:
+		wake_lock(&battery->monitor_wake_lock);
+		queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
+		break;
+	case POWER_SUPPLY_PROP_PRESENT:
+		battery->present = val->intval;
+
+		wake_lock(&battery->monitor_wake_lock);
+		queue_work_on(0, battery->monitor_wqueue,
+				   &battery->monitor_work);
 		break;
 	default:
 		return -EINVAL;
@@ -2840,10 +2901,6 @@ static int sec_bat_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = battery->present;
-#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
-		dev_info(battery->dev,
-			"%s: battery present: %d\n", __func__, val->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = battery->cable_type;
@@ -2877,7 +2934,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 		if (battery->status == POWER_SUPPLY_STATUS_FULL) {
-			if(battery->eng_not_full_status == true)
+			if(battery->eng_not_full_status)
 				val->intval = battery->capacity;
 			else
 				val->intval = 100;
@@ -2915,7 +2972,7 @@ static int sec_usb_get_property(struct power_supply *psy,
 		return -EINVAL;
 
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
-			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+		(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
 		val->intval = 0;
 		return 0;
 	}
@@ -2932,6 +2989,8 @@ static int sec_usb_get_property(struct power_supply *psy,
 		break;
 	}
 
+	if (battery->slate_mode)
+		val->intval = 0;
 	return 0;
 }
 
@@ -2947,8 +3006,8 @@ static int sec_ac_get_property(struct power_supply *psy,
 
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
 		(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
-		val->intval = 0;
-		return 0;
+			val->intval = 0;
+			return 0;
 	}
 	/* Set enable=1 only if the AC charger is connected */
 	switch (battery->cable_type) {
@@ -3008,13 +3067,13 @@ static int sec_ps_set_property(struct power_supply *psy,
 			dev_info(battery->dev,
 					"%s: power sharing cable plugin (%d)\n", __func__, battery->ps_status);
 			wake_lock(&battery->monitor_wake_lock);
-			queue_work(battery->monitor_wqueue, &battery->monitor_work);
+			queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 		} else {
 			battery->ps_status = false;
 			dev_info(battery->dev,
 					"%s: power sharing cable plugout (%d)\n", __func__, battery->ps_status);
 			wake_lock(&battery->monitor_wake_lock);
-			queue_work(battery->monitor_wqueue, &battery->monitor_work);
+			queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 		}
 			break;
 	default:
@@ -3084,7 +3143,7 @@ static irqreturn_t sec_bat_irq_thread(int irq, void *irq_data)
 			if (sec_bat_get_cable_type(battery,
 				battery->pdata->cable_source_type)) {
 				wake_lock(&battery->cable_wake_lock);
-				queue_work(battery->monitor_wqueue,
+				queue_work_on(0, battery->monitor_wqueue,
 					&battery->cable_work);
 			}
 		}
@@ -3096,7 +3155,7 @@ no_cable_check:
 		battery->present = battery->pdata->check_battery_callback();
 
 		wake_lock(&battery->monitor_wake_lock);
-		queue_work(battery->monitor_wqueue, &battery->monitor_work);
+		queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 	}
 
 	return IRQ_HANDLED;
@@ -3163,12 +3222,15 @@ static int sec_battery_probe(struct platform_device *pdev)
 #endif
 	battery->ps_enable= 0;
 
-	hrtimer_init(&battery->event_termination_hrtimer,
-			CLOCK_BOOTTIME,
-			HRTIMER_MODE_ABS);
-	battery->event_termination_hrtimer.function =
-			&sec_bat_event_expired_timer_func;
-
+#if defined(ANDROID_ALARM_ACTIVATED)
+	alarm_init(&battery->event_termination_alarm,
+			ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
+			sec_bat_event_expired_timer_func);
+#else
+	alarm_init(&battery->event_termination_alarm,
+			ALARM_BOOTTIME,
+			sec_bat_event_expired_timer_func);
+#endif
 	battery->temp_high_threshold =
 		pdata->temp_high_threshold_normal;
 	battery->temp_high_recovery =
@@ -3215,7 +3277,8 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->psy_ps.set_property = sec_ps_set_property;
 
 	/* create work queue */
-	battery->monitor_wqueue = alloc_workqueue(dev_name(&pdev->dev), WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	battery->monitor_wqueue =
+	    alloc_workqueue(dev_name(&pdev->dev), WQ_MEM_RECLAIM, 1);
 	if (!battery->monitor_wqueue) {
 		dev_err(battery->dev,
 			"%s: Fail to Create Workqueue\n", __func__);
@@ -3227,17 +3290,22 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	switch (pdata->polling_type) {
 	case SEC_BATTERY_MONITOR_WORKQUEUE:
-		INIT_DEFERRABLE_WORK(&battery->polling_work,
+		INIT_DELAYED_WORK(&battery->polling_work,
 			sec_bat_polling_work);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
+#if defined(ANDROID_ALARM_ACTIVATED)
+		battery->last_poll_time = alarm_get_elapsed_realtime();
+		alarm_init(&battery->polling_alarm,
+			ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
+			sec_bat_alarm);
+#else
 		battery->last_poll_time = ktime_get_boottime();
-		hrtimer_init(&battery->polling_hrtimer,
-			CLOCK_BOOTTIME,
-			HRTIMER_MODE_ABS);
-		battery->polling_hrtimer.function =
-			&sec_bat_alarm;
+		alarm_init(&battery->polling_alarm, ALARM_BOOTTIME,
+			sec_bat_alarm);
+#endif
 		break;
+
 	default:
 		break;
 	}
@@ -3304,7 +3372,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	}
 
 	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 
 	pdata->initial_check();
 	battery->pdata->check_cable_result_callback(POWER_SUPPLY_TYPE_MAINS);
@@ -3365,13 +3433,13 @@ static int sec_battery_remove(struct platform_device *pdev)
 		cancel_delayed_work(&battery->polling_work);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
-		hrtimer_cancel(&battery->polling_hrtimer);
+		alarm_cancel(&battery->polling_alarm);
 		break;
 	default:
 		break;
 	}
 
-	hrtimer_cancel(&battery->event_termination_hrtimer);
+	alarm_cancel(&battery->event_termination_alarm);
 	flush_workqueue(battery->monitor_wqueue);
 	destroy_workqueue(battery->monitor_wqueue);
 	wake_lock_destroy(&battery->monitor_wake_lock);
@@ -3405,7 +3473,7 @@ static int sec_battery_prepare(struct device *dev)
 		cancel_delayed_work(&battery->polling_work);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
-		hrtimer_cancel(&battery->polling_hrtimer);
+		alarm_cancel(&battery->polling_alarm);
 		break;
 	default:
 		break;
@@ -3448,10 +3516,10 @@ static void sec_battery_complete(struct device *dev)
 
 	/* cancel current alarm and reset after monitor work */
 	if (battery->pdata->polling_type == SEC_BATTERY_MONITOR_ALARM)
-		hrtimer_cancel(&battery->polling_hrtimer);
+		alarm_cancel(&battery->polling_alarm);
 
 	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue,
+	queue_work_on(0, battery->monitor_wqueue,
 		&battery->monitor_work);
 
 	dev_dbg(battery->dev, "%s: End\n", __func__);
@@ -3461,6 +3529,19 @@ static void sec_battery_complete(struct device *dev)
 
 static void sec_battery_shutdown(struct device *dev)
 {
+	struct sec_battery_info *battery
+		= dev_get_drvdata(dev);
+
+	switch (battery->pdata->polling_type) {
+	case SEC_BATTERY_MONITOR_WORKQUEUE:
+		cancel_delayed_work(&battery->polling_work);
+		break;
+	case SEC_BATTERY_MONITOR_ALARM:
+		alarm_cancel(&battery->polling_alarm);
+		break;
+	default:
+		break;
+	}
 }
 
 static const struct dev_pm_ops sec_battery_pm_ops = {

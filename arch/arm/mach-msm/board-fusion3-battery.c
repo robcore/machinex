@@ -473,10 +473,10 @@ static bool sec_bat_check_callback(void)
 		value.intval = 1;
 	} else {
 		int ret;
-		ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
+		ret = psy->get_property(psy, POWER_SUPPLY_PROP_ONLINE, &(value));
 		if (ret < 0) {
 			pr_err("%s: Fail to sec-charger get_property (%d=>%d)\n",
-				__func__, POWER_SUPPLY_PROP_PRESENT, ret);
+				__func__, POWER_SUPPLY_PROP_ONLINE, ret);
 			value.intval = 1;
 		}
 #if defined(CONFIG_BOARD_JF_REFRESH)
