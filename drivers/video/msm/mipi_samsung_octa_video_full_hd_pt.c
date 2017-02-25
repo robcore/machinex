@@ -611,17 +611,17 @@ static char samsung_brightness_acl_cont_pre[] = {
 
 /* B5h
  * 1st - 0x01 : PSRE , 0x03 : no PSRE
- * 2nd(OPR) - 0x99 : 60%
+ * 2nd(OPR) - 0x99 : 60% 0xFF : 100%
  * 3rd(ACL) - 0x23 : 27.6% , 0x27 : 30%, 0x35 : 40%
  */
 static char samsung_brightness_acl_cont_ref[] = {
 	0xB5,
-	0x03, 0x99, 0x00,
+	0x00, 0xFF, 0x00,
 };
 
 static char samsung_brightness_acl_cont_default[] = {
 	0xB5,
-	0x01, 0x99, 0x00,
+	0x03, 0xFF, 0x00,
 };
 static char samsung_brightness_psre_cont[] = {
 	0xBC,
@@ -1280,10 +1280,10 @@ static int get_candela_index(int bl_level)
 	case 250 ... 251:
 		backlightlevel = GAMMA_265CD;
 		break;
-	case 252 ... 253:
+	case 252 ... 254:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 254 ... 255:
+	case 255:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1668,10 +1668,10 @@ static int brightness_control(int bl_level)
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 
 	if (mipi_pd.ldi_rev >= 'H') {
-		if (get_auto_brightness() == 6)
+		if (get_auto_brightness() >= 6)
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 	} else {
-		if (get_auto_brightness() == 6)
+		if (get_auto_brightness() >= 6)
 			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
@@ -1709,7 +1709,7 @@ static int brightness_control(int bl_level)
 	/* 0xB5 setting */
 	memcpy(samsung_brightness_acl_cont_pre, samsung_brightness_acl_cont_ref,
 						sizeof(samsung_brightness_acl_cont_ref));
-	if(get_auto_brightness() == 6) {
+	if(get_auto_brightness() >= 6) {
 		samsung_brightness_acl_cont_ref[1] = 0x01; /* PSRE set */
 	} else {
 		samsung_brightness_acl_cont_ref[1] = 0x03; /* No PSRE set */
@@ -1727,7 +1727,7 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (get_auto_brightness() == 6) {
+	if (get_auto_brightness() >= 6) {
 		brightness_packet[cmd_size].payload =
 				samsung_brightness_write_als;
 		brightness_packet[cmd_size].dlen =
@@ -1740,7 +1740,14 @@ static int brightness_control(int bl_level)
 	memcpy(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
 					sizeof(samsung_brightness_acl_ref));
 
-		samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	if (get_auto_brightness() >= 6) {
+		samsung_brightness_acl_ref[1] = 0x00; /*RE low, ACL on 40p*/
+	} else {
+		if (mipi_pd.acl_status || mipi_pd.siop_status)
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p*/
+		else
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	}
 
 	if (memcmp(samsung_brightness_acl_pre, samsung_brightness_acl_ref,
 				sizeof(samsung_brightness_acl_ref))) {
@@ -1755,7 +1762,7 @@ static int brightness_control(int bl_level)
 
 	/* PSRE control 1 **********************************************************************/
 	/* 0xBC setting */
-	if (get_auto_brightness() == 6) {
+	if (get_auto_brightness() >= 6) {
 		brightness_packet[cmd_size].payload =
 					samsung_brightness_psre_cont;
 		brightness_packet[cmd_size].dlen =
@@ -1807,8 +1814,23 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-	samsung_brightness_acl_cont_default[1] = 0x00;
-	samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	/* acl control *************************************************************************/
+	/* 0xB5 setting */
+	if (get_auto_brightness() >= 6)
+		samsung_brightness_acl_cont_default[1] = 0x01;
+	else
+		samsung_brightness_acl_cont_default[1] = 0x03;
+
+	/* write power saving *****************************************************************/
+	/* 0x55 setting */
+	if (get_auto_brightness() >= 6) {
+		samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p, re low*/
+	} else {
+		if (mipi_pd.acl_status || mipi_pd.siop_status)
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p*/
+		else
+			samsung_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	}
 
 	return 1;
 }
@@ -1998,7 +2020,7 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 255;
-	pinfo.bl_min = 10;
+	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;

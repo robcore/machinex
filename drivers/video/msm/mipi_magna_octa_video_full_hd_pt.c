@@ -1338,10 +1338,10 @@ static int get_candela_index(int bl_level)
 	case 250 ... 251:
 		backlightlevel = GAMMA_265CD;
 		break;
-	case 252 ... 253:
+	case 252 ... 254:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 254 ... 255:
+	case 255:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1837,7 +1837,7 @@ static int brightness_control(int bl_level)
 	memcpy(magna_psre_mtp_pre, magna_psre_mtp_ref,
 						sizeof(magna_psre_mtp_ref));
 
-	if (get_auto_brightness() == 6) {
+	if (get_auto_brightness() >= 6) {
 		magna_psre_mtp_ref[1] = 0x04; // RE ON
 	} else {
 		magna_psre_mtp_ref[1] = 0x84; // RE OFF
@@ -1912,7 +1912,7 @@ static int brightness_control(int bl_level)
 	/* 0x53 setting */
 	memcpy(hbm_mode_cont_pre, hbm_mode_cont_ref, sizeof(hbm_mode_cont_ref));
 
-	if (get_auto_brightness() == 6) {
+	if (get_auto_brightness() >= 6) {
 		hbm_mode_cont_ref[1] = 0xA0; /* HBM Mid on (400nit) */
 	} else {
 		hbm_mode_cont_ref[1] = 0x00; /* HBM off */
@@ -1950,8 +1950,15 @@ static int brightness_control(int bl_level)
 
 static int acl_control(int bl_level)
 {
-	magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
-	magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+
+	if (get_auto_brightness() >= 6) {
+		magna_brightness_acl_ref[1] = 0x00; /*RE low, ACL 40%*/
+	} else {
+		if (mipi_pd.acl_status) 
+			magna_brightness_acl_ref[1] = 0x00; /*ACL 40%*/
+		else
+			magna_brightness_acl_ref[1] = 0x00; /*ACL off*/
+	}
 
 	return 1;
 }
@@ -2158,7 +2165,7 @@ static int __init mipi_video_magna_octa_full_hd_pt_init(void)
 	pinfo.lcdc.hsync_skew = 0;
 
 	pinfo.bl_max = 255;
-	pinfo.bl_min = 10;
+	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
 
 	pinfo.clk_rate = 898000000;
