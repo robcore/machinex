@@ -2344,7 +2344,9 @@ void update_external_temp_table(struct sec_battery_info *battery, int temp[])
 		battery->pdata->event_check = 1;
 }
 
-static unsigned int
+static unsigned int event_hook;
+module_param(event_hook, uint, 0644);
+
 ssize_t sec_bat_store_attrs(
 					struct device *dev,
 					struct device_attribute *attr,
@@ -2526,74 +2528,110 @@ ssize_t sec_bat_store_attrs(
 	case BATT_EVENT_2G_CALL:
 	case BATT_EVENT_TALK_GSM:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_2G_CALL, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_3G_CALL:
 	case BATT_EVENT_TALK_WCDMA:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_3G_CALL, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_MUSIC:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_MUSIC, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_VIDEO:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_VIDEO, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_BROWSER:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_BROWSER, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_HOTSPOT:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_HOTSPOT, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_CAMERA:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_CAMERA, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_CAMCORDER:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_CAMCORDER, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_DATA_CALL:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_DATA_CALL, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_WIFI:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_WIFI, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_WIBRO:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_WIBRO, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
 	case BATT_EVENT_LTE:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_LTE, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
@@ -2607,7 +2645,10 @@ ssize_t sec_bat_store_attrs(
 		break;
 	case BATT_EVENT_GPS:
 		if (sscanf(buf, "%d\n", &x) == 1) {
+		if (!event_hook) {
 			sec_bat_event_set(battery, EVENT_GPS, x);
+			ret = count;
+		} else
 			ret = count;
 		}
 		break;
