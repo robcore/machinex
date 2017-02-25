@@ -624,10 +624,14 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
-	msd.mpd->first_bl_hbm_psre = 1;
-
-	if (get_auto_brightness() >= 6)
+	if (get_auto_brightness() >= 6) {
+		msd.mpd->first_bl_hbm_psre = 1;
 		msd.dstat.auto_brightness = 6;
+	} else {
+		pr_debug("PSRE Disabled\n");
+		msd.mpd->first_bl_hbm_psre = 0;
+		msd.dstat.auto_brightness = 0;
+	}
 
 #ifdef CONFIG_SEC_DEBUG_MDP
 	sec_debug_mdp_reset_value();
@@ -749,7 +753,10 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
-		msd.mpd->first_bl_hbm_psre = 1;
+		if (get_auto_brightness() >= 6)
+			msd.mpd->first_bl_hbm_psre = 1;
+		else
+			msd.mpd->first_bl_hbm_psre = 0;
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
 		pr_info("%s : panel is off state!!\n", __func__);
@@ -928,7 +935,10 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	}
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
-		msd.mpd->first_bl_hbm_psre = 1;
+		if (get_auto_brightness() >= 6)
+			msd.mpd->first_bl_hbm_psre = 1;
+		else
+			msd.mpd->first_bl_hbm_psre = 0;
 		mipi_samsung_disp_backlight(mfd);
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
