@@ -967,13 +967,14 @@ static ssize_t mipi_samsung_disp_acl_store(struct device *dev,
 	else {
 		return size;
 	}
-
+/*
 	if (mfd->panel_power_on) {
 		if (msd.mpd->acl_control(mfd->bl_level))
 			mipi_samsung_disp_send_cmd(mfd,
 						PANEL_ACL_CONTROL, true);
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
+*/
 
 	pr_info("%s : acl_status (%d) siop_status (%d)",
 			__func__, msd.mpd->acl_status, msd.mpd->siop_status);
@@ -1006,13 +1007,14 @@ static ssize_t mipi_samsung_disp_siop_store(struct device *dev,
 		pr_debug("%s: Invalid argument!!", __func__);
 		return size;
 	}
-
+/*
 	if (mfd->panel_power_on) {
 		if (msd.mpd->acl_control(mfd->bl_level))
 			mipi_samsung_disp_send_cmd(mfd,
 						PANEL_ACL_CONTROL, true);
 	} else
 		pr_info("%s : panel is off state. updating state value.\n", __func__);
+*/
 
 	pr_debug("%s : acl_status (%d) siop_status (%d)",
 			__func__, msd.mpd->acl_status, msd.mpd->siop_status);
