@@ -2146,6 +2146,8 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 			battery->pdata->is_lpm() ? 1 : 0);
 		break;
 	case SIOP_ACTIVATED:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
+			battery->siop_activated);
 		break;
 	case SIOP_LEVEL:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
@@ -2429,6 +2431,16 @@ ssize_t sec_bat_store_attrs(
 	case BATT_LP_CHARGING:
 		break;
 	case SIOP_ACTIVATED:
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			union power_supply_propval value;
+				battery->siop_activated = x;
+		else if (sscanf(buf, "%d\n", &x) == 0) {
+				battery->siop_activated = x;
+				value.intval = battery->siop_activated;
+				psy_do_property("sec-charger", set,
+					POWER_SUPPLY_PROP_CURRENT_NOW, value);
+				ret = count;
+		}
 		break;
 	case SIOP_LEVEL:
 		if (sscanf(buf, "%d\n", &x) == 1) {
