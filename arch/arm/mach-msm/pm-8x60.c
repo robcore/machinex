@@ -846,19 +846,18 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 	return ret;
 }
 
-enum msm_pm_sleep_mode msm_pm_idle_enter(struct cpuidle_device *dev,
-			struct cpuidle_driver *drv, int index)
+int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 {
 	int64_t time;
 	int exit_stat;
 
 	if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: mode %d\n",
-			smp_processor_id(), __func__, msm_pm_sleep_mode);
+			smp_processor_id(), __func__, sleep_mode);
 
 	time = ktime_to_ns(ktime_get());
 
-	switch (msm_pm_sleep_mode) {
+	switch (sleep_mode) {
 	case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
 		msm_pm_swfi();
 		exit_stat = MSM_PM_STAT_IDLE_WFI;
@@ -882,7 +881,7 @@ enum msm_pm_sleep_mode msm_pm_idle_enter(struct cpuidle_device *dev,
 		uint32_t sleep_delay = 1;
 		int ret = -ENODEV;
 		int notify_rpm =
-			(msm_pm_sleep_mode == MSM_PM_SLEEP_MODE_POWER_COLLAPSE);
+			(sleep_mode == MSM_PM_SLEEP_MODE_POWER_COLLAPSE);
 		int collapsed = 0;
 
 		sleep_delay = (uint32_t)msm_pm_timer_enter_idle();

@@ -590,12 +590,12 @@ static char samsung_brightness_elvss_pre[] = {
 };
 
 static char samsung_brightness_acl_default[] = {
-	0x00,
+	0x55,
 	0x00,
 };
 
 static char samsung_brightness_acl_ref[] = {
-	0x00,
+	0x55,
 	0x00,
 };
 
