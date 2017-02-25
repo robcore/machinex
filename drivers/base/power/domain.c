@@ -711,7 +711,7 @@ static int __init pd_ignore_unused_setup(char *__unused)
 	pd_ignore_unused = true;
 	return 1;
 }
-__setup("pd_ignore_unused", pd_ignore_unused_setup);
+__setup("pd_ignore_unused=", pd_ignore_unused_setup);
 
 /**
  * pm_genpd_poweroff_unused - Power off all PM domains with no devices in use.
