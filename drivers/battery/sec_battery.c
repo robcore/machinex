@@ -2149,7 +2149,7 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		break;
 	case SIOP_LEVEL:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
-			sec_battery_attrs->siop_level);
+			battery->siop_level);
 		break;
 	case BATT_CHARGING_SOURCE:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
@@ -2344,6 +2344,7 @@ void update_external_temp_table(struct sec_battery_info *battery, int temp[])
 		battery->pdata->event_check = 1;
 }
 
+static unsigned int
 ssize_t sec_bat_store_attrs(
 					struct device *dev,
 					struct device_attribute *attr,
