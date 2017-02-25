@@ -742,8 +742,7 @@ msm_v4l2_overlay_mmap(struct file *filp, struct vm_area_struct * vma)
 	start += off;
 	vma->vm_pgoff = start >> PAGE_SHIFT;
 	/* This is an IO map - tell maydump to skip this VMA */
-//	vma->vm_flags |= VM_IO | VM_DONTDUMP;
-	vma->vm_flags |= VM_IO | VM_RESERVED;
+	vma->vm_flags |= VM_IO | VM_DONTDUMP;
 
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
