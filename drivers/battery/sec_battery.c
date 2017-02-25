@@ -2146,12 +2146,10 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 			battery->pdata->is_lpm() ? 1 : 0);
 		break;
 	case SIOP_ACTIVATED:
-		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
-			battery->siop_activated);
 		break;
 	case SIOP_LEVEL:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
-			battery->siop_level);
+			sec_battery_attrs->siop_level);
 		break;
 	case BATT_CHARGING_SOURCE:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
