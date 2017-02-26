@@ -694,7 +694,6 @@ static int __init msm_mpdecision_init(void)
 {
 	int cpu;
 	if (!msm_mpd_enabled) {
-		pr_info("Not enabled\n");
 		return 0;
 	}
 
