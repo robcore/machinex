@@ -24,7 +24,6 @@ extern struct arm_delay_ops {
 	void (*delay)(unsigned long);
 	void (*const_udelay)(unsigned long);
 	void (*udelay)(unsigned long);
-	bool const_clock;
 	unsigned long ticks_per_jiffy;
 } arm_delay_ops;
 
