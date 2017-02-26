@@ -1314,34 +1314,34 @@ static int get_candela_index(int bl_level)
 	case 162 ... 171:
 		backlightlevel = GAMMA_162CD;
 		break;
-	case 172 ... 182:
+	case 172 ... 174:
 		backlightlevel = GAMMA_172CD;
 		break;
-	case 183 ... 194:
+	case 175 ... 177:
 		backlightlevel = GAMMA_183CD;
 		break;
-	case 195 ... 206:
+	case 178 ... 181:
 		backlightlevel = GAMMA_195CD;
 		break;
-	case 207 ... 219:
+	case 182 ... 184:
 		backlightlevel = GAMMA_207CD;
 		break;
-	case 220 ... 232:
+	case 185 ... 189:
 		backlightlevel = GAMMA_220CD;
 		break;
-	case 233 ... 248:
+	case 190 ... 193:
 		backlightlevel = GAMMA_234CD;
 		break;
-	case 249:
+	case 194:
 		backlightlevel = GAMMA_249CD;
 		break;
-	case 250 ... 251:
+	case 195 ... 200:
 		backlightlevel = GAMMA_265CD;
 		break;
-	case 252 ... 253:
+	case 201 ... 206:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 254 ... 255:
+	case 207 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
