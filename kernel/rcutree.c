@@ -1637,8 +1637,6 @@ rcu_start_gp(struct rcu_state *rsp)
 }
 
 /*
-
-/*
  * Start a new RCU grace period if warranted, re-initializing the hierarchy
  * in preparation for detecting the next grace period.  The caller must hold
  * the root node's ->lock and hard irqs must be disabled.
