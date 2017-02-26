@@ -460,6 +460,19 @@ void account_process_tick(struct task_struct *p, int user_tick)
 		account_idle_time(cputime_one_jiffy);
 }
 
+#ifndef __ARCH_HAS_VTIME_TASK_SWITCH
+void vtime_task_switch(struct task_struct *prev)
+{
+	if (is_idle_task(prev))
+		vtime_account_idle(prev);
+	else
+		vtime_account_system(prev);
+
+	vtime_account_user(prev);
+	arch_vtime_task_switch(prev);
+}
+#endif
+
 /*
  * Account multiple ticks of steal time.
  * @p: the process from which the cpu time has been stolen
