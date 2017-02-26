@@ -27,6 +27,7 @@
 #include <linux/workqueue.h>
 #include <linux/jiffies.h>
 #include <linux/wakelock.h>
+#include <linux/delay.h>
 
 #include <asm/uaccess.h>
 #include <asm/setup.h>
