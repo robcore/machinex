@@ -3272,7 +3272,7 @@ static struct msm_dcvs_core_info apq8064_core_info = {
 		.core_type	= MSM_DCVS_CORE_TYPE_CPU,
 	},
 	.algo_param		= {
-		.disable_pc_threshold		= 810000,
+		.disable_pc_threshold		= 0,
 		.em_win_size_min_us		= 100000,
 		.em_win_size_max_us		= 300000,
 		.em_max_util_pct		= 97,
