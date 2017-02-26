@@ -136,8 +136,8 @@ struct dcvs_core {
 	int flags;
 };
 
-static int msm_dcvs_enabled = 1;
-module_param_named(enable, msm_dcvs_enabled, int, S_IRUGO | S_IWUSR | S_IWGRP);
+static int msm_dcvs_enabled = 0;
+module_param_named(enable, msm_dcvs_enabled, int, 0644);
 
 static struct dentry		*debugfs_base;
 
@@ -1347,7 +1347,6 @@ static int __init msm_dcvs_early_init(void)
 		__info("Not enabled (%d)\n", msm_dcvs_enabled);
 		return 0;
 	}
-
 
 	/* Only need about 32kBytes for normal operation */
 	ret = msm_dcvs_scm_init(SZ_32K);
