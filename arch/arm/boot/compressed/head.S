@@ -597,7 +597,7 @@ params:		ldr	r0, =0x10000100		@ params_phys for RPC
 #endif
 
 /*
- * change@ksingh.sra-dallas - Copying the zImage to a secure location
+ * change@ksingh.sra-dallas - Copying the zImage to a secure location 
  * this copy will be used to computer integrity for FIPS validation
  */
 #ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
@@ -952,8 +952,8 @@ proc_types:
 
 #if !defined(CONFIG_CPU_V7)
 		/* This collides with some V7 IDs, preventing correct detection */
-		.word	0x41000000		@ old ARM ID
-		.word	0xff00f000
+		.word	0x00000000		@ old ARM ID
+		.word	0x0000f000
 		mov	pc, lr
  THUMB(		nop				)
 		mov	pc, lr
@@ -981,7 +981,7 @@ proc_types:
 		W(b)	__armv3_mpu_cache_on
 		W(b)	__armv3_mpu_cache_off
 		W(b)	__armv3_mpu_cache_flush
-
+		
 		.word	0x41009400		@ ARM94x
 		.word	0xff00ff00
 		W(b)	__armv4_mpu_cache_on
@@ -1211,7 +1211,7 @@ __armv4_mpu_cache_flush:
 		mcrne	p15, 0, ip, c7, c5, 0	@ invalidate I cache
 		mcr	p15, 0, ip, c7, c10, 4	@ drain WB
 		mov	pc, lr
-
+		
 __fa526_cache_flush:
 		tst	r4, #1
 		movne	pc, lr
