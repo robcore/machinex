@@ -1104,6 +1104,7 @@ void __init setup_arch(char **cmdline_p)
 	arm_dt_init_cpu_maps();
 #ifdef CONFIG_SMP
 	if (is_smp())
+		smp_set_ops(mdesc->smp);
 		smp_init_cpus();
 		smp_build_mpidr_hash();
 #endif
