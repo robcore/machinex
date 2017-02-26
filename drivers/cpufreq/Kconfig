@@ -18,13 +18,6 @@ config CPU_FREQ
 
 if CPU_FREQ
 
-config CPU_GOVERNOR_COMMON
-	bool "Do the thing"
-	depends on CPU_FREQ
-	default y
-	help
-	  This does the thing. Say yes.
-
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
 	depends on CPU_FREQ

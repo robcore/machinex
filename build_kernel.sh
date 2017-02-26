@@ -31,6 +31,10 @@ rm -rf $(pwd)/include/generated >> /dev/null;
 rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
 }
 
+if [ -e /media/root/robcore/AIK/previous.txt ]; then
+	PREV=`cat /media/root/robcore/AIK/previous.txt`
+fi;
+
 function countdown()
 {
 	echo "3"
@@ -43,11 +47,7 @@ function countdown()
 
 function NORMAL()
 {
-if [ -e /media/root/robcore/AIK/previous.txt ]; then
-	PREV=`cat /media/root/robcore/AIK/previous.txt`
-	echo "your previous version was $PREV"
-fi;
-
+echo "your previous version was $PREV"
 echo -n "Use Previous Name?  y/n [ENTER]: "
 read USEPRV
 if [[ $USEPRV = "n" ]]; then
@@ -85,7 +85,7 @@ if [[ $USEPRV = "n" ]]; then
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	fi;
 else
-	PRVS=`cat /media/root/robcore/AIK/previous.txt`
+	PRVS=$PREV
 	if [ -d /media/root/robcore/AIK/$PRVS ]; then
 		echo "removing previously compiled folder and zip of the same name"
 		rm -rf /media/root/robcore/AIK/$PRVS
@@ -204,11 +204,7 @@ fi;
 
 function SPARSE()
 {
-if [ -e /media/root/robcore/AIK/previous.txt ]; then
-	PREV=`cat /media/root/robcore/AIK/previous.txt`
-	echo "your previous version was $PREV"
-fi;
-
+echo "your previous version was $PREV"
 echo -n "Use Previous Name?  y/n [ENTER]: "
 read USEPRV
 if [[ $USEPRV = "n" ]]; then
@@ -246,7 +242,7 @@ if [[ $USEPRV = "n" ]]; then
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	fi;
 else
-	PRVS=`cat /media/root/robcore/AIK/previous.txt`
+	PRVS=$PREV
 	if [ -d /media/root/robcore/AIK/$PRVS ]; then
 		echo "removing previously compiled folder and zip of the same name"
 		rm -rf /media/root/robcore/AIK/$PRVS
@@ -362,11 +358,7 @@ fi;
 function MISMATCH()
 {
 echo "Building CONFIG_SECTION_MISMATCH kernel"
-	if [ -e /media/root/robcore/AIK/previous.txt ]; then
-		PREV=`cat /media/root/robcore/AIK/previous.txt`
-		echo "your previous version was $PREV"
-	fi;
-
+	echo "your previous version was $PREV"
 	echo -n "Use Previous Name?  y/n [ENTER]: "
 	read USEPRV
 	if [[ $USEPRV = "n" ]]; then
@@ -404,7 +396,7 @@ echo "Building CONFIG_SECTION_MISMATCH kernel"
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		fi;
 	else
-		PRVS=`cat /media/root/robcore/AIK/previous.txt`
+		PRVS=$PREV
 		if [ -d /media/root/robcore/AIK/$PRVS ]; then
 			echo "removing previously compiled folder and zip of the same name"
 			rm -rf /media/root/robcore/AIK/$PRVS
@@ -515,9 +507,9 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 function HEADERS()
 {
 echo "Building HEADERS kernel"
-PRVS=`cat /media/root/robcore/AIK/previous.txt`
+PRVS=$PREV
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
-	echo "your previous version was $PREV"
+	echo "your previous version was $PRVS"
 fi;
 	OUTFOLDER=$PRVS
 
@@ -547,13 +539,10 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/canadefconfig
 
 function REBUILD()
 {
-if [ -e /media/root/robcore/AIK/previous.txt ]; then
-	PREV=`cat /media/root/robcore/AIK/previous.txt`
-	echo "your previous version was $PREV"
-	sleep 1
-fi;
+echo "your previous version was $PREV"
+sleep 1
 
-PRVS=`cat /media/root/robcore/AIK/previous.txt`
+PRVS=$PREV
 if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	echo "removing previously compiled folder and zip of the same name"
 	sleep 1
