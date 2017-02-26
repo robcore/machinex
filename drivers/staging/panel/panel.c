@@ -1194,7 +1194,7 @@ static inline int handle_lcd_special_code(void)
 		break;
 	}
 
-	/* Check wether one flag was changed */
+	/* Check whether one flag was changed */
 	if (oldflags != lcd_flags) {
 		/* check whether one of B,C,D flags were changed */
 		if ((oldflags ^ lcd_flags) &
@@ -1209,7 +1209,7 @@ static inline int handle_lcd_special_code(void)
 			lcd_write_cmd(0x30
 				      | ((lcd_flags & LCD_FLAG_F) ? 4 : 0)
 				      | ((lcd_flags & LCD_FLAG_N) ? 8 : 0));
-		/* check wether L flag was changed */
+		/* check whether L flag was changed */
 		else if ((oldflags ^ lcd_flags) & (LCD_FLAG_L)) {
 			if (lcd_flags & (LCD_FLAG_L))
 				lcd_backlight(1);
