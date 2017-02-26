@@ -118,8 +118,10 @@ static int fixed_voltage_enable(struct regulator_dev *dev)
 {
 	struct fixed_voltage_data *data = rdev_get_drvdata(dev);
 
-	gpio_set_value_cansleep(data->gpio, data->enable_high);
-	data->is_enabled = true;
+	if (gpio_is_valid(data->gpio)) {
+		gpio_set_value_cansleep(data->gpio, data->enable_high);
+		data->is_enabled = true;
+	}
 
 	return 0;
 }
@@ -128,8 +130,10 @@ static int fixed_voltage_disable(struct regulator_dev *dev)
 {
 	struct fixed_voltage_data *data = rdev_get_drvdata(dev);
 
-	gpio_set_value_cansleep(data->gpio, !data->enable_high);
-	data->is_enabled = false;
+	if (gpio_is_valid(data->gpio)) {
+		gpio_set_value_cansleep(data->gpio, !data->enable_high);
+		data->is_enabled = false;
+	}
 
 	return 0;
 }
@@ -162,16 +166,11 @@ static int fixed_voltage_list_voltage(struct regulator_dev *dev,
 	return data->microvolts;
 }
 
-static struct regulator_ops fixed_voltage_gpio_ops = {
+static struct regulator_ops fixed_voltage_ops = {
 	.is_enabled = fixed_voltage_is_enabled,
 	.enable = fixed_voltage_enable,
 	.disable = fixed_voltage_disable,
 	.enable_time = fixed_voltage_enable_time,
-	.get_voltage = fixed_voltage_get_voltage,
-	.list_voltage = fixed_voltage_list_voltage,
-};
-
-static struct regulator_ops fixed_voltage_ops = {
 	.get_voltage = fixed_voltage_get_voltage,
 	.list_voltage = fixed_voltage_list_voltage,
 };
@@ -209,6 +208,7 @@ static int reg_fixed_voltage_probe(struct platform_device *pdev)
 	}
 	drvdata->desc.type = REGULATOR_VOLTAGE;
 	drvdata->desc.owner = THIS_MODULE;
+	drvdata->desc.ops = &fixed_voltage_ops;
 
 	if (config->microvolts)
 		drvdata->desc.n_voltages = 1;
@@ -258,10 +258,11 @@ static int reg_fixed_voltage_probe(struct platform_device *pdev)
 			goto err_gpio;
 		}
 
-		drvdata->desc.ops = &fixed_voltage_gpio_ops;
-
 	} else {
-		drvdata->desc.ops = &fixed_voltage_ops;
+		/* Regulator without GPIO control is considered
+		 * always enabled
+		 */
+		drvdata->is_enabled = true;
 	}
 
 	drvdata->dev = regulator_register(&drvdata->desc, &pdev->dev,
