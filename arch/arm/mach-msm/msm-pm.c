@@ -289,7 +289,7 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	return ret ? ret : count;
 }
 
-static int __devinit msm_pm_mode_sysfs_add_cpu(
+static int msm_pm_mode_sysfs_add_cpu(
 	unsigned int cpu, struct kobject *modes_kobj)
 {
 	char cpu_name[8];
@@ -372,7 +372,7 @@ mode_sysfs_add_cpu_exit:
 	return ret;
 }
 
-int __devinit msm_pm_mode_sysfs_add(void)
+int msm_pm_mode_sysfs_add(void)
 {
 	struct kobject *module_kobj;
 	struct kobject *modes_kobj;
