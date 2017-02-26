@@ -3885,7 +3885,6 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	char log_buf[GAMMA_SET_MAX];
 	memset(pBuffer, 0x00, 256);
 #endif
-	gpsmart = psmart;
 	id1 = (psmart->ldi_revision & 0x00FF0000) >> 16;
 	id2 = (psmart->ldi_revision & 0x0000FF00) >> 8;
 	id3 = psmart->ldi_revision & 0xFF;
@@ -3894,6 +3893,7 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 	gamma_cell_determine(psmart->ldi_revision);
 	set_max_lux_table();
 
+	gpsmart = psmart;
 #ifdef SMART_DIMMING_DEBUG
 	print_RGB_offset(psmart);
 #endif

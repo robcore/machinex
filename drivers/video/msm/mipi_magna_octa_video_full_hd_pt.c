@@ -517,12 +517,12 @@ static char magna_brightness_elvss_pre[] = {
 
 
 static char magna_brightness_acl_default[] = {
-	0x55,
+	0x00,
 	0x00,
 };
 
 static char magna_brightness_acl_ref[] = {
-	0x55,
+	0x00,
 	0x00,
 };
 
@@ -1338,10 +1338,10 @@ static int get_candela_index(int bl_level)
 	case 250 ... 251:
 		backlightlevel = GAMMA_265CD;
 		break;
-	case 252 ... 254:
+	case 252 ... 253:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 255:
+	case 254 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1837,8 +1837,8 @@ static int brightness_control(int bl_level)
 	memcpy(magna_psre_mtp_pre, magna_psre_mtp_ref,
 						sizeof(magna_psre_mtp_ref));
 
-	if (get_auto_brightness() >= 6) {
-		magna_psre_mtp_ref[1] = 0x04; // RE ON
+	if (get_auto_brightness() == 6) {
+		magna_psre_mtp_ref[1] = 0x84; // RE ON
 	} else {
 		magna_psre_mtp_ref[1] = 0x84; // RE OFF
 	}
@@ -1854,7 +1854,7 @@ static int brightness_control(int bl_level)
 
 	/* PSRE control 1 *************************************************************************/
 	/* 0xBC setting */
-	if (magna_psre_mtp_ref[1] == 0x04) {
+	if (magna_psre_mtp_ref[1] == 0x84) {
 		brightness_packet[cmd_size].payload =
 				magna_brightness_psre_cont;
 		brightness_packet[cmd_size].dlen =
@@ -1912,7 +1912,7 @@ static int brightness_control(int bl_level)
 	/* 0x53 setting */
 	memcpy(hbm_mode_cont_pre, hbm_mode_cont_ref, sizeof(hbm_mode_cont_ref));
 
-	if (get_auto_brightness() >= 6) {
+	if (get_auto_brightness() == 6) {
 		hbm_mode_cont_ref[1] = 0xA0; /* HBM Mid on (400nit) */
 	} else {
 		hbm_mode_cont_ref[1] = 0x00; /* HBM off */
@@ -1951,7 +1951,7 @@ static int brightness_control(int bl_level)
 static int acl_control(int bl_level)
 {
 
-	if (get_auto_brightness() >= 6) {
+	if (get_auto_brightness() == 6) {
 		magna_brightness_acl_ref[1] = 0x00; /*RE low, ACL 40%*/
 	} else {
 		if (mipi_pd.acl_status) 
