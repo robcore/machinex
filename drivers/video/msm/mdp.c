@@ -2884,7 +2884,6 @@ static int mdp_probe(struct platform_device *pdev)
 #ifdef CONFIG_FB_MSM_MDP40
 	int intf, if_no;
 #endif
-	uint32_t irq;
 #if defined(CONFIG_FB_MSM_MIPI_DSI) && defined(CONFIG_FB_MSM_MDP40)
 	struct mipi_panel_info *mipi;
 #endif
@@ -3347,7 +3346,7 @@ static int mdp_probe(struct platform_device *pdev)
 	frame_rate = mdp_get_panel_framerate(mfd);
 	if (frame_rate) {
 		mfd->panel_info.frame_interval = 1000 / frame_rate;
-		mfd->cpu_pm_hdl = add_event_timer(irq, (void *)mfd, NULL);
+		mfd->cpu_pm_hdl = add_event_timer(NULL, (void *)mfd);
 	}
 	mdp_clk_ctrl(0);
 

@@ -753,7 +753,6 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 	int ret = MSM_PM_SLEEP_MODE_NOT_SELECTED;
 	uint32_t modified_time_us = 0;
 	struct msm_pm_time_params time_param;
-	int cpu;
 
 	time_param.latency_us =
 		(uint32_t) pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
@@ -764,7 +763,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 
 	if (!dev->cpu)
 		time_param.next_event_us =
-			(uint32_t) (ktime_to_us(get_next_event_time(cpu))
+			(uint32_t) (ktime_to_us(get_next_event_time())
 								& UINT_MAX);
 	else
 		time_param.next_event_us = 0;
