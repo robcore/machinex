@@ -1338,10 +1338,10 @@ static int get_candela_index(int bl_level)
 	case 250 ... 251:
 		backlightlevel = GAMMA_265CD;
 		break;
-	case 252 ... 253:
+	case 252 ... 254:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 254 ... 255:
+	case 255:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1838,7 +1838,7 @@ static int brightness_control(int bl_level)
 						sizeof(magna_psre_mtp_ref));
 
 	if (get_auto_brightness() >= 6) {
-		magna_psre_mtp_ref[1] = 0x84; // RE ON
+		magna_psre_mtp_ref[1] = 0x04; // RE ON
 	} else {
 		magna_psre_mtp_ref[1] = 0x84; // RE OFF
 	}
@@ -1854,7 +1854,7 @@ static int brightness_control(int bl_level)
 
 	/* PSRE control 1 *************************************************************************/
 	/* 0xBC setting */
-	if (magna_psre_mtp_ref[1] == 0x84) {
+	if (magna_psre_mtp_ref[1] == 0x04) {
 		brightness_packet[cmd_size].payload =
 				magna_brightness_psre_cont;
 		brightness_packet[cmd_size].dlen =

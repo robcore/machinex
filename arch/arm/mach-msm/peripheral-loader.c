@@ -27,7 +27,6 @@
 #include <linux/workqueue.h>
 #include <linux/jiffies.h>
 #include <linux/wakelock.h>
-#include <linux/delay.h>
 
 #include <asm/uaccess.h>
 #include <asm/setup.h>
@@ -266,12 +265,18 @@ static int load_image(struct pil_device *pil)
 	const struct firmware *fw;
 	unsigned long proxy_timeout = pil->desc->proxy_timeout;
 
+#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK
+	static int load_count_fwd;
+	static int load_count_auth;
+#endif
+
 	down_read(&pil_pm_rwsem);
 	snprintf(fw_name, sizeof(fw_name), "%s.mdt", pil->desc->name);
 	ret = request_firmware(&fw, fw_name, &pil->dev);
 	if (ret) {
 		dev_err(&pil->dev, "%s: Failed to locate %s\n",
 				pil->desc->name, fw_name);
+
 		goto out;
 	}
 
@@ -307,7 +312,18 @@ static int load_image(struct pil_device *pil)
 	if (ret) {
 		dev_err(&pil->dev, "%s: Invalid firmware metadata\n",
 				pil->desc->name);
+#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK
+		load_count_fwd++;
+		if (load_count_fwd > 10) {
+			release_firmware(fw);
+			up_read(&pil_pm_rwsem);
+			sec_peripheral_secure_check_fail();
+		} else {
+			goto release_fw;
+		}
+#else
 		goto release_fw;
+#endif
 	}
 
 	phdr = (const struct elf32_phdr *)(fw->data + sizeof(struct elf32_hdr));
@@ -335,10 +351,23 @@ static int load_image(struct pil_device *pil)
 		dev_err(&pil->dev, "%s: Failed to bring out of reset %d\n",
 				pil->desc->name, ret);
 		proxy_timeout = 0; /* Remove proxy vote immediately on error */
+#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK
+		load_count_auth++;
+		if (load_count_auth > 10) {
+			release_firmware(fw);
+			up_read(&pil_pm_rwsem);
+			sec_peripheral_secure_check_fail();
+		} else {
+			goto release_fw;
+		}
+#else
 		goto err_boot;
+#endif
 	}
 	dev_info(&pil->dev, "%s: Brought out of reset\n", pil->desc->name);
+#ifndef CONFIG_SEC_PERIPHERAL_SECURE_CHK
 err_boot:
+#endif
 	pil_proxy_unvote(pil, proxy_timeout);
 release_fw:
 	release_firmware(fw);
