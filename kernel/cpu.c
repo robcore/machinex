@@ -19,10 +19,14 @@
 #include <linux/mutex.h>
 #include <linux/gfp.h>
 #include <linux/suspend.h>
-
-#include "smpboot.h"
+#include <linux/lockdep.h>
+#include <linux/tick.h>
+#include <linux/smpboot.h>
+#include <trace/events/power.h>
 
 #include <trace/events/sched.h>
+
+#include "smpboot.h"
 
 #ifdef CONFIG_SMP
 /* Serializes the updates to cpu_online_mask, cpu_present_mask */
@@ -34,7 +38,7 @@ static DEFINE_MUTEX(cpu_add_remove_lock);
  * The APIs cpu_notifier_register_begin/done() must be used to protect CPU
  * hotplug callback (un)registration performed using __register_cpu_notifier()
  * or __unregister_cpu_notifier().
-*/
+ */
 void cpu_maps_update_begin(void)
 {
 	mutex_lock(&cpu_add_remove_lock);
@@ -59,7 +63,6 @@ static RAW_NOTIFIER_HEAD(cpu_chain);
  */
 static int cpu_hotplug_disabled;
 
-#ifdef CONFIG_HOTPLUG_CPU
 
 static struct {
 	struct task_struct *active_writer;
@@ -85,7 +88,7 @@ void get_online_cpus(void)
 	mutex_unlock(&cpu_hotplug.lock);
 
 }
-EXPORT_SYMBOL_GPL(get_online_cpus);
+EXPORT_SYMBOL(get_online_cpus);
 
 void put_online_cpus(void)
 {
@@ -101,7 +104,7 @@ void put_online_cpus(void)
 	mutex_unlock(&cpu_hotplug.lock);
 
 }
-EXPORT_SYMBOL_GPL(put_online_cpus);
+EXPORT_SYMBOL(put_online_cpus);
 
 /*
  * This ensures that the hotplug operation can begin only when the
@@ -166,10 +169,6 @@ void cpu_hotplug_enable(void)
 	cpu_maps_update_done();
 }
 
-#else /* #if CONFIG_HOTPLUG_CPU */
-static void cpu_hotplug_begin(void) {}
-static void cpu_hotplug_done(void) {}
-#endif	/* #else #if CONFIG_HOTPLUG_CPU */
 
 /* Need to know about CPUs going up/down? */
 int __ref register_cpu_notifier(struct notifier_block *nb)
@@ -201,8 +200,6 @@ static int cpu_notify(unsigned long val, void *v)
 {
 	return __cpu_notify(val, v, -1, NULL);
 }
-
-#ifdef CONFIG_HOTPLUG_CPU
 
 static void cpu_notify_nofail(unsigned long val, void *v)
 {
@@ -329,8 +326,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 	if (err) {
 		nr_calls--;
 		__cpu_notify(CPU_DOWN_FAILED | mod, hcpu, nr_calls, NULL);
-		printk("%s: attempt to take down CPU %u failed\n",
-				__func__, cpu);
+		pr_warn("%s: attempt to take down CPU %u failed\n",
+			__func__, cpu);
 		goto out_release;
 	}
 
@@ -406,7 +403,6 @@ out:
 	return err;
 }
 EXPORT_SYMBOL(cpu_down);
-#endif /*CONFIG_HOTPLUG_CPU*/
 
 /*
  * Unpark per-CPU smpboot kthreads at CPU-online time.
@@ -546,7 +542,7 @@ out:
 	cpu_maps_update_done();
 	return err;
 }
-EXPORT_SYMBOL_GPL(cpu_up);
+EXPORT_SYMBOL(cpu_up);
 
 #ifdef CONFIG_PM_SLEEP_SMP
 static cpumask_var_t frozen_cpus;
@@ -727,7 +723,7 @@ const unsigned long cpu_bit_bitmap[BITS_PER_LONG+1][BITS_TO_LONGS(NR_CPUS)] = {
 	MASK_DECLARE_8(48),	MASK_DECLARE_8(56),
 #endif
 };
-EXPORT_SYMBOL_GPL(cpu_bit_bitmap);
+EXPORT_SYMBOL(cpu_bit_bitmap);
 
 const DECLARE_BITMAP(cpu_all_bits, NR_CPUS) = CPU_BITS_ALL;
 EXPORT_SYMBOL(cpu_all_bits);
@@ -808,16 +804,16 @@ void idle_notifier_register(struct notifier_block *n)
 {
 	atomic_notifier_chain_register(&idle_notifier, n);
 }
-EXPORT_SYMBOL_GPL(idle_notifier_register);
+EXPORT_SYMBOL(idle_notifier_register);
 
 void idle_notifier_unregister(struct notifier_block *n)
 {
 	atomic_notifier_chain_unregister(&idle_notifier, n);
 }
-EXPORT_SYMBOL_GPL(idle_notifier_unregister);
+EXPORT_SYMBOL(idle_notifier_unregister);
 
 void idle_notifier_call_chain(unsigned long val)
 {
 	atomic_notifier_call_chain(&idle_notifier, val, NULL);
 }
-EXPORT_SYMBOL_GPL(idle_notifier_call_chain);
+EXPORT_SYMBOL(idle_notifier_call_chain);
