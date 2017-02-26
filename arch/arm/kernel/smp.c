@@ -348,6 +348,7 @@ asmlinkage void secondary_start_kernel(void)
 	 * reference and switch to it.
 	 */
 	cpu = smp_processor_id();
+
 	atomic_inc(&mm->mm_count);
 	current->active_mm = mm;
 	cpumask_set_cpu(cpu, mm_cpumask(mm));
@@ -773,6 +774,9 @@ static int cpufreq_callback(struct notifier_block *nb,
 	int cpu = freq->cpu;
 
 	if (freq->flags & CPUFREQ_CONST_LOOPS)
+		return NOTIFY_OK;
+
+	if (arm_delay_ops.const_clock)
 		return NOTIFY_OK;
 
 	if (!per_cpu(l_p_j_ref, cpu)) {
