@@ -56,4 +56,4 @@ u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy)
 
 	return idle_time;
 }
-EXPORT_SYMBOL_GPL(get_cpu_idle_time);
+EXPORT_SYMBOL(get_cpu_idle_time);
