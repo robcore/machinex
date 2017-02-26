@@ -16,7 +16,6 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
