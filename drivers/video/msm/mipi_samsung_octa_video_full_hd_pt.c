@@ -1280,10 +1280,10 @@ static int get_candela_index(int bl_level)
 	case 250 ... 251:
 		backlightlevel = GAMMA_265CD;
 		break;
-	case 252 ... 254:
+	case 252 ... 253:
 		backlightlevel = GAMMA_282CD;
 		break;
-	case 255:
+	case 254 ... 255:
 		backlightlevel = GAMMA_300CD;
 		break;
 	default:
@@ -1710,7 +1710,7 @@ static int brightness_control(int bl_level)
 	memcpy(samsung_brightness_acl_cont_pre, samsung_brightness_acl_cont_ref,
 						sizeof(samsung_brightness_acl_cont_ref));
 	if(get_auto_brightness() == 6) {
-		samsung_brightness_acl_cont_ref[1] = 0x01; /* PSRE set */
+		samsung_brightness_acl_cont_ref[1] = 0x03; /* PSRE set */
 	} else {
 		samsung_brightness_acl_cont_ref[1] = 0x03; /* No PSRE set */
 	}
