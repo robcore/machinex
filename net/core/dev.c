@@ -437,7 +437,7 @@ void __dev_remove_pack(struct packet_type *pt)
 	struct list_head *head = ptype_head(pt);
 	struct packet_type *pt1;
 
-	spin_lock(&offload_lock);
+	spin_lock(&ptype_lock);
 
 	list_for_each_entry(pt1, head, list) {
 		if (pt == pt1) {
@@ -448,7 +448,7 @@ void __dev_remove_pack(struct packet_type *pt)
 
 	pr_warn("dev_remove_pack: %p not found\n", pt);
 out:
-	spin_unlock(&offload_lock);
+	spin_unlock(&ptype_lock);
 }
 EXPORT_SYMBOL(__dev_remove_pack);
 
