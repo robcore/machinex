@@ -1,28 +1,150 @@
-#!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0041-bump-my-element-count.patch"
-patch -p1 -R < "/root/machinex/patches/0040-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0038-ARM-SMP-basic-IPI-triggered-completion-support.patch"
-patch -p1 -R < "/root/machinex/patches/0037-hopefully-thats-the-final-removal-of-localversion.patch"
-patch -p1 -R < "/root/machinex/patches/0036-that-should-help-me-avoid-annoying-defconfig-commits.patch"
-patch -p1 -R < "/root/machinex/patches/0033-fixed.patch"
-patch -p1 -R < "/root/machinex/patches/0032-possing.patch"
-patch -p1 -R < "/root/machinex/patches/0031-GOD-DAMN-IT.patch"
-patch -p1 -R < "/root/machinex/patches/0030-oops-dont-need-it-for-that-one-its-in-the-func.patch"
-patch -p1 -R < "/root/machinex/patches/0029-rcutree-declare-your-flags-dumbshits.patch"
-patch -p1 -R < "/root/machinex/patches/0028-DERP.patch"
-patch -p1 -R < "/root/machinex/patches/0026-rcu-Make-rcu_accelerate_cbs-note-need-for-future-gra.patch"
-patch -p1 -R < "/root/machinex/patches/0025-rcu-Abstract-rcu_start_future_gp-from-rcu_nocb_wait.patch"
-patch -p1 -R < "/root/machinex/patches/0024-rcu-Rename-n_nocb_gp_requests-to-need_future_gp.patch"
-patch -p1 -R < "/root/machinex/patches/0023-rcu-Push-lock-release-to-rcu_start_gp-s-callers.patch"
-patch -p1 -R < "/root/machinex/patches/0022-AGAIN-rcu-repurpose-no-cbs-event-tracing.patch"
-patch -p1 -R < "/root/machinex/patches/0021-rcu-Accelerate-RCU-callbacks-at-grace-period-end.patch"
-patch -p1 -R < "/root/machinex/patches/0020-rcu-Distinguish-rcuo-kthreads-by-RCU-flavor.patch"
-patch -p1 -R < "/root/machinex/patches/0019-rcu-Add-event-tracing-for-no-CBs-CPUs-grace-periods.patch"
-patch -p1 -R < "/root/machinex/patches/0018-rcu-Add-event-tracing-for-no-CBs-CPUs-callback-reg.patch"
-patch -p1 -R < "/root/machinex/patches/0017-rcu-Introduce-proper-blocking-to-no-CBs-kthreads-GP.patch"
-patch -p1 -R < "/root/machinex/patches/0016-net-use-right-lock-in-__dev_remove_offload.patch"
-patch -p1 -R < "/root/machinex/patches/0015-dox.patch"
-patch -p1 -R < "/root/machinex/patches/0013-rcu-Provide-compile-time-control-for-no-CBs-CPUs.patch"
-patch -p1 -R < "/root/machinex/patches/0012-ring-buffer-Add-ring-buffer-startup-selftest.patch"
-patch -p1 -R < "/root/machinex/patches/0011-bs.patch"
-patch -p1 -R < "/root/machinex/patches/0010-ARM-7653-2-do-not-scale-loops_per_jiffy-when-using-a.patch"
+/root/machinex/patches/0150-REVERT-ARM-SMP-basic-IPI-triggered-completion-suppor.patch
+/root/machinex/patches/0149-REVERT-ARM-SMP-basic-IPI-triggered-completion-suppor.patch
+/root/machinex/patches/0148-lol-after-all-that-my-ashmem-commit-was-bogus.patch
+/root/machinex/patches/0147-fix-doubled-while.patch
+/root/machinex/patches/0146-turn-on-partial-resume-and-time-related-suspend-feat.patch
+/root/machinex/patches/0145-partial-resume-add-missing-mutex-unlock.patch
+/root/machinex/patches/0144-REVERT-that.patch
+/root/machinex/patches/0143-cpufreq_stats-Adds-the-fucntionality-to-load-current.patch
+/root/machinex/patches/0142-Revert-Revert-gpio-msm-remove-logging-of-wakeup.patch
+/root/machinex/patches/0141-Power-Add-wakeup-reasons-counters-from-boot.patch
+/root/machinex/patches/0140-PM-Reduce-waiting-for-wakeup-reasons-to-100-ms.patch
+/root/machinex/patches/0139-Revert-gpio-msm-remove-logging-of-wakeup-reason.patch
+/root/machinex/patches/0138-PM-wakeup_reasons-disable-wakeup-reason-deduction-by.patch
+/root/machinex/patches/0137-PM-Replace-WARN_ON-on-timeout-with-one-line-print.patch
+/root/machinex/patches/0136-PM-wakeup_reasons-fix-race-condition.patch
+/root/machinex/patches/0135-Power-Report-total-suspend-times-from-boot.patch
+/root/machinex/patches/0134-PM-extend-suspend_again-mechanism-to-use-partialresu.patch
+/root/machinex/patches/0133-Bring-in-the-Partial-Resume-framework-from-this-set.patch
+/root/machinex/patches/0132-PM-wakeup_reason-correctly-deduce-wakeup-interrupts.patch
+/root/machinex/patches/0131-PM-wakeup_reason-add-check_wakeup_reason-to-verify-w.patch
+/root/machinex/patches/0130-gpio-msm-remove-logging-of-wakeup-reason.-To-be-hand.patch
+/root/machinex/patches/0129-irq_flow_handler_t-now-returns-bool.patch
+/root/machinex/patches/0128-ARM-gic-ignore-non-wakeup-interrupts-when-reporting-.patch
+/root/machinex/patches/0127-Power-Report-suspend-times-from-last_suspend_time.patch
+/root/machinex/patches/0126-PM-wakeup_reason-add-functions-to-query-and-clear-wa.patch
+/root/machinex/patches/0125-rtmutex-Avoid-pointless-requeueing-in-the-deadlock.patch
+/root/machinex/patches/0124-rtmutex-Cleanup-deadlock-detector-debug-logic.patch
+/root/machinex/patches/0123-rtmutex-Confine-deadlock-logic-to-futex.patch
+/root/machinex/patches/0122-rtmutex-Simplify-remove_waiter.patch
+/root/machinex/patches/0121-rtmutex-Document-pi-chain-walk.patch
+/root/machinex/patches/0120-rtmutex-turn-the-plist-into-an-rb-tree.patch
+/root/machinex/patches/0119-rtmutex-Clarify-the-boost-deboost-part.patch
+/root/machinex/patches/0118-rtmutex-No-need-to-keep-task-ref-for-lock-owner-chec.patch
+/root/machinex/patches/0117-rtmutex-Simplify-and-document-try_to_take_rtmutex.patch
+/root/machinex/patches/0116-rtmutex-Simplify-rtmutex_slowtrylock.patch
+/root/machinex/patches/0115-added-bcm-irq-chip-driver.patch
+/root/machinex/patches/0114-ashmem-Add-routines-to-get-in-kernel-reference.patch
+/root/machinex/patches/0113-done.patch
+/root/machinex/patches/0112-revert-me.patch
+/root/machinex/patches/0111-build_kernel.sh-can-stay-where-it-is-now.patch
+/root/machinex/patches/0110-success.patch
+/root/machinex/patches/0109-made-a-pos-but-am-first-just-gonna-try-reverting-the.patch
+/root/machinex/patches/0108-fix-my-config-again.patch
+/root/machinex/patches/0107-bump-my-element-count.patch
+/root/machinex/patches/0106-dox.patch
+/root/machinex/patches/0105-ARM-mcpm-add-a-simple-poke-mechanism-to-the-early.patch
+/root/machinex/patches/0104-ARM-SMP-basic-IPI-triggered-completion-support.patch
+/root/machinex/patches/0103-hopefully-thats-the-final-removal-of-localversion.patch
+/root/machinex/patches/0102-that-should-help-me-avoid-annoying-defconfig-commits.patch
+/root/machinex/patches/0101-update-config.patch
+/root/machinex/patches/0100-remove-useless-governor-common-again.patch
+/root/machinex/patches/0099-fixed.patch
+/root/machinex/patches/0098-possing.patch
+/root/machinex/patches/0097-GOD-DAMN-IT.patch
+/root/machinex/patches/0096-oops-dont-need-it-for-that-one-its-in-the-func.patch
+/root/machinex/patches/0095-rcutree-declare-your-flags-dumbshits.patch
+/root/machinex/patches/0094-DERP.patch
+/root/machinex/patches/0093-fuck-get-rid-of-cpu-gov-common.patch
+/root/machinex/patches/0092-rcu-Make-rcu_accelerate_cbs-note-need-for-future-gra.patch
+/root/machinex/patches/0091-rcu-Abstract-rcu_start_future_gp-from-rcu_nocb_wait.patch
+/root/machinex/patches/0090-rcu-Rename-n_nocb_gp_requests-to-need_future_gp.patch
+/root/machinex/patches/0089-rcu-Push-lock-release-to-rcu_start_gp-s-callers.patch
+/root/machinex/patches/0088-AGAIN-rcu-repurpose-no-cbs-event-tracing.patch
+/root/machinex/patches/0087-rcu-Accelerate-RCU-callbacks-at-grace-period-end.patch
+/root/machinex/patches/0086-rcu-Distinguish-rcuo-kthreads-by-RCU-flavor.patch
+/root/machinex/patches/0085-rcu-Add-event-tracing-for-no-CBs-CPUs-grace-periods.patch
+/root/machinex/patches/0084-rcu-Add-event-tracing-for-no-CBs-CPUs-callback-reg.patch
+/root/machinex/patches/0083-rcu-Introduce-proper-blocking-to-no-CBs-kthreads-GP.patch
+/root/machinex/patches/0082-net-use-right-lock-in-__dev_remove_offload.patch
+/root/machinex/patches/0081-dox.patch
+/root/machinex/patches/0080-quick-uapi-inclusion.patch
+/root/machinex/patches/0079-rcu-Provide-compile-time-control-for-no-CBs-CPUs.patch
+/root/machinex/patches/0078-ring-buffer-Add-ring-buffer-startup-selftest.patch
+/root/machinex/patches/0077-bs.patch
+/root/machinex/patches/0076-ARM-7653-2-do-not-scale-loops_per_jiffy-when-using-a.patch
+/root/machinex/patches/0075-changed-default-gov-to-interactive-to-test.patch
+/root/machinex/patches/0074-disabled-mpdecision-and-dcvs-again.patch
+/root/machinex/patches/0073-remoteproc-Add-STE-modem-driver.patch
+/root/machinex/patches/0072-bs.patch
+/root/machinex/patches/0071-bs.patch
+/root/machinex/patches/0070-bs.patch
+/root/machinex/patches/0069-driver-we-will-never-use.patch
+/root/machinex/patches/0068-bs.patch
+/root/machinex/patches/0067-netfilter-ipset-Check-and-reject-crazy-0-input-param.patch
+/root/machinex/patches/0066-netfilter-ipset-Fix-sparse-warnings-incorrect-type-a.patch
+/root/machinex/patches/0065-drivers-sbus-char-removes-unnecessary-semicolon.patch
+/root/machinex/patches/0064-stmmac-fix-return-value-check-in-stmmac_open_ext_tim.patch
+/root/machinex/patches/0063-l2tp-fix-compile-error.patch
+/root/machinex/patches/0062-dox.patch
+/root/machinex/patches/0061-dox.patch
+/root/machinex/patches/0060-cpuidle-rename-function-name-__cpuidle_register_driv.patch
+/root/machinex/patches/0059-turned-autogroup-back-on.patch
+/root/machinex/patches/0058-fuck-the-sysctl-parameters.patch
+/root/machinex/patches/0057-already-did.patch
+/root/machinex/patches/0056-i-will-do-devres-later.patch
+/root/machinex/patches/0055-boards-missing-core.h-inclusion.patch
+/root/machinex/patches/0054-REVERT-kconfig-Regenerate-lexer.patch
+/root/machinex/patches/0053-wow-build-does.patch
+/root/machinex/patches/0052-menuconfig-update-who-the-fuck-cares.patch
+/root/machinex/patches/0051-ARM-7534-1-clk-Make-the-managed-clk-functions-generi.patch
+/root/machinex/patches/0050-ARM-7507-1-cache-l2x0.c-save-the-final-aux-ctrl-val.patch
+/root/machinex/patches/0049-ARM-7510-1-opcodes-Add-helpers-for-emitting-custom-o.patch
+/root/machinex/patches/0048-pinctrl-use-kasprintf-in-pinmux_request_gpio.patch
+/root/machinex/patches/0047-bs.patch
+/root/machinex/patches/0046-scsi-ipr-remove-an-unneeded-check.patch
+/root/machinex/patches/0045-dox.patch
+/root/machinex/patches/0044-SCSI-hpsa-use-ioremap_nocache-instead-of-ioremap.patch
+/root/machinex/patches/0043-SCSI-ipr-missing-unlock-before-a-return.patch
+/root/machinex/patches/0042-this-may-be-screqy.patch
+/root/machinex/patches/0041-ARM-smp-Make-SMP-operations-mandatory.patch
+/root/machinex/patches/0040-msm-convert-to-smp-ops.patch
+/root/machinex/patches/0039-xattr-mark-variable-as-uninitialized-to-make-both-gc.patch
+/root/machinex/patches/0038-bvs.patch
+/root/machinex/patches/0037-bs.patch
+/root/machinex/patches/0036-this-may-be-old-.-lockdep-Check-if-nested-lock-is-ac.patch
+/root/machinex/patches/0035-ARM-SoC-add-per-platform-SMP-operations.patch
+/root/machinex/patches/0034-kconfig-Regenerate-lexer.patch
+/root/machinex/patches/0033-kbuild-Remove-reference-to-uninitialised-variable.patch
+/root/machinex/patches/0032-sure-did.patch
+/root/machinex/patches/0031-I-must-already-have-this-no.patch
+/root/machinex/patches/0030-vtime-consolidate-some-of-the-ctx-switch-dcode.patch
+/root/machinex/patches/0029-ARM-7579-1-arch-allow-a-scno-of-1-to-not-cause-a-SIG.patch
+/root/machinex/patches/0028-userns-fix-return-value-on-mntns_install-failure.patch
+/root/machinex/patches/0027-dox.patch
+/root/machinex/patches/0026-procfs-Use-the-proc-generic-infrastructure-for-proc-.patch
+/root/machinex/patches/0025-procfs-Don-t-cache-a-pid-in-the-root-inode.patch
+/root/machinex/patches/0024-sysctl-Pass-useful-parameters-to-sysctl-permissions.patch
+/root/machinex/patches/0023-max17042_battery-Fix-missing-verify_model_lock-retur.patch
+/root/machinex/patches/0022-sched-core-Fix-a-race-between-try_to_wake_up-and-a-w.patch
+/root/machinex/patches/0021-that-was-the-right-choice-those-vars-would-need-to-e.patch
+/root/machinex/patches/0020-reverted-those-to-build-myself-a-jic-version.patch
+/root/machinex/patches/0019-this-is-going-to-crash-and-burn-isnt-it.patch
+/root/machinex/patches/0018-ok.made-that-build.technically.patch
+/root/machinex/patches/0017-see-if-i-can-get-away-with-updating-dcvs.patch
+/root/machinex/patches/0016-hm.patch
+/root/machinex/patches/0015-make-msm-event-timer-actually-useful.patch
+/root/machinex/patches/0014-bricked-hotplug-add-hotplug-suspend-resume-functions.patch
+/root/machinex/patches/0013-net-checkpatch-warnings.patch
+/root/machinex/patches/0012-slub-remove-unused-argument-of-init_kmem_cache_node.patch
+/root/machinex/patches/0011-dox.patch
+/root/machinex/patches/0010-revert-last-two-regulator-ones.patch
+/root/machinex/patches/0009-regulator-fixed-Don-t-supply-voltage-change-ops.patch
+/root/machinex/patches/0008-regmap-Use-pad_bits-and-reg_bits.patch
+/root/machinex/patches/0007-regulator-fixed-Use-devm_kzalloc.patch
+/root/machinex/patches/0006-I-AM-DECLARING-FUCKING-WAR.-You-want-to-dim-my-scree.patch
+/root/machinex/patches/0005-will-this-work-can-i-just.can-i-just-force-our-globa.patch
+/root/machinex/patches/0004-got-rid-of-stupid-governor-driver-and-trying-out-cpu.patch
+/root/machinex/patches/0003-brought-back-panel-hax.patch
+/root/machinex/patches/0002-pf_key-xfrm-algos-prepare-for-new-config.patch
+/root/machinex/patches/0001-mpilib-use-DIV_ROUND_UP-and-remove-unused-macros.patch
