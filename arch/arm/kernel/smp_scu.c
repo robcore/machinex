@@ -11,6 +11,7 @@
 #include <linux/init.h>
 #include <linux/io.h>
 
+#include <asm/smp_plat.h>
 #include <asm/smp_scu.h>
 #include <asm/cacheflush.h>
 #include <asm/cputype.h>
