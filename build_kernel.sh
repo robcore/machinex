@@ -160,7 +160,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
-	echo "\n" >> ~/machinex/datetracker.txt
+	echo "------------------------" >> ~/machinex/datetracker.txt
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
@@ -318,7 +318,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
-	echo "\n" >> ~/machinex/datetracker.txt
+	echo "------------------------" >> ~/machinex/datetracker.txt
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
@@ -482,7 +482,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 		date >> ~/machinex/datetracker.txt
-		echo "\n" >> ~/machinex/datetracker.txt
+		echo "------------------------" >> ~/machinex/datetracker.txt
 		if [[ $AUTO = "n" ]]; then
 			echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 			read repadb
@@ -629,7 +629,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
-	echo "\n" >> ~/machinex/datetracker.txt
+	echo "------------------------" >> ~/machinex/datetracker.txt
 	echo "ENABLE ADB WIRELESS"
 	countdown
 	adb connect 192.168.1.103
