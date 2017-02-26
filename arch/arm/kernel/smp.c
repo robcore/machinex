@@ -28,6 +28,7 @@
 #include <linux/cpufreq.h>
 
 #include <linux/atomic.h>
+#include <asm/smp.h>
 #include <asm/cacheflush.h>
 #include <asm/cpu.h>
 #include <asm/cputype.h>
@@ -45,6 +46,8 @@
 #include <asm/smp_plat.h>
 #include <asm/mpu.h>
 #include <asm/virt.h>
+#include <asm/mach/arch.h>
+#include <asm/mpu.h>
 
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
@@ -57,7 +60,7 @@ struct secondary_data secondary_data;
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
  */
-volatile int __cpuinitdata pen_release = -1;
+volatile int pen_release = -1;
 
 enum ipi_msg_type {
 	IPI_WAKEUP,
@@ -234,8 +237,7 @@ void __ref cpu_die(void)
 	 * The return path should not be used for platforms which can
 	 * power off the CPU.
 	 */
-	if (smp_ops.cpu_die)
-		smp_ops.cpu_die(cpu);
+	platform_cpu_die(cpu);
 
 	/*
 	 * Do not return to the idle loop - jump back to the secondary
@@ -301,14 +303,13 @@ asmlinkage void secondary_start_kernel(void)
 	/*
 	 * Give the platform a chance to do its own initialisation.
 	 */
-	if (smp_ops.smp_secondary_init)
-		smp_ops.smp_secondary_init(cpu);
-
-        smp_store_cpu_info(cpu);
+	platform_secondary_init(cpu);
 
 	notify_cpu_starting(cpu);
 
 	calibrate_delay();
+
+	smp_store_cpu_info(cpu);
 
 	/*
 	 * OK, now it's safe to let the boot CPU continue.  Wait for
@@ -368,8 +369,8 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		/*
 		 * Initialise the present map, which describes the set of CPUs
 		 * actually populated at the present time. A platform should
-		 * re-initialize the map in the platforms smp_prepare_cpus()
-		 * if present != possible (e.g. physical hotplug).
+		 * re-initialize the map in platform_smp_prepare_cpus() if
+		 * present != possible (e.g. physical hotplug).
 		 */
 		init_cpu_present(cpu_possible_mask);
 
@@ -377,8 +378,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		 * Initialise the SCU if there are more than one CPU
 		 * and let them know where to start.
 		 */
-		if (smp_ops.smp_prepare_cpus)
-			smp_ops.smp_prepare_cpus(max_cpus);
+		platform_smp_prepare_cpus(max_cpus);
 	}
 }
 
@@ -527,12 +527,10 @@ static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 		raw_spin_unlock(&stop_lock);
 	}
 
-	set_cpu_active(cpu, false);
+	set_cpu_online(cpu, false);
 
 	local_fiq_disable();
 	local_irq_disable();
-
-	flush_cache_all();
 
 	while (1)
 		cpu_relax();
@@ -653,9 +651,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 
 void smp_send_reschedule(int cpu)
 {
-	if (cpu_is_offline(cpu)) {
-		return;
-	}
 	smp_cross_call(cpumask_of(cpu), IPI_RESCHEDULE);
 }
 
@@ -670,10 +665,10 @@ void smp_send_stop(void)
 
 	/* Wait up to one second for other CPUs to stop */
 	timeout = USEC_PER_SEC;
-	while (num_active_cpus() > 1 && timeout--)
+	while (num_online_cpus() > 1 && timeout--)
 		udelay(1);
 
-	if (num_active_cpus() > 1)
+	if (num_online_cpus() > 1)
 		pr_warning("SMP: failed to stop secondary CPUs\n");
 }
 
