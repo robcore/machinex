@@ -192,7 +192,8 @@ static int reg_fixed_voltage_probe(struct platform_device *pdev)
 	if (!config)
 		return -ENOMEM;
 
-	drvdata = kzalloc(sizeof(struct fixed_voltage_data), GFP_KERNEL);
+	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct fixed_voltage_data),
+			       GFP_KERNEL);
 	if (drvdata == NULL) {
 		dev_err(&pdev->dev, "Failed to allocate device data\n");
 		ret = -ENOMEM;
@@ -286,7 +287,6 @@ err_gpio:
 err_name:
 	kfree(drvdata->desc.name);
 err:
-	kfree(drvdata);
 	return ret;
 }
 
@@ -298,7 +298,6 @@ static int reg_fixed_voltage_remove(struct platform_device *pdev)
 	if (gpio_is_valid(drvdata->gpio))
 		gpio_free(drvdata->gpio);
 	kfree(drvdata->desc.name);
-	kfree(drvdata);
 
 	return 0;
 }
