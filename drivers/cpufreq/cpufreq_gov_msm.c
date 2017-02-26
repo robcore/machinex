@@ -131,19 +131,10 @@ static void msm_gov_check_limits(struct cpufreq_policy *policy)
 {
 	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
 
-	if (policy->max < gov->cur_freq)
-		__cpufreq_driver_target(policy, policy->max,
-				CPUFREQ_RELATION_H);
-	else if (policy->min > gov->cur_freq)
-		__cpufreq_driver_target(policy, policy->min,
-				CPUFREQ_RELATION_L);
-	else
-		__cpufreq_driver_target(policy, gov->cur_freq,
-				CPUFREQ_RELATION_L);
+	policy->cur = gov->cur_freq;
+	policy->min = gov->min_freq;
+	policy->max = gov->max_freq;
 
-	gov->cur_freq = policy->cur;
-	gov->min_freq = policy->min;
-	gov->max_freq = policy->max;
 	msm_dcvs_update_limits(gov->dcvs_core_id);
 }
 
@@ -228,7 +219,7 @@ struct cpufreq_governor cpufreq_gov_msm = {
 	.owner = THIS_MODULE,
 };
 
-static int __devinit msm_gov_probe(struct platform_device *pdev)
+static int msm_gov_probe(struct platform_device *pdev)
 {
 	int cpu;
 	struct msm_dcvs_core_info *core = NULL;
@@ -268,7 +259,7 @@ static int __devinit msm_gov_probe(struct platform_device *pdev)
 	return cpufreq_register_governor(&cpufreq_gov_msm);
 }
 
-static int __devexit msm_gov_remove(struct platform_device *pdev)
+static int msm_gov_remove(struct platform_device *pdev)
 {
 	platform_set_drvdata(pdev, NULL);
 	return 0;
@@ -276,7 +267,7 @@ static int __devexit msm_gov_remove(struct platform_device *pdev)
 
 static struct platform_driver msm_gov_driver = {
 	.probe = msm_gov_probe,
-	.remove = __devexit_p(msm_gov_remove),
+	.remove = msm_gov_remove,
 	.driver = {
 		.name = "msm_dcvs_gov",
 		.owner = THIS_MODULE,
