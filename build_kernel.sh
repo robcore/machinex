@@ -113,11 +113,9 @@ else
 fi;
 }
 
-cp arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
+cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
-cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
-rm arch/arm/configs/tmpconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
@@ -270,7 +268,7 @@ else
 fi;
 }
 
-cp arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
+cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 
@@ -433,7 +431,7 @@ else
 fi;
 }
 
-cp arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
+cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 
@@ -522,7 +520,7 @@ if [ -e /media/root/robcore/AIK/previous.txt ]; then
 fi;
 	OUTFOLDER=$PRVS
 
-cp arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
+cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
@@ -577,7 +575,7 @@ else
 fi;
 }
 
-cp arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
+cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 
