@@ -340,8 +340,13 @@ config SUSPEND_TIME
 	  keeps statistics on the time spent in suspend in
 	  /sys/kernel/debug/suspend_time
 
+config DEDUCE_WAKEUP_REASONS
+	bool
+	default n
+
 config PARTIALRESUME
 	bool "Partial-resume framework"
+	select DEDUCE_WAKEUP_REASONS
 	default y
 	---help---
 	  Provides hooks for drivers to register partial-resume handlers.
