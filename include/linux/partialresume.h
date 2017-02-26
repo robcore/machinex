@@ -30,6 +30,7 @@ struct partial_resume {
 	struct list_head next_match;
 	int irq;
 	struct partial_resume_stats stats;
+	void *private;
 	bool (*partial_resume)(struct partial_resume *);
 };
 
@@ -45,7 +46,7 @@ bool suspend_again_consensus(void);
 struct partial_resume;
 static inline int register_partial_resume(struct partial_resume *handler) { return 0; }
 static inline void unregister_partial_resume(struct partial_resume *handler) {}
-static inline bool suspend_again_match(const struct list_head *irqs, size_t irqs_len) { return false; }
+static inline bool suspend_again_match(const struct list_head *irqs) { return false; }
 static inline bool suspend_again_consensus(void) { return false; }
 
 #endif
