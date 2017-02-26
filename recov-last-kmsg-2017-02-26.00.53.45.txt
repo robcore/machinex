@@ -1,0 +1,140 @@
+Truncating memory at 0xc0000000 to fit in 32-bit physical address space
+sec_tsp_mode: LCD_ID = 0x428047, val: 0X428047, ret1: 0x8
+msm_rpm_get_status(): Status id 433 not defined for target
+msm_rpm_get_status(): Status id 433 not defined for target
+sensor_power_on_vdd: done
+i2c i2c-4: Failed to register i2c client imx135 at 0x10 (-16)
+i2c i2c-4: Can't create device at 0x10
+i2c i2c-4: Failed to register i2c client s5k3l1yx at 0x34 (-16)
+i2c i2c-4: Can't create device at 0x34
+AXI: msm_bus_fabric_init_driver(): msm_bus_fabric_init_driver
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+Error-Bad Function Input
+Error-Bad Function Input
+smd_channel_probe_worker: allocation table not initialized
+mdm_modem_probe: registered mdm id 0
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[mdnie lite] start!
+[mdnie lite] end!
+hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddb1b808
+Inside writeback_driver_init
+Inside writeback_probe
+Unknown PM state 0
+Unknown PM state 3
+wcd9xxx_slim_probe: failed to get slimbus tabla-slim logical address: -6
+msm_otg msm_otg: failed to get phy_clk
+couldn't get usb power supply
+[jc_spi_init:336] Entered
+[jc_spi_probe:301] Entered
+[jc_spi_probe:311] jc_spi successfully probed
+msm_eeprom_probe probe_fail
+msm_sensor_i2c_probe s5k6b2yx probe succeeded
+msm_eeprom_probe probe_fail
+mmc0: No card detect facilities available
+power_supply sec-fuelgauge: driver failed to report `status' property: -22
+power_supply sec-fuelgauge: driver failed to report `status' property: -22
+max77693_get_health_state: Fail to get psy (battery)
+power_supply sec-charger: driver failed to report `power_now' property: -22
+max77693_get_health_state: Fail to get psy (battery)
+power_supply sec-charger: driver failed to report `power_now' property: -22
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x1343c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x18 not connected
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+max77693_muic_charger_cb: cable type for charger: MUIC(3), CHARGER(3)
+max77693_muic_charger_cb: fail to get battery/ps psy
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x11100c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+Unable to register core for 0
+max17048_rcomp_update: Fail to get psy (battery)
+sec-battery sec-battery: sec_battery_probe: Failed to Enable Wakeup Source(-6)
+barcode_emul_ice4: probe complete barcode_emul_probe
+Warning: unable to open an initial console.
+sec_bat_cable_work: Fail to set psy ((null))
+init: /init.rc: 222: invalid command 'load_system_props'
+init: /init.qcom.rc: 689: invalid command '/system/bin/log'
+init: init.carrier.rc: 90: ignored duplicate definition of service 'privatemode'
+init: init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+init: init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+init: init.carrier.rc: 195: invalid option 'write'
+init: init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+init: /init.carrier.rc: 84: ignored duplicate definition of service 'vcsFPService'
+init: /init.carrier.rc: 90: ignored duplicate definition of service 'privatemode'
+init: /init.carrier.rc: 130: ignored duplicate definition of service 'scranton_RD'
+init: /init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+init: /init.carrier.rc: 156: ignored duplicate definition of service 'diag_uart_log'
+init: /init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+init: /init.carrier.rc: 177: ignored duplicate definition of service 'swapon'
+init: /init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'fm_radio'
+power_supply sec-fuelgauge: driver failed to report `status' property: -22
+power_supply sec-charger: driver failed to report `power_now' property: -22
+init: Running /dev/block/platform/msm_sdcc.1/by-name/cache on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/efs on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+init: failed to open '/sys/devices/soc0/soc_id'
+init: failed to open '/sys/devices/soc0/platform_version'
+init: failed to open '/sys/devices/soc0/hw_platform'
+init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
+init: do_restorecon: Could not access /carrier
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+init: Warning!  Service lmkd needs a SELinux domain defined; please fix!
+init: Warning!  Service modem-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-c_core-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service config_bluetooth needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-usb-sh needs a SELinux domain defined; please fix!
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+init: service 'console' requires console
+init: Warning!  Service scs needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/debuggerd64', disabling 'debuggerd64'
+init: Warning!  Service DR-daemon needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-c_main-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service macloader needs a SELinux domain defined; please fix!
+init: Warning!  Service sec-sh needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/rf4ce', disabling 'rf4ce'
+init: cannot find '/system/bin/imsqmidaemon', disabling 'imsqmidaemon'
+init: Warning!  Service zygote needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/dpmd', disabling 'dpmd'
+init: cannot find '/system/bin/loc_launcher', disabling 'loc_launcher'
+init: Warning!  Service qcom-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service ppd needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/vcsFPService', disabling 'vcsFPService'
+init: service 'console' requires console
+init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+init: untracked pid 306 exited with status 0
+init: no such service 'quipc_igsn'
+init: no such service 'quipc_main'
+init: untracked pid 337 exited with status 1
+init: untracked pid 395 exited with status 1
+init: untracked pid 488 exited with status 0
+[mdnie lite] is negative Mode On = 0
+[mdnie lite]  = UI MODE =
+[mdnie lite]  = DYNAMIC MODE =
+init: untracked pid 313 exited with status 1
+init: untracked pid 786 exited with status 1
+
+No errors detected
