@@ -616,7 +616,7 @@ static char samsung_brightness_acl_cont_pre[] = {
  */
 static char samsung_brightness_acl_cont_ref[] = {
 	0xB5,
-	0x00, 0xFF, 0x00,
+	0x03, 0xFF, 0x00,
 };
 
 static char samsung_brightness_acl_cont_default[] = {
@@ -1709,7 +1709,7 @@ static int brightness_control(int bl_level)
 	/* 0xB5 setting */
 	memcpy(samsung_brightness_acl_cont_pre, samsung_brightness_acl_cont_ref,
 						sizeof(samsung_brightness_acl_cont_ref));
-	if(get_auto_brightness() >= 6) {
+	if(get_auto_brightness() == 6) {
 		samsung_brightness_acl_cont_ref[1] = 0x01; /* PSRE set */
 	} else {
 		samsung_brightness_acl_cont_ref[1] = 0x03; /* No PSRE set */
@@ -1727,7 +1727,7 @@ static int brightness_control(int bl_level)
 
 	/* write als *************************************************************************/
 	/* 0xE3 setting */
-	if (get_auto_brightness() >= 6) {
+	if (get_auto_brightness() == 6) {
 		brightness_packet[cmd_size].payload =
 				samsung_brightness_write_als;
 		brightness_packet[cmd_size].dlen =
@@ -1816,14 +1816,14 @@ static int acl_control(int bl_level)
 {
 	/* acl control *************************************************************************/
 	/* 0xB5 setting */
-	if (get_auto_brightness() >= 6)
+	if (get_auto_brightness() == 6)
 		samsung_brightness_acl_cont_default[1] = 0x01;
 	else
 		samsung_brightness_acl_cont_default[1] = 0x03;
 
 	/* write power saving *****************************************************************/
 	/* 0x55 setting */
-	if (get_auto_brightness() >= 6) {
+	if (get_auto_brightness() == 6) {
 		samsung_brightness_acl_ref[1] = 0x00; /*ACL on 40p, re low*/
 	} else {
 		if (mipi_pd.acl_status || mipi_pd.siop_status)

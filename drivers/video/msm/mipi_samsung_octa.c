@@ -624,14 +624,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		wmb();
 	}
 
-	if (get_auto_brightness() >= 6) {
-		msd.mpd->first_bl_hbm_psre = 1;
-		msd.dstat.auto_brightness = 6;
-	} else {
-		pr_debug("PSRE Disabled\n");
-		msd.mpd->first_bl_hbm_psre = 0;
-		msd.dstat.auto_brightness = 0;
-	}
+	msd.mpd->first_bl_hbm_psre = 0;
 
 #ifdef CONFIG_SEC_DEBUG_MDP
 	sec_debug_mdp_reset_value();
@@ -754,7 +747,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
 		if (get_auto_brightness() >= 6)
-			msd.mpd->first_bl_hbm_psre = 1;
+			msd.mpd->first_bl_hbm_psre = 0;
 		else
 			msd.mpd->first_bl_hbm_psre = 0;
 	} else {
@@ -911,6 +904,7 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
+	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
@@ -931,12 +925,14 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "7")) // HBM mode (HBM + PSRE)
 		msd.dstat.auto_brightness = 7;
 	else {
-		return size;
-	}
+		if (!first_auto_br) {
+			first_auto_br++;
+			return size;
+		}
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		if (get_auto_brightness() >= 6)
-			msd.mpd->first_bl_hbm_psre = 1;
+			msd.mpd->first_bl_hbm_psre = 0;
 		else
 			msd.mpd->first_bl_hbm_psre = 0;
 		mipi_samsung_disp_backlight(mfd);
