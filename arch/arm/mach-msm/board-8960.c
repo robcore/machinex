@@ -109,6 +109,8 @@
 #include <linux/mutex.h>
 #endif
 
+#include "core.h"
+
 static struct platform_device msm_fm_platform_init = {
 	.name = "iris_fm",
 	.id   = -1,

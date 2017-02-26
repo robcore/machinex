@@ -43,7 +43,6 @@
 #include <asm/ptrace.h>
 #include <asm/localtimer.h>
 #include <asm/smp_plat.h>
-#include <asm/mach/arch.h>
 #include <asm/mpu.h>
 #include <asm/virt.h>
 #include <asm/mach/arch.h>
@@ -61,12 +60,6 @@ struct secondary_data secondary_data;
  * boot "holding pen"
  */
 volatile int pen_release = -1;
-
-/*
- * control for which core is the next to come out of the secondary
- * boot "holding pen"
- */
-volatile int __cpuinitdata pen_release = -1;
 
 enum ipi_msg_type {
 	IPI_WAKEUP,
@@ -143,7 +136,7 @@ static void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 		smp_ops.smp_prepare_cpus(max_cpus);
 }
 
-static void __cpuinit platform_secondary_init(unsigned int cpu)
+static void platform_secondary_init(unsigned int cpu)
 {
 	if (smp_ops.smp_secondary_init)
 		smp_ops.smp_secondary_init(cpu);

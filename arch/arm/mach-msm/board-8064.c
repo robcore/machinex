@@ -89,6 +89,8 @@
 #include "smd_private.h"
 #include "sysmon.h"
 
+#include "core.h"
+
 #ifdef CONFIG_SEC_THERMISTOR
 #include <mach/sec_thermistor.h>
 #include <mach/fusion3-thermistor.h>

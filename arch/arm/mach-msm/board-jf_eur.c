@@ -148,6 +148,8 @@
 #include <asm/kexec.h>
 #endif
 
+#include "core.h"
+
 #if defined(CONFIG_SENSORS_SSP)
 enum {
 	SNS_PWR_OFF,
