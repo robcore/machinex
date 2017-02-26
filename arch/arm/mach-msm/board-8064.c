@@ -3492,6 +3492,7 @@ static void __init apq8064_cdp_init(void)
 }
 
 MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
@@ -3504,6 +3505,7 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 MACHINE_END
 
 MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
@@ -3516,6 +3518,7 @@ MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
 MACHINE_END
 
 MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
@@ -3528,6 +3531,7 @@ MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
 MACHINE_END
 
 MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
@@ -3540,6 +3544,7 @@ MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
 MACHINE_END
 
 MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
@@ -3552,6 +3557,7 @@ MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
 MACHINE_END
 
 MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,

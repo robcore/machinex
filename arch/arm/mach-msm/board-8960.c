@@ -3576,6 +3576,7 @@ static void __init msm8960_cdp_init(void)
 }
 
 MACHINE_START(MSM8960_CDP, "QCT MSM8960 CDP")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
@@ -3588,6 +3589,7 @@ MACHINE_START(MSM8960_CDP, "QCT MSM8960 CDP")
 MACHINE_END
 
 MACHINE_START(MSM8960_MTP, "QCT MSM8960 MTP")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
@@ -3600,6 +3602,7 @@ MACHINE_START(MSM8960_MTP, "QCT MSM8960 MTP")
 MACHINE_END
 
 MACHINE_START(MSM8960_FLUID, "QCT MSM8960 FLUID")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
@@ -3612,6 +3615,7 @@ MACHINE_START(MSM8960_FLUID, "QCT MSM8960 FLUID")
 MACHINE_END
 
 MACHINE_START(MSM8960_LIQUID, "QCT MSM8960 LIQUID")
+	.smp = smp_ops(msm_smp_ops),
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
