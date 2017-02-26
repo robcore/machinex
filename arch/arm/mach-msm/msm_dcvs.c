@@ -312,15 +312,8 @@ void msm_dcvs_apply_gpu_floor(unsigned long cpu_freq)
 static void check_power_collapse_modes(struct dcvs_core *core)
 {
 	struct msm_dcvs_algo_param *params;
-	int index;
 
-	index = CPU_OFFSET + num_online_cpus() - 1;
-	if (index < 0 || index >= CORES_MAX) {
-		__err("%s: Not updating params. Invalid index to core!\n",
-			 __func__);
-		return;
-	}
-	params = &core_list[index].algo_param;
+	params = &core_list[CPU_OFFSET + num_online_cpus() - 1].algo_param;
 
 	if (core->actual_freq >= params->disable_pc_threshold)
 		core->idle_enable(core->type_core_num,
@@ -572,14 +565,10 @@ int msm_dcvs_update_algo_params(void)
 {
 	static struct msm_dcvs_algo_param curr_params;
 	struct msm_dcvs_algo_param *new_params;
-	int cpu, ret = 0, index;
-
-	index = CPU_OFFSET + num_online_cpus() - 1;
-	if (index < 0 || index >= CORES_MAX)
-		return ret;
+	int cpu, ret = 0;
 
 	mutex_lock(&param_update_mutex);
-	new_params = &core_list[index].algo_param;
+	new_params = &core_list[CPU_OFFSET + num_online_cpus() - 1].algo_param;
 
 	if (memcmp(&curr_params, new_params,
 		   sizeof(struct msm_dcvs_algo_param))) {
