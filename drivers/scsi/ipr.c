@@ -5800,7 +5800,7 @@ static int ipr_queuecommand_lck(struct scsi_cmnd *scsi_cmd,
 	struct ipr_resource_entry *res;
 	struct ipr_ioarcb *ioarcb;
 	struct ipr_cmnd *ipr_cmd;
-	int rc = 0;
+	int rc;
 
 	scsi_cmd->scsi_done = done;
 	ioa_cfg = (struct ipr_ioa_cfg *)scsi_cmd->device->host->hostdata;
@@ -5862,12 +5862,10 @@ static int ipr_queuecommand_lck(struct scsi_cmnd *scsi_cmd,
 	    (!ipr_is_gscsi(res) || scsi_cmd->cmnd[0] == IPR_QUERY_RSRC_STATE))
 		ioarcb->cmd_pkt.request_type = IPR_RQTYPE_IOACMD;
 
-	if (likely(rc == 0)) {
-		if (ioa_cfg->sis64)
-			rc = ipr_build_ioadl64(ioa_cfg, ipr_cmd);
-		else
-			rc = ipr_build_ioadl(ioa_cfg, ipr_cmd);
-	}
+	if (ioa_cfg->sis64)
+		rc = ipr_build_ioadl64(ioa_cfg, ipr_cmd);
+	else
+		rc = ipr_build_ioadl(ioa_cfg, ipr_cmd);
 
 	if (unlikely(rc != 0)) {
 		list_move_tail(&ipr_cmd->queue, &ioa_cfg->free_q);
