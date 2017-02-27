@@ -50,16 +50,6 @@ config SPS_SUPPORT_NDP_BAM
 	help
 	  No-Data-Path BAM is used to improve BAM performance.
 
-config QPNP_PWM
-	depends on SPMI
-	depends on OF_SPMI
-        tristate "Qualcomm QPNP LPG/PWM support"
-        help
-          This driver supports PWM/LPG devices in Qualcomm PMIC chips which
-          comply with QPNP.  QPNP is a SPMI based PMIC implementation.  These
-          devices support Pulse Width Modulation output with user generated
-          patterns. They share a lookup table with size of 64 entries.
-
 config SPS_SUPPORT_4K_GROUP
 	bool "SPS support 4K resource group"
 	depends on SPS && SPS_SUPPORT_NDP_BAM
@@ -69,6 +59,16 @@ config SPS_SUPPORT_4K_GROUP
 	  The register offsets of all BAM registers are
 	  changed in SPS driver to support this new 4K
 	  resource groups allocations.
+
+config QPNP_PWM
+	depends on SPMI
+	depends on OF_SPMI
+        tristate "Qualcomm QPNP LPG/PWM support"
+        help
+          This driver supports PWM/LPG devices in Qualcomm PMIC chips which
+          comply with QPNP.  QPNP is a SPMI based PMIC implementation.  These
+          devices support Pulse Width Modulation output with user generated
+          patterns. They share a lookup table with size of 64 entries.
 
 config QPNP_POWER_ON
 	tristate "QPNP PMIC POWER-ON Driver"
