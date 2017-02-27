@@ -149,15 +149,15 @@ bool  check_bcm4335_rev(void)
         char *filepath = "/data/.rev";
         char chip_rev[10]={0,};
         bool is_revb0 = true;
-		bcm_bt_unlock(lock_cookie_wifi);
+
         printk("check BCM4335, check_bcm4335_rev \n");
         fp = filp_open(filepath, O_RDONLY, 0);
         if (IS_ERR(fp)) {
-                pr_err("/data/.rev file open error\n");
+                printk("/data/.rev file open error\n");
                 is_revb0 = true;
 
         } else {
-                pr_err("/data/.rev file Found\n");
+                printk("/data/.rev file Found\n");
                 ret = kernel_read(fp, 0, (char *)chip_rev, 9);
                 if(ret != -1 && NULL != strstr(chip_rev,"BCM4335B0")) {
                         printk("Found BCM4335B0\n");
@@ -165,9 +165,9 @@ bool  check_bcm4335_rev(void)
                 } else {
                         is_revb0 = false;
                 }
+                filp_close(fp, NULL);
         }
 
-		filp_close(fp, NULL);
         return is_revb0;
 }
 #endif
