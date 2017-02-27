@@ -73,11 +73,11 @@ bool suspend_again_consensus(void)
 	list_for_each_entry(h, &pr_matches, next_match) {
 		h->stats.total++;
 		if (!h->partial_resume(h)) {
-			pr_debug("%s: partial-resume for %d: false\n", __func__, h->irq);
+			pr_info("%s: partial-resume for %d: false\n", __func__, h->irq);
 			return false;
 		}
 		h->stats.total_yes++;
-		pr_debug("%s: partial-resume for %d: true\n", __func__, h->irq);
+		pr_info("%s: partial-resume for %d: true\n", __func__, h->irq);
 	}
 
 	consensus_stats.total_yes++;
