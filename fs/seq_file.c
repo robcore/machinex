@@ -7,11 +7,11 @@
 
 #include <linux/fs.h>
 #include <linux/export.h>
+#include <linux/mm.h>
 #include <linux/seq_file.h>
-#include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/cred.h>
-#include <linux/mm.h>
+#include <linux/vmalloc.h>
 
 #include <asm/uaccess.h>
 #include <asm/page.h>
@@ -30,16 +30,6 @@ static bool seq_overflow(struct seq_file *m)
 static void seq_set_overflow(struct seq_file *m)
 {
 	m->count = m->size;
-}
-
-static void *seq_buf_alloc(unsigned long size)
-{
-	void *buf;
-
-	buf = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
-	if (!buf && size > PAGE_SIZE)
-		buf = vmalloc(size);
-	return buf;
 }
 
 /**
@@ -108,7 +98,7 @@ static int traverse(struct seq_file *m, loff_t offset)
 		return 0;
 	}
 	if (!m->buf) {
-		m->buf = seq_buf_alloc(m->size = PAGE_SIZE);
+		m->buf = kmalloc(m->size = PAGE_SIZE, GFP_KERNEL);
 		if (!m->buf)
 			return -ENOMEM;
 	}
@@ -147,9 +137,19 @@ static int traverse(struct seq_file *m, loff_t offset)
 
 Eoverflow:
 	m->op->stop(m, p);
-	kvfree(m->buf);
-	m->count = 0;
-	m->buf = seq_buf_alloc(m->size <<= 1);
+#ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
+	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
+	m->size <<= 1;
+	if (m->size <= (2* PAGE_SIZE))
+		m->buf = kmalloc(m->size, GFP_KERNEL);
+	else
+		m->buf = vmalloc(m->size);
+#else
+	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
+	m->buf = kmalloc(m->size <<= 1, GFP_KERNEL | __GFP_NOWARN);
+	if (!m->buf)
+		m->buf = vmalloc(m->size);
+#endif
 	return !m->buf ? -ENOMEM : -EAGAIN;
 }
 
@@ -204,7 +204,7 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 
 	/* grab buffer if we didn't have one */
 	if (!m->buf) {
-		m->buf = seq_buf_alloc(m->size = PAGE_SIZE);
+		m->buf = kmalloc(m->size = PAGE_SIZE, GFP_KERNEL);
 		if (!m->buf)
 			goto Enomem;
 	}
@@ -244,11 +244,22 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 		if (m->count < m->size)
 			goto Fill;
 		m->op->stop(m, p);
-		kvfree(m->buf);
-		m->count = 0;
-		m->buf = seq_buf_alloc(m->size <<= 1);
+#ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
+		is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
+		m->size <<= 1;
+		if (m->size <= (2* PAGE_SIZE))
+			m->buf = kmalloc(m->size, GFP_KERNEL);
+		else
+			m->buf = vmalloc(m->size);
+#else
+		is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
+		m->buf = kmalloc(m->size <<= 1, GFP_KERNEL | __GFP_NOWARN);
+		if (!m->buf)
+			m->buf = vmalloc(m->size);
+#endif
 		if (!m->buf)
 			goto Enomem;
+		m->count = 0;
 		m->version = 0;
 		pos = m->index;
 		p = m->op->start(m, &pos);
@@ -321,29 +332,29 @@ loff_t seq_lseek(struct file *file, loff_t offset, int whence)
 	mutex_lock(&m->lock);
 	m->version = file->f_version;
 	switch (whence) {
-	case SEEK_CUR:
-		offset += file->f_pos;
-	case SEEK_SET:
-		if (offset < 0)
-			break;
-		retval = offset;
-		if (offset != m->read_pos) {
-			while ((retval = traverse(m, offset)) == -EAGAIN)
-				;
-			if (retval) {
-				/* with extreme prejudice... */
-				file->f_pos = 0;
-				m->read_pos = 0;
-				m->version = 0;
-				m->index = 0;
-				m->count = 0;
+		case SEEK_CUR:
+			offset += file->f_pos;
+		case SEEK_SET:
+			if (offset < 0)
+				break;
+			retval = offset;
+			if (offset != m->read_pos) {
+				while ((retval=traverse(m, offset)) == -EAGAIN)
+					;
+				if (retval) {
+					/* with extreme prejudice... */
+					file->f_pos = 0;
+					m->read_pos = 0;
+					m->version = 0;
+					m->index = 0;
+					m->count = 0;
+				} else {
+					m->read_pos = offset;
+					retval = file->f_pos = offset;
+				}
 			} else {
-				m->read_pos = offset;
-				retval = file->f_pos = offset;
+				file->f_pos = offset;
 			}
-		} else {
-			file->f_pos = offset;
-		}
 	}
 	file->f_version = m->version;
 	mutex_unlock(&m->lock);
@@ -362,7 +373,7 @@ EXPORT_SYMBOL(seq_lseek);
 int seq_release(struct inode *inode, struct file *file)
 {
 	struct seq_file *m = file->private_data;
-	kvfree(m->buf);
+	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
 	kfree(m);
 	return 0;
 }
@@ -613,24 +624,6 @@ int single_open(struct file *file, int (*show)(struct seq_file *, void *),
 	return res;
 }
 EXPORT_SYMBOL(single_open);
-
-int single_open_size(struct file *file, int (*show)(struct seq_file *, void *),
-		void *data, size_t size)
-{
-	char *buf = seq_buf_alloc(size);
-	int ret;
-	if (!buf)
-		return -ENOMEM;
-	ret = single_open(file, show, data);
-	if (ret) {
-		kvfree(buf);
-		return ret;
-	}
-	((struct seq_file *)file->private_data)->buf = buf;
-	((struct seq_file *)file->private_data)->size = size;
-	return 0;
-}
-EXPORT_SYMBOL(single_open_size);
 
 int single_release(struct inode *inode, struct file *file)
 {
