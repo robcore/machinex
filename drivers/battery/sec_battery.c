@@ -714,7 +714,7 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 			dev_info(battery->dev,
 				"%s: battery status full -> charging, RepSOC(%d)\n", __func__, value.intval);
 		}
-	return false
+	return false;
 	}
 
 	/* Re-Charging check */
