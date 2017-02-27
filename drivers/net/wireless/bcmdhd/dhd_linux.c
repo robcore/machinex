@@ -614,7 +614,7 @@ int dhd_ioctl_timeout_msec = IOCTL_RESP_TIMEOUT;
 module_param(dhd_ioctl_timeout_msec, int, 0644);
 
 /* Idle timeout for backplane clock */
-int dhd_idletime = DHD_IDLETIME_TICKS;
+int dhd_idletime = 10;
 module_param(dhd_idletime, int, 0644);
 
 /* Use polling */
