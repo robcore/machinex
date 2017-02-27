@@ -705,7 +705,7 @@ static int pm_genpd_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static bool pd_ignore_unused = true;
+static bool pd_ignore_unused = false;
 
 /*
 static int __init pd_ignore_unused_setup(char *__unused)
