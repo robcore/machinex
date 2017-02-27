@@ -2370,7 +2370,7 @@ struct platform_device msm_gss = {
 
 static struct fs_driver_data gfx3d_fs_data = {
 	.clks = (struct fs_clk_data[]){
-		{ .name = "core_clk", .reset_rate = 1800000 },
+		{ .name = "core_clk", .reset_rate = 27000000 },
 		{ .name = "iface_clk" },
 		{ .name = "bus_clk" },
 		{ 0 }
@@ -3272,7 +3272,7 @@ static struct msm_dcvs_core_info apq8064_core_info = {
 		.core_type	= MSM_DCVS_CORE_TYPE_CPU,
 	},
 	.algo_param		= {
-		.disable_pc_threshold		= 810000,
+		.disable_pc_threshold		= 1458000,
 		.em_win_size_min_us		= 100000,
 		.em_win_size_max_us		= 300000,
 		.em_max_util_pct		= 97,
