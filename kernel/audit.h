@@ -22,12 +22,18 @@
 #include <linux/fs.h>
 #include <linux/audit.h>
 #include <linux/skbuff.h>
+#include <uapi/linux/mqueue.h>
 
 /* 0 = no checking
    1 = put_count checking
    2 = verbose put_count checking
 */
 #define AUDIT_DEBUG 0
+
+/* AUDIT_NAMES is the number of slots we reserve in the audit_context
+ * for saving names from getname().  If we get more names we will allocate
+ * a name dynamically and also add those to the list anchored by names_list. */
+#define AUDIT_NAMES	5
 
 /* At task start time, the audit_state is set in the audit_context using
    a per-task filter.  At syscall entry, the audit_state is augmented by
