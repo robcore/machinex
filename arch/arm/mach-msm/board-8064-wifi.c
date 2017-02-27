@@ -566,7 +566,7 @@ int __init brcm_wlan_init(void)
 
 #if 0
 static struct partial_resume smd_pr = {
-	.irq = 200,
+	.irq = 353,
 	.partial_resume = smd_partial_resume,
 };
 
