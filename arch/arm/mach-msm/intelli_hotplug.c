@@ -29,24 +29,16 @@
 #define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEF_SAMPLING_MS			30
-#define RESUME_SAMPLING_MS		HZ / 10
-#define START_DELAY_MS			HZ * 10
-#define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			500 * 1000L
+#define RESUME_SAMPLING_MS		100
+#define START_DELAY_MS			20000
+#define MIN_INPUT_INTERVAL		500 * 1000L
+#define BOOST_LOCK_DUR			1000 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
 #define DEFAULT_DOWN_LOCK_DUR		2000
 
 #define CAPACITY_RESERVE		50
-#if defined(CONFIG_ARCH_MSM8960) || defined(CONFIG_ARCH_APQ8064) || \
-defined(CONFIG_ARCH_MSM8974)
 #define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
-#elif defined(CONFIG_ARCH_MSM8226) || defined (CONFIG_ARCH_MSM8926) || \
-defined (CONFIG_ARCH_MSM8610) || defined (CONFIG_ARCH_MSM8228)
-#define THREAD_CAPACITY			(190 - CAPACITY_RESERVE)
-#else
-#define THREAD_CAPACITY			(250 - CAPACITY_RESERVE)
-#endif
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
@@ -73,7 +65,7 @@ static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 1; /* performance profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
-static bool hotplug_suspended = false;
+static bool hotplug_suspended;
 static unsigned int min_cpus_online_res = 2;
 static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
 /*
@@ -522,7 +514,7 @@ static int __ref intelli_plug_start(void)
 	}
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      START_DELAY_MS);
+			      msecs_to_jiffies(START_DELAY_MS));
 
 	return ret;
 err_dev:
@@ -782,6 +774,7 @@ static void __exit intelli_plug_exit(void)
 late_initcall(intelli_plug_init);
 module_exit(intelli_plug_exit);
 
+MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
 		Alucard24, Dorimanx, neobuddy89");
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
