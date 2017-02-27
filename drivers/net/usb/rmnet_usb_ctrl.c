@@ -19,20 +19,22 @@
 #include <linux/poll.h>
 #include <linux/ratelimit.h>
 #include <linux/debugfs.h>
+#if 0
 #include <linux/msm_charm.h>
 #include <mach/mdm2.h>
 #include <mach/restart.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
+int subsystem_restart(const char *name);
+#endif
 #include "rmnet_usb.h"
 
-int subsystem_restart(const char *name);
 
 static char *rmnet_dev_names[MAX_RMNET_DEVS] = {"hsicctl"};
 module_param_array(rmnet_dev_names, charp, NULL, S_IRUGO | S_IWUSR);
 
 #define DEFAULT_READ_URB_LENGTH		0x1000
-#define UNLINK_TIMEOUT_MS		500 /*random value*/
+#define UNLINK_TIMEOUT_MS		750 /*random value*/
 
 /*Output control lines.*/
 #define ACM_CTRL_DTR		BIT(0)
@@ -550,7 +552,7 @@ static int rmnet_usb_ctrl_write(struct rmnet_ctrl_dev *dev,
 		usb_unanchor_urb(sndurb);
 		usb_free_urb(sndurb);
 		kfree(out_ctlreq);
-		subsystem_restart("external_modem");
+//		subsystem_restart("external_modem");
 		return result;
 	}
 

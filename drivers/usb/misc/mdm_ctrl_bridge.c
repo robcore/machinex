@@ -25,18 +25,20 @@
 #include <linux/termios.h>
 #include <asm/unaligned.h>
 #include <mach/usb_bridge.h>
+#if 0
 #include <linux/msm_charm.h>
 #include <mach/mdm2.h>
 #include <mach/restart.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
+#endif
 
 #define ACM_CTRL_DTR		(1 << 0)
 #define DEFAULT_READ_URB_LENGTH	4096
 
 #define SUSPENDED		BIT(0)
 
-int subsystem_restart(const char *name);
+//int subsystem_restart(const char *name);
 
 enum ctrl_bridge_rx_state {
 	RX_IDLE, /* inturb is not queued */
@@ -469,7 +471,7 @@ int ctrl_bridge_write(unsigned int id, char *data, size_t size)
 		dev_err(&dev->intf->dev, "%s: submit URB error %d\n",
 			__func__, result);
 		usb_autopm_put_interface_async(dev->intf);
-		goto unanchor_urb;
+		goto sheblamo;
 	}
 deferred:
 	return size;
@@ -478,7 +480,7 @@ unanchor_urb:
 	usb_unanchor_urb(writeurb);
 	usb_kill_urb(writeurb);
 	usb_free_urb(writeurb);
-	subsystem_restart("external_modem");
+//	subsystem_restart("external_modem");
 free_ctrlreq:
 	kfree(out_ctlreq);
 free_urb:
@@ -486,6 +488,11 @@ free_urb:
 free_data:
 	kfree(data);
 
+	return result;
+sheblamo:
+	usb_unanchor_urb(writeurb);
+	usb_kill_urb(writeurb);
+	usb_free_urb(writeurb);
 	return result;
 }
 EXPORT_SYMBOL(ctrl_bridge_write);

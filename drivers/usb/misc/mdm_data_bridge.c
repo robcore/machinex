@@ -20,10 +20,11 @@
 #include <linux/uaccess.h>
 #include <linux/ratelimit.h>
 #include <mach/usb_bridge.h>
+#if 0
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
 #include <linux/machinex_defines.h>
-
+#endif
 #define MAX_RX_URBS			100
 #define RMNET_RX_BUFSIZE		2048
 
@@ -35,7 +36,7 @@
 #define BRIDGE_DATA_IDX		0
 #define BRIDGE_CTRL_IDX		1
 
-int subsystem_restart(const char *name);
+//int subsystem_restart(const char *name);
 
 /*for xport : HSIC*/
 static const char * const serial_hsic_bridge_names[] = {
@@ -647,7 +648,7 @@ int data_bridge_write(unsigned int id, struct sk_buff *skb)
 free_urb:
 	usb_kill_urb(txurb);
 	usb_free_urb(txurb);
-	subsystem_restart("external_modem");
+//	subsystem_restart("external_modem");
 error:
 	dev->txurb_drp_cnt++;
 	usb_autopm_put_interface(dev->intf);
