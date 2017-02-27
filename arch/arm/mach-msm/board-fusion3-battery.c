@@ -466,36 +466,7 @@ static bool sec_bat_check_callback(void)
 	struct power_supply *psy;
 	union power_supply_propval value;
 
-	psy = get_power_supply_by_name(("sec-charger"));
-	if (!psy) {
-		pr_err("%s: Fail to get psy (%s)\n",
-			__func__, "sec_charger");
-		value.intval = 1;
-	} else {
-		int ret;
-		ret = psy->get_property(psy, POWER_SUPPLY_PROP_ONLINE, &(value));
-		if (ret < 0) {
-			pr_err("%s: Fail to sec-charger get_property (%d=>%d)\n",
-				__func__, POWER_SUPPLY_PROP_ONLINE, ret);
-			value.intval = 1;
-		}
-#if defined(CONFIG_BOARD_JF_REFRESH)
-		{
-			int data;
-			struct pm8xxx_adc_chan_result result;
-
-			pm8xxx_adc_read(ADC_MPP_1_AMUX8, &result);
-			data = ((int)result.physical) / 1000;
-			pr_info("%s: result.physical(%d)\n", __func__, data);
-			if(data < SHORT_BATTERY_STANDARD) {
-				pr_info("%s: Short Battery is connected.\n", __func__);
-				value.intval = 0;
-			}
-		}
-#endif
-	}
-
-	return value.intval;
+	return true;
 }
 static bool sec_bat_check_result_callback(void) {return true; }
 
