@@ -149,7 +149,7 @@ bool  check_bcm4335_rev(void)
         char *filepath = "/data/.rev";
         char chip_rev[10]={0,};
         bool is_revb0 = true;
-
+		bcm_bt_unlock(lock_cookie_wifi);
         printk("check BCM4335, check_bcm4335_rev \n");
         fp = filp_open(filepath, O_RDONLY, 0);
         if (IS_ERR(fp)) {
@@ -166,7 +166,7 @@ bool  check_bcm4335_rev(void)
                         is_revb0 = false;
                 }
         }
-		
+
 		filp_close(fp, NULL);
         return is_revb0;
 }
