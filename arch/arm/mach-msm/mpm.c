@@ -40,7 +40,9 @@ enum {
 };
 
 static int msm_mpm_debug_mask = 0;
-module_param_named(debug_mask, msm_mpm_debug_mask, int, 0644);
+module_param_named(
+	debug_mask, msm_mpm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
+);
 
 /******************************************************************************
  * Request and Status Definitions
@@ -145,9 +147,6 @@ static void msm_mpm_set(bool wakeset)
 
 		reg = MSM_MPM_REQUEST_REG_CLEAR;
 		msm_mpm_write(reg, i, 0xffffffff);
-
-		reg = MSM_MPM_STATUS_REG_PENDING;
-		msm_mpm_write(reg, i, 0);
 	}
 
 	/* Ensure that the set operation is complete before sending the
@@ -164,7 +163,6 @@ static void msm_mpm_clear(void)
 	for (i = 0; i < MSM_MPM_REG_WIDTH; i++) {
 		msm_mpm_write(MSM_MPM_REQUEST_REG_ENABLE, i, 0);
 		msm_mpm_write(MSM_MPM_REQUEST_REG_CLEAR, i, 0xffffffff);
-		msm_mpm_write(MSM_MPM_STATUS_REG_PENDING, i, 0);
 	}
 
 	/* Ensure the clear is complete before sending the interrupt */
