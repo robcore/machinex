@@ -127,7 +127,7 @@ static void __init rcu_bootup_announce_oddness(void)
 #ifdef CONFIG_TREE_PREEMPT_RCU
 
 struct rcu_state rcu_preempt_state =
-	RCU_STATE_INITIALIZER(rcu_preempt, call_rcu);
+	RCU_STATE_INITIALIZER(rcu_preempt, 'p', call_rcu);
 DEFINE_PER_CPU(struct rcu_data, rcu_preempt_data);
 static struct rcu_state *rcu_state = &rcu_preempt_state;
 
@@ -1807,11 +1807,11 @@ static void rcu_prepare_for_idle(int cpu)
 		if (rcu_cpu_has_nonlazy_callbacks(cpu)) {
 			trace_rcu_prep_idle("User dyntick with callbacks");
 			rdtp->idle_gp_timer_expires =
-				round_up(jiffies + RCU_IDLE_GP_DELAY,
-					 RCU_IDLE_GP_DELAY);
+				round_up(jiffies + rcu_idle_gp_delay,
+					 rcu_idle_gp_delay);
 		} else if (rcu_cpu_has_callbacks(cpu)) {
 			rdtp->idle_gp_timer_expires =
-				round_jiffies(jiffies + RCU_IDLE_LAZY_GP_DELAY);
+				round_jiffies(jiffies + rcu_idle_lazy_gp_delay);
 			trace_rcu_prep_idle("User dyntick with lazy callbacks");
 		} else {
 			return;
@@ -2540,7 +2540,8 @@ static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 		return;
 	for_each_cpu(cpu, rcu_nocb_mask) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
-		t = kthread_run(rcu_nocb_kthread, rdp, "rcuo%d", cpu);
+		t = kthread_run(rcu_nocb_kthread, rdp,
+				"rcuo%c/%d", rsp->abbr, cpu);
 		BUG_ON(IS_ERR(t));
 		ACCESS_ONCE(rdp->nocb_kthread) = t;
 	}
