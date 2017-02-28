@@ -44,7 +44,7 @@
 #include <linux/seq_file.h>
 
 #define RCU_TREE_NONCORE
-#include "rcutree.h"
+#include "tree.h"
 
 static int r_open(struct inode *inode, struct file *file,
 					const struct seq_operations *op)
@@ -498,5 +498,3 @@ module_exit(rcutree_trace_cleanup);
 MODULE_AUTHOR("Paul E. McKenney");
 MODULE_DESCRIPTION("Read-Copy Update tracing for hierarchical implementation");
 MODULE_LICENSE("GPL");
-
-

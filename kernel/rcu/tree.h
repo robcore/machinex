@@ -89,18 +89,14 @@ struct rcu_dynticks {
 	int dynticks_nmi_nesting;   /* Track NMI nesting level. */
 	atomic_t dynticks;	    /* Even value for idle, else odd. */
 #ifdef CONFIG_RCU_FAST_NO_HZ
-	int dyntick_drain;	    /* Prepare-for-idle state variable. */
-	unsigned long dyntick_holdoff;
-				    /* No retries for the jiffy of failure. */
-	struct timer_list idle_gp_timer;
-				    /* Wake up CPU sleeping with callbacks. */
-	unsigned long idle_gp_timer_expires;
-				    /* When to wake up CPU (for repost). */
-	bool idle_first_pass;	    /* First pass of attempt to go idle? */
+	bool all_lazy;		    /* Are all CPU's CBs lazy? */
 	unsigned long nonlazy_posted;
 				    /* # times non-lazy CBs posted to CPU. */
 	unsigned long nonlazy_posted_snap;
 				    /* idle-period nonlazy_posted snapshot. */
+	unsigned long last_accelerate;
+				    /* Last jiffy CBs were accelerated. */
+	int tick_nohz_enabled_snap; /* Previously seen value from sysfs. */
 #endif /* #ifdef CONFIG_RCU_FAST_NO_HZ */
 };
 
@@ -347,17 +343,12 @@ struct rcu_data {
 #define RCU_FORCE_QS		3	/* Need to force quiescent state. */
 #define RCU_SIGNAL_INIT		RCU_SAVE_DYNTICK
 
-#define RCU_JIFFIES_TILL_FORCE_QS (1 + (HZ > 250) + (HZ > 500))
-					/* For jiffies_till_first_fqs and */
-					/*  and jiffies_till_next_fqs. */
+#define RCU_JIFFIES_TILL_FORCE_QS	 3	/* for rsp->jiffies_force_qs */
 
-#define RCU_JIFFIES_FQS_DIV	256	/* Very large systems need more */
-					/*  delay between bouts of */
-					/*  quiescent-state forcing. */
-
-#define RCU_STALL_RAT_DELAY	2	/* Allow other CPUs time to take */
-					/*  at least one scheduling clock */
-					/*  irq before ratting on them. */
+#define RCU_STALL_RAT_DELAY		2	/* Allow other CPUs time */
+						/*  to take at least one */
+						/*  scheduling clock irq */
+						/*  before ratting on them. */
 
 #define rcu_wait(cond)							\
 do {									\
@@ -529,7 +520,6 @@ static int __cpuinit rcu_spawn_one_boost_kthread(struct rcu_state *rsp,
 						 struct rcu_node *rnp);
 #endif /* #ifdef CONFIG_RCU_BOOST */
 static void __cpuinit rcu_prepare_kthreads(int cpu);
-static void rcu_prepare_for_idle_init(int cpu);
 static void rcu_cleanup_after_idle(int cpu);
 static void rcu_prepare_for_idle(int cpu);
 static void rcu_idle_count_callbacks_posted(void);
@@ -548,8 +538,8 @@ static bool rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 				      struct rcu_data *rdp);
 static void rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp);
 static void rcu_spawn_nocb_kthreads(struct rcu_state *rsp);
-static bool init_nocb_callback_list(struct rcu_data *rdp);
 static void rcu_kick_nohz_cpu(int cpu);
+static bool init_nocb_callback_list(struct rcu_data *rdp);
 
 #endif /* #ifndef RCU_TREE_NONCORE */
 
@@ -569,4 +559,3 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 }
 #endif /* #else #ifdef CONFIG_RCU_NOCB_CPU */
 #endif /* #ifdef CONFIG_RCU_TRACE */
-

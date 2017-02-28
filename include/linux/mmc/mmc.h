@@ -23,6 +23,7 @@
 
 #ifndef LINUX_MMC_MMC_H
 #define LINUX_MMC_MMC_H
+
 #include <uapi/linux/mmc/mmc.h>
 
 static inline bool mmc_op_multi(u32 opcode)
@@ -268,6 +269,12 @@ struct _mmc_csd {
 #define EXT_CSD_POWER_OFF_LONG_TIME	247	/* RO */
 #define EXT_CSD_GENERIC_CMD6_TIME	248	/* RO */
 #define EXT_CSD_CACHE_SIZE		249	/* RO, 4 bytes */
+#define EXT_CSD_FIRMWARE_VERSION	254	/* RO, 8Byte */
+#define EXT_CSD_DEVICE_VERSION		262	/* RO, 2Byte */
+#define EXT_CSD_OPTIMAL_TRIM_UNIT_SIZE	264	/* RO */
+#define EXT_CSD_PRE_EOL_INFO		267	/* RO */
+#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYPE_A	268	/* RO */
+#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYPE_B	269	/* RO */
 #define EXT_CSD_TAG_UNIT_SIZE		498	/* RO */
 #define EXT_CSD_DATA_TAG_SUPPORT	499	/* RO */
 #define EXT_CSD_MAX_PACKED_WRITES	500	/* RO */
@@ -275,13 +282,6 @@ struct _mmc_csd {
 #define EXT_CSD_BKOPS_SUPPORT		502	/* RO */
 #define EXT_CSD_HPI_FEATURES		503	/* RO */
 
-/* additional : eMMC v5.0 or later Only */
-#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYPE_B	269	/* RO */
-#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYPE_A	268	/* RO */
-#define EXT_CSD_PRE_EOL_INFO			267	/* RO */
-#define EXT_CSD_OPTIMAL_TRIM_UNIT_SIZE		264	/* RO */
-#define EXT_CSD_DEVICE_VERSION			262	/* RO, 2Byte */
-#define EXT_CSD_FIRMWARE_VERSION		254	/* RO, 8Byte */
 
 /*
  * EXT_CSD field definitions

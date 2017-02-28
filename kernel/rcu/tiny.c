@@ -42,8 +42,9 @@
 
 #include "rcu.h"
 
-/* Forward declarations for rcutiny_plugin.h. */
+/* Forward declarations for tiny_plugin.h. */
 struct rcu_ctrlblk;
+static void invoke_rcu_callbacks(void);
 static void __rcu_process_callbacks(struct rcu_ctrlblk *rcp);
 static void rcu_process_callbacks(struct softirq_action *unused);
 static void __call_rcu(struct rcu_head *head,
@@ -52,7 +53,7 @@ static void __call_rcu(struct rcu_head *head,
 
 static long long rcu_dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
 
-#include "rcutiny_plugin.h"
+#include "tiny_plugin.h"
 
 /* Common code for rcu_idle_enter() and rcu_irq_exit(), see kernel/rcutree.c. */
 static void rcu_idle_enter_common(long long newval)
@@ -65,7 +66,7 @@ static void rcu_idle_enter_common(long long newval)
 	}
 	RCU_TRACE(trace_rcu_dyntick("Start", rcu_dynticks_nesting, newval));
 	if (!is_idle_task(current)) {
-		struct task_struct *idle = idle_task(smp_processor_id());
+		struct task_struct *idle __maybe_unused = idle_task(smp_processor_id());
 
 		RCU_TRACE(trace_rcu_dyntick("Error on entry: not idle task",
 					    rcu_dynticks_nesting, newval));
@@ -126,7 +127,7 @@ static void rcu_idle_exit_common(long long oldval)
 	}
 	RCU_TRACE(trace_rcu_dyntick("End", oldval, rcu_dynticks_nesting));
 	if (!is_idle_task(current)) {
-		struct task_struct *idle = idle_task(smp_processor_id());
+		struct task_struct *idle __maybe_unused = idle_task(smp_processor_id());
 
 		RCU_TRACE(trace_rcu_dyntick("Error on exit: not idle task",
 			  oldval, rcu_dynticks_nesting));
@@ -204,7 +205,7 @@ static int rcu_is_cpu_rrupt_from_idle(void)
  */
 static int rcu_qsctr_help(struct rcu_ctrlblk *rcp)
 {
-	RCU_TRACE(reset_cpu_stall_ticks(rcp));
+	reset_cpu_stall_ticks(rcp);
 	if (rcp->rcucblist != NULL &&
 	    rcp->donetail != rcp->curtail) {
 		rcp->donetail = rcp->curtail;
@@ -226,7 +227,7 @@ void rcu_sched_qs(int cpu)
 	local_irq_save(flags);
 	if (rcu_qsctr_help(&rcu_sched_ctrlblk) +
 	    rcu_qsctr_help(&rcu_bh_ctrlblk))
-		raise_softirq(RCU_SOFTIRQ);
+		invoke_rcu_callbacks();
 	local_irq_restore(flags);
 }
 
@@ -239,7 +240,7 @@ void rcu_bh_qs(int cpu)
 
 	local_irq_save(flags);
 	if (rcu_qsctr_help(&rcu_bh_ctrlblk))
-		raise_softirq(RCU_SOFTIRQ);
+		invoke_rcu_callbacks();
 	local_irq_restore(flags);
 }
 
@@ -251,11 +252,12 @@ void rcu_bh_qs(int cpu)
  */
 void rcu_check_callbacks(int cpu, int user)
 {
-	RCU_TRACE(check_cpu_stalls());
+	check_cpu_stalls();
 	if (user || rcu_is_cpu_rrupt_from_idle())
 		rcu_sched_qs(cpu);
 	else if (!in_softirq())
 		rcu_bh_qs(cpu);
+	rcu_preempt_check_callbacks();
 }
 
 /*
@@ -276,23 +278,19 @@ static void __rcu_process_callbacks(struct rcu_ctrlblk *rcp)
 					      ACCESS_ONCE(rcp->rcucblist),
 					      need_resched(),
 					      is_idle_task(current),
-					      false));
+					      rcu_is_callbacks_kthread()));
 		return;
 	}
 
 	/* Move the ready-to-invoke callbacks to a local list. */
 	local_irq_save(flags);
-	if (rcp->donetail == &rcp->rcucblist) {
-		/* No callbacks ready, so just leave. */
-		local_irq_restore(flags);
-		return;
-	}
 	RCU_TRACE(trace_rcu_batch_start(rcp->name, 0, rcp->qlen, -1));
 	list = rcp->rcucblist;
 	rcp->rcucblist = *rcp->donetail;
 	*rcp->donetail = NULL;
 	if (rcp->curtail == rcp->donetail)
 		rcp->curtail = &rcp->rcucblist;
+	rcu_preempt_remove_callbacks(rcp);
 	rcp->donetail = &rcp->rcucblist;
 	local_irq_restore(flags);
 
@@ -311,13 +309,14 @@ static void __rcu_process_callbacks(struct rcu_ctrlblk *rcp)
 	RCU_TRACE(rcu_trace_sub_qlen(rcp, cb_count));
 	RCU_TRACE(trace_rcu_batch_end(rcp->name, cb_count, 0, need_resched(),
 				      is_idle_task(current),
-				      false));
+				      rcu_is_callbacks_kthread()));
 }
 
 static void rcu_process_callbacks(struct softirq_action *unused)
 {
 	__rcu_process_callbacks(&rcu_sched_ctrlblk);
 	__rcu_process_callbacks(&rcu_bh_ctrlblk);
+	rcu_preempt_process_callbacks();
 }
 
 /*
@@ -383,8 +382,3 @@ void call_rcu_bh(struct rcu_head *head, void (*func)(struct rcu_head *rcu))
 	__call_rcu(head, func, &rcu_bh_ctrlblk);
 }
 EXPORT_SYMBOL_GPL(call_rcu_bh);
-
-void rcu_init(void)
-{
-	open_softirq(RCU_SOFTIRQ, rcu_process_callbacks);
-}

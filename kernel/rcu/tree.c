@@ -41,6 +41,7 @@
 #include <linux/export.h>
 #include <linux/completion.h>
 #include <linux/moduleparam.h>
+#include <linux/module.h>
 #include <linux/percpu.h>
 #include <linux/notifier.h>
 #include <linux/cpu.h>
@@ -54,10 +55,16 @@
 #include <linux/stop_machine.h>
 #include <linux/random.h>
 
-#include "rcutree.h"
+#include "tree.h"
 #include <trace/events/rcu.h>
 
 #include "rcu.h"
+
+MODULE_ALIAS("rcutree");
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX "rcutree."
 
 /* Data structures. */
 
@@ -106,7 +113,7 @@ int rcu_num_nodes __read_mostly = NUM_RCU_NODES; /* Total # rcu_nodes in use. */
  * The rcu_scheduler_active variable transitions from zero to one just
  * before the first task is spawned.  So when this variable is zero, RCU
  * can assume that there is but one task, allowing RCU to (for example)
- * optimized synchronize_sched() to a simple barrier().  When this variable
+ * optimize synchronize_sched() to a simple barrier().  When this variable
  * is one, RCU must actually do all the hard work required to detect real
  * grace periods.  This variable is also used to suppress boot-time false
  * positives from lockdep-RCU error checking.
@@ -218,8 +225,8 @@ module_param(blimit, long, 0444);
 module_param(qhimark, long, 0444);
 module_param(qlowmark, long, 0444);
 
-static ulong jiffies_till_first_fqs = ULONG_MAX;
-static ulong jiffies_till_next_fqs = ULONG_MAX;
+static ulong jiffies_till_first_fqs = RCU_JIFFIES_TILL_FORCE_QS;
+static ulong jiffies_till_next_fqs = RCU_JIFFIES_TILL_FORCE_QS;
 
 module_param(jiffies_till_first_fqs, ulong, 0644);
 module_param(jiffies_till_next_fqs, ulong, 0644);
@@ -452,27 +459,6 @@ void rcu_user_enter_after_irq(void)
 #endif /* CONFIG_RCU_USER_QS */
 
 /**
- * rcu_user_enter_after_irq - inform RCU that we are going to resume userspace
- * after the current irq returns.
- *
- * This is similar to rcu_user_enter() but in the context of a non-nesting
- * irq. After this call, RCU enters into idle mode when the interrupt
- * returns.
- */
-void rcu_user_enter_after_irq(void)
-{
-	unsigned long flags;
-	struct rcu_dynticks *rdtp;
-
-	local_irq_save(flags);
-	rdtp = &__get_cpu_var(rcu_dynticks);
-	/* Ensure this irq is interrupting a non-idle RCU state.  */
-	WARN_ON_ONCE(!(rdtp->dynticks_nesting & DYNTICK_TASK_MASK));
-	rdtp->dynticks_nesting = 1;
-	local_irq_restore(flags);
-}
-
-/**
  * rcu_irq_exit - inform RCU that current CPU is exiting irq towards idle
  *
  * Exit from an interrupt handler, which might possibly result in entering
@@ -609,28 +595,6 @@ void rcu_user_exit_after_irq(void)
 	local_irq_restore(flags);
 }
 #endif /* CONFIG_RCU_USER_QS */
-
-/**
- * rcu_user_exit_after_irq - inform RCU that we won't resume to userspace
- * idle mode after the current non-nesting irq returns.
- *
- * This is similar to rcu_user_exit() but in the context of an irq.
- * This is called when the irq has interrupted a userspace RCU idle mode
- * context. When the current non-nesting interrupt returns after this call,
- * the CPU won't restore the RCU idle mode.
- */
-void rcu_user_exit_after_irq(void)
-{
-	unsigned long flags;
-	struct rcu_dynticks *rdtp;
-
-	local_irq_save(flags);
-	rdtp = &__get_cpu_var(rcu_dynticks);
-	/* Ensure we are interrupting an RCU idle mode. */
-	WARN_ON_ONCE(rdtp->dynticks_nesting & DYNTICK_TASK_NEST_MASK);
-	rdtp->dynticks_nesting += DYNTICK_TASK_EXIT_IDLE;
-	local_irq_restore(flags);
-}
 
 /**
  * rcu_irq_enter - inform RCU that current CPU is entering irq away from idle
@@ -932,7 +896,7 @@ static void print_other_cpu_stall(struct rcu_state *rsp)
 	 */
 	rnp = rcu_get_root(rsp);
 	raw_spin_lock_irqsave(&rnp->lock, flags);
-	ndetected = rcu_print_task_stall(rnp);
+	ndetected += rcu_print_task_stall(rnp);
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 
 	print_cpu_stall_info_end();
@@ -1686,7 +1650,6 @@ rcu_start_gp_advanced(struct rcu_state *rsp, struct rcu_node *rnp,
 		 */
 		return;
 	}
-
 	rsp->gp_flags = RCU_GP_FLAG_INIT;
 
 	/*
@@ -2831,19 +2794,27 @@ static int rcu_pending(int cpu)
 }
 
 /*
- * Check to see if any future RCU-related work will need to be done
- * by the current CPU, even if none need be done immediately, returning
- * 1 if so.
+ * Return true if the specified CPU has any callback.  If all_lazy is
+ * non-NULL, store an indication of whether all callbacks are lazy.
+ * (If there are no callbacks, all of them are deemed to be lazy.)
  */
-static int rcu_cpu_has_callbacks(int cpu)
+static int rcu_cpu_has_callbacks(int cpu, bool *all_lazy)
 {
+	bool al = true;
+	bool hc = false;
+	struct rcu_data *rdp;
 	struct rcu_state *rsp;
 
-	/* RCU callbacks either ready or pending? */
-	for_each_rcu_flavor(rsp)
-		if (per_cpu_ptr(rsp->rda, cpu)->nxtlist)
-			return 1;
-	return 0;
+	for_each_rcu_flavor(rsp) {
+		rdp = per_cpu_ptr(rsp->rda, cpu);
+		if (rdp->qlen != rdp->qlen_lazy)
+			al = false;
+		if (rdp->nxtlist)
+			hc = true;
+	}
+	if (all_lazy)
+		*all_lazy = al;
+	return hc;
 }
 
 /*
@@ -3062,7 +3033,6 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp, int preemptible)
 	rdp->dynticks->dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
 	atomic_set(&rdp->dynticks->dynticks,
 		   (atomic_read(&rdp->dynticks->dynticks) & ~0x1) + 1);
-	rcu_prepare_for_idle_init(cpu);
 	raw_spin_unlock(&rnp->lock);		/* irqs remain disabled. */
 
 	/* Add CPU to rcu_node bitmasks. */
@@ -3131,7 +3101,6 @@ static int rcu_cpu_notify(struct notifier_block *self,
 	case CPU_DYING_FROZEN:
 		for_each_rcu_flavor(rsp)
 			rcu_cleanup_dying_cpu(rsp);
-		rcu_cleanup_after_idle(cpu);
 		break;
 	case CPU_DEAD:
 	case CPU_DEAD_FROZEN:
@@ -3298,29 +3267,15 @@ static void __init rcu_init_one(struct rcu_state *rsp,
 
 /*
  * Compute the rcu_node tree geometry from kernel parameters.  This cannot
- * replace the definitions in rcutree.h because those are needed to size
+ * replace the definitions in tree.h because those are needed to size
  * the ->node array in the rcu_state structure.
  */
 static void __init rcu_init_geometry(void)
 {
-	ulong d;
 	int i;
 	int j;
 	int n = nr_cpu_ids;
 	int rcu_capacity[MAX_RCU_LVLS + 1];
-
-	/*
-	 * Initialize any unspecified boot parameters.
-	 * The default values of jiffies_till_first_fqs and
-	 * jiffies_till_next_fqs are set to the RCU_JIFFIES_TILL_FORCE_QS
-	 * value, which is a function of HZ, then adding one for each
-	 * RCU_JIFFIES_FQS_DIV CPUs that might be on the system.
-	 */
-	d = RCU_JIFFIES_TILL_FORCE_QS + nr_cpu_ids / RCU_JIFFIES_FQS_DIV;
-	if (jiffies_till_first_fqs == ULONG_MAX)
-		jiffies_till_first_fqs = d;
-	if (jiffies_till_next_fqs == ULONG_MAX)
-		jiffies_till_next_fqs = d;
 
 	/* If the compile-time values are accurate, just leave. */
 	if (rcu_fanout_leaf == CONFIG_RCU_FANOUT_LEAF &&
@@ -3380,7 +3335,7 @@ void __init rcu_init(void)
 	rcu_init_one(&rcu_sched_state, &rcu_sched_data);
 	rcu_init_one(&rcu_bh_state, &rcu_bh_data);
 	__rcu_init_preempt();
-	 open_softirq(RCU_SOFTIRQ, rcu_process_callbacks);
+	open_softirq(RCU_SOFTIRQ, rcu_process_callbacks);
 
 	/*
 	 * We don't need protection against CPU-hotplug here because
@@ -3392,5 +3347,4 @@ void __init rcu_init(void)
 		rcu_cpu_notify(NULL, CPU_UP_PREPARE, (void *)(long)cpu);
 }
 
-#include "rcutree_plugin.h"
-
+#include "tree_plugin.h"
