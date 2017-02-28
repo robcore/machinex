@@ -109,7 +109,6 @@
 #define __noclone	/* not needed */
 #endif
 
-
 #if GCC_VERSION >= 40900 && !defined(__CHECKER__)
 /*
  * __assume_aligned(n, k): Tell the optimizer that the returned
