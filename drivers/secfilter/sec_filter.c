@@ -55,7 +55,7 @@ int sec_url_filter_release( struct inode *inode, struct file *filp)
     {                                                           // if so
         if (filterMode != FILTER_MODE_OFF)                      // Check filter mode is on or off and if it is not off it means app. is not finished properly
         {
-            resetTime   = get_jiffies_64()+closingTime*HZ;      // Get current time and add some time to wait for revival of app.
+            resetTime   = get_jiffies_64() + (closingTime * msecs_to_jiffies(1000));      // Get current time and add some time to wait for revival of app.
             filterMode  = FILTER_MODE_CLOSING;                  // Change the status of filter mode
         }
         wake_up_interruptible(&user_noti_Q);                    // Wake up the sleeping process
