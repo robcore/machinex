@@ -127,7 +127,7 @@ static void __init rcu_bootup_announce_oddness(void)
 #ifdef CONFIG_TREE_PREEMPT_RCU
 
 struct rcu_state rcu_preempt_state =
-	RCU_STATE_INITIALIZER(rcu_preempt, call_rcu);
+	RCU_STATE_INITIALIZER(rcu_preempt, 'p', call_rcu);
 DEFINE_PER_CPU(struct rcu_data, rcu_preempt_data);
 static struct rcu_state *rcu_state = &rcu_preempt_state;
 
@@ -2162,9 +2162,9 @@ static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
 	wake_up_all(&rnp->nocb_gp_wq[c & 0x1]);
 	rnp->need_future_gp[c & 0x1] = 0;
 	needmore = rnp->need_future_gp[(c + 1) & 0x1];
-	trace_rcu_nocb_grace_period(rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    needmore ? "CleanupMore" : "Cleanup");
+	trace_rcu_future_grace_period(rsp->name, rnp->gpnum, rnp->completed,
+				      c, rnp->level, rnp->grplo, rnp->grphi,
+				      needmore ? "CleanupMore" : "Cleanup");
 	return needmore;
 }
 
@@ -2310,9 +2310,9 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 
 	/* Count our request for a grace period. */
 	rnp->need_future_gp[c & 0x1]++;
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "Startleaf");
+	trace_rcu_future_grace_period(rdp->rsp->name, rnp->gpnum,
+				      rnp->completed, c, rnp->level,
+				      rnp->grplo, rnp->grphi, "Startleaf");
 
 	if (rnp->gpnum != rnp->completed) {
 
@@ -2321,10 +2321,10 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		 * is in progress, so we are done.  When this grace
 		 * period ends, our request will be acted upon.
 		 */
-		trace_rcu_nocb_grace_period(rdp->rsp->name,
-					    rnp->gpnum, rnp->completed, c,
-					    rnp->level, rnp->grplo, rnp->grphi,
-					    "Startedleaf");
+		trace_rcu_future_grace_period(rdp->rsp->name, rnp->gpnum,
+					      rnp->completed, c, rnp->level,
+					      rnp->grplo, rnp->grphi,
+					      "Startedleaf");
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 
 	} else {
@@ -2336,11 +2336,12 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		if (rnp != rnp_root)
 			raw_spin_lock(&rnp_root->lock); /* irqs disabled. */
 		if (rnp_root->gpnum != rnp_root->completed) {
-			trace_rcu_nocb_grace_period(rdp->rsp->name,
-						    rnp->gpnum, rnp->completed,
-						    c, rnp->level,
-						    rnp->grplo, rnp->grphi,
-						    "Startedleafroot");
+			trace_rcu_future_grace_period(rdp->rsp->name,
+						      rnp->gpnum,
+						      rnp->completed,
+						      c, rnp->level,
+						      rnp->grplo, rnp->grphi,
+						      "Startedleafroot");
 			raw_spin_unlock(&rnp_root->lock); /* irqs disabled. */
 		} else {
 
@@ -2357,11 +2358,12 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 			rnp->need_future_gp[c & 0x1]++;
 			rnp_root->need_future_gp[c & 0x1]++;
 			rcu_start_gp(rdp->rsp);
-			trace_rcu_nocb_grace_period(rdp->rsp->name,
-						    rnp->gpnum, rnp->completed,
-						    c, rnp->level,
-						    rnp->grplo, rnp->grphi,
-						    "Startedroot");
+			trace_rcu_future_grace_period(rdp->rsp->name,
+						      rnp->gpnum,
+						      rnp->completed,
+						      c, rnp->level,
+						      rnp->grplo, rnp->grphi,
+						      "Startedroot");
 			raw_spin_unlock(&rnp->lock);
 		}
 
@@ -2376,9 +2378,9 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 	 * Wait for the grace period.  Do so interruptibly to avoid messing
 	 * up the load average.
 	 */
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "StartWait");
+	trace_rcu_future_grace_period(rdp->rsp->name, rnp->gpnum,
+				      rnp->completed, c, rnp->level,
+				      rnp->grplo, rnp->grphi, "StartWait");
 	for (;;) {
 		wait_event_interruptible(
 			rnp->nocb_gp_wq[c & 0x1],
@@ -2386,14 +2388,14 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		if (likely(d))
 			break;
 		flush_signals(current);
-		trace_rcu_nocb_grace_period(rdp->rsp->name,
-					    rnp->gpnum, rnp->completed, c,
-					    rnp->level, rnp->grplo, rnp->grphi,
-					    "ResumeWait");
+		trace_rcu_future_grace_period(rdp->rsp->name,
+					      rnp->gpnum, rnp->completed, c,
+					      rnp->level, rnp->grplo,
+					      rnp->grphi, "ResumeWait");
 	}
-	trace_rcu_nocb_grace_period(rdp->rsp->name, rnp->gpnum, rnp->completed,
-				    c, rnp->level, rnp->grplo, rnp->grphi,
-				    "EndWait");
+	trace_rcu_future_grace_period(rdp->rsp->name, rnp->gpnum,
+				      rnp->completed, c, rnp->level,
+				      rnp->grplo, rnp->grphi, "EndWait");
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
 }
 
@@ -2569,7 +2571,8 @@ static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 		return;
 	for_each_cpu(cpu, rcu_nocb_mask) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
-		t = kthread_run(rcu_nocb_kthread, rdp, "rcuo%d", cpu);
+		t = kthread_run(rcu_nocb_kthread, rdp,
+				"rcuo%c/%d", rsp->abbr, cpu);
 		BUG_ON(IS_ERR(t));
 		ACCESS_ONCE(rdp->nocb_kthread) = t;
 	}
