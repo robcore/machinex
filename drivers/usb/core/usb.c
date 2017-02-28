@@ -563,7 +563,7 @@ EXPORT_SYMBOL_GPL(usb_put_intf);
 int usb_lock_device_for_reset(struct usb_device *udev,
 			      const struct usb_interface *iface)
 {
-	unsigned long jiffies_expire = jiffies + HZ;
+	unsigned long jiffies_expire = jiffies + msecs_to_jiffies(1000);
 
 	if (udev->state == USB_STATE_NOTATTACHED)
 		return -ENODEV;

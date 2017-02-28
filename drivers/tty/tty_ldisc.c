@@ -648,7 +648,7 @@ int tty_set_ldisc(struct tty_struct *tty, int ldisc)
 
 	tty_ldisc_flush_works(tty);
 
-	retval = tty_ldisc_wait_idle(tty, 5 * HZ);
+	retval = tty_ldisc_wait_idle(tty, msecs_to_jiffies(5000));
 
 	tty_lock();
 	mutex_lock(&tty->ldisc_mutex);
@@ -830,10 +830,10 @@ retry:
 	if (tty->ldisc) {	/* Not yet closed */
 		if (atomic_read(&tty->ldisc->users) != 1) {
 			char cur_n[TASK_COMM_LEN], tty_n[64];
-			long timeout = 3 * HZ;
+			long timeout = 3000;
 			tty_unlock();
 
-			while (tty_ldisc_wait_idle(tty, timeout) == -EBUSY) {
+			while (tty_ldisc_wait_idle(tty, msecs_to_jiffies(timeout)) == -EBUSY) {
 				timeout = MAX_SCHEDULE_TIMEOUT;
 				printk_ratelimited(KERN_WARNING
 					"%s: waiting (%s) for %s took too long, but we keep waiting...\n",

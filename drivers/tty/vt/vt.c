@@ -134,7 +134,7 @@ const struct consw *conswitchp;
  * Here is the default bell parameters: 750HZ, 1/8th of a second
  */
 #define DEFAULT_BELL_PITCH	750
-#define DEFAULT_BELL_DURATION	(HZ/8)
+#define DEFAULT_BELL_DURATION	(1000/8)
 
 struct vc vc_cons [MAX_NR_CONSOLES];
 
@@ -1528,7 +1528,7 @@ static void setterm_command(struct vc_data *vc)
 		case 11: /* set bell duration in msec */
 			if (vc->vc_npar >= 1)
 				vc->vc_bell_duration = (vc->vc_par[1] < 2000) ?
-					vc->vc_par[1] * HZ / 1000 : 0;
+					vc->vc_par[1] * 1000 / 1000 : 0;
 			else
 				vc->vc_bell_duration = DEFAULT_BELL_DURATION;
 			break;
@@ -1540,7 +1540,7 @@ static void setterm_command(struct vc_data *vc)
 			poke_blanked_console();
 			break;
 		case 14: /* set vesa powerdown interval */
-			vesa_off_interval = ((vc->vc_par[1] < 60) ? vc->vc_par[1] : 60) * 60 * HZ;
+			vesa_off_interval = ((vc->vc_par[1] < 60) ? vc->vc_par[1] : 60) * 60 * 1000;
 			break;
 		case 15: /* activate the previous console */
 			set_console(last_console);
@@ -1691,7 +1691,7 @@ static void do_con_trol(struct tty_struct *tty, struct vc_data *vc, int c)
 		return;
 	case 7:
 		if (vc->vc_bell_duration)
-			kd_mksound(vc->vc_bell_pitch, vc->vc_bell_duration);
+			kd_mksound(vc->vc_bell_pitch, msecs_to_jiffies(vc->vc_bell_duration));
 		return;
 	case 8:
 		bs(vc);
@@ -2926,7 +2926,7 @@ static int __init con_init(void)
 
 	if (blankinterval) {
 		blank_state = blank_normal_wait;
-		mod_timer(&console_timer, jiffies + (blankinterval * HZ));
+		mod_timer(&console_timer, jiffies + (blankinterval * msecs_to_jiffies(1000)));
 	}
 
 	for (currcons = 0; currcons < MIN_NR_CONSOLES; currcons++) {
@@ -3860,7 +3860,7 @@ void do_blank_screen(int entering_gfx)
 
 	if (vesa_off_interval && vesa_blank_mode) {
 		blank_state = blank_vesa_wait;
-		mod_timer(&console_timer, jiffies + vesa_off_interval);
+		mod_timer(&console_timer, jiffies + msecs_to_jiffies(vesa_off_interval));
 	}
 	vt_event_post(VT_EVENT_BLANK, vc->vc_num, vc->vc_num);
 }
@@ -3897,7 +3897,7 @@ void do_unblank_screen(int leaving_gfx)
 		return; /* but leave console_blanked != 0 */
 
 	if (blankinterval) {
-		mod_timer(&console_timer, jiffies + (blankinterval * HZ));
+		mod_timer(&console_timer, jiffies + (blankinterval * msecs_to_jiffies(1000)));
 		blank_state = blank_normal_wait;
 	}
 
@@ -3932,7 +3932,7 @@ void unblank_screen(void)
 static void blank_screen_t(unsigned long dummy)
 {
 	if (unlikely(!keventd_up())) {
-		mod_timer(&console_timer, jiffies + (blankinterval * HZ));
+		mod_timer(&console_timer, jiffies + (blankinterval * msecs_to_jiffies(1000)));
 		return;
 	}
 	blank_timer_expired = 1;
@@ -3962,7 +3962,7 @@ void poke_blanked_console(void)
 	if (console_blanked)
 		unblank_screen();
 	else if (blankinterval) {
-		mod_timer(&console_timer, jiffies + (blankinterval * HZ));
+		mod_timer(&console_timer, jiffies + (blankinterval * msecs_to_jiffies(1000)));
 		blank_state = blank_normal_wait;
 	}
 }

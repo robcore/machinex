@@ -373,7 +373,7 @@ int smux_ctl_open(struct inode *inode, struct file *file)
 {
 	int r = 0;
 	struct smux_ctl_dev *devp;
-	unsigned wait_time = DEFAULT_OPEN_TIMEOUT * HZ;
+	unsigned wait_time = DEFAULT_OPEN_TIMEOUT * msecs_to_jiffies(1000);
 
 	if (!smux_ctl_inited)
 		return -EIO;
@@ -401,7 +401,7 @@ int smux_ctl_open(struct inode *inode, struct file *file)
 		}
 
 		if (devp->open_timeout_val)
-			wait_time = devp->open_timeout_val * HZ;
+			wait_time = devp->open_timeout_val * msecs_to_jiffies(1000);
 
 		r = wait_event_interruptible_timeout(
 				devp->write_wait_queue,

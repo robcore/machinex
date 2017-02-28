@@ -1060,7 +1060,7 @@ static inline void n_tty_receive_overrun(struct tty_struct *tty)
 	char buf[64];
 
 	tty->num_overrun++;
-	if (time_before(tty->overrun_time, jiffies - HZ) ||
+	if (time_before(tty->overrun_time, jiffies - msecs_to_jiffies(1000)) ||
 			time_after(tty->overrun_time, jiffies)) {
 		printk(KERN_WARNING "%s: %d input overrun(s)\n",
 			tty_name(tty, buf),
@@ -1756,7 +1756,7 @@ do_it_again:
 	minimum = time = 0;
 	timeout = MAX_SCHEDULE_TIMEOUT;
 	if (!tty->icanon) {
-		time = (HZ / 10) * TIME_CHAR(tty);
+		time = 100 * TIME_CHAR(tty);
 		minimum = MIN_CHAR(tty);
 		if (minimum) {
 			if (time)

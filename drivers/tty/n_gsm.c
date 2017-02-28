@@ -84,7 +84,7 @@ module_param(debug, int, 0600);
  */
 #define MAX_MRU 1500
 #define MAX_MTU 1500
-#define	GSM_NET_TX_TIMEOUT (HZ*10)
+#define	GSM_NET_TX_TIMEOUT 10000
 
 /**
  *	struct gsm_mux_net	-	network interface
@@ -1345,7 +1345,7 @@ static void gsm_control_retransmit(unsigned long data)
 			return;
 		}
 		gsm_control_transmit(gsm, ctrl);
-		mod_timer(&gsm->t2_timer, jiffies + gsm->t2 * HZ / 100);
+		mod_timer(&gsm->t2_timer, jiffies + gsm->t2 * msecs_to_jiffies(10));
 	}
 	spin_unlock_irqrestore(&gsm->control_lock, flags);
 }
@@ -1382,7 +1382,7 @@ retry:
 	ctrl->len = clen;
 	gsm->pending_cmd = ctrl;
 	gsm->cretries = gsm->n2;
-	mod_timer(&gsm->t2_timer, jiffies + gsm->t2 * HZ / 100);
+	mod_timer(&gsm->t2_timer, jiffies + gsm->t2 * msecs_to_jiffies(10));
 	gsm_control_transmit(gsm, ctrl);
 	spin_unlock_irqrestore(&gsm->control_lock, flags);
 	return ctrl;
@@ -1484,7 +1484,7 @@ static void gsm_dlci_t1(unsigned long data)
 		dlci->retries--;
 		if (dlci->retries) {
 			gsm_command(dlci->gsm, dlci->addr, SABM|PF);
-			mod_timer(&dlci->t1, jiffies + gsm->t1 * HZ / 100);
+			mod_timer(&dlci->t1, jiffies + gsm->t1 * msecs_to_jiffies(10));
 		} else
 			gsm_dlci_close(dlci);
 		break;
@@ -1492,7 +1492,7 @@ static void gsm_dlci_t1(unsigned long data)
 		dlci->retries--;
 		if (dlci->retries) {
 			gsm_command(dlci->gsm, dlci->addr, DISC|PF);
-			mod_timer(&dlci->t1, jiffies + gsm->t1 * HZ / 100);
+			mod_timer(&dlci->t1, jiffies + gsm->t1 * msecs_to_jiffies(10));
 		} else
 			gsm_dlci_close(dlci);
 		break;
@@ -1517,7 +1517,7 @@ static void gsm_dlci_begin_open(struct gsm_dlci *dlci)
 	dlci->retries = gsm->n2;
 	dlci->state = DLCI_OPENING;
 	gsm_command(dlci->gsm, dlci->addr, SABM|PF);
-	mod_timer(&dlci->t1, jiffies + gsm->t1 * HZ / 100);
+	mod_timer(&dlci->t1, jiffies + gsm->t1 * msecs_to_jiffies(10));
 }
 
 /**
@@ -1539,7 +1539,7 @@ static void gsm_dlci_begin_close(struct gsm_dlci *dlci)
 	dlci->retries = gsm->n2;
 	dlci->state = DLCI_CLOSING;
 	gsm_command(dlci->gsm, dlci->addr, DISC|PF);
-	mod_timer(&dlci->t1, jiffies + gsm->t1 * HZ / 100);
+	mod_timer(&dlci->t1, jiffies + gsm->t1 * msecs_to_jiffies(10));
 }
 
 /**
