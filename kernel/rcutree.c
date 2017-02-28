@@ -1574,11 +1574,9 @@ rcu_start_gp(struct rcu_state *rsp, unsigned long flags)
 	}
 
 	rsp->gp_flags = RCU_GP_FLAG_INIT;
-	raw_spin_unlock(&rnp->lock); /* Interrupts remain disabled. */
 
 	/* Ensure that CPU is aware of completion of last grace period. */
-	rcu_process_gp_end(rsp, rdp);
-	local_irq_restore(flags);
+	__rcu_process_gp_end(rsp, rdp->mynode, rdp);
 
 	/*
 	 * We can't do wakeups while holding the rnp->lock, as that
@@ -1586,6 +1584,7 @@ rcu_start_gp(struct rcu_state *rsp, unsigned long flags)
 	 * the wakeup to interrupt context.
 	 */
 	irq_work_queue(&rsp->wakeup_work);
+	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 }
 
 /*
