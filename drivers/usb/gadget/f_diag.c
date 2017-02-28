@@ -394,7 +394,7 @@ int usb_diag_read(struct usb_diag_ch *ch, struct diag_request *d_req)
 	struct diag_context *ctxt = ch->priv_usb;
 	unsigned long flags;
 	struct usb_request *req;
-	static DEFINE_RATELIMIT_STATE(rl, msecs_to_jiffies(10000), 1);
+	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
 
 	if (!ctxt)
 		return -ENODEV;
@@ -453,7 +453,7 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 	struct diag_context *ctxt = ch->priv_usb;
 	unsigned long flags;
 	struct usb_request *req = NULL;
-	static DEFINE_RATELIMIT_STATE(rl, msecs_to_jiffies(10000), 1);
+	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
 
 	if (!ctxt)
 		return -ENODEV;
