@@ -194,7 +194,7 @@ static irqreturn_t bcm2079x_dev_irq_handler(int irq, void *dev_id)
 	bcm2079x_dev->count_irq++;
 	spin_unlock_irqrestore(&bcm2079x_dev->irq_enabled_lock, flags);
 	wake_up(&bcm2079x_dev->read_wq);
-	wake_lock_timeout(&bcm2079x_dev->bcm_wake_lock, 2 * HZ);
+	wake_lock_timeout(&bcm2079x_dev->bcm_wake_lock, msecs_to_jiffies(2000));
 
 	return IRQ_HANDLED;
 }

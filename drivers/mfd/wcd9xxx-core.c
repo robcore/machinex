@@ -320,13 +320,13 @@ static struct wcd9xx_codec_type {
 	 SITAR_NUM_IRQS},
 	{{0x2, 0x0, 0x1, 0x1}, sitar_devs, ARRAY_SIZE(sitar_devs),
 	 SITAR_NUM_IRQS},
-	 
+
 	{{0x0, 0x0, 0x3, 0x1}, tapan_devs, ARRAY_SIZE(tapan_devs),
-	
+
 	 TAPAN_NUM_IRQS},
 	{{0x1, 0x0, 0x3, 0x1}, tapan_devs, ARRAY_SIZE(tapan_devs),
-	 TAPAN_NUM_IRQS},	 
-	 
+	 TAPAN_NUM_IRQS},
+
 };
 
 static void wcd9xxx_bring_up(struct wcd9xxx *wcd9xxx)
@@ -390,7 +390,7 @@ static int wcd9xxx_reset(struct wcd9xxx *wcd9xxx)
             wcd9xxx->reset_gpio = 0;
             return ret;
         }
-#endif //CONFIG_MACH_SERRANO_EUR_LTE		
+#endif //CONFIG_MACH_SERRANO_EUR_LTE
 #else
 #if !defined(CONFIG_MACH_JF)
 		ret = gpio_tlmm_config
@@ -503,7 +503,7 @@ static int wcd9xxx_device_init(struct wcd9xxx *wcd9xxx, int irq)
 		}
 	}
 #endif
-		
+
 	ret = mfd_add_devices(wcd9xxx->dev, -1, wcd9xxx_dev, wcd9xxx_dev_size,
 			      NULL, 0);
 	if (ret != 0) {
@@ -937,7 +937,7 @@ static int __devinit wcd9xxx_i2c_probe(struct i2c_client *client,
 	int i2c_mode = 0;
 	int wcd9xx_index = 0;
 	struct device *dev;
-	
+
 	pr_info("%s: interface status %d\n", __func__, wcd9xxx_intf);
 	if (wcd9xxx_intf == WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
 		dev_dbg(&client->dev, "%s:Codec is detected in slimbus mode\n",
@@ -1596,7 +1596,7 @@ static int wcd9xxx_suspend(struct wcd9xxx *wcd9xxx, pm_message_t pmesg)
 						  WCD9XXX_PM_SLEEPABLE,
 						  WCD9XXX_PM_ASLEEP) ==
 							WCD9XXX_PM_SLEEPABLE,
-					 HZ))) {
+					 msecs_to_jiffies(1000)))) {
 			pr_debug("%s: suspend failed state %d, wlock %d\n",
 				 __func__, wcd9xxx->pm_state,
 				 wcd9xxx->wlock_holders);
