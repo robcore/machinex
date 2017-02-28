@@ -546,6 +546,7 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 {
 	unsigned long seq, last_jiffies, next_jiffies, delta_jiffies;
 	ktime_t last_update, expires, ret = { .tv64 = 0 };
+	unsigned long rcu_delta_jiffies;
 	struct clock_event_device *dev = __get_cpu_var(tick_cpu_device).evtdev;
 	u64 time_delta;
 
@@ -558,14 +559,18 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 		last_jiffies = jiffies;
 	} while (read_seqretry(&jiffies_lock, seq));
 
-	if (rcu_needs_cpu(cpu) ||arch_needs_cpu(cpu) ||
-	    irq_work_needs_cpu()) {
+	if (rcu_needs_cpu(cpu, &rcu_delta_jiffies) ||
+	    arch_needs_cpu(cpu) || irq_work_needs_cpu()) {
 		next_jiffies = last_jiffies + 1;
 		delta_jiffies = 1;
 	} else {
 		/* Get the next timer wheel timer */
 		next_jiffies = get_next_timer_interrupt(last_jiffies);
 		delta_jiffies = next_jiffies - last_jiffies;
+		if (rcu_delta_jiffies < delta_jiffies) {
+			next_jiffies = last_jiffies + rcu_delta_jiffies;
+			delta_jiffies = rcu_delta_jiffies;
+		}
 	}
 
 	/*
