@@ -314,13 +314,6 @@ out_free:
 	goto out;
 }
 
-void disable_pid_allocation(struct pid_namespace *ns)
-{
-	spin_lock_irq(&pidmap_lock);
-	ns->nr_hashed &= ~PIDNS_HASH_ADDING;
-	spin_unlock_irq(&pidmap_lock);
-}
-
 struct pid *find_pid_ns(int nr, struct pid_namespace *ns)
 {
 	struct upid *pnr;
@@ -550,9 +543,6 @@ void __init pidhash_init(void)
 
 void __init pidmap_init(void)
 {
-	/* Veryify no one has done anything silly */
-	BUILD_BUG_ON(PID_MAX_LIMIT >= PIDNS_HASH_ADDING);
-
 	/* bump default and minimum pid_max based on number of cpus */
 	pid_max = min(pid_max_max, max_t(int, pid_max,
 				PIDS_PER_CPU_DEFAULT * num_possible_cpus()));
