@@ -2551,7 +2551,12 @@ static bool init_nocb_callback_list(struct rcu_data *rdp)
 
 #else /* #ifdef CONFIG_RCU_NOCB_CPU */
 
-static int rcu_nocb_needs_gp(struct rcu_data *rdp)
+static int rcu_nocb_needs_gp(struct rcu_state *rsp)
+{
+	return 0;
+}
+
+static int rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
 {
 	return 0;
 }
