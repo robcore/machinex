@@ -229,7 +229,7 @@ static void hsic_tty_data_write_tohost(struct work_struct *w)
 			if (!timer_pending(&info->buf_req_timer)) {
 				init_timer(&info->buf_req_timer);
 				info->buf_req_timer.expires = jiffies +
-				    ((30 * HZ) / 1000);
+				    (msecs_to_jiffies(3));
 				info->buf_req_timer.function = buf_req_retry;
 				info->buf_req_timer.data = (unsigned long)info;
 				add_timer(&info->buf_req_timer);
@@ -241,7 +241,7 @@ static void hsic_tty_data_write_tohost(struct work_struct *w)
 		memcpy(ptr, skb->data, avail);
 		dev_kfree_skb_any(skb);
 
-		wake_lock_timeout(&info->wake_lock, HZ / 2);
+		wake_lock_timeout(&info->wake_lock, msecs_to_jiffies(500));
 		tty_flip_buffer_push(tty);
 
 		info->to_host++;
@@ -456,7 +456,7 @@ static int hsic_tty_open(struct tty_struct *tty, struct file *f)
 			    wait_event_interruptible_timeout(info->
 							     ch_opened_wait_queue,
 							     info->is_open,
-							     (2 * HZ));
+							     msecs_to_jiffies(2000));
 			if (res == 0)
 				res = -ETIMEDOUT;
 			if (res < 0) {
@@ -520,7 +520,7 @@ static void hsic_tty_close(struct tty_struct *tty, struct file *f)
 							     ch_opened_wait_queue,
 							     !info->is_open,
 							     (lge_ds_modem_wait
-							      * HZ));
+							      * msecs_to_jiffies(1000)));
 			if (res == 0) {
 				/* just in case, remain result value */
 				res = -ETIMEDOUT;

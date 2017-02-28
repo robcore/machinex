@@ -875,7 +875,7 @@ static ssize_t audio_mvs_read(struct file *file,
 	rc = wait_event_interruptible_timeout(audio->out_wait,
 					     (!list_empty(&audio->out_queue) ||
 					     audio->state == AUDIO_MVS_STOPPED),
-					     1 * HZ);
+					     msecs_to_jiffies(1000));
 
 	if (rc > 0) {
 		mutex_lock(&audio->out_lock);
@@ -948,7 +948,7 @@ static ssize_t audio_mvs_write(struct file *file,
 
 	rc = wait_event_interruptible_timeout(audio->in_wait,
 		(!list_empty(&audio->free_in_queue) ||
-		audio->state == AUDIO_MVS_STOPPED), 1 * HZ);
+		audio->state == AUDIO_MVS_STOPPED), msecs_to_jiffies(1000));
 	if (rc > 0) {
 		mutex_lock(&audio->in_lock);
 

@@ -207,11 +207,11 @@ int apr_wait_for_device_up(int dest_id)
 	if (dest_id == APR_DEST_MODEM)
 		rc = wait_event_interruptible_timeout(modem_wait,
 				    (apr_get_modem_state() == APR_SUBSYS_UP),
-				    (1 * HZ));
+				    msecs_to_jiffies(1000));
 	else if (dest_id == APR_DEST_QDSP6)
 		rc = wait_event_interruptible_timeout(dsp_wait,
 				    (apr_get_q6_state() == APR_SUBSYS_UP),
-				    (1 * HZ));
+				    msecs_to_jiffies(1000));
 	else
 		pr_err("%s: unknown dest_id %d\n", __func__, dest_id);
 	/* returns left time */
@@ -231,8 +231,11 @@ int apr_load_adsp_image(void)
 			apr_set_q6_state(APR_SUBSYS_LOADED);
 			pr_debug("APR: Image is loaded, stated\n");
 		}
-	} else
+	} else if (apr_get_q6_state() == APR_SUBSYS_LOADED) {
+		pr_debug("APR: q6 image already loaded\n");
+	} else {
 		pr_debug("APR: cannot load state %d\n", apr_get_q6_state());
+	}
 	mutex_unlock(&q6.lock);
 	return rc;
 }
@@ -616,11 +619,11 @@ static int modem_notifier_cb(struct notifier_block *this, unsigned long code,
 	switch (code) {
 	case SUBSYS_BEFORE_SHUTDOWN:
 		pr_debug("M-Notify: Shutdown started\n");
-		apr_set_modem_state(APR_SUBSYS_DOWN);
-		dispatch_event(code, APR_DEST_MODEM);
 		break;
 	case SUBSYS_AFTER_SHUTDOWN:
 		pr_debug("M-Notify: Shutdown Completed\n");
+		apr_set_modem_state(APR_SUBSYS_DOWN);
+		dispatch_event(code, APR_DEST_MODEM);
 		break;
 	case SUBSYS_BEFORE_POWERUP:
 		pr_debug("M-notify: Bootup started\n");

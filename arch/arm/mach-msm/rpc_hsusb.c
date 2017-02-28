@@ -211,7 +211,7 @@ int msm_hsusb_phy_reset(void)
 	}
 
 	rc = msm_rpc_call(usb_ep, usb_rpc_ids.init_phy,
-				&req, sizeof(req), 5 * HZ);
+				&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: phy_reset rpc failed! rc = %d\n",
@@ -238,7 +238,7 @@ int msm_hsusb_vbus_powerup(void)
 	}
 
 	rc = msm_rpc_call(usb_ep, usb_rpc_ids.vbus_pwr_up,
-		&req, sizeof(req), 5 * HZ);
+		&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: vbus_powerup failed! rc = %d\n",
@@ -265,7 +265,7 @@ int msm_hsusb_vbus_shutdown(void)
 	}
 
 	rc = msm_rpc_call(usb_ep, usb_rpc_ids.vbus_pwr_down,
-		&req, sizeof(req), 5 * HZ);
+		&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: vbus_shutdown failed! rc = %d\n",
@@ -294,7 +294,7 @@ int msm_hsusb_send_productID(uint32_t product_id)
 	req.product_id = cpu_to_be32(product_id);
 	rc = msm_rpc_call(usb_ep, usb_rpc_ids.update_product_id,
 				&req, sizeof(req),
-				5 * HZ);
+				msecs_to_jiffies(5000));
 	if (rc < 0)
 		pr_err("%s: rpc call failed! error: %d\n",
 			__func__, rc);
@@ -335,7 +335,7 @@ int msm_hsusb_send_serial_number(const char *serial_number)
 	req->length = cpu_to_be32(serial_len);
 	strncpy(req->sn , serial_number, serial_len);
 	rc = msm_rpc_call(usb_ep, usb_rpc_ids.update_serial_num,
-				req, rlen, 5 * HZ);
+				req, rlen, msecs_to_jiffies(5000));
 	if (rc < 0)
 		pr_err("%s: rpc call failed! error: %d\n",
 			__func__, rc);
@@ -368,7 +368,7 @@ int msm_hsusb_is_serial_num_null(uint32_t val)
 	req.value = cpu_to_be32(val);
 	rc = msm_rpc_call(usb_ep, usb_rpc_ids.update_is_serial_num_null,
 				&req, sizeof(req),
-				5 * HZ);
+				msecs_to_jiffies(5000));
 	if (rc < 0)
 		pr_err("%s: rpc call failed! error: %d\n" ,
 			__func__, rc);
@@ -391,7 +391,7 @@ int msm_chg_usb_charger_connected(uint32_t device)
 		return -EAGAIN;
 	req.otg_dev = cpu_to_be32(device);
 	rc = msm_rpc_call(chg_ep, chg_rpc_ids.chg_usb_charger_connected_proc,
-			&req, sizeof(req), 5 * HZ);
+			&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: charger_connected failed! rc = %d\n",
@@ -415,7 +415,7 @@ int msm_chg_usb_i_is_available(uint32_t sample)
 		return -EAGAIN;
 	req.i_ma = cpu_to_be32(sample);
 	rc = msm_rpc_call(chg_ep, chg_rpc_ids.chg_usb_i_is_available_proc,
-			&req, sizeof(req), 5 * HZ);
+			&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: charger_i_available failed! rc = %d\n",
@@ -437,7 +437,7 @@ int msm_chg_usb_i_is_not_available(void)
 	if (!chg_ep || IS_ERR(chg_ep))
 		return -EAGAIN;
 	rc = msm_rpc_call(chg_ep, chg_rpc_ids.chg_usb_i_is_not_available_proc,
-			&req, sizeof(req), 5 * HZ);
+			&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: charger_i_not_available failed! rc ="
@@ -459,7 +459,7 @@ int msm_chg_usb_charger_disconnected(void)
 	if (!chg_ep || IS_ERR(chg_ep))
 		return -EAGAIN;
 	rc = msm_rpc_call(chg_ep, chg_rpc_ids.chg_usb_charger_disconnected_proc,
-			&req, sizeof(req), 5 * HZ);
+			&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: charger_disconnected failed! rc = %d\n",
@@ -542,7 +542,7 @@ int msm_hsusb_reset_rework_installed(void)
 
 	rc = msm_rpc_call_reply(usb_ep, usb_rpc_ids.reset_rework_installed,
 				&req, sizeof(req),
-				&rep, sizeof(rep), 5 * HZ);
+				&rep, sizeof(rep), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: rpc call failed! error: (%d)"
@@ -572,10 +572,10 @@ static int msm_hsusb_pmic_ulpidata0_config(int enable)
 
 	if (enable)
 		rc = msm_rpc_call(usb_ep, usb_rpc_ids.enable_pmic_ulpi_data0,
-					&req, sizeof(req), 5 * HZ);
+					&req, sizeof(req), msecs_to_jiffies(5000));
 	else
 		rc = msm_rpc_call(usb_ep, usb_rpc_ids.disable_pmic_ulpi_data0,
-					&req, sizeof(req), 5 * HZ);
+					&req, sizeof(req), msecs_to_jiffies(5000));
 
 	if (rc < 0)
 		pr_err("%s: rpc call failed! error: %d\n",

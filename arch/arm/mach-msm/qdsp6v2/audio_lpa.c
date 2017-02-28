@@ -1039,7 +1039,7 @@ int audlpa_async_fsync(struct audio *audio)
 	}
 	rc = wait_event_interruptible_timeout(audio->write_wait,
 				  (audio->teos || audio->wflush ||
-				  audio->stopped), 5*HZ);
+				  audio->stopped), msecs_to_jiffies(5000));
 
 	if (rc < 0) {
 		pr_err("%s: wait event for teos failed, rc = %d\n", __func__,

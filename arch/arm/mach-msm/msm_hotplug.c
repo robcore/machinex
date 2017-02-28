@@ -31,8 +31,8 @@
 
 #define MSM_HOTPLUG			"msm_hotplug"
 #define HOTPLUG_ENABLED			0
-#define DEFAULT_UPDATE_RATE		HZ / 10
-#define START_DELAY			HZ * 20
+#define DEFAULT_UPDATE_RATE		100
+#define START_DELAY			20000
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define DEFAULT_HISTORY_SIZE		10
 #define DEFAULT_DOWN_LOCK_DUR		1000
@@ -88,7 +88,7 @@ static struct workqueue_struct *hotplug_wq;
 static struct delayed_work hotplug_work;
 
 static u64 last_boost_time;
-static unsigned int default_update_rates[] = { DEFAULT_UPDATE_RATE };
+static unsigned int default_update_rates[] = { msecs_to_jiffies(DEFAULT_UPDATE_RATE) };
 
 static struct cpu_stats {
 	unsigned int *update_rates;
@@ -696,7 +696,7 @@ static int __ref msm_hotplug_start(void)
 	}
 
 	queue_delayed_work_on(0, hotplug_wq, &hotplug_work,
-			      START_DELAY);
+			      msecs_to_jiffies(START_DELAY));
 
 	return ret;
 err_dev:

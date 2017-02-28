@@ -48,7 +48,7 @@
 #define LOOPBACK_INX (NUM_SMD_PKT_PORTS - 1)
 
 #define DEVICE_NAME "smdpkt"
-#define WAKELOCK_TIMEOUT (2*HZ)
+#define WAKELOCK_TIMEOUT 2000
 #define SMD_PKT_MAGIC (0xDEADBAAD)
 
 struct smd_pkt_dev {
@@ -252,7 +252,7 @@ static void packet_arrival_worker(struct work_struct *work)
 		D_READ("%s locking smd_pkt_dev id:%d wakelock\n",
 			__func__, smd_pkt_devp->i);
 		wake_lock_timeout(&smd_pkt_devp->pa_wake_lock,
-				  WAKELOCK_TIMEOUT);
+				  msecs_to_jiffies(WAKELOCK_TIMEOUT));
 	}
 	spin_unlock_irqrestore(&smd_pkt_devp->pa_spinlock, flags);
 	mutex_unlock(&smd_pkt_devp->ch_lock);
@@ -875,7 +875,7 @@ int smd_pkt_open(struct inode *inode, struct file *file)
 
 		r = wait_event_interruptible_timeout(
 				smd_pkt_devp->ch_opened_wait_queue,
-				smd_pkt_devp->is_open, (2 * HZ));
+				smd_pkt_devp->is_open, (msecs_to_jiffies(2000)));
 		if (r == 0) {
 			r = -ETIMEDOUT;
 			/* close the ch to sync smd's state with smd_pkt */

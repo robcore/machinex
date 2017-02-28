@@ -33,7 +33,7 @@
 #define ION_ADSPRPC_HEAP_ID ION_AUDIO_HEAP_ID
 #endif
 
-#define RPC_TIMEOUT	(5 * HZ)
+#define RPC_TIMEOUT	(5000)
 #define RPC_HASH_BITS	5
 #define RPC_HASH_SZ	(1 << RPC_HASH_BITS)
 

@@ -83,7 +83,7 @@ static void set_pmic_vibrator(int on)
 		req.data = cpu_to_be32(0);
 
 	msm_rpc_call(vib_endpoint, HTC_PROCEDURE_SET_VIB_ON_OFF, &req,
-		sizeof(req), 5 * HZ);
+		sizeof(req), msecs_to_jiffies(5000));
 }
 #endif
 

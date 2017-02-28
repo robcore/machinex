@@ -33,7 +33,7 @@
 #define PM_VOTE_USB_PWR_SEL_SWITCH_APP__HSUSB 	(1 << 2)
 #define PM_USB_PWR_SEL_SWITCH_ID 		0
 
-#define PMAPP_RPC_TIMEOUT (5*HZ)
+#define PMAPP_RPC_TIMEOUT 5000
 
 #define PMAPP_DISPLAY_CLOCK_CONFIG_PROC		21
 #define PMAPP_VREG_LEVEL_VOTE_PROC		23
@@ -420,7 +420,7 @@ static int pmapp_rpc_req_reply(struct pmapp_buf *tbuf, struct pmapp_buf *rbuf,
 	len = msm_rpc_call_reply(pm->endpoint, proc,
 				tbuf->data, tbuf->len,
 				rbuf->data, rbuf->size,
-				PMAPP_RPC_TIMEOUT);
+				msecs_to_jiffies(PMAPP_RPC_TIMEOUT));
 
 	if (len <= 0) {
 		printk(KERN_ERR "%s: rpc failed! len = %d\n", __func__, len);

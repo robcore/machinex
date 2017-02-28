@@ -1673,7 +1673,7 @@ static void ul_wakeup(void)
 		}
 		if (wait_for_dfab) {
 			ret = wait_for_completion_timeout(
-					&dfab_unvote_completion, HZ);
+					&dfab_unvote_completion, msecs_to_jiffies(1000));
 			BUG_ON(ret == 0);
 		}
 		if (likely(do_vote_dfab))
@@ -1891,7 +1891,7 @@ static void release_wakelock(void)
 	if (wakelock_reference_count == 0) {
 		wake_unlock(&bam_wakelock);
 #ifdef BAM_DMUX_FD
-		wake_lock_timeout(&bam_wakelock, wakelock_timeout * HZ);
+		wake_lock_timeout(&bam_wakelock, wakelock_timeout * msecs_to_jiffies(1000));
 #endif
 		}
 	spin_unlock_irqrestore(&wakelock_reference_lock, flags);

@@ -362,7 +362,7 @@ static void sdio_mux_read_data(struct work_struct *work)
 	ptr = skb_put(skb_mux, sz);
 
 	/* half second wakelock is fine? */
-	wake_lock_timeout(&sdio_mux_ch_wakelock, HZ / 2);
+	wake_lock_timeout(&sdio_mux_ch_wakelock, msecs_to_jiffies(500));
 	rc = sdio_read(sdio_mux_ch, ptr, sz);
 	DBG("%s: read %d\n", __func__, rc);
 	if (rc) {
