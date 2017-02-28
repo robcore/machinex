@@ -503,8 +503,7 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 {
 	struct gpio_keys_drvdata *ddata = dev_id;
 
-	cancel_delayed_work_sync(&ddata->flip_cover_dwork);
-	schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 20);
+	mod_delayed_work(system_wq, &ddata->flip_cover_dwork, msecs_to_jiffies(50));
 	return IRQ_HANDLED;
 }
 #endif
@@ -785,7 +784,7 @@ static int gpio_keys_open(struct input_dev *input)
 		INIT_DELAYED_WORK(&ddata->flip_cover_dwork, flip_cover_work);
 
 		/* update the current status */
-		schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
+		queue_delayed_work(system_wq, &ddata->flip_cover_dwork, msecs_to_jiffies(500));
 
 hall_sensor_error:
 
