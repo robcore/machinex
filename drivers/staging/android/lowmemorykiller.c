@@ -396,7 +396,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				     selected_tasksize[i],
 					 other_free, other_file);
 #endif
-			lowmem_deathpending_timeout = jiffies + HZ;
+			lowmem_deathpending_timeout = jiffies + msecs_to_jiffies(1000);
 			send_sig(SIGKILL, selected[i], 0);
 			set_tsk_thread_flag(selected[i], TIF_MEMDIE);
 			rem -= selected_tasksize[i];
@@ -418,7 +418,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize);
 #endif
-		lowmem_deathpending_timeout = jiffies + HZ;
+		lowmem_deathpending_timeout = jiffies + msecs_to_jiffies(1000);
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
