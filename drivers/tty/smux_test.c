@@ -815,7 +815,7 @@ static int smux_ut_ssr_remote_open(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(10000),
+					&cb_data.cb_completion, msecs_to_jiffies(10000)),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
