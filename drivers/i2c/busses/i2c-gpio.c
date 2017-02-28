@@ -179,7 +179,7 @@ static int __devinit i2c_gpio_probe(struct platform_device *pdev)
 	if (pdata->timeout)
 		bit_data->timeout = pdata->timeout;
 	else
-		bit_data->timeout = HZ / 10;		/* 100 ms */
+		bit_data->timeout = msecs_to_jiffies(100);		/* 100 ms */
 
 	bit_data->data = pdata;
 

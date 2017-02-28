@@ -235,7 +235,7 @@ qup_i2c_interrupt(int irq, void *devid)
 	uint32_t op_flgs = readl_relaxed(dev->base + QUP_OPERATIONAL);
 	int err = 0;
 
-#ifdef SECURE_INPUT    
+#ifdef SECURE_INPUT
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -369,7 +369,7 @@ qup_config_core_on_en(struct qup_i2c_dev *dev)
 static void
 qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state)
 {
-#ifdef SECURE_INPUT    
+#ifdef SECURE_INPUT
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return;
 	}
@@ -823,7 +823,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	long timeout;
 	int err;
 
-#ifdef SECURE_INPUT    
+#ifdef SECURE_INPUT
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -1029,7 +1029,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 					(istatus & I2C_STATUS_BUS_MASTER)) {
 					timeout =
 					wait_for_completion_timeout(&complete,
-									HZ);
+									msecs_to_jiffies(1000));
 					if (timeout)
 						goto timeout_err;
 				}
@@ -1141,7 +1141,7 @@ timeout_err:
 	dev->pos = 0;
 	dev->err = 0;
 	dev->cnt = 0;
-	dev->pwr_timer.expires = jiffies + 3*HZ;
+	dev->pwr_timer.expires = jiffies + msecs_to_jiffies(3000);
 	add_timer(&dev->pwr_timer);
 	mutex_unlock(&dev->mlock);
 	return ret;
