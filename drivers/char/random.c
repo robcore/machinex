@@ -864,7 +864,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
 
 	fast_mix(fast_pool, input);
 
-	if ((fast_pool->count & 63) && !time_after(now, fast_pool->last + HZ))
+	if ((fast_pool->count & 63) && !time_after(now, fast_pool->last + msecs_to_jiffies(1000)))
 		return;
 
 	fast_pool->last = now;
@@ -933,7 +933,7 @@ static void xfer_secondary_pool(struct entropy_store *r, size_t nbytes)
 		unsigned long now = jiffies;
 
 		if (time_before(now,
-				r->last_pulled + random_min_urandom_seed * HZ))
+				r->last_pulled + random_min_urandom_seed * msecs_to_jiffies(1000)))
 			return;
 		r->last_pulled = now;
 	}
