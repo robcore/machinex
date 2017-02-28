@@ -2992,10 +2992,10 @@ void mmc_rescan(struct work_struct *work)
  out:
 	/* only extend the wakelock, if suspend has not started yet */
 	if (extend_wakelock && !host->rescan_disable)
-		wake_lock_timeout(&host->detect_wake_lock, HZ / 2);
+		wake_lock_timeout(&host->detect_wake_lock, msecs_to_jiffies(500));
 
 	if (host->caps & MMC_CAP_NEEDS_POLL)
-		mmc_schedule_delayed_work(&host->detect, HZ);
+		mmc_schedule_delayed_work(&host->detect, msecs_to_jiffies(1000));
 }
 
 void mmc_start_host(struct mmc_host *host)

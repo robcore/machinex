@@ -33,7 +33,7 @@ void mmc_detach_bus(struct mmc_host *host);
 
 void mmc_init_erase(struct mmc_card *card);
 
-void mmc_power_up(struct mmc_host *host);
+void mmc_power_up(struct mmc_host *host);hz
 void mmc_power_off(struct mmc_host *host);
 void mmc_set_chip_select(struct mmc_host *host, int mode);
 void mmc_set_clock(struct mmc_host *host, unsigned int hz);
@@ -52,10 +52,10 @@ void mmc_power_cycle(struct mmc_host *host);
 
 static inline void mmc_delay(unsigned int ms)
 {
-	if (ms < 1000 / HZ) {
+	if (ms < jiffies_to_msecs(1)) {
 		cond_resched();
 		mdelay(ms);
-	} else if (ms < jiffies_to_msecs(2)) {
+	} else if ((ms > jiffies_to_msecs(1)) && (ms < jiffies_to_msecs(2))) {
 		usleep_range(ms * 1000, (ms + 1) * 1000);
 	} else {
 		msleep(ms);

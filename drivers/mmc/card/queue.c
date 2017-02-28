@@ -78,7 +78,7 @@ static int mmc_queue_thread(void *d)
 		req = blk_fetch_request(q);
 		/* set nopacked_period if next request is RT class */
 		if (req && IS_RT_CLASS_REQ(req))
-			    mmc_set_nopacked_period(mq, HZ);
+			    mmc_set_nopacked_period(mq, msecs_to_jiffies(1000));
 		mq->mqrq_cur->req = req;
 		spin_unlock_irq(q->queue_lock);
 
@@ -148,7 +148,7 @@ static void mmc_request_fn(struct request_queue *q)
 		if (ioc) {
 		    /* Set nopacked period if requesting process is RT class */
 		    if (IOPRIO_PRIO_CLASS(ioc->ioprio) == IOPRIO_CLASS_RT)
-		        mmc_set_nopacked_period(mq, HZ);
+		        mmc_set_nopacked_period(mq, msecs_to_jiffies(1000));
 		    put_io_context(ioc);
 		}
 	}
