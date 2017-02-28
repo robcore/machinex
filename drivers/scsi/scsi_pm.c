@@ -145,7 +145,7 @@ static int scsi_runtime_suspend(struct device *dev)
 		err = scsi_dev_type_suspend(dev, PMSG_AUTO_SUSPEND);
 		if (err == -EAGAIN)
 			pm_schedule_suspend(dev, jiffies_to_msecs(
-				round_jiffies_up_relative(HZ/10)));
+				round_jiffies_up_relative(100)));
 	}
 
 	/* Insert hooks here for targets, hosts, and transport classes */

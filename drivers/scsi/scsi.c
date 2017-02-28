@@ -77,10 +77,10 @@ static void scsi_done(struct scsi_cmnd *cmd);
  * Definitions and constants.
  */
 
-#define MIN_RESET_DELAY (2*HZ)
+#define MIN_RESET_DELAY 2000
 
 /* Do not call reset on error if we just did a reset within 15 sec. */
-#define MIN_RESET_PERIOD (15*HZ)
+#define MIN_RESET_PERIOD 15000
 
 /*
  * Note - the initial logging level can be set here to log events at boot time.
@@ -605,7 +605,7 @@ void scsi_log_completion(struct scsi_cmnd *cmd, int disposition)
 				printk("FAILED\n");
 				break;
 			case TIMEOUT_ERROR:
-				/* 
+				/*
 				 * If called via scsi_times_out.
 				 */
 				printk("TIMEOUT\n");
@@ -638,7 +638,7 @@ void scsi_log_completion(struct scsi_cmnd *cmd, int disposition)
 void scsi_cmd_get_serial(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 {
 	cmd->serial_number = host->cmd_serial_number++;
-	if (cmd->serial_number == 0) 
+	if (cmd->serial_number == 0)
 		cmd->serial_number = host->cmd_serial_number++;
 }
 EXPORT_SYMBOL(scsi_cmd_get_serial);
@@ -671,7 +671,7 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
 
 	/* Check to see if the scsi lld made this device blocked. */
 	if (unlikely(scsi_device_blocked(cmd->device))) {
-		/* 
+		/*
 		 * in blocked state, the command is just put back on
 		 * the device queue.  The suspend state has already
 		 * blocked the queue so future requests should not
@@ -690,7 +690,7 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
 		goto out;
 	}
 
-	/* 
+	/*
 	 * If SCSI-2 or lower, store the LUN value in cmnd.
 	 */
 	if (cmd->device->scsi_level <= SCSI_2 &&
@@ -703,7 +703,7 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
 	 * We will wait MIN_RESET_DELAY clock ticks after the last reset so
 	 * we can avoid the drive not being ready.
 	 */
-	timeout = host->last_reset + MIN_RESET_DELAY;
+	timeout = host->last_reset + msecs_to_jiffies(MIN_RESET_DELAY);
 
 	if (host->resetting && time_before(jiffies, timeout)) {
 		int ticks_remaining = timeout - jiffies;
@@ -957,7 +957,7 @@ int scsi_track_queue_full(struct scsi_device *sdev, int depth)
 		scsi_adjust_queue_depth(sdev, 0, sdev->host->cmd_per_lun);
 		return -1;
 	}
-	
+
 	if (sdev->ordered_tags)
 		scsi_adjust_queue_depth(sdev, MSG_ORDERED_TAG, depth);
 	else

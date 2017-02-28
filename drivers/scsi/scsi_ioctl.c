@@ -26,7 +26,7 @@
 #include "scsi_logging.h"
 
 #define NORMAL_RETRIES			5
-#define IOCTL_NORMAL_TIMEOUT			(10 * HZ)
+#define IOCTL_NORMAL_TIMEOUT			10000
 
 #define MAX_BUF PAGE_SIZE
 
@@ -65,24 +65,24 @@ static int ioctl_probe(struct Scsi_Host *host, void __user *buffer)
 /*
 
  * The SCSI_IOCTL_SEND_COMMAND ioctl sends a command out to the SCSI host.
- * The IOCTL_NORMAL_TIMEOUT and NORMAL_RETRIES  variables are used.  
- * 
+ * The IOCTL_NORMAL_TIMEOUT and NORMAL_RETRIES  variables are used.
+ *
  * dev is the SCSI device struct ptr, *(int *) arg is the length of the
- * input data, if any, not including the command string & counts, 
+ * input data, if any, not including the command string & counts,
  * *((int *)arg + 1) is the output buffer size in bytes.
- * 
- * *(char *) ((int *) arg)[2] the actual command byte.   
- * 
+ *
+ * *(char *) ((int *) arg)[2] the actual command byte.
+ *
  * Note that if more than MAX_BUF bytes are requested to be transferred,
  * the ioctl will fail with error EINVAL.
- * 
+ *
  * This size *does not* include the initial lengths that were passed.
- * 
+ *
  * The SCSI command is read from the memory location immediately after the
  * length words, and the input data is right after the command.  The SCSI
- * routines know the command size based on the opcode decode.  
- * 
- * The output area is then filled in starting from the command byte. 
+ * routines know the command size based on the opcode decode.
+ *
+ * The output area is then filled in starting from the command byte.
  */
 
 static int ioctl_internal_command(struct scsi_device *sdev, char *cmd,
@@ -147,7 +147,7 @@ int scsi_set_medium_removal(struct scsi_device *sdev, char state)
 	scsi_cmd[5] = 0;
 
 	ret = ioctl_internal_command(sdev, scsi_cmd,
-			IOCTL_NORMAL_TIMEOUT, NORMAL_RETRIES);
+			msecs_to_jiffies(IOCTL_NORMAL_TIMEOUT), NORMAL_RETRIES);
 	if (ret == 0)
 		sdev->locked = (state == SCSI_REMOVAL_PREVENT);
 	return ret;
@@ -250,7 +250,7 @@ int scsi_ioctl(struct scsi_device *sdev, int cmd, void __user *arg)
 	case SCSI_IOCTL_DOORUNLOCK:
 		return scsi_set_medium_removal(sdev, SCSI_REMOVAL_ALLOW);
 	case SCSI_IOCTL_TEST_UNIT_READY:
-		return scsi_test_unit_ready(sdev, IOCTL_NORMAL_TIMEOUT,
+		return scsi_test_unit_ready(sdev, msecs_to_jiffies(IOCTL_NORMAL_TIMEOUT),
 					    NORMAL_RETRIES, NULL);
 	case SCSI_IOCTL_START_UNIT:
 		scsi_cmd[0] = START_STOP;

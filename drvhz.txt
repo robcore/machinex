@@ -33,7 +33,7 @@ atm/he.c:		timeout = schedule_timeout(30*HZ);
 atm/he.c:		timeout = schedule_timeout(30*HZ);
 atm/horizon.c:  mod_timer (&dev->housekeeping, jiffies + HZ/10);
 atm/idt77105.h:#define IDT77105_RESTART_TIMER_PERIOD   (5 * HZ)
-atm/idt77105.h:#define IDT77105_STATS_TIMER_PERIOD     (HZ) 
+atm/idt77105.h:#define IDT77105_STATS_TIMER_PERIOD     (HZ)
 atm/idt77252.c:	est->timer.expires = jiffies + ((HZ / 4) << est->interval);
 atm/idt77252.c:	est->timer.expires = jiffies + ((HZ / 4) << est->interval);
 atm/idt77252.c:	if (time_after(jiffies, scq->trans_start + HZ)) {
@@ -5588,14 +5588,14 @@ net/xen-netfront.c:				  jiffies + (HZ/10));
 oprofile/cpu_buffer.c:#define DEFAULT_TIMER_EXPIRE (HZ / 10)
 oprofile/nmi_timer_int.c:	do_div(period, HZ);
 parisc/led.c:	    count_HZ = 0;
-parisc/led.c:				count_HZ < HEARTBEAT_2ND_RANGE_END)) 
+parisc/led.c:				count_HZ < HEARTBEAT_2ND_RANGE_END))
 parisc/led.c:				(count_HZ >= HEARTBEAT_2ND_RANGE_START &&
 parisc/led.c:	count_HZ += jiffies - last_jiffies;
 parisc/led.c:			currentleds = (count_HZ <= (HZ/2)) ? 0 : 0xff;
 parisc/led.c:#define HEARTBEAT_2ND_RANGE_START (HZ*28/100)
 parisc/led.c:#define HEARTBEAT_LEN (HZ*10/100)
 parisc/led.c:#define LED_UPDATE_INTERVAL (1 + (HZ*19/1000))
-parisc/led.c:		if (count_HZ < HEARTBEAT_LEN || 
+parisc/led.c:		if (count_HZ < HEARTBEAT_LEN ||
 parisc/led.c:	if (count_HZ >= HZ)
 parisc/led.c:			if (count_HZ <= (HZ/2))
 parisc/led.c:#include <asm/param.h>		/* HZ */
@@ -6050,7 +6050,7 @@ scsi/aacraid/linit.c:			blk_queue_rq_timeout(sdev->request_queue, 45*HZ);
 scsi/aacraid/linit.c:		if (sdev->request_queue->rq_timeout < (45 * HZ))
 scsi/aacraid/rx.c:		  time_after(jiffies, start + HZ *
 scsi/aacraid/rx.c:		  time_after(jiffies, start+HZ*startup_timeout)) {
-scsi/aacraid/rx.c:	while (time_before(jiffies, start+30*HZ)) 
+scsi/aacraid/rx.c:	while (time_before(jiffies, start+30*HZ))
 scsi/aacraid/sa.c:		if (time_after(jiffies, start+startup_timeout*HZ)) {
 scsi/aacraid/sa.c:	while(time_before(jiffies, start+30*HZ))
 scsi/aacraid/src.c:		  time_after(jiffies, start + HZ *
@@ -6402,7 +6402,7 @@ scsi/osst.c:			if (debugging || time_after_eq(jiffies, startwait + 2*HZ/OSST_POL
 scsi/osst.c:		if (time_after_eq(jiffies, startwait + 2*HZ/OSST_POLL_PER_SEC) && notyetprinted)
 scsi/osst.c:					(((jiffies-startwait)%HZ)*10)/HZ);
 scsi/osst.c:		(jiffies-startwait)/HZ, (((jiffies-startwait)%HZ)*10)/HZ);
-scsi/osst.c:					result, (jiffies-startwait)/HZ, 
+scsi/osst.c:					result, (jiffies-startwait)/HZ,
 scsi/osst.c:			schedule_timeout_interruptible(HZ / OSST_POLL_PER_SEC);
 scsi/osst.c:			STp->long_timeout = (value & ~MT_ST_SET_LONG_TIMEOUT) * HZ;
 scsi/osst.c:			STp->timeout = value * HZ;
@@ -6568,7 +6568,7 @@ scsi/tmscsim.c:	DC390_write8(Clk_Factor, CLK_FREQ_40MHZ);
 scsi/tmscsim.c:		    + HZ * dc390_eepromBuf[pACB->AdapterIndex][EE_DELAY];
 scsi/tmscsim.c:		+ HZ * dc390_eepromBuf[pACB->AdapterIndex][EE_DELAY];
 scsi/tmscsim.c:			HZ * dc390_eepromBuf[pACB->AdapterIndex][EE_DELAY];
-scsi/tmscsim.c:	pACB->pScsiHost->last_reset = jiffies + 3*HZ/2 
+scsi/tmscsim.c:	pACB->pScsiHost->last_reset = jiffies + 3*HZ/2
 scsi/tmscsim.c:    pACB->pScsiHost->last_reset = jiffies + 5*HZ/2
 scsi/tmscsim.c:		shost->last_reset = jiffies + HZ/2 +
 scsi/tmscsim.c:	    unsigned long timeout = jiffies + HZ;
@@ -7207,13 +7207,13 @@ staging/panel/panel.c:#define INPUT_POLL_TIME		(HZ/50)
 staging/panel/panel.c:		schedule_timeout((ms * HZ + 999) / 1000);
 staging/prima/CORE/BAP/src/bapRsnSsmServices.h:#define ANI_SSM_MAX_AUTHZONE_LEN  32
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_19P2_MHZ_PMIC_CLK_ENABLED_DEFAULT               (0)
-staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_19P2_MHZ_PMIC_CLK_ENABLED_MAX                   (1) 
+staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_19P2_MHZ_PMIC_CLK_ENABLED_MAX                   (1)
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_19P2_MHZ_PMIC_CLK_ENABLED_MIN                   (0)
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_19P2_MHZ_PMIC_CLK_ENABLED_NAME                  "19p2MhzPmicClkEnabled"
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_CHANNEL_BONDING_MODE_24GHZ_NAME    "gChannelBondingMode24GHz"
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_CHANNEL_BONDING_MODE_5GHZ_NAME     "gChannelBondingMode5GHz"
-staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_20MHZ_DEFAULT             WNI_CFG_SHORT_GI_20MHZ_STADEF 
-staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_20MHZ_MAX                 WNI_CFG_SHORT_GI_20MHZ_STAMAX 
+staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_20MHZ_DEFAULT             WNI_CFG_SHORT_GI_20MHZ_STADEF
+staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_20MHZ_MAX                 WNI_CFG_SHORT_GI_20MHZ_STAMAX
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_20MHZ_MIN                 WNI_CFG_SHORT_GI_20MHZ_STAMIN
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_20MHZ_NAME                "gShortGI20Mhz"
 staging/prima/CORE/HDD/inc/wlan_hdd_cfg.h:#define CFG_SHORT_GI_40MHZ_DEFAULT             1
@@ -7231,7 +7231,7 @@ staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    .channels = hdd_channels_5_GH
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    .channels = hdd_social_channels_2_4_GHZ,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:#define HDD2GHZCHAN(freq, chan, flag)   {     \
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:#define HDD5GHZCHAN(freq, chan, flag)   {     \
-staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    else if ((chan_no > ARRAY_SIZE(hdd_channels_2_4_GHZ)) && 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    else if ((chan_no > ARRAY_SIZE(hdd_channels_2_4_GHZ)) &&
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        freq = ieee80211_channel_to_frequency(chan_no, IEEE80211_BAND_2GHZ);
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        freq = ieee80211_channel_to_frequency(chan_no, IEEE80211_BAND_2GHZ);
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        freq = ieee80211_channel_to_frequency(chan_no, IEEE80211_BAND_5GHZ);
@@ -7278,9 +7278,9 @@ staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    HDD5GHZCHAN(5785,157, 0) ,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    HDD5GHZCHAN(5805,161, 0) ,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    HDD5GHZCHAN(5825,165, 0) ,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    if (chan_no <= ARRAY_SIZE(hdd_channels_2_4_GHZ))
-staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    if (chan_no <= ARRAY_SIZE(hdd_channels_2_4_GHZ) && 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    if (chan_no <= ARRAY_SIZE(hdd_channels_2_4_GHZ) &&
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        if (IEEE80211_BAND_5GHZ == params->channel->band)
-staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    int freq = chan->center_freq; /* freq is in MHZ */ 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    int freq = chan->center_freq; /* freq is in MHZ */
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    .n_channels = ARRAY_SIZE(hdd_channels_2_4_GHZ),
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    .n_channels = ARRAY_SIZE(hdd_channels_5_GHZ),
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:    .n_channels = ARRAY_SIZE(hdd_social_channels_2_4_GHZ),
@@ -7311,25 +7311,25 @@ staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        wlan_hdd_band_5_GHZ.ht_ca
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        wlan_hdd_band_5_GHZ.ht_cap.cap       &= ~IEEE80211_HT_CAP_SGI_40;
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        wlan_hdd_band_5_GHZ.ht_cap.cap &= ~IEEE80211_HT_CAP_SUP_WIDTH_20_40;
 staging/prima/CORE/HDD/src/wlan_hdd_cfg80211.c:        wlan_hdd_band_p2p_2_4_GHZ.ht_cap.cap &= ~IEEE80211_HT_CAP_SGI_20;
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_19P2_MHZ_PMIC_CLK_ENABLED_DEFAULT, 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_19P2_MHZ_PMIC_CLK_ENABLED_DEFAULT,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_19P2_MHZ_PMIC_CLK_ENABLED_MAX ),
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_19P2_MHZ_PMIC_CLK_ENABLED_MIN, 
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_SHORT_GI_20MHZ_DEFAULT, 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_19P2_MHZ_PMIC_CLK_ENABLED_MIN,
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_SHORT_GI_20MHZ_DEFAULT,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_SHORT_GI_20MHZ_MAX ),
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_SHORT_GI_20MHZ_MIN, 
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:              CFG_SHORT_GI_40MHZ_DEFAULT, 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:                 CFG_SHORT_GI_20MHZ_MIN,
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:              CFG_SHORT_GI_40MHZ_DEFAULT,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:              CFG_SHORT_GI_40MHZ_MAX ),
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:              CFG_SHORT_GI_40MHZ_MIN, 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:              CFG_SHORT_GI_40MHZ_MIN,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:      hddLog(LOGE, "Could not pass on WNI_CFG_SHORT_GI_20MHZ to CCM\n");
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:      hddLog(LOGE, "Could not pass on WNI_CFG_SHORT_GI_40MHZ to CCM\n");
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_SHORT_GI_20MHZ, 
-staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_SHORT_GI_40MHZ, 
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_SHORT_GI_20MHZ,
+staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_SHORT_GI_40MHZ,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   REG_VARIABLE( CFG_19P2_MHZ_PMIC_CLK_ENABLED_NAME , WLAN_PARAM_Integer,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   REG_VARIABLE( CFG_CHANNEL_BONDING_MODE_24GHZ_NAME, WLAN_PARAM_Integer,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   REG_VARIABLE( CFG_CHANNEL_BONDING_MODE_5GHZ_NAME, WLAN_PARAM_Integer,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c:   REG_VARIABLE( CFG_SHORT_GI_20MHZ_NAME, WLAN_PARAM_Integer,
 staging/prima/CORE/HDD/src/wlan_hdd_cfg.c: REG_VARIABLE( CFG_SHORT_GI_40MHZ_NAME, WLAN_PARAM_Integer,
-staging/prima/CORE/HDD/src/wlan_hdd_hostapd.c:#define SAP_24GHZ_CH_COUNT (14) 
+staging/prima/CORE/HDD/src/wlan_hdd_hostapd.c:#define SAP_24GHZ_CH_COUNT (14)
 staging/prima/CORE/HDD/src/wlan_hdd_hostapd.c:              fwrq->e = MHZ;
 staging/prima/CORE/HDD/src/wlan_hdd_hostapd.c:           fwrq->e = MHZ;
 staging/prima/CORE/HDD/src/wlan_hdd_hostapd.c:              /* Set Exponent parameter as 6 (MHZ) in struct iw_freq
@@ -7645,8 +7645,8 @@ staging/prima/CORE/MAC/src/include/sirParams.h:    PHY_QUADRUPLE_CHANNEL_20MHZ_L
 staging/prima/CORE/MAC/src/pe/include/schGlobal.h:#define ANI_SCH_ADAPTIVE_ALGO_BAND_2GHZ     0x00000001
 staging/prima/CORE/MAC/src/pe/include/schGlobal.h:#define ANI_SCH_ADAPTIVE_ALGO_BAND_5GHZ     0x00000002
 staging/prima/CORE/MAC/src/pe/include/schGlobal.h:#define ANI_SCH_ADAPTIVE_ALGO_BAND_ALL      (ANI_SCH_ADAPTIVE_ALGO_BAND_2GHZ | ANI_SCH_ADAPTIVE_ALGO_BAND_5GHZ)
-staging/prima/CORE/MAC/src/pe/lim/limApi.c:   if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_20MHZ, &val2) != eSIR_SUCCESS) 
-staging/prima/CORE/MAC/src/pe/lim/limApi.c:   if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_40MHZ, &val3) != eSIR_SUCCESS) 
+staging/prima/CORE/MAC/src/pe/lim/limApi.c:   if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_20MHZ, &val2) != eSIR_SUCCESS)
+staging/prima/CORE/MAC/src/pe/lim/limApi.c:   if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_40MHZ, &val3) != eSIR_SUCCESS)
 staging/prima/CORE/MAC/src/pe/lim/limApi.c:   /* WNI_CFG_SHORT_GI_20MHZ */
 staging/prima/CORE/MAC/src/pe/lim/limAssocUtils.c:                (eHT_CHANNEL_WIDTH_20MHZ == pStaDs->htSupportedChannelWidthSet))
 staging/prima/CORE/MAC/src/pe/lim/limAssocUtils.c:    else if(SIR_BAND_2_4_GHZ == rfBand)
@@ -7660,13 +7660,13 @@ staging/prima/CORE/MAC/src/pe/lim/limAssocUtils.c:        pAddStaParams->fShortG
 staging/prima/CORE/MAC/src/pe/lim/limAssocUtils.c:        pAddStaParams->fShortGI40Mhz     = limGetHTCapability( pMac, eHT_SHORT_GI_40MHZ, psessionEntry);
 staging/prima/CORE/MAC/src/pe/lim/limIbssPeerMgmt.c:    if(SIR_BAND_2_4_GHZ== rfBand)
 staging/prima/CORE/MAC/src/pe/lim/limIbssPeerMgmt.c:    if(SIR_BAND_2_4_GHZ == rfBand)
-staging/prima/CORE/MAC/src/pe/lim/limP2P.c:        (SIR_BAND_5_GHZ == limGetRFBand(psessionEntry->currentOperChannel)) ) 
+staging/prima/CORE/MAC/src/pe/lim/limP2P.c:        (SIR_BAND_5_GHZ == limGetRFBand(psessionEntry->currentOperChannel)) )
 staging/prima/CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c:            else if(SIR_BAND_2_4_GHZ == limGetRFBand(firstChannelNumber))
 staging/prima/CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c:            if(SIR_BAND_5_GHZ == limGetRFBand(firstChannelNumber))
 staging/prima/CORE/MAC/src/pe/lim/limProcessCfgUpdates.c:    case WNI_CFG_SHORT_GI_20MHZ:
 staging/prima/CORE/MAC/src/pe/lim/limProcessCfgUpdates.c:    case WNI_CFG_SHORT_GI_40MHZ:
-staging/prima/CORE/MAC/src/pe/lim/limProcessCfgUpdates.c:        if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_20MHZ, &val2) != eSIR_SUCCESS) 
-staging/prima/CORE/MAC/src/pe/lim/limProcessCfgUpdates.c:        if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_40MHZ, &val2) != eSIR_SUCCESS) 
+staging/prima/CORE/MAC/src/pe/lim/limProcessCfgUpdates.c:        if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_20MHZ, &val2) != eSIR_SUCCESS)
+staging/prima/CORE/MAC/src/pe/lim/limProcessCfgUpdates.c:        if (wlan_cfgGetInt(pMac, WNI_CFG_SHORT_GI_40MHZ, &val2) != eSIR_SUCCESS)
 staging/prima/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c:            cbState =  PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_CENTERED;
 staging/prima/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c:            cbState =  PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH;
 staging/prima/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c:            cbState =  PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_LOW;
@@ -7802,7 +7802,7 @@ staging/prima/CORE/SAP/src/sapModule.c:       case RF_SUBBAND_4_9_GHZ:
 staging/prima/CORE/SAP/src/sapModule.c:       case RF_SUBBAND_5_HIGH_GHZ:
 staging/prima/CORE/SAP/src/sapModule.c:       case RF_SUBBAND_5_LOW_GHZ:
 staging/prima/CORE/SAP/src/sapModule.c:       case RF_SUBBAND_5_MID_GHZ:
-staging/prima/CORE/SME/inc/csrApi.h:  This is the function to change the Band configuraiton (ALL/2.4 GHZ/5 GHZ) 
+staging/prima/CORE/SME/inc/csrApi.h:  This is the function to change the Band configuraiton (ALL/2.4 GHZ/5 GHZ)
 staging/prima/CORE/SME/inc/csrInternal.h:#define CSR_IS_CHANNEL_24GHZ(chnNum) \
 staging/prima/CORE/SME/inc/csrInternal.h:#define CSR_IS_CHANNEL_5GHZ(chnNum) \
 staging/prima/CORE/SME/inc/csrInternal.h:#define CSR_IS_SAME_BAND_CHANNELS(ch1, ch2) (CSR_IS_CHANNEL_5GHZ(ch1) == CSR_IS_CHANNEL_5GHZ(ch2))
@@ -7837,7 +7837,7 @@ staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_C
 staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_CENTERED_40MHZ_CENTERED;
 staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH;
 staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_LOW;
-staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_CENTERED; 
+staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_CENTERED;
 staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_HIGH;
 staging/prima/CORE/SME/src/csr/csrApiRoam.c:        phyCbState = PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_LOW;
 staging/prima/CORE/SME/src/csr/csrApiRoam.c:     pMac->roam.configParam.nVhtChannelWidth = WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ + 1;
@@ -8396,10 +8396,10 @@ staging/prima/CORE/WDA/src/wlan_qct_wda.c:                    "Failed to get val
 staging/prima/CORE/WDA/src/wlan_qct_wda.c:                    "Failed to get value for WNI_CFG_DEFAULT_RATE_INDEX_5GHZ");
 staging/prima/CORE/WDA/src/wlan_qct_wda.c:                 "Failed to get value for WNI_CFG_FIXED_RATE_MULTICAST_24GHZ");
 staging/prima/CORE/WDA/src/wlan_qct_wda.c:                 "Failed to get value for WNI_CFG_FIXED_RATE_MULTICAST_5GHZ");
-staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_DEFAULT_RATE_INDEX_24GHZ, 
-staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_DEFAULT_RATE_INDEX_5GHZ, 
-staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_FIXED_RATE_MULTICAST_24GHZ, 
-staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_FIXED_RATE_MULTICAST_5GHZ, 
+staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_DEFAULT_RATE_INDEX_24GHZ,
+staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_DEFAULT_RATE_INDEX_5GHZ,
+staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_FIXED_RATE_MULTICAST_24GHZ,
+staging/prima/CORE/WDA/src/wlan_qct_wda.c:   if(wlan_cfgGetInt(pMac, WNI_CFG_FIXED_RATE_MULTICAST_5GHZ,
 staging/prima/CORE/WDA/src/wlan_qct_wda.c:   /* QWLAN_HAL_CFG_DEFAULT_RATE_INDEX_24GHZ   */
 staging/prima/CORE/WDA/src/wlan_qct_wda.c:   /* QWLAN_HAL_CFG_DEFAULT_RATE_INDEX_5GHZ   */
 staging/prima/CORE/WDA/src/wlan_qct_wda.c:   /* QWLAN_HAL_CFG_FIXED_RATE_MULTICAST_24GHZ   */
@@ -8458,7 +8458,7 @@ staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_CHANNEL_20MHZ_HIGH_40MHZ_LOW 
 staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_CHANNEL_20MHZ_LOW_40MHZ_CENTERED = 4, //20/40MHZ offset LOW 40/80MHZ offset CENTERED
 staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_CHANNEL_20MHZ_LOW_40MHZ_HIGH = 9, //20/40MHZ offset LOW 40/80MHZ offset HIGH
 staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_CHANNEL_20MHZ_LOW_40MHZ_LOW = 7,//20/40MHZ offset LOW 40/80MHZ offset LOW
-staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_HT_OP_MODE_NO_LEGACY_20MHZ_HT,  
+staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_HT_OP_MODE_NO_LEGACY_20MHZ_HT,
 staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_QUADRUPLE_CHANNEL_20MHZ_CENTERED_40MHZ_CENTERED = 5, //20/40MHZ offset CENTERED 40/80MHZ offset CENTERED
 staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_CENTERED = 6, //20/40MHZ offset HIGH 40/80MHZ offset CENTERED
 staging/prima/CORE/WDI/CP/inc/wlan_qct_wdi.h:  WDI_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH = 10,//20/40MHZ offset-HIGH 40/80MHZ offset HIGH
@@ -9235,7 +9235,7 @@ tty/smux_test.c:	wait_for_completion_timeout(&cb_data.cb_completion, HZ);
 tty/synclink.c:	dev->watchdog_timeo = 10 * HZ;
 tty/synclink.c:		info->port.close_delay = 5*HZ/10;
 tty/synclink.c:		info->port.closing_wait = 30*HZ;
-tty/synclink.c:		info->timeout = (32*HZ*bits_per_char) / 
+tty/synclink.c:		info->timeout = (32*HZ*bits_per_char) /
 tty/synclink.c:	info->timeout += HZ/50;		/* Add .02 seconds of slop */
 tty/synclink_gt.c:	dev->watchdog_timeo = 10 * HZ;
 tty/synclink_gt.c:		info->port.close_delay = 5*HZ/10;
