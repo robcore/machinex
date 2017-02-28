@@ -533,7 +533,7 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	unsigned int val = 0;
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	const long div = 1000/HZ;
+	const long div = 1;
 	static unsigned int org_interval_timeout = 1;
 	int ret;
 
@@ -567,8 +567,8 @@ static int kgsl_pwrctrl_idle_timer_show(struct device *dev,
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	if (device == NULL)
 		return 0;
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-		device->pwrctrl.interval_timeout);
+	return snprintf(buf, PAGE_SIZE, "%lu\n",
+		msecs_to_jiffies(device->pwrctrl.interval_timeout));
 }
 
 static int kgsl_pwrctrl_pmqos_latency_store(struct device *dev,
@@ -1246,7 +1246,7 @@ void kgsl_idle_check(struct work_struct *work)
 
 			mod_timer(&device->idle_timer,
 					jiffies +
-					device->pwrctrl.interval_timeout);
+					msecs_to_jiffies(device->pwrctrl.interval_timeout));
 			/*
 			 * If the GPU has been too busy to sleep, make sure
 			 * that is acurately reflected in the % busy numbers.
@@ -1486,7 +1486,7 @@ int kgsl_pwrctrl_wake(struct kgsl_device *device)
 		kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
 		/* Re-enable HW access */
 		mod_timer(&device->idle_timer,
-				jiffies + device->pwrctrl.interval_timeout);
+				jiffies + msecs_to_jiffies(device->pwrctrl.interval_timeout));
 		mod_timer(&device->hang_timer,
 			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_HANG_DETECT)));
 		pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
@@ -1662,7 +1662,7 @@ void kgsl_active_count_put(struct kgsl_device *device)
 		if (kgsl_pwrctrl_sleep(device) != 0)
 			mod_timer(&device->idle_timer,
 					jiffies
-					+ device->pwrctrl.interval_timeout);
+					+ msecs_to_jiffies(device->pwrctrl.interval_timeout));
 	}
 	device->active_cnt--;
 
