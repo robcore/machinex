@@ -457,6 +457,12 @@ int usbnet_cdc_bind(struct usbnet *dev, struct usb_interface *intf)
 }
 EXPORT_SYMBOL_GPL(usbnet_cdc_bind);
 
+static int cdc_manage_power(struct usbnet *dev, int on)
+{
+	dev->intf->needs_remote_wakeup = on;
+	return 0;
+}
+
 static const struct driver_info	cdc_info = {
 	.description =	"CDC Ethernet Device",
 	.flags =	FLAG_ETHER | FLAG_POINTTOPOINT,
@@ -464,7 +470,7 @@ static const struct driver_info	cdc_info = {
 	.bind =		usbnet_cdc_bind,
 	.unbind =	usbnet_cdc_unbind,
 	.status =	usbnet_cdc_status,
-	.manage_power =	usbnet_manage_power,
+	.manage_power =	cdc_manage_power,
 };
 
 static const struct driver_info wwan_info = {
@@ -473,7 +479,7 @@ static const struct driver_info wwan_info = {
 	.bind =		usbnet_cdc_bind,
 	.unbind =	usbnet_cdc_unbind,
 	.status =	usbnet_cdc_status,
-	.manage_power =	usbnet_manage_power,
+	.manage_power =	cdc_manage_power,
 };
 
 /*-------------------------------------------------------------------------*/

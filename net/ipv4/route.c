@@ -1915,7 +1915,7 @@ void ip_rt_get_source(u8 *addr, struct sk_buff *skb, struct rtable *rt)
 		fl4.flowi4_oif = rt->dst.dev->ifindex;
 		fl4.flowi4_iif = skb->dev->ifindex;
 		fl4.flowi4_mark = skb->mark;
-		fl4.flowi4_uid = sock_i_uid(skb->sk);
+		fl4.flowi4_uid = skb->sk ? sock_i_uid(skb->sk) : 0;
 
 		rcu_read_lock();
 		if (fib_lookup(dev_net(rt->dst.dev), &fl4, &res) == 0)

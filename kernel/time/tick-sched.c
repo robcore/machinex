@@ -21,20 +21,21 @@
 #include <linux/sched.h>
 #include <linux/timer.h>
 #include <linux/module.h>
+#include <linux/rq_stats.h>
 #include <linux/irq_work.h>
 #include <linux/posix-timers.h>
 #include <linux/perf_event.h>
-#include <linux/rq_stats.h>
 
 #include <asm/irq_regs.h>
 
 #include "tick-internal.h"
 
-#include <trace/events/timer.h>
 
 struct rq_data rq_info;
 struct workqueue_struct *rq_wq;
 spinlock_t rq_lock;
+
+#include <trace/events/timer.h>
 
 /*
  * Per cpu nohz control structure
@@ -376,7 +377,7 @@ void __init tick_nohz_init(void)
 /*
  * NO HZ enabled ?
  */
-int tick_nohz_enabled __read_mostly  = 1;
+static int tick_nohz_enabled __read_mostly  = 1;
 
 /*
  * Enable / Disable tickless mode
@@ -545,30 +546,26 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 {
 	unsigned long seq, last_jiffies, next_jiffies, delta_jiffies;
 	ktime_t last_update, expires, ret = { .tv64 = 0 };
-	unsigned long rcu_delta_jiffies;
 	struct clock_event_device *dev = __get_cpu_var(tick_cpu_device).evtdev;
 	u64 time_delta;
+
+	time_delta = timekeeping_max_deferment();
 
 	/* Read jiffies and the time when jiffies were updated last */
 	do {
 		seq = read_seqbegin(&jiffies_lock);
 		last_update = last_jiffies_update;
 		last_jiffies = jiffies;
-		time_delta = timekeeping_max_deferment();
 	} while (read_seqretry(&jiffies_lock, seq));
 
-	if (rcu_needs_cpu(cpu, &rcu_delta_jiffies) ||
-	    arch_needs_cpu(cpu) || irq_work_needs_cpu()) {
+	if (rcu_needs_cpu(cpu) ||arch_needs_cpu(cpu) ||
+	    irq_work_needs_cpu()) {
 		next_jiffies = last_jiffies + 1;
 		delta_jiffies = 1;
 	} else {
 		/* Get the next timer wheel timer */
 		next_jiffies = get_next_timer_interrupt(last_jiffies);
 		delta_jiffies = next_jiffies - last_jiffies;
-		if (rcu_delta_jiffies < delta_jiffies) {
-			next_jiffies = last_jiffies + rcu_delta_jiffies;
-			delta_jiffies = rcu_delta_jiffies;
-		}
 	}
 
 	/*

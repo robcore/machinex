@@ -279,8 +279,7 @@ static int __devinit gab_probe(struct platform_device *pdev)
 	}
 
 	memcpy(psy->properties, gab_props, sizeof(gab_props));
-	properties = (enum power_supply_property *)
-				((char *)psy->properties + sizeof(gab_props));
+	properties = psy->properties + sizeof(gab_props);
 
 	/*
 	 * getting channel from iio and copying the battery properties
