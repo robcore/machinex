@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/gfp.h>
 #include <linux/oom.h>
+#include <linux/smpboot.h>
 #include <linux/tick.h>
 
 #define RCU_KTHREAD_PRIO 1
