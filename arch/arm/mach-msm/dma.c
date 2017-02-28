@@ -834,7 +834,7 @@ static int msm_dmov_probe(struct platform_device *pdev)
 	}
 
 	ret = request_irq(dmov_conf[adm].irq, msm_dmov_isr,
-		0, "msmdatamover", NULL);
+		IRQF_ONESHOT, "msmdatamover", NULL);
 	if (ret) {
 		PRINT_ERROR("Requesting ADM%d irq %d failed\n", adm,
 			dmov_conf[adm].irq);
