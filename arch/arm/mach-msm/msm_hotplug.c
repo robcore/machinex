@@ -88,7 +88,7 @@ static struct workqueue_struct *hotplug_wq;
 static struct delayed_work hotplug_work;
 
 static u64 last_boost_time;
-static unsigned int default_update_rates[] = { msecs_to_jiffies(DEFAULT_UPDATE_RATE) };
+static unsigned int default_update_rates[] = { DEFAULT_UPDATE_RATE };
 
 static struct cpu_stats {
 	unsigned int *update_rates;
