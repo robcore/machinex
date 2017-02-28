@@ -1843,7 +1843,7 @@ static int adreno_start(struct kgsl_device *device)
 	 */
 
 	if (KGSL_STATE_DUMP_AND_FT != device->state)
-		mod_timer(&device->idle_timer, jiffies + FIRST_TIMEOUT);
+		mod_timer(&device->idle_timer, jiffies + msecs_to_jiffies(FIRST_TIMEOUT));
 
 	if (!adreno_is_a2xx(adreno_dev))
 		adreno_perfcounter_start(adreno_dev);
@@ -2740,7 +2740,7 @@ adreno_dump_and_exec_ft(struct kgsl_device *device)
 			kgsl_pwrctrl_set_state(device, KGSL_STATE_HUNG);
 		} else {
 			kgsl_pwrctrl_set_state(device, KGSL_STATE_ACTIVE);
-			mod_timer(&device->idle_timer, jiffies + FIRST_TIMEOUT);
+			mod_timer(&device->idle_timer, jiffies + msecs_to_jiffies(FIRST_TIMEOUT));
 			mod_timer(&device->hang_timer,
 				(jiffies +
 				msecs_to_jiffies(KGSL_TIMEOUT_HANG_DETECT)));
