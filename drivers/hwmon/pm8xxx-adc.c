@@ -795,7 +795,7 @@ uint32_t pm8xxx_adc_read(enum pm8xxx_adc_channels channel,
 	}
 
 	rc = wait_for_completion_timeout(&adc_pmic->adc_rslt_completion,
-						msecs_to_jifffies(2000));
+						msecs_to_jiffies(2000));
 	if (!rc) {
 		u8 data_arb_usrp_cntrl1 = 0;
 		rc = pm8xxx_adc_read_reg(PM8XXX_ADC_ARB_USRP_CNTRL1,
