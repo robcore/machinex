@@ -356,9 +356,7 @@ int device_wakeup_disable(struct device *dev)
 		return -EINVAL;
 
 	ws = device_wakeup_detach(dev);
-	if (ws)
-		wakeup_source_unregister(ws);
-
+	wakeup_source_unregister(ws);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(device_wakeup_disable);
@@ -572,7 +570,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	unsigned int cec;
 	bool freezing_in_progress;
 
-	if (WARN(wakeup_source_not_registered(ws),
+	if (WARN_ONCE(wakeup_source_not_registered(ws),
 			"unregistered wakeup source\n"))
 		return;
 
@@ -623,7 +621,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 		}
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
 	} else
-		pm_system_wakeup();
+		freeze_wake();
 
 	ws->active = true;
 	ws->active_count++;
@@ -932,7 +930,7 @@ bool pm_get_wakeup_count(unsigned int *count, bool block)
 			split_counters(&cnt, &inpr);
 			if (inpr == 0 || signal_pending(current))
 				break;
-
+			pm_print_active_wakeup_sources();
 			schedule();
 		}
 		finish_wait(&wakeup_count_wait_queue, &wait);
@@ -1023,7 +1021,6 @@ static int print_wakeup_source_stats(struct seq_file *m,
 	unsigned long active_count;
 	ktime_t active_time;
 	ktime_t prevent_sleep_time;
-	int ret;
 
 	spin_lock_irqsave(&ws->lock, flags);
 
@@ -1046,17 +1043,16 @@ static int print_wakeup_source_stats(struct seq_file *m,
 		active_time = ktime_set(0, 0);
 	}
 
-	ret = seq_printf(m, "%-12s\t%lu\t\t%lu\t\t%lu\t\t%lu\t\t"
-			"%lld\t\t%lld\t\t%lld\t\t%lld\t\t%lld\n",
-			ws->name, active_count, ws->event_count,
-			ws->wakeup_count, ws->expire_count,
-			ktime_to_ms(active_time), ktime_to_ms(total_time),
-			ktime_to_ms(max_time), ktime_to_ms(ws->last_time),
-			ktime_to_ms(prevent_sleep_time));
+	seq_printf(m, "%-12s\t%lu\t\t%lu\t\t%lu\t\t%lu\t\t%lld\t\t%lld\t\t%lld\t\t%lld\t\t%lld\n",
+		   ws->name, active_count, ws->event_count,
+		   ws->wakeup_count, ws->expire_count,
+		   ktime_to_ms(active_time), ktime_to_ms(total_time),
+		   ktime_to_ms(max_time), ktime_to_ms(ws->last_time),
+		   ktime_to_ms(prevent_sleep_time));
 
 	spin_unlock_irqrestore(&ws->lock, flags);
 
-	return ret;
+	return 0;
 }
 
 /**
