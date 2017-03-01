@@ -671,7 +671,6 @@ extern struct cpufreq_governor cpufreq_gov_whiskeyactive;
 #define CPUFREQ_TABLE_END     ~1
 
 struct cpufreq_frequency_table {
-	unsigned int	flags;
 	unsigned int	driver_data; /* driver specific data, not used by core */
 	unsigned int	frequency; /* kHz - doesn't need to be in ascending
 				    * order */
@@ -688,8 +687,6 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 				   unsigned int target_freq,
 				   unsigned int relation,
 				   unsigned int *index);
-
-ssize_t cpufreq_show_cpus(const struct cpumask *mask, char *buf);
 
 /* the following 3 funtions are for cpufreq core use only */
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);

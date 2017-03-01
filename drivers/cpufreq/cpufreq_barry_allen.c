@@ -26,7 +26,7 @@
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
-#include <linux/sched/rt.h>
+//#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
@@ -141,7 +141,7 @@ static bool io_is_busy = 0;
  * sync_freq
  */
 static unsigned int up_threshold_any_cpu_load = 99;
-static unsigned int sync_freq = 1242000;
+static unsigned int sync_freq = 1566000;
 static unsigned int up_threshold_any_cpu_freq = 85;
 
 static int cpufreq_governor_barry_allen(struct cpufreq_policy *policy,
@@ -274,7 +274,7 @@ static unsigned int choose_freq(
 
 		if (cpufreq_frequency_table_target(
 			    pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
-			    CPUFREQ_RELATION_C, &index))
+			    CPUFREQ_RELATION_L, &index))
 			break;
 		freq = pcpu->freq_table[index].frequency;
 
@@ -316,7 +316,7 @@ static unsigned int choose_freq(
 				 */
 				if (cpufreq_frequency_table_target(
 					    pcpu->policy, pcpu->freq_table,
-					    freqmin + 1, CPUFREQ_RELATION_C,
+					    freqmin + 1, CPUFREQ_RELATION_L,
 					    &index))
 					break;
 				freq = pcpu->freq_table[index].frequency;
@@ -447,7 +447,7 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 	}
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-					   new_freq, CPUFREQ_RELATION_C,
+					   new_freq, CPUFREQ_RELATION_L,
 					   &index))
 		goto rearm;
 
@@ -977,7 +977,7 @@ static ssize_t store_timer_rate(struct kobject *kobj,
 			struct attribute *attr, const char *buf, size_t count)
 {
 	int ret;
-	unsigned long val, val_round;
+	unsigned long val;
 
 	if (ba_locked)
 		return count;
@@ -985,13 +985,7 @@ static ssize_t store_timer_rate(struct kobject *kobj,
 	ret = strict_strtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
-
-	val_round = jiffies_to_usecs(usecs_to_jiffies(val));
-	if (val != val_round)
-		pr_warn("timer_rate not aligned to jiffy. Rounded up to %lu\n",
-				val_round);
-
-	timer_rate = val_round;
+	timer_rate = val;
 	return count;
 }
 
@@ -1378,7 +1372,7 @@ static int cpufreq_governor_barry_allen(struct cpufreq_policy *policy,
 					policy->max, CPUFREQ_RELATION_H);
 		else if (policy->min > policy->cur)
 			__cpufreq_driver_target(policy,
-					policy->min, CPUFREQ_RELATION_C);
+					policy->min, CPUFREQ_RELATION_L);
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
 
