@@ -293,6 +293,7 @@ bool handle_nested_irq(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 	struct irqaction *action;
+	int mask_this_irq = 0;
 	irqreturn_t action_ret;
 	bool handled = false;
 
@@ -305,6 +306,7 @@ bool handle_nested_irq(unsigned int irq)
 
 	action = desc->action;
 	if (unlikely(!action || irqd_irq_disabled(&desc->irq_data))) {
+		mask_this_irq = 1;
 		desc->istate |= IRQS_PENDING;
 		goto out_unlock;
 	}
@@ -323,6 +325,12 @@ bool handle_nested_irq(unsigned int irq)
 
 out_unlock:
 	raw_spin_unlock_irq(&desc->lock);
+	if (unlikely(mask_this_irq)) {
+		chip_bus_lock(desc);
+		mask_irq(desc);
+		chip_bus_sync_unlock(desc);
+	}
+
 	return handled;
 }
 EXPORT_SYMBOL_GPL(handle_nested_irq);
@@ -478,7 +486,8 @@ handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 	 * then mask it and get out of here:
 	 */
 	if (unlikely(!desc->action || irqd_irq_disabled(&desc->irq_data))) {
-		desc->istate |= IRQS_PENDING;
+		if (!irq_settings_is_level(desc))
+			desc->istate |= IRQS_PENDING;
 		mask_irq(desc);
 		goto out;
 	}
