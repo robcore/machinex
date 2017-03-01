@@ -622,7 +622,8 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			pm_system_wakeup();
 		}
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
-	}
+	} else
+		pm_system_wakeup();
 
 	ws->active = true;
 	ws->active_count++;
