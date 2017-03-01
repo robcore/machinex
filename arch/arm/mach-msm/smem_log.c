@@ -1742,7 +1742,7 @@ static int debug_dump(char *buf, int max, uint32_t cont)
 		r = wait_event_interruptible_timeout(inst[GEN].read_wait,
 						     inst[GEN].last_read_avail,
 						     smem_log_timeout_ms *
-						     msecs_to_jiffies(1));
+						     HZ / 1000);
 		DBG("%s: read available %d\n", __func__,
 		    inst[GEN].last_read_avail);
 		if (r < 0)
@@ -1766,7 +1766,7 @@ static int debug_dump_sym(char *buf, int max, uint32_t cont)
 		r = wait_event_interruptible_timeout(inst[GEN].read_wait,
 						     inst[GEN].last_read_avail,
 						     smem_log_timeout_ms *
-						     msecs_to_jiffies(1));
+						     HZ / 1000);
 		DBG("%s: readavailable %d\n", __func__,
 		    inst[GEN].last_read_avail);
 		if (r < 0)
@@ -1790,7 +1790,7 @@ static int debug_dump_static(char *buf, int max, uint32_t cont)
 		r = wait_event_interruptible_timeout(inst[STA].read_wait,
 						     inst[STA].last_read_avail,
 						     smem_log_timeout_ms *
-						     msecs_to_jiffies(1));
+						     HZ / 1000);
 		DBG("%s: readavailable %d\n", __func__,
 		    inst[STA].last_read_avail);
 		if (r < 0)
@@ -1814,7 +1814,7 @@ static int debug_dump_static_sym(char *buf, int max, uint32_t cont)
 		r = wait_event_interruptible_timeout(inst[STA].read_wait,
 						     inst[STA].last_read_avail,
 						     smem_log_timeout_ms *
-						     msecs_to_jiffies(1));
+						     HZ / 1000);
 		DBG("%s: readavailable %d\n", __func__,
 		    inst[STA].last_read_avail);
 		if (r < 0)
@@ -1838,7 +1838,7 @@ static int debug_dump_power(char *buf, int max, uint32_t cont)
 		r = wait_event_interruptible_timeout(inst[POW].read_wait,
 						     inst[POW].last_read_avail,
 						     smem_log_timeout_ms *
-						     msecs_to_jiffies(1));
+						     HZ / 1000);
 		DBG("%s: readavailable %d\n", __func__,
 		    inst[POW].last_read_avail);
 		if (r < 0)
@@ -1862,7 +1862,7 @@ static int debug_dump_power_sym(char *buf, int max, uint32_t cont)
 		r = wait_event_interruptible_timeout(inst[POW].read_wait,
 						     inst[POW].last_read_avail,
 						     smem_log_timeout_ms *
-						     msecs_to_jiffies(1));
+						     HZ / 1000);
 		DBG("%s: readavailable %d\n", __func__,
 		    inst[POW].last_read_avail);
 		if (r < 0)

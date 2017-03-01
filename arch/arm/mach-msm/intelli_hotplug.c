@@ -30,8 +30,8 @@
 
 #define DEF_SAMPLING_MS			30
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			10000
-#define MIN_INPUT_INTERVAL		150 * 1000L
+#define START_DELAY_MS			20000
+#define MIN_INPUT_INTERVAL		500 * 1000L
 #define BOOST_LOCK_DUR			1000 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
@@ -774,6 +774,7 @@ static void __exit intelli_plug_exit(void)
 late_initcall(intelli_plug_init);
 module_exit(intelli_plug_exit);
 
+MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
 		Alucard24, Dorimanx, neobuddy89");
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "

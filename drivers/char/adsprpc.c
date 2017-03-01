@@ -37,7 +37,7 @@
 #define ION_ADSPRPC_HEAP_ID ION_AUDIO_HEAP_ID
 #endif /*ION_ADSPRPC_HEAP_ID*/
 
-#define RPC_TIMEOUT	(5000)
+#define RPC_TIMEOUT	(5 * HZ)
 #define RPC_HASH_BITS	5
 #define RPC_HASH_SZ	(1 << RPC_HASH_BITS)
 #define BALIGN		32
@@ -579,7 +579,7 @@ static int fastrpc_init(void)
 		if (err)
 			goto bail;
 		VERIFY(err, 0 != wait_for_completion_timeout(&me->work,
-							msecs_to_jiffies(RPC_TIMEOUT)));
+							RPC_TIMEOUT));
 		if (err)
 			goto bail;
 	}

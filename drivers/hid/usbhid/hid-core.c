@@ -161,7 +161,7 @@ static void hid_io_error(struct hid_device *hid)
 
 	/* If it has been a while since the last error, we'll assume
 	 * this a brand new error and reset the retry timeout. */
-	if (time_after(jiffies, usbhid->stop_retry + msecs_to_jiffies(500)))
+	if (time_after(jiffies, usbhid->stop_retry + HZ/2))
 		usbhid->retry_delay = 0;
 
 	/* When an error occurs, retry at increasing intervals */
@@ -559,7 +559,7 @@ static void __usbhid_submit_report(struct hid_device *hid, struct hid_report *re
 			usbhid_restart_out_queue(usbhid);
 
 		/* Otherwise see if an earlier request has timed out */
-		} else if (time_after(jiffies, usbhid->last_out + msecs_to_jiffies(5000))) {
+		} else if (time_after(jiffies, usbhid->last_out + HZ * 5)) {
 
 			/* Prevent autosuspend following the unlink */
 			usb_autopm_get_interface_no_resume(usbhid->intf);
@@ -610,7 +610,7 @@ static void __usbhid_submit_report(struct hid_device *hid, struct hid_report *re
 		usbhid_restart_ctrl_queue(usbhid);
 
 	/* Otherwise see if an earlier request has timed out */
-	} else if (time_after(jiffies, usbhid->last_ctrl + msecs_to_jiffies(5000))) {
+	} else if (time_after(jiffies, usbhid->last_ctrl + HZ * 5)) {
 
 		/* Prevent autosuspend following the unlink */
 		usb_autopm_get_interface_no_resume(usbhid->intf);
@@ -712,7 +712,7 @@ int usbhid_wait_io(struct hid_device *hid)
 	if (!wait_event_timeout(usbhid->wait,
 				(!test_bit(HID_CTRL_RUNNING, &usbhid->iofl) &&
 				!test_bit(HID_OUT_RUNNING, &usbhid->iofl)),
-					msecs_to_jiffies(10000))) {
+					10*HZ)) {
 		dbg_hid("timeout waiting for ctrl or out queue to clear\n");
 		return -1;
 	}
@@ -761,7 +761,7 @@ int usbhid_open(struct hid_device *hid)
 		usbhid->intf->needs_remote_wakeup = 1;
 		if (hid_start_in(hid))
 			hid_io_error(hid);
-
+ 
 		usb_autopm_put_interface(usbhid->intf);
 	}
 	mutex_unlock(&hid_open_mut);

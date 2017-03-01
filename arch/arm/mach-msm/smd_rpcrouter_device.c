@@ -41,7 +41,7 @@
 #define SAFETY_MEM_SIZE (65536 + sizeof(struct rpc_request_hdr))
 
 /* modem load timeout */
-#define MODEM_LOAD_TIMEOUT 10000
+#define MODEM_LOAD_TIMEOUT (10 * HZ)
 
 /* Next minor # available for a remote server */
 static int next_minor = 1;
@@ -75,7 +75,7 @@ static void *msm_rpcrouter_load_modem(void)
 	else {
 		rc = wait_for_completion_interruptible_timeout(
 						&rpc_remote_router_up,
-						msecs_to_jiffies(MODEM_LOAD_TIMEOUT));
+						MODEM_LOAD_TIMEOUT);
 		if (!rc)
 			rc = -ETIMEDOUT;
 		if (rc < 0) {
@@ -167,7 +167,7 @@ static ssize_t rpcrouter_read(struct file *filp, char __user *buf,
 
 	count = rc;
 
-	while (frag != NULL) {
+	while (frag != NULL) {		
 		if (copy_to_user(buf, frag->data, frag->length)) {
 			printk(KERN_ERR
 			       "rpcrouter: could not copy all read data to user!\n");

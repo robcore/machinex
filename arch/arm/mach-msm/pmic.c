@@ -134,7 +134,7 @@
 #define GPIO_SET_OUTPUT_BUFFER_DRIVE_STRENGTH_PROC 113
 
 /* rpc related */
-#define PMIC_RPC_TIMEOUT (5000)
+#define PMIC_RPC_TIMEOUT (5*HZ)
 
 #define PMIC_PDEV_NAME	"rs00010001:00000000"
 #define PMIC_RPC_PROG	0x30000061
@@ -364,7 +364,7 @@ static int pmic_rpc_req_reply(struct pmic_buf *tbuf, struct pmic_buf *rbuf,
 	len = msm_rpc_call_reply(pm->endpoint, proc,
 				tbuf->data, tbuf->len,
 				rbuf->data, rbuf->size,
-				msecs_to_jiffies(PMIC_RPC_TIMEOUT));
+				PMIC_RPC_TIMEOUT);
 
 	if (len <= 0) {
 		printk(KERN_ERR "%s: rpc failed! len = %d\n", __func__, len);

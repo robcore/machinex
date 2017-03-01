@@ -25,8 +25,8 @@
 #include <linux/slab.h>
 #include <linux/machinex_defines.h>
 
-#define INIT_DELAY		msecs_to_jiffies(60000) /* Initial delay to 60 sec */
-#define DELAY			msecs_to_jiffies(100)
+#define INIT_DELAY		(60 * HZ) /* Initial delay to 60 sec */
+#define DELAY			(HZ / 2)
 #define UP_THRESHOLD		(25)
 #define MIN_CPUS_ONLINE		(2)
 #define MAX_CPUS_ONLINE		(4)

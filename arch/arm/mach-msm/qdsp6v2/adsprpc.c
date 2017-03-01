@@ -427,7 +427,7 @@ static int fastrpc_init(void)
 						SMD_APPS_QDSP, &me->chan,
 						me, smd_event_handler));
 		VERIFY(0 != wait_for_completion_timeout(&me->work,
-							msecs_to_jiffies(RPC_TIMEOUT)));
+							RPC_TIMEOUT));
 	}
  bail:
 	if (err)

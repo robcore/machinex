@@ -31,7 +31,7 @@
 #define USF_VERSION_ID 0x0140
 
 /* Standard timeout in the asynchronous ops */
-#define USF_TIMEOUT_JIFFIES 1000 /* 1 sec */
+#define USF_TIMEOUT_JIFFIES (1*HZ) /* 1 sec */
 
 /* Undefined USF device */
 #define USF_UNDEF_DEV_ID 0xffff
@@ -818,9 +818,9 @@ static int usf_set_us_detection(struct usf_type *usf, unsigned long arg)
 						USF_US_DETECT_UNDEF));
 	} else {
 		if (detect_info.detect_timeout == USF_DEFAULT_TIMEOUT)
-			timeout = msecs_to_jiffies(USF_TIMEOUT_JIFFIES);
+			timeout = USF_TIMEOUT_JIFFIES;
 		else
-			timeout = detect_info.detect_timeout * 1000;
+			timeout = detect_info.detect_timeout * HZ;
 	}
 	rc = wait_event_interruptible_timeout(usf_xx->wait,
 					(usf_xx->us_detect_type !=
@@ -1005,7 +1005,7 @@ static int usf_get_tx_update(struct usf_type *usf, unsigned long arg)
 		else {
 			prev_jiffies = jiffies;
 			if (upd_tx_info.timeout == USF_DEFAULT_TIMEOUT) {
-				timeout = msecs_to_jiffies(USF_TIMEOUT_JIFFIES);
+				timeout = USF_TIMEOUT_JIFFIES;
 				rc = wait_event_timeout(
 						usf_xx->wait,
 						(usf_xx->prev_region !=
@@ -1014,7 +1014,7 @@ static int usf_get_tx_update(struct usf_type *usf, unsigned long arg)
 						 USF_WORK_STATE),
 						timeout);
 			} else {
-				timeout = upd_tx_info.timeout * 1000;
+				timeout = upd_tx_info.timeout * HZ;
 				rc = wait_event_interruptible_timeout(
 						usf_xx->wait,
 						(usf_xx->prev_region !=
@@ -1098,7 +1098,7 @@ static int usf_set_rx_update(struct usf_xx_type *usf_xx, unsigned long arg)
 			usf_xx->usc,
 			&upd_rx_info.free_region) ||
 		(usf_xx->usf_state == USF_IDLE_STATE),
-		msecs_to_jiffies(USF_TIMEOUT_JIFFIES));
+		USF_TIMEOUT_JIFFIES);
 
 	if (!rc) {
 		rc = -ETIME;

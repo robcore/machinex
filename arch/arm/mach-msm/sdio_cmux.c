@@ -281,7 +281,7 @@ int sdio_cmux_open(const int id,
 	}
 
 	r = wait_event_timeout(logical_ch[id].open_wait_queue,
-				logical_ch[id].is_remote_open, msecs_to_jiffies(1000));
+				logical_ch[id].is_remote_open, (1 * HZ));
 	if (r < 0) {
 		pr_err("ERROR %s: wait_event_timeout() failed for"
 		       " ch%d with rc %d\n", __func__, id, r);

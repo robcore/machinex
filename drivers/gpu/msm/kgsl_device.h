@@ -30,7 +30,7 @@
 #define KGSL_TIMEOUT_LONG_IB_DETECTION  2000 /* 2 sec*/
 #define KGSL_TIMEOUT_HANG_DETECT	200	/* 200 msec */
 
-#define FIRST_TIMEOUT 500
+#define FIRST_TIMEOUT (HZ / 2)
 
 
 /* KGSL device state is initialized to INIT when platform_probe		*

@@ -253,7 +253,7 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 	}
 
 	queue_delayed_work(wq, &decide_hotplug,
-		msecs_to_jiffies(t->timer * 1000));
+		msecs_to_jiffies(t->timer * HZ));
 
 	return;
 
@@ -264,7 +264,7 @@ reschedule:
 	 * we don't need to run this work every 100ms, but rather just
 	 * once every 2 seconds
 	 */
-	queue_delayed_work(wq, &decide_hotplug, msecs_to_jiffies(2000));
+	queue_delayed_work(wq, &decide_hotplug, HZ * 2);
 }
 
 /*
@@ -514,7 +514,7 @@ static int mako_hotplug_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&decide_hotplug, decide_hotplug_func);
 
-	queue_delayed_work(wq, &decide_hotplug, msecs_to_jiffies(30000));
+	queue_delayed_work(wq, &decide_hotplug, HZ * 30);
 err:
 	return ret;
 }

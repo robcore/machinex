@@ -220,7 +220,7 @@ static int uhid_hid_get_raw(struct hid_device *hid, unsigned char rnum,
 	spin_unlock_irqrestore(&uhid->qlock, flags);
 
 	ret = wait_event_interruptible_timeout(uhid->report_wait,
-				atomic_read(&uhid->report_done), msecs_to_jiffies(5000));
+				atomic_read(&uhid->report_done), 5 * HZ);
 
 	/*
 	 * Make sure "uhid->running" is cleared on shutdown before

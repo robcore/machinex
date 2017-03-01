@@ -2081,7 +2081,7 @@ struct platform_device msm8960_device_qup_i2c_gsbi5 = {
 	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi5),
 	.resource	= resources_qup_i2c_gsbi5,
 };
-#if !defined(CONFIG_SENSOR_LT02_CTC)
+#if !defined(CONFIG_SENSOR_LT02_CTC)	
 static struct resource resources_qup_i2c_gsbi11[] = {
 	{
 		.name	= "gsbi_qup_i2c_addr",
@@ -3791,7 +3791,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.init_level = 1,
 	.num_levels = ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
-	.idle_timeout = (1000/12),
+	.idle_timeout = HZ/12,
 	.nap_allowed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -3858,7 +3858,7 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.init_level = 0,
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
-	.idle_timeout = 200,
+	.idle_timeout = HZ/5,
 	.nap_allowed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -3925,7 +3925,7 @@ static struct kgsl_device_platform_data kgsl_2d1_pdata = {
 	.init_level = 0,
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
-	.idle_timeout = 200,
+	.idle_timeout = HZ/5,
 	.nap_allowed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
