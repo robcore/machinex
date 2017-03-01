@@ -469,12 +469,12 @@ void msm_rotator_imem_free(int requestor)
 {
 #ifdef CONFIG_MSM_ROTATOR_USE_IMEM
 	if (msm_rotator_dev->imem_owner == requestor) {
-		schedule_delayed_work(&msm_rotator_dev->imem_clk_work, msecs_to_jiffies(1000));
+		schedule_delayed_work(&msm_rotator_dev->imem_clk_work, HZ);
 		mutex_unlock(&msm_rotator_dev->imem_lock);
 	}
 #else
 	if (requestor == JPEG_REQUEST)
-		schedule_delayed_work(&msm_rotator_dev->imem_clk_work, msecs_to_jiffies(1000));
+		schedule_delayed_work(&msm_rotator_dev->imem_clk_work, HZ);
 #endif
 }
 EXPORT_SYMBOL(msm_rotator_imem_free);
@@ -2159,7 +2159,7 @@ do_rotate_exit:
 #ifdef CONFIG_MSM_ROTATOR_USE_IMEM
 	msm_rotator_imem_free(ROTATOR_REQUEST);
 #endif
-	schedule_delayed_work(&msm_rotator_dev->rot_clk_work, msecs_to_jiffies(1000));
+	schedule_delayed_work(&msm_rotator_dev->rot_clk_work, HZ);
 	put_img(dstp1_file, dstp1_ihdl, ROTATOR_DST_DOMAIN,
 		img_info->secure);
 	put_img(srcp1_file, srcp1_ihdl, ROTATOR_SRC_DOMAIN, 0);

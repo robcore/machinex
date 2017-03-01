@@ -52,10 +52,10 @@ void mmc_power_cycle(struct mmc_host *host);
 
 static inline void mmc_delay(unsigned int ms)
 {
-	if (ms < jiffies_to_msecs(1)) {
+	if (ms < 1000 / HZ) {
 		cond_resched();
 		mdelay(ms);
-	} else if ((ms > jiffies_to_msecs(1)) && (ms < jiffies_to_msecs(2))) {
+	} else if (ms < jiffies_to_msecs(2)) {
 		usleep_range(ms * 1000, (ms + 1) * 1000);
 	} else {
 		msleep(ms);

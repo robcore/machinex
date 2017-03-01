@@ -233,7 +233,7 @@ static void __ref msm_therm_temp_log(struct work_struct *work)
           pr_debug("%s: Debug Temp for Sensors %s",KBUILD_MODNAME,buffer);
 
     }
-    schedule_delayed_work(&temp_log_work, msecs_to_jiffies(5000));
+    schedule_delayed_work(&temp_log_work, HZ*5);
 }
 
 static int msm_thermal_cpu_callback(struct notifier_block *nfb,
@@ -558,7 +558,7 @@ int __init msm_thermal_device_init(void)
 int __init msm_thermal_late_init(void)
 {
         INIT_DELAYED_WORK(&temp_log_work,msm_therm_temp_log);
-        schedule_delayed_work(&temp_log_work, msecs_to_jiffies(2000));
+        schedule_delayed_work(&temp_log_work,HZ*2);
 	return msm_thermal_add_cc_nodes();
 }
 module_init(msm_thermal_late_init);

@@ -241,7 +241,7 @@ static void zero_suspend(struct usb_composite_dev *cdev)
 		return;
 
 	if (autoresume) {
-		mod_timer(&autoresume_timer, jiffies + (msecs_to_jiffies(1000) * autoresume));
+		mod_timer(&autoresume_timer, jiffies + (HZ * autoresume));
 		DBG(cdev, "suspend, wakeup in %d seconds\n", autoresume);
 	} else
 		DBG(cdev, "%s\n", __func__);

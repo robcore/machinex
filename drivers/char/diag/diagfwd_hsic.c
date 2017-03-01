@@ -45,7 +45,7 @@ static void diag_read_hsic_work_fn(struct work_struct *work)
 	struct diag_hsic_dev *hsic_struct = container_of(work,
 				struct diag_hsic_dev, diag_read_hsic_work);
 	int index = hsic_struct->id;
-	static DEFINE_RATELIMIT_STATE(rl, (10 *1000), 1);
+	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
 
 	if (!diag_hsic[index].hsic_ch) {
 		pr_err("DIAG in %s: diag_hsic[index].hsic_ch == 0\n", __func__);
@@ -134,7 +134,7 @@ static void diag_hsic_read_complete_callback(void *ctxt, char *buf,
 {
 	int err = -2;
 	int index = (int)ctxt;
-	static DEFINE_RATELIMIT_STATE(rl, (10 *1000), 1);
+	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
 
 	if (!diag_hsic[index].hsic_ch) {
 		/*

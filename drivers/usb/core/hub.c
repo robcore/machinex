@@ -288,7 +288,7 @@ static void set_port_led(
 			status);
 }
 
-#define	LED_CYCLE_PERIOD	(2000/3)
+#define	LED_CYCLE_PERIOD	((2*HZ)/3)
 
 static void led_work (struct work_struct *work)
 {
@@ -357,7 +357,7 @@ static void led_work (struct work_struct *work)
 		changed++;
 	}
 	if (changed)
-		schedule_delayed_work(&hub->leds, msecs_to_jiffies(LED_CYCLE_PERIOD));
+		schedule_delayed_work(&hub->leds, LED_CYCLE_PERIOD);
 }
 
 /* use a short timeout for hub/port status fetches */
@@ -1051,7 +1051,7 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 	if (status < 0)
 		dev_err(hub->intfdev, "activate --> %d\n", status);
 	if (hub->has_indicators && blinkenlights)
-		schedule_delayed_work(&hub->leds, msecs_to_jiffies(LED_CYCLE_PERIOD));
+		schedule_delayed_work(&hub->leds, LED_CYCLE_PERIOD);
 
 	/* Scan all ports that need attention */
 	kick_khubd(hub);

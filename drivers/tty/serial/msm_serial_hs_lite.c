@@ -240,6 +240,7 @@ static irqreturn_t msm_hsl_wakeup_isr(int irq, void *dev)
 {
 	unsigned int wakeup = 0;
 	struct msm_hsl_port *msm_hsl_port = (struct msm_hsl_port *)dev;
+	const unsigned long WAKE_LOCK_EXPIRE_TIME = HZ;
 	/* let it expire within 1 sec */
 
 	if (msm_hsl_port->wakeup.ignore)
@@ -250,7 +251,7 @@ static irqreturn_t msm_hsl_wakeup_isr(int irq, void *dev)
 	if (wakeup) {
 		/* let it self expire */
 		wake_lock_timeout(&msm_hsl_port->wakeup.wake_lock,
-					msecs_to_jiffies(1000));
+					WAKE_LOCK_EXPIRE_TIME*6);
 	}
 
 	return IRQ_HANDLED;

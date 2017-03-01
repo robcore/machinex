@@ -38,7 +38,7 @@
 #define MAX_ZONE_LIMIT		10
 #define SEND_KEY_CHECK_TIME_MS	30		/* 30ms */
 #define DET_CHECK_TIME_MS	100		/* 100ms */
-#define WAKE_LOCK_TIME		5000	/* 5 sec */
+#define WAKE_LOCK_TIME		(HZ * 5)	/* 5 sec */
 
 #ifdef CONFIG_MACH_MELIUS_EUR_OPEN
 extern unsigned int system_rev;
@@ -382,7 +382,7 @@ void sec_jack_detect_work(struct work_struct *work)
 	unsigned npolarity = !hi->pdata->det_active_high;
 
 	/* prevent suspend to allow user space to respond to switch */
-	wake_lock_timeout(&hi->det_wake_lock, msecs_to_jiffies(WAKE_LOCK_TIME));
+	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
 
 	pr_info("%s: detect_irq(%d)\n", __func__,
 		gpio_get_value(pdata->det_gpio) ^ npolarity);

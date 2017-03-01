@@ -130,7 +130,7 @@ static int sdio_irq_thread(void *_host)
 		if (ret < 0) {
 			set_current_state(TASK_INTERRUPTIBLE);
 			if (!kthread_should_stop())
-				schedule_timeout(msecs_to_jiffies(1000));
+				schedule_timeout(HZ);
 			set_current_state(TASK_RUNNING);
 		}
 

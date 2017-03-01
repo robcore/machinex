@@ -980,7 +980,7 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 				msg->comp, sbdev->laddr, &tid);
 		/* sync read */
 		if (!ret && !msg->comp) {
-			ret = wait_for_completion_timeout(&complete, msecs_to_jiffies(1000));
+			ret = wait_for_completion_timeout(&complete, HZ);
 			if (!ret) {
 				struct slim_msg_txn *txn;
 				mutex_lock(&ctrl->m_ctrl);

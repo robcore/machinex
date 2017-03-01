@@ -929,7 +929,7 @@ static void gs_close(struct tty_struct *tty, struct file *file)
 		spin_unlock_irq(&port->port_lock);
 		wait_event_interruptible_timeout(port->drain_wait,
 					gs_writes_finished(port),
-					GS_CLOSE_TIMEOUT * msecs_to_jiffies(1000));
+					GS_CLOSE_TIMEOUT * HZ);
 		spin_lock_irq(&port->port_lock);
 		gser = port->port_usb;
 	}

@@ -1665,7 +1665,7 @@ requeued:
 	spin_lock(q->queue_lock);
 
 delay_and_out:
-	blk_delay_queue(q, msecs_to_jiffies(100));
+	blk_delay_queue(q, HZ / 10);
 out:
 	dm_table_put(map);
 }

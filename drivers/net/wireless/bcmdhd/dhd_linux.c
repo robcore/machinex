@@ -6228,7 +6228,7 @@ dhd_os_ioctl_resp_wait(dhd_pub_t *pub, uint *condition, bool *pending)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	timeout = msecs_to_jiffies(dhd_ioctl_timeout_msec);
 #else
-	timeout = dhd_ioctl_timeout_msec;
+	timeout = dhd_ioctl_timeout_msec * HZ / 1000;
 #endif
 
 	timeout = wait_event_timeout(dhd->ioctl_resp_wait, (*condition), timeout);
@@ -6695,7 +6695,7 @@ void dhd_wait_for_event(dhd_pub_t *dhd, bool *lockvar)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	int timeout = msecs_to_jiffies(IOCTL_RESP_TIMEOUT);
 #else
-	int timeout = IOCTL_RESP_TIMEOUT;
+	int timeout = (IOCTL_RESP_TIMEOUT / 1000) * HZ;
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
 
 	dhd_os_sdunlock(dhd);

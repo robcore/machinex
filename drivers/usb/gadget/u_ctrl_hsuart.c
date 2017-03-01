@@ -237,7 +237,7 @@ static void ghsuart_ctrl_connect_w(struct work_struct *w)
 
 	if (test_bit(CH_OPENED, &port->channel_sts)) {
 		retval = wait_for_completion_timeout(
-				&port->close_complete, msecs_to_jiffies(3000));
+				&port->close_complete, 3 * HZ);
 		if (retval == 0) {
 			pr_err("%s: smux close timedout\n", __func__);
 			return;

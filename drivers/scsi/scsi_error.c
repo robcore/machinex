@@ -801,7 +801,7 @@ static int scsi_send_eh_cmnd(struct scsi_cmnd *scmd, unsigned char *cmnd,
 	scmd->scsi_done = scsi_eh_done;
 	shost->hostt->queuecommand(shost, scmd);
 
-	timeleft = wait_for_completion_timeout(&done, msecs_to_jiffies(timeout));
+	timeleft = wait_for_completion_timeout(&done, timeout);
 
 	shost->eh_action = NULL;
 
@@ -1653,7 +1653,7 @@ static void scsi_eh_lock_door(struct scsi_device *sdev)
 
 	req->cmd_type = REQ_TYPE_BLOCK_PC;
 	req->cmd_flags |= REQ_QUIET;
-	req->timeout = 10000;
+	req->timeout = 10 * HZ;
 	req->retries = 5;
 
 	blk_execute_rq_nowait(req->q, NULL, req, 1, eh_lock_door_done);

@@ -1406,7 +1406,7 @@ static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on)
 #ifdef CONFIG_USB_HOST_NOTIFY
 			else
 				schedule_delayed_work(&motg->late_power_work,
-							(msecs_to_jiffies(1000)));
+							(1000 * HZ/1000));
 #endif
 		}
 		return;
@@ -2245,7 +2245,7 @@ static const char *chg_to_string(enum usb_chg_type chg_type)
 	}
 }
 
-#define MSM_CHECK_TA_DELAY 500
+#define MSM_CHECK_TA_DELAY (5 * HZ)
 #define PORTSC_LS  (3 << 10) /* Read - Port's Line status */
 static void msm_ta_detect_work(struct work_struct *w)
 {
@@ -2272,13 +2272,13 @@ static void msm_ta_detect_work(struct work_struct *w)
 		schedule_work(&motg->sm_work);
 		return;
 	}
-	schedule_delayed_work(&motg->check_ta_work, msecs_to_jiffies(MSM_CHECK_TA_DELAY));
+	schedule_delayed_work(&motg->check_ta_work, MSM_CHECK_TA_DELAY);
 }
 
-#define MSM_CHG_DCD_TIMEOUT			750 /* 750 msec */
-#define MSM_CHG_DCD_POLL_TIME		50 /* 50 msec */
-#define MSM_CHG_PRIMARY_DET_TIME	50 /* TVDPSRC_ON */
-#define MSM_CHG_SECONDARY_DET_TIME	50 /* TVDMSRC_ON */
+#define MSM_CHG_DCD_TIMEOUT		(750 * HZ/1000) /* 750 msec */
+#define MSM_CHG_DCD_POLL_TIME		(50 * HZ/1000) /* 50 msec */
+#define MSM_CHG_PRIMARY_DET_TIME	(50 * HZ/1000) /* TVDPSRC_ON */
+#define MSM_CHG_SECONDARY_DET_TIME	(50 * HZ/1000) /* TVDMSRC_ON */
 static void msm_chg_detect_work(struct work_struct *w)
 {
 	struct msm_otg *motg = container_of(w, struct msm_otg, chg_work.work);
@@ -2409,7 +2409,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 		return;
 	}
 
-	queue_delayed_work(system_wq, &motg->chg_work, msecs_to_jiffies(delay));
+	queue_delayed_work(system_wq, &motg->chg_work, delay);
 }
 
 /*

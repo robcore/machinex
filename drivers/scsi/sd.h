@@ -11,9 +11,9 @@
 /*
  * Time out in seconds for disks and Magneto-opticals (which are slower).
  */
-#define SD_TIMEOUT		(30 * 1000)
-#define SD_MOD_TIMEOUT		(75 * 1000)
-#define SD_FLUSH_TIMEOUT	(60 * 1000)
+#define SD_TIMEOUT		(30 * HZ)
+#define SD_MOD_TIMEOUT		(75 * HZ)
+#define SD_FLUSH_TIMEOUT	(60 * HZ)
 
 /*
  * Number of allowed retries

@@ -559,7 +559,7 @@ static bool sec_bat_ovp_uvlo_result(
 			battery->is_recharging = false;
 			/* Take the wakelock during 10 seconds
 			   when over-voltage status is detected	 */
-			wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(1000 * 10));
+			wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
 			break;
 		}
 		power_supply_changed(&battery->psy_bat);
@@ -1429,7 +1429,7 @@ static void sec_bat_do_fullcharged(
 	 * activated wake lock in a few seconds
 	 */
 	if (battery->pdata->polling_type == SEC_BATTERY_MONITOR_ALARM)
-		wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(1000 * 10));
+		wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
 }
 
 static bool sec_bat_fullcharged_check(
@@ -1808,10 +1808,10 @@ static void sec_bat_set_polling(
 	case SEC_BATTERY_MONITOR_WORKQUEUE:
 		if (battery->pdata->monitor_initial_count) {
 			battery->pdata->monitor_initial_count--;
-			schedule_delayed_work(&battery->polling_work, msecs_to_jiffies(1000));
+			schedule_delayed_work(&battery->polling_work, HZ);
 		} else
 			schedule_delayed_work(&battery->polling_work,
-				polling_time_temp * msecs_to_jiffies(1000));
+				polling_time_temp * HZ);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
 #if defined(ANDROID_ALARM_ACTIVATED)
@@ -1925,7 +1925,7 @@ skip_monitor:
 #endif
 
 	if (battery->capacity <= 0)
-		wake_lock_timeout(&battery->monitor_wake_lock, msecs_to_jiffies(1000 * 5));
+		wake_lock_timeout(&battery->monitor_wake_lock, HZ * 5);
 	else
 		wake_unlock(&battery->monitor_wake_lock);
 
@@ -1947,7 +1947,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 * if cable is connected and disconnected,
 	 * activated wake lock in a few seconds
 	 */
-	wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(1000 * 5));
+	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 5);
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &

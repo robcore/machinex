@@ -197,7 +197,7 @@ ch_do_scsi(scsi_changer *ch, unsigned char *cmd,
 	}
 
         result = scsi_execute_req(ch->device, cmd, direction, buffer,
-				  buflength, &sshdr, timeout * msecs_to_jiffies(1000),
+				  buflength, &sshdr, timeout * HZ,
 				  MAX_RETRIES, NULL);
 
 	DPRINTK("result: 0x%x\n",result);

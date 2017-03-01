@@ -539,7 +539,7 @@ static int smux_ut_basic_core(char *buf, int max,
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -564,14 +564,14 @@ static int smux_ut_basic_core(char *buf, int max,
 			UT_ASSERT_INT(ret, ==, 0);
 			UT_ASSERT_INT(
 					(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 
 			/* wait for write and echo'd read to complete */
 			INIT_COMPLETION(cb_data.cb_completion);
 			if (cb_data.cb_count < 2)
 				UT_ASSERT_INT(
 					(int)wait_for_completion_timeout(
-						&cb_data.cb_completion, msecs_to_jiffies(1000)),
+						&cb_data.cb_completion, HZ),
 					>, 0);
 			end_t = sched_clock();
 
@@ -636,7 +636,7 @@ static int smux_ut_basic_core(char *buf, int max,
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -802,7 +802,7 @@ static int smux_ut_ssr_remote_open(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -815,7 +815,7 @@ static int smux_ut_ssr_remote_open(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(10000)),
+					&cb_data.cb_completion, 10*HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -891,7 +891,7 @@ static int smux_ut_ssr_remote_rx_buff_retry(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -904,7 +904,7 @@ static int smux_ut_ssr_remote_rx_buff_retry(char *buf, int max)
 		while (!cb_data.get_rx_buff_retry_count) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -919,7 +919,7 @@ static int smux_ut_ssr_remote_rx_buff_retry(char *buf, int max)
 		retry_count = 0;
 		while (cb_data.event_disconnected_ssr == 0) {
 			(void)wait_for_completion_timeout(
-				&cb_data.cb_completion, msecs_to_jiffies(1000));
+				&cb_data.cb_completion, HZ);
 			INIT_COMPLETION(cb_data.cb_completion);
 			++retry_count;
 			UT_ASSERT_INT(retry_count, <, 10);
@@ -1265,7 +1265,7 @@ static int smux_ut_tiocm(char *buf, int max, const char *name)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -1278,7 +1278,7 @@ static int smux_ut_tiocm(char *buf, int max, const char *name)
 			UT_ASSERT_INT(ret, ==, 0);
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 			UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 			UT_ASSERT_INT(cb_data.event_tiocm, ==, 1);
 			UT_ASSERT_INT(cb_data.tiocm_meta.tiocm_old, ==,
@@ -1293,7 +1293,7 @@ static int smux_ut_tiocm(char *buf, int max, const char *name)
 			UT_ASSERT_INT(ret, ==, 0);
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 			UT_ASSERT_INT(cb_data.event_tiocm, ==, 1);
@@ -1311,7 +1311,7 @@ static int smux_ut_tiocm(char *buf, int max, const char *name)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1428,7 +1428,7 @@ static int smux_ut_local_wm(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -1450,7 +1450,7 @@ static int smux_ut_local_wm(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-				&cb_data.cb_completion, msecs_to_jiffies(1000)),
+				&cb_data.cb_completion, HZ),
 			>, 0);
 		UT_ASSERT_INT(cb_data.event_high_wm, ==, 1);
 		UT_ASSERT_INT(cb_data.event_low_wm, ==, 0);
@@ -1468,7 +1468,7 @@ static int smux_ut_local_wm(char *buf, int max)
 		while (cb_data.cb_count < 9) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1486,7 +1486,7 @@ static int smux_ut_local_wm(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1551,7 +1551,7 @@ static int smux_ut_local_smuxld_receive_buf(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -1570,7 +1570,7 @@ static int smux_ut_local_smuxld_receive_buf(char *buf, int max)
 		do {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		} while (cb_data.cb_count < 3);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
@@ -1601,7 +1601,7 @@ static int smux_ut_local_smuxld_receive_buf(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1713,7 +1713,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -1757,7 +1757,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 		while (cb_data.event_read_failed == 0) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(2000)),
+					&cb_data.cb_completion, 2*HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1880,7 +1880,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 		if (cb_data.event_read_done == 0)
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 		UT_ASSERT_INT(cb_data.event_read_done, ==, 1);
 		UT_ASSERT_INT(list_empty(&cb_data.read_events), ==, 0);
@@ -1901,7 +1901,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 			UT_ASSERT_INT(ret, ==, 0);
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 		}
 
@@ -1909,7 +1909,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 		while (cb_data.event_read_failed == 0) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(2000)),
+					&cb_data.cb_completion, 2*HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1920,7 +1920,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 		while (cb_data.event_read_done < SMUX_RX_RETRY_MAX_PKTS) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(2000)),
+					&cb_data.cb_completion, 2*HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -1938,7 +1938,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -2002,7 +2002,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -2028,7 +2028,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 			while (cb_data.event_write_done <= try) {
 				UT_ASSERT_INT(
 					(int)wait_for_completion_timeout(
-						&cb_data.cb_completion, msecs_to_jiffies(1000)),
+						&cb_data.cb_completion, HZ),
 					>, 0);
 				INIT_COMPLETION(cb_data.cb_completion);
 			}
@@ -2050,7 +2050,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 		while (cb_data.event_read_done < SMUX_RX_WM_HIGH) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(2000)),
+					&cb_data.cb_completion, 2*HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -2069,7 +2069,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -2128,7 +2128,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -2139,7 +2139,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-				&cb_data.cb_completion, msecs_to_jiffies(1000)),
+				&cb_data.cb_completion, HZ),
 			>, 0);
 		UT_ASSERT_INT(cb_data.event_write_done, ==, 1);
 
@@ -2147,7 +2147,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 		if (!cb_data.event_read_done) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 		}
 		UT_ASSERT_INT(cb_data.event_read_done, ==, 1);
@@ -2170,7 +2170,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-				&cb_data.cb_completion, msecs_to_jiffies(1000)),
+				&cb_data.cb_completion, HZ),
 				>, 0);
 		INIT_COMPLETION(cb_data.cb_completion);
 		UT_ASSERT_INT(cb_data.event_write_done, ==, 1);
@@ -2179,7 +2179,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-				&cb_data.cb_completion, msecs_to_jiffies(1000)),
+				&cb_data.cb_completion, 1*HZ),
 			==, 0);
 		UT_ASSERT_INT(cb_data.event_read_done, ==, 0);
 		mock_cb_data_reset(&cb_data);
@@ -2192,7 +2192,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-				&cb_data.cb_completion, msecs_to_jiffies(1000)),
+				&cb_data.cb_completion, HZ),
 			>, 0);
 		UT_ASSERT_INT(cb_data.event_read_done, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -2203,7 +2203,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 		while (cb_data.cb_count < 3) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)),
+					&cb_data.cb_completion, HZ),
 				>, 0);
 			INIT_COMPLETION(cb_data.cb_completion);
 		}
@@ -2264,7 +2264,7 @@ static int smux_ut_remote_initiated_wakeup(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_connected, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -2277,7 +2277,7 @@ static int smux_ut_remote_initiated_wakeup(char *buf, int max)
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_data.cb_completion, msecs_to_jiffies(1000)), >, 0);
+					&cb_data.cb_completion, HZ), >, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_data.event_write_done, ==, 1);
 		mock_cb_data_reset(&cb_data);
@@ -2341,7 +2341,7 @@ static int smux_ut_remote_initiated_wakeup(char *buf, int max)
 
 	mock_cb_data_reset(&cb_data);
 	msm_smux_close(SMUX_TEST_LCID);
-	wait_for_completion_timeout(&cb_data.cb_completion, msecs_to_jiffies(1000));
+	wait_for_completion_timeout(&cb_data.cb_completion, HZ);
 
 	mock_cb_data_reset(&cb_data);
 	smux_set_loopback_data_reply_delay(0);
