@@ -25,7 +25,7 @@
 #define MSM_SLEEPER_MINOR_VERSION	1
 #define MSM_SLEEPER_ENABLED		0
 #define MSM_SLEEPER_DEBUG		0
-#define DELAY				HZ
+#define DELAY				1000
 #define DEF_UP_THRESHOLD		85
 #define DEF_MAX_CPUS_ONLINE			4
 #define DEF_DOWN_COUNT_MAX		10 /* 1 sec */
@@ -452,7 +452,7 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&sleeper_work, hotplug_func);
 
 	if (sleeper_data.enabled)
-		queue_delayed_work_on(0, sleeper_wq, &sleeper_work, HZ * 60);
+		queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(60000);
 
 	return ret;
 
