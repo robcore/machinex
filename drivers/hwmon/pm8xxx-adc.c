@@ -123,7 +123,6 @@
 #define PM8XXX_ADC_PA_THERM_VREG_UA_LOAD		100000
 #define PM8XXX_ADC_HWMON_NAME_LENGTH			32
 #define PM8XXX_ADC_BTM_INTERVAL_MAX			0x14
-#define PM8XXX_ADC_COMPLETION_TIMEOUT			(2 * HZ)
 
 struct pm8xxx_adc {
 	struct device				*dev;
@@ -498,7 +497,7 @@ int pm8921_enable_batt_therm(u8 en)
 	}
 
 	return rc;
-} 
+}
 
 static void pm8xxx_adc_btm_warm_scheduler_fn(struct work_struct *work)
 {
@@ -796,7 +795,7 @@ uint32_t pm8xxx_adc_read(enum pm8xxx_adc_channels channel,
 	}
 
 	rc = wait_for_completion_timeout(&adc_pmic->adc_rslt_completion,
-						PM8XXX_ADC_COMPLETION_TIMEOUT);
+						msecs_to_jiffies(2000));
 	if (!rc) {
 		u8 data_arb_usrp_cntrl1 = 0;
 		rc = pm8xxx_adc_read_reg(PM8XXX_ADC_ARB_USRP_CNTRL1,
