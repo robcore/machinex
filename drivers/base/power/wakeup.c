@@ -523,11 +523,13 @@ void pm_system_wakeup(void)
 	pm_abort_suspend = true;
 	freeze_wake();
 }
+EXPORT_SYMBOL_GPL(pm_system_wakeup);
 
 void pm_wakeup_clear(void)
 {
 	pm_abort_suspend = false;
 }
+EXPORT_SYMBOL_GPL(pm_wakeup_clear);
 
 /*
  * The functions below use the observation that each wakeup event starts a
@@ -939,7 +941,6 @@ bool pm_get_wakeup_count(unsigned int *count, bool block)
 	*count = cnt;
 	return !inpr;
 }
-EXPORT_SYMBOL_GPL(pm_system_wakeup);
 
 /**
  * pm_save_wakeup_count - Save the current number of registered wakeup events.
