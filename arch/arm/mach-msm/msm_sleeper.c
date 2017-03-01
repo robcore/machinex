@@ -452,7 +452,7 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&sleeper_work, hotplug_func);
 
 	if (sleeper_data.enabled)
-		queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(60000);
+		queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(60000));
 
 	return ret;
 
