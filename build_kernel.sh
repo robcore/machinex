@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export CONCURRENCY_LEVEL=$(cat /proc/cpuinfo | grep processor | wc -l)
+
 function WASHME()
 {
 if [ -d $(pwd)/out ]; then
