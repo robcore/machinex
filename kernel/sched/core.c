@@ -6004,8 +6004,6 @@ static void destroy_sched_domains(struct sched_domain *sd, int cpu)
 DEFINE_PER_CPU(struct sched_domain *, sd_llc);
 DEFINE_PER_CPU(int, sd_llc_size);
 DEFINE_PER_CPU(int, sd_llc_id);
-DEFINE_PER_CPU(struct sched_domain *, sd_busy);
-DEFINE_PER_CPU(struct sched_domain *, sd_asym);
 
 static void update_top_cache_domain(int cpu)
 {
@@ -6046,17 +6044,13 @@ static void update_top_cache_domain(int cpu)
 			tmp->idle_buddy = cpumask_first(sched_group_cpus(sg));
 		} while ((tmp = tmp->child));
 
-		if (sd) {
-			id = cpumask_first(sched_domain_span(sd));
-			size = cpumask_weight(sched_domain_span(sd));
-			rcu_assign_pointer(per_cpu(sd_busy, cpu), sd->parent);
+		id = cpumask_first(sched_domain_span(sd));
+                size = cpumask_weight(sched_domain_span(sd));
 	}
 
 	rcu_assign_pointer(per_cpu(sd_llc, cpu), sd);
 	per_cpu(sd_llc_size, cpu) = size;
 	per_cpu(sd_llc_id, cpu) = id;
-	sd = highest_flag_domain(cpu, SD_ASYM_PACKING);
-	rcu_assign_pointer(per_cpu(sd_asym, cpu), sd);
 }
 
 /*
