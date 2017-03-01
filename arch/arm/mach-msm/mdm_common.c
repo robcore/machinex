@@ -856,6 +856,7 @@ static int mdm_subsys_shutdown(const struct subsys_desc *crashed_subsys)
 	mdm_ssr_started(mdev);
 	cancel_delayed_work(&mdev->mdm2ap_status_check_work);
 
+	atomic_set(&mdev->mdm_data.mdm_ready, 0);
 	if (!mdm_drv->pdata->no_a2m_errfatal_on_ssr)
 		gpio_direction_output(mdm_drv->ap2mdm_errfatal_gpio, 1);
 
