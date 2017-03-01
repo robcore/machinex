@@ -3976,10 +3976,10 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 		p->sched_class = &dl_sched_class;
 	else if (rt_prio(prio))
 		p->sched_class = &rt_sched_class;
-	} else {
+	else {
 		if (rt_prio(oldprio))
 			p->rt.timeout = 0;
-		p->sched_class = &fair_sched_class;
+			p->sched_class = &fair_sched_class;
 	}
 
 	p->prio = prio;
