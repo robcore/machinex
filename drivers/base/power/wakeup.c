@@ -34,6 +34,8 @@ module_param(enable_bluesleep_ws, bool, 0644);
 static bool enable_ssp_sensorhub_ws = true;
 module_param(enable_ssp_sensorhub_ws, bool, 0644);
 
+extern bool freezing_in_progress;
+
 #include "power.h"
 
 /*
@@ -73,6 +75,7 @@ static void pm_wakeup_timer_fn(unsigned long data);
 static LIST_HEAD(wakeup_sources);
 
 static DECLARE_WAIT_QUEUE_HEAD(wakeup_count_wait_queue);
+static DECLARE_WAIT_QUEUE_HEAD(wakeup_freezer_wait_queue);
 
 static ktime_t last_read_time;
 
@@ -515,6 +518,17 @@ static bool wakeup_source_not_registered(struct wakeup_source *ws)
 		   ws->timer.data != (unsigned long)ws;
 }
 
+void pm_system_wakeup(void)
+{
+	pm_abort_suspend = true;
+	freeze_wake();
+}
+
+void pm_wakeup_clear(void)
+{
+	pm_abort_suspend = false;
+}
+
 /*
  * The functions below use the observation that each wakeup event starts a
  * period in which the system should not be suspended.  The moment this period
@@ -554,6 +568,7 @@ static bool wakeup_source_not_registered(struct wakeup_source *ws)
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
+	bool freezing_in_progress;
 
 	if (WARN(wakeup_source_not_registered(ws),
 			"unregistered wakeup source\n"))
@@ -562,7 +577,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	if (((!enable_gps_ws &&
 			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
 		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) || 
+			!strcmp(ws->name, "bluesleep")) ||
 		(!enable_msm_hsic_ws &&
 			!strcmp(ws->name, "msm_hsic_host")) ||
 		(!enable_wlan_rx_wake_ws &&
@@ -588,9 +603,24 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 
 	/*
 	 * active wakeup source should bring the system
-	 * out of PM_SUSPEND_FREEZE state
+	 * out of PM_SUSPEND_FREEZE state -> Rob: but should also go through the proper process
+	 * of calling pm_abort_suspend so as to minimize the potential damage caused by aborting
+	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
+	 * the freezer and be patient for the fucking 7ms or whatever it takes for it to complete?
 	 */
-	freeze_wake();
+	if (freezing_in_progress) {
+		DEFINE_WAIT(wait);
+
+		for (;;) {
+			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
+					TASK_INTERRUPTIBLE);
+			if (freezing_in_progress == false)
+				break;
+
+			pm_system_wakeup();
+		}
+		finish_wait(&wakeup_freezer_wait_queue, &wait);
+	}
 
 	ws->active = true;
 	ws->active_count++;
@@ -867,17 +897,6 @@ bool pm_wakeup_pending(void)
 	}
 
 	return ret || pm_abort_suspend;
-}
-
-void pm_system_wakeup(void)
-{
-	pm_abort_suspend = true;
-	freeze_wake();
-}
-
-void pm_wakeup_clear(void)
-{
-	pm_abort_suspend = false;
 }
 
 /**
