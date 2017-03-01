@@ -254,7 +254,7 @@ static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se)
 	 * future; in fact, we must consider execution overheads (time
 	 * spent on hardirq context, etc.).
 	 */
-	dl_se->deadline = rq_clock(rq) + dl_se->dl_deadline;
+	dl_se->deadline = rq->clock + dl_se->dl_deadline;
 	dl_se->runtime = dl_se->dl_runtime;
 	dl_se->dl_new = 0;
 }
@@ -302,14 +302,14 @@ static void replenish_dl_entity(struct sched_dl_entity *dl_se)
 	 * resetting the deadline and the budget of the
 	 * entity.
 	 */
-	if (dl_time_before(dl_se->deadline, rq_clock(rq))) {
+	if (dl_time_before(dl_se->deadline, rq->clock)) {
 		static bool lag_once = false;
 
 		if (!lag_once) {
 			lag_once = true;
-			printk_sched("sched: DL replenish lagged to much\n");
+			pr_info("sched: DL replenish lagged to much\n");
 		}
-		dl_se->deadline = rq_clock(rq) + dl_se->dl_deadline;
+		dl_se->deadline = rq->clock + dl_se->dl_deadline;
 		dl_se->runtime = dl_se->dl_runtime;
 	}
 }
@@ -388,9 +388,9 @@ static void update_dl_entity(struct sched_dl_entity *dl_se)
 		return;
 	}
 
-	if (dl_time_before(dl_se->deadline, rq_clock(rq)) ||
-	    dl_entity_overflow(dl_se, rq_clock(rq))) {
-		dl_se->deadline = rq_clock(rq) + dl_se->dl_deadline;
+	if (dl_time_before(dl_se->deadline, rq->clock) ||
+	    dl_entity_overflow(dl_se, rq->clock)) {
+		dl_se->deadline = rq->clock + dl_se->dl_deadline;
 		dl_se->runtime = dl_se->dl_runtime;
 	}
 }
@@ -421,7 +421,7 @@ static int start_dl_timer(struct sched_dl_entity *dl_se)
 	 */
 	act = ns_to_ktime(dl_se->deadline);
 	now = hrtimer_cb_get_time(&dl_se->dl_timer);
-	delta = ktime_to_ns(now) - rq_clock(rq);
+	delta = ktime_to_ns(now) - rq->clock;
 	act = ktime_add_ns(act, delta);
 
 	/*
@@ -514,7 +514,7 @@ void init_dl_task_timer(struct sched_dl_entity *dl_se)
 static
 int dl_runtime_exceeded(struct rq *rq, struct sched_dl_entity *dl_se)
 {
-	int dmiss = dl_time_before(dl_se->deadline, rq_clock(rq));
+	int dmiss = dl_time_before(dl_se->deadline, rq->clock);
 	int rorun = dl_se->runtime <= 0;
 
 	if (!rorun && !dmiss)
@@ -528,7 +528,7 @@ int dl_runtime_exceeded(struct rq *rq, struct sched_dl_entity *dl_se)
 	 */
 	if (dmiss) {
 		dl_se->runtime = rorun ? dl_se->runtime : 0;
-		dl_se->runtime -= rq_clock(rq) - dl_se->deadline;
+		dl_se->runtime -= rq->clock - dl_se->deadline;
 	}
 
 	return 1;
@@ -555,7 +555,7 @@ static void update_curr_dl(struct rq *rq)
 	 * natural solution, but the full ramifications of this
 	 * approach need further study.
 	 */
-	delta_exec = rq_clock_task(rq) - curr->se.exec_start;
+	delta_exec = rq->clock_task - curr->se.exec_start;
 	if (unlikely((s64)delta_exec < 0))
 		delta_exec = 0;
 
@@ -565,7 +565,7 @@ static void update_curr_dl(struct rq *rq)
 	curr->se.sum_exec_runtime += delta_exec;
 	account_group_exec_runtime(curr, delta_exec);
 
-	curr->se.exec_start = rq_clock_task(rq);
+	curr->se.exec_start = rq->clock_task;
 	cpuacct_charge(curr, delta_exec);
 
 	sched_rt_avg_update(rq, delta_exec);
@@ -818,12 +818,16 @@ static int latest_cpu_find(struct cpumask *span,
 			   struct cpumask *later_mask);
 
 static int
-select_task_rq_dl(struct task_struct *p, int cpu, int sd_flag, int flags)
+select_task_rq_dl(struct task_struct *p, int sd_flag, int flags)
 {
 	struct task_struct *curr;
 	struct rq *rq;
+	int cpu = task_cpu(p);
 
-	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
+	if (p->nr_cpus_allowed == 1)
+		goto out;
+
+	if (sd_flag != SD_BALANCE_WAKE)
 		goto out;
 
 	rq = cpu_rq(cpu);
@@ -937,7 +941,7 @@ struct task_struct *pick_next_task_dl(struct rq *rq)
 	BUG_ON(!dl_se);
 
 	p = dl_task_of(dl_se);
-	p->se.exec_start = rq_clock_task(rq);
+	p->se.exec_start = rq->clock_task;
 
 	/* Running task will never be pushed. */
 	if (p)
@@ -993,7 +997,7 @@ static void set_curr_task_dl(struct rq *rq)
 {
 	struct task_struct *p = rq->curr;
 
-	p->se.exec_start = rq_clock_task(rq);
+	p->se.exec_start = rq->clock_task;
 
 	/* You can't push away the running task */
 	dequeue_pushable_dl_task(rq, p);
