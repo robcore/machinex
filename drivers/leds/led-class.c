@@ -68,7 +68,7 @@ static void led_update_brightness(struct led_classdev *led_cdev)
 		led_cdev->brightness = led_cdev->brightness_get(led_cdev);
 }
 
-static ssize_t led_brightness_show(struct device *dev, 
+static ssize_t led_brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
@@ -242,7 +242,7 @@ int led_classdev_register(struct device *parent, struct led_classdev *led_cdev)
 	dev_dbg(parent, "Registered led device: %s\n",
 			led_cdev->name);
 #ifdef CONFIG_GENERIC_BLN
-	if (strcmp(led_cdev, "button-backlight"))
+	if (strcmp(led_cdev->name, "button-backlight"))
 	{
 		bln_led_cdev = led_cdev;
 		register_bln_implementation(&led_bln);

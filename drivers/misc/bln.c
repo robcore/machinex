@@ -12,7 +12,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/init.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/device.h>
 #include <linux/miscdevice.h>
 #include <linux/bln.h>
@@ -101,25 +101,24 @@ static void bln_power_off(void)
 	}
 }
 
-static void bln_early_suspend(struct early_suspend *h)
+static void bln_power_suspend(struct power_suspend *h)
 {
 	bln_suspended = true;
 }
 
-static void bln_late_resume(struct early_suspend *h)
+static void bln_power_resume(struct power_suspend *h)
 {
 	bln_suspended = false;
 
 	reset_bln_states();
 }
 
-static struct early_suspend bln_suspend_data = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1,
-	.suspend = bln_early_suspend,
-	.resume = bln_late_resume,
+static struct power_suspend bln_suspend_data = {
+	.suspend = bln_power_suspend,
+	.resume = bln_power_resume,
 };
 
-static void blink_thread(void)
+static int blink_thread(void)
 {
 	while(bln_suspended)
 	{
@@ -128,6 +127,7 @@ static void blink_thread(void)
 		bln_disable_backlights(get_led_mask());
 		msleep(1000);
 	}
+	return 0;
 }
 
 static void enable_led_notification(void)
@@ -141,7 +141,7 @@ static void enable_led_notification(void)
 	*/
 	if (!bln_suspended)
 		return;
-	
+
 	/*
 	* If we already have a blink thread going
 	* don't start another one.
@@ -155,7 +155,7 @@ static void enable_led_notification(void)
 	if(!bln_blink_mode)
 		bln_enable_backlights(get_led_mask());
 	else
-		kthread_run(&blink_thread, NULL,"bln_blink_thread");
+		kthread_run(blink_thread, (void *)bln_imp, "bln_blink_thread");
 
 	pr_info("%s: notification led enabled\n", __FUNCTION__);
 }
@@ -176,7 +176,7 @@ static ssize_t backlightnotification_status_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
-		
+
 	if(unlikely(!bln_imp))
 		ret = -1;
 
@@ -184,7 +184,7 @@ static ssize_t backlightnotification_status_read(struct device *dev,
 		ret = 1;
 	else
 		ret = 0;
-		
+
 	return sprintf(buf, "%u\n", ret);
 }
 
@@ -434,7 +434,8 @@ static struct attribute_group bln_notification_group = {
 	.attrs  = bln_notification_attributes,
 };
 
-static struct miscdevice bln_device = {
+static struct miscdevice bln_device
+ = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "backlightnotification",
 };
@@ -488,9 +489,12 @@ static int __init bln_control_init(void)
 	wake_lock_init(&bln_wake_lock, WAKE_LOCK_SUSPEND, "bln_kernel_wake_lock");
 #endif
 
-	register_early_suspend(&bln_suspend_data);
+	register_power_suspend(&bln_suspend_data);
 
 	return 0;
 }
 
 device_initcall(bln_control_init);
+MODULE_DESCRIPTION("Seamless Sensor Platform(SSP) sensorhub driver");
+MODULE_AUTHOR("Michael Richter, Adam Kent, Jonathan Jason Dennis, Rob Patershuk");
+MODULE_LICENSE("GPLV2");
