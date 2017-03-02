@@ -116,17 +116,11 @@ static inline void msm_mpm_send_interrupt(void)
 	__raw_writel(msm_mpm_dev_data.mpm_apps_ipc_val,
 			msm_mpm_dev_data.mpm_apps_ipc_reg);
 	/* Ensure the write is complete before returning. */
-	wmb();
+	mb();
 }
 
 static irqreturn_t msm_mpm_irq(int irq, void *dev_id)
 {
-	/*
-	 * When the system resumes from deep sleep mode, the RPM hardware wakes
-	 * up the Apps processor by triggering this interrupt. This interrupt
-	 * has to be enabled and set as wake for the irq to get SPM out of
-	 * sleep. Handle the interrupt here to make sure that it gets cleared.
-	 */
 	return IRQ_HANDLED;
 }
 
@@ -158,7 +152,7 @@ static void msm_mpm_set(bool wakeset)
 	/* Ensure that the set operation is complete before sending the
 	 * interrupt
 	 */
-	wmb();
+	mb();
 	msm_mpm_send_interrupt();
 }
 
@@ -172,7 +166,7 @@ static void msm_mpm_clear(void)
 	}
 
 	/* Ensure the clear is complete before sending the interrupt */
-	wmb();
+	mb();
 	msm_mpm_send_interrupt();
 }
 
@@ -435,20 +429,15 @@ void msm_mpm_enter_sleep(uint32_t sclk_count, bool from_idle)
 void msm_mpm_exit_sleep(bool from_idle)
 {
 	unsigned long pending;
-	uint32_t *enabled_intr;
 	int i;
 	int k;
 
-	enabled_intr = from_idle ? msm_mpm_enabled_irq :
-						msm_mpm_wake_irq;
-
 	for (i = 0; i < MSM_MPM_REG_WIDTH; i++) {
 		pending = msm_mpm_read(MSM_MPM_STATUS_REG_PENDING, i);
-		pending &= enabled_intr[i];
 
 		if (MSM_MPM_DEBUG_PENDING_IRQ & msm_mpm_debug_mask)
-pr_info("%s: enabled_intr pending.%d: 0x%08x 0x%08lx\n",
-				__func__, i, enabled_intr[i], pending);
+			pr_info("%s: pending.%d: 0x%08lx", __func__,
+					i, pending);
 
 		k = find_first_bit(&pending, 32);
 		while (k < 32) {
