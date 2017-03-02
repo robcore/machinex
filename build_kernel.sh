@@ -198,7 +198,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		ADBRETRY
 		cd ~/machinex
 		WASHME
-		echo "Push and Cleanup finished"
+		echo "cleanup finished"
 	fi;
 
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
@@ -356,7 +356,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		ADBRETRY
 		cd ~/machinex
 		WASHME
-		echo "Push and Cleanup finished"
+		echo "cleanup finished"
 	fi;
 
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
@@ -511,7 +511,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 			ADBRETRY
 			cd ~/machinex
 			WASHME
-			echo "push and cleanup finished"
+			echo "cleanup finished"
 		fi;
 
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
@@ -639,7 +639,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	ADBRETRY
 	cd ~/machinex
 	WASHME
-	echo "push and cleanup finished"
+	echo "cleanup finished"
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "MD5 is $SUMMY"
 else
