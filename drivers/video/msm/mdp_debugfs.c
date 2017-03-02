@@ -1380,14 +1380,14 @@ int mdp_debugfs_init(void)
 		return -1;
 	}
 
-	if (debugfs_create_file("off", 0600, dent, 0, &mdp_off_fops)
+	if (debugfs_create_file("off", 0644, dent, 0, &mdp_off_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: index fail\n",
 			__FILE__, __LINE__);
 		return -1;
 	}
 
-	if (debugfs_create_file("reg", 0600, dent, 0, &mdp_reg_fops)
+	if (debugfs_create_file("reg", 0644, dent, 0, &mdp_reg_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: debug fail\n",
 			__FILE__, __LINE__);
@@ -1411,7 +1411,7 @@ int mdp_debugfs_init(void)
 		return -1;
 	}
 
-	if (debugfs_create_file("reg", 0600, dent, 0, &pmdh_fops)
+	if (debugfs_create_file("reg", 0644, dent, 0, &pmdh_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: debug fail\n",
 			__FILE__, __LINE__);
@@ -1419,7 +1419,7 @@ int mdp_debugfs_init(void)
 	}
 
 #if defined(CONFIG_FB_MSM_OVERLAY) && defined(CONFIG_FB_MSM_MDDI)
-	if (debugfs_create_file("vsync", 0600, dent, 0, &vsync_fops)
+	if (debugfs_create_file("vsync", 0644, dent, 0, &vsync_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: debug fail\n",
 			__FILE__, __LINE__);
@@ -1435,7 +1435,7 @@ int mdp_debugfs_init(void)
 		return -1;
 	}
 
-	if (debugfs_create_file("reg", 0600, dent, 0, &emdh_fops)
+	if (debugfs_create_file("reg", 0644, dent, 0, &emdh_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: debug fail\n",
 			__FILE__, __LINE__);
@@ -1450,21 +1450,21 @@ int mdp_debugfs_init(void)
 		return -1;
 	}
 
-	if (debugfs_create_file("base", 0600, dent, 0, &dbg_base_fops)
+	if (debugfs_create_file("base", 0644, dent, 0, &dbg_base_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: index fail\n",
 			__FILE__, __LINE__);
 		return -1;
 	}
 
-	if (debugfs_create_file("off", 0600, dent, 0, &dbg_off_fops)
+	if (debugfs_create_file("off", 0644, dent, 0, &dbg_off_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: index fail\n",
 			__FILE__, __LINE__);
 		return -1;
 	}
 
-	if (debugfs_create_file("reg", 0600, dent, 0, &dbg_reg_fops)
+	if (debugfs_create_file("reg", 0644, dent, 0, &dbg_reg_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: debug fail\n",
 			__FILE__, __LINE__);
@@ -1480,14 +1480,14 @@ int mdp_debugfs_init(void)
 		return PTR_ERR(dent);
 	}
 
-	if (debugfs_create_file("off", 0600, dent, 0, &hdmi_off_fops)
+	if (debugfs_create_file("off", 0644, dent, 0, &hdmi_off_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: 'off' fail\n",
 			__FILE__, __LINE__);
 		return -ENOENT;
 	}
 
-	if (debugfs_create_file("reg", 0600, dent, 0, &hdmi_reg_fops)
+	if (debugfs_create_file("reg", 0644, dent, 0, &hdmi_reg_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: 'reg' fail\n",
 			__FILE__, __LINE__);
