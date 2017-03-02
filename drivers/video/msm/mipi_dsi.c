@@ -38,6 +38,7 @@
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
+#include <linux/display_state.h>
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
@@ -55,6 +56,12 @@
 /* Check if LCD was connected. */
 #include "mipi_samsung_oled-8930.h"
 #endif
+
+bool display_on = true;
+bool is_display_on()
+{
+	return display_on;
+}
 
 u32 dsi_irq;
 u32 esc_byte_ratio;
@@ -197,6 +204,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
+	display_on = false;
 
 	return ret;
 }
@@ -480,6 +488,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 #ifdef CONFIG_LCD_NOTIFY
 		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 #endif
+		display_on = true;
 
 	return ret;
 }
