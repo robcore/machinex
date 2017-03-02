@@ -131,9 +131,9 @@ static void mdp_hw_cursor_enable_vsync(void)
 	if (sync_disabled) {
 
 		/* cancel pending task to disable MDP interrupts */
-		if (work_pending(&mdp_cursor_ctrl_worker))
+		if (work_pending(&mdp_cursor_ctrl_worker)) {
 			cancel_work_sync(&mdp_cursor_ctrl_worker);
-		else {
+		} else {
 			/* enable irq */
 			if (hdmi_prim_display)
 				mdp_enable_irq(MDP_OVERLAY1_TERM);

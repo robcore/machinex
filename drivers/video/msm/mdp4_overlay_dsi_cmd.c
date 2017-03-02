@@ -1083,8 +1083,8 @@ int mdp4_dsi_cmd_off(struct platform_device *pdev)
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
 	if (pipe == NULL) {
-		mutex_unlock(&mfd->dma->ov_mutex);
 		pr_err("%s: NO base pipe\n", __func__);
+		mutex_unlock(&mfd->dma->ov_mutex);
 		return ret;
 	}
 
@@ -1143,6 +1143,11 @@ int mdp4_dsi_cmd_off(struct platform_device *pdev)
 		 */
 		pr_warn("%s: update_cnt=%d\n", __func__, vp->update_cnt);
 		mdp4_dsi_cmd_pipe_clean(vp);
+	}
+
+	undx =  vctrl->update_ndx;
+	vp = &vctrl->vlist[undx];
+	if (vp->update_cnt) {
 		/*
 		 * pipe's iommu will be freed at next overlay play
 		 * and iommu_drop statistic will be increased by one
@@ -1150,6 +1155,7 @@ int mdp4_dsi_cmd_off(struct platform_device *pdev)
 		vp->update_cnt = 0;     /* empty queue */
 	}
 
+	mutex_unlock(&mfd->dma->ov_mutex);
 	pr_debug("%s-:\n", __func__);
 	return ret;
 }
@@ -1184,9 +1190,7 @@ static int mdp4_dsi_cmd_clk_check(struct vsycn_ctrl *vctrl)
 	int clk_set_on = 0;
 	unsigned long flags;
 
-	mutex_lock(&vctrl->update_lock);
 	if (atomic_read(&vctrl->suspend)) {
-		mutex_unlock(&vctrl->update_lock);
 		pr_err("%s: suspended, no more pan display\n", __func__);
 		return -EPERM;
 	}
@@ -1208,8 +1212,6 @@ static int mdp4_dsi_cmd_clk_check(struct vsycn_ctrl *vctrl)
 		vsync_irq_enable(INTR_PRIMARY_RDPTR, MDP_PRIM_RDPTR_TERM);
 	}
 
-	mutex_unlock(&vctrl->update_lock);
-
 	return 0;
 }
 
@@ -1230,11 +1232,6 @@ void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 	pipe = vctrl->base_pipe;
 	if (pipe == NULL) {
 		pr_err("%s: NO base pipe\n", __func__);
-		mutex_unlock(&mfd->dma->ov_mutex);
-		return;
-	}
-
-	if (mdp4_dsi_cmd_clk_check(vctrl) < 0) {
 		mutex_unlock(&mfd->dma->ov_mutex);
 		return;
 	}

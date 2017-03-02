@@ -1236,7 +1236,7 @@ int mipi_dsi_cmds_tx(struct dsi_buf *tp, struct dsi_cmd_desc *cmds, int cnt)
 		mipi_dsi_cmd_dma_add(tp, cm);
 		mipi_dsi_cmd_dma_tx(tp);
 		if (cm->wait)
-			msleep(cm->wait);
+			usleep_range(cm->wait * 1000, cm->wait * 1000);
 		cm++;
 	}
 
@@ -1859,15 +1859,18 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 		pr_err("%s: dma timeout error\n", __func__);
 		dumpreg(0);
 		dumstate(0);
+#ifdef CONFIG_SEC_DEBUG_MDP
+		sec_debug_mdp.dsi_err.mipi_tx_time_out_err_cnt++;
+#endif
 		mdp4_dump_regs();
 		dsi_clk_dump();
 		console_verbose();
 		dump_stack();
 	} else {
-		if(normalcase == 0){
+		if(normalcase==0){
 			dumpreg(1);
 			dumstate(1);
-			normalcase = 1;
+			normalcase=1;
 			mdp4_dump_regs();
 			dsi_clk_dump();
 		}

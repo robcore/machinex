@@ -238,8 +238,9 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
 #if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
-	if( is_booting == 1 )
+	if( is_booting == 1 ) {
 		is_booting = 0;
+	}
 #endif
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)

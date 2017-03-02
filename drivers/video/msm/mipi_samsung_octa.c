@@ -1753,7 +1753,6 @@ int mipi_samsung_octa_device_register(struct msm_panel_info *pinfo,
 		goto err_device_put;
 	}
 
-	Lpanel_colors = 2;
 	printk(KERN_INFO "[lcd] mipi_samsung_device_register end\n");
 
 	return ret;
@@ -1809,6 +1808,8 @@ static int __init mipi_samsung_disp_init(void)
 	}
 
 	ldi_chip();
+
+	Lpanel_colors = 2;
 
 	mipi_dsi_buf_alloc(&msd.samsung_tx_buf, DSI_BUF_SIZE);
 	mipi_dsi_buf_alloc(&msd.samsung_rx_buf, DSI_BUF_SIZE);

@@ -605,7 +605,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_PM)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct msm_fb_data_type *mfd;
@@ -741,7 +741,7 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 }
 #endif
 
-#if defined(CONFIG_PM)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int msm_fb_resume(struct platform_device *pdev)
 {
 	/* This resume function is called when interrupt is enabled.
@@ -1715,7 +1715,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 #endif
 	ret = 0;
 
-/*#ifdef CONFIG_HAS_POWERSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 
 	if (hdmi_prim_display ||
 		(mfd->panel_info.type != DTV_PANEL)) {
@@ -1723,7 +1723,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		mfd->power_suspend.resume = msmfb_power_resume;
 		register_power_suspend(&mfd->power_suspend);
 	}
-#endif */
+#endif
 
 #ifdef MSM_FB_ENABLE_DBGFS
 	{
