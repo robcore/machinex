@@ -383,3 +383,7 @@ config QUICK_WAKEUP
 	---help---
 	  Allow kernel driver to do periodic jobs without resuming the full system
 	  This option can increase battery life on android powered smartphone.
+
+config ADAPTIVE_TUNING
+        bool "Detect CPU idle"
+        depends on ARCH_MSM && CPU_IDLE

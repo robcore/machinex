@@ -15,6 +15,6 @@ obj-$(CONFIG_SUSPEND_TIME)	+= suspend_time.o
 obj-$(CONFIG_POWERSUSPEND)	+= powersuspend.o
 obj-$(CONFIG_PARTIALRESUME)	+= partialresume.o
 obj-$(CONFIG_QUICK_WAKEUP)	+= quickwakeup.o
-
 obj-$(CONFIG_MAGIC_SYSRQ)	+= poweroff.o
 obj-$(CONFIG_WAKEUP_REASON)	+= wakeup_reason.o
+obj-$(CONFIG_ADAPTIVE_TUNING)	+= adaptive_tuning.o
