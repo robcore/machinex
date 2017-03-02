@@ -93,7 +93,7 @@ unsigned int mdnie_lock;
 #endif
 
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
-int hijack = HIJACK_ENABLED;
+int hijack = HIJACK_DISABLED; /* By default, do not enable hijacking */
 int curve = 0;
 int black = 0;
 int black_r = 0;
@@ -115,31 +115,33 @@ extern int mipi_samsung_cabc_onoff ( int enable );
 struct dsi_buf mdnie_tun_tx_buf;
 struct dsi_buf mdnie_tun_rx_buf;
 
-struct mdnie_lite_tun_type mdnie_tun_state = {
-	.mdnie_enable = false,
-	.scenario = mDNIe_UI_MODE,
-	.background = DYNAMIC_MODE,
-	.outdoor = OUTDOOR_OFF_MODE,
-	.negative = mDNIe_NEGATIVE_OFF,
-	.blind = ACCESSIBILITY_OFF,
-};
-
-const char accessibility_name[ACCESSIBILITY_MAX][20] = {
-	"ACCESSIBILITY_OFF",
-	"NEGATIVE_MODE",
-	"COLOR_BLIND_MODE",
-#if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
-	"SCREEN_CURTAIN_MODE",
-#endif
-};
-
-const char background_name[MAX_BACKGROUND_MODE][16] = {
-	"DYNAMIC",
-	"STANDARD",
-	"NATURAL",
-	"MOVIE",
-	"AUTO",
-};
+static bool mdnie_nightmode_togglestate = false;
+static bool mdnie_blackout_togglestate = false;
+static int hijack_saved = 0;
+static int r_r_saved = 0;
+static int r_g_saved = 0;
+static int r_b_saved = 0;
+static int c_r_saved = 0;
+static int c_g_saved = 0;
+static int c_b_saved = 0;
+static int g_r_saved = 0;
+static int g_g_saved = 0;
+static int g_b_saved = 0;
+static int m_r_saved = 0;
+static int m_g_saved = 0;
+static int m_b_saved = 0;
+static int b_r_saved = 0;
+static int b_g_saved = 0;
+static int b_b_saved = 0;
+static int y_r_saved = 0;
+static int y_g_saved = 0;
+static int y_b_saved = 0;
+static int k_r_saved = 0;
+static int k_g_saved = 0;
+static int k_b_saved = 0;
+static int w_r_saved = 0;
+static int w_g_saved = 0;
+static int w_b_saved = 0;
 
 const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"UI_MODE",
@@ -156,6 +158,36 @@ const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"DMB_MODE",
 	"DMB_WARM_MODE",
 	"DMB_COLD_MODE",
+#endif
+};
+
+const char background_name[MAX_BACKGROUND_MODE][16] = {
+	"DYNAMIC",
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+    "CONTROL",
+#else
+	"STANDARD",
+#endif
+	"NATURAL",
+	"MOVIE",
+	"AUTO",
+};
+
+struct mdnie_lite_tun_type mdnie_tun_state = {
+	.mdnie_enable = false,
+	.scenario = mDNIe_UI_MODE,
+	.background = DYNAMIC_MODE,
+	.outdoor = OUTDOOR_OFF_MODE,
+	.negative = mDNIe_NEGATIVE_OFF,
+	.blind = ACCESSIBILITY_OFF,
+};
+
+const char accessibility_name[ACCESSIBILITY_MAX][20] = {
+	"ACCESSIBILITY_OFF",
+	"NEGATIVE_MODE",
+	"COLOR_BLIND_MODE",
+#if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
+	"SCREEN_CURTAIN_MODE",
 #endif
 };
 
