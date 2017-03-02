@@ -618,7 +618,7 @@ static ssize_t siop_enable_show(struct device *dev,
 {
 	int rc;
 
-	rc = snprintf((char *)buf, sizeof(buf), "%d\n",msd.dstat.cabc);
+	rc = snprintf((char *)buf, sizeof(*buf), "%d\n",msd.dstat.cabc);
 	pr_info("%s :[MIPI2LVDS] CABC: %d\n", __func__, msd.dstat.cabc);
 	return rc;
 }
