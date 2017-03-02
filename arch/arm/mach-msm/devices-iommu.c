@@ -1121,4 +1121,3 @@ module_exit(iommu_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Stepan Moskovchenko <stepanm@codeaurora.org>");
-
