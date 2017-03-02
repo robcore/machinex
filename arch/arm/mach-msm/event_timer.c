@@ -161,17 +161,16 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer)
 
 	while (next && (ktime_to_ns(next->expires)
 		<= ktime_to_ns(hrtimer->node.expires))) {
-		if (!next)
+		if (!next) {
+			spin_unlock_irqrestore(&event_timer_lock, flags);
 			goto hrtimer_cb_exit;
+		}
 
 		event = container_of(next, struct event_timer_info, node);
-		if (!event)
+		if (!event) {
+			spin_unlock_irqrestore(&event_timer_lock, flags);
 			goto hrtimer_cb_exit;
-
-		if (msm_event_debug_mask && MSM_EVENT_TIMER_DEBUG)
-			pr_info("%s: Deleting event 0x%x @ %lu", __func__,
-			(unsigned int)event,
-			(unsigned long)ktime_to_ns(next->expires));
+		}
 
 		timerqueue_del(&timer_head, &event->node);
 
@@ -183,8 +182,8 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer)
 	if (next)
 		create_hrtimer(next->expires);
 
-hrtimer_cb_exit:
 	spin_unlock_irqrestore(&event_timer_lock, flags);
+hrtimer_cb_exit:
 	return HRTIMER_NORESTART;
 }
 
