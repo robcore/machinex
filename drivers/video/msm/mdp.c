@@ -3513,7 +3513,7 @@ static void mdp_power_resume(struct power_suspend *h)
 	mdp_suspended = FALSE;
 	mutex_unlock(&mdp_suspend_mutex);
 }
-#endif */
+#endif
 
 static int mdp_remove(struct platform_device *pdev)
 {

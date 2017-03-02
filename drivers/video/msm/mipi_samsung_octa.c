@@ -1484,8 +1484,11 @@ static ssize_t panel_colors_show(struct device *dev, struct device_attribute *at
 
 static ssize_t panel_colors_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
+	struct msm_fb_data_type *mfd;
 	int ret;
 	unsigned int value;
+
+	mfd = platform_get_drvdata(msd.msm_pdev);
 
 	ret = sscanf(buf, "%d\n", &value);
 	if (ret != 1)
@@ -1499,6 +1502,16 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 	Lpanel_colors = value;
 
 	panel_load_colors(Lpanel_colors);
+
+	msd.mpd->need_update = 1;
+
+	if (mfd->resume_state == MIPI_RESUME_STATE) {
+		if (msd.mpd->backlight_control(mfd->bl_level)) {
+			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
+		}
+	} else {
+		pr_debug("%s : panel is off state!!\n", __func__);
+	}
 
 	return size;
 }
