@@ -1618,19 +1618,19 @@ static void gamma_init_vt888(struct SMART_DIM *pSmart, char *str, int size)
 				(pSmart->brightness_level >= 110)) {
 		/* V255 */
 		level_255_temp = (str[0] << 8) | str[1] ;
-		level_255_temp +=  adding_180cd_110cd_vt888[0][0];
+		level_255_temp +=  adding_180cd_110cd_vt888[1][0];
 		level_255_temp_MSB = level_255_temp / 256;
 		gamma_setting[0] = level_255_temp_MSB & 0xff;
 		gamma_setting[1] = level_255_temp & 0xff;
 
 		level_255_temp = (str[2] << 8) | str[3] ;
-		level_255_temp +=  adding_180cd_110cd_vt888[0][1];
+		level_255_temp +=  adding_180cd_110cd_vt888[1][1];
 		level_255_temp_MSB = level_255_temp / 256;
 		gamma_setting[2] = level_255_temp_MSB & 0xff;
 		gamma_setting[3] = level_255_temp & 0xff;
 
 		level_255_temp = (str[4] << 8) | str[5] ;
-		level_255_temp +=  adding_180cd_110cd_vt888[0][2];
+		level_255_temp +=  adding_180cd_110cd_vt888[1][2];
 		level_255_temp_MSB = level_255_temp / 256;
 		gamma_setting[4] = level_255_temp_MSB & 0xff;
 		gamma_setting[5] = level_255_temp & 0xff;
@@ -1906,7 +1906,7 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 		bl_level = AOR_ADJUST_CD;
 	}
 
-	if ((pSmart->brightness_level <= 290) &&
+	if ((pSmart->brightness_level <= 300) &&
 					(pSmart->brightness_level >= 190)) {
 		for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
 			point_index = S6E8FA_ARRAY[cnt+1];
