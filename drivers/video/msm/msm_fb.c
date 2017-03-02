@@ -977,10 +977,12 @@ static void msm_fb_scale_bl(__u32 bl_max, __u32 *bl_lvl)
 	pr_debug("%s: input = %d, scale = %d", __func__, temp, bl_scale);
 	if (temp >= bl_min_lvl) {
 		/* checking if temp is below bl_max else capping */
+#ifdef CONFIG_SUCK_MY_DICK
 		if (temp > bl_max) {
 			pr_warn("%s: invalid bl level\n", __func__);
 			temp = bl_max;
 		}
+#endif
 		/* checking if bl_scale is below 1024 else capping */
 		if (bl_scale > 1024) {
 			pr_warn("%s: invalid bl scale\n", __func__);
@@ -988,12 +990,11 @@ static void msm_fb_scale_bl(__u32 bl_max, __u32 *bl_lvl)
 		}
 		/* bl_scale is the numerator of scaling fraction (x/1024)*/
 		temp = (temp * bl_scale) / 1024;
-
+	}
 		/*if less than minimum level, use min level*/
 		if (temp < bl_min_lvl)
 			temp = bl_min_lvl;
-	}
-	pr_debug("%s: output = %d", __func__, temp);
+
 
 	(*bl_lvl) = temp;
 }
