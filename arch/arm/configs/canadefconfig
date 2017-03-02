@@ -1572,6 +1572,7 @@ CONFIG_BCM2079X_NFC_I2C=y
 # CONFIG_DESKDOCK_DISABLE is not set
 # CONFIG_SRAM is not set
 # CONFIG_GENERIC_BLN is not set
+# CONFIG_BLX is not set
 # CONFIG_C2PORT is not set
 
 #
