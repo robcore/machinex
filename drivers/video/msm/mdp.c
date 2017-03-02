@@ -1956,7 +1956,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 		 * pending
 		 */
 
-		if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
+		//if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
 			/*
 			 * try to cancel the current work if it fails to
 			 * stop (which means del_timer can't delete it
@@ -1965,8 +1965,14 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 			 * accept the next job which is same as
 			 * queue_delayed_work(mdp_timer_duration = 0)
 			 */
+
+			/* Rob note: delayed_work_pending is pretty deprecated
+			  due to its unreliability, just go ahead and cancel
+			  any potential work.
+			*/
+
 			cancel_delayed_work(&mdp_pipe_ctrl_worker);
-		}
+		//}
 
 		if ((mdp_all_blocks_off) && (mdp_current_clk_on)) {
 			mutex_lock(&mdp_suspend_mutex);
@@ -2184,7 +2190,7 @@ irqreturn_t mdp_isr(int irq, void *ptr)
 
 		/* DMA_E LCD-Out Complete */
 		if (mdp_interrupt & MDP_DMA_E_DONE) {
-			dma = &dma_s_data;
+			dma = &dma_e_data;
 			dma->busy = FALSE;
 			mdp_pipe_ctrl(MDP_DMA_E_BLOCK, MDP_BLOCK_POWER_OFF,
 									TRUE);
@@ -2258,7 +2264,11 @@ static void mdp_drv_init(void)
 	spin_lock_init(&mdp_lut_push_lock);
 	mdp_dma_wq = create_singlethread_workqueue("mdp_dma_wq");
 	mdp_vsync_wq = create_singlethread_workqueue("mdp_vsync_wq");
-	mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
+	/*mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
+	Gives mdp pipe ctrl high priority */
+	mdp_pipe_ctrl_wq = alloc_workqueue("mdp_pipe_ctrl_wq",
+					WQ_HIGHPRI, 0);
+
 	INIT_DELAYED_WORK(&mdp_pipe_ctrl_worker,
 			  mdp_pipe_ctrl_workqueue_handler);
 
