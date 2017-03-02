@@ -88,7 +88,7 @@ static int sec_therm_get_adc_data(struct sec_therm_info *info)
 	int i, adc_data;
 	struct pm8xxx_adc_chan_result result;
 #if defined (CONFIG_MACH_LT02)
-	int system_rev = msm8930_get_board_rev();
+	unsigned int system_rev = msm8930_get_board_rev();
 #endif
 
 	for (i = 0; i < ADC_SAMPLING_CNT; i++) {

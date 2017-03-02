@@ -136,7 +136,7 @@ struct jc_ctrl_t {
 	bool hw_vdis_mode;
 	bool torch_mode;
 	bool fw_update;
-	int system_rev;
+	unsigned int system_rev;
 	bool movie_mode;
 	int shot_mode;
 	bool anti_stream_off;

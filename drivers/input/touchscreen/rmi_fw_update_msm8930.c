@@ -86,7 +86,7 @@
 #define MIN_SLEEP_TIME_US 50
 #define MAX_SLEEP_TIME_US 100
 
-extern int system_rev;
+extern unsigned int system_rev;
 
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
@@ -807,8 +807,8 @@ static bool fwu_check_skip_reflash(bool mode,bool factory_fw,
 				"%s:FW_version Bin:0x%02X, FW_version IC:0x%02X", __func__,
 				fwu->rmi4_data->fw_version_of_bin, fwu->rmi4_data->fw_version_of_ic);
 		if (fwu->rmi4_data->force_update == true)
-			return false;		
-		
+			return false;
+
 		if ((fwu->rmi4_data->fw_version_of_bin <= fwu->rmi4_data->fw_version_of_ic) &&
 			(!mode) && (!fwu->rmi4_data->flash_prog_mode)) {
 			dev_info(&fwu->rmi4_data->i2c_client->dev,
@@ -1589,7 +1589,7 @@ i2c_err_retry:
 			 SYNAPTICS_PRODUCT_ID_MANUFACTURE_SY4, 9) == 0) {
 		rmi4_data->manufactures_num_of_ic = 0x03;
 	} else
-		rmi4_data->manufactures_num_of_ic = 0x00;	
+		rmi4_data->manufactures_num_of_ic = 0x00;
 #else
 	if (strncmp(fwu->product_id,
 			 SYNAPTICS_PRODUCT_ID_MANUFACTURE_2, 9) == 0) {
@@ -1600,7 +1600,7 @@ i2c_err_retry:
 	} else
 		rmi4_data->manufactures_num_of_ic = 0x01;
 #endif
-	
+
 	dev_info(&rmi4_data->i2c_client->dev,
 			"%s: [IC] [F01 product info, ID(revision)] [0x%04X 0x%04X, %s(0X%X)], PANEL : 0x%02X, manufacture:0x%02X\n",
 			__func__, fwu->productinfo1,
