@@ -859,6 +859,13 @@ config GENERIC_BLN_USE_WAKELOCK
 	help
 		Say Y here use the wakelock implementation of the bln driver
 
+config BLX
+	bool "Enable BLX"
+	default y
+	help
+	  Enable Battery Life eXtender
+
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
