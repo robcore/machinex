@@ -365,49 +365,25 @@ static struct msm_iommu_dev vcodec_b_iommu = {
 static struct msm_iommu_dev gfx3d_iommu = {
 	.name = "gfx3d",
 	.ncb = 3,
-//[S_QCT_PATCH][CASE_00938184] Patch for iommu page fault
-#if 0
-	.ttbr_split = 2,
-#else
-	.ttbr_split = 1,
-#endif
-//[E_QCT_PATCH]
+	.ttbr_split = 0,
 };
 
 static struct msm_iommu_dev gfx3d1_iommu = {
 	.name = "gfx3d1",
 	.ncb = 3,
-//[S_QCT_PATCH][CASE_00938184] Patch for iommu page fault
-#if 0
-	.ttbr_split = 2,
-#else
-	.ttbr_split = 1,
-#endif
-//[E_QCT_PATCH]
+	.ttbr_split = 0,
 };
 
 static struct msm_iommu_dev gfx2d0_iommu = {
 	.name = "gfx2d0",
 	.ncb = 2,
-//[S_QCT_PATCH][CASE_00938184] Patch for iommu page fault
-#if 0
-	.ttbr_split = 2,
-#else
-	.ttbr_split = 1,
-#endif
-//[E_QCT_PATCH]
+	.ttbr_split = 0,
 };
 
 static struct msm_iommu_dev gfx2d1_iommu = {
 	.name = "gfx2d1",
 	.ncb = 2,
-//[S_QCT_PATCH][CASE_00938184] Patch for iommu page fault
-#if 0
-	.ttbr_split = 2,
-#else
-	.ttbr_split = 1,
-#endif
-//[E_QCT_PATCH]
+	.ttbr_split = 0,
 };
 
 static struct msm_iommu_dev vcap_iommu = {
