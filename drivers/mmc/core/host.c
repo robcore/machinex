@@ -91,7 +91,6 @@ static ssize_t clkgate_delay_store(struct device *dev,
  */
 static void mmc_host_clk_gate_delayed(struct mmc_host *host)
 {
-	unsigned long tick_ns;
 	unsigned long freq = host->ios.clock;
 	unsigned long flags;
 
@@ -115,8 +114,6 @@ static void mmc_host_clk_gate_delayed(struct mmc_host *host)
 	 */
 	if (!host->clk_requests) {
 		spin_unlock_irqrestore(&host->clk_lock, flags);
-		tick_ns = DIV_ROUND_UP(1000000000, freq);
-		ndelay(host->clk_delay * tick_ns);
 	} else {
 		/* New users appeared while waiting for this work */
 		spin_unlock_irqrestore(&host->clk_lock, flags);
