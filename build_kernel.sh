@@ -75,15 +75,30 @@ if [[ $USEPRV = "n" ]]; then
 				SUBVERSION=P$PROTO
 			fi
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
+			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
+				echo "removing previously compiled folder and zip of the same name"
+				sleep 1
+				rm -rf /media/root/robcore/AIK/$OUTFOLDER
+			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		else
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
+			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
+				echo "removing previously compiled folder and zip of the same name"
+				sleep 1
+				rm -rf /media/root/robcore/AIK/$OUTFOLDER
+			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 		fi
 	else
 		echo -n "Name? (Number-P-N) [ENTER]: "
 		read OVNAME
 		OUTFOLDER=machinex-Mark$OVNAME
+		if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
+			echo "removing previously compiled folder and zip of the same name"
+			sleep 1
+			rm -rf /media/root/robcore/AIK/$OUTFOLDER
+		fi;
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 	fi;
 else
