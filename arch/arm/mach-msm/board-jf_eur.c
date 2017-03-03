@@ -175,7 +175,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x5400000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -242,11 +242,15 @@ static int __init sec_tsp_mode(char *mode)
 	printk(KERN_ERR "%s: LCD_ID = 0x%s, val: 0X%x, ret1: 0x%x",
 			__func__, mode, ret, ret1);
 
-	if (ret1 == 0x02 || ret1 == 0x03 || (ret1 == 0x00 && system_rev <= BOARD_REV09))
+	if (ret1 == 0x02 || ret1 == 0x03 || ret1 == 0x00)
 		sec_tsp_synaptics_mode = 0;
-	else if ((ret == 0) || (ret1 == 0x00 && system_rev >= BOARD_REV10))
-		sec_tsp_synaptics_mode = 1;
 	else
+		sec_tsp_synaptics_mode = 1;
+
+	if (ret == 0)
+		sec_tsp_synaptics_mode = 1;
+
+	if (ret1 == 0x00 && system_rev >= BOARD_REV10)
 		sec_tsp_synaptics_mode = 1;
 
 	pr_info("%s : %s", __func__, sec_tsp_synaptics_mode ?
@@ -973,7 +977,7 @@ static struct persistent_ram_descriptor per_ram_descs[] __initdata = {
                .name = "kexec_hb_page",
                .size = SZ_1M - (KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR),
 #else
-               .size = SZ_1M,
+                .size = SZ_1M,
 #endif
        }
 };
@@ -1467,7 +1471,7 @@ static void sii8240_hw_onoff(bool onoff)
 			if (rc)
 				pr_err("error enabling regulator\n");
 		}
-		mdelay(1);
+		usleep(1*1000);
 		if (system_rev >= 6)
 			ice_gpiox_set(FPGA_VSIL_A_1P2_EN, 1);
 		if (system_rev >= 4 && system_rev < 6)
@@ -1497,7 +1501,7 @@ static void sii8240_hw_onoff(bool onoff)
 					pr_err("error disable mhl_l32\n");
 			}
 		}
-		mdelay(20);
+		usleep_range(10000, 20000);
 
 		if (system_rev >= 6)
 			ice_gpiox_set(FPGA_GPIO_MHL_RST, 0);
@@ -1512,16 +1516,16 @@ static void sii8240_hw_onoff(bool onoff)
 
 static void sii8240_hw_reset(void)
 {
-	mdelay(20);
+	usleep_range(10000, 20000);
 	if (system_rev >= 6) {
 		if (ice_gpiox_set(FPGA_GPIO_MHL_RST, 1))
 			pr_info("%s error in making GPIO_MHL_RST HIGH\n",
 			__func__);
-		mdelay(10);
+		usleep_range(5000, 20000);
 		if (ice_gpiox_set(FPGA_GPIO_MHL_RST, 0))
 			pr_err("%s error in making GPIO_MHL_RST Low\n",
 			__func__);
-		mdelay(20);
+		usleep_range(10000, 20000);
 		if (ice_gpiox_set(FPGA_GPIO_MHL_RST, 1))
 			pr_err("%s error in making GPIO_MHL_RST HIGH\n",
 			__func__);
@@ -1531,12 +1535,12 @@ static void sii8240_hw_reset(void)
 			pr_err("%s error in making GPIO_MHL_RST HIGH\n",
 				__func__);
 
-		mdelay(10);
+		usleep_range(5000, 20000);
 		if (gpio_direction_output(GPIO_MHL_RST, 0))
 			pr_err("%s error in making GPIO_MHL_RST Low\n",
 			__func__);
 
-		mdelay(20);
+		usleep_range(10000, 20000);
 		if (gpio_direction_output(GPIO_MHL_RST, 1))
 			pr_err("%s error in making GPIO_MHL_RST HIGH\n",
 			__func__);
