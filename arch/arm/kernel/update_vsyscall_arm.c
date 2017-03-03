@@ -54,9 +54,7 @@ struct kernel_wtm_t {
  * data, as well as additional fields needed to calculate
  * gettimeofday, clock_gettime, etc.
  */
-void
-update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
-	struct clocksource *c, u32 mult)
+void update_vsyscall(struct timekeeper *tk)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
