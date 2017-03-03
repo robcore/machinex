@@ -348,6 +348,39 @@ int rw_verify_area(int read_write, struct file *file, loff_t *ppos, size_t count
 	return count > MAX_RW_COUNT ? MAX_RW_COUNT : count;
 }
 
+static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
+{
+	set_current_state(TASK_UNINTERRUPTIBLE);
+	if (!kiocbIsKicked(iocb))
+		schedule();
+	else
+		kiocbClearKicked(iocb);
+	__set_current_state(TASK_RUNNING);
+}
+
+ssize_t do_aio_read(struct kiocb *kiocb, const struct iovec *iov,
+		    unsigned long nr_segs, loff_t pos)
+{
+	struct file *file = kiocb->ki_filp;
+
+	if (file->f_op->read_iter) {
+		size_t count;
+		struct iov_iter iter;
+		int ret;
+
+		count = 0;
+		ret = generic_segment_checks(iov, &nr_segs, &count,
+					     VERIFY_WRITE);
+		if (ret)
+			return ret;
+
+		iov_iter_init(&iter, iov, nr_segs, count, 0);
+		return file->f_op->read_iter(kiocb, &iter, pos);
+	}
+
+	return file->f_op->aio_read(kiocb, iov, nr_segs, pos);
+}
+
 ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
 {
 	struct iovec iov = { .iov_base = buf, .iov_len = len };
@@ -356,9 +389,16 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
 
-	ret = filp->f_op->aio_read(&kiocb, &iov, 1, kiocb.ki_pos);
+	for (;;) {
+		ret = do_aio_read(&kiocb, &iov, 1, kiocb.ki_pos);
+		if (ret != -EIOCBRETRY)
+			break;
+		wait_on_retry_sync_kiocb(&kiocb);
+	}
+
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;
@@ -373,7 +413,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
 	if (!(file->f_mode & FMODE_READ))
 		return -EBADF;
-	if (!file->f_op->read && !file->f_op->aio_read)
+	if (!file_readable(file))
 		return -EINVAL;
 	if (unlikely(!access_ok(VERIFY_WRITE, buf, count)))
 		return -EFAULT;
@@ -397,6 +437,29 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
 EXPORT_SYMBOL(vfs_read);
 
+ssize_t do_aio_write(struct kiocb *kiocb, const struct iovec *iov,
+		     unsigned long nr_segs, loff_t pos)
+{
+	struct file *file = kiocb->ki_filp;
+
+	if (file->f_op->write_iter) {
+		size_t count;
+		struct iov_iter iter;
+		int ret;
+
+		count = 0;
+		ret = generic_segment_checks(iov, &nr_segs, &count,
+					     VERIFY_READ);
+		if (ret)
+			return ret;
+
+		iov_iter_init(&iter, iov, nr_segs, count, 0);
+		return file->f_op->write_iter(kiocb, &iter, pos);
+	}
+
+	return file->f_op->aio_write(kiocb, iov, nr_segs, pos);
+}
+
 ssize_t do_sync_write(struct file *filp, const char __user *buf, size_t len, loff_t *ppos)
 {
 	struct iovec iov = { .iov_base = (void __user *)buf, .iov_len = len };
@@ -405,9 +468,16 @@ ssize_t do_sync_write(struct file *filp, const char __user *buf, size_t len, lof
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
 
-	ret = filp->f_op->aio_write(&kiocb, &iov, 1, kiocb.ki_pos);
+	for (;;) {
+		ret = do_aio_write(&kiocb, &iov, 1, *ppos);
+		if (ret != -EIOCBRETRY)
+			break;
+		wait_on_retry_sync_kiocb(&kiocb);
+	}
+
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;
@@ -422,7 +492,7 @@ ssize_t __kernel_write(struct file *file, const char *buf, size_t count, loff_t 
 	const char __user *p;
 	ssize_t ret;
 
-	if (!file->f_op->write && !file->f_op->aio_write)
+	if (!file->f_op || (!file->f_op->write && !file->f_op->aio_write))
 		return -EINVAL;
 
 	old_fs = get_fs();
@@ -582,9 +652,16 @@ ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
 
-	ret = fn(&kiocb, iov, nr_segs, kiocb.ki_pos);
+	for (;;) {
+		ret = fn(&kiocb, iov, nr_segs, kiocb.ki_pos);
+		if (ret != -EIOCBRETRY)
+			break;
+		wait_on_retry_sync_kiocb(&kiocb);
+	}
+
 	if (ret == -EIOCBQUEUED)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;

@@ -2322,7 +2322,7 @@ int ocfs2_inode_lock_full_nested(struct inode *inode,
 	status = __ocfs2_cluster_lock(osb, lockres, level, dlm_flags,
 				      arg_flags, subclass, _RET_IP_);
 	if (status < 0) {
-		if (status != -EAGAIN)
+		if (status != -EAGAIN && status != -EIOCBRETRY)
 			mlog_errno(status);
 		goto bail;
 	}
