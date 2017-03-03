@@ -1733,12 +1733,8 @@ static unsigned int sec_bat_get_polling_time(
 	if (battery->polling_short)
 		return battery->pdata->polling_time[
 			SEC_BATTERY_POLLING_TIME_BASIC];
-	/* set polling time to 46s to reduce current noise on wc */
-	else if (battery->cable_type == POWER_SUPPLY_TYPE_WIRELESS &&
-			battery->status == POWER_SUPPLY_STATUS_CHARGING)
-		battery->polling_time = 46;
-
-	return battery->polling_time;
+	else
+		return battery->polling_time;
 }
 
 static bool sec_bat_is_short_polling(
@@ -1951,7 +1947,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 * if cable is connected and disconnected,
 	 * activated wake lock in a few seconds
 	 */
-	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 5);
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &
@@ -1961,13 +1957,6 @@ static void sec_bat_cable_work(struct work_struct *work)
 			val.intval = POWER_SUPPLY_TYPE_BATTERY;
 			psy_do_property("sec-fuelgauge", set,
 					POWER_SUPPLY_PROP_CHARGE_FULL, val);
-			/* To get SOC value (NOT raw SOC), need to reset value */
-			val.intval = 0;
-			psy_do_property("sec-fuelgauge", get,
-					POWER_SUPPLY_PROP_CAPACITY, val);
-
-
-			battery->capacity = val.intval;
 		}
 		battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 		battery->is_recharging = false;
@@ -2761,10 +2750,14 @@ static int sec_bat_set_property(struct power_supply *psy,
 				battery->pdata->check_cable_result_callback(
 					battery->cable_type);
 
-
 			wake_lock(&battery->cable_wake_lock);
 				queue_work_on(0, battery->monitor_wqueue,
 					&battery->cable_work);
+			} else {
+				dev_dbg(battery->dev,
+					"%s: Cable is NOT Changed(%d)\n",
+					__func__, battery->cable_type);
+				/* Do NOT activate cable work for NOT changed */
 			}
 		} else {
 			if (sec_bat_get_cable_type(battery,
@@ -2820,9 +2813,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		psy_do_property("sec-charger", get,
 			POWER_SUPPLY_PROP_CHARGE_TYPE, value);
-		if ((value.intval == POWER_SUPPLY_CHARGE_TYPE_UNKNOWN) || 
-			(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY &&
-			battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS))
+		if (value.intval == POWER_SUPPLY_CHARGE_TYPE_UNKNOWN)
 			/* if error in CHARGE_TYPE of charger
 			 * set CHARGE_TYPE as NONE
 			 */
@@ -2842,11 +2833,6 @@ static int sec_bat_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = battery->cable_type;
-		if ((val->intval == POWER_SUPPLY_TYPE_BATTERY) &&
-				(battery->pdata->is_lpm())) {
-			/* Userspace expects 0 for no-supply */
-			val->intval = 0;
-			}
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = battery->pdata->technology;
@@ -2927,8 +2913,6 @@ static int sec_usb_get_property(struct power_supply *psy,
 		break;
 	}
 
-	if (battery->slate_mode)
-		val->intval = 0;
 	return 0;
 }
 

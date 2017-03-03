@@ -10,10 +10,6 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_fuelgauge.h>
-#include <linux/battery/sec_charger.h>
-#include <linux/battery/sec_battery.h>
-#include <linux/gpio.h>
-
 static struct device_attribute sec_fg_attrs[] = {
 	SEC_FG_ATTR(reg),
 	SEC_FG_ATTR(data),
@@ -106,14 +102,6 @@ static int sec_fg_get_property(struct power_supply *psy,
 			if (soc_type == SEC_FUELGAUGE_CAPACITY_TYPE_RAW)
 				break;
 
-			/* check whether doing the wake_unlock */
-			if ((val->intval > fuelgauge->pdata->fuel_alert_soc) &&
-				fuelgauge->is_fuel_alerted) {
-				wake_unlock(&fuelgauge->fuel_alert_wake_lock);
-				sec_hal_fg_fuelalert_init(fuelgauge->client,
-					fuelgauge->pdata->fuel_alert_soc);
-			}
-
 			if (fuelgauge->pdata->capacity_calculation_type &
 				(SEC_FUELGAUGE_CAPACITY_TYPE_SCALE |
 				 SEC_FUELGAUGE_CAPACITY_TYPE_DYNAMIC_SCALE))
@@ -129,6 +117,14 @@ static int sec_fg_get_property(struct power_supply *psy,
 
 			/* get only integer part */
 			val->intval /= 10;
+
+			/* check whether doing the wake_unlock */
+			if ((val->intval > fuelgauge->pdata->fuel_alert_soc) &&
+					fuelgauge->is_fuel_alerted) {
+				wake_unlock(&fuelgauge->fuel_alert_wake_lock);
+				sec_hal_fg_fuelalert_init(fuelgauge->client,
+						fuelgauge->pdata->fuel_alert_soc);
+			}
 
 			/* (Only for atomic capacity)
 			 * In initial time, capacity_old is 0.
@@ -191,9 +187,6 @@ static int sec_fg_calculate_dynamic_scale(
 	fuelgauge->capacity_max =
 		(fuelgauge->capacity_max * 99 / 100);
 
-	/* update capacity_old for sec_fg_get_atomic_capacity algorithm */
-	fuelgauge->capacity_old = 100;
-
 	dev_info(&fuelgauge->client->dev, "%s: %d is used for capacity_max\n",
 		__func__, fuelgauge->capacity_max);
 
@@ -206,7 +199,6 @@ static int sec_fg_set_property(struct power_supply *psy,
 {
 	struct sec_fuelgauge_info *fuelgauge =
 		container_of(psy, struct sec_fuelgauge_info, psy_fg);
-	sec_battery_platform_data_t *pdata = fuelgauge->pdata;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -226,10 +218,9 @@ static int sec_fg_set_property(struct power_supply *psy,
 			fuelgauge->is_charging = false;
 		else
 			fuelgauge->is_charging = true;
-		/* fall through */
 	case POWER_SUPPLY_PROP_CAPACITY:
 		if (val->intval == SEC_FUELGAUGE_CAPACITY_TYPE_RESET) {
-			fuelgauge->initial_update_of_soc = true;
+			fuelgauge->is_reset = true;
 			if (!sec_hal_fg_reset(fuelgauge->client))
 				return -EINVAL;
 			else
@@ -255,8 +246,7 @@ static void sec_fg_isr_work(struct work_struct *work)
 	sec_hal_fg_fuelalert_process(fuelgauge, fuelgauge->is_fuel_alerted);
 
 	/* process for others */
-	if (fuelgauge->pdata->fuelalert_process != NULL)
-		fuelgauge->pdata->fuelalert_process(fuelgauge->is_fuel_alerted);
+	fuelgauge->pdata->fuelalert_process(fuelgauge->is_fuel_alerted);
 }
 
 static irqreturn_t sec_fg_irq_thread(int irq, void *irq_data)
@@ -433,11 +423,7 @@ static int __devinit sec_fuelgauge_probe(struct i2c_client *client,
 			dev_err(&client->dev,
 				"%s: Failed to Enable Wakeup Source(%d)\n",
 				__func__, ret);
-	} else {
-			dev_err(&client->dev, "%s: Failed gpio_to_irq(%d)\n",
-				__func__, fuelgauge->pdata->fg_irq);
-			goto err_supply_unreg;
-		}
+	}
 
 	fuelgauge->is_fuel_alerted = false;
 	if (fuelgauge->pdata->fuel_alert_soc >= 0) {
