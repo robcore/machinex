@@ -114,6 +114,37 @@ void idr_remove_all(struct idr *idp);
 void idr_destroy(struct idr *idp);
 void idr_init(struct idr *idp);
 
+/**
+ * backport of idr idr_alloc() usage
+ *
+ * This backports a patch series send by Tejun Heo:
+ * https://lkml.org/lkml/2013/2/2/159
+ */
+static inline void compat_idr_destroy(struct idr *idp)
+{
+	idr_remove_all(idp);
+	idr_destroy(idp);
+}
+//#define idr_destroy(idp) compat_idr_destroy(idp)
+
+static inline int idmx_alloc(struct idmx *idmx, void *ptr, int start, int end,
+			    gfp_t gfp_mask)
+{
+	int id, ret;
+
+	do {
+		if (!idmx_pre_get(idmx, gfp_mask))
+			return -ENOMEM;
+		ret = idmx_get_new_above(idmx, ptr, start, &id);
+		if (!ret && id > end) {
+			idr_remove(idmx, id);
+			ret = -ENOSPC;
+		}
+	} while (ret == -EAGAIN);
+
+	return ret ? ret : id;
+}
+
 static inline void idr_preload(gfp_t gfp_mask)
 {
 }
