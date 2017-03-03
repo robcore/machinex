@@ -14,41 +14,13 @@
 #include <linux/timekeeper_internal.h>
 #include <linux/time.h>
 #include "update_vsyscall_arm.h"
+
+static DEFINE_MUTEX(machinex_vsys);
 /*
- * See entry-armv.S for the offsets into the kernel user helper for
- * these fields.
+ * This read-write spinlock protects us from races in SMP while
+ * updating the kernel user helper-embedded time.
  */
-#define ARM_VSYSCALL_TIMER_TZ			0xf20
-#define ARM_VSYSCALL_TIMER_SEQ			0xf28
-#define ARM_VSYSCALL_TIMER_OFFSET		0xf30
-#define ARM_VSYSCALL_TIMER_WTM_TV_SEC		0xf38
-#define ARM_VSYSCALL_TIMER_WTM_TV_NSEC		0xf3c
-#define ARM_VSYSCALL_TIMER_CYCLE_LAST		0xf40
-#define ARM_VSYSCALL_TIMER_MASK			0xf48
-#define ARM_VSYSCALL_TIMER_MULT			0xf50
-#define ARM_VSYSCALL_TIMER_SHIFT		0xf54
-#define ARM_VSYSCALL_TIMER_TV_SEC		0xf58
-#define ARM_VSYSCALL_TIMER_TV_NSEC		0xf5c
-
-struct kernel_gtod_t {
-	u64  cycle_last;
-	u64  mask;
-	u32  mult;
-	u32  shift;
-	u32  tv_sec;
-	u32  tv_nsec;
-};
-
-struct kernel_tz_t {
-	u32  tz_minuteswest;
-	u32  tz_dsttime;
-};
-
-struct kernel_wtm_t {
-	u32  tv_sec;
-	u32  tv_nsec;
-};
-
+__cacheline_aligned_in_smp DEFINE_SPINLOCK(mxvsys->kuh_time_lock);
 /*
  * Updates the kernel user helper area with the current timespec
  * data, as well as additional fields needed to calculate
@@ -60,14 +32,15 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
-	unsigned *seqnum = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
+	unsigned *seqcount = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
 	struct kernel_gtod_t *dgtod = (struct kernel_gtod_t *)(vectors +
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
 
-	write_seqlock_irqsave(&kuh_time_lock, flags);
-	*seqnum = kuh_time_lock.sequence;
+	mutex_lock(&machinex_vsys);
+	spin_lock_irqsave(&mxvsys->kuh_time_lock, flags);
+	*seqcount = write_seqcount_begin(&mxvsys->seq)
 	dgtod->cycle_last = c->cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
@@ -76,25 +49,30 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 	dgtod->tv_nsec = ts->tv_nsec;
 	dgwtm->tv_sec = wtm->tv_sec;
 	dgwtm->tv_nsec = wtm->tv_nsec;
-	*seqnum = kuh_time_lock.sequence + 1;
-	write_sequnlock_irqrestore(&kuh_time_lock, flags);
+	*seqcount = write_seqcount_end(&mxvsys->seq)
+	spin_lock_irqrestore(&mxvsys->kuh_time_lock, flags);
+	mutex_unlock(&machinex_vsys);
 }
-EXPORT_SYMBOL(update_vsyscall);
+EXPORT_SYMBOL(update_vsyscall_old);
 
 void
 update_vsyscall_tz(void)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
-	unsigned *seqnum = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
+	unsigned *seqcount = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
 	struct kernel_tz_t *dgtod = (struct kernel_tz_t *)(vectors +
 		ARM_VSYSCALL_TIMER_TZ);
 
-	write_seqlock_irqsave(&kuh_time_lock, flags);
-	*seqnum = kuh_time_lock.sequence;
+	mutex_lock(&machinex_vsys);
+	spin_lock_irqsave(&mxvsys->kuh_time_lock, flags);
+	*seqcount = write_seqcount_begin(&mxvsys->seq)
 	dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
 	dgtod->tz_dsttime = sys_tz.tz_dsttime;
-	*seqnum = kuh_time_lock.sequence + 1;
-	write_sequnlock_irqrestore(&kuh_time_lock, flags);
+	*seqcount = write_seqcount_end(&mxvsys->seq)
+	spin_lock_irqrestore(&mxvsys->kuh_time_lock, flags);
+	mutex_unlock(&machinex_vsys);
+
+
 }
 EXPORT_SYMBOL(update_vsyscall_tz);
