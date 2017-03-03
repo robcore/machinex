@@ -1,100 +1,15 @@
-/root/machinex/patches/0100-FUCK.patch
-/root/machinex/patches/0099-fuck-me-hard.patch
-/root/machinex/patches/0098-intro-new-generic-vsyscall-again.patch
-/root/machinex/patches/0097-seqlock-bringup.patch
-/root/machinex/patches/0096-remove-those-for-a-sec-to-build.patch
-/root/machinex/patches/0095-time-Only-do-nanosecond-rounding.patch
-/root/machinex/patches/0094-arm-vsyscall-update-to-reflect-previous-move-of-time.patch
-/root/machinex/patches/0093-fixed-up-my-build-kernel-script-to-remove-any-pre-ex.patch
-/root/machinex/patches/0092-crypto-user-ensure-user-supplied-strings-are-nul-ter.patch
-/root/machinex/patches/0091-crypto-user-fix-empty-string-test-in-report-API.patch
-/root/machinex/patches/0090-TEST-trying-out-replacing-old-seqlock-funcs-with-sec.patch
-/root/machinex/patches/0089-USB-locking-Various-static-lock-initializer-fixesrou.patch
-/root/machinex/patches/0088-block-optionally-snapshot-page-contents-to-provide-s.patch
-/root/machinex/patches/0087-fbcon-clear-the-logo-bitmap-from-the-margin-area.patch
-/root/machinex/patches/0086-bug.h-compiler.h-introduce-compiletime_assert-BUILD.patch
-/root/machinex/patches/0085-compiler.h-bug.h-prevent-double-error-messages-with-.patch
-/root/machinex/patches/0084-bug.h-make-BUILD_BUG_ON-generate-compile-time-error.patch
-/root/machinex/patches/0083-bug.h-prevent-double-evaulation-of-condition-in-BUIL.patch
-/root/machinex/patches/0082-bug.h-fix-BUILD_BUG_ON-macro-in-__CHECKER__.patch
-/root/machinex/patches/0081-compiler-gcc4-.h-bug.h-Remove-duplicate-macros.patch
-/root/machinex/patches/0080-compiler-gcc-3-4-.h-Use-GCC_VERSION-macro.patch
-/root/machinex/patches/0079-compiler-gcc4.h-Reorder-macros-based-upon-gcc-ver.patch
-/root/machinex/patches/0078-workqueues-will-still-not-be-power-efficient-by-defa.patch
-/root/machinex/patches/0077-Revert-workqueue-allow-work_on_cpu-to-be-called-recu.patch
-/root/machinex/patches/0076-reverted-last-three.patch
-/root/machinex/patches/0075-workqueue-move-pwq_pool_locking-outside-of-get-put.patch
-/root/machinex/patches/0074-workqueue-fix-memory-leak-in-apply_workqueue_attrs.patch
-/root/machinex/patches/0073-workqueue-fix-unbound-workqueue-attrs-hashing.patch
-/root/machinex/patches/0072-workqueue-fix-race-condition-in-unbound-workqueue-fr.patch
-/root/machinex/patches/0071-UBI-do-not-abort-init-when-ubi.mtd-devices-cannot-be.patch
-/root/machinex/patches/0070-clocksource-apb_timer-Remove-unsused-function.patch
-/root/machinex/patches/0069-usb-misc-Fixed-assignment-error-in-if-statement.patch
-/root/machinex/patches/0068-ipg-fix-an-unsigned-widening-cast-of-truncation.patch
-/root/machinex/patches/0067-workqueue-Add-system-wide-power_efficient-workqueues.patch
-/root/machinex/patches/0066-adding-in-power-efficient-workqueues.patch
-/root/machinex/patches/0065-workqueue-workqueue_congested-link-to-smp-processor-.patch
-/root/machinex/patches/0064-Nope-now-just-not-booting.patch
-/root/machinex/patches/0063-k.just-make-sure-to-wake-unlock-wpc-for-now.patch
-/root/machinex/patches/0062-REVERT-wireless-charging-will-do-some-more-work-on-i.patch
-/root/machinex/patches/0061-REVERT-board-changes.patch
-/root/machinex/patches/0060-jf_eur-apply-much-more-reasonable-logic-to-synaptics.patch
-/root/machinex/patches/0059-brought-back-some-of-my-wireless-hax-for-ol-Markster.patch
-/root/machinex/patches/0058-working-a-little-more-on-mdnie-control-port.patch
-/root/machinex/patches/0057-Reverted.patch
-/root/machinex/patches/0056-queue-msm_fb-work-the-system-workqueue.gonna-revert-.patch
-/root/machinex/patches/0055-the-adaptive-tuning-driver-needs-some-work.patch
-/root/machinex/patches/0054-Now-THIS-is-intriguing-going-to-try-out-and-probably.patch
-/root/machinex/patches/0053-EXPERIMENT-mmc-core-Remove-timed-delay-for-media-sca.patch
-/root/machinex/patches/0052-msm-fix-for-a-driver-we-dont-use.patch
-/root/machinex/patches/0051-mm-slab-fix-unexpected-index-mapping-result-of-kmall.patch
-/root/machinex/patches/0050-shmem-fix-shm-fallocate-list-corruption.patch
-/root/machinex/patches/0049-UPSTREAM-sched-fair-Avoid-pulling-all-tasks-in-idle-.patch
-/root/machinex/patches/0048-display-add-a-simple-api-to-query-the-display-state-.patch
-/root/machinex/patches/0047-TEST-workqueue-make-sure-delayed-work-run-in-local-c.patch
-/root/machinex/patches/0046-initial-import-of-blx-by-Ezekeel.patch
-/root/machinex/patches/0045-good-catch-cpufreq-cpu-boost-don-t-boost-if-input_bo.patch
-/root/machinex/patches/0044-build-script-dont-report-push-if-it-failed.patch
-/root/machinex/patches/0043-mdp-giving-pipe-control-workqueue-a-dedicated-highpr.patch
-/root/machinex/patches/0042-selinux-Fix-panic-inducing-NULL-reference-pointer.patch
-/root/machinex/patches/0041-gfx3d-reset-rate-dropped-down-to-1800000-again-the-h.patch
-/root/machinex/patches/0040-actually-naw.patch
-/root/machinex/patches/0039-EXPERIMENT-msm-kgsl-Wake-up-GPU-only-for-touch-event.patch
-/root/machinex/patches/0038-REVERT-readahead-make-context-more-conservative.patch
-/root/machinex/patches/0037-jbd2-optimize-jbd2_journal_force_commit.patch
-/root/machinex/patches/0036-fixup-remaining-sammy-system_rev-var-mismatch.patch
-/root/machinex/patches/0035-fuck-all-of-that-i-guess.patch
-/root/machinex/patches/0034-I-just-do-not-understand-backlight-operation.patch
-/root/machinex/patches/0033-bring-it-back-for-my-funtime.patch
-/root/machinex/patches/0032-quick-revert-while-i-build-to-test-the-legit-stuff.patch
-/root/machinex/patches/0031-yall-know-i-cant-resist-smart_dim-hacking.patch
-/root/machinex/patches/0030-msm_fb-only-limit-max-brightness-level-if-CONFIG_SUC.patch
-/root/machinex/patches/0029-more-video-updates-including-a-nifty-instant-screen-.patch
-/root/machinex/patches/0028-daddy-wants-644.patch
-/root/machinex/patches/0027-cleanup-in-curser.patch
-/root/machinex/patches/0026-ditto-dtv-and-lcdc.patch
-/root/machinex/patches/0025-fix-doubled-values-and-applied-the-same-logic-fix-in.patch
-/root/machinex/patches/0024-mdp4-overlay-dsi-cmd-logic-fixups.patch
-/root/machinex/patches/0023-aesthetic-cleanup.patch
-/root/machinex/patches/0022-gonna-try-out-mdp-powersuspend.patch
-/root/machinex/patches/0021-k-reverted-those.patch
-/root/machinex/patches/0020-dmov-trying-out-one-shot-and-getting-rid-of-the-snpr.patch
-/root/machinex/patches/0019-msm-dmov-change-our-scheduled-work-delay-to-10-in-li.patch
-/root/machinex/patches/0018-event-timer-sort-out-the-locking-that-has-been-bothe.patch
-/root/machinex/patches/0017-gonna-try-this-again-now-that-i-fixed-my-ramdisk-exp.patch
-/root/machinex/patches/0016-dont-like-that-o3-tho.patch
-/root/machinex/patches/0015-k-keep-flags-I-guess.patch
-/root/machinex/patches/0014-REVERT-ion-mpm.patch
-/root/machinex/patches/0013-mpm-fix-bug-in-finding-the-pending-interrupts-by-con.patch
-/root/machinex/patches/0012-remove-optimization-flags-from-gpu-makefiles.patch
-/root/machinex/patches/0011-hail-mary-Use-pgprot_writecombine-in-ion_system_heap.patch
-/root/machinex/patches/0010-nope.patch
-/root/machinex/patches/0009-drivers-base-power-wakeup-mainline-got-rid-of-the-rc.patch
-/root/machinex/patches/0008-msm_iommu-TB-splits-QC-fix-for-the-pagefaults-weve-b.patch
-/root/machinex/patches/0007-saving-this-for-later.patch
-/root/machinex/patches/0006-added-a-generic-bln-driver.patch
-/root/machinex/patches/0005-cma-Add-API-to-get-the-start-address-of-a-CMA-region.patch
-/root/machinex/patches/0004-wakeup-in-device-wakeup-disable-dev-is-already-teste.patch
-/root/machinex/patches/0003-wakeup-source-freezer-contingency-if-the-value-is-fa.patch
-/root/machinex/patches/0002-done.patch
-/root/machinex/patches/0001-time-wasting.patch
+#!/bin/bash
+patch -p1 -R < "/root/machinex/patches/0040-though-i-got-it-working-doesnt-even-matter-because-i.patch"
+patch -p1 -R < "/root/machinex/patches/0039-this-may-have-been-too-much-too-fast.man-i-gotta-fix.patch"
+patch -p1 -R < "/root/machinex/patches/0038-fuck-it-i-am-trying-blkdev-direct-write-with-iovec-i.patch"
+patch -p1 -R < "/root/machinex/patches/0037-Revert-that-last-one-till-further-notice.patch"
+patch -p1 -R < "/root/machinex/patches/0036-sort-of-cleaned-up-refcount-when-did-this-become-an-.patch"
+patch -p1 -R < "/root/machinex/patches/0035-aio-make-aio_put_req-lockless.patch"
+patch -p1 -R < "/root/machinex/patches/0034-aio-do-fget-after-aio_get_req.patch"
+patch -p1 -R < "/root/machinex/patches/0033-aio-dprintk-pr_debug.patch"
+patch -p1 -R < "/root/machinex/patches/0032-this-was-technically-moving-private-stuff-out-of-the.patch"
+patch -p1 -R < "/root/machinex/patches/0031-aio-add-kiocb_cancel.patch"
+patch -p1 -R < "/root/machinex/patches/0030-aio-kill-return-value-of-aio_complete.patch"
+patch -p1 -R < "/root/machinex/patches/0029-char-add-aio_-read-write-to-dev-null-zero.patch"
+patch -p1 -R < "/root/machinex/patches/0028-aio-remove-retry-based-AIO.patch"
+patch -p1 -R < "/root/machinex/patches/0027-aio-remove-dead-code-from-aio.h.patch"
