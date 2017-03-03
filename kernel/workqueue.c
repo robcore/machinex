@@ -286,7 +286,7 @@ EXPORT_SYMBOL(system_freezable_power_efficient_wq);
 
 /* see the comment above the definition of WQ_POWER_EFFICIENT */
 #ifdef CONFIG_WQ_POWER_EFFICIENT_DEFAULT
-static bool wq_power_efficient = true;
+static bool wq_power_efficient;
 #else
 static bool wq_power_efficient;
 #endif
