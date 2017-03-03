@@ -1,15 +1,4 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0040-though-i-got-it-working-doesnt-even-matter-because-i.patch"
-patch -p1 -R < "/root/machinex/patches/0039-this-may-have-been-too-much-too-fast.man-i-gotta-fix.patch"
-patch -p1 -R < "/root/machinex/patches/0038-fuck-it-i-am-trying-blkdev-direct-write-with-iovec-i.patch"
-patch -p1 -R < "/root/machinex/patches/0037-Revert-that-last-one-till-further-notice.patch"
-patch -p1 -R < "/root/machinex/patches/0036-sort-of-cleaned-up-refcount-when-did-this-become-an-.patch"
-patch -p1 -R < "/root/machinex/patches/0035-aio-make-aio_put_req-lockless.patch"
-patch -p1 -R < "/root/machinex/patches/0034-aio-do-fget-after-aio_get_req.patch"
-patch -p1 -R < "/root/machinex/patches/0033-aio-dprintk-pr_debug.patch"
-patch -p1 -R < "/root/machinex/patches/0032-this-was-technically-moving-private-stuff-out-of-the.patch"
-patch -p1 -R < "/root/machinex/patches/0031-aio-add-kiocb_cancel.patch"
-patch -p1 -R < "/root/machinex/patches/0030-aio-kill-return-value-of-aio_complete.patch"
-patch -p1 -R < "/root/machinex/patches/0029-char-add-aio_-read-write-to-dev-null-zero.patch"
-patch -p1 -R < "/root/machinex/patches/0028-aio-remove-retry-based-AIO.patch"
-patch -p1 -R < "/root/machinex/patches/0027-aio-remove-dead-code-from-aio.h.patch"
+
+patch -p1 -R < "/root/machinex/patches/0024-lseek_execute-doesn-t-need-an-inode-passed-to-it.patch"
+patch -p1 -R < "/root/machinex/patches/0023-block_dev-switch-to-fixed_size_llseek.patch"
