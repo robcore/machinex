@@ -809,11 +809,12 @@ static int sec_chg_set_property(struct power_supply *psy,
 					union power_supply_propval cable_type;
 					psy_do_property("battery", get,
 						POWER_SUPPLY_PROP_ONLINE, cable_type);
-					wake_lock(&charger->wpc_wake_lock);
+					wake_lock_timeout(&charger->wpc_wake_lock, 500);
 					queue_delayed_work(charger->wqueue, &charger->wpc_work,
 							msecs_to_jiffies(500));
 					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
 						charger->wc_w_state = 0;
+						wake_unlock(&charger->wpc_wake_lock);
 						pr_err("%s:cable removed,wireless connected\n", __func__);
 					}
 				}
