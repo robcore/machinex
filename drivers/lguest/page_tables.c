@@ -1002,7 +1002,6 @@ void guest_set_pgd(struct lguest *lg, unsigned long gpgdir, u32 idx)
 			kill_guest(&lg->cpus[0],
 				   "Cannot populate switcher mapping");
 		}
-		lg->pgdirs[pgdir].last_host_cpu = -1;
 	}
 }
 

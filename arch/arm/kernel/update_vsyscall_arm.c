@@ -11,7 +11,7 @@
  */
 
 #include <linux/export.h>
-#include <linux/timekeeper_internal.h>
+#include <linux/clocksource.h>
 #include <linux/time.h>
 #include "update_vsyscall_arm.h"
 /*
@@ -54,7 +54,9 @@ struct kernel_wtm_t {
  * data, as well as additional fields needed to calculate
  * gettimeofday, clock_gettime, etc.
  */
-void update_vsyscall(struct timekeeper *tk)
+void
+update_vsyscall(struct timespec *ts, struct timespec *wtm,
+	struct clocksource *c, u32 mult)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;

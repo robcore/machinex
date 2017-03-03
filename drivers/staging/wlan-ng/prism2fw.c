@@ -804,7 +804,7 @@ int read_cardpda(struct pda *pda, wlandevice_t *wlandev)
 *
 * Note also that the start address record, originally an S7 record in
 * the srec file, is expected in the fw file to be like a data record but
-* with a certain address to make it identifiable.
+* with a certain address to make it identiable.
 *
 * Here's the SREC format that the fw should have come from:
 * S[37]nnaaaaaaaaddd...dddcc
