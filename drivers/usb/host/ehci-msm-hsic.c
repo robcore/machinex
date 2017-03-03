@@ -159,7 +159,7 @@ static struct {
 	rwlock_t lck;   /* lock */
 } dbg_hsic_ctrl = {
 	.idx = 0,
-	.lck = __RW_LOCK_UNLOCKED(lck)
+	.lck = __RW_LOCK_UNLOCKED(dbg_hsic_ctrl.lck)
 };
 
 static struct {
@@ -168,7 +168,7 @@ static struct {
 	rwlock_t lck;   /* lock */
 } dbg_hsic_data = {
 	.idx = 0,
-	.lck = __RW_LOCK_UNLOCKED(lck)
+	.lck = __RW_LOCK_UNLOCKED(dbg_hsic_data.lck)
 };
 
 /**
