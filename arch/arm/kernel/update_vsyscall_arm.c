@@ -11,7 +11,7 @@
  */
 
 #include <linux/export.h>
-#include <linux/timekeeper_internal.h>
+#include <linux/clocksource.h>
 #include <linux/time.h>
 #include "update_vsyscall_arm.h"
 /*
@@ -55,7 +55,7 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
+update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	struct clocksource *c, u32 mult)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
