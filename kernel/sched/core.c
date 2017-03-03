@@ -1418,6 +1418,7 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	if (is_idle_task(p) || (sched_ravg_window < min_sched_ravg_window))
 		return;
 
+	rcu_user_exit();
 	do {
 		s64 delta = 0;
 		int n;
