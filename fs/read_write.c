@@ -9,7 +9,6 @@
 #include <linux/fcntl.h>
 #include <linux/file.h>
 #include <linux/uio.h>
-#include <linux/aio.h>
 #include <linux/fsnotify.h>
 #include <linux/security.h>
 #include <linux/export.h>
@@ -26,7 +25,7 @@
 const struct file_operations generic_ro_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= do_sync_read,
-	.aio_read	= generic_file_aio_read,
+	.read_iter	= generic_file_read_iter,
 	.mmap		= generic_file_readonly_mmap,
 	.splice_read	= generic_file_splice_read,
 };
@@ -450,7 +449,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 
 	if (!(file->f_mode & FMODE_WRITE))
 		return -EBADF;
-	if (!file->f_op->write && !file->f_op->aio_write)
+	if (!file_writable(file))
 		return -EINVAL;
 	if (unlikely(!access_ok(VERIFY_READ, buf, count)))
 		return -EFAULT;
@@ -492,8 +491,7 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
 	if (f.file) {
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_read(f.file, buf, count, &pos);
-		if (ret >= 0)
-			file_pos_write(f.file, pos);
+		file_pos_write(f.file, pos);
 		fdput_pos(f);
 	}
 	return ret;
@@ -508,8 +506,7 @@ SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
 	if (f.file) {
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_write(f.file, buf, count, &pos);
-		if (ret >= 0)
-			file_pos_write(f.file, pos);
+		file_pos_write(f.file, pos);
 		fdput_pos(f);
 	}
 
@@ -715,6 +712,11 @@ static ssize_t do_readv_writev(int type, struct file *file,
 	io_fn_t fn;
 	iov_fn_t fnv;
 
+	if (!file->f_op) {
+		ret = -EINVAL;
+		goto out;
+	}
+
 	ret = rw_copy_check_uvector(type, uvector, nr_segs,
 				    ARRAY_SIZE(iovstack), iovstack, &iov);
 	if (ret <= 0)
@@ -728,10 +730,12 @@ static ssize_t do_readv_writev(int type, struct file *file,
 	fnv = NULL;
 	if (type == READ) {
 		fn = file->f_op->read;
-		fnv = file->f_op->aio_read;
+		if (file->f_op->aio_read || file->f_op->read_iter)
+			fnv = do_aio_read;
 	} else {
 		fn = (io_fn_t)file->f_op->write;
-		fnv = file->f_op->aio_write;
+		if (file->f_op->aio_write || file->f_op->write_iter)
+			fnv = do_aio_write;
 	}
 
 	if (fnv)
@@ -757,7 +761,7 @@ ssize_t vfs_readv(struct file *file, const struct iovec __user *vec,
 {
 	if (!(file->f_mode & FMODE_READ))
 		return -EBADF;
-	if (!file->f_op->aio_read && !file->f_op->read)
+	if (!file_readable(file))
 		return -EINVAL;
 
 	return do_readv_writev(READ, file, vec, vlen, pos);
@@ -770,7 +774,7 @@ ssize_t vfs_writev(struct file *file, const struct iovec __user *vec,
 {
 	if (!(file->f_mode & FMODE_WRITE))
 		return -EBADF;
-	if (!file->f_op->aio_write && !file->f_op->write)
+	if (!file_writable(file))
 		return -EINVAL;
 
 	return do_readv_writev(WRITE, file, vec, vlen, pos);
@@ -787,8 +791,7 @@ SYSCALL_DEFINE3(readv, unsigned long, fd, const struct iovec __user *, vec,
 	if (f.file) {
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_readv(f.file, vec, vlen, &pos);
-		if (ret >= 0)
-			file_pos_write(f.file, pos);
+		file_pos_write(f.file, pos);
 		fdput_pos(f);
 	}
 
@@ -807,8 +810,7 @@ SYSCALL_DEFINE3(writev, unsigned long, fd, const struct iovec __user *, vec,
 	if (f.file) {
 		loff_t pos = file_pos_read(f.file);
 		ret = vfs_writev(f.file, vec, vlen, &pos);
-		if (ret >= 0)
-			file_pos_write(f.file, pos);
+		file_pos_write(f.file, pos);
 		fdput_pos(f);
 	}
 
@@ -878,7 +880,6 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	struct fd in, out;
 	struct inode *in_inode, *out_inode;
 	loff_t pos;
-	loff_t out_pos;
 	ssize_t retval;
 	int fl;
 
@@ -892,14 +893,12 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	if (!(in.file->f_mode & FMODE_READ))
 		goto fput_in;
 	retval = -ESPIPE;
-	if (!ppos) {
-		pos = in.file->f_pos;
-	} else {
-		pos = *ppos;
+	if (!ppos)
+		ppos = &in.file->f_pos;
+	else
 		if (!(in.file->f_mode & FMODE_PREAD))
 			goto fput_in;
-	}
-	retval = rw_verify_area(READ, in.file, &pos, count);
+	retval = rw_verify_area(READ, in.file, ppos, count);
 	if (retval < 0)
 		goto fput_in;
 	count = retval;
@@ -916,8 +915,7 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	retval = -EINVAL;
 	in_inode = file_inode(in.file);
 	out_inode = file_inode(out.file);
-	out_pos = out.file->f_pos;
-	retval = rw_verify_area(WRITE, out.file, &out_pos, count);
+	retval = rw_verify_area(WRITE, out.file, &out.file->f_pos, count);
 	if (retval < 0)
 		goto fput_out;
 	count = retval;
@@ -925,6 +923,7 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	if (!max)
 		max = min(in_inode->i_sb->s_maxbytes, out_inode->i_sb->s_maxbytes);
 
+	pos = *ppos;
 	if (unlikely(pos + count > max)) {
 		retval = -EOVERFLOW;
 		if (pos >= max)
@@ -943,23 +942,18 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	if (in.file->f_flags & O_NONBLOCK)
 		fl = SPLICE_F_NONBLOCK;
 #endif
-	retval = do_splice_direct(in.file, &pos, out.file, &out_pos, count, fl);
+	retval = do_splice_direct(in.file, ppos, out.file, count, fl);
 
 	if (retval > 0) {
 		add_rchar(current, retval);
 		add_wchar(current, retval);
 		fsnotify_access(in.file);
 		fsnotify_modify(out.file);
-		out.file->f_pos = out_pos;
-		if (ppos)
-			*ppos = pos;
-		else
-			in.file->f_pos = pos;
 	}
 
 	inc_syscr(current);
 	inc_syscw(current);
-	if (pos > max)
+	if (*ppos > max)
 		retval = -EOVERFLOW;
 
 fput_out:
