@@ -754,7 +754,6 @@ config USB_HSIC_SMSC_HUB
 
 config MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN
 	bool "Support for deep memory power down on QCOM chipsets"
-	depends on ARCH_MSM
 	help
 	  This is a page-migration helper required for suspend to
 	  memory on qualcomm based chipsets.
