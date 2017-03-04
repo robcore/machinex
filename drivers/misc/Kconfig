@@ -752,12 +752,6 @@ config USB_HSIC_SMSC_HUB
 	  This adds support for connecting devices like mouse in HSIC
 	  Host mode.
 
-config MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN
-	bool "Support for deep memory power down on QCOM chipsets"
-	help
-	  This is a page-migration helper required for suspend to
-	  memory on qualcomm based chipsets.
-
 config BU52031NVX
 	tristate "Cradle BU52031NVX support"
 	depends on MFD_PM8XXX
