@@ -227,7 +227,7 @@ static int get_num_brps(void)
 static int halting_mode_enabled(void)
 {
 	u32 dscr;
-	ARM_DBG_READ(c0, c1, 0, dscr);
+	ARM_DBG_READ(c1, 0, dscr);
 	WARN_ONCE(dscr & ARM_DSCR_HDBGEN,
 		  "halting debug mode enabled. "
 		  "Unable to access hardware resources.\n");
