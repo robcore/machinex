@@ -553,7 +553,7 @@ acpi_os_table_override(struct acpi_table_header * existing_table,
 			   "this is unsafe: tainting kernel\n",
 		       existing_table->signature,
 		       existing_table->oem_table_id);
-		add_taint(TAINT_OVERRIDDEN_ACPI_TABLE);
+		add_taint(TAINT_OVERRIDDEN_ACPI_TABLE, LOCKDEP_NOW_UNRELIABLE);
 	}
 	return AE_OK;
 }
@@ -1064,7 +1064,7 @@ acpi_status acpi_os_wait_semaphore(acpi_handle handle, u32 units, u16 timeout)
 		jiffies = MAX_SCHEDULE_TIMEOUT;
 	else
 		jiffies = msecs_to_jiffies(timeout);
-	
+
 	ret = down_timeout(sem, jiffies);
 	if (ret)
 		status = AE_TIME;
