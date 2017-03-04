@@ -727,10 +727,12 @@ config QFP_FUSE
 	  fuses. The ioctls provides the necessary interface
 	  to the fuse block. Currently this is supported only
 	  on FSM targets.
+
 config MPU_411_ENABLE
 	bool "mpu gyro sensor MPL 4.1.1"
 	depends on I2C
 	default n
+
 config SEC_MISC
 	bool "Samsung P series miscellaneous driver"
 	default n
@@ -749,6 +751,13 @@ config USB_HSIC_SMSC_HUB
 
 	  This adds support for connecting devices like mouse in HSIC
 	  Host mode.
+
+CONFIG_MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN
+	bool "Support for deep memory power down on QCOM chipsets"
+	depends on ARCH_MSM
+	help
+	  This is a page-migration helper required for suspend to
+	  memory on qualcomm based chipsets.
 
 config BU52031NVX
 	tristate "Cradle BU52031NVX support"
