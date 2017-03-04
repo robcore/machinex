@@ -1,0 +1,212 @@
+root@machina:~# linaro
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel# cd patches
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# girly 'a8d6ffcf618b319a68677d9d4c856417c817f6c8.patch.1'^C
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# nicer grep -rl 'sys_finit_module' | sort -d
+10patches/6890-unify-compat-fanotify_mark-2-switch-to-COMPAT_SYSCAL.patch
+11patches/0428-xtensa-add-finit_module-syscall.patch
+11patches/0663-xtensa-add-accept4-syscall.patch
+11patches/1334-ARM-7665-1-Wire-up-kcmp-syscall.patch
+12patches/0522-sh-wire-up-finit_module-syscall.patch
+13patches/4855-module-add-syscall-to-load-module-from-fd.patch
+13patches/4856-module-add-flags-arg-to-sys_finit_module.patch
+13patches/4858-ARM-add-finit_module-syscall-to-ARM.patch
+13patches/4859-add-finit_module-syscall-to-asm-generic.patch
+13patches/6083-m68k-Wire-up-finit_module.patch
+13patches/6264-MIPS-Wire-up-finit_module-syscall.patch
+13patches/6292-sparc-Hook-up-finit_module-syscall.patch
+13patches/6547-microblaze-Add-finit_module-syscall.patch
+13patches/6573-Wire-up-finit_module-syscall.patch
+13patches/7495-s390-syscalls-wire-up-finit_module-syscall.patch
+1patches/0456-MIPS-Wire-up-renameat2-syscall.patch
+1patches/2264-m68k-add-renameat2-syscall.patch
+1patches/2266-ia64-add-renameat2-syscall.patch
+1patches/2267-asm-generic-Add-renameat2-syscall.patch
+2patches/1494-vfs-add-renameat2-syscall.patch
+2patches/2923-s390-wire-up-sys_renameat2.patch
+2patches/2979-i386-Wire-up-the-renameat2-syscall.patch
+2patches/4776-arm64-__NR_compat_syscalls-fix.patch
+2patches/5008-arm64-add-renameat2-compat-syscall.patch
+2patches/5011-ARM-add-renameat2-syscall.patch
+3patches/1357-xtensa-wire-up-sched_setattr-and-sched_getattr-sysca.patch
+3patches/1797-asm-generic-add-sched_setattr-sched_getattr-syscalls.patch
+3patches/3424-s390-compat-convert-system-call-wrappers-to-C-part-1.patch
+3patches/4273-s390-compat-get-rid-of-compat-wrapper-assembly-code.patch
+3patches/5578-microblaze-Wire-up-new-system-calls-sched_setattr-ge.patch
+4patches/1578-CRIS-Add-missing-syscalls.patch
+4patches/2092-sched-Add-new-scheduler-syscalls-to-support-an-exten.patch
+4patches/3830-s390-wire-up-sys_sched_setattr-sys_sched_getattr.patch
+4patches/4783-IA64-Wire-up-new-sched_setattr-and-sched_getattr-sys.patch
+4patches/5007-sparc-Hook-up-sched_setattr-and-sched_getattr-syscal.patch
+4patches/5691-MIPS-Wire-up-sched_setattr-sched_getattr-syscalls.patch
+4patches/5880-arm64-compat-Wire-up-new-AArch32-syscalls.patch
+4patches/6752-m68k-Wire-up-sched_setattr-and-sched_getattr.patch
+6patches/5649-MIPS-compat-Export-O32-syscall-table-and-rename-to-a.patch
+6patches/5655-MIPS-O32-32-bit-Always-copy-4-stack-arguments.patch
+8patches/2893-alpha-Add-kcmp-and-finit_module-syscalls.patch
+9patches/0571-MIPS-N64-Wire-getdents64-2.patch
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# medit 13patches/4855-module-add-syscall-to-load-module-from-fd.patch
+[1] 5114
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches#
+[1]+  Done                    exec medit $@
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# grep -rl 'kernel/module.c' | sort -d
+^C
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# nicer grep -rl 'kernel/module.c' | sort -d
+
+10patches/1291-ARC-Fix-coding-style-issues.patch
+10patches/2919-module-don-t-unlink-the-module-until-we-ve-removed-a.patch
+10patches/7282-avr32-fix-relocation-check-for-signed-18-bit-offset.patch
+10patches/7935-kmemleak-Scan-all-allocated-writeable-and-not-execut.patch
+10patches/7936-kmemleak-No-need-for-scanning-specific-module-sectio.patch
+11patches/0679-switch-vfs_getattr-to-struct-path.patch
+11patches/0988-s390-module-fix-compile-warning.patch
+11patches/1257-metag-Module-support.patch
+11patches/3457-CONFIG_SYMBOL_PREFIX-cleanup.patch
+11patches/4767-module-fix-symbol-versioning-with-symbol-prefixes.patch
+12patches/0278-module-add-new-state-MODULE_STATE_UNFORMED.patch
+12patches/0279-module-put-modules-in-list-much-earlier.patch
+12patches/0949-module-async-async_synchronize_full-on-module-init-i.patch
+12patches/1723-module-fix-missing-module_mutex-unlock.patch
+12patches/1728-module-printk-message-when-module-signature-fail-tai.patch
+12patches/1729-taint-add-explicit-flag-to-show-whether-lock-dep-is-.patch
+12patches/1732-module-clean-up-load_module-a-little-more.patch
+12patches/4271-MIPS-Whitespace-cleanup.patch
+12patches/6281-microblaze-Fix-coding-style-issues.patch
+12patches/6282-microblaze-Do-not-use-module.h-in-files-which-are-no.patch
+12patches/6808-s390-modules-add-relocation-overflow-checking.patch
+12patches/6844-s390-module-Add-missing-R_390_NONE-relocation-type.patch
+12patches/7073-ARC-Module-support.patch
+12patches/7076-ARC-DWARF2-.debug_frame-based-stack-unwinder.patch
+13patches/4855-module-add-syscall-to-load-module-from-fd.patch
+13patches/4856-module-add-flags-arg-to-sys_finit_module.patch
+13patches/4857-security-introduce-kernel_module_from_file-hook.patch
+13patches/4867-module-Remove-a-extra-null-character-at-the-top-of-m.patch
+13patches/4868-modules-don-t-hand-0-to-vmalloc.patch
+13patches/5153-kernel-remove-reference-to-feature-removal-schedule..patch
+13patches/5488-xtensa-clean-up-files-to-make-them-code-style-compli.patch
+13patches/6418-module-prevent-warning-when-finit_module-a-0-sized-f.patch
+13patches/8278-module-add-new-state-MODULE_STATE_UNFORMED.patch
+13patches/8279-module-put-modules-in-list-much-earlier.patch
+14patches/0928-s390-vmalloc-have-separate-modules-area.patch
+14patches/1047-module-signature-checking-hook.patch
+14patches/1048-MODSIGN-Add-FIPS-policy.patch
+14patches/2012-Hexagon-Copyright-marking-changes.patch
+14patches/2219-MODSIGN-Move-the-magic-string-to-the-end-of-a-module.patch
+14patches/2672-arch-tile-avoid-build-warnings-from-duplicate-ELF_R_.patch
+14patches/4251-module-fix-out-by-one-error-in-kallsyms.patch
+15patches/3914-arm64-Loadable-modules.patch
+15patches/5042-sparc32-Enable-the-relocation-target-R_SPARC_DISP32-.patch
+15patches/5043-sparc-fix-the-return-value-of-module_alloc.patch
+15patches/6737-module-taint-kernel-when-lve-module-is-loaded.patch
+15patches/6738-MIPS-Fix-module.c-build-for-32-bit.patch
+15patches/6739-Make-most-arch-asm-module.h-files-use-asm-generic-mo.patch
+15patches/6740-module-fix-symbol-waiting-when-module-fails-before-i.patch
+15patches/6741-module-wait-when-loading-a-module-which-is-currently.patch
+15patches/7960-UAPI-Scripted-Disintegrate-include-asm-generic.patch
+16patches/3157-module.c-spelling-s-postition-position-g.patch
+16patches/3166-s390-comments-unify-copyright-messages-and-remove-fi.patch
+16patches/7249-MIPS-Fix-memory-leak-in-error-path-of-HI16-LO16-relo.patch
+16patches/7250-MIPS-Fix-race-condition-in-module-relocation-code.patch
+16patches/7251-MIPS-Module-Deal-with-malformed-HI16-LO16-relocation.patch
+17patches/0103-sparc32-Kill-off-software-32-bit-multiply-divide-rou.patch
+17patches/1914-Guard-check-in-module-loader-against-integer-overflo.patch
+17patches/2154-arch-tile-support-building-big-endian-kernel.patch
+17patches/3886-x86-debug-Add-KERN_-LEVEL-to-bare-printks-convert-pr.patch
+18patches/0399-arch-tile-don-t-leak-kernel-memory-when-we-unload-mo.patch
+18patches/4594-dynamic_debug-make-dynamic-debug-work-for-module-ini.patch
+18patches/8103-sparc32-Kill-off-software-32-bit-multiply-divide-rou.patch
+1patches/0641-module-set-nx-before-marking-module-MODULE_STATE_COM.patch
+1patches/7978-arch-unicore32-kernel-module.c-use-__vmalloc_node_ra.patch
+2patches/0346-x86-kaslr-fix-module-lock-ordering-problem.patch
+2patches/1235-Use-E-instead-of-X-for-unsigned-module-taint-flag.patch
+2patches/2659-modules-use-raw_cpu_write-for-initialization-of-per-.patch
+2patches/5886-module-remove-warning-about-waiting-module-removal.patch
+2patches/5897-param-hand-arguments-after-straight-to-init.patch
+2patches/6080-ftrace-module-Hardcode-ftrace_module_init-call-into-.patch
+3patches/2251-x86-kaslr-randomize-module-base-load-address.patch
+3patches/5793-module-use-pr_cont.patch
+3patches/5796-Fix-module-signature-vs-tracepoints-add-new-TAINT_UN.patch
+3patches/7978-Rename-TAINT_UNSAFE_SMP-to-TAINT_CPU_OUT_OF_SPEC.patch
+4patches/1296-arm64-move-encode_insn_immediate-from-module.c-to-in.patch
+4patches/3490-module-Add-missing-newline-in-printk-call.patch
+4patches/7728-lto-Handle-LTO-common-symbols-in-module-loader.patch
+5patches/0104-mm-arch-use-NUMA_NO_NODE.patch
+5patches/0320-kernel-module.c-use-pr_foo.patch
+6patches/3353-kernel-add-support-for-init_array-constructors.patch
+6patches/3941-ARM-module-correctly-relocate-instructions-in-BE8.patch
+6patches/5633-MIPS-Use-NUMA_NO_NODE-instead-of-1-for-node-ID.patch
+6patches/5799-powerpc-Move-local-setup.h-declarations-to-arch-incl.patch
+6patches/6575-arm64-module-ensure-instruction-is-little-endian-bef.patch
+6patches/6585-openrisc-Refactor-16-bit-constant-relocation.patch
+6patches/8104-mm-arch-use-NUMA_NO_NODE.patch
+7patches/0411-module-Add-NOARG-flag-for-ops-with-param_set_bool_en.patch
+7patches/0413-kernel-module.c-use-scnprintf-instead-of-sprintf.patch
+7patches/3341-ARM-7829-1-Add-.text.unlikely-and-.text.hot-to-arm-u.patch
+7patches/3407-module-Fix-mod-mkobj.kobj-potentially-freed-too-earl.patch
+7patches/3716-switch-copy_module_from_fd-to-fdget.patch
+7patches/5359-Drop-support-for-Renesas-H8-300-h8300-architecture.patch
+7patches/6134-module-remove-rmmod-wait-option.patch
+8patches/0626-module-don-t-modify-argument-of-module_kallsyms_look.patch
+8patches/0629-modules-don-t-fail-to-load-on-unknown-parameters.patch
+8patches/0725-module-do-percpu-allocation-after-uniqueness-check.-.patch
+8patches/0726-module-cleanup-call-chain.patch
+9patches/2644-Finally-eradicate-CONFIG_HOTPLUG.patch
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches#
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# girly '/scripts/sign-file' | sort -d
+^C
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# grep -rl 'SYMBOL_PREFIX' | sort -d
+10patches/5724-linkage.h-fix-build-breakage-due-to-symbol-prefix-ha.patch
+11patches/0154-depmod-pass-P-CONFIG_SYMBOL_PREFIX.patch
+11patches/1232-asm-generic-unistd.h-handle-symbol-prefixes-in-cond_.patch
+11patches/1267-metag-Build-infrastructure.patch
+11patches/1406-consolidate-cond_syscall-and-SYSCALL_ALIAS-declarati.patch
+11patches/3457-CONFIG_SYMBOL_PREFIX-cleanup.patch
+11patches/4768-genksyms-pass-symbol-prefix-instead-of-arch.patch
+12patches/4564-h8300-switch-to-generic-sigaltstack.patch
+12patches/4566-h8300-switch-to-generic-old-sigsuspend.patch
+12patches/4568-h8300-switch-to-generic-old-sigaction.patch
+12patches/6002-openrisc-remove-CONFIG_SYMBOL_PREFIX.patch
+12patches/8154-depmod-pass-P-CONFIG_SYMBOL_PREFIX.patch
+13patches/3077-linux-kernel.h-define-SYMBOL_PREFIX.patch
+13patches/3078-modsign-add-symbol-prefix-to-certificate-list.patch
+13patches/4478-mm-use-IS_ENABLED-CONFIG_COMPACTION-instead-of-COMPA.patch
+13patches/4869-MODSIGN-Avoid-using-.incbin-in-C-source.patch
+13patches/5595-Bury-the-conditionals-from-kernel_thread-kernel_exec.patch
+14patches/1352-h8300-generic-kernel_thread.patch
+14patches/1353-h8300-generic-kernel_execve.patch
+15patches/2598-kbuild-add-symbol-prefix-arg-to-kallsyms.patch
+15patches/6739-Make-most-arch-asm-module.h-files-use-asm-generic-mo.patch
+18patches/5439-h8300-use-generic-init_task.patch
+18patches/5458-init_task-Replace-CONFIG_HAVE_GENERIC_INIT_TASK.patch
+6patches/0156-irq-Optimize-softirq-stack-selection-in-irq-exit.patch
+7patches/5062-Remove-GENERIC_HARDIRQ-config-option.patch
+7patches/5359-Drop-support-for-Renesas-H8-300-h8300-architecture.patch
+7patches/8156-irq-Optimize-softirq-stack-selection-in-irq-exit.patch
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# medit 12patches/1732-module-clean-up-load_module-a-little-more.patch
+[1] 13731
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# medit 13patches/4858-ARM-add-finit_module-syscall-to-ARM.patch
+[2] 13875
+[1]   Done                    exec medit $@
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# medit 13patches/6573-Wire-up-finit_module-syscall.patch
+[3] 13879
+[2]   Done                    exec medit $@
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# girly 'link-vmlinux.sh' | sort -d
+11patches/0136-scripts-link-vmlinux.sh-source-variables-from-KCONFI.patch
+11patches/0594-kbuild-Fix-reading-of-.config-in-link-vmlinux.sh.patch
+11patches/3457-CONFIG_SYMBOL_PREFIX-cleanup.patch
+12patches/8136-scripts-link-vmlinux.sh-source-variables-from-KCONFI.patch
+13patches/4017-kbuild-Do-not-remove-vmlinux-when-cleaning-external-.patch
+15patches/2598-kbuild-add-symbol-prefix-arg-to-kallsyms.patch
+16patches/0468-kbuild-Print-errors-to-stderr.patch
+16patches/6188-link-vmlinux.sh-Fix-stray-echo-in-error-message.patch
+17patches/0221-mips-Fix-KBUILD_CPPFLAGS-definition.patch
+18patches/5486-kbuild-link-of-vmlinux-moved-to-a-script.patch
+18patches/5487-kbuild-document-KBUILD_LDS-KBUILD_VMLINUX_-INIT-MAIN.patch
+18patches/6688-kbuild-fix-ia64-link.patch
+18patches/8221-mips-Fix-KBUILD_CPPFLAGS-definition.patch
+3patches/6526-kallsyms-fix-percpu-vars-on-x86-64-with-relocation.patch
+5patches/4246-scripts-link-vmlinux.sh-only-filter-kernel-symbols-f.patch
+6patches/6354-scripts-kallsyms-filter-symbols-not-in-kernel-addres.patch
+[3]+  Done                    exec medit $@
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches# medit 18patches/5486-kbuild-link-of-vmlinux-moved-to-a-script.patch
+[1] 27443
+root@machina:/media/root/robcore/android/linaro-8064-lt/kernel/patches#
