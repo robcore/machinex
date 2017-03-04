@@ -28,6 +28,7 @@
 #include <linux/perf_event.h>
 #include <linux/hw_breakpoint.h>
 #include <linux/smp.h>
+#include <linux/cpu_pm.h>
 
 #include <asm/cacheflush.h>
 #include <asm/cputype.h>
@@ -220,20 +221,6 @@ static int get_num_brps(void)
 {
 	int brps = get_num_brp_resources();
 	return core_has_mismatch_brps() ? brps - 1 : brps;
-}
-
-/* Determine if halting mode is enabled */
-static int halting_mode_enabled(void)
-{
-	u32 dscr;
-
-	ARM_DBG_READ(c1, 0, dscr);
-
-	if (WARN_ONCE(dscr & ARM_DSCR_HDBGEN,
-		      "halting debug mode enabled. "
-		      "Unable to access hardware resources.\n"))
-		return -EPERM;
-	return 0;
 }
 
 /* Determine if halting mode is enabled */
@@ -1039,6 +1026,30 @@ static struct notifier_block dbg_reset_nb = {
 	.notifier_call = dbg_reset_notify,
 };
 
+#ifdef CONFIG_CPU_PM
+static int dbg_cpu_pm_notify(struct notifier_block *self, unsigned long action,
+			     void *v)
+{
+	if (action == CPU_PM_EXIT)
+		reset_ctrl_regs(NULL);
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block dbg_cpu_pm_nb = {
+	.notifier_call = dbg_cpu_pm_notify,
+};
+
+static void __init pm_init(void)
+{
+	cpu_pm_register_notifier(&dbg_cpu_pm_nb);
+}
+#else
+static inline void pm_init(void)
+{
+}
+#endif
+
 static int __init arch_hw_breakpoint_init(void)
 {
 	u32 dscr;
@@ -1103,6 +1114,7 @@ static int __init arch_hw_breakpoint_init(void)
 
 	cpu_notifier_register_done();
 
+	pm_init();
 	return 0;
 }
 arch_initcall(arch_hw_breakpoint_init);
