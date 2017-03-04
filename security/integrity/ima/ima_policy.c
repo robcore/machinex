@@ -70,6 +70,7 @@ static struct ima_measure_rule_entry default_rules[] = {
 	 .flags = IMA_FUNC | IMA_MASK},
 	{.action = MEASURE,.func = FILE_CHECK,.mask = MAY_READ,.uid = 0,
 	 .flags = IMA_FUNC | IMA_MASK | IMA_UID},
+	{.action = MEASURE,.func = MODULE_CHECK, .flags = IMA_FUNC},
 };
 
 static LIST_HEAD(measure_default_rules);
@@ -314,6 +315,8 @@ static int ima_parse_rule(char *rule, struct ima_measure_rule_entry *entry)
 			/* PATH_CHECK is for backwards compat */
 			else if (strcmp(args[0].from, "PATH_CHECK") == 0)
 				entry->func = FILE_CHECK;
+			else if (strcmp(args[0].from, "MODULE_CHECK") == 0)
+				entry->func = MODULE_CHECK;
 			else if (strcmp(args[0].from, "FILE_MMAP") == 0)
 				entry->func = FILE_MMAP;
 			else if (strcmp(args[0].from, "BPRM_CHECK") == 0)

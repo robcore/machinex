@@ -116,6 +116,7 @@ struct integrity_iint_cache *integrity_iint_find(struct inode *inode);
 /* IMA policy related functions */
 enum ima_hooks { FILE_CHECK = 1, FILE_MMAP, BPRM_CHECK };
 
+extern int ima_module_check(struct file *file);
 int ima_match_policy(struct inode *inode, enum ima_hooks func, int mask);
 void ima_init_policy(void);
 void ima_update_policy(void);
