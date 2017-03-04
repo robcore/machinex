@@ -874,11 +874,13 @@ bool pm_wakeup_pending(void)
 				if (freezing_in_progress == false)
 					break;
 			}
+
 		pr_info("Machinex: Wakeup pending, aborting suspend after freeze is complete\n");
-		pm_print_active_wakeup_sources();
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
-	} else
-		pr_info("PM: Wakeup pending, aborting suspend\n");
+
+		} else {
+			pr_info("PM: Wakeup pending, aborting suspend\n");
+		}
 		pm_print_active_wakeup_sources();
 	}
 
