@@ -752,7 +752,7 @@ config USB_HSIC_SMSC_HUB
 	  This adds support for connecting devices like mouse in HSIC
 	  Host mode.
 
-CONFIG_MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN
+config MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN
 	bool "Support for deep memory power down on QCOM chipsets"
 	depends on ARCH_MSM
 	help
