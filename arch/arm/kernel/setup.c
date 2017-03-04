@@ -18,6 +18,7 @@
 #include <linux/bootmem.h>
 #include <linux/seq_file.h>
 #include <linux/screen_info.h>
+#include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/kexec.h>
 #include <linux/of_fdt.h>
@@ -1104,10 +1105,11 @@ void __init setup_arch(char **cmdline_p)
 
 	arm_dt_init_cpu_maps();
 #ifdef CONFIG_SMP
-	if (is_smp())
+	if (is_smp()) {
 		smp_set_ops(mdesc->smp);
 		smp_init_cpus();
 		smp_build_mpidr_hash();
+	}
 #endif
 
 	if (!is_smp())
@@ -1179,6 +1181,7 @@ static const char *hwcap_str[] = {
 	"vfpv4",
 	"idiva",
 	"idivt",
+	"vfpd32",
 	NULL
 };
 
@@ -1187,7 +1190,7 @@ static int c_show(struct seq_file *m, void *v)
 	int i, j;
 	u32 cpuid;
 
-	for_each_online_cpu(i) {
+	for_each_present_cpu(i) {
 		/*
 		 * glibc reads /proc/cpuinfo to determine the number of
 		 * online processors, looking for lines beginning with
