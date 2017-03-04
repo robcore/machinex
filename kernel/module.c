@@ -2442,7 +2442,6 @@ static int module_sig_check(struct load_info *info)
 }
 #else /* !CONFIG_MODULE_SIG */
 static int module_sig_check(struct load_info *info)
-			    void *mod, unsigned long *len)
 {
 	return 0;
 }
