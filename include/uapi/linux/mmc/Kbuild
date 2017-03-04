@@ -1,4 +1,5 @@
 # UAPI Header export list
+header-y += ioctl.h
 header-y += core.h
 header-y += ioctl.h
 header-y += mmc.h
