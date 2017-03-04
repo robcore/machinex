@@ -8,7 +8,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <asm/assembler.h>
 #include <asm/unistd.h>
 #include <asm/ftrace.h>
 #include <asm/unwind.h>

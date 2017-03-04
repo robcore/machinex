@@ -133,6 +133,12 @@
 	mov	\rd, \rd, lsl #13
 	.endm
 
+	@
+	@ 32-bit wide "ret pc, reg"
+	@
+	.macro	ret.w_pc, reg
+	ret	pc, \reg
+	.endm
 #else	/* CONFIG_THUMB2_KERNEL */
 	.macro	svc_exit, rpsr, irq = 0
 	.if	\irq != 0
