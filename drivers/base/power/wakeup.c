@@ -851,6 +851,7 @@ EXPORT_SYMBOL_GPL(pm_print_active_wakeup_sources);
 bool pm_wakeup_pending(void)
 {
 	unsigned long flags;
+	bool freezing_in_progress;
 	bool ret = false;
 
 	spin_lock_irqsave(&events_lock, flags);
@@ -864,6 +865,19 @@ bool pm_wakeup_pending(void)
 	spin_unlock_irqrestore(&events_lock, flags);
 
 	if (ret) {
+		if (freezing_in_progress) {
+			DEFINE_WAIT(wait);
+
+			for (;;) {
+				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
+						TASK_INTERRUPTIBLE);
+				if (freezing_in_progress == false)
+					break;
+			}
+		pr_info("Machinex: Wakeup pending, aborting suspend after freeze is complete\n");
+		pm_print_active_wakeup_sources();
+		finish_wait(&wakeup_freezer_wait_queue, &wait);
+	} else
 		pr_info("PM: Wakeup pending, aborting suspend\n");
 		pm_print_active_wakeup_sources();
 	}
