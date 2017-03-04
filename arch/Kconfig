@@ -354,12 +354,6 @@ config GENERIC_COMPAT_RT_SIGACTION
 config GENERIC_SIGALTSTACK
 	bool
 
-config HAVE_UNDERSCORE_SYMBOL_PREFIX
-	bool
-	help
-	  Some architectures generate an _ in front of C symbols; things like
-	  module loading and assembly files need to know about this.
-
 #
 # ABI hall of shame
 #
