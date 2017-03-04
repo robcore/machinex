@@ -236,6 +236,17 @@ static int halting_mode_enabled(void)
 	return 0;
 }
 
+/* Determine if halting mode is enabled */
+static int halting_mode_enabled(void)
+{
+	u32 dscr;
+	ARM_DBG_READ(c0, c1, 0, dscr);
+	WARN_ONCE(dscr & ARM_DSCR_HDBGEN,
+		  "halting debug mode enabled. "
+		  "Unable to access hardware resources.\n");
+	return !!(dscr & ARM_DSCR_HDBGEN);
+}
+
 /*
  * In order to access the breakpoint/watchpoint control registers,
  * we must be running in debug monitor mode. Unfortunately, we can
@@ -925,6 +936,17 @@ static void reset_ctrl_regs(void *unused)
 {
 	int i, raw_num_brps, err = 0, cpu = smp_processor_id();
 	u32 val;
+
+	/*
+	 * Bail out without clearing the breakpoint registers if halting
+	 * debug mode or monitor debug mode is enabled. Checking for monitor
+	 * debug mode here ensures we don't clear the breakpoint registers
+	 * across power collapse if save and restore code has already
+	 * preserved the debug register values or they weren't lost and
+	 * monitor mode was already enabled earlier.
+	 */
+	if (halting_mode_enabled() || monitor_mode_enabled())
+		return;
 
 	/*
 	 * v7 debug contains save and restore registers so that debug state
