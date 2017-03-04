@@ -130,3 +130,5 @@ idr-patchlist.txt
 kernel/hz.bc
 datetracker.txt
 arch/arm/configs/tmpconfig
+
+arch/arm/kernel/vmlinux.lds
