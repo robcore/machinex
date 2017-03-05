@@ -343,7 +343,6 @@ AWK		= awk
 GENKSYMS	= scripts/genksyms/genksyms
 INSTALLKERNEL  := installkernel
 DEPMOD		= /sbin/depmod
-KALLSYMS	= scripts/kallsyms
 PERL		= perl
 CHECK		= sparse
 
@@ -1036,8 +1035,6 @@ endif # CONFIG_MODULES
 
 # Directories & files removed with 'make clean'
 CLEAN_DIRS  += $(MODVERDIR)
-CLEAN_FILES +=	vmlinux System.map \
-                .tmp_kallsyms* .tmp_version .tmp_vmlinux* .tmp_System.map
 
 # Directories & files removed with 'make mrproper'
 MRPROPER_DIRS  += include/config usr/include include/generated          \
@@ -1285,6 +1282,7 @@ scripts: ;
 endif # KBUILD_EXTMOD
 
 clean: $(clean-dirs)
+	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/link-vmlinux.sh clean
 	$(call cmd,rmdirs)
 	$(call cmd,rmfiles)
 	@find $(if $(KBUILD_EXTMOD), $(KBUILD_EXTMOD), .) $(RCS_FIND_IGNORE) \
@@ -1418,14 +1416,6 @@ quiet_cmd_depmod = DEPMOD  $(KERNELRELEASE)
 # clean it up only when building all modules
 cmd_crmodverdir = $(Q)mkdir -p $(MODVERDIR) \
                   $(if $(KBUILD_MODULES),; rm -f $(MODVERDIR)/*)
-
-a_flags = -Wp,-MD,$(depfile) $(KBUILD_AFLAGS) $(AFLAGS_KERNEL) \
-	  $(KBUILD_AFLAGS_KERNEL)                              \
-	  $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(KBUILD_CPPFLAGS) \
-	  $(modkern_aflags) $(EXTRA_AFLAGS) $(AFLAGS_$(basetarget).o)
-
-quiet_cmd_as_o_S = AS      $@
-cmd_as_o_S       = $(CC) $(a_flags) -c -o $@ $<
 
 # read all saved command lines
 
