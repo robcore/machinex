@@ -104,8 +104,8 @@ static inline void msm_mpm_write(
 	unsigned int reg, unsigned int subreg_index, uint32_t value)
 {
 	unsigned int offset = reg * MSM_MPM_REG_WIDTH + subreg_index;
-
 	__raw_writel(value, msm_mpm_dev_data.mpm_request_reg_base + offset * 4);
+
 	if (MSM_MPM_DEBUG_WRITE & msm_mpm_debug_mask)
 		pr_info("%s: reg %u.%u: 0x%08x\n",
 			__func__, reg, subreg_index, value);

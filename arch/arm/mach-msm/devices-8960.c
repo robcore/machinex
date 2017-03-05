@@ -131,18 +131,11 @@ static struct resource msm8960_resources_pccntr[] = {
 	},
 };
 
-static struct msm_pm_init_data_type msm_pm_data = {
-	.retention_calls_tz = true,
-};
-
-struct platform_device msm8960_pm_8x60 = {
-	.name		= "pm-8x60",
+struct platform_device msm8960_pc_cntr = {
+	.name		= "pc-cntr",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(msm8960_resources_pccntr),
 	.resource	= msm8960_resources_pccntr,
-	.dev = {
-		.platform_data = &msm_pm_data,
-	},
 };
 
 static struct msm_pm_sleep_status_data msm_pm_slp_sts_data = {
@@ -2088,7 +2081,7 @@ struct platform_device msm8960_device_qup_i2c_gsbi5 = {
 	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi5),
 	.resource	= resources_qup_i2c_gsbi5,
 };
-#if !defined(CONFIG_SENSOR_LT02_CTC)
+#if !defined(CONFIG_SENSOR_LT02_CTC)	
 static struct resource resources_qup_i2c_gsbi11[] = {
 	{
 		.name	= "gsbi_qup_i2c_addr",

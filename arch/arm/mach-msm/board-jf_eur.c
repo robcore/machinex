@@ -175,7 +175,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x5400000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -4102,6 +4102,7 @@ static struct platform_device *cdp_devices[] __initdata = {
 #ifdef CONFIG_MSM_ROTATOR
 	&msm_rotator_device,
 #endif
+	&msm8064_pc_cntr,
 	&msm8064_cpu_slp_status,
 	&sec_device_jack,
 #ifdef CONFIG_SENSORS_SSP_C12SD
@@ -5237,13 +5238,11 @@ static void __init apq8064_common_init(void)
 	if (cpu_is_apq8064ab())
 		apq8064ab_update_krait_spm();
 	if (cpu_is_krait_v3()) {
-		struct msm_pm_init_data_type *pdata =
-			msm8064_pm_8x60.dev.platform_data;
-		pdata->retention_calls_tz = false;
+		msm_pm_set_tz_retention_flag(0);
 		apq8064ab_update_retention_spm();
+	} else {
+		msm_pm_set_tz_retention_flag(1);
 	}
-
-	platform_device_register(&msm8064_pm_8x60);
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm_tsens_early_init(&apq_tsens_pdata);

@@ -218,8 +218,8 @@ static int msm_xo_update_vote(struct msm_xo *xo)
 		     * reserved in both cases, just set both and be
 		     * done with it.
 		     */
-		    ((msm_xo_sources[MSM_XO_CORE].mode ? 1 : 0) << 20);
-		    //((msm_xo_sources[MSM_XO_CORE].mode ? 1 : 0) << 18);
+		    ((msm_xo_sources[MSM_XO_CORE].mode ? 1 : 0) << 20) |
+		    ((msm_xo_sources[MSM_XO_CORE].mode ? 1 : 0) << 18);
 	ret = msm_rpm_set(MSM_RPM_CTX_SET_0, &cmd, 1);
 
 	if (ret)

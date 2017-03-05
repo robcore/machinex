@@ -249,7 +249,7 @@ static void bricked_hotplug_suspend(void)
 {
 	int cpu;
 
-	if (!hotplug.bricked_enabled || hotplug.suspended)
+	if (hotplug.suspended)
 		return;
 
 	if (!hotplug.hotplug_suspend)
@@ -284,7 +284,7 @@ static void __ref bricked_hotplug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
-	if (!hotplug.hotplug_suspend || !hotplug.bricked_enabled)
+	if (!hotplug.hotplug_suspend)
 		return;
 
 	if (hotplug.suspended) {
@@ -657,11 +657,8 @@ static ssize_t store_bricked_enabled(struct device *dev,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input >= 1)
+	if (input > 1)
 		input = 1;
-
-	if ((input == 1) && (hotplug.suspended))
-		return -EINVAL;
 
 	if (input == hotplug.bricked_enabled)
 		return count;
