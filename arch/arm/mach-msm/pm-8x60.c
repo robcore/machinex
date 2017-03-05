@@ -80,7 +80,6 @@
 	(container_of(attr, struct msm_pm_kobj_attribute, ka)->cpu)
 
 #define SCLK_HZ (32768)
-#define MSM_PM_SLEEP_TICK_LIMIT (0x6DDD000)
 
 #define NUM_OF_COUNTERS 3
 #define MAX_BUF_SIZE  512
@@ -144,7 +143,6 @@ static bool msm_pm_use_sync_timer = true;
 static bool msm_pm_use_sync_timer;
 static struct msm_pm_cp15_save_data cp15_data;
 static bool msm_pm_retention_calls_tz;
-static uint32_t msm_pm_max_sleep_time;
 static bool msm_no_ramp_down_pc;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 static bool msm_pm_pc_reset_timer;
