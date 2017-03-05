@@ -2797,7 +2797,7 @@ struct platform_device apq8064_rpm_log_device = {
 
 static struct msm_pm_init_data_type msm_pm_data = {
 	.use_sync_timer = true,
-	.pc_mode = MSM_PM_PC_NOTZ_L2_EXT,
+	.pc_mode = MSM_PC_TZ_L2_INT,
 };
 
 struct platform_device apq8064_pm_8x60 = {
