@@ -146,7 +146,6 @@ static bool msm_pm_retention_calls_tz;
 static bool msm_no_ramp_down_pc;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 static bool msm_pm_pc_reset_timer;
-static struct clk *pnoc_clk;
 
 static int msm_pm_get_pc_mode(struct device_node *node,
 		const char *key, uint32_t *pc_mode_val)
@@ -1797,18 +1796,6 @@ static int __init msm_pm_8x60_init(void)
 		pr_err("%s(): failed to register driver %s\n", __func__,
 				msm_cpu_pm_snoc_client_driver.driver.name);
 		return rc;
-	}
-
-	pnoc_clk = clk_get_sys("pm_8x60", "bus_clk");
-
-	if (IS_ERR(pnoc_clk))
-		pnoc_clk = NULL;
-	else {
-		clk_set_rate(pnoc_clk, 19200000);
-		rc = clk_prepare_enable(pnoc_clk);
-
-		if (rc)
-			pr_err("%s: PNOC clock enable failed\n", __func__);
 	}
 
 	return platform_driver_register(&msm_pm_8x60_driver);
