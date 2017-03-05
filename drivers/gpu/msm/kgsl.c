@@ -2354,6 +2354,8 @@ error_attach:
 		break;
 	}
 error:
+	/* Clear gpuaddr here so userspace doesn't get any wrong ideas */
+	param->gpuaddr = 0;
 	kfree(entry);
 	return result;
 }
