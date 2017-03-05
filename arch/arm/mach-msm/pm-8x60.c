@@ -1333,7 +1333,7 @@ static int __init msm_pm_setup_saved_state(void)
 }
 core_initcall(msm_pm_setup_saved_state);
 
-static int __init msm_pm_init(void)
+static int __devinit msm_pm_init(void)
 {
 	int rc;
 
