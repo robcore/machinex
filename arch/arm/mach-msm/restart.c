@@ -321,6 +321,9 @@ void msm_restart(char mode, const char *cmd)
 #endif
 #endif
 #endif
+	if (in_panic == 1)
+		flush_cache_louis();
+
 	printk(KERN_NOTICE "Going down for restart now\n");
 
 	pm8xxx_reset_pwr_off(1);
