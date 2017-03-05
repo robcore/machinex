@@ -2166,7 +2166,7 @@ static int __init mdm9615_audio_init(void)
 	int ret;
 
 	if (!cpu_is_msm9615()) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: msm9615 - Not the right machine type\n", __func__);
 		return -ENODEV ;
 	}
 
@@ -2239,7 +2239,7 @@ module_init(mdm9615_audio_init);
 static void __exit mdm9615_audio_exit(void)
 {
 	if (!cpu_is_msm9615()) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: msm9615 - Not the right machine type\n", __func__);
 		return ;
 	}
 	mdm9615_free_headset_mic_gpios();

@@ -1777,7 +1777,7 @@ static int __init msm8960_audio_init(void)
 	int ret;
 
 	if (!soc_class_is_msm8960()) {
-		pr_debug("%s: Not the right machine type\n", __func__);
+		pr_debug("%s: 8960 - Not the right machine type\n", __func__);
 		return -ENODEV ;
 	}
 
@@ -1850,7 +1850,7 @@ module_init(msm8960_audio_init);
 static void __exit msm8960_audio_exit(void)
 {
 	if (!soc_class_is_msm8960()) {
-		pr_debug("%s: Not the right machine type\n", __func__);
+		pr_debug("%s: 8960 - Not the right machine type\n", __func__);
 		return ;
 	}
 	msm8960_free_headset_mic_gpios();

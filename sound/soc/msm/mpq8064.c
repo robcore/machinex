@@ -1520,7 +1520,7 @@ static int __init msm_audio_init(void)
 	int ret;
 
 	if (socinfo_get_id() != 130) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: mpq8064 - Not the right machine type\n", __func__);
 		return -ENODEV;
 	}
 
@@ -1562,7 +1562,7 @@ module_init(msm_audio_init);
 static void __exit msm_audio_exit(void)
 {
 	if (socinfo_get_id() != 130) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: mpq8064 - Not the right machine type\n", __func__);
 		return ;
 	}
 	msm_free_headset_mic_gpios();
