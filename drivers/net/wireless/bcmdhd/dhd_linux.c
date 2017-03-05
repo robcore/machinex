@@ -7388,6 +7388,9 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 #elif (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 		dhd_bus_dev_pm_stay_awake(pub);
 #endif
+#ifdef CONFIG_PARTIALRESUME
+			wifi_process_partial_resume(WIFI_PR_WD_COMPLETE);
+#endif
 		}
 		dhd->wakelock_counter++;
 		ret = dhd->wakelock_counter;
@@ -7476,6 +7479,10 @@ int dhd_os_wd_wake_lock(dhd_pub_t *pub)
 			wake_lock(&dhd->wl_wdwake);
 #endif
 		}
+#ifdef CONFIG_PARTIALRESUME
+		if (!dhd->wakelock_wd_counter)
+			wifi_process_partial_resume(WIFI_PR_WD_INIT);
+#endif
 		dhd->wakelock_wd_counter++;
 		ret = dhd->wakelock_wd_counter;
 		spin_unlock_irqrestore(&dhd->wakelock_spinlock, flags);
