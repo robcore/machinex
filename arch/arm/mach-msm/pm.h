@@ -59,10 +59,10 @@ enum msm_pm_sleep_mode {
 #define MSM_PM_MODE(cpu, mode_nr)  ((cpu) * MSM_PM_SLEEP_MODE_NR + (mode_nr))
 
 struct msm_pm_time_params {
-	uint32_t latency_us;
-	uint32_t sleep_us;
-	uint32_t next_event_us;
-	uint32_t modified_time_us;
+	uint64_t latency_us;
+	uint64_t sleep_us;
+	uint64_t next_event_us;
+	uint64_t modified_time_us;
 };
 
 struct msm_pm_sleep_status_data {
@@ -88,7 +88,7 @@ struct msm_pm_sleep_ops {
 	void *(*lowest_limits)(bool from_idle,
 			enum msm_pm_sleep_mode sleep_mode,
 			struct msm_pm_time_params *time_param, uint32_t *power);
-	int (*enter_sleep)(uint32_t sclk_count, void *limits,
+	int (*enter_sleep)(uint64_t sclk_count, void *limits,
 			bool from_idle, bool notify_rpm);
 	void (*exit_sleep)(void *limits, bool from_idle,
 			bool notify_rpm, bool collapsed);

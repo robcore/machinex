@@ -50,7 +50,7 @@ enum {
 
 static int msm_rpmrs_debug_mask;
 module_param_named(
-	debug_mask, msm_rpmrs_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
+	debug_mask, msm_rpmrs_debug_mask, int, 0644
 );
 
 static int msm_rpmrs_debug_collapse;
@@ -195,7 +195,7 @@ static struct attribute_group msm_rpmrs_mode_attribute_group = {
  * Resource Specific Functions
  *****************************************************************************/
 
-static void msm_rpmrs_aggregate_sclk(uint32_t sclk_count)
+static void msm_rpmrs_aggregate_sclk(uint64_t sclk_count)
 {
 	msm_rpmrs_buffer[MSM_RPM_ID_TRIGGER_TIMED_TO] = 0;
 	set_bit(MSM_RPM_ID_TRIGGER_TIMED_TO, msm_rpmrs_buffered);
@@ -560,7 +560,7 @@ static void msm_rpmrs_L2_restore(struct msm_rpmrs_limits *limits,
 #endif
 
 static int msm_rpmrs_flush_buffer(
-	uint32_t sclk_count, struct msm_rpmrs_limits *limits, int from_idle)
+	uint64_t sclk_count, struct msm_rpmrs_limits *limits, int from_idle)
 {
 	struct msm_rpm_iv_pair *req;
 	int count;
@@ -1016,7 +1016,7 @@ static void *msm_rpmrs_lowest_limits(bool from_idle,
 	return best_level ? &best_level->rs_limits : NULL;
 }
 
-static int msm_rpmrs_enter_sleep(uint32_t sclk_count, void *limits,
+static int msm_rpmrs_enter_sleep(uint64_t sclk_count, void *limits,
 		bool from_idle, bool notify_rpm)
 {
 	int rc = 0;
