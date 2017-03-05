@@ -96,7 +96,6 @@
 
 #include "clock.h"
 #include "msm_watchdog.h"
-#include "platsmp.h"
 #include "board-8064.h"
 #include "clock.h"
 #include "spm.h"
