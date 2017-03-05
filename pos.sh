@@ -1,36 +1,37 @@
-/root/machinex/patches/0036-fuck-it.patch
-/root/machinex/patches/0035-brought-it-all-back-with-wakeup_reason.h-included-in.patch
-/root/machinex/patches/0034-REVERT-ENTIRE-DHD-partialresume-support-revert-this-.patch
-/root/machinex/patches/0033-REVERT-Report-IPv6-NA-packets-processing-to-partial-.patch
-/root/machinex/patches/0032-alright-got-er-to-build.patch
-/root/machinex/patches/0031-another-wifi-fix-and-a-hacked-in-wlan-reset-function.patch
-/root/machinex/patches/0030-more-board-adaptations.patch
-/root/machinex/patches/0029-dhd-partialresume-adapt-find_irq-function-logic-to-o.patch
-/root/machinex/patches/0028-PM-Check-dpm_suspend_start-return-code-during-partia.patch
-/root/machinex/patches/0027-msm-rpm_master_stats-Add-DT-support.patch
-/root/machinex/patches/0026-msm-rpm-master-stat-Modify-RPM-master-stats-platform.patch
-/root/machinex/patches/0025-wakeup_reason-use-vsnprintf-instead-of-snprintf-for-.patch
-/root/machinex/patches/0024-net-wireless-bcmdhd-Inform-watchdog-status-to-partia.patch
-/root/machinex/patches/0023-ARM-msm-JFLTE-Add-watchdog-init-complete-hooks-for-p.patch
-/root/machinex/patches/0022-Add-watchdog-init-complete-hooks-for-partial-resume.patch
-/root/machinex/patches/0021-net-wireless-bcmdhd-Increase-allowed-DTIM-in-power-s.patch
-/root/machinex/patches/0020-REVERT-cpufreq-Avoid-using-global-variable-total_cpu.patch
-/root/machinex/patches/0019-fixed-up-my-irqs-we-have-4-interrupts-labelled-smd_d.patch
-/root/machinex/patches/0018-8064-wifi-add-mpm-hook-to-partial-resume.patch
-/root/machinex/patches/0017-Report-IPv6-NA-packets-processing-to-partial-resume.patch
-/root/machinex/patches/0016-net-wireless-bcmdhd-Add-partial-resume-support.patch
-/root/machinex/patches/0015-add-back-partialresume-code-in-8064-wifi.patch
-/root/machinex/patches/0014-REVERT-last-7.patch
-/root/machinex/patches/0013-Jesus.patch
-/root/machinex/patches/0012-.patch
-/root/machinex/patches/0011-ufs-Fix-evaluation-of-UTP-task-completion-code.patch
-/root/machinex/patches/0010-iommu-msm-Decrement-ref-counts-for-device.patch
-/root/machinex/patches/0009-iommu-msm-Fix-usage-of-uninitialized-variables.patch
-/root/machinex/patches/0008-qup_i2c-Add-runtime-PM-support-to-I2C-QUP-controller.patch
-/root/machinex/patches/0007-gpio-msm-Get-the-interrupt-number-from-the-board.patch
-/root/machinex/patches/0006-iommmu-v2-msm-Remove-writes-to-invalid-registers.patch
-/root/machinex/patches/0005-ocmem-Add-client-id-to-Data-Mover-Control-Register.patch
-/root/machinex/patches/0004-msm-spm_devices-Update-notify_rpm-flag-for-L2-retent.patch
-/root/machinex/patches/0003-msm-buspm-Add-RPM-SMD-support-for-SPDM-clocks-to-bus.patch
-/root/machinex/patches/0002-lpm-resources-configure-MPM-during-power-collapse.patch
-/root/machinex/patches/0001-turned-off-msm-avtimer.patch
+#!/bin/bash
+patch -p1 -R < "/root/machinex/patches/0036-fuck-it.patch"
+patch -p1 -R < "/root/machinex/patches/0035-brought-it-all-back-with-wakeup_reason.h-included-in.patch"
+patch -p1 -R < "/root/machinex/patches/0034-REVERT-ENTIRE-DHD-partialresume-support-revert-this-.patch"
+patch -p1 -R < "/root/machinex/patches/0033-REVERT-Report-IPv6-NA-packets-processing-to-partial-.patch"
+patch -p1 -R < "/root/machinex/patches/0032-alright-got-er-to-build.patch"
+patch -p1 -R < "/root/machinex/patches/0031-another-wifi-fix-and-a-hacked-in-wlan-reset-function.patch"
+patch -p1 -R < "/root/machinex/patches/0030-more-board-adaptations.patch"
+patch -p1 -R < "/root/machinex/patches/0029-dhd-partialresume-adapt-find_irq-function-logic-to-o.patch"
+patch -p1 -R < "/root/machinex/patches/0028-PM-Check-dpm_suspend_start-return-code-during-partia.patch"
+patch -p1 -R < "/root/machinex/patches/0027-msm-rpm_master_stats-Add-DT-support.patch"
+patch -p1 -R < "/root/machinex/patches/0026-msm-rpm-master-stat-Modify-RPM-master-stats-platform.patch"
+patch -p1 -R < "/root/machinex/patches/0025-wakeup_reason-use-vsnprintf-instead-of-snprintf-for-.patch"
+patch -p1 -R < "/root/machinex/patches/0024-net-wireless-bcmdhd-Inform-watchdog-status-to-partia.patch"
+patch -p1 -R < "/root/machinex/patches/0023-ARM-msm-JFLTE-Add-watchdog-init-complete-hooks-for-p.patch"
+patch -p1 -R < "/root/machinex/patches/0022-Add-watchdog-init-complete-hooks-for-partial-resume.patch"
+patch -p1 -R < "/root/machinex/patches/0021-net-wireless-bcmdhd-Increase-allowed-DTIM-in-power-s.patch"
+patch -p1 -R < "/root/machinex/patches/0020-REVERT-cpufreq-Avoid-using-global-variable-total_cpu.patch"
+patch -p1 -R < "/root/machinex/patches/0019-fixed-up-my-irqs-we-have-4-interrupts-labelled-smd_d.patch"
+patch -p1 -R < "/root/machinex/patches/0018-8064-wifi-add-mpm-hook-to-partial-resume.patch"
+patch -p1 -R < "/root/machinex/patches/0017-Report-IPv6-NA-packets-processing-to-partial-resume.patch"
+patch -p1 -R < "/root/machinex/patches/0016-net-wireless-bcmdhd-Add-partial-resume-support.patch"
+patch -p1 -R < "/root/machinex/patches/0015-add-back-partialresume-code-in-8064-wifi.patch"
+patch -p1 -R < "/root/machinex/patches/0014-REVERT-last-7.patch"
+patch -p1 -R < "/root/machinex/patches/0013-Jesus.patch"
+patch -p1 -R < "/root/machinex/patches/0012-.patch"
+patch -p1 -R < "/root/machinex/patches/0011-ufs-Fix-evaluation-of-UTP-task-completion-code.patch"
+patch -p1 -R < "/root/machinex/patches/0010-iommu-msm-Decrement-ref-counts-for-device.patch"
+patch -p1 -R < "/root/machinex/patches/0009-iommu-msm-Fix-usage-of-uninitialized-variables.patch"
+patch -p1 -R < "/root/machinex/patches/0008-qup_i2c-Add-runtime-PM-support-to-I2C-QUP-controller.patch"
+patch -p1 -R < "/root/machinex/patches/0007-gpio-msm-Get-the-interrupt-number-from-the-board.patch"
+patch -p1 -R < "/root/machinex/patches/0006-iommmu-v2-msm-Remove-writes-to-invalid-registers.patch"
+patch -p1 -R < "/root/machinex/patches/0005-ocmem-Add-client-id-to-Data-Mover-Control-Register.patch"
+patch -p1 -R < "/root/machinex/patches/0004-msm-spm_devices-Update-notify_rpm-flag-for-L2-retent.patch"
+patch -p1 -R < "/root/machinex/patches/0003-msm-buspm-Add-RPM-SMD-support-for-SPDM-clocks-to-bus.patch"
+patch -p1 -R < "/root/machinex/patches/0002-lpm-resources-configure-MPM-during-power-collapse.patch"
+patch -p1 -R < "/root/machinex/patches/0001-turned-off-msm-avtimer.patch"
