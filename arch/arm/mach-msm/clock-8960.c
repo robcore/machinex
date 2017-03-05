@@ -4898,6 +4898,12 @@ static DEFINE_CLK_VOTER(ebi1_msmbus_a_clk, &ebi1_a_clk.c, LONG_MAX);
 static DEFINE_CLK_VOTER(afab_acpu_a_clk, &afab_a_clk.c, LONG_MAX);
 static DEFINE_CLK_VOTER(afab_msmbus_a_clk, &afab_a_clk.c, LONG_MAX);
 
+#ifdef CONFIG_DEBUG_FS
+struct measure_sel {
+	u32 test_vector;
+	struct clk *c;
+};
+
 static DEFINE_CLK_MEASURE(l2_m_clk);
 static DEFINE_CLK_MEASURE(krait0_m_clk);
 static DEFINE_CLK_MEASURE(krait1_m_clk);
@@ -4906,12 +4912,6 @@ static DEFINE_CLK_MEASURE(krait3_m_clk);
 static DEFINE_CLK_MEASURE(q6sw_clk);
 static DEFINE_CLK_MEASURE(q6fw_clk);
 static DEFINE_CLK_MEASURE(q6_func_clk);
-
-#ifdef CONFIG_DEBUG_FS
-struct measure_sel {
-	u32 test_vector;
-	struct clk *c;
-};
 
 static struct measure_sel measure_mux[] = {
 	{ TEST_PER_LS(0x08), &slimbus_xo_src_clk.c },
@@ -5617,7 +5617,18 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("mem_iface_clk",	imem_p_clk.c,	"kgsl-3d0.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,		"mdp.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,	"footswitch-8x60.4"),
-	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,		"msm_iommu"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.0"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.1"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.2"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.3"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.4"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.5"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.6"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.7"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.8"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.9"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.10"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.11"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"msm_rotator.0"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"footswitch-8x60.6"),
 	CLK_LOOKUP("iface_clk",		vcodec_p_clk.c,		"msm_vidc.0"),
@@ -5998,7 +6009,16 @@ static struct clk_lookup msm_clocks_8960_common[] __initdata = {
 	CLK_LOOKUP("mem_iface_clk",	imem_p_clk.c,	"kgsl-3d0.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,		"mdp.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,	"footswitch-8x60.4"),
-	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.0"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.1"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.2"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.3"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.4"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.5"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.6"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.7"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.8"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.9"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"msm_rotator.0"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"footswitch-8x60.6"),
 	CLK_LOOKUP("iface_clk",		vcodec_p_clk.c,	"msm_vidc.0"),
@@ -6095,12 +6115,15 @@ static struct clk_lookup msm_clocks_8960_only[] __initdata = {
 	CLK_LOOKUP("iface_clk",		gfx2d0_p_clk.c,	"footswitch-8x60.0"),
 	CLK_LOOKUP("iface_clk",		gfx2d1_p_clk.c,	"kgsl-2d1.1"),
 	CLK_LOOKUP("iface_clk",		gfx2d1_p_clk.c,	"footswitch-8x60.1"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.10"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.11"),
 	CLK_LOOKUP("core_clk",		gfx2d0_clk.c,		"msm_iommu.10"),
 	CLK_LOOKUP("core_clk",		gfx2d1_clk.c,		"msm_iommu.11"),
 };
 
 static struct clk_lookup msm_clocks_8960ab_only[] __initdata = {
 	CLK_LOOKUP("bus_clk", gfx3d_axi_clk.c, "footswitch-8x60.2"),
+	CLK_LOOKUP("iface_clk",	smmu_p_clk.c,	"msm_iommu.10"),
 	CLK_LOOKUP("core_clk", gfx3d_axi_clk.c, "msm_iommu.10"),
 	CLK_LOOKUP("div_clk",	tv_src_div_clk.c,	""),
 };
@@ -6433,7 +6456,17 @@ static struct clk_lookup msm_clocks_8930[] = {
 	CLK_LOOKUP("mem_iface_clk",	imem_p_clk.c,	"kgsl-3d0.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,		"mdp.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,	"footswitch-8x60.4"),
-	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.0"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.1"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.2"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.3"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.4"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.5"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.6"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.7"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.8"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.9"),
+	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu.10"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"msm_rotator.0"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"footswitch-8x60.6"),
 	CLK_LOOKUP("iface_clk",		vcodec_p_clk.c,	"msm_vidc.0"),
@@ -6850,6 +6883,7 @@ static void __init reg_init(void)
 }
 
 struct clock_init_data msm8960_clock_init_data __initdata;
+
 static void __init msm8960_clock_pre_init(void)
 {
 	u32 reg;
