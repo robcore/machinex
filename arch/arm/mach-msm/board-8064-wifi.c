@@ -1,4 +1,3 @@
-#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -6,10 +5,11 @@
 #include <linux/err.h>
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
-#if 0
+#ifdef CONFIG_PARTIALRESUME
 #include <linux/partialresume.h>
-#endif
 #include <linux/spinlock.h>
+#include <linux/module.h>
+#endif
 #ifdef CONFIG_BROKEN_SDIO_HACK
 #include <linux/mmc/host.h>
 #include <mach/board.h>
@@ -200,7 +200,7 @@ static unsigned get_gpio_wl_host_wake(void)
 
 int __init brcm_wifi_init_gpio(void)
 {
-#if 0
+#if CONFIG_PARTIALRESUME
 	if (gpio_tlmm_config(config_gpio_wl_reg_on[0], GPIO_CFG_ENABLE))
 		printk(KERN_ERR "%s: Failed to configure GPIO"
 			" - WL_REG_ON\n", __func__);
@@ -444,7 +444,7 @@ static struct resource brcm_wlan_resources[] = {
 	},
 };
 
-#if 0
+#if CONFIG_PARTIALRESUME
 static bool smd_partial_resume(struct partial_resume *pr)
 {
 	return true;
@@ -535,7 +535,7 @@ static struct wifi_platform_data brcm_wlan_control = {
 	.mem_prealloc	= brcm_wlan_mem_prealloc,
 #endif
 	.get_country_code = brcm_wlan_get_country_code,
-#if 0
+#if CONFIG_PARTIALRESUME
 	.partial_resume = bcm_wifi_process_partial_resume,
 #endif
 };
@@ -564,7 +564,7 @@ int __init brcm_wlan_init(void)
 	return platform_device_register(&brcm_device_wlan);
 }
 
-#if 0
+#if CONFIG_PARTIALRESUME
 static struct partial_resume smd_pr = {
 	.irq = 353,
 	.partial_resume = smd_partial_resume,
