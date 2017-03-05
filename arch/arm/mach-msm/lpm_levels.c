@@ -56,6 +56,12 @@ int msm_lpm_enter_sleep(uint32_t sclk_count, void *limits,
 	int debug_mask;
 	struct msm_rpmrs_limits *l = (struct msm_rpmrs_limits *)limits;
 
+	ret = msm_rpm_enter_sleep();
+	if (ret) {
+		pr_warn("%s(): RPM failed to enter sleep err:%d\n",
+				__func__, ret);
+		goto bail;
+	}
 	if (from_idle)
 		debug_mask = msm_lpm_lvl_dbg_msk &
 				MSM_LPM_LVL_DBG_IDLE_LIMITS;
@@ -72,15 +78,6 @@ int msm_lpm_enter_sleep(uint32_t sclk_count, void *limits,
 				l->vdd_dig_upper_bound);
 
 	ret = msm_lpmrs_enter_sleep(sclk_count, l, from_idle, notify_rpm);
-	if (ret) {
-		pr_warn("%s() LPM resources failed to enter sleep\n",
-				__func__);
-		goto bail;
-	}
-	ret = msm_rpm_enter_sleep(debug_mask);
-	if (ret)
-		pr_warn("%s(): RPM failed to enter sleep err:%d\n",
-				__func__, ret);
 bail:
 	return ret;
 }
