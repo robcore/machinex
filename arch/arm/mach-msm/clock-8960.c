@@ -4895,6 +4895,7 @@ static DEFINE_CLK_VOTER(ebi1_adm_clk, &ebi1_clk.c, 0);
 
 static DEFINE_CLK_VOTER(ebi1_acpu_a_clk, &ebi1_a_clk.c, LONG_MAX);
 static DEFINE_CLK_VOTER(ebi1_msmbus_a_clk, &ebi1_a_clk.c, LONG_MAX);
+static DEFINE_CLK_VOTER(dfab_pm_clk, &dfab_clk.c, LONG_MAX);
 static DEFINE_CLK_VOTER(afab_acpu_a_clk, &afab_a_clk.c, LONG_MAX);
 static DEFINE_CLK_VOTER(afab_msmbus_a_clk, &afab_a_clk.c, LONG_MAX);
 
@@ -6176,6 +6177,7 @@ static struct clk_lookup msm_clocks_8930[] = {
 	CLK_LOOKUP("mem_a_clk",		ebi1_msmbus_a_clk.c,	"msm_bus"),
 	CLK_LOOKUP("dfab_clk",		dfab_msmbus_clk.c,	"msm_bus"),
 	CLK_LOOKUP("dfab_a_clk",	dfab_msmbus_a_clk.c,	"msm_bus"),
+	CLK_LOOKUP("bus_clk",		dfab_pm_clk.c,      "pm_8x60"),
 	CLK_LOOKUP("core_a_clk",	qdss_a_clk.c,		""),
 	CLK_LOOKUP("core_clk",		qdss_clk.c,	"coresight-tpiu.0"),
 	CLK_LOOKUP("core_clk",		qdss_clk.c,	"coresight-etb.0"),
