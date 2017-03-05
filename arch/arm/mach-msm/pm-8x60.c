@@ -42,7 +42,9 @@
 #include <asm/hardware/gic.h>
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
+#ifdef CONFIG_CACHE_L2X0
 #include <asm/hardware/cache-l2x0.h>
+#endif
 #include <asm/outercache.h>
 #ifdef CONFIG_VFP
 #include <asm/vfp.h>
