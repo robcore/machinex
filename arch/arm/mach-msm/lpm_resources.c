@@ -681,8 +681,7 @@ int msm_lpmrs_enter_sleep(uint64_t sclk_count, struct msm_rpmrs_limits *limits,
 	}
 	msm_lpm_get_rpm_notif = true;
 
-	if (msm_lpm_use_mpm(limits))
-		msm_mpm_enter_sleep(sclk_count, from_idle);
+	msm_mpm_enter_sleep(sclk_count, from_idle);
 
 	return ret;
 }
@@ -690,9 +689,8 @@ int msm_lpmrs_enter_sleep(uint64_t sclk_count, struct msm_rpmrs_limits *limits,
 void msm_lpmrs_exit_sleep(struct msm_rpmrs_limits *limits,
 		bool from_idle, bool notify_rpm, bool collapsed)
 {
-	/* MPM exit sleep
 	if (msm_lpm_use_mpm(limits))
-		msm_mpm_exit_sleep(from_idle);*/
+		msm_mpm_exit_sleep(from_idle);
 
 	if (msm_lpm_l2.valid)
 		msm_lpm_set_l2_mode(msm_lpm_l2.rs_data.default_value, false);
