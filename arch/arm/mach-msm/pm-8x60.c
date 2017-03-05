@@ -68,6 +68,42 @@
 #include <linux/secgpio_dvs.h>
 #endif
 
+#define SCM_L2_RETENTION	(0x2)
+#define SCM_CMD_TERMINATE_PC	(0x2)
+
+#define GET_CPU_OF_ATTR(attr) \
+	(container_of(attr, struct msm_pm_kobj_attribute, ka)->cpu)
+
+#define SCLK_HZ (32768)
+
+static int msm_pm_debug_mask = 0;
+module_param_named(
+	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
+#ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
+static int msm_pm_sleep_time_override;
+module_param_named(sleep_time_override,
+	msm_pm_sleep_time_override, int, 0664);
+#endif
+
+struct reg_data {
+	uint32_t reg;
+	uint32_t val;
+};
+
+static struct reg_data reg_saved_state[] = {
+	{ .reg = 0x4501, },
+	{ .reg = 0x5501, },
+	{ .reg = 0x6501, },
+	{ .reg = 0x7501, },
+	{ .reg = 0x0500, },
+};
+
+static unsigned int active_vdd;
+static bool msm_pm_save_cp15;
+static const unsigned int pc_vdd = 0x98;
+
 /******************************************************************************
  * Debug Definitions
  *****************************************************************************/
@@ -84,23 +120,11 @@ enum {
 	MSM_PM_DEBUG_HOTPLUG = BIT(8),
 };
 
-static int msm_pm_debug_mask = 0;
-module_param_named(
-	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
-);
-static int msm_pm_retention_tz_call;
-
-/******************************************************************************
- * Sleep Modes and Parameters
- *****************************************************************************/
 enum {
 	MSM_PM_MODE_ATTR_SUSPEND,
 	MSM_PM_MODE_ATTR_IDLE,
 	MSM_PM_MODE_ATTR_NR,
 };
-
-#define SCM_L2_RETENTION	(0x2)
-#define SCM_CMD_TERMINATE_PC	(0x2)
 
 static char *msm_pm_mode_attr_labels[MSM_PM_MODE_ATTR_NR] = {
 	[MSM_PM_MODE_ATTR_SUSPEND] = "suspend_enabled",
@@ -111,9 +135,6 @@ struct msm_pm_kobj_attribute {
 	unsigned int cpu;
 	struct kobj_attribute ka;
 };
-
-#define GET_CPU_OF_ATTR(attr) \
-	(container_of(attr, struct msm_pm_kobj_attribute, ka)->cpu)
 
 struct msm_pm_sysfs_sleep_mode {
 	struct kobject *kobj;
@@ -135,6 +156,9 @@ static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 static bool msm_pm_ldo_retention_enabled = false;
 static bool msm_pm_use_sync_timer;
+static int msm_pm_retention_tz_call;
+static void *msm_pm_idle_rs_limits;
+
 /*
  * Write out the attribute.
  */
@@ -181,9 +205,6 @@ static ssize_t msm_pm_mode_attr_show(
 	return ret;
 }
 
-/*
- * Read in the new attribute value.
- */
 static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -220,9 +241,6 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	return ret ? ret : count;
 }
 
-/*
- * Add sysfs entries for one cpu.
- */
 static int __init msm_pm_mode_sysfs_add_cpu(
 	unsigned int cpu, struct kobject *modes_kobj)
 {
@@ -306,9 +324,6 @@ mode_sysfs_add_cpu_exit:
 	return ret;
 }
 
-/*
- * Add sysfs entries for the sleep modes.
- */
 static int __init msm_pm_mode_sysfs_add(void)
 {
 	struct kobject *module_kobj;
@@ -343,10 +358,6 @@ mode_sysfs_add_exit:
 	return ret;
 }
 
-/******************************************************************************
- * Configure Hardware before/after Low Power Mode
- *****************************************************************************/
-
 /*
  * Configure hardware registers in preparation for Apps power down.
  */
@@ -377,6 +388,7 @@ static void msm_pm_config_hw_before_swfi(void)
 static void msm_pm_config_hw_after_retention(void)
 {
 	int ret;
+
 	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
 	WARN_ON(ret);
 }
@@ -385,36 +397,6 @@ static void msm_pm_config_hw_before_retention(void)
 {
 	return;
 }
-
-
-/******************************************************************************
- * Suspend Max Sleep Time
- *****************************************************************************/
-
-#ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
-static int msm_pm_sleep_time_override;
-module_param_named(sleep_time_override,
-	msm_pm_sleep_time_override, int, 0664);
-#endif
-
-#define SCLK_HZ (32768)
-
-struct reg_data {
-	uint32_t reg;
-	uint32_t val;
-};
-
-static struct reg_data reg_saved_state[] = {
-	{ .reg = 0x4501, },
-	{ .reg = 0x5501, },
-	{ .reg = 0x6501, },
-	{ .reg = 0x7501, },
-	{ .reg = 0x0500, },
-};
-
-static unsigned int active_vdd;
-static bool msm_pm_save_cp15;
-static const unsigned int pc_vdd = 0x98;
 
 static void msm_pm_save_cpu_reg(void)
 {
@@ -456,8 +438,6 @@ static void msm_pm_restore_cpu_reg(void)
 		msm_spm_set_vdd(0, active_vdd);
 	}
 }
-
-static void *msm_pm_idle_rs_limits;
 
 static void msm_pm_swfi(void)
 {
@@ -534,13 +514,8 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-#ifdef CONFIG_SEC_DEBUG
-	secdbg_sched_msg("+pc(I:%d,R:%d)", from_idle, notify_rpm);
 	collapsed = msm_pm_l2x0_power_collapse();
-	secdbg_sched_msg("-pc(%d)", collapsed);
-#else
-	collapsed = msm_pm_l2x0_power_collapse();
-#endif
+
 	msm_pm_boot_config_after_pc(cpu);
 
 	if (collapsed) {
@@ -865,7 +840,7 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		break;
 
 	case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
-		if(msm_pm_power_collapse_standalone(true))
+		if (msm_pm_power_collapse_standalone(true))
 			exit_stat = MSM_PM_STAT_IDLE_STANDALONE_POWER_COLLAPSE;
 		else
 			exit_stat =
