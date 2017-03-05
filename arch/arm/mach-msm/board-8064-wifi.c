@@ -1,3 +1,4 @@
+#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -5,11 +6,10 @@
 #include <linux/err.h>
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
-#ifdef CONFIG_PARTIALRESUME
+#if 0
 #include <linux/partialresume.h>
-#include <linux/spinlock.h>
-#include <linux/module.h>
 #endif
+#include <linux/spinlock.h>
 #ifdef CONFIG_BROKEN_SDIO_HACK
 #include <linux/mmc/host.h>
 #include <mach/board.h>
@@ -200,8 +200,18 @@ static unsigned get_gpio_wl_host_wake(void)
 
 int __init brcm_wifi_init_gpio(void)
 {
-#if CONFIG_PARTIALRESUME
-/*do fuck all here*/
+#if 0
+	if (gpio_tlmm_config(config_gpio_wl_reg_on[0], GPIO_CFG_ENABLE))
+		printk(KERN_ERR "%s: Failed to configure GPIO"
+			" - WL_REG_ON\n", __func__);
+
+	if (gpio_request(GPIO_WL_REG_ON, "WL_REG_ON"))
+		printk(KERN_ERR "Failed to request gpio %d for WL_REG_ON\n",
+			GPIO_WL_REG_ON);
+
+	if (gpio_direction_output(GPIO_WL_REG_ON, 0))
+		printk(KERN_ERR "%s: WL_REG_ON  "
+			"failed to pull down\n", __func__);
 #endif
 
 	unsigned gpio_cfg = GPIO_CFG(get_gpio_wl_host_wake(), 0, GPIO_CFG_INPUT,
@@ -293,9 +303,6 @@ static int brcm_wlan_reset(int onoff)
 	gpio_set_value(GPIO_WLAN_ENABLE,
 			onoff ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
   */
-	ice_gpiox_set(FPGA_GPIO_WLAN_EN,
-			onoff ? 1 : 0);
-
 	return 0;
 }
 
@@ -437,7 +444,7 @@ static struct resource brcm_wlan_resources[] = {
 	},
 };
 
-#if CONFIG_PARTIALRESUME
+#if 0
 static bool smd_partial_resume(struct partial_resume *pr)
 {
 	return true;
@@ -448,8 +455,7 @@ static bool smd_partial_resume(struct partial_resume *pr)
 #define PR_RESUME_OK_STATE	2
 #define PR_SUSPEND_OK_STATE	3
 
-static DECLARE_COMPLETION(bcm_pk_comp);
-static DECLARE_COMPLETION(bcm_wd_comp);
+static DECLARE_COMPLETION(bcm_comp);
 static int bcm_suspend = PR_INIT_STATE;
 static spinlock_t bcm_lock;
 
@@ -475,43 +481,30 @@ static bool bcm_wifi_process_partial_resume(int action)
 		return suspend;
 
 	if (action == WIFI_PR_WAIT_FOR_READY)
-		timeout = wait_for_completion_timeout(&bcm_pk_comp,
+		timeout = wait_for_completion_timeout(&bcm_comp,
 						      msecs_to_jiffies(50));
 
 	spin_lock(&bcm_lock);
 	switch (action) {
 	case WIFI_PR_WAIT_FOR_READY:
 		suspend = (bcm_suspend == PR_SUSPEND_OK_STATE) && (timeout != 0);
-		if (suspend) {
-			spin_unlock(&bcm_lock);
-			timeout = wait_for_completion_timeout(&bcm_wd_comp,
-							msecs_to_jiffies(100));
-			spin_lock(&bcm_lock);
-			suspend = (timeout != 0);
-		}
 		bcm_suspend = PR_INIT_STATE;
 		break;
 	case WIFI_PR_VOTE_FOR_RESUME:
 		bcm_suspend = PR_RESUME_OK_STATE;
-		complete(&bcm_pk_comp);
+		complete(&bcm_comp);
 		break;
 	case WIFI_PR_VOTE_FOR_SUSPEND:
 		if (bcm_suspend == PR_IN_RESUME_STATE)
 			bcm_suspend = PR_SUSPEND_OK_STATE;
-		complete(&bcm_pk_comp);
+		complete(&bcm_comp);
 		break;
 	case WIFI_PR_NOTIFY_RESUME:
-		INIT_COMPLETION(bcm_pk_comp);
+		INIT_COMPLETION(bcm_comp);
 		bcm_suspend = PR_IN_RESUME_STATE;
 		break;
 	case WIFI_PR_INIT:
 		bcm_suspend = PR_INIT_STATE;
-		break;
-	case WIFI_PR_WD_INIT:
-		INIT_COMPLETION(bcm_wd_comp);
-		break;
-	case WIFI_PR_WD_COMPLETE:
-		complete(&bcm_wd_comp);
 		break;
 	}
 	spin_unlock(&bcm_lock);
@@ -542,7 +535,7 @@ static struct wifi_platform_data brcm_wlan_control = {
 	.mem_prealloc	= brcm_wlan_mem_prealloc,
 #endif
 	.get_country_code = brcm_wlan_get_country_code,
-#if CONFIG_PARTIALRESUME
+#if 0
 	.partial_resume = bcm_wifi_process_partial_resume,
 #endif
 };
@@ -571,9 +564,9 @@ int __init brcm_wlan_init(void)
 	return platform_device_register(&brcm_device_wlan);
 }
 
-#if CONFIG_PARTIALRESUME
+#if 0
 static struct partial_resume smd_pr = {
-	.irq = 122,
+	.irq = 353,
 	.partial_resume = smd_partial_resume,
 };
 
@@ -591,8 +584,8 @@ int __init wlan_partial_resume_init(void)
 {
 	int rc;
 
-	spin_lock_init(&bcm_lock); /* Setup partial resume */
-	complete(&bcm_wd_comp);    /* Prepare for case when WD is not set */
+	/* Setup partial resume */
+	spin_lock_init(&bcm_lock);
 	wlan_pr.irq = brcm_device_wlan.resource->start;
 	rc = register_partial_resume(&wlan_pr);
 	pr_debug("%s: after registering %pF: %d\n", __func__,

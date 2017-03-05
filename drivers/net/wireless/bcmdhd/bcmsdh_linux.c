@@ -2,13 +2,13 @@
  * SDIO access interface for drivers - linux specific (pci only)
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -227,7 +227,6 @@ int bcmsdh_resume(bcmsdh_info_t *bcmsdh)
 	return 0;
 }
 
-
 extern int bcmsdh_register_client_driver(void);
 extern void bcmsdh_unregister_client_driver(void);
 extern int sdio_func_reg_notify(void* semaphore);
@@ -392,15 +391,6 @@ void bcmsdh_oob_intr_unregister(bcmsdh_info_t *bcmsdh)
 	bcmsdh_osinfo->oob_irq_registered = FALSE;
 }
 #endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
-
-int bcmsdh_get_irq(bcmsdh_info_t *bcmsdh)
-{
-	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
-
-	if (!bcmsdh_osinfo->oob_irq_registered)
-		return -1;
-	return bcmsdh_osinfo->oob_irq_num;
-}
 
 /* Module parameters specific to each host-controller driver */
 
