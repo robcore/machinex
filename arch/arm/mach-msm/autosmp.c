@@ -117,7 +117,7 @@ static void __cpuinit asmp_work_fn(struct work_struct *work)
 	unsigned int nr_cpu_online;
 	unsigned int min_boost_freq = asmp_param.min_boost_freq;
 	u64 now;
-
+	
 	if (!asmp_param.enabled)
 		return;
 
