@@ -201,17 +201,7 @@ static unsigned get_gpio_wl_host_wake(void)
 int __init brcm_wifi_init_gpio(void)
 {
 #if CONFIG_PARTIALRESUME
-	if (gpio_tlmm_config(config_gpio_wl_reg_on[0], GPIO_CFG_ENABLE))
-		printk(KERN_ERR "%s: Failed to configure GPIO"
-			" - WL_REG_ON\n", __func__);
-
-	if (gpio_request(GPIO_WL_REG_ON, "WL_REG_ON"))
-		printk(KERN_ERR "Failed to request gpio %d for WL_REG_ON\n",
-			GPIO_WL_REG_ON);
-
-	if (gpio_direction_output(GPIO_WL_REG_ON, 0))
-		printk(KERN_ERR "%s: WL_REG_ON  "
-			"failed to pull down\n", __func__);
+/*do fuck all here*/
 #endif
 
 	unsigned gpio_cfg = GPIO_CFG(get_gpio_wl_host_wake(), 0, GPIO_CFG_INPUT,
