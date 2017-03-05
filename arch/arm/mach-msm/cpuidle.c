@@ -92,7 +92,7 @@ static int msm_cpuidle_enter(
 	return ret;
 }
 
-static void __init msm_cpuidle_set_states(void)
+static void msm_cpuidle_set_states(void)
 {
 	int i = 0;
 	int state_count = 0;
@@ -127,7 +127,7 @@ static void __init msm_cpuidle_set_states(void)
 	msm_cpuidle_driver.safe_state_index = 0;
 }
 
-static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
+static void msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 {
 	int i = 0;
 	int state_count = 0;
