@@ -227,6 +227,7 @@ int bcmsdh_resume(bcmsdh_info_t *bcmsdh)
 	return 0;
 }
 
+
 extern int bcmsdh_register_client_driver(void);
 extern void bcmsdh_unregister_client_driver(void);
 extern int sdio_func_reg_notify(void* semaphore);
@@ -392,8 +393,10 @@ void bcmsdh_oob_intr_unregister(bcmsdh_info_t *bcmsdh)
 }
 #endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
 
-int bcmsdh_get_irq(void)
+int bcmsdh_get_irq(bcmsdh_info_t *bcmsdh)
 {
+	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
+
 	if (!bcmsdh_osinfo->oob_irq_registered)
 		return -1;
 	return bcmsdh_osinfo->oob_irq_num;

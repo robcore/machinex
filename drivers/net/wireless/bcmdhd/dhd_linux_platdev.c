@@ -48,6 +48,7 @@ struct wifi_platform_data {
 	void *(*mem_prealloc)(int section, unsigned long size);
 	int (*get_mac_addr)(unsigned char *buf);
 	void *(*get_country_code)(char *ccode);
+	bool (*wifi_process_partial_resume)(int action)
 };
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
 
@@ -328,6 +329,21 @@ static int wifi_plat_dev_drv_resume(struct platform_device *pdev)
 		bcmsdh_oob_intr_set(1);
 #endif /* (OOB_INTR_ONLY) */
 	return 0;
+}
+
+bool wifi_process_partial_resume(int action)
+{
+	struct wifi_platform_data *plat_data;
+	wifi_adapter_info_t *adapter = adapter;
+	plat_data = adapter->wifi_plat_data;
+#ifdef CONFIG_PARTIALRESUME
+	if (plat_data && plat_data->partial_resume)
+		return plat_data->partial_resume(action);
+
+	return false;
+#else
+	return false;
+#endif
 }
 
 static struct platform_driver wifi_platform_dev_driver = {

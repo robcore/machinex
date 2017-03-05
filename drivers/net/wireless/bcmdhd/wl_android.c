@@ -732,17 +732,6 @@ static int wl_android_get_country_rev(
 }
 #endif /* ROAM_API */
 
-bool wifi_process_partial_resume(int action)
-{
-#ifdef CONFIG_PARTIALRESUME
-	if (wifi_control_data && wifi_control_data->partial_resume) {
-		return wifi_control_data->partial_resume(action);
-	}
-	return false;
-#else
-	return false;
-#endif
-
 #ifdef WES_SUPPORT
 int wl_android_get_roam_scan_control(struct net_device *dev, char *command, int total_len)
 {
