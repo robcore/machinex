@@ -448,28 +448,23 @@ static inline void __percpu *mod_percpu(struct module *mod)
 	return mod->percpu;
 }
 
-static int percpu_modalloc(struct module *mod, struct load_info *info)
+static int percpu_modalloc(struct module *mod,
+			   unsigned long size, unsigned long align)
 {
-	Elf_Shdr *pcpusec = &info->sechdrs[info->index.pcpu];
-	unsigned long align = pcpusec->sh_addralign;
-
-	if (!pcpusec->sh_size)
-		return 0;
-
 	if (align > PAGE_SIZE) {
 		printk(KERN_WARNING "%s: per-cpu alignment %li > %li\n",
 		       mod->name, align, PAGE_SIZE);
 		align = PAGE_SIZE;
 	}
 
-	mod->percpu = __alloc_reserved_percpu(pcpusec->sh_size, align);
+	mod->percpu = __alloc_reserved_percpu(size, align);
 	if (!mod->percpu) {
 		printk(KERN_WARNING
 		       "%s: Could not allocate %lu bytes percpu data\n",
-		       mod->name, (unsigned long)pcpusec->sh_size);
+		       mod->name, size);
 		return -ENOMEM;
 	}
-	mod->percpu_size = pcpusec->sh_size;
+	mod->percpu_size = size;
 	return 0;
 }
 
@@ -534,12 +529,10 @@ static inline void __percpu *mod_percpu(struct module *mod)
 {
 	return NULL;
 }
-static int percpu_modalloc(struct module *mod, struct load_info *info)
+static inline int percpu_modalloc(struct module *mod,
+				  unsigned long size, unsigned long align)
 {
-	/* UP modules shouldn't have this section: ENOMEM isn't quite right */
-	if (info->sechdrs[info->index.pcpu].sh_size != 0)
-		return -ENOMEM;
-	return 0;
+	return -ENOMEM;
 }
 static inline void percpu_modfree(struct module *mod)
 {
@@ -569,7 +562,7 @@ static void setup_modinfo_##field(struct module *mod, const char *s)  \
 static ssize_t show_modinfo_##field(struct module_attribute *mattr,   \
 			struct module_kobject *mk, char *buffer)      \
 {                                                                     \
-	return scnprintf(buffer, PAGE_SIZE, "%s\n", mk->mod->field);  \
+	return sprintf(buffer, "%s\n", mk->mod->field);               \
 }                                                                     \
 static int modinfo_##field##_exists(struct module *mod)               \
 {                                                                     \
@@ -1581,14 +1574,6 @@ static void module_remove_modinfo_attrs(struct module *mod)
 	kfree(mod->modinfo_attrs);
 }
 
-static void mod_kobject_put(struct module *mod)
-{
-	DECLARE_COMPLETION_ONSTACK(c);
-	mod->mkobj.kobj_completion = &c;
-	kobject_put(&mod->mkobj.kobj);
-	wait_for_completion(&c);
-}
-
 static int mod_sysfs_init(struct module *mod)
 {
 	int err;
@@ -1616,7 +1601,7 @@ static int mod_sysfs_init(struct module *mod)
 	err = kobject_init_and_add(&mod->mkobj.kobj, &module_ktype, NULL,
 				   "%s", mod->name);
 	if (err)
-		mod_kobject_put(mod);
+		kobject_put(&mod->mkobj.kobj);
 
 	/* delay uevent until full sysfs population */
 out:
@@ -1660,7 +1645,7 @@ out_unreg_param:
 out_unreg_holders:
 	kobject_put(mod->holders_dir);
 out_unreg:
-	mod_kobject_put(mod);
+	kobject_put(&mod->mkobj.kobj);
 out:
 	return err;
 }
@@ -1669,7 +1654,7 @@ static void mod_sysfs_fini(struct module *mod)
 {
 	remove_notes_attrs(mod);
 	remove_sect_attrs(mod);
-	mod_kobject_put(mod);
+	kobject_put(&mod->mkobj.kobj);
 }
 
 #else /* !CONFIG_SYSFS */
@@ -2903,6 +2888,7 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 {
 	/* Module within temporary copy. */
 	struct module *mod;
+	Elf_Shdr *pcpusec;
 	int err;
 
 	mod = setup_load_info(info, flags);
@@ -2917,10 +2903,17 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 	err = module_frob_arch_sections(info->hdr, info->sechdrs,
 					info->secstrings, mod);
 	if (err < 0)
-		return ERR_PTR(err);
+		goto out;
 
-	/* We will do a special allocation for per-cpu sections later. */
-	info->sechdrs[info->index.pcpu].sh_flags &= ~(unsigned long)SHF_ALLOC;
+	pcpusec = &info->sechdrs[info->index.pcpu];
+	if (pcpusec->sh_size) {
+		/* We have a special allocation for this section. */
+		err = percpu_modalloc(mod,
+				      pcpusec->sh_size, pcpusec->sh_addralign);
+		if (err)
+			goto out;
+		pcpusec->sh_flags &= ~(unsigned long)SHF_ALLOC;
+	}
 
 	/* Determine total sizes, and put offsets in sh_entsize.  For now
 	   this is done generically; there doesn't appear to be any
@@ -2931,12 +2924,17 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 	/* Allocate and move to the final place */
 	err = move_module(mod, info);
 	if (err)
-		return ERR_PTR(err);
+		goto free_percpu;
 
 	/* Module has been copied to its final place now: return it. */
 	mod = (void *)info->sechdrs[info->index.mod].sh_addr;
 	kmemleak_load_module(mod, info);
 	return mod;
+
+free_percpu:
+	percpu_modfree(mod);
+out:
+	return ERR_PTR(err);
 }
 
 /* mod is no longer valid after this! */
@@ -3162,17 +3160,6 @@ out:
 	return err;
 }
 
-static int unknown_module_param_cb(char *param, char *val, const char *modname)
-{
-	/* Check for magic 'dyndbg' arg */
-	int ret = ddebug_dyndbg_module_param_cb(param, val, modname);
-	if (ret != 0) {
-		printk(KERN_WARNING "%s: unknown parameter '%s' ignored\n",
-		       modname, param);
-	}
-	return 0;
-}
-
 /* Allocate and load the module: note that size of section 0 is always
    zero, and we rely on this for optional sections. */
 static int load_module(struct load_info *info, const char __user *uargs,
@@ -3211,11 +3198,6 @@ static int load_module(struct load_info *info, const char __user *uargs,
 		add_taint_module(mod, TAINT_FORCED_MODULE, LOCKDEP_STILL_OK);
 	}
 #endif
-
-	/* To avoid stressing percpu allocator, do this once we're unique. */
-	err = percpu_modalloc(mod, info);
-	if (err)
-		goto unlink_mod;
 
 	/* Now module is in final location, initialize linked lists, etc. */
 	err = module_unload_init(mod);
@@ -3267,7 +3249,7 @@ static int load_module(struct load_info *info, const char __user *uargs,
 
 	/* Module is ready to execute: parsing args may do that. */
 	err = parse_args(mod->name, mod->args, mod->kp, mod->num_kp,
-			 -32768, 32767, unknown_module_param_cb);
+			 -32768, 32767, NULL);
 	if (err < 0)
 		goto bug_cleanup;
 
