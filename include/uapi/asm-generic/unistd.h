@@ -1,5 +1,5 @@
 #include <asm/bitsperlong.h>
-#include <linux/export.h>
+
 /*
  * This file contains the system call numbers, based on the
  * layout of the x86-64 architecture, which embeds the
@@ -860,12 +860,6 @@ __SYSCALL(__NR_fork, sys_ni_syscall)
 #define __NR_syscalls (__NR_fork+1)
 
 #endif /* __ARCH_WANT_SYSCALL_DEPRECATED */
-
-#ifndef cond_syscall
-#define cond_syscall(x) asm(".weak\t" VMLINUX_SYMBOL_STR(x) "\n\t"	\
-			    ".set\t" VMLINUX_SYMBOL_STR(x) ","	\
-			    VMLINUX_SYMBOL_STR(sys_ni_syscall))
-#endif
 
 /*
  * 32 bit systems traditionally used different

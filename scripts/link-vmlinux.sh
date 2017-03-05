@@ -74,8 +74,9 @@ kallsyms()
 	info KSYM ${2}
 	local kallsymopt;
 
-	if [ -n "${CONFIG_HAVE_UNDERSCORE_SYMBOL_PREFIX}" ]; then
-		kallsymopt="${kallsymopt} --symbol-prefix=_"
+	if [ -n "${CONFIG_SYMBOL_PREFIX}" ]; then
+		kallsymopt="${kallsymopt} \
+			    --symbol-prefix=${CONFIG_SYMBOL_PREFIX}"
 	fi
 
 	if [ -n "${CONFIG_KALLSYMS_ALL}" ]; then

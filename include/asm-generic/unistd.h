@@ -7,5 +7,5 @@
  */
 #if __BITS_PER_LONG == 32
 #define __ARCH_WANT_STAT64
-#define __ARCH_WANT_SYS_LLSEEKzz
+#define __ARCH_WANT_SYS_LLSEEK
 #endif
