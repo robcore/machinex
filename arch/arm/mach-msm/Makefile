@@ -496,6 +496,7 @@ obj-$(CONFIG_MSM_SLEEPER) += msm_sleeper.o
 obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
 obj-$(CONFIG_BLU_PLUG) += blu_plug.o
 obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
+obj-$(CONFIG_AUTOSMP)			+= autosmp.o
 
 ifdef CONFIG_SEC_THERMISTOR
 obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o
