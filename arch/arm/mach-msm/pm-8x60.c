@@ -134,6 +134,7 @@ static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 static bool msm_pm_ldo_retention_enabled = false;
+static bool msm_pm_use_sync_timer;
 /*
  * Write out the attribute.
  */
@@ -457,7 +458,6 @@ static void msm_pm_restore_cpu_reg(void)
 }
 
 static void *msm_pm_idle_rs_limits;
-static bool msm_pm_use_qtimer;
 
 static void msm_pm_swfi(void)
 {
@@ -661,14 +661,11 @@ static void msm_pm_target_init(void)
 {
 	if (cpu_is_apq8064())
 		msm_pm_save_cp15 = true;
-
-	if (cpu_is_msm8974())
-		msm_pm_use_qtimer = true;
 }
 
 static int64_t msm_pm_timer_enter_idle(void)
 {
-	if (msm_pm_use_qtimer)
+	if (msm_pm_use_sync_timer)
 		return ktime_to_ns(tick_nohz_get_sleep_length());
 
 	return msm_timer_enter_idle();
@@ -676,7 +673,7 @@ static int64_t msm_pm_timer_enter_idle(void)
 
 static void msm_pm_timer_exit_idle(bool timer_halted)
 {
-	if (msm_pm_use_qtimer)
+	if (msm_pm_use_sync_timer)
 		return;
 
 	msm_timer_exit_idle((int) timer_halted);
@@ -686,7 +683,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 {
 	int64_t time = 0;
 
-	if (msm_pm_use_qtimer)
+	if (msm_pm_use_sync_timer)
 		return sched_clock();
 
 	time = msm_timer_get_sclk_time(period);
@@ -698,7 +695,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
-	if (msm_pm_use_qtimer)
+	if (msm_pm_use_sync_timer)
 		return sched_clock() - time;
 
 	if (time != 0) {
@@ -773,9 +770,9 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 		struct cpuidle_state_usage *st_usage = &dev->states_usage[i];
 		enum msm_pm_sleep_mode mode;
 		bool allow;
-		void *rs_limits = NULL;
 		uint32_t power;
 		int idx;
+		void *rs_limits = NULL;
 
 		mode = (enum msm_pm_sleep_mode) cpuidle_get_statedata(st_usage);
 		idx = MSM_PM_MODE(dev->cpu, mode);
@@ -810,7 +807,6 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 			}
 		case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
 			break;
-
 		default:
 			allow = false;
 			break;
@@ -1067,7 +1063,7 @@ static int msm_pm_enter(suspend_state_t state)
 #endif /* CONFIG_MSM_SLEEP_TIME_OVERRIDE */
 		if (pm_sleep_ops.lowest_limits)
 			rs_limits = pm_sleep_ops.lowest_limits(false,
-			MSM_PM_SLEEP_MODE_POWER_COLLAPSE, &time_param, &power);
+		MSM_PM_SLEEP_MODE_POWER_COLLAPSE, &time_param, &power);
 
 		if (rs_limits) {
 			if (pm_sleep_ops.enter_sleep)
@@ -1110,17 +1106,6 @@ enter_exit:
 
 	return 0;
 }
-
-#ifdef CONFIG_SEC_DEBUG
-enum {
-	MSM_PM_SECDEBUG_LEVLE1 = BIT(0),
-};
-
-static int msm_pm_secdebug_mask;
-module_param_named(
-	secdebug, msm_pm_secdebug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
-);
-#endif
 
 static int msm_pm_prepare_late(void)
 {
