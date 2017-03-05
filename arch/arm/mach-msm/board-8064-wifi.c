@@ -576,6 +576,11 @@ static struct partial_resume mpm_pr = {
 	.partial_resume = smd_partial_resume,
 };
 
+static struct partial_resume mpm_pr = {
+	.irq = 203,
+	.partial_resume = smd_partial_resume,
+};
+
 static struct partial_resume wlan_pr = {
 	.partial_resume = bcm_wifi_partial_resume,
 };
