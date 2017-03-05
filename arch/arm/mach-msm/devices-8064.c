@@ -2795,6 +2795,19 @@ struct platform_device apq8064_rpm_log_device = {
 	},
 };
 
+static struct msm_pm_init_data_type msm_pm_data = {
+	.use_sync_timer = true,
+	.pc_mode = MSM_PM_PC_NOTZ_L2_EXT,
+};
+
+struct platform_device apq8064_pm_8x60 = {
+	.name	= "pm-8x60",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &msm_pm_data,
+	},
+};
+
 /* Sensors DSPS platform data */
 
 #define PPSS_DSPS_TCM_CODE_BASE   0x12000000
