@@ -4093,7 +4093,6 @@ static struct platform_device *common_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 	&ram_console_device,
 #endif
-	&msm8064_cpu_slp_status,
 };
 
 static struct platform_device *cdp_devices[] __initdata = {

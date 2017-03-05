@@ -410,6 +410,7 @@ static void msm_pm_config_hw_before_swfi(void)
 static void msm_pm_config_hw_after_retention(void)
 {
 	int ret;
+
 	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
 	WARN_ON(ret);
 }
@@ -1333,10 +1334,8 @@ static int __init msm_pm_setup_saved_state(void)
 }
 core_initcall(msm_pm_setup_saved_state);
 
-static int __devinit msm_pm_init(void)
+static int __init msm_pm_init(void)
 {
-	int rc;
-
 	enum msm_pm_time_stats_id enable_stats[] = {
 		MSM_PM_STAT_IDLE_WFI,
 		MSM_PM_STAT_RETENTION,
@@ -1344,24 +1343,14 @@ static int __devinit msm_pm_init(void)
 		MSM_PM_STAT_IDLE_POWER_COLLAPSE,
 		MSM_PM_STAT_SUSPEND,
 	};
-
 	msm_pm_mode_sysfs_add();
 	msm_pm_add_stats(enable_stats, ARRAY_SIZE(enable_stats));
 	suspend_set_ops(&msm_pm_ops);
 	hrtimer_init(&pm_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	msm_cpuidle_init();
-	rc = platform_driver_register(&msm_cpu_status_driver);
-
-	if (rc) {
-		pr_err("%s(): failed to register driver %s\n", __func__,
-				msm_cpu_status_driver.driver.name);
-		return rc;
-	}
-
 
 	return 0;
 }
-late_initcall(msm_pm_init);
 
 static void __devinit msm_pm_set_flush_fn(uint32_t pc_mode)
 {
