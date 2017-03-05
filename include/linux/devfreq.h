@@ -213,7 +213,7 @@ struct devfreq_simple_ondemand_data {
 #endif
 
 #else /* !CONFIG_PM_DEVFREQ */
-static inline struct devfreq *devfreq_add_device(struct device *dev,
+static struct devfreq *devfreq_add_device(struct device *dev,
 					  struct devfreq_dev_profile *profile,
 					  const char *governor_name,
 					  void *data)
@@ -221,34 +221,34 @@ static inline struct devfreq *devfreq_add_device(struct device *dev,
 	return NULL;
 }
 
-static inline int devfreq_remove_device(struct devfreq *devfreq)
+static int devfreq_remove_device(struct devfreq *devfreq)
 {
 	return 0;
 }
 
-static inline int devfreq_suspend_device(struct devfreq *devfreq)
+static int devfreq_suspend_device(struct devfreq *devfreq)
 {
 	return 0;
 }
 
-static inline int devfreq_resume_device(struct devfreq *devfreq)
+static int devfreq_resume_device(struct devfreq *devfreq)
 {
 	return 0;
 }
 
-static inline struct opp *devfreq_recommended_opp(struct device *dev,
+static struct opp *devfreq_recommended_opp(struct device *dev,
 					   unsigned long *freq, u32 flags)
 {
-	return ERR_PTR(-EINVAL);
+	return -EINVAL;
 }
 
-static inline int devfreq_register_opp_notifier(struct device *dev,
+static int devfreq_register_opp_notifier(struct device *dev,
 					 struct devfreq *devfreq)
 {
 	return -EINVAL;
 }
 
-static inline int devfreq_unregister_opp_notifier(struct device *dev,
+static int devfreq_unregister_opp_notifier(struct device *dev,
 					   struct devfreq *devfreq)
 {
 	return -EINVAL;

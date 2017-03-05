@@ -66,7 +66,6 @@ static struct pm_qos_constraints cpu_dma_constraints = {
 	.list = PLIST_HEAD_INIT(cpu_dma_constraints.list),
 	.target_value = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE,
 	.default_value = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE,
-	.no_constraint_value = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE,
 	.type = PM_QOS_MIN,
 	.notifiers = &cpu_dma_lat_notifier,
 };
@@ -80,7 +79,6 @@ static struct pm_qos_constraints network_lat_constraints = {
 	.list = PLIST_HEAD_INIT(network_lat_constraints.list),
 	.target_value = PM_QOS_NETWORK_LAT_DEFAULT_VALUE,
 	.default_value = PM_QOS_NETWORK_LAT_DEFAULT_VALUE,
-	.no_constraint_value = PM_QOS_NETWORK_LAT_DEFAULT_VALUE,
 	.type = PM_QOS_MIN,
 	.notifiers = &network_lat_notifier,
 };
@@ -94,7 +92,6 @@ static struct pm_qos_constraints network_tput_constraints = {
 	.list = PLIST_HEAD_INIT(network_tput_constraints.list),
 	.target_value = PM_QOS_NETWORK_THROUGHPUT_DEFAULT_VALUE,
 	.default_value = PM_QOS_NETWORK_THROUGHPUT_DEFAULT_VALUE,
-	.no_constraint_value = PM_QOS_NETWORK_THROUGHPUT_DEFAULT_VALUE,
 	.type = PM_QOS_MAX,
 	.notifiers = &network_throughput_notifier,
 };
@@ -161,7 +158,7 @@ static bool pm_qos_enabled __read_mostly = true;
 static inline int pm_qos_get_value(struct pm_qos_constraints *c)
 {
 	if (plist_head_empty(&c->list))
-		return c->no_constraint_value;
+		return c->default_value;
 
 	switch (c->type) {
 	case PM_QOS_MIN:
@@ -173,7 +170,6 @@ static inline int pm_qos_get_value(struct pm_qos_constraints *c)
 	default:
 		/* runtime check for not using enum */
 		BUG();
-		return PM_QOS_DEFAULT_VALUE;
 	}
 }
 
@@ -203,7 +199,6 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 {
 	unsigned long flags;
 	int prev_value, curr_value, new_value;
-	int ret;
 
 	spin_lock_irqsave(&pm_qos_lock, flags);
 	prev_value = pm_qos_get_value(c);
@@ -243,15 +238,13 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 
 	trace_pm_qos_update_target(action, prev_value, curr_value);
 	if (prev_value != curr_value) {
-		ret = 1;
-		if (c->notifiers)
-			blocking_notifier_call_chain(c->notifiers,
-						     (unsigned long)curr_value,
-						     NULL);
+		blocking_notifier_call_chain(c->notifiers,
+					     (unsigned long)curr_value,
+					     NULL);
+		return 1;
 	} else {
-		ret = 0;
+		return 0;
 	}
-	return ret;
 }
 
 /**
@@ -389,20 +382,6 @@ static struct kernel_param_ops pm_qos_enabled_ops = {
 
 module_param_cb(enable, &pm_qos_enabled_ops, &pm_qos_enabled, 0644);
 
-static void __pm_qos_update_request(struct pm_qos_request *req,
-			   s32 new_value)
-{
-	if (!req || !pm_qos_request_active(req))
-		return;
-
-	trace_pm_qos_update_request(req->pm_qos_class, new_value);
-
-	if (new_value != req->node.prio)
-		pm_qos_update_target(
-			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
-}
-
 /**
  * pm_qos_work_fn - the timeout handler of pm_qos_update_request_timeout
  * @work: work struct for the delayed work (timeout)
@@ -411,11 +390,18 @@ static void __pm_qos_update_request(struct pm_qos_request *req,
  */
 static void pm_qos_work_fn(struct work_struct *work)
 {
+	s32 new_value = PM_QOS_DEFAULT_VALUE;
 	struct pm_qos_request *req = container_of(to_delayed_work(work),
 						  struct pm_qos_request,
 						  work);
 
-	__pm_qos_update_request(req, PM_QOS_DEFAULT_VALUE);
+	if (!req || !pm_qos_request_active(req))
+		return;
+
+	if (new_value != req->node.prio)
+		pm_qos_update_target(
+			pm_qos_array[req->pm_qos_class]->constraints,
+			&req->node, PM_QOS_UPDATE_REQ, new_value);
 }
 
 /**
@@ -471,7 +457,12 @@ void pm_qos_update_request(struct pm_qos_request *req,
 	}
 
 	cancel_delayed_work_sync(&req->work);
-	__pm_qos_update_request(req, new_value);
+
+	trace_pm_qos_update_request(req->pm_qos_class, new_value);
+	if (new_value != req->node.prio)
+		pm_qos_update_target(
+			pm_qos_array[req->pm_qos_class]->constraints,
+			&req->node, PM_QOS_UPDATE_REQ, new_value);
 }
 EXPORT_SYMBOL_GPL(pm_qos_update_request);
 
