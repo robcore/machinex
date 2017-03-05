@@ -394,9 +394,9 @@ void bcmsdh_oob_intr_unregister(bcmsdh_info_t *bcmsdh)
 
 int bcmsdh_get_irq(void)
 {
-	if (!sdhcinfo)
+	if (!bcmsdh_osinfo)
 		return -1;
-	return sdhcinfo->oob_irq;
+	return sdhcinfo->oob_irq_num;
 }
 
 /* Module parameters specific to each host-controller driver */
