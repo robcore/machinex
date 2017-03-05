@@ -157,8 +157,15 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
+
 static bool msm_pm_ldo_retention_enabled = true;
+module_param_named(ldo_retention_enabled,
+	msm_pm_ldo_retention_enabled, bool, 0664);
+
 static bool msm_pm_use_sync_timer = true;
+module_param_named(use_sync_timer,
+	msm_pm_use_sync_timer, bool, 0664);
+
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
 
