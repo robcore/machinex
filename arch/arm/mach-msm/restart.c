@@ -321,9 +321,6 @@ void msm_restart(char mode, const char *cmd)
 #endif
 #endif
 #endif
-	if (in_panic == 1)
-		flush_cache_louis();
-
 	printk(KERN_NOTICE "Going down for restart now\n");
 
 	pm8xxx_reset_pwr_off(1);
@@ -365,16 +362,19 @@ void msm_restart(char mode, const char *cmd)
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
-	}
 #ifdef CONFIG_LGE_CRASH_HANDLER
 	if (in_panic == 1)
 		set_kernel_crash_magic_number();
 reset:
 #endif /* CONFIG_LGE_CRASH_HANDLER */
-	else {
+	} else {
 		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
 	}
+
+	if (in_panic == 1)
+		flush_cache_louis();
+
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
