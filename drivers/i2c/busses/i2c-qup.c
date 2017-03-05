@@ -1544,7 +1544,6 @@ static int i2c_qup_pm_resume_runtime(struct device *device)
 	dev->suspended = 0;
 	return 0;
 }
-#endif /* CONFIG_PM */
 
 static int qup_i2c_suspend(struct device *device)
 {
