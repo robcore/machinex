@@ -406,7 +406,7 @@ bool msm_mpm_irqs_detectable(bool from_idle)
 				MSM_MPM_NR_APPS_IRQS);
 		buf[sizeof(buf) - 1] = '\0';
 
-		pr_info("%s: cannot monitor %s", __func__, buf);
+		//pr_info("%s: cannot monitor %s", __func__, buf);
 	}
 
 	return (bool)__bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
