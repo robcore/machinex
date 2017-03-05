@@ -96,6 +96,7 @@
 
 #include "clock.h"
 #include "msm_watchdog.h"
+#include "platsmp.h"
 #include "board-8064.h"
 #include "clock.h"
 #include "spm.h"
@@ -175,7 +176,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x5400000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -5244,7 +5245,7 @@ static void __init apq8064_common_init(void)
 		apq8064ab_update_retention_spm();
 	}
 
-	platform_device_register(&msm8930_pm_8x60);
+	platform_device_register(&msm8064_pm_8x60);
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm_tsens_early_init(&apq_tsens_pdata);
