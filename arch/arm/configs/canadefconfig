@@ -3616,7 +3616,7 @@ CONFIG_SPS=y
 CONFIG_SPS_SUPPORT_BAMDMA=y
 # CONFIG_SPS_SUPPORT_NDP_BAM is not set
 # CONFIG_IPA is not set
-# CONFIG_MSM_AVTIMER is not set
+CONFIG_MSM_AVTIMER=y
 
 #
 # SOC (System On Chip) specific Drivers
