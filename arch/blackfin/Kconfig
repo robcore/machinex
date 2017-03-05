@@ -1,7 +1,3 @@
-config SYMBOL_PREFIX
-	string
-	default "_"
-
 config MMU
 	def_bool n
 
