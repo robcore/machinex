@@ -137,9 +137,11 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 
 static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
-static bool msm_pm_ldo_retention_enabled = false;
-static bool msm_pm_use_sync_timer = true;
+static bool msm_pm_ldo_retention_enabled = true;
+module_param(msm_pm_ldo_retention_enabled, bool, 0644);
 static bool msm_pm_use_sync_timer;
+module_param(msm_pm_use_sync_timer, bool, 0644);
+
 static struct msm_pm_cp15_save_data cp15_data;
 static bool msm_pm_retention_calls_tz;
 static bool msm_no_ramp_down_pc;
@@ -261,7 +263,7 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	return ret ? ret : count;
 }
 
-static int __init msm_pm_mode_sysfs_add_cpu(
+static int __devinit msm_pm_mode_sysfs_add_cpu(
 	unsigned int cpu, struct kobject *modes_kobj)
 {
 	char cpu_name[8];
@@ -344,7 +346,7 @@ mode_sysfs_add_cpu_exit:
 	return ret;
 }
 
-int __init msm_pm_mode_sysfs_add(void)
+int __devinit msm_pm_mode_sysfs_add(void)
 {
 	struct kobject *module_kobj;
 	struct kobject *modes_kobj;
@@ -408,7 +410,6 @@ static void msm_pm_config_hw_before_swfi(void)
 static void msm_pm_config_hw_after_retention(void)
 {
 	int ret;
-
 	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
 	WARN_ON(ret);
 }
@@ -783,7 +784,7 @@ static int msm_pm_idle_prepare(struct cpuidle_device *dev,
 	else
 		time_param.next_event_us = 0;
 
-	for (i = 0; i < dev->state_count; i++) {
+	for (i = 0; i < drv->state_count; i++) {
 		struct cpuidle_state *state = &drv->states[i];
 		struct cpuidle_state_usage *st_usage = &dev->states_usage[i];
 		enum msm_pm_sleep_mode mode;
@@ -1190,7 +1191,7 @@ static const struct platform_suspend_ops msm_pm_ops = {
 	.valid = suspend_valid_only_mem,
 };
 
-static int msm_cpu_status_probe(struct platform_device *pdev)
+static int __devinit msm_cpu_status_probe(struct platform_device *pdev)
 {
 	struct msm_pm_sleep_status_data *pdata;
 	char *key;
@@ -1332,7 +1333,7 @@ static int __init msm_pm_setup_saved_state(void)
 }
 core_initcall(msm_pm_setup_saved_state);
 
-static int __devinit msm_pm_init(void)
+static int __init msm_pm_init(void)
 {
 	int rc;
 
@@ -1343,6 +1344,7 @@ static int __devinit msm_pm_init(void)
 		MSM_PM_STAT_IDLE_POWER_COLLAPSE,
 		MSM_PM_STAT_SUSPEND,
 	};
+
 	msm_pm_mode_sysfs_add();
 	msm_pm_add_stats(enable_stats, ARRAY_SIZE(enable_stats));
 	suspend_set_ops(&msm_pm_ops);
@@ -1359,6 +1361,7 @@ static int __devinit msm_pm_init(void)
 
 	return 0;
 }
+late_initcall(msm_pm_init);
 
 static void __devinit msm_pm_set_flush_fn(uint32_t pc_mode)
 {
@@ -1541,6 +1544,7 @@ static int __devinit msm_pm_8x60_probe(struct platform_device *pdev)
 		key = "qcom,saw-turns-off-pll";
 		msm_no_ramp_down_pc = of_property_read_bool(pdev->dev.of_node,
 					key);
+
 	}
 
 	if (pdata_local.cp15_data.reg_data &&
@@ -1554,7 +1558,7 @@ static int __devinit msm_pm_8x60_probe(struct platform_device *pdev)
 		cp15_data.reg_val = kzalloc(sizeof(uint32_t) *
 				pdata_local.cp15_data.reg_saved_state_size,
 				GFP_KERNEL);
-		if (cp15_data.reg_val)
+		if (!cp15_data.reg_val)
 			return -ENOMEM;
 
 		memcpy(cp15_data.reg_data, pdata_local.cp15_data.reg_data,
@@ -1563,14 +1567,10 @@ static int __devinit msm_pm_8x60_probe(struct platform_device *pdev)
 	}
 
 	msm_pm_set_flush_fn(pdata_local.pc_mode);
-	msm_pm_use_sync_timer = pdata_local.use_sync_timer;
 	msm_pm_retention_calls_tz = pdata_local.retention_calls_tz;
 
 pm_8x60_probe_done:
 	msm_pm_init();
-	if (pdev->dev.of_node)
-		of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
-
 	return ret;
 }
 
