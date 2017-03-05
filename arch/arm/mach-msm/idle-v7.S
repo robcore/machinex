@@ -458,18 +458,6 @@ msm_pm_disable_l2_fn:
 msm_pm_flush_l2_fn:
 	.long 0x0
 
-	.globl msm_pm_enable_l2_fn
-msm_pm_enable_l2_fn:
-	.long 0x0
-
-	.globl msm_pm_disable_l2_fn
-msm_pm_disable_l2_fn:
-	.long 0x0
-
-	.globl msm_pm_flush_l2_fn
-msm_pm_flush_l2_fn:
-	.long 0x0
-
 /*
  * Default the l2 flush flag to 1 so that caches are flushed during power
  * collapse unless the  L2 driver decides to flush them only during L2
