@@ -385,54 +385,15 @@ fi;
 function MISMATCH()
 {
 echo "Building CONFIG_SECTION_MISMATCH kernel"
+sleep 1
 	echo "your previous version was $PREV"
 	echo -n "Use Previous Name?  y/n [ENTER]: "
-	read USEPRV
-	if [[ $USEPRV = "n" ]]; then
-		echo -n "Override Naming Process?  y/n [ENTER]: "
-		read overide
-		if [[ $overide = "n" ]]; then
-			echo -n "Enter Kernel major version and press [ENTER]: "
-			read MAJOR
-			KERNEL_NAME=machinex
-			KERNEL_VERSION=Mark$MAJOR
-			echo -n "Is this a BETA?  y/n [ENTER]: "
-			read rep
-			if [[ $rep = "y" ]]; then
-				echo -n "Is this Next or Proto Version? n/p [ENTER]: "
-				read reply
-				if [[ $reply = "n" ]]; then
-					echo -n "Enter Next Version and press [ENTER]: "
-					read NEXT
-					SUBVERSION=Next$NEXT
-				else
-					echo -n "Enter Proto Version and press [ENTER]: "
-					read PROTO
-					SUBVERSION=P$PROTO
-				fi
-				OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
-				echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
-			else
-				OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
-				echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
-			fi
-		else
-			echo -n "Name? (Number-P-N) [ENTER]: "
-			read OVNAME
-			OUTFOLDER=machinex-Mark$OVNAME
-			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
-		fi;
-	else
-		PRVS=$PREV
-		if [ -d /media/root/robcore/AIK/$PRVS ]; then
-			echo "removing previously compiled folder and zip of the same name"
-			rm -rf /media/root/robcore/AIK/$PRVS
-		fi;
-		OUTFOLDER=$PRVS
+	PRVS=$PREV-MISMATCH
+	if [ -d /media/root/robcore/AIK/$PRVS ]; then
+		echo "removing previously compiled folder and zip of the same name"
+		rm -rf /media/root/robcore/AIK/$PRVS
 	fi;
-
-	echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
-	read AUTO
+	OUTFOLDER=$PRVS
 
 function ADBRETRY()
 {
@@ -478,61 +439,9 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 	rm arch/arm/configs/tmpconfig
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
 	make CONFIG_DEBUG_SECTION_MISMATCH=y SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
-		if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
-			cd /media/root/robcore/AIK;
-			cp -R -p machina-new $OUTFOLDER;
-		if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
-			cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-		fi
-		if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-			cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
-		fi
-		rm $(pwd)/split_img/boot.img-zImage;
-		cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
-		rm image-new.img;
-		sh repackimg.sh --sudo;
-		cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
-		cd $OUTFOLDER
-		zip -r -9 - * > $OUTFOLDER.zip
-		#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
-		SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
-		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
-		date >> ~/machinex/datetracker.txt
-		echo "------------------------" >> ~/machinex/datetracker.txt
-		if [[ $AUTO = "n" ]]; then
-			echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
-			read repadb
-			if [[ $repadb = "y" ]]; then
-				echo "ENABLE ADB WIRELESS"
-				countdown
-				adb connect 192.168.1.103
-				countdown
-				ADBRETRY
-			fi;
-			echo -n "Cleanup?  y/n [ENTER]: "
-			read repcln
-			if [[ $repcln = "y" ]]; then
-				cd ~/machinex
-				WASHME
-				echo "cleanup finished"
-			fi;
-		else
-			echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-			echo "ENABLE ADB WIRELESS"
-			countdown
-			adb connect 192.168.1.103
-			countdown
-			ADBRETRY
-			cd ~/machinex
-			WASHME
-			echo "cleanup finished"
-		fi;
-
-		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		echo "MD5 is $SUMMY"
+	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
+		echo "Success!"
 	else
-		WASHME
 		echo "Build failed, Skipped Ramdisk Creation"
 	fi;
 }
