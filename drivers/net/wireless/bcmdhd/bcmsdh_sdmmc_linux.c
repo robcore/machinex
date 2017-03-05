@@ -42,11 +42,6 @@
 #include <bcmsdh_sdmmc.h>
 #include <dhd_dbg.h>
 
-#ifdef CONFIG_PARTIALRESUME
-#include <linux/wakeup_reason.h>
-#include "wl_android.h"
-#endif
-
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
 #endif /* !defined(SDIO_VENDOR_ID_BROADCOM) */
@@ -223,9 +218,6 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 MODULE_DEVICE_TABLE(sdio, bcmsdh_sdmmc_ids);
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) && defined(CONFIG_PM)
-
-int bcmsdh_get_irq(void);
-
 static int bcmsdh_sdmmc_suspend(struct device *pdev)
 {
 	int err;
@@ -262,9 +254,6 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 #if defined(OOB_INTR_ONLY) && !defined(CUSTOMER_HW4)
 	bcmsdh_oob_intr_set(sdioh->bcmsdh, FALSE);
 #endif /* OOB_INTR_ONLY && !CUSTOMER_HW4 */
-#ifdef CONFIG_PARTIALRESUME
-	wifi_process_partial_resume(WIFI_PR_INIT);
-#endif
 	smp_mb();
 
 	return 0;
@@ -281,10 +270,6 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 
 	sdioh = sdio_get_drvdata(func);
 	dhd_mmc_suspend = FALSE;
-#ifdef CONFIG_PARTIALRESUME
-		if (check_wakeup_reason(bcmsdh_get_irq()))
-			wifi_process_partial_resume(WIFI_PR_NOTIFY_RESUME);
-#endif
 #if defined(OOB_INTR_ONLY) && !defined(CUSTOMER_HW4)
 	bcmsdh_resume(sdioh->bcmsdh);
 #endif /* OOB_INTR_ONLY && !CUSTOMER_HW4 */
