@@ -293,6 +293,9 @@ static int brcm_wlan_reset(int onoff)
 	gpio_set_value(GPIO_WLAN_ENABLE,
 			onoff ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
   */
+	ice_gpiox_set(FPGA_GPIO_WLAN_EN,
+			onoff ? 1 : 0);
+
 	return 0;
 }
 
