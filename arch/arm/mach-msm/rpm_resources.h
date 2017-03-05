@@ -81,7 +81,7 @@ struct msm_rpmrs_limits {
 	uint32_t vdd_dig_upper_bound;
 	uint32_t vdd_dig;
 
-	uint64_t latency_us[NR_CPUS];
+	uint32_t latency_us[NR_CPUS];
 	uint32_t power[NR_CPUS];
 };
 
@@ -89,10 +89,10 @@ struct msm_rpmrs_level {
 	enum msm_pm_sleep_mode sleep_mode;
 	struct msm_rpmrs_limits rs_limits;
 	bool available;
-	uint64_t latency_us;
+	uint32_t latency_us;
 	uint32_t steady_state_power;
 	uint32_t energy_overhead;
-	uint64_t time_overhead_us;
+	uint32_t time_overhead_us;
 };
 
 struct msm_rpmrs_platform_data {
@@ -276,8 +276,8 @@ static inline int msm_rpmrs_clear_nosleep(
 }
 
 static inline struct msm_rpmrs_limits *msm_rpmrs_lowest_limits(
-	bool from_idle, enum msm_pm_sleep_mode sleep_mode, uint64_t latency_us,
-	uint64_t sleep_us)
+	bool from_idle, enum msm_pm_sleep_mode sleep_mode, uint32_t latency_us,
+	uint32_t sleep_us)
 {
 	return NULL;
 }

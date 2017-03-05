@@ -59,10 +59,10 @@ enum msm_pm_sleep_mode {
 #define MSM_PM_MODE(cpu, mode_nr)  ((cpu) * MSM_PM_SLEEP_MODE_NR + (mode_nr))
 
 struct msm_pm_time_params {
-	uint64_t latency_us;
-	uint64_t sleep_us;
-	uint64_t next_event_us;
-	uint64_t modified_time_us;
+	uint32_t latency_us;
+	uint32_t sleep_us;
+	uint32_t next_event_us;
+	uint32_t modified_time_us;
 };
 
 struct msm_pm_sleep_status_data {
