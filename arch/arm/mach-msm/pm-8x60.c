@@ -1189,6 +1189,7 @@ void msm_pm_set_sleep_ops(struct msm_pm_sleep_ops *ops)
 		pm_sleep_ops = *ops;
 }
 
+/*
 static int msm_suspend_prepare(void)
 {
 	msm_mpm_suspend_prepare();
@@ -1199,6 +1200,7 @@ static void msm_suspend_wake(void)
 {
 	msm_mpm_suspend_wake();
 }
+*/
 
 static const struct platform_suspend_ops msm_pm_ops = {
 	.prepare_late = msm_pm_prepare_late,
