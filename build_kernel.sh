@@ -387,33 +387,8 @@ function MISMATCH()
 echo "Building CONFIG_SECTION_MISMATCH kernel"
 sleep 1
 	echo "your previous version was $PREV"
-	echo -n "Use Previous Name?  y/n [ENTER]: "
 	PRVS=$PREV-MISMATCH
-	if [ -d /media/root/robcore/AIK/$PRVS ]; then
-		echo "removing previously compiled folder and zip of the same name"
-		rm -rf /media/root/robcore/AIK/$PRVS
-	fi;
 	OUTFOLDER=$PRVS
-
-function ADBRETRY()
-{
-ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
-	echo "connected"
-	adb push $OUTFOLDER.zip /storage/extSdCard
-	echo "push complete"
-else
-	echo "disconnected, retrying"
-	adb connect 192.168.1.103
-	countdown
-	if [[ $ONLINE == device ]]; then
-		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
-	else
-		echo "push failed"
-	fi
-fi;
-}
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig

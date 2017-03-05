@@ -5242,6 +5242,7 @@ static void __init apq8064_common_init(void)
 			msm8064_pm_8x60.dev.platform_data;
 		pdata->retention_calls_tz = false;
 		apq8064ab_update_retention_spm();
+	}
 
 	platform_device_register(&msm8930_pm_8x60);
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
