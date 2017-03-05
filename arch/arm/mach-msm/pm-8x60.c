@@ -43,6 +43,7 @@
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <asm/hardware/cache-l2x0.h>
+#include <asm/outercache.h>
 #ifdef CONFIG_VFP
 #include <asm/vfp.h>
 #endif
@@ -154,7 +155,7 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
-static bool msm_pm_ldo_retention_enabled = false;
+static bool msm_pm_ldo_retention_enabled = true;
 static bool msm_pm_use_sync_timer = true;
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
@@ -463,24 +464,6 @@ static void msm_pm_retention(void)
 	msm_pm_config_hw_after_retention();
 }
 
-#ifdef CONFIG_CACHE_L2X0
-static inline bool msm_pm_l2x0_power_collapse(void)
-{
-	bool collapsed = 0;
-
-	l2cc_suspend();
-	collapsed = msm_pm_collapse();
-	l2cc_resume();
-
-	return collapsed;
-}
-#else
-static inline bool msm_pm_l2x0_power_collapse(void)
-{
-	return msm_pm_collapse();
-}
-#endif
-
 static bool __ref msm_pm_spm_power_collapse(
 	unsigned int cpu, bool from_idle, bool notify_rpm)
 {
@@ -514,7 +497,7 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-	collapsed = msm_pm_l2x0_power_collapse();
+	collapsed = msm_pm_collapse();
 
 	msm_pm_boot_config_after_pc(cpu);
 
@@ -634,8 +617,7 @@ static bool msm_pm_power_collapse(bool from_idle)
 
 static void msm_pm_target_init(void)
 {
-	if (cpu_is_apq8064())
-		msm_pm_save_cp15 = true;
+	msm_pm_save_cp15 = true;
 }
 
 static int64_t msm_pm_timer_enter_idle(void)
@@ -1111,17 +1093,6 @@ void msm_pm_set_sleep_ops(struct msm_pm_sleep_ops *ops)
 {
 	if (ops)
 		pm_sleep_ops = *ops;
-}
-
-static int msm_suspend_prepare(void)
-{
-	msm_mpm_suspend_prepare();
-	return 0;
-}
-
-static void msm_suspend_wake(void)
-{
-	msm_mpm_suspend_wake();
 }
 
 void __init msm_pm_set_tz_retention_flag(unsigned int flag)
