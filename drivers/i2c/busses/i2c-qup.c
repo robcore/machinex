@@ -1552,7 +1552,7 @@ static int qup_i2c_suspend(struct device *device)
 		dev_dbg(device, "system suspend");
 		i2c_qup_pm_suspend_runtime(device);
 	}
-	return 0
+	return 0;
 }
 
 static int qup_i2c_resume(struct device *device)
