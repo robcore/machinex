@@ -67,6 +67,7 @@ enum scalables {
 	CPU2,
 	CPU3,
 	L2,
+	MAX_SCALABLES
 };
 
 

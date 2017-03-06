@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -440,12 +440,12 @@ static void decrease_vdd(int cpu, struct vdd_data *data,
 	}
 }
 
-static inline int calculate_vdd_mem(const struct acpu_level *tgt)
+static int calculate_vdd_mem(const struct acpu_level *tgt)
 {
 	return drv.l2_freq_tbl[tgt->l2_level].vdd_mem;
 }
 
-static inline int get_src_dig(const struct core_speed *s)
+static int get_src_dig(const struct core_speed *s)
 {
 	const int *hfpll_vdd = drv.hfpll_data->vdd;
 	const u32 low_vdd_l_max = drv.hfpll_data->low_vdd_l_max;
@@ -461,7 +461,7 @@ static inline int get_src_dig(const struct core_speed *s)
 		return hfpll_vdd[HFPLL_VDD_LOW];
 }
 
-static inline int calculate_vdd_dig(const struct acpu_level *tgt)
+static int calculate_vdd_dig(const struct acpu_level *tgt)
 {
 	int l2_pll_vdd_dig, cpu_pll_vdd_dig;
 
@@ -475,7 +475,7 @@ static inline int calculate_vdd_dig(const struct acpu_level *tgt)
 static bool enable_boost = true;
 module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
 
-static int inline calculate_vdd_core(const struct acpu_level *tgt)
+static int calculate_vdd_core(const struct acpu_level *tgt)
 {
 	return tgt->vdd_core + (enable_boost ? drv.boost_uv : 0);
 }
@@ -602,9 +602,6 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	 */
 	skip_regulators = (reason == SETRATE_PC);
 
-#ifdef CONFIG_SEC_DEBUG_DCVS_LOG
-	sec_debug_dcvs_log(cpu, strt_acpu_s->khz, tgt_acpu_s->khz);
-#endif
 	/* Set the new CPU speed. */
 	set_speed(&drv.scalable[cpu], tgt_acpu_s, skip_regulators);
 
