@@ -219,7 +219,7 @@ static inline phys_addr_t virt_to_phys(const volatile void *x)
 
 static inline void *phys_to_virt(phys_addr_t x)
 {
-	return (void *)__phys_to_virt(phys_addr_t)(x)));
+	return (void *)__phys_to_virt((phys_addr_t)(x));
 }
 
 /*
