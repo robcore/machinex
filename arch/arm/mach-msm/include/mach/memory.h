@@ -100,7 +100,7 @@ extern void store_dac(void);
 #define finish_arch_switch(prev)	do { store_ttbr0(); } while (0)
 #endif
 
-#define MAX_HOLE_ADDRESS    (PHYS_OFFSET + 0x10000000)
+#define MAX_HOLE_ADDRESS    (PLAT_PHYS_OFFSET + 0x10000000)
 extern phys_addr_t memory_hole_offset;
 extern phys_addr_t memory_hole_start;
 extern phys_addr_t memory_hole_end;
