@@ -127,6 +127,8 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 	unsigned long rate;
+	struct cpufreq_frequency_table *table;
+	unsigned int relation;
 
 	if (limit->limits_init) {
 		if (new_freq > limit->allowed_max) {
@@ -143,7 +145,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	/* limits applied above must be in cpufreq table */
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (cpufreq_frequency_table_target(policy, table, new_freq,
-		relation, &index))
+		CPUFREQ_RELATION_H || CPUFREQ_RELATION_L || CPUFREQ_RELATION_C, &index))
 		return -EINVAL;
 
 	freqs.old = policy->cur;
