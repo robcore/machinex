@@ -44,6 +44,7 @@ struct cma {
 	unsigned long	count;
 	unsigned long	*bitmap;
 	bool in_system;
+	struct mutex lock;
 };
 
 static DEFINE_MUTEX(cma_mutex);
@@ -76,7 +77,6 @@ static struct cma *cma_get_area(phys_addr_t base)
 	return NULL;
 }
 
-#ifdef CONFIG_OF
 static struct cma *cma_get_area_by_name(const char *name)
 {
 	int i;
@@ -88,7 +88,7 @@ static struct cma *cma_get_area_by_name(const char *name)
 			return cma_areas[i].cma;
 	return NULL;
 }
-#endif
+
 
 
 #ifdef CONFIG_CMA_SIZE_MBYTES
@@ -97,11 +97,6 @@ static struct cma *cma_get_area_by_name(const char *name)
 #define CMA_SIZE_MBYTES 0
 #endif
 
-#ifdef CONFIG_CMA_RESERVE_DEFAULT_AREA
-#define CMA_RESERVE_AREA 1
-#else
-#define CMA_RESERVE_AREA 0
-#endif
 /*
  * Default global CMA area size can be defined in kernel's .config.
  * This is usefull mainly for distro maintainers to create a kernel
@@ -198,6 +193,7 @@ static __init struct cma *cma_create_area(unsigned long base_pfn,
 		if (ret)
 			goto error;
 	}
+	mutex_init(&cma->lock);
 
 	pr_debug("%s: returned %p\n", __func__, (void *)cma);
 	return cma;
@@ -220,6 +216,7 @@ int __init cma_fdt_scan(unsigned long node, const char *uname,
 	__be32 *prop;
 	char *name;
 	bool in_system;
+	phys_addr_t limit = MEMBLOCK_ALLOC_ANYWHERE;
 
 	if (!of_get_flat_dt_prop(node, "linux,contiguous-region", NULL))
 		return 0;
@@ -235,9 +232,13 @@ int __init cma_fdt_scan(unsigned long node, const char *uname,
 	in_system =
 		of_get_flat_dt_prop(node, "linux,reserve-region", NULL) ? 0 : 1;
 
-	pr_info("Found %s, memory base %lx, size %ld MiB\n", uname,
-		(unsigned long)base, (unsigned long)size / SZ_1M);
-	dma_contiguous_reserve_area(size, &base, 0, name,
+	prop = of_get_flat_dt_prop(node, "linux,memory-limit", NULL);
+	if (prop)
+		limit = be32_to_cpu(prop[0]);
+
+	pr_info("Found %s, memory base %lx, size %ld MiB, limit %pa\n", uname,
+		(unsigned long)base, (unsigned long)size / SZ_1M, &limit);
+	dma_contiguous_reserve_area(size, &base, limit, name,
 					in_system);
 
 	return 0;
@@ -280,7 +281,7 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 			 (unsigned long)sel_size / SZ_1M);
 
 		if (dma_contiguous_reserve_area(sel_size, &base, limit, NULL,
-		    CMA_RESERVE_AREA) == 0)
+		    true) == 0)
 			dma_contiguous_def_base = base;
 	}
 #ifdef CONFIG_OF
@@ -468,6 +469,20 @@ phys_addr_t cma_get_base(struct device *dev)
 	return cma->base_pfn << PAGE_SHIFT;
 }
 
+phys_addr_t cma_get_base(struct device *dev)
+{
+	struct cma *cma = dev_get_cma_area(dev);
+
+	return cma->base_pfn << PAGE_SHIFT;
+}
+
+static void clear_cma_bitmap(struct cma *cma, unsigned long pfn, int count)
+{
+	mutex_lock(&cma->lock);
+	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
+	mutex_unlock(&cma->lock);
+}
+
 /**
  * dma_alloc_from_contiguous() - allocate pages from contiguous area
  * @dev:   Pointer to device for which the allocation is performed.
@@ -501,31 +516,43 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 	mask = (1 << align) - 1;
 
-	mutex_lock(&cma_mutex);
-
 	for (;;) {
+		mutex_lock(&cma->lock);
 		pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count,
 						    start, count, mask);
-		if (pageno >= cma->count)
+		if (pageno >= cma->count) {
+			mutex_unlock(&cma_mutex);
 			break;
+		}
+		bitmap_set(cma->bitmap, pageno, count);
+		/*
+		 * It's safe to drop the lock here. We've marked this region for
+		 * our exclusive use. If the migration fails we will take the
+		 * lock again and unmark it.
+		 */
+		mutex_unlock(&cma->lock);
 
 		pfn = cma->base_pfn + pageno;
+		mutex_lock(&cma_mutex);
 		if (cma->in_system)
 			ret = alloc_contig_range(pfn, pfn + count, MIGRATE_CMA);
+		mutex_unlock(&cma_mutex);
 		if (ret == 0) {
-			bitmap_set(cma->bitmap, pageno, count);
 			page = pfn_to_page(pfn);
 			break;
 		} else if (ret != -EBUSY) {
+			pfn = 0;
+			clear_cma_bitmap(cma, pfn, count);
 			break;
 		}
+		clear_cma_bitmap(cma, pfn, count);
+
 		pr_debug("%s(): memory range at %p is busy, retrying\n",
 			 __func__, pfn_to_page(pfn));
 		/* try again with a bit different memory target */
 		start = pageno + mask + 1;
 	}
 
-	mutex_unlock(&cma_mutex);
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
 }
@@ -558,11 +585,9 @@ bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 
 	VM_BUG_ON(pfn + count > cma->base_pfn + cma->count);
 
-	mutex_lock(&cma_mutex);
-	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
 	if (cma->in_system)
 		free_contig_range(pfn, count);
-	mutex_unlock(&cma_mutex);
+	clear_cma_bitmap(cma, pfn, count);
 
 	return true;
 }
