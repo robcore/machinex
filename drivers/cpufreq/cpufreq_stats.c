@@ -26,10 +26,16 @@
 
 static spinlock_t cpufreq_stats_lock;
 
+#define CPUFREQ_STATDEVICE_ATTR(_name, _mode, _show) \
+static struct freq_attr _attr_##_name = {\
+	.attr = {.name = __stringify(_name), .mode = _mode, }, \
+	.show = _show,\
+};
+
 struct cpufreq_stats {
 	unsigned int cpu;
 	unsigned int total_trans;
-	unsigned long long last_time;
+	unsigned long long  last_time;
 	unsigned int max_state;
 	unsigned int state_num;
 	unsigned int last_index;
@@ -40,6 +46,20 @@ struct cpufreq_stats {
 #endif
 };
 
+struct all_cpufreq_stats {
+	unsigned int state_num;
+	u64 *time_in_state;
+	unsigned int *freq_table;
+};
+
+struct all_freq_table {
+	unsigned int *freq_table;
+	unsigned int table_size;
+};
+
+static struct all_freq_table *all_freq_table;
+
+static DEFINE_PER_CPU(struct all_cpufreq_stats *, all_cpufreq_stats);
 static DEFINE_PER_CPU(struct cpufreq_stats *, cpufreq_stats_table);
 
 struct cpufreq_stats_attribute {
@@ -50,14 +70,24 @@ struct cpufreq_stats_attribute {
 static int cpufreq_stats_update(unsigned int cpu)
 {
 	struct cpufreq_stats *stat;
+	struct all_cpufreq_stats *all_stat;
 	unsigned long long cur_time;
 
 	cur_time = get_jiffies_64();
 	spin_lock(&cpufreq_stats_lock);
 	stat = per_cpu(cpufreq_stats_table, cpu);
-	if (stat->time_in_state)
+	all_stat = per_cpu(all_cpufreq_stats, cpu);
+	if (!stat) {
+		spin_unlock(&cpufreq_stats_lock);
+		return 0;
+	}
+	if (stat->time_in_state) {
 		stat->time_in_state[stat->last_index] +=
 			cur_time - stat->last_time;
+		if (all_stat)
+			all_stat->time_in_state[stat->last_index] +=
+					cur_time - stat->last_time;
+	}
 	stat->last_time = cur_time;
 	spin_unlock(&cpufreq_stats_lock);
 	return 0;
@@ -85,6 +115,62 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 			(unsigned long long)
 			cputime64_to_clock_t(stat->time_in_state[i]));
 	}
+	return len;
+}
+
+static int get_index_all_cpufreq_stat(struct all_cpufreq_stats *all_stat,
+		unsigned int freq)
+{
+	int i;
+	if (!all_stat)
+		return -1;
+	for (i = 0; i < all_stat->state_num; i++) {
+		if (all_stat->freq_table[i] == freq)
+			return i;
+	}
+	return -1;
+}
+
+static ssize_t show_all_time_in_state(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	ssize_t len = 0;
+	unsigned int i, cpu, freq, index;
+	struct all_cpufreq_stats *all_stat;
+	struct cpufreq_policy *policy;
+
+	len += scnprintf(buf + len, PAGE_SIZE - len, "freq\t\t");
+	for_each_possible_cpu(cpu) {
+		len += scnprintf(buf + len, PAGE_SIZE - len, "cpu%d\t\t", cpu);
+		if (cpu_online(cpu))
+			cpufreq_stats_update(cpu);
+	}
+
+	if (!all_freq_table)
+		goto out;
+	for (i = 0; i < all_freq_table->table_size; i++) {
+		freq = all_freq_table->freq_table[i];
+		len += scnprintf(buf + len, PAGE_SIZE - len, "\n%u\t\t", freq);
+		for_each_possible_cpu(cpu) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy == NULL)
+				continue;
+			all_stat = per_cpu(all_cpufreq_stats, policy->cpu);
+			index = get_index_all_cpufreq_stat(all_stat, freq);
+			if (index != -1) {
+				len += scnprintf(buf + len, PAGE_SIZE - len,
+					"%llu\t\t", (unsigned long long)
+					cputime64_to_clock_t(all_stat->time_in_state[index]));
+			} else {
+				len += scnprintf(buf + len, PAGE_SIZE - len,
+						"N/A\t\t");
+			}
+			cpufreq_cpu_put(policy);
+		}
+	}
+
+out:
+	len += scnprintf(buf + len, PAGE_SIZE - len, "\n");
 	return len;
 }
 
@@ -118,7 +204,7 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 		len += snprintf(buf + len, PAGE_SIZE - len, "%9u: ",
 				stat->freq_table[i]);
 
-		for (j = 0; j < stat->state_num; j++) {
+		for (j = 0; j < stat->state_num; j++)   {
 			if (len >= PAGE_SIZE)
 				break;
 			len += snprintf(buf + len, PAGE_SIZE - len, "%9u ",
@@ -132,17 +218,17 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 		return PAGE_SIZE;
 	return len;
 }
-cpufreq_freq_attr_ro(trans_table);
+CPUFREQ_STATDEVICE_ATTR(trans_table, 0444, show_trans_table);
 #endif
 
-cpufreq_freq_attr_ro(total_trans);
-cpufreq_freq_attr_ro(time_in_state);
+CPUFREQ_STATDEVICE_ATTR(total_trans, 0444, show_total_trans);
+CPUFREQ_STATDEVICE_ATTR(time_in_state, 0444, show_time_in_state);
 
 static struct attribute *default_attrs[] = {
-	&total_trans.attr,
-	&time_in_state.attr,
+	&_attr_total_trans.attr,
+	&_attr_time_in_state.attr,
 #ifdef CONFIG_CPU_FREQ_STAT_DETAILS
-	&trans_table.attr,
+	&_attr_trans_table.attr,
 #endif
 	NULL
 };
@@ -150,6 +236,9 @@ static struct attribute_group stats_attr_group = {
 	.attrs = default_attrs,
 	.name = "stats"
 };
+
+static struct kobj_attribute _attr_all_time_in_state = __ATTR(all_time_in_state,
+		0444, show_all_time_in_state, NULL);
 
 static int freq_table_get_index(struct cpufreq_stats *stat, unsigned int freq)
 {
@@ -160,49 +249,81 @@ static int freq_table_get_index(struct cpufreq_stats *stat, unsigned int freq)
 	return -1;
 }
 
-static void __cpufreq_stats_free_table(struct cpufreq_policy *policy)
-{
-	struct cpufreq_stats *stat = per_cpu(cpufreq_stats_table, policy->cpu);
-
-	if (!stat)
-		return;
-
-	pr_debug("%s: Free stat table\n", __func__);
-
-	sysfs_remove_group(&policy->kobj, &stats_attr_group);
-	kfree(stat->time_in_state);
-	kfree(stat);
-	per_cpu(cpufreq_stats_table, policy->cpu) = NULL;
-}
-
+/* should be called late in the CPU removal sequence so that the stats
+ * memory is still available in case someone tries to use it.
+ */
 static void cpufreq_stats_free_table(unsigned int cpu)
 {
-	struct cpufreq_policy *policy;
-
-	policy = cpufreq_cpu_get(cpu);
-	if (!policy)
-		return;
-
-	if (cpufreq_frequency_get_table(policy->cpu))
-		__cpufreq_stats_free_table(policy);
-
-	cpufreq_cpu_put(policy);
+	struct cpufreq_stats *stat = per_cpu(cpufreq_stats_table, cpu);
+	if (stat) {
+		kfree(stat->time_in_state);
+		kfree(stat);
+	}
+	per_cpu(cpufreq_stats_table, cpu) = NULL;
 }
 
-static int __cpufreq_stats_create_table(struct cpufreq_policy *policy,
+/* must be called early in the CPU removal sequence (before
+ * cpufreq_remove_dev) so that policy is still valid.
+ */
+static void cpufreq_stats_free_sysfs(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+
+	if (!cpufreq_frequency_get_table(cpu))
+		return;
+
+	if (policy && policy->cpu == cpu)
+		sysfs_remove_group(policy->kobj, &stats_attr_group);
+	if (policy)
+		cpufreq_cpu_put(policy);
+}
+
+static void cpufreq_allstats_free(void)
+{
+	int cpu;
+	struct all_cpufreq_stats *all_stat;
+
+	sysfs_remove_file(cpufreq_global_kobject,
+						&_attr_all_time_in_state.attr);
+
+	for_each_possible_cpu(cpu) {
+		all_stat = per_cpu(all_cpufreq_stats, cpu);
+		if (!all_stat)
+			continue;
+		kfree(all_stat->time_in_state);
+		kfree(all_stat);
+		per_cpu(all_cpufreq_stats, cpu) = NULL;
+	}
+	if (all_freq_table) {
+		kfree(all_freq_table->freq_table);
+		kfree(all_freq_table);
+		all_freq_table = NULL;
+	}
+}
+
+static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table)
 {
 	unsigned int i, j, count = 0, ret = 0;
 	struct cpufreq_stats *stat;
+	struct cpufreq_policy *data;
 	unsigned int alloc_size;
 	unsigned int cpu = policy->cpu;
+
 	if (per_cpu(cpufreq_stats_table, cpu))
-		return -EBUSY;
-	stat = kzalloc(sizeof(*stat), GFP_KERNEL);
+		return 0;
+
+	stat = kzalloc(sizeof(struct cpufreq_stats), GFP_KERNEL);
 	if ((stat) == NULL)
 		return -ENOMEM;
 
-	ret = sysfs_create_group(&policy->kobj, &stats_attr_group);
+	data = cpufreq_cpu_get(cpu);
+	if (data == NULL) {
+		ret = -EINVAL;
+		goto error_get_fail;
+	}
+
+	ret = sysfs_create_group(data->kobj, &stats_attr_group);
 	if (ret)
 		goto error_out;
 
@@ -225,7 +346,7 @@ static int __cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	stat->time_in_state = kzalloc(alloc_size, GFP_KERNEL);
 	if (!stat->time_in_state) {
 		ret = -ENOMEM;
-		goto error_alloc;
+		goto error_out;
 	}
 	stat->freq_table = (unsigned int *)(stat->time_in_state + count);
 
@@ -245,71 +366,132 @@ static int __cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	stat->last_time = get_jiffies_64();
 	stat->last_index = freq_table_get_index(stat, policy->cur);
 	spin_unlock(&cpufreq_stats_lock);
+	cpufreq_cpu_put(data);
 	return 0;
-error_alloc:
-	sysfs_remove_group(&policy->kobj, &stats_attr_group);
 error_out:
+	cpufreq_cpu_put(data);
+error_get_fail:
 	kfree(stat);
 	per_cpu(cpufreq_stats_table, cpu) = NULL;
 	return ret;
 }
 
-static void cpufreq_stats_create_table(unsigned int cpu)
+static int compare_for_sort(const void *lhs_ptr, const void *rhs_ptr)
 {
-	struct cpufreq_policy *policy;
-	struct cpufreq_frequency_table *table;
-
-	/*
-	 * "likely(!policy)" because normally cpufreq_stats will be registered
-	 * before cpufreq driver
-	 */
-	policy = cpufreq_cpu_get(cpu);
-	if (likely(!policy))
-		return;
-
-	table = cpufreq_frequency_get_table(policy->cpu);
-	if (likely(table))
-		__cpufreq_stats_create_table(policy, table);
-
-	cpufreq_cpu_put(policy);
+	unsigned int lhs = *(const unsigned int *)(lhs_ptr);
+	unsigned int rhs = *(const unsigned int *)(rhs_ptr);
+	return (lhs - rhs);
 }
 
-static void cpufreq_stats_update_policy_cpu(struct cpufreq_policy *policy)
+static bool check_all_freq_table(unsigned int freq)
 {
-	struct cpufreq_stats *stat = per_cpu(cpufreq_stats_table,
-			policy->last_cpu);
+	int i;
+	for (i = 0; i < all_freq_table->table_size; i++) {
+		if (freq == all_freq_table->freq_table[i])
+			return true;
+	}
+	return false;
+}
 
-	pr_debug("Updating stats_table for new_cpu %u from last_cpu %u\n",
-			policy->cpu, policy->last_cpu);
-	per_cpu(cpufreq_stats_table, policy->cpu) = per_cpu(cpufreq_stats_table,
-			policy->last_cpu);
-	per_cpu(cpufreq_stats_table, policy->last_cpu) = NULL;
-	stat->cpu = policy->cpu;
+static void create_all_freq_table(void)
+{
+	all_freq_table = kzalloc(sizeof(struct all_freq_table),
+			GFP_KERNEL);
+	if (!all_freq_table)
+		pr_warn("could not allocate memory for all_freq_table\n");
+	return;
+}
+
+static void add_all_freq_table(unsigned int freq)
+{
+	unsigned int size;
+	size = sizeof(unsigned int) * (all_freq_table->table_size + 1);
+	all_freq_table->freq_table = krealloc(all_freq_table->freq_table,
+			size, GFP_ATOMIC);
+	if (IS_ERR(all_freq_table->freq_table)) {
+		pr_warn("Could not reallocate memory for freq_table\n");
+		all_freq_table->freq_table = NULL;
+		return;
+	}
+	all_freq_table->freq_table[all_freq_table->table_size++] = freq;
+}
+
+static void cpufreq_allstats_create(unsigned int cpu)
+{
+	int i , j = 0;
+	unsigned int alloc_size, count = 0;
+	struct cpufreq_frequency_table *table = cpufreq_frequency_get_table(cpu);
+	struct all_cpufreq_stats *all_stat;
+	bool sort_needed = false;
+
+	if (!table)
+		return;
+
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+		unsigned int freq = table[i].frequency;
+		if (freq == CPUFREQ_ENTRY_INVALID)
+			continue;
+		count++;
+	}
+
+	all_stat = kzalloc(sizeof(struct all_cpufreq_stats),
+			GFP_KERNEL);
+	if (!all_stat) {
+		pr_warn("Cannot allocate memory for cpufreq stats\n");
+		return;
+	}
+
+	/*Allocate memory for freq table per cpu as well as clockticks per freq*/
+	alloc_size = count * sizeof(int) + count * sizeof(u64);
+	all_stat->time_in_state = kzalloc(alloc_size, GFP_KERNEL);
+	if (!all_stat->time_in_state) {
+		pr_warn("Cannot allocate memory for cpufreq time_in_state\n");
+		kfree(all_stat);
+		all_stat = NULL;
+		return;
+	}
+	all_stat->freq_table = (unsigned int *)
+		(all_stat->time_in_state + count);
+
+	spin_lock(&cpufreq_stats_lock);
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+		unsigned int freq = table[i].frequency;
+		if (freq == CPUFREQ_ENTRY_INVALID)
+			continue;
+		all_stat->freq_table[j++] = freq;
+		if (all_freq_table && !check_all_freq_table(freq)) {
+			add_all_freq_table(freq);
+			sort_needed = true;
+		}
+	}
+	if (sort_needed)
+		sort(all_freq_table->freq_table, all_freq_table->table_size,
+				sizeof(unsigned int), &compare_for_sort, NULL);
+	all_stat->state_num = j;
+	per_cpu(all_cpufreq_stats, cpu) = all_stat;
+	spin_unlock(&cpufreq_stats_lock);
 }
 
 static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
-	int ret = 0;
+	int ret;
 	struct cpufreq_policy *policy = data;
 	struct cpufreq_frequency_table *table;
 	unsigned int cpu = policy->cpu;
-
-	if (val == CPUFREQ_UPDATE_POLICY_CPU) {
-		cpufreq_stats_update_policy_cpu(policy);
+	if (val != CPUFREQ_NOTIFY)
 		return 0;
-	}
-
 	table = cpufreq_frequency_get_table(cpu);
 	if (!table)
 		return 0;
 
-	if (val == CPUFREQ_CREATE_POLICY)
-		ret = __cpufreq_stats_create_table(policy, table);
-	else if (val == CPUFREQ_REMOVE_POLICY)
-		__cpufreq_stats_free_table(policy);
+	if (!per_cpu(all_cpufreq_stats, cpu))
+		cpufreq_allstats_create(cpu);
 
-	return ret;
+	ret = cpufreq_stats_create_table(policy, table);
+	if (ret)
+		return ret;
+	return 0;
 }
 
 static int cpufreq_stat_notifier_trans(struct notifier_block *nb,
@@ -348,6 +530,63 @@ static int cpufreq_stat_notifier_trans(struct notifier_block *nb,
 	return 0;
 }
 
+static int cpufreq_stats_create_table_cpu(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
+	struct cpufreq_frequency_table *table;
+	int ret = -ENODEV;
+
+	policy = cpufreq_cpu_get(cpu);
+	if (!policy)
+		return -ENODEV;
+
+	table = cpufreq_frequency_get_table(cpu);
+	if (!table)
+		goto out;
+
+	if (!per_cpu(all_cpufreq_stats, cpu))
+		cpufreq_allstats_create(cpu);
+
+	ret = cpufreq_stats_create_table(policy, table);
+
+out:
+	cpufreq_cpu_put(policy);
+	return ret;
+}
+
+static int cpufreq_stat_cpu_callback(struct notifier_block *nfb,
+					       unsigned long action,
+					       void *hcpu)
+{
+	unsigned int cpu = (unsigned long)hcpu;
+
+	switch (action) {
+	case CPU_ONLINE:
+	case CPU_ONLINE_FROZEN:
+		cpufreq_update_policy(cpu);
+		break;
+	case CPU_DOWN_PREPARE:
+	case CPU_DOWN_PREPARE_FROZEN:
+		cpufreq_stats_free_sysfs(cpu);
+		break;
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
+		cpufreq_stats_free_table(cpu);
+		break;
+	case CPU_DOWN_FAILED:
+	case CPU_DOWN_FAILED_FROZEN:
+		cpufreq_stats_create_table_cpu(cpu);
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+/* priority=1 so this will get called before cpufreq_remove_dev */
+static struct notifier_block cpufreq_stat_cpu_notifier __refdata = {
+	.notifier_call = cpufreq_stat_cpu_callback,
+	.priority = 1,
+};
+
 static struct notifier_block notifier_policy_block = {
 	.notifier_call = cpufreq_stat_notifier_policy
 };
@@ -367,18 +606,26 @@ static int __init cpufreq_stats_init(void)
 	if (ret)
 		return ret;
 
+	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 	for_each_online_cpu(cpu)
-		cpufreq_stats_create_table(cpu);
+		cpufreq_update_policy(cpu);
 
 	ret = cpufreq_register_notifier(&notifier_trans_block,
 				CPUFREQ_TRANSITION_NOTIFIER);
 	if (ret) {
 		cpufreq_unregister_notifier(&notifier_policy_block,
 				CPUFREQ_POLICY_NOTIFIER);
+		unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 		for_each_online_cpu(cpu)
 			cpufreq_stats_free_table(cpu);
 		return ret;
 	}
+
+	create_all_freq_table();
+	ret = sysfs_create_file(cpufreq_global_kobject,
+			&_attr_all_time_in_state.attr);
+	if (ret)
+		pr_warn("Error creating sysfs file for cpufreq stats\n");
 
 	return 0;
 }
@@ -390,8 +637,11 @@ static void __exit cpufreq_stats_exit(void)
 			CPUFREQ_POLICY_NOTIFIER);
 	cpufreq_unregister_notifier(&notifier_trans_block,
 			CPUFREQ_TRANSITION_NOTIFIER);
-	for_each_online_cpu(cpu)
+	unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
+	for_each_online_cpu(cpu) {
 		cpufreq_stats_free_table(cpu);
+	}
+	cpufreq_allstats_free();
 }
 
 MODULE_AUTHOR("Zou Nan hai <nanhai.zou@intel.com>");

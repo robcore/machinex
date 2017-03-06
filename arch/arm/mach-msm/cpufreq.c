@@ -25,7 +25,6 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/sched.h>
-#include <linux/sched/rt.h>
 #include <linux/suspend.h>
 #include <linux/clk.h>
 #include <linux/err.h>
@@ -34,14 +33,9 @@
 #include <trace/events/power.h>
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
+#include <linux/sched/rt.h>
 
 #include "acpuclock.h"
-
-#ifdef CONFIG_USE_DEBUG_FS
-#include <linux/debugfs.h>
-#include <linux/seq_file.h>
-#include <asm/div64.h>
-#endif
 
 static DEFINE_MUTEX(l2bw_lock);
 
@@ -162,7 +156,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 		sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
 	}
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -177,7 +171,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-		cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	/* Restore priority after clock ramp-up */
 	if (freqs.new > freqs.old && saved_sched_policy >= 0) {
@@ -671,42 +665,6 @@ static int cpufreq_parse_dt(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_USE_DEBUG_FS
-static int msm_cpufreq_show(struct seq_file *m, void *unused)
-{
-	unsigned int i, cpu_freq;
-
-	if (!freq_table)
-		return 0;
-
-	seq_printf(m, "%10s%10s", "CPU (KHz)", "L2 (KHz)");
-	seq_printf(m, "%12s\n", "Mem (MBps)");
-
-	for (i = 0; freq_table[i].frequency != CPUFREQ_TABLE_END; i++) {
-		cpu_freq = freq_table[i].frequency;
-		if (cpu_freq == CPUFREQ_ENTRY_INVALID)
-			continue;
-		seq_printf(m, "%10d", cpu_freq);
-		seq_printf(m, "%10d", l2_khz ? l2_khz[i] : cpu_freq);
-		seq_printf(m, "%12lu", mem_bw[i]);
-		seq_printf(m, "\n");
-	}
-	return 0;
-}
-
-static int msm_cpufreq_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, msm_cpufreq_show, inode->i_private);
-}
-
-const struct file_operations msm_cpufreq_fops = {
-	.open		= msm_cpufreq_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= seq_release,
-};
-#endif
-
 static int __init msm_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -744,11 +702,6 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 			dev_warn(dev, "Unable to register bus client\n");
 	}
 
-#ifdef CONFIG_USE_DEBUG_FS
-	if (!debugfs_create_file("msm_cpufreq", S_IRUGO, NULL, NULL,
-		&msm_cpufreq_fops))
-		return -ENOMEM;
-#endif
 	is_clk = true;
 	return 0;
 }
@@ -777,9 +730,9 @@ static int __init msm_cpufreq_register(void)
 
 	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
 	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI, 0);
-	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
+	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
-late_initcall(msm_cpufreq_register);
+device_initcall(msm_cpufreq_register);
