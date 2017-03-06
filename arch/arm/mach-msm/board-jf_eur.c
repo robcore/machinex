@@ -576,7 +576,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int apq8064_paddr_to_memtype(unsigned int paddr)
+static int apq8064_paddr_to_memtype(phys_addr_t paddr)
 {
 	return MEMTYPE_EBI1;
 }
@@ -977,7 +977,7 @@ static struct persistent_ram_descriptor per_ram_descs[] __initdata = {
                .name = "kexec_hb_page",
                .size = SZ_1M - (KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR),
 #else
-               .size = SZ_1M,
+                .size = SZ_1M,
 #endif
        }
 };
@@ -4029,6 +4029,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&apq8064_rpm_device,
 	&apq8064_rpm_log_device,
 	&apq8064_rpm_stat_device,
+	&apq8064_rpm_master_stat_device,
 	&apq_device_tz_log,
 	&msm_bus_8064_apps_fabric,
 	&msm_bus_8064_sys_fabric,
@@ -4101,6 +4102,7 @@ static struct platform_device *cdp_devices[] __initdata = {
 #ifdef CONFIG_MSM_ROTATOR
 	&msm_rotator_device,
 #endif
+	&msm8064_pc_cntr,
 	&msm8064_cpu_slp_status,
 	&sec_device_jack,
 #ifdef CONFIG_SENSORS_SSP_C12SD
@@ -5536,6 +5538,7 @@ MACHINE_START(JF, "SAMSUNG JF")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = samsung_jf_init,
 	.init_early = apq8064_allocate_memory_regions,

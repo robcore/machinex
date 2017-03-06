@@ -56,7 +56,7 @@ static struct GAForensicINFO {
 	unsigned short vfsmount_struct_mnt_root;
 	unsigned int pgdir_shift;
 	unsigned int ptrs_per_pte;
-	unsigned int phys_offset;
+	unsigned int plat_phys_offset;
 	unsigned int page_offset;
 	unsigned int page_shift;
 	unsigned int page_size;
@@ -133,7 +133,7 @@ static struct GAForensicINFO {
 	.vfsmount_struct_mnt_root = offsetof(struct vfsmount, mnt_root),
 	.pgdir_shift = PGDIR_SHIFT,
 	.ptrs_per_pte = PTRS_PER_PTE,
-	.phys_offset = PHYS_OFFSET,
+	.plat_phys_offset = PLAT_PHYS_OFFSET,
 	.page_offset = PAGE_OFFSET,
 	.page_shift = PAGE_SHIFT,
 	.page_size = PAGE_SIZE,

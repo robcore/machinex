@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/include/mach/memory.h
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,8 +19,9 @@
 
 /* physical offset of RAM */
 #define PLAT_PHYS_OFFSET UL(CONFIG_PHYS_OFFSET)
+
 #ifdef CONFIG_HAVE_END_MEM
-#define END_MEM          UL(CONFIG_END_MEM)
+#define END_MEM	UL(CONFIG_END_MEM)
 #endif
 
 #define MAX_PHYSMEM_BITS 32
@@ -99,31 +100,26 @@ extern void store_dac(void);
 #define finish_arch_switch(prev)	do { store_ttbr0(); } while (0)
 #endif
 
-#define MAX_HOLE_ADDRESS    (PHYS_OFFSET + 0x10000000)
-extern phys_addr_t memory_hole_offset;
-extern phys_addr_t memory_hole_start;
-extern phys_addr_t memory_hole_end;
-extern unsigned long memory_hole_align;
-extern unsigned long virtual_hole_start;
-extern unsigned long virtual_hole_end;
 #ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-void find_memory_hole(void);
+extern unsigned long membank0_size;
+extern unsigned long membank1_start;
+void find_membank0_hole(void);
 
-#define MEM_HOLE_END_PHYS_OFFSET (memory_hole_end)
-#define MEM_HOLE_PAGE_OFFSET (PAGE_OFFSET + memory_hole_offset + \
-				memory_hole_align)
+#define MEMBANK0_PHYS_OFFSET PLAT_PHYS_OFFSET
+#define MEMBANK0_PAGE_OFFSET PAGE_OFFSET
+
+#define MEMBANK1_PHYS_OFFSET (membank1_start)
+#define MEMBANK1_PAGE_OFFSET (MEMBANK0_PAGE_OFFSET + (membank0_size))
 
 #define __phys_to_virt(phys)				\
-	(unsigned long)\
-	((MEM_HOLE_END_PHYS_OFFSET && ((phys) >= MEM_HOLE_END_PHYS_OFFSET)) ? \
-	(phys) - MEM_HOLE_END_PHYS_OFFSET + MEM_HOLE_PAGE_OFFSET :	\
-	(phys) - PHYS_OFFSET + PAGE_OFFSET)
+	((MEMBANK1_PHYS_OFFSET && ((phys) >= MEMBANK1_PHYS_OFFSET)) ?	\
+	(phys) - MEMBANK1_PHYS_OFFSET + MEMBANK1_PAGE_OFFSET :	\
+	(phys) - MEMBANK0_PHYS_OFFSET + MEMBANK0_PAGE_OFFSET)
 
 #define __virt_to_phys(virt)				\
-	(unsigned long)\
-	((MEM_HOLE_END_PHYS_OFFSET && ((virt) >= MEM_HOLE_PAGE_OFFSET)) ? \
-	(virt) - MEM_HOLE_PAGE_OFFSET + MEM_HOLE_END_PHYS_OFFSET :	\
-	(virt) - PAGE_OFFSET + PHYS_OFFSET)
+	((MEMBANK1_PHYS_OFFSET && ((virt) >= MEMBANK1_PAGE_OFFSET)) ?	\
+	(virt) - MEMBANK1_PAGE_OFFSET + MEMBANK1_PHYS_OFFSET :	\
+	(virt) - MEMBANK0_PAGE_OFFSET + MEMBANK0_PHYS_OFFSET)
 #endif
 
 /*
