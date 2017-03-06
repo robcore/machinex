@@ -512,7 +512,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		 count, align);
 
 	if (!count)
-		return 0;
+		return NULL;
 
 	mask = (1 << align) - 1;
 
@@ -538,6 +538,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 			ret = alloc_contig_range(pfn, pfn + count, MIGRATE_CMA);
 		mutex_unlock(&cma_mutex);
 		if (ret == 0) {
+			page = pfn_to_page(pfn);
 			break;
 		} else if (ret != -EBUSY) {
 			pfn = 0;
@@ -552,8 +553,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		start = pageno + mask + 1;
 	}
 
-	pr_debug("%s(): returned %lx\n", __func__, pfn);
-	return pfn;
+	pr_debug("%s(): returned %p\n", __func__, page);
+	return page;
 }
 
 /**
@@ -566,15 +567,18 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
  * It returns false when provided pages do not belong to contiguous area and
  * true otherwise.
  */
-bool dma_release_from_contiguous(struct device *dev, unsigned long pfn,
+bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 				 int count)
 {
 	struct cma *cma = dev_get_cma_area(dev);
+	unsigned long pfn;
 
-	if (!cma || !pfn)
+	if (!cma || !pages)
 		return false;
 
-	pr_debug("%s(pfn %lx)\n", __func__, pfn);
+	pr_debug("%s(page %p)\n", __func__, (void *)pages);
+
+	pfn = page_to_pfn(pages);
 
 	if (pfn < cma->base_pfn || pfn >= cma->base_pfn + cma->count)
 		return false;
