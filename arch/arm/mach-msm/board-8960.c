@@ -154,12 +154,13 @@ struct sx150x_platform_data msm8960_sx150x_data[] = {
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 #define HOLE_SIZE	0x20000
+#define MSM_ION_MFC_META_SIZE 0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE            0x3800000 /* Need to be multiple of 64K */
+#define MSM_ION_MM_SIZE            0x5400000 /* Need to be multiple of 64K */
 #define MSM_ION_SF_SIZE            0x0
 #define MSM_ION_QSECOM_SIZE        0x780000 /* (7.5MB) */
-#define MSM_ION_HEAP_NUM	8
+#define MSM_ION_HEAP_NUM	7
 #else
 #define MSM_ION_MM_SIZE            MSM_PMEM_ADSP_SIZE
 #define MSM_ION_SF_SIZE            MSM_PMEM_SIZE
@@ -167,7 +168,7 @@ struct sx150x_platform_data msm8960_sx150x_data[] = {
 #define MSM_ION_HEAP_NUM	8
 #endif
 #define MSM_ION_MM_FW_SIZE	(0x200000 - HOLE_SIZE) /* 128kb */
-#define MSM_ION_MFC_SIZE	SZ_8K
+#define MSM_ION_MFC_SIZE	(SZ_8K + MSM_ION_MFC_META_SIZE)
 #define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
 
 #define MSM_LIQUID_ION_MM_SIZE (MSM_ION_MM_SIZE + 0x600000)
@@ -179,7 +180,6 @@ struct sx150x_platform_data msm8960_sx150x_data[] = {
 							HOLE_SIZE))
 #define MAX_FIXED_AREA_SIZE	0x10000000
 #define MSM8960_FW_START	MSM8960_FIXED_AREA_START
-#define MSM_ION_ADSP_SIZE	SZ_8M
 
 static unsigned msm_ion_sf_size = MSM_ION_SF_SIZE;
 #else
@@ -350,7 +350,7 @@ static void __init reserve_pmem_memory(void)
 #endif
 }
 
-static int msm8960_paddr_to_memtype(unsigned int paddr)
+static int msm8960_paddr_to_memtype(phys_addr_t paddr)
 {
 	return MEMTYPE_EBI1;
 }
@@ -398,15 +398,6 @@ static u64 msm_dmamask = DMA_BIT_MASK(32);
 
 static struct platform_device ion_mm_heap_device = {
 	.name = "ion-mm-heap-device",
-	.id = -1,
-	.dev = {
-		.dma_mask = &msm_dmamask,
-		.coherent_dma_mask = DMA_BIT_MASK(32),
-	}
-};
-
-static struct platform_device ion_adsp_heap_device = {
-	.name = "ion-adsp-heap-device",
 	.id = -1,
 	.dev = {
 		.dma_mask = &msm_dmamask,
@@ -487,15 +478,6 @@ struct ion_platform_heap msm8960_heaps[] = {
 			.size	= MSM_ION_AUDIO_SIZE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = (void *) &co_msm8960_ion_pdata,
-		},
-		{
-			.id     = ION_ADSP_HEAP_ID,
-			.type   = ION_HEAP_TYPE_DMA,
-			.name   = ION_ADSP_HEAP_NAME,
-			.size   = MSM_ION_ADSP_SIZE,
-			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &co_msm8960_ion_pdata,
-			.priv	= &ion_adsp_heap_device.dev,
 		},
 #endif
 };
@@ -795,6 +777,7 @@ static void __init msm8960_calculate_reserve_sizes(void)
 	reserve_mdp_memory();
 	reserve_rtb_memory();
 	reserve_cache_dump_memory();
+	msm8960_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
 }
 
 static struct reserve_info msm8960_reserve_info __initdata = {
@@ -2578,7 +2561,6 @@ static struct i2c_board_info sii_device_info[] __initdata = {
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi4_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
-	.keep_ahb_clk_on = 1,
 };
 
 static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi3_pdata = {
@@ -2977,6 +2959,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm8960_cache_dump_device,
 	&msm8960_iommu_domain_device,
 	&msm_tsens_device,
+	&msm8960_pc_cntr,
 	&msm8960_cpu_slp_status,
 };
 
@@ -3566,10 +3549,8 @@ static void __init msm8960_cdp_init(void)
 
 	msm8960_pm8921_gpio_mpp_init();
 	/* Don't add modem devices on APQ targets */
-	if (socinfo_get_id() != 124) {
-		platform_device_register(&msm_8960_q6_mss_fw);
-		platform_device_register(&msm_8960_q6_mss_sw);
-	}
+	if (socinfo_get_id() != 124)
+		platform_device_register(&msm_8960_q6_mss);
 	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
 	msm8960_init_smsc_hub();
 	msm8960_init_hsic();
@@ -3601,6 +3582,7 @@ MACHINE_START(MSM8960_CDP, "QCT MSM8960 CDP")
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = msm8960_cdp_init,
 	.init_early = msm8960_allocate_memory_regions,
@@ -3613,6 +3595,7 @@ MACHINE_START(MSM8960_MTP, "QCT MSM8960 MTP")
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = msm8960_cdp_init,
 	.init_early = msm8960_allocate_memory_regions,
@@ -3625,6 +3608,7 @@ MACHINE_START(MSM8960_FLUID, "QCT MSM8960 FLUID")
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = msm8960_cdp_init,
 	.init_early = msm8960_allocate_memory_regions,
@@ -3637,6 +3621,7 @@ MACHINE_START(MSM8960_LIQUID, "QCT MSM8960 LIQUID")
 	.map_io = msm8960_map_io,
 	.reserve = msm8960_reserve,
 	.init_irq = msm8960_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = msm8960_cdp_init,
 	.init_early = msm8960_allocate_memory_regions,

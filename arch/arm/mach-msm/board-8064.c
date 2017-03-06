@@ -112,7 +112,7 @@
 #define MSM_ION_MM_SIZE		0x5400000
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x780000 /* (7.5MB) */
-#define MSM_ION_HEAP_NUM	8
+#define MSM_ION_HEAP_NUM	7
 #else
 #define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
@@ -132,7 +132,6 @@
 #define MAX_FIXED_AREA_SIZE	0x10000000
 #define MSM_MM_FW_SIZE		(0x200000 - HOLE_SIZE)
 #define APQ8064_FW_START	APQ8064_FIXED_AREA_START
-#define MSM_ION_ADSP_SIZE	SZ_8M
 
 #define QFPROM_RAW_FEAT_CONFIG_ROW0_MSB     (MSM_QFPROM_BASE + 0x23c)
 #define QFPROM_RAW_OEM_CONFIG_ROW0_LSB      (MSM_QFPROM_BASE + 0x220)
@@ -287,7 +286,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int apq8064_paddr_to_memtype(unsigned int paddr)
+static int apq8064_paddr_to_memtype(phys_addr_t paddr)
 {
 	return MEMTYPE_EBI1;
 }
@@ -339,14 +338,7 @@ static struct platform_device ion_mm_heap_device = {
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	}
 };
-static struct platform_device ion_adsp_heap_device = {
-	.name = "ion-adsp-heap-device",
-	.id = -1,
-	.dev = {
-		.dma_mask = &msm_dmamask,
-		.coherent_dma_mask = DMA_BIT_MASK(32),
-	}
-};
+
 /**
  * These heaps are listed in the order they will be allocated. Due to
  * video hardware restrictions and content protection the FW heap has to
@@ -420,15 +412,6 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.size	= MSM_ION_AUDIO_SIZE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = (void *) &co_apq8064_ion_pdata,
-		},
-		{
-			.id     = ION_ADSP_HEAP_ID,
-			.type   = ION_HEAP_TYPE_DMA,
-			.name   = ION_ADSP_HEAP_NAME,
-			.size   = MSM_ION_ADSP_SIZE,
-			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &co_apq8064_ion_pdata,
-			.priv = &ion_adsp_heap_device.dev,
 		},
 #endif
 };
@@ -689,6 +672,7 @@ static void __init apq8064_calculate_reserve_sizes(void)
 	reserve_rtb_memory();
 	reserve_cache_dump_memory();
 	reserve_mpdcvs_memory();
+	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
 }
 
 static struct reserve_info apq8064_reserve_info __initdata = {
@@ -2592,6 +2576,7 @@ static struct platform_device *cdp_devices[] __initdata = {
 #ifdef CONFIG_MSM_ROTATOR
 	&msm_rotator_device,
 #endif
+	&msm8064_pc_cntr,
 	&msm8064_cpu_slp_status,
 };
 
@@ -3513,6 +3498,7 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = apq8064_cdp_init,
 	.init_early = apq8064_allocate_memory_regions,
@@ -3525,6 +3511,7 @@ MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = apq8064_cdp_init,
 	.init_early = apq8064_allocate_memory_regions,
@@ -3537,6 +3524,7 @@ MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = apq8064_cdp_init,
 	.init_early = apq8064_allocate_memory_regions,
@@ -3549,6 +3537,7 @@ MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = apq8064_cdp_init,
 	.init_early = apq8064_allocate_memory_regions,
@@ -3561,6 +3550,7 @@ MACHINE_START(MPQ8064_HRD, "QCT MPQ8064 HRD")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = apq8064_cdp_init,
 	.init_early = apq8064_allocate_memory_regions,
@@ -3573,6 +3563,7 @@ MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = apq8064_cdp_init,
 	.init_early = apq8064_allocate_memory_regions,
