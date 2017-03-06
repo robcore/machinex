@@ -66,8 +66,8 @@ config CPU_FREQ_GOV_COMMON
 	default y
 	help
 	  This serves no purpose other than to frustrate me.
+	  If in doubt, say Y, but hate yourself for it.
 
-	If in doubt, say Y, but hate yourself for it.
 choice
 	prompt "Default CPUFreq governor"
 	default CPU_FREQ_DEFAULT_GOV_USERSPACE if CPU_FREQ_SA1100 || CPU_FREQ_SA1110
