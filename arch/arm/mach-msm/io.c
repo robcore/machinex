@@ -100,7 +100,6 @@ void __init msm_map_common_io(void)
 	asm("mcr p15, 0, %0, c15, c2, 4" : : "r" (0));
 #endif
 	msm_map_io(msm_io_desc, ARRAY_SIZE(msm_io_desc));
-	map_page_strongly_ordered();
 }
 #endif
 
@@ -312,7 +311,6 @@ static struct map_desc msm_8974_io_desc[] __initdata = {
 #ifdef CONFIG_DEBUG_MSM8974_UART
 	MSM_DEVICE(DEBUG_UART),
 #endif
-	MSM_CHIP_DEVICE(DBG_IMEM, MSM8974),
 };
 
 void __init msm_map_8974_io(void)
@@ -454,7 +452,6 @@ static struct map_desc msm8625_io_desc[] __initdata = {
 void __init msm_map_msm8625_io(void)
 {
 	msm_map_io(msm8625_io_desc, ARRAY_SIZE(msm8625_io_desc));
-	map_page_strongly_ordered();
 }
 #else
 void __init msm_map_msm8625_io(void) { return; }
