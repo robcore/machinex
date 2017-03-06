@@ -76,7 +76,7 @@ static struct dentry *lpm_ext_comm;
 static struct msm_rpmrs_level *lpm_supp_level;
 static int lpm_level_count;
 static int lpm_level_iter;
-static bool msm_lpm_use_qtimer;
+static bool msm_pm_use_sync_timer = false;
 static unsigned long lpm_sleep_time;
 static bool lpm_latency_test;
 
@@ -185,7 +185,7 @@ static void lpm_populate_name(struct lpm_level_stat *stat,
 
 static int64_t msm_lpm_get_time(void)
 {
-	if (msm_lpm_use_qtimer)
+	if (msm_pm_use_sync_timer)
 		return ktime_to_ns(ktime_get());
 
 	return msm_timer_get_sclk_time(NULL);
@@ -670,9 +670,6 @@ static int lpm_test_probe(struct platform_device *pdev)
 
 	test_levels = pdata->msm_lpm_test_levels;
 	test_lpm_level_count = pdata->msm_lpm_test_level_count;
-
-	if (pdata->use_qtimer)
-		msm_lpm_use_qtimer = true;
 
 	lpm_test_init(test_lpm_level_count, test_levels);
 
