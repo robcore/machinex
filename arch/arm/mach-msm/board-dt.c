@@ -82,7 +82,6 @@ DT_MACHINE_START(MSM_DT, "Qualcomm MSM (Flattened Device Tree)")
 	.map_io = msm_dt_map_io,
 	.init_irq = msm_dt_init_irq,
 	.init_machine = msm_dt_init,
-	.handle_irq = gic_handle_irq,
 	.timer = &msm_dt_timer,
 	.dt_compat = msm_dt_match,
 	.reserve = msm_dt_reserve,

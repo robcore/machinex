@@ -175,10 +175,10 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x5400000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
-#define MSM_ION_HEAP_NUM	7
+#define MSM_ION_HEAP_NUM	8
 #else
 #define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
@@ -198,6 +198,7 @@ static void sensor_power_on_vdd(int, int);
 #define MAX_FIXED_AREA_SIZE	0x10000000
 #define MSM_MM_FW_SIZE		(0x200000 - HOLE_SIZE)
 #define APQ8064_FW_START	APQ8064_FIXED_AREA_START
+#define MSM_ION_ADSP_SIZE	SZ_8M
 
 #define QFPROM_RAW_FEAT_CONFIG_ROW0_MSB     (MSM_QFPROM_BASE + 0x23c)
 #define QFPROM_RAW_OEM_CONFIG_ROW0_LSB      (MSM_QFPROM_BASE + 0x220)
@@ -576,7 +577,7 @@ static void __init reserve_pmem_memory(void)
 #endif /*CONFIG_ANDROID_PMEM*/
 }
 
-static int apq8064_paddr_to_memtype(phys_addr_t paddr)
+static int apq8064_paddr_to_memtype(unsigned int paddr)
 {
 	return MEMTYPE_EBI1;
 }
@@ -629,6 +630,14 @@ static struct platform_device ion_mm_heap_device = {
 	}
 };
 
+static struct platform_device ion_adsp_heap_device = {
+	.name = "ion-adsp-heap-device",
+	.id = -1,
+	.dev = {
+		.dma_mask = &msm_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	}
+};
 /**
  * These heaps are listed in the order they will be allocated. Due to
  * video hardware restrictions and content protection the FW heap has to
@@ -702,6 +711,15 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.size	= MSM_ION_AUDIO_SIZE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = (void *) &co_apq8064_ion_pdata,
+		},
+		{
+			.id     = ION_ADSP_HEAP_ID,
+			.type   = ION_HEAP_TYPE_DMA,
+			.name   = ION_ADSP_HEAP_NAME,
+			.size   = MSM_ION_ADSP_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = (void *) &co_apq8064_ion_pdata,
+			.priv = &ion_adsp_heap_device.dev,
 		},
 #endif
 };
@@ -977,7 +995,7 @@ static struct persistent_ram_descriptor per_ram_descs[] __initdata = {
                .name = "kexec_hb_page",
                .size = SZ_1M - (KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR),
 #else
-                .size = SZ_1M,
+               .size = SZ_1M,
 #endif
        }
 };
@@ -1020,7 +1038,6 @@ static void __init apq8064_calculate_reserve_sizes(void)
 	reserve_rtb_memory();
 	reserve_cache_dump_memory();
 	reserve_mpdcvs_memory();
-	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
 }
 
 static struct reserve_info apq8064_reserve_info __initdata = {
@@ -4029,7 +4046,6 @@ static struct platform_device *common_devices[] __initdata = {
 	&apq8064_rpm_device,
 	&apq8064_rpm_log_device,
 	&apq8064_rpm_stat_device,
-	&apq8064_rpm_master_stat_device,
 	&apq_device_tz_log,
 	&msm_bus_8064_apps_fabric,
 	&msm_bus_8064_sys_fabric,
@@ -4102,7 +4118,6 @@ static struct platform_device *cdp_devices[] __initdata = {
 #ifdef CONFIG_MSM_ROTATOR
 	&msm_rotator_device,
 #endif
-	&msm8064_pc_cntr,
 	&msm8064_cpu_slp_status,
 	&sec_device_jack,
 #ifdef CONFIG_SENSORS_SSP_C12SD
@@ -5538,7 +5553,6 @@ MACHINE_START(JF, "SAMSUNG JF")
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
-	.handle_irq = gic_handle_irq,
 	.init_time	= msm_timer_init,
 	.init_machine = samsung_jf_init,
 	.init_early = apq8064_allocate_memory_regions,
