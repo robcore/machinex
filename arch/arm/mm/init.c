@@ -247,7 +247,7 @@ void __init setup_dma_zone(struct machine_desc *mdesc)
 #ifdef CONFIG_ZONE_DMA
 	if (mdesc->dma_zone_size) {
 		arm_dma_zone_size = mdesc->dma_zone_size;
-		arm_dma_limit = PLAT_PHYS_OFFSET + arm_dma_zone_size - 1;
+		arm_dma_limit = PHYS_OFFSET + arm_dma_zone_size - 1;
 	} else
 		arm_dma_limit = 0xffffffff;
 #endif
@@ -426,7 +426,7 @@ void find_memory_hole(void)
 		}
 	}
 
-	memory_hole_offset = memory_hole_start - PLAT_PHYS_OFFSET;
+	memory_hole_offset = memory_hole_start - PHYS_OFFSET;
 	if (!IS_ALIGNED(memory_hole_start, SECTION_SIZE)) {
 		pr_err("memory_hole_start %pa is not aligned to %lx\n",
 			&memory_hole_start, SECTION_SIZE);

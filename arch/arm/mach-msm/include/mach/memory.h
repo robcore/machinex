@@ -19,9 +19,8 @@
 
 /* physical offset of RAM */
 #define PLAT_PHYS_OFFSET UL(CONFIG_PHYS_OFFSET)
-
 #ifdef CONFIG_HAVE_END_MEM
-#define END_MEM	UL(CONFIG_END_MEM)
+#define END_MEM          UL(CONFIG_END_MEM)
 #endif
 
 #define MAX_PHYSMEM_BITS 32
@@ -100,7 +99,7 @@ extern void store_dac(void);
 #define finish_arch_switch(prev)	do { store_ttbr0(); } while (0)
 #endif
 
-#define MAX_HOLE_ADDRESS    (PLAT_PHYS_OFFSET + 0x10000000)
+#define MAX_HOLE_ADDRESS    (PHYS_OFFSET + 0x10000000)
 extern phys_addr_t memory_hole_offset;
 extern phys_addr_t memory_hole_start;
 extern phys_addr_t memory_hole_end;
@@ -118,13 +117,13 @@ void find_memory_hole(void);
 	(unsigned long)\
 	((MEM_HOLE_END_PHYS_OFFSET && ((phys) >= MEM_HOLE_END_PHYS_OFFSET)) ? \
 	(phys) - MEM_HOLE_END_PHYS_OFFSET + MEM_HOLE_PAGE_OFFSET :	\
-	(phys) - PLAT_PHYS_OFFSET + PAGE_OFFSET)
+	(phys) - PHYS_OFFSET + PAGE_OFFSET)
 
 #define __virt_to_phys(virt)				\
 	(unsigned long)\
 	((MEM_HOLE_END_PHYS_OFFSET && ((virt) >= MEM_HOLE_PAGE_OFFSET)) ? \
 	(virt) - MEM_HOLE_PAGE_OFFSET + MEM_HOLE_END_PHYS_OFFSET :	\
-	(virt) - PAGE_OFFSET + PLAT_PHYS_OFFSET)
+	(virt) - PAGE_OFFSET + PHYS_OFFSET)
 #endif
 
 /*
