@@ -118,13 +118,13 @@ void find_memory_hole(void);
 	(unsigned long)\
 	((MEM_HOLE_END_PHYS_OFFSET && ((phys) >= MEM_HOLE_END_PHYS_OFFSET)) ? \
 	(phys) - MEM_HOLE_END_PHYS_OFFSET + MEM_HOLE_PAGE_OFFSET :	\
-	(phys) - PHYS_OFFSET + PAGE_OFFSET)
+	(phys) - PLAT_PHYS_OFFSET + PAGE_OFFSET)
 
 #define __virt_to_phys(virt)				\
 	(unsigned long)\
 	((MEM_HOLE_END_PHYS_OFFSET && ((virt) >= MEM_HOLE_PAGE_OFFSET)) ? \
 	(virt) - MEM_HOLE_PAGE_OFFSET + MEM_HOLE_END_PHYS_OFFSET :	\
-	(virt) - PAGE_OFFSET + PHYS_OFFSET)
+	(virt) - PAGE_OFFSET + PLAT_PHYS_OFFSET)
 #endif
 
 /*
