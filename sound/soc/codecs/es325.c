@@ -72,12 +72,12 @@ struct es325_cmd_access {
 #define ES325_SLIM_RX_PORTS		6
 #define ES325_SLIM_TX_PORTS		6
 
-#define ES325_SLIM_1_PB		1
-#define ES325_SLIM_1_CAP	2
-#define ES325_SLIM_2_PB		3
-#define ES325_SLIM_2_CAP	4
-#define ES325_SLIM_3_PB		5
-#define ES325_SLIM_3_CAP	6
+#define ES325_SLIM_1_PB		0
+#define ES325_SLIM_1_CAP	1
+#define ES325_SLIM_2_PB		2
+#define ES325_SLIM_2_CAP	3
+#define ES325_SLIM_3_PB		4
+#define ES325_SLIM_3_CAP	5
 
 #define ES325_SLIM_1_PB_MAX_CHANS	2
 #define ES325_SLIM_1_CAP_MAX_CHANS	2
