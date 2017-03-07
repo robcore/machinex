@@ -868,6 +868,12 @@ config BLX
 	  Enable Battery Life eXtender
 
 
+config ANDROID_PMEM_ION_WRAPPER
+	bool "Android PMEM->ION wrapper"
+	help
+	  This enables a custom PMEM driver, which has the only purpose of
+	  redirecting all PMEM allocations to ION.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
