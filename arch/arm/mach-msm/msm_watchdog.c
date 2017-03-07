@@ -479,7 +479,7 @@ static int msm_watchdog_probe(struct platform_device *pdev)
 	 * This is only temporary till SBLs turn on the XPUs
 	 * This initialization will be done in SBLs on a later releases
 	 */
-	if (soc_class_is_msm9615())
+	if (cpu_is_msm9615())
 		__raw_writel(0xF, MSM_TCSR_BASE + TCSR_WDT_CFG);
 
 	if (pdata->needs_expired_enable)

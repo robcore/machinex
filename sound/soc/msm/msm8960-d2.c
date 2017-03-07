@@ -235,7 +235,7 @@ static void msm8960_ext_spk_power_amp_on(u32 spk)
 			msecs_to_jiffies(60));
 #else
 			msecs_to_jiffies(50));
-#endif
+#endif			
 		}
 	} else  {
 
@@ -1481,7 +1481,7 @@ static int msm8960_audrx_init(struct snd_soc_pcm_runtime *rtd)
 			mbhc_cfg.gpio = PM8921_GPIO_PM_TO_SYS(JACK_DETECT_GPIO);
 			mbhc_cfg.gpio_irq = JACK_DETECT_INT;
 		}
-
+		
 		if (mbhc_cfg.gpio) {
 			err = pm8xxx_gpio_config(mbhc_cfg.gpio, &jack_gpio_cfg);
 			if (err) {
@@ -2547,7 +2547,7 @@ static int __init msm8960_audio_init(void)
 		return ret;
 	}
 
-	if (soc_class_is_msm8960()) {
+	if (cpu_is_msm8960()) {
 	if (msm8960_configure_audio_gpios()) {
 		pr_err("%s Fail to configure headset mic gpios\n", __func__);
 		msm8960_audio_gpios_configured = 0;
@@ -2559,7 +2559,7 @@ static int __init msm8960_audio_init(void)
 
 	mutex_init(&cdc_mclk_mutex);
 	atomic_set(&auxpcm_rsc_ref, 0);
-
+	
 	INIT_DELAYED_WORK(&ext_amp_dwork.dwork,
 			external_speaker_amp_work);
 #if defined(CONFIG_MACH_AEGIS2)

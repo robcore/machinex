@@ -200,7 +200,7 @@ int pas_supported(enum pas_id id)
 	 * 8660 SCM doesn't support querying secure PIL support so just return
 	 * true if not overridden on the command line.
 	 */
-	if (soc_class_is_msm8x60())
+	if (cpu_is_msm8x60())
 		return 1;
 
 	if (scm_is_call_available(SCM_SVC_PIL, PAS_IS_SUPPORTED_CMD) <= 0)
@@ -228,7 +228,7 @@ static int __init scm_pas_init(void)
 	rate = clk_round_rate(scm_clocks[CORE_CLK_SRC], 1);
 	clk_set_rate(scm_clocks[CORE_CLK_SRC], rate);
 
-	if (soc_class_is_msm8974()) {
+	if (cpu_is_msm8974()) {
 		scm_pas_bw_tbl[0].vectors[0].src = MSM_BUS_MASTER_CRYPTO_CORE0;
 		scm_pas_bw_tbl[1].vectors[0].src = MSM_BUS_MASTER_CRYPTO_CORE0;
 	} else {

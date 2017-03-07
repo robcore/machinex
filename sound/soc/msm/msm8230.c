@@ -211,7 +211,7 @@ static struct ext_amp_work ext_amp_dwork;
 static void external_speaker_amp_work(struct work_struct *work)
 {
 	pr_debug("%s :: Ext Speaker Amp enable\n", __func__);
-
+	
 	if (msm8930_ext_spk_pamp == 0)
 		pr_debug("%s :: Ext Speaker Amp enable but msm8930_ext_spk_pamp is already 0\n", __func__);
 	else {
@@ -366,7 +366,7 @@ static void msm8930_ext_spk_power_amp_off(u32 spk)
 static int msm8930_spkramp_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *k, int event)
 {
-
+	
 	pr_debug("%s() %x\n", __func__, SND_SOC_DAPM_EVENT_ON(event));
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
 		if (!strncmp(w->name, "Ext Spk Left Pos", 17))
@@ -599,7 +599,7 @@ static int msm8930_enable_codec_ext_clk(
 #else
 			rtn = clk_set_rate(codec_clk, TAPAN_EXT_CLK_RATE);
 			pr_debug("%s: clk_set_rate rtn = %x\n", __func__, rtn);
-#endif
+#endif 
 			rtn = clk_prepare_enable(codec_clk);
 			pr_debug("%s: clk_prepare_enable rtn = %x\n", __func__, rtn);
 			tapan_mclk_enable(codec, 1, dapm);
@@ -730,7 +730,7 @@ static const struct snd_soc_dapm_route common_audio_map[] = {
 #ifdef CONFIG_EXT_EARMIC_BIAS
 	{"AMIC2", NULL, "Ear Mic Bias"},
 	{"Ear Mic Bias", NULL, "Headset Mic"},
-#else
+#else 
 #ifdef CONFIG_MACH_KS02
 	{"AMIC2", NULL, "MIC BIAS2 Internal1"},
 	{"MIC BIAS2 Internal1", NULL, "Headset Mic"},
@@ -1344,7 +1344,7 @@ static int msm8930_i2s_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	rx_cpu_dai = cpu_dai;
-
+	
 	pr_debug("%s(), CPU DAI dev_name = %s\n", __func__,
 			dev_name(cpu_dai->dev));
 
@@ -1355,7 +1355,7 @@ static int msm8930_i2s_audrx_init(struct snd_soc_pcm_runtime *rtd)
 				ARRAY_SIZE(tapan_msm8930_i2s_controls));
 	if (err < 0)
 		return err;
-
+	
 	snd_soc_dapm_new_controls(dapm, msm8930_dapm_widgets,
 				ARRAY_SIZE(msm8930_dapm_widgets));
 
@@ -1417,7 +1417,7 @@ static int msm8930_i2s_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	tapan_register_mclk_cb(codec, msm8930_enable_codec_ext_clk);
-
+	
 	return 0;
 }
 
@@ -1671,7 +1671,7 @@ static int msm8930_mi2s_startup(struct snd_pcm_substream *substream)
 		if (!IS_ERR(mi2s_osr_clk)) {
 			clk_set_rate(mi2s_osr_clk, 12288000);
 			clk_prepare_enable(mi2s_osr_clk);
-		} else
+		} else 
 			pr_err("Failed to get mi2s_osr_clk\n");
 		mi2s_bit_clk = clk_get(cpu_dai->dev, "bit_clk");
 		if (IS_ERR(mi2s_bit_clk)) {
@@ -1894,7 +1894,7 @@ static int msm8930_i2s_startup(struct snd_pcm_substream *substream)
 			pr_err("%s(): msm8930_i2s_enable FAILED. ret = %d\n",
 					__func__, ret);
 			mutex_unlock(&i2s_mutex);
-			return ret;
+			return ret; 
 		}
 	}
 	i2s_count++;
@@ -1915,7 +1915,7 @@ static int msm8930_i2s_startup(struct snd_pcm_substream *substream)
 				" ret = %d\n" ,__func__, ret);
 			return ret;
 		}
-
+		
 	} else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 
 		configure_i2s_tx_gpio();
@@ -1949,7 +1949,7 @@ static int msm8930_i2s_startup(struct snd_pcm_substream *substream)
 				" ret = %d\n" ,__func__, ret);
 			return ret;
 		}
-
+		
 		ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_CBS_CFS);
 		if (ret < 0) {
 			pr_err("%s(): set format for TX codec dai FAILED."
@@ -2700,7 +2700,7 @@ module_init(msm8930_audio_init);
 
 static void __exit msm8930_audio_exit(void)
 {
-	if (!soc_class_is_msm8930() && !soc_class_is_msm8930aa() && !soc_class_is_msm8627()) {
+	if (!cpu_is_msm8930() && !cpu_is_msm8930aa() && !cpu_is_msm8627()) {
 		pr_err("%s: Not the right machine type\n", __func__);
 		return ;
 	}

@@ -163,7 +163,7 @@ static int release_secondary(unsigned int cpu)
 {
 	BUG_ON(cpu >= get_core_count());
 
-	if (soc_class_is_msm8x60())
+	if (cpu_is_msm8x60())
 		return scorpion_release_secondary();
 
 	if (machine_is_msm8974_sim() || machine_is_mpq8092_sim() ||
@@ -174,7 +174,7 @@ static int release_secondary(unsigned int cpu)
 	    soc_class_is_apq8064())
 		return krait_release_secondary(0x02088000, cpu);
 
-	if (soc_class_is_msm8974())
+	if (cpu_is_msm8974())
 		return krait_release_secondary_p3(0xf9088000, cpu);
 
 	WARN(1, "unknown CPU case in release_secondary\n");

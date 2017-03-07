@@ -275,7 +275,7 @@ void __init msm_reserve(void)
 static int get_ebi_memtype(void)
 {
 	/* on 7x30 and 8x55 "EBI1 kernel PMEM" is really on EBI0 */
-	if (soc_class_is_msm7x30() || soc_class_is_msm8x55())
+	if (cpu_is_msm7x30() || cpu_is_msm8x55())
 		return MEMTYPE_EBI0;
 	return MEMTYPE_EBI1;
 }
@@ -319,7 +319,7 @@ int32_t pmem_kalloc(const size_t size, const uint32_t flags)
 	}
 
 	/* on 7x30 and 8x55 "EBI1 kernel PMEM" is really on EBI0 */
-	if (soc_class_is_msm7x30() || soc_class_is_msm8x55())
+	if (cpu_is_msm7x30() || cpu_is_msm8x55())
 			ebi1_memtype = MEMTYPE_EBI0;
 
 	pmem_memtype = flags & PMEM_MEMTYPE_MASK;

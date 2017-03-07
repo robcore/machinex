@@ -1312,7 +1312,7 @@ static int kgsl_iommu_init(struct kgsl_mmu *mmu)
 				KGSL_IOMMU_SETSTATE_NOP_OFFSET,
 				cp_nop_packet(1));
 
-	if (soc_class_is_msm8960()) {
+	if (cpu_is_msm8960()) {
 		/*
 		 * 8960 doesn't have a second context bank, so the IOMMU
 		 * registers must be mapped into every pagetable.
@@ -1355,7 +1355,7 @@ static int kgsl_iommu_setup_defaultpagetable(struct kgsl_mmu *mmu)
 
 	/* If chip is not 8960 then we use the 2nd context bank for pagetable
 	 * switching on the 3D side for which a separate table is allocated */
-	if (!soc_class_is_msm8960() && msm_soc_version_supports_iommu_v1()) {
+	if (!cpu_is_msm8960() && msm_soc_version_supports_iommu_v1()) {
 		mmu->priv_bank_table =
 			kgsl_mmu_getpagetable(KGSL_MMU_PRIV_BANK_TABLE_NAME);
 		if (mmu->priv_bank_table == NULL) {
@@ -1416,7 +1416,7 @@ static void kgsl_iommu_lock_rb_in_tlb(struct kgsl_mmu *mmu)
 		struct kgsl_iommu_unit *iommu_unit = &iommu->iommu_units[i];
 		for (j = 0; j < iommu_unit->dev_count; j++) {
 			tlblkcr = 0;
-			if (soc_class_is_msm8960())
+			if (cpu_is_msm8960())
 				tlblkcr |= ((num_tlb_entries &
 					KGSL_IOMMU_TLBLKCR_FLOOR_MASK) <<
 					KGSL_IOMMU_TLBLKCR_FLOOR_SHIFT);
@@ -1441,7 +1441,7 @@ static void kgsl_iommu_lock_rb_in_tlb(struct kgsl_mmu *mmu)
 		}
 		for (j = 0; j < iommu_unit->dev_count; j++) {
 			/* skip locking entries for private bank on 8960 */
-			if (soc_class_is_msm8960() &&  KGSL_IOMMU_CONTEXT_PRIV == j)
+			if (cpu_is_msm8960() &&  KGSL_IOMMU_CONTEXT_PRIV == j)
 				continue;
 			/* Lock the ringbuffer virtual address into tlb */
 			vaddr = rb->buffer_desc.gpuaddr;
@@ -1513,7 +1513,7 @@ static int kgsl_iommu_start(struct kgsl_mmu *mmu)
 
 	/* We use the GPU MMU to control access to IOMMU registers on 8960 with
 	 * a225, hence we still keep the MMU active on 8960 */
-	if (soc_class_is_msm8960() && KGSL_DEVICE_3D0 == mmu->device->id) {
+	if (cpu_is_msm8960() && KGSL_DEVICE_3D0 == mmu->device->id) {
 		struct kgsl_mh *mh = &(mmu->device->mh);
 		BUG_ON(iommu->iommu_units[0].reg_map.gpuaddr != 0 &&
 			mh->mpu_base > iommu->iommu_units[0].reg_map.gpuaddr);
