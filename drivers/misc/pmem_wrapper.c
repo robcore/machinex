@@ -533,7 +533,7 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 		goto err;
 	}
 	pmem[id].heap_id = pdata->ion_heap_id;
-	pmem[id].client = msm_ion_client_create(-1, pdata->name);
+	pmem[id].client = msm_ion_client_create(pdata->name);
 	if (IS_ERR_OR_NULL(pmem[id].client)) {
 		ret = PTR_ERR(pmem[id].client);
 		pmem[id].client = NULL;
