@@ -1104,7 +1104,6 @@ int __init msm_rpmrs_levels_init(struct msm_rpmrs_platform_data *data)
 	memcpy(msm_rpmrs_levels, levels,
 			msm_rpmrs_level_count * sizeof(struct msm_rpmrs_level));
 
-	lpm_test_pdata.use_qtimer = 0;
 	lpm_test_pdata.msm_lpm_test_levels = msm_rpmrs_levels,
 	lpm_test_pdata.msm_lpm_test_level_count = msm_rpmrs_level_count;
 
