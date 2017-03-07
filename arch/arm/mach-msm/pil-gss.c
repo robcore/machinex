@@ -225,7 +225,7 @@ static int pil_gss_reset(struct pil_desc *pil)
 	while (!(readl_relaxed(base + GSS_CSR_POWER_UP_DOWN) & A5_POWER_STATUS))
 		cpu_relax();
 
-	if (cpu_is_apq8064() &&
+	if (soc_class_is_apq8064() &&
 	    ((SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 1) &&
 	     (SOCINFO_VERSION_MINOR(socinfo_get_version()) == 0))) {
 		ret = smp_call_function_single(0, cfg_qgic2_bus_access, drv, 1);

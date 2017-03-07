@@ -235,7 +235,7 @@ static int __msm_xo_mode_vote(struct msm_xo_voter *xo_voter, unsigned mode)
 	int is_d0 = xo == &msm_xo_sources[MSM_XO_TCXO_D0];
 	int needs_workaround = soc_class_is_msm8960() ||
 			       soc_class_is_apq8064() ||
-			       soc_class_is_msm8930() || cpu_is_msm9615();
+			       soc_class_is_msm8930() || soc_class_is_msm9615();
 
 	if (xo_voter->mode == mode)
 		return 0;

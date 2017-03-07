@@ -976,7 +976,7 @@ void kgsl_mmu_set_mmutype(char *mmutype)
 {
 	/* Set the default MMU - GPU on <=8960 and nothing on >= 8064 */
 	kgsl_mmu_type =
-		cpu_is_apq8064() ? KGSL_MMU_TYPE_NONE : KGSL_MMU_TYPE_GPU;
+		soc_class_is_apq8064() ? KGSL_MMU_TYPE_NONE : KGSL_MMU_TYPE_GPU;
 
 	/* Use the IOMMU if it is found */
 	if (iommu_present(&platform_bus_type))

@@ -178,7 +178,7 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 	int old_val = restart_level;
 	int subtype;
 
-	if (cpu_is_msm9615()) {
+	if (soc_class_is_msm9615()) {
 		pr_err("Only Phase 1 subsystem restart is supported\n");
 		return -EINVAL;
 	}
@@ -613,7 +613,7 @@ static int __init ssr_init_soc_restart_orders(void)
 	atomic_notifier_chain_register(&panic_notifier_list,
 			&panic_nb);
 
-	if (cpu_is_apq8064() || cpu_is_msm8x60()) {
+	if (soc_class_is_apq8064() || soc_class_is_msm8x60()) {
 		for (i = 0; i < ARRAY_SIZE(orders_8x60_all); i++) {
 			mutex_init(&orders_8x60_all[i]->powerup_lock);
 			mutex_init(&orders_8x60_all[i]->shutdown_lock);
@@ -638,7 +638,7 @@ static int __init ssr_init_soc_restart_orders(void)
 		n_restart_orders = ARRAY_SIZE(restart_orders_8064_sglte2);
 	}
 #if 0
-	if (cpu_is_msm8960() || cpu_is_msm8930() || cpu_is_apq8064()) {
+	if (soc_class_is_msm8960() || soc_class_is_msm8930() || soc_class_is_apq8064()) {
 		restart_orders = restart_orders_modem_8960;
 		n_restart_orders = ARRAY_SIZE(restart_orders_modem_8960);
 	}

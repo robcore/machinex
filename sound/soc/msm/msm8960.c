@@ -1827,7 +1827,7 @@ static int __init msm8960_audio_init(void)
 		return ret;
 	}
 
-	if (cpu_is_msm8960()) {
+	if (soc_class_is_msm8960()) {
 		if (msm8960_configure_headset_mic_gpios()) {
 			pr_err("%s Fail to configure headset mic gpios\n",
 								__func__);

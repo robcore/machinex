@@ -1110,7 +1110,7 @@ static int __init msm_rpmrs_init(void)
 
 	BUG_ON(!msm_rpmrs_levels);
 
-	if (cpu_is_msm8x60()) {
+	if (soc_class_is_msm8x60()) {
 		req.id = msm_rpmrs_l2_cache.rs[0].id;
 		req.value = 1;
 
@@ -1162,7 +1162,7 @@ static int __init msm_rpmrs_l2_init(void)
 
 		register_hotcpu_notifier(&rpmrs_cpu_notifier);
 
-	} else if (cpu_is_msm9615()) {
+	} else if (soc_class_is_msm9615()) {
 		msm_rpmrs_l2_cache.beyond_limits = NULL;
 		msm_rpmrs_l2_cache.aggregate = NULL;
 		msm_rpmrs_l2_cache.restore = NULL;

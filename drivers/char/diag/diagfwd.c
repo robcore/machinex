@@ -177,7 +177,7 @@ int chk_apps_master(void)
 	if (driver->use_device_tree)
 		return 1;
 	else if (soc_class_is_msm8960() || soc_class_is_msm8930() ||
-		 soc_class_is_apq8064() || cpu_is_msm9615())
+		 soc_class_is_apq8064() || soc_class_is_msm9615())
 		return 1;
 	else
 		return 0;
@@ -1121,7 +1121,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 		return 0;
 	}
 	/* Check for download command */
-	else if ((cpu_is_msm8x60() || chk_apps_master()) && (*buf == 0x3A)) {
+	else if ((soc_class_is_msm8x60() || chk_apps_master()) && (*buf == 0x3A)) {
 		/* send response back */
 		driver->apps_rsp_buf[0] = *buf;
 		encode_rsp_and_send(0);

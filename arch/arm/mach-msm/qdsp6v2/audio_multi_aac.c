@@ -101,7 +101,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_err("cmd media format block failed\n");
 			break;
 		}
-		if (!cpu_is_msm8x60()) {
+		if (!soc_class_is_msm8x60()) {
 			rc = q6asm_set_encdec_chan_map(audio->ac, 2);
 			if (rc < 0) {
 				pr_err("%s: cmd set encdec_chan_map failed\n",

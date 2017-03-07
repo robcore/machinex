@@ -519,7 +519,7 @@ static void notify_other_smsm(uint32_t smsm_entry, uint32_t notify_mask)
 				& notify_mask)) {
 		uint32_t mux_val;
 
-		if (cpu_is_qsd8x50() && smsm_info.intr_mux) {
+		if (soc_class_is_qsd8x50() && smsm_info.intr_mux) {
 			mux_val = __raw_readl(
 					SMSM_INTR_MUX_ADDR(SMEM_APPS_Q6_SMSM));
 			mux_val++;
@@ -2714,7 +2714,7 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 		uint32_t mux_val;
 		static uint32_t prev_smem_q6_apps_smsm;
 
-		if (smsm_info.intr_mux && cpu_is_qsd8x50()) {
+		if (smsm_info.intr_mux && soc_class_is_qsd8x50()) {
 			mux_val = __raw_readl(
 					SMSM_INTR_MUX_ADDR(SMEM_Q6_APPS_SMSM));
 			if (mux_val != prev_smem_q6_apps_smsm)
