@@ -7,7 +7,7 @@
  * Copyright (C) 2010 Texas Instruments Inc.
  *
  * Authors: Liam Girdwood <lrg@ti.com>
- *          Mark Brown <broonie@opensource.wolfsonmicro.com>       
+ *          Mark Brown <broonie@opensource.wolfsonmicro.com>
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
@@ -467,7 +467,7 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 
 	/* Muting the DAC suppresses artifacts caused during digital
 	 * shutdown, for example from stopping clocks.
-	 * Always call Mute for Codec Dai irrespective of Stream type. 
+	 * Always call Mute for Codec Dai irrespective of Stream type.
 	 */
 #ifndef CONFIG_WCD9304_CODEC
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -505,7 +505,7 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 		} else {
 			/* start delayed pop wq here for playback streams */
 			codec_dai->pop_wait = 1;
-			schedule_delayed_work(&rtd->delayed_work,
+			queue_delayed_work(system_power_efficient_wq, &rtd->delayed_work,
 				msecs_to_jiffies(rtd->pmdown_time));
 		}
 	} else {
@@ -1342,7 +1342,7 @@ static int soc_dpcm_fe_dai_shutdown(struct snd_pcm_substream *substream)
 
 	mutex_lock(&fe->card->dpcm_mutex);
 	fe->dpcm[stream].runtime_update = SND_SOC_DPCM_UPDATE_FE;
-	
+
 	dev_dbg(fe->dev, "dpcm: close FE %s\n", fe->dai_link->name);
 
 	/* now shutdown the frontend */
