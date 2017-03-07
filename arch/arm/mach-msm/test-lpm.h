@@ -17,6 +17,5 @@
 struct lpm_test_platform_data {
 	struct msm_rpmrs_level *msm_lpm_test_levels;
 	int msm_lpm_test_level_count;
-	bool use_qtimer;
 };
 #endif
