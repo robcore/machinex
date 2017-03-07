@@ -144,7 +144,7 @@ static void __devinit cpufreq_table_init(void)
 	for (i = 0; acpu_freq_tbl[i].acpuclk_khz != 0
 			&& freq_cnt < ARRAY_SIZE(freq_table)-1; i++) {
 		if (acpu_freq_tbl[i].use_for_scaling) {
-			freq_table[freq_cnt].index = freq_cnt;
+			freq_table[freq_cnt].driver_data = freq_cnt;
 			freq_table[freq_cnt].frequency
 				= acpu_freq_tbl[i].acpuclk_khz;
 			freq_cnt++;
@@ -154,7 +154,7 @@ static void __devinit cpufreq_table_init(void)
 	/* freq_table not big enough to store all usable freqs. */
 	BUG_ON(acpu_freq_tbl[i].acpuclk_khz != 0);
 
-	freq_table[freq_cnt].index = freq_cnt;
+	freq_table[freq_cnt].driver_data = freq_cnt;
 	freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
 
 	pr_info("%d scaling frequencies supported.\n", freq_cnt);
