@@ -175,7 +175,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x5400000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -1209,6 +1209,7 @@ early_param("ext_resolution", hdmi_resulution_setup);
 
 static void __init apq8064_reserve(void)
 {
+	reserve_info = &apq8064_reserve_info;
 	apq8064_set_display_params(prim_panel_name, ext_panel_name,
 		ext_resolution);
 	msm_reserve();
