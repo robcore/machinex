@@ -46,7 +46,7 @@ int ion_cp_change_chunks_state(unsigned long chunks, unsigned int nchunks,
 	request.chunks.chunk_list_size = nchunks;
 	request.chunks.chunk_size = chunk_size;
 
-	return scm_call(SCM_SVC_MP, MEM_PROTECT_LOCK_ID,
+	return scm_call(SCM_SVC_CP, MEM_PROTECT_LOCK_ID,
 			&request, sizeof(request), &resp, sizeof(resp));
 
 }

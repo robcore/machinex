@@ -48,7 +48,7 @@ static struct notifier_block notif;
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_ms = 50;
+static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
 static bool hotplug_boost;

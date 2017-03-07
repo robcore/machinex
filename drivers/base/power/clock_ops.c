@@ -114,7 +114,7 @@ static void __pm_clk_remove(struct pm_clock_entry *ce)
 
 	if (ce->status < PCE_STATUS_ERROR) {
 		if (ce->status == PCE_STATUS_ENABLED)
-			clk_disable_unprepare(ce->clk);
+			clk_disable(ce->clk);
 
 		if (ce->status >= PCE_STATUS_ACQUIRED) {
 			clk_unprepare(ce->clk);
