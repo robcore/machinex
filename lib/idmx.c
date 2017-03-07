@@ -20,7 +20,7 @@
  * that id to this code and it returns your pointer.
 
  * You can release ids at any time. When all ids are released, most of
- * the memory is returned (we keep MAX_IDR_FREE) in a local pool so we
+ * the memory is returned (we keep MAX_IDMX_FREE) in a local pool so we
  * don't need to go to the memory "store" during an id allocate, just
  * so you don't need to be too concerned about locking and conflicts
  * with the slab allocator.
@@ -33,15 +33,15 @@
 #endif
 #include <linux/err.h>
 #include <linux/string.h>
-#include <linux/idr.h>
+#include <linux/idmx.h>
 #include <linux/spinlock.h>
 
-static struct kmem_cache *idr_layer_cache;
+static struct kmem_cache *idmx_layer_cache;
 static DEFINE_SPINLOCK(simple_ida_lock);
 
-static struct idr_layer *get_from_free_list(struct idr *idp)
+static struct idmx_layer *get_from_free_list(struct idmx *idp)
 {
-	struct idr_layer *p;
+	struct idmx_layer *p;
 	unsigned long flags;
 
 	spin_lock_irqsave(&idp->lock, flags);
@@ -54,28 +54,28 @@ static struct idr_layer *get_from_free_list(struct idr *idp)
 	return(p);
 }
 
-static void idr_layer_rcu_free(struct rcu_head *head)
+static void idmx_layer_rcu_free(struct rcu_head *head)
 {
-	struct idr_layer *layer;
+	struct idmx_layer *layer;
 
-	layer = container_of(head, struct idr_layer, rcu_head);
-	kmem_cache_free(idr_layer_cache, layer);
+	layer = container_of(head, struct idmx_layer, rcu_head);
+	kmem_cache_free(idmx_layer_cache, layer);
 }
 
-static inline void free_layer(struct idr_layer *p)
+static inline void free_layer(struct idmx_layer *p)
 {
-	call_rcu(&p->rcu_head, idr_layer_rcu_free);
+	call_rcu(&p->rcu_head, idmx_layer_rcu_free);
 }
 
 /* only called when idp->lock is held */
-static void __move_to_free_list(struct idr *idp, struct idr_layer *p)
+static void __move_to_free_list(struct idmx *idp, struct idmx_layer *p)
 {
 	p->ary[0] = idp->id_free;
 	idp->id_free = p;
 	idp->id_free_cnt++;
 }
 
-static void move_to_free_list(struct idr *idp, struct idr_layer *p)
+static void move_to_free_list(struct idmx *idp, struct idmx_layer *p)
 {
 	unsigned long flags;
 
@@ -87,32 +87,32 @@ static void move_to_free_list(struct idr *idp, struct idr_layer *p)
 	spin_unlock_irqrestore(&idp->lock, flags);
 }
 
-static void idr_mark_full(struct idr_layer **pa, int id)
+static void idmx_mark_full(struct idmx_layer **pa, int id)
 {
-	struct idr_layer *p = pa[0];
+	struct idmx_layer *p = pa[0];
 	int l = 0;
 
-	__set_bit(id & IDR_MASK, &p->bitmap);
+	__set_bit(id & IDMX_MASK, &p->bitmap);
 	/*
 	 * If this layer is full mark the bit in the layer above to
 	 * show that this part of the radix tree is full.  This may
 	 * complete the layer above and require walking up the radix
 	 * tree.
 	 */
-	while (p->bitmap == IDR_FULL) {
+	while (p->bitmap == IDMX_FULL) {
 		if (!(p = pa[++l]))
 			break;
-		id = id >> IDR_BITS;
-		__set_bit((id & IDR_MASK), &p->bitmap);
+		id = id >> IDMX_BITS;
+		__set_bit((id & IDMX_MASK), &p->bitmap);
 	}
 }
 
 /**
- * idr_pre_get - reserve resources for idr allocation
- * @idp:	idr handle
+ * idmx_pre_get - reserve resources for idmx allocation
+ * @idp:	idmx handle
  * @gfp_mask:	memory allocation flags
  *
- * This function should be called prior to calling the idr_get_new* functions.
+ * This function should be called prior to calling the idmx_get_new* functions.
  * It preallocates enough memory to satisfy the worst possible allocation. The
  * caller should pass in GFP_KERNEL if possible.  This of course requires that
  * no spinning locks be held.
@@ -120,23 +120,23 @@ static void idr_mark_full(struct idr_layer **pa, int id)
  * If the system is REALLY out of memory this function returns %0,
  * otherwise %1.
  */
-int idr_pre_get(struct idr *idp, gfp_t gfp_mask)
+int idmx_pre_get(struct idmx *idp, gfp_t gfp_mask)
 {
-	while (idp->id_free_cnt < MAX_IDR_FREE) {
-		struct idr_layer *new;
-		new = kmem_cache_zalloc(idr_layer_cache, gfp_mask);
+	while (idp->id_free_cnt < MAX_IDMX_FREE) {
+		struct idmx_layer *new;
+		new = kmem_cache_zalloc(idmx_layer_cache, gfp_mask);
 		if (new == NULL)
 			return (0);
 		move_to_free_list(idp, new);
 	}
 	return 1;
 }
-EXPORT_SYMBOL(idr_pre_get);
+EXPORT_SYMBOL(idmx_pre_get);
 
-static int sub_alloc(struct idr *idp, int *starting_id, struct idr_layer **pa)
+static int sub_alloc(struct idmx *idp, int *starting_id, struct idmx_layer **pa)
 {
 	int n, m, sh;
-	struct idr_layer *p, *new;
+	struct idmx_layer *p, *new;
 	int l, id, oid;
 	unsigned long bm;
 
@@ -149,19 +149,19 @@ static int sub_alloc(struct idr *idp, int *starting_id, struct idr_layer **pa)
 		/*
 		 * We run around this while until we reach the leaf node...
 		 */
-		n = (id >> (IDR_BITS*l)) & IDR_MASK;
+		n = (id >> (IDMX_BITS*l)) & IDMX_MASK;
 		bm = ~p->bitmap;
-		m = find_next_bit(&bm, IDR_SIZE, n);
-		if (m == IDR_SIZE) {
+		m = find_next_bit(&bm, IDMX_SIZE, n);
+		if (m == IDMX_SIZE) {
 			/* no space available go back to previous layer. */
 			l++;
 			oid = id;
-			id = (id | ((1 << (IDR_BITS * l)) - 1)) + 1;
+			id = (id | ((1 << (IDMX_BITS * l)) - 1)) + 1;
 
 			/* if already at the top layer, we need to grow */
-			if (id >= 1 << (idp->layers * IDR_BITS)) {
+			if (id >= 1 << (idp->layers * IDMX_BITS)) {
 				*starting_id = id;
-				return IDR_NEED_TO_GROW;
+				return IDMX_NEED_TO_GROW;
 			}
 			p = pa[l];
 			BUG_ON(!p);
@@ -169,18 +169,18 @@ static int sub_alloc(struct idr *idp, int *starting_id, struct idr_layer **pa)
 			/* If we need to go up one layer, continue the
 			 * loop; otherwise, restart from the top.
 			 */
-			sh = IDR_BITS * (l + 1);
+			sh = IDMX_BITS * (l + 1);
 			if (oid >> sh == id >> sh)
 				continue;
 			else
 				goto restart;
 		}
 		if (m != n) {
-			sh = IDR_BITS*l;
+			sh = IDMX_BITS*l;
 			id = ((id >> sh) ^ n ^ m) << sh;
 		}
-		if ((id >= MAX_IDR_BIT) || (id < 0))
-			return IDR_NOMORE_SPACE;
+		if ((id >= MAX_IDMX_BIT) || (id < 0))
+			return IDMX_NOMORE_SPACE;
 		if (l == 0)
 			break;
 		/*
@@ -202,10 +202,10 @@ static int sub_alloc(struct idr *idp, int *starting_id, struct idr_layer **pa)
 	return id;
 }
 
-static int idr_get_empty_slot(struct idr *idp, int starting_id,
-			      struct idr_layer **pa)
+static int idmx_get_empty_slot(struct idmx *idp, int starting_id,
+			      struct idmx_layer **pa)
 {
-	struct idr_layer *p, *new;
+	struct idmx_layer *p, *new;
 	int layers, v, id;
 	unsigned long flags;
 
@@ -223,7 +223,7 @@ build_up:
 	 * Add a new layer to the top of the tree if the requested
 	 * id is larger than the currently allocated space.
 	 */
-	while ((layers < (MAX_IDR_LEVEL - 1)) && (id >= (1 << (layers*IDR_BITS)))) {
+	while ((layers < (MAX_IDMX_LEVEL - 1)) && (id >= (1 << (layers*IDMX_BITS)))) {
 		layers++;
 		if (!p->count) {
 			/* special case: if the tree is currently empty,
@@ -251,41 +251,41 @@ build_up:
 		new->ary[0] = p;
 		new->count = 1;
 		new->layer = layers-1;
-		if (p->bitmap == IDR_FULL)
+		if (p->bitmap == IDMX_FULL)
 			__set_bit(0, &new->bitmap);
 		p = new;
 	}
 	rcu_assign_pointer(idp->top, p);
 	idp->layers = layers;
 	v = sub_alloc(idp, &id, pa);
-	if (v == IDR_NEED_TO_GROW)
+	if (v == IDMX_NEED_TO_GROW)
 		goto build_up;
 	return(v);
 }
 
-static int idr_get_new_above_int(struct idr *idp, void *ptr, int starting_id)
+static int idmx_get_new_above_int(struct idmx *idp, void *ptr, int starting_id)
 {
-	struct idr_layer *pa[MAX_IDR_LEVEL];
+	struct idmx_layer *pa[MAX_IDMX_LEVEL];
 	int id;
 
-	id = idr_get_empty_slot(idp, starting_id, pa);
+	id = idmx_get_empty_slot(idp, starting_id, pa);
 	if (id >= 0) {
 		/*
 		 * Successfully found an empty slot.  Install the user
 		 * pointer and mark the slot full.
 		 */
-		rcu_assign_pointer(pa[0]->ary[id & IDR_MASK],
-				(struct idr_layer *)ptr);
+		rcu_assign_pointer(pa[0]->ary[id & IDMX_MASK],
+				(struct idmx_layer *)ptr);
 		pa[0]->count++;
-		idr_mark_full(pa, id);
+		idmx_mark_full(pa, id);
 	}
 
 	return id;
 }
 
 /**
- * idr_get_new_above - allocate new idr entry above or equal to a start id
- * @idp: idr handle
+ * idmx_get_new_above - allocate new idmx entry above or equal to a start id
+ * @idp: idmx handle
  * @ptr: pointer you want associated with the id
  * @starting_id: id to start search at
  * @id: pointer to the allocated handle
@@ -293,86 +293,86 @@ static int idr_get_new_above_int(struct idr *idp, void *ptr, int starting_id)
  * This is the allocate id function.  It should be called with any
  * required locks.
  *
- * If allocation from IDR's private freelist fails, idr_get_new_above() will
- * return %-EAGAIN.  The caller should retry the idr_pre_get() call to refill
- * IDR's preallocation and then retry the idr_get_new_above() call.
+ * If allocation from IDMX's private freelist fails, idmx_get_new_above() will
+ * return %-EAGAIN.  The caller should retry the idmx_pre_get() call to refill
+ * IDMX's preallocation and then retry the idmx_get_new_above() call.
  *
- * If the idr is full idr_get_new_above() will return %-ENOSPC.
+ * If the idmx is full idmx_get_new_above() will return %-ENOSPC.
  *
  * @id returns a value in the range @starting_id ... %0x7fffffff
  */
-int idr_get_new_above(struct idr *idp, void *ptr, int starting_id, int *id)
+int idmx_get_new_above(struct idmx *idp, void *ptr, int starting_id, int *id)
 {
 	int rv;
 
-	rv = idr_get_new_above_int(idp, ptr, starting_id);
+	rv = idmx_get_new_above_int(idp, ptr, starting_id);
 	/*
-	 * This is a cheap hack until the IDR code can be fixed to
+	 * This is a cheap hack until the IDMX code can be fixed to
 	 * return proper error values.
 	 */
 	if (rv < 0)
-		return _idr_rc_to_errno(rv);
+		return _idmx_rc_to_errno(rv);
 	*id = rv;
 	return 0;
 }
-EXPORT_SYMBOL(idr_get_new_above);
+EXPORT_SYMBOL(idmx_get_new_above);
 
 /**
- * idr_get_new - allocate new idr entry
- * @idp: idr handle
+ * idmx_get_new - allocate new idmx entry
+ * @idp: idmx handle
  * @ptr: pointer you want associated with the id
  * @id: pointer to the allocated handle
  *
- * If allocation from IDR's private freelist fails, idr_get_new_above() will
- * return %-EAGAIN.  The caller should retry the idr_pre_get() call to refill
- * IDR's preallocation and then retry the idr_get_new_above() call.
+ * If allocation from IDMX's private freelist fails, idmx_get_new_above() will
+ * return %-EAGAIN.  The caller should retry the idmx_pre_get() call to refill
+ * IDMX's preallocation and then retry the idmx_get_new_above() call.
  *
- * If the idr is full idr_get_new_above() will return %-ENOSPC.
+ * If the idmx is full idmx_get_new_above() will return %-ENOSPC.
  *
  * @id returns a value in the range %0 ... %0x7fffffff
  */
-int idr_get_new(struct idr *idp, void *ptr, int *id)
+int idmx_get_new(struct idmx *idp, void *ptr, int *id)
 {
 	int rv;
 
-	rv = idr_get_new_above_int(idp, ptr, 0);
+	rv = idmx_get_new_above_int(idp, ptr, 0);
 	/*
-	 * This is a cheap hack until the IDR code can be fixed to
+	 * This is a cheap hack until the IDMX code can be fixed to
 	 * return proper error values.
 	 */
 	if (rv < 0)
-		return _idr_rc_to_errno(rv);
+		return _idmx_rc_to_errno(rv);
 	*id = rv;
 	return 0;
 }
-EXPORT_SYMBOL(idr_get_new);
+EXPORT_SYMBOL(idmx_get_new);
 
-static void idr_remove_warning(int id)
+static void idmx_remove_warning(int id)
 {
 	printk(KERN_WARNING
-		"idr_remove called for id=%d which is not allocated.\n", id);
+		"idmx_remove called for id=%d which is not allocated.\n", id);
 	dump_stack();
 }
 
-static void sub_remove(struct idr *idp, int shift, int id)
+static void sub_remove(struct idmx *idp, int shift, int id)
 {
-	struct idr_layer *p = idp->top;
-	struct idr_layer **pa[MAX_IDR_LEVEL];
-	struct idr_layer ***paa = &pa[0];
-	struct idr_layer *to_free;
+	struct idmx_layer *p = idp->top;
+	struct idmx_layer **pa[MAX_IDMX_LEVEL];
+	struct idmx_layer ***paa = &pa[0];
+	struct idmx_layer *to_free;
 	int n;
 
 	*paa = NULL;
 	*++paa = &idp->top;
 
 	while ((shift > 0) && p) {
-		n = (id >> shift) & IDR_MASK;
+		n = (id >> shift) & IDMX_MASK;
 		__clear_bit(n, &p->bitmap);
 		*++paa = &p->ary[n];
 		p = p->ary[n];
-		shift -= IDR_BITS;
+		shift -= IDMX_BITS;
 	}
-	n = id & IDR_MASK;
+	n = id & IDMX_MASK;
 	if (likely(p != NULL && test_bit(n, &p->bitmap))){
 		__clear_bit(n, &p->bitmap);
 		rcu_assign_pointer(p->ary[n], NULL);
@@ -388,23 +388,23 @@ static void sub_remove(struct idr *idp, int shift, int id)
 		if (to_free)
 			free_layer(to_free);
 	} else
-		idr_remove_warning(id);
+		idmx_remove_warning(id);
 }
 
 /**
- * idr_remove - remove the given id and free its slot
- * @idp: idr handle
+ * idmx_remove - remove the given id and free its slot
+ * @idp: idmx handle
  * @id: unique key
  */
-void idr_remove(struct idr *idp, int id)
+void idmx_remove(struct idmx *idp, int id)
 {
-	struct idr_layer *p;
-	struct idr_layer *to_free;
+	struct idmx_layer *p;
+	struct idmx_layer *to_free;
 
 	/* Mask off upper bits we don't use for the search. */
-	id &= MAX_IDR_MASK;
+	id &= MAX_IDMX_MASK;
 
-	sub_remove(idp, (idp->layers - 1) * IDR_BITS, id);
+	sub_remove(idp, (idp->layers - 1) * IDMX_BITS, id);
 	if (idp->top && idp->top->count == 1 && (idp->layers > 1) &&
 	    idp->top->ary[0]) {
 		/*
@@ -420,51 +420,51 @@ void idr_remove(struct idr *idp, int id)
 		to_free->bitmap = to_free->count = 0;
 		free_layer(to_free);
 	}
-	while (idp->id_free_cnt >= MAX_IDR_FREE) {
+	while (idp->id_free_cnt >= MAX_IDMX_FREE) {
 		p = get_from_free_list(idp);
 		/*
 		 * Note: we don't call the rcu callback here, since the only
 		 * layers that fall into the freelist are those that have been
 		 * preallocated.
 		 */
-		kmem_cache_free(idr_layer_cache, p);
+		kmem_cache_free(idmx_layer_cache, p);
 	}
 	return;
 }
-EXPORT_SYMBOL(idr_remove);
+EXPORT_SYMBOL(idmx_remove);
 
 /**
- * idr_remove_all - remove all ids from the given idr tree
- * @idp: idr handle
+ * idmx_remove_all - remove all ids from the given idmx tree
+ * @idp: idmx handle
  *
- * idr_destroy() only frees up unused, cached idp_layers, but this
+ * idmx_destroy() only frees up unused, cached idp_layers, but this
  * function will remove all id mappings and leave all idp_layers
  * unused.
  *
- * A typical clean-up sequence for objects stored in an idr tree will
- * use idr_for_each() to free all objects, if necessay, then
- * idr_remove_all() to remove all ids, and idr_destroy() to free
- * up the cached idr_layers.
+ * A typical clean-up sequence for objects stored in an idmx tree will
+ * use idmx_for_each() to free all objects, if necessay, then
+ * idmx_remove_all() to remove all ids, and idmx_destroy() to free
+ * up the cached idmx_layers.
  */
-void idr_remove_all(struct idr *idp)
+void idmx_remove_all(struct idmx *idp)
 {
 	int n, id, max;
 	int bt_mask;
-	struct idr_layer *p;
-	struct idr_layer *pa[MAX_IDR_LEVEL];
-	struct idr_layer **paa = &pa[0];
+	struct idmx_layer *p;
+	struct idmx_layer *pa[MAX_IDMX_LEVEL];
+	struct idmx_layer **paa = &pa[0];
 
-	n = idp->layers * IDR_BITS;
+	n = idp->layers * IDMX_BITS;
 	p = idp->top;
 	rcu_assign_pointer(idp->top, NULL);
 	max = 1 << n;
 
 	id = 0;
 	while (id < max) {
-		while (n > IDR_BITS && p) {
-			n -= IDR_BITS;
+		while (n > IDMX_BITS && p) {
+			n -= IDMX_BITS;
 			*paa++ = p;
-			p = p->ary[(id >> n) & IDR_MASK];
+			p = p->ary[(id >> n) & IDMX_MASK];
 		}
 
 		bt_mask = id;
@@ -473,101 +473,101 @@ void idr_remove_all(struct idr *idp)
 		while (n < fls(id ^ bt_mask)) {
 			if (p)
 				free_layer(p);
-			n += IDR_BITS;
+			n += IDMX_BITS;
 			p = *--paa;
 		}
 	}
 	idp->layers = 0;
 }
-EXPORT_SYMBOL(idr_remove_all);
+EXPORT_SYMBOL(idmx_remove_all);
 
 /**
- * idr_destroy - release all cached layers within an idr tree
- * @idp: idr handle
+ * idmx_destroy - release all cached layers within an idmx tree
+ * @idp: idmx handle
  */
-void idr_destroy(struct idr *idp)
+void idmx_destroy(struct idmx *idp)
 {
 	while (idp->id_free_cnt) {
-		struct idr_layer *p = get_from_free_list(idp);
-		kmem_cache_free(idr_layer_cache, p);
+		struct idmx_layer *p = get_from_free_list(idp);
+		kmem_cache_free(idmx_layer_cache, p);
 	}
 }
-EXPORT_SYMBOL(idr_destroy);
+EXPORT_SYMBOL(idmx_destroy);
 
 /**
- * idr_find - return pointer for given id
- * @idp: idr handle
+ * idmx_find - return pointer for given id
+ * @idp: idmx handle
  * @id: lookup key
  *
  * Return the pointer given the id it has been registered with.  A %NULL
  * return indicates that @id is not valid or you passed %NULL in
- * idr_get_new().
+ * idmx_get_new().
  *
  * This function can be called under rcu_read_lock(), given that the leaf
  * pointers lifetimes are correctly managed.
  */
-void *idr_find(struct idr *idp, int id)
+void *idmx_find(struct idmx *idp, int id)
 {
 	int n;
-	struct idr_layer *p;
+	struct idmx_layer *p;
 
 	p = rcu_dereference_raw(idp->top);
 	if (!p)
 		return NULL;
-	n = (p->layer+1) * IDR_BITS;
+	n = (p->layer+1) * IDMX_BITS;
 
 	/* Mask off upper bits we don't use for the search. */
-	id &= MAX_IDR_MASK;
+	id &= MAX_IDMX_MASK;
 
 	if (id >= (1 << n))
 		return NULL;
 	BUG_ON(n == 0);
 
 	while (n > 0 && p) {
-		n -= IDR_BITS;
-		BUG_ON(n != p->layer*IDR_BITS);
-		p = rcu_dereference_raw(p->ary[(id >> n) & IDR_MASK]);
+		n -= IDMX_BITS;
+		BUG_ON(n != p->layer*IDMX_BITS);
+		p = rcu_dereference_raw(p->ary[(id >> n) & IDMX_MASK]);
 	}
 	return((void *)p);
 }
-EXPORT_SYMBOL(idr_find);
+EXPORT_SYMBOL(idmx_find);
 
 /**
- * idr_for_each - iterate through all stored pointers
- * @idp: idr handle
+ * idmx_for_each - iterate through all stored pointers
+ * @idp: idmx handle
  * @fn: function to be called for each pointer
  * @data: data passed back to callback function
  *
- * Iterate over the pointers registered with the given idr.  The
+ * Iterate over the pointers registered with the given idmx.  The
  * callback function will be called for each pointer currently
  * registered, passing the id, the pointer and the data pointer passed
- * to this function.  It is not safe to modify the idr tree while in
- * the callback, so functions such as idr_get_new and idr_remove are
+ * to this function.  It is not safe to modify the idmx tree while in
+ * the callback, so functions such as idmx_get_new and idmx_remove are
  * not allowed.
  *
  * We check the return of @fn each time. If it returns anything other
  * than %0, we break out and return that value.
  *
- * The caller must serialize idr_for_each() vs idr_get_new() and idr_remove().
+ * The caller must serialize idmx_for_each() vs idmx_get_new() and idmx_remove().
  */
-int idr_for_each(struct idr *idp,
+int idmx_for_each(struct idmx *idp,
 		 int (*fn)(int id, void *p, void *data), void *data)
 {
 	int n, id, max, error = 0;
-	struct idr_layer *p;
-	struct idr_layer *pa[MAX_IDR_LEVEL];
-	struct idr_layer **paa = &pa[0];
+	struct idmx_layer *p;
+	struct idmx_layer *pa[MAX_IDMX_LEVEL];
+	struct idmx_layer **paa = &pa[0];
 
-	n = idp->layers * IDR_BITS;
+	n = idp->layers * IDMX_BITS;
 	p = rcu_dereference_raw(idp->top);
 	max = 1 << n;
 
 	id = 0;
 	while (id < max) {
 		while (n > 0 && p) {
-			n -= IDR_BITS;
+			n -= IDMX_BITS;
 			*paa++ = p;
-			p = rcu_dereference_raw(p->ary[(id >> n) & IDR_MASK]);
+			p = rcu_dereference_raw(p->ary[(id >> n) & IDMX_MASK]);
 		}
 
 		if (p) {
@@ -578,18 +578,18 @@ int idr_for_each(struct idr *idp,
 
 		id += 1 << n;
 		while (n < fls(id)) {
-			n += IDR_BITS;
+			n += IDMX_BITS;
 			p = *--paa;
 		}
 	}
 
 	return error;
 }
-EXPORT_SYMBOL(idr_for_each);
+EXPORT_SYMBOL(idmx_for_each);
 
 /**
- * idr_get_next - lookup next object of id to given id.
- * @idp: idr handle
+ * idmx_get_next - lookup next object of id to given id.
+ * @idp: idmx handle
  * @nextidp:  pointer to lookup key
  *
  * Returns pointer to registered object with id, which is next number to
@@ -599,10 +599,10 @@ EXPORT_SYMBOL(idr_for_each);
  * This function can be called under rcu_read_lock(), given that the leaf
  * pointers lifetimes are correctly managed.
  */
-void *idr_get_next(struct idr *idp, int *nextidp)
+void *idmx_get_next(struct idmx *idp, int *nextidp)
 {
-	struct idr_layer *p, *pa[MAX_IDR_LEVEL];
-	struct idr_layer **paa = &pa[0];
+	struct idmx_layer *p, *pa[MAX_IDMX_LEVEL];
+	struct idmx_layer **paa = &pa[0];
 	int id = *nextidp;
 	int n, max;
 
@@ -610,14 +610,14 @@ void *idr_get_next(struct idr *idp, int *nextidp)
 	p = rcu_dereference_raw(idp->top);
 	if (!p)
 		return NULL;
-	n = (p->layer + 1) * IDR_BITS;
+	n = (p->layer + 1) * IDMX_BITS;
 	max = 1 << n;
 
 	while (id < max) {
 		while (n > 0 && p) {
-			n -= IDR_BITS;
+			n -= IDMX_BITS;
 			*paa++ = p;
-			p = rcu_dereference_raw(p->ary[(id >> n) & IDR_MASK]);
+			p = rcu_dereference_raw(p->ary[(id >> n) & IDMX_MASK]);
 		}
 
 		if (p) {
@@ -627,25 +627,25 @@ void *idr_get_next(struct idr *idp, int *nextidp)
 
 		/*
 		 * Proceed to the next layer at the current level.  Unlike
-		 * idr_for_each(), @id isn't guaranteed to be aligned to
+		 * idmx_for_each(), @id isn't guaranteed to be aligned to
 		 * layer boundary at this point and adding 1 << n may
 		 * incorrectly skip IDs.  Make sure we jump to the
 		 * beginning of the next layer using round_up().
 		 */
 		id = round_up(id + 1, 1 << n);
 		while (n < fls(id)) {
-			n += IDR_BITS;
+			n += IDMX_BITS;
 			p = *--paa;
 		}
 	}
 	return NULL;
 }
-EXPORT_SYMBOL(idr_get_next);
+EXPORT_SYMBOL(idmx_get_next);
 
 
 /**
- * idr_replace - replace pointer for given id
- * @idp: idr handle
+ * idmx_replace - replace pointer for given id
+ * @idp: idmx handle
  * @ptr: pointer you want associated with the id
  * @id: lookup key
  *
@@ -655,29 +655,29 @@ EXPORT_SYMBOL(idr_get_next);
  *
  * The caller must serialize with writers.
  */
-void *idr_replace(struct idr *idp, void *ptr, int id)
+void *idmx_replace(struct idmx *idp, void *ptr, int id)
 {
 	int n;
-	struct idr_layer *p, *old_p;
+	struct idmx_layer *p, *old_p;
 
 	p = idp->top;
 	if (!p)
 		return ERR_PTR(-EINVAL);
 
-	n = (p->layer+1) * IDR_BITS;
+	n = (p->layer+1) * IDMX_BITS;
 
-	id &= MAX_IDR_MASK;
+	id &= MAX_IDMX_MASK;
 
 	if (id >= (1 << n))
 		return ERR_PTR(-EINVAL);
 
-	n -= IDR_BITS;
+	n -= IDMX_BITS;
 	while ((n > 0) && p) {
-		p = p->ary[(id >> n) & IDR_MASK];
-		n -= IDR_BITS;
+		p = p->ary[(id >> n) & IDMX_MASK];
+		n -= IDMX_BITS;
 	}
 
-	n = id & IDR_MASK;
+	n = id & IDMX_MASK;
 	if (unlikely(p == NULL || !test_bit(n, &p->bitmap)))
 		return ERR_PTR(-ENOENT);
 
@@ -686,35 +686,35 @@ void *idr_replace(struct idr *idp, void *ptr, int id)
 
 	return old_p;
 }
-EXPORT_SYMBOL(idr_replace);
+EXPORT_SYMBOL(idmx_replace);
 
-void __init idr_init_cache(void)
+void __init idmx_init_cache(void)
 {
-	idr_layer_cache = kmem_cache_create("idr_layer_cache",
-				sizeof(struct idr_layer), 0, SLAB_PANIC, NULL);
+	idmx_layer_cache = kmem_cache_create("idmx_layer_cache",
+				sizeof(struct idmx_layer), 0, SLAB_PANIC, NULL);
 }
 
 /**
- * idr_init - initialize idr handle
- * @idp:	idr handle
+ * idmx_init - initialize idmx handle
+ * @idp:	idmx handle
  *
  * This function is use to set up the handle (@idp) that you will pass
  * to the rest of the functions.
  */
-void idr_init(struct idr *idp)
+void idmx_init(struct idmx *idp)
 {
-	memset(idp, 0, sizeof(struct idr));
+	memset(idp, 0, sizeof(struct idmx));
 	spin_lock_init(&idp->lock);
 }
-EXPORT_SYMBOL(idr_init);
+EXPORT_SYMBOL(idmx_init);
 
 
 /**
  * DOC: IDA description
- * IDA - IDR based ID allocator
+ * IDA - IDMX based ID allocator
  *
  * This is id allocator without id -> pointer translation.  Memory
- * usage is much lower than full blown idr because each id only
+ * usage is much lower than full blown idmx because each id only
  * occupies a bit.  ida uses a custom leaf node which contains
  * IDA_BITMAP_BITS slots.
  *
@@ -726,12 +726,12 @@ static void free_bitmap(struct ida *ida, struct ida_bitmap *bitmap)
 	unsigned long flags;
 
 	if (!ida->free_bitmap) {
-		spin_lock_irqsave(&ida->idr.lock, flags);
+		spin_lock_irqsave(&ida->idmx.lock, flags);
 		if (!ida->free_bitmap) {
 			ida->free_bitmap = bitmap;
 			bitmap = NULL;
 		}
-		spin_unlock_irqrestore(&ida->idr.lock, flags);
+		spin_unlock_irqrestore(&ida->idmx.lock, flags);
 	}
 
 	kfree(bitmap);
@@ -751,8 +751,8 @@ static void free_bitmap(struct ida *ida, struct ida_bitmap *bitmap)
  */
 int ida_pre_get(struct ida *ida, gfp_t gfp_mask)
 {
-	/* allocate idr_layers */
-	if (!idr_pre_get(&ida->idr, gfp_mask))
+	/* allocate idmx_layers */
+	if (!idmx_pre_get(&ida->idmx, gfp_mask))
 		return 0;
 
 	/* allocate free_bitmap */
@@ -787,39 +787,39 @@ EXPORT_SYMBOL(ida_pre_get);
  */
 int ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
 {
-	struct idr_layer *pa[MAX_IDR_LEVEL];
+	struct idmx_layer *pa[MAX_IDMX_LEVEL];
 	struct ida_bitmap *bitmap;
 	unsigned long flags;
-	int idr_id = starting_id / IDA_BITMAP_BITS;
+	int idmx_id = starting_id / IDA_BITMAP_BITS;
 	int offset = starting_id % IDA_BITMAP_BITS;
 	int t, id;
 
  restart:
 	/* get vacant slot */
-	t = idr_get_empty_slot(&ida->idr, idr_id, pa);
+	t = idmx_get_empty_slot(&ida->idmx, idmx_id, pa);
 	if (t < 0)
-		return _idr_rc_to_errno(t);
+		return _idmx_rc_to_errno(t);
 
-	if (t * IDA_BITMAP_BITS >= MAX_IDR_BIT)
+	if (t * IDA_BITMAP_BITS >= MAX_IDMX_BIT)
 		return -ENOSPC;
 
-	if (t != idr_id)
+	if (t != idmx_id)
 		offset = 0;
-	idr_id = t;
+	idmx_id = t;
 
 	/* if bitmap isn't there, create a new one */
-	bitmap = (void *)pa[0]->ary[idr_id & IDR_MASK];
+	bitmap = (void *)pa[0]->ary[idmx_id & IDMX_MASK];
 	if (!bitmap) {
-		spin_lock_irqsave(&ida->idr.lock, flags);
+		spin_lock_irqsave(&ida->idmx.lock, flags);
 		bitmap = ida->free_bitmap;
 		ida->free_bitmap = NULL;
-		spin_unlock_irqrestore(&ida->idr.lock, flags);
+		spin_unlock_irqrestore(&ida->idmx.lock, flags);
 
 		if (!bitmap)
 			return -EAGAIN;
 
 		memset(bitmap, 0, sizeof(struct ida_bitmap));
-		rcu_assign_pointer(pa[0]->ary[idr_id & IDR_MASK],
+		rcu_assign_pointer(pa[0]->ary[idmx_id & IDMX_MASK],
 				(void *)bitmap);
 		pa[0]->count++;
 	}
@@ -828,18 +828,18 @@ int ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
 	t = find_next_zero_bit(bitmap->bitmap, IDA_BITMAP_BITS, offset);
 	if (t == IDA_BITMAP_BITS) {
 		/* no empty slot after offset, continue to the next chunk */
-		idr_id++;
+		idmx_id++;
 		offset = 0;
 		goto restart;
 	}
 
-	id = idr_id * IDA_BITMAP_BITS + t;
-	if (id >= MAX_IDR_BIT)
+	id = idmx_id * IDA_BITMAP_BITS + t;
+	if (id >= MAX_IDMX_BIT)
 		return -ENOSPC;
 
 	__set_bit(t, bitmap->bitmap);
 	if (++bitmap->nr_busy == IDA_BITMAP_BITS)
-		idr_mark_full(pa, idr_id);
+		idmx_mark_full(pa, idmx_id);
 
 	*p_id = id;
 
@@ -848,10 +848,10 @@ int ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
 	 * Throw away extra resources one by one after each successful
 	 * allocation.
 	 */
-	if (ida->idr.id_free_cnt || ida->free_bitmap) {
-		struct idr_layer *p = get_from_free_list(&ida->idr);
+	if (ida->idmx.id_free_cnt || ida->free_bitmap) {
+		struct idmx_layer *p = get_from_free_list(&ida->idmx);
 		if (p)
-			kmem_cache_free(idr_layer_cache, p);
+			kmem_cache_free(idmx_layer_cache, p);
 	}
 
 	return 0;
@@ -860,13 +860,13 @@ EXPORT_SYMBOL(ida_get_new_above);
 
 /**
  * ida_get_new - allocate new ID
- * @ida:	idr handle
+ * @ida:	idmx handle
  * @p_id:	pointer to the allocated handle
  *
  * Allocate new ID.  It should be called with any required locks.
  *
  * If memory is required, it will return %-EAGAIN, you should unlock
- * and go back to the idr_pre_get() call.  If the idr is full, it will
+ * and go back to the idmx_pre_get() call.  If the idmx is full, it will
  * return %-ENOSPC.
  *
  * @p_id returns a value in the range %0 ... %0x7fffffff.
@@ -884,25 +884,25 @@ EXPORT_SYMBOL(ida_get_new);
  */
 void ida_remove(struct ida *ida, int id)
 {
-	struct idr_layer *p = ida->idr.top;
-	int shift = (ida->idr.layers - 1) * IDR_BITS;
-	int idr_id = id / IDA_BITMAP_BITS;
+	struct idmx_layer *p = ida->idmx.top;
+	int shift = (ida->idmx.layers - 1) * IDMX_BITS;
+	int idmx_id = id / IDA_BITMAP_BITS;
 	int offset = id % IDA_BITMAP_BITS;
 	int n;
 	struct ida_bitmap *bitmap;
 
-	/* clear full bits while looking up the leaf idr_layer */
+	/* clear full bits while looking up the leaf idmx_layer */
 	while ((shift > 0) && p) {
-		n = (idr_id >> shift) & IDR_MASK;
+		n = (idmx_id >> shift) & IDMX_MASK;
 		__clear_bit(n, &p->bitmap);
 		p = p->ary[n];
-		shift -= IDR_BITS;
+		shift -= IDMX_BITS;
 	}
 
 	if (p == NULL)
 		goto err;
 
-	n = idr_id & IDR_MASK;
+	n = idmx_id & IDMX_MASK;
 	__clear_bit(n, &p->bitmap);
 
 	bitmap = (void *)p->ary[n];
@@ -912,8 +912,8 @@ void ida_remove(struct ida *ida, int id)
 	/* update bitmap and remove it if empty */
 	__clear_bit(offset, bitmap->bitmap);
 	if (--bitmap->nr_busy == 0) {
-		__set_bit(n, &p->bitmap);	/* to please idr_remove() */
-		idr_remove(&ida->idr, idr_id);
+		__set_bit(n, &p->bitmap);	/* to please idmx_remove() */
+		idmx_remove(&ida->idmx, idmx_id);
 		free_bitmap(ida, bitmap);
 	}
 
@@ -931,7 +931,7 @@ EXPORT_SYMBOL(ida_remove);
  */
 void ida_destroy(struct ida *ida)
 {
-	idr_destroy(&ida->idr);
+	idmx_destroy(&ida->idmx);
 	kfree(ida->free_bitmap);
 }
 EXPORT_SYMBOL(ida_destroy);
@@ -1014,7 +1014,7 @@ EXPORT_SYMBOL(ida_simple_remove);
 void ida_init(struct ida *ida)
 {
 	memset(ida, 0, sizeof(struct ida));
-	idr_init(&ida->idr);
+	idmx_init(&ida->idmx);
 
 }
 EXPORT_SYMBOL(ida_init);
