@@ -2756,8 +2756,18 @@ static int mdp_irq_clk_setup(struct platform_device *pdev,
 	disable_irq(mdp_irq);
 
 	hdmi_pll_fs = regulator_get(&pdev->dev, "hdmi_pll_fs");
-	if (IS_ERR(hdmi_pll_fs))
+	if (IS_ERR(hdmi_pll_fs)) {
 		hdmi_pll_fs = NULL;
+	} else {
+		if (mdp_rev != MDP_REV_44) {
+			ret = regulator_set_voltage(hdmi_pll_fs, 1800000,
+				1800000);
+			if (ret) {
+				pr_err("set_voltage failed for hdmi_pll_fs, ret=%d\n",
+					ret);
+			}
+		}
+	}
 
 	dsi_pll_vdda = regulator_get(&pdev->dev, "dsi_pll_vdda");
 	if (IS_ERR(dsi_pll_vdda)) {
