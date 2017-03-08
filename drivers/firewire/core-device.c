@@ -996,11 +996,16 @@ static void fw_device_init(struct work_struct *work)
 
 	fw_device_get(device);
 	down_write(&fw_device_rwsem);
-	minor = idr_alloc(&fw_device_idr, device, 0, 1 << MINORBITS,
-			GFP_KERNEL);
+	ret = idr_pre_get(&fw_device_idr, GFP_KERNEL) ?
+	      idr_get_new(&fw_device_idr, device, &minor) :
+	      -ENOMEM;
+	if (minor >= 1 << MINORBITS) {
+		idr_remove(&fw_device_idr, minor);
+		minor = -ENOSPC;
+	}
 	up_write(&fw_device_rwsem);
 
-	if (minor < 0)
+	if (ret < 0)
 		goto error;
 
 	device->device.bus = &fw_bus_type;
