@@ -224,7 +224,8 @@ static ulong jiffies_till_next_fqs = ULONG_MAX;
 module_param(jiffies_till_first_fqs, ulong, 0644);
 module_param(jiffies_till_next_fqs, ulong, 0644);
 
-static void rcu_start_gp(struct rcu_state *rsp);
+static void rcu_start_gp_advanced(struct rcu_state *rsp, struct rcu_node *rnp,
+				  struct rcu_data *rdp);
 static void force_qs_rnp(struct rcu_state *rsp, int (*f)(struct rcu_data *));
 static void force_quiescent_state(struct rcu_state *rsp);
 static int rcu_pending(int cpu);
@@ -798,6 +799,16 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp)
 		rdp->offline_fqs++;
 		return 1;
 	}
+
+	/*
+	 * There is a possibility that a CPU in adaptive-ticks state
+	 * might run in the kernel with the scheduling-clock tick disabled
+	 * for an extended time period.  Invoke rcu_kick_nohz_cpu() to
+	 * force the CPU to restart the scheduling-clock tick in this
+	 * CPU is in this state.
+	 */
+	rcu_kick_nohz_cpu(rdp->cpu);
+
 	return 0;
 }
 
@@ -1162,7 +1173,7 @@ rcu_start_future_gp(struct rcu_node *rnp, struct rcu_data *rdp)
 		trace_rcu_future_gp(rnp, rdp, c, "Startedleafroot");
 	} else {
 		trace_rcu_future_gp(rnp, rdp, c, "Startedroot");
-		rcu_start_gp(rdp->rsp);
+		rcu_start_gp_advanced(rdp->rsp, rnp_root, rdp);
 	}
 unlock_out:
 	if (rnp != rnp_root)
@@ -1248,6 +1259,8 @@ static void rcu_accelerate_cbs(struct rcu_state *rsp, struct rcu_node *rnp,
 		rdp->nxttail[i] = rdp->nxttail[RCU_NEXT_TAIL];
 		rdp->nxtcompleted[i] = c;
 	}
+	/* Record any needed additional grace periods. */
+	rcu_start_future_gp(rnp, rdp);
 
 	/* Trace depending on how much we were able to accelerate. */
 	if (!*rdp->nxttail[RCU_WAIT_TAIL])
@@ -1618,20 +1631,9 @@ static void rsp_wakeup(struct irq_work *work)
  * quiescent state.
  */
 static void
-rcu_start_gp(struct rcu_state *rsp)
+rcu_start_gp_advanced(struct rcu_state *rsp, struct rcu_node *rnp,
+		      struct rcu_data *rdp)
 {
-	struct rcu_data *rdp = this_cpu_ptr(rsp->rda);
-	struct rcu_node *rnp = rcu_get_root(rsp);
-
-	/*
-	 * If there is no grace period in progress right now, any
-	 * callbacks we have up to this point will be satisfied by the
-	 * next grace period.  Also, advancing the callbacks reduces the
-	 * probability of false positives from cpu_needs_another_gp()
-	 * resulting in pointless grace periods.  So, advance callbacks!
-	 */
-	rcu_advance_cbs(rsp, rnp, rdp);
-
 	if (!rsp->gp_kthread || !cpu_needs_another_gp(rsp, rdp)) {
 		/*
 		 * Either we have not yet spawned the grace-period
@@ -1655,6 +1657,31 @@ rcu_start_gp(struct rcu_state *rsp)
 	 * the wakeup to interrupt context.
 	 */
 	irq_work_queue(&rsp->wakeup_work);
+}
+
+/*
+ * Similar to rcu_start_gp_advanced(), but also advance the calling CPU's
+ * callbacks.  Note that rcu_start_gp_advanced() cannot do this because it
+ * is invoked indirectly from rcu_advance_cbs(), which would result in
+ * endless recursion -- or would do so if it wasn't for the self-deadlock
+ * that is encountered beforehand.
+ */
+static void
+rcu_start_gp(struct rcu_state *rsp)
+{
+	struct rcu_data *rdp = this_cpu_ptr(rsp->rda);
+	struct rcu_node *rnp = rcu_get_root(rsp);
+
+	/*
+	 * If there is no grace period in progress right now, any
+	 * callbacks we have up to this point will be satisfied by the
+	 * next grace period.  Also, advancing the callbacks reduces the
+	 * probability of false positives from cpu_needs_another_gp()
+	 * resulting in pointless grace periods.  So, advance callbacks
+	 * then start the grace period!
+	 */
+	rcu_advance_cbs(rsp, rnp, rdp);
+	rcu_start_gp_advanced(rsp, rnp, rdp);
 }
 
 /*
