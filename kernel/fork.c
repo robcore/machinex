@@ -120,7 +120,7 @@ void __weak arch_release_task_struct(struct task_struct *tsk)
 {
 }
 
-#ifndef __HAVE_ARCH_TASK_STRUCT_ALLOCATOR
+#ifndef CONFIG_ARCH_TASK_STRUCT_ALLOCATOR
 static struct kmem_cache *task_struct_cachep;
 
 static inline struct task_struct *alloc_task_struct_node(int node)
@@ -138,7 +138,7 @@ void __weak arch_release_thread_info(struct thread_info *ti)
 {
 }
 
-#ifndef __HAVE_ARCH_THREAD_INFO_ALLOCATOR
+#ifndef CONFIG_ARCH_THREAD_INFO_ALLOCATOR
 
 /*
  * Allocate pages if THREAD_SIZE is >= PAGE_SIZE, otherwise use a
@@ -268,7 +268,7 @@ void __init __weak arch_task_cache_init(void) { }
 
 void __init fork_init(unsigned long mempages)
 {
-#ifndef __HAVE_ARCH_TASK_STRUCT_ALLOCATOR
+#ifndef CONFIG_ARCH_TASK_STRUCT_ALLOCATOR
 #ifndef ARCH_MIN_TASKALIGN
 #define ARCH_MIN_TASKALIGN	L1_CACHE_BYTES
 #endif
