@@ -23,9 +23,6 @@
 #include <linux/init.h>
 #include <linux/nmi.h>
 #include <linux/dmi.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 #include <linux/coresight.h>
 
 #define PANIC_TIMER_STEP 100
@@ -83,9 +80,8 @@ void panic(const char *fmt, ...)
 	va_list args;
 	long i, i_next = 0;
 	int state = 0;
-#if !defined(CONFIG_MACH_MELIUS) && !defined(CONFIG_SEC_PRODUCT_8960) && !defined(CONFIG_MACH_SERRANO) && !defined(CONFIG_MACH_GOLDEN) && !defined(CONFIG_MACH_LT02) && !defined(CONFIG_MACH_CANE)
+	/* Samsung Specific */
 	coresight_abort();
-#endif
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
 	 * from deadlocking the first cpu that invokes the panic, since
@@ -115,24 +111,13 @@ void panic(const char *fmt, ...)
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	set_kernel_crash_magic_number();
-	set_crash_store_enable();
-#endif
 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	set_crash_store_disable();
-#endif
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing
 	 */
 	if (!test_taint(TAINT_DIE) && oops_in_progress <= 1)
 		dump_stack();
-#endif
-#ifdef CONFIG_SEC_DEBUG_SUBSYS
-	sec_debug_save_panic_info(buf,
-		(unsigned int)__builtin_return_address(0));
 #endif
 
 	/*
