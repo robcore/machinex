@@ -36,7 +36,7 @@
 #include <linux/inet.h>
 #include <linux/in6.h>
 #include <linux/slab.h>
-#include <linux/idr.h>
+#include <linux/idmx.h>
 #include <net/ipv6.h>
 #include <linux/nfs_xdr.h>
 #include <linux/sunrpc/bc_xprt.h>
@@ -62,7 +62,7 @@ static DECLARE_WAIT_QUEUE_HEAD(nfs_client_active_wq);
  * Get a unique NFSv4.0 callback identifier which will be used
  * by the V4.0 callback service to lookup the nfs_client struct
  */
-static int nfs_get_cb_ident_idr(struct nfs_client *clp, int minorversion)
+static int nfs_get_cb_ident_idmx(struct nfs_client *clp, int minorversion)
 {
 	int ret = 0;
 	struct nfs_net *nn = net_generic(clp->cl_net, nfs_net_id);
@@ -70,10 +70,10 @@ static int nfs_get_cb_ident_idr(struct nfs_client *clp, int minorversion)
 	if (clp->rpc_ops->version != 4 || minorversion != 0)
 		return ret;
 retry:
-	if (!idr_pre_get(&nn->cb_ident_idr, GFP_KERNEL))
+	if (!idmx_pre_get(&nn->cb_ident_idmx, GFP_KERNEL))
 		return -ENOMEM;
 	spin_lock(&nn->nfs_client_lock);
-	ret = idr_get_new(&nn->cb_ident_idr, clp, &clp->cl_cb_ident);
+	ret = idmx_get_new(&nn->cb_ident_idmx, clp, &clp->cl_cb_ident);
 	spin_unlock(&nn->nfs_client_lock);
 	if (ret == -EAGAIN)
 		goto retry;
@@ -212,7 +212,7 @@ struct nfs_client *nfs4_alloc_client(const struct nfs_client_initdata *cl_init)
 	if (IS_ERR(clp))
 		return clp;
 
-	err = nfs_get_cb_ident_idr(clp, cl_init->minorversion);
+	err = nfs_get_cb_ident_idmx(clp, cl_init->minorversion);
 	if (err)
 		goto error;
 
@@ -259,21 +259,21 @@ void nfs4_free_client(struct nfs_client *clp)
 	nfs_free_client(clp);
 }
 
-/* idr_remove_all is not needed as all id's are removed by nfs_put_client */
-void nfs_cleanup_cb_ident_idr(struct net *net)
+/* idmx_remove_all is not needed as all id's are removed by nfs_put_client */
+void nfs_cleanup_cb_ident_idmx(struct net *net)
 {
 	struct nfs_net *nn = net_generic(net, nfs_net_id);
 
-	idr_destroy(&nn->cb_ident_idr);
+	idmx_destroy(&nn->cb_ident_idmx);
 }
 
 /* nfs_client_lock held */
-static void nfs_cb_idr_remove_locked(struct nfs_client *clp)
+static void nfs_cb_idmx_remove_locked(struct nfs_client *clp)
 {
 	struct nfs_net *nn = net_generic(clp->cl_net, nfs_net_id);
 
 	if (clp->cl_cb_ident)
-		idr_remove(&nn->cb_ident_idr, clp->cl_cb_ident);
+		idmx_remove(&nn->cb_ident_idmx, clp->cl_cb_ident);
 }
 
 static void pnfs_init_server(struct nfs_server *server)
@@ -289,11 +289,11 @@ static void nfs4_destroy_server(struct nfs_server *server)
 }
 
 #else
-void nfs_cleanup_cb_ident_idr(struct net *net)
+void nfs_cleanup_cb_ident_idmx(struct net *net)
 {
 }
 
-static void nfs_cb_idr_remove_locked(struct nfs_client *clp)
+static void nfs_cb_idmx_remove_locked(struct nfs_client *clp)
 {
 }
 
@@ -341,7 +341,7 @@ void nfs_put_client(struct nfs_client *clp)
 
 	if (atomic_dec_and_lock(&clp->cl_count, &nn->nfs_client_lock)) {
 		list_del(&clp->cl_share_link);
-		nfs_cb_idr_remove_locked(clp);
+		nfs_cb_idmx_remove_locked(clp);
 		spin_unlock(&nn->nfs_client_lock);
 
 		BUG_ON(!list_empty(&clp->cl_superblocks));
@@ -1241,7 +1241,7 @@ nfs4_find_client_ident(struct net *net, int cb_ident)
 	struct nfs_net *nn = net_generic(net, nfs_net_id);
 
 	spin_lock(&nn->nfs_client_lock);
-	clp = idr_find(&nn->cb_ident_idr, cb_ident);
+	clp = idmx_find(&nn->cb_ident_idmx, cb_ident);
 	if (clp)
 		atomic_inc(&clp->cl_count);
 	spin_unlock(&nn->nfs_client_lock);
@@ -1695,7 +1695,7 @@ void nfs_clients_init(struct net *net)
 	INIT_LIST_HEAD(&nn->nfs_client_list);
 	INIT_LIST_HEAD(&nn->nfs_volume_list);
 #ifdef CONFIG_NFS_V4
-	idr_init(&nn->cb_ident_idr);
+	idmx_init(&nn->cb_ident_idmx);
 #endif
 	spin_lock_init(&nn->nfs_client_lock);
 	nn->boot_time = CURRENT_TIME;
