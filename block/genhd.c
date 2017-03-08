@@ -430,7 +430,9 @@ int blk_alloc_devt(struct hd_struct *part, dev_t *devt)
 		if (!idr_pre_get(&ext_devt_idr, GFP_KERNEL))
 			return -ENOMEM;
 		spin_lock_bh(&ext_devt_lock);
+		mutex_lock(&ext_devt_mutex);
 		rc = idr_get_new(&ext_devt_idr, part, &idx);
+		mutex_unlock(&ext_devt_mutex);
 		if (!rc && idx >= NR_EXT_DEVT) {
 			idr_remove(&ext_devt_idr, idx);
 			rc = -EBUSY;
@@ -438,8 +440,15 @@ int blk_alloc_devt(struct hd_struct *part, dev_t *devt)
 		spin_unlock_bh(&ext_devt_lock);
 	} while (rc == -EAGAIN);
 
-	if (rc)
-		return rc;
+ 	if (rc)
+ 		return rc;
+
+	if (idx > MAX_EXT_DEVT) {
+		mutex_lock(&ext_devt_mutex);
+		idr_remove(&ext_devt_idr, idx);
+		mutex_unlock(&ext_devt_mutex);
+		return -EBUSY;
+	}
 
 	*devt = MKDEV(BLOCK_EXT_MAJOR, blk_mangle_minor(idx));
 	return 0;
@@ -737,6 +746,7 @@ void del_gendisk(struct gendisk *disk)
 	__func__,MAJOR(dev->devt),MINOR(dev->devt),dev->kobj.name);
 #endif
 	device_del(disk_to_dev(disk));
+	blk_free_devt(disk_to_dev(disk)->devt);
 }
 EXPORT_SYMBOL(del_gendisk);
 

@@ -29,7 +29,7 @@
 #ifdef CONFIG_BLK_DEV_MD
 extern void md_autodetect_dev(dev_t dev);
 #endif
- 
+
 /*
  * disk_name() is used by partition check code and the genhd driver.
  * It formats the devicename of the indicated disk into
@@ -278,8 +278,9 @@ void delete_partition(struct gendisk *disk, int partno)
 	dev = part_to_dev(part);
 	ST_LOG("<%s> KOBJ_REMOVE %d:%d %s",
 	__func__,MAJOR(dev->devt),MINOR(dev->devt),dev->kobj.name);
-#endif	
+#endif
 	device_del(part_to_dev(part));
+	blk_free_devt(part_devt(part));
 
 	hd_struct_put(part);
 }
