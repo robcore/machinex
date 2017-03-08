@@ -39,6 +39,7 @@ struct kobject *block_depr;
  */
 static DEFINE_SPINLOCK(ext_devt_lock);
 static DEFINE_IDR(ext_devt_idr);
+static DEFINE_MUTEX(ext_devt_mutex);
 
 static struct device_type disk_type;
 
