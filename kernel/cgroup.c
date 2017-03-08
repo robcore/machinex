@@ -4833,10 +4833,8 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	offline_css(ss, cgroup_dummy_top);
 	ss->active = 0;
 
-	if (ss->use_id) {
-		idr_remove_all(&ss->idr);
+	if (ss->use_id)
 		idr_destroy(&ss->idr);
-	}
 
 	/* deassign the subsys_id */
 	cgroup_subsys[ss->subsys_id] = NULL;
