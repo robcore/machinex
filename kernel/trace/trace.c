@@ -3095,9 +3095,19 @@ static int __tracing_resize_ring_buffer(unsigned long size)
 
 static ssize_t tracing_resize_ring_buffer(unsigned long size)
 {
-	int ret = size;
+	int cpu, ret = size;
 
 	mutex_lock(&trace_types_lock);
+
+	tracing_stop();
+
+	/* disable all cpu buffers */
+	for_each_tracing_cpu(cpu) {
+		if (global_trace.data[cpu])
+			atomic_inc(&global_trace.data[cpu]->disabled);
+		if (max_tr.data[cpu])
+			atomic_inc(&max_tr.data[cpu]->disabled);
+	}
 
 	if (size != global_trace.entries)
 		ret = __tracing_resize_ring_buffer(size);
@@ -3105,6 +3115,14 @@ static ssize_t tracing_resize_ring_buffer(unsigned long size)
 	if (ret < 0)
 		ret = -ENOMEM;
 
+	for_each_tracing_cpu(cpu) {
+		if (global_trace.data[cpu])
+			atomic_dec(&global_trace.data[cpu]->disabled);
+		if (max_tr.data[cpu])
+			atomic_dec(&max_tr.data[cpu]->disabled);
+	}
+
+	tracing_start();
 	mutex_unlock(&trace_types_lock);
 
 	return ret;
