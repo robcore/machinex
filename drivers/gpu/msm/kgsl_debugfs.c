@@ -243,7 +243,7 @@ static int process_mem_print(struct seq_file *s, void *unused)
 	/* now print all the unbound entries */
 	while (1) {
 		rcu_read_lock();
-		entry = idmx_get_next(&private->mem_idmx, &next);
+		entry = idr_get_next(&private->mem_idr, &next);
 		rcu_read_unlock();
 
 		if (entry == NULL)

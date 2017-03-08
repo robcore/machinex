@@ -55,7 +55,6 @@
 #include <linux/namei.h>
 #include <linux/pid_namespace.h>
 #include <linux/idr.h>
-#include <linux/idmx.h>
 #include <linux/vmalloc.h> /* TODO: replace with more sophisticated array */
 #include <linux/eventfd.h>
 #include <linux/poll.h>
@@ -195,7 +194,7 @@ static int cgroup_root_count;
  * rules as other root ops - both cgroup_mutex and cgroup_root_mutex for
  * writes, either for reads.
  */
-static DEFINE_IDMX(cgroup_hierarchy_idr);
+static DEFINE_IDR(cgroup_hierarchy_idr);
 static int next_hierarchy_id;
 
 static struct cgroup_name root_cgroup_name = { .name = "/" };
@@ -1403,14 +1402,14 @@ static int cgroup_init_root_id(struct cgroupfs_root *root)
 	lockdep_assert_held(&cgroup_root_mutex);
 
 	do {
-		if (!idmx_pre_get(&cgroup_hierarchy_idr, GFP_KERNEL))
+		if (!idr_pre_get(&cgroup_hierarchy_idr, GFP_KERNEL))
 			return -ENOMEM;
 		/* Try to allocate the next unused ID */
-		ret = idmx_get_new_above(&cgroup_hierarchy_idr, root, next_hierarchy_id,
+		ret = idr_get_new_above(&cgroup_hierarchy_idr, root, next_hierarchy_id,
 					&root->hierarchy_id);
 		if (ret == -ENOSPC)
 			/* Try again starting from 0 */
-			ret = idmx_get_new(&cgroup_hierarchy_idr, root, &root->hierarchy_id);
+			ret = idr_get_new(&cgroup_hierarchy_idr, root, &root->hierarchy_id);
 		if (!ret) {
 			next_hierarchy_id = root->hierarchy_id + 1;
 		} else if (ret != -EAGAIN) {
@@ -1427,7 +1426,7 @@ static void cgroup_exit_root_id(struct cgroupfs_root *root)
 	lockdep_assert_held(&cgroup_root_mutex);
 
 	if (root->hierarchy_id) {
-		idmx_remove(&cgroup_hierarchy_idr, root->hierarchy_id);
+		idr_remove(&cgroup_hierarchy_idr, root->hierarchy_id);
 		root->hierarchy_id = 0;
 	}
 }
@@ -1835,7 +1834,7 @@ int task_cgroup_path_from_hierarchy(struct task_struct *task, int hierarchy_id,
 
 	mutex_lock(&cgroup_mutex);
 
-	root = idmx_find(&cgroup_hierarchy_idr, hierarchy_id);
+	root = idr_find(&cgroup_hierarchy_idr, hierarchy_id);
 	if (root) {
 		cgrp = task_cgroup_from_root(task, root);
 		ret = cgroup_path(cgrp, buf, buflen);
@@ -4834,8 +4833,10 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	offline_css(ss, cgroup_dummy_top);
 	ss->active = 0;
 
-	if (ss->use_id)
+	if (ss->use_id) {
+		idr_remove_all(&ss->idr);
 		idr_destroy(&ss->idr);
+	}
 
 	/* deassign the subsys_id */
 	cgroup_subsys[ss->subsys_id] = NULL;
@@ -5434,7 +5435,7 @@ EXPORT_SYMBOL_GPL(free_css_id);
 static struct css_id *get_new_cssid(struct cgroup_subsys *ss, int depth)
 {
 	struct css_id *newid;
-	int ret, size;
+	int myid, error, size;
 
 	BUG_ON(!ss->use_id);
 
@@ -5442,24 +5443,35 @@ static struct css_id *get_new_cssid(struct cgroup_subsys *ss, int depth)
 	newid = kzalloc(size, GFP_KERNEL);
 	if (!newid)
 		return ERR_PTR(-ENOMEM);
-
-	idr_preload(GFP_KERNEL);
+	/* get id */
+	if (unlikely(!idr_pre_get(&ss->idr, GFP_KERNEL))) {
+		error = -ENOMEM;
+		goto err_out;
+	}
 	spin_lock(&ss->id_lock);
 	/* Don't use 0. allocates an ID of 1-65535 */
-	ret = idr_alloc(&ss->idr, newid, 1, CSS_ID_MAX + 1, GFP_NOWAIT);
+	error = idr_get_new_above(&ss->idr, newid, 1, &myid);
 	spin_unlock(&ss->id_lock);
-	idr_preload_end();
 
 	/* Returns error when there are no free spaces for new ID.*/
-	if (ret < 0)
+	if (error) {
+		error = -ENOSPC;
 		goto err_out;
+	}
+	if (myid > CSS_ID_MAX)
+		goto remove_idr;
 
-	newid->id = ret;
+	newid->id = myid;
 	newid->depth = depth;
 	return newid;
+remove_idr:
+	error = -ENOSPC;
+	spin_lock(&ss->id_lock);
+	idr_remove(&ss->idr, myid);
+	spin_unlock(&ss->id_lock);
 err_out:
 	kfree(newid);
-	return ERR_PTR(ret);
+	return ERR_PTR(error);
 
 }
 

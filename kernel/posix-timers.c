@@ -55,6 +55,20 @@
  * Timer ids are allocated by an external routine that keeps track of the
  * id and the timer.  The external interface is:
  *
+ * void *idr_find(struct idr *idp, int id);           to find timer_id <id>
+ * int idr_get_new(struct idr *idp, void *ptr);       to get a new id and
+ *                                                    related it to <ptr>
+ * void idr_remove(struct idr *idp, int id);          to release <id>
+ * void idr_init(struct idr *idp);                    to initialize <idp>
+ *                                                    which we supply.
+ * The idr_get_new *may* call slab for more memory so it must not be
+ * called under a spin lock.  Likewise idr_remore may release memory
+ * (but it may be ok to do this under a lock...).
+ * idr_find is just a memory look up and is quite fast.  A -1 return
+ * indicates that the requested id does not exist.
+ */
+
+/*
  * Lets keep our timers in a slab cache :-)
  */
 static struct kmem_cache *posix_timers_cache;
@@ -556,22 +570,24 @@ SYSCALL_DEFINE3(timer_create, const clockid_t, which_clock,
 		return -EAGAIN;
 
 	spin_lock_init(&new_timer->it_lock);
-
-	idr_preload(GFP_KERNEL);
+ retry:
+	if (unlikely(!idr_pre_get(&posix_timers_id, GFP_KERNEL))) {
+		error = -EAGAIN;
+		goto out;
+	}
 	spin_lock_irq(&idr_lock);
-	error = idr_alloc(&posix_timers_id, new_timer, 0, 0, GFP_NOWAIT);
+	error = idr_get_new(&posix_timers_id, new_timer, &new_timer_id);
 	spin_unlock_irq(&idr_lock);
-	idr_preload_end();
-	if (error < 0) {
+	if (error) {
+		if (error == -EAGAIN)
+			goto retry;
 		/*
 		 * Weird looking, but we return EAGAIN if the IDR is
 		 * full (proper POSIX return value for this)
 		 */
-		if (error == -ENOSPC)
-			error = -EAGAIN;
+		error = -EAGAIN;
 		goto out;
 	}
-	new_timer_id = error;
 
 	it_id_set = IT_ID_SET;
 	new_timer->it_id = (timer_t) new_timer_id;

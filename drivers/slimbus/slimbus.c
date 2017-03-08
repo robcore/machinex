@@ -15,7 +15,7 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/completion.h>
-#include <linux/idmx.h>
+#include <linux/idr.h>
 #include <linux/pm_runtime.h>
 #include <linux/slimbus/slimbus.h>
 
@@ -39,7 +39,7 @@
 #define SLIM_MAX_INTR_COEFF_1	SLIM_SL_PER_SUPERFRAME
 
 static DEFINE_MUTEX(slim_lock);
-static DEFINE_IDMX(ctrl_idmx);
+static DEFINE_IDR(ctrl_idr);
 static struct device_type slim_dev_type;
 static struct device_type slim_ctrl_type;
 
@@ -485,7 +485,7 @@ err_port_failed:
 	device_unregister(&ctrl->dev);
 out_list:
 	mutex_lock(&slim_lock);
-	idmx_remove(&ctrl_idmx, ctrl->nr);
+	idr_remove(&ctrl_idr, ctrl->nr);
 	mutex_unlock(&slim_lock);
 	return ret;
 }
@@ -515,7 +515,7 @@ int slim_del_controller(struct slim_controller *ctrl)
 
 	/* First make sure that this bus was added */
 	mutex_lock(&slim_lock);
-	found = idmx_find(&ctrl_idmx, ctrl->nr);
+	found = idr_find(&ctrl_idr, ctrl->nr);
 	mutex_unlock(&slim_lock);
 	if (found != ctrl)
 		return -EINVAL;
@@ -534,7 +534,7 @@ int slim_del_controller(struct slim_controller *ctrl)
 	destroy_workqueue(ctrl->wq);
 	/* free bus id */
 	mutex_lock(&slim_lock);
-	idmx_remove(&ctrl_idmx, ctrl->nr);
+	idr_remove(&ctrl_idr, ctrl->nr);
 	mutex_unlock(&slim_lock);
 
 	kfree(ctrl->sched.chc1);
@@ -561,18 +561,18 @@ int slim_add_numbered_controller(struct slim_controller *ctrl)
 	int	id;
 	int	status;
 
-	if (ctrl->nr & ~MAX_IDMX_MASK)
+	if (ctrl->nr & ~MAX_IDR_MASK)
 		return -EINVAL;
 
 retry:
-	if (idmx_pre_get(&ctrl_idmx, GFP_KERNEL) == 0)
+	if (idr_pre_get(&ctrl_idr, GFP_KERNEL) == 0)
 		return -ENOMEM;
 
 	mutex_lock(&slim_lock);
-	status = idmx_get_new_above(&ctrl_idmx, ctrl, ctrl->nr, &id);
+	status = idr_get_new_above(&ctrl_idr, ctrl, ctrl->nr, &id);
 	if (status == 0 && id != ctrl->nr) {
 		status = -EAGAIN;
-		idmx_remove(&ctrl_idmx, id);
+		idr_remove(&ctrl_idr, id);
 	}
 	mutex_unlock(&slim_lock);
 	if (status == -EAGAIN)

@@ -304,22 +304,28 @@ static u8 o2net_num_from_nn(struct o2net_node *nn)
 
 static int o2net_prep_nsw(struct o2net_node *nn, struct o2net_status_wait *nsw)
 {
-	int ret;
+	int ret = 0;
 
-	spin_lock(&nn->nn_lock);
-	ret = idr_alloc(&nn->nn_status_idr, nsw, 0, 0, GFP_ATOMIC);
-	if (ret >= 0) {
-		nsw->ns_id = ret;
-		list_add_tail(&nsw->ns_node_item, &nn->nn_status_list);
+	do {
+		if (!idr_pre_get(&nn->nn_status_idr, GFP_ATOMIC)) {
+			ret = -EAGAIN;
+			break;
+		}
+		spin_lock(&nn->nn_lock);
+		ret = idr_get_new(&nn->nn_status_idr, nsw, &nsw->ns_id);
+		if (ret == 0)
+			list_add_tail(&nsw->ns_node_item,
+				      &nn->nn_status_list);
+		spin_unlock(&nn->nn_lock);
+	} while (ret == -EAGAIN);
+
+	if (ret == 0)  {
+		init_waitqueue_head(&nsw->ns_wq);
+		nsw->ns_sys_status = O2NET_ERR_NONE;
+		nsw->ns_status = 0;
 	}
-	spin_unlock(&nn->nn_lock);
-	if (ret < 0)
-		return ret;
 
-	init_waitqueue_head(&nsw->ns_wq);
-	nsw->ns_sys_status = O2NET_ERR_NONE;
-	nsw->ns_status = 0;
-	return 0;
+	return ret;
 }
 
 static void o2net_complete_nsw_locked(struct o2net_node *nn,

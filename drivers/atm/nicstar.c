@@ -251,6 +251,7 @@ static void __devexit nicstar_remove_one(struct pci_dev *pcidev)
 		if (card->scd2vc[j] != NULL)
 			free_scq(card, card->scd2vc[j]->scq, card->scd2vc[j]->tx_vcc);
 	}
+	idr_remove_all(&card->idr);
 	idr_destroy(&card->idr);
 	pci_free_consistent(card->pcidev, NS_RSQSIZE + NS_RSQ_ALIGNMENT,
 			    card->rsq.org, card->rsq.dma);
@@ -949,10 +950,11 @@ static void free_scq(ns_dev *card, scq_info *scq, struct atm_vcc *vcc)
 static void push_rxbufs(ns_dev * card, struct sk_buff *skb)
 {
 	struct sk_buff *handle1, *handle2;
-	int id1, id2;
+	u32 id1 = 0, id2 = 0;
 	u32 addr1, addr2;
 	u32 stat;
 	unsigned long flags;
+	int err;
 
 	/* *BARF* */
 	handle2 = NULL;
@@ -1025,12 +1027,23 @@ static void push_rxbufs(ns_dev * card, struct sk_buff *skb)
 				card->lbfqc += 2;
 		}
 
-		id1 = idr_alloc(&card->idr, handle1, 0, 0, GFP_ATOMIC);
-		if (id1 < 0)
-			goto out;
+		do {
+			if (!idr_pre_get(&card->idr, GFP_ATOMIC)) {
+				printk(KERN_ERR
+				       "nicstar%d: no free memory for idr\n",
+				       card->index);
+				goto out;
+			}
 
-		id2 = idr_alloc(&card->idr, handle2, 0, 0, GFP_ATOMIC);
-		if (id2 < 0)
+			if (!id1)
+				err = idr_get_new_above(&card->idr, handle1, 0, &id1);
+
+			if (!id2 && err == 0)
+				err = idr_get_new_above(&card->idr, handle2, 0, &id2);
+
+		} while (err == -EAGAIN);
+
+		if (err)
 			goto out;
 
 		spin_lock_irqsave(&card->res_lock, flags);

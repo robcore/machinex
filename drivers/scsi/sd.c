@@ -40,7 +40,7 @@
 #include <linux/genhd.h>
 #include <linux/hdreg.h>
 #include <linux/errno.h>
-#include <linux/idmx.h>
+#include <linux/idr.h>
 #include <linux/interrupt.h>
 #include <linux/init.h>
 #include <linux/blkdev.h>
@@ -117,7 +117,7 @@ static void sd_print_sense_hdr(struct scsi_disk *, struct scsi_sense_hdr *);
 static void sd_print_result(struct scsi_disk *, int);
 
 static DEFINE_SPINLOCK(sd_index_lock);
-static DEFINE_IDAMX(sd_index_idamx);
+static DEFINE_IDA(sd_index_ida);
 
 /* This semaphore is used to mediate the 0->1 reference get in the
  * face of object destruction (i.e. we can't allow a get on an
@@ -2818,11 +2818,11 @@ static int sd_probe(struct device *dev)
 		goto out_free;
 
 	do {
-		if (!idamx_pre_get(&sd_index_idamx, GFP_KERNEL))
+		if (!ida_pre_get(&sd_index_ida, GFP_KERNEL))
 			goto out_put;
 
 		spin_lock(&sd_index_lock);
-		error = idamx_get_new(&sd_index_idamx, &index);
+		error = ida_get_new(&sd_index_ida, &index);
 		spin_unlock(&sd_index_lock);
 	} while (error == -EAGAIN);
 
@@ -2884,7 +2884,7 @@ static int sd_probe(struct device *dev)
 
  out_free_index:
 	spin_lock(&sd_index_lock);
-	idamx_remove(&sd_index_idamx, index);
+	ida_remove(&sd_index_ida, index);
 	spin_unlock(&sd_index_lock);
  out_put:
 	put_disk(gd);
@@ -2958,7 +2958,7 @@ static void scsi_disk_release(struct device *dev)
 	struct gendisk *disk = sdkp->disk;
 
 	spin_lock(&sd_index_lock);
-	idamx_remove(&sd_index_idamx, sdkp->index);
+	ida_remove(&sd_index_ida, sdkp->index);
 	spin_unlock(&sd_index_lock);
 
 	disk->private_data = NULL;

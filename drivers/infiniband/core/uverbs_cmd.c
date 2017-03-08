@@ -119,17 +119,18 @@ static int idr_add_uobj(struct idr *idr, struct ib_uobject *uobj)
 {
 	int ret;
 
-	idr_preload(GFP_KERNEL);
+retry:
+	if (!idr_pre_get(idr, GFP_KERNEL))
+		return -ENOMEM;
+
 	spin_lock(&ib_uverbs_idr_lock);
-
-	ret = idr_alloc(idr, uobj, 0, 0, GFP_NOWAIT);
-	if (ret >= 0)
-		uobj->id = ret;
-
+	ret = idr_get_new(idr, uobj, &uobj->id);
 	spin_unlock(&ib_uverbs_idr_lock);
-	idr_preload_end();
 
-	return ret < 0 ? ret : 0;
+	if (ret == -EAGAIN)
+		goto retry;
+
+	return ret;
 }
 
 void idr_remove_uobj(struct idr *idr, struct ib_uobject *uobj)

@@ -15,7 +15,7 @@
 #include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/rbtree.h>
-#include <linux/idmx.h>
+#include <linux/idr.h>
 #include <linux/genalloc.h>
 #include <linux/of.h>
 #include <linux/io.h>
@@ -133,7 +133,7 @@ struct ocmem_region {
 	/* Chain in Interval Tree */
 	struct rb_node region_rb;
 	/* Hash map of requests */
-	struct idmx region_idmx;
+	struct idr region_idr;
 	/* Chain in eviction list */
 	struct list_head eviction_list;
 	unsigned long r_start;
@@ -313,7 +313,7 @@ static struct ocmem_region *create_region(void)
 	p =  kzalloc(sizeof(struct ocmem_region), GFP_KERNEL);
 	if (!p)
 		return NULL;
-	idmx_init(&p->region_idmx);
+	idr_init(&p->region_idr);
 	INIT_LIST_HEAD(&p->eviction_list);
 	p->r_start = p->r_end = p->r_sz = 0x0;
 	p->max_prio = NO_PRIO;
@@ -331,10 +331,10 @@ static int attach_req(struct ocmem_region *region, struct ocmem_req *req)
 	int ret, id;
 
 	while (1) {
-		if (idmx_pre_get(&region->region_idmx, GFP_KERNEL) == 0)
+		if (idr_pre_get(&region->region_idr, GFP_KERNEL) == 0)
 			return -ENOMEM;
 
-		ret = idmx_get_new_above(&region->region_idmx, req, 1, &id);
+		ret = idr_get_new_above(&region->region_idr, req, 1, &id);
 
 		if (ret != -EAGAIN)
 			break;
@@ -351,7 +351,7 @@ static int attach_req(struct ocmem_region *region, struct ocmem_req *req)
 
 static int detach_req(struct ocmem_region *region, struct ocmem_req *req)
 {
-	idmx_remove(&region->region_idmx, req->req_id);
+	idr_remove(&region->region_idr, req->req_id);
 	return 0;
 }
 
@@ -373,7 +373,7 @@ static int region_req_count(int id, void *ptr, void *data)
 static int req_count(struct ocmem_region *region)
 {
 	int count = 0;
-	idmx_for_each(&region->region_idmx, region_req_count, &count);
+	idr_for_each(&region->region_idr, region_req_count, &count);
 	return count;
 }
 
@@ -391,7 +391,7 @@ static int update_region_prio(struct ocmem_region *region)
 {
 	int max_prio;
 	if (req_count(region) != 0) {
-		idmx_for_each(&region->region_idmx, compute_max_prio, &max_prio);
+		idr_for_each(&region->region_idr, compute_max_prio, &max_prio);
 		region->max_prio = max_prio;
 	} else {
 		region->max_prio = NO_PRIO;
@@ -454,7 +454,7 @@ static struct ocmem_req *find_req_match(int owner, struct ocmem_region *region)
 	if (!region)
 		return NULL;
 
-	req = idmx_find(&region->region_idmx, owner);
+	req = idr_find(&region->region_idr, owner);
 
 	return req;
 }

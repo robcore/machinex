@@ -21,7 +21,7 @@
 #include <linux/compat.h>
 #include <linux/chio.h>			/* here are all the ioctls */
 #include <linux/mutex.h>
-#include <linux/idmx.h>
+#include <linux/idr.h>
 #include <linux/slab.h>
 
 #include <scsi/scsi.h>
@@ -114,7 +114,7 @@ typedef struct {
 	struct mutex	    lock;
 } scsi_changer;
 
-static DEFINE_IDMX(ch_index_idmx);
+static DEFINE_IDR(ch_index_idr);
 static DEFINE_SPINLOCK(ch_index_lock);
 
 static const struct {
@@ -583,7 +583,7 @@ ch_open(struct inode *inode, struct file *file)
 
 	mutex_lock(&ch_mutex);
 	spin_lock(&ch_index_lock);
-	ch = idmx_find(&ch_index_idmx, minor);
+	ch = idr_find(&ch_index_idr, minor);
 
 	if (NULL == ch || scsi_device_get(ch->device)) {
 		spin_unlock(&ch_index_lock);
@@ -905,11 +905,11 @@ static int ch_probe(struct device *dev)
 	if (NULL == ch)
 		return -ENOMEM;
 
-	if (!idmx_pre_get(&ch_index_idmx, GFP_KERNEL))
+	if (!idr_pre_get(&ch_index_idr, GFP_KERNEL))
 		goto free_ch;
 
 	spin_lock(&ch_index_lock);
-	ret = idmx_get_new(&ch_index_idmx, ch, &minor);
+	ret = idr_get_new(&ch_index_idr, ch, &minor);
 	spin_unlock(&ch_index_lock);
 
 	if (ret)
@@ -917,7 +917,7 @@ static int ch_probe(struct device *dev)
 
 	if (minor > CH_MAX_DEVS) {
 		ret = -ENODEV;
-		goto remove_idmx;
+		goto remove_idr;
 	}
 
 	ch->minor = minor;
@@ -930,7 +930,7 @@ static int ch_probe(struct device *dev)
 		printk(KERN_WARNING "ch%d: device_create failed\n",
 		       ch->minor);
 		ret = PTR_ERR(class_dev);
-		goto remove_idmx;
+		goto remove_idr;
 	}
 
 	mutex_init(&ch->lock);
@@ -943,8 +943,8 @@ static int ch_probe(struct device *dev)
 	sdev_printk(KERN_INFO, sd, "Attached scsi changer %s\n", ch->name);
 
 	return 0;
-remove_idmx:
-	idmx_remove(&ch_index_idmx, minor);
+remove_idr:
+	idr_remove(&ch_index_idr, minor);
 free_ch:
 	kfree(ch);
 	return ret;
@@ -955,7 +955,7 @@ static int ch_remove(struct device *dev)
 	scsi_changer *ch = dev_get_drvdata(dev);
 
 	spin_lock(&ch_index_lock);
-	idmx_remove(&ch_index_idmx, ch->minor);
+	idr_remove(&ch_index_idr, ch->minor);
 	spin_unlock(&ch_index_lock);
 
 	device_destroy(ch_sysfs_class, MKDEV(SCSI_CHANGER_MAJOR,ch->minor));
@@ -1017,7 +1017,7 @@ static void __exit exit_ch_module(void)
 	scsi_unregister_driver(&ch_template.gendrv);
 	unregister_chrdev(SCSI_CHANGER_MAJOR, "ch");
 	class_destroy(ch_sysfs_class);
-	idmx_destroy(&ch_index_idmx);
+	idr_destroy(&ch_index_idr);
 }
 
 module_init(init_ch_module);

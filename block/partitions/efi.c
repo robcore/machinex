@@ -310,20 +310,12 @@ static int is_gpt_valid(struct parsed_partitions *state, u64 lba,
 		goto fail;
 	}
 
-	/* Check the GUID Partition Table header size is too big */
+	/* Check the GUID Partition Table header size */
 	if (le32_to_cpu((*gpt)->header_size) >
 			bdev_logical_block_size(state->bdev)) {
-		pr_debug("GUID Partition Table Header size is too large: %u > %u\n",
+		pr_debug("GUID Partition Table Header size is wrong: %u > %u\n",
 			le32_to_cpu((*gpt)->header_size),
 			bdev_logical_block_size(state->bdev));
-		goto fail;
-	}
-
-	/* Check the GUID Partition Table header size is too small */
-	if (le32_to_cpu((*gpt)->header_size) < sizeof(gpt_header)) {
-		pr_debug("GUID Partition Table Header size is too small: %u < %zu\n",
-			le32_to_cpu((*gpt)->header_size),
-			sizeof(gpt_header));
 		goto fail;
 	}
 
