@@ -27,12 +27,12 @@
 #include <linux/errno.h>
 #include <linux/iommu.h>
 #include <linux/scatterlist.h>
-#include <linux/idr.h>
+#include <linux/idmx.h>
 #include <linux/notifier.h>
 #include <linux/err.h>
 
 static struct kset *iommu_group_kset;
-static struct idr iommu_group_idr;
+static struct idmx iommu_group_idmx;
 static struct mutex iommu_group_mutex;
 
 struct iommu_group {
@@ -126,7 +126,7 @@ static void iommu_group_release(struct kobject *kobj)
 		group->iommu_data_release(group->iommu_data);
 
 	mutex_lock(&iommu_group_mutex);
-	idr_remove(&iommu_group_idr, group->id);
+	idmx_remove(&iommu_group_idmx, group->id);
 	mutex_unlock(&iommu_group_mutex);
 
 	kfree(group->name);
@@ -167,13 +167,13 @@ struct iommu_group *iommu_group_alloc(void)
 	mutex_lock(&iommu_group_mutex);
 
 again:
-	if (unlikely(0 == idr_pre_get(&iommu_group_idr, GFP_KERNEL))) {
+	if (unlikely(0 == idmx_pre_get(&iommu_group_idmx, GFP_KERNEL))) {
 		kfree(group);
 		mutex_unlock(&iommu_group_mutex);
 		return ERR_PTR(-ENOMEM);
 	}
 
-	ret = idr_get_new_above(&iommu_group_idr, group, 1, &group->id);
+	ret = idmx_get_new_above(&iommu_group_idmx, group, 1, &group->id);
 	if (ret == -EAGAIN)
 		goto again;
 	mutex_unlock(&iommu_group_mutex);
@@ -187,7 +187,7 @@ again:
 				   NULL, "%d", group->id);
 	if (ret) {
 		mutex_lock(&iommu_group_mutex);
-		idr_remove(&iommu_group_idr, group->id);
+		idmx_remove(&iommu_group_idmx, group->id);
 		mutex_unlock(&iommu_group_mutex);
 		kfree(group);
 		return ERR_PTR(ret);
@@ -445,7 +445,7 @@ struct iommu_group *iommu_group_find(const char *name)
 	int next = 0;
 
 	mutex_lock(&iommu_group_mutex);
-	while ((group = idr_get_next(&iommu_group_idr, &next))) {
+	while ((group = idmx_get_next(&iommu_group_idmx, &next))) {
 		if (group->name) {
 			if (strcmp(group->name, name) == 0)
 				break;
@@ -924,7 +924,7 @@ static int __init iommu_init(void)
 {
 	iommu_group_kset = kset_create_and_add("iommu_groups",
 					       NULL, kernel_kobj);
-	idr_init(&iommu_group_idr);
+	idmx_init(&iommu_group_idmx);
 	mutex_init(&iommu_group_mutex);
 
 	BUG_ON(!iommu_group_kset);

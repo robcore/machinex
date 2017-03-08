@@ -258,7 +258,7 @@ void kgsl_check_fences(struct work_struct *work);
 			kgsl_hang_check),\
 	.ts_expired_ws  = __WORK_INITIALIZER((_dev).ts_expired_ws,\
 			kgsl_process_events),\
-	.context_idmx = IDR_INIT((_dev).context_idmx),\
+	.context_idmx = IDMX_INIT((_dev).context_idmx),\
 	.events = LIST_HEAD_INIT((_dev).events),\
 	.events_pending_list = LIST_HEAD_INIT((_dev).events_pending_list), \
 	.wait_queue = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).wait_queue),\

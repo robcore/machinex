@@ -1951,7 +1951,7 @@ static void adreno_mark_context_status(struct kgsl_device *device,
 	/* Mark the status for all the contexts in the device */
 
 	read_lock(&device->context_lock);
-	idr_for_each(&device->context_idr, _mark_context_status, &ft_status);
+	idmx_for_each(&device->context_idmx, _mark_context_status, &ft_status);
 	read_unlock(&device->context_lock);
 }
 
@@ -1983,7 +1983,7 @@ static int _set_max_ts(int id, void *ptr, void *data)
 static void adreno_set_max_ts_for_bad_ctxs(struct kgsl_device *device)
 {
 	read_lock(&device->context_lock);
-	idr_for_each(&device->context_idr, _set_max_ts, device);
+	idmx_for_each(&device->context_idmx, _set_max_ts, device);
 	read_unlock(&device->context_lock);
 }
 
@@ -3354,7 +3354,7 @@ struct kgsl_memdesc *adreno_find_ctxtmem(struct kgsl_device *device,
 
 	read_lock(&device->context_lock);
 	while (1) {
-		context = idr_get_next(&device->context_idr, &next);
+		context = idmx_get_next(&device->context_idmx, &next);
 		if (context == NULL)
 			break;
 
