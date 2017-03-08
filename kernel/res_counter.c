@@ -22,23 +22,28 @@ void res_counter_init(struct res_counter *counter, struct res_counter *parent)
 	counter->parent = parent;
 }
 
-int res_counter_charge_locked(struct res_counter *counter, unsigned long val)
+int res_counter_charge_locked(struct res_counter *counter, unsigned long val,
+			      bool force)
 {
+	int ret = 0;
+
 	if (counter->usage + val > counter->limit) {
 		counter->failcnt++;
-		return -ENOMEM;
+		ret = -ENOMEM;
+		if (!force)
+			return ret;
 	}
 
 	counter->usage += val;
-	if (counter->usage > counter->max_usage)
+	if (!force && counter->usage > counter->max_usage)
 		counter->max_usage = counter->usage;
-	return 0;
+	return ret;
 }
 
-int res_counter_charge(struct res_counter *counter, unsigned long val,
-			struct res_counter **limit_fail_at)
+static int __res_counter_charge(struct res_counter *counter, unsigned long val,
+				struct res_counter **limit_fail_at, bool force)
 {
-	int ret;
+	int ret, r;
 	unsigned long flags;
 	struct res_counter *c, *u;
 
@@ -46,51 +51,40 @@ int res_counter_charge(struct res_counter *counter, unsigned long val,
 	local_irq_save(flags);
 	for (c = counter; c != NULL; c = c->parent) {
 		spin_lock(&c->lock);
-		ret = res_counter_charge_locked(c, val);
+		r = res_counter_charge_locked(c, val, force);
 		spin_unlock(&c->lock);
-		if (ret < 0) {
+		if (r < 0 && !ret) {
+			ret = r;
 			*limit_fail_at = c;
-			goto undo;
+			if (!force)
+				break;
 		}
 	}
-	ret = 0;
-	goto done;
-undo:
-	for (u = counter; u != c; u = u->parent) {
-		spin_lock(&u->lock);
-		res_counter_uncharge_locked(u, val);
-		spin_unlock(&u->lock);
+
+	if (ret < 0 && !force) {
+		for (u = counter; u != c; u = u->parent) {
+			spin_lock(&u->lock);
+			res_counter_uncharge_locked(u, val);
+			spin_unlock(&u->lock);
+		}
 	}
-done:
 	local_irq_restore(flags);
+
 	return ret;
+}
+
+int res_counter_charge(struct res_counter *counter, unsigned long val,
+			struct res_counter **limit_fail_at)
+{
+	return __res_counter_charge(counter, val, limit_fail_at, false);
 }
 
 int res_counter_charge_nofail(struct res_counter *counter, unsigned long val,
 			      struct res_counter **limit_fail_at)
 {
-	int ret, r;
-	unsigned long flags;
-	struct res_counter *c;
-
-	r = ret = 0;
-	*limit_fail_at = NULL;
-	local_irq_save(flags);
-	for (c = counter; c != NULL; c = c->parent) {
-		spin_lock(&c->lock);
-		r = res_counter_charge_locked(c, val);
-		if (r)
-			c->usage += val;
-		spin_unlock(&c->lock);
-		if (r < 0 && ret == 0) {
-			*limit_fail_at = c;
-			ret = r;
-		}
-	}
-	local_irq_restore(flags);
-
-	return ret;
+	return __res_counter_charge(counter, val, limit_fail_at, true);
 }
+
 u64 res_counter_uncharge_locked(struct res_counter *counter, unsigned long val)
 {
 	if (WARN_ON(counter->usage < val))
