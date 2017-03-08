@@ -432,7 +432,7 @@ kgsl_mem_entry_untrack_gpuaddr(struct kgsl_process_private *process,
  * @process: the owner process
  *
  * Attach a newly created mem_entry to its owner process so that
- * it can be found later. The mem_entry will be added to mem_idr and have
+ * it can be found later. The mem_entry will be added to mem_idmx and have
  * its 'id' field assigned. If the GPU address has been set, the entry
  * will also be added to the mem_rb tree.
  *
@@ -450,13 +450,13 @@ kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
 		return -EBADF;
 
 	while (1) {
-		if (idr_pre_get(&process->mem_idr, GFP_KERNEL) == 0) {
+		if (idmx_pre_get(&process->mem_idmx, GFP_KERNEL) == 0) {
 			ret = -ENOMEM;
 			goto err_put_proc_priv;
 		}
 
 		spin_lock(&process->mem_lock);
-		ret = idr_get_new_above(&process->mem_idr, entry, 1,
+		ret = idmx_get_new_above(&process->mem_idmx, entry, 1,
 					&entry->id);
 		spin_unlock(&process->mem_lock);
 
@@ -471,7 +471,7 @@ kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
 	spin_lock(&process->mem_lock);
 	ret = kgsl_mem_entry_track_gpuaddr(process, entry);
 	if (ret)
-		idr_remove(&process->mem_idr, entry->id);
+		idmx_remove(&process->mem_idmx, entry->id);
 	spin_unlock(&process->mem_lock);
 	if (ret)
 		goto err_put_proc_priv;
@@ -502,7 +502,7 @@ static void kgsl_mem_entry_detach_process(struct kgsl_mem_entry *entry)
 
 	kgsl_mem_entry_untrack_gpuaddr(entry->priv, entry);
 	if (entry->id != 0)
-		idr_remove(&entry->priv->mem_idr, entry->id);
+		idmx_remove(&entry->priv->mem_idmx, entry->id);
 	entry->id = 0;
 
 	entry->priv->stats[entry->memtype].cur -= entry->memdesc.size;
@@ -528,14 +528,14 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 
 
 	while (1) {
-		if (idr_pre_get(&device->context_idr, GFP_KERNEL) == 0) {
-			KGSL_DRV_INFO(device, "idr_pre_get: ENOMEM\n");
+		if (idmx_pre_get(&device->context_idmx, GFP_KERNEL) == 0) {
+			KGSL_DRV_INFO(device, "idmx_pre_get: ENOMEM\n");
 			ret = -ENOMEM;
 			break;
 		}
 
 		write_lock(&device->context_lock);
-		ret = idr_get_new_above(&device->context_idr, context, 1, &id);
+		ret = idmx_get_new_above(&device->context_idmx, context, 1, &id);
 		context->id = id;
 		write_unlock(&device->context_lock);
 
@@ -579,7 +579,7 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 fail_free_id:
 	if (ret) {
 		write_lock(&device->context_lock);
-		idr_remove(&device->context_idr, id);
+		idmx_remove(&device->context_idmx, id);
 		write_unlock(&device->context_lock);
 	}
 
@@ -626,7 +626,7 @@ kgsl_context_detach(struct kgsl_context *context)
 
 	write_lock(&device->context_lock);
 	context->id = KGSL_CONTEXT_INVALID;
-	idr_remove(&device->context_idr, id);
+	idmx_remove(&device->context_idmx, id);
 	write_unlock(&device->context_lock);
 	context->dev_priv = NULL;
 	kgsl_context_put(context);
@@ -919,7 +919,7 @@ static void kgsl_destroy_process_private(struct kref *kref)
 	mutex_unlock(&kgsl_driver.process_mutex);
 
 	kgsl_mmu_putpagetable(private->pagetable);
-	idr_destroy(&private->mem_idr);
+	idmx_destroy(&private->mem_idmx);
 
 	kfree(private);
 	return;
@@ -1020,7 +1020,7 @@ kgsl_get_process_private(struct kgsl_device *device)
 		goto done;
 
 	private->mem_rb = RB_ROOT;
-	idr_init(&private->mem_idr);
+	idmx_init(&private->mem_idmx);
 
 	if ((!private->pagetable) && kgsl_mmu_enabled()) {
 		unsigned long pt_name;
@@ -1068,7 +1068,7 @@ static int kgsl_release(struct inode *inodep, struct file *filep)
 
 	while (1) {
 		read_lock(&device->context_lock);
-		context = idr_get_next(&device->context_idr, &next);
+		context = idmx_get_next(&device->context_idmx, &next);
 		read_unlock(&device->context_lock);
 
 		if (context == NULL)
@@ -1082,7 +1082,7 @@ static int kgsl_release(struct inode *inodep, struct file *filep)
 	next = 0;
 	while (1) {
 		spin_lock(&private->mem_lock);
-		entry = idr_get_next(&private->mem_idr, &next);
+		entry = idmx_get_next(&private->mem_idmx, &next);
 		spin_unlock(&private->mem_lock);
 		if (entry == NULL)
 			break;
@@ -1364,7 +1364,7 @@ kgsl_sharedmem_find_id(struct kgsl_process_private *process, unsigned int id)
 	struct kgsl_mem_entry *entry;
 
 	rcu_read_lock();
-	entry = idr_find(&process->mem_idr, id);
+	entry = idmx_find(&process->mem_idmx, id);
 	if (entry)
 		result = kgsl_mem_entry_get(entry);
 	rcu_read_unlock();
@@ -3575,7 +3575,7 @@ void kgsl_device_platform_remove(struct kgsl_device *device)
 
 	pm_qos_remove_request(&device->pwrctrl.pm_qos_req_dma);
 
-	idr_destroy(&device->context_idr);
+	idmx_destroy(&device->context_idmx);
 
 	kgsl_sharedmem_free(&device->memstore);
 

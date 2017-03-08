@@ -15,7 +15,7 @@
 #include <linux/sysfs.h>
 #include <linux/utsname.h>
 #include <linux/sched.h>
-#include <linux/idr.h>
+#include <linux/idmx.h>
 
 #include "kgsl.h"
 #include "kgsl_log.h"
@@ -85,7 +85,7 @@ done:
 	return size;
 }
 
-/* idr_for_each function to count the number of contexts */
+/* idmx_for_each function to count the number of contexts */
 
 static int snapshot_context_count(int id, void *ptr, void *data)
 {
@@ -145,7 +145,7 @@ static int snapshot_os(struct kgsl_device *device,
 	 * be appended on the end of the structure */
 
 	read_lock(&device->context_lock);
-	idr_for_each(&device->context_idr, snapshot_context_count, &ctxtcount);
+	idmx_for_each(&device->context_idmx, snapshot_context_count, &ctxtcount);
 	read_unlock(&device->context_lock);
 
 	/* Increment ctxcount for the global memstore */
@@ -204,7 +204,7 @@ static int snapshot_os(struct kgsl_device *device,
 	/* append information for each context */
 
 	read_lock(&device->context_lock);
-	idr_for_each(&device->context_idr, snapshot_context_info, NULL);
+	idmx_for_each(&device->context_idmx, snapshot_context_info, NULL);
 	read_unlock(&device->context_lock);
 
 	/* Return the size of the data segment */

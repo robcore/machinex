@@ -13,7 +13,7 @@
 #ifndef __KGSL_DEVICE_H
 #define __KGSL_DEVICE_H
 
-#include <linux/idr.h>
+#include <linux/idmx.h>
 #include <linux/pm_qos.h>
 #include <linux/powersuspend.h>
 
@@ -204,7 +204,7 @@ struct kgsl_device {
 	struct device *parentdev;
 	struct completion ft_gate;
 	struct dentry *d_debugfs;
-	struct idr context_idr;
+	struct idmx context_idmx;
 	struct power_suspend display_off;
 	rwlock_t context_lock;
 
@@ -258,7 +258,7 @@ void kgsl_check_fences(struct work_struct *work);
 			kgsl_hang_check),\
 	.ts_expired_ws  = __WORK_INITIALIZER((_dev).ts_expired_ws,\
 			kgsl_process_events),\
-	.context_idr = IDR_INIT((_dev).context_idr),\
+	.context_idmx = IDR_INIT((_dev).context_idmx),\
 	.events = LIST_HEAD_INIT((_dev).events),\
 	.events_pending_list = LIST_HEAD_INIT((_dev).events_pending_list), \
 	.wait_queue = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).wait_queue),\
@@ -304,7 +304,7 @@ struct kgsl_context {
  * @refcount: kref object for reference counting the process
  * @process_private_mutex: Mutex to synchronize access to the process struct
  * @mem_rb: RB tree node for the memory owned by this process
- * @idr: Iterator for assigning IDs to memory allocations
+ * @idmx: Iterator for assigning IDs to memory allocations
  * @pagetable: Pointer to the pagetable owned by this process
  * @kobj: Pointer to a kobj for the sysfs directory for this process
  * @debug_root: Pointer to the debugfs root for this process
@@ -321,7 +321,7 @@ struct kgsl_process_private {
 	struct mutex process_private_mutex;
 
 	struct rb_root mem_rb;
-	struct idr mem_idr;
+	struct idmx mem_idmx;
 	struct kgsl_pagetable *pagetable;
 	struct list_head list;
 	struct kobject kobj;
@@ -519,7 +519,7 @@ static inline struct kgsl_context *kgsl_context_get(struct kgsl_device *device,
 
 	read_lock(&device->context_lock);
 
-	context = idr_find(&device->context_idr, id);
+	context = idmx_find(&device->context_idmx, id);
 
 	result = _kgsl_context_get(context);
 
