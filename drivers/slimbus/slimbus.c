@@ -39,7 +39,7 @@
 #define SLIM_MAX_INTR_COEFF_1	SLIM_SL_PER_SUPERFRAME
 
 static DEFINE_MUTEX(slim_lock);
-static DEFINE_IDR(ctrl_idmx);
+static DEFINE_IDMX(ctrl_idmx);
 static struct device_type slim_dev_type;
 static struct device_type slim_ctrl_type;
 
@@ -561,7 +561,7 @@ int slim_add_numbered_controller(struct slim_controller *ctrl)
 	int	id;
 	int	status;
 
-	if (ctrl->nr & ~MAX_IDR_MASK)
+	if (ctrl->nr & ~MAX_IDMX_MASK)
 		return -EINVAL;
 
 retry:
