@@ -101,20 +101,6 @@ static void __init rcu_bootup_announce_oddness(void)
 	if (nr_cpu_ids != NR_CPUS)
 		pr_info("\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%d.\n", NR_CPUS, nr_cpu_ids);
 #ifdef CONFIG_RCU_NOCB_CPU
-#ifndef CONFIG_RCU_NOCB_CPU_NONE
-	if (!have_rcu_nocb_mask) {
-		zalloc_cpumask_var(&rcu_nocb_mask, GFP_KERNEL);
-		have_rcu_nocb_mask = true;
-	}
-#ifdef CONFIG_RCU_NOCB_CPU_ZERO
-	pr_info("\tExperimental no-CBs CPU 0\n");
-	cpumask_set_cpu(0, rcu_nocb_mask);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ZERO */
-#ifdef CONFIG_RCU_NOCB_CPU_ALL
-	pr_info("\tExperimental no-CBs for all CPUs\n");
-	cpumask_setall(rcu_nocb_mask);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ALL */
-#endif /* #ifndef CONFIG_RCU_NOCB_CPU_NONE */
 	if (have_rcu_nocb_mask) {
 		cpulist_scnprintf(nocb_buf, sizeof(nocb_buf), rcu_nocb_mask);
 		pr_info("\ttOffload RCU callbacks from CPUs: %s.\n", nocb_buf);
@@ -127,7 +113,7 @@ static void __init rcu_bootup_announce_oddness(void)
 #ifdef CONFIG_TREE_PREEMPT_RCU
 
 struct rcu_state rcu_preempt_state =
-	RCU_STATE_INITIALIZER(rcu_preempt, 'p', call_rcu);
+	RCU_STATE_INITIALIZER(rcu_preempt, call_rcu);
 DEFINE_PER_CPU(struct rcu_data, rcu_preempt_data);
 static struct rcu_state *rcu_state = &rcu_preempt_state;
 
@@ -138,7 +124,7 @@ static int rcu_preempted_readers_exp(struct rcu_node *rnp);
  */
 static void __init rcu_bootup_announce(void)
 {
-	pr_info("Preemptible hierarchical RCU implementation.\n");
+	printk(KERN_INFO "Preemptible hierarchical RCU implementation.\n");
 	rcu_bootup_announce_oddness();
 }
 
@@ -505,13 +491,13 @@ static void rcu_print_detail_task_stall(struct rcu_state *rsp)
 
 static void rcu_print_task_stall_begin(struct rcu_node *rnp)
 {
-	pr_err("\tTasks blocked on level-%d rcu_node (CPUs %d-%d):",
+	printk(KERN_ERR "\tTasks blocked on level-%d rcu_node (CPUs %d-%d):",
 	       rnp->level, rnp->grplo, rnp->grphi);
 }
 
 static void rcu_print_task_stall_end(void)
 {
-	pr_cont("\n");
+	printk(KERN_CONT "\n");
 }
 
 #else /* #ifdef CONFIG_RCU_CPU_STALL_INFO */
@@ -541,7 +527,7 @@ static int rcu_print_task_stall(struct rcu_node *rnp)
 	t = list_entry(rnp->gp_tasks,
 		       struct task_struct, rcu_node_entry);
 	list_for_each_entry_continue(t, &rnp->blkd_tasks, rcu_node_entry) {
-		pr_cont(" P%d", t->pid);
+		printk(KERN_CONT " P%d", t->pid);
 		ndetected++;
 	}
 	rcu_print_task_stall_end();
@@ -976,7 +962,7 @@ static struct rcu_state *rcu_state = &rcu_sched_state;
  */
 static void __init rcu_bootup_announce(void)
 {
-	pr_info("Hierarchical RCU implementation.\n");
+	printk(KERN_INFO "Hierarchical RCU implementation.\n");
 	rcu_bootup_announce_oddness();
 }
 
@@ -2008,7 +1994,7 @@ static void print_cpu_stall_fast_no_hz(char *cp, int cpu)
 /* Initiate the stall-info list. */
 static void print_cpu_stall_info_begin(void)
 {
-	pr_cont("\n");
+	printk(KERN_CONT "\n");
 }
 
 /*
@@ -2039,7 +2025,7 @@ static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
 		ticks_value = rsp->gpnum - rdp->gpnum;
 	}
 	print_cpu_stall_fast_no_hz(fast_no_hz, cpu);
-	pr_err("\t%d: (%lu %s) idle=%03x/%llx/%d softirq=%u/%u %s\n",
+	printk(KERN_ERR "\t%d: (%lu %s) idle=%03x/%llx/%d softirq=%u/%u %s\n",
 	       cpu, ticks_value, ticks_title,
 	       atomic_read(&rdtp->dynticks) & 0xfff,
 	       rdtp->dynticks_nesting, rdtp->dynticks_nmi_nesting,
@@ -2050,7 +2036,7 @@ static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
 /* Terminate the stall-info list. */
 static void print_cpu_stall_info_end(void)
 {
-	pr_err("\t");
+	printk(KERN_ERR "\t");
 }
 
 /* Zero ->ticks_this_gp for all flavors of RCU. */
@@ -2073,17 +2059,17 @@ static void increment_cpu_stall_ticks(void)
 
 static void print_cpu_stall_info_begin(void)
 {
-	pr_cont(" {");
+	printk(KERN_CONT " {");
 }
 
 static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
 {
-	pr_cont(" %d", cpu);
+	printk(KERN_CONT " %d", cpu);
 }
 
 static void print_cpu_stall_info_end(void)
 {
-	pr_cont("} ");
+	printk(KERN_CONT "} ");
 }
 
 static void zero_cpu_stall_ticks(struct rcu_data *rdp)
@@ -2137,44 +2123,11 @@ static int __init parse_rcu_nocb_poll(char *arg)
 early_param("rcu_nocb_poll", parse_rcu_nocb_poll);
 
 /*
- * Do any no-CBs CPUs need another grace period?
- *
- * Interrupts must be disabled.  If the caller does not hold the root
- * rnp_node structure's ->lock, the results are advisory only.
+ * Does this CPU needs a grace period due to offloaded callbacks?
  */
-static int rcu_nocb_needs_gp(struct rcu_state *rsp)
+static int rcu_nocb_needs_gp(struct rcu_data *rdp)
 {
-	struct rcu_node *rnp = rcu_get_root(rsp);
-
-	return rnp->need_future_gp[(ACCESS_ONCE(rnp->completed) + 1) & 0x1];
-}
-
-/*
- * Wake up any no-CBs CPUs' kthreads that were waiting on the just-ended
- * grace period.
- */
-static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
-{
-	wake_up_all(&rnp->nocb_gp_wq[rnp->completed & 0x1]);
-}
-
-/*
- * Set the root rcu_node structure's ->need_future_gp field
- * based on the sum of those of all rcu_node structures.  This does
- * double-count the root rcu_node structure's requests, but this
- * is necessary to handle the possibility of a rcu_nocb_kthread()
- * having awakened during the time that the rcu_node structures
- * were being updated for the end of the previous grace period.
- */
-static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
-{
-	rnp->need_future_gp[(rnp->completed + 1) & 0x1] += nrq;
-}
-
-static void rcu_init_one_nocb(struct rcu_node *rnp)
-{
-	init_waitqueue_head(&rnp->nocb_gp_wq[0]);
-	init_waitqueue_head(&rnp->nocb_gp_wq[1]);
+	return rdp->nocb_needs_gp;
 }
 
 /* Is the specified CPU a no-CPUs CPU? */
@@ -2239,13 +2192,6 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 	if (!rcu_is_nocb_cpu(rdp->cpu))
 		return 0;
 	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy);
-	if (__is_kfree_rcu_offset((unsigned long)rhp->func))
-		trace_rcu_kfree_callback(rdp->rsp->name, rhp,
-					 (unsigned long)rhp->func,
-					 rdp->qlen_lazy, rdp->qlen);
-	else
-		trace_rcu_callback(rdp->rsp->name, rhp,
-				   rdp->qlen_lazy, rdp->qlen);
 	return 1;
 }
 
@@ -2290,29 +2236,32 @@ static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 {
 	unsigned long c;
-	bool d;
 	unsigned long flags;
+	unsigned long j;
 	struct rcu_node *rnp = rdp->mynode;
 
 	raw_spin_lock_irqsave(&rnp->lock, flags);
-	c = rcu_start_future_gp(rnp, rdp);
+	c = rnp->completed + 2;
+	rdp->nocb_needs_gp = true;
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 
 	/*
 	 * Wait for the grace period.  Do so interruptibly to avoid messing
 	 * up the load average.
 	 */
-	trace_rcu_future_gp(rnp, rdp, c, "StartWait");
 	for (;;) {
-		wait_event_interruptible(
-			rnp->nocb_gp_wq[c & 0x1],
-			(d = ULONG_CMP_GE(ACCESS_ONCE(rnp->completed), c)));
-		if (likely(d))
+		j = jiffies;
+		schedule_timeout_interruptible(2);
+		raw_spin_lock_irqsave(&rnp->lock, flags);
+		if (ULONG_CMP_GE(rnp->completed, c)) {
+			rdp->nocb_needs_gp = false;
+			raw_spin_unlock_irqrestore(&rnp->lock, flags);
 			break;
-		flush_signals(current);
-		trace_rcu_future_gp(rnp, rdp, c, "ResumeWait");
+		}
+		if (j == jiffies)
+			flush_signals(current);
+		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	}
-	trace_rcu_future_gp(rnp, rdp, c, "EndWait");
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
 }
 
@@ -2488,8 +2437,7 @@ static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 		return;
 	for_each_cpu(cpu, rcu_nocb_mask) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
-		t = kthread_run(rcu_nocb_kthread, rdp,
-				"rcuo%c/%d", rsp->abbr, cpu);
+		t = kthread_run(rcu_nocb_kthread, rdp, "rcuo%d", cpu);
 		BUG_ON(IS_ERR(t));
 		ACCESS_ONCE(rdp->nocb_kthread) = t;
 	}
@@ -2507,23 +2455,10 @@ static bool init_nocb_callback_list(struct rcu_data *rdp)
 
 #else /* #ifdef CONFIG_RCU_NOCB_CPU */
 
-static int rcu_nocb_needs_gp(struct rcu_state *rsp)
+static int rcu_nocb_needs_gp(struct rcu_data *rdp)
 {
 	return 0;
 }
-
-static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
-{
-}
-
-tatic void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
-{
-}
-
-static void rcu_init_one_nocb(struct rcu_node *rnp)
-{
-}
-
 
 static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 			    bool lazy)

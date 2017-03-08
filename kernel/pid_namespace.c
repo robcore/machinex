@@ -178,7 +178,6 @@ void zap_pid_ns_processes(struct pid_namespace *pid_ns)
 	int nr;
 	int rc;
 	struct task_struct *task, *me = current;
-	int init_pids = thread_group_leader(me) ? 1 : 2;
 
 	/* Ignore SIGCHLD causing any terminated children to autoreap */
 	spin_lock_irq(&me->sighand->siglock);
