@@ -40,7 +40,7 @@
 #include <linux/genhd.h>
 #include <linux/hdreg.h>
 #include <linux/errno.h>
-#include <linux/idr.h>
+#include <linux/idmx.h>
 #include <linux/interrupt.h>
 #include <linux/init.h>
 #include <linux/blkdev.h>

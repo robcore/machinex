@@ -44,7 +44,7 @@ static int sg_version_num = 30534;	/* 2 digits for each component */
 #include <linux/poll.h>
 #include <linux/moduleparam.h>
 #include <linux/cdev.h>
-#include <linux/idr.h>
+#include <linux/idmx.h>
 #include <linux/seq_file.h>
 #include <linux/blkdev.h>
 #include <linux/delay.h>
@@ -106,7 +106,7 @@ static void sg_remove(struct device *, struct class_interface *);
 
 static DEFINE_MUTEX(sg_mutex);
 
-static DEFINE_IDR(sg_index_idr);
+static DEFINE_IDMX(sg_index_idmx);
 static DEFINE_RWLOCK(sg_index_lock);	/* Also used to lock
 							   file descriptor list for device */
 
@@ -1380,18 +1380,18 @@ static Sg_device *sg_alloc(struct gendisk *disk, struct scsi_device *scsidp)
 		return ERR_PTR(-ENOMEM);
 	}
 
-	if (!idr_pre_get(&sg_index_idr, GFP_KERNEL)) {
-		printk(KERN_WARNING "idr expansion Sg_device failure\n");
+	if (!idmx_pre_get(&sg_index_idmx, GFP_KERNEL)) {
+		printk(KERN_WARNING "idmx expansion Sg_device failure\n");
 		error = -ENOMEM;
 		goto out;
 	}
 
 	write_lock_irqsave(&sg_index_lock, iflags);
 
-	error = idr_get_new(&sg_index_idr, sdp, &k);
+	error = idmx_get_new(&sg_index_idmx, sdp, &k);
 	if (error) {
 		write_unlock_irqrestore(&sg_index_lock, iflags);
-		printk(KERN_WARNING "idr allocation Sg_device failure: %d\n",
+		printk(KERN_WARNING "idmx allocation Sg_device failure: %d\n",
 		       error);
 		goto out;
 	}
@@ -1421,7 +1421,7 @@ static Sg_device *sg_alloc(struct gendisk *disk, struct scsi_device *scsidp)
 	return sdp;
 
  overflow:
-	idr_remove(&sg_index_idr, k);
+	idmx_remove(&sg_index_idmx, k);
 	write_unlock_irqrestore(&sg_index_lock, iflags);
 	sdev_printk(KERN_WARNING, scsidp,
 		    "Unable to attach sg device type=%d, minor "
@@ -1499,7 +1499,7 @@ sg_add(struct device *cl_dev, struct class_interface *cl_intf)
 
 cdev_add_err:
 	write_lock_irqsave(&sg_index_lock, iflags);
-	idr_remove(&sg_index_idr, sdp->index);
+	idmx_remove(&sg_index_idmx, sdp->index);
 	write_unlock_irqrestore(&sg_index_lock, iflags);
 	kfree(sdp);
 
@@ -1515,13 +1515,13 @@ static void sg_device_destroy(struct kref *kref)
 	struct sg_device *sdp = container_of(kref, struct sg_device, d_ref);
 	unsigned long flags;
 
-	/* CAUTION!  Note that the device can still be found via idr_find()
-	 * even though the refcount is 0.  Therefore, do idr_remove() BEFORE
+	/* CAUTION!  Note that the device can still be found via idmx_find()
+	 * even though the refcount is 0.  Therefore, do idmx_remove() BEFORE
 	 * any other cleanup.
 	 */
 
 	write_lock_irqsave(&sg_index_lock, flags);
-	idr_remove(&sg_index_idr, sdp->index);
+	idmx_remove(&sg_index_idmx, sdp->index);
 	write_unlock_irqrestore(&sg_index_lock, flags);
 
 	SCSI_LOG_TIMEOUT(3,
@@ -1625,7 +1625,7 @@ exit_sg(void)
 	sg_sysfs_valid = 0;
 	unregister_chrdev_region(MKDEV(SCSI_GENERIC_MAJOR, 0),
 				 SG_MAX_DEVS);
-	idr_destroy(&sg_index_idr);
+	idmx_destroy(&sg_index_idmx);
 }
 
 static int sg_start_req(Sg_request *srp, unsigned char *cmd)
@@ -2155,7 +2155,7 @@ sg_res_in_use(Sg_fd * sfp)
 
 #ifdef CONFIG_SCSI_PROC_FS
 static int
-sg_idr_max_id(int id, void *p, void *data)
+sg_idmx_max_id(int id, void *p, void *data)
 {
 	int *k = data;
 
@@ -2172,7 +2172,7 @@ sg_last_dev(void)
 	unsigned long iflags;
 
 	read_lock_irqsave(&sg_index_lock, iflags);
-	idr_for_each(&sg_index_idr, sg_idr_max_id, &k);
+	idmx_for_each(&sg_index_idmx, sg_idmx_max_id, &k);
 	read_unlock_irqrestore(&sg_index_lock, iflags);
 	return k + 1;		/* origin 1 */
 }
@@ -2181,7 +2181,7 @@ sg_last_dev(void)
 /* must be called with sg_index_lock held */
 static Sg_device *sg_lookup_dev(int dev)
 {
-	return idr_find(&sg_index_idr, dev);
+	return idmx_find(&sg_index_idmx, dev);
 }
 
 static Sg_device *sg_get_dev(int dev)
