@@ -57,6 +57,4 @@ static inline void arch_decomp_setup(void)
 		ux500_uart_base = U8500_UART2_BASE;
 }
 
-#define arch_decomp_wdog() /* nothing to do here */
-
 #endif /* __ASM_ARCH_UNCOMPRESS_H */
