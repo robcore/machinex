@@ -433,13 +433,6 @@ int blk_alloc_devt(struct hd_struct *part, dev_t *devt)
 	if (idx < 0)
 		return idx == -ENOSPC ? -EBUSY : idx;
 
-	if (idx > MAX_EXT_DEVT) {
-		mutex_lock(&ext_devt_mutex);
-		idr_remove(&ext_devt_idr, idx);
-		mutex_unlock(&ext_devt_mutex);
-		return -EBUSY;
-	}
-
 	*devt = MKDEV(BLOCK_EXT_MAJOR, blk_mangle_minor(idx));
 	return 0;
 }

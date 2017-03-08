@@ -55,6 +55,7 @@
 #include <linux/namei.h>
 #include <linux/pid_namespace.h>
 #include <linux/idr.h>
+#include <linux/idmx.h>
 #include <linux/vmalloc.h> /* TODO: replace with more sophisticated array */
 #include <linux/eventfd.h>
 #include <linux/poll.h>
@@ -1402,14 +1403,14 @@ static int cgroup_init_root_id(struct cgroupfs_root *root)
 	lockdep_assert_held(&cgroup_root_mutex);
 
 	do {
-		if (!idr_pre_get(&cgroup_hierarchy_idr, GFP_KERNEL))
+		if (!idmx_pre_get(&cgroup_hierarchy_idr, GFP_KERNEL))
 			return -ENOMEM;
 		/* Try to allocate the next unused ID */
-		ret = idr_get_new_above(&cgroup_hierarchy_idr, root, next_hierarchy_id,
+		ret = idmx_get_new_above(&cgroup_hierarchy_idr, root, next_hierarchy_id,
 					&root->hierarchy_id);
 		if (ret == -ENOSPC)
 			/* Try again starting from 0 */
-			ret = idr_get_new(&cgroup_hierarchy_idr, root, &root->hierarchy_id);
+			ret = idmx_get_new(&cgroup_hierarchy_idr, root, &root->hierarchy_id);
 		if (!ret) {
 			next_hierarchy_id = root->hierarchy_id + 1;
 		} else if (ret != -EAGAIN) {
@@ -1426,7 +1427,7 @@ static void cgroup_exit_root_id(struct cgroupfs_root *root)
 	lockdep_assert_held(&cgroup_root_mutex);
 
 	if (root->hierarchy_id) {
-		idr_remove(&cgroup_hierarchy_idr, root->hierarchy_id);
+		idmx_remove(&cgroup_hierarchy_idr, root->hierarchy_id);
 		root->hierarchy_id = 0;
 	}
 }
@@ -1834,7 +1835,7 @@ int task_cgroup_path_from_hierarchy(struct task_struct *task, int hierarchy_id,
 
 	mutex_lock(&cgroup_mutex);
 
-	root = idr_find(&cgroup_hierarchy_idr, hierarchy_id);
+	root = idmx_find(&cgroup_hierarchy_idr, hierarchy_id);
 	if (root) {
 		cgrp = task_cgroup_from_root(task, root);
 		ret = cgroup_path(cgrp, buf, buflen);
