@@ -276,10 +276,8 @@ void free_pid(struct pid *pid)
 	for (i = 0; i <= pid->level; i++) {
 		struct upid *upid = pid->numbers + i;
 		hlist_del_rcu(&upid->pid_chain);
-		if (--upid->ns->nr_hashed == 0) {
-			upid->ns->nr_hashed = -1;
+		if (--upid->ns->nr_hashed == 0)
 			schedule_work(&upid->ns->proc_work);
-		}
 	}
 	spin_unlock_irqrestore(&pidmap_lock, flags);
 
@@ -325,8 +323,6 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 
 	upid = pid->numbers + ns->level;
 	spin_lock_irq(&pidmap_lock);
-	if (ns->nr_hashed < 0)
-		goto out_unlock;
 	for ( ; upid >= pid->numbers; --upid) {
 		hlist_add_head_rcu(&upid->pid_chain,
 				&pid_hash[pid_hashfn(upid->nr, upid->ns)]);
@@ -337,8 +333,6 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 out:
 	return pid;
 
-out_unlock:
-	spin_unlock(&pidmap_lock);
 out_free:
 	while (++i <= ns->level)
 		free_pidmap(pid->numbers + i);
