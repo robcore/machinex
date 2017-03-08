@@ -7527,6 +7527,7 @@ void __might_sleep(const char *file, int line, int preempt_offset)
 	if (irqs_disabled())
 		print_irqtrace_events(current);
 	dump_stack();
+	add_taint(TAINT_WARN);
 }
 EXPORT_SYMBOL(__might_sleep);
 #endif
