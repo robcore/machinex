@@ -1651,14 +1651,19 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	lockdep_assert_held(&pool->manager_mutex);
 
+	/*
+	 * ID is needed to determine kthread name.  Allocate ID first
+	 * without installing the pointer.
+	 */
+	idr_preload(GFP_KERNEL);
+
 	spin_lock_irq(&pool->lock);
-	while (idr_get_new_above(&pool->worker_idr, worker, 0, &id)) {
-		spin_unlock_irq(&pool->lock);
-		if (!idr_pre_get(&pool->worker_idr, GFP_KERNEL))
-			goto fail;
-		spin_lock_irq(&pool->lock);
-	}
+	id = idr_alloc(&pool->worker_idr, NULL, 0, 0, GFP_NOWAIT);
 	spin_unlock_irq(&pool->lock);
+
+	idr_preload_end();
+	if (id < 0)
+		goto fail;
 
 	worker = alloc_worker();
 	if (!worker)
