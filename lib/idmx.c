@@ -37,7 +37,7 @@
 #include <linux/spinlock.h>
 
 static struct kmem_cache *idmx_layer_cache;
-static DEFINE_SPINLOCK(simple_ida_lock);
+static DEFINE_SPINLOCK(simple_idamx_lock);
 
 static struct idmx_layer *get_from_free_list(struct idmx *idp)
 {
@@ -710,36 +710,36 @@ EXPORT_SYMBOL(idmx_init);
 
 
 /**
- * DOC: IDA description
- * IDA - IDMX based ID allocator
+ * DOC: IDAMX description
+ * IDAMX - IDMX based ID allocator
  *
  * This is id allocator without id -> pointer translation.  Memory
  * usage is much lower than full blown idmx because each id only
- * occupies a bit.  ida uses a custom leaf node which contains
- * IDA_BITMAP_BITS slots.
+ * occupies a bit.  idamx uses a custom leaf node which contains
+ * IDAMX_BITMAP_BITS slots.
  *
  * 2007-04-25  written by Tejun Heo <htejun@gmail.com>
  */
 
-static void free_bitmap(struct ida *ida, struct ida_bitmap *bitmap)
+static void free_bitmap(struct idamx *idamx, struct idamx_bitmap *bitmap)
 {
 	unsigned long flags;
 
-	if (!ida->free_bitmap) {
-		spin_lock_irqsave(&ida->idmx.lock, flags);
-		if (!ida->free_bitmap) {
-			ida->free_bitmap = bitmap;
+	if (!idamx->free_bitmap) {
+		spin_lock_irqsave(&idamx->idmx.lock, flags);
+		if (!idamx->free_bitmap) {
+			idamx->free_bitmap = bitmap;
 			bitmap = NULL;
 		}
-		spin_unlock_irqrestore(&ida->idmx.lock, flags);
+		spin_unlock_irqrestore(&idamx->idmx.lock, flags);
 	}
 
 	kfree(bitmap);
 }
 
 /**
- * ida_pre_get - reserve resources for ida allocation
- * @ida:	ida handle
+ * idamx_pre_get - reserve resources for idamx allocation
+ * @idamx:	idamx handle
  * @gfp_mask:	memory allocation flag
  *
  * This function should be called prior to locking and calling the
@@ -749,30 +749,30 @@ static void free_bitmap(struct ida *ida, struct ida_bitmap *bitmap)
  * If the system is REALLY out of memory this function returns %0,
  * otherwise %1.
  */
-int ida_pre_get(struct ida *ida, gfp_t gfp_mask)
+int idamx_pre_get(struct idamx *idamx, gfp_t gfp_mask)
 {
 	/* allocate idmx_layers */
-	if (!idmx_pre_get(&ida->idmx, gfp_mask))
+	if (!idmx_pre_get(&idamx->idmx, gfp_mask))
 		return 0;
 
 	/* allocate free_bitmap */
-	if (!ida->free_bitmap) {
-		struct ida_bitmap *bitmap;
+	if (!idamx->free_bitmap) {
+		struct idamx_bitmap *bitmap;
 
-		bitmap = kmalloc(sizeof(struct ida_bitmap), gfp_mask);
+		bitmap = kmalloc(sizeof(struct idamx_bitmap), gfp_mask);
 		if (!bitmap)
 			return 0;
 
-		free_bitmap(ida, bitmap);
+		free_bitmap(idamx, bitmap);
 	}
 
 	return 1;
 }
-EXPORT_SYMBOL(ida_pre_get);
+EXPORT_SYMBOL(idamx_pre_get);
 
 /**
- * ida_get_new_above - allocate new ID above or equal to a start id
- * @ida:	ida handle
+ * idamx_get_new_above - allocate new ID above or equal to a start id
+ * @idamx:	idamx handle
  * @starting_id: id to start search at
  * @p_id:	pointer to the allocated handle
  *
@@ -780,27 +780,27 @@ EXPORT_SYMBOL(ida_pre_get);
  * with any required locks.
  *
  * If memory is required, it will return %-EAGAIN, you should unlock
- * and go back to the ida_pre_get() call.  If the ida is full, it will
+ * and go back to the idamx_pre_get() call.  If the idamx is full, it will
  * return %-ENOSPC.
  *
  * @p_id returns a value in the range @starting_id ... %0x7fffffff.
  */
-int ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
+int idamx_get_new_above(struct idamx *idamx, int starting_id, int *p_id)
 {
 	struct idmx_layer *pa[MAX_IDMX_LEVEL];
-	struct ida_bitmap *bitmap;
+	struct idamx_bitmap *bitmap;
 	unsigned long flags;
-	int idmx_id = starting_id / IDA_BITMAP_BITS;
-	int offset = starting_id % IDA_BITMAP_BITS;
+	int idmx_id = starting_id / IDAMX_BITMAP_BITS;
+	int offset = starting_id % IDAMX_BITMAP_BITS;
 	int t, id;
 
  restart:
 	/* get vacant slot */
-	t = idmx_get_empty_slot(&ida->idmx, idmx_id, pa);
+	t = idmx_get_empty_slot(&idamx->idmx, idmx_id, pa);
 	if (t < 0)
 		return _idmx_rc_to_errno(t);
 
-	if (t * IDA_BITMAP_BITS >= MAX_IDMX_BIT)
+	if (t * IDAMX_BITMAP_BITS >= MAX_IDMX_BIT)
 		return -ENOSPC;
 
 	if (t != idmx_id)
@@ -810,57 +810,57 @@ int ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
 	/* if bitmap isn't there, create a new one */
 	bitmap = (void *)pa[0]->ary[idmx_id & IDMX_MASK];
 	if (!bitmap) {
-		spin_lock_irqsave(&ida->idmx.lock, flags);
-		bitmap = ida->free_bitmap;
-		ida->free_bitmap = NULL;
-		spin_unlock_irqrestore(&ida->idmx.lock, flags);
+		spin_lock_irqsave(&idamx->idmx.lock, flags);
+		bitmap = idamx->free_bitmap;
+		idamx->free_bitmap = NULL;
+		spin_unlock_irqrestore(&idamx->idmx.lock, flags);
 
 		if (!bitmap)
 			return -EAGAIN;
 
-		memset(bitmap, 0, sizeof(struct ida_bitmap));
+		memset(bitmap, 0, sizeof(struct idamx_bitmap));
 		rcu_assign_pointer(pa[0]->ary[idmx_id & IDMX_MASK],
 				(void *)bitmap);
 		pa[0]->count++;
 	}
 
 	/* lookup for empty slot */
-	t = find_next_zero_bit(bitmap->bitmap, IDA_BITMAP_BITS, offset);
-	if (t == IDA_BITMAP_BITS) {
+	t = find_next_zero_bit(bitmap->bitmap, IDAMX_BITMAP_BITS, offset);
+	if (t == IDAMX_BITMAP_BITS) {
 		/* no empty slot after offset, continue to the next chunk */
 		idmx_id++;
 		offset = 0;
 		goto restart;
 	}
 
-	id = idmx_id * IDA_BITMAP_BITS + t;
+	id = idmx_id * IDAMX_BITMAP_BITS + t;
 	if (id >= MAX_IDMX_BIT)
 		return -ENOSPC;
 
 	__set_bit(t, bitmap->bitmap);
-	if (++bitmap->nr_busy == IDA_BITMAP_BITS)
+	if (++bitmap->nr_busy == IDAMX_BITMAP_BITS)
 		idmx_mark_full(pa, idmx_id);
 
 	*p_id = id;
 
 	/* Each leaf node can handle nearly a thousand slots and the
-	 * whole idea of ida is to have small memory foot print.
+	 * whole idea of idamx is to have small memory foot print.
 	 * Throw away extra resources one by one after each successful
 	 * allocation.
 	 */
-	if (ida->idmx.id_free_cnt || ida->free_bitmap) {
-		struct idmx_layer *p = get_from_free_list(&ida->idmx);
+	if (idamx->idmx.id_free_cnt || idamx->free_bitmap) {
+		struct idmx_layer *p = get_from_free_list(&idamx->idmx);
 		if (p)
 			kmem_cache_free(idmx_layer_cache, p);
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(ida_get_new_above);
+EXPORT_SYMBOL(idamx_get_new_above);
 
 /**
- * ida_get_new - allocate new ID
- * @ida:	idmx handle
+ * idamx_get_new - allocate new ID
+ * @idamx:	idmx handle
  * @p_id:	pointer to the allocated handle
  *
  * Allocate new ID.  It should be called with any required locks.
@@ -871,25 +871,25 @@ EXPORT_SYMBOL(ida_get_new_above);
  *
  * @p_id returns a value in the range %0 ... %0x7fffffff.
  */
-int ida_get_new(struct ida *ida, int *p_id)
+int idamx_get_new(struct idamx *idamx, int *p_id)
 {
-	return ida_get_new_above(ida, 0, p_id);
+	return idamx_get_new_above(idamx, 0, p_id);
 }
-EXPORT_SYMBOL(ida_get_new);
+EXPORT_SYMBOL(idamx_get_new);
 
 /**
- * ida_remove - remove the given ID
- * @ida:	ida handle
+ * idamx_remove - remove the given ID
+ * @idamx:	idamx handle
  * @id:		ID to free
  */
-void ida_remove(struct ida *ida, int id)
+void idamx_remove(struct idamx *idamx, int id)
 {
-	struct idmx_layer *p = ida->idmx.top;
-	int shift = (ida->idmx.layers - 1) * IDMX_BITS;
-	int idmx_id = id / IDA_BITMAP_BITS;
-	int offset = id % IDA_BITMAP_BITS;
+	struct idmx_layer *p = idamx->idmx.top;
+	int shift = (idamx->idmx.layers - 1) * IDMX_BITS;
+	int idmx_id = id / IDAMX_BITMAP_BITS;
+	int offset = id % IDAMX_BITMAP_BITS;
 	int n;
-	struct ida_bitmap *bitmap;
+	struct idamx_bitmap *bitmap;
 
 	/* clear full bits while looking up the leaf idmx_layer */
 	while ((shift > 0) && p) {
@@ -913,32 +913,32 @@ void ida_remove(struct ida *ida, int id)
 	__clear_bit(offset, bitmap->bitmap);
 	if (--bitmap->nr_busy == 0) {
 		__set_bit(n, &p->bitmap);	/* to please idmx_remove() */
-		idmx_remove(&ida->idmx, idmx_id);
-		free_bitmap(ida, bitmap);
+		idmx_remove(&idamx->idmx, idmx_id);
+		free_bitmap(idamx, bitmap);
 	}
 
 	return;
 
  err:
 	printk(KERN_WARNING
-	       "ida_remove called for id=%d which is not allocated.\n", id);
+	       "idamx_remove called for id=%d which is not allocated.\n", id);
 }
-EXPORT_SYMBOL(ida_remove);
+EXPORT_SYMBOL(idamx_remove);
 
 /**
- * ida_destroy - release all cached layers within an ida tree
- * @ida:		ida handle
+ * idamx_destroy - release all cached layers within an idamx tree
+ * @idamx:		idamx handle
  */
-void ida_destroy(struct ida *ida)
+void idamx_destroy(struct idamx *idamx)
 {
-	idmx_destroy(&ida->idmx);
-	kfree(ida->free_bitmap);
+	idmx_destroy(&idamx->idmx);
+	kfree(idamx->free_bitmap);
 }
-EXPORT_SYMBOL(ida_destroy);
+EXPORT_SYMBOL(idamx_destroy);
 
 /**
- * ida_simple_get - get a new id.
- * @ida: the (initialized) ida.
+ * idamx_simple_get - get a new id.
+ * @idamx: the (initialized) idamx.
  * @start: the minimum id (inclusive, < 0x8000000)
  * @end: the maximum id (exclusive, < 0x8000000 or 0)
  * @gfp_mask: memory allocation flags
@@ -946,9 +946,9 @@ EXPORT_SYMBOL(ida_destroy);
  * Allocates an id in the range start <= id < end, or returns -ENOSPC.
  * On memory allocation failure, returns -ENOMEM.
  *
- * Use ida_simple_remove() to get rid of an id.
+ * Use idamx_simple_remove() to get rid of an id.
  */
-int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
+int idamx_simple_get(struct idamx *idamx, unsigned int start, unsigned int end,
 		   gfp_t gfp_mask)
 {
 	int ret, id;
@@ -966,56 +966,56 @@ int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
 	}
 
 again:
-	if (!ida_pre_get(ida, gfp_mask))
+	if (!idamx_pre_get(idamx, gfp_mask))
 		return -ENOMEM;
 
-	spin_lock_irqsave(&simple_ida_lock, flags);
-	ret = ida_get_new_above(ida, start, &id);
+	spin_lock_irqsave(&simple_idamx_lock, flags);
+	ret = idamx_get_new_above(idamx, start, &id);
 	if (!ret) {
 		if (id > max) {
-			ida_remove(ida, id);
+			idamx_remove(idamx, id);
 			ret = -ENOSPC;
 		} else {
 			ret = id;
 		}
 	}
-	spin_unlock_irqrestore(&simple_ida_lock, flags);
+	spin_unlock_irqrestore(&simple_idamx_lock, flags);
 
 	if (unlikely(ret == -EAGAIN))
 		goto again;
 
 	return ret;
 }
-EXPORT_SYMBOL(ida_simple_get);
+EXPORT_SYMBOL(idamx_simple_get);
 
 /**
- * ida_simple_remove - remove an allocated id.
- * @ida: the (initialized) ida.
- * @id: the id returned by ida_simple_get.
+ * idamx_simple_remove - remove an allocated id.
+ * @idamx: the (initialized) idamx.
+ * @id: the id returned by idamx_simple_get.
  */
-void ida_simple_remove(struct ida *ida, unsigned int id)
+void idamx_simple_remove(struct idamx *idamx, unsigned int id)
 {
 	unsigned long flags;
 
 	BUG_ON((int)id < 0);
-	spin_lock_irqsave(&simple_ida_lock, flags);
-	ida_remove(ida, id);
-	spin_unlock_irqrestore(&simple_ida_lock, flags);
+	spin_lock_irqsave(&simple_idamx_lock, flags);
+	idamx_remove(idamx, id);
+	spin_unlock_irqrestore(&simple_idamx_lock, flags);
 }
-EXPORT_SYMBOL(ida_simple_remove);
+EXPORT_SYMBOL(idamx_simple_remove);
 
 /**
- * ida_init - initialize ida handle
- * @ida:	ida handle
+ * idamx_init - initialize idamx handle
+ * @idamx:	idamx handle
  *
- * This function is use to set up the handle (@ida) that you will pass
+ * This function is use to set up the handle (@idamx) that you will pass
  * to the rest of the functions.
  */
-void ida_init(struct ida *ida)
+void idamx_init(struct idamx *idamx)
 {
-	memset(ida, 0, sizeof(struct ida));
-	idmx_init(&ida->idmx);
+	memset(idamx, 0, sizeof(struct idamx));
+	idmx_init(&idamx->idmx);
 
 }
-EXPORT_SYMBOL(ida_init);
+EXPORT_SYMBOL(idamx_init);
 

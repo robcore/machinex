@@ -154,39 +154,39 @@ static inline void idmx_preload_end(void)
 }
 
 /*
- * IDA - IDMX based id allocator, use when translation from id to
+ * IDAMX - IDMX based id allocator, use when translation from id to
  * pointer isn't necessary.
  *
- * IDA_BITMAP_LONGS is calculated to be one less to accommodate
- * ida_bitmap->nr_busy so that the whole struct fits in 128 bytes.
+ * IDAMX_BITMAP_LONGS is calculated to be one less to accommodate
+ * idamx_bitmap->nr_busy so that the whole struct fits in 128 bytes.
  */
-#define IDA_CHUNK_SIZE		128	/* 128 bytes per chunk */
-#define IDA_BITMAP_LONGS	(IDA_CHUNK_SIZE / sizeof(long) - 1)
-#define IDA_BITMAP_BITS 	(IDA_BITMAP_LONGS * sizeof(long) * 8)
+#define IDAMX_CHUNK_SIZE		128	/* 128 bytes per chunk */
+#define IDAMX_BITMAP_LONGS	(IDAMX_CHUNK_SIZE / sizeof(long) - 1)
+#define IDAMX_BITMAP_BITS 	(IDAMX_BITMAP_LONGS * sizeof(long) * 8)
 
-struct ida_bitmap {
+struct idamx_bitmap {
 	long			nr_busy;
-	unsigned long		bitmap[IDA_BITMAP_LONGS];
+	unsigned long		bitmap[IDAMX_BITMAP_LONGS];
 };
 
-struct ida {
+struct idamx {
 	struct idmx		idmx;
-	struct ida_bitmap	*free_bitmap;
+	struct idamx_bitmap	*free_bitmap;
 };
 
-#define IDA_INIT(name)		{ .idmx = IDMX_INIT((name).idmx), .free_bitmap = NULL, }
-#define DEFINE_IDA(name)	struct ida name = IDA_INIT(name)
+#define IDAMX_INIT(name)		{ .idmx = IDMX_INIT((name).idmx), .free_bitmap = NULL, }
+#define DEFINE_IDAMX(name)	struct idamx name = IDAMX_INIT(name)
 
-int ida_pre_get(struct ida *ida, gfp_t gfp_mask);
-int ida_get_new_above(struct ida *ida, int starting_id, int *p_id);
-int ida_get_new(struct ida *ida, int *p_id);
-void ida_remove(struct ida *ida, int id);
-void ida_destroy(struct ida *ida);
-void ida_init(struct ida *ida);
+int idamx_pre_get(struct idamx *idamx, gfp_t gfp_mask);
+int idamx_get_new_above(struct idamx *idamx, int starting_id, int *p_id);
+int idamx_get_new(struct idamx *idamx, int *p_id);
+void idamx_remove(struct idamx *idamx, int id);
+void idamx_destroy(struct idamx *idamx);
+void idamx_init(struct idamx *idamx);
 
-int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
+int idamx_simple_get(struct idamx *idamx, unsigned int start, unsigned int end,
 		   gfp_t gfp_mask);
-void ida_simple_remove(struct ida *ida, unsigned int id);
+void idamx_simple_remove(struct idamx *idamx, unsigned int id);
 
 void __init idmx_init_cache(void);
 
