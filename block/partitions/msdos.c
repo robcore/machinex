@@ -455,19 +455,14 @@ int msdos_partition(struct parsed_partitions *state)
 	data = read_part_sector(state, 0, &sect);
 	if (!data)
 		return -1;
-
-	/*
-	 * Note order! (some AIX disks, e.g. unbootable kind,
-	 * have no MSDOS 55aa)
-	 */
-	if (aix_magic_present(state, data)) {
+	if (!msdos_magic_present(data + 510)) {
 		put_dev_sector(sect);
-		strlcat(state->pp_buf, " [AIX]", PAGE_SIZE);
 		return 0;
 	}
 
-	if (!msdos_magic_present(data + 510)) {
+	if (aix_magic_present(state, data)) {
 		put_dev_sector(sect);
+		strlcat(state->pp_buf, " [AIX]", PAGE_SIZE);
 		return 0;
 	}
 
