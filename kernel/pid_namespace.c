@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/proc_fs.h>
 #include <linux/reboot.h>
+#include <linux/export.h>
 
 struct pid_cache {
 	int nr_ids;
@@ -150,6 +151,7 @@ struct pid_namespace *copy_pid_ns(unsigned long flags,
 		return ERR_PTR(-EINVAL);
 	return create_pid_namespace(user_ns, old_ns);
 }
+EXPORT_SYMBOL_GPL(free_pid_ns);
 
 static void free_pid_ns(struct kref *kref)
 {
