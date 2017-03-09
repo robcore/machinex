@@ -97,8 +97,8 @@ int res_counter_charge_nofail(struct res_counter *counter, unsigned long val,
 }
 
 u64 res_counter_uncharge_until(struct res_counter *counter,
-				struct res_counter *top,
-				unsigned long val)
+			       struct res_counter *top,
+			       unsigned long val)
 {
 	unsigned long flags;
 	struct res_counter *c;
