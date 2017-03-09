@@ -1198,6 +1198,9 @@ static int __init skew_tick(char *str)
 {
 	get_option(&str, &sched_skew_tick);
 
+	cpulist_scnprintf(nohz_ext_buf, sizeof(nohz_ext_buf), nohz_extended_mask);
+	pr_info("NO_HZ: Full dynticks CPUs: %s.\n", nohz_ext_buf);
+
 	return 0;
 }
 early_param("skew_tick", skew_tick);
