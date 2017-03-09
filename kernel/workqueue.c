@@ -4557,7 +4557,10 @@ static int __init init_workqueues(void)
 		struct workqueue_attrs *attrs;
 
 		BUG_ON(!(attrs = alloc_workqueue_attrs(GFP_KERNEL)));
+
 		attrs->nice = std_nice[i];
+		cpumask_setall(attrs->cpumask);
+
 		unbound_std_wq_attrs[i] = attrs;
 	}
 
@@ -4578,6 +4581,11 @@ static int __init init_workqueues(void)
 	       !system_power_efficient_wq ||
 	       !system_freezable_power_efficient_wq);
 	return 0;
+
+enomem:
+	kmem_cache_free(pwq_cache, pwq);
+	free_workqueue_attrs(new_attrs);
+	return -ENOMEM;
 }
 early_initcall(init_workqueues);
 
