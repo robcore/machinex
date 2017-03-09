@@ -2924,7 +2924,6 @@ void dump_stack_print_info(const char *log_lvl)
 		printk("%sHardware name: %s\n",
 		       log_lvl, dump_stack_arch_desc_str);
 
-	print_worker_info(log_lvl, current);
 }
 
 /**
