@@ -50,7 +50,7 @@ static void function_trace_start(struct trace_array *tr)
 
 static void
 function_trace_call_preempt_only(unsigned long ip, unsigned long parent_ip,
-				 struct ftrace_ops *op)
+				 struct ftrace_ops *op, struct pt_regs *pt_regs)
 {
 	struct trace_array *tr = func_trace;
 	struct trace_array_cpu *data;
@@ -86,7 +86,8 @@ static struct tracer_flags func_flags;
 
 static void
 function_trace_call(unsigned long ip, unsigned long parent_ip,
-		    struct ftrace_ops *op)
+		    struct ftrace_ops *op, struct pt_regs *pt_regs)
+
 {
 	struct trace_array *tr = func_trace;
 	struct trace_array_cpu *data;
@@ -124,7 +125,7 @@ function_trace_call(unsigned long ip, unsigned long parent_ip,
 
 static void
 function_stack_trace_call(unsigned long ip, unsigned long parent_ip,
-			  struct ftrace_ops *op)
+			  struct ftrace_ops *op, struct pt_regs *pt_regs)
 {
 	struct trace_array *tr = func_trace;
 	struct trace_array_cpu *data;

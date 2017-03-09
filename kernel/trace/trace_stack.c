@@ -150,7 +150,8 @@ check_stack(unsigned long ip, unsigned long *stack)
 }
 
 static void
-stack_trace_call(unsigned long ip, unsigned long parent_ip, struct ftrace_ops *op)
+stack_trace_call(unsigned long ip, unsigned long parent_ip,
+		 struct ftrace_ops *op, struct pt_regs *pt_regs)
 {
 	unsigned long stack;
 	int cpu;
