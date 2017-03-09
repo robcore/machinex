@@ -65,7 +65,9 @@ static async_cookie_t next_cookie = 1;
 
 static LIST_HEAD(async_pending);
 static ASYNC_DOMAIN(async_running);
+static LIST_HEAD(async_domains);
 static DEFINE_SPINLOCK(async_lock);
+static DEFINE_MUTEX(async_register_mutex);
 
 struct async_entry {
 	struct list_head	list;
@@ -154,6 +156,8 @@ static void async_run_entry_fn(struct work_struct *work)
 	/* 3) remove self from the running queue */
 	spin_lock_irqsave(&async_lock, flags);
 	list_del(&entry->list);
+	if (running->registered && --running->count == 0)
+		list_del_init(&running->node);
 
 	/* 4) free the entry */
 	kfree(entry);
@@ -196,6 +200,8 @@ static async_cookie_t __async_schedule(async_func_ptr *ptr, void *data, struct a
 	spin_lock_irqsave(&async_lock, flags);
 	newcookie = entry->cookie = next_cookie++;
 	list_add_tail(&entry->list, &async_pending);
+	if (running->registered && running->count++ == 0)
+		list_add_tail(&running->node, &async_domains);
 	atomic_inc(&entry_count);
 	spin_unlock_irqrestore(&async_lock, flags);
 
@@ -248,7 +254,18 @@ EXPORT_SYMBOL_GPL(async_schedule_domain);
  */
 void async_synchronize_full(void)
 {
-	async_synchronize_cookie_domain(next_cookie, NULL);
+	mutex_lock(&async_register_mutex);
+	do {
+		struct async_domain *domain = NULL;
+
+		spin_lock_irq(&async_lock);
+		if (!list_empty(&async_domains))
+			domain = list_first_entry(&async_domains, typeof(*domain), node);
+		spin_unlock_irq(&async_lock);
+
+		async_synchronize_cookie_domain(next_cookie, domain);
+	} while (!list_empty(&async_domains));
+	mutex_unlock(&async_register_mutex);
 }
 EXPORT_SYMBOL_GPL(async_synchronize_full);
 
@@ -277,6 +294,9 @@ EXPORT_SYMBOL_GPL(async_synchronize_full_domain);
 void async_synchronize_cookie_domain(async_cookie_t cookie, struct async_domain *running)
 {
 	ktime_t uninitialized_var(starttime), delta, endtime;
+
+	if (!running)
+		return;
 
 	if (initcall_debug && system_state == SYSTEM_BOOTING) {
 		printk(KERN_DEBUG "async_waiting @ %i\n", task_pid_nr(current));
