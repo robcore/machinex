@@ -11,7 +11,7 @@
 #include <linux/time.h>
 
 extern ktime_t ntp_get_next_leap(void);
-extern int __do_adjtimex(struct timex *);
+extern int __do_adjtimex(struct timex *, struct timespec *, s32 *);
 
 /* Structure holding internal timekeeping values. */
 struct timekeeper {
