@@ -346,7 +346,6 @@ static void __clockevents_unbind(void *arg)
 	cu->res = res;
 	raw_spin_unlock(&clockevents_lock);
 }
-EXPORT_SYMBOL_GPL(clockevents_config_and_register);
 
 /*
  * Issues smp function call to unbind a per cpu device. Called with
