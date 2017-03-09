@@ -1743,7 +1743,7 @@ __trace_array_vprintk(struct ring_buffer *buffer,
 		ring_buffer_unlock_commit(buffer, event);
 		ftrace_trace_stack(buffer, flags, 6, pc);
 	}
-  out:
+ out:
 	preempt_enable_notrace();
 	unpause_graph_tracing();
 
@@ -1753,7 +1753,7 @@ __trace_array_vprintk(struct ring_buffer *buffer,
 int trace_array_vprintk(struct trace_array *tr,
 			unsigned long ip, const char *fmt, va_list args)
 {
-	return __trace_array_vprintk(tr->trace_buffer.buffer, ip, fmt, args);
+	return __trace_array_vprintk(tr->buffer, ip, fmt, args);
 }
 
 int trace_array_printk(struct trace_array *tr,
@@ -1811,7 +1811,7 @@ peek_next_entry(struct trace_iterator *iter, int cpu, u64 *ts,
 	if (buf_iter)
 		event = ring_buffer_iter_peek(buf_iter, ts);
 	else
-		event = ring_buffer_peek(iter->trace_buffer->buffer, cpu, ts,
+		event = ring_buffer_peek(iter->tr->buffer, cpu, ts,
 					 lost_events);
 
 	if (event) {
@@ -1826,7 +1826,7 @@ static struct trace_entry *
 __find_next_entry(struct trace_iterator *iter, int *ent_cpu,
 		  unsigned long *missing_events, u64 *ent_ts)
 {
-	struct ring_buffer *buffer = iter->trace_buffer->buffer;
+	struct ring_buffer *buffer = iter->tr->buffer;
 	struct trace_entry *ent, *next = NULL;
 	unsigned long lost_events = 0, next_lost = 0;
 	int cpu_file = iter->cpu_file;
