@@ -2477,9 +2477,11 @@ static void fc_terminate_rport_io(struct fc_rport *rport)
 		i->f->terminate_rport_io(rport);
 
 	/*
-	 * Must unblock to flush queued IO. scsi-ml will fail incoming reqs.
+	 * must unblock to flush queued IO. The caller will have set
+	 * the port_state or flags, so that fc_remote_port_chkready will
+	 * fail IO.
 	 */
-	scsi_target_unblock(&rport->dev, SDEV_TRANSPORT_OFFLINE);
+	scsi_target_unblock(&rport->dev);
 }
 
 /**
@@ -2813,8 +2815,7 @@ fc_remote_port_add(struct Scsi_Host *shost, int channel,
 							&rport->scan_work);
 					spin_unlock_irqrestore(shost->host_lock,
 							flags);
-					scsi_target_unblock(&rport->dev,
-							    SDEV_RUNNING);
+					scsi_target_unblock(&rport->dev);
 				} else
 					spin_unlock_irqrestore(shost->host_lock,
 							flags);
@@ -2881,7 +2882,7 @@ fc_remote_port_add(struct Scsi_Host *shost, int channel,
 				rport->flags |= FC_RPORT_SCAN_PENDING;
 				scsi_queue_work(shost, &rport->scan_work);
 				spin_unlock_irqrestore(shost->host_lock, flags);
-				scsi_target_unblock(&rport->dev, SDEV_RUNNING);
+				scsi_target_unblock(&rport->dev);
 			} else
 				spin_unlock_irqrestore(shost->host_lock, flags);
 
@@ -3087,7 +3088,7 @@ fc_remote_port_rolechg(struct fc_rport  *rport, u32 roles)
 		rport->flags |= FC_RPORT_SCAN_PENDING;
 		scsi_queue_work(shost, &rport->scan_work);
 		spin_unlock_irqrestore(shost->host_lock, flags);
-		scsi_target_unblock(&rport->dev, SDEV_RUNNING);
+		scsi_target_unblock(&rport->dev);
 	}
 }
 EXPORT_SYMBOL(fc_remote_port_rolechg);
@@ -3126,7 +3127,7 @@ fc_timeout_deleted_rport(struct work_struct *work)
 			"blocked FC remote port time out: no longer"
 			" a FCP target, removing starget\n");
 		spin_unlock_irqrestore(shost->host_lock, flags);
-		scsi_target_unblock(&rport->dev, SDEV_TRANSPORT_OFFLINE);
+		scsi_target_unblock(&rport->dev);
 		fc_queue_work(shost, &rport->stgt_delete_work);
 		return;
 	}
