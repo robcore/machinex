@@ -1730,7 +1730,6 @@ __trace_array_vprintk(struct ring_buffer *buffer,
 
 	local_save_flags(flags);
 	size = sizeof(*entry) + len + 1;
-	buffer = tr->buffer;
 	event = trace_buffer_lock_reserve(buffer, TRACE_PRINT, size,
 					  flags, pc);
 	if (!event)
@@ -1812,7 +1811,7 @@ peek_next_entry(struct trace_iterator *iter, int cpu, u64 *ts,
 	if (buf_iter)
 		event = ring_buffer_iter_peek(buf_iter, ts);
 	else
-		event = ring_buffer_peek(iter->tr->buffer, cpu, ts,
+		event = ring_buffer_peek(iter->trace_buffer->buffer, cpu, ts,
 					 lost_events);
 
 	if (event) {
@@ -1827,7 +1826,7 @@ static struct trace_entry *
 __find_next_entry(struct trace_iterator *iter, int *ent_cpu,
 		  unsigned long *missing_events, u64 *ent_ts)
 {
-	struct ring_buffer *buffer = iter->tr->buffer;
+	struct ring_buffer *buffer = iter->trace_buffer->buffer;
 	struct trace_entry *ent, *next = NULL;
 	unsigned long lost_events = 0, next_lost = 0;
 	int cpu_file = iter->cpu_file;
