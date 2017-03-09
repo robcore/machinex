@@ -31,6 +31,7 @@
 #include <linux/memcontrol.h>
 #include <linux/gfp.h>
 #include <linux/hugetlb.h>
+#include <linux/aio.h>
 
 #include "internal.h"
 

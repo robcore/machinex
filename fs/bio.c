@@ -26,6 +26,7 @@
 #include <linux/mempool.h>
 #include <linux/workqueue.h>
 #include <scsi/sg.h>		/* for struct sg_iovec */
+#include <linux/aio.h>
 
 #include <trace/events/block.h>
 
