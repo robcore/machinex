@@ -1698,26 +1698,12 @@ out:
 }
 EXPORT_SYMBOL_GPL(trace_vbprintk);
 
-int trace_array_printk(struct trace_array *tr,
-		       unsigned long ip, const char *fmt, ...)
+static int
+__trace_array_vprintk(struct ring_buffer *buffer,
+		      unsigned long ip, const char *fmt, va_list args)
 {
-	int ret;
-	va_list ap;
-
-	if (!(trace_flags & TRACE_ITER_PRINTK))
-		return 0;
-
-	va_start(ap, fmt);
-	ret = trace_array_vprintk(tr, ip, fmt, ap);
-	va_end(ap);
-	return ret;
-}
-
-int trace_array_vprintk(struct trace_array *tr,
-			unsigned long ip, const char *fmt, va_list args)
- 	struct ftrace_event_call *call = &event_print;
+	struct ftrace_event_call *call = &event_print;
 	struct ring_buffer_event *event;
-	struct ring_buffer *buffer;
 	int len = 0, size, pc;
 	struct print_entry *entry;
 	unsigned long flags;
@@ -1763,6 +1749,42 @@ int trace_array_vprintk(struct trace_array *tr,
 	unpause_graph_tracing();
 
 	return len;
+}
+
+int trace_array_vprintk(struct trace_array *tr,
+			unsigned long ip, const char *fmt, va_list args)
+{
+	return __trace_array_vprintk(tr->trace_buffer.buffer, ip, fmt, args);
+}
+
+int trace_array_printk(struct trace_array *tr,
+		       unsigned long ip, const char *fmt, ...)
+{
+	int ret;
+	va_list ap;
+
+	if (!(trace_flags & TRACE_ITER_PRINTK))
+		return 0;
+
+	va_start(ap, fmt);
+	ret = trace_array_vprintk(tr, ip, fmt, ap);
+	va_end(ap);
+	return ret;
+}
+
+int trace_array_printk_buf(struct ring_buffer *buffer,
+			   unsigned long ip, const char *fmt, ...)
+{
+	int ret;
+	va_list ap;
+
+	if (!(trace_flags & TRACE_ITER_PRINTK))
+		return 0;
+
+	va_start(ap, fmt);
+	ret = __trace_array_vprintk(buffer, ip, fmt, ap);
+	va_end(ap);
+	return ret;
 }
 
 int trace_vprintk(unsigned long ip, const char *fmt, va_list args)
