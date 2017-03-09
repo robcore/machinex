@@ -1017,7 +1017,6 @@ static void __init apq8064_calculate_reserve_sizes(void)
 	reserve_pmem_memory();
 	reserve_ion_memory();
 	reserve_mdp_memory();
-	reserve_rtb_memory();
 	reserve_cache_dump_memory();
 	reserve_mpdcvs_memory();
 	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
@@ -4042,7 +4041,6 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_8960_q6_lpass,
 	&msm_pil_vidc,
 	&msm_gss,
-	&apq8064_rtb_device,
 	&apq8064_dcvs_device,
 	&apq8064_msm_gov_device,
 	&apq8064_device_cache_erp,
