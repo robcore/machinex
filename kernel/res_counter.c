@@ -47,6 +47,7 @@ static int __res_counter_charge(struct res_counter *counter, unsigned long val,
 	unsigned long flags;
 	struct res_counter *c, *u;
 
+	r = ret = 0;
 	*limit_fail_at = NULL;
 	local_irq_save(flags);
 	for (c = counter; c != NULL; c = c->parent) {
