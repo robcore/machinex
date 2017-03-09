@@ -486,10 +486,6 @@ void
 scsi_netlink_init(void)
 {
 	int error;
-	struct netlink_kernel_cfg cfg = {
-		.input	= scsi_nl_rcv_msg,
-		.groups	= SCSI_NL_GRP_CNT,
-	};
 
 	INIT_LIST_HEAD(&scsi_nl_drivers);
 
@@ -501,7 +497,8 @@ scsi_netlink_init(void)
 	}
 
 	scsi_nl_sock = netlink_kernel_create(&init_net, NETLINK_SCSITRANSPORT,
-					     THIS_MODULE, &cfg);
+				SCSI_NL_GRP_CNT, scsi_nl_rcv_msg, NULL,
+				THIS_MODULE);
 	if (!scsi_nl_sock) {
 		printk(KERN_ERR "%s: register of receive handler failed\n",
 				__func__);

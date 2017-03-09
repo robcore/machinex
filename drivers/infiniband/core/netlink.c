@@ -171,11 +171,8 @@ static void ibnl_rcv(struct sk_buff *skb)
 
 int __init ibnl_init(void)
 {
-	struct netlink_kernel_cfg cfg = {
-		.input	= ibnl_rcv,
-	};
-
-	nls = netlink_kernel_create(&init_net, NETLINK_RDMA, THIS_MODULE, &cfg);
+	nls = netlink_kernel_create(&init_net, NETLINK_RDMA, 0, ibnl_rcv,
+				    NULL, THIS_MODULE);
 	if (!nls) {
 		pr_warn("Failed to create netlink socket\n");
 		return -ENOMEM;

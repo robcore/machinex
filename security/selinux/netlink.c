@@ -108,12 +108,8 @@ void selnl_notify_policyload(u32 seqno)
 
 static int __init selnl_init(void)
 {
-	struct netlink_kernel_cfg cfg = {
-		.groups	= SELNLGRP_MAX,
-	};
-
 	selnl = netlink_kernel_create(&init_net, NETLINK_SELINUX,
-				      THIS_MODULE, &cfg);
+				      SELNLGRP_MAX, NULL, NULL, THIS_MODULE);
 	if (selnl == NULL)
 		panic("SELinux:  Cannot create netlink socket.");
 	netlink_set_nonroot(NETLINK_SELINUX, NL_NONROOT_RECV);

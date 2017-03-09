@@ -379,9 +379,6 @@ static struct nf_logger ipt_ulog_logger __read_mostly = {
 static int __init ulog_tg_init(void)
 {
 	int ret, i;
-	struct netlink_kernel_cfg cfg = {
-		.groups	= ULOG_MAXNLGROUPS,
-	};
 
 	pr_debug("init module\n");
 
@@ -394,8 +391,9 @@ static int __init ulog_tg_init(void)
 	for (i = 0; i < ULOG_MAXNLGROUPS; i++)
 		setup_timer(&ulog_buffers[i].timer, ulog_timer, i);
 
-	nflognl = netlink_kernel_create(&init_net, NETLINK_NFLOG,
-					THIS_MODULE, &cfg);
+	nflognl = netlink_kernel_create(&init_net,
+					NETLINK_NFLOG, ULOG_MAXNLGROUPS, NULL,
+					NULL, THIS_MODULE);
 	if (!nflognl)
 		return -ENOMEM;
 

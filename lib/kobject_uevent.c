@@ -373,16 +373,13 @@ EXPORT_SYMBOL_GPL(add_uevent_var);
 static int uevent_net_init(struct net *net)
 {
 	struct uevent_sock *ue_sk;
-	struct netlink_kernel_cfg cfg = {
-		.groups	= 1,
-	};
 
 	ue_sk = kzalloc(sizeof(*ue_sk), GFP_KERNEL);
 	if (!ue_sk)
 		return -ENOMEM;
 
 	ue_sk->sk = netlink_kernel_create(net, NETLINK_KOBJECT_UEVENT,
-					  THIS_MODULE, &cfg);
+					  1, NULL, NULL, THIS_MODULE);
 	if (!ue_sk->sk) {
 		printk(KERN_ERR
 		       "kobject_uevent: unable to create netlink socket!\n");

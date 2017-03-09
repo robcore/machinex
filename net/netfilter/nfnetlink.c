@@ -210,12 +210,9 @@ static void nfnetlink_rcv(struct sk_buff *skb)
 static int __net_init nfnetlink_net_init(struct net *net)
 {
 	struct sock *nfnl;
-	struct netlink_kernel_cfg cfg = {
-		.groups	= NFNLGRP_MAX,
-		.input	= nfnetlink_rcv,
-	};
 
-	nfnl = netlink_kernel_create(net, NETLINK_NETFILTER, THIS_MODULE, &cfg);
+	nfnl = netlink_kernel_create(net, NETLINK_NETFILTER, NFNLGRP_MAX,
+				     nfnetlink_rcv, NULL, THIS_MODULE);
 	if (!nfnl)
 		return -ENOMEM;
 	net->nfnl_stash = nfnl;
