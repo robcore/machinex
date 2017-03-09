@@ -396,6 +396,23 @@ static int
 ftrace_modify_code(unsigned long ip, unsigned const char *old_code,
 		   unsigned const char *new_code);
 
+#ifdef ARCH_SUPPORTS_FTRACE_SAVE_REGS
+/*
+ * Should never be called:
+ *  As it is only called by __ftrace_replace_code() which is called by
+ *  ftrace_replace_code() that x86 overrides, and by ftrace_update_code()
+ *  which is called to turn mcount into nops or nops into function calls
+ *  but not to convert a function from not using regs to one that uses
+ *  regs, which ftrace_modify_call() is for.
+ */
+int ftrace_modify_call(struct dyn_ftrace *rec, unsigned long old_addr,
+				 unsigned long addr)
+{
+	WARN_ON(1);
+	return -EINVAL;
+}
+#endif
+
 int ftrace_update_ftrace_func(ftrace_func_t func)
 {
 	unsigned long ip = (unsigned long)(&ftrace_call);
@@ -409,6 +426,16 @@ int ftrace_update_ftrace_func(ftrace_func_t func)
 	atomic_inc(&modifying_ftrace_code);
 
 	ret = ftrace_modify_code(ip, old, new);
+
+#ifdef ARCH_SUPPORTS_FTRACE_SAVE_REGS
+	/* Also update the regs callback function */
+	if (!ret) {
+		ip = (unsigned long)(&ftrace_regs_call);
+		memcpy(old, &ftrace_regs_call, MCOUNT_INSN_SIZE);
+		new = ftrace_call_replace(ip, (unsigned long)func);
+		ret = ftrace_modify_code(ip, old, new);
+	}
+#endif
 
 	atomic_dec(&modifying_ftrace_code);
 
