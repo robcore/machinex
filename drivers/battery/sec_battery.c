@@ -1899,7 +1899,7 @@ skip_monitor:
 #endif
 
 	if (battery->capacity <= 0)
-		wake_lock_timeout(&battery->monitor_wake_lock, msecs_to_jiffies(2500);
+		wake_lock_timeout(&battery->monitor_wake_lock, msecs_to_jiffies(2500));
 	else
 		wake_unlock(&battery->monitor_wake_lock);
 
