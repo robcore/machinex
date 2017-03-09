@@ -122,7 +122,6 @@ struct console_cmdline
 #define MAX_CMDLINECONSOLES 8
 
 static struct console_cmdline console_cmdline[MAX_CMDLINECONSOLES];
-
 static int selected_console = -1;
 static int preferred_console = -1;
 int console_set_on_cmdline;
@@ -216,9 +215,8 @@ struct log {
 };
 
 /*
- * The logbuf_lock protects kmsg buffer, indices, counters.  This can be taken
- * within the scheduler's rq lock. It must be released before calling
- * console_unlock() or anything else that might wake up a process.
+ * The logbuf_lock protects kmsg buffer, indices, counters. It is also
+ * used in interesting ways to provide interlocking in console_unlock();
  */
 static DEFINE_RAW_SPINLOCK(logbuf_lock);
 
@@ -250,9 +248,6 @@ static u32 clear_idx;
 #define PREFIX_MAX		32
 #define LOG_LINE_MAX		1024 - PREFIX_MAX
 
-/* cpu currently holding logbuf_lock */
-static volatile unsigned int logbuf_cpu = UINT_MAX;
-
 /* record buffer */
 #if defined(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS)
 #define LOG_ALIGN 4
@@ -264,11 +259,8 @@ static char __log_buf[__LOG_BUF_LEN] __aligned(LOG_ALIGN);
 static char *log_buf = __log_buf;
 static u32 log_buf_len = __LOG_BUF_LEN;
 
-/* the next printk record to read by syslog(READ) or /proc/kmsg */
-static u64 syslog_seq;
-static u32 syslog_idx;
-static enum log_flags syslog_prev;
-static size_t syslog_partial;
+/* cpu currently holding logbuf_lock */
+static volatile unsigned int logbuf_cpu = UINT_MAX;
 
 /* human readable text of the record */
 static char *log_text(const struct log *msg)
@@ -374,52 +366,6 @@ static void log_store(int facility, int level,
 	log_next_idx += msg->len;
 	log_next_seq++;
 }
-#ifdef CONFIG_SECURITY_DMESG_RESTRICT
-int dmesg_restrict = 1;
-#else
-int dmesg_restrict;
-#endif
-
-static int syslog_action_restricted(int type)
-{
-	if (dmesg_restrict)
-		return 1;
-	/* Unless restricted, we allow "read all" and "get buffer size" for everybody */
-	return type != SYSLOG_ACTION_READ_ALL && type != SYSLOG_ACTION_SIZE_BUFFER;
-}
-
-static int check_syslog_permissions(int type, bool from_file)
-{
-	/*
-	 * If this is from /proc/kmsg and we've already opened it, then we've
-	 * already done the capabilities checks at open time.
-	 */
-	if (from_file && type != SYSLOG_ACTION_OPEN)
-		return 0;
-
-	if (syslog_action_restricted(type)) {
-		if (capable(CAP_SYSLOG))
-			return 0;
-		/* For historical reasons, accept CAP_SYS_ADMIN too, with a warning */
-		if (capable(CAP_SYS_ADMIN)) {
-			printk_once(KERN_WARNING "%s (%d): "
-				 "Attempt to access syslog with CAP_SYS_ADMIN "
-				 "but no CAP_SYSLOG (deprecated).\n",
-				 current->comm, task_pid_nr(current));
-			return 0;
-		}
-		return -EPERM;
-	}
-	return 0;
-}
-
-#ifdef CONFIG_PRINTK
-
-static char __log_buf[__LOG_BUF_LEN];
-static char *log_buf = __log_buf;
-static int log_buf_len = __LOG_BUF_LEN;
-static unsigned logged_chars; /* Number of chars produced since last read+clear operation */
-static int saved_console_loglevel = -1;
 
 #ifdef CONFIG_SECURITY_DMESG_RESTRICT
 int dmesg_restrict = 1;
@@ -854,21 +800,6 @@ static bool __read_mostly ignore_loglevel;
 static int __init ignore_loglevel_setup(char *str)
 {
 	ignore_loglevel = 1;
-	pr_info("debug: ignoring loglevel setting.\n");
-
-	return 0;
-}
-
-early_param("ignore_loglevel", ignore_loglevel_setup);
-module_param(ignore_loglevel, bool, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(ignore_loglevel, "ignore loglevel setting, to"
-	"print all kernel messages to the console.");
-
-static bool __read_mostly ignore_loglevel;
-
-static int __init ignore_loglevel_setup(char *str)
-{
-	ignore_loglevel = 1;
 	printk(KERN_INFO "debug: ignoring loglevel setting.\n");
 
 	return 0;
@@ -933,53 +864,6 @@ static inline void boot_delay_msec(int level)
 {
 }
 #endif
-
-/*
- * Return the number of unread characters in the log buffer.
- */
-static int log_buf_get_len(void)
-{
-	return logged_chars;
-}
-
-/*
- * Clears the ring-buffer
- */
-void log_buf_clear(void)
-{
-	logged_chars = 0;
-}
-
-/*
- * Copy a range of characters from the log buffer.
- */
-int log_buf_copy(char *dest, int idx, int len)
-{
-	int ret, max;
-	bool took_lock = false;
-
-	if (!oops_in_progress) {
-		raw_spin_lock_irq(&logbuf_lock);
-		took_lock = true;
-	}
-
-	max = log_buf_get_len();
-	if (idx < 0 || idx >= max) {
-		ret = -1;
-	} else {
-		if (len > max - idx)
-			len = max - idx;
-		ret = len;
-		idx += (log_end - max);
-		while (len-- > 0)
-			dest[len] = LOG_BUF(idx + len);
-	}
-
-	if (took_lock)
-		raw_spin_unlock_irq(&logbuf_lock);
-
-	return ret;
-}
 
 #if defined(CONFIG_PRINTK_TIME)
 static bool printk_time = 1;
@@ -1488,12 +1372,10 @@ static int console_trylock_for_printk(unsigned int cpu)
 			retval = 0;
 		}
 	}
-
 	logbuf_cpu = UINT_MAX;
-    raw_spin_unlock(&logbuf_lock);
 	if (wake)
 		up(&console_sem);
-
+	raw_spin_unlock(&logbuf_lock);
 	return retval;
 }
 
@@ -1841,44 +1723,14 @@ static struct cont {
 	u8 level;
 	bool flushed:1;
 } cont;
-static struct printk_log *log_from_idx(u32 idx) { return NULL; }
+static struct log *log_from_idx(u32 idx) { return NULL; }
 static u32 log_next(u32 idx) { return 0; }
 static void call_console_drivers(int level, const char *text, size_t len) {}
-static size_t msg_print_text(const struct printk_log *msg, enum log_flags prev,
+static size_t msg_print_text(const struct log *msg, enum log_flags prev,
 			     bool syslog, char *buf, size_t size) { return 0; }
 static size_t cont_print_text(char *text, size_t size) { return 0; }
 
 #endif /* CONFIG_PRINTK */
-
-static void call_console_drivers(int level, const char *text, size_t len)
-{
-}
-
-static void __cpuinit console_flush(struct work_struct *work)
-{
-	console_lock();
-	console_unlock();
-}
-
-static __cpuinitdata DECLARE_WORK(console_cpu_notify_work, console_flush);
-
-/**
- * show_regs_print_info - print generic debug info for show_regs()
- * @log_lvl: log level
- *
- * show_regs() implementations can use this function to print out generic
- * debug information.
- */
-void show_regs_print_info(const char *log_lvl)
-{
-	dump_stack_print_info(log_lvl);
-
-	printk("%stask: %p ti: %p task.ti: %p\n",
-	       log_lvl, current, current_thread_info(),
-	       task_thread_info(current));
-}
-
-#endif
 
 #ifdef CONFIG_EARLY_PRINTK
 struct console *early_console;
@@ -2193,7 +2045,7 @@ out:
  * by printk().  If this is the case, console_unlock(); emits
  * the output prior to releasing the lock.
  *
- * If there is output waiting, we wake it /dev/kmsg and syslog() users.
+ * If there is output waiting, we wake /dev/kmsg and syslog() users.
  *
  * console_unlock(); may be called from any context.
  */
@@ -2380,7 +2232,7 @@ static int __read_mostly keep_bootcon;
 static int __init keep_bootcon_setup(char *str)
 {
 	keep_bootcon = 1;
-	pr_info("debug: skip boot console de-registration.\n");
+	printk(KERN_INFO "debug: skip boot console de-registration.\n");
 
 	return 0;
 }
@@ -2420,7 +2272,7 @@ void register_console(struct console *newcon)
 		/* find the last or real console */
 		for_each_console(bcon) {
 			if (!(bcon->flags & CON_BOOT)) {
-				pr_info("Too late to register bootconsole %s%d\n",
+				printk(KERN_INFO "Too late to register bootconsole %s%d\n",
 					newcon->name, newcon->index);
 				return;
 			}
@@ -2460,7 +2312,6 @@ void register_console(struct console *newcon)
 	 */
 	for (i = 0; i < MAX_CMDLINECONSOLES && console_cmdline[i].name[0];
 			i++) {
-		BUILD_BUG_ON(sizeof(console_cmdline[i].name) != sizeof(newcon->name));
 		if (strcmp(console_cmdline[i].name, newcon->name) != 0)
 			continue;
 		if (newcon->index >= 0 &&
@@ -2606,6 +2457,8 @@ static int __init printk_late_init(void)
 
 	for_each_console(con) {
 		if (!keep_bootcon && con->flags & CON_BOOT) {
+			printk(KERN_INFO "turn off boot console %s%d\n",
+				con->name, con->index);
 			unregister_console(con);
 		}
 	}
@@ -2654,7 +2507,7 @@ void wake_up_klogd(void)
 	preempt_enable();
 }
 
-int printk_deferred(const char *fmt, ...)
+int printk_sched(const char *fmt, ...)
 {
 	unsigned long flags;
 	va_list args;
@@ -2895,28 +2748,6 @@ bool kmsg_dump_get_line(struct kmsg_dumper *dumper, bool syslog,
 }
 EXPORT_SYMBOL_GPL(kmsg_dump_get_line);
 
-static char dump_stack_arch_desc_str[128];
-
-/**
- * dump_stack_set_arch_desc - set arch-specific str to show with task dumps
- * @fmt: printf-style format string
- * @...: arguments for the format string
- *
- * The configured string will be printed right after utsname during task
- * dumps.  Usually used to add arch-specific system identifiers.  If an
- * arch wants to make use of such an ID string, it should initialize this
- * as soon as possible during boot.
- */
-void __init dump_stack_set_arch_desc(const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	vsnprintf(dump_stack_arch_desc_str, sizeof(dump_stack_arch_desc_str),
-		  fmt, args);
-	va_end(args);
-}
-
 /**
  * kmsg_dump_get_buffer - copy kmsg log lines
  * @dumper: registered kmsg dumper
@@ -3051,7 +2882,66 @@ void kmsg_dump_rewind(struct kmsg_dumper *dumper)
 	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
 }
 EXPORT_SYMBOL_GPL(kmsg_dump_rewind);
-#ifdef CONFIG_PRINTK_NOCACHE
-module_init(printk_remap_nocache);
+
+static char dump_stack_arch_desc_str[128];
+
+/**
+ * dump_stack_set_arch_desc - set arch-specific str to show with task dumps
+ * @fmt: printf-style format string
+ * @...: arguments for the format string
+ *
+ * The configured string will be printed right after utsname during task
+ * dumps.  Usually used to add arch-specific system identifiers.  If an
+ * arch wants to make use of such an ID string, it should initialize this
+ * as soon as possible during boot.
+ */
+void __init dump_stack_set_arch_desc(const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(dump_stack_arch_desc_str, sizeof(dump_stack_arch_desc_str),
+		  fmt, args);
+	va_end(args);
+}
+
+/**
+ * dump_stack_print_info - print generic debug info for dump_stack()
+ * @log_lvl: log level
+ *
+ * Arch-specific dump_stack() implementations can use this function to
+ * print out the same debug information as the generic dump_stack().
+ */
+void dump_stack_print_info(const char *log_lvl)
+{
+	printk("%sCPU: %d PID: %d Comm: %.20s %s %s %.*s\n",
+	       log_lvl, raw_smp_processor_id(), current->pid, current->comm,
+	       print_tainted(), init_utsname()->release,
+	       (int)strcspn(init_utsname()->version, " "),
+	       init_utsname()->version);
+
+	if (dump_stack_arch_desc_str[0] != '\0')
+		printk("%sHardware name: %s\n",
+		       log_lvl, dump_stack_arch_desc_str);
+
+	print_worker_info(log_lvl, current);
+}
+
+/**
+ * show_regs_print_info - print generic debug info for show_regs()
+ * @log_lvl: log level
+ *
+ * show_regs() implementations can use this function to print out generic
+ * debug information.
+ */
+void show_regs_print_info(const char *log_lvl)
+{
+	dump_stack_print_info(log_lvl);
+
+	printk("%stask: %p ti: %p task.ti: %p\n",
+	       log_lvl, current, current_thread_info(),
+	       task_thread_info(current));
+}
+
 #endif
-#endif
+
