@@ -3743,7 +3743,7 @@ struct platform_device apq8064_iommu_domain_device = {
 		.platform_data = &apq8064_iommu_domain_pdata,
 	}
 };
-
+#if 0
 struct msm_rtb_platform_data apq8064_rtb_pdata = {
 	.size = SZ_1M,
 };
@@ -3765,6 +3765,7 @@ struct platform_device apq8064_rtb_device = {
 		.platform_data = &apq8064_rtb_pdata,
 	},
 };
+#endif
 
 #define APQ8064_L1_SIZE  SZ_1M
 /*
