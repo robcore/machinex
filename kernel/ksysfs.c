@@ -204,6 +204,7 @@ static struct attribute * kernel_attrs[] = {
 	&kexec_crash_size_attr.attr,
 	&vmcoreinfo_attr.attr,
 #endif
+	&poweroff_charging_attr.attr,
 	&rcu_expedited_attr.attr,
 	NULL
 };
