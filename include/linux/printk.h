@@ -157,6 +157,8 @@ extern int printk_delay_msec;
 extern int dmesg_restrict;
 extern int kptr_restrict;
 
+extern void wake_up_klogd(void);
+
 void log_buf_kexec_setup(void);
 void __init setup_log_buf(int early);
 #else
@@ -183,6 +185,10 @@ static inline bool printk_timed_ratelimit(unsigned long *caller_jiffies,
 					  unsigned int interval_msec)
 {
 	return false;
+}
+
+static inline void wake_up_klogd(void)
+{
 }
 
 static inline void log_buf_kexec_setup(void)
