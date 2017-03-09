@@ -103,8 +103,6 @@ enum {
 	 */
 	RESCUER_NICE_LEVEL	= -20,
 	HIGHPRI_NICE_LEVEL	= -20,
-
-	WQ_NAME_LEN		= 24,
 };
 
 /*
@@ -254,7 +252,7 @@ struct workqueue_struct {
 #ifdef CONFIG_LOCKDEP
 	struct lockdep_map	lockdep_map;
 #endif
-	char			name[WQ_NAME_LEN]; /* I: workqueue name */
+	char			name[];		/* I: workqueue name */
 };
 
 /* see the comment above the definition of WQ_POWER_EFFICIENT */
@@ -3317,7 +3315,7 @@ struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask)
 	if (!alloc_cpumask_var(&attrs->cpumask, gfp_mask))
 		goto fail;
 
-	cpumask_copy(attrs->cpumask, cpu_possible_mask);
+	cpumask_setall(attrs->cpumask);
 	return attrs;
 fail:
 	free_workqueue_attrs(attrs);
@@ -3331,14 +3329,33 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	cpumask_copy(to->cpumask, from->cpumask);
 }
 
+/*
+ * Hacky implementation of jhash of bitmaps which only considers the
+ * specified number of bits.  We probably want a proper implementation in
+ * include/linux/jhash.h.
+ */
+static u32 jhash_bitmap(const unsigned long *bitmap, int bits, u32 hash)
+{
+	int nr_longs = bits / BITS_PER_LONG;
+	int nr_leftover = bits % BITS_PER_LONG;
+	unsigned long leftover = 0;
+
+	if (nr_longs)
+		hash = jhash(bitmap, nr_longs * sizeof(long), hash);
+	if (nr_leftover) {
+		bitmap_copy(&leftover, bitmap + nr_longs, nr_leftover);
+		hash = jhash(&leftover, sizeof(long), hash);
+	}
+	return hash;
+}
+
 /* hash value of the content of @attr */
 static u32 wqattrs_hash(const struct workqueue_attrs *attrs)
 {
 	u32 hash = 0;
 
 	hash = jhash_1word(attrs->nice, hash);
-	hash = jhash(cpumask_bits(attrs->cpumask),
-		     BITS_TO_LONGS(nr_cpumask_bits) * sizeof(long), hash);
+	hash = jhash_bitmap(cpumask_bits(attrs->cpumask), nr_cpu_ids, hash);
 	return hash;
 }
 
@@ -3411,27 +3428,30 @@ static void rcu_free_pool(struct rcu_head *rcu)
  * safe manner.  get_unbound_pool() calls this function on its failure path
  * and this function should be able to release pools which went through,
  * successfully or not, init_worker_pool().
- *
- * Should be called with wq_pool_mutex held.
  */
 static void put_unbound_pool(struct worker_pool *pool)
 {
 	struct worker *worker;
 
-	lockdep_assert_held(&wq_pool_mutex);
-
-	if (--pool->refcnt)
+	mutex_lock(&wq_pool_mutex);
+	if (--pool->refcnt) {
+		mutex_unlock(&wq_pool_mutex);
 		return;
+	}
 
 	/* sanity checks */
 	if (WARN_ON(!(pool->flags & POOL_DISASSOCIATED)) ||
-	    WARN_ON(!list_empty(&pool->worklist)))
+	    WARN_ON(!list_empty(&pool->worklist))) {
+		mutex_unlock(&wq_pool_mutex);
 		return;
+	}
 
 	/* release id and unhash */
 	if (pool->id >= 0)
 		idr_remove(&worker_pool_idr, pool->id);
 	hash_del(&pool->hash_node);
+
+	mutex_unlock(&wq_pool_mutex);
 
 	/*
 	 * Become the manager and destroy all workers.  Grabbing
@@ -3505,8 +3525,10 @@ static struct worker_pool *get_unbound_pool(const struct workqueue_attrs *attrs)
 	/* install */
 	hash_add(unbound_pool_hash, &pool->hash_node, hash);
 out_unlock:
+	mutex_unlock(&wq_pool_mutex);
 	return pool;
 fail:
+	mutex_unlock(&wq_pool_mutex);
 	if (pool)
 		put_unbound_pool(pool);
 	return NULL;
@@ -3543,10 +3565,7 @@ static void pwq_unbound_release_workfn(struct work_struct *work)
 	is_last = list_empty(&wq->pwqs);
 	mutex_unlock(&wq->mutex);
 
-	mutex_lock(&wq_pool_mutex);
 	put_unbound_pool(pool);
-	mutex_unlock(&wq_pool_mutex);
-
 	call_rcu_sched(&pwq->rcu, rcu_free_pwq);
 
 	/*
@@ -3649,10 +3668,8 @@ static void init_and_link_pwq(struct pool_workqueue *pwq,
 int apply_workqueue_attrs(struct workqueue_struct *wq,
 			  const struct workqueue_attrs *attrs)
 {
-	struct workqueue_attrs *new_attrs;
-	struct pool_workqueue *pwq = NULL, *last_pwq;
+	struct pool_workqueue *pwq, *last_pwq;
 	struct worker_pool *pool;
-	int ret;
 
 	/* only unbound workqueues can change attributes */
 	if (WARN_ON(!(wq->flags & WQ_UNBOUND)))
@@ -3662,29 +3679,15 @@ int apply_workqueue_attrs(struct workqueue_struct *wq,
 	if (WARN_ON((wq->flags & __WQ_ORDERED) && !list_empty(&wq->pwqs)))
 		return -EINVAL;
 
-	/* make a copy of @attrs and sanitize it */
-	new_attrs = alloc_workqueue_attrs(GFP_KERNEL);
-	if (!new_attrs)
-		goto enomem;
-
-	copy_workqueue_attrs(new_attrs, attrs);
-	cpumask_and(new_attrs->cpumask, new_attrs->cpumask, cpu_possible_mask);
-
-	mutex_lock(&wq_pool_mutex);
-
 	pwq = kmem_cache_zalloc(pwq_cache, GFP_KERNEL);
-	if (!pwq) {
-		mutex_unlock(&wq_pool_mutex);
-		goto enomem;
-	}
+	if (!pwq)
+		return -ENOMEM;
 
-	pool = get_unbound_pool(new_attrs);
+	pool = get_unbound_pool(attrs);
 	if (!pool) {
-		mutex_unlock(&wq_pool_mutex);
-		goto enomem;
+		kmem_cache_free(pwq_cache, pwq);
+		return -ENOMEM;
 	}
-
-	mutex_unlock(&wq_pool_mutex);
 
 	init_and_link_pwq(pwq, wq, pool, &last_pwq);
 	if (last_pwq) {
@@ -3693,16 +3696,7 @@ int apply_workqueue_attrs(struct workqueue_struct *wq,
 		spin_unlock_irq(&last_pwq->pool->lock);
 	}
 
-	ret = 0;
-	/* fall through */
-out_free:
-	free_workqueue_attrs(new_attrs);
-	return ret;
-
-enomem:
-	kmem_cache_free(pwq_cache, pwq);
-	ret = -ENOMEM;
-	goto out_free;
+	return 0;
 }
 
 static int alloc_and_link_pwqs(struct workqueue_struct *wq)
@@ -3747,22 +3741,27 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 					       struct lock_class_key *key,
 					       const char *lock_name, ...)
 {
-	va_list args;
+	va_list args, args1;
 	struct workqueue_struct *wq;
 	struct pool_workqueue *pwq;
+	size_t namelen;
 
 	/* see the comment above the definition of WQ_POWER_EFFICIENT */
 	if ((flags & WQ_POWER_EFFICIENT) && wq_power_efficient)
 		flags |= WQ_UNBOUND;
 
-	/* allocate wq and format name */
-	wq = kzalloc(sizeof(*wq), GFP_KERNEL);
+	/* determine namelen, allocate wq and format name */
+	va_start(args, lock_name);
+	va_copy(args1, args);
+	namelen = vsnprintf(NULL, 0, fmt, args) + 1;
+
+	wq = kzalloc(sizeof(*wq) + namelen, GFP_KERNEL);
 	if (!wq)
 		return NULL;
 
-	va_start(args, lock_name);
-	vsnprintf(wq->name, sizeof(wq->name), fmt, args);
+	vsnprintf(wq->name, namelen, fmt, args1);
 	va_end(args);
+	va_end(args1);
 
 	max_active = max_active ?: WQ_DFL_ACTIVE;
 	max_active = wq_clamp_max_active(max_active, flags, wq->name);
@@ -4581,11 +4580,6 @@ static int __init init_workqueues(void)
 	       !system_power_efficient_wq ||
 	       !system_freezable_power_efficient_wq);
 	return 0;
-
-enomem:
-	kmem_cache_free(pwq_cache, pwq);
-	free_workqueue_attrs(new_attrs);
-	return -ENOMEM;
 }
 early_initcall(init_workqueues);
 
