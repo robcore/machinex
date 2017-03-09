@@ -47,6 +47,7 @@
 
 #include <asm/uaccess.h>
 
+#include <mach/msm_rtb.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
 #ifdef LOCAL_CONFIG_PRINT_EXTRA_INFO
@@ -1804,6 +1805,11 @@ asmlinkage int printk(const char *fmt, ...)
 {
 	va_list args;
 	int r;
+#ifdef CONFIG_MSM_RTB
+	void *caller = __builtin_return_address(0);
+
+	uncached_logk_pc(LOGK_LOGBUF, caller, (void *)log_next_idx);
+#endif
 
 #ifdef CONFIG_KGDB_KDB
 	if (unlikely(kdb_trap_printk)) {
@@ -1853,6 +1859,14 @@ static size_t cont_print_text(char *text, size_t size) { return 0; }
 static void call_console_drivers(int level, const char *text, size_t len)
 {
 }
+
+static void __cpuinit console_flush(struct work_struct *work)
+{
+	console_lock();
+	console_unlock();
+}
+
+static __cpuinitdata DECLARE_WORK(console_cpu_notify_work, console_flush);
 
 /**
  * show_regs_print_info - print generic debug info for show_regs()
