@@ -826,8 +826,6 @@ void tick_nohz_idle_enter(void)
 }
 EXPORT_SYMBOL_GPL(tick_nohz_idle_enter);
 
-static int sched_skew_tick;
-
 /**
  * tick_nohz_irq_exit - update next tick event from interrupt exit
  *
@@ -1050,14 +1048,6 @@ static void tick_nohz_switch_to_nohz(void)
 	hrtimer_init(&ts->sched_timer, CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
 	/* Get the next period */
 	next = tick_init_jiffy_update();
-
-	/* Offset the tick to avert xtime_lock contention. */
-	if (sched_skew_tick) {
-		u64 offset = ktime_to_ns(tick_period) >> 1;
-		do_div(offset, num_possible_cpus());
-		offset *= smp_processor_id();
-		hrtimer_add_expires_ns(&ts->sched_timer, offset);
-	}
 
 	for (;;) {
 		hrtimer_set_expires(&ts->sched_timer, next);
@@ -1320,11 +1310,3 @@ int tick_check_oneshot_change(int allow_nohz)
 	tick_nohz_switch_to_nohz();
 	return 0;
 }
-
-static int __init skew_tick(char *str)
-{
-	get_option(&str, &sched_skew_tick);
-
-	return 0;
-}
-early_param("skew_tick", skew_tick);
