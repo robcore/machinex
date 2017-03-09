@@ -173,7 +173,7 @@ module_param_cb(disable_boot_timeout, &disable_boot_timeout_ops,
 		&disable_boot_timeout, 0644);
 MODULE_PARM_DESC(disable_boot_timeout, "Disable panic on mdm bootup timeout");
 
-module_param(poweroff_charging, int, 0444);
+//module_param(poweroff_charging, int, 0444);
 
 /* If the platform's cascading_ssr flag is set, the subsystem
  * restart module will restart the other modems so stop

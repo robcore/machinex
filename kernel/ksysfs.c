@@ -3,7 +3,7 @@
  * 		     are not related to any other subsystem
  *
  * Copyright (C) 2004 Kay Sievers <kay.sievers@vrfy.org>
- * 
+ *
  * This file is release under the GPLv2
  *
  */
@@ -156,6 +156,14 @@ static ssize_t rcu_expedited_store(struct kobject *kobj,
 	return count;
 }
 KERNEL_ATTR_RW(rcu_expedited);
+
+extern int poweroff_charging;
+static ssize_t poweroff_charging_show(struct kobject *kobj,
+				  struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", poweroff_charging);
+}
+KERNEL_ATTR_RO(poweroff_charging);
 
 /*
  * Make /sys/kernel/notes give the raw contents of our kernel .notes section.
