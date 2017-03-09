@@ -22,9 +22,6 @@ static u16 __initdata dmi_ver;
  */
 static int dmi_initialized;
 
-/* DMI system identification string used during boot */
-static char dmi_ids_string[128] __initdata;
-
 static const char * __init dmi_string_nosave(const struct dmi_header *dm, u8 s)
 {
 	const u8 *bp = ((u8 *) dm) + dm->length;
@@ -379,44 +376,38 @@ static void __init dmi_decode(const struct dmi_header *dm, void *dummy)
 	}
 }
 
-static int __init print_filtered(char *buf, size_t len, const char *info)
+static void __init print_filtered(const char *info)
 {
-	int c = 0;
 	const char *p;
 
 	if (!info)
-		return c;
+		return;
 
 	for (p = info; *p; p++)
 		if (isprint(*p))
-			c += scnprintf(buf + c, len - c, "%c", *p);
+			printk(KERN_CONT "%c", *p);
 		else
-			c += scnprintf(buf + c, len - c, "\\x%02x", *p & 0xff);
-	return c;
+			printk(KERN_CONT "\\x%02x", *p & 0xff);
 }
 
-static void __init dmi_format_ids(char *buf, size_t len)
+static void __init dmi_dump_ids(void)
 {
-	int c = 0;
 	const char *board;	/* Board Name is optional */
 
-	c += print_filtered(buf + c, len - c,
-			    dmi_get_system_info(DMI_SYS_VENDOR));
-	c += scnprintf(buf + c, len - c, " ");
-	c += print_filtered(buf + c, len - c,
-			    dmi_get_system_info(DMI_PRODUCT_NAME));
-
+	printk(KERN_DEBUG "DMI: ");
+	print_filtered(dmi_get_system_info(DMI_SYS_VENDOR));
+	printk(KERN_CONT " ");
+	print_filtered(dmi_get_system_info(DMI_PRODUCT_NAME));
 	board = dmi_get_system_info(DMI_BOARD_NAME);
 	if (board) {
-		c += scnprintf(buf + c, len - c, "/");
-		c += print_filtered(buf + c, len - c, board);
+		printk(KERN_CONT "/");
+		print_filtered(board);
 	}
-	c += scnprintf(buf + c, len - c, ", BIOS ");
-	c += print_filtered(buf + c, len - c,
-			    dmi_get_system_info(DMI_BIOS_VERSION));
-	c += scnprintf(buf + c, len - c, " ");
-	c += print_filtered(buf + c, len - c,
-			    dmi_get_system_info(DMI_BIOS_DATE));
+	printk(KERN_CONT ", BIOS ");
+	print_filtered(dmi_get_system_info(DMI_BIOS_VERSION));
+	printk(KERN_CONT " ");
+	print_filtered(dmi_get_system_info(DMI_BIOS_DATE));
+	printk(KERN_CONT "\n");
 }
 
 static int __init dmi_present(const u8 *buf)
@@ -463,8 +454,7 @@ static int __init dmi_present(const u8 *buf)
 				pr_info("Legacy DMI %d.%d present.\n",
 				       dmi_ver >> 8, dmi_ver & 0xFF);
 			}
-			dmi_format_ids(dmi_ids_string, sizeof(dmi_ids_string));
-			printk(KERN_DEBUG "DMI: %s\n", dmi_ids_string);
+			dmi_dump_ids();
 			return 0;
 		}
 	}
