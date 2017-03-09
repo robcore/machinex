@@ -6,6 +6,7 @@
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
 #include <linux/tick.h>
+#include <linux/printk.h>
 
 #include "cpupri.h"
 #include "cpuacct.h"
