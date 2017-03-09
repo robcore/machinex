@@ -223,20 +223,42 @@ struct log {
 };
 
 /*
- * The logbuf_lock protects kmsg buffer, indices, counters. It is also
- * used in interesting ways to provide interlocking in console_unlock();
+ * The logbuf_lock protects kmsg buffer, indices, counters.  This can be taken
+ * within the scheduler's rq lock. It must be released before calling
+ * console_unlock() or anything else that might wake up a process.
  */
 static DEFINE_RAW_SPINLOCK(logbuf_lock);
 
+#ifdef CONFIG_PRINTK
+DECLARE_WAIT_QUEUE_HEAD(log_wait);
+/* the next printk record to read by syslog(READ) or /proc/kmsg */
+static u64 syslog_seq;
+static u32 syslog_idx;
+static enum log_flags syslog_prev;
+static size_t syslog_partial;
+
+/* index and sequence number of the first record stored in the buffer */
+static u64 log_first_seq;
+static u32 log_first_idx;
+
+/* index and sequence number of the next record to store in the buffer */
+static u64 log_next_seq;
+static u32 log_next_idx;
+
+/* the next printk record to write to the console */
+static u64 console_seq;
+static u32 console_idx;
+static enum log_flags console_prev;
+
+/* the next printk record to read after the last 'clear' command */
+static u64 clear_seq;
+static u32 clear_idx;
+
+#define PREFIX_MAX		32
+#define LOG_LINE_MAX		1024 - PREFIX_MAX
+
 /* cpu currently holding logbuf_lock */
 static volatile unsigned int logbuf_cpu = UINT_MAX;
-
-static struct cont {
-	size_t len;
-	size_t cons;
-	u8 level;
-	bool flushed:1;
-} cont;
 
 /* record buffer */
 #if defined(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS)
@@ -248,21 +270,6 @@ static struct cont {
 static char __log_buf[__LOG_BUF_LEN] __aligned(LOG_ALIGN);
 static char *log_buf = __log_buf;
 static u32 log_buf_len = __LOG_BUF_LEN;
-
-/* index and sequence number of the first record stored in the buffer */
-static u64 log_first_seq;
-static u32 log_first_idx;
-
-/* index and sequence number of the next record to store in the buffer */
-static u64 log_next_seq;
-static u32 log_next_idx;
-
-/* the next printk record to read after the last 'clear' command */
-static u64 clear_seq;
-static u32 clear_idx;
-
-#define PREFIX_MAX		32
-#define LOG_LINE_MAX		1024 - PREFIX_MAX
 
 /* the next printk record to read by syslog(READ) or /proc/kmsg */
 static u64 syslog_seq;
@@ -711,254 +718,6 @@ static int __init log_buf_len_setup(char *str)
 	return 0;
 }
 early_param("log_buf_len", log_buf_len_setup);
-
-#ifdef CONFIG_SEC_DEBUG
-#define CONFIG_PRINTK_NOCACHE
-/*
- * Example usage: sec_log=256K@0x45000000
- *
- * In above case, log_buf size is 256KB and its physical base address
- * is 0x45000000. Actually, *(int *)(base - 8) is log_magic and *(int
- * *)(base - 4) is log_ptr. Therefore we reserve (size + 8) bytes from
- * (base - 8)
- */
-#define LOG_MAGIC 0x4d474f4c /* "LOGM" */
-
-/* These variables are also protected by logbuf_lock */
-static unsigned *sec_log_ptr;
-static char *sec_log_buf;
-static unsigned sec_log_size;
-
-#ifdef CONFIG_PRINTK_NOCACHE
-static unsigned sec_log_save_size;
-static unsigned long long sec_log_save_base;
-unsigned long long sec_log_reserve_base;
-unsigned sec_log_reserve_size;
-unsigned int *sec_log_irq_en;
-#ifdef CONFIG_SEC_LOG_LAST_KMSG
-#define LAST_LOG_BUF_SHIFT 19
-static char *last_kmsg_buffer;
-static unsigned last_kmsg_size;
-#endif /* CONFIG_SEC_LOG_LAST_KMSG */
-#endif
-static inline void emit_sec_log_char(char c)
-{
-	if (sec_log_buf && sec_log_ptr) {
-		sec_log_buf[*sec_log_ptr & (sec_log_size - 1)] = c;
-		(*sec_log_ptr)++;
-	}
-}
-
-#ifdef CONFIG_SEC_LOG_LAST_KMSG
-static void __init sec_log_save_old(void)
-{
-	extern char* last_kmsg_buffer;
-	extern unsigned last_kmsg_size;
-
-	/* provide previous log as last_kmsg */
-	last_kmsg_size =
-	    min((unsigned)(1 << LAST_LOG_BUF_SHIFT), *sec_log_ptr);
-	last_kmsg_buffer = (char *)kmalloc(last_kmsg_size, GFP_KERNEL);
-
-	if (last_kmsg_size && last_kmsg_buffer && sec_log_buf) {
-		unsigned int i;
-		for (i = 0; i < last_kmsg_size; i++)
-			last_kmsg_buffer[i] =
-			    sec_log_buf[(*sec_log_ptr - last_kmsg_size +
-					 i) & (sec_log_size - 1)];
-
-		pr_info("%s: saved old log at %d@%p\n",
-			__func__, last_kmsg_size, last_kmsg_buffer);
-	} else
-		pr_err("%s: failed saving old log %d@%p\n",
-		       __func__, last_kmsg_size, last_kmsg_buffer);
-}
-#else
-static void __init sec_log_save_old(void)
-{
-}
-#endif
-
-#ifdef CONFIG_SEC_DEBUG_SUBSYS
-void sec_debug_subsys_set_kloginfo(unsigned int *idx_paddr,
-	unsigned int *log_paddr, unsigned int *size)
-{
-	*idx_paddr = (unsigned int)&log_end -
-		CONFIG_PAGE_OFFSET + CONFIG_PHYS_OFFSET;
-	*log_paddr = (unsigned int)__log_buf -
-		CONFIG_PAGE_OFFSET + CONFIG_PHYS_OFFSET;
-	*size = __LOG_BUF_LEN;
-}
-#endif
-
-
-#ifdef CONFIG_PRINTK_NOCACHE
-static int __init printk_remap_nocache(void)
-{
-	void __iomem *nocache_base = 0;
-	unsigned *sec_log_mag;
-	unsigned long flags;
-	unsigned start;
-	int rc = 0;
-
-	sec_getlog_supply_kloginfo(log_buf);
-
-#ifndef CONFIG_SEC_DEBUG_NOCACHE_LOG_IN_LEVEL_LOW
-	if (0 == sec_debug_is_enabled()) {
-#if defined(CONFIG_SEC_DEBUG_LOW_LOG) || defined(CONFIG_SEC_SSR_DUMP)
-		nocache_base = ioremap_nocache(sec_log_save_base - 4096,
-		sec_log_save_size + 8192);
-		nocache_base = nocache_base + 4096;
-
-		sec_log_mag = nocache_base - 8;
-		sec_log_ptr = nocache_base - 4;
-		sec_log_buf = nocache_base;
-#ifdef CONFIG_SEC_SSR_DUMP
-             ramdump_kernel_log_addr = sec_log_ptr;
-                pr_debug("ramdump_kernel_log_addr = 0x%x\n",
-                (unsigned int)ramdump_kernel_log_addr);
-#endif
-		sec_log_size = sec_log_save_size;
-		sec_log_irq_en = nocache_base - 0xC ;
-#endif
-		return rc;
-	}
-#endif /* CONFIG_SEC_DEBUG_NOCACHE_LOG_IN_LEVEL_LOW */
-
-	pr_err("%s: sec_log_save_size %d at sec_log_save_base 0x%x\n",
-	__func__, sec_log_save_size, (unsigned int)sec_log_save_base);
-	pr_err("%s: sec_log_reserve_size %d at sec_log_reserve_base 0x%x\n",
-	__func__, sec_log_reserve_size, (unsigned int)sec_log_reserve_base);
-
-	nocache_base = ioremap_nocache(sec_log_save_base - 4096,
-					sec_log_save_size + 8192);
-	nocache_base = nocache_base + 4096;
-
-	sec_log_mag = nocache_base - 8;
-	sec_log_ptr = nocache_base - 4;
-	sec_log_buf = nocache_base;
-#ifdef CONFIG_SEC_SSR_DUMP
-		ramdump_kernel_log_addr = sec_log_ptr;
-		pr_info("%s: ramdump_kernel_log_addr = 0x%x\n",
-		__func__, (unsigned int)ramdump_kernel_log_addr);
-#endif
-	sec_log_size = sec_log_save_size;
-	sec_log_irq_en = nocache_base - 0xC ;
-
-	if (*sec_log_mag != LOG_MAGIC) {
-		*sec_log_ptr = 0;
-		*sec_log_mag = LOG_MAGIC;
-	} else {
-		sec_log_save_old();
-	}
-
-	raw_spin_lock_irqsave(&logbuf_lock, flags);
-	start = min(con_start, log_start);
-	while (start != log_end) {
-		emit_sec_log_char(__log_buf
-				  [start++ & (__LOG_BUF_LEN - 1)]);
-	}
-
-	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-	return rc;
-}
-
-static ssize_t seclog_read(struct file *file, char __user *buf,
-				    size_t len, loff_t *offset)
-{
-	loff_t pos = *offset;
-	ssize_t count = 0;
-#ifdef CONFIG_SEC_LOG_LAST_KMSG
-	size_t log_size = last_kmsg_size;
-	const char *log = last_kmsg_buffer;
-#else
-	size_t log_size = sec_log_size;
-	const char *log = sec_log_buf;
-#endif
-
-	if (pos < log_size) {
-		count = min(len, (size_t)(log_size - pos));
-		if (copy_to_user(buf, log + pos, count))
-			return -EFAULT;
-	}
-
-	*offset += count;
-	return count;
-}
-
-static const struct file_operations seclog_file_ops = {
-	.owner = THIS_MODULE,
-	.read = seclog_read,
-};
-static int __init seclog_late_init(void)
-{
-	struct proc_dir_entry *entry;
-
-	if (!sec_log_buf)
-		return 0;
-
-	/* The reason we are using the file name "last_kmsg" is only
-	 * because the dumpstate app is dumping this file.
-	 * If we add a line in the dumpstate app (and we should change
-	 * the owner and permission in init.rc) with a new name, then
-	 * we can use a more appropriate name. (But the purpose of
-	 * last_kmsg and this file are almost the same, so the name isn't
-	 * that odd) */
-	entry = create_proc_entry("last_kmsg", S_IFREG | S_IRUGO, NULL);
-	if (!entry) {
-		pr_err("%s: failed to create proc entry. ram console may be"\
-			"present.\n", __func__);
-		return 0;
-	}
-
-	entry->proc_fops = &seclog_file_ops;
-#ifdef CONFIG_SEC_LOG_LAST_KMSG
-	entry->size = last_kmsg_size;
-#else
-	entry->size = sec_log_size;
-#endif
-	return 0;
-}
-late_initcall(seclog_late_init);
-#endif
-
-static int __init sec_log_setup(char *str)
-{
-	unsigned size = memparse(str, &str);
-	int ret;
-/*
-	unsigned *sec_log_mag;
-	unsigned start;
-	unsigned long flags;
-*/
-
-	if (size && (size == roundup_pow_of_two(size)) && (*str == '@')) {
-		unsigned long long base = 0;
-
-	ret = kstrtoull(++str, 0, &base);
-
-#ifdef CONFIG_PRINTK_NOCACHE
-		sec_log_save_size = size;
-		sec_log_save_base = base;
-		sec_log_size = size;
-		sec_log_reserve_base = base - 8;
-		sec_log_reserve_size = size + 8;
-
-		return 1;
-#endif
-	}
-	return 1;
-}
-
-__setup("sec_log=", sec_log_setup);
-
-#else
-
-static inline void emit_sec_log_char(char c)
-{
-}
-
-#endif
 
 void __init setup_log_buf(int early)
 {
@@ -1709,6 +1468,7 @@ static struct cont {
 	u64 ts_nsec;			/* time of first print */
 	u8 level;			/* log level of first message */
 	u8 facility;			/* log level of first message */
+	enum log_flags flags;		/* prefix, newline flags */
 	bool flushed:1;			/* buffer sealed and committed */
 } cont;
 
@@ -1719,10 +1479,25 @@ static void cont_flush(enum log_flags flags)
 	if (cont.len == 0)
 		return;
 
-	log_store(cont.facility, cont.level, LOG_NOCONS | flags,
-		  cont.ts_nsec, NULL, 0, cont.buf, cont.len);
-
-	cont.flushed = true;
+	if (cont.cons) {
+		/*
+		 * If a fragment of this line was directly flushed to the
+		 * console; wait for the console to pick up the rest of the
+		 * line. LOG_NOCONS suppresses a duplicated output.
+		 */
+		log_store(cont.facility, cont.level, flags | LOG_NOCONS,
+			  cont.ts_nsec, NULL, 0, cont.buf, cont.len);
+		cont.flags = flags;
+		cont.flushed = true;
+	} else {
+		/*
+		 * If no fragment of this line ever reached the console,
+		 * just submit it to the store and free the buffer.
+		 */
+		log_store(cont.facility, cont.level, flags, 0,
+			  NULL, 0, cont.buf, cont.len);
+		cont.len = 0;
+	}
 }
 
 static bool cont_add(int facility, int level, const char *text, size_t len)
@@ -1741,12 +1516,17 @@ static bool cont_add(int facility, int level, const char *text, size_t len)
 		cont.level = level;
 		cont.owner = current;
 		cont.ts_nsec = local_clock();
+		cont.flags = 0;
 		cont.cons = 0;
 		cont.flushed = false;
 	}
 
 	memcpy(cont.buf + cont.len, text, len);
 	cont.len += len;
+
+	if (cont.len > (sizeof(cont.buf) * 80) / 100)
+		cont_flush(LOG_CONT);
+
 	return true;
 }
 
@@ -1755,7 +1535,7 @@ static size_t cont_print_text(char *text, size_t size)
 	size_t textlen = 0;
 	size_t len;
 
-	if (cont.cons == 0) {
+	if (cont.cons == 0 && (console_prev & LOG_NEWLINE)) {
 		textlen += print_time(cont.ts_nsec, text);
 		size -= textlen;
 	}
@@ -1770,7 +1550,8 @@ static size_t cont_print_text(char *text, size_t size)
 	}
 
 	if (cont.flushed) {
-		text[textlen++] = '\n';
+		if (cont.flags & LOG_NEWLINE)
+			text[textlen++] = '\n';
 		/* got everything, release buffer */
 		cont.len = 0;
 	}
@@ -1868,7 +1649,7 @@ asmlinkage int vprintk_emit(int facility, int level,
 		 * or another task also prints continuation lines.
 		 */
 		if (cont.len && (lflags & LOG_PREFIX || cont.owner != current))
-			cont_flush(0);
+			cont_flush(LOG_NEWLINE);
 
 		/* buffer line if possible, otherwise store it right away */
 		if (!cont_add(facility, level, text, text_len))
@@ -1886,7 +1667,7 @@ asmlinkage int vprintk_emit(int facility, int level,
 		if (cont.len && cont.owner == current) {
 			if (!(lflags & LOG_PREFIX))
 				stored = cont_add(facility, level, text, text_len);
-			cont_flush(0);
+			cont_flush(LOG_NEWLINE);
 		}
 
 		if (!stored)
@@ -1976,7 +1757,35 @@ asmlinkage int printk(const char *fmt, ...)
 	return r;
 }
 EXPORT_SYMBOL(printk);
-#else
+
+#else /* CONFIG_PRINTK */
+
+#define LOG_LINE_MAX		0
+#define PREFIX_MAX		0
+#define LOG_LINE_MAX 0
+static u64 syslog_seq;
+static u32 syslog_idx;
+static u64 console_seq;
+static u32 console_idx;
+static enum log_flags syslog_prev;
+static u64 log_first_seq;
+static u32 log_first_idx;
+static u64 log_next_seq;
+static enum log_flags console_prev;
+static struct cont {
+	size_t len;
+	size_t cons;
+	u8 level;
+	bool flushed:1;
+} cont;
+static struct printk_log *log_from_idx(u32 idx) { return NULL; }
+static u32 log_next(u32 idx) { return 0; }
+static void call_console_drivers(int level, const char *text, size_t len) {}
+static size_t msg_print_text(const struct printk_log *msg, enum log_flags prev,
+			     bool syslog, char *buf, size_t size) { return 0; }
+static size_t cont_print_text(char *text, size_t size) { return 0; }
+
+#endif /* CONFIG_PRINTK */
 
 static void call_console_drivers(int level, const char *text, size_t len)
 {
@@ -2274,10 +2083,34 @@ void wake_up_klogd(void)
 	preempt_enable();
 }
 
-/* the next printk record to write to the console */
-static u64 console_seq;
-static u32 console_idx;
-static enum log_flags console_prev;
+static void console_cont_flush(char *text, size_t size)
+{
+	unsigned long flags;
+	size_t len;
+
+	raw_spin_lock_irqsave(&logbuf_lock, flags);
+
+	if (!cont.len)
+		goto out;
+
+	/*
+	 * We still queue earlier records, likely because the console was
+	 * busy. The earlier ones need to be printed before this one, we
+	 * did not flush any fragment so far, so just let it queue up.
+	 */
+	if (console_seq < log_next_seq && !cont.cons)
+		goto out;
+
+	len = cont_print_text(text, size);
+	raw_spin_unlock(&logbuf_lock);
+	stop_critical_timings();
+	call_console_drivers(cont.level, text, len);
+	start_critical_timings();
+	local_irq_restore(flags);
+	return;
+out:
+	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
+}
 
 /**
  * console_unlock - unlock the console system
@@ -2309,19 +2142,7 @@ void console_unlock(void)
 	console_may_schedule = 0;
 
 	/* flush buffered message fragment immediately to console */
-	raw_spin_lock_irqsave(&logbuf_lock, flags);
-	if (cont.len && (cont.cons < cont.len || cont.flushed)) {
-		size_t len;
-
-		len = cont_print_text(text, sizeof(text));
-		raw_spin_unlock(&logbuf_lock);
-		stop_critical_timings();
-		call_console_drivers(cont.level, text, len);
-		start_critical_timings();
-		local_irq_restore(flags);
-	} else
-		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-
+	console_cont_flush(text, sizeof(text));
 again:
 	for (;;) {
 		struct log *msg;
@@ -2358,6 +2179,7 @@ skip:
 			 * will properly dump everything later.
 			 */
 			msg->flags &= ~LOG_NOCONS;
+			console_prev = msg->flags;
 			goto skip;
 		}
 
