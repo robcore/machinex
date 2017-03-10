@@ -542,6 +542,7 @@ struct rq {
 	unsigned int ttwu_count;
 	unsigned int ttwu_local;
 #endif
+};
 
 static inline u64 rq_clock(struct rq *rq)
 {
