@@ -241,11 +241,10 @@ int pvclock_gtod_register_notifier(struct notifier_block *nb)
 	unsigned long flags;
 	int ret;
 
-	write_seqlock_irqsave(&tk->lock, flags);
+	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 	ret = raw_notifier_chain_register(&pvclock_gtod_chain, nb);
-	/* update timekeeping data */
 	update_pvclock_gtod(tk, true);
-	write_sequnlock_irqrestore(&tk->lock, flags);
+	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 
 	return ret;
 }
@@ -254,18 +253,15 @@ EXPORT_SYMBOL_GPL(pvclock_gtod_register_notifier);
 /**
  * pvclock_gtod_unregister_notifier - unregister a pvclock
  * timedata update listener
- *
- * Must hold write on timekeeper.lock
  */
 int pvclock_gtod_unregister_notifier(struct notifier_block *nb)
 {
-	struct timekeeper *tk = &timekeeper;
 	unsigned long flags;
 	int ret;
 
-	write_seqlock_irqsave(&tk->lock, flags);
+	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 	ret = raw_notifier_chain_unregister(&pvclock_gtod_chain, nb);
-	write_sequnlock_irqrestore(&tk->lock, flags);
+	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 
 	return ret;
 }
@@ -553,48 +549,6 @@ int do_settimeofday(const struct timespec *tv)
 	return 0;
 }
 EXPORT_SYMBOL(do_settimeofday);
-
-
-/**
- * timekeeping_get_tai_offset - Returns current TAI offset from UTC
- *
- */
-s32 timekeeping_get_tai_offset(void)
-{
-	struct timekeeper *tk = &timekeeper;
-	unsigned int seq;
-	s32 ret;
-
-	do {
-		seq = read_seqbegin(&tk->lock);
-		ret = tk->tai_offset;
-	} while (read_seqretry(&tk->lock, seq));
-
-	return ret;
-}
-
-/**
- * __timekeeping_set_tai_offset - Lock free worker function
- *
- */
-void __timekeeping_set_tai_offset(struct timekeeper *tk, s32 tai_offset)
-{
-	tk->tai_offset = tai_offset;
-}
-
-/**
- * timekeeping_set_tai_offset - Sets the current TAI offset from UTC
- *
- */
-void timekeeping_set_tai_offset(s32 tai_offset)
-{
-	struct timekeeper *tk = &timekeeper;
-	unsigned long flags;
-
-	write_seqlock_irqsave(&tk->lock, flags);
-	__timekeeping_set_tai_offset(tk, tai_offset);
-	write_sequnlock_irqrestore(&tk->lock, flags);
-}
 
 /**
  * timekeeping_inject_offset - Adds or subtracts from the current time.
@@ -1348,8 +1302,6 @@ static inline unsigned int accumulate_nsecs_to_secs(struct timekeeper *tk)
 
 			__timekeeping_set_tai_offset(tk, tk->tai_offset - leap);
 
-			__timekeeping_set_tai_offset(tk, tk->tai_offset - leap);
-
 			clock_was_set_delayed();
 			action = TK_CLOCK_WAS_SET;
 		}
@@ -1639,7 +1591,6 @@ struct timespec get_monotonic_coarse(void)
 void do_timer(unsigned long ticks)
 {
 	jiffies_64 += ticks;
-	update_wall_time();
 	calc_global_load(ticks);
 }
 
@@ -1724,7 +1675,7 @@ int do_adjtimex(struct timex *txc)
 	struct timekeeper *tk = &timekeeper;
 	unsigned long flags;
 	struct timespec ts;
-	s32 tai;
+	s32 orig_tai, tai;
 	int ret;
 
 	/* Validate the data before disabling interrupts */
@@ -1748,14 +1699,19 @@ int do_adjtimex(struct timex *txc)
 	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 	write_seqcount_begin(&timekeeper_seq);
 
-	tai = tk->tai_offset;
+	orig_tai = tai = tk->tai_offset;
 	ret = __do_adjtimex(txc, &ts, &tai);
 
-	__timekeeping_set_tai_offset(tk, tai);
-	update_pvclock_gtod(tk, true);
-
+	if (tai != orig_tai) {
+		__timekeeping_set_tai_offset(tk, tai);
+		timekeeping_update(tk, TK_MIRROR | TK_CLOCK_WAS_SET);
+		update_pvclock_gtod(tk, true);
+	}
 	write_seqcount_end(&timekeeper_seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
+
+	if (tai != orig_tai)
+		clock_was_set();
 
 	return ret;
 }
@@ -1790,4 +1746,5 @@ void xtime_update(unsigned long ticks)
 	write_seqlock(&jiffies_lock);
 	do_timer(ticks);
 	write_sequnlock(&jiffies_lock);
+	update_wall_time();
 }
