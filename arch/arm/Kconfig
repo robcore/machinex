@@ -278,7 +278,7 @@ config GENERIC_TIME_VSYSCALL
 
 config GENERIC_TIME_VSYSCALL_OLD
 	bool "Enable gettimeofday updates"
-	depends on CPU_V7 && UPDATED_ACCESSIBLE_TIMERS
+	depends on CPU_V7
 	help
 	  Enables updating the kernel user helper area with the xtime struct
 	  data for gettimeofday via kernel user helpers.
