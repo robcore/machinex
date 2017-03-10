@@ -543,6 +543,16 @@ struct rq {
 	unsigned int ttwu_local;
 #endif
 
+static inline u64 rq_clock(struct rq *rq)
+{
+	return rq->clock;
+}
+
+static inline u64 rq_clock_task(struct rq *rq)
+{
+	return rq->clock_task;
+}
+
 #ifdef CONFIG_SMP
 	struct llist_head wake_list;
 #endif
