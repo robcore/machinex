@@ -409,7 +409,6 @@ static int sec_bat_get_cable_from_extended_cable_type(
 			case POWER_SUPPLY_TYPE_CARDOCK:
 			case POWER_SUPPLY_TYPE_OTG:
 			case POWER_SUPPLY_TYPE_MISC:
-			case POWER_SUPPLY_TYPE_CARDOCK:
 			case POWER_SUPPLY_TYPE_POWER_SHARING:
 			case POWER_SUPPLY_TYPE_WIRELESS:
 			case POWER_SUPPLY_TYPE_MAINS:
@@ -423,7 +422,8 @@ static int sec_bat_get_cable_from_extended_cable_type(
 				break;
 			default:
 				break;
-
+		}
+	}
 
 #endif
 
