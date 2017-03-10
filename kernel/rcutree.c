@@ -1445,7 +1445,7 @@ rcu_start_gp(struct rcu_state *rsp, unsigned long flags)
 	raw_spin_unlock(&rnp->lock); /* Interrupts remain disabled. */
 
 	/* Ensure that CPU is aware of completion of last grace period. */
-	rcu_process_gp_end(rsp, rdp);
+	note_gp_changes(rsp, rdp);
 	local_irq_restore(flags);
 
 	/*
