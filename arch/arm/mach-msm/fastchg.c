@@ -500,25 +500,27 @@ static ssize_t info_show(struct kobject *kobj,
 		"Custom Wireless level : %dmA/h\n"
 		"Failsafe mode : %s\n"
 		"Valid AC  levels : %s\n"
+		"Valid GLOBAL levels : %s\n"
 		"Valid USB levels : %s\n"
-		"Valid Wireless levels : %s\n"
-		"ForceMains : %s\n",
+		"Valid Wireless levels : %s\n",
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	       ? "0 - Disabled (default)" :
-		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
+		 force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
 		 force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA  ? "2 - Use custom mA on AC and USB" :
-		(force_fast_charge == FAST_CHARGE_FORCE_GLOBAL	   ? "3 - Use custom mA on AC and USB" : "Problem : value out of range")),
+		(force_fast_charge == FAST_CHARGE_FORCE_GLOBAL	   ? "3 - Use custom mA on AC and USB" : "Problem : value out of range"),
 
 		 use_mtp_during_fast_charge          == USE_MTP_DURING_FAST_CHARGE_DISABLED           ? "0 - Disabled" :
 		(use_mtp_during_fast_charge          == USE_MTP_DURING_FAST_CHARGE_ENABLED            ? "1 - Enabled" : "Problem : value out of range"),
 		 screen_on_current_limit          == SCREEN_ON_CURRENT_LIMIT_DISABLED           ? "0 - Disabled" :
 		(screen_on_current_limit          == SCREEN_ON_CURRENT_LIMIT_ENABLED            ? "1 - Enabled" : "Problem : value out of range"),
 		 ac_charge_level,
+		 global_charge_level,
 		 usb_charge_level,
 		 wireless_charge_level,
 		 failsafe          == FAIL_SAFE_DISABLED           ? "0 - Failsafe disabled - please be careful !" :
 		(failsafe          == FAIL_SAFE_ENABLED            ? "1 - Failsafe active (default)" : "Problem : value out of range"),
 		 failsafe          == FAIL_SAFE_ENABLED            ? AC_LEVELS : ANY_LEVELS,
+		 failsafe          == FAIL_SAFE_ENABLED            ? GLOBAL_LEVELS : ANY_LEVELS,
 		 failsafe          == FAIL_SAFE_ENABLED            ? USB_LEVELS : ANY_LEVELS,
 		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS
 		);
