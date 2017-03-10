@@ -22,7 +22,7 @@
 #ifndef _LINUX_FASTCHG_H
 #define _LINUX_FASTCHG_H
 
-#define FAST_CHARGE_VERSION "v1.2 by Yank555.lu, ktoonsez & Tkkg1994"
+#define FAST_CHARGE_VERSION "v1.3 by Yank555.lu, ktoonsez, Tkkg1994, & robcore"
 #define AC_LEVELS  "1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100"
 #define USB_LEVELS "460 500 600 700 800 900 1000"
 #define WIRELESS_LEVELS "650 800 900 1000 1100 1200"
@@ -84,5 +84,9 @@ extern int wireless_charge_level;
 extern int failsafe;
 #define FAIL_SAFE_ENABLED 1	/* default */
 #define FAIL_SAFE_DISABLED 0
+
+extern int force_mains;
+#define FORCE_MAINS_ENABLED 1
+#define FORCE_MAINS_DISABLED 0 /*default */
 
 #endif

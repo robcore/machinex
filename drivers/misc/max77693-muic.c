@@ -802,6 +802,9 @@ int max77693_muic_get_charging_type(void)
 		return CABLE_TYPE_NONE_MUIC;
 }
 
+static bool enforce_disable;
+module_param_named(force_disable_charger, enforce_disable, bool, 0644);
+
 static int max77693_muic_set_charging_type(struct max77693_muic_info *info,
 					   bool force_disable)
 {
@@ -810,10 +813,13 @@ static int max77693_muic_set_charging_type(struct max77693_muic_info *info,
 	dev_info(info->dev, "func:%s cable_type:%d force_disable:%d\n",
 		 __func__, info->cable_type, force_disable);
 	if (mdata->charger_cb) {
-		if (force_disable)
-			ret = mdata->charger_cb(CABLE_TYPE_NONE_MUIC);
-		else
-			ret = mdata->charger_cb(info->cable_type);
+		if (!enforce_disable) {
+			if (force_disable)
+				ret = mdata->charger_cb(CABLE_TYPE_NONE_MUIC);
+			else
+				ret = mdata->charger_cb(info->cable_type);
+		} else if (enforce_disable)
+				ret = mdata->charger_cb(CABLE_TYPE_NONE_MUIC);
 	}
 
 	if (ret) {
