@@ -298,7 +298,7 @@ static int sec_bat_get_cable_from_extended_cable_type(
 		default:
 			if (cable_type != POWER_SUPPLY_TYPE_BATTERY &&
 				force_mains == FORCE_MAINS_ENABLED) {
-				cable_type = POWER_SUPPLY_TYPE_MAINS
+				cable_type = POWER_SUPPLY_TYPE_MAINS;
 			}
 
 			cable_type = current_cable_type;
@@ -335,7 +335,7 @@ static int sec_bat_get_cable_from_extended_cable_type(
 			default:
 				if (cable_type != POWER_SUPPLY_TYPE_BATTERY &&
 					force_mains == FORCE_MAINS_ENABLED) {
-					cable_type = POWER_SUPPLY_TYPE_MAINS
+					cable_type = POWER_SUPPLY_TYPE_MAINS;
 				}
 
 				cable_type = cable_main;
@@ -354,7 +354,7 @@ static int sec_bat_get_cable_from_extended_cable_type(
 		default:
 			if (cable_type != POWER_SUPPLY_TYPE_BATTERY &&
 				force_mains == FORCE_MAINS_ENABLED) {
-				cable_type = POWER_SUPPLY_TYPE_MAINS
+				cable_type = POWER_SUPPLY_TYPE_MAINS;
 			}
 			cable_type = cable_main;
 			charge_current_max = 0;
@@ -364,7 +364,7 @@ static int sec_bat_get_cable_from_extended_cable_type(
 	default:
 		if (cable_type != POWER_SUPPLY_TYPE_BATTERY &&
 			force_mains == FORCE_MAINS_ENABLED) {
-			cable_type = POWER_SUPPLY_TYPE_MAINS
+			cable_type = POWER_SUPPLY_TYPE_MAINS;
 		}
 		cable_type = cable_main;
 		break;
