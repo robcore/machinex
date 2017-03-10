@@ -50,6 +50,10 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
+
+#include "console_cmdline.h"
+#include "braille.h"
+
 #ifdef LOCAL_CONFIG_PRINT_EXTRA_INFO
 #define EXTRA_BUF_SIZE (TASK_COMM_LEN+16)
 #else
@@ -1767,9 +1771,8 @@ static int __add_preferred_console(char *name, int idx, char *options,
 	c = &console_cmdline[i];
 	strlcpy(c->name, name, sizeof(c->name));
 	c->options = options;
-#ifdef CONFIG_A11Y_BRAILLE_CONSOLE
-	c->brl_options = brl_options;
-#endif
+	braille_set_options(c, brl_options);
+
 	c->index = idx;
 	return 0;
 }
@@ -1782,20 +1785,8 @@ static int __init console_setup(char *str)
 	char *s, *options, *brl_options = NULL;
 	int idx;
 
-#ifdef CONFIG_A11Y_BRAILLE_CONSOLE
-	if (!memcmp(str, "brl,", 4)) {
-		brl_options = "";
-		str += 4;
-	} else if (!memcmp(str, "brl=", 4)) {
-		brl_options = str + 4;
-		str = strchr(brl_options, ',');
-		if (!str) {
-			printk(KERN_ERR "need port name after brl=\n");
-			return 1;
-		}
-		*(str++) = 0;
-	}
-#endif
+	if (_braille_console_setup(&str, &brl_options))
+		return 1;
 
 	/*
 	 * Decode str into name, index, options.
@@ -2307,16 +2298,10 @@ void register_console(struct console *newcon)
 			continue;
 		if (newcon->index < 0)
 			newcon->index = console_cmdline[i].index;
-#ifdef CONFIG_A11Y_BRAILLE_CONSOLE
-		if (console_cmdline[i].brl_options) {
-			newcon->flags |= CON_BRL;
-			braille_register_console(newcon,
-					console_cmdline[i].index,
-					console_cmdline[i].options,
-					console_cmdline[i].brl_options);
+
+		if (_braille_register_console(newcon, &console_cmdline[i]))
 			return;
-		}
-#endif
+
 		if (newcon->setup &&
 		    newcon->setup(newcon, console_cmdline[i].options) != 0)
 			break;
@@ -2404,13 +2389,13 @@ EXPORT_SYMBOL(register_console);
 int unregister_console(struct console *console)
 {
         struct console *a, *b;
-	int res = 1;
+	int res;
 
-#ifdef CONFIG_A11Y_BRAILLE_CONSOLE
-	if (console->flags & CON_BRL)
-		return braille_unregister_console(console);
-#endif
+	res = _braille_unregister_console(console);
+	if (res)
+		return res;
 
+	res = 1;
 	console_lock();
 	if (console_drivers == console) {
 		console_drivers=console->next;
