@@ -3454,7 +3454,7 @@ struct cgroup_pidlist {
 	/* pointer to the cgroup we belong to, for list removal purposes */
 	struct cgroup *owner;
 	/* protects the other fields */
-	struct rw_semaphore mutex;
+	struct rw_semaphore rwsem;
 };
 
 /*
@@ -3527,7 +3527,7 @@ static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
 	struct pid_namespace *ns = task_active_pid_ns(current);
 
 	/*
-	 * We can't drop the pidlist_mutex before taking the l->mutex in case
+	 * We can't drop the pidlist_mutex before taking the l->rwsem in case
 	 * the last ref-holder is trying to remove l from the list at the same
 	 * time. Holding the pidlist_mutex precludes somebody taking whichever
 	 * list we find out from under us - compare release_pid_array().
@@ -3536,7 +3536,7 @@ static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
 	list_for_each_entry(l, &cgrp->pidlists, links) {
 		if (l->key.type == type && l->key.ns == ns) {
 			/* make sure l doesn't vanish out from under us */
-			down_write(&l->mutex);
+			down_write(&l->rwsem);
 			mutex_unlock(&cgrp->pidlist_mutex);
 			return l;
 		}
@@ -3547,8 +3547,8 @@ static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
 		mutex_unlock(&cgrp->pidlist_mutex);
 		return l;
 	}
-	init_rwsem(&l->mutex);
-	down_write(&l->mutex);
+	init_rwsem(&l->rwsem);
+	down_write(&l->rwsem);
 	l->key.type = type;
 	l->key.ns = get_pid_ns(ns);
 	l->owner = cgrp;
@@ -3609,7 +3609,7 @@ static int pidlist_array_load(struct cgroup *cgrp, enum cgroup_filetype type,
 	l->list = array;
 	l->length = length;
 	l->use_count++;
-	up_write(&l->mutex);
+	up_write(&l->rwsem);
 	*lp = l;
 	return 0;
 }
@@ -3688,7 +3688,7 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 	int index = 0, pid = *pos;
 	int *iter;
 
-	down_read(&l->mutex);
+	down_read(&l->rwsem);
 	if (pid) {
 		int end = l->length;
 
@@ -3715,7 +3715,7 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 static void cgroup_pidlist_stop(struct seq_file *s, void *v)
 {
 	struct cgroup_pidlist *l = s->private;
-	up_read(&l->mutex);
+	up_read(&l->rwsem);
 }
 
 static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
@@ -3761,7 +3761,7 @@ static void cgroup_release_pid_array(struct cgroup_pidlist *l)
 	 * pidlist_mutex, we have to take pidlist_mutex first.
 	 */
 	mutex_lock(&l->owner->pidlist_mutex);
-	down_write(&l->mutex);
+	down_write(&l->rwsem);
 	BUG_ON(!l->use_count);
 	if (!--l->use_count) {
 		/* we're the last user if refcount is 0; remove and free */
@@ -3769,12 +3769,12 @@ static void cgroup_release_pid_array(struct cgroup_pidlist *l)
 		mutex_unlock(&l->owner->pidlist_mutex);
 		pidlist_free(l->list);
 		put_pid_ns(l->key.ns);
-		up_write(&l->mutex);
+		up_write(&l->rwsem);
 		kfree(l);
 		return;
 	}
 	mutex_unlock(&l->owner->pidlist_mutex);
-	up_write(&l->mutex);
+	up_write(&l->rwsem);
 }
 
 static int cgroup_pidlist_release(struct inode *inode, struct file *file)
