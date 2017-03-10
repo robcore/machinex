@@ -239,7 +239,7 @@ void timer_stats_update_stats(void *timer, pid_t pid, void *startf,
 	 * It doesn't matter which lock we take:
 	 */
 	raw_spinlock_t *lock;
-	struct entry *entry, input = {0};
+	struct entry *entry, input;
 	unsigned long flags;
 
 	if (likely(!timer_stats_active))
@@ -298,15 +298,15 @@ static int tstats_show(struct seq_file *m, void *v)
 	period = ktime_to_timespec(time);
 	ms = period.tv_nsec / 1000000;
 
-	seq_puts(m, "Timer Stats Version: v0.2\n");
+	seq_puts(m, "Timer Stats Version: v0.3\n");
 	seq_printf(m, "Sample period: %ld.%03ld s\n", period.tv_sec, ms);
 	if (atomic_read(&overflow_count))
-		seq_printf(m, "Overflow: %d entries\n",
-			atomic_read(&overflow_count));
+		seq_printf(m, "Overflow: %d entries\n", atomic_read(&overflow_count));
+	seq_printf(m, "Collection: %s\n", timer_stats_active ? "active" : "inactive");
 
 	for (i = 0; i < nr_entries; i++) {
 		entry = entries + i;
- 		if (entry->timer_flag & TIMER_STATS_FLAG_DEFERRABLE) {
+		if (entry->timer_flag & TIMER_STATS_FLAG_DEFERRABLE) {
 			seq_printf(m, "%4luD, %5d %-16s ",
 				entry->count, entry->pid, entry->comm);
 		} else {

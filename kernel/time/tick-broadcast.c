@@ -285,8 +285,12 @@ static void tick_do_broadcast(struct cpumask *mask)
  */
 static void tick_do_periodic_broadcast(void)
 {
+	raw_spin_lock(&tick_broadcast_lock);
+
 	cpumask_and(tmpmask, cpu_online_mask, tick_broadcast_mask);
 	tick_do_broadcast(tmpmask);
+
+	raw_spin_unlock(&tick_broadcast_lock);
 }
 
 /*
@@ -296,15 +300,13 @@ static void tick_handle_periodic_broadcast(struct clock_event_device *dev)
 {
 	ktime_t next;
 
-	raw_spin_lock(&tick_broadcast_lock);
-
 	tick_do_periodic_broadcast();
 
 	/*
 	 * The device is in periodic mode. No reprogramming necessary:
 	 */
 	if (dev->mode == CLOCK_EVT_MODE_PERIODIC)
-		goto unlock;
+		return;
 
 	/*
 	 * Setup the next period for devices, which do not have
@@ -317,11 +319,9 @@ static void tick_handle_periodic_broadcast(struct clock_event_device *dev)
 		next = ktime_add(next, tick_period);
 
 		if (!clockevents_program_event(dev, next, false))
-			goto unlock;
+			return;
 		tick_do_periodic_broadcast();
 	}
-unlock:
-	raw_spin_unlock(&tick_broadcast_lock);
 }
 
 /*
@@ -599,10 +599,6 @@ again:
 			next_cpu = cpu;
 		}
 	}
-
-	/* Take care of enforced broadcast requests */
-	cpumask_or(tmpmask, tmpmask, tick_broadcast_force_mask);
-	cpumask_clear(tick_broadcast_force_mask);
 
 	/*
 	 * Remove the current cpu from the pending mask. The event is

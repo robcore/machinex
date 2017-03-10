@@ -31,7 +31,7 @@ extern void tick_install_replacement(struct clock_event_device *dev);
 
 extern void clockevents_shutdown(struct clock_event_device *dev);
 
-extern size_t sysfs_get_uname(const char *buf, char *dst, size_t cnt);
+extern ssize_t sysfs_get_uname(const char *buf, char *dst, size_t cnt);
 
 /*
  * NO_HZ / high resolution timer shared code
@@ -159,3 +159,4 @@ static inline int tick_device_is_functional(struct clock_event_device *dev)
 
 int __clockevents_update_freq(struct clock_event_device *dev, u32 freq);
 extern void do_timer(unsigned long ticks);
+extern void update_wall_time(void);

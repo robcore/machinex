@@ -687,8 +687,8 @@ static inline void clocksource_select_fallback(void) { }
  * clocksource_done_booting - Called near the end of core bootup
  *
  * Hack to avoid lots of clocksource churn at boot time.
- * We use arch_initcall because we want this to start before
- * device_initcall but after SMP init.
+ * We use fs_initcall because we want this to start before
+ * device_initcall but after subsys_initcall.
  */
 static int __init clocksource_done_booting(void)
 {
@@ -703,7 +703,7 @@ static int __init clocksource_done_booting(void)
 	mutex_unlock(&clocksource_mutex);
 	return 0;
 }
-arch_initcall(clocksource_done_booting);
+fs_initcall(clocksource_done_booting);
 
 /*
  * Enqueue the clocksource sorted by rating
@@ -908,7 +908,7 @@ sysfs_show_current_clocksources(struct device *dev,
 	return count;
 }
 
-size_t sysfs_get_uname(const char *buf, char *dst, size_t cnt)
+ssize_t sysfs_get_uname(const char *buf, char *dst, size_t cnt)
 {
 	size_t ret = cnt;
 
@@ -939,7 +939,7 @@ static ssize_t sysfs_override_clocksource(struct device *dev,
 					  struct device_attribute *attr,
 					  const char *buf, size_t count)
 {
-	size_t ret;
+	ssize_t ret;
 
 	mutex_lock(&clocksource_mutex);
 
@@ -967,7 +967,7 @@ static ssize_t sysfs_unbind_clocksource(struct device *dev,
 {
 	struct clocksource *cs;
 	char name[CS_NAME_LEN];
-	size_t ret;
+	ssize_t ret;
 
 	ret = sysfs_get_uname(buf, name, count);
 	if (ret < 0)
