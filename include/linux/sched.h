@@ -115,6 +115,7 @@ extern void sched_get_nr_running_avg(int *avg, int *iowait_avg);
 
 extern void calc_global_load(unsigned long ticks);
 extern void update_cpu_load_nohz(void);
+extern void wake_up_if_idle(int cpu);
 
 /* Notifier for when a task gets migrated to a new CPU */
 struct task_migration_notifier {
