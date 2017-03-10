@@ -3326,8 +3326,8 @@ int cgroup_scan_tasks(struct cgroup_scanner *scan)
 	 * guarantees forward progress and that we don't miss any tasks.
 	 */
 	heap->size = 0;
-	cgroup_iter_start(scan->cg, &it);
-	while ((p = cgroup_iter_next(scan->cg, &it))) {
+	cgroup_iter_start(scan->cgrp, &it);
+	while ((p = cgroup_iter_next(scan->cgrp, &it))) {
 		/*
 		 * Only affect tasks that qualify per the caller's callback,
 		 * if he provided one
@@ -3360,7 +3360,7 @@ int cgroup_scan_tasks(struct cgroup_scanner *scan)
 		 * the heap and wasn't inserted
 		 */
 	}
-	cgroup_iter_end(scan->cg, &it);
+	cgroup_iter_end(scan->cgrp, &it);
 
 	if (heap->size) {
 		for (i = 0; i < heap->size; i++) {
@@ -3406,7 +3406,7 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
 {
 	struct cgroup_scanner scan;
 
-	scan.cg = from;
+	scan.cgrp = from;
 	scan.test_task = NULL; /* select all tasks in cgroup */
 	scan.process_task = cgroup_transfer_one_task;
 	scan.heap = NULL;
