@@ -238,7 +238,7 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
+void msm_restart(char mode, const char *cmd)
 {
 	unsigned long value;
 
