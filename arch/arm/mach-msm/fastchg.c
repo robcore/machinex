@@ -397,7 +397,7 @@ static ssize_t force_mains_store(struct kobject *kobj,
 
 	sscanf(buf, "%du", &newfm);
 
-	switch (new_cable_type) {
+	switch (newfm) {
 		case FORCE_MAINS_ENABLED:
 			force_mains = newfm;
 			return count;
@@ -477,7 +477,7 @@ static ssize_t info_show(struct kobject *kobj,
 		 failsafe          == FAIL_SAFE_ENABLED            ? USB_LEVELS : ANY_LEVELS,
 		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS,
 		 force_mains       == FORCE_MAINS_DISABLED         ? "0 - Force Mains Inactive (default) - Safe and Sound" :
-		(force_mains       == FORCE_MAINS_ENABLED          ? "1 - Force Mains Active - This will cause an explosion!" : "Problem : value out of range"),
+		(force_mains       == FORCE_MAINS_ENABLED          ? "1 - Force Mains Active - This will cause an explosion!" : "Problem : value out of range")
 		);
 }
 
