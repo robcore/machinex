@@ -351,13 +351,14 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (is_clk && !cpu_clk[policy->cpu])
 		return 0;
 
-#ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
+
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
+#ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
 		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
-
+#endif
 	}
-
+#ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
 	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
