@@ -1357,7 +1357,7 @@ static cycle_t logarithmic_accumulation(struct timekeeper *tk, cycle_t offset,
  * update_wall_time - Uses the current clocksource to increment the wall time
  *
  */
-static void update_wall_time(void)
+void update_wall_time(void)
 {
 	struct clocksource *clock;
 	struct timekeeper *real_tk = &timekeeper;
