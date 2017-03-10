@@ -85,4 +85,8 @@ extern int failsafe;
 #define FAIL_SAFE_ENABLED 1	/* default */
 #define FAIL_SAFE_DISABLED 0
 
+extern int force_mains;
+#define FORCE_MAINS_ENABLED 1
+#define FORCE_MAINS_DISABLED 0 /*default */
+
 #endif

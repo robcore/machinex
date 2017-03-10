@@ -380,6 +380,38 @@ static ssize_t failsafe_store(struct kobject *kobj,
 static struct kobj_attribute failsafe_attribute =
 	__ATTR(failsafe, 0666, failsafe_show, failsafe_store);
 
+int force_mains;
+
+static ssize_t force_mains_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", force_mains);
+}
+
+static ssize_t force_mains_store(struct kobject *kobj,
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
+{
+
+	int new_cable_type;
+
+	sscanf(buf, "%du", &new_cable_type);
+
+	switch (new_cable_type) {
+		case FORCE_MAINS_ENABLED:
+			cable_type = new_cable_type;
+			return count;
+		case FORCE_MAINS_DISABLED:
+			cable_type = new_cable_type;
+			return count;
+		default:
+			return -EINVAL;
+	}
+}
+
+static struct kobj_attribute force_mains_attribute =
+	__ATTR(failsafe, 0666, force_mains_show, force_mains_store);
+
 /* sysfs interface for "ac_levels" */
 static ssize_t ac_levels_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -470,6 +502,7 @@ static struct attribute *force_fast_charge_attrs[] = {
 	&usb_charge_level_attribute.attr,
 	&wireless_charge_level_attribute.attr,
 	&failsafe_attribute.attr,
+	&force_mains_attribute.attr,
 	&ac_levels_attribute.attr,
 	&usb_levels_attribute.attr,
 	&wireless_levels_attribute.attr,
@@ -499,7 +532,9 @@ int force_fast_charge_init(void)
 	/* Default USB charge level to 650mA/h    */
 	wireless_charge_level = WIRELESS_CHARGE_650;
 	/* Allow only values in list by default   */
-	failsafe          = FAIL_SAFE_ENABLED;
+	failsafe = FAIL_SAFE_ENABLED;
+	/* Obviously default this one to off */
+	force_mains	= FORCE_MAINS_DISABLED;
 
         force_fast_charge_kobj =
 		kobject_create_and_add("fast_charge", kernel_kobj);
