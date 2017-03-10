@@ -155,12 +155,14 @@ struct max77693_muic_data {
 #ifdef CONFIG_MFD_MAX77693
 extern struct max77693_muic_data max77693_muic;
 extern struct max77693_regulator_data max77693_regulators[];
-#else if CONFIG_REGULATOR_NEW_MAX77693
+#else
+#ifdef CONFIG_REGULATOR_NEW_MAX77693
 struct max77693_regulator_data {
 	int id;
 	struct regulator_init_data *initdata;
 	struct device_node *of_node;
 };
+#endif
 #endif
 #ifdef CONFIG_VIDEO_MHL_V2
 int acc_register_notifier(struct notifier_block *nb);
