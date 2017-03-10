@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2002 ARM Ltd.
  *  All Rights Reserved
- *  Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ *  Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -57,9 +57,22 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 		 * The trouble is, letting people know about this is not really
 		 * possible, since we are currently running incoherently, and
 		 * therefore cannot safely call printk() or anything else
+		 * Read the pending interrupts to understand why we woke up
 		 */
+		local_irq_disable();
+		gic_show_pending_irq();
 		(*spurious)++;
 	}
+}
+
+int msm_cpu_kill(unsigned int cpu)
+{
+	int ret = 0;
+
+	if (cpumask_test_and_clear_cpu(cpu, &cpu_dying_mask))
+		ret = msm_pm_wait_cpu_shutdown(cpu);
+
+	return ret ? 0 : 1;
 }
 
 /*
@@ -159,7 +172,8 @@ int msm_platform_secondary_init(unsigned int cpu)
 
 	if (!(*warm_boot)) {
 		*warm_boot = 1;
-		return 0;
+		if (cpu)
+			return 0;
 	}
 	msm_jtag_restore_state();
 #if defined(CONFIG_VFP) && defined (CONFIG_CPU_PM)
