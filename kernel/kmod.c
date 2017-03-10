@@ -138,6 +138,9 @@ int __request_module(bool wait, const char *fmt, ...)
 #define MAX_KMOD_CONCURRENT 50	/* Completely arbitrary value - KAO */
 	static int kmod_loop_msg;
 
+	if (!modprobe_path[0])
+		return 0;
+
 	va_start(args, fmt);
 	ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
 	va_end(args);
@@ -560,14 +563,6 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info, int wait)
 	int retval = 0;
 
 	helper_lock();
-	if (!sub_info->path) {
-		retval = -EINVAL;
-		goto out;
-	}
-
-	if (sub_info->path[0] == '\0')
-		goto out;
-
 	if (!khelper_wq || usermodehelper_disabled) {
 		retval = -EBUSY;
 		goto out;
