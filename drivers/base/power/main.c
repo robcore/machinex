@@ -549,11 +549,7 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "noirq power domain ";
 		callback = pm_noirq_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "noirq type ";
 		callback = pm_noirq_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -569,7 +565,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 		callback = pm_noirq_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 
  Out:
@@ -664,11 +659,7 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "early power domain ";
 		callback = pm_late_early_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "early type ";
 		callback = pm_late_early_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -684,7 +675,6 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 		callback = pm_late_early_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 
  Out:
@@ -771,8 +761,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
+		goto Driver;
 	}
 
 	if (dev->type && dev->type->pm) {
@@ -914,11 +903,7 @@ static void device_complete(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "completing power domain ";
 		callback = dev->pm_domain->ops.complete;
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "completing type ";
 		callback = dev->type->pm->complete;
 	} else if (dev->class && dev->class->pm) {
@@ -934,7 +919,6 @@ static void device_complete(struct device *dev, pm_message_t state)
 		callback = dev->driver->pm->complete;
 	}
 
- End:
 	if (callback) {
 		pm_dev_dbg(dev, state, info);
 		callback(dev);
@@ -1037,11 +1021,7 @@ static int device_suspend_noirq(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "noirq power domain ";
 		callback = pm_noirq_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "noirq type ";
 		callback = pm_noirq_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -1057,7 +1037,6 @@ static int device_suspend_noirq(struct device *dev, pm_message_t state)
 		callback = pm_noirq_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 	if (error)
 		pm_runtime_enable(dev);
@@ -1140,11 +1119,7 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "late power domain ";
 		callback = pm_late_early_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "late type ";
 		callback = pm_late_early_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -1160,7 +1135,6 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 		callback = pm_late_early_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 	if (error)
 		/*
@@ -1312,21 +1286,20 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto Run;
+		goto Run;
 	}
 
 	if (dev->type && dev->type->pm) {
 		info = "type ";
 		callback = pm_op(dev->type->pm, state);
-		goto Driver;
+		goto Run;
 	}
 
 	if (dev->class) {
 		if (dev->class->pm) {
 			info = "class ";
 			callback = pm_op(dev->class->pm, state);
-			goto Driver;
+			goto Run;
 		} else if (dev->class->suspend) {
 			pm_dev_dbg(dev, state, "legacy class ");
 			error = legacy_suspend(dev, state, dev->class->suspend);
@@ -1345,16 +1318,14 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		}
 	}
 
- Driver:
+ Run:
 	if (!callback && dev->driver && dev->driver->pm) {
 		info = "driver ";
 		callback = pm_op(dev->driver->pm, state);
 	}
 
- Run:
 	error = dpm_run_callback(callback, dev, state, info);
-	if (error)
-		pm_runtime_enable(dev);
+
  End:
 	if (!error) {
 		dev->power.is_suspended = true;
@@ -1483,11 +1454,7 @@ static int device_prepare(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "preparing power domain ";
 		callback = dev->pm_domain->ops.prepare;
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "preparing type ";
 		callback = dev->type->pm->prepare;
 	} else if (dev->class && dev->class->pm) {
@@ -1503,7 +1470,6 @@ static int device_prepare(struct device *dev, pm_message_t state)
 		callback = dev->driver->pm->prepare;
 	}
 
- End:
 	if (callback) {
 		error = callback(dev);
 		suspend_report_result(callback, error);

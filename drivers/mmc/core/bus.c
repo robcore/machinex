@@ -167,7 +167,7 @@ static int mmc_runtime_resume(struct device *dev)
 
 static int mmc_runtime_idle(struct device *dev)
 {
-	return 0;
+	return pm_runtime_suspend(dev);
 }
 
 static const struct dev_pm_ops mmc_bus_pm_ops = {

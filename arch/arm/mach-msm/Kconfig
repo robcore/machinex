@@ -1778,7 +1778,7 @@ config MSM_RPC_SDIO_XPRT
 	default y
 	bool "MSM SDIO XPRT Layer"
 	help
-	  SDIO Transport Layer for RPC Router
+	  SDIO Transport Layer for RPC Rouer
 
 config MSM_RPC_SDIO_DEBUG
 	depends on MSM_RPC_SDIO_XPRT

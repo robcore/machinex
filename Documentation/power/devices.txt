@@ -303,10 +303,8 @@ The PM domain, type, class and bus callbacks may in turn invoke device- or
 driver-specific methods stored in dev->driver->pm, but they don't have to do
 that.
 
-If a PM domain exist, but the callback chosen for execution isn't present, the
-PM core will fall back to try the other subsystem level callbacks.  Finally, if
-no subsystem level callback is found, it executes the corresponding method from
-dev->driver->pm instead if there is one.
+If the subsystem callback chosen for execution is not present, the PM core will
+execute the corresponding method from dev->driver->pm instead if there is one.
 
 
 Entering System Suspend

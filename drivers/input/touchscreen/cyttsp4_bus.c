@@ -588,7 +588,7 @@ static int cyttsp4_pm_resume(struct device *dev)
 #ifdef CONFIG_PM_RUNTIME
 #define cyttsp4_pm_rt_suspend		pm_generic_runtime_suspend
 #define cyytsp4_pm_rt_resume		pm_generic_runtime_resume
-#define cyytsp4_pm_rt_idle			NULL
+#define cyytsp4_pm_rt_idle		pm_generic_runtime_idle
 #else /* !CONFIG_PM_RUNTIME */
 #define cyttsp4_pm_rt_suspend		NULL
 #define cyytsp4_pm_rt_resume		NULL
@@ -598,11 +598,9 @@ static int cyttsp4_pm_resume(struct device *dev)
 static const struct dev_pm_ops cyttsp4_dev_pm_ops = {
 	.suspend = cyttsp4_pm_suspend,
 	.resume = cyttsp4_pm_resume,
-	SET_RUNTIME_PM_OPS(
 	.runtime_suspend = cyttsp4_pm_rt_suspend,
 	.runtime_resume = cyytsp4_pm_rt_resume,
-	.runtime_idle = NULL,
-	)
+	.runtime_idle = cyytsp4_pm_rt_idle,
 };
 
 struct bus_type cyttsp4_bus_type = {
