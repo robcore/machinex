@@ -6938,10 +6938,12 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 */
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
-		if (unlikely(work_busy(&mmc->detect.work)))
+		if (unlikely(work_busy(&mmc->detect.work))) {
 			rc = -EAGAIN;
-		else
+			goto anotheround;
+		} else
 			rc = mmc_suspend_host(mmc);
+
 		pm_runtime_put_noidle(dev);
 
 		if (!rc) {
@@ -6972,6 +6974,8 @@ out:
 	 */
 	if (!atomic_read(&host->clks_on))
 		msmsdcc_msm_bus_cancel_work_and_set_vote(host, NULL);
+	return rc;
+anotheround:
 	return rc;
 }
 
@@ -7032,10 +7036,9 @@ static int msmsdcc_runtime_idle(struct device *dev)
 
 	/* Idle timeout is not configurable for now */
 	/* Disable Runtime PM becasue of potential issues
-	 *pm_schedule_suspend(dev, host->idle_tout);
-	 */
-
+	pm_schedule_suspend(dev, host->idle_tout);
 	return -EAGAIN;
+	 */
 }
 
 static int msmsdcc_pm_suspend(struct device *dev)
