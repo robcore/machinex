@@ -102,6 +102,7 @@ enum max77693_pmic_reg {
 	MAX77693_PMIC_REG_END,
 };
 
+#ifdef CONFIG_REGULATOR_NEW_MAX77693
 /* MAX77693 CHG_CNFG_00 register */
 #define CHG_CNFG_00_CHG_MASK		0x1
 #define CHG_CNFG_00_BUCK_MASK		0x4
@@ -114,6 +115,7 @@ enum max77693_pmic_reg {
 #define SAFEOUT_CTRL_SAFEOUT2_MASK	0xC
 #define SAFEOUT_CTRL_ENSAFEOUT1_MASK	0x40
 #define SAFEOUT_CTRL_ENSAFEOUT2_MASK	0x80
+#endif
 
 /* Slave addr = 0x4A: MUIC */
 enum max77693_muic_reg {
