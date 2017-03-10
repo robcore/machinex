@@ -11,6 +11,13 @@
 #include "cpupri.h"
 #include "cpuacct.h"
 
+struct rq;
+extern unsigned long calc_load_update;
+extern atomic_long_t calc_load_tasks;
+
+extern long calc_load_fold_active(struct rq *this_rq);
+extern void update_cpu_load_active(struct rq *this_rq);
+
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_MIGRATING	2
 

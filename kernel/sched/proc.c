@@ -115,8 +115,8 @@ EXPORT_SYMBOL(avg_cpu_nr_running);
  */
 
 /* Variables and functions for calc_load */
-static atomic_long_t calc_load_tasks;
-static unsigned long calc_load_update;
+atomic_long_t calc_load_tasks;
+unsigned long calc_load_update;
 unsigned long avenrun[3];
 EXPORT_SYMBOL(avenrun); /* should be removed */
 
@@ -135,7 +135,7 @@ void get_avenrun(unsigned long *loads, unsigned long offset, int shift)
 	loads[2] = (avenrun[2] + offset) << shift;
 }
 
-static long calc_load_fold_active(struct rq *this_rq)
+long calc_load_fold_active(struct rq *this_rq)
 {
 	long nr_active, delta = 0;
 
@@ -618,7 +618,7 @@ void update_cpu_load_nohz(void)
 /*
  * Called from scheduler_tick()
  */
-static void update_cpu_load_active(struct rq *this_rq)
+void update_cpu_load_active(struct rq *this_rq)
 {
 	/*
 	 * See the mess around update_idle_cpu_load() / update_cpu_load_nohz().
