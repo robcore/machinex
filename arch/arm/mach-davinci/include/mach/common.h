@@ -14,7 +14,6 @@
 
 #include <linux/compiler.h>
 #include <linux/types.h>
-#include <linux/reboot.h>
 
 extern void davinci_timer_init(void);
 

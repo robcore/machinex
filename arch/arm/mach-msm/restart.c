@@ -281,6 +281,7 @@ void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 {
 	unsigned long value;
 
+#ifndef CONFIG_SEC_DEBUG
 #ifdef CONFIG_MSM_DLOAD_MODE
 
 	/* This looks like a normal reboot at this point. */
@@ -290,13 +291,13 @@ void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	set_dload_mode(in_panic);
 
 	/* Write download mode flags if restart_mode says so */
-	if (restart_mode == RESTART_DLOAD) {
+	if (restart_mode == RESTART_DLOAD)
 		set_dload_mode(1);
-	}
 
 	/* Kill download mode if master-kill switch is set */
 	if (!download_mode)
 		set_dload_mode(0);
+#endif
 #endif
 
 #ifdef CONFIG_SEC_DEBUG_LOW_LOG
@@ -320,6 +321,10 @@ void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 			unsigned long code;
 			code = simple_strtoul(cmd + 4, NULL, 16) & 0xff;
 			__raw_writel(0x6f656d00 | code, restart_reason);
+#ifdef CONFIG_SEC_DEBUG
+		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {
+			__raw_writel(0x776655ee, restart_reason);
+#endif
 		} else if (!strncmp(cmd, "download", 8)) {
 			__raw_writel(0x12345671, restart_reason);
 		} else if (!strncmp(cmd, "sud", 3)) {
@@ -328,12 +333,22 @@ void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 		} else if (!strncmp(cmd, "debug", 5)
 				&& !kstrtoul(cmd + 5, 0, &value)) {
 			__raw_writel(0xabcd0000 | value, restart_reason);
+#ifdef CONFIG_SEC_SSR_DEBUG_LEVEL_CHK
+		} else if (!strncmp(cmd, "cpdebug", 7) /* set cp debug level */
+				&& !kstrtoul(cmd + 7, 0, &value)) {
+			__raw_writel(0xfedc0000 | value, restart_reason);
+#endif
 		} else if (strlen(cmd) == 0) {
 			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
 			__raw_writel(0x12345678, restart_reason);
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	if (in_panic == 1)
+		set_kernel_crash_magic_number();
+reset:
+#endif /* CONFIG_LGE_CRASH_HANDLER */
 	} else {
 		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
@@ -358,11 +373,23 @@ void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	mdelay(10000);
 	printk(KERN_ERR "Restarting has failed\n");
 }
+#ifdef CONFIG_SEC_DEBUG
+static int dload_mode_normal_reboot_handler(struct notifier_block *nb,
+				unsigned long l, void *p)
+{
+	set_dload_mode(0);
+	return 0;
+}
+
+static struct notifier_block dload_reboot_block = {
+	.notifier_call = dload_mode_normal_reboot_handler
+};
+#endif
 
 #ifdef CONFIG_KEXEC_HARDBOOT
 void msm_kexec_hardboot(void)
 {
-#if defined(CONFIG_MSM_DLOAD_MODE)
+#if defined(CONFIG_MSM_DLOAD_MODE) && !defined(CONFIG_SEC_DEBUG)
 	/* Do not enter download mode on reboot. */
 	set_dload_mode(0);
 #endif
@@ -380,6 +407,13 @@ static int __init msm_pmic_restart_init(void)
 {
 	int rc;
 
+#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS)
+	return 0;
+#elif defined(CONFIG_SEC_DEBUG)
+	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
+		return 0;
+#endif
+
 	if (pmic_reset_irq != 0) {
 		rc = request_any_context_irq(pmic_reset_irq,
 					resout_irq_handler, IRQF_TRIGGER_HIGH,
@@ -388,8 +422,13 @@ static int __init msm_pmic_restart_init(void)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
 		irq_enabled = 1;
 		status = 1;
-	} else
+	} else {
 		pr_warn("no pmic restart interrupt specified\n");
+	}
+
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	__raw_writel(0x6d63ad00, restart_reason);
+#endif
 
 	return 0;
 }

@@ -343,7 +343,7 @@ static void realview_pbx_fixup(struct tag *tags, char **from,
 #endif
 }
 
-static void realview_pbx_restart(enum reboot_mode mode, const char *cmd)
+static void realview_pbx_restart(char mode, const char *cmd)
 {
 	void __iomem *reset_ctrl = __io_address(REALVIEW_SYS_RESETCTL);
 	void __iomem *lock_ctrl = __io_address(REALVIEW_SYS_LOCK);

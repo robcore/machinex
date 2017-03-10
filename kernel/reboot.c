@@ -4,9 +4,6 @@
  *  Copyright (C) 2013  Linus Torvalds
  */
 
-#define pr_fmt(fmt)	"reboot: " fmt
-
-#include <linux/ctype.h>
 #include <linux/export.h>
 #include <linux/kexec.h>
 #include <linux/kmod.h>
@@ -24,18 +21,6 @@
 int C_A_D = 1;
 struct pid *cad_pid;
 EXPORT_SYMBOL(cad_pid);
-
-#if defined(CONFIG_ARM) || defined(CONFIG_UNICORE32)
-#define DEFAULT_REBOOT_MODE		= REBOOT_HARD
-#else
-#define DEFAULT_REBOOT_MODE
-#endif
-enum reboot_mode reboot_mode DEFAULT_REBOOT_MODE;
-
-int reboot_default;
-int reboot_cpu;
-enum reboot_type reboot_type = BOOT_ACPI;
-int reboot_force;
 
 /*
  * If set, this is used for preparing the system to power off.
@@ -100,7 +85,7 @@ EXPORT_SYMBOL(unregister_reboot_notifier);
 void migrate_to_reboot_cpu(void)
 {
 	/* The boot cpu is always logical cpu 0 */
-	int cpu = reboot_cpu;
+	int cpu = 0;
 
 	cpu_hotplug_disable();
 
@@ -132,10 +117,10 @@ void kernel_restart(char *cmd)
 	migrate_to_reboot_cpu();
 	syscore_shutdown();
 	if (!cmd)
-		pr_emerg("Restarting system\n");
+		printk(KERN_EMERG "Restarting system.\n");
 	else
-		pr_emerg("Restarting system with command '%s'\n", cmd);
-		pr_emerg("Current task:%s(%d) Parent task:%s(%d)\n",
+		printk(KERN_EMERG "Restarting system with command '%s'.\n", cmd);
+	printk(KERN_EMERG "Current task:%s(%d) Parent task:%s(%d)\n",
 		current->comm, current->pid,
 		current->real_parent->comm,
 		current->real_parent->pid);
@@ -147,7 +132,7 @@ EXPORT_SYMBOL_GPL(kernel_restart);
 static void kernel_shutdown_prepare(enum system_states state)
 {
 	blocking_notifier_call_chain(&reboot_notifier_list,
-		(state == SYSTEM_HALT) ? SYS_HALT : SYS_POWER_OFF, NULL);
+		(state == SYSTEM_HALT)?SYS_HALT:SYS_POWER_OFF, NULL);
 	system_state = state;
 	usermodehelper_disable();
 	device_shutdown();
@@ -162,10 +147,11 @@ void kernel_halt(void)
 	kernel_shutdown_prepare(SYSTEM_HALT);
 	migrate_to_reboot_cpu();
 	syscore_shutdown();
-	pr_emerg("System halted\n");
+	printk(KERN_EMERG "System halted.\n");
 	kmsg_dump(KMSG_DUMP_HALT);
 	machine_halt();
 }
+
 EXPORT_SYMBOL_GPL(kernel_halt);
 
 /**
@@ -183,8 +169,8 @@ void kernel_power_off(void)
 		pm_power_off_prepare();
 	migrate_to_reboot_cpu();
 	syscore_shutdown();
-	pr_emerg("Power down\n");
-	pr_emerg("Current task:%s(%d) Parent task:%s(%d)\n",
+	printk(KERN_EMERG "Power down.\n");
+	printk(KERN_EMERG "Current task:%s(%d) Parent task:%s(%d)\n",
 		current->comm, current->pid,
 		current->real_parent->comm,
 		current->real_parent->pid);
@@ -215,10 +201,10 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 
 	/* For safety, we require "magic" arguments. */
 	if (magic1 != LINUX_REBOOT_MAGIC1 ||
-			(magic2 != LINUX_REBOOT_MAGIC2 &&
-			magic2 != LINUX_REBOOT_MAGIC2A &&
+	    (magic2 != LINUX_REBOOT_MAGIC2 &&
+	                magic2 != LINUX_REBOOT_MAGIC2A &&
 			magic2 != LINUX_REBOOT_MAGIC2B &&
-			magic2 != LINUX_REBOOT_MAGIC2C))
+	                magic2 != LINUX_REBOOT_MAGIC2C))
 		return -EINVAL;
 
 	/*
@@ -261,8 +247,7 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		break;
 
 	case LINUX_REBOOT_CMD_RESTART2:
-		ret = strncpy_from_user(&buffer[0], arg, sizeof(buffer) - 1);
-		if (ret < 0) {
+		if (strncpy_from_user(&buffer[0], arg, sizeof(buffer) - 1) < 0) {
 			ret = -EFAULT;
 			break;
 		}
@@ -328,11 +313,14 @@ static int __orderly_poweroff(bool force)
 		ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
 		argv_free(argv);
 	} else {
+		printk(KERN_WARNING "%s failed to allocate memory for \"%s\"\n",
+					 __func__, poweroff_cmd);
 		ret = -ENOMEM;
 	}
 
 	if (ret && force) {
-		pr_warn("Failed to start orderly shutdown: forcing the issue\n");
+		printk(KERN_WARNING "Failed to start orderly shutdown: "
+					"forcing the issue\n");
 		/*
 		 * I guess this should try to kick off some daemon to sync and
 		 * poweroff asap.  Or not even bother syncing if we're doing an
@@ -369,64 +357,3 @@ int orderly_poweroff(bool force)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(orderly_poweroff);
-
-static int __init reboot_setup(char *str)
-{
-	for (;;) {
-		/*
-		 * Having anything passed on the command line via
-		 * reboot= will cause us to disable DMI checking
-		 * below.
-		 */
-		reboot_default = 0;
-
-		switch (*str) {
-		case 'w':
-			reboot_mode = REBOOT_WARM;
-			break;
-
-		case 'c':
-			reboot_mode = REBOOT_COLD;
-			break;
-
-		case 'h':
-			reboot_mode = REBOOT_HARD;
-			break;
-
-		case 's':
-			if (isdigit(*(str+1)))
-				reboot_cpu = simple_strtoul(str+1, NULL, 0);
-			else if (str[1] == 'm' && str[2] == 'p' &&
-							isdigit(*(str+3)))
-				reboot_cpu = simple_strtoul(str+3, NULL, 0);
-			else
-				reboot_mode = REBOOT_SOFT;
-			break;
-
-		case 'g':
-			reboot_mode = REBOOT_GPIO;
-			break;
-
-		case 'b':
-		case 'a':
-		case 'k':
-		case 't':
-		case 'e':
-		case 'p':
-			reboot_type = *str;
-			break;
-
-		case 'f':
-			reboot_force = 1;
-			break;
-		}
-
-		str = strchr(str, ',');
-		if (str)
-			str++;
-		else
-			break;
-	}
-	return 1;
-}
-__setup("reboot=", reboot_setup);

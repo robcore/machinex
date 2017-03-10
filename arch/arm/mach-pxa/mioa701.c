@@ -37,7 +37,6 @@
 #include <linux/wm97xx.h>
 #include <linux/mtd/physmap.h>
 #include <linux/usb/gpio_vbus.h>
-#include <linux/reboot.h>
 #include <linux/regulator/max1586.h>
 #include <linux/slab.h>
 #include <linux/i2c/pxa-i2c.h>
@@ -693,13 +692,13 @@ static void mioa701_machine_exit(void);
 static void mioa701_poweroff(void)
 {
 	mioa701_machine_exit();
-	pxa_restart(REBOOT_SOFT, NULL);
+	pxa_restart('s', NULL);
 }
 
-static void mioa701_restart(enum reboot_mode c, const char *cmd)
+static void mioa701_restart(char c, const char *cmd)
 {
 	mioa701_machine_exit();
-	pxa_restart(REBOOT_SOFT, cmd);
+	pxa_restart('s', cmd);
 }
 
 static struct gpio global_gpios[] = {

@@ -10,8 +10,6 @@
 #define __MACH_PRIMA2_COMMON_H__
 
 #include <linux/init.h>
-#include <linux/reboot.h>
-
 #include <asm/mach/time.h>
 
 extern void sirfsoc_timer_init(void);

@@ -14,7 +14,6 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
-#include <linux/reboot.h>
 
 #include <asm/mach/arch.h>
 #include <asm/hardware/vic.h>
@@ -79,7 +78,7 @@ static void __init picoxcell_init_irq(void)
 	of_irq_init(vic_of_match);
 }
 
-static void picoxcell_wdt_restart(enum reboot_mode mode, const char *cmd)
+static void picoxcell_wdt_restart(char mode, const char *cmd)
 {
 	/*
 	 * Configure the watchdog to reset with the shortest possible timeout

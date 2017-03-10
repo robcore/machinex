@@ -111,11 +111,11 @@ struct sys_timer ks8695_timer = {
 	.resume		= ks8695_timer_setup,
 };
 
-void ks8695_restart(enum reboot_mode reboot_mode, const char *cmd)
+void ks8695_restart(char mode, const char *cmd)
 {
 	unsigned int reg;
 
-	if (reboot_mode == REBOOT_SOFT)
+	if (mode == 's')
 		soft_restart(0);
 
 	/* disable timer0 */

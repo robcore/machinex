@@ -27,7 +27,6 @@
 #include <linux/i2c.h>
 #include <linux/i2c-gpio.h>
 
-#include <mach/hardware.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/flash.h>

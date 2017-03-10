@@ -8,10 +8,7 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/types.h>
-
 #ifndef __ASSEMBLY__
-#include <linux/reboot.h>
 
 struct tag;
 struct meminfo;
@@ -42,7 +39,7 @@ struct machine_desc {
 	unsigned char		reserve_lp0 :1;	/* never has lp0	*/
 	unsigned char		reserve_lp1 :1;	/* never has lp1	*/
 	unsigned char		reserve_lp2 :1;	/* never has lp2	*/
-	enum reboot_mode	reboot_mode;	/* default restart mode	*/
+	char			restart_mode;	/* default restart mode	*/
 	struct smp_operations	*smp;		/* SMP operations	*/
 	void			(*fixup)(struct tag *, char **,
 					 struct meminfo *);
@@ -57,7 +54,7 @@ struct machine_desc {
 #ifdef CONFIG_MULTI_IRQ_HANDLER
 	void			(*handle_irq)(struct pt_regs *);
 #endif
-	void			(*restart)(enum reboot_mode, const char *);
+	void			(*restart)(char, const char *);
 };
 
 /*
