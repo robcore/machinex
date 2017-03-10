@@ -45,9 +45,7 @@ enum {
 enum max77693_regulators {
 	MAX77693_ESAFEOUT1 = 0,
 	MAX77693_ESAFEOUT2,
-
 	MAX77693_CHARGER,
-
 	MAX77693_REG_MAX,
 };
 
@@ -128,7 +126,7 @@ struct max77693_muic_data {
 	void (*cardock_cb) (bool attached);
 #if defined(CONFIG_MACH_MELIUS)
 	void (*smartdock_cb) (bool attached, u8 cable_type);
-#else 
+#else
 	void (*smartdock_cb) (bool attached);
 #endif
 	void (*audiodock_cb) (bool attached);
@@ -157,6 +155,12 @@ struct max77693_muic_data {
 #ifdef CONFIG_MFD_MAX77693
 extern struct max77693_muic_data max77693_muic;
 extern struct max77693_regulator_data max77693_regulators[];
+#else if CONFIG_REGULATOR_NEW_MAX77693
+struct max77693_regulator_data {
+	int id;
+	struct regulator_init_data *initdata;
+	struct device_node *of_node;
+};
 #endif
 #ifdef CONFIG_VIDEO_MHL_V2
 int acc_register_notifier(struct notifier_block *nb);
