@@ -803,7 +803,7 @@ int max77693_muic_get_charging_type(void)
 }
 
 static bool enforce_disable;
-module_param_named(force_disable_charger, enforce_disable, bool, 0644);
+module_param_named(charger_killswitch, enforce_disable, bool, 0644);
 
 static int max77693_muic_set_charging_type(struct max77693_muic_info *info,
 					   bool force_disable)

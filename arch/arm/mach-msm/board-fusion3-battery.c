@@ -399,7 +399,32 @@ static int sec_bat_get_cable_from_extended_cable_type(
 			default:
 				break;
 		}
-	}
+	} else if (force_fast_charge == FAST_CHARGE_FORCE_GLOBAL) {
+		switch(cable_type) {
+			case POWER_SUPPLY_TYPE_UNKNOWN:
+			case POWER_SUPPLY_TYPE_USB:
+			case POWER_SUPPLY_TYPE_USB_DCP:
+			case POWER_SUPPLY_TYPE_USB_CDP:
+			case POWER_SUPPLY_TYPE_USB_ACA:
+			case POWER_SUPPLY_TYPE_CARDOCK:
+			case POWER_SUPPLY_TYPE_OTG:
+			case POWER_SUPPLY_TYPE_MISC:
+			case POWER_SUPPLY_TYPE_CARDOCK:
+			case POWER_SUPPLY_TYPE_POWER_SHARING:
+			case POWER_SUPPLY_TYPE_WIRELESS:
+			case POWER_SUPPLY_TYPE_MAINS:
+			if (cable_type != POWER_SUPPLY_TYPE_BATTERY) {
+				charge_current_max = global_charge_level;
+				/* but never go above 2.1A */
+				charge_current     =
+				/* Keep the 300mA/h delta, but never go above 2.1A/h */
+					min(global_charge_level+300, MAX_CHARGE_LEVEL);
+			}
+				break;
+			default:
+				break;
+
+
 #endif
 
 	if (charge_current_max == 0) {

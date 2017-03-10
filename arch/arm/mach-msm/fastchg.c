@@ -27,6 +27,7 @@
  *   0 - disabled (default)
  *   1 - substitute AC to USB
  *   2 - use custom mA configured through sysfs interface (see below)
+ *	 3 - DANGER - use custom mA EVERYWHERE.  GLOBAL.
  *
  * /sys/kernel/fast_charge/use_mtp_during_fast_charge (rw)
  *
@@ -49,6 +50,10 @@
  * /sys/kernel/fast_charge/wireless_charge_level (r/w)
  *
  *   rate at which to charge when on WIRELESS (0.650A/h to 1.2A/h)
+ *
+ * /sys/kernel/fast_charge/global_charge_level (rw)
+ *
+ *   rate at which to charge GLOBALLY, REGARDLESS of charge type (0.5A/h to 2.1A/h)
  *
  * /sys/kernel/fast_charge/failsafe (rw)
  *
@@ -103,6 +108,8 @@ static ssize_t force_fast_charge_store(struct kobject *kobj,
 		case FAST_CHARGE_DISABLED:
 		case FAST_CHARGE_FORCE_AC:
 		case FAST_CHARGE_FORCE_CUSTOM_MA:
+			force_fast_charge = new_force_fast_charge;
+		case FAST_CHARGE_FORCE_GLOBAL:
 			force_fast_charge = new_force_fast_charge;
 			return count;
 		default:
@@ -367,6 +374,8 @@ static ssize_t failsafe_store(struct kobject *kobj,
 		case FAIL_SAFE_ENABLED:
 			usb_charge_level = USB_CHARGE_460;
 			ac_charge_level = AC_CHARGE_1800;
+			global_charge_level = AC_CHARGE_1800;
+			wireless_charge_level = WIRELESS_CHARGE_650;
 			failsafe = new_failsafe;
 			return count;
 		case FAIL_SAFE_DISABLED:
@@ -379,6 +388,103 @@ static ssize_t failsafe_store(struct kobject *kobj,
 
 static struct kobj_attribute failsafe_attribute =
 	__ATTR(failsafe, 0666, failsafe_show, failsafe_store);
+
+
+/* sysfs interface for "global_charge_level" */
+
+int global_charge_level;
+
+static ssize_t global_charge_level_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", global_charge_level);
+}
+
+static ssize_t global_charge_level_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+
+	int new_global_charge_level;
+
+	sscanf(buf, "%du", &new_global_charge_level);
+
+	if (failsafe == FAIL_SAFE_DISABLED &&
+		new_global_charge_level <= MAX_CHARGE_LEVEL) {
+
+		global_charge_level = new_global_charge_level;
+		return count;
+
+	}
+
+	else {
+
+		switch (new_global_charge_level) {
+			case GLOBAL_CHARGE_500:
+			case GLOBAL_CHARGE_600:
+			case GLOBAL_CHARGE_700:
+			case GLOBAL_CHARGE_800:
+			case GLOBAL_CHARGE_900:
+			case GLOBAL_CHARGE_1000:
+			case GLOBAL_CHARGE_1100:
+			case GLOBAL_CHARGE_1200:
+			case GLOBAL_CHARGE_1300:
+			case GLOBAL_CHARGE_1400:
+			case GLOBAL_CHARGE_1500:
+			case GLOBAL_CHARGE_1600:
+			case GLOBAL_CHARGE_1700:
+			case GLOBAL_CHARGE_1800:
+			case GLOBAL_CHARGE_1900:
+			case GLOBAL_CHARGE_2000:
+			case GLOBAL_CHARGE_2100:
+				global_charge_level = new_global_charge_level;
+				return count;
+			default:
+				return -EINVAL;
+
+		}
+
+	}
+
+	return -EINVAL;
+
+}
+
+static struct kobj_attribute global_charge_level_attribute =
+	__ATTR(global_charge_level, 0666,
+		global_charge_level_show,
+		global_charge_level_store);
+
+int force_mains;
+
+static ssize_t force_mains_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", force_mains);
+}
+
+static ssize_t force_mains_store(struct kobject *kobj,
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
+{
+
+	int newfm;
+
+	sscanf(buf, "%du", &newfm);
+
+	switch (newfm) {
+		case FORCE_MAINS_ENABLED:
+			force_mains = newfm;
+			return count;
+		case FORCE_MAINS_DISABLED:
+			force_mains = newfm;
+			return count;
+		default:
+			return -EINVAL;
+	}
+}
+
+static struct kobj_attribute force_mains_attribute =
+	__ATTR(force_mains, 0666, force_mains_show, force_mains_store);
 
 /* sysfs interface for "ac_levels" */
 static ssize_t ac_levels_show(struct kobject *kobj,
@@ -421,16 +527,20 @@ static ssize_t info_show(struct kobject *kobj,
 		"MTP while charging mode : %s\n"
 		"Screen on Current Limit mode : %s\n"
 		"Custom  AC level : %dmA/h\n"
+		"Custom  GLOBAL level : %dmA/h\n"
 		"Custom USB level : %dmA/h\n"
 		"Custom Wireless level : %dmA/h\n"
 		"Failsafe mode : %s\n"
 		"Valid AC  levels : %s\n"
 		"Valid USB levels : %s\n"
-		"Valid Wireless levels : %s\n",
+		"Valid Wireless levels : %s\n"
+		"ForceMains : %s\n",
 		 FAST_CHARGE_VERSION,
-		 force_fast_charge == FAST_CHARGE_DISABLED 	   ? "0 - Disabled (default)" :
+		 force_fast_charge == FAST_CHARGE_DISABLED 	       ? "0 - Disabled (default)" :
 		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
-		(force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA  ? "2 - Use custom mA on AC and USB" : "Problem : value out of range")),
+		(force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA  ? "2 - Use custom mA on AC and USB" :
+		(force_fast_charge == FAST_CHARGE_FORCE_GLOBAL	   ? "3 - Use custom mA on AC and USB" : "Problem : value out of range")),
+
 		 use_mtp_during_fast_charge          == USE_MTP_DURING_FAST_CHARGE_DISABLED           ? "0 - Disabled" :
 		(use_mtp_during_fast_charge          == USE_MTP_DURING_FAST_CHARGE_ENABLED            ? "1 - Enabled" : "Problem : value out of range"),
 		 screen_on_current_limit          == SCREEN_ON_CURRENT_LIMIT_DISABLED           ? "0 - Disabled" :
@@ -467,6 +577,7 @@ static struct attribute *force_fast_charge_attrs[] = {
 	&use_mtp_during_fast_charge_attribute.attr,
 	&screen_on_current_limit_attribute.attr,
 	&ac_charge_level_attribute.attr,
+	&global_charge_level_attribute.attr,
 	&usb_charge_level_attribute.attr,
 	&wireless_charge_level_attribute.attr,
 	&failsafe_attribute.attr,
@@ -494,12 +605,16 @@ int force_fast_charge_init(void)
 	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_ENABLED;
 	/* Default AC charge level to 1000mA/h    */
 	ac_charge_level   = AC_CHARGE_1000;
+	/* Default GLOBAL charge level to 1000mA/h    */
+	global_charge_level   = GLOBAL_CHARGE_1000;
 	/* Default USB charge level to 460mA/h    */
 	usb_charge_level  = USB_CHARGE_460;
 	/* Default USB charge level to 650mA/h    */
 	wireless_charge_level = WIRELESS_CHARGE_650;
 	/* Allow only values in list by default   */
-	failsafe          = FAIL_SAFE_ENABLED;
+	failsafe = FAIL_SAFE_ENABLED;
+	/* Obviously default this one to off */
+	force_mains	= FORCE_MAINS_DISABLED;
 
         force_fast_charge_kobj =
 		kobject_create_and_add("fast_charge", kernel_kobj);

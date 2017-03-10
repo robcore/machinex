@@ -837,6 +837,10 @@ static int sec_chg_set_property(struct power_supply *psy,
 					/* We are in custom current Fast Charge mode for WIRELESS */
 					charger->charging_current_max = wireless_charge_level;
 					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
+				} else if (force_fast_charge == FAST_CHARGE_FORCE_GLOBAL) {
+					/* We are in GLOBAL custom current Fast Charge mode for WIRELESS */
+					charger->charging_current_max = wireless_charge_level;
+					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
 				} else
 #endif
 				set_charging_current_max = wpc_charging_current;
@@ -850,7 +854,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 #endif
 					val->intval == POWER_SUPPLY_TYPE_MAINS) {
 				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
-				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
+				if (screen_on_current_limit && set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
 					set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
 			}
 		}
