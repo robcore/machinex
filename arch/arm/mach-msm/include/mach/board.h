@@ -367,8 +367,8 @@ struct msm_camera_sensor_platform_info {
 	void(*sensor_power_off)(void);
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	void(*sensor_power_on_sub)(void);
-	void(*sensor_power_off_sub)(void);	
-#endif	
+	void(*sensor_power_off_sub)(void);
+#endif
 	void(*sensor_af_power_off)(void);
 	void(*sensor_vddio_power_off)(void);
 	void(*sensor_pmic_gpio_ctrl)(int, int);
@@ -808,7 +808,7 @@ void msm_snddev_tx_route_deconfig(void);
 extern void msm8930_enable_ear_micbias(bool state);
 #endif
 
-extern phys_addr_t msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
+extern unsigned int msm_shared_ram_phys; /* defined in arch/arm/mach-msm/io.c */
 #ifdef CONFIG_BROKEN_SDIO_HACK
 void apq8064_bt_init(void);
 

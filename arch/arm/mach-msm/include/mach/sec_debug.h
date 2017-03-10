@@ -552,7 +552,7 @@ extern void get_fbinfo(int fb_num, unsigned int *fb_paddr, unsigned int *xres,
 		unsigned char *goff, unsigned char *glen,
 		unsigned char *boff, unsigned char *blen,
 		unsigned char *aoff, unsigned char *alen);
-extern phys_addr_t msm_shared_ram_phys;
+extern unsigned int msm_shared_ram_phys;
 extern char *get_kernel_log_buf_paddr(void);
 extern char *get_fb_paddr(void);
 extern void sec_modify_restart_level_mdm(int value);
