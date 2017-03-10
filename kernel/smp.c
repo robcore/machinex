@@ -698,7 +698,7 @@ void on_each_cpu_cond(bool (*cond_func)(int cpu, void *info),
 			if (cond_func(cpu, info)) {
 				ret = smp_call_function_single(cpu, func,
 								info, wait);
-				WARN_ON_ONCE(ret);
+				WARN_ON_ONCE(!ret);
 			}
 		preempt_enable();
 	}
@@ -726,4 +726,4 @@ void kick_all_cpus_sync(void)
 	smp_mb();
 	smp_call_function(do_nothing, NULL, 1);
 }
-EXPORT_SYMBOL(kick_all_cpus_sync);
+EXPORT_SYMBOL_GPL(kick_all_cpus_sync);
