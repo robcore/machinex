@@ -417,7 +417,7 @@ static void __init realview_eb_timer_init(void)
 	realview_eb_twd_init();
 }
 
-static void realview_eb_restart(char mode, const char *cmd)
+static void realview_eb_restart(enum reboot_mode mode, const char *cmd)
 {
 	void __iomem *reset_ctrl = __io_address(REALVIEW_SYS_RESETCTL);
 	void __iomem *lock_ctrl = __io_address(REALVIEW_SYS_LOCK);

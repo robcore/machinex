@@ -315,7 +315,7 @@ static void __init realview_pb11mp_timer_init(void)
 	realview_pb11mp_twd_init();
 }
 
-static void realview_pb11mp_restart(char mode, const char *cmd)
+static void realview_pb11mp_restart(enum reboot_mode mode, const char *cmd)
 {
 	void __iomem *reset_ctrl = __io_address(REALVIEW_SYS_RESETCTL);
 	void __iomem *lock_ctrl = __io_address(REALVIEW_SYS_LOCK);

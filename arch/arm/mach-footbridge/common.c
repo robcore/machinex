@@ -200,9 +200,9 @@ void __init footbridge_map_io(void)
 		iotable_init(ebsa285_host_io_desc, ARRAY_SIZE(ebsa285_host_io_desc));
 }
 
-void footbridge_restart(char mode, const char *cmd)
+void footbridge_restart(enum reboot_mode mode, const char *cmd)
 {
-	if (mode == 's') {
+	if (mode == REBOOT_SOFT) {
 		/* Jump into the ROM */
 		soft_restart(0x41000000);
 	} else {

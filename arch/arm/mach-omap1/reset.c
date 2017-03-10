@@ -3,12 +3,13 @@
  */
 #include <linux/kernel.h>
 #include <linux/io.h>
+#include <linux/reboot.h>
 
 #include <plat/prcm.h>
 
 #include <mach/hardware.h>
 
-void omap1_restart(char mode, const char *cmd)
+void omap1_restart(enum reboot_mode mode, const char *cmd)
 {
 	/*
 	 * Workaround for 5912/1611b bug mentioned in sprz209d.pdf p. 28

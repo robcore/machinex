@@ -277,11 +277,10 @@ void set_kernel_crash_magic_number(void)
 }
 #endif /* CONFIG_LGE_CRASH_HANDLER */
 
-void msm_restart(char mode, const char *cmd)
+void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 {
 	unsigned long value;
 
-#ifndef CONFIG_SEC_DEBUG
 #ifdef CONFIG_MSM_DLOAD_MODE
 
 	/* This looks like a normal reboot at this point. */
@@ -293,42 +292,24 @@ void msm_restart(char mode, const char *cmd)
 	/* Write download mode flags if restart_mode says so */
 	if (restart_mode == RESTART_DLOAD) {
 		set_dload_mode(1);
-#ifdef CONFIG_LGE_CRASH_HANDLER
-		writel(0x6d63c421, restart_reason);
-		goto reset;
-#endif
 	}
 
 	/* Kill download mode if master-kill switch is set */
 	if (!download_mode)
 		set_dload_mode(0);
 #endif
-#endif
 
 #ifdef CONFIG_SEC_DEBUG_LOW_LOG
 #ifdef CONFIG_MSM_DLOAD_MODE
-#ifdef CONFIG_SEC_DEBUG
-	if (sec_debug_is_enabled()
-	&& ((restart_mode == RESTART_DLOAD) || in_panic))
-		set_dload_mode(1);
-	else
-		set_dload_mode(0);
-#else
 	set_dload_mode(0);
 	set_dload_mode(in_panic);
 	if (restart_mode == RESTART_DLOAD)
 		set_dload_mode(1);
 #endif
 #endif
-#endif
 	printk(KERN_NOTICE "Going down for restart now\n");
 
 	pm8xxx_reset_pwr_off(1);
-#ifdef CONFIG_SEC_DEBUG
-	if (!restart_reason)
-		restart_reason = ioremap_nocache((unsigned long)(MSM_IMEM_BASE \
-						+ RESTART_REASON_ADDR), SZ_4K);
-#endif
 
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
@@ -339,10 +320,6 @@ void msm_restart(char mode, const char *cmd)
 			unsigned long code;
 			code = simple_strtoul(cmd + 4, NULL, 16) & 0xff;
 			__raw_writel(0x6f656d00 | code, restart_reason);
-#ifdef CONFIG_SEC_DEBUG
-		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {
-			__raw_writel(0x776655ee, restart_reason);
-#endif
 		} else if (!strncmp(cmd, "download", 8)) {
 			__raw_writel(0x12345671, restart_reason);
 		} else if (!strncmp(cmd, "sud", 3)) {
@@ -351,22 +328,12 @@ void msm_restart(char mode, const char *cmd)
 		} else if (!strncmp(cmd, "debug", 5)
 				&& !kstrtoul(cmd + 5, 0, &value)) {
 			__raw_writel(0xabcd0000 | value, restart_reason);
-#ifdef CONFIG_SEC_SSR_DEBUG_LEVEL_CHK
-		} else if (!strncmp(cmd, "cpdebug", 7) /* set cp debug level */
-				&& !kstrtoul(cmd + 7, 0, &value)) {
-			__raw_writel(0xfedc0000 | value, restart_reason);
-#endif
 		} else if (strlen(cmd) == 0) {
 			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
 			__raw_writel(0x12345678, restart_reason);
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	if (in_panic == 1)
-		set_kernel_crash_magic_number();
-reset:
-#endif /* CONFIG_LGE_CRASH_HANDLER */
 	} else {
 		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
@@ -391,23 +358,11 @@ reset:
 	mdelay(10000);
 	printk(KERN_ERR "Restarting has failed\n");
 }
-#ifdef CONFIG_SEC_DEBUG
-static int dload_mode_normal_reboot_handler(struct notifier_block *nb,
-				unsigned long l, void *p)
-{
-	set_dload_mode(0);
-	return 0;
-}
-
-static struct notifier_block dload_reboot_block = {
-	.notifier_call = dload_mode_normal_reboot_handler
-};
-#endif
 
 #ifdef CONFIG_KEXEC_HARDBOOT
 void msm_kexec_hardboot(void)
 {
-#if defined(CONFIG_MSM_DLOAD_MODE) && !defined(CONFIG_SEC_DEBUG)
+#if defined(CONFIG_MSM_DLOAD_MODE)
 	/* Do not enter download mode on reboot. */
 	set_dload_mode(0);
 #endif
@@ -425,13 +380,6 @@ static int __init msm_pmic_restart_init(void)
 {
 	int rc;
 
-#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS)
-	return 0;
-#elif defined(CONFIG_SEC_DEBUG)
-	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
-		return 0;
-#endif
-
 	if (pmic_reset_irq != 0) {
 		rc = request_any_context_irq(pmic_reset_irq,
 					resout_irq_handler, IRQF_TRIGGER_HIGH,
@@ -440,13 +388,8 @@ static int __init msm_pmic_restart_init(void)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
 		irq_enabled = 1;
 		status = 1;
-	} else {
+	} else
 		pr_warn("no pmic restart interrupt specified\n");
-	}
-
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	__raw_writel(0x6d63ad00, restart_reason);
-#endif
 
 	return 0;
 }
@@ -458,24 +401,11 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_MSM_DLOAD_MODE
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
 	dload_mode_addr = MSM_IMEM_BASE + DLOAD_MODE_ADDR;
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	lge_error_handler_cookie_addr = MSM_IMEM_BASE +
-		LGE_ERROR_HANDLER_MAGIC_ADDR;
-#endif
-#ifdef CONFIG_SEC_DEBUG
-	register_reboot_notifier(&dload_reboot_block);
-#endif
-#ifdef CONFIG_SEC_DEBUG_LOW_LOG
-	if (!sec_debug_is_enabled()) {
-		set_dload_mode(0);
-	} else
-#endif
+
 	set_dload_mode(download_mode);
-#endif
+
 	msm_tmr0_base = msm_timer_get_timer0_base();
-#ifndef CONFIG_SEC_DEBUG
 	restart_reason = MSM_IMEM_BASE + RESTART_REASON_ADDR;
-#endif
 	pm_power_off = msm_power_off;
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;

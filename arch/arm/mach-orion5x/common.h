@@ -1,6 +1,8 @@
 #ifndef __ARCH_ORION5X_COMMON_H
 #define __ARCH_ORION5X_COMMON_H
 
+#include <linux/reboot.h>
+
 struct dsa_platform_data;
 struct mv643xx_eth_platform_data;
 struct mv_sata_platform_data;
@@ -38,7 +40,7 @@ void orion5x_spi_init(void);
 void orion5x_uart0_init(void);
 void orion5x_uart1_init(void);
 void orion5x_xor_init(void);
-void orion5x_restart(char, const char *);
+void orion5x_restart(enum reboot_mode, const char *);
 
 /*
  * PCIe/PCI functions.

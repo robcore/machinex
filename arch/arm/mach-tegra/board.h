@@ -22,8 +22,9 @@
 #define __MACH_TEGRA_BOARD_H
 
 #include <linux/types.h>
+#include <linux/reboot.h>
 
-void tegra_assert_system_reset(char mode, const char *cmd);
+void tegra_assert_system_reset(enum reboot_mode mode, const char *cmd);
 
 void __init tegra20_init_early(void);
 void __init tegra30_init_early(void);

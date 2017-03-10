@@ -222,7 +222,7 @@ struct sys_timer clps711x_timer = {
 	.offset		= clps711x_gettimeoffset,
 };
 
-void clps711x_restart(char mode, const char *cmd)
+void clps711x_restart(enum reboot_mode mode, const char *cmd)
 {
 	soft_restart(0);
 }

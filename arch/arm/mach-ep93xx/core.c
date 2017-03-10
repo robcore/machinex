@@ -896,7 +896,7 @@ void __init ep93xx_init_devices(void)
 	platform_device_register(&ep93xx_wdt_device);
 }
 
-void ep93xx_restart(char mode, const char *cmd)
+void ep93xx_restart(enum reboot_mode mode, const char *cmd)
 {
 	/*
 	 * Set then clear the SWRST bit to initiate a software reset

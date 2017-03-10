@@ -16,6 +16,7 @@
 #include <linux/serial_8250.h>
 #include <linux/ahci_platform.h>
 #include <linux/clk.h>
+#include <linux/reboot.h>
 
 #include <mach/cputype.h>
 #include <mach/common.h>
@@ -363,7 +364,7 @@ struct platform_device da8xx_wdt_device = {
 	.resource	= da8xx_watchdog_resources,
 };
 
-void da8xx_restart(char mode, const char *cmd)
+void da8xx_restart(enum reboot_mode mode, const char *cmd)
 {
 	davinci_watchdog_reset(&da8xx_wdt_device);
 }

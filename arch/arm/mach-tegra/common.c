@@ -64,7 +64,7 @@ void __init tegra_dt_init_irq(void)
 }
 #endif
 
-void tegra_assert_system_reset(char mode, const char *cmd)
+void tegra_assert_system_reset(enum reboot_mode mode, const char *cmd)
 {
 	void __iomem *reset = IO_ADDRESS(TEGRA_PMC_BASE + 0);
 	u32 reg;

@@ -24,6 +24,7 @@
 #include <linux/serial_core.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>
+#include <linux/reboot.h>
 
 #include <asm/irq.h>
 #include <asm/proc-fns.h>

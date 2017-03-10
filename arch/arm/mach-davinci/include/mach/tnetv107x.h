@@ -35,6 +35,7 @@
 #include <linux/serial_8250.h>
 #include <linux/input/matrix_keypad.h>
 #include <linux/mfd/ti_ssp.h>
+#include <linux/reboot.h>
 
 #include <mach/mmc.h>
 #include <mach/nand.h>

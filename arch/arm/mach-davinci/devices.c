@@ -13,6 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
+#include <linux/reboot.h>
 
 #include <mach/hardware.h>
 #include <mach/i2c.h>
@@ -301,7 +302,7 @@ struct platform_device davinci_wdt_device = {
 	.resource	= wdt_resources,
 };
 
-void davinci_restart(char mode, const char *cmd)
+void davinci_restart(enum reboot_mode mode, const char *cmd)
 {
 	davinci_watchdog_reset(&davinci_wdt_device);
 }

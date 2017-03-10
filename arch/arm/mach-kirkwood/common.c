@@ -528,7 +528,7 @@ static int __init kirkwood_clock_gate(void)
 }
 late_initcall(kirkwood_clock_gate);
 
-void kirkwood_restart(char mode, const char *cmd)
+void kirkwood_restart(enum reboot_mode mode, const char *cmd)
 {
 	/*
 	 * Enable soft reset to assert RSTOUTn.

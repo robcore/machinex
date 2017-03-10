@@ -24,6 +24,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
+#include <linux/reboot.h>
 
 #include <asm/irq.h>
 #include <asm/proc-fns.h>
