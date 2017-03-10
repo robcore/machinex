@@ -131,7 +131,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 /*
  * Default thread migration boost cpufreq
  */
-#define CPU_SYNC_FREQ 810000
+#define CPU_SYNC_FREQ 1458000
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
@@ -156,7 +156,7 @@ static bool closest_freq_selection = false;
  * Stay at max freq for at least max_freq_hysteresis before dropping
  * frequency.
  */
-#define DEFAULT_HYSTERESIS 8
+#define DEFAULT_HYSTERESIS 7
 static unsigned int max_freq_hysteresis = DEFAULT_HYSTERESIS;
 
 static bool io_is_busy = 0;
