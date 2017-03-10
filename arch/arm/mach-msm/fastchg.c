@@ -454,38 +454,6 @@ static struct kobj_attribute global_charge_level_attribute =
 		global_charge_level_show,
 		global_charge_level_store);
 
-int force_mains;
-
-static ssize_t force_mains_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", force_mains);
-}
-
-static ssize_t force_mains_store(struct kobject *kobj,
-		struct kobj_attribute *attr,
-		const char *buf, size_t count)
-{
-
-	int newfm;
-
-	sscanf(buf, "%du", &newfm);
-
-	switch (newfm) {
-		case FORCE_MAINS_ENABLED:
-			force_mains = newfm;
-			return count;
-		case FORCE_MAINS_DISABLED:
-			force_mains = newfm;
-			return count;
-		default:
-			return -EINVAL;
-	}
-}
-
-static struct kobj_attribute force_mains_attribute =
-	__ATTR(force_mains, 0666, force_mains_show, force_mains_store);
-
 /* sysfs interface for "ac_levels" */
 static ssize_t ac_levels_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -538,7 +506,7 @@ static ssize_t info_show(struct kobject *kobj,
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	       ? "0 - Disabled (default)" :
 		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
-		(force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA  ? "2 - Use custom mA on AC and USB" :
+		 force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA  ? "2 - Use custom mA on AC and USB" :
 		(force_fast_charge == FAST_CHARGE_FORCE_GLOBAL	   ? "3 - Use custom mA on AC and USB" : "Problem : value out of range")),
 
 		 use_mtp_during_fast_charge          == USE_MTP_DURING_FAST_CHARGE_DISABLED           ? "0 - Disabled" :
@@ -613,8 +581,6 @@ int force_fast_charge_init(void)
 	wireless_charge_level = WIRELESS_CHARGE_650;
 	/* Allow only values in list by default   */
 	failsafe = FAIL_SAFE_ENABLED;
-	/* Obviously default this one to off */
-	force_mains	= FORCE_MAINS_DISABLED;
 
         force_fast_charge_kobj =
 		kobject_create_and_add("fast_charge", kernel_kobj);
