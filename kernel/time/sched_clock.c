@@ -14,11 +14,12 @@
 #include <linux/syscore_ops.h>
 #include <linux/timer.h>
 #include <linux/sched_clock.h>
+#include <linux/seqlock.h>
 
 struct clock_data {
 	u64 epoch_ns;
 	u32 epoch_cyc;
-	u32 epoch_cyc_copy;
+	seqcount_t seq;
 	unsigned long rate;
 	u32 mult;
 	u32 shift;
@@ -90,16 +91,13 @@ static void notrace update_sched_clock(void)
 	ns = cd.epoch_ns +
 		cyc_to_ns((cyc - cd.epoch_cyc) & sched_clock_mask,
 			  cd.mult, cd.shift);
-	/*
-	 * Write epoch_cyc and epoch_ns in a way that the update is
-	 * detectable in cyc_to_fixed_sched_clock().
-	 */
+
+
 	raw_local_irq_save(flags);
-	cd.epoch_cyc_copy = cyc;
-	smp_wmb();
+	write_seqcount_begin(&cd.seq);
 	cd.epoch_ns = ns;
-	smp_wmb();
 	cd.epoch_cyc = cyc;
+	write_seqcount_end(&cd.seq);
 	raw_local_irq_restore(flags);
 }
 
@@ -201,7 +199,6 @@ static int sched_clock_suspend(void)
 static void sched_clock_resume(void)
 {
 	cd.epoch_cyc = read_sched_clock();
-	cd.epoch_cyc_copy = cd.epoch_cyc;
 	cd.suspended = false;
 }
 
