@@ -115,9 +115,7 @@ void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 DEFINE_MUTEX(sched_domains_mutex);
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 DEFINE_PER_CPU_SHARED_ALIGNED(struct nr_stats_s, runqueue_stats);
-#endif
 
 static void update_rq_clock_task(struct rq *rq, s64 delta);
 
@@ -2312,7 +2310,6 @@ unsigned long this_cpu_load(void)
 	return this->cpu_load[0];
 }
 
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 unsigned long avg_nr_running(void)
 {
 	unsigned long i, sum = 0;
@@ -2365,7 +2362,6 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 	return ave_nr_running;
 }
 EXPORT_SYMBOL(avg_cpu_nr_running);
-#endif
 
 /*
  * Global load-average calculations
