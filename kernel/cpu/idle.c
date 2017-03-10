@@ -3,7 +3,6 @@
  */
 #include <linux/sched.h>
 #include <linux/cpu.h>
-#include <linux/cpuidle.h>
 #include <linux/tick.h>
 #include <linux/mm.h>
 #include <linux/stackprotector.h>
@@ -12,7 +11,7 @@
 
 #include <trace/events/power.h>
 
-int __read_mostly cpu_idle_force_poll;
+static int __read_mostly cpu_idle_force_poll;
 
 void cpu_idle_poll_ctrl(bool enable)
 {
@@ -75,6 +74,9 @@ static void cpu_idle_loop(void)
 			check_pgt_cache();
 			rmb();
 
+			if (cpu_is_offline(smp_processor_id()))
+				arch_cpu_idle_dead();
+
 			local_irq_disable();
 			arch_cpu_idle_enter();
 
@@ -93,10 +95,8 @@ static void cpu_idle_loop(void)
 				if (!current_clr_polling_and_test()) {
 					stop_critical_timings();
 					rcu_idle_enter();
-					if (cpuidle_idle_call())
-						arch_cpu_idle();
-					if (WARN_ON_ONCE(irqs_disabled()))
-						local_irq_enable();
+					arch_cpu_idle();
+					WARN_ON_ONCE(irqs_disabled());
 					rcu_idle_exit();
 					start_critical_timings();
 				} else {
@@ -106,11 +106,18 @@ static void cpu_idle_loop(void)
 			}
 			arch_cpu_idle_exit();
 		}
+
+		/*
+		 * Since we fell out of the loop above, we know
+		 * TIF_NEED_RESCHED must be set, propagate it into
+		 * PREEMPT_NEED_RESCHED.
+		 *
+		 * This is required because for polling idle loops we will
+		 * not have had an IPI to fold the state for us.
+		 */
+		preempt_set_need_resched();
 		tick_nohz_idle_exit();
 		schedule_preempt_disabled();
-		if (cpu_is_offline(smp_processor_id()))
-			arch_cpu_idle_dead();
-
 	}
 }
 
