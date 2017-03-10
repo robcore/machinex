@@ -21,6 +21,7 @@
 #include <linux/time.h>
 #include <linux/tick.h>
 #include <linux/stop_machine.h>
+#include <linux/pvclock_gtod.h>
 
 #include "tick-internal.h"
 #include "ntp_internal.h"
@@ -221,6 +222,54 @@ static inline void tk_update_leap_state(struct timekeeper *tk)
 		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
 }
 
+static RAW_NOTIFIER_HEAD(pvclock_gtod_chain);
+
+static void update_pvclock_gtod(struct timekeeper *tk)
+{
+	raw_notifier_call_chain(&pvclock_gtod_chain, 0, tk);
+}
+
+/**
+ * pvclock_gtod_register_notifier - register a pvclock timedata update listener
+ *
+ * Must hold write on timekeeper.lock
+ */
+int pvclock_gtod_register_notifier(struct notifier_block *nb)
+{
+	struct timekeeper *tk = &timekeeper;
+	unsigned long flags;
+	int ret;
+
+	write_seqlock_irqsave(&tk->lock, flags);
+	ret = raw_notifier_chain_register(&pvclock_gtod_chain, nb);
+	/* update timekeeping data */
+	update_pvclock_gtod(tk);
+	write_sequnlock_irqrestore(&tk->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(pvclock_gtod_register_notifier);
+
+/**
+ * pvclock_gtod_unregister_notifier - unregister a pvclock
+ * timedata update listener
+ *
+ * Must hold write on timekeeper.lock
+ */
+int pvclock_gtod_unregister_notifier(struct notifier_block *nb)
+{
+	struct timekeeper *tk = &timekeeper;
+	unsigned long flags;
+	int ret;
+
+	write_seqlock_irqsave(&tk->lock, flags);
+	ret = raw_notifier_chain_unregister(&pvclock_gtod_chain, nb);
+	write_sequnlock_irqrestore(&tk->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(pvclock_gtod_unregister_notifier);
+
 /* must hold timekeeper_lock */
 static void timekeeping_update(struct timekeeper *tk, unsigned int action)
 {
@@ -232,6 +281,7 @@ static void timekeeping_update(struct timekeeper *tk, unsigned int action)
 	}
 	xt = tk_xtime(tk);
 	update_vsyscall(&xt, &tk->wall_to_monotonic, tk->clock, tk->mult);
+	update_pvclock_gtod(tk);
 
 	if (action & TK_MIRROR)
 		memcpy(&shadow_timekeeper, &timekeeper, sizeof(timekeeper));
