@@ -393,16 +393,16 @@ static ssize_t force_mains_store(struct kobject *kobj,
 		const char *buf, size_t count)
 {
 
-	int new_cable_type;
+	int newfm;
 
-	sscanf(buf, "%du", &new_cable_type);
+	sscanf(buf, "%du", &newfm);
 
 	switch (new_cable_type) {
 		case FORCE_MAINS_ENABLED:
-			force_mains = new_cable_type;
+			force_mains = newfm;
 			return count;
 		case FORCE_MAINS_DISABLED:
-			force_mains = new_cable_type;
+			force_mains = newfm;
 			return count;
 		default:
 			return -EINVAL;
@@ -410,7 +410,7 @@ static ssize_t force_mains_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute force_mains_attribute =
-	__ATTR(failsafe, 0666, force_mains_show, force_mains_store);
+	__ATTR(force_mains, 0666, force_mains_show, force_mains_store);
 
 /* sysfs interface for "ac_levels" */
 static ssize_t ac_levels_show(struct kobject *kobj,
@@ -458,7 +458,8 @@ static ssize_t info_show(struct kobject *kobj,
 		"Failsafe mode : %s\n"
 		"Valid AC  levels : %s\n"
 		"Valid USB levels : %s\n"
-		"Valid Wireless levels : %s\n",
+		"Valid Wireless levels : %s\n"
+		"ForceMains : %s\n",
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	   ? "0 - Disabled (default)" :
 		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
@@ -474,7 +475,9 @@ static ssize_t info_show(struct kobject *kobj,
 		(failsafe          == FAIL_SAFE_ENABLED            ? "1 - Failsafe active (default)" : "Problem : value out of range"),
 		 failsafe          == FAIL_SAFE_ENABLED            ? AC_LEVELS : ANY_LEVELS,
 		 failsafe          == FAIL_SAFE_ENABLED            ? USB_LEVELS : ANY_LEVELS,
-		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS
+		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS,
+		 force_mains       == FORCE_MAINS_DISABLED         ? "0 - Force Mains Inactive (default) - Safe and Sound" :
+		(force_mains       == FORCE_MAINS_ENABLED          ? "1 - Force Mains Active - This will cause an explosion!" : "Problem : value out of range"),
 		);
 }
 
