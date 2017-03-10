@@ -238,45 +238,6 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_LGE_CRASH_HANDLER
-#define SUBSYS_NAME_MAX_LENGTH	40
-
-int get_ssr_magic_number(void)
-{
-	return ssr_magic_number;
-}
-
-void set_ssr_magic_number(const char* subsys_name)
-{
-	int i;
-	const char *subsys_list[] = {
-		"modem", "riva", "dsps", "lpass",
-		"external_modem", "gss",
-	};
-
-	ssr_magic_number = (0x6d630000 | 0x0000f000);
-
-	for (i=0; i < ARRAY_SIZE(subsys_list); i++) {
-		if (!strncmp(subsys_list[i], subsys_name,
-					SUBSYS_NAME_MAX_LENGTH)) {
-			ssr_magic_number = (0x6d630000 | ((i+1)<<12));
-			break;
-		}
-	}
-
-	flush_cache_louis();
-}
-
-void set_kernel_crash_magic_number(void)
-{
-	pet_watchdog();
-	if (ssr_magic_number == 0)
-		__raw_writel(0x6d630100, restart_reason);
-	else
-		__raw_writel(restart_mode, restart_reason);
-}
-#endif /* CONFIG_LGE_CRASH_HANDLER */
-
 void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 {
 	unsigned long value;
@@ -356,6 +317,10 @@ reset:
 
 	if (in_panic == 1)
 		flush_cache_louis();
+	else {
+		flush_cache_all();
+		outer_flush_all();
+	}
 
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
