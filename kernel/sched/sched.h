@@ -155,7 +155,7 @@ struct task_group {
 
 	atomic_t load_weight;
 #ifdef	CONFIG_SMP
-	atomic64_t load_avg;
+	atomic_long_t load_avg;
 	atomic_t runnable_avg, usage_avg;
 #endif
 #endif
@@ -287,13 +287,14 @@ struct cfs_rq {
 	 * the FAIR_GROUP_SCHED case).
 	 */
 	unsigned long runnable_load_avg, blocked_load_avg;
-	atomic64_t decay_counter, removed_load;
+	atomic64_t decay_counter;
 	u64 last_decay;
+	atomic_long_t removed_load;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 /* Required to track per-cpu representation of a task_group */
 	u32 tg_runnable_contrib, tg_usage_contrib;
-	u64 tg_load_contrib;
+	unsigned long tg_load_contrib;
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 
 	/*
