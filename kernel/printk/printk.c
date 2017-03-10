@@ -107,19 +107,6 @@ static int console_locked, console_suspended;
  */
 static struct console *exclusive_console;
 
-/*
- *	Array of consoles built from command line options (console=)
- */
-struct console_cmdline
-{
-	char	name[16];			/* Name of the driver	    */
-	int	index;				/* Minor dev. to use	    */
-	char	*options;			/* Options for the driver   */
-#ifdef CONFIG_A11Y_BRAILLE_CONSOLE
-	char	*brl_options;			/* Options for braille driver */
-#endif
-};
-
 #define MAX_CMDLINECONSOLES 8
 
 static struct console_cmdline console_cmdline[MAX_CMDLINECONSOLES];
