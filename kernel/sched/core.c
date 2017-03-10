@@ -82,7 +82,9 @@
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
 #endif
-
+#ifdef CONFIG_SEC_DEBUG
+#include <mach/sec_debug.h>
+#endif
 #include "sched.h"
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
