@@ -703,7 +703,7 @@ static int __init clocksource_done_booting(void)
 	mutex_unlock(&clocksource_mutex);
 	return 0;
 }
-fs_initcall(clocksource_done_booting);
+arch_initcall(clocksource_done_booting);
 
 /*
  * Enqueue the clocksource sorted by rating
