@@ -399,10 +399,10 @@ static ssize_t force_mains_store(struct kobject *kobj,
 
 	switch (new_cable_type) {
 		case FORCE_MAINS_ENABLED:
-			cable_type = new_cable_type;
+			force_mains = new_cable_type;
 			return count;
 		case FORCE_MAINS_DISABLED:
-			cable_type = new_cable_type;
+			force_mains = new_cable_type;
 			return count;
 		default:
 			return -EINVAL;
