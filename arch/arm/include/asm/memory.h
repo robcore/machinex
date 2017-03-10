@@ -98,19 +98,23 @@
 #define TASK_UNMAPPED_BASE	UL(0x00000000)
 #endif
 
+#ifndef PHYS_OFFSET
+#define PHYS_OFFSET 		UL(CONFIG_DRAM_BASE)
+#endif
+
 #ifndef END_MEM
 #define END_MEM     		(UL(CONFIG_DRAM_BASE) + CONFIG_DRAM_SIZE)
 #endif
 
 #ifndef PAGE_OFFSET
-#define PAGE_OFFSET		PLAT_PHYS_OFFSET
+#define PAGE_OFFSET		(PHYS_OFFSET)
 #endif
 
 /*
  * The module can be at any place in ram in nommu mode.
  */
 #define MODULES_END		(END_MEM)
-#define MODULES_VADDR		PAGE_OFFSET
+#define MODULES_VADDR		(PHYS_OFFSET)
 
 #define XIP_VIRT_ADDR(physaddr)  (physaddr)
 
@@ -136,16 +140,6 @@
  */
 #define page_to_phys(page)	(__pfn_to_phys(page_to_pfn(page)))
 #define phys_to_page(phys)	(pfn_to_page(__phys_to_pfn(phys)))
-
-/*
- * PLAT_PHYS_OFFSET is the offset (from zero) of the start of physical
- * memory. This is used for XIP and NoMMU kernels, or by kernels which
- * have their own mach/memory.h. Assembly code must always use
- * PLAT_PHYS_OFFSET and not PHYS_OFFSET.
- */
-#ifndef PLAT_PHYS_OFFSET
-#define PLAT_PHYS_OFFSET	UL(CONFIG_PHYS_OFFSET)
-#endif
 
 #ifndef __ASSEMBLY__
 
@@ -175,32 +169,30 @@ extern unsigned long __pv_phys_offset;
 	: "=r" (to)					\
 	: "r" (from), "I" (type))
 
-static inline phys_addr_t __virt_to_phys(unsigned long x)
+static inline unsigned long __virt_to_phys(unsigned long x)
 {
 	unsigned long t;
 	__pv_stub(x, t, "add", __PV_BITS_31_24);
 	return t;
 }
 
-static inline unsigned long __phys_to_virt(phys_addr_t x)
+static inline unsigned long __phys_to_virt(unsigned long x)
 {
 	unsigned long t;
 	__pv_stub(x, t, "sub", __PV_BITS_31_24);
 	return t;
 }
 #else
+#define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
+#define __phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
+#endif
+#endif
 
+#ifndef PHYS_OFFSET
+#ifdef PLAT_PHYS_OFFSET
 #define PHYS_OFFSET	PLAT_PHYS_OFFSET
-
-static inline phys_addr_t __virt_to_phys(unsigned long x)
-{
-	return (phys_addr_t)x - PAGE_OFFSET + PHYS_OFFSET;
-}
-
-static inline unsigned long __phys_to_virt(phys_addr_t x)
-{
-	return x - PHYS_OFFSET + PAGE_OFFSET;
-}
+#else
+#define PHYS_OFFSET	UL(CONFIG_PHYS_OFFSET)
 #endif
 #endif
 
@@ -212,7 +204,7 @@ static inline unsigned long __phys_to_virt(phys_addr_t x)
  * direct-mapped view.  We assume this is the first page
  * of RAM in the mem_map as well.
  */
-#define PHYS_PFN_OFFSET	((unsigned long)(PHYS_OFFSET >> PAGE_SHIFT))
+#define PHYS_PFN_OFFSET	(PHYS_OFFSET >> PAGE_SHIFT)
 
 /*
  * These are *only* valid on the kernel direct mapped RAM memory.
@@ -227,14 +219,14 @@ static inline phys_addr_t virt_to_phys(const volatile void *x)
 
 static inline void *phys_to_virt(phys_addr_t x)
 {
-	return (void *)__phys_to_virt(x);
+	return (void *)(__phys_to_virt((unsigned long)(x)));
 }
 
 /*
  * Drivers should NOT use these either.
  */
 #define __pa(x)			__virt_to_phys((unsigned long)(x))
-#define __va(x)			((void *)__phys_to_virt((phys_addr_t)(x)))
+#define __va(x)			((void *)__phys_to_virt((unsigned long)(x)))
 #define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
 
 /*
@@ -278,8 +270,7 @@ static inline __deprecated void *bus_to_virt(unsigned long x)
 #define ARCH_PFN_OFFSET		PHYS_PFN_OFFSET
 
 #define virt_to_page(kaddr)	pfn_to_page(__pa(kaddr) >> PAGE_SHIFT)
-#define virt_addr_valid(kaddr)	(((unsigned long)(kaddr) >= PAGE_OFFSET && (unsigned long)(kaddr) < (unsigned long)high_memory) \
-					&& pfn_valid(__pa(kaddr) >> PAGE_SHIFT) )
+#define virt_addr_valid(kaddr)	((unsigned long)(kaddr) >= PAGE_OFFSET && (unsigned long)(kaddr) < (unsigned long)high_memory)
 
 /*
  * Optional coherency support.  Currently used only by selected
@@ -301,3 +292,4 @@ static inline __deprecated void *bus_to_virt(unsigned long x)
 #include <asm-generic/memory_model.h>
 
 #endif
+
