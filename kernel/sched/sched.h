@@ -1110,6 +1110,8 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 	return ave_nr_running;
 }
 
+extern void init_task_runnable_average(struct task_struct *p);
+
 #ifdef CONFIG_PARAVIRT
 static inline u64 steal_ticks(u64 steal)
 {
