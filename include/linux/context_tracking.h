@@ -31,6 +31,8 @@ static inline bool context_tracking_active(void)
 	return __this_cpu_read(context_tracking.active);
 }
 
+extern void context_tracking_cpu_set(int cpu);
+
 extern void user_enter(void);
 extern void user_exit(void);
 extern void context_tracking_task_switch(struct task_struct *prev,
