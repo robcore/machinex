@@ -37,7 +37,6 @@ extern struct irq_chip gic_arch_extn;
 
 void gic_init_bases(unsigned int, int, void __iomem *, void __iomem *,
 		    u32 offset, struct device_node *);
-void gic_secondary_init(unsigned int);
 int gic_of_init(struct device_node *node, struct device_node *parent);
 void gic_handle_irq(struct pt_regs *regs);
 void gic_cascade_irq(unsigned int gic_nr, unsigned int irq);
