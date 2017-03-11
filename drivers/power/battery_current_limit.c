@@ -33,6 +33,8 @@
 #define MIN_BCL_POLL_INTERVAL 10
 
 static const char bcl_type[] = "bcl";
+static int force_disable;
+module_param(force_disable, int, 0644);
 
 /*
  * Battery Current Limit Enable or Not
@@ -175,7 +177,7 @@ static void bcl_imax_work(struct work_struct *work)
 	struct bcl_context *bcl = container_of(work,
 			struct bcl_context, bcl_imax_work.work);
 
-	if (gbcl->bcl_mode == BCL_DEVICE_ENABLED) {
+	if (gbcl->bcl_mode == BCL_DEVICE_ENABLED && !force_disable) {
 		bcl_calculate_imax_trigger();
 		/* restart the delay work for caculating imax */
 		schedule_delayed_work(&bcl->bcl_imax_work,
@@ -189,20 +191,28 @@ static void bcl_imax_work(struct work_struct *work)
  */
 static void bcl_mode_set(enum bcl_device_mode mode)
 {
-	if (!gbcl)
-		return;
+	if (!force_disable) {
 
-	if (gbcl->bcl_mode == mode)
-		return;
+		if (!gbcl)
+			return;
 
-	if (gbcl->bcl_mode == BCL_DEVICE_DISABLED
-		&& mode == BCL_DEVICE_ENABLED) {
-		gbcl->bcl_mode = mode;
-		bcl_imax_work(&(gbcl->bcl_imax_work.work));
-		return;
-	} else if (gbcl->bcl_mode == BCL_DEVICE_ENABLED
-		&& mode == BCL_DEVICE_DISABLED) {
-		gbcl->bcl_mode = mode;
+		if (gbcl->bcl_mode == mode)
+			return;
+
+		if (gbcl->bcl_mode == BCL_DEVICE_DISABLED
+			&& mode == BCL_DEVICE_ENABLED) {
+			gbcl->bcl_mode = mode;
+			bcl_imax_work(&(gbcl->bcl_imax_work.work));
+			return;
+		} else if (gbcl->bcl_mode == BCL_DEVICE_ENABLED
+			&& mode == BCL_DEVICE_DISABLED) {
+			gbcl->bcl_mode = mode;
+			cancel_delayed_work_sync(&(gbcl->bcl_imax_work));
+			return;
+		}
+	} else {
+		gbcl->bcl_mode = BCL_DEVICE_DISABLED;
+		mode == BCL_DEVICE_DISABLED;
 		cancel_delayed_work_sync(&(gbcl->bcl_imax_work));
 		return;
 	}
@@ -246,9 +256,9 @@ mode_store(struct device *dev, struct device_attribute *attr,
 	if (!gbcl)
 		return -EPERM;
 
-	if (!strncmp(buf, "enabled", 7))
+	if (!strncmp(buf, "enabled", 7) && !force_disable)
 		bcl_mode_set(BCL_DEVICE_ENABLED);
-	else if (!strncmp(buf, "disabled", 8))
+	else if (!strncmp(buf, "disabled", 8) || force_disable)
 		bcl_mode_set(BCL_DEVICE_DISABLED);
 	else
 		return -EINVAL;
@@ -460,7 +470,7 @@ static void remove_bcl_sysfs(struct bcl_context *bcl)
 	return;
 }
 
-static int __devinit bcl_probe(struct platform_device *pdev)
+static int bcl_probe(struct platform_device *pdev)
 {
 	struct bcl_context *bcl;
 	int ret = 0;
