@@ -12,7 +12,8 @@
  * Note: the dentry argument is the parent dentry.
  */
 
-static int hpfs_hash_dentry(const struct dentry *dentry, struct qstr *qstr)
+static int hpfs_hash_dentry(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
 {
 	unsigned long	 hash;
 	int		 i;
@@ -34,7 +35,9 @@ static int hpfs_hash_dentry(const struct dentry *dentry, struct qstr *qstr)
 	return 0;
 }
 
-static int hpfs_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
+static int hpfs_compare_dentry(const struct dentry *parent,
+		const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	unsigned al = len;

@@ -1479,7 +1479,7 @@ struct dentry *d_make_root(struct inode *root_inode)
 	struct dentry *res = NULL;
 
 	if (root_inode) {
-		static const struct qstr name = QSTR_INIT("/", 1);
+		static const struct qstr name = { .name = "/", .len = 1 };
 
 		res = __d_alloc(root_inode->i_sb, &name);
 		if (res)
@@ -1540,7 +1540,7 @@ EXPORT_SYMBOL(d_find_any_alias);
  */
 struct dentry *d_obtain_alias(struct inode *inode)
 {
-	static const struct qstr anonstring = QSTR_INIT("/", 1);
+	static const struct qstr anonstring = { .name = "/", .len = 1 };
 	struct dentry *tmp;
 	struct dentry *res;
 
@@ -1723,6 +1723,7 @@ EXPORT_SYMBOL(d_add_ci);
  * @parent: parent dentry
  * @name: qstr of name we wish to find
  * @seqp: returns d_seq value at the point where the dentry was found
+ * @inode: returns dentry->d_inode when the inode was found valid.
  * Returns: dentry, or NULL
  *
  * __d_lookup_rcu is the dcache lookup function for rcu-walk name
@@ -1748,9 +1749,10 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 				const struct qstr *name,
 				unsigned *seqp, struct inode **inode)
 {
-	u64 hashlen = name->hash_len;
+	unsigned int len = name->len;
+	unsigned int hash = name->hash;
 	const unsigned char *str = name->name;
-	struct hlist_bl_head *b = d_hash(parent, hashlen_hash(hashlen));
+	struct hlist_bl_head *b = d_hash(parent, hash);
 	struct hlist_bl_node *node;
 	struct dentry *dentry;
 
@@ -1780,13 +1782,16 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 		const char *tname;
 		int tlen;
 
+		if (dentry->d_name.hash != hash)
+			continue;
+
 seqretry:
 		seq = read_seqcount_begin(&dentry->d_seq);
 		if (dentry->d_parent != parent)
 			continue;
 		if (d_unhashed(dentry))
 			continue;
-		tlen = dentry->d_name.hash_len;
+		tlen = dentry->d_name.len;
 		tname = dentry->d_name.name;
 		i = dentry->d_inode;
 		prefetch(tname);
@@ -1799,14 +1804,12 @@ seqretry:
 		if (read_seqcount_retry(&dentry->d_seq, seq))
 			goto seqretry;
 		if (unlikely(parent->d_flags & DCACHE_OP_COMPARE)) {
-			if (dentry->d_name.hash != hashlen_hash(hashlen))
-				continue;
 			if (parent->d_op->d_compare(parent, *inode,
 						dentry, i,
 						tlen, tname, name))
 				continue;
 		} else {
-			if (dentry_cmp(tname, tlen, str, hash_len))
+			if (dentry_cmp(tname, tlen, str, len))
 				continue;
 		}
 		/*
@@ -1952,7 +1955,7 @@ struct dentry *d_hash_and_lookup(struct dentry *dir, struct qstr *name)
 	 */
 	name->hash = full_name_hash(name->name, name->len);
 	if (dir->d_flags & DCACHE_OP_HASH) {
-		int err = dir->d_op->d_hash(dir, name);
+		int err = dir->d_op->d_hash(dir, dir->d_inode, name);
 		if (unlikely(err < 0))
 			return ERR_PTR(err);
 	}
@@ -2959,21 +2962,34 @@ rename_retry:
 	goto again;
 }
 
-void d_tmpfile(struct dentry *dentry, struct inode *inode)
+/**
+ * find_inode_number - check for dentry with name
+ * @dir: directory to check
+ * @name: Name to find.
+ *
+ * Check whether a dentry already exists for the given name,
+ * and return the inode number if it has an inode. Otherwise
+ * 0 is returned.
+ *
+ * This routine is used to post-process directory listings for
+ * filesystems using synthetic inode numbers, and is necessary
+ * to keep getcwd() working.
+ */
+
+ino_t find_inode_number(struct dentry *dir, struct qstr *name)
 {
-	inode_dec_link_count(inode);
-	BUG_ON(dentry->d_name.name != dentry->d_iname ||
-		!hlist_unhashed(&dentry->d_alias) ||
-		!d_unlinked(dentry));
-	spin_lock(&dentry->d_parent->d_lock);
-	spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
-	dentry->d_name.len = sprintf(dentry->d_iname, "#%llu",
-				(unsigned long long)inode->i_ino);
-	spin_unlock(&dentry->d_lock);
-	spin_unlock(&dentry->d_parent->d_lock);
-	d_instantiate(dentry, inode);
+	struct dentry * dentry;
+	ino_t ino = 0;
+
+	dentry = d_hash_and_lookup(dir, name);
+	if (!IS_ERR_OR_NULL(dentry)) {
+		if (dentry->d_inode)
+			ino = dentry->d_inode->i_ino;
+		dput(dentry);
+	}
+	return ino;
 }
-EXPORT_SYMBOL(d_tmpfile);
+EXPORT_SYMBOL(find_inode_number);
 
 static __initdata unsigned long dhash_entries;
 static int __init set_dhash_entries(char *str)

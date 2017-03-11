@@ -27,23 +27,31 @@
 
 #define BEQUIET
 
-static int isofs_hashi(const struct dentry *parent, struct qstr *qstr);
-static int isofs_hash(const struct dentry *parent, struct qstr *qstr);
+static int isofs_hashi(const struct dentry *parent, const struct inode *inode,
+		struct qstr *qstr);
+static int isofs_hash(const struct dentry *parent, const struct inode *inode,
+		struct qstr *qstr);
 static int isofs_dentry_cmpi(const struct dentry *parent,
-		const struct dentry *dentry,
+		const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
 static int isofs_dentry_cmp(const struct dentry *parent,
-		const struct dentry *dentry,
+		const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
 
 #ifdef CONFIG_JOLIET
-static int isofs_hashi_ms(const struct dentry *parent, struct qstr *qstr);
-static int isofs_hash_ms(const struct dentry *parent, struct qstr *qstr);
+static int isofs_hashi_ms(const struct dentry *parent, const struct inode *inode,
+		struct qstr *qstr);
+static int isofs_hash_ms(const struct dentry *parent, const struct inode *inode,
+		struct qstr *qstr);
 static int isofs_dentry_cmpi_ms(const struct dentry *parent,
-		const struct dentry *dentry,
+		const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
 static int isofs_dentry_cmp_ms(const struct dentry *parent,
-		const struct dentry *dentry,
+		const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
 #endif
 
@@ -256,26 +264,30 @@ static int isofs_dentry_cmp_common(
 }
 
 static int
-isofs_hash(const struct dentry *dentry, struct qstr *qstr)
+isofs_hash(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
 {
 	return isofs_hash_common(dentry, qstr, 0);
 }
 
 static int
-isofs_hashi(const struct dentry *dentry, struct qstr *qstr)
+isofs_hashi(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
 {
 	return isofs_hashi_common(dentry, qstr, 0);
 }
 
 static int
-isofs_dentry_cmp(const struct dentry *parent, const struct dentry *dentry,
+isofs_dentry_cmp(const struct dentry *parent, const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	return isofs_dentry_cmp_common(len, str, name, 0, 0);
 }
 
 static int
-isofs_dentry_cmpi(const struct dentry *parent, const struct dentry *dentry,
+isofs_dentry_cmpi(const struct dentry *parent, const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	return isofs_dentry_cmp_common(len, str, name, 0, 1);
@@ -283,26 +295,30 @@ isofs_dentry_cmpi(const struct dentry *parent, const struct dentry *dentry,
 
 #ifdef CONFIG_JOLIET
 static int
-isofs_hash_ms(const struct dentry *dentry, struct qstr *qstr)
+isofs_hash_ms(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
 {
 	return isofs_hash_common(dentry, qstr, 1);
 }
 
 static int
-isofs_hashi_ms(const struct dentry *dentry, struct qstr *qstr)
+isofs_hashi_ms(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
 {
 	return isofs_hashi_common(dentry, qstr, 1);
 }
 
 static int
-isofs_dentry_cmp_ms(const struct dentry *parent, const struct dentry *dentry,
+isofs_dentry_cmp_ms(const struct dentry *parent, const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	return isofs_dentry_cmp_common(len, str, name, 1, 0);
 }
 
 static int
-isofs_dentry_cmpi_ms(const struct dentry *parent, const struct dentry *dentry,
+isofs_dentry_cmpi_ms(const struct dentry *parent, const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	return isofs_dentry_cmp_common(len, str, name, 1, 1);
