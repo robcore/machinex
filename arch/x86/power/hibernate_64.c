@@ -18,26 +18,26 @@
 #include <asm/suspend.h>
 
 /* References to section boundaries */
-extern __visible const void __nosave_begin, __nosave_end;
+extern const void __nosave_begin, __nosave_end;
 
 /* Defined in hibernate_asm_64.S */
-extern asmlinkage int restore_image(void);
+extern int restore_image(void);
 
 /*
  * Address to jump to in the last phase of restore in order to get to the image
  * kernel's text (this value is passed in the image header).
  */
-unsigned long restore_jump_address __visible;
+unsigned long restore_jump_address;
 
 /*
  * Value of the cr3 register from before the hibernation (this value is passed
  * in the image header).
  */
-unsigned long restore_cr3 __visible;
+unsigned long restore_cr3;
 
-pgd_t *temp_level4_pgt __visible;
+pgd_t *temp_level4_pgt;
 
-void *relocated_restore_code __visible;
+void *relocated_restore_code;
 
 static int res_phys_pud_init(pud_t *pud, unsigned long address, unsigned long end)
 {

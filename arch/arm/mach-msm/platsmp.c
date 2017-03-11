@@ -256,6 +256,12 @@ static int msm_boot_secondary(unsigned int cpu, struct task_struct *idle)
 
 	return pen_release != -1 ? -ENOSYS : 0;
 }
+
+int  msm_cpu_disable(unsigned int cpu)
+{
+	return 0; /* support hotplugging any cpu */
+}
+
 /*
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
@@ -286,5 +292,6 @@ struct smp_operations msm_smp_ops __initdata = {
 	.smp_boot_secondary	= msm_boot_secondary,
 #ifdef CONFIG_HOTPLUG_CPU
 	.cpu_die		= msm_cpu_die,
+	.cpu_disable = msm_cpu_disable,
 #endif
 };

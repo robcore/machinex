@@ -859,7 +859,7 @@ void task_numa_fault(int node, int pages, bool migrated)
 {
 	struct task_struct *p = current;
 
-	if (!numabalancing_enabled)
+	if (!sched_feat_numa(NUMA))
 		return;
 
 	/* FIXME: Allocate task-specific structure for placement policy here */
@@ -2132,7 +2132,6 @@ entity_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr, int queued)
 	 */
 	update_entity_load_avg(curr, 1);
 	update_cfs_rq_blocked_load(cfs_rq, 1);
-	update_cfs_shares(cfs_rq);
 
 #ifdef CONFIG_SCHED_HRTICK
 	/*

@@ -62,6 +62,16 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 	}
 }
 
+int msm_cpu_kill(unsigned int cpu)
+{
+	int ret = 0;
+
+	if (cpumask_test_and_clear_cpu(cpu, &cpu_dying_mask))
+		ret = msm_pm_wait_cpu_shutdown(cpu);
+
+	return ret ? 0 : 1;
+}
+
 /*
  * platform-specific code to shutdown a CPU
  *
@@ -159,7 +169,8 @@ int msm_platform_secondary_init(unsigned int cpu)
 
 	if (!(*warm_boot)) {
 		*warm_boot = 1;
-		return 0;
+		if (cpu)
+			return 0;
 	}
 	msm_jtag_restore_state();
 #if defined(CONFIG_VFP) && defined (CONFIG_CPU_PM)

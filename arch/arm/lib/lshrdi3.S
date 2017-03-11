@@ -48,7 +48,7 @@ ENTRY(__aeabi_llsr)
  THUMB(	lslmi	r3, ah, ip		)
  THUMB(	orrmi	al, al, r3		)
 	mov	ah, ah, lsr r2
-	mov	pc, lr
+	ret	lr
 
 ENDPROC(__lshrdi3)
 ENDPROC(__aeabi_llsr)

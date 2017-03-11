@@ -647,6 +647,9 @@ static void __vtime_account_system(struct task_struct *tsk)
 
 void vtime_account_system(struct task_struct *tsk)
 {
+	if (!vtime_accounting_enabled())
+		return;
+
 	write_seqlock(&tsk->vtime_seqlock);
 	__vtime_account_system(tsk);
 	write_sequnlock(&tsk->vtime_seqlock);
@@ -668,8 +671,12 @@ void vtime_account_user(struct task_struct *tsk)
 {
 	cputime_t delta_cpu;
 
-	write_seqlock(&tsk->vtime_seqlock);
+	if (!vtime_accounting_enabled())
+		return;
+
 	delta_cpu = get_vtime_delta(tsk);
+
+	write_seqlock(&tsk->vtime_seqlock);
 	tsk->vtime_snap_whence = VTIME_SYS;
 	account_user_time(tsk, delta_cpu, cputime_to_scaled(delta_cpu));
 	write_sequnlock(&tsk->vtime_seqlock);
@@ -677,6 +684,9 @@ void vtime_account_user(struct task_struct *tsk)
 
 void vtime_user_enter(struct task_struct *tsk)
 {
+	if (!vtime_accounting_enabled())
+		return;
+
 	write_seqlock(&tsk->vtime_seqlock);
 	tsk->vtime_snap_whence = VTIME_USER;
 	__vtime_account_system(tsk);
@@ -685,13 +695,6 @@ void vtime_user_enter(struct task_struct *tsk)
 
 void vtime_guest_enter(struct task_struct *tsk)
 {
-	/*
-	 * The flags must be updated under the lock with
-	 * the vtime_snap flush and update.
-	 * That enforces a right ordering and update sequence
-	 * synchronization against the reader (task_gtime())
-	 * that can thus safely catch up with a tickless delta.
-	 */
 	write_seqlock(&tsk->vtime_seqlock);
 	__vtime_account_system(tsk);
 	current->flags |= PF_VCPU;

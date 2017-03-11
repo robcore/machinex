@@ -227,13 +227,25 @@ static void flush_smp_call_function_queue(bool warn_cpu_offline)
 
 	while (!list_empty(&list)) {
 		struct call_single_data *csd;
+		unsigned int csd_flags;
 
 		csd = list_entry(list.next, struct call_single_data, list);
 		list_del(&csd->list);
 
+		/*
+		 * 'csd' can be invalid after this call if flags == 0
+		 * (when called through generic_exec_single()),
+		 * so save them away before making the call:
+		 */
+		csd_flags = csd->flags;
+
 		csd->func(csd->info);
 
-		csd_unlock(csd);
+		/*
+		 * Unlocked CSDs are valid through generic_exec_single():
+		 */
+		if (csd_flags & CSD_FLAG_LOCK)
+			csd_unlock(csd);
 	}
 }
 
