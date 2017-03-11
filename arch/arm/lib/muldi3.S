@@ -42,7 +42,7 @@ ENTRY(__aeabi_lmul)
 	adc	xh, xh, yh, lsr #16
 	adds	xl, xl, ip, lsl #16
 	adc	xh, xh, ip, lsr #16
-	ret	lr
+	mov	pc, lr
 
 ENDPROC(__muldi3)
 ENDPROC(__aeabi_lmul)
