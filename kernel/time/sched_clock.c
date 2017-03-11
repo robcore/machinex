@@ -67,7 +67,7 @@ unsigned long long notrace sched_clock(void)
 		return cd.epoch_ns;
 
 	do {
-		seq = raw_read_seqcount_begin(&cd.seq);
+		seq = read_seqcount_begin(&cd.seq);
 		epoch_cyc = cd.epoch_cyc;
 		epoch_ns = cd.epoch_ns;
 	} while (read_seqcount_retry(&cd.seq, seq));
@@ -92,10 +92,10 @@ static void notrace update_sched_clock(void)
 			  cd.mult, cd.shift);
 
 	raw_local_irq_save(flags);
-	raw_write_seqcount_begin(&cd.seq);
+	write_seqcount_begin(&cd.seq);
 	cd.epoch_ns = ns;
 	cd.epoch_cyc = cyc;
-	raw_write_seqcount_end(&cd.seq);
+	write_seqcount_end(&cd.seq);
 	raw_local_irq_restore(flags);
 }
 
