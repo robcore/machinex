@@ -27,6 +27,11 @@ DEFINE_PER_CPU(struct context_tracking, context_tracking) = {
 #endif
 };
 
+void context_tracking_cpu_set(int cpu)
+{
+	per_cpu(context_tracking.active, cpu) = true;
+}
+
 /**
  * user_enter - Inform the context tracking that the CPU is going to
  *              enter userspace mode.
@@ -81,10 +86,9 @@ void user_enter(void)
  */
 void __sched notrace preempt_schedule_context(void)
 {
-	struct thread_info *ti = current_thread_info();
 	enum ctx_state prev_ctx;
 
-	if (likely(ti->preempt_count || irqs_disabled()))
+	if (likely(!preemptible()))
 		return;
 
 	/*
