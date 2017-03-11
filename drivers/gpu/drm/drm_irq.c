@@ -790,7 +790,7 @@ u32 drm_vblank_count_and_time(struct drm_device *dev, int crtc,
 	/* Read timestamp from slot of _vblank_time ringbuffer
 	 * that corresponds to current vblank count. Retry if
 	 * count has incremented during readout. This works like
-	 * a seqlock.
+	 * a seq---lock.
 	 */
 	do {
 		cur_vblank = atomic_read(&dev->_vblank_count[crtc]);
