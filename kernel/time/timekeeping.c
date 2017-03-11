@@ -254,6 +254,8 @@ int pvclock_gtod_unregister_notifier(struct notifier_block *nb)
 	ret = raw_notifier_chain_unregister(&pvclock_gtod_chain, nb);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 
+	ntp_notify_cmos_timer();
+
 	return ret;
 }
 EXPORT_SYMBOL_GPL(pvclock_gtod_unregister_notifier);
