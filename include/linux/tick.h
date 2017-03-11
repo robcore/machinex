@@ -10,7 +10,7 @@
 #include <linux/irqflags.h>
 #include <linux/percpu.h>
 #include <linux/hrtimer.h>
-#include <linux/context_tracking_state.h>
+#include <linux/context_tracking.h>
 #include <linux/cpumask.h>
 
 #ifdef CONFIG_GENERIC_CLOCKEVENTS
