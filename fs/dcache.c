@@ -1479,7 +1479,7 @@ struct dentry *d_make_root(struct inode *root_inode)
 	struct dentry *res = NULL;
 
 	if (root_inode) {
-		static const struct qstr name = { .name = "/", .len = 1 };
+		static const struct qstr name = QSTR_INIT("/", 1);
 
 		res = __d_alloc(root_inode->i_sb, &name);
 		if (res)
@@ -1540,7 +1540,7 @@ EXPORT_SYMBOL(d_find_any_alias);
  */
 struct dentry *d_obtain_alias(struct inode *inode)
 {
-	static const struct qstr anonstring = { .name = "/", .len = 1 };
+	static const struct qstr anonstring = QSTR_INIT("/", 1);
 	struct dentry *tmp;
 	struct dentry *res;
 
@@ -1723,7 +1723,6 @@ EXPORT_SYMBOL(d_add_ci);
  * @parent: parent dentry
  * @name: qstr of name we wish to find
  * @seqp: returns d_seq value at the point where the dentry was found
- * @inode: returns dentry->d_inode when the inode was found valid.
  * Returns: dentry, or NULL
  *
  * __d_lookup_rcu is the dcache lookup function for rcu-walk name
@@ -1749,10 +1748,9 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 				const struct qstr *name,
 				unsigned *seqp, struct inode **inode)
 {
-	unsigned int len = name->len;
-	unsigned int hash = name->hash;
+	u64 hashlen = name->hash_len;
 	const unsigned char *str = name->name;
-	struct hlist_bl_head *b = d_hash(parent, hash);
+	struct hlist_bl_head *b = d_hash(parent, hashlen_hash(hashlen));
 	struct hlist_bl_node *node;
 	struct dentry *dentry;
 
@@ -1782,16 +1780,13 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 		const char *tname;
 		int tlen;
 
-		if (dentry->d_name.hash != hash)
-			continue;
-
 seqretry:
 		seq = read_seqcount_begin(&dentry->d_seq);
 		if (dentry->d_parent != parent)
 			continue;
 		if (d_unhashed(dentry))
 			continue;
-		tlen = dentry->d_name.len;
+		tlen = dentry->d_name.hash_len;
 		tname = dentry->d_name.name;
 		i = dentry->d_inode;
 		prefetch(tname);
@@ -1804,12 +1799,14 @@ seqretry:
 		if (read_seqcount_retry(&dentry->d_seq, seq))
 			goto seqretry;
 		if (unlikely(parent->d_flags & DCACHE_OP_COMPARE)) {
+			if (dentry->d_name.hash != hashlen_hash(hashlen))
+				continue;
 			if (parent->d_op->d_compare(parent, *inode,
 						dentry, i,
 						tlen, tname, name))
 				continue;
 		} else {
-			if (dentry_cmp(tname, tlen, str, len))
+			if (dentry_cmp(tname, tlen, str, hash_len))
 				continue;
 		}
 		/*
@@ -1955,7 +1952,7 @@ struct dentry *d_hash_and_lookup(struct dentry *dir, struct qstr *name)
 	 */
 	name->hash = full_name_hash(name->name, name->len);
 	if (dir->d_flags & DCACHE_OP_HASH) {
-		int err = dir->d_op->d_hash(dir, dir->d_inode, name);
+		int err = dir->d_op->d_hash(dir, name);
 		if (unlikely(err < 0))
 			return ERR_PTR(err);
 	}
