@@ -2517,7 +2517,7 @@ static int copy_module_from_user(const void __user *umod, unsigned long len,
 /* Sets info->hdr and info->len. */
 static int copy_module_from_fd(int fd, struct load_info *info)
 {
-+	struct fd f = fdget(fd);
+	struct fd f = fdget(fd);
 	int err;
 	struct kstat stat;
 	loff_t pos;
