@@ -40,7 +40,6 @@
 #include <asm/leds.h>
 #include <asm/hardware/arm_timer.h>
 #include <asm/hardware/icst.h>
-#include <asm/hardware/vic.h>
 #include <asm/mach-types.h>
 
 #include <asm/mach/arch.h>
