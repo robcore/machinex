@@ -36,6 +36,52 @@
  * updating starting before the write_seqcountbeqin() and ending
  * after the write_seqcount_end().
  */
+
+typedef struct {
+	unsigned sequence;
+	spinlock_t lock;
+} legacy_seqlock_t;
+
+/*
+ * These macros triggered gcc-3.x compile-time problems.  We think these are
+ * OK now.  Be cautious.
+ */
+#define __LEGACY_SEQLOCK_UNLOCKED(lockname) \
+		 { 0, __SPIN_LOCK_UNLOCKED(lockname) }
+
+#define legacy_seqlock_init(x)					\
+	do {						\
+		(x)->sequence = 0;			\
+		spin_lock_init(&(x)->lock);		\
+	} while (0)
+
+#define DEFINE_LEGACY_SEQLOCK(x) \
+		legacy_seqlock_t x = __LEGACY_SEQLOCK_UNLOCKED(x)
+
+#define write_legacy_seqlock_irqsave(lock, flags)				\
+	do { local_irq_save(flags); write_legacy_seqlock(lock); } while (0)
+
+#define write_legacy_sequnlock_irqrestore(lock, flags)				\
+	do { write_legacy_sequnlock(lock); local_irq_restore(flags); } while(0)
+
+/* Lock out other writers and update the count.
+ * Acts like a normal spin_lock/unlock.
+ * Don't need preempt_disable() because that is in the spin_lock already.
+ */
+static inline void write_legacy_seqlock(legacy_seqlock_t *sl)
+{
+	spin_lock(&sl->lock);
+	++sl->sequence;
+	smp_wmb();
+}
+
+static inline void write_legacy_sequnlock(legacy_seqlock_t *sl)
+{
+	smp_wmb();
+	sl->sequence++;
+	spin_unlock(&sl->lock);
+}
+
 typedef struct seqcount {
 	unsigned sequence;
 } seqcount_t;
