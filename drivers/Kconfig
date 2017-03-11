@@ -150,6 +150,10 @@ source "drivers/rpmsg/Kconfig"
 
 source "drivers/devfreq/Kconfig"
 
+source "drivers/pwm/Kconfig"
+
+source "drivers/irqchip/Kconfig"
+
 source "drivers/gud/Kconfig"
 
 source "drivers/coresight/Kconfig"
@@ -173,8 +177,6 @@ source "drivers/irda/Kconfig"
 source "drivers/felica/Kconfig"
 
 source "drivers/motor_msm8930/Kconfig"
-
-source "drivers/pwm/Kconfig"
 
 source "drivers/secfilter/Kconfig"
 endmenu
