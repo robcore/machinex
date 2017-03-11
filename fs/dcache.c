@@ -82,7 +82,7 @@ int sysctl_vfs_cache_pressure __read_mostly = 100;
 EXPORT_SYMBOL_GPL(sysctl_vfs_cache_pressure);
 
 static __cacheline_aligned_in_smp DEFINE_SPINLOCK(dcache_lru_lock);
-__cacheline_aligned_in_smp DEFINE_SEQLOCK(rename_lock);
+__cacheline_aligned_in_smp DEFINE_LEGACY_SEQLOCK(rename_lock);
 
 EXPORT_SYMBOL(rename_lock);
 
@@ -235,7 +235,7 @@ static inline void dentry_rcuwalk_barrier(struct dentry *dentry)
 {
 	assert_spin_locked(&dentry->d_lock);
 	/* Go through a barrier */
-	write_seqcount_barrier(&dentry->d_seq);
+	write_legacy_seqcount_barrier(&dentry->d_seq);
 }
 
 /*
@@ -995,7 +995,7 @@ int have_submounts(struct dentry *parent)
 	unsigned seq;
 	int locked = 0;
 
-	seq = read_seqbegin(&rename_lock);
+	seq = read_legacy_seqbegin(&rename_lock);
 again:
 	this_parent = parent;
 
@@ -1039,7 +1039,7 @@ ascend:
 		spin_lock(&this_parent->d_lock);
 
 		/* might go back up the wrong parent if we have had a rename */
-		if (!locked && read_seqretry(&rename_lock, seq))
+		if (!locked && read_legacy_seqretry(&rename_lock, seq))
 			goto rename_retry;
 		next = child->d_child.next;
 		while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED)) {
@@ -1051,18 +1051,18 @@ ascend:
 		rcu_read_unlock();
 		goto resume;
 	}
-	if (!locked && read_seqretry(&rename_lock, seq))
+	if (!locked && read_legacy_seqretry(&rename_lock, seq))
 		goto rename_retry;
 	spin_unlock(&this_parent->d_lock);
 	rcu_read_unlock();
 	if (locked)
-		write_sequnlock(&rename_lock);
+		write_legacy_sequnlock(&rename_lock);
 	return 0; /* No mount points found in tree */
 positive:
-	if (!locked && read_seqretry(&rename_lock, seq))
+	if (!locked && read_legacy_seqretry(&rename_lock, seq))
 		goto rename_retry_unlocked;
 	if (locked)
-		write_sequnlock(&rename_lock);
+		write_legacy_sequnlock(&rename_lock);
 	return 1;
 
 rename_retry:
@@ -1072,7 +1072,7 @@ rename_retry:
 		goto again;
 rename_retry_unlocked:
 	locked = 1;
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	goto again;
 }
 EXPORT_SYMBOL(have_submounts);
@@ -1099,7 +1099,7 @@ static int select_parent(struct dentry *parent, struct list_head *dispose)
 	int found = 0;
 	int locked = 0;
 
-	seq = read_seqbegin(&rename_lock);
+	seq = read_legacy_seqbegin(&rename_lock);
 again:
 	this_parent = parent;
 	spin_lock(&this_parent->d_lock);
@@ -1165,7 +1165,7 @@ ascend:
 		spin_lock(&this_parent->d_lock);
 
 		/* might go back up the wrong parent if we have had a rename */
-		if (!locked && read_seqretry(&rename_lock, seq))
+		if (!locked && read_legacy_seqretry(&rename_lock, seq))
 			goto rename_retry;
 		/* go into the first sibling still alive */
 		do {
@@ -1178,12 +1178,12 @@ ascend:
 		goto resume;
 	}
 out:
-	if (!locked && read_seqretry(&rename_lock, seq))
+	if (!locked && read_legacy_seqretry(&rename_lock, seq))
 		goto rename_retry;
 	spin_unlock(&this_parent->d_lock);
 	rcu_read_unlock();
 	if (locked)
-		write_sequnlock(&rename_lock);
+		write_legacy_sequnlock(&rename_lock);
 	return found;
 
 rename_retry:
@@ -1194,7 +1194,7 @@ rename_retry:
 	if (locked)
 		goto again;
 	locked = 1;
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	goto again;
 }
 
@@ -1264,7 +1264,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	dentry->d_count = 1;
 	dentry->d_flags = 0;
 	spin_lock_init(&dentry->d_lock);
-	seqcount_init(&dentry->d_seq);
+	legacy_seqcount_init(&dentry->d_seq);
 	dentry->d_inode = NULL;
 	dentry->d_parent = dentry;
 	dentry->d_sb = sb;
@@ -1786,7 +1786,7 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 			continue;
 
 seqretry:
-		seq = read_seqcount_begin(&dentry->d_seq);
+		seq = read_legacy_seqcount_begin(&dentry->d_seq);
 		if (dentry->d_parent != parent)
 			continue;
 		if (d_unhashed(dentry))
@@ -1801,7 +1801,7 @@ seqretry:
 		 * edge of memory when walking. If we could load this
 		 * atomically some other way, we could drop this check.
 		 */
-		if (read_seqcount_retry(&dentry->d_seq, seq))
+		if (read_legacy_seqcount_retry(&dentry->d_seq, seq))
 			goto seqretry;
 		if (unlikely(parent->d_flags & DCACHE_OP_COMPARE)) {
 			if (parent->d_op->d_compare(parent, *inode,
@@ -1842,11 +1842,11 @@ struct dentry *d_lookup(const struct dentry *parent, const struct qstr *name)
 	unsigned seq;
 
         do {
-                seq = read_seqbegin(&rename_lock);
+                seq = read_legacy_seqbegin(&rename_lock);
                 dentry = __d_lookup(parent, name);
                 if (dentry)
 			break;
-	} while (read_seqretry(&rename_lock, seq));
+	} while (read_legacy_seqretry(&rename_lock, seq));
 	return dentry;
 }
 EXPORT_SYMBOL(d_lookup);
@@ -2096,9 +2096,9 @@ void dentry_update_name_case(struct dentry *dentry, struct qstr *name)
 	BUG_ON(dentry->d_name.len != name->len); /* d_lookup gives this */
 
 	spin_lock(&dentry->d_lock);
-	write_seqcount_begin(&dentry->d_seq);
+	write_legacy_seqcount_begin(&dentry->d_seq);
 	memcpy((unsigned char *)dentry->d_name.name, name->name, name->len);
-	write_seqcount_end(&dentry->d_seq);
+	write_legacy_seqcount_end(&dentry->d_seq);
 	spin_unlock(&dentry->d_lock);
 }
 EXPORT_SYMBOL(dentry_update_name_case);
@@ -2211,10 +2211,10 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 
 	dentry_lock_for_move(dentry, target);
 
-	write_seqcount_begin(&dentry->d_seq);
-	write_seqcount_begin_nested(&target->d_seq, DENTRY_D_LOCK_NESTED);
+	write_legacy_seqcount_begin(&dentry->d_seq);
+	write_legacy_seqcount_begin(&target->d_seq);
 
-	/* __d_drop does write_seqcount_barrier, but they're OK to nest. */
+	/* __d_drop does write_legacy_seqcount_barrier, but they're OK to nest. */
 
 	/*
 	 * Move the dentry to the target hash queue. Don't bother checking
@@ -2247,8 +2247,8 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 
 	list_add(&dentry->d_child, &dentry->d_parent->d_subdirs);
 
-	write_seqcount_end(&target->d_seq);
-	write_seqcount_end(&dentry->d_seq);
+	write_legacy_seqcount_end(&target->d_seq);
+	write_legacy_seqcount_end(&dentry->d_seq);
 
 	dentry_unlock_parents_for_move(dentry, target);
 	spin_unlock(&target->d_lock);
@@ -2267,9 +2267,9 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
  */
 void d_move(struct dentry *dentry, struct dentry *target)
 {
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	__d_move(dentry, target);
-	write_sequnlock(&rename_lock);
+	write_legacy_sequnlock(&rename_lock);
 }
 EXPORT_SYMBOL(d_move);
 
@@ -2343,8 +2343,8 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 
 	dentry_lock_for_move(anon, dentry);
 
-	write_seqcount_begin(&dentry->d_seq);
-	write_seqcount_begin_nested(&anon->d_seq, DENTRY_D_LOCK_NESTED);
+	write_legacy_seqcount_begin(&dentry->d_seq);
+	write_legacy_seqcount_begin(&anon->d_seq);
 
 	dparent = dentry->d_parent;
 	aparent = anon->d_parent;
@@ -2366,8 +2366,8 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	else
 		INIT_LIST_HEAD(&anon->d_child);
 
-	write_seqcount_end(&dentry->d_seq);
-	write_seqcount_end(&anon->d_seq);
+	write_legacy_seqcount_end(&dentry->d_seq);
+	write_legacy_seqcount_end(&anon->d_seq);
 
 	dentry_unlock_parents_for_move(anon, dentry);
 	spin_unlock(&dentry->d_lock);
@@ -2407,7 +2407,7 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 		alias = __d_find_alias(inode, 0);
 		if (alias) {
 			actual = alias;
-			write_seqlock(&rename_lock);
+			write_legacy_seqlock(&rename_lock);
 
 			if (d_ancestor(alias, dentry)) {
 				/* Check for loops */
@@ -2417,7 +2417,7 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 				/* Is this an anonymous mountpoint that we
 				 * could splice into our tree? */
 				__d_materialise_dentry(dentry, alias);
-				write_sequnlock(&rename_lock);
+				write_legacy_sequnlock(&rename_lock);
 				__d_drop(alias);
 				goto found;
 			} else {
@@ -2425,7 +2425,7 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 				 * aliasing. This drops inode->i_lock */
 				actual = __d_unalias(inode, dentry, alias);
 			}
-			write_sequnlock(&rename_lock);
+			write_legacy_sequnlock(&rename_lock);
 			if (IS_ERR(actual)) {
 				if (PTR_ERR(actual) == -ELOOP)
 					pr_warn_ratelimited(
@@ -2580,9 +2580,9 @@ char *__d_path(const struct path *path,
 
 	prepend(&res, &buflen, "\0", 1);
 	br_read_lock(&vfsmount_lock);
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	error = prepend_path(path, root, &res, &buflen);
-	write_sequnlock(&rename_lock);
+	write_legacy_sequnlock(&rename_lock);
 	br_read_unlock(&vfsmount_lock);
 
 	if (error < 0)
@@ -2601,9 +2601,9 @@ char *d_absolute_path(const struct path *path,
 
 	prepend(&res, &buflen, "\0", 1);
 	br_read_lock(&vfsmount_lock);
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	error = prepend_path(path, &root, &res, &buflen);
-	write_sequnlock(&rename_lock);
+	write_legacy_sequnlock(&rename_lock);
 	br_read_unlock(&vfsmount_lock);
 
 	if (error > 1)
@@ -2669,9 +2669,9 @@ char *d_path(const struct path *path, char *buf, int buflen)
 
 	get_fs_root(current->fs, &root);
 	br_read_lock(&vfsmount_lock);
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	error = path_with_deleted(path, &root, &res, &buflen);
-	write_sequnlock(&rename_lock);
+	write_legacy_sequnlock(&rename_lock);
 	br_read_unlock(&vfsmount_lock);
 	if (error < 0)
 		res = ERR_PTR(error);
@@ -2739,9 +2739,9 @@ char *dentry_path_raw(struct dentry *dentry, char *buf, int buflen)
 {
 	char *retval;
 
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	retval = __dentry_path(dentry, buf, buflen);
-	write_sequnlock(&rename_lock);
+	write_legacy_sequnlock(&rename_lock);
 
 	return retval;
 }
@@ -2752,7 +2752,7 @@ char *dentry_path(struct dentry *dentry, char *buf, int buflen)
 	char *p = NULL;
 	char *retval;
 
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	if (d_unlinked(dentry)) {
 		p = buf + buflen;
 		if (prepend(&p, &buflen, "//deleted", 10) != 0)
@@ -2760,7 +2760,7 @@ char *dentry_path(struct dentry *dentry, char *buf, int buflen)
 		buflen++;
 	}
 	retval = __dentry_path(dentry, buf, buflen);
-	write_sequnlock(&rename_lock);
+	write_legacy_sequnlock(&rename_lock);
 	if (!IS_ERR(retval) && p)
 		*p = '/';	/* restore '/' overriden with '\0' */
 	return retval;
@@ -2799,7 +2799,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 
 	error = -ENOENT;
 	br_read_lock(&vfsmount_lock);
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	if (!d_unlinked(pwd.dentry)) {
 		unsigned long len;
 		char *cwd = page + PAGE_SIZE;
@@ -2807,7 +2807,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 
 		prepend(&cwd, &buflen, "\0", 1);
 		error = prepend_path(&pwd, &root, &cwd, &buflen);
-		write_sequnlock(&rename_lock);
+		write_legacy_sequnlock(&rename_lock);
 		br_read_unlock(&vfsmount_lock);
 
 		if (error < 0)
@@ -2828,7 +2828,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 				error = -EFAULT;
 		}
 	} else {
-		write_sequnlock(&rename_lock);
+		write_legacy_sequnlock(&rename_lock);
 		br_read_unlock(&vfsmount_lock);
 	}
 
@@ -2865,7 +2865,7 @@ int is_subdir(struct dentry *new_dentry, struct dentry *old_dentry)
 
 	do {
 		/* for restarting inner loop in case of seq retry */
-		seq = read_seqbegin(&rename_lock);
+		seq = read_legacy_seqbegin(&rename_lock);
 		/*
 		 * Need rcu_readlock to protect against the d_parent trashing
 		 * due to d_move
@@ -2876,7 +2876,7 @@ int is_subdir(struct dentry *new_dentry, struct dentry *old_dentry)
 		else
 			result = 0;
 		rcu_read_unlock();
-	} while (read_seqretry(&rename_lock, seq));
+	} while (read_legacy_seqretry(&rename_lock, seq));
 
 	return result;
 }
@@ -2888,7 +2888,7 @@ void d_genocide(struct dentry *root)
 	unsigned seq;
 	int locked = 0;
 
-	seq = read_seqbegin(&rename_lock);
+	seq = read_legacy_seqbegin(&rename_lock);
 again:
 	this_parent = root;
 	spin_lock(&this_parent->d_lock);
@@ -2932,7 +2932,7 @@ ascend:
 		spin_lock(&this_parent->d_lock);
 
 		/* might go back up the wrong parent if we have had a rename */
-		if (!locked && read_seqretry(&rename_lock, seq))
+		if (!locked && read_legacy_seqretry(&rename_lock, seq))
 			goto rename_retry;
 		next = child->d_child.next;
 		while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED)) {
@@ -2944,12 +2944,12 @@ ascend:
 		rcu_read_unlock();
 		goto resume;
 	}
-	if (!locked && read_seqretry(&rename_lock, seq))
+	if (!locked && read_legacy_seqretry(&rename_lock, seq))
 		goto rename_retry;
 	spin_unlock(&this_parent->d_lock);
 	rcu_read_unlock();
 	if (locked)
-		write_sequnlock(&rename_lock);
+		write_legacy_sequnlock(&rename_lock);
 	return;
 
 rename_retry:
@@ -2958,7 +2958,7 @@ rename_retry:
 	if (locked)
 		goto again;
 	locked = 1;
-	write_seqlock(&rename_lock);
+	write_legacy_seqlock(&rename_lock);
 	goto again;
 }
 
