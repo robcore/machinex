@@ -49,6 +49,9 @@ struct kernel_wtm_t {
 	u32  tv_nsec;
 };
 
+struct mxvsys {
+	seqcount_t seqnum;
+};
 /*
  * Updates the kernel user helper area with the current timespec
  * data, as well as additional fields needed to calculate
@@ -60,14 +63,14 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
-	unsigned *seqnum = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
+	seqcount_t *seqnum = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
 	struct kernel_gtod_t *dgtod = (struct kernel_gtod_t *)(vectors +
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
 
 	write_seqlock_irqsave(&kuh_time_lock, flags);
-	*seqnum = kuh_time_lock.sequence;
+	*seqnum = kuh_time_lock.seqcount;
 	dgtod->cycle_last = c->cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
@@ -76,7 +79,7 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	dgtod->tv_nsec = ts->tv_nsec;
 	dgwtm->tv_sec = wtm->tv_sec;
 	dgwtm->tv_nsec = wtm->tv_nsec;
-	*seqnum = kuh_time_lock.sequence + 1;
+	*seqnum = kuh_time_lock.seqcount + 1;
 	write_sequnlock_irqrestore(&kuh_time_lock, flags);
 }
 EXPORT_SYMBOL(update_vsyscall);
