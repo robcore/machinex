@@ -135,7 +135,7 @@ void __init sched_clock_register(u64 (*read)(void), int bits,
 	ns = cd.epoch_ns + cyc_to_ns((cyc - cd.epoch_cyc) & sched_clock_mask,
 			  cd.mult, cd.shift);
 
-	write_seqcount_begin(&cd.seq);
+	raw_write_seqcount_begin(&cd.seq);
 	read_sched_clock = read;
 	sched_clock_mask = new_mask;
 	cd.rate = rate;
@@ -144,7 +144,7 @@ void __init sched_clock_register(u64 (*read)(void), int bits,
 	cd.shift = new_shift;
 	cd.epoch_cyc = new_epoch;
 	cd.epoch_ns = ns;
-	write_seqcount_end(&cd.seq);
+	raw_write_seqcount_end(&cd.seq);
 
 	r = rate;
 	if (r >= 4000000) {
