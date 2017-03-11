@@ -88,44 +88,6 @@ EXPORT_SYMBOL(rename_lock);
 
 static struct kmem_cache *dentry_cache __read_mostly;
 
-/**
- * read_seqbegin_or_lock - begin a sequence number check or locking block
- * lock: sequence lock
- * seq : sequence number to be checked
- *
- * First try it once optimistically without taking the lock. If that fails,
- * take the lock. The sequence number is also used as a marker for deciding
- * whether to be a reader (even) or writer (odd).
- * N.B. seq must be initialized to an even number to begin with.
- */
-static inline void read_seqbegin_or_lock(seqlock_t *lock, int *seq)
-{
-	if (!(*seq & 1)) {	/* Even */
-		*seq = read_seqbegin(lock);
-		rcu_read_lock();
-	} else			/* Odd */
-		write_seqlock(lock);
-}
-
-/**
- * read_seqretry_or_unlock - end a seqretry or lock block & return retry status
- * lock	 : sequence lock
- * seq	 : sequence number
- * Return: 1 to retry operation again, 0 to continue
- */
-static inline int read_seqretry_or_unlock(seqlock_t *lock, int *seq)
-{
-	if (!(*seq & 1)) {	/* Even */
-		rcu_read_unlock();
-		if (read_seqretry(lock, *seq)) {
-			(*seq)++;	/* Take writer lock */
-			return 1;
-		}
-	} else			/* Odd */
-		write_sequnlock(lock);
-	return 0;
-}
-
 /*
  * This is the single most critical data structure when it comes
  * to the dcache: the hashtable for lookups. Somebody should try
