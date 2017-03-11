@@ -49,6 +49,8 @@ struct kernel_wtm_t {
 	u32  tv_nsec;
 };
 
+seqcount_t seq;
+
 /*
  * Updates the kernel user helper area with the current timespec
  * data, as well as additional fields needed to calculate
