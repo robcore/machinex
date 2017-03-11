@@ -64,7 +64,7 @@ rename_retry:
 	*--end = '\0';
 	buflen--;
 
-	seq = read_legacy_seqbegin(&rename_lock);
+	seq = read_seqbegin(&rename_lock);
 	rcu_read_lock();
 	while (1) {
 		spin_lock(&dentry->d_lock);
@@ -80,7 +80,7 @@ rename_retry:
 		spin_unlock(&dentry->d_lock);
 		dentry = dentry->d_parent;
 	}
-	if (read_legacy_seqretry(&rename_lock, seq)) {
+	if (read_seqretry(&rename_lock, seq)) {
 		spin_unlock(&dentry->d_lock);
 		rcu_read_unlock();
 		goto rename_retry;
@@ -121,7 +121,7 @@ rename_retry:
 Elong_unlock:
 	spin_unlock(&dentry->d_lock);
 	rcu_read_unlock();
-	if (read_legacy_seqretry(&rename_lock, seq))
+	if (read_seqretry(&rename_lock, seq))
 		goto rename_retry;
 Elong:
 	return ERR_PTR(-ENAMETOOLONG);

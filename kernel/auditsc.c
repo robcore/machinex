@@ -1900,7 +1900,7 @@ retry:
 	drop = NULL;
 	d = dentry;
 	rcu_read_lock();
-	seq = read_legacy_seqbegin(&rename_lock);
+	seq = read_seqbegin(&rename_lock);
 	for(;;) {
 		struct inode *inode = d->d_inode;
 		if (inode && unlikely(!hlist_empty(&inode->i_fsnotify_marks))) {
@@ -1918,7 +1918,7 @@ retry:
 			break;
 		d = parent;
 	}
-	if (unlikely(read_legacy_seqretry(&rename_lock, seq) || drop)) {  /* in this order */
+	if (unlikely(read_seqretry(&rename_lock, seq) || drop)) {  /* in this order */
 		rcu_read_unlock();
 		if (!drop) {
 			/* just a race with rename */
