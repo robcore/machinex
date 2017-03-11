@@ -16,10 +16,10 @@ void set_fs_root(struct fs_struct *fs, const struct path *path)
 
 	path_get(path);
 	spin_lock(&fs->lock);
-	write_seqcount_begin(&fs->seq);
+	write_legacy_seqcount_begin(&fs->seq);
 	old_root = fs->root;
 	fs->root = *path;
-	write_seqcount_end(&fs->seq);
+	write_legacy_seqcount_end(&fs->seq);
 	spin_unlock(&fs->lock);
 	if (old_root.dentry)
 		path_put(&old_root);
@@ -35,10 +35,10 @@ void set_fs_pwd(struct fs_struct *fs, const struct path *path)
 
 	path_get(path);
 	spin_lock(&fs->lock);
-	write_seqcount_begin(&fs->seq);
+	write_legacy_seqcount_begin(&fs->seq);
 	old_pwd = fs->pwd;
 	fs->pwd = *path;
-	write_seqcount_end(&fs->seq);
+	write_legacy_seqcount_end(&fs->seq);
 	spin_unlock(&fs->lock);
 
 	if (old_pwd.dentry)
@@ -66,10 +66,10 @@ void chroot_fs_refs(const struct path *old_root, const struct path *new_root)
 		if (fs) {
 			int hits = 0;
 			spin_lock(&fs->lock);
-			write_seqcount_begin(&fs->seq);
+			write_legacy_seqcount_begin(&fs->seq);
 			hits += replace_path(&fs->root, old_root, new_root);
 			hits += replace_path(&fs->pwd, old_root, new_root);
-			write_seqcount_end(&fs->seq);
+			write_legacy_seqcount_end(&fs->seq);
 			while (hits--) {
 				count++;
 				path_get(new_root);
@@ -115,7 +115,7 @@ struct fs_struct *copy_fs_struct(struct fs_struct *old)
 		fs->users = 1;
 		fs->in_exec = 0;
 		spin_lock_init(&fs->lock);
-		seqcount_init(&fs->seq);
+		legacy_seqcount_init(&fs->seq);
 		fs->umask = old->umask;
 
 		spin_lock(&old->lock);
@@ -161,6 +161,6 @@ EXPORT_SYMBOL(current_umask);
 struct fs_struct init_fs = {
 	.users		= 1,
 	.lock		= __SPIN_LOCK_UNLOCKED(init_fs.lock),
-	.seq		= SEQCNT_ZERO,
+	.seq		= LEGACY_SEQCNT_ZERO,
 	.umask		= 0022,
 };

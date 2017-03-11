@@ -88,7 +88,7 @@ extern unsigned int full_name_hash(const unsigned char *, unsigned int);
 struct dentry {
 	/* RCU lookup touched fields */
 	unsigned int d_flags;		/* protected by d_lock */
-	seqcount_t d_seq;		/* per dentry seqlock */
+	legacy_seqcount_t d_seq;		/* per dentry seqlock */
 	struct hlist_bl_node d_hash;	/* lookup hash list */
 	struct dentry *d_parent;	/* parent directory */
 	struct qstr d_name;
@@ -195,7 +195,7 @@ struct dentry_operations {
 
 #define DCACHE_DENTRY_KILLED	0x100000
 
-extern seqlock_t rename_lock;
+extern legacy_seqlock_t rename_lock;
 
 static inline int dname_external(struct dentry *dentry)
 {
@@ -250,7 +250,7 @@ extern void d_rehash(struct dentry *);
  * This adds the entry to the hash queues and initializes @inode.
  * The entry was actually filled in earlier during d_alloc().
  */
- 
+
 static inline void d_add(struct dentry *entry, struct inode *inode)
 {
 	d_instantiate(entry, inode);
@@ -302,7 +302,7 @@ static inline int __d_rcu_to_refcount(struct dentry *dentry, unsigned seq)
 	int ret = 0;
 
 	assert_spin_locked(&dentry->d_lock);
-	if (!read_seqcount_retry(&dentry->d_seq, seq)) {
+	if (!read_legacy_seqcount_retry(&dentry->d_seq, seq)) {
 		ret = 1;
 		dentry->d_count++;
 	}
@@ -331,7 +331,7 @@ extern char *dentry_path(struct dentry *, char *, int);
  *	@dentry: dentry to get a reference to
  *
  *	Given a dentry or %NULL pointer increment the reference count
- *	if appropriate and return the dentry. A dentry will not be 
+ *	if appropriate and return the dentry. A dentry will not be
  *	destroyed when it has references.
  */
 static inline struct dentry *dget_dlock(struct dentry *dentry)
@@ -359,7 +359,7 @@ extern struct dentry *dget_parent(struct dentry *dentry);
  *
  *	Returns true if the dentry passed is not currently hashed.
  */
- 
+
 static inline int d_unhashed(struct dentry *dentry)
 {
 	return hlist_bl_unhashed(&dentry->d_hash);
