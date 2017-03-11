@@ -46,7 +46,7 @@
 #include <asm/exception.h>
 #include <asm/smp_plat.h>
 #include <asm/mach/irq.h>
-#include <asm/hardware/gic.h>
+#include <linux/irqchip/arm-gic.h>
 #include <asm/system.h>
 
 #include <mach/socinfo.h>
