@@ -11,6 +11,8 @@
 #ifndef _IRQCHIP_H
 #define _IRQCHIP_H
 
+#include <linux/of.h>
+
 /*
  * This macro must be used by the different irqchip drivers to declare
  * the association between their DT compatible string and their

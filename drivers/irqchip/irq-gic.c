@@ -55,7 +55,7 @@
 
 union gic_base {
 	void __iomem *common_base;
-	void __percpu __iomem **percpu_base;
+	void __percpu * __iomem *percpu_base;
 };
 
 struct gic_chip_data {
@@ -145,7 +145,7 @@ static inline void gic_set_base_accessor(struct gic_chip_data *data,
 #else
 #define gic_data_dist_base(d)	((d)->dist_base.common_base)
 #define gic_data_cpu_base(d)	((d)->cpu_base.common_base)
-#define gic_set_base_accessor(d,f)
+#define gic_set_base_accessor(d, f)
 #endif
 
 static inline void __iomem *gic_dist_base(struct irq_data *d)
@@ -403,10 +403,9 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	if (cpu >= NR_GIC_CPU_IF || cpu >= nr_cpu_ids)
 		return -EINVAL;
 
+	raw_spin_lock(&irq_controller_lock);
 	mask = 0xff << shift;
 	bit = gic_cpu_map[cpu] << shift;
-
-	raw_spin_lock(&irq_controller_lock);
 	val = readl_relaxed_no_log(reg) & ~mask;
 	writel_relaxed_no_log(val | bit, reg);
 	raw_spin_unlock(&irq_controller_lock);
@@ -457,14 +456,12 @@ asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 		if (likely(irqnr > 15 && irqnr < 1021)) {
 			irqnr = irq_find_mapping(gic->domain, irqnr);
 			handle_IRQ(irqnr, regs);
-//			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 			continue;
 		}
 		if (irqnr < 16) {
 			writel_relaxed_no_log(irqstat, cpu_base + GIC_CPU_EOI);
 #ifdef CONFIG_SMP
 			handle_IPI(irqnr, regs);
-//			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 #endif
 			continue;
 		}
@@ -976,7 +973,6 @@ void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 	BUG_ON(gic_nr >= MAX_GIC_NR);
 
 	gic = &gic_data[gic_nr];
-
 #ifdef CONFIG_GIC_NON_BANKED
 	if (percpu_offset) { /* Frankein-GIC without banked registers... */
 		unsigned int cpu;
@@ -984,7 +980,7 @@ void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 		gic->dist_base.percpu_base = alloc_percpu(void __iomem *);
 		gic->cpu_base.percpu_base = alloc_percpu(void __iomem *);
 		if (WARN_ON(!gic->dist_base.percpu_base ||
-			     !gic->cpu_base.percpu_base)) {
+			    !gic->cpu_base.percpu_base)) {
 			free_percpu(gic->dist_base.percpu_base);
 			free_percpu(gic->cpu_base.percpu_base);
 			return;
@@ -1050,13 +1046,9 @@ void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 		return;
 
 #ifdef CONFIG_SMP
+	set_smp_cross_call(gic_raise_softirq);
 	register_cpu_notifier(&gic_cpu_notifier);
 #endif
-
-#ifdef CONFIG_SMP
-	set_smp_cross_call(gic_raise_softirq);
-#endif
-
 	set_handle_irq(gic_handle_irq);
 
 	gic_chip.flags |= gic_arch_extn.flags;
