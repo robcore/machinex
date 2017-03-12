@@ -513,8 +513,6 @@ out:
 static int
 msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 {
-	int ret = 0;
-
 	BUG_ON(host->curr.data);
 
 	del_timer(&host->req_tout_timer);
@@ -537,7 +535,7 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 	mmc_request_done(host->mmc, mrq);
 	spin_lock(&host->lock);
 
-	return ret;
+	return 0;
 }
 
 static void
