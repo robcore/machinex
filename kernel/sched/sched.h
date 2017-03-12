@@ -599,6 +599,7 @@ struct nr_stats_s {
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
 
 #ifdef CONFIG_NUMA_BALANCING
+extern int migrate_task_to(struct task_struct *p, int cpu);
 static inline void task_numa_free(struct task_struct *p)
 {
 	kfree(p->numa_faults);
