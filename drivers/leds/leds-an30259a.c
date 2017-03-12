@@ -1101,7 +1101,7 @@ static void an30259a_deinitialize(struct an30259a_led *led, int channel)
 	cancel_work_sync(&led->brightness_work);
 }
 
-static int __devinit an30259a_probe(struct i2c_client *client,
+static int an30259a_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	struct an30259a_data *data;
@@ -1174,7 +1174,7 @@ exit:
 	return ret;
 }
 
-static int __devexit an30259a_remove(struct i2c_client *client)
+static int an30259a_remove(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	int i;
@@ -1224,7 +1224,7 @@ static struct i2c_driver an30259a_i2c_driver = {
 	},
 	.id_table = an30259a_id,
 	.probe = an30259a_probe,
-	.remove = __devexit_p(an30259a_remove),
+	.remove = an30259a_remove,
 };
 
 static int __init an30259a_init(void)
