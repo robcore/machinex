@@ -171,8 +171,8 @@ extern char *__bad_type_size(void);
 		#type, #name, offsetof(typeof(trace), name),		\
 		sizeof(trace.name), is_signed_type(type)
 
-static
-int  __set_enter_print_fmt(struct syscall_metadata *entry, char *buf, int len)
+static int __init
+__set_enter_print_fmt(struct syscall_metadata *entry, char *buf, int len)
 {
 	int i;
 	int pos = 0;
@@ -199,7 +199,7 @@ int  __set_enter_print_fmt(struct syscall_metadata *entry, char *buf, int len)
 	return pos;
 }
 
-static int set_syscall_print_fmt(struct ftrace_event_call *call)
+static int __init set_syscall_print_fmt(struct ftrace_event_call *call)
 {
 	char *print_fmt;
 	int len;
@@ -224,7 +224,7 @@ static int set_syscall_print_fmt(struct ftrace_event_call *call)
 	return 0;
 }
 
-static void free_syscall_print_fmt(struct ftrace_event_call *call)
+static void __init free_syscall_print_fmt(struct ftrace_event_call *call)
 {
 	struct syscall_metadata *entry = call->data;
 
@@ -418,7 +418,7 @@ void unreg_event_syscall_exit(struct ftrace_event_call *call)
 	mutex_unlock(&syscall_trace_lock);
 }
 
-static int init_syscall_trace(struct ftrace_event_call *call)
+static int __init init_syscall_trace(struct ftrace_event_call *call)
 {
 	int id;
 	int num;
