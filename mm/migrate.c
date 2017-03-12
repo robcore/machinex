@@ -1498,7 +1498,7 @@ static struct page *alloc_misplaced_dst_page(struct page *page,
 					  __GFP_NOWARN) &
 					 ~GFP_IOFS, 0);
 	if (newpage)
-		page_nid_xchg_last(newpage, page_nid_last(page));
+		page_nidpid_xchg_last(newpage, page_nidpid_last(page));
 
 	return newpage;
 }
