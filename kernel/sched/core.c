@@ -687,6 +687,7 @@ void sched_avg_update(struct rq *rq)
 		rq->rt_avg /= 2;
 	}
 }
+#endif /* CONFIG_SMP */
 
 #if defined(CONFIG_RT_GROUP_SCHED) || (defined(CONFIG_FAIR_GROUP_SCHED) && \
 			(defined(CONFIG_SMP) || defined(CONFIG_CFS_BANDWIDTH)))
