@@ -492,6 +492,7 @@ static inline void init_hrtick(void)
  * might also involve a cross-CPU call to trigger the scheduler on
  * the target CPU.
  */
+#ifdef CONFIG_SMP
 
 /*
  *  * cmpxchg based fetch_or, macro so it works for different integer types
@@ -559,7 +560,6 @@ void resched_cpu(int cpu)
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
 
-#ifdef CONFIG_SMP
 #ifdef CONFIG_NO_HZ_COMMON
 /*
  * In the semi idle case, use the nearest busy cpu for migrating timers
@@ -686,6 +686,13 @@ void sched_avg_update(struct rq *rq)
 		rq->age_stamp += period;
 		rq->rt_avg /= 2;
 	}
+}
+
+#else /* !CONFIG_SMP */
+void resched_task(struct task_struct *p)
+{
+	assert_raw_spin_locked(&task_rq(p)->lock);
+	set_tsk_need_resched(p);
 }
 #endif /* CONFIG_SMP */
 

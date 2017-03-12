@@ -513,14 +513,14 @@ out:
 static int
 msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 {
+	int retval = 0;
+
 	BUG_ON(host->curr.data);
 
 	del_timer(&host->req_tout_timer);
 
 	if (mrq->data)
 		mrq->data->bytes_xfered = host->curr.data_xfered;
-	if (mrq->cmd->error == -ETIMEDOUT)
-		mdelay(5);
 
 	msmsdcc_reset_dpsm(host);
 
@@ -535,7 +535,7 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 	mmc_request_done(host->mmc, mrq);
 	spin_lock(&host->lock);
 
-	return 0;
+	return retval;
 }
 
 static void
