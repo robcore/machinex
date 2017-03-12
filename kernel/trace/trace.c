@@ -5054,6 +5054,9 @@ static __init int tracer_init_debugfs(void)
 	trace_create_file("trace", 0644, d_tracer,
 			(void *) TRACE_PIPE_ALL_CPU, &tracing_fops);
 
+	trace_create_file("tracing_cpumask", 0644, d_tracer,
+			&global_trace, &tracing_cpumask_fops);
+
 	trace_create_file("available_tracers", 0444, d_tracer,
 			&global_trace, &show_traces_fops);
 
