@@ -23,7 +23,6 @@ struct sched_param {
 #include <linux/errno.h>
 #include <linux/nodemask.h>
 #include <linux/mm_types.h>
-#include <linux/preempt.h>
 
 #include <asm/page.h>
 #include <asm/ptrace.h>
@@ -447,9 +446,7 @@ struct task_cputime {
  * We include PREEMPT_ACTIVE to avoid cond_resched() from working
  * before the scheduler is active -- see should_resched().
  */
-#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE + PREEMPT_NEED_RESCHED)
-#define PREEMPT_ENABLED		(PREEMPT_NEED_RESCHED)
-#define PREEMPT_DISABLED	(1 + PREEMPT_NEED_RESCHED)
+#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE)
 
 /**
  * struct thread_group_cputimer - thread group interval timer counts
@@ -2608,7 +2605,7 @@ static inline int signal_pending_state(long state, struct task_struct *p)
 
 static inline int need_resched(void)
 {
-	return unlikely(test_preempt_need_resched());
+	return unlikely(test_thread_flag(TIF_NEED_RESCHED));
 }
 
 /*
