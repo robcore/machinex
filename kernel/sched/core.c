@@ -492,7 +492,6 @@ static inline void init_hrtick(void)
  * might also involve a cross-CPU call to trigger the scheduler on
  * the target CPU.
  */
-#ifdef CONFIG_SMP
 
 /*
  *  * cmpxchg based fetch_or, macro so it works for different integer types
