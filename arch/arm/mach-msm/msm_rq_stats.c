@@ -533,8 +533,8 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_jiffies = DEFAULT_DEF_TIMER_JIFFIES;
 	rq_info.rq_poll_last_jiffy = 0;
 	rq_info.def_timer_last_jiffy = 0;
-	rq_info.hotplug_disabled = 1;
-	rq_info.hotplug_enabled = 0;
+	rq_info.hotplug_disabled = 0;
+	rq_info.hotplug_enabled = 1;
 	conservative_rq = 0;
 	ret = init_rq_attribs();
 
@@ -566,12 +566,6 @@ late_initcall(msm_rq_stats_init);
 
 static int __init msm_rq_stats_early_init(void)
 {
-#ifndef CONFIG_SMP
-	/* Bail out if this is not an SMP Target */
-	rq_info.init = 0;
-	return -ENOSYS;
-#endif
-
 	pm_notifier(system_suspend_handler, 0);
 	return 0;
 }
