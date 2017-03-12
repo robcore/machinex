@@ -1454,18 +1454,12 @@ static int trace_module_notify(struct notifier_block *self,
 
 	return 0;
 }
-#else
-static int trace_module_notify(struct notifier_block *self,
-			       unsigned long val, void *data)
-{
-	return 0;
-}
-#endif /* CONFIG_MODULES */
 
 static struct notifier_block trace_module_nb = {
 	.notifier_call = trace_module_notify,
 	.priority = 0,
 };
+#endif /* CONFIG_MODULES */
 
 extern struct ftrace_event_call *__start_ftrace_events[];
 extern struct ftrace_event_call *__stop_ftrace_events[];
@@ -1573,10 +1567,11 @@ static __init int event_trace_init(void)
 			event_remove(call);
 	}
 
+#ifdef CONFIG_MODULES
 	ret = register_module_notifier(&trace_module_nb);
 	if (ret)
 		pr_warning("Failed to register trace events module notifier\n");
-
+#endif
 	return 0;
 }
 core_initcall(event_trace_enable);
