@@ -538,10 +538,8 @@ void resched_task(struct task_struct *p)
 
 	cpu = task_cpu(p);
 
-	set_tsk_need_resched(p);
-
 	if (cpu == smp_processor_id()) {
-		set_preempt_need_resched();
+		set_tsk_need_resched(p);
 		return;
 	}
 
@@ -1553,14 +1551,6 @@ static void sched_ttwu_pending(void)
 
 void scheduler_ipi(void)
 {
-	/*
-	 * Fold TIF_NEED_RESCHED into the preempt_count; anybody setting
-	 * TIF_NEED_RESCHED remotely (for the first time) will also send
-	 * this IPI.
-	 */
-	if (tif_need_resched())
-		set_preempt_need_resched();
-
 	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick()
 	    && !tick_nohz_full_cpu(smp_processor_id()))
 		return;
@@ -1938,7 +1928,7 @@ void sched_fork(struct task_struct *p)
 #endif
 #ifdef CONFIG_PREEMPT_COUNT
 	/* Want to start with kernel preemption disabled. */
-	task_thread_info(p)->preempt_count = PREEMPT_DISABLED;
+	task_thread_info(p)->preempt_count = 1;
 #endif
 #ifdef CONFIG_SMP
 	plist_node_init(&p->pushable_tasks, MAX_PRIO);
@@ -2672,7 +2662,6 @@ need_resched:
 	put_prev_task(rq, prev);
 	next = pick_next_task(rq);
 	clear_tsk_need_resched(prev);
-	clear_preempt_need_resched();
 	rq->skip_clock_update = 0;
 
 	if (likely(prev != next)) {
@@ -2791,13 +2780,12 @@ EXPORT_SYMBOL(preempt_schedule);
  */
 asmlinkage void __sched preempt_schedule_irq(void)
 {
-	enum ctx_state prev_state;
+	struct thread_info *ti = current_thread_info();
 
 	/* Catch callers which need to be fixed */
-	BUG_ON(preempt_count() || !irqs_disabled());
+	BUG_ON(ti->preempt_count || !irqs_disabled());
 
-	prev_state = exception_enter();
-
+	user_exit();
 	do {
 		add_preempt_count(PREEMPT_ACTIVE);
 		local_irq_enable();
@@ -2811,8 +2799,6 @@ asmlinkage void __sched preempt_schedule_irq(void)
 		 */
 		barrier();
 	} while (need_resched());
-
-	exception_exit(prev_state);
 }
 
 #endif /* CONFIG_PREEMPT */
@@ -4486,7 +4472,7 @@ void init_idle(struct task_struct *idle, int cpu)
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
 	/* Set the preempt count _outside_ the spinlocks! */
-	task_thread_info(idle)->preempt_count = PREEMPT_ENABLED;
+	task_thread_info(idle)->preempt_count = 0;
 
 	/*
 	 * The idle tasks have their own, simple scheduling class:
