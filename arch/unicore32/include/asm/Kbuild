@@ -59,4 +59,3 @@ generic-y += unaligned.h
 generic-y += user.h
 generic-y += vga.h
 generic-y += xor.h
-generic-y += preempt.h

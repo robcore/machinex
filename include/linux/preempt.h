@@ -6,10 +6,24 @@
  * preempt_count (used for kernel preemption, interrupt count, etc.)
  */
 
+#include <linux/thread_info.h>
 #include <linux/linkage.h>
 #include <linux/list.h>
 
-#include <asm/preempt.h>
+static __always_inline int preempt_count(void)
+{
+	return current_thread_info()->preempt_count;
+}
+
+static __always_inline int *preempt_count_ptr(void)
+{
+	return &current_thread_info()->preempt_count;
+}
+
+static __always_inline void preempt_count_set(int pc)
+{
+	*preempt_count_ptr() = pc;
+}
 
 #if defined(CONFIG_DEBUG_PREEMPT) || defined(CONFIG_PREEMPT_TRACER)
   extern void add_preempt_count(int val);
