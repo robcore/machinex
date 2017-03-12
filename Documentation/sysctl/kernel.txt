@@ -419,11 +419,6 @@ A small number of systems do generate NMI's for bizarre random reasons
 such as power management so the default is off. That sysctl works like
 the existing panic controls already in that directory.
 
-numa_balancing_settle_count is how many scan periods must complete before
-the schedule balancer stops pushing the task towards a preferred node. This
-gives the scheduler a chance to place the task on an alternative node if the
-preferred node is overloaded.
-
 ==============================================================
 
 panic_on_oops:

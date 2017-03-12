@@ -23,7 +23,6 @@ struct sched_param {
 #include <linux/errno.h>
 #include <linux/nodemask.h>
 #include <linux/mm_types.h>
-#include <linux/preempt.h>
 
 #include <asm/page.h>
 #include <asm/ptrace.h>
@@ -440,14 +439,6 @@ struct task_cputime {
 		.sum_exec_runtime = 0,				\
 	}
 
-#define PREEMPT_ENABLED		(PREEMPT_NEED_RESCHED)
-
-#ifdef CONFIG_PREEMPT_COUNT
-#define PREEMPT_DISABLED	(1 + PREEMPT_ENABLED)
-#else
-#define PREEMPT_DISABLED	PREEMPT_ENABLED
-#endif
-
 /*
  * Disable preemption until the scheduler is running.
  * Reset by start_kernel()->sched_init()->init_idle().
@@ -455,7 +446,7 @@ struct task_cputime {
  * We include PREEMPT_ACTIVE to avoid cond_resched() from working
  * before the scheduler is active -- see should_resched().
  */
-#define INIT_PREEMPT_COUNT	(PREEMPT_DISABLED + PREEMPT_ACTIVE)
+#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE)
 
 /**
  * struct thread_group_cputimer - thread group interval timer counts
@@ -796,7 +787,6 @@ enum cpu_idle_type {
 #define SD_ASYM_PACKING		0x0800  /* Place busy groups earlier in the domain */
 #define SD_PREFER_SIBLING	0x1000	/* Prefer to place tasks in a sibling domain */
 #define SD_OVERLAP		0x2000	/* sched_domains of this level overlap */
-#define SD_NUMA			0x4000	/* cross-node balancing */
 
 extern int __weak arch_sd_sibiling_asym_packing(void);
 
@@ -1144,8 +1134,6 @@ struct task_struct {
 	struct task_struct *last_wakee;
 	unsigned long wakee_flips;
 	unsigned long wakee_flip_decay_ts;
-
-	int wake_cpu;
 #endif
 	int on_rq;
 
@@ -1454,29 +1442,8 @@ struct task_struct {
 	int numa_scan_seq;
 	int numa_migrate_seq;
 	unsigned int numa_scan_period;
-	unsigned int numa_scan_period_max;
-	unsigned long numa_migrate_retry;
 	u64 node_stamp;			/* migration stamp  */
 	struct callback_head numa_work;
-
-	struct list_head numa_entry;
-	struct numa_group *numa_group;
-
-	/*
-	 * Exponential decaying average of faults on a per-node basis.
-	 * Scheduling placement decisions are made based on the these counts.
-	 * The values remain static for the duration of a PTE scan
-	 */
-	unsigned long *numa_faults;
-
-	/*
-	 * numa_faults_buffer records faults per node during the current
-	 * scan window. When the scan completes, the counts in numa_faults
-	 * decay and these values are copied.
-	 */
-	unsigned long *numa_faults_buffer;
-
-	int numa_preferred_nid;
 #endif /* CONFIG_NUMA_BALANCING */
 
 	struct rcu_head rcu;
@@ -1552,21 +1519,12 @@ struct task_struct {
 /* Future-safe accessor for struct task_struct's cpus_allowed. */
 #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
 
-#define TNF_MIGRATED	0x01
-#define TNF_NO_GROUP	0x02
-
 #ifdef CONFIG_NUMA_BALANCING
-extern void task_numa_fault(int last_node, int node, int pages, int flags);
-extern pid_t task_numa_group_id(struct task_struct *p);
+extern void task_numa_fault(int node, int pages, bool migrated);
 extern void set_numabalancing_state(bool enabled);
 #else
-static inline void task_numa_fault(int last_node, int node, int pages,
-				   int flags)
+static inline void task_numa_fault(int node, int pages, bool migrated)
 {
-}
-static inline pid_t task_numa_group_id(struct task_struct *p)
-{
-	return 0;
 }
 static inline void set_numabalancing_state(bool enabled)
 {
@@ -2643,6 +2601,11 @@ static inline int signal_pending_state(long state, struct task_struct *p)
 		return 0;
 
 	return (state & TASK_INTERRUPTIBLE) || __fatal_signal_pending(p);
+}
+
+static inline int need_resched(void)
+{
+	return unlikely(test_thread_flag(TIF_NEED_RESCHED));
 }
 
 /*

@@ -637,34 +637,21 @@ void rcu_nmi_exit(void)
 }
 
 /**
- * __rcu_is_watching - are RCU read-side critical sections safe?
- *
- * Return true if RCU is watching the running CPU, which means that
- * this CPU can safely enter RCU read-side critical sections.  Unlike
- * rcu_is_watching(), the caller of __rcu_is_watching() must have at
- * least disabled preemption.
- */
-bool __rcu_is_watching(void)
-{
-	return atomic_read(this_cpu_ptr(&rcu_dynticks.dynticks)) & 0x1;
-}
-
-/**
- * rcu_is_watching - see if RCU thinks that the current CPU is idle
+ * rcu_is_cpu_idle - see if RCU thinks that the current CPU is idle
  *
  * If the current CPU is in its idle loop and is neither in an interrupt
  * or NMI handler, return true.
  */
-bool rcu_is_watching(void)
+int rcu_is_cpu_idle(void)
 {
 	int ret;
 
 	preempt_disable();
-	ret = ret = __rcu_is_watching();
+	ret = (atomic_read(this_cpu_ptr(&rcu_dynticks.dynticks)) & 0x1) == 0;
 	preempt_enable();
 	return ret;
 }
-EXPORT_SYMBOL_GPL(rcu_is_watching);
+EXPORT_SYMBOL(rcu_is_cpu_idle);
 
 #if defined(CONFIG_PROVE_RCU) && defined(CONFIG_HOTPLUG_CPU)
 
@@ -787,11 +774,8 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 
 static void record_gp_stall_check_time(struct rcu_state *rsp)
 {
-	unsigned long j = ACCESS_ONCE(jiffies);
-
-	rsp->gp_start = j;
-	smp_wmb(); /* Record start time before stall time. */
-	rsp->jiffies_stall = j + rcu_jiffies_till_stall_check();
+	rsp->gp_start = jiffies;
+	rsp->jiffies_stall = jiffies + rcu_jiffies_till_stall_check();
 }
 
 /*
@@ -886,12 +870,6 @@ static void print_other_cpu_stall(struct rcu_state *rsp)
 	force_quiescent_state(rsp);  /* Kick them all. */
 }
 
-/*
- * This function really isn't for public consumption, but RCU is special in
- * that context switches can allow the state machine to make progress.
- */
-extern void resched_cpu(int cpu);
-
 static void print_cpu_stall(struct rcu_state *rsp)
 {
 	int cpu;
@@ -921,60 +899,22 @@ static void print_cpu_stall(struct rcu_state *rsp)
 				     3 * rcu_jiffies_till_stall_check() + 3;
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 
-	/*
-	 * Attempt to revive the RCU machinery by forcing a context switch.
-	 *
-	 * A context switch would normally allow the RCU state machine to make
-	 * progress and it could be we're stuck in kernel space without context
-	 * switches for an entirely unreasonable amount of time.
-	 */
-	resched_cpu(smp_processor_id());
+	set_need_resched();  /* kick ourselves to get things going. */
 }
 
 static void check_cpu_stall(struct rcu_state *rsp, struct rcu_data *rdp)
 {
-	unsigned long completed;
-	unsigned long gpnum;
-	unsigned long gps;
 	unsigned long j;
 	unsigned long js;
 	struct rcu_node *rnp;
 
-	if (rcu_cpu_stall_suppress || !rcu_gp_in_progress(rsp))
+	if (rcu_cpu_stall_suppress)
 		return;
 	j = ACCESS_ONCE(jiffies);
-
-	/*
-	 * Lots of memory barriers to reject false positives.
-	 *
-	 * The idea is to pick up rsp->gpnum, then rsp->jiffies_stall,
-	 * then rsp->gp_start, and finally rsp->completed.  These values
-	 * are updated in the opposite order with memory barriers (or
-	 * equivalent) during grace-period initialization and cleanup.
-	 * Now, a false positive can occur if we get an new value of
-	 * rsp->gp_start and a old value of rsp->jiffies_stall.  But given
-	 * the memory barriers, the only way that this can happen is if one
-	 * grace period ends and another starts between these two fetches.
-	 * Detect this by comparing rsp->completed with the previous fetch
-	 * from rsp->gpnum.
-	 *
-	 * Given this check, comparisons of jiffies, rsp->jiffies_stall,
-	 * and rsp->gp_start suffice to forestall false positives.
-	 */
-	gpnum = ACCESS_ONCE(rsp->gpnum);
-	smp_rmb(); /* Pick up ->gpnum first... */
 	js = ACCESS_ONCE(rsp->jiffies_stall);
-	smp_rmb(); /* ...then ->jiffies_stall before the rest... */
-	gps = ACCESS_ONCE(rsp->gp_start);
-	smp_rmb(); /* ...and finally ->gp_start before ->completed. */
-	completed = ACCESS_ONCE(rsp->completed);
-	if (ULONG_CMP_GE(completed, gpnum) ||
-	    ULONG_CMP_LT(j, js) ||
-	    ULONG_CMP_GE(gps, js))
-		return; /* No stall or GP completed since entering function. */
 	rnp = rdp->mynode;
 	if (rcu_gp_in_progress(rsp) &&
-	    (ACCESS_ONCE(rnp->qsmask) & rdp->grpmask)) {
+	    (ACCESS_ONCE(rnp->qsmask) & rdp->grpmask) && ULONG_CMP_GE(j, js)) {
 
 		/* We haven't checked in, so go dump stack. */
 		print_cpu_stall(rsp);
@@ -1305,7 +1245,7 @@ rcu_start_gp_per_cpu(struct rcu_state *rsp, struct rcu_node *rnp, struct rcu_dat
 }
 
 /*
- * Initialize a new grace period.  Return 0 if no grace period required.
+ * Initialize a new grace period.
  */
 static int rcu_gp_init(struct rcu_state *rsp)
 {
@@ -1314,27 +1254,18 @@ static int rcu_gp_init(struct rcu_state *rsp)
 
 	rcu_bind_gp_kthread();
 	raw_spin_lock_irq(&rnp->lock);
-	if (rsp->gp_flags == 0) {
-		/* Spurious wakeup, tell caller to go back to sleep.  */
-		raw_spin_unlock_irq(&rnp->lock);
-		return 0;
-	}
 	rsp->gp_flags = 0; /* Clear all flags: New grace period. */
 
-	if (WARN_ON_ONCE(rcu_gp_in_progress(rsp))) {
-		/*
-		 * Grace period already in progress, don't start another.
-		 * Not supposed to be able to happen.
-		 */
+	if (rcu_gp_in_progress(rsp)) {
+		/* Grace period already in progress, don't start another.  */
 		raw_spin_unlock_irq(&rnp->lock);
 		return 0;
 	}
 
 	/* Advance to a new grace period and initialize state. */
-	record_gp_stall_check_time(rsp);
-	smp_wmb(); /* Record GP times before starting GP. */
 	rsp->gpnum++;
 	trace_rcu_grace_period(rsp->name, rsp->gpnum, "start");
+	record_gp_stall_check_time(rsp);
 	raw_spin_unlock_irq(&rnp->lock);
 
 	/* Exclude any concurrent CPU-hotplug operations. */
@@ -1472,7 +1403,6 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
 static int __noreturn rcu_gp_kthread(void *arg)
 {
 	int fqs_state;
-	int gf;
 	unsigned long j;
 	int ret;
 	struct rcu_state *rsp = arg;
@@ -1482,19 +1412,14 @@ static int __noreturn rcu_gp_kthread(void *arg)
 
 		/* Handle grace-period start. */
 		for (;;) {
-			trace_rcu_grace_period(rsp->name,
-					       ACCESS_ONCE(rsp->gpnum),
-					       TPS("reqwait"));
 			wait_event_interruptible(rsp->gp_wq,
-						 ACCESS_ONCE(rsp->gp_flags) &
+						 rsp->gp_flags &
 						 RCU_GP_FLAG_INIT);
-			if (rcu_gp_init(rsp))
+			if ((rsp->gp_flags & RCU_GP_FLAG_INIT) &&
+			    rcu_gp_init(rsp))
 				break;
 			cond_resched();
 			flush_signals(current);
-			trace_rcu_grace_period(rsp->name,
-					       ACCESS_ONCE(rsp->gpnum),
-					       TPS("reqwaitsig"));
 		}
 
 		/* Handle quiescent-state forcing. */
@@ -1504,16 +1429,10 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			j = HZ;
 			jiffies_till_first_fqs = HZ;
 		}
-		ret = 0;
 		for (;;) {
-			if (!ret)
-				rsp->jiffies_force_qs = jiffies + j;
-			trace_rcu_grace_period(rsp->name,
-					       ACCESS_ONCE(rsp->gpnum),
-					       TPS("fqswait"));
+			rsp->jiffies_force_qs = jiffies + j;
 			ret = wait_event_interruptible_timeout(rsp->gp_wq,
-					((gf = ACCESS_ONCE(rsp->gp_flags)) &
-					 RCU_GP_FLAG_FQS) ||
+					(rsp->gp_flags & RCU_GP_FLAG_FQS) ||
 					(!ACCESS_ONCE(rnp->qsmask) &&
 					 !rcu_preempt_blocked_readers_cgp(rnp)),
 					j);
@@ -1522,23 +1441,13 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			    !rcu_preempt_blocked_readers_cgp(rnp))
 				break;
 			/* If time for quiescent-state forcing, do it. */
-			if (ULONG_CMP_GE(jiffies, rsp->jiffies_force_qs) ||
-			    (gf & RCU_GP_FLAG_FQS)) {
-				trace_rcu_grace_period(rsp->name,
-						       ACCESS_ONCE(rsp->gpnum),
-						       TPS("fqsstart"));
+			if (ret == 0 || (rsp->gp_flags & RCU_GP_FLAG_FQS)) {
 				fqs_state = rcu_gp_fqs(rsp, fqs_state);
-				trace_rcu_grace_period(rsp->name,
-						       ACCESS_ONCE(rsp->gpnum),
-						       TPS("fqsend"));
 				cond_resched();
 			} else {
 				/* Deal with stray signal. */
 				cond_resched();
 				flush_signals(current);
-				trace_rcu_grace_period(rsp->name,
-						       ACCESS_ONCE(rsp->gpnum),
-						       TPS("fqswaitsig"));
 			}
 			j = jiffies_till_next_fqs;
 			if (j > HZ) {
@@ -2285,7 +2194,7 @@ static void __call_rcu_core(struct rcu_state *rsp, struct rcu_data *rdp,
 	 * If called from an extended quiescent state, invoke the RCU
 	 * core in order to force a re-evaluation of RCU's idleness.
 	 */
-	if (!rcu_is_watching() && cpu_online(smp_processor_id()))
+	if (rcu_is_cpu_idle() && cpu_online(smp_processor_id()))
 		invoke_rcu_core();
 
 	/* If interrupts were disabled or CPU offline, don't invoke RCU core. */

@@ -35,7 +35,6 @@
 #include <linux/time.h>
 #include <linux/cpu.h>
 #include <linux/prefetch.h>
-#include <linux/ftrace_event.h>
 
 #ifdef CONFIG_RCU_TRACE
 #include <trace/events/rcu.h>
@@ -59,17 +58,16 @@ static long long rcu_dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
 static void rcu_idle_enter_common(long long newval)
 {
 	if (newval) {
-		RCU_TRACE(trace_rcu_dyntick(TPS("--="),
+		RCU_TRACE(trace_rcu_dyntick("--=",
 					    rcu_dynticks_nesting, newval));
 		rcu_dynticks_nesting = newval;
 		return;
 	}
-	RCU_TRACE(trace_rcu_dyntick(TPS("Start"),
-				    rcu_dynticks_nesting, newval));
+	RCU_TRACE(trace_rcu_dyntick("Start", rcu_dynticks_nesting, newval));
 	if (!is_idle_task(current)) {
 		struct task_struct *idle = idle_task(smp_processor_id());
 
-		RCU_TRACE(trace_rcu_dyntick(TPS("Entry error: not idle task"),
+		RCU_TRACE(trace_rcu_dyntick("Error on entry: not idle task",
 					    rcu_dynticks_nesting, newval));
 		ftrace_dump(DUMP_ALL);
 		WARN_ONCE(1, "Current pid: %d comm: %s / Idle pid: %d comm: %s",
@@ -122,15 +120,15 @@ EXPORT_SYMBOL_GPL(rcu_irq_exit);
 static void rcu_idle_exit_common(long long oldval)
 {
 	if (oldval) {
-		RCU_TRACE(trace_rcu_dyntick(TPS("++="),
+		RCU_TRACE(trace_rcu_dyntick("++=",
 					    oldval, rcu_dynticks_nesting));
 		return;
 	}
-	RCU_TRACE(trace_rcu_dyntick(TPS("End"), oldval, rcu_dynticks_nesting));
+	RCU_TRACE(trace_rcu_dyntick("End", oldval, rcu_dynticks_nesting));
 	if (!is_idle_task(current)) {
 		struct task_struct *idle = idle_task(smp_processor_id());
 
-		RCU_TRACE(trace_rcu_dyntick(TPS("Exit error: not idle task"),
+		RCU_TRACE(trace_rcu_dyntick("Error on exit: not idle task",
 			  oldval, rcu_dynticks_nesting));
 		ftrace_dump(DUMP_ALL);
 		WARN_ONCE(1, "Current pid: %d comm: %s / Idle pid: %d comm: %s",
@@ -176,18 +174,18 @@ void rcu_irq_enter(void)
 }
 EXPORT_SYMBOL_GPL(rcu_irq_enter);
 
-#if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE)
+#ifdef CONFIG_DEBUG_LOCK_ALLOC
 
 /*
  * Test whether RCU thinks that the current CPU is idle.
  */
-bool __rcu_is_watching(void)
+int rcu_is_cpu_idle(void)
 {
-	return rcu_dynticks_nesting;
+	return !rcu_dynticks_nesting;
 }
-EXPORT_SYMBOL(__rcu_is_watching);
+EXPORT_SYMBOL(rcu_is_cpu_idle);
 
-#endif /* defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE) */
+#endif /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
 
 /*
  * Test whether the current CPU was interrupted from idle.  Nested
@@ -311,8 +309,7 @@ static void __rcu_process_callbacks(struct rcu_ctrlblk *rcp)
 		RCU_TRACE(cb_count++);
 	}
 	RCU_TRACE(rcu_trace_sub_qlen(rcp, cb_count));
-	RCU_TRACE(trace_rcu_batch_end(rcp->name,
-				      cb_count, 0, need_resched(),
+	RCU_TRACE(trace_rcu_batch_end(rcp->name, cb_count, 0, need_resched(),
 				      is_idle_task(current),
 				      false));
 }

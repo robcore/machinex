@@ -1336,7 +1336,7 @@ ENTRY(kernel_execve)
 END(kernel_execve)
 
 /* Call softirq on interrupt stack. Interrupts are off. */
-ENTRY(do_softirq_own_stack)
+ENTRY(call_softirq)
 	CFI_STARTPROC
 	pushq_cfi %rbp
 	CFI_REL_OFFSET rbp,0
@@ -1353,7 +1353,7 @@ ENTRY(do_softirq_own_stack)
 	decl PER_CPU_VAR(irq_count)
 	ret
 	CFI_ENDPROC
-END(do_softirq_own_stack)
+END(call_softirq)
 
 #ifdef CONFIG_XEN
 zeroentry xen_hypervisor_callback xen_do_hypervisor_callback

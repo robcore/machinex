@@ -70,8 +70,8 @@
 
 #include "internal.h"
 
-#ifdef LAST_CPUPID_NOT_IN_PAGE_FLAGS
-#warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_cpupid.
+#ifdef LAST_NID_NOT_IN_PAGE_FLAGS
+#warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_nid.
 #endif
 
 #ifndef CONFIG_NEED_MULTIPLE_NODES
@@ -2752,14 +2752,6 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		get_page(dirty_page);
 
 reuse:
-		/*
-		 * Clear the pages cpupid information as the existing
-		 * information potentially belongs to a now completely
-		 * unrelated process.
-		 */
-		if (old_page)
-			page_cpupid_xchg_last(old_page, (1 << LAST_CPUPID_SHIFT) - 1);
-
 		flush_cache_page(vma, address, pte_pfn(orig_pte));
 		entry = pte_mkyoung(orig_pte);
 		entry = maybe_mkwrite(pte_mkdirty(entry), vma);
@@ -3595,10 +3587,8 @@ int do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	struct page *page = NULL;
 	spinlock_t *ptl;
 	int current_nid = -1;
-	int last_cpupid;
 	int target_nid;
 	bool migrated = false;
-	int flags = 0;
 
 	/*
 	* The "pte" at this point cannot be used safely without
@@ -3627,7 +3617,6 @@ int do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	}
 
 	current_nid = page_to_nid(page);
-	last_cpupid = page_cpupid_last(page);
 	target_nid = numa_migrate_prep(page, vma, addr, current_nid);
 	pte_unmap_unlock(ptep, ptl);
 	if (target_nid == -1) {
@@ -3647,7 +3636,7 @@ int do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 
 out:
 	if (current_nid != -1)
-		task_numa_fault(last_cpupid, page_nid, 1, migrated);
+		task_numa_fault(current_nid, 1, migrated);
 	return 0;
 }
 
@@ -3662,7 +3651,6 @@ static int do_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	unsigned long offset;
 	spinlock_t *ptl;
 	bool numa = false;
-	int last_cpupid;
 	int local_nid = numa_node_id();
 
 	spin_lock(&mm->page_table_lock);
@@ -3716,7 +3704,6 @@ static int do_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		 * migrated to.
 		 */
 		curr_nid = local_nid;
-		last_cpupid = page_cpupid_last(page);
 		target_nid = numa_migrate_prep(page, vma, addr,
 					       page_to_nid(page));
 		if (target_nid == -1) {
@@ -3729,7 +3716,7 @@ static int do_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		migrated = migrate_misplaced_page(page, target_nid);
 		if (migrated)
 			curr_nid = target_nid;
-		task_numa_fault(last_cpupid, page_nid, 1, migrated);
+		task_numa_fault(curr_nid, 1, migrated);
 
 		pte = pte_offset_map_lock(mm, pmdp, addr, &ptl);
 	}

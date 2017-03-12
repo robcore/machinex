@@ -6,7 +6,6 @@
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
 #include <linux/tick.h>
-#include <linux/slab.h>
 #include <linux/printk.h>
 
 #include "cpupri.h"
@@ -598,16 +597,6 @@ struct nr_stats_s {
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
 
-#ifdef CONFIG_NUMA_BALANCING
-extern int migrate_task_to(struct task_struct *p, int cpu);
-extern int migrate_swap(struct task_struct *, struct task_struct *);
-extern void task_numa_free(struct task_struct *p);
-#else /* CONFIG_NUMA_BALANCING */
-static inline void task_numa_free(struct task_struct *p)
-{
-}
-#endif /* CONFIG_NUMA_BALANCING */
-
 #ifdef CONFIG_SMP
 
 #define rcu_dereference_check_sched_domain(p) \
@@ -649,22 +638,9 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 	return hsd;
 }
 
-static inline struct sched_domain *lowest_flag_domain(int cpu, int flag)
-{
-	struct sched_domain *sd;
-
-	for_each_domain(cpu, sd) {
-		if (sd->flags & flag)
-			break;
-	}
-
-	return sd;
-}
-
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
-DECLARE_PER_CPU(struct sched_domain *, sd_numa);
 
 #endif /* CONFIG_SMP */
 
@@ -777,7 +753,6 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 	 */
 	smp_wmb();
 	task_thread_info(p)->cpu = cpu;
-	p->wake_cpu = cpu;
 #endif
 }
 
@@ -1038,7 +1013,7 @@ struct sched_class {
 	void (*put_prev_task) (struct rq *rq, struct task_struct *p);
 
 #ifdef CONFIG_SMP
-	int  (*select_task_rq)(struct task_struct *p, int task_cpu, int sd_flag, int flags);
+	int  (*select_task_rq)(struct task_struct *p, int sd_flag, int flags);
 	void (*migrate_task_rq)(struct task_struct *p, int next_cpu);
 
 	void (*pre_schedule) (struct rq *this_rq, struct task_struct *task);

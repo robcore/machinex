@@ -421,7 +421,6 @@ static void seq_lock_time(struct seq_file *m, struct lock_time *lt)
 	seq_time(m, lt->min);
 	seq_time(m, lt->max);
 	seq_time(m, lt->total);
-	seq_time(m, lt->nr ? do_div(lt->total, lt->nr) : 0);
 }
 
 static void seq_stats(struct seq_file *m, struct lock_stat_data *data)
@@ -519,20 +518,20 @@ static void seq_stats(struct seq_file *m, struct lock_stat_data *data)
 	}
 	if (i) {
 		seq_puts(m, "\n");
-		seq_line(m, '.', 0, 40 + 1 + 12 * (14 + 1));
+		seq_line(m, '.', 0, 40 + 1 + 10 * (14 + 1));
 		seq_puts(m, "\n");
 	}
 }
 
 static void seq_header(struct seq_file *m)
 {
-	seq_puts(m, "lock_stat version 0.4\n");
+	seq_printf(m, "lock_stat version 0.3\n");
 
 	if (unlikely(!debug_locks))
 		seq_printf(m, "*WARNING* lock debugging disabled!! - possibly due to a lockdep warning\n");
 
-	seq_line(m, '-', 0, 40 + 1 + 12 * (14 + 1));
-	seq_printf(m, "%40s %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s "
+	seq_line(m, '-', 0, 40 + 1 + 10 * (14 + 1));
+	seq_printf(m, "%40s %14s %14s %14s %14s %14s %14s %14s %14s "
 			"%14s %14s\n",
 			"class name",
 			"con-bounces",
@@ -540,14 +539,12 @@ static void seq_header(struct seq_file *m)
 			"waittime-min",
 			"waittime-max",
 			"waittime-total",
-			"waittime-avg",
 			"acq-bounces",
 			"acquisitions",
 			"holdtime-min",
 			"holdtime-max",
-			"holdtime-total",
-			"holdtime-avg");
-	seq_line(m, '-', 0, 40 + 1 + 12 * (14 + 1));
+			"holdtime-total");
+	seq_line(m, '-', 0, 40 + 1 + 10 * (14 + 1));
 	seq_printf(m, "\n");
 }
 
