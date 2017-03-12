@@ -138,7 +138,7 @@ static ssize_t show_conservative_rq(struct kobject *kobj,
 
 static struct kobj_attribute conservative_rq_attr =
 	__ATTR(conservative_rq, 0644, show_conservative_rq,
-	       store_conservative_rq;
+	       store_conservative_rq);
 
 static unsigned int report_load_at_max_freq(void)
 {
