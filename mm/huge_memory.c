@@ -1315,7 +1315,7 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 {
 	struct page *page;
 	unsigned long haddr = addr & HPAGE_PMD_MASK;
-	int target_nid;
+	int target_nid, last_nid = -1;
 	int current_nid = -1;
 	bool migrated;
 
@@ -1326,6 +1326,7 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	page = pmd_page(pmd);
 	get_page(page);
 	current_nid = page_to_nid(page);
+	last_nid = page_nid_last(page);
 	count_vm_numa_event(NUMA_HINT_FAULTS);
 	if (current_nid == numa_node_id())
 		count_vm_numa_event(NUMA_HINT_FAULTS_LOCAL);
@@ -1355,7 +1356,7 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	if (!migrated)
 		goto check_same;
 
-	task_numa_fault(target_nid, HPAGE_PMD_NR, true);
+	task_numa_fault(last_nid, page_nid, HPAGE_PMD_NR, migrated);
 	return 0;
 
 check_same:
