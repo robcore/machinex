@@ -29,4 +29,12 @@ config CPU_IDLE_GOV_NULL
 	help
 	  Do not use - except with qct lpm idle driver which neglects governor input.
 
+if CPU_IDLE
 
+config CPU_IDLE_CALXEDA
+	bool "CPU Idle Driver for Calxeda processors"
+	depends on ARCH_HIGHBANK
+	help
+	  Select this to enable cpuidle on Calxeda processors.
+
+endif
