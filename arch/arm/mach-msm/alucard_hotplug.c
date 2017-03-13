@@ -74,7 +74,7 @@ static struct hotplug_tuners {
 	.hp_io_is_busy = 0,
 #if defined(CONFIG_POWERSUSPEND)
 
-	.hotplug_suspend = 1,
+	.hotplug_suspend = 0,
 	.suspended = false,
 	.force_cpu_up = false,
 #endif
