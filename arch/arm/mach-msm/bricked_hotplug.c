@@ -29,7 +29,7 @@
 #define DEBUG 0
 
 #define MPDEC_TAG			"bricked_hotplug"
-#define HOTPLUG_ENABLED			0
+#define HOTPLUG_ENABLED			1
 #define MSM_MPDEC_STARTDELAY		20000
 #define MSM_MPDEC_DELAY			130
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
