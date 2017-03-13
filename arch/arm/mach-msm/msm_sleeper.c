@@ -17,12 +17,13 @@
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
-#include <linux/fb.h>
+#include <linux/state_notifier.h>
 #include <linux/platform_device.h>
+#include <linux/module.h>
 
 #define MSM_SLEEPER "msm_sleeper"
 #define MSM_SLEEPER_MAJOR_VERSION	4
-#define MSM_SLEEPER_MINOR_VERSION	1
+#define MSM_SLEEPER_MINOR_VERSION	2
 #define MSM_SLEEPER_ENABLED		0
 #define MSM_SLEEPER_DEBUG		0
 #define DELAY				1000
@@ -185,30 +186,21 @@ static void __ref msm_sleeper_resume(struct work_struct *work)
 	}
 }
 
-static int fb_notifier_callback(struct notifier_block *this,
+static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	struct fb_event *evdata = data;
-	int *blank;
-
 	if (!sleeper_data.enabled)
 		return NOTIFY_OK;
 
-	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
-		blank = evdata->data;
-		switch (*blank) {
-			case FB_BLANK_UNBLANK:
-				//display on
-				queue_work_on(0, sleeper_wq, &sleeper_data.resume_work);
-				break;
-			case FB_BLANK_POWERDOWN:
-			case FB_BLANK_HSYNC_SUSPEND:
-			case FB_BLANK_VSYNC_SUSPEND:
-			case FB_BLANK_NORMAL:
-				//display off
-				queue_work_on(0, sleeper_wq, &sleeper_data.suspend_work);
-				break;
-		}
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
+			queue_work_on(0, sleeper_wq, &sleeper_data.resume_work);
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			queue_work_on(0, sleeper_wq, &sleeper_data.suspend_work);
+			break;
+		default:
+			break;
 	}
 
 	return NOTIFY_OK;
@@ -217,7 +209,7 @@ static int fb_notifier_callback(struct notifier_block *this,
 static ssize_t show_enable_hotplug(struct device *dev,
 				   struct device_attribute *msm_sleeper_attrs, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.enabled);
+	return sprintf(buf, "%u\n", sleeper_data.enabled);
 }
 
 static ssize_t __ref store_enable_hotplug(struct device *dev,
@@ -251,7 +243,7 @@ static ssize_t show_plug_all(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.plug_all);
+	return sprintf(buf, "%u\n", sleeper_data.plug_all);
 }
 
 static ssize_t store_plug_all(struct device *dev,
@@ -274,7 +266,7 @@ static ssize_t show_max_cpus_online(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.max_cpus_online);
+	return sprintf(buf, "%u\n", sleeper_data.max_cpus_online);
 }
 
 static ssize_t store_max_cpus_online(struct device *dev,
@@ -303,7 +295,7 @@ static ssize_t show_max_cpus_online_susp(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.max_cpus_online_susp);
+	return sprintf(buf, "%u\n", sleeper_data.max_cpus_online_susp);
 }
 
 static ssize_t store_max_cpus_online_susp(struct device *dev,
@@ -326,7 +318,7 @@ static ssize_t show_up_threshold(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.up_threshold);
+	return sprintf(buf, "%u\n", sleeper_data.up_threshold);
 }
 
 static ssize_t store_up_threshold(struct device *dev,
@@ -349,7 +341,7 @@ static ssize_t show_up_count_max(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.up_count_max);
+	return sprintf(buf, "%u\n", sleeper_data.up_count_max);
 }
 
 static ssize_t store_up_count_max(struct device *dev,
@@ -372,7 +364,7 @@ static ssize_t show_down_count_max(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%u\n", sleeper_data.down_count_max);
+	return sprintf(buf, "%u\n", sleeper_data.down_count_max);
 }
 
 
@@ -441,8 +433,8 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 		goto err_dev;
 	}
 
-	sleeper_data.notif.notifier_call = fb_notifier_callback;
-	if (fb_register_client(&sleeper_data.notif)) {
+	sleeper_data.notif.notifier_call = state_notifier_callback;
+	if (state_register_client(&sleeper_data.notif)) {
 		ret = -EINVAL;
 		goto err_dev;
 	}
@@ -458,8 +450,8 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 
 err_dev:
 	destroy_workqueue(sleeper_wq);
-
 err_out:
+	sleeper_data.enabled = 0;
 	return ret;
 }
 
@@ -475,7 +467,6 @@ static struct platform_driver msm_sleeper_driver = {
 	.remove = msm_sleeper_remove,
 	.driver = {
 		.name = MSM_SLEEPER,
-		.owner = THIS_MODULE,
 	},
 };
 
