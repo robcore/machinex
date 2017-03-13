@@ -560,94 +560,8 @@ static ssize_t store_##file_name					\
 									\
 	return ret ? ret : count;					\
 }
-
-/* Yank555.lu : CPU Hardlimit - Enforce userspace dvfs lock */
-/* robcore : CPU Hardlimit - Account for configurations with DVFS Disabled by Default */
-#ifdef CONFIG_SEC_DVFS
-static ssize_t store_scaling_min_freq
-(struct cpufreq_policy *policy, const char *buf, size_t count)
-{
-	unsigned int ret;
-	struct cpufreq_policy new_policy;
-
-	// Yank555.lu - Enforce userspace dvfs lock
-	switch (userspace_dvfs_lock_status()) {
-		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_IGNORE:
-			return count;
-		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_REFUSE:
-			return -EINVAL;
-	}
-
-	ret = cpufreq_get_policy(&new_policy, policy->cpu);
-	if (ret)
-		return -EINVAL;
-
-	new_policy.min = new_policy.user_policy.min;
-	new_policy.max = new_policy.user_policy.max;
-
-	ret = sscanf(buf, "%u", &new_policy.min);
-	if (ret != 1)
-		return -EINVAL;
-
-	ret = cpufreq_driver->verify(&new_policy);
-	if (ret)
-		pr_err("cpufreq: Frequency verification failed\n");
-
-	policy->user_policy.min = new_policy.min;
-	policy->user_policy.max = new_policy.max;
-
-	ret = __cpufreq_set_policy(policy, &new_policy);
-
-	return ret ? ret : count;
-}
-#else
-/* Disable scaling_min_freq store */
 store_one(scaling_min_freq, min);
-#endif /* CONFIG_SEC_DVFS */
-
-/* Yank555.lu : CPU Hardlimit - Enforce userspace dvfs lock */
-/* robcore : CPU Hardlimit - Account for configurations with DVFS Disabled by Default */
-#ifdef CONFIG_SEC_DVFS
-static ssize_t store_scaling_max_freq
-(struct cpufreq_policy *policy, const char *buf, size_t count)
-{
-	unsigned int ret;
-	struct cpufreq_policy new_policy;
-
-
-	// Yank555.lu - Enforce userspace dvfs lock
-	switch (userspace_dvfs_lock_status()) {
-		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_IGNORE:
-			return count;
-		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_REFUSE:
-			return -EINVAL;
-	}
-
-	ret = cpufreq_get_policy(&new_policy, policy->cpu);
-	if (ret)
-		return -EINVAL;
-
-	new_policy.min = new_policy.user_policy.min;
-	new_policy.max = new_policy.user_policy.max;
-
-	ret = sscanf(buf, "%u", &new_policy.max);
-	if (ret != 1)
-		return -EINVAL;
-
-	ret = cpufreq_driver->verify(&new_policy);
-	if (ret)
-		pr_err("cpufreq: Frequency verification failed\n");
-
-	policy->user_policy.min = new_policy.min;
-	policy->user_policy.max = new_policy.max;
-
-	ret = __cpufreq_set_policy(policy, &new_policy);
-
-	return ret ? ret : count;
-}
-#else
 store_one(scaling_max_freq, max);
-#endif /* CONFIG_SEC_DVFS */
 
 ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
 {
@@ -690,7 +604,6 @@ static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 				policy->governor->name);
 	return -EINVAL;
 }
-
 
 /**
  * store_scaling_governor - store policy for the specified CPU

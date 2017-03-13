@@ -204,7 +204,7 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 		len += snprintf(buf + len, PAGE_SIZE - len, "%9u: ",
 				stat->freq_table[i]);
 
-		for (j = 0; j < stat->state_num; j++)   {
+		for (j = 0; j < stat->state_num; j++) {
 			if (len >= PAGE_SIZE)
 				break;
 			len += snprintf(buf + len, PAGE_SIZE - len, "%9u ",
