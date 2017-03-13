@@ -305,9 +305,10 @@ static struct msm_dmov_cmd *start_ready_cmd(unsigned ch, int adm)
 
 	cmd = list_entry(dmov_conf[adm].ready_commands[ch].next, typeof(*cmd),
 			 list);
-	list_add_tail(&cmd->list, &dmov_conf[adm].active_commands[ch]);
+	list_del(&cmd->list);
 	if (cmd->exec_func)
 		cmd->exec_func(cmd);
+	list_add_tail(&cmd->list, &dmov_conf[adm].active_commands[ch]);
 	if (!dmov_conf[adm].channel_active)
 		enable_irq(dmov_conf[adm].irq);
 	dmov_conf[adm].channel_active |= BIT(ch);
