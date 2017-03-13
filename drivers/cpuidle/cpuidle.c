@@ -328,7 +328,6 @@ static int __cpuidle_register_device(struct cpuidle_device *dev)
 	int ret;
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
 
-	cpuidle_driver = cpuidle_get_driver();
 	if (!try_module_get(drv->owner))
 		return -EINVAL;
 

@@ -30,9 +30,6 @@ config CPU_IDLE_GOV_MENU
 	bool "Menu governor (for tickless system)"
 	default y
 
-config ARCH_NEEDS_CPU_IDLE_COUPLED
-	def_bool n
-
 config CPU_IDLE_GOV_NULL
 	bool "Null idle governor"
 	depends on CPU_IDLE
@@ -40,8 +37,8 @@ config CPU_IDLE_GOV_NULL
 	help
 	  Do not use - except with qct lpm idle driver which neglects governor input.
 
-menu "ARM CPU Idle Drivers"
-depends on ARM
-source "drivers/cpuidle/Kconfig.arm"
-endmenu
 endif
+
+config ARCH_NEEDS_CPU_IDLE_COUPLED
+	def_bool n
+endmenu
