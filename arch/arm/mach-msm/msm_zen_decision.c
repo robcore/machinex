@@ -38,8 +38,8 @@ unsigned int enabled = 1;
 /*
  * How long to wait to enable cores on wake (in ms)
  */
-#define WAKE_WAIT_TIME_MAX 60000 // 1 minute maximum
-unsigned int wake_wait_time = 1000;
+#define WAKE_WAIT_TIME_MAX 5000 // 5 seconds
+unsigned int wake_wait_time = 0;
 
 /*
  * Battery level threshold to ignore UP operations.
