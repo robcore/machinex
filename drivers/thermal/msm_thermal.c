@@ -54,11 +54,9 @@ static int msm_thermal_get_freq_table(void)
 
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
-#if defined (CONFIG_MACH_M2_REFRESHSPR)
-	limit_idx_low = 5;
-#else
+
 	limit_idx_low = 0;
-#endif
+
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -452,7 +450,7 @@ done_cc_nodes:
 	return ret;
 }
 
-int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
+int msm_thermal_init(struct msm_thermal_data *pdata)
 {
 	int ret = 0;
 
@@ -460,8 +458,8 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
 
-	enabled = 1;
-	core_control_enabled = 1;
+	enabled = 0;
+	core_control_enabled = 0;
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	schedule_delayed_work(&check_temp_work, 0);
 
@@ -470,7 +468,7 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	return ret;
 }
 
-static int __devinit msm_thermal_dev_probe(struct platform_device *pdev)
+static int msm_thermal_dev_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	char *key = NULL;
@@ -558,7 +556,7 @@ int __init msm_thermal_device_init(void)
 int __init msm_thermal_late_init(void)
 {
         INIT_DELAYED_WORK(&temp_log_work,msm_therm_temp_log);
-        schedule_delayed_work(&temp_log_work,HZ*2);
+        schedule_delayed_work(&temp_log_work, HZ*2);
 	return msm_thermal_add_cc_nodes();
 }
 module_init(msm_thermal_late_init);
