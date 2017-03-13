@@ -1167,7 +1167,7 @@ int sysctl_stat_interval __read_mostly = HZ;
 static void vmstat_update(struct work_struct *w)
 {
 	refresh_cpu_vm_stats(smp_processor_id());
-	queue_delayed_work(vmstat_wq, this_cpu_ptr(vmstat_work),
+	queue_delayed_work(vmstat_wq, this_cpu_ptr(&vmstat_work),
 		round_jiffies_relative(sysctl_stat_interval));
 }
 
