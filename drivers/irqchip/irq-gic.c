@@ -489,7 +489,7 @@ static bool gic_handle_cascade_irq(unsigned int irq, struct irq_desc *desc)
 
 	cascade_irq = irq_find_mapping(chip_data->domain, gic_irq);
 	if (unlikely(gic_irq < 32 || gic_irq > 1020))
-		do_bad_IRQ(cascade_irq, desc);
+		handle_bad_irq(cascade_irq, desc);
 	else
 		handled = generic_handle_irq(cascade_irq);
 
