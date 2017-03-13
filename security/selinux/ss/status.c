@@ -23,7 +23,7 @@
  * of userspace access vector without context switching.
  *
  * The selinux_kernel_status structure on the head of status page is
- * protected from concurrent accesses using seqlock logic, so userspace
+ * protected from concurrent accesses using seq---lock logic, so userspace
  * application should reference the status page according to the seqlock
  * logic.
  *

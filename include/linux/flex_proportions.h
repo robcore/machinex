@@ -29,7 +29,7 @@ struct fprop_global {
 	/* Current period */
 	unsigned int period;
 	/* Synchronization with period transitions */
-	seqcount_t sequence;
+	legacy_seqcount_t sequence;
 };
 
 int fprop_global_init(struct fprop_global *p);

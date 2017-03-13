@@ -306,11 +306,11 @@ static struct neighbour *neigh_alloc(struct neigh_table *tbl, struct net_device 
 
 	__skb_queue_head_init(&n->arp_queue);
 	rwlock_init(&n->lock);
-	seqlock_init(&n->ha_lock);
+	legacy_seqlock_init(&n->ha_lock);
 	n->updated	  = n->used = now;
 	n->nud_state	  = NUD_NONE;
 	n->output	  = neigh_blackhole;
-	seqlock_init(&n->hh.hh_lock);
+	legacy_seqlock_init(&n->hh.hh_lock);
 	n->parms	  = neigh_parms_clone(&tbl->parms);
 	setup_timer(&n->timer, neigh_timer_handler, (unsigned long)n);
 
@@ -1053,9 +1053,9 @@ static void neigh_update_hhs(struct neighbour *neigh)
 	if (update) {
 		hh = &neigh->hh;
 		if (hh->hh_len) {
-			write_seqlock_bh(&hh->hh_lock);
+			write_legacy_seqlock_bh(&hh->hh_lock);
 			update(hh, neigh->dev, neigh->ha);
-			write_sequnlock_bh(&hh->hh_lock);
+			write_legacy_sequnlock_bh(&hh->hh_lock);
 		}
 	}
 }
@@ -1180,9 +1180,9 @@ int neigh_update(struct neighbour *neigh, const u8 *lladdr, u8 new,
 	}
 
 	if (lladdr != neigh->ha) {
-		write_seqlock(&neigh->ha_lock);
+		write_legacy_seqlock(&neigh->ha_lock);
 		memcpy(&neigh->ha, lladdr, dev->addr_len);
-		write_sequnlock(&neigh->ha_lock);
+		write_legacy_sequnlock(&neigh->ha_lock);
 		neigh_update_hhs(neigh);
 		if (!(new & NUD_CONNECTED))
 			neigh->confirmed = jiffies -
@@ -1304,10 +1304,10 @@ int neigh_resolve_output(struct neighbour *neigh, struct sk_buff *skb)
 
 		do {
 			__skb_pull(skb, skb_network_offset(skb));
-			seq = read_seqbegin(&neigh->ha_lock);
+			seq = read_legacy_seqbegin(&neigh->ha_lock);
 			err = dev_hard_header(skb, dev, ntohs(skb->protocol),
 					      neigh->ha, NULL, skb->len);
-		} while (read_seqretry(&neigh->ha_lock, seq));
+		} while (read_legacy_seqretry(&neigh->ha_lock, seq));
 
 		if (err >= 0)
 			rc = dev_queue_xmit(skb);
@@ -1336,10 +1336,10 @@ int neigh_connected_output(struct neighbour *neigh, struct sk_buff *skb)
 
 	do {
 		__skb_pull(skb, skb_network_offset(skb));
-		seq = read_seqbegin(&neigh->ha_lock);
+		seq = read_legacy_seqbegin(&neigh->ha_lock);
 		err = dev_hard_header(skb, dev, ntohs(skb->protocol),
 				      neigh->ha, NULL, skb->len);
-	} while (read_seqretry(&neigh->ha_lock, seq));
+	} while (read_legacy_seqretry(&neigh->ha_lock, seq));
 
 	if (err >= 0)
 		err = dev_queue_xmit(skb);

@@ -551,9 +551,9 @@ pnfs_choose_layoutget_stateid(nfs4_stateid *dst, struct pnfs_layout_hdr *lo,
 		int seq;
 
 		do {
-			seq = read_seqbegin(&open_state->seqlock);
+			seq = read_legacy_seqbegin(&open_state->seqlock);
 			nfs4_stateid_copy(dst, &open_state->stateid);
-		} while (read_seqretry(&open_state->seqlock, seq));
+		} while (read_legacy_seqretry(&open_state->seqlock, seq));
 	} else
 		nfs4_stateid_copy(dst, &lo->plh_stateid);
 	spin_unlock(&lo->plh_inode->i_lock);

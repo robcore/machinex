@@ -107,7 +107,7 @@ struct neighbour {
 	__u8			nud_state;
 	__u8			type;
 	__u8			dead;
-	seqlock_t		ha_lock;
+	legacy_seqlock_t		ha_lock;
 	unsigned char		ha[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
 	struct hh_cache		hh;
 	int			(*output)(struct neighbour *, struct sk_buff *);
@@ -208,7 +208,7 @@ extern struct neighbour *	neigh_create(struct neigh_table *tbl,
 					     struct net_device *dev);
 extern void			neigh_destroy(struct neighbour *neigh);
 extern int			__neigh_event_send(struct neighbour *neigh, struct sk_buff *skb);
-extern int			neigh_update(struct neighbour *neigh, const u8 *lladdr, u8 new, 
+extern int			neigh_update(struct neighbour *neigh, const u8 *lladdr, u8 new,
 					     u32 flags);
 extern void			neigh_changeaddr(struct neigh_table *tbl, struct net_device *dev);
 extern int			neigh_ifdown(struct neigh_table *tbl, struct net_device *dev);
@@ -267,7 +267,7 @@ extern void *neigh_seq_start(struct seq_file *, loff_t *, struct neigh_table *, 
 extern void *neigh_seq_next(struct seq_file *, void *, loff_t *);
 extern void neigh_seq_stop(struct seq_file *, void *);
 
-extern int			neigh_sysctl_register(struct net_device *dev, 
+extern int			neigh_sysctl_register(struct net_device *dev,
 						      struct neigh_parms *p,
 						      char *p_name,
 						      proc_handler *proc_handler);
@@ -312,7 +312,7 @@ static inline void neigh_confirm(struct neighbour *neigh)
 static inline int neigh_event_send(struct neighbour *neigh, struct sk_buff *skb)
 {
 	unsigned long now = jiffies;
-	
+
 	if (neigh->used != now)
 		neigh->used = now;
 	if (!(neigh->nud_state&(NUD_CONNECTED|NUD_DELAY|NUD_PROBE)))
@@ -326,10 +326,10 @@ static inline int neigh_hh_bridge(struct hh_cache *hh, struct sk_buff *skb)
 	unsigned int seq, hh_alen;
 
 	do {
-		seq = read_seqbegin(&hh->hh_lock);
+		seq = read_legacy_seqbegin(&hh->hh_lock);
 		hh_alen = HH_DATA_ALIGN(ETH_HLEN);
 		memcpy(skb->data - hh_alen, hh->hh_data, ETH_ALEN + hh_alen - ETH_HLEN);
-	} while (read_seqretry(&hh->hh_lock, seq));
+	} while (read_legacy_seqretry(&hh->hh_lock, seq));
 	return 0;
 }
 #endif
@@ -342,11 +342,11 @@ static inline int neigh_hh_output(struct hh_cache *hh, struct sk_buff *skb)
 	do {
 		int hh_alen;
 
-		seq = read_seqbegin(&hh->hh_lock);
+		seq = read_legacy_seqbegin(&hh->hh_lock);
 		hh_len = hh->hh_len;
 		hh_alen = HH_DATA_ALIGN(hh_len);
 		memcpy(skb->data - hh_alen, hh->hh_data, hh_alen);
-	} while (read_seqretry(&hh->hh_lock, seq));
+	} while (read_legacy_seqretry(&hh->hh_lock, seq));
 
 	skb_push(skb, hh_len);
 	return dev_queue_xmit(skb);
@@ -400,8 +400,8 @@ static inline void neigh_ha_snapshot(char *dst, const struct neighbour *n,
 	unsigned int seq;
 
 	do {
-		seq = read_seqbegin(&n->ha_lock);
+		seq = read_legacy_seqbegin(&n->ha_lock);
 		memcpy(dst, n->ha, dev->addr_len);
-	} while (read_seqretry(&n->ha_lock, seq));
+	} while (read_legacy_seqretry(&n->ha_lock, seq));
 }
 #endif

@@ -27,7 +27,7 @@
 #ifdef CONFIG_LEDS_SWITCH
 #include <linux/gpio.h>
 #define FLASH_SWITCH_REMOVED_REVISION	0x05
-#endif 
+#endif
 
 struct max77693_led_data {
 	struct led_classdev led;
@@ -41,7 +41,7 @@ struct max77693_led_data {
 	int test_brightness;
 #ifdef CONFIG_MACH_JF_DCM
 	int movie_brightness;
-#endif 
+#endif
 };
 
 static u8 led_en_mask[MAX77693_LED_MAX] = {
@@ -256,10 +256,10 @@ static int max77693_led_setup(struct max77693_led_data *led_data)
 	struct max77693_led *data = led_data->data;
 	int id = data->id;
 	int value;
-	
+
 #if defined(CONFIG_SEC_TORCH_FLASH)
 	torchLED = led_data;
-#endif	
+#endif
 
 	ret |= max77693_write_reg(led_data->i2c, MAX77693_LED_REG_VOUT_CNTL,
 				  MAX77693_BOOST_FLASH_MODE_FLED1);
@@ -422,7 +422,7 @@ static int max77693_led_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit max77693_led_remove(struct platform_device *pdev)
+static int max77693_led_remove(struct platform_device *pdev)
 {
 	struct max77693_led_data **led_datas = platform_get_drvdata(pdev);
 	int i;
@@ -441,7 +441,7 @@ static int __devexit max77693_led_remove(struct platform_device *pdev)
 	device_remove_file(flash_dev, &dev_attr_rear_flash);
 #ifdef CONFIG_MACH_JF_DCM
 	device_remove_file(flash_dev, &dev_attr_movie_brightness);
-#endif	
+#endif
 	device_destroy(camera_class, 0);
 	class_destroy(camera_class);
 
@@ -480,7 +480,7 @@ void SEC_Torch_Flash_OnOff(unsigned long state)
 			goto error_set_bits;
 	}
 	return;
-	
+
 error_set_bits:
 	pr_err("%s: can't set led level %d\n", __func__, ret);
 	return;
@@ -489,7 +489,7 @@ error_set_bits:
 
 static struct platform_driver max77693_led_driver = {
 	.probe		= max77693_led_probe,
-	.remove		= __devexit_p(max77693_led_remove),
+	.remove		= max77693_led_remove,
 	.driver		= {
 		.name	= "max77693-led",
 		.owner	= THIS_MODULE,

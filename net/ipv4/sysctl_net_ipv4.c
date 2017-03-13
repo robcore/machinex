@@ -47,10 +47,10 @@ static int tcp_use_userconfig_max = 1;
 /* Update system visible IP port range */
 static void set_local_port_range(int range[2])
 {
-	write_seqlock(&sysctl_local_ports.lock);
+	write_legacy_seqlock(&sysctl_local_ports.lock);
 	sysctl_local_ports.range[0] = range[0];
 	sysctl_local_ports.range[1] = range[1];
-	write_sequnlock(&sysctl_local_ports.lock);
+	write_legacy_sequnlock(&sysctl_local_ports.lock);
 }
 
 /* Validate changes from /proc interface. */
@@ -87,21 +87,21 @@ static void inet_get_ping_group_range_table(struct ctl_table *table, gid_t *low,
 	gid_t *data = table->data;
 	unsigned int seq;
 	do {
-		seq = read_seqbegin(&sysctl_local_ports.lock);
+		seq = read_legacy_seqbegin(&sysctl_local_ports.lock);
 
 		*low = data[0];
 		*high = data[1];
-	} while (read_seqretry(&sysctl_local_ports.lock, seq));
+	} while (read_legacy_seqretry(&sysctl_local_ports.lock, seq));
 }
 
 /* Update system visible IP port range */
 static void set_ping_group_range(struct ctl_table *table, gid_t range[2])
 {
 	gid_t *data = table->data;
-	write_seqlock(&sysctl_local_ports.lock);
+	write_legacy_seqlock(&sysctl_local_ports.lock);
 	data[0] = range[0];
 	data[1] = range[1];
-	write_sequnlock(&sysctl_local_ports.lock);
+	write_legacy_sequnlock(&sysctl_local_ports.lock);
 }
 
 /* Validate changes from /proc interface. */

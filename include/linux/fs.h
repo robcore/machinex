@@ -457,7 +457,7 @@ static inline int mapping_writably_mapped(struct address_space *mapping)
 #if BITS_PER_LONG==32 && defined(CONFIG_SMP)
 #include <linux/seqlock.h>
 #define __NEED_I_SIZE_ORDERED
-#define i_size_ordered_init(inode) seqcount_init(&inode->i_size_seqcount)
+#define i_size_ordered_init(inode) legacy_seqcount_init(&inode->i_size_seqcount)
 #else
 #define i_size_ordered_init(inode) do { } while (0)
 #endif
@@ -518,7 +518,7 @@ struct inode {
 	blkcnt_t		i_blocks;
 
 #ifdef __NEED_I_SIZE_ORDERED
-	seqcount_t		i_size_seqcount;
+	legacy_seqcount_t		i_size_seqcount;
 #endif
 
 	/* Misc */
@@ -607,9 +607,9 @@ static inline loff_t i_size_read(const struct inode *inode)
 	unsigned int seq;
 
 	do {
-		seq = read_seqcount_begin(&inode->i_size_seqcount);
+		seq = read_legacy_seqcount_begin(&inode->i_size_seqcount);
 		i_size = inode->i_size;
-	} while (read_seqcount_retry(&inode->i_size_seqcount, seq));
+	} while (read_legacy_seqcount_retry(&inode->i_size_seqcount, seq));
 	return i_size;
 #elif BITS_PER_LONG==32 && defined(CONFIG_PREEMPT)
 	loff_t i_size;
@@ -632,9 +632,9 @@ static inline void i_size_write(struct inode *inode, loff_t i_size)
 {
 #if BITS_PER_LONG==32 && defined(CONFIG_SMP)
 	preempt_disable();
-	write_seqcount_begin(&inode->i_size_seqcount);
+	write_legacy_seqcount_begin(&inode->i_size_seqcount);
 	inode->i_size = i_size;
-	write_seqcount_end(&inode->i_size_seqcount);
+	write_legacy_seqcount_end(&inode->i_size_seqcount);
 	preempt_enable();
 #elif BITS_PER_LONG==32 && defined(CONFIG_PREEMPT)
 	preempt_disable();

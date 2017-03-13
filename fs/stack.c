@@ -13,7 +13,7 @@ void fsstack_copy_inode_size(struct inode *dst, struct inode *src)
 	blkcnt_t i_blocks;
 
 	/*
-	 * i_size_read() includes its own seqlocking and protection from
+	 * i_size_read() includes its own seq--locking and protection from
 	 * preemption (see include/linux/fs.h): we need nothing extra for
 	 * that here, and prefer to avoid nesting locks than attempt to keep
 	 * i_size and i_blocks in sync together.
