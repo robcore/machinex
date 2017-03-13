@@ -70,7 +70,7 @@ static const struct inet_peer peer_fake_node = {
 
 struct inet_peer_base {
 	struct inet_peer __rcu *root;
-	legacy_seqlock_t	lock;
+	seqlock_t	lock;
 	int		total;
 };
 
@@ -441,9 +441,9 @@ struct inet_peer *inet_getpeer(const struct inetpeer_addr *daddr, int create)
 	 * Because of a concurrent writer, we might not find an existing entry.
 	 */
 	rcu_read_lock();
-	sequence = read_legacy_seqbegin(&base->lock);
+	sequence = read_seqbegin(&base->lock);
 	p = lookup_rcu(daddr, base);
-	invalidated = read_legacy_seqretry(&base->lock, sequence);
+	invalidated = read_seqretry(&base->lock, sequence);
 	rcu_read_unlock();
 
 	if (p)
@@ -456,12 +456,12 @@ struct inet_peer *inet_getpeer(const struct inetpeer_addr *daddr, int create)
 	/* retry an exact lookup, taking the lock before.
 	 * At least, nodes should be hot in our cache.
 	 */
-	write_legacy_seqlock_bh(&base->lock);
+	write_seqlock_bh(&base->lock);
 relookup:
 	p = lookup(daddr, stack, base);
 	if (p != peer_avl_empty) {
 		atomic_inc(&p->refcnt);
-		write_legacy_sequnlock_bh(&base->lock);
+		write_sequnlock_bh(&base->lock);
 		return p;
 	}
 	if (!gccnt) {
@@ -487,7 +487,7 @@ relookup:
 		link_to_pool(p, base);
 		base->total++;
 	}
-	write_legacy_sequnlock_bh(&base->lock);
+	write_sequnlock_bh(&base->lock);
 
 	return p;
 }
@@ -558,7 +558,7 @@ void inetpeer_invalidate_tree(int family)
 	struct inet_peer *old, *new, *prev;
 	struct inet_peer_base *base = family_to_base(family);
 
-	write_legacy_seqlock_bh(&base->lock);
+	write_seqlock_bh(&base->lock);
 
 	old = base->root;
 	if (old == peer_avl_empty_rcu)
@@ -573,6 +573,6 @@ void inetpeer_invalidate_tree(int family)
 	}
 
 out:
-	write_legacy_sequnlock_bh(&base->lock);
+	write_sequnlock_bh(&base->lock);
 }
 EXPORT_SYMBOL(inetpeer_invalidate_tree);
