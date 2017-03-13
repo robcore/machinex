@@ -546,7 +546,7 @@ static int __init msm_rq_stats_init(void)
 		cpufreq_get_policy(&cpu_policy, i);
 		pcpu->policy_max = cpu_policy.max;
 		if (cpu_online(i))
-			pcpu->cur_freq = cpu_policy.cur;
+			pcpu->cur_freq = cpufreq_quick_get(i);
 		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
 				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
