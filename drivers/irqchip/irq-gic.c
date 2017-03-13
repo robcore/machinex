@@ -1162,7 +1162,7 @@ void gic_clear_irq_pending(unsigned int irq)
 	raw_spin_unlock(&irq_controller_lock);
 }
 
-void msm_gic_save(void)
+void msm_gic_save(bool modem_wake, int from_idle)
 {
 	unsigned int i;
 	struct gic_chip_data *gic = &gic_data[0];
