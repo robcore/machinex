@@ -1,5 +1,6 @@
+menu "CPU Idle"
 
-menuconfig CPU_IDLE
+config CPU_IDLE
 	bool "CPU idle PM support"
 	default y if ACPI || PPC_PSERIES
 	select CPU_IDLE_GOV_LADDER if (!NO_HZ && !NO_HZ_IDLE)
@@ -39,10 +40,8 @@ config CPU_IDLE_GOV_NULL
 	help
 	  Do not use - except with qct lpm idle driver which neglects governor input.
 
-config CPU_IDLE_CALXEDA
-	bool "CPU Idle Driver for Calxeda processors"
-	depends on ARCH_HIGHBANK
-	help
-	  Select this to enable cpuidle on Calxeda processors.
-
+menu "ARM CPU Idle Drivers"
+depends on ARM
+source "drivers/cpuidle/Kconfig.arm"
+endmenu
 endif
