@@ -1572,7 +1572,7 @@ void vfree(const void *addr)
 	if (!addr)
 		return;
 	if (unlikely(in_interrupt())) {
-		struct vfree_deferred *p = &this_cpu_ptr(vfree_deferred);
+		struct vfree_deferred *p = this_cpu_ptr(vfree_deferred);
 		llist_add((struct llist_node *)addr, &p->list);
 		schedule_work(&p->wq);
 	} else
