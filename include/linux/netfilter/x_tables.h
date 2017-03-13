@@ -279,13 +279,13 @@ extern void xt_free_table_info(struct xt_table_info *info);
 
 /**
  * xt_recseq - recursive seqcount for netfilter use
- * 
+ *
  * Packet processing changes the seqcount only if no recursion happened
  * get_counters() can use read_seqcount_begin()/read_seqcount_retry(),
  * because we use the normal seqcount convention :
  * Low order bit set to 1 if a writer is active.
  */
-DECLARE_PER_CPU(seqcount_t, xt_recseq);
+DECLARE_PER_CPU(legacy_seqcount_t, xt_recseq);
 
 static inline int get_reader(atomic_t *v){
 #ifdef CONFIG_ARM
