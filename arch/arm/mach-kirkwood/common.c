@@ -308,6 +308,28 @@ void __init kirkwood_wdt_init(void)
 	orion_wdt_init(kirkwood_tclk);
 }
 
+/*****************************************************************************
+ * CPU idle
+ ****************************************************************************/
+static struct resource kirkwood_cpuidle_resource[] = {
+	{
+		.flags	= IORESOURCE_MEM,
+		.start	= DDR_OPERATION_BASE,
+		.end	= DDR_OPERATION_BASE + 3,
+	},
+};
+
+static struct platform_device kirkwood_cpuidle = {
+	.name		= "kirkwood_cpuidle",
+	.id		= -1,
+	.resource	= kirkwood_cpuidle_resource,
+	.num_resources	= 1,
+};
+
+void __init kirkwood_cpuidle_init(void)
+{
+	platform_device_register(&kirkwood_cpuidle);
+}
 
 /*****************************************************************************
  * Time handling
