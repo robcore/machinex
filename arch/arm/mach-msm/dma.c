@@ -305,7 +305,7 @@ static struct msm_dmov_cmd *start_ready_cmd(unsigned ch, int adm)
 
 	cmd = list_entry(dmov_conf[adm].ready_commands[ch].next, typeof(*cmd),
 			 list);
-	list_move_tail(&cmd->list, &active_commands[id]);
+	list_add_tail(&cmd->list, &dmov_conf[adm].active_commands[ch]);
 	if (cmd->exec_func)
 		cmd->exec_func(cmd);
 	if (!dmov_conf[adm].channel_active)
