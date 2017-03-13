@@ -41,10 +41,6 @@
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
 
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
-
 /*
  * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
  */
@@ -76,10 +72,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
-#ifdef CONFIG_SEC_DEBUG
-	int cpu = smp_processor_id();
-	unsigned long long start_time = cpu_clock(cpu);
-#endif
 	irq_enter();
 
 	/*
@@ -98,9 +90,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	irq_finish(irq);
 
 	irq_exit();
-#ifdef CONFIG_SEC_DEBUG
-	sec_debug_irq_enterexit_log(irq, start_time);
-#endif
 	set_irq_regs(old_regs);
 }
 
@@ -156,8 +145,6 @@ int __init arch_probe_nr_irqs(void)
 }
 #endif
 
-#ifdef CONFIG_HOTPLUG_CPU
-
 static bool migrate_one_irq(struct irq_desc *desc)
 {
 	struct irq_data *d = irq_desc_get_irq_data(desc);
@@ -208,4 +195,3 @@ void migrate_irqs(void)
 
 	local_irq_restore(flags);
 }
-#endif /* CONFIG_HOTPLUG_CPU */
