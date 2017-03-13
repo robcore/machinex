@@ -257,6 +257,7 @@ static int msm_dmov_clk_on(int adm)
 	}
 	return ret;
 }
+EXPORT_SYMBOL_GPL(msm_dmov_stop_cmd);
 
 static void msm_dmov_clk_off(int adm)
 {
@@ -288,6 +289,7 @@ static void msm_dmov_clock_work(struct work_struct *work)
 	spin_unlock_irqrestore(&conf->lock, irq_flags);
 	mutex_unlock(&conf->clock_lock);
 }
+EXPORT_SYMBOL_GPL(msm_dmov_enqueue_cmd);
 
 enum {
 	NOFLUSH = 0,
