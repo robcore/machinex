@@ -233,7 +233,7 @@ struct netdev_hw_addr_list {
 struct hh_cache {
 	u16		hh_len;
 	u16		__pad;
-	legacy_seqlock_t	hh_lock;
+	seqlock_t	hh_lock;
 
 	/* cached hardware header; allow for machine alignment needs.        */
 #define HH_DATA_MOD	16
