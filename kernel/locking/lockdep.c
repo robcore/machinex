@@ -590,7 +590,6 @@ static int very_verbose(struct lock_class *class)
 /*
  * Is this the address of a static object:
  */
-#ifdef __KERNEL__
 static int static_obj(void *obj)
 {
 	unsigned long start = (unsigned long) &_stext,
@@ -617,7 +616,6 @@ static int static_obj(void *obj)
 	 */
 	return is_module_address(addr) || is_module_percpu_address(addr);
 }
-#endif
 
 /*
  * To make lock name printouts unique, we calculate a unique
@@ -1234,7 +1232,7 @@ static int noop_count(struct lock_list *entry, void *data)
 	return 0;
 }
 
-static unsigned long __lockdep_count_forward_deps(struct lock_list *this)
+unsigned long __lockdep_count_forward_deps(struct lock_list *this)
 {
 	unsigned long  count = 0;
 	struct lock_list *uninitialized_var(target_entry);
@@ -1260,7 +1258,7 @@ unsigned long lockdep_count_forward_deps(struct lock_class *class)
 	return ret;
 }
 
-static unsigned long __lockdep_count_backward_deps(struct lock_list *this)
+unsigned long __lockdep_count_backward_deps(struct lock_list *this)
 {
 	unsigned long  count = 0;
 	struct lock_list *uninitialized_var(target_entry);
@@ -4117,7 +4115,6 @@ void debug_check_no_locks_held(void)
 }
 EXPORT_SYMBOL_GPL(debug_check_no_locks_held);
 
-#ifdef __KERNEL__
 void debug_show_all_locks(void)
 {
 	struct task_struct *g, *p;
@@ -4175,7 +4172,6 @@ retry:
 		read_unlock(&tasklist_lock);
 }
 EXPORT_SYMBOL_GPL(debug_show_all_locks);
-#endif
 
 /*
  * Careful: only use this function if you are sure that
