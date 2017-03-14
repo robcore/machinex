@@ -44,6 +44,8 @@ static bool __read_mostly rcu_nocb_poll;    /* Offload kthread are to poll. */
 static char __initdata nocb_buf[NR_CPUS * 5];
 #endif /* #ifdef CONFIG_RCU_NOCB_CPU */
 
+extern int tick_nohz_active;
+
 /*
  * An adaptive-ticks CPU can potentially execute in kernel mode for an
  * arbitrarily long period of time with the scheduling-clock tick turned
@@ -2205,6 +2207,7 @@ static void rcu_prepare_for_idle(int cpu)
 	 * Instead, repost the rcu_idle_gp_timer if this CPU has callbacks
 	 * pending.
 	 */
+	//tne = ACCESS_ONCE(tick_nohz_active);
 	if (!rdtp->idle_first_pass &&
 	    (rdtp->nonlazy_posted == rdtp->nonlazy_posted_snap)) {
 		if (rcu_cpu_has_callbacks(cpu)) {
