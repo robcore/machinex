@@ -35,7 +35,7 @@ static DEFINE_MUTEX(cpu_add_remove_lock);
  * The APIs cpu_notifier_register_begin/done() must be used to protect CPU
  * hotplug callback (un)registration performed using __register_cpu_notifier()
  * or __unregister_cpu_notifier().
-*/
+ */
 void cpu_maps_update_begin(void)
 {
 	mutex_lock(&cpu_add_remove_lock);
