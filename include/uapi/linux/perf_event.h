@@ -443,6 +443,16 @@ enum perf_event_type {
 	 * file will be supported by older perf tools, with these new optional
 	 * fields being ignored.
 	 *
+	 * struct sample_id {
+	 * 	{ u32			pid, tid; } && PERF_SAMPLE_TID
+	 * 	{ u64			time;     } && PERF_SAMPLE_TIME
+	 * 	{ u64			id;       } && PERF_SAMPLE_ID
+	 * 	{ u64			stream_id;} && PERF_SAMPLE_STREAM_ID
+	 * 	{ u32			cpu, res; } && PERF_SAMPLE_CPU
+	 * } && perf_event_attr::sample_id_all
+	 */
+
+	/*
 	 * The MMAP events record the PROT_EXEC mappings so that we can
 	 * correlate userspace IPs to code. They have the following structure:
 	 *
@@ -463,6 +473,7 @@ enum perf_event_type {
 	 *	struct perf_event_header	header;
 	 *	u64				id;
 	 *	u64				lost;
+	 * 	struct sample_id		sample_id;
 	 * };
 	 */
 	PERF_RECORD_LOST			= 2,
@@ -473,6 +484,7 @@ enum perf_event_type {
 	 *
 	 *	u32				pid, tid;
 	 *	char				comm[];
+	 * 	struct sample_id		sample_id;
 	 * };
 	 */
 	PERF_RECORD_COMM			= 3,
@@ -483,6 +495,7 @@ enum perf_event_type {
 	 *	u32				pid, ppid;
 	 *	u32				tid, ptid;
 	 *	u64				time;
+	 * 	struct sample_id		sample_id;
 	 * };
 	 */
 	PERF_RECORD_EXIT			= 4,
@@ -493,6 +506,7 @@ enum perf_event_type {
 	 *	u64				time;
 	 *	u64				id;
 	 *	u64				stream_id;
+	 * 	struct sample_id		sample_id;
 	 * };
 	 */
 	PERF_RECORD_THROTTLE			= 5,
@@ -504,6 +518,7 @@ enum perf_event_type {
 	 *	u32				pid, ppid;
 	 *	u32				tid, ptid;
 	 *	u64				time;
+	 * 	struct sample_id		sample_id;
 	 * };
 	 */
 	PERF_RECORD_FORK			= 7,
@@ -514,6 +529,7 @@ enum perf_event_type {
 	 *	u32				pid, tid;
 	 *
 	 *	struct read_format		values;
+	 * 	struct sample_id		sample_id;
 	 * };
 	 */
 	PERF_RECORD_READ			= 8,
