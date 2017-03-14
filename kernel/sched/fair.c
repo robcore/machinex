@@ -3405,15 +3405,11 @@ static DEFINE_PER_CPU(bool, dbs_boost_needed);
  */
 static struct sched_group *
 find_idlest_group(struct sched_domain *sd, struct task_struct *p,
-		  int this_cpu, int sd_flag)
+		  int this_cpu, int load_idx)
 {
 	struct sched_group *idlest = NULL, *group = sd->groups;
 	unsigned long min_load = ULONG_MAX, this_load = 0;
-	int load_idx = sd->forkexec_idx;
 	int imbalance = 100 + (sd->imbalance_pct-100)/2;
-
-	if (sd_flag & SD_BALANCE_WAKE)
-		load_idx = sd->wake_idx;
 
 	do {
 		unsigned long load, avg_load;
@@ -3588,6 +3584,7 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	}
 
 	while (sd) {
+		int load_idx = sd->forkexec_idx;
 		struct sched_group *group;
 		int weight;
 
@@ -3596,7 +3593,10 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 			continue;
 		}
 
-		group = find_idlest_group(sd, p, cpu, sd_flag);
+		if (sd_flag & SD_BALANCE_WAKE)
+			load_idx = sd->wake_idx;
+
+		group = find_idlest_group(sd, p, cpu, load_idx);
 		if (!group) {
 			sd = sd->child;
 			continue;
