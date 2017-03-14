@@ -81,7 +81,7 @@ struct fmeter {
 };
 
 struct cpuset {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 
 	unsigned long flags;		/* "unsigned long" so bitops work */
 	cpumask_var_t cpus_allowed;	/* CPUs allowed to tasks in cpuset */
@@ -117,14 +117,14 @@ struct cpuset {
 /* Retrieve the cpuset for a cgroup */
 static inline struct cpuset *cgroup_cs(struct cgroup *cgrp)
 {
-	return container_of(cgroup_subsys_state(cgrp, cpuset_subsys_id),
+	return container_of(cgroup_css(cgrp, cpuset_subsys_id),
 			    struct cpuset, css);
 }
 
 /* Retrieve the cpuset for a task */
 static inline struct cpuset *task_cs(struct task_struct *task)
 {
-	return container_of(task_subsys_state(task, cpuset_subsys_id),
+	return container_of(task_css(task, cpuset_subsys_id),
 			    struct cpuset, css);
 }
 
@@ -1959,7 +1959,7 @@ static struct cftype files[] = {
  *	cgrp:	control group that the new cpuset will be part of
  */
 
-static struct cgroup_subsys_state *cpuset_css_alloc(struct cgroup *cgrp)
+static struct cgroup_css *cpuset_css_alloc(struct cgroup *cgrp)
 {
 	struct cpuset *cs;
 
@@ -2726,7 +2726,7 @@ int proc_cpuset_show(struct seq_file *m, void *unused_v)
 	struct pid *pid;
 	struct task_struct *tsk;
 	char *buf;
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	int retval;
 
 	retval = -ENOMEM;
@@ -2741,7 +2741,7 @@ int proc_cpuset_show(struct seq_file *m, void *unused_v)
 		goto out_free;
 
 	rcu_read_lock();
-	css = task_subsys_state(tsk, cpuset_subsys_id);
+	css = task_css(tsk, cpuset_subsys_id);
 	retval = cgroup_path(css->cgroup, buf, PAGE_SIZE);
 	rcu_read_unlock();
 	if (retval < 0)

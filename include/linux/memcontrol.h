@@ -99,7 +99,7 @@ bool mm_match_cgroup(const struct mm_struct *mm, const struct mem_cgroup *memcg)
 	return match;
 }
 
-extern struct cgroup_subsys_state *mem_cgroup_css(struct mem_cgroup *memcg);
+extern struct cgroup_css *mem_cgroup_css(struct mem_cgroup *memcg);
 
 extern void
 mem_cgroup_prepare_migration(struct page *page, struct page *newpage,
@@ -279,7 +279,7 @@ static inline int task_in_mem_cgroup(struct task_struct *task,
 	return 1;
 }
 
-static inline struct cgroup_subsys_state
+static inline struct cgroup_css
 		*mem_cgroup_css(struct mem_cgroup *memcg)
 {
 	return NULL;

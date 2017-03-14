@@ -33,7 +33,7 @@ static inline void bfq_init_entity(struct bfq_entity *entity,
 
 static struct bfqio_cgroup *cgroup_to_bfqio(struct cgroup *cgroup)
 {
-	return container_of(cgroup_subsys_state(cgroup, bfqio_subsys_id),
+	return container_of(cgroup_css(cgroup, bfqio_subsys_id),
 			    struct bfqio_cgroup, css);
 }
 
@@ -731,7 +731,7 @@ static struct cftype bfqio_files[] = {
 	},
 };
 
-static struct cgroup_subsys_state *bfqio_create(struct cgroup *cgroup)
+static struct cgroup_css *bfqio_create(struct cgroup *cgroup)
 {
 	struct bfqio_cgroup *bgrp;
 

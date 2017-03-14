@@ -26,7 +26,7 @@ struct netprio_map {
 };
 
 struct cgroup_netprio_state {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	u32 prioidx;
 };
 
@@ -40,7 +40,7 @@ static inline u32 task_netprioidx(struct task_struct *p)
 	u32 idx;
 
 	rcu_read_lock();
-	state = container_of(task_subsys_state(p, net_prio_subsys_id),
+	state = container_of(task_css(p, net_prio_subsys_id),
 			     struct cgroup_netprio_state, css);
 	idx = state->prioidx;
 	rcu_read_unlock();
@@ -51,11 +51,11 @@ static inline u32 task_netprioidx(struct task_struct *p)
 
 static inline u32 task_netprioidx(struct task_struct *p)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	u32 idx = 0;
 
 	rcu_read_lock();
-	css = task_subsys_state(p, net_prio_subsys_id);
+	css = task_css(p, net_prio_subsys_id);
 	if (css)
 		idx = container_of(css,
 				   struct cgroup_netprio_state, css)->prioidx;

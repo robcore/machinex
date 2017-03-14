@@ -84,14 +84,14 @@ blkio_policy_search_node(const struct blkio_cgroup *blkcg, dev_t dev,
 
 struct blkio_cgroup *cgroup_to_blkio_cgroup(struct cgroup *cgroup)
 {
-	return container_of(cgroup_subsys_state(cgroup, blkio_subsys_id),
+	return container_of(cgroup_css(cgroup, blkio_subsys_id),
 			    struct blkio_cgroup, css);
 }
 EXPORT_SYMBOL_GPL(cgroup_to_blkio_cgroup);
 
 struct blkio_cgroup *task_blkio_cgroup(struct task_struct *tsk)
 {
-	return container_of(task_subsys_state(tsk, blkio_subsys_id),
+	return container_of(task_css(tsk, blkio_subsys_id),
 			    struct blkio_cgroup, css);
 }
 EXPORT_SYMBOL_GPL(task_blkio_cgroup);
@@ -487,7 +487,7 @@ int blkiocg_del_blkio_group(struct blkio_group *blkg)
 {
 	struct blkio_cgroup *blkcg;
 	unsigned long flags;
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	int ret = 1;
 
 	rcu_read_lock();
@@ -1567,7 +1567,7 @@ static void blkiocg_destroy(struct cgroup *cgroup)
 		kfree(blkcg);
 }
 
-static struct cgroup_subsys_state *blkiocg_create(struct cgroup *cgroup)
+static struct cgroup_css *blkiocg_create(struct cgroup *cgroup)
 {
 	struct blkio_cgroup *blkcg;
 	struct cgroup *parent = cgroup->parent;

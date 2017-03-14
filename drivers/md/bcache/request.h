@@ -45,7 +45,7 @@ extern struct kmem_cache *bch_search_cache, *bch_passthrough_cache;
 
 struct bch_cgroup {
 #ifdef CONFIG_CGROUP_BCACHE
-	struct cgroup_subsys_state	css;
+	struct cgroup_css	css;
 #endif
 	/*
 	 * We subtract one from the index into bch_cache_modes[], so that

@@ -19,7 +19,7 @@
 #include <linux/hugetlb_cgroup.h>
 
 struct hugetlb_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	/*
 	 * the counter to account for hugepages from hugetlb.
 	 */
@@ -34,7 +34,7 @@ struct cgroup_subsys hugetlb_subsys __read_mostly;
 static struct hugetlb_cgroup *root_h_cgroup __read_mostly;
 
 static inline
-struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_subsys_state *s)
+struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_css *s)
 {
 	return container_of(s, struct hugetlb_cgroup, css);
 }
@@ -42,15 +42,13 @@ struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_subsys_state *s)
 static inline
 struct hugetlb_cgroup *hugetlb_cgroup_from_cgroup(struct cgroup *cgroup)
 {
-	return hugetlb_cgroup_from_css(cgroup_subsys_state(cgroup,
-							   hugetlb_subsys_id));
+	return hugetlb_cgroup_from_css(cgroup_css(cgroup, hugetlb_subsys_id));
 }
 
 static inline
 struct hugetlb_cgroup *hugetlb_cgroup_from_task(struct task_struct *task)
 {
-	return hugetlb_cgroup_from_css(task_subsys_state(task,
-							 hugetlb_subsys_id));
+	return hugetlb_cgroup_from_css(task_css(task, hugetlb_subsys_id));
 }
 
 static inline bool hugetlb_cgroup_is_root(struct hugetlb_cgroup *h_cg)
@@ -77,7 +75,7 @@ static inline bool hugetlb_cgroup_have_usage(struct cgroup *cg)
 	return false;
 }
 
-static struct cgroup_subsys_state *hugetlb_cgroup_css_alloc(struct cgroup *cgroup)
+static struct cgroup_css *hugetlb_cgroup_css_alloc(struct cgroup *cgroup)
 {
 	int idx;
 	struct cgroup *parent_cgroup;

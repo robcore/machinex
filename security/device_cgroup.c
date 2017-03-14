@@ -46,24 +46,24 @@ struct dev_exception_item {
 };
 
 struct dev_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	struct list_head exceptions;
 	enum devcg_behavior behavior;
 };
 
-static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)
+static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_css *s)
 {
 	return container_of(s, struct dev_cgroup, css);
 }
 
 static inline struct dev_cgroup *cgroup_to_devcgroup(struct cgroup *cgroup)
 {
-	return css_to_devcgroup(cgroup_subsys_state(cgroup, devices_subsys_id));
+	return css_to_devcgroup(cgroup_css(cgroup, devices_subsys_id));
 }
 
 static inline struct dev_cgroup *task_devcgroup(struct task_struct *task)
 {
-	return css_to_devcgroup(task_subsys_state(task, devices_subsys_id));
+	return css_to_devcgroup(task_css(task, devices_subsys_id));
 }
 
 struct cgroup_subsys devices_subsys;
@@ -231,7 +231,7 @@ static void devcgroup_offline(struct cgroup *cgroup)
 /*
  * called from kernel/cgroup.c with cgroup_lock() held.
  */
-static struct cgroup_subsys_state *devcgroup_css_alloc(struct cgroup *cgroup)
+static struct cgroup_css *devcgroup_css_alloc(struct cgroup *cgroup)
 {
 	struct dev_cgroup *dev_cgroup;
 

@@ -705,7 +705,7 @@ struct bfq_group {
  * @ioprio and @ioprio_class are protected by @lock.
  */
 struct bfqio_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 
 	unsigned short weight, ioprio, ioprio_class;
 

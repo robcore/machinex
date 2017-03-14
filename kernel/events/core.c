@@ -328,7 +328,7 @@ struct perf_cgroup_info {
 };
 
 struct perf_cgroup {
-	struct cgroup_subsys_state	css;
+	struct cgroup_css	css;
 	struct perf_cgroup_info	__percpu *info;
 };
 
@@ -340,8 +340,8 @@ struct perf_cgroup {
 static inline struct perf_cgroup *
 perf_cgroup_from_task(struct task_struct *task)
 {
-	return container_of(task_subsys_state(task, perf_subsys_id),
-			struct perf_cgroup, css);
+	return container_of(task_css(task, perf_subsys_id),
+			    struct perf_cgroup, css);
 }
 
 static inline bool
@@ -584,7 +584,7 @@ static inline int perf_cgroup_connect(int fd, struct perf_event *event,
 				      struct perf_event *group_leader)
 {
 	struct perf_cgroup *cgrp;
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	struct fd f = fdget(fd);
 	int ret = 0;
 
@@ -7912,7 +7912,7 @@ unlock:
 device_initcall(perf_event_sysfs_init);
 
 #ifdef CONFIG_CGROUP_PERF
-static struct cgroup_subsys_state *perf_cgroup_css_alloc(struct cgroup *cont)
+static struct cgroup_css *perf_cgroup_css_alloc(struct cgroup *cont)
 {
 	struct perf_cgroup *jc;
 
@@ -7932,7 +7932,7 @@ static struct cgroup_subsys_state *perf_cgroup_css_alloc(struct cgroup *cont)
 static void perf_cgroup_css_free(struct cgroup *cont)
 {
 	struct perf_cgroup *jc;
-	jc = container_of(cgroup_subsys_state(cont, perf_subsys_id),
+	jc = container_of(cgroup_css(cont, perf_subsys_id),
 			  struct perf_cgroup, css);
 	free_percpu(jc->info);
 	kfree(jc);

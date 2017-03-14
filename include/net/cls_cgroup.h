@@ -20,7 +20,7 @@
 #if IS_ENABLED(CONFIG_NET_CLS_CGROUP)
 struct cgroup_cls_state
 {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	u32 classid;
 };
 
@@ -35,7 +35,7 @@ static inline u32 task_cls_classid(struct task_struct *p)
 		return 0;
 
 	rcu_read_lock();
-	classid = container_of(task_subsys_state(p, net_cls_subsys_id),
+	classid = container_of(task_css(p, net_cls_subsys_id),
 			       struct cgroup_cls_state, css)->classid;
 	rcu_read_unlock();
 
@@ -45,14 +45,14 @@ static inline u32 task_cls_classid(struct task_struct *p)
 
 static inline u32 task_cls_classid(struct task_struct *p)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	u32 classid = 0;
 
 	if (in_interrupt())
 		return 0;
 
 	rcu_read_lock();
-	css = task_subsys_state(p, net_cls_subsys_id);
+	css = task_css(p, net_cls_subsys_id);
 	if (css)
 		classid = container_of(css,
 				       struct cgroup_cls_state, css)->classid;

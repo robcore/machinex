@@ -134,7 +134,7 @@ EXPORT_SYMBOL_GPL(hwpoison_filter_memcg);
 static int hwpoison_filter_task(struct page *p)
 {
 	struct mem_cgroup *mem;
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	unsigned long ino;
 
 	if (!hwpoison_filter_memcg)

@@ -112,7 +112,7 @@ enum blkcg_file_name_throtl {
 };
 
 struct blkio_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	unsigned int weight;
 	spinlock_t lock;
 	struct hlist_head blkg_list;

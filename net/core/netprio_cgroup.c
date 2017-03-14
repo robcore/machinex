@@ -35,7 +35,7 @@ static atomic_t max_prioidx = ATOMIC_INIT(0);
 
 static inline struct cgroup_netprio_state *cgrp_netprio_state(struct cgroup *cgrp)
 {
-	return container_of(cgroup_subsys_state(cgrp, net_prio_subsys_id),
+	return container_of(cgroup_css(cgrp, net_prio_subsys_id),
 			    struct cgroup_netprio_state, css);
 }
 
@@ -110,7 +110,7 @@ static void update_netdev_tables(void)
 	rtnl_unlock();
 }
 
-static struct cgroup_subsys_state *cgrp_css_alloc(struct cgroup *cgrp)
+static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
 {
 	struct cgroup_netprio_state *cs;
 	int ret;

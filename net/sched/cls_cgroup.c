@@ -24,17 +24,17 @@
 
 static inline struct cgroup_cls_state *cgrp_cls_state(struct cgroup *cgrp)
 {
-	return container_of(cgroup_subsys_state(cgrp, net_cls_subsys_id),
+	return container_of(cgroup_css(cgrp, net_cls_subsys_id),
 			    struct cgroup_cls_state, css);
 }
 
 static inline struct cgroup_cls_state *task_cls_state(struct task_struct *p)
 {
-	return container_of(task_subsys_state(p, net_cls_subsys_id),
+	return container_of(task_css(p, net_cls_subsys_id),
 			    struct cgroup_cls_state, css);
 }
 
-static struct cgroup_subsys_state *cgrp_css_alloc(struct cgroup *cgrp)
+static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
 {
 	struct cgroup_cls_state *cs;
 

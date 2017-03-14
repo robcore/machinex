@@ -40,20 +40,20 @@ enum freezer_state_flags {
 };
 
 struct freezer {
-	struct cgroup_subsys_state	css;
+	struct cgroup_css	css;
 	unsigned int			state;
 	spinlock_t			lock;
 };
 
 static inline struct freezer *cgroup_freezer(struct cgroup *cgroup)
 {
-	return container_of(cgroup_subsys_state(cgroup, freezer_subsys_id),
+	return container_of(cgroup_css(cgroup, freezer_subsys_id),
 			    struct freezer, css);
 }
 
 static inline struct freezer *task_freezer(struct task_struct *task)
 {
-	return container_of(task_subsys_state(task, freezer_subsys_id),
+	return container_of(task_css(task, freezer_subsys_id),
 			    struct freezer, css);
 }
 
@@ -92,7 +92,7 @@ static const char *freezer_state_strs(unsigned int state)
 
 struct cgroup_subsys freezer_subsys;
 
-static struct cgroup_subsys_state *freezer_css_alloc(struct cgroup *cgroup)
+static struct cgroup_css *freezer_css_alloc(struct cgroup *cgroup)
 {
 	struct freezer *freezer;
 

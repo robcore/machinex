@@ -173,11 +173,11 @@ Control Groups extends the kernel as follows:
    css_set.
 
  - A css_set contains a set of reference-counted pointers to
-   cgroup_subsys_state objects, one for each cgroup subsystem
+   cgroup_css objects, one for each cgroup subsystem
    registered in the system. There is no direct link from a task to
    the cgroup of which it's a member in each hierarchy, but this
    can be determined by following pointers through the
-   cgroup_subsys_state objects. This is because accessing the
+   cgroup_css objects. This is because accessing the
    subsystem state is something that's expected to happen frequently
    and in performance-critical code, whereas operations that require a
    task's actual cgroup assignments (in particular, moving between
@@ -554,14 +554,14 @@ Each subsystem may export the following methods. The only mandatory
 methods are css_alloc/free. Any others that are null are presumed to
 be successful no-ops.
 
-struct cgroup_subsys_state *css_alloc(struct cgroup *cgrp)
+struct cgroup_css *css_alloc(struct cgroup *cgrp)
 (cgroup_mutex held by caller)
 
 Called to allocate a subsystem state object for a cgroup. The
 subsystem should allocate its subsystem state object for the passed
 cgroup, returning a pointer to the new object on success or a
 ERR_PTR() value. On success, the subsystem pointer should point to
-a structure of type cgroup_subsys_state (typically embedded in a
+a structure of type cgroup_css (typically embedded in a
 larger subsystem-specific object), which will be initialized by the
 cgroup system. Note that this will be called at initialization to
 create the root subsystem state for this subsystem; this case can be

@@ -81,7 +81,7 @@
  */
 #ifdef CONFIG_PROVE_RCU
 DEFINE_MUTEX(cgroup_mutex);
-EXPORT_SYMBOL_GPL(cgroup_mutex);	/* only for task_subsys_state_check() */
+EXPORT_SYMBOL_GPL(cgroup_mutex);	/* only for lockdep */
 #else
 static DEFINE_MUTEX(cgroup_mutex);
 #endif
@@ -135,7 +135,7 @@ struct css_id {
 	 * is called after synchronize_rcu(). But for safe use, css_tryget()
 	 * should be used for avoiding race.
 	 */
-	struct cgroup_subsys_state __rcu *css;
+	struct cgroup_css __rcu *css;
 	/*
 	 * ID of this css.
 	 */
@@ -346,7 +346,7 @@ static struct css_set init_css_set;
 static struct cgrp_cset_link init_cgrp_cset_link;
 
 static int cgroup_init_idr(struct cgroup_subsys *ss,
-			   struct cgroup_subsys_state *css);
+			   struct cgroup_css *css);
 
 /* css_set_lock protects the list of css_set objects, and the
  * chain of tasks off each css_set.  Nests outside task->alloc_lock
@@ -362,7 +362,7 @@ static int css_set_count;
 #define CSS_SET_HASH_BITS	7
 static DEFINE_HASHTABLE(css_set_table, CSS_SET_HASH_BITS);
 
-static unsigned long css_set_hash(struct cgroup_subsys_state *css[])
+static unsigned long css_set_hash(struct cgroup_css *css[])
 {
 	unsigned long key = 0UL;
 	struct cgroup_subsys *ss;
@@ -438,7 +438,7 @@ static void put_css_set(struct css_set *cset)
 static bool compare_css_sets(struct css_set *cset,
 			     struct css_set *old_cset,
 			     struct cgroup *new_cgrp,
-			     struct cgroup_subsys_state *template[])
+			     struct cgroup_css *template[])
 {
 	struct list_head *l1, *l2;
 
@@ -505,7 +505,7 @@ static bool compare_css_sets(struct css_set *cset,
  */
 static struct css_set *find_existing_css_set(struct css_set *old_cset,
 					struct cgroup *cgrp,
-					struct cgroup_subsys_state *template[])
+					struct cgroup_css *template[])
 {
 	struct cgroupfs_root *root = cgrp->root;
 	struct cgroup_subsys *ss;
@@ -614,7 +614,7 @@ static void link_css_set(struct list_head *tmp_links, struct css_set *cset,
 static struct css_set *find_css_set(struct css_set *old_cset,
 				    struct cgroup *cgrp)
 {
-	struct cgroup_subsys_state *template[CGROUP_SUBSYS_COUNT] = { };
+	struct cgroup_css *template[CGROUP_SUBSYS_COUNT] = { };
 	struct css_set *cset;
 	struct list_head tmp_links;
 	struct cgrp_cset_link *link;
@@ -4168,7 +4168,7 @@ static int cgroup_populate_dir(struct cgroup *cgrp, unsigned long subsys_mask)
 
 	/* This cgroup is ready now */
 	for_each_root_subsys(cgrp->root, ss) {
-		struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
+		struct cgroup_css *css = cgrp->subsys[ss->subsys_id];
 		struct css_id *id = rcu_dereference_protected(css->id, true);
 
 		/*
@@ -4188,21 +4188,21 @@ err:
 
 static void css_dput_fn(struct work_struct *work)
 {
-	struct cgroup_subsys_state *css =
-		container_of(work, struct cgroup_subsys_state, dput_work);
+	struct cgroup_css *css =
+		container_of(work, struct cgroup_css, dput_work);
 
 	cgroup_dput(css->cgroup);
 }
 
 static void css_release(struct percpu_ref *ref)
 {
-	struct cgroup_subsys_state *css =
-		container_of(ref, struct cgroup_subsys_state, refcnt);
+	struct cgroup_css *css =
+		container_of(ref, struct cgroup_css, refcnt);
 
 	schedule_work(&css->dput_work);
 }
 
-static void init_cgroup_css(struct cgroup_subsys_state *css,
+static void init_cgroup_css(struct cgroup_css *css,
 			       struct cgroup_subsys *ss,
 			       struct cgroup *cgrp)
 {
@@ -4240,7 +4240,7 @@ static int online_css(struct cgroup_subsys *ss, struct cgroup *cgrp)
 /* if the CSS is online, invoke ->css_offline() on it and mark it offline */
 static void offline_css(struct cgroup_subsys *ss, struct cgroup *cgrp)
 {
-	struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
+	struct cgroup_css *css = cgrp->subsys[ss->subsys_id];
 
 	lockdep_assert_held(&cgroup_mutex);
 
@@ -4319,7 +4319,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 
 	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css;
+		struct cgroup_css *css;
 
 		css = ss->css_alloc(cgrp);
 		if (IS_ERR(css)) {
@@ -4396,7 +4396,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 err_free_all:
 	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
+		struct cgroup_css *css = cgrp->subsys[ss->subsys_id];
 
 		if (css) {
 			percpu_ref_cancel_init(&css->refcnt);
@@ -4446,8 +4446,8 @@ static void cgroup_css_killed(struct cgroup *cgrp)
 
 static void css_ref_killed_fn(struct percpu_ref *ref)
 {
-	struct cgroup_subsys_state *css =
-		container_of(ref, struct cgroup_subsys_state, refcnt);
+	struct cgroup_css *css =
+		container_of(ref, struct cgroup_css, refcnt);
 
 	cgroup_css_killed(css->cgroup);
 }
@@ -4531,7 +4531,7 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	 */
 	atomic_set(&cgrp->css_kill_cnt, 1);
 	for_each_root_subsys(cgrp->root, ss) {
-		struct cgroup_subsys_state *css = cgrp->subsys[ss->subsys_id];
+		struct cgroup_css *css = cgrp->subsys[ss->subsys_id];
 
 		/*
 		 * Killing would put the base ref, but we need to keep it
@@ -4657,7 +4657,7 @@ static void __init_or_module cgroup_init_cftsets(struct cgroup_subsys *ss)
 
 static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 
 	printk(KERN_INFO "Initializing cgroup subsys %s\n", ss->name);
 
@@ -4708,7 +4708,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
  */
 int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	int i, ret;
 	struct hlist_node *tmp;
 	struct css_set *cset;
@@ -5361,7 +5361,7 @@ __setup("cgroup_disable=", cgroup_disable);
  */
 
 /* to get ID other than 0, this should be called when !cgroup_is_dead() */
-unsigned short css_id(struct cgroup_subsys_state *css)
+unsigned short css_id(struct cgroup_css *css)
 {
 	struct css_id *cssid;
 
@@ -5391,8 +5391,8 @@ EXPORT_SYMBOL_GPL(css_id);
  * If "child" is valid object and this returns true, "root" is valid, too.
  */
 
-bool css_is_ancestor(struct cgroup_subsys_state *child,
-		    const struct cgroup_subsys_state *root)
+bool css_is_ancestor(struct cgroup_css *child,
+		    const struct cgroup_css *root)
 {
 	struct css_id *child_id;
 	struct css_id *root_id;
@@ -5410,7 +5410,7 @@ bool css_is_ancestor(struct cgroup_subsys_state *child,
 	return true;
 }
 
-void free_css_id(struct cgroup_subsys *ss, struct cgroup_subsys_state *css)
+void free_css_id(struct cgroup_subsys *ss, struct cgroup_css *css)
 {
 	struct css_id *id = rcu_dereference_protected(css->id, true);
 
@@ -5478,7 +5478,7 @@ err_out:
 }
 
 static int __init_or_module cgroup_init_idr(struct cgroup_subsys *ss,
-					    struct cgroup_subsys_state *rootcss)
+					    struct cgroup_css *rootcss)
 {
 	struct css_id *newid;
 
@@ -5499,7 +5499,7 @@ static int alloc_css_id(struct cgroup_subsys *ss, struct cgroup *parent,
 			struct cgroup *child)
 {
 	int subsys_id, i, depth = 0;
-	struct cgroup_subsys_state *parent_css, *child_css;
+	struct cgroup_css *parent_css, *child_css;
 	struct css_id *child_id, *parent_id;
 
 	subsys_id = ss->subsys_id;
@@ -5529,10 +5529,10 @@ static int alloc_css_id(struct cgroup_subsys *ss, struct cgroup *parent,
  * @ss: cgroup subsys to be looked into.
  * @id: the id
  *
- * Returns pointer to cgroup_subsys_state if there is valid one with id.
+ * Returns pointer to cgroup_css if there is valid one with id.
  * NULL if not. Should be called under rcu_read_lock()
  */
-struct cgroup_subsys_state *css_lookup(struct cgroup_subsys *ss, int id)
+struct cgroup_css *css_lookup(struct cgroup_subsys *ss, int id)
 {
 	struct css_id *cssid = NULL;
 
@@ -5549,11 +5549,11 @@ EXPORT_SYMBOL_GPL(css_lookup);
 /*
  * get corresponding css from file open on cgroupfs directory
  */
-struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id)
+struct cgroup_css *cgroup_css_from_dir(struct file *f, int id)
 {
 	struct cgroup *cgrp;
 	struct inode *inode;
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 
 	inode = file_inode(f);
 	/* check in cgroup filesystem dir */
@@ -5570,9 +5570,9 @@ struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id)
 }
 
 #ifdef CONFIG_CGROUP_DEBUG
-static struct cgroup_subsys_state *debug_css_alloc(struct cgroup *cgrp)
+static struct cgroup_css *debug_css_alloc(struct cgroup *cgrp)
 {
-	struct cgroup_subsys_state *css = kzalloc(sizeof(*css), GFP_KERNEL);
+	struct cgroup_css *css = kzalloc(sizeof(*css), GFP_KERNEL);
 
 	if (!css)
 		return ERR_PTR(-ENOMEM);

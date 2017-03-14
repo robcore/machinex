@@ -255,7 +255,7 @@ static void mem_cgroup_oom_notify(struct mem_cgroup *memcg);
  * a feature that will be implemented much later in the future.
  */
 struct mem_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	/*
 	 * the counter to account for memory usage
 	 */
@@ -515,19 +515,19 @@ struct vmpressure *memcg_to_vmpressure(struct mem_cgroup *memcg)
 	return &memcg->vmpressure;
 }
 
-struct cgroup_subsys_state *vmpressure_to_css(struct vmpressure *vmpr)
+struct cgroup_css *vmpressure_to_css(struct vmpressure *vmpr)
 {
 	return &container_of(vmpr, struct mem_cgroup, vmpressure)->css;
 }
 
-struct vmpressure *css_to_vmpressure(struct cgroup_subsys_state *css)
+struct vmpressure *css_to_vmpressure(struct cgroup_css *css)
 {
 	struct mem_cgroup *memcg = container_of(css, struct mem_cgroup, css);
 	return &memcg->vmpressure;
 }
 
 static inline
-struct mem_cgroup *mem_cgroup_from_css(struct cgroup_subsys_state *s)
+struct mem_cgroup *mem_cgroup_from_css(struct cgroup_css *s)
 {
 	return container_of(s, struct mem_cgroup, css);
 }
@@ -689,7 +689,7 @@ mem_cgroup_zoneinfo(struct mem_cgroup *memcg, int nid, int zid)
 	return &memcg->info.nodeinfo[nid]->zoneinfo[zid];
 }
 
-struct cgroup_subsys_state *mem_cgroup_css(struct mem_cgroup *memcg)
+struct cgroup_css *mem_cgroup_css(struct mem_cgroup *memcg)
 {
 	return &memcg->css;
 }
@@ -1063,8 +1063,7 @@ static void memcg_check_events(struct mem_cgroup *memcg, struct page *page)
 
 struct mem_cgroup *mem_cgroup_from_cont(struct cgroup *cont)
 {
-	return mem_cgroup_from_css(
-		cgroup_subsys_state(cont, mem_cgroup_subsys_id));
+	return mem_cgroup_from_css(cgroup_css(cont, mem_cgroup_subsys_id));
 }
 
 struct mem_cgroup *mem_cgroup_from_task(struct task_struct *p)
@@ -1077,7 +1076,7 @@ struct mem_cgroup *mem_cgroup_from_task(struct task_struct *p)
 	if (unlikely(!p))
 		return NULL;
 
-	return mem_cgroup_from_css(task_subsys_state(p, mem_cgroup_subsys_id));
+	return mem_cgroup_from_css(task_css(p, mem_cgroup_subsys_id));
 }
 
 struct mem_cgroup *try_get_mem_cgroup_from_mm(struct mm_struct *mm)
@@ -1160,7 +1159,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 	rcu_read_lock();
 	while (!memcg) {
 		struct mem_cgroup_reclaim_iter *uninitialized_var(iter);
-		struct cgroup_subsys_state *css = NULL;
+		struct cgroup_css *css = NULL;
 
 		if (reclaim) {
 			int nid = zone_to_nid(reclaim->zone);
@@ -1210,7 +1209,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 			next_cgroup = cgroup_next_descendant_pre(prev_cgroup,
 					root->css.cgroup);
 			if (next_cgroup)
-				css = cgroup_subsys_state(next_cgroup,
+				css = cgroup_css(next_cgroup,
 						mem_cgroup_subsys_id);
 		}
 
@@ -2794,7 +2793,7 @@ static void __mem_cgroup_cancel_local_charge(struct mem_cgroup *memcg,
  */
 static struct mem_cgroup *mem_cgroup_lookup(unsigned short id)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 
 	/* ID 0 is unused ID */
 	if (!id)
@@ -6192,7 +6191,7 @@ static void __init mem_cgroup_soft_limit_tree_init(void)
 	}
 }
 
-static struct cgroup_subsys_state * __ref
+static struct cgroup_css * __ref
 mem_cgroup_css_alloc(struct cgroup *cont)
 {
 	struct mem_cgroup *memcg;
