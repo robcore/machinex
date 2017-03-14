@@ -2104,13 +2104,17 @@ config INTELLI_HOTPLUG
         help
           Generic Intelli-plug cpu hotplug driver for ARM SOCs
 
+config MSM_ZEN_DECISION
+        bool "Enable Zen-Decision Core-Wakeup-helper driver"
+        default n
+        help
+          Supplementary driver for MSM based SOCs
+
 config ALUCARD_HOTPLUG
 	bool "Enable alucard-hotplug cpu hotplug driver"
 	default y
 	help
 	  Generic Alucard-hotplug cpu hotplug driver for ARM SOCs
-
-endif # CPU_FREQ_MSM
 
 config BRICKED_HOTPLUG
 	bool "Enable kernel based mpdecision"
@@ -2158,6 +2162,8 @@ config MAKO_HOTPLUG
 
 config STATE_HELPER
 	bool "State Helper"
+
+endif # CPU_FREQ_MSM
 
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
