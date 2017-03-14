@@ -5327,11 +5327,6 @@ static void swevent_hlist_put(struct perf_event *event)
 {
 	int cpu;
 
-	if (event->cpu != -1) {
-		swevent_hlist_put_cpu(event, event->cpu);
-		return;
-	}
-
 	for_each_possible_cpu(cpu)
 		swevent_hlist_put_cpu(event, cpu);
 }
@@ -5364,9 +5359,6 @@ static int swevent_hlist_get(struct perf_event *event)
 {
 	int err;
 	int cpu, failed_cpu;
-
-	if (event->cpu != -1)
-		return swevent_hlist_get_cpu(event, event->cpu);
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
