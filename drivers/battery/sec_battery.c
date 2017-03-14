@@ -1830,7 +1830,7 @@ static void sec_bat_monitor_work(
 		battery->polling_in_sleep = false;
 		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
 			(battery->ps_enable != true)) {
-			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 10 * 60) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < (10 * 60)) {
 				pr_info("Skip monitor_work(%ld)\n",
 						c_ts.tv_sec - old_ts.tv_sec);
 				goto skip_monitor;

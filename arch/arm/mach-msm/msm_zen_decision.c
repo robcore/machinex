@@ -21,11 +21,9 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/state_notifier.h>
-#include <linux/notifier.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
 #include <linux/power_supply.h>
-#include <linux/battery/sec_battery.h>
 //#include <linux/cpuset.h>
 
 #define ZEN_DECISION "zen_decision"
@@ -49,8 +47,8 @@ unsigned int wake_wait_time = 0;
  */
 unsigned int bat_threshold_ignore = 0;
 
-/* FB Notifier */
-static struct notifier_block state_notifier;
+/* State Notifier */
+static struct notifier_block notif;
 
 /* Worker Stuff */
 static struct workqueue_struct *zen_wake_wq;
@@ -61,15 +59,15 @@ struct kobject *zendecision_kobj;
 
 /* Power supply information */
 static struct power_supply *psy;
-union power_supply_propval current_charge;
-
+union power_supply_propval capacity;
+extern struct power_supply *power_supply_get_by_name(char *name);
+char ps_name[] = "battery";
 /*
  * Some devices may have a different name power_supply device representing the battery.
  *
  * If we can't find the "battery" device, then we ignore all battery work, which means
  * we do the CPU_UP work regardless of the battery level.
  */
-const char ps_name[] = "battery";
 
 static int get_power_supply_level(void)
 {
@@ -85,11 +83,11 @@ static int get_power_supply_level(void)
 	 *
 	 * Unknown if other devices use this property or a different one.
 	 */
-	ret = psy->get_property(psy, POWER_SUPPLY_PROP_CAPACITY, &current_charge);
+	ret = psy->get_property(psy, POWER_SUPPLY_PROP_CAPACITY, &capacity);
 	if (ret)
 		return ret;
 
-	return current_charge.intval;
+	return capacity.intval;
 }
 
 /*
@@ -102,9 +100,8 @@ static void __ref msm_zd_online_all_cpus(struct work_struct *work)
 {
 	int cpu;
 
-	for_each_cpu_not(cpu, cpu_online_mask) {
+	for_each_cpu_not(cpu, cpu_online_mask)
 		cpu_up(cpu);
-	}
 }
 
 /*
@@ -119,22 +116,21 @@ static void msm_zd_queue_online_work(void)
 			msecs_to_jiffies(wake_wait_time));
 }
 
-/** Use FB notifiers to detect screen off/on and do the work **/
-static int state_notifier_callback(struct notifier_block *nb,
+/** Use State notifier to detect screen off/on and do the work **/
+static int state_notifier_callback(struct notifier_block *this,
 	unsigned long event, void *data)
 {
 	/* If driver is disabled just leave here */
 	if (!enabled)
 		return NOTIFY_OK;
 
-	/* Clear wake workqueue of any pending threads */
-	flush_workqueue(zen_wake_wq);
-	cancel_delayed_work_sync(&wake_work);
-
-	switch {
-		STATE_NOTIFIER_ACTIVE:
+	switch (event) {
+		case STATE_NOTIFIER_SUSPEND:
+			/* Clear wake workqueue of any pending threads */
+			cancel_delayed_work_sync(&wake_work);
+			flush_workqueue(zen_wake_wq);
 			break;
-		STATE_NOTIFIER_SUSPEND:
+		case STATE_NOTIFIER_ACTIVE:
 			/* Always queue work if PS device doesn't exist or bat_threshold_ignore == 0 */
 			if (psy && bat_threshold_ignore) {
 				/* If current level > ignore threshold, then queue UP work */
@@ -271,9 +267,9 @@ static int zd_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&wake_work, msm_zd_online_all_cpus);
 
 	/* Setup FB Notifier */
-	state_notifier.notifier_call = state_notifier_callback;
-	if (state_register_client(&state_notifier)) {
-		pr_err("[%s]: failed to register FB notifier\n", ZEN_DECISION);
+	notif.notifier_call = state_notifier_callback;
+	if (state_register_client(&notif)) {
+		pr_err("[%s]: Failed to register State notifier callback\n", ZEN_DECISION);
 		return -ENOMEM;
 	}
 
@@ -298,9 +294,8 @@ static int zd_remove(struct platform_device *pdev)
 	flush_workqueue(zen_wake_wq);
 	cancel_delayed_work_sync(&wake_work);
 	destroy_workqueue(zen_wake_wq);
-
-	state_unregister_client(&state_notifier);
-	state_notifier.notifier_call = NULL;
+	state_unregister_client(&notif);
+	notif.notifier_call = NULL;
 
 	return 0;
 }
@@ -343,7 +338,7 @@ static void __exit zd_exit(void)
 	platform_device_unregister(&zd_device);
 }
 
-module_initcall(zd_init);
+module_init(zd_init);
 module_exit(zd_exit);
 
 MODULE_VERSION("2.0");
