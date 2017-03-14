@@ -60,4 +60,5 @@ void msm_gic_save(bool modem_wake, int from_idle);
 void msm_gic_restore(void);
 void gic_configure_and_raise(unsigned int irq, unsigned int cpu);
 void gic_migrate_target(unsigned int new_cpu_id);
+unsigned long gic_get_sgir_physaddr(void);
 #endif
