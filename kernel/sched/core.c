@@ -1003,10 +1003,8 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 	trace_sched_migrate_task(p, new_cpu);
 
 	if (task_cpu(p) != new_cpu) {
-
 		if (p->sched_class->migrate_task_rq)
 			p->sched_class->migrate_task_rq(p, new_cpu);
-
 		p->se.nr_migrations++;
 		perf_sw_event(PERF_COUNT_SW_CPU_MIGRATIONS, 1, NULL, 0);
 	}
@@ -1551,8 +1549,9 @@ static void sched_ttwu_pending(void)
 
 void scheduler_ipi(void)
 {
-	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick()
-	    && !tick_nohz_full_cpu(smp_processor_id()))
+	if (llist_empty(&this_rq()->wake_list)
+			&& !tick_nohz_full_cpu(smp_processor_id())
+			&& !got_nohz_idle_kick())
 		return;
 
 	/*
