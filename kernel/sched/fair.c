@@ -3405,15 +3405,11 @@ static DEFINE_PER_CPU(bool, dbs_boost_needed);
  */
 static struct sched_group *
 find_idlest_group(struct sched_domain *sd, struct task_struct *p,
-		  int this_cpu, int sd_flag)
+		  int this_cpu, int load_idx)
 {
 	struct sched_group *idlest = NULL, *group = sd->groups;
 	unsigned long min_load = ULONG_MAX, this_load = 0;
-	int load_idx = sd->forkexec_idx;
 	int imbalance = 100 + (sd->imbalance_pct-100)/2;
-
-	if (sd_flag & SD_BALANCE_WAKE)
-		load_idx = sd->wake_idx;
 
 	do {
 		unsigned long load, avg_load;
@@ -3588,6 +3584,7 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	}
 
 	while (sd) {
+		int load_idx = sd->forkexec_idx;
 		struct sched_group *group;
 		int weight;
 
@@ -3596,7 +3593,10 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 			continue;
 		}
 
-		group = find_idlest_group(sd, p, cpu, sd_flag);
+		if (sd_flag & SD_BALANCE_WAKE)
+			load_idx = sd->wake_idx;
+
+		group = find_idlest_group(sd, p, cpu, load_idx);
 		if (!group) {
 			sd = sd->child;
 			continue;
@@ -4572,31 +4572,10 @@ void update_group_power(struct sched_domain *sd, int cpu)
 		 */
 
 		for_each_cpu(cpu, sched_group_cpus(sdg)) {
-			struct sched_group_power *sgp;
-			struct rq *rq = cpu_rq(cpu);
+			struct sched_group *sg = cpu_rq(cpu)->sd->groups;
 
-			/*
-			 * build_sched_domains() -> init_sched_groups_power()
-			 * gets here before we've attached the domains to the
-			 * runqueues.
-			 *
-			 * Use power_of(), which is set irrespective of domains
-			 * in update_cpu_power().
-			 *
-			 * This avoids power/power_orig from being 0 and
-			 * causing divide-by-zero issues on boot.
-			 *
-			 * Runtime updates will correct power_orig.
-			 */
-			if (unlikely(!rq->sd)) {
-				power_orig += power_of(cpu);
-				power += power_of(cpu);
-				continue;
-			}
-
-			sgp = rq->sd->groups->sgp;
-			power_orig += sgp->power_orig;
-			power += sgp->power;
+			power_orig += sg->sgp->power_orig;
+			power += sg->sgp->power;
 		}
 	} else  {
 		/*
