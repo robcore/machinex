@@ -30,6 +30,8 @@
 #define GIC_DIST_TARGET			0x800
 #define GIC_DIST_CONFIG			0xc00
 #define GIC_DIST_SOFTINT		0xf00
+#define GIC_DIST_SGI_PENDING_CLEAR	0xf10
+#define GIC_DIST_SGI_PENDING_SET	0xf20
 
 struct device_node;
 
@@ -57,4 +59,5 @@ void gic_set_irq_secure(unsigned int irq);
 void msm_gic_save(bool modem_wake, int from_idle);
 void msm_gic_restore(void);
 void gic_configure_and_raise(unsigned int irq, unsigned int cpu);
+void gic_migrate_target(unsigned int new_cpu_id);
 #endif
