@@ -27,6 +27,7 @@
 #include <linux/perf_event.h>
 #include <linux/context_tracking.h>
 #include "../rcu/tree_plugin.h"
+#include "../rcu/tree.h"
 
 #include <asm/irq_regs.h>
 
