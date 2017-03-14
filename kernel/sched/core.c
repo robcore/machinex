@@ -5046,10 +5046,9 @@ static void update_top_cache_domain(int cpu)
 		} while ((tmp = tmp->child));
 
 		id = cpumask_first(sched_domain_span(sd));
-		size = cpumask_weight(sched_domain_span(sd));
-		sd = sd->parent; /* sd_busy */
+                size = cpumask_weight(sched_domain_span(sd));
 	}
-	rcu_assign_pointer(per_cpu(sd_busy, cpu), sd);
+
 	rcu_assign_pointer(per_cpu(sd_llc, cpu), sd);
 	per_cpu(sd_llc_size, cpu) = size;
 	per_cpu(sd_llc_id, cpu) = id;
