@@ -45,16 +45,16 @@ static struct work_struct input_boost_work;
 static struct notifier_block notif;
 #endif
 
-static bool input_boost_enabled = true;
+static bool input_boost_enabled = false;
 module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 50;
 module_param(input_boost_ms, uint, 0644);
 
-static bool hotplug_boost;
+static bool hotplug_boost = false;
 module_param(hotplug_boost, bool, 0644);
 
-static bool wakeup_boost;
+static bool wakeup_boost = false;
 module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
