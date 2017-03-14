@@ -535,7 +535,7 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_last_jiffy = 0;
 	rq_info.hotplug_disabled = 0;
 	rq_info.hotplug_enabled = 1;
-	conservative_rq = 0;
+	conservative_rq = 1;
 	ret = init_rq_attribs();
 
 	rq_info.init = 1;
