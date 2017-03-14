@@ -641,6 +641,12 @@ static void gic_cpu_init(struct gic_chip_data *gic)
     mb();
 }
 
+void gic_cpu_if_down(void)
+{
+	void __iomem *cpu_base = gic_data_cpu_base(&gic_data[0]);
+	writel_relaxed(0, cpu_base + GIC_CPU_CTRL);
+}
+
 #ifdef CONFIG_CPU_PM
 /*
  * Saves the GIC distributor registers during suspend or idle.  Must be called
