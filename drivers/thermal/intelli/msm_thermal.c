@@ -585,9 +585,9 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
 
-	enabled = 0;
-	//if (num_possible_cpus() > 1)
-	core_control_enabled = 0;
+	enabled = 1;
+	if (num_possible_cpus() > 1)
+		core_control_enabled = 1;
 	intellithermal_wq = alloc_workqueue("intellithermal",
 				WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
