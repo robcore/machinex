@@ -1038,7 +1038,7 @@ static const struct attribute_group *tmc_etf_attr_grps[] = {
 	NULL,
 };
 
-static int __devinit tmc_etr_bam_init(struct platform_device *pdev,
+static int tmc_etr_bam_init(struct platform_device *pdev,
 				      struct tmc_drvdata *drvdata)
 {
 	struct device *dev = &pdev->dev;
@@ -1078,7 +1078,7 @@ static void tmc_etr_bam_exit(struct tmc_drvdata *drvdata)
 	sps_deregister_bam_device(bamdata->handle);
 }
 
-static int __devinit tmc_probe(struct platform_device *pdev)
+static int tmc_probe(struct platform_device *pdev)
 {
 	int ret;
 	uint32_t devid;
@@ -1275,7 +1275,7 @@ err0:
 	return ret;
 }
 
-static int __devexit tmc_remove(struct platform_device *pdev)
+static int tmc_remove(struct platform_device *pdev)
 {
 	struct tmc_drvdata *drvdata = platform_get_drvdata(pdev);
 

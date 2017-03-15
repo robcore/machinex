@@ -865,7 +865,7 @@ fail:
 	return -ENODEV;
 }
 
-static int __devinit hdmi_probe(struct platform_device *pdev)
+static int hdmi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct resource *res;
@@ -1013,7 +1013,7 @@ fail:
 	return ret;
 }
 
-static int __devexit hdmi_remove(struct platform_device *pdev)
+static int hdmi_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct v4l2_subdev *sd = dev_get_drvdata(dev);

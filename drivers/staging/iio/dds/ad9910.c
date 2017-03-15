@@ -361,7 +361,7 @@ static const struct iio_info ad9910_info = {
 	.driver_module = THIS_MODULE,
 };
 
-static int __devinit ad9910_probe(struct spi_device *spi)
+static int ad9910_probe(struct spi_device *spi)
 {
 	struct ad9910_state *st;
 	struct iio_dev *idev;
@@ -397,7 +397,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit ad9910_remove(struct spi_device *spi)
+static int ad9910_remove(struct spi_device *spi)
 {
 	iio_device_unregister(spi_get_drvdata(spi));
 	iio_free_device(spi_get_drvdata(spi));

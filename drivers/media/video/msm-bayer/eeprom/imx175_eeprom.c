@@ -673,7 +673,7 @@ void imx175_format_calibrationdata(void)
 		/* patch#183359 : e*/
 }
 
-static int __devinit imx175_spi_probe(struct spi_device *spi)
+static int imx175_spi_probe(struct spi_device *spi)
 {
 	int rc = 0;
 	struct msm_cam_subdev_info sd_info;

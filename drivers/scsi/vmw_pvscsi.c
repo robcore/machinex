@@ -397,7 +397,7 @@ static void pvscsi_unmap_buffers(const struct pvscsi_adapter *adapter,
 				 SCSI_SENSE_BUFFERSIZE, PCI_DMA_FROMDEVICE);
 }
 
-static int __devinit pvscsi_allocate_rings(struct pvscsi_adapter *adapter)
+static int pvscsi_allocate_rings(struct pvscsi_adapter *adapter)
 {
 	adapter->rings_state = pci_alloc_consistent(adapter->dev, PAGE_SIZE,
 						    &adapter->ringStatePA);
@@ -1152,7 +1152,7 @@ static void pvscsi_release_resources(struct pvscsi_adapter *adapter)
  * just use a statically allocated scatter list.
  *
  */
-static int __devinit pvscsi_allocate_sg(struct pvscsi_adapter *adapter)
+static int pvscsi_allocate_sg(struct pvscsi_adapter *adapter)
 {
 	struct pvscsi_ctx *ctx;
 	int i;
@@ -1233,7 +1233,7 @@ exit:
 	return numPhys;
 }
 
-static int __devinit pvscsi_probe(struct pci_dev *pdev,
+static int pvscsi_probe(struct pci_dev *pdev,
 				  const struct pci_device_id *id)
 {
 	struct pvscsi_adapter *adapter;

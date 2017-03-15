@@ -80,7 +80,7 @@ static const struct of_device_id of_anatop_match[] = {
 	{ },
 };
 
-static int __devinit of_anatop_probe(struct platform_device *pdev)
+static int of_anatop_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
@@ -101,7 +101,7 @@ static int __devinit of_anatop_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit of_anatop_remove(struct platform_device *pdev)
+static int of_anatop_remove(struct platform_device *pdev)
 {
 	struct anatop *drvdata;
 	drvdata = platform_get_drvdata(pdev);

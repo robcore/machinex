@@ -1500,7 +1500,7 @@ static struct sensor_device_attribute epm_adc_psoc_in_attrs[] = {
 	SENSOR_ATTR(ads1_chan15, S_IRUGO, epm_adc_psoc_show_in, NULL, 31),
 };
 
-static int __devinit epm_adc_psoc_init_hwmon(struct spi_device *spi,
+static int epm_adc_psoc_init_hwmon(struct spi_device *spi,
 						struct epm_adc_drv *epm_adc)
 {
 	int i, rc, num_chans = 15;
@@ -1584,7 +1584,7 @@ static int get_device_tree_data(struct spi_device *spi)
 	return 0;
 }
 
-static int __devinit epm_adc_psoc_spi_probe(struct spi_device *spi)
+static int epm_adc_psoc_spi_probe(struct spi_device *spi)
 {
 	struct epm_adc_drv *epm_adc;
 	struct device_node *node = spi->dev.of_node;
@@ -1623,7 +1623,7 @@ static int __devinit epm_adc_psoc_spi_probe(struct spi_device *spi)
 	return rc;
 }
 
-static int __devexit epm_adc_psoc_spi_remove(struct spi_device *spi)
+static int epm_adc_psoc_spi_remove(struct spi_device *spi)
 {
 	epm_adc_drv->epm_spi_client = NULL;
 	return 0;
@@ -1725,7 +1725,7 @@ static struct sensor_device_attribute epm_adc_in_attrs[] = {
 	SENSOR_ATTR(ads1_chan15, S_IRUGO, epm_adc_show_in, NULL, 31),
 };
 
-static int __devinit epm_adc_init_hwmon(struct platform_device *pdev,
+static int epm_adc_init_hwmon(struct platform_device *pdev,
 					       struct epm_adc_drv *epm_adc)
 {
 	struct epm_adc_platform_data *pdata = pdev->dev.platform_data;
@@ -1743,7 +1743,7 @@ static int __devinit epm_adc_init_hwmon(struct platform_device *pdev,
 	return 0;
 }
 
-static int __devinit epm_adc_probe(struct platform_device *pdev)
+static int epm_adc_probe(struct platform_device *pdev)
 {
 	struct epm_adc_drv *epm_adc;
 	struct epm_adc_platform_data *pdata = pdev->dev.platform_data;
@@ -1800,7 +1800,7 @@ static int __devinit epm_adc_probe(struct platform_device *pdev)
 	return rc;
 }
 
-static int __devexit epm_adc_remove(struct platform_device *pdev)
+static int epm_adc_remove(struct platform_device *pdev)
 {
 	struct epm_adc_drv *epm_adc = platform_get_drvdata(pdev);
 	struct epm_adc_platform_data *pdata = pdev->dev.platform_data;

@@ -1260,13 +1260,13 @@ static struct comedi_driver driver_pcimio = {
 	.detach = pcimio_detach,
 };
 
-static int __devinit driver_pcimio_pci_probe(struct pci_dev *dev,
+static int driver_pcimio_pci_probe(struct pci_dev *dev,
 					     const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_pcimio.driver_name);
 }
 
-static void __devexit driver_pcimio_pci_remove(struct pci_dev *dev)
+static void driver_pcimio_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

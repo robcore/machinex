@@ -755,7 +755,7 @@ bfin_sport_spi_destroy_queue(struct bfin_sport_spi_master_data *drv_data)
 	return 0;
 }
 
-static int __devinit
+static int
 bfin_sport_spi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;

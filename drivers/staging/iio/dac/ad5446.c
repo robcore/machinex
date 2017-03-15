@@ -305,7 +305,7 @@ static const struct iio_info ad5446_info_no_pwr_down = {
 	.driver_module = THIS_MODULE,
 };
 
-static int __devinit ad5446_probe(struct spi_device *spi)
+static int ad5446_probe(struct spi_device *spi)
 {
 	struct ad5446_state *st;
 	struct iio_dev *indio_dev;

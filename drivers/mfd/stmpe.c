@@ -853,7 +853,7 @@ static struct irq_chip stmpe_irq_chip = {
 	.irq_unmask		= stmpe_irq_unmask,
 };
 
-static int __devinit stmpe_irq_init(struct stmpe *stmpe)
+static int stmpe_irq_init(struct stmpe *stmpe)
 {
 	struct irq_chip *chip = NULL;
 	int num_irqs = stmpe->variant->num_irqs;
@@ -892,7 +892,7 @@ static void stmpe_irq_remove(struct stmpe *stmpe)
 	}
 }
 
-static int __devinit stmpe_chip_init(struct stmpe *stmpe)
+static int stmpe_chip_init(struct stmpe *stmpe)
 {
 	unsigned int irq_trigger = stmpe->pdata->irq_trigger;
 	int autosleep_timeout = stmpe->pdata->autosleep_timeout;
@@ -958,14 +958,14 @@ static int __devinit stmpe_chip_init(struct stmpe *stmpe)
 	return stmpe_reg_write(stmpe, stmpe->regs[STMPE_IDX_ICR_LSB], icr);
 }
 
-static int __devinit stmpe_add_device(struct stmpe *stmpe,
+static int stmpe_add_device(struct stmpe *stmpe,
 				      struct mfd_cell *cell, int irq)
 {
 	return mfd_add_devices(stmpe->dev, stmpe->pdata->id, cell, 1,
 			       NULL, stmpe->irq_base + irq);
 }
 
-static int __devinit stmpe_devices_init(struct stmpe *stmpe)
+static int stmpe_devices_init(struct stmpe *stmpe)
 {
 	struct stmpe_variant_info *variant = stmpe->variant;
 	unsigned int platform_blocks = stmpe->pdata->blocks;
@@ -993,7 +993,7 @@ static int __devinit stmpe_devices_init(struct stmpe *stmpe)
 }
 
 /* Called from client specific probe routines */
-int __devinit stmpe_probe(struct stmpe_client_info *ci, int partnum)
+int stmpe_probe(struct stmpe_client_info *ci, int partnum)
 {
 	struct stmpe_platform_data *pdata = dev_get_platdata(ci->dev);
 	struct stmpe *stmpe;

@@ -88,7 +88,7 @@ static struct hwrng timeriomem_rng_ops = {
 	.priv		= 0,
 };
 
-static int __devinit timeriomem_rng_probe(struct platform_device *pdev)
+static int timeriomem_rng_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int ret;

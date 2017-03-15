@@ -409,7 +409,7 @@ static int tvout_off(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit tvout_probe(struct platform_device *pdev)
+static int tvout_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	uint32 reg;
@@ -504,7 +504,7 @@ error:
 	return 0;
 }
 
-static int __devexit tvout_remove(struct platform_device *pdev)
+static int tvout_remove(struct platform_device *pdev)
 {
 	external_common_state_remove();
 	kfree(tvout_msm_state);

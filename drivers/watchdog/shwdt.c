@@ -330,7 +330,7 @@ static struct miscdevice sh_wdt_miscdev = {
 	.fops		= &sh_wdt_fops,
 };
 
-static int __devinit sh_wdt_probe(struct platform_device *pdev)
+static int sh_wdt_probe(struct platform_device *pdev)
 {
 	struct sh_wdt *wdt;
 	struct resource *res;
@@ -406,7 +406,7 @@ out_release:
 	return rc;
 }
 
-static int __devexit sh_wdt_remove(struct platform_device *pdev)
+static int sh_wdt_remove(struct platform_device *pdev)
 {
 	struct sh_wdt *wdt = platform_get_drvdata(pdev);
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

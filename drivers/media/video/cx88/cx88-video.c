@@ -1848,7 +1848,7 @@ static void cx8800_unregister_video(struct cx8800_dev *dev)
 	}
 }
 
-static int __devinit cx8800_initdev(struct pci_dev *pci_dev,
+static int cx8800_initdev(struct pci_dev *pci_dev,
 				    const struct pci_device_id *pci_id)
 {
 	struct cx8800_dev *dev;
@@ -2042,7 +2042,7 @@ fail_free:
 	return err;
 }
 
-static void __devexit cx8800_finidev(struct pci_dev *pci_dev)
+static void cx8800_finidev(struct pci_dev *pci_dev)
 {
 	struct cx8800_dev *dev = pci_get_drvdata(pci_dev);
 	struct cx88_core *core = dev->core;

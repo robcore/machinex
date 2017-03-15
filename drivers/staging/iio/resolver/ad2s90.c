@@ -57,7 +57,7 @@ static const struct iio_chan_spec ad2s90_chan = {
 	.channel = 0,
 };
 
-static int __devinit ad2s90_probe(struct spi_device *spi)
+static int ad2s90_probe(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev;
 	struct ad2s90_state *st;
@@ -97,7 +97,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit ad2s90_remove(struct spi_device *spi)
+static int ad2s90_remove(struct spi_device *spi)
 {
 	iio_device_unregister(spi_get_drvdata(spi));
 	iio_free_device(spi_get_drvdata(spi));

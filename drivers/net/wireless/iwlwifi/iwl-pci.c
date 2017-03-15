@@ -313,7 +313,7 @@ out_free_bus:
 	return err;
 }
 
-static void __devexit iwl_pci_remove(struct pci_dev *pdev)
+static void iwl_pci_remove(struct pci_dev *pdev)
 {
 	struct iwl_trans *iwl_trans = pci_get_drvdata(pdev);
 	struct iwl_shared *shrd = iwl_trans->shrd;

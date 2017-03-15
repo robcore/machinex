@@ -202,7 +202,7 @@ static struct mfd_cell jz4740_adc_cells[] = {
 	},
 };
 
-static int __devinit jz4740_adc_probe(struct platform_device *pdev)
+static int jz4740_adc_probe(struct platform_device *pdev)
 {
 	struct irq_chip_generic *gc;
 	struct irq_chip_type *ct;
@@ -306,7 +306,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit jz4740_adc_remove(struct platform_device *pdev)
+static int jz4740_adc_remove(struct platform_device *pdev)
 {
 	struct jz4740_adc *adc = platform_get_drvdata(pdev);
 

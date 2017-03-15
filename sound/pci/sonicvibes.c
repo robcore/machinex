@@ -877,7 +877,7 @@ static struct snd_pcm_ops snd_sonicvibes_capture_ops = {
 	.pointer =	snd_sonicvibes_capture_pointer,
 };
 
-static int __devinit snd_sonicvibes_pcm(struct sonicvibes * sonic, int device, struct snd_pcm ** rpcm)
+static int snd_sonicvibes_pcm(struct sonicvibes * sonic, int device, struct snd_pcm ** rpcm)
 {
 	struct snd_pcm *pcm;
 	int err;
@@ -1087,7 +1087,7 @@ static int snd_sonicvibes_put_double(struct snd_kcontrol *kcontrol, struct snd_c
 	return change;
 }
 
-static struct snd_kcontrol_new snd_sonicvibes_controls[] __devinitdata = {
+static struct snd_kcontrol_new snd_sonicvibes_controls[] = {
 SONICVIBES_DOUBLE("Capture Volume", 0, SV_IREG_LEFT_ADC, SV_IREG_RIGHT_ADC, 0, 0, 15, 0),
 SONICVIBES_DOUBLE("Aux Playback Switch", 0, SV_IREG_LEFT_AUX1, SV_IREG_RIGHT_AUX1, 7, 7, 1, 1),
 SONICVIBES_DOUBLE("Aux Playback Volume", 0, SV_IREG_LEFT_AUX1, SV_IREG_RIGHT_AUX1, 0, 0, 31, 1),
@@ -1118,7 +1118,7 @@ static void snd_sonicvibes_master_free(struct snd_kcontrol *kcontrol)
 	sonic->master_volume = NULL;
 }
 
-static int __devinit snd_sonicvibes_mixer(struct sonicvibes * sonic)
+static int snd_sonicvibes_mixer(struct sonicvibes * sonic)
 {
 	struct snd_card *card;
 	struct snd_kcontrol *kctl;
@@ -1175,7 +1175,7 @@ static void snd_sonicvibes_proc_read(struct snd_info_entry *entry,
 	snd_iprintf(buffer, "MIDI to ext. Tx  : %s\n", tmp & 0x04 ? "on" : "off");
 }
 
-static void __devinit snd_sonicvibes_proc_init(struct sonicvibes * sonic)
+static void snd_sonicvibes_proc_init(struct sonicvibes * sonic)
 {
 	struct snd_info_entry *entry;
 
@@ -1188,10 +1188,10 @@ static void __devinit snd_sonicvibes_proc_init(struct sonicvibes * sonic)
  */
 
 #ifdef SUPPORT_JOYSTICK
-static struct snd_kcontrol_new snd_sonicvibes_game_control __devinitdata =
+static struct snd_kcontrol_new snd_sonicvibes_game_control =
 SONICVIBES_SINGLE("Joystick Speed", 0, SV_IREG_GAME_PORT, 1, 15, 0);
 
-static int __devinit snd_sonicvibes_create_gameport(struct sonicvibes *sonic)
+static int snd_sonicvibes_create_gameport(struct sonicvibes *sonic)
 {
 	struct gameport *gp;
 
@@ -1246,7 +1246,7 @@ static int snd_sonicvibes_dev_free(struct snd_device *device)
 	return snd_sonicvibes_free(sonic);
 }
 
-static int __devinit snd_sonicvibes_create(struct snd_card *card,
+static int snd_sonicvibes_create(struct snd_card *card,
 					struct pci_dev *pci,
 					int reverb,
 					int mge,
@@ -1401,7 +1401,7 @@ static int __devinit snd_sonicvibes_create(struct snd_card *card,
  *  MIDI section
  */
 
-static struct snd_kcontrol_new snd_sonicvibes_midi_controls[] __devinitdata = {
+static struct snd_kcontrol_new snd_sonicvibes_midi_controls[] = {
 SONICVIBES_SINGLE("SonicVibes Wave Source RAM", 0, SV_IREG_WAVE_SOURCE, 0, 1, 0),
 SONICVIBES_SINGLE("SonicVibes Wave Source RAM+ROM", 0, SV_IREG_WAVE_SOURCE, 1, 1, 0),
 SONICVIBES_SINGLE("SonicVibes Onboard Synth", 0, SV_IREG_MPU401, 0, 1, 0),
@@ -1422,7 +1422,7 @@ static void snd_sonicvibes_midi_input_close(struct snd_mpu401 * mpu)
 	outb(sonic->irqmask |= SV_MIDI_MASK, SV_REG(sonic, IRQMASK));
 }
 
-static int __devinit snd_sonicvibes_midi(struct sonicvibes * sonic,
+static int snd_sonicvibes_midi(struct sonicvibes * sonic,
 					 struct snd_rawmidi *rmidi)
 {
 	struct snd_mpu401 * mpu = rmidi->private_data;
@@ -1441,7 +1441,7 @@ static int __devinit snd_sonicvibes_midi(struct sonicvibes * sonic,
 	return 0;
 }
 
-static int __devinit snd_sonic_probe(struct pci_dev *pci,
+static int snd_sonic_probe(struct pci_dev *pci,
 				     const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -1524,7 +1524,7 @@ static int __devinit snd_sonic_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit snd_sonic_remove(struct pci_dev *pci)
+static void snd_sonic_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

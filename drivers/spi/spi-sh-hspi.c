@@ -229,7 +229,7 @@ static void hspi_cleanup(struct spi_device *spi)
 	dev_dbg(dev, "%s cleanup\n", spi->modalias);
 }
 
-static int __devinit hspi_probe(struct platform_device *pdev)
+static int hspi_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct spi_master *master;
@@ -302,7 +302,7 @@ static int __devinit hspi_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit hspi_remove(struct platform_device *pdev)
+static int hspi_remove(struct platform_device *pdev)
 {
 	struct hspi_priv *hspi = dev_get_drvdata(&pdev->dev);
 

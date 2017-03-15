@@ -98,7 +98,7 @@ static void gp2a_device_close(struct input_dev *dev)
 			"unable to deactivate, err %d\n", error);
 }
 
-static int __devinit gp2a_initialize(struct gp2a_data *dt)
+static int gp2a_initialize(struct gp2a_data *dt)
 {
 	int error;
 
@@ -122,7 +122,7 @@ static int __devinit gp2a_initialize(struct gp2a_data *dt)
 	return error;
 }
 
-static int __devinit gp2a_probe(struct i2c_client *client,
+static int gp2a_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	const struct gp2a_platform_data *pdata = client->dev.platform_data;
@@ -205,7 +205,7 @@ err_hw_shutdown:
 	return error;
 }
 
-static int __devexit gp2a_remove(struct i2c_client *client)
+static int gp2a_remove(struct i2c_client *client)
 {
 	struct gp2a_data *dt = i2c_get_clientdata(client);
 	const struct gp2a_platform_data *pdata = dt->pdata;

@@ -179,7 +179,7 @@ static void max7359_initialize(struct i2c_client *client)
 	max7359_fall_deepsleep(client);
 }
 
-static int __devinit max7359_probe(struct i2c_client *client,
+static int max7359_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 	const struct matrix_keymap_data *keymap_data = client->dev.platform_data;
@@ -260,7 +260,7 @@ failed_free_mem:
 	return error;
 }
 
-static int __devexit max7359_remove(struct i2c_client *client)
+static int max7359_remove(struct i2c_client *client)
 {
 	struct max7359_keypad *keypad = i2c_get_clientdata(client);
 

@@ -1017,7 +1017,7 @@ release_card(struct fritzcard *card)
 	AVM_cnt--;
 }
 
-static int __devinit
+static int
 setup_instance(struct fritzcard *card)
 {
 	int i, err;
@@ -1074,7 +1074,7 @@ error:
 	return err;
 }
 
-static int __devinit
+static int
 fritzpci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int err = -ENOMEM;
@@ -1120,7 +1120,7 @@ fritz_remove_pci(struct pci_dev *pdev)
 			pr_info("%s: drvdata already removed\n", __func__);
 }
 
-static struct pci_device_id fcpci_ids[] __devinitdata = {
+static struct pci_device_id fcpci_ids[] = {
 	{ PCI_VENDOR_ID_AVM, PCI_DEVICE_ID_AVM_A1, PCI_ANY_ID, PCI_ANY_ID,
 	  0, 0, (unsigned long) "Fritz!Card PCI"},
 	{ PCI_VENDOR_ID_AVM, PCI_DEVICE_ID_AVM_A1_V2, PCI_ANY_ID, PCI_ANY_ID,

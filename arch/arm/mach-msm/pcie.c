@@ -698,7 +698,7 @@ static int __init msm_pcie_init(void)
 subsys_initcall(msm_pcie_init);
 
 /* RC do not represent the right class; set it to PCI_CLASS_BRIDGE_PCI */
-static void __devinit msm_pcie_fixup_early(struct pci_dev *dev)
+static void msm_pcie_fixup_early(struct pci_dev *dev)
 {
 	PCIE_DBG("hdr_type %d\n", dev->hdr_type);
 	if (dev->hdr_type == 1)
@@ -733,7 +733,7 @@ DECLARE_PCI_FIXUP_RESUME(PCIE_VENDOR_ID_RCP, PCIE_DEVICE_ID_RCP,
  * from msm_pcie_dev.axi_bar_start; correct the device resource structure here;
  * address translation unit handles the required translations
  */
-static void __devinit msm_pcie_fixup_final(struct pci_dev *dev)
+static void msm_pcie_fixup_final(struct pci_dev *dev)
 {
 	int i;
 	struct resource *res;

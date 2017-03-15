@@ -620,7 +620,7 @@ static int omap2_onenand_disable(struct mtd_info *mtd)
 	return ret;
 }
 
-static int __devinit omap2_onenand_probe(struct platform_device *pdev)
+static int omap2_onenand_probe(struct platform_device *pdev)
 {
 	struct omap_onenand_platform_data *pdata;
 	struct omap2_onenand *c;
@@ -785,7 +785,7 @@ err_kfree:
 	return r;
 }
 
-static int __devexit omap2_onenand_remove(struct platform_device *pdev)
+static int omap2_onenand_remove(struct platform_device *pdev)
 {
 	struct omap2_onenand *c = dev_get_drvdata(&pdev->dev);
 

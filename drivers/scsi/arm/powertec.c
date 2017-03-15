@@ -309,7 +309,7 @@ static struct scsi_host_template powertecscsi_template = {
 	.proc_name			= "powertec",
 };
 
-static int __devinit
+static int
 powertecscsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	struct Scsi_Host *host;
@@ -409,7 +409,7 @@ powertecscsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit powertecscsi_remove(struct expansion_card *ec)
+static void powertecscsi_remove(struct expansion_card *ec)
 {
 	struct Scsi_Host *host = ecard_get_drvdata(ec);
 	struct powertec_info *info = (struct powertec_info *)host->hostdata;

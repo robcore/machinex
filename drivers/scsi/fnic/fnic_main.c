@@ -399,7 +399,7 @@ static u8 *fnic_get_mac(struct fc_lport *lport)
 	return fnic->data_src_addr;
 }
 
-static int __devinit fnic_probe(struct pci_dev *pdev,
+static int fnic_probe(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	struct Scsi_Host *host;
@@ -774,7 +774,7 @@ err_out:
 	return err;
 }
 
-static void __devexit fnic_remove(struct pci_dev *pdev)
+static void fnic_remove(struct pci_dev *pdev)
 {
 	struct fnic *fnic = pci_get_drvdata(pdev);
 	struct fc_lport *lp = fnic->lport;

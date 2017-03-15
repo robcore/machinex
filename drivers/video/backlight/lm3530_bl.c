@@ -312,7 +312,7 @@ static struct backlight_ops lm3530_bl_ops = {
 	.get_brightness = bl_get_intensity,
 };
 
-static int __devinit lm3530_probe(struct i2c_client *i2c_dev,
+static int lm3530_probe(struct i2c_client *i2c_dev,
 		const struct i2c_device_id *id)
 {
 	struct backlight_platform_data *pdata;
@@ -395,7 +395,7 @@ err_backlight_device_register:
 	return err;
 }
 
-static int __devexit lm3530_remove(struct i2c_client *i2c_dev)
+static int lm3530_remove(struct i2c_client *i2c_dev)
 {
 	struct lm3530_device *dev = i2c_get_clientdata(i2c_dev);
 

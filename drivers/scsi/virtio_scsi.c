@@ -440,7 +440,7 @@ static int virtscsi_init(struct virtio_device *vdev,
 	return 0;
 }
 
-static int __devinit virtscsi_probe(struct virtio_device *vdev)
+static int virtscsi_probe(struct virtio_device *vdev)
 {
 	struct Scsi_Host *shost;
 	struct virtio_scsi *vscsi;
@@ -503,7 +503,7 @@ static void virtscsi_remove_vqs(struct virtio_device *vdev)
 	vdev->config->del_vqs(vdev);
 }
 
-static void __devexit virtscsi_remove(struct virtio_device *vdev)
+static void virtscsi_remove(struct virtio_device *vdev)
 {
 	struct Scsi_Host *shost = virtio_scsi_host(vdev);
 

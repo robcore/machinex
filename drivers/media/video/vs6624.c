@@ -788,7 +788,7 @@ static const struct v4l2_subdev_ops vs6624_ops = {
 	.video = &vs6624_video_ops,
 };
 
-static int __devinit vs6624_probe(struct i2c_client *client,
+static int vs6624_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct vs6624 *sensor;
@@ -881,7 +881,7 @@ static int __devinit vs6624_probe(struct i2c_client *client,
 	return ret;
 }
 
-static int __devexit vs6624_remove(struct i2c_client *client)
+static int vs6624_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct vs6624 *sensor = to_vs6624(sd);

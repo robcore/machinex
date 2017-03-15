@@ -534,7 +534,7 @@ static struct i2c_driver wm8741_i2c_driver = {
 #endif
 
 #if defined(CONFIG_SPI_MASTER)
-static int __devinit wm8741_spi_probe(struct spi_device *spi)
+static int wm8741_spi_probe(struct spi_device *spi)
 {
 	struct wm8741_priv *wm8741;
 	int ret;
@@ -552,7 +552,7 @@ static int __devinit wm8741_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit wm8741_spi_remove(struct spi_device *spi)
+static int wm8741_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 	return 0;

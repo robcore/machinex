@@ -685,13 +685,13 @@ struct dmi_onboard_device_info {
 	const char *i2c_type;
 };
 
-static struct dmi_onboard_device_info __devinitdata dmi_devices[] = {
+static struct dmi_onboard_device_info dmi_devices[] = {
 	{ "Syleus", DMI_DEV_TYPE_OTHER, 0x73, "fscsyl" },
 	{ "Hermes", DMI_DEV_TYPE_OTHER, 0x73, "fscher" },
 	{ "Hades",  DMI_DEV_TYPE_OTHER, 0x73, "fschds" },
 };
 
-static void __devinit dmi_check_onboard_device(u8 type, const char *name,
+static void dmi_check_onboard_device(u8 type, const char *name,
 					       struct i2c_adapter *adap)
 {
 	int i;
@@ -715,7 +715,7 @@ static void __devinit dmi_check_onboard_device(u8 type, const char *name,
 /* We use our own function to check for onboard devices instead of
    dmi_find_device() as some buggy BIOS's have the devices we are interested
    in marked as disabled */
-static void __devinit dmi_check_onboard_devices(const struct dmi_header *dm,
+static void dmi_check_onboard_devices(const struct dmi_header *dm,
 						void *adap)
 {
 	int i, count;
@@ -745,7 +745,7 @@ static void __devinit dmi_check_onboard_devices(const struct dmi_header *dm,
 }
 
 /* Register optional slaves */
-static void __devinit i801_probe_optional_slaves(struct i801_priv *priv)
+static void i801_probe_optional_slaves(struct i801_priv *priv)
 {
 	/* Only register slaves on main SMBus channel */
 	if (priv->features & FEATURE_IDF)
@@ -765,10 +765,10 @@ static void __devinit i801_probe_optional_slaves(struct i801_priv *priv)
 }
 #else
 static void __init input_apanel_init(void) {}
-static void __devinit i801_probe_optional_slaves(struct i801_priv *priv) {}
+static void i801_probe_optional_slaves(struct i801_priv *priv) {}
 #endif	/* CONFIG_X86 && CONFIG_DMI */
 
-static int __devinit i801_probe(struct pci_dev *dev,
+static int i801_probe(struct pci_dev *dev,
 				const struct pci_device_id *id)
 {
 	unsigned char temp;
@@ -888,7 +888,7 @@ exit:
 	return err;
 }
 
-static void __devexit i801_remove(struct pci_dev *dev)
+static void i801_remove(struct pci_dev *dev)
 {
 	struct i801_priv *priv = pci_get_drvdata(dev);
 

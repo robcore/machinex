@@ -494,7 +494,7 @@ static struct pll_freq_tbl_map acpu_freq_tbl_list[] = {
 #ifdef CONFIG_CPU_FREQ_MSM
 static struct cpufreq_frequency_table freq_table[NR_CPUS][20];
 
-static void __devinit cpufreq_table_init(void)
+static void cpufreq_table_init(void)
 {
 	int cpu;
 	for_each_possible_cpu(cpu) {
@@ -859,7 +859,7 @@ out:
 	return rc;
 }
 
-static void __devinit acpuclk_hw_init(void)
+static void acpuclk_hw_init(void)
 {
 	struct clkctl_acpu_speed *speed;
 	uint32_t div, sel, reg_clksel;
@@ -941,7 +941,7 @@ static unsigned long acpuclk_7627_get_rate(int cpu)
  * Clock driver initialization
  *---------------------------------------------------------------------------*/
 #define MHZ 1000000
-static void __devinit select_freq_plan(void)
+static void select_freq_plan(void)
 {
 	unsigned long pll_mhz[ACPU_PLL_END];
 	struct pll_freq_tbl_map *t = acpu_freq_tbl_list;
@@ -1049,7 +1049,7 @@ static void __devinit select_freq_plan(void)
  * Hardware requires the CPU to be dropped to less than MAX_WAIT_FOR_IRQ_KHZ
  * before entering a wait for irq low-power mode. Find a suitable rate.
  */
-static unsigned long __devinit find_wait_for_irq_khz(void)
+static unsigned long find_wait_for_irq_khz(void)
 {
 	unsigned long found_khz = 0;
 	int i;
@@ -1061,7 +1061,7 @@ static unsigned long __devinit find_wait_for_irq_khz(void)
 	return found_khz;
 }
 
-static void __devinit lpj_init(void)
+static void lpj_init(void)
 {
 	int i = 0, cpu;
 	const struct clkctl_acpu_speed *base_clk = drv_state.current_speed;
@@ -1082,7 +1082,7 @@ static void __devinit lpj_init(void)
 	}
 }
 
-static void __devinit precompute_stepping(void)
+static void precompute_stepping(void)
 {
 	int i, step_idx;
 
@@ -1123,7 +1123,7 @@ static void __devinit precompute_stepping(void)
 	}
 }
 
-static void __devinit print_acpu_freq_tbl(void)
+static void print_acpu_freq_tbl(void)
 {
 	struct clkctl_acpu_speed *t;
 	short down_idx[ACPU_PLL_END];
@@ -1161,7 +1161,7 @@ static struct acpuclk_data acpuclk_7627_data = {
 	.switch_time_us = 50,
 };
 
-static int __devinit acpuclk_7627_probe(struct platform_device *pdev)
+static int acpuclk_7627_probe(struct platform_device *pdev)
 {
 	const struct acpuclk_pdata *pdata = pdev->dev.platform_data;
 

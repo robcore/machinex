@@ -276,7 +276,7 @@ debug_error:
 	return -ENOMEM;
 }
 
-static int __devexit pm8xxx_upl_debug_remove(struct pm8xxx_upl_device *upldev)
+static int pm8xxx_upl_debug_remove(struct pm8xxx_upl_device *upldev)
 {
 	debugfs_remove_recursive(upldev->dent);
 	return 0;
@@ -284,7 +284,7 @@ static int __devexit pm8xxx_upl_debug_remove(struct pm8xxx_upl_device *upldev)
 
 #endif /* CONFIG_DEBUG_FS */
 
-static int __devinit pm8xxx_upl_probe(struct platform_device *pdev)
+static int pm8xxx_upl_probe(struct platform_device *pdev)
 {
 	struct pm8xxx_upl_device	*upldev;
 
@@ -307,7 +307,7 @@ static int __devinit pm8xxx_upl_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pm8xxx_upl_remove(struct platform_device *pdev)
+static int pm8xxx_upl_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_upl_device *upldev = platform_get_drvdata(pdev);
 

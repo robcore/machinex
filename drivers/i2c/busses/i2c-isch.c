@@ -249,7 +249,7 @@ static struct i2c_adapter sch_adapter = {
 	.algo		= &smbus_algorithm,
 };
 
-static int __devinit smbus_sch_probe(struct platform_device *dev)
+static int smbus_sch_probe(struct platform_device *dev)
 {
 	struct resource *res;
 	int retval;
@@ -284,7 +284,7 @@ static int __devinit smbus_sch_probe(struct platform_device *dev)
 	return retval;
 }
 
-static int __devexit smbus_sch_remove(struct platform_device *pdev)
+static int smbus_sch_remove(struct platform_device *pdev)
 {
 	struct resource *res;
 	if (sch_smba) {

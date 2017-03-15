@@ -516,7 +516,7 @@ static const struct iio_info adis16240_info = {
 	.driver_module = THIS_MODULE,
 };
 
-static int __devinit adis16240_probe(struct spi_device *spi)
+static int adis16240_probe(struct spi_device *spi)
 {
 	int ret;
 	struct adis16240_state *st;

@@ -7703,7 +7703,7 @@ static const struct net_device_ops s2io_netdev_ops = {
  *  returns 0 on success and negative on failure.
  */
 
-static int __devinit
+static int
 s2io_init_nic(struct pci_dev *pdev, const struct pci_device_id *pre)
 {
 	struct s2io_nic *sp;
@@ -8204,7 +8204,7 @@ mem_alloc_failed:
  * from memory.
  */
 
-static void __devexit s2io_rem_nic(struct pci_dev *pdev)
+static void s2io_rem_nic(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct s2io_nic *sp;

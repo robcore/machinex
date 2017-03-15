@@ -98,7 +98,7 @@ static struct snd_soc_card snd_soc_snappercl15 = {
 	.num_links	= 1,
 };
 
-static int __devinit snappercl15_probe(struct platform_device *pdev)
+static int snappercl15_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_snappercl15;
 	int ret;
@@ -119,7 +119,7 @@ static int __devinit snappercl15_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit snappercl15_remove(struct platform_device *pdev)
+static int snappercl15_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

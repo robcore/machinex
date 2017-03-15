@@ -1007,8 +1007,8 @@ void qib_disable_after_error(struct qib_devdata *dd)
 		*dd->devstatusp |= QIB_STATUS_HWERROR;
 }
 
-static void __devexit qib_remove_one(struct pci_dev *);
-static int __devinit qib_init_one(struct pci_dev *,
+static void qib_remove_one(struct pci_dev *);
+static int qib_init_one(struct pci_dev *,
 				  const struct pci_device_id *);
 
 #define DRIVER_LOAD_MSG "QLogic " QIB_DRV_NAME " loaded: "
@@ -1202,7 +1202,7 @@ static void qib_postinit_cleanup(struct qib_devdata *dd)
 	qib_free_devdata(dd);
 }
 
-static int __devinit qib_init_one(struct pci_dev *pdev,
+static int qib_init_one(struct pci_dev *pdev,
 				  const struct pci_device_id *ent)
 {
 	int ret, j, pidx, initfail;
@@ -1303,7 +1303,7 @@ bail:
 	return ret;
 }
 
-static void __devexit qib_remove_one(struct pci_dev *pdev)
+static void qib_remove_one(struct pci_dev *pdev)
 {
 	struct qib_devdata *dd = pci_get_drvdata(pdev);
 	int ret;

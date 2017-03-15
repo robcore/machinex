@@ -280,7 +280,7 @@ static const struct file_operations omap_wdt_fops = {
 	.llseek = no_llseek,
 };
 
-static int __devinit omap_wdt_probe(struct platform_device *pdev)
+static int omap_wdt_probe(struct platform_device *pdev)
 {
 	struct resource *res, *mem;
 	struct omap_wdt_dev *wdev;
@@ -376,7 +376,7 @@ static void omap_wdt_shutdown(struct platform_device *pdev)
 	}
 }
 
-static int __devexit omap_wdt_remove(struct platform_device *pdev)
+static int omap_wdt_remove(struct platform_device *pdev)
 {
 	struct omap_wdt_dev *wdev = platform_get_drvdata(pdev);
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

@@ -734,7 +734,7 @@ failed_get_resource:
 	return ret;
 }
 
-static int __devexit mxs_saif_remove(struct platform_device *pdev)
+static int mxs_saif_remove(struct platform_device *pdev)
 {
 	struct mxs_saif *saif = platform_get_drvdata(pdev);
 

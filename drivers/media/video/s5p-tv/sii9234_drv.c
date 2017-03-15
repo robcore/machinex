@@ -315,7 +315,7 @@ static const struct v4l2_subdev_ops sii9234_ops = {
 	.video = &sii9234_video_ops,
 };
 
-static int __devinit sii9234_probe(struct i2c_client *client,
+static int sii9234_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
@@ -385,7 +385,7 @@ fail:
 	return ret;
 }
 
-static int __devexit sii9234_remove(struct i2c_client *client)
+static int sii9234_remove(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);

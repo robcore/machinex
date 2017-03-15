@@ -939,7 +939,7 @@ static struct uart_driver xuartps_uart_driver = {
  *
  * Returns 0 on success, negative error otherwise
  **/
-static int __devinit xuartps_probe(struct platform_device *pdev)
+static int xuartps_probe(struct platform_device *pdev)
 {
 	int rc, irq;
 	struct uart_port *port;
@@ -1001,7 +1001,7 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
  *
  * Returns 0 on success, negative error otherwise
  **/
-static int __devexit xuartps_remove(struct platform_device *pdev)
+static int xuartps_remove(struct platform_device *pdev)
 {
 	struct uart_port *port = dev_get_drvdata(&pdev->dev);
 	int rc = 0;
@@ -1046,7 +1046,7 @@ static int xuartps_resume(struct platform_device *pdev)
 /* Match table for of_platform binding */
 
 #ifdef CONFIG_OF
-static struct of_device_id xuartps_of_match[] __devinitdata = {
+static struct of_device_id xuartps_of_match[] = {
 	{ .compatible = "xlnx,xuartps", },
 	{}
 };

@@ -3535,7 +3535,7 @@ static int pm_chg_override_hot(struct pm8921_chg_chip *chip, int flag)
 	return rc;
 }
 
-static void __devinit pm8921_chg_btc_override_init(struct pm8921_chg_chip *chip)
+static void pm8921_chg_btc_override_init(struct pm8921_chg_chip *chip)
 {
 	int rc = 0;
 	u8 reg;
@@ -3849,7 +3849,7 @@ static void free_irqs(struct pm8921_chg_chip *chip)
 
 #define PM8921_USB_TRIM_SEL_BIT		BIT(6)
 /* determines the initial present states */
-static void __devinit determine_initial_state(struct pm8921_chg_chip *chip)
+static void determine_initial_state(struct pm8921_chg_chip *chip)
 {
 	int fsm_state;
 	int is_fast_chg;
@@ -3996,7 +3996,7 @@ struct pm_chg_irq_init_data chg_irq_data[] = {
 	CHG_IRQ(DCIN_UV_IRQ, IRQF_TRIGGER_RISING, dcin_uv_irq_handler),
 };
 
-static int __devinit request_irqs(struct pm8921_chg_chip *chip,
+static int request_irqs(struct pm8921_chg_chip *chip,
 					struct platform_device *pdev)
 {
 	struct resource *res;
@@ -4154,7 +4154,7 @@ static void detect_battery_removal(struct pm8921_chg_chip *chip)
 #define PM_SUB_REV		0x001
 #define MIN_CHARGE_CURRENT_MA	350
 #define DEFAULT_SAFETY_MINUTES	500
-static int __devinit pm8921_chg_hw_init(struct pm8921_chg_chip *chip)
+static int pm8921_chg_hw_init(struct pm8921_chg_chip *chip)
 {
 	u8 subrev;
 	int rc, vdd_safe, fcc_uah, safety_time = DEFAULT_SAFETY_MINUTES;
@@ -4807,7 +4807,7 @@ static void pm8921_sec_charger_disable(struct pm8921_chg_chip *chip)
 }
 #endif
 
-static int __devinit pm8921_charger_probe(struct platform_device *pdev)
+static int pm8921_charger_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct pm8921_chg_chip *chip;
@@ -5012,7 +5012,7 @@ free_chip:
 	return rc;
 }
 
-static int __devexit pm8921_charger_remove(struct platform_device *pdev)
+static int pm8921_charger_remove(struct platform_device *pdev)
 {
 	struct pm8921_chg_chip *chip = platform_get_drvdata(pdev);
 

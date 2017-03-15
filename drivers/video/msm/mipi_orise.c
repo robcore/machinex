@@ -95,7 +95,7 @@ static int mipi_orise_lcd_off(struct platform_device *pdev)
 
 
 
-static int __devinit mipi_orise_lcd_probe(struct platform_device *pdev)
+static int mipi_orise_lcd_probe(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;

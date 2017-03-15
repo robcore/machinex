@@ -3584,7 +3584,7 @@ static const struct regmap_config wm8962_regmap = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-static __devinit int wm8962_i2c_probe(struct i2c_client *i2c,
+static int wm8962_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8962_pdata *pdata = dev_get_platdata(&i2c->dev);
@@ -3701,7 +3701,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8962_i2c_remove(struct i2c_client *client)
+static int wm8962_i2c_remove(struct i2c_client *client)
 {
 	struct wm8962_priv *wm8962 = dev_get_drvdata(&client->dev);
 

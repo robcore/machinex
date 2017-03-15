@@ -45,7 +45,7 @@ struct ltq_mtd {
 };
 
 static char ltq_map_name[] = "ltq_nor";
-static const char *ltq_probe_types[] __devinitconst = { "cmdlinepart", NULL };
+static const char *ltq_probe_types[] = { "cmdlinepart", NULL };
 
 static map_word
 ltq_read16(struct map_info *map, unsigned long adr)

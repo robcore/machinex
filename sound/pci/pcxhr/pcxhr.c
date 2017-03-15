@@ -1179,7 +1179,7 @@ static int pcxhr_chip_dev_free(struct snd_device *device)
 
 /*
  */
-static int __devinit pcxhr_create(struct pcxhr_mgr *mgr,
+static int pcxhr_create(struct pcxhr_mgr *mgr,
 				  struct snd_card *card, int idx)
 {
 	int err;
@@ -1368,7 +1368,7 @@ static void pcxhr_proc_gpo_write(struct snd_info_entry *entry,
 	}
 }
 
-static void __devinit pcxhr_proc_init(struct snd_pcxhr *chip)
+static void pcxhr_proc_init(struct snd_pcxhr *chip)
 {
 	struct snd_info_entry *entry;
 
@@ -1426,7 +1426,7 @@ static int pcxhr_free(struct pcxhr_mgr *mgr)
 /*
  *    probe function - creates the card manager
  */
-static int __devinit pcxhr_probe(struct pci_dev *pci,
+static int pcxhr_probe(struct pci_dev *pci,
 				 const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -1601,7 +1601,7 @@ static int __devinit pcxhr_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit pcxhr_remove(struct pci_dev *pci)
+static void pcxhr_remove(struct pci_dev *pci)
 {
 	pcxhr_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

@@ -172,7 +172,7 @@ static struct mfd_cell mpp_cell = {
 	.num_resources	= ARRAY_SIZE(mpp_cell_resources),
 };
 
-static int __devinit
+static int
 pm8901_add_subdevices(const struct pm8901_platform_data *pdata,
 				struct pm8901_chip *pmic)
 {
@@ -281,7 +281,7 @@ static const char * const pm8901_rev_names[] = {
 	[PM8XXX_REVISION_8901_2p3]	= "2.3",
 };
 
-static int __devinit pm8901_probe(struct platform_device *pdev)
+static int pm8901_probe(struct platform_device *pdev)
 {
 	int rc;
 	struct pm8901_platform_data *pdata = pdev->dev.platform_data;
@@ -334,7 +334,7 @@ err:
 	return rc;
 }
 
-static int __devexit pm8901_remove(struct platform_device *pdev)
+static int pm8901_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_drvdata *drvdata;
 	struct pm8901_chip *pmic = NULL;

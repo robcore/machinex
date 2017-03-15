@@ -2996,7 +2996,7 @@ static int __init sec_bat_current_boot_mode(char *mode)
 }
 __setup("androidboot.batt_check_recovery=", sec_bat_current_boot_mode);
 
-static __devinit int sec_bat_probe(struct platform_device *pdev)
+static int sec_bat_probe(struct platform_device *pdev)
 {
 	struct sec_bat_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	struct sec_bat_info *info;
@@ -3327,7 +3327,7 @@ err_kfree:
 	return ret;
 }
 
-static int __devexit sec_bat_remove(struct platform_device *pdev)
+static int sec_bat_remove(struct platform_device *pdev)
 {
 	struct sec_bat_info *info = platform_get_drvdata(pdev);
 

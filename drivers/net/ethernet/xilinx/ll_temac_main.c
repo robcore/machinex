@@ -995,7 +995,7 @@ static const struct ethtool_ops temac_ethtool_ops = {
 	.get_link = ethtool_op_get_link,
 };
 
-static int __devinit temac_of_probe(struct platform_device *op)
+static int temac_of_probe(struct platform_device *op)
 {
 	struct device_node *np;
 	struct temac_local *lp;
@@ -1137,7 +1137,7 @@ static int __devinit temac_of_probe(struct platform_device *op)
 	return rc;
 }
 
-static int __devexit temac_of_remove(struct platform_device *op)
+static int temac_of_remove(struct platform_device *op)
 {
 	struct net_device *ndev = dev_get_drvdata(&op->dev);
 	struct temac_local *lp = netdev_priv(ndev);
@@ -1156,7 +1156,7 @@ static int __devexit temac_of_remove(struct platform_device *op)
 	return 0;
 }
 
-static struct of_device_id temac_of_match[] __devinitdata = {
+static struct of_device_id temac_of_match[] = {
 	{ .compatible = "xlnx,xps-ll-temac-1.01.b", },
 	{ .compatible = "xlnx,xps-ll-temac-2.00.a", },
 	{ .compatible = "xlnx,xps-ll-temac-2.02.a", },

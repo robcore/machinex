@@ -3125,7 +3125,7 @@ static int pm8xxx_init_boost(struct pm8xxx_vreg *vreg)
 	return rc;
 }
 
-static int __devinit pm8xxx_vreg_probe(struct platform_device *pdev)
+static int pm8xxx_vreg_probe(struct platform_device *pdev)
 {
 	struct pm8xxx_regulator_core_platform_data *core_data;
 	const struct pm8xxx_regulator_platform_data *pdata;
@@ -3301,7 +3301,7 @@ bail:
 	return rc;
 }
 
-static int __devexit pm8xxx_vreg_remove(struct platform_device *pdev)
+static int pm8xxx_vreg_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_regulator_core_platform_data *core_data;
 

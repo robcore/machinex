@@ -291,7 +291,7 @@ static int auo_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_SPI_QUP
-static int __devinit lcdc_auo_spi_probe(struct spi_device *spi)
+static int lcdc_auo_spi_probe(struct spi_device *spi)
 {
 	pr_info("%s\n", __func__);
 	lcdc_spi_client = spi;
@@ -300,7 +300,7 @@ static int __devinit lcdc_auo_spi_probe(struct spi_device *spi)
 		schedule_work(&disp_on_delayed_work);
 	return 0;
 }
-static int __devexit lcdc_auo_spi_remove(struct spi_device *spi)
+static int lcdc_auo_spi_remove(struct spi_device *spi)
 {
 	lcdc_spi_client = NULL;
 	return 0;

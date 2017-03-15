@@ -1180,7 +1180,7 @@ static struct uart_driver sunsu_reg = {
 	.major			= TTY_MAJOR,
 };
 
-static int __devinit sunsu_kbd_ms_init(struct uart_sunsu_port *up)
+static int sunsu_kbd_ms_init(struct uart_sunsu_port *up)
 {
 	int quot, baud;
 #ifdef CONFIG_SERIO
@@ -1381,7 +1381,7 @@ static inline struct console *SUNSU_CONSOLE(void)
 #define sunsu_serial_console_init()	do { } while (0)
 #endif
 
-static enum su_type __devinit su_get_type(struct device_node *dp)
+static enum su_type su_get_type(struct device_node *dp)
 {
 	struct device_node *ap = of_find_node_by_path("/aliases");
 
@@ -1402,7 +1402,7 @@ static enum su_type __devinit su_get_type(struct device_node *dp)
 	return SU_PORT_PORT;
 }
 
-static int __devinit su_probe(struct platform_device *op)
+static int su_probe(struct platform_device *op)
 {
 	struct device_node *dp = op->dev.of_node;
 	struct uart_sunsu_port *up;
@@ -1494,7 +1494,7 @@ out_unmap:
 	return err;
 }
 
-static int __devexit su_remove(struct platform_device *op)
+static int su_remove(struct platform_device *op)
 {
 	struct uart_sunsu_port *up = dev_get_drvdata(&op->dev);
 	bool kbdms = false;

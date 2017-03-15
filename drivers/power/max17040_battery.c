@@ -824,7 +824,7 @@ static int max17040_set_property(struct power_supply *psy,
 	return 0;
 }
 
-static int __devinit max17040_probe(struct i2c_client *client,
+static int max17040_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -944,7 +944,7 @@ err_kfree:
 	return ret;
 }
 
-static int __devexit max17040_remove(struct i2c_client *client)
+static int max17040_remove(struct i2c_client *client)
 {
 	struct max17040_chip *chip = i2c_get_clientdata(client);
 

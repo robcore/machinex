@@ -1787,7 +1787,7 @@ static inline struct omap_mmc_platform_data
 }
 #endif
 
-static int __devinit omap_hsmmc_probe(struct platform_device *pdev)
+static int omap_hsmmc_probe(struct platform_device *pdev)
 {
 	struct omap_mmc_platform_data *pdata = pdev->dev.platform_data;
 	struct mmc_host *mmc;
@@ -2036,7 +2036,7 @@ err:
 	return ret;
 }
 
-static int __devexit omap_hsmmc_remove(struct platform_device *pdev)
+static int omap_hsmmc_remove(struct platform_device *pdev)
 {
 	struct omap_hsmmc_host *host = platform_get_drvdata(pdev);
 	struct resource *res;

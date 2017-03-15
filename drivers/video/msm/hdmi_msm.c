@@ -4677,7 +4677,7 @@ static bool hdmi_msm_cable_connected(void)
 			external_common_state->hpd_state;
 }
 
-static int __devinit hdmi_msm_probe(struct platform_device *pdev)
+static int hdmi_msm_probe(struct platform_device *pdev)
 {
 	int rc;
 	struct platform_device *fb_dev;
@@ -4870,7 +4870,7 @@ error:
 	return rc;
 }
 
-static int __devexit hdmi_msm_remove(struct platform_device *pdev)
+static int hdmi_msm_remove(struct platform_device *pdev)
 {
 	DEV_INFO("HDMI device: remove\n");
 

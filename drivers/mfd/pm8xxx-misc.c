@@ -1236,7 +1236,7 @@ int pm8xxx_hsed_bias_control(enum pm8xxx_hsed_bias bias, bool enable)
 }
 EXPORT_SYMBOL(pm8xxx_hsed_bias_control);
 
-static int __devinit pm8xxx_misc_probe(struct platform_device *pdev)
+static int pm8xxx_misc_probe(struct platform_device *pdev)
 {
 	const struct pm8xxx_misc_platform_data *pdata = pdev->dev.platform_data;
 	struct pm8xxx_misc_chip *chip;
@@ -1318,7 +1318,7 @@ fail_irq:
 	return rc;
 }
 
-static int __devexit pm8xxx_misc_remove(struct platform_device *pdev)
+static int pm8xxx_misc_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_misc_chip *chip = platform_get_drvdata(pdev);
 	unsigned long flags;

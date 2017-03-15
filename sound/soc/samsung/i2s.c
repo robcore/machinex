@@ -950,7 +950,7 @@ static const struct snd_soc_dai_ops samsung_i2s_dai_ops = {
 					SNDRV_PCM_FMTBIT_S16_LE | \
 					SNDRV_PCM_FMTBIT_S24_LE)
 
-static __devinit
+static
 struct i2s_dai *i2s_alloc_dai(struct platform_device *pdev, bool sec)
 {
 	struct i2s_dai *i2s;
@@ -992,7 +992,7 @@ struct i2s_dai *i2s_alloc_dai(struct platform_device *pdev, bool sec)
 	return i2s;
 }
 
-static __devinit int samsung_i2s_probe(struct platform_device *pdev)
+static int samsung_i2s_probe(struct platform_device *pdev)
 {
 	u32 dma_pl_chan, dma_cp_chan, dma_pl_sec_chan;
 	struct i2s_dai *pri_dai, *sec_dai = NULL;
@@ -1114,7 +1114,7 @@ err:
 	return ret;
 }
 
-static __devexit int samsung_i2s_remove(struct platform_device *pdev)
+static int samsung_i2s_remove(struct platform_device *pdev)
 {
 	struct i2s_dai *i2s, *other;
 	struct resource *res;

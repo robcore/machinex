@@ -638,12 +638,12 @@ static void lance_set_multicast(struct net_device *dev)
 	netif_wake_queue(dev);
 }
 
-static int __devinit a2065_init_one(struct zorro_dev *z,
+static int a2065_init_one(struct zorro_dev *z,
 				    const struct zorro_device_id *ent);
-static void __devexit a2065_remove_one(struct zorro_dev *z);
+static void a2065_remove_one(struct zorro_dev *z);
 
 
-static struct zorro_device_id a2065_zorro_tbl[] __devinitdata = {
+static struct zorro_device_id a2065_zorro_tbl[] = {
 	{ ZORRO_PROD_CBM_A2065_1 },
 	{ ZORRO_PROD_CBM_A2065_2 },
 	{ ZORRO_PROD_AMERISTAR_A2065 },
@@ -669,7 +669,7 @@ static const struct net_device_ops lance_netdev_ops = {
 	.ndo_set_mac_address	= eth_mac_addr,
 };
 
-static int __devinit a2065_init_one(struct zorro_dev *z,
+static int a2065_init_one(struct zorro_dev *z,
 				    const struct zorro_device_id *ent)
 {
 	struct net_device *dev;
@@ -753,7 +753,7 @@ static int __devinit a2065_init_one(struct zorro_dev *z,
 }
 
 
-static void __devexit a2065_remove_one(struct zorro_dev *z)
+static void a2065_remove_one(struct zorro_dev *z)
 {
 	struct net_device *dev = zorro_get_drvdata(z);
 

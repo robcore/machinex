@@ -343,7 +343,7 @@ static ssize_t check_ir_show(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR(check_ir, 0664, check_ir_show, NULL);
 
 
-static int __devinit ir_remocon_probe(struct i2c_client *client,
+static int ir_remocon_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -447,7 +447,7 @@ static const struct dev_pm_ops ir_remocon_pm_ops = {
 };
 #endif
 
-static int __devexit ir_remocon_remove(struct i2c_client *client)
+static int ir_remocon_remove(struct i2c_client *client)
 {
 	struct ir_remocon_data *data = i2c_get_clientdata(client);
 

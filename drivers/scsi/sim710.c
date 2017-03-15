@@ -94,7 +94,7 @@ static struct scsi_host_template sim710_driver_template = {
 	.module			= THIS_MODULE,
 };
 
-static __devinit int
+static int
 sim710_probe_common(struct device *dev, unsigned long base_addr,
 		    int irq, int clock, int differential, int scsi_id)
 {
@@ -153,7 +153,7 @@ sim710_probe_common(struct device *dev, unsigned long base_addr,
 	return -ENODEV;
 }
 
-static __devexit int
+static int
 sim710_device_remove(struct device *dev)
 {
 	struct Scsi_Host *host = dev_get_drvdata(dev);

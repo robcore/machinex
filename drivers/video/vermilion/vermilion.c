@@ -393,7 +393,7 @@ static void vmlfb_release_devices(struct vml_par *par)
  * Free up allocated resources for a device.
  */
 
-static void __devexit vml_pci_remove(struct pci_dev *dev)
+static void vml_pci_remove(struct pci_dev *dev)
 {
 	struct fb_info *info;
 	struct vml_info *vinfo;
@@ -452,7 +452,7 @@ static void vmlfb_set_pref_pixel_format(struct fb_var_screeninfo *var)
  * struct per pipe. Currently we have only one pipe.
  */
 
-static int __devinit vml_pci_probe(struct pci_dev *dev,
+static int vml_pci_probe(struct pci_dev *dev,
 				   const struct pci_device_id *id)
 {
 	struct vml_info *vinfo;

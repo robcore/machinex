@@ -313,7 +313,7 @@ static struct ata_port_operations pata_at91_port_ops = {
 	.cable_detect	= ata_cable_40wire,
 };
 
-static int __devinit pata_at91_probe(struct platform_device *pdev)
+static int pata_at91_probe(struct platform_device *pdev)
 {
 	struct at91_cf_data *board = pdev->dev.platform_data;
 	struct device *dev = &pdev->dev;

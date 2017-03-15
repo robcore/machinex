@@ -1424,7 +1424,7 @@ static int ks8851_resume(struct spi_device *spi)
 #define ks8851_resume NULL
 #endif
 
-static int __devinit ks8851_init_hw(struct spi_device *spi,
+static int ks8851_init_hw(struct spi_device *spi,
 				    struct ks8851_net *ks)
 {
 	struct ks8851_pdata *pdata = spi->dev.platform_data;
@@ -1489,7 +1489,7 @@ fail_gpio:
 	return ret;
 }
 
-static int __devinit ks8851_probe(struct spi_device *spi)
+static int ks8851_probe(struct spi_device *spi)
 {
 	struct net_device *ndev;
 	struct ks8851_net *ks;
@@ -1626,7 +1626,7 @@ err_init:
 	return ret;
 }
 
-static int __devexit ks8851_remove(struct spi_device *spi)
+static int ks8851_remove(struct spi_device *spi)
 {
 	struct ks8851_net *priv = dev_get_drvdata(&spi->dev);
 

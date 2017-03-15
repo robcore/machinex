@@ -1286,7 +1286,7 @@ static struct device_attribute *ad7146_attrs[] = {
 
   @return 0 on success,and On failure -ENOMEM, -EINVAL ,etc., will be returned
  */
-static int __devinit ad7146_probe(struct i2c_client *client,
+static int ad7146_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	int ret = -EINVAL;
@@ -1445,7 +1445,7 @@ err_kzalloc_mem:
   @param client The Client Id to be removed
   @return 0 on success
  */
-static int __devexit ad7146_i2c_remove(struct i2c_client *client)
+static int ad7146_i2c_remove(struct i2c_client *client)
 {
 	struct ad7146_chip *ad7146 = i2c_get_clientdata(client);
 

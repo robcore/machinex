@@ -345,7 +345,7 @@ static const struct attribute_group exynos4_tmu_attr_group = {
 	.attrs = exynos4_tmu_attributes,
 };
 
-static int __devinit exynos4_tmu_probe(struct platform_device *pdev)
+static int exynos4_tmu_probe(struct platform_device *pdev)
 {
 	struct exynos4_tmu_data *data;
 	struct exynos4_tmu_platform_data *pdata = pdev->dev.platform_data;
@@ -452,7 +452,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit exynos4_tmu_remove(struct platform_device *pdev)
+static int exynos4_tmu_remove(struct platform_device *pdev)
 {
 	struct exynos4_tmu_data *data = platform_get_drvdata(pdev);
 

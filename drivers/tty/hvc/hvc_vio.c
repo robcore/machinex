@@ -53,7 +53,7 @@
 
 static const char hvc_driver_name[] = "hvc_console";
 
-static struct vio_device_id hvc_driver_table[] __devinitdata = {
+static struct vio_device_id hvc_driver_table[] = {
 	{"serial", "hvterm1"},
 #ifndef HVC_OLD_HVSI
 	{"serial", "hvterm-protocol"},
@@ -230,7 +230,7 @@ static const struct hv_ops hvterm_hvsi_ops = {
 	.tiocmset = hvterm_hvsi_tiocmset,
 };
 
-static int __devinit hvc_vio_probe(struct vio_dev *vdev,
+static int hvc_vio_probe(struct vio_dev *vdev,
 				   const struct vio_device_id *id)
 {
 	const struct hv_ops *ops;
@@ -292,7 +292,7 @@ static int __devinit hvc_vio_probe(struct vio_dev *vdev,
 	return 0;
 }
 
-static int __devexit hvc_vio_remove(struct vio_dev *vdev)
+static int hvc_vio_remove(struct vio_dev *vdev)
 {
 	struct hvc_struct *hp = dev_get_drvdata(&vdev->dev);
 	int rc, termno;

@@ -11,7 +11,7 @@
 #include <mach/cns3xxx.h>
 #include <mach/pm.h>
 
-static int __devinit
+static int
 cns3xxx_ohci_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);

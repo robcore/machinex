@@ -288,7 +288,7 @@ err:
 	return ret;
 }
 
-static int __devinit jz_nand_probe(struct platform_device *pdev)
+static int jz_nand_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct jz_nand *nand;
@@ -399,7 +399,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit jz_nand_remove(struct platform_device *pdev)
+static int jz_nand_remove(struct platform_device *pdev)
 {
 	struct jz_nand *nand = platform_get_drvdata(pdev);
 

@@ -1663,7 +1663,7 @@ static void mpu6050_work_func_gyro(struct work_struct *work)
 }
 #endif
 
-static int __devinit mpu6050_input_probe(struct i2c_client *client,
+static int mpu6050_input_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 

@@ -140,7 +140,7 @@ static irqreturn_t rotary_encoder_half_period_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit rotary_encoder_probe(struct platform_device *pdev)
+static int rotary_encoder_probe(struct platform_device *pdev)
 {
 	struct rotary_encoder_platform_data *pdata = pdev->dev.platform_data;
 	struct rotary_encoder *encoder;
@@ -260,7 +260,7 @@ exit_free_mem:
 	return err;
 }
 
-static int __devexit rotary_encoder_remove(struct platform_device *pdev)
+static int rotary_encoder_remove(struct platform_device *pdev)
 {
 	struct rotary_encoder *encoder = platform_get_drvdata(pdev);
 	struct rotary_encoder_platform_data *pdata = pdev->dev.platform_data;

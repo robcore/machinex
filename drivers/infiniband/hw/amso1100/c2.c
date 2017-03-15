@@ -920,7 +920,7 @@ static struct net_device *c2_devinit(struct c2_dev *c2dev,
 	return netdev;
 }
 
-static int __devinit c2_probe(struct pci_dev *pcidev,
+static int c2_probe(struct pci_dev *pcidev,
 			      const struct pci_device_id *ent)
 {
 	int ret = 0, i;
@@ -1191,7 +1191,7 @@ static int __devinit c2_probe(struct pci_dev *pcidev,
 	return ret;
 }
 
-static void __devexit c2_remove(struct pci_dev *pcidev)
+static void c2_remove(struct pci_dev *pcidev)
 {
 	struct c2_dev *c2dev = pci_get_drvdata(pcidev);
 	struct net_device *netdev = c2dev->netdev;

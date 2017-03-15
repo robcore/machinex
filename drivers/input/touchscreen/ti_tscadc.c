@@ -303,7 +303,7 @@ static irqreturn_t tscadc_irq(int irq, void *dev)
  * The functions for inserting/removing driver as a module.
  */
 
-static int __devinit tscadc_probe(struct platform_device *pdev)
+static int tscadc_probe(struct platform_device *pdev)
 {
 	const struct tsc_data *pdata = pdev->dev.platform_data;
 	struct resource *res;
@@ -449,7 +449,7 @@ err_free_mem:
 	return err;
 }
 
-static int __devexit tscadc_remove(struct platform_device *pdev)
+static int tscadc_remove(struct platform_device *pdev)
 {
 	struct tscadc *ts_dev = platform_get_drvdata(pdev);
 	struct resource *res;

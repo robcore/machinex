@@ -927,7 +927,7 @@ static int wcd9xxx_i2c_get_client_index(struct i2c_client *client,
 	return ret;
 }
 
-static int __devinit wcd9xxx_i2c_probe(struct i2c_client *client,
+static int wcd9xxx_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct wcd9xxx *wcd9xxx = NULL;
@@ -1060,7 +1060,7 @@ fail:
 	return ret;
 }
 
-static int __devexit wcd9xxx_i2c_remove(struct i2c_client *client)
+static int wcd9xxx_i2c_remove(struct i2c_client *client)
 {
 	struct wcd9xxx *wcd9xxx;
 	struct wcd9xxx_pdata *pdata = client->dev.platform_data;

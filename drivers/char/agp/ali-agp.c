@@ -299,7 +299,7 @@ static struct agp_device_ids ali_agp_device_ids[] =
 	{ }, /* dummy final entry, always present */
 };
 
-static int __devinit agp_ali_probe(struct pci_dev *pdev,
+static int agp_ali_probe(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	struct agp_device_ids *devs = ali_agp_device_ids;

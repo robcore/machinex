@@ -89,12 +89,12 @@ MODULE_PARM_DESC(channels, "GF1 channels for " CRD_NAME " driver.");
 module_param_array(pcm_channels, int, NULL, 0444);
 MODULE_PARM_DESC(pcm_channels, "Reserved PCM channels for " CRD_NAME " driver.");
 
-static int __devinit snd_gusextreme_match(struct device *dev, unsigned int n)
+static int snd_gusextreme_match(struct device *dev, unsigned int n)
 {
 	return enable[n];
 }
 
-static int __devinit snd_gusextreme_es1688_create(struct snd_card *card,
+static int snd_gusextreme_es1688_create(struct snd_card *card,
 		struct snd_es1688 *chip, struct device *dev, unsigned int n)
 {
 	static long possible_ports[] = {0x220, 0x240, 0x260};
@@ -132,7 +132,7 @@ static int __devinit snd_gusextreme_es1688_create(struct snd_card *card,
 	return error;
 }
 
-static int __devinit snd_gusextreme_gus_card_create(struct snd_card *card,
+static int snd_gusextreme_gus_card_create(struct snd_card *card,
 		struct device *dev, unsigned int n, struct snd_gus_card **rgus)
 {
 	static int possible_irqs[] = {11, 12, 15, 9, 5, 7, 3, -1};
@@ -156,7 +156,7 @@ static int __devinit snd_gusextreme_gus_card_create(struct snd_card *card,
 			0, channels[n], pcm_channels[n], 0, rgus);
 }
 
-static int __devinit snd_gusextreme_detect(struct snd_gus_card *gus,
+static int snd_gusextreme_detect(struct snd_gus_card *gus,
 	struct snd_es1688 *es1688)
 {
 	unsigned long flags;
@@ -206,7 +206,7 @@ static int __devinit snd_gusextreme_detect(struct snd_gus_card *gus,
 	return 0;
 }
 
-static int __devinit snd_gusextreme_mixer(struct snd_card *card)
+static int snd_gusextreme_mixer(struct snd_card *card)
 {
 	struct snd_ctl_elem_id id1, id2;
 	int error;
@@ -232,7 +232,7 @@ static int __devinit snd_gusextreme_mixer(struct snd_card *card)
 	return 0;
 }
 
-static int __devinit snd_gusextreme_probe(struct device *dev, unsigned int n)
+static int snd_gusextreme_probe(struct device *dev, unsigned int n)
 {
 	struct snd_card *card;
 	struct snd_gus_card *gus;
@@ -339,7 +339,7 @@ out:	snd_card_free(card);
 	return error;
 }
 
-static int __devexit snd_gusextreme_remove(struct device *dev, unsigned int n)
+static int snd_gusextreme_remove(struct device *dev, unsigned int n)
 {
 	snd_card_free(dev_get_drvdata(dev));
 	dev_set_drvdata(dev, NULL);

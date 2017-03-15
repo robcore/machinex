@@ -195,7 +195,7 @@ static const struct net_device_ops mace_netdev_ops = {
  * model of Macintrash has a MACE (AV macintoshes)
  */
 
-static int __devinit mace_probe(struct platform_device *pdev)
+static int mace_probe(struct platform_device *pdev)
 {
 	int j;
 	struct mace_data *mp;
@@ -742,7 +742,7 @@ MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Macintosh MACE ethernet driver");
 MODULE_ALIAS("platform:macmace");
 
-static int __devexit mac_mace_device_remove (struct platform_device *pdev)
+static int mac_mace_device_remove (struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct mace_data *mp = netdev_priv(dev);

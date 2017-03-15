@@ -3304,7 +3304,7 @@ static struct snd_soc_platform_driver msm_soc_routing_platform = {
 	.write		= msm_routing_write,
 };
 
-static __devinit int msm_routing_pcm_probe(struct platform_device *pdev)
+static int msm_routing_pcm_probe(struct platform_device *pdev)
 {
 	dev_dbg(&pdev->dev, "dev name %s\n", dev_name(&pdev->dev));
 	return snd_soc_register_platform(&pdev->dev,

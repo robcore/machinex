@@ -383,9 +383,9 @@ static int qcikbd_resume(struct device *dev)
 	return 0;
 }
 #endif
-static int __devinit qcikbd_probe(struct i2c_client *client,
+static int qcikbd_probe(struct i2c_client *client,
 	const struct i2c_device_id *id);
-static int __devexit qcikbd_remove(struct i2c_client *kbd);
+static int qcikbd_remove(struct i2c_client *kbd);
 
 static const struct i2c_device_id qcikbd_idtable[] = {
 	{ KEYBOARD_ID_NAME, 0 },
@@ -574,7 +574,7 @@ static int qcikbd_open(struct input_dev *dev)
 	return 0;
 }
 
-static int __devinit qcikbd_probe(struct i2c_client *client,
+static int qcikbd_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
 {
 	int err;
@@ -684,7 +684,7 @@ gpio_request_fail:
 	return err;
 }
 
-static int __devexit qcikbd_remove(struct i2c_client *dev)
+static int qcikbd_remove(struct i2c_client *dev)
 {
 	struct i2ckbd_drv_data *context = i2c_get_clientdata(dev);
 

@@ -45,7 +45,7 @@ static const struct bmp18x_bus_ops bmp18x_i2c_bus_ops = {
 	.write_byte	= bmp18x_i2c_write_byte
 };
 
-static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
+static int bmp18x_i2c_probe(struct i2c_client *client,
 				      const struct i2c_device_id *id)
 {
 	struct bmp18x_data_bus data_bus = {

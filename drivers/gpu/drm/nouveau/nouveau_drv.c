@@ -154,7 +154,7 @@ MODULE_DEVICE_TABLE(pci, pciidlist);
 
 static struct drm_driver driver;
 
-static int __devinit
+static int
 nouveau_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	return drm_get_pci_dev(pdev, ent, &driver);

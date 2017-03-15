@@ -786,7 +786,7 @@ void Amd7930_init(struct IsdnCardState *cs)
 	}
 }
 
-void __devinit
+void
 setup_Amd7930(struct IsdnCardState *cs)
 {
 	INIT_WORK(&cs->tqueue, Amd7930_bh);

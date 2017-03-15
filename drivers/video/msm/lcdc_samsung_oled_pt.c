@@ -468,7 +468,7 @@ static struct msm_fb_panel_data samsung_panel_data = {
 	.off = lcdc_samsung_panel_off,
 };
 
-static int __devinit samsung_probe(struct platform_device *pdev)
+static int samsung_probe(struct platform_device *pdev)
 {
 	struct msm_panel_info *pinfo;
 #ifdef SYSFS_DEBUG_CMD
@@ -522,14 +522,14 @@ static int __devinit samsung_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_SPI_QUP
-static int __devinit lcdc_samsung_spi_probe(struct spi_device *spi)
+static int lcdc_samsung_spi_probe(struct spi_device *spi)
 {
 	pr_info("%s\n", __func__);
 	lcdc_spi_client = spi;
 	lcdc_spi_client->bits_per_word = 32;
 	return 0;
 }
-static int __devexit lcdc_samsung_spi_remove(struct spi_device *spi)
+static int lcdc_samsung_spi_remove(struct spi_device *spi)
 {
 	lcdc_spi_client = NULL;
 	return 0;

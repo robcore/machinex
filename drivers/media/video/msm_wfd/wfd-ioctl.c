@@ -1565,7 +1565,7 @@ err_video_device_alloc:
 err_v4l2_registration:
 	return rc;
 }
-static int __devinit __wfd_probe(struct platform_device *pdev)
+static int __wfd_probe(struct platform_device *pdev)
 {
 	int rc = 0, c = 0;
 	struct wfd_device *wfd_dev; /* Should be taken as an array*/
@@ -1646,7 +1646,7 @@ err_v4l2_probe:
 	return rc;
 }
 
-static int __devexit __wfd_remove(struct platform_device *pdev)
+static int __wfd_remove(struct platform_device *pdev)
 {
 	struct wfd_device *wfd_dev;
 	int c = 0;

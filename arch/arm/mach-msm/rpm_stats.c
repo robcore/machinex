@@ -194,7 +194,7 @@ static const struct file_operations msm_rpmstats_fops = {
 	.llseek   = no_llseek,
 };
 
-static  int __devinit msm_rpmstats_probe(struct platform_device *pdev)
+static  int msm_rpmstats_probe(struct platform_device *pdev)
 {
 	struct dentry *dent;
 	struct msm_rpmstats_platform_data *pdata;

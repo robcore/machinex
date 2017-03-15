@@ -2433,7 +2433,7 @@ static const unsigned int wm5100_mic_ctrl_reg[] = {
 	WM5100_IN4L_CONTROL,
 };
 
-static __devinit int wm5100_i2c_probe(struct i2c_client *i2c,
+static int wm5100_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm5100_pdata *pdata = dev_get_platdata(&i2c->dev);
@@ -2660,7 +2660,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm5100_i2c_remove(struct i2c_client *i2c)
+static int wm5100_i2c_remove(struct i2c_client *i2c)
 {
 	struct wm5100_priv *wm5100 = i2c_get_clientdata(i2c);
 

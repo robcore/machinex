@@ -276,9 +276,9 @@ struct ab8500_platform_data {
 	struct ab8500_gpio_platform_data *gpio;
 };
 
-extern int __devinit ab8500_init(struct ab8500 *ab8500,
+extern int ab8500_init(struct ab8500 *ab8500,
 				 enum ab8500_version version);
-extern int __devexit ab8500_exit(struct ab8500 *ab8500);
+extern int ab8500_exit(struct ab8500 *ab8500);
 
 static inline int is_ab8500(struct ab8500 *ab)
 {

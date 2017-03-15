@@ -389,7 +389,7 @@ static ssize_t mipi_hx8389b_lcdtype_show(struct device *dev,
 static DEVICE_ATTR(lcd_type, S_IRUGO, mipi_hx8389b_lcdtype_show, NULL);
 #endif
 
-static int __devinit mipi_hx8389b_lcd_probe(struct platform_device *pdev)
+static int mipi_hx8389b_lcd_probe(struct platform_device *pdev)
 {
 	struct platform_device *pthisdev = NULL;
 #if defined(CONFIG_LCD_CLASS_DEVICE)

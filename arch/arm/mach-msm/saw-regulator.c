@@ -192,7 +192,7 @@ static struct regulator_ops saw_ops = {
 	.is_enabled  = saw_is_enabled,
 };
 
-static int __devinit saw_probe(struct platform_device *pdev)
+static int saw_probe(struct platform_device *pdev)
 {
 	struct regulator_init_data *init_data;
 	struct saw_vreg *vreg;

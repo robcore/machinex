@@ -745,7 +745,7 @@ static const struct iio_info adt7310_info = {
  * device probe and remove
  */
 
-static int __devinit adt7310_probe(struct spi_device *spi_dev)
+static int adt7310_probe(struct spi_device *spi_dev)
 {
 	struct adt7310_chip_info *chip;
 	struct iio_dev *indio_dev;
@@ -839,7 +839,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit adt7310_remove(struct spi_device *spi_dev)
+static int adt7310_remove(struct spi_device *spi_dev)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(&spi_dev->dev);
 	unsigned long *adt7310_platform_data = spi_dev->dev.platform_data;

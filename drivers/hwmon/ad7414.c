@@ -232,7 +232,7 @@ exit:
 	return err;
 }
 
-static int __devexit ad7414_remove(struct i2c_client *client)
+static int ad7414_remove(struct i2c_client *client)
 {
 	struct ad7414_data *data = i2c_get_clientdata(client);
 

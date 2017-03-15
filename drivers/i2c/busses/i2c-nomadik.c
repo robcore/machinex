@@ -899,7 +899,7 @@ static const struct i2c_algorithm nmk_i2c_algo = {
 	.functionality	= nmk_i2c_functionality
 };
 
-static int __devinit nmk_i2c_probe(struct platform_device *pdev)
+static int nmk_i2c_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct resource *res;
@@ -1014,7 +1014,7 @@ static int __devinit nmk_i2c_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit nmk_i2c_remove(struct platform_device *pdev)
+static int nmk_i2c_remove(struct platform_device *pdev)
 {
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct nmk_i2c_dev *dev = platform_get_drvdata(pdev);

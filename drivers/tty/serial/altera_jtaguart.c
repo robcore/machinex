@@ -406,7 +406,7 @@ static struct uart_driver altera_jtaguart_driver = {
 	.cons		= ALTERA_JTAGUART_CONSOLE,
 };
 
-static int __devinit altera_jtaguart_probe(struct platform_device *pdev)
+static int altera_jtaguart_probe(struct platform_device *pdev)
 {
 	struct altera_jtaguart_platform_uart *platp = pdev->dev.platform_data;
 	struct uart_port *port;
@@ -453,7 +453,7 @@ static int __devinit altera_jtaguart_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit altera_jtaguart_remove(struct platform_device *pdev)
+static int altera_jtaguart_remove(struct platform_device *pdev)
 {
 	struct uart_port *port;
 	int i = pdev->id;

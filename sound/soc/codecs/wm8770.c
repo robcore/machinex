@@ -689,7 +689,7 @@ static const struct of_device_id wm8770_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, wm8770_of_match);
 
-static int __devinit wm8770_spi_probe(struct spi_device *spi)
+static int wm8770_spi_probe(struct spi_device *spi)
 {
 	struct wm8770_priv *wm8770;
 	int ret;
@@ -708,7 +708,7 @@ static int __devinit wm8770_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit wm8770_spi_remove(struct spi_device *spi)
+static int wm8770_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 	return 0;

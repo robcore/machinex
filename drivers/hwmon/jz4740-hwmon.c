@@ -101,7 +101,7 @@ static const struct attribute_group jz4740_hwmon_attr_group = {
 	.attrs = jz4740_hwmon_attributes,
 };
 
-static int __devinit jz4740_hwmon_probe(struct platform_device *pdev)
+static int jz4740_hwmon_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct jz4740_hwmon *hwmon;
@@ -185,7 +185,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit jz4740_hwmon_remove(struct platform_device *pdev)
+static int jz4740_hwmon_remove(struct platform_device *pdev)
 {
 	struct jz4740_hwmon *hwmon = platform_get_drvdata(pdev);
 

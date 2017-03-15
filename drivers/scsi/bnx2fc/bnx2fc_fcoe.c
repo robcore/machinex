@@ -25,7 +25,7 @@ DEFINE_PER_CPU(struct bnx2fc_percpu_s, bnx2fc_percpu);
 #define DRV_MODULE_RELDATE	"Jan 22, 2011"
 
 
-static char version[] __devinitdata =
+static char version[] =
 		"Broadcom NetXtreme II FCoE Driver " DRV_MODULE_NAME \
 		" v" DRV_MODULE_VERSION " (" DRV_MODULE_RELDATE ")\n";
 

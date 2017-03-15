@@ -668,7 +668,7 @@ err:
 	return ret;
 }
 
-static int __devexit wm9090_i2c_remove(struct i2c_client *i2c)
+static int wm9090_i2c_remove(struct i2c_client *i2c)
 {
 	struct wm9090_priv *wm9090 = i2c_get_clientdata(i2c);
 

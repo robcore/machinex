@@ -160,7 +160,7 @@ static struct snd_soc_card snd_soc_tegra_alc5632 = {
 	.fully_routed = true,
 };
 
-static __devinit int tegra_alc5632_probe(struct platform_device *pdev)
+static int tegra_alc5632_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_tegra_alc5632;
 	struct tegra_alc5632 *alc5632;
@@ -244,7 +244,7 @@ err:
 	return ret;
 }
 
-static int __devexit tegra_alc5632_remove(struct platform_device *pdev)
+static int tegra_alc5632_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_alc5632 *machine = snd_soc_card_get_drvdata(card);

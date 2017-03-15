@@ -275,7 +275,7 @@ static int led_cb_func(struct msm_rpc_client *client, void *buffer, int in_size)
 	return rc;
 }
 
-static int __devinit tricolor_led_probe(struct platform_device *pdev)
+static int tricolor_led_probe(struct platform_device *pdev)
 {
 	const struct led_platform_data *pdata = pdev->dev.platform_data;
 	struct msm_rpc_client *rpc_client;
@@ -366,7 +366,7 @@ fail_mem_alloc:
 	return rc;
 }
 
-static int __devexit tricolor_led_remove(struct platform_device *pdev)
+static int tricolor_led_remove(struct platform_device *pdev)
 {
 	const struct led_platform_data *pdata = pdev->dev.platform_data;
 	struct tricolor_led_data *led = platform_get_drvdata(pdev);

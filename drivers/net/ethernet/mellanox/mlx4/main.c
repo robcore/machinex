@@ -95,7 +95,7 @@ MODULE_PARM_DESC(log_num_mgm_entry_size, "log mgm size, that defines the num"
 #define HCA_GLOBAL_CAP_MASK            0
 #define PF_CONTEXT_BEHAVIOUR_MASK      0
 
-static char mlx4_version[] __devinitdata =
+static char mlx4_version[] =
 	DRV_NAME ": Mellanox ConnectX core driver v"
 	DRV_VERSION " (" DRV_RELDATE ")\n";
 
@@ -2024,7 +2024,7 @@ err_disable_pdev:
 	return err;
 }
 
-static int __devinit mlx4_init_one(struct pci_dev *pdev,
+static int mlx4_init_one(struct pci_dev *pdev,
 				   const struct pci_device_id *id)
 {
 	struct mlx4_priv *priv;

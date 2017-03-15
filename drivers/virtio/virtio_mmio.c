@@ -431,7 +431,7 @@ static struct virtio_config_ops virtio_mmio_config_ops = {
 
 /* Platform device */
 
-static int __devinit virtio_mmio_probe(struct platform_device *pdev)
+static int virtio_mmio_probe(struct platform_device *pdev)
 {
 	struct virtio_mmio_device *vm_dev;
 	struct resource *mem;
@@ -484,7 +484,7 @@ static int __devinit virtio_mmio_probe(struct platform_device *pdev)
 	return register_virtio_device(&vm_dev->vdev);
 }
 
-static int __devexit virtio_mmio_remove(struct platform_device *pdev)
+static int virtio_mmio_remove(struct platform_device *pdev)
 {
 	struct virtio_mmio_device *vm_dev = platform_get_drvdata(pdev);
 

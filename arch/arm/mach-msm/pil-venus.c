@@ -381,7 +381,7 @@ static struct pil_reset_ops pil_venus_ops_trusted = {
 	.proxy_unvote = pil_venus_remove_proxy_vote,
 };
 
-static int __devinit pil_venus_probe(struct platform_device *pdev)
+static int pil_venus_probe(struct platform_device *pdev)
 {
 	struct venus_data *drv;
 	struct resource *res;

@@ -276,7 +276,7 @@ static const struct v4l2_ioctl_ops fmi_ioctl_ops = {
 };
 
 /* ladis: this is my card. does any other types exist? */
-static struct isapnp_device_id id_table[] __devinitdata = {
+static struct isapnp_device_id id_table[] = {
 	{	ISAPNP_ANY_ID, ISAPNP_ANY_ID,
 		ISAPNP_VENDOR('M','F','R'), ISAPNP_FUNCTION(0xad10), 0},
 	{	ISAPNP_CARD_END, },

@@ -188,7 +188,7 @@ static struct snd_soc_card mx27vis_aic32x4 = {
 	.num_dapm_routes = ARRAY_SIZE(aic32x4_dapm_routes),
 };
 
-static int __devinit mx27vis_aic32x4_probe(struct platform_device *pdev)
+static int mx27vis_aic32x4_probe(struct platform_device *pdev)
 {
 	int ret;
 
@@ -221,7 +221,7 @@ static int __devinit mx27vis_aic32x4_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit mx27vis_aic32x4_remove(struct platform_device *pdev)
+static int mx27vis_aic32x4_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_card(&mx27vis_aic32x4);
 

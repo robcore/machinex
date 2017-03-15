@@ -270,7 +270,7 @@ static void pxa_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 				(value ? GPSR_OFFSET : GPCR_OFFSET));
 }
 
-static int __devinit pxa_init_gpio_chip(int gpio_end,
+static int pxa_init_gpio_chip(int gpio_end,
 					int (*set_wake)(unsigned int, unsigned int))
 {
 	int i, gpio, nbanks = gpio_to_bank(gpio_end) + 1;
@@ -481,7 +481,7 @@ static int pxa_gpio_nums(void)
 	return count;
 }
 
-static int __devinit pxa_gpio_probe(struct platform_device *pdev)
+static int pxa_gpio_probe(struct platform_device *pdev)
 {
 	struct pxa_gpio_chip *c;
 	struct resource *res;

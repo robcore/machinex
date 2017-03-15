@@ -1757,7 +1757,7 @@ snd_rme9652_proc_read(struct snd_info_entry *entry, struct snd_info_buffer *buff
 	snd_iprintf(buffer, "\n");
 }
 
-static void __devinit snd_rme9652_proc_init(struct snd_rme9652 *rme9652)
+static void snd_rme9652_proc_init(struct snd_rme9652 *rme9652)
 {
 	struct snd_info_entry *entry;
 
@@ -1788,7 +1788,7 @@ static int snd_rme9652_free(struct snd_rme9652 *rme9652)
 	return 0;
 }
 
-static int __devinit snd_rme9652_initialize_memory(struct snd_rme9652 *rme9652)
+static int snd_rme9652_initialize_memory(struct snd_rme9652 *rme9652)
 {
 	unsigned long pb_bus, cb_bus;
 
@@ -2414,7 +2414,7 @@ static struct snd_pcm_ops snd_rme9652_capture_ops = {
 	.copy =		snd_rme9652_capture_copy,
 };
 
-static int __devinit snd_rme9652_create_pcm(struct snd_card *card,
+static int snd_rme9652_create_pcm(struct snd_card *card,
 					 struct snd_rme9652 *rme9652)
 {
 	struct snd_pcm *pcm;
@@ -2438,7 +2438,7 @@ static int __devinit snd_rme9652_create_pcm(struct snd_card *card,
 	return 0;
 }
 
-static int __devinit snd_rme9652_create(struct snd_card *card,
+static int snd_rme9652_create(struct snd_card *card,
 				     struct snd_rme9652 *rme9652,
 				     int precise_ptr)
 {
@@ -2578,7 +2578,7 @@ static void snd_rme9652_card_free(struct snd_card *card)
 		snd_rme9652_free(rme9652);
 }
 
-static int __devinit snd_rme9652_probe(struct pci_dev *pci,
+static int snd_rme9652_probe(struct pci_dev *pci,
 				       const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -2625,7 +2625,7 @@ static int __devinit snd_rme9652_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit snd_rme9652_remove(struct pci_dev *pci)
+static void snd_rme9652_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

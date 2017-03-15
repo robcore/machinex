@@ -248,7 +248,7 @@ static const struct net_device_ops mipsnet_netdev_ops = {
 	.ndo_set_mac_address	= eth_mac_addr,
 };
 
-static int __devinit mipsnet_probe(struct platform_device *dev)
+static int mipsnet_probe(struct platform_device *dev)
 {
 	struct net_device *netdev;
 	int err;
@@ -301,7 +301,7 @@ out:
 	return err;
 }
 
-static int __devexit mipsnet_device_remove(struct platform_device *device)
+static int mipsnet_device_remove(struct platform_device *device)
 {
 	struct net_device *dev = platform_get_drvdata(device);
 

@@ -925,7 +925,7 @@ static int omap_dev_ready(struct mtd_info *mtd)
 	return 1;
 }
 
-static int __devinit omap_nand_probe(struct platform_device *pdev)
+static int omap_nand_probe(struct platform_device *pdev)
 {
 	struct omap_nand_info		*info;
 	struct omap_nand_platform_data	*pdata;

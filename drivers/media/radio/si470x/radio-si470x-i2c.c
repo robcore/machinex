@@ -357,7 +357,7 @@ end:
 /*
  * si470x_i2c_probe - probe for the device
  */
-static int __devinit si470x_i2c_probe(struct i2c_client *client,
+static int si470x_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct si470x_device *radio;
@@ -472,7 +472,7 @@ err_initial:
 /*
  * si470x_i2c_remove - remove the device
  */
-static __devexit int si470x_i2c_remove(struct i2c_client *client)
+static int si470x_i2c_remove(struct i2c_client *client)
 {
 	struct si470x_device *radio = i2c_get_clientdata(client);
 

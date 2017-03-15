@@ -473,7 +473,7 @@ stop_charging:
 #define DEFAULT_MAX_VOLTAGE_REG_VALUE	0x1070
 #define DEFAULT_MIN_VOLTAGE_REG_VALUE	0x0D00
 
-static int __devinit isl9519q_init_adapter(struct isl9519q_struct *isl_chg)
+static int isl9519q_init_adapter(struct isl9519q_struct *isl_chg)
 {
 	int ret;
 	struct i2c_client *client = isl_chg->client;
@@ -541,7 +541,7 @@ out:
 
 }
 
-static int __devinit isl9519q_init_ext_chg(struct isl9519q_struct *isl_chg)
+static int isl9519q_init_ext_chg(struct isl9519q_struct *isl_chg)
 {
 	int ret;
 
@@ -628,7 +628,7 @@ static void remove_debugfs_entries(struct isl9519q_struct *isl_chg)
 		debugfs_remove_recursive(isl_chg->dent);
 }
 
-static int __devinit isl9519q_hwinit(struct isl9519q_struct *isl_chg)
+static int isl9519q_hwinit(struct isl9519q_struct *isl_chg)
 {
 	int ret;
 
@@ -658,7 +658,7 @@ static int __devinit isl9519q_hwinit(struct isl9519q_struct *isl_chg)
 	return 0;
 }
 
-static int __devinit isl9519q_probe(struct i2c_client *client,
+static int isl9519q_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
 {
 	struct isl_platform_data *pdata;
@@ -753,7 +753,7 @@ out:
 	return ret;
 }
 
-static int __devexit isl9519q_remove(struct i2c_client *client)
+static int isl9519q_remove(struct i2c_client *client)
 {
 	struct isl_platform_data *pdata;
 	struct isl9519q_struct *isl_chg = i2c_get_clientdata(client);

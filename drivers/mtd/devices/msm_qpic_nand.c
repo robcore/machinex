@@ -2347,7 +2347,7 @@ out:
  * mtd_device_parse_register().
  *
  */
-static int __devinit msm_nand_probe(struct platform_device *pdev)
+static int msm_nand_probe(struct platform_device *pdev)
 {
 	struct msm_nand_info *info;
 	struct resource *res;
@@ -2467,7 +2467,7 @@ out:
  * Remove functionality that gets called when driver/device msm-nand
  * is removed.
  */
-static int __devexit msm_nand_remove(struct platform_device *pdev)
+static int msm_nand_remove(struct platform_device *pdev)
 {
 	struct msm_nand_info *info = dev_get_drvdata(&pdev->dev);
 

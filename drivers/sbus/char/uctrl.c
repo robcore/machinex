@@ -347,7 +347,7 @@ static void uctrl_get_external_status(struct uctrl_driver *driver)
 	
 }
 
-static int __devinit uctrl_probe(struct platform_device *op)
+static int uctrl_probe(struct platform_device *op)
 {
 	struct uctrl_driver *p;
 	int err = -ENOMEM;
@@ -402,7 +402,7 @@ out_free:
 	goto out;
 }
 
-static int __devexit uctrl_remove(struct platform_device *op)
+static int uctrl_remove(struct platform_device *op)
 {
 	struct uctrl_driver *p = dev_get_drvdata(&op->dev);
 

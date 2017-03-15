@@ -4936,7 +4936,7 @@ FUNCTION:  tavarua_remove
 
   @return On success 0 is returned, else error code.
 */
-static int __devexit tavarua_remove(struct platform_device *pdev)
+static int tavarua_remove(struct platform_device *pdev)
 {
 	int i;
 	struct tavarua_device *radio = platform_get_drvdata(pdev);

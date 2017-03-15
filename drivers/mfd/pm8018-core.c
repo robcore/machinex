@@ -146,7 +146,7 @@ static struct pm8xxx_drvdata pm8018_drvdata = {
 	.pmic_restart_reason	= pm8018_restart_reason,
 };
 
-static const struct resource gpio_cell_resources[] __devinitconst = {
+static const struct resource gpio_cell_resources[] = {
 	[0] = {
 		.start = PM8018_IRQ_BLOCK_BIT(PM8018_GPIO_BLOCK_START, 0),
 		.end   = PM8018_IRQ_BLOCK_BIT(PM8018_GPIO_BLOCK_START, 0)
@@ -155,27 +155,27 @@ static const struct resource gpio_cell_resources[] __devinitconst = {
 	},
 };
 
-static struct mfd_cell gpio_cell __devinitdata = {
+static struct mfd_cell gpio_cell = {
 	.name		= PM8XXX_GPIO_DEV_NAME,
 	.id		= -1,
 	.resources	= gpio_cell_resources,
 	.num_resources	= ARRAY_SIZE(gpio_cell_resources),
 };
 
-static const struct resource adc_cell_resources[] __devinitconst = {
+static const struct resource adc_cell_resources[] = {
 	SINGLE_IRQ_RESOURCE(NULL, PM8018_ADC_EOC_USR_IRQ),
 	SINGLE_IRQ_RESOURCE(NULL, PM8018_ADC_BATT_TEMP_WARM_IRQ),
 	SINGLE_IRQ_RESOURCE(NULL, PM8018_ADC_BATT_TEMP_COLD_IRQ),
 };
 
-static struct mfd_cell adc_cell __devinitdata = {
+static struct mfd_cell adc_cell = {
 	.name		= PM8XXX_ADC_DEV_NAME,
 	.id		= -1,
 	.resources	= adc_cell_resources,
 	.num_resources	= ARRAY_SIZE(adc_cell_resources),
 };
 
-static const struct resource mpp_cell_resources[] __devinitconst = {
+static const struct resource mpp_cell_resources[] = {
 	{
 		.start	= PM8018_IRQ_BLOCK_BIT(PM8018_MPP_BLOCK_START, 0),
 		.end	= PM8018_IRQ_BLOCK_BIT(PM8018_MPP_BLOCK_START, 0)
@@ -184,14 +184,14 @@ static const struct resource mpp_cell_resources[] __devinitconst = {
 	},
 };
 
-static struct mfd_cell mpp_cell __devinitdata = {
+static struct mfd_cell mpp_cell = {
 	.name		= PM8XXX_MPP_DEV_NAME,
 	.id		= -1,
 	.resources	= mpp_cell_resources,
 	.num_resources	= ARRAY_SIZE(mpp_cell_resources),
 };
 
-static const struct resource rtc_cell_resources[] __devinitconst = {
+static const struct resource rtc_cell_resources[] = {
 	[0] = SINGLE_IRQ_RESOURCE(NULL, PM8018_RTC_ALARM_IRQ),
 	[1] = {
 		.name   = "pmic_rtc_base",
@@ -201,48 +201,48 @@ static const struct resource rtc_cell_resources[] __devinitconst = {
 	},
 };
 
-static struct mfd_cell rtc_cell __devinitdata = {
+static struct mfd_cell rtc_cell = {
 	.name           = PM8XXX_RTC_DEV_NAME,
 	.id             = -1,
 	.resources      = rtc_cell_resources,
 	.num_resources  = ARRAY_SIZE(rtc_cell_resources),
 };
 
-static const struct resource resources_pwrkey[] __devinitconst = {
+static const struct resource resources_pwrkey[] = {
 	SINGLE_IRQ_RESOURCE(NULL, PM8018_PWRKEY_REL_IRQ),
 	SINGLE_IRQ_RESOURCE(NULL, PM8018_PWRKEY_PRESS_IRQ),
 };
 
-static struct mfd_cell pwrkey_cell __devinitdata = {
+static struct mfd_cell pwrkey_cell = {
 	.name		= PM8XXX_PWRKEY_DEV_NAME,
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(resources_pwrkey),
 	.resources	= resources_pwrkey,
 };
 
-static struct mfd_cell misc_cell __devinitdata = {
+static struct mfd_cell misc_cell = {
 	.name           = PM8XXX_MISC_DEV_NAME,
 	.id             = -1,
 };
 
-static struct mfd_cell debugfs_cell __devinitdata = {
+static struct mfd_cell debugfs_cell = {
 	.name		= "pm8xxx-debug",
 	.id		= -1,
 	.platform_data	= "pm8018-dbg",
 	.pdata_size	= sizeof("pm8018-dbg"),
 };
 
-static struct mfd_cell pwm_cell __devinitdata = {
+static struct mfd_cell pwm_cell = {
 	.name           = PM8XXX_PWM_DEV_NAME,
 	.id             = -1,
 };
 
-static struct mfd_cell leds_cell __devinitdata = {
+static struct mfd_cell leds_cell = {
 	.name		= PM8XXX_LEDS_DEV_NAME,
 	.id		= -1,
 };
 
-static const struct resource thermal_alarm_cell_resources[] __devinitconst = {
+static const struct resource thermal_alarm_cell_resources[] = {
 	SINGLE_IRQ_RESOURCE("pm8018_tempstat_irq", PM8018_TEMPSTAT_IRQ),
 	SINGLE_IRQ_RESOURCE("pm8018_overtemp_irq", PM8018_OVERTEMP_IRQ),
 };
@@ -257,7 +257,7 @@ static struct pm8xxx_tm_core_data thermal_alarm_cdata = {
 	.irq_name_over_temp =		"pm8018_overtemp_irq",
 };
 
-static struct mfd_cell thermal_alarm_cell __devinitdata = {
+static struct mfd_cell thermal_alarm_cell = {
 	.name		= PM8XXX_TM_DEV_NAME,
 	.id		= -1,
 	.resources	= thermal_alarm_cell_resources,
@@ -295,7 +295,7 @@ static struct pm8xxx_vreg regulator_data[] = {
 
 #define MAX_NAME_COMPARISON_LEN 32
 
-static int __devinit match_regulator(
+static int match_regulator(
 	struct pm8xxx_regulator_core_platform_data *core_data, const char *name)
 {
 	int found = 0;
@@ -325,7 +325,7 @@ static int __devinit match_regulator(
 	return found;
 }
 
-static int __devinit
+static int
 pm8018_add_regulators(const struct pm8018_platform_data *pdata,
 		      struct pm8018 *pmic, int irq_base)
 {
@@ -390,7 +390,7 @@ bail:
 	return ret;
 }
 
-static int __devinit
+static int
 pm8018_add_subdevices(const struct pm8018_platform_data *pdata,
 		      struct pm8018 *pmic)
 {
@@ -534,7 +534,7 @@ static const char * const pm8018_rev_names[] = {
 	[PM8XXX_REVISION_8018_2p1]	= "2.1",
 };
 
-static int __devinit pm8018_probe(struct platform_device *pdev)
+static int pm8018_probe(struct platform_device *pdev)
 {
 	const struct pm8018_platform_data *pdata = pdev->dev.platform_data;
 	const char *revision_name = "unknown";
@@ -629,7 +629,7 @@ err_read_rev:
 	return rc;
 }
 
-static int __devexit pm8018_remove(struct platform_device *pdev)
+static int pm8018_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_drvdata *drvdata;
 	struct pm8018 *pmic = NULL;

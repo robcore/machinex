@@ -8,7 +8,7 @@
 
 #if defined(CONFIG_X86_IO_APIC) && defined(CONFIG_SMP) && defined(CONFIG_PCI)
 
-static void __devinit quirk_intel_irqbalance(struct pci_dev *dev)
+static void quirk_intel_irqbalance(struct pci_dev *dev)
 {
 	u8 config;
 	u16 word;

@@ -4220,7 +4220,7 @@ static void beiscsi_msix_enable(struct beiscsi_hba *phba)
 	return;
 }
 
-static int __devinit beiscsi_dev_probe(struct pci_dev *pcidev,
+static int beiscsi_dev_probe(struct pci_dev *pcidev,
 				const struct pci_device_id *id)
 {
 	struct beiscsi_hba *phba = NULL;

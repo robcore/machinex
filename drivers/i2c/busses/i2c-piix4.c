@@ -99,7 +99,7 @@ static int srvrworks_csb5_delay;
 static struct pci_driver piix4_driver;
 static struct i2c_adapter piix4_adapter;
 
-static struct dmi_system_id __devinitdata piix4_dmi_blacklist[] = {
+static struct dmi_system_id piix4_dmi_blacklist[] = {
 	{
 		.ident = "Sapphire AM2RD790",
 		.matches = {
@@ -119,7 +119,7 @@ static struct dmi_system_id __devinitdata piix4_dmi_blacklist[] = {
 
 /* The IBM entry is in a separate table because we only check it
    on Intel-based systems */
-static struct dmi_system_id __devinitdata piix4_dmi_ibm[] = {
+static struct dmi_system_id piix4_dmi_ibm[] = {
 	{
 		.ident = "IBM",
 		.matches = { DMI_MATCH(DMI_SYS_VENDOR, "IBM"), },
@@ -127,7 +127,7 @@ static struct dmi_system_id __devinitdata piix4_dmi_ibm[] = {
 	{ },
 };
 
-static int __devinit piix4_setup(struct pci_dev *PIIX4_dev,
+static int piix4_setup(struct pci_dev *PIIX4_dev,
 				const struct pci_device_id *id)
 {
 	unsigned char temp;
@@ -227,7 +227,7 @@ static int __devinit piix4_setup(struct pci_dev *PIIX4_dev,
 	return 0;
 }
 
-static int __devinit piix4_setup_sb800(struct pci_dev *PIIX4_dev,
+static int piix4_setup_sb800(struct pci_dev *PIIX4_dev,
 				const struct pci_device_id *id)
 {
 	unsigned short smba_idx = 0xcd6;
@@ -497,7 +497,7 @@ static DEFINE_PCI_DEVICE_TABLE(piix4_ids) = {
 
 MODULE_DEVICE_TABLE (pci, piix4_ids);
 
-static int __devinit piix4_probe(struct pci_dev *dev,
+static int piix4_probe(struct pci_dev *dev,
 				const struct pci_device_id *id)
 {
 	int retval;
@@ -529,7 +529,7 @@ static int __devinit piix4_probe(struct pci_dev *dev,
 	return retval;
 }
 
-static void __devexit piix4_remove(struct pci_dev *dev)
+static void piix4_remove(struct pci_dev *dev)
 {
 	if (piix4_smba) {
 		i2c_del_adapter(&piix4_adapter);

@@ -94,7 +94,7 @@ static irqreturn_t jornada720_kbd_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 };
 
-static int __devinit jornada720_kbd_probe(struct platform_device *pdev)
+static int jornada720_kbd_probe(struct platform_device *pdev)
 {
 	struct jornadakbd *jornadakbd;
 	struct input_dev *input_dev;
@@ -152,7 +152,7 @@ static int __devinit jornada720_kbd_probe(struct platform_device *pdev)
 	return err;
 };
 
-static int __devexit jornada720_kbd_remove(struct platform_device *pdev)
+static int jornada720_kbd_remove(struct platform_device *pdev)
 {
 	struct jornadakbd *jornadakbd = platform_get_drvdata(pdev);
 

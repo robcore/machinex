@@ -113,7 +113,7 @@ void pwm_free(struct pwm_device *pwm)
 }
 EXPORT_SYMBOL(pwm_free);
 
-static int __devinit ab8500_pwm_probe(struct platform_device *pdev)
+static int ab8500_pwm_probe(struct platform_device *pdev)
 {
 	struct pwm_device *pwm;
 	/*
@@ -133,7 +133,7 @@ static int __devinit ab8500_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit ab8500_pwm_remove(struct platform_device *pdev)
+static int ab8500_pwm_remove(struct platform_device *pdev)
 {
 	struct pwm_device *pwm = platform_get_drvdata(pdev);
 	list_del(&pwm->node);

@@ -361,7 +361,7 @@ static const struct snd_soc_dai_driver au1xpsc_ac97_dai_template = {
 	.ops = &au1xpsc_ac97_dai_ops,
 };
 
-static int __devinit au1xpsc_ac97_drvprobe(struct platform_device *pdev)
+static int au1xpsc_ac97_drvprobe(struct platform_device *pdev)
 {
 	int ret;
 	struct resource *iores, *dmares;
@@ -427,7 +427,7 @@ static int __devinit au1xpsc_ac97_drvprobe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit au1xpsc_ac97_drvremove(struct platform_device *pdev)
+static int au1xpsc_ac97_drvremove(struct platform_device *pdev)
 {
 	struct au1xpsc_audio_data *wd = platform_get_drvdata(pdev);
 

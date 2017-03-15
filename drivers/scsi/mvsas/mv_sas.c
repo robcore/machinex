@@ -220,7 +220,7 @@ int mvs_phy_control(struct asd_sas_phy *sas_phy, enum phy_func func,
 	return rc;
 }
 
-void __devinit mvs_set_sas_addr(struct mvs_info *mvi, int port_id,
+void mvs_set_sas_addr(struct mvs_info *mvi, int port_id,
 				u32 off_lo, u32 off_hi, u64 sas_addr)
 {
 	u32 lo = (u32)sas_addr;

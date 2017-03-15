@@ -208,7 +208,7 @@ static const struct watchdog_ops wdt_ops = {
 	.get_timeleft	= wdt_timeleft,
 };
 
-static int __devinit
+static int
 sp805_wdt_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	struct sp805_wdt *wdt;
@@ -270,7 +270,7 @@ err:
 	return ret;
 }
 
-static int __devexit sp805_wdt_remove(struct amba_device *adev)
+static int sp805_wdt_remove(struct amba_device *adev)
 {
 	struct sp805_wdt *wdt = amba_get_drvdata(adev);
 

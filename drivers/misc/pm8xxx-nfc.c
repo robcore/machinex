@@ -246,7 +246,7 @@ static int pm8xxx_nfc_debug_init(struct pm8xxx_nfc_device *nfcdev)
 }
 #endif
 
-static int __devinit pm8xxx_nfc_probe(struct platform_device *pdev)
+static int pm8xxx_nfc_probe(struct platform_device *pdev)
 {
 	struct pm8xxx_nfc_device	*nfcdev;
 
@@ -270,7 +270,7 @@ static int __devinit pm8xxx_nfc_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pm8xxx_nfc_remove(struct platform_device *pdev)
+static int pm8xxx_nfc_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_nfc_device *nfcdev = platform_get_drvdata(pdev);
 

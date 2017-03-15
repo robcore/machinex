@@ -242,7 +242,7 @@ static struct dca_ops ioat_dca_ops = {
 };
 
 
-struct dca_provider * __devinit
+struct dca_provider *
 ioat_dca_init(struct pci_dev *pdev, void __iomem *iobase)
 {
 	struct dca_provider *dca;
@@ -408,7 +408,7 @@ static int ioat2_dca_count_dca_slots(void __iomem *iobase, u16 dca_offset)
 	return slots;
 }
 
-struct dca_provider * __devinit
+struct dca_provider *
 ioat2_dca_init(struct pci_dev *pdev, void __iomem *iobase)
 {
 	struct dca_provider *dca;
@@ -604,7 +604,7 @@ static int ioat3_dca_count_dca_slots(void *iobase, u16 dca_offset)
 	return slots;
 }
 
-struct dca_provider * __devinit
+struct dca_provider *
 ioat3_dca_init(struct pci_dev *pdev, void __iomem *iobase)
 {
 	struct dca_provider *dca;

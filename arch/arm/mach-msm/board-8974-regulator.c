@@ -36,7 +36,7 @@ VREG_CONSUMERS(K3) = {
 
 #define PM8X41_VREG_INIT(_id, _name, _min_uV, _max_uV, _modes, _ops, \
 			 _always_on, _supply_regulator, _hpm_min, _system_uA)  \
-	struct stub_regulator_pdata vreg_dev_##_id##_pdata __devinitdata = { \
+	struct stub_regulator_pdata vreg_dev_##_id##_pdata = { \
 		.init_data = { \
 			.constraints = { \
 				.valid_modes_mask	= _modes, \
@@ -72,7 +72,7 @@ KRAIT_PWR(K2, "krait2", 0, 850000,  1100000, NULL,     100000, 0);
 KRAIT_PWR(K3, "krait3", 0, 850000,  1100000, NULL,     100000, 0);
 
 #define VREG_DEVICE(_name, _devid) \
-	static struct platform_device vreg_device_##_name __devinitdata = \
+	static struct platform_device vreg_device_##_name = \
 	{ \
 		.name = STUB_REGULATOR_DRIVER_NAME, \
 		.id = _devid, \
@@ -84,12 +84,12 @@ VREG_DEVICE(K1, 1);
 VREG_DEVICE(K2, 2);
 VREG_DEVICE(K3, 3);
 
-struct platform_device *msm_8974_stub_regulator_devices[] __devinitdata = {
+struct platform_device *msm_8974_stub_regulator_devices[] = {
 	&vreg_device_K0,
 	&vreg_device_K1,
 	&vreg_device_K2,
 	&vreg_device_K3,
 };
 
-int msm_8974_stub_regulator_devices_len __devinitdata =
+int msm_8974_stub_regulator_devices_len =
 			ARRAY_SIZE(msm_8974_stub_regulator_devices);

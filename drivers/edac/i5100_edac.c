@@ -638,7 +638,7 @@ static struct pci_dev *pci_get_device_func(unsigned vendor,
 	return ret;
 }
 
-static unsigned long __devinit i5100_npages(struct mem_ctl_info *mci,
+static unsigned long i5100_npages(struct mem_ctl_info *mci,
 					    int csrow)
 {
 	struct i5100_priv *priv = mci->pvt_info;
@@ -660,7 +660,7 @@ static unsigned long __devinit i5100_npages(struct mem_ctl_info *mci,
 		((unsigned long long) (1ULL << addr_lines) / PAGE_SIZE);
 }
 
-static void __devinit i5100_init_mtr(struct mem_ctl_info *mci)
+static void i5100_init_mtr(struct mem_ctl_info *mci)
 {
 	struct i5100_priv *priv = mci->pvt_info;
 	struct pci_dev *mms[2] = { priv->ch0mm, priv->ch1mm };
@@ -732,7 +732,7 @@ static int i5100_read_spd_byte(const struct mem_ctl_info *mci,
  *   o not the only way to may chip selects to dimm slots
  *   o investigate if there is some way to obtain this map from the bios
  */
-static void __devinit i5100_init_dimm_csmap(struct mem_ctl_info *mci)
+static void i5100_init_dimm_csmap(struct mem_ctl_info *mci)
 {
 	struct i5100_priv *priv = mci->pvt_info;
 	int i;
@@ -762,7 +762,7 @@ static void __devinit i5100_init_dimm_csmap(struct mem_ctl_info *mci)
 	}
 }
 
-static void __devinit i5100_init_dimm_layout(struct pci_dev *pdev,
+static void i5100_init_dimm_layout(struct pci_dev *pdev,
 					     struct mem_ctl_info *mci)
 {
 	struct i5100_priv *priv = mci->pvt_info;
@@ -784,7 +784,7 @@ static void __devinit i5100_init_dimm_layout(struct pci_dev *pdev,
 	i5100_init_dimm_csmap(mci);
 }
 
-static void __devinit i5100_init_interleaving(struct pci_dev *pdev,
+static void i5100_init_interleaving(struct pci_dev *pdev,
 					      struct mem_ctl_info *mci)
 {
 	u16 w;
@@ -830,7 +830,7 @@ static void __devinit i5100_init_interleaving(struct pci_dev *pdev,
 	i5100_init_mtr(mci);
 }
 
-static void __devinit i5100_init_csrows(struct mem_ctl_info *mci)
+static void i5100_init_csrows(struct mem_ctl_info *mci)
 {
 	int i;
 	struct i5100_priv *priv = mci->pvt_info;
@@ -864,7 +864,7 @@ static void __devinit i5100_init_csrows(struct mem_ctl_info *mci)
 	}
 }
 
-static int __devinit i5100_init_one(struct pci_dev *pdev,
+static int i5100_init_one(struct pci_dev *pdev,
 				    const struct pci_device_id *id)
 {
 	int rc;
@@ -1020,7 +1020,7 @@ bail:
 	return ret;
 }
 
-static void __devexit i5100_remove_one(struct pci_dev *pdev)
+static void i5100_remove_one(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 	struct i5100_priv *priv;

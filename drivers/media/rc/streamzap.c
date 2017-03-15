@@ -346,7 +346,7 @@ out:
  *	On any failure the return value is the ERROR
  *	On success return 0
  */
-static int __devinit streamzap_probe(struct usb_interface *intf,
+static int streamzap_probe(struct usb_interface *intf,
 				     const struct usb_device_id *id)
 {
 	struct usb_device *usbdev = interface_to_usbdev(intf);

@@ -869,7 +869,7 @@ static struct fb_ops overlay_fb_ops = {
 	.fb_set_par		= overlayfb_set_par,
 };
 
-static void __devinit init_pxafb_overlay(struct pxafb_info *fbi,
+static void init_pxafb_overlay(struct pxafb_info *fbi,
 					 struct pxafb_layer *ofb, int id)
 {
 	sprintf(ofb->fb.fix.id, "overlay%d", id + 1);
@@ -903,7 +903,7 @@ static inline int pxafb_overlay_supported(void)
 	return 0;
 }
 
-static int __devinit pxafb_overlay_map_video_memory(struct pxafb_info *pxafb,
+static int pxafb_overlay_map_video_memory(struct pxafb_info *pxafb,
 	struct pxafb_layer *ofb)
 {
 	/* We assume that user will use at most video_mem_size for overlay fb,
@@ -927,7 +927,7 @@ static int __devinit pxafb_overlay_map_video_memory(struct pxafb_info *pxafb,
 	return 0;
 }
 
-static void __devinit pxafb_overlay_init(struct pxafb_info *fbi)
+static void pxafb_overlay_init(struct pxafb_info *fbi)
 {
 	int i, ret;
 
@@ -959,7 +959,7 @@ static void __devinit pxafb_overlay_init(struct pxafb_info *fbi)
 	pr_info("PXA Overlay driver loaded successfully!\n");
 }
 
-static void __devexit pxafb_overlay_exit(struct pxafb_info *fbi)
+static void pxafb_overlay_exit(struct pxafb_info *fbi)
 {
 	int i;
 
@@ -1706,7 +1706,7 @@ static const struct dev_pm_ops pxafb_pm_ops = {
 };
 #endif
 
-static int __devinit pxafb_init_video_memory(struct pxafb_info *fbi)
+static int pxafb_init_video_memory(struct pxafb_info *fbi)
 {
 	int size = PAGE_ALIGN(fbi->video_mem_size);
 
@@ -1789,7 +1789,7 @@ decode_mode:
 		fbi->video_mem_size = video_mem_size;
 }
 
-static struct pxafb_info * __devinit pxafb_init_fbinfo(struct device *dev)
+static struct pxafb_info * pxafb_init_fbinfo(struct device *dev)
 {
 	struct pxafb_info *fbi;
 	void *addr;
@@ -1853,7 +1853,7 @@ static struct pxafb_info * __devinit pxafb_init_fbinfo(struct device *dev)
 }
 
 #ifdef CONFIG_FB_PXA_PARAMETERS
-static int __devinit parse_opt_mode(struct device *dev, const char *this_opt)
+static int parse_opt_mode(struct device *dev, const char *this_opt)
 {
 	struct pxafb_mach_info *inf = dev->platform_data;
 
@@ -1912,7 +1912,7 @@ done:
 	return 0;
 }
 
-static int __devinit parse_opt(struct device *dev, char *this_opt)
+static int parse_opt(struct device *dev, char *this_opt)
 {
 	struct pxafb_mach_info *inf = dev->platform_data;
 	struct pxafb_mode_info *mode = &inf->modes[0];
@@ -2012,7 +2012,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	return 0;
 }
 
-static int __devinit pxafb_parse_options(struct device *dev, char *options)
+static int pxafb_parse_options(struct device *dev, char *options)
 {
 	char *this_opt;
 	int ret;
@@ -2031,7 +2031,7 @@ static int __devinit pxafb_parse_options(struct device *dev, char *options)
 	return 0;
 }
 
-static char g_options[256] __devinitdata = "";
+static char g_options[256] = "";
 
 #ifndef MODULE
 static int __init pxafb_setup_options(void)
@@ -2061,7 +2061,7 @@ MODULE_PARM_DESC(options, "LCD parameters (see Documentation/fb/pxafb.txt)");
 #ifdef DEBUG_VAR
 /* Check for various illegal bit-combinations. Currently only
  * a warning is given. */
-static void __devinit pxafb_check_options(struct device *dev,
+static void pxafb_check_options(struct device *dev,
 					  struct pxafb_mach_info *inf)
 {
 	if (inf->lcd_conn)
@@ -2094,7 +2094,7 @@ static void __devinit pxafb_check_options(struct device *dev,
 #define pxafb_check_options(...)	do {} while (0)
 #endif
 
-static int __devinit pxafb_probe(struct platform_device *dev)
+static int pxafb_probe(struct platform_device *dev)
 {
 	struct pxafb_info *fbi;
 	struct pxafb_mach_info *inf;
@@ -2263,7 +2263,7 @@ failed:
 	return ret;
 }
 
-static int __devexit pxafb_remove(struct platform_device *dev)
+static int pxafb_remove(struct platform_device *dev)
 {
 	struct pxafb_info *fbi = platform_get_drvdata(dev);
 	struct resource *r;

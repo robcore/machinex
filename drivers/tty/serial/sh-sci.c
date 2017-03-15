@@ -1107,7 +1107,7 @@ static const char *sci_gpio_str(unsigned int index)
 	return sci_gpio_names[index];
 }
 
-static void __devinit sci_init_gpios(struct sci_port *port)
+static void sci_init_gpios(struct sci_port *port)
 {
 	struct uart_port *up = &port->port;
 	int i;
@@ -2031,7 +2031,7 @@ static struct uart_ops sci_uart_ops = {
 #endif
 };
 
-static int __devinit sci_init_single(struct platform_device *dev,
+static int sci_init_single(struct platform_device *dev,
 				     struct sci_port *sci_port,
 				     unsigned int index,
 				     struct plat_sci_port *p)
@@ -2173,7 +2173,7 @@ static void serial_console_write(struct console *co, const char *s,
 		cpu_relax();
 }
 
-static int __devinit serial_console_setup(struct console *co, char *options)
+static int serial_console_setup(struct console *co, char *options)
 {
 	struct sci_port *sci_port;
 	struct uart_port *port;
@@ -2227,7 +2227,7 @@ static struct console early_serial_console = {
 
 static char early_serial_buf[32];
 
-static int __devinit sci_probe_earlyprintk(struct platform_device *pdev)
+static int sci_probe_earlyprintk(struct platform_device *pdev)
 {
 	struct plat_sci_port *cfg = pdev->dev.platform_data;
 
@@ -2250,7 +2250,7 @@ static int __devinit sci_probe_earlyprintk(struct platform_device *pdev)
 #define SCI_CONSOLE	(&serial_console)
 
 #else
-static inline int __devinit sci_probe_earlyprintk(struct platform_device *pdev)
+static inline int sci_probe_earlyprintk(struct platform_device *pdev)
 {
 	return -EINVAL;
 }
@@ -2290,7 +2290,7 @@ static int sci_remove(struct platform_device *dev)
 	return 0;
 }
 
-static int __devinit sci_probe_single(struct platform_device *dev,
+static int sci_probe_single(struct platform_device *dev,
 				      unsigned int index,
 				      struct plat_sci_port *p,
 				      struct sci_port *sciport)
@@ -2314,7 +2314,7 @@ static int __devinit sci_probe_single(struct platform_device *dev,
 	return uart_add_one_port(&sci_uart_driver, &sciport->port);
 }
 
-static int __devinit sci_probe(struct platform_device *dev)
+static int sci_probe(struct platform_device *dev)
 {
 	struct plat_sci_port *p = dev->dev.platform_data;
 	struct sci_port *sp = &sci_ports[dev->id];

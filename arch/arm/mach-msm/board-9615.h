@@ -54,12 +54,12 @@ struct i2c_registry {
 #define PM8018_MPP_IRQ_BASE		(PM8018_IRQ_BASE + NR_GPIO_IRQS)
 
 extern struct pm8xxx_regulator_platform_data
-	msm_pm8018_regulator_pdata[] __devinitdata;
+	msm_pm8018_regulator_pdata[];
 
-extern int msm_pm8018_regulator_pdata_len __devinitdata;
+extern int msm_pm8018_regulator_pdata_len;
 
 extern struct rpm_regulator_platform_data
-msm_rpm_regulator_9615_pdata __devinitdata;
+msm_rpm_regulator_9615_pdata;
 
 #define GPIO_VREG_ID_EXT_2P95V		0
 

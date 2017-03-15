@@ -841,7 +841,7 @@ static int flctl_chip_init_tail(struct mtd_info *mtd)
 	return 0;
 }
 
-static int __devinit flctl_probe(struct platform_device *pdev)
+static int flctl_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct sh_flctl *flctl;
@@ -927,7 +927,7 @@ err_iomap:
 	return ret;
 }
 
-static int __devexit flctl_remove(struct platform_device *pdev)
+static int flctl_remove(struct platform_device *pdev)
 {
 	struct sh_flctl *flctl = platform_get_drvdata(pdev);
 

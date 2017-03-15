@@ -549,7 +549,7 @@ static const struct iio_info ad7150_info = {
  * device probe and remove
  */
 
-static int __devinit ad7150_probe(struct i2c_client *client,
+static int ad7150_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	int ret;
@@ -626,7 +626,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit ad7150_remove(struct i2c_client *client)
+static int ad7150_remove(struct i2c_client *client)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 

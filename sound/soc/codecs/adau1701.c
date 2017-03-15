@@ -490,7 +490,7 @@ static struct snd_soc_codec_driver adau1701_codec_drv = {
 	.set_sysclk		= adau1701_set_sysclk,
 };
 
-static __devinit int adau1701_i2c_probe(struct i2c_client *client,
+static int adau1701_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct adau1701 *adau1701;
@@ -506,7 +506,7 @@ static __devinit int adau1701_i2c_probe(struct i2c_client *client,
 	return ret;
 }
 
-static __devexit int adau1701_i2c_remove(struct i2c_client *client)
+static int adau1701_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	return 0;

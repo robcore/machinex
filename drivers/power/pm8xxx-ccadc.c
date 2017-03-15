@@ -741,7 +741,7 @@ static void create_debugfs_entries(struct pm8xxx_ccadc_chip *chip)
 				(void *)0, &calc_fops);
 }
 
-static int __devinit pm8xxx_ccadc_probe(struct platform_device *pdev)
+static int pm8xxx_ccadc_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct pm8xxx_ccadc_chip *chip;
@@ -801,7 +801,7 @@ free_chip:
 	return rc;
 }
 
-static int __devexit pm8xxx_ccadc_remove(struct platform_device *pdev)
+static int pm8xxx_ccadc_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_ccadc_chip *chip = platform_get_drvdata(pdev);
 

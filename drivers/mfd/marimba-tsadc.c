@@ -547,7 +547,7 @@ static void marimba_tsadc_power_resume(struct power_suspend *h)
 }
 #endif
 
-static int __devinit marimba_tsadc_probe(struct platform_device *pdev)
+static int marimba_tsadc_probe(struct platform_device *pdev)
 {
 	struct marimba *marimba = platform_get_drvdata(pdev);
 	struct marimba_tsadc *tsadc;
@@ -639,7 +639,7 @@ fail_tsadc_init:
 	return rc;
 }
 
-static int __devexit marimba_tsadc_remove(struct platform_device *pdev)
+static int marimba_tsadc_remove(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct marimba_tsadc *tsadc = platform_get_drvdata(pdev);

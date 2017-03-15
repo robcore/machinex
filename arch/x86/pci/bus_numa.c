@@ -53,7 +53,7 @@ default_resources:
 	pci_add_resource(resources, &iomem_resource);
 }
 
-void __devinit update_res(struct pci_root_info *info, resource_size_t start,
+void update_res(struct pci_root_info *info, resource_size_t start,
 			  resource_size_t end, unsigned long flags, int merge)
 {
 	int i;

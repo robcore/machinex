@@ -1413,7 +1413,7 @@ static irqreturn_t mxt_irq_handler(int irq, void *_mxt)
 /* Initialization of driver                                                   */
 /******************************************************************************/
 
-static int __devinit mxt_identify(struct i2c_client *client,
+static int mxt_identify(struct i2c_client *client,
 				  struct mxt_data *mxt,
 				  u8 *id_block_data)
 {
@@ -1522,7 +1522,7 @@ static int __devinit mxt_identify(struct i2c_client *client,
  * block and object table).
  *
  */
-static int __devinit mxt_read_object_table(struct i2c_client *client,
+static int mxt_read_object_table(struct i2c_client *client,
 					   struct mxt_data *mxt,
 					   u8 *raw_id_data)
 {
@@ -1873,7 +1873,7 @@ static const struct dev_pm_ops mxt_pm_ops = {
 };
 #endif
 
-static int __devinit mxt_probe(struct i2c_client *client,
+static int mxt_probe(struct i2c_client *client,
 			       const struct i2c_device_id *id)
 {
 	struct mxt_data          *mxt;
@@ -2241,7 +2241,7 @@ err_mxt_alloc:
 	return error;
 }
 
-static int __devexit mxt_remove(struct i2c_client *client)
+static int mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *mxt;
 

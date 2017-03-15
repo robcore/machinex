@@ -76,7 +76,7 @@ static const char *nsp32_release_version = "1.2";
 /****************************************************************************
  * Supported hardware
  */
-static struct pci_device_id nsp32_pci_table[] __devinitdata = {
+static struct pci_device_id nsp32_pci_table[] = {
 	{
 		.vendor      = PCI_VENDOR_ID_IODATA,
 		.device      = PCI_DEVICE_ID_NINJASCSI_32BI_CBSC_II,
@@ -186,8 +186,8 @@ static nsp32_sync_table nsp32_sync_table_pci[] = {
  * function declaration
  */
 /* module entry point */
-static int  __devinit nsp32_probe (struct pci_dev *, const struct pci_device_id *);
-static void __devexit nsp32_remove(struct pci_dev *);
+static int  nsp32_probe (struct pci_dev *, const struct pci_device_id *);
+static void nsp32_remove(struct pci_dev *);
 static int  __init    init_nsp32  (void);
 static void __exit    exit_nsp32  (void);
 
@@ -3382,7 +3382,7 @@ static int nsp32_resume(struct pci_dev *pdev)
 /************************************************************************
  * PCI/Cardbus probe/remove routine
  */
-static int __devinit nsp32_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+static int nsp32_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	int ret;
 	nsp32_hw_data *data = &nsp32_data_base;
@@ -3418,7 +3418,7 @@ static int __devinit nsp32_probe(struct pci_dev *pdev, const struct pci_device_i
 	return ret;
 }
 
-static void __devexit nsp32_remove(struct pci_dev *pdev)
+static void nsp32_remove(struct pci_dev *pdev)
 {
 	struct Scsi_Host *host = pci_get_drvdata(pdev);
 

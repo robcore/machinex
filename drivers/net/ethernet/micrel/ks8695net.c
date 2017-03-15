@@ -1277,7 +1277,7 @@ ks8695_open(struct net_device *ndev)
  *	This initialises the LAN switch in the KS8695 to a known-good
  *	set of defaults.
  */
-static void __devinit
+static void
 ks8695_init_switch(struct ks8695_priv *ksp)
 {
 	u32 ctrl;
@@ -1305,7 +1305,7 @@ ks8695_init_switch(struct ks8695_priv *ksp)
  *	This initialises a KS8695's WAN phy to sensible values for
  *	autonegotiation etc.
  */
-static void __devinit
+static void
 ks8695_init_wan_phy(struct ks8695_priv *ksp)
 {
 	u32 ctrl;
@@ -1349,7 +1349,7 @@ static const struct net_device_ops ks8695_netdev_ops = {
  *	wan ports, and an IORESOURCE_IRQ for the link IRQ for the wan
  *	port.
  */
-static int __devinit
+static int
 ks8695_probe(struct platform_device *pdev)
 {
 	struct ks8695_priv *ksp;

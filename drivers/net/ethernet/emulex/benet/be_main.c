@@ -3258,7 +3258,7 @@ static int be_stats_init(struct be_adapter *adapter)
 	return 0;
 }
 
-static void __devexit be_remove(struct pci_dev *pdev)
+static void be_remove(struct pci_dev *pdev)
 {
 	struct be_adapter *adapter = pci_get_drvdata(pdev);
 
@@ -3507,7 +3507,7 @@ reschedule:
 	schedule_delayed_work(&adapter->work, msecs_to_jiffies(1000));
 }
 
-static int __devinit be_probe(struct pci_dev *pdev,
+static int be_probe(struct pci_dev *pdev,
 			const struct pci_device_id *pdev_id)
 {
 	int status = 0;

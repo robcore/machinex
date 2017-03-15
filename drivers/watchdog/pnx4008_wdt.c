@@ -145,7 +145,7 @@ static struct watchdog_device pnx4008_wdd = {
 	.max_timeout = MAX_HEARTBEAT,
 };
 
-static int __devinit pnx4008_wdt_probe(struct platform_device *pdev)
+static int pnx4008_wdt_probe(struct platform_device *pdev)
 {
 	struct resource *r;
 	int ret = 0;
@@ -191,7 +191,7 @@ out:
 	return ret;
 }
 
-static int __devexit pnx4008_wdt_remove(struct platform_device *pdev)
+static int pnx4008_wdt_remove(struct platform_device *pdev)
 {
 	watchdog_unregister_device(&pnx4008_wdd);
 

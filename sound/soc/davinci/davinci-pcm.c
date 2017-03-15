@@ -864,12 +864,12 @@ static struct snd_soc_platform_driver davinci_soc_platform = {
 	.pcm_free = 	davinci_pcm_free,
 };
 
-static int __devinit davinci_soc_platform_probe(struct platform_device *pdev)
+static int davinci_soc_platform_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev, &davinci_soc_platform);
 }
 
-static int __devexit davinci_soc_platform_remove(struct platform_device *pdev)
+static int davinci_soc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;

@@ -1605,7 +1605,7 @@ static struct vreg *rpm_vreg_get_vreg(int id)
 	return vreg;
 }
 
-static int __devinit
+static int
 rpm_vreg_init_regulator(const struct rpm_regulator_init_data *pdata,
 			struct device *dev)
 {
@@ -1752,7 +1752,7 @@ static void rpm_vreg_set_point_init(void)
 	}
 }
 
-static int __devinit rpm_vreg_probe(struct platform_device *pdev)
+static int rpm_vreg_probe(struct platform_device *pdev)
 {
 	struct rpm_regulator_platform_data *platform_data;
 	static struct rpm_regulator_consumer_mapping *prev_consumer_map;

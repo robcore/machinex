@@ -4523,7 +4523,7 @@ static struct scsi_host_template megaraid_template = {
 	.eh_host_reset_handler		= megaraid_reset,
 };
 
-static int __devinit
+static int
 megaraid_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct Scsi_Host *host;

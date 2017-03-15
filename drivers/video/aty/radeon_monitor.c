@@ -62,7 +62,7 @@ static char *radeon_get_mon_name(int type)
  * models with broken OF probing by hard-coding known EDIDs for some Mac
  * laptops internal LVDS panel. (XXX: not done yet)
  */
-static int __devinit radeon_parse_montype_prop(struct device_node *dp, u8 **out_EDID,
+static int radeon_parse_montype_prop(struct device_node *dp, u8 **out_EDID,
 					       int hdno)
 {
         static char *propnames[] = { "DFP,EDID", "LCD,EDID", "EDID",
@@ -115,7 +115,7 @@ static int __devinit radeon_parse_montype_prop(struct device_node *dp, u8 **out_
 	return mt;
 }
 
-static int __devinit radeon_probe_OF_head(struct radeonfb_info *rinfo, int head_no,
+static int radeon_probe_OF_head(struct radeonfb_info *rinfo, int head_no,
 					  u8 **out_EDID)
 {
         struct device_node *dp;
@@ -163,7 +163,7 @@ static int __devinit radeon_probe_OF_head(struct radeonfb_info *rinfo, int head_
 #endif /* CONFIG_PPC_OF || CONFIG_SPARC */
 
 
-static int __devinit radeon_get_panel_info_BIOS(struct radeonfb_info *rinfo)
+static int radeon_get_panel_info_BIOS(struct radeonfb_info *rinfo)
 {
 	unsigned long tmp, tmp0;
 	char stmp[30];
@@ -251,7 +251,7 @@ static int __devinit radeon_get_panel_info_BIOS(struct radeonfb_info *rinfo)
  * doesn't quite work yet, but it's output is still useful for
  * debugging
  */
-static void __devinit radeon_parse_connector_info(struct radeonfb_info *rinfo)
+static void radeon_parse_connector_info(struct radeonfb_info *rinfo)
 {
 	int offset, chips, connectors, tmp, i, conn, type;
 
@@ -297,7 +297,7 @@ static void __devinit radeon_parse_connector_info(struct radeonfb_info *rinfo)
  * as well and currently is only implemented for the CRT DAC, the
  * code for the TVDAC is commented out in XFree as "non working"
  */
-static int __devinit radeon_crt_is_connected(struct radeonfb_info *rinfo, int is_crt_dac)
+static int radeon_crt_is_connected(struct radeonfb_info *rinfo, int is_crt_dac)
 {
     int	          connected = 0;
 
@@ -369,7 +369,7 @@ static int __devinit radeon_crt_is_connected(struct radeonfb_info *rinfo, int is
  * Parse the "monitor_layout" string if any. This code is mostly
  * copied from XFree's radeon driver
  */
-static int __devinit radeon_parse_monitor_layout(struct radeonfb_info *rinfo,
+static int radeon_parse_monitor_layout(struct radeonfb_info *rinfo,
 						 const char *monitor_layout)
 {
 	char s1[5], s2[5];
@@ -433,7 +433,7 @@ static int __devinit radeon_parse_monitor_layout(struct radeonfb_info *rinfo,
  * try to retrieve EDID. The algorithm here comes from XFree's radeon
  * driver
  */
-void __devinit radeon_probe_screens(struct radeonfb_info *rinfo,
+void radeon_probe_screens(struct radeonfb_info *rinfo,
 				    const char *monitor_layout, int ignore_edid)
 {
 #ifdef CONFIG_FB_RADEON_I2C
@@ -734,7 +734,7 @@ static void radeon_videomode_to_var(struct fb_var_screeninfo *var,
  * Build the modedb for head 1 (head 2 will come later), check panel infos
  * from either BIOS or EDID, and pick up the default mode
  */
-void __devinit radeon_check_modes(struct radeonfb_info *rinfo, const char *mode_option)
+void radeon_check_modes(struct radeonfb_info *rinfo, const char *mode_option)
 {
 	struct fb_info * info = rinfo->info;
 	int has_default_mode = 0;

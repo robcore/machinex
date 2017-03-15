@@ -2362,7 +2362,7 @@ fst_start_xmit(struct sk_buff *skb, struct net_device *dev)
  *      via a printk and leave the corresponding interface and all that follow
  *      disabled.
  */
-static char *type_strings[] __devinitdata = {
+static char *type_strings[] = {
 	"no hardware",		/* Should never be seen */
 	"FarSync T2P",
 	"FarSync T4P",
@@ -2372,7 +2372,7 @@ static char *type_strings[] __devinitdata = {
 	"FarSync TE1"
 };
 
-static void __devinit
+static void
 fst_init_card(struct fst_card_info *card)
 {
 	int i;
@@ -2416,7 +2416,7 @@ static const struct net_device_ops fst_ops = {
  *      Initialise card when detected.
  *      Returns 0 to indicate success, or errno otherwise.
  */
-static int __devinit
+static int
 fst_add_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	static int no_of_cards_added = 0;

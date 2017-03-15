@@ -100,7 +100,7 @@ static int snd_mpu401_create(int dev, struct snd_card **rcard)
 	return err;
 }
 
-static int __devinit snd_mpu401_probe(struct platform_device *devptr)
+static int snd_mpu401_probe(struct platform_device *devptr)
 {
 	int dev = devptr->id;
 	int err;
@@ -126,7 +126,7 @@ static int __devinit snd_mpu401_probe(struct platform_device *devptr)
 	return 0;
 }
 
-static int __devexit snd_mpu401_remove(struct platform_device *devptr)
+static int snd_mpu401_remove(struct platform_device *devptr)
 {
 	snd_card_free(platform_get_drvdata(devptr));
 	platform_set_drvdata(devptr, NULL);
@@ -155,7 +155,7 @@ static struct pnp_device_id snd_mpu401_pnpids[] = {
 
 MODULE_DEVICE_TABLE(pnp, snd_mpu401_pnpids);
 
-static int __devinit snd_mpu401_pnp(int dev, struct pnp_dev *device,
+static int snd_mpu401_pnp(int dev, struct pnp_dev *device,
 				 const struct pnp_device_id *id)
 {
 	if (!pnp_port_valid(device, 0) ||
@@ -181,7 +181,7 @@ static int __devinit snd_mpu401_pnp(int dev, struct pnp_dev *device,
 	return 0;
 }
 
-static int __devinit snd_mpu401_pnp_probe(struct pnp_dev *pnp_dev,
+static int snd_mpu401_pnp_probe(struct pnp_dev *pnp_dev,
 					  const struct pnp_device_id *id)
 {
 	static int dev;
@@ -210,7 +210,7 @@ static int __devinit snd_mpu401_pnp_probe(struct pnp_dev *pnp_dev,
 	return -ENODEV;
 }
 
-static void __devexit snd_mpu401_pnp_remove(struct pnp_dev *dev)
+static void snd_mpu401_pnp_remove(struct pnp_dev *dev)
 {
 	struct snd_card *card = (struct snd_card *) pnp_get_drvdata(dev);
 

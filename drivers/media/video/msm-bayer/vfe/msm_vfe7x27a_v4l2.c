@@ -2409,7 +2409,7 @@ static const struct v4l2_subdev_ops msm_vfe_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops msm_vfe_internal_ops;
 
-static int __devinit vfe2x_probe(struct platform_device *pdev)
+static int vfe2x_probe(struct platform_device *pdev)
 {
 	struct msm_cam_subdev_info sd_info;
 

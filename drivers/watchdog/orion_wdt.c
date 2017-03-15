@@ -235,7 +235,7 @@ static struct miscdevice orion_wdt_miscdev = {
 	.fops		= &orion_wdt_fops,
 };
 
-static int __devinit orion_wdt_probe(struct platform_device *pdev)
+static int orion_wdt_probe(struct platform_device *pdev)
 {
 	struct orion_wdt_platform_data *pdata = pdev->dev.platform_data;
 	struct resource *res;
@@ -269,7 +269,7 @@ static int __devinit orion_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit orion_wdt_remove(struct platform_device *pdev)
+static int orion_wdt_remove(struct platform_device *pdev)
 {
 	int ret;
 

@@ -1995,7 +1995,7 @@ power_off:
  * and creates a work queue for detection of other expansion Function
  * modules.
  */
-static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
+static int synaptics_rmi4_probe(struct i2c_client *client,
 		const struct i2c_device_id *dev_id)
 {
 	int retval = 0;
@@ -2296,7 +2296,7 @@ err_input_device:
  * frees the interrupt, unregisters the driver from the input subsystem,
  * turns off the power to the sensor, and frees other allocated resources.
  */
-static int __devexit synaptics_rmi4_remove(struct i2c_client *client)
+static int synaptics_rmi4_remove(struct i2c_client *client)
 {
 	unsigned char attr_count;
 	struct synaptics_rmi4_fn *fhandler;

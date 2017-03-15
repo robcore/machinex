@@ -836,7 +836,7 @@ msm_v4l2_overlay_open(struct file *file)
 }
 
 
-static int __devinit
+static int
 msm_v4l2_overlay_probe(struct platform_device *pdev)
 {
 	char *v4l2_ram_phys_unaligned;

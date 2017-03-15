@@ -82,7 +82,7 @@ static struct mdiobb_ops mdio_gpio_ops = {
 	.get_mdio_data = mdio_get,
 };
 
-static struct mii_bus * __devinit mdio_gpio_bus_init(struct device *dev,
+static struct mii_bus * mdio_gpio_bus_init(struct device *dev,
 					struct mdio_gpio_platform_data *pdata,
 					int bus_id)
 {
@@ -152,7 +152,7 @@ static void mdio_gpio_bus_deinit(struct device *dev)
 	kfree(bitbang);
 }
 
-static void __devexit mdio_gpio_bus_destroy(struct device *dev)
+static void mdio_gpio_bus_destroy(struct device *dev)
 {
 	struct mii_bus *bus = dev_get_drvdata(dev);
 
@@ -160,7 +160,7 @@ static void __devexit mdio_gpio_bus_destroy(struct device *dev)
 	mdio_gpio_bus_deinit(dev);
 }
 
-static int __devinit mdio_gpio_probe(struct platform_device *pdev)
+static int mdio_gpio_probe(struct platform_device *pdev)
 {
 	struct mdio_gpio_platform_data *pdata = pdev->dev.platform_data;
 	struct mii_bus *new_bus;
@@ -180,7 +180,7 @@ static int __devinit mdio_gpio_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit mdio_gpio_remove(struct platform_device *pdev)
+static int mdio_gpio_remove(struct platform_device *pdev)
 {
 	mdio_gpio_bus_destroy(&pdev->dev);
 
@@ -189,7 +189,7 @@ static int __devexit mdio_gpio_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_OF_GPIO
 
-static int __devinit mdio_ofgpio_probe(struct platform_device *ofdev)
+static int mdio_ofgpio_probe(struct platform_device *ofdev)
 {
 	struct mdio_gpio_platform_data *pdata;
 	struct mii_bus *new_bus;
@@ -224,7 +224,7 @@ out_free:
 	return -ENODEV;
 }
 
-static int __devexit mdio_ofgpio_remove(struct platform_device *ofdev)
+static int mdio_ofgpio_remove(struct platform_device *ofdev)
 {
 	mdio_gpio_bus_destroy(&ofdev->dev);
 	kfree(ofdev->dev.platform_data);

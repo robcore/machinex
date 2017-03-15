@@ -516,7 +516,7 @@ geode_aes_remove(struct pci_dev *dev)
 }
 
 
-static int __devinit
+static int
 geode_aes_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	int ret;

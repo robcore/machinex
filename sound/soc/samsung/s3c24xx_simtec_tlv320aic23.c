@@ -88,7 +88,7 @@ static struct snd_soc_card snd_soc_machine_simtec_aic23 = {
 	.num_dapm_routes = ARRAY_SIZE(base_map),
 };
 
-static int __devinit simtec_audio_tlv320aic23_probe(struct platform_device *pd)
+static int simtec_audio_tlv320aic23_probe(struct platform_device *pd)
 {
 	return simtec_audio_core_probe(pd, &snd_soc_machine_simtec_aic23);
 }

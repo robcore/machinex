@@ -1111,7 +1111,7 @@ static struct fb_ops s3c_fb_ops = {
  *
  * Calculate the pixel clock when none has been given through platform data.
  */
-static void __devinit s3c_fb_missing_pixclock(struct fb_videomode *mode)
+static void s3c_fb_missing_pixclock(struct fb_videomode *mode)
 {
 	u64 pixclk = 1000000000000ULL;
 	u32 div;
@@ -1134,7 +1134,7 @@ static void __devinit s3c_fb_missing_pixclock(struct fb_videomode *mode)
  *
  * Allocate memory for the given framebuffer.
  */
-static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
+static int s3c_fb_alloc_memory(struct s3c_fb *sfb,
 					 struct s3c_fb_win *win)
 {
 	struct s3c_fb_pd_win *windata = win->windata;
@@ -1225,7 +1225,7 @@ static void s3c_fb_release_win(struct s3c_fb *sfb, struct s3c_fb_win *win)
  * Allocate and do the basic initialisation for one of the hardware's graphics
  * windows.
  */
-static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
+static int s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 				      struct s3c_fb_win_variant *variant,
 				      struct s3c_fb_win **res)
 {
@@ -1358,7 +1358,7 @@ static void s3c_fb_clear_win(struct s3c_fb *sfb, int win)
 	writel(reg & ~SHADOWCON_WINx_PROTECT(win), regs + SHADOWCON);
 }
 
-static int __devinit s3c_fb_probe(struct platform_device *pdev)
+static int s3c_fb_probe(struct platform_device *pdev)
 {
 	const struct platform_device_id *platid;
 	struct s3c_fb_driverdata *fbdrv;
@@ -1531,7 +1531,7 @@ err_sfb:
  * Shutdown and then release all the resources that the driver allocated
  * on initialisation.
  */
-static int __devexit s3c_fb_remove(struct platform_device *pdev)
+static int s3c_fb_remove(struct platform_device *pdev)
 {
 	struct s3c_fb *sfb = platform_get_drvdata(pdev);
 	int win;

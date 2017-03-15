@@ -181,7 +181,7 @@ static const struct gpio _mandatory_gpio[] = {
 /*
  * Main initialization routine
  */
-static int __devinit ams_delta_init(struct platform_device *pdev)
+static int ams_delta_init(struct platform_device *pdev)
 {
 	struct nand_chip *this;
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -279,7 +279,7 @@ out_free:
 /*
  * Clean up routine
  */
-static int __devexit ams_delta_cleanup(struct platform_device *pdev)
+static int ams_delta_cleanup(struct platform_device *pdev)
 {
 	void __iomem *io_base = platform_get_drvdata(pdev);
 

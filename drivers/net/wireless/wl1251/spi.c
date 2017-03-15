@@ -233,7 +233,7 @@ static const struct wl1251_if_operations wl1251_spi_ops = {
 	.power = wl1251_spi_set_power,
 };
 
-static int __devinit wl1251_spi_probe(struct spi_device *spi)
+static int wl1251_spi_probe(struct spi_device *spi)
 {
 	struct wl12xx_platform_data *pdata;
 	struct ieee80211_hw *hw;
@@ -305,7 +305,7 @@ static int __devinit wl1251_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit wl1251_spi_remove(struct spi_device *spi)
+static int wl1251_spi_remove(struct spi_device *spi)
 {
 	struct wl1251 *wl = dev_get_drvdata(&spi->dev);
 

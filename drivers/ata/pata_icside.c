@@ -337,7 +337,7 @@ static struct ata_port_operations pata_icside_port_ops = {
 	.port_start		= ATA_OP_NULL,	/* don't need PRD table */
 };
 
-static void __devinit
+static void
 pata_icside_setup_ioaddr(struct ata_port *ap, void __iomem *base,
 			 struct pata_icside_info *info,
 			 const struct portinfo *port)
@@ -368,7 +368,7 @@ pata_icside_setup_ioaddr(struct ata_port *ap, void __iomem *base,
 		ata_port_desc(ap, "iocbase 0x%lx", info->raw_ioc_base);
 }
 
-static int __devinit pata_icside_register_v5(struct pata_icside_info *info)
+static int pata_icside_register_v5(struct pata_icside_info *info)
 {
 	struct pata_icside_state *state = info->state;
 	void __iomem *base;
@@ -391,7 +391,7 @@ static int __devinit pata_icside_register_v5(struct pata_icside_info *info)
 	return 0;
 }
 
-static int __devinit pata_icside_register_v6(struct pata_icside_info *info)
+static int pata_icside_register_v6(struct pata_icside_info *info)
 {
 	struct pata_icside_state *state = info->state;
 	struct expansion_card *ec = info->ec;
@@ -434,7 +434,7 @@ static int __devinit pata_icside_register_v6(struct pata_icside_info *info)
 	return icside_dma_init(info);
 }
 
-static int __devinit pata_icside_add_ports(struct pata_icside_info *info)
+static int pata_icside_add_ports(struct pata_icside_info *info)
 {
 	struct expansion_card *ec = info->ec;
 	struct ata_host *host;
@@ -474,7 +474,7 @@ static int __devinit pata_icside_add_ports(struct pata_icside_info *info)
 				 &pata_icside_sht);
 }
 
-static int __devinit
+static int
 pata_icside_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	struct pata_icside_state *state;

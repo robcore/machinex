@@ -1276,7 +1276,7 @@ static struct of_device_id spmi_match_table[];
 
 #define MAX_NAME_LEN	127
 
-static int __devinit qpnp_regulator_probe(struct spmi_device *spmi)
+static int qpnp_regulator_probe(struct spmi_device *spmi)
 {
 	struct qpnp_regulator_platform_data *pdata;
 	struct qpnp_regulator *vreg;
@@ -1413,7 +1413,7 @@ bail:
 	return rc;
 }
 
-static int __devexit qpnp_regulator_remove(struct spmi_device *spmi)
+static int qpnp_regulator_remove(struct spmi_device *spmi)
 {
 	struct qpnp_regulator *vreg;
 

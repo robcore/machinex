@@ -406,7 +406,7 @@ static const struct v4l2_subdev_ops msm_csic_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops msm_csic_internal_ops;
 
-static int __devinit csic_probe(struct platform_device *pdev)
+static int csic_probe(struct platform_device *pdev)
 {
 	struct csic_device *new_csic_dev;
 	int rc = 0;

@@ -361,7 +361,7 @@ static ssize_t lm3530_mode_set(struct device *dev, struct device_attribute
 }
 static DEVICE_ATTR(mode, 0644, lm3530_mode_get, lm3530_mode_set);
 
-static int __devinit lm3530_probe(struct i2c_client *client,
+static int lm3530_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
 {
 	struct lm3530_platform_data *pdata = client->dev.platform_data;
@@ -448,7 +448,7 @@ err_out:
 	return err;
 }
 
-static int __devexit lm3530_remove(struct i2c_client *client)
+static int lm3530_remove(struct i2c_client *client)
 {
 	struct lm3530_data *drvdata = i2c_get_clientdata(client);
 

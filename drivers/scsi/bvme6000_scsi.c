@@ -34,7 +34,7 @@ static struct scsi_host_template bvme6000_scsi_driver_template = {
 
 static struct platform_device *bvme6000_scsi_device;
 
-static __devinit int
+static int
 bvme6000_probe(struct platform_device *dev)
 {
 	struct Scsi_Host *host;
@@ -88,7 +88,7 @@ bvme6000_probe(struct platform_device *dev)
 	return -ENODEV;
 }
 
-static __devexit int
+static int
 bvme6000_device_remove(struct platform_device *dev)
 {
 	struct Scsi_Host *host = platform_get_drvdata(dev);

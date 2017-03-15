@@ -85,7 +85,7 @@ static int octeon_mdiobus_write(struct mii_bus *bus, int phy_id,
 	return 0;
 }
 
-static int __devinit octeon_mdiobus_probe(struct platform_device *pdev)
+static int octeon_mdiobus_probe(struct platform_device *pdev)
 {
 	struct octeon_mdiobus *bus;
 	union cvmx_smix_en smi_en;
@@ -144,7 +144,7 @@ err:
 	return err;
 }
 
-static int __devexit octeon_mdiobus_remove(struct platform_device *pdev)
+static int octeon_mdiobus_remove(struct platform_device *pdev)
 {
 	struct octeon_mdiobus *bus;
 	union cvmx_smix_en smi_en;

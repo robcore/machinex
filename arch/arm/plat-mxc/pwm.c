@@ -196,7 +196,7 @@ void pwm_free(struct pwm_device *pwm)
 }
 EXPORT_SYMBOL(pwm_free);
 
-static int __devinit mxc_pwm_probe(struct platform_device *pdev)
+static int mxc_pwm_probe(struct platform_device *pdev)
 {
 	struct pwm_device *pwm;
 	struct resource *r;
@@ -258,7 +258,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit mxc_pwm_remove(struct platform_device *pdev)
+static int mxc_pwm_remove(struct platform_device *pdev)
 {
 	struct pwm_device *pwm;
 	struct resource *r;

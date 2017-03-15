@@ -1154,7 +1154,7 @@ static struct platform_device msm_device_wcnss_wlan = {
 };
 
 #ifdef CONFIG_RADIO_IRIS
-static struct platform_device msm_device_iris_fm __devinitdata = {
+static struct platform_device msm_device_iris_fm = {
 	.name = "iris_fm",
 	.id   = -1,
 };
@@ -1709,7 +1709,7 @@ static void __init apq8064_init_buses(void)
 	msm_bus_8064_cpss_fpb.dev.platform_data = &msm_bus_8064_cpss_fpb_pdata;
 } 
 
-static struct platform_device apq8064_device_ext_dsv_load_vreg __devinitdata = {
+static struct platform_device apq8064_device_ext_dsv_load_vreg = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= APQ8064_EXT_DSV_LOAD_EN_GPIO,
 	.dev	= {
@@ -1718,7 +1718,7 @@ static struct platform_device apq8064_device_ext_dsv_load_vreg __devinitdata = {
 	},
 };
 
-static struct platform_device apq8064_device_rpm_regulator __devinitdata = {
+static struct platform_device apq8064_device_rpm_regulator = {
 	.name	= "rpm-regulator",
 	.id	= -1,
 	.dev	= {

@@ -1164,7 +1164,7 @@ static void remove_vq_common(struct virtnet_info *vi)
 		__free_pages(get_a_page(vi, GFP_KERNEL), 0);
 }
 
-static void __devexit virtnet_remove(struct virtio_device *vdev)
+static void virtnet_remove(struct virtio_device *vdev)
 {
 	struct virtnet_info *vi = vdev->priv;
 

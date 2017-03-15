@@ -499,7 +499,7 @@ static inline void nuc900fb_cpufreq_deregister(struct nuc900fb_info *info)
 
 static char driver_name[] = "nuc900fb";
 
-static int __devinit nuc900fb_probe(struct platform_device *pdev)
+static int nuc900fb_probe(struct platform_device *pdev)
 {
 	struct nuc900fb_info *fbi;
 	struct nuc900fb_display *display;

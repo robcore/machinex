@@ -656,7 +656,7 @@ static int bf5xx_nand_hw_init(struct bf5xx_nand_info *info)
 /*
  * Device management interface
  */
-static int __devinit bf5xx_nand_add_partition(struct bf5xx_nand_info *info)
+static int bf5xx_nand_add_partition(struct bf5xx_nand_info *info)
 {
 	struct mtd_info *mtd = &info->mtd;
 	struct mtd_partition *parts = info->platform->partitions;
@@ -665,7 +665,7 @@ static int __devinit bf5xx_nand_add_partition(struct bf5xx_nand_info *info)
 	return mtd_device_register(mtd, parts, nr);
 }
 
-static int __devexit bf5xx_nand_remove(struct platform_device *pdev)
+static int bf5xx_nand_remove(struct platform_device *pdev)
 {
 	struct bf5xx_nand_info *info = to_nand_info(pdev);
 
@@ -723,7 +723,7 @@ static int bf5xx_nand_scan(struct mtd_info *mtd)
  * it can allocate all necessary resources then calls the
  * nand layer to look for devices
  */
-static int __devinit bf5xx_nand_probe(struct platform_device *pdev)
+static int bf5xx_nand_probe(struct platform_device *pdev)
 {
 	struct bf5xx_nand_platform *plat = to_nand_plat(pdev);
 	struct bf5xx_nand_info *info = NULL;

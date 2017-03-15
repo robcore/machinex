@@ -307,7 +307,7 @@ static struct snd_rawmidi_ops snd_echo_midi_output = {
 
 
 /* <--snd_echo_probe() */
-static int __devinit snd_echo_midi_create(struct snd_card *card,
+static int snd_echo_midi_create(struct snd_card *card,
 					  struct echoaudio *chip)
 {
 	int err;

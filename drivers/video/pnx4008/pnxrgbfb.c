@@ -107,7 +107,7 @@ static int rgbfb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit rgbfb_probe(struct platform_device *pdev)
+static int rgbfb_probe(struct platform_device *pdev)
 {
 	struct fb_info *info;
 	struct dumchannel_uf chan_uf;

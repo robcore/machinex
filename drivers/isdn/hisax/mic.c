@@ -187,7 +187,7 @@ mic_card_msg(struct IsdnCardState *cs, int mt, void *arg)
 	return (0);
 }
 
-int __devinit
+int
 setup_mic(struct IsdnCard *card)
 {
 	int bytecnt;

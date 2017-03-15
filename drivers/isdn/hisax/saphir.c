@@ -240,7 +240,7 @@ saphir_card_msg(struct IsdnCardState *cs, int mt, void *arg)
 }
 
 
-int __devinit
+int
 setup_saphir(struct IsdnCard *card)
 {
 	struct IsdnCardState *cs = card->cs;

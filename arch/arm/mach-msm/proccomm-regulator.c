@@ -289,7 +289,7 @@ static void destroy_proccomm_rdev(struct regulator_dev *rdev)
 }
 
 
-static int __devinit proccomm_vreg_probe(struct platform_device *pdev)
+static int proccomm_vreg_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct proccomm_regulator_platform_data *pdata = dev->platform_data;

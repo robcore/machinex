@@ -215,7 +215,7 @@ static void w90p910_close(struct input_dev *dev)
 	clk_disable(w90p910_ts->clk);
 }
 
-static int __devinit w90x900ts_probe(struct platform_device *pdev)
+static int w90x900ts_probe(struct platform_device *pdev)
 {
 	struct w90p910_ts *w90p910_ts;
 	struct input_dev *input_dev;
@@ -301,7 +301,7 @@ fail1:	input_free_device(input_dev);
 	return err;
 }
 
-static int __devexit w90x900ts_remove(struct platform_device *pdev)
+static int w90x900ts_remove(struct platform_device *pdev)
 {
 	struct w90p910_ts *w90p910_ts = platform_get_drvdata(pdev);
 	struct resource *res;

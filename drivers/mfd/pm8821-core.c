@@ -122,7 +122,7 @@ static struct pm8xxx_drvdata pm8821_drvdata = {
 	.pmic_get_revision	= pm8821_get_revision,
 };
 
-static const struct resource mpp_cell_resources[] __devinitconst = {
+static const struct resource mpp_cell_resources[] = {
 	{
 		.start	= PM8821_IRQ_BLOCK_BIT(PM8821_MPP_BLOCK_START, 0),
 		.end	= PM8821_IRQ_BLOCK_BIT(PM8821_MPP_BLOCK_START, 0)
@@ -131,21 +131,21 @@ static const struct resource mpp_cell_resources[] __devinitconst = {
 	},
 };
 
-static struct mfd_cell mpp_cell __devinitdata = {
+static struct mfd_cell mpp_cell = {
 	.name		= PM8XXX_MPP_DEV_NAME,
 	.id		= 1,
 	.resources	= mpp_cell_resources,
 	.num_resources	= ARRAY_SIZE(mpp_cell_resources),
 };
 
-static struct mfd_cell debugfs_cell __devinitdata = {
+static struct mfd_cell debugfs_cell = {
 	.name		= "pm8xxx-debug",
 	.id		= 1,
 	.platform_data	= "pm8821-dbg",
 	.pdata_size	= sizeof("pm8821-dbg"),
 };
 
-static const struct resource thermal_alarm_cell_resources[] __devinitconst = {
+static const struct resource thermal_alarm_cell_resources[] = {
 	SINGLE_IRQ_RESOURCE("pm8821_tempstat_irq", PM8821_TEMPSTAT_IRQ),
 	SINGLE_IRQ_RESOURCE("pm8821_overtemp_irq", PM8821_OVERTEMP_IRQ),
 };
@@ -160,7 +160,7 @@ static struct pm8xxx_tm_core_data thermal_alarm_cdata = {
 	.default_no_adc_temp		= 37000,
 };
 
-static struct mfd_cell thermal_alarm_cell __devinitdata = {
+static struct mfd_cell thermal_alarm_cell = {
 	.name		= PM8XXX_TM_DEV_NAME,
 	.id		= 1,
 	.resources	= thermal_alarm_cell_resources,
@@ -169,7 +169,7 @@ static struct mfd_cell thermal_alarm_cell __devinitdata = {
 	.pdata_size	= sizeof(struct pm8xxx_tm_core_data),
 };
 
-static int __devinit
+static int
 pm8821_add_subdevices(const struct pm8821_platform_data *pdata,
 		      struct pm8821 *pmic)
 {
@@ -233,7 +233,7 @@ static const char * const pm8821_rev_names[] = {
 	[PM8XXX_REVISION_8821_2p1]	= "2.1",
 };
 
-static int __devinit pm8821_probe(struct platform_device *pdev)
+static int pm8821_probe(struct platform_device *pdev)
 {
 	const struct pm8821_platform_data *pdata = pdev->dev.platform_data;
 	const char *revision_name = "unknown";
@@ -304,7 +304,7 @@ err_read_rev:
 	return rc;
 }
 
-static int __devexit pm8821_remove(struct platform_device *pdev)
+static int pm8821_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_drvdata *drvdata;
 	struct pm8821 *pmic = NULL;

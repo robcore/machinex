@@ -1334,7 +1334,7 @@ static struct regmap_config cs42l73_regmap = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-static __devinit int cs42l73_i2c_probe(struct i2c_client *i2c_client,
+static int cs42l73_i2c_probe(struct i2c_client *i2c_client,
 				       const struct i2c_device_id *id)
 {
 	struct cs42l73_private *cs42l73;
@@ -1401,7 +1401,7 @@ err:
 	return ret;
 }
 
-static __devexit int cs42l73_i2c_remove(struct i2c_client *client)
+static int cs42l73_i2c_remove(struct i2c_client *client)
 {
 	struct cs42l73_private *cs42l73 = i2c_get_clientdata(client);
 

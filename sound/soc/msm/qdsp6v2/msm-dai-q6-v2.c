@@ -833,7 +833,7 @@ static struct snd_soc_dai_driver msm_dai_q6_slimbus_1_tx_dai = {
 	.remove = msm_dai_q6_dai_remove,
 };
 
-static int __devinit msm_auxpcm_dev_probe(struct platform_device *pdev)
+static int msm_auxpcm_dev_probe(struct platform_device *pdev)
 {
 	int id;
 	void *plat_data;
@@ -876,7 +876,7 @@ static int __devinit msm_auxpcm_dev_probe(struct platform_device *pdev)
 	return rc;
 }
 
-static int __devinit msm_auxpcm_resource_probe(
+static int msm_auxpcm_resource_probe(
 			struct platform_device *pdev)
 {
 	int rc = 0;
@@ -971,13 +971,13 @@ fail_free_plat:
 	return rc;
 }
 
-static int __devexit msm_auxpcm_dev_remove(struct platform_device *pdev)
+static int msm_auxpcm_dev_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_dai(&pdev->dev);
 	return 0;
 }
 
-static int __devexit msm_auxpcm_resource_remove(
+static int msm_auxpcm_resource_remove(
 				struct platform_device *pdev)
 {
 	void *auxpcm_pdata;

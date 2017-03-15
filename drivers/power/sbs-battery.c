@@ -675,7 +675,7 @@ static struct sbs_platform_data *sbs_of_populate_pdata(
 }
 #endif
 
-static int __devinit sbs_probe(struct i2c_client *client,
+static int sbs_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	struct sbs_info *chip;
@@ -790,7 +790,7 @@ exit_free_name:
 	return rc;
 }
 
-static int __devexit sbs_remove(struct i2c_client *client)
+static int sbs_remove(struct i2c_client *client)
 {
 	struct sbs_info *chip = i2c_get_clientdata(client);
 

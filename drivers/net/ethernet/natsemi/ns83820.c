@@ -1941,7 +1941,7 @@ static const struct net_device_ops netdev_ops = {
 	.ndo_tx_timeout		= ns83820_tx_timeout,
 };
 
-static int __devinit ns83820_init_one(struct pci_dev *pci_dev,
+static int ns83820_init_one(struct pci_dev *pci_dev,
 				      const struct pci_device_id *id)
 {
 	struct net_device *ndev;
@@ -2241,7 +2241,7 @@ out:
 	return err;
 }
 
-static void __devexit ns83820_remove_one(struct pci_dev *pci_dev)
+static void ns83820_remove_one(struct pci_dev *pci_dev)
 {
 	struct net_device *ndev = pci_get_drvdata(pci_dev);
 	struct ns83820 *dev = PRIV(ndev); /* ok even if NULL */

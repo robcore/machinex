@@ -953,7 +953,7 @@ static void tsu6721_init_detect(struct work_struct *work)
 	local_usbsw->last_state.int2 = ret;
 }
 
-static int __devinit tsu6721_probe(struct i2c_client *client,
+static int tsu6721_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1044,7 +1044,7 @@ fail1:
 	return ret;
 }
 
-static int __devexit tsu6721_remove(struct i2c_client *client)
+static int tsu6721_remove(struct i2c_client *client)
 {
 	struct tsu6721_usbsw *usbsw = i2c_get_clientdata(client);
 	cancel_delayed_work(&usbsw->init_work);

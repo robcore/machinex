@@ -85,7 +85,7 @@ static int mipi_simulator_lcd_off(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit mipi_simulator_lcd_probe(struct platform_device *pdev)
+static int mipi_simulator_lcd_probe(struct platform_device *pdev)
 {
 	if (pdev->id == 0) {
 		mipi_simulator_pdata = pdev->dev.platform_data;

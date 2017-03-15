@@ -134,7 +134,7 @@ enum iTCO_chipsets {
 static struct {
 	char *name;
 	unsigned int iTCO_version;
-} iTCO_chipset_info[] __devinitdata = {
+} iTCO_chipset_info[] = {
 	{"ICH", 1},
 	{"ICH0", 1},
 	{"ICH2", 1},
@@ -786,7 +786,7 @@ static struct miscdevice iTCO_wdt_miscdev = {
  *	Init & exit routines
  */
 
-static int __devinit iTCO_wdt_init(struct pci_dev *pdev,
+static int iTCO_wdt_init(struct pci_dev *pdev,
 		const struct pci_device_id *ent, struct platform_device *dev)
 {
 	int ret;
@@ -903,7 +903,7 @@ out:
 	return ret;
 }
 
-static void __devexit iTCO_wdt_cleanup(void)
+static void iTCO_wdt_cleanup(void)
 {
 	/* Stop the timer before we leave */
 	if (!nowayout)
@@ -919,7 +919,7 @@ static void __devexit iTCO_wdt_cleanup(void)
 	iTCO_wdt_private.ACPIBASE = 0;
 }
 
-static int __devinit iTCO_wdt_probe(struct platform_device *dev)
+static int iTCO_wdt_probe(struct platform_device *dev)
 {
 	int ret = -ENODEV;
 	int found = 0;
@@ -944,7 +944,7 @@ static int __devinit iTCO_wdt_probe(struct platform_device *dev)
 	return ret;
 }
 
-static int __devexit iTCO_wdt_remove(struct platform_device *dev)
+static int iTCO_wdt_remove(struct platform_device *dev)
 {
 	if (iTCO_wdt_private.ACPIBASE)
 		iTCO_wdt_cleanup();

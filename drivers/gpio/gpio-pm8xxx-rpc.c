@@ -140,7 +140,7 @@ static void pm8xxx_gpio_rpc_dbg_show(struct seq_file *s, struct gpio_chip
 	}
 }
 
-static int __devinit pm8xxx_gpio_rpc_probe(struct platform_device *pdev)
+static int pm8xxx_gpio_rpc_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct pm8xxx_gpio_rpc_chip *pm8xxx_gpio_chip;

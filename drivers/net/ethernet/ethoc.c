@@ -665,7 +665,7 @@ static void ethoc_mdio_poll(struct net_device *dev)
 {
 }
 
-static int __devinit ethoc_mdio_probe(struct net_device *dev)
+static int ethoc_mdio_probe(struct net_device *dev)
 {
 	struct ethoc *priv = netdev_priv(dev);
 	struct phy_device *phy;
@@ -905,7 +905,7 @@ static const struct net_device_ops ethoc_netdev_ops = {
  * ethoc_probe() - initialize OpenCores ethernet MAC
  * pdev:	platform device
  */
-static int __devinit ethoc_probe(struct platform_device *pdev)
+static int ethoc_probe(struct platform_device *pdev)
 {
 	struct net_device *netdev = NULL;
 	struct resource *res = NULL;
@@ -1143,7 +1143,7 @@ out:
  * ethoc_remove() - shutdown OpenCores ethernet MAC
  * @pdev:	platform device
  */
-static int __devexit ethoc_remove(struct platform_device *pdev)
+static int ethoc_remove(struct platform_device *pdev)
 {
 	struct net_device *netdev = platform_get_drvdata(pdev);
 	struct ethoc *priv = netdev_priv(netdev);

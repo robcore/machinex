@@ -984,7 +984,7 @@ static bool msm_rpm_set_standalone(void)
 	return standalone;
 }
 
-static int __devinit msm_rpm_dev_probe(struct platform_device *pdev)
+static int msm_rpm_dev_probe(struct platform_device *pdev)
 {
 	char *key = NULL;
 	int ret;

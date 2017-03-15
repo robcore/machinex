@@ -2638,7 +2638,7 @@ err_ret:
 	return ret;
 }
 
-static int __devinit amd64_probe_one_instance(struct pci_dev *pdev,
+static int amd64_probe_one_instance(struct pci_dev *pdev,
 					     const struct pci_device_id *mc_type)
 {
 	u8 nid = get_node_id(pdev);
@@ -2687,7 +2687,7 @@ err_out:
 	return ret;
 }
 
-static void __devexit amd64_remove_one_instance(struct pci_dev *pdev)
+static void amd64_remove_one_instance(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 	struct amd64_pvt *pvt;

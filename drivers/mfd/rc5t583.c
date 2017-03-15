@@ -245,7 +245,7 @@ static const struct regmap_config rc5t583_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-static int __devinit rc5t583_i2c_probe(struct i2c_client *i2c,
+static int rc5t583_i2c_probe(struct i2c_client *i2c,
 			      const struct i2c_device_id *id)
 {
 	struct rc5t583 *rc5t583;
@@ -304,7 +304,7 @@ err_irq_init:
 	return ret;
 }
 
-static int  __devexit rc5t583_i2c_remove(struct i2c_client *i2c)
+static int  rc5t583_i2c_remove(struct i2c_client *i2c)
 {
 	struct rc5t583 *rc5t583 = i2c_get_clientdata(i2c);
 

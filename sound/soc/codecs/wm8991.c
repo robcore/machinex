@@ -1357,7 +1357,7 @@ static struct snd_soc_codec_driver soc_codec_dev_wm8991 = {
 	.reg_cache_default = wm8991_reg_defs
 };
 
-static __devinit int wm8991_i2c_probe(struct i2c_client *i2c,
+static int wm8991_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8991_priv *wm8991;
@@ -1377,7 +1377,7 @@ static __devinit int wm8991_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static __devexit int wm8991_i2c_remove(struct i2c_client *client)
+static int wm8991_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	kfree(i2c_get_clientdata(client));

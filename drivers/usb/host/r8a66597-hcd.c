@@ -2398,7 +2398,7 @@ static const struct dev_pm_ops r8a66597_dev_pm_ops = {
 #define R8A66597_DEV_PM_OPS	NULL
 #endif
 
-static int __devexit r8a66597_remove(struct platform_device *pdev)
+static int r8a66597_remove(struct platform_device *pdev)
 {
 	struct r8a66597		*r8a66597 = dev_get_drvdata(&pdev->dev);
 	struct usb_hcd		*hcd = r8a66597_to_hcd(r8a66597);
@@ -2414,7 +2414,7 @@ static int __devexit r8a66597_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit r8a66597_probe(struct platform_device *pdev)
+static int r8a66597_probe(struct platform_device *pdev)
 {
 #ifdef CONFIG_HAVE_CLK
 	char clk_name[8];

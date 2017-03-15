@@ -2527,7 +2527,7 @@ void max77693_update_jig_state(struct max77693_muic_info *info)
 	mdata->jig_state(jig_state);
 }
 
-static int __devinit max77693_muic_probe(struct platform_device *pdev)
+static int max77693_muic_probe(struct platform_device *pdev)
 {
 	struct max77693_dev *max77693 = dev_get_drvdata(pdev->dev.parent);
 	struct max77693_platform_data *pdata = dev_get_platdata(max77693->dev);
@@ -2682,7 +2682,7 @@ static int __devinit max77693_muic_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit max77693_muic_remove(struct platform_device *pdev)
+static int max77693_muic_remove(struct platform_device *pdev)
 {
 	struct max77693_muic_info *info = platform_get_drvdata(pdev);
 	sysfs_remove_group(&switch_dev->kobj, &max77693_muic_group);

@@ -620,7 +620,7 @@ chip-id,power configuration, system configuration2 registers */
 	return ret;
 }
 
-static int __devinit Si47xx_i2c_probe(struct i2c_client *client,
+static int Si47xx_i2c_probe(struct i2c_client *client,
 			    const struct i2c_device_id *id)
 {
 	struct Si47xx_device_t *Si47xx_dev;
@@ -663,7 +663,7 @@ dev_init_err:
 
 }
 
-static int __devexit Si47xx_i2c_remove(struct i2c_client *client)
+static int Si47xx_i2c_remove(struct i2c_client *client)
 {
 	struct Si47xx_device_t *Si47xx_dev = i2c_get_clientdata(client);
 	int ret = 0;

@@ -1785,7 +1785,7 @@ static int mvumi_io_attach(struct mvumi_hba *mhba)
  * @pdev:		PCI device structure
  * @id:			PCI ids of supported hotplugged adapter
  */
-static int __devinit mvumi_probe_one(struct pci_dev *pdev,
+static int mvumi_probe_one(struct pci_dev *pdev,
 					const struct pci_device_id *id)
 {
 	struct Scsi_Host *host;

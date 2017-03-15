@@ -63,7 +63,7 @@ static int pcspkr_event(struct input_dev *dev, unsigned int type, unsigned int c
 	return 0;
 }
 
-static int __devinit pcspkr_probe(struct platform_device *dev)
+static int pcspkr_probe(struct platform_device *dev)
 {
 	struct input_dev *pcspkr_dev;
 	int err;
@@ -95,7 +95,7 @@ static int __devinit pcspkr_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __devexit pcspkr_remove(struct platform_device *dev)
+static int pcspkr_remove(struct platform_device *dev)
 {
 	struct input_dev *pcspkr_dev = platform_get_drvdata(dev);
 

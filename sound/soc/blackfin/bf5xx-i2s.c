@@ -246,7 +246,7 @@ static struct snd_soc_dai_driver bf5xx_i2s_dai = {
 	.ops = &bf5xx_i2s_dai_ops,
 };
 
-static int __devinit bf5xx_i2s_probe(struct platform_device *pdev)
+static int bf5xx_i2s_probe(struct platform_device *pdev)
 {
 	struct sport_device *sport_handle;
 	int ret;
@@ -268,7 +268,7 @@ static int __devinit bf5xx_i2s_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit bf5xx_i2s_remove(struct platform_device *pdev)
+static int bf5xx_i2s_remove(struct platform_device *pdev)
 {
 	struct sport_device *sport_handle = platform_get_drvdata(pdev);
 

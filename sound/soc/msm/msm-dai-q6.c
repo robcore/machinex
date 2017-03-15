@@ -2147,7 +2147,7 @@ static struct snd_soc_dai_driver msm_dai_q6_slimbus_3_rx_dai = {
 };
 
 /* To do: change to register DAIs as batch */
-static __devinit int msm_dai_q6_dev_probe(struct platform_device *pdev)
+static int msm_dai_q6_dev_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 
@@ -2247,13 +2247,13 @@ static __devinit int msm_dai_q6_dev_probe(struct platform_device *pdev)
 	return rc;
 }
 
-static __devexit int msm_dai_q6_dev_remove(struct platform_device *pdev)
+static int msm_dai_q6_dev_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_dai(&pdev->dev);
 	return 0;
 }
 
-static __devinit int msm_dai_q6_mi2s_dev_probe(struct platform_device *pdev)
+static int msm_dai_q6_mi2s_dev_probe(struct platform_device *pdev)
 {
 	struct msm_dai_q6_mi2s_dai_data *dai_data;
 	int rc = 0;
@@ -2292,7 +2292,7 @@ rtn:
 	return rc;
 }
 
-static __devexit int msm_dai_q6_mi2s_dev_remove(struct platform_device *pdev)
+static int msm_dai_q6_mi2s_dev_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_dai(&pdev->dev);
 	return 0;

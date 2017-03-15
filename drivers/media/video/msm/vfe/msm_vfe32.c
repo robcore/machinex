@@ -7150,7 +7150,7 @@ static const struct v4l2_subdev_ops msm_axi_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops msm_axi_internal_ops;
 
-static int __devinit vfe32_probe(struct platform_device *pdev)
+static int vfe32_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct axi_ctrl_t *axi_ctrl;

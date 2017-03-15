@@ -1487,7 +1487,7 @@ static int fec_enet_init(struct net_device *ndev)
 }
 
 #ifdef CONFIG_OF
-static int __devinit fec_get_phy_mode_dt(struct platform_device *pdev)
+static int fec_get_phy_mode_dt(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 
@@ -1497,7 +1497,7 @@ static int __devinit fec_get_phy_mode_dt(struct platform_device *pdev)
 	return -ENODEV;
 }
 
-static void __devinit fec_reset_phy(struct platform_device *pdev)
+static void fec_reset_phy(struct platform_device *pdev)
 {
 	int err, phy_reset;
 	struct device_node *np = pdev->dev.of_node;
@@ -1529,7 +1529,7 @@ static inline void fec_reset_phy(struct platform_device *pdev)
 }
 #endif /* CONFIG_OF */
 
-static int __devinit
+static int
 fec_probe(struct platform_device *pdev)
 {
 	struct fec_enet_private *fep;

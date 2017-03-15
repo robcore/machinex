@@ -4114,7 +4114,7 @@ err:
  *      A platform bus SATA device has been unplugged. Perform the needed
  *      cleanup. Also called on module unload for any active devices.
  */
-static int __devexit mv_platform_remove(struct platform_device *pdev)
+static int mv_platform_remove(struct platform_device *pdev)
 {
 	struct ata_host *host = platform_get_drvdata(pdev);
 #if defined(CONFIG_HAVE_CLK)
@@ -4379,7 +4379,7 @@ static int mv_pci_device_resume(struct pci_dev *pdev)
 #endif
 
 static int mv_platform_probe(struct platform_device *pdev);
-static int __devexit mv_platform_remove(struct platform_device *pdev);
+static int mv_platform_remove(struct platform_device *pdev);
 
 static int __init mv_init(void)
 {

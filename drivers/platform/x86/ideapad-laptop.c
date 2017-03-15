@@ -295,7 +295,7 @@ static const struct file_operations debugfs_cfg_fops = {
 	.release = single_release,
 };
 
-static int __devinit ideapad_debugfs_init(struct ideapad_private *priv)
+static int ideapad_debugfs_init(struct ideapad_private *priv)
 {
 	struct dentry *node;
 
@@ -431,7 +431,7 @@ static void ideapad_sync_rfk_state(struct ideapad_private *priv)
 			rfkill_set_hw_state(priv->rfk[i], hw_blocked);
 }
 
-static int __devinit ideapad_register_rfkill(struct acpi_device *adevice,
+static int ideapad_register_rfkill(struct acpi_device *adevice,
 					     int dev)
 {
 	struct ideapad_private *priv = dev_get_drvdata(&adevice->dev);
@@ -482,7 +482,7 @@ static void ideapad_unregister_rfkill(struct acpi_device *adevice, int dev)
 /*
  * Platform device
  */
-static int __devinit ideapad_platform_init(struct ideapad_private *priv)
+static int ideapad_platform_init(struct ideapad_private *priv)
 {
 	int result;
 
@@ -526,7 +526,7 @@ static const struct key_entry ideapad_keymap[] = {
 	{ KE_END, 0 },
 };
 
-static int __devinit ideapad_input_init(struct ideapad_private *priv)
+static int ideapad_input_init(struct ideapad_private *priv)
 {
 	struct input_dev *inputdev;
 	int error;
@@ -693,7 +693,7 @@ static const struct acpi_device_id ideapad_device_ids[] = {
 };
 MODULE_DEVICE_TABLE(acpi, ideapad_device_ids);
 
-static int __devinit ideapad_acpi_add(struct acpi_device *adevice)
+static int ideapad_acpi_add(struct acpi_device *adevice)
 {
 	int ret, i;
 	unsigned long cfg;
@@ -751,7 +751,7 @@ platform_failed:
 	return ret;
 }
 
-static int __devexit ideapad_acpi_remove(struct acpi_device *adevice, int type)
+static int ideapad_acpi_remove(struct acpi_device *adevice, int type)
 {
 	struct ideapad_private *priv = dev_get_drvdata(&adevice->dev);
 	int i;

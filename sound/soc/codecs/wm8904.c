@@ -2255,7 +2255,7 @@ static const struct regmap_config wm8904_regmap = {
 	.num_reg_defaults = ARRAY_SIZE(wm8904_reg_defaults),
 };
 
-static __devinit int wm8904_i2c_probe(struct i2c_client *i2c,
+static int wm8904_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8904_priv *wm8904;
@@ -2290,7 +2290,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8904_i2c_remove(struct i2c_client *client)
+static int wm8904_i2c_remove(struct i2c_client *client)
 {
 	struct wm8904_priv *wm8904 = i2c_get_clientdata(client);
 	snd_soc_unregister_codec(&client->dev);

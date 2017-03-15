@@ -109,12 +109,12 @@ static void novatek_fpga_read(uint8 addr)
 	return;
 }
 
-static int __devinit panel_3d_spi_probe(struct spi_device *spi)
+static int panel_3d_spi_probe(struct spi_device *spi)
 {
 	panel_3d_spi_client = spi;
 	return 0;
 }
-static int __devexit panel_3d_spi_remove(struct spi_device *spi)
+static int panel_3d_spi_remove(struct spi_device *spi)
 {
 	panel_3d_spi_client = NULL;
 	return 0;
@@ -491,7 +491,7 @@ static void mipi_novatek_set_backlight(struct msm_fb_data_type *mfd)
 static int mipi_dsi_3d_barrier_sysfs_register(struct device *dev);
 static int barrier_mode;
 
-static int __devinit mipi_novatek_lcd_probe(struct platform_device *pdev)
+static int mipi_novatek_lcd_probe(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;

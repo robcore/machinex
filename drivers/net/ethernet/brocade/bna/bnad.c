@@ -3254,7 +3254,7 @@ bnad_pci_uninit(struct pci_dev *pdev)
 	pci_disable_device(pdev);
 }
 
-static int __devinit
+static int
 bnad_pci_probe(struct pci_dev *pdev,
 		const struct pci_device_id *pcidev_id)
 {

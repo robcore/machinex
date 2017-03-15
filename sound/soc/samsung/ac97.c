@@ -370,7 +370,7 @@ static struct snd_soc_dai_driver s3c_ac97_dai[] = {
 	},
 };
 
-static __devinit int s3c_ac97_probe(struct platform_device *pdev)
+static int s3c_ac97_probe(struct platform_device *pdev)
 {
 	struct resource *mem_res, *dmatx_res, *dmarx_res, *dmamic_res, *irq_res;
 	struct s3c_audio_pdata *ac97_pdata;
@@ -478,7 +478,7 @@ err1:
 	return ret;
 }
 
-static __devexit int s3c_ac97_remove(struct platform_device *pdev)
+static int s3c_ac97_remove(struct platform_device *pdev)
 {
 	struct resource *mem_res, *irq_res;
 

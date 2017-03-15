@@ -55,7 +55,7 @@ struct dwc3_pci {
 	struct platform_device	*dwc3;
 };
 
-static int __devinit dwc3_pci_probe(struct pci_dev *pci,
+static int dwc3_pci_probe(struct pci_dev *pci,
 		const struct pci_device_id *id)
 {
 	struct resource		res[2];
@@ -142,7 +142,7 @@ err1:
 	return ret;
 }
 
-static void __devexit dwc3_pci_remove(struct pci_dev *pci)
+static void dwc3_pci_remove(struct pci_dev *pci)
 {
 	struct dwc3_pci	*glue = pci_get_drvdata(pci);
 

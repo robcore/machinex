@@ -1216,7 +1216,7 @@ static void mpu6500_set_65XX_gyro_config(struct i2c_client *i2c_client)
 
 }
 
-static int __devinit mpu6500_input_initialize(struct mpu6500_input_data *data, const struct mpu6500_input_cfg
+static int mpu6500_input_initialize(struct mpu6500_input_data *data, const struct mpu6500_input_cfg
 					      *cfg)
 {
 	int result;
@@ -2169,7 +2169,7 @@ static struct device_attribute *accel_sensor_attrs[] = {
 	NULL,
 };
 
-static int __devinit mpu6500_input_register_input_device(struct
+static int mpu6500_input_register_input_device(struct
 							 mpu6500_input_data
 							 *data)
 {
@@ -2326,7 +2326,7 @@ static void mpu6500_work_func_gyro(struct work_struct *work)
 }
 #endif
 
-static int __devinit mpu6500_input_probe(struct i2c_client *client,
+static int mpu6500_input_probe(struct i2c_client *client,
 					 const struct i2c_device_id *id)
 {
 	struct mpu6k_input_platform_data *pdata =
@@ -2439,7 +2439,7 @@ err_free_mem:
 	return error;
 }
 
-static int __devexit mpu6500_input_remove(struct i2c_client *client)
+static int mpu6500_input_remove(struct i2c_client *client)
 {
 	struct mpu6500_input_data *data = i2c_get_clientdata(client);
 	if (data == NULL)

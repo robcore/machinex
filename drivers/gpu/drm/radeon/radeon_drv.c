@@ -286,7 +286,7 @@ static void radeon_kick_out_firmware_fb(struct pci_dev *pdev)
 	kfree(ap);
 }
 
-static int __devinit
+static int
 radeon_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	/* Get rid of things like offb */

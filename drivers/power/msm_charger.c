@@ -1019,7 +1019,7 @@ static int determine_initial_batt_status(void)
 	return 0;
 }
 
-static int __devinit msm_charger_probe(struct platform_device *pdev)
+static int msm_charger_probe(struct platform_device *pdev)
 {
 	msm_chg.dev = &pdev->dev;
 	if (pdev->dev.platform_data) {
@@ -1070,7 +1070,7 @@ static int __devinit msm_charger_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit msm_charger_remove(struct platform_device *pdev)
+static int msm_charger_remove(struct platform_device *pdev)
 {
 	wake_lock_destroy(&msm_chg.wl);
 	mutex_destroy(&msm_chg.status_lock);

@@ -133,7 +133,7 @@ static DEVICE_ATTR(name, S_IRUGO, lm70_show_name, NULL);
 
 /*----------------------------------------------------------------------*/
 
-static int __devinit lm70_probe(struct spi_device *spi)
+static int lm70_probe(struct spi_device *spi)
 {
 	int chip = spi_get_device_id(spi)->driver_data;
 	struct lm70 *p_lm70;
@@ -185,7 +185,7 @@ out_dev_create_temp_file_failed:
 	return status;
 }
 
-static int __devexit lm70_remove(struct spi_device *spi)
+static int lm70_remove(struct spi_device *spi)
 {
 	struct lm70 *p_lm70 = spi_get_drvdata(spi);
 

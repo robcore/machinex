@@ -1242,7 +1242,7 @@ static void mmcif_timeout_work(struct work_struct *work)
 	mmc_request_done(host->mmc, mrq);
 }
 
-static int __devinit sh_mmcif_probe(struct platform_device *pdev)
+static int sh_mmcif_probe(struct platform_device *pdev)
 {
 	int ret = 0, irq[2];
 	struct mmc_host *mmc;
@@ -1364,7 +1364,7 @@ clean_up:
 	return ret;
 }
 
-static int __devexit sh_mmcif_remove(struct platform_device *pdev)
+static int sh_mmcif_remove(struct platform_device *pdev)
 {
 	struct sh_mmcif_host *host = platform_get_drvdata(pdev);
 	int irq[2];

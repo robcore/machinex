@@ -400,7 +400,7 @@ struct buffer {
 } __attribute__ ((packed));
 
 /*    Global variables */
-static const struct pci_device_id nozomi_pci_tbl[] __devinitconst = {
+static const struct pci_device_id nozomi_pci_tbl[] = {
 	{PCI_DEVICE(0x1931, 0x000c)},	/* Nozomi HSDPA */
 	{},
 };
@@ -1360,7 +1360,7 @@ static void remove_sysfs_files(struct nozomi *dc)
 }
 
 /* Allocate memory for one device */
-static int __devinit nozomi_card_init(struct pci_dev *pdev,
+static int nozomi_card_init(struct pci_dev *pdev,
 				      const struct pci_device_id *ent)
 {
 	resource_size_t start;
@@ -1504,7 +1504,7 @@ err:
 	return ret;
 }
 
-static void __devexit tty_exit(struct nozomi *dc)
+static void tty_exit(struct nozomi *dc)
 {
 	unsigned int i;
 
@@ -1525,7 +1525,7 @@ static void __devexit tty_exit(struct nozomi *dc)
 }
 
 /* Deallocate memory for one device */
-static void __devexit nozomi_card_exit(struct pci_dev *pdev)
+static void nozomi_card_exit(struct pci_dev *pdev)
 {
 	int i;
 	struct ctrl_ul ctrl;

@@ -284,7 +284,7 @@ static void mipi_samsung_esd_power_resume(struct power_suspend *h)
 
 } */
 
-static int __devinit mipi_esd_refresh_probe(struct platform_device *pdev)
+static int mipi_esd_refresh_probe(struct platform_device *pdev)
 {
 	struct esd_data_t *p_esd_data;
 	struct sec_esd_platform_data *pdata = pdev->dev.platform_data;

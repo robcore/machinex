@@ -133,7 +133,7 @@ err_switch_dev_register:
 	return ret;
 }
 
-static int __devexit gpio_switch_remove(struct platform_device *pdev)
+static int gpio_switch_remove(struct platform_device *pdev)
 {
 	struct gpio_switch_data *switch_data = platform_get_drvdata(pdev);
 

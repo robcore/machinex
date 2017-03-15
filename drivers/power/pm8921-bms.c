@@ -3161,7 +3161,7 @@ static void free_irqs(struct pm8921_bms_chip *chip)
 		}
 }
 
-static int __devinit request_irqs(struct pm8921_bms_chip *chip,
+static int request_irqs(struct pm8921_bms_chip *chip,
 					struct platform_device *pdev)
 {
 	struct resource *res;
@@ -3197,7 +3197,7 @@ err_out:
 
 #define EN_BMS_BIT	BIT(7)
 #define EN_PON_HS_BIT	BIT(0)
-static int __devinit pm8921_bms_hw_init(struct pm8921_bms_chip *chip)
+static int pm8921_bms_hw_init(struct pm8921_bms_chip *chip)
 {
 	int rc;
 
@@ -3846,7 +3846,7 @@ restore_sbi_config:
 	return 0;
 }
 
-static int __devinit pm8921_bms_probe(struct platform_device *pdev)
+static int pm8921_bms_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	int vbatt = 0;
@@ -4035,7 +4035,7 @@ free_chip:
 	return rc;
 }
 
-static int __devexit pm8921_bms_remove(struct platform_device *pdev)
+static int pm8921_bms_remove(struct platform_device *pdev)
 {
 	struct pm8921_bms_chip *chip = platform_get_drvdata(pdev);
 

@@ -204,7 +204,7 @@ static struct pccard_operations xxs1500_pcmcia_operations = {
 	.set_mem_map		= au1x00_pcmcia_set_mem_map,
 };
 
-static int __devinit xxs1500_pcmcia_probe(struct platform_device *pdev)
+static int xxs1500_pcmcia_probe(struct platform_device *pdev)
 {
 	struct xxs1500_pcmcia_sock *sock;
 	struct resource *r;
@@ -299,7 +299,7 @@ out0:
 	return ret;
 }
 
-static int __devexit xxs1500_pcmcia_remove(struct platform_device *pdev)
+static int xxs1500_pcmcia_remove(struct platform_device *pdev)
 {
 	struct xxs1500_pcmcia_sock *sock = platform_get_drvdata(pdev);
 

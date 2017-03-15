@@ -357,7 +357,7 @@ static const struct iio_info ad5380_info = {
 	.driver_module = THIS_MODULE,
 };
 
-static int __devinit ad5380_alloc_channels(struct iio_dev *indio_dev)
+static int ad5380_alloc_channels(struct iio_dev *indio_dev)
 {
 	struct ad5380_state *st = iio_priv(indio_dev);
 	struct iio_chan_spec *channels;
@@ -380,7 +380,7 @@ static int __devinit ad5380_alloc_channels(struct iio_dev *indio_dev)
 	return 0;
 }
 
-static int __devinit ad5380_probe(struct device *dev, struct regmap *regmap,
+static int ad5380_probe(struct device *dev, struct regmap *regmap,
 	enum ad5380_type type, const char *name)
 {
 	struct iio_dev *indio_dev;
@@ -461,7 +461,7 @@ error_regmap_exit:
 	return ret;
 }
 
-static int __devexit ad5380_remove(struct device *dev)
+static int ad5380_remove(struct device *dev)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct ad5380_state *st = iio_priv(indio_dev);
@@ -499,7 +499,7 @@ static const struct regmap_config ad5380_regmap_config = {
 
 #if IS_ENABLED(CONFIG_SPI_MASTER)
 
-static int __devinit ad5380_spi_probe(struct spi_device *spi)
+static int ad5380_spi_probe(struct spi_device *spi)
 {
 	const struct spi_device_id *id = spi_get_device_id(spi);
 	struct regmap *regmap;
@@ -512,7 +512,7 @@ static int __devinit ad5380_spi_probe(struct spi_device *spi)
 	return ad5380_probe(&spi->dev, regmap, id->driver_data, id->name);
 }
 
-static int __devexit ad5380_spi_remove(struct spi_device *spi)
+static int ad5380_spi_remove(struct spi_device *spi)
 {
 	return ad5380_remove(&spi->dev);
 }
@@ -573,7 +573,7 @@ static inline void ad5380_spi_unregister_driver(void)
 
 #if IS_ENABLED(CONFIG_I2C)
 
-static int __devinit ad5380_i2c_probe(struct i2c_client *i2c,
+static int ad5380_i2c_probe(struct i2c_client *i2c,
 	const struct i2c_device_id *id)
 {
 	struct regmap *regmap;
@@ -586,7 +586,7 @@ static int __devinit ad5380_i2c_probe(struct i2c_client *i2c,
 	return ad5380_probe(&i2c->dev, regmap, id->driver_data, id->name);
 }
 
-static int __devexit ad5380_i2c_remove(struct i2c_client *i2c)
+static int ad5380_i2c_remove(struct i2c_client *i2c)
 {
 	return ad5380_remove(&i2c->dev);
 }

@@ -238,7 +238,7 @@ out_err_create_base:
 	return ret;
 }
 
-static int __devexit mc13783_adc_remove(struct platform_device *pdev)
+static int mc13783_adc_remove(struct platform_device *pdev)
 {
 	struct mc13783_adc_priv *priv = platform_get_drvdata(pdev);
 	kernel_ulong_t driver_data = platform_get_device_id(pdev)->driver_data;

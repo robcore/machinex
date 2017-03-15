@@ -1487,7 +1487,7 @@ exit_check_functionality_failed:
 	return err;
 }
 
-static int __devexit lis3dh_acc_remove(struct i2c_client *client)
+static int lis3dh_acc_remove(struct i2c_client *client)
 {
 	struct lis3dh_acc_data *acc = i2c_get_clientdata(client);
 

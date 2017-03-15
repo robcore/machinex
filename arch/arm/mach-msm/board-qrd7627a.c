@@ -758,7 +758,7 @@ static struct gpio_regulator_platform_data msm_gpio_regulator_pdata[] = {
 };
 
 /* GPIO regulator */
-static struct platform_device qrd_vreg_gpio_ext_2p85v __devinitdata = {
+static struct platform_device qrd_vreg_gpio_ext_2p85v = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= 35,
 	.dev	= {
@@ -767,7 +767,7 @@ static struct platform_device qrd_vreg_gpio_ext_2p85v __devinitdata = {
 	},
 };
 
-static struct platform_device qrd_vreg_gpio_ext_1p8v __devinitdata = {
+static struct platform_device qrd_vreg_gpio_ext_1p8v = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= 40,
 	.dev	= {

@@ -266,7 +266,7 @@ static void nxp_stop_hc(void)
 	__raw_writel(tmp, USB_OTG_STAT_CONTROL);
 }
 
-static int __devinit ohci_nxp_start(struct usb_hcd *hcd)
+static int ohci_nxp_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
 	int ret;
@@ -367,7 +367,7 @@ static void nxp_unset_usb_bits(void)
 	}
 }
 
-static int __devinit usb_hcd_nxp_probe(struct platform_device *pdev)
+static int usb_hcd_nxp_probe(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = 0;
 	struct ohci_hcd *ohci;

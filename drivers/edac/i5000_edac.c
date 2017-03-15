@@ -1491,7 +1491,7 @@ fail0:
  *		negative on error
  *		count (>= 0)
  */
-static int __devinit i5000_init_one(struct pci_dev *pdev,
+static int i5000_init_one(struct pci_dev *pdev,
 				const struct pci_device_id *id)
 {
 	int rc;
@@ -1511,7 +1511,7 @@ static int __devinit i5000_init_one(struct pci_dev *pdev,
  *	i5000_remove_one	destructor for one instance of device
  *
  */
-static void __devexit i5000_remove_one(struct pci_dev *pdev)
+static void i5000_remove_one(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 

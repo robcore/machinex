@@ -1361,7 +1361,7 @@ static const struct net_device_ops dm9000_netdev_ops = {
 /*
  * Search DM9000 board, allocate space and register it
  */
-static int __devinit
+static int
 dm9000_probe(struct platform_device *pdev)
 {
 	struct dm9000_plat_data *pdata = pdev->dev.platform_data;

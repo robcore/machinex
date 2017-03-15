@@ -843,7 +843,7 @@ static int pch_dma_resume(struct pci_dev *pdev)
 }
 #endif
 
-static int __devinit pch_dma_probe(struct pci_dev *pdev,
+static int pch_dma_probe(struct pci_dev *pdev,
 				   const struct pci_device_id *id)
 {
 	struct pch_dma *pd;
@@ -961,7 +961,7 @@ err_free_mem:
 	return err;
 }
 
-static void __devexit pch_dma_remove(struct pci_dev *pdev)
+static void pch_dma_remove(struct pci_dev *pdev)
 {
 	struct pch_dma *pd = pci_get_drvdata(pdev);
 	struct pch_dma_chan *pd_chan;

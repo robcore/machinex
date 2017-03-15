@@ -461,7 +461,7 @@ static void tzdbgfs_exit(struct platform_device *pdev)
 /*
  * Driver functions
  */
-static int __devinit tz_log_probe(struct platform_device *pdev)
+static int tz_log_probe(struct platform_device *pdev)
 {
 	struct resource *resource;
 	void __iomem *virt_iobase;

@@ -285,7 +285,7 @@ static enum led_brightness pm8xxx_led_get(struct led_classdev *led_cdev)
 	return led->cdev.brightness;
 }
 
-static int __devinit get_init_value(struct pm8xxx_led_data *led, u8 *val)
+static int get_init_value(struct pm8xxx_led_data *led, u8 *val)
 {
 	int rc = -1 , offset = 0;
 	u16 addr = 0;
@@ -1124,7 +1124,7 @@ static void led_virtual_dev(struct leds_dev_data *info)
 }
 #endif
 
-static int __devinit pm8xxx_led_probe(struct platform_device *pdev)
+static int pm8xxx_led_probe(struct platform_device *pdev)
 {
 	const struct led_platform_data *pcore_data;
 	struct led_info *curr_led;
@@ -1229,7 +1229,7 @@ fail_mem_check:
 	return rc;
 }
 
-static int __devexit pm8xxx_led_remove(struct platform_device *pdev)
+static int pm8xxx_led_remove(struct platform_device *pdev)
 {
 	int i;
 	const struct led_platform_data *pdata =

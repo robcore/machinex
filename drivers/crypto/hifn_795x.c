@@ -2561,7 +2561,7 @@ static void hifn_tasklet_callback(unsigned long data)
 		hifn_process_queue(dev);
 }
 
-static int __devinit hifn_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+static int hifn_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	int err, i;
 	struct hifn_device *dev;
@@ -2693,7 +2693,7 @@ err_out_disable_pci_device:
 	return err;
 }
 
-static void __devexit hifn_remove(struct pci_dev *pdev)
+static void hifn_remove(struct pci_dev *pdev)
 {
 	int i;
 	struct hifn_device *dev;

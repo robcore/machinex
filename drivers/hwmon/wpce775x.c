@@ -32,9 +32,9 @@ struct i2cec_drv_data {
 		char ec_data[EC_BUFFER_LEN+1];
 };
 
-static int __devinit wpce_probe(struct i2c_client *client,
+static int wpce_probe(struct i2c_client *client,
 	const struct i2c_device_id *id);
-static int __devexit wpce_remove(struct i2c_client *kbd);
+static int wpce_remove(struct i2c_client *kbd);
 
 #ifdef CONFIG_PM
 static int wpce_suspend(struct device *dev)
@@ -73,7 +73,7 @@ static struct i2c_driver wpce_driver = {
 	.id_table   = wpce_idtable,
 };
 
-static int __devinit wpce_probe(struct i2c_client *client,
+static int wpce_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
 {
 	int err = -ENOMEM;
@@ -93,7 +93,7 @@ static int __devinit wpce_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit wpce_remove(struct i2c_client *dev)
+static int wpce_remove(struct i2c_client *dev)
 {
 	struct i2cec_drv_data *context = i2c_get_clientdata(dev);
 	g_i2cec_client = NULL;

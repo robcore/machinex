@@ -201,7 +201,7 @@ err_free:
 	return ERR_PTR(ret);
 }
 
-static int __devinit puv3_pwm_probe(struct platform_device *pdev)
+static int puv3_pwm_probe(struct platform_device *pdev)
 {
 	struct pwm_device *pwm = pwm_probe(pdev, pdev->id, NULL);
 
@@ -211,7 +211,7 @@ static int __devinit puv3_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pwm_remove(struct platform_device *pdev)
+static int pwm_remove(struct platform_device *pdev)
 {
 	struct pwm_device *pwm;
 	struct resource *r;

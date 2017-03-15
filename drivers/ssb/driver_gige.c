@@ -107,7 +107,7 @@ void gige_pcicfg_write32(struct ssb_gige *dev,
 	gige_write32(dev, SSB_GIGE_PCICFG + offset, value);
 }
 
-static int __devinit ssb_gige_pci_read_config(struct pci_bus *bus,
+static int ssb_gige_pci_read_config(struct pci_bus *bus,
 					      unsigned int devfn, int reg,
 					      int size, u32 *val)
 {
@@ -138,7 +138,7 @@ static int __devinit ssb_gige_pci_read_config(struct pci_bus *bus,
 	return PCIBIOS_SUCCESSFUL;
 }
 
-static int __devinit ssb_gige_pci_write_config(struct pci_bus *bus,
+static int ssb_gige_pci_write_config(struct pci_bus *bus,
 					       unsigned int devfn, int reg,
 					       int size, u32 val)
 {
@@ -169,7 +169,7 @@ static int __devinit ssb_gige_pci_write_config(struct pci_bus *bus,
 	return PCIBIOS_SUCCESSFUL;
 }
 
-static int __devinit ssb_gige_probe(struct ssb_device *sdev,
+static int ssb_gige_probe(struct ssb_device *sdev,
 				    const struct ssb_device_id *id)
 {
 	struct ssb_gige *dev;

@@ -1458,7 +1458,7 @@ static int soc_camera_video_start(struct soc_camera_device *icd)
 	return 0;
 }
 
-static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
+static int soc_camera_pdrv_probe(struct platform_device *pdev)
 {
 	struct soc_camera_link *icl = pdev->dev.platform_data;
 	struct soc_camera_device *icd;
@@ -1496,7 +1496,7 @@ escdevreg:
  * hot-pluggable. Now we know, that all our users - hosts and devices have
  * been unloaded already
  */
-static int __devexit soc_camera_pdrv_remove(struct platform_device *pdev)
+static int soc_camera_pdrv_remove(struct platform_device *pdev)
 {
 	struct soc_camera_device *icd = platform_get_drvdata(pdev);
 

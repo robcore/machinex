@@ -740,7 +740,7 @@ static struct dev_pm_ops bfin_sport_uart_dev_pm_ops = {
 };
 #endif
 
-static int __devinit sport_uart_probe(struct platform_device *pdev)
+static int sport_uart_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct sport_uart_port *sport;
@@ -850,7 +850,7 @@ out_error_free_mem:
 	return ret;
 }
 
-static int __devexit sport_uart_remove(struct platform_device *pdev)
+static int sport_uart_remove(struct platform_device *pdev)
 {
 	struct sport_uart_port *sport = platform_get_drvdata(pdev);
 

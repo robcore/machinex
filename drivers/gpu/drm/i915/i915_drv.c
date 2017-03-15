@@ -785,7 +785,7 @@ int i915_reset(struct drm_device *dev, u8 flags)
 }
 
 
-static int __devinit
+static int
 i915_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	/* Only bind to function 0 of the device. Early generations

@@ -845,7 +845,7 @@ static const struct v4l2_subdev_ops msm_ispif_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops msm_ispif_internal_ops;
 
-static int __devinit ispif_probe(struct platform_device *pdev)
+static int ispif_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct msm_cam_subdev_info sd_info;

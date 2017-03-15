@@ -709,7 +709,7 @@ void tegra_pinmux_config_pullupdown_table(const struct tegra_pingroup_config *co
 	}
 }
 
-static struct of_device_id tegra_pinmux_of_match[] __devinitdata = {
+static struct of_device_id tegra_pinmux_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	{ .compatible = "nvidia,tegra20-pinmux", tegra20_pinmux_init },
 #endif
@@ -719,7 +719,7 @@ static struct of_device_id tegra_pinmux_of_match[] __devinitdata = {
 	{ },
 };
 
-static int __devinit tegra_pinmux_probe(struct platform_device *pdev)
+static int tegra_pinmux_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int i;

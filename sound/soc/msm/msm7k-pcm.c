@@ -662,7 +662,7 @@ struct snd_soc_platform_driver msm_soc_platform = {
 };
 EXPORT_SYMBOL(msm_soc_platform);
 
-static __devinit int msm_pcm_probe(struct platform_device *pdev)
+static int msm_pcm_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev,
 				&msm_soc_platform);

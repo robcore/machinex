@@ -1238,7 +1238,7 @@ static void fsa9485_delayed_audio(struct work_struct *work)
 	mutex_unlock(&usbsw->mutex);
 }
 
-static int __devinit fsa9485_probe(struct i2c_client *client,
+static int fsa9485_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1375,7 +1375,7 @@ fail1:
 	return ret;
 }
 
-static int __devexit fsa9485_remove(struct i2c_client *client)
+static int fsa9485_remove(struct i2c_client *client)
 {
 	struct fsa9485_usbsw *usbsw = i2c_get_clientdata(client);
 

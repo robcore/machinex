@@ -7047,7 +7047,7 @@ static int setup_mtd_device(struct platform_device *pdev,
 	return err;
 }
 
-static int __devinit msm_nand_probe(struct platform_device *pdev)
+static int msm_nand_probe(struct platform_device *pdev)
 {
 	struct msm_nand_info *info;
 	struct resource *res;
@@ -7183,7 +7183,7 @@ out_free_info:
 	return err;
 }
 
-static int __devexit msm_nand_remove(struct platform_device *pdev)
+static int msm_nand_remove(struct platform_device *pdev)
 {
 	struct msm_nand_info *info = dev_get_drvdata(&pdev->dev);
 

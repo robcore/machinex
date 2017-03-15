@@ -1376,7 +1376,7 @@ static void fsa9485_init_detect(struct work_struct *work)
 	local_usbsw->last_state.int2 = ret;
 }
 
-static int __devinit fsa9485_probe(struct i2c_client *client,
+static int fsa9485_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1467,7 +1467,7 @@ fail1:
 	return ret;
 }
 
-static int __devexit fsa9485_remove(struct i2c_client *client)
+static int fsa9485_remove(struct i2c_client *client)
 {
 	struct fsa9485_usbsw *usbsw = i2c_get_clientdata(client);
 	cancel_delayed_work(&usbsw->init_work);

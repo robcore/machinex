@@ -951,7 +951,7 @@ wbcir_resume(struct pnp_dev *device)
 	return 0;
 }
 
-static int __devinit
+static int
 wbcir_probe(struct pnp_dev *device, const struct pnp_device_id *dev_id)
 {
 	struct device *dev = &device->dev;

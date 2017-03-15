@@ -1077,7 +1077,7 @@ static const struct net_device_ops bigmac_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 };
 
-static int __devinit bigmac_ether_init(struct platform_device *op,
+static int bigmac_ether_init(struct platform_device *op,
 				       struct platform_device *qec_op)
 {
 	static int version_printed;
@@ -1234,7 +1234,7 @@ fail_and_cleanup:
 /* QEC can be the parent of either QuadEthernet or a BigMAC.  We want
  * the latter.
  */
-static int __devinit bigmac_sbus_probe(struct platform_device *op)
+static int bigmac_sbus_probe(struct platform_device *op)
 {
 	struct device *parent = op->dev.parent;
 	struct platform_device *qec_op;
@@ -1244,7 +1244,7 @@ static int __devinit bigmac_sbus_probe(struct platform_device *op)
 	return bigmac_ether_init(op, qec_op);
 }
 
-static int __devexit bigmac_sbus_remove(struct platform_device *op)
+static int bigmac_sbus_remove(struct platform_device *op)
 {
 	struct bigmac *bp = dev_get_drvdata(&op->dev);
 	struct device *parent = op->dev.parent;

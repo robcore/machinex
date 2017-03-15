@@ -280,7 +280,7 @@ static void mipi_toshiba_set_backlight(struct msm_fb_data_type *mfd)
 	}
 }
 
-static int __devinit mipi_toshiba_lcd_probe(struct platform_device *pdev)
+static int mipi_toshiba_lcd_probe(struct platform_device *pdev)
 {
 	if (pdev->id == 0) {
 		mipi_toshiba_pdata = pdev->dev.platform_data;

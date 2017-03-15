@@ -361,13 +361,13 @@ static struct comedi_driver pci9111_driver = {
 	.detach = pci9111_detach,
 };
 
-static int __devinit pci9111_driver_pci_probe(struct pci_dev *dev,
+static int pci9111_driver_pci_probe(struct pci_dev *dev,
 					      const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, pci9111_driver.driver_name);
 }
 
-static void __devexit pci9111_driver_pci_remove(struct pci_dev *dev)
+static void pci9111_driver_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

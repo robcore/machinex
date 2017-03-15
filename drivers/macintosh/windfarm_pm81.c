@@ -721,7 +721,7 @@ static int wf_smu_probe(struct platform_device *ddev)
 	return 0;
 }
 
-static int __devexit wf_smu_remove(struct platform_device *ddev)
+static int wf_smu_remove(struct platform_device *ddev)
 {
 	wf_unregister_client(&wf_smu_events);
 

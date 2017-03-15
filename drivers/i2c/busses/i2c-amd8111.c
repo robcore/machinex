@@ -422,7 +422,7 @@ static DEFINE_PCI_DEVICE_TABLE(amd8111_ids) = {
 
 MODULE_DEVICE_TABLE (pci, amd8111_ids);
 
-static int __devinit amd8111_probe(struct pci_dev *dev,
+static int amd8111_probe(struct pci_dev *dev,
 		const struct pci_device_id *id)
 {
 	struct amd_smbus *smbus;
@@ -475,7 +475,7 @@ static int __devinit amd8111_probe(struct pci_dev *dev,
 	return error;
 }
 
-static void __devexit amd8111_remove(struct pci_dev *dev)
+static void amd8111_remove(struct pci_dev *dev)
 {
 	struct amd_smbus *smbus = pci_get_drvdata(dev);
 

@@ -327,7 +327,7 @@ static void gscps2_close(struct serio *port)
  * @return: success/error report
  */
 
-static int __devinit gscps2_probe(struct parisc_device *dev)
+static int gscps2_probe(struct parisc_device *dev)
 {
 	struct gscps2port *ps2port;
 	struct serio *serio;
@@ -414,7 +414,7 @@ fail_nomem:
  * @return: success/error report
  */
 
-static int __devexit gscps2_remove(struct parisc_device *dev)
+static int gscps2_remove(struct parisc_device *dev)
 {
 	struct gscps2port *ps2port = dev_get_drvdata(&dev->dev);
 

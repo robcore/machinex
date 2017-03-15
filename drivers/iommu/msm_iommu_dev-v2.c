@@ -120,7 +120,7 @@ fail:
 
 static atomic_t msm_iommu_next_id = ATOMIC_INIT(-1);
 
-static int __devinit msm_iommu_probe(struct platform_device *pdev)
+static int msm_iommu_probe(struct platform_device *pdev)
 {
 	struct msm_iommu_drvdata *drvdata;
 	struct resource *r;
@@ -186,7 +186,7 @@ static int __devinit msm_iommu_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit msm_iommu_remove(struct platform_device *pdev)
+static int msm_iommu_remove(struct platform_device *pdev)
 {
 	struct msm_iommu_drvdata *drv = NULL;
 
@@ -254,7 +254,7 @@ static int msm_iommu_ctx_parse_dt(struct platform_device *pdev,
 	return 0;
 }
 
-static int __devinit msm_iommu_ctx_probe(struct platform_device *pdev)
+static int msm_iommu_ctx_probe(struct platform_device *pdev)
 {
 	struct msm_iommu_ctx_drvdata *ctx_drvdata = NULL;
 	int ret;
@@ -279,7 +279,7 @@ static int __devinit msm_iommu_ctx_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit msm_iommu_ctx_remove(struct platform_device *pdev)
+static int msm_iommu_ctx_remove(struct platform_device *pdev)
 {
 	platform_set_drvdata(pdev, NULL);
 	return 0;

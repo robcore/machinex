@@ -283,7 +283,7 @@ static int omap_kp_resume(struct platform_device *dev)
 #define omap_kp_resume	NULL
 #endif
 
-static int __devinit omap_kp_probe(struct platform_device *pdev)
+static int omap_kp_probe(struct platform_device *pdev)
 {
 	struct omap_kp *omap_kp;
 	struct input_dev *input_dev;
@@ -433,7 +433,7 @@ err1:
 	return -EINVAL;
 }
 
-static int __devexit omap_kp_remove(struct platform_device *pdev)
+static int omap_kp_remove(struct platform_device *pdev)
 {
 	struct omap_kp *omap_kp = platform_get_drvdata(pdev);
 

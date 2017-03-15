@@ -622,7 +622,7 @@ static const struct iio_info adis16220_info = {
 	.read_raw = &adis16220_read_raw,
 };
 
-static int __devinit adis16220_probe(struct spi_device *spi)
+static int adis16220_probe(struct spi_device *spi)
 {
 	int ret;
 	struct adis16220_state *st;

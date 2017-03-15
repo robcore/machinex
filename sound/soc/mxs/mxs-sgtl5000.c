@@ -110,7 +110,7 @@ static struct snd_soc_card mxs_sgtl5000 = {
 	.num_links	= ARRAY_SIZE(mxs_sgtl5000_dai),
 };
 
-static int __devinit mxs_sgtl5000_probe(struct platform_device *pdev)
+static int mxs_sgtl5000_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &mxs_sgtl5000;
 	int ret;
@@ -137,7 +137,7 @@ static int __devinit mxs_sgtl5000_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit mxs_sgtl5000_remove(struct platform_device *pdev)
+static int mxs_sgtl5000_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

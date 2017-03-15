@@ -328,7 +328,7 @@ static irqreturn_t bcm63xx_spi_interrupt(int irq, void *dev_id)
 }
 
 
-static int __devinit bcm63xx_spi_probe(struct platform_device *pdev)
+static int bcm63xx_spi_probe(struct platform_device *pdev)
 {
 	struct resource *r;
 	struct device *dev = &pdev->dev;
@@ -436,7 +436,7 @@ out:
 	return ret;
 }
 
-static int __devexit bcm63xx_spi_remove(struct platform_device *pdev)
+static int bcm63xx_spi_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = platform_get_drvdata(pdev);
 	struct bcm63xx_spi *bs = spi_master_get_devdata(master);

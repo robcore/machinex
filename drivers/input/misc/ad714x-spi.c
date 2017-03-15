@@ -83,7 +83,7 @@ static int ad714x_spi_write(struct ad714x_chip *chip,
 	return 0;
 }
 
-static int __devinit ad714x_spi_probe(struct spi_device *spi)
+static int ad714x_spi_probe(struct spi_device *spi)
 {
 	struct ad714x_chip *chip;
 	int err;
@@ -103,7 +103,7 @@ static int __devinit ad714x_spi_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit ad714x_spi_remove(struct spi_device *spi)
+static int ad714x_spi_remove(struct spi_device *spi)
 {
 	struct ad714x_chip *chip = spi_get_drvdata(spi);
 

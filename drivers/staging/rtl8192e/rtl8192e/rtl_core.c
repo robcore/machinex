@@ -82,7 +82,7 @@ static struct rtl819x_ops rtl819xp_ops = {
 	.RxCheckStuckHandler		= rtl8192_HalRxCheckStuck,
 };
 
-static struct pci_device_id rtl8192_pci_id_tbl[] __devinitdata = {
+static struct pci_device_id rtl8192_pci_id_tbl[] = {
 	{RTL_PCI_DEVICE(0x10ec, 0x8192, rtl819xp_ops)},
 	{RTL_PCI_DEVICE(0x07aa, 0x0044, rtl819xp_ops)},
 	{RTL_PCI_DEVICE(0x07aa, 0x0047, rtl819xp_ops)},
@@ -91,9 +91,9 @@ static struct pci_device_id rtl8192_pci_id_tbl[] __devinitdata = {
 
 MODULE_DEVICE_TABLE(pci, rtl8192_pci_id_tbl);
 
-static int __devinit rtl8192_pci_probe(struct pci_dev *pdev,
+static int rtl8192_pci_probe(struct pci_dev *pdev,
 			const struct pci_device_id *id);
-static void __devexit rtl8192_pci_disconnect(struct pci_dev *pdev);
+static void rtl8192_pci_disconnect(struct pci_dev *pdev);
 
 static struct pci_driver rtl8192_pci_driver = {
 	.name = DRV_NAME,	/* Driver name   */
@@ -2848,7 +2848,7 @@ static const struct net_device_ops rtl8192_netdev_ops = {
 	.ndo_start_xmit = rtllib_xmit,
 };
 
-static int __devinit rtl8192_pci_probe(struct pci_dev *pdev,
+static int rtl8192_pci_probe(struct pci_dev *pdev,
 			const struct pci_device_id *id)
 {
 	unsigned long ioaddr = 0;
@@ -2983,7 +2983,7 @@ err_pci_disable:
 	return err;
 }
 
-static void __devexit rtl8192_pci_disconnect(struct pci_dev *pdev)
+static void rtl8192_pci_disconnect(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct r8192_priv *priv ;

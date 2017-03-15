@@ -393,7 +393,7 @@ static void lcdc_toshiba_set_backlight(struct msm_fb_data_type *mfd)
 				__func__);
 }
 
-static int __devinit toshiba_probe(struct platform_device *pdev)
+static int toshiba_probe(struct platform_device *pdev)
 {
 	if (pdev->id == 0) {
 		lcdc_toshiba_pdata = pdev->dev.platform_data;
@@ -407,13 +407,13 @@ static int __devinit toshiba_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_SPI_QSD
-static int __devinit lcdc_toshiba_spi_probe(struct spi_device *spi)
+static int lcdc_toshiba_spi_probe(struct spi_device *spi)
 {
 	lcdc_toshiba_spi_client = spi;
 	lcdc_toshiba_spi_client->bits_per_word = 32;
 	return 0;
 }
-static int __devexit lcdc_toshiba_spi_remove(struct spi_device *spi)
+static int lcdc_toshiba_spi_remove(struct spi_device *spi)
 {
 	lcdc_toshiba_spi_client = NULL;
 	return 0;

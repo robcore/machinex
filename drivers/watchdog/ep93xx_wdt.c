@@ -112,7 +112,7 @@ static struct watchdog_device ep93xx_wdt_wdd = {
 	.ops		= &ep93xx_wdt_ops,
 };
 
-static int __devinit ep93xx_wdt_probe(struct platform_device *pdev)
+static int ep93xx_wdt_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	unsigned long val;
@@ -156,7 +156,7 @@ static int __devinit ep93xx_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit ep93xx_wdt_remove(struct platform_device *pdev)
+static int ep93xx_wdt_remove(struct platform_device *pdev)
 {
 	watchdog_unregister_device(&ep93xx_wdt_wdd);
 	return 0;

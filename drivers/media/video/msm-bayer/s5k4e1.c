@@ -860,7 +860,7 @@ probe_failure:
 	return rc;
 }
 
-static int __devexit s5k4e1_remove(struct i2c_client *client)
+static int s5k4e1_remove(struct i2c_client *client)
 {
 	struct s5k4e1_work_t *sensorw = i2c_get_clientdata(client);
 	free_irq(client->irq, sensorw);
@@ -869,7 +869,7 @@ static int __devexit s5k4e1_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int __devexit s5k4e1_af_remove(struct i2c_client *client)
+static int s5k4e1_af_remove(struct i2c_client *client)
 {
 	struct s5k4e1_work_t *s5k4e1_af = i2c_get_clientdata(client);
 	free_irq(client->irq, s5k4e1_af);
@@ -1080,7 +1080,7 @@ probe_fail_1:
 	return rc;
 }
 
-static int __devinit s5k4e1_probe(struct platform_device *pdev)
+static int s5k4e1_probe(struct platform_device *pdev)
 {
 	return msm_camera_drv_start(pdev, s5k4e1_sensor_probe);
 }

@@ -626,7 +626,7 @@ EXPORT_SYMBOL_GPL(omap_dm_timers_active);
  * Called by driver framework at the end of device registration for all
  * timer devices.
  */
-static int __devinit omap_dm_timer_probe(struct platform_device *pdev)
+static int omap_dm_timer_probe(struct platform_device *pdev)
 {
 	int ret;
 	unsigned long flags;
@@ -718,7 +718,7 @@ err_free_ioregion:
  * In addition to freeing platform resources it also deletes the timer
  * entry from the local list.
  */
-static int __devexit omap_dm_timer_remove(struct platform_device *pdev)
+static int omap_dm_timer_remove(struct platform_device *pdev)
 {
 	struct omap_dm_timer *timer;
 	unsigned long flags;

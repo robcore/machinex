@@ -1394,7 +1394,7 @@ static const struct net_device_ops sc92031_netdev_ops = {
 #endif
 };
 
-static int __devinit sc92031_probe(struct pci_dev *pdev,
+static int sc92031_probe(struct pci_dev *pdev,
 		const struct pci_device_id *id)
 {
 	int err;
@@ -1501,7 +1501,7 @@ out_enable_device:
 	return err;
 }
 
-static void __devexit sc92031_remove(struct pci_dev *pdev)
+static void sc92031_remove(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct sc92031_priv *priv = netdev_priv(dev);

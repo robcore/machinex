@@ -279,7 +279,7 @@ sfax_dctrl(struct mISDNchannel *ch, u32 cmd, void *arg)
 	return err;
 }
 
-static int __devinit
+static int
 init_card(struct sfax_hw *sf)
 {
 	int	ret, cnt = 3;
@@ -318,7 +318,7 @@ init_card(struct sfax_hw *sf)
 }
 
 
-static int __devinit
+static int
 setup_speedfax(struct sfax_hw *sf)
 {
 	u_long flags;
@@ -368,7 +368,7 @@ release_card(struct sfax_hw *card) {
 	sfax_cnt--;
 }
 
-static int __devinit
+static int
 setup_instance(struct sfax_hw *card)
 {
 	const struct firmware *firmware;
@@ -448,7 +448,7 @@ error_fw:
 	return err;
 }
 
-static int __devinit
+static int
 sfaxpci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int err = -ENOMEM;
@@ -488,7 +488,7 @@ sfax_remove_pci(struct pci_dev *pdev)
 		pr_debug("%s: drvdata already removed\n", __func__);
 }
 
-static struct pci_device_id sfaxpci_ids[] __devinitdata = {
+static struct pci_device_id sfaxpci_ids[] = {
 	{ PCI_VENDOR_ID_TIGERJET, PCI_DEVICE_ID_TIGERJET_100,
 	  PCI_SUBVENDOR_SPEEDFAX_PYRAMID, PCI_SUB_ID_SEDLBAUER,
 	  0, 0, (unsigned long) "Pyramid Speedfax + PCI"

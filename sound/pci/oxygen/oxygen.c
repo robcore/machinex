@@ -753,7 +753,7 @@ static const struct oxygen_model model_generic = {
 	.adc_i2s_format = OXYGEN_I2S_FORMAT_LJUST,
 };
 
-static int __devinit get_oxygen_model(struct oxygen *chip,
+static int get_oxygen_model(struct oxygen *chip,
 				      const struct pci_device_id *id)
 {
 	static const char *const names[] = {
@@ -840,7 +840,7 @@ static int __devinit get_oxygen_model(struct oxygen *chip,
 	return 0;
 }
 
-static int __devinit generic_oxygen_probe(struct pci_dev *pci,
+static int generic_oxygen_probe(struct pci_dev *pci,
 					  const struct pci_device_id *pci_id)
 {
 	static int dev;

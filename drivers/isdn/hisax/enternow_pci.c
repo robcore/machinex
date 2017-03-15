@@ -300,7 +300,7 @@ enpci_interrupt(int intno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit en_pci_probe(struct pci_dev *dev_netjet,
+static int en_pci_probe(struct pci_dev *dev_netjet,
 				  struct IsdnCardState *cs)
 {
 	if (pci_enable_device(dev_netjet))
@@ -326,7 +326,7 @@ static int __devinit en_pci_probe(struct pci_dev *dev_netjet,
 	return (1);
 }
 
-static void __devinit en_cs_init(struct IsdnCard *card,
+static void en_cs_init(struct IsdnCard *card,
 				 struct IsdnCardState *cs)
 {
 	cs->hw.njet.auxa = cs->hw.njet.base + NETJET_AUXDATA;
@@ -350,7 +350,7 @@ static void __devinit en_cs_init(struct IsdnCard *card,
 	outb(cs->hw.njet.auxd, cs->hw.njet.auxa);
 }
 
-static int __devinit en_cs_init_rest(struct IsdnCard *card,
+static int en_cs_init_rest(struct IsdnCard *card,
 				     struct IsdnCardState *cs)
 {
 	const int bytecnt = 256;
@@ -384,10 +384,10 @@ static int __devinit en_cs_init_rest(struct IsdnCard *card,
 	return (1);
 }
 
-static struct pci_dev *dev_netjet __devinitdata = NULL;
+static struct pci_dev *dev_netjet = NULL;
 
 /* called by config.c */
-int __devinit
+int
 setup_enternow_pci(struct IsdnCard *card)
 {
 	int ret;

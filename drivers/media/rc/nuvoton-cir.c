@@ -1116,7 +1116,7 @@ failure:
 	return ret;
 }
 
-static void __devexit nvt_remove(struct pnp_dev *pdev)
+static void nvt_remove(struct pnp_dev *pdev)
 {
 	struct nvt_dev *nvt = pnp_get_drvdata(pdev);
 	unsigned long flags;

@@ -1725,7 +1725,7 @@ fail0:
  *		< 0 for error code
  */
 
-static int __devinit sbridge_probe(struct pci_dev *pdev,
+static int sbridge_probe(struct pci_dev *pdev,
 				  const struct pci_device_id *id)
 {
 	int rc;
@@ -1776,7 +1776,7 @@ fail0:
  *	sbridge_remove	destructor for one instance of device
  *
  */
-static void __devexit sbridge_remove(struct pci_dev *pdev)
+static void sbridge_remove(struct pci_dev *pdev)
 {
 	struct sbridge_dev *sbridge_dev;
 

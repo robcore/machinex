@@ -4891,7 +4891,7 @@ void qla4xxx_build_ddb_list(struct scsi_qla_host *ha, int is_reset)
  * It returns zero if successful. It also initializes all data necessary for
  * the driver.
  **/
-static int __devinit qla4xxx_probe_adapter(struct pci_dev *pdev,
+static int qla4xxx_probe_adapter(struct pci_dev *pdev,
 					   const struct pci_device_id *ent)
 {
 	int ret = -ENODEV, status;
@@ -5199,7 +5199,7 @@ static void qla4xxx_destroy_fw_ddb_session(struct scsi_qla_host *ha)
  * qla4xxx_remove_adapter - calback function to remove adapter.
  * @pci_dev: PCI device pointer
  **/
-static void __devexit qla4xxx_remove_adapter(struct pci_dev *pdev)
+static void qla4xxx_remove_adapter(struct pci_dev *pdev)
 {
 	struct scsi_qla_host *ha;
 

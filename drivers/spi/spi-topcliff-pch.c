@@ -1401,7 +1401,7 @@ static void pch_alloc_dma_buf(struct pch_spi_board_data *board_dat,
 				PCH_BUF_SIZE, &dma->rx_buf_dma, GFP_KERNEL);
 }
 
-static int __devinit pch_spi_pd_probe(struct platform_device *plat_dev)
+static int pch_spi_pd_probe(struct platform_device *plat_dev)
 {
 	int ret;
 	struct spi_master *master;
@@ -1499,7 +1499,7 @@ err_pci_iomap:
 	return ret;
 }
 
-static int __devexit pch_spi_pd_remove(struct platform_device *plat_dev)
+static int pch_spi_pd_remove(struct platform_device *plat_dev)
 {
 	struct pch_spi_board_data *board_dat = dev_get_platdata(&plat_dev->dev);
 	struct pch_spi_data *data = platform_get_drvdata(plat_dev);
@@ -1627,7 +1627,7 @@ static struct platform_driver pch_spi_pd_driver = {
 	.resume = pch_spi_pd_resume
 };
 
-static int __devinit pch_spi_probe(struct pci_dev *pdev,
+static int pch_spi_probe(struct pci_dev *pdev,
 				   const struct pci_device_id *id)
 {
 	struct pch_spi_board_data *board_dat;
@@ -1708,7 +1708,7 @@ err_no_mem:
 	return retval;
 }
 
-static void __devexit pch_spi_remove(struct pci_dev *pdev)
+static void pch_spi_remove(struct pci_dev *pdev)
 {
 	int i;
 	struct pch_pd_dev_save *pd_dev_save = pci_get_drvdata(pdev);

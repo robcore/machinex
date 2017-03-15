@@ -41,7 +41,7 @@ static struct pil_reset_ops pil_tzapps_ops = {
 	.shutdown = pil_tzapps_shutdown,
 };
 
-static int __devinit pil_tzapps_driver_probe(struct platform_device *pdev)
+static int pil_tzapps_driver_probe(struct platform_device *pdev)
 {
 	struct pil_desc *desc;
 	struct pil_device *pil;

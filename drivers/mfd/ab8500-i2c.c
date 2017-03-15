@@ -48,7 +48,7 @@ static int ab8500_i2c_read(struct ab8500 *ab8500, u16 addr)
 	return (int)data;
 }
 
-static int __devinit ab8500_i2c_probe(struct platform_device *plf)
+static int ab8500_i2c_probe(struct platform_device *plf)
 {
 	const struct platform_device_id *platid = platform_get_device_id(plf);
 	struct ab8500 *ab8500;
@@ -83,7 +83,7 @@ static int __devinit ab8500_i2c_probe(struct platform_device *plf)
 	return ret;
 }
 
-static int __devexit ab8500_i2c_remove(struct platform_device *plf)
+static int ab8500_i2c_remove(struct platform_device *plf)
 {
 	struct ab8500 *ab8500 = platform_get_drvdata(plf);
 

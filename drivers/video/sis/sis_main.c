@@ -106,7 +106,7 @@ sisfb_setdefaultparms(void)
 
 /* ------------- Parameter parsing -------------- */
 
-static void __devinit
+static void
 sisfb_search_vesamode(unsigned int vesamode, bool quiet)
 {
 	int i = 0, j = 0;
@@ -146,7 +146,7 @@ sisfb_search_vesamode(unsigned int vesamode, bool quiet)
 		printk(KERN_ERR "sisfb: Invalid VESA mode 0x%x'\n", vesamode);
 }
 
-static void __devinit
+static void
 sisfb_search_mode(char *name, bool quiet)
 {
 	unsigned int j = 0, xres = 0, yres = 0, depth = 0, rate = 0;
@@ -225,7 +225,7 @@ sisfb_search_mode(char *name, bool quiet)
 }
 
 #ifndef MODULE
-static void __devinit
+static void
 sisfb_get_vga_mode_from_kernel(void)
 {
 #ifdef CONFIG_X86
@@ -345,7 +345,7 @@ sisfb_search_specialtiming(const char *name)
 
 /* ----------- Various detection routines ----------- */
 
-static void __devinit
+static void
 sisfb_detect_custom_timing(struct sis_video_info *ivideo)
 {
 	unsigned char *biosver = NULL;
@@ -403,7 +403,7 @@ sisfb_detect_custom_timing(struct sis_video_info *ivideo)
 	} while(mycustomttable[i].chipID);
 }
 
-static bool __devinit
+static bool
 sisfb_interpret_edid(struct sisfb_monitor *monitor, u8 *buffer)
 {
 	int i, j, xres, yres, refresh, index;
@@ -505,7 +505,7 @@ sisfb_interpret_edid(struct sisfb_monitor *monitor, u8 *buffer)
 	return monitor->datavalid;
 }
 
-static void __devinit
+static void
 sisfb_handle_ddc(struct sis_video_info *ivideo, struct sisfb_monitor *monitor, int crtno)
 {
 	unsigned short temp, i, realcrtno = crtno;
@@ -1898,7 +1898,7 @@ static struct fb_ops sisfb_ops = {
 
 /* ---------------- Chip generation dependent routines ---------------- */
 
-static struct pci_dev * __devinit
+static struct pci_dev *
 sisfb_get_northbridge(int basechipid)
 {
 	struct pci_dev *pdev = NULL;
@@ -1938,7 +1938,7 @@ sisfb_get_northbridge(int basechipid)
 	return pdev;
 }
 
-static int __devinit
+static int
 sisfb_get_dram_size(struct sis_video_info *ivideo)
 {
 #if defined(CONFIG_FB_SIS_300) || defined(CONFIG_FB_SIS_315)
@@ -2038,7 +2038,7 @@ sisfb_get_dram_size(struct sis_video_info *ivideo)
 
 /* -------------- video bridge device detection --------------- */
 
-static void __devinit
+static void
 sisfb_detect_VB_connect(struct sis_video_info *ivideo)
 {
 	u8 cr32, temp;
@@ -2164,7 +2164,7 @@ sisfb_detect_VB_connect(struct sis_video_info *ivideo)
 
 /* ------------------ Sensing routines ------------------ */
 
-static bool __devinit
+static bool
 sisfb_test_DDC1(struct sis_video_info *ivideo)
 {
     unsigned short old;
@@ -2177,7 +2177,7 @@ sisfb_test_DDC1(struct sis_video_info *ivideo)
     return (count != -1);
 }
 
-static void __devinit
+static void
 sisfb_sense_crt1(struct sis_video_info *ivideo)
 {
     bool mustwait = false;
@@ -2259,7 +2259,7 @@ sisfb_sense_crt1(struct sis_video_info *ivideo)
 }
 
 /* Determine and detect attached devices on SiS30x */
-static void __devinit
+static void
 SiS_SenseLCD(struct sis_video_info *ivideo)
 {
 	unsigned char buffer[256];
@@ -2347,7 +2347,7 @@ SiS_SenseLCD(struct sis_video_info *ivideo)
 	ivideo->SiS_Pr.PanelSelfDetected = true;
 }
 
-static int __devinit
+static int
 SISDoSense(struct sis_video_info *ivideo, u16 type, u16 test)
 {
     int temp, mytest, result, i, j;
@@ -2377,7 +2377,7 @@ SISDoSense(struct sis_video_info *ivideo, u16 type, u16 test)
     return result;
 }
 
-static void __devinit
+static void
 SiS_Sense30x(struct sis_video_info *ivideo)
 {
     u8  backupP4_0d,backupP2_00,backupP2_4d,backupSR_1e,biosflag=0;
@@ -2518,7 +2518,7 @@ SiS_Sense30x(struct sis_video_info *ivideo)
 }
 
 /* Determine and detect attached TV's on Chrontel */
-static void __devinit
+static void
 SiS_SenseCh(struct sis_video_info *ivideo)
 {
 #if defined(CONFIG_FB_SIS_300) || defined(CONFIG_FB_SIS_315)
@@ -2643,7 +2643,7 @@ SiS_SenseCh(struct sis_video_info *ivideo)
     }
 }
 
-static void __devinit
+static void
 sisfb_get_VB_type(struct sis_video_info *ivideo)
 {
 	char stdstr[]    = "sisfb: Detected";
@@ -2906,7 +2906,7 @@ sisfb_engine_init(struct sis_video_info *ivideo)
 	ivideo->engineok = 1;
 }
 
-static void __devinit
+static void
 sisfb_detect_lcd_type(struct sis_video_info *ivideo)
 {
 	u8 reg;
@@ -2962,7 +2962,7 @@ sisfb_detect_lcd_type(struct sis_video_info *ivideo)
 			ivideo->lcdxres, ivideo->lcdyres);
 }
 
-static void __devinit
+static void
 sisfb_save_pdc_emi(struct sis_video_info *ivideo)
 {
 #ifdef CONFIG_FB_SIS_300
@@ -3081,7 +3081,7 @@ sisfb_save_pdc_emi(struct sis_video_info *ivideo)
 
 /* -------------------- Memory manager routines ---------------------- */
 
-static u32 __devinit
+static u32
 sisfb_getheapstart(struct sis_video_info *ivideo)
 {
 	u32 ret = ivideo->sisfb_parm_mem * 1024;
@@ -3128,7 +3128,7 @@ sisfb_getheapstart(struct sis_video_info *ivideo)
 	return ret;
 }
 
-static u32 __devinit
+static u32
 sisfb_getheapsize(struct sis_video_info *ivideo)
 {
 	u32 max = ivideo->video_size - ivideo->hwcursor_size - ivideo->cmdQueueSize;
@@ -3154,7 +3154,7 @@ sisfb_getheapsize(struct sis_video_info *ivideo)
 	return ret;
 }
 
-static int __devinit
+static int
 sisfb_heap_init(struct sis_video_info *ivideo)
 {
 	struct SIS_OH *poh;
@@ -4061,7 +4061,7 @@ static int __init sisfb_setup(char *options)
 }
 #endif
 
-static int __devinit
+static int
 sisfb_check_rom(void __iomem *rom_base, struct sis_video_info *ivideo)
 {
 	void __iomem *rom;
@@ -4089,7 +4089,7 @@ sisfb_check_rom(void __iomem *rom_base, struct sis_video_info *ivideo)
 	return 1;
 }
 
-static unsigned char * __devinit
+static unsigned char *
 sisfb_find_rom(struct pci_dev *pdev)
 {
 	struct sis_video_info *ivideo = pci_get_drvdata(pdev);
@@ -4149,7 +4149,7 @@ sisfb_find_rom(struct pci_dev *pdev)
 	return myrombase;
 }
 
-static void __devinit
+static void
 sisfb_post_map_vram(struct sis_video_info *ivideo, unsigned int *mapsize,
 			unsigned int min)
 {
@@ -4176,7 +4176,7 @@ sisfb_post_map_vram(struct sis_video_info *ivideo, unsigned int *mapsize,
 }
 
 #ifdef CONFIG_FB_SIS_300
-static int __devinit
+static int
 sisfb_post_300_buswidth(struct sis_video_info *ivideo)
 {
 	void __iomem *FBAddress = ivideo->video_vbase;
@@ -4222,7 +4222,7 @@ sisfb_post_300_buswidth(struct sis_video_info *ivideo)
 	return 1;			/* 32bit */
 }
 
-static int __devinit
+static int
 sisfb_post_300_rwtest(struct sis_video_info *ivideo, int iteration, int buswidth,
 			int PseudoRankCapacity, int PseudoAdrPinCount,
 			unsigned int mapsize)
@@ -4308,7 +4308,7 @@ sisfb_post_300_rwtest(struct sis_video_info *ivideo, int iteration, int buswidth
 	return 0;
 }
 
-static void __devinit
+static void
 sisfb_post_300_ramsize(struct pci_dev *pdev, unsigned int mapsize)
 {
 	struct	sis_video_info *ivideo = pci_get_drvdata(pdev);
@@ -4334,7 +4334,7 @@ sisfb_post_300_ramsize(struct pci_dev *pdev, unsigned int mapsize)
 	}
 }
 
-static void __devinit
+static void
 sisfb_post_sis300(struct pci_dev *pdev)
 {
 	struct sis_video_info *ivideo = pci_get_drvdata(pdev);
@@ -4546,7 +4546,7 @@ sisfb_post_sis300(struct pci_dev *pdev)
 
 #ifdef CONFIG_FB_SIS_315
 #if 0
-static void __devinit
+static void
 sisfb_post_sis315330(struct pci_dev *pdev)
 {
 	/* TODO */
@@ -4558,7 +4558,7 @@ static inline int sisfb_xgi_is21(struct sis_video_info *ivideo)
 	return ivideo->chip_real_id == XGI_21;
 }
 
-static void __devinit
+static void
 sisfb_post_xgi_delay(struct sis_video_info *ivideo, int delay)
 {
 	unsigned int i;
@@ -4570,7 +4570,7 @@ sisfb_post_xgi_delay(struct sis_video_info *ivideo, int delay)
 	}
 }
 
-static int __devinit
+static int
 sisfb_find_host_bridge(struct sis_video_info *ivideo, struct pci_dev *mypdev,
 				unsigned short pcivendor)
 {
@@ -4590,7 +4590,7 @@ sisfb_find_host_bridge(struct sis_video_info *ivideo, struct pci_dev *mypdev,
 	return ret;
 }
 
-static int __devinit
+static int
 sisfb_post_xgi_rwtest(struct sis_video_info *ivideo, int starta,
 			unsigned int enda, unsigned int mapsize)
 {
@@ -4622,7 +4622,7 @@ sisfb_post_xgi_rwtest(struct sis_video_info *ivideo, int starta,
 	return 1;
 }
 
-static int __devinit
+static int
 sisfb_post_xgi_ramsize(struct sis_video_info *ivideo)
 {
 	unsigned int buswidth, ranksize, channelab, mapsize;
@@ -4875,7 +4875,7 @@ bail_out:
 	return status;
 }
 
-static void __devinit
+static void
 sisfb_post_xgi_setclocks(struct sis_video_info *ivideo, u8 regb)
 {
 	u8 v1, v2, v3;
@@ -4931,7 +4931,7 @@ sisfb_post_xgi_setclocks(struct sis_video_info *ivideo, u8 regb)
 	sisfb_post_xgi_delay(ivideo, 0x43);
 }
 
-static void __devinit
+static void
 sisfb_post_xgi_ddr2_mrs_default(struct sis_video_info *ivideo, u8 regb)
 {
 	unsigned char *bios = ivideo->bios_abase;
@@ -4972,7 +4972,7 @@ sisfb_post_xgi_ddr2_mrs_default(struct sis_video_info *ivideo, u8 regb)
 	sisfb_post_xgi_delay(ivideo, 1);
 }
 
-static void __devinit
+static void
 sisfb_post_xgi_ddr2_mrs_xg21(struct sis_video_info *ivideo)
 {
 	sisfb_post_xgi_setclocks(ivideo, 1);
@@ -5014,7 +5014,7 @@ sisfb_post_xgi_ddr2_mrs_xg21(struct sis_video_info *ivideo)
 	sisfb_post_xgi_delay(ivideo, 1);
 }
 
-static void __devinit
+static void
 sisfb_post_xgi_ddr2(struct sis_video_info *ivideo, u8 regb)
 {
 	unsigned char *bios = ivideo->bios_abase;
@@ -5060,7 +5060,7 @@ sisfb_post_xgi_ddr2(struct sis_video_info *ivideo, u8 regb)
 		sisfb_post_xgi_ddr2_mrs_default(ivideo, regb);
 }
 
-static u8 __devinit
+static u8
 sisfb_post_xgi_ramtype(struct sis_video_info *ivideo)
 {
 	unsigned char *bios = ivideo->bios_abase;
@@ -5100,7 +5100,7 @@ sisfb_post_xgi_ramtype(struct sis_video_info *ivideo)
 	return ramtype;
 }
 
-static int __devinit
+static int
 sisfb_post_xgi(struct pci_dev *pdev)
 {
 	struct sis_video_info *ivideo = pci_get_drvdata(pdev);
@@ -5838,7 +5838,7 @@ sisfb_post_xgi(struct pci_dev *pdev)
 }
 #endif
 
-static int __devinit
+static int
 sisfb_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct sisfb_chip_info	*chipinfo = &sisfb_chip_info[ent->driver_data];
@@ -6529,7 +6529,7 @@ error_3:	vfree(ivideo->bios_abase);
 /*                PCI DEVICE HANDLING                */
 /*****************************************************/
 
-static void __devexit sisfb_remove(struct pci_dev *pdev)
+static void sisfb_remove(struct pci_dev *pdev)
 {
 	struct sis_video_info	*ivideo = pci_get_drvdata(pdev);
 	struct fb_info		*sis_fb_info = ivideo->memyselfandi;

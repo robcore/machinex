@@ -128,7 +128,7 @@ static struct scsi_host_template oakscsi_template = {
 	.proc_name		= "oakscsi",
 };
 
-static int __devinit
+static int
 oakscsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	struct Scsi_Host *host;
@@ -181,7 +181,7 @@ oakscsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit oakscsi_remove(struct expansion_card *ec)
+static void oakscsi_remove(struct expansion_card *ec)
 {
 	struct Scsi_Host *host = ecard_get_drvdata(ec);
 

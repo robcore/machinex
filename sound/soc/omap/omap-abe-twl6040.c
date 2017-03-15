@@ -281,7 +281,7 @@ static struct snd_soc_card omap_abe_card = {
 	.num_dapm_routes = ARRAY_SIZE(audio_map),
 };
 
-static __devinit int omap_abe_probe(struct platform_device *pdev)
+static int omap_abe_probe(struct platform_device *pdev)
 {
 	struct omap_abe_twl6040_data *pdata = dev_get_platdata(&pdev->dev);
 	struct snd_soc_card *card = &omap_abe_card;
@@ -322,7 +322,7 @@ static __devinit int omap_abe_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit omap_abe_remove(struct platform_device *pdev)
+static int omap_abe_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

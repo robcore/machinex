@@ -537,7 +537,7 @@ static void chg_worker(struct work_struct *work)
 	power_supply_changed(&smb349_chg->dc_psy);
 }
 
-static int __devinit smb349_init_ext_chg(struct smb349_struct *smb349_chg)
+static int smb349_init_ext_chg(struct smb349_struct *smb349_chg)
 {
 	int ret;
 
@@ -560,7 +560,7 @@ static int __devinit smb349_init_ext_chg(struct smb349_struct *smb349_chg)
 	return 0;
 }
 
-static int __devinit smb349_probe(struct i2c_client *client,
+static int smb349_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
 {
 	const struct smb349_platform_data *pdata;
@@ -635,7 +635,7 @@ out:
 	return ret;
 }
 
-static int __devexit smb349_remove(struct i2c_client *client)
+static int smb349_remove(struct i2c_client *client)
 {
 	const struct smb349_platform_data *pdata;
 	struct smb349_struct *smb349_chg = i2c_get_clientdata(client);

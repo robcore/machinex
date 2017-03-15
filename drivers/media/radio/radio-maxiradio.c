@@ -114,7 +114,7 @@ static struct snd_tea575x_ops maxiradio_tea_ops = {
 	.set_direction = maxiradio_tea575x_set_direction,
 };
 
-static int __devinit maxiradio_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+static int maxiradio_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct maxiradio *dev;
 	struct v4l2_device *v4l2_dev;
@@ -172,7 +172,7 @@ errfr:
 	return retval;
 }
 
-static void __devexit maxiradio_remove(struct pci_dev *pdev)
+static void maxiradio_remove(struct pci_dev *pdev)
 {
 	struct v4l2_device *v4l2_dev = dev_get_drvdata(&pdev->dev);
 	struct maxiradio *dev = to_maxiradio(v4l2_dev);

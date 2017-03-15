@@ -279,7 +279,7 @@ err:
 			__func__, vreg->name);
 }
 
-static int __devinit vreg_debug_init(void)
+static int vreg_debug_init(void)
 {
 	root = debugfs_create_dir("vreg", NULL);
 

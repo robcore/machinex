@@ -407,7 +407,7 @@ static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit gpio_keys_setup_key(struct platform_device *pdev,
+static int gpio_keys_setup_key(struct platform_device *pdev,
 					 struct gpio_button_data *bdata,
 					 struct gpio_keys_button *button)
 {
@@ -575,7 +575,7 @@ static DEVICE_ATTR(sec_qwerty_flip_pressed, 0444, sysfs_qwerty_flip_onoff_show,
 NULL);
 #endif
 
-static int __devinit gpio_keys_probe(struct platform_device *pdev)
+static int gpio_keys_probe(struct platform_device *pdev)
 {
 	struct gpio_keys_platform_data *pdata = pdev->dev.platform_data;
 	struct gpio_keys_drvdata *ddata;

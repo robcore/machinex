@@ -360,7 +360,7 @@ static const struct dev_pm_ops tsc2007_pm_ops = {
 };
 #endif
 
-static int __devinit tsc2007_probe(struct i2c_client *client,
+static int tsc2007_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	struct tsc2007 *ts;
@@ -465,7 +465,7 @@ static int __devinit tsc2007_probe(struct i2c_client *client,
 	return err;
 }
 
-static int __devexit tsc2007_remove(struct i2c_client *client)
+static int tsc2007_remove(struct i2c_client *client)
 {
 	struct tsc2007	*ts = i2c_get_clientdata(client);
 	struct tsc2007_platform_data *pdata = client->dev.platform_data;

@@ -927,7 +927,7 @@ static int cypress_touchkey_i2c_check(struct cypress_touchkey_info *info)
 	return ret;
 }
 
-static int __devinit cypress_touchkey_probe(struct i2c_client *client,
+static int cypress_touchkey_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1131,7 +1131,7 @@ err_mem_alloc:
 	return ret;
 }
 
-static int __devexit cypress_touchkey_remove(struct i2c_client *client)
+static int cypress_touchkey_remove(struct i2c_client *client)
 {
 	struct cypress_touchkey_info *info = i2c_get_clientdata(client);
 	if (info->irq >= 0)

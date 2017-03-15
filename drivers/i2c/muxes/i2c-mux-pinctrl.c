@@ -129,7 +129,7 @@ static inline int i2c_mux_pinctrl_parse_dt(struct i2c_mux_pinctrl *mux,
 }
 #endif
 
-static int __devinit i2c_mux_pinctrl_probe(struct platform_device *pdev)
+static int i2c_mux_pinctrl_probe(struct platform_device *pdev)
 {
 	struct i2c_mux_pinctrl *mux;
 	int (*deselect)(struct i2c_adapter *, void *, u32);
@@ -241,7 +241,7 @@ err:
 	return ret;
 }
 
-static int __devexit i2c_mux_pinctrl_remove(struct platform_device *pdev)
+static int i2c_mux_pinctrl_remove(struct platform_device *pdev)
 {
 	struct i2c_mux_pinctrl *mux = platform_get_drvdata(pdev);
 	int i;
@@ -255,7 +255,7 @@ static int __devexit i2c_mux_pinctrl_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_OF
-static const struct of_device_id i2c_mux_pinctrl_of_match[] __devinitconst = {
+static const struct of_device_id i2c_mux_pinctrl_of_match[] = {
 	{ .compatible = "i2c-mux-pinctrl", },
 	{},
 };

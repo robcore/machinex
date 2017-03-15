@@ -450,7 +450,7 @@ static irqreturn_t stmp_spi_irq_err(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit stmp_spi_probe(struct platform_device *dev)
+static int stmp_spi_probe(struct platform_device *dev)
 {
 	int err = 0;
 	struct spi_master *master;
@@ -589,7 +589,7 @@ out0:
 	return err;
 }
 
-static int __devexit stmp_spi_remove(struct platform_device *dev)
+static int stmp_spi_remove(struct platform_device *dev)
 {
 	struct stmp_spi *ss;
 	struct spi_master *master;

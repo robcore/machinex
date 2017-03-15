@@ -246,7 +246,7 @@ static void free_irqs(void)
 		}
 }
 
-static int __devinit request_irqs(struct platform_device *pdev)
+static int request_irqs(struct platform_device *pdev)
 {
 	struct resource *res;
 	int ret;
@@ -296,7 +296,7 @@ static int pm8058_usb_voltage_lower_limit(void)
 	return ret;
 }
 
-static int __devinit pm8058_charger_probe(struct platform_device *pdev)
+static int pm8058_charger_probe(struct platform_device *pdev)
 {
 	struct pm8058_chip *pm_chip;
 
@@ -323,7 +323,7 @@ static int __devinit pm8058_charger_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pm8058_charger_remove(struct platform_device *pdev)
+static int pm8058_charger_remove(struct platform_device *pdev)
 {
 	free_irqs();
 	return 0;

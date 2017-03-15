@@ -854,7 +854,7 @@ static void pch_i2c_disbl_int(struct i2c_algo_pch_data *adap)
 	iowrite32(BUFFER_MODE_INTR_DISBL, p + PCH_I2CBUFMSK);
 }
 
-static int __devinit pch_i2c_probe(struct pci_dev *pdev,
+static int pch_i2c_probe(struct pci_dev *pdev,
 				   const struct pci_device_id *id)
 {
 	void __iomem *base_addr;
@@ -947,7 +947,7 @@ err_pci_enable:
 	return ret;
 }
 
-static void __devexit pch_i2c_remove(struct pci_dev *pdev)
+static void pch_i2c_remove(struct pci_dev *pdev)
 {
 	int i;
 	struct adapter_info *adap_info = pci_get_drvdata(pdev);

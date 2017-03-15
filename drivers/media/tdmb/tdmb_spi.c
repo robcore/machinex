@@ -42,7 +42,7 @@ static int tdmbspi_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit tdmbspi_remove(struct spi_device *spi)
+static int tdmbspi_remove(struct spi_device *spi)
 {
 	return 0;
 }

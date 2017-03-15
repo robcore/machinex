@@ -1725,7 +1725,7 @@ static struct snd_soc_codec_driver soc_codec_dev_wm8993 = {
 	.set_bias_level = wm8993_set_bias_level,
 };
 
-static __devinit int wm8993_i2c_probe(struct i2c_client *i2c,
+static int wm8993_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8993_priv *wm8993;
@@ -1829,7 +1829,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8993_i2c_remove(struct i2c_client *i2c)
+static int wm8993_i2c_remove(struct i2c_client *i2c)
 {
 	struct wm8993_priv *wm8993 = i2c_get_clientdata(i2c);
 

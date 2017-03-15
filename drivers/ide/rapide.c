@@ -29,7 +29,7 @@ static void rapide_setup_ports(struct ide_hw *hw, void __iomem *base,
 	hw->irq = irq;
 }
 
-static int __devinit
+static int
 rapide_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	void __iomem *base;
@@ -64,7 +64,7 @@ rapide_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit rapide_remove(struct expansion_card *ec)
+static void rapide_remove(struct expansion_card *ec)
 {
 	struct ide_host *host = ecard_get_drvdata(ec);
 

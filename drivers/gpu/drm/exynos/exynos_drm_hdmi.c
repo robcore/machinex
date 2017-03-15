@@ -308,7 +308,7 @@ static int hdmi_subdrv_probe(struct drm_device *drm_dev,
 	return 0;
 }
 
-static int __devinit exynos_drm_hdmi_probe(struct platform_device *pdev)
+static int exynos_drm_hdmi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct exynos_drm_subdrv *subdrv;
@@ -354,7 +354,7 @@ static const struct dev_pm_ops hdmi_pm_ops = {
 	.runtime_resume	 = hdmi_runtime_resume,
 };
 
-static int __devexit exynos_drm_hdmi_remove(struct platform_device *pdev)
+static int exynos_drm_hdmi_remove(struct platform_device *pdev)
 {
 	struct drm_hdmi_context *ctx = platform_get_drvdata(pdev);
 

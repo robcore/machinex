@@ -219,7 +219,7 @@ static void vx855gpio_gpio_setup(struct vx855_gpio *vg)
 }
 
 /* This platform device is ordinarily registered by the vx855 mfd driver */
-static __devinit int vx855gpio_probe(struct platform_device *pdev)
+static int vx855gpio_probe(struct platform_device *pdev)
 {
 	struct resource *res_gpi;
 	struct resource *res_gpo;
@@ -284,7 +284,7 @@ out_release:
 	return ret;
 }
 
-static int __devexit vx855gpio_remove(struct platform_device *pdev)
+static int vx855gpio_remove(struct platform_device *pdev)
 {
 	struct vx855_gpio *vg = platform_get_drvdata(pdev);
 	struct resource *res;

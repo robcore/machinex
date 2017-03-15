@@ -106,9 +106,9 @@ static int cyttsp_next_avail_inlist(u16 cur_trk[],
 			u8 *new_loc, u8 num_touches);
 static int cyttsp_putbl(struct cyttsp *ts, int show,
 			int show_status, int show_version, int show_cid);
-static int __devinit cyttsp_probe(struct i2c_client *client,
+static int cyttsp_probe(struct i2c_client *client,
 			const struct i2c_device_id *id);
-static int __devexit cyttsp_remove(struct i2c_client *client);
+static int cyttsp_remove(struct i2c_client *client);
 static int cyttsp_resume(struct device *dev);
 static int cyttsp_suspend(struct device *dev);
 
@@ -2797,7 +2797,7 @@ success:
 }
 
 /* I2C driver probe function */
-static int __devinit cyttsp_probe(struct i2c_client *client,
+static int cyttsp_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct cyttsp *ts;
@@ -3080,7 +3080,7 @@ static int cyttsp_suspend(struct device *dev)
 #endif
 
 /* registered in driver struct */
-static int __devexit cyttsp_remove(struct i2c_client *client)
+static int cyttsp_remove(struct i2c_client *client)
 {
 	/* clientdata registered on probe */
 	struct cyttsp *ts = i2c_get_clientdata(client);

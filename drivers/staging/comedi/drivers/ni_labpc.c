@@ -2141,13 +2141,13 @@ static void write_caldac(struct comedi_device *dev, unsigned int channel,
 }
 
 #ifdef CONFIG_COMEDI_PCI_DRIVERS
-static int __devinit driver_labpc_pci_probe(struct pci_dev *dev,
+static int driver_labpc_pci_probe(struct pci_dev *dev,
 					    const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_labpc.driver_name);
 }
 
-static void __devexit driver_labpc_pci_remove(struct pci_dev *dev)
+static void driver_labpc_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

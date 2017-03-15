@@ -853,7 +853,7 @@ static struct v4l2_file_operations bcap_fops = {
 	.poll = bcap_poll
 };
 
-static int __devinit bcap_probe(struct platform_device *pdev)
+static int bcap_probe(struct platform_device *pdev)
 {
 	struct bcap_device *bcap_dev;
 	struct video_device *vfd;
@@ -1016,7 +1016,7 @@ err_free_dev:
 	return ret;
 }
 
-static int __devexit bcap_remove(struct platform_device *pdev)
+static int bcap_remove(struct platform_device *pdev)
 {
 	struct v4l2_device *v4l2_dev = platform_get_drvdata(pdev);
 	struct bcap_device *bcap_dev = container_of(v4l2_dev,

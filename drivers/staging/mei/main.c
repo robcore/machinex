@@ -944,7 +944,7 @@ static struct miscdevice  mei_misc_device = {
  *
  * returns 0 on success, <0 on failure.
  */
-static int __devinit mei_probe(struct pci_dev *pdev,
+static int mei_probe(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	struct mei_device *dev;
@@ -1053,7 +1053,7 @@ end:
  * mei_remove is called by the PCI subsystem to alert the driver
  * that it should release a PCI device.
  */
-static void __devexit mei_remove(struct pci_dev *pdev)
+static void mei_remove(struct pci_dev *pdev)
 {
 	struct mei_device *dev;
 

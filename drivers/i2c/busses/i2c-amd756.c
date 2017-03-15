@@ -324,7 +324,7 @@ static DEFINE_PCI_DEVICE_TABLE(amd756_ids) = {
 
 MODULE_DEVICE_TABLE (pci, amd756_ids);
 
-static int __devinit amd756_probe(struct pci_dev *pdev,
+static int amd756_probe(struct pci_dev *pdev,
 				  const struct pci_device_id *id)
 {
 	int nforce = (id->driver_data == NFORCE);
@@ -397,7 +397,7 @@ static int __devinit amd756_probe(struct pci_dev *pdev,
 	return error;
 }
 
-static void __devexit amd756_remove(struct pci_dev *dev)
+static void amd756_remove(struct pci_dev *dev)
 {
 	i2c_del_adapter(&amd756_smbus);
 	release_region(amd756_ioport, SMB_IOSIZE);

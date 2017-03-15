@@ -44,7 +44,7 @@
 
 #include "ieee80211/dot11d.h"
 
-static struct pci_device_id rtl8180_pci_id_tbl[] __devinitdata = {
+static struct pci_device_id rtl8180_pci_id_tbl[] = {
 	{
 		.vendor = PCI_VENDOR_ID_REALTEK,
 		.device = 0x8199,
@@ -84,10 +84,10 @@ MODULE_PARM_DESC(hwwep, " Try to use hardware WEP support. Still broken and not 
 MODULE_PARM_DESC(channels, " Channel bitmask for specific locales. NYI");
 
 
-static int __devinit rtl8180_pci_probe(struct pci_dev *pdev,
+static int rtl8180_pci_probe(struct pci_dev *pdev,
 				       const struct pci_device_id *id);
 
-static void __devexit rtl8180_pci_remove(struct pci_dev *pdev);
+static void rtl8180_pci_remove(struct pci_dev *pdev);
 
 static void rtl8180_shutdown(struct pci_dev *pdev)
 {
@@ -3556,7 +3556,7 @@ static const struct net_device_ops rtl8180_netdev_ops = {
 	.ndo_start_xmit		= ieee80211_rtl_xmit,
 };
 
-static int __devinit rtl8180_pci_probe(struct pci_dev *pdev,
+static int rtl8180_pci_probe(struct pci_dev *pdev,
 				       const struct pci_device_id *id)
 {
 	unsigned long ioaddr = 0;
@@ -3668,7 +3668,7 @@ fail_free:
 	return ret;
 }
 
-static void __devexit rtl8180_pci_remove(struct pci_dev *pdev)
+static void rtl8180_pci_remove(struct pci_dev *pdev)
 {
 	struct r8180_priv *priv;
 	struct net_device *dev = pci_get_drvdata(pdev);

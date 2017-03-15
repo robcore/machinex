@@ -76,7 +76,7 @@ static struct led_classdev raq_power_off_led = {
 	.default_trigger	= "power-off",
 };
 
-static int __devinit cobalt_raq_led_probe(struct platform_device *pdev)
+static int cobalt_raq_led_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int retval;
@@ -109,7 +109,7 @@ err_iounmap:
 	return retval;
 }
 
-static int __devexit cobalt_raq_led_remove(struct platform_device *pdev)
+static int cobalt_raq_led_remove(struct platform_device *pdev)
 {
 	led_classdev_unregister(&raq_power_off_led);
 	led_classdev_unregister(&raq_web_led);

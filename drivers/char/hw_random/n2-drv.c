@@ -611,7 +611,7 @@ static void n2rng_work(struct work_struct *work)
 		schedule_delayed_work(&np->work, HZ * 2);
 }
 
-static void __devinit n2rng_driver_version(void)
+static void n2rng_driver_version(void)
 {
 	static int n2rng_version_printed;
 
@@ -620,7 +620,7 @@ static void __devinit n2rng_driver_version(void)
 }
 
 static const struct of_device_id n2rng_match[];
-static int __devinit n2rng_probe(struct platform_device *op)
+static int n2rng_probe(struct platform_device *op)
 {
 	const struct of_device_id *match;
 	int multi_capable;

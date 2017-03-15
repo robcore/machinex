@@ -212,7 +212,7 @@ static int __init kirkwood_pcie_setup(int nr, struct pci_sys_data *sys)
 	return 1;
 }
 
-static void __devinit rc_pci_fixup(struct pci_dev *dev)
+static void rc_pci_fixup(struct pci_dev *dev)
 {
 	/*
 	 * Prevent enumeration of root complex.

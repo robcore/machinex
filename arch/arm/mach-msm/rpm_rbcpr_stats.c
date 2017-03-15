@@ -360,7 +360,7 @@ static const struct file_operations msm_rpmrbcpr_fops = {
 	.llseek   = no_llseek,
 };
 
-static  int __devinit msm_rpmrbcpr_probe(struct platform_device *pdev)
+static  int msm_rpmrbcpr_probe(struct platform_device *pdev)
 {
 	struct dentry *dent;
 	struct msm_rpmrbcpr_platform_data *pdata;

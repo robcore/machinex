@@ -1642,7 +1642,7 @@ adreno_ocmem_gmem_free(struct adreno_device *adreno_dev)
 }
 #endif
 
-static int __devinit
+static int
 adreno_probe(struct platform_device *pdev)
 {
 	struct kgsl_device *device;

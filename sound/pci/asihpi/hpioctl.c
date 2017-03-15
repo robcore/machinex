@@ -307,7 +307,7 @@ out:
 	return err;
 }
 
-int __devinit asihpi_adapter_probe(struct pci_dev *pci_dev,
+int asihpi_adapter_probe(struct pci_dev *pci_dev,
 	const struct pci_device_id *pci_id)
 {
 	int idx, nm;
@@ -421,7 +421,7 @@ err:
 	return -ENODEV;
 }
 
-void __devexit asihpi_adapter_remove(struct pci_dev *pci_dev)
+void asihpi_adapter_remove(struct pci_dev *pci_dev)
 {
 	int idx;
 	struct hpi_message hm;

@@ -713,7 +713,7 @@ static void nvec_power_off(void)
 	nvec_write_async(nvec_power_handle, "\x04\x01", 2);
 }
 
-static int __devinit tegra_nvec_probe(struct platform_device *pdev)
+static int tegra_nvec_probe(struct platform_device *pdev)
 {
 	int err, ret;
 	struct clk *i2c_clk;
@@ -861,7 +861,7 @@ failed:
 	return -ENOMEM;
 }
 
-static int __devexit tegra_nvec_remove(struct platform_device *pdev)
+static int tegra_nvec_remove(struct platform_device *pdev)
 {
 	struct nvec_chip *nvec = platform_get_drvdata(pdev);
 
@@ -913,7 +913,7 @@ static int tegra_nvec_resume(struct platform_device *pdev)
 #endif
 
 /* Match table for of_platform binding */
-static const struct of_device_id nvidia_nvec_of_match[] __devinitconst = {
+static const struct of_device_id nvidia_nvec_of_match[] = {
 	{ .compatible = "nvidia,nvec", },
 	{},
 };

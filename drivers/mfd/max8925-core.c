@@ -583,7 +583,7 @@ tsc_irq:
 	return 0;
 }
 
-int __devinit max8925_device_init(struct max8925_chip *chip,
+int max8925_device_init(struct max8925_chip *chip,
 				  struct max8925_platform_data *pdata)
 {
 	int ret;
@@ -670,7 +670,7 @@ out:
 	return ret;
 }
 
-void __devexit max8925_device_exit(struct max8925_chip *chip)
+void max8925_device_exit(struct max8925_chip *chip)
 {
 	if (chip->core_irq)
 		free_irq(chip->core_irq, chip);

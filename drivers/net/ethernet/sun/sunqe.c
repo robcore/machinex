@@ -742,7 +742,7 @@ static void qec_init_once(struct sunqec *qecp, struct platform_device *op)
 		    qecp->gregs + GLOB_RSIZE);
 }
 
-static u8 __devinit qec_get_burst(struct device_node *dp)
+static u8 qec_get_burst(struct device_node *dp)
 {
 	u8 bsizes, bsizes_more;
 
@@ -762,7 +762,7 @@ static u8 __devinit qec_get_burst(struct device_node *dp)
 	return bsizes;
 }
 
-static struct sunqec * __devinit get_qec(struct platform_device *child)
+static struct sunqec * get_qec(struct platform_device *child)
 {
 	struct platform_device *op = to_platform_device(child->dev.parent);
 	struct sunqec *qecp;
@@ -828,7 +828,7 @@ static const struct net_device_ops qec_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 };
 
-static int __devinit qec_ether_init(struct platform_device *op)
+static int qec_ether_init(struct platform_device *op)
 {
 	static unsigned version_printed;
 	struct net_device *dev;
@@ -927,12 +927,12 @@ fail:
 	return res;
 }
 
-static int __devinit qec_sbus_probe(struct platform_device *op)
+static int qec_sbus_probe(struct platform_device *op)
 {
 	return qec_ether_init(op);
 }
 
-static int __devexit qec_sbus_remove(struct platform_device *op)
+static int qec_sbus_remove(struct platform_device *op)
 {
 	struct sunqe *qp = dev_get_drvdata(&op->dev);
 	struct net_device *net_dev = qp->dev;

@@ -129,7 +129,7 @@ static struct notifier_block vreg_cpufreq_notifier_block = {
  *	bfin_dpmc_probe -
  *
  */
-static int __devinit bfin_dpmc_probe(struct platform_device *pdev)
+static int bfin_dpmc_probe(struct platform_device *pdev)
 {
 	if (pdev->dev.platform_data)
 		pdata = pdev->dev.platform_data;
@@ -143,7 +143,7 @@ static int __devinit bfin_dpmc_probe(struct platform_device *pdev)
 /**
  *	bfin_dpmc_remove -
  */
-static int __devexit bfin_dpmc_remove(struct platform_device *pdev)
+static int bfin_dpmc_remove(struct platform_device *pdev)
 {
 	pdata = NULL;
 	return cpufreq_unregister_notifier(&vreg_cpufreq_notifier_block,

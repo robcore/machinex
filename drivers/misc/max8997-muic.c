@@ -398,7 +398,7 @@ static void max8997_initialize_device(struct max8997_muic_info *info)
 	}
 }
 
-static int __devinit max8997_muic_probe(struct platform_device *pdev)
+static int max8997_muic_probe(struct platform_device *pdev)
 {
 	struct max8997_dev *iodev = dev_get_drvdata(pdev->dev.parent);
 	struct max8997_platform_data *pdata = dev_get_platdata(iodev->dev);
@@ -463,7 +463,7 @@ err_kfree:
 	return ret;
 }
 
-static int __devexit max8997_muic_remove(struct platform_device *pdev)
+static int max8997_muic_remove(struct platform_device *pdev)
 {
 	struct max8997_muic_info *info = platform_get_drvdata(pdev);
 	struct max8997_platform_data *pdata =

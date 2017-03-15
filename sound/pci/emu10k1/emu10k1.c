@@ -99,7 +99,7 @@ static DEFINE_PCI_DEVICE_TABLE(snd_emu10k1_ids) = {
 
 MODULE_DEVICE_TABLE(pci, snd_emu10k1_ids);
 
-static int __devinit snd_card_emu10k1_probe(struct pci_dev *pci,
+static int snd_card_emu10k1_probe(struct pci_dev *pci,
 					    const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -201,7 +201,7 @@ static int __devinit snd_card_emu10k1_probe(struct pci_dev *pci,
 	return err;
 }
 
-static void __devexit snd_card_emu10k1_remove(struct pci_dev *pci)
+static void snd_card_emu10k1_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

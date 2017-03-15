@@ -438,7 +438,7 @@ static void check_via_agp3 (struct agp_bridge_data *bridge)
 }
 
 
-static int __devinit agp_via_probe(struct pci_dev *pdev,
+static int agp_via_probe(struct pci_dev *pdev,
 				   const struct pci_device_id *ent)
 {
 	struct agp_device_ids *devs = via_agp_device_ids;

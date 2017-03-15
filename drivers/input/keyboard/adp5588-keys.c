@@ -145,7 +145,7 @@ static int adp5588_gpio_direction_output(struct gpio_chip *chip,
 	return ret;
 }
 
-static int __devinit adp5588_build_gpiomap(struct adp5588_kpad *kpad,
+static int adp5588_build_gpiomap(struct adp5588_kpad *kpad,
 				const struct adp5588_kpad_platform_data *pdata)
 {
 	bool pin_used[ADP5588_MAXGPIO];
@@ -170,7 +170,7 @@ static int __devinit adp5588_build_gpiomap(struct adp5588_kpad *kpad,
 	return n_unused;
 }
 
-static int __devinit adp5588_gpio_add(struct adp5588_kpad *kpad)
+static int adp5588_gpio_add(struct adp5588_kpad *kpad)
 {
 	struct device *dev = &kpad->client->dev;
 	const struct adp5588_kpad_platform_data *pdata = dev->platform_data;
@@ -223,7 +223,7 @@ static int __devinit adp5588_gpio_add(struct adp5588_kpad *kpad)
 	return 0;
 }
 
-static void __devexit adp5588_gpio_remove(struct adp5588_kpad *kpad)
+static void adp5588_gpio_remove(struct adp5588_kpad *kpad)
 {
 	struct device *dev = &kpad->client->dev;
 	const struct adp5588_kpad_platform_data *pdata = dev->platform_data;
@@ -318,7 +318,7 @@ static irqreturn_t adp5588_irq(int irq, void *handle)
 	return IRQ_HANDLED;
 }
 
-static int __devinit adp5588_setup(struct i2c_client *client)
+static int adp5588_setup(struct i2c_client *client)
 {
 	const struct adp5588_kpad_platform_data *pdata = client->dev.platform_data;
 	const struct adp5588_gpio_platform_data *gpio_data = pdata->gpio_data;
@@ -381,7 +381,7 @@ static int __devinit adp5588_setup(struct i2c_client *client)
 	return 0;
 }
 
-static void __devinit adp5588_report_switch_state(struct adp5588_kpad *kpad)
+static void adp5588_report_switch_state(struct adp5588_kpad *kpad)
 {
 	int gpi_stat1 = adp5588_read(kpad->client, GPIO_DAT_STAT1);
 	int gpi_stat2 = adp5588_read(kpad->client, GPIO_DAT_STAT2);
@@ -419,7 +419,7 @@ static void __devinit adp5588_report_switch_state(struct adp5588_kpad *kpad)
 }
 
 
-static int __devinit adp5588_probe(struct i2c_client *client,
+static int adp5588_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 	struct adp5588_kpad *kpad;
@@ -586,7 +586,7 @@ static int __devinit adp5588_probe(struct i2c_client *client,
 	return error;
 }
 
-static int __devexit adp5588_remove(struct i2c_client *client)
+static int adp5588_remove(struct i2c_client *client)
 {
 	struct adp5588_kpad *kpad = i2c_get_clientdata(client);
 

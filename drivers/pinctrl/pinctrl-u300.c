@@ -1113,7 +1113,7 @@ static struct pinctrl_desc u300_pmx_desc = {
 	.owner = THIS_MODULE,
 };
 
-static int __devinit u300_pmx_probe(struct platform_device *pdev)
+static int u300_pmx_probe(struct platform_device *pdev)
 {
 	struct u300_pmx *upmx;
 	struct resource *res;
@@ -1180,7 +1180,7 @@ out_no_resource:
 	return ret;
 }
 
-static int __devexit u300_pmx_remove(struct platform_device *pdev)
+static int u300_pmx_remove(struct platform_device *pdev)
 {
 	struct u300_pmx *upmx = platform_get_drvdata(pdev);
 	int i;

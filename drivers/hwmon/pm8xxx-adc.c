@@ -1226,7 +1226,7 @@ static int pm8xxx_adc_teardown(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit pm8xxx_adc_probe(struct platform_device *pdev)
+static int pm8xxx_adc_probe(struct platform_device *pdev)
 {
 	const struct pm8xxx_adc_platform_data *pdata = pdev->dev.platform_data;
 	struct pm8xxx_adc *adc_pmic;

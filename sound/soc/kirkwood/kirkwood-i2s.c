@@ -397,7 +397,7 @@ static struct snd_soc_dai_driver kirkwood_i2s_dai = {
 	.ops = &kirkwood_i2s_dai_ops,
 };
 
-static __devinit int kirkwood_i2s_dev_probe(struct platform_device *pdev)
+static int kirkwood_i2s_dev_probe(struct platform_device *pdev)
 {
 	struct resource *mem;
 	struct kirkwood_asoc_platform_data *data =
@@ -461,7 +461,7 @@ error:
 	return err;
 }
 
-static __devexit int kirkwood_i2s_dev_remove(struct platform_device *pdev)
+static int kirkwood_i2s_dev_remove(struct platform_device *pdev)
 {
 	struct kirkwood_dma_data *priv = dev_get_drvdata(&pdev->dev);
 

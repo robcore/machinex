@@ -1082,7 +1082,7 @@ static struct scsi_host_template inia100_template = {
 	.use_clustering		= ENABLE_CLUSTERING,
 };
 
-static int __devinit inia100_probe_one(struct pci_dev *pdev,
+static int inia100_probe_one(struct pci_dev *pdev,
 		const struct pci_device_id *id)
 {
 	struct Scsi_Host *shost;
@@ -1197,7 +1197,7 @@ out:
 	return error;
 }
 
-static void __devexit inia100_remove_one(struct pci_dev *pdev)
+static void inia100_remove_one(struct pci_dev *pdev)
 {
 	struct Scsi_Host *shost = pci_get_drvdata(pdev);
 	struct orc_host *host = (struct orc_host *)shost->hostdata;

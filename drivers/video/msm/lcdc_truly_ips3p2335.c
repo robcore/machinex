@@ -224,7 +224,7 @@ static void lcdc_truly_set_backlight(struct msm_fb_data_type *mfd)
 	return;
 }
 
-static int __devinit truly_probe(struct platform_device *pdev)
+static int truly_probe(struct platform_device *pdev)
 {
 
 	if (pdev->id == 0) {

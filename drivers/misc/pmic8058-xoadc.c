@@ -650,7 +650,7 @@ static const struct dev_pm_ops pm8058_xoadc_dev_pm_ops = {
 #define PM8058_XOADC_DEV_PM_OPS NULL
 #endif
 
-static int __devinit pm8058_xoadc_probe(struct platform_device *pdev)
+static int pm8058_xoadc_probe(struct platform_device *pdev)
 {
 	struct xoadc_platform_data *pdata = pdev->dev.platform_data;
 	struct pmic8058_adc *adc_pmic;
@@ -758,7 +758,7 @@ static int __devinit pm8058_xoadc_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pm8058_xoadc_teardown(struct platform_device *pdev)
+static int pm8058_xoadc_teardown(struct platform_device *pdev)
 {
 	struct pmic8058_adc *adc_pmic = platform_get_drvdata(pdev);
 

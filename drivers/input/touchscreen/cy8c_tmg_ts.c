@@ -442,7 +442,7 @@ static struct i2c_driver cy8c_ts_driver = {
 	},
 };
 
-static int __devinit cy8c_ts_init(void)
+static int cy8c_ts_init(void)
 {
 	cypress_touch_wq = create_singlethread_workqueue("cypress_touch_wq");
 	if (!cypress_touch_wq)

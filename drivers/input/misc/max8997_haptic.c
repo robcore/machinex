@@ -241,7 +241,7 @@ static void max8997_haptic_close(struct input_dev *dev)
 	max8997_haptic_disable(chip);
 }
 
-static int __devinit max8997_haptic_probe(struct platform_device *pdev)
+static int max8997_haptic_probe(struct platform_device *pdev)
 {
 	struct max8997_dev *iodev = dev_get_drvdata(pdev->dev.parent);
 	const struct max8997_platform_data *pdata =
@@ -354,7 +354,7 @@ err_free_mem:
 	return error;
 }
 
-static int __devexit max8997_haptic_remove(struct platform_device *pdev)
+static int max8997_haptic_remove(struct platform_device *pdev)
 {
 	struct max8997_haptic *chip = platform_get_drvdata(pdev);
 

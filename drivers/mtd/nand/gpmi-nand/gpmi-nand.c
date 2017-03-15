@@ -307,7 +307,7 @@ int start_dma_with_bch_irq(struct gpmi_nand_data *this,
 	return 0;
 }
 
-static int __devinit
+static int
 acquire_register_block(struct gpmi_nand_data *this, const char *res_name)
 {
 	struct platform_device *pdev = this->pdev;
@@ -348,7 +348,7 @@ static void release_register_block(struct gpmi_nand_data *this)
 	res->bch_regs = NULL;
 }
 
-static int __devinit
+static int
 acquire_bch_irq(struct gpmi_nand_data *this, irq_handler_t irq_h)
 {
 	struct platform_device *pdev = this->pdev;
@@ -415,7 +415,7 @@ static void release_dma_channels(struct gpmi_nand_data *this)
 		}
 }
 
-static int __devinit acquire_dma_channels(struct gpmi_nand_data *this)
+static int acquire_dma_channels(struct gpmi_nand_data *this)
 {
 	struct platform_device *pdev = this->pdev;
 	struct gpmi_nand_platform_data *pdata = this->pdata;
@@ -473,7 +473,7 @@ acquire_err:
 	return -EINVAL;
 }
 
-static int __devinit acquire_resources(struct gpmi_nand_data *this)
+static int acquire_resources(struct gpmi_nand_data *this)
 {
 	struct resources *res = &this->resources;
 	int ret;
@@ -521,7 +521,7 @@ static void release_resources(struct gpmi_nand_data *this)
 	release_dma_channels(this);
 }
 
-static int __devinit init_hardware(struct gpmi_nand_data *this)
+static int init_hardware(struct gpmi_nand_data *this)
 {
 	int ret;
 
@@ -1460,7 +1460,7 @@ void gpmi_nfc_exit(struct gpmi_nand_data *this)
 	gpmi_free_dma_buffer(this);
 }
 
-static int __devinit gpmi_nfc_init(struct gpmi_nand_data *this)
+static int gpmi_nfc_init(struct gpmi_nand_data *this)
 {
 	struct gpmi_nand_platform_data *pdata = this->pdata;
 	struct mtd_info  *mtd = &this->mtd;
@@ -1519,7 +1519,7 @@ err_out:
 	return ret;
 }
 
-static int __devinit gpmi_nand_probe(struct platform_device *pdev)
+static int gpmi_nand_probe(struct platform_device *pdev)
 {
 	struct gpmi_nand_platform_data *pdata = pdev->dev.platform_data;
 	struct gpmi_nand_data *this;

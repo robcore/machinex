@@ -1163,7 +1163,7 @@ static int __init at91ether_probe(struct platform_device *pdev)
 	return detected;
 }
 
-static int __devexit at91ether_remove(struct platform_device *pdev)
+static int at91ether_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct at91_private *lp = netdev_priv(dev);

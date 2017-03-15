@@ -123,7 +123,7 @@ static const struct iio_info ad7476_info = {
 	.read_raw = &ad7476_read_raw,
 };
 
-static int __devinit ad7476_probe(struct spi_device *spi)
+static int ad7476_probe(struct spi_device *spi)
 {
 	struct ad7476_platform_data *pdata = spi->dev.platform_data;
 	struct ad7476_state *st;

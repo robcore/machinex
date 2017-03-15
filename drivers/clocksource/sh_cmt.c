@@ -685,7 +685,7 @@ err0:
 	return ret;
 }
 
-static int __devinit sh_cmt_probe(struct platform_device *pdev)
+static int sh_cmt_probe(struct platform_device *pdev)
 {
 	struct sh_cmt_priv *p = platform_get_drvdata(pdev);
 	int ret;
@@ -716,7 +716,7 @@ static int __devinit sh_cmt_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit sh_cmt_remove(struct platform_device *pdev)
+static int sh_cmt_remove(struct platform_device *pdev)
 {
 	return -EBUSY; /* cannot unregister clockevent and clocksource */
 }

@@ -634,7 +634,7 @@ static void virtio_pci_release_dev(struct device *_d)
 }
 
 /* the PCI probing function */
-static int __devinit virtio_pci_probe(struct pci_dev *pci_dev,
+static int virtio_pci_probe(struct pci_dev *pci_dev,
 				      const struct pci_device_id *id)
 {
 	struct virtio_pci_device *vp_dev;
@@ -707,7 +707,7 @@ out:
 	return err;
 }
 
-static void __devexit virtio_pci_remove(struct pci_dev *pci_dev)
+static void virtio_pci_remove(struct pci_dev *pci_dev)
 {
 	struct virtio_pci_device *vp_dev = pci_get_drvdata(pci_dev);
 

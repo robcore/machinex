@@ -1099,7 +1099,7 @@ out:
 	return NULL;
 }
 
-static int __devinit redrat3_dev_probe(struct usb_interface *intf,
+static int redrat3_dev_probe(struct usb_interface *intf,
 				       const struct usb_device_id *id)
 {
 	struct usb_device *udev = interface_to_usbdev(intf);
@@ -1237,7 +1237,7 @@ no_endpoints:
 	return retval;
 }
 
-static void __devexit redrat3_dev_disconnect(struct usb_interface *intf)
+static void redrat3_dev_disconnect(struct usb_interface *intf)
 {
 	struct usb_device *udev = interface_to_usbdev(intf);
 	struct redrat3_dev *rr3 = usb_get_intfdata(intf);

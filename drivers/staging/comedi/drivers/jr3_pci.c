@@ -974,13 +974,13 @@ static int jr3_pci_detach(struct comedi_device *dev)
 	return 0;
 }
 
-static int __devinit driver_jr3_pci_pci_probe(struct pci_dev *dev,
+static int driver_jr3_pci_pci_probe(struct pci_dev *dev,
 					      const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_jr3_pci.driver_name);
 }
 
-static void __devexit driver_jr3_pci_pci_remove(struct pci_dev *dev)
+static void driver_jr3_pci_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

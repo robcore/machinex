@@ -86,7 +86,7 @@ static int max8997_battery_get_property(struct power_supply *psy,
 	return 0;
 }
 
-static __devinit int max8997_battery_probe(struct platform_device *pdev)
+static int max8997_battery_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct charger_data *charger;
@@ -167,7 +167,7 @@ err:
 	return ret;
 }
 
-static int __devexit max8997_battery_remove(struct platform_device *pdev)
+static int max8997_battery_remove(struct platform_device *pdev)
 {
 	struct charger_data *charger = platform_get_drvdata(pdev);
 

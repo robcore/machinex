@@ -624,7 +624,7 @@ static void __smb137b_otg_power(int on)
 								__func__, ret);
 	}
 }
-static int __devinit smb137b_probe(struct i2c_client *client,
+static int smb137b_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
 {
 	const struct smb137b_platform_data *pdata;
@@ -775,7 +775,7 @@ void smb137b_otg_power(int on)
 	mutex_unlock(&init_lock);
 }
 
-static int __devexit smb137b_remove(struct i2c_client *client)
+static int smb137b_remove(struct i2c_client *client)
 {
 	const struct smb137b_platform_data *pdata;
 	struct smb137b_data *smb137b_chg = i2c_get_clientdata(client);

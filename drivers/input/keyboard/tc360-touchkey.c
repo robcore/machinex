@@ -1628,7 +1628,7 @@ static void tc360_destroy_interface(struct tc360_data *data)
 #endif
 }
 
-static int __devinit tc360_probe(struct i2c_client *client,
+static int tc360_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
 	struct tc360_platform_data *pdata = client->dev.platform_data;
@@ -1840,7 +1840,7 @@ err_data_alloc:
 	return ret;
 }
 
-static int __devexit tc360_remove(struct i2c_client *client)
+static int tc360_remove(struct i2c_client *client)
 {
 	struct tc360_data *data = i2c_get_clientdata(client);
 

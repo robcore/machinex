@@ -150,7 +150,7 @@ static struct lcd_ops lms_ops = {
 	.get_power	= NULL,
 };
 
-static int __devinit lms283gf05_probe(struct spi_device *spi)
+static int lms283gf05_probe(struct spi_device *spi)
 {
 	struct lms283gf05_state *st;
 	struct lms283gf05_pdata *pdata = spi->dev.platform_data;
@@ -201,7 +201,7 @@ err:
 	return ret;
 }
 
-static int __devexit lms283gf05_remove(struct spi_device *spi)
+static int lms283gf05_remove(struct spi_device *spi)
 {
 	struct lms283gf05_state *st = dev_get_drvdata(&spi->dev);
 	struct lms283gf05_pdata *pdata = st->spi->dev.platform_data;

@@ -374,7 +374,7 @@ exit:
 	return err;
 }
 
-static int __devinit lp3944_probe(struct i2c_client *client,
+static int lp3944_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct lp3944_platform_data *lp3944_pdata = client->dev.platform_data;
@@ -412,7 +412,7 @@ static int __devinit lp3944_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit lp3944_remove(struct i2c_client *client)
+static int lp3944_remove(struct i2c_client *client)
 {
 	struct lp3944_platform_data *pdata = client->dev.platform_data;
 	struct lp3944_data *data = i2c_get_clientdata(client);

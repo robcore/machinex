@@ -98,7 +98,7 @@ static void pata_platform_setup_port(struct ata_ioports *ioaddr,
  *
  *	If no IRQ resource is present, PIO polling mode is used instead.
  */
-int __devinit __pata_platform_probe(struct device *dev,
+int __pata_platform_probe(struct device *dev,
 				    struct resource *io_res,
 				    struct resource *ctl_res,
 				    struct resource *irq_res,
@@ -195,7 +195,7 @@ int __pata_platform_remove(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(__pata_platform_remove);
 
-static int __devinit pata_platform_probe(struct platform_device *pdev)
+static int pata_platform_probe(struct platform_device *pdev)
 {
 	struct resource *io_res;
 	struct resource *ctl_res;
@@ -242,7 +242,7 @@ static int __devinit pata_platform_probe(struct platform_device *pdev)
 				     pio_mask);
 }
 
-static int __devexit pata_platform_remove(struct platform_device *pdev)
+static int pata_platform_remove(struct platform_device *pdev)
 {
 	return __pata_platform_remove(&pdev->dev);
 }

@@ -474,7 +474,7 @@ static void atmel_nand_hwctl(struct mtd_info *mtd, int mode)
 }
 
 #if defined(CONFIG_OF)
-static int __devinit atmel_of_init_port(struct atmel_nand_host *host,
+static int atmel_of_init_port(struct atmel_nand_host *host,
 					 struct device_node *np)
 {
 	u32 val;
@@ -516,7 +516,7 @@ static int __devinit atmel_of_init_port(struct atmel_nand_host *host,
 	return 0;
 }
 #else
-static int __devinit atmel_of_init_port(struct atmel_nand_host *host,
+static int atmel_of_init_port(struct atmel_nand_host *host,
 					 struct device_node *np)
 {
 	return -EINVAL;

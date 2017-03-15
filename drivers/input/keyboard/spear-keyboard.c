@@ -136,7 +136,7 @@ static void spear_kbd_close(struct input_dev *dev)
 	kbd->last_key = KEY_RESERVED;
 }
 
-static int __devinit spear_kbd_probe(struct platform_device *pdev)
+static int spear_kbd_probe(struct platform_device *pdev)
 {
 	const struct kbd_platform_data *pdata = pdev->dev.platform_data;
 	const struct matrix_keymap_data *keymap;
@@ -258,7 +258,7 @@ err_free_mem:
 	return error;
 }
 
-static int __devexit spear_kbd_remove(struct platform_device *pdev)
+static int spear_kbd_remove(struct platform_device *pdev)
 {
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 

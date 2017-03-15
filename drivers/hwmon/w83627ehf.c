@@ -1865,7 +1865,7 @@ static void w83627ehf_device_remove_files(struct device *dev)
 }
 
 /* Get the monitoring functions started */
-static inline void __devinit w83627ehf_init_device(struct w83627ehf_data *data,
+static inline void w83627ehf_init_device(struct w83627ehf_data *data,
 						   enum kinds kind)
 {
 	int i;
@@ -1951,7 +1951,7 @@ static void w82627ehf_swap_tempreg(struct w83627ehf_data *data,
 	data->reg_temp_config[r2] = tmp;
 }
 
-static void __devinit
+static void
 w83627ehf_set_temp_reg_ehf(struct w83627ehf_data *data, int n_temp)
 {
 	int i;
@@ -1964,7 +1964,7 @@ w83627ehf_set_temp_reg_ehf(struct w83627ehf_data *data, int n_temp)
 	}
 }
 
-static void __devinit
+static void
 w83627ehf_check_fan_inputs(const struct w83627ehf_sio_data *sio_data,
 			   struct w83627ehf_data *data)
 {
@@ -2053,7 +2053,7 @@ w83627ehf_check_fan_inputs(const struct w83627ehf_sio_data *sio_data,
 	}
 }
 
-static int __devinit w83627ehf_probe(struct platform_device *pdev)
+static int w83627ehf_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct w83627ehf_sio_data *sio_data = dev->platform_data;
@@ -2595,7 +2595,7 @@ exit:
 	return err;
 }
 
-static int __devexit w83627ehf_remove(struct platform_device *pdev)
+static int w83627ehf_remove(struct platform_device *pdev)
 {
 	struct w83627ehf_data *data = platform_get_drvdata(pdev);
 

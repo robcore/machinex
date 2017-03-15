@@ -142,7 +142,7 @@ static DEFINE_PCI_DEVICE_TABLE(k8temp_ids) = {
 
 MODULE_DEVICE_TABLE(pci, k8temp_ids);
 
-static int __devinit is_rev_g_desktop(u8 model)
+static int is_rev_g_desktop(u8 model)
 {
 	u32 brandidx;
 
@@ -173,7 +173,7 @@ static int __devinit is_rev_g_desktop(u8 model)
 	return 1;
 }
 
-static int __devinit k8temp_probe(struct pci_dev *pdev,
+static int k8temp_probe(struct pci_dev *pdev,
 				  const struct pci_device_id *id)
 {
 	int err;
@@ -313,7 +313,7 @@ exit:
 	return err;
 }
 
-static void __devexit k8temp_remove(struct pci_dev *pdev)
+static void k8temp_remove(struct pci_dev *pdev)
 {
 	struct k8temp_data *data = pci_get_drvdata(pdev);
 

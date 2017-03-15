@@ -82,7 +82,7 @@ static void usb6fire_chip_destroy(struct sfire_chip *chip)
 	}
 }
 
-static int __devinit usb6fire_chip_probe(struct usb_interface *intf,
+static int usb6fire_chip_probe(struct usb_interface *intf,
 		const struct usb_device_id *usb_id)
 {
 	int ret;

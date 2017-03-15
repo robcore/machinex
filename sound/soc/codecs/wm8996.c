@@ -3115,7 +3115,7 @@ static struct snd_soc_dai_driver wm8996_dai[] = {
 	},
 };
 
-static __devinit int wm8996_i2c_probe(struct i2c_client *i2c,
+static int wm8996_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8996_priv *wm8996;
@@ -3228,7 +3228,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8996_i2c_remove(struct i2c_client *client)
+static int wm8996_i2c_remove(struct i2c_client *client)
 {
 	struct wm8996_priv *wm8996 = i2c_get_clientdata(client);
 

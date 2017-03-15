@@ -921,7 +921,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	return 0;
 }
 
-static void __devinit mipi_samsung_disp_shutdown(struct platform_device *pdev)
+static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 {
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata;
 
@@ -1564,7 +1564,7 @@ static void esd_test_work_func(struct work_struct *work)
 }
 #endif
 
-static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
+static int mipi_samsung_disp_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct platform_device *msm_fb_added_dev;

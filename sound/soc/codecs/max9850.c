@@ -329,7 +329,7 @@ static struct snd_soc_codec_driver soc_codec_dev_max9850 = {
 	.num_dapm_routes = ARRAY_SIZE(max9850_dapm_routes),
 };
 
-static int __devinit max9850_i2c_probe(struct i2c_client *i2c,
+static int max9850_i2c_probe(struct i2c_client *i2c,
 		const struct i2c_device_id *id)
 {
 	struct max9850_priv *max9850;
@@ -347,7 +347,7 @@ static int __devinit max9850_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static __devexit int max9850_i2c_remove(struct i2c_client *client)
+static int max9850_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	return 0;

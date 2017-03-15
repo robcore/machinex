@@ -2457,7 +2457,7 @@ static int get_device_tree_data(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit msm_sps_probe(struct platform_device *pdev)
+static int msm_sps_probe(struct platform_device *pdev)
 {
 	int ret = -ENODEV;
 
@@ -2578,7 +2578,7 @@ alloc_chrdev_region_err:
 	return ret;
 }
 
-static int __devexit msm_sps_remove(struct platform_device *pdev)
+static int msm_sps_remove(struct platform_device *pdev)
 {
 	SPS_DBG("sps:%s.", __func__);
 

@@ -322,7 +322,7 @@ unregister_chrdev_region:
 
 }
 
-static int __devexit dev_avtimer_remove(struct platform_device *pdev)
+static int dev_avtimer_remove(struct platform_device *pdev)
 {
 	struct avtimer_t *pavtimer = &avtimer;
 

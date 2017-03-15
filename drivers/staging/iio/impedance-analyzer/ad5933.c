@@ -701,7 +701,7 @@ static void ad5933_work(struct work_struct *work)
 	mutex_unlock(&indio_dev->mlock);
 }
 
-static int __devinit ad5933_probe(struct i2c_client *client,
+static int ad5933_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	int ret, voltage_uv = 0;
@@ -791,7 +791,7 @@ error_put_reg:
 	return ret;
 }
 
-static __devexit int ad5933_remove(struct i2c_client *client)
+static int ad5933_remove(struct i2c_client *client)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 	struct ad5933_state *st = iio_priv(indio_dev);

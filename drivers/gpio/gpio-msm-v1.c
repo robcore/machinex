@@ -787,7 +787,7 @@ void msm_gpio_find_out(const unsigned gpio, void __iomem **out,
 	*offset = gpio - msm_chip->chip.base;
 }
 
-static int __devinit msm_gpio_probe(struct platform_device *dev)
+static int msm_gpio_probe(struct platform_device *dev)
 {
 	int i, j = 0;
 	int grp_irq;

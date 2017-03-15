@@ -1070,7 +1070,7 @@ static struct notifier_block sh_dmae_nmi_notifier __read_mostly = {
 	.priority	= 1,
 };
 
-static int __devinit sh_dmae_chan_probe(struct sh_dmae_device *shdev, int id,
+static int sh_dmae_chan_probe(struct sh_dmae_device *shdev, int id,
 					int irq, unsigned long flags)
 {
 	int err;

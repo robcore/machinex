@@ -1249,7 +1249,7 @@ err:
 
 /* ------------------------------------------------------------- */
 
-static int __devinit c4_probe(struct pci_dev *dev,
+static int c4_probe(struct pci_dev *dev,
 			      const struct pci_device_id *ent)
 {
 	int nr = ent->driver_data;

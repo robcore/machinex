@@ -10,7 +10,7 @@
 #include <sound/core.h>
 #include "au88x0.h"
 
-static int __devinit snd_vortex_mixer(vortex_t * vortex)
+static int snd_vortex_mixer(vortex_t * vortex)
 {
 	struct snd_ac97_bus *pbus;
 	struct snd_ac97_template ac97;

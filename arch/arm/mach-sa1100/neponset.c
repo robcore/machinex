@@ -153,7 +153,7 @@ static u_int neponset_get_mctrl(struct uart_port *port)
 	return ret;
 }
 
-static struct sa1100_port_fns neponset_port_fns __devinitdata = {
+static struct sa1100_port_fns neponset_port_fns = {
 	.set_mctrl	= neponset_set_mctrl,
 	.get_mctrl	= neponset_get_mctrl,
 };
@@ -232,7 +232,7 @@ static struct sa1111_platform_data sa1111_info = {
 	.disable_devs	= SA1111_DEVID_PS2_MSE,
 };
 
-static int __devinit neponset_probe(struct platform_device *dev)
+static int neponset_probe(struct platform_device *dev)
 {
 	struct neponset_drvdata *d;
 	struct resource *nep_res, *sa1111_res, *smc91x_res;
@@ -367,7 +367,7 @@ static int __devinit neponset_probe(struct platform_device *dev)
 	return ret;
 }
 
-static int __devexit neponset_remove(struct platform_device *dev)
+static int neponset_remove(struct platform_device *dev)
 {
 	struct neponset_drvdata *d = platform_get_drvdata(dev);
 	int irq = platform_get_irq(dev, 0);

@@ -118,7 +118,7 @@ static int max77693_haptic_probe(struct platform_device *pdev)
 	return error;
 }
 
-static int __devexit max77693_haptic_remove(struct platform_device *pdev)
+static int max77693_haptic_remove(struct platform_device *pdev)
 {
 	struct max77693_haptic_data *data = platform_get_drvdata(pdev);
 	kfree(data);

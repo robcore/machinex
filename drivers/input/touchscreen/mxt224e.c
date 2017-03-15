@@ -332,7 +332,7 @@ static ssize_t mxt224_reset(struct mxt224_data *data)
 	return write_mem(data, data->cmd_proc + CMD_RESET_OFFSET, 1, &buf);
 }
 
-static int __devinit mxt224_backup(struct mxt224_data *data)
+static int mxt224_backup(struct mxt224_data *data)
 {
 	u8 buf = 0x55u;
 	return write_mem(data, data->cmd_proc + CMD_BACKUP_OFFSET, 1, &buf);
@@ -380,7 +380,7 @@ static int write_config(struct mxt224_data *data, u8 type, const u8 *cfg)
 }
 
 
-static u32 __devinit crc24(u32 crc, u8 byte1, u8 byte2)
+static u32 crc24(u32 crc, u8 byte1, u8 byte2)
 {
 	static const u32 crcpoly = 0x80001B;
 	u32 res;
@@ -395,7 +395,7 @@ static u32 __devinit crc24(u32 crc, u8 byte1, u8 byte2)
 	return res;
 }
 
-static int __devinit calculate_infoblock_crc(struct mxt224_data *data,
+static int calculate_infoblock_crc(struct mxt224_data *data,
 							u32 *crc_pointer)
 {
 	u32 crc = 0;
@@ -2639,7 +2639,7 @@ static const struct attribute_group mxt224_attr_group = {
 	.attrs = mxt224_attrs,
 };
 
-static int __devinit mxt224_probe(struct i2c_client *client,
+static int mxt224_probe(struct i2c_client *client,
 						const struct i2c_device_id *id)
 {
 	struct mxt224_platform_data *pdata = client->dev.platform_data;
@@ -2997,7 +2997,7 @@ err_alloc_dev:
 	return ret;
 }
 
-static int __devexit mxt224_remove(struct i2c_client *client)
+static int mxt224_remove(struct i2c_client *client)
 {
 	struct mxt224_data *data = i2c_get_clientdata(client);
 

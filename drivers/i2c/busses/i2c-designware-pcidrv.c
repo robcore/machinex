@@ -207,7 +207,7 @@ static u32 i2c_dw_get_clk_rate_khz(struct dw_i2c_dev *dev)
 	return dev->controller->clk_khz;
 }
 
-static int __devinit i2c_dw_pci_probe(struct pci_dev *pdev,
+static int i2c_dw_pci_probe(struct pci_dev *pdev,
 const struct pci_device_id *id)
 {
 	struct dw_i2c_dev *dev;
@@ -328,7 +328,7 @@ exit:
 	return r;
 }
 
-static void __devexit i2c_dw_pci_remove(struct pci_dev *pdev)
+static void i2c_dw_pci_remove(struct pci_dev *pdev)
 {
 	struct dw_i2c_dev *dev = pci_get_drvdata(pdev);
 

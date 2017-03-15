@@ -309,7 +309,7 @@ static long msm_cpp_subdev_fops_ioctl(struct file *file, unsigned int cmd,
 	return video_usercopy(file, cmd, arg, msm_cpp_subdev_do_ioctl);
 }
 
-static int __devinit cpp_probe(struct platform_device *pdev)
+static int cpp_probe(struct platform_device *pdev)
 {
 	struct cpp_device *cpp_dev;
 	struct msm_cam_subdev_info sd_info;

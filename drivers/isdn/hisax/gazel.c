@@ -483,7 +483,7 @@ error:
 	return 1;
 }
 
-static int __devinit
+static int
 setup_gazelisa(struct IsdnCard *card, struct IsdnCardState *cs)
 {
 	printk(KERN_INFO "Gazel: ISA PnP card automatic recognition\n");
@@ -532,9 +532,9 @@ setup_gazelisa(struct IsdnCard *card, struct IsdnCardState *cs)
 }
 
 #ifdef CONFIG_PCI
-static struct pci_dev *dev_tel __devinitdata = NULL;
+static struct pci_dev *dev_tel = NULL;
 
-static int __devinit
+static int
 setup_gazelpci(struct IsdnCardState *cs)
 {
 	u_int pci_ioaddr0 = 0, pci_ioaddr1 = 0;
@@ -622,7 +622,7 @@ setup_gazelpci(struct IsdnCardState *cs)
 }
 #endif /* CONFIG_PCI */
 
-int __devinit
+int
 setup_gazel(struct IsdnCard *card)
 {
 	struct IsdnCardState *cs = card->cs;

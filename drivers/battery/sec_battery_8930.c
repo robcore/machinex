@@ -3021,7 +3021,7 @@ void sec_battery_detect_switch(int on)
 }
 #endif
 
-static int __devinit sec_battery_probe(struct platform_device *pdev)
+static int sec_battery_probe(struct platform_device *pdev)
 {
 	sec_battery_platform_data_t *pdata = dev_get_platdata(&pdev->dev);
 	struct sec_battery_info *battery;

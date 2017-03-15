@@ -154,7 +154,7 @@ static int pmic8058_vib_play_effect(struct input_dev *dev, void *data,
 	return 0;
 }
 
-static int __devinit pmic8058_vib_probe(struct platform_device *pdev)
+static int pmic8058_vib_probe(struct platform_device *pdev)
 
 {
 	struct pmic8058_vibrator_pdata *pdata = pdev->dev.platform_data;

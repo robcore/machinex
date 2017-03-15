@@ -1609,7 +1609,7 @@ static const struct net_device_ops bcm_enet_ops = {
 /*
  * allocate netdevice, request register memory and register device.
  */
-static int __devinit bcm_enet_probe(struct platform_device *pdev)
+static int bcm_enet_probe(struct platform_device *pdev)
 {
 	struct bcm_enet_priv *priv;
 	struct net_device *dev;
@@ -1827,7 +1827,7 @@ out:
 /*
  * exit func, stops hardware and unregisters netdevice
  */
-static int __devexit bcm_enet_remove(struct platform_device *pdev)
+static int bcm_enet_remove(struct platform_device *pdev)
 {
 	struct bcm_enet_priv *priv;
 	struct net_device *dev;
@@ -1884,7 +1884,7 @@ struct platform_driver bcm63xx_enet_driver = {
 /*
  * reserve & remap memory space shared between all macs
  */
-static int __devinit bcm_enet_shared_probe(struct platform_device *pdev)
+static int bcm_enet_shared_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	unsigned int iomem_size;
@@ -1905,7 +1905,7 @@ static int __devinit bcm_enet_shared_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit bcm_enet_shared_remove(struct platform_device *pdev)
+static int bcm_enet_shared_remove(struct platform_device *pdev)
 {
 	struct resource *res;
 

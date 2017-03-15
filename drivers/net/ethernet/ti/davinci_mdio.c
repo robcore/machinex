@@ -288,7 +288,7 @@ static int davinci_mdio_write(struct mii_bus *bus, int phy_id,
 	return 0;
 }
 
-static int __devinit davinci_mdio_probe(struct platform_device *pdev)
+static int davinci_mdio_probe(struct platform_device *pdev)
 {
 	struct mdio_platform_data *pdata = pdev->dev.platform_data;
 	struct device *dev = &pdev->dev;
@@ -386,7 +386,7 @@ bail_out:
 	return ret;
 }
 
-static int __devexit davinci_mdio_remove(struct platform_device *pdev)
+static int davinci_mdio_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct davinci_mdio_data *data = dev_get_drvdata(dev);

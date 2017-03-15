@@ -1094,7 +1094,7 @@ static irqreturn_t zatm_int(int irq,void *dev_id)
 /*----------------------------- (E)EPROM access -----------------------------*/
 
 
-static void __devinit eprom_set(struct zatm_dev *zatm_dev,unsigned long value,
+static void eprom_set(struct zatm_dev *zatm_dev,unsigned long value,
     unsigned short cmd)
 {
 	int error;
@@ -1105,7 +1105,7 @@ static void __devinit eprom_set(struct zatm_dev *zatm_dev,unsigned long value,
 }
 
 
-static unsigned long __devinit eprom_get(struct zatm_dev *zatm_dev,
+static unsigned long eprom_get(struct zatm_dev *zatm_dev,
     unsigned short cmd)
 {
 	unsigned int value;
@@ -1118,7 +1118,7 @@ static unsigned long __devinit eprom_get(struct zatm_dev *zatm_dev,
 }
 
 
-static void __devinit eprom_put_bits(struct zatm_dev *zatm_dev,
+static void eprom_put_bits(struct zatm_dev *zatm_dev,
     unsigned long data,int bits,unsigned short cmd)
 {
 	unsigned long value;
@@ -1133,7 +1133,7 @@ static void __devinit eprom_put_bits(struct zatm_dev *zatm_dev,
 }
 
 
-static void __devinit eprom_get_byte(struct zatm_dev *zatm_dev,
+static void eprom_get_byte(struct zatm_dev *zatm_dev,
     unsigned char *byte,unsigned short cmd)
 {
 	int i;
@@ -1149,7 +1149,7 @@ static void __devinit eprom_get_byte(struct zatm_dev *zatm_dev,
 }
 
 
-static unsigned char __devinit eprom_try_esi(struct atm_dev *dev,
+static unsigned char eprom_try_esi(struct atm_dev *dev,
     unsigned short cmd,int offset,int swap)
 {
 	unsigned char buf[ZEPROM_SIZE];
@@ -1170,7 +1170,7 @@ static unsigned char __devinit eprom_try_esi(struct atm_dev *dev,
 }
 
 
-static void __devinit eprom_get_esi(struct atm_dev *dev)
+static void eprom_get_esi(struct atm_dev *dev)
 {
 	if (eprom_try_esi(dev,ZEPROM_V1_REG,ZEPROM_V1_ESI_OFF,1)) return;
 	(void) eprom_try_esi(dev,ZEPROM_V2_REG,ZEPROM_V2_ESI_OFF,0);
@@ -1180,7 +1180,7 @@ static void __devinit eprom_get_esi(struct atm_dev *dev)
 /*--------------------------------- entries ---------------------------------*/
 
 
-static int __devinit zatm_init(struct atm_dev *dev)
+static int zatm_init(struct atm_dev *dev)
 {
 	struct zatm_dev *zatm_dev;
 	struct pci_dev *pci_dev;
@@ -1257,7 +1257,7 @@ static int __devinit zatm_init(struct atm_dev *dev)
 }
 
 
-static int __devinit zatm_start(struct atm_dev *dev)
+static int zatm_start(struct atm_dev *dev)
 {
 	struct zatm_dev *zatm_dev = ZATM_DEV(dev);
 	struct pci_dev *pdev = zatm_dev->pci_dev;
@@ -1584,7 +1584,7 @@ static const struct atmdev_ops ops = {
 	.change_qos	= zatm_change_qos,
 };
 
-static int __devinit zatm_init_one(struct pci_dev *pci_dev,
+static int zatm_init_one(struct pci_dev *pci_dev,
 				   const struct pci_device_id *ent)
 {
 	struct atm_dev *dev;
@@ -1636,7 +1636,7 @@ out_free:
 
 MODULE_LICENSE("GPL");
 
-static struct pci_device_id zatm_pci_tbl[] __devinitdata = {
+static struct pci_device_id zatm_pci_tbl[] = {
 	{ PCI_VDEVICE(ZEITNET, PCI_DEVICE_ID_ZEITNET_1221), ZATM_COPPER },
 	{ PCI_VDEVICE(ZEITNET, PCI_DEVICE_ID_ZEITNET_1225), 0 },
 	{ 0, }

@@ -36,7 +36,7 @@ static struct cb_id uvesafb_cn_id = {
 static char v86d_path[PATH_MAX] = "/sbin/v86d";
 static char v86d_started;	/* has v86d been started by uvesafb? */
 
-static struct fb_fix_screeninfo uvesafb_fix __devinitdata = {
+static struct fb_fix_screeninfo uvesafb_fix = {
 	.id	= "VESA VGA",
 	.type	= FB_TYPE_PACKED_PIXELS,
 	.accel	= FB_ACCEL_NONE,
@@ -55,7 +55,7 @@ static u16 maxclk	__devinitdata; /* maximum pixel clock */
 static u16 maxvf	__devinitdata; /* maximum vertical frequency */
 static u16 maxhf	__devinitdata; /* maximum horizontal frequency */
 static u16 vbemode	__devinitdata; /* force use of a specific VBE mode */
-static char *mode_option __devinitdata;
+static char *mode_option;
 static u8  dac_width	= 6;
 
 static struct uvesafb_ktask *uvfb_tasks[UVESAFB_TASKS_MAX];
@@ -418,7 +418,7 @@ static void uvesafb_vbe_state_restore(struct uvesafb_par *par, u8 *state_buf)
 	uvesafb_free(task);
 }
 
-static int __devinit uvesafb_vbe_getinfo(struct uvesafb_ktask *task,
+static int uvesafb_vbe_getinfo(struct uvesafb_ktask *task,
 		struct uvesafb_par *par)
 {
 	int err;
@@ -477,7 +477,7 @@ static int __devinit uvesafb_vbe_getinfo(struct uvesafb_ktask *task,
 	return 0;
 }
 
-static int __devinit uvesafb_vbe_getmodes(struct uvesafb_ktask *task,
+static int uvesafb_vbe_getmodes(struct uvesafb_ktask *task,
 		struct uvesafb_par *par)
 {
 	int off = 0, err;
@@ -556,7 +556,7 @@ static int __devinit uvesafb_vbe_getmodes(struct uvesafb_ktask *task,
  * x86 and not x86_64.
  */
 #ifdef CONFIG_X86_32
-static int __devinit uvesafb_vbe_getpmi(struct uvesafb_ktask *task,
+static int uvesafb_vbe_getpmi(struct uvesafb_ktask *task,
 		struct uvesafb_par *par)
 {
 	int i, err;
@@ -602,7 +602,7 @@ static int __devinit uvesafb_vbe_getpmi(struct uvesafb_ktask *task,
  * Check whether a video mode is supported by the Video BIOS and is
  * compatible with the monitor limits.
  */
-static int __devinit uvesafb_is_valid_mode(struct fb_videomode *mode,
+static int uvesafb_is_valid_mode(struct fb_videomode *mode,
 		struct fb_info *info)
 {
 	if (info->monspecs.gtf) {
@@ -618,7 +618,7 @@ static int __devinit uvesafb_is_valid_mode(struct fb_videomode *mode,
 	return 1;
 }
 
-static int __devinit uvesafb_vbe_getedid(struct uvesafb_ktask *task,
+static int uvesafb_vbe_getedid(struct uvesafb_ktask *task,
 		struct fb_info *info)
 {
 	struct uvesafb_par *par = info->par;
@@ -682,7 +682,7 @@ static int __devinit uvesafb_vbe_getedid(struct uvesafb_ktask *task,
 	return err;
 }
 
-static void __devinit uvesafb_vbe_getmonspecs(struct uvesafb_ktask *task,
+static void uvesafb_vbe_getmonspecs(struct uvesafb_ktask *task,
 		struct fb_info *info)
 {
 	struct uvesafb_par *par = info->par;
@@ -763,7 +763,7 @@ static void __devinit uvesafb_vbe_getmonspecs(struct uvesafb_ktask *task,
 	return;
 }
 
-static void __devinit uvesafb_vbe_getstatesize(struct uvesafb_ktask *task,
+static void uvesafb_vbe_getstatesize(struct uvesafb_ktask *task,
 		struct uvesafb_par *par)
 {
 	int err;
@@ -792,7 +792,7 @@ static void __devinit uvesafb_vbe_getstatesize(struct uvesafb_ktask *task,
 	par->vbe_state_size = 64 * (task->t.regs.ebx & 0xffff);
 }
 
-static int __devinit uvesafb_vbe_init(struct fb_info *info)
+static int uvesafb_vbe_init(struct fb_info *info)
 {
 	struct uvesafb_ktask *task = NULL;
 	struct uvesafb_par *par = info->par;
@@ -837,7 +837,7 @@ out:	uvesafb_free(task);
 	return err;
 }
 
-static int __devinit uvesafb_vbe_init_mode(struct fb_info *info)
+static int uvesafb_vbe_init_mode(struct fb_info *info)
 {
 	struct list_head *pos;
 	struct fb_modelist *modelist;
@@ -1442,7 +1442,7 @@ static struct fb_ops uvesafb_ops = {
 	.fb_set_par	= uvesafb_set_par,
 };
 
-static void __devinit uvesafb_init_info(struct fb_info *info,
+static void uvesafb_init_info(struct fb_info *info,
 		struct vbe_mode_ib *mode)
 {
 	unsigned int size_vmode;
@@ -1538,7 +1538,7 @@ static void __devinit uvesafb_init_info(struct fb_info *info,
 		info->fbops->fb_pan_display = NULL;
 }
 
-static void __devinit uvesafb_init_mtrr(struct fb_info *info)
+static void uvesafb_init_mtrr(struct fb_info *info)
 {
 #ifdef CONFIG_MTRR
 	if (mtrr && !(info->fix.smem_start & (PAGE_SIZE - 1))) {
@@ -1580,7 +1580,7 @@ static void __devinit uvesafb_init_mtrr(struct fb_info *info)
 #endif /* CONFIG_MTRR */
 }
 
-static void __devinit uvesafb_ioremap(struct fb_info *info)
+static void uvesafb_ioremap(struct fb_info *info)
 {
 #ifdef CONFIG_X86
 	switch (mtrr) {
@@ -1736,7 +1736,7 @@ static struct attribute_group uvesafb_dev_attgrp = {
 	.attrs = uvesafb_dev_attrs,
 };
 
-static int __devinit uvesafb_probe(struct platform_device *dev)
+static int uvesafb_probe(struct platform_device *dev)
 {
 	struct fb_info *info;
 	struct vbe_mode_ib *mode = NULL;
@@ -1880,7 +1880,7 @@ static struct platform_driver uvesafb_driver = {
 static struct platform_device *uvesafb_device;
 
 #ifndef MODULE
-static int __devinit uvesafb_setup(char *options)
+static int uvesafb_setup(char *options)
 {
 	char *this_opt;
 
@@ -1948,7 +1948,7 @@ static ssize_t store_v86d(struct device_driver *dev, const char *buf,
 
 static DRIVER_ATTR(v86d, S_IRUGO | S_IWUSR, show_v86d, store_v86d);
 
-static int __devinit uvesafb_init(void)
+static int uvesafb_init(void)
 {
 	int err;
 
@@ -1992,7 +1992,7 @@ static int __devinit uvesafb_init(void)
 
 module_init(uvesafb_init);
 
-static void __devexit uvesafb_exit(void)
+static void uvesafb_exit(void)
 {
 	struct uvesafb_ktask *task;
 

@@ -71,7 +71,7 @@ static const struct ide_port_info delkin_cb_port_info = {
 	.chipset		= ide_pci,
 };
 
-static int __devinit
+static int
 delkin_cb_probe (struct pci_dev *dev, const struct pci_device_id *id)
 {
 	struct ide_host *host;
@@ -158,7 +158,7 @@ static int delkin_cb_resume(struct pci_dev *dev)
 #define delkin_cb_resume NULL
 #endif
 
-static struct pci_device_id delkin_cb_pci_tbl[] __devinitdata = {
+static struct pci_device_id delkin_cb_pci_tbl[] = {
 	{ 0x1145, 0xf021, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ 0x1145, 0xf024, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ 0, },

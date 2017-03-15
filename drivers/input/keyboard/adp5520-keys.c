@@ -69,7 +69,7 @@ static int adp5520_keys_notifier(struct notifier_block *nb,
 	return 0;
 }
 
-static int __devinit adp5520_keys_probe(struct platform_device *pdev)
+static int adp5520_keys_probe(struct platform_device *pdev)
 {
 	struct adp5520_keys_platform_data *pdata = pdev->dev.platform_data;
 	struct input_dev *input;
@@ -182,7 +182,7 @@ err:
 	return ret;
 }
 
-static int __devexit adp5520_keys_remove(struct platform_device *pdev)
+static int adp5520_keys_remove(struct platform_device *pdev)
 {
 	struct adp5520_keys *dev = platform_get_drvdata(pdev);
 

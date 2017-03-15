@@ -144,7 +144,7 @@ static struct thermal_zone_device_ops pop_mem_thermal_zone_ops = {
 };
 
 
-static int __devinit pop_mem_tm_probe(struct platform_device *pdev)
+static int pop_mem_tm_probe(struct platform_device *pdev)
 {
 	int rc, len, numcontrollers;
 	struct resource *controller_mem = NULL;
@@ -235,7 +235,7 @@ fail:
 	return rc;
 }
 
-static int __devexit pop_mem_tm_remove(struct platform_device *pdev)
+static int pop_mem_tm_remove(struct platform_device *pdev)
 {
 
 	int len;

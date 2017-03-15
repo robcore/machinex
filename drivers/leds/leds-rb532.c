@@ -37,12 +37,12 @@ static struct led_classdev rb532_uled = {
 	.default_trigger = "nand-disk",
 };
 
-static int __devinit rb532_led_probe(struct platform_device *pdev)
+static int rb532_led_probe(struct platform_device *pdev)
 {
 	return led_classdev_register(&pdev->dev, &rb532_uled);
 }
 
-static int __devexit rb532_led_remove(struct platform_device *pdev)
+static int rb532_led_remove(struct platform_device *pdev)
 {
 	led_classdev_unregister(&rb532_uled);
 	return 0;

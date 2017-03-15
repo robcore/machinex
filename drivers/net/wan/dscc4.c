@@ -707,7 +707,7 @@ static void dscc4_free1(struct pci_dev *pdev)
 	kfree(ppriv);
 }
 
-static int __devinit dscc4_init_one(struct pci_dev *pdev,
+static int dscc4_init_one(struct pci_dev *pdev,
 				  const struct pci_device_id *ent)
 {
 	struct dscc4_pci_priv *priv;
@@ -1967,7 +1967,7 @@ err_out:
 	return -ENOMEM;
 }
 
-static void __devexit dscc4_remove_one(struct pci_dev *pdev)
+static void dscc4_remove_one(struct pci_dev *pdev)
 {
 	struct dscc4_pci_priv *ppriv;
 	struct dscc4_dev_priv *root;

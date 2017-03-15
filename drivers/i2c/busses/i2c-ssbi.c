@@ -484,7 +484,7 @@ err_probe_exit:
 	return ret;
 }
 
-static int __devexit i2c_ssbi_remove(struct platform_device *pdev)
+static int i2c_ssbi_remove(struct platform_device *pdev)
 {
 	struct i2c_ssbi_dev *ssbi = platform_get_drvdata(pdev);
 

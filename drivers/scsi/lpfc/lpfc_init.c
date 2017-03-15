@@ -8513,7 +8513,7 @@ lpfc_get_sli4_parameters(struct lpfc_hba *phba, LPFC_MBOXQ_t *mboxq)
  * 	0 - driver can claim the device
  * 	negative value - driver can not claim the device
  **/
-static int __devinit
+static int
 lpfc_pci_probe_one_s3(struct pci_dev *pdev, const struct pci_device_id *pid)
 {
 	struct lpfc_hba   *phba;
@@ -9236,7 +9236,7 @@ out:
  * 	0 - driver can claim the device
  * 	negative value - driver can not claim the device
  **/
-static int __devinit
+static int
 lpfc_pci_probe_one_s4(struct pci_dev *pdev, const struct pci_device_id *pid)
 {
 	struct lpfc_hba   *phba;
@@ -9862,7 +9862,7 @@ lpfc_io_resume_s4(struct pci_dev *pdev)
  * 	0 - driver can claim the device
  * 	negative value - driver can not claim the device
  **/
-static int __devinit
+static int
 lpfc_pci_probe_one(struct pci_dev *pdev, const struct pci_device_id *pid)
 {
 	int rc;

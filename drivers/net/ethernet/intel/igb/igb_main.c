@@ -113,7 +113,7 @@ static void igb_free_all_tx_resources(struct igb_adapter *);
 static void igb_free_all_rx_resources(struct igb_adapter *);
 static void igb_setup_mrqc(struct igb_adapter *);
 static int igb_probe(struct pci_dev *, const struct pci_device_id *);
-static void __devexit igb_remove(struct pci_dev *pdev);
+static void igb_remove(struct pci_dev *pdev);
 static void igb_init_hw_timer(struct igb_adapter *adapter);
 static int igb_sw_init(struct igb_adapter *);
 static int igb_open(struct net_device *);
@@ -1795,7 +1795,7 @@ static const struct net_device_ops igb_netdev_ops = {
  * The OS initialization, configuring of the adapter private structure,
  * and a hardware reset occur.
  **/
-static int __devinit igb_probe(struct pci_dev *pdev,
+static int igb_probe(struct pci_dev *pdev,
 			       const struct pci_device_id *ent)
 {
 	struct net_device *netdev;
@@ -2145,7 +2145,7 @@ err_dma:
  * Hot-Plug event, or because the driver is going to be removed from
  * memory.
  **/
-static void __devexit igb_remove(struct pci_dev *pdev)
+static void igb_remove(struct pci_dev *pdev)
 {
 	struct net_device *netdev = pci_get_drvdata(pdev);
 	struct igb_adapter *adapter = netdev_priv(netdev);
@@ -2224,7 +2224,7 @@ static void __devexit igb_remove(struct pci_dev *pdev)
  * mor expensive time wise to disable SR-IOV than it is to allocate and free
  * the memory for the VFs.
  **/
-static void __devinit igb_probe_vfs(struct igb_adapter * adapter)
+static void igb_probe_vfs(struct igb_adapter * adapter)
 {
 #ifdef CONFIG_PCI_IOV
 	struct pci_dev *pdev = adapter->pdev;
@@ -2385,7 +2385,7 @@ static void igb_init_hw_timer(struct igb_adapter *adapter)
  * Fields are initialized based on PCI device information and
  * OS network device settings (MTU size).
  **/
-static int __devinit igb_sw_init(struct igb_adapter *adapter)
+static int igb_sw_init(struct igb_adapter *adapter)
 {
 	struct e1000_hw *hw = &adapter->hw;
 	struct net_device *netdev = adapter->netdev;

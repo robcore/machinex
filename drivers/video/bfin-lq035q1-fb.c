@@ -137,7 +137,7 @@ static int lq035q1_control(struct spi_device *spi, unsigned char reg, unsigned s
 	return ret;
 }
 
-static int __devinit lq035q1_spidev_probe(struct spi_device *spi)
+static int lq035q1_spidev_probe(struct spi_device *spi)
 {
 	int ret;
 	struct spi_control *ctl;
@@ -358,7 +358,7 @@ static inline void bfin_lq035q1_free_ports(unsigned ppi16)
 		gpio_free(P_IDENT(P_PPI0_FS3));
 }
 
-static int __devinit bfin_lq035q1_request_ports(struct platform_device *pdev,
+static int bfin_lq035q1_request_ports(struct platform_device *pdev,
 						unsigned ppi16)
 {
 	int ret;
@@ -555,7 +555,7 @@ static irqreturn_t bfin_lq035q1_irq_error(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit bfin_lq035q1_probe(struct platform_device *pdev)
+static int bfin_lq035q1_probe(struct platform_device *pdev)
 {
 	struct bfin_lq035q1fb_info *info;
 	struct fb_info *fbinfo;
@@ -763,7 +763,7 @@ static int __devinit bfin_lq035q1_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit bfin_lq035q1_remove(struct platform_device *pdev)
+static int bfin_lq035q1_remove(struct platform_device *pdev)
 {
 	struct fb_info *fbinfo = platform_get_drvdata(pdev);
 	struct bfin_lq035q1fb_info *info = fbinfo->par;

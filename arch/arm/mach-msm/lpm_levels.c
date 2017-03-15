@@ -179,7 +179,7 @@ static struct msm_pm_sleep_ops msm_lpm_ops = {
 	.exit_sleep = msm_lpm_exit_sleep,
 };
 
-static int __devinit msm_lpm_levels_probe(struct platform_device *pdev)
+static int msm_lpm_levels_probe(struct platform_device *pdev)
 {
 	struct msm_rpmrs_level *levels = NULL;
 	struct msm_rpmrs_level *level = NULL;

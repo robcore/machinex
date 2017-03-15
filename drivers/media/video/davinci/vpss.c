@@ -445,7 +445,7 @@ fail1:
 	return status;
 }
 
-static int __devexit vpss_remove(struct platform_device *pdev)
+static int vpss_remove(struct platform_device *pdev)
 {
 	struct resource		*res;
 

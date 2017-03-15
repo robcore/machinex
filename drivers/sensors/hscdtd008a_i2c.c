@@ -523,7 +523,7 @@ exit_alloc_data_failed:
 	return err;
 }
 
-static int __devexit hscd_remove(struct i2c_client *client)
+static int hscd_remove(struct i2c_client *client)
 {
 	printk("[HSCD] remove\n");
 	hscd_activate(0, 0, atomic_read(&delay));

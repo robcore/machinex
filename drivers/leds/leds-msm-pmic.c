@@ -50,7 +50,7 @@ static int msm_pmic_led_probe(struct platform_device *pdev)
 	return rc;
 }
 
-static int __devexit msm_pmic_led_remove(struct platform_device *pdev)
+static int msm_pmic_led_remove(struct platform_device *pdev)
 {
 	led_classdev_unregister(&msm_kp_bl_led);
 

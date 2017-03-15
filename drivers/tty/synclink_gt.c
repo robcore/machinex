@@ -3693,7 +3693,7 @@ static void device_init(int adapter_num, struct pci_dev *pdev)
 		tty_register_device(serial_driver, port_array[i]->line, &(port_array[i]->pdev->dev));
 }
 
-static int __devinit init_one(struct pci_dev *dev,
+static int init_one(struct pci_dev *dev,
 			      const struct pci_device_id *ent)
 {
 	if (pci_enable_device(dev)) {
@@ -3705,7 +3705,7 @@ static int __devinit init_one(struct pci_dev *dev,
 	return 0;
 }
 
-static void __devexit remove_one(struct pci_dev *dev)
+static void remove_one(struct pci_dev *dev)
 {
 }
 

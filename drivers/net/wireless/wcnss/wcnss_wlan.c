@@ -570,7 +570,7 @@ fail:
 	return rc;
 }
 
-static int __devinit
+static int
 wcnss_wlan_ctrl_probe(struct platform_device *pdev)
 {
 	if (!penv || !penv->triggered)
@@ -623,7 +623,7 @@ wcnss_ctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit
+static int
 wcnss_ctrl_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1759,7 +1759,7 @@ static struct miscdevice wcnss_misc = {
 	.fops = &wcnss_node_fops,
 };
 
-static int __devinit
+static int
 wcnss_wlan_probe(struct platform_device *pdev)
 {
 	int ret = 0;

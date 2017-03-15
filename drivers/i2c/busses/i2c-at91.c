@@ -42,7 +42,7 @@ static void __iomem *twi_base;
 /*
  * Initialize the TWI hardware registers.
  */
-static void __devinit at91_twi_hwinit(void)
+static void at91_twi_hwinit(void)
 {
 	unsigned long cdiv, ckdiv;
 
@@ -189,7 +189,7 @@ static struct i2c_algorithm at91_algorithm = {
 /*
  * Main initialization routine.
  */
-static int __devinit at91_i2c_probe(struct platform_device *pdev)
+static int at91_i2c_probe(struct platform_device *pdev)
 {
 	struct i2c_adapter *adapter;
 	struct resource *res;
@@ -256,7 +256,7 @@ fail0:
 	return rc;
 }
 
-static int __devexit at91_i2c_remove(struct platform_device *pdev)
+static int at91_i2c_remove(struct platform_device *pdev)
 {
 	struct i2c_adapter *adapter = platform_get_drvdata(pdev);
 	struct resource *res;

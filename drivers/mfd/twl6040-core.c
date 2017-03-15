@@ -498,7 +498,7 @@ static struct regmap_config twl6040_regmap_config = {
 	.readable_reg = twl6040_readable_reg,
 };
 
-static int __devinit twl6040_probe(struct i2c_client *client,
+static int twl6040_probe(struct i2c_client *client,
 				     const struct i2c_device_id *id)
 {
 	struct twl6040_platform_data *pdata = client->dev.platform_data;
@@ -628,7 +628,7 @@ err:
 	return ret;
 }
 
-static int __devexit twl6040_remove(struct i2c_client *client)
+static int twl6040_remove(struct i2c_client *client)
 {
 	struct twl6040 *twl6040 = i2c_get_clientdata(client);
 

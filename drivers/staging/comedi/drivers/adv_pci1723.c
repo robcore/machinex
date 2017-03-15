@@ -495,13 +495,13 @@ static int pci1723_detach(struct comedi_device *dev)
  * A convenient macro that defines init_module() and cleanup_module(),
  * as necessary.
  */
-static int __devinit driver_pci1723_pci_probe(struct pci_dev *dev,
+static int driver_pci1723_pci_probe(struct pci_dev *dev,
 					      const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_pci1723.driver_name);
 }
 
-static void __devexit driver_pci1723_pci_remove(struct pci_dev *dev)
+static void driver_pci1723_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

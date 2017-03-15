@@ -1253,7 +1253,7 @@ eclk:
 	return err;
 }
 
-static int __devexit mxcnd_remove(struct platform_device *pdev)
+static int mxcnd_remove(struct platform_device *pdev)
 {
 	struct mxc_nand_host *host = platform_get_drvdata(pdev);
 

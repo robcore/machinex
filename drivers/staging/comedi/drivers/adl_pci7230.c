@@ -192,14 +192,14 @@ static int adl_pci7230_di_insn_bits(struct comedi_device *dev,
 	return 2;
 }
 
-static int __devinit driver_adl_pci7230_pci_probe(struct pci_dev *dev,
+static int driver_adl_pci7230_pci_probe(struct pci_dev *dev,
 						  const struct pci_device_id
 						  *ent)
 {
 	return comedi_pci_auto_config(dev, driver_adl_pci7230.driver_name);
 }
 
-static void __devexit driver_adl_pci7230_pci_remove(struct pci_dev *dev)
+static void driver_adl_pci7230_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

@@ -744,7 +744,7 @@ static ssize_t fimc_md_sysfs_store(struct device *dev,
 static DEVICE_ATTR(subdev_conf_mode, S_IWUSR | S_IRUGO,
 		   fimc_md_sysfs_show, fimc_md_sysfs_store);
 
-static int __devinit fimc_md_probe(struct platform_device *pdev)
+static int fimc_md_probe(struct platform_device *pdev)
 {
 	struct v4l2_device *v4l2_dev;
 	struct fimc_md *fmd;
@@ -816,7 +816,7 @@ err2:
 	return ret;
 }
 
-static int __devexit fimc_md_remove(struct platform_device *pdev)
+static int fimc_md_remove(struct platform_device *pdev)
 {
 	struct fimc_md *fmd = platform_get_drvdata(pdev);
 

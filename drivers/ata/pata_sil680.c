@@ -323,7 +323,7 @@ static u8 sil680_init_chip(struct pci_dev *pdev, int *try_mmio)
 	return tmpbyte & 0x30;
 }
 
-static int __devinit sil680_init_one(struct pci_dev *pdev,
+static int sil680_init_one(struct pci_dev *pdev,
 				     const struct pci_device_id *id)
 {
 	static const struct ata_port_info info = {

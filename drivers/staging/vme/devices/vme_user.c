@@ -136,8 +136,8 @@ static loff_t vme_user_llseek(struct file *, loff_t, int);
 static long vme_user_unlocked_ioctl(struct file *, unsigned int, unsigned long);
 
 static int vme_user_match(struct vme_dev *);
-static int __devinit vme_user_probe(struct vme_dev *);
-static int __devexit vme_user_remove(struct vme_dev *);
+static int vme_user_probe(struct vme_dev *);
+static int vme_user_remove(struct vme_dev *);
 
 static const struct file_operations vme_user_fops = {
 	.open = vme_user_open,
@@ -678,7 +678,7 @@ static int vme_user_match(struct vme_dev *vdev)
  * as practical. We will therefore reserve the buffers and request the images
  * here so that we don't have to do it later.
  */
-static int __devinit vme_user_probe(struct vme_dev *vdev)
+static int vme_user_probe(struct vme_dev *vdev)
 {
 	int i, err;
 	char name[12];
@@ -853,7 +853,7 @@ err_dev:
 	return err;
 }
 
-static int __devexit vme_user_remove(struct vme_dev *dev)
+static int vme_user_remove(struct vme_dev *dev)
 {
 	int i;
 

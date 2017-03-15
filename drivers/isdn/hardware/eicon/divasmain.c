@@ -150,7 +150,7 @@ MODULE_DEVICE_TABLE(pci, divas_pci_tbl);
 
 static int divas_init_one(struct pci_dev *pdev,
 			  const struct pci_device_id *ent);
-static void __devexit divas_remove_one(struct pci_dev *pdev);
+static void divas_remove_one(struct pci_dev *pdev);
 
 static struct pci_driver diva_pci_driver = {
 	.name     = "divas",
@@ -688,7 +688,7 @@ static int DIVA_INIT_FUNCTION divas_register_chrdev(void)
 /* --------------------------------------------------------------------------
    PCI driver section
    -------------------------------------------------------------------------- */
-static int __devinit divas_init_one(struct pci_dev *pdev,
+static int divas_init_one(struct pci_dev *pdev,
 				    const struct pci_device_id *ent)
 {
 	void *pdiva = NULL;
@@ -749,7 +749,7 @@ static int __devinit divas_init_one(struct pci_dev *pdev,
 	return (0);
 }
 
-static void __devexit divas_remove_one(struct pci_dev *pdev)
+static void divas_remove_one(struct pci_dev *pdev)
 {
 	void *pdiva = pci_get_drvdata(pdev);
 

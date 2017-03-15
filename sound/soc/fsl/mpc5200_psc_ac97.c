@@ -272,7 +272,7 @@ static struct snd_soc_dai_driver psc_ac97_dai[] = {
  * - Probe/remove operations
  * - OF device match table
  */
-static int __devinit psc_ac97_of_probe(struct platform_device *op)
+static int psc_ac97_of_probe(struct platform_device *op)
 {
 	int rc;
 	struct snd_ac97 ac97;
@@ -301,14 +301,14 @@ static int __devinit psc_ac97_of_probe(struct platform_device *op)
 	return 0;
 }
 
-static int __devexit psc_ac97_of_remove(struct platform_device *op)
+static int psc_ac97_of_remove(struct platform_device *op)
 {
 	snd_soc_unregister_dais(&op->dev, ARRAY_SIZE(psc_ac97_dai));
 	return 0;
 }
 
 /* Match table for of_platform binding */
-static struct of_device_id psc_ac97_match[] __devinitdata = {
+static struct of_device_id psc_ac97_match[] = {
 	{ .compatible = "fsl,mpc5200-psc-ac97", },
 	{ .compatible = "fsl,mpc5200b-psc-ac97", },
 	{}

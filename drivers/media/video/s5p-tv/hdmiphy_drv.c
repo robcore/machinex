@@ -143,7 +143,7 @@ static const struct v4l2_subdev_ops hdmiphy_ops = {
 	.video = &hdmiphy_video_ops,
 };
 
-static int __devinit hdmiphy_probe(struct i2c_client *client,
+static int hdmiphy_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	static struct v4l2_subdev sd;
@@ -153,7 +153,7 @@ static int __devinit hdmiphy_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit hdmiphy_remove(struct i2c_client *client)
+static int hdmiphy_remove(struct i2c_client *client)
 {
 	dev_info(&client->dev, "remove successful\n");
 	return 0;

@@ -332,7 +332,7 @@ static const struct snd_soc_dai_driver tegra_i2s_dai_template = {
 	.symmetric_rates = 1,
 };
 
-static __devinit int tegra_i2s_platform_probe(struct platform_device *pdev)
+static int tegra_i2s_platform_probe(struct platform_device *pdev)
 {
 	struct tegra_i2s * i2s;
 	struct resource *mem, *memregion, *dmareq;
@@ -423,7 +423,7 @@ err:
 	return ret;
 }
 
-static int __devexit tegra_i2s_platform_remove(struct platform_device *pdev)
+static int tegra_i2s_platform_remove(struct platform_device *pdev)
 {
 	struct tegra_i2s *i2s = dev_get_drvdata(&pdev->dev);
 
@@ -436,7 +436,7 @@ static int __devexit tegra_i2s_platform_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id tegra_i2s_of_match[] __devinitconst = {
+static const struct of_device_id tegra_i2s_of_match[] = {
 	{ .compatible = "nvidia,tegra20-i2s", },
 	{},
 };

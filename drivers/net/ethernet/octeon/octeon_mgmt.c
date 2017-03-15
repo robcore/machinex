@@ -1069,7 +1069,7 @@ static const struct net_device_ops octeon_mgmt_ops = {
 #endif
 };
 
-static int __devinit octeon_mgmt_probe(struct platform_device *pdev)
+static int octeon_mgmt_probe(struct platform_device *pdev)
 {
 	struct resource *res_irq;
 	struct net_device *netdev;
@@ -1128,7 +1128,7 @@ err:
 	return -ENOENT;
 }
 
-static int __devexit octeon_mgmt_remove(struct platform_device *pdev)
+static int octeon_mgmt_remove(struct platform_device *pdev)
 {
 	struct net_device *netdev = dev_get_drvdata(&pdev->dev);
 

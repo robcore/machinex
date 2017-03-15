@@ -135,7 +135,7 @@ static irqreturn_t wireless_interrupt_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int __devinit bq51051b_wlc_hw_init(struct bq51051b_wlc_chip *chip)
+static int bq51051b_wlc_hw_init(struct bq51051b_wlc_chip *chip)
 {
 	int ret;
 	WLC_DBG_INFO("hw_init");
@@ -164,7 +164,7 @@ static int bq51051b_wlc_suspend(struct device *dev)
 	return 0;
 }
 
-static int __devinit bq51051b_wlc_probe(struct platform_device *pdev)
+static int bq51051b_wlc_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct bq51051b_wlc_chip *chip;
@@ -228,7 +228,7 @@ free_chip:
 	return rc;
 }
 
-static int __devexit bq51051b_wlc_remove(struct platform_device *pdev)
+static int bq51051b_wlc_remove(struct platform_device *pdev)
 {
 	struct bq51051b_wlc_chip *chip = platform_get_drvdata(pdev);
 

@@ -1540,7 +1540,7 @@ static void stex_free_irq(struct st_hba *hba)
 		pci_disable_msi(pdev);
 }
 
-static int __devinit
+static int
 stex_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct st_hba *hba;

@@ -256,7 +256,7 @@ static int cdce_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit cdce_remove(struct i2c_client *client)
+static int cdce_remove(struct i2c_client *client)
 {
 	cdce_i2c_client = NULL;
 	return 0;

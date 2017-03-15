@@ -6563,7 +6563,7 @@ static const struct dev_pm_ops sitar_pm_ops = {
 };
 #endif
 
-static int __devinit sitar_probe(struct platform_device *pdev)
+static int sitar_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	pr_err("%s\n", __func__);
@@ -6580,7 +6580,7 @@ static int __devinit sitar_probe(struct platform_device *pdev)
 			sitar_i2s_dai, ARRAY_SIZE(sitar_i2s_dai));
 	return ret;
 }
-static int __devexit sitar_remove(struct platform_device *pdev)
+static int sitar_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 

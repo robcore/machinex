@@ -37,7 +37,7 @@
 #include <asm/prom.h>
 #endif
 
-static char version[] __devinitdata =
+static char version[] =
 	"Linux Tulip driver version " DRV_VERSION " (" DRV_RELDATE ")\n";
 
 /* A few user-configurable values. */
@@ -1189,7 +1189,7 @@ static void set_rx_mode(struct net_device *dev)
 }
 
 #ifdef CONFIG_TULIP_MWI
-static void __devinit tulip_mwi_config (struct pci_dev *pdev,
+static void tulip_mwi_config (struct pci_dev *pdev,
 					struct net_device *dev)
 {
 	struct tulip_private *tp = netdev_priv(dev);
@@ -1299,7 +1299,7 @@ DEFINE_PCI_DEVICE_TABLE(early_486_chipsets) = {
 	{ },
 };
 
-static int __devinit tulip_init_one (struct pci_dev *pdev,
+static int tulip_init_one (struct pci_dev *pdev,
 				     const struct pci_device_id *ent)
 {
 	struct tulip_private *tp;
@@ -1925,7 +1925,7 @@ static int tulip_resume(struct pci_dev *pdev)
 #endif /* CONFIG_PM */
 
 
-static void __devexit tulip_remove_one (struct pci_dev *pdev)
+static void tulip_remove_one (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata (pdev);
 	struct tulip_private *tp;

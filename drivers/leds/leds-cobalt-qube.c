@@ -34,7 +34,7 @@ static struct led_classdev qube_front_led = {
 	.default_trigger	= "default-on",
 };
 
-static int __devinit cobalt_qube_led_probe(struct platform_device *pdev)
+static int cobalt_qube_led_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int retval;
@@ -63,7 +63,7 @@ err_iounmap:
 	return retval;
 }
 
-static int __devexit cobalt_qube_led_remove(struct platform_device *pdev)
+static int cobalt_qube_led_remove(struct platform_device *pdev)
 {
 	led_classdev_unregister(&qube_front_led);
 

@@ -70,7 +70,7 @@ extern int pil_q6v4_init_image_trusted(struct pil_desc *pil,
 		const u8 *metadata, size_t size);
 extern int pil_q6v4_boot_trusted(struct pil_desc *pil);
 extern int pil_q6v4_shutdown_trusted(struct pil_desc *pil);
-extern void __devinit
+extern void
 pil_q6v4_init(struct q6v4_data *drv, const struct pil_q6v4_pdata *p);
 
 #endif

@@ -764,7 +764,7 @@ static int sdum_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit sdum_probe(struct platform_device *pdev)
+static int sdum_probe(struct platform_device *pdev)
 {
 	int ret = 0, i = 0;
 

@@ -91,7 +91,7 @@ static struct gpio_chip template_chip = {
 	.base			= -1,
 };
 
-static int __devinit tps65912_gpio_probe(struct platform_device *pdev)
+static int tps65912_gpio_probe(struct platform_device *pdev)
 {
 	struct tps65912 *tps65912 = dev_get_drvdata(pdev->dev.parent);
 	struct tps65912_board *pdata = tps65912->dev->platform_data;
@@ -123,7 +123,7 @@ err:
 	return ret;
 }
 
-static int __devexit tps65912_gpio_remove(struct platform_device *pdev)
+static int tps65912_gpio_remove(struct platform_device *pdev)
 {
 	struct tps65912_gpio_data  *tps65912_gpio = platform_get_drvdata(pdev);
 	int ret;

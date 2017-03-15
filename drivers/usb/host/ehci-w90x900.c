@@ -18,7 +18,7 @@
 #define PHY0_CTR	(0xA4)
 #define PHY1_CTR	(0xA8)
 
-static int __devinit usb_w90x900_probe(const struct hc_driver *driver,
+static int usb_w90x900_probe(const struct hc_driver *driver,
 		      struct platform_device *pdev)
 {
 	struct usb_hcd *hcd;
@@ -147,7 +147,7 @@ static const struct hc_driver ehci_w90x900_hc_driver = {
 	.clear_tt_buffer_complete = ehci_clear_tt_buffer_complete,
 };
 
-static int __devinit ehci_w90x900_probe(struct platform_device *pdev)
+static int ehci_w90x900_probe(struct platform_device *pdev)
 {
 	if (usb_disabled())
 		return -ENODEV;
@@ -155,7 +155,7 @@ static int __devinit ehci_w90x900_probe(struct platform_device *pdev)
 	return usb_w90x900_probe(&ehci_w90x900_hc_driver, pdev);
 }
 
-static int __devexit ehci_w90x900_remove(struct platform_device *pdev)
+static int ehci_w90x900_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 

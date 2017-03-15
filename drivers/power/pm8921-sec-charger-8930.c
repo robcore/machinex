@@ -5275,7 +5275,7 @@ static void free_irqs(struct pm8921_chg_chip *chip)
 }
 
 /* determines the initial present states */
-static void __devinit determine_initial_state(struct pm8921_chg_chip *chip)
+static void determine_initial_state(struct pm8921_chg_chip *chip)
 {
 	int fsm_state;
 	int is_fast_chg;
@@ -5401,7 +5401,7 @@ struct pm_chg_irq_init_data chg_irq_data[] = {
 	CHG_IRQ(DCIN_UV_IRQ, IRQF_TRIGGER_RISING, dcin_uv_irq_handler),
 };
 
-static int __devinit request_irqs(struct pm8921_chg_chip *chip,
+static int request_irqs(struct pm8921_chg_chip *chip,
 					struct platform_device *pdev)
 {
 	struct resource *res;
@@ -5544,7 +5544,7 @@ static void detect_battery_removal(struct pm8921_chg_chip *chip)
 #define CHG_VCP_EN		BIT(0)
 #define CHG_BAT_TEMP_DIS_BIT	BIT(2)
 #define SAFE_CURRENT_MA		1500
-static int __devinit pm8921_chg_hw_init(struct pm8921_chg_chip *chip)
+static int pm8921_chg_hw_init(struct pm8921_chg_chip *chip)
 {
 	int rc;
 	int vdd_safe;
@@ -6155,7 +6155,7 @@ static void pm8921_sec_charger_disable(struct pm8921_chg_chip *chip)
 }
 #endif
 
-static int __devinit pm8921_charger_probe(struct platform_device *pdev)
+static int pm8921_charger_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct pm8921_chg_chip *chip;
@@ -6441,7 +6441,7 @@ free_chip:
 	return rc;
 }
 
-static int __devexit pm8921_charger_remove(struct platform_device *pdev)
+static int pm8921_charger_remove(struct platform_device *pdev)
 {
 	struct pm8921_chg_chip *chip = platform_get_drvdata(pdev);
 

@@ -185,7 +185,7 @@ static const struct v4l2_subdev_ops msm_irqrouter_subdev_ops = {
 	.core = &msm_irqrouter_subdev_core_ops,
 };
 
-static int __devinit irqrouter_probe(struct platform_device *pdev)
+static int irqrouter_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct irqrouter_ctrl_type *irqrouter_ctrl;

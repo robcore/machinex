@@ -1068,7 +1068,7 @@ void nmk_gpio_read_pull(int gpio_bank, u32 *pull_up)
 	}
 }
 
-static int __devinit nmk_gpio_probe(struct platform_device *dev)
+static int nmk_gpio_probe(struct platform_device *dev)
 {
 	struct nmk_gpio_platform_data *pdata = dev->dev.platform_data;
 	struct nmk_gpio_chip *nmk_chip;

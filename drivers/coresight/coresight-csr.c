@@ -134,7 +134,7 @@ void msm_qdss_csr_disable_flush(void)
 }
 EXPORT_SYMBOL_GPL(msm_qdss_csr_disable_flush);
 
-static int __devinit csr_probe(struct platform_device *pdev)
+static int csr_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
@@ -188,7 +188,7 @@ static int __devinit csr_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit csr_remove(struct platform_device *pdev)
+static int csr_remove(struct platform_device *pdev)
 {
 	struct csr_drvdata *drvdata = platform_get_drvdata(pdev);
 

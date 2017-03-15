@@ -754,7 +754,7 @@ static int saa7134_hwfini(struct saa7134_dev *dev)
 	return 0;
 }
 
-static void __devinit must_configure_manually(int has_eeprom)
+static void must_configure_manually(int has_eeprom)
 {
 	unsigned int i,p;
 
@@ -860,7 +860,7 @@ static void mpeg_ops_detach(struct saa7134_mpeg_ops *ops,
 	dev->mops = NULL;
 }
 
-static int __devinit saa7134_initdev(struct pci_dev *pci_dev,
+static int saa7134_initdev(struct pci_dev *pci_dev,
 				     const struct pci_device_id *pci_id)
 {
 	struct saa7134_dev *dev;
@@ -1103,7 +1103,7 @@ static int __devinit saa7134_initdev(struct pci_dev *pci_dev,
 	return err;
 }
 
-static void __devexit saa7134_finidev(struct pci_dev *pci_dev)
+static void saa7134_finidev(struct pci_dev *pci_dev)
 {
 	struct v4l2_device *v4l2_dev = pci_get_drvdata(pci_dev);
 	struct saa7134_dev *dev = container_of(v4l2_dev, struct saa7134_dev, v4l2_dev);

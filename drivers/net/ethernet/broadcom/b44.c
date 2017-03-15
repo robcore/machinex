@@ -2065,7 +2065,7 @@ out:
 	return err;
 }
 
-static int __devinit b44_get_invariants(struct b44 *bp)
+static int b44_get_invariants(struct b44 *bp)
 {
 	struct ssb_device *sdev = bp->sdev;
 	int err = 0;
@@ -2123,7 +2123,7 @@ static const struct net_device_ops b44_netdev_ops = {
 #endif
 };
 
-static int __devinit b44_init_one(struct ssb_device *sdev,
+static int b44_init_one(struct ssb_device *sdev,
 				  const struct ssb_device_id *ent)
 {
 	struct net_device *dev;
@@ -2231,7 +2231,7 @@ out:
 	return err;
 }
 
-static void __devexit b44_remove_one(struct ssb_device *sdev)
+static void b44_remove_one(struct ssb_device *sdev)
 {
 	struct net_device *dev = ssb_get_drvdata(sdev);
 

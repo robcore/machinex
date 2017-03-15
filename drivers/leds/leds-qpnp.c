@@ -316,7 +316,7 @@ static void qpnp_led_set(struct led_classdev *led_cdev,
 	mutex_unlock(&led->lock);
 }
 
-static int __devinit qpnp_led_set_max_brightness(struct qpnp_led_data *led)
+static int qpnp_led_set_max_brightness(struct qpnp_led_data *led)
 {
 	switch (led->id) {
 	case QPNP_ID_WLED:
@@ -339,7 +339,7 @@ static enum led_brightness qpnp_led_get(struct led_classdev *led_cdev)
 	return led->cdev.brightness;
 }
 
-static int __devinit qpnp_wled_init(struct qpnp_led_data *led)
+static int qpnp_wled_init(struct qpnp_led_data *led)
 {
 	int rc, i;
 	u8 num_wled_strings;
@@ -469,7 +469,7 @@ static int __devinit qpnp_wled_init(struct qpnp_led_data *led)
 	return 0;
 }
 
-static int __devinit qpnp_led_initialize(struct qpnp_led_data *led)
+static int qpnp_led_initialize(struct qpnp_led_data *led)
 {
 	int rc;
 
@@ -491,7 +491,7 @@ static int __devinit qpnp_led_initialize(struct qpnp_led_data *led)
 /*
  * Handlers for alternative sources of platform_data
  */
-static int __devinit qpnp_get_config_wled(struct qpnp_led_data *led,
+static int qpnp_get_config_wled(struct qpnp_led_data *led,
 				struct device_node *node)
 {
 	u32 val;
@@ -586,7 +586,7 @@ static int __devinit qpnp_get_config_wled(struct qpnp_led_data *led,
 	return 0;
 }
 
-static int __devinit qpnp_leds_probe(struct spmi_device *spmi)
+static int qpnp_leds_probe(struct spmi_device *spmi)
 {
 	struct qpnp_led_data *led;
 	struct resource *led_resource;
@@ -685,7 +685,7 @@ fail_id_check:
 	return rc;
 }
 
-static int __devexit qpnp_leds_remove(struct spmi_device *spmi)
+static int qpnp_leds_remove(struct spmi_device *spmi)
 {
 	struct qpnp_led_data *led  = dev_get_drvdata(&spmi->dev);
 

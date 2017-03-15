@@ -672,7 +672,7 @@ done:
 	return rc;
 }
 
-static int __devinit pm8xxx_batt_alarm_probe(struct platform_device *pdev)
+static int pm8xxx_batt_alarm_probe(struct platform_device *pdev)
 {
 	const struct pm8xxx_batt_alarm_core_data *cdata
 			= pdev->dev.platform_data;
@@ -760,7 +760,7 @@ err_free_chip:
 	return rc;
 }
 
-static int __devexit pm8xxx_batt_alarm_remove(struct platform_device *pdev)
+static int pm8xxx_batt_alarm_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_batt_alarm_chip *chip = platform_get_drvdata(pdev);
 

@@ -122,7 +122,7 @@ static int bfin_eval_adav80x_probe(struct platform_device *pdev)
 	return snd_soc_register_card(&bfin_eval_adav80x);
 }
 
-static int __devexit bfin_eval_adav80x_remove(struct platform_device *pdev)
+static int bfin_eval_adav80x_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

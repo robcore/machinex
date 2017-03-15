@@ -243,7 +243,7 @@ void __init ixp23xx_pci_preinit(void)
 /*
  * Prevent PCI layer from seeing the inbound host-bridge resources
  */
-static void __devinit pci_fixup_ixp23xx(struct pci_dev *dev)
+static void pci_fixup_ixp23xx(struct pci_dev *dev)
 {
 	int i;
 

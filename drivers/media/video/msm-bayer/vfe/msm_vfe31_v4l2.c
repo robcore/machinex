@@ -4096,7 +4096,7 @@ void msm_vfe_subdev_release(struct v4l2_subdev *sd)
 
 static const struct v4l2_subdev_internal_ops msm_vfe_internal_ops;
 
-static int __devinit vfe31_probe(struct platform_device *pdev)
+static int vfe31_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct msm_cam_subdev_info sd_info;

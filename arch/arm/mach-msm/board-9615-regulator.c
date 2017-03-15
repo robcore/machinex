@@ -314,11 +314,11 @@ struct gpio_regulator_platform_data msm_gpio_regulator_pdata[] = {
 
 /* PM8018 regulator constraints */
 struct pm8xxx_regulator_platform_data
-msm_pm8018_regulator_pdata[] __devinitdata = {
+msm_pm8018_regulator_pdata[] = {
 };
 
 static struct rpm_regulator_init_data
-msm_rpm_regulator_init_data[] __devinitdata = {
+msm_rpm_regulator_init_data[] = {
 	/*	 ID    a_on pd ss min_uV   max_uV  supply sys_uA  freq */
 	RPM_SMPS(S1,     0, 1, 1,  500000, 1150000, NULL, 100000, 1p60),
 	RPM_SMPS(S2,     0, 1, 0, 1225000, 1300000, NULL, 0,	  1p60),
@@ -349,11 +349,11 @@ msm_rpm_regulator_init_data[] __devinitdata = {
 		RPM_VREG_CORNER_HIGH, NULL),
 };
 
-int msm_pm8018_regulator_pdata_len __devinitdata =
+int msm_pm8018_regulator_pdata_len =
 	ARRAY_SIZE(msm_pm8018_regulator_pdata);
 
 struct rpm_regulator_platform_data
-msm_rpm_regulator_9615_pdata __devinitdata = {
+msm_rpm_regulator_9615_pdata = {
 	.init_data		= msm_rpm_regulator_init_data,
 	.num_regulators		= ARRAY_SIZE(msm_rpm_regulator_init_data),
 	.version		= RPM_VREG_VERSION_9615,

@@ -601,7 +601,7 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4641 = {
 };
 
 
-static int __devinit ak4641_i2c_probe(struct i2c_client *i2c,
+static int ak4641_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct ak4641_priv *ak4641;
@@ -619,7 +619,7 @@ static int __devinit ak4641_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static int __devexit ak4641_i2c_remove(struct i2c_client *i2c)
+static int ak4641_i2c_remove(struct i2c_client *i2c)
 {
 	snd_soc_unregister_codec(&i2c->dev);
 	return 0;

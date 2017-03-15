@@ -815,7 +815,7 @@ static int adv7520_hpd_feature(int on)
 	return rc;
 }
 
-static int __devinit
+static int
 	adv7520_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int rc;
@@ -897,7 +897,7 @@ probe_exit:
 
 }
 
-static int __devexit adv7520_remove(struct i2c_client *client)
+static int adv7520_remove(struct i2c_client *client)
 {
 	if (!client->adapter) {
 		DEV_ERR("%s: No HDMI Device\n", __func__);

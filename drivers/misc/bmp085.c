@@ -403,7 +403,7 @@ exit:
 	return status;
 }
 
-static int __devinit bmp085_probe(struct i2c_client *client,
+static int bmp085_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct bmp085_data *data;
@@ -439,7 +439,7 @@ exit:
 	return err;
 }
 
-static int __devexit bmp085_remove(struct i2c_client *client)
+static int bmp085_remove(struct i2c_client *client)
 {
 	sysfs_remove_group(&client->dev.kobj, &bmp085_attr_group);
 	kfree(i2c_get_clientdata(client));

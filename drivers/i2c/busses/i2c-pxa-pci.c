@@ -94,7 +94,7 @@ out:
 	return ERR_PTR(ret);
 }
 
-static int __devinit ce4100_i2c_probe(struct pci_dev *dev,
+static int ce4100_i2c_probe(struct pci_dev *dev,
 		const struct pci_device_id *ent)
 {
 	int ret;
@@ -135,7 +135,7 @@ err_mem:
 	return ret;
 }
 
-static void __devexit ce4100_i2c_remove(struct pci_dev *dev)
+static void ce4100_i2c_remove(struct pci_dev *dev)
 {
 	struct ce4100_devices *sds;
 	unsigned int i;

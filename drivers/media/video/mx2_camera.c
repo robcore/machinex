@@ -1598,7 +1598,7 @@ static irqreturn_t mx27_camera_emma_irq(int irq_emma, void *data)
 	return IRQ_HANDLED;
 }
 
-static int __devinit mx27_camera_emma_init(struct mx2_camera_dev *pcdev)
+static int mx27_camera_emma_init(struct mx2_camera_dev *pcdev)
 {
 	struct resource *res_emma = pcdev->res_emma;
 	int err = 0;
@@ -1649,7 +1649,7 @@ out:
 	return err;
 }
 
-static int __devinit mx2_camera_probe(struct platform_device *pdev)
+static int mx2_camera_probe(struct platform_device *pdev)
 {
 	struct mx2_camera_dev *pcdev;
 	struct resource *res_csi, *res_emma;
@@ -1792,7 +1792,7 @@ exit:
 	return err;
 }
 
-static int __devexit mx2_camera_remove(struct platform_device *pdev)
+static int mx2_camera_remove(struct platform_device *pdev)
 {
 	struct soc_camera_host *soc_host = to_soc_camera_host(&pdev->dev);
 	struct mx2_camera_dev *pcdev = container_of(soc_host,

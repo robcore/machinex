@@ -462,7 +462,7 @@ rtc_alarm_handled:
 	return IRQ_HANDLED;
 }
 
-static int __devinit qpnp_rtc_probe(struct spmi_device *spmi)
+static int qpnp_rtc_probe(struct spmi_device *spmi)
 {
 	int rc;
 	u8 subtype;
@@ -613,7 +613,7 @@ fail_rtc_enable:
 	return rc;
 }
 
-static int __devexit qpnp_rtc_remove(struct spmi_device *spmi)
+static int qpnp_rtc_remove(struct spmi_device *spmi)
 {
 	struct qpnp_rtc *rtc_dd = dev_get_drvdata(&spmi->dev);
 

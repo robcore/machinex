@@ -215,7 +215,7 @@ static irqreturn_t altera_spi_irq(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
-static int __devinit altera_spi_probe(struct platform_device *pdev)
+static int altera_spi_probe(struct platform_device *pdev)
 {
 	struct altera_spi_platform_data *platp = pdev->dev.platform_data;
 	struct altera_spi *hw;
@@ -290,7 +290,7 @@ exit:
 	return err;
 }
 
-static int __devexit altera_spi_remove(struct platform_device *dev)
+static int altera_spi_remove(struct platform_device *dev)
 {
 	struct altera_spi *hw = platform_get_drvdata(dev);
 	struct spi_master *master = hw->bitbang.master;

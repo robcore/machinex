@@ -139,7 +139,7 @@ in the event that chatty debug messages are desired - jjs 12/30/98 */
 
 /* version and credits */
 #ifndef PCMCIA
-static char version[] __devinitdata =
+static char version[] =
     "\nibmtr.c: v1.3.57   8/ 7/94 Peter De Schrijver and Mark Swanson\n"
     "         v2.1.125 10/20/98 Paul Norton    <pnorton@ieee.org>\n"
     "         v2.2.0   12/30/98 Joel Sloan     <jjs@c-me.com>\n"
@@ -150,9 +150,9 @@ static char version[] __devinitdata =
 
 /* this allows displaying full adapter information */
 
-static char *channel_def[] __devinitdata = { "ISA", "MCA", "ISA P&P" };
+static char *channel_def[] = { "ISA", "MCA", "ISA P&P" };
 
-static char pcchannelid[] __devinitdata = {
+static char pcchannelid[] = {
 	0x05, 0x00, 0x04, 0x09,
 	0x04, 0x03, 0x04, 0x0f,
 	0x03, 0x06, 0x03, 0x01,
@@ -161,7 +161,7 @@ static char pcchannelid[] __devinitdata = {
 	0x03, 0x00, 0x02, 0x00
 };
 
-static char mcchannelid[] __devinitdata =  {
+static char mcchannelid[] =  {
 	0x04, 0x0d, 0x04, 0x01,
 	0x05, 0x02, 0x05, 0x03,
 	0x03, 0x06, 0x03, 0x03,
@@ -170,7 +170,7 @@ static char mcchannelid[] __devinitdata =  {
 	0x03, 0x08, 0x02, 0x00
 };
 
-static char __devinit *adapter_def(char type)
+static char *adapter_def(char type)
 {
 	switch (type) {
 	case 0xF: return "PC Adapter | PC Adapter II | Adapter/A";
@@ -206,18 +206,18 @@ static void	ibmtr_readlog(struct net_device *dev);
 static int	ibmtr_change_mtu(struct net_device *dev, int mtu);
 static void	find_turbo_adapters(int *iolist);
 
-static int ibmtr_portlist[IBMTR_MAX_ADAPTERS+1] __devinitdata = {
+static int ibmtr_portlist[IBMTR_MAX_ADAPTERS+1] = {
 	0xa20, 0xa24, 0, 0, 0
 };
-static int __devinitdata turbo_io[IBMTR_MAX_ADAPTERS] = {0};
-static int __devinitdata turbo_irq[IBMTR_MAX_ADAPTERS] = {0};
-static int __devinitdata turbo_searched = 0;
+static int turbo_io[IBMTR_MAX_ADAPTERS] = {0};
+static int turbo_irq[IBMTR_MAX_ADAPTERS] = {0};
+static int turbo_searched = 0;
 
 #ifndef PCMCIA
-static __u32 ibmtr_mem_base __devinitdata = 0xd0000;
+static __u32 ibmtr_mem_base = 0xd0000;
 #endif
 
-static void __devinit PrtChanID(char *pcid, short stride)
+static void PrtChanID(char *pcid, short stride)
 {
 	short i, j;
 	for (i = 0, j = 0; i < 24; i++, j += stride)
@@ -225,7 +225,7 @@ static void __devinit PrtChanID(char *pcid, short stride)
 	printk("\n");
 }
 
-static void __devinit HWPrtChanID(void __iomem *pcid, short stride)
+static void HWPrtChanID(void __iomem *pcid, short stride)
 {
 	short i, j;
 	for (i = 0, j = 0; i < 24; i++, j += stride)
@@ -237,7 +237,7 @@ static void __devinit HWPrtChanID(void __iomem *pcid, short stride)
  * going away. 
  */
 
-static void __devinit find_turbo_adapters(int *iolist)
+static void find_turbo_adapters(int *iolist)
 {
 	int ram_addr;
 	int index=0;
@@ -345,7 +345,7 @@ static void ibmtr_cleanup_card(struct net_device *dev)
  *	which references it.
  ****************************************************************************/
 
-static int __devinit ibmtr_probe(struct net_device *dev)
+static int ibmtr_probe(struct net_device *dev)
 {
 	int i;
 	int base_addr = dev->base_addr;
@@ -365,7 +365,7 @@ static int __devinit ibmtr_probe(struct net_device *dev)
 	return -ENODEV;
 }
 
-int __devinit ibmtr_probe_card(struct net_device *dev)
+int ibmtr_probe_card(struct net_device *dev)
 {
 	int err = ibmtr_probe(dev);
 	if (!err) {
@@ -378,7 +378,7 @@ int __devinit ibmtr_probe_card(struct net_device *dev)
 
 /*****************************************************************************/
 
-static int __devinit ibmtr_probe1(struct net_device *dev, int PIOaddr)
+static int ibmtr_probe1(struct net_device *dev, int PIOaddr)
 {
 
 	unsigned char segment, intr=0, irq=0, i, j, cardpresent=NOTOK, temp=0;
@@ -799,7 +799,7 @@ static int __devinit ibmtr_probe1(struct net_device *dev, int PIOaddr)
 /* query the adapter for the size of shared RAM  */
 /* the function returns the RAM size in units of 512 bytes */
 
-static unsigned char __devinit get_sram_size(struct tok_info *adapt_info)
+static unsigned char get_sram_size(struct tok_info *adapt_info)
 {
 	unsigned char avail_sram_code;
 	static unsigned char size_code[] = { 0, 16, 32, 64, 127, 128 };
@@ -827,7 +827,7 @@ static const struct net_device_ops trdev_netdev_ops = {
 	.ndo_change_mtu		= ibmtr_change_mtu,
 };
 
-static int __devinit trdev_init(struct net_device *dev)
+static int trdev_init(struct net_device *dev)
 {
 	struct tok_info *ti = netdev_priv(dev);
 

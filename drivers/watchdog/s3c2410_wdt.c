@@ -302,7 +302,7 @@ static inline void s3c2410wdt_cpufreq_deregister(void)
 }
 #endif
 
-static int __devinit s3c2410wdt_probe(struct platform_device *pdev)
+static int s3c2410wdt_probe(struct platform_device *pdev)
 {
 	struct device *dev;
 	unsigned int wtcon;
@@ -436,7 +436,7 @@ static int __devinit s3c2410wdt_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit s3c2410wdt_remove(struct platform_device *dev)
+static int s3c2410wdt_remove(struct platform_device *dev)
 {
 	watchdog_unregister_device(&s3c2410_wdd);
 

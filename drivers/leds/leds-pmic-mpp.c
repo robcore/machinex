@@ -101,7 +101,7 @@ unreg_led_cdev:
 
 }
 
-static int __devexit pmic_mpp_led_remove(struct platform_device *pdev)
+static int pmic_mpp_led_remove(struct platform_device *pdev)
 {
 	const struct led_platform_data *pdata = pdev->dev.platform_data;
 	struct pmic_mpp_led_data *led = platform_get_drvdata(pdev);

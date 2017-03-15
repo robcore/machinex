@@ -180,7 +180,7 @@ static const struct attribute_group ili210x_attr_group = {
 	.attrs = ili210x_attributes,
 };
 
-static int __devinit ili210x_i2c_probe(struct i2c_client *client,
+static int ili210x_i2c_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
@@ -298,7 +298,7 @@ err_free_mem:
 	return error;
 }
 
-static int __devexit ili210x_i2c_remove(struct i2c_client *client)
+static int ili210x_i2c_remove(struct i2c_client *client)
 {
 	struct ili210x *priv = i2c_get_clientdata(client);
 

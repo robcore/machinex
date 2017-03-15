@@ -1457,7 +1457,7 @@ static const struct net_device_ops bfin_mac_netdev_ops = {
 #endif
 };
 
-static int __devinit bfin_mac_probe(struct platform_device *pdev)
+static int bfin_mac_probe(struct platform_device *pdev)
 {
 	struct net_device *ndev;
 	struct bfin_mac_local *lp;
@@ -1576,7 +1576,7 @@ out_err_probe_mac:
 	return rc;
 }
 
-static int __devexit bfin_mac_remove(struct platform_device *pdev)
+static int bfin_mac_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct bfin_mac_local *lp = netdev_priv(ndev);
@@ -1633,7 +1633,7 @@ static int bfin_mac_resume(struct platform_device *pdev)
 #define bfin_mac_resume NULL
 #endif	/* CONFIG_PM */
 
-static int __devinit bfin_mii_bus_probe(struct platform_device *pdev)
+static int bfin_mii_bus_probe(struct platform_device *pdev)
 {
 	struct mii_bus *miibus;
 	struct bfin_mii_bus_platform_data *mii_bus_pd;
@@ -1711,7 +1711,7 @@ out_err_alloc:
 	return rc;
 }
 
-static int __devexit bfin_mii_bus_remove(struct platform_device *pdev)
+static int bfin_mii_bus_remove(struct platform_device *pdev)
 {
 	struct mii_bus *miibus = platform_get_drvdata(pdev);
 	struct bfin_mii_bus_platform_data *mii_bus_pd =

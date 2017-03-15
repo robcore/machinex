@@ -80,7 +80,7 @@ static int ohci_xls_reset(struct usb_hcd *hcd)
 	return ohci_init(ohci);
 }
 
-static int __devinit ohci_xls_start(struct usb_hcd *hcd)
+static int ohci_xls_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd *ohci;
 	int ret;

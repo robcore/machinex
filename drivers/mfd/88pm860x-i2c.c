@@ -264,7 +264,7 @@ static struct regmap_config pm860x_regmap_config = {
 	.val_bits = 8,
 };
 
-static int __devinit pm860x_probe(struct i2c_client *client,
+static int pm860x_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct pm860x_platform_data *pdata = client->dev.platform_data;
@@ -320,7 +320,7 @@ static int __devinit pm860x_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit pm860x_remove(struct i2c_client *client)
+static int pm860x_remove(struct i2c_client *client)
 {
 	struct pm860x_chip *chip = i2c_get_clientdata(client);
 

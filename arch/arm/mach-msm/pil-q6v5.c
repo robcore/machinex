@@ -193,7 +193,7 @@ int pil_q6v5_reset(struct pil_desc *pil)
 }
 EXPORT_SYMBOL(pil_q6v5_reset);
 
-struct pil_desc __devinit *pil_q6v5_init(struct platform_device *pdev)
+struct pil_desc *pil_q6v5_init(struct platform_device *pdev)
 {
 	struct q6v5_data *drv;
 	struct resource *res;

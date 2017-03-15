@@ -228,7 +228,7 @@ static const struct attribute_group smsc47b397_group = {
 	.attrs = smsc47b397_attributes,
 };
 
-static int __devexit smsc47b397_remove(struct platform_device *pdev)
+static int smsc47b397_remove(struct platform_device *pdev)
 {
 	struct smsc47b397_data *data = platform_get_drvdata(pdev);
 	struct resource *res;
@@ -253,7 +253,7 @@ static struct platform_driver smsc47b397_driver = {
 	.remove		= __devexit_p(smsc47b397_remove),
 };
 
-static int __devinit smsc47b397_probe(struct platform_device *pdev)
+static int smsc47b397_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct smsc47b397_data *data;

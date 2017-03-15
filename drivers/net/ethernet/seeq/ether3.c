@@ -67,7 +67,7 @@
 #include <asm/ecard.h>
 #include <asm/io.h>
 
-static char version[] __devinitdata = "ether3 ethernet driver (c) 1995-2000 R.M.King v1.17\n";
+static char version[] = "ether3 ethernet driver (c) 1995-2000 R.M.King v1.17\n";
 
 #include "ether3.h"
 
@@ -194,7 +194,7 @@ static inline void ether3_ledon(struct net_device *dev)
  * Read the ethernet address string from the on board rom.
  * This is an ascii string!!!
  */
-static int __devinit
+static int
 ether3_addr(char *addr, struct expansion_card *ec)
 {
 	struct in_chunk_dir cd;
@@ -219,7 +219,7 @@ ether3_addr(char *addr, struct expansion_card *ec)
 
 /* --------------------------------------------------------------------------- */
 
-static int __devinit
+static int
 ether3_ramtest(struct net_device *dev, unsigned char byte)
 {
 	unsigned char *buffer = kmalloc(RX_END, GFP_KERNEL);
@@ -268,7 +268,7 @@ ether3_ramtest(struct net_device *dev, unsigned char byte)
 
 /* ------------------------------------------------------------------------------- */
 
-static int __devinit ether3_init_2(struct net_device *dev)
+static int ether3_init_2(struct net_device *dev)
 {
 	int i;
 
@@ -736,7 +736,7 @@ static void ether3_tx(struct net_device *dev)
 	}
 }
 
-static void __devinit ether3_banner(void)
+static void ether3_banner(void)
 {
 	static unsigned version_printed = 0;
 
@@ -755,7 +755,7 @@ static const struct net_device_ops ether3_netdev_ops = {
 	.ndo_set_mac_address	= eth_mac_addr,
 };
 
-static int __devinit
+static int
 ether3_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	const struct ether3_data *data = id->data;
@@ -852,7 +852,7 @@ ether3_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit ether3_remove(struct expansion_card *ec)
+static void ether3_remove(struct expansion_card *ec)
 {
 	struct net_device *dev = ecard_get_drvdata(ec);
 

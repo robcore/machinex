@@ -380,7 +380,7 @@ static int mipi_hx8389b_create_sysfs(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit mipi_hx8389b_lcd_probe(struct platform_device *pdev)
+static int mipi_hx8389b_lcd_probe(struct platform_device *pdev)
 {
 	struct platform_device *pthisdev = NULL;
 #if defined(CONFIG_LCD_CLASS_DEVICE)

@@ -756,7 +756,7 @@ int omap_mcbsp_st_add_controls(struct snd_soc_pcm_runtime *rtd)
 }
 EXPORT_SYMBOL_GPL(omap_mcbsp_st_add_controls);
 
-static __devinit int asoc_mcbsp_probe(struct platform_device *pdev)
+static int asoc_mcbsp_probe(struct platform_device *pdev)
 {
 	struct omap_mcbsp_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	struct omap_mcbsp *mcbsp;
@@ -782,7 +782,7 @@ static __devinit int asoc_mcbsp_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit asoc_mcbsp_remove(struct platform_device *pdev)
+static int asoc_mcbsp_remove(struct platform_device *pdev)
 {
 	struct omap_mcbsp *mcbsp = platform_get_drvdata(pdev);
 

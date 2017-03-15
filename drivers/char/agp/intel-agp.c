@@ -731,7 +731,7 @@ static const struct intel_agp_driver_description {
 	{ 0, NULL, NULL }
 };
 
-static int __devinit agp_intel_probe(struct pci_dev *pdev,
+static int agp_intel_probe(struct pci_dev *pdev,
 				     const struct pci_device_id *ent)
 {
 	struct agp_bridge_data *bridge;

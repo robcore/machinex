@@ -48,7 +48,7 @@ static int migrate_pages_callback(struct notifier_block *self,
 }
 #endif
 
-static int __devinit msm_migrate_pages_probe(struct platform_device *pdev)
+static int msm_migrate_pages_probe(struct platform_device *pdev)
 {
 #ifdef CONFIG_MEMORY_HOTPLUG
 	hotplug_memory_notifier(migrate_pages_callback, 0);

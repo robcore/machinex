@@ -101,7 +101,7 @@ static struct regulator_ops gpio_vreg_ops = {
 	.is_enabled	= gpio_vreg_is_enabled,
 };
 
-static int __devinit gpio_vreg_probe(struct platform_device *pdev)
+static int gpio_vreg_probe(struct platform_device *pdev)
 {
 	const struct gpio_regulator_platform_data *pdata;
 	struct gpio_vreg *vreg;
@@ -180,7 +180,7 @@ free_vreg:
 	return rc;
 }
 
-static int __devexit gpio_vreg_remove(struct platform_device *pdev)
+static int gpio_vreg_remove(struct platform_device *pdev)
 {
 	struct gpio_vreg *vreg = platform_get_drvdata(pdev);
 

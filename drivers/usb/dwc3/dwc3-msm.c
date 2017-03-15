@@ -1372,7 +1372,7 @@ error:
 	debugfs_remove_recursive(dwc3_debugfs_root);
 }
 
-static int __devinit dwc3_msm_probe(struct platform_device *pdev)
+static int dwc3_msm_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
 	struct platform_device *dwc3;
@@ -1606,7 +1606,7 @@ disable_core_clk:
 	return ret;
 }
 
-static int __devexit dwc3_msm_remove(struct platform_device *pdev)
+static int dwc3_msm_remove(struct platform_device *pdev)
 {
 	struct dwc3_msm	*msm = platform_get_drvdata(pdev);
 
@@ -1726,7 +1726,7 @@ static struct platform_driver dwc3_msm_driver = {
 MODULE_LICENSE("GPLV2");
 MODULE_DESCRIPTION("DesignWare USB3 MSM Glue Layer");
 
-static int __devinit dwc3_msm_init(void)
+static int dwc3_msm_init(void)
 {
 	return platform_driver_register(&dwc3_msm_driver);
 }

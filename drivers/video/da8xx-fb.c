@@ -168,7 +168,7 @@ struct da8xx_fb_par {
 };
 
 /* Variable Screen Information */
-static struct fb_var_screeninfo da8xx_fb_var __devinitdata = {
+static struct fb_var_screeninfo da8xx_fb_var = {
 	.xoffset = 0,
 	.yoffset = 0,
 	.transp = {0, 0, 0},
@@ -185,7 +185,7 @@ static struct fb_var_screeninfo da8xx_fb_var __devinitdata = {
 	.vmode = FB_VMODE_NONINTERLACED
 };
 
-static struct fb_fix_screeninfo da8xx_fb_fix __devinitdata = {
+static struct fb_fix_screeninfo da8xx_fb_fix = {
 	.id = "DA8xx FB Drv",
 	.type = FB_TYPE_PACKED_PIXELS,
 	.type_aux = 0,
@@ -904,7 +904,7 @@ static inline void lcd_da8xx_cpufreq_deregister(struct da8xx_fb_par *par)
 }
 #endif
 
-static int __devexit fb_remove(struct platform_device *dev)
+static int fb_remove(struct platform_device *dev)
 {
 	struct fb_info *info = dev_get_drvdata(&dev->dev);
 
@@ -1103,7 +1103,7 @@ static unsigned int da8xxfb_pixel_clk_period(struct da8xx_fb_par *par)
 	return pix_clk_period_picosec;
 }
 
-static int __devinit fb_probe(struct platform_device *device)
+static int fb_probe(struct platform_device *device)
 {
 	struct da8xx_lcdc_platform_data *fb_pdata =
 						device->dev.platform_data;

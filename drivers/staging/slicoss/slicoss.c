@@ -3187,7 +3187,7 @@ static void slic_card_cleanup(struct sliccard *card)
 	kfree(card);
 }
 
-static void __devexit slic_entry_remove(struct pci_dev *pcidev)
+static void slic_entry_remove(struct pci_dev *pcidev)
 {
 	struct net_device *dev = pci_get_drvdata(pcidev);
 	u32 mmio_start = 0;
@@ -3833,7 +3833,7 @@ static u32 slic_card_locate(struct adapter *adapter)
 	return 0;
 }
 
-static int __devinit slic_entry_probe(struct pci_dev *pcidev,
+static int slic_entry_probe(struct pci_dev *pcidev,
 			       const struct pci_device_id *pci_tbl_entry)
 {
 	static int cards_found;

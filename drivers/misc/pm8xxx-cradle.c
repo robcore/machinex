@@ -154,7 +154,7 @@ static ssize_t cradle_print_name(struct switch_dev *sdev, char *buf)
 	return -EINVAL;
 }
 
-static int __devinit pm8xxx_cradle_probe(struct platform_device *pdev)
+static int pm8xxx_cradle_probe(struct platform_device *pdev)
 {
 	int ret, i;
 	const struct pm8xxx_cradle_platform_data *pdata =
@@ -223,7 +223,7 @@ err_switch_dev_register:
 	return ret;
 }
 
-static int __devexit pm8xxx_cradle_remove(struct platform_device *pdev)
+static int pm8xxx_cradle_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_cradle *cradle = platform_get_drvdata(pdev);
 

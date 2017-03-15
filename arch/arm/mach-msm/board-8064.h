@@ -41,14 +41,14 @@
 #endif
 
 extern struct pm8xxx_regulator_platform_data
-	msm8064_pm8921_regulator_pdata[] __devinitdata;
+	msm8064_pm8921_regulator_pdata[];
 
-extern int msm8064_pm8921_regulator_pdata_len __devinitdata;
+extern int msm8064_pm8921_regulator_pdata_len;
 
 extern struct pm8xxx_regulator_platform_data
-	msm8064_pm8917_regulator_pdata[] __devinitdata;
+	msm8064_pm8917_regulator_pdata[];
 
-extern int msm8064_pm8917_regulator_pdata_len __devinitdata;
+extern int msm8064_pm8917_regulator_pdata_len;
 
 #define GPIO_VREG_ID_EXT_5V		0
 #define GPIO_VREG_ID_EXT_3P3V		1
@@ -64,18 +64,18 @@ extern int msm8064_pm8917_regulator_pdata_len __devinitdata;
 #define APQ8064_EXT_3P3V_REG_EN_GPIO	77
 
 extern struct gpio_regulator_platform_data
-	apq8064_gpio_regulator_pdata[] __devinitdata;
+	apq8064_gpio_regulator_pdata[];
 
 extern struct gpio_regulator_platform_data
-	mpq8064_gpio_regulator_pdata[] __devinitdata;
+	mpq8064_gpio_regulator_pdata[];
 
 extern struct fixed_voltage_config mpq8064_3p3_regulator_pdata;
 
 extern struct rpm_regulator_platform_data
-	apq8064_rpm_regulator_pdata __devinitdata;
+	apq8064_rpm_regulator_pdata;
 
 extern struct rpm_regulator_platform_data
-	apq8064_rpm_regulator_pm8921_pdata __devinitdata;
+	apq8064_rpm_regulator_pm8921_pdata;
 
 extern struct regulator_init_data msm8064_saw_regulator_pdata_8921_s5;
 extern struct regulator_init_data msm8064_saw_regulator_pdata_8921_s6;

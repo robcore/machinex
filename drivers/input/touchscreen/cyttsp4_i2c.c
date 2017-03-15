@@ -127,7 +127,7 @@ static struct cyttsp4_ops ops = {
 	.read = cyttsp4_i2c_read,
 };
 
-static int __devinit cyttsp4_i2c_probe(struct i2c_client *client,
+static int cyttsp4_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *i2c_id)
 {
 	struct cyttsp4_i2c *ts_i2c;
@@ -191,7 +191,7 @@ error_alloc_data_failed:
 }
 
 /* registered in driver struct */
-static int __devexit cyttsp4_i2c_remove(struct i2c_client *client)
+static int cyttsp4_i2c_remove(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct cyttsp4_i2c *ts_i2c = dev_get_drvdata(dev);

@@ -434,7 +434,7 @@ static const char * const ad5064_vref_name(struct ad5064_state *st,
 	return st->chip_info->shared_vref ? "vref" : ad5064_vref_names[vref];
 }
 
-static int __devinit ad5064_probe(struct spi_device *spi)
+static int ad5064_probe(struct spi_device *spi)
 {
 	enum ad5064_type type = spi_get_device_id(spi)->driver_data;
 	struct iio_dev *indio_dev;
@@ -505,7 +505,7 @@ error_free:
 }
 
 
-static int __devexit ad5064_remove(struct spi_device *spi)
+static int ad5064_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 	struct ad5064_state *st = iio_priv(indio_dev);

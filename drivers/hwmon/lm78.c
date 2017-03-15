@@ -840,7 +840,7 @@ static struct lm78_data *lm78_update_device(struct device *dev)
 }
 
 #ifdef CONFIG_ISA
-static int __devinit lm78_isa_probe(struct platform_device *pdev)
+static int lm78_isa_probe(struct platform_device *pdev)
 {
 	int err;
 	struct lm78_data *data;
@@ -899,7 +899,7 @@ static int __devinit lm78_isa_probe(struct platform_device *pdev)
 	return err;
 }
 
-static int __devexit lm78_isa_remove(struct platform_device *pdev)
+static int lm78_isa_remove(struct platform_device *pdev)
 {
 	struct lm78_data *data = platform_get_drvdata(pdev);
 	struct resource *res;

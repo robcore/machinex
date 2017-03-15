@@ -29,7 +29,7 @@ struct s3d_info {
 	u32			pseudo_palette[16];
 };
 
-static int __devinit s3d_get_props(struct s3d_info *sp)
+static int s3d_get_props(struct s3d_info *sp)
 {
 	sp->width = of_getintprop_default(sp->of_node, "width", 0);
 	sp->height = of_getintprop_default(sp->of_node, "height", 0);
@@ -70,7 +70,7 @@ static struct fb_ops s3d_ops = {
 	.fb_imageblit		= cfb_imageblit,
 };
 
-static int __devinit s3d_set_fbinfo(struct s3d_info *sp)
+static int s3d_set_fbinfo(struct s3d_info *sp)
 {
 	struct fb_info *info = sp->info;
 	struct fb_var_screeninfo *var = &info->var;
@@ -115,7 +115,7 @@ static int __devinit s3d_set_fbinfo(struct s3d_info *sp)
         return 0;
 }
 
-static int __devinit s3d_pci_register(struct pci_dev *pdev,
+static int s3d_pci_register(struct pci_dev *pdev,
 				      const struct pci_device_id *ent)
 {
 	struct fb_info *info;
@@ -217,7 +217,7 @@ err_out:
 	return err;
 }
 
-static void __devexit s3d_pci_unregister(struct pci_dev *pdev)
+static void s3d_pci_unregister(struct pci_dev *pdev)
 {
 	struct fb_info *info = pci_get_drvdata(pdev);
 	struct s3d_info *sp = info->par;

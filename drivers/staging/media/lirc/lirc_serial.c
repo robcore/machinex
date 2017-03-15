@@ -835,7 +835,7 @@ static int hardware_init_port(void)
 	return 0;
 }
 
-static int __devinit lirc_serial_probe(struct platform_device *dev)
+static int lirc_serial_probe(struct platform_device *dev)
 {
 	int i, nlow, nhigh, result;
 
@@ -921,7 +921,7 @@ exit_free_irq:
 	return result;
 }
 
-static int __devexit lirc_serial_remove(struct platform_device *dev)
+static int lirc_serial_remove(struct platform_device *dev)
 {
 	free_irq(irq, (void *)&hardware);
 

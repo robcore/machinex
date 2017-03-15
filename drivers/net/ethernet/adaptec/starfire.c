@@ -175,7 +175,7 @@ static int full_duplex[MAX_UNITS] = {0, };
 #define FIRMWARE_TX	"adaptec/starfire_tx.bin"
 
 /* These identify the driver base version and may not be removed. */
-static const char version[] __devinitconst =
+static const char version[] =
 KERN_INFO "starfire.c:v1.03 7/26/2000  Written by Donald Becker <becker@scyld.com>\n"
 " (unofficial 2.2/2.4 kernel port, version " DRV_VERSION ", " DRV_RELDATE ")\n";
 
@@ -308,7 +308,7 @@ MODULE_DEVICE_TABLE(pci, starfire_pci_tbl);
 static const struct chip_info {
 	const char *name;
 	int drv_flags;
-} netdrv_tbl[] __devinitconst = {
+} netdrv_tbl[] = {
 	{ "Adaptec Starfire 6915", CanHaveMII },
 };
 
@@ -654,7 +654,7 @@ static const struct net_device_ops netdev_ops = {
 #endif
 };
 
-static int __devinit starfire_init_one(struct pci_dev *pdev,
+static int starfire_init_one(struct pci_dev *pdev,
 				       const struct pci_device_id *ent)
 {
 	struct netdev_private *np;
@@ -2022,7 +2022,7 @@ static int starfire_resume(struct pci_dev *pdev)
 #endif /* CONFIG_PM */
 
 
-static void __devexit starfire_remove_one (struct pci_dev *pdev)
+static void starfire_remove_one (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct netdev_private *np = netdev_priv(dev);

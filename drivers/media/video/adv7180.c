@@ -302,7 +302,7 @@ static irqreturn_t adv7180_irq(int irq, void *devid)
  * concerning the addresses: i2c wants 7 bit (without the r/w bit), so '>>1'
  */
 
-static __devinit int adv7180_probe(struct i2c_client *client,
+static int adv7180_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct adv7180_state *state;
@@ -404,7 +404,7 @@ err:
 	return ret;
 }
 
-static __devexit int adv7180_remove(struct i2c_client *client)
+static int adv7180_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct adv7180_state *state = to_state(sd);

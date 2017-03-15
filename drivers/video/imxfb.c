@@ -869,7 +869,7 @@ failed_init:
 	return ret;
 }
 
-static int __devexit imxfb_remove(struct platform_device *pdev)
+static int imxfb_remove(struct platform_device *pdev)
 {
 	struct imx_fb_platform_data *pdata;
 	struct fb_info *info = platform_get_drvdata(pdev);

@@ -389,8 +389,8 @@ MODULE_DEVICE_TABLE( pci, ips_pci_table );
 
 static char ips_hot_plug_name[] = "ips";
 
-static int __devinit  ips_insert_device(struct pci_dev *pci_dev, const struct pci_device_id *ent);
-static void __devexit ips_remove_device(struct pci_dev *pci_dev);
+static int  ips_insert_device(struct pci_dev *pci_dev, const struct pci_device_id *ent);
+static void ips_remove_device(struct pci_dev *pci_dev);
 
 static struct pci_driver ips_pci_driver = {
 	.name		= ips_hot_plug_name,
@@ -6898,7 +6898,7 @@ module_exit(ips_module_exit);
 /*   Return Value:                                                           */
 /*     0 if Successful, else non-zero                                        */
 /*---------------------------------------------------------------------------*/
-static int __devinit
+static int
 ips_insert_device(struct pci_dev *pci_dev, const struct pci_device_id *ent)
 {
 	int index = -1;

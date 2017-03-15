@@ -193,7 +193,7 @@ static struct snd_soc_card lowland = {
 	.num_dapm_routes = ARRAY_SIZE(audio_paths),
 };
 
-static __devinit int lowland_probe(struct platform_device *pdev)
+static int lowland_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &lowland;
 	int ret;
@@ -210,7 +210,7 @@ static __devinit int lowland_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit lowland_remove(struct platform_device *pdev)
+static int lowland_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

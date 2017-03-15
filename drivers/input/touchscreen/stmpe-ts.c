@@ -166,7 +166,7 @@ static irqreturn_t stmpe_ts_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int __devinit stmpe_init_hw(struct stmpe_touch *ts)
+static int stmpe_init_hw(struct stmpe_touch *ts)
 {
 	int ret;
 	u8 adc_ctrl1, adc_ctrl1_mask, tsc_cfg, tsc_cfg_mask;
@@ -261,7 +261,7 @@ static void stmpe_ts_close(struct input_dev *dev)
 			STMPE_TSC_CTRL_TSC_EN, 0);
 }
 
-static int __devinit stmpe_input_probe(struct platform_device *pdev)
+static int stmpe_input_probe(struct platform_device *pdev)
 {
 	struct stmpe *stmpe = dev_get_drvdata(pdev->dev.parent);
 	struct stmpe_platform_data *pdata = stmpe->pdata;
@@ -353,7 +353,7 @@ err_out:
 	return ret;
 }
 
-static int __devexit stmpe_ts_remove(struct platform_device *pdev)
+static int stmpe_ts_remove(struct platform_device *pdev)
 {
 	struct stmpe_touch *ts = platform_get_drvdata(pdev);
 	unsigned int ts_irq = platform_get_irq_byname(pdev, "FIFO_TH");

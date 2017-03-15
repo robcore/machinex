@@ -73,8 +73,8 @@ struct isp1763_dev isp1763_loc_dev[ISP1763_LAST_DEV];
  *               Local Function
  *--------------------------------------------------------------*/
 
-static int __devexit isp1763_remove(struct platform_device *pdev);
-static int __devinit isp1763_probe(struct platform_device *pdev);
+static int isp1763_remove(struct platform_device *pdev);
+static int isp1763_probe(struct platform_device *pdev);
 
 
 /*--------------------------------------------------------------*
@@ -570,7 +570,7 @@ void dummy_mem_read(struct isp1763_dev *dev)
  *
  --------------------------------------------------------------**/
 
-static int __devinit
+static int
 isp1763_probe(struct platform_device *pdev)
 {
 	u32 reg_data = 0;

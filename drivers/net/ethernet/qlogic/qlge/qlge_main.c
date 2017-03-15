@@ -4469,7 +4469,7 @@ static void ql_release_all(struct pci_dev *pdev)
 	pci_set_drvdata(pdev, NULL);
 }
 
-static int __devinit ql_init_device(struct pci_dev *pdev,
+static int ql_init_device(struct pci_dev *pdev,
 				    struct net_device *ndev, int cards_found)
 {
 	struct ql_adapter *qdev = netdev_priv(ndev);
@@ -4633,7 +4633,7 @@ static void ql_timer(unsigned long data)
 	mod_timer(&qdev->timer, jiffies + (5*HZ));
 }
 
-static int __devinit qlge_probe(struct pci_dev *pdev,
+static int qlge_probe(struct pci_dev *pdev,
 				const struct pci_device_id *pci_entry)
 {
 	struct net_device *ndev = NULL;
@@ -4705,7 +4705,7 @@ int ql_clean_lb_rx_ring(struct rx_ring *rx_ring, int budget)
 	return ql_clean_inbound_rx_ring(rx_ring, budget);
 }
 
-static void __devexit qlge_remove(struct pci_dev *pdev)
+static void qlge_remove(struct pci_dev *pdev)
 {
 	struct net_device *ndev = pci_get_drvdata(pdev);
 	struct ql_adapter *qdev = netdev_priv(ndev);

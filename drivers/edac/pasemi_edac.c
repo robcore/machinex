@@ -188,7 +188,7 @@ static int pasemi_edac_init_csrows(struct mem_ctl_info *mci,
 	return 0;
 }
 
-static int __devinit pasemi_edac_probe(struct pci_dev *pdev,
+static int pasemi_edac_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent)
 {
 	struct mem_ctl_info *mci = NULL;
@@ -266,7 +266,7 @@ fail:
 	return -ENODEV;
 }
 
-static void __devexit pasemi_edac_remove(struct pci_dev *pdev)
+static void pasemi_edac_remove(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci = edac_mc_del_mc(&pdev->dev);
 

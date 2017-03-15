@@ -41,7 +41,7 @@ static int da9052_i2c_enable_multiwrite(struct da9052 *da9052)
 	return 0;
 }
 
-static int __devinit da9052_i2c_probe(struct i2c_client *client,
+static int da9052_i2c_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
 	struct da9052 *da9052;
@@ -89,7 +89,7 @@ err:
 	return ret;
 }
 
-static int __devexit da9052_i2c_remove(struct i2c_client *client)
+static int da9052_i2c_remove(struct i2c_client *client)
 {
 	struct da9052 *da9052 = i2c_get_clientdata(client);
 

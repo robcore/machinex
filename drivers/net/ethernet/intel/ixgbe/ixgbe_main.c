@@ -4344,7 +4344,7 @@ static void ixgbe_tx_timeout(struct net_device *netdev)
  * Fields are initialized based on PCI device information and
  * OS network device settings (MTU size).
  **/
-static int __devinit ixgbe_sw_init(struct ixgbe_adapter *adapter)
+static int ixgbe_sw_init(struct ixgbe_adapter *adapter)
 {
 	struct ixgbe_hw *hw = &adapter->hw;
 	struct pci_dev *pdev = adapter->pdev;
@@ -6738,7 +6738,7 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.ndo_fix_features = ixgbe_fix_features,
 };
 
-static void __devinit ixgbe_probe_vf(struct ixgbe_adapter *adapter,
+static void ixgbe_probe_vf(struct ixgbe_adapter *adapter,
 				     const struct ixgbe_info *ii)
 {
 #ifdef CONFIG_PCI_IOV
@@ -6768,7 +6768,7 @@ static void __devinit ixgbe_probe_vf(struct ixgbe_adapter *adapter,
  * The OS initialization, configuring of the adapter private structure,
  * and a hardware reset occur.
  **/
-static int __devinit ixgbe_probe(struct pci_dev *pdev,
+static int ixgbe_probe(struct pci_dev *pdev,
 				 const struct pci_device_id *ent)
 {
 	struct net_device *netdev;
@@ -7200,7 +7200,7 @@ err_dma:
  * Hot-Plug event, or because the driver is going to be removed from
  * memory.
  **/
-static void __devexit ixgbe_remove(struct pci_dev *pdev)
+static void ixgbe_remove(struct pci_dev *pdev)
 {
 	struct ixgbe_adapter *adapter = pci_get_drvdata(pdev);
 	struct net_device *netdev = adapter->netdev;

@@ -1622,7 +1622,7 @@ failure:
 	return ret;
 }
 
-static void __devexit ite_remove(struct pnp_dev *pdev)
+static void ite_remove(struct pnp_dev *pdev)
 {
 	struct ite_dev *dev = pnp_get_drvdata(pdev);
 	unsigned long flags;

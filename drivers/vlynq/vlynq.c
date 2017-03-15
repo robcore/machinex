@@ -783,7 +783,7 @@ struct bus_type vlynq_bus_type = {
 };
 EXPORT_SYMBOL(vlynq_bus_type);
 
-static int __devinit vlynq_init(void)
+static int vlynq_init(void)
 {
 	int res = 0;
 
@@ -803,7 +803,7 @@ fail_bus:
 	return res;
 }
 
-static void __devexit vlynq_exit(void)
+static void vlynq_exit(void)
 {
 	platform_driver_unregister(&vlynq_platform_driver);
 	bus_unregister(&vlynq_bus_type);

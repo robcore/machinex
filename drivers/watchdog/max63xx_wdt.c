@@ -174,7 +174,7 @@ static struct watchdog_device max63xx_wdt_dev = {
 	.ops = &max63xx_wdt_ops,
 };
 
-static int __devinit max63xx_wdt_probe(struct platform_device *pdev)
+static int max63xx_wdt_probe(struct platform_device *pdev)
 {
 	struct resource	*wdt_mem;
 	struct max63xx_timeout *table;
@@ -209,7 +209,7 @@ static int __devinit max63xx_wdt_probe(struct platform_device *pdev)
 	return watchdog_register_device(&max63xx_wdt_dev);
 }
 
-static int __devexit max63xx_wdt_remove(struct platform_device *pdev)
+static int max63xx_wdt_remove(struct platform_device *pdev)
 {
 	watchdog_unregister_device(&max63xx_wdt_dev);
 	return 0;

@@ -343,7 +343,7 @@ static inline const struct samsung_usbphy_drvdata
 				platform_get_device_id(pdev)->driver_data;
 }
 
-static int __devinit samsung_usbphy_probe(struct platform_device *pdev)
+static int samsung_usbphy_probe(struct platform_device *pdev)
 {
 	struct samsung_usbphy *sphy;
 	struct samsung_usbphy_data *pdata = pdev->dev.platform_data;

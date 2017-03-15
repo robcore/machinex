@@ -1503,7 +1503,7 @@ static int mipi_nt35590_lcd_off(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit mipi_nt35590_lcd_probe(struct platform_device *pdev)
+static int mipi_nt35590_lcd_probe(struct platform_device *pdev)
 {
 	struct platform_device *pthisdev = NULL;
 	struct msm_fb_data_type *mfd;

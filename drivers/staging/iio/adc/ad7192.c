@@ -1016,7 +1016,7 @@ static struct iio_chan_spec ad7192_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(8),
 };
 
-static int __devinit ad7192_probe(struct spi_device *spi)
+static int ad7192_probe(struct spi_device *spi)
 {
 	struct ad7192_platform_data *pdata = spi->dev.platform_data;
 	struct ad7192_state *st;

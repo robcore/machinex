@@ -419,7 +419,7 @@ static struct pinctrl_desc tegra_pinctrl_desc = {
 	.owner = THIS_MODULE,
 };
 
-static struct of_device_id tegra_pinctrl_of_match[] __devinitdata = {
+static struct of_device_id tegra_pinctrl_of_match[] = {
 #ifdef CONFIG_PINCTRL_TEGRA20
 	{
 		.compatible = "nvidia,tegra20-pinmux-disabled",
@@ -435,7 +435,7 @@ static struct of_device_id tegra_pinctrl_of_match[] __devinitdata = {
 	{},
 };
 
-static int __devinit tegra_pinctrl_probe(struct platform_device *pdev)
+static int tegra_pinctrl_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
 	tegra_pinctrl_soc_initf initf = NULL;
@@ -521,7 +521,7 @@ static int __devinit tegra_pinctrl_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit tegra_pinctrl_remove(struct platform_device *pdev)
+static int tegra_pinctrl_remove(struct platform_device *pdev)
 {
 	struct tegra_pmx *pmx = platform_get_drvdata(pdev);
 

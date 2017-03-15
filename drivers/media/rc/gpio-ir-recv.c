@@ -62,7 +62,7 @@ err_get_value:
 	return IRQ_HANDLED;
 }
 
-static int __devinit gpio_ir_recv_probe(struct platform_device *pdev)
+static int gpio_ir_recv_probe(struct platform_device *pdev)
 {
 	struct gpio_rc_dev *gpio_dev;
 	struct rc_dev *rcdev;
@@ -140,7 +140,7 @@ err_allocate_device:
 	return rc;
 }
 
-static int __devexit gpio_ir_recv_remove(struct platform_device *pdev)
+static int gpio_ir_recv_remove(struct platform_device *pdev)
 {
 	struct gpio_rc_dev *gpio_dev = platform_get_drvdata(pdev);
 

@@ -336,7 +336,7 @@ static struct snd_soc_codec_driver soc_codec_dev_ad1836 = {
 	.num_dapm_routes = ARRAY_SIZE(ad183x_dapm_routes),
 };
 
-static int __devinit ad1836_spi_probe(struct spi_device *spi)
+static int ad1836_spi_probe(struct spi_device *spi)
 {
 	struct ad1836_priv *ad1836;
 	int ret;
@@ -355,7 +355,7 @@ static int __devinit ad1836_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit ad1836_spi_remove(struct spi_device *spi)
+static int ad1836_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 	return 0;

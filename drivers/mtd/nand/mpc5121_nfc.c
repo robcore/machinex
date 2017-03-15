@@ -647,7 +647,7 @@ static void mpc5121_nfc_free(struct device *dev, struct mtd_info *mtd)
 		iounmap(prv->csreg);
 }
 
-static int __devinit mpc5121_nfc_probe(struct platform_device *op)
+static int mpc5121_nfc_probe(struct platform_device *op)
 {
 	struct device_node *rootnode, *dn = op->dev.of_node;
 	struct device *dev = &op->dev;
@@ -850,7 +850,7 @@ error:
 	return retval;
 }
 
-static int __devexit mpc5121_nfc_remove(struct platform_device *op)
+static int mpc5121_nfc_remove(struct platform_device *op)
 {
 	struct device *dev = &op->dev;
 	struct mtd_info *mtd = dev_get_drvdata(dev);
@@ -864,7 +864,7 @@ static int __devexit mpc5121_nfc_remove(struct platform_device *op)
 	return 0;
 }
 
-static struct of_device_id mpc5121_nfc_match[] __devinitdata = {
+static struct of_device_id mpc5121_nfc_match[] = {
 	{ .compatible = "fsl,mpc5121-nfc", },
 	{},
 };

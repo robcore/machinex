@@ -577,7 +577,7 @@ free_buffers(struct platform_device *dev,
 	priv->free = NULL;
 }
 
-static int __devinit
+static int
 pxa3xx_gcu_probe(struct platform_device *dev)
 {
 	int i, ret, irq;

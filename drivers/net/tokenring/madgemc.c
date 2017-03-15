@@ -142,7 +142,7 @@ static void madgemc_sifwritew(struct net_device *dev, unsigned short val, unsign
 
 static struct net_device_ops madgemc_netdev_ops __read_mostly;
 
-static int __devinit madgemc_probe(struct device *device)
+static int madgemc_probe(struct device *device)
 {	
 	static int versionprinted;
 	struct net_device *dev;
@@ -702,7 +702,7 @@ static int madgemc_mcaproc(char *buf, int slot, void *d)
 	return len;
 }
 
-static int __devexit madgemc_remove(struct device *device)
+static int madgemc_remove(struct device *device)
 {
 	struct net_device *dev = dev_get_drvdata(device);
 	struct net_local *tp;

@@ -931,7 +931,7 @@ static void moxa_board_deinit(struct moxa_board_conf *brd)
 }
 
 #ifdef CONFIG_PCI
-static int __devinit moxa_pci_probe(struct pci_dev *pdev,
+static int moxa_pci_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent)
 {
 	struct moxa_board_conf *board;
@@ -1005,7 +1005,7 @@ err:
 	return retval;
 }
 
-static void __devexit moxa_pci_remove(struct pci_dev *pdev)
+static void moxa_pci_remove(struct pci_dev *pdev)
 {
 	struct moxa_board_conf *brd = pci_get_drvdata(pdev);
 

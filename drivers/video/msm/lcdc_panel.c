@@ -24,7 +24,7 @@ static int lcdc_panel_off(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit lcdc_panel_probe(struct platform_device *pdev)
+static int lcdc_panel_probe(struct platform_device *pdev)
 {
 	msm_fb_add_device(pdev);
 

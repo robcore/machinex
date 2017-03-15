@@ -276,7 +276,7 @@ static struct scsi_host_template arxescsi_template = {
 	.proc_name			= "arxescsi",
 };
 
-static int __devinit
+static int
 arxescsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	struct Scsi_Host *host;
@@ -340,7 +340,7 @@ arxescsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit arxescsi_remove(struct expansion_card *ec)
+static void arxescsi_remove(struct expansion_card *ec)
 {
 	struct Scsi_Host *host = ecard_get_drvdata(ec);
 

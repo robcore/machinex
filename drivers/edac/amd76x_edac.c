@@ -301,7 +301,7 @@ fail:
 }
 
 /* returns count (>= 0), or negative on error */
-static int __devinit amd76x_init_one(struct pci_dev *pdev,
+static int amd76x_init_one(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	debugf0("%s()\n", __func__);
@@ -318,7 +318,7 @@ static int __devinit amd76x_init_one(struct pci_dev *pdev,
  *	structure for the device then delete the mci and free the
  *	resources.
  */
-static void __devexit amd76x_remove_one(struct pci_dev *pdev)
+static void amd76x_remove_one(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 

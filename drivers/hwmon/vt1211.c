@@ -1089,7 +1089,7 @@ static struct device_attribute vt1211_sysfs_misc[] = {
  * Device registration and initialization
  * --------------------------------------------------------------------- */
 
-static void __devinit vt1211_init_device(struct vt1211_data *data)
+static void vt1211_init_device(struct vt1211_data *data)
 {
 	/* set VRM */
 	data->vrm = vid_which_vrm();
@@ -1144,7 +1144,7 @@ static void vt1211_remove_sysfs(struct platform_device *pdev)
 		device_remove_file(dev, &vt1211_sysfs_misc[i]);
 }
 
-static int __devinit vt1211_probe(struct platform_device *pdev)
+static int vt1211_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct vt1211_data *data;
@@ -1226,7 +1226,7 @@ EXIT:
 	return err;
 }
 
-static int __devexit vt1211_remove(struct platform_device *pdev)
+static int vt1211_remove(struct platform_device *pdev)
 {
 	struct vt1211_data *data = platform_get_drvdata(pdev);
 	struct resource *res;

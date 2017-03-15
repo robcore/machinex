@@ -70,7 +70,7 @@ static const struct hc_driver exynos_ohci_hc_driver = {
 	.start_port_reset	= ohci_start_port_reset,
 };
 
-static int __devinit exynos_ohci_probe(struct platform_device *pdev)
+static int exynos_ohci_probe(struct platform_device *pdev)
 {
 	struct exynos4_ohci_platdata *pdata;
 	struct exynos_ohci_hcd *exynos_ohci;
@@ -165,7 +165,7 @@ fail_hcd:
 	return err;
 }
 
-static int __devexit exynos_ohci_remove(struct platform_device *pdev)
+static int exynos_ohci_remove(struct platform_device *pdev)
 {
 	struct exynos4_ohci_platdata *pdata = pdev->dev.platform_data;
 	struct exynos_ohci_hcd *exynos_ohci = platform_get_drvdata(pdev);

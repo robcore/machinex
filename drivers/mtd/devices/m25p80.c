@@ -784,7 +784,7 @@ static const struct spi_device_id *__devinit jedec_probe(struct spi_device *spi)
  * matches what the READ command supports, at least until this driver
  * understands FAST_READ (for clocks over 25 MHz).
  */
-static int __devinit m25p_probe(struct spi_device *spi)
+static int m25p_probe(struct spi_device *spi)
 {
 	const struct spi_device_id	*id = spi_get_device_id(spi);
 	struct flash_platform_data	*data;
@@ -943,7 +943,7 @@ static int __devinit m25p_probe(struct spi_device *spi)
 }
 
 
-static int __devexit m25p_remove(struct spi_device *spi)
+static int m25p_remove(struct spi_device *spi)
 {
 	struct m25p	*flash = dev_get_drvdata(&spi->dev);
 

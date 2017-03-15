@@ -980,7 +980,7 @@ unlock:
 	return NOTIFY_DONE;
 }
 
-static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
+static int exynos4_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
 	struct opp *opp;
@@ -1071,7 +1071,7 @@ err_regulator:
 	return err;
 }
 
-static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
+static int exynos4_busfreq_remove(struct platform_device *pdev)
 {
 	struct busfreq_data *data = platform_get_drvdata(pdev);
 

@@ -1166,7 +1166,7 @@ static int rpm_vreg_resource_remove(struct platform_device *pdev)
  * properties which are required to configure individual regulator
  * framework regulators for a given RPM regulator resource.
  */
-static int __devinit rpm_vreg_device_probe(struct platform_device *pdev)
+static int rpm_vreg_device_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->of_node;
@@ -1339,7 +1339,7 @@ fail_free_reg:
  * This probe is called for parent rpm-regulator devices which have
  * properties which are required to identify a given RPM resource.
  */
-static int __devinit rpm_vreg_resource_probe(struct platform_device *pdev)
+static int rpm_vreg_resource_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->of_node;

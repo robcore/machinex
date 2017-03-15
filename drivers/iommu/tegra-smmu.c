@@ -1015,7 +1015,7 @@ static struct platform_driver tegra_smmu_driver = {
 	},
 };
 
-static int __devinit tegra_smmu_init(void)
+static int tegra_smmu_init(void)
 {
 	bus_set_iommu(&platform_bus_type, &smmu_iommu_ops);
 	return platform_driver_register(&tegra_smmu_driver);

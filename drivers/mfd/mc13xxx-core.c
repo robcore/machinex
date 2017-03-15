@@ -838,7 +838,7 @@ err_revision:
 	return 0;
 }
 
-static int __devexit mc13xxx_remove(struct spi_device *spi)
+static int mc13xxx_remove(struct spi_device *spi)
 {
 	struct mc13xxx *mc13xxx = dev_get_drvdata(&spi->dev);
 

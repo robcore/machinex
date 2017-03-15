@@ -196,11 +196,11 @@ Tips on when/where to use the above attributes:
 
 	o Do not mark the struct pci_driver.
 
-	o The ID table array should be marked __devinitconst; this is done
+	o The ID table array should be marked; this is done
 	  automatically if the table is declared with DEFINE_PCI_DEVICE_TABLE().
 
-	o The probe() and remove() functions should be marked __devinit
-	  and __devexit respectively.  All initialization functions
+	o The probe() and remove() functions should be marked
+	  and respectively.  All initialization functions
 	  exclusively called by the probe() routine, can be marked __devinit.
 	  Ditto for remove() and __devexit.
 

@@ -187,7 +187,7 @@ static void mcs5000_ts_phys_init(struct mcs5000_ts_data *data)
 			OP_MODE_ACTIVE | REPORT_RATE_80);
 }
 
-static int __devinit mcs5000_ts_probe(struct i2c_client *client,
+static int mcs5000_ts_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct mcs5000_ts_data *data;
@@ -249,7 +249,7 @@ err_free_mem:
 	return ret;
 }
 
-static int __devexit mcs5000_ts_remove(struct i2c_client *client)
+static int mcs5000_ts_remove(struct i2c_client *client)
 {
 	struct mcs5000_ts_data *data = i2c_get_clientdata(client);
 

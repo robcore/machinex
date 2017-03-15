@@ -1281,13 +1281,13 @@ static unsigned int get_ao_divisor(unsigned int ns, unsigned int flags);
 static void load_ao_dma(struct comedi_device *dev,
 			const struct comedi_cmd *cmd);
 
-static int __devinit driver_cb_pcidas_pci_probe(struct pci_dev *dev,
+static int driver_cb_pcidas_pci_probe(struct pci_dev *dev,
 						const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_cb_pcidas.driver_name);
 }
 
-static void __devexit driver_cb_pcidas_pci_remove(struct pci_dev *dev)
+static void driver_cb_pcidas_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

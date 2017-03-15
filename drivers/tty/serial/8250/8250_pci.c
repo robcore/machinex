@@ -287,7 +287,7 @@ static int pci_plx9050_init(struct pci_dev *dev)
 	return 0;
 }
 
-static void __devexit pci_plx9050_exit(struct pci_dev *dev)
+static void pci_plx9050_exit(struct pci_dev *dev)
 {
 	u8 __iomem *p;
 
@@ -312,7 +312,7 @@ static void __devexit pci_plx9050_exit(struct pci_dev *dev)
 #define NI8420_INT_ENABLE_REG	0x38
 #define NI8420_INT_ENABLE_BIT	0x2000
 
-static void __devexit pci_ni8420_exit(struct pci_dev *dev)
+static void pci_ni8420_exit(struct pci_dev *dev)
 {
 	void __iomem *p;
 	unsigned long base, len;
@@ -344,7 +344,7 @@ static void __devexit pci_ni8420_exit(struct pci_dev *dev)
 
 #define MITE_LCIMR2_CLR_CPU_IE	(1 << 30)
 
-static void __devexit pci_ni8430_exit(struct pci_dev *dev)
+static void pci_ni8430_exit(struct pci_dev *dev)
 {
 	void __iomem *p;
 	unsigned long base, len;
@@ -421,7 +421,7 @@ static int sbs_init(struct pci_dev *dev)
  * Disables the global interrupt of PMC-OctalPro
  */
 
-static void __devexit sbs_exit(struct pci_dev *dev)
+static void sbs_exit(struct pci_dev *dev)
 {
 	u8 __iomem *p;
 
@@ -990,7 +990,7 @@ static int pci_ite887x_init(struct pci_dev *dev)
 	return ret;
 }
 
-static void __devexit pci_ite887x_exit(struct pci_dev *dev)
+static void pci_ite887x_exit(struct pci_dev *dev)
 {
 	u32 ioport;
 	/* the ioport is bit 0-15 in POSIO0R */
@@ -1918,7 +1918,7 @@ enum pci_board_num_t {
  * see first lines of serial_in() and serial_out() in 8250.c
 */
 
-static struct pciserial_board pci_boards[] __devinitdata = {
+static struct pciserial_board pci_boards[] = {
 	[pbn_default] = {
 		.flags		= FL_BASE0,
 		.num_ports	= 1,
@@ -2637,7 +2637,7 @@ static const struct pci_device_id softmodem_blacklist[] = {
  * guess what the configuration might be, based on the pitiful PCI
  * serial specs.  Returns 0 on success, 1 on failure.
  */
-static int __devinit
+static int
 serial_pci_guess_board(struct pci_dev *dev, struct pciserial_board *board)
 {
 	const struct pci_device_id *blacklist;
@@ -2857,7 +2857,7 @@ EXPORT_SYMBOL_GPL(pciserial_resume_ports);
  * Probe one serial board.  Unfortunately, there is no rhyme nor reason
  * to the arrangement of serial ports on a PCI card.
  */
-static int __devinit
+static int
 pciserial_init_one(struct pci_dev *dev, const struct pci_device_id *ent)
 {
 	struct pci_serial_quirk *quirk;
@@ -2928,7 +2928,7 @@ pciserial_init_one(struct pci_dev *dev, const struct pci_device_id *ent)
 	return rc;
 }
 
-static void __devexit pciserial_remove_one(struct pci_dev *dev)
+static void pciserial_remove_one(struct pci_dev *dev)
 {
 	struct serial_private *priv = pci_get_drvdata(dev);
 

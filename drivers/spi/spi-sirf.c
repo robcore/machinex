@@ -479,7 +479,7 @@ static int spi_sirfsoc_setup(struct spi_device *spi)
 	return spi_sirfsoc_setup_transfer(spi, NULL);
 }
 
-static int __devinit spi_sirfsoc_probe(struct platform_device *pdev)
+static int spi_sirfsoc_probe(struct platform_device *pdev)
 {
 	struct sirfsoc_spi *sspi;
 	struct spi_master *master;
@@ -607,7 +607,7 @@ err_cs:
 	return ret;
 }
 
-static int  __devexit spi_sirfsoc_remove(struct platform_device *pdev)
+static int  spi_sirfsoc_remove(struct platform_device *pdev)
 {
 	struct spi_master *master;
 	struct sirfsoc_spi *sspi;

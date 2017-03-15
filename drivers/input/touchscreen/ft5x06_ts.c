@@ -589,7 +589,7 @@ free_mem:
 	return err;
 }
 
-static int __devexit ft5x06_ts_remove(struct i2c_client *client)
+static int ft5x06_ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts_data *data = i2c_get_clientdata(client);
 

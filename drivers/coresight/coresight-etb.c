@@ -353,7 +353,7 @@ static const struct attribute_group *etb_attr_grps[] = {
 	NULL,
 };
 
-static int __devinit etb_probe(struct platform_device *pdev)
+static int etb_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
@@ -427,7 +427,7 @@ err:
 	return ret;
 }
 
-static int __devexit etb_remove(struct platform_device *pdev)
+static int etb_remove(struct platform_device *pdev)
 {
 	struct etb_drvdata *drvdata = platform_get_drvdata(pdev);
 

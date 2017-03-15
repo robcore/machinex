@@ -68,7 +68,7 @@ static struct scsi_host_template dmx3191d_driver_template = {
 	.use_clustering		= DISABLE_CLUSTERING,
 };
 
-static int __devinit dmx3191d_probe_one(struct pci_dev *pdev,
+static int dmx3191d_probe_one(struct pci_dev *pdev,
 		const struct pci_device_id *id)
 {
 	struct Scsi_Host *shost;
@@ -123,7 +123,7 @@ static int __devinit dmx3191d_probe_one(struct pci_dev *pdev,
 	return error;
 }
 
-static void __devexit dmx3191d_remove_one(struct pci_dev *pdev)
+static void dmx3191d_remove_one(struct pci_dev *pdev)
 {
 	struct Scsi_Host *shost = pci_get_drvdata(pdev);
 

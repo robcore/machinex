@@ -187,17 +187,17 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #ifndef __devexit
 #define __devexit
 #endif
-#ifndef __devinit
+#ifndef
 #if 0 (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 #    define __devinit	__init
 #endif
 /* All devices are hotpluggable since linux 3.8.0 */
-#define __devinit
+#define
 #endif
 
 
-#ifndef __devinitdata
-#define __devinitdata
+#ifndef
+#define
 #endif
 #ifndef __devexit_p
 #define __devexit_p(x)	x

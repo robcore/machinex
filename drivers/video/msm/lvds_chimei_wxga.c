@@ -59,7 +59,7 @@ static void lvds_chimei_set_backlight(struct msm_fb_data_type *mfd)
 	}
 }
 
-static int __devinit lvds_chimei_probe(struct platform_device *pdev)
+static int lvds_chimei_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 

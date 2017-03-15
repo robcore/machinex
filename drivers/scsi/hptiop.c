@@ -953,7 +953,7 @@ static int hptiop_internal_memfree_mv(struct hptiop_hba *hba)
 		return -1;
 }
 
-static int __devinit hptiop_probe(struct pci_dev *pcidev,
+static int hptiop_probe(struct pci_dev *pcidev,
 					const struct pci_device_id *id)
 {
 	struct Scsi_Host *host = NULL;

@@ -358,7 +358,7 @@ static irqreturn_t xenfb_event_handler(int rq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit xenfb_probe(struct xenbus_device *dev,
+static int xenfb_probe(struct xenbus_device *dev,
 				 const struct xenbus_device_id *id)
 {
 	struct xenfb_info *info;
@@ -487,7 +487,7 @@ error:
 	return ret;
 }
 
-static __devinit void
+static void
 xenfb_make_preferred_console(void)
 {
 	struct console *c;

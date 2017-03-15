@@ -1947,7 +1947,7 @@ err_mem_alloc:
 
 }
 
-static int __devexit cypress_touchkey_remove(struct i2c_client *client)
+static int cypress_touchkey_remove(struct i2c_client *client)
 {
 	struct cypress_touchkey_info *info = i2c_get_clientdata(client);
 	if (info->irq >= 0)

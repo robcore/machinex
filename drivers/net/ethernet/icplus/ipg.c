@@ -2167,7 +2167,7 @@ static const struct ethtool_ops ipg_ethtool_ops = {
 	.nway_reset   = ipg_nway_reset,
 };
 
-static void __devexit ipg_remove(struct pci_dev *pdev)
+static void ipg_remove(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct ipg_nic_private *sp = netdev_priv(dev);
@@ -2199,7 +2199,7 @@ static const struct net_device_ops ipg_netdev_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 };
 
-static int __devinit ipg_probe(struct pci_dev *pdev,
+static int ipg_probe(struct pci_dev *pdev,
 			       const struct pci_device_id *id)
 {
 	unsigned int i = id->driver_data;

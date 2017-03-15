@@ -302,7 +302,7 @@ static irqreturn_t spi_attn_isr(int irq, void *info)
  */
 static int sensor_count;
 
-static int __devinit rmi_spi_probe(struct spi_device *spi)
+static int rmi_spi_probe(struct spi_device *spi)
 {
 	struct spi_device_instance_data *instance_data;
 	int retval;
@@ -492,7 +492,7 @@ static int rmi_spi_resume(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit rmi_spi_remove(struct spi_device *spi)
+static int rmi_spi_remove(struct spi_device *spi)
 {
 	struct spi_device_instance_data *id = spi_get_drvdata(spi);
 

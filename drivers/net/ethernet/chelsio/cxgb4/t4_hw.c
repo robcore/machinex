@@ -1715,7 +1715,7 @@ void t4_read_mtu_tbl(struct adapter *adap, u16 *mtus, u8 *mtu_log)
  *
  *	Initialize the congestion control parameters.
  */
-static void __devinit init_cong_ctrl(unsigned short *a, unsigned short *b)
+static void init_cong_ctrl(unsigned short *a, unsigned short *b)
 {
 	a[0] = a[1] = a[2] = a[3] = a[4] = a[5] = a[6] = a[7] = a[8] = 1;
 	a[9] = 2;
@@ -2681,7 +2681,7 @@ int t4_handle_fw_rpl(struct adapter *adap, const __be64 *rpl)
 	return 0;
 }
 
-static void __devinit get_pci_mode(struct adapter *adapter,
+static void get_pci_mode(struct adapter *adapter,
 				   struct pci_params *p)
 {
 	u16 val;
@@ -2703,7 +2703,7 @@ static void __devinit get_pci_mode(struct adapter *adapter,
  *	Initializes the SW state maintained for each link, including the link's
  *	capabilities and default speed/flow-control/autonegotiation settings.
  */
-static void __devinit init_link_config(struct link_config *lc,
+static void init_link_config(struct link_config *lc,
 				       unsigned int caps)
 {
 	lc->supported = caps;
@@ -2728,7 +2728,7 @@ int t4_wait_dev_ready(struct adapter *adap)
 	return t4_read_reg(adap, PL_WHOAMI) != 0xffffffff ? 0 : -EIO;
 }
 
-static int __devinit get_flash_params(struct adapter *adap)
+static int get_flash_params(struct adapter *adap)
 {
 	int ret;
 	u32 info;
@@ -2764,7 +2764,7 @@ static int __devinit get_flash_params(struct adapter *adap)
  *	values for some adapter tunables, take PHYs out of reset, and
  *	initialize the MDIO interface.
  */
-int __devinit t4_prep_adapter(struct adapter *adapter)
+int t4_prep_adapter(struct adapter *adapter)
 {
 	int ret;
 
@@ -2795,7 +2795,7 @@ int __devinit t4_prep_adapter(struct adapter *adapter)
 	return 0;
 }
 
-int __devinit t4_port_init(struct adapter *adap, int mbox, int pf, int vf)
+int t4_port_init(struct adapter *adap, int mbox, int pf, int vf)
 {
 	u8 addr[6];
 	int ret, i, j = 0;

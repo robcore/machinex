@@ -269,7 +269,7 @@ static const struct regmap_config tps62360_regmap_config = {
 	.val_bits = 8,
 };
 
-static int __devinit tps62360_probe(struct i2c_client *client,
+static int tps62360_probe(struct i2c_client *client,
 				     const struct i2c_device_id *id)
 {
 	struct tps62360_regulator_platform_data *pdata;

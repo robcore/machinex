@@ -274,7 +274,7 @@ static struct miscdevice ar7_wdt_miscdev = {
 	.fops		= &ar7_wdt_fops,
 };
 
-static int __devinit ar7_wdt_probe(struct platform_device *pdev)
+static int ar7_wdt_probe(struct platform_device *pdev)
 {
 	int rc;
 
@@ -326,7 +326,7 @@ out:
 	return rc;
 }
 
-static int __devexit ar7_wdt_remove(struct platform_device *pdev)
+static int ar7_wdt_remove(struct platform_device *pdev)
 {
 	misc_deregister(&ar7_wdt_miscdev);
 	iounmap(ar7_wdt);

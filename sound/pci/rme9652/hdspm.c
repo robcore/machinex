@@ -962,9 +962,9 @@ static DEFINE_PCI_DEVICE_TABLE(snd_hdspm_ids) = {
 MODULE_DEVICE_TABLE(pci, snd_hdspm_ids);
 
 /* prototypes */
-static int __devinit snd_hdspm_create_alsa_devices(struct snd_card *card,
+static int snd_hdspm_create_alsa_devices(struct snd_card *card,
 						   struct hdspm * hdspm);
-static int __devinit snd_hdspm_create_pcm(struct snd_card *card,
+static int snd_hdspm_create_pcm(struct snd_card *card,
 					  struct hdspm * hdspm);
 
 static inline void snd_hdspm_initialize_midi_flush(struct hdspm *hdspm);
@@ -1844,7 +1844,7 @@ static struct snd_rawmidi_ops snd_hdspm_midi_input =
 	.trigger =	snd_hdspm_midi_input_trigger,
 };
 
-static int __devinit snd_hdspm_create_midi (struct snd_card *card,
+static int snd_hdspm_create_midi (struct snd_card *card,
 					    struct hdspm *hdspm, int id)
 {
 	int err;
@@ -5181,7 +5181,7 @@ static void snd_hdspm_proc_ports_out(struct snd_info_entry *entry,
 }
 
 
-static void __devinit snd_hdspm_proc_init(struct hdspm *hdspm)
+static void snd_hdspm_proc_init(struct hdspm *hdspm)
 {
 	struct snd_info_entry *entry;
 
@@ -6323,7 +6323,7 @@ static struct snd_pcm_ops snd_hdspm_capture_ops = {
 	.page = snd_pcm_sgbuf_ops_page,
 };
 
-static int __devinit snd_hdspm_create_hwdep(struct snd_card *card,
+static int snd_hdspm_create_hwdep(struct snd_card *card,
 					    struct hdspm * hdspm)
 {
 	struct snd_hwdep *hw;
@@ -6349,7 +6349,7 @@ static int __devinit snd_hdspm_create_hwdep(struct snd_card *card,
 /*------------------------------------------------------------
    memory interface
  ------------------------------------------------------------*/
-static int __devinit snd_hdspm_preallocate_memory(struct hdspm *hdspm)
+static int snd_hdspm_preallocate_memory(struct hdspm *hdspm)
 {
 	int err;
 	struct snd_pcm *pcm;
@@ -6390,7 +6390,7 @@ static void hdspm_set_sgbuf(struct hdspm *hdspm,
 
 
 /* ------------- ALSA Devices ---------------------------- */
-static int __devinit snd_hdspm_create_pcm(struct snd_card *card,
+static int snd_hdspm_create_pcm(struct snd_card *card,
 					  struct hdspm *hdspm)
 {
 	struct snd_pcm *pcm;
@@ -6426,7 +6426,7 @@ static inline void snd_hdspm_initialize_midi_flush(struct hdspm * hdspm)
 		snd_hdspm_flush_midi_input(hdspm, i);
 }
 
-static int __devinit snd_hdspm_create_alsa_devices(struct snd_card *card,
+static int snd_hdspm_create_alsa_devices(struct snd_card *card,
 						   struct hdspm * hdspm)
 {
 	int err, i;
@@ -6485,7 +6485,7 @@ static int __devinit snd_hdspm_create_alsa_devices(struct snd_card *card,
 	return 0;
 }
 
-static int __devinit snd_hdspm_create(struct snd_card *card,
+static int snd_hdspm_create(struct snd_card *card,
 		struct hdspm *hdspm) {
 
 	struct pci_dev *pci = hdspm->pci;
@@ -6859,7 +6859,7 @@ static void snd_hdspm_card_free(struct snd_card *card)
 }
 
 
-static int __devinit snd_hdspm_probe(struct pci_dev *pci,
+static int snd_hdspm_probe(struct pci_dev *pci,
 				     const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -6918,7 +6918,7 @@ static int __devinit snd_hdspm_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit snd_hdspm_remove(struct pci_dev *pci)
+static void snd_hdspm_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

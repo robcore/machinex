@@ -213,7 +213,7 @@ static int mioa701_wm9713_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit mioa701_wm9713_remove(struct platform_device *pdev)
+static int mioa701_wm9713_remove(struct platform_device *pdev)
 {
 	platform_device_unregister(mioa701_snd_device);
 	return 0;

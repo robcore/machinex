@@ -16,7 +16,7 @@
 #include "dl2k.h"
 #include <linux/dma-mapping.h>
 
-static char version[] __devinitdata =
+static char version[] =
       KERN_INFO DRV_NAME " " DRV_VERSION " " DRV_RELDATE "\n";
 #define MAX_UNITS 8
 static int mtu[MAX_UNITS];
@@ -98,7 +98,7 @@ static const struct net_device_ops netdev_ops = {
 	.ndo_change_mtu		= change_mtu,
 };
 
-static int __devinit
+static int
 rio_probe1 (struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct net_device *dev;

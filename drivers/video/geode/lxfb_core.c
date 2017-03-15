@@ -35,7 +35,7 @@ static int vt_switch;
  * we try to make it something sane - 640x480-60 is sane
  */
 
-static struct fb_videomode geode_modedb[] __devinitdata = {
+static struct fb_videomode geode_modedb[] = {
 	/* 640x480-60 */
 	{ NULL, 60, 640, 480, 39682, 48, 8, 25, 2, 88, 2,
 	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
@@ -219,14 +219,14 @@ static struct fb_videomode geode_modedb[] __devinitdata = {
 #ifdef CONFIG_OLPC
 #include <asm/olpc.h>
 
-static struct fb_videomode olpc_dcon_modedb[] __devinitdata = {
+static struct fb_videomode olpc_dcon_modedb[] = {
 	/* The only mode the DCON has is 1200x900 */
 	{ NULL, 50, 1200, 900, 17460, 24, 8, 4, 5, 8, 3,
 	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	  FB_VMODE_NONINTERLACED, 0 }
 };
 
-static void __devinit get_modedb(struct fb_videomode **modedb,
+static void get_modedb(struct fb_videomode **modedb,
 		unsigned int *size)
 {
 	if (olpc_has_dcon()) {
@@ -239,7 +239,7 @@ static void __devinit get_modedb(struct fb_videomode **modedb,
 }
 
 #else
-static void __devinit get_modedb(struct fb_videomode **modedb,
+static void get_modedb(struct fb_videomode **modedb,
 		unsigned int *size)
 {
 	*modedb = (struct fb_videomode *) geode_modedb;
@@ -336,7 +336,7 @@ static int lxfb_blank(int blank_mode, struct fb_info *info)
 }
 
 
-static int __devinit lxfb_map_video_memory(struct fb_info *info,
+static int lxfb_map_video_memory(struct fb_info *info,
 					struct pci_dev *dev)
 {
 	struct lxfb_par *par = info->par;
@@ -414,7 +414,7 @@ static struct fb_ops lxfb_ops = {
 	.fb_imageblit	= cfb_imageblit,
 };
 
-static struct fb_info * __devinit lxfb_init_fbinfo(struct device *dev)
+static struct fb_info * lxfb_init_fbinfo(struct device *dev)
 {
 	struct lxfb_par *par;
 	struct fb_info *info;
@@ -498,7 +498,7 @@ static int lxfb_resume(struct pci_dev *pdev)
 #define lxfb_resume NULL
 #endif
 
-static int __devinit lxfb_probe(struct pci_dev *pdev,
+static int lxfb_probe(struct pci_dev *pdev,
 			     const struct pci_device_id *id)
 {
 	struct lxfb_par *par;
@@ -590,7 +590,7 @@ err:
 	return ret;
 }
 
-static void __devexit lxfb_remove(struct pci_dev *pdev)
+static void lxfb_remove(struct pci_dev *pdev)
 {
 	struct fb_info *info = pci_get_drvdata(pdev);
 	struct lxfb_par *par = info->par;

@@ -115,7 +115,7 @@ const struct file_operations fops = {
 	.release = user_rc_input_release,
 };
 
-static int __devinit user_rc_input_probe(struct platform_device *pdev)
+static int user_rc_input_probe(struct platform_device *pdev)
 {
 	struct user_rc_input_dev *user_rc_dev;
 	struct rc_dev *rcdev;
@@ -209,7 +209,7 @@ err:
 	return retval;
 }
 
-static int __devexit user_rc_input_remove(struct platform_device *pdev)
+static int user_rc_input_remove(struct platform_device *pdev)
 {
 	struct user_rc_input_dev *user_rc_dev = platform_get_drvdata(pdev);
 

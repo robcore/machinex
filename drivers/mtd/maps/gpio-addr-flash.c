@@ -26,7 +26,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 
-#define pr_devinit(fmt, args...) ({ static const __devinitconst char __fmt[] = fmt; printk(__fmt, ## args); })
+#define pr_devinit(fmt, args...) ({ static const char __fmt[] = fmt; printk(__fmt, ## args); })
 
 #define DRIVER_NAME "gpio-addr-flash"
 #define PFX DRIVER_NAME ": "
@@ -185,7 +185,7 @@ static const char *part_probe_types[] = { "cmdlinepart", "RedBoot", NULL };
  *	...
  * };
  */
-static int __devinit gpio_flash_probe(struct platform_device *pdev)
+static int gpio_flash_probe(struct platform_device *pdev)
 {
 	size_t i, arr_size;
 	struct physmap_flash_data *pdata;
@@ -258,7 +258,7 @@ static int __devinit gpio_flash_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit gpio_flash_remove(struct platform_device *pdev)
+static int gpio_flash_remove(struct platform_device *pdev)
 {
 	struct async_state *state = platform_get_drvdata(pdev);
 	size_t i = 0;

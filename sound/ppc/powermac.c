@@ -51,7 +51,7 @@ static struct platform_device *device;
 /*
  */
 
-static int __devinit snd_pmac_probe(struct platform_device *devptr)
+static int snd_pmac_probe(struct platform_device *devptr)
 {
 	struct snd_card *card;
 	struct snd_pmac *chip;
@@ -136,7 +136,7 @@ __error:
 }
 
 
-static int __devexit snd_pmac_remove(struct platform_device *devptr)
+static int snd_pmac_remove(struct platform_device *devptr)
 {
 	snd_card_free(platform_get_drvdata(devptr));
 	platform_set_drvdata(devptr, NULL);

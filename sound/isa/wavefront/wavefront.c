@@ -98,7 +98,7 @@ static struct pnp_card_device_id snd_wavefront_pnpids[] = {
 
 MODULE_DEVICE_TABLE(pnp_card, snd_wavefront_pnpids);
 
-static int __devinit
+static int
 snd_wavefront_pnp (int dev, snd_wavefront_card_t *acard, struct pnp_card_link *card,
 		   const struct pnp_card_device_id *id)
 {
@@ -231,7 +231,7 @@ static irqreturn_t snd_wavefront_ics2115_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static struct snd_hwdep * __devinit
+static struct snd_hwdep *
 snd_wavefront_new_synth (struct snd_card *card,
 			 int hw_dev,
 			 snd_wavefront_card_t *acard)
@@ -257,7 +257,7 @@ snd_wavefront_new_synth (struct snd_card *card,
 	return wavefront_synth;
 }
 
-static struct snd_hwdep * __devinit
+static struct snd_hwdep *
 snd_wavefront_new_fx (struct snd_card *card,
 		      int hw_dev,
 		      snd_wavefront_card_t *acard,
@@ -361,7 +361,7 @@ static int snd_wavefront_card_new(int dev, struct snd_card **cardp)
 	return 0;
 }
 
-static int __devinit
+static int
 snd_wavefront_probe (struct snd_card *card, int dev)
 {
 	snd_wavefront_card_t *acard = card->private_data;
@@ -541,7 +541,7 @@ snd_wavefront_probe (struct snd_card *card, int dev)
 	return snd_card_register(card);
 }	
 
-static int __devinit snd_wavefront_isa_match(struct device *pdev,
+static int snd_wavefront_isa_match(struct device *pdev,
 					     unsigned int dev)
 {
 	if (!enable[dev])
@@ -561,7 +561,7 @@ static int __devinit snd_wavefront_isa_match(struct device *pdev,
 	return 1;
 }
 
-static int __devinit snd_wavefront_isa_probe(struct device *pdev,
+static int snd_wavefront_isa_probe(struct device *pdev,
 					     unsigned int dev)
 {
 	struct snd_card *card;
@@ -580,7 +580,7 @@ static int __devinit snd_wavefront_isa_probe(struct device *pdev,
 	return 0;
 }
 
-static int __devexit snd_wavefront_isa_remove(struct device *devptr,
+static int snd_wavefront_isa_remove(struct device *devptr,
 					      unsigned int dev)
 {
 	snd_card_free(dev_get_drvdata(devptr));
@@ -602,7 +602,7 @@ static struct isa_driver snd_wavefront_driver = {
 
 
 #ifdef CONFIG_PNP
-static int __devinit snd_wavefront_pnp_detect(struct pnp_card_link *pcard,
+static int snd_wavefront_pnp_detect(struct pnp_card_link *pcard,
 					const struct pnp_card_device_id *pid)
 {
 	static int dev;
@@ -637,7 +637,7 @@ static int __devinit snd_wavefront_pnp_detect(struct pnp_card_link *pcard,
 	return 0;
 }
 
-static void __devexit snd_wavefront_pnp_remove(struct pnp_card_link * pcard)
+static void snd_wavefront_pnp_remove(struct pnp_card_link * pcard)
 {
 	snd_card_free(pnp_get_card_drvdata(pcard));
 	pnp_set_card_drvdata(pcard, NULL);

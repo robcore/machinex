@@ -29,7 +29,7 @@
 #include "stmmac.h"
 
 #ifdef CONFIG_OF
-static int __devinit stmmac_probe_config_dt(struct platform_device *pdev,
+static int stmmac_probe_config_dt(struct platform_device *pdev,
 					    struct plat_stmmacenet_data *plat,
 					    const char **mac)
 {
@@ -58,7 +58,7 @@ static int __devinit stmmac_probe_config_dt(struct platform_device *pdev,
 	return 0;
 }
 #else
-static int __devinit stmmac_probe_config_dt(struct platform_device *pdev,
+static int stmmac_probe_config_dt(struct platform_device *pdev,
 					    struct plat_stmmacenet_data *plat,
 					    const char **mac)
 {

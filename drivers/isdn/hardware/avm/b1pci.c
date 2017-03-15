@@ -299,7 +299,7 @@ static void b1pciv4_remove(struct pci_dev *pdev)
 
 #endif /* CONFIG_ISDN_DRV_AVMB1_B1PCIV4 */
 
-static int __devinit b1pci_pci_probe(struct pci_dev *pdev,
+static int b1pci_pci_probe(struct pci_dev *pdev,
 				     const struct pci_device_id *ent)
 {
 	struct capicardparams param;
@@ -344,7 +344,7 @@ static int __devinit b1pci_pci_probe(struct pci_dev *pdev,
 	return retval;
 }
 
-static void __devexit b1pci_pci_remove(struct pci_dev *pdev)
+static void b1pci_pci_remove(struct pci_dev *pdev)
 {
 #ifdef CONFIG_ISDN_DRV_AVMB1_B1PCIV4
 	avmcard *card = pci_get_drvdata(pdev);

@@ -1779,7 +1779,7 @@ static int cmc624_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit cmc624_i2c_remove(struct i2c_client *client)
+static int cmc624_i2c_remove(struct i2c_client *client)
 {
 	struct cmc624_data *data = i2c_get_clientdata(client);
 

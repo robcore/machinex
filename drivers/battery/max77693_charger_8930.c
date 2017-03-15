@@ -1363,7 +1363,7 @@ static void max77693_chgin_init_work(struct work_struct *work)
 	}
 }
 
-static __devinit int max77693_charger_probe(struct platform_device *pdev)
+static int max77693_charger_probe(struct platform_device *pdev)
 {
 	struct max77693_dev *iodev = dev_get_drvdata(pdev->dev.parent);
 	struct max77693_platform_data *pdata = dev_get_platdata(iodev->dev);

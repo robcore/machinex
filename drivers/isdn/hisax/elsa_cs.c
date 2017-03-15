@@ -72,7 +72,7 @@ typedef struct local_info_t {
 	int			cardnr;
 } local_info_t;
 
-static int __devinit elsa_cs_probe(struct pcmcia_device *link)
+static int elsa_cs_probe(struct pcmcia_device *link)
 {
 	local_info_t *local;
 
@@ -90,7 +90,7 @@ static int __devinit elsa_cs_probe(struct pcmcia_device *link)
 	return elsa_cs_config(link);
 } /* elsa_cs_attach */
 
-static void __devexit elsa_cs_detach(struct pcmcia_device *link)
+static void elsa_cs_detach(struct pcmcia_device *link)
 {
 	local_info_t *info = link->priv;
 
@@ -126,7 +126,7 @@ static int elsa_cs_configcheck(struct pcmcia_device *p_dev, void *priv_data)
 	return -ENODEV;
 }
 
-static int __devinit elsa_cs_config(struct pcmcia_device *link)
+static int elsa_cs_config(struct pcmcia_device *link)
 {
 	int i;
 	IsdnCard_t icard;

@@ -157,7 +157,7 @@ static int bfin_eval_adau1373_probe(struct platform_device *pdev)
 	return snd_soc_register_card(&bfin_eval_adau1373);
 }
 
-static int __devexit bfin_eval_adau1373_remove(struct platform_device *pdev)
+static int bfin_eval_adau1373_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

@@ -537,7 +537,7 @@ static struct attribute_group dcdbas_attr_group = {
 	.attrs = dcdbas_dev_attrs,
 };
 
-static int __devinit dcdbas_probe(struct platform_device *dev)
+static int dcdbas_probe(struct platform_device *dev)
 {
 	int i, error;
 
@@ -575,7 +575,7 @@ static int __devinit dcdbas_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __devexit dcdbas_remove(struct platform_device *dev)
+static int dcdbas_remove(struct platform_device *dev)
 {
 	int i;
 

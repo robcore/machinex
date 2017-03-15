@@ -433,7 +433,7 @@
   /* chip-specific constructor
    * (see "Management of Cards and Components")
    */
-  static int __devinit snd_mychip_create(struct snd_card *card,
+  static int snd_mychip_create(struct snd_card *card,
                                          struct pci_dev *pci,
                                          struct mychip **rchip)
   {
@@ -475,7 +475,7 @@
   }
 
   /* constructor -- see "Constructor" sub-section */
-  static int __devinit snd_mychip_probe(struct pci_dev *pci,
+  static int snd_mychip_probe(struct pci_dev *pci,
                                const struct pci_device_id *pci_id)
   {
           static int dev;
@@ -526,7 +526,7 @@
   }
 
   /* destructor -- see the "Destructor" sub-section */
-  static void __devexit snd_mychip_remove(struct pci_dev *pci)
+  static void snd_mychip_remove(struct pci_dev *pci)
   {
           snd_card_free(pci_get_drvdata(pci));
           pci_set_drvdata(pci, NULL);
@@ -728,7 +728,7 @@
         <informalexample>
           <programlisting>
 <![CDATA[
-  static void __devexit snd_mychip_remove(struct pci_dev *pci)
+  static void snd_mychip_remove(struct pci_dev *pci)
   {
           snd_card_free(pci_get_drvdata(pci));
           pci_set_drvdata(pci, NULL);
@@ -1120,7 +1120,7 @@
   }
 
   /* chip-specific constructor */
-  static int __devinit snd_mychip_create(struct snd_card *card,
+  static int snd_mychip_create(struct snd_card *card,
                                          struct pci_dev *pci,
                                          struct mychip **rchip)
   {
@@ -1918,7 +1918,7 @@
    */
 
   /* create a pcm device */
-  static int __devinit snd_mychip_new_pcm(struct mychip *chip)
+  static int snd_mychip_new_pcm(struct mychip *chip)
   {
           struct snd_pcm *pcm;
           int err;
@@ -1957,7 +1957,7 @@
         <informalexample>
           <programlisting>
 <![CDATA[
-  static int __devinit snd_mychip_new_pcm(struct mychip *chip)
+  static int snd_mychip_new_pcm(struct mychip *chip)
   {
           struct snd_pcm *pcm;
           int err;
@@ -2124,7 +2124,7 @@
           ....
   }
 
-  static int __devinit snd_mychip_new_pcm(struct mychip *chip)
+  static int snd_mychip_new_pcm(struct mychip *chip)
   {
           struct snd_pcm *pcm;
           ....
@@ -3399,7 +3399,7 @@ struct _snd_pcm_runtime {
 	  <title>Definition of a Control</title>
           <programlisting>
 <![CDATA[
-  static struct snd_kcontrol_new my_control __devinitdata = {
+  static struct snd_kcontrol_new my_control = {
           .iface = SNDRV_CTL_ELEM_IFACE_MIXER,
           .name = "PCM Playback Switch",
           .index = 0,
@@ -3896,7 +3896,7 @@ struct _snd_pcm_runtime {
 <![CDATA[
   static DECLARE_TLV_DB_SCALE(db_scale_my_control, -4050, 150, 0);
 
-  static struct snd_kcontrol_new my_control __devinitdata = {
+  static struct snd_kcontrol_new my_control = {
           ...
           .access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
                     SNDRV_CTL_ELEM_ACCESS_TLV_READ,
@@ -5761,7 +5761,7 @@ struct _snd_pcm_runtime {
       <informalexample>
         <programlisting>
 <![CDATA[
-  static int __devinit snd_mychip_probe(struct pci_dev *pci,
+  static int snd_mychip_probe(struct pci_dev *pci,
                                const struct pci_device_id *pci_id)
   {
           ....
@@ -5787,7 +5787,7 @@ struct _snd_pcm_runtime {
       <informalexample>
         <programlisting>
 <![CDATA[
-  static int __devinit snd_mychip_probe(struct pci_dev *pci,
+  static int snd_mychip_probe(struct pci_dev *pci,
                                const struct pci_device_id *pci_id)
   {
           ....

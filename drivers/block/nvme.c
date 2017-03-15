@@ -942,7 +942,7 @@ static int queue_request_irq(struct nvme_dev *dev, struct nvme_queue *nvmeq,
 				IRQF_DISABLED | IRQF_SHARED, name, nvmeq);
 }
 
-static __devinit struct nvme_queue *nvme_create_queue(struct nvme_dev *dev,
+static struct nvme_queue *nvme_create_queue(struct nvme_dev *dev,
 					int qid, int cq_size, int vector)
 {
 	int result;
@@ -978,7 +978,7 @@ static __devinit struct nvme_queue *nvme_create_queue(struct nvme_dev *dev,
 	return ERR_PTR(result);
 }
 
-static int __devinit nvme_configure_admin_queue(struct nvme_dev *dev)
+static int nvme_configure_admin_queue(struct nvme_dev *dev)
 {
 	int result = 0;
 	u32 aqa;
@@ -1391,7 +1391,7 @@ static int set_queue_count(struct nvme_dev *dev, int count)
 	return min(result & 0xffff, result >> 16) + 1;
 }
 
-static int __devinit nvme_setup_io_queues(struct nvme_dev *dev)
+static int nvme_setup_io_queues(struct nvme_dev *dev)
 {
 	int result, cpu, i, nr_io_queues, db_bar_size;
 
@@ -1463,7 +1463,7 @@ static void nvme_free_queues(struct nvme_dev *dev)
 		nvme_free_queue(dev, i);
 }
 
-static int __devinit nvme_dev_add(struct nvme_dev *dev)
+static int nvme_dev_add(struct nvme_dev *dev)
 {
 	int res, nn, i;
 	struct nvme_ns *ns, *next;
@@ -1581,7 +1581,7 @@ static void nvme_release_instance(struct nvme_dev *dev)
 {
 }
 
-static int __devinit nvme_probe(struct pci_dev *pdev,
+static int nvme_probe(struct pci_dev *pdev,
 						const struct pci_device_id *id)
 {
 	int bars, result = -ENOMEM;

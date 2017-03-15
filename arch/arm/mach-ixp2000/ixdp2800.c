@@ -141,7 +141,7 @@ void __init ixdp2800_pci_preinit(void)
  * of the regular PCI window, because there's only 512M of outbound PCI
  * memory window on each IXP, while we need 1G for each of the BARs.
  */
-static void __devinit ixp2800_pci_fixup(struct pci_dev *dev)
+static void ixp2800_pci_fixup(struct pci_dev *dev)
 {
 	if (machine_is_ixdp2800()) {
 		dev->resource[2].start = 0;

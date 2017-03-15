@@ -86,7 +86,7 @@ static int tps65023_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit tps65023_remove(struct i2c_client *client)
+static int tps65023_remove(struct i2c_client *client)
 {
 	tpsclient = NULL;
 	return 0;

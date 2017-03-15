@@ -48,7 +48,7 @@
 /* ---- External Function Prototypes ------------------------------------- */
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */
-static const __devinitconst char gBanner[] = KERN_INFO \
+static const char gBanner[] = KERN_INFO \
 	"BCM UMI MTD NAND Driver: 1.00\n";
 
 #if NAND_ECC_BCH
@@ -353,7 +353,7 @@ static int bcm_umi_nand_verify_buf(struct mtd_info *mtd, const u_char * buf,
 	return 0;
 }
 
-static int __devinit bcm_umi_nand_probe(struct platform_device *pdev)
+static int bcm_umi_nand_probe(struct platform_device *pdev)
 {
 	struct nand_chip *this;
 	struct resource *r;

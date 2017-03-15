@@ -385,7 +385,7 @@ void pm_gpio_dbg_showall(unsigned int level)
 	}
 }
 
-static int __devinit pm_gpio_probe(struct platform_device *pdev)
+static int pm_gpio_probe(struct platform_device *pdev)
 {
 	int ret;
 	const struct pm8xxx_gpio_platform_data *pdata = pdev->dev.platform_data;

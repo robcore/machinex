@@ -198,7 +198,7 @@ static const struct attribute_group kxsd9_attribute_group = {
 	.attrs = kxsd9_attributes,
 };
 
-static int __devinit kxsd9_power_up(struct kxsd9_state *st)
+static int kxsd9_power_up(struct kxsd9_state *st)
 {
 	int ret;
 
@@ -220,7 +220,7 @@ static const struct iio_info kxsd9_info = {
 	.driver_module = THIS_MODULE,
 };
 
-static int __devinit kxsd9_probe(struct spi_device *spi)
+static int kxsd9_probe(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev;
 	struct kxsd9_state *st;
@@ -259,7 +259,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit kxsd9_remove(struct spi_device *spi)
+static int kxsd9_remove(struct spi_device *spi)
 {
 	iio_device_unregister(spi_get_drvdata(spi));
 	iio_free_device(spi_get_drvdata(spi));

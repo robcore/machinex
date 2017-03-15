@@ -293,7 +293,7 @@ int vibetonz_clk_off(struct device *dev)
 }
 #endif	/* VIBE_ENABLE_SYSTEM_TIMER */
 
-static __devinit int tspdrv_probe(struct platform_device *pdev)
+static int tspdrv_probe(struct platform_device *pdev)
 {
 	struct vibrator_platform_data *pdata;
 	int ret = 0, i;   /* initialized below */
@@ -385,7 +385,7 @@ fail:
 	return ret;
 }
 
-static int __devexit tspdrv_remove(struct platform_device *pdev)
+static int tspdrv_remove(struct platform_device *pdev)
 {
 	DbgOut((KERN_INFO "tspdrv: tspdrv_remove.\n"));
 

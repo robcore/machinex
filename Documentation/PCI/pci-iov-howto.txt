@@ -53,7 +53,7 @@ To notify SR-IOV core of Virtual Function Migration:
 
 Following piece of code illustrates the usage of the SR-IOV API.
 
-static int __devinit dev_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int dev_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	pci_enable_sriov(dev, NR_VIRTFN);
 
@@ -62,7 +62,7 @@ static int __devinit dev_probe(struct pci_dev *dev, const struct pci_device_id *
 	return 0;
 }
 
-static void __devexit dev_remove(struct pci_dev *dev)
+static void dev_remove(struct pci_dev *dev)
 {
 	pci_disable_sriov(dev);
 

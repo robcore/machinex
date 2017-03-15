@@ -582,7 +582,7 @@ failure:
 	return ret;
 }
 
-static void __devexit fintek_remove(struct pnp_dev *pdev)
+static void fintek_remove(struct pnp_dev *pdev)
 {
 	struct fintek_dev *fintek = pnp_get_drvdata(pdev);
 	unsigned long flags;

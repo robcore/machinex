@@ -527,7 +527,7 @@ static const struct iio_info isl29108_info = {
 	.write_raw = &isl29018_write_raw,
 };
 
-static int __devinit isl29018_probe(struct i2c_client *client,
+static int isl29018_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct isl29018_chip *chip;
@@ -574,7 +574,7 @@ exit:
 	return err;
 }
 
-static int __devexit isl29018_remove(struct i2c_client *client)
+static int isl29018_remove(struct i2c_client *client)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 

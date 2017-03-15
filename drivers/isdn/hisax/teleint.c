@@ -259,7 +259,7 @@ TeleInt_card_msg(struct IsdnCardState *cs, int mt, void *arg)
 	return (0);
 }
 
-int __devinit
+int
 setup_TeleInt(struct IsdnCard *card)
 {
 	struct IsdnCardState *cs = card->cs;

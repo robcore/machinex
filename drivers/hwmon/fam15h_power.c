@@ -113,7 +113,7 @@ static const struct attribute_group fam15h_power_attr_group = {
 	.attrs	= fam15h_power_attrs,
 };
 
-static bool __devinit fam15h_power_is_internal_node0(struct pci_dev *f4)
+static bool fam15h_power_is_internal_node0(struct pci_dev *f4)
 {
 	u32 val;
 
@@ -170,7 +170,7 @@ static int fam15h_power_resume(struct pci_dev *pdev)
 #define fam15h_power_resume NULL
 #endif
 
-static void __devinit fam15h_power_init_data(struct pci_dev *f4,
+static void fam15h_power_init_data(struct pci_dev *f4,
 					     struct fam15h_power_data *data)
 {
 	u32 val;
@@ -196,7 +196,7 @@ static void __devinit fam15h_power_init_data(struct pci_dev *f4,
 	data->processor_pwr_watts = (tmp * 15625) >> 10;
 }
 
-static int __devinit fam15h_power_probe(struct pci_dev *pdev,
+static int fam15h_power_probe(struct pci_dev *pdev,
 					const struct pci_device_id *id)
 {
 	struct fam15h_power_data *data;
@@ -244,7 +244,7 @@ exit:
 	return err;
 }
 
-static void __devexit fam15h_power_remove(struct pci_dev *pdev)
+static void fam15h_power_remove(struct pci_dev *pdev)
 {
 	struct device *dev;
 	struct fam15h_power_data *data;

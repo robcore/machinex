@@ -223,7 +223,7 @@ static struct miscdevice ks8695wdt_miscdev = {
 	.fops		= &ks8695wdt_fops,
 };
 
-static int __devinit ks8695wdt_probe(struct platform_device *pdev)
+static int ks8695wdt_probe(struct platform_device *pdev)
 {
 	int res;
 
@@ -240,7 +240,7 @@ static int __devinit ks8695wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit ks8695wdt_remove(struct platform_device *pdev)
+static int ks8695wdt_remove(struct platform_device *pdev)
 {
 	int res;
 

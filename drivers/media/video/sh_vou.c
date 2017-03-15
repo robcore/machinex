@@ -1305,7 +1305,7 @@ static const struct video_device sh_vou_video_template = {
 	.current_norm	= V4L2_STD_NTSC_M,
 };
 
-static int __devinit sh_vou_probe(struct platform_device *pdev)
+static int sh_vou_probe(struct platform_device *pdev)
 {
 	struct sh_vou_pdata *vou_pdata = pdev->dev.platform_data;
 	struct v4l2_rect *rect;
@@ -1440,7 +1440,7 @@ ereqmemreg:
 	return ret;
 }
 
-static int __devexit sh_vou_remove(struct platform_device *pdev)
+static int sh_vou_remove(struct platform_device *pdev)
 {
 	int irq = platform_get_irq(pdev, 0);
 	struct v4l2_device *v4l2_dev = platform_get_drvdata(pdev);

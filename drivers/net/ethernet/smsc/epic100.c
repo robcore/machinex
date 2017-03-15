@@ -90,9 +90,9 @@ static int rx_copybreak;
 #include <asm/byteorder.h>
 
 /* These identify the driver base version and may not be removed. */
-static char version[] __devinitdata =
+static char version[] =
 DRV_NAME ".c:v1.11 1/7/2001 Written by Donald Becker <becker@scyld.com>\n";
-static char version2[] __devinitdata =
+static char version2[] =
 "  (unofficial 2.4.x kernel port, version " DRV_VERSION ", " DRV_RELDATE ")\n";
 
 MODULE_AUTHOR("Donald Becker <becker@scyld.com>");
@@ -321,7 +321,7 @@ static const struct net_device_ops epic_netdev_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 };
 
-static int __devinit epic_init_one (struct pci_dev *pdev,
+static int epic_init_one (struct pci_dev *pdev,
 				    const struct pci_device_id *ent)
 {
 	static int card_idx = -1;
@@ -580,7 +580,7 @@ static inline void epic_napi_irq_on(struct net_device *dev,
 	outl(ep->irq_mask | EpicNapiEvent, ioaddr + INTMASK);
 }
 
-static int __devinit read_eeprom(long ioaddr, int location)
+static int read_eeprom(long ioaddr, int location)
 {
 	int i;
 	int retval = 0;
@@ -1524,7 +1524,7 @@ static int netdev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 }
 
 
-static void __devexit epic_remove_one (struct pci_dev *pdev)
+static void epic_remove_one (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct epic_private *ep = netdev_priv(dev);

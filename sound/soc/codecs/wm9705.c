@@ -384,13 +384,13 @@ static struct snd_soc_codec_driver soc_codec_dev_wm9705 = {
 	.num_dapm_routes = ARRAY_SIZE(wm9705_audio_map),
 };
 
-static __devinit int wm9705_probe(struct platform_device *pdev)
+static int wm9705_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_wm9705, wm9705_dai, ARRAY_SIZE(wm9705_dai));
 }
 
-static int __devexit wm9705_remove(struct platform_device *pdev)
+static int wm9705_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;

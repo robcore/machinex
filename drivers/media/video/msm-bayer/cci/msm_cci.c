@@ -621,7 +621,7 @@ static void msm_cci_initialize_cci_params(struct cci_device *new_cci_dev)
 	return;
 }
 
-static int __devinit msm_cci_probe(struct platform_device *pdev)
+static int msm_cci_probe(struct platform_device *pdev)
 {
 	struct cci_device *new_cci_dev;
 	int rc = 0;

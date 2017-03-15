@@ -204,7 +204,7 @@ static struct miscdevice mtx1_wdt_misc = {
 };
 
 
-static int __devinit mtx1_wdt_probe(struct platform_device *pdev)
+static int mtx1_wdt_probe(struct platform_device *pdev)
 {
 	int ret;
 
@@ -233,7 +233,7 @@ static int __devinit mtx1_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit mtx1_wdt_remove(struct platform_device *pdev)
+static int mtx1_wdt_remove(struct platform_device *pdev)
 {
 	/* FIXME: do we need to lock this test ? */
 	if (mtx1_wdt_device.queue) {

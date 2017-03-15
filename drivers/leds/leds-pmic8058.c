@@ -387,7 +387,7 @@ fail_id_check:
 	return rc;
 }
 
-static int __devexit pmic8058_led_remove(struct platform_device *pdev)
+static int pmic8058_led_remove(struct platform_device *pdev)
 {
 	int i;
 	struct pmic8058_leds_platform_data *pdata = pdev->dev.platform_data;

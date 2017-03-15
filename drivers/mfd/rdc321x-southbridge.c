@@ -72,7 +72,7 @@ static struct mfd_cell rdc321x_sb_cells[] = {
 	},
 };
 
-static int __devinit rdc321x_sb_probe(struct pci_dev *pdev,
+static int rdc321x_sb_probe(struct pci_dev *pdev,
 					const struct pci_device_id *ent)
 {
 	int err;
@@ -90,7 +90,7 @@ static int __devinit rdc321x_sb_probe(struct pci_dev *pdev,
 		rdc321x_sb_cells, ARRAY_SIZE(rdc321x_sb_cells), NULL, 0);
 }
 
-static void __devexit rdc321x_sb_remove(struct pci_dev *pdev)
+static void rdc321x_sb_remove(struct pci_dev *pdev)
 {
 	mfd_remove_devices(&pdev->dev);
 }

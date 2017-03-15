@@ -891,7 +891,7 @@ static int synaptics_rmi4_i2c_query_device(struct synaptics_rmi4_data *pdata)
  * the rmi4 Physical Device Table and enumerate any rmi4 functions that
  * have data sources associated with them.
  */
-static int __devinit synaptics_rmi4_probe
+static int synaptics_rmi4_probe
 	(struct i2c_client *client, const struct i2c_device_id *dev_id)
 {
 	int retval;
@@ -1032,7 +1032,7 @@ err_input:
  * This function uses to remove the i2c-client
  * touchscreen driver and returns integer.
  */
-static int __devexit synaptics_rmi4_remove(struct i2c_client *client)
+static int synaptics_rmi4_remove(struct i2c_client *client)
 {
 	struct synaptics_rmi4_data *rmi4_data = i2c_get_clientdata(client);
 	const struct synaptics_rmi4_platform_data *pdata = rmi4_data->board;

@@ -2367,7 +2367,7 @@ static int frontend_init(struct av7110 *av7110)
  * The same behaviour of missing VSYNC can be duplicated on budget
  * cards, by seting DD1_INIT trigger mode 7 in 3rd nibble.
  */
-static int __devinit av7110_attach(struct saa7146_dev* dev,
+static int av7110_attach(struct saa7146_dev* dev,
 				   struct saa7146_pci_extension_data *pci_ext)
 {
 	const int length = TS_WIDTH * TS_HEIGHT;
@@ -2761,7 +2761,7 @@ err_kfree_0:
 	goto out;
 }
 
-static int __devexit av7110_detach(struct saa7146_dev* saa)
+static int av7110_detach(struct saa7146_dev* saa)
 {
 	struct av7110 *av7110 = saa->ext_priv;
 	dprintk(4, "%p\n", av7110);

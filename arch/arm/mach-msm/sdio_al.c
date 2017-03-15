@@ -3384,7 +3384,7 @@ exit:
 }
 EXPORT_SYMBOL(sdio_write);
 
-static int __devinit msm_sdio_al_probe(struct platform_device *pdev)
+static int msm_sdio_al_probe(struct platform_device *pdev)
 {
 	if (!sdio_al) {
 		pr_err(MODULE_NAME ": %s: NULL sdio_al\n", __func__);

@@ -449,7 +449,7 @@ static int mipi2lvds_disp_off(struct platform_device *pdev)
 	return 0;
 }
 
-static void __devinit mipi2lvds_disp_shutdown(struct platform_device *pdev)
+static void mipi2lvds_disp_shutdown(struct platform_device *pdev)
 {
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata;
 
@@ -819,7 +819,7 @@ static DEVICE_ATTR(auto_brightness, S_IRUGO | S_IWUSR | S_IWGRP,
 			mipi2lvds_auto_brightness_show,
 			mipi2lvds_auto_brightness_store);
 
-static int __devinit mipi2lvds_vx5b3d_disp_probe(struct platform_device *pdev)
+static int mipi2lvds_vx5b3d_disp_probe(struct platform_device *pdev)
 {
 	struct platform_device *msm_fb_added_dev;
 	int ret;

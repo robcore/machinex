@@ -713,7 +713,7 @@ static void cpsw_slave_init(struct cpsw_slave *slave, struct cpsw_priv *priv)
 	slave->sliver	= regs + data->sliver_reg_ofs;
 }
 
-static int __devinit cpsw_probe(struct platform_device *pdev)
+static int cpsw_probe(struct platform_device *pdev)
 {
 	struct cpsw_platform_data	*data = pdev->dev.platform_data;
 	struct net_device		*ndev;
@@ -942,7 +942,7 @@ clean_ndev_ret:
 	return ret;
 }
 
-static int __devexit cpsw_remove(struct platform_device *pdev)
+static int cpsw_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct cpsw_priv *priv = netdev_priv(ndev);

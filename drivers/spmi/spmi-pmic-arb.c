@@ -480,7 +480,7 @@ static int pmic_arb_intr_priv_data(struct spmi_controller *ctrl,
 	return 0;
 }
 
-static int __devinit
+static int
 spmi_pmic_arb_get_property(struct platform_device *pdev, char *pname, u32 *prop)
 {
 	int ret = of_property_read_u32(pdev->dev.of_node, pname, prop);
@@ -493,7 +493,7 @@ spmi_pmic_arb_get_property(struct platform_device *pdev, char *pname, u32 *prop)
 	return ret;
 }
 
-static int __devinit spmi_pmic_arb_get_map_data(struct platform_device *pdev,
+static int spmi_pmic_arb_get_map_data(struct platform_device *pdev,
 					struct spmi_pmic_arb_dev *pmic_arb)
 {
 	int i;
@@ -563,7 +563,7 @@ static struct qpnp_local_int spmi_pmic_arb_intr_cb = {
 	.register_priv_data = pmic_arb_intr_priv_data,
 };
 
-static int __devinit spmi_pmic_arb_probe(struct platform_device *pdev)
+static int spmi_pmic_arb_probe(struct platform_device *pdev)
 {
 	struct spmi_pmic_arb_dev *pmic_arb;
 	struct resource *mem_res;
@@ -689,7 +689,7 @@ err_add_controller:
 	return ret;
 }
 
-static int __devexit spmi_pmic_arb_remove(struct platform_device *pdev)
+static int spmi_pmic_arb_remove(struct platform_device *pdev)
 {
 	struct spmi_pmic_arb_dev *pmic_arb = platform_get_drvdata(pdev);
 

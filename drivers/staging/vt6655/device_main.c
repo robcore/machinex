@@ -359,7 +359,7 @@ static char* get_chip_name(int chip_id) {
     return chip_info_table[i].name;
 }
 
-static void __devexit vt6655_remove(struct pci_dev *pcid)
+static void vt6655_remove(struct pci_dev *pcid)
 {
     PSDevice pDevice=pci_get_drvdata(pcid);
 
@@ -910,7 +910,7 @@ static const struct net_device_ops device_netdev_ops = {
 
 
 
-static int __devinit
+static int
 vt6655_probe(struct pci_dev *pcid, const struct pci_device_id *ent)
 {
     static bool bFirst = true;
@@ -1118,7 +1118,7 @@ static void device_print_info(PSDevice pDevice)
 
 }
 
-static bool __devinit vt6655_init_info(struct pci_dev* pcid, PSDevice* ppDevice,
+static bool vt6655_init_info(struct pci_dev* pcid, PSDevice* ppDevice,
     PCHIP_INFO pChip_info) {
 
     PSDevice p;

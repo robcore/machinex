@@ -473,12 +473,12 @@ static const struct hc_driver ohci_s3c2410_hc_driver = {
 
 /* device driver */
 
-static int __devinit ohci_hcd_s3c2410_drv_probe(struct platform_device *pdev)
+static int ohci_hcd_s3c2410_drv_probe(struct platform_device *pdev)
 {
 	return usb_hcd_s3c2410_probe(&ohci_s3c2410_hc_driver, pdev);
 }
 
-static int __devexit ohci_hcd_s3c2410_drv_remove(struct platform_device *pdev)
+static int ohci_hcd_s3c2410_drv_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 

@@ -102,7 +102,7 @@ err_reset:
 	return rc;
 }
 
-static int __devexit tosa_bt_remove(struct platform_device *dev)
+static int tosa_bt_remove(struct platform_device *dev)
 {
 	struct tosa_bt_data *data = dev->dev.platform_data;
 	struct rfkill *rfk = platform_get_drvdata(dev);

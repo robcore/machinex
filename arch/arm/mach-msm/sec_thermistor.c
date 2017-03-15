@@ -247,7 +247,7 @@ out:
 			msecs_to_jiffies(info->pdata->polling_interval));
 }
 
-static __devinit int sec_therm_probe(struct platform_device *pdev)
+static int sec_therm_probe(struct platform_device *pdev)
 {
 	struct sec_therm_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	struct sec_therm_info *info;

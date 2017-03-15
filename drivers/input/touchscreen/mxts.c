@@ -1869,7 +1869,7 @@ out:
 	release_firmware(fw);
 }
 
-static int __devinit mxt_touch_init(struct mxt_data *data, bool nowait)
+static int mxt_touch_init(struct mxt_data *data, bool nowait)
 {
 	struct i2c_client *client = data->client;
 	const char *firmware_name =
@@ -1979,7 +1979,7 @@ static int mxt_resume(struct device *dev)
  */
 
 #include "mxts_sec.c"
-static int __devinit mxt_probe(struct i2c_client *client,
+static int mxt_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	const struct mxt_platform_data *pdata = client->dev.platform_data;
@@ -2109,7 +2109,7 @@ err_allocate_input_device:
 	return error;
 }
 
-static int __devexit mxt_remove(struct i2c_client *client)
+static int mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 

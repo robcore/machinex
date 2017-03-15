@@ -248,7 +248,7 @@ static struct snd_soc_dai_driver tegra_spdif_dai = {
 	.ops = &tegra_spdif_dai_ops,
 };
 
-static __devinit int tegra_spdif_platform_probe(struct platform_device *pdev)
+static int tegra_spdif_platform_probe(struct platform_device *pdev)
 {
 	struct tegra_spdif *spdif;
 	struct resource *mem, *memregion, *dmareq;
@@ -326,7 +326,7 @@ exit:
 	return ret;
 }
 
-static int __devexit tegra_spdif_platform_remove(struct platform_device *pdev)
+static int tegra_spdif_platform_remove(struct platform_device *pdev)
 {
 	struct tegra_spdif *spdif = dev_get_drvdata(&pdev->dev);
 	struct resource *res;

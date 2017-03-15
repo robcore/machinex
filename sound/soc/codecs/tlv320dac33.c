@@ -1519,7 +1519,7 @@ static struct snd_soc_dai_driver dac33_dai = {
 	.ops = &dac33_dai_ops,
 };
 
-static int __devinit dac33_i2c_probe(struct i2c_client *client,
+static int dac33_i2c_probe(struct i2c_client *client,
 				     const struct i2c_device_id *id)
 {
 	struct tlv320dac33_platform_data *pdata;
@@ -1591,7 +1591,7 @@ err_gpio:
 	return ret;
 }
 
-static int __devexit dac33_i2c_remove(struct i2c_client *client)
+static int dac33_i2c_remove(struct i2c_client *client)
 {
 	struct tlv320dac33_priv *dac33 = i2c_get_clientdata(client);
 

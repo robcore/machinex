@@ -749,7 +749,7 @@ static int sirfsoc_uart_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static struct of_device_id sirfsoc_uart_ids[] __devinitdata = {
+static struct of_device_id sirfsoc_uart_ids[] = {
 	{ .compatible = "sirf,prima2-uart", },
 	{ .compatible = "sirf,marco-uart", },
 	{}

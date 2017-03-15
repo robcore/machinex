@@ -316,7 +316,7 @@ static struct wl1271_if_operations spi_ops = {
 	.set_block_size = NULL,
 };
 
-static int __devinit wl1271_probe(struct spi_device *spi)
+static int wl1271_probe(struct spi_device *spi)
 {
 	struct wl12xx_spi_glue *glue;
 	struct wl12xx_platform_data *pdata;
@@ -395,7 +395,7 @@ out:
 	return ret;
 }
 
-static int __devexit wl1271_remove(struct spi_device *spi)
+static int wl1271_remove(struct spi_device *spi)
 {
 	struct wl12xx_spi_glue *glue = spi_get_drvdata(spi);
 

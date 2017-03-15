@@ -1046,7 +1046,7 @@ static int rpmsg_remove_device(struct device *dev, void *data)
 	return 0;
 }
 
-static void __devexit rpmsg_remove(struct virtio_device *vdev)
+static void rpmsg_remove(struct virtio_device *vdev)
 {
 	struct virtproc_info *vrp = vdev->priv;
 	int ret;

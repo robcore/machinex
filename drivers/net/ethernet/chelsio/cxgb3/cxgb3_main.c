@@ -3078,7 +3078,7 @@ static void set_nqsets(struct adapter *adap)
 	}
 }
 
-static int __devinit cxgb_enable_msix(struct adapter *adap)
+static int cxgb_enable_msix(struct adapter *adap)
 {
 	struct msix_entry entries[SGE_QSETS + 1];
 	int vectors;
@@ -3108,7 +3108,7 @@ static int __devinit cxgb_enable_msix(struct adapter *adap)
 	return err;
 }
 
-static void __devinit print_port_info(struct adapter *adap,
+static void print_port_info(struct adapter *adap,
 				      const struct adapter_info *ai)
 {
 	static const char *pci_variant[] = {
@@ -3165,7 +3165,7 @@ static const struct net_device_ops cxgb_netdev_ops = {
 #endif
 };
 
-static void __devinit cxgb3_init_iscsi_mac(struct net_device *dev)
+static void cxgb3_init_iscsi_mac(struct net_device *dev)
 {
 	struct port_info *pi = netdev_priv(dev);
 
@@ -3173,7 +3173,7 @@ static void __devinit cxgb3_init_iscsi_mac(struct net_device *dev)
 	pi->iscsic.mac_addr[3] |= 0x80;
 }
 
-static int __devinit init_one(struct pci_dev *pdev,
+static int init_one(struct pci_dev *pdev,
 			      const struct pci_device_id *ent)
 {
 	static int version_printed;
@@ -3377,7 +3377,7 @@ out:
 	return err;
 }
 
-static void __devexit remove_one(struct pci_dev *pdev)
+static void remove_one(struct pci_dev *pdev)
 {
 	struct adapter *adapter = pci_get_drvdata(pdev);
 

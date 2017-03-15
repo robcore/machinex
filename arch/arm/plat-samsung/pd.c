@@ -35,7 +35,7 @@ static int samsung_pd_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit samsung_pd_remove(struct platform_device *pdev)
+static int samsung_pd_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 

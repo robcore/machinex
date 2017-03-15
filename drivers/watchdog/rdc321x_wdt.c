@@ -225,7 +225,7 @@ static struct miscdevice rdc321x_wdt_misc = {
 	.fops	= &rdc321x_wdt_fops,
 };
 
-static int __devinit rdc321x_wdt_probe(struct platform_device *pdev)
+static int rdc321x_wdt_probe(struct platform_device *pdev)
 {
 	int err;
 	struct resource *r;
@@ -272,7 +272,7 @@ static int __devinit rdc321x_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit rdc321x_wdt_remove(struct platform_device *pdev)
+static int rdc321x_wdt_remove(struct platform_device *pdev)
 {
 	if (rdc321x_wdt_device.queue) {
 		rdc321x_wdt_device.queue = 0;

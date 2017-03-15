@@ -162,7 +162,7 @@ void msm_camio_set_perf_lvl(enum msm_bus_perf_setting perf_setting)
 	}
 }
 
-static int __devinit clkctl_probe(struct platform_device *pdev)
+static int clkctl_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 

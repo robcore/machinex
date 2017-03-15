@@ -434,7 +434,7 @@ megaraid_exit(void)
  * This routine should be called whenever a new adapter is detected by the
  * PCI hotplug susbsystem.
  */
-static int __devinit
+static int
 megaraid_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	adapter_t	*adapter;
@@ -735,7 +735,7 @@ megaraid_io_detach(adapter_t *adapter)
  * - Allocate memory required for all the commands
  * - Use internal library of FW routines, build up complete soft state
  */
-static int __devinit
+static int
 megaraid_init_mbox(adapter_t *adapter)
 {
 	struct pci_dev		*pdev;

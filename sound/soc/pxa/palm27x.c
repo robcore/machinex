@@ -187,7 +187,7 @@ put_device:
 	return ret;
 }
 
-static int __devexit palm27x_asoc_remove(struct platform_device *pdev)
+static int palm27x_asoc_remove(struct platform_device *pdev)
 {
 	platform_device_unregister(palm27x_snd_device);
 	return 0;

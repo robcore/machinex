@@ -99,7 +99,7 @@ panel_off_exit:
 	return ret;
 }
 
-static int __devinit lvds_frc_probe(struct platform_device *pdev)
+static int lvds_frc_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 

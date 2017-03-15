@@ -194,7 +194,7 @@ static int twl4030_vibra_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(twl4030_vibra_pm_ops,
 			 twl4030_vibra_suspend, twl4030_vibra_resume);
 
-static int __devinit twl4030_vibra_probe(struct platform_device *pdev)
+static int twl4030_vibra_probe(struct platform_device *pdev)
 {
 	struct twl4030_vibra_data *pdata = pdev->dev.platform_data;
 	struct vibra_info *info;
@@ -255,7 +255,7 @@ err_kzalloc:
 	return ret;
 }
 
-static int __devexit twl4030_vibra_remove(struct platform_device *pdev)
+static int twl4030_vibra_remove(struct platform_device *pdev)
 {
 	struct vibra_info *info = platform_get_drvdata(pdev);
 

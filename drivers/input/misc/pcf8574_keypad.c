@@ -82,7 +82,7 @@ static irqreturn_t pcf8574_kp_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit pcf8574_kp_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int pcf8574_kp_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int i, ret;
 	struct input_dev *idev;
@@ -156,7 +156,7 @@ static int __devinit pcf8574_kp_probe(struct i2c_client *client, const struct i2
 	return ret;
 }
 
-static int __devexit pcf8574_kp_remove(struct i2c_client *client)
+static int pcf8574_kp_remove(struct i2c_client *client)
 {
 	struct kp_data *lp = i2c_get_clientdata(client);
 

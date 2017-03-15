@@ -1039,7 +1039,7 @@ static const struct regmap_config wm8978_regmap_config = {
 	.num_reg_defaults = ARRAY_SIZE(wm8978_reg_defaults),
 };
 
-static __devinit int wm8978_i2c_probe(struct i2c_client *i2c,
+static int wm8978_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8978_priv *wm8978;
@@ -1080,7 +1080,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8978_i2c_remove(struct i2c_client *client)
+static int wm8978_i2c_remove(struct i2c_client *client)
 {
 	struct wm8978_priv *wm8978 = i2c_get_clientdata(client);
 

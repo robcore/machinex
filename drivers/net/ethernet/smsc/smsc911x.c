@@ -1059,7 +1059,7 @@ static int smsc911x_mii_probe(struct net_device *dev)
 	return 0;
 }
 
-static int __devinit smsc911x_mii_init(struct platform_device *pdev,
+static int smsc911x_mii_init(struct platform_device *pdev,
 				       struct net_device *dev)
 {
 	struct smsc911x_data *pdata = netdev_priv(dev);
@@ -2112,7 +2112,7 @@ static const struct net_device_ops smsc911x_netdev_ops = {
 };
 
 /* copies the current mac address from hardware to dev->dev_addr */
-static void __devinit smsc911x_read_mac_address(struct net_device *dev)
+static void smsc911x_read_mac_address(struct net_device *dev)
 {
 	struct smsc911x_data *pdata = netdev_priv(dev);
 	u32 mac_high16 = smsc911x_mac_read(pdata, ADDRH);
@@ -2127,7 +2127,7 @@ static void __devinit smsc911x_read_mac_address(struct net_device *dev)
 }
 
 /* Initializing private device structures, only called from probe */
-static int __devinit smsc911x_init(struct net_device *dev)
+static int smsc911x_init(struct net_device *dev)
 {
 	struct smsc911x_data *pdata = netdev_priv(dev);
 	unsigned int byte_test;
@@ -2254,7 +2254,7 @@ static int __devinit smsc911x_init(struct net_device *dev)
 	return 0;
 }
 
-static int __devexit smsc911x_drv_remove(struct platform_device *pdev)
+static int smsc911x_drv_remove(struct platform_device *pdev)
 {
 	struct net_device *dev;
 	struct smsc911x_data *pdata;
@@ -2317,7 +2317,7 @@ static const struct smsc911x_ops shifted_smsc911x_ops = {
 };
 
 #ifdef CONFIG_OF
-static int __devinit smsc911x_probe_config_dt(
+static int smsc911x_probe_config_dt(
 				struct smsc911x_platform_config *config,
 				struct device_node *np)
 {
@@ -2367,7 +2367,7 @@ static inline int smsc911x_probe_config_dt(
 }
 #endif /* CONFIG_OF */
 
-static int __devinit smsc911x_drv_probe(struct platform_device *pdev)
+static int smsc911x_drv_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct net_device *dev;

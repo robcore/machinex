@@ -1728,7 +1728,7 @@ static int meye_resume(struct pci_dev *pdev)
 }
 #endif
 
-static int __devinit meye_probe(struct pci_dev *pcidev,
+static int meye_probe(struct pci_dev *pcidev,
 				const struct pci_device_id *ent)
 {
 	struct v4l2_device *v4l2_dev = &meye.v4l2_dev;
@@ -1889,7 +1889,7 @@ outnotdev:
 	return ret;
 }
 
-static void __devexit meye_remove(struct pci_dev *pcidev)
+static void meye_remove(struct pci_dev *pcidev)
 {
 	video_unregister_device(meye.vdev);
 

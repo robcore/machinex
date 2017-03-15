@@ -552,7 +552,7 @@ static struct dentry *ab8500_bank_file;
 static struct dentry *ab8500_address_file;
 static struct dentry *ab8500_val_file;
 
-static int __devinit ab8500_debug_probe(struct platform_device *plf)
+static int ab8500_debug_probe(struct platform_device *plf)
 {
 	debug_bank = AB8500_MISC;
 	debug_address = AB8500_REV_REG & 0x00FF;
@@ -597,7 +597,7 @@ exit_no_debugfs:
 	return -ENOMEM;
 }
 
-static int __devexit ab8500_debug_remove(struct platform_device *plf)
+static int ab8500_debug_remove(struct platform_device *plf)
 {
 	debugfs_remove(ab8500_val_file);
 	debugfs_remove(ab8500_address_file);

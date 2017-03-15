@@ -214,7 +214,7 @@ static struct snd_soc_card tobermory = {
 	.late_probe = tobermory_late_probe,
 };
 
-static __devinit int tobermory_probe(struct platform_device *pdev)
+static int tobermory_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &tobermory;
 	int ret;
@@ -231,7 +231,7 @@ static __devinit int tobermory_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit tobermory_remove(struct platform_device *pdev)
+static int tobermory_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

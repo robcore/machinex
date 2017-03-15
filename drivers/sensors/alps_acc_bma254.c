@@ -1020,7 +1020,7 @@ static int bma254_resume(struct i2c_client *client)
 	return 0;
 }
 
-static int __devexit bma254_remove(struct i2c_client *client)
+static int bma254_remove(struct i2c_client *client)
 {
 #ifdef CONFIG_BMA254_SMART_ALERT
 	struct bma254_data *bma254 = &bma254_data;

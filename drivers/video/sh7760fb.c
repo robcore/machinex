@@ -431,7 +431,7 @@ static int sh7760fb_alloc_mem(struct fb_info *info)
 	return 0;
 }
 
-static int __devinit sh7760fb_probe(struct platform_device *pdev)
+static int sh7760fb_probe(struct platform_device *pdev)
 {
 	struct fb_info *info;
 	struct resource *res;
@@ -557,7 +557,7 @@ out_fb:
 	return ret;
 }
 
-static int __devexit sh7760fb_remove(struct platform_device *dev)
+static int sh7760fb_remove(struct platform_device *dev)
 {
 	struct fb_info *info = platform_get_drvdata(dev);
 	struct sh7760fb_par *par = info->par;

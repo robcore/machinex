@@ -236,7 +236,7 @@ struct pci_id_info {
         int drv_flags;		/* Driver use, intended as capability flags. */
 };
 
-static const struct pci_id_info pci_id_tbl[] __devinitconst = {
+static const struct pci_id_info pci_id_tbl[] = {
 	{ 				/* Sometime a Level-One switch card. */
 	  "Winbond W89c840",	CanHaveMII | HasBrokenTx | FDXOnNoMII},
 	{ "Winbond W89c840",	CanHaveMII | HasBrokenTx},
@@ -358,7 +358,7 @@ static const struct net_device_ops netdev_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 };
 
-static int __devinit w840_probe1 (struct pci_dev *pdev,
+static int w840_probe1 (struct pci_dev *pdev,
 				  const struct pci_device_id *ent)
 {
 	struct net_device *dev;
@@ -1533,7 +1533,7 @@ static int netdev_close(struct net_device *dev)
 	return 0;
 }
 
-static void __devexit w840_remove1 (struct pci_dev *pdev)
+static void w840_remove1 (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 

@@ -1137,7 +1137,7 @@ static void __iomem *sirfsoc_rsc_of_iomap(void)
 	return of_iomap(np, 0);
 }
 
-static int __devinit sirfsoc_pinmux_probe(struct platform_device *pdev)
+static int sirfsoc_pinmux_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct sirfsoc_pmx *spmx;

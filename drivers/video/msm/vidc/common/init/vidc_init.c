@@ -127,7 +127,7 @@ static void vidc_work_handler(struct work_struct *work)
 
 static DECLARE_WORK(vidc_work, vidc_work_handler);
 
-static int __devinit vidc_720p_probe(struct platform_device *pdev)
+static int vidc_720p_probe(struct platform_device *pdev)
 {
 	struct resource *resource;
 	DBG("Enter %s()\n", __func__);
@@ -170,7 +170,7 @@ static int __devinit vidc_720p_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit vidc_720p_remove(struct platform_device *pdev)
+static int vidc_720p_remove(struct platform_device *pdev)
 {
 	if (pdev->id) {
 		ERR("Invalid plaform device ID = %d\n", pdev->id);

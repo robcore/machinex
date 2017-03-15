@@ -727,7 +727,7 @@ static int ngd_slim_rx_msgq_thread(void *data)
 	return 0;
 }
 
-static int __devinit ngd_slim_probe(struct platform_device *pdev)
+static int ngd_slim_probe(struct platform_device *pdev)
 {
 	struct msm_slim_ctrl *dev;
 	int ret;
@@ -898,7 +898,7 @@ err_ioremap_failed:
 	return ret;
 }
 
-static int __devexit ngd_slim_remove(struct platform_device *pdev)
+static int ngd_slim_remove(struct platform_device *pdev)
 {
 	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
 	pm_runtime_disable(&pdev->dev);

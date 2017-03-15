@@ -547,7 +547,7 @@ static void mpu3050_input_work_fn(struct work_struct *work)
  *
  *	Called during device probe; configures the sampling method.
  */
-static int __devinit mpu3050_hw_init(struct mpu3050_sensor *sensor)
+static int mpu3050_hw_init(struct mpu3050_sensor *sensor)
 {
 	struct i2c_client *client = sensor->client;
 	int ret;
@@ -596,7 +596,7 @@ static int __devinit mpu3050_hw_init(struct mpu3050_sensor *sensor)
  *
  *	If present install the relevant sysfs interfaces and input device.
  */
-static int __devinit mpu3050_probe(struct i2c_client *client,
+static int mpu3050_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	struct mpu3050_sensor *sensor;
@@ -744,7 +744,7 @@ err_free_mem:
  *
  *	Our sensor is going away, clean up the resources.
  */
-static int __devexit mpu3050_remove(struct i2c_client *client)
+static int mpu3050_remove(struct i2c_client *client)
 {
 	struct mpu3050_sensor *sensor = i2c_get_clientdata(client);
 

@@ -447,7 +447,7 @@ DEFINE_SIMPLE_ATTRIBUTE(loopback_enable_fops, msm_serial_loopback_enable_get,
  * test scripts.
  * writing 0 disables the internal loopback mode. Default is disabled.
  */
-static void __devinit msm_serial_debugfs_init(struct msm_hs_port *msm_uport,
+static void msm_serial_debugfs_init(struct msm_hs_port *msm_uport,
 					   int id)
 {
 	char node_name[15];
@@ -463,7 +463,7 @@ static void __devinit msm_serial_debugfs_init(struct msm_hs_port *msm_uport,
 							__func__, id);
 }
 
-static int __devexit msm_hs_remove(struct platform_device *pdev)
+static int msm_hs_remove(struct platform_device *pdev)
 {
 
 	struct msm_hs_port *msm_uport;
@@ -2377,7 +2377,7 @@ free_tx_command_ptr:
 	return ret;
 }
 
-static int __devinit msm_hs_probe(struct platform_device *pdev)
+static int msm_hs_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct uart_port *uport;

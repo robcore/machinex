@@ -1661,7 +1661,7 @@ static void ehci_hsic_msm_debugfs_cleanup(void)
 	debugfs_remove_recursive(ehci_hsic_msm_dbg_root);
 }
 
-static int __devinit ehci_hsic_msm_probe(struct platform_device *pdev)
+static int ehci_hsic_msm_probe(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd;
 	struct resource *res;
@@ -1865,7 +1865,7 @@ put_parent:
 	return ret;
 }
 
-static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
+static int ehci_hsic_msm_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);

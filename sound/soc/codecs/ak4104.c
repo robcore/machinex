@@ -233,7 +233,7 @@ err:
 	return ret;
 }
 
-static int __devexit ak4104_spi_remove(struct spi_device *spi)
+static int ak4104_spi_remove(struct spi_device *spi)
 {
 	struct ak4104_private *ak4101 = spi_get_drvdata(spi);
 	regmap_exit(ak4101->regmap);

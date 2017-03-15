@@ -1111,7 +1111,7 @@ static const struct regmap_config wm8985_regmap = {
 };
 
 #if defined(CONFIG_SPI_MASTER)
-static int __devinit wm8985_spi_probe(struct spi_device *spi)
+static int wm8985_spi_probe(struct spi_device *spi)
 {
 	struct wm8985_priv *wm8985;
 	int ret;
@@ -1142,7 +1142,7 @@ err:
 	return ret;
 }
 
-static int __devexit wm8985_spi_remove(struct spi_device *spi)
+static int wm8985_spi_remove(struct spi_device *spi)
 {
 	struct wm8985_priv *wm8985 = spi_get_drvdata(spi);
 
@@ -1163,7 +1163,7 @@ static struct spi_driver wm8985_spi_driver = {
 #endif
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-static __devinit int wm8985_i2c_probe(struct i2c_client *i2c,
+static int wm8985_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8985_priv *wm8985;
@@ -1195,7 +1195,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8985_i2c_remove(struct i2c_client *i2c)
+static int wm8985_i2c_remove(struct i2c_client *i2c)
 {
 	struct wm8985_priv *wm8985 = i2c_get_clientdata(i2c);
 

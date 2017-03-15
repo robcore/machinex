@@ -147,7 +147,7 @@ static const struct cyttsp_bus_ops cyttsp_spi_bus_ops = {
 	.read		= cyttsp_spi_read_block_data,
 };
 
-static int __devinit cyttsp_spi_probe(struct spi_device *spi)
+static int cyttsp_spi_probe(struct spi_device *spi)
 {
 	struct cyttsp *ts;
 	int error;
@@ -172,7 +172,7 @@ static int __devinit cyttsp_spi_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit cyttsp_spi_remove(struct spi_device *spi)
+static int cyttsp_spi_remove(struct spi_device *spi)
 {
 	struct cyttsp *ts = spi_get_drvdata(spi);
 

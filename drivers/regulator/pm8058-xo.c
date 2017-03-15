@@ -143,7 +143,7 @@ static int pm8058_init_xo_buffer(struct pm8058_xo_buffer *xo)
 	return rc;
 }
 
-static int __devinit pm8058_xo_buffer_probe(struct platform_device *pdev)
+static int pm8058_xo_buffer_probe(struct platform_device *pdev)
 {
 	struct regulator_desc *rdesc;
 	struct pm8058_xo_buffer *xo;
@@ -180,7 +180,7 @@ bail:
 	return rc;
 }
 
-static int __devexit pm8058_xo_buffer_remove(struct platform_device *pdev)
+static int pm8058_xo_buffer_remove(struct platform_device *pdev)
 {
 	regulator_unregister(pm8058_xo_buffer[pdev->id].rdev);
 	return 0;

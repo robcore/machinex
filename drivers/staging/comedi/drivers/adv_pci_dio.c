@@ -1316,13 +1316,13 @@ static int pci_dio_detach(struct comedi_device *dev)
 /*
 ==============================================================================
 */
-static int __devinit driver_pci_dio_pci_probe(struct pci_dev *dev,
+static int driver_pci_dio_pci_probe(struct pci_dev *dev,
 					      const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_pci_dio.driver_name);
 }
 
-static void __devexit driver_pci_dio_pci_remove(struct pci_dev *dev)
+static void driver_pci_dio_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

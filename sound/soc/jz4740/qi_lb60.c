@@ -96,7 +96,7 @@ static const struct gpio qi_lb60_gpios[] = {
 	{ QI_LB60_AMP_GPIO, GPIOF_OUT_INIT_LOW, "AMP" },
 };
 
-static int __devinit qi_lb60_probe(struct platform_device *pdev)
+static int qi_lb60_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &qi_lb60;
 	int ret;
@@ -116,7 +116,7 @@ static int __devinit qi_lb60_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit qi_lb60_remove(struct platform_device *pdev)
+static int qi_lb60_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

@@ -1827,7 +1827,7 @@ static int fimc_suspend(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-static int __devexit fimc_remove(struct platform_device *pdev)
+static int fimc_remove(struct platform_device *pdev)
 {
 	struct fimc_dev *fimc = platform_get_drvdata(pdev);
 

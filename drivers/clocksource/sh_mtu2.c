@@ -302,7 +302,7 @@ static int sh_mtu2_setup(struct sh_mtu2_priv *p, struct platform_device *pdev)
 	return ret;
 }
 
-static int __devinit sh_mtu2_probe(struct platform_device *pdev)
+static int sh_mtu2_probe(struct platform_device *pdev)
 {
 	struct sh_mtu2_priv *p = platform_get_drvdata(pdev);
 	int ret;
@@ -333,7 +333,7 @@ static int __devinit sh_mtu2_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit sh_mtu2_remove(struct platform_device *pdev)
+static int sh_mtu2_remove(struct platform_device *pdev)
 {
 	return -EBUSY; /* cannot unregister clockevent */
 }

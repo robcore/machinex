@@ -1158,7 +1158,7 @@ static const struct i2c_algorithm qup_i2c_algo = {
 	.functionality	= qup_i2c_func,
 };
 
-static int __devinit
+static int
 qup_i2c_probe(struct platform_device *pdev)
 {
 	struct qup_i2c_dev	*dev;

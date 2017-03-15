@@ -70,7 +70,7 @@ static const struct fb_videomode grvga_modedb[] = {
     }
  };
 
-static struct fb_fix_screeninfo grvga_fix __devinitdata = {
+static struct fb_fix_screeninfo grvga_fix = {
 	.id =		"AG SVGACTRL",
 	.type =		FB_TYPE_PACKED_PIXELS,
 	.visual =       FB_VISUAL_PSEUDOCOLOR,
@@ -267,7 +267,7 @@ static struct fb_ops grvga_ops = {
 	.fb_imageblit	= cfb_imageblit
 };
 
-static int __devinit grvga_parse_custom(char *options,
+static int grvga_parse_custom(char *options,
 				     struct fb_var_screeninfo *screendata)
 {
 	char *this_opt;
@@ -329,7 +329,7 @@ static int __devinit grvga_parse_custom(char *options,
 	return 0;
 }
 
-static int __devinit grvga_probe(struct platform_device *dev)
+static int grvga_probe(struct platform_device *dev)
 {
 	struct fb_info *info;
 	int retval = -ENOMEM;
@@ -512,7 +512,7 @@ free_fb:
 	return retval;
 }
 
-static int __devexit grvga_remove(struct platform_device *device)
+static int grvga_remove(struct platform_device *device)
 {
 	struct fb_info *info = dev_get_drvdata(&device->dev);
 	struct grvga_par *par = info->par;

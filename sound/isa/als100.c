@@ -117,7 +117,7 @@ static struct pnp_card_device_id snd_als100_pnpids[] = {
 
 MODULE_DEVICE_TABLE(pnp_card, snd_als100_pnpids);
 
-static int __devinit snd_card_als100_pnp(int dev, struct snd_card_als100 *acard,
+static int snd_card_als100_pnp(int dev, struct snd_card_als100 *acard,
 					 struct pnp_card_link *card,
 					 const struct pnp_card_device_id *id)
 {
@@ -183,7 +183,7 @@ static int __devinit snd_card_als100_pnp(int dev, struct snd_card_als100 *acard,
 	return 0;
 }
 
-static int __devinit snd_card_als100_probe(int dev,
+static int snd_card_als100_probe(int dev,
 					struct pnp_card_link *pcard,
 					const struct pnp_card_device_id *pid)
 {
@@ -286,9 +286,9 @@ static int __devinit snd_card_als100_probe(int dev,
 	return 0;
 }
 
-static unsigned int __devinitdata als100_devices;
+static unsigned int als100_devices;
 
-static int __devinit snd_als100_pnp_detect(struct pnp_card_link *card,
+static int snd_als100_pnp_detect(struct pnp_card_link *card,
 					   const struct pnp_card_device_id *id)
 {
 	static int dev;
@@ -307,7 +307,7 @@ static int __devinit snd_als100_pnp_detect(struct pnp_card_link *card,
 	return -ENODEV;
 }
 
-static void __devexit snd_als100_pnp_remove(struct pnp_card_link * pcard)
+static void snd_als100_pnp_remove(struct pnp_card_link * pcard)
 {
 	snd_card_free(pnp_get_card_drvdata(pcard));
 	pnp_set_card_drvdata(pcard, NULL);

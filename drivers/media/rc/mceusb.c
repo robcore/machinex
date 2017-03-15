@@ -1239,7 +1239,7 @@ out:
 	return NULL;
 }
 
-static int __devinit mceusb_dev_probe(struct usb_interface *intf,
+static int mceusb_dev_probe(struct usb_interface *intf,
 				      const struct usb_device_id *id)
 {
 	struct usb_device *dev = interface_to_usbdev(intf);
@@ -1404,7 +1404,7 @@ mem_alloc_fail:
 }
 
 
-static void __devexit mceusb_dev_disconnect(struct usb_interface *intf)
+static void mceusb_dev_disconnect(struct usb_interface *intf)
 {
 	struct usb_device *dev = interface_to_usbdev(intf);
 	struct mceusb_dev *ir = usb_get_intfdata(intf);

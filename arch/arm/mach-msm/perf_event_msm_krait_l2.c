@@ -550,7 +550,7 @@ static struct arm_pmu krait_l2_pmu = {
 	.pmu.attr_groups		= msm_l2_pmu_attr_grps,
 };
 
-static int __devinit krait_l2_pmu_device_probe(struct platform_device *pdev)
+static int krait_l2_pmu_device_probe(struct platform_device *pdev)
 {
 	krait_l2_pmu.plat_device = pdev;
 

@@ -92,7 +92,7 @@ static int blink_set(struct led_classdev *cdev,
 	return 0;
 }
 
-static int __devinit asic3_led_probe(struct platform_device *pdev)
+static int asic3_led_probe(struct platform_device *pdev)
 {
 	struct asic3_led *led = pdev->dev.platform_data;
 	int ret;
@@ -127,7 +127,7 @@ ret0:
 	return ret;
 }
 
-static int __devexit asic3_led_remove(struct platform_device *pdev)
+static int asic3_led_remove(struct platform_device *pdev)
 {
 	struct asic3_led *led = pdev->dev.platform_data;
 

@@ -1500,7 +1500,7 @@ static struct uart_driver msm_hsl_uart_driver = {
 
 static atomic_t msm_serial_hsl_next_id = ATOMIC_INIT(0);
 
-static int __devinit msm_serial_hsl_probe(struct platform_device *pdev)
+static int msm_serial_hsl_probe(struct platform_device *pdev)
 {
 	struct msm_hsl_port *msm_hsl_port;
 	struct resource *uart_resource;
@@ -1612,7 +1612,7 @@ static int __devinit msm_serial_hsl_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit msm_serial_hsl_remove(struct platform_device *pdev)
+static int msm_serial_hsl_remove(struct platform_device *pdev)
 {
 	struct msm_hsl_port *msm_hsl_port = platform_get_drvdata(pdev);
 	struct uart_port *port;

@@ -99,7 +99,7 @@ static const struct backlight_ops max8925_backlight_ops = {
 	.get_brightness	= max8925_backlight_get_brightness,
 };
 
-static int __devinit max8925_backlight_probe(struct platform_device *pdev)
+static int max8925_backlight_probe(struct platform_device *pdev)
 {
 	struct max8925_chip *chip = dev_get_drvdata(pdev->dev.parent);
 	struct max8925_platform_data *max8925_pdata;
@@ -168,7 +168,7 @@ out:
 	return ret;
 }
 
-static int __devexit max8925_backlight_remove(struct platform_device *pdev)
+static int max8925_backlight_remove(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 

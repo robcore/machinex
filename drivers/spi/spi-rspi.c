@@ -406,7 +406,7 @@ static irqreturn_t rspi_irq(int irq, void *_sr)
 	return ret;
 }
 
-static int __devexit rspi_remove(struct platform_device *pdev)
+static int rspi_remove(struct platform_device *pdev)
 {
 	struct rspi_data *rspi = dev_get_drvdata(&pdev->dev);
 
@@ -419,7 +419,7 @@ static int __devexit rspi_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit rspi_probe(struct platform_device *pdev)
+static int rspi_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct spi_master *master;

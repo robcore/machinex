@@ -2169,7 +2169,7 @@ err_set_interrupt:
  * Fields are initialized based on PCI device information and
  * OS network device settings (MTU size).
  **/
-static int __devinit ixgbevf_sw_init(struct ixgbevf_adapter *adapter)
+static int ixgbevf_sw_init(struct ixgbevf_adapter *adapter)
 {
 	struct ixgbe_hw *hw = &adapter->hw;
 	struct pci_dev *pdev = adapter->pdev;
@@ -3296,7 +3296,7 @@ static void ixgbevf_assign_netdev_ops(struct net_device *dev)
  * The OS initialization, configuring of the adapter private structure,
  * and a hardware reset occur.
  **/
-static int __devinit ixgbevf_probe(struct pci_dev *pdev,
+static int ixgbevf_probe(struct pci_dev *pdev,
 				   const struct pci_device_id *ent)
 {
 	struct net_device *netdev;
@@ -3483,7 +3483,7 @@ err_dma:
  * Hot-Plug event, or because the driver is going to be removed from
  * memory.
  **/
-static void __devexit ixgbevf_remove(struct pci_dev *pdev)
+static void ixgbevf_remove(struct pci_dev *pdev)
 {
 	struct net_device *netdev = pci_get_drvdata(pdev);
 	struct ixgbevf_adapter *adapter = netdev_priv(netdev);

@@ -1507,7 +1507,7 @@ static void do_housekeeping (unsigned long arg) {
 
 /********** creation of communication queues **********/
 
-static int __devinit create_queues (amb_dev * dev, unsigned int cmds,
+static int create_queues (amb_dev * dev, unsigned int cmds,
 				 unsigned int txs, unsigned int * rxs,
 				 unsigned int * rx_buffer_sizes) {
   unsigned char pool;
@@ -1737,7 +1737,7 @@ static  int decode_loader_result (loader_command cmd, u32 result)
 	return res;
 }
 
-static int __devinit do_loader_command (volatile loader_block * lb,
+static int do_loader_command (volatile loader_block * lb,
 				     const amb_dev * dev, loader_command cmd) {
   
   unsigned long timeout;
@@ -1793,7 +1793,7 @@ static int __devinit do_loader_command (volatile loader_block * lb,
 
 /* loader: determine loader version */
 
-static int __devinit get_loader_version (loader_block * lb,
+static int get_loader_version (loader_block * lb,
 				      const amb_dev * dev, u32 * version) {
   int res;
   
@@ -1809,7 +1809,7 @@ static int __devinit get_loader_version (loader_block * lb,
 
 /* loader: write memory data blocks */
 
-static int __devinit loader_write (loader_block* lb,
+static int loader_write (loader_block* lb,
 				   const amb_dev *dev,
 				   const struct ihex_binrec *rec) {
   transfer_block * tb = &lb->payload.transfer;
@@ -1824,7 +1824,7 @@ static int __devinit loader_write (loader_block* lb,
 
 /* loader: verify memory data blocks */
 
-static int __devinit loader_verify (loader_block * lb,
+static int loader_verify (loader_block * lb,
 				    const amb_dev *dev,
 				    const struct ihex_binrec *rec) {
   transfer_block * tb = &lb->payload.transfer;
@@ -1842,7 +1842,7 @@ static int __devinit loader_verify (loader_block * lb,
 
 /* loader: start microcode */
 
-static int __devinit loader_start (loader_block * lb,
+static int loader_start (loader_block * lb,
 				const amb_dev * dev, u32 address) {
   PRINTD (DBG_FLOW|DBG_LOAD, "loader_start");
   
@@ -1918,7 +1918,7 @@ static int amb_reset (amb_dev * dev, int diags) {
 
 /********** transfer and start the microcode **********/
 
-static int __devinit ucode_init (loader_block * lb, amb_dev * dev) {
+static int ucode_init (loader_block * lb, amb_dev * dev) {
   const struct firmware *fw;
   unsigned long start_address;
   const struct ihex_binrec *rec;
@@ -1979,7 +1979,7 @@ static inline __be32 bus_addr(void * addr) {
     return cpu_to_be32 (virt_to_bus (addr));
 }
 
-static int __devinit amb_talk (amb_dev * dev) {
+static int amb_talk (amb_dev * dev) {
   adap_talk_block a;
   unsigned char pool;
   unsigned long timeout;
@@ -2026,7 +2026,7 @@ static int __devinit amb_talk (amb_dev * dev) {
 }
 
 // get microcode version
-static void __devinit amb_ucode_version (amb_dev * dev) {
+static void amb_ucode_version (amb_dev * dev) {
   u32 major;
   u32 minor;
   command cmd;
@@ -2041,7 +2041,7 @@ static void __devinit amb_ucode_version (amb_dev * dev) {
 }
   
 // get end station address
-static void __devinit amb_esi (amb_dev * dev, u8 * esi) {
+static void amb_esi (amb_dev * dev, u8 * esi) {
   u32 lower4;
   u16 upper2;
   command cmd;
@@ -2087,7 +2087,7 @@ static void fixup_plx_window (amb_dev *dev, loader_block *lb)
 	return;
 }
 
-static int __devinit amb_init (amb_dev * dev)
+static int amb_init (amb_dev * dev)
 {
   loader_block lb;
   
@@ -2183,7 +2183,7 @@ static void setup_pci_dev(struct pci_dev *pci_dev)
 	}
 }
 
-static int __devinit amb_probe(struct pci_dev *pci_dev, const struct pci_device_id *pci_ent)
+static int amb_probe(struct pci_dev *pci_dev, const struct pci_device_id *pci_ent)
 {
 	amb_dev * dev;
 	int err;
@@ -2284,7 +2284,7 @@ out_disable:
 }
 
 
-static void __devexit amb_remove_one(struct pci_dev *pci_dev)
+static void amb_remove_one(struct pci_dev *pci_dev)
 {
 	struct amb_dev *dev;
 

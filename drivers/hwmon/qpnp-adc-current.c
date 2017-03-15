@@ -516,7 +516,7 @@ hwmon_err_sens:
 	return rc;
 }
 
-static int __devinit qpnp_iadc_probe(struct spmi_device *spmi)
+static int qpnp_iadc_probe(struct spmi_device *spmi)
 {
 	struct qpnp_iadc_drv *iadc;
 	struct qpnp_adc_drv *adc_qpnp;
@@ -599,7 +599,7 @@ static int __devinit qpnp_iadc_probe(struct spmi_device *spmi)
 	return 0;
 }
 
-static int __devexit qpnp_iadc_remove(struct spmi_device *spmi)
+static int qpnp_iadc_remove(struct spmi_device *spmi)
 {
 	struct qpnp_iadc_drv *iadc = dev_get_drvdata(&spmi->dev);
 	struct device_node *node = spmi->dev.of_node;

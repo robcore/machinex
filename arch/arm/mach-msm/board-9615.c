@@ -270,21 +270,21 @@ static struct pm8xxx_adc_platform_data pm8018_adc_pdata = {
 	.adc_prop		= &pm8018_adc_data,
 };
 
-static struct pm8xxx_irq_platform_data pm8xxx_irq_pdata __devinitdata = {
+static struct pm8xxx_irq_platform_data pm8xxx_irq_pdata = {
 	.irq_base		= PM8018_IRQ_BASE,
 	.devirq			= MSM_GPIO_TO_INT(87),
 	.irq_trigger_flag	= IRQF_TRIGGER_LOW,
 };
 
-static struct pm8xxx_gpio_platform_data pm8xxx_gpio_pdata __devinitdata = {
+static struct pm8xxx_gpio_platform_data pm8xxx_gpio_pdata = {
 	.gpio_base		= PM8018_GPIO_PM_TO_SYS(1),
 };
 
-static struct pm8xxx_mpp_platform_data pm8xxx_mpp_pdata __devinitdata = {
+static struct pm8xxx_mpp_platform_data pm8xxx_mpp_pdata = {
 	.mpp_base		= PM8018_MPP_PM_TO_SYS(1),
 };
 
-static struct pm8xxx_rtc_platform_data pm8xxx_rtc_pdata __devinitdata = {
+static struct pm8xxx_rtc_platform_data pm8xxx_rtc_pdata = {
 	.rtc_write_enable	= false,
 	.rtc_alarm_powerup	= false,
 };
@@ -343,7 +343,7 @@ static struct ltc4088_charger_platform_data ltc4088_chg_pdata = {
 };
 #endif
 
-static struct pm8018_platform_data pm8018_platform_data __devinitdata = {
+static struct pm8018_platform_data pm8018_platform_data = {
 	.irq_pdata		= &pm8xxx_irq_pdata,
 	.gpio_pdata		= &pm8xxx_gpio_pdata,
 	.mpp_pdata		= &pm8xxx_mpp_pdata,
@@ -355,7 +355,7 @@ static struct pm8018_platform_data pm8018_platform_data __devinitdata = {
 	.leds_pdata		= &pm8xxx_leds_pdata,
 };
 
-static struct msm_ssbi_platform_data msm9615_ssbi_pm8018_pdata __devinitdata = {
+static struct msm_ssbi_platform_data msm9615_ssbi_pm8018_pdata = {
 	.controller_type = MSM_SBI_CTRL_PMIC_ARBITER,
 	.slave	= {
 		.name		= PM8018_CORE_DEV_NAME,
@@ -363,7 +363,7 @@ static struct msm_ssbi_platform_data msm9615_ssbi_pm8018_pdata __devinitdata = {
 	},
 };
 
-static struct platform_device msm9615_device_rpm_regulator __devinitdata = {
+static struct platform_device msm9615_device_rpm_regulator = {
 	.name	= "rpm-regulator",
 	.id	= -1,
 	.dev	= {

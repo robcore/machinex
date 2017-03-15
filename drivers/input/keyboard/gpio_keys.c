@@ -657,7 +657,7 @@ out:
 	return IRQ_HANDLED;
 }
 
-static int __devinit gpio_keys_setup_key(struct platform_device *pdev,
+static int gpio_keys_setup_key(struct platform_device *pdev,
 					 struct input_dev *input,
 					 struct gpio_button_data *bdata,
 					 struct gpio_keys_button *button)
@@ -999,7 +999,7 @@ static void gpio_remove_key(struct gpio_button_data *bdata)
 }
 
 extern struct class *sec_class;
-static int __devinit gpio_keys_probe(struct platform_device *pdev)
+static int gpio_keys_probe(struct platform_device *pdev)
 {
 	const struct gpio_keys_platform_data *pdata = pdev->dev.platform_data;
 	struct gpio_keys_drvdata *ddata;

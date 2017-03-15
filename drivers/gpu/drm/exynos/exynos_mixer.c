@@ -902,7 +902,7 @@ static const struct dev_pm_ops mixer_pm_ops = {
 	.runtime_resume	 = mixer_runtime_resume,
 };
 
-static int __devinit mixer_resources_init(struct exynos_drm_hdmi_context *ctx,
+static int mixer_resources_init(struct exynos_drm_hdmi_context *ctx,
 				 struct platform_device *pdev)
 {
 	struct mixer_context *mixer_ctx = ctx->ctx;
@@ -1022,7 +1022,7 @@ static void mixer_resources_cleanup(struct mixer_context *ctx)
 	iounmap(res->mixer_regs);
 }
 
-static int __devinit mixer_probe(struct platform_device *pdev)
+static int mixer_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct exynos_drm_hdmi_context *drm_hdmi_ctx;

@@ -69,12 +69,12 @@ static const struct sdhci_pltfm_data sdhci_dove_pdata = {
 		  SDHCI_QUIRK_FORCE_DMA,
 };
 
-static int __devinit sdhci_dove_probe(struct platform_device *pdev)
+static int sdhci_dove_probe(struct platform_device *pdev)
 {
 	return sdhci_pltfm_register(pdev, &sdhci_dove_pdata);
 }
 
-static int __devexit sdhci_dove_remove(struct platform_device *pdev)
+static int sdhci_dove_remove(struct platform_device *pdev)
 {
 	return sdhci_pltfm_unregister(pdev);
 }

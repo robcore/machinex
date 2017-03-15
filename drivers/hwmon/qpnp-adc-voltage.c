@@ -732,7 +732,7 @@ hwmon_err_sens:
 	return rc;
 }
 
-static int __devinit qpnp_vadc_probe(struct spmi_device *spmi)
+static int qpnp_vadc_probe(struct spmi_device *spmi)
 {
 	struct qpnp_vadc_drv *vadc;
 	struct qpnp_adc_drv *adc_qpnp;
@@ -816,7 +816,7 @@ fail_free_irq:
 	return rc;
 }
 
-static int __devexit qpnp_vadc_remove(struct spmi_device *spmi)
+static int qpnp_vadc_remove(struct spmi_device *spmi)
 {
 	struct qpnp_vadc_drv *vadc = dev_get_drvdata(&spmi->dev);
 	struct device_node *node = spmi->dev.of_node;

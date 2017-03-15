@@ -508,7 +508,7 @@ static const struct v4l2_subdev_ops msm_csid_subdev_ops = {
 	.core = &msm_csid_subdev_core_ops,
 };
 
-static int __devinit csid_probe(struct platform_device *pdev)
+static int csid_probe(struct platform_device *pdev)
 {
 	struct csid_device *new_csid_dev;
 	struct msm_cam_subdev_info sd_info;

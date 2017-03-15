@@ -3250,7 +3250,7 @@ config_setup_fail:
 	return rc;
 }
 
-static int __devinit msm_camera_probe(struct platform_device *pdev)
+static int msm_camera_probe(struct platform_device *pdev)
 {
 	int rc = 0, i;
 	memset(&g_server_dev, 0, sizeof(struct msm_cam_server_dev));

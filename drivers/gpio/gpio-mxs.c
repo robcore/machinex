@@ -180,7 +180,7 @@ static int mxs_gpio_to_irq(struct gpio_chip *gc, unsigned offset)
 	return port->virtual_irq_start + offset;
 }
 
-static int __devinit mxs_gpio_probe(struct platform_device *pdev)
+static int mxs_gpio_probe(struct platform_device *pdev)
 {
 	static void __iomem *base;
 	struct mxs_gpio_port *port;

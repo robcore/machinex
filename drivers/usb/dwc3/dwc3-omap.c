@@ -204,7 +204,7 @@ static irqreturn_t dwc3_omap_interrupt(int irq, void *_omap)
 	return IRQ_HANDLED;
 }
 
-static int __devinit dwc3_omap_probe(struct platform_device *pdev)
+static int dwc3_omap_probe(struct platform_device *pdev)
 {
 	struct dwc3_omap_data	*pdata = pdev->dev.platform_data;
 	struct device_node	*node = pdev->dev.of_node;
@@ -366,7 +366,7 @@ err1:
 	return ret;
 }
 
-static int __devexit dwc3_omap_remove(struct platform_device *pdev)
+static int dwc3_omap_remove(struct platform_device *pdev)
 {
 	struct dwc3_omap	*omap = platform_get_drvdata(pdev);
 

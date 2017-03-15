@@ -182,7 +182,7 @@ static void mipi_truly_set_backlight(struct msm_fb_data_type *mfd)
 	return;
 }
 
-static int __devinit mipi_truly_lcd_probe(struct platform_device *pdev)
+static int mipi_truly_lcd_probe(struct platform_device *pdev)
 {
 	if (pdev->id == 0) {
 		mipi_truly_pdata = pdev->dev.platform_data;

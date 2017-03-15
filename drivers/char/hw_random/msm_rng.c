@@ -109,7 +109,7 @@ static struct hwrng msm_rng = {
 	.read = msm_rng_read,
 };
 
-static int __devinit msm_rng_enable_hw(struct msm_rng_device *msm_rng_dev)
+static int msm_rng_enable_hw(struct msm_rng_device *msm_rng_dev)
 {
 	unsigned long val = 0;
 	unsigned long reg_val = 0;
@@ -151,7 +151,7 @@ static int __devinit msm_rng_enable_hw(struct msm_rng_device *msm_rng_dev)
 	return 0;
 }
 
-static int __devinit msm_rng_probe(struct platform_device *pdev)
+static int msm_rng_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct msm_rng_device *msm_rng_dev = NULL;

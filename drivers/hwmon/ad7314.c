@@ -107,7 +107,7 @@ static const struct attribute_group ad7314_group = {
 	.attrs = ad7314_attributes,
 };
 
-static int __devinit ad7314_probe(struct spi_device *spi_dev)
+static int ad7314_probe(struct spi_device *spi_dev)
 {
 	int ret;
 	struct ad7314_data *chip;
@@ -138,7 +138,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit ad7314_remove(struct spi_device *spi_dev)
+static int ad7314_remove(struct spi_device *spi_dev)
 {
 	struct ad7314_data *chip = dev_get_drvdata(&spi_dev->dev);
 

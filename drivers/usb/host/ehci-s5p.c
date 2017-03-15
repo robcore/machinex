@@ -63,7 +63,7 @@ static const struct hc_driver s5p_ehci_hc_driver = {
 	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
 };
 
-static int __devinit s5p_ehci_probe(struct platform_device *pdev)
+static int s5p_ehci_probe(struct platform_device *pdev)
 {
 	struct s5p_ehci_platdata *pdata;
 	struct s5p_ehci_hcd *s5p_ehci;
@@ -161,7 +161,7 @@ fail_hcd:
 	return err;
 }
 
-static int __devexit s5p_ehci_remove(struct platform_device *pdev)
+static int s5p_ehci_remove(struct platform_device *pdev)
 {
 	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);

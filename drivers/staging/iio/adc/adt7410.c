@@ -713,7 +713,7 @@ static const struct iio_info adt7410_info = {
  * device probe and remove
  */
 
-static int __devinit adt7410_probe(struct i2c_client *client,
+static int adt7410_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct adt7410_chip_info *chip;
@@ -803,7 +803,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit adt7410_remove(struct i2c_client *client)
+static int adt7410_remove(struct i2c_client *client)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 	unsigned long *adt7410_platform_data = client->dev.platform_data;

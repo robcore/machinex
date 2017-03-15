@@ -225,7 +225,7 @@ static struct scsi_host_template cumanascsi_template = {
 	.proc_name		= "CumanaSCSI-1",
 };
 
-static int __devinit
+static int
 cumanascsi1_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	struct Scsi_Host *host;
@@ -298,7 +298,7 @@ cumanascsi1_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit cumanascsi1_remove(struct expansion_card *ec)
+static void cumanascsi1_remove(struct expansion_card *ec)
 {
 	struct Scsi_Host *host = ecard_get_drvdata(ec);
 

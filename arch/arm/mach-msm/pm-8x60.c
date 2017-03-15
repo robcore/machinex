@@ -1109,7 +1109,7 @@ void __init msm_pm_set_tz_retention_flag(unsigned int flag)
 	msm_pm_retention_tz_call = flag;
 }
 
-static int __devinit msm_pc_debug_probe(struct platform_device *pdev)
+static int msm_pc_debug_probe(struct platform_device *pdev)
 {
 	struct resource *res = NULL;
 	int i ;

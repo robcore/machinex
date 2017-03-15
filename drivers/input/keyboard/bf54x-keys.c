@@ -177,7 +177,7 @@ static irqreturn_t bfin_kpad_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit bfin_kpad_probe(struct platform_device *pdev)
+static int bfin_kpad_probe(struct platform_device *pdev)
 {
 	struct bf54x_kpad *bf54x_kpad;
 	struct bfin_kpad_platform_data *pdata = pdev->dev.platform_data;
@@ -331,7 +331,7 @@ out:
 	return error;
 }
 
-static int __devexit bfin_kpad_remove(struct platform_device *pdev)
+static int bfin_kpad_remove(struct platform_device *pdev)
 {
 	struct bfin_kpad_platform_data *pdata = pdev->dev.platform_data;
 	struct bf54x_kpad *bf54x_kpad = platform_get_drvdata(pdev);

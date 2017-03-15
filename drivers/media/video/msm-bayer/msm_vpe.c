@@ -1026,7 +1026,7 @@ static const struct v4l2_subdev_internal_ops msm_vpe_internal_ops = {
 	.close = msm_vpe_subdev_close,
 };
 
-static int __devinit msm_vpe_probe(struct platform_device *pdev)
+static int msm_vpe_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct msm_cam_subdev_info sd_info;

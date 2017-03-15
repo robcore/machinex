@@ -78,7 +78,7 @@ static const struct hc_driver ehci_platform_hc_driver = {
 	.clear_tt_buffer_complete = ehci_clear_tt_buffer_complete,
 };
 
-static int __devinit ehci_platform_probe(struct platform_device *dev)
+static int ehci_platform_probe(struct platform_device *dev)
 {
 	struct usb_hcd *hcd;
 	struct resource *res_mem;
@@ -151,7 +151,7 @@ err_power:
 	return err;
 }
 
-static int __devexit ehci_platform_remove(struct platform_device *dev)
+static int ehci_platform_remove(struct platform_device *dev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(dev);
 	struct usb_ehci_pdata *pdata = dev->dev.platform_data;

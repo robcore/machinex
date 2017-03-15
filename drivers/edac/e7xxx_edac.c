@@ -527,7 +527,7 @@ fail0:
 }
 
 /* returns count (>= 0), or negative on error */
-static int __devinit e7xxx_init_one(struct pci_dev *pdev,
+static int e7xxx_init_one(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	debugf0("%s()\n", __func__);
@@ -537,7 +537,7 @@ static int __devinit e7xxx_init_one(struct pci_dev *pdev,
 		-EIO : e7xxx_probe1(pdev, ent->driver_data);
 }
 
-static void __devexit e7xxx_remove_one(struct pci_dev *pdev)
+static void e7xxx_remove_one(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 	struct e7xxx_pvt *pvt;

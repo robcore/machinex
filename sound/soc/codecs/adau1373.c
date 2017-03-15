@@ -1353,7 +1353,7 @@ static struct snd_soc_codec_driver adau1373_codec_driver = {
 	.num_dapm_routes = ARRAY_SIZE(adau1373_dapm_routes),
 };
 
-static int __devinit adau1373_i2c_probe(struct i2c_client *client,
+static int adau1373_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	struct adau1373 *adau1373;
@@ -1370,7 +1370,7 @@ static int __devinit adau1373_i2c_probe(struct i2c_client *client,
 	return ret;
 }
 
-static int __devexit adau1373_i2c_remove(struct i2c_client *client)
+static int adau1373_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	return 0;

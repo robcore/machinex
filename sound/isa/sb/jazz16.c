@@ -78,7 +78,7 @@ static irqreturn_t jazz16_interrupt(int irq, void *chip)
 	return snd_sb8dsp_interrupt(chip);
 }
 
-static int __devinit jazz16_configure_ports(unsigned long port,
+static int jazz16_configure_ports(unsigned long port,
 					    unsigned long mpu_port, int idx)
 {
 	unsigned char val;
@@ -99,7 +99,7 @@ static int __devinit jazz16_configure_ports(unsigned long port,
 	return 0;
 }
 
-static int __devinit jazz16_detect_board(unsigned long port,
+static int jazz16_detect_board(unsigned long port,
 					 unsigned long mpu_port)
 {
 	int err;
@@ -156,7 +156,7 @@ err_unmap:
 	return err;
 }
 
-static int __devinit jazz16_configure_board(struct snd_sb *chip, int mpu_irq)
+static int jazz16_configure_board(struct snd_sb *chip, int mpu_irq)
 {
 	static unsigned char jazz_irq_bits[] = { 0, 0, 2, 3, 0, 1, 0, 4,
 						 0, 2, 5, 0, 0, 0, 0, 6 };
@@ -183,7 +183,7 @@ static int __devinit jazz16_configure_board(struct snd_sb *chip, int mpu_irq)
 	return 0;
 }
 
-static int __devinit snd_jazz16_match(struct device *devptr, unsigned int dev)
+static int snd_jazz16_match(struct device *devptr, unsigned int dev)
 {
 	if (!enable[dev])
 		return 0;
@@ -218,7 +218,7 @@ static int __devinit snd_jazz16_match(struct device *devptr, unsigned int dev)
 	return 1;
 }
 
-static int __devinit snd_jazz16_probe(struct device *devptr, unsigned int dev)
+static int snd_jazz16_probe(struct device *devptr, unsigned int dev)
 {
 	struct snd_card *card;
 	struct snd_card_jazz16 *jazz16;
@@ -341,7 +341,7 @@ err_free:
 	return err;
 }
 
-static int __devexit snd_jazz16_remove(struct device *devptr, unsigned int dev)
+static int snd_jazz16_remove(struct device *devptr, unsigned int dev)
 {
 	struct snd_card *card = dev_get_drvdata(devptr);
 

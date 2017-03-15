@@ -1245,7 +1245,7 @@ static int max1363_initial_setup(struct max1363_state *st)
 	return max1363_set_scan_mode(st);
 }
 
-static int __devinit max1363_alloc_scan_masks(struct iio_dev *indio_dev)
+static int max1363_alloc_scan_masks(struct iio_dev *indio_dev)
 {
 	struct max1363_state *st = iio_priv(indio_dev);
 	unsigned long *masks;
@@ -1266,7 +1266,7 @@ static int __devinit max1363_alloc_scan_masks(struct iio_dev *indio_dev)
 	return 0;
 }
 
-static int __devinit max1363_probe(struct i2c_client *client,
+static int max1363_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	int ret;

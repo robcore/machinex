@@ -262,7 +262,7 @@ static struct bin_attribute ks8995_registers_attr = {
 
 /* ------------------------------------------------------------------------ */
 
-static int __devinit ks8995_probe(struct spi_device *spi)
+static int ks8995_probe(struct spi_device *spi)
 {
 	struct ks8995_switch    *ks;
 	struct ks8995_pdata     *pdata;
@@ -328,7 +328,7 @@ err_drvdata:
 	return err;
 }
 
-static int __devexit ks8995_remove(struct spi_device *spi)
+static int ks8995_remove(struct spi_device *spi)
 {
 	struct ks8995_data      *ks8995;
 

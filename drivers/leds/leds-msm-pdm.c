@@ -91,7 +91,7 @@ static const struct dev_pm_ops msm_led_pdm_pm_ops = {
 };
 #endif
 
-static int __devinit msm_pdm_led_probe(struct platform_device *pdev)
+static int msm_pdm_led_probe(struct platform_device *pdev)
 {
 	const struct led_info *pdata = pdev->dev.platform_data;
 	struct pdm_led_data *led;
@@ -184,7 +184,7 @@ err_get_res:
 	return rc;
 }
 
-static int __devexit msm_pdm_led_remove(struct platform_device *pdev)
+static int msm_pdm_led_remove(struct platform_device *pdev)
 {
 	struct pdm_led_data *led = platform_get_drvdata(pdev);
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

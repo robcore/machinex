@@ -1092,7 +1092,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 }
 
 #ifndef CONFIG_MDP_SHUTDOWN
-static void __devinit mipi_samsung_disp_shutdown(struct platform_device *pdev)
+static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 {
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata;
 	struct msm_fb_data_type *mfd;
@@ -1997,7 +1997,7 @@ static DEVICE_ATTR(esd_check, S_IRUGO , mipi_samsung_esd_check_show,\
 #endif
 #endif
 
-static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
+static int mipi_samsung_disp_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct platform_device *msm_fb_added_dev;

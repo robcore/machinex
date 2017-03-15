@@ -137,7 +137,7 @@ static void pcap_ts_close(struct input_dev *dev)
 				pcap_ts->read_state << PCAP_ADC_TS_M_SHIFT);
 }
 
-static int __devinit pcap_ts_probe(struct platform_device *pdev)
+static int pcap_ts_probe(struct platform_device *pdev)
 {
 	struct input_dev *input_dev;
 	struct pcap_ts *pcap_ts;
@@ -202,7 +202,7 @@ fail:
 	return err;
 }
 
-static int __devexit pcap_ts_remove(struct platform_device *pdev)
+static int pcap_ts_remove(struct platform_device *pdev)
 {
 	struct pcap_ts *pcap_ts = platform_get_drvdata(pdev);
 

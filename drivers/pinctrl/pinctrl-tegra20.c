@@ -2854,7 +2854,7 @@ static const struct tegra_pinctrl_soc_data tegra20_pinctrl = {
 	.ngroups = ARRAY_SIZE(tegra20_groups),
 };
 
-void __devinit tegra20_pinctrl_init(const struct tegra_pinctrl_soc_data **soc)
+void tegra20_pinctrl_init(const struct tegra_pinctrl_soc_data **soc)
 {
 	*soc = &tegra20_pinctrl;
 }

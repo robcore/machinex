@@ -128,7 +128,7 @@ static int rdc_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 /*
  * Cache the initial value of both GPIO data registers
  */
-static int __devinit rdc321x_gpio_probe(struct platform_device *pdev)
+static int rdc321x_gpio_probe(struct platform_device *pdev)
 {
 	int err;
 	struct resource *r;
@@ -205,7 +205,7 @@ out_free:
 	return err;
 }
 
-static int __devexit rdc321x_gpio_remove(struct platform_device *pdev)
+static int rdc321x_gpio_remove(struct platform_device *pdev)
 {
 	int ret;
 	struct rdc321x_gpio *rdc321x_gpio_dev = platform_get_drvdata(pdev);

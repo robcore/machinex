@@ -1726,7 +1726,7 @@ static const struct net_device_ops pasemi_netdev_ops = {
 #endif
 };
 
-static int __devinit
+static int
 pasemi_mac_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct net_device *dev;
@@ -1848,7 +1848,7 @@ out_disable_device:
 
 }
 
-static void __devexit pasemi_mac_remove(struct pci_dev *pdev)
+static void pasemi_mac_remove(struct pci_dev *pdev)
 {
 	struct net_device *netdev = pci_get_drvdata(pdev);
 	struct pasemi_mac *mac;

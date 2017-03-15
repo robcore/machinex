@@ -872,7 +872,7 @@ put_alt_core_clk:
 	return ret;
 }
 
-static int __devinit ehci_msm2_probe(struct platform_device *pdev)
+static int ehci_msm2_probe(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd;
 	struct resource *res;
@@ -1039,7 +1039,7 @@ put_hcd:
 	return ret;
 }
 
-static int __devexit ehci_msm2_remove(struct platform_device *pdev)
+static int ehci_msm2_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct msm_hcd *mhcd = hcd_to_mhcd(hcd);

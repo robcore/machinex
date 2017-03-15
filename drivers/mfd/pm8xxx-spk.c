@@ -193,7 +193,7 @@ static int pm8xxx_spk_config(void)
 	return ret;
 }
 
-static int __devinit pm8xxx_spk_probe(struct platform_device *pdev)
+static int pm8xxx_spk_probe(struct platform_device *pdev)
 {
 	const struct pm8xxx_spk_platform_data *pdata = pdev->dev.platform_data;
 	int ret = 0;
@@ -266,7 +266,7 @@ err_handle:
 	return ret;
 }
 
-static int __devexit pm8xxx_spk_remove(struct platform_device *pdev)
+static int pm8xxx_spk_remove(struct platform_device *pdev)
 {
 	if (spk_defined() == false) {
 		pr_err("Invalid spk handle or no spk_chip\n");

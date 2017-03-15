@@ -2805,7 +2805,7 @@ static const struct file_operations msm_rotator_fops = {
 	.unlocked_ioctl = msm_rotator_ioctl,
 };
 
-static int __devinit msm_rotator_probe(struct platform_device *pdev)
+static int msm_rotator_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct resource *res;

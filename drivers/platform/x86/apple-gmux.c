@@ -106,7 +106,7 @@ static const struct backlight_ops gmux_bl_ops = {
 	.update_status = gmux_update_status,
 };
 
-static int __devinit gmux_probe(struct pnp_dev *pnp,
+static int gmux_probe(struct pnp_dev *pnp,
 				const struct pnp_device_id *id)
 {
 	struct apple_gmux_data *gmux_data;
@@ -201,7 +201,7 @@ err_free:
 	return ret;
 }
 
-static void __devexit gmux_remove(struct pnp_dev *pnp)
+static void gmux_remove(struct pnp_dev *pnp)
 {
 	struct apple_gmux_data *gmux_data = pnp_get_drvdata(pnp);
 

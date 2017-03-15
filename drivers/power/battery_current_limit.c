@@ -508,7 +508,7 @@ static int bcl_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit bcl_remove(struct platform_device *pdev)
+static int bcl_remove(struct platform_device *pdev)
 {
 	remove_bcl_sysfs(gbcl);
 	kfree(gbcl);

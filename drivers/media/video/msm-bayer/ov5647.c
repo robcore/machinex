@@ -940,7 +940,7 @@ probe_failure:
 	return rc;
 }
 
-static int __devexit ov5647_remove(struct i2c_client *client)
+static int ov5647_remove(struct i2c_client *client)
 {
 	struct ov5647_work_t *sensorw = i2c_get_clientdata(client);
 	free_irq(client->irq, sensorw);
@@ -949,7 +949,7 @@ static int __devexit ov5647_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int __devexit ov5647_af_remove(struct i2c_client *client)
+static int ov5647_af_remove(struct i2c_client *client)
 {
 	struct ov5647_work_t *ov5647_af = i2c_get_clientdata(client);
 	free_irq(client->irq, ov5647_af);
@@ -1178,7 +1178,7 @@ probe_fail_1:
 	return rc;
 }
 
-static int __devinit ov5647_probe(struct platform_device *pdev)
+static int ov5647_probe(struct platform_device *pdev)
 {
 	return msm_camera_drv_start(pdev, ov5647_sensor_probe);
 }

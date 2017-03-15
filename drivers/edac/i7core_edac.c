@@ -2236,7 +2236,7 @@ fail0:
  *		< 0 for error code
  */
 
-static int __devinit i7core_probe(struct pci_dev *pdev,
+static int i7core_probe(struct pci_dev *pdev,
 				  const struct pci_device_id *id)
 {
 	int rc, count = 0;
@@ -2299,7 +2299,7 @@ fail0:
  *	i7core_remove	destructor for one instance of device
  *
  */
-static void __devexit i7core_remove(struct pci_dev *pdev)
+static void i7core_remove(struct pci_dev *pdev)
 {
 	struct i7core_dev *i7core_dev;
 

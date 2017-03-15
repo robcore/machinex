@@ -777,14 +777,14 @@ static struct snd_soc_dai_driver atmel_ssc_dai[NUM_SSC_DEVICES] = {
 #endif
 };
 
-static __devinit int asoc_ssc_probe(struct platform_device *pdev)
+static int asoc_ssc_probe(struct platform_device *pdev)
 {
 	BUG_ON(pdev->id < 0);
 	BUG_ON(pdev->id >= ARRAY_SIZE(atmel_ssc_dai));
 	return snd_soc_register_dai(&pdev->dev, &atmel_ssc_dai[pdev->id]);
 }
 
-static int __devexit asoc_ssc_remove(struct platform_device *pdev)
+static int asoc_ssc_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_dai(&pdev->dev);
 	return 0;

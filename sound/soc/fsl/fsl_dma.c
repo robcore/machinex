@@ -900,7 +900,7 @@ static struct snd_pcm_ops fsl_dma_ops = {
 	.pointer	= fsl_dma_pointer,
 };
 
-static int __devinit fsl_soc_dma_probe(struct platform_device *pdev)
+static int fsl_soc_dma_probe(struct platform_device *pdev)
  {
 	struct dma_object *dma;
 	struct device_node *np = pdev->dev.of_node;
@@ -964,7 +964,7 @@ static int __devinit fsl_soc_dma_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit fsl_soc_dma_remove(struct platform_device *pdev)
+static int fsl_soc_dma_remove(struct platform_device *pdev)
 {
 	struct dma_object *dma = dev_get_drvdata(&pdev->dev);
 

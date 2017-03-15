@@ -296,7 +296,7 @@ error:
 	return -EINVAL;
 }
 
-static int __devinit mdss_dsi_panel_probe(struct platform_device *pdev)
+static int mdss_dsi_panel_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct mdss_panel_common_pdata *vendor_pdata = NULL;

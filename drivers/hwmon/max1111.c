@@ -135,7 +135,7 @@ static const struct attribute_group max1111_attr_group = {
 	.attrs	= max1111_attributes,
 };
 
-static int __devinit setup_transfer(struct max1111_data *data)
+static int setup_transfer(struct max1111_data *data)
 {
 	struct spi_message *m;
 	struct spi_transfer *x;
@@ -157,7 +157,7 @@ static int __devinit setup_transfer(struct max1111_data *data)
 	return 0;
 }
 
-static int __devinit max1111_probe(struct spi_device *spi)
+static int max1111_probe(struct spi_device *spi)
 {
 	struct max1111_data *data;
 	int err;
@@ -208,7 +208,7 @@ err_free_data:
 	return err;
 }
 
-static int __devexit max1111_remove(struct spi_device *spi)
+static int max1111_remove(struct spi_device *spi)
 {
 	struct max1111_data *data = spi_get_drvdata(spi);
 

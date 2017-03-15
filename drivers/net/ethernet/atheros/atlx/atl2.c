@@ -83,7 +83,7 @@ static void atl2_check_options(struct atl2_adapter *adapter);
  * Fields are initialized based on PCI device information and
  * OS network device settings (MTU size).
  */
-static int __devinit atl2_sw_init(struct atl2_adapter *adapter)
+static int atl2_sw_init(struct atl2_adapter *adapter)
 {
 	struct atl2_hw *hw = &adapter->hw;
 	struct pci_dev *pdev = adapter->pdev;
@@ -1349,7 +1349,7 @@ static const struct net_device_ops atl2_netdev_ops = {
  * The OS initialization, configuring of the adapter private structure,
  * and a hardware reset occur.
  */
-static int __devinit atl2_probe(struct pci_dev *pdev,
+static int atl2_probe(struct pci_dev *pdev,
 	const struct pci_device_id *ent)
 {
 	struct net_device *netdev;
@@ -1509,7 +1509,7 @@ err_dma:
  */
 /* FIXME: write the original MAC address back in case it was changed from a
  * BIOS-set value, as in atl1 -- CHS */
-static void __devexit atl2_remove(struct pci_dev *pdev)
+static void atl2_remove(struct pci_dev *pdev)
 {
 	struct net_device *netdev = pci_get_drvdata(pdev);
 	struct atl2_adapter *adapter = netdev_priv(netdev);
@@ -2856,12 +2856,12 @@ static void atl2_force_ps(struct atl2_hw *hw)
  */
 
 #define ATL2_PARAM(X, desc) \
-    static const int __devinitconst X[ATL2_MAX_NIC + 1] = ATL2_PARAM_INIT; \
+    static const int X[ATL2_MAX_NIC + 1] = ATL2_PARAM_INIT; \
     MODULE_PARM(X, "1-" __MODULE_STRING(ATL2_MAX_NIC) "i"); \
     MODULE_PARM_DESC(X, desc);
 #else
 #define ATL2_PARAM(X, desc) \
-    static int __devinitdata X[ATL2_MAX_NIC+1] = ATL2_PARAM_INIT; \
+    static int X[ATL2_MAX_NIC+1] = ATL2_PARAM_INIT; \
     static unsigned int num_##X; \
     module_param_array_named(X, X, int, &num_##X, 0); \
     MODULE_PARM_DESC(X, desc);
@@ -2945,7 +2945,7 @@ struct atl2_option {
 	} arg;
 };
 
-static int __devinit atl2_validate_option(int *value, struct atl2_option *opt)
+static int atl2_validate_option(int *value, struct atl2_option *opt)
 {
 	int i;
 	struct atl2_opt_list *ent;
@@ -3003,7 +3003,7 @@ static int __devinit atl2_validate_option(int *value, struct atl2_option *opt)
  * value exists, a default value is used.  The final value is stored
  * in a variable in the adapter structure.
  */
-static void __devinit atl2_check_options(struct atl2_adapter *adapter)
+static void atl2_check_options(struct atl2_adapter *adapter)
 {
 	int val;
 	struct atl2_option opt;

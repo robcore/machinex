@@ -23,7 +23,7 @@
 #include "mdp4_wfd_writeback_util.h"
 #include "msm_fb.h"
 
-static int __devinit writeback_panel_probe(struct platform_device *pdev)
+static int writeback_panel_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	if (pdev->id == 0)

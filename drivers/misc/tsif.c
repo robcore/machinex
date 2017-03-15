@@ -1391,7 +1391,7 @@ static struct msm_tsif_device *tsif_find_by_id(int id)
 	return NULL;
 }
 
-static int __devinit msm_tsif_probe(struct platform_device *pdev)
+static int msm_tsif_probe(struct platform_device *pdev)
 {
 	int rc = -ENODEV;
 	struct msm_tsif_platform_data *plat = pdev->dev.platform_data;
@@ -1501,7 +1501,7 @@ out:
 	return rc;
 }
 
-static int __devexit msm_tsif_remove(struct platform_device *pdev)
+static int msm_tsif_remove(struct platform_device *pdev)
 {
 	struct msm_tsif_device *tsif_device = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "Unload\n");

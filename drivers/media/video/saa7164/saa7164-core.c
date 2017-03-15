@@ -1223,7 +1223,7 @@ static int saa7164_thread_function(void *data)
 	return 0;
 }
 
-static int __devinit saa7164_initdev(struct pci_dev *pci_dev,
+static int saa7164_initdev(struct pci_dev *pci_dev,
 				     const struct pci_device_id *pci_id)
 {
 	struct saa7164_dev *dev;
@@ -1416,7 +1416,7 @@ static void saa7164_shutdown(struct saa7164_dev *dev)
 	dprintk(1, "%s()\n", __func__);
 }
 
-static void __devexit saa7164_finidev(struct pci_dev *pci_dev)
+static void saa7164_finidev(struct pci_dev *pci_dev)
 {
 	struct saa7164_dev *dev = pci_get_drvdata(pci_dev);
 

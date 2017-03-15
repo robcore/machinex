@@ -1053,7 +1053,7 @@ static void msm_adc_teardown(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 }
 
-static int __devinit msm_adc_device_conv_init(struct msm_adc_drv *msm_adc,
+static int msm_adc_device_conv_init(struct msm_adc_drv *msm_adc,
 					      struct adc_dev *adc_dev)
 {
 	struct platform_device *pdev = msm_adc->pdev;
@@ -1091,7 +1091,7 @@ dal_err_cb:
 static struct sensor_device_attribute msm_rpc_adc_curr_in_attr =
 	SENSOR_ATTR(NULL, S_IRUGO, msm_adc_show_curr, NULL, 0);
 
-static int __devinit msm_rpc_adc_device_init_hwmon(struct platform_device *pdev,
+static int msm_rpc_adc_device_init_hwmon(struct platform_device *pdev,
 						struct adc_dev *adc_dev)
 {
 	struct dal_translation *transl = &adc_dev->transl;
@@ -1148,7 +1148,7 @@ hwmon_err_fnames:
 	return rc;
 }
 
-static int __devinit msm_rpc_adc_device_init(struct platform_device *pdev)
+static int msm_rpc_adc_device_init(struct platform_device *pdev)
 {
 	struct msm_adc_platform_data *pdata = pdev->dev.platform_data;
 	struct msm_adc_drv *msm_adc = platform_get_drvdata(pdev);
@@ -1211,7 +1211,7 @@ dev_init_err:
 	return rc;
 }
 
-static int __devinit msm_rpc_adc_init(struct platform_device *pdev1)
+static int msm_rpc_adc_init(struct platform_device *pdev1)
 {
 	struct msm_adc_drv *msm_adc = msm_adc_drv;
 	struct platform_device *pdev = msm_adc->pdev;
@@ -1342,7 +1342,7 @@ void msm_adc_wq_work(struct work_struct *work)
 static struct sensor_device_attribute msm_adc_curr_in_attr =
 	SENSOR_ATTR(NULL, S_IRUGO, msm_adc_show_curr, NULL, 0);
 
-static int __devinit msm_adc_init_hwmon(struct platform_device *pdev,
+static int msm_adc_init_hwmon(struct platform_device *pdev,
 					       struct msm_adc_drv *msm_adc)
 {
 	struct msm_adc_platform_data *pdata = pdev->dev.platform_data;
@@ -1392,7 +1392,7 @@ static struct platform_driver msm_adc_rpcrouter_remote_driver = {
 	},
 };
 
-static int __devinit msm_adc_probe(struct platform_device *pdev)
+static int msm_adc_probe(struct platform_device *pdev)
 {
 	struct msm_adc_platform_data *pdata = pdev->dev.platform_data;
 	struct msm_adc_drv *msm_adc;
@@ -1464,7 +1464,7 @@ err_cleanup:
 	return rc;
 }
 
-static int __devexit msm_adc_remove(struct platform_device *pdev)
+static int msm_adc_remove(struct platform_device *pdev)
 {
 	int rc;
 

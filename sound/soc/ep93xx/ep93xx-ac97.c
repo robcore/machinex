@@ -356,7 +356,7 @@ static struct snd_soc_dai_driver ep93xx_ac97_dai = {
 	.ops			= &ep93xx_ac97_dai_ops,
 };
 
-static int __devinit ep93xx_ac97_probe(struct platform_device *pdev)
+static int ep93xx_ac97_probe(struct platform_device *pdev)
 {
 	struct ep93xx_ac97_info *info;
 	int ret;
@@ -422,7 +422,7 @@ fail_free_info:
 	return ret;
 }
 
-static int __devexit ep93xx_ac97_remove(struct platform_device *pdev)
+static int ep93xx_ac97_remove(struct platform_device *pdev)
 {
 	struct ep93xx_ac97_info	*info = platform_get_drvdata(pdev);
 

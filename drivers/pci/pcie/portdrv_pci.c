@@ -124,7 +124,7 @@ static const struct dev_pm_ops pcie_portdrv_pm_ops = {
  * this port device.
  *
  */
-static int __devinit pcie_portdrv_probe(struct pci_dev *dev,
+static int pcie_portdrv_probe(struct pci_dev *dev,
 					const struct pci_device_id *id)
 {
 	int status;

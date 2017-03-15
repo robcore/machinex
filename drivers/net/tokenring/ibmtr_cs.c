@@ -111,7 +111,7 @@ static irqreturn_t ibmtr_interrupt(int irq, void *dev_id) {
 	return tok_interrupt(irq, dev);
 };
 
-static int __devinit ibmtr_attach(struct pcmcia_device *link)
+static int ibmtr_attach(struct pcmcia_device *link)
 {
     ibmtr_dev_t *info;
     struct net_device *dev;
@@ -165,7 +165,7 @@ static void ibmtr_detach(struct pcmcia_device *link)
     kfree(info);
 } /* ibmtr_detach */
 
-static int __devinit ibmtr_config(struct pcmcia_device *link)
+static int ibmtr_config(struct pcmcia_device *link)
 {
     ibmtr_dev_t *info = link->priv;
     struct net_device *dev = info->dev;
@@ -284,7 +284,7 @@ static int ibmtr_suspend(struct pcmcia_device *link)
 	return 0;
 }
 
-static int __devinit ibmtr_resume(struct pcmcia_device *link)
+static int ibmtr_resume(struct pcmcia_device *link)
 {
 	ibmtr_dev_t *info = link->priv;
 	struct net_device *dev = info->dev;

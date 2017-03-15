@@ -332,7 +332,7 @@ ssize_t sec_chg_store_attrs(struct device *dev,
 }
 
 #if defined(CONFIG_CHARGER_MFD)
-static int __devinit sec_charger_probe(struct platform_device *pdev)
+static int sec_charger_probe(struct platform_device *pdev)
 {
 	struct sec_charger_info *charger;
 	sec_charger_dev_t *mfd_dev = dev_get_drvdata(pdev->dev.parent);
@@ -475,7 +475,7 @@ static void __exit sec_charger_exit(void)
 	platform_driver_unregister(&sec_charger_driver);
 }
 #else
-static int __devinit sec_charger_probe(struct i2c_client *client,
+static int sec_charger_probe(struct i2c_client *client,
 						const struct i2c_device_id *id)
 {
 	struct sec_charger_info *charger;

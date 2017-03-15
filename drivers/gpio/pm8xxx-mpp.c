@@ -281,7 +281,7 @@ int pm8xxx_mpp_config(unsigned mpp, struct pm8xxx_mpp_config_data *config)
 }
 EXPORT_SYMBOL_GPL(pm8xxx_mpp_config);
 
-static int __devinit pm8xxx_mpp_reg_init(struct pm8xxx_mpp_chip *mpp_chip)
+static int pm8xxx_mpp_reg_init(struct pm8xxx_mpp_chip *mpp_chip)
 {
 	int rc, i;
 
@@ -298,7 +298,7 @@ static int __devinit pm8xxx_mpp_reg_init(struct pm8xxx_mpp_chip *mpp_chip)
 	return 0;
 }
 
-static int __devinit pm8xxx_mpp_probe(struct platform_device *pdev)
+static int pm8xxx_mpp_probe(struct platform_device *pdev)
 {
 	int rc;
 	const struct pm8xxx_mpp_platform_data *pdata = pdev->dev.platform_data;

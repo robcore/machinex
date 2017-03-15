@@ -584,7 +584,7 @@ static struct fb_ops mxsfb_ops = {
 	.fb_imageblit = cfb_imageblit,
 };
 
-static int __devinit mxsfb_restore_mode(struct mxsfb_info *host)
+static int mxsfb_restore_mode(struct mxsfb_info *host)
 {
 	struct fb_info *fb_info = &host->fb_info;
 	unsigned line_count;
@@ -675,7 +675,7 @@ static int __devinit mxsfb_restore_mode(struct mxsfb_info *host)
 	return 0;
 }
 
-static int __devinit mxsfb_init_fbinfo(struct mxsfb_info *host)
+static int mxsfb_init_fbinfo(struct mxsfb_info *host)
 {
 	struct fb_info *fb_info = &host->fb_info;
 	struct fb_var_screeninfo *var = &fb_info->var;
@@ -737,7 +737,7 @@ static int __devinit mxsfb_init_fbinfo(struct mxsfb_info *host)
 	return 0;
 }
 
-static void __devexit mxsfb_free_videomem(struct mxsfb_info *host)
+static void mxsfb_free_videomem(struct mxsfb_info *host)
 {
 	struct fb_info *fb_info = &host->fb_info;
 
@@ -750,7 +750,7 @@ static void __devexit mxsfb_free_videomem(struct mxsfb_info *host)
 	}
 }
 
-static int __devinit mxsfb_probe(struct platform_device *pdev)
+static int mxsfb_probe(struct platform_device *pdev)
 {
 	struct mxsfb_platform_data *pdata = pdev->dev.platform_data;
 	struct resource *res;
@@ -858,7 +858,7 @@ error_alloc_info:
 	return ret;
 }
 
-static int __devexit mxsfb_remove(struct platform_device *pdev)
+static int mxsfb_remove(struct platform_device *pdev)
 {
 	struct fb_info *fb_info = platform_get_drvdata(pdev);
 	struct mxsfb_info *host = to_imxfb_host(fb_info);

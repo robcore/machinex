@@ -262,7 +262,7 @@ static void nuc900_nand_enable(struct nuc900_nand *nand)
 	spin_unlock(&nand->lock);
 }
 
-static int __devinit nuc900_nand_probe(struct platform_device *pdev)
+static int nuc900_nand_probe(struct platform_device *pdev)
 {
 	struct nuc900_nand *nuc900_nand;
 	struct nand_chip *chip;
@@ -334,7 +334,7 @@ fail1:	kfree(nuc900_nand);
 	return retval;
 }
 
-static int __devexit nuc900_nand_remove(struct platform_device *pdev)
+static int nuc900_nand_remove(struct platform_device *pdev)
 {
 	struct nuc900_nand *nuc900_nand = platform_get_drvdata(pdev);
 	struct resource *res;

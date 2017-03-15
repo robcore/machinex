@@ -1538,7 +1538,7 @@ static unsigned short atapi_io_port[] = {
  *		- IRQ	   (IORESOURCE_IRQ)
  *
  */
-static int __devinit bfin_atapi_probe(struct platform_device *pdev)
+static int bfin_atapi_probe(struct platform_device *pdev)
 {
 	int board_idx = 0;
 	struct resource *res;

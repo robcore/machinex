@@ -3774,7 +3774,7 @@ static struct i2c_driver bt532_ts_driver = {
 	},
 };
 
-static int __devinit bt532_ts_init(void)
+static int bt532_ts_init(void)
 {
 	return i2c_add_driver(&bt532_ts_driver);
 }

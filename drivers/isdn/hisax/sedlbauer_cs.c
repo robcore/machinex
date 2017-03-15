@@ -73,7 +73,7 @@ typedef struct local_info_t {
 	int			cardnr;
 } local_info_t;
 
-static int __devinit sedlbauer_probe(struct pcmcia_device *link)
+static int sedlbauer_probe(struct pcmcia_device *link)
 {
 	local_info_t *local;
 
@@ -90,7 +90,7 @@ static int __devinit sedlbauer_probe(struct pcmcia_device *link)
 	return sedlbauer_config(link);
 } /* sedlbauer_attach */
 
-static void __devexit sedlbauer_detach(struct pcmcia_device *link)
+static void sedlbauer_detach(struct pcmcia_device *link)
 {
 	dev_dbg(&link->dev, "sedlbauer_detach(0x%p)\n", link);
 
@@ -110,7 +110,7 @@ static int sedlbauer_config_check(struct pcmcia_device *p_dev, void *priv_data)
 	return pcmcia_request_io(p_dev);
 }
 
-static int __devinit sedlbauer_config(struct pcmcia_device *link)
+static int sedlbauer_config(struct pcmcia_device *link)
 {
 	int ret;
 	IsdnCard_t  icard;

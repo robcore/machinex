@@ -220,12 +220,12 @@ static struct snd_soc_platform_driver mxs_soc_platform = {
 	.pcm_free	= mxs_pcm_free,
 };
 
-static int __devinit mxs_soc_platform_probe(struct platform_device *pdev)
+static int mxs_soc_platform_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev, &mxs_soc_platform);
 }
 
-static int __devexit mxs_soc_platform_remove(struct platform_device *pdev)
+static int mxs_soc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 

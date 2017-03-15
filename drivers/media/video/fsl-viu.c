@@ -1459,7 +1459,7 @@ static struct video_device viu_template = {
 	.current_norm   = V4L2_STD_NTSC_M,
 };
 
-static int __devinit viu_of_probe(struct platform_device *op)
+static int viu_of_probe(struct platform_device *op)
 {
 	struct viu_dev *viu_dev;
 	struct video_device *vdev;
@@ -1596,7 +1596,7 @@ err:
 	return ret;
 }
 
-static int __devexit viu_of_remove(struct platform_device *op)
+static int viu_of_remove(struct platform_device *op)
 {
 	struct v4l2_device *v4l2_dev = dev_get_drvdata(&op->dev);
 	struct viu_dev *dev = container_of(v4l2_dev, struct viu_dev, v4l2_dev);

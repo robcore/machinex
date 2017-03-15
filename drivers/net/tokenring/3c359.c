@@ -71,7 +71,7 @@
 
 #include "3c359.h"
 
-static char version[] __devinitdata  = 
+static char version[]  = 
 "3c359.c v1.2.0 2/17/01 - Mike Phillips (mikep@linuxtr.net)" ; 
 
 #define FW_NAME		"3com/3C359.bin"
@@ -285,7 +285,7 @@ static const struct net_device_ops xl_netdev_ops = {
 	.ndo_set_mac_address	= xl_set_mac_address,
 };
  
-static int __devinit xl_probe(struct pci_dev *pdev,
+static int xl_probe(struct pci_dev *pdev,
 			      const struct pci_device_id *ent) 
 {
 	struct net_device *dev ; 
@@ -385,7 +385,7 @@ static int xl_init_firmware(struct xl_private *xl_priv)
 	return err;
 }
 
-static int __devinit xl_init(struct net_device *dev) 
+static int xl_init(struct net_device *dev) 
 {
 	struct xl_private *xl_priv = netdev_priv(dev);
 	int err;
@@ -1805,7 +1805,7 @@ static int xl_change_mtu(struct net_device *dev, int mtu)
 	return 0 ; 
 }
 
-static void __devexit xl_remove_one (struct pci_dev *pdev)
+static void xl_remove_one (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct xl_private *xl_priv=netdev_priv(dev);

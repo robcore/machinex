@@ -39,7 +39,7 @@
 #include "tms380tr.h"
 #include "abyss.h"            /* Madge-specific constants */
 
-static char version[] __devinitdata =
+static char version[] =
 "abyss.c: v1.02 23/11/2000 by Adam Fritzler\n";
 
 #define ABYSS_IO_EXTENT 64
@@ -93,7 +93,7 @@ static void abyss_sifwritew(struct net_device *dev, unsigned short val, unsigned
 
 static struct net_device_ops abyss_netdev_ops;
 
-static int __devinit abyss_attach(struct pci_dev *pdev, const struct pci_device_id *ent)
+static int abyss_attach(struct pci_dev *pdev, const struct pci_device_id *ent)
 {	
 	static int versionprinted;
 	struct net_device *dev;
@@ -428,7 +428,7 @@ static int abyss_close(struct net_device *dev)
 	return 0;
 }
 
-static void __devexit abyss_detach (struct pci_dev *pdev)
+static void abyss_detach (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	

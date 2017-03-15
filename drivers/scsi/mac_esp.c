@@ -481,7 +481,7 @@ static struct esp_driver_ops mac_esp_ops = {
 	.dma_error        = mac_esp_dma_error,
 };
 
-static int __devinit esp_mac_probe(struct platform_device *dev)
+static int esp_mac_probe(struct platform_device *dev)
 {
 	struct scsi_host_template *tpnt = &scsi_esp_template;
 	struct Scsi_Host *host;
@@ -591,7 +591,7 @@ fail:
 	return err;
 }
 
-static int __devexit esp_mac_remove(struct platform_device *dev)
+static int esp_mac_remove(struct platform_device *dev)
 {
 	struct mac_esp_priv *mep = platform_get_drvdata(dev);
 	struct esp *esp = mep->esp;

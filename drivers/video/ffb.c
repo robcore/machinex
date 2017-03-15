@@ -893,7 +893,7 @@ static void ffb_init_fix(struct fb_info *info)
 	info->fix.accel = FB_ACCEL_SUN_CREATOR;
 }
 
-static int __devinit ffb_probe(struct platform_device *op)
+static int ffb_probe(struct platform_device *op)
 {
 	struct device_node *dp = op->dev.of_node;
 	struct ffb_fbc __iomem *fbc;
@@ -1022,7 +1022,7 @@ out_err:
 	return err;
 }
 
-static int __devexit ffb_remove(struct platform_device *op)
+static int ffb_remove(struct platform_device *op)
 {
 	struct fb_info *info = dev_get_drvdata(&op->dev);
 	struct ffb_par *par = info->par;

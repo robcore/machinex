@@ -1648,7 +1648,7 @@ static int DELAYED_INIT_MARK azx_codec_create(struct azx *chip, const char *mode
 }
 
 /* configure each codec instance */
-static int __devinit azx_codec_configure(struct azx *chip)
+static int azx_codec_configure(struct azx *chip)
 {
 	struct hda_codec *codec;
 	list_for_each_entry(codec, &chip->bus->codec_list, list) {
@@ -2305,7 +2305,7 @@ azx_attach_pcm_stream(struct hda_bus *bus, struct hda_codec *codec,
 /*
  * mixer creation - all stuff is implemented in hda module
  */
-static int __devinit azx_mixer_create(struct azx *chip)
+static int azx_mixer_create(struct azx *chip)
 {
 	return snd_hda_build_controls(chip->bus);
 }
@@ -2314,7 +2314,7 @@ static int __devinit azx_mixer_create(struct azx *chip)
 /*
  * initialize SD streams
  */
-static int __devinit azx_init_stream(struct azx *chip)
+static int azx_init_stream(struct azx *chip)
 {
 	int i;
 
@@ -2493,7 +2493,7 @@ static void azx_notifier_unregister(struct azx *chip)
 static int DELAYED_INIT_MARK azx_first_init(struct azx *chip);
 static int DELAYED_INIT_MARK azx_probe_continue(struct azx *chip);
 
-static struct pci_dev __devinit *get_bound_vga(struct pci_dev *pci);
+static struct pci_dev *get_bound_vga(struct pci_dev *pci);
 
 #ifdef SUPPORT_VGA_SWITCHEROO
 static void azx_vs_set_state(struct pci_dev *pci,
@@ -2556,7 +2556,7 @@ static bool azx_vs_can_switch(struct pci_dev *pci)
 	return true;
 }
 
-static void __devinit init_vga_switcheroo(struct azx *chip)
+static void init_vga_switcheroo(struct azx *chip)
 {
 	struct pci_dev *p = get_bound_vga(chip->pci);
 	if (p) {
@@ -2573,7 +2573,7 @@ static const struct vga_switcheroo_client_ops azx_vs_ops = {
 	.can_switch = azx_vs_can_switch,
 };
 
-static int __devinit register_vga_switcheroo(struct azx *chip)
+static int register_vga_switcheroo(struct azx *chip)
 {
 	if (!chip->use_vga_switcheroo)
 		return 0;
@@ -2650,7 +2650,7 @@ static int azx_dev_free(struct snd_device *device)
 /*
  * Check of disabled HDMI controller by vga-switcheroo
  */
-static struct pci_dev __devinit *get_bound_vga(struct pci_dev *pci)
+static struct pci_dev *get_bound_vga(struct pci_dev *pci)
 {
 	struct pci_dev *p;
 
@@ -2673,7 +2673,7 @@ static struct pci_dev __devinit *get_bound_vga(struct pci_dev *pci)
 	return NULL;
 }
 
-static bool __devinit check_hdmi_disabled(struct pci_dev *pci)
+static bool check_hdmi_disabled(struct pci_dev *pci)
 {
 	bool vga_inactive = false;
 	struct pci_dev *p = get_bound_vga(pci);
@@ -2689,7 +2689,7 @@ static bool __devinit check_hdmi_disabled(struct pci_dev *pci)
 /*
  * white/black-listing for position_fix
  */
-static struct snd_pci_quirk position_fix_list[] __devinitdata = {
+static struct snd_pci_quirk position_fix_list[] = {
 	SND_PCI_QUIRK(0x1028, 0x01cc, "Dell D820", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x1028, 0x01de, "Dell Precision 390", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x103c, 0x306d, "HP dv3", POS_FIX_LPIB),
@@ -2707,7 +2707,7 @@ static struct snd_pci_quirk position_fix_list[] __devinitdata = {
 	{}
 };
 
-static int __devinit check_position_fix(struct azx *chip, int fix)
+static int check_position_fix(struct azx *chip, int fix)
 {
 	const struct snd_pci_quirk *q;
 
@@ -2743,7 +2743,7 @@ static int __devinit check_position_fix(struct azx *chip, int fix)
 /*
  * black-lists for probe_mask
  */
-static struct snd_pci_quirk probe_mask_list[] __devinitdata = {
+static struct snd_pci_quirk probe_mask_list[] = {
 	/* Thinkpad often breaks the controller communication when accessing
 	 * to the non-working (or non-existing) modem codec slot.
 	 */
@@ -2762,7 +2762,7 @@ static struct snd_pci_quirk probe_mask_list[] __devinitdata = {
 
 #define AZX_FORCE_CODEC_MASK	0x100
 
-static void __devinit check_probe_mask(struct azx *chip, int dev)
+static void check_probe_mask(struct azx *chip, int dev)
 {
 	const struct snd_pci_quirk *q;
 
@@ -2790,7 +2790,7 @@ static void __devinit check_probe_mask(struct azx *chip, int dev)
 /*
  * white/black-list for enable_msi
  */
-static struct snd_pci_quirk msi_black_list[] __devinitdata = {
+static struct snd_pci_quirk msi_black_list[] = {
 	SND_PCI_QUIRK(0x1043, 0x81f2, "ASUS", 0), /* Athlon64 X2 + nvidia */
 	SND_PCI_QUIRK(0x1043, 0x81f6, "ASUS", 0), /* nvidia */
 	SND_PCI_QUIRK(0x1043, 0x822d, "ASUS", 0), /* Athlon64 X2 + nvidia MCP55 */
@@ -2800,7 +2800,7 @@ static struct snd_pci_quirk msi_black_list[] __devinitdata = {
 	{}
 };
 
-static void __devinit check_msi(struct azx *chip)
+static void check_msi(struct azx *chip)
 {
 	const struct snd_pci_quirk *q;
 
@@ -2826,7 +2826,7 @@ static void __devinit check_msi(struct azx *chip)
 }
 
 /* check the snoop mode availability */
-static void __devinit azx_check_snoop_available(struct azx *chip)
+static void azx_check_snoop_available(struct azx *chip)
 {
 	bool snoop = chip->snoop;
 
@@ -2858,7 +2858,7 @@ static void __devinit azx_check_snoop_available(struct azx *chip)
 /*
  * constructor
  */
-static int __devinit azx_create(struct snd_card *card, struct pci_dev *pci,
+static int azx_create(struct snd_card *card, struct pci_dev *pci,
 				int dev, unsigned int driver_caps,
 				struct azx **rchip)
 {
@@ -3146,7 +3146,7 @@ static void power_down_all_codecs(struct azx *chip)
 #endif
 }
 
-static int __devinit azx_probe(struct pci_dev *pci,
+static int azx_probe(struct pci_dev *pci,
 			       const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -3244,7 +3244,7 @@ out_free:
 	return err;
 }
 
-static void __devexit azx_remove(struct pci_dev *pci)
+static void azx_remove(struct pci_dev *pci)
 {
 	struct snd_card *card = pci_get_drvdata(pci);
 	if (card)

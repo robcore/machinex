@@ -2860,7 +2860,7 @@ static irqreturn_t pl330_irq_handler(int irq, void *data)
 		return IRQ_NONE;
 }
 
-static int __devinit
+static int
 pl330_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	struct dma_pl330_platdata *pdat;
@@ -3013,7 +3013,7 @@ probe_err1:
 	return ret;
 }
 
-static int __devexit pl330_remove(struct amba_device *adev)
+static int pl330_remove(struct amba_device *adev)
 {
 	struct dma_pl330_dmac *pdmac = amba_get_drvdata(adev);
 	struct dma_pl330_chan *pch, *_p;

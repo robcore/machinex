@@ -48,7 +48,7 @@ static struct ata_port_operations palmld_port_ops = {
 	.cable_detect		= ata_cable_40wire,
 };
 
-static __devinit int palmld_pata_probe(struct platform_device *pdev)
+static int palmld_pata_probe(struct platform_device *pdev)
 {
 	struct ata_host *host;
 	struct ata_port *ap;
@@ -109,7 +109,7 @@ err1:
 	return ret;
 }
 
-static __devexit int palmld_pata_remove(struct platform_device *dev)
+static int palmld_pata_remove(struct platform_device *dev)
 {
 	struct ata_host *host = platform_get_drvdata(dev);
 

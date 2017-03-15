@@ -542,7 +542,7 @@ error:
 }
 
 /* Needs ssb_buses_lock() */
-static int __devinit ssb_attach_queued_buses(void)
+static int ssb_attach_queued_buses(void)
 {
 	struct ssb_bus *bus, *n;
 	int err = 0;
@@ -753,7 +753,7 @@ out:
 	return err;
 }
 
-static int __devinit ssb_bus_register(struct ssb_bus *bus,
+static int ssb_bus_register(struct ssb_bus *bus,
 				      ssb_invariants_func_t get_invariants,
 				      unsigned long baseaddr)
 {
@@ -836,7 +836,7 @@ err_disable_xtal:
 }
 
 #ifdef CONFIG_SSB_PCIHOST
-int __devinit ssb_bus_pcibus_register(struct ssb_bus *bus,
+int ssb_bus_pcibus_register(struct ssb_bus *bus,
 				      struct pci_dev *host_pci)
 {
 	int err;
@@ -860,7 +860,7 @@ EXPORT_SYMBOL(ssb_bus_pcibus_register);
 #endif /* CONFIG_SSB_PCIHOST */
 
 #ifdef CONFIG_SSB_PCMCIAHOST
-int __devinit ssb_bus_pcmciabus_register(struct ssb_bus *bus,
+int ssb_bus_pcmciabus_register(struct ssb_bus *bus,
 					 struct pcmcia_device *pcmcia_dev,
 					 unsigned long baseaddr)
 {
@@ -882,7 +882,7 @@ EXPORT_SYMBOL(ssb_bus_pcmciabus_register);
 #endif /* CONFIG_SSB_PCMCIAHOST */
 
 #ifdef CONFIG_SSB_SDIOHOST
-int __devinit ssb_bus_sdiobus_register(struct ssb_bus *bus,
+int ssb_bus_sdiobus_register(struct ssb_bus *bus,
 				       struct sdio_func *func,
 				       unsigned int quirks)
 {
@@ -904,7 +904,7 @@ int __devinit ssb_bus_sdiobus_register(struct ssb_bus *bus,
 EXPORT_SYMBOL(ssb_bus_sdiobus_register);
 #endif /* CONFIG_SSB_PCMCIAHOST */
 
-int __devinit ssb_bus_ssbbus_register(struct ssb_bus *bus,
+int ssb_bus_ssbbus_register(struct ssb_bus *bus,
 				      unsigned long baseaddr,
 				      ssb_invariants_func_t get_invariants)
 {

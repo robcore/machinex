@@ -328,7 +328,7 @@ static void snd_uart16550_buffer_timer(unsigned long data)
  *  return 0 if found
  *  return negative error if not found
  */
-static int __devinit snd_uart16550_detect(struct snd_uart16550 *uart)
+static int snd_uart16550_detect(struct snd_uart16550 *uart)
 {
 	unsigned long io_base = uart->base;
 	int ok;
@@ -783,7 +783,7 @@ static int snd_uart16550_dev_free(struct snd_device *device)
 	return snd_uart16550_free(uart);
 }
 
-static int __devinit snd_uart16550_create(struct snd_card *card,
+static int snd_uart16550_create(struct snd_card *card,
 				       unsigned long iobase,
 				       int irq,
 				       unsigned int speed,
@@ -863,7 +863,7 @@ static int __devinit snd_uart16550_create(struct snd_card *card,
 	return 0;
 }
 
-static void __devinit snd_uart16550_substreams(struct snd_rawmidi_str *stream)
+static void snd_uart16550_substreams(struct snd_rawmidi_str *stream)
 {
 	struct snd_rawmidi_substream *substream;
 
@@ -872,7 +872,7 @@ static void __devinit snd_uart16550_substreams(struct snd_rawmidi_str *stream)
 	}
 }
 
-static int __devinit snd_uart16550_rmidi(struct snd_uart16550 *uart, int device,
+static int snd_uart16550_rmidi(struct snd_uart16550 *uart, int device,
 				      int outs, int ins,
 				      struct snd_rawmidi **rmidi)
 {
@@ -899,7 +899,7 @@ static int __devinit snd_uart16550_rmidi(struct snd_uart16550 *uart, int device,
 	return 0;
 }
 
-static int __devinit snd_serial_probe(struct platform_device *devptr)
+static int snd_serial_probe(struct platform_device *devptr)
 {
 	struct snd_card *card;
 	struct snd_uart16550 *uart;
@@ -982,7 +982,7 @@ static int __devinit snd_serial_probe(struct platform_device *devptr)
 	return err;
 }
 
-static int __devexit snd_serial_remove(struct platform_device *devptr)
+static int snd_serial_remove(struct platform_device *devptr)
 {
 	snd_card_free(platform_get_drvdata(devptr));
 	platform_set_drvdata(devptr, NULL);

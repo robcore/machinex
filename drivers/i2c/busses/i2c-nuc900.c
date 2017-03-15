@@ -518,7 +518,7 @@ static const struct i2c_algorithm nuc900_i2c_algorithm = {
  * called by the bus driver when a suitable device is found
 */
 
-static int __devinit nuc900_i2c_probe(struct platform_device *pdev)
+static int nuc900_i2c_probe(struct platform_device *pdev)
 {
 	struct nuc900_i2c *i2c;
 	struct nuc900_platform_i2c *pdata;
@@ -663,7 +663,7 @@ static int __devinit nuc900_i2c_probe(struct platform_device *pdev)
  * called when device is removed from the bus
 */
 
-static int __devexit nuc900_i2c_remove(struct platform_device *pdev)
+static int nuc900_i2c_remove(struct platform_device *pdev)
 {
 	struct nuc900_i2c *i2c = platform_get_drvdata(pdev);
 

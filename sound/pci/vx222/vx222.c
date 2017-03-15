@@ -134,7 +134,7 @@ static int snd_vx222_dev_free(struct snd_device *device)
 }
 
 
-static int __devinit snd_vx222_create(struct snd_card *card, struct pci_dev *pci,
+static int snd_vx222_create(struct snd_card *card, struct pci_dev *pci,
 				      struct snd_vx_hardware *hw,
 				      struct snd_vx222 **rchip)
 {
@@ -188,7 +188,7 @@ static int __devinit snd_vx222_create(struct snd_card *card, struct pci_dev *pci
 }
 
 
-static int __devinit snd_vx222_probe(struct pci_dev *pci,
+static int snd_vx222_probe(struct pci_dev *pci,
 				     const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -251,7 +251,7 @@ static int __devinit snd_vx222_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit snd_vx222_remove(struct pci_dev *pci)
+static void snd_vx222_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

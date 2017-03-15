@@ -589,7 +589,7 @@ static int mipi_nt35510_create_sysfs(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit mipi_nt35510_lcd_probe(struct platform_device *pdev)
+static int mipi_nt35510_lcd_probe(struct platform_device *pdev)
 {
 	struct platform_device *pthisdev = NULL;
 	pr_debug("%s\n", __func__);

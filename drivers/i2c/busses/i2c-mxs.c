@@ -320,7 +320,7 @@ static const struct i2c_algorithm mxs_i2c_algo = {
 	.functionality = mxs_i2c_func,
 };
 
-static int __devinit mxs_i2c_probe(struct platform_device *pdev)
+static int mxs_i2c_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mxs_i2c_dev *i2c;
@@ -377,7 +377,7 @@ static int __devinit mxs_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit mxs_i2c_remove(struct platform_device *pdev)
+static int mxs_i2c_remove(struct platform_device *pdev)
 {
 	struct mxs_i2c_dev *i2c = platform_get_drvdata(pdev);
 	int ret;

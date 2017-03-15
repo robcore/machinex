@@ -2869,7 +2869,7 @@ vmxnet3_reset_work(struct work_struct *data)
 }
 
 
-static int __devinit
+static int
 vmxnet3_probe_device(struct pci_dev *pdev,
 		     const struct pci_device_id *id)
 {

@@ -99,7 +99,7 @@ MODULE_DEVICE_TABLE(pnp_card, snd_ad1816a_pnpids);
 #define	DRIVER_NAME	"snd-card-ad1816a"
 
 
-static int __devinit snd_card_ad1816a_pnp(int dev, struct snd_card_ad1816a *acard,
+static int snd_card_ad1816a_pnp(int dev, struct snd_card_ad1816a *acard,
 					  struct pnp_card_link *card,
 					  const struct pnp_card_device_id *id)
 {
@@ -148,7 +148,7 @@ static int __devinit snd_card_ad1816a_pnp(int dev, struct snd_card_ad1816a *acar
 	return 0;
 }
 
-static int __devinit snd_card_ad1816a_probe(int dev, struct pnp_card_link *pcard,
+static int snd_card_ad1816a_probe(int dev, struct pnp_card_link *pcard,
 					    const struct pnp_card_device_id *pid)
 {
 	int error;
@@ -231,9 +231,9 @@ static int __devinit snd_card_ad1816a_probe(int dev, struct pnp_card_link *pcard
 	return 0;
 }
 
-static unsigned int __devinitdata ad1816a_devices;
+static unsigned int ad1816a_devices;
 
-static int __devinit snd_ad1816a_pnp_detect(struct pnp_card_link *card,
+static int snd_ad1816a_pnp_detect(struct pnp_card_link *card,
 					    const struct pnp_card_device_id *id)
 {
 	static int dev;
@@ -252,7 +252,7 @@ static int __devinit snd_ad1816a_pnp_detect(struct pnp_card_link *card,
         return -ENODEV;
 }
 
-static void __devexit snd_ad1816a_pnp_remove(struct pnp_card_link * pcard)
+static void snd_ad1816a_pnp_remove(struct pnp_card_link * pcard)
 {
 	snd_card_free(pnp_get_card_drvdata(pcard));
 	pnp_set_card_drvdata(pcard, NULL);

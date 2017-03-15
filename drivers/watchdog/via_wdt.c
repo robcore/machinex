@@ -155,7 +155,7 @@ static struct watchdog_device wdt_dev = {
 	.max_timeout =	WDT_TIMEOUT_MAX,
 };
 
-static int __devinit wdt_probe(struct pci_dev *pdev,
+static int wdt_probe(struct pci_dev *pdev,
 			       const struct pci_device_id *ent)
 {
 	unsigned char conf;
@@ -229,7 +229,7 @@ err_out_disable_device:
 	return ret;
 }
 
-static void __devexit wdt_remove(struct pci_dev *pdev)
+static void wdt_remove(struct pci_dev *pdev)
 {
 	watchdog_unregister_device(&wdt_dev);
 	del_timer(&timer);

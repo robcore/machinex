@@ -60,9 +60,9 @@ static int auto_fw_reset = AUTO_FW_RESET_ENABLED;
 module_param(auto_fw_reset, int, 0644);
 MODULE_PARM_DESC(auto_fw_reset,"Auto firmware reset (0=disabled, 1=enabled");
 
-static int __devinit netxen_nic_probe(struct pci_dev *pdev,
+static int netxen_nic_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent);
-static void __devexit netxen_nic_remove(struct pci_dev *pdev);
+static void netxen_nic_remove(struct pci_dev *pdev);
 static int netxen_nic_open(struct net_device *netdev);
 static int netxen_nic_close(struct net_device *netdev);
 static netdev_tx_t netxen_nic_xmit_frame(struct sk_buff *,
@@ -1389,7 +1389,7 @@ static void netxen_mask_aer_correctable(struct netxen_adapter *adapter)
 }
 #endif
 
-static int __devinit
+static int
 netxen_nic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct net_device *netdev = NULL;
@@ -1561,7 +1561,7 @@ void netxen_cleanup_minidump(struct netxen_adapter *adapter)
 	}
 }
 
-static void __devexit netxen_nic_remove(struct pci_dev *pdev)
+static void netxen_nic_remove(struct pci_dev *pdev)
 {
 	struct netxen_adapter *adapter;
 	struct net_device *netdev;

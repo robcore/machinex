@@ -479,7 +479,7 @@ static const struct musb_platform_ops da8xx_ops = {
 
 static u64 da8xx_dmamask = DMA_BIT_MASK(32);
 
-static int __devinit da8xx_probe(struct platform_device *pdev)
+static int da8xx_probe(struct platform_device *pdev)
 {
 	struct musb_hdrc_platform_data	*pdata = pdev->dev.platform_data;
 	struct platform_device		*musb;
@@ -563,7 +563,7 @@ err0:
 	return ret;
 }
 
-static int __devexit da8xx_remove(struct platform_device *pdev)
+static int da8xx_remove(struct platform_device *pdev)
 {
 	struct da8xx_glue		*glue = platform_get_drvdata(pdev);
 

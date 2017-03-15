@@ -1783,7 +1783,7 @@ static irqreturn_t smb347_inok_work_func(int irq, void *smb_chip)
 	return IRQ_HANDLED;
 }
 
-static int __devinit smb347_probe(struct i2c_client *client,
+static int smb347_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1921,7 +1921,7 @@ err_kfree:
 	return ret;
 }
 
-static int __devexit smb347_remove(struct i2c_client *client)
+static int smb347_remove(struct i2c_client *client)
 {
 	struct smb347_chip *chip = i2c_get_clientdata(client);
 

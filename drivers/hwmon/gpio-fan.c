@@ -422,7 +422,7 @@ static ssize_t show_name(struct device *dev,
 
 static DEVICE_ATTR(name, S_IRUGO, show_name, NULL);
 
-static int __devinit gpio_fan_probe(struct platform_device *pdev)
+static int gpio_fan_probe(struct platform_device *pdev)
 {
 	int err;
 	struct gpio_fan_data *fan_data;
@@ -487,7 +487,7 @@ err_free_data:
 	return err;
 }
 
-static int __devexit gpio_fan_remove(struct platform_device *pdev)
+static int gpio_fan_remove(struct platform_device *pdev)
 {
 	struct gpio_fan_data *fan_data = platform_get_drvdata(pdev);
 

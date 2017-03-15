@@ -343,7 +343,7 @@ static void lcdc_nt35582_set_backlight(struct msm_fb_data_type *mfd)
 	}
 }
 
-static int __devinit nt35582_probe(struct platform_device *pdev)
+static int nt35582_probe(struct platform_device *pdev)
 {
 	if (pdev->id == 0) {
 		lcdc_nt35582_pdata = pdev->dev.platform_data;
@@ -357,7 +357,7 @@ static int __devinit nt35582_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_SPI_QUP
-static int __devinit lcdc_nt35582_spi_probe(struct spi_device *spi)
+static int lcdc_nt35582_spi_probe(struct spi_device *spi)
 {
 	spi_client = spi;
 	spi_client->bits_per_word = 16;
@@ -369,7 +369,7 @@ static int __devinit lcdc_nt35582_spi_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit lcdc_nt35582_spi_remove(struct spi_device *spi)
+static int lcdc_nt35582_spi_remove(struct spi_device *spi)
 {
 	spi_client = NULL;
 	return 0;

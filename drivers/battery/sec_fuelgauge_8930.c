@@ -353,7 +353,7 @@ ssize_t sec_fg_store_attrs(struct device *dev,
 	return ret;
 }
 
-static int __devinit sec_fuelgauge_probe(struct i2c_client *client,
+static int sec_fuelgauge_probe(struct i2c_client *client,
 						const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);

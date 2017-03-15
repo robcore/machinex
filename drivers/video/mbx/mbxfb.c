@@ -80,7 +80,7 @@ struct mbxfb_info {
 
 };
 
-static struct fb_var_screeninfo mbxfb_default __devinitdata = {
+static struct fb_var_screeninfo mbxfb_default = {
 	.xres = 640,
 	.yres = 480,
 	.xres_virtual = 640,
@@ -103,7 +103,7 @@ static struct fb_var_screeninfo mbxfb_default __devinitdata = {
 	.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 };
 
-static struct fb_fix_screeninfo mbxfb_fix  __devinitdata = {
+static struct fb_fix_screeninfo mbxfb_fix  = {
 	.id = "MBX",
 	.type = FB_TYPE_PACKED_PIXELS,
 	.visual = FB_VISUAL_TRUECOLOR,
@@ -688,7 +688,7 @@ static struct fb_ops mbxfb_ops = {
   Enable external SDRAM controller. Assume that all clocks are active
   by now.
 */
-static void __devinit setup_memc(struct fb_info *fbi)
+static void setup_memc(struct fb_info *fbi)
 {
 	unsigned long tmp;
 	int i;
@@ -748,7 +748,7 @@ static void enable_clocks(struct fb_info *fbi)
 	write_reg_dly(0x00000001, PIXCLKDIV);
 }
 
-static void __devinit setup_graphics(struct fb_info *fbi)
+static void setup_graphics(struct fb_info *fbi)
 {
 	unsigned long gsctrl;
 	unsigned long vscadr;
@@ -782,7 +782,7 @@ static void __devinit setup_graphics(struct fb_info *fbi)
 	write_reg_dly(vscadr, VSCADR);
 }
 
-static void __devinit setup_display(struct fb_info *fbi)
+static void setup_display(struct fb_info *fbi)
 {
 	unsigned long dsctrl = 0;
 
@@ -796,7 +796,7 @@ static void __devinit setup_display(struct fb_info *fbi)
 	write_reg_dly((readl(DSCTRL) | DSCTRL_SYNCGEN_EN), DSCTRL);
 }
 
-static void __devinit enable_controller(struct fb_info *fbi)
+static void enable_controller(struct fb_info *fbi)
 {
 	u32 svctrl, shctrl;
 
@@ -882,7 +882,7 @@ static int mbxfb_resume(struct platform_device *dev)
 
 #define res_size(_r) (((_r)->end - (_r)->start) + 1)
 
-static int __devinit mbxfb_probe(struct platform_device *dev)
+static int mbxfb_probe(struct platform_device *dev)
 {
 	int ret;
 	struct fb_info *fbi;
@@ -1010,7 +1010,7 @@ err1:
 	return ret;
 }
 
-static int __devexit mbxfb_remove(struct platform_device *dev)
+static int mbxfb_remove(struct platform_device *dev)
 {
 	struct fb_info *fbi = platform_get_drvdata(dev);
 

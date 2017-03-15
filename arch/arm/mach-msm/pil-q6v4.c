@@ -270,7 +270,7 @@ int pil_q6v4_shutdown_trusted(struct pil_desc *pil)
 }
 EXPORT_SYMBOL(pil_q6v4_shutdown_trusted);
 
-void __devinit
+void
 pil_q6v4_init(struct q6v4_data *drv, const struct pil_q6v4_pdata *pdata)
 {
 	drv->strap_tcm_base	= pdata->strap_tcm_base;

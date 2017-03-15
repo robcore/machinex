@@ -2617,7 +2617,7 @@ static void qfec_free_res(struct resource *res, void *base)
 /*
  * probe function that obtain configuration info and allocate net_device
  */
-static int __devinit qfec_probe(struct platform_device *plat)
+static int qfec_probe(struct platform_device *plat)
 {
 	struct net_device  *dev;
 	struct qfec_priv   *priv;
@@ -2723,7 +2723,7 @@ err:
 /*
  * module remove
  */
-static int __devexit qfec_remove(struct platform_device *plat)
+static int qfec_remove(struct platform_device *plat)
 {
 	struct net_device  *dev  = platform_get_drvdata(plat);
 	struct qfec_priv   *priv = netdev_priv(dev);

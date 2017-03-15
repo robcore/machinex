@@ -117,7 +117,7 @@ struct nforce2_smbus {
 #define MAX_TIMEOUT	100
 
 /* We disable the second SMBus channel on these boards */
-static struct dmi_system_id __devinitdata nforce2_dmi_blacklist2[] = {
+static struct dmi_system_id nforce2_dmi_blacklist2[] = {
 	{
 		.ident = "DFI Lanparty NF4 Expert",
 		.matches = {
@@ -330,7 +330,7 @@ static DEFINE_PCI_DEVICE_TABLE(nforce2_ids) = {
 MODULE_DEVICE_TABLE (pci, nforce2_ids);
 
 
-static int __devinit nforce2_probe_smb (struct pci_dev *dev, int bar,
+static int nforce2_probe_smb (struct pci_dev *dev, int bar,
 	int alt_reg, struct nforce2_smbus *smbus, const char *name)
 {
 	int error;
@@ -382,7 +382,7 @@ static int __devinit nforce2_probe_smb (struct pci_dev *dev, int bar,
 }
 
 
-static int __devinit nforce2_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int nforce2_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	struct nforce2_smbus *smbuses;
 	int res1, res2;
@@ -430,7 +430,7 @@ static int __devinit nforce2_probe(struct pci_dev *dev, const struct pci_device_
 }
 
 
-static void __devexit nforce2_remove(struct pci_dev *dev)
+static void nforce2_remove(struct pci_dev *dev)
 {
 	struct nforce2_smbus *smbuses = pci_get_drvdata(dev);
 

@@ -5332,7 +5332,7 @@ mptsas_shutdown(struct pci_dev *pdev)
 	mptsas_cleanup_fw_event_q(ioc);
 }
 
-static void __devexit mptsas_remove(struct pci_dev *pdev)
+static void mptsas_remove(struct pci_dev *pdev)
 {
 	MPT_ADAPTER *ioc = pci_get_drvdata(pdev);
 	struct mptsas_portinfo *p, *n;

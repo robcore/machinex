@@ -542,7 +542,7 @@ static void z180_ringbuffer_close(struct kgsl_device *device)
 	memset(&z180_dev->ringbuffer, 0, sizeof(struct z180_ringbuffer));
 }
 
-static int __devinit z180_probe(struct platform_device *pdev)
+static int z180_probe(struct platform_device *pdev)
 {
 	int status = -EINVAL;
 	struct kgsl_device *device = NULL;

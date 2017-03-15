@@ -296,7 +296,7 @@ int msm_ssbi_write(struct device *dev, u16 addr, u8 *buf, int len)
 }
 EXPORT_SYMBOL(msm_ssbi_write);
 
-static int __devinit msm_ssbi_add_slave(struct msm_ssbi *ssbi,
+static int msm_ssbi_add_slave(struct msm_ssbi *ssbi,
 				const struct msm_ssbi_slave_info *slave)
 {
 	struct platform_device *slave_pdev;
@@ -333,7 +333,7 @@ err:
 	return ret;
 }
 
-static int __devinit msm_ssbi_probe(struct platform_device *pdev)
+static int msm_ssbi_probe(struct platform_device *pdev)
 {
 	const struct msm_ssbi_platform_data *pdata = pdev->dev.platform_data;
 	struct resource *mem_res;
@@ -404,7 +404,7 @@ err_get_mem_res:
 	return ret;
 }
 
-static int __devexit msm_ssbi_remove(struct platform_device *pdev)
+static int msm_ssbi_remove(struct platform_device *pdev)
 {
 	struct msm_ssbi *ssbi = platform_get_drvdata(pdev);
 

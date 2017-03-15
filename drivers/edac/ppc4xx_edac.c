@@ -838,7 +838,7 @@ ppc4xx_edac_isr(int irq, void *dev_id)
  *
  * Returns a device type width enumeration.
  */
-static enum dev_type __devinit
+static enum dev_type
 ppc4xx_edac_get_dtype(u32 mcopt1)
 {
 	switch (mcopt1 & SDRAM_MCOPT1_WDTH_MASK) {
@@ -862,7 +862,7 @@ ppc4xx_edac_get_dtype(u32 mcopt1)
  *
  * Returns a memory type enumeration.
  */
-static enum mem_type __devinit
+static enum mem_type
 ppc4xx_edac_get_mtype(u32 mcopt1)
 {
 	bool rden = ((mcopt1 & SDRAM_MCOPT1_RDEN_MASK) == SDRAM_MCOPT1_RDEN);
@@ -893,7 +893,7 @@ ppc4xx_edac_get_mtype(u32 mcopt1)
  * Returns 0 if OK; otherwise, -EINVAL if the memory bank size
  * configuration cannot be determined.
  */
-static int __devinit
+static int
 ppc4xx_edac_init_csrows(struct mem_ctl_info *mci, u32 mcopt1)
 {
 	const struct ppc4xx_edac_pdata *pdata = mci->pvt_info;
@@ -1011,7 +1011,7 @@ ppc4xx_edac_init_csrows(struct mem_ctl_info *mci, u32 mcopt1)
  *
  * Returns 0 if OK; otherwise, < 0 on error.
  */
-static int __devinit
+static int
 ppc4xx_edac_mc_init(struct mem_ctl_info *mci,
 		    struct platform_device *op,
 		    const dcr_host_t *dcr_host,
@@ -1105,7 +1105,7 @@ ppc4xx_edac_mc_init(struct mem_ctl_info *mci,
  * Returns 0 if OK; otherwise, -ENODEV if the interrupts could not be
  * mapped and assigned.
  */
-static int __devinit
+static int
 ppc4xx_edac_register_irq(struct platform_device *op, struct mem_ctl_info *mci)
 {
 	int status = 0;
@@ -1183,7 +1183,7 @@ ppc4xx_edac_register_irq(struct platform_device *op, struct mem_ctl_info *mci)
  * Returns 0 if the DCRs were successfully mapped; otherwise, < 0 on
  * error.
  */
-static int __devinit
+static int
 ppc4xx_edac_map_dcrs(const struct device_node *np, dcr_host_t *dcr_host)
 {
 	unsigned int dcr_base, dcr_len;
@@ -1232,7 +1232,7 @@ ppc4xx_edac_map_dcrs(const struct device_node *np, dcr_host_t *dcr_host)
  * Returns 0 if the controller instance was successfully bound to the
  * driver; otherwise, < 0 on error.
  */
-static int __devinit ppc4xx_edac_probe(struct platform_device *op)
+static int ppc4xx_edac_probe(struct platform_device *op)
 {
 	int status = 0;
 	u32 mcopt1, memcheck;

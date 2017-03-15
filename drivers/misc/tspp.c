@@ -2670,7 +2670,7 @@ static void tspp_debugfs_exit(struct tspp_device *device)
 }
 
 /* copy device-tree data to platfrom data struct */
-static __devinit struct msm_tspp_platform_data *
+static struct msm_tspp_platform_data *
 msm_tspp_dt_to_pdata(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
@@ -2800,7 +2800,7 @@ static int msm_tspp_map_irqs(struct platform_device *pdev,
 	return 0;
 }
 
-static int __devinit msm_tspp_probe(struct platform_device *pdev)
+static int msm_tspp_probe(struct platform_device *pdev)
 {
 	int rc = -ENODEV;
 	u32 version;
@@ -3051,7 +3051,7 @@ out:
 	return rc;
 }
 
-static int __devexit msm_tspp_remove(struct platform_device *pdev)
+static int msm_tspp_remove(struct platform_device *pdev)
 {
 	struct tspp_channel *channel;
 	u32 i;

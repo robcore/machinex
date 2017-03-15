@@ -224,7 +224,7 @@ static struct miscdevice ath79_wdt_miscdev = {
 	.fops = &ath79_wdt_fops,
 };
 
-static int __devinit ath79_wdt_probe(struct platform_device *pdev)
+static int ath79_wdt_probe(struct platform_device *pdev)
 {
 	u32 ctrl;
 	int err;
@@ -270,7 +270,7 @@ err_clk_put:
 	return err;
 }
 
-static int __devexit ath79_wdt_remove(struct platform_device *pdev)
+static int ath79_wdt_remove(struct platform_device *pdev)
 {
 	misc_deregister(&ath79_wdt_miscdev);
 	clk_disable(wdt_clk);

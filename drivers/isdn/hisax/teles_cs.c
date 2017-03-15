@@ -53,7 +53,7 @@ typedef struct local_info_t {
 	int			cardnr;
 } local_info_t;
 
-static int __devinit teles_probe(struct pcmcia_device *link)
+static int teles_probe(struct pcmcia_device *link)
 {
 	local_info_t *local;
 
@@ -72,7 +72,7 @@ static int __devinit teles_probe(struct pcmcia_device *link)
 	return teles_cs_config(link);
 } /* teles_attach */
 
-static void __devexit teles_detach(struct pcmcia_device *link)
+static void teles_detach(struct pcmcia_device *link)
 {
 	local_info_t *info = link->priv;
 
@@ -108,7 +108,7 @@ static int teles_cs_configcheck(struct pcmcia_device *p_dev, void *priv_data)
 	return -ENODEV;
 }
 
-static int __devinit teles_cs_config(struct pcmcia_device *link)
+static int teles_cs_config(struct pcmcia_device *link)
 {
 	int i;
 	IsdnCard_t icard;

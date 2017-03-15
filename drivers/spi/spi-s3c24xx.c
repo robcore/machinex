@@ -506,7 +506,7 @@ static void s3c24xx_spi_initialsetup(struct s3c24xx_spi *hw)
 	}
 }
 
-static int __devinit s3c24xx_spi_probe(struct platform_device *pdev)
+static int s3c24xx_spi_probe(struct platform_device *pdev)
 {
 	struct s3c2410_spi_info *pdata;
 	struct s3c24xx_spi *hw;
@@ -662,7 +662,7 @@ static int __devinit s3c24xx_spi_probe(struct platform_device *pdev)
 	return err;
 }
 
-static int __devexit s3c24xx_spi_remove(struct platform_device *dev)
+static int s3c24xx_spi_remove(struct platform_device *dev)
 {
 	struct s3c24xx_spi *hw = platform_get_drvdata(dev);
 

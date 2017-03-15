@@ -9526,7 +9526,7 @@ advansys_queuecommand_lck(struct scsi_cmnd *scp, void (*done)(struct scsi_cmnd *
 
 static DEF_SCSI_QCMD(advansys_queuecommand)
 
-static ushort __devinit AscGetEisaChipCfg(PortAddr iop_base)
+static ushort AscGetEisaChipCfg(PortAddr iop_base)
 {
 	PortAddr eisa_cfg_iop = (PortAddr) ASC_GET_EISA_SLOT(iop_base) |
 	    (PortAddr) (ASC_EISA_CFG_IOP_MASK);
@@ -9537,7 +9537,7 @@ static ushort __devinit AscGetEisaChipCfg(PortAddr iop_base)
  * Return the BIOS address of the adapter at the specified
  * I/O port and with the specified bus type.
  */
-static unsigned short __devinit
+static unsigned short
 AscGetChipBiosAddress(PortAddr iop_base, unsigned short bus_type)
 {
 	unsigned short cfg_lsw;
@@ -9569,7 +9569,7 @@ AscGetChipBiosAddress(PortAddr iop_base, unsigned short bus_type)
 	return bios_addr;
 }
 
-static uchar __devinit AscSetChipScsiID(PortAddr iop_base, uchar new_host_id)
+static uchar AscSetChipScsiID(PortAddr iop_base, uchar new_host_id)
 {
 	ushort cfg_lsw;
 
@@ -9583,7 +9583,7 @@ static uchar __devinit AscSetChipScsiID(PortAddr iop_base, uchar new_host_id)
 	return (AscGetChipScsiID(iop_base));
 }
 
-static unsigned char __devinit AscGetChipScsiCtrl(PortAddr iop_base)
+static unsigned char AscGetChipScsiCtrl(PortAddr iop_base)
 {
 	unsigned char sc;
 
@@ -9593,7 +9593,7 @@ static unsigned char __devinit AscGetChipScsiCtrl(PortAddr iop_base)
 	return sc;
 }
 
-static unsigned char __devinit
+static unsigned char
 AscGetChipVersion(PortAddr iop_base, unsigned short bus_type)
 {
 	if (bus_type & ASC_IS_EISA) {
@@ -9608,7 +9608,7 @@ AscGetChipVersion(PortAddr iop_base, unsigned short bus_type)
 }
 
 #ifdef CONFIG_ISA
-static void __devinit AscEnableIsaDma(uchar dma_channel)
+static void AscEnableIsaDma(uchar dma_channel)
 {
 	if (dma_channel < 4) {
 		outp(0x000B, (ushort)(0xC0 | dma_channel));
@@ -9638,7 +9638,7 @@ static int AscStopQueueExe(PortAddr iop_base)
 	return (0);
 }
 
-static ASC_DCNT __devinit AscGetMaxDmaCount(ushort bus_type)
+static ASC_DCNT AscGetMaxDmaCount(ushort bus_type)
 {
 	if (bus_type & ASC_IS_ISA)
 		return ASC_MAX_ISA_DMA_COUNT;
@@ -9648,7 +9648,7 @@ static ASC_DCNT __devinit AscGetMaxDmaCount(ushort bus_type)
 }
 
 #ifdef CONFIG_ISA
-static ushort __devinit AscGetIsaDmaChannel(PortAddr iop_base)
+static ushort AscGetIsaDmaChannel(PortAddr iop_base)
 {
 	ushort channel;
 
@@ -9660,7 +9660,7 @@ static ushort __devinit AscGetIsaDmaChannel(PortAddr iop_base)
 	return (channel + 4);
 }
 
-static ushort __devinit AscSetIsaDmaChannel(PortAddr iop_base, ushort dma_channel)
+static ushort AscSetIsaDmaChannel(PortAddr iop_base, ushort dma_channel)
 {
 	ushort cfg_lsw;
 	uchar value;
@@ -9678,7 +9678,7 @@ static ushort __devinit AscSetIsaDmaChannel(PortAddr iop_base, ushort dma_channe
 	return 0;
 }
 
-static uchar __devinit AscGetIsaDmaSpeed(PortAddr iop_base)
+static uchar AscGetIsaDmaSpeed(PortAddr iop_base)
 {
 	uchar speed_value;
 
@@ -9689,7 +9689,7 @@ static uchar __devinit AscGetIsaDmaSpeed(PortAddr iop_base)
 	return speed_value;
 }
 
-static uchar __devinit AscSetIsaDmaSpeed(PortAddr iop_base, uchar speed_value)
+static uchar AscSetIsaDmaSpeed(PortAddr iop_base, uchar speed_value)
 {
 	speed_value &= 0x07;
 	AscSetBank(iop_base, 1);
@@ -9699,7 +9699,7 @@ static uchar __devinit AscSetIsaDmaSpeed(PortAddr iop_base, uchar speed_value)
 }
 #endif /* CONFIG_ISA */
 
-static ushort __devinit AscInitAscDvcVar(ASC_DVC_VAR *asc_dvc)
+static ushort AscInitAscDvcVar(ASC_DVC_VAR *asc_dvc)
 {
 	int i;
 	PortAddr iop_base;
@@ -9786,7 +9786,7 @@ static ushort __devinit AscInitAscDvcVar(ASC_DVC_VAR *asc_dvc)
 	return warn_code;
 }
 
-static int __devinit AscWriteEEPCmdReg(PortAddr iop_base, uchar cmd_reg)
+static int AscWriteEEPCmdReg(PortAddr iop_base, uchar cmd_reg)
 {
 	int retry;
 
@@ -9801,12 +9801,12 @@ static int __devinit AscWriteEEPCmdReg(PortAddr iop_base, uchar cmd_reg)
 	return 0;
 }
 
-static void __devinit AscWaitEEPRead(void)
+static void AscWaitEEPRead(void)
 {
 	mdelay(1);
 }
 
-static ushort __devinit AscReadEEPWord(PortAddr iop_base, uchar addr)
+static ushort AscReadEEPWord(PortAddr iop_base, uchar addr)
 {
 	ushort read_wval;
 	uchar cmd_reg;
@@ -9821,7 +9821,7 @@ static ushort __devinit AscReadEEPWord(PortAddr iop_base, uchar addr)
 	return read_wval;
 }
 
-static ushort __devinit
+static ushort
 AscGetEEPConfig(PortAddr iop_base, ASCEEP_CONFIG *cfg_buf, ushort bus_type)
 {
 	ushort wval;
@@ -9868,7 +9868,7 @@ AscGetEEPConfig(PortAddr iop_base, ASCEEP_CONFIG *cfg_buf, ushort bus_type)
 	return sum;
 }
 
-static int __devinit AscTestExternalLram(ASC_DVC_VAR *asc_dvc)
+static int AscTestExternalLram(ASC_DVC_VAR *asc_dvc)
 {
 	PortAddr iop_base;
 	ushort q_addr;
@@ -9890,12 +9890,12 @@ static int __devinit AscTestExternalLram(ASC_DVC_VAR *asc_dvc)
 	return (sta);
 }
 
-static void __devinit AscWaitEEPWrite(void)
+static void AscWaitEEPWrite(void)
 {
 	mdelay(20);
 }
 
-static int __devinit AscWriteEEPDataReg(PortAddr iop_base, ushort data_reg)
+static int AscWriteEEPDataReg(PortAddr iop_base, ushort data_reg)
 {
 	ushort read_back;
 	int retry;
@@ -9914,7 +9914,7 @@ static int __devinit AscWriteEEPDataReg(PortAddr iop_base, ushort data_reg)
 	}
 }
 
-static ushort __devinit
+static ushort
 AscWriteEEPWord(PortAddr iop_base, uchar addr, ushort word_val)
 {
 	ushort read_wval;
@@ -9935,7 +9935,7 @@ AscWriteEEPWord(PortAddr iop_base, uchar addr, ushort word_val)
 	return (read_wval);
 }
 
-static int __devinit
+static int
 AscSetEEPConfigOnce(PortAddr iop_base, ASCEEP_CONFIG *cfg_buf, ushort bus_type)
 {
 	int n_error;
@@ -10031,7 +10031,7 @@ AscSetEEPConfigOnce(PortAddr iop_base, ASCEEP_CONFIG *cfg_buf, ushort bus_type)
 	return n_error;
 }
 
-static int __devinit
+static int
 AscSetEEPConfig(PortAddr iop_base, ASCEEP_CONFIG *cfg_buf, ushort bus_type)
 {
 	int retry;
@@ -10050,7 +10050,7 @@ AscSetEEPConfig(PortAddr iop_base, ASCEEP_CONFIG *cfg_buf, ushort bus_type)
 	return n_error;
 }
 
-static ushort __devinit AscInitFromEEP(ASC_DVC_VAR *asc_dvc)
+static ushort AscInitFromEEP(ASC_DVC_VAR *asc_dvc)
 {
 	ASCEEP_CONFIG eep_config_buf;
 	ASCEEP_CONFIG *eep_config;
@@ -10215,7 +10215,7 @@ static ushort __devinit AscInitFromEEP(ASC_DVC_VAR *asc_dvc)
 	return (warn_code);
 }
 
-static int __devinit AscInitGetConfig(struct Scsi_Host *shost)
+static int AscInitGetConfig(struct Scsi_Host *shost)
 {
 	struct asc_board *board = shost_priv(shost);
 	ASC_DVC_VAR *asc_dvc = &board->dvc_var.asc_dvc_var;
@@ -10269,7 +10269,7 @@ static int __devinit AscInitGetConfig(struct Scsi_Host *shost)
 	return asc_dvc->err_code;
 }
 
-static int __devinit AscInitSetConfig(struct pci_dev *pdev, struct Scsi_Host *shost)
+static int AscInitSetConfig(struct pci_dev *pdev, struct Scsi_Host *shost)
 {
 	struct asc_board *board = shost_priv(shost);
 	ASC_DVC_VAR *asc_dvc = &board->dvc_var.asc_dvc_var;
@@ -10383,7 +10383,7 @@ static int __devinit AscInitSetConfig(struct pci_dev *pdev, struct Scsi_Host *sh
  * on big-endian platforms so char fields read as words are actually being
  * unswapped on big-endian platforms.
  */
-static ADVEEP_3550_CONFIG Default_3550_EEPROM_Config __devinitdata = {
+static ADVEEP_3550_CONFIG Default_3550_EEPROM_Config = {
 	ADV_EEPROM_BIOS_ENABLE,	/* cfg_lsw */
 	0x0000,			/* cfg_msw */
 	0xFFFF,			/* disc_enable */
@@ -10421,7 +10421,7 @@ static ADVEEP_3550_CONFIG Default_3550_EEPROM_Config __devinitdata = {
 	0			/* num_of_err */
 };
 
-static ADVEEP_3550_CONFIG ADVEEP_3550_Config_Field_IsChar __devinitdata = {
+static ADVEEP_3550_CONFIG ADVEEP_3550_Config_Field_IsChar = {
 	0,			/* cfg_lsw */
 	0,			/* cfg_msw */
 	0,			/* -disc_enable */
@@ -10459,7 +10459,7 @@ static ADVEEP_3550_CONFIG ADVEEP_3550_Config_Field_IsChar __devinitdata = {
 	0			/* num_of_err */
 };
 
-static ADVEEP_38C0800_CONFIG Default_38C0800_EEPROM_Config __devinitdata = {
+static ADVEEP_38C0800_CONFIG Default_38C0800_EEPROM_Config = {
 	ADV_EEPROM_BIOS_ENABLE,	/* 00 cfg_lsw */
 	0x0000,			/* 01 cfg_msw */
 	0xFFFF,			/* 02 disc_enable */
@@ -10524,7 +10524,7 @@ static ADVEEP_38C0800_CONFIG Default_38C0800_EEPROM_Config __devinitdata = {
 	0			/* 63 reserved */
 };
 
-static ADVEEP_38C0800_CONFIG ADVEEP_38C0800_Config_Field_IsChar __devinitdata = {
+static ADVEEP_38C0800_CONFIG ADVEEP_38C0800_Config_Field_IsChar = {
 	0,			/* 00 cfg_lsw */
 	0,			/* 01 cfg_msw */
 	0,			/* 02 disc_enable */
@@ -10589,7 +10589,7 @@ static ADVEEP_38C0800_CONFIG ADVEEP_38C0800_Config_Field_IsChar __devinitdata = 
 	0			/* 63 reserved */
 };
 
-static ADVEEP_38C1600_CONFIG Default_38C1600_EEPROM_Config __devinitdata = {
+static ADVEEP_38C1600_CONFIG Default_38C1600_EEPROM_Config = {
 	ADV_EEPROM_BIOS_ENABLE,	/* 00 cfg_lsw */
 	0x0000,			/* 01 cfg_msw */
 	0xFFFF,			/* 02 disc_enable */
@@ -10654,7 +10654,7 @@ static ADVEEP_38C1600_CONFIG Default_38C1600_EEPROM_Config __devinitdata = {
 	0			/* 63 reserved */
 };
 
-static ADVEEP_38C1600_CONFIG ADVEEP_38C1600_Config_Field_IsChar __devinitdata = {
+static ADVEEP_38C1600_CONFIG ADVEEP_38C1600_Config_Field_IsChar = {
 	0,			/* 00 cfg_lsw */
 	0,			/* 01 cfg_msw */
 	0,			/* 02 disc_enable */
@@ -10723,7 +10723,7 @@ static ADVEEP_38C1600_CONFIG ADVEEP_38C1600_Config_Field_IsChar __devinitdata = 
 /*
  * Wait for EEPROM command to complete
  */
-static void __devinit AdvWaitEEPCmd(AdvPortAddr iop_base)
+static void AdvWaitEEPCmd(AdvPortAddr iop_base)
 {
 	int eep_delay_ms;
 
@@ -10742,7 +10742,7 @@ static void __devinit AdvWaitEEPCmd(AdvPortAddr iop_base)
 /*
  * Read the EEPROM from specified location
  */
-static ushort __devinit AdvReadEEPWord(AdvPortAddr iop_base, int eep_word_addr)
+static ushort AdvReadEEPWord(AdvPortAddr iop_base, int eep_word_addr)
 {
 	AdvWriteWordRegister(iop_base, IOPW_EE_CMD,
 			     ASC_EEP_CMD_READ | eep_word_addr);
@@ -10753,7 +10753,7 @@ static ushort __devinit AdvReadEEPWord(AdvPortAddr iop_base, int eep_word_addr)
 /*
  * Write the EEPROM from 'cfg_buf'.
  */
-static void __devinit
+static void
 AdvSet3550EEPConfig(AdvPortAddr iop_base, ADVEEP_3550_CONFIG *cfg_buf)
 {
 	ushort *wbuf;
@@ -10820,7 +10820,7 @@ AdvSet3550EEPConfig(AdvPortAddr iop_base, ADVEEP_3550_CONFIG *cfg_buf)
 /*
  * Write the EEPROM from 'cfg_buf'.
  */
-static void __devinit
+static void
 AdvSet38C0800EEPConfig(AdvPortAddr iop_base, ADVEEP_38C0800_CONFIG *cfg_buf)
 {
 	ushort *wbuf;
@@ -10887,7 +10887,7 @@ AdvSet38C0800EEPConfig(AdvPortAddr iop_base, ADVEEP_38C0800_CONFIG *cfg_buf)
 /*
  * Write the EEPROM from 'cfg_buf'.
  */
-static void __devinit
+static void
 AdvSet38C1600EEPConfig(AdvPortAddr iop_base, ADVEEP_38C1600_CONFIG *cfg_buf)
 {
 	ushort *wbuf;
@@ -10956,7 +10956,7 @@ AdvSet38C1600EEPConfig(AdvPortAddr iop_base, ADVEEP_38C1600_CONFIG *cfg_buf)
  *
  * Return a checksum based on the EEPROM configuration read.
  */
-static ushort __devinit
+static ushort
 AdvGet3550EEPConfig(AdvPortAddr iop_base, ADVEEP_3550_CONFIG *cfg_buf)
 {
 	ushort wval, chksum;
@@ -10999,7 +10999,7 @@ AdvGet3550EEPConfig(AdvPortAddr iop_base, ADVEEP_3550_CONFIG *cfg_buf)
  *
  * Return a checksum based on the EEPROM configuration read.
  */
-static ushort __devinit
+static ushort
 AdvGet38C0800EEPConfig(AdvPortAddr iop_base, ADVEEP_38C0800_CONFIG *cfg_buf)
 {
 	ushort wval, chksum;
@@ -11042,7 +11042,7 @@ AdvGet38C0800EEPConfig(AdvPortAddr iop_base, ADVEEP_38C0800_CONFIG *cfg_buf)
  *
  * Return a checksum based on the EEPROM configuration read.
  */
-static ushort __devinit
+static ushort
 AdvGet38C1600EEPConfig(AdvPortAddr iop_base, ADVEEP_38C1600_CONFIG *cfg_buf)
 {
 	ushort wval, chksum;
@@ -11092,7 +11092,7 @@ AdvGet38C1600EEPConfig(AdvPortAddr iop_base, ADVEEP_38C1600_CONFIG *cfg_buf)
  *
  * Note: Chip is stopped on entry.
  */
-static int __devinit AdvInitFrom3550EEP(ADV_DVC_VAR *asc_dvc)
+static int AdvInitFrom3550EEP(ADV_DVC_VAR *asc_dvc)
 {
 	AdvPortAddr iop_base;
 	ushort warn_code;
@@ -11242,7 +11242,7 @@ static int __devinit AdvInitFrom3550EEP(ADV_DVC_VAR *asc_dvc)
  *
  * Note: Chip is stopped on entry.
  */
-static int __devinit AdvInitFrom38C0800EEP(ADV_DVC_VAR *asc_dvc)
+static int AdvInitFrom38C0800EEP(ADV_DVC_VAR *asc_dvc)
 {
 	AdvPortAddr iop_base;
 	ushort warn_code;
@@ -11441,7 +11441,7 @@ static int __devinit AdvInitFrom38C0800EEP(ADV_DVC_VAR *asc_dvc)
  *
  * Note: Chip is stopped on entry.
  */
-static int __devinit AdvInitFrom38C1600EEP(ADV_DVC_VAR *asc_dvc)
+static int AdvInitFrom38C1600EEP(ADV_DVC_VAR *asc_dvc)
 {
 	AdvPortAddr iop_base;
 	ushort warn_code;
@@ -11661,7 +11661,7 @@ static int __devinit AdvInitFrom38C1600EEP(ADV_DVC_VAR *asc_dvc)
  * For a non-fatal error return a warning code. If there are no warnings
  * then 0 is returned.
  */
-static int __devinit
+static int
 AdvInitGetConfig(struct pci_dev *pdev, struct Scsi_Host *shost)
 {
 	struct asc_board *board = shost_priv(shost);
@@ -11769,7 +11769,7 @@ static struct scsi_host_template advansys_template = {
 	.use_clustering = ENABLE_CLUSTERING,
 };
 
-static int __devinit advansys_wide_init_chip(struct Scsi_Host *shost)
+static int advansys_wide_init_chip(struct Scsi_Host *shost)
 {
 	struct asc_board *board = shost_priv(shost);
 	struct adv_dvc_var *adv_dvc = &board->dvc_var.adv_dvc_var;
@@ -11882,7 +11882,7 @@ static void advansys_wide_free_mem(struct asc_board *board)
 	}
 }
 
-static int __devinit advansys_board_found(struct Scsi_Host *shost,
+static int advansys_board_found(struct Scsi_Host *shost,
 					  unsigned int iop, int bus_type)
 {
 	struct pci_dev *pdev;
@@ -12428,7 +12428,7 @@ static PortAddr _asc_def_iop_base[ASC_IOADR_TABLE_MAX_IX] = {
  * 10: 12
  * 11: 15
  */
-static unsigned int __devinit advansys_isa_irq_no(PortAddr iop_base)
+static unsigned int advansys_isa_irq_no(PortAddr iop_base)
 {
 	unsigned short cfg_lsw = AscGetChipCfgLsw(iop_base);
 	unsigned int chip_irq = ((cfg_lsw >> 2) & 0x03) + 10;
@@ -12437,7 +12437,7 @@ static unsigned int __devinit advansys_isa_irq_no(PortAddr iop_base)
 	return chip_irq;
 }
 
-static int __devinit advansys_isa_probe(struct device *dev, unsigned int id)
+static int advansys_isa_probe(struct device *dev, unsigned int id)
 {
 	int err = -ENODEV;
 	PortAddr iop_base = _asc_def_iop_base[id];
@@ -12477,7 +12477,7 @@ static int __devinit advansys_isa_probe(struct device *dev, unsigned int id)
 	return err;
 }
 
-static int __devexit advansys_isa_remove(struct device *dev, unsigned int id)
+static int advansys_isa_remove(struct device *dev, unsigned int id)
 {
 	int ioport = _asc_def_iop_base[id];
 	advansys_release(dev_get_drvdata(dev));
@@ -12505,7 +12505,7 @@ static struct isa_driver advansys_isa_driver = {
  * 110: 15
  * 111: invalid
  */
-static unsigned int __devinit advansys_vlb_irq_no(PortAddr iop_base)
+static unsigned int advansys_vlb_irq_no(PortAddr iop_base)
 {
 	unsigned short cfg_lsw = AscGetChipCfgLsw(iop_base);
 	unsigned int chip_irq = ((cfg_lsw >> 2) & 0x07) + 9;
@@ -12514,7 +12514,7 @@ static unsigned int __devinit advansys_vlb_irq_no(PortAddr iop_base)
 	return chip_irq;
 }
 
-static int __devinit advansys_vlb_probe(struct device *dev, unsigned int id)
+static int advansys_vlb_probe(struct device *dev, unsigned int id)
 {
 	int err = -ENODEV;
 	PortAddr iop_base = _asc_def_iop_base[id];
@@ -12568,7 +12568,7 @@ static struct isa_driver advansys_vlb_driver = {
 	},
 };
 
-static struct eisa_device_id advansys_eisa_table[] __devinitdata = {
+static struct eisa_device_id advansys_eisa_table[] = {
 	{ "ABP7401" },
 	{ "ABP7501" },
 	{ "" }
@@ -12595,7 +12595,7 @@ struct eisa_scsi_data {
  * 110: invalid
  * 111: invalid
  */
-static unsigned int __devinit advansys_eisa_irq_no(struct eisa_device *edev)
+static unsigned int advansys_eisa_irq_no(struct eisa_device *edev)
 {
 	unsigned short cfg_lsw = inw(edev->base_addr + 0xc86);
 	unsigned int chip_irq = ((cfg_lsw >> 8) & 0x07) + 10;
@@ -12604,7 +12604,7 @@ static unsigned int __devinit advansys_eisa_irq_no(struct eisa_device *edev)
 	return chip_irq;
 }
 
-static int __devinit advansys_eisa_probe(struct device *dev)
+static int advansys_eisa_probe(struct device *dev)
 {
 	int i, ioport, irq = 0;
 	int err;
@@ -12677,7 +12677,7 @@ static int __devinit advansys_eisa_probe(struct device *dev)
 	return err;
 }
 
-static __devexit int advansys_eisa_remove(struct device *dev)
+static int advansys_eisa_remove(struct device *dev)
 {
 	int i;
 	struct eisa_scsi_data *data = dev_get_drvdata(dev);
@@ -12706,7 +12706,7 @@ static struct eisa_driver advansys_eisa_driver = {
 };
 
 /* PCI Devices supported by this driver */
-static struct pci_device_id advansys_pci_tbl[] __devinitdata = {
+static struct pci_device_id advansys_pci_tbl[] = {
 	{PCI_VENDOR_ID_ASP, PCI_DEVICE_ID_ASP_1200A,
 	 PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{PCI_VENDOR_ID_ASP, PCI_DEVICE_ID_ASP_ABP940,
@@ -12724,7 +12724,7 @@ static struct pci_device_id advansys_pci_tbl[] __devinitdata = {
 
 MODULE_DEVICE_TABLE(pci, advansys_pci_tbl);
 
-static void __devinit advansys_set_latency(struct pci_dev *pdev)
+static void advansys_set_latency(struct pci_dev *pdev)
 {
 	if ((pdev->device == PCI_DEVICE_ID_ASP_1200A) ||
 	    (pdev->device == PCI_DEVICE_ID_ASP_ABP940)) {
@@ -12737,7 +12737,7 @@ static void __devinit advansys_set_latency(struct pci_dev *pdev)
 	}
 }
 
-static int __devinit
+static int
 advansys_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int err, ioport;
@@ -12791,7 +12791,7 @@ advansys_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	return err;
 }
 
-static void __devexit advansys_pci_remove(struct pci_dev *pdev)
+static void advansys_pci_remove(struct pci_dev *pdev)
 {
 	advansys_release(pci_get_drvdata(pdev));
 	pci_release_regions(pdev);

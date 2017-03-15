@@ -4220,7 +4220,7 @@ static const struct dev_pm_ops sii8240_pm_ops = {
 	.suspend        = sii8240_mhl_tx_suspend,
 	.resume         = sii8240_mhl_tx_resume,
 };
-static int __devinit sii8240_tmds_i2c_probe(struct i2c_client *client,
+static int sii8240_tmds_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	int ret;
@@ -4314,7 +4314,7 @@ err_exit0:
 	return ret;
 }
 
-static int __devinit sii8240_hdmi_i2c_probe(struct i2c_client *client,
+static int sii8240_hdmi_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct sii8240_platform_data *pdata = client->dev.platform_data;
@@ -4323,7 +4323,7 @@ static int __devinit sii8240_hdmi_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devinit sii8240_disc_i2c_probe(struct i2c_client *client,
+static int sii8240_disc_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct sii8240_platform_data *pdata = client->dev.platform_data;
@@ -4332,7 +4332,7 @@ static int __devinit sii8240_disc_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devinit sii8240_tpi_i2c_probe(struct i2c_client *client,
+static int sii8240_tpi_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct sii8240_platform_data *pdata = client->dev.platform_data;
@@ -4340,7 +4340,7 @@ static int __devinit sii8240_tpi_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devinit sii8240_cbus_i2c_probe(struct i2c_client *client,
+static int sii8240_cbus_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct sii8240_platform_data *pdata = client->dev.platform_data;
@@ -4349,27 +4349,27 @@ static int __devinit sii8240_cbus_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit sii8240_tmds_remove(struct i2c_client *client)
+static int sii8240_tmds_remove(struct i2c_client *client)
 {
 	return 0;
 }
 
-static int __devexit sii8240_hdmi_remove(struct i2c_client *client)
+static int sii8240_hdmi_remove(struct i2c_client *client)
 {
 	return 0;
 }
 
-static int __devexit sii8240_disc_remove(struct i2c_client *client)
+static int sii8240_disc_remove(struct i2c_client *client)
 {
 	return 0;
 }
 
-static int __devexit sii8240_tpi_remove(struct i2c_client *client)
+static int sii8240_tpi_remove(struct i2c_client *client)
 {
 	return 0;
 }
 
-static int __devexit sii8240_cbus_remove(struct i2c_client *client)
+static int sii8240_cbus_remove(struct i2c_client *client)
 {
 	return 0;
 }

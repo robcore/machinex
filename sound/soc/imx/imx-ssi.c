@@ -654,7 +654,7 @@ failed_clk:
 	return ret;
 }
 
-static int __devexit imx_ssi_remove(struct platform_device *pdev)
+static int imx_ssi_remove(struct platform_device *pdev)
 {
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct imx_ssi *ssi = platform_get_drvdata(pdev);

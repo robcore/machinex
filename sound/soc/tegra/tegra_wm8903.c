@@ -374,7 +374,7 @@ static struct snd_soc_card snd_soc_tegra_wm8903 = {
 	.fully_routed = true,
 };
 
-static __devinit int tegra_wm8903_driver_probe(struct platform_device *pdev)
+static int tegra_wm8903_driver_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_tegra_wm8903;
 	struct tegra_wm8903 *machine;
@@ -474,7 +474,7 @@ err:
 	return ret;
 }
 
-static int __devexit tegra_wm8903_driver_remove(struct platform_device *pdev)
+static int tegra_wm8903_driver_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_wm8903 *machine = snd_soc_card_get_drvdata(card);

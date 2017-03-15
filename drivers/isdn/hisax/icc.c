@@ -673,7 +673,7 @@ clear_pending_icc_ints(struct IsdnCardState *cs)
 	cs->writeisac(cs, ICC_MASK, 0xFF);
 }
 
-void __devinit
+void
 setup_icc(struct IsdnCardState *cs)
 {
 	INIT_WORK(&cs->tqueue, icc_bh);

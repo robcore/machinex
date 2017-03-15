@@ -655,7 +655,7 @@ static const struct sdhci_pci_fixes sdhci_via = {
 	.probe		= via_probe,
 };
 
-static const struct pci_device_id pci_ids[] __devinitconst = {
+static const struct pci_device_id pci_ids[] = {
 	{
 		.vendor		= PCI_VENDOR_ID_RICOH,
 		.device		= PCI_DEVICE_ID_RICOH_R5C822,
@@ -1185,7 +1185,7 @@ static const struct dev_pm_ops sdhci_pci_pm_ops = {
  *                                                                           *
 \*****************************************************************************/
 
-static struct sdhci_pci_slot * __devinit sdhci_pci_probe_slot(
+static struct sdhci_pci_slot * sdhci_pci_probe_slot(
 	struct pci_dev *pdev, struct sdhci_pci_chip *chip, int first_bar,
 	int slotno)
 {
@@ -1340,7 +1340,7 @@ static void sdhci_pci_remove_slot(struct sdhci_pci_slot *slot)
 	sdhci_free_host(slot->host);
 }
 
-static void __devinit sdhci_pci_runtime_pm_allow(struct device *dev)
+static void sdhci_pci_runtime_pm_allow(struct device *dev)
 {
 	pm_runtime_put_noidle(dev);
 	pm_runtime_allow(dev);
@@ -1349,13 +1349,13 @@ static void __devinit sdhci_pci_runtime_pm_allow(struct device *dev)
 	pm_suspend_ignore_children(dev, 1);
 }
 
-static void __devexit sdhci_pci_runtime_pm_forbid(struct device *dev)
+static void sdhci_pci_runtime_pm_forbid(struct device *dev)
 {
 	pm_runtime_forbid(dev);
 	pm_runtime_get_noresume(dev);
 }
 
-static int __devinit sdhci_pci_probe(struct pci_dev *pdev,
+static int sdhci_pci_probe(struct pci_dev *pdev,
 				     const struct pci_device_id *ent)
 {
 	struct sdhci_pci_chip *chip;
@@ -1447,7 +1447,7 @@ err:
 	return ret;
 }
 
-static void __devexit sdhci_pci_remove(struct pci_dev *pdev)
+static void sdhci_pci_remove(struct pci_dev *pdev)
 {
 	int i;
 	struct sdhci_pci_chip *chip;

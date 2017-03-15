@@ -236,7 +236,7 @@ static int rpmsg_sample_probe(struct rpmsg_channel *rpdev)
 	return 0;
 }
 
-static void __devexit rpmsg_sample_remove(struct rpmsg_channel *rpdev)
+static void rpmsg_sample_remove(struct rpmsg_channel *rpdev)
 {
 	dev_info(&rpdev->dev, "rpmsg sample client driver is removed\n");
 }

@@ -870,7 +870,7 @@ static struct attribute_group driver_attr_group = {
 	.attrs = driver_attributes,
 };
 
-static int __devinit msm_rpm_probe(struct platform_device *pdev)
+static int msm_rpm_probe(struct platform_device *pdev)
 {
 	return sysfs_create_group(&pdev->dev.kobj, &driver_attr_group);
 }

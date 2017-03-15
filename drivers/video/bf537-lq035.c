@@ -87,7 +87,7 @@ static void set_vcomm(void)
 		pr_err("i2c_smbus_write_byte_data fail: %d\n", nr);
 }
 
-static int __devinit ad5280_probe(struct i2c_client *client,
+static int ad5280_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	int ret;
@@ -108,7 +108,7 @@ static int __devinit ad5280_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int __devexit ad5280_remove(struct i2c_client *client)
+static int ad5280_remove(struct i2c_client *client)
 {
 	ad5280_client = NULL;
 	return 0;
@@ -360,7 +360,7 @@ static int config_dma(void)
 	return 0;
 }
 
-static int __devinit request_ports(void)
+static int request_ports(void)
 {
 	u16 tmr_req[] = TIMERS;
 
@@ -443,7 +443,7 @@ static struct fb_var_screeninfo bfin_lq035_fb_defined = {
 	.transp		= {0, 0, 0},
 };
 
-static struct fb_fix_screeninfo bfin_lq035_fb_fix __devinitdata = {
+static struct fb_fix_screeninfo bfin_lq035_fb_fix = {
 	.id		= KBUILD_MODNAME,
 	.smem_len	= ACTIVE_VIDEO_MEM_SIZE,
 	.type		= FB_TYPE_PACKED_PIXELS,
@@ -686,7 +686,7 @@ static struct lcd_ops bfin_lcd_ops = {
 
 static struct lcd_device *lcd_dev;
 
-static int __devinit bfin_lq035_probe(struct platform_device *pdev)
+static int bfin_lq035_probe(struct platform_device *pdev)
 {
 	struct backlight_properties props;
 	dma_addr_t dma_handle;
@@ -817,7 +817,7 @@ out_ports:
 	return ret;
 }
 
-static int __devexit bfin_lq035_remove(struct platform_device *pdev)
+static int bfin_lq035_remove(struct platform_device *pdev)
 {
 	if (fb_buffer != NULL)
 		dma_free_coherent(NULL, TOTAL_VIDEO_MEM_SIZE, fb_buffer, 0);

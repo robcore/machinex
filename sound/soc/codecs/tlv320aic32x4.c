@@ -694,7 +694,7 @@ static struct snd_soc_codec_driver soc_codec_dev_aic32x4 = {
 	.set_bias_level = aic32x4_set_bias_level,
 };
 
-static __devinit int aic32x4_i2c_probe(struct i2c_client *i2c,
+static int aic32x4_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct aic32x4_pdata *pdata = i2c->dev.platform_data;
@@ -724,7 +724,7 @@ static __devinit int aic32x4_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static __devexit int aic32x4_i2c_remove(struct i2c_client *client)
+static int aic32x4_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	return 0;

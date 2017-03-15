@@ -204,7 +204,7 @@ static const struct net_device_ops olympic_netdev_ops = {
 	.ndo_set_mac_address	= olympic_set_mac_address,
 };
 
-static int __devinit olympic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+static int olympic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct net_device *dev ; 
 	struct olympic_private *olympic_priv;
@@ -1706,7 +1706,7 @@ static const struct file_operations olympic_proc_ops = {
 	.release	= single_release,
 };
 
-static void __devexit olympic_remove_one(struct pci_dev *pdev) 
+static void olympic_remove_one(struct pci_dev *pdev) 
 {
 	struct net_device *dev = pci_get_drvdata(pdev) ; 
 	struct olympic_private *olympic_priv=netdev_priv(dev);

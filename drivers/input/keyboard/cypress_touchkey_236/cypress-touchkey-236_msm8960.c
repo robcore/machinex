@@ -833,7 +833,7 @@ static DEVICE_ATTR(touchkey_brightness_level, S_IRUGO | S_IWUSR | S_IWGRP,
 				brightness_level_show, brightness_control);
 
 
-static int __devinit cypress_touchkey_probe(struct i2c_client *client,
+static int cypress_touchkey_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1146,7 +1146,7 @@ err_mem_alloc:
 
 }
 
-static int __devexit cypress_touchkey_remove(struct i2c_client *client)
+static int cypress_touchkey_remove(struct i2c_client *client)
 {
 	struct cypress_touchkey_info *info = i2c_get_clientdata(client);
 	if (info->irq >= 0)

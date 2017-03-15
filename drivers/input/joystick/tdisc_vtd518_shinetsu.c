@@ -262,7 +262,7 @@ static void tdisc_close(struct input_dev *dev)
 		dd->pdata->tdisc_disable();
 }
 
-static int __devexit tdisc_remove(struct i2c_client *client)
+static int tdisc_remove(struct i2c_client *client)
 {
 	struct tdisc_data		*dd;
 
@@ -361,7 +361,7 @@ static const struct i2c_device_id tdisc_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, tdisc_id);
 
-static int __devinit tdisc_probe(struct i2c_client *client,
+static int tdisc_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	int			rc = -1;

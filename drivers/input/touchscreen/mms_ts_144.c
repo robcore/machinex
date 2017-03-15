@@ -2923,7 +2923,7 @@ static struct attribute_group sec_touch_factory_attr_group = {
 };
 #endif /* SEC_TSP_FACTORY_TEST */
 
-static int __devinit mms_ts_probe(struct i2c_client *client,
+static int mms_ts_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -3060,7 +3060,7 @@ err_alloc:
 	return ret;
 }
 
-static int __devexit mms_ts_remove(struct i2c_client *client)
+static int mms_ts_remove(struct i2c_client *client)
 {
 	struct mms_ts_info *info = i2c_get_clientdata(client);
 

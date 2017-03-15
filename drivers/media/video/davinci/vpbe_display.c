@@ -1590,7 +1590,7 @@ static int vpbe_device_get(struct device *dev, void *data)
 	return 0;
 }
 
-static __devinit int init_vpbe_layer(int i, struct vpbe_display *disp_dev,
+static int init_vpbe_layer(int i, struct vpbe_display *disp_dev,
 				     struct platform_device *pdev)
 {
 	struct vpbe_layer *vpbe_display_layer = NULL;
@@ -1646,7 +1646,7 @@ static __devinit int init_vpbe_layer(int i, struct vpbe_display *disp_dev,
 	return 0;
 }
 
-static __devinit int register_device(struct vpbe_layer *vpbe_display_layer,
+static int register_device(struct vpbe_layer *vpbe_display_layer,
 					struct vpbe_display *disp_dev,
 					struct platform_device *pdev) {
 	int err;
@@ -1680,7 +1680,7 @@ static __devinit int register_device(struct vpbe_layer *vpbe_display_layer,
  * This function creates device entries by register itself to the V4L2 driver
  * and initializes fields of each layer objects
  */
-static __devinit int vpbe_display_probe(struct platform_device *pdev)
+static int vpbe_display_probe(struct platform_device *pdev)
 {
 	struct vpbe_layer *vpbe_display_layer;
 	struct vpbe_display *disp_dev;

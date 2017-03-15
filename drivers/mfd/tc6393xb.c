@@ -137,7 +137,7 @@ static int tc6393xb_nand_enable(struct platform_device *nand)
 	return 0;
 }
 
-static struct resource __devinitdata tc6393xb_nand_resources[] = {
+static struct resource tc6393xb_nand_resources[] = {
 	{
 		.start	= 0x1000,
 		.end	= 0x1007,
@@ -196,7 +196,7 @@ static const struct resource tc6393xb_ohci_resources[] = {
 	},
 };
 
-static struct resource __devinitdata tc6393xb_fb_resources[] = {
+static struct resource tc6393xb_fb_resources[] = {
 	{
 		.start	= 0x5000,
 		.end	= 0x51ff,
@@ -393,7 +393,7 @@ static struct tmio_mmc_data tc6393xb_mmc_data = {
 	.set_clk_div = tc6393xb_mmc_clk_div,
 };
 
-static struct mfd_cell __devinitdata tc6393xb_cells[] = {
+static struct mfd_cell tc6393xb_cells[] = {
 	[TC6393XB_CELL_NAND] = {
 		.name = "tmio-nand",
 		.enable = tc6393xb_nand_enable,
@@ -613,7 +613,7 @@ static void tc6393xb_detach_irq(struct platform_device *dev)
 
 /*--------------------------------------------------------------------------*/
 
-static int __devinit tc6393xb_probe(struct platform_device *dev)
+static int tc6393xb_probe(struct platform_device *dev)
 {
 	struct tc6393xb_platform_data *tcpd = dev->dev.platform_data;
 	struct tc6393xb *tc6393xb;
@@ -742,7 +742,7 @@ err_kzalloc:
 	return ret;
 }
 
-static int __devexit tc6393xb_remove(struct platform_device *dev)
+static int tc6393xb_remove(struct platform_device *dev)
 {
 	struct tc6393xb_platform_data *tcpd = dev->dev.platform_data;
 	struct tc6393xb *tc6393xb = platform_get_drvdata(dev);

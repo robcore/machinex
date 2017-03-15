@@ -473,7 +473,7 @@ EXPORT_SYMBOL(msm_gpio_install_direct_irq);
  */
 static struct lock_class_key msm_gpio_lock_class;
 
-static int __devinit msm_gpio_probe(struct platform_device *pdev)
+static int msm_gpio_probe(struct platform_device *pdev)
 {
 	int ret;
 #ifndef CONFIG_OF
@@ -508,7 +508,7 @@ static int __devinit msm_gpio_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_OF
-static struct of_device_id msm_gpio_of_match[] __devinitdata = {
+static struct of_device_id msm_gpio_of_match[] = {
 	{.compatible = "qcom,msm-gpio", },
 	{ },
 };

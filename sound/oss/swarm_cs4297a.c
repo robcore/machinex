@@ -46,7 +46,7 @@
 *                libOSSm.so)
 * 10/11/00 trw - modified for 2.4.0-test9 kernel enhancements (NR_MAP removal)
 * 11/03/00 trw - fixed interrupt loss/stutter, added debug.
-* 11/10/00 bkz - added __devinit to cs4297a_hw_init()
+* 11/10/00 bkz - added to cs4297a_hw_init()
 * 11/10/00 trw - fixed SMP and capture spinlock hang.
 * 12/04/00 trw - cleaned up CSDEBUG flags and added "defaultorder" moduleparm.
 * 12/05/00 trw - fixed polling (myth2), and added underrun swptr fix.

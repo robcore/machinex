@@ -3946,7 +3946,7 @@ fail_set_dma_mask:
  * @pdev:		PCI device structure
  * @id:			PCI ids of supported hotplugged adapter
  */
-static int __devinit
+static int
 megasas_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	int rval, pos, i, j;
@@ -4500,7 +4500,7 @@ fail_ready_state:
  * megasas_detach_one -	PCI hot"un"plug entry point
  * @pdev:		PCI device structure
  */
-static void __devexit megasas_detach_one(struct pci_dev *pdev)
+static void megasas_detach_one(struct pci_dev *pdev)
 {
 	int i;
 	struct Scsi_Host *host;

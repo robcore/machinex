@@ -748,7 +748,7 @@ static void spi_imx_cleanup(struct spi_device *spi)
 {
 }
 
-static int __devinit spi_imx_probe(struct platform_device *pdev)
+static int spi_imx_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	const struct of_device_id *of_id =
@@ -890,7 +890,7 @@ out_gpio_free:
 	return ret;
 }
 
-static int __devexit spi_imx_remove(struct platform_device *pdev)
+static int spi_imx_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = platform_get_drvdata(pdev);
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

@@ -244,7 +244,7 @@ static struct max8925_regulator_info max8925_regulator_info[] = {
 	MAX8925_LDO(20, 750, 3900, 50),
 };
 
-static struct max8925_regulator_info * __devinit find_regulator_info(int id)
+static struct max8925_regulator_info * find_regulator_info(int id)
 {
 	struct max8925_regulator_info *ri;
 	int i;

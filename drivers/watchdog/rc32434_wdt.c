@@ -260,7 +260,7 @@ static struct miscdevice rc32434_wdt_miscdev = {
 	.fops	= &rc32434_wdt_fops,
 };
 
-static int __devinit rc32434_wdt_probe(struct platform_device *pdev)
+static int rc32434_wdt_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct resource *r;
@@ -306,7 +306,7 @@ unmap:
 	return ret;
 }
 
-static int __devexit rc32434_wdt_remove(struct platform_device *pdev)
+static int rc32434_wdt_remove(struct platform_device *pdev)
 {
 	misc_deregister(&rc32434_wdt_miscdev);
 	iounmap(wdt_reg);

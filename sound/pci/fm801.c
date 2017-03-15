@@ -689,7 +689,7 @@ static struct snd_pcm_ops snd_fm801_capture_ops = {
 	.pointer =	snd_fm801_capture_pointer,
 };
 
-static int __devinit snd_fm801_pcm(struct fm801 *chip, int device, struct snd_pcm ** rpcm)
+static int snd_fm801_pcm(struct fm801 *chip, int device, struct snd_pcm ** rpcm)
 {
 	struct snd_pcm *pcm;
 	int err;
@@ -972,7 +972,7 @@ static const DECLARE_TLV_DB_SCALE(db_scale_dsp, -3450, 150, 0);
 
 #define FM801_CONTROLS ARRAY_SIZE(snd_fm801_controls)
 
-static struct snd_kcontrol_new snd_fm801_controls[] __devinitdata = {
+static struct snd_kcontrol_new snd_fm801_controls[] = {
 FM801_DOUBLE_TLV("Wave Playback Volume", FM801_PCM_VOL, 0, 8, 31, 1,
 		 db_scale_dsp),
 FM801_SINGLE("Wave Playback Switch", FM801_PCM_VOL, 15, 1, 1),
@@ -993,7 +993,7 @@ FM801_SINGLE("FM Playback Switch", FM801_FM_VOL, 15, 1, 1),
 
 #define FM801_CONTROLS_MULTI ARRAY_SIZE(snd_fm801_controls_multi)
 
-static struct snd_kcontrol_new snd_fm801_controls_multi[] __devinitdata = {
+static struct snd_kcontrol_new snd_fm801_controls_multi[] = {
 FM801_SINGLE("AC97 2ch->4ch Copy Switch", FM801_CODEC_CTRL, 7, 1, 0),
 FM801_SINGLE("AC97 18-bit Switch", FM801_CODEC_CTRL, 10, 1, 0),
 FM801_SINGLE(SNDRV_CTL_NAME_IEC958("",CAPTURE,SWITCH), FM801_I2S_MODE, 8, 1, 0),
@@ -1018,7 +1018,7 @@ static void snd_fm801_mixer_free_ac97(struct snd_ac97 *ac97)
 	}
 }
 
-static int __devinit snd_fm801_mixer(struct fm801 *chip)
+static int snd_fm801_mixer(struct fm801 *chip)
 {
 	struct snd_ac97_template ac97;
 	unsigned int i;
@@ -1179,7 +1179,7 @@ static int snd_fm801_dev_free(struct snd_device *device)
 	return snd_fm801_free(chip);
 }
 
-static int __devinit snd_fm801_create(struct snd_card *card,
+static int snd_fm801_create(struct snd_card *card,
 				      struct pci_dev * pci,
 				      int tea575x_tuner,
 				      int radio_nr,
@@ -1284,7 +1284,7 @@ static int __devinit snd_fm801_create(struct snd_card *card,
 	return 0;
 }
 
-static int __devinit snd_card_fm801_probe(struct pci_dev *pci,
+static int snd_card_fm801_probe(struct pci_dev *pci,
 					  const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -1355,7 +1355,7 @@ static int __devinit snd_card_fm801_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit snd_card_fm801_remove(struct pci_dev *pci)
+static void snd_card_fm801_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

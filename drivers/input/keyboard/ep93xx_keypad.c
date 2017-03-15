@@ -237,7 +237,7 @@ static int ep93xx_keypad_resume(struct platform_device *pdev)
 #define ep93xx_keypad_resume	NULL
 #endif	/* !CONFIG_PM */
 
-static int __devinit ep93xx_keypad_probe(struct platform_device *pdev)
+static int ep93xx_keypad_probe(struct platform_device *pdev)
 {
 	struct ep93xx_keypad *keypad;
 	const struct matrix_keymap_data *keymap_data;
@@ -353,7 +353,7 @@ failed_free:
 	return err;
 }
 
-static int __devexit ep93xx_keypad_remove(struct platform_device *pdev)
+static int ep93xx_keypad_remove(struct platform_device *pdev)
 {
 	struct ep93xx_keypad *keypad = platform_get_drvdata(pdev);
 	struct resource *res;

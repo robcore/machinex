@@ -562,7 +562,7 @@ static int i2c_pnx_controller_resume(struct platform_device *pdev)
 #define i2c_pnx_controller_resume	NULL
 #endif
 
-static int __devinit i2c_pnx_probe(struct platform_device *pdev)
+static int i2c_pnx_probe(struct platform_device *pdev)
 {
 	unsigned long tmp;
 	int ret = 0;
@@ -685,7 +685,7 @@ out:
 	return ret;
 }
 
-static int __devexit i2c_pnx_remove(struct platform_device *pdev)
+static int i2c_pnx_remove(struct platform_device *pdev)
 {
 	struct i2c_pnx_algo_data *alg_data = platform_get_drvdata(pdev);
 	struct i2c_pnx_data *i2c_pnx = alg_data->i2c_pnx;

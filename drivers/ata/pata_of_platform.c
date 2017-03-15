@@ -15,7 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/ata_platform.h>
 
-static int __devinit pata_of_platform_probe(struct platform_device *ofdev)
+static int pata_of_platform_probe(struct platform_device *ofdev)
 {
 	int ret;
 	struct device_node *dn = ofdev->dev.of_node;
@@ -76,7 +76,7 @@ static int __devinit pata_of_platform_probe(struct platform_device *ofdev)
 				     reg_shift, pio_mask);
 }
 
-static int __devexit pata_of_platform_remove(struct platform_device *ofdev)
+static int pata_of_platform_remove(struct platform_device *ofdev)
 {
 	return __pata_platform_remove(&ofdev->dev);
 }

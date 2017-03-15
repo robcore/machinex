@@ -182,7 +182,7 @@ static const struct i2c_board_info wm1277_devs[] = {
 	},
 };
 
-static __devinitdata const struct {
+static const struct {
 	u8 id;
 	const char *name;
 	const struct i2c_board_info *i2c_devs;
@@ -213,7 +213,7 @@ static __devinitdata const struct {
 	  .i2c_devs = wm1277_devs, .num_i2c_devs = ARRAY_SIZE(wm1277_devs) },
 };
 
-static __devinit int wlf_gf_module_probe(struct i2c_client *i2c,
+static int wlf_gf_module_probe(struct i2c_client *i2c,
 					 const struct i2c_device_id *i2c_id)
 {
 	int ret, i, j, id, rev;

@@ -717,7 +717,7 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 	return 0;
 }
 
-static void __devinit mipi_samsung_disp_shutdown(struct platform_device *pdev)
+static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 {
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata;
 	struct msm_fb_data_type *mfd;
@@ -1506,7 +1506,7 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 static DEVICE_ATTR(panel_colors, 0644,
 			panel_colors_show, panel_colors_store);
 
-static int __devinit mipi_samsung_disp_probe(struct platform_device *pdev)
+static int mipi_samsung_disp_probe(struct platform_device *pdev)
 {
 	int ret, rc;
 	struct platform_device *msm_fb_added_dev;

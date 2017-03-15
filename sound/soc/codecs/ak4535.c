@@ -437,7 +437,7 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4535 = {
 	.num_dapm_routes = ARRAY_SIZE(ak4535_audio_map),
 };
 
-static __devinit int ak4535_i2c_probe(struct i2c_client *i2c,
+static int ak4535_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct ak4535_priv *ak4535;
@@ -465,7 +465,7 @@ static __devinit int ak4535_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static __devexit int ak4535_i2c_remove(struct i2c_client *client)
+static int ak4535_i2c_remove(struct i2c_client *client)
 {
 	struct ak4535_priv *ak4535 = i2c_get_clientdata(client);
 

@@ -687,7 +687,7 @@ static const struct iio_info ad7746_info = {
  * device probe and remove
  */
 
-static int __devinit ad7746_probe(struct i2c_client *client,
+static int ad7746_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct ad7746_platform_data *pdata = client->dev.platform_data;
@@ -761,7 +761,7 @@ error_ret:
 	return ret;
 }
 
-static int __devexit ad7746_remove(struct i2c_client *client)
+static int ad7746_remove(struct i2c_client *client)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 

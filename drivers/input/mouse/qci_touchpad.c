@@ -41,9 +41,9 @@
 #define TOUCHPAD_CMD_ENABLE             0xF4
 #define TOUCHPAD_INIT_DELAY_MS    100
 
-static int __devinit qcitp_probe(struct i2c_client *client,
+static int qcitp_probe(struct i2c_client *client,
 	const struct i2c_device_id *id);
-static int __devexit qcitp_remove(struct i2c_client *kbd);
+static int qcitp_remove(struct i2c_client *kbd);
 
 /* General structure to hold the driver data */
 struct i2ctpad_drv_data {
@@ -187,7 +187,7 @@ static irqreturn_t qcitp_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit qcitp_probe(struct i2c_client *client,
+static int qcitp_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
 {
 	int err = -ENOMEM;
@@ -277,7 +277,7 @@ allocate_fail:
 	return err;
 }
 
-static int __devexit qcitp_remove(struct i2c_client *dev)
+static int qcitp_remove(struct i2c_client *dev)
 {
 	struct i2ctpad_drv_data *context = i2c_get_clientdata(dev);
 

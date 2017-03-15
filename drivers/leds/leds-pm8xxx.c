@@ -706,7 +706,7 @@ static enum led_brightness pm8xxx_led_get(struct led_classdev *led_cdev)
 	return led->cdev.brightness;
 }
 
-static int __devinit init_wled(struct pm8xxx_led_data *led)
+static int init_wled(struct pm8xxx_led_data *led)
 {
 	int rc, i;
 	u8 val, num_wled_strings, comp;
@@ -921,7 +921,7 @@ static int __devinit init_wled(struct pm8xxx_led_data *led)
 	return 0;
 }
 
-static int __devinit get_init_value(struct pm8xxx_led_data *led, u8 *val)
+static int get_init_value(struct pm8xxx_led_data *led, u8 *val)
 {
 	int rc, offset;
 	u16 addr;
@@ -1179,7 +1179,7 @@ static ssize_t pm8xxx_led_blink_store(struct device *dev,
 static DEVICE_ATTR(blink, 0644, pm8xxx_led_blink_show, pm8xxx_led_blink_store);
 
 
-static int __devinit pm8xxx_led_probe(struct platform_device *pdev)
+static int pm8xxx_led_probe(struct platform_device *pdev)
 {
 	const struct pm8xxx_led_platform_data *pdata = pdev->dev.platform_data;
 	const struct led_platform_data *pcore_data;
@@ -1357,7 +1357,7 @@ fail_id_check:
 	return rc;
 }
 
-static int __devexit pm8xxx_led_remove(struct platform_device *pdev)
+static int pm8xxx_led_remove(struct platform_device *pdev)
 {
 	int i;
 	const struct led_platform_data *pdata =

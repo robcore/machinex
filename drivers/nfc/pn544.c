@@ -711,7 +711,7 @@ static SIMPLE_DEV_PM_OPS(pn544_pm_ops, pn544_suspend, pn544_resume);
 static struct device_attribute pn544_attr =
 	__ATTR(nfc_test, S_IRUGO, pn544_test, NULL);
 
-static int __devinit pn544_probe(struct i2c_client *client,
+static int pn544_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
 	struct pn544_info *info;
@@ -824,7 +824,7 @@ err_info_alloc:
 	return r;
 }
 
-static __devexit int pn544_remove(struct i2c_client *client)
+static int pn544_remove(struct i2c_client *client)
 {
 	struct pn544_info *info = i2c_get_clientdata(client);
 	struct pn544_nfc_platform_data *pdata = client->dev.platform_data;

@@ -129,7 +129,7 @@ static struct snd_soc_card smdk_pcm = {
 	.num_links = 1,
 };
 
-static int __devinit snd_smdk_probe(struct platform_device *pdev)
+static int snd_smdk_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 
@@ -143,7 +143,7 @@ static int __devinit snd_smdk_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit snd_smdk_remove(struct platform_device *pdev)
+static int snd_smdk_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_card(&smdk_pcm);
 	platform_set_drvdata(pdev, NULL);

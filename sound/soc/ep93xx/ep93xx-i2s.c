@@ -441,7 +441,7 @@ fail:
 	return err;
 }
 
-static int __devexit ep93xx_i2s_remove(struct platform_device *pdev)
+static int ep93xx_i2s_remove(struct platform_device *pdev)
 {
 	struct ep93xx_i2s_info *info = dev_get_drvdata(&pdev->dev);
 

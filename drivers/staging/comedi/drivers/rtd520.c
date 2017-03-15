@@ -2352,13 +2352,13 @@ static int rtd_dio_insn_config(struct comedi_device *dev,
  * A convenient macro that defines init_module() and cleanup_module(),
  * as necessary.
  */
-static int __devinit rtd520Driver_pci_probe(struct pci_dev *dev,
+static int rtd520Driver_pci_probe(struct pci_dev *dev,
 					    const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, rtd520Driver.driver_name);
 }
 
-static void __devexit rtd520Driver_pci_remove(struct pci_dev *dev)
+static void rtd520Driver_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

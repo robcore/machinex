@@ -166,7 +166,7 @@ static int tx_params[MAX_UNITS] = {-1, -1, -1, -1, -1, -1, -1, -1};
 #include <asm/unaligned.h>
 #include <asm/cache.h>
 
-static const char version[] __devinitconst =
+static const char version[] =
 KERN_INFO DRV_NAME ".c:v" DRV_VERSION " " DRV_RELDATE "  Written by Donald Becker\n"
 "   Some modifications by Eric kasten <kasten@nscl.msu.edu>\n"
 "   Further modifications by Keith Underwood <keithu@parl.clemson.edu>\n";
@@ -576,7 +576,7 @@ static const struct net_device_ops hamachi_netdev_ops = {
 };
 
 
-static int __devinit hamachi_init_one (struct pci_dev *pdev,
+static int hamachi_init_one (struct pci_dev *pdev,
 				    const struct pci_device_id *ent)
 {
 	struct hamachi_private *hmp;
@@ -793,7 +793,7 @@ err_out:
 	return ret;
 }
 
-static int __devinit read_eeprom(void __iomem *ioaddr, int location)
+static int read_eeprom(void __iomem *ioaddr, int location)
 {
 	int bogus_cnt = 1000;
 
@@ -1900,7 +1900,7 @@ static int netdev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 }
 
 
-static void __devexit hamachi_remove_one (struct pci_dev *pdev)
+static void hamachi_remove_one (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 

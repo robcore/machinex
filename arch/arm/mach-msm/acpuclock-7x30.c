@@ -316,7 +316,7 @@ static unsigned long acpuclk_7x30_get_rate(int cpu)
  * Clock driver initialization
  *---------------------------------------------------------------------------*/
 
-static void __devinit acpuclk_hw_init(void)
+static void acpuclk_hw_init(void)
 {
 	struct clkctl_acpu_speed *s;
 	uint32_t div, sel, src_num;
@@ -394,7 +394,7 @@ static void __devinit acpuclk_hw_init(void)
 }
 
 /* Initalize the lpj field in the acpu_freq_tbl. */
-static void __devinit lpj_init(void)
+static void lpj_init(void)
 {
 	int i;
 	const struct clkctl_acpu_speed *base_clk = drv_state.current_speed;
@@ -432,7 +432,7 @@ static inline void setup_cpufreq_table(void) { }
  * Truncate the frequency table at the current PLL2 rate and determine the
  * backup PLL to use when scaling PLL2.
  */
-void __devinit pll2_fixup(void)
+void pll2_fixup(void)
 {
 	struct clkctl_acpu_speed *speed = acpu_freq_tbl;
 	u8 pll2_l = readl_relaxed(PLL2_L_VAL_ADDR) & 0xFF;
@@ -454,7 +454,7 @@ void __devinit pll2_fixup(void)
 #define RPM_BYPASS_MASK	(1 << 3)
 #define PMIC_MODE_MASK	(1 << 4)
 
-static void __devinit populate_plls(void)
+static void populate_plls(void)
 {
 	acpuclk_sources[PLL_1] = clk_get_sys("acpu", "pll1_clk");
 	BUG_ON(IS_ERR(acpuclk_sources[PLL_1]));
@@ -480,7 +480,7 @@ static struct acpuclk_data acpuclk_7x30_data = {
 	.switch_time_us = 50,
 };
 
-static int __devinit acpuclk_7x30_probe(struct platform_device *pdev)
+static int acpuclk_7x30_probe(struct platform_device *pdev)
 {
 	pr_info("%s()\n", __func__);
 

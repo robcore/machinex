@@ -111,7 +111,7 @@ extern dbg_info_t *DbgInfo;
 #endif  // DBG
 
 /* define the PCI device Table Cardname and id tables */
-static struct pci_device_id wl_pci_tbl[] __devinitdata = {
+static struct pci_device_id wl_pci_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_WL_LKM, PCI_DEVICE_ID_WL_LKM_0), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_WL_LKM, PCI_DEVICE_ID_WL_LKM_1), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_WL_LKM, PCI_DEVICE_ID_WL_LKM_2), },
@@ -124,9 +124,9 @@ MODULE_DEVICE_TABLE(pci, wl_pci_tbl);
 /*******************************************************************************
  * function prototypes
  ******************************************************************************/
-int __devinit wl_pci_probe( struct pci_dev *pdev,
+int wl_pci_probe( struct pci_dev *pdev,
                                 const struct pci_device_id *ent );
-void __devexit wl_pci_remove(struct pci_dev *pdev);
+void wl_pci_remove(struct pci_dev *pdev);
 int wl_pci_setup( struct pci_dev *pdev );
 void wl_pci_enable_cardbus_interrupts( struct pci_dev *pdev );
 
@@ -399,7 +399,7 @@ int wl_adapter_is_open( struct net_device *dev )
  *      errno value otherwise
  *
  ******************************************************************************/
-int __devinit wl_pci_probe( struct pci_dev *pdev,
+int wl_pci_probe( struct pci_dev *pdev,
                                 const struct pci_device_id *ent )
 {
     int result;
@@ -436,7 +436,7 @@ int __devinit wl_pci_probe( struct pci_dev *pdev,
  *      N/A
  *
  ******************************************************************************/
-void __devexit wl_pci_remove(struct pci_dev *pdev)
+void wl_pci_remove(struct pci_dev *pdev)
 {
     struct net_device       *dev = NULL;
     /*------------------------------------------------------------------------*/

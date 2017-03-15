@@ -54,9 +54,9 @@ static int qlcnic_config_npars;
 module_param(qlcnic_config_npars, int, 0444);
 MODULE_PARM_DESC(qlcnic_config_npars, "Configure NPARs (0=disabled, 1=enabled");
 
-static int __devinit qlcnic_probe(struct pci_dev *pdev,
+static int qlcnic_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent);
-static void __devexit qlcnic_remove(struct pci_dev *pdev);
+static void qlcnic_remove(struct pci_dev *pdev);
 static int qlcnic_open(struct net_device *netdev);
 static int qlcnic_close(struct net_device *netdev);
 static void qlcnic_tx_timeout(struct net_device *netdev);
@@ -1546,7 +1546,7 @@ qlcnic_alloc_msix_entries(struct qlcnic_adapter *adapter, u16 count)
 	return -ENOMEM;
 }
 
-static int __devinit
+static int
 qlcnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct net_device *netdev = NULL;
@@ -1698,7 +1698,7 @@ err_out_disable_pdev:
 	return err;
 }
 
-static void __devexit qlcnic_remove(struct pci_dev *pdev)
+static void qlcnic_remove(struct pci_dev *pdev)
 {
 	struct qlcnic_adapter *adapter;
 	struct net_device *netdev;

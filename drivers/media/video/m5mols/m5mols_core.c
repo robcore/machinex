@@ -938,7 +938,7 @@ static irqreturn_t m5mols_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int __devinit m5mols_probe(struct i2c_client *client,
+static int m5mols_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	const struct m5mols_platform_data *pdata = client->dev.platform_data;
@@ -1026,7 +1026,7 @@ out_free:
 	return ret;
 }
 
-static int __devexit m5mols_remove(struct i2c_client *client)
+static int m5mols_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct m5mols_info *info = to_m5mols(sd);

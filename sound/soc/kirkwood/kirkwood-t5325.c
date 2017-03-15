@@ -92,7 +92,7 @@ static struct snd_soc_card t5325 = {
 	.num_dapm_routes = ARRAY_SIZE(t5325_route),
 };
 
-static int __devinit t5325_probe(struct platform_device *pdev)
+static int t5325_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &t5325;
 	int ret;
@@ -106,7 +106,7 @@ static int __devinit t5325_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit t5325_remove(struct platform_device *pdev)
+static int t5325_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

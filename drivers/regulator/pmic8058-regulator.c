@@ -1666,7 +1666,7 @@ bail:
 	return rc;
 }
 
-static int __devinit pm8058_vreg_probe(struct platform_device *pdev)
+static int pm8058_vreg_probe(struct platform_device *pdev)
 {
 	struct regulator_desc *rdesc;
 	struct pm8058_vreg *vreg;
@@ -1710,7 +1710,7 @@ bail:
 	return rc;
 }
 
-static int __devexit pm8058_vreg_remove(struct platform_device *pdev)
+static int pm8058_vreg_remove(struct platform_device *pdev)
 {
 	regulator_unregister(pm8058_vreg[pdev->id].rdev);
 	return 0;

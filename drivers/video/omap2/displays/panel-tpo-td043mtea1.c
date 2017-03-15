@@ -521,7 +521,7 @@ static int tpo_td043_spi_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit tpo_td043_spi_remove(struct spi_device *spi)
+static int tpo_td043_spi_remove(struct spi_device *spi)
 {
 	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&spi->dev);
 

@@ -174,7 +174,7 @@ static void omap4_keypad_close(struct input_dev *input)
 	pm_runtime_put_sync(input->dev.parent);
 }
 
-static int __devinit omap4_keypad_probe(struct platform_device *pdev)
+static int omap4_keypad_probe(struct platform_device *pdev)
 {
 	const struct omap4_keypad_platform_data *pdata;
 	struct omap4_keypad *keypad_data;
@@ -305,7 +305,7 @@ err_free_keypad:
 	return error;
 }
 
-static int __devexit omap4_keypad_remove(struct platform_device *pdev)
+static int omap4_keypad_remove(struct platform_device *pdev)
 {
 	struct omap4_keypad *keypad_data = platform_get_drvdata(pdev);
 	struct resource *res;

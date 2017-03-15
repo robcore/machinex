@@ -1025,7 +1025,7 @@ static void ep93xx_spi_release_dma(struct ep93xx_spi *espi)
 		free_page((unsigned long)espi->zeropage);
 }
 
-static int __devinit ep93xx_spi_probe(struct platform_device *pdev)
+static int ep93xx_spi_probe(struct platform_device *pdev)
 {
 	struct spi_master *master;
 	struct ep93xx_spi_info *info;
@@ -1150,7 +1150,7 @@ fail_release_master:
 	return error;
 }
 
-static int __devexit ep93xx_spi_remove(struct platform_device *pdev)
+static int ep93xx_spi_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = platform_get_drvdata(pdev);
 	struct ep93xx_spi *espi = spi_master_get_devdata(master);

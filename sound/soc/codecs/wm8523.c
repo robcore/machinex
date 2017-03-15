@@ -511,7 +511,7 @@ static const struct of_device_id wm8523_of_match[] = {
 };
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-static __devinit int wm8523_i2c_probe(struct i2c_client *i2c,
+static int wm8523_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8523_priv *wm8523;
@@ -532,7 +532,7 @@ static __devinit int wm8523_i2c_probe(struct i2c_client *i2c,
 
 }
 
-static __devexit int wm8523_i2c_remove(struct i2c_client *client)
+static int wm8523_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	kfree(i2c_get_clientdata(client));

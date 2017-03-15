@@ -224,7 +224,7 @@ static int aat1290a_led_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit aat1290a_led_remove(struct platform_device *pdev)
+static int aat1290a_led_remove(struct platform_device *pdev)
 {
 	led_pdata->freeGpio();
 	misc_deregister(&aat1290a_miscdev);

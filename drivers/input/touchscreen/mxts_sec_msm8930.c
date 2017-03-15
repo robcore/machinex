@@ -2043,7 +2043,7 @@ static void mxt_exit_factory(struct mxt_data *data)
 #endif
 
 #if TSP_USE_ATMELDBG
-static int __devinit mxt_sysfs_init_for_ATMELDBG(struct mxt_data *data)
+static int mxt_sysfs_init_for_ATMELDBG(struct mxt_data *data)
 {
 	struct i2c_client *client = data->client;
 
@@ -2065,7 +2065,7 @@ static int __devinit mxt_sysfs_init_for_ATMELDBG(struct mxt_data *data)
 }
 #endif
 
-static int  __devinit mxt_sysfs_init(struct i2c_client *client)
+static int  mxt_sysfs_init(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 	int error;

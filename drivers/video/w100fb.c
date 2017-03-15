@@ -630,7 +630,7 @@ static int w100fb_resume(struct platform_device *dev)
 #endif
 
 
-int __devinit w100fb_probe(struct platform_device *pdev)
+int w100fb_probe(struct platform_device *pdev)
 {
 	int err = -EIO;
 	struct w100fb_mach_info *inf;
@@ -783,7 +783,7 @@ out:
 }
 
 
-static int __devexit w100fb_remove(struct platform_device *pdev)
+static int w100fb_remove(struct platform_device *pdev)
 {
 	struct fb_info *info = platform_get_drvdata(pdev);
 	struct w100fb_par *par=info->par;
@@ -1021,7 +1021,7 @@ static struct pll_entries {
 	{ 0 },
 };
 
-struct w100_pll_info __devinit *w100_get_xtal_table(unsigned int freq)
+struct w100_pll_info *w100_get_xtal_table(unsigned int freq)
 {
 	struct pll_entries *pll_entry = w100_pll_tables;
 

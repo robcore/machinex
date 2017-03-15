@@ -392,7 +392,7 @@ uint32_t dai_get_dma_pos(uint32_t dma_ch)
 	return addr;
 }
 
-static int __devinit dai_probe(struct platform_device *pdev)
+static int dai_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	int i = 0;

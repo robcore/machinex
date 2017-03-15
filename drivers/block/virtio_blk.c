@@ -474,7 +474,7 @@ static const struct device_attribute dev_attr_cache_type_rw =
 	__ATTR(cache_type, S_IRUGO|S_IWUSR,
 	       virtblk_cache_type_show, virtblk_cache_type_store);
 
-static int __devinit virtblk_probe(struct virtio_device *vdev)
+static int virtblk_probe(struct virtio_device *vdev)
 {
 	struct virtio_blk *vblk;
 	struct request_queue *q;
@@ -655,7 +655,7 @@ out:
 	return err;
 }
 
-static void __devexit virtblk_remove(struct virtio_device *vdev)
+static void virtblk_remove(struct virtio_device *vdev)
 {
 	struct virtio_blk *vblk = vdev->priv;
 	int index = vblk->index;
@@ -749,7 +749,7 @@ static unsigned int features[] = {
 
 /*
  * virtio_blk causes spurious section mismatch warning by
- * simultaneously referring to a __devinit and a __devexit function.
+ * simultaneously referring to a and a function.
  * Use __refdata to avoid this warning.
  */
 static struct virtio_driver __refdata virtio_blk = {

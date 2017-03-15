@@ -3139,7 +3139,7 @@ static inline u32 sky2_clk2us(const struct sky2_hw *hw, u32 clk)
 }
 
 
-static int __devinit sky2_init(struct sky2_hw *hw)
+static int sky2_init(struct sky2_hw *hw)
 {
 	u8 t8;
 
@@ -4729,7 +4729,7 @@ static const struct net_device_ops sky2_netdev_ops[2] = {
 };
 
 /* Initialize network device */
-static __devinit struct net_device *sky2_init_netdev(struct sky2_hw *hw,
+static struct net_device *sky2_init_netdev(struct sky2_hw *hw,
 						     unsigned port,
 						     int highmem, int wol)
 {
@@ -4795,7 +4795,7 @@ static __devinit struct net_device *sky2_init_netdev(struct sky2_hw *hw,
 	return dev;
 }
 
-static void __devinit sky2_show_addr(struct net_device *dev)
+static void sky2_show_addr(struct net_device *dev)
 {
 	const struct sky2_port *sky2 = netdev_priv(dev);
 
@@ -4803,7 +4803,7 @@ static void __devinit sky2_show_addr(struct net_device *dev)
 }
 
 /* Handle software interrupt used during MSI test */
-static irqreturn_t __devinit sky2_test_intr(int irq, void *dev_id)
+static irqreturn_t sky2_test_intr(int irq, void *dev_id)
 {
 	struct sky2_hw *hw = dev_id;
 	u32 status = sky2_read32(hw, B0_Y2_SP_ISRC2);
@@ -4822,7 +4822,7 @@ static irqreturn_t __devinit sky2_test_intr(int irq, void *dev_id)
 }
 
 /* Test interrupt path by forcing a a software IRQ */
-static int __devinit sky2_test_msi(struct sky2_hw *hw)
+static int sky2_test_msi(struct sky2_hw *hw)
 {
 	struct pci_dev *pdev = hw->pdev;
 	int err;
@@ -4884,7 +4884,7 @@ static const char *sky2_name(u8 chipid, char *buf, int sz)
 	return buf;
 }
 
-static int __devinit sky2_probe(struct pci_dev *pdev,
+static int sky2_probe(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	struct net_device *dev, *dev1;
@@ -5072,7 +5072,7 @@ err_out:
 	return err;
 }
 
-static void __devexit sky2_remove(struct pci_dev *pdev)
+static void sky2_remove(struct pci_dev *pdev)
 {
 	struct sky2_hw *hw = pci_get_drvdata(pdev);
 	int i;

@@ -153,7 +153,7 @@ static struct i2c_driver hsic_hub_driver = {
 #define HSIC_HUB_VDD_VOL_MIN	1650000 /* uV */
 #define HSIC_HUB_VDD_VOL_MAX	1950000 /* uV */
 #define HSIC_HUB_VDD_LOAD	36000	/* uA */
-static int __devinit smsc_hub_probe(struct platform_device *pdev)
+static int smsc_hub_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	const struct smsc_hub_platform_data *pdata;

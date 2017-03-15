@@ -1648,7 +1648,7 @@ out:
 }
 
 /* AU1200 LCD controller device driver */
-static int __devinit au1200fb_drv_probe(struct platform_device *dev)
+static int au1200fb_drv_probe(struct platform_device *dev)
 {
 	struct au1200fb_device *fbdev;
 	struct au1200fb_platdata *pd;
@@ -1773,7 +1773,7 @@ failed:
 	return ret;
 }
 
-static int __devexit au1200fb_drv_remove(struct platform_device *dev)
+static int au1200fb_drv_remove(struct platform_device *dev)
 {
 	struct au1200fb_platdata *pd = platform_get_drvdata(dev);
 	struct au1200fb_device *fbdev;

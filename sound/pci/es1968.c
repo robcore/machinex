@@ -1429,7 +1429,7 @@ static void snd_es1968_free_dmabuf(struct es1968 *chip)
 	}
 }
 
-static int __devinit
+static int
 snd_es1968_init_dmabuf(struct es1968 *chip)
 {
 	int err;
@@ -1704,7 +1704,7 @@ static struct snd_pcm_ops snd_es1968_capture_ops = {
  */
 #define CLOCK_MEASURE_BUFSIZE	16768	/* enough large for a single shot */
 
-static void __devinit es1968_measure_clock(struct es1968 *chip)
+static void es1968_measure_clock(struct es1968 *chip)
 {
 	int i, apu;
 	unsigned int pa, offset, t;
@@ -1806,7 +1806,7 @@ static void snd_es1968_pcm_free(struct snd_pcm *pcm)
 	esm->pcm = NULL;
 }
 
-static int __devinit
+static int
 snd_es1968_pcm(struct es1968 *chip, int device)
 {
 	struct snd_pcm *pcm;
@@ -2016,7 +2016,7 @@ static irqreturn_t snd_es1968_interrupt(int irq, void *dev_id)
  *  Mixer stuff
  */
 
-static int __devinit
+static int
 snd_es1968_mixer(struct es1968 *chip)
 {
 	struct snd_ac97_bus *pbus;
@@ -2458,7 +2458,7 @@ static int es1968_resume(struct pci_dev *pci)
 
 #ifdef SUPPORT_JOYSTICK
 #define JOYSTICK_ADDR	0x200
-static int __devinit snd_es1968_create_gameport(struct es1968 *chip, int dev)
+static int snd_es1968_create_gameport(struct es1968 *chip, int dev)
 {
 	struct gameport *gp;
 	struct resource *r;
@@ -2509,7 +2509,7 @@ static inline void snd_es1968_free_gameport(struct es1968 *chip) { }
 #endif
 
 #ifdef CONFIG_SND_ES1968_INPUT
-static int __devinit snd_es1968_input_register(struct es1968 *chip)
+static int snd_es1968_input_register(struct es1968 *chip)
 {
 	struct input_dev *input_dev;
 	int err;
@@ -2641,7 +2641,7 @@ struct ess_device_list {
 	unsigned short vendor;	/* subsystem vendor id */
 };
 
-static struct ess_device_list pm_whitelist[] __devinitdata = {
+static struct ess_device_list pm_whitelist[] = {
 	{ TYPE_MAESTRO2E, 0x0e11 },	/* Compaq Armada */
 	{ TYPE_MAESTRO2E, 0x1028 },
 	{ TYPE_MAESTRO2E, 0x103c },
@@ -2650,11 +2650,11 @@ static struct ess_device_list pm_whitelist[] __devinitdata = {
 	{ TYPE_MAESTRO2E, 0x1558 },
 };
 
-static struct ess_device_list mpu_blacklist[] __devinitdata = {
+static struct ess_device_list mpu_blacklist[] = {
 	{ TYPE_MAESTRO2, 0x125d },
 };
 
-static int __devinit snd_es1968_create(struct snd_card *card,
+static int snd_es1968_create(struct snd_card *card,
 				       struct pci_dev *pci,
 				       int total_bufsize,
 				       int play_streams,
@@ -2781,7 +2781,7 @@ static int __devinit snd_es1968_create(struct snd_card *card,
 
 /*
  */
-static int __devinit snd_es1968_probe(struct pci_dev *pci,
+static int snd_es1968_probe(struct pci_dev *pci,
 				      const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -2892,7 +2892,7 @@ static int __devinit snd_es1968_probe(struct pci_dev *pci,
 	return 0;
 }
 
-static void __devexit snd_es1968_remove(struct pci_dev *pci)
+static void snd_es1968_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

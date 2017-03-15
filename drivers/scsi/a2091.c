@@ -179,7 +179,7 @@ static struct scsi_host_template a2091_scsi_template = {
 	.use_clustering		= DISABLE_CLUSTERING
 };
 
-static int __devinit a2091_probe(struct zorro_dev *z,
+static int a2091_probe(struct zorro_dev *z,
 				 const struct zorro_device_id *ent)
 {
 	struct Scsi_Host *instance;
@@ -239,7 +239,7 @@ fail_alloc:
 	return error;
 }
 
-static void __devexit a2091_remove(struct zorro_dev *z)
+static void a2091_remove(struct zorro_dev *z)
 {
 	struct Scsi_Host *instance = zorro_get_drvdata(z);
 	struct a2091_hostdata *hdata = shost_priv(instance);
@@ -251,7 +251,7 @@ static void __devexit a2091_remove(struct zorro_dev *z)
 	release_mem_region(z->resource.start, 256);
 }
 
-static struct zorro_device_id a2091_zorro_tbl[] __devinitdata = {
+static struct zorro_device_id a2091_zorro_tbl[] = {
 	{ ZORRO_PROD_CBM_A590_A2091_1 },
 	{ ZORRO_PROD_CBM_A590_A2091_2 },
 	{ 0 }

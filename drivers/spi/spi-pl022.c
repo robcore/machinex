@@ -1070,7 +1070,7 @@ err_alloc_rx_sg:
 	return -ENOMEM;
 }
 
-static int __devinit pl022_dma_probe(struct pl022 *pl022)
+static int pl022_dma_probe(struct pl022 *pl022)
 {
 	dma_cap_mask_t mask;
 
@@ -1986,7 +1986,7 @@ static void pl022_cleanup(struct spi_device *spi)
 	kfree(chip);
 }
 
-static int __devinit
+static int
 pl022_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	struct device *dev = &adev->dev;

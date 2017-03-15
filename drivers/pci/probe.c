@@ -344,7 +344,7 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
 	}
 }
 
-static void __devinit pci_read_bridge_io(struct pci_bus *child)
+static void pci_read_bridge_io(struct pci_bus *child)
 {
 	struct pci_dev *dev = child->self;
 	u8 io_base_lo, io_limit_lo;
@@ -380,7 +380,7 @@ static void __devinit pci_read_bridge_io(struct pci_bus *child)
 	}
 }
 
-static void __devinit pci_read_bridge_mmio(struct pci_bus *child)
+static void pci_read_bridge_mmio(struct pci_bus *child)
 {
 	struct pci_dev *dev = child->self;
 	u16 mem_base_lo, mem_limit_lo;
@@ -402,7 +402,7 @@ static void __devinit pci_read_bridge_mmio(struct pci_bus *child)
 	}
 }
 
-static void __devinit pci_read_bridge_mmio_pref(struct pci_bus *child)
+static void pci_read_bridge_mmio_pref(struct pci_bus *child)
 {
 	struct pci_dev *dev = child->self;
 	u16 mem_base_lo, mem_limit_lo;
@@ -451,7 +451,7 @@ static void __devinit pci_read_bridge_mmio_pref(struct pci_bus *child)
 	}
 }
 
-void __devinit pci_read_bridge_bases(struct pci_bus *child)
+void pci_read_bridge_bases(struct pci_bus *child)
 {
 	struct pci_dev *dev = child->self;
 	struct resource *res;
@@ -726,7 +726,7 @@ static void pci_fixup_parent_subordinate_busnr(struct pci_bus *child, int max)
  * them, we proceed to assigning numbers to the remaining buses in
  * order to avoid overlaps between old and new bus numbers.
  */
-int __devinit pci_scan_bridge(struct pci_bus *bus, struct pci_dev *dev, int max, int pass)
+int pci_scan_bridge(struct pci_bus *bus, struct pci_dev *dev, int max, int pass)
 {
 	struct pci_bus *child;
 	int is_cardbus = (dev->hdr_type == PCI_HEADER_TYPE_CARDBUS);
@@ -1604,7 +1604,7 @@ void pcie_bus_configure_settings(struct pci_bus *bus, u8 mpss)
 }
 EXPORT_SYMBOL_GPL(pcie_bus_configure_settings);
 
-unsigned int __devinit pci_scan_child_bus(struct pci_bus *bus)
+unsigned int pci_scan_child_bus(struct pci_bus *bus)
 {
 	unsigned int devfn, pass, max = bus->secondary;
 	struct pci_dev *dev;
@@ -1757,7 +1757,7 @@ err_bus:
 	return NULL;
 }
 
-struct pci_bus * __devinit pci_scan_root_bus(struct device *parent, int bus,
+struct pci_bus * pci_scan_root_bus(struct device *parent, int bus,
 		struct pci_ops *ops, void *sysdata, struct list_head *resources)
 {
 	struct pci_bus *b;
@@ -1773,7 +1773,7 @@ struct pci_bus * __devinit pci_scan_root_bus(struct device *parent, int bus,
 EXPORT_SYMBOL(pci_scan_root_bus);
 
 /* Deprecated; use pci_scan_root_bus() instead */
-struct pci_bus * __devinit pci_scan_bus_parented(struct device *parent,
+struct pci_bus * pci_scan_bus_parented(struct device *parent,
 		int bus, struct pci_ops *ops, void *sysdata)
 {
 	LIST_HEAD(resources);
@@ -1790,7 +1790,7 @@ struct pci_bus * __devinit pci_scan_bus_parented(struct device *parent,
 }
 EXPORT_SYMBOL(pci_scan_bus_parented);
 
-struct pci_bus * __devinit pci_scan_bus(int bus, struct pci_ops *ops,
+struct pci_bus * pci_scan_bus(int bus, struct pci_ops *ops,
 					void *sysdata)
 {
 	LIST_HEAD(resources);

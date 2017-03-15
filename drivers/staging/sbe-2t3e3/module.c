@@ -50,7 +50,7 @@ static void t3e3_remove_channel(struct channel *channel)
 	pci_set_drvdata(pdev, NULL);
 }
 
-static int __devinit t3e3_init_channel(struct channel *channel, struct pci_dev *pdev, struct card *card)
+static int t3e3_init_channel(struct channel *channel, struct pci_dev *pdev, struct card *card)
 {
 	struct net_device *dev;
 	unsigned int val;
@@ -107,7 +107,7 @@ disable:
 	return err;
 }
 
-static void __devexit t3e3_remove_card(struct pci_dev *pdev)
+static void t3e3_remove_card(struct pci_dev *pdev)
 {
 	struct channel *channel0 = pci_get_drvdata(pdev);
 	struct card *card = channel0->card;
@@ -121,7 +121,7 @@ static void __devexit t3e3_remove_card(struct pci_dev *pdev)
 	kfree(card);
 }
 
-static int __devinit t3e3_init_card(struct pci_dev *pdev, const struct pci_device_id *ent)
+static int t3e3_init_card(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	/* pdev points to channel #0 */
 	struct pci_dev *pdev1 = NULL;
@@ -178,7 +178,7 @@ free_card:
 	return err;
 }
 
-static struct pci_device_id t3e3_pci_tbl[] __devinitdata = {
+static struct pci_device_id t3e3_pci_tbl[] = {
 	{ PCI_VENDOR_ID_DEC, PCI_DEVICE_ID_DEC_21142,
 	  PCI_VENDOR_ID_SBE, PCI_SUBDEVICE_ID_SBE_T3E3, 0, 0, 0 },
 	{ PCI_VENDOR_ID_DEC, PCI_DEVICE_ID_DEC_21142,

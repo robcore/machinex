@@ -316,7 +316,7 @@ err_setup:
 	return ret;
 }
 
-static int __devexit jc_spi_remove(struct spi_device *spi)
+static int jc_spi_remove(struct spi_device *spi)
 {
 	return 0;
 }

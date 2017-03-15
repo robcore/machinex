@@ -275,7 +275,7 @@ static void s3c_hwmon_remove_attr(struct device *dev,
  * s3c_hwmon_probe - device probe entry.
  * @dev: The device being probed.
 */
-static int __devinit s3c_hwmon_probe(struct platform_device *dev)
+static int s3c_hwmon_probe(struct platform_device *dev)
 {
 	struct s3c_hwmon_pdata *pdata = dev->dev.platform_data;
 	struct s3c_hwmon *hwmon;
@@ -367,7 +367,7 @@ static int __devinit s3c_hwmon_probe(struct platform_device *dev)
 	return ret;
 }
 
-static int __devexit s3c_hwmon_remove(struct platform_device *dev)
+static int s3c_hwmon_remove(struct platform_device *dev)
 {
 	struct s3c_hwmon *hwmon = platform_get_drvdata(dev);
 	int i;

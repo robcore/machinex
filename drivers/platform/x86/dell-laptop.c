@@ -119,7 +119,7 @@ static const struct dmi_system_id __initdata dell_device_table[] = {
 };
 MODULE_DEVICE_TABLE(dmi, dell_device_table);
 
-static struct dmi_system_id __devinitdata dell_blacklist[] = {
+static struct dmi_system_id dell_blacklist[] = {
 	/* Supported by compal-laptop */
 	{
 		.ident = "Dell Mini 9",
@@ -166,7 +166,7 @@ static struct dmi_system_id __devinitdata dell_blacklist[] = {
 	{}
 };
 
-static struct dmi_system_id __devinitdata dell_quirks[] = {
+static struct dmi_system_id dell_quirks[] = {
 	{
 		.callback = dmi_matched,
 		.ident = "Dell Vostro V130",
@@ -644,7 +644,7 @@ static struct led_classdev touchpad_led = {
 	.flags = LED_CORE_SUSPENDRESUME,
 };
 
-static int __devinit touchpad_led_init(struct device *dev)
+static int touchpad_led_init(struct device *dev)
 {
 	return led_classdev_register(dev, &touchpad_led);
 }

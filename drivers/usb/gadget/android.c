@@ -2881,7 +2881,7 @@ static void free_android_config(struct android_dev *dev,
 	kfree(conf);
 }
 
-static int __devinit android_probe(struct platform_device *pdev)
+static int android_probe(struct platform_device *pdev)
 {
 	struct android_usb_platform_data *pdata = pdev->dev.platform_data;
 	struct android_dev *android_dev;
@@ -3009,7 +3009,7 @@ static int android_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct platform_device_id android_id_table[] __devinitconst = {
+static const struct platform_device_id android_id_table[] = {
 	{
 		.name = "android_usb",
 	},

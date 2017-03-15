@@ -305,7 +305,7 @@ out_free_hw:
 	return ret;
 }
 
-static void __devexit wl1251_sdio_remove(struct sdio_func *func)
+static void wl1251_sdio_remove(struct sdio_func *func)
 {
 	struct wl1251 *wl = sdio_get_drvdata(func);
 	struct wl1251_sdio *wl_sdio = wl->if_priv;

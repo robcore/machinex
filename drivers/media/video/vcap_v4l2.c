@@ -1852,7 +1852,7 @@ static irqreturn_t vcap_vc_handler(int irq_num, void *data)
 	return vc_handler(vcap_ctrl);
 }
 
-static int __devinit vcap_probe(struct platform_device *pdev)
+static int vcap_probe(struct platform_device *pdev)
 {
 	struct vcap_dev *dev;
 	struct video_device *vfd;
@@ -1997,7 +1997,7 @@ free_dev:
 	return ret;
 }
 
-static int __devexit vcap_remove(struct platform_device *pdev)
+static int vcap_remove(struct platform_device *pdev)
 {
 	struct vcap_dev *dev = vcap_ctrl;
 	ion_client_destroy(dev->ion_client);

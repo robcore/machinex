@@ -172,7 +172,7 @@ unsigned char *mdss_dsi_get_clk_base(void)
 
 static int mdss_dsi_resource_initialized;
 
-static int __devinit mdss_dsi_probe(struct platform_device *pdev)
+static int mdss_dsi_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	pr_debug("%s\n", __func__);
@@ -220,7 +220,7 @@ static int __devinit mdss_dsi_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit mdss_dsi_remove(struct platform_device *pdev)
+static int mdss_dsi_remove(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 

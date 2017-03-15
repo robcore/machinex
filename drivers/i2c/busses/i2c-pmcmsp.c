@@ -270,7 +270,7 @@ static irqreturn_t pmcmsptwi_interrupt(int irq, void *ptr)
 /*
  * Probe for and register the device and return 0 if there is one.
  */
-static int __devinit pmcmsptwi_probe(struct platform_device *pldev)
+static int pmcmsptwi_probe(struct platform_device *pldev)
 {
 	struct resource *res;
 	int rc = -ENODEV;
@@ -368,7 +368,7 @@ ret_err:
 /*
  * Release the device and return 0 if there is one.
  */
-static int __devexit pmcmsptwi_remove(struct platform_device *pldev)
+static int pmcmsptwi_remove(struct platform_device *pldev)
 {
 	struct resource *res;
 

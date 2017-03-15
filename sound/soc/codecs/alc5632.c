@@ -1117,7 +1117,7 @@ static struct regmap_config alc5632_regmap = {
  *    low  = 0x1a
  *    high = 0x1b
  */
-static __devinit int alc5632_i2c_probe(struct i2c_client *client,
+static int alc5632_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	struct alc5632_priv *alc5632;
@@ -1184,7 +1184,7 @@ static __devinit int alc5632_i2c_probe(struct i2c_client *client,
 	return ret;
 }
 
-static __devexit int alc5632_i2c_remove(struct i2c_client *client)
+static int alc5632_i2c_remove(struct i2c_client *client)
 {
 	struct alc5632_priv *alc5632 = i2c_get_clientdata(client);
 	snd_soc_unregister_codec(&client->dev);

@@ -255,7 +255,7 @@ fail:
 }
 
 /* returns count (>= 0), or negative on error */
-static int __devinit i82860_init_one(struct pci_dev *pdev,
+static int i82860_init_one(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	int rc;
@@ -274,7 +274,7 @@ static int __devinit i82860_init_one(struct pci_dev *pdev,
 	return rc;
 }
 
-static void __devexit i82860_remove_one(struct pci_dev *pdev)
+static void i82860_remove_one(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 

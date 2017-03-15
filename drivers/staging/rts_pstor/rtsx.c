@@ -894,7 +894,7 @@ static void rtsx_init_options(struct rtsx_chip *chip)
 	chip->s3_pwr_off_delay = 1000;
 }
 
-static int __devinit rtsx_probe(struct pci_dev *pci,
+static int rtsx_probe(struct pci_dev *pci,
 				const struct pci_device_id *pci_id)
 {
 	struct Scsi_Host *host;
@@ -1055,7 +1055,7 @@ errout:
 }
 
 
-static void __devexit rtsx_remove(struct pci_dev *pci)
+static void rtsx_remove(struct pci_dev *pci)
 {
 	struct rtsx_dev *dev = (struct rtsx_dev *)pci_get_drvdata(pci);
 

@@ -160,7 +160,7 @@ static inline void __add_pwm(struct pwm_device *pwm)
 	mutex_unlock(&pwm_lock);
 }
 
-static int __devinit pwm_probe(struct platform_device *pdev)
+static int pwm_probe(struct platform_device *pdev)
 {
 	struct pwm_device *pwms;
 	struct resource *r;
@@ -216,7 +216,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit pwm_remove(struct platform_device *pdev)
+static int pwm_remove(struct platform_device *pdev)
 {
 	struct pwm_device *pwms;
 	struct resource *r;

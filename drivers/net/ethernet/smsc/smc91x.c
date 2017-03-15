@@ -1787,7 +1787,7 @@ static const struct net_device_ops smc_netdev_ops = {
  * I just deleted auto_irq.c, since it was never built...
  *   --jgarzik
  */
-static int __devinit smc_findirq(struct smc_local *lp)
+static int smc_findirq(struct smc_local *lp)
 {
 	void __iomem *ioaddr = lp->base;
 	int timeout = 20;
@@ -1861,7 +1861,7 @@ static int __devinit smc_findirq(struct smc_local *lp)
  * o  actually GRAB the irq.
  * o  GRAB the region
  */
-static int __devinit smc_probe(struct net_device *dev, void __iomem *ioaddr,
+static int smc_probe(struct net_device *dev, void __iomem *ioaddr,
 			    unsigned long irq_flags)
 {
 	struct smc_local *lp = netdev_priv(dev);
@@ -2209,7 +2209,7 @@ static void smc_release_datacs(struct platform_device *pdev, struct net_device *
  *	0 --> there is a device
  *	anything else, error
  */
-static int __devinit smc_drv_probe(struct platform_device *pdev)
+static int smc_drv_probe(struct platform_device *pdev)
 {
 	struct smc91x_platdata *pd = pdev->dev.platform_data;
 	struct smc_local *lp;
@@ -2322,7 +2322,7 @@ static int __devinit smc_drv_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit smc_drv_remove(struct platform_device *pdev)
+static int smc_drv_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct smc_local *lp = netdev_priv(ndev);

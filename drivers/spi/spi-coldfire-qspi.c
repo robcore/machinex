@@ -444,7 +444,7 @@ static int mcfqspi_setup(struct spi_device *spi)
 	return 0;
 }
 
-static int __devinit mcfqspi_probe(struct platform_device *pdev)
+static int mcfqspi_probe(struct platform_device *pdev)
 {
 	struct spi_master *master;
 	struct mcfqspi *mcfqspi;
@@ -564,7 +564,7 @@ fail0:
 	return status;
 }
 
-static int __devexit mcfqspi_remove(struct platform_device *pdev)
+static int mcfqspi_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = platform_get_drvdata(pdev);
 	struct mcfqspi *mcfqspi = spi_master_get_devdata(master);

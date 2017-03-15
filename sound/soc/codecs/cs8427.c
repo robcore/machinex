@@ -761,7 +761,7 @@ int poweron_cs8427(struct cs8427 *chip)
 	return ret;
 }
 
-static __devinit int cs8427_i2c_probe(struct i2c_client *client,
+static int cs8427_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	static unsigned char initvals1[] = {
@@ -927,7 +927,7 @@ __fail:
 	return err < 0 ? err : -EIO;
 }
 
-static int __devexit cs8427_remove(struct i2c_client *client)
+static int cs8427_remove(struct i2c_client *client)
 {
 	struct cs8427 *chip;
 	struct cs8427_platform_data *pdata;

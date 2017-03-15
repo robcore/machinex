@@ -318,7 +318,7 @@ probe_exit:
 	return rc;
 }
 
-static int __devexit hdmi_sii_remove(struct i2c_client *client)
+static int hdmi_sii_remove(struct i2c_client *client)
 {
 	int err = 0 ;
 	struct msm_hdmi_platform_data *pd;

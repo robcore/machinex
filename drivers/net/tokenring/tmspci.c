@@ -39,7 +39,7 @@
 
 #include "tms380tr.h"
 
-static char version[] __devinitdata =
+static char version[] =
 "tmspci.c: v1.02 23/11/2000 by Adam Fritzler\n";
 
 #define TMS_PCI_IO_EXTENT 32
@@ -90,7 +90,7 @@ static void tms_pci_sifwritew(struct net_device *dev, unsigned short val, unsign
 	outw(val, dev->base_addr + reg);
 }
 
-static int __devinit tms_pci_attach(struct pci_dev *pdev, const struct pci_device_id *ent)
+static int tms_pci_attach(struct pci_dev *pdev, const struct pci_device_id *ent)
 {	
 	static int versionprinted;
 	struct net_device *dev;
@@ -213,7 +213,7 @@ static unsigned short tms_pci_setnselout_pins(struct net_device *dev)
 	return val;
 }
 
-static void __devexit tms_pci_detach (struct pci_dev *pdev)
+static void tms_pci_detach (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 

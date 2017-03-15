@@ -1284,7 +1284,7 @@ static const struct net_device_ops xennet_netdev_ops = {
 #endif
 };
 
-static struct net_device * __devinit xennet_create_dev(struct xenbus_device *dev)
+static struct net_device * xennet_create_dev(struct xenbus_device *dev)
 {
 	int i, err;
 	struct net_device *netdev;
@@ -1382,7 +1382,7 @@ static struct net_device * __devinit xennet_create_dev(struct xenbus_device *dev
  * structures and the ring buffers for communication with the backend, and
  * inform the backend of the appropriate details for those.
  */
-static int __devinit netfront_probe(struct xenbus_device *dev,
+static int netfront_probe(struct xenbus_device *dev,
 				    const struct xenbus_device_id *id)
 {
 	int err;
@@ -1942,7 +1942,7 @@ static const struct xenbus_device_id netfront_ids[] = {
 };
 
 
-static int __devexit xennet_remove(struct xenbus_device *dev)
+static int xennet_remove(struct xenbus_device *dev)
 {
 	struct netfront_info *info = dev_get_drvdata(&dev->dev);
 

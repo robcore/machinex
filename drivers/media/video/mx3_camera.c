@@ -1145,7 +1145,7 @@ static struct soc_camera_host_ops mx3_soc_camera_host_ops = {
 	.set_bus_param	= mx3_camera_set_bus_param,
 };
 
-static int __devinit mx3_camera_probe(struct platform_device *pdev)
+static int mx3_camera_probe(struct platform_device *pdev)
 {
 	struct mx3_camera_dev *mx3_cam;
 	struct resource *res;
@@ -1250,7 +1250,7 @@ egetres:
 	return err;
 }
 
-static int __devexit mx3_camera_remove(struct platform_device *pdev)
+static int mx3_camera_remove(struct platform_device *pdev)
 {
 	struct soc_camera_host *soc_host = to_soc_camera_host(&pdev->dev);
 	struct mx3_camera_dev *mx3_cam = container_of(soc_host,

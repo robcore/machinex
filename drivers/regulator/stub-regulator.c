@@ -136,7 +136,7 @@ static void regulator_stub_cleanup(struct regulator_stub *vreg_priv)
 	kfree(vreg_priv);
 }
 
-static int __devinit regulator_stub_probe(struct platform_device *pdev)
+static int regulator_stub_probe(struct platform_device *pdev)
 {
 	struct stub_regulator_pdata *vreg_pdata;
 	struct regulator_desc *rdesc;
@@ -198,7 +198,7 @@ err_probe:
 	return rc;
 }
 
-static int __devexit regulator_stub_remove(struct platform_device *pdev)
+static int regulator_stub_remove(struct platform_device *pdev)
 {
 	struct regulator_stub *vreg_priv = dev_get_drvdata(&pdev->dev);
 

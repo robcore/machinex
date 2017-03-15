@@ -385,7 +385,7 @@ err:
 
 }
 
-static int __devexit qfp_fuse_remove(struct platform_device *plat)
+static int qfp_fuse_remove(struct platform_device *plat)
 {
 	if (qfp_priv && qfp_priv->fuse_vdd)
 		regulator_put(qfp_priv->fuse_vdd);

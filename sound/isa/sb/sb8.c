@@ -79,7 +79,7 @@ static void snd_sb8_free(struct snd_card *card)
 	release_and_free_resource(acard->fm_res);
 }
 
-static int __devinit snd_sb8_match(struct device *pdev, unsigned int dev)
+static int snd_sb8_match(struct device *pdev, unsigned int dev)
 {
 	if (!enable[dev])
 		return 0;
@@ -94,7 +94,7 @@ static int __devinit snd_sb8_match(struct device *pdev, unsigned int dev)
 	return 1;
 }
 
-static int __devinit snd_sb8_probe(struct device *pdev, unsigned int dev)
+static int snd_sb8_probe(struct device *pdev, unsigned int dev)
 {
 	struct snd_sb *chip;
 	struct snd_card *card;
@@ -205,7 +205,7 @@ static int __devinit snd_sb8_probe(struct device *pdev, unsigned int dev)
 	return err;
 }
 
-static int __devexit snd_sb8_remove(struct device *pdev, unsigned int dev)
+static int snd_sb8_remove(struct device *pdev, unsigned int dev)
 {
 	snd_card_free(dev_get_drvdata(pdev));
 	dev_set_drvdata(pdev, NULL);

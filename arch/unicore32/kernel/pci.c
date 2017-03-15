@@ -154,7 +154,7 @@ void __init puv3_pci_adjust_zones(unsigned long *zone_size,
 	zhole_size[0] = 0;
 }
 
-void __devinit pcibios_update_irq(struct pci_dev *dev, int irq)
+void pcibios_update_irq(struct pci_dev *dev, int irq)
 {
 	if (debug_pci)
 		printk(KERN_DEBUG "PCI: Assigning IRQ %02d to %s\n",
@@ -175,7 +175,7 @@ static inline int pdev_bad_for_parity(struct pci_dev *dev)
  * pcibios_fixup_bus - Called after each bus is probed,
  * but before its children are examined.
  */
-void __devinit pcibios_fixup_bus(struct pci_bus *bus)
+void pcibios_fixup_bus(struct pci_bus *bus)
 {
 	struct pci_dev *dev;
 	u16 features = PCI_COMMAND_SERR
@@ -296,7 +296,7 @@ static int __init pci_common_init(void)
 }
 subsys_initcall(pci_common_init);
 
-char * __devinit pcibios_setup(char *str)
+char * pcibios_setup(char *str)
 {
 	if (!strcmp(str, "debug")) {
 		debug_pci = 1;

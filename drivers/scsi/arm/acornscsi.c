@@ -2965,7 +2965,7 @@ static struct scsi_host_template acornscsi_template = {
 	.proc_name		= "acornscsi",
 };
 
-static int __devinit
+static int
 acornscsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 {
 	struct Scsi_Host *host;
@@ -3032,7 +3032,7 @@ acornscsi_probe(struct expansion_card *ec, const struct ecard_id *id)
 	return ret;
 }
 
-static void __devexit acornscsi_remove(struct expansion_card *ec)
+static void acornscsi_remove(struct expansion_card *ec)
 {
 	struct Scsi_Host *host = ecard_get_drvdata(ec);
 	AS_Host *ashost = (AS_Host *)host->hostdata;

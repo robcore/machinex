@@ -1497,7 +1497,7 @@ enable_pci_ports(hfc4s8s_hw *hw)
 /* initialise the HFC-4s/8s hardware */
 /* return 0 on success.              */
 /*************************************/
-static int __devinit
+static int
 setup_instance(hfc4s8s_hw *hw)
 {
 	int err = -EIO;
@@ -1585,7 +1585,7 @@ out:
 /*****************************************/
 /* PCI hotplug interface: probe new card */
 /*****************************************/
-static int __devinit
+static int
 hfc4s8s_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int err = -ENOMEM;

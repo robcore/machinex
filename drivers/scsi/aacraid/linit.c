@@ -91,9 +91,9 @@ char aac_driver_version[] = AAC_DRIVER_FULL_VERSION;
 #ifdef DECLARE_PCI_DEVICE_TABLE
 static DECLARE_PCI_DEVICE_TABLE(aac_pci_tbl) = {
 #elif defined(__devinitconst)
-static const struct pci_device_id aac_pci_tbl[] __devinitconst = {
+static const struct pci_device_id aac_pci_tbl[] = {
 #else
-static const struct pci_device_id aac_pci_tbl[] __devinitconst = {
+static const struct pci_device_id aac_pci_tbl[] = {
 #endif
 	{ 0x1028, 0x0001, 0x1028, 0x0001, 0, 0, 0 }, /* PERC 2/Si (Iguana/PERC2Si) */
 	{ 0x1028, 0x0002, 0x1028, 0x0002, 0, 0, 1 }, /* PERC 3/Di (Opal/PERC3Di) */
@@ -1100,7 +1100,7 @@ static void __aac_shutdown(struct aac_dev * aac)
 		pci_disable_msi(aac->pdev);
 }
 
-static int __devinit aac_probe_one(struct pci_dev *pdev,
+static int aac_probe_one(struct pci_dev *pdev,
 		const struct pci_device_id *id)
 {
 	unsigned index = id->driver_data;
@@ -1302,7 +1302,7 @@ static void aac_shutdown(struct pci_dev *dev)
 	__aac_shutdown((struct aac_dev *)shost->hostdata);
 }
 
-static void __devexit aac_remove_one(struct pci_dev *pdev)
+static void aac_remove_one(struct pci_dev *pdev)
 {
 	struct Scsi_Host *shost = pci_get_drvdata(pdev);
 	struct aac_dev *aac = (struct aac_dev *)shost->hostdata;

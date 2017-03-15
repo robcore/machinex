@@ -1021,7 +1021,7 @@ int pm8058_pwm_set_dtest(struct pwm_device *pwm, int enable)
 }
 EXPORT_SYMBOL(pm8058_pwm_set_dtest);
 
-static int __devinit pmic8058_pwm_probe(struct platform_device *pdev)
+static int pmic8058_pwm_probe(struct platform_device *pdev)
 {
 	struct pm8058_pwm_chip	*chip;
 	int	i;
@@ -1048,7 +1048,7 @@ static int __devinit pmic8058_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pmic8058_pwm_remove(struct platform_device *pdev)
+static int pmic8058_pwm_remove(struct platform_device *pdev)
 {
 	struct pm8058_pwm_chip	*chip = platform_get_drvdata(pdev);
 

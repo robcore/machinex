@@ -1440,13 +1440,13 @@ static struct snd_soc_codec_driver soc_codec_dev_wm8400 = {
 	.num_dapm_routes = ARRAY_SIZE(wm8400_dapm_routes),
 };
 
-static int __devinit wm8400_probe(struct platform_device *pdev)
+static int wm8400_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev, &soc_codec_dev_wm8400,
 			&wm8400_dai, 1);
 }
 
-static int __devexit wm8400_remove(struct platform_device *pdev)
+static int wm8400_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;

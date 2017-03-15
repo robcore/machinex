@@ -418,7 +418,7 @@ fail:
 	return rc;
 }
 
-static int __devinit x38_init_one(struct pci_dev *pdev,
+static int x38_init_one(struct pci_dev *pdev,
 				const struct pci_device_id *ent)
 {
 	int rc;
@@ -435,7 +435,7 @@ static int __devinit x38_init_one(struct pci_dev *pdev,
 	return rc;
 }
 
-static void __devexit x38_remove_one(struct pci_dev *pdev)
+static void x38_remove_one(struct pci_dev *pdev)
 {
 	struct mem_ctl_info *mci;
 

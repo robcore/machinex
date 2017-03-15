@@ -445,7 +445,7 @@ static void lola_reset_setups(struct lola *chip)
 	lola_setup_all_analog_gains(chip, PLAY, false); /* output, update */
 }
 
-static int __devinit lola_parse_tree(struct lola *chip)
+static int lola_parse_tree(struct lola *chip)
 {
 	unsigned int val;
 	int nid, err;
@@ -568,7 +568,7 @@ static int lola_dev_free(struct snd_device *device)
 	return 0;
 }
 
-static int __devinit lola_create(struct snd_card *card, struct pci_dev *pci,
+static int lola_create(struct snd_card *card, struct pci_dev *pci,
 				 int dev, struct lola **rchip)
 {
 	struct lola *chip;
@@ -702,7 +702,7 @@ static int __devinit lola_create(struct snd_card *card, struct pci_dev *pci,
 	return err;
 }
 
-static int __devinit lola_probe(struct pci_dev *pci,
+static int lola_probe(struct pci_dev *pci,
 				const struct pci_device_id *pci_id)
 {
 	static int dev;
@@ -756,7 +756,7 @@ out_free:
 	return err;
 }
 
-static void __devexit lola_remove(struct pci_dev *pci)
+static void lola_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);

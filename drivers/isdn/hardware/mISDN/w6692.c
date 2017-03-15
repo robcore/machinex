@@ -1362,7 +1362,7 @@ error_setup:
 	return err;
 }
 
-static int __devinit
+static int
 w6692_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int		err = -ENOMEM;

@@ -2059,7 +2059,7 @@ static int bus_notify(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-static int __devinit sh_mobile_ceu_probe(struct platform_device *pdev)
+static int sh_mobile_ceu_probe(struct platform_device *pdev)
 {
 	struct sh_mobile_ceu_dev *pcdev;
 	struct resource *res;
@@ -2245,7 +2245,7 @@ exit:
 	return err;
 }
 
-static int __devexit sh_mobile_ceu_remove(struct platform_device *pdev)
+static int sh_mobile_ceu_remove(struct platform_device *pdev)
 {
 	struct soc_camera_host *soc_host = to_soc_camera_host(&pdev->dev);
 	struct sh_mobile_ceu_dev *pcdev = container_of(soc_host,

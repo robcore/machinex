@@ -970,7 +970,7 @@ static int w90p910_ether_setup(struct net_device *dev)
 	return 0;
 }
 
-static int __devinit w90p910_ether_probe(struct platform_device *pdev)
+static int w90p910_ether_probe(struct platform_device *pdev)
 {
 	struct w90p910_ether *ether;
 	struct net_device *dev;
@@ -1063,7 +1063,7 @@ failed_free:
 	return error;
 }
 
-static int __devexit w90p910_ether_remove(struct platform_device *pdev)
+static int w90p910_ether_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct w90p910_ether *ether = netdev_priv(dev);

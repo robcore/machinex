@@ -222,7 +222,7 @@ static int mipi_novatek_disp_off(struct platform_device *pdev)
 	return 0;
 }
 
-static void __devinit mipi_novatek_disp_shutdown(struct platform_device *pdev)
+static void mipi_novatek_disp_shutdown(struct platform_device *pdev)
 {
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata;
 	struct msm_fb_data_type *mfd;
@@ -654,7 +654,7 @@ static DEVICE_ATTR(siop_enable, S_IRUGO | S_IWUSR | S_IWGRP,
 #endif
 
 
-static int __devinit mipi_novatek_disp_probe(struct platform_device *pdev)
+static int mipi_novatek_disp_probe(struct platform_device *pdev)
 {
 	struct platform_device *msm_fb_added_dev;
 #if defined(CONFIG_LCD_CLASS_DEVICE)

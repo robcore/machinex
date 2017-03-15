@@ -487,7 +487,7 @@ static const struct i2c_algorithm mv64xxx_i2c_algo = {
  *
  *****************************************************************************
  */
-static int __devinit
+static int
 mv64xxx_i2c_map_regs(struct platform_device *pd,
 	struct mv64xxx_i2c_data *drv_data)
 {
@@ -521,7 +521,7 @@ mv64xxx_i2c_unmap_regs(struct mv64xxx_i2c_data *drv_data)
 	drv_data->reg_base_p = 0;
 }
 
-static int __devinit
+static int
 mv64xxx_i2c_probe(struct platform_device *pd)
 {
 	struct mv64xxx_i2c_data		*drv_data;

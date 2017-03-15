@@ -117,7 +117,7 @@ static int 			 SMT113J_SPI_probe		( struct platform_device *pdev );
 
 /*** SPI Driver Registory Call ***/
 static int 			 smt113j_spi_probe		( struct spi_device *spi );
-static int __devexit smt113j_spi_remove		( struct spi_device *spi );
+static int smt113j_spi_remove		( struct spi_device *spi );
 
 /*** thread control ***/
 static int 			 smt113j_spi_thread_Init 	( void );
@@ -1226,7 +1226,7 @@ static int smt113j_spi_probe(struct spi_device *spi)
 /******************************************************************************/
 /*** 																		***/
 /******************************************************************************/
-static int __devexit smt113j_spi_remove(struct spi_device *spi)
+static int smt113j_spi_remove(struct spi_device *spi)
 {
 	DEBUG_PRINT ("smt113j_spi_remove : Start");
 

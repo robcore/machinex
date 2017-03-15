@@ -145,7 +145,7 @@ void usb_hcd_pnx8550_remove (struct usb_hcd *hcd, struct platform_device *dev)
 
 /*-------------------------------------------------------------------------*/
 
-static int __devinit
+static int
 ohci_pnx8550_start (struct usb_hcd *hcd)
 {
 	struct ohci_hcd	*ohci = hcd_to_ohci (hcd);

@@ -264,7 +264,7 @@ gpio_nand_get_io_sync(struct platform_device *pdev)
 	return platform_get_resource(pdev, IORESOURCE_MEM, 1);
 }
 
-static int __devexit gpio_nand_remove(struct platform_device *dev)
+static int gpio_nand_remove(struct platform_device *dev)
 {
 	struct gpiomtd *gpiomtd = platform_get_drvdata(dev);
 	struct resource *res;
@@ -314,7 +314,7 @@ static void __iomem *request_and_remap(struct resource *res, size_t size,
 	return ptr;
 }
 
-static int __devinit gpio_nand_probe(struct platform_device *dev)
+static int gpio_nand_probe(struct platform_device *dev)
 {
 	struct gpiomtd *gpiomtd;
 	struct nand_chip *this;

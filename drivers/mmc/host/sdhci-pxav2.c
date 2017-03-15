@@ -114,7 +114,7 @@ static const struct sdhci_ops pxav2_sdhci_ops = {
 	.platform_bus_width = pxav2_mmc_set_width,
 };
 
-static int __devinit sdhci_pxav2_probe(struct platform_device *pdev)
+static int sdhci_pxav2_probe(struct platform_device *pdev)
 {
 	struct sdhci_pltfm_host *pltfm_host;
 	struct sdhci_pxa_platdata *pdata = pdev->dev.platform_data;
@@ -189,7 +189,7 @@ err_clk_get:
 	return ret;
 }
 
-static int __devexit sdhci_pxav2_remove(struct platform_device *pdev)
+static int sdhci_pxav2_remove(struct platform_device *pdev)
 {
 	struct sdhci_host *host = platform_get_drvdata(pdev);
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);

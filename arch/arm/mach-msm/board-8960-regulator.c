@@ -519,7 +519,7 @@ VREG_CONSUMERS(EXT_OTG_SW) = {
 	}
 
 /* GPIO regulator constraints */
-struct gpio_regulator_platform_data msm_gpio_regulator_pdata[] __devinitdata = {
+struct gpio_regulator_platform_data msm_gpio_regulator_pdata[] = {
 	/*        ID      vreg_name gpio_label   gpio                  supply */
 	GPIO_VREG(EXT_5V, "ext_5v", "ext_5v_en", PM8921_MPP_PM_TO_SYS(7), NULL),
 	GPIO_VREG(EXT_L2, "ext_l2", "ext_l2_en", 91, NULL),
@@ -538,7 +538,7 @@ struct regulator_init_data msm_saw_regulator_pdata_s6 =
 
 /* PM8921 regulator constraints */
 struct pm8xxx_regulator_platform_data
-msm_pm8921_regulator_pdata[] __devinitdata = {
+msm_pm8921_regulator_pdata[] = {
 	/*
 	 *		ID   name always_on pd min_uV   max_uV   en_t supply
 	 *	system_uA reg_ID
@@ -563,7 +563,7 @@ msm_pm8921_regulator_pdata[] __devinitdata = {
 };
 
 static struct rpm_regulator_init_data
-msm_rpm_regulator_init_data[] __devinitdata = {
+msm_rpm_regulator_init_data[] = {
 	/*	ID a_on pd ss min_uV   max_uV  supply sys_uA  freq  fm  ss_fm */
 	RPM_SMPS(S1, 1, 1, 0, 1225000, 1225000, NULL, 100000, 3p20, NONE, NONE),
 	RPM_SMPS(S2, 0, 1, 0, 1300000, 1300000, NULL,      0, 1p60, NONE, NONE),
@@ -617,7 +617,7 @@ msm_rpm_regulator_init_data[] __devinitdata = {
 	RPM_NCP(NCP,	 0,    0, 1800000, 1800000, "8921_l6",    1p60),
 };
 
-int msm_pm8921_regulator_pdata_len __devinitdata =
+int msm_pm8921_regulator_pdata_len =
 	ARRAY_SIZE(msm_pm8921_regulator_pdata);
 
 #define RPM_REG_MAP(_id, _sleep_also, _voter, _supply, _dev_name) \
@@ -629,7 +629,7 @@ int msm_pm8921_regulator_pdata_len __devinitdata =
 		.dev_name = _dev_name, \
 	}
 static struct rpm_regulator_consumer_mapping
-	      msm_rpm_regulator_consumer_mapping[] __devinitdata = {
+	      msm_rpm_regulator_consumer_mapping[] = {
 	RPM_REG_MAP(L23, 0, 1, "krait0_l23", "acpuclk-8960"),
 	RPM_REG_MAP(L23, 0, 2, "krait1_l23", "acpuclk-8960"),
 	RPM_REG_MAP(L23, 0, 6, "l2_l23",     "acpuclk-8960"),
@@ -653,7 +653,7 @@ static struct rpm_regulator_consumer_mapping
 	RPM_REG_MAP(S8,  0, 6, "l2_s8",      "acpuclk-8960ab"),
 };
 
-struct rpm_regulator_platform_data msm_rpm_regulator_pdata __devinitdata = {
+struct rpm_regulator_platform_data msm_rpm_regulator_pdata = {
 	.init_data		= msm_rpm_regulator_init_data,
 	.num_regulators		= ARRAY_SIZE(msm_rpm_regulator_init_data),
 	.version		= RPM_VREG_VERSION_8960,

@@ -1141,7 +1141,7 @@ static const struct ethtool_ops ks8842_ethtool_ops = {
 	.get_link		= ethtool_op_get_link,
 };
 
-static int __devinit ks8842_probe(struct platform_device *pdev)
+static int ks8842_probe(struct platform_device *pdev)
 {
 	int err = -ENOMEM;
 	struct resource *iomem;
@@ -1240,7 +1240,7 @@ err_mem_region:
 	return err;
 }
 
-static int __devexit ks8842_remove(struct platform_device *pdev)
+static int ks8842_remove(struct platform_device *pdev)
 {
 	struct net_device *netdev = platform_get_drvdata(pdev);
 	struct ks8842_adapter *adapter = netdev_priv(netdev);

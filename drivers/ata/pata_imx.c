@@ -91,7 +91,7 @@ static void pata_imx_setup_port(struct ata_ioports *ioaddr)
 	ioaddr->command_addr	= ioaddr->cmd_addr + (ATA_REG_CMD     << 2);
 }
 
-static int __devinit pata_imx_probe(struct platform_device *pdev)
+static int pata_imx_probe(struct platform_device *pdev)
 {
 	struct ata_host *host;
 	struct ata_port *ap;
@@ -167,7 +167,7 @@ free_priv:
 	return -ENOMEM;
 }
 
-static int __devexit pata_imx_remove(struct platform_device *pdev)
+static int pata_imx_remove(struct platform_device *pdev)
 {
 	struct ata_host *host = dev_get_drvdata(&pdev->dev);
 	struct pata_imx_priv *priv = host->private_data;

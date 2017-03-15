@@ -124,7 +124,7 @@ static struct attribute_group attr_group = {
 };
 #endif
 
-static int __devinit samsung_probe(struct platform_device *pdev)
+static int samsung_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 #ifdef CONFIG_FB_MSM_LCDC_DSUB
@@ -188,7 +188,7 @@ probe_exit:
 }
 
 #ifdef CONFIG_FB_MSM_LCDC_DSUB
-static int __devexit samsung_remove(struct platform_device *pdev)
+static int samsung_remove(struct platform_device *pdev)
 {
 	sysfs_remove_group(&dd->fbpdev->dev.kobj, &attr_group);
 	return 0;

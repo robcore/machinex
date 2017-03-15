@@ -69,7 +69,7 @@ static irqreturn_t wm831x_on_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int __devinit wm831x_on_probe(struct platform_device *pdev)
+static int wm831x_on_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
 	struct wm831x_on *wm831x_on;
@@ -124,7 +124,7 @@ err:
 	return ret;
 }
 
-static int __devexit wm831x_on_remove(struct platform_device *pdev)
+static int wm831x_on_remove(struct platform_device *pdev)
 {
 	struct wm831x_on *wm831x_on = platform_get_drvdata(pdev);
 	int irq = platform_get_irq(pdev, 0);

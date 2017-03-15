@@ -918,7 +918,7 @@ static void mv_xor_issue_pending(struct dma_chan *chan)
  */
 #define MV_XOR_TEST_SIZE 2000
 
-static int __devinit mv_xor_memcpy_self_test(struct mv_xor_device *device)
+static int mv_xor_memcpy_self_test(struct mv_xor_device *device)
 {
 	int i;
 	void *src, *dest;
@@ -992,7 +992,7 @@ out:
 }
 
 #define MV_XOR_NUM_SRC_TEST 4 /* must be <= 15 */
-static int __devinit
+static int
 mv_xor_xor_self_test(struct mv_xor_device *device)
 {
 	int i, src_idx;
@@ -1238,13 +1238,13 @@ mv_xor_channel_add(struct mv_xor_shared_private *msp,
 	return ERR_PTR(ret);
 }
 
-static int __devexit mv_xor_remove(struct platform_device *pdev)
+static int mv_xor_remove(struct platform_device *pdev)
 {
 	struct mv_xor_device *device = platform_get_drvdata(pdev);
 	return mv_xor_channel_remove(device);
 }
 
-static int __devinit mv_xor_probe(struct platform_device *pdev)
+static int mv_xor_probe(struct platform_device *pdev)
 {
 	struct mv_xor_platform_data *plat_data = pdev->dev.platform_data;
 	struct mv_xor_shared_private *msp =

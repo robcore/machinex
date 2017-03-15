@@ -67,7 +67,7 @@ static struct socket_info sockets[MAX_SOCKETS];
 static int socket_count;  /* shortcut */                                  	                                	
 
 
-static int __devinit i82092aa_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int i82092aa_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	unsigned char configbyte;
 	int i, ret;
@@ -162,7 +162,7 @@ err_out_disable:
 	return ret;			
 }
 
-static void __devexit i82092aa_pci_remove(struct pci_dev *dev)
+static void i82092aa_pci_remove(struct pci_dev *dev)
 {
 	struct pcmcia_socket *socket = pci_get_drvdata(dev);
 

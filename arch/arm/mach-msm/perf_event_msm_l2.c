@@ -905,7 +905,7 @@ static struct arm_pmu scorpion_l2_pmu = {
 	.pmu.attr_groups		= msm_l2_pmu_attr_grps,
 };
 
-static int __devinit scorpion_l2_pmu_device_probe(struct platform_device *pdev)
+static int scorpion_l2_pmu_device_probe(struct platform_device *pdev)
 {
 	scorpion_l2_pmu.plat_device = pdev;
 

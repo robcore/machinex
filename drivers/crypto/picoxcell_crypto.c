@@ -1708,7 +1708,7 @@ static bool spacc_is_compatible(struct platform_device *pdev,
 	return false;
 }
 
-static int __devinit spacc_probe(struct platform_device *pdev)
+static int spacc_probe(struct platform_device *pdev)
 {
 	int i, err, ret = -EINVAL;
 	struct resource *mem, *irq;
@@ -1841,7 +1841,7 @@ static int __devinit spacc_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit spacc_remove(struct platform_device *pdev)
+static int spacc_remove(struct platform_device *pdev)
 {
 	struct spacc_alg *alg, *next;
 	struct spacc_engine *engine = platform_get_drvdata(pdev);

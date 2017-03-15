@@ -197,7 +197,7 @@ struct r6040_private {
 	int old_duplex;
 };
 
-static char version[] __devinitdata = DRV_NAME
+static char version[] = DRV_NAME
 	": RDC R6040 NAPI net driver,"
 	"version "DRV_VERSION " (" DRV_RELDATE ")";
 
@@ -1063,7 +1063,7 @@ static int r6040_mii_probe(struct net_device *dev)
 	return 0;
 }
 
-static int __devinit r6040_init_one(struct pci_dev *pdev,
+static int r6040_init_one(struct pci_dev *pdev,
 					 const struct pci_device_id *ent)
 {
 	struct net_device *dev;
@@ -1226,7 +1226,7 @@ err_out:
 	return err;
 }
 
-static void __devexit r6040_remove_one(struct pci_dev *pdev)
+static void r6040_remove_one(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct r6040_private *lp = netdev_priv(dev);

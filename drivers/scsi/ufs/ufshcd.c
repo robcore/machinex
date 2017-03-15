@@ -1809,7 +1809,7 @@ static int ufshcd_set_dma_mask(struct ufs_hba *hba)
  *
  * Returns 0 on success, non-zero value on failure
  */
-static int __devinit
+static int
 ufshcd_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct Scsi_Host *host;

@@ -112,7 +112,7 @@ static DEFINE_PCI_DEVICE_TABLE(hydra_ids) = {
 
 MODULE_DEVICE_TABLE (pci, hydra_ids);
 
-static int __devinit hydra_probe(struct pci_dev *dev,
+static int hydra_probe(struct pci_dev *dev,
 				 const struct pci_device_id *id)
 {
 	unsigned long base = pci_resource_start(dev, 0);
@@ -139,7 +139,7 @@ static int __devinit hydra_probe(struct pci_dev *dev,
 	return 0;
 }
 
-static void __devexit hydra_remove(struct pci_dev *dev)
+static void hydra_remove(struct pci_dev *dev)
 {
 	pdregw(hydra_bit_data.data, 0);		/* clear SCLK_OE and SDAT_OE */
 	i2c_del_adapter(&hydra_adap);

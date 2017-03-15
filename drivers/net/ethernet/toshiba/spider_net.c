@@ -2489,7 +2489,7 @@ out_disable_dev:
  * spider_net_probe initializes pdev and registers a net_device
  * structure for it. After that, the device can be ifconfig'ed up
  **/
-static int __devinit
+static int
 spider_net_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int err = -EIO;

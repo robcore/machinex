@@ -814,12 +814,12 @@ static struct snd_soc_dai_driver pxa_ssp_dai = {
 		.ops = &pxa_ssp_dai_ops,
 };
 
-static __devinit int asoc_ssp_probe(struct platform_device *pdev)
+static int asoc_ssp_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_dai(&pdev->dev, &pxa_ssp_dai);
 }
 
-static int __devexit asoc_ssp_remove(struct platform_device *pdev)
+static int asoc_ssp_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_dai(&pdev->dev);
 	return 0;

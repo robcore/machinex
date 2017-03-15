@@ -156,7 +156,7 @@ unsigned int twl4030_audio_get_mclk(void)
 }
 EXPORT_SYMBOL_GPL(twl4030_audio_get_mclk);
 
-static int __devinit twl4030_audio_probe(struct platform_device *pdev)
+static int twl4030_audio_probe(struct platform_device *pdev)
 {
 	struct twl4030_audio *audio;
 	struct twl4030_audio_data *pdata = pdev->dev.platform_data;
@@ -238,7 +238,7 @@ static int __devinit twl4030_audio_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit twl4030_audio_remove(struct platform_device *pdev)
+static int twl4030_audio_remove(struct platform_device *pdev)
 {
 	struct twl4030_audio *audio = platform_get_drvdata(pdev);
 

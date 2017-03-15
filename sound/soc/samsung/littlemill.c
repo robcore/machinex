@@ -212,7 +212,7 @@ static struct snd_soc_card littlemill = {
 	.late_probe = littlemill_late_probe,
 };
 
-static __devinit int littlemill_probe(struct platform_device *pdev)
+static int littlemill_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &littlemill;
 	int ret;
@@ -229,7 +229,7 @@ static __devinit int littlemill_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit littlemill_remove(struct platform_device *pdev)
+static int littlemill_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

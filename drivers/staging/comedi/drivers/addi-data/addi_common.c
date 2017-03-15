@@ -2540,13 +2540,13 @@ static struct comedi_driver driver_addi = {
 	.offset = sizeof(struct addi_board),
 };
 
-static int __devinit driver_addi_pci_probe(struct pci_dev *dev,
+static int driver_addi_pci_probe(struct pci_dev *dev,
 					   const struct pci_device_id *ent)
 {
 	return comedi_pci_auto_config(dev, driver_addi.driver_name);
 }
 
-static void __devexit driver_addi_pci_remove(struct pci_dev *dev)
+static void driver_addi_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }

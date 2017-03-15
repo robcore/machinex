@@ -1040,7 +1040,7 @@ static struct attribute_group sec_led_attr_group = {
 };
 #endif
 
-static int __devinit an30259a_initialize(struct i2c_client *client,
+static int an30259a_initialize(struct i2c_client *client,
 					struct an30259a_led *led, int channel)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);

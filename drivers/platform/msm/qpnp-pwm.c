@@ -1572,7 +1572,7 @@ out:
 	return rc;
 }
 
-static int __devinit qpnp_pwm_probe(struct spmi_device *spmi)
+static int qpnp_pwm_probe(struct spmi_device *spmi)
 {
 	struct qpnp_lpg_chip	*chip;
 	int			rc, id;
@@ -1615,7 +1615,7 @@ failed_config:
 	return rc;
 }
 
-static int __devexit qpnp_pwm_remove(struct spmi_device *spmi)
+static int qpnp_pwm_remove(struct spmi_device *spmi)
 {
 	struct qpnp_lpg_chip *chip;
 	struct qpnp_lpg_config *lpg_config;

@@ -244,7 +244,7 @@ static struct miscdevice xen_wdt_miscdev = {
 	.fops =		&xen_wdt_fops,
 };
 
-static int __devinit xen_wdt_probe(struct platform_device *dev)
+static int xen_wdt_probe(struct platform_device *dev)
 {
 	struct sched_watchdog wd = { .id = ~0 };
 	int ret = HYPERVISOR_sched_op(SCHEDOP_watchdog, &wd);
@@ -280,7 +280,7 @@ static int __devinit xen_wdt_probe(struct platform_device *dev)
 	return ret;
 }
 
-static int __devexit xen_wdt_remove(struct platform_device *dev)
+static int xen_wdt_remove(struct platform_device *dev)
 {
 	/* Stop the timer before we leave */
 	if (!nowayout)

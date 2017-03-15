@@ -1544,7 +1544,7 @@ static inline void s3cmci_debugfs_remove(struct s3cmci_host *host) { }
 
 #endif /* CONFIG_DEBUG_FS */
 
-static int __devinit s3cmci_probe(struct platform_device *pdev)
+static int s3cmci_probe(struct platform_device *pdev)
 {
 	struct s3cmci_host *host;
 	struct mmc_host	*mmc;
@@ -1823,7 +1823,7 @@ static void s3cmci_shutdown(struct platform_device *pdev)
 	clk_disable(host->clk);
 }
 
-static int __devexit s3cmci_remove(struct platform_device *pdev)
+static int s3cmci_remove(struct platform_device *pdev)
 {
 	struct mmc_host		*mmc  = platform_get_drvdata(pdev);
 	struct s3cmci_host	*host = mmc_priv(mmc);

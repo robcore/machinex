@@ -92,7 +92,7 @@ static void pca9633_led_set(struct led_classdev *led_cdev,
 	schedule_work(&pca9633->work);
 }
 
-static int __devinit pca9633_probe(struct i2c_client *client,
+static int pca9633_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 	struct pca9633_led *pca9633;
@@ -161,7 +161,7 @@ exit:
 	return err;
 }
 
-static int __devexit pca9633_remove(struct i2c_client *client)
+static int pca9633_remove(struct i2c_client *client)
 {
 	struct pca9633_led *pca9633 = i2c_get_clientdata(client);
 	int i;

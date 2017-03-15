@@ -198,7 +198,7 @@ pcibios_init(void)
 
 subsys_initcall(pcibios_init);
 
-char * __devinit
+char *
 pcibios_setup(char *str)
 {
 	return str;
@@ -207,7 +207,7 @@ pcibios_setup(char *str)
 #ifdef ALPHA_RESTORE_SRM_SETUP
 static struct pdev_srm_saved_conf *srm_saved_configs;
 
-void __devinit
+void
 pdev_save_srm_config(struct pci_dev *dev)
 {
 	struct pdev_srm_saved_conf *tmp;
@@ -250,7 +250,7 @@ pci_restore_srm_config(void)
 }
 #endif
 
-void __devinit
+void
 pcibios_fixup_bus(struct pci_bus *bus)
 {
 	struct pci_dev *dev = bus->self;

@@ -2121,7 +2121,7 @@ static int wm8903_set_pdata_from_of(struct i2c_client *i2c,
 	return 0;
 }
 
-static __devinit int wm8903_i2c_probe(struct i2c_client *i2c,
+static int wm8903_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct wm8903_platform_data *pdata = dev_get_platdata(&i2c->dev);
@@ -2203,7 +2203,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm8903_i2c_remove(struct i2c_client *client)
+static int wm8903_i2c_remove(struct i2c_client *client)
 {
 	struct wm8903_priv *wm8903 = i2c_get_clientdata(client);
 

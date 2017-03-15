@@ -597,7 +597,7 @@ static int msmrtc_setup_cb(struct msm_rtc *rtc_pdata)
 	return rc;
 }
 
-static int __devinit
+static int
 msmrtc_probe(struct platform_device *pdev)
 {
 	int rc;
@@ -758,7 +758,7 @@ msmrtc_resume(struct platform_device *dev)
 #define msmrtc_resume  NULL
 #endif
 
-static int __devexit msmrtc_remove(struct platform_device *pdev)
+static int msmrtc_remove(struct platform_device *pdev)
 {
 	struct msm_rtc *rtc_pdata = platform_get_drvdata(pdev);
 

@@ -252,7 +252,7 @@ static const struct file_operations cn_file_ops = {
 	.release = single_release
 };
 
-static int __devinit cn_init(void)
+static int cn_init(void)
 {
 	struct cn_dev *dev = &cdev;
 
@@ -277,7 +277,7 @@ static int __devinit cn_init(void)
 	return 0;
 }
 
-static void __devexit cn_fini(void)
+static void cn_fini(void)
 {
 	struct cn_dev *dev = &cdev;
 

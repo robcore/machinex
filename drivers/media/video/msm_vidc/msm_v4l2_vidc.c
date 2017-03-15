@@ -798,7 +798,7 @@ core_init_failed:
 	return rc;
 }
 
-static int __devinit msm_vidc_probe(struct platform_device *pdev)
+static int msm_vidc_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct msm_vidc_core *core;
@@ -883,7 +883,7 @@ err_no_mem:
 	return rc;
 }
 
-static int __devexit msm_vidc_remove(struct platform_device *pdev)
+static int msm_vidc_remove(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct msm_vidc_core *core = pdev->dev.platform_data;

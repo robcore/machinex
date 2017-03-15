@@ -4978,7 +4978,7 @@ static struct gpio_regulator_platform_data msm_gpio_regulator_pdata[] = {
 };
 
 /* GPIO regulator */
-static struct platform_device msm8x60_8901_mpp_vreg __devinitdata = {
+static struct platform_device msm8x60_8901_mpp_vreg = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= PM8901_MPP_PM_TO_SYS(0),
 	.dev	= {
@@ -6438,7 +6438,7 @@ static struct pm8058_platform_data pm8058_platform_data = {
 };
 
 #ifdef CONFIG_MSM_SSBI
-static struct msm_ssbi_platform_data msm8x60_ssbi_pm8058_pdata __devinitdata = {
+static struct msm_ssbi_platform_data msm8x60_ssbi_pm8058_pdata = {
 	.controller_type = MSM_SBI_CTRL_PMIC_ARBITER,
 	.slave	= {
 		.name			= "pm8058-core",
@@ -6864,7 +6864,7 @@ static struct pm8901_platform_data pm8901_platform_data = {
 	.misc_pdata		= &pm8901_misc_pdata,
 };
 
-static struct msm_ssbi_platform_data msm8x60_ssbi_pm8901_pdata __devinitdata = {
+static struct msm_ssbi_platform_data msm8x60_ssbi_pm8901_pdata = {
 	.controller_type = MSM_SBI_CTRL_PMIC_ARBITER,
 	.slave	= {
 		.name = "pm8901-core",

@@ -1132,7 +1132,7 @@ err_dev:
 }
 
 /* Remove the driver */
-static int __devexit s5p_mfc_remove(struct platform_device *pdev)
+static int s5p_mfc_remove(struct platform_device *pdev)
 {
 	struct s5p_mfc_dev *dev = platform_get_drvdata(pdev);
 

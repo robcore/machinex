@@ -129,7 +129,7 @@ static const struct coresight_ops tpiu_cs_ops = {
 	.sink_ops	= &tpiu_sink_ops,
 };
 
-static int __devinit tpiu_probe(struct platform_device *pdev)
+static int tpiu_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
@@ -193,7 +193,7 @@ static int __devinit tpiu_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit tpiu_remove(struct platform_device *pdev)
+static int tpiu_remove(struct platform_device *pdev)
 {
 	struct tpiu_drvdata *drvdata = platform_get_drvdata(pdev);
 

@@ -30,7 +30,7 @@ struct dwc3_exynos {
 	struct clk		*clk;
 };
 
-static int __devinit dwc3_exynos_probe(struct platform_device *pdev)
+static int dwc3_exynos_probe(struct platform_device *pdev)
 {
 	struct dwc3_exynos_data	*pdata = pdev->dev.platform_data;
 	struct platform_device	*dwc3;
@@ -115,7 +115,7 @@ err0:
 	return ret;
 }
 
-static int __devexit dwc3_exynos_remove(struct platform_device *pdev)
+static int dwc3_exynos_remove(struct platform_device *pdev)
 {
 	struct dwc3_exynos	*exynos = platform_get_drvdata(pdev);
 	struct dwc3_exynos_data *pdata = pdev->dev.platform_data;

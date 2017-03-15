@@ -434,7 +434,7 @@ static const struct file_operations reg_debug_rw_ops = {
 };
 #endif /* #ifdef CONFIG_DEBUG_FS */
 
-static void __devexit rt8547_chip_io_deinit(struct rt8547_chip* chip)
+static void rt8547_chip_io_deinit(struct rt8547_chip* chip)
 {
 	struct rt8547_platform_data *pdata = chip->dev->platform_data;
 	gpio_direction_input(pdata->flen_gpio);
@@ -445,7 +445,7 @@ static void __devexit rt8547_chip_io_deinit(struct rt8547_chip* chip)
 	gpio_free(pdata->flset_gpio);
 }
 
-static int __devinit rt8547_chip_io_init(struct rt8547_chip *chip)
+static int rt8547_chip_io_init(struct rt8547_chip *chip)
 {
 	struct rt8547_platform_data *pdata = chip->dev->platform_data;
 	int ret;
@@ -489,7 +489,7 @@ request_gpio1_fail:
 	return ret;
 }
 
-static int __devinit rt8547_chip_reg_init(struct rt8547_chip *chip)
+static int rt8547_chip_reg_init(struct rt8547_chip *chip)
 {
 	int reg;
 	struct rt8547_platform_data *pdata = chip->dev->platform_data;
@@ -506,7 +506,7 @@ static int __devinit rt8547_chip_reg_init(struct rt8547_chip *chip)
 	return 0;
 }
 
-static int __devinit rt8547_led_probe(struct platform_device *pdev)
+static int rt8547_led_probe(struct platform_device *pdev)
 {
 	struct rt8547_platform_data *pdata = pdev->dev.platform_data;
 	struct rt8547_chip *chip;
@@ -576,7 +576,7 @@ IO_INIT_FAIL:
 	return ret;
 }
 
-static int __devexit rt8547_led_remove(struct platform_device *pdev)
+static int rt8547_led_remove(struct platform_device *pdev)
 {
 	struct rt8547_chip *chip = dev_get_drvdata(&pdev->dev);
 

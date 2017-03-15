@@ -83,7 +83,7 @@ static void bluetooth_power_rfkill_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 }
 
-static int __devinit bt_power_probe(struct platform_device *pdev)
+static int bt_power_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 

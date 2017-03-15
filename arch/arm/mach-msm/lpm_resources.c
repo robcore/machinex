@@ -716,7 +716,7 @@ static int msm_lpm_cpu_callback(struct notifier_block *cpu_nb,
 }
 
 /* RPM CTL */
-static int __devinit msm_lpm_init_rpm_ctl(void)
+static int msm_lpm_init_rpm_ctl(void)
 {
 	struct msm_lpm_resource *rs = &msm_lpm_rpm_ctl;
 
@@ -731,7 +731,7 @@ static int __devinit msm_lpm_init_rpm_ctl(void)
 	return 0;
 }
 
-static int __devinit msm_lpm_resource_sysfs_add(void)
+static int msm_lpm_resource_sysfs_add(void)
 {
 	struct kobject *module_kobj = NULL;
 	struct kobject *low_power_kobj = NULL;
@@ -788,7 +788,7 @@ resource_sysfs_add_exit:
 
 late_initcall(msm_lpm_resource_sysfs_add);
 
-static int __devinit msm_lpmrs_probe(struct platform_device *pdev)
+static int msm_lpmrs_probe(struct platform_device *pdev)
 {
 	struct device_node *node = NULL;
 	char *key = NULL;

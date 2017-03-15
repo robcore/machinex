@@ -51,7 +51,7 @@ static struct ci13xxx_udc_driver ci13xxx_pci_udc_driver = {
  * Allocates basic PCI resources for this USB device controller, and then
  * invokes the udc_probe() method to start the UDC associated with it
  */
-static int __devinit ci13xxx_pci_probe(struct pci_dev *pdev,
+static int ci13xxx_pci_probe(struct pci_dev *pdev,
 				       const struct pci_device_id *id)
 {
 	void __iomem *regs = NULL;
@@ -119,7 +119,7 @@ static int __devinit ci13xxx_pci_probe(struct pci_dev *pdev,
  * first invoking the udc_remove() and then releases
  * all PCI resources allocated for this USB device controller
  */
-static void __devexit ci13xxx_pci_remove(struct pci_dev *pdev)
+static void ci13xxx_pci_remove(struct pci_dev *pdev)
 {
 	free_irq(pdev->irq, pdev);
 	udc_remove();

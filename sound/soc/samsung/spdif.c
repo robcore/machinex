@@ -357,7 +357,7 @@ static struct snd_soc_dai_driver samsung_spdif_dai = {
 	.resume = spdif_resume,
 };
 
-static __devinit int spdif_probe(struct platform_device *pdev)
+static int spdif_probe(struct platform_device *pdev)
 {
 	struct s3c_audio_pdata *spdif_pdata;
 	struct resource *mem_res, *dma_res;
@@ -453,7 +453,7 @@ err0:
 	return ret;
 }
 
-static __devexit int spdif_remove(struct platform_device *pdev)
+static int spdif_remove(struct platform_device *pdev)
 {
 	struct samsung_spdif_info *spdif = &spdif_info;
 	struct resource *mem_res;

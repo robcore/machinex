@@ -532,7 +532,7 @@ err_free_backlight_on:
 	return err;
 }
 
-static int __devinit corgi_lcd_probe(struct spi_device *spi)
+static int corgi_lcd_probe(struct spi_device *spi)
 {
 	struct backlight_properties props;
 	struct corgi_lcd_platform_data *pdata = spi->dev.platform_data;
@@ -593,7 +593,7 @@ err_unregister_lcd:
 	return ret;
 }
 
-static int __devexit corgi_lcd_remove(struct spi_device *spi)
+static int corgi_lcd_remove(struct spi_device *spi)
 {
 	struct corgi_lcd *lcd = dev_get_drvdata(&spi->dev);
 

@@ -787,7 +787,7 @@ static struct ata_port_operations arasan_cf_ops = {
 	.set_dmamode = arasan_cf_set_dmamode,
 };
 
-static int __devinit arasan_cf_probe(struct platform_device *pdev)
+static int arasan_cf_probe(struct platform_device *pdev)
 {
 	struct arasan_cf_dev *acdev;
 	struct arasan_cf_pdata *pdata = dev_get_platdata(&pdev->dev);

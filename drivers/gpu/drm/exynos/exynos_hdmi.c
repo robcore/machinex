@@ -2113,7 +2113,7 @@ static irqreturn_t hdmi_irq_handler(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
-static int __devinit hdmi_resources_init(struct hdmi_context *hdata)
+static int hdmi_resources_init(struct hdmi_context *hdata)
 {
 	struct device *dev = hdata->dev;
 	struct hdmi_resources *res = &hdata->res;
@@ -2279,7 +2279,7 @@ void hdmi_attach_hdmiphy_client(struct i2c_client *hdmiphy)
 		hdmi_hdmiphy = hdmiphy;
 }
 
-static int __devinit hdmi_probe(struct platform_device *pdev)
+static int hdmi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct exynos_drm_hdmi_context *drm_hdmi_ctx;
@@ -2418,7 +2418,7 @@ err_data:
 	return ret;
 }
 
-static int __devexit hdmi_remove(struct platform_device *pdev)
+static int hdmi_remove(struct platform_device *pdev)
 {
 	struct exynos_drm_hdmi_context *ctx = platform_get_drvdata(pdev);
 	struct hdmi_context *hdata = ctx->ctx;

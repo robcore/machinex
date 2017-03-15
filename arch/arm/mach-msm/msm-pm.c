@@ -1335,7 +1335,7 @@ static const struct platform_suspend_ops msm_pm_ops = {
 	.wake = msm_suspend_wake,
 };
 
-static int __devinit msm_pm_snoc_client_probe(struct platform_device *pdev)
+static int msm_pm_snoc_client_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	static struct msm_bus_scale_pdata *msm_pm_bus_pdata;
@@ -1364,7 +1364,7 @@ snoc_cl_probe_done:
 	return rc;
 }
 
-static int __devinit msm_cpu_status_probe(struct platform_device *pdev)
+static int msm_cpu_status_probe(struct platform_device *pdev)
 {
 	struct msm_pm_sleep_status_data *pdata;
 	char *key;
@@ -1514,7 +1514,7 @@ static int __init msm_pm_init(void)
 	return 0;
 }
 
-static void __devinit msm_pm_set_flush_fn(uint32_t pc_mode)
+static void msm_pm_set_flush_fn(uint32_t pc_mode)
 {
 	msm_pm_disable_l2_fn = NULL;
 	msm_pm_enable_l2_fn = NULL;
@@ -1674,7 +1674,7 @@ static int msm_pm_clk_init(struct platform_device *pdev)
 	return PTR_RET(l2_clk);
 }
 
-static int __devinit msm_pm_8x60_probe(struct platform_device *pdev)
+static int msm_pm_8x60_probe(struct platform_device *pdev)
 {
 	char *key = NULL;
 	struct dentry *dent = NULL;

@@ -759,7 +759,7 @@ static const struct attribute_group ds2780_attr_group = {
 	.attrs = ds2780_attributes,
 };
 
-static int __devinit ds2780_battery_probe(struct platform_device *pdev)
+static int ds2780_battery_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct ds2780_device_info *dev_info;
@@ -826,7 +826,7 @@ fail:
 	return ret;
 }
 
-static int __devexit ds2780_battery_remove(struct platform_device *pdev)
+static int ds2780_battery_remove(struct platform_device *pdev)
 {
 	struct ds2780_device_info *dev_info = platform_get_drvdata(pdev);
 

@@ -788,7 +788,7 @@ static int fimd_power_on(struct fimd_context *ctx, bool enable)
 	return 0;
 }
 
-static int __devinit fimd_probe(struct platform_device *pdev)
+static int fimd_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct fimd_context *ctx;
@@ -920,7 +920,7 @@ err_clk_get:
 	return ret;
 }
 
-static int __devexit fimd_remove(struct platform_device *pdev)
+static int fimd_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct fimd_context *ctx = platform_get_drvdata(pdev);

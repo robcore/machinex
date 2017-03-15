@@ -123,7 +123,7 @@ static void lcdc_chimei_panel_backlight(struct msm_fb_data_type *mfd)
 	lcdc_chimei_set_backlight(mfd->bl_level);
 }
 
-static int __devinit chimei_probe(struct platform_device *pdev)
+static int chimei_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 

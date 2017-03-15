@@ -49,7 +49,7 @@ static int gpiomux_deselect(struct i2c_adapter *adap, void *data, u32 chan)
 	return 0;
 }
 
-static int __devinit gpiomux_probe(struct platform_device *pdev)
+static int gpiomux_probe(struct platform_device *pdev)
 {
 	struct gpiomux *mux;
 	struct gpio_i2cmux_platform_data *pdata;
@@ -137,7 +137,7 @@ alloc_failed:
 	return ret;
 }
 
-static int __devexit gpiomux_remove(struct platform_device *pdev)
+static int gpiomux_remove(struct platform_device *pdev)
 {
 	struct gpiomux *mux = platform_get_drvdata(pdev);
 	int i;

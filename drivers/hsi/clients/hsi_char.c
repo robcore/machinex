@@ -675,7 +675,7 @@ static const struct file_operations hsc_fops = {
 	.release	= hsc_release,
 };
 
-static void __devinit hsc_channel_init(struct hsc_channel *channel)
+static void hsc_channel_init(struct hsc_channel *channel)
 {
 	init_waitqueue_head(&channel->rx_wait);
 	init_waitqueue_head(&channel->tx_wait);
@@ -685,7 +685,7 @@ static void __devinit hsc_channel_init(struct hsc_channel *channel)
 	INIT_LIST_HEAD(&channel->tx_msgs_queue);
 }
 
-static int __devinit hsc_probe(struct device *dev)
+static int hsc_probe(struct device *dev)
 {
 	const char devname[] = "hsi_char";
 	struct hsc_client_data *cl_data;
