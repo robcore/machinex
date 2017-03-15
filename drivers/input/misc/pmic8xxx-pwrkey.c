@@ -54,38 +54,38 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwr)
 {
 	struct pmic8xxx_pwrkey *pwr = _pwr;
 
-	if (pwrkey->press == true) {
-		pwrkey->press = false;
+	if (pwr->press == true) {
+		pwr->press = false;
 		return IRQ_HANDLED;
 	} else {
-		pwrkey->press = true;
+		pwr->press = true;
 	}
 
-	pwrkey->powerkey_state = 1;
+	pwr->powerkey_state = 1;
 	if (poweroff_charging)
-		wake_lock(&pwrkey->wake_lock);
-	input_report_key(pwrkey->pwr, KEY_POWER, 1);
-	input_sync(pwrkey->pwr);
+		wake_lock(&pwr->wake_lock);
+	input_report_key(pwr, KEY_POWER, 1);
+	input_sync(pwr);
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t pwrkey_release_irq(int irq, void *pwr)
 {
-	struct pmic8xxx_pwrkey *pwr = pwr;
+	struct pmic8xxx_pwrkey *pwr = _pwr;
 
-	if (pwrkey->press == false) {
-		input_report_key(pwrkey->pwr, KEY_POWER, 1);
-		input_sync(pwrkey->pwr);
-		pwrkey->press = true;
+	if (pwr->press == false) {
+		input_report_key(pwr, KEY_POWER, 1);
+		input_sync(pwr);
+		pwr->press = true;
 	} else {
-		pwrkey->press = false;
+		pwr->press = false;
 	}
 
-	pwrkey->powerkey_state = 0;
-	input_report_key(pwrkey->pwr, KEY_POWER, 0);
-	input_sync(pwrkey->pwr);
+	pwr->powerkey_state = 0;
+	input_report_key(pwr, KEY_POWER, 0);
+	input_sync(pwr);
 	if (poweroff_charging)
-		wake_unlock(&pwrkey->wake_lock);
+		wake_unlock(&pwr->wake_lock);
 #if defined(CONFIG_SEC_DEBUG)
 	sec_debug_check_crash_key(KEY_POWER, 0);
 #endif
@@ -95,11 +95,11 @@ static irqreturn_t pwrkey_release_irq(int irq, void *pwr)
 #ifdef CONFIG_PM_SLEEP
 static int pmic8xxx_pwrkey_suspend(struct device *dev)
 {
-	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
+	struct pmic8xxx_pwrkey *pwr = dev_get_drvdata(dev);
 
 	if (device_may_wakeup(dev)) {
-		enable_irq_wake(pwrkey->key_press_irq);
-		enable_irq_wake(pwrkey->key_release_irq);
+		enable_irq_wake(pwr->key_press_irq);
+		enable_irq_wake(pwr->key_release_irq);
 	}
 
 	return 0;
@@ -107,11 +107,11 @@ static int pmic8xxx_pwrkey_suspend(struct device *dev)
 
 static int pmic8xxx_pwrkey_resume(struct device *dev)
 {
-	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
+	struct pmic8xxx_pwrkey *pwr = dev_get_drvdata(dev);
 
 	if (device_may_wakeup(dev)) {
-		disable_irq_wake(pwrkey->key_press_irq);
-		disable_irq_wake(pwrkey->key_release_irq);
+		disable_irq_wake(pwr->key_press_irq);
+		disable_irq_wake(pwr->key_release_irq);
 	}
 
 	return 0;
@@ -126,13 +126,13 @@ static ssize_t  sysfs_powerkey_onoff_show(struct device *dev,
 {
 	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
 	printk(KERN_INFO "inside sysfs_powerkey_onoff_show\n");
-	if (pwrkey->powerkey_state == 1) {
+	if (pwr->powerkey_state == 1) {
 		printk(KERN_INFO "powerkey is pressed\n");
-		return snprintf(buf, 5, "%d\n", pwrkey->powerkey_state);
+		return snprintf(buf, 5, "%d\n", pwr->powerkey_state);
 	}
-	if (pwrkey->powerkey_state == 0) {
+	if (pwr->powerkey_state == 0) {
 		printk(KERN_INFO "powerkey is released\n");
-		return snprintf(buf, 5, "%d\n", pwrkey->powerkey_state);
+		return snprintf(buf, 5, "%d\n", pwr->powerkey_state);
 	}
 
 	return 0;
@@ -149,7 +149,7 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	unsigned int delay;
 	u8 pon_cntl;
 	int ret;
-	struct pmic8xxx_pwrkey *pwrkey;
+	struct pmic8xxx_pwrkey *pwr;
 	struct device *sec_powerkey;
 	const struct pm8xxx_pwrkey_platform_data *pdata =
 					dev_get_platdata(&pdev->dev);
@@ -220,7 +220,7 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pwrkey);
 
 	if (poweroff_charging)
-		wake_lock_init(&pwrkey->wake_lock, WAKE_LOCK_SUSPEND, "pmic_pwrkey");
+		wake_lock_init(&pwr->wake_lock, WAKE_LOCK_SUSPEND, "pmic_pwrkey");
 
 	/* check power key status during boot */
 	err = pm8xxx_read_irq_stat(pdev->dev.parent, key_press_irq);
@@ -228,11 +228,11 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "reading irq status failed\n");
 		goto unreg_input_dev;
 	}
-	pwrkey->press = !!err;
+	pwr->press = !!err;
 
-	if (pwrkey->press) {
-		input_report_key(pwrkey->pwr, KEY_POWER, 1);
-		input_sync(pwrkey->pwr);
+	if (pwr->press) {
+		input_report_key(pwr, KEY_POWER, 1);
+		input_sync(pwr);
 	}
 
 	err = request_any_context_irq(key_press_irq, pwrkey_press_irq,
@@ -287,10 +287,10 @@ static int pmic8xxx_pwrkey_remove(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 0);
 	if (poweroff_charging)
-		wake_lock_destroy(&pwrkey->wake_lock);
+		wake_lock_destroy(&pwr->wake_lock);
 	free_irq(key_press_irq, pwr);
 	free_irq(key_release_irq, pwr);
-	input_unregister_device(pwrkey->pwr);
+	input_unregister_device(pwr);
 	kfree(pwrkey);
 
 	return 0;
