@@ -1714,11 +1714,12 @@ static unsigned int sec_bat_get_polling_time(
 	if (battery->polling_short)
 		return battery->pdata->polling_time[
 			SEC_BATTERY_POLLING_TIME_BASIC];
+	/* set polling time to 46s to reduce current noise on wc */
 	else if (battery->cable_type == POWER_SUPPLY_TYPE_WIRELESS &&
 			battery->status == POWER_SUPPLY_STATUS_CHARGING)
 		battery->polling_time = 46;
-	else
-		return battery->polling_time;
+
+	return battery->polling_time;
 }
 
 static bool sec_bat_is_short_polling(
@@ -1792,10 +1793,10 @@ static void sec_bat_set_polling(
 	case SEC_BATTERY_MONITOR_WORKQUEUE:
 		if (battery->pdata->monitor_initial_count) {
 			battery->pdata->monitor_initial_count--;
-			schedule_delayed_work(&battery->polling_work, HZ);
+			schedule_delayed_work(&battery->polling_work, 1000);
 		} else
 			schedule_delayed_work(&battery->polling_work,
-				polling_time_temp * HZ);
+				polling_time_temp * 1000);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
 		battery->last_poll_time = ktime_get_boottime();
@@ -1823,6 +1824,7 @@ static void sec_bat_monitor_work(
 	static struct timespec old_ts;
 	struct timespec c_ts;
 
+	wake_unlock(&battery->cable_wake_lock);
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 
 	//c_ts = ktime_to_timespec(alarm_get_elapsed_realtime());
@@ -1895,21 +1897,9 @@ continue_monitor:
 
 skip_monitor:
 	sec_bat_set_polling(battery);
-
 	/* check muic cable status */
-#if defined(CONFIG_MACH_JF)
-	if (max77693_muic_monitor_status() < 0 ) {
-		wake_unlock(&battery->monitor_wake_lock);
-		goto continue_monitor;
-	}
-	
-	if (battery->capacity <= 0)
-		wake_lock_timeout(&battery->monitor_wake_lock, msecs_to_jiffies(2500));
-	else
-		wake_unlock(&battery->monitor_wake_lock);
-	}
-
-	dev_dbg(battery->dev, "%s: End\n", __func__);
+	max77693_muic_monitor_status();
+	wake_unlock(&battery->monitor_wake_lock);
 
 	return;
 }
@@ -1927,7 +1917,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 * if cable is connected and disconnected,
 	 * activated wake lock in a few seconds
 	 */
-	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 5);
+	wake_lock(&battery->vbus_wake_lock);
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &
@@ -1965,8 +1955,8 @@ static void sec_bat_cable_work(struct work_struct *work)
 			goto end_of_cable_work;
 
 		/* No need for wakelock in Alarm */
-		if (battery->pdata->polling_type != SEC_BATTERY_MONITOR_ALARM)
-			wake_lock(&battery->vbus_wake_lock);
+		if (battery->pdata->polling_type == SEC_BATTERY_MONITOR_ALARM)
+			wake_unlock(&battery->vbus_wake_lock);
 	}
 
 	/* polling time should be reset when cable is changed
@@ -1991,7 +1981,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 
 	battery->polling_count = 1;	/* initial value = 1 */
 
-	wake_lock(&battery->monitor_wake_lock);
+	wake_lock_timeout(&battery->monitor_wake_lock, 2500);
 	queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 end_of_cable_work:
 #if defined(CONFIG_MACH_JACTIVE_ATT)
@@ -2815,7 +2805,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 		val->intval = battery->cable_type;
 		if ((val->intval == POWER_SUPPLY_TYPE_BATTERY) &&
 				(battery->pdata->is_lpm()) &&
-				(current_cable_type != POWER_SUPPLY_TYPE_WIRELESS)) {
+				(battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS)) {
 			/* Userspace expects 0 for no-supply */
 			val->intval = 0;
 			}
