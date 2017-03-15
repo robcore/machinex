@@ -8,58 +8,44 @@ find -type f | xargs sed -i "s/ __cpuinit$//g"
 find -type f | xargs sed -i "s/^__cpuinit //g"
 }
 
-finder() {
-find . -type f | parallel grep -rl '__devinit\|__devinitdata\|__devinitconst\|__devexit\|__devexitdata\|__devexitconst\|__devexit_p' {} \; | sort -d >> ~/machinex/devinit_remains.txt
-}
-
-cd ~/machinex
-
-if [ -e devinit_remains.txt ]; then
-	rm devinit_remains.txt
-fi
-
-touch devinit_remains.txt
-
 cd ~/machinex/arch
 killer
-finder
 cd ~/machinex/block
-finder
+killer
 cd ~/machinex/crypto
-finder
+killer
 cd ~/machinex/Documentation
-finder
+killer
 cd ~/machinex/drivers
 killer
-finder
 cd ~/machinex/firmware
-finder
+killer
 cd ~/machinex/fs
-finder
+killer
 cd ~/machinex/init
-finder
+killer
 cd ~/machinex/ipc
-finder
+killer
 cd ~/machinex/kernel
-finder
+killer
 cd ~/machinex/lib
-finder
+killer
 cd ~/machinex/mm
-finder
+killer
 cd ~/machinex/net
-finder
+killer
 cd ~/machinex/samples
-finder
+killer
 cd ~/machinex/scripts
-finder
+killer
 cd ~/machinex/security
-finder
+killer
 cd ~/machinex/sound
-finder
+killer
 cd ~/machinex/tools
-finder
+killer
 cd ~/machinex/usr
-finder
+killer
 cd ~/machinex/virt
-finder
+killer
 echo "complete"
