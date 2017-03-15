@@ -1338,7 +1338,7 @@ static int pm8xxx_misc_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_misc_driver = {
 	.probe	= pm8xxx_misc_probe,
-	.remove	= __devexit_p(pm8xxx_misc_remove),
+	.remove	= pm8xxx_misc_remove,
 	.driver	= {
 		.name	= PM8XXX_MISC_DEV_NAME,
 		.owner	= THIS_MODULE,

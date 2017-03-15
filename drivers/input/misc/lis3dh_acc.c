@@ -1548,7 +1548,7 @@ static struct i2c_driver lis3dh_acc_driver = {
 			.name = LIS3DH_ACC_DEV_NAME,
 		  },
 	.probe = lis3dh_acc_probe,
-	.remove = __devexit_p(lis3dh_acc_remove),
+	.remove = lis3dh_acc_remove,
 	.suspend = lis3dh_acc_suspend,
 	.resume = lis3dh_acc_resume,
 	.id_table = lis3dh_acc_id,

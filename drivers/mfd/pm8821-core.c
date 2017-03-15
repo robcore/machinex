@@ -328,7 +328,7 @@ static int pm8821_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8821_driver = {
 	.probe		= pm8821_probe,
-	.remove		= __devexit_p(pm8821_remove),
+	.remove		= pm8821_remove,
 	.driver		= {
 		.name	= "pm8821-core",
 		.owner	= THIS_MODULE,

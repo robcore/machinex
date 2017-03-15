@@ -1499,7 +1499,7 @@ static int pm8xxx_pwm_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_pwm_driver = {
 	.probe		= pm8xxx_pwm_probe,
-	.remove		= __devexit_p(pm8xxx_pwm_remove),
+	.remove		= pm8xxx_pwm_remove,
 	.driver		= {
 		.name = PM8XXX_PWM_DEV_NAME,
 		.owner = THIS_MODULE,

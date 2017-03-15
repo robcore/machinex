@@ -780,7 +780,7 @@ static int pm8xxx_batt_alarm_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_batt_alarm_driver = {
 	.probe	= pm8xxx_batt_alarm_probe,
-	.remove	= __devexit_p(pm8xxx_batt_alarm_remove),
+	.remove	= pm8xxx_batt_alarm_remove,
 	.driver	= {
 		.name = PM8XXX_BATT_ALARM_DEV_NAME,
 		.owner = THIS_MODULE,

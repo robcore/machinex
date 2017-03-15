@@ -676,7 +676,7 @@ static int resume(struct platform_device *pdev)
 
 static struct platform_driver tspdrv_driver = {
 	.probe = tspdrv_probe,
-	.remove = __devexit_p(tspdrv_remove),
+	.remove = tspdrv_remove,
 	.suspend = suspend,
 	.resume = resume,
 	.driver = {

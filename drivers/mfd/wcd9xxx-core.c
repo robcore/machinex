@@ -320,13 +320,13 @@ static struct wcd9xx_codec_type {
 	 SITAR_NUM_IRQS},
 	{{0x2, 0x0, 0x1, 0x1}, sitar_devs, ARRAY_SIZE(sitar_devs),
 	 SITAR_NUM_IRQS},
-	 
+
 	{{0x0, 0x0, 0x3, 0x1}, tapan_devs, ARRAY_SIZE(tapan_devs),
-	
+
 	 TAPAN_NUM_IRQS},
 	{{0x1, 0x0, 0x3, 0x1}, tapan_devs, ARRAY_SIZE(tapan_devs),
-	 TAPAN_NUM_IRQS},	 
-	 
+	 TAPAN_NUM_IRQS},
+
 };
 
 static void wcd9xxx_bring_up(struct wcd9xxx *wcd9xxx)
@@ -390,7 +390,7 @@ static int wcd9xxx_reset(struct wcd9xxx *wcd9xxx)
             wcd9xxx->reset_gpio = 0;
             return ret;
         }
-#endif //CONFIG_MACH_SERRANO_EUR_LTE		
+#endif //CONFIG_MACH_SERRANO_EUR_LTE
 #else
 #if !defined(CONFIG_MACH_JF)
 		ret = gpio_tlmm_config
@@ -503,7 +503,7 @@ static int wcd9xxx_device_init(struct wcd9xxx *wcd9xxx, int irq)
 		}
 	}
 #endif
-		
+
 	ret = mfd_add_devices(wcd9xxx->dev, -1, wcd9xxx_dev, wcd9xxx_dev_size,
 			      NULL, 0);
 	if (ret != 0) {
@@ -937,7 +937,7 @@ static int wcd9xxx_i2c_probe(struct i2c_client *client,
 	int i2c_mode = 0;
 	int wcd9xx_index = 0;
 	struct device *dev;
-	
+
 	pr_info("%s: interface status %d\n", __func__, wcd9xxx_intf);
 	if (wcd9xxx_intf == WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
 		dev_dbg(&client->dev, "%s:Codec is detected in slimbus mode\n",
@@ -1740,37 +1740,37 @@ static struct i2c_device_id sitar_id_table[] = {
 MODULE_DEVICE_TABLE(i2c, tabla_id_table);
 
 static struct i2c_driver tabla_i2c_driver = {
-	.driver                 = {
-		.owner          =       THIS_MODULE,
-		.name           =       "tabla-i2c-core",
+	.driver = {
+	.owner = THIS_MODULE,
+	.name = "tabla-i2c-core",
 	},
-	.id_table               =       tabla_id_table,
-	.probe                  =       wcd9xxx_i2c_probe,
-	.remove                 =       __devexit_p(wcd9xxx_i2c_remove),
+	.id_table = tabla_id_table,
+	.probe = wcd9xxx_i2c_probe,
+	.remove = wcd9xxx_i2c_remove,
 	.resume	= wcd9xxx_i2c_resume,
 	.suspend = wcd9xxx_i2c_suspend,
 };
 
 static struct i2c_driver sitar_i2c_driver = {
-	.driver                 = {
-		.owner          =       THIS_MODULE,
-		.name           =       "sitar-i2c-core",
+	.driver = {
+	.owner = THIS_MODULE,
+	.name = "sitar-i2c-core",
 	},
-	.id_table               =       sitar_id_table,
-	.probe                  =       wcd9xxx_i2c_probe,
-	.remove                 =       __devexit_p(wcd9xxx_i2c_remove),
+	.id_table = sitar_id_table,
+	.probe = wcd9xxx_i2c_probe,
+	.remove = wcd9xxx_i2c_remove,
 	.resume	= wcd9xxx_i2c_resume,
 	.suspend = wcd9xxx_i2c_suspend,
 };
 
 static struct i2c_driver wcd9xxx_i2c_driver = {
-       .driver                 = {
-               .owner          =       THIS_MODULE,
-               .name           =       "wcd9xxx-i2c-core",
+       .driver = {
+	   .owner= THIS_MODULE,
+	   .name = "wcd9xxx-i2c-core",
        },
-       .id_table               =       wcd9xxx_id_table,
-       .probe                  =       wcd9xxx_i2c_probe,
-       .remove                 =       __devexit_p(wcd9xxx_i2c_remove),
+       .id_table = wcd9xxx_id_table,
+       .probe = wcd9xxx_i2c_probe,
+       .remove = wcd9xxx_i2c_remove,
        .resume = wcd9xxx_i2c_resume,
        .suspend = wcd9xxx_i2c_suspend,
 };

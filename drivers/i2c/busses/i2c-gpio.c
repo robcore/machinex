@@ -256,7 +256,7 @@ static struct platform_driver i2c_gpio_driver = {
 		.of_match_table	= of_match_ptr(i2c_gpio_dt_ids),
 	},
 	.probe		= i2c_gpio_probe,
-	.remove		= __devexit_p(i2c_gpio_remove),
+	.remove		= i2c_gpio_remove,
 };
 
 static int __init i2c_gpio_init(void)

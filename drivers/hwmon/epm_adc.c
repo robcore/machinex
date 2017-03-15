@@ -1637,7 +1637,7 @@ static const struct of_device_id epm_adc_psoc_match_table[] = {
 
 static struct spi_driver epm_spi_driver = {
 	.probe = epm_adc_psoc_spi_probe,
-	.remove = __devexit_p(epm_adc_psoc_spi_remove),
+	.remove = epm_adc_psoc_spi_remove,
 	.driver = {
 		.name = EPM_ADC_DRIVER_NAME,
 		.of_match_table = epm_adc_psoc_match_table,
@@ -1818,7 +1818,7 @@ static int epm_adc_remove(struct platform_device *pdev)
 
 static struct platform_driver epm_adc_driver = {
 	.probe = epm_adc_probe,
-	.remove = __devexit_p(epm_adc_remove),
+	.remove = epm_adc_remove,
 	.driver = {
 		.name = EPM_ADC_DRIVER_NAME,
 		.owner = THIS_MODULE,
