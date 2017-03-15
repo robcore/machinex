@@ -965,7 +965,7 @@ static struct i2c_driver cs8427_i2c_driver = {
 	},
 	.id_table               =       cs8427_id_table,
 	.probe                  =       cs8427_i2c_probe,
-	.remove                 =       __devexit_p(cs8427_remove),
+	.remove                 =       cs8427_remove,
 };
 
 static int __init cs8427_module_init(void)
