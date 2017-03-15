@@ -50,9 +50,9 @@ struct pmic8xxx_pwrkey {
 	struct wake_lock wake_lock;
 };
 
-static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
+static irqreturn_t pwrkey_press_irq(int irq, void *_pwr)
 {
-	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
+	struct pmic8xxx_pwrkey *pwr = _pwr;
 
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
@@ -66,15 +66,12 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 		wake_lock(&pwrkey->wake_lock);
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
-#if defined(CONFIG_SEC_DEBUG)
-	sec_debug_check_crash_key(KEY_POWER, 1);
-#endif
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
+static irqreturn_t pwrkey_release_irq(int irq, void *pwr)
 {
-	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
+	struct pmic8xxx_pwrkey *pwr = pwr;
 
 	if (pwrkey->press == false) {
 		input_report_key(pwrkey->pwr, KEY_POWER, 1);
@@ -239,7 +236,7 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	}
 
 	err = request_any_context_irq(key_press_irq, pwrkey_press_irq,
-		IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_press", pwrkey);
+		IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_press", pwr);
 	if (err < 0) {
 		dev_dbg(&pdev->dev, "Can't get %d IRQ for pwrkey: %d\n",
 				 key_press_irq, err);
@@ -247,7 +244,7 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	}
 
 	err = request_any_context_irq(key_release_irq, pwrkey_release_irq,
-		 IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_release", pwrkey);
+		 IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_release", pwr);
 	if (err < 0) {
 		dev_dbg(&pdev->dev, "Can't get %d IRQ for pwrkey: %d\n",
 				 key_release_irq, err);
@@ -263,13 +260,15 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 		pr_err("Failed to create device file in sysfs entries(%s)!\n",
 			dev_attr_sec_powerkey_pressed.attr.name);
 	}
-	dev_set_drvdata(sec_powerkey, pwrkey);
+	dev_set_drvdata(sec_powerkey, pwr);
 	device_init_wakeup(&pdev->dev, pdata->wakeup);
 
 	return 0;
 
 free_press_irq:
-	free_irq(key_press_irq, pwrkey);
+	free_irq(key_press_irq, pwr);
+free_release_irq:
+	free_irq(key_release_irq, pwr);
 unreg_input_dev:
 	input_unregister_device(pwr);
 	pwr = NULL;
@@ -289,8 +288,8 @@ static int pmic8xxx_pwrkey_remove(struct platform_device *pdev)
 	device_init_wakeup(&pdev->dev, 0);
 	if (poweroff_charging)
 		wake_lock_destroy(&pwrkey->wake_lock);
-	free_irq(key_press_irq, pwrkey);
-	free_irq(key_release_irq, pwrkey);
+	free_irq(key_press_irq, pwr);
+	free_irq(key_release_irq, pwr);
 	input_unregister_device(pwrkey->pwr);
 	kfree(pwrkey);
 
