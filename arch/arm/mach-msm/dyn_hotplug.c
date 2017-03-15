@@ -90,7 +90,7 @@ static void hp_power_suspend(struct power_suspend *h)
 }
 
 /* On late resume bring online all CPUs to prevent lags */
-static void hp_power_resume(struct power_suspend *h)
+static __cpuinit void hp_power_resume(struct power_suspend *h)
 {
 	pr_debug("%s: num_online_cpus: %u\n", __func__, num_online_cpus());
 
@@ -173,7 +173,7 @@ out:
  * If the average load is below up_threshold offline one more CPU if the
  * down_timer has expired.
  */
-static void load_timer(struct work_struct *work)
+static __cpuinit void load_timer(struct work_struct *work)
 {
 	unsigned int cpu;
 	unsigned int avg_load = 0;
@@ -225,7 +225,7 @@ static void dyn_hp_disable(void)
 /******************** Module parameters *********************/
 
 /* enabled */
-static int set_enabled(const char *val, const struct kernel_param *kp)
+static __cpuinit int set_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 
@@ -273,7 +273,7 @@ static struct kernel_param_ops up_threshold_ops = {
 module_param_cb(up_threshold, &up_threshold_ops, &up_threshold, 0644);
 
 /* min_cpus_online */
-static int set_min_cpus_online(const char *val,
+static __cpuinit int set_min_cpus_online(const char *val,
 						const struct kernel_param *kp)
 {
 	int ret = 0;
@@ -303,7 +303,7 @@ static struct kernel_param_ops min_cpus_online_ops = {
 module_param_cb(min_cpus_online, &min_cpus_online_ops, &min_cpus_online, 0644);
 
 /* max_cpus_online */
-static int set_max_cpus_online(const char *val,
+static __cpuinit int set_max_cpus_online(const char *val,
 						const struct kernel_param *kp)
 {
 	int ret = 0;
