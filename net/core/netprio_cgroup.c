@@ -110,8 +110,7 @@ static void update_netdev_tables(void)
 	rtnl_unlock();
 }
 
-static struct cgroup_subsys_state *
-cgrp_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
 {
 	struct cgroup_netprio_state *cs;
 	int ret;
@@ -135,9 +134,22 @@ cgrp_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &cs->css;
 }
 
-static void cgrp_css_free(struct cgroup_subsys_state *css)
+static void cgrp_css_free(struct cgroup *cgrp)
 {
-	kfree(css);
+	struct cgroup_netprio_state *cs;
+	struct net_device *dev;
+	struct netprio_map *map;
+
+	cs = cgrp_netprio_state(cgrp);
+	rtnl_lock();
+	for_each_netdev(&init_net, dev) {
+		map = rtnl_dereference(dev->priomap);
+		if (map && cs->prioidx < map->priomap_len)
+			map->priomap[cs->prioidx] = 0;
+	}
+	rtnl_unlock();
+	put_prioidx(cs->prioidx);
+	kfree(cs);
 }
 
 static u64 read_prioidx(struct cgroup *cgrp, struct cftype *cft)
@@ -225,12 +237,11 @@ out_free_devname:
 	return ret;
 }
 
-static void net_prio_attach(struct cgroup_subsys_state *css,
-			    struct cgroup_taskset *tset)
+static void net_prio_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	struct task_struct *p;
 
-	cgroup_taskset_for_each(p, css->cgroup, tset) {
+	cgroup_taskset_for_each(p, cgrp, tset) {
 		unsigned int fd;
 		struct fdtable *fdt;
 		struct files_struct *files;

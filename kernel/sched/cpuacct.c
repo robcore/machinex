@@ -33,26 +33,30 @@ struct cpuacct {
 	struct kernel_cpustat __percpu *cpustat;
 };
 
-static inline struct cpuacct *css_ca(struct cgroup_subsys_state *css)
-{
-	return css ? container_of(css, struct cpuacct, css) : NULL;
-}
-
 /* return cpu accounting group corresponding to this container */
 static inline struct cpuacct *cgroup_ca(struct cgroup *cgrp)
 {
-	return css_ca(cgroup_css(cgrp, cpuacct_subsys_id));
+	return container_of(cgroup_css(cgrp, cpuacct_subsys_id),
+			    struct cpuacct, css);
 }
 
 /* return cpu accounting group to which this task belongs */
 static inline struct cpuacct *task_ca(struct task_struct *tsk)
 {
-	return css_ca(task_css(tsk, cpuacct_subsys_id));
+	return container_of(task_css(tsk, cpuacct_subsys_id),
+			    struct cpuacct, css);
+}
+
+static inline struct cpuacct *__parent_ca(struct cpuacct *ca)
+{
+	return cgroup_ca(ca->css.cgroup->parent);
 }
 
 static inline struct cpuacct *parent_ca(struct cpuacct *ca)
 {
-	return css_ca(css_parent(&ca->css));
+	if (!ca->css.cgroup->parent)
+		return NULL;
+	return cgroup_ca(ca->css.cgroup->parent);
 }
 
 static DEFINE_PER_CPU(u64, root_cpuacct_cpuusage);
@@ -62,12 +66,11 @@ static struct cpuacct root_cpuacct = {
 };
 
 /* create a new cpu accounting group */
-static struct cgroup_subsys_state *
-cpuacct_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css *cpuacct_css_alloc(struct cgroup *cgrp)
 {
 	struct cpuacct *ca;
 
-	if (!parent_css)
+	if (!cgrp->parent)
 		return &root_cpuacct.css;
 
 	ca = kzalloc(sizeof(*ca), GFP_KERNEL);
@@ -93,9 +96,9 @@ out:
 }
 
 /* destroy an existing cpu accounting group */
-static void cpuacct_css_free(struct cgroup_subsys_state *css)
+static void cpuacct_css_free(struct cgroup *cgrp)
 {
-	struct cpuacct *ca = css_ca(css);
+	struct cpuacct *ca = cgroup_ca(cgrp);
 
 	free_percpu(ca->cpustat);
 	free_percpu(ca->cpuusage);
@@ -278,7 +281,7 @@ void cpuacct_account_field(struct task_struct *p, int index, u64 val)
 	while (ca != &root_cpuacct) {
 		kcpustat = this_cpu_ptr(ca->cpustat);
 		kcpustat->cpustat[index] += val;
-		ca = parent_ca(ca);
+		ca = __parent_ca(ca);
 	}
 	rcu_read_unlock();
 }

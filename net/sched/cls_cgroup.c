@@ -22,23 +22,19 @@
 #include <net/sock.h>
 #include <net/cls_cgroup.h>
 
-static inline struct cgroup_cls_state *css_cls_state(struct cgroup_subsys_state *css)
-{
-	return css ? container_of(css, struct cgroup_cls_state, css) : NULL;
-}
-
 static inline struct cgroup_cls_state *cgrp_cls_state(struct cgroup *cgrp)
 {
-	return css_cls_state(cgroup_css(cgrp, net_cls_subsys_id));
+	return container_of(cgroup_css(cgrp, net_cls_subsys_id),
+			    struct cgroup_cls_state, css);
 }
 
 static inline struct cgroup_cls_state *task_cls_state(struct task_struct *p)
 {
-	return css_cls_state(task_css(p, net_cls_subsys_id));
+	return container_of(task_css(p, net_cls_subsys_id),
+			    struct cgroup_cls_state, css);
 }
 
-static struct cgroup_subsys_state *
-cgrp_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
 {
 	struct cgroup_cls_state *cs;
 
@@ -52,19 +48,9 @@ cgrp_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &cs->css;
 }
 
-static int cgrp_css_online(struct cgroup_subsys_state *css)
+static void cgrp_css_free(struct cgroup *cgrp)
 {
-	struct cgroup_cls_state *cs = css_cls_state(css);
-	struct cgroup_cls_state *parent = css_cls_state(css_parent(css));
-
-	if (parent)
-		cs->classid = parent->classid;
-	return 0;
-}
-
-static void cgrp_css_free(struct cgroup_subsys_state *css)
-{
-	kfree(css_cls_state(css));
+	kfree(cgrp_cls_state(cgrp));
 }
 
 static u64 read_classid(struct cgroup *cgrp, struct cftype *cft)

@@ -66,11 +66,12 @@ enum cgroup_subsys_id {
 
 /* Per-subsystem/per-cgroup state maintained by the system. */
 struct cgroup_css {
-	/* the cgroup that this css is attached to */
+	/*
+	 * The cgroup that this subsystem is attached to. Useful
+	 * for subsystems that want to know about the cgroup
+	 * hierarchy structure
+	 */
 	struct cgroup *cgroup;
-
-	/* the cgroup subsystem that this css is attached to */
-	struct cgroup_subsys *ss;
 
 	/* reference count - access via css_[try]get() and css_put() */
 	struct percpu_ref refcnt;
@@ -420,12 +421,6 @@ struct cftype {
 	/* CFTYPE_* flags */
 	unsigned int flags;
 
-	/*
-	 * The subsys this file belongs to.  Initialized automatically
-	 * during registration.  NULL for cgroup core files.
-	 */
-	struct cgroup_subsys *ss;
-
 	int (*open)(struct inode *inode, struct file *file);
 	ssize_t (*read)(struct cgroup *cgrp, struct cftype *cft,
 			struct file *file,
@@ -539,7 +534,7 @@ static inline const char *cgroup_name(const struct cgroup *cgrp)
 }
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
-int cgroup_rm_cftypes(struct cftype *cfts);
+int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
 int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
@@ -574,23 +569,18 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
-	int (*css_online)(struct cgroup_subsys_state *css);
-	void (*css_offline)(struct cgroup_subsys_state *css);
-	void (*css_free)(struct cgroup_subsys_state *css);
-
-	int (*can_attach)(struct cgroup_subsys_state *css,
-			  struct cgroup_taskset *tset);
-	void (*cancel_attach)(struct cgroup_subsys_state *css,
-			      struct cgroup_taskset *tset);
-	void (*attach)(struct cgroup_subsys_state *css,
-		       struct cgroup_taskset *tset);
+	struct cgroup_css *(*css_alloc)(struct cgroup *cgrp);
+	int (*css_online)(struct cgroup *cgrp);
+	void (*css_offline)(struct cgroup *cgrp);
+	void (*css_free)(struct cgroup *cgrp);
 	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	int (*can_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	void (*cancel_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	void (*attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
-	void (*exit)(struct cgroup_subsys_state *css,
-		     struct cgroup_subsys_state *old_css,
+	void (*exit)(struct cgroup *cgrp, struct cgroup *old_cgrp,
 		     struct task_struct *task);
-	void (*bind)(struct cgroup_subsys_state *root_css);
+	void (*bind)(struct cgroup *root);
 
 	int subsys_id;
 	int active;
@@ -646,21 +636,6 @@ struct cgroup_subsys {
 #include <linux/cgroup_subsys.h>
 #undef IS_SUBSYS_ENABLED
 #undef SUBSYS
-
-/**
- * css_parent - find the parent css
- * @css: the target cgroup_subsys_state
- *
- * Return the parent css of @css.  This function is guaranteed to return
- * non-NULL parent as long as @css isn't the root.
- */
-static inline
-struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
-{
-	struct cgroup *parent_cgrp = css->cgroup->parent;
-
-	return parent_cgrp ? parent_cgrp->subsys[css->ss->subsys_id] : NULL;
-}
 
 /**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
