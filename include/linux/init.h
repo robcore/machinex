@@ -26,8 +26,8 @@
  * extern int initialize_foobar_device(int, int, int) __init;
  *
  * For initialized data:
- * You should insert __initdata between the variable name and equal
- * sign followed by value, e.g.:
+ * You should insert __initdata or __initconst between the variable name
+ * and equal sign followed by value, e.g.:
  *
  * static int init_variable __initdata = 0;
  * static const char linux_logo[] __initconst = { 0x32, 0x36, ... };
@@ -89,12 +89,13 @@
 #define __devexit
 #define __devexitdata
 #define __devexitconst
+#define __devexit_p(x) x
 
-/* Used for HOTPLUG_CPU */
-#define __cpuinit        __cold
+/* temporary, until all users are removed */
+#define __cpuinit
 #define __cpuinitdata
 #define __cpuinitconst
-#define __cpuexit        __exitused __cold
+#define __cpuexit
 #define __cpuexitdata
 #define __cpuexitconst
 
@@ -115,9 +116,9 @@
 #define __INITRODATA	.section	".init.rodata","a",%progbits
 #define __FINITDATA	.previous
 
-#define __CPUINIT        .section	".cpuinit.text", "ax"
-#define __CPUINITDATA    .section	".cpuinit.data", "aw"
-#define __CPUINITRODATA  .section	".cpuinit.rodata", "a"
+#define __CPUINIT
+#define __CPUINITDATA
+#define __CPUINITRODATA
 
 #define __MEMINIT        .section	".meminit.text", "ax"
 #define __MEMINITDATA    .section	".meminit.data", "aw"
@@ -188,6 +189,7 @@ extern bool initcall_debug;
  * initializes variables that couldn't be statically initialized.
  *
  * This only exists for built-in code, not for modules.
+ * Keep main.c:initcall_level_names[] in sync.
  */
 #define pure_initcall(fn)		__define_initcall(fn, 0)
 
@@ -277,7 +279,13 @@ void __init parse_early_options(char *cmdline);
 
 #else /* MODULE */
 
-/* Don't use these in modules, but some people do... */
+/*
+ * In most cases loadable modules do not need custom
+ * initcall levels. There are still some valid cases where
+ * a driver may be needed early if built in, and does not
+ * matter when built as a loadable module. Like bus
+ * snooping debug drivers.
+ */
 #define early_initcall(fn)		module_init(fn)
 #define core_initcall(fn)		module_init(fn)
 #define postcore_initcall(fn)		module_init(fn)
@@ -325,18 +333,6 @@ void __init parse_early_options(char *cmdline);
 #define __INITDATA_OR_MODULE __INITDATA
 #define __INITRODATA_OR_MODULE __INITRODATA
 #endif /*CONFIG_MODULES*/
-
-/* Functions marked as __devexit may be discarded at kernel link time, depending
-   on config options.  Newer versions of binutils detect references from
-   retained sections to discarded sections and flag an error.  Pointers to
-   __devexit functions must use __devexit_p(function_name), the wrapper will
-   insert either the function_name or NULL, depending on the config options.
- */
-#if defined(MODULE) || defined(CONFIG_HOTPLUG)
-#define __devexit_p(x) x
-#else
-#define __devexit_p(x) NULL
-#endif
 
 #ifdef MODULE
 #define __exit_p(x) x

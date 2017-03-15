@@ -1,129 +1,60 @@
 #!/bin/bash
-cd /media/root/robcore/android/machinex
-find arch/ -name "*.h" | xargs sed -i "s/ __cpuinit//g"
-cd /media/root/robcore/android/machinex/arch
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/block
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/crypto
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/Documentation
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/drivers
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/firmware
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/fs
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/include
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/init
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/ipc
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/kernel
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/lib
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/mm
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/net
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/samples
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/scripts
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/security
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/sound
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/tools
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/usr
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
-cd /media/root/robcore/android/machinex/virt
-find -name "*.c" | xargs sed -i "s/ __cpuinit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuexit / /g"
-find -name "*.c" | xargs sed -i "s/ __cpuinitdata//g"
-find -name "*.c" | xargs sed -i "s/ __cpuinit$//g"
-find -name "*.c" | xargs sed -i "s/^__cpuinit //g"
+
+killer() {
+find . -type f | parallel sed -i "s/ __cpuinit / /g" {} \;
+find . -type f | parallel sed -i "s/ __cpuexit / /g" {} \;
+find . -type f | parallel sed -i "s/ __cpuinitdata//g" {} \;
+find . -type f | parallel sed -i "s/ __cpuinit$//g" {} \;
+find . -type f | parallel sed -i "s/^__cpuinit //g" {} \;
+find . -type f | parallel sed -i "s/ __cpuinit//g" {} \;
+}
+finder() {
+find . -type f | parallel grep -rl '__devinit\|__devinitdata\|__devinitconst\|__devexit\|__devexitdata\|__devexitconst\|__devexit_p' {} \; | sort -d >> ~/machinex/devinit_remains.txt
+}
+
+cd ~/machinex
+touch devinit_remains.txt
+
+cd ~/machinex/arch
+killer
+finder
+cd ~/machinex/block
+finder
+cd ~/machinex/crypto
+finder
+cd ~/machinex/Documentation
+finder
+cd ~/machinex/drivers
+killer
+finder
+cd ~/machinex/firmware
+finder
+cd ~/machinex/fs
+finder
+cd ~/machinex/init
+finder
+cd ~/machinex/ipc
+finder
+cd ~/machinex/kernel
+finder
+cd ~/machinex/lib
+finder
+cd ~/machinex/mm
+finder
+cd ~/machinex/net
+finder
+cd ~/machinex/samples
+finder
+cd ~/machinex/scripts
+finder
+cd ~/machinex/security
+finder
+cd ~/machinex/sound
+finder
+cd ~/machinex/tools
+finder
+cd ~/machinex/usr
+finder
+cd ~/machinex/virt
+finder
+echo "complete"
