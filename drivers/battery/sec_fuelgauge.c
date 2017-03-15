@@ -246,7 +246,8 @@ static void sec_fg_isr_work(struct work_struct *work)
 	sec_hal_fg_fuelalert_process(fuelgauge, fuelgauge->is_fuel_alerted);
 
 	/* process for others */
-	fuelgauge->pdata->fuelalert_process(fuelgauge->is_fuel_alerted);
+	if (fuelgauge->pdata->fuelalert_process != NULL)
+		fuelgauge->pdata->fuelalert_process(fuelgauge->is_fuel_alerted);
 }
 
 static irqreturn_t sec_fg_irq_thread(int irq, void *irq_data)
@@ -423,7 +424,11 @@ static int __devinit sec_fuelgauge_probe(struct i2c_client *client,
 			dev_err(&client->dev,
 				"%s: Failed to Enable Wakeup Source(%d)\n",
 				__func__, ret);
-	}
+	} else {
+			dev_err(&client->dev, "%s: Failed gpio_to_irq(%d)\n",
+				__func__, fuelgauge->pdata->fg_irq);
+			goto err_supply_unreg;
+		}
 
 	fuelgauge->is_fuel_alerted = false;
 	if (fuelgauge->pdata->fuel_alert_soc >= 0) {

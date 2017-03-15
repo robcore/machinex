@@ -664,13 +664,17 @@ static ssize_t max77693_muic_set_apo_factory(struct device *dev,
 }
 #endif /* !CONFIG_MUIC_MAX77693_SUPPORT_CAR_DOCK */
 
-void max77693_muic_monitor_status(void){
+int max77693_muic_monitor_status(void){
 	int ret;
 	u8 status[2];
 
 	ret = max77693_bulk_read(gInfo->muic, MAX77693_MUIC_REG_STATUS1, 2, status);
+	if (ret < 0)
+		return ret;
+
 	dev_info(gInfo->dev, "func:%s, ST1:0x%x, ST2:0x%x CABLE:%d\n", __func__,
 			status[0], status[1], gInfo->cable_type);
+	return 0;
 }
 EXPORT_SYMBOL(max77693_muic_monitor_status);
 

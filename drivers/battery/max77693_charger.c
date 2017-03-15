@@ -24,7 +24,7 @@
 #define DISABLE 0
 
 
-#define RECOVERY_DELAY		2500
+#define RECOVERY_DELAY		3000
 #define RECOVERY_CNT		5
 #define REDUCE_CURRENT_STEP	100
 #define MINIMUM_INPUT_CURRENT	300
@@ -809,11 +809,12 @@ static int sec_chg_set_property(struct power_supply *psy,
 					union power_supply_propval cable_type;
 					psy_do_property("battery", get,
 						POWER_SUPPLY_PROP_ONLINE, cable_type);
-					wake_lock(&charger->wpc_wake_lock);
+					wake_lock_timeout(&charger->wpc_wake_lock, 500);
 					queue_delayed_work(charger->wqueue, &charger->wpc_work,
 							msecs_to_jiffies(500));
 					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
 						charger->wc_w_state = 0;
+						wake_unlock(&charger->wpc_wake_lock);
 						pr_err("%s:cable removed,wireless connected\n", __func__);
 					}
 				}
@@ -854,7 +855,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 #endif
 					val->intval == POWER_SUPPLY_TYPE_MAINS) {
 				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
-				if (screen_on_current_limit && set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
+				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
 					set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
 			}
 		}

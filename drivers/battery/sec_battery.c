@@ -1714,6 +1714,9 @@ static unsigned int sec_bat_get_polling_time(
 	if (battery->polling_short)
 		return battery->pdata->polling_time[
 			SEC_BATTERY_POLLING_TIME_BASIC];
+	else if (battery->cable_type == POWER_SUPPLY_TYPE_WIRELESS &&
+			battery->status == POWER_SUPPLY_STATUS_CHARGING)
+		battery->polling_time = 46;
 	else
 		return battery->polling_time;
 }
@@ -1830,7 +1833,7 @@ static void sec_bat_monitor_work(
 		battery->polling_in_sleep = false;
 		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
 			(battery->ps_enable != true)) {
-			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < (10 * 60)) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 600) {
 				pr_info("Skip monitor_work(%ld)\n",
 						c_ts.tv_sec - old_ts.tv_sec);
 				goto skip_monitor;
@@ -1895,13 +1898,16 @@ skip_monitor:
 
 	/* check muic cable status */
 #if defined(CONFIG_MACH_JF)
-	max77693_muic_monitor_status();
-#endif
-
+	if (max77693_muic_monitor_status() < 0 ) {
+		wake_unlock(&battery->monitor_wake_lock);
+		goto continue_monitor;
+	}
+	
 	if (battery->capacity <= 0)
 		wake_lock_timeout(&battery->monitor_wake_lock, msecs_to_jiffies(2500));
 	else
 		wake_unlock(&battery->monitor_wake_lock);
+	}
 
 	dev_dbg(battery->dev, "%s: End\n", __func__);
 
@@ -2807,6 +2813,12 @@ static int sec_bat_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = battery->cable_type;
+		if ((val->intval == POWER_SUPPLY_TYPE_BATTERY) &&
+				(battery->pdata->is_lpm()) &&
+				(current_cable_type != POWER_SUPPLY_TYPE_WIRELESS)) {
+			/* Userspace expects 0 for no-supply */
+			val->intval = 0;
+			}
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = battery->pdata->technology;
