@@ -1,12 +1,12 @@
 #!/bin/bash
 
 killer() {
-find . -type f | parallel sed -i "s/ __cpuinit / /g" {} \;
-find . -type f | parallel sed -i "s/ __cpuexit / /g" {} \;
-find . -type f | parallel sed -i "s/ __cpuinitdata//g" {} \;
-find . -type f | parallel sed -i "s/ __cpuinit$//g" {} \;
-find . -type f | parallel sed -i "s/^__cpuinit //g" {} \;
-find . -type f | parallel sed -i "s/ __cpuinit//g" {} \;
+find . -type f | parallel sed -i 's/ __cpuinit / /g' {} \;
+find . -type f | parallel sed -i 's/ __cpuexit / /g' {} \;
+find . -type f | parallel sed -i 's/ __cpuinitdata//g' {} \;
+find . -type f | parallel sed -i 's/ __cpuinit$//g' {} \;
+find . -type f | parallel sed -i 's/^__cpuinit //g' {} \;
+find . -type f | parallel sed -i 's/ __cpuinit//g' {} \;
 }
 
 finder() {
