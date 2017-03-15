@@ -388,10 +388,13 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 
 	switch (battery->pdata->battery_check_type) {
 	case SEC_BATTERY_CHECK_ADC:
-		ret = sec_bat_check_vf_adc(battery);
+		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
+			ret = battery->present;
+		else
+			ret = sec_bat_check_vf_adc(battery);
 		break;
-	case SEC_BATTERY_CHECK_CALLBACK:
 	case SEC_BATTERY_CHECK_INT:
+	case SEC_BATTERY_CHECK_CALLBACK:
 		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
 			ret = battery->present;
 		else
@@ -475,8 +478,8 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 					POWER_SUPPLY_STATUS_NOT_CHARGING;
 				sec_bat_set_charge(battery, false);
 			}
-
-			battery->pdata->check_battery_result_callback();
+			if (battery->pdata->check_battery_result_callback)
+				battery->pdata->check_battery_result_callback();
 			return false;
 		}
 	} else
@@ -548,6 +551,7 @@ static bool sec_bat_ovp_uvlo_result(
 			battery->status =
 				POWER_SUPPLY_STATUS_CHARGING;
 			battery->charging_mode = SEC_BATTERY_CHARGING_1ST;
+			sec_bat_set_charge(battery, true);
 			break;
 		case POWER_SUPPLY_HEALTH_OVERVOLTAGE:
 		case POWER_SUPPLY_HEALTH_UNDERVOLTAGE:
@@ -556,6 +560,7 @@ static bool sec_bat_ovp_uvlo_result(
 				__func__, health);
 			battery->status =
 				POWER_SUPPLY_STATUS_NOT_CHARGING;
+			sec_bat_set_charge(battery, false);
 			battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 			battery->is_recharging = false;
 			/* Take the wakelock during 10 seconds
@@ -574,6 +579,11 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 {
 	int health;
 
+	if ((battery->factory_mode || battery->pdata->check_jig_status()) ||
+		((battery->status == POWER_SUPPLY_STATUS_FULL) &&
+		   (battery->charging_mode == SEC_BATTERY_CHARGING_NONE)))
+		return false;
+
 	if (battery->health != POWER_SUPPLY_HEALTH_GOOD &&
 		battery->health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
 		battery->health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE) {
@@ -585,7 +595,8 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 
 	switch (battery->pdata->ovp_uvlo_check_type) {
 	case SEC_BATTERY_OVP_UVLO_CALLBACK:
-		health = battery->pdata->ovp_uvlo_callback();
+		if (battery->pdata->ovp_uvlo_callback)
+			health = battery->pdata->ovp_uvlo_callback();
 		break;
 	case SEC_BATTERY_OVP_UVLO_PMICPOLLING:
 	case SEC_BATTERY_OVP_UVLO_CHGPOLLING:
@@ -1043,7 +1054,7 @@ static bool sec_bat_check_fullcharged_condition(
 	}
 
 	if (battery->pdata->full_condition_type &
-			SEC_BATTERY_FULL_CONDITION_SOC) {
+		SEC_BATTERY_FULL_CONDITION_SOC) {
 		if (battery->capacity <
 			battery->pdata->full_condition_soc) {
 			dev_dbg(battery->dev,
