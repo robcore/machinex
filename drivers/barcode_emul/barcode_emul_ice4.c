@@ -1042,7 +1042,7 @@ static void fw_work(struct work_struct *work)
 	}
 }
 
-static int __devinit barcode_emul_probe(struct i2c_client *client,
+static int barcode_emul_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);

@@ -1,12 +1,17 @@
 #!/bin/bash
 
 killer() {
-find -type f | xargs sed -i "s/ __cpuinit / /g"
-find -type f | xargs sed -i "s/ __cpuexit / /g"
-find -type f | xargs sed -i "s/ __cpuinitdata//g"
-find -type f | xargs sed -i "s/ __cpuinit$//g"
-find -type f | xargs sed -i "s/^__cpuinit //g"
+find -type f | xargs sed -i "s/ __devinit / /g"
+find -type f | xargs sed -i "s/ __devexit_p / /g"
+find -type f | xargs sed -i "s/ __devexit / /g"
+find -type f | xargs sed -i "s/ __devexitdata//g"
+find -type f | xargs sed -i "s/ __devinit$//g"
+find -type f | xargs sed -i "s/^__devinit //g"
+find -type f | xargs sed -i "s/ __devinitdata//g"
+find -type f | xargs sed -i "s/ __devexitconst//g"
+find -type f | xargs sed -i "s/ __devinitconst//g"
 }
+
 #define __devinit
 #define __devinitdata
 #define __devinitconst
@@ -29,6 +34,8 @@ killer
 cd ~/machinex/fs
 killer
 cd ~/machinex/init
+killer
+cd ~/machinex/include
 killer
 cd ~/machinex/ipc
 killer
