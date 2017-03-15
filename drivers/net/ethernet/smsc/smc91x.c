@@ -2405,7 +2405,7 @@ static struct dev_pm_ops smc_drv_pm_ops = {
 
 static struct platform_driver smc_driver = {
 	.probe		= smc_drv_probe,
-	.remove		= __devexit_p(smc_drv_remove),
+	.remove		= smc_drv_remove,
 	.driver		= {
 		.name	= CARDNAME,
 		.owner	= THIS_MODULE,

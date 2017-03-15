@@ -198,7 +198,7 @@ static int gpio_vreg_remove(struct platform_device *pdev)
 
 static struct platform_driver gpio_vreg_driver = {
 	.probe = gpio_vreg_probe,
-	.remove = __devexit_p(gpio_vreg_remove),
+	.remove = gpio_vreg_remove,
 	.driver = {
 		.name = GPIO_REGULATOR_DEV_NAME,
 		.owner = THIS_MODULE,

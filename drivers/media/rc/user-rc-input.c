@@ -228,7 +228,7 @@ static int user_rc_input_remove(struct platform_device *pdev)
 
 static struct platform_driver user_rc_input_driver = {
 	.probe  = user_rc_input_probe,
-	.remove = __devexit_p(user_rc_input_remove),
+	.remove = user_rc_input_remove,
 	.driver = {
 		.name   = USER_RC_INPUT_DRV_NAME,
 		.owner  = THIS_MODULE,

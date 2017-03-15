@@ -2033,7 +2033,7 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 
 static struct platform_driver ehci_msm_hsic_driver = {
 	.probe	= ehci_hsic_msm_probe,
-	.remove	= __devexit_p(ehci_hsic_msm_remove),
+	.remove	= ehci_hsic_msm_remove,
 	.driver = {
 		.name = "msm_hsic_host",
 #ifdef CONFIG_PM

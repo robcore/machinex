@@ -4409,7 +4409,7 @@ static struct i2c_driver sii8240_tmds_i2c_driver = {
 	},
 	.id_table = sii8240_tmds_id,
 	.probe = sii8240_tmds_i2c_probe,
-	.remove = __devexit_p(sii8240_tmds_remove),
+	.remove = sii8240_tmds_remove,
 };
 static struct i2c_driver sii8240_hdmi_i2c_driver = {
 	.driver = {
@@ -4418,7 +4418,7 @@ static struct i2c_driver sii8240_hdmi_i2c_driver = {
 	},
 	.id_table = sii8240_hdmi_id,
 	.probe = sii8240_hdmi_i2c_probe,
-	.remove = __devexit_p(sii8240_hdmi_remove),
+	.remove = sii8240_hdmi_remove,
 };
 static struct i2c_driver sii8240_disc_i2c_driver = {
 	.driver = {
@@ -4427,7 +4427,7 @@ static struct i2c_driver sii8240_disc_i2c_driver = {
 	},
 	.id_table = sii8240_disc_id,
 	.probe = sii8240_disc_i2c_probe,
-	.remove = __devexit_p(sii8240_disc_remove),
+	.remove = sii8240_disc_remove,
 };
 static struct i2c_driver sii8240_tpi_i2c_driver = {
 	.driver = {
@@ -4436,7 +4436,7 @@ static struct i2c_driver sii8240_tpi_i2c_driver = {
 	},
 	.id_table = sii8240_tpi_id,
 	.probe = sii8240_tpi_i2c_probe,
-	.remove = __devexit_p(sii8240_tpi_remove),
+	.remove = sii8240_tpi_remove,
 };
 static struct i2c_driver sii8240_cbus_i2c_driver = {
 	.driver = {
@@ -4445,7 +4445,7 @@ static struct i2c_driver sii8240_cbus_i2c_driver = {
 	},
 	.id_table = sii8240_cbus_id,
 	.probe = sii8240_cbus_i2c_probe,
-	.remove = __devexit_p(sii8240_cbus_remove),
+	.remove = sii8240_cbus_remove,
 };
 
 #ifdef CONFIG_MHL_SWING_LEVEL

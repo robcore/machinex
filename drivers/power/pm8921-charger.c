@@ -5030,7 +5030,7 @@ static const struct dev_pm_ops pm8921_pm_ops = {
 };
 static struct platform_driver pm8921_charger_driver = {
 	.probe		= pm8921_charger_probe,
-	.remove		= __devexit_p(pm8921_charger_remove),
+	.remove		= pm8921_charger_remove,
 	.driver		= {
 			.name	= PM8921_CHARGER_DEV_NAME,
 			.owner	= THIS_MODULE,

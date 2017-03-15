@@ -1145,7 +1145,7 @@ static const struct dev_pm_ops ehci_msm2_dev_pm_ops = {
 
 static struct platform_driver ehci_msm2_driver = {
 	.probe	= ehci_msm2_probe,
-	.remove	= __devexit_p(ehci_msm2_remove),
+	.remove	= ehci_msm2_remove,
 	.driver = {
 		.name = "msm_ehci_host",
 #ifdef CONFIG_PM

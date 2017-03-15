@@ -2614,7 +2614,7 @@ MODULE_DEVICE_TABLE(of, smsc911x_dt_ids);
 
 static struct platform_driver smsc911x_driver = {
 	.probe = smsc911x_drv_probe,
-	.remove = __devexit_p(smsc911x_drv_remove),
+	.remove = smsc911x_drv_remove,
 	.driver = {
 		.name	= SMSC_CHIPNAME,
 		.owner	= THIS_MODULE,

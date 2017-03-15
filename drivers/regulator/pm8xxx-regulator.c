@@ -3320,7 +3320,7 @@ static int pm8xxx_vreg_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_vreg_driver = {
 	.probe	= pm8xxx_vreg_probe,
-	.remove	= __devexit_p(pm8xxx_vreg_remove),
+	.remove	= pm8xxx_vreg_remove,
 	.driver	= {
 		.name	= PM8XXX_REGULATOR_DEV_NAME,
 		.owner	= THIS_MODULE,

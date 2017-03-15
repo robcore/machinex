@@ -2186,7 +2186,7 @@ static int smc911x_drv_resume(struct platform_device *dev)
 
 static struct platform_driver smc911x_driver = {
 	.probe		 = smc911x_drv_probe,
-	.remove	 = __devexit_p(smc911x_drv_remove),
+	.remove	 = smc911x_drv_remove,
 	.suspend	 = smc911x_drv_suspend,
 	.resume	 = smc911x_drv_resume,
 	.driver	 = {

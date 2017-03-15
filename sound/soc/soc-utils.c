@@ -5,7 +5,7 @@
  *
  * Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
  *         Liam Girdwood <lrg@slimlogic.co.uk>
- *         
+ *
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
@@ -125,7 +125,7 @@ static struct platform_driver soc_dummy_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = snd_soc_dummy_probe,
-	.remove = __devexit_p(snd_soc_dummy_remove),
+	.remove = snd_soc_dummy_remove,
 };
 
 static struct platform_device *soc_dummy_dev;

@@ -328,7 +328,7 @@ static struct spi_driver jc_spi_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe	= jc_spi_probe,
-	.remove = __devexit_p(jc_spi_remove),
+	.remove = jc_spi_remove,
 };
 
 int jc_spi_init(void)

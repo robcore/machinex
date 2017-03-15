@@ -4420,7 +4420,7 @@ static struct of_device_id msm_otg_dt_match[] = {
 };
 
 static struct platform_driver msm_otg_driver = {
-	.remove = __devexit_p(msm_otg_remove),
+	.remove = msm_otg_remove,
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
