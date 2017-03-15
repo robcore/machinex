@@ -13,6 +13,11 @@ find . -type f | parallel grep -rl '__devinit\|__devinitdata\|__devinitconst\|__
 }
 
 cd ~/machinex
+
+if [ -e devinit_remains.txt ]; then
+	rm devinit_remains.txt
+fi
+
 touch devinit_remains.txt
 
 cd ~/machinex/arch
