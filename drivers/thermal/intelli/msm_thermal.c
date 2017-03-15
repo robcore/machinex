@@ -263,7 +263,7 @@ static void __ref check_temp(struct work_struct *work)
 	do_freq_control(temp);
 reschedule:
 	if (enabled)
-		queue_delayed_work(intellithermal_wq, &check_temp_work,
+		queue_delayed_work_on(0, intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
@@ -319,7 +319,7 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 	} else {
 		if (!enabled) {
 			enabled = 1;
-			queue_delayed_work(intellithermal_wq,
+			queue_delayed_work_on(0, intellithermal_wq,
 					   &check_temp_work, 0);
 			pr_debug("msm_thermal: rescheduling...\n");
 		} else
@@ -589,9 +589,9 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	if (num_possible_cpus() > 1)
 		core_control_enabled = 1;
 	intellithermal_wq = alloc_workqueue("intellithermal",
-				WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+				WQ_MEM_RECLAIM, 1);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
-	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
+	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 
 	if (num_possible_cpus() > 1)
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
