@@ -300,7 +300,7 @@ void apenable_auto_hotplug(bool state)
 	}
 }
 
-static void __cpuinit hotplug_online_all_work_fn(struct work_struct *work)
+static void hotplug_online_all_work_fn(struct work_struct *work)
 {
 	int cpu;
 	if (!isEnabled && !EnableOverride)
@@ -322,7 +322,7 @@ static void __cpuinit hotplug_online_all_work_fn(struct work_struct *work)
 	schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
 }
 
-static void __cpuinit hotplug_offline_all_work_fn(struct work_struct *work)
+static void hotplug_offline_all_work_fn(struct work_struct *work)
 {
 	int cpu;
 	if (!isEnabled)
@@ -338,7 +338,7 @@ static void __cpuinit hotplug_offline_all_work_fn(struct work_struct *work)
 	}
 }
 
-static void __cpuinit hotplug_online_single_work_fn(struct work_struct *work)
+static void hotplug_online_single_work_fn(struct work_struct *work)
 {
 	int cpu;
 	if (!isEnabled)

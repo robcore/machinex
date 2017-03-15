@@ -358,7 +358,7 @@ static unsigned int get_curr_load(unsigned int cpu)
 	return cur_load;
 }
 
-static void __cpuinit tplug_work_fn(struct work_struct *work)
+static void tplug_work_fn(struct work_struct *work)
 {
 	int i;
 	unsigned int load[8], avg_load[8];
