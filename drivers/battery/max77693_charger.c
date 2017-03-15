@@ -834,15 +834,12 @@ static int sec_chg_set_property(struct power_supply *psy,
 					/* We are in basic Fast Charge mode, so we substitute AC to WIRELESS levels */
 					charger->charging_current_max = WIRELESS_CHARGE_1000;
 					charger->charging_current = WIRELESS_CHARGE_1000 + 100;
-				} else if (force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) {
+				} else if ((force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) ||
+							(force_fast_charge == FAST_CHARGE_FORCE_GLOBAL)) {
 					/* We are in custom current Fast Charge mode for WIRELESS */
 					charger->charging_current_max = wireless_charge_level;
 					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
-				} else if (force_fast_charge == FAST_CHARGE_FORCE_GLOBAL) {
-					/* We are in GLOBAL custom current Fast Charge mode for WIRELESS */
-					charger->charging_current_max = wireless_charge_level;
-					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
-				} else
+				else
 #endif
 				set_charging_current_max = wpc_charging_current;
 			} else
