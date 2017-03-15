@@ -102,6 +102,14 @@ static int sec_fg_get_property(struct power_supply *psy,
 			if (soc_type == SEC_FUELGAUGE_CAPACITY_TYPE_RAW)
 				break;
 
+			/* check whether doing the wake_unlock */
+			if ((val->intval > fuelgauge->pdata->fuel_alert_soc) &&
+				fuelgauge->is_fuel_alerted) {
+				wake_unlock(&fuelgauge->fuel_alert_wake_lock);
+				sec_hal_fg_fuelalert_init(fuelgauge->client,
+					fuelgauge->pdata->fuel_alert_soc);
+			}
+
 			if (fuelgauge->pdata->capacity_calculation_type &
 				(SEC_FUELGAUGE_CAPACITY_TYPE_SCALE |
 				 SEC_FUELGAUGE_CAPACITY_TYPE_DYNAMIC_SCALE))
@@ -117,14 +125,6 @@ static int sec_fg_get_property(struct power_supply *psy,
 
 			/* get only integer part */
 			val->intval /= 10;
-
-			/* check whether doing the wake_unlock */
-			if ((val->intval > fuelgauge->pdata->fuel_alert_soc) &&
-					fuelgauge->is_fuel_alerted) {
-				wake_unlock(&fuelgauge->fuel_alert_wake_lock);
-				sec_hal_fg_fuelalert_init(fuelgauge->client,
-						fuelgauge->pdata->fuel_alert_soc);
-			}
 
 			/* (Only for atomic capacity)
 			 * In initial time, capacity_old is 0.
