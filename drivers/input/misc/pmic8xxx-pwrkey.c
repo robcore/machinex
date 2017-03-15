@@ -50,10 +50,9 @@ struct pmic8xxx_pwrkey {
 	struct wake_lock wake_lock;
 };
 
-static irqreturn_t pwrkey_press_irq(int irq, void *_pwr)
+static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
-	struct pmic8xxx_pwrkey *pwrkey = pwrkey;
-	struct input_dev *pwr = _pwr;
+	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
 
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
@@ -65,31 +64,34 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwr)
 	pwrkey->powerkey_state = 1;
 	if (poweroff_charging)
 		wake_lock(&pwrkey->wake_lock);
-	input_report_key(pwr, KEY_POWER, 1);
-	input_sync(pwr);
-
+	input_report_key(pwrkey->pwr, KEY_POWER, 1);
+	input_sync(pwrkey->pwr);
+#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_check_crash_key(KEY_POWER, 1);
+#endif
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t pwrkey_release_irq(int irq, void *_pwr)
+static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 {
-	struct pmic8xxx_pwrkey *pwrkey = pwrkey;
-	struct input_dev *pwr = _pwr;
+	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
 
 	if (pwrkey->press == false) {
-		input_report_key(pwr, KEY_POWER, 1);
-		input_sync(pwr);
+		input_report_key(pwrkey->pwr, KEY_POWER, 1);
+		input_sync(pwrkey->pwr);
 		pwrkey->press = true;
 	} else {
 		pwrkey->press = false;
 	}
 
 	pwrkey->powerkey_state = 0;
-	input_report_key(pwr, KEY_POWER, 0);
-	input_sync(pwr);
+	input_report_key(pwrkey->pwr, KEY_POWER, 0);
+	input_sync(pwrkey->pwr);
 	if (poweroff_charging)
 		wake_unlock(&pwrkey->wake_lock);
-
+#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_check_crash_key(KEY_POWER, 0);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -141,7 +143,7 @@ static ssize_t  sysfs_powerkey_onoff_show(struct device *dev,
 
 static DEVICE_ATTR(sec_powerkey_pressed, 0444 , sysfs_powerkey_onoff_show,
 	NULL);
-static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
+static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 {
 	struct input_dev *pwr;
 	int key_release_irq = platform_get_irq(pdev, 0);
@@ -250,30 +252,26 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "Can't get %d IRQ for pwrkey: %d\n",
 				 key_release_irq, err);
 
-		goto free_release_irq;
+		goto free_press_irq;
 	}
 
 	sec_powerkey = device_create(sec_class, NULL, 0, NULL, "sec_powerkey");
 	if (IS_ERR(sec_powerkey))
 		pr_err("Failed to create device(sec_powerkey)!\n");
 	ret = device_create_file(sec_powerkey, &dev_attr_sec_powerkey_pressed);
-
 	if (ret) {
 		pr_err("Failed to create device file in sysfs entries(%s)!\n",
 			dev_attr_sec_powerkey_pressed.attr.name);
 	}
-
 	dev_set_drvdata(sec_powerkey, pwrkey);
-
 	device_init_wakeup(&pdev->dev, pdata->wakeup);
 
 	return 0;
 
 free_press_irq:
-	free_irq(key_press_irq, pwr);
-free_release_irq:
-	free_irq(key_release_irq, pwr);
+	free_irq(key_press_irq, NULL);
 unreg_input_dev:
+	platform_set_drvdata(pdev, NULL);
 	input_unregister_device(pwr);
 	pwr = NULL;
 free_input_dev:
@@ -283,19 +281,19 @@ free_pwrkey:
 	return err;
 }
 
-static int pmic8xxx_pwrkey_remove(struct platform_device *pdev)
+static int __exit pmic8xxx_pwrkey_remove(struct platform_device *pdev)
 {
 	struct pmic8xxx_pwrkey *pwrkey = platform_get_drvdata(pdev);
-	struct input_dev *pwr = pwr;
 	int key_release_irq = platform_get_irq(pdev, 0);
 	int key_press_irq = platform_get_irq(pdev, 1);
 
 	device_init_wakeup(&pdev->dev, 0);
 	if (poweroff_charging)
 		wake_lock_destroy(&pwrkey->wake_lock);
-	free_irq(key_press_irq, pwr);
-	free_irq(key_release_irq, pwr);
-	input_unregister_device(pwr);
+	free_irq(key_press_irq, pwrkey);
+	free_irq(key_release_irq, pwrkey);
+	input_unregister_device(pwrkey->pwr);
+	platform_set_drvdata(pdev, NULL);
 	kfree(pwrkey);
 
 	return 0;
@@ -310,7 +308,13 @@ static struct platform_driver pmic8xxx_pwrkey_driver = {
 		.pm	= &pm8xxx_pwr_key_pm_ops,
 	},
 };
-module_platform_driver(pmic8xxx_pwrkey_driver);
+
+static int __init pmic8xxx_pwrkey_init(void)
+{
+	return platform_driver_register(&pmic8xxx_pwrkey_driver);
+}
+
+subsys_initcall(pmic8xxx_pwrkey_init);
 
 MODULE_ALIAS("platform:pmic8xxx_pwrkey");
 MODULE_DESCRIPTION("PMIC8XXX Power Key driver");
