@@ -998,7 +998,7 @@ struct pipe_inode_info * alloc_pipe_info(struct inode *inode)
 	return NULL;
 }
 
-void free_pipe_info(struct pipe_inode_info *pipe)
+void __free_pipe_info(struct pipe_inode_info *pipe)
 {
 	int i;
 
@@ -1013,6 +1013,12 @@ void free_pipe_info(struct pipe_inode_info *pipe)
 		__free_page(pipe->tmp_page);
 	kfree(pipe->bufs);
 	kfree(pipe);
+}
+
+void free_pipe_info(struct inode *inode)
+{
+	__free_pipe_info(inode->i_pipe);
+	inode->i_pipe = NULL;
 }
 
 static struct vfsmount *pipe_mnt __read_mostly;
@@ -1107,12 +1113,12 @@ int create_pipe_files(struct file **res, int flags)
 err_file:
 	put_filp(f);
 err_dentry:
-	free_pipe_info(inode->i_pipe);
+	free_pipe_info(inode);
 	path_put(&path);
 	return err;
 
 err_inode:
-	free_pipe_info(inode->i_pipe);
+	free_pipe_info(inode);
 	iput(inode);
 	return err;
 }
