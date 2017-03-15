@@ -136,13 +136,12 @@ void user_exit(void)
 	local_irq_restore(flags);
 }
 
-#ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
 void guest_enter(void)
 {
 	if (vtime_accounting_enabled())
 		vtime_guest_enter(current);
 	else
-		current->flags |= PF_VCPU;
+		__guest_enter();
 }
 EXPORT_SYMBOL_GPL(guest_enter);
 
@@ -151,10 +150,9 @@ void guest_exit(void)
 	if (vtime_accounting_enabled())
 		vtime_guest_exit(current);
 	else
-		current->flags &= ~PF_VCPU;
+		__guest_exit();
 }
 EXPORT_SYMBOL_GPL(guest_exit);
-#endif /* CONFIG_VIRT_CPU_ACCOUNTING_GEN */
 
 void context_tracking_task_switch(struct task_struct *prev,
 			     struct task_struct *next)
