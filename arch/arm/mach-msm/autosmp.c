@@ -109,7 +109,7 @@ static void max_min_check(void)
 		asmp_param.min_cpus = asmp_param.max_cpus;
 }
 
-static void __cpuinit asmp_work_fn(struct work_struct *work)
+static void asmp_work_fn(struct work_struct *work)
 {
 	unsigned int cpu = 0, slow_cpu = 0;
 	unsigned int rate, cpu0_rate, slow_rate = UINT_MAX, fast_rate;
@@ -409,7 +409,7 @@ static void __ref hotplug_stop(void)
 			cpu_up(cpu);
 }
 
-static int __cpuinit set_enabled(const char *val, const struct kernel_param *kp)
+static int set_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 
