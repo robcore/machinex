@@ -8,6 +8,7 @@ find . -type f | parallel sed -i "s/ __cpuinit$//g" {} \;
 find . -type f | parallel sed -i "s/^__cpuinit //g" {} \;
 find . -type f | parallel sed -i "s/ __cpuinit//g" {} \;
 }
+
 finder() {
 find . -type f | parallel grep -rl '__devinit\|__devinitdata\|__devinitconst\|__devexit\|__devexitdata\|__devexitconst\|__devexit_p' {} \; | sort -d >> ~/machinex/devinit_remains.txt
 }
