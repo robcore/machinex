@@ -235,7 +235,7 @@ qup_i2c_interrupt(int irq, void *devid)
 	uint32_t op_flgs = readl_relaxed(dev->base + QUP_OPERATIONAL);
 	int err = 0;
 
-#ifdef SECURE_INPUT    
+#ifdef SECURE_INPUT
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -369,7 +369,7 @@ qup_config_core_on_en(struct qup_i2c_dev *dev)
 static void
 qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state)
 {
-#ifdef SECURE_INPUT    
+#ifdef SECURE_INPUT
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return;
 	}
@@ -823,7 +823,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	long timeout;
 	int err;
 
-#ifdef SECURE_INPUT    
+#ifdef SECURE_INPUT
 	if (is_secure_world && dev->adapter.nr == 3) {
 		return 0;
 	}
@@ -1468,7 +1468,7 @@ get_res_failed:
 	return ret;
 }
 
-static int __devexit
+static int
 qup_i2c_remove(struct platform_device *pdev)
 {
 	struct qup_i2c_dev	*dev = platform_get_drvdata(pdev);
@@ -1607,7 +1607,7 @@ static struct of_device_id i2c_qup_dt_match[] = {
 
 static struct platform_driver qup_i2c_driver = {
 	.probe		= qup_i2c_probe,
-	.remove		= __devexit_p(qup_i2c_remove),
+	.remove		= qup_i2c_remove,
 	.driver		= {
 		.name	= "qup_i2c",
 		.owner	= THIS_MODULE,

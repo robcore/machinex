@@ -575,7 +575,7 @@ static void pata_icside_shutdown(struct expansion_card *ec)
 	}
 }
 
-static void __devexit pata_icside_remove(struct expansion_card *ec)
+static void pata_icside_remove(struct expansion_card *ec)
 {
 	struct ata_host *host = ecard_get_drvdata(ec);
 	struct pata_icside_state *state = host->private_data;
@@ -602,7 +602,7 @@ static const struct ecard_id pata_icside_ids[] = {
 
 static struct ecard_driver pata_icside_driver = {
 	.probe		= pata_icside_probe,
-	.remove 	= __devexit_p(pata_icside_remove),
+	.remove 	= pata_icside_remove,
 	.shutdown	= pata_icside_shutdown,
 	.id_table	= pata_icside_ids,
 	.drv = {

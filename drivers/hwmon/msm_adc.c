@@ -1508,7 +1508,7 @@ static int __devexit msm_adc_remove(struct platform_device *pdev)
 
 static struct platform_driver msm_adc_driver = {
 	.probe = msm_adc_probe,
-	.remove = __devexit_p(msm_adc_remove),
+	.remove = msm_adc_remove,
 	.driver = {
 		.name = MSM_ADC_DRIVER_NAME,
 		.owner = THIS_MODULE,

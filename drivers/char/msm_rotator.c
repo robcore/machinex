@@ -3046,7 +3046,7 @@ error_imem_clk:
 	return rc;
 }
 
-static int __devexit msm_rotator_remove(struct platform_device *plat_dev)
+static int msm_rotator_remove(struct platform_device *plat_dev)
 {
 	int i;
 
@@ -3129,7 +3129,7 @@ static int msm_rotator_resume(struct platform_device *dev)
 
 static struct platform_driver msm_rotator_platform_driver = {
 	.probe = msm_rotator_probe,
-	.remove = __devexit_p(msm_rotator_remove),
+	.remove = msm_rotator_remove,
 #ifdef CONFIG_PM
 	.suspend = msm_rotator_suspend,
 	.resume = msm_rotator_resume,

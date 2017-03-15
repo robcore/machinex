@@ -224,7 +224,7 @@ err_exit:
 	return error;
 }
 
-static int __devexit msm_rng_remove(struct platform_device *pdev)
+static int msm_rng_remove(struct platform_device *pdev)
 {
 	struct msm_rng_device *msm_rng_dev = platform_get_drvdata(pdev);
 
@@ -244,7 +244,7 @@ static struct of_device_id qrng_match[] = {
 
 static struct platform_driver rng_driver = {
 	.probe      = msm_rng_probe,
-	.remove     = __devexit_p(msm_rng_remove),
+	.remove     = msm_rng_remove,
 	.driver     = {
 		.name   = DRIVER_NAME,
 		.owner  = THIS_MODULE,

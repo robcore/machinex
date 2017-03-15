@@ -477,7 +477,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit sec_fuelgauge_remove(
+static int sec_fuelgauge_remove(
 						struct i2c_client *client)
 {
 	struct sec_fuelgauge_info *fuelgauge = i2c_get_clientdata(client);
@@ -541,7 +541,7 @@ static struct i2c_driver sec_fuelgauge_driver = {
 #endif
 		   },
 	.probe	= sec_fuelgauge_probe,
-	.remove	= __devexit_p(sec_fuelgauge_remove),
+	.remove	= sec_fuelgauge_remove,
 	.shutdown   = sec_fuelgauge_shutdown,
 	.id_table   = sec_fuelgauge_id,
 };

@@ -99,7 +99,7 @@ static int __devinit bt_power_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit bt_power_remove(struct platform_device *pdev)
+static int bt_power_remove(struct platform_device *pdev)
 {
 	dev_dbg(&pdev->dev, "%s\n", __func__);
 
@@ -110,7 +110,7 @@ static int __devexit bt_power_remove(struct platform_device *pdev)
 
 static struct platform_driver bt_power_driver = {
 	.probe = bt_power_probe,
-	.remove = __devexit_p(bt_power_remove),
+	.remove = bt_power_remove,
 	.driver = {
 		.name = "bt_power",
 		.owner = THIS_MODULE,

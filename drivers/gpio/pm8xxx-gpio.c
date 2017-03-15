@@ -462,7 +462,7 @@ free_chip:
 	return ret;
 }
 
-static int __devexit pm_gpio_remove(struct platform_device *pdev)
+static int pm_gpio_remove(struct platform_device *pdev)
 {
 	struct pm_gpio_chip *pm_gpio_chip
 		= platform_get_drvdata(pdev);
@@ -559,7 +559,7 @@ EXPORT_SYMBOL(pm8xxx_gpio_config);
 
 static struct platform_driver pm_gpio_driver = {
 	.probe		= pm_gpio_probe,
-	.remove		= __devexit_p(pm_gpio_remove),
+	.remove		= pm_gpio_remove,
 	.driver		= {
 		.name	= PM8XXX_GPIO_DEV_NAME,
 		.owner	= THIS_MODULE,

@@ -272,7 +272,7 @@ static struct pil_reset_ops pil_riva_ops_trusted = {
 	.proxy_unvote = pil_riva_remove_proxy_vote,
 };
 
-static int __devinit pil_riva_probe(struct platform_device *pdev)
+static int pil_riva_probe(struct platform_device *pdev)
 {
 	struct riva_data *drv;
 	struct resource *res;
@@ -357,7 +357,7 @@ exit_drv_kfree:
 	return ret;
 }
 
-static int __devexit pil_riva_remove(struct platform_device *pdev)
+static int pil_riva_remove(struct platform_device *pdev)
 {
 	struct riva_data *drv = platform_get_drvdata(pdev);
 	msm_pil_unregister(drv->pil);
@@ -366,7 +366,7 @@ static int __devexit pil_riva_remove(struct platform_device *pdev)
 
 static struct platform_driver pil_riva_driver = {
 	.probe = pil_riva_probe,
-	.remove = __devexit_p(pil_riva_remove),
+	.remove = pil_riva_remove,
 	.driver = {
 		.name = "pil_riva",
 		.owner = THIS_MODULE,

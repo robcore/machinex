@@ -933,7 +933,7 @@ out:
 	return ret;
 }
 
-static int __devexit swim_remove(struct platform_device *dev)
+static int swim_remove(struct platform_device *dev)
 {
 	struct swim_priv *swd = platform_get_drvdata(dev);
 	int drive;
@@ -968,7 +968,7 @@ static int __devexit swim_remove(struct platform_device *dev)
 
 static struct platform_driver swim_driver = {
 	.probe  = swim_probe,
-	.remove = __devexit_p(swim_remove),
+	.remove = swim_remove,
 	.driver   = {
 		.name	= CARDNAME,
 		.owner	= THIS_MODULE,

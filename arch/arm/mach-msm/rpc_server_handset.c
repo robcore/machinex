@@ -580,7 +580,7 @@ static int __devinit hs_rpc_init(void)
 	return rc;
 }
 
-static void __devexit hs_rpc_deinit(void)
+static void hs_rpc_deinit(void)
 {
 	if (rpc_client)
 		msm_rpc_unregister_client(rpc_client);
@@ -671,7 +671,7 @@ err_switch_dev_register:
 	return rc;
 }
 
-static int __devexit hs_remove(struct platform_device *pdev)
+static int hs_remove(struct platform_device *pdev)
 {
 	struct msm_handset *hs = platform_get_drvdata(pdev);
 
@@ -684,7 +684,7 @@ static int __devexit hs_remove(struct platform_device *pdev)
 
 static struct platform_driver hs_driver = {
 	.probe		= hs_probe,
-	.remove		= __devexit_p(hs_remove),
+	.remove		= hs_remove,
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,

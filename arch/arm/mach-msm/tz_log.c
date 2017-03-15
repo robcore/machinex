@@ -528,7 +528,7 @@ err:
 }
 
 
-static int __devexit tz_log_remove(struct platform_device *pdev)
+static int tz_log_remove(struct platform_device *pdev)
 {
 	kzfree(tzdbg.diag_buf);
 	tzdbgfs_exit(pdev);
@@ -544,7 +544,7 @@ static struct of_device_id tzlog_match[] = {
 
 static struct platform_driver tz_log_driver = {
 	.probe		= tz_log_probe,
-	.remove		= __devexit_p(tz_log_remove),
+	.remove		= tz_log_remove,
 	.driver		= {
 		.name = "tz_log",
 		.owner = THIS_MODULE,

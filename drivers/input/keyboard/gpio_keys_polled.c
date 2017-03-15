@@ -206,7 +206,7 @@ err_free_bdev:
 	return error;
 }
 
-static int __devexit gpio_keys_polled_remove(struct platform_device *pdev)
+static int gpio_keys_polled_remove(struct platform_device *pdev)
 {
 	struct gpio_keys_polled_dev *bdev = platform_get_drvdata(pdev);
 	struct gpio_keys_platform_data *pdata = bdev->pdata;
@@ -227,7 +227,7 @@ static int __devexit gpio_keys_polled_remove(struct platform_device *pdev)
 
 static struct platform_driver gpio_keys_polled_driver = {
 	.probe	= gpio_keys_polled_probe,
-	.remove	= __devexit_p(gpio_keys_polled_remove),
+	.remove	= gpio_keys_polled_remove,
 	.driver	= {
 		.name	= DRV_NAME,
 		.owner	= THIS_MODULE,

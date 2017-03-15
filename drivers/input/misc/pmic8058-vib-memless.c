@@ -242,7 +242,7 @@ err_read_vib:
 	return rc;
 }
 
-static int __devexit pmic8058_vib_remove(struct platform_device *pdev)
+static int pmic8058_vib_remove(struct platform_device *pdev)
 {
 	struct pmic8058_vib *vib = platform_get_drvdata(pdev);
 
@@ -258,7 +258,7 @@ static int __devexit pmic8058_vib_remove(struct platform_device *pdev)
 
 static struct platform_driver pmic8058_vib_driver = {
 	.probe		= pmic8058_vib_probe,
-	.remove		= __devexit_p(pmic8058_vib_remove),
+	.remove		= pmic8058_vib_remove,
 	.driver		= {
 		.name	= "pm8058-vib",
 		.owner	= THIS_MODULE,

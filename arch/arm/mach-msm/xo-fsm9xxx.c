@@ -249,7 +249,7 @@ err:
 	return ret;
 }
 
-static int __devexit fsm_xo_remove(struct platform_device *pdev)
+static int fsm_xo_remove(struct platform_device *pdev)
 {
 	if (fsm_xo_priv && fsm_xo_priv->a0)
 		regulator_put(fsm_xo_priv->a0);

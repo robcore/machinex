@@ -1147,7 +1147,7 @@ err_free_mem:
 	return error;
 }
 
-static int __devexit barcode_emul_remove(struct i2c_client *client)
+static int barcode_emul_remove(struct i2c_client *client)
 {
 	struct barcode_emul_data *data = i2c_get_clientdata(client);
 
@@ -1168,7 +1168,7 @@ static struct i2c_driver ice4_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = barcode_emul_probe,
-	.remove = __devexit_p(barcode_emul_remove),
+	.remove = barcode_emul_remove,
 	.id_table = ice4_id,
 };
 

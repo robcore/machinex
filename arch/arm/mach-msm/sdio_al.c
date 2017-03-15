@@ -3395,7 +3395,7 @@ static int __devinit msm_sdio_al_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit msm_sdio_al_remove(struct platform_device *pdev)
+static int msm_sdio_al_remove(struct platform_device *pdev)
 {
 	return 0;
 }

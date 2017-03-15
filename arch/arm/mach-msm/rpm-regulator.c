@@ -1873,7 +1873,7 @@ remove_regulators:
 	return rc;
 }
 
-static int __devexit rpm_vreg_remove(struct platform_device *pdev)
+static int rpm_vreg_remove(struct platform_device *pdev)
 {
 	struct rpm_regulator_platform_data *platform_data;
 	int i, id;
@@ -1900,7 +1900,7 @@ static int __devexit rpm_vreg_remove(struct platform_device *pdev)
 
 static struct platform_driver rpm_vreg_driver = {
 	.probe = rpm_vreg_probe,
-	.remove = __devexit_p(rpm_vreg_remove),
+	.remove = rpm_vreg_remove,
 	.driver = {
 		.name = RPM_REGULATOR_DEV_NAME,
 		.owner = THIS_MODULE,

@@ -199,7 +199,7 @@ err0:
 	return rc;
 }
 
-static int __devexit ahci_remove(struct platform_device *pdev)
+static int ahci_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct ahci_platform_data *pdata = dev_get_platdata(dev);
@@ -286,7 +286,7 @@ static const struct of_device_id ahci_of_match[] = {
 MODULE_DEVICE_TABLE(of, ahci_of_match);
 
 static struct platform_driver ahci_driver = {
-	.remove = __devexit_p(ahci_remove),
+	.remove = ahci_remove,
 	.driver = {
 		.name = "ahci",
 		.owner = THIS_MODULE,

@@ -345,7 +345,7 @@ check_fail:
 	return rc;
 }
 
-static int __devexit proccomm_vreg_remove(struct platform_device *pdev)
+static int proccomm_vreg_remove(struct platform_device *pdev)
 {
 	struct proccomm_regulator_platform_data *pdata;
 	struct regulator_dev **rdevs;
@@ -364,7 +364,7 @@ static int __devexit proccomm_vreg_remove(struct platform_device *pdev)
 
 static struct platform_driver proccomm_vreg_driver = {
 	.probe	= proccomm_vreg_probe,
-	.remove = __devexit_p(proccomm_vreg_remove),
+	.remove = proccomm_vreg_remove,
 	.driver = {
 		.name	= PROCCOMM_REGULATOR_DEV_NAME,
 		.owner	= THIS_MODULE,

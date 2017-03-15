@@ -421,7 +421,7 @@ err_put:
 	return ret;
 }
 
-static int __devexit pata_at91_remove(struct platform_device *pdev)
+static int pata_at91_remove(struct platform_device *pdev)
 {
 	struct ata_host *host = dev_get_drvdata(&pdev->dev);
 	struct at91_ide_info *info;
@@ -442,7 +442,7 @@ static int __devexit pata_at91_remove(struct platform_device *pdev)
 
 static struct platform_driver pata_at91_driver = {
 	.probe		= pata_at91_probe,
-	.remove		= __devexit_p(pata_at91_remove),
+	.remove		= pata_at91_remove,
 	.driver		= {
 		.name		= DRV_NAME,
 		.owner		= THIS_MODULE,

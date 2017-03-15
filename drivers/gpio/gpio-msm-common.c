@@ -514,7 +514,7 @@ static struct of_device_id msm_gpio_of_match[] __devinitdata = {
 };
 #endif
 
-static int __devexit msm_gpio_remove(struct platform_device *pdev)
+static int msm_gpio_remove(struct platform_device *pdev)
 {
 	int ret;
 
@@ -528,7 +528,7 @@ static int __devexit msm_gpio_remove(struct platform_device *pdev)
 
 static struct platform_driver msm_gpio_driver = {
 	.probe = msm_gpio_probe,
-	.remove = __devexit_p(msm_gpio_remove),
+	.remove = msm_gpio_remove,
 	.driver = {
 		.name = "msmgpio",
 		.owner = THIS_MODULE,

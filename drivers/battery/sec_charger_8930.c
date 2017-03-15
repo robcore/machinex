@@ -420,7 +420,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit sec_charger_remove(struct platform_device *pdev)
+static int sec_charger_remove(struct platform_device *pdev)
 {
 	return 0;
 }
@@ -462,7 +462,7 @@ static struct platform_driver sec_charger_driver = {
 		   .shutdown = sec_charger_shutdown,
 		   },
 	.probe = sec_charger_probe,
-	.remove = __devexit_p(sec_charger_remove),
+	.remove = sec_charger_remove,
 };
 
 static int __init sec_charger_init(void)
@@ -567,7 +567,7 @@ err_free:
 	return ret;
 }
 
-static int __devexit sec_charger_remove(
+static int sec_charger_remove(
 						struct i2c_client *client)
 {
 	return 0;
@@ -613,7 +613,7 @@ static struct i2c_driver sec_charger_driver = {
 		.name	= "sec-charger",
 	},
 	.probe	= sec_charger_probe,
-	.remove	= __devexit_p(sec_charger_remove),
+	.remove	= sec_charger_remove,
 	.suspend	= sec_charger_suspend,
 	.resume		= sec_charger_resume,
 	.shutdown	= sec_charger_shutdown,

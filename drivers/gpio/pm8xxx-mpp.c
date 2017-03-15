@@ -379,7 +379,7 @@ free_mpp_chip:
 	return rc;
 }
 
-static int __devexit pm8xxx_mpp_remove(struct platform_device *pdev)
+static int pm8xxx_mpp_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_mpp_chip *mpp_chip = platform_get_drvdata(pdev);
 
@@ -397,7 +397,7 @@ static int __devexit pm8xxx_mpp_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_mpp_driver = {
 	.probe		= pm8xxx_mpp_probe,
-	.remove		= __devexit_p(pm8xxx_mpp_remove),
+	.remove		= pm8xxx_mpp_remove,
 	.driver		= {
 		.name	= PM8XXX_MPP_DEV_NAME,
 		.owner	= THIS_MODULE,

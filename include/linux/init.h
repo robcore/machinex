@@ -91,15 +91,6 @@
 
 #define __exit          __section(.exit.text) __exitused __cold notrace
 
-/* Used for HOTPLUG, but that is always enabled now, so just make them noops */
-#define __devinit
-#define __devinitdata
-#define __devinitconst
-#define __devexit
-#define __devexitdata
-#define __devexitconst
-#define __devexit_p(x) x
-
 /* temporary, until all users are removed */
 #define __cpuinit
 #define __cpuinitdata

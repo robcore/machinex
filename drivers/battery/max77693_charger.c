@@ -1539,7 +1539,7 @@ err_free:
 
 }
 
-static int __devexit max77693_charger_remove(struct platform_device *pdev)
+static int max77693_charger_remove(struct platform_device *pdev)
 {
 	struct max77693_charger_data *charger =
 				platform_get_drvdata(pdev);
@@ -1600,7 +1600,7 @@ static struct platform_driver max77693_charger_driver = {
 		.shutdown = max77693_charger_shutdown,
 	},
 	.probe = max77693_charger_probe,
-	.remove = __devexit_p(max77693_charger_remove),
+	.remove = max77693_charger_remove,
 };
 
 static int __init max77693_charger_init(void)

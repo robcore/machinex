@@ -905,7 +905,7 @@ free_clk:
 	return ret;
 }
 
-static int __devexit arasan_cf_remove(struct platform_device *pdev)
+static int arasan_cf_remove(struct platform_device *pdev)
 {
 	struct ata_host *host = dev_get_drvdata(&pdev->dev);
 	struct arasan_cf_dev *acdev = host->ports[0]->private_data;
@@ -949,7 +949,7 @@ static SIMPLE_DEV_PM_OPS(arasan_cf_pm_ops, arasan_cf_suspend, arasan_cf_resume);
 
 static struct platform_driver arasan_cf_driver = {
 	.probe		= arasan_cf_probe,
-	.remove		= __devexit_p(arasan_cf_remove),
+	.remove		= arasan_cf_remove,
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,

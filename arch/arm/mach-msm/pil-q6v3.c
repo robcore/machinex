@@ -198,7 +198,7 @@ static struct pil_reset_ops pil_q6v3_ops_trusted = {
 	.proxy_unvote = pil_q6v3_remove_proxy_votes,
 };
 
-static int __devinit pil_q6v3_driver_probe(struct platform_device *pdev)
+static int pil_q6v3_driver_probe(struct platform_device *pdev)
 {
 	struct q6v3_data *drv;
 	struct resource *res;
@@ -245,7 +245,7 @@ static int __devinit pil_q6v3_driver_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pil_q6v3_driver_exit(struct platform_device *pdev)
+static int pil_q6v3_driver_exit(struct platform_device *pdev)
 {
 	struct q6v3_data *drv = platform_get_drvdata(pdev);
 	msm_pil_unregister(drv->pil);
@@ -254,7 +254,7 @@ static int __devexit pil_q6v3_driver_exit(struct platform_device *pdev)
 
 static struct platform_driver pil_q6v3_driver = {
 	.probe = pil_q6v3_driver_probe,
-	.remove = __devexit_p(pil_q6v3_driver_exit),
+	.remove = pil_q6v3_driver_exit,
 	.driver = {
 		.name = "pil_qdsp6v3",
 		.owner = THIS_MODULE,

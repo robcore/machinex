@@ -147,7 +147,7 @@ static struct pil_reset_ops pil_lpass_ops_trusted = {
 	.shutdown = pil_lpass_shutdown_trusted,
 };
 
-static int __devinit pil_lpass_driver_probe(struct platform_device *pdev)
+static int pil_lpass_driver_probe(struct platform_device *pdev)
 {
 	struct q6v5_data *drv;
 	struct pil_desc *desc;
@@ -195,7 +195,7 @@ static int __devinit pil_lpass_driver_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pil_lpass_driver_exit(struct platform_device *pdev)
+static int pil_lpass_driver_exit(struct platform_device *pdev)
 {
 	struct q6v5_data *drv = platform_get_drvdata(pdev);
 	msm_pil_unregister(drv->pil);
@@ -209,7 +209,7 @@ static struct of_device_id lpass_match_table[] = {
 
 static struct platform_driver pil_lpass_driver = {
 	.probe = pil_lpass_driver_probe,
-	.remove = __devexit_p(pil_lpass_driver_exit),
+	.remove = pil_lpass_driver_exit,
 	.driver = {
 		.name = "pil-q6v5-lpass",
 		.of_match_table = lpass_match_table,

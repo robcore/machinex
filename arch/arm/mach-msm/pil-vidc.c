@@ -63,7 +63,7 @@ static struct pil_reset_ops pil_vidc_ops = {
 	.shutdown = pil_vidc_shutdown,
 };
 
-static int __devinit pil_vidc_driver_probe(struct platform_device *pdev)
+static int pil_vidc_driver_probe(struct platform_device *pdev)
 {
 	struct pil_desc *desc;
 	struct vidc_data *drv;
@@ -113,7 +113,7 @@ err_desc_kfree:
 	return ret;
 }
 
-static int __devexit pil_vidc_driver_exit(struct platform_device *pdev)
+static int pil_vidc_driver_exit(struct platform_device *pdev)
 {
 	struct vidc_data *drv = platform_get_drvdata(pdev);
 	msm_pil_unregister(drv->pil);
@@ -122,7 +122,7 @@ static int __devexit pil_vidc_driver_exit(struct platform_device *pdev)
 
 static struct platform_driver pil_vidc_driver = {
 	.probe = pil_vidc_driver_probe,
-	.remove = __devexit_p(pil_vidc_driver_exit),
+	.remove = pil_vidc_driver_exit,
 	.driver = {
 		.name = "pil_vidc",
 		.owner = THIS_MODULE,

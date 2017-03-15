@@ -1661,7 +1661,7 @@ static int __devinit nvme_probe(struct pci_dev *pdev,
 	return result;
 }
 
-static void __devexit nvme_remove(struct pci_dev *pdev)
+static void nvme_remove(struct pci_dev *pdev)
 {
 	struct nvme_dev *dev = pci_get_drvdata(pdev);
 	nvme_dev_remove(dev);
@@ -1706,7 +1706,7 @@ static struct pci_driver nvme_driver = {
 	.name		= "nvme",
 	.id_table	= nvme_id_table,
 	.probe		= nvme_probe,
-	.remove		= __devexit_p(nvme_remove),
+	.remove		= nvme_remove,
 	.suspend	= nvme_suspend,
 	.resume		= nvme_resume,
 	.err_handler	= &nvme_err_handler,

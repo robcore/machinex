@@ -498,7 +498,7 @@ int pm8921_enable_batt_therm(u8 en)
 	}
 
 	return rc;
-} 
+}
 
 static void pm8xxx_adc_btm_warm_scheduler_fn(struct work_struct *work)
 {
@@ -1206,7 +1206,7 @@ static const struct dev_pm_ops pm8xxx_adc_dev_pm_ops = {
 #define PM8XXX_ADC_DEV_PM_OPS NULL
 #endif
 
-static int __devexit pm8xxx_adc_teardown(struct platform_device *pdev)
+static int pm8xxx_adc_teardown(struct platform_device *pdev)
 {
 	struct pm8xxx_adc *adc_pmic = pmic_adc;
 	int i;
@@ -1349,7 +1349,7 @@ static int __devinit pm8xxx_adc_probe(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_adc_driver = {
 	.probe	= pm8xxx_adc_probe,
-	.remove	= __devexit_p(pm8xxx_adc_teardown),
+	.remove	= pm8xxx_adc_teardown,
 	.driver	= {
 		.name	= PM8XXX_ADC_DEV_NAME,
 		.owner	= THIS_MODULE,

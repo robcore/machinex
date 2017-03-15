@@ -242,7 +242,7 @@ err_free_mem:
 	return error;
 }
 
-static int __devexit pm8xxx_vib_remove(struct platform_device *pdev)
+static int pm8xxx_vib_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_vib *vib = platform_get_drvdata(pdev);
 
@@ -270,7 +270,7 @@ static SIMPLE_DEV_PM_OPS(pm8xxx_vib_pm_ops, pm8xxx_vib_suspend, NULL);
 
 static struct platform_driver pm8xxx_vib_driver = {
 	.probe		= pm8xxx_vib_probe,
-	.remove		= __devexit_p(pm8xxx_vib_remove),
+	.remove		= pm8xxx_vib_remove,
 	.driver		= {
 		.name	= "pm8xxx-vib",
 		.owner	= THIS_MODULE,
