@@ -116,9 +116,8 @@
 #define __INITRODATA	.section	".init.rodata","a",%progbits
 #define __FINITDATA	.previous
 
+/* temporary, until all users are removed */
 #define __CPUINIT
-#define __CPUINITDATA
-#define __CPUINITRODATA
 
 #define __MEMINIT        .section	".meminit.text", "ax"
 #define __MEMINITDATA    .section	".meminit.data", "aw"
@@ -152,6 +151,7 @@ extern unsigned int reset_devices;
 void setup_arch(char **);
 void prepare_namespace(void);
 void __init load_default_modules(void);
+int __init init_rootfs(void);
 
 extern void (*late_time_init)(void);
 
@@ -163,7 +163,24 @@ extern bool initcall_debug;
 
 #ifndef __ASSEMBLY__
 
-/* initcalls are now grouped by functionality into separate
+#ifdef CONFIG_LTO
+/* Work around a LTO gcc problem: when there is no reference to a variable
+ * in a module it will be moved to the end of the program. This causes
+ * reordering of initcalls which the kernel does not like.
+ * Add a dummy reference function to avoid this. The function is
+ * deleted by the linker.
+ */
+#define LTO_REFERENCE_INITCALL(x) \
+	; /* yes this is needed */			\
+	static __used __exit void *reference_##x(void)	\
+	{						\
+		return &x;				\
+	}
+#else
+#define LTO_REFERENCE_INITCALL(x)
+#endif
+
+/* initcalls are now grouped by functionality into separate 
  * subsections. Ordering inside the subsections is determined
  * by link order.
  * For backwards compatibility, initcall() puts the call in
@@ -175,7 +192,8 @@ extern bool initcall_debug;
 
 #define __define_initcall(fn, id) \
 	static initcall_t __initcall_##fn##id __used \
-	__attribute__((__section__(".initcall" #id ".init"))) = fn
+	__attribute__((__section__(".initcall" #id ".init"))) = fn; \
+	LTO_REFERENCE_INITCALL(__initcall_##fn##id)
 
 /*
  * Early initcalls run before initializing SMP.
@@ -288,13 +306,21 @@ void __init parse_early_options(char *cmdline);
  */
 #define early_initcall(fn)		module_init(fn)
 #define core_initcall(fn)		module_init(fn)
+#define core_initcall_sync(fn)		module_init(fn)
 #define postcore_initcall(fn)		module_init(fn)
+#define postcore_initcall_sync(fn)	module_init(fn)
 #define arch_initcall(fn)		module_init(fn)
 #define subsys_initcall(fn)		module_init(fn)
+#define subsys_initcall_sync(fn)	module_init(fn)
 #define fs_initcall(fn)			module_init(fn)
+#define fs_initcall_sync(fn)		module_init(fn)
+#define rootfs_initcall(fn)		module_init(fn)
 #define device_initcall(fn)		module_init(fn)
+#define device_initcall_sync(fn)	module_init(fn)
 #define late_initcall(fn)		module_init(fn)
+#define late_initcall_sync(fn)		module_init(fn)
 
+#define console_initcall(fn)		module_init(fn)
 #define security_initcall(fn)		module_init(fn)
 
 /* Each module must use one module_init(). */
