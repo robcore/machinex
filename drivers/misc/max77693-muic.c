@@ -795,16 +795,19 @@ static int max77693_muic_set_usb_path(struct max77693_muic_info *info, int path)
 	return 0;
 }
 
-int max77693_muic_get_charging_type(void)
-{
-	if (gInfo)
-		return gInfo->cable_type;
-	else
-		return CABLE_TYPE_NONE_MUIC;
-}
-
 static bool enforce_disable;
 module_param_named(charger_killswitch, enforce_disable, bool, 0644);
+
+int max77693_muic_get_charging_type(void)
+{
+	if (!enforce_disable) {
+		if (gInfo)
+			return gInfo->cable_type;
+		else
+			return CABLE_TYPE_NONE_MUIC;
+	} else
+		return CABLE_TYPE_NONE_MUIC;
+}
 
 static int max77693_muic_set_charging_type(struct max77693_muic_info *info,
 					   bool force_disable)
