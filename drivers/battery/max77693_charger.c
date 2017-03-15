@@ -839,9 +839,9 @@ static int sec_chg_set_property(struct power_supply *psy,
 					/* We are in custom current Fast Charge mode for WIRELESS */
 					charger->charging_current_max = wireless_charge_level;
 					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
-				else
+				} else
 #endif
-				set_charging_current_max = wpc_charging_current;
+					set_charging_current_max = wpc_charging_current;
 			} else
 				set_charging_current_max =
 					charger->charging_current_max;
