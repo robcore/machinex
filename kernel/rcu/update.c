@@ -128,7 +128,7 @@ struct lockdep_map rcu_sched_lock_map =
 	STATIC_LOCKDEP_MAP_INIT("rcu_read_lock_sched", &rcu_sched_lock_key);
 EXPORT_SYMBOL_GPL(rcu_sched_lock_map);
 
-int notrace debug_lockdep_rcu_enabled(void)
+int debug_lockdep_rcu_enabled(void)
 {
 	return rcu_scheduler_active && debug_locks &&
 	       current->lockdep_recursion == 0;
@@ -154,7 +154,7 @@ int rcu_read_lock_bh_held(void)
 {
 	if (!debug_lockdep_rcu_enabled())
 		return 1;
-	if (!rcu_is_watching())
+	if (rcu_is_cpu_idle())
 		return 0;
 	if (!rcu_lockdep_current_cpu_online())
 		return 0;
@@ -218,6 +218,43 @@ static inline void debug_rcu_head_free(struct rcu_head *head)
 }
 
 /*
+ * fixup_init is called when:
+ * - an active object is initialized
+ */
+static int rcuhead_fixup_init(void *addr, enum debug_obj_state state)
+{
+	struct rcu_head *head = addr;
+
+	switch (state) {
+	case ODEBUG_STATE_ACTIVE:
+		/*
+		 * Ensure that queued callbacks are all executed.
+		 * If we detect that we are nested in a RCU read-side critical
+		 * section, we should simply fail, otherwise we would deadlock.
+		 * In !PREEMPT configurations, there is no way to tell if we are
+		 * in a RCU read-side critical section or not, so we never
+		 * attempt any fixup and just print a warning.
+		 */
+#ifndef CONFIG_PREEMPT
+		WARN_ON_ONCE(1);
+		return 0;
+#endif
+		if (rcu_preempt_depth() != 0 || preempt_count() != 0 ||
+		    irqs_disabled()) {
+			WARN_ON_ONCE(1);
+			return 0;
+		}
+		rcu_barrier();
+		rcu_barrier_sched();
+		rcu_barrier_bh();
+		debug_object_init(head, &rcuhead_debug_descr);
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+/*
  * fixup_activate is called when:
  * - an active object is activated
  * - an unknown object is activated (might be a statically initialized object)
@@ -237,8 +274,69 @@ static int rcuhead_fixup_activate(void *addr, enum debug_obj_state state)
 		debug_object_init(head, &rcuhead_debug_descr);
 		debug_object_activate(head, &rcuhead_debug_descr);
 		return 0;
-	default:
+
+	case ODEBUG_STATE_ACTIVE:
+		/*
+		 * Ensure that queued callbacks are all executed.
+		 * If we detect that we are nested in a RCU read-side critical
+		 * section, we should simply fail, otherwise we would deadlock.
+		 * In !PREEMPT configurations, there is no way to tell if we are
+		 * in a RCU read-side critical section or not, so we never
+		 * attempt any fixup and just print a warning.
+		 */
+#ifndef CONFIG_PREEMPT
+		WARN_ON_ONCE(1);
+		return 0;
+#endif
+		if (rcu_preempt_depth() != 0 || preempt_count() != 0 ||
+		    irqs_disabled()) {
+			WARN_ON_ONCE(1);
+			return 0;
+		}
+		rcu_barrier();
+		rcu_barrier_sched();
+		rcu_barrier_bh();
+		debug_object_activate(head, &rcuhead_debug_descr);
 		return 1;
+	default:
+		return 0;
+	}
+}
+
+/*
+ * fixup_free is called when:
+ * - an active object is freed
+ */
+static int rcuhead_fixup_free(void *addr, enum debug_obj_state state)
+{
+	struct rcu_head *head = addr;
+
+	switch (state) {
+	case ODEBUG_STATE_ACTIVE:
+		/*
+		 * Ensure that queued callbacks are all executed.
+		 * If we detect that we are nested in a RCU read-side critical
+		 * section, we should simply fail, otherwise we would deadlock.
+		 * In !PREEMPT configurations, there is no way to tell if we are
+		 * in a RCU read-side critical section or not, so we never
+		 * attempt any fixup and just print a warning.
+		 */
+#ifndef CONFIG_PREEMPT
+		WARN_ON_ONCE(1);
+		return 0;
+#endif
+		if (rcu_preempt_depth() != 0 || preempt_count() != 0 ||
+		    irqs_disabled()) {
+			WARN_ON_ONCE(1);
+			return 0;
+		}
+		rcu_barrier();
+		rcu_barrier_sched();
+		rcu_barrier_bh();
+		debug_object_free(head, &rcuhead_debug_descr);
+		return 1;
+	default:
+		return 0;
 	}
 }
 
@@ -277,13 +375,15 @@ EXPORT_SYMBOL_GPL(destroy_rcu_head_on_stack);
 
 struct debug_obj_descr rcuhead_debug_descr = {
 	.name = "rcu_head",
+	.fixup_init = rcuhead_fixup_init,
 	.fixup_activate = rcuhead_fixup_activate,
+	.fixup_free = rcuhead_fixup_free,
 };
 EXPORT_SYMBOL_GPL(rcuhead_debug_descr);
 #endif /* #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD */
 
 #if defined(CONFIG_TREE_RCU) || defined(CONFIG_TREE_PREEMPT_RCU) || defined(CONFIG_RCU_TRACE)
-void do_trace_rcu_torture_read(const char *rcutorturename, struct rcu_head *rhp,
+void do_trace_rcu_torture_read(char *rcutorturename, struct rcu_head *rhp,
 			       unsigned long secs,
 			       unsigned long c_old, unsigned long c)
 {
@@ -345,3 +445,4 @@ static int __init check_cpu_stall_init(void)
 early_initcall(check_cpu_stall_init);
 
 #endif /* #ifdef CONFIG_RCU_STALL_COMMON */
+

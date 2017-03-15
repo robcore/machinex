@@ -31,7 +31,7 @@
 #define __LINUX_RCUTREE_H
 
 extern void rcu_note_context_switch(int cpu);
-extern int rcu_needs_cpu(int cpu, unsigned long *delta_jiffies);
+extern int rcu_needs_cpu(int cpu);
 extern void rcu_cpu_stall_reset(void);
 
 /*
@@ -90,6 +90,5 @@ extern void exit_rcu(void);
 extern void rcu_scheduler_starting(void);
 extern int rcu_scheduler_active __read_mostly;
 
-extern bool rcu_is_watching(void);
-
 #endif /* __LINUX_RCUTREE_H */
+

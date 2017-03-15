@@ -52,7 +52,7 @@ extern int rcutorture_runnable; /* for sysctl */
 #if defined(CONFIG_TREE_RCU) || defined(CONFIG_TREE_PREEMPT_RCU)
 extern void rcutorture_record_test_transition(void);
 extern void rcutorture_record_progress(unsigned long vernum);
-extern void do_trace_rcu_torture_read(const char *rcutorturename,
+extern void do_trace_rcu_torture_read(char *rcutorturename,
 				      struct rcu_head *rhp,
 				      unsigned long secs,
 				      unsigned long c_old,
@@ -65,7 +65,7 @@ static inline void rcutorture_record_progress(unsigned long vernum)
 {
 }
 #ifdef CONFIG_RCU_TRACE
-extern void do_trace_rcu_torture_read(const char *rcutorturename,
+extern void do_trace_rcu_torture_read(char *rcutorturename,
 				      struct rcu_head *rhp,
 				      unsigned long secs,
 				      unsigned long c_old,
@@ -229,6 +229,8 @@ extern void rcu_irq_exit(void);
 #ifdef CONFIG_RCU_USER_QS
 extern void rcu_user_enter(void);
 extern void rcu_user_exit(void);
+extern void rcu_user_hooks_switch(struct task_struct *prev,
+				  struct task_struct *next);
 #else
 static inline void rcu_user_enter(void) { }
 static inline void rcu_user_exit(void) { }
@@ -260,10 +262,6 @@ static inline void rcu_user_hooks_switch(struct task_struct *prev,
 		do { a; } while (0); \
 		rcu_irq_exit(); \
 	} while (0)
-
-#if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE) || defined(CONFIG_SMP)
-extern bool __rcu_is_watching(void);
-#endif /* #if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE) || defined(CONFIG_SMP) */
 
 /*
  * Infrastructure to implement the synchronize_() primitives in
@@ -300,6 +298,10 @@ static inline void destroy_rcu_head_on_stack(struct rcu_head *head)
 {
 }
 #endif	/* #else !CONFIG_DEBUG_OBJECTS_RCU_HEAD */
+
+#if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_SMP)
+extern int rcu_is_cpu_idle(void);
+#endif /* #if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_SMP) */
 
 #if defined(CONFIG_HOTPLUG_CPU) && defined(CONFIG_PROVE_RCU)
 bool rcu_lockdep_current_cpu_online(void);
@@ -351,7 +353,7 @@ static inline int rcu_read_lock_held(void)
 {
 	if (!debug_lockdep_rcu_enabled())
 		return 1;
-	if (!rcu_is_watching())
+	if (rcu_is_cpu_idle())
 		return 0;
 	if (!rcu_lockdep_current_cpu_online())
 		return 0;
@@ -402,7 +404,7 @@ static inline int rcu_read_lock_sched_held(void)
 
 	if (!debug_lockdep_rcu_enabled())
 		return 1;
-	if (!rcu_is_watching())
+	if (rcu_is_cpu_idle())
 		return 0;
 	if (!rcu_lockdep_current_cpu_online())
 		return 0;
@@ -771,7 +773,7 @@ static inline void rcu_read_lock(void)
 	__rcu_read_lock();
 	__acquire(RCU);
 	rcu_lock_acquire(&rcu_lock_map);
-	rcu_lockdep_assert(rcu_is_watching(),
+	rcu_lockdep_assert(!rcu_is_cpu_idle(),
 			   "rcu_read_lock() used illegally while idle");
 }
 
@@ -792,7 +794,7 @@ static inline void rcu_read_lock(void)
  */
 static inline void rcu_read_unlock(void)
 {
-	rcu_lockdep_assert(rcu_is_watching(),
+	rcu_lockdep_assert(!rcu_is_cpu_idle(),
 			   "rcu_read_unlock() used illegally while idle");
 	rcu_lock_release(&rcu_lock_map);
 	__release(RCU);
@@ -821,7 +823,7 @@ static inline void rcu_read_lock_bh(void)
 	local_bh_disable();
 	__acquire(RCU_BH);
 	rcu_lock_acquire(&rcu_bh_lock_map);
-	rcu_lockdep_assert(rcu_is_watching(),
+	rcu_lockdep_assert(!rcu_is_cpu_idle(),
 			   "rcu_read_lock_bh() used illegally while idle");
 }
 
@@ -832,7 +834,7 @@ static inline void rcu_read_lock_bh(void)
  */
 static inline void rcu_read_unlock_bh(void)
 {
-	rcu_lockdep_assert(rcu_is_watching(),
+	rcu_lockdep_assert(!rcu_is_cpu_idle(),
 			   "rcu_read_unlock_bh() used illegally while idle");
 	rcu_lock_release(&rcu_bh_lock_map);
 	__release(RCU_BH);
@@ -857,7 +859,7 @@ static inline void rcu_read_lock_sched(void)
 	preempt_disable();
 	__acquire(RCU_SCHED);
 	rcu_lock_acquire(&rcu_sched_lock_map);
-	rcu_lockdep_assert(rcu_is_watching(),
+	rcu_lockdep_assert(!rcu_is_cpu_idle(),
 			   "rcu_read_lock_sched() used illegally while idle");
 }
 
@@ -875,7 +877,7 @@ static inline notrace void rcu_read_lock_sched_notrace(void)
  */
 static inline void rcu_read_unlock_sched(void)
 {
-	rcu_lockdep_assert(rcu_is_watching(),
+	rcu_lockdep_assert(!rcu_is_cpu_idle(),
 			   "rcu_read_unlock_sched() used illegally while idle");
 	rcu_lock_release(&rcu_sched_lock_map);
 	__release(RCU_SCHED);
@@ -951,6 +953,14 @@ static inline notrace void rcu_read_unlock_sched_notrace(void)
 	do { \
 		p = (typeof(*v) __force __rcu *)(v); \
 	} while (0)
+
+/**
+ * RCU_POINTER_INITIALIZER() - statically initialize an RCU protected pointer
+ *
+ * GCC-style initialization for an RCU-protected pointer in a structure field.
+ */
+#define RCU_POINTER_INITIALIZER(p, v) \
+		.p = (typeof(*v) __force __rcu *)(v)
 
 /**
  * RCU_POINTER_INITIALIZER() - statically initialize an RCU protected pointer

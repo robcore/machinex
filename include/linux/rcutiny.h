@@ -68,23 +68,14 @@ static inline void kfree_call_rcu(struct rcu_head *head,
 	call_rcu(head, func);
 }
 
+static inline void rcu_preempt_note_context_switch(void)
+{
+}
+
 static inline int rcu_needs_cpu(int cpu, unsigned long *delta_jiffies)
 {
 	*delta_jiffies = ULONG_MAX;
 	return 0;
-}
-
-static inline void rcu_note_context_switch(int cpu)
-{
-	rcu_sched_qs(cpu);
-}
-
-/*
- * Take advantage of the fact that there is only one CPU, which
- * allows us to ignore virtualization-based context switches.
- */
-static inline void rcu_virt_note_context_switch(int cpu)
-{
 }
 
 /*
@@ -131,22 +122,5 @@ static inline void rcu_scheduler_starting(void)
 {
 }
 #endif /* #else #ifdef CONFIG_DEBUG_LOCK_ALLOC */
-
-#if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE)
-
-static inline bool rcu_is_watching(void)
-{
-	return __rcu_is_watching();
-}
-
-#else /* defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE) */
-
-static inline bool rcu_is_watching(void)
-{
-	return true;
-}
-
-
-#endif /* #else defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE) */
 
 #endif /* __LINUX_RCUTINY_H */
