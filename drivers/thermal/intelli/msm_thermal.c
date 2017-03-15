@@ -579,24 +579,22 @@ done_cc_nodes:
 
 int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
-	int ret = 0;
-
 	BUG_ON(!pdata);
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
 
 	enabled = 1;
-	if (num_possible_cpus() > 1)
+	if (num_possible_cpus() > 1) {
 		core_control_enabled = 1;
+		register_cpu_notifier(&msm_thermal_cpu_notifier);
+	}
+
 	intellithermal_wq = alloc_workqueue("intellithermal",
 				WQ_MEM_RECLAIM, 1);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 
-	if (num_possible_cpus() > 1)
-		register_cpu_notifier(&msm_thermal_cpu_notifier);
-
-	return ret;
+	return 0;
 }
 
 int __init msm_thermal_late_init(void)
