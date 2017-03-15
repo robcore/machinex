@@ -19,6 +19,21 @@
  */
 
 /*
+ * INIT_LIST_HEAD_RCU - Initialize a list_head visible to RCU readers
+ * @list: list to be initialized
+ *
+ * You should instead use INIT_LIST_HEAD() for normal initialization and
+ * cleanup tasks, when readers have no access to the list being initialized.
+ * However, if the list being initialized is visible to readers, you
+ * need to keep the compiler from being too mischievous.
+ */
+static inline void INIT_LIST_HEAD_RCU(struct list_head *list)
+{
+	ACCESS_ONCE(list->next) = list;
+	ACCESS_ONCE(list->prev) = list;
+}
+
+/*
  * return the ->next pointer of a list_head in an rcu safe
  * way, we must not access it directly
  */
@@ -30,6 +45,7 @@
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
+#ifndef CONFIG_DEBUG_LIST
 static inline void __list_add_rcu(struct list_head *new,
 		struct list_head *prev, struct list_head *next)
 {
@@ -38,6 +54,10 @@ static inline void __list_add_rcu(struct list_head *new,
 	rcu_assign_pointer(list_next_rcu(prev), new);
 	next->prev = new;
 }
+#else
+extern void __list_add_rcu(struct list_head *new,
+		struct list_head *prev, struct list_head *next);
+#endif
 
 /**
  * list_add_rcu - add a new entry to rcu-protected list
@@ -108,7 +128,7 @@ static inline void list_add_tail_rcu(struct list_head *new,
  */
 static inline void list_del_rcu(struct list_head *entry)
 {
-	__list_del(entry->prev, entry->next);
+	__list_del_entry(entry);
 	entry->prev = LIST_POISON2;
 }
 
@@ -186,9 +206,13 @@ static inline void list_splice_init_rcu(struct list_head *list,
 	if (list_empty(list))
 		return;
 
-	/* "first" and "last" tracking list, so initialize it. */
+	/*
+	 * "first" and "last" tracking list, so initialize it.  RCU readers
+	 * have access to this list, so we must use INIT_LIST_HEAD_RCU()
+	 * instead of INIT_LIST_HEAD().
+	 */
 
-	INIT_LIST_HEAD(list);
+	INIT_LIST_HEAD_RCU(list);
 
 	/*
 	 * At this point, the list body still points to the source list.
@@ -228,18 +252,26 @@ static inline void list_splice_init_rcu(struct list_head *list,
 	})
 
 /**
- * list_first_entry_rcu - get the first element from a list
- * @ptr:        the list head to take the element from.
- * @type:       the type of the struct this is embedded in.
- * @member:     the name of the list_struct within the struct.
+ * Where are list_empty_rcu() and list_first_entry_rcu()?
  *
- * Note, that list is expected to be not empty.
+ * Implementing those functions following their counterparts list_empty() and
+ * list_first_entry() is not advisable because they lead to subtle race
+ * conditions as the following snippet shows:
  *
- * This primitive may safely run concurrently with the _rcu list-mutation
- * primitives such as list_add_rcu() as long as it's guarded by rcu_read_lock().
+ * if (!list_empty_rcu(mylist)) {
+ *	struct foo *bar = list_first_entry_rcu(mylist, struct foo, list_member);
+ *	do_something(bar);
+ * }
+ *
+ * The list may not be empty when list_empty_rcu checks it, but it may be when
+ * list_first_entry_rcu rereads the ->next pointer.
+ *
+ * Rereading the ->next pointer is not a problem for list_empty() and
+ * list_first_entry() because they would be protected by a lock that blocks
+ * writers.
+ *
+ * See list_first_or_null_rcu for an alternative.
  */
-#define list_first_entry_rcu(ptr, type, member) \
-	list_entry_rcu((ptr)->next, type, member)
 
 /**
  * list_first_or_null_rcu - get the first element from a list

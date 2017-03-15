@@ -340,7 +340,7 @@ static struct trace_event_functions ftrace_event_type_funcs_##call = {	\
 
 #undef DECLARE_EVENT_CLASS
 #define DECLARE_EVENT_CLASS(call, proto, args, tstruct, func, print)	\
-static int notrace							\
+static int notrace __init						\
 ftrace_define_fields_##call(struct ftrace_event_call *event_call)	\
 {									\
 	struct ftrace_raw_##call field;					\
@@ -643,13 +643,13 @@ __attribute__((section("_ftrace_events"))) *__event_##call = &event_##call
 #define __get_str(field) (char *)__get_dynamic_array(field)
 
 #undef __perf_addr
-#define __perf_addr(a) __addr = (a)
+#define __perf_addr(a)	(__addr = (a))
 
 #undef __perf_count
-#define __perf_count(c) __count = (c)
+#define __perf_count(c)	(__count = (c))
 
 #undef __perf_task
-#define __perf_task(t) __task = (t)
+#define __perf_task(t)	(__task = (t))
 
 #undef TP_perf_assign
 #define TP_perf_assign(args...) args
