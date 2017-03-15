@@ -180,7 +180,7 @@ static struct regulator_desc vp_reg = {
 	.type = REGULATOR_VOLTAGE,
 };
 
-static int __devinit msm_vp_reg_probe(struct platform_device *pdev)
+static int msm_vp_reg_probe(struct platform_device *pdev)
 {
 	struct msm_vp *vp;
 	int rc;
@@ -206,7 +206,7 @@ error:
 	return rc;
 }
 
-static int __devexit msm_vp_reg_remove(struct platform_device *pdev)
+static int msm_vp_reg_remove(struct platform_device *pdev)
 {
 	struct msm_vp *vp = platform_get_drvdata(pdev);
 
@@ -219,7 +219,7 @@ static int __devexit msm_vp_reg_remove(struct platform_device *pdev)
 
 static struct platform_driver msm_vp_reg_driver = {
 	.probe	= msm_vp_reg_probe,
-	.remove = __devexit_p(msm_vp_reg_remove),
+	.remove = msm_vp_reg_remove,
 	.driver = {
 		.name	= MSM_VP_REGULATOR_DEV_NAME,
 		.owner	= THIS_MODULE,

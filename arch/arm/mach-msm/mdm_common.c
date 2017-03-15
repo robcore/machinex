@@ -1285,7 +1285,7 @@ fatal_err:
 	return ret;
 }
 
-static int __devinit mdm_modem_probe(struct platform_device *pdev)
+static int mdm_modem_probe(struct platform_device *pdev)
 {
 	struct mdm_device *mdev = NULL;
 	int ret = -1;
@@ -1343,7 +1343,7 @@ init_err:
 	return ret;
 }
 
-static int __devexit mdm_modem_remove(struct platform_device *pdev)
+static int mdm_modem_remove(struct platform_device *pdev)
 {
 	int ret;
 	struct mdm_device *mdev = platform_get_drvdata(pdev);
@@ -1381,7 +1381,7 @@ static struct of_device_id mdm_match_table[] = {
 
 static struct platform_driver mdm_modem_driver = {
 	.probe    = mdm_modem_probe,
-	.remove   = __devexit_p(mdm_modem_remove),
+	.remove   = mdm_modem_remove,
 	.shutdown = mdm_modem_shutdown,
 	.driver         = {
 		.name = "mdm2_modem",

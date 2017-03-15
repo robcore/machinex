@@ -179,7 +179,7 @@ static struct of_device_id cache_dump_match_table[] = {
 EXPORT_COMPAT("qcom,cache_dump");
 
 static struct platform_driver msm_cache_dump_driver = {
-	.remove		= __devexit_p(msm_cache_dump_remove),
+	.remove		= msm_cache_dump_remove,
 	.driver         = {
 		.name = "msm_cache_dump",
 		.owner = THIS_MODULE,

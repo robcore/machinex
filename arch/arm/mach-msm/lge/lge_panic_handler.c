@@ -275,14 +275,14 @@ static int __init panic_handler_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit panic_handler_remove(struct platform_device *pdev)
+static int panic_handler_remove(struct platform_device *pdev)
 {
 	return 0;
 }
 
 static struct platform_driver panic_handler_driver __refdata = {
 	.probe = panic_handler_probe,
-	.remove = __devexit_p(panic_handler_remove),
+	.remove = panic_handler_remove,
 	.driver = {
 		.name = PANIC_HANDLER_NAME,
 		.owner = THIS_MODULE,

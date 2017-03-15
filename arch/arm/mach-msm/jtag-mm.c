@@ -529,7 +529,7 @@ static inline bool etm_arch_supported(uint8_t arch)
 	return true;
 }
 
-static void __devinit etm_init_arch_data(void *info)
+static void etm_init_arch_data(void *info)
 {
 	uint32_t etmidr;
 	uint32_t etmccr;
@@ -564,7 +564,7 @@ static void __devinit etm_init_arch_data(void *info)
 	ETM_LOCK(etmdata);
 }
 
-static int __devinit jtag_mm_etm_probe(struct platform_device *pdev,
+static int jtag_mm_etm_probe(struct platform_device *pdev,
 								uint32_t cpu)
 {
 	struct etm_cpu_ctx *etmdata;
@@ -613,7 +613,7 @@ static inline bool dbg_arch_supported(uint8_t arch)
 	return true;
 }
 
-static void __devinit dbg_init_arch_data(void *info)
+static void dbg_init_arch_data(void *info)
 {
 	uint32_t dbgdidr;
 	struct dbg_cpu_ctx *dbgdata = info;
@@ -628,7 +628,7 @@ static void __devinit dbg_init_arch_data(void *info)
 
 
 
-static int __devinit jtag_mm_dbg_probe(struct platform_device *pdev,
+static int jtag_mm_dbg_probe(struct platform_device *pdev,
 								uint32_t cpu)
 {
 	struct dbg_cpu_ctx *dbgdata;
@@ -666,7 +666,7 @@ static int __devinit jtag_mm_dbg_probe(struct platform_device *pdev,
 	return 0;
 }
 
-static int __devinit jtag_mm_probe(struct platform_device *pdev)
+static int jtag_mm_probe(struct platform_device *pdev)
 {
 	int etm_ret, dbg_ret, ret;
 	static uint32_t cpu;
@@ -708,7 +708,7 @@ static int __devinit jtag_mm_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int __devexit jtag_mm_remove(struct platform_device *pdev)
+static int jtag_mm_remove(struct platform_device *pdev)
 {
 	struct clk *clock = platform_get_drvdata(pdev);
 
@@ -723,7 +723,7 @@ static struct of_device_id msm_qdss_mm_match[] = {
 
 static struct platform_driver jtag_mm_driver = {
 	.probe          = jtag_mm_probe,
-	.remove         = __devexit_p(jtag_mm_remove),
+	.remove         = jtag_mm_remove,
 	.driver         = {
 		.name   = "msm-jtag-mm",
 		.owner	= THIS_MODULE,

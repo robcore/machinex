@@ -599,7 +599,7 @@ static void kvreg_hw_init(struct krait_power_vreg *kvreg)
 		BHS_SEG_EN_MASK, BHS_SEG_EN_DEFAULT << BHS_SEG_EN_BIT_POS);
 }
 
-static int __devinit krait_power_probe(struct platform_device *pdev)
+static int krait_power_probe(struct platform_device *pdev)
 {
 	struct krait_power_vreg *kvreg;
 	struct resource *res;
@@ -693,7 +693,7 @@ out:
 	return rc;
 }
 
-static int __devexit krait_power_remove(struct platform_device *pdev)
+static int krait_power_remove(struct platform_device *pdev)
 {
 	struct krait_power_vreg *kvreg = platform_get_drvdata(pdev);
 	struct pmic_gang_vreg *pvreg = kvreg->pvreg;
@@ -714,7 +714,7 @@ static struct of_device_id krait_power_match_table[] = {
 
 static struct platform_driver krait_power_driver = {
 	.probe	= krait_power_probe,
-	.remove	= __devexit_p(krait_power_remove),
+	.remove	= krait_power_remove,
 	.driver	= {
 		.name		= KRAIT_REGULATOR_DRIVER_NAME,
 		.of_match_table	= krait_power_match_table,

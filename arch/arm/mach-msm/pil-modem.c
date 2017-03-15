@@ -232,7 +232,7 @@ static struct pil_reset_ops pil_modem_ops_trusted = {
 	.proxy_unvote = remove_modem_proxy_votes,
 };
 
-static int __devinit pil_modem_driver_probe(struct platform_device *pdev)
+static int pil_modem_driver_probe(struct platform_device *pdev)
 {
 	struct modem_data *drv;
 	struct resource *res;
@@ -279,7 +279,7 @@ static int __devinit pil_modem_driver_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pil_modem_driver_exit(struct platform_device *pdev)
+static int pil_modem_driver_exit(struct platform_device *pdev)
 {
 	struct modem_data *drv = platform_get_drvdata(pdev);
 	msm_pil_unregister(drv->pil);
@@ -288,7 +288,7 @@ static int __devexit pil_modem_driver_exit(struct platform_device *pdev)
 
 static struct platform_driver pil_modem_driver = {
 	.probe = pil_modem_driver_probe,
-	.remove = __devexit_p(pil_modem_driver_exit),
+	.remove = pil_modem_driver_exit,
 	.driver = {
 		.name = "pil_modem",
 		.owner = THIS_MODULE,

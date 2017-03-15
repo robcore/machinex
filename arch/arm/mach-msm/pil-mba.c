@@ -160,7 +160,7 @@ static struct pil_reset_ops pil_mba_ops = {
 	.shutdown = pil_mba_shutdown,
 };
 
-static int __devinit pil_mba_driver_probe(struct platform_device *pdev)
+static int pil_mba_driver_probe(struct platform_device *pdev)
 {
 	struct mba_data *drv;
 	struct resource *res;
@@ -217,7 +217,7 @@ static int __devinit pil_mba_driver_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pil_mba_driver_exit(struct platform_device *pdev)
+static int pil_mba_driver_exit(struct platform_device *pdev)
 {
 	struct mba_data *drv = platform_get_drvdata(pdev);
 	msm_pil_unregister(drv->pil);
@@ -231,7 +231,7 @@ static struct of_device_id mba_match_table[] = {
 
 struct platform_driver pil_mba_driver = {
 	.probe = pil_mba_driver_probe,
-	.remove = __devexit_p(pil_mba_driver_exit),
+	.remove = pil_mba_driver_exit,
 	.driver = {
 		.name = "pil-mba",
 		.of_match_table = mba_match_table,

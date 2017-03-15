@@ -680,7 +680,7 @@ err:
 	return rc;
 }
 
-static int __devexit footswitch_remove(struct platform_device *pdev)
+static int footswitch_remove(struct platform_device *pdev)
 {
 	struct footswitch *fs = &footswitches[pdev->id];
 	struct fs_clk_data *clock;
@@ -694,7 +694,7 @@ static int __devexit footswitch_remove(struct platform_device *pdev)
 
 static struct platform_driver footswitch_driver = {
 	.probe		= footswitch_probe,
-	.remove		= __devexit_p(footswitch_remove),
+	.remove		= footswitch_remove,
 	.driver		= {
 		.name		= "footswitch-8x60",
 		.owner		= THIS_MODULE,

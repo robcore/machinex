@@ -2157,7 +2157,7 @@ err_exit:
 	return ret;
 }
 
-static int __devexit microp_i2c_remove(struct i2c_client *client)
+static int microp_i2c_remove(struct i2c_client *client)
 {
 	struct microp_i2c_client_data *cdata;
 	int i;
@@ -2239,7 +2239,7 @@ static struct i2c_driver microp_i2c_driver = {
 	.probe = microp_i2c_probe,
 	.suspend = microp_i2c_suspend,
 	.resume = microp_i2c_resume,
-	.remove = __devexit_p(microp_i2c_remove),
+	.remove = microp_i2c_remove,
 };
 
 

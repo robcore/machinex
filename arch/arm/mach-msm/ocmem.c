@@ -193,7 +193,7 @@ static struct ocmem_plat_data *parse_static_config(struct platform_device *pdev)
 	return pdata;
 }
 
-int __devinit of_ocmem_parse_regions(struct device *dev,
+int of_ocmem_parse_regions(struct device *dev,
 			struct ocmem_partition **part)
 {
 	const char *name;
@@ -615,7 +615,7 @@ static int ocmem_init_gfx_mpu(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit msm_ocmem_probe(struct platform_device *pdev)
+static int msm_ocmem_probe(struct platform_device *pdev)
 {
 	struct device   *dev = &pdev->dev;
 	struct clk *ocmem_core_clk = NULL;
@@ -694,7 +694,7 @@ static int __devinit msm_ocmem_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit msm_ocmem_remove(struct platform_device *pdev)
+static int msm_ocmem_remove(struct platform_device *pdev)
 {
 	return 0;
 }
@@ -707,7 +707,7 @@ static struct of_device_id msm_ocmem_dt_match[] = {
 
 static struct platform_driver msm_ocmem_driver = {
 	.probe = msm_ocmem_probe,
-	.remove = __devexit_p(msm_ocmem_remove),
+	.remove = msm_ocmem_remove,
 	.driver = {
 		.name = "msm_ocmem",
 		.owner = THIS_MODULE,

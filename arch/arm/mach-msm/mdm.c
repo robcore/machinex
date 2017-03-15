@@ -415,7 +415,7 @@ fatal_err:
 }
 
 
-static int __devexit charm_modem_remove(struct platform_device *pdev)
+static int charm_modem_remove(struct platform_device *pdev)
 {
 	gpio_free(AP2MDM_STATUS);
 	gpio_free(AP2MDM_ERRFATAL);
