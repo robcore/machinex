@@ -348,8 +348,6 @@ ENTRY(cpu_mohawk_set_pte_ext)
 	mcr	p15, 0, r0, c7, c10, 4		@ drain WB
 	ret	lr
 
-	__CPUINIT
-
 	.type	__mohawk_setup, #function
 __mohawk_setup:
 	mov	r0, #0
