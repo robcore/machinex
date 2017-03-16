@@ -498,7 +498,6 @@ void pm_wakeup_clear(void)
 {
 	pm_abort_suspend = false;
 }
-EXPORT_SYMBOL_GPL(pm_wakeup_clear);
 
 /*
  * The functions below use the observation that each wakeup event starts a
