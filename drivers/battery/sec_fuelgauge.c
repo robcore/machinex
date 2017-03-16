@@ -102,14 +102,6 @@ static int sec_fg_get_property(struct power_supply *psy,
 			if (soc_type == SEC_FUELGAUGE_CAPACITY_TYPE_RAW)
 				break;
 
-			/* check whether doing the wake_unlock */
-			if ((val->intval > fuelgauge->pdata->fuel_alert_soc) &&
-				fuelgauge->is_fuel_alerted) {
-				wake_unlock(&fuelgauge->fuel_alert_wake_lock);
-				sec_hal_fg_fuelalert_init(fuelgauge->client,
-					fuelgauge->pdata->fuel_alert_soc);
-			}
-
 			if (fuelgauge->pdata->capacity_calculation_type &
 				(SEC_FUELGAUGE_CAPACITY_TYPE_SCALE |
 				 SEC_FUELGAUGE_CAPACITY_TYPE_DYNAMIC_SCALE))
@@ -125,6 +117,14 @@ static int sec_fg_get_property(struct power_supply *psy,
 
 			/* get only integer part */
 			val->intval /= 10;
+
+			/* check whether doing the wake_unlock */
+			if ((val->intval > fuelgauge->pdata->fuel_alert_soc) &&
+					fuelgauge->is_fuel_alerted) {
+				wake_unlock(&fuelgauge->fuel_alert_wake_lock);
+				sec_hal_fg_fuelalert_init(fuelgauge->client,
+						fuelgauge->pdata->fuel_alert_soc);
+			}
 
 			/* (Only for atomic capacity)
 			 * In initial time, capacity_old is 0.
@@ -248,6 +248,8 @@ static void sec_fg_isr_work(struct work_struct *work)
 	/* process for others */
 	if (fuelgauge->pdata->fuelalert_process != NULL)
 		fuelgauge->pdata->fuelalert_process(fuelgauge->is_fuel_alerted);
+
+		wake_unlock(&fuelgauge->fuel_alert_wake_lock);
 }
 
 static irqreturn_t sec_fg_irq_thread(int irq, void *irq_data)
@@ -277,9 +279,11 @@ static irqreturn_t sec_fg_irq_thread(int irq, void *irq_data)
 		else
 			wake_unlock(&fuelgauge->fuel_alert_wake_lock);
 
-		schedule_delayed_work(&fuelgauge->isr_work, 0);
 
 		fuelgauge->is_fuel_alerted = fuel_alerted;
+
+		schedule_delayed_work(&fuelgauge->isr_work, 0);
+
 	}
 
 	return IRQ_HANDLED;
@@ -548,4 +552,4 @@ module_exit(sec_fuelgauge_exit);
 
 MODULE_DESCRIPTION("Samsung Fuel Gauge Driver");
 MODULE_AUTHOR("Samsung Electronics");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL V2");

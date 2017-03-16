@@ -388,14 +388,11 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 
 	switch (battery->pdata->battery_check_type) {
 	case SEC_BATTERY_CHECK_ADC:
-		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
-			ret = battery->present;
-		else
-			ret = sec_bat_check_vf_adc(battery);
+		ret = sec_bat_check_vf_adc(battery);
 		break;
-	case SEC_BATTERY_CHECK_INT:
 	case SEC_BATTERY_CHECK_CALLBACK:
-		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
+	case SEC_BATTERY_CHECK_INT:
+		if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
 			ret = battery->present;
 		else
 			ret = battery->pdata->check_battery_callback();
@@ -478,8 +475,8 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 					POWER_SUPPLY_STATUS_NOT_CHARGING;
 				sec_bat_set_charge(battery, false);
 			}
-			if (battery->pdata->check_battery_result_callback)
-				battery->pdata->check_battery_result_callback();
+
+			battery->pdata->check_battery_result_callback();
 			return false;
 		}
 	} else
@@ -551,7 +548,6 @@ static bool sec_bat_ovp_uvlo_result(
 			battery->status =
 				POWER_SUPPLY_STATUS_CHARGING;
 			battery->charging_mode = SEC_BATTERY_CHARGING_1ST;
-			sec_bat_set_charge(battery, true);
 			break;
 		case POWER_SUPPLY_HEALTH_OVERVOLTAGE:
 		case POWER_SUPPLY_HEALTH_UNDERVOLTAGE:
@@ -560,7 +556,6 @@ static bool sec_bat_ovp_uvlo_result(
 				__func__, health);
 			battery->status =
 				POWER_SUPPLY_STATUS_NOT_CHARGING;
-			sec_bat_set_charge(battery, false);
 			battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 			battery->is_recharging = false;
 			/* Take the wakelock during 10 seconds
@@ -595,8 +590,7 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 
 	switch (battery->pdata->ovp_uvlo_check_type) {
 	case SEC_BATTERY_OVP_UVLO_CALLBACK:
-		if (battery->pdata->ovp_uvlo_callback)
-			health = battery->pdata->ovp_uvlo_callback();
+		health = battery->pdata->ovp_uvlo_callback();
 		break;
 	case SEC_BATTERY_OVP_UVLO_PMICPOLLING:
 	case SEC_BATTERY_OVP_UVLO_CHGPOLLING:
@@ -1846,7 +1840,7 @@ static void sec_bat_monitor_work(
 		battery->polling_in_sleep = false;
 		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
 			(battery->ps_enable != true)) {
-			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 600) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 1000) {
 				pr_info("Skip monitor_work(%ld)\n",
 						c_ts.tv_sec - old_ts.tv_sec);
 				goto skip_monitor;
@@ -1905,6 +1899,7 @@ continue_monitor:
 			__func__, battery->stability_test, battery->eng_not_full_status);
 #endif
 	power_supply_changed(&battery->psy_bat);
+	wake_unlock(&battery->monitor_wake_lock);
 
 skip_monitor:
 	sec_bat_set_polling(battery);
