@@ -396,7 +396,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
 	if (cpu_load >= go_hispeed_load) {
-		if (pcpu->policy->cur < hispeed_freq) {
+		if (pcpu->target_freq < hispeed_freq) {
 			new_freq = hispeed_freq;
 		} else {
 			new_freq = choose_freq(pcpu, loadadjfreq);
@@ -429,10 +429,10 @@ static void cpufreq_interactive_timer(unsigned long data)
 		}
 	}
 
-	if (pcpu->policy->cur >= hispeed_freq &&
-	    new_freq > pcpu->policy->cur &&
+	if (pcpu->target_freq >= hispeed_freq &&
+	    new_freq > pcpu->target_freq &&
 	    now - pcpu->hispeed_validate_time <
-	    freq_to_above_hispeed_delay(pcpu->policy->cur)) {
+	    freq_to_above_hispeed_delay(pcpu->target_freq)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -485,8 +485,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 		pcpu->floor_validate_time = now;
 	}
 
-	if (pcpu->policy->cur == new_freq &&
-			pcpu->target_freq <= pcpu->policy->cur) {
+	if (pcpu->target_freq == new_freq) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm_if_notmax;
 	}
