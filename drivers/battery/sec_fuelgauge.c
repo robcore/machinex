@@ -248,8 +248,6 @@ static void sec_fg_isr_work(struct work_struct *work)
 	/* process for others */
 	if (fuelgauge->pdata->fuelalert_process != NULL)
 		fuelgauge->pdata->fuelalert_process(fuelgauge->is_fuel_alerted);
-
-		wake_unlock(&fuelgauge->fuel_alert_wake_lock);
 }
 
 static irqreturn_t sec_fg_irq_thread(int irq, void *irq_data)
@@ -279,11 +277,9 @@ static irqreturn_t sec_fg_irq_thread(int irq, void *irq_data)
 		else
 			wake_unlock(&fuelgauge->fuel_alert_wake_lock);
 
-
-		fuelgauge->is_fuel_alerted = fuel_alerted;
-
 		schedule_delayed_work(&fuelgauge->isr_work, 0);
 
+		fuelgauge->is_fuel_alerted = fuel_alerted;
 	}
 
 	return IRQ_HANDLED;

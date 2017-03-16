@@ -560,7 +560,7 @@ static bool sec_bat_ovp_uvlo_result(
 			battery->is_recharging = false;
 			/* Take the wakelock during 10 seconds
 			   when over-voltage status is detected	 */
-			wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+			wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(10000));
 			break;
 		}
 		power_supply_changed(&battery->psy_bat);
@@ -576,15 +576,11 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 
 	if ((battery->factory_mode || battery->pdata->check_jig_status()) ||
 		((battery->status == POWER_SUPPLY_STATUS_FULL) &&
-		   (battery->charging_mode == SEC_BATTERY_CHARGING_NONE)))
-		return false;
-
-	if (battery->health != POWER_SUPPLY_HEALTH_GOOD &&
+		(battery->charging_mode == SEC_BATTERY_CHARGING_NONE)) || 
+		(battery->health != POWER_SUPPLY_HEALTH_GOOD &&
 		battery->health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
-		battery->health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE) {
-		dev_dbg(battery->dev, "%s: No need to check\n", __func__);
-		return false;
-	}
+		battery->health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE))
+			return false;
 
 	health = battery->health;
 
@@ -1433,9 +1429,11 @@ static void sec_bat_do_fullcharged(
 	 * because wakeup time is too short to check uevent
 	 * To make sure that target is wakeup if full-charged,
 	 * activated wake lock in a few seconds
+	 *  A TEN SECOND WAKELOCK? ARE YOU FUCKING SURE? Also, you realize this
+	 *  Will activate FOR a few seconds, not IN a few seconds, right? dumbass?
 	 */
 	if (battery->pdata->polling_type == SEC_BATTERY_MONITOR_ALARM)
-		wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+		wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(5000));
 }
 
 static bool sec_bat_fullcharged_check(
@@ -1798,10 +1796,10 @@ static void sec_bat_set_polling(
 	case SEC_BATTERY_MONITOR_WORKQUEUE:
 		if (battery->pdata->monitor_initial_count) {
 			battery->pdata->monitor_initial_count--;
-			schedule_delayed_work(&battery->polling_work, 1000);
+			schedule_delayed_work(&battery->polling_work, HZ);
 		} else
 			schedule_delayed_work(&battery->polling_work,
-				polling_time_temp * 1000);
+				polling_time_temp * HZ);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
 		battery->last_poll_time = ktime_get_boottime();
@@ -1829,7 +1827,6 @@ static void sec_bat_monitor_work(
 	static struct timespec old_ts;
 	struct timespec c_ts;
 
-	wake_unlock(&battery->cable_wake_lock);
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 
 	//c_ts = ktime_to_timespec(alarm_get_elapsed_realtime());
@@ -1839,14 +1836,15 @@ static void sec_bat_monitor_work(
 	if (battery->polling_in_sleep) {
 		battery->polling_in_sleep = false;
 		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
-			(battery->ps_enable != true)) {
-			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 1000) {
+				(battery->ps_enable != true)) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 10 * 60) {
 				pr_info("Skip monitor_work(%ld)\n",
 						c_ts.tv_sec - old_ts.tv_sec);
 				goto skip_monitor;
 			}
 		}
 	}
+
 	/* update last monitor time */
 	old_ts = c_ts;
 
@@ -1899,7 +1897,6 @@ continue_monitor:
 			__func__, battery->stability_test, battery->eng_not_full_status);
 #endif
 	power_supply_changed(&battery->psy_bat);
-	wake_unlock(&battery->monitor_wake_lock);
 
 skip_monitor:
 	sec_bat_set_polling(battery);
@@ -1921,9 +1918,9 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 * because wakeup time is too short to check uevent
 	 * To make sure that target is wakeup
 	 * if cable is connected and disconnected,
-	 * activated wake lock in a few seconds
+	 * activated wake lock in (FOR -- you realize you weren't deferring this?) a few seconds
 	 */
-	wake_lock(&battery->vbus_wake_lock);
+	//wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(5000));
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &
@@ -1986,8 +1983,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 		battery->polling_time);
 
 	battery->polling_count = 1;	/* initial value = 1 */
-
-	wake_lock_timeout(&battery->monitor_wake_lock, 2500);
+	wake_lock(&battery->monitor_wake_lock);
 	queue_work_on(0, battery->monitor_wqueue, &battery->monitor_work);
 end_of_cable_work:
 #if defined(CONFIG_MACH_JACTIVE_ATT)
@@ -2725,16 +2721,11 @@ static int sec_bat_set_property(struct power_supply *psy,
 				battery->cable_type = current_cable_type;
 				battery->pdata->check_cable_result_callback(
 					battery->cable_type);
+			}
 
 			wake_lock(&battery->cable_wake_lock);
 				queue_work_on(0, battery->monitor_wqueue,
 					&battery->cable_work);
-			} else {
-				dev_dbg(battery->dev,
-					"%s: Cable is NOT Changed(%d)\n",
-					__func__, battery->cable_type);
-				/* Do NOT activate cable work for NOT changed */
-			}
 		} else {
 			if (sec_bat_get_cable_type(battery,
 				battery->pdata->cable_source_type)) {
@@ -2809,12 +2800,6 @@ static int sec_bat_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = battery->cable_type;
-		if ((val->intval == POWER_SUPPLY_TYPE_BATTERY) &&
-				(battery->pdata->is_lpm()) &&
-				(battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS)) {
-			/* Userspace expects 0 for no-supply */
-			val->intval = 0;
-			}
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = battery->pdata->technology;
