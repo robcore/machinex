@@ -23,14 +23,15 @@
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
-#include <linux/sched/rt.h>
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
+#include <linux/display_state.h>
 #include <asm/cputime.h>
 
 static int active_count;
@@ -68,8 +69,7 @@ static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
 /* Hi speed to bump to from lo speed when load burst (default max) */
-static unsigned int hispeed_freq = 1890000;
-
+static unsigned int hispeed_freq;
 /* Go to hi speed when CPU load at or above this value. */
 #define DEFAULT_GO_HISPEED_LOAD 99
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
@@ -78,7 +78,7 @@ static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 static unsigned int sampling_down_factor = 3;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 85
+#define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -87,7 +87,7 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  */
-#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (60 * USEC_PER_MSEC)
 static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 
 /*
@@ -99,11 +99,16 @@ static unsigned long timer_rate = DEFAULT_TIMER_RATE;
 /* Busy SDF parameters*/
 #define MIN_BUSY_TIME (100 * USEC_PER_MSEC)
 
+#define SCREEN_OFF_TIMER_RATE ((unsigned long)(60 * USEC_PER_MSEC))
+static unsigned long prev_timer_rate = DEFAULT_TIMER_RATE;
+
 /*
  * Wait this long before raising speed above hispeed, by default a single
  * timer interval.
  */
-static unsigned int default_above_hispeed_delay[] = {100000};
+#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
+static unsigned int default_above_hispeed_delay[] = {
+	DEFAULT_ABOVE_HISPEED_DELAY };
 static spinlock_t above_hispeed_delay_lock;
 static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
@@ -122,17 +127,17 @@ static u64 boostpulse_endtime;
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy = 0;
+static bool io_is_busy = false;
 
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
- * or if the highest frequency among the other CPUs is higher than
+ * and if the highest frequency among the other CPUs is higher than
  * up_threshold_any_cpu_freq then do not let the frequency to drop below
  * sync_freq
  */
-static unsigned int up_threshold_any_cpu_load = 80;
-static unsigned int sync_freq = 1026000;
-static unsigned int up_threshold_any_cpu_freq = 1458000;
+static unsigned int up_threshold_any_cpu_load = 90;
+static unsigned int sync_freq = 810000;
+static unsigned int up_threshold_any_cpu_freq = 1674000;
 
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		unsigned int event);
@@ -369,6 +374,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	int i, max_load;
 	unsigned int max_freq;
 	struct cpufreq_interactive_cpuinfo *picpu;
+	bool display_on = is_display_on();
 
 	if (!down_read_trylock(&pcpu->enable_sem))
 		return;
@@ -383,6 +389,13 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (!delta_time)
 		goto rearm;
+
+	if (display_on && timer_rate != prev_timer_rate)
+		timer_rate = prev_timer_rate;
+	else if (!display_on && timer_rate != SCREEN_OFF_TIMER_RATE) {
+		prev_timer_rate = timer_rate;
+		timer_rate = max(timer_rate, SCREEN_OFF_TIMER_RATE);
+	}
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
@@ -421,7 +434,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 				max_freq = max(max_freq, picpu->target_freq);
 			}
 
-			if (max_freq > up_threshold_any_cpu_freq ||
+			if (max_freq > up_threshold_any_cpu_freq &&
 				max_load >= up_threshold_any_cpu_load)
 				new_freq = sync_freq;
 		}
@@ -438,7 +451,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->hispeed_validate_time = now;
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-					   new_freq, CPUFREQ_RELATION_C,
+					   new_freq, CPUFREQ_RELATION_L,
 					   &index)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
@@ -964,6 +977,7 @@ static ssize_t store_timer_rate(struct kobject *kobj,
 				val_round);
 
 	timer_rate = val_round;
+	prev_timer_rate = val_round;
 	return count;
 }
 
