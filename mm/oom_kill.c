@@ -611,7 +611,7 @@ void clear_zonelist_oom(struct zonelist *zonelist, gfp_t gfp_mask)
 }
 
 /**
- * out_of_memory - kill the "best" process when we run out of memory
+ * __out_of_memory - kill the "best" process when we run out of memory
  * @zonelist: zonelist pointer
  * @gfp_mask: memory allocation flags
  * @order: amount of memory being requested as a power of 2
@@ -623,7 +623,7 @@ void clear_zonelist_oom(struct zonelist *zonelist, gfp_t gfp_mask)
  * OR try to be smart about which process to kill. Note that we
  * don't have to be perfect here, we just have to be good.
  */
-void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
+static void __out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 		int order, nodemask_t *nodemask, bool force_kill)
 {
 	const nodemask_t *mpol_mask;
@@ -686,6 +686,32 @@ out:
 	 */
 	if (killed)
 		schedule_timeout_killable(1);
+}
+
+/**
+ * out_of_memory -  tries to invoke OOM killer.
+ * @zonelist: zonelist pointer
+ * @gfp_mask: memory allocation flags
+ * @order: amount of memory being requested as a power of 2
+ * @nodemask: nodemask passed to page allocator
+ * @force_kill: true if a task must be killed, even if others are exiting
+ *
+ * invokes __out_of_memory if the OOM is not disabled by oom_killer_disable()
+ * when it returns false. Otherwise returns true.
+ */
+bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
+		int order, nodemask_t *nodemask, bool force_kill)
+{
+	bool ret = false;
+
+	down_read(&oom_sem);
+	if (!oom_killer_disabled) {
+		__out_of_memory(zonelist, gfp_mask, order, nodemask, force_kill);
+		ret = true;
+	}
+	up_read(&oom_sem);
+
+	return ret;
 }
 
 /*
