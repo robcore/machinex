@@ -288,7 +288,7 @@ static void cpufreq_cpu_put_sysfs(struct cpufreq_policy *data)
  */
 #ifndef CONFIG_SMP
 static unsigned long l_p_j_ref;
-static unsigned int  l_p_j_ref_freq;
+static unsigned int l_p_j_ref_freq;
 
 static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 {
