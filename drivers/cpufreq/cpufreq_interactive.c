@@ -49,7 +49,6 @@ struct cpufreq_interactive_cpuinfo {
 	spinlock_t target_freq_lock; /*protects target freq */
 	unsigned int target_freq;
 	unsigned int floor_freq;
-	unsigned int min_freq;
 	unsigned int max_freq;
 	u64 floor_validate_time;
 	u64 hispeed_validate_time;
@@ -107,9 +106,7 @@ static unsigned long prev_timer_rate = DEFAULT_TIMER_RATE;
  * Wait this long before raising speed above hispeed, by default a single
  * timer interval.
  */
-#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
-static unsigned int default_above_hispeed_delay[] = {
-	DEFAULT_ABOVE_HISPEED_DELAY };
+static unsigned int default_above_hispeed_delay[] = {100000};
 static spinlock_t above_hispeed_delay_lock;
 static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
@@ -121,7 +118,7 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy = false;
+static bool io_is_busy = 0;
 
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
@@ -1125,7 +1122,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			pcpu->hispeed_validate_time =
 				pcpu->floor_validate_time;
 			pcpu->max_freq = policy->max;
-			pcpu->min_freq = policy->min;
 			down_write(&pcpu->enable_sem);
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
@@ -1201,15 +1197,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 			if (policy->max < pcpu->target_freq)
 				pcpu->target_freq = policy->max;
-			else if (policy->min >= pcpu->target_freq)
-				pcpu->target_freq = policy->min;
-
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
-
-			if (policy->min < pcpu->min_freq)
-				cpufreq_interactive_timer_resched(pcpu);
-			pcpu->min_freq = policy->min;
-
 			up_read(&pcpu->enable_sem);
 			/*
 			 * Delete and reschedule timer.
