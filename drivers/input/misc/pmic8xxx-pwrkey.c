@@ -143,7 +143,7 @@ static ssize_t  sysfs_powerkey_onoff_show(struct device *dev,
 
 static DEVICE_ATTR(sec_powerkey_pressed, 0444 , sysfs_powerkey_onoff_show,
 	NULL);
-static int __init pmic8xxx_pwrkey_probe(struct platform_device *pdev)
+static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 {
 	struct input_dev *pwr;
 	int key_release_irq = platform_get_irq(pdev, 0);
@@ -269,7 +269,7 @@ static int __init pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	return 0;
 
 free_press_irq:
-	free_irq(key_press_irq, NULL);
+	free_irq(key_press_irq, pwrkey);
 unreg_input_dev:
 	platform_set_drvdata(pdev, NULL);
 	input_unregister_device(pwr);
@@ -281,7 +281,7 @@ free_pwrkey:
 	return err;
 }
 
-static int __exit pmic8xxx_pwrkey_remove(struct platform_device *pdev)
+static int pmic8xxx_pwrkey_remove(struct platform_device *pdev)
 {
 	struct pmic8xxx_pwrkey *pwrkey = platform_get_drvdata(pdev);
 	int key_release_irq = platform_get_irq(pdev, 0);
@@ -309,7 +309,7 @@ static struct platform_driver pmic8xxx_pwrkey_driver = {
 	},
 };
 
-static int __init pmic8xxx_pwrkey_init(void)
+static int pmic8xxx_pwrkey_init(void)
 {
 	return platform_driver_register(&pmic8xxx_pwrkey_driver);
 }
