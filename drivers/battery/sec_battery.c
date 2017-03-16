@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_battery.h>
+#include <linux/display_state.h>
 
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
@@ -1826,6 +1827,8 @@ static void sec_bat_monitor_work(
 		monitor_work);
 	static struct timespec old_ts;
 	struct timespec c_ts;
+	union power_supply_propval val;
+	bool display_on = is_display_on();
 
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 
@@ -1844,6 +1847,9 @@ static void sec_bat_monitor_work(
 			}
 		}
 	}
+
+	if ((battery->cable_type == POWER_SUPPLY_TYPE_BATTERY) && (!display_on))
+		goto skip_monitor;
 
 	/* update last monitor time */
 	old_ts = c_ts;
