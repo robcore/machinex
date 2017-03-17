@@ -133,6 +133,15 @@ longer intervals, so that the time between (say) the first and second
 message will be about three times the interval between the beginning
 of the stall and the first message.
 
+If the relevant grace-period kthread has been unable to run prior to
+the stall warning, the following additional line is printed:
+
+	rcu_preempt kthread starved for 2023 jiffies!
+
+Starving the grace-period kthreads of CPU time can of course result in
+RCU CPU stall warnings even when all CPUs and tasks have passed through
+the required quiescent states.
+
 
 What Causes RCU CPU Stall Warnings?
 
