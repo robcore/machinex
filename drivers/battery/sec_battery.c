@@ -577,7 +577,7 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 
 	if ((battery->factory_mode || battery->pdata->check_jig_status()) ||
 		((battery->status == POWER_SUPPLY_STATUS_FULL) &&
-		(battery->charging_mode == SEC_BATTERY_CHARGING_NONE)) || 
+		(battery->charging_mode == SEC_BATTERY_CHARGING_NONE)) ||
 		(battery->health != POWER_SUPPLY_HEALTH_GOOD &&
 		battery->health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
 		battery->health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE))
@@ -1828,7 +1828,7 @@ static void sec_bat_monitor_work(
 	static struct timespec old_ts;
 	struct timespec c_ts;
 	union power_supply_propval val;
-	bool display_on = is_display_on();
+	//bool display_on = is_display_on();
 
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 
@@ -1848,8 +1848,8 @@ static void sec_bat_monitor_work(
 		}
 	}
 
-	if ((battery->cable_type == POWER_SUPPLY_TYPE_BATTERY) && (!display_on))
-		goto skip_monitor;
+	//if ((battery->cable_type == POWER_SUPPLY_TYPE_BATTERY) && (!display_on))
+		//goto skip_monitor;
 
 	/* update last monitor time */
 	old_ts = c_ts;
