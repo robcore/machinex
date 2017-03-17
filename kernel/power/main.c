@@ -674,7 +674,7 @@ power_attr(pm_freeze_timeout);
 
 #endif	/* CONFIG_FREEZER*/
 /* If set, devices may be suspended and resumed asynchronously. */
-int suspendsync = 1;
+int suspendsync = 0;
 
 static ssize_t suspend_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
