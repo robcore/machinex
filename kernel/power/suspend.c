@@ -174,28 +174,6 @@ static bool platform_suspend_again(void)
 	return suspend;
 }
 
-static bool platform_suspend_again(void)
-{
-	int count;
-	bool suspend = suspend_ops->suspend_again ?
-		suspend_ops->suspend_again() : false;
-
-	if (suspend) {
-		/*
-		 * pm_get_wakeup_count() gets an updated count of wakeup events
-		 * that have occured and will return false (i.e. abort suspend)
-		 * if a wakeup event has been started during suspend_again() and
-		 * is still active. pm_save_wakeup_count() stores the count
-		 * and enables pm_wakeup_pending() to properly analyze wakeup
-		 * events before entering suspend in suspend_enter().
-		 */
-		suspend = pm_get_wakeup_count(&count, false) &&
-			  pm_save_wakeup_count(count);
-	}
-
-	return suspend;
-}
-
 static int suspend_test(int level)
 {
 #ifdef CONFIG_PM_DEBUG
