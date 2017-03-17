@@ -172,7 +172,7 @@ static DEVICE_ATTR(crash_notes_size, 0400, show_crash_notes_size, NULL);
 
 struct cpu_attr {
 	struct device_attribute attr;
-	const struct cpumask *const * const map;
+	const struct cpumask *const map;
 };
 
 static ssize_t show_cpus_attr(struct device *dev,
