@@ -338,8 +338,7 @@ static bool suspend_again(bool *drivers_resumed)
 	 * platform's suspend_again callback returns true, then we proceed to
 	 * check the drivers as well.
 	 */
-	if (suspend_ops->suspend_again && !suspend_ops->suspend_again()
-		&& platform_suspend_again())
+	if (suspend_ops->suspend_again && !suspend_ops->suspend_again())
 		return false;
 
 	/* TODO: resume only the drivers associated with the wakeup interrupts!
