@@ -880,7 +880,7 @@ static void rcu_print_detail_task_stall_rnp(struct rcu_node *rnp)
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 		return;
 	}
-	t = list_entry(rnp->gp_tasks->prev,
+	t = list_entry(rnp->gp_tasks,
 		       struct task_struct, rcu_node_entry);
 	list_for_each_entry_continue(t, &rnp->blkd_tasks, rcu_node_entry)
 		sched_show_task(t);
@@ -945,7 +945,7 @@ static int rcu_print_task_stall(struct rcu_node *rnp)
 	if (!rcu_preempt_blocked_readers_cgp(rnp))
 		return 0;
 	rcu_print_task_stall_begin(rnp);
-	t = list_entry(rnp->gp_tasks->prev,
+	t = list_entry(rnp->gp_tasks,
 		       struct task_struct, rcu_node_entry);
 	list_for_each_entry_continue(t, &rnp->blkd_tasks, rcu_node_entry) {
 		pr_cont(" P%d", t->pid);
@@ -2465,11 +2465,11 @@ static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
 		ticks_value = rsp->gpnum - rdp->gpnum;
 	}
 	print_cpu_stall_fast_no_hz(fast_no_hz, cpu);
-	pr_err("\t%d: (%lu %s) idle=%03x/%llx/%d softirq=%u/%u fqs=%ld %s\n",
+	pr_err("\t%d: (%lu %s) idle=%03x/%llx/%d softirq=%u/%u %s\n",
 	       cpu, ticks_value, ticks_title,
 	       atomic_read(&rdtp->dynticks) & 0xfff,
 	       rdtp->dynticks_nesting, rdtp->dynticks_nmi_nesting,
-	       ACCESS_ONCE(rsp->n_force_qs) - rsp->n_force_qs_gpstart,
+	       rdp->softirq_snap, kstat_softirqs_cpu(RCU_SOFTIRQ, cpu),
 	       fast_no_hz);
 }
 
