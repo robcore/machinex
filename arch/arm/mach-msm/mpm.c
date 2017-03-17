@@ -399,16 +399,6 @@ bool msm_mpm_irqs_detectable(bool from_idle)
 					MSM_MPM_DEBUG_NON_DETECTABLE_IRQ;
 	}
 
-	if (debug_mask) {
-		static char buf[DIV_ROUND_UP(MSM_MPM_NR_APPS_IRQS, 32)*9+1];
-
-		bitmap_scnprintf(buf, sizeof(buf), apps_irq_bitmap,
-				MSM_MPM_NR_APPS_IRQS);
-		buf[sizeof(buf) - 1] = '\0';
-
-		//pr_info("%s: cannot monitor %s", __func__, buf);
-	}
-
 	return (bool)bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
 }
 
