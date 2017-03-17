@@ -68,8 +68,8 @@ enum ipi_msg_type {
 	IPI_CALL_FUNC,
 	IPI_CALL_FUNC_SINGLE,
 	IPI_CPU_STOP,
-	IPI_CPU_BACKTRACE,
 	IPI_COMPLETION,
+	IPI_CPU_BACKTRACE,
 };
 
 static DECLARE_COMPLETION(cpu_running);
@@ -102,7 +102,7 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 	/*
 	 * Now bring the CPU into our world.
 	 */
-	ret = boot_secondary(cpu, idle);
+	ret = smp_ops.smp_boot_secondary(cpu, idle);
 	if (ret == 0) {
 		/*
 		 * CPU was successfully started, wait for it
@@ -243,7 +243,7 @@ void __cpu_die(unsigned int cpu)
 	 * the requesting CPU and the dying CPU actually losing power.
 	 */
 	if (!platform_cpu_kill(cpu))
-		printk("CPU%u: unable to kill\n", cpu);
+		pr_err("CPU%u: unable to kill\n", cpu);
 }
 
 /*
@@ -591,7 +591,7 @@ static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 	    system_state == SYSTEM_RUNNING) {
 		per_cpu(regs_before_stop, cpu) = *regs;
 		raw_spin_lock(&stop_lock);
-		printk(KERN_CRIT "CPU%u: stopping\n", cpu);
+		pr_crit("CPU%u: stopping\n", cpu);
 		dump_stack();
 		raw_spin_unlock(&stop_lock);
 	}
@@ -730,8 +730,8 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 
 	default:
-		printk(KERN_CRIT "CPU%u: Unknown IPI message 0x%x\n",
-		       cpu, ipinr);
+		pr_crit("CPU%u: Unknown IPI message 0x%x\n",
+		        cpu, ipinr);
 		break;
 	}
 	set_irq_regs(old_regs);
@@ -749,7 +749,8 @@ void smp_send_stop(void)
 
 	cpumask_copy(&mask, cpu_online_mask);
 	cpumask_clear_cpu(smp_processor_id(), &mask);
-	smp_cross_call(&mask, IPI_CPU_STOP);
+	if (!cpumask_empty(&mask))
+		smp_cross_call(&mask, IPI_CPU_STOP);
 
 	/* Wait up to one second for other CPUs to stop */
 	timeout = USEC_PER_SEC;
@@ -757,7 +758,7 @@ void smp_send_stop(void)
 		udelay(1);
 
 	if (num_online_cpus() > 1)
-		pr_warning("SMP: failed to stop secondary CPUs\n");
+		pr_warn("SMP: failed to stop secondary CPUs\n");
 }
 
 /*

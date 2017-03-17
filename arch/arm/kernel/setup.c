@@ -415,7 +415,7 @@ void notrace cpu_init(void)
 	struct stack *stk = &stacks[cpu];
 
 	if (cpu >= NR_CPUS) {
-		printk(KERN_CRIT "CPU%u: bad primary CPU number\n", cpu);
+		pr_crit("CPU%u: bad primary CPU number\n", cpu);
 		BUG();
 	}
 
