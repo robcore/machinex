@@ -409,7 +409,7 @@ bool msm_mpm_irqs_detectable(bool from_idle)
 		//pr_info("%s: cannot monitor %s", __func__, buf);
 	}
 
-	return (bool)__bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
+	return (bool)bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
 }
 
 bool msm_mpm_gpio_irqs_detectable(bool from_idle)

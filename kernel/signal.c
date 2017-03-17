@@ -3015,7 +3015,7 @@ static int do_rt_sigqueueinfo(pid_t pid, int sig, siginfo_t *info)
 	/* Not even root can pretend to send signals from the kernel.
 	 * Nor can they impersonate a kill()/tgkill(), which adds source info.
 	 */
-	    if (task_pid_vnr(current) != pid))
+	    if (task_pid_vnr(current) != pid)
 			return -EPERM;
 	}
 	info->si_signo = sig;
