@@ -47,7 +47,7 @@
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define DEF_SAMPLING_RATE			(50000)
 
-#define DEF_SYNC_FREQUENCY			(1026000)
+#define DEF_SYNC_FREQUENCY			(1242000)
 #define DEF_OPTIMAL_FREQUENCY			(1134000)
 #define DEF_OPTIMAL_MAX_FREQ			(1890000)
 
@@ -162,7 +162,7 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.sync_freq = DEF_SYNC_FREQUENCY,
-	.optimal_freq,
+	.optimal_freq = DEF_OPTIMAL_FREQUENCY,
 	.optimal_max_freq = DEF_OPTIMAL_MAX_FREQ,
 	.input_boost = 0,
 	.io_is_busy = 0,
