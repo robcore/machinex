@@ -6863,6 +6863,9 @@ static inline void msmsdcc_ungate_clock(struct msmsdcc_host *host)
 	mmc->ios.clock = host->clk_rate;
 	mmc_set_ios(mmc);
 	mmc_host_clk_release(mmc);
+
+	if (host->pdev->id == 3)
+		printk(KERN_INFO "%s: msmsdcc_ungate_clock due to mmc_card_keep_power complete\n", __func__);
 }
 #else
 static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
@@ -6942,6 +6945,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 			rc = -EAGAIN;
 		else
 			rc = mmc_suspend_host(mmc);
+
 		pm_runtime_put_noidle(dev);
 
 		if (!rc) {
