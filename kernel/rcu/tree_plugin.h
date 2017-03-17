@@ -1990,8 +1990,10 @@ static void rcu_prepare_kthreads(int cpu)
  * Because we not have RCU_FAST_NO_HZ, just check whether this CPU needs
  * any flavor of RCU.
  */
-int rcu_needs_cpu(int cpu)
+int rcu_needs_cpu(int cpu, unsigned long *delta_jiffies)
 {
+	*delta_jiffies = ULONG_MAX;
+
 	return rcu_cpu_has_callbacks(cpu, NULL);
 }
 
@@ -2045,6 +2047,7 @@ static void rcu_prepare_for_idle(int cpu)
  */
 #define RCU_IDLE_GP_DELAY 6		/* Roughly one grace period. */
 #define RCU_IDLE_LAZY_GP_DELAY (6 * HZ)	/* Roughly six seconds. */
+extern int tick_nohz_enabled;
 
 static DEFINE_PER_CPU(int, rcu_dyntick_drain);
 static DEFINE_PER_CPU(unsigned long, rcu_dyntick_holdoff);
@@ -2148,22 +2151,19 @@ static void rcu_prepare_for_idle(int cpu)
 	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
 	struct rcu_state *rsp;
 	struct rcu_data *rdp;
-	/*
-	 * If this is an idle re-entry, for example, due to use of
-	 * RCU_NONIDLE() or the new idle-loop tracing API within the idle
-	 * loop, then don't take any state-machine actions, unless the
-	 * momentary exit from idle queued additional non-lazy callbacks.
-	 * Instead, repost the rcu_idle_gp_timer if this CPU has callbacks
-	 * pending.
-	 */
-	if (!rdtp->idle_first_pass &&
-	    (rdtp->nonlazy_posted == rdtp->nonlazy_posted_snap)) {
+	int tne;
+
+	/* Handle nohz enablement switches conservatively. */
+	tne = ACCESS_ONCE(tick_nohz_enabled);
+	if (tne != rdtp->tick_nohz_enabled_snap) {
 		if (rcu_cpu_has_callbacks(cpu, NULL))
-			tp = &rdtp->idle_gp_timer;
-			mod_timer_pinned(tp, rdtp->idle_gp_timer_expires);
-		}
+			invoke_rcu_core(); /* force nohz to see update. */
+		rdtp->tick_nohz_enabled_snap = tne;
 		return;
 	}
+	if (!tne)
+		return;
+
 	rdtp->idle_first_pass = 0;
 	rdtp->nonlazy_posted_snap = rdtp->nonlazy_posted - 1;
 
@@ -2175,6 +2175,7 @@ static void rcu_prepare_for_idle(int cpu)
 		per_cpu(rcu_dyntick_holdoff, cpu) = jiffies - 1;
 		per_cpu(rcu_dyntick_drain, cpu) = 0;
 		trace_rcu_prep_idle("No callbacks");
+		rdtp->tick_nohz_enabled_snap = ACCESS_ONCE(tick_nohz_enabled);
 		return;
 	}
 
