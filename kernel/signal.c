@@ -3017,7 +3017,7 @@ static int do_rt_sigqueueinfo(pid_t pid, int sig, siginfo_t *info)
 	 */
 	    if (task_pid_vnr(current) != pid)
 			return -EPERM;
-	}
+
 	info->si_signo = sig;
 
 	/* POSIX.1b doesn't mention process groups.  */
