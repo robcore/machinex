@@ -41,7 +41,7 @@
 #define DEF_FREQUENCY_UP_THRESHOLD_MULTI_CORE		(80)	/* Yank555.lu : new */
 #define DEF_SAMPLING_DOWN_FACTOR			(2)	/* Yank555.lu : was 1 */
 #define MAX_SAMPLING_DOWN_FACTOR			(100000)
-#define DEF_INPUT_BOOST					(810000)/* Yank555.lu : new */
+#define DEF_INPUT_BOOST					(1350000)/* Yank555.lu : new */
 #define DEF_IO_IS_BUSY					(1)	/* Yank555.lu : new */
 #define DEF_OPTIMAL_FREQUENCY				(918000)/* Yank555.lu : new */
 #define DEF_SYNC_FREQUENCY				(1026000)/* Yank555.lu : new */

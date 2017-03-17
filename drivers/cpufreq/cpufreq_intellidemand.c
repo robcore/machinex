@@ -210,8 +210,8 @@ static struct dbs_tuners {
 	.up_threshold_any_cpu_load = DEF_FREQUENCY_UP_THRESHOLD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 810000,
-	.optimal_freq = 1026000,
+	.sync_freq = 1026000,
+	.optimal_freq,
 	/* 20130711 smart_up */
 	.smart_up = SMART_UP_PLUS,
 	.smart_slow_up_load = SUP_SLOW_UP_LOAD,
@@ -226,7 +226,7 @@ static struct dbs_tuners {
 	.step_up_interim_hispeed = DEF_STEP_UP_INTERIM_HISPEED,
 	.sampling_early_factor = DEF_SAMPLING_EARLY_HISPEED_FACTOR,
 	.sampling_interim_factor = DEF_SAMPLING_INTERIM_HISPEED_FACTOR,
-	.two_phase_freq = 1782000,
+	.two_phase_freq = 1674000,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
 };
@@ -380,7 +380,7 @@ static ssize_t show_powersave_bias
 	return snprintf(buf, PAGE_SIZE, "%d\n", dbs_tuners_ins.powersave_bias);
 }
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1782000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1674000} ;
 
 static ssize_t show_two_phase_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)

@@ -128,7 +128,7 @@ int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
 /*
  * Default thread migration boost cpufreq
  */
-#define CPU_SYNC_FREQ 810000
+#define CPU_SYNC_FREQ 1026000
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
