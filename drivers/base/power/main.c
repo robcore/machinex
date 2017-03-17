@@ -685,6 +685,7 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 	}
 
  End:
+	pm_runtime_enable(dev);
 	error = dpm_run_callback(callback, dev, state, info);
 
  Out:
@@ -1371,6 +1372,9 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (error)
 		async_error = error;
 
+	if (error)
+		pm_runtime_put(dev);
+
 	return error;
 }
 
@@ -1513,7 +1517,6 @@ static int device_prepare(struct device *dev, pm_message_t state)
 
 	if (error)
 		pm_runtime_put(dev);
-
 
 	return error;
 }
