@@ -1598,7 +1598,7 @@ retry:
 				seq_printf(s, "Couldn't get client lock...\n");
 				continue;
 			}
-			mutex_unlock(&dev->lock);
+			up_read(&dev->lock);
 			goto retry;
 		}
 
@@ -1757,7 +1757,7 @@ retry:
 				seq_printf(s, "Couldn't get client lock...\n");
 				continue;
 			}
-			mutex_unlock(&dev->lock);
+			up_write(&dev->lock);
 			goto retry;
 		}
 
