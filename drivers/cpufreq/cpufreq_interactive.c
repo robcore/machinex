@@ -386,7 +386,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
 	if (cpu_load >= go_hispeed_load) {
-		if (pcpu->policy->cur < hispeed_freq) {
+		if (pcpu->target_freq < hispeed_freq) {
 			new_freq = hispeed_freq;
 		} else {
 			new_freq = choose_freq(pcpu, loadadjfreq);
@@ -465,9 +465,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	/*
 	 * Update the timestamp for checking whether speed has been held at
 	 * or above the selected frequency for a minimum of min_sample_time,
-	 * if not boosted to this_hispeed_freq.  If boosted to this_hispeed_freq
-	 * then we allow the speed to drop as soon as the boostpulse duration
-	 * expires (or the indefinite boost is turned off).
+	 * if not boosted to hispeed_freq.  If boosted to hispeed_freq then we
+	 * allow the speed to drop as soon as the boostpulse duration expires
+	 * (or the indefinite boost is turned off).
 	 */
 
 	if (new_freq > hispeed_freq) {
