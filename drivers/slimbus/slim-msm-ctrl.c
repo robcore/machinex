@@ -341,7 +341,7 @@ static int msm_slim_rx_enqueue(struct msm_slim_ctrl *dev, u32 *buf, u8 len)
 	spin_lock(&dev->rx_lock);
 	if ((dev->tail + 1) % MSM_CONCUR_MSG == dev->head) {
 		spin_unlock(&dev->rx_lock);
-		dev_err(dev->dev, "RX QUEUE full!");
+		dev_err(dev->dev, "RX QUEUE full!\n");
 		return -EXFULL;
 	}
 	memcpy((u8 *)dev->rx_msgs[dev->tail], (u8 *)buf, len);
@@ -370,7 +370,7 @@ static int msm_sat_enqueue(struct msm_slim_sat *sat, u32 *buf, u8 len)
 	spin_lock(&sat->lock);
 	if ((sat->stail + 1) % SAT_CONCUR_MSG == sat->shead) {
 		spin_unlock(&sat->lock);
-		dev_err(dev->dev, "SAT QUEUE full!");
+		dev_err(dev->dev, "SAT QUEUE full!\n");
 		return -EXFULL;
 	}
 	memcpy(sat->sat_msgs[sat->stail], (u8 *)buf, len);
@@ -420,7 +420,7 @@ static int msm_slim_get_ctrl(struct msm_slim_ctrl *dev)
 	if (ret >= 0) {
 		ref = atomic_read(&dev->dev->power.usage_count);
 		if (ref <= 0) {
-			dev_err(dev->dev, "reference count -ve:%d", ref);
+			dev_err(dev->dev, "reference count -ve:%d\n", ref);
 			ret = -ENODEV;
 		}
 	}
@@ -436,7 +436,7 @@ static void msm_slim_put_ctrl(struct msm_slim_ctrl *dev)
 	pm_runtime_mark_last_busy(dev->dev);
 	ref = atomic_read(&dev->dev->power.usage_count);
 	if (ref <= 0)
-		dev_err(dev->dev, "reference count mismatch:%d", ref);
+		dev_err(dev->dev, "reference count mismatch:%d\n", ref);
 	else
 		pm_runtime_put(dev->dev);
 #endif
@@ -482,16 +482,16 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 
 			writel_relaxed(MGR_INT_TX_NACKED_2,
 					dev->base + MGR_INT_CLR);
-			pr_err("TX Nack MGR dump:int_stat:0x%x, mgr_stat:0x%x",
+			pr_err("TX Nack MGR dump:int_stat:0x%x, mgr_stat:0x%x\n",
 					stat, mgr_stat);
-			pr_err("TX Nack MGR dump:ie_stat:0x%x", mgr_ie_stat);
-			pr_err("TX Nack FRM dump:int_stat:0x%x, frm_stat:0x%x",
+			pr_err("TX Nack MGR dump:ie_stat:0x%x\n", mgr_ie_stat);
+			pr_err("TX Nack FRM dump:int_stat:0x%x, frm_stat:0x%x\n",
 					frm_intr_stat, frm_stat);
-			pr_err("TX Nack FRM dump:frm_cfg:0x%x, ie_stat:0x%x",
+			pr_err("TX Nack FRM dump:frm_cfg:0x%x, ie_stat:0x%x\n",
 					frm_cfg, frm_ie_stat);
-			pr_err("TX Nack INTF dump:intr_st:0x%x, intf_stat:0x%x",
+			pr_err("TX Nack INTF dump:intr_st:0x%x, intf_stat:0x%x\n",
 					intf_intr_stat, intf_stat);
-			pr_err("TX Nack INTF dump:ie_stat:0x%x", intf_ie_stat);
+			pr_err("TX Nack INTF dump:ie_stat:0x%x\n", intf_ie_stat);
 
 			dev->err = -EIO;
 		}
@@ -524,7 +524,7 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 			if (sat)
 				msm_sat_enqueue(sat, rx_buf, len);
 			else
-				dev_err(dev->dev, "unknown sat:%d message",
+				dev_err(dev->dev, "unknown sat:%d message\n",
 						laddr);
 			writel_relaxed(MGR_INT_RX_MSG_RCVD,
 					dev->base + MGR_INT_CLR);
@@ -575,10 +575,10 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 			u8 l_addr = buf[2];
 			u16 ele = (u16)buf[4] << 4;
 			ele |= ((buf[3] & 0xf0) >> 4);
-			dev_err(dev->dev, "Slim-dev:%d report inf element:0x%x",
+			dev_err(dev->dev, "Slim-dev:%d report inf element:0x%x\n",
 					l_addr, ele);
 			for (i = 0; i < len - 5; i++)
-				dev_err(dev->dev, "offset:0x%x:bit mask:%x",
+				dev_err(dev->dev, "offset:0x%x:bit mask:%x\n",
 						i, buf[i+5]);
 			writel_relaxed(MGR_INT_RX_MSG_RCVD, dev->base +
 						MGR_INT_CLR);
@@ -588,10 +588,10 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 			 */
 			mb();
 		} else {
-			dev_err(dev->dev, "Unexpected MC,%x MT:%x, len:%d",
+			dev_err(dev->dev, "Unexpected MC,%x MT:%x, len:%d\n",
 						mc, mt, len);
 			for (i = 0; i < ((len + 3) >> 2); i++)
-				dev_err(dev->dev, "error msg: %x", rx_buf[i]);
+				dev_err(dev->dev, "error msg: %x\n", rx_buf[i]);
 			writel_relaxed(MGR_INT_RX_MSG_RCVD, dev->base +
 						MGR_INT_CLR);
 			/*
@@ -753,7 +753,7 @@ static int msm_slim_connect_pipe_port(struct msm_slim_ctrl *dev, u8 pn)
 		cfg->source = SPS_DEV_HANDLE_MEM;
 		cfg->dest_pipe_index = ((stat & (0xFF << 4)) >> 4);
 		cfg->src_pipe_index = 0;
-		dev_dbg(dev->dev, "flow src:pipe num:%d",
+		dev_dbg(dev->dev, "flow src:pipe num:%d\n",
 					cfg->dest_pipe_index);
 		cfg->mode = SPS_MODE_DEST;
 	} else {
@@ -761,7 +761,7 @@ static int msm_slim_connect_pipe_port(struct msm_slim_ctrl *dev, u8 pn)
 		cfg->destination = SPS_DEV_HANDLE_MEM;
 		cfg->src_pipe_index = ((stat & (0xFF << 4)) >> 4);
 		cfg->dest_pipe_index = 0;
-		dev_dbg(dev->dev, "flow dest:pipe num:%d",
+		dev_dbg(dev->dev, "flow dest:pipe num:%d\n",
 					cfg->src_pipe_index);
 		cfg->mode = SPS_MODE_SRC;
 	}
@@ -823,7 +823,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 	if (dev->state == MSM_CTRL_ASLEEP ||
 		((!(txn->mc & SLIM_MSG_CLK_PAUSE_SEQ_FLG)) &&
 		dev->state == MSM_CTRL_SLEEPING)) {
-		dev_err(dev->dev, "runtime or system PM suspended state");
+		dev_err(dev->dev, "runtime or system PM suspended state\n");
 		mutex_unlock(&dev->tx_lock);
 		if (msgv >= 0)
 			msm_slim_put_ctrl(dev);
@@ -898,7 +898,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 			return 0;
 		}
 		if (dev->err) {
-			dev_err(dev->dev, "pipe-port connect err:%d", dev->err);
+			dev_err(dev->dev, "pipe-port connect err:%d\n", dev->err);
 			mutex_unlock(&dev->tx_lock);
 			if (msgv >= 0)
 				msm_slim_put_ctrl(dev);
@@ -924,7 +924,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 		if ((txn->mc == (SLIM_MSG_MC_RECONFIGURE_NOW |
 					SLIM_MSG_CLK_PAUSE_SEQ_FLG)) &&
 				!timeout) {
-			dev_err(dev->dev, "clock pause failed");
+			dev_err(dev->dev, "clock pause failed\n");
 			mutex_unlock(&dev->tx_lock);
 			return -ETIMEDOUT;
 		}
@@ -944,13 +944,13 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 		}
 	}
 	if (!timeout) {
-		dev_err(dev->dev, "TX timed out:MC:0x%x,mt:0x%x",
+		dev_err(dev->dev, "TX timed out:MC:0x%x,mt:0x%x\n",
 				txn->mc, txn->mt);
 		dev->wr_comp = NULL;
 	}
 	if (mc == SLIM_USR_MC_GENERIC_ACK) {
 		u32 mgrstat = readl_relaxed(dev->base + MGR_STATUS);
-		pr_info("-slimdebug-generic ack:0x %x, mgrstat:0x%x", pbuf[0], mgrstat);
+		pr_info("-slimdebug-generic ack:0x %x, mgrstat:0x%x\n", pbuf[0], mgrstat);
 	} /* slimbus debug patch */
 	mutex_unlock(&dev->tx_lock);
 	if (msgv >= 0)
@@ -1003,13 +1003,13 @@ retry_laddr:
 	}
 	mutex_unlock(&dev->tx_lock);
 	if (ret) {
-		pr_err("set LADDR:0x%x failed:ret:%d, retrying", laddr, ret);
+		pr_err("set LADDR:0x%x failed:ret:%d, retrying\n", laddr, ret);
 		if (retries < INIT_MX_RETRIES) {
 			msm_slim_wait_retry(dev);
 			retries++;
 			goto retry_laddr;
 		} else {
-			pr_err("set LADDR failed after retrying:ret:%d", ret);
+			pr_err("set LADDR failed after retrying:ret:%d\n", ret);
 		}
 	}
 	return ret;
@@ -1121,7 +1121,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		/* part of grp. activating/removing 1 will take care of rest */
 		ret = slim_control_ch(&sat->satcl, sat->satch[i].chanh, oper,
 					false);
-		pr_info("-slimdebug-SAT oper:%d grp start:%d, ret:%d", oper,
+		pr_info("-slimdebug-SAT oper:%d grp start:%d, ret:%d\n", oper,
 				sat->satch[i].chan, ret); /* slimbus debug patch */
 		if (!ret) {
 			for (i = 5; i < len; i++) {
@@ -1199,7 +1199,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		else
 			ret = slim_define_ch(&sat->satcl, &prop,
 					chh, 1, true, &chh[0]);
-		dev_dbg(dev->dev, "define sat grp returned:%d", ret);
+		dev_dbg(dev->dev, "define sat grp returned:%d\n", ret);
 		if (ret)
 			return ret;
 		else if (grph)
@@ -1210,7 +1210,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
 					SLIM_CH_ACTIVATE, false);
-			pr_info("-slimdebug-SAT activate grp start: ret:%d", ret); /* slimbus debug patch */
+			pr_info("-slimdebug-SAT activate grp start: ret:%d\n", ret); /* slimbus debug patch */
 		}
 	}
 	return ret;
@@ -1288,7 +1288,7 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 				queue_work(sat->wq, &sat->wd);
 			}
 			if (ret)
-				pr_err("assign laddr failed, error:%d", ret);
+				pr_err("assign laddr failed, error:%d\n", ret);
 		} else if (mc == SLIM_MSG_MC_REPLY_INFORMATION ||
 				mc == SLIM_MSG_MC_REPLY_VALUE) {
 			u8 tid = buf[3];
@@ -1300,20 +1300,20 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 			u8 l_addr = buf[2];
 			u16 ele = (u16)buf[4] << 4;
 			ele |= ((buf[3] & 0xf0) >> 4);
-			dev_err(dev->dev, "Slim-dev:%d report inf element:0x%x",
+			dev_err(dev->dev, "Slim-dev:%d report inf element:0x%x\n",
 					l_addr, ele);
 			for (i = 0; i < len - 5; i++)
-				dev_err(dev->dev, "offset:0x%x:bit mask:%x",
+				dev_err(dev->dev, "offset:0x%x:bit mask:%x\n",
 						i, buf[i+5]);
 		} else {
-			dev_err(dev->dev, "unexpected message:mc:%x, mt:%x",
+			dev_err(dev->dev, "unexpected message:mc:%x, mt:%x\n",
 					mc, mt);
 			for (i = 0; i < len; i++)
-				dev_err(dev->dev, "error msg: %x", buf[i]);
+				dev_err(dev->dev, "error msg: %x\n", buf[i]);
 
 		}
 	} else
-		dev_err(dev->dev, "rxwq called and no dequeue");
+		dev_err(dev->dev, "rxwq called and no dequeue\n");
 }
 
 static void slim_sat_rxprocess(struct work_struct *work)
@@ -1322,9 +1322,9 @@ static void slim_sat_rxprocess(struct work_struct *work)
 	struct msm_slim_ctrl *dev = sat->dev;
 	u8 buf[40];
 
-#ifdef CONFIG_DEBUG_FS	
+#ifdef CONFIG_DEBUG_FS
 	int index;
-#endif	
+#endif
 
 	while ((msm_sat_dequeue(sat, buf)) != -ENODATA) {
 		struct slim_msg_txn txn;
@@ -1365,11 +1365,11 @@ static void slim_sat_rxprocess(struct work_struct *work)
 			 * when this is detected
 			 */
 			if (sat->sent_capability) {
-				pr_info("-slimdebug-Received report present from SAT:0x%x",
+				pr_info("-slimdebug-Received report present from SAT:0x%x\n",
 						sat->satcl.laddr); /* slimbus debug patch */
 				for (i = 0; i < sat->nsatch; i++) {
 					if (sat->satch[i].reconf) {
-						pr_err("SSR, sat:%d, rm ch:%d",
+						pr_err("SSR, sat:%d, rm ch:%d\n",
 							sat->satcl.laddr,
 							sat->satch[i].chan);
 						slim_control_ch(&sat->satcl,
@@ -1406,7 +1406,7 @@ static void slim_sat_rxprocess(struct work_struct *work)
 			ret = slim_add_device(&dev->ctrl, &sat->satcl);
 			if (ret) {
 				dev_err(dev->dev,
-					"Satellite-init failed");
+					"Satellite-init failed\n");
 				continue;
 			}
 			/* Satellite-channels */
@@ -1426,14 +1426,14 @@ send_capability:
 			txn.len = 4;
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 			if (ret) {
-				pr_err("capability for:0x%x fail:%d, retry:%d",
+				pr_err("capability for:0x%x fail:%d, retry:%d\n",
 						sat->satcl.laddr, ret, retries);
 				if (retries < INIT_MX_RETRIES) {
 					msm_slim_wait_retry(dev);
 					retries++;
 					goto send_capability;
 				} else {
-					pr_err("failed after all retries:%d",
+					pr_err("failed after all retries:%d\n",
 							ret);
 				}
 			} else {
@@ -1464,7 +1464,7 @@ send_capability:
 			ret = msm_sat_define_ch(sat, buf, len, mc);
 			if (ret) {
 				dev_err(dev->dev,
-					"SAT define_ch returned:%d",
+					"SAT define_ch returned:%d\n",
 					ret);
 			}
 			if (!sat->pending_reconf) {
@@ -1476,7 +1476,7 @@ send_capability:
 		case SLIM_USR_MC_RECONFIG_NOW:
 			tid = buf[3];
 			gen_ack = true;
-			pr_info("-slimdebug-SAT:LA:%x reconf req", sat->satcl.laddr); /* slimbus debug patch */
+			pr_info("-slimdebug-SAT:LA:%x reconf req\n", sat->satcl.laddr); /* slimbus debug patch */
 			ret = slim_reconfigure_now(&sat->satcl);
 			for (i = 0; i < sat->nsatch; i++) {
 				struct msm_sat_chan *sch = &sat->satch[i];
@@ -1524,20 +1524,20 @@ send_capability:
 			txn.len = 2;
 			txn.wbuf = wbuf;
 			gen_ack = true;
-			pr_info("-slimdebug-SAT connect MC:0x%x,LA:0x%x", txn.mc,
+			pr_info("-slimdebug-SAT connect MC:0x%x,LA:0x%x\n", txn.mc,
 					sat->satcl.laddr); /* slimbus debug patch */
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 
-#ifdef CONFIG_DEBUG_FS			
+#ifdef CONFIG_DEBUG_FS
 			if(txn.la ==  0)
 				index = 0;
-			else 
+			else
 				index = 1;
 			slim_debug[index][buf[4] &0x1f].la = txn.la;
 			slim_debug[index][buf[4] &0x1f].direction = txn.mc;
 			slim_debug[index][buf[4] &0x1f].port = buf[4] & 0x1f;
 			slim_debug[index][buf[4] &0x1f].ch_num = buf[5];
-#endif			
+#endif
 			break;
 		case SLIM_USR_MC_DISCONNECT_PORT:
 			txn.mc = SLIM_MSG_MC_DISCONNECT_PORT;
@@ -1549,13 +1549,13 @@ send_capability:
 			txn.mt = SLIM_MSG_MT_CORE;
 			txn.wbuf = wbuf;
 			gen_ack = true;
-			pr_info("-slimdebug-SAT disconnect LA:0x%x", sat->satcl.laddr); /* slimbus debug patch */
+			pr_info("-slimdebug-SAT disconnect LA:0x%x\n", sat->satcl.laddr); /* slimbus debug patch */
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 
-#ifdef CONFIG_DEBUG_FS			
+#ifdef CONFIG_DEBUG_FS
 			if(txn.la ==  0)
 				index = 0;
-			else 
+			else
 				index = 1;
 			slim_debug[index][buf[4] &0x1f].direction = 0;
 			slim_debug[index][buf[4] &0x1f].port = 0;
@@ -1578,7 +1578,7 @@ send_capability:
 		if (!ret)
 			wbuf[1] = MSM_SAT_SUCCSS;
 		else {
-			pr_info("-slimdebug-sat cmd:0x%x no ack:%d", mc, ret); /* slimbus debug patch */
+			pr_info("-slimdebug-sat cmd:0x%x no ack:%d\n", mc, ret); /* slimbus debug patch */
 			wbuf[1] = 0;
 		}
 		txn.mc = SLIM_USR_MC_GENERIC_ACK;
@@ -1589,8 +1589,8 @@ send_capability:
 		txn.mt = SLIM_MSG_MT_SRC_REFERRED_USER;
 		ret = msm_xfer_msg(&dev->ctrl, &txn);
 		if (ret) {
-			pr_info("-slimdebug-sending ACK failed:%d", ret);
-			pr_info("-slimdebug-clk gear:%d, subfrm mode:0x%x",
+			pr_info("-slimdebug-sending ACK failed:%d\n", ret);
+			pr_info("-slimdebug-clk gear:%d, subfrm mode:0x%x\n",
 				dev->ctrl.clkgear, dev->ctrl.sched.subfrmcode);
 			ret = 0;
 		} /* slimbus debug patch */
@@ -1608,18 +1608,18 @@ static struct msm_slim_sat *msm_slim_alloc_sat(struct msm_slim_ctrl *dev)
 
 	sat = kzalloc(sizeof(struct msm_slim_sat), GFP_KERNEL);
 	if (!sat) {
-		dev_err(dev->dev, "no memory for satellite");
+		dev_err(dev->dev, "no memory for satellite\n");
 		return NULL;
 	}
 	name = kzalloc(SLIMBUS_NAME_SIZE, GFP_KERNEL);
 	if (!name) {
-		dev_err(dev->dev, "no memory for satellite name");
+		dev_err(dev->dev, "no memory for satellite name\n");
 		kfree(sat);
 		return NULL;
 	}
 	dev->satd[dev->nsats] = sat;
 	sat->dev = dev;
-	snprintf(name, SLIMBUS_NAME_SIZE, "msm_sat%d", dev->nsats);
+	snprintf(name, SLIMBUS_NAME_SIZE, "msm_sat%d\n", dev->nsats);
 	sat->satcl.name = name;
 	spin_lock_init(&sat->lock);
 	INIT_WORK(&sat->wd, slim_sat_rxprocess);
@@ -1738,14 +1738,14 @@ static int msm_slim_rx_msgq_thread(void *data)
 	u8 msg_len = 0;
 	int ret;
 
-	dev_dbg(dev->dev, "rx thread started");
+	dev_dbg(dev->dev, "rx thread started\n");
 
 	while (!kthread_should_stop()) {
 		set_current_state(TASK_INTERRUPTIBLE);
 		ret = wait_for_completion_interruptible(notify);
 
 		if (ret)
-			dev_err(dev->dev, "rx thread wait error:%d", ret);
+			dev_err(dev->dev, "rx thread wait error:%d\n", ret);
 
 		/* 1 irq notification per message */
 		if (!dev->use_rx_msgqs) {
@@ -1904,7 +1904,7 @@ static int msm_slim_init_rx_msgq(struct msm_slim_ctrl *dev)
 rx_thread_create:
 	/* Fire up the Rx message queue thread */
 	dev->rx_msgq_thread = kthread_run(msm_slim_rx_msgq_thread, dev,
-					MSM_SLIM_NAME "_rx_msgq_thread");
+					MSM_SLIM_NAME "_rx_msgq_thread\n");
 	if (!dev->rx_msgq_thread) {
 		dev_err(dev->dev, "Failed to start Rx message queue thread\n");
 		/* Tear-down BAMs or return? */
@@ -2023,7 +2023,7 @@ static void msm_slim_prg_slew(struct platform_device *pdev,
 	void __iomem *slew_reg;
 	/* SLEW RATE register for this slimbus */
 	dev->slew_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
-						"slimbus_slew_reg");
+						"slimbus_slew_reg\n");
 	if (!dev->slew_mem) {
 		dev_dbg(&pdev->dev, "no slimbus slew resource\n");
 		return;
@@ -2038,7 +2038,7 @@ static void msm_slim_prg_slew(struct platform_device *pdev,
 
 	slew_reg = ioremap(dev->slew_mem->start, resource_size(dev->slew_mem));
 	if (!slew_reg) {
-		dev_dbg(dev->dev, "slew register mapping failed");
+		dev_dbg(dev->dev, "slew register mapping failed\n");
 		release_mem_region(dev->slew_mem->start,
 					resource_size(dev->slew_mem));
 		dev->slew_mem = NULL;
@@ -2057,20 +2057,20 @@ static ssize_t slim_ch_show(struct device *dev,
 {
 	int length = 0;
 	int i;
-		  
+
 	for(i = 0; i < MSM_SLIM_NPORTS; i++)
-			if(slim_debug[0][i].direction) 
+			if(slim_debug[0][i].direction)
 					length += sprintf(buf+length,
 					"=Index[%d]=laddr[%2d]=dir[0x%02x]=port[%d]=chnum[%d]=\n",
-					i, slim_debug[0][i].la, slim_debug[0][i].direction, 
+					i, slim_debug[0][i].la, slim_debug[0][i].direction,
 					   slim_debug[0][i].port, slim_debug[0][i].ch_num);
 	for(i = 0; i < MSM_SLIM_NPORTS; i++)
 			if(slim_debug[1][i].direction)
 					length += sprintf(buf+length,
 					"=Index[%d]=laddr[%2d]=dir[0x%02x]=port[%d]=chnum[%d]=\n",
-					i, slim_debug[1][i].la, slim_debug[1][i].direction, 
+					i, slim_debug[1][i].la, slim_debug[1][i].direction,
 					   slim_debug[1][i].port, slim_debug[1][i].ch_num);
-	
+
 	return length;
 }
 static DEVICE_ATTR(slim_ch_status, 0644, slim_ch_show, NULL);
@@ -2083,15 +2083,15 @@ static ssize_t slim_addr_show(struct device *dev,
 	struct slim_controller *ctrl = &slim_ctrl->ctrl;
 	int length = 0;
 	int i;
-		  
+
 	for(i = 0; i < ctrl->num_dev; i++)
-		if(ctrl->addrt[i].valid) 
+		if(ctrl->addrt[i].valid)
 			length += sprintf(buf+length,
 				"=laddr[%02d]=eaddr[ %02x%02x %02x %02x %02x %02x ]=\n",
 				i, ctrl->addrt[i].eaddr[5], ctrl->addrt[i].eaddr[4],
 				ctrl->addrt[i].eaddr[3], ctrl->addrt[i].eaddr[2],
 				ctrl->addrt[i].eaddr[1], ctrl->addrt[i].eaddr[0]);
-	
+
 	return length;
 }
 static DEVICE_ATTR(slim_addr_status, 0644, slim_addr_show, NULL);
@@ -2177,7 +2177,7 @@ static int msm_slim_probe(struct platform_device *pdev)
 		ret = of_property_read_u32(pdev->dev.of_node, "cell-index",
 					&dev->ctrl.nr);
 		if (ret) {
-			dev_err(&pdev->dev, "Cell index not specified:%d", ret);
+			dev_err(&pdev->dev, "Cell index not specified:%d\n", ret);
 			goto err_of_init_failed;
 		}
 		rxreg_access = of_property_read_bool(pdev->dev.of_node,
@@ -2187,7 +2187,7 @@ static int msm_slim_probe(struct platform_device *pdev)
 					"qcom,min-clk-gear", &dev->ctrl.min_cg);
 		ret = of_property_read_u32(pdev->dev.of_node,
 					"qcom,max-clk-gear", &dev->ctrl.max_cg);
-		pr_info("min_cg:%d, max_cg:%d, rxreg: %d", dev->ctrl.min_cg,
+		pr_info("min_cg:%d, max_cg:%d, rxreg: %d\n", dev->ctrl.min_cg,
 					dev->ctrl.max_cg, rxreg_access);
 	} else {
 		dev->ctrl.nr = pdev->id;
@@ -2255,7 +2255,7 @@ static int msm_slim_probe(struct platform_device *pdev)
 
 	dev->rclk = clk_get(dev->dev, "core_clk");
 	if (!dev->rclk) {
-		dev_err(dev->dev, "slimbus clock not found");
+		dev_err(dev->dev, "slimbus clock not found\n");
 		goto err_clk_get_failed;
 	}
 	clk_set_rate(dev->rclk, SLIM_ROOT_FREQ);
@@ -2445,7 +2445,7 @@ static int msm_slim_runtime_suspend(struct device *device)
 	dev->state = MSM_CTRL_SLEEPING;
 	ret = slim_ctrl_clk_pause(&dev->ctrl, false, SLIM_CLK_UNSPECIFIED);
 	if (ret) {
-		dev_err(device, "clk pause not entered:%d", ret);
+		dev_err(device, "clk pause not entered:%d\n", ret);
 		dev->state = MSM_CTRL_AWAKE;
 	} else {
 		dev->state = MSM_CTRL_ASLEEP;
@@ -2462,7 +2462,7 @@ static int msm_slim_runtime_resume(struct device *device)
 	if (dev->state == MSM_CTRL_ASLEEP)
 		ret = slim_ctrl_clk_pause(&dev->ctrl, true, 0);
 	if (ret) {
-		dev_err(device, "clk pause not exited:%d", ret);
+		dev_err(device, "clk pause not exited:%d\n", ret);
 		dev->state = MSM_CTRL_ASLEEP;
 	} else {
 		dev->state = MSM_CTRL_AWAKE;
@@ -2476,7 +2476,7 @@ static int msm_slim_suspend(struct device *dev)
 	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
 		struct platform_device *pdev = to_platform_device(dev);
 		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
-		dev_dbg(dev, "system suspend");
+		dev_dbg(dev, "system suspend\n");
 		ret = msm_slim_runtime_suspend(dev);
 		if (!ret) {
 			if (cdev->hclk)
@@ -2504,7 +2504,7 @@ static int msm_slim_resume(struct device *dev)
 		struct platform_device *pdev = to_platform_device(dev);
 		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
 		int ret;
-		dev_dbg(dev, "system resume");
+		dev_dbg(dev, "system resume\n");
 		if (cdev->hclk)
 			clk_prepare_enable(cdev->hclk);
 		ret = msm_slim_runtime_resume(dev);
