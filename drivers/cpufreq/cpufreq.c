@@ -1530,7 +1530,7 @@ static void handle_update(struct work_struct *work)
 static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 				unsigned int new_freq)
 {
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	struct cpufreq_freqs freqs;
 	unsigned long flags;
 
@@ -1539,10 +1539,6 @@ static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 
 	freqs.old = old_freq;
 	freqs.new = new_freq;
-	spin_lock_irqsave(&cpufreq_driver_lock, flags);
-	policy = per_cpu(cpufreq_cpu_data, cpu);
-	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 }
