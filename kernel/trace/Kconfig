@@ -243,6 +243,17 @@ config FTRACE_SYSCALLS
 	help
 	  Basic tracer to catch the syscall entry and exit events.
 
+config TRACER_SNAPSHOT
+	bool "Create a snapshot trace buffer"
+	default n
+	select TRACER_MAX_TRACE
+	help
+	  Allow tracing users to take snapshot of the current buffer using the
+	  ftrace interface, e.g.:
+
+	      echo 1 > /sys/kernel/debug/tracing/snapshot
+	      cat snapshot
+
 config TRACER_SNAPSHOT_PER_CPU_SWAP
         bool "Allow snapshot to swap per CPU"
 	depends on TRACER_SNAPSHOT

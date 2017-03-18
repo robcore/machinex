@@ -372,6 +372,7 @@ struct tracer {
 #ifdef CONFIG_TRACER_MAX_TRACE
 	bool			use_max_tr;
 #endif
+	bool			allocated_snapshot;
 };
 
 

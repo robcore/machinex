@@ -80,6 +80,9 @@ struct trace_iterator {
 
 	cpumask_var_t		started;
 
+	/* it's true when current open file is snapshot */
+	bool			snapshot;
+
 	/* The below is zeroed out in pipe_read */
 	struct trace_seq	seq;
 	struct trace_entry	*ent;
