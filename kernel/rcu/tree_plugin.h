@@ -2054,23 +2054,6 @@ static DEFINE_PER_CPU(unsigned long, rcu_dyntick_holdoff);
 static DEFINE_PER_CPU(struct timer_list, rcu_idle_gp_timer);
 
 /*
- * Allow the CPU to enter dyntick-idle mode if either: (1) There are no
- * callbacks on this CPU, (2) this CPU has not yet attempted to enter
- * dyntick-idle mode, or (3) this CPU is in the process of attempting to
- * enter dyntick-idle mode.  Otherwise, if we have recently tried and failed
- * to enter dyntick-idle mode, we refuse to try to enter it.  After all,
- * it is better to incur scheduling-clock interrupts than to spin
- * continuously for the same time duration!
- */
-int rcu_needs_cpu(int cpu)
-{
-	/* If no callbacks, RCU doesn't need the CPU. */
-	if (!rcu_cpu_has_callbacks(cpu))
-		return 0;
-	/* Otherwise, RCU needs the CPU only if it recently tried and failed. */
-	return per_cpu(rcu_dyntick_holdoff, cpu) == jiffies;
-}
-/*
  * Try to advance callbacks for all flavors of RCU on the current CPU.
  * Afterwards, if there are any callbacks ready for immediate invocation,
  * return true.
