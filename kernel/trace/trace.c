@@ -368,7 +368,7 @@ int __trace_puts(unsigned long ip, const char *str, int size)
 
 	local_save_flags(irq_flags);
 	buffer = global_trace.trace_buffer.buffer;
-	event = trace_buffer_lock_reserve(buffer, TRACE_PRINT, alloc, 
+	event = trace_buffer_lock_reserve(buffer, TRACE_PRINT, alloc,
 					  irq_flags, preempt_count());
 	if (!event)
 		return 0;
@@ -5616,6 +5616,8 @@ allocate_trace_buffer(struct trace_array *tr, struct trace_buffer *buf, int size
 
 	rb_flags = trace_flags & TRACE_ITER_OVERWRITE ? RB_FL_OVERWRITE : 0;
 
+	buf->tr = tr;
+
 	buf->buffer = ring_buffer_alloc(size, rb_flags);
 	if (!buf->buffer)
 		return -ENOMEM;
@@ -5703,8 +5705,10 @@ static int new_instance_create(const char *name)
 		goto out_free_tr;
 
 	ret = event_trace_add_tracer(tr->dir, tr);
-	if (ret)
+	if (ret) {
+		debugfs_remove_recursive(tr->dir);
 		goto out_free_tr;
+	}
 
 	init_tracer_debugfs(tr, tr->dir);
 
@@ -5773,7 +5777,7 @@ static int instance_mkdir (struct inode *inode, struct dentry *dentry, umode_t m
 	int ret;
 
 	/* Paranoid: Make sure the parent is the "instances" directory */
-	parent = hlist_entry(inode->i_dentry.first, struct dentry, d_alias);
+	parent = hlist_entry(inode->i_dentry, struct dentry, d_u.d_alias);
 	if (WARN_ON_ONCE(parent != trace_instance_dir))
 		return -ENOENT;
 
@@ -5800,7 +5804,7 @@ static int instance_rmdir(struct inode *inode, struct dentry *dentry)
 	int ret;
 
 	/* Paranoid: Make sure the parent is the "instances" directory */
-	parent = hlist_entry(inode->i_dentry.first, struct dentry, d_alias);
+	parent = hlist_entry(inode->i_dentry, struct dentry, d_u.d_alias);
 	if (WARN_ON_ONCE(parent != trace_instance_dir))
 		return -ENOENT;
 
@@ -5890,6 +5894,8 @@ static __init int tracer_init_debugfs(void)
 	trace_access_lock_init();
 
 	d_tracer = tracing_init_dentry();
+	if (!d_tracer)
+		return 0;
 
 	init_tracer_debugfs(&global_trace, d_tracer);
 
