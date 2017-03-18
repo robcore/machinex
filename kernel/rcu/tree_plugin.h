@@ -2842,7 +2842,7 @@ static int rcu_nocb_needs_gp(struct rcu_state *rsp)
 
 static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
 {
-	return 0;
+	return;
 }
 
 static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq)
