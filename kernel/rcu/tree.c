@@ -522,9 +522,10 @@ static void rcu_eqs_exit(bool user)
 	WARN_ON_ONCE(oldval < 0);
 	if (oldval & DYNTICK_TASK_NEST_MASK)
 		rdtp->dynticks_nesting += DYNTICK_TASK_NEST_VALUE;
-	else
+	else {
 		rdtp->dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
-	rcu_eqs_exit_common(rdtp, oldval, user);
+		rcu_eqs_exit_common(rdtp, oldval, user);
+	}
 }
 
 /**
