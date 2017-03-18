@@ -1445,12 +1445,18 @@ static int trace_module_notify(struct notifier_block *self,
 
 	return 0;
 }
+#else
+static int trace_module_notify(struct notifier_block *self,
+			       unsigned long val, void *data)
+{
+	return 0;
+}
+#endif /* CONFIG_MODULES */
 
 static struct notifier_block trace_module_nb = {
 	.notifier_call = trace_module_notify,
 	.priority = 0,
 };
-#endif /* CONFIG_MODULES */
 
 extern struct ftrace_event_call *__start_ftrace_events[];
 extern struct ftrace_event_call *__stop_ftrace_events[];
