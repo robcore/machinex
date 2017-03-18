@@ -27,6 +27,8 @@
 #include <linux/delay.h>
 #include <linux/gfp.h>
 #include <linux/oom.h>
+#include <linux/smpboot.h>
+#include <linux/tick.h>
 #include "../time/tick-internal.h"
 
 #define RCU_KTHREAD_PRIO 1
@@ -1237,7 +1239,6 @@ sync_rcu_preempt_exp_init(struct rcu_state *rsp, struct rcu_node *rnp)
 		rcu_report_exp_rnp(rsp, rnp, false); /* Don't wake self. */
 }
 
-
 /**
  * synchronize_rcu_expedited - Brute-force RCU grace period
  *
@@ -2045,8 +2046,13 @@ static void rcu_prepare_for_idle(int cpu)
  * adjustment, they can be converted into kernel config parameters, though
  * making the state machine smarter might be a better option.
  */
-#define RCU_IDLE_GP_DELAY 6		/* Roughly one grace period. */
+#define RCU_IDLE_GP_DELAY 4		/* Roughly one grace period. */
 #define RCU_IDLE_LAZY_GP_DELAY (6 * HZ)	/* Roughly six seconds. */
+static int rcu_idle_gp_delay = RCU_IDLE_GP_DELAY;
+module_param(rcu_idle_gp_delay, int, 0644);
+static int rcu_idle_lazy_gp_delay = RCU_IDLE_LAZY_GP_DELAY;
+module_param(rcu_idle_lazy_gp_delay, int, 0644);
+
 extern int tick_nohz_enabled;
 
 static DEFINE_PER_CPU(int, rcu_dyntick_drain);
@@ -2087,14 +2093,11 @@ static bool rcu_try_advance_all_cbs(void)
 int rcu_needs_cpu(int cpu, unsigned long *dj)
 {
 	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
-	/* Flag a new idle sojourn to the idle-entry state machine. */
-	rdtp->idle_first_pass = 1;
+
 	/* Snapshot to detect later posting of non-lazy callback. */
 	rdtp->nonlazy_posted_snap = rdtp->nonlazy_posted;
 
 	/* If no callbacks, RCU doesn't need the CPU. */
-	if (!rcu_cpu_has_callbacks(cpu)) {
-		*delta_jiffies = ULONG_MAX;
 	if (!rcu_cpu_has_callbacks(cpu, &rdtp->all_lazy)) {
 		*dj = ULONG_MAX;
 		return 0;
@@ -2109,7 +2112,7 @@ int rcu_needs_cpu(int cpu, unsigned long *dj)
 	rdtp->last_accelerate = jiffies;
 
 	/* Request timer delay depending on laziness, and round. */
-	if (rdtp->all_lazy) {
+	if (!rdtp->all_lazy) {
 		*dj = round_up(rcu_idle_gp_delay + jiffies,
 			       rcu_idle_gp_delay) - jiffies;
 	} else {
@@ -2130,10 +2133,10 @@ int rcu_needs_cpu(int cpu, unsigned long *dj)
  */
 static void rcu_prepare_for_idle(int cpu)
 {
-	struct rcu_node *rnp;
+	struct rcu_data *rdp;
 	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
 	struct rcu_state *rsp;
-	struct rcu_data *rdp;
+	struct rcu_node *rnp;
 	int tne;
 
 	/* Handle nohz enablement switches conservatively. */
@@ -2147,23 +2150,8 @@ static void rcu_prepare_for_idle(int cpu)
 	if (!tne)
 		return;
 
-	rdtp->idle_first_pass = 0;
-	rdtp->nonlazy_posted_snap = rdtp->nonlazy_posted - 1;
-
-	/*
-	 * If there are no callbacks on this CPU, enter dyntick-idle mode.
-	 * Also reset state to avoid prejudicing later attempts.
-	 */
-	if (!rcu_cpu_has_callbacks(cpu)) {
-		per_cpu(rcu_dyntick_holdoff, cpu) = jiffies - 1;
-		per_cpu(rcu_dyntick_drain, cpu) = 0;
-		trace_rcu_prep_idle("No callbacks");
-		rdtp->tick_nohz_enabled_snap = ACCESS_ONCE(tick_nohz_enabled);
-		return;
-	}
-
 	/* If this is a no-CBs CPU, no callbacks, just return. */
-	if (is_nocb_cpu(cpu))
+	if (rcu_is_nocb_cpu(cpu))
 		return;
 
 	/*
@@ -2205,9 +2193,9 @@ static void rcu_cleanup_after_idle(int cpu)
 	struct rcu_data *rdp;
 	struct rcu_state *rsp;
 
-	if (is_nocb_cpu(cpu))
-	return;
-+	rcu_try_advance_all_cbs();
+	if (rcu_is_nocb_cpu(cpu))
+		return;
+	rcu_try_advance_all_cbs();
 	for_each_rcu_flavor(rsp) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
 		if (cpu_has_callbacks_ready_to_invoke(rdp))
@@ -2316,7 +2304,7 @@ early_initcall(rcu_register_oom_notifier);
 
 static void print_cpu_stall_fast_no_hz(char *cp, int cpu)
 {
- 	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
+	struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
 	unsigned long nlpd = rdtp->nonlazy_posted - rdtp->nonlazy_posted_snap;
 
 	sprintf(cp, "last_accelerate: %04lx/%04lx, nonlazy_posted: %ld, %c%c",
