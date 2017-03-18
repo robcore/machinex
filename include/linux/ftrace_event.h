@@ -271,9 +271,8 @@ struct ftrace_event_file {
 
 	/*
 	 * 32 bit flags:
-	 *   bit 1:		enabled
-	 *   bit 2:		filter_active
-	 *   bit 3:		enabled cmd record
+	 *   bit 0:		enabled
+	 *   bit 1:		enabled cmd record
 	 *
 	 * Changes to flags must hold the event_mutex.
 	 *
