@@ -41,8 +41,8 @@ struct msg_msgseg {
 	/* the next part of the message follows immediately */
 };
 
-#define DATALEN_MSG	((size_t)PAGE_SIZE-sizeof(struct msg_msg))
-#define DATALEN_SEG	((size_t)PAGE_SIZE-sizeof(struct msg_msgseg))
+#define DATALEN_MSG	(int)(PAGE_SIZE-sizeof(struct msg_msg))
+#define DATALEN_SEG	(int)(PAGE_SIZE-sizeof(struct msg_msgseg))
 
 struct msg_msg *load_msg(const void __user *src, size_t len)
 {
@@ -51,10 +51,7 @@ struct msg_msg *load_msg(const void __user *src, size_t len)
 	int err;
 	size_t alen;
 
-	alen = len;
-	if (alen > DATALEN_MSG)
-		alen = DATALEN_MSG;
-
+	alen = min(len, DATALEN_MSG);
 	msg = kmalloc(sizeof(*msg) + alen, GFP_KERNEL);
 	if (msg == NULL)
 		return ERR_PTR(-ENOMEM);
@@ -72,9 +69,7 @@ struct msg_msg *load_msg(const void __user *src, size_t len)
 	pseg = &msg->next;
 	while (len > 0) {
 		struct msg_msgseg *seg;
-		alen = len;
-		if (alen > DATALEN_SEG)
-			alen = DATALEN_SEG;
+		alen = min(len, DATALEN_SEG);
 		seg = kmalloc(sizeof(*seg) + alen,
 						 GFP_KERNEL);
 		if (seg == NULL) {
@@ -108,9 +103,7 @@ int store_msg(void __user *dest, struct msg_msg *msg, size_t len)
 	size_t alen;
 	struct msg_msgseg *seg;
 
-	alen = len;
-	if (alen > DATALEN_MSG)
-		alen = DATALEN_MSG;
+	alen = min(len, DATALEN_MSG);
 	if (copy_to_user(dest, msg + 1, alen))
 		return -1;
 
@@ -118,9 +111,7 @@ int store_msg(void __user *dest, struct msg_msg *msg, size_t len)
 	dest = ((char __user *)dest) + alen;
 	seg = msg->next;
 	while (len > 0) {
-		alen = len;
-		if (alen > DATALEN_SEG)
-			alen = DATALEN_SEG;
+		alen = min(len, DATALEN_SEG);
 		if (copy_to_user(dest, seg + 1, alen))
 			return -1;
 		len -= alen;
