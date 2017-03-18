@@ -261,7 +261,7 @@ static int update_count(void **data)
 }
 
 static void
-ftrace_traceon(unsigned long ip, unsigned long parent_ip, void **data)
+ftrace_traceon_count(unsigned long ip, unsigned long parent_ip, void **data)
 {
 	if (tracing_is_on())
 		return;
@@ -271,7 +271,7 @@ ftrace_traceon(unsigned long ip, unsigned long parent_ip, void **data)
 }
 
 static void
-ftrace_traceoff(unsigned long ip, unsigned long parent_ip, void **data)
+ftrace_traceoff_count(unsigned long ip, unsigned long parent_ip, void **data)
 {
 	if (!tracing_is_on())
 		return;
@@ -280,9 +280,37 @@ ftrace_traceoff(unsigned long ip, unsigned long parent_ip, void **data)
 		tracing_off();
 }
 
+static void
+ftrace_traceon(unsigned long ip, unsigned long parent_ip, void **data)
+{
+	if (tracing_is_on())
+		return;
+
+	tracing_on();
+}
+
+static void
+ftrace_traceoff(unsigned long ip, unsigned long parent_ip, void **data)
+{
+	if (!tracing_is_on())
+		return;
+
+	tracing_off();
+}
+
 static int
 ftrace_trace_onoff_print(struct seq_file *m, unsigned long ip,
 			 struct ftrace_probe_ops *ops, void *data);
+
+static struct ftrace_probe_ops traceon_count_probe_ops = {
+	.func			= ftrace_traceon_count,
+	.print			= ftrace_trace_onoff_print,
+};
+
+static struct ftrace_probe_ops traceoff_count_probe_ops = {
+	.func			= ftrace_traceoff_count,
+	.print			= ftrace_trace_onoff_print,
+};
 
 static struct ftrace_probe_ops traceon_probe_ops = {
 	.func			= ftrace_traceon,
@@ -302,7 +330,7 @@ ftrace_trace_onoff_print(struct seq_file *m, unsigned long ip,
 
 	seq_printf(m, "%ps:", (void *)ip);
 
-	if (ops == &traceon_probe_ops)
+	if (ops == &traceon_probe_ops || ops == &traceon_count_probe_ops)
 		seq_printf(m, "traceon");
 	else
 		seq_printf(m, "traceoff");
@@ -330,9 +358,9 @@ ftrace_trace_onoff_callback(struct ftrace_hash *hash,
 
 	/* we register both traceon and traceoff to this callback */
 	if (strcmp(cmd, "traceon") == 0)
-		ops = &traceon_probe_ops;
+		ops = param ? &traceon_count_probe_ops : &traceon_probe_ops;
 	else
-		ops = &traceoff_probe_ops;
+		ops = param ? &traceoff_count_probe_ops : &traceoff_probe_ops;
 
 	if (glob[0] == '!') {
 		unregister_ftrace_function_probe_func(glob+1, ops);
