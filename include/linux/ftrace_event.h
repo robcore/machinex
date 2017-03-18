@@ -181,21 +181,18 @@ extern int ftrace_event_reg(struct ftrace_event_call *event,
 			    enum trace_reg type, void *data);
 
 enum {
+	TRACE_EVENT_FL_ENABLED_BIT,
 	TRACE_EVENT_FL_FILTERED_BIT,
+	TRACE_EVENT_FL_RECORDED_CMD_BIT,
 	TRACE_EVENT_FL_CAP_ANY_BIT,
 	TRACE_EVENT_FL_NO_SET_FILTER_BIT,
 	TRACE_EVENT_FL_IGNORE_ENABLE_BIT,
 };
 
-/*
- * Event flags:
- *  FILTERED	  - The event has a filter attached
- *  CAP_ANY	  - Any user can enable for perf
- *  NO_SET_FILTER - Set when filter has error and is to be ignored
- *  IGNORE_ENABLE - For ftrace internal events, do not enable with debugfs file
- */
 enum {
+	TRACE_EVENT_FL_ENABLED		= (1 << TRACE_EVENT_FL_ENABLED_BIT),
 	TRACE_EVENT_FL_FILTERED		= (1 << TRACE_EVENT_FL_FILTERED_BIT),
+	TRACE_EVENT_FL_RECORDED_CMD	= (1 << TRACE_EVENT_FL_RECORDED_CMD_BIT),
 	TRACE_EVENT_FL_CAP_ANY		= (1 << TRACE_EVENT_FL_CAP_ANY_BIT),
 	TRACE_EVENT_FL_NO_SET_FILTER	= (1 << TRACE_EVENT_FL_NO_SET_FILTER_BIT),
 	TRACE_EVENT_FL_IGNORE_ENABLE	= (1 << TRACE_EVENT_FL_IGNORE_ENABLE_BIT),
@@ -205,56 +202,18 @@ struct ftrace_event_call {
 	struct list_head	list;
 	struct ftrace_event_class *class;
 	char			*name;
+	struct dentry		*dir;
 	struct trace_event	event;
 	const char		*print_fmt;
 	struct event_filter	*filter;
-	struct list_head	*files;
 	void			*mod;
 	void			*data;
-	/*
-	 *   bit 0:		filter_active
-	 *   bit 1:		allow trace by non root (cap any)
-	 *   bit 2:		failed to apply filter
-	 *   bit 3:		ftrace internal event (do not enable)
-	 *   bit 4:		Event was enabled by module
-	 */
-	int			flags; /* static flags of different events */
-
-#ifdef CONFIG_PERF_EVENTS
-	int				perf_refcount;
-	struct hlist_head __percpu	*perf_events;
-#endif
-};
-
-struct trace_array;
-struct ftrace_subsystem_dir;
-
-enum {
-	FTRACE_EVENT_FL_ENABLED_BIT,
-	FTRACE_EVENT_FL_RECORDED_CMD_BIT,
-};
-
-/*
- * Ftrace event file flags:
- *  ENABLED	  - The event is enabled
- *  RECORDED_CMD  - The comms should be recorded at sched_switch
- */
-enum {
-	FTRACE_EVENT_FL_ENABLED		= (1 << FTRACE_EVENT_FL_ENABLED_BIT),
-	FTRACE_EVENT_FL_RECORDED_CMD	= (1 << FTRACE_EVENT_FL_RECORDED_CMD_BIT),
-};
-
-struct ftrace_event_file {
-	struct list_head		list;
-	struct ftrace_event_call	*event_call;
-	struct dentry			*dir;
-	struct trace_array		*tr;
-	struct ftrace_subsystem_dir	*system;
 
 	/*
 	 * 32 bit flags:
-	 *   bit 0:		enabled
-	 *   bit 1:		enabled cmd record
+	 *   bit 1:		enabled
+	 *   bit 2:		filter_active
+	 *   bit 3:		enabled cmd record
 	 *
 	 * Changes to flags must hold the event_mutex.
 	 *
