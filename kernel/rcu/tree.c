@@ -1526,7 +1526,7 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
 	}
 	rnp = rcu_get_root(rsp);
 	raw_spin_lock_irq(&rnp->lock);
-	rcu_nocb_gp_set(rnp, nocb)
+	rcu_nocb_gp_set(rnp, nocb);
 
 	ACCESS_ONCE(rsp->completed) = rsp->gpnum;
 	trace_rcu_grace_period(rsp->name, rsp->completed, "end");
@@ -1623,7 +1623,7 @@ static void rsp_wakeup(struct irq_work *work)
  */
 static void
 rcu_start_gp_advanced(struct rcu_state *rsp, struct rcu_node *rnp,
-		      struct rcu_data *rdp)rcu_start_gp(struct rcu_state *rsp)
+		      struct rcu_data *rdp)
 {
 	if (!rsp->gp_kthread || !cpu_needs_another_gp(rsp, rdp)) {
 		/*
