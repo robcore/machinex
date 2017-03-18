@@ -37,6 +37,11 @@ EXPORT_SYMBOL_GPL(event_storage);
 LIST_HEAD(ftrace_events);
 LIST_HEAD(ftrace_common_fields);
 
+#define GFP_TRACE (GFP_KERNEL | __GFP_ZERO)
+
+static struct kmem_cache *field_cachep;
+static struct kmem_cache *file_cachep;
+
 /* Double loops, do not use break, only goto's work */
 #define do_for_each_event_file(tr, file)			\
 	list_for_each_entry(tr, &ftrace_trace_arrays, list) {	\
@@ -64,7 +69,7 @@ static int __trace_define_field(struct list_head *head, const char *type,
 {
 	struct ftrace_event_field *field;
 
-	field = kzalloc(sizeof(*field), GFP_KERNEL);
+	field = kmem_cache_alloc(field_cachep, GFP_TRACE);
 	if (!field)
 		goto err;
 
@@ -92,7 +97,7 @@ static int __trace_define_field(struct list_head *head, const char *type,
 err:
 	if (field)
 		kfree(field->name);
-	kfree(field);
+	kmem_cache_free(field_cachep, field);
 
 	return -ENOMEM;
 }
@@ -144,7 +149,7 @@ void trace_destroy_fields(struct ftrace_event_call *call)
 		list_del(&field->link);
 		kfree(field->type);
 		kfree(field->name);
-		kfree(field);
+		kmem_cache_free(field_cachep, field);
 	}
 }
 
@@ -1375,7 +1380,7 @@ static void remove_event_from_tracers(struct ftrace_event_call *call)
 		list_del(&file->list);
 		debugfs_remove_recursive(file->dir);
 		remove_subsystem(file->system);
-		kfree(file);
+		kmem_cache_free(file_cachep, file);
 
 		/*
 		 * The do_for_each_event_file_safe() is
@@ -1454,7 +1459,7 @@ __trace_add_new_event(struct ftrace_event_call *call,
 {
 	struct ftrace_event_file *file;
 
-	file = kzalloc(sizeof(*file), GFP_KERNEL);
+	file = kmem_cache_alloc(file_cachep, GFP_TRACE);
 	if (!file)
 		return -ENOMEM;
 
@@ -1476,7 +1481,7 @@ __trace_early_add_new_event(struct ftrace_event_call *call,
 {
 	struct ftrace_event_file *file;
 
-	file = kzalloc(sizeof(*file), GFP_KERNEL);
+	file = kmem_cache_alloc(file_cachep, GFP_TRACE);
 	if (!file)
 		return -ENOMEM;
 
@@ -1795,7 +1800,7 @@ __trace_remove_event_dirs(struct trace_array *tr)
 		list_del(&file->list);
 		debugfs_remove_recursive(file->dir);
 		remove_subsystem(file->system);
-		kfree(file);
+		kmem_cache_free(file_cachep, file);
 	}
 }
 
@@ -1951,6 +1956,13 @@ int event_trace_del_tracer(struct trace_array *tr)
 	return 0;
 }
 
+static __init int event_trace_memsetup(void)
+{
+	field_cachep = KMEM_CACHE(ftrace_event_field, SLAB_PANIC);
+	file_cachep = KMEM_CACHE(ftrace_event_file, SLAB_PANIC);
+	return 0;
+}
+
 static __init int event_trace_enable(void)
 {
 	struct trace_array *tr = top_trace_array();
@@ -2026,6 +2038,7 @@ static __init int event_trace_init(void)
 #endif
 	return 0;
 }
+early_initcall(event_trace_memsetup);
 core_initcall(event_trace_enable);
 fs_initcall(event_trace_init);
 
