@@ -101,12 +101,6 @@ enum trace_iter_flags {
 	TRACE_FILE_TIME_IN_NS	= 4,
 };
 
-enum trace_iter_flags {
-	TRACE_FILE_LAT_FMT	= 1,
-	TRACE_FILE_ANNOTATE	= 2,
-	TRACE_FILE_TIME_IN_NS	= 4,
-};
-
 
 typedef enum print_line_t (*trace_print_func)(struct trace_iterator *iter,
 				      int flags, struct trace_event *event);
