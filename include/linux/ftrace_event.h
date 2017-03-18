@@ -229,6 +229,13 @@ struct ftrace_event_call {
 	struct list_head	*files;
 	void			*mod;
 	void			*data;
+	/*
+	 *   bit 0:		filter_active
+	 *   bit 1:		allow trace by non root (cap any)
+	 *   bit 2:		failed to apply filter
+	 *   bit 3:		ftrace internal event (do not enable)
+	 *   bit 4:		Event was enabled by module
+	 */
 	int			flags; /* static flags of different events */
 
 #ifdef CONFIG_PERF_EVENTS
@@ -247,7 +254,7 @@ enum {
 
 /*
  * Ftrace event file flags:
- *  ENABELD	  - The event is enabled
+ *  ENABLED	  - The event is enabled
  *  RECORDED_CMD  - The comms should be recorded at sched_switch
  */
 enum {
