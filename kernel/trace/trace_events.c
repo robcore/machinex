@@ -1576,7 +1576,7 @@ int trace_add_event_call(struct ftrace_event_call *call)
 }
 
 /*
- * Must be called under locking both of event_mutex and trace_event_mutex.
+ * Must be called under locking both of event_mutex and trace_event_sem.
  */
 static void __trace_remove_event_call(struct ftrace_event_call *call)
 {
@@ -1589,9 +1589,9 @@ static void __trace_remove_event_call(struct ftrace_event_call *call)
 void trace_remove_event_call(struct ftrace_event_call *call)
 {
 	mutex_lock(&event_mutex);
-	down_write(&trace_event_mutex);
+	down_write(&trace_event_sem);
 	__trace_remove_event_call(call);
-	up_write(&trace_event_mutex);
+	up_write(&trace_event_sem);
 	mutex_unlock(&event_mutex);
 }
 
@@ -1709,7 +1709,7 @@ static void trace_module_remove_events(struct module *mod)
 	struct ftrace_event_call *call, *p;
 	bool clear_trace = false;
 
-	down_write(&trace_event_mutex);
+	down_write(&trace_event_sem);
 	list_for_each_entry_safe(call, p, &ftrace_events, list) {
 		if (call->mod == mod) {
 			if (call->flags & TRACE_EVENT_FL_WAS_ENABLED)
@@ -1727,7 +1727,7 @@ static void trace_module_remove_events(struct module *mod)
 		list_del(&file_ops->list);
 		kfree(file_ops);
 	}
-	up_write(&trace_event_mutex);
+	up_write(&trace_event_sem);
 
 	/*
 	 * It is safest to reset the ring buffer if the module being unloaded
@@ -2267,9 +2267,9 @@ int event_trace_add_tracer(struct dentry *parent, struct trace_array *tr)
 	if (ret)
 		goto out_unlock;
 
-	down_write(&trace_event_mutex);
+	down_write(&trace_event_sem);
 	__trace_add_event_dirs(tr);
-	up_write(&trace_event_mutex);
+	up_write(&trace_event_sem);
 
  out_unlock:
 	mutex_unlock(&event_mutex);
@@ -2292,9 +2292,9 @@ early_event_add_tracer(struct dentry *parent, struct trace_array *tr)
 	if (ret)
 		goto out_unlock;
 
-	down_write(&trace_event_mutex);
+	down_write(&trace_event_sem);
 	__trace_early_add_event_dirs(tr);
-	up_write(&trace_event_mutex);
+	up_write(&trace_event_sem);
 
  out_unlock:
 	mutex_unlock(&event_mutex);
@@ -2309,10 +2309,10 @@ int event_trace_del_tracer(struct trace_array *tr)
 
 	mutex_lock(&event_mutex);
 
-	down_write(&trace_event_mutex);
+	down_write(&trace_event_sem);
 	__trace_remove_event_dirs(tr);
 	debugfs_remove_recursive(tr->event_dir);
-	up_write(&trace_event_mutex);
+	up_write(&trace_event_sem);
 
 	tr->event_dir = NULL;
 
